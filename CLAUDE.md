@@ -1,6 +1,6 @@
 # wholework
 
-Claude Code Skills & workflow toolkit — a public repository for sharing Skills, modules, and workflow automation built on the Claude Agent SDK.
+Spec-driven skills for autonomous work on GitHub — a public repository for sharing Skills, modules, and workflow automation built on the Claude Agent SDK.
 
 ## Language Conventions
 
