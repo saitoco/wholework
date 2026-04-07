@@ -11,6 +11,8 @@ ssot_for:
 
 ```
 wholework/
+├── .claude-plugin/      # Plugin manifest directory
+│   └── plugin.json      # Plugin manifest (name: "wholework")
 ├── skills/              # Claude Code skills (one subdirectory per skill)
 │   └── <skill-name>/
 │       └── SKILL.md
@@ -32,7 +34,6 @@ wholework/
 │   ├── migration-notes.md # Interface change records per migration issue
 │   ├── environment-adaptation.md # Environment adaptation architecture (4-layer)
 │   └── spec/            # Issue specifications
-├── install.sh           # Symlink-based installer
 ├── package.json         # npm package manifest (for future npx support)
 ├── LICENSE              # Apache License 2.0
 ├── README.md            # Project overview
@@ -126,20 +127,13 @@ Key modules:
 
 ### Install
 
-- `install.sh` — creates symlinks from repo into `~/.claude/` directory
+Wholework is installed as a local Claude Code plugin using `--plugin-dir`:
 
-| Repository directory | Install destination | Notes |
-|---|---|---|
-| `skills/` | `~/.claude/skills/wholework/` | Each skill as a subdirectory |
-| `modules/` | `~/.claude/skills/wholework/modules/` | Co-located with skills; single reference path |
-| `agents/` | `~/.claude/agents/wholework/` | Agent definitions |
-| `scripts/` | `~/.claude/skills/wholework/scripts/` | Co-located with skills; same pattern as modules |
+```sh
+claude --plugin-dir ~/src/wholework
+```
 
-Design rationale:
-- `~/.claude/skills/wholework/` is a real directory (not a symlink). Individual skills are symlinked inside it as subdirectories, allowing `modules/` and `scripts/` to coexist as sibling symlinks.
-- `modules/` and `scripts/` are placed under `~/.claude/skills/wholework/` rather than `~/.claude/modules/` or `~/.claude/scripts/` to avoid duplicate loading and keep the package self-contained.
-- Symlinks are created with `ln -sfn` for idempotent installs.
-- `install.sh` is POSIX-compatible (`#!/bin/sh`) for maximum portability.
+Skills are discovered as `wholework:<skill-name>`. Claude Code sets `${CLAUDE_PLUGIN_ROOT}` to the plugin directory at runtime, which skills and modules use to reference scripts and modules.
 
 <!-- ## Module Dependencies（Optional）
 
