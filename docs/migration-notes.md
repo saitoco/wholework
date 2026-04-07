@@ -30,6 +30,22 @@ Output strings that test assertions do not verify are easy to miss. Manually aud
 - [ ] Help / usage text (output of `--help`)
 - [ ] Success and completion messages
 
+### Comprehensive Japanese Residual Check
+
+Run this command after migration to catch any remaining Japanese characters across all migrated files:
+
+```bash
+grep -rP "[\x{3000}-\x{9FFF}]" <path-to-migrated-files>
+```
+
+This covers the full CJK Unified Ideographs block and adjacent ranges (U+3000–U+9FFF), including hiragana, katakana, kanji, and CJK symbols. Any matches indicate untranslated text that must be resolved before merging.
+
+Example — scan all skill files:
+
+```bash
+grep -rP "[\x{3000}-\x{9FFF}]" skills/
+```
+
 ### Tests
 
 - [ ] `@test` names translated to English (required — multibyte characters cause bats parse errors)
