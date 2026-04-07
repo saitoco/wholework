@@ -75,6 +75,22 @@ wholework を Claude Code のローカルプラグイン（`--plugin-dir` 形式
 - agents がプラグイン経由で正しく発見されることを確認（`/agents` 一覧に表示）
 - modules, scripts がスキル内から正しく参照されることを確認（代表的なスキルを1回実行）
 
+## spec レトロスペクティブ
+
+（spec フェーズの振り返りはここに記載）
+
+## code レトロスペクティブ
+
+### 設計からの逸脱
+- 特になし
+
+### 設計の不備・曖昧さ
+- `validate_command_hint_paths` 関数（validate-skill-syntax.py）が `~/.claude/scripts/` のみを検出していたが、`${CLAUDE_PLUGIN_ROOT}/scripts/` パターンへの更新が必要だった。さらに `validate_body_scripts_in_allowed_tools` のチェック文字列も `~/.claude/scripts/` ハードコードを残していたため、テスト232・234 が失敗した。Spec の実装ステップ4には「line 809 の内部文字列更新」のみ明示されており、`validate_body_scripts_in_allowed_tools` の `script_path_pattern` 変数は漏れていた。
+- テスト `validate-skill-syntax.bats` の line 682 アサーションが `*"~/.claude/scripts"*` だったため、置換後は `*"CLAUDE_PLUGIN_ROOT"*` に変更が必要だった（Spec には記載あり、正しく対応）。
+
+### 手戻り
+- `validate_body_scripts_in_allowed_tools` の `script_path_pattern = f"~/.claude/scripts/{script_name}"` が未更新で、テスト232・234 が失敗。修正対応で追加コミットが発生した。
+
 ## 注意事項
 
 - **`${CLAUDE_PLUGIN_ROOT}` の動作**: Claude Code がプラグイン実行時に設定する環境変数。Bash コードブロック内では自動展開される。スキル body テキスト（Read 指示等）中の `${CLAUDE_PLUGIN_ROOT}` も Claude Code が展開してコンテキストに渡す。
