@@ -810,7 +810,7 @@ def validate_modules_scripts_in_allowed_tools(skill_files: List[Path], modules_d
                 if script_path not in allowed_tools:
                     skill_rel = f'skills/{skill_file.parent.name}/SKILL.md'
                     errors.append(
-                        f"{skill_rel}: modules/{module_name} が参照するスクリプト '{script_name}' が allowed-tools に含まれていません"
+                        f"{skill_rel}: script '{script_name}' referenced by modules/{module_name} is not included in allowed-tools"
                     )
 
     return errors
@@ -846,7 +846,7 @@ def main() -> None:
 
     for path in input_paths:
         if not path.exists():
-            print(f"Error: '{path}' が存在しません", file=sys.stderr)
+            print(f"Error: '{path}' does not exist", file=sys.stderr)
             sys.exit(1)
 
         # Case 1: direct SKILL.md file path (e.g. skills/triage/SKILL.md)
@@ -872,7 +872,7 @@ def main() -> None:
             modules_dir = inferred_modules
 
     if not skill_files:
-        print("Error: 指定されたパスにスキルファイルが見つかりません", file=sys.stderr)
+        print("Error: no skill files found at the specified path(s)", file=sys.stderr)
         sys.exit(1)
 
     if modules_dir is None:
@@ -881,7 +881,7 @@ def main() -> None:
     total_errors = 0
     total_warnings = 0
 
-    print(f"検証対象: {len(skill_files)} スキル\n")
+    print(f"Validating: {len(skill_files)} skill(s)\n")
 
     for skill_file in skill_files:
         try:
@@ -905,12 +905,12 @@ def main() -> None:
     # Cross-file validation: check module-referenced scripts in allowed-tools
     modules_errors = validate_modules_scripts_in_allowed_tools(skill_files, modules_dir)
     if modules_errors:
-        print("\n[クロスファイル検証]")
+        print("\n[Cross-file validation]")
         for error in modules_errors:
             print(f"  ❌ Error: {error}")
             total_errors += 1
 
-    print(f"\n結果: {total_errors} エラー, {total_warnings} 警告")
+    print(f"\nResult: {total_errors} error(s), {total_warnings} warning(s)")
 
     if total_errors > 0:
         sys.exit(1)

@@ -78,9 +78,9 @@ while IFS= read -r issue_num; do
   while IFS= read -r fpath; do
     [[ -z "$fpath" ]] && continue
     if [[ -n "$ISSUE_FILE_PAIRS" ]]; then
-      ISSUE_FILE_PAIRS="${ISSUE_FILE_PAIRS}"$'\n'"${issue_num}\t${fpath}"
+      ISSUE_FILE_PAIRS="${ISSUE_FILE_PAIRS}"$'\n'"${issue_num}"$'\t'"${fpath}"
     else
-      ISSUE_FILE_PAIRS="${issue_num}\t${fpath}"
+      ISSUE_FILE_PAIRS="${issue_num}"$'\t'"${fpath}"
     fi
   done <<< "$FILES_IN_SPEC"
 

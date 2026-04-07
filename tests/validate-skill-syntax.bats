@@ -52,7 +52,7 @@ create_include() {
     create_valid_skill
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"0 エラー"* ]]
+    [[ "$output" == *"0 error"* ]]
 }
 
 @test "success: valid skill with context and agent" {
@@ -73,7 +73,7 @@ EOF
 
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"0 エラー"* ]]
+    [[ "$output" == *"0 error"* ]]
 }
 
 # --- allowed-tools tool name validation ---
@@ -134,7 +134,7 @@ EOF
 
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"0 エラー"* ]]
+    [[ "$output" == *"0 error"* ]]
 }
 
 @test "error: AskUserQuestion in allowed-tools is forbidden" {
@@ -173,7 +173,7 @@ EOF
 
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"0 エラー"* ]]
+    [[ "$output" == *"0 error"* ]]
 }
 
 # --- context field validation ---
@@ -214,7 +214,7 @@ EOF
 
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"0 エラー"* ]]
+    [[ "$output" == *"0 error"* ]]
 }
 
 # --- agent field validation ---
@@ -255,7 +255,7 @@ EOF
 
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"0 エラー"* ]]
+    [[ "$output" == *"0 error"* ]]
 }
 
 # --- body script path validation ---
@@ -304,7 +304,7 @@ EOF
 
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"0 エラー"* ]]
+    [[ "$output" == *"0 error"* ]]
 }
 
 @test "error: body references script not in allowed-tools" {
@@ -352,7 +352,7 @@ EOF
 
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"0 エラー"* ]]
+    [[ "$output" == *"0 error"* ]]
 }
 
 # --- shell-sensitive character validation ---
@@ -394,7 +394,7 @@ EOF
 
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"0 エラー"* ]]
+    [[ "$output" == *"0 error"* ]]
 }
 
 # --- decimal step validation ---
@@ -448,7 +448,7 @@ EOF
 
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"0 エラー"* ]]
+    [[ "$output" == *"0 error"* ]]
 }
 
 # --- Phase-only heading validation ---
@@ -497,7 +497,7 @@ EOF
 
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"0 エラー"* ]]
+    [[ "$output" == *"0 error"* ]]
 }
 
 @test "error: unknown verify command name is rejected" {
@@ -591,7 +591,7 @@ EOF
 
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"0 エラー"* ]]
+    [[ "$output" == *"0 error"* ]]
 }
 
 # --- multiple path specifications ---
@@ -602,20 +602,20 @@ EOF
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills/skill-a/SKILL.md" "$PROJECT_ROOT/skills/skill-b/SKILL.md"
     [ "$status" -eq 0 ]
     [[ "$output" == *"2 スキル"* ]]
-    [[ "$output" == *"0 エラー"* ]]
+    [[ "$output" == *"0 error"* ]]
 }
 
 @test "error: nonexistent path exits with error" {
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills/nonexistent"
     [ "$status" -eq 1 ]
-    [[ "$output" == *"存在しません"* ]]
+    [[ "$output" == *"does not exist"* ]]
 }
 
 @test "success: individual skill directory path is accepted" {
     create_valid_skill "myskill"
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills/myskill"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"0 エラー"* ]]
+    [[ "$output" == *"0 error"* ]]
 }
 
 # --- body tool usage vs allowed-tools validation ---
@@ -655,7 +655,7 @@ EOF
 
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"0 エラー"* ]]
+    [[ "$output" == *"0 error"* ]]
 }
 
 # --- tilde-claude-scripts in command hints ---
@@ -701,5 +701,5 @@ EOF
 
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"0 エラー"* ]]
+    [[ "$output" == *"0 error"* ]]
 }
