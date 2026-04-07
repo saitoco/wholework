@@ -37,6 +37,51 @@ Output strings that test assertions do not verify are easy to miss. Manually aud
 
 ---
 
+## Issue #22: Core Workflow Skills Migration (issue, spec, review)
+
+10 skill files were migrated from claude-config to wholework: `skills/issue/SKILL.md`, `skills/issue/mcp-call-guidelines.md`, `skills/issue/spec-test-guidelines.md`, `skills/spec/SKILL.md`, `skills/spec/codebase-search.md`, `skills/spec/external-spec.md`, `skills/spec/figma-design-phase.md`, `skills/review/SKILL.md`, `skills/review/external-review-phase.md`, and `skills/review/skill-dev-recheck.md`. All Japanese text (frontmatter `description` field, section headings, body text, inline comments) was translated to English. Existing stubs were replaced with the full content. Opportunistic simplification was applied following the approach from Issue #21.
+
+### Interface Changes
+
+No breaking interface changes. All cross-module references (`~/.claude/modules/xxx.md` paths, `~/.claude/scripts/` paths) are unchanged. Sub-file paths (`skills/issue/mcp-call-guidelines.md`, `skills/spec/codebase-search.md`, etc.) are also unchanged (same directory structure).
+
+**Frontmatter description translations (Japanese → English):**
+- `issue`: `課題化（\`/issue "タイトル"\` または \`/issue 123\`）...` → `Issue creation and refinement (\`/issue "title"\` or \`/issue 123\`)...`
+- `spec`: `仕様化（\`/spec 123\`）...` → `Issue specification (\`/spec 123\`)...`
+- `review`: `PRレビュー（\`/review 88\`）...` → `PR review (\`/review 88\`)...`
+
+**Section heading translations applied (Japanese → English):**
+- `課題化` → `Issue Creation and Refinement`
+- `仕様化` → `Issue Specification`
+- `PRレビュー` → `PR Review`
+- `手順` → `Steps`
+- `目的` → `Purpose`
+- `入力` → `Input`
+- `処理手順` → `Processing Steps`
+- `出力フォーマット` → `Output Format`
+- `完了報告` → `Completion Report`
+- `注意` → `Notes`
+- `自律実行モード（--auto）` → `Autonomous Mode (--auto)`
+- `新規Issue作成` → `New Issue Creation`
+- `既存Issue精査` → `Existing Issue Refinement`
+- `自動解決済みの曖昧ポイント` → `Auto-Resolved Ambiguity Points`
+- `UIデザインフェーズ` → `UI Design Phase`
+- `外部レビューステップ` → `External Review Step`
+- `skill 開発再チェック` → `Skill Development Re-check`
+- `コードベース横断調査` → `Codebase Cross-Cutting Investigation`
+- `外部仕様の確認` → `External Specification Check`
+
+**Commit message translations:**
+- `review/SKILL.md`: `"Add review retrospective for issue #$ISSUE_NUMBER"` (co-author tag updated to Sonnet 4.6)
+
+**Opportunistic simplifications applied:**
+- Verbose step-by-step sub-issue creation procedures compressed to intent-level descriptions while preserving all behavioral details
+- Repeated cross-reference patterns (e.g., "same as New Issue Creation Step N") preserved as cross-references where appropriate
+
+**Private repo references removed:** None found. All `~/.claude/` path references are retained unchanged (installed via `install.sh` symlinks at the same paths).
+
+---
+
 ## Issue #21: Simple Skills Migration (merge, code, auto, verify)
 
 5 skill files were migrated from claude-config to wholework: `skills/merge/SKILL.md`, `skills/code/SKILL.md`, `skills/auto/SKILL.md`, `skills/verify/SKILL.md`, and `skills/verify/browser-verify-phase.md`. All Japanese text (frontmatter `description` field, section headings, body text, inline comments) was translated to English. Existing stubs were replaced with the full content. Opportunistic simplification was applied following the approach from Issue #18.
