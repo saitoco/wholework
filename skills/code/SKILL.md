@@ -268,7 +268,7 @@ gh pr create --title "Issue #$NUMBER: {summary of changes}" --base "${BASE_BRANC
 Include `closes #N` in PR body only when BASE_BRANCH is `main`. If BASE_BRANCH is not main, omit `closes #N` and instead note: "Since the base branch is `{BASE_BRANCH}`, please close the Issue manually at final merge."
 
 **PR title format:**
-- Use the format `Issue #N: {summary of changes}` in Japanese
+- Use the format `Issue #N: {summary of changes}` (concise English summary)
 - Example: `Issue #48: Fix Mermaid diagram parse error`
 
 PR body should include:
