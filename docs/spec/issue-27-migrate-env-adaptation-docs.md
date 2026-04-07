@@ -71,3 +71,27 @@ private リポジトリに散在する環境適応アーキテクチャドキュ
 - **ソースファイルの frontmatter**: source の `environment-adaptation.md` は `type: project` を持つ。新規ファイルも `type: project` を使用する
 - **モジュール参照パス**: ドキュメント内でモジュールを参照する際は相対パス（`modules/xxx-adapter.md`）形式で記述する（インストール先ではなくリポジトリ相対パス）
 - **Domain Files テーブルの注記**: Layer 3 の Domain Files テーブルは現時点の状態であり、`(exhaustive)` と注記する
+
+## issue レトロスペクティブ
+
+### 判断経緯
+- ファイル配置先を `docs/adapter-contract.md` とした（adapter は modules/ に実装があるが、契約テンプレートはユーザー向けドキュメントのため docs/ が適切）
+- 「移植」の範囲は CLAUDE.md の Migration Guidelines に従い、英語翻訳 + wholework 向けリファクタリングとした
+
+### 重要な方針決定
+- ユーザーが `docs/` にドキュメントとして配置する方針を選択
+
+### 受け入れ条件の変更理由
+- 特になし（初回作成のため変更なし）
+
+## spec レトロスペクティブ
+
+### 軽微な観察
+- issue レトロスペクティブで「`docs/adapter-contract.md`」という配置先が言及されているが、Issue 本文の受け入れ条件は `docs/environment-adaptation.md` を参照している。Issue タイトルも "to docs/" となっており、最終的には `docs/environment-adaptation.md` として統合する方針が Issue 本文で確定している
+
+### 判断経緯
+- `--when` 修飾子は source に "未実装（#825）" と明記されている。アーキテクチャ全体像を伝えるドキュメントとして、計画中の機能も注記付きで含めることを自動解決した
+- adapter 契約テンプレートを Layer 4 のサブセクションとして統合する構成は Issue 本文に明示されており、設計の曖昧さなし
+
+### 不確定要素の解決
+- 特になし（ソースファイルが private repo に存在し、受け入れ条件も明確に定義されていた）
