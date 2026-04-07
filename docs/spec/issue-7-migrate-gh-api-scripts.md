@@ -159,3 +159,30 @@
 
 ### 受け入れ条件の検証困難さ
 - `command "bats tests/gh-graphql.bats"` および `command "bats tests/gh-label-transition.bats"` の受け入れチェックが CI ジョブ未設定のため、ローカル bats 実行で代替した。CI workflow（例: `.github/workflows/test.yml`）の追加により、今後は自動検証が可能になる
+
+## verify レトロスペクティブ
+
+### 各フェーズの振り返り
+
+#### spec
+- 受け入れ条件は具体的かつ検証可能。file_exists/file_not_contains/command/grep の組み合わせで15条件が明確に自動検証できた
+- 「マージ後」セクションの3条件（全 bats テスト、実行権限、install.sh）は verify ヒントなしのため自動検証対象外だったが、重要なリグレッションリスクになり得る
+
+#### design
+- 設計と実装の主な乖離（gh-check-blocking.sh の PATH 優先方式）は code レトロに記録済み。設計書としての品質は高く、verify 時点で問題を再発見する必要はなかった
+
+#### code
+- gh-check-blocking.sh のパス解決変更（SCRIPT_DIR 直接参照 → PATH 優先 + SCRIPT_DIR フォールバック）が唯一の手戻り。bats テストのモック方式（PATH 経由）と設計の「SCRIPT_DIR に統一」が矛盾していたことが原因。spec 設計時にテストのモック方式を考慮すれば防げた
+
+#### review
+- CONSIDER 指摘（引数解析パターンの潜在的誤マッチ）は軽微で機能には影響なし。レビューで CI 不在への対応（ローカル bats 実行）の判断が適切だったことが verify で確認された
+
+#### merge
+- PR #10 は `closes #7` でクローズ済み。コンフリクトなし
+
+#### verify
+- 全15条件 PASS。`command` ヒント（bats テスト実行）は非インタラクティブモードで直接実行し正常動作を確認
+- CI workflow 未整備のため `command` ヒントをローカル実行で検証。review レトロに記録されていた懸念通り、CI 追加が今後の優先事項
+
+### 改善提案
+- bats テスト（特に `gh-graphql.bats` と `gh-label-transition.bats`）を CI で自動実行する GitHub Actions workflow を追加すると、`command` ヒントの verify が CI 参照で代替可能になり、ローカル環境依存を解消できる
