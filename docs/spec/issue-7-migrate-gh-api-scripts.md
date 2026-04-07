@@ -147,3 +147,15 @@
 
 ### 不確定要素の解決
 - 特になし（移植作業のため外部仕様への依存なし）
+
+## review レトロスペクティブ
+
+### 設計と実装の乖離パターン
+- 特になし。唯一の乖離（gh-check-blocking.sh の PATH 優先方式）は code レトロスペクティブに既記録されており、機能要件は達成されている
+
+### 頻出する指摘事項
+- CONSIDER 指摘 1 件（gh-check-blocking.sh の引数解析パターン `[0-9]*` が `1abc` に誤マッチする可能性）のみ。同種の繰り返しなし
+- 移植作業としてスコープが明確だったため、バグや仕様乖離は最小限に抑えられた
+
+### 受け入れ条件の検証困難さ
+- `command "bats tests/gh-graphql.bats"` および `command "bats tests/gh-label-transition.bats"` の受け入れチェックが CI ジョブ未設定のため、ローカル bats 実行で代替した。CI workflow（例: `.github/workflows/test.yml`）の追加により、今後は自動検証が可能になる
