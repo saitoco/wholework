@@ -1,8 +1,398 @@
 ---
 name: issue
-description: Issue creation and refinement skill
+description: Issue creation and refinement (`/issue "title"` or `/issue 123`). Creates new issues or refines/reformats existing ones. Use when creating issues, defining requirements, or standardizing issue content.
+allowed-tools: Bash(gh issue create:*, gh issue view:*, gh issue edit:*, gh issue close:*, gh issue list:*, gh label create:*, ~/.claude/scripts/gh-issue-edit.sh:*, ~/.claude/scripts/gh-graphql.sh:*, ~/.claude/scripts/gh-issue-comment.sh:*, ~/.claude/scripts/get-issue-size.sh:*, ~/.claude/scripts/opportunistic-search.sh:*, ~/.claude/scripts/gh-check-blocking.sh:*, ~/.claude/scripts/gh-label-transition.sh:*), Glob, Grep, Write, Read, WebFetch, ToolSearch, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
-# Issue
+# Issue Creation and Refinement
 
-Create or refine a GitHub Issue.
+If ARGUMENTS is a number, refine an existing issue; if a string, create a new one.
+
+If ARGUMENTS contains `--help`, read `~/.claude/modules/skill-help.md` and output help following the "Processing Steps" section. Do not execute further steps.
+
+---
+
+## New Issue Creation
+
+### Step 1: Collect Basic Information
+
+Use AskUserQuestion to collect:
+1. Background (why is this needed)
+2. Purpose (what to achieve)
+3. Acceptance criteria (completion conditions, multiple allowed)
+
+### Step 2: Reference Steering Documents (if present)
+
+Check whether the following steering documents exist under `docs/` using Glob, then read only those that exist:
+
+- `docs/product.md` — project vision, Non-Goals, Terms (terminology consistency)
+- `docs/tech.md` — Forbidden Expressions (to avoid prohibited terms)
+
+**If none exist, skip this step and proceed to the next.**
+
+Use the referenced documents in subsequent steps for vision alignment, terminology consistency, and forbidden expression avoidance.
+
+### Step 3: Ambiguity Detection
+
+Read `~/.claude/modules/ambiguity-detector.md` and check acceptance criteria against the pattern table.
+
+New issue creation flow has no Size yet (treat as unset). Follow the "size routing table" in `modules/ambiguity-detector.md` — extract **at most 3** ambiguity points.
+
+### Step 4: Classify Acceptance Criteria and Assign Acceptance Checks
+
+Read `~/.claude/modules/verify-patterns.md` and follow the "Processing Steps" section guidelines to design acceptance check patterns.
+
+After ambiguity detection, classify each acceptance criterion as "pre-merge" or "post-merge" and assign acceptance checks.
+
+**Classification guidance (examples):**
+
+| Pre-merge (auto-verified) | Post-merge |
+|--------------------------|-----------|
+| File existence/content | Environment reflection (symlinks, etc.) |
+| Documentation updates | Command execution verification |
+| Code quality/structure | Production environment behavior |
+| Test results | User experience verification |
+
+**Acceptance check (`<!-- verify: ... -->`) assignment:**
+
+- **Always assign**: file existence/absence, specific text presence (mechanically verifiable)
+- **Conditionally assign**: command execution results (may omit if CI covers it)
+- **Do not assign**: subjective judgment, external environment dependency, user experience
+
+Assign hints on a best-effort basis. Inaccuracies are handled by `/verify`'s AI fallback.
+
+**Prefer dedicated commands over `command` hints:**
+
+`command` hints run generic shell commands and become UNCERTAIN in `/review` safe mode. Use dedicated commands when possible:
+
+- **Use dedicated commands for**: file/directory existence, text containment, JSON field values, symlink checks
+- **Use `command` hints for**: bats test runs, CI integration, compound condition verification
+
+**Supported commands (exhaustive):**
+
+| Command | Syntax | Purpose |
+|---------|--------|---------|
+| `file_exists` | `file_exists "path"` | File existence |
+| `file_not_exists` | `file_not_exists "path"` | File absence |
+| `dir_exists` | `dir_exists "path"` | Directory existence |
+| `dir_not_exists` | `dir_not_exists "path"` | Directory absence |
+| `file_contains` | `file_contains "path" "text"` | Text containment |
+| `file_not_contains` | `file_not_contains "path" "text"` | Text absence |
+| `grep` | `grep "pattern" "path"` | Regex match |
+| `command` | `command "cmd"` | Command execution (exit 0 = success). **Note: runs with user confirmation in `/verify`. Only specify safe test/verification commands** |
+| `json_field` | `json_field "path" ".key" "value"` | JSON field value |
+| `section_contains` | `section_contains "path" "heading" "text"` | Text within a markdown section (heading to next same-or-higher-level heading) |
+| `section_not_contains` | `section_not_contains "path" "heading" "text"` | Text absence within a markdown section |
+| `symlink` | `symlink "path" "target"` | Symlink verification |
+| `http_status` | `http_status "URL" "CODE"` | HTTP response code. Safe mode blocks private IPs (including localhost) |
+| `html_check` | `html_check "URL" "selector" "--exists"` / `html_check "URL" "selector" "--count=N"` | HTML structure verification using CSS selectors |
+| `api_check` | `api_check "URL" "jq_expression" "expected_value"` | JSON API response verification (GET only) |
+| `http_header` | `http_header "URL" "Header-Name" "expected_value"` | HTTP response header value |
+| `http_redirect` | `http_redirect "source_URL" "expected_destination" "expected_status"` | HTTP redirect verification |
+| `build_success` | `build_success "CMD"` | Build command success. **Note: only in `/verify` (full) mode. Use only safe build/validation commands** |
+| `lighthouse_check` | `lighthouse_check "URL" "category" "min_score"` | Lighthouse score. **Note: only in `/verify` (full) mode. Requires Lighthouse CLI** |
+| `browser_check` | `browser_check "url" "selector" ["expected_text"]` | Browser element existence/text. **Note: only in `/verify` (full) mode. Requires MCP Playwright** |
+| `browser_screenshot` | `browser_screenshot "url" "description"` | Browser screenshot with AI visual judgment. **Note: only in `/verify` (full) mode** |
+| `mcp_call` | `mcp_call "tool_name" "description"` | MCP tool call with AI judgment. Use `server_name__tool_name` format. **Note: only in `/verify` (full) mode** |
+| `github_check` | `github_check "gh_command" "expected_value"` | GitHub state verification. Safe mode: read-only operations only |
+
+When MCP tools are available, use ToolSearch with `select:<tool_name>` to confirm existence and read-only nature before proposing `mcp_call` hints.
+
+**`--when` modifier (conditional verification):**
+
+Append `--when="shell_condition"` to any check to skip it when the condition is not met (returns SKIPPED):
+
+| Pattern | `--when` condition |
+|---------|--------------------|
+| Browser required | `--when="command -v browser-use \|\| test -n \"$PLAYWRIGHT_MCP\""` |
+| Preview URL required | `--when="test -n \"$PREVIEW_URL\""` |
+| MCP tool required | `--when="test -n \"$MCP_TOOLS\""` |
+| Specific CLI required | `--when="command -v lighthouse"` |
+| CI only | `--when="test -n \"$CI\""` |
+
+**MCP tool detection and mcp_call proposal (conditional):**
+
+Read `~/.claude/modules/detect-config-markers.md` and retrieve `MCP_TOOLS`. If non-empty, read `skills/issue/mcp-call-guidelines.md` and follow the "Declaration Priority" section. If empty, skip `mcp_call` hints.
+
+**Assign verify-type tags to post-merge conditions:**
+
+Read `~/.claude/modules/verify-classifier.md` and assign `<!-- verify-type: auto|opportunistic|manual -->` tags to each post-merge condition.
+
+### Step 5: Clarification Questions
+
+If ambiguity points were found, process them as follows.
+
+**Priority sort:**
+
+Sort ambiguity points from Step 3 in descending order of impact (scope of effect on acceptance criteria text, degree of propagation to implementation approach).
+
+**Auto-resolution (for L/XL or all sizes in new issue flow):**
+
+After priority sorting, check auto-resolution conditions from lowest-priority items upward. Conditions:
+- Uniquely inferrable from existing codebase patterns
+- Same judgment made in past similar issues (in retrospectives)
+- Acceptance criteria text is unaffected regardless of which option is chosen
+
+Items not meeting any condition are presented to the user.
+
+**Pre-investigation (for each unresolved ambiguity point):**
+
+Refer to `~/.claude/modules/ambiguity-detector.md`'s "Sources to investigate" column and investigate sequentially (no sub-agents):
+
+| Aspect | Content | Source |
+|--------|---------|--------|
+| Existing patterns | Similar implementations/conventions | Project source code (Grep/Read) |
+| Past knowledge | Retrospectives from similar issues/specs | `docs/spec/*.md`. Skip if absent |
+| Trade-offs | Pros and cons of each option | Codebase + Steering Docs |
+
+Format with investigation results + recommended option + alternative + confirmation question, or with "no related patterns" note as fallback.
+
+### Step 6: Create Issue
+
+Read `~/.claude/modules/title-normalizer.md` and normalize the title. Create the issue:
+
+1. `mkdir -p .tmp`
+2. Write body to `.tmp/new-issue-body.md`
+3. `gh issue create --title "$TITLE" --body-file .tmp/new-issue-body.md`
+4. `rm -f .tmp/new-issue-body.md`
+
+### Step 7: Apply Labels
+
+```bash
+~/.claude/scripts/gh-label-transition.sh $NUMBER issue
+```
+
+### Step 8: Scope Assessment (sub-issue splitting)
+
+Read `~/.claude/modules/size-workflow-table.md` and use its XL definition (11+ files or multiple independent features) as the split threshold.
+
+Analyze the issue background and acceptance criteria to determine whether sub-issue splitting is needed.
+
+**Split criteria (examples, Claude judgment):**
+- Changes span multiple independent features
+- Staged release is preferable
+- Scope exceeds a single PR
+- **Risk profile differences**: high-risk vs. low-risk changes benefit from separation
+- **Sequential validation**: A can be merged/validated before B
+- **Independent testability**: each part testable independently
+
+**When splitting is not needed (skip):** small changes (single feature, few files) or clear single-scope acceptance criteria.
+
+**Changing Size when no split is needed:**
+If Size is `XL` but splitting is not needed, read `~/.claude/modules/project-field-update.md` and update Size XL → L (steps 1→2→3→4). Use label fallback (step 5) only if GraphQL fails. When GitHub Projects is not configured, step 1 returns empty `projectsV2.nodes` and automatically falls through to step 5.
+
+**Procedure:**
+1. Propose split plan via AskUserQuestion (sub-issue count, scope of each, dependencies)
+2. After approval, create sub-issues with `gh issue create`
+3. Redistribute acceptance criteria; retain only cross-cutting conditions in the parent
+3a. Run lightweight refinement loop per sub-issue (steering doc alignment, verify hint assignment, lightweight ambiguity detection, auto-resolution, record unresolved points, update body)
+4. Set parent-child relationships via `addSubIssue` GraphQL mutation
+5. Set sub-issue dependencies with `addBlockedBy` if applicable
+6. Apply `phase/issue` label to each sub-issue
+7. Run lightweight triage for each sub-issue (skip Steps 1, 1.5, 7; inherit Type/Priority from parent; determine Size individually per sub-issue scope)
+8. Parent phase management: auto-close when all sub-issues done (no cross-cutting conditions); phase/verify + notify when cross-cutting conditions remain
+
+**GraphQL commands (examples):**
+```bash
+# Get issue ID
+mapfile -t _id_arr < <(~/.claude/scripts/gh-graphql.sh --cache --query get-issue-id -F num=$NUM --jq '.data.repository.issue.id')
+ID="${_id_arr[0]}"
+
+# Set parent-child
+~/.claude/scripts/gh-graphql.sh --query add-sub-issue -F parentId="$PARENT_ID" -F childId="$CHILD_ID"
+
+# Set dependency
+~/.claude/scripts/gh-graphql.sh --query add-blocked-by -F issueId="$FRONTEND_ID" -F blockingId="$BACKEND_ID"
+```
+
+### Step 9: Issue Retrospective
+
+Post a retrospective comment to the issue covering: judgment rationale for ambiguity resolution, key policy decisions from Q&A, and reasons for acceptance criteria changes. Always create the section (write "Nothing to note" if no content).
+
+```bash
+mkdir -p .tmp
+# write to .tmp/issue-comment-$NUMBER.md
+~/.claude/scripts/gh-issue-comment.sh $NUMBER .tmp/issue-comment-$NUMBER.md
+rm -f .tmp/issue-comment-$NUMBER.md
+```
+
+### Step 10: Opportunistic Verification
+
+If `opportunistic-verify: true` is set in `.wholework.yml`, read `~/.claude/modules/opportunistic-verify.md` and follow "Processing Steps". Skill name: `/issue`. Skip if not set.
+
+---
+
+## Existing Issue Refinement
+
+### Step 1: Fetch Issue Information
+
+```bash
+gh issue view $NUMBER --json body,title,labels
+gh issue view $NUMBER --json comments
+```
+
+Detect embedded links in body and comments; fetch GitHub-hosted attachments via WebFetch or Read. Use attachment content and all comments as context for subsequent steps.
+
+### Step 2: Auto-chain to triage (if `triaged` label is absent)
+
+If `triaged` is absent from `labels`: read `skills/triage/SKILL.md` and run the "Single Execution" section starting from Step 2 (title normalization). Output an intermediate triage results table after completion.
+
+If `triaged` is present: skip this step.
+
+### Step 3: Label Transition
+
+```bash
+~/.claude/scripts/gh-label-transition.sh $NUMBER issue
+```
+
+### Step 4: Reference Steering Documents (if present)
+
+Same as New Issue Creation Step 2.
+
+### Step 5: Ambiguity Detection
+
+Read `~/.claude/modules/ambiguity-detector.md`. Get Size with `get-issue-size.sh $NUMBER`. Detection limit: XS/S/M or unset → **at most 3**; L/XL → **at most 5**.
+
+### Step 6: Classify Acceptance Criteria and Assign Acceptance Checks
+
+Same as New Issue Creation Step 4. Propose "Pre-merge" / "Post-merge" section split for existing issues lacking sections.
+
+### Step 7: Clarification Questions
+
+Collect ambiguity points and missing information. Process with priority sort → auto-resolution → pre-investigation → user Q&A (same approach as New Issue Creation Step 5).
+
+After confirming auto-resolved items, record them in an "Auto-Resolved Ambiguity Points" section appended to the issue body (combined with Step 8 body update). Skip the record if no items were auto-resolved.
+
+### Step 8: Update Issue Body
+
+`mkdir -p .tmp`, write to `.tmp/issue-body-$NUMBER.md`, update with `gh-issue-edit.sh $NUMBER .tmp/issue-body-$NUMBER.md`, delete with `rm -f .tmp/issue-body-$NUMBER.md`.
+
+> **Note**: Always use the Write tool for temp files. Shell redirects trigger confirmation prompts.
+
+### Step 9: Set Blocked-by Dependencies
+
+```bash
+~/.claude/scripts/gh-check-blocking.sh $NUMBER
+```
+
+Exit code 0: no open blockers. Exit code 2: open blockers (relationship set, continue). Exit code 1: error (warn and continue).
+
+### Step 10: Scope Assessment (sub-issue splitting)
+
+Read `~/.claude/modules/size-workflow-table.md`.
+
+**For L/XL issues: run parallel investigation (Step 10a → 10b → 10c).**
+
+#### Step 10a: Parallel Investigation (Scope / Risk / Precedent Agents)
+
+Get steering doc paths with Glob. Launch 3 agents in parallel:
+
+```text
+Task(subagent_type="scope-agent", description="Scope investigation",
+  prompt="Issue=$NUMBER, Steering Documents=$STEERING_DOCS_PATHS, Issue body=<full text>")
+
+Task(subagent_type="risk-agent", description="Risk investigation",
+  prompt="Issue=$NUMBER, Issue body=<full text>")
+
+Task(subagent_type="precedent-agent", description="Precedent investigation",
+  prompt="Issue=$NUMBER, Issue body=<full text>")
+```
+
+On failure: fall back to standard scope assessment.
+
+#### Step 10b: Split Proposal (integrate results)
+
+Integrate outputs into a structured split proposal: sub-issue boundaries (from scope + risk data), size estimates, parallelization groups, key design decisions (from precedent data). Present via AskUserQuestion.
+
+#### Step 10c: Create sub-issues (after approval)
+
+Run the standard sub-issue creation flow (New Issue Creation Step 8, procedures 2–8).
+
+---
+
+(For non-L/XL or fallback: run standard split assessment. Size XL → L change applies when no split is needed.)
+
+### Step 11: Issue Retrospective
+
+Same as New Issue Creation Step 9.
+
+### Step 12: Opportunistic Verification
+
+Same as New Issue Creation Step 10.
+
+---
+
+## Label Transition on Close
+
+```bash
+gh issue close $NUMBER --reason "not planned" --comment "close reason"
+~/.claude/scripts/gh-label-transition.sh $NUMBER done
+```
+
+---
+
+## Standard Format
+
+```markdown
+## Background
+(why this is needed)
+
+## Purpose
+(what to achieve)
+
+## Acceptance Criteria
+
+### Pre-merge (auto-verified)
+- [ ] <!-- verify: file_exists "path" --> Condition 1 (subject, timing, and criteria clearly stated)
+- [ ] <!-- verify: file_contains "path" "text" --> Condition 2 (subject, timing, and criteria clearly stated)
+
+### Post-merge
+- [ ] Condition 3 (subject, timing, and criteria clearly stated) <!-- verify-type: manual -->
+
+## Related Issues
+Related to #XX
+```
+
+---
+
+## Acceptance Criteria Writing Guide
+
+**Bad examples (ambiguous):**
+- [ ] Verify behavior
+- [ ] Errors are handled appropriately
+
+**Good examples (clear, pre-merge):**
+- [ ] <!-- verify: file_exists "skills/review/SKILL.md" --> `skills/review/SKILL.md` has been created
+- [ ] <!-- verify: file_contains "CLAUDE.md" "/review" --> CLAUDE.md has `/review` description added
+
+**Good examples (clear, post-merge):**
+- [ ] User accesses the health check URL in production after merge and confirms 200 response <!-- verify-type: manual -->
+- [ ] Running `/review {PR number}` in Claude Code confirms that a review comment is posted to the PR <!-- verify-type: opportunistic -->
+
+**Do not include test counts (use `command` hints for verification):**
+
+Bad:
+- [ ] 12 bats tests all pass
+
+Good:
+- [ ] <!-- verify: command "bats tests/scripts/test-name.bats" --> All bats tests pass
+
+---
+
+## Completion Report
+
+After opportunistic verification, get Size with `get-issue-size.sh $NUMBER` and guide the next action.
+
+**For XL issues (after sub-issue splitting)**: list sub-issues with unresolved "Needs Refinement" points and recommend running `/issue N` for each. Do not list sub-issues without needs-refinement points.
+
+- **Size is XS only**: transition to `phase/ready`, then guide "Run `/auto $NUMBER`":
+  ```bash
+  ~/.claude/scripts/gh-label-transition.sh $NUMBER ready
+  ```
+- **All other cases (S/M/L/XL/unset)**: guide "Run `/spec $NUMBER`."
+
+---
+
+## Behavior Test Recommendations
+
+If `scripts/validate-skill-syntax.py` exists, read `skills/issue/spec-test-guidelines.md` and follow its guidelines. Skip if the file does not exist.
