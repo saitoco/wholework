@@ -82,7 +82,7 @@ Skip this step if `HAS_CLAUDE_CODE_REVIEW=false` or if Claude Code Review timed 
 
 **With `--review-only` mode**: skip 7.4 and proceed to Step 8.
 
-After review completion, if issues exist, apply them using the same procedure as 6.2:
+After review completion, if issues exist, apply them using the same procedure as 7.2:
 
 1. **Assess each issue** (requires fix / does not require fix)
 2. **Fix work**: Edit → git add → git commit → git push

@@ -152,7 +152,7 @@ gh pr view "$NUMBER" --json files
 
 Detect external review tool settings and handle waiting/issue resolution for enabled tools. Also detect the `review-bug` independent control marker.
 
-### 6.0. External Review Tool Detection
+### 7.0. External Review Tool Detection
 
 Read `skills/review/external-review-phase.md` and follow the "Step 7 Prerequisites" section (which internally reads `modules/detect-config-markers.md` to detect `.wholework.yml` settings).
 
@@ -175,7 +175,7 @@ After detection, follow `external-review-phase.md`'s Step 7 procedure for extern
 
 ## Step 8: Static Acceptance Criteria Verification
 
-### 7.0. Preview URL Resolution (if acceptance checks contain `{{base_url}}`)
+### 8.0. Preview URL Resolution (if acceptance checks contain `{{base_url}}`)
 
 If any acceptance check contains `{{base_url}}`, resolve the Preview URL before passing to verify-executor:
 
@@ -252,9 +252,9 @@ gh pr view "$NUMBER" --json statusCheckRollup
 
 ## Step 10: Multi-perspective Code Review (parallel execution)
 
-**In light mode**: if `REVIEW_DEPTH=light` and Issue number was extracted (Step 7 ran), run 1-agent lightweight integrated review instead of 2-agent parallel (see 9.0). If Issue number was not extracted and Step 7 was skipped, run full mode (9.1–9.3) regardless of `REVIEW_DEPTH`.
+**In light mode**: if `REVIEW_DEPTH=light` and Issue number was extracted (Step 7 ran), run 1-agent lightweight integrated review instead of 2-agent parallel (see 10.0). If Issue number was not extracted and Step 7 was skipped, run full mode (10.1–10.3) regardless of `REVIEW_DEPTH`.
 
-### 9.0. Lightweight Integrated Review (REVIEW_DEPTH=light only)
+### 10.0. Lightweight Integrated Review (REVIEW_DEPTH=light only)
 
 Run only when `REVIEW_DEPTH=light` and Issue number is extractable.
 
@@ -284,21 +284,21 @@ If `SKIP_REVIEW_BUG=true`, specify in the prompt to run only review-light's spec
    ```
 
 5. **Pass results to Step 10**:
-   - Extract `path`, `line`, `body`, `severity` from `review-light` output; generate line comments JSON and Review body (same processing as full mode 9.2)
+   - Extract `path`, `line`, `body`, `severity` from `review-light` output; generate line comments JSON and Review body (same processing as full mode 10.2)
    - Write to `.tmp/review-comments-$NUMBER.json` and `.tmp/review-body-$NUMBER.md`
 
-6. **Proceed to Step 10** (skip 9.1–9.3)
+6. **Proceed to Step 10** (skip 10.1–10.3)
 
 Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or fallback).
 
-### 9.1. Group Definitions
+### 10.1. Group Definitions
 
 | Group | Aspects | Model | Agent file |
 |-------|---------|-------|-----------|
 | **Spec: spec/documentation** | Spec divergence, documentation consistency, steering document alignment | **opus** | `~/.claude/agents/review-spec.md` |
 | **Bug: bug/logic error detection** | HIGH SIGNAL bugs, logic errors, security issues | **opus** | `~/.claude/agents/review-bug.md` (×2 parallel) |
 
-### 9.2. Parallel Execution Steps
+### 10.2. Parallel Execution Steps
 
 1. **Save PR diff to file**:
    - `mkdir -p .tmp`
@@ -352,17 +352,17 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
    - Write line comments array to `.tmp/review-comments-$NUMBER.json` (JSON array format)
    - Write Review body (acceptance criteria table + CI status + General Comments + issue count summary) to `.tmp/review-body-$NUMBER.md`
 
-5. **Pass integrated results to Step 9.3**:
-   - Run 2-stage verification on issues collected from review-bug×2 via verification sub-agents (see 9.3)
+5. **Pass integrated results to Step 10.3**:
+   - Run 2-stage verification on issues collected from review-bug×2 via verification sub-agents (see 10.3)
    - review-spec results are passed directly to Step 10 (no verification needed)
 
-### 9.3. Verification Sub-agents (2-stage Bug Issue Verification)
+### 10.3. Verification Sub-agents (2-stage Bug Issue Verification)
 
 Run only when `SKIP_REVIEW_BUG=false` (skip if review-bug was skipped).
 
 Launch verification sub-agents (Opus) in parallel for each issue collected from review-bug×2 to filter false positives. Issue limit: **10**; excess issues are passed to Step 10 without verification.
 
-1. **Collect issues**: list review-bug issues from 9.2 results
+1. **Collect issues**: list review-bug issues from 10.2 results
 2. **Launch verification sub-agents in parallel** (one inline prompt per issue):
 
    ```text
@@ -398,13 +398,13 @@ Reason: {explanation}"""
    - Rejected: {issue summary} → Reason: {REJECT reason}
    ```
 
-5. **Pass integrated results to Step 10**: use `.tmp/review-body-$NUMBER.md` and `.tmp/review-comments-$NUMBER.json` in Step 10
+5. **Pass integrated results to Step 11**: use `.tmp/review-body-$NUMBER.md` and `.tmp/review-comments-$NUMBER.json` in Step 11
 
 ---
 
 ## Step 11: Post Review Results
 
-Integrate Steps 7 (acceptance criteria verification), 8 (CI status), and 9 (parallel review) and post as a GitHub Pull Request Review.
+Integrate Steps 7 (acceptance criteria verification), 8 (CI status), and 10 (parallel review) and post as a GitHub Pull Request Review.
 
 1. `mkdir -p .tmp`
 2. **When Step 9 was run (both full and light mode)**: `.tmp/review-body-$NUMBER.md` already generated in Step 9 (no Write needed). **When Step 9 was entirely skipped** (only when Issue number was not extractable and Step 7 was also skipped): write Review body (acceptance criteria table + CI status) to `.tmp/review-body-$NUMBER.md`
@@ -505,14 +505,14 @@ Fixes should be handled by the user or Copilot.
 
 After posting Step 10 review results, if Claude review issues exist:
 
-### 11.1. Issue Priority Assessment
+### 12.1. Issue Priority Assessment
 
 Classify each issue:
 - **MUST**: must fix (spec divergence, security, bugs, unverified uncertainty, etc.)
 - **SHOULD**: strongly recommended fix (maintainability, consistency, robustness, etc.)
 - **CONSIDER**: items to consider (style, optimization, future extensibility, etc.)
 
-### 11.2. Fix Work
+### 12.2. Fix Work
 
 Fix all MUST issues. Claude decides whether to fix SHOULD/CONSIDER issues.
 
@@ -522,18 +522,18 @@ Fix all MUST issues. Claude decides whether to fix SHOULD/CONSIDER issues.
 4. **Commit with `git commit -m "Address review feedback: {fix summary}"`**
 5. **Push with git push**
 
-### 11.3. Lightweight Re-check
+### 12.3. Lightweight Re-check
 
-If `scripts/validate-skill-syntax.py` exists, read `skills/review/skill-dev-recheck.md` and follow "Step 11.3: Re-run validate-skill-syntax".
+If `scripts/validate-skill-syntax.py` exists, read `skills/review/skill-dev-recheck.md` and follow "Step 12.3: Re-run validate-skill-syntax".
 
 After fixes, run a lightweight re-check focused on changed areas:
 - Light re-check (not full Step 7+9 re-run) focused on changed areas
 - Check for new issues
 - Re-run tests/validation
-- If new MUST issues found in re-check, return to Step 11.2
+- If new MUST issues found in re-check, return to Step 12.2
 - **Retry limit**: 3 times total (initial review + 2 re-checks)
 
-### 11.4. Record Fix Results
+### 12.4. Record Fix Results
 
 ```markdown
 ## Claude Review Response
@@ -555,7 +555,7 @@ After fixes, run a lightweight re-check focused on changed areas:
 
 After Step 11 issue resolution (including when Step 11 was skipped), check consistency between changes and acceptance criteria.
 
-### 12.1. Policy Change Detection
+### 13.1. Policy Change Detection
 
 Analyze the following implementation changes for policy changes:
 - All implementation changes made in Step 7 (Copilot review; including 7.2)
@@ -574,7 +574,7 @@ Assess whether any changes contradict the acceptance criteria (acceptance check 
 
 **If no policy changes** (or no implementation changes in Step 7/12): skip this step and proceed to Step 13.
 
-### 12.2. Update Issue Body (only on policy change detection)
+### 13.2. Update Issue Body (only on policy change detection)
 
 1. `gh issue view "$ISSUE_NUMBER" --json body -q .body` to get current Issue body
 2. Identify acceptance conditions invalidated by policy changes
@@ -582,7 +582,7 @@ Assess whether any changes contradict the acceptance criteria (acceptance check 
 4. Write to `.tmp/issue-body-$ISSUE_NUMBER.md`
 5. `~/.claude/scripts/gh-issue-edit.sh "$ISSUE_NUMBER" .tmp/issue-body-$ISSUE_NUMBER.md`
 
-### 12.3. Post Change Reason Comment (only on policy change detection)
+### 13.3. Post Change Reason Comment (only on policy change detection)
 
 Format:
 ```markdown
@@ -616,7 +616,7 @@ rm -f .tmp/issue-acceptance-update-$ISSUE_NUMBER.md
 
 Compile Steps 7 (Copilot response) and 12 (Claude response) and post as a second PR comment.
 
-### 13.1. Generate Summary Body
+### 14.1. Generate Summary Body
 
 Refer to `skills/review/external-review-phase.md`'s "Step 14: External Review Response Results Section" and include external review response results in the summary.
 
@@ -651,7 +651,7 @@ Template:
 
 **If no acceptance criteria updates (Step 12 skipped)**: omit that section.
 
-### 13.2. Post PR Comment
+### 14.2. Post PR Comment
 
 ```bash
 mkdir -p .tmp

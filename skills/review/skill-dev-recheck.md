@@ -9,7 +9,7 @@ When a CI job is FAILURE, suggest the following job-specific fixes:
 
 - `validate-skill-syntax` FAIL → run `python3 scripts/validate-skill-syntax.py skills/` locally and fix errors
 
-## Step 11.3: Re-run validate-skill-syntax
+## Step 12.3: Re-run validate-skill-syntax
 
 During the lightweight re-check, run:
 
