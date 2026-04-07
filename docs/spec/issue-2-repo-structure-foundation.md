@@ -60,3 +60,25 @@ Establish the wholework repository foundation: directory layout, symlink-based i
 - `modules/` and `scripts/` are placed under `~/.claude/skills/wholework/` (not `~/.claude/modules/` or `~/.claude/scripts/`) to co-locate with skills, avoid duplicate loading, and keep the package self-contained
 - `install.sh` should be POSIX-compatible (`#!/bin/sh`) for maximum portability
 - `package.json` bin field enables future `npx wholework` usage
+
+## code レトロスペクティブ
+
+### 設計からの逸脱
+- 特になし
+
+### 設計の不備・曖昧さ
+- 特になし
+
+### 手戻り
+- 特になし
+
+## review レトロスペクティブ
+
+### 設計と実装の乖離パターン
+- `install.sh` で `SKILLS_DEST`（`~/.claude/skills/wholework`）をシンボリックリンクとして作成した後に `MODULES_DEST`（`~/.claude/skills/wholework/modules`）を作成しようとすると、OS がシンボリックリンクを辿ってリポジトリ内 `skills/` ディレクトリを汚染するバグが検出された。Spec の install target mapping の記述（`modules/ → ~/.claude/skills/wholework/modules/`）は正しかったが、実装がそれを実現できていなかった。
+
+### 頻出する指摘事項
+- 特になし（今回は1件のMUST指摘）
+
+### 受け入れ条件の検証困難さ
+- 受け入れ条件はファイル存在・内容チェックのみで、実際のシンボリックリンク挙動は「マージ後」の手動検証に委ねられている。インストーラースクリプトの場合、dry-run オプションや POSIX 環境での実行テストを受け入れ条件に含めることで自動検証の精度が上がる可能性がある。
