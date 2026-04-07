@@ -30,6 +30,7 @@ wholework/
 ├── docs/                # Documentation and steering documents
 │   ├── structure.md     # This file
 │   ├── migration-notes.md # Interface change records per migration issue
+│   ├── environment-adaptation.md # Environment adaptation architecture (4-layer)
 │   └── spec/            # Issue specifications
 ├── install.sh           # Symlink-based installer
 ├── package.json         # npm package manifest (for future npx support)
