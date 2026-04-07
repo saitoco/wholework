@@ -68,10 +68,10 @@ INLINE_CODE_PATTERN = re.compile(r'`[^`]+`')
 SHELL_SENSITIVE_CHAR_PATTERN = re.compile(r'!')
 
 # Pattern to extract script paths from allowed-tools
-SCRIPT_PATH_PATTERN = re.compile(r'~/.claude/scripts/([a-zA-Z0-9_-]+\.sh)')
+SCRIPT_PATH_PATTERN = re.compile(r'\$\{CLAUDE_PLUGIN_ROOT\}/scripts/([a-zA-Z0-9_-]+\.sh)')
 
 # Pattern to extract module file references from SKILL.md body
-MODULES_REF_PATTERN = re.compile(r'~/.claude/modules/([a-zA-Z0-9_-]+\.md)')
+MODULES_REF_PATTERN = re.compile(r'\$\{CLAUDE_PLUGIN_ROOT\}/modules/([a-zA-Z0-9_-]+\.md)')
 
 
 def parse_simple_yaml(text: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
@@ -806,7 +806,7 @@ def validate_modules_scripts_in_allowed_tools(skill_files: List[Path], modules_d
         for module_name in sorted(referenced_modules):
             scripts = modules_scripts.get(module_name, set())
             for script_name in sorted(scripts):
-                script_path = f'~/.claude/scripts/{script_name}'
+                script_path = f'${{CLAUDE_PLUGIN_ROOT}}/scripts/{script_name}'
                 if script_path not in allowed_tools:
                     skill_rel = f'skills/{skill_file.parent.name}/SKILL.md'
                     errors.append(
