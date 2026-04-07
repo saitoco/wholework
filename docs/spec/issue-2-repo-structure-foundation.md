@@ -60,3 +60,14 @@ Establish the wholework repository foundation: directory layout, symlink-based i
 - `modules/` and `scripts/` are placed under `~/.claude/skills/wholework/` (not `~/.claude/modules/` or `~/.claude/scripts/`) to co-locate with skills, avoid duplicate loading, and keep the package self-contained
 - `install.sh` should be POSIX-compatible (`#!/bin/sh`) for maximum portability
 - `package.json` bin field enables future `npx wholework` usage
+
+## code レトロスペクティブ
+
+### 設計からの逸脱
+- 特になし
+
+### 設計の不備・曖昧さ
+- 特になし
+
+### 手戻り
+- 特になし
