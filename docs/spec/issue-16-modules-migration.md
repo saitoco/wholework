@@ -163,3 +163,14 @@ Browser/Testing 関連の 5 ファイルを同じ手順で移植する:
 
 ### 不確定要素の解決
 - validate-skill-syntax.py の cross-file validation が modules 存在時にどう動作するかは、Step 8 で実行して初めて判明する。Spec 段階では注意事項として記録するにとどめた
+
+## review レトロスペクティブ
+
+### 設計と実装の乖離パターン
+- 特になし。Spec の全22モジュールファイルが `modules/` に揃っており、日本語テキストの英語化も完全に完了していた
+
+### 頻出する指摘事項
+- 特になし。review-spec / review-bug×2 の全3エージェントで指摘0件。`browser-verify-security.md` 内の localhost ポリシーの見かけ上の矛盾（Processing Steps では許可、http_status Policy では safe モードでブロック）は意図的な設計差分と判定し棄却した
+
+### 受け入れ条件の検証困難さ
+- 特になし。9件全条件がファイル存在確認・文字列検索・コマンド実行で自動判定可能な `file_exists`/`file_not_contains`/`grep`/`command` ヒント付きであり、UNCERTAIN は0件。受け入れチェックの設計として模範的なパターン
