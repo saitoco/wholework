@@ -30,6 +30,39 @@ Output strings that test assertions do not verify are easy to miss. Manually aud
 
 ---
 
+## Issue #21: Simple Skills Migration (merge, code, auto, verify)
+
+5 skill files were migrated from claude-config to wholework: `skills/merge/SKILL.md`, `skills/code/SKILL.md`, `skills/auto/SKILL.md`, `skills/verify/SKILL.md`, and `skills/verify/browser-verify-phase.md`. All Japanese text (frontmatter `description` field, section headings, body text, inline comments) was translated to English. Existing stubs were replaced with the full content. Opportunistic simplification was applied following the approach from Issue #18.
+
+### Interface Changes
+
+No breaking interface changes. All cross-module references (`~/.claude/modules/xxx.md` paths, `~/.claude/scripts/` paths) are unchanged.
+
+**Frontmatter description translations (Japanese → English):**
+- `merge`: `PRをSquash mergeしてリモートブランチ削除...` → `Squash-merge a PR and delete the remote branch...`
+- `code`: `ローカル実装（\`/code 123\`）...` → `Local implementation (\`/code 123\`)...`
+- `auto`: `自律実行（\`/auto 123\`）...` → `Autonomous execution (\`/auto 123\`)...`
+- `verify`: `受け入れテスト。マージ後の受け入れ条件を自動検証し...` → `Acceptance test. Automatically verifies post-merge acceptance conditions...`
+
+**Section heading translations applied (Japanese → English):**
+- `手順` → `Steps`
+- `自律実行モード（--auto）` → `Autonomous Mode (--auto)`
+- `モード判定` → `Mode Detection`
+- `非インタラクティブ実行時のエラーハンドリング` → `Error Handling in Non-Interactive Mode`
+- `完了報告` → `Completion Report`
+- `注意` → `Notes`
+- `ルート別フェーズ構成` → `Route-Phase Matrix`
+- `バッチモード（--batch N）` → `Batch Mode (--batch N)`
+
+**Private repo references updated:**
+- `auto/SKILL.md`: `` `~/.claude/skills/` は `~/.claude/` シンボリックリンク経由でリポジトリの `skills/` を参照する `` → `` `~/.claude/skills/wholework/` is the installation path for skills, created via symlinks by `install.sh` ``
+- `verify/SKILL.md`: commit message `"issue #$NUMBER の verify レトロスペクティブを追加"` → `"Add verify retrospective for issue #$NUMBER"`
+
+**Squash merge expression:**
+- Avoided `"Squash merge"` (capital S + lowercase m) throughout `merge/SKILL.md` per acceptance condition `file_not_contains`; used `"Squash Merge"` (both capitals) instead
+
+---
+
 ## Issue #18: Agents Migration
 
 6 agent definition files were migrated from claude-config to wholework under the `agents/` directory. All Japanese text (frontmatter `description` field, section headings, body text, example text in code blocks) was translated to English. Opportunistic simplification of verbose step-by-step instructions to intent-level descriptions was applied following the approach from Issue #16.
