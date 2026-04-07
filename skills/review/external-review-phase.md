@@ -19,7 +19,7 @@ Wait for external reviews immediately after PR creation and apply any issues fou
 Skip this step if `HAS_COPILOT_REVIEW=false`.
 
 ```bash
-~/.claude/scripts/wait-external-review.sh "$NUMBER" copilot
+${CLAUDE_PLUGIN_ROOT}/scripts/wait-external-review.sh "$NUMBER" copilot
 ```
 
 The script:
@@ -66,7 +66,7 @@ After review completion, if issues exist:
 Skip this step if `HAS_CLAUDE_CODE_REVIEW=false`.
 
 ```bash
-~/.claude/scripts/wait-external-review.sh "$NUMBER" claude-code-review
+${CLAUDE_PLUGIN_ROOT}/scripts/wait-external-review.sh "$NUMBER" claude-code-review
 ```
 
 The script:

@@ -16,7 +16,7 @@ Cross-reference PR diff against Spec and documentation, and report findings acro
 
 ## Type-Specific Focus
 
-Read `~/.claude/modules/review-type-weighting.md` and apply the Type-specific focus from the `## review-spec` section.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/review-type-weighting.md` and apply the Type-specific focus from the `## review-spec` section.
 
 ## Input
 
@@ -75,7 +75,7 @@ Reference the `## Forbidden Expressions` section in `docs/tech.md` and cross-ref
 
 ### 2. Documentation Consistency Check
 
-Read `~/.claude/modules/doc-checker.md` and follow the "Processing Steps" section to check documentation consistency.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-checker.md` and follow the "Processing Steps" section to check documentation consistency.
 
 ## Output Format
 
@@ -119,6 +119,6 @@ Recommended fix:
 (only when no applicable problems exist)
 ```
 
-Read `~/.claude/modules/review-output-format.md` and follow the common finding format and path/line specification rules.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/review-output-format.md` and follow the common finding format and path/line specification rules.
 
 **When there are no findings**: Output only the "### No Issues Found" section with the message: "Spec group verification detected no spec deviation or documentation consistency issues."

@@ -1,14 +1,14 @@
 ---
 name: issue
 description: Issue creation and refinement (`/issue "title"` or `/issue 123`). Creates new issues or refines/reformats existing ones. Use when creating issues, defining requirements, or standardizing issue content.
-allowed-tools: Bash(gh issue create:*, gh issue view:*, gh issue edit:*, gh issue close:*, gh issue list:*, gh label create:*, ~/.claude/scripts/gh-issue-edit.sh:*, ~/.claude/scripts/gh-graphql.sh:*, ~/.claude/scripts/gh-issue-comment.sh:*, ~/.claude/scripts/get-issue-size.sh:*, ~/.claude/scripts/opportunistic-search.sh:*, ~/.claude/scripts/gh-check-blocking.sh:*, ~/.claude/scripts/gh-label-transition.sh:*), Glob, Grep, Write, Read, WebFetch, ToolSearch, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
+allowed-tools: Bash(gh issue create:*, gh issue view:*, gh issue edit:*, gh issue close:*, gh issue list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*), Glob, Grep, Write, Read, WebFetch, ToolSearch, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Issue Creation and Refinement
 
 If ARGUMENTS is a number, refine an existing issue; if a string, create a new one.
 
-If ARGUMENTS contains `--help`, read `~/.claude/modules/skill-help.md` and output help following the "Processing Steps" section. Do not execute further steps.
+If ARGUMENTS contains `--help`, read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.md` and output help following the "Processing Steps" section. Do not execute further steps.
 
 ---
 
@@ -34,13 +34,13 @@ Use the referenced documents in subsequent steps for vision alignment, terminolo
 
 ### Step 3: Ambiguity Detection
 
-Read `~/.claude/modules/ambiguity-detector.md` and check acceptance criteria against the pattern table.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md` and check acceptance criteria against the pattern table.
 
 New issue creation flow has no Size yet (treat as unset). Follow the "size routing table" in `modules/ambiguity-detector.md` — extract **at most 3** ambiguity points.
 
 ### Step 4: Classify Acceptance Criteria and Assign Acceptance Checks
 
-Read `~/.claude/modules/verify-patterns.md` and follow the "Processing Steps" section guidelines to design acceptance check patterns.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-patterns.md` and follow the "Processing Steps" section guidelines to design acceptance check patterns.
 
 After ambiguity detection, classify each acceptance criterion as "pre-merge" or "post-merge" and assign acceptance checks.
 
@@ -112,11 +112,11 @@ Append `--when="shell_condition"` to any check to skip it when the condition is 
 
 **MCP tool detection and mcp_call proposal (conditional):**
 
-Read `~/.claude/modules/detect-config-markers.md` and retrieve `MCP_TOOLS`. If non-empty, read `skills/issue/mcp-call-guidelines.md` and follow the "Declaration Priority" section. If empty, skip `mcp_call` hints.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and retrieve `MCP_TOOLS`. If non-empty, read `skills/issue/mcp-call-guidelines.md` and follow the "Declaration Priority" section. If empty, skip `mcp_call` hints.
 
 **Assign verify-type tags to post-merge conditions:**
 
-Read `~/.claude/modules/verify-classifier.md` and assign `<!-- verify-type: auto|opportunistic|manual -->` tags to each post-merge condition.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md` and assign `<!-- verify-type: auto|opportunistic|manual -->` tags to each post-merge condition.
 
 ### Step 5: Clarification Questions
 
@@ -137,7 +137,7 @@ Items not meeting any condition are presented to the user.
 
 **Pre-investigation (for each unresolved ambiguity point):**
 
-Refer to `~/.claude/modules/ambiguity-detector.md`'s "Sources to investigate" column and investigate sequentially (no sub-agents):
+Refer to `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md`'s "Sources to investigate" column and investigate sequentially (no sub-agents):
 
 | Aspect | Content | Source |
 |--------|---------|--------|
@@ -149,7 +149,7 @@ Format with investigation results + recommended option + alternative + confirmat
 
 ### Step 6: Create Issue
 
-Read `~/.claude/modules/title-normalizer.md` and normalize the title. Create the issue:
+Read `${CLAUDE_PLUGIN_ROOT}/modules/title-normalizer.md` and normalize the title. Create the issue:
 
 1. `mkdir -p .tmp`
 2. Write body to `.tmp/new-issue-body.md`
@@ -159,12 +159,12 @@ Read `~/.claude/modules/title-normalizer.md` and normalize the title. Create the
 ### Step 7: Apply Labels
 
 ```bash
-~/.claude/scripts/gh-label-transition.sh $NUMBER issue
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER issue
 ```
 
 ### Step 8: Scope Assessment (sub-issue splitting)
 
-Read `~/.claude/modules/size-workflow-table.md` and use its XL definition (11+ files or multiple independent features) as the split threshold.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` and use its XL definition (11+ files or multiple independent features) as the split threshold.
 
 Analyze the issue background and acceptance criteria to determine whether sub-issue splitting is needed.
 
@@ -179,7 +179,7 @@ Analyze the issue background and acceptance criteria to determine whether sub-is
 **When splitting is not needed (skip):** small changes (single feature, few files) or clear single-scope acceptance criteria.
 
 **Changing Size when no split is needed:**
-If Size is `XL` but splitting is not needed, read `~/.claude/modules/project-field-update.md` and update Size XL → L (steps 1→2→3→4). Use label fallback (step 5) only if GraphQL fails. When GitHub Projects is not configured, step 1 returns empty `projectsV2.nodes` and automatically falls through to step 5.
+If Size is `XL` but splitting is not needed, read `${CLAUDE_PLUGIN_ROOT}/modules/project-field-update.md` and update Size XL → L (steps 1→2→3→4). Use label fallback (step 5) only if GraphQL fails. When GitHub Projects is not configured, step 1 returns empty `projectsV2.nodes` and automatically falls through to step 5.
 
 **Procedure:**
 1. Propose split plan via AskUserQuestion (sub-issue count, scope of each, dependencies)
@@ -195,14 +195,14 @@ If Size is `XL` but splitting is not needed, read `~/.claude/modules/project-fie
 **GraphQL commands (examples):**
 ```bash
 # Get issue ID
-mapfile -t _id_arr < <(~/.claude/scripts/gh-graphql.sh --cache --query get-issue-id -F num=$NUM --jq '.data.repository.issue.id')
+mapfile -t _id_arr < <(${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --cache --query get-issue-id -F num=$NUM --jq '.data.repository.issue.id')
 ID="${_id_arr[0]}"
 
 # Set parent-child
-~/.claude/scripts/gh-graphql.sh --query add-sub-issue -F parentId="$PARENT_ID" -F childId="$CHILD_ID"
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query add-sub-issue -F parentId="$PARENT_ID" -F childId="$CHILD_ID"
 
 # Set dependency
-~/.claude/scripts/gh-graphql.sh --query add-blocked-by -F issueId="$FRONTEND_ID" -F blockingId="$BACKEND_ID"
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query add-blocked-by -F issueId="$FRONTEND_ID" -F blockingId="$BACKEND_ID"
 ```
 
 ### Step 9: Issue Retrospective
@@ -212,13 +212,13 @@ Post a retrospective comment to the issue covering: judgment rationale for ambig
 ```bash
 mkdir -p .tmp
 # write to .tmp/issue-comment-$NUMBER.md
-~/.claude/scripts/gh-issue-comment.sh $NUMBER .tmp/issue-comment-$NUMBER.md
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $NUMBER .tmp/issue-comment-$NUMBER.md
 rm -f .tmp/issue-comment-$NUMBER.md
 ```
 
 ### Step 10: Opportunistic Verification
 
-If `opportunistic-verify: true` is set in `.wholework.yml`, read `~/.claude/modules/opportunistic-verify.md` and follow "Processing Steps". Skill name: `/issue`. Skip if not set.
+If `opportunistic-verify: true` is set in `.wholework.yml`, read `${CLAUDE_PLUGIN_ROOT}/modules/opportunistic-verify.md` and follow "Processing Steps". Skill name: `/issue`. Skip if not set.
 
 ---
 
@@ -242,7 +242,7 @@ If `triaged` is present: skip this step.
 ### Step 3: Label Transition
 
 ```bash
-~/.claude/scripts/gh-label-transition.sh $NUMBER issue
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER issue
 ```
 
 ### Step 4: Reference Steering Documents (if present)
@@ -251,7 +251,7 @@ Same as New Issue Creation Step 2.
 
 ### Step 5: Ambiguity Detection
 
-Read `~/.claude/modules/ambiguity-detector.md`. Get Size with `get-issue-size.sh $NUMBER`. Detection limit: XS/S/M or unset → **at most 3**; L/XL → **at most 5**.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md`. Get Size with `get-issue-size.sh $NUMBER`. Detection limit: XS/S/M or unset → **at most 3**; L/XL → **at most 5**.
 
 ### Step 6: Classify Acceptance Criteria and Assign Acceptance Checks
 
@@ -272,14 +272,14 @@ After confirming auto-resolved items, record them in an "Auto-Resolved Ambiguity
 ### Step 9: Set Blocked-by Dependencies
 
 ```bash
-~/.claude/scripts/gh-check-blocking.sh $NUMBER
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh $NUMBER
 ```
 
 Exit code 0: no open blockers. Exit code 2: open blockers (relationship set, continue). Exit code 1: error (warn and continue).
 
 ### Step 10: Scope Assessment (sub-issue splitting)
 
-Read `~/.claude/modules/size-workflow-table.md`.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md`.
 
 **For L/XL issues: run parallel investigation (Step 10a → 10b → 10c).**
 
@@ -326,7 +326,7 @@ Same as New Issue Creation Step 10.
 
 ```bash
 gh issue close $NUMBER --reason "not planned" --comment "close reason"
-~/.claude/scripts/gh-label-transition.sh $NUMBER done
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER done
 ```
 
 ---
@@ -387,7 +387,7 @@ After opportunistic verification, get Size with `get-issue-size.sh $NUMBER` and 
 
 - **Size is XS only**: transition to `phase/ready`, then guide "Run `/auto $NUMBER`":
   ```bash
-  ~/.claude/scripts/gh-label-transition.sh $NUMBER ready
+  ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER ready
   ```
 - **All other cases (S/M/L/XL/unset)**: guide "Run `/spec $NUMBER`."
 

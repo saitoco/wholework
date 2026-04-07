@@ -75,6 +75,22 @@ wholework を Claude Code のローカルプラグイン（`--plugin-dir` 形式
 - agents がプラグイン経由で正しく発見されることを確認（`/agents` 一覧に表示）
 - modules, scripts がスキル内から正しく参照されることを確認（代表的なスキルを1回実行）
 
+## spec レトロスペクティブ
+
+（spec フェーズの振り返りはここに記載）
+
+## code レトロスペクティブ
+
+### 設計からの逸脱
+- 特になし
+
+### 設計の不備・曖昧さ
+- `validate_command_hint_paths` 関数（validate-skill-syntax.py）が `~/.claude/scripts/` のみを検出していたが、`${CLAUDE_PLUGIN_ROOT}/scripts/` パターンへの更新が必要だった。さらに `validate_body_scripts_in_allowed_tools` のチェック文字列も `~/.claude/scripts/` ハードコードを残していたため、テスト232・234 が失敗した。Spec の実装ステップ4には「line 809 の内部文字列更新」のみ明示されており、`validate_body_scripts_in_allowed_tools` の `script_path_pattern` 変数は漏れていた。
+- テスト `validate-skill-syntax.bats` の line 682 アサーションが `*"~/.claude/scripts"*` だったため、置換後は `*"CLAUDE_PLUGIN_ROOT"*` に変更が必要だった（Spec には記載あり、正しく対応）。
+
+### 手戻り
+- `validate_body_scripts_in_allowed_tools` の `script_path_pattern = f"~/.claude/scripts/{script_name}"` が未更新で、テスト232・234 が失敗。修正対応で追加コミットが発生した。
+
 ## 注意事項
 
 - **`${CLAUDE_PLUGIN_ROOT}` の動作**: Claude Code がプラグイン実行時に設定する環境変数。Bash コードブロック内では自動展開される。スキル body テキスト（Read 指示等）中の `${CLAUDE_PLUGIN_ROOT}` も Claude Code が展開してコンテキストに渡す。
@@ -82,3 +98,17 @@ wholework を Claude Code のローカルプラグイン（`--plugin-dir` 形式
 - **anthropics/claude-code#29360**: `--plugin-dir` 使用時に `allowed-tools` の MCP ツール名に名前空間プレフィックスが追加されるバグあり。影響が確認された場合は別 Issue で対応する。
 - **`scripts/` → `bin/` リネーム**: `bin/` にリネームすると Claude Code プラグインが自動的に PATH に追加するが、本 Issue のスコープ外。別途 Issue で検討する。
 - **plugin.json の追加フィールド**: `version`、`description` 等の追加フィールドが必要な場合は実装時に確認する。受け入れ条件は `name: "wholework"` のみを要求。
+
+## review レトロスペクティブ
+
+### 設計と実装の乖離パターン
+
+`modules/adapter-resolver.md` において、3-Layer Adapter Resolution テーブル（Priority 3）は `${CLAUDE_PLUGIN_ROOT}/modules/` に正しく更新されたが、直下の Existence check procedure のBashコマンド（行48）が `$HOME/.claude/modules/` のまま未更新だった。同一ファイル内での機械的全置換が `$HOME/.claude/modules/` 表記（`~/.claude/` の別形式）を見落とすパターン。受け入れ条件の grep パターンが `~/.claude/` 表記のみを検出するため自動検証もすり抜けた。今後の全置換 Task では、`$HOME/.claude/` と `~/.claude/` の両表記を検証パターンに含める必要がある。
+
+### 頻出する指摘事項
+
+同一問題（adapter-resolver.md の置換漏れ）を review-spec と review-bug×2 が独立して検出した。review-bug×1 は「+行として現れていない」として棄却し、review-bug×2 は「+行が不完全な更新を引き起こしている」として MUST 採用。複数エージェントが同一問題を異なる視点で報告する場合、最も厳しい判定を採用することが適切。
+
+### 受け入れ条件の検証困難さ
+
+受け入れ条件「`~/.claude/modules/` 参照が残っていない」の grep パターンが `~/.claude/` 形式のみを検出し、`$HOME/.claude/` 形式を見落とした。受け入れチェックのコマンドを `grep -rl '~/.claude/modules/\|~/.claude/scripts/\|\$HOME/.claude/modules/\|\$HOME/.claude/scripts/' skills/ modules/ agents/` のように拡張することで自動検証精度が向上する。

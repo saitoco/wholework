@@ -18,7 +18,7 @@ Analyze PR diff and perform lightweight checks across the following 4 perspectiv
 
 ## Type-Specific Focus
 
-Read `~/.claude/modules/review-type-weighting.md` and apply the Type-specific focus from the `## review-light` section.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/review-type-weighting.md` and apply the Type-specific focus from the `## review-light` section.
 
 ## Input
 
@@ -104,6 +104,6 @@ Recommended fix:
 (only when no applicable problems exist)
 ```
 
-Read `~/.claude/modules/review-output-format.md` and follow the common finding format and path/line specification rules.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/review-output-format.md` and follow the common finding format and path/line specification rules.
 
 **When there are no findings**: Output only the "### No Issues Found" section with the message: "Lightweight check across all 4 perspectives detected no issues."

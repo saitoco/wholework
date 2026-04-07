@@ -273,7 +273,7 @@ description: A test skill
 Run this:
 
 ```bash
-~/.claude/scripts/nonexistent-script.sh arg1
+${CLAUDE_PLUGIN_ROOT}/scripts/nonexistent-script.sh arg1
 ```
 EOF
 
@@ -290,7 +290,7 @@ EOF
 ---
 name: myskill
 description: A test skill
-allowed-tools: Bash(~/.claude/scripts/my-helper.sh:*)
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/my-helper.sh:*)
 ---
 
 # Test Skill
@@ -298,7 +298,7 @@ allowed-tools: Bash(~/.claude/scripts/my-helper.sh:*)
 Run this:
 
 ```bash
-~/.claude/scripts/my-helper.sh arg1
+${CLAUDE_PLUGIN_ROOT}/scripts/my-helper.sh arg1
 ```
 EOF
 
@@ -322,7 +322,7 @@ allowed-tools: Bash(gh issue view:*), Read
 Run this:
 
 ```bash
-~/.claude/scripts/my-script.sh arg1
+${CLAUDE_PLUGIN_ROOT}/scripts/my-script.sh arg1
 ```
 EOF
 
@@ -338,7 +338,7 @@ EOF
 ---
 name: myskill
 description: A test skill
-allowed-tools: Bash(gh issue view:*, ~/.claude/scripts/my-script.sh:*), Read
+allowed-tools: Bash(gh issue view:*, ${CLAUDE_PLUGIN_ROOT}/scripts/my-script.sh:*), Read
 ---
 
 # Test Skill
@@ -346,7 +346,7 @@ allowed-tools: Bash(gh issue view:*, ~/.claude/scripts/my-script.sh:*), Read
 Run this:
 
 ```bash
-~/.claude/scripts/my-script.sh arg1
+${CLAUDE_PLUGIN_ROOT}/scripts/my-script.sh arg1
 ```
 EOF
 
@@ -672,14 +672,14 @@ description: A test skill
 
 Check this:
 
-- [ ] <!-- verify: command "~/.claude/scripts/my-script.sh arg" --> script runs
+- [ ] <!-- verify: command "${CLAUDE_PLUGIN_ROOT}/scripts/my-script.sh arg" --> script runs
 
 Content here.
 EOF
 
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
     [ "$status" -eq 1 ]
-    [[ "$output" == *"~/.claude/scripts"* ]]
+    [[ "$output" == *"CLAUDE_PLUGIN_ROOT"* ]]
 }
 
 @test "success: repo-relative path in command hint is allowed" {

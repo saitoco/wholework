@@ -1,7 +1,7 @@
 ---
 name: spec
 description: Issue specification (`/spec 123`). Reads Issue requirements and creates an implementation plan. Automatically adjusts investigation depth (light/full) based on Size (`--light`/`--full` to override).
-allowed-tools: Bash(gh issue view:*, gh issue create:*, gh issue edit:*, gh issue list:*, ~/.claude/scripts/gh-issue-edit.sh:*, ~/.claude/scripts/gh-issue-comment.sh:*, ~/.claude/scripts/gh-graphql.sh:*, ~/.claude/scripts/get-issue-size.sh:*, ~/.claude/scripts/get-issue-type.sh:*, ~/.claude/scripts/opportunistic-search.sh:*, ~/.claude/scripts/gh-check-blocking.sh:*, ~/.claude/scripts/gh-label-transition.sh:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*), Glob, Grep, Read, Write, Edit, WebFetch, WebSearch, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_figma_figma__get_design_context, mcp__plugin_figma_figma__get_variable_defs, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__whoami
+allowed-tools: Bash(gh issue view:*, gh issue create:*, gh issue edit:*, gh issue list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*), Glob, Grep, Read, Write, Edit, WebFetch, WebSearch, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_figma_figma__get_design_context, mcp__plugin_figma_figma__get_variable_defs, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__whoami
 ---
 
 # Issue Specification
@@ -12,7 +12,7 @@ Read Issue requirements, investigate the codebase, and create an implementation 
 
 ### Step 0: Mode Detection
 
-If ARGUMENTS contains `--help`, read `~/.claude/modules/skill-help.md` and output help following the "Processing Steps" section. Do not execute further steps.
+If ARGUMENTS contains `--help`, read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.md` and output help following the "Processing Steps" section. Do not execute further steps.
 
 Parse ARGUMENTS to extract the Issue number and mode options:
 - Extract the numeric part as the Issue number
@@ -22,7 +22,7 @@ Parse ARGUMENTS to extract the Issue number and mode options:
 
 **Auto-detection rules (when no flag is specified):**
 
-1. `~/.claude/scripts/get-issue-size.sh $NUMBER` to get Size (Project field first, label fallback)
+1. `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER` to get Size (Project field first, label fallback)
 2. Determine SPEC_DEPTH (rules are hardcoded; no need to read `size-workflow-table.md`):
    - Size XS/S (patch route) → SPEC_DEPTH=light
    - Size M (pr route) → SPEC_DEPTH=light
@@ -40,7 +40,7 @@ Parse ARGUMENTS to extract the Issue number and mode options:
 gh issue view $NUMBER --json title,body,labels
 ```
 
-Run `~/.claude/scripts/get-issue-type.sh $NUMBER` and store the result in `ISSUE_TYPE`:
+Run `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh $NUMBER` and store the result in `ISSUE_TYPE`:
 - Value (`Bug`/`Feature`/`Task`) stored as-is
 - Empty string: `ISSUE_TYPE=unset`
 
@@ -48,7 +48,7 @@ Run `~/.claude/scripts/get-issue-type.sh $NUMBER` and store the result in `ISSUE
 
 ### Step 2: Worktree Entry
 
-Read `~/.claude/modules/worktree-lifecycle.md` and follow the "Entry" section.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Entry" section.
 
 **Worktree name convention:** `spec/issue-$NUMBER`
 
@@ -57,7 +57,7 @@ Record `ENTERED_WORKTREE` for later use. The Entry section includes running `.cl
 ### Step 3: Label Transition (start)
 
 ```bash
-~/.claude/scripts/gh-label-transition.sh $NUMBER spec
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER spec
 ```
 
 ### Step 4: Blocked-by Detection
@@ -65,7 +65,7 @@ Record `ENTERED_WORKTREE` for later use. The Entry section includes running `.cl
 Check whether the target Issue has unresolved blocked-by relationships:
 
 ```bash
-~/.claude/scripts/gh-check-blocking.sh $NUMBER --dry-run
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh $NUMBER --dry-run
 ```
 
 - Exit code 0: no open blockers → `HAS_OPEN_BLOCKING=false`
@@ -88,7 +88,7 @@ Use the referenced documents as the codebase exploration starting point, for tec
 
 ### Step 6: Codebase Investigation
 
-Read `~/.claude/modules/measurement-scope.md` and follow its measurement scope guidelines when recording quantitative data (file counts, line counts, grep hit counts, etc.) in the Spec.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/measurement-scope.md` and follow its measurement scope guidelines when recording quantitative data (file counts, line counts, grep hit counts, etc.) in the Spec.
 
 **Based on SPEC_DEPTH:**
 
@@ -137,7 +137,7 @@ Steps:
 
 **SPEC_DEPTH=full only. Skip if SPEC_DEPTH=light.**
 
-Read `~/.claude/modules/ambiguity-detector.md` and check Issue requirements and implementation points against the pattern table — extract **at most 3** ambiguity points.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md` and check Issue requirements and implementation points against the pattern table — extract **at most 3** ambiguity points.
 
 **Priority sort:**
 
@@ -207,9 +207,9 @@ If UI design is needed, read `skills/spec/figma-design-phase.md` and follow its 
 
 **Prerequisite: all codebase investigation in Step 6 must be complete.**
 
-If SPEC_DEPTH=full and `scripts/validate-skill-syntax.py` exists, read `~/.claude/modules/skill-dev-checks.md` and follow it at the relevant point in Step 10. Skip if SPEC_DEPTH=light or the file does not exist.
+If SPEC_DEPTH=full and `scripts/validate-skill-syntax.py` exists, read `${CLAUDE_PLUGIN_ROOT}/modules/skill-dev-checks.md` and follow it at the relevant point in Step 10. Skip if SPEC_DEPTH=light or the file does not exist.
 
-Read `~/.claude/modules/doc-checker.md` and use the "Impact Assessment" section to decide whether to include documentation files in the changed-files list.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-checker.md` and use the "Impact Assessment" section to decide whether to include documentation files in the changed-files list.
 
 **Rename-type Issue grep check:**
 
@@ -268,10 +268,10 @@ SHOULD constraints (best practices, manual check — examples):
 | Verify existing parser behavior | When reusing parsers/libraries, include steps to verify actual behavior (quoting, spaces) in the Spec | #825 |
 | New tools in allowed-tools | When introducing new tools (MCP, ToolSearch), include allowed-tools addition in acceptance criteria | #690 |
 | KNOWN_TOOLS sync | When adding tools to allowed-tools, also include `validate-skill-syntax.py` KNOWN_TOOLS update | #760 |
-| Shared module reference paths | Use full `~/.claude/modules/xxx.md` paths (no abbreviations) | tech.md |
+| Shared module reference paths | Use full `${CLAUDE_PLUGIN_ROOT}/modules/xxx.md` paths (no abbreviations) | tech.md |
 | False positive exclusion set | Note false-positive exclusion policy for broadly-used terms (Task, Agent, etc.) in validation implementations | #810 |
 | `settings.json` Skill entry | Include `settings.json` `Skill(skill-name)` permission for new skills | #725 |
-| Read instruction for extracted modules | When extracting to a module, write Read instruction as "read `~/.claude/modules/xxx.md` and follow the `Processing Steps` section" | #716 |
+| Read instruction for extracted modules | When extracting to a module, write Read instruction as "read `${CLAUDE_PLUGIN_ROOT}/modules/xxx.md` and follow the `Processing Steps` section" | #716 |
 | `git add -f` for .gitignore targets | Note `git add -f` requirement in implementation steps for `.gitignore`-tracked files | #901 |
 | Post-merge skill name alignment | Verify skill name in `## Verification > Post-merge` matches the target skill in Issue purpose | #684 |
 
@@ -287,7 +287,7 @@ When defining acceptance criteria, explicitly consider:
 
 Save the implementation plan to `docs/spec/issue-$NUMBER-short-title.md`.
 
-Read `~/.claude/modules/verify-patterns.md` and follow the "Processing Steps" guidelines (especially "3. Pre-verification of target file format").
+Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-patterns.md` and follow the "Processing Steps" guidelines (especially "3. Pre-verification of target file format").
 
 **Notes and acceptance check consistency (immediately after creating acceptance checks):**
 
@@ -299,7 +299,7 @@ If implementation steps include section renaming (e.g., `## Implementation Steps
 
 **verify-type tag check:**
 
-If post-merge conditions in the Issue body have `<!-- verify-type: ... -->` tags, read `~/.claude/modules/verify-classifier.md` and verify:
+If post-merge conditions in the Issue body have `<!-- verify-type: ... -->` tags, read `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md` and verify:
 - `auto`-tagged conditions without acceptance checks — consider adding them
 - `opportunistic`-tagged conditions align with `verify-classifier.md`'s `opportunistic` definition
 
@@ -547,7 +547,7 @@ Reflect on the specification phase and present improvement suggestions to the us
 
 ### Step 13: Worktree Exit (merge-to-main)
 
-Read `~/.claude/modules/worktree-lifecycle.md` and follow the "Exit: merge-to-main" section.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Exit: merge-to-main" section.
 
 `ENTERED_WORKTREE` value determines behavior:
 - `ENTERED_WORKTREE=true`: ExitWorktree("keep") → merge → push → cleanup
@@ -565,7 +565,7 @@ Write to `.tmp/issue-comment-$NUMBER.md` using the Write tool, then post:
 
 ```bash
 mkdir -p .tmp
-~/.claude/scripts/gh-issue-comment.sh $NUMBER .tmp/issue-comment-$NUMBER.md
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $NUMBER .tmp/issue-comment-$NUMBER.md
 rm -f .tmp/issue-comment-$NUMBER.md
 ```
 
@@ -577,16 +577,16 @@ Template:
 ### Step 15: Label Transition (design complete)
 
 ```bash
-~/.claude/scripts/gh-label-transition.sh $NUMBER ready
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER ready
 ```
 
 ### Step 16: Opportunistic Verification
 
-If `opportunistic-verify: true` is set in `.wholework.yml`, read `~/.claude/modules/opportunistic-verify.md` and follow "Processing Steps". Skill name: `/spec`. Skip if not set.
+If `opportunistic-verify: true` is set in `.wholework.yml`, read `${CLAUDE_PLUGIN_ROOT}/modules/opportunistic-verify.md` and follow "Processing Steps". Skill name: `/spec`. Skip if not set.
 
 ### Step 17: Size-to-Workflow Determination (for Step 18)
 
-Read `~/.claude/modules/size-workflow-table.md` and re-evaluate Size using the 2-axis method.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` and re-evaluate Size using the 2-axis method.
 
 **Steps:**
 
@@ -594,10 +594,10 @@ Read `~/.claude/modules/size-workflow-table.md` and re-evaluate Size using the 2
 
 2. Get the triage-time Size for comparison (Project field first, label fallback):
    ```bash
-   ~/.claude/scripts/get-issue-size.sh $NUMBER
+   ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER
    ```
 
-3. If re-evaluation differs from triage-time Size, read `~/.claude/modules/project-field-update.md` and update Size (steps 1→2→3→4). Use label fallback (step 5) only if GraphQL fails. When GitHub Projects is not configured, step 1 returns empty `projectsV2.nodes` and falls through to step 5 automatically.
+3. If re-evaluation differs from triage-time Size, read `${CLAUDE_PLUGIN_ROOT}/modules/project-field-update.md` and update Size (steps 1→2→3→4). Use label fallback (step 5) only if GraphQL fails. When GitHub Projects is not configured, step 1 returns empty `projectsV2.nodes` and falls through to step 5 automatically.
 
 4. Store the final workflow route as `ROUTE`:
    - `XS` or `S` → `patch`

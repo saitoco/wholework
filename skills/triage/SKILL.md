@@ -2,7 +2,7 @@
 model: sonnet
 name: triage
 description: Issue triage. Automates title normalization, Type/Priority/Size/Value assignment (`/triage 123` for single issue + lightweight analysis, `/triage` for bulk execution, `/triage --backlog` for bulk processing + 4-perspective deep analysis).
-allowed-tools: Bash(gh:*, cat:*, echo:*, grep:*, jq:*, test:*, bash:*, printf:*, wc:*, head:*, tail:*, sed:*, awk:*, mkdir:*, rm:*, ~/.claude/scripts/triage-backlog-filter.sh:*, ~/.claude/scripts/gh-graphql.sh:*, ~/.claude/scripts/gh-issue-comment.sh:*), Read, Write, Glob, Grep
+allowed-tools: Bash(gh:*, cat:*, echo:*, grep:*, jq:*, test:*, bash:*, printf:*, wc:*, head:*, tail:*, sed:*, awk:*, mkdir:*, rm:*, ${CLAUDE_PLUGIN_ROOT}/scripts/triage-backlog-filter.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*), Read, Write, Glob, Grep
 ---
 
 # Issue Triage
@@ -11,7 +11,7 @@ A skill that automates Issue metadata maintenance. When invoked, execute immedia
 
 ## Argument Parsing (execute first)
 
-If ARGUMENTS contains `--help`, Read `~/.claude/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
+If ARGUMENTS contains `--help`, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
 
 **If ARGUMENTS is empty (unspecified, empty string, or whitespace only) or contains only `--limit N` → skip the single-issue section and proceed immediately to the "Bulk Execution" section (default: `--limit 100`)**
 
@@ -38,13 +38,13 @@ To avoid confirmation dialogs, strictly follow these rules:
 1. **Single line**: Write commands on a single line (no `\` line continuations)
 2. **No comment lines**: Do not include `# ...` comment lines before commands
 3. **No leading variable assignments**: Do not start with `VAR=... && command` or `VAR=$(...)`
-4. **Start with a script or command**: Begin with `~/.claude/scripts/gh-graphql.sh` or `gh` directly
+4. **Start with a script or command**: Begin with `${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh` or `gh` directly
 5. **No `&&` chaining**: Execute only one command per Bash call
 6. **No inline GraphQL**: Do not pass inline GraphQL query strings to `gh-graphql.sh`. Always use `--query <n>` format
 
 **Good examples:**
 ```bash
-~/.claude/scripts/gh-graphql.sh --query get-issue-id -F num=123 --jq '.data.repository.issue.id'
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query get-issue-id -F num=123 --jq '.data.repository.issue.id'
 ```
 
 ```bash
@@ -53,7 +53,7 @@ gh issue view 123 --json number,title,body,labels
 
 **Bad examples (do not use):**
 ```bash
-~/.claude/scripts/gh-graphql.sh 'mutation(...)' \
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh 'mutation(...)' \
   -F projectId="PVT_xxx" \
   -F itemId="PVTI_xxx"
 ```
@@ -88,17 +88,17 @@ gh issue list --state open --json number,title,body --limit 100
   - Comment format example: `⚠️ Possible duplicate: similar to #123 "test-runner: Add Vitest detection"`
   - Run `mkdir -p .tmp` to create the directory in advance
   - Write comment body to `.tmp/triage-duplicate-comment-$NUMBER.md` using the Write tool
-  - Post: `~/.claude/scripts/gh-issue-comment.sh $NUMBER .tmp/triage-duplicate-comment-$NUMBER.md`
+  - Post: `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $NUMBER .tmp/triage-duplicate-comment-$NUMBER.md`
   - Delete: `rm -f .tmp/triage-duplicate-comment-$NUMBER.md`
 - If no duplicate candidates, skip without comment
 
 ### Step 3: Title Normalization
 
-Read `~/.claude/modules/title-normalizer.md` and follow the "Processing Steps" section to normalize the title.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/title-normalizer.md` and follow the "Processing Steps" section to normalize the title.
 
 ### Step 4: Type Assignment (Issue Types + label fallback)
 
-Read `~/.claude/modules/project-field-update.md` and execute Steps 1→2 from the "Type Field Update" section to set the Type. Complete on GraphQL success; only execute Step 3 label fallback on failure.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/project-field-update.md` and execute Steps 1→2 from the "Type Field Update" section to set the Type. Complete on GraphQL success; only execute Step 3 label fallback on failure.
 
 Named queries to use (`--query <n>` format): `get-issue-types`, `get-issue-id`, `update-issue-type`
 
@@ -111,7 +111,7 @@ Determine Bug / Feature / Task from the issue body.
 
 ### Step 5: Priority Assignment (Projects field)
 
-Read `~/.claude/modules/project-field-update.md` and execute Steps 1→2→3→4 from the "Priority / Size Field Update" section to set Priority. Complete on GraphQL success; only execute Step 5 label fallback on failure.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/project-field-update.md` and execute Steps 1→2→3→4 from the "Priority / Size Field Update" section to set Priority. Complete on GraphQL success; only execute Step 5 label fallback on failure.
 
 Named queries to use (`--query <n>` format): `get-projects-with-fields`, `get-issue-id`, `add-project-item`, `update-field-value`
 
@@ -136,9 +136,9 @@ Detect priority information from the title or body and reflect it in the project
 
 ### Step 6: Size Assignment (Projects field)
 
-Read `~/.claude/modules/size-workflow-table.md` and follow the "Processing Steps" section's Size determination flow (2-axis method) to determine Size.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` and follow the "Processing Steps" section's Size determination flow (2-axis method) to determine Size.
 
-Read `~/.claude/modules/project-field-update.md` and execute Steps 1→2→3→4 from the "Priority / Size Field Update" section to set Size. Complete on GraphQL success; only execute Step 5 label fallback on failure.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/project-field-update.md` and execute Steps 1→2→3→4 from the "Priority / Size Field Update" section to set Size. Complete on GraphQL success; only execute Step 5 label fallback on failure.
 
 Named queries to use (`--query <n>` format): `get-projects-with-fields`, `get-issue-id`, `add-project-item`, `update-field-value`
 
@@ -256,15 +256,15 @@ Bulk execution uses the following 3 steps. Do not use Task sub-agents.
 
 1. Get target issue numbers using the helper script (add `$ASSIGNEE_FILTER` if set):
    ```bash
-   ~/.claude/scripts/triage-backlog-filter.sh --limit $LIMIT
+   ${CLAUDE_PLUGIN_ROOT}/scripts/triage-backlog-filter.sh --limit $LIMIT
    ```
    With `--assignee {user}`:
    ```bash
-   ~/.claude/scripts/triage-backlog-filter.sh --limit $LIMIT --assignee {user}
+   ${CLAUDE_PLUGIN_ROOT}/scripts/triage-backlog-filter.sh --limit $LIMIT --assignee {user}
    ```
    With `--no-assignee`:
    ```bash
-   ~/.claude/scripts/triage-backlog-filter.sh --limit $LIMIT --no-assignee
+   ${CLAUDE_PLUGIN_ROOT}/scripts/triage-backlog-filter.sh --limit $LIMIT --no-assignee
    ```
 
    This script outputs issue numbers without the `triaged` label one per line.
@@ -283,7 +283,7 @@ Bulk execution uses the following 3 steps. Do not use Task sub-agents.
 Based on all issue information retrieved in Step 1, Claude directly classifies all issues in a single inference pass.
 
 **Classification per issue:**
-- Title normalization (follow `~/.claude/modules/title-normalizer.md` naming conventions)
+- Title normalization (follow `${CLAUDE_PLUGIN_ROOT}/modules/title-normalizer.md` naming conventions)
 - Type determination (Bug / Feature / Task)
 - Size estimation (XS / S / M / L / XL)
 - Priority detection (urgent / high / medium / low / null)
@@ -354,7 +354,7 @@ for each issue in Step 2 results:
      - Comment format example: `⚠️ Possible duplicate: similar to #123 "test-runner: Add Vitest detection"`
      - Run mkdir -p .tmp to create the directory in advance
      - Write comment body to `.tmp/triage-duplicate-comment-$NUMBER.md` using the Write tool
-     - Post: `~/.claude/scripts/gh-issue-comment.sh $NUMBER .tmp/triage-duplicate-comment-$NUMBER.md`
+     - Post: `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $NUMBER .tmp/triage-duplicate-comment-$NUMBER.md`
      - Delete: `rm -f .tmp/triage-duplicate-comment-$NUMBER.md`
 ```
 
@@ -364,7 +364,7 @@ for each issue in Step 2 results:
 
 **Fetch project information once at the start of Step 3:**
 ```bash
-~/.claude/scripts/gh-graphql.sh --cache --query get-projects-with-fields
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --cache --query get-projects-with-fields
 ```
 - Fetch and cache Priority / Size field IDs and option IDs
 - Also fetch Issue Types once at the start of Step 3
@@ -730,7 +730,7 @@ After each perspective's analysis is complete, always run the application flow. 
 3. Record rationale in a comment for issues whose Value changed:
    - Run `mkdir -p .tmp` first
    - Write comment body to `.tmp/triage-value-comment-$N.md` using the Write tool
-   - Post: `~/.claude/scripts/gh-issue-comment.sh $N .tmp/triage-value-comment-$N.md`
+   - Post: `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $N .tmp/triage-value-comment-$N.md`
    - Delete: `rm -f .tmp/triage-value-comment-$N.md`
 
 **Duplicate perspective application flow:**
@@ -742,7 +742,7 @@ After each perspective's analysis is complete, always run the application flow. 
    - Comment format example: `⚠️ Possible duplicate: similar to #456 "issue-B". Consider merging or closing (no auto-close)`
    - Run `mkdir -p .tmp` first
    - Write comment body to `.tmp/triage-duplicate-comment-$N.md` using the Write tool
-   - Post: `~/.claude/scripts/gh-issue-comment.sh $N .tmp/triage-duplicate-comment-$N.md`
+   - Post: `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $N .tmp/triage-duplicate-comment-$N.md`
    - Delete: `rm -f .tmp/triage-duplicate-comment-$N.md`
 3. After posting, report "Posted duplicate comments to N issues"
 
@@ -756,7 +756,7 @@ After each perspective's analysis is complete, always run the application flow. 
    - Comment format (suggest close): `Stale analysis: classified as pattern "No Longer Needed". Reason: X. Recommended action: consider closing (no auto-close)`
    - Run `mkdir -p .tmp` first
    - Write comment body to `.tmp/triage-stale-comment-$N.md` using the Write tool
-   - Post: `~/.claude/scripts/gh-issue-comment.sh $N .tmp/triage-stale-comment-$N.md`
+   - Post: `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $N .tmp/triage-stale-comment-$N.md`
    - Delete: `rm -f .tmp/triage-stale-comment-$N.md`
 3. After posting, report "Posted stale analysis comments to N issues" (no auto-close)
 
@@ -770,7 +770,7 @@ After each perspective's analysis is complete, always run the application flow. 
    - Comment format (orphan): `Dependency analysis: blocked-by target #999 does not exist. Recommend removing Blocked by #999 from body (no auto-correction)`
    - Run `mkdir -p .tmp` first
    - Write comment body to `.tmp/triage-dependency-comment-$N.md` using the Write tool
-   - Post: `~/.claude/scripts/gh-issue-comment.sh $N .tmp/triage-dependency-comment-$N.md`
+   - Post: `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $N .tmp/triage-dependency-comment-$N.md`
    - Delete: `rm -f .tmp/triage-dependency-comment-$N.md`
 3. After posting, report "Posted dependency analysis comments to N issues" (no auto-correction)
 

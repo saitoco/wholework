@@ -2,14 +2,14 @@
 name: review
 description: PR review (`/review 88`). Automatically runs acceptance criteria verification, multi-perspective code review, issue resolution, and summary posting. Use after `/code` creates a PR and before `/merge` (`--light`/`--full` to adjust depth).
 context: fork
-allowed-tools: Bash(gh pr view:*, gh pr diff:*, gh pr comment:*, gh issue view:*, gh issue edit:*, gh issue create:*, gh issue list:*, ~/.claude/scripts/gh-issue-edit.sh:*, ~/.claude/scripts/gh-issue-comment.sh:*, ~/.claude/scripts/gh-pr-review.sh:*, ~/.claude/scripts/wait-external-review.sh:*, ~/.claude/scripts/run-review.sh:*, ~/.claude/scripts/get-issue-size.sh:*, ~/.claude/scripts/get-issue-type.sh:*, ~/.claude/scripts/opportunistic-search.sh:*, ~/.claude/scripts/gh-extract-issue-from-pr.sh:*, ~/.claude/scripts/gh-label-transition.sh:*, wc:*, diff:*, git log:*, git diff:*, git show:*, git add:*, git commit:*, git push:*, git fetch:*, git checkout:*, git worktree:*, git branch:*, python3:*), Read, Write, Edit, Glob, Grep, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree
+allowed-tools: Bash(gh pr view:*, gh pr diff:*, gh pr comment:*, gh issue view:*, gh issue edit:*, gh issue create:*, gh issue list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-external-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, wc:*, diff:*, git log:*, git diff:*, git show:*, git add:*, git commit:*, git push:*, git fetch:*, git checkout:*, git worktree:*, git branch:*, python3:*), Read, Write, Edit, Glob, Grep, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree
 ---
 
 # PR Review
 
 Accepts a PR number as ARGUMENTS. If an Issue number is provided, searches for the related PR.
 
-If ARGUMENTS contains `--help`, read `~/.claude/modules/skill-help.md` and output help following the "Processing Steps" section. Do not execute further steps.
+If ARGUMENTS contains `--help`, read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.md` and output help following the "Processing Steps" section. Do not execute further steps.
 
 ## Autonomous Mode (--auto)
 
@@ -21,7 +21,7 @@ If ARGUMENTS contains `--auto`:
 
 1. Extract the PR number from ARGUMENTS
 2. Check for `--review-only`, `--light`, `--full` flags and include them as arguments
-3. Run `~/.claude/scripts/run-review.sh $NUMBER [--review-only] [--light | --full]` via Bash
+3. Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh $NUMBER [--review-only] [--light | --full]` via Bash
 4. After the script completes, stop (do not execute further steps)
 
 If `--auto` is absent, run the normal steps below.
@@ -49,7 +49,7 @@ gh pr view "$NUMBER" --json number,title,body,headRefName,baseRefName
 Extract the linked Issue number and base branch using `gh-extract-issue-from-pr.sh`:
 
 ```bash
-EXTRACT_RESULT=$(~/.claude/scripts/gh-extract-issue-from-pr.sh "$NUMBER")
+EXTRACT_RESULT=$(${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh "$NUMBER")
 ISSUE_NUMBER=$(echo "$EXTRACT_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('issue_number',''))")
 BASE_REF=$(echo "$EXTRACT_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('base_ref','main'))")
 ```
@@ -58,7 +58,7 @@ BASE_REF=$(echo "$EXTRACT_RESULT" | python3 -c "import json,sys; print(json.load
 
 **Fetch Type (only when Issue number is extracted):**
 
-Run `~/.claude/scripts/get-issue-type.sh $ISSUE_NUMBER` and store the result in `$TYPE`:
+Run `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh $ISSUE_NUMBER` and store the result in `$TYPE`:
 - Value (`Bug`/`Feature`/`Task`) stored as-is
 - Empty string: `TYPE=` (empty; the "unset" row in each agent applies, maintaining current behavior)
 
@@ -66,7 +66,7 @@ If Issue number cannot be extracted, set `TYPE=` (empty string).
 
 ### Step 2: Worktree Entry
 
-Read `~/.claude/modules/worktree-lifecycle.md` and follow the "Entry" section.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Entry" section.
 
 **Worktree name convention:** `review/pr-$NUMBER`
 
@@ -111,7 +111,7 @@ Patch route — review is not needed. Proceed with `/merge $PR_NUMBER`.
 
 Get Size (Project field first, label fallback):
 ```bash
-~/.claude/scripts/get-issue-size.sh "$ISSUE_NUMBER" 2>/dev/null
+${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh "$ISSUE_NUMBER" 2>/dev/null
 ```
 
 ### Step 4: Label Transition (review start)
@@ -119,7 +119,7 @@ Get Size (Project field first, label fallback):
 If Issue number was extracted:
 
 ```bash
-~/.claude/scripts/gh-label-transition.sh "$ISSUE_NUMBER" review
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$ISSUE_NUMBER" review
 ```
 
 ### Step 5: Fetch Issue Information
@@ -200,11 +200,11 @@ If any acceptance check contains `{{base_url}}`, resolve the Preview URL before 
    - `state` is `pending`/`in_progress` etc. → treat `{{base_url}}` checks as UNCERTAIN (note "Preview deployment not complete")
    - Empty statuses → treat as UNCERTAIN (note "Cannot retrieve deployment status")
 
-5. When Preview URL is obtained, run static checks (file existence, etc.) first, then run `{{base_url}}`-containing browser checks last. Since the Preview URL comes from GitHub Deployments API (trusted source), run `browser_check`/`browser_screenshot` in full mode when browser tools are available (still applying security checks from `~/.claude/modules/browser-verify-security.md`).
+5. When Preview URL is obtained, run static checks (file existence, etc.) first, then run `{{base_url}}`-containing browser checks last. Since the Preview URL comes from GitHub Deployments API (trusted source), run `browser_check`/`browser_screenshot` in full mode when browser tools are available (still applying security checks from `${CLAUDE_PLUGIN_ROOT}/modules/browser-verify-security.md`).
 
 Skip this step if no `{{base_url}}`-containing checks exist.
 
-Read `~/.claude/modules/verify-executor.md` and follow the "Processing Steps" translation table. Mode: **safe**, PR number: `$NUMBER`. For `command` hints, do not run directly — attempt CI reference fallback (`gh pr view "$NUMBER" --json statusCheckRollup` to check related job status). If CI cannot determine the result, treat as UNCERTAIN (note reason such as "corresponding CI job not identified").
+Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md` and follow the "Processing Steps" translation table. Mode: **safe**, PR number: `$NUMBER`. For `command` hints, do not run directly — attempt CI reference fallback (`gh pr view "$NUMBER" --json statusCheckRollup` to check related job status). If CI cannot determine the result, treat as UNCERTAIN (note reason such as "corresponding CI job not identified").
 
 Verify each condition:
 
@@ -227,7 +227,7 @@ For "Pre-merge (auto-verified)" conditions that PASS in Step 7 verification, upd
 Write to `.tmp/issue-body-$ISSUE_NUMBER.md` using the Write tool, then run:
 ```bash
 mkdir -p .tmp
-~/.claude/scripts/gh-issue-edit.sh "$ISSUE_NUMBER" .tmp/issue-body-$ISSUE_NUMBER.md
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh "$ISSUE_NUMBER" .tmp/issue-body-$ISSUE_NUMBER.md
 ```
 
 - PASS → update to `- [x]`
@@ -412,12 +412,12 @@ Integrate Steps 7 (acceptance criteria verification), 8 (CI status), and 10 (par
 
 When Step 9 was run (with line comments):
 ```bash
-~/.claude/scripts/gh-pr-review.sh "$NUMBER" ".tmp/review-body-$NUMBER.md" ".tmp/review-comments-$NUMBER.json"
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-review.sh "$NUMBER" ".tmp/review-body-$NUMBER.md" ".tmp/review-comments-$NUMBER.json"
 ```
 
 When Step 9 was skipped (no line comments):
 ```bash
-~/.claude/scripts/gh-pr-review.sh "$NUMBER" ".tmp/review-body-$NUMBER.md"
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-review.sh "$NUMBER" ".tmp/review-body-$NUMBER.md"
 ```
 
 - Script automatically posts with `REQUEST_CHANGES` event if MUST issues exist
@@ -580,7 +580,7 @@ Assess whether any changes contradict the acceptance criteria (acceptance check 
 2. Identify acceptance conditions invalidated by policy changes
 3. Update condition text and `<!-- verify: ... -->` hints to reflect post-change content
 4. Write to `.tmp/issue-body-$ISSUE_NUMBER.md`
-5. `~/.claude/scripts/gh-issue-edit.sh "$ISSUE_NUMBER" .tmp/issue-body-$ISSUE_NUMBER.md`
+5. `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh "$ISSUE_NUMBER" .tmp/issue-body-$ISSUE_NUMBER.md`
 
 ### 13.3. Post Change Reason Comment (only on policy change detection)
 
@@ -604,7 +604,7 @@ Format:
 
 Post comment:
 ```bash
-~/.claude/scripts/gh-issue-comment.sh "$ISSUE_NUMBER" .tmp/issue-acceptance-update-$ISSUE_NUMBER.md
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh "$ISSUE_NUMBER" .tmp/issue-acceptance-update-$ISSUE_NUMBER.md
 rm -f .tmp/issue-acceptance-update-$ISSUE_NUMBER.md
 ```
 
@@ -698,13 +698,13 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 
 ## Worktree Exit (push-and-remove)
 
-Read `~/.claude/modules/worktree-lifecycle.md` and follow the "Exit: push-and-remove" section.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Exit: push-and-remove" section.
 
 Since the retrospective push (`git push origin HEAD`) is complete, call ExitWorktree("remove", discard_changes: true) to delete the worktree and return to the original directory.
 
 ## Opportunistic Verification
 
-If `opportunistic-verify: true` is set in `.wholework.yml`, read `~/.claude/modules/opportunistic-verify.md` and follow "Processing Steps". Skill name: `/review`. Skip if not set.
+If `opportunistic-verify: true` is set in `.wholework.yml`, read `${CLAUDE_PLUGIN_ROOT}/modules/opportunistic-verify.md` and follow "Processing Steps". Skill name: `/review`. Skip if not set.
 
 ## Completion Report
 

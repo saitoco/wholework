@@ -2,21 +2,21 @@
 name: code
 description: Local implementation (`/code 123`). Size auto-detection routes XS/S→patch (direct commit to main), M/L→branch+PR. Override with `--patch`/`--pr`.
 context: fork
-allowed-tools: Bash(gh issue view:*, gh issue edit:*, gh issue list:*, git checkout:*, git pull:*, git add:*, git status:*, git diff:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh pr create:*, gh pr comment:*, ~/.claude/scripts/gh-issue-edit.sh:*, ~/.claude/scripts/gh-issue-comment.sh:*, ~/.claude/scripts/run-code.sh:*, ~/.claude/scripts/get-issue-size.sh:*, ~/.claude/scripts/get-issue-type.sh:*, ~/.claude/scripts/opportunistic-search.sh:*, ~/.claude/scripts/gh-label-transition.sh:*, python3:*, bats:*), Glob, Grep, Read, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree
+allowed-tools: Bash(gh issue view:*, gh issue edit:*, gh issue list:*, git checkout:*, git pull:*, git add:*, git status:*, git diff:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh pr create:*, gh pr comment:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, python3:*, bats:*), Glob, Grep, Read, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree
 ---
 
 # Local Implementation
 
 Receive an Issue number and implement based on the Spec.
 
-If ARGUMENTS contains `--help`, Read `~/.claude/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
+If ARGUMENTS contains `--help`, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
 
 ## Autonomous Mode (--auto)
 
 If ARGUMENTS contains the `--auto` flag, delegate as follows:
 
 1. Extract the Issue number from ARGUMENTS (numeric part)
-2. If `--patch` is present, run `~/.claude/scripts/run-code.sh $NUMBER --patch [--base {branch}]` via Bash; otherwise run `~/.claude/scripts/run-code.sh $NUMBER [--base {branch}]` (add `--base {branch}` if `--base` flag is present)
+2. If `--patch` is present, run `${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER --patch [--base {branch}]` via Bash; otherwise run `${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER [--base {branch}]` (add `--base {branch}` if `--base` flag is present)
 3. Exit after the script completes (do not execute subsequent steps)
 
 If `--auto` is not present, proceed with mode detection below.
@@ -62,7 +62,7 @@ Determine the route based on Size (Project field preferred → label fallback) a
 First, fetch Size (run before route detection):
 
 ```bash
-~/.claude/scripts/get-issue-size.sh "$NUMBER" 2>/dev/null
+${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh "$NUMBER" 2>/dev/null
 ```
 
 `get-issue-size.sh` fetches Size in two stages: Project field preferred → `size/*` label fallback. Use the output value (e.g., `S`, `M`; empty means Size not set) in subsequent steps (e.g., XS/S detection in Step 2).
@@ -77,7 +77,7 @@ If ARGUMENTS contains `--base {branch}`, use that value as `BASE_BRANCH`. If `--
 
 **Size auto-detection** (when no flags are present):
 
-Follow the Size→workflow mapping table in `~/.claude/modules/size-workflow-table.md`:
+Follow the Size→workflow mapping table in `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md`:
 - `XS` or `S` → **patch route**
 - `M` or `L` → **pr route** (branch + PR flow)
 - `XL` → exit with error ("XL requires sub-issue splitting. Split the Issue and run `/code` on each sub-issue.")
@@ -96,7 +96,7 @@ Generate a short description from the title (e.g., "add-implement-skill").
 
 ### Step 2: Worktree Entry
 
-Read `~/.claude/modules/worktree-lifecycle.md` and follow the "Entry section" to create a worktree.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Entry section" to create a worktree.
 
 **Worktree naming convention (by route):**
 - **patch route**: `patch/issue-$NUMBER`
@@ -133,7 +133,7 @@ The worktree was already created by Worktree Entry (EnterWorktree) in Step 2 —
 Both routes:
 
 ```bash
-~/.claude/scripts/gh-label-transition.sh $NUMBER code
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER code
 ```
 
 ### Step 5: Load Spec
@@ -178,7 +178,7 @@ Implement the code following the "Implementation Steps" in the Spec.
 
 ### Step 9: Run Tests
 
-Read `~/.claude/modules/test-runner.md` and follow the "Processing Steps" section to run tests.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/test-runner.md` and follow the "Processing Steps" section to run tests.
 
 **Additional validation (run after tests):**
 
@@ -192,7 +192,7 @@ This is equivalent to the CI `validate-syntax` job and detects invalid `allowed-
 
 **Documentation consistency check (run after validation):**
 
-Read `~/.claude/modules/doc-checker.md` and follow the "Impact assessment criteria" section to determine whether documentation sync updates are needed for files changed during implementation.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-checker.md` and follow the "Impact assessment criteria" section to determine whether documentation sync updates are needed for files changed during implementation.
 
 If sync is required, update the target documents (`README.md`, `docs/workflow.md`, `.github/copilot-instructions.md`, etc.) before committing.
 
@@ -204,7 +204,7 @@ If sync is required, update the target documents (`README.md`, `docs/workflow.md
 2. If `LOCAL_BASE_URL` is not set, default to `http://localhost:3000`
 3. Replace `{{base_url}}` in acceptance checks with the resolved URL before passing to verify-executor
 
-Read `~/.claude/modules/verify-executor.md` and follow the "Processing Steps" section to run acceptance check consistency verification in **full mode**. Target: pre-merge acceptance checks for Issue #$NUMBER. Skip if no hints exist.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md` and follow the "Processing Steps" section to run acceptance check consistency verification in **full mode**. Target: pre-merge acceptance checks for Issue #$NUMBER. Skip if no hints exist.
 
 Handle results as follows:
 1. If all PASS, complete this step and update checkboxes:
@@ -212,7 +212,7 @@ Handle results as follows:
    - Fetch current Issue body with `gh issue view $NUMBER --json body`
    - For each pre-merge condition line with acceptance check, replace leading `- [ ]` with `- [x]` (preserve the rest of the line, acceptance check comments `<!-- verify: ... -->`, etc.)
    - Write updated body to `.tmp/issue-body-$NUMBER.md` with Write tool
-   - Update Issue body with `~/.claude/scripts/gh-issue-edit.sh $NUMBER .tmp/issue-body-$NUMBER.md`
+   - Update Issue body with `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh $NUMBER .tmp/issue-body-$NUMBER.md`
    - After update, delete temp file with `rm -f .tmp/issue-body-$NUMBER.md`
 2. If any hints FAIL:
    - Check the post-implementation file state and generate the correct verification command
@@ -220,7 +220,7 @@ Handle results as follows:
    - Example: `file_contains "settings.json" "gh project"` FAILs → check actual file content and rewrite to `file_contains "settings.json" "Skill(triage)"`
    - Pre-create directory with `mkdir -p .tmp`
    - Write updated Issue body to `.tmp/issue-body-$NUMBER.md` with Write tool
-   - Update with `~/.claude/scripts/gh-issue-edit.sh $NUMBER .tmp/issue-body-$NUMBER.md`
+   - Update with `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh $NUMBER .tmp/issue-body-$NUMBER.md`
    - After update, delete temp file with `rm -f .tmp/issue-body-$NUMBER.md`
 3. If any hints are UNCERTAIN (syntax errors, etc.):
    - Display a warning and continue
@@ -243,7 +243,7 @@ Handle results as follows:
 
 **Determine commit prefix (fetch Type → map to prefix):**
 
-1. Run `~/.claude/scripts/get-issue-type.sh $NUMBER` and get the returned Type name (`Bug`/`Feature`/`Task`)
+1. Run `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh $NUMBER` and get the returned Type name (`Bug`/`Feature`/`Task`)
 2. If none are set (empty string): use `patch:` prefix
 
 Include `closes #N` only when the base branch is `main` (GitHub auto-close via `closes #N` only works when merging to the default branch).
@@ -295,7 +295,7 @@ closes #$NUMBER
 
 **Auto-append acceptance conditions to Issue:**
 
-When creating a PR, compare the Spec verification methods against the Issue acceptance conditions. If the Issue acceptance conditions are missing verification items, fetch the current Issue body with `gh issue view $NUMBER --json body`, build the updated body with the missing items appended, pre-create the directory with `mkdir -p .tmp`, write the updated body to `.tmp/issue-body-$NUMBER.md` with Write tool, update with `~/.claude/scripts/gh-issue-edit.sh $NUMBER .tmp/issue-body-$NUMBER.md`. After update, delete the temp file with `rm -f .tmp/issue-body-$NUMBER.md`.
+When creating a PR, compare the Spec verification methods against the Issue acceptance conditions. If the Issue acceptance conditions are missing verification items, fetch the current Issue body with `gh issue view $NUMBER --json body`, build the updated body with the missing items appended, pre-create the directory with `mkdir -p .tmp`, write the updated body to `.tmp/issue-body-$NUMBER.md` with Write tool, update with `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh $NUMBER .tmp/issue-body-$NUMBER.md`. After update, delete the temp file with `rm -f .tmp/issue-body-$NUMBER.md`.
 
 ### Step 12: Code Retrospective
 
@@ -345,7 +345,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 
 ### Step 13: Worktree Exit
 
-Read `~/.claude/modules/worktree-lifecycle.md` and follow the Exit section appropriate for the route.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the Exit section appropriate for the route.
 
 **patch route (merge-to-main pattern):**
 Follow "Exit: merge-to-main section". After push completes, transition the label (patch route skips `/merge`, so label transition happens here).
@@ -353,7 +353,7 @@ Follow "Exit: merge-to-main section". After push completes, transition the label
 **patch route (XS/S common)**: After push completes, transition to `phase/verify`:
 
 ```bash
-~/.claude/scripts/gh-label-transition.sh $NUMBER verify
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER verify
 ```
 
 patch route completes here. Follow the completion report section to inform the user.
@@ -363,7 +363,7 @@ Follow "Exit: push-and-remove section" (push was done in Step 12, so only delete
 
 ### Step 14: Opportunistic Verification
 
-Only if `.wholework.yml` in the project has `opportunistic-verify: true`, Read `~/.claude/modules/opportunistic-verify.md` and follow the "Processing Steps" section to run opportunistic verification. The skill name is `/code`. Skip this step if not configured.
+Only if `.wholework.yml` in the project has `opportunistic-verify: true`, Read `${CLAUDE_PLUGIN_ROOT}/modules/opportunistic-verify.md` and follow the "Processing Steps" section to run opportunistic verification. The skill name is `/code`. Skip this step if not configured.
 
 ## Completion Report
 

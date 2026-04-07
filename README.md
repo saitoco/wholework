@@ -14,23 +14,22 @@ Spec-first Claude Code skills for autonomous GitHub workflows.
 
 ```sh
 git clone https://github.com/saitoco/wholework.git
-cd wholework
-./install.sh
 ```
 
-This creates symlinks in your `~/.claude/` directory:
-
-| Repository directory | Install destination |
-|---|---|
-| `skills/` | `~/.claude/skills/wholework/` |
-| `modules/` | `~/.claude/skills/wholework/modules/` |
-| `agents/` | `~/.claude/agents/wholework/` |
-| `scripts/` | `~/.claude/skills/wholework/scripts/` |
-
-To uninstall:
+Then launch Claude Code with the `--plugin-dir` flag pointing to the cloned repository:
 
 ```sh
-./install.sh --uninstall
+claude --plugin-dir ~/src/wholework
+```
+
+Skills are available as `wholework:<skill-name>` (e.g., `/wholework:review`, `/wholework:code`).
+
+To always load wholework as a plugin, add it to your Claude Code settings:
+
+```json
+{
+  "pluginDirectories": ["~/src/wholework"]
+}
 ```
 
 ## Repository structure

@@ -22,7 +22,7 @@ The following information is passed from the caller:
 
 ### Step 1: URL Security Check
 
-Read `~/.claude/modules/browser-verify-security.md` and execute the URL security constraint check following its processing steps. Return UNCERTAIN if constraints are not met (include detailed reason).
+Read `${CLAUDE_PLUGIN_ROOT}/modules/browser-verify-security.md` and execute the URL security constraint check following its processing steps. Return UNCERTAIN if constraints are not met (include detailed reason).
 
 ### Step 2: Tool Detection
 
