@@ -1,0 +1,96 @@
+# doc-checker
+
+Documentation consistency checker.
+
+## Purpose
+
+Check consistency of documentation (README.md, CLAUDE.md, docs/workflow.md, etc.) against code changes, detecting missed updates and path/command example mismatches.
+
+## Input
+
+The following information is passed from the caller:
+
+- **Changes**: PR diff or list of changed files with change summary
+- **Documents to check**: List of document file paths to verify (defaults to the following when omitted):
+  - **Steering documents**: Get `docs/*.md` with Glob, and dynamically identify files with frontmatter `type: steering`
+  - **Project documents**: Get `docs/*.md` with Glob, and dynamically identify files with frontmatter `type: project`
+  - **Fixed root documents**: `README.md`, `CLAUDE.md`, `.github/copilot-instructions.md`
+  - Files under `docs/spec/` and `docs/reports/` are excluded from search
+- **Check perspectives**: Points to focus on
+  - Completeness: Are all necessary items included?
+  - Specificity: Are there any ambiguous expressions?
+  - Consistency: Is there consistency with other documents?
+  - Measurability: Are metrics measurable?
+
+## Impact Determination Criteria
+
+When changes fall into any of the following categories, include the corresponding document files as targets for change:
+
+**Change Types (exhaustive):**
+
+| Change Type | Affected Documents |
+|------------|-------------------|
+| Skill addition, change, or deletion | `README.md` (skill list), `docs/workflow.md` (skill list, phase descriptions), `CLAUDE.md` (skill list, dev flow), `.github/copilot-instructions.md` (skill list, dev flow) |
+| Agent/shared module addition, change, or deletion | `docs/workflow.md` (modules/agents list table), `README.md` (if applicable) |
+| Workflow phase changes | `docs/workflow.md`, `README.md`, `CLAUDE.md`, `.github/copilot-instructions.md` |
+| Project structure changes (directory/file placement) | `README.md` (project structure), `docs/workflow.md` (if applicable), `docs/structure.md` (Directory Layout / Key Files) |
+| Script addition, change, or deletion | `README.md` (setup instructions, script descriptions), `docs/workflow.md` (if applicable) |
+
+**Default document list**: Refer to the list in "Input" section under "Documents to check (defaults when omitted)".
+
+**Relationship with grep-based search**: The table above is the baseline (criteria based on change type), and the basename grep described below complements it. It dynamically discovers mentions not detectable by the table.
+
+## Processing Steps
+
+1. Identify document items potentially affected by the changes:
+   - File path changes → path references in documents
+   - Command/script changes → command examples, usage instructions
+   - Feature additions/deletions → feature lists, skill lists
+   - Configuration changes → setup procedures, configuration examples
+2. Dynamically identify candidate document files using Glob:
+   - Get `docs/*.md` with Glob to create a Steering / Project document candidate list (do not Read at this stage)
+   - Exclude files under `docs/spec/` and `docs/reports/` from candidates
+   - Always include `README.md`, `CLAUDE.md`, `.github/copilot-instructions.md` as fixed targets
+3. Read each document and parse the frontmatter at the top to determine the type (Read only once per file):
+   - Treat files with frontmatter `type: steering` as Steering documents
+   - Treat files with frontmatter `type: project` as Project documents
+   - Exclude `docs/*.md` files without `type` defined in frontmatter from subsequent checks (always check the fixed list: `README.md`, `CLAUDE.md`, `.github/copilot-instructions.md`)
+4. Extract only the base names (without extensions) of changed files as search keywords, and grep across all target documents identified in steps 2-3 (purpose: additional detection of affected document candidates):
+   - Additionally detect documents that mention base names as "affected document candidates"
+5. For each document, grep for multiple keywords related to the change (base name plus full path, command names, feature names, etc.) and identify lines with suspected inconsistencies
+6. Detect inconsistencies from the following perspectives:
+   - Path/filename mismatches
+   - Outdated command examples
+   - Added features not reflected in documentation
+   - Deleted features remaining in documentation
+   - Unupdated list tables (skill lists, etc.)
+7. Cross-check the impact determination criteria table results against the list of changed files:
+   - Check whether changes matching the "Change Type" in the table above are included
+   - If matching change types are found, check whether corresponding "Affected Documents" are in the changed files list
+   - For missing documents, output the following warning:
+
+     ```
+     Warning: Document sync needed — target files not in the change list
+     - Change type: {matching change type}
+     - Missing documents: {path of corresponding document}
+     → Please add to the change file list
+     ```
+
+## Output Format
+
+```markdown
+## Documentation Consistency Check Results
+
+| Document | Item | Result | Details |
+|----------|------|--------|---------|
+| docs/workflow.md | Skill list table | Needs update | New skill `/xxx` not added |
+| README.md | Installation instructions | OK | No impact from change |
+| CLAUDE.md | Workflow description | Needs update | Old path `skills/old/` remains |
+
+### Action Items
+
+1. **File**: target document path
+   - **Location**: relevant line or section
+   - **Current**: current description
+   - **Recommended**: content to fix
+```

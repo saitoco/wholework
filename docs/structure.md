@@ -71,6 +71,18 @@ Each skill lives in its own subdirectory containing a `SKILL.md` file. Skills ar
 
 Shared markdown modules referenced by skills. Module files use the `.md` extension and follow the naming convention `<module-name>.md`.
 
+Key modules include:
+- `verify-patterns.md` — acceptance check pattern accuracy guidelines
+- `verify-classifier.md` — post-merge condition verifiability classification
+- `verify-executor.md` — acceptance check command translation and execution
+- `worktree-lifecycle.md` — shared worktree Entry/Exit lifecycle for all skills
+- `test-runner.md` — quality check execution and result analysis
+- `size-workflow-table.md` — Size-to-workflow decision table
+- `detect-config-markers.md` — `.wholework.yml` configuration detection
+- `adapter-resolver.md` — 3-layer adapter resolution (project-local → user-global → bundled)
+- `opportunistic-verify.md` — opportunistic verification at skill completion
+- `doc-checker.md` — documentation consistency checker
+
 ### `agents/`
 
 Agent definitions as markdown files. Each agent is a single `.md` file.
