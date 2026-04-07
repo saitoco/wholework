@@ -1,6 +1,7 @@
 ---
 name: spec
 description: Issue specification skill
+allowed-tools: Read
 ---
 
 # Spec
