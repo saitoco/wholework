@@ -16,7 +16,8 @@ wholework/
 ├── scripts/             # Utility scripts used by skills and agents
 │   └── <script-name>.sh
 ├── tests/               # Bats test files for scripts
-│   └── <script-name>.bats
+│   ├── <script-name>.bats
+│   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
 │   ├── structure.md     # This file
 │   └── spec/            # Issue specifications
@@ -78,3 +79,7 @@ Shell scripts used by skills and agents. Scripts should be POSIX-compatible wher
 ### `tests/`
 
 Bats test files for scripts in `scripts/`. Each test file follows the naming convention `<script-name>.bats`.
+
+### `tests/fixtures/`
+
+Static fixture files used by bats tests (e.g. HTML files for browser-based verification tests).

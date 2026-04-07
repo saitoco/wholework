@@ -1,0 +1,36 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  bats:
+    name: Run bats tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bats
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y bats
+
+      - name: Run bats tests
+        run: bats tests/
+
+  validate-syntax:
+    name: Validate skill syntax
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Validate skill syntax
+        run: python3 scripts/validate-skill-syntax.py skills/
