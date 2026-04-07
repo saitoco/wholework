@@ -6,6 +6,7 @@ node_modules/
 
 # Claude Code worktrees
 .claire/
+.claude/worktrees/
 
 # OS files
 .DS_Store
