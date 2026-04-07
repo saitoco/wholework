@@ -65,3 +65,31 @@
 - 参照実装との主な差分: (1) `phase/issue` と `phase/spec` の個別カラムマッピング、(2) `phase/verify` マッピング追加、(3) wholework 固有の ID 群
 - `GITHUB_TOKEN` には Projects スコープがないため、`PROJECT_PAT` (Fine-grained PAT with `project:write`) を Repository secret として設定する必要がある
 - GraphQL mutation の構造は参照実装と同一（`addProjectV2ItemById` + `updateProjectV2ItemFieldValue`）
+
+## verify レトロスペクティブ
+
+### 各フェーズの振り返り
+
+#### spec
+- 受け入れ条件はすべて `file_exists` / `grep` による自動検証可能な形式で記述されており品質良好
+- マージ後の manual 条件も `<!-- verify-type: manual -->` で明示されており、自動/手動の分類が明確
+
+#### design
+- 特になし（spec レトロスペクティブにも記録なし）
+
+#### code
+- `grep "on:.*issues"` という受け入れチェックパターンが YAML 複数行フォーマットにマッチしないことが実装中に判明し、`grep "issues:"` に修正された（Specの受け入れチェック記述の問題。Issue 本文とSpecの両方が修正された）
+- patch ルートで直接 main にコミット（PR なし）。commit `1518b6b` と `a871b02` の2コミットで完了
+
+#### review
+- patch ルートのため正式なレビューは実施されていない。コードはシンプルな YAML ファイルのため問題なし
+
+#### merge
+- patch ルート（直接 main コミット）。コンフリクトなし
+
+#### verify
+- 自動検証対象11件すべてPASS
+- マージ後2件は `verify-type: manual` のため自動検証対象外（ユーザー手動検証が必要）
+
+### 改善提案
+- 特になし
