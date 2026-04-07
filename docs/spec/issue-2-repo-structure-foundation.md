@@ -82,3 +82,28 @@ Establish the wholework repository foundation: directory layout, symlink-based i
 
 ### 受け入れ条件の検証困難さ
 - 受け入れ条件はファイル存在・内容チェックのみで、実際のシンボリックリンク挙動は「マージ後」の手動検証に委ねられている。インストーラースクリプトの場合、dry-run オプションや POSIX 環境での実行テストを受け入れ条件に含めることで自動検証の精度が上がる可能性がある。
+
+## verify レトロスペクティブ
+
+### 各フェーズの振り返り
+
+#### spec
+- Spec 作成後に `e1f1add` でスクリプトインストールパスを `~/.claude/scripts/wholework/` から `~/.claude/skills/wholework/scripts/` に修正した。これは Spec の設計決定（skills と同梱・自己完結パッケージ）と整合するよう修正されたもので、Spec が早期に main に反映されていたため対応できた。
+
+#### design
+- 特になし（Spec の設計判断は実装と整合していた）
+
+#### code
+- 手戻りなし。レビューで指摘された `SKILLS_DEST` シンボリックリンクバグは PR マージ前に修正済みであることをコミット履歴（`f5aa411`）で確認。
+
+#### review
+- `SKILLS_DEST` をシンボリックリンクとして作成すると `MODULES_DEST` 作成時にリポジトリ内 `skills/` を汚染するバグをレビューが検出した。レビューが有効に機能していた。
+
+#### merge
+- PR #3 がクリーンにマージされ、コンフリクトの形跡なし。
+
+#### verify
+- 自動検証対象の全14条件が PASS。`install.sh` の実際のシンボリックリンク挙動（マージ後 manual 条件2件）はユーザー手動検証に委ねられている。インストーラーの受け入れ条件に `command "bash install.sh && test -L ~/.claude/agents/wholework"` 等の自動実行可能ヒントを追加すれば verify フェーズでの自動化が可能になる。
+
+### 改善提案
+- インストーラースクリプトを伴う Issue の受け入れ条件に `<!-- verify: command "..." -->` ヒントを付与することで、シンボリックリンク作成/削除の挙動を `/verify` で自動検証できるようにする（現状は全て手動検証）。
