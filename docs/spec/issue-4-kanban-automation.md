@@ -45,6 +45,21 @@
 - Repository secrets に `PROJECT_PAT`（`project:write` スコープ付き PAT）が設定されている
 - Issue に `phase/code` ラベルを付与し、Projects の Status カラムが Code に自動更新されることを確認
 
+## spec レトロスペクティブ
+
+（spec フェーズでの振り返りはなし）
+
+## code レトロスペクティブ
+
+### 設計からの逸脱
+- 特になし
+
+### 設計の不備・曖昧さ
+- 受け入れチェック `grep "on:.*issues"` が標準的な YAML 複数行フォーマット（`on:` と `issues:` が別行）にマッチしない。`grep "issues:"` に修正した
+
+### 手戻り
+- 特になし
+
 ## 注意事項
 
 - 参照実装との主な差分: (1) `phase/issue` と `phase/spec` の個別カラムマッピング、(2) `phase/verify` マッピング追加、(3) wholework 固有の ID 群
