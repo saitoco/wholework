@@ -117,7 +117,7 @@ Read the conflicting file with Read, analyze both sides of the conflict:
    **Resolution approaches (examples):**
    - Include both (merge)
    - Choose one side
-   - Write new integrated code
+   - Create new integrated code
 4. If deemed complex (e.g., different parts of the same function, conflicting logic changes):
    - Confirm resolution approach via AskUserQuestion (non-interactive mode: output conflict details, run `git rebase --abort`, guide to run `/merge {PR number}` interactively, then abort)
    - User declines: Abort rebase with `git rebase --abort` and exit
