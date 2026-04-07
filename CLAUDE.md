@@ -5,7 +5,8 @@ Spec-driven skills for autonomous work on GitHub — a public repository for sha
 ## Language Conventions
 
 - Source code: **English** (variable names, function names, comments, file names)
-- Documentation: **English** (README, spec files, module docs, skill docs)
+- Documentation: **English** (README, module docs, skill docs)
+- Spec files: **Japanese** (disposable, same treatment as issue bodies)
 - Issue titles: English
 - Issue bodies: Japanese (for now)
 - Commit messages: English
