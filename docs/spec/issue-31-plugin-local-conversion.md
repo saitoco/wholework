@@ -112,3 +112,32 @@ wholework を Claude Code のローカルプラグイン（`--plugin-dir` 形式
 ### 受け入れ条件の検証困難さ
 
 受け入れ条件「`~/.claude/modules/` 参照が残っていない」の grep パターンが `~/.claude/` 形式のみを検出し、`$HOME/.claude/` 形式を見落とした。受け入れチェックのコマンドを `grep -rl '~/.claude/modules/\|~/.claude/scripts/\|\$HOME/.claude/modules/\|\$HOME/.claude/scripts/' skills/ modules/ agents/` のように拡張することで自動検証精度が向上する。
+
+## verify レトロスペクティブ
+
+### 各フェーズの振り返り
+
+#### spec
+- Spec は全体的に明確で実装ステップも具体的だった
+- ただし `validate_body_scripts_in_allowed_tools` 関数の更新が実装ステップ4から漏れており、コードフェーズで手戻りが発生した（code レトロスペクティブに記録済み）
+
+#### design
+- 特になし（design フェーズは spec フェーズに統合済み）
+
+#### code
+- `validate_body_scripts_in_allowed_tools` の `script_path_pattern = f"~/.claude/scripts/{script_name}"` 未更新によりテスト232・234 が失敗し、追加 fix コミットが発生した
+- PR #32 のコミット履歴: `fix: Update script path check in validate_body_scripts_in_allowed_tools` および `Fix missed path substitutions in adapter-resolver and environment-ada…` の2件の修正コミットで対応済み
+
+#### review
+- `adapter-resolver.md` の `$HOME/.claude/modules/` 形式の置換漏れを review エージェントが正しく検出し、修正コミットにつながった。レビューは有効に機能した
+- 受け入れ条件の grep パターンが `~/.claude/` 形式のみを対象としていたため、自動検証では見逃されていた問題をレビューで補完した
+
+#### merge
+- PR #32 経由で squash マージ完了。コンフリクトなし
+
+#### verify
+- マージ前の全6条件がPASS
+- マージ後の3条件はすべて `verify-type: manual` のため自動検証対象外
+
+### 改善提案
+- 受け入れ条件の参照パス検証 grep パターンに `$HOME/.claude/` 形式（`\$HOME/.claude/modules/\|\$HOME/.claude/scripts/`）を追加する。`~/.claude/` と `$HOME/.claude/` は等価だが機械的な全置換では見落とされやすい。Issue #31 でこのパターンが実際に自動検証をすり抜けてレビューで補完される事象が発生した
