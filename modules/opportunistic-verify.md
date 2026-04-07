@@ -18,12 +18,12 @@ Skills that Read this file should execute opportunistic verification following t
 
 ### 1. Fetch Verification-Pending Issues and Extract Conditions
 
-First check for the existence of `~/.claude/scripts/opportunistic-search.sh` using a `-x` test. If the script does not exist (or is not executable), output "Warning: ~/.claude/scripts/opportunistic-search.sh not found. Skipping opportunistic verification." and skip all subsequent processing.
+First check for the existence of `${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh` using a `-x` test. If the script does not exist (or is not executable), output "Warning: ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh not found. Skipping opportunistic verification." and skip all subsequent processing.
 
 If the script exists:
 
 ```bash
-~/.claude/scripts/opportunistic-search.sh <skill-name>
+${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh <skill-name>
 ```
 
 - The script fetches closed Issues with the `phase/verify` label and filters by `verify-type: opportunistic` tag, skill name, and unchecked conditions
@@ -49,13 +49,13 @@ For Issues with PASS conditions, execute the following:
 1. Get current Issue body with `gh issue view $N --json body -q .body`
 2. Rewrite `- [ ]` to `- [x]` for PASS conditions
 3. Create directory with `mkdir -p .tmp`, then write updated body to `.tmp/issue-body-$N.md` using the Write tool
-4. Update Issue body with `~/.claude/scripts/gh-issue-edit.sh $N .tmp/issue-body-$N.md`
+4. Update Issue body with `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh $N .tmp/issue-body-$N.md`
 5. Delete temp file with `rm -f .tmp/issue-body-$N.md`
 
 **Post comment:**
 
 1. Write comment body to `.tmp/issue-comment-$N.md` using the Write tool (template below)
-2. Post comment with `~/.claude/scripts/gh-issue-comment.sh $N .tmp/issue-comment-$N.md`
+2. Post comment with `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $N .tmp/issue-comment-$N.md`
 3. Delete temp file with `rm -f .tmp/issue-comment-$N.md`
 
 **Comment template:**

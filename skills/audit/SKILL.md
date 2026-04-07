@@ -1,14 +1,14 @@
 ---
 name: audit
 description: Detect documentation/implementation drift and auto-generate Issues (`/audit drift`), and detect structural fragility (`/audit fragility`). AI detects semantic drift between Steering Documents + Project Documents and codebase implementation, and auto-generates Issues for code-side fixes. Where `/doc sync` proposes documentation-side fixes, `/audit` is the complementary skill that creates Issues for code-side fixes. Running without arguments executes both drift and fragility perspectives in an integrated run.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash(gh issue create:*, gh issue list:*, gh issue edit:*, gh label create:*, ls:*, mkdir:*, rm:*, ~/.claude/scripts/gh-issue-edit.sh:*, ~/.claude/scripts/gh-graphql.sh:*, ~/.claude/scripts/gh-issue-comment.sh:*)
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(gh issue create:*, gh issue list:*, gh issue edit:*, gh label create:*, ls:*, mkdir:*, rm:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*)
 ---
 
 # audit: Documentation × Implementation Drift Detection
 
 Parse ARGUMENTS and route to the appropriate subcommand.
 
-If ARGUMENTS contains `--help`, Read `~/.claude/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
+If ARGUMENTS contains `--help`, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
 
 ## Command Routing
 
@@ -37,7 +37,7 @@ Parse the following options from ARGUMENTS:
 
 ### Step 1: Context Collection
 
-Read `~/.claude/modules/codebase-analysis.md` and follow the "Processing Steps" section to execute cross-codebase analysis.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/codebase-analysis.md` and follow the "Processing Steps" section to execute cross-codebase analysis.
 
 Then collect documents using the following procedure:
 
@@ -176,7 +176,7 @@ If the `audit/drift` label doesn't exist, create it with `gh label create` (colo
 
 **Type/Size assignment:**
 
-Set Type and Size from AI estimation of drift scope (update project fields via `~/.claude/scripts/gh-graphql.sh`).
+Set Type and Size from AI estimation of drift scope (update project fields via `${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh`).
 
 **After generation:**
 
@@ -199,7 +199,7 @@ Parse the following options from ARGUMENTS (same system as drift):
 
 ### Step 1: Context Collection
 
-Execute the same procedure as drift's Step 1 (run `~/.claude/modules/codebase-analysis.md` + load Steering Documents / Project Documents + fetch existing open Issues).
+Execute the same procedure as drift's Step 1 (run `${CLAUDE_PLUGIN_ROOT}/modules/codebase-analysis.md` + load Steering Documents / Project Documents + fetch existing open Issues).
 
 ---
 
@@ -305,7 +305,7 @@ If the `audit/fragility` label doesn't exist, create it with `gh label create` (
 
 **Type/Size assignment:**
 
-Set Type and Size from AI estimation of fragility scope (update project fields via `~/.claude/scripts/gh-graphql.sh`).
+Set Type and Size from AI estimation of fragility scope (update project fields via `${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh`).
 
 **After generation:**
 

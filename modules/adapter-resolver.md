@@ -18,7 +18,7 @@ The following information is passed from the caller:
 
 ### Step 1: Capability Declaration Check
 
-Read `~/.claude/modules/detect-config-markers.md` and get capability variables following its processing steps.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and get capability variables following its processing steps.
 
 Derive the variable name from the capability name (e.g., `browser`) using the naming convention (`HAS_{UPPERCASE_CAPABILITY_NAME}_CAPABILITY`):
 
@@ -39,14 +39,14 @@ Search for `{capability}-adapter.md` in the following priority order and use the
 |---------|-----------|------|-------------|
 | 1 | Project-local | `.wholework/adapters/{capability}-adapter.md` | Project-specific override |
 | 2 | User-global | `~/.wholework/adapters/{capability}-adapter.md` | User environment-specific config |
-| 3 | Bundled | `~/.claude/modules/{capability}-adapter.md` | Default implementation (fallback) |
+| 3 | Bundled | `${CLAUDE_PLUGIN_ROOT}/modules/{capability}-adapter.md` | Default implementation (fallback) |
 
 Existence check procedure for each path:
 
 1. Run `test -f ".wholework/adapters/{capability}-adapter.md"` in Bash; if succeeds, use **project-local**
 2. If fails, run `test -f "$HOME/.wholework/adapters/{capability}-adapter.md"` in Bash; if succeeds, use **user-global**
 3. If fails, run `test -f "$HOME/.claude/modules/{capability}-adapter.md"` in Bash; if succeeds, use **bundled**
-4. If all fail, return UNCERTAIN (state in detail: "`{capability}-adapter.md` not found (not present in project-local: `.wholework/adapters/`, user-global: `~/.wholework/adapters/`, or bundled: `~/.claude/modules/`)")
+4. If all fail, return UNCERTAIN (state in detail: "`{capability}-adapter.md` not found (not present in project-local: `.wholework/adapters/`, user-global: `~/.wholework/adapters/`, or bundled: `${CLAUDE_PLUGIN_ROOT}/modules/`)")
 
 ### Step 3: Delegation to Adapter
 

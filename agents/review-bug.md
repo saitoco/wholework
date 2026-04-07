@@ -31,7 +31,7 @@ The following are **false positive candidates** and must not be reported:
 
 ## Type-Specific Focus
 
-Read `~/.claude/modules/review-type-weighting.md` and apply the Type-specific focus from the `## review-bug` section.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/review-type-weighting.md` and apply the Type-specific focus from the `## review-bug` section.
 
 ## Input
 
@@ -112,6 +112,6 @@ Recommended fix:
 (only when no HIGH SIGNAL problems were detected)
 ```
 
-Read `~/.claude/modules/review-output-format.md` and follow the common finding format and path/line specification rules.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/review-output-format.md` and follow the common finding format and path/line specification rules.
 
 **When there are no findings**: Output only the "### No Issues Found" section with the message: "Bug group HIGH SIGNAL verification detected no bugs or logic errors."

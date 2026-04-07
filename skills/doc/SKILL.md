@@ -8,7 +8,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash(ls:*, wc:*)
 
 Parse ARGUMENTS and route to the appropriate command.
 
-If ARGUMENTS contains `--help`, Read `~/.claude/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
+If ARGUMENTS contains `--help`, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
 
 - Empty (no arguments) → status display
 - `init` → init wizard
@@ -288,7 +288,7 @@ Read existing files with Read and retain as analysis targets.
 
 If no analysis source files are found, display "No analysis sources found. Run in a project with README.md, package.json, etc." and exit.
 
-If `--deep` flag is enabled, Read `~/.claude/modules/codebase-analysis.md` and follow the "Processing Steps" section to run codebase analysis and integrate the extracted information into analysis target information. Reflect results in each document following this policy:
+If `--deep` flag is enabled, Read `${CLAUDE_PLUGIN_ROOT}/modules/codebase-analysis.md` and follow the "Processing Steps" section to run codebase analysis and integrate the extracted information into analysis target information. Reflect results in each document following this policy:
 
 - Entry point list + estimated architecture → tech.md Architecture Decisions and structure.md Directory Layout
 - Directory role table → structure.md Directory Layout
@@ -441,7 +441,7 @@ Also load the following files with Glob:
 
 **Cross-skill consistency check:**
 
-If `scripts/validate-skill-syntax.py` exists, Read `~/.claude/modules/skill-dev-checks.md` and follow the "Cross-Skill Consistency Check" section to run cross-cutting checks. Include detected inconsistencies in the drift report in Step 7 (normalization proposals).
+If `scripts/validate-skill-syntax.py` exists, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-dev-checks.md` and follow the "Cross-Skill Consistency Check" section to run cross-cutting checks. Include detected inconsistencies in the drift report in Step 7 (normalization proposals).
 
 **Content classification based on dynamic SSoT mapping:**
 

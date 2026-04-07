@@ -18,7 +18,7 @@ Information provided by the calling skill:
 
 1. Dynamically fetch projects linked to the repository:
    ```bash
-   ~/.claude/scripts/gh-graphql.sh --cache --query get-projects-with-fields
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --cache --query get-projects-with-fields
    ```
    - If `projectsV2.nodes` is an empty array → proceed to step 5 (label fallback)
 
@@ -27,15 +27,15 @@ Information provided by the calling skill:
 
 3. Add Issue to the project if not already added:
    ```bash
-   ~/.claude/scripts/gh-graphql.sh --cache --query get-issue-id -F num=$NUMBER --jq '.data.repository.issue.id'
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --cache --query get-issue-id -F num=$NUMBER --jq '.data.repository.issue.id'
    ```
    ```bash
-   ~/.claude/scripts/gh-graphql.sh --query add-project-item -F projectId="$PROJECT_ID" -F contentId="$ISSUE_ID"
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query add-project-item -F projectId="$PROJECT_ID" -F contentId="$ISSUE_ID"
    ```
 
 4. Set the field value:
    ```bash
-   ~/.claude/scripts/gh-graphql.sh --query update-field-value -F projectId="$PROJECT_ID" -F itemId="$ITEM_ID" -F fieldId="$FIELD_ID" -F optionId="$OPTION_ID"
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query update-field-value -F projectId="$PROJECT_ID" -F itemId="$ITEM_ID" -F fieldId="$FIELD_ID" -F optionId="$OPTION_ID"
    ```
    - **If successful → processing complete. Skip step 5.**
 
@@ -60,16 +60,16 @@ Type uses the Issue Types API (`updateIssueIssueType` mutation). **Execute steps
 
 1. Check if Issue Types are available in the repository:
    ```bash
-   ~/.claude/scripts/gh-graphql.sh --cache --query get-issue-types --jq '.data.repository.issueTypes.nodes // []'
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --cache --query get-issue-types --jq '.data.repository.issueTypes.nodes // []'
    ```
    - If `nodes` is empty array or `issueTypes` is null → proceed to step 3 (label fallback)
 
 2. If Issue Types are available (`nodes` is non-empty):
    ```bash
-   ~/.claude/scripts/gh-graphql.sh --cache --query get-issue-id -F num=$NUMBER --jq '.data.repository.issue.id'
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --cache --query get-issue-id -F num=$NUMBER --jq '.data.repository.issue.id'
    ```
    ```bash
-   ~/.claude/scripts/gh-graphql.sh --query update-issue-type -F issueId="$ISSUE_ID" -F typeId="$TYPE_ID"
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query update-issue-type -F issueId="$ISSUE_ID" -F typeId="$TYPE_ID"
    ```
    - **If successful → processing complete. Skip step 3.**
 

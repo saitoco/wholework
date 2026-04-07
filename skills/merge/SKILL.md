@@ -2,12 +2,12 @@
 name: merge
 description: Squash-merge a PR and delete the remote branch (`/merge 88`). Use when merging review-approved, CI-passing PRs. Automatically attempts conflict resolution when conflicts occur.
 context: fork
-allowed-tools: Bash(gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, ~/.claude/scripts/gh-issue-comment.sh:*, ~/.claude/scripts/run-merge.sh:*, ~/.claude/scripts/gh-pr-merge-status.sh:*, ~/.claude/scripts/gh-label-transition.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*), Read, Edit, Grep, EnterWorktree, ExitWorktree
+allowed-tools: Bash(gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*), Read, Edit, Grep, EnterWorktree, ExitWorktree
 ---
 
 # Squash Merge
 
-If ARGUMENTS contains `--help`, Read `~/.claude/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
+If ARGUMENTS contains `--help`, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
 
 ## Autonomous Mode (--auto)
 
@@ -16,7 +16,7 @@ If ARGUMENTS contains the `--auto` flag, delegate as follows:
 **Note**: `--auto` mode accepts **PR numbers only**.
 
 1. Extract the PR number from ARGUMENTS (numeric part)
-2. Run `~/.claude/scripts/run-merge.sh $NUMBER` via Bash
+2. Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh $NUMBER` via Bash
 3. Exit after the script completes (do not execute subsequent steps)
 
 If `--auto` is not present, proceed with the normal steps below.
@@ -49,7 +49,7 @@ In `--auto` mode (invoked via `run-merge.sh` with `claude -p`), AskUserQuestion 
 
 2. Determine mergeability:
    ```bash
-   ~/.claude/scripts/gh-pr-merge-status.sh "$NUMBER"
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh "$NUMBER"
    ```
    Based on `mergeable` / `reason` in the output JSON, proceed as follows.
 
@@ -64,7 +64,7 @@ Note: Always wrap `$NUMBER` in double quotes.
 
 ### Step 2: Worktree Entry
 
-Read `~/.claude/modules/worktree-lifecycle.md` and follow the "Entry section" to create a worktree.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Entry section" to create a worktree.
 
 **Worktree naming convention:** `merge/pr-$NUMBER`
 
@@ -189,12 +189,12 @@ If `BASE_BRANCH` is not `main`, inform the user after merge:
 Extract the related Issue number from the PR body (`closes #N`, `Related to #N`, `Issue #N:` in PR title, etc.):
 
 ```bash
-~/.claude/scripts/gh-label-transition.sh "$ISSUE_NUMBER" verify
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$ISSUE_NUMBER" verify
 ```
 
 ### Step 6: Worktree Exit (push-and-remove)
 
-Read `~/.claude/modules/worktree-lifecycle.md` and follow the "Exit: push-and-remove section" to exit the worktree.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Exit: push-and-remove section" to exit the worktree.
 
 `gh pr merge --squash --delete-branch` in Step 4 has already merged and deleted the remote branch, so call ExitWorktree("remove", discard_changes: true) to delete the worktree and return to the original directory.
 

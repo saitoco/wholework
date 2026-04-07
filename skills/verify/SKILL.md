@@ -2,14 +2,14 @@
 name: verify
 description: Acceptance test. Automatically verifies post-merge acceptance conditions and updates Issue checkboxes (`/verify 123`). Use after `/merge`. Reopens Issue on FAIL to return to the fix cycle.
 context: fork
-allowed-tools: Bash(git checkout:*, git pull:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, ~/.claude/scripts/gh-issue-edit.sh:*, ~/.claude/scripts/gh-issue-comment.sh:*, ~/.claude/scripts/run-verify.sh:*, ~/.claude/scripts/opportunistic-search.sh:*, ~/.claude/scripts/gh-extract-issue-from-pr.sh:*, ~/.claude/scripts/gh-label-transition.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
+allowed-tools: Bash(git checkout:*, git pull:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
 ---
 
 # Acceptance Test
 
 Receive an Issue number and automatically verify post-merge acceptance conditions.
 
-If ARGUMENTS contains `--help`, Read `~/.claude/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
+If ARGUMENTS contains `--help`, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
 
 ## Autonomous Mode (--auto)
 
@@ -18,7 +18,7 @@ If ARGUMENTS contains the `--auto` flag, delegate as follows:
 > **Note**: This mode only works when invoked via `/auto` (direct `run-verify.sh` call). Running `/verify 123 --auto` directly from an interactive session spawns a fork sub-agent via `context: fork`, making it appear unresponsive because output is not streamed. In interactive sessions, run `/verify 123` without `--auto`.
 
 1. Extract the Issue number from ARGUMENTS (numeric part)
-2. Run `~/.claude/scripts/run-verify.sh $NUMBER` via Bash
+2. Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh $NUMBER` via Bash
 3. Exit after the script completes (do not execute subsequent steps)
 
 If `--auto` is not present, proceed with mode detection below.
@@ -76,7 +76,7 @@ PR_NUMBER=$(gh pr list --search "$ISSUE_NUMBER" --state merged --json number --j
 If PR number is found:
 
 ```bash
-EXTRACT_RESULT=$(~/.claude/scripts/gh-extract-issue-from-pr.sh "$PR_NUMBER")
+EXTRACT_RESULT=$(${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh "$PR_NUMBER")
 BASE_BRANCH=$(echo "$EXTRACT_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('base_ref','main'))")
 ```
 
@@ -92,7 +92,7 @@ git pull origin "${BASE_BRANCH}"
 
 ### Step 3: Worktree Entry
 
-Read `~/.claude/modules/worktree-lifecycle.md` and follow the "Entry section" to create a worktree.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Entry section" to create a worktree.
 
 **Worktree naming convention:** `verify/issue-$NUMBER`
 
@@ -106,7 +106,7 @@ gh issue view "$NUMBER" --json body
 
 Parse acceptance condition checkboxes:
 
-**Resolving `{{base_url}}` to production URL**: If acceptance checks contain `{{base_url}}`, Read `~/.claude/modules/detect-config-markers.md` and follow the "Processing Steps" section to fetch `PRODUCTION_URL` from `.wholework.yml` (key: `production-url: "https://example.com"`). Then replace `{{base_url}}` with `PRODUCTION_URL` before passing to verify-executor.
+**Resolving `{{base_url}}` to production URL**: If acceptance checks contain `{{base_url}}`, Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to fetch `PRODUCTION_URL` from `.wholework.yml` (key: `production-url: "https://example.com"`). Then replace `{{base_url}}` with `PRODUCTION_URL` before passing to verify-executor.
 
 - If `PRODUCTION_URL` is found: run browser verification with the replaced URL
 - If `PRODUCTION_URL` is empty (not configured): treat acceptance checks containing `{{base_url}}` as UNCERTAIN, noting "`production-url` is not configured in `.wholework.yml`" in the remarks column
@@ -143,7 +143,7 @@ When referencing CI job results, determine whether the failure is infrastructure
 
 #### Step 2: Conditions with Acceptance Checks
 
-For conditions with `<!-- verify: ... -->`, Read `~/.claude/modules/verify-executor.md` and follow the "Processing Steps" section's translation table to translate and execute acceptance checks. Mode: **full** (`command` hints are also treated as execution targets; however, actual execution is only after user approval).
+For conditions with `<!-- verify: ... -->`, Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md` and follow the "Processing Steps" section's translation table to translate and execute acceptance checks. Mode: **full** (`command` hints are also treated as execution targets; however, actual execution is only after user approval).
 
 **Security note for `command` hints**: In full mode, "execute `command` hints" means:
 - **Interactive mode**: present the command to the user and execute only after approval. Treat suspicious commands as UNCERTAIN.
@@ -153,11 +153,11 @@ For conditions with `<!-- verify: ... -->`, Read `~/.claude/modules/verify-execu
 
 **Browser verification command (`browser_check`, `browser_screenshot`) processing flow:**
 
-First check `HAS_BROWSER_CAPABILITY`. If not yet fetched, Read `~/.claude/modules/detect-config-markers.md` at this point to fetch it. Reuse the value if already fetched. Only if `HAS_BROWSER_CAPABILITY=true`, Read `skills/verify/browser-verify-phase.md` and follow the "Inside Step 2: Browser Verification Command Processing Flow" section. If `HAS_BROWSER_CAPABILITY` is unset or false, treat browser verification commands as UNCERTAIN.
+First check `HAS_BROWSER_CAPABILITY`. If not yet fetched, Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` at this point to fetch it. Reuse the value if already fetched. Only if `HAS_BROWSER_CAPABILITY=true`, Read `skills/verify/browser-verify-phase.md` and follow the "Inside Step 2: Browser Verification Command Processing Flow" section. If `HAS_BROWSER_CAPABILITY` is unset or false, treat browser verification commands as UNCERTAIN.
 
 #### Step 3: No Hints → Attempt Verification with AI Judgment
 
-If the condition follows the pattern "command X works" or "tests pass", Read `~/.claude/modules/test-runner.md` and follow the "Processing Steps" section to run tests.
+If the condition follows the pattern "command X works" or "tests pass", Read `${CLAUDE_PLUGIN_ROOT}/modules/test-runner.md` and follow the "Processing Steps" section to run tests.
 
 For other patterns, verify using the translation table below:
 
@@ -178,7 +178,7 @@ The following cannot be auto-verified:
 - Subjective UI/UX evaluations
 - Conditions starting with "The user..." (requires user action)
 
-**Prerequisite check before browser-verifiable case exclusion**: Before making this determination, confirm that `HAS_BROWSER_CAPABILITY` has been fetched within the same `/verify` execution flow. If not yet fetched, Read `~/.claude/modules/detect-config-markers.md` at this point to fetch it.
+**Prerequisite check before browser-verifiable case exclusion**: Before making this determination, confirm that `HAS_BROWSER_CAPABILITY` has been fetched within the same `/verify` execution flow. If not yet fetched, Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` at this point to fetch it.
 
 **Browser-verifiable case exclusion**: Only if `HAS_BROWSER_CAPABILITY=true` is confirmed via the above steps, Read `skills/verify/browser-verify-phase.md` and follow the "Inside Step 4: Browser-Verifiable Case Exclusion" section for classification. If `HAS_BROWSER_CAPABILITY` is unset or false, treat conditions with browser verification commands as UNCERTAIN.
 
@@ -186,16 +186,16 @@ The following cannot be auto-verified:
 
 Identify the checkbox indices (1-based) of conditions that PASSed and pass to the script:
 ```bash
-~/.claude/scripts/gh-issue-edit.sh "$NUMBER" --checkbox <pass-indices> --check
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh "$NUMBER" --checkbox <pass-indices> --check
 # Example: if 1st and 3rd acceptance conditions PASS
-# ~/.claude/scripts/gh-issue-edit.sh "$NUMBER" --checkbox 1,3 --check
+# ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh "$NUMBER" --checkbox 1,3 --check
 ```
 
 **Checkbox mode** (when updating only checkboxes by index):
 
 Identify PASS condition indices (1-based) and update individually:
 ```bash
-~/.claude/scripts/gh-issue-edit.sh "$NUMBER" --checkbox 1,3 --check
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh "$NUMBER" --checkbox 1,3 --check
 ```
 
 Comma-separated multiple indices are supported. Use `--uncheck` to uncheck.
@@ -212,7 +212,7 @@ Comma-separated multiple indices are supported. Use `--uncheck` to uncheck.
 
 Write body to `.tmp/issue-comment-$NUMBER.md` with Write tool, then pass to script:
 ```bash
-~/.claude/scripts/gh-issue-comment.sh "$NUMBER" ".tmp/issue-comment-$NUMBER.md"
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh "$NUMBER" ".tmp/issue-comment-$NUMBER.md"
 rm -f .tmp/issue-comment-$NUMBER.md
 ```
 
@@ -262,11 +262,11 @@ Judgment:
   - Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->` or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body
   - **If unchecked opportunistic or manual conditions remain**: assign `phase/verify` label and remove all other `phase/*` labels:
     ```bash
-    ~/.claude/scripts/gh-label-transition.sh "$NUMBER" verify
+    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
     ```
   - **If no unchecked opportunistic or manual conditions remain**: remove all `phase/*` labels and assign `phase/done` (also handles cases where `phase/code` persists in patch route):
     ```bash
-    ~/.claude/scripts/gh-label-transition.sh "$NUMBER" done
+    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" done
     ```
   - Confirm the Issue is closed. If not closed, close with `gh issue close "$NUMBER"` (handles cases like XL parent Issues not auto-closed by PR's `closes #N`)
   - **Even if post-merge conditions without hints are unchecked, do not reopen the Issue** (present user verification guide only)
@@ -274,7 +274,7 @@ Judgment:
   - Reopen Issue and remove all `phase/*` labels:
     ```bash
     gh issue reopen "$NUMBER"
-    ~/.claude/scripts/gh-label-transition.sh "$NUMBER"
+    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER"
     ```
   - User selects the next action (`/code`, `/spec`, or `/issue`) to return to the fix cycle
 
@@ -354,7 +354,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 
 ### Step 11: Worktree Exit (merge-to-main)
 
-Read `~/.claude/modules/worktree-lifecycle.md` and follow the "Exit: merge-to-main section" to exit the worktree.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Exit: merge-to-main section" to exit the worktree.
 
 Behavior differs based on `ENTERED_WORKTREE`:
 - `ENTERED_WORKTREE=true`: ExitWorktree("keep") → merge → push → cleanup
@@ -362,11 +362,11 @@ Behavior differs based on `ENTERED_WORKTREE`:
 
 ### Step 12: Opportunistic Verification
 
-Only if `.wholework.yml` in the project has `opportunistic-verify: true`, Read `~/.claude/modules/opportunistic-verify.md` and follow the "Processing Steps" section to run opportunistic verification. The skill name is `/verify`. Skip this step if not configured.
+Only if `.wholework.yml` in the project has `opportunistic-verify: true`, Read `${CLAUDE_PLUGIN_ROOT}/modules/opportunistic-verify.md` and follow the "Processing Steps" section to run opportunistic verification. The skill name is `/verify`. Skip this step if not configured.
 
 ### Step 13: Collect Improvement Proposals and Create Issues
 
-Read `~/.claude/modules/title-normalizer.md` and follow the "Processing Steps" section to normalize titles (used for Issue title normalization when creating Issues). Also Read `~/.claude/modules/detect-config-markers.md` and follow the "Processing Steps" section to detect `.wholework.yml` settings and fetch `HAS_SKILL_PROPOSALS` (if already fetched and detected in Step 12's `opportunistic-verify.md` processing, reuse the result).
+Read `${CLAUDE_PLUGIN_ROOT}/modules/title-normalizer.md` and follow the "Processing Steps" section to normalize titles (used for Issue title normalization when creating Issues). Also Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to detect `.wholework.yml` settings and fetch `HAS_SKILL_PROPOSALS` (if already fetched and detected in Step 12's `opportunistic-verify.md` processing, reuse the result).
 
 Extract text from `### Improvement Proposals` sections in each Spec retrospective section (spec, design, code, review, verify, auto).
 
@@ -380,7 +380,7 @@ Integrate improvement proposals collected from multiple phases, removing only ex
 
 - **Skill infrastructure improvement**: improvement proposals matching any of the following (examples):
   - Proposals for changes to skill commands themselves (`/spec`, `/verify`, `/review`, etc.) (e.g., "Should add a step to `/spec`")
-  - References to files under `~/.claude/` (e.g., "Should improve `~/.claude/modules/xxx.md`")
+  - References to files under `~/.claude/` (e.g., "Should improve `${CLAUDE_PLUGIN_ROOT}/modules/xxx.md`")
   - References to skill-specific filenames like `SKILL.md`, `modules/*.md`, `agents/*.md`
   - **Classification note**: Generic path names like `scripts/`, `docs/` are classified as skill infrastructure improvement only when referenced in the context of the skill infrastructure (behavior of `/verify`, `modules/` files). Improvement proposals for `scripts/` or `docs/` in external repositories are treated as code improvements
 - **Code improvement**: improvement proposals not falling into the above (proposals for code, configuration, tests, CI, etc. in the current repository)
@@ -415,7 +415,7 @@ grep -r "{keyword}" {target file or directory}
 
 **Create Issue and add verify hints**:
 
-- Normalize title following `~/.claude/modules/title-normalizer.md` processing steps, then create Issues in standard format (background, purpose, acceptance conditions) with `gh issue create` for each improvement proposal
+- Normalize title following `${CLAUDE_PLUGIN_ROOT}/modules/title-normalizer.md` processing steps, then create Issues in standard format (background, purpose, acceptance conditions) with `gh issue create` for each improvement proposal
 - **Add verify hints to acceptance conditions**: add acceptance checks like `<!-- verify: grep "{keyword}" "{target file}" -->` to the created Issue's acceptance conditions. Extract keywords from acceptance condition text and infer target files from proposal content (improves automation accuracy for `/auto --batch`). Create Issue without verify hints if they cannot be determined
 - If Issue creation fails, output error log to stderr, skip, and continue verify (does not affect exit code)
 - Output created Issue number to terminal

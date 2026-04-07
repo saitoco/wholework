@@ -1,14 +1,14 @@
 ---
 name: auto
 description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues.
-allowed-tools: Bash(~/.claude/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh pr list:*, ~/.claude/scripts/run-code.sh:*, ~/.claude/scripts/run-review.sh:*, ~/.claude/scripts/run-merge.sh:*, ~/.claude/scripts/run-verify.sh:*, ~/.claude/scripts/get-sub-issue-graph.sh:*, ~/.claude/scripts/run-auto-sub.sh:*, ~/.claude/scripts/run-spec.sh:*, ~/.claude/scripts/run-issue.sh:*, ~/.claude/scripts/gh-label-transition.sh:*), Read
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*), Read
 ---
 
 # Autonomous Execution
 
 Receive an Issue number and run spec (when needed)→code→review→merge→verify in sequence using Size-based routing. Each phase runs via `run-*.sh` using `claude -p --dangerously-skip-permissions` for a fresh context with full permission bypass.
 
-If ARGUMENTS contains `--help`, Read `~/.claude/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
+If ARGUMENTS contains `--help`, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
 
 ## Route-Phase Matrix
 
@@ -47,7 +47,7 @@ If `--base {branch}` is present, record as `BASE_BRANCH`. If `--base` is not spe
 If no flags, fetch Size to auto-detect route:
 
 ```bash
-~/.claude/scripts/get-issue-size.sh "$NUMBER" 2>/dev/null
+${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh "$NUMBER" 2>/dev/null
 ```
 
 ### Step 3: `phase/ready` Label Check
@@ -57,19 +57,19 @@ Fetch labels with `gh issue view $NUMBER --json labels -q '.labels[].name'` and 
 - **`phase/ready` label present**: proceed to the next step
 - **`phase/issue` label present (no `phase/ready`)**:
   - **Size is XS**: Spec not needed — skip spec and proceed to Step 4
-  - Size is `L`: run `~/.claude/scripts/run-spec.sh $NUMBER --opus` (run spec with Opus model)
-  - Size is neither XS nor L: run `~/.claude/scripts/run-spec.sh $NUMBER`
+  - Size is `L`: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh $NUMBER --opus` (run spec with Opus model)
+  - Size is neither XS nor L: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh $NUMBER`
   - On spec success, proceed to Step 4
   - On spec failure, go to Step 6 (error report)
 - **No `phase/*` labels** (issue triage not done):
-  - Run `~/.claude/scripts/run-issue.sh $NUMBER` (issue triage → Size setting/requirement shaping)
-  - After success, re-fetch Size (`~/.claude/scripts/get-issue-size.sh $NUMBER`). Update route if Size is now set.
+  - Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh $NUMBER` (issue triage → Size setting/requirement shaping)
+  - After success, re-fetch Size (`${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`). Update route if Size is now set.
   - Re-fetch labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
   - If re-fetched labels have **`phase/ready`**: proceed to Step 4
   - If re-fetched labels have **`phase/issue` (no `phase/ready`)**:
     - **Size is XS**: skip spec, proceed to Step 4
-    - Size is `L`: run `~/.claude/scripts/run-spec.sh $NUMBER --opus`
-    - Size is neither XS nor L: run `~/.claude/scripts/run-spec.sh $NUMBER`
+    - Size is `L`: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh $NUMBER --opus`
+    - Size is neither XS nor L: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh $NUMBER`
     - On spec success, proceed to Step 4
     - On spec failure, go to Step 6 (error report)
   - If expected `phase/*` label state is not reached after re-fetch, go to Step 6 (error report)
@@ -89,7 +89,7 @@ Run each phase via `run-*.sh`. Each script launches an independent process with 
 
 1. **Fetch dependency graph**:
    ```bash
-   ~/.claude/scripts/get-sub-issue-graph.sh $NUMBER
+   ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh $NUMBER
    ```
    Parse the result JSON and extract `execution_order` (array of sub-issue numbers per level).
 
@@ -100,7 +100,7 @@ Run each phase via `run-*.sh`. Each script launches an independent process with 
    # For each level (in execution_order order):
    Skip sub-issues that depend on failed issues,
    then run non-skipped sub-issues in background:
-     ~/.claude/scripts/run-auto-sub.sh $SUB_NUMBER &
+     ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh $SUB_NUMBER &
    Wait for all processes with `wait`, check each process exit code
    ```
 
@@ -110,7 +110,7 @@ Run each phase via `run-*.sh`. Each script launches an independent process with 
       - 1+ children at `phase/code` or later (code/review/verify/done) → parent becomes `phase/code`
       - All children at `phase/verify` or later (verify/done) → parent becomes `phase/verify`
       - All children at `phase/done` → handled by close flow judgment (Step 4c); do not aggregate-update here
-   3. Update parent with `~/.claude/scripts/gh-label-transition.sh $NUMBER <aggregated phase>`
+   3. Update parent with `${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER <aggregated phase>`
 
 3. **On failure**:
    - Add failed sub-issue numbers to the failure set
@@ -126,23 +126,23 @@ Run each phase via `run-*.sh`. Each script launches an independent process with 
 
 **patch route XS/S (2 phases):**
 
-1. code phase: run `~/.claude/scripts/run-code.sh $NUMBER --patch [--base {branch}]` via Bash (timeout: 600000)
+1. code phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER --patch [--base {branch}]` via Bash (timeout: 600000)
 2. If code fails: go to Step 6
 3. **XS only**: transcribe issue retrospective to Spec (see Step 4b)
-4. verify phase: run `~/.claude/scripts/run-verify.sh $NUMBER [--base ${BASE_BRANCH}]` via Bash (timeout: 600000)
+4. verify phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh $NUMBER [--base ${BASE_BRANCH}]` via Bash (timeout: 600000)
 5. Based on verify result, proceed to Step 5 or Step 6
 
 **pr route (4 phases):**
 
-1. code phase: run `~/.claude/scripts/run-code.sh $NUMBER --pr [--base {branch}]` via Bash (timeout: 600000)
+1. code phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER --pr [--base {branch}]` via Bash (timeout: 600000)
 2. If code fails: go to Step 6
 3. Extract PR number: `gh pr list --head "*issue-$NUMBER-*" --json number -q '.[0].number'` (also handles worktree branch names like `worktree-issue-*`)
 4. If PR number cannot be fetched: report error and go to Step 6
-5. review phase: run `~/.claude/scripts/run-review.sh $PR_NUMBER [--light|--full]` via Bash (timeout: 600000) (M→`--light`, L→`--full`)
+5. review phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh $PR_NUMBER [--light|--full]` via Bash (timeout: 600000) (M→`--light`, L→`--full`)
 6. If review fails: go to Step 6
-7. merge phase: run `~/.claude/scripts/run-merge.sh $PR_NUMBER` via Bash (timeout: 600000)
+7. merge phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh $PR_NUMBER` via Bash (timeout: 600000)
 8. If merge fails: go to Step 6
-9. verify phase: run `~/.claude/scripts/run-verify.sh $NUMBER [--base ${BASE_BRANCH}]` via Bash (timeout: 600000)
+9. verify phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh $NUMBER [--base ${BASE_BRANCH}]` via Bash (timeout: 600000)
 10. Based on verify result, proceed to Step 5 or Step 6
 
 ### Step 4b: Issue Retrospective Transcription (XS patch route only)
@@ -233,13 +233,13 @@ Determine the close flow for the parent Issue based on all sub-issue execution r
 
 3. **No unchecked cross-cutting conditions**: auto-close the parent:
    ```bash
-   ~/.claude/scripts/gh-label-transition.sh $NUMBER done
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER done
    gh issue close $NUMBER
    ```
 
 4. **Unchecked cross-cutting conditions remain**: transition to `phase/verify` and post a notification comment:
    ```bash
-   ~/.claude/scripts/gh-label-transition.sh $NUMBER verify
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER verify
    gh issue comment $NUMBER --body "All sub-issues are complete. The parent Issue has remaining manual acceptance conditions. Run \`/verify $NUMBER\` after reviewing."
    ```
    Leave the parent Issue open. The user runs `/verify $NUMBER` for final confirmation before closing.
@@ -277,9 +277,9 @@ Sort by `createdAt` descending (newest first) and select the top N. Targets: Iss
 Process the selected N Issues **sequentially** (serially):
 
 1. Check Issue labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
-2. **If no `phase/*` labels**: run `~/.claude/scripts/run-issue.sh $NUMBER` (issue triage → Size setting → `phase/ready` assignment)
+2. **If no `phase/*` labels**: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh $NUMBER` (issue triage → Size setting → `phase/ready` assignment)
    - On failure: output a warning and skip to the next Issue (do not abort the entire batch)
-3. Run `~/.claude/scripts/run-auto-sub.sh $NUMBER` (all phases spec→code→review→merge→verify, auto-starting from the current `phase/*` state)
+3. Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh $NUMBER` (all phases spec→code→review→merge→verify, auto-starting from the current `phase/*` state)
    - On failure: output a warning and skip to the next Issue (do not abort the entire batch)
 
 ### Batch Completion Report
