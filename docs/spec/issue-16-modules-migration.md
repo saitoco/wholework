@@ -139,6 +139,18 @@ Browser/Testing 関連の 5 ファイルを同じ手順で移植する:
 - ロジック改善はスコープ外（英語化と汎用化のみ）
 - verify false positive 修正: `grep "modules" "docs/migration-notes.md"` → `grep "Issue #16" "docs/migration-notes.md"` に修正（既存ファイルに "modules/" が既出のため）
 
+## code レトロスペクティブ
+
+### 設計からの逸脱
+- 特になし
+
+### 設計の不備・曖昧さ
+- worktree-lifecycle.md のソース（`~/.claude/modules/`）は既に日本語版であるため、同一ファイルを英語化するだけでよかった。Spec では「新規作成」と記述されているが実質的には翻訳作業
+- `review-output-format.md` と `review-type-weighting.md` にはソースに YAML フロントマターが含まれていたが、Spec では触れられていなかった。フロントマターはそのまま英語化して維持した
+
+### 手戻り
+- 特になし
+
 ## spec レトロスペクティブ
 
 ### 軽微な観察
