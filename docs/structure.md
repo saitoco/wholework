@@ -15,6 +15,8 @@ wholework/
 │   └── <agent-name>.md
 ├── scripts/             # Utility scripts used by skills and agents
 │   └── <script-name>.sh
+├── tests/               # Bats test files for scripts
+│   └── <script-name>.bats
 ├── docs/                # Documentation and steering documents
 │   ├── structure.md     # This file
 │   └── spec/            # Issue specifications
@@ -72,3 +74,7 @@ Agent definitions as markdown files. Each agent is a single `.md` file.
 ### `scripts/`
 
 Shell scripts used by skills and agents. Scripts should be POSIX-compatible where possible.
+
+### `tests/`
+
+Bats test files for scripts in `scripts/`. Each test file follows the naming convention `<script-name>.bats`.

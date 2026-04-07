@@ -108,6 +108,10 @@ if ! echo "$LABELS" | grep -q "phase/ready"; then
   fi
 fi
 
+# Re-fetch SIZE after spec phase in case spec set the Size label
+if [[ -z "$SIZE" ]]; then
+  SIZE=$("$SCRIPT_DIR/get-issue-size.sh" "$SUB_NUMBER" 2>/dev/null || true)
+fi
 if [[ -z "$SIZE" ]]; then
   echo "Error: Size is not set for issue #${SUB_NUMBER}" >&2
   exit 1
