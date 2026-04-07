@@ -1,6 +1,6 @@
-# Wholework Skills
+# Wholework
 
-Spec-driven skills for autonomous work on GitHub.
+Spec-first Claude Code skills for autonomous GitHub workflows.
 
 ## Language Conventions
 
