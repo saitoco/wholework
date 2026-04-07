@@ -53,6 +53,92 @@ grep -rP "[\x{3000}-\x{9FFF}]" skills/
 
 ---
 
+## Issue #23: Utility Skills Migration (triage, audit, doc)
+
+7 files were migrated from claude-config to wholework: `skills/triage/SKILL.md`, `skills/audit/SKILL.md`, `skills/doc/SKILL.md`, `skills/doc/product-template.md`, `skills/doc/tech-template.md`, and `skills/doc/structure-template.md`. All Japanese text (frontmatter `description` field, section headings, body text, inline comments) was translated to English. All files are new creations. Opportunistic simplification was applied.
+
+### Interface Changes
+
+**Frontmatter description translations (Japanese → English):**
+- `triage`: `Issueトリアージ。タイトル正規化・Type/Priority/Size/Value設定を自動化...` → `Issue triage. Automates title normalization, Type/Priority/Size/Value assignment...`
+- `audit`: `ドキュメント×実装の乖離検出・Issue自動生成...` → `Detect documentation/implementation drift and auto-generate Issues...`
+- `doc`: `プロジェクト基盤ドキュメント管理...` → `Project foundation document management...`
+
+**allowed-tools changes (triage):**
+
+Removed absolute paths from `allowed-tools`:
+- `/Users/saito/.claude/scripts/triage-backlog-filter.sh:*` → removed (kept `~/.claude/scripts/triage-backlog-filter.sh:*` only)
+- `/Users/saito/.claude/scripts/gh-graphql.sh:*` → removed (kept `~/.claude/scripts/gh-graphql.sh:*` only)
+- `/Users/saito/.claude/scripts/gh-issue-comment.sh:*` → removed (kept `~/.claude/scripts/gh-issue-comment.sh:*` only)
+
+**Section heading translations applied (Japanese → English):**
+- `Issueトリアージ` / `Issue トリアージ` → `Issue Triage`
+- `引数パース（最初に実行）` → `Argument Parsing (execute first)`
+- `コマンド実行の制約` → `Command Execution Constraints`
+- `単体実行` → `Single Issue Execution`
+- `一括実行` → `Bulk Execution`
+- `バックログ分析` → `Backlog Analysis`
+- `注意事項` → `Notes`
+- `audit: ドキュメント × 実装の乖離検出` → `audit: Documentation × Implementation Drift Detection`
+- `コマンドルーティング` → `Command Routing`
+- `doc: プロジェクト基盤情報管理` → `doc: Project Foundation Information Management`
+- `テンプレート定義` → `Template Definitions`
+- `ドキュメント走査（共通手順）` → `Document Traversal (common procedure)`
+- `ステータス表示` → `Status Display`
+- `個別作成・更新` → `Individual Create/Update`
+- `init ウィザード` → `init Wizard`
+- `sync 双方向正規化` → `sync Bidirectional Normalization`
+- `sync 個別逆生成` → `sync Individual Reverse-Generation`
+- `add — 既存ドキュメントの登録` → `add — Register Existing Document`
+- `project — 新規 project document の作成` → `project — Create New Project Document`
+
+**Step numbering change (triage):**
+
+The source contained a fractional step `### 1.5. 重複候補検出`. This was renamed to `### Step 2: Duplicate Candidate Detection` and all subsequent steps were renumbered (+1 offset). Final step numbering in the Single Issue Execution section: Steps 1–10 (source: Steps 1, 1.5, 2–9 → normalized to Steps 1–10).
+
+**claude-config references replaced (doc):**
+
+3 occurrences of "claude-config リポジトリ" in error messages replaced:
+- `"エラー: テンプレートファイル ... が見つかりません。claude-config リポジトリが正しくセットアップされているか確認してください。"` → `"Error: template file ... not found. wholework is not correctly installed. Run install.sh first."`
+- `"エラー: テンプレートファイルが見つかりません。claude-config リポジトリが正しくセットアップされているか確認してください。"` → `"Error: template file not found. wholework is not correctly installed. Run install.sh first."`
+
+**Wholework-managed directories reference (doc):**
+
+1 occurrence of "claude-config 管理ディレクトリ: skills/、modules/、agents/" replaced with "wholework-managed directories: skills/, modules/, agents/".
+
+**Template file placeholder translations (doc sub-templates):**
+
+All Japanese placeholder text in `product-template.md`, `tech-template.md`, and `structure-template.md` was translated to English:
+- `プロジェクトの目的・ゴールを記述する。` → `Describe the project purpose and goals.`
+- `対象ユーザーを記述する。` → `Describe the target users.`
+- `やらないこと・スコープ外を記述する。` → `Describe what is out of scope.`
+- `成功指標を記述する。` → `Describe success metrics.`
+- `競合・代替手段を記述する。` → `Describe competitors and alternatives.`
+- `プロジェクト固有の用語と定義を記述する。` → `Describe project-specific terms and definitions.`
+- Table headers: `用語 / 定義 / コンテキスト` → `Term / Definition / Context`
+- `使用する言語・ランタイムを記述する。` → `Describe the languages and runtime used.`
+- `主要依存パッケージとその役割を記述する。` → `Describe major dependency packages and their roles.`
+- `重要な技術判断・選定理由を記述する。` → `Describe important technical decisions and rationale.`
+- `コーディング規約・命名規則を記述する。` → `Describe coding conventions and naming rules.`
+- `使用を禁止する表現・用語と、推奨する代替表現を記述する。` → `Describe expressions/terms that are prohibited and their recommended alternatives.`
+- Table headers: `表現 / 理由 / 代替` → `Expression / Reason / Alternative`
+- `ビルド・デプロイ手順を記述する。` → `Describe build and deploy procedures.`
+- `テスト方針・ツールを記述する。` → `Describe testing policies and tools.`
+- `ディレクトリ構成と各ディレクトリの役割を記述する。` → `Describe the directory structure and each directory's role.`
+- `重要ファイルの説明を記述する。` → `Describe important files.`
+- `モジュール間の依存関係を記述する。` → `Describe dependencies between modules.`
+- `ファイル命名規則を記述する。` → `Describe file naming conventions.`
+
+**Opportunistic simplifications applied:**
+- Verbose step-by-step sub-procedures in triage bulk update and backlog analysis application flows compressed to intent-level descriptions while preserving all behavioral details
+- Command execution constraint examples retained as-is (important for avoiding confirmation dialogs)
+
+**Private repo references removed:**
+- `triage/SKILL.md`: removed 3 absolute path entries from `allowed-tools` (`/Users/saito/.claude/scripts/...`)
+- `doc/SKILL.md`: replaced 2 "claude-config リポジトリ" error message references and 1 "claude-config 管理ディレクトリ" reference with wholework equivalents
+
+---
+
 ## Issue #22: Core Workflow Skills Migration (issue, spec, review)
 
 10 skill files were migrated from claude-config to wholework: `skills/issue/SKILL.md`, `skills/issue/mcp-call-guidelines.md`, `skills/issue/spec-test-guidelines.md`, `skills/spec/SKILL.md`, `skills/spec/codebase-search.md`, `skills/spec/external-spec.md`, `skills/spec/figma-design-phase.md`, `skills/review/SKILL.md`, `skills/review/external-review-phase.md`, and `skills/review/skill-dev-recheck.md`. All Japanese text (frontmatter `description` field, section headings, body text, inline comments) was translated to English. Existing stubs were replaced with the full content. Opportunistic simplification was applied following the approach from Issue #21.
