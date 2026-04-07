@@ -86,3 +86,17 @@
 
 ### Rework
 - One additional commit was needed to fix the `Write` false positive in merge/SKILL.md after the initial migration commit. The validator check was only discovered at validation time.
+
+## review レトロスペクティブ
+
+### 設計と実装の乖離パターン
+
+CLAUDE.md の英語化ガイドライン（「すべての日本語テキストを英語化」）が `skills/code/SKILL.md:271` の PR title format 指示テキストに適用されておらず、"in Japanese" が残留していた。Example が英語タイトルを示しているため機能的影響は軽微だが、移植チェックリストに「指示文・説明テキストも含めて英語化確認」を明示するとよい。
+
+### 頻出する指摘事項
+
+指摘は1件（英語化漏れ）のみで、同種の指摘が複数箇所にあるパターンは確認されなかった。`validate-skill-syntax.py` が自動チェックしていない領域（指示文テキスト）での見落としが発生しやすいことが分かった。
+
+### 受け入れ条件の検証困難さ
+
+受け入れ条件はすべて自動チェック可能なヒント付きで、UNCERTAIN なし。`file_not_contains "skills/merge/SKILL.md" "Squash merge"` のように代表ファイルのみを検証対象にしている条件があるが、全ファイルの日本語残留を網羅的に検証するには不十分。次回移植 Issue では `grep -r "日本語パターン" skills/` 形式の包括的チェックコマンドを追加することを検討する。
