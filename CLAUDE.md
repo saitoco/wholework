@@ -1,6 +1,6 @@
 # Wholework Skills
 
-Spec-driven skills for autonomous work on GitHub — a public repository for sharing Skills built on the Claude Agent SDK.
+Spec-driven skills for autonomous work on GitHub.
 
 ## Language Conventions
 
