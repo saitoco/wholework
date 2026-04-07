@@ -1,0 +1,75 @@
+name: Kanban Automation
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+jobs:
+  move-to-column:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Map label to column
+        id: map
+        run: |
+          LABEL="${{ github.event.label.name }}"
+          case "$LABEL" in
+            "phase/issue")
+              echo "option_id=cefd394b" >> "$GITHUB_OUTPUT"
+              ;;
+            "phase/spec")
+              echo "option_id=511e5084" >> "$GITHUB_OUTPUT"
+              ;;
+            "phase/ready")
+              echo "option_id=61e4505c" >> "$GITHUB_OUTPUT"
+              ;;
+            "phase/code")
+              echo "option_id=47fc9ee4" >> "$GITHUB_OUTPUT"
+              ;;
+            "phase/verify")
+              echo "option_id=df73e18b" >> "$GITHUB_OUTPUT"
+              ;;
+            "phase/done")
+              echo "option_id=98236657" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Add issue to project and update status
+        if: steps.map.outputs.skip != 'true'
+        env:
+          # GITHUB_TOKEN has no projects scope, use PROJECT_PAT instead
+          GH_TOKEN: ${{ secrets.PROJECT_PAT }}
+          ISSUE_NODE_ID: ${{ github.event.issue.node_id }}
+          PROJECT_ID: "PVT_kwDOAT8ukc4BT2qC"
+          FIELD_ID: "PVTSSF_lADOAT8ukc4BT2qCzhBCrns"
+          OPTION_ID: ${{ steps.map.outputs.option_id }}
+        run: |
+          # Add issue to project (returns existing ID if already present)
+          ITEM_ID=$(gh api graphql -f query='
+            mutation($project: ID!, $issue: ID!) {
+              addProjectV2ItemById(input: {projectId: $project, contentId: $issue}) {
+                item { id }
+              }
+            }' -f project="$PROJECT_ID" -f issue="$ISSUE_NODE_ID" \
+            --jq '.data.addProjectV2ItemById.item.id')
+
+          # Fail explicitly if ITEM_ID could not be retrieved
+          if [ -z "$ITEM_ID" ]; then
+            echo "Error: Failed to get project item ID from addProjectV2ItemById. Check PROJECT_PAT permissions, PROJECT_ID, and ISSUE_NODE_ID."
+            exit 1
+          fi
+
+          # Update Status field
+          gh api graphql -f query='
+            mutation($project: ID!, $item: ID!, $field: ID!, $option: String!) {
+              updateProjectV2ItemFieldValue(
+                input: {projectId: $project, itemId: $item, fieldId: $field, value: {singleSelectOptionId: $option}}
+              ) {
+                projectV2Item { id }
+              }
+            }' -f project="$PROJECT_ID" -f item="$ITEM_ID" -f field="$FIELD_ID" -f option="$OPTION_ID"
