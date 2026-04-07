@@ -106,3 +106,31 @@ private リポジトリに散在する環境適応アーキテクチャドキュ
 
 ### 不確定要素の解決
 - 特になし（ソースファイルが private repo に存在し、受け入れ条件も明確に定義されていた）
+
+## verify レトロスペクティブ
+
+### 各フェーズの振り返り
+
+#### spec
+- issue レトロスペクティブで配置先として `docs/adapter-contract.md` に言及があるが、Issue 本文では `docs/environment-adaptation.md` と明示されており、spec でその不整合が正確に観察・記録されている
+
+#### design
+- 実装は Spec の設計通りに進み、逸脱なし
+- `--when` 修飾子の "(planned, not yet implemented)" 注記など、曖昧要素も Spec で事前解決済み
+
+#### code
+- 直接 main コミット（patch ルート）で1コミットにより完結。手戻りなし
+- `docs/environment-adaptation.md`（293行追加）と `docs/structure.md`（1行追加）のみの変更で受け入れ条件を全て充足
+
+#### review
+- patch ルートのため formal PR レビューなし（code 直コミット）
+- 受け入れ条件が全て grep/file_exists ベースで明確であり、自動検証で十分
+
+#### merge
+- PR なし、main への直接コミット（patch ルート）。コンフリクトなし
+
+#### verify
+- 全10条件 PASS。grep/file_exists ベースの受け入れ条件は verify で完全自動化でき、効率的
+
+### 改善提案
+- 特になし
