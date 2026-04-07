@@ -45,7 +45,7 @@ Existence check procedure for each path:
 
 1. Run `test -f ".wholework/adapters/{capability}-adapter.md"` in Bash; if succeeds, use **project-local**
 2. If fails, run `test -f "$HOME/.wholework/adapters/{capability}-adapter.md"` in Bash; if succeeds, use **user-global**
-3. If fails, run `test -f "$HOME/.claude/modules/{capability}-adapter.md"` in Bash; if succeeds, use **bundled**
+3. If fails, run `test -f "${CLAUDE_PLUGIN_ROOT}/modules/{capability}-adapter.md"` in Bash; if succeeds, use **bundled**
 4. If all fail, return UNCERTAIN (state in detail: "`{capability}-adapter.md` not found (not present in project-local: `.wholework/adapters/`, user-global: `~/.wholework/adapters/`, or bundled: `${CLAUDE_PLUGIN_ROOT}/modules/`)")
 
 ### Step 3: Delegation to Adapter

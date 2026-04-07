@@ -116,7 +116,7 @@ An adapter encapsulates a capability (e.g., `browser`). It selects the tool-spec
 ```
 1. .wholework/adapters/{capability}-adapter.md   (project-local)
 2. ~/.wholework/adapters/{capability}-adapter.md  (user-global)
-3. ~/.claude/modules/{capability}-adapter.md      (bundled default)
+3. ${CLAUDE_PLUGIN_ROOT}/modules/{capability}-adapter.md      (bundled default)
 ```
 
 An adapter operates in three steps: detection → command translation → execution delegation.
@@ -288,6 +288,6 @@ command -v (Layer 2) ─→ CLI tool availability check (inside adapters, inside
 ### Adding new Domain logic
 
 1. Create `skills/{skill-name}/{domain}-phase.md`
-   - List the full paths of all modules this file references at the top of the file (e.g., `~/.claude/modules/detect-config-markers.md`). Abbreviated forms (e.g., `detect-config-markers.md` alone) are not allowed. Listing full paths at the top allows callers to know the referenced modules before loading.
+   - List the full paths of all modules this file references at the top of the file (e.g., `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md`). Abbreviated forms (e.g., `detect-config-markers.md` alone) are not allowed. Listing full paths at the top allows callers to know the referenced modules before loading.
 2. Add a conditional Read instruction to SKILL.md (marker-detection or file-existence pattern)
 3. Add to the Domain Files table in `docs/structure.md`
