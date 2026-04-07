@@ -11,7 +11,7 @@ Establish the wholework repository foundation: directory layout, symlink-based i
 | `skills/` | `~/.claude/skills/wholework/` | Each skill as a subdirectory |
 | `modules/` | `~/.claude/skills/wholework/modules/` | Co-located with skills, single reference path |
 | `agents/` | `~/.claude/agents/wholework/` | Agent definitions |
-| `scripts/` | `~/.claude/scripts/wholework/` | Helper scripts, namespaced to avoid conflicts |
+| `scripts/` | `~/.claude/skills/wholework/scripts/` | Co-located with skills, same pattern as modules |
 
 ## Changed files
 
@@ -25,7 +25,7 @@ Establish the wholework repository foundation: directory layout, symlink-based i
 
 1. Create `docs/structure.md` with Repository Layout section (tree diagram of `skills/`, `modules/`, `agents/`, `scripts/`, `docs/`) and Install section documenting symlink targets (-> acceptance criteria 1-6)
 
-2. Create `install.sh` with symlink creation for all four directories. Support `--uninstall` flag to remove symlinks. Use `ln -sfn` for idempotent symlink creation. Target paths: `~/.claude/skills/wholework/`, `~/.claude/skills/wholework/modules/`, `~/.claude/agents/wholework/`, `~/.claude/scripts/wholework/` (-> acceptance criteria 7-11)
+2. Create `install.sh` with symlink creation for all four directories. Support `--uninstall` flag to remove symlinks. Use `ln -sfn` for idempotent symlink creation. Target paths: `~/.claude/skills/wholework/`, `~/.claude/skills/wholework/modules/`, `~/.claude/agents/wholework/`, `~/.claude/skills/wholework/scripts/` (-> acceptance criteria 7-11)
 
 3. Create `package.json` with name `wholework`, version `0.1.0`, license `Apache-2.0`, bin pointing to `install.sh` (-> acceptance criteria 12-13)
 
@@ -57,7 +57,6 @@ Establish the wholework repository foundation: directory layout, symlink-based i
 
 ## Notes
 
-- `modules/` is placed under `~/.claude/skills/wholework/modules/` (not `~/.claude/modules/`) to co-locate with skills and avoid duplicate module loading across different packages
-- `scripts/` uses `~/.claude/scripts/wholework/` namespace to avoid conflicts with other packages' scripts while following the `~/.claude/scripts/` convention
+- `modules/` and `scripts/` are placed under `~/.claude/skills/wholework/` (not `~/.claude/modules/` or `~/.claude/scripts/`) to co-locate with skills, avoid duplicate loading, and keep the package self-contained
 - `install.sh` should be POSIX-compatible (`#!/bin/sh`) for maximum portability
 - `package.json` bin field enables future `npx wholework` usage
