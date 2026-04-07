@@ -20,13 +20,21 @@ usage() {
 install() {
   echo "Installing wholework..."
 
-  # Create parent directories if they don't exist
-  mkdir -p "$HOME/.claude/skills"
+  # Create destination directories
+  # SKILLS_DEST is a real directory (not a symlink) so that modules/ and scripts/
+  # can be symlinked inside it without traversal issues.
+  mkdir -p "$SKILLS_DEST"
   mkdir -p "$HOME/.claude/agents"
 
-  # skills/ -> ~/.claude/skills/wholework/
-  ln -sfn "$REPO_DIR/skills" "$SKILLS_DEST"
-  echo "  Linked skills/ -> $SKILLS_DEST"
+  # skills/<name>/ -> ~/.claude/skills/wholework/<name>/  (one symlink per skill)
+  if [ -d "$REPO_DIR/skills" ]; then
+    for skill_dir in "$REPO_DIR/skills"/*/; do
+      [ -d "$skill_dir" ] || continue
+      skill_name=$(basename "$skill_dir")
+      ln -sfn "$skill_dir" "$SKILLS_DEST/$skill_name"
+      echo "  Linked skills/$skill_name/ -> $SKILLS_DEST/$skill_name"
+    done
+  fi
 
   # modules/ -> ~/.claude/skills/wholework/modules/
   ln -sfn "$REPO_DIR/modules" "$MODULES_DEST"
@@ -48,6 +56,9 @@ uninstall() {
 
   if [ -L "$SKILLS_DEST" ]; then
     rm "$SKILLS_DEST"
+    echo "  Removed $SKILLS_DEST"
+  elif [ -d "$SKILLS_DEST" ]; then
+    rm -rf "$SKILLS_DEST"
     echo "  Removed $SKILLS_DEST"
   fi
 

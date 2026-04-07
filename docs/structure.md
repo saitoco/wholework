@@ -50,6 +50,7 @@ To remove the installed symlinks:
 
 ### Design rationale
 
+- `~/.claude/skills/wholework/` is a real directory (not a symlink). Individual skills are symlinked inside it as subdirectories, allowing `modules/` and `scripts/` to coexist as sibling symlinks.
 - `modules/` and `scripts/` are placed under `~/.claude/skills/wholework/` rather than `~/.claude/modules/` or `~/.claude/scripts/` to avoid duplicate loading and keep the package self-contained.
 - Symlinks are created with `ln -sfn` for idempotent installs (safe to run multiple times).
 - `install.sh` is POSIX-compatible (`#!/bin/sh`) for maximum portability.
