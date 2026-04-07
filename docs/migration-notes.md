@@ -2,6 +2,34 @@
 
 ---
 
+## English Conversion Checklist
+
+Use this checklist when migrating scripts to ensure all Japanese text has been translated to English.
+
+### Source File Strings
+
+- [ ] Comments (inline and block)
+- [ ] Variable names and function names
+- [ ] String literals (error messages, usage text, log output)
+- [ ] Documentation strings / docstrings
+
+### Output Strings Not Covered by Tests
+
+Output strings that test assertions do not verify are easy to miss. Manually audit each category:
+
+- [ ] Summary and result lines (e.g., `"検証対象: N スキル"`, `"結果: N エラー"`)
+- [ ] Warning messages
+- [ ] Progress indicators and phase labels
+- [ ] Help / usage text (output of `--help`)
+- [ ] Success and completion messages
+
+### Tests
+
+- [ ] `@test` names translated to English (required — multibyte characters cause bats parse errors)
+- [ ] Assertion strings updated to match new English messages
+
+---
+
 ## Issue #9: Tooling Scripts, Tests, and CI Workflow
 
 6 scripts, 7 bats test files, test fixtures, and a CI workflow were migrated. All Japanese text (comments, error messages, usage text, test names) was translated to English. `validate-permissions.sh` was refactored with new wholework-specific logic. `install.bats` was fully rewritten for wholework's install.sh structure.
