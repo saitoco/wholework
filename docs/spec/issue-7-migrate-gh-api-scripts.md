@@ -124,6 +124,17 @@
 - **docs/migration-notes.md**: インターフェース変更がないスクリプトも「変更なし」として記載し、後続の skills 移植 Issue (#6 の他の sub-issue) で参照できるようにする
 - **ISSUE_TYPE=Task のため、代替案の検討・不確定要素・UIデザインセクションは省略**
 
+## code レトロスペクティブ
+
+### 設計からの逸脱
+- `gh-check-blocking.sh` のパス解決を「`$SCRIPT_DIR/gh-graphql.sh` に統一」と設計したが、bats テストが `$MOCK_DIR/gh-graphql.sh`（PATH経由）でモックしているため、PATH検索を先行させ `$SCRIPT_DIR/gh-graphql.sh` をフォールバックとする方式に変更した。これにより `~/.claude/scripts/` フォールバックの削除という本来の目的は達成しつつ、テスト互換性も維持できた
+
+### 設計の不備・曖昧さ
+- spec の「`$SCRIPT_DIR/gh-graphql.sh` に統一する」という記述が、テストのモック方式（PATH経由）と矛盾していた。実装時に発見した。PATH優先→SCRIPT_DIR フォールバック方式が正解
+
+### 手戻り
+- gh-check-blocking.sh を `$SCRIPT_DIR` 直接参照で実装後、テスト35が失敗。PATH優先方式に修正して解決
+
 ## spec レトロスペクティブ
 
 ### 軽微な観察
