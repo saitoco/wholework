@@ -1,0 +1,123 @@
+#!/usr/bin/env bats
+
+# Tests for run-review.sh
+# Mock claude command by placing it at the front of PATH
+
+SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/run-review.sh"
+
+setup() {
+    MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
+    mkdir -p "$MOCK_DIR"
+    export PATH="$MOCK_DIR:$PATH"
+
+    # Record file for verifying claude calls
+    CLAUDE_CALL_LOG="$BATS_TEST_TMPDIR/claude_calls.log"
+    export CLAUDE_CALL_LOG
+
+    cat > "$MOCK_DIR/claude" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$CLAUDE_CALL_LOG"
+echo "ANTHROPIC_MODEL=$ANTHROPIC_MODEL" >> "$CLAUDE_CALL_LOG"
+echo "CLAUDECODE=${CLAUDECODE:-__UNSET__}" >> "$CLAUDE_CALL_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/claude"
+}
+
+teardown() {
+    rm -rf "$MOCK_DIR"
+}
+
+@test "error: no arguments" {
+    run bash "$SCRIPT"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Usage: run-review.sh <pr-number>"* ]]
+}
+
+@test "error: non-numeric PR number" {
+    run bash "$SCRIPT" abc
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Error: PR number must be numeric: abc"* ]]
+}
+
+@test "success: valid PR number calls claude with correct arguments" {
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+
+    # Verify claude was called with correct arguments
+    # Direct SKILL.md body mode: prompt contains ARGUMENTS: 123
+    grep -q "ARGUMENTS: 123" "$CLAUDE_CALL_LOG"
+    grep -q -- "--model claude-sonnet-4-6" "$CLAUDE_CALL_LOG"
+    grep -q -- "--dangerously-skip-permissions" "$CLAUDE_CALL_LOG"
+    # Should use direct prompt, not skill invocation (/review 123)
+    ! grep -q -- "-p /review 123" "$CLAUDE_CALL_LOG"
+
+    # Verify ANTHROPIC_MODEL environment variable was set
+    grep -q "ANTHROPIC_MODEL=claude-sonnet-4-6" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: output shows start and finish messages" {
+    run bash "$SCRIPT" 456
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Starting /review for PR #456"* ]]
+    [[ "$output" == *"Finished /review for PR #456"* ]]
+    [[ "$output" == *"Model: sonnet"* ]]
+    [[ "$output" == *"Permissions: skip (autonomous mode)"* ]]
+}
+
+@test "success: CLAUDECODE env var is not inherited by claude subprocess" {
+    export CLAUDECODE="parent-session-id"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+
+    # Verify CLAUDECODE was stripped by env -u
+    grep -q "CLAUDECODE=__UNSET__" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: --review-only flag is passed through to ARGUMENTS" {
+    run bash "$SCRIPT" 123 --review-only
+    [ "$status" -eq 0 ]
+
+    # ARGUMENTS: 123 --review-only should be present
+    grep -q "ARGUMENTS: 123 --review-only" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: --light flag is passed through to ARGUMENTS" {
+    run bash "$SCRIPT" 123 --light
+    [ "$status" -eq 0 ]
+
+    grep -q "ARGUMENTS: 123 --light" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: --full flag is passed through to ARGUMENTS" {
+    run bash "$SCRIPT" 123 --full
+    [ "$status" -eq 0 ]
+
+    grep -q "ARGUMENTS: 123 --full" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: no extra flags does not include --light or --full in ARGUMENTS" {
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+
+    grep -q "ARGUMENTS: 123" "$CLAUDE_CALL_LOG"
+    ! grep -q "ARGUMENTS: 123 --light" "$CLAUDE_CALL_LOG"
+    ! grep -q "ARGUMENTS: 123 --full" "$CLAUDE_CALL_LOG"
+}
+
+@test "error: claude command fails with non-zero exit code" {
+    # Override mock claude to exit with code 42
+    cat > "$MOCK_DIR/claude" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$CLAUDE_CALL_LOG"
+echo "ANTHROPIC_MODEL=$ANTHROPIC_MODEL" >> "$CLAUDE_CALL_LOG"
+exit 42
+MOCK
+    chmod +x "$MOCK_DIR/claude"
+
+    run bash "$SCRIPT" 789
+    [ "$status" -eq 42 ]
+    [[ "$output" == *"Starting /review for PR #789"* ]]
+    [[ "$output" == *"Finished /review for PR #789"* ]]
+    [[ "$output" == *"Exit code: 42"* ]]
+}
