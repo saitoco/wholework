@@ -632,9 +632,9 @@ def validate_verify_hints(body: str) -> List[str]:
 
 def validate_command_hint_paths(body: str) -> List[str]:
     """
-    Validates that verify command hints in SKILL.md body do not contain ~/.claude/scripts paths.
-    Detects <!-- verify: command "~/.claude/scripts/..." --> patterns in HTML comments.
-    Command hints should use repository-relative paths (scripts/xxx).
+    Validates that verify command hints in SKILL.md body do not contain plugin-internal
+    script paths. Detects <!-- verify: command "${CLAUDE_PLUGIN_ROOT}/scripts/..." -->
+    patterns in HTML comments. Command hints should use repository-relative paths (scripts/xxx).
 
     Returns:
         List of error messages
@@ -645,13 +645,13 @@ def validate_command_hint_paths(body: str) -> List[str]:
     body_stripped = ALL_CODEBLOCK_PATTERN.sub('', body)
     body_stripped = INLINE_CODE_PATTERN.sub('', body_stripped)
 
-    # Search for ~/.claude/scripts inside HTML comments
+    # Search for ${CLAUDE_PLUGIN_ROOT}/scripts inside HTML comments
     for comment_match in HTML_COMMENT_PATTERN.finditer(body_stripped):
         comment_text = comment_match.group(0)
-        if '~/.claude/scripts' in comment_text:
+        if 'CLAUDE_PLUGIN_ROOT' in comment_text and '/scripts/' in comment_text:
             line_num = body_stripped[:comment_match.start()].count('\n') + 1
             errors.append(
-                f"body line {line_num}: '~/.claude/scripts' path found in verify command hint."
+                f"body line {line_num}: '{{CLAUDE_PLUGIN_ROOT}}/scripts' path found in verify command hint."
                 " Use a repository-relative path (scripts/xxx) instead"
             )
 
@@ -660,7 +660,8 @@ def validate_command_hint_paths(body: str) -> List[str]:
 
 def validate_body_script_paths(body: str, scripts_dir: Path) -> List[str]:
     """
-    Validates that ~/.claude/scripts/*.sh path references in the Markdown body actually exist.
+    Validates that ${CLAUDE_PLUGIN_ROOT}/scripts/*.sh path references in the Markdown body
+    actually exist.
 
     Returns:
         List of error messages
@@ -683,7 +684,7 @@ def validate_body_script_paths(body: str, scripts_dir: Path) -> List[str]:
 
 def validate_body_scripts_in_allowed_tools(body: str, allowed_tools: str) -> List[str]:
     """
-    Validates that ~/.claude/scripts/*.sh paths referenced in the Markdown body
+    Validates that ${CLAUDE_PLUGIN_ROOT}/scripts/*.sh paths referenced in the Markdown body
     are also included in the allowed-tools Bash(...) pattern.
 
     Args:
@@ -696,7 +697,7 @@ def validate_body_scripts_in_allowed_tools(body: str, allowed_tools: str) -> Lis
     errors: List[str] = []
     seen: set = set()
 
-    # Extract ~/.claude/scripts/*.sh patterns from body
+    # Extract ${CLAUDE_PLUGIN_ROOT}/scripts/*.sh patterns from body
     for match in SCRIPT_PATH_PATTERN.finditer(body):
         script_name = match.group(1)
         if script_name in seen:
@@ -704,7 +705,7 @@ def validate_body_scripts_in_allowed_tools(body: str, allowed_tools: str) -> Lis
         seen.add(script_name)
 
         # Check if the script path is included in allowed-tools
-        script_path_pattern = f"~/.claude/scripts/{script_name}"
+        script_path_pattern = f"${{CLAUDE_PLUGIN_ROOT}}/scripts/{script_name}"
         if script_path_pattern not in allowed_tools:
             errors.append(
                 f"本文中に参照されたスクリプト '{script_name}' が allowed-tools の Bash(...) パターンに含まれていません"
