@@ -30,7 +30,7 @@
 
 ### マージ前
 - <!-- verify: file_exists ".github/workflows/kanban-automation.yml" --> `.github/workflows/kanban-automation.yml` が作成されている
-- <!-- verify: grep "on:.*issues" ".github/workflows/kanban-automation.yml" --> ワークフローのトリガーが `issues` の `labeled` イベントである
+- <!-- verify: grep "issues:" ".github/workflows/kanban-automation.yml" --> ワークフローのトリガーが `issues` の `labeled` イベントである
 - <!-- verify: grep "phase/issue" ".github/workflows/kanban-automation.yml" --> `phase/issue` → Issue カラム（option_id: `cefd394b`）のマッピングが定義されている
 - <!-- verify: grep "phase/spec" ".github/workflows/kanban-automation.yml" --> `phase/spec` → Spec カラム（option_id: `511e5084`）のマッピングが定義されている
 - <!-- verify: grep "phase/ready" ".github/workflows/kanban-automation.yml" --> `phase/ready` → Ready カラム（option_id: `61e4505c`）のマッピングが定義されている
