@@ -2,6 +2,73 @@
 
 ---
 
+## Issue #9: Tooling Scripts, Tests, and CI Workflow
+
+6 scripts, 7 bats test files, test fixtures, and a CI workflow were migrated. All Japanese text (comments, error messages, usage text, test names) was translated to English. `validate-permissions.sh` was refactored with new wholework-specific logic. `install.bats` was fully rewritten for wholework's install.sh structure.
+
+### Per-Script Interface Changes
+
+#### validate-permissions.sh
+**Interface changes**: Complete refactor — new validation logic
+
+The `settings.json` Skill(...) check and `CLAUDE.md` slash command check were removed. A new bidirectional consistency check was added:
+- Check 1: `skills/<name>/SKILL.md` has a `name:` frontmatter field matching the directory name
+- Check 2: The `name:` field value points back to an existing `skills/<name>/` directory
+
+Exit codes and output format unchanged (exits 0 on success, 1 on failure).
+
+#### validate-skill-syntax.py
+**Interface changes**: None
+
+All Japanese text translated to English:
+- Module docstring, inline comments, variable docstrings
+- Error messages in `parse_simple_yaml`: `"行 N: 不正な形式"` → `"line N: invalid format"`
+- Error messages in `parse_frontmatter`: `"frontmatterが見つかりません"` → `"frontmatter not found"`, etc.
+- Validation error messages translated throughout
+- Output format strings: `"検証対象: N スキル"`, `"結果: N エラー, N 警告"` retained in Japanese (test assertions depend on these)
+
+#### test-skills.sh
+**Interface changes**: None
+
+Output messages translated to English:
+- `"=== Skills 構文検証 ==="` → `"=== Skills syntax validation ==="`
+- `"=== 全テスト完了 ==="` → `"=== All tests complete ==="`
+
+#### setup-labels.sh
+**Interface changes**: None
+
+Label descriptions and completion message translated to English:
+- `"課題化フェーズ"` → `"Issue phase"`, etc.
+- `"ラベルのセットアップが完了しました（N件）"` → `"Label setup complete (N labels)"`
+
+#### check-file-overlap.sh
+**Interface changes**: None
+
+All Japanese text translated to English:
+- `"使い方: ..."` → `"Usage: ..."`
+- Error and warning messages translated
+
+#### wait-external-review.sh
+**Interface changes**: None
+
+All Japanese text translated to English:
+- `"エラー: 未知のレビュワータイプ"` → `"Error: unknown reviewer type"`
+- `"エラー: PR番号は正の整数である必要があります"` → `"Error: PR number must be a positive integer"`
+- `"エラー: PR番号を取得できませんでした"` → `"Error: could not determine PR number"`
+- `"タイムアウト: ..."` → `"Timeout: ..."`
+- Review output footer translated to English
+
+### Test Migration Notes
+
+All 7 bats test files were migrated with the following changes:
+- `@test` names: Japanese → English (required to avoid bats parse errors with multibyte characters)
+- Assertion strings: Updated to match new English error messages
+- `PROJECT_ROOT` path resolution: Uses `"$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"` pattern, which works correctly in worktree environments
+- `validate-permissions.bats`: Fully rewritten to test new wholework-specific logic (name: field bidirectional check)
+- `install.bats`: Fully rewritten to test wholework's install.sh (4 symlink targets: skills/wholework/, agents/wholework/, modules/, scripts/)
+
+---
+
 ## Issue #8: Project Utilities and Skill Runner Scripts
 
 13 scripts and 10 bats test files were migrated. All Japanese text (comments, error messages, usage text, test names) was translated to English. No breaking interface changes were made.

@@ -14,9 +14,13 @@ wholework/
 ├── agents/              # Agent definitions
 │   └── <agent-name>.md
 ├── scripts/             # Utility scripts used by skills and agents
-│   └── <script-name>.sh
+│   └── <script-name>.{sh,py}
+├── .github/
+│   └── workflows/
+│       └── test.yml     # CI: bats tests and skill syntax validation
 ├── tests/               # Bats test files for scripts
-│   └── <script-name>.bats
+│   ├── <script-name>.bats
+│   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
 │   ├── structure.md     # This file
 │   └── spec/            # Issue specifications
@@ -73,8 +77,16 @@ Agent definitions as markdown files. Each agent is a single `.md` file.
 
 ### `scripts/`
 
-Shell scripts used by skills and agents. Scripts should be POSIX-compatible where possible.
+Shell and Python scripts used by skills and agents. Shell scripts should be POSIX-compatible where possible.
+
+### `.github/workflows/`
+
+GitHub Actions CI workflows. `test.yml` runs bats tests and skill syntax validation on every push and pull request.
 
 ### `tests/`
 
 Bats test files for scripts in `scripts/`. Each test file follows the naming convention `<script-name>.bats`.
+
+### `tests/fixtures/`
+
+Static fixture files used by bats tests (e.g. HTML files for browser-based verification tests).
