@@ -127,3 +127,27 @@ Browser/Testing 関連の 5 ファイルを同じ手順で移植する:
 - **private repo 参照**: 調査の結果、modules 内に claude-config 固有のパス参照は存在しなかった。移植時に改めて確認し、発見した場合は除去する
 - **スキルからの参照パス**: 現在 wholework のスキルは modules を参照していない。modules 移植後も、スキルの SKILL.md 側の参照パス更新は本 Issue のスコープ外（スキルは `~/.claude/modules/xxx.md` パスで参照しており、install.sh が symlink を作成するため、modules ファイルが存在すれば動作する）
 - **validate-skill-syntax.py の cross-file validation**: modules/ が存在する状態で初めて `validate_modules_scripts_in_allowed_tools` 関数が有効になる。modules 内の Bash コマンドパターン（`scripts/xxx.sh` 等）が skills の allowed-tools に含まれているかを検証するため、既存スキルで警告が出る可能性がある。その場合は警告内容を確認し、false positive であれば migration-notes に記録する
+
+## issue レトロスペクティブ
+
+### 判断経緯
+- 22 ファイル（XL 基準）だがドキュメントのみの変更のため複雑度補正 -1 で L と判定。sub-issue 分割不要
+- scripts 移植 (#6) と同じパターン（claude-config → wholework、英語化 + リファクタリング）のため、曖昧ポイントは全て自動解決
+
+### 重要な方針決定
+- scripts 移植時 (#6) の方針を踏襲: 英語化 + private repo 固有参照の除去 + migration-notes.md への変更記録
+- ロジック改善はスコープ外（英語化と汎用化のみ）
+- verify false positive 修正: `grep "modules" "docs/migration-notes.md"` → `grep "Issue #16" "docs/migration-notes.md"` に修正（既存ファイルに "modules/" が既出のため）
+
+## spec レトロスペクティブ
+
+### 軽微な観察
+- 22 ファイルの移植は scripts 移植（#6, #7, #8, #9）と同一パターンのため、設計上の新規判断は少なかった
+- modules 内に claude-config 固有のパス参照がなかったため、汎用化の作業負荷は低い見込み
+
+### 判断経緯
+- 実装ステップを機能グループ（Verify/Review, Issue/Triage, Code/Infrastructure, Browser/Testing, Other）に分割し、並行実行可能にした。22 ファイルを個別ステップにすると上限超過のため、5グループ + ドキュメント2件 + 検証1件 = 計8ステップに収めた
+- ISSUE_TYPE=Task のため、代替案の検討・不確定要素・UIデザインセクションを省略
+
+### 不確定要素の解決
+- validate-skill-syntax.py の cross-file validation が modules 存在時にどう動作するかは、Step 8 で実行して初めて判明する。Spec 段階では注意事項として記録するにとどめた
