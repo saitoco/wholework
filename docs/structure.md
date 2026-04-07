@@ -87,6 +87,8 @@ GitHub Actions CI workflows. `test.yml` runs bats tests and skill syntax validat
 
 Bats test files for scripts in `scripts/`. Each test file follows the naming convention `<script-name>.bats`.
 
+Key test files include `check-file-overlap.bats` (tests for `scripts/check-file-overlap.sh`).
+
 ### `tests/fixtures/`
 
 Static fixture files used by bats tests (e.g. HTML files for browser-based verification tests).
