@@ -601,7 +601,7 @@ EOF
     create_valid_skill "skill-b"
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills/skill-a/SKILL.md" "$PROJECT_ROOT/skills/skill-b/SKILL.md"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"2 スキル"* ]]
+    [[ "$output" == *"2 skill(s)"* ]]
     [[ "$output" == *"0 error"* ]]
 }
 
