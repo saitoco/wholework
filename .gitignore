@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Temporary files
+.tmp/
+
+# Claude Code worktrees
+.claire/
+
+# OS files
+.DS_Store
+
+# Environment
+.env
+.env.local
