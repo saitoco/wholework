@@ -30,6 +30,30 @@ Output strings that test assertions do not verify are easy to miss. Manually aud
 
 ---
 
+## Issue #16: Modules Migration
+
+22 module files were migrated from claude-config to wholework. All Japanese text (section headings, descriptions, table content, comments) was translated to English. Opportunistic simplification of verbose step-by-step instructions to high-level intent descriptions was applied following the approach from saito/claude-config#845.
+
+### Interface Changes
+
+No breaking interface changes. The module files retain their standard structure (Purpose / Input / Processing Steps / Output) and all cross-module references (`~/.claude/modules/xxx.md` paths) are unchanged.
+
+**Section heading translations applied (Japanese → English):**
+- `目的` → `Purpose`
+- `入力` → `Input`
+- `処理手順` → `Processing Steps`
+- `出力` → `Output` or `Output Format`
+
+**Simplifications applied (opportunistic, skills behavior unchanged):**
+- Verbose numbered Bash/Grep step sequences simplified to intent-level descriptions where the outcome is clear from context
+- Table-format mapping definitions retained as-is (Size routing, label naming conventions, verification command translation table, etc.)
+- Issue number guardrails (e.g., `occurred in #509`) retained for traceability
+- Read instruction placement (first paragraph after heading) preserved
+
+**Private repo references removed:** None found. No claude-config-specific path references existed in the modules.
+
+---
+
 ## Issue #9: Tooling Scripts, Tests, and CI Workflow
 
 6 scripts, 7 bats test files, test fixtures, and a CI workflow were migrated. All Japanese text (comments, error messages, usage text, test names) was translated to English. `validate-permissions.sh` was refactored with new wholework-specific logic. `install.bats` was fully rewritten for wholework's install.sh structure.
