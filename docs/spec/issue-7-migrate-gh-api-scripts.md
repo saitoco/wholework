@@ -124,6 +124,17 @@
 - **docs/migration-notes.md**: インターフェース変更がないスクリプトも「変更なし」として記載し、後続の skills 移植 Issue (#6 の他の sub-issue) で参照できるようにする
 - **ISSUE_TYPE=Task のため、代替案の検討・不確定要素・UIデザインセクションは省略**
 
+## code レトロスペクティブ
+
+### 設計からの逸脱
+- `gh-check-blocking.sh` のパス解決を「`$SCRIPT_DIR/gh-graphql.sh` に統一」と設計したが、bats テストが `$MOCK_DIR/gh-graphql.sh`（PATH経由）でモックしているため、PATH検索を先行させ `$SCRIPT_DIR/gh-graphql.sh` をフォールバックとする方式に変更した。これにより `~/.claude/scripts/` フォールバックの削除という本来の目的は達成しつつ、テスト互換性も維持できた
+
+### 設計の不備・曖昧さ
+- spec の「`$SCRIPT_DIR/gh-graphql.sh` に統一する」という記述が、テストのモック方式（PATH経由）と矛盾していた。実装時に発見した。PATH優先→SCRIPT_DIR フォールバック方式が正解
+
+### 手戻り
+- gh-check-blocking.sh を `$SCRIPT_DIR` 直接参照で実装後、テスト35が失敗。PATH優先方式に修正して解決
+
 ## spec レトロスペクティブ
 
 ### 軽微な観察
@@ -136,3 +147,15 @@
 
 ### 不確定要素の解決
 - 特になし（移植作業のため外部仕様への依存なし）
+
+## review レトロスペクティブ
+
+### 設計と実装の乖離パターン
+- 特になし。唯一の乖離（gh-check-blocking.sh の PATH 優先方式）は code レトロスペクティブに既記録されており、機能要件は達成されている
+
+### 頻出する指摘事項
+- CONSIDER 指摘 1 件（gh-check-blocking.sh の引数解析パターン `[0-9]*` が `1abc` に誤マッチする可能性）のみ。同種の繰り返しなし
+- 移植作業としてスコープが明確だったため、バグや仕様乖離は最小限に抑えられた
+
+### 受け入れ条件の検証困難さ
+- `command "bats tests/gh-graphql.bats"` および `command "bats tests/gh-label-transition.bats"` の受け入れチェックが CI ジョブ未設定のため、ローカル bats 実行で代替した。CI workflow（例: `.github/workflows/test.yml`）の追加により、今後は自動検証が可能になる
