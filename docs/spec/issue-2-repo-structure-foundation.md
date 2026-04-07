@@ -71,3 +71,14 @@ Establish the wholework repository foundation: directory layout, symlink-based i
 
 ### 手戻り
 - 特になし
+
+## review レトロスペクティブ
+
+### 設計と実装の乖離パターン
+- `install.sh` で `SKILLS_DEST`（`~/.claude/skills/wholework`）をシンボリックリンクとして作成した後に `MODULES_DEST`（`~/.claude/skills/wholework/modules`）を作成しようとすると、OS がシンボリックリンクを辿ってリポジトリ内 `skills/` ディレクトリを汚染するバグが検出された。Spec の install target mapping の記述（`modules/ → ~/.claude/skills/wholework/modules/`）は正しかったが、実装がそれを実現できていなかった。
+
+### 頻出する指摘事項
+- 特になし（今回は1件のMUST指摘）
+
+### 受け入れ条件の検証困難さ
+- 受け入れ条件はファイル存在・内容チェックのみで、実際のシンボリックリンク挙動は「マージ後」の手動検証に委ねられている。インストーラースクリプトの場合、dry-run オプションや POSIX 環境での実行テストを受け入れ条件に含めることで自動検証の精度が上がる可能性がある。
