@@ -1,28 +1,35 @@
-# Repository Structure
+---
+type: steering
+ssot_for:
+  - directory-layout
+  - agent-includes-catalog
+---
 
-This document describes the wholework repository layout and installation conventions.
+# Structure
 
-## Repository Layout
+## Directory Layout（Required）
 
 ```
 wholework/
 ├── skills/              # Claude Code skills (one subdirectory per skill)
 │   └── <skill-name>/
 │       └── SKILL.md
-├── modules/             # Shared modules referenced by skills
+├── modules/             # Shared modules referenced by skills (22 files)
 │   └── <module-name>.md
-├── agents/              # Agent definitions
+├── agents/              # Agent definitions (6 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents
+├── scripts/             # Utility scripts used by skills and agents (27 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   └── workflows/
-│       └── test.yml     # CI: bats tests and skill syntax validation
-├── tests/               # Bats test files for scripts
+│       ├── test.yml             # CI: bats tests and skill syntax validation
+│       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
+├── tests/               # Bats test files for scripts (27 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
 │   ├── structure.md     # This file
+│   ├── migration-notes.md # Interface change records per migration issue
 │   └── spec/            # Issue specifications
 ├── install.sh           # Symlink-based installer
 ├── package.json         # npm package manifest (for future npx support)
@@ -31,21 +38,94 @@ wholework/
 └── CLAUDE.md            # Claude Code project instructions
 ```
 
-## Install
+## Key Files（Required）
 
-Run `install.sh` to create symlinks from this repository into your `~/.claude/` directory:
+### Skills
 
-```sh
-./install.sh
-```
+Skills are being actively migrated from a private repository. Each skill lives in `skills/<skill-name>/SKILL.md`. See the `skills/` directory for the current list.
 
-To remove the installed symlinks:
+### Modules
 
-```sh
-./install.sh --uninstall
-```
+Key modules:
+- `modules/verify-patterns.md` — acceptance check pattern accuracy guidelines
+- `modules/verify-classifier.md` — post-merge condition verifiability classification
+- `modules/verify-executor.md` — acceptance check command translation and execution
+- `modules/worktree-lifecycle.md` — shared worktree Entry/Exit lifecycle for all skills
+- `modules/test-runner.md` — quality check execution and result analysis
+- `modules/size-workflow-table.md` — Size-to-workflow decision table
+- `modules/detect-config-markers.md` — `.wholework.yml` configuration detection
+- `modules/adapter-resolver.md` — 3-layer adapter resolution (project-local → user-global → bundled)
+- `modules/opportunistic-verify.md` — opportunistic verification at skill completion
+- `modules/doc-checker.md` — documentation consistency checker
+- `modules/skill-help.md` — shared `--help` output formatter for skills
+- `modules/skill-dev-checks.md` — cross-skill consistency validation
+- `modules/codebase-analysis.md` — codebase analysis for `/doc` deep mode
+- `modules/title-normalizer.md` — issue title normalization
+- `modules/ambiguity-detector.md` — ambiguity detection in issue descriptions
+- `modules/review-output-format.md` — review output formatting
+- `modules/review-type-weighting.md` — review type weighting configuration
+- `modules/project-field-update.md` — GitHub Projects field update
+- `modules/browser-adapter.md` — browser-based verification adapter
+- `modules/browser-verify-security.md` — browser verification security checks
+- `modules/lighthouse-adapter.md` — Lighthouse performance audit adapter
+- `modules/measurement-scope.md` — measurement scope definition
 
-### Install target mapping
+### Agents
+
+| Agent | Path | Description |
+|---|---|---|
+| review-bug | `agents/review-bug.md` | Bug/Logic Error Detection (HIGH SIGNAL) |
+| review-light | `agents/review-light.md` | Lightweight Integrated review (all 4 perspectives) |
+| review-spec | `agents/review-spec.md` | Spec/Documentation review |
+| scope-agent | `agents/scope-agent.md` | Scope investigation for L/XL issues |
+| risk-agent | `agents/risk-agent.md` | Risk investigation for L/XL issues |
+| precedent-agent | `agents/precedent-agent.md` | Precedent investigation from similar issues |
+
+### Scripts
+
+**GitHub API utilities:**
+- `scripts/gh-graphql.sh` — GraphQL query executor with caching
+- `scripts/gh-issue-comment.sh` — post comments to issues
+- `scripts/gh-issue-edit.sh` — edit issue body (checkbox updates)
+- `scripts/gh-label-transition.sh` — phase label transitions
+- `scripts/gh-check-blocking.sh` — check blocking issue dependencies
+- `scripts/gh-extract-issue-from-pr.sh` — extract linked issue from PR
+- `scripts/gh-pr-merge-status.sh` — check PR merge status
+- `scripts/gh-pr-review.sh` — post PR reviews
+
+**Project utilities:**
+- `scripts/get-issue-size.sh` — get issue size label
+- `scripts/get-issue-type.sh` — get issue type label
+- `scripts/get-sub-issue-graph.sh` — build sub-issue dependency graph
+- `scripts/log-permission.sh` — log permission events (JSON output)
+- `scripts/opportunistic-search.sh` — opportunistic skill search
+- `scripts/triage-backlog-filter.sh` — filter backlog for triage
+
+**Skill runners:**
+- `scripts/run-auto-sub.sh` — run auto workflow for sub-issues
+- `scripts/run-code.sh` — run code skill
+- `scripts/run-issue.sh` — run issue skill
+- `scripts/run-merge.sh` — run merge skill
+- `scripts/run-review.sh` — run review skill
+- `scripts/run-spec.sh` — run spec skill
+- `scripts/run-verify.sh` — run verify skill
+
+**Tooling:**
+- `scripts/validate-permissions.sh` — validate skill directory ↔ name: field consistency
+- `scripts/validate-skill-syntax.py` — validate SKILL.md frontmatter and syntax
+- `scripts/check-file-overlap.sh` — detect file overlap between repos
+- `scripts/setup-labels.sh` — create GitHub labels for workflow
+- `scripts/test-skills.sh` — run all skill tests
+- `scripts/wait-external-review.sh` — wait for external review completion
+
+### CI Workflows
+
+- `.github/workflows/test.yml` — runs bats tests and `validate-skill-syntax.py` on push/PR
+- `.github/workflows/kanban-automation.yml` — auto-moves issues to project board columns on `phase/*` label events
+
+### Install
+
+- `install.sh` — creates symlinks from repo into `~/.claude/` directory
 
 | Repository directory | Install destination | Notes |
 |---|---|---|
@@ -54,53 +134,16 @@ To remove the installed symlinks:
 | `agents/` | `~/.claude/agents/wholework/` | Agent definitions |
 | `scripts/` | `~/.claude/skills/wholework/scripts/` | Co-located with skills; same pattern as modules |
 
-### Design rationale
-
+Design rationale:
 - `~/.claude/skills/wholework/` is a real directory (not a symlink). Individual skills are symlinked inside it as subdirectories, allowing `modules/` and `scripts/` to coexist as sibling symlinks.
 - `modules/` and `scripts/` are placed under `~/.claude/skills/wholework/` rather than `~/.claude/modules/` or `~/.claude/scripts/` to avoid duplicate loading and keep the package self-contained.
-- Symlinks are created with `ln -sfn` for idempotent installs (safe to run multiple times).
+- Symlinks are created with `ln -sfn` for idempotent installs.
 - `install.sh` is POSIX-compatible (`#!/bin/sh`) for maximum portability.
 
-## Directory conventions
+<!-- ## Module Dependencies（Optional）
 
-### `skills/`
+モジュール間の依存関係を記述する。 -->
 
-Each skill lives in its own subdirectory containing a `SKILL.md` file. Skills are the primary unit of distribution for wholework.
+<!-- ## File Naming Conventions（Optional）
 
-### `modules/`
-
-Shared markdown modules referenced by skills. Module files use the `.md` extension and follow the naming convention `<module-name>.md`.
-
-Key modules include:
-- `verify-patterns.md` — acceptance check pattern accuracy guidelines
-- `verify-classifier.md` — post-merge condition verifiability classification
-- `verify-executor.md` — acceptance check command translation and execution
-- `worktree-lifecycle.md` — shared worktree Entry/Exit lifecycle for all skills
-- `test-runner.md` — quality check execution and result analysis
-- `size-workflow-table.md` — Size-to-workflow decision table
-- `detect-config-markers.md` — `.wholework.yml` configuration detection
-- `adapter-resolver.md` — 3-layer adapter resolution (project-local → user-global → bundled)
-- `opportunistic-verify.md` — opportunistic verification at skill completion
-- `doc-checker.md` — documentation consistency checker
-
-### `agents/`
-
-Agent definitions as markdown files. Each agent is a single `.md` file.
-
-### `scripts/`
-
-Shell and Python scripts used by skills and agents. Shell scripts should be POSIX-compatible where possible.
-
-### `.github/workflows/`
-
-GitHub Actions CI workflows. `test.yml` runs bats tests and skill syntax validation on every push and pull request.
-
-### `tests/`
-
-Bats test files for scripts in `scripts/`. Each test file follows the naming convention `<script-name>.bats`.
-
-Key test files include `check-file-overlap.bats` (tests for `scripts/check-file-overlap.sh`).
-
-### `tests/fixtures/`
-
-Static fixture files used by bats tests (e.g. HTML files for browser-based verification tests).
+ファイル命名規則を記述する。 -->
