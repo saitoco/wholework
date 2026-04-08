@@ -59,6 +59,40 @@ Check procedure:
 3. Record missing tools in "Tool Dependencies" section
 4. If the design includes adding new tools (base tool names without `mcp__` prefix) to `allowed-tools`, Grep `scripts/validate-skill-syntax.py` for the `KNOWN_TOOLS` definition and include `scripts/validate-skill-syntax.py` in the changed files if not registered
 
+#### Read Instruction Placement Rule
+
+When changed files include SKILL.md or new modules files that reference shared modules with Read instructions, verify placement follows this rule:
+
+Read instructions for shared modules (`modules/*.md`) must be placed in the **first paragraph immediately after the step or section heading** (a blank line between heading and paragraph is allowed).
+
+Prohibited patterns:
+- Read instruction at the end or middle of a numbered list (LLM may complete list processing and skip the Read)
+- Read instruction embedded in a table cell (LLM treats it as table description and skips)
+
+When the Spec includes steps that reference shared modules, ensure the implementation step description places the Read instruction at the heading level, not nested inside lists or tables.
+
+#### Exhaustive/Example Markers
+
+When changed files include new lists or tables in SKILL.md or modules files, verify that each enumeration uses one of the following markers to distinguish coverage:
+
+| Marker | Meaning | When to use |
+|--------|---------|-------------|
+| **(examples)** | Representative cases shown; other cases may apply | List or table covers only some patterns |
+| **(exhaustive)** | All cases listed; nothing else applies | List or table intentionally covers all patterns |
+| **(project-dependent)** | Target changes based on project configuration or settings | List covers project-specific values, paths, or tool names |
+
+Exceptions: Marker not required when context already makes coverage clear (e.g., sentences starting with "e.g.," or "for example", "Example" column in a table, templates inside code fences, or text like "all N types").
+
+#### Caller Condition Propagation
+
+When changed files include modules files that have caller condition branching (SPEC_DEPTH branching, skill name branching, etc.), verify that the calling SKILL.md also explicitly states the same caller condition.
+
+Rule: If a modules file executes certain checks only under specific conditions (e.g., only when `SPEC_DEPTH=full`), the SKILL.md that calls it must state this caller condition explicitly so the implementer is aware of when the module's logic applies.
+
+Example: `skill-dev-checks.md` runs design-time checks only when `SPEC_DEPTH=full` → the `/spec` SKILL.md must also state "Read skill-dev-checks.md only when SPEC_DEPTH=full".
+
+When the Spec includes a step that calls a modules file with caller-dependent conditions, add "propagate the condition to the calling SKILL.md" as part of that implementation step.
+
 #### SKILL.md Validation Constraint Check (when SKILL.md is in changed files)
 
 When changed files include SKILL.md (new creation or existing modification), consider the known constraints of `validate-skill-syntax.py` at design time.
