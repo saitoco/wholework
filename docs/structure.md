@@ -15,7 +15,8 @@ wholework/
 │   └── plugin.json      # Plugin manifest (name: "wholework")
 ├── skills/              # Claude Code skills (one subdirectory per skill)
 │   └── <skill-name>/
-│       └── SKILL.md
+│       ├── SKILL.md     # Skill definition (required)
+│       └── *.md         # Auxiliary phase/guideline files (optional)
 ├── modules/             # Shared modules referenced by skills (22 files)
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (6 files)
@@ -44,7 +45,7 @@ wholework/
 
 ### Skills
 
-Skills are being actively migrated from a private repository. Each skill lives in `skills/<skill-name>/SKILL.md`. See the `skills/` directory for the current list.
+Skills are being actively migrated from a private repository. Each skill lives in `skills/<skill-name>/SKILL.md`. Many skills also include auxiliary `.md` files for sub-phases or specialized guidelines (e.g., `external-review-phase.md`, `codebase-search.md`). See the `skills/` directory for the current list.
 
 ### Modules
 
