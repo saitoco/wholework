@@ -76,6 +76,33 @@ Nothing to note.
 
 All 14 pre-merge conditions verified as PASS with mechanical checks. The one CONSIDER-level issue (step number reference) was not covered by acceptance criteria — adding a `file_not_contains "docs/tech.md" "Step 6"` check would have caught this at code phase.
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec was concise and implementation-ready. All acceptance conditions were machine-verifiable with `file_exists`, `grep`, `file_not_contains`, and `section_not_contains` hints.
+- One gap: step number reference (`Code review (Step 6)`) in Key Dependencies was not covered by acceptance criteria. A `file_not_contains "docs/tech.md" "Step 6"` check would have caught the migration artifact at code phase.
+
+#### design
+- N/A (design was embedded in the spec)
+
+#### code
+- One rework: `caller condition` phrase was not included in the initial write of skill-dev-checks.md. The acceptance check `grep "caller condition"` failed, requiring a targeted fix. This type of literal-phrase mismatch between acceptance check and implementation wording is a common pattern in text-matching acceptance checks.
+
+#### review
+- Review caught the step number reference issue (`Step 6` vs `Step 7`) — a non-obvious migration artifact. Good catch. The issue was noted at CONSIDER level and not blocking, which was appropriate given the doc is steering-level and the error was cosmetic.
+- No FAIL items in verify that review missed.
+
+#### merge
+- Clean merge via PR #38. No conflicts or CI issues.
+
+#### verify
+- All 14 pre-merge conditions PASS. One post-merge opportunistic condition (`/spec` references Forbidden Expressions) deferred to user verification — appropriate for behavioral confirmation that cannot be auto-verified without actually running `/spec`.
+
+### Improvement Proposals
+- For migration tasks translating step-number references between repositories, add `file_not_contains` acceptance checks for specific step numbers that differ between source and target (e.g., `file_not_contains "docs/tech.md" "Step 6"`). This would catch migration artifacts mechanically without relying on review.
+
 ## Notes
 
 - **Coding Conventions section eliminated from tech.md**: Of 25+ conventions in claude-config's tech.md, analysis shows:
