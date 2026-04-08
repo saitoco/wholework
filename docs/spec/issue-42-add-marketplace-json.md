@@ -59,3 +59,31 @@ The README Install section contains an invalid `pluginDirectories` setting that 
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Acceptance conditions were well-scoped and fully auto-verifiable (10/11 conditions had `<!-- verify: ... -->` hints). The one manual condition (`verify-type: manual`) for runtime marketplace installation is appropriately deferred, as it requires actual Claude Code execution.
+- No Issue Retrospective or Spec Retrospective sections found in Spec — these phases may have been skipped or combined in the patch route.
+
+#### design
+- Design was straightforward: 3 files changed, clear 1:1 mapping from implementation steps to acceptance criteria. No design ambiguities were noted.
+
+#### code
+- Single clean commit `a1e869b` with no rework or fixup patterns. Code Retrospective recorded N/A for all dimensions.
+- Patch route (direct push to main) was appropriate for this small documentation + file addition change.
+
+#### review
+- Patch route: no formal review phase. Given the minimal scope (JSON manifest + README rewrite + structure.md update), skipping review was acceptable.
+
+#### merge
+- Direct push to main via patch route. No conflicts or CI failures detected in git log.
+
+#### verify
+- All 10 pre-merge conditions passed on re-verification. No regressions detected.
+- Post-merge manual verification (`/plugin marketplace add saitoco/wholework`) remains as user verification item; `phase/verify` label assigned.
+
+### Improvement Proposals
+- N/A
