@@ -75,3 +75,30 @@ claude-config から残り 2 つの Project Documents (`workflow.md`, `figma-bes
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue本文とSpec内容が一致しており、受け入れ条件が具体的なファイル存在・内容検証として定義されていた。自動検証可能な形式で記述された良い例。
+- Post-merge条件 (`/issue` 実行時の認識確認) は `verify-type: opportunistic` で分類されており、ユーザー手動確認として適切に分類されている。
+
+#### design
+- #43 (product.md) の移植パターンを踏襲した設計で、実装との乖離なし。
+
+#### code
+- コード回顧: 逸脱・設計ギャップ・リワークなし。シンプルなドキュメント移植タスクで実装が一発完了。
+
+#### review
+- コミット履歴上、専用レビューステップなし（patch相当のサイズ感でdirect commitパターン）。
+
+#### merge
+- `closes #45` でIssueが自動クローズ済み。マージプロセスに問題なし。
+
+#### verify
+- 全13条件がPASS。`file_not_contains` による claude-config 参照除去の確認、`grep` によるフェーズ記述確認が有効に機能。
+- Post-merge opportunistic条件 (`/issue` 実行時の認識確認) が未チェックのため `phase/verify` ラベルを付与。
+
+### Improvement Proposals
+- N/A
