@@ -103,6 +103,22 @@ When changed files include SKILL.md (new creation or existing modification), con
 | Half-width exclamation mark prohibited | Half-width exclamation marks cannot appear in SKILL.md body text (outside code fences and inline code). Use full-width "！" or Japanese expressions | Do not include half-width exclamation marks in implementation step text |
 | Triple backtick prohibited | Triple backticks cannot appear in SKILL.md body text (validator misidentifies as code fence start) | Explain code examples containing triple backticks using Japanese expressions (e.g., "code fence block", "3 backticks") |
 
+#### Migration Step-Number Reference Check
+
+When changed files include migration of a workflow document (SKILL.md, modules file, docs page) from another repository, add `file_not_contains` acceptance checks for step numbers, workflow names, or other repository-specific references from the source repository that must not survive migration.
+
+Check procedure:
+1. Identify any step-number references in the source document (e.g., "Step 6", "Step 3")
+2. Confirm whether each referenced step number is valid in the target repository's workflow
+3. For step numbers that are source-specific and should not appear in the migrated file, add a `file_not_contains` acceptance check
+
+Example (from #36 tech.md migration — `Code review (Step 6)` was a claude-config step number that leaked into wholework's docs):
+```
+- <!-- verify: file_not_contains "docs/tech.md" "Step 6" --> No source-repo step numbers remain in migrated file
+```
+
+Apply this check to any string that is repository-specific: step numbers, phase names, tool names, or internal references tied to the source repository's structure.
+
 ### Cross-Skill Consistency Checks (called from /doc sync)
 
 Run regardless of SPEC_DEPTH condition (sync is not a design phase).
