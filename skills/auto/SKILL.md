@@ -291,4 +291,4 @@ After all N Issues are processed, report results (success/skip/failure) for each
 - Run after `/issue` is complete (spec is auto-run if not yet complete)
 - Detailed logic for each phase (review comment handling, conflict resolution, etc.) is delegated to each skill
 - `auto` itself does not post Issue comments (posted individually within each phase)
-- `~/.claude/skills/wholework/` is the installation path for skills, created via symlinks by `install.sh`
+- Skills are installed via the plugin marketplace and referenced through `${CLAUDE_PLUGIN_ROOT}` at runtime

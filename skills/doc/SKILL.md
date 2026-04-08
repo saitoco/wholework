@@ -179,7 +179,7 @@ If the file is not found, display the following error and abort:
 
 ```
 Error: template file `skills/doc/{doc}-template.md` not found.
-wholework is not correctly installed. Run install.sh first.
+wholework is not correctly installed. Reinstall the wholework plugin via `/plugin install wholework@saitoco-wholework`.
 ```
 
 Fill in the template with collected information and save to `docs/{doc}.md` with Write.
@@ -341,7 +341,7 @@ Read all template files listed in the "Template Definitions" section table. If e
 
 ```
 Error: template file not found.
-wholework is not correctly installed. Run install.sh first.
+wholework is not correctly installed. Reinstall the wholework plugin via `/plugin install wholework@saitoco-wholework`.
 ```
 
 Extract information corresponding to the Required sections of each steering document template from analysis sources and generate draft document content (Markdown strings). If `--deep` flag is enabled and Pattern 1 (absorb into steering) files were detected in .md integrated scan, integrate relevant file content into the corresponding draft sections per the absorption target determination table (skip user question flow, auto-generate draft from analysis/scan results).
@@ -437,7 +437,6 @@ Also load the following files with Glob:
 - `modules/*.md`
 - `agents/*.md`
 - `scripts/*.sh`
-- `install.sh`
 
 **Cross-skill consistency check:**
 

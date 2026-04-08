@@ -42,7 +42,6 @@ wholework/
 │   ├── migration-notes.md # Interface change records per migration issue
 │   ├── environment-adaptation.md # Environment adaptation architecture (4-layer)
 │   └── spec/            # Issue specifications
-├── package.json         # npm package manifest (for future npx support)
 ├── LICENSE              # Apache License 2.0
 ├── README.md            # Project overview
 └── CLAUDE.md            # Claude Code project instructions
