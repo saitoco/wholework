@@ -37,6 +37,8 @@ wholework/
 │   ├── structure.md     # This file
 │   ├── product.md       # Project vision, non-goals, terminology (steering)
 │   ├── tech.md          # Tech stack, architecture decisions, forbidden expressions (steering)
+│   ├── workflow.md      # Development workflow phases and label transitions (project)
+│   ├── figma-best-practices.md # Figma MCP UI design guidelines (project)
 │   ├── migration-notes.md # Interface change records per migration issue
 │   ├── environment-adaptation.md # Environment adaptation architecture (4-layer)
 │   └── spec/            # Issue specifications
