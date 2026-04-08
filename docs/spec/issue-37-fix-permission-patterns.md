@@ -44,3 +44,31 @@
 ### Purpose の明確化
 
 Issue 背景を整理し、「相対パスが問題」ではなく「ワイルドカードパターンが存在しない」ことが本質的な原因であることを明記した。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue Refinement Retrospective が2回記録されており、`/spec` フェーズで受け入れ条件を一度改善（個別スクリプト grep → ワイルドカードエントリの直接検証）した。前者は false negative を生む可能性があったため、適切な改善だった。
+- 設計判断（ワイルドカード採用・`settings.local.json` スコープ外）が Issue Refinement 内で十分に記録されている。
+
+#### design
+- XS Issue のためデザインフェーズなし。1行の settings.json 変更で完結する最小実装が適切だった。
+
+#### code
+- 修正コミット1件（`7f99c00`）のみ。fixup/amend なし。シンプルな XS バグ修正として理想的な実装経路。
+
+#### review
+- PRが見つからないため、patch ルート（main 直接コミット）で処理された。XS サイズの1行変更なのでレビュー省略は妥当。
+
+#### merge
+- `closes #37` でIssueが自動クローズされた。コンフリクトなし、正常マージ。
+
+#### verify
+- 自動検証条件1件: PASS（`.claude/settings.json` 42行目にパターン確認）。
+- Post-merge 手動確認条件1件: ユーザー検証に委ねる（`verify-type: manual`）。
+- 自動検証はクリーンに完了。
+
+### Improvement Proposals
+- N/A
