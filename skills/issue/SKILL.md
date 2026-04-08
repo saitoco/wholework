@@ -375,13 +375,13 @@ Related to #XX
 - [ ] User accesses the health check URL in production after merge and confirms 200 response <!-- verify-type: manual -->
 - [ ] Running `/review {PR number}` in Claude Code confirms that a review comment is posted to the PR <!-- verify-type: opportunistic -->
 
-**Do not include test counts (use `command` hints for verification):**
+**Do not include test counts (use `github_check` hints for verification):**
 
 Bad:
 - [ ] 12 bats tests all pass
 
 Good:
-- [ ] <!-- verify: command "bats tests/scripts/test-name.bats" --> All bats tests pass
+- [ ] <!-- verify: github_check "gh pr checks" "Run bats tests" --> All bats tests pass
 
 ---
 

@@ -16,7 +16,7 @@ For changes in the following categories, include **bats behavior tests** in acce
 
 **Example acceptance criteria entry:**
 ```markdown
-- [ ] <!-- verify: command "bats tests/scripts/test-name.bats" --> All bats tests pass
+- [ ] <!-- verify: github_check "gh pr checks" "Run bats tests" --> All bats tests pass
 ```
 
 **Test file location:**
@@ -33,26 +33,22 @@ bats tests (in mock environments) cannot detect all integration-level issues. Fo
 - [ ] <!-- verify: command "scripts/target-script.sh args" --> Real invocation succeeds
 ```
 
-## Specifying individual test files in `command` hints
+## Using `github_check` for CI-based bats verification
 
-In `command` hints, prefer specifying **individual test files** over integrated commands (e.g., `python3 scripts/validate-skill-syntax.py skills/`):
+For bats test verification, use `github_check` hints which directly reference CI job status. This works reliably in safe mode without local execution or CI Reference Fallback inference.
 
-**Reason:** When CI reference fallback occurs in `/review` safe mode, integrated commands make it harder to identify the corresponding CI job. Specifying individual test files makes the mapping to CI jobs explicit, improving automated verification reliability.
+**Reason:** `github_check` explicitly references the CI job by name, providing more reliable automated verification than `command` hints which require CI Reference Fallback inference in safe mode.
 
-**Recommended pattern (individual test file):**
+**Recommended pattern:**
 
 ```markdown
-- [ ] <!-- verify: command "bats tests/validate-skill-syntax.bats" --> Skill syntax validation tests all pass
+- [ ] <!-- verify: github_check "gh pr checks" "Run bats tests" --> All bats tests pass
 ```
 
-```markdown
-- [ ] <!-- verify: command "bats tests/scripts/test-name.bats" --> All bats tests pass
-```
-
-**Pattern to avoid (integrated command):**
+**Pattern to avoid (requires local execution or fallback inference):**
 
 ```markdown
-<!-- avoid: integrated commands make CI job mapping unclear -->
+<!-- avoid: requires local bats execution or CI Reference Fallback inference in safe mode -->
 - [ ] <!-- verify: command "python3 scripts/validate-skill-syntax.py skills/" --> Syntax validation passes
 ```
 

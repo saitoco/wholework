@@ -133,7 +133,7 @@ Get detailed job information via `gh api` and check for the following patterns:
 | # | Condition | Verification Command | Result | Details |
 |---|-----------|---------------------|--------|---------|
 | 1 | Summary of condition text | `file_exists "path"` | PASS | File exists |
-| 2 | Summary of condition text | `command "bats tests/"` | PASS | Alternative verification via CI job `test-scripts` success |
+| 2 | Summary of condition text | `github_check "gh pr checks" "Run bats tests"` | PASS | CI job `Run bats tests` succeeded |
 | 3 | Summary of condition text | `file_contains "file" "text"` | FAIL | Text not found |
 
 ### Summary

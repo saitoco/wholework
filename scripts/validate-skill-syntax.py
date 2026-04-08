@@ -503,6 +503,7 @@ KNOWN_VERIFY_COMMANDS: Dict[str, Tuple[int, int]] = {
     'browser_check': (2, 3),
     'browser_screenshot': (2, 2),
     'mcp_call': (2, 2),
+    'github_check': (2, 2),
 }
 
 

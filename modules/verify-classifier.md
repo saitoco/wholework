@@ -28,7 +28,7 @@ Skills that Read this file should evaluate each post-merge condition against the
 
 ```markdown
 ### Post-Merge
-- [ ] <!-- verify: command "bats tests/..." --> All bats tests PASS <!-- verify-type: auto -->
+- [ ] <!-- verify: github_check "gh pr checks" "Run bats tests" --> All bats tests PASS <!-- verify-type: auto -->
 - [ ] Confirm test file search is included when `/spec` runs <!-- verify-type: opportunistic -->
 - [ ] User visually confirms no confirmation dialog appears <!-- verify-type: manual -->
 ```
