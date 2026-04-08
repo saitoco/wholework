@@ -65,3 +65,32 @@ Port `docs/product.md` from the claude-config repository to Wholework, rewriting
 - Future Direction: "Skills repository split/distribution" item should be removed or marked as completed (already realized as the current public repo distribution)
 - Target Users: remove "リポジトリオーナー個人" (individual repo owner) framing; generalize to developers using Claude Code regularly
 - `docs/structure.md` currently lists only `tech.md` with `(steering)` annotation; `product.md` should be added consistently
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Acceptance conditions were clear and machine-verifiable (all 11 pre-merge conditions used `<!-- verify: ... -->` hints). No ambiguity needed resolution.
+- Post-merge condition was correctly marked as `verify-type: opportunistic` since it requires actual `/issue` execution to verify behavior.
+
+#### design
+- Spec mapped cleanly to implementation. Changed files (`docs/product.md`, `docs/structure.md`) and section structure were specified precisely.
+- Removal constraints (no "claude-config", no "個人用設定リポジトリ") were explicitly listed as acceptance criteria — good practice for migration tasks.
+
+#### code
+- Patch route (direct commit to main). No PR or review phase. Code retrospective recorded N/A for deviations, gaps, and rework — clean implementation.
+- Single commit delivered both files (`docs/product.md` + `docs/structure.md` update) as specified.
+
+#### review
+- No review phase (patch route). Review was skipped by design for this documentation-only change.
+
+#### merge
+- Direct merge to main via patch route. No conflicts detected.
+
+#### verify
+- All 11 pre-merge conditions passed cleanly on re-verification. Checkboxes were already checked from pre-merge auto-verify run.
+- Post-merge opportunistic condition (`/issue` Vision alignment check) deferred to user verification as expected.
+
+### Improvement Proposals
+- N/A
