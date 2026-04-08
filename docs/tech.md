@@ -62,11 +62,10 @@ ssot_for:
 | Expression | Reason | Alternative |
 |------------|--------|-------------|
 | Half-width `!` (in SKILL.md body, outside code fences and inline code) | Claude Code's Bash permission checker misdetects it as zsh history expansion, causing errors at skill execution | Full-width "！" or rephrased expression |
-| 「設計ファイル」 | Term unification (#422 unified to "Spec") | "Spec" |
-| 「Issue Spec」 | Term simplification (#588 changed to "Spec") | "Spec" |
-| 「検証ヒント」 | Term redesign (#669 changed to "acceptance check") | "acceptance check" |
-| 「共有手順書」 | Term redesign (#669 changed to "shared module") | "shared module" |
-| 「ディスパッチ」 | Term redesign (#727 changed to "autonomous execution") | "autonomous execution" |
+| Design file | Term unification (unified to "Spec") | "Spec" |
+| Issue Spec | Term simplification (#changed to "Spec") | "Spec" |
+| Verify hint | Term redesign (changed to "verify command) | "verify command" |
+| Dispatch | Term redesign (changed to "autonomous execution") | "autonomous execution" |
 
 ## Terminology Migration Scope Rule
 
