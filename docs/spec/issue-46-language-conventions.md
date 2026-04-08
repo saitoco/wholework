@@ -17,3 +17,31 @@
 ### 受入条件の変更理由
 
 なし（初回作成）
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- `## Issue Retrospective` のみ存在（patch ルートのため Spec Retrospective は未作成）
+- 受入条件の粒度は適切。`section_contains`/`grep` による検証可能な条件として明確に定義されており、ambiguity も事前に自動解決セクションで処理済み
+
+#### design
+- 設計ドキュメント（Spec）は作成されたが、実装は1コミット（`eb51526`）で完了。設計通りの直接的な変更（箇条書き→テーブル化）であり、設計逸脱なし
+
+#### code
+- パッチルート（直接 main コミット）。fixup/amend パターンなし、単一コミットでクリーンに実装完了
+- `chore: restructure Language Conventions as table with PR body and Skill output rules` — コミットメッセージが変更内容を的確に表現している
+
+#### review
+- patch ルートのため PR レビューなし（XS Issue）
+
+#### merge
+- 直接 main へのコミット（patch ルート）。コンフリクトなし
+
+#### verify
+- pre-merge 3条件すべて PASS（既にチェック済みを冪等再確認）
+- post-merge の opportunistic 条件 3件は自動検証対象外（`verify-type: opportunistic` で verify ヒントなし）。実際の Skill 実行時に確認が必要
+
+### Improvement Proposals
+- N/A
