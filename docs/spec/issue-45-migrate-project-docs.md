@@ -64,3 +64,14 @@ claude-config から残り 2 つの Project Documents (`workflow.md`, `figma-bes
 
 - 書き換え範囲: #43 と同パターンで決定 (英語化 + claude-config 参照除去)
 - figma-best-practices.md の適合性: ユーザーが移植対象として明確に指定
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
