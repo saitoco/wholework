@@ -14,7 +14,8 @@ wholework/
 ├── .claude/
 │   └── settings.json    # Repo-level Claude Code settings (hooks, permissions)
 ├── .claude-plugin/      # Plugin manifest directory
-│   └── plugin.json      # Plugin manifest (name: "wholework")
+│   ├── plugin.json      # Plugin manifest (name: "wholework")
+│   └── marketplace.json # Marketplace manifest (name: "saitoco-wholework")
 ├── skills/              # Claude Code skills (one subdirectory per skill)
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill definition (required)
@@ -131,7 +132,18 @@ Key modules:
 
 ### Install
 
-Wholework is installed as a local Claude Code plugin using `--plugin-dir`:
+Wholework supports two installation methods:
+
+**Marketplace install** (primary):
+
+```sh
+/plugin marketplace add saitoco/wholework
+/plugin install wholework@saitoco-wholework
+```
+
+The marketplace manifest is at `.claude-plugin/marketplace.json` (name: `saitoco-wholework`).
+
+**Development install** (local):
 
 ```sh
 claude --plugin-dir ~/src/wholework

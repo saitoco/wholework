@@ -1,0 +1,12 @@
+{
+  "name": "saitoco-wholework",
+  "owner": {
+    "name": "Saito & Co."
+  },
+  "plugins": [
+    {
+      "name": "wholework",
+      "source": "./"
+    }
+  ]
+}
