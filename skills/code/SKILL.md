@@ -194,7 +194,7 @@ This is equivalent to the CI `validate-syntax` job and detects invalid `allowed-
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-checker.md` and follow the "Impact assessment criteria" section to determine whether documentation sync updates are needed for files changed during implementation.
 
-If sync is required, update the target documents (`README.md`, `docs/workflow.md`, `.github/copilot-instructions.md`, etc.) before committing.
+If sync is required, update the target documents (`README.md`, `docs/workflow.md`, etc.) before committing.
 
 ### Step 10: Acceptance Check Consistency
 

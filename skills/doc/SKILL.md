@@ -278,7 +278,7 @@ Search for the following files in the project root with Glob (deduplicate files 
 - `README.*` (README files regardless of extension. Supplements non-Markdown formats like .rst, .txt)
 - `package.json`, `Gemfile`, `requirements.txt`, `go.mod`, `Cargo.toml`, `pyproject.toml`, `tsconfig.json`, `Makefile`
 - `CLAUDE.md`
-- `.github/*.md`, `.github/**/*.md` (PR/Issue templates, copilot-instructions.md etc.)
+- `.github/*.md`, `.github/**/*.md` (PR/Issue templates etc.)
 - `.github/workflows/*.yml` (CI/CD configuration)
 - `docs/**/*.md` (all Markdown including subdirectories. But skip files with a `type` field in frontmatter. After retrieving with Glob, check for `type` field by reading the beginning of each file. If many matches, prioritize files directly under `docs/` and limit to 15)
 - `Dockerfile`, `docker-compose.yml`, `.env.example` (infrastructure configuration)
@@ -302,7 +302,7 @@ If `--deep` flag is enabled, in addition to codebase analysis, run **existing .m
 
 Search with Glob `**/*.md` and skip files matching these exclusion conditions:
 
-- **Protected files**: CLAUDE.md, README.md, .github/copilot-instructions.md (skip; not targets for content absorption/movement/deletion)
+- **Protected files**: CLAUDE.md, README.md (skip; not targets for content absorption/movement/deletion)
 - **Existing managed targets**: files with `type: steering` or `type: project` in frontmatter (read beginning to check `type` field; skip if present)
 - **Spec documents**: files under `docs/spec/`
 - **Package management directories**: files under `node_modules/`, `.git/`, `vendor/`
@@ -444,7 +444,7 @@ If `scripts/validate-skill-syntax.py` exists, Read `${CLAUDE_PLUGIN_ROOT}/module
 
 **Content classification based on dynamic SSoT mapping:**
 
-Based on the constructed SSoT mapping, determine the "source of truth (Single Source of Truth)" for each section/description. Detect references by dynamically searching other files (README.md, CLAUDE.md, copilot-instructions.md etc.) with Grep for information corresponding to each SSoT file's `ssot_for` category.
+Based on the constructed SSoT mapping, determine the "source of truth (Single Source of Truth)" for each section/description. Detect references by dynamically searching other files (README.md, CLAUDE.md etc.) with Grep for information corresponding to each SSoT file's `ssot_for` category.
 
 Classification of each section/description:
 - **Duplicate**: same information exists in multiple places (both SSoT side and reference side have substantive descriptions)
@@ -466,8 +466,6 @@ Based on Step 6 classification results, propose one of 3 actions for each item:
 - **Absorb**: incorporate descriptions from analysis source/implementation code into Steering Documents and replace original descriptions with reference links. Check for duplicate content in Steering Documents before executing
 - **Reference**: replace duplicate descriptions in analysis source/implementation code with reference links to Steering Documents (when Steering Documents already have the information). Treat Steering Documents as the source of truth; other files hold references to them
 - **Drift report**: report drift between implementation code and Steering Documents (no auto-fix, ask for user judgment)
-
-**Exclude copilot-instructions.md**: `.github/copilot-instructions.md` is the only instruction file that GitHub Copilot Agent is guaranteed to read, and replacing descriptions with references to external files risks losing information. Exclude copilot-instructions.md descriptions from "reference" and "absorb" targets; maintain self-contained descriptions even if there are duplicates. Include items related to copilot-instructions.md only as "drift report" proposals.
 
 If `--deep` flag is enabled and Step 2's .md integration scan results exist, add integration proposals for Pattern 2–4 unintegrated .md files to the existing proposal table:
 
@@ -502,7 +500,6 @@ If integration operations (absorb/move/delete) occurred, Grep the following file
 
 - CLAUDE.md (protected but update reference links)
 - README.md (protected but update reference links)
-- .github/copilot-instructions.md
 - `skills/*/SKILL.md`
 - `docs/spec/*.md` (best effort)
 
