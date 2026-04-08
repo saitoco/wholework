@@ -1,0 +1,44 @@
+{
+  "hooks": {
+    "PermissionRequest": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/scripts/log-permission.sh",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(scripts/get-issue-size.sh *)",
+      "Bash(scripts/get-issue-type.sh *)",
+      "Bash(scripts/get-sub-issue-graph.sh *)",
+      "Bash(scripts/gh-issue-edit.sh *)",
+      "Bash(scripts/gh-issue-comment.sh *)",
+      "Bash(scripts/gh-graphql.sh *)",
+      "Bash(scripts/gh-extract-issue-from-pr.sh *)",
+      "Bash(scripts/gh-label-transition.sh *)",
+      "Bash(scripts/gh-pr-merge-status.sh *)",
+      "Bash(scripts/gh-pr-review.sh *)",
+      "Bash(scripts/gh-check-blocking.sh *)",
+      "Bash(scripts/opportunistic-search.sh *)",
+      "Bash(scripts/check-file-overlap.sh *)",
+      "Bash(scripts/triage-backlog-filter.sh *)",
+      "Bash(scripts/wait-external-review.sh *)",
+      "Bash(scripts/validate-permissions.sh *)",
+      "Bash(scripts/run-code.sh *)",
+      "Bash(scripts/run-spec.sh *)",
+      "Bash(scripts/run-review.sh *)",
+      "Bash(scripts/run-merge.sh *)",
+      "Bash(scripts/run-verify.sh *)",
+      "Bash(scripts/run-auto-sub.sh *)",
+      "Bash(scripts/run-issue.sh *)",
+      "Bash(python3 scripts/validate-skill-syntax.py *)"
+    ]
+  }
+}

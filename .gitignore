@@ -8,6 +8,10 @@ node_modules/
 .claire/
 .claude/worktrees/
 
+# Un-ignore repo-level Claude Code settings (overrides global gitignore which ignores .claude/)
+!.claude/
+!.claude/settings.json
+
 # OS files
 .DS_Store
 

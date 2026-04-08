@@ -11,6 +11,8 @@ ssot_for:
 
 ```
 wholework/
+├── .claude/
+│   └── settings.json    # Repo-level Claude Code settings (hooks, permissions)
 ├── .claude-plugin/      # Plugin manifest directory
 │   └── plugin.json      # Plugin manifest (name: "wholework")
 ├── skills/              # Claude Code skills (one subdirectory per skill)
