@@ -149,7 +149,8 @@ The marketplace manifest is at `.claude-plugin/marketplace.json` (name: `saitoco
 **Development install** (local):
 
 ```sh
-claude --plugin-dir ~/src/wholework
+git clone https://github.com/saitoco/wholework.git
+claude --plugin-dir <path-to-wholework>
 ```
 
 Skills are discovered as `wholework:<skill-name>`. Claude Code sets `${CLAUDE_PLUGIN_ROOT}` to the plugin directory at runtime, which skills and modules use to reference scripts and modules.

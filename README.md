@@ -13,23 +13,13 @@ Spec-first Claude Code skills for autonomous GitHub workflows.
 ## Install
 
 ```sh
-git clone https://github.com/saitoco/wholework.git
-```
-
-**Primary method** — add via the Claude Code plugin marketplace:
-
-```sh
 /plugin marketplace add saitoco/wholework
 /plugin install wholework@saitoco-wholework
 ```
 
 Skills are available as `wholework:<skill-name>` (e.g., `/wholework:review`, `/wholework:code`).
 
-**Development option** — launch Claude Code directly with `--plugin-dir`:
-
-```sh
-claude --plugin-dir ~/src/wholework
-```
+For development setup, see [docs/structure.md](docs/structure.md#install).
 
 ## Repository structure
 
