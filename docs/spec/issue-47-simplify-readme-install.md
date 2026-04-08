@@ -37,3 +37,28 @@ Size 影響: 単一ファイル → 2 ファイル編集に拡大するが、い
 - **重複**: なし
 - **停滞**: なし
 - **依存**: #42（CLOSED）への言及のみ、未解決依存なし
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue Retrospective が既に記録されている。スコープ拡張（docs/structure.md への変更追加）を明文化した判断プロセスが残っており、後から意図が追いやすい。受け入れ条件は具体的かつ verify ヒント付きで品質が高かった。
+
+#### design
+- Spec ファイルに Spec Retrospective セクションなし（patch ルートのため `/spec` 未実行）。設計判断は Issue Retrospective のAuto-Resolved Ambiguity Points で代替されており、実用上問題なし。
+
+#### code
+- 実装は単一コミット `95868be` で完了（リワークなし）。patch ルート（XS）のため直接 main へコミット。コミットメッセージが変更内容を簡潔に表現しており良い。
+
+#### review
+- patch ルートのため PR レビューなし。変更規模（2 ファイル、数行の削除・追加）からして正当な判断。
+
+#### merge
+- 直接 main にコミット・プッシュ（patch ルート）。競合なし、CI パスを確認。
+
+#### verify
+- 全 9 条件が一発で PASS。受け入れ条件に verify ヒントが適切に付与されており、自動検証が完全に機能した。特に `section_contains` を使った構造的な検証（`### Install` セクション内の存在確認）が有効だった。
+
+### Improvement Proposals
+- N/A
