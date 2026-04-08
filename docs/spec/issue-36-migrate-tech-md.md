@@ -62,6 +62,20 @@ Migrate `docs/tech.md` from claude-config to wholework as a steering document. T
 ### Rework
 - skill-dev-checks.md Caller Condition Propagation section: initial wording described "execution conditions dependent on the caller" but did not include the literal phrase "caller condition" required by the acceptance check. Reworded to include "caller condition branching" and "caller condition" explicitly.
 
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+The Key Dependencies table in `docs/tech.md` contains `Code review (Step 6)` which references a step number from claude-config's review workflow rather than wholework's current Step 7 (External Review Integration). Migration tasks that translate step-number references from source documents should verify step numbers against the target project's current SKILL.md.
+
+### Recurring Issues
+
+Nothing to note.
+
+### Acceptance Criteria Verification Difficulty
+
+All 14 pre-merge conditions verified as PASS with mechanical checks. The one CONSIDER-level issue (step number reference) was not covered by acceptance criteria — adding a `file_not_contains "docs/tech.md" "Step 6"` check would have caught this at code phase.
+
 ## Notes
 
 - **Coding Conventions section eliminated from tech.md**: Of 25+ conventions in claude-config's tech.md, analysis shows:
