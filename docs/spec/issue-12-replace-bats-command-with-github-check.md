@@ -60,3 +60,33 @@ CI job key: `bats`, display name: `Run bats tests` (from `.github/workflows/test
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Acceptance conditions had clear, machine-verifiable `<!-- verify: ... -->` hints for all 7 conditions.
+- `file_exists` was correctly used instead of `grep "github_check" ".github/workflows/test.yml"` for the CI prerequisite (noted in Auto-Resolved Ambiguity Points). Good self-correction.
+- `section_not_contains` pattern worked well for verifying absence of the old `command "bats` pattern within specific sections.
+
+#### design
+- Spec correctly scoped out closed Issue specs (issue-7, -8, -9) and the CI Reference Fallback section — a sound decision that kept the change minimal and focused.
+- The Changed Files section was accurate except for the missing `scripts/validate-skill-syntax.py` entry (captured in Code Retrospective).
+
+#### code
+- Patch route (direct main commit) was appropriate for this scoped template-text-only change.
+- The unspecced `validate-skill-syntax.py` change was discovered via CI and handled correctly, but could have been caught earlier with a pre-implementation grep of `KNOWN_VERIFY_COMMANDS`.
+
+#### review
+- Patch route — no formal PR review. For pure documentation/example text changes, this is acceptable.
+
+#### merge
+- Direct commit to main (`747acb2`). Clean, no conflicts.
+
+#### verify
+- All 7 conditions PASS on first run. Smooth verification with no FAIL or UNCERTAIN.
+- `section_not_contains` proved effective for verifying the absence of old patterns within specific markdown sections.
+
+### Improvement Proposals
+- N/A
