@@ -35,6 +35,7 @@ wholework/
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
 │   ├── structure.md     # This file
+│   ├── product.md       # Project vision, non-goals, terminology (steering)
 │   ├── tech.md          # Tech stack, architecture decisions, forbidden expressions (steering)
 │   ├── migration-notes.md # Interface change records per migration issue
 │   ├── environment-adaptation.md # Environment adaptation architecture (4-layer)
