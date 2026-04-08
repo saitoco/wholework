@@ -10,6 +10,7 @@ node_modules/
 
 # Un-ignore repo-level Claude Code settings (overrides global gitignore which ignores .claude/)
 !.claude/
+.claude/*
 !.claude/settings.json
 
 # OS files
