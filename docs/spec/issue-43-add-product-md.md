@@ -48,6 +48,17 @@ Port `docs/product.md` from the claude-config repository to Wholework, rewriting
 
 - When running `/issue`, `docs/product.md` is referenced and Vision alignment check works
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
 ## Notes
 
 - Competitors section data is ported as-is from claude-config; only the differentiation summary subject changes from "claude-config" to "Wholework"
