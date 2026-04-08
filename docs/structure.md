@@ -30,7 +30,7 @@ wholework/
 │   └── workflows/
 │       ├── test.yml             # CI: bats tests and skill syntax validation
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
-├── tests/               # Bats test files for scripts (27 files)
+├── tests/               # Bats test files for scripts (25 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -39,8 +39,8 @@ wholework/
 │   ├── tech.md          # Tech stack, architecture decisions, forbidden expressions (steering)
 │   ├── workflow.md      # Development workflow phases and label transitions (project)
 │   ├── figma-best-practices.md # Figma MCP UI design guidelines (project)
-│   ├── migration-notes.md # Interface change records per migration issue
-│   ├── environment-adaptation.md # Environment adaptation architecture (4-layer)
+│   ├── migration-notes.md # Interface change records per migration issue (project)
+│   ├── environment-adaptation.md # Environment adaptation architecture (4-layer) (project)
 │   └── spec/            # Issue specifications
 ├── LICENSE              # Apache License 2.0
 ├── README.md            # Project overview

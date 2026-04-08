@@ -279,7 +279,7 @@ SHOULD constraints (best practices, manual check — examples):
 
 When defining acceptance criteria, explicitly consider:
 - Documentation additions (README.md, CLAUDE.md, docs/workflow.md, etc.)
-- Workflow-impacting doc sync (docs/workflow.md, README.md, .github/copilot-instructions.md — for workflow phase/skill behavior/routing changes)
+- Workflow-impacting doc sync (docs/workflow.md, README.md — for workflow phase/skill behavior/routing changes)
 - Config marker additions (.wholework.yml)
 - Reference updates in existing files (tables, links, etc.)
 - For new modules: include docs/structure.md module table and Mermaid graph updates in changed-files list

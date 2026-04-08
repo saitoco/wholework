@@ -185,13 +185,11 @@ Document structure:
 - `docs/tech.md` — Tech stack, coding conventions, Forbidden Expressions
 - `docs/structure.md` — Directory structure, agent infrastructure
 
-**Rule**: When making changes that affect the workflow — such as adding, modifying, or removing skills — also update `docs/workflow.md`, `README.md`, and `.github/copilot-instructions.md`.
+**Rule**: When making changes that affect the workflow — such as adding, modifying, or removing skills — also update `docs/workflow.md` and `README.md`.
 
-Reason: To keep implementation and documentation always in sync and maintain an accurate overall view of the workflow. The 3 files each target different audiences (human / Claude Code / GitHub Copilot) so all must be kept in sync.
+Reason: To keep implementation and documentation always in sync and maintain an accurate overall view of the workflow. The 2 files target different audiences (human / Claude Code) so both must be kept in sync.
 
 **Key Files table sync rule**: When the role or description of files listed in the Key Files table in `docs/structure.md` changes, or when files are added, removed, or renamed, also update the Key Files table in `docs/structure.md`.
-
-**copilot-instructions.md self-containment**: Do not replace descriptions in `.github/copilot-instructions.md` with reference links to Steering Documents or other files. Since GitHub Copilot Agent cannot guarantee it will reference repository files other than `copilot-instructions.md`, maintain self-contained descriptions even if duplicated. Even in `/doc sync` normalization proposals, copilot-instructions.md is excluded from referencing targets.
 
 ## Related Documents
 
