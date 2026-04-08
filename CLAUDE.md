@@ -4,12 +4,18 @@ Spec-first Claude Code skills for autonomous GitHub workflows.
 
 ## Language Conventions
 
-- Source code: **English** (variable names, function names, comments, file names)
-- Documentation: **English** (README, module docs, skill docs)
-- Spec files: **Japanese** (disposable, same treatment as issue bodies)
-- Issue titles: English
-- Issue bodies: Japanese (for now)
-- Commit messages: English
+These conventions apply to all Skill-generated output (Issue bodies, Spec files, PR bodies, commit messages, etc.).
+
+| Artifact | Language | Notes |
+|----------|----------|-------|
+| Source code | English | Variable names, function names, comments, file names |
+| Documentation | English | README, module docs, skill docs |
+| Commit messages | English | |
+| Issue titles | English | |
+| Issue bodies | Japanese | For now |
+| Spec files | Japanese | Disposable, same treatment as issue bodies |
+| PR body | Japanese | Summaries and verification sections |
+| Skill output (terminal) | Japanese | User-facing messages and status output |
 
 ## Skills Migration Guidelines
 
