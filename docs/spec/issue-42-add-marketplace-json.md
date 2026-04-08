@@ -48,3 +48,14 @@ The README Install section contains an invalid `pluginDirectories` setting that 
 
 - `docs/tech.md` line 29 mentions `--plugin-dir` in Architecture Decisions. No change needed — `--plugin-dir` remains valid for development use and correctly describes the runtime mechanism.
 - `owner.name` in marketplace.json uses "Saito & Co." as placeholder. Adjust if needed.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
