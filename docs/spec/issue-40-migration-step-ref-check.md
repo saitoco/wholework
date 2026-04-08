@@ -27,3 +27,14 @@ Add a convention to `modules/skill-dev-checks.md` for migration tasks: when tran
 ## Notes
 
 - Placement after "SKILL.md Validation Constraint Check" follows the convention that migration-specific checks are less frequently triggered than general constraints, so they go last in the Design-Time Checks section.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
