@@ -49,3 +49,14 @@ CI job key: `bats`, display name: `Run bats tests` (from `.github/workflows/test
 - `github_check` requires a PR context (PR number) to check CI job status. For patch routes (direct main commits), `github_check "gh pr checks"` is not applicable. However, template examples primarily target PR-based workflows (size M/L) where CI checks are available.
 - The `command "bats ..."` pattern remains valid and documented in the CI Reference Fallback section of `verify-executor.md` as a fallback mechanism. This issue only changes the *recommended* example pattern, not the underlying infrastructure.
 - The CI Reference Fallback section (verify-executor.md lines 94-126) and its `command "bats tests/setup-labels.bats"` → `test-scripts` job mapping example are not modified — they document the existing fallback behavior for `command` hints.
+
+## Code Retrospective
+
+### Deviations from Design
+- Added `github_check` to `KNOWN_VERIFY_COMMANDS` in `scripts/validate-skill-syntax.py`. This was not listed in the Spec's Changed Files, but was required because the validator rejected `github_check` as an unknown verify command. The fix was straightforward (add `'github_check': (2, 2)` to the registry).
+
+### Design Gaps/Ambiguities
+- The Spec did not mention that `validate-skill-syntax.py` has a hard-coded allowlist of known verify commands. `github_check` was already documented in `verify-executor.md` but missing from the validator registry, causing CI-equivalent validation to fail after the SKILL.md change.
+
+### Rework
+- N/A
