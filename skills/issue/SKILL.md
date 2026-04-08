@@ -162,7 +162,13 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/title-normalizer.md` and normalize the title
 ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER issue
 ```
 
-### Step 8: Scope Assessment (sub-issue splitting)
+### Step 8: Triage Auto-chain (if `triaged` label is absent)
+
+If `triaged` is absent from labels: read `skills/triage/SKILL.md` and run the "Single Execution" section starting from Step 2 (title normalization). Output an intermediate triage results table after completion.
+
+If `triaged` is present: skip this step.
+
+### Step 9: Scope Assessment (sub-issue splitting)
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` and use its XL definition (11+ files or multiple independent features) as the split threshold.
 
@@ -205,7 +211,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query add-sub-issue -F parentId="$
 ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query add-blocked-by -F issueId="$FRONTEND_ID" -F blockingId="$BACKEND_ID"
 ```
 
-### Step 9: Issue Retrospective
+### Step 10: Issue Retrospective
 
 Post a retrospective comment to the issue covering: judgment rationale for ambiguity resolution, key policy decisions from Q&A, and reasons for acceptance criteria changes. Always create the section (write "Nothing to note" if no content).
 
@@ -216,7 +222,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $NUMBER .tmp/issue-comment-$NU
 rm -f .tmp/issue-comment-$NUMBER.md
 ```
 
-### Step 10: Opportunistic Verification
+### Step 11: Opportunistic Verification
 
 If `opportunistic-verify: true` is set in `.wholework.yml`, read `${CLAUDE_PLUGIN_ROOT}/modules/opportunistic-verify.md` and follow "Processing Steps". Skill name: `/issue`. Skip if not set.
 
