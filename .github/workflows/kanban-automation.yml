@@ -28,8 +28,11 @@ jobs:
             "phase/code")
               echo "option_id=47fc9ee4" >> "$GITHUB_OUTPUT"
               ;;
-            "phase/verify")
+            "phase/review")
               echo "option_id=df73e18b" >> "$GITHUB_OUTPUT"
+              ;;
+            "phase/verify")
+              echo "option_id=70bdc676" >> "$GITHUB_OUTPUT"
               ;;
             "phase/done")
               echo "option_id=98236657" >> "$GITHUB_OUTPUT"
