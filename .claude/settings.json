@@ -38,7 +38,8 @@
       "Bash(scripts/run-verify.sh *)",
       "Bash(scripts/run-auto-sub.sh *)",
       "Bash(scripts/run-issue.sh *)",
-      "Bash(python3 scripts/validate-skill-syntax.py *)"
+      "Bash(python3 scripts/validate-skill-syntax.py *)",
+      "Bash(/Users/saito/src/wholework/scripts/*.sh *)"
     ]
   }
 }
