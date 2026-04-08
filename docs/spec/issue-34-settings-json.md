@@ -25,3 +25,28 @@
 ### Ambiguity Auto-Resolution
 
 - hook の command パスは実装裁量があるため受入条件化せず（Auto-Resolved に記録済み）
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue Retrospective にて `json_field` → `grep` への変更や `run-auto.sh` 条件削除など適切な受入条件の精査が行われた。受入条件は明確で自動検証可能な形式で記述されている。
+
+#### design
+- 設計フェーズは patch ルートのため省略。Issue Refinement Retrospective でスペックの変更点が適切に記録されている。
+
+#### code
+- 単一コミット `f293160` で実装完了。`.claude/settings.json`、`.gitignore`、`docs/structure.md` の3ファイルのみの変更でシンプル。リワークなし。
+
+#### review
+- patch ルート（size/XS）のため正式なレビューなし。受入条件が全8項目 PASS しており、実装品質に問題なし。
+
+#### merge
+- patch ルートにより main への直接コミット。PRなし。コンフリクトなし。
+
+#### verify
+- 全8条件 PASS。受入条件はすべて自動検証可能な `grep`/`file_exists` ヒントが付与されており、検証精度が高い。再実行時も全条件が確認できた。
+
+### Improvement Proposals
+- N/A
