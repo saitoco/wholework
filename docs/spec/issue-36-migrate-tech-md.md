@@ -51,6 +51,17 @@ Migrate `docs/tech.md` from claude-config to wholework as a steering document. T
 
 - `/spec` execution references `docs/tech.md` Forbidden Expressions
 
+## Code Retrospective
+
+### Deviations from Design
+- The "caller condition" phrase was not included in the initial write of the Caller Condition Propagation section in skill-dev-checks.md. The acceptance check `grep "caller condition"` failed, requiring a fix to include that exact phrase in the section text. Added "caller condition branching" wording to align with the acceptance check.
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- skill-dev-checks.md Caller Condition Propagation section: initial wording described "execution conditions dependent on the caller" but did not include the literal phrase "caller condition" required by the acceptance check. Reworded to include "caller condition branching" and "caller condition" explicitly.
+
 ## Notes
 
 - **Coding Conventions section eliminated from tech.md**: Of 25+ conventions in claude-config's tech.md, analysis shows:
