@@ -93,3 +93,49 @@ teardown() {
     [ "$status" -eq 1 ]
     [[ "$output" == *"invalid phase"* ]]
 }
+
+@test "idempotent: target label already set skips remove+add of target" {
+    # Mock gh to return phase/done as current label for 'issue view' calls
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+if [ "\$1" = "issue" ] && [ "\$2" = "view" ]; then
+    echo "phase/done"
+else
+    echo "\$@" >> "$GH_CALL_LOG"
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 42 done
+    [ "$status" -eq 0 ]
+    # Should not remove phase/done (target label already present)
+    run grep -- "--remove-label phase/done" "$GH_CALL_LOG"
+    [ "$status" -ne 0 ]
+    # Should not add phase/done again
+    run grep -- "--add-label phase/done" "$GH_CALL_LOG"
+    [ "$status" -ne 0 ]
+    # Should still remove other phase labels
+    grep -q -- "--remove-label phase/verify" "$GH_CALL_LOG"
+}
+
+@test "idempotent: target label not set uses normal remove+add flow" {
+    # Mock gh to return a different label for 'issue view' calls
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+if [ "\$1" = "issue" ] && [ "\$2" = "view" ]; then
+    echo "phase/verify"
+else
+    echo "\$@" >> "$GH_CALL_LOG"
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 42 done
+    [ "$status" -eq 0 ]
+    # Should add phase/done
+    grep -q -- "--add-label phase/done" "$GH_CALL_LOG"
+    # Should remove phase/verify
+    grep -q -- "--remove-label phase/verify" "$GH_CALL_LOG"
+}

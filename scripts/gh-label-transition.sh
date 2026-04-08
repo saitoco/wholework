@@ -47,15 +47,35 @@ if [ -n "$TARGET_PHASE" ]; then
     esac
 fi
 
-# Build --remove-label flags for all phase/* labels
-REMOVE_ARGS=()
-for label in $PHASE_LABELS; do
-    REMOVE_ARGS+=(--remove-label "$label")
-done
-
-# Add target phase label if specified
+# Check current labels if transitioning to a target phase
+CURRENT_LABELS=""
 if [ -n "$TARGET_PHASE" ]; then
-    gh issue edit "$ISSUE_NUMBER" "${REMOVE_ARGS[@]}" --add-label "phase/$TARGET_PHASE"
-else
+    CURRENT_LABELS=$(gh issue view "$ISSUE_NUMBER" --json labels --jq '.labels[].name' 2>/dev/null || true)
+fi
+
+# If target label already exists, skip remove+add to avoid GitHub API race condition
+# (remove+add of same label causes remove-only behavior)
+TARGET_LABEL="phase/$TARGET_PHASE"
+if [ -n "$TARGET_PHASE" ] && echo "$CURRENT_LABELS" | grep -qx "$TARGET_LABEL"; then
+    # Target label already set: only remove other phase/* labels
+    REMOVE_ARGS=()
+    for label in $PHASE_LABELS; do
+        if [ "$label" != "$TARGET_LABEL" ]; then
+            REMOVE_ARGS+=(--remove-label "$label")
+        fi
+    done
     gh issue edit "$ISSUE_NUMBER" "${REMOVE_ARGS[@]}"
+else
+    # Build --remove-label flags for all phase/* labels
+    REMOVE_ARGS=()
+    for label in $PHASE_LABELS; do
+        REMOVE_ARGS+=(--remove-label "$label")
+    done
+
+    # Add target phase label if specified
+    if [ -n "$TARGET_PHASE" ]; then
+        gh issue edit "$ISSUE_NUMBER" "${REMOVE_ARGS[@]}" --add-label "phase/$TARGET_PHASE"
+    else
+        gh issue edit "$ISSUE_NUMBER" "${REMOVE_ARGS[@]}"
+    fi
 fi
