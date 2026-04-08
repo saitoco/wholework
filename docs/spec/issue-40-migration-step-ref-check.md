@@ -38,3 +38,20 @@ Add a convention to `modules/skill-dev-checks.md` for migration tasks: when tran
 
 ### Rework
 - N/A
+
+## Issue Retrospective
+
+### Ambiguity Resolution
+
+All 3 ambiguity points were auto-resolved:
+- **Placement**: Under "Design-Time Checks" section in `modules/skill-dev-checks.md`, following existing subsection patterns
+- **Target file**: Resolved from acceptance criteria explicitly targeting `modules/skill-dev-checks.md`
+- **Content scope**: Derived from #36 background — `file_not_contains` checks for source repo step-number references
+
+### Acceptance Criteria Changes
+
+- Fixed false positive: `grep "Step"` → `grep "file_not_contains"` (original pattern matched existing "Processing Steps" heading)
+- Added `section_contains` check to verify placement under the correct section
+- Added pre-merge/post-merge section structure
+- Clarified Purpose text (removed "or" ambiguity)
+- Added "Related Issues" section linking to #36
