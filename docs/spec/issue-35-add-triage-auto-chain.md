@@ -21,3 +21,29 @@
 
 - Type: Feature, Priority: medium, Size: XS, Value: 1
 - 挿入位置（Step 7 後）の決定をレトロスペクティブから Auto-Resolved Ambiguity Points セクションに移動して明示化。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- XS サイズのパッチルートのため Spec ファイルは作成されなかった。Issue Retrospective セクションにて verify hint の偽陽性修正（`grep "triaged"` → `section_contains ... "triaged"`、`section_contains ... "Step 2"` → `section_contains ... "Single Execution"`）が行われており、受け入れ条件の品質向上に繋がっていた。
+
+#### design
+- N/A（Spec なし・パッチルート）
+
+#### code
+- `dbb3782` の単一コミットで完結。fixup/amend なし。実装は `## New Issue Creation` の Step 8 として `triage` 自動チェーンを追加するシンプルな変更で、リワークなし。
+
+#### review
+- N/A（PR なし・パッチルート）
+
+#### merge
+- main への直接コミット（XS パッチルート）。コンフリクトなし。
+
+#### verify
+- 全5件の自動検証条件がすべて PASS。Post-merge に `opportunistic` 条件が1件残っており、ユーザー確認待ち（`/issue "test title"` で実際にメタデータ自動設定を確認）。
+- Issue Retrospective での verify hint 修正（偽陽性対策）が機能しており、条件1〜4は `section_contains` を使った正確なスコープ限定検証で正しく PASS を判定できた。
+
+### Improvement Proposals
+- N/A
