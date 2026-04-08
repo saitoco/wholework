@@ -53,6 +53,40 @@ grep -rP "[\x{3000}-\x{9FFF}]" skills/
 
 ---
 
+## Path Replacement Verification: Checking Both ~/.claude/ and $HOME/.claude/
+
+When creating acceptance conditions for path replacement tasks, verify **both** `~/.claude/` and `$HOME/.claude/` forms. These two notations refer to the same path but are distinct byte sequences — a pattern targeting only one form will silently miss occurrences of the other.
+
+### Background
+
+This guideline was extracted from the Issue #31 retrospective: `modules/adapter-resolver.md` contained a `$HOME/.claude/` reference that slipped past an acceptance-condition grep pattern targeting only the `~/.claude/` form. The review phase caught it, but the miss highlighted the need for a standard dual-form check.
+
+### Recommended Grep Pattern
+
+When writing acceptance conditions or manual verification commands for path replacement tasks, use a pattern that matches both forms:
+
+```bash
+grep -rn '~/.claude/\|$HOME/.claude/' <path>
+```
+
+Or with extended regex:
+
+```bash
+grep -rEn '(~|\$HOME)/.claude/' <path>
+```
+
+This covers both `~/.claude/` (tilde form) and `$HOME/.claude/` (environment variable form) in a single pass.
+
+### Checklist for Path Replacement Acceptance Conditions
+
+When a task involves replacing or auditing `~/.claude/` path references:
+
+- [ ] Acceptance condition grep pattern includes both `~/.claude/` and `$HOME/.claude/`
+- [ ] Verification command uses `grep -rn '~/.claude/\|$HOME/.claude/'` (or equivalent) rather than a single-form pattern
+- [ ] Post-migration check runs the dual-form pattern across all migrated files
+
+---
+
 ## Issue #23: Utility Skills Migration (triage, audit, doc)
 
 7 files were migrated from claude-config to wholework: `skills/triage/SKILL.md`, `skills/audit/SKILL.md`, `skills/doc/SKILL.md`, `skills/doc/product-template.md`, `skills/doc/tech-template.md`, and `skills/doc/structure-template.md`. All Japanese text (frontmatter `description` field, section headings, body text, inline comments) was translated to English. All files are new creations. Opportunistic simplification was applied.
