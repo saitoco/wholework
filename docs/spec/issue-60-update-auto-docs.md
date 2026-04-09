@@ -44,3 +44,14 @@
 - Issue 本文の Auto-Resolved Ambiguity Points より: Terms table の `` `--auto` mode `` エントリ改名は `/auto` へ（他の Terms エントリが skill/機能名ベースのため統一）
 - `docs/workflow.md` line 46 は既に `--batch`・XL・spec 自動実行・issue 自動開始を含む最新記述のため変更不要
 - `README.md` line 9 の高レベル概要記述は既に正確のため変更不要
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
