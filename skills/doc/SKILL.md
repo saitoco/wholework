@@ -400,7 +400,7 @@ To normalize Steering Documents and project files, run `/doc sync` again.
 
 **Load analysis sources and Steering Documents:**
 
-Explore and load analysis sources (README.md, CLAUDE.md, etc.) using the same procedure as "Step 2 (Reverse-Generation Flow — Explore Analysis Sources)".
+Explore and load analysis sources (README.md, CLAUDE.md, etc.) using the same procedure as "Step 2 (Reverse-Generation Flow — Explore Analysis Sources)". If the `--deep` flag is enabled, also Read `${CLAUDE_PLUGIN_ROOT}/modules/codebase-analysis.md` and follow the "Processing Steps" section to run codebase analysis; retain the extracted results (entry points, dependency graph, directory roles, etc.) for use in subsequent steps including the Narrative Semantic Drift Check.
 
 **Collect normalization targets via frontmatter-based traversal:**
 
@@ -446,6 +446,32 @@ Also load the following files with Glob:
 
 If `scripts/validate-skill-syntax.py` exists, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-dev-checks.md` and follow the "Cross-Skill Consistency Check" section to run cross-cutting checks. Include detected inconsistencies in the drift report in Step 7 (normalization proposals).
 
+**Narrative Semantic Drift Check (--deep only):**
+
+This sub-step runs only when the `--deep` flag is enabled. It detects drift in narrative sections of Steering Documents using AI judgment, without requiring `ssot_for` category declarations.
+
+**Identify narrative sections:**
+
+For each Steering Document loaded above, use AI judgment to identify sections that are primarily prose or bullet-point narrative (as opposed to purely structured tables or code blocks). Examples of narrative sections: Architecture Decisions, Non-Goals, Coding Conventions, Vision. This classification is intentionally AI-driven rather than based on a fixed list, to accommodate the variety of section names across user projects.
+
+**Input sources for comparison:**
+
+- The narrative section text from each Steering Document
+- Codebase analysis results retained in this step (entry points, dependency graph, directory roles, etc.)
+- Implementation files loaded in "Scan implementation code" above (`skills/*/SKILL.md`, `modules/*.md`, `agents/*.md`, `scripts/*.sh`)
+
+**Detect drift in 3 categories (missing coverage, partial description, obsolete mention):**
+
+| Category | Definition | Example |
+|---|---|---|
+| Missing coverage | An important pattern present in the implementation has no mention at all in the Steering Document | A newly introduced agent is not mentioned in Architecture Decisions |
+| Partial description | An existing description mentions only specific cases, leaving other instances of the same pattern undocumented | "Sub-agent splitting: `/review` splits…" with no mention of `/issue`'s parallel investigation sub-agents |
+| Obsolete mention | A description refers to an element that no longer exists in the implementation | A reference to a deleted agent or removed flag |
+
+**Output findings as drift report:**
+
+Do not auto-fix any detected narrative drift. Accumulate all findings as drift report items and pass them to Step 7 (normalization proposals). Each finding should include: the Steering Document and section name, the drift category, a brief description of the gap, and a suggested update direction for the user to evaluate.
+
 **Content classification based on dynamic SSoT mapping:**
 
 Based on the constructed SSoT mapping, determine the "source of truth (Single Source of Truth)" for each section/description. Detect references by dynamically searching other files (README.md, CLAUDE.md etc.) with Grep for information corresponding to each SSoT file's `ssot_for` category.
@@ -469,7 +495,7 @@ Based on Step 6 classification results, propose one of 3 actions for each item:
 
 - **Absorb**: incorporate descriptions from analysis source/implementation code into Steering Documents and replace original descriptions with reference links. Check for duplicate content in Steering Documents before executing
 - **Reference**: replace duplicate descriptions in analysis source/implementation code with reference links to Steering Documents (when Steering Documents already have the information). Treat Steering Documents as the source of truth; other files hold references to them
-- **Drift report**: report drift between implementation code and Steering Documents (no auto-fix, ask for user judgment)
+- **Drift report**: report drift between implementation code and Steering Documents (no auto-fix, ask for user judgment). When `--deep` is enabled, narrative semantic drift check findings (Missing coverage / Partial description / Obsolete mention) are also surfaced through this path and never auto-fixed
 
 If `--deep` flag is enabled and Step 2's .md integration scan results exist, add integration proposals for Pattern 2–4 unintegrated .md files to the existing proposal table:
 
