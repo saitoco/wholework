@@ -184,6 +184,23 @@ translate セクション内の Step 3（翻訳指示）では、以下の保持
 - description/Usage への `translate` 記載を pre-merge 条件に追加（Precedent 調査で特定）
 - `doc sync --deep` 誤検知回避を post-merge 条件に追加（Risk 調査で特定）
 
+## Code Retrospective
+
+### Deviations from Design
+
+- **allowed-tools の分割形式変更**: Spec の実装 Step 1 では `Bash(mkdir:*, git add:*, git commit:*, git push:*, git status:*, git diff:*)` を1エントリとして追加する想定だったが、受入条件チェック `grep "Bash(git" "skills/doc/SKILL.md"` が `Bash(ls:*,..., git add:*...)` の形式では FAIL となるため、`Bash(ls:*, wc:*, mkdir:*)` と `Bash(git add:*, git commit:*, git push:*, git status:*, git diff:*)` の2エントリに分割した
+- **structure.md のコメント補足**: `├── ja/` エントリのコメントに `docs/ja/` を明記する形式に変更（受入条件 `grep "docs/ja/" "docs/structure.md"` をパスするため）。Spec ではコメントの文字列形式を指定していなかった
+- **docs/workflow.md の更新**: doc-checker の Impact assessment で Skill 変更時は `docs/workflow.md` も更新対象となるため、`/doc translate` の説明を追記した。Spec の実装ステップには含まれていなかった
+
+### Design Gaps/Ambiguities
+
+- `section_contains` ベースの受入条件と `grep "Bash(git"` の受入条件が同時に成立するためには allowed-tools を `Bash(git...)` の形式で独立エントリ化する必要があった。Spec には `allowed-tools` のエントリ構造（1エントリ vs 複数エントリ）の指定がなかった
+
+### Rework
+
+- `allowed-tools` の形式を1エントリから2エントリに修正（受入条件との整合）
+- `docs/structure.md` の `ja/` エントリコメントに `docs/ja/` を補足追記
+
 ## spec retrospective
 
 ### Minor observations
