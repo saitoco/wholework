@@ -85,3 +85,36 @@
 ### Related Issues
 
 - #58: 本 Issue の整備した用語集を `/doc translate` 実装時に参照する
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue Retrospective は Spec に詳細に記録されており、翻訳方針の判断根拠が明示されている
+- 8つの受け入れ条件はすべて `section_contains` / `section_not_contains` で機械検証可能な形式で記述されており、品質が高い
+- Spec Retrospective セクションは存在しないが、設計は Issue body の Design Decisions をそのまま引き継いでおり乖離なし
+
+#### design
+- 実装ステップが受け入れ条件に1対1対応しており、過不足なし
+- `skills/doc/product-template.md` の同期更新をスコープに含める判断（将来の `/doc product` との整合性維持）は適切
+
+#### code
+- Code Retrospective では逸脱・手戻り・曖昧点なし（N/A）
+- パッチルートでの直接実装（`ad3b147`）が適用され、変更量に対して適切な方法を選択
+- 実装後に `67a4b2f docs: regenerate Japanese translations` が追加されているが、これは Issue #58 の `/doc translate` 機能によるもので、用語集整備の効果が即座に反映された
+
+#### review
+- パッチルート（XS サイズ）のため PR・正式レビューなし
+- 変更範囲が限定的（2ファイルのテーブル構造変更のみ）であり、レビューなしは妥当
+
+#### merge
+- パッチルートでの直接 main コミット。マージコンフリクトなし
+- Issue は `closes #66` の PR なしで自動クローズされ、スクリプト経由でクローズ処理済み
+
+#### verify
+- 全8条件が PASS。チェックボックスは事前にすべて `- [x]` 状態だったため変更不要
+- Post-merge の opportunistic 条件（Issue #58 の `/doc translate` 実装時参照）は `phase/verify` ラベルで追跡継続
+
+### Improvement Proposals
+- N/A
