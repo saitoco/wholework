@@ -91,3 +91,17 @@ N/A
 ### Rework
 
 - なし
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+docs/product.md の Non-Goals セクションが変更対象ファイルリストから漏れていた。`/doc translate` から `/doc translate {lang}` への変更はドキュメント全体に波及するが、Spec の変更対象ファイルリストには `docs/workflow.md`・`docs/structure.md` のみが含まれ、`docs/product.md` が抜けていた。複数ドキュメントに横断して同じ文字列が出現する変更は、Spec 作成時に全ファイルを grep して確認する習慣が必要。
+
+### 繰り返し問題
+
+記録なし。
+
+### 受入基準検証難易度
+
+全11項目が PASS で問題なし。verify hint の精度も良好。`{lang}` の形式検証（SHOULD）は Spec の設計決定（LLM 解釈委任）と整合するため Issue 化しない。
