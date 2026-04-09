@@ -43,7 +43,7 @@ The following information is passed from the caller:
 | `dir_not_exists "path"` | Run `test ! -d "path"` in Bash |
 | `file_contains "path" "text"` | Search for "text" in "path" using Grep |
 | `file_not_contains "path" "text"` | Search with Grep and confirm no match |
-| `grep "pattern" "path"` | Regex match using Grep |
+| `grep "pattern" "path"` | Regex match using Grep. **PASS when match is found**. To assert absence (no match), use `file_not_contains` instead |
 | `command "cmd"` | **Mode-dependent**: `safe` → attempt CI reference fallback (see below); return UNCERTAIN if no match. `full` → execute command in Bash (timeout: 60 seconds; exit code 0 = success) |
 | `json_field "path" ".key" "value"` | Read file, parse JSON, and confirm field value |
 | `section_contains "path" "heading" "text"` | Read file and confirm fixed string "text" is present within the specified markdown heading section (from the specified heading line to just before the next heading of the same or higher level, or end of file) |
