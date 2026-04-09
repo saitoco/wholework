@@ -44,3 +44,17 @@
 ### Post-merge
 
 - Issue #58 の `/doc translate` 実装時に本用語集が翻訳指示から参照されること
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
