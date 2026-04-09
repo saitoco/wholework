@@ -38,7 +38,9 @@ ssot_for:
   | verify | Yes | Verifies post-merge state independently; must not be influenced by prior phase decisions |
 
 - **`/auto` skill**: Orchestrator that runs code→review→merge→verify sequentially via `run-*.sh`. Each phase runs as an independent process with `claude -p --dangerously-skip-permissions`, guaranteeing fresh context and full permission bypass.
-- **Sub-agent splitting**: `/review` splits into two groups — Spec compliance review (`review-spec`) and bug detection (`review-bug`) — with two-stage verification (detection→verification sub-agents) to eliminate false positives.
+- **Sub-agent splitting**: Used in two skills:
+  - `/issue` (L/XL): Parallel investigation via three independent sub-agents (`scope-agent`, `risk-agent`, `precedent-agent`) to analyze change scope, risk, and precedents simultaneously.
+  - `/review`: Splits into two groups — Spec compliance review (`review-spec`) and bug detection (`review-bug`) — with two-stage verification (detection→verification sub-agents) to eliminate false positives.
 - **Shared module pattern**: Common processing across multiple skills is extracted to `modules/*.md`, referenced using the "Read and follow" pattern.
 - **Spec-first (disposable)**: Spec is not maintained as an artifact after task completion. Spec-anchored and Spec-as-source approaches are not adopted. Reasons: (1) LLM non-determinism means the same spec does not guarantee the same code regeneration; (2) spec maintenance cost adds overhead to code maintenance cost.
 - **Progressive disclosure (Core/Domain separation)**: SKILL.md body contains only generic logic independent of project type or tool. Logic specific to particular tools (Figma, Copilot, etc.) or project types (skill development, IaC, etc.) is extracted to auxiliary files (`skills/{name}/xxx-phase.md`), read only when applicable. Decision criterion: "Is this logic needed in projects that don't use this tool/project type?" — If No, extract it.
