@@ -1,7 +1,7 @@
 ---
 name: doc
 description: Project foundation document management (`/doc init`). Centrally manages Steering Documents and Project Documents, ensuring consistency through drift detection and normalization (`/doc sync` for bidirectional normalization, `/doc add`/`/doc project` for adding documents, `/doc translate` for generating Japanese translations).
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash(ls:*, wc:*, mkdir:*, git add:*, git commit:*, git push:*, git status:*, git diff:*)
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(ls:*, wc:*, mkdir:*), Bash(git add:*, git commit:*, git push:*, git status:*, git diff:*)
 ---
 
 # doc: Project Foundation Information Management
