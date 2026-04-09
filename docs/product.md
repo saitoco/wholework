@@ -151,23 +151,14 @@ Key differences from other tools:
 
 ## Terms
 
-<!-- public: terms exposed to end users / internal: implementation terms for developers -->
-
-### Public Terms (User-facing)
-
-| Term | Definition | Context |
-|------|------------|---------|
-| Skill | A Claude Code extension. Processing steps are described in `skills/<n>/SKILL.md` and invoked with `/<n>` | Claude Code |
-| Spec | An implementation-plan document created by `/spec`, stored at `docs/spec/issue-N-short-title.md`. **Also records retrospectives (execution logs) after each Skill runs** — reviewing the Spec before running a Skill shows the history of prior executions | Development workflow |
-| `/auto` | Orchestrator Skill that chains spec→code→review→merge→verify non-interactively via `claude -p`. Auto-starts from issue triage when no `phase/*` label is set; auto-runs `/spec` when `phase/ready` is absent. `--batch N` processes N XS/S Issues from the backlog; XL Issues execute independent sub-issues in parallel (worktree isolation). `--base {branch}` targets a release branch | Development workflow |
-| Acceptance check | An HTML comment in `<!-- verify: ... -->` format. Attaches a machine-verifiable method to an acceptance condition. Formerly called "verification hint" | /issue, /verify |
-
-### Internal Terms (Developer-facing)
-
-| Term | Definition | Context |
-|------|------------|---------|
-| Steering Documents | Collective name for the foundation documents (product/tech/structure). Stored under `docs/` | /doc Skill |
-| Project Documents | Workflow and operational procedure documents for the project. Stored under `docs/` | /doc Skill |
-| Fork context | A Skill execution mode that does not affect the main conversation | Claude Code |
-| Shared module | A procedure document stored in `modules/*.md` and referenced by multiple Skills via the "Read and follow" pattern. Formerly called "shared procedure document" | Skill development |
-| Sub-agent | A sub-agent spawned via the Task tool. Returns only the result to the main agent | Claude Code |
+| Term | Definition | Context | 日本語訳 |
+|------|------------|---------|---------|
+| Skill | A Claude Code extension. Processing steps are described in `skills/<n>/SKILL.md` and invoked with `/<n>` | Claude Code | スキル |
+| Spec | An implementation-plan document created by `/spec`, stored at `docs/spec/issue-N-short-title.md`. **Also records retrospectives (execution logs) after each Skill runs** — reviewing the Spec before running a Skill shows the history of prior executions | Development workflow | Spec |
+| `/auto` | Orchestrator Skill that chains spec→code→review→merge→verify non-interactively via `claude -p`. Auto-starts from issue triage when no `phase/*` label is set; auto-runs `/spec` when `phase/ready` is absent. `--batch N` processes N XS/S Issues from the backlog; XL Issues execute independent sub-issues in parallel (worktree isolation). `--base {branch}` targets a release branch | Development workflow | `/auto` |
+| Acceptance check | An HTML comment in `<!-- verify: ... -->` format. Attaches a machine-verifiable method to an acceptance condition. Formerly called "verification hint" | /issue, /verify | 受入チェック |
+| Steering Documents | Collective name for the foundation documents (product/tech/structure). Stored under `docs/` | /doc Skill | Steering Documents |
+| Project Documents | Workflow and operational procedure documents for the project. Stored under `docs/` | /doc Skill | Project Documents |
+| Fork context | A Skill execution mode that does not affect the main conversation | Claude Code | fork コンテキスト |
+| Shared module | A procedure document stored in `modules/*.md` and referenced by multiple Skills via the "Read and follow" pattern. Formerly called "shared procedure document" | Skill development | 共有モジュール |
+| Sub-agent | A sub-agent spawned via the Task tool. Returns only the result to the main agent | Claude Code | サブエージェント |

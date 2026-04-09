@@ -32,6 +32,6 @@ Describe competitors and alternatives.
 
 Describe project-specific terms and definitions. Leave an empty table if none.
 
-| Term | Definition | Context |
-|------|-----------|---------|
-|      |           |         |
+| Term | Definition | Context | 日本語訳 |
+|------|-----------|---------|---------|
+|      |           |         |          |
