@@ -110,7 +110,7 @@ Describe success metrics here. -->
 | [BMAD Method](https://github.com/bmad-code-org/BMAD-METHOD) | Agile AI dev framework | analyst → PM → architect → SM → dev → QA | QA agent included | npm package (21 agents, 50+ workflows) |
 | [OpenSpec](https://github.com/Fission-AI/OpenSpec) | SDD framework | proposal → specs → design → tasks → apply | None | npm package (20+ tools) |
 | [cc-sdd](https://github.com/gotalab/cc-sdd) | Kiro-inspired tool | requirements → design → tasks → impl | None | npm package (8 agents) |
-| [Taskmaster AI](https://github.com/eyaltoledano/claude-task-master) | AI task management | PRD → parse → tasks.json → execute | None | MCP server + CLI (Cursor/Claude Code) |
+| [Taskmaster AI](https://github.com/eyaltoledano/claude-task-master) | AI task management | PRD → parse → tasks.json → execute | None | npm package + MCP server (Cursor/Windsurf/Lovable/Roo/others) |
 
 ### Claude Code Plugins / Skills
 
@@ -125,6 +125,7 @@ Describe success metrics here. -->
 | [CCPM](https://github.com/automazeio/ccpm) | GitHub Issue-integrated PM | PRD → epic → tasks → GitHub sync → parallel exec | PR workflow included | Claude Code Skills (worktree parallel execution) |
 | [AgentSys](https://github.com/avifenesh/AgentSys) | Workflow automation | task → production, drift detection | Multi-agent code review | Claude Code Plugin + agnix linter |
 | [spec-workflow-mcp](https://github.com/Pimzino/spec-workflow-mcp) | MCP server | Steering → Specs → Impl → Verify | Approval workflow included | MCP server + dashboard |
+| [cc-blueprint-toolkit](https://github.com/croffasia/cc-blueprint-toolkit) | Blueprint-driven SDD plugin | Define → Architect → Build → Iterate (DABI) | None | Claude Code Plugin (13 skills, 8 agents) |
 
 ### GitHub Workflow Assistants / AI Code Review
 
@@ -135,6 +136,8 @@ Describe success metrics here. -->
 | [CodeRabbit](https://coderabbit.ai/) | AI PR review service | PR review (security, logic, performance) | SaaS (GitHub/GitLab/Bitbucket/Azure DevOps) |
 | [Qodo PR-Agent](https://github.com/qodo-ai/pr-agent) | OSS PR review agent | /review, /improve, /ask | GitHub Actions / CLI (OSS + paid) |
 | [Graphite](https://graphite.dev/) | Stacked PR + AI review | PR management → AI review → merge queue | SaaS (GitHub only) |
+| [Sweep](https://sweep.dev/) | AI GitHub issue → PR agent | Issue triage → PR creation | GitHub App (OSS + paid) |
+| [Ellipsis](https://www.ellipsis.dev/) | AI PR review + auto-fix | PR review | SaaS (GitHub/GitLab, YC W24) |
 
 ### Differentiation Summary
 
@@ -146,8 +149,6 @@ Key differences from other tools:
 - **GitHub-native**: Issues/PRs/Labels are the workflow backbone — no dedicated IDE (like Kiro), no task-management JSON (like Taskmaster), no proprietary filesystem (like GSD's `.planning/` or BMAD's `bmad/`).
 - **Size-based routing**: Automatically adjusting the patch/pr route, review depth, and spec granularity based on XS–XL size is not found in other tools.
 - **Post-merge verification**: Few tools have a dedicated `/verify` phase for independent post-merge acceptance testing.
-
-Detailed comparison analysis: [docs/reports/competitor-research-2026-03.md](reports/competitor-research-2026-03.md)
 
 ## Terms
 
