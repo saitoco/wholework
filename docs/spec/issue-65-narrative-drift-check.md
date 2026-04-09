@@ -66,3 +66,17 @@
 - `modules/skill-dev-checks.md` への cross-check 追加はスコープ外（前の案検討で wholework 開発リポジトリ専用のため却下）
 - `scripts/validate-skill-syntax.py` の MUST 制約（半角 `!` 禁止、decimal step 禁止など）を満たすこと
 - テストコード追加はスコープ外: narrative drift check は AI 判定ベースのため bats で決定論的に検証できない。動作確認は Post-merge の opportunistic/manual verify で行う
+
+## Code Retrospective
+
+### Deviations from Design
+
+- "partial description" (小文字) キーワード: Spec では検出対象として明示するとあったが、実装時に table header が "Partial description" (大文字P) になっていたため `file_contains` チェックが失敗した。Introduction paragraph に "(missing coverage, partial description, obsolete mention)" と小文字で記述することで対応。Spec に「小文字を含む表現を必ず使うこと」という指定はなかったが実用上必要な追加。
+
+### Design Gaps/Ambiguities
+
+- Spec の Implementation Steps では "narrative" キーワードの出現位置について明示がなく、大文字/小文字の混在に起因する `file_contains` の失敗リスクが書かれていなかった。acceptance check は case-sensitive であるため、実装時に lowercase 確認が必要。
+
+### Rework
+
+- Step 4 の self-check で "partial description" が 0 件と判明し、Introduction paragraph に lowercase 版を追記する rework が 1 回発生した。
