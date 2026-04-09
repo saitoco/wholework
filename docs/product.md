@@ -21,7 +21,7 @@ flowchart TD
     T -.->|"normalize title, set Type/Size"| A
     A -->|"/issue"| B["Clarify requirements"]
     B -->|"/spec"| C["Design spec"]
-    C -->|"Copilot / /code / manual"| E["Implement, test, create PR"]
+    C -->|"/code"| E["Implement, test, create PR"]
     E -->|"/review"| F["PR review"]
     F -->|"/merge"| G["Merge PR"]
     G -->|"/verify"| H["Acceptance testing"]
@@ -47,8 +47,7 @@ Details: [docs/workflow.md](workflow.md)
 
 ## Target Users
 
-- Developers who use Claude Code regularly on GitHub projects
-- Teams using GitHub Copilot and Claude Code together
+- Anyone who works on GitHub with Claude Code — not only developers, but also PMs, designers, technical writers, and other contributors who drive work through Issues and PRs
 
 ## Non-Goals
 
