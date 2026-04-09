@@ -115,3 +115,48 @@ translate セクション内の Step 3（翻訳指示）では、以下の保持
 ### settings.json 更新は不要
 
 `modules/skill-dev-checks.md > settings.json Addition Check` は新規 skill 追加時のルールであり、既存 `/doc` skill への追加変更は対象外。また、`.claude/settings.json` は wholework 固有スクリプトのパス allowlist のみを管理しており、git/gh 系の Bash パターンは登録されていない（他の skill も SKILL.md の `allowed-tools` で制御している）。
+
+## issue retrospective
+
+### 曖昧性解決の判断根拠
+
+| 項目 | 判断 | 根拠 |
+|------|------|------|
+| 生成方向（英語→日本語） | 自動解決 | タイトル「日本語ドキュメント自動生成」から一意に推定 |
+| 同期方式（全量再生成） | 自動解決 | LLM 翻訳での差分管理は複雑性が高く、全量再生成がシンプル |
+| 配置場所（`docs/ja/`） | ユーザー確認済み | ミラー構造の明確さ・将来の多言語対応の容易さ。README のみルート直下 |
+| 実行方法（`/doc translate`） | ユーザー確認済み | 既存 `/doc` Skill のサブコマンドとして自然に統合 |
+| コミット先（main 直接） | ユーザー確認済み | Spec ファイルと同様、機械生成物を Non-Goals の例外扱いに |
+
+### 並列調査からの主要な知見
+
+**Scope**: 直接変更 3 ファイル（SKILL.md, product.md, structure.md）+ 間接影響 3-4 ファイル。単一機能のため分割不要。
+
+**Risk**: `doc sync --deep` が `docs/ja/` を誤って吸収候補にするリスクを特定。`allowed-tools` への git パターン追加が必要なことを確認。受入条件に反映済み。
+
+**Precedent**: 既存の `/doc` サブコマンド追加パターン（routing if-chain + Usage 更新）を踏襲すべきこと、LLM 生成物には確認フロー（AskUserQuestion）を挟む慣例があることを確認。過去の verify ヒント偽陽性（#35）の教訓を Risk Notes に反映。
+
+### 受入条件の変更理由
+
+初回作成時の 8 条件から 10 条件（pre-merge）+ 4 条件（post-merge）に拡充:
+- `allowed-tools` の git パターン追加を pre-merge 条件に追加（Risk 調査で特定）
+- description/Usage への `translate` 記載を pre-merge 条件に追加（Precedent 調査で特定）
+- `doc sync --deep` 誤検知回避を post-merge 条件に追加（Risk 調査で特定）
+
+## spec retrospective
+
+### Minor observations
+
+- `skills/doc/SKILL.md` は既存で 713 行と大きく、translate セクションを末尾に追記する形で肥大化リスクあり。将来的には `skills/doc/translate-phase.md` への Progressive Disclosure 分離を検討する余地がある（tech.md の Core/Domain 分離方針に準拠）
+- `docs/ja/` 配下の翻訳ファイルは frontmatter を持たないため、`Document Traversal common procedure` の `type:` Grep からは自然に除外される。ただし `sync --deep` の `**/*.md` スキャンでは拾われるため明示除外が必要、という2段構えの挙動は将来の読み手に分かりにくい可能性あり
+
+### Judgment rationale
+
+- **フロントマター除去 vs 保持**: 保持案も検討したが、`Document Traversal common procedure` が `type:` を Grep する設計上、翻訳ファイルが SSoT 候補として混入しステータス表示を壊す。除去して純粋なミラーとする方針で SSoT 衝突を根本回避
+- **サフィックス方式（`.ja.md`）vs ディレクトリ分離（`docs/ja/`）**: サフィックス方式は `docs/*.md` Glob でも引っかかり除外ロジックが複雑化する。ディレクトリ分離の方が除外パターンが単純（`docs/ja/` の prefix チェック1回で済む）
+- **コミット粒度（1コミット）**: ファイル単位のコミットはレビュー時の差分追跡を難しくするため集約。アトミック性を優先
+
+### Uncertainty resolution
+
+- **LLM 翻訳の品質一貫性**: 初回実装では解決しない。用語集による制御は将来の拡張案として記録。実運用後に人間レビューでフィードバックを収集する方針
+- **`doc sync --deep` 除外が効くか**: Implementation Step 4 で除外条件の追加を明記。post-merge で実際に `/doc sync --deep` を実行して吸収候補に上がらないことを確認する（post-merge 条件3）
