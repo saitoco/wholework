@@ -55,7 +55,7 @@
 - <!-- verify: grep "docs/\\${lang}\|docs/{lang}" "skills/doc/SKILL.md" --> 出力先パスが `docs/{lang}/` としてテンプレート化されている
 - <!-- verify: grep "README\\.\\${lang}\\.md\|README\\.{lang}\\.md" "skills/doc/SKILL.md" --> README 翻訳版が `README.{lang}.md` としてテンプレート化されている
 - <!-- verify: section_not_contains "skills/doc/SKILL.md" "## translate" "Translate the entire file content to Japanese" --> 翻訳指示の「to Japanese」ハードコードが除去され、引数 `{lang}` を参照する形になっている
-- <!-- verify: section_contains "skills/doc/SKILL.md" "### Step" "Usage:" --> 引数なし実行時に Usage メッセージを表示して中止する処理が定義されている
+- <!-- verify: section_contains "skills/doc/SKILL.md" "### Step 0" "Usage:" --> 引数なし実行時に Usage メッセージを表示して中止する処理が定義されている
 - <!-- verify: section_contains "skills/doc/SKILL.md" "## sync Bidirectional Normalization" "docs/{lang}\|docs/\\${lang}\|language code\|BCP 47" --> sync --deep の除外リストが多言語対応（任意の言語ディレクトリを除外）に更新されている
 - <!-- verify: section_not_contains "skills/doc/SKILL.md" "description:" "Japanese translations" --> frontmatter description から「Japanese translations」ハードコードが除去され汎用表現に変更されている
 - <!-- verify: grep "docs: regenerate.*translations" "skills/doc/SKILL.md" --> コミットメッセージが言語名を含む汎用テンプレート（例: `docs: regenerate {lang} translations`）になっている
@@ -72,3 +72,36 @@
 - `section_not_contains "skills/doc/SKILL.md" "description:" "Japanese translations"`: frontmatter の `description:` フィールドを対象としたセクション検索。`## translate` セクションには改めて Japanese の言及が残る可能性があるため、あえて `description:` フィールドをスコープとしている
 - sync --deep 除外パターン（受入基準 9）の具体的実装: `README.{lang}.md at project root` の表現は grep や Glob で「言語コードパターン」として汎用的に認識できる記述にする。ハードコードを完全排除するため具体的な言語コードは記載しない
 - 既存 `docs/ja/` と `README.ja.md` はそのまま残置する（本 Issue の scope 外）
+
+## Spec Retrospective
+
+N/A
+
+## Code Retrospective
+
+### Deviations from Design
+
+- verify hint (受入基準 8): Spec の `section_contains "### Step" "Usage:"` を `section_contains "### Step 0" "Usage:"` に修正。実装では Step 0 という専用ステップを追加したが、verify-executor が最初の `### Step` を検索するため（Status Display の Step 1 が先に存在する）、より具体的なヘッディング `### Step 0` に変更した。
+- Implementation Steps に Step 0 を追加: Command Routing での引数なしチェックに加え、translate セクション内でも Step 0 として明示的に引数チェックを定義した（Spec では Command Routing のみ記載）。
+
+### Design Gaps/Ambiguities
+
+- Spec の「Step 1 の前に Step 0 追加」という指示は実装できたが、verify hint の `"### Step"` が複数セクションのどれを対象とするかが曖昧だった。verify-executor の実装は最初のマッチを使うため、translate 以前の `### Step 1` が先に評価される点は Spec に明記されていなかった。
+
+### Rework
+
+- なし
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+docs/product.md の Non-Goals セクションが変更対象ファイルリストから漏れていた。`/doc translate` から `/doc translate {lang}` への変更はドキュメント全体に波及するが、Spec の変更対象ファイルリストには `docs/workflow.md`・`docs/structure.md` のみが含まれ、`docs/product.md` が抜けていた。複数ドキュメントに横断して同じ文字列が出現する変更は、Spec 作成時に全ファイルを grep して確認する習慣が必要。
+
+### 繰り返し問題
+
+記録なし。
+
+### 受入基準検証難易度
+
+全11項目が PASS で問題なし。verify hint の精度も良好。`{lang}` の形式検証（SHOULD）は Spec の設計決定（LLM 解釈委任）と整合するため Issue 化しない。
