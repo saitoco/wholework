@@ -55,3 +55,17 @@
 - XS も同じ早期終了パスを通るため、メッセージ変更で同時にカバーされる
 - 既存の Size=S → skip 動作（patch route 想定）は変更しない（後方互換性維持）
 - 本提案は Issue #49 の `/verify` レトロスペクティブで検出
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
