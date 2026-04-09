@@ -69,3 +69,28 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue本文に Option A/B/C の比較と採用理由が明確に記述されており、Specへの翻訳が容易だった。受け入れ条件は全てgrep/file_contains で自動検証可能な形式で設計されており、品質が高い。
+
+#### design
+- 変更範囲を `skills/review/SKILL.md` の単一行に限定したことで実装ステップが非常にシンプル。Spec と実装の乖離なし。
+
+#### code
+- 実装コミット1件（`b24468d`）のみ、reworkなし。Code Retrospective も N/A。クリーンな実装。
+
+#### review
+- patch route（mainへの直接コミット）のため PR は作成されず、コードレビューは行われていない。変更量が1行追加と最小限であるため、レビュースキップは適切だった。
+
+#### merge
+- patch route でのマージ、コンフリクトなし。
+
+#### verify
+- pre-merge 3条件すべて PASS。post-merge 2条件（`verify-type: opportunistic`）は自動検証対象外でユーザー手動確認が必要。`phase/verify` ラベルで継続管理。
+
+### Improvement Proposals
+- N/A
