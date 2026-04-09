@@ -233,3 +233,32 @@ translate セクション内の Step 3（翻訳指示）では、以下の保持
 ### 受入基準検証の難易度
 
 - すべて PASS で UNCERTAIN なし。grep ベースの検証は確実に動作した。ただし `grep "Bash(git"` のように、実装方式を検証パターンが拘束するケースが存在する。`section_contains` 系に置き換えるか、エントリ形式を Spec で明示する方が理想的。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec 更新が2コミットに分かれた（`017e57a Add design for issue #58` → `961cb04 Add relative link rewriting rules to spec for issue #58`）。相対リンク書き換えルールが実装後に Spec に追記される形になり、Spec が実装と並走した。Spec フェーズで相対リンク変換の必要性を先に特定できていれば、受入条件も最初から11条件になっていた
+- `docs/workflow.md` 更新がSpec の「変更ファイル」リストに未記載だった（doc-checker Impact assessment ルールにより実装時に判明）。Skill変更時の影響ファイルを Spec の Changed Files に事前列挙するルールを明文化することで、実装者の判断コストと Spec 乖離を減らせる
+
+#### design
+- 設計判断（フロントマター除去、`docs/ja/` ディレクトリ分離、コミット粒度）はすべて妥当であり、実装・検証でも矛盾なく確認された
+- 2段構えの除外ロジック（frontmatter 非保持 → Document Traversal 自然除外、`sync --deep` 明示除外）は将来の読み手にとって分かりにくい可能性がある（Spec Retrospective に記録済み）
+
+#### code
+- 3点の実装偏差（allowed-tools 分割、structure.md コメント形式、workflow.md 追記）はいずれもリワークとして記録済み。allowed-tools 形式の偏差は verify ヒント `grep "Bash(git"` との整合が必要となったことが直接原因であり、ヒントのパターンが実装形式を拘束する副作用が発生した
+
+#### review
+- Spec-実装乖離の3点はレビュー前に code retrospective に記録されており、トレーサビリティは確保されていた
+- `allowed-tools` エントリ形式の未指定が verify ヒントのパターンに影響するという連鎖は、review フェーズでの改善提案として有効だったが、提案として残っていない
+
+#### merge
+- PR #67 として単一コミットでクリーンにマージ完了。コンフリクト・CI障害なし
+
+#### verify
+- 11条件すべて PASS、FAIL/UNCERTAIN ゼロ。grep/section_contains ベースの verify ヒントは安定して機能した
+- Post-merge 5条件はすべて `verify-type: manual`。`/doc translate` の実行結果確認（翻訳品質・リンク切れ・sync 誤検知）は手動確認を要するため、適切な分類
+
+### Improvement Proposals
+- `skills/doc/SKILL.md` の translate セクション（約100行）を `skills/doc/translate-phase.md` に Progressive Disclosure 分離する。現在のSKILL.mdは 800行超に達しており、tech.md の Core/Domain 分離方針（構造的脆弱性として登録済みか要確認）に準拠した分割が保守性を高める
