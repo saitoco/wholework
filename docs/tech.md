@@ -37,7 +37,7 @@ ssot_for:
   | merge | Yes | Decision completes with Spec + PR metadata; does not carry over review context |
   | verify | Yes | Verifies post-merge state independently; must not be influenced by prior phase decisions |
 
-- **`/auto` skill**: Orchestrator that runs code→review→merge→verify sequentially via `run-*.sh`. Each phase runs as an independent process with `claude -p --dangerously-skip-permissions`, guaranteeing fresh context and full permission bypass.
+- **`/auto` skill**: Orchestrator that chains spec→code→review→merge→verify sequentially via `run-*.sh`. Each phase runs as an independent process with `claude -p --dangerously-skip-permissions`, guaranteeing fresh context and full permission bypass. Additional capabilities: auto-starts from issue triage/refinement when no `phase/*` label is set; auto-runs `/spec` when `phase/ready` is absent; `--batch N` processes N XS/S Issues from the backlog; XL Issues read the sub-issue dependency graph (`blockedBy`) and execute independent sub-issues in parallel (worktree isolation) before sequencing dependent ones; `--base {branch}` targets a release branch instead of main.
 - **Sub-agent splitting**: Used in two skills:
   - `/issue` (L/XL): Parallel investigation via three independent sub-agents (`scope-agent`, `risk-agent`, `precedent-agent`) to analyze change scope, risk, and precedents simultaneously.
   - `/review`: Splits into two groups — Spec compliance review (`review-spec`) and bug detection (`review-bug`) — with two-stage verification (detection→verification sub-agents) to eliminate false positives.
