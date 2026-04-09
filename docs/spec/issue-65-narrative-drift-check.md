@@ -80,3 +80,30 @@
 ### Rework
 
 - Step 4 の self-check で "partial description" が 0 件と判明し、Introduction paragraph に lowercase 版を追記する rework が 1 回発生した。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec の実装ステップに `file_contains` チェックの case-sensitivity に関する注記がなく、"Partial description"（大文字P）と書いてしまう典型的な落とし穴が記載されていなかった。acceptance check キーワードの大文字/小文字要件を Spec 段階で明示する習慣が有効。
+
+#### design
+- 設計方針（AI判定ベース / auto-fix しない / --deep 限定 / 3検出カテゴリ）は実装と一致。Issue 議論から継承した設計方針が Spec に明示されており、実装への転写は正確だった。
+
+#### code
+- "partial description" lowercase 問題で rework 1 回。Spec の self-check ステップ（Step 4）が実装直後に問題を検出できた点は良好。
+- 変更ファイルは `skills/doc/SKILL.md` のみで設計通り。スコープ逸脱なし。
+
+#### review
+- patch ルート（直接 main commit）のため PR レビューなし。acceptance check がすべて `file_contains` / `section_contains` パターンで構成されており、自動検証で十分な信頼性を確保できた。
+
+#### merge
+- 直接 main へのコミット（patch ルート）。コンフリクトなし。
+
+#### verify
+- pre-merge 5条件すべて PASS。post-merge 条件は opportunistic/manual のため自動検証対象外。
+- Issue はクローズ済み、`phase/verify` ラベルで opportunistic 確認待ち状態が正しく維持されている。
+
+### Improvement Proposals
+- `file_contains` チェックで特定キーワードを使う場合、Spec の acceptance criteria 作成時に「case-sensitive であるため小文字表現を実装に含めること」を注記する習慣を推奨する。`/spec` の acceptance condition 作成ガイドラインに case-sensitivity の注意書きを追加することで、同種の rework を防止できる。
