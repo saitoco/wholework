@@ -55,3 +55,28 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue本文にAuto-Resolved Ambiguity Pointsセクションがあり、スコープ（README.md除外、workflow.md確認のみ）が明確に定義されていた。acceptance conditionは全てverify hintを持ち、自動検証しやすい設計だった。
+
+#### design
+- 実装ステップが3つのみの小規模変更で、設計と実装の乖離なし。Spec変更後の実装もSpecに記載の通りに行われた。
+
+#### code
+- コミット履歴: `afaa76f`（Spec作成）→`2ad7490`（実装）→`d85e11c`（Code Retrospective追記）。reworkなし。XS相当の変更でpatchルート適用。
+
+#### review
+- XSサイズのためreviewフェーズなし（直接mainへのコミット）。
+
+#### merge
+- PR未作成。patchルートで`closes #60`をコミットメッセージに含めてmainに直接マージ。コンフリクトなし。
+
+#### verify
+- 全5条件がPASS。post-merge条件は`<!-- verify-type: manual -->`のため自動検証対象外。`phase/verify`ラベルは手動確認待ちとして適切に設定済み。
+
+### Improvement Proposals
+- N/A
