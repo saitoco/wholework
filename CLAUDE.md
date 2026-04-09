@@ -11,7 +11,7 @@ These conventions apply to all Skill-generated output (Issue bodies, Spec files,
 | Source code | English | Variable names, function names, comments, file names |
 | Documentation | English | README, module docs, skill docs |
 | Commit messages | English | |
-| Issue titles | English | |
+| Issue titles | Japanese | For now |
 | Issue bodies | Japanese | For now |
 | Spec files | Japanese | Disposable, same treatment as issue bodies |
 | PR body | Japanese | Summaries and verification sections |
