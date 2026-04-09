@@ -107,6 +107,7 @@ If `REVIEW_DEPTH=skip`, skip Steps 7/8/9/10/11/12/13/14 and output this message:
 
 ```
 Patch route — review is not needed. Proceed with `/merge $PR_NUMBER`.
+If you need to run a review explicitly (e.g., main branch protection required PR route), run `/review $PR_NUMBER --light`.
 ```
 
 Get Size (Project field first, label fallback):
