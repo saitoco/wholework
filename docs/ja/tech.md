@@ -47,6 +47,7 @@
     | マーカー検出 | `.wholework.yml` の YAML キー | `review/external-review-phase.md`（`copilot-review: true`、`claude-code-review: true`、または `coderabbit-review: true` の時に読み込み） |
     | ファイル存在 | 特定ファイルの存在 | `review/skill-dev-recheck.md`（`scripts/validate-skill-syntax.py` が存在する時に読み込み） |
 
+- **配布可能コンポーネント優先の改善原則**: レトロスペクティブで特定された改善は、配布可能コンポーネント（Skills、Agents、Modules、Scripts）に反映しなければならない。CLAUDE.md、Steering Documents、Project Documents はユーザーリポジトリ固有の成果物であり、Wholework プラグインの一部として配布されない — これらのドキュメントのみを改善しても、他の Wholework ユーザーには価値が届かない。レトロスペクティブで改善を特定した場合、実装対象は配布可能レイヤーであるべきで、非配布成果物のみの更新では不十分である。
 - **工数最適化戦略（3 軸）**: `claude -p` 呼び出しにおける実行コストと品質を制御する 3 つの軸。軸ごとの CLI サポート状況と Wholework の採用方針:
   - **軸 1 — Model selection**（`--model`）: 実装済み。Sonnet がデフォルト、`run-spec.sh --opus` で L サイズ Spec に Opus を使用。レビュー確認済み。
   - **軸 2 — Adaptive Thinking**（`--effort`）: `claude -p` は `low/medium/high/max` レベルをサポート（`claude --help` で確認済み）。`run-*.sh` にフェーズ別 effort レベルを実装済み（下記マトリクス参照）。medium effort + Opus advisor の組み合わせで、デフォルト effort の Sonnet と同等品質を低コストで達成可能（Anthropic ベンチマークによる）。
