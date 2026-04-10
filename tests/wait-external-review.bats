@@ -120,8 +120,8 @@ MOCK
 
 @test "claude-code-review: timeout when no review arrives" {
     create_gh_mock_no_review
-    export COPILOT_REVIEW_TIMEOUT=1
-    export COPILOT_REVIEW_INTERVAL=1
+    export EXTERNAL_REVIEW_TIMEOUT=1
+    export EXTERNAL_REVIEW_INTERVAL=1
 
     run bash "$SCRIPT" 88 claude-code-review
     [ "$status" -eq 1 ]
@@ -140,8 +140,8 @@ MOCK
 
 @test "coderabbit: timeout when no review arrives" {
     create_gh_mock_no_review
-    export COPILOT_REVIEW_TIMEOUT=1
-    export COPILOT_REVIEW_INTERVAL=1
+    export EXTERNAL_REVIEW_TIMEOUT=1
+    export EXTERNAL_REVIEW_INTERVAL=1
 
     run bash "$SCRIPT" 88 coderabbit
     [ "$status" -eq 1 ]
@@ -172,8 +172,8 @@ MOCK
 
 @test "error: timeout when no Copilot review arrives" {
     create_gh_mock_no_review
-    export COPILOT_REVIEW_TIMEOUT=1
-    export COPILOT_REVIEW_INTERVAL=1
+    export EXTERNAL_REVIEW_TIMEOUT=1
+    export EXTERNAL_REVIEW_INTERVAL=1
 
     run bash "$SCRIPT" 88
     [ "$status" -eq 1 ]

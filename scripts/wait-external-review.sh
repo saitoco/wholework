@@ -15,8 +15,8 @@
 set -euo pipefail
 
 # Configuration
-TIMEOUT=${COPILOT_REVIEW_TIMEOUT:-300}  # Default: 5 minutes
-INTERVAL=${COPILOT_REVIEW_INTERVAL:-10}  # Default: 10 seconds
+TIMEOUT=${EXTERNAL_REVIEW_TIMEOUT:-${COPILOT_REVIEW_TIMEOUT:-300}}  # Default: 5 minutes
+INTERVAL=${EXTERNAL_REVIEW_INTERVAL:-${COPILOT_REVIEW_INTERVAL:-10}}  # Default: 10 seconds
 
 # Reviewer configuration: switched by second argument (default: copilot)
 REVIEWER_TYPE="${2:-copilot}"
