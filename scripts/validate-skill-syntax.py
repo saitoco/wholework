@@ -270,8 +270,8 @@ def validate_skill(file_path: Path) -> Tuple[List[str], List[str]]:
     errors.extend(command_hint_errors)
 
     # Validate verify command syntax (command name and argument count)
-    verify_hint_errors = validate_verify_hints(body)
-    errors.extend(verify_hint_errors)
+    verify_command_errors = validate_verify_commands(body)
+    errors.extend(verify_command_errors)
 
     return errors, warnings
 
@@ -483,7 +483,7 @@ def validate_phase_headings(body: str) -> List[str]:
 
 # Known verify commands and argument counts (min_args, max_args)
 # Source of truth: verify-executor.md translation table
-KNOWN_VERIFY_COMMANDS: Dict[str, Tuple[int, int]] = {
+KNOWN_VERIFY_COMMAND_TYPES: Dict[str, Tuple[int, int]] = {
     'file_exists': (1, 1),
     'file_not_exists': (1, 1),
     'dir_exists': (1, 1),
@@ -558,10 +558,10 @@ def _parse_verify_args(args_str: str) -> List[str]:
     return args
 
 
-def validate_verify_hints(body: str) -> List[str]:
+def validate_verify_commands(body: str) -> List[str]:
     """
-    Validates <!-- verify: ... --> hints in the SKILL.md body.
-    Hints inside code fences or inline code are excluded from validation.
+    Validates <!-- verify: ... --> verify commands in the SKILL.md body.
+    Verify commands inside code fences or inline code are excluded from validation.
 
     Returns:
         List of error messages
@@ -596,14 +596,14 @@ def validate_verify_hints(body: str) -> List[str]:
         if cmd.startswith('{'):
             continue
 
-        if cmd not in KNOWN_VERIFY_COMMANDS:
+        if cmd not in KNOWN_VERIFY_COMMAND_TYPES:
             errors.append(
                 f"body line {line_num}: 未知の verify コマンド '{cmd}'。"
-                f" 既知コマンド: {', '.join(sorted(KNOWN_VERIFY_COMMANDS))}"
+                f" 既知コマンド: {', '.join(sorted(KNOWN_VERIFY_COMMAND_TYPES))}"
             )
             continue
 
-        min_args, max_args = KNOWN_VERIFY_COMMANDS[cmd]
+        min_args, max_args = KNOWN_VERIFY_COMMAND_TYPES[cmd]
         try:
             _parse_verify_args(args_str)
         except ValueError as e:
