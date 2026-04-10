@@ -150,3 +150,18 @@ Issue #84 で verify command への用語統一を実施したが、Scope Declar
 
 ### Uncertainty resolution
 - Nothing to note
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Python スクリプトで一括置換を実装（Spec は Edit ツール逐次置換を想定していたが、22 ファイルへの効率的適用のためスクリプト化）
+- 置換パターンの追加: "Acceptance check" (capital A, lowercase c) のパターンが初回スクリプトで未対応。2 パス処理で対応（`verify-executor.md`, `spec/SKILL.md`, `issue/SKILL.md`, `risk-agent.md`, `docs/tech.md` の 5 ファイルが対象）
+
+### Design Gaps/Ambiguities
+
+- Forbidden Expressions テーブルエントリが広範 grep チェック (#8) に引っかかる問題: `docs/tech.md` の Forbidden Expressions 行に "Acceptance check" が含まれるため、追加後は自身がチェックに引っかかる。`grep -v '| Acceptance check |'` 除外パターンを追加して対処。Spec および Issue body の verify command hint を修正
+
+### Rework
+
+- 広範 grep コマンド hint の修正: 初回コミット後に Step 10 で FAIL が判明。verify command hint に除外パターン追加が必要だった（`| Acceptance check |` 行の除外）。Spec と Issue body 両方を修正してリコミット
