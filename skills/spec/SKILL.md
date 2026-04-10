@@ -416,6 +416,7 @@ Keep implementation step count and pre-merge verification item count within the 
 - **Step numbers**: integers only (Step 1, 2, 3...). No decimal numbers (Step 1.5, etc.). Renumber subsequent steps when inserting new ones.
 - **Dependencies**: note "(after N)" for sequential deps, "(parallel with N, M)" for parallel-safe steps
 - **Acceptance criteria mapping**: note "(→ acceptance criteria X)" for each step
+- **Insertion position**: specify by nearby code context (e.g., "immediately before `--dangerously-skip-permissions`") rather than line numbers. Line numbers shift as files change and become unreliable guides for implementation.
 
 1. Step 1 (→ acceptance criteria A)
 2. Step 2 (after 1) (→ acceptance criteria B)
