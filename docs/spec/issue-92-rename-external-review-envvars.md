@@ -29,3 +29,14 @@
 ### Post-merge
 
 - `/review` skill の外部レビュー待機フローで `EXTERNAL_REVIEW_TIMEOUT` / `EXTERNAL_REVIEW_INTERVAL` 環境変数として動作することを確認
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
