@@ -70,3 +70,17 @@
 
 ### Rework
 - N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+`modules/title-normalizer.md` の `## Output` セクションは「呼び出し元が `gh issue edit` を実行する」設計を前提としているが、新設した「Title Drift Check」サブセクションはモジュール内部で直接 `gh issue edit` を実行する。この2パターンが同一モジュール内に混在し、モジュールの責任境界が不明瞭になっている（SHOULD）。将来 Output セクションを2パートに分割して責任境界を明記することで改善できる。
+
+### Recurring issues
+
+今回の変更規模（SKILL.md のステップ挿入とリナンバリング）としてはレビューイシューが最小限に抑えられており、繰り返しパターンは特になし。
+
+### Acceptance criteria verification difficulty
+
+Pre-merge 条件3件はすべて `section_contains` / `grep` ヒントが整備されており PASS 判定が容易だった。Post-merge 条件はいずれも `verify-type: opportunistic` で適切にマークされており、UNCERTAIN 対応が不要だった。
