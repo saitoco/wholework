@@ -199,3 +199,54 @@ When assigning `<!-- verify-type: auto -->` to a condition, a `<!-- verify: ... 
 - Spec 修正後の pre-merge verification: **22 items**（Phase A 6 + Phase B 8 + Phase C 6 + Phase D 2）
 - 差分: Phase A に ja/product.md の旧エントリ削除確認 +1、Phase B に verify-classifier 向けの 2 分割 (+1) = 計 +2 items
 - 本 Spec 作成時に Issue body を Spec と一致するよう更新する（Spec 側を source of truth）
+
+## issue retrospective
+
+### 判断根拠の記録
+
+**用語選定のロジック**:
+
+本 Issue の出発点は「`verify hint`（Forbidden Expressions の旧用語）がコード/ドキュメントに残っている」という単純な残存調査だったが、事前調査中に 2 つのステアリングドキュメント間の用語不整合が判明したため、調査範囲を「Terms SSOT の正本化」まで拡張した。
+
+- `docs/product.md:159` Terms (SSOT for terminology): 「Acceptance check」
+- `docs/tech.md:70` Forbidden Expressions: 「Verify hint → verify command」（末尾の閉じ引用符欠落 typo あり）
+
+ユーザーとの対話で以下を明確化:
+
+1. **L1 `acceptance criteria`（受入条件）** と **L2 の `<!-- verify: ... -->` 構造** は別概念だが、Terms SSOT の「Acceptance check」は日本語「受入チェック」と相まって語感衝突が強い。`/verify` 実行時に「受入条件のチェックボックスに完了チェックを入れる」のような文脈で混乱しやすい。
+2. 「command = 実行される指示」という英語ニュアンスが、L2 の役割（verify-executor が解釈・実行するディレクティブ）と一致する。
+3. Python 定数 `KNOWN_VERIFY_COMMANDS`（現行）は shell 慣例的に「既知コマンド種別の集合」を意味するが、L2 全体を「verify command」と呼ぶ新用語の下では曖昧化するため、`KNOWN_VERIFY_COMMAND_TYPES` にリネームし L2/L3 の階層を命名で区別する。
+
+採用案: **`verify command`**（L2）+ **`KNOWN_VERIFY_COMMAND_TYPES`**（L3 定数）。
+
+### Q&A で決まった主要方針
+
+- **Forbidden Expressions 行の扱い**: 新用語に修正して残す（誤用検出ガードとして機能継続、典型的な「migration row」パターン）
+- **Python 関数・定数のリネーム**: スコープに含める。`KNOWN_VERIFY_COMMANDS → KNOWN_VERIFY_COMMAND_TYPES` も含む（影響 5 箇所、小規模）
+- **docs/ja/ 追随更新**: 英日のドリフトを避けるため同 Issue で更新
+- **Scope 宣言**: 「Acceptance check」の広範置換（24 ファイル・83 occurrences）は本 Issue スコープ外
+
+### 関連 Issue
+
+- #77 「verify: section_contains hint でOR代替パターンは分割する旨をガイドラインに追記」 は同じ旧用語 "section_contains hint" を title に含む別 Issue。本 Issue マージ後、#77 のタイトル・本文の用語を新用語に合わせる追従が望ましい
+
+## spec retrospective
+
+### Minor observations
+
+- Issue #84 本文の `file_not_contains "modules/verify-classifier.md" "--> hint"` が実ファイル内容と pattern mismatch（backtick 介在）し、永続 false-positive となる問題を Spec フェーズの self-review で発見。Issue body を修正済み。pre-verification of target file format（`verify-patterns.md` セクション 3）の重要性が実証された
+- `docs/product.md` Terms 表の旧エントリ削除確認に当初 `section_not_contains "Formerly called \"verification hint\""` を用いようとしたが、新エントリにも旧称を legacy mention として残す方針だと false-negative になるため、`file_not_contains "| Acceptance check |"` (pipe-delimited テーブル行) に変更。テーブル行削除検出の典型パターンとして再利用可能
+- Forbidden Expressions typo 修正の verify command は当初 `grep "verify command\"\\)"` を使ったが、regex バックスラッシュと fixed-string の境界が曖昧だったため `file_contains "changed to \"verify command\")"` (fixed-string + エスケープ) に変更。ロジックが単純で確実
+
+### Judgment rationale
+
+- **verify-classifier.md 置換の scope 拡張**: 当初 Issue では「verify hint」文字列のみを対象としたが、同ファイル line 38-41 は「hint」単独表現で `<!-- verify: ... -->` を指すため、本 Issue のスコープ（L2 用語統一）に含めるべきと判断。Spec 作成時に実ファイルを読んで確認した上で Verification section に反映
+- **テーブル行削除検出パターンの採用**: Terms 表の旧エントリ削除確認に pipe-delimited パターン (`| X |`) を採用。markdown テーブル行は他の本文と区別でき、fixed-string 検索で一意に特定できるため false-positive リスクが最小
+- **Python ローカル変数 `verify_hint_errors` の追随リネーム**: Issue 本文の Phase C には含まれていなかったが、関数名・定数名リネームと同時に更新するのが自然なため、Spec 側で明示的に含めた。実装時の見落とし防止
+
+### Uncertainty resolution
+
+- **Issue body の誤 acceptance criterion**: Spec self-review 中に Issue 本文の実装不整合を発見 → Spec を source of truth として Issue body を自動更新（`/spec` Step 10 self-review rules 準拠）
+- **Terms SSOT 正本と一般文書の過渡的不整合**: 「Acceptance check」系 83 occurrences の広範置換を同 Issue に含めるか後続 Issue に分離するか → 後続 Issue に分離（`docs/tech.md` Terminology Migration Scope Rule 準拠）。Scope Declaration で明示
+- **ambiguity 検出 0 件**: 本 Issue の受入条件は Spec 段階で新たな ambiguity を発見せず。Issue フェーズで AskUserQuestion を通じて全決定を行い、Auto-Resolved として記録済みだったため
+
