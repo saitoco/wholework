@@ -1,10 +1,10 @@
 # verify-patterns
 
-Accuracy guidelines for acceptance check patterns.
+Accuracy guidelines for verify command patterns.
 
 ## Purpose
 
-This file provides guidelines for managing the quality of acceptance check patterns (`<!-- verify: ... -->`) in acceptance criteria. Callers: `/issue`, `/spec`.
+This file provides guidelines for managing the quality of verify command patterns (`<!-- verify: ... -->`) in acceptance criteria. Callers: `/issue`, `/spec`.
 
 ## Input
 
@@ -15,7 +15,7 @@ Information provided by the calling skill:
 
 ## Processing Steps
 
-Skills that Read this file should design acceptance check patterns following these guidelines.
+Skills that Read this file should design verify command patterns following these guidelines.
 
 ### 1. False Positive Patterns and How to Avoid Them
 
@@ -71,7 +71,7 @@ When designing `grep`/`file_contains` patterns, follow this cross-reference proc
 
 **Cross-Reference for New Code Additions:**
 
-For new code additions, the target text does not yet exist in the file, so the post-implementation string format must be predicted to design the grep pattern. Divergence between predicted and actual format causes the acceptance check to miss the intended code.
+For new code additions, the target text does not yet exist in the file, so the post-implementation string format must be predicted to design the grep pattern. Divergence between predicted and actual format causes the verify command to miss the intended code.
 
 Concrete divergence example (case statement patterns):
 - If a new query `get-issue-id` is implemented in a case statement, the actual form is `get-issue-id)`
@@ -106,9 +106,9 @@ When verifying identifiers (variable names, function names, constant names) with
 
 **Procedure:** Read or Grep the target file to confirm the actual casing of identifiers, then use that exact form in the pattern.
 
-### 5. Acceptance Checks When Adding New Command Types to Documentation
+### 5. Verify Commands When Adding New Command Types to Documentation
 
-For issues involving documentation changes such as adding new command types to acceptance check tables, recommend combining `grep` for existence checks with `section_contains` to also verify the correctness of description text (purpose, guidance wording, etc.).
+For issues involving documentation changes such as adding new command types to verify command tables, recommend combining `grep` for existence checks with `section_contains` to also verify the correctness of description text (purpose, guidance wording, etc.).
 
 **Background**: `grep` is effective for checking keyword presence, but cannot verify that the keyword is used in the correct section and context. Adding `section_contains` extends verification coverage to functional correctness within a specific section.
 
@@ -131,7 +131,7 @@ For issues involving documentation changes such as adding new command types to a
 
 ### 6. Verification Target Files for Module-Delegated Processing
 
-When a skill (`skills/*/SKILL.md`) delegates part of its processing to a shared module (`modules/*.md`), specify the **delegate module file directly** as the `grep` / `file_contains` target in acceptance checks.
+When a skill (`skills/*/SKILL.md`) delegates part of its processing to a shared module (`modules/*.md`), specify the **delegate module file directly** as the `grep` / `file_contains` target in verify commands.
 
 **Background**: Skill files contain only the delegation instruction ("Read module and follow it"), while actual processing logic (warning messages, error handling, etc.) is written in the delegate module. Grepping the skill file can cause false positives when delegation instruction text or other contextual keywords unintentionally match (occurred in #775).
 
@@ -149,4 +149,4 @@ When a skill (`skills/*/SKILL.md`) delegates part of its processing to a shared 
 
 ## Output
 
-Design acceptance checks following these guidelines and apply them to acceptance criteria.
+Design verify commands following these guidelines and apply them to acceptance criteria.

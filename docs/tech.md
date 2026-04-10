@@ -56,15 +56,16 @@ ssot_for:
 
 | Tool | Purpose | When |
 |------|---------|------|
-| **bats** (Bash Automated Testing System) | Unit tests for shell scripts | Pre-merge (via `command` acceptance check) |
+| **bats** (Bash Automated Testing System) | Unit tests for shell scripts | Pre-merge (via `command` verify command) |
 | **validate-skill-syntax.py** | SKILL.md syntax validation (half-width `!` detection, frontmatter validation) | Pre-merge |
-| **Acceptance checks** (`<!-- verify: ... -->`) | Mechanical verification of acceptance criteria (file existence, text content, command execution) | At `/verify` skill execution |
+| **Verify commands** (`<!-- verify: ... -->`) | Mechanical verification of acceptance criteria (file existence, text content, command execution) | At `/verify` skill execution |
 
 ## Forbidden Expressions
 
 | Expression | Reason | Alternative |
 |------------|--------|-------------|
 | Half-width `!` (in SKILL.md body, outside code fences and inline code) | Claude Code's Bash permission checker misdetects it as zsh history expansion, causing errors at skill execution | Full-width "！" or rephrased expression |
+| Acceptance check | Term redesign (changed to "verify command") | "verify command" |
 
 ## Terminology Migration Scope Rule
 

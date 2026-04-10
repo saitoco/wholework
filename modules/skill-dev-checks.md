@@ -105,12 +105,12 @@ When changed files include SKILL.md (new creation or existing modification), con
 
 #### Migration Step-Number Reference Check
 
-When changed files include migration of a workflow document (SKILL.md, modules file, docs page) from another repository, add `file_not_contains` acceptance checks for step numbers, workflow names, or other repository-specific references from the source repository that must not survive migration.
+When changed files include migration of a workflow document (SKILL.md, modules file, docs page) from another repository, add `file_not_contains` verify commands for step numbers, workflow names, or other repository-specific references from the source repository that must not survive migration.
 
 Check procedure:
 1. Identify any step-number references in the source document (e.g., "Step 6", "Step 3")
 2. Confirm whether each referenced step number is valid in the target repository's workflow
-3. For step numbers that are source-specific and should not appear in the migrated file, add a `file_not_contains` acceptance check
+3. For step numbers that are source-specific and should not appear in the migrated file, add a `file_not_contains` verify command
 
 Example (from #36 tech.md migration — `Code review (Step 6)` was a claude-config step number that leaked into wholework's docs):
 ```

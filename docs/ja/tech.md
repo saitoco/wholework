@@ -48,15 +48,16 @@
 
 | ツール | 目的 | タイミング |
 |--------|------|------------|
-| **bats**（Bash Automated Testing System） | シェルスクリプトのユニットテスト | pre-merge（`command` 受入チェック経由） |
+| **bats**（Bash Automated Testing System） | シェルスクリプトのユニットテスト | pre-merge（`command` verify command経由） |
 | **validate-skill-syntax.py** | SKILL.md 構文検証（半角 `!` 検出、frontmatter 検証） | pre-merge |
-| **受入チェック**（`<!-- verify: ... -->`） | 受入条件の機械的検証（ファイル存在、テキスト内容、コマンド実行） | `/verify` Skill 実行時 |
+| **verify command**（`<!-- verify: ... -->`） | 受入条件の機械的検証（ファイル存在、テキスト内容、コマンド実行） | `/verify` Skill 実行時 |
 
 ## Forbidden Expressions
 
 | 表現 | 理由 | 代替 |
 |------|------|------|
 | 半角 `!`（SKILL.md 本文、コードフェンス外および inline code 外） | Claude Code の Bash パーミッションチェッカが zsh の履歴展開として誤検知し、Skill 実行時にエラーが発生する | 全角「！」または表現の書き換え |
+| Acceptance check | 用語再設計（"verify command" に変更） | "verify command" |
 
 ## 用語移行のスコープルール
 

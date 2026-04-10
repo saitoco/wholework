@@ -31,7 +31,7 @@ Maintains project foundation information in `docs/`. Each document defines its t
 
 ### 1. Issue Creation Phase — `/issue`
 
-Clarifies Issue requirements. Two modes: new creation (`/issue "title"`) and existing refinement (`/issue 123`). Performs ambiguity detection, acceptance condition classification, acceptance check assignment, and sub-issue splitting. When refining an existing Issue without a `triaged` label, automatically chains triage execution — a single `/issue` completes both triage + issue creation for standalone Issues. Details: [`skills/issue/SKILL.md`](../skills/issue/SKILL.md)
+Clarifies Issue requirements. Two modes: new creation (`/issue "title"`) and existing refinement (`/issue 123`). Performs ambiguity detection, acceptance condition classification, verify command assignment, and sub-issue splitting. When refining an existing Issue without a `triaged` label, automatically chains triage execution — a single `/issue` completes both triage + issue creation for standalone Issues. Details: [`skills/issue/SKILL.md`](../skills/issue/SKILL.md)
 
 **Responsibility boundary between `/issue` and `/spec`**: [docs/product.md — Responsibility Boundary Table](product.md#spec-design-boundary)
 

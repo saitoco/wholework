@@ -42,7 +42,7 @@ Translate the entire file content to the target language (language code: `{lang}
 - Preserve Markdown structure (heading hierarchy, lists, tables, code blocks)
 - Do NOT translate content inside code fences (` ``` `) or inline code (backticks) — keep as-is
 - Preserve external URLs (`http://`, `https://`) as-is; translate only the link text
-- Preserve HTML comments (`<!-- ... -->`) as-is (used for acceptance check hints etc.)
+- Preserve HTML comments (`<!-- ... -->`) as-is (used for verify command hints etc.)
 - Remove the source file's frontmatter (`---`...`---`) from the translation output — output pure Markdown without frontmatter
 - Preserve proper nouns and product names (Wholework, Claude Code, GitHub, etc.) as-is
 

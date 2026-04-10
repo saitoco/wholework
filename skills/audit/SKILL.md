@@ -158,7 +158,7 @@ Each Issue body:
 
 ### Pre-merge (automated verification)
 
-- [ ] <!-- verify: {acceptance check} --> {condition 1}
+- [ ] <!-- verify: {verify command} --> {condition 1}
 - [ ] {condition 2}
 
 ### Post-merge
@@ -287,7 +287,7 @@ Each Issue body:
 
 ### Pre-merge (automated verification)
 
-- [ ] <!-- verify: {acceptance check} --> {condition 1}
+- [ ] <!-- verify: {verify command} --> {condition 1}
 - [ ] {condition 2}
 
 ### Post-merge

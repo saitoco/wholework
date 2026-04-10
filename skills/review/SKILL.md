@@ -179,9 +179,9 @@ After detection, follow `external-review-phase.md`'s Step 7 procedure for extern
 
 ## Step 8: Static Acceptance Criteria Verification
 
-### 8.0. Preview URL Resolution (if acceptance checks contain `{{base_url}}`)
+### 8.0. Preview URL Resolution (if verify commands contain `{{base_url}}`)
 
-If any acceptance check contains `{{base_url}}`, resolve the Preview URL before passing to verify-executor:
+If any verify command contains `{{base_url}}`, resolve the Preview URL before passing to verify-executor:
 
 1. Get the PR branch name:
    ```bash
@@ -212,7 +212,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md` and follow the "Processi
 
 Verify each condition:
 
-1. **With acceptance check (`<!-- verify: ... -->`)**:
+1. **With verify command (`<!-- verify: ... -->`)**:
    - Valid syntax: run the specified command's corresponding processing
    - **Invalid syntax** (unknown command name, missing args, etc.) → treat as UNCERTAIN, fall back to AI judgment. Note error details.
 
@@ -574,7 +574,7 @@ Policy change detection patterns:
 | Scope reduction/expansion | Split part of feature into another Issue |
 | Behavioral spec change | Default value change, error handling policy change |
 
-Assess whether any changes contradict the acceptance criteria (acceptance check text or condition descriptions).
+Assess whether any changes contradict the acceptance criteria (verify command text or condition descriptions).
 
 **If no policy changes** (or no implementation changes in Step 7/12): skip this step and proceed to Step 13.
 
@@ -600,7 +600,7 @@ Format:
 |-----------|--------|-------|
 | Condition summary | old text | new text |
 
-### Updated Acceptance Checks
+### Updated Verify Commands
 | Hint | Before | After |
 |------|--------|-------|
 | command name | old syntax | new syntax |
@@ -682,7 +682,7 @@ Reflect on the review phase; record improvement proposals in the Spec only. Issu
 |--------|-------|
 | Spec vs. implementation divergence patterns | Are there structural divergences between Spec and PR diff? |
 | Recurring issues | Are there multiple issues of the same kind (room for workflow improvement)? |
-| Acceptance criteria verification difficulty | Are there many UNCERTAINs, missing or inaccurate acceptance checks? |
+| Acceptance criteria verification difficulty | Are there many UNCERTAINs, missing or inaccurate verify commands? |
 
 **Steps:**
 

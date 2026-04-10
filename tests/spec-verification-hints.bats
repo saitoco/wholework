@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# Tests for acceptance check generation logic in the /issue skill
+# Tests for verify command generation logic in the /issue skill
 # Validates false positive patterns (multiline content, negation contexts)
 
 setup() {

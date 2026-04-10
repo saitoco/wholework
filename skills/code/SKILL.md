@@ -196,21 +196,21 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-checker.md` and follow the "Impact asses
 
 If sync is required, update the target documents (`README.md`, `docs/workflow.md`, etc.) before committing.
 
-### Step 10: Acceptance Check Consistency
+### Step 10: Verify Command Consistency
 
-**Resolving `{{base_url}}` to localhost**: If acceptance checks contain `{{base_url}}`, resolve it before passing to verify-executor:
+**Resolving `{{base_url}}` to localhost**: If verify commands contain `{{base_url}}`, resolve it before passing to verify-executor:
 
 1. If environment variable `LOCAL_BASE_URL` is set, use that value
 2. If `LOCAL_BASE_URL` is not set, default to `http://localhost:3000`
-3. Replace `{{base_url}}` in acceptance checks with the resolved URL before passing to verify-executor
+3. Replace `{{base_url}}` in verify commands with the resolved URL before passing to verify-executor
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md` and follow the "Processing Steps" section to run acceptance check consistency verification in **full mode**. Target: pre-merge acceptance checks for Issue #$NUMBER. Skip if no hints exist.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md` and follow the "Processing Steps" section to run verify command consistency verification in **full mode**. Target: pre-merge verify commands for Issue #$NUMBER. Skip if no hints exist.
 
 Handle results as follows:
 1. If all PASS, complete this step and update checkboxes:
    - Pre-create directory with `mkdir -p .tmp`
    - Fetch current Issue body with `gh issue view $NUMBER --json body`
-   - For each pre-merge condition line with acceptance check, replace leading `- [ ]` with `- [x]` (preserve the rest of the line, acceptance check comments `<!-- verify: ... -->`, etc.)
+   - For each pre-merge condition line with verify command, replace leading `- [ ]` with `- [x]` (preserve the rest of the line, verify command comments `<!-- verify: ... -->`, etc.)
    - Write updated body to `.tmp/issue-body-$NUMBER.md` with Write tool
    - Update Issue body with `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh $NUMBER .tmp/issue-body-$NUMBER.md`
    - After update, delete temp file with `rm -f .tmp/issue-body-$NUMBER.md`
@@ -226,7 +226,7 @@ Handle results as follows:
    - Display a warning and continue
    - Do not fix UNCERTAIN hints — they will be re-verified in the `/verify` phase after merge
 
-**Spec sync (when acceptance checks are modified):** If Issue body acceptance checks (`<!-- verify: ... -->`) are modified, also apply the same fix to the "Verification > Pre-merge" section in the Spec (`docs/spec/issue-$NUMBER-*.md`). Updating only the Issue body without updating the Spec will cause discrepancies flagged in the review retrospective.
+**Spec sync (when verify commands are modified):** If Issue body verify commands (`<!-- verify: ... -->`) are modified, also apply the same fix to the "Verification > Pre-merge" section in the Spec (`docs/spec/issue-$NUMBER-*.md`). Updating only the Issue body without updating the Spec will cause discrepancies flagged in the review retrospective.
 
 ### Step 11: Commit, Push, or Create PR
 
