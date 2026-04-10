@@ -50,3 +50,33 @@
   - `docs/ja/product.md` → `docs/ko/product.md` → 相対パスは `../ko/product.md`
 - 言語名解決は既存の方針どおり LLM の組み込み知識に委譲（マッピングテーブル不要）
 - 既存バナーの検出パターン: 先頭行（frontmatter 後）が `English |` または `[English]` で始まるかどうかで判定可能
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec の実装ステップは明確で、各受入条件との対応関係（`→ acceptance criteria N`）が明示されていた。条件の曖昧さは見当たらない。
+- `## Issue Retrospective` セクション・`## Spec Retrospective` セクションはなく、Issue 精査・Spec 設計フェーズのレトロスペクティブ記録はなし。
+
+#### design
+- Code Retrospective にて「Deviations from Design: N/A」— 設計どおりの実装が行われた。
+- 軽微な設計ギャップあり: Step 6 の `git add` コマンド形式が Spec に未定義だったが、コード実装時に適切な形式（`git add README.md README.{lang}.md docs/`）が採用された。次回 Spec 作成時は具体的なコマンド形式まで記述するとよい。
+
+#### code
+- コミット履歴はクリーン（design + implementation の2コミットのみ）。fixup/amend パターンなし。
+- `/code` の patch ルート（XS サイズ）として直接 main へコミットされた。
+
+#### review
+- patch ルートのため PR 作成なし、正式なレビューフェーズなし。
+- CLAUDE.md の Language Conventions を遵守したコミットメッセージ・Spec 記述であった。
+
+#### merge
+- direct commit to main（patch ルート）。コンフリクトなし、クリーンなマージ。
+
+#### verify
+- Pre-merge 5条件すべて PASS。`skills/doc/translate-phase.md` に必要な記述がすべて実装されていることを確認。
+- Post-merge opportunistic 条件（実際に `doc translate ja` を実行して確認）はヒントなしのため自動検証対象外。ユーザーによる手動確認待ち（`phase/verify` ラベル設定済み）。
+
+### Improvement Proposals
+- N/A
