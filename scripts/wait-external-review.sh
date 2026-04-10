@@ -34,8 +34,13 @@ case "$REVIEWER_TYPE" in
         REVIEWER_LOGIN_SHORT="claude-code-review"
         REVIEWER_DISPLAY_NAME="Claude Code"
         ;;
+    coderabbit)
+        REVIEWER_LOGIN="coderabbitai[bot]"
+        REVIEWER_LOGIN_SHORT="coderabbitai"
+        REVIEWER_DISPLAY_NAME="CodeRabbit"
+        ;;
     *)
-        echo "Error: unknown reviewer type: ${REVIEWER_TYPE} (specify copilot or claude-code-review)" >&2
+        echo "Error: unknown reviewer type: ${REVIEWER_TYPE} (specify copilot, claude-code-review, or coderabbit)" >&2
         exit 1
         ;;
 esac
