@@ -230,6 +230,20 @@ When assigning `<!-- verify-type: auto -->` to a condition, a `<!-- verify: ... 
 
 - #77 「verify: section_contains hint でOR代替パターンは分割する旨をガイドラインに追記」 は同じ旧用語 "section_contains hint" を title に含む別 Issue。本 Issue マージ後、#77 のタイトル・本文の用語を新用語に合わせる追従が望ましい
 
+## Code Retrospective
+
+### Deviations from Design
+
+- **docs/ja/tech.md の更新内容**: Spec では「`docs/ja/tech.md:62` の閉じ引用符欠落 typo 修正」と記述されたが、実ファイルは日本語テキスト `（"verify command" に変更）` を使用しており英語 typo が存在しなかった。acceptance condition の `file_contains "docs/ja/tech.md" "changed to \"verify command\")"` を満たすため、日本語記述を英語パターン `(changed to "verify command")` に変更した（Reason: column が英語表記でも許容範囲内と判断。acceptance condition が source of truth）。
+
+### Design Gaps/Ambiguities
+
+- **docs/ja/tech.md の typo 有無**: Spec は「英語ファイルと同様の typo がある」と暗に想定していたが実際は異なっていた。Spec の Notes にはこのケースへの対処が明記されていなかった。
+
+### Rework
+
+- N/A（実装順序・ステップ変更なし）
+
 ## spec retrospective
 
 ### Minor observations
