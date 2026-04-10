@@ -129,6 +129,26 @@ MOCK
     [[ "$output" == *"Timeout"* ]]
 }
 
+# === CodeRabbit tests ===
+
+@test "coderabbit: review found with explicit PR number" {
+    create_gh_mock_with_review "coderabbitai" "coderabbitai[bot]"
+    run bash "$SCRIPT" 88 coderabbit
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"CodeRabbit Review Complete"* ]]
+}
+
+@test "coderabbit: timeout when no review arrives" {
+    create_gh_mock_no_review
+    export COPILOT_REVIEW_TIMEOUT=1
+    export COPILOT_REVIEW_INTERVAL=1
+
+    run bash "$SCRIPT" 88 coderabbit
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"CodeRabbit"* ]]
+    [[ "$output" == *"Timeout"* ]]
+}
+
 # === Error handling tests ===
 
 @test "error: invalid PR number (non-numeric)" {
