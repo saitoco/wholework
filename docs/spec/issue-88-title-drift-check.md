@@ -48,3 +48,25 @@
   - `/spec` での drift 検出ソースは Issue body のみ（`docs/product.md` の `/issue` (What) vs `/spec` (How) 境界に沿う）
   - drift 検出後の再生成は既存の naming convention をそのまま適用
 - `docs/structure.md` のモジュール一覧の description は "issue title normalization" のままで更新不要（drift check は normalization の拡張であり範囲内）
+
+## Spec Retrospective
+
+### Minor observations
+- Nothing to note
+
+### Judgment rationale
+- Nothing to note
+
+### Uncertainty resolution
+- Nothing to note
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
