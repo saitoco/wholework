@@ -2,7 +2,7 @@
 
 # Wholework
 
-自律的な GitHub ワークフローのための、Spec ファーストな Claude Code Skill 群。
+自律的な GitHub ワークフローのための、Issue 駆動の Claude Code Skill 群。
 
 ## なぜ Wholework か
 
