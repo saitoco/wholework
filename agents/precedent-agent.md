@@ -2,7 +2,7 @@
 name: precedent-agent
 description: Precedent Investigation: extract learnings from similar Issue/Spec retrospectives (for L/XL Issue parallel investigation)
 tools: Read, Glob, Grep
-model: sonnet
+model: opus
 ---
 
 # Precedent Investigation Agent

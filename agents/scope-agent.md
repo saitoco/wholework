@@ -2,7 +2,7 @@
 name: scope-agent
 description: Scope Investigation: identify change targets and impact scope (for L/XL Issue parallel investigation)
 tools: Read, Glob, Grep, Bash(git log:*, git diff:*)
-model: sonnet
+model: opus
 ---
 
 # Scope Investigation Agent
