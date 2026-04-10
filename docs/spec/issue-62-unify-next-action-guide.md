@@ -210,3 +210,19 @@
 - **スコープ確定のポイント**: `docs/ja/structure.md` は `/doc translate` で自動生成されるため対象外、`docs/structure.md` の Modules セクションとカウント (22 → 23) のみが更新対象であることを特定した。これにより対象ファイルを 10 件に確定。
 - **想定リスク**: `/verify` および `/auto --batch` での PASS 時の次アクション案内抑制ルールをモジュール側で扱う必要があり、判定テーブルで `RESULT=success AND SKILL_NAME IN (verify, auto-batch)` のケースを明示する必要がある。実装時に見落とすと「何もしない」動作が崩れる。
 - **検証計画**: 16 件の pre-merge acceptance check と 5 件の post-merge acceptance check で、モジュール作成・8 skill 更新・structure.md 同期を網羅。`grep` と `section_contains` で機械的に検証可能にした。
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+- Spec に「Step 6（On Failure）も同様に参照」と明示されていたにもかかわらず、コード実装時に漏れが生じた。`{success|fail}` という曖昧な値を Step 5 に残したことで、実装者が「Step 5 で両方カバーできる」と誤解しやすくなっていた。Spec でフェーズ別に独立した指示をする場合は、ステップ単位で明示的に分けた記述が有効。
+- `$PR_NUMBER` と `$NUMBER` の変数名不一致は横断的変更（8 skill）で起きやすい典型的な誤り。次回の横断修正時は、PRe-existing の変数名を Spec の実装ステップに明記するか、完了後に変数名の一貫性チェックを追加する。
+
+### 繰り返し課題
+
+- 今回は1件のみ（Step 6 漏れ）で同種の繰り返しなし。review-bug×2 エージェントは偽陽性を多く排除し、実際の課題を1件正確に特定できた（HIGH SIGNAL フィルタが適切に機能）。
+
+### 受け入れ条件の検証難易度
+
+- pre-merge 16 件はすべて `file_exists`/`grep`/`section_contains`/`command`(CI fallback) で機械的に検証可能だった。UNCERTAIN が0件で、今後の Issue 設計の参考になる。
+- 検証が難しい post-merge 条件（opportunistic verify）は適切に分離されており、今回のレビューフェーズでの過検証（UNCERTAIN 多発）を防げた。
