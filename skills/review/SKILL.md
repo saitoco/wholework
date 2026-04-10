@@ -110,6 +110,8 @@ Patch route — review is not needed. Proceed with `/merge $PR_NUMBER`.
 If you need to run a review explicitly (e.g., main branch protection required PR route), run `/review $PR_NUMBER --light`.
 ```
 
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with `SKILL_NAME=review, PR_NUMBER=$PR_NUMBER, ISSUE_NUMBER=$ISSUE_NUMBER, RESULT=success`.
+
 Get Size (Project field first, label fallback):
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh "$ISSUE_NUMBER" 2>/dev/null
@@ -711,7 +713,7 @@ If `opportunistic-verify: true` is set in `.wholework.yml`, read `${CLAUDE_PLUGI
 
 **Completion report (always use this format):**
 
-After posting the Step 14 summary, output a review response summary to the terminal and a completion report in the following format (do not abbreviate or modify):
+After posting the Step 14 summary, output a review response summary to the terminal in the following format (do not abbreviate or modify):
 
 ```
 ## Review Complete
@@ -719,8 +721,6 @@ After posting the Step 14 summary, output a review response summary to the termi
 - Copilot review response: {response count} resolved, {skip count} skipped
 - Claude review response: {response count} resolved, {skip count} skipped
 - Lightweight re-check: {result}
-
-Next: run `/merge $NUMBER`.
 ```
 
 **If Copilot/Claude response was skipped (including Step 7 skip due to settings)**: omit the corresponding line.
@@ -728,6 +728,12 @@ Next: run `/merge $NUMBER`.
 **When Step 10 was entirely skipped**: replace "Claude review response" line with "Step 10: skipped (Issue number not extractable)".
 
 **In light mode (`REVIEW_DEPTH=light`)**: replace "Claude review response" line with "Step 10 (lightweight integrated review): review-light agent ran all 4 aspects".
+
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
+- `SKILL_NAME=review`
+- `PR_NUMBER=$NUMBER`
+- `ISSUE_NUMBER=$ISSUE_NUMBER`
+- `RESULT=success`
 
 ---
 

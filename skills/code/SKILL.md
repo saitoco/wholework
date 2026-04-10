@@ -367,9 +367,17 @@ Only if `.wholework.yml` in the project has `opportunistic-verify: true`, Read `
 
 ## Completion Report
 
-**Completion report (always use this format):**
-- **patch route**: "Direct commit and push to main complete. Run `/verify {Issue number}` next."
-- **pr route**: "PR creation complete. Run `/review {PR number}` next."
+Output the route-specific prefix, then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section.
+
+- **patch route prefix**: "Direct commit and push to main complete."
+- **pr route prefix**: "PR creation complete."
+
+Parameters to pass to next-action-guide:
+- `SKILL_NAME=code`
+- `ISSUE_NUMBER=$NUMBER`
+- `PR_NUMBER={PR number if pr route}`
+- `ROUTE={patch|pr}`
+- `RESULT=success`
 
 ## Notes
 

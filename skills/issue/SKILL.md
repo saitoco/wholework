@@ -387,15 +387,20 @@ Good:
 
 ## Completion Report
 
-After opportunistic verification, get Size with `get-issue-size.sh $NUMBER` and guide the next action.
+After opportunistic verification, get Size with `get-issue-size.sh $NUMBER`.
 
 **For XL issues (after sub-issue splitting)**: list sub-issues with unresolved "Needs Refinement" points and recommend running `/issue N` for each. Do not list sub-issues without needs-refinement points.
 
-- **Size is XS only**: transition to `phase/ready`, then guide "Run `/auto $NUMBER`":
-  ```bash
-  ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER ready
-  ```
-- **All other cases (S/M/L/XL/unset)**: guide "Run `/spec $NUMBER`."
+**For XS issues only**: transition to `phase/ready` first:
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER ready
+```
+
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
+- `SKILL_NAME=issue`
+- `ISSUE_NUMBER=$NUMBER`
+- `SIZE={fetched size}`
+- `RESULT={success|blocked}`
 
 ---
 

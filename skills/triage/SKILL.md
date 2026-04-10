@@ -238,6 +238,12 @@ Output a summary of the processing results to the user:
 - Dependency check: no dependencies (or "resolved dependency (#200 is CLOSED)")
 ```
 
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
+- `SKILL_NAME=triage`
+- `ISSUE_NUMBER=$NUMBER`
+- `SIZE={triaged size}`
+- `RESULT=success`
+
 ---
 
 ## Bulk Execution (`/triage`)
@@ -382,6 +388,11 @@ After processing all issues, output a results summary:
 | #102 | unchanged | Bug | — | M | 2 | none | ✅ |
 | #103 | — | — | — | — | — | — | ❌ API error |
 ```
+
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
+- `SKILL_NAME=triage`
+- `RESULT=success`
+- (omit `ISSUE_NUMBER` — bulk run with multiple issues, guide will be omitted per module logic)
 
 ---
 

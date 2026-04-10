@@ -20,7 +20,7 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill definition (required)
 │       └── *.md         # Auxiliary phase/guideline files (optional)
-├── modules/             # Shared modules referenced by skills (22 files)
+├── modules/             # Shared modules referenced by skills (23 files)
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (6 files)
 │   └── <agent-name>.md
@@ -80,6 +80,7 @@ Key modules:
 - `modules/browser-verify-security.md` — browser verification security checks
 - `modules/lighthouse-adapter.md` — Lighthouse performance audit adapter
 - `modules/measurement-scope.md` — measurement scope definition
+- `modules/next-action-guide.md` — unified next action guidance for all skills
 
 ### Agents
 

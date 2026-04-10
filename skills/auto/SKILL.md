@@ -248,6 +248,11 @@ Determine the close flow for the parent Issue based on all sub-issue execution r
 
 If all phases succeeded, report completion. **For XL routes, also output "Auto retrospective recorded in Spec".**
 
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
+- `SKILL_NAME=auto`
+- `ISSUE_NUMBER=$NUMBER`
+- `RESULT={success|fail}`
+
 ### Step 6: On Failure: Stop and Report Error
 
 If any phase exits with a non-zero exit code, stop processing and report the error to the user. Do not invoke subsequent phases.
@@ -285,6 +290,11 @@ Process the selected N Issues **sequentially** (serially):
 ### Batch Completion Report
 
 After all N Issues are processed, report results (success/skip/failure) for each Issue.
+
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
+- `SKILL_NAME=auto`
+- `RESULT=success`
+- (omit `ISSUE_NUMBER` — batch run with multiple issues, guide will be omitted per module logic)
 
 ## Notes
 
