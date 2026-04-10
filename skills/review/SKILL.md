@@ -30,7 +30,7 @@ If `--auto` is absent, run the normal steps below.
 
 If ARGUMENTS contains `--review-only` (and `--auto` is absent), set `REVIEW_ONLY=true` for reference in subsequent processing.
 
-- With `--review-only`: skip Steps 7.2 (Copilot issue resolution), 12, 13, 14, and retrospective
+- With `--review-only`: skip Steps 7.2 (Copilot issue resolution), 7.4 (Claude Code Review issue resolution), 7.6 (CodeRabbit issue resolution), 12, 13, 14, and retrospective
 - Status label transitions are not made after Step 11 completes (maintain `phase/review`)
 - When combining `--auto` and `--review-only`, the `--auto` section passes `--review-only` to `run-review.sh` as an argument, which passes it through to ARGUMENTS for branching control in SKILL.md
 
