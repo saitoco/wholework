@@ -20,3 +20,31 @@
 - 旧 AC2 `grep "section_contains"` が実装前から PASS する false positive のため削除
 - AC1 の grep パターンに `file_contains` の OR 条件を追加（スコープ拡張対応）
 - Pre-merge / Post-merge セクション構造を適用
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 本文内で 3 つの曖昧性（AC2 false positive、`file_contains` スコープ、配置箇所）が自動解決されており、/spec 実行なしで Spec として機能した
+- AC1 の grep パターンを `file_contains` も含む OR パターンに拡張したことで、実装内容を正確に検証できた
+
+#### design
+- N/A（設計フェーズなし。シンプルな 1 行追記タスク）
+
+#### code
+- commit `d02bfc4` で直接実装。fixup/amend なし
+- パッチルート（直コミット）で完結しており、PR レビューなし
+
+#### review
+- パッチルートのため PR レビューなし。コードの変更は `modules/verify-patterns.md` への 1 エントリ追加のみ
+
+#### merge
+- クリーンな直コミット。コンフリクトなし
+
+#### verify
+- grep verify コマンドが正確に機能。36 行目にマッチ（PASS）
+- 既にチェック済みの条件だったが、再検証でも同じ PASS 結果（idempotent）
+
+### Improvement Proposals
+- N/A
