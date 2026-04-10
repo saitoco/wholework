@@ -35,10 +35,10 @@ Skills that Read this file should evaluate each post-merge condition against the
 
 ### Constraint: Required Rule When Using auto Type
 
-When assigning `<!-- verify-type: auto -->` to a condition, a `<!-- verify: ... -->` hint **must be present**.
+When assigning `<!-- verify-type: auto -->` to a condition, a `<!-- verify: ... -->` verify command **must be present**.
 
-- `verify-type: auto` is assigned only to conditions that have a hint (a `auto` without a hint is equivalent to skipping verification, which contradicts user expectations)
-- If a hint cannot be provided, classify as `opportunistic` or `manual` instead
+- `verify-type: auto` is assigned only to conditions that have a verify command (a `auto` without a verify command is equivalent to skipping verification, which contradicts user expectations)
+- If a verify command cannot be provided, classify as `opportunistic` or `manual` instead
 
 ## Output
 

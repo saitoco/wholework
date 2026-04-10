@@ -269,7 +269,7 @@ def validate_skill(file_path: Path) -> Tuple[List[str], List[str]]:
     command_hint_errors = validate_command_hint_paths(body)
     errors.extend(command_hint_errors)
 
-    # Validate verify hint syntax (command name and argument count)
+    # Validate verify command syntax (command name and argument count)
     verify_hint_errors = validate_verify_hints(body)
     errors.extend(verify_hint_errors)
 
@@ -509,7 +509,7 @@ KNOWN_VERIFY_COMMANDS: Dict[str, Tuple[int, int]] = {
 
 def _parse_verify_args(args_str: str) -> List[str]:
     """
-    Parses the argument string of a verify hint and returns a list of arguments.
+    Parses the argument string of a verify command and returns a list of arguments.
     Handles double-quoted arguments with escape sequences.
 
     Raises:
@@ -589,7 +589,7 @@ def validate_verify_hints(body: str) -> List[str]:
 
         # Command name is empty (e.g. <!-- verify: -->)
         if not cmd:
-            errors.append(f"body line {line_num}: verify hint has no command name.")
+            errors.append(f"body line {line_num}: verify command has no command name.")
             continue
 
         # Skip template placeholders ({...} format)

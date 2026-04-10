@@ -477,9 +477,9 @@ EOF
     [[ "$output" == *"Phase-only"* ]]
 }
 
-# --- verify hint syntax validation ---
+# --- verify command syntax validation ---
 
-@test "success: valid verify hints pass validation" {
+@test "success: valid verify commands pass validation" {
     mkdir -p "$PROJECT_ROOT/skills/myskill"
     cat > "$PROJECT_ROOT/skills/myskill/SKILL.md" <<'EOF'
 ---
@@ -519,7 +519,7 @@ EOF
     [[ "$output" == *"unknown_cmd"* ]]
 }
 
-@test "error: verify hint with too few args is rejected" {
+@test "error: verify command with too few args is rejected" {
     mkdir -p "$PROJECT_ROOT/skills/myskill"
     cat > "$PROJECT_ROOT/skills/myskill/SKILL.md" <<'EOF'
 ---
@@ -538,7 +538,7 @@ EOF
     [[ "$output" == *"file_contains"* ]]
 }
 
-@test "error: verify hint with too many args is rejected" {
+@test "error: verify command with too many args is rejected" {
     mkdir -p "$PROJECT_ROOT/skills/myskill"
     cat > "$PROJECT_ROOT/skills/myskill/SKILL.md" <<'EOF'
 ---
@@ -557,7 +557,7 @@ EOF
     [[ "$output" == *"file_exists"* ]]
 }
 
-@test "error: verify hint with unterminated quote is rejected" {
+@test "error: verify command with unterminated quote is rejected" {
     mkdir -p "$PROJECT_ROOT/skills/myskill-bad-quote"
     cat > "$PROJECT_ROOT/skills/myskill-bad-quote/SKILL.md" <<'EOF'
 ---
@@ -575,7 +575,7 @@ EOF
     [[ "$output" == *"構文エラー"* ]]
 }
 
-@test "success: verify hint with --when modifier passes validation" {
+@test "success: verify command with --when modifier passes validation" {
     mkdir -p "$PROJECT_ROOT/skills/myskill"
     cat > "$PROJECT_ROOT/skills/myskill/SKILL.md" <<'EOF'
 ---

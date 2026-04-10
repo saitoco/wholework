@@ -293,9 +293,9 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-patterns.md` and follow the "Processi
 
 If Notes contain implementation direction statements, verify they do not contradict the corresponding acceptance checks. Correct discrepancies immediately.
 
-**Section rename — update verify hints simultaneously:**
+**Section rename — update verify commands simultaneously:**
 
-If implementation steps include section renaming (e.g., `## Implementation Steps` → `## Changes`), update any `section_contains`/`section_not_contains` hints referencing that section name at the same time.
+If implementation steps include section renaming (e.g., `## Implementation Steps` → `## Changes`), update any `section_contains`/`section_not_contains` verify commands referencing that section name at the same time.
 
 **verify-type tag check:**
 
