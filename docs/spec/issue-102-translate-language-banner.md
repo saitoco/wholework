@@ -30,6 +30,17 @@
 ### Post-merge
 - `doc translate ja` を実行し、ソースドキュメントと翻訳ドキュメントの両方に言語切り替えバナーが追加されることを確認
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- Step 6 の `git add` コマンドについて Spec の実装ステップ 4 に「git add にソースファイルを追加」と記述されていたが、具体的なコマンド形式が未定義だった。`README.md` と `docs/` をまとめて add する形式（`git add README.md README.{lang}.md docs/`）を採用し、翻訳ドキュメントとソースドキュメントの両方をカバーした。
+
+### Rework
+- N/A
+
 ## Notes
 
 - バナーの相対パス計算はファイル位置に依存する:
