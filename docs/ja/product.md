@@ -72,7 +72,7 @@ Wholework が機能するために必要なハード依存関係:
 ## 今後の方向性
 
 - **`.wholework.yml` 設定カスタマイズ**: Spec の保存先（デフォルト: `docs/spec/`）などのパスをプロジェクトごとに設定可能にする。既存のディレクトリ構造を持つプロジェクトで Wholework を導入する際の摩擦を軽減。
-- **ワークフロー最適化（3 軸）**: Agent Teams（並列エージェント連携）、Model selection（Skill/フェーズごとの異なるモデル）、Adaptive Thinking（動的な推論深度制御）を組み合わせ、ワークフローの品質・速度・コストを最適化。
+- **ワークフロー最適化（3 軸）**: Model selection（Skill/フェーズごとの異なるモデル）、Adaptive Thinking（`--effort` による動的な推論深度制御）、Advisor strategy（Opus advisor によるコスト効率的な品質向上）を組み合わせ、ワークフローの品質・速度・コストを最適化。現在の phase 別マトリクスは `docs/tech.md` Architecture Decisions（`ssot_for: model-effort-matrix`）を参照。
 - **コンテキスト分離戦略（コンテキスト劣化対策）**: Spec がフェーズ間のメモリとして機能するため、各 Skill は fork コンテキストでフェーズ間の情報を失わずに実行可能。実行フェーズの Skill を積極的に fork コンテキストで実行することで、コンテキスト劣化を防止。
   - **共有コンテキスト**（`/issue` + `/spec`）: 要件と設計を洗練するインタラクティブフェーズ。暗黙のコンテキスト（却下されたオプションの理由等）に価値があるため、コンテキストを共有。
   - **fork コンテキスト**（`/code`、`/review`、`/merge`、`/verify`）: 実行フェーズ。それぞれが Spec から必要な情報を読み取り、独立して実行。4 つの Skill すべてが fork コンテキストで動作。

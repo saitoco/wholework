@@ -80,7 +80,7 @@ This design minimizes setup cost and allows teams to adopt individual workflow p
 ## Future Direction
 
 - **`.wholework.yml` configuration customization**: Allow per-project configuration of paths such as the Spec storage location (default: `docs/spec/`). This reduces friction when adopting Wholework in projects with existing directory structures.
-- **Workflow optimization (3 axes)**: Combine Agent Teams (parallel agent coordination), Model selection (different models per skill/phase), and Adaptive Thinking (dynamic reasoning depth control) to optimize workflow quality, speed, and cost.
+- **Workflow optimization (3 axes)**: Combine Model selection (different models per skill/phase), Adaptive Thinking (`--effort` for dynamic reasoning depth control), and Advisor strategy (Opus advisor for cost-efficient quality) to optimize workflow quality, speed, and cost. See `docs/tech.md` Architecture Decisions for the current phase-specific matrix (`ssot_for: model-effort-matrix`).
 - **Context isolation strategy (countering context rot)**: Because Spec acts as cross-phase memory, each Skill can run in a fork context without losing information between phases. Actively fork-contexting execution-phase Skills prevents context rot.
   - **Shared context** (`/issue` + `/spec`): the interactive phases where requirements and design are refined. Implicit context (reasons for rejected options, etc.) has value, so context is shared.
   - **Fork context** (`/code`, `/review`, `/merge`, `/verify`): execution phases. Each reads the required information from the Spec and runs independently. All four Skills operate in fork context.
