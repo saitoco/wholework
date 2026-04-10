@@ -46,6 +46,7 @@ fi
 
 echo "=== run-code.sh: Starting /code for issue #${ISSUE_NUMBER} ==="
 echo "Model: sonnet"
+echo "Effort: high"
 echo "Permissions: skip (autonomous mode)"
 if [[ "$ROUTE_FLAG" == "--patch" ]]; then
   echo "Route: patch (${BASE_BRANCH:-main} direct commit)"
@@ -104,6 +105,7 @@ set +e
 ANTHROPIC_MODEL=claude-sonnet-4-6 \
   env -u CLAUDECODE claude -p "$PROMPT" \
     --model claude-sonnet-4-6 \
+    --effort high \
     --dangerously-skip-permissions
 EXIT_CODE=$?
 set -e

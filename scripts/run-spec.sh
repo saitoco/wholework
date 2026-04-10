@@ -30,6 +30,7 @@ fi
 
 echo "=== run-spec.sh: Starting /spec for issue #${ISSUE_NUMBER} ==="
 echo "Model: ${MODEL}"
+echo "Effort: max"
 echo "Permissions: skip (autonomous mode)"
 echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
@@ -61,6 +62,7 @@ set +e
 ANTHROPIC_MODEL="${MODEL}" \
   env -u CLAUDECODE claude -p "$PROMPT" \
     --model "${MODEL}" \
+    --effort max \
     --dangerously-skip-permissions
 EXIT_CODE=$?
 set -e
