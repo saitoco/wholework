@@ -108,3 +108,17 @@
 - `grep "受入条件" "docs/product.md"` は「受入条件項目」も部分一致するため、Acceptance criteria の日本語訳「受入条件」が存在すれば必ず PASS する
 - `docs/ja/product.md` のソート順は英語版の順序に合わせる（日本語ファイルのアルファベットソート検証は acceptance check に含まれていないが、一貫性のため揃える）
 - Scope Declaration（Issue 本文より）: コードベース内の用語置換は含まない（後続 Issue #94 で対応）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
