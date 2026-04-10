@@ -46,3 +46,14 @@
 - Missing term 検出はAI判断に依拠するため、閾値（3ファイル以上）は誤検知抑制の目安。一般的な英単語（"step", "file", "skill" 等）は除外対象とする
 - 両チェックとも drift report への追加のみ行い、自動修正は行わない（既存の Narrative Semantic Drift Check と同方針）
 - `section_contains` が `**Narrative Semantic Drift Check (--deep only):**`（bold 形式の見出し）を section 境界として認識できるかは verify 実行時に確認する
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- 2つの Spec ファイル（`issue-101-doc-sync-terms-check.md` と `issue-101-terms-consistency-check.md`）が存在したが、両者は同じ要件を記述しており内容は一致していた。`doc-sync-terms-check.md` をメインとして採用した
+
+### Rework
+- N/A
