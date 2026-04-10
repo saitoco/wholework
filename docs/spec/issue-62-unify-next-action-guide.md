@@ -188,6 +188,21 @@
 - **モジュール標準構造**: 新規モジュール `next-action-guide.md` は `worktree-lifecycle.md` などの 4 セクション（Purpose / Input / Processing Steps / Output）を踏襲する。`docs/tech.md` の Coding Conventions「新規コンポーネントの入力インターフェース」に準拠。
 - **Read 指示の書式**: 抽出されたモジュール参照は `read ${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md and follow the "Processing Steps" section` 形式で記述する（#716 のパターン、tech.md 準拠）。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。Spec の Implementation Steps に記載された順序・内容通りに実装完了。Step 1（モジュール作成）→ Step 2〜9（8 skill 更新、並列実施）→ Step 10（docs/structure.md 更新）の順序を維持。
+
+### Design Gaps/Ambiguities
+
+- `skills/review/SKILL.md` の早期終了（XS/S patch route）メッセージ箇所は Spec で「108〜111 行目」と記載されていたが、実際は 104〜111 行目が該当ブロック。行番号のズレは軽微で内容は一致しており問題なし。
+- Spec で「既存の `"need to run a review explicitly"` / `"main branch protection"` 言及はそのまま保持」と指示されていた通り、既存文言を削除せずに `next-action-guide.md` 参照指示を後ろに追加する形で実装した。
+
+### Rework
+
+- なし。各 SKILL.md の Completion Report セクションを 1 回で確定できた。バリデーションも 0 errors で一発通過。
+
 ## spec retrospective
 
 - **Spec 作成の所感**: 8 skill の Completion Report セクションを Grep で一括特定し、各セクションの出力パターンを比較することで、統一モジュールに必要な入力インターフェース（SKILL_NAME / RESULT / ISSUE_NUMBER / PR_NUMBER / SIZE / ROUTE / BLOCKED_BY_OPEN）を抽出できた。`/spec` Step 18 の ROUTE ベース 2 択ロジックが既存の参照実装として機能しており、そこから一般化する形で設計できた。
