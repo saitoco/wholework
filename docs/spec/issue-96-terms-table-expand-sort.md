@@ -122,3 +122,29 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec に18用語の最終ソート順が明示されており、実装と完全に一致した。Python ソートチェックコマンドを acceptance check に組み込んだことで、機械的な検証が可能になった点は特に有効だった。
+
+#### design
+- Issue Retrospective・Spec Retrospective セクションは存在しないが、Spec の実装ステップが変更ファイル単位で明確に記述されており、設計通りの実装が行われた。
+
+#### code
+- Code Retrospective はすべて N/A（手戻りなし）。Patch route による直接コミットで、実装の複雑度が低くリスクも少ない変更であったため適切な経路選択だった。
+
+#### review
+- Patch route のため PR レビューなし。この規模の変更（ドキュメントのみ）であれば Patch route は妥当。
+
+#### merge
+- `d418e43` で直接 main にコミット（closes #96）。コンフリクトなし。
+
+#### verify
+- 全15件が初回検証で PASS。acceptance check の設計が精緻で（section_contains、grep、command の使い分け）、自動検証カバレッジが100%だった。Python コマンドによるソート検証は再現性が高く有用。
+
+### Improvement Proposals
+
+- N/A
