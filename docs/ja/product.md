@@ -152,7 +152,7 @@ Describe success metrics here. -->
 | Skill | Claude Code の拡張機能。処理ステップは `skills/<n>/SKILL.md` に記述され、`/<n>` で呼び出される | Claude Code |
 | Spec | `/spec` が作成する実装計画ドキュメント。`docs/spec/issue-N-short-title.md` に保存される。**各 Skill 実行後の retrospective（実行ログ）も記録される** — Skill 実行前に Spec を参照すると、過去の実行履歴を確認できる | 開発ワークフロー |
 | `/auto` | spec→code→review→merge→verify を `claude -p` 経由で非対話的に連鎖させるオーケストレータ Skill。`phase/*` ラベルがない場合は Issue の triage から自動開始、`phase/ready` がない場合は `/spec` を自動実行。`--batch N` はバックログから XS/S の Issue を N 件処理、XL Issue は独立サブ Issue を並列実行（worktree 分離）。`--base {branch}` はリリースブランチを対象にする | 開発ワークフロー |
-| 受入チェック | `<!-- verify: ... -->` 形式の HTML コメント。受入条件に機械的に検証可能な方法を付与する。旧称「verification hint」 | /issue、/verify |
+| verify command | `<!-- verify: ... -->` 形式の HTML コメント。受入条件に機械的に検証可能な方法を付与する。旧称「verification hint / Acceptance check / 受入チェック」 | /issue、/verify |
 
 ### Internal Terms（開発者向け）
 

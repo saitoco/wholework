@@ -156,7 +156,7 @@ Key differences from other tools:
 | Skill | A Claude Code extension. Processing steps are described in `skills/<n>/SKILL.md` and invoked with `/<n>` | Claude Code | スキル |
 | Spec | An implementation-plan document created by `/spec`, stored at `docs/spec/issue-N-short-title.md`. **Also records retrospectives (execution logs) after each Skill runs** — reviewing the Spec before running a Skill shows the history of prior executions | Development workflow | Spec |
 | `/auto` | Orchestrator Skill that chains spec→code→review→merge→verify non-interactively via `claude -p`. Auto-starts from issue triage when no `phase/*` label is set; auto-runs `/spec` when `phase/ready` is absent. `--batch N` processes N XS/S Issues from the backlog; XL Issues execute independent sub-issues in parallel (worktree isolation). `--base {branch}` targets a release branch | Development workflow | `/auto` |
-| Acceptance check | An HTML comment in `<!-- verify: ... -->` format. Attaches a machine-verifiable method to an acceptance condition. Formerly called "verification hint" | /issue, /verify | 受入チェック |
+| verify command | An HTML comment in `<!-- verify: ... -->` format. Attaches a machine-verifiable method to an acceptance condition. Formerly called "verification hint / Acceptance check" | /issue, /verify | verify command |
 | Steering Documents | Collective name for the foundation documents (product/tech/structure). Stored under `docs/` | /doc Skill | Steering Documents |
 | Project Documents | Workflow and operational procedure documents for the project. Stored under `docs/` | /doc Skill | Project Documents |
 | Fork context | A Skill execution mode that does not affect the main conversation | Claude Code | fork コンテキスト |

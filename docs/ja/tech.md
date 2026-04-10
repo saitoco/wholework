@@ -59,7 +59,7 @@
 | 半角 `!`（SKILL.md 本文、コードフェンス外および inline code 外） | Claude Code の Bash パーミッションチェッカが zsh の履歴展開として誤検知し、Skill 実行時にエラーが発生する | 全角「！」または表現の書き換え |
 | Design file | 用語統一（"Spec" に統一） | "Spec" |
 | Issue Spec | 用語簡素化（"Spec" に変更） | "Spec" |
-| Verify hint | 用語再設計（"verify command" に変更） | "verify command" |
+| Verify hint | 用語再設計 (changed to "verify command") | "verify command" |
 | Dispatch | 用語再設計（"autonomous execution" に変更） | "autonomous execution" |
 
 ## 用語移行のスコープルール
