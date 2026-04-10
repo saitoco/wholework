@@ -72,7 +72,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh $NUMBER --dry-run
 - Exit code 2: open blockers present → `HAS_OPEN_BLOCKING=true`
 - Exit code 1: error → warn and set `HAS_OPEN_BLOCKING=false`
 
-**Retain the result**: if any open blocked-by Issues exist (exit code 2), set `HAS_OPEN_BLOCKING=true` and retain through Step 18.
+**Retain the result**: if any open blocked-by Issues exist (exit code 2), set `HAS_OPEN_BLOCKING=true` and retain through Step 19.
 
 ### Step 5: Reference Steering Documents (if present)
 
@@ -485,16 +485,20 @@ Before committing the Spec, verify internal consistency:
   - If mismatched, auto-update Issue body (use Spec's `## Verification > Pre-merge` as source of truth)
 - **Post-merge skill name alignment**: if `## Verification > Post-merge` mentions a target skill name (`/foo`), verify it matches the target skill in the Issue purpose
 
-### Step 11: Commit Spec
+### Step 11: Title Drift Check
 
-Commit the Spec (push is done in Step 13 Worktree Exit):
+Read `${CLAUDE_PLUGIN_ROOT}/modules/title-normalizer.md` and follow the "Title Drift Check" section. Detect semantic drift between the current title and the updated Issue body (drift detection source: Issue body only — do not include Spec content). Update the title if drift is found.
+
+### Step 12: Commit Spec
+
+Commit the Spec (push is done in Step 14 Worktree Exit):
 
 ```bash
 git add docs/spec/issue-$NUMBER-short-title.md
 git commit -m "Add design for issue #$NUMBER"
 ```
 
-### Step 12: Spec Retrospective
+### Step 13: Spec Retrospective
 
 **SPEC_DEPTH=full only. Skip if SPEC_DEPTH=light.**
 
@@ -539,13 +543,13 @@ Reflect on the specification phase and present improvement suggestions to the us
 1. Write "Nothing to note" in each section if nothing to record
 2. If issue retrospective found, transfer it first (Edit tool to prepend to Spec)
 3. Edit tool to append spec retrospective to Spec end
-4. Additional commit (push in Step 13 Worktree Exit):
+4. Additional commit (push in Step 14 Worktree Exit):
    ```bash
    git add docs/spec/issue-$NUMBER-short-title.md
    git commit -m "Add retrospective notes for issue #$NUMBER"
    ```
 
-### Step 13: Worktree Exit (merge-to-main)
+### Step 14: Worktree Exit (merge-to-main)
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Exit: merge-to-main" section.
 
@@ -553,7 +557,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Exit:
 - `ENTERED_WORKTREE=true`: ExitWorktree("keep") → merge → push → cleanup
 - `ENTERED_WORKTREE=false`: run `git push origin main` directly
 
-### Step 14: Issue Comment
+### Step 15: Issue Comment
 
 Post a design summary comment to the target Issue.
 
@@ -574,17 +578,17 @@ Template:
 - `### Implementation Steps` — numbered list with dependencies and acceptance criteria mapping
 - Spec link: `[issue-$NUMBER-short-title.md](https://github.com/{REPO}/blob/main/docs/spec/issue-$NUMBER-short-title.md)`
 
-### Step 15: Label Transition (design complete)
+### Step 16: Label Transition (design complete)
 
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER ready
 ```
 
-### Step 16: Opportunistic Verification
+### Step 17: Opportunistic Verification
 
 If `opportunistic-verify: true` is set in `.wholework.yml`, read `${CLAUDE_PLUGIN_ROOT}/modules/opportunistic-verify.md` and follow "Processing Steps". Skill name: `/spec`. Skip if not set.
 
-### Step 17: Size-to-Workflow Determination (for Step 18)
+### Step 18: Size-to-Workflow Determination (for Step 19)
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` and re-evaluate Size using the 2-axis method.
 
@@ -604,7 +608,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` and re-evaluate Size
    - `M` or `L` → `pr`
    - `XL` → `sub_issue`
 
-### Step 18: Completion Message
+### Step 19: Completion Message
 
 Output "Design complete. Spec created, committed, pushed, and Issue comment posted." as a fixed prefix.
 
@@ -622,5 +626,5 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 
 - This skill covers Spec creation, commit, push, and Issue comment only
 - Implementation is not performed here
-- After Step 11 commit → Step 12 retrospective → Step 13 Worktree Exit+push → Step 14 Issue comment → Step 16 opportunistic verification → Step 18 completion message
+- After Step 12 commit → Step 13 retrospective → Step 14 Worktree Exit+push → Step 15 Issue comment → Step 17 opportunistic verification → Step 19 completion message
 - Always use the Write tool for temp files. Shell redirects trigger confirmation prompts
