@@ -154,3 +154,31 @@ Step 2 分岐の結果を受けて Phase B を実装:
 - **install.sh:29 — sed delimiter conflict (CONSIDER)**: コメント追記のみ。実装変更は POSIX システムの `$HOME` 制約から不要
 - **docs/structure.md:164 — git pull note (CONSIDER)**: 対応済み。`after git pull whenever the template has changed` を追記
 - **README.md — 直接言及なし (CONSIDER)**: スキップ。既存のアンカーリンク経由で十分と判断
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- conditional spec パターン（Phase A probe → Phase B 実装の 2 段階構成）は `/spec` skill の設計想定外であり、Spec 作成時に「Step 1 完了後にユーザー介入が必要」という制約を明示的に記述する必要があった。issue retrospective の hot-reload 検証知見が Spec 設計に活かされた点は良かった
+
+#### design
+- 最終的に Phase B（install.sh template 展開）で解決したが、Phase A（`~/` 展開 probe）を経由した点で 2 往復（#80 revert → #83 probe → revert → #85 Phase B）の試行錯誤が発生した。#80 の最初のテストが shell operators を含む不完全なテストだったことが根本原因。事前に probe テストの条件（simple invocation のみ使用）を明確化しておけば、#80 → #85 の 1 往復で完了した可能性がある
+
+#### code
+- Phase B の実装は 5 ファイル変更、install.sh の sed + atomic write パターンとして clean に完了
+- probe PR (#83) を pr route で作成した判断（Code Retrospective 記録済み）については、結果的に probe commit にはpatch route の方が軽量だったが、CI 検証が走った点ではメリットもあった
+
+#### review
+- review-light が install.sh の atomic write パターン不備（SHOULD）を検出できた点は有効
+- 4 件中 3 件（SHOULD×1 + CONSIDER×2）が対応され、レビュー指摘の有効性は高い
+
+#### merge
+- PR #83（probe）と #85（Phase B）の 2 回のマージはいずれもクリーン（コンフリクトなし、CI 成功）
+
+#### verify
+- Pre-merge 4 条件すべて PASS。`file_not_contains`、`file_exists`、`file_contains` の組み合わせで template + install.sh + .gitignore の 3 点を機械的に検証できた
+- Post-merge の manual 条件 2 件のうち、条件 2（git pull + install.sh 再実行）は本セッション内で実地検証済み。条件 1（異なるホームディレクトリ）は別ユーザ環境が必要なため未検証だが、install.sh の sed 置換ロジック自体は `$HOME` 変数で汎用化されており、論理的には問題ない
+
+### Improvement Proposals
+- **probe テスト条件の事前明確化**: Permission pattern の動作検証を伴う Issue では、テスト条件（shell operators の有無、settings.local.json の事前承認状態、セッション再起動要否）を acceptance criteria に明記するか、Spec の Notes に「検証プロトコル」として記述する運用を検討。今回の 2 往復は不完全なテストに起因した
