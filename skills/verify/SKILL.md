@@ -420,6 +420,22 @@ grep -r "{keyword}" {target file or directory}
 - If Issue creation fails, output error log to stderr, skip, and continue verify (does not affect exit code)
 - Output created Issue number to terminal
 
+**Assign `retro/verify` label (best-effort):**
+
+After each Issue is created successfully, assign the `retro/verify` label. This applies to both Code improvement and Skill infrastructure improvement categories.
+
+1. Ensure the `retro/verify` label exists (run once before assigning to Issues):
+   ```bash
+   gh label list --limit 100 | grep -q "retro/verify" || gh label create "retro/verify" --color "#c5def5" --description "Auto-created from /verify retrospective improvement proposal"
+   ```
+   If `gh label create` fails, output a warning and continue (does not affect Issue creation).
+
+2. Assign the label to the created Issue:
+   ```bash
+   gh issue edit {issue_number} --add-label "retro/verify"
+   ```
+   If `gh issue edit` fails, output a warning and continue (does not affect the exit code).
+
 **Completion report (always use this format):**
 
 - All conditions PASS: "Acceptance test complete. Issue #$NUMBER is closed."
