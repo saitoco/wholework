@@ -153,12 +153,21 @@ Key differences from other tools:
 
 | Term | Definition | Context | 日本語訳 |
 |------|------------|---------|---------|
-| Skill | A Claude Code extension. Processing steps are described in `skills/<n>/SKILL.md` and invoked with `/<n>` | Claude Code | スキル |
-| Spec | An implementation-plan document created by `/spec`, stored at `docs/spec/issue-N-short-title.md`. **Also records retrospectives (execution logs) after each Skill runs** — reviewing the Spec before running a Skill shows the history of prior executions | Development workflow | Spec |
 | `/auto` | Orchestrator Skill that chains spec→code→review→merge→verify non-interactively via `claude -p`. Auto-starts from issue triage when no `phase/*` label is set; auto-runs `/spec` when `phase/ready` is absent. `--batch N` processes N XS/S Issues from the backlog; XL Issues execute independent sub-issues in parallel (worktree isolation). `--base {branch}` targets a release branch | Development workflow | `/auto` |
-| verify command | An HTML comment in `<!-- verify: ... -->` format. Attaches a machine-verifiable method to an acceptance condition. Formerly called "verification hint / Acceptance check" | /issue, /verify | verify command |
-| Steering Documents | Collective name for the foundation documents (product/tech/structure). Stored under `docs/` | /doc Skill | Steering Documents |
-| Project Documents | Workflow and operational procedure documents for the project. Stored under `docs/` | /doc Skill | Project Documents |
+| Acceptance condition | A single verifiable requirement item within an Issue's acceptance criteria. Appears as one checklist row; typically paired with a verify command | /issue, /verify | 受入条件項目 |
+| Acceptance criteria | The complete set of acceptance conditions for an Issue, defined under `## Acceptance Criteria` in the Issue body. L1 collection of L2 individual acceptance conditions | /issue, /verify | 受入条件 |
+| Drift | Semantic divergence between documented specifications (Steering Documents or Specs) and actual code implementation. Detected by `/audit drift` | /audit Skill | ドリフト |
 | Fork context | A Skill execution mode that does not affect the main conversation | Claude Code | fork コンテキスト |
+| Patch route | Workflow path for XS/S-sized Issues; commits directly to the main branch without creating a Pull Request | Development workflow | パッチ経路 |
+| Phase label | A `phase/*` GitHub label (e.g., `phase/issue`, `phase/spec`, `phase/ready`, `phase/code`) indicating the current workflow stage of an Issue | Development workflow | フェーズラベル |
+| PR route | Workflow path for M/L-sized Issues; creates a Pull Request for code review before merging | Development workflow | PR 経路 |
+| Project Documents | Workflow and operational procedure documents for the project. Stored under `docs/` | /doc Skill | Project Documents |
+| Retrospective | A section appended to the Spec after each Skill run, recording observations, decisions, and uncertainty resolutions from that phase. Accumulates execution history across workflow phases | Development workflow | レトロスペクティブ |
 | Shared module | A procedure document stored in `modules/*.md` and referenced by multiple Skills via the "Read and follow" pattern. Formerly called "shared procedure document" | Skill development | 共有モジュール |
+| Size | A complexity/effort estimate (XS/S/M/L/XL) assigned during triage. Determines the workflow route (patch vs. PR) and Spec depth | /triage Skill | サイズ |
+| Skill | A Claude Code extension. Processing steps are described in `skills/<n>/SKILL.md` and invoked with `/<n>` | Claude Code | スキル |
+| Spec | An implementation-plan document created by `/spec`, stored at `docs/spec/issue-N-short-title.md`. **Also accumulates Retrospectives after each Skill run, serving as cross-phase memory for the workflow** | Development workflow | Spec |
+| Steering Documents | Collective name for the foundation documents (product/tech/structure). Stored under `docs/` | /doc Skill | Steering Documents |
 | Sub-agent | A sub-agent spawned via the Task tool. Returns only the result to the main agent | Claude Code | サブエージェント |
+| Sub-issue | A child Issue within an XL Issue decomposition. `/auto` reads the `blockedBy` dependency graph and executes independent sub-issues in parallel (worktree isolation), sequencing dependents after their blockers complete | Development workflow | サブ Issue |
+| verify command | An HTML comment in `<!-- verify: ... -->` format. Attaches a machine-verifiable method to an acceptance condition. Formerly called "verification hint / Acceptance check" | /issue, /verify | verify command |

@@ -143,23 +143,23 @@ Describe success metrics here. -->
 
 ## Terms
 
-<!-- public: terms exposed to end users / internal: implementation terms for developers -->
-
-### Public Terms（ユーザ向け）
-
 | 用語 | 定義 | 文脈 |
 |------|------|------|
-| Skill | Claude Code の拡張機能。処理ステップは `skills/<n>/SKILL.md` に記述され、`/<n>` で呼び出される | Claude Code |
-| Spec | `/spec` が作成する実装計画ドキュメント。`docs/spec/issue-N-short-title.md` に保存される。**各 Skill 実行後の retrospective（実行ログ）も記録される** — Skill 実行前に Spec を参照すると、過去の実行履歴を確認できる | 開発ワークフロー |
 | `/auto` | spec→code→review→merge→verify を `claude -p` 経由で非対話的に連鎖させるオーケストレータ Skill。`phase/*` ラベルがない場合は Issue の triage から自動開始、`phase/ready` がない場合は `/spec` を自動実行。`--batch N` はバックログから XS/S の Issue を N 件処理、XL Issue は独立サブ Issue を並列実行（worktree 分離）。`--base {branch}` はリリースブランチを対象にする | 開発ワークフロー |
-| verify command | `<!-- verify: ... -->` 形式の HTML コメント。受入条件に機械的に検証可能な方法を付与する。旧称「verification hint / Acceptance check / 受入チェック」 | /issue、/verify |
-
-### Internal Terms（開発者向け）
-
-| 用語 | 定義 | 文脈 |
-|------|------|------|
-| Steering Documents | 基盤ドキュメント（product/tech/structure）の総称。`docs/` 配下に保存される | /doc Skill |
-| Project Documents | プロジェクトのワークフローや運用手順のドキュメント。`docs/` 配下に保存される | /doc Skill |
+| 受入条件項目（Acceptance condition） | Issue の受入条件のうち、1件の検証可能な要件項目。チェックリストの1行として現れ、verify command と対になることが多い | /issue、/verify |
+| 受入条件（Acceptance criteria） | Issue の受入条件の全体セット。Issue 本文の `## Acceptance Criteria` に定義される。個別の受入条件項目の集合 | /issue、/verify |
+| ドリフト（Drift） | 文書化された仕様（Steering Documents または Spec）と実際のコード実装の間の意味的乖離。`/audit drift` で検出される | /audit Skill |
 | フォークコンテキスト | メイン会話に影響を与えない Skill 実行モード | Claude Code |
+| パッチ経路（Patch route） | XS/S サイズの Issue 向けのワークフロー経路。Pull Request を作成せず main ブランチに直接コミットする | 開発ワークフロー |
+| フェーズラベル（Phase label） | `phase/*` の GitHub ラベル（例: `phase/issue`、`phase/spec`、`phase/ready`、`phase/code`）。Issue の現在のワークフローステージを示す | 開発ワークフロー |
+| PR 経路（PR route） | M/L サイズの Issue 向けのワークフロー経路。マージ前にコードレビューのための Pull Request を作成する | 開発ワークフロー |
+| Project Documents | プロジェクトのワークフローや運用手順のドキュメント。`docs/` 配下に保存される | /doc Skill |
+| レトロスペクティブ（Retrospective） | 各 Skill 実行後に Spec に追記されるセクション。そのフェーズの観察、決定、不確実性解消を記録する。ワークフローの全フェーズにわたる実行履歴を蓄積する | 開発ワークフロー |
 | 共有モジュール | `modules/*.md` に保存される手順ドキュメント。複数の Skill から "Read and follow" パターンで参照される。旧称「共有手順ドキュメント」 | Skill 開発 |
+| サイズ（Size） | トリアージ時に設定される複雑さ・作業量の見積（XS/S/M/L/XL）。ワークフロー経路（patch vs. PR）と Spec の粒度を決定する | /triage Skill |
+| Skill | Claude Code の拡張機能。処理ステップは `skills/<n>/SKILL.md` に記述され、`/<n>` で呼び出される | Claude Code |
+| Spec | `/spec` が作成する実装計画ドキュメント。`docs/spec/issue-N-short-title.md` に保存される。**各 Skill 実行後の Retrospective を蓄積し、ワークフロー全体を貫くクロスフェーズメモリとして機能する** | 開発ワークフロー |
+| Steering Documents | 基盤ドキュメント（product/tech/structure）の総称。`docs/` 配下に保存される | /doc Skill |
 | サブエージェント | Task ツールで起動されるサブエージェント。結果のみをメインエージェントに返す | Claude Code |
+| サブ Issue（Sub-issue） | XL Issue 分割における子 Issue。`/auto` が `blockedBy` 依存グラフを読み取り、独立サブ Issue を並列実行（worktree 分離）、依存先完了後に後続サブ Issue を順次実行する | 開発ワークフロー |
+| verify command | `<!-- verify: ... -->` 形式の HTML コメント。受入条件に機械的に検証可能な方法を付与する。旧称「verification hint / Acceptance check / 受入チェック」 | /issue、/verify |
