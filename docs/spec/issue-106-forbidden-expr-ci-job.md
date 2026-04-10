@@ -49,3 +49,28 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue本文に「Auto-Resolved Ambiguity Points」として5点の曖昧点が整理されており、verify command の BRE/ERE 問題や大文字小文字対応が `/issue` 段階で事前解決されていた。Spec は Issue の判断を引き継ぎ、verify command に `[Ff]orbidden` / `[Aa]cceptance check` を採用した点は適切。
+
+#### design
+- Spec の変更ファイルリスト（`test.yml`, `docs/structure.md`, `docs/ja/structure.md`）と実装コミットの変更ファイルが完全一致。設計と実装の乖離なし。
+
+#### code
+- 実装コミット1件、fixup/amend なし。コード再作業ゼロ。Code Retrospective も偏差・ギャップ・再作業なし（N/A）。
+
+#### review
+- patchルートのため PR レビューなし。Forbidden Expressions チェックが CI に入ったことで、将来の用語統一違反を自動検出できる仕組みが整った。
+
+#### merge
+- mainへの直接コミット（patchルート）。コンフリクトなし、CI も issue-106 自体が追加したジョブを通過。
+
+#### verify
+- 受け入れ条件2件とも `grep` コマンドで即時 PASS。verify command の `[Ff]orbidden` / `[Aa]cceptance check` パターンが実装内容と正確に対応しており、false negative/positive なし。
+
+### Improvement Proposals
+- N/A
