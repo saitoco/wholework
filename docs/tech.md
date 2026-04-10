@@ -65,14 +65,10 @@ ssot_for:
 | Expression | Reason | Alternative |
 |------------|--------|-------------|
 | Half-width `!` (in SKILL.md body, outside code fences and inline code) | Claude Code's Bash permission checker misdetects it as zsh history expansion, causing errors at skill execution | Full-width "！" or rephrased expression |
-| Design file | Term unification (unified to "Spec") | "Spec" |
-| Issue Spec | Term simplification (#changed to "Spec") | "Spec" |
-| Verify hint | Term redesign (changed to "verify command") | "verify command" |
-| Dispatch | Term redesign (changed to "autonomous execution") | "autonomous execution" |
 
 ## Terminology Migration Scope Rule
 
-When creating an Issue that adds deprecated terms to Forbidden Expressions (gradual terminology migration), explicitly state whether replacing deprecated terms within the same file is included in scope.
+When creating an Issue that adds deprecated terms to Terms 'Formerly called' (gradual terminology migration), explicitly state whether replacing deprecated terms within the same file is included in scope.
 
 ### Scope Declaration Template
 

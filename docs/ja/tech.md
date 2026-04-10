@@ -57,14 +57,10 @@
 | 表現 | 理由 | 代替 |
 |------|------|------|
 | 半角 `!`（SKILL.md 本文、コードフェンス外および inline code 外） | Claude Code の Bash パーミッションチェッカが zsh の履歴展開として誤検知し、Skill 実行時にエラーが発生する | 全角「！」または表現の書き換え |
-| Design file | 用語統一（"Spec" に統一） | "Spec" |
-| Issue Spec | 用語簡素化（"Spec" に変更） | "Spec" |
-| Verify hint | 用語再設計 (changed to "verify command") | "verify command" |
-| Dispatch | 用語再設計（"autonomous execution" に変更） | "autonomous execution" |
 
 ## 用語移行のスコープルール
 
-Forbidden Expressions に非推奨用語を追加する Issue（段階的な用語移行）を作成する際は、同一ファイル内の非推奨用語の置換を対象に含むかどうかを明示してください。
+Terms の 'Formerly called' に非推奨用語を追加する Issue（段階的な用語移行）を作成する際は、同一ファイル内の非推奨用語の置換を対象に含むかどうかを明示してください。
 
 ### スコープ宣言テンプレート
 

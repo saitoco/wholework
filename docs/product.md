@@ -153,7 +153,7 @@ Key differences from other tools:
 
 | Term | Definition | Context | 日本語訳 |
 |------|------------|---------|---------|
-| `/auto` | Orchestrator Skill that chains spec→code→review→merge→verify non-interactively via `claude -p`. Auto-starts from issue triage when no `phase/*` label is set; auto-runs `/spec` when `phase/ready` is absent. `--batch N` processes N XS/S Issues from the backlog; XL Issues execute independent sub-issues in parallel (worktree isolation). `--base {branch}` targets a release branch | Development workflow | `/auto` |
+| `/auto` | Orchestrator Skill that chains spec→code→review→merge→verify non-interactively via `claude -p`. Auto-starts from issue triage when no `phase/*` label is set; auto-runs `/spec` when `phase/ready` is absent. `--batch N` processes N XS/S Issues from the backlog; XL Issues execute independent sub-issues in parallel (worktree isolation). `--base {branch}` targets a release branch. Formerly called 'Dispatch' | Development workflow | `/auto` |
 | Acceptance condition | A single verifiable requirement item within an Issue's acceptance criteria. Appears as one checklist row; typically paired with a verify command | /issue, /verify | 受入条件項目 |
 | Acceptance criteria | The complete set of acceptance conditions for an Issue, defined under `## Acceptance Criteria` in the Issue body. L1 collection of L2 individual acceptance conditions | /issue, /verify | 受入条件 |
 | auto-verify | The automated verification process run by `/verify`. Executes verify commands for each acceptance condition, checks off passing conditions, and reopens the Issue on failure | /verify Skill | 自動検証 |
@@ -167,7 +167,7 @@ Key differences from other tools:
 | Shared module | A procedure document stored in `modules/*.md` and referenced by multiple Skills via the "Read and follow" pattern. Formerly called "shared procedure document" | Skill development | 共有モジュール |
 | Size | A complexity/effort estimate (XS/S/M/L/XL) assigned during triage. Determines the workflow route (patch vs. PR) and Spec depth | /triage Skill | サイズ |
 | Skill | A Claude Code extension. Processing steps are described in `skills/<n>/SKILL.md` and invoked with `/<n>` | Claude Code | スキル |
-| Spec | An implementation-plan document created by `/spec`, stored at `docs/spec/issue-N-short-title.md`. **Also accumulates Retrospectives after each Skill run, serving as cross-phase memory for the workflow** | Development workflow | Spec |
+| Spec | An implementation-plan document created by `/spec`, stored at `docs/spec/issue-N-short-title.md`. **Also accumulates Retrospectives after each Skill run, serving as cross-phase memory for the workflow**. Formerly called 'Design file' / 'Issue Spec' | Development workflow | Spec |
 | Steering Documents | Collective name for the foundation documents (product/tech/structure). Stored under `docs/` | /doc Skill | Steering Documents |
 | Sub-agent | A sub-agent spawned via the Task tool. Returns only the result to the main agent | Claude Code | サブエージェント |
 | Sub-issue | A child Issue within an XL Issue decomposition. `/auto` reads the `blockedBy` dependency graph and executes independent sub-issues in parallel (worktree isolation), sequencing dependents after their blockers complete | Development workflow | サブ Issue |
