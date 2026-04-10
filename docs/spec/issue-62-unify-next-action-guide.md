@@ -188,6 +188,21 @@
 - **モジュール標準構造**: 新規モジュール `next-action-guide.md` は `worktree-lifecycle.md` などの 4 セクション（Purpose / Input / Processing Steps / Output）を踏襲する。`docs/tech.md` の Coding Conventions「新規コンポーネントの入力インターフェース」に準拠。
 - **Read 指示の書式**: 抽出されたモジュール参照は `read ${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md and follow the "Processing Steps" section` 形式で記述する（#716 のパターン、tech.md 準拠）。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- `skills/auto/SKILL.md` の Step 6（On Failure）への next-action-guide 参照が初回実装で漏れていた。Spec Implementation Step 9 に「Step 6（On Failure）も同様に `RESULT=fail` で参照」と明記されていたが、Step 5 の `RESULT={success|fail}` で十分と誤判断。レビューフィードバックを受けて同 PR 内で追加修正した。また `skills/review/SKILL.md` 早期終了パスで `PR_NUMBER=$PR_NUMBER`（未定義変数）を `PR_NUMBER=$NUMBER` に修正した。
+
+### Design Gaps/Ambiguities
+
+- `skills/review/SKILL.md` の早期終了（XS/S patch route）メッセージ箇所は Spec で「108〜111 行目」と記載されていたが、実際は 104〜111 行目が該当ブロック。行番号のズレは軽微で内容は一致しており問題なし。
+- Spec で「既存の `"need to run a review explicitly"` / `"main branch protection"` 言及はそのまま保持」と指示されていた通り、既存文言を削除せずに `next-action-guide.md` 参照指示を後ろに追加する形で実装した。
+
+### Rework
+
+- なし。各 SKILL.md の Completion Report セクションを 1 回で確定できた。バリデーションも 0 errors で一発通過。
+
 ## spec retrospective
 
 - **Spec 作成の所感**: 8 skill の Completion Report セクションを Grep で一括特定し、各セクションの出力パターンを比較することで、統一モジュールに必要な入力インターフェース（SKILL_NAME / RESULT / ISSUE_NUMBER / PR_NUMBER / SIZE / ROUTE / BLOCKED_BY_OPEN）を抽出できた。`/spec` Step 18 の ROUTE ベース 2 択ロジックが既存の参照実装として機能しており、そこから一般化する形で設計できた。
@@ -195,3 +210,19 @@
 - **スコープ確定のポイント**: `docs/ja/structure.md` は `/doc translate` で自動生成されるため対象外、`docs/structure.md` の Modules セクションとカウント (22 → 23) のみが更新対象であることを特定した。これにより対象ファイルを 10 件に確定。
 - **想定リスク**: `/verify` および `/auto --batch` での PASS 時の次アクション案内抑制ルールをモジュール側で扱う必要があり、判定テーブルで `RESULT=success AND SKILL_NAME IN (verify, auto-batch)` のケースを明示する必要がある。実装時に見落とすと「何もしない」動作が崩れる。
 - **検証計画**: 16 件の pre-merge acceptance check と 5 件の post-merge acceptance check で、モジュール作成・8 skill 更新・structure.md 同期を網羅。`grep` と `section_contains` で機械的に検証可能にした。
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+- Spec に「Step 6（On Failure）も同様に参照」と明示されていたにもかかわらず、コード実装時に漏れが生じた。`{success|fail}` という曖昧な値を Step 5 に残したことで、実装者が「Step 5 で両方カバーできる」と誤解しやすくなっていた。Spec でフェーズ別に独立した指示をする場合は、ステップ単位で明示的に分けた記述が有効。
+- `$PR_NUMBER` と `$NUMBER` の変数名不一致は横断的変更（8 skill）で起きやすい典型的な誤り。次回の横断修正時は、PRe-existing の変数名を Spec の実装ステップに明記するか、完了後に変数名の一貫性チェックを追加する。
+
+### 繰り返し課題
+
+- 今回は1件のみ（Step 6 漏れ）で同種の繰り返しなし。review-bug×2 エージェントは偽陽性を多く排除し、実際の課題を1件正確に特定できた（HIGH SIGNAL フィルタが適切に機能）。
+
+### 受け入れ条件の検証難易度
+
+- pre-merge 16 件はすべて `file_exists`/`grep`/`section_contains`/`command`(CI fallback) で機械的に検証可能だった。UNCERTAIN が0件で、今後の Issue 設計の参考になる。
+- 検証が難しい post-merge 条件（opportunistic verify）は適切に分離されており、今回のレビューフェーズでの過検証（UNCERTAIN 多発）を防げた。

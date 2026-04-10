@@ -606,58 +606,15 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` and re-evaluate Size
 
 ### Step 18: Completion Message
 
-Output a completion message based on `ROUTE` and blocked-by status:
+Output "Design complete. Spec created, committed, pushed, and Issue comment posted." as a fixed prefix.
 
-**If open blocked-by Issues were detected** (`HAS_OPEN_BLOCKING=true`):
-
-```
-Design complete. Spec created, committed, pushed, and Issue comment posted.
-
-This Issue is blocked. Start implementation after the blocking issue is resolved.
-
-Next actions:
-- After resolving blockers, run `/code $NUMBER` or `/auto $NUMBER`
-```
-
-**No blockers (or all closed):**
-
-- **`ROUTE=patch` (XS/S: patch route recommended):**
-```
-Design complete. Spec created, committed, pushed, and Issue comment posted.
-
-Next actions:
-- `/auto $NUMBER` — autonomous execution (recommended: implementation through verification, patch route)
-- `/code $NUMBER` — patch route (direct commit to main, no PR)
-```
-
-- **`ROUTE=pr` (M: pr route, review=light recommended):**
-```
-Design complete. Spec created, committed, pushed, and Issue comment posted.
-
-Next actions:
-- `/auto $NUMBER` — autonomous execution (recommended: implementation through merge and verification, pr route, review=light)
-- `/code $NUMBER` — branch + PR implementation
-```
-
-- **`ROUTE=pr` (L: pr route, review=full recommended):**
-```
-Design complete. Spec created, committed, pushed, and Issue comment posted.
-
-Next actions:
-- `/auto $NUMBER` — autonomous execution (recommended: implementation through merge and verification, pr route, review=full)
-- `/code $NUMBER` — branch + PR implementation
-```
-
-- **`ROUTE=sub_issue` (XL: sub-issue splitting required):**
-```
-Design complete. Spec created.
-
-Size XL change — sub-issue splitting is recommended.
-
-Next actions:
-- `/issue $NUMBER` — consider sub-issue splitting (recommended)
-- After splitting, run `/auto $NUMBER` or `/code $NUMBER` for each sub-issue
-```
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
+- `SKILL_NAME=spec`
+- `ISSUE_NUMBER=$NUMBER`
+- `ROUTE=$ROUTE`
+- `SIZE={fetched size}`
+- `RESULT=success`
+- `BLOCKED_BY_OPEN=$HAS_OPEN_BLOCKING`
 
 ---
 

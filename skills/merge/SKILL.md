@@ -200,15 +200,17 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Exit:
 
 ## Completion Report
 
-Extract the related Issue number from the PR body and report in the following format.
+Extract the related Issue number from the PR body.
 
 **Issue number extraction steps:**
 1. Run `gh pr view "$NUMBER" --json title,body` to get PR info
 2. Search the PR body for `closes #N`, `Related to #N`, or `Issue #N`
 3. If not found, search the PR title for `Issue #N`
 
-**Completion report (always use this format):**
-"Merge complete. Run `/verify {Issue number}` next."
+Output "Merge complete." as a fixed prefix, then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
+- `SKILL_NAME=merge`
+- `ISSUE_NUMBER=$ISSUE_NUMBER`
+- `RESULT=success`
 
 ## Notes
 

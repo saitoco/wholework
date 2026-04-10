@@ -441,6 +441,11 @@ After each Issue is created successfully, assign the `retro/verify` label. This 
 - All conditions PASS: "Acceptance test complete. Issue #$NUMBER is closed."
 - Partial PASS: "Acceptance test found unchecked conditions. Issue #$NUMBER has been reopened."
 
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
+- `SKILL_NAME=verify`
+- `ISSUE_NUMBER=$NUMBER`
+- `RESULT={success if PASS, fail if partial PASS}`
+
 ---
 
 ## Notes
