@@ -84,3 +84,32 @@
 ### Acceptance criteria verification difficulty
 
 Pre-merge 条件3件はすべて `section_contains` / `grep` ヒントが整備されており PASS 判定が容易だった。Post-merge 条件はいずれも `verify-type: opportunistic` で適切にマークされており、UNCERTAIN 対応が不要だった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec は簡潔かつ正確。Issue body の「Auto-Resolved Ambiguity Points」で曖昧さが事前解消されており、Spec 作成時の不確実性が最小化されていた。
+- 受入条件の verify ヒント（`section_contains`、`grep`）が実装変更内容と正確に対応しており、自動検証が容易だった。
+
+#### design
+- 実装と設計の乖離なし。3ファイル（title-normalizer.md、issue/SKILL.md、spec/SKILL.md）への変更がすべて計画通り実施された。
+
+#### code
+- リワークなし。fixup/amend パターンも検出されなかった。実装は設計から逸脱なく完了した。
+
+#### review
+- PR #91 レビューで SHOULD:1、CONSIDER:1 のコメントが検出された（MUST:0）。
+- SHOULD 指摘: `modules/title-normalizer.md` の `## Output` セクション（呼び出し元が `gh issue edit` を実行する設計前提）と Title Drift Check サブセクション（モジュール内部で直接実行）が混在し責任境界が不明瞭。今後の改善候補として Spec に記録済み。
+- レビューは MUST 問題を発見せず、マージ判断は適切だった。
+
+#### merge
+- クリーンなマージ。コンフリクトなし。CI（bats tests + skill syntax validation）が全ジョブ SUCCESS。
+
+#### verify
+- Pre-merge 条件3件すべて PASS。verify ヒントが整備されており検証が確実かつ迅速に完了した。
+- Post-merge 条件2件は `verify-type: opportunistic` で適切にマーキングされており、自動検証対象外として正しく扱われた。
+
+### Improvement Proposals
+- `modules/title-normalizer.md` の `## Output` セクションと `Title Drift Check` サブセクションの責任境界の不明瞭さを解消する: Output セクションを「呼び出し元が実行するケース」と「モジュール内部で実行するケース」の2パートに分割し、それぞれの責任範囲を明記する（review retrospective に記録済みの SHOULD 項目）。
