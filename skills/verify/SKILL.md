@@ -70,7 +70,7 @@ git status
 If ARGUMENTS contains `--base {branch}`, use that as `BASE_BRANCH`. Otherwise, search for a merged PR linked to the Issue and fetch `baseRefName`:
 
 ```bash
-PR_NUMBER=$(gh pr list --search "$ISSUE_NUMBER" --state merged --json number --jq ".[0].number")
+PR_NUMBER=$(gh pr list --search "closes #$ISSUE_NUMBER" --state merged --json number --jq ".[0].number")
 ```
 
 If PR number is found:
