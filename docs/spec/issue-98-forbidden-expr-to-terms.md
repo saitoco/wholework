@@ -64,3 +64,33 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 本文に verify コマンド付きの受け入れ条件が12件網羅されており、仕様の曖昧さは最小限。
+- Spec の Notes 欄で「受入条件8は #94 マージ後にフェイルに転じる」という依存関係を明示しており、実装時のリスクが事前に文書化されていた。
+
+#### design
+- Spec は5ステップの実装手順が明確で、各ステップと受入条件の対応も明示されていた。
+- Code Retrospective に記載のとおり、Step 2 の「#94 マージ後に Acceptance check 行を削除」は #94 が未マージだったため該当行がなく、実質スキップとなったが、設計自体に問題はなく意図通りの動作と判断。
+
+#### code
+- 手戻りなし（rework N/A）。設計乖離なし。
+- 唯一の設計ギャップは Acceptance check 削除がスキップになった点で、既に Code Retrospective に記録済み。
+
+#### review
+- review フェーズのレコードなし（パッチルートのため PR レビューなし）。
+
+#### merge
+- パッチルート（直接 main にコミット）。マージコンフリクト・CI 失敗なし。
+- コミット: `d788b79 chore: move terminology entries from Forbidden Expressions to Terms (closes #98)`
+
+#### verify
+- 全12受け入れ条件が初回実行で PASS。FAIL・UNCERTAIN なし。
+- Pre-merge セクションのみで verify コマンド付き条件が完備されており、検証が完全自動化されていた。
+
+### Improvement Proposals
+- N/A
