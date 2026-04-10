@@ -251,7 +251,7 @@ If all phases succeeded, report completion. **For XL routes, also output "Auto r
 Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
 - `SKILL_NAME=auto`
 - `ISSUE_NUMBER=$NUMBER`
-- `RESULT={success|fail}`
+- `RESULT=success`
 
 ### Step 6: On Failure: Stop and Report Error
 
@@ -261,6 +261,11 @@ If any phase exits with a non-zero exit code, stop processing and report the err
 - review phase failure: review wait timeout, fix failure, retry limit reached
 - merge phase failure: invalid PR state (not approved, CI failure), conflict resolution failure
 - verify phase failure: acceptance condition FAIL, Issue reopened
+
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
+- `SKILL_NAME=auto`
+- `ISSUE_NUMBER=$NUMBER`
+- `RESULT=fail`
 
 ## Batch Mode (--batch N)
 

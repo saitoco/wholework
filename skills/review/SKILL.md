@@ -110,7 +110,7 @@ Patch route — review is not needed. Proceed with `/merge $PR_NUMBER`.
 If you need to run a review explicitly (e.g., main branch protection required PR route), run `/review $PR_NUMBER --light`.
 ```
 
-Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with `SKILL_NAME=review, PR_NUMBER=$PR_NUMBER, ISSUE_NUMBER=$ISSUE_NUMBER, RESULT=success`.
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with `SKILL_NAME=review, PR_NUMBER=$NUMBER, ISSUE_NUMBER=$ISSUE_NUMBER, RESULT=success`.
 
 Get Size (Project field first, label fallback):
 ```bash

@@ -192,7 +192,7 @@
 
 ### Deviations from Design
 
-- なし。Spec の Implementation Steps に記載された順序・内容通りに実装完了。Step 1（モジュール作成）→ Step 2〜9（8 skill 更新、並列実施）→ Step 10（docs/structure.md 更新）の順序を維持。
+- `skills/auto/SKILL.md` の Step 6（On Failure）への next-action-guide 参照が初回実装で漏れていた。Spec Implementation Step 9 に「Step 6（On Failure）も同様に `RESULT=fail` で参照」と明記されていたが、Step 5 の `RESULT={success|fail}` で十分と誤判断。レビューフィードバックを受けて同 PR 内で追加修正した。また `skills/review/SKILL.md` 早期終了パスで `PR_NUMBER=$PR_NUMBER`（未定義変数）を `PR_NUMBER=$NUMBER` に修正した。
 
 ### Design Gaps/Ambiguities
 
