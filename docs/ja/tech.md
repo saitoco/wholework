@@ -48,7 +48,7 @@
 
 | ツール | 目的 | タイミング |
 |--------|------|------------|
-| **bats**（Bash Automated Testing System） | シェルスクリプトのユニットテスト | pre-merge（`command` verify command経由） |
+| **bats**（Bash Automated Testing System） | シェルスクリプトのユニットテスト | pre-merge（`command` verify command 経由） |
 | **validate-skill-syntax.py** | SKILL.md 構文検証（半角 `!` 検出、frontmatter 検証） | pre-merge |
 | **verify command**（`<!-- verify: ... -->`） | 受入条件の機械的検証（ファイル存在、テキスト内容、コマンド実行） | `/verify` Skill 実行時 |
 

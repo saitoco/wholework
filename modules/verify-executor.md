@@ -1,6 +1,6 @@
 # verify-executor
 
-Parse and execute verify command commands.
+Parse and execute verify commands.
 
 ## Purpose
 

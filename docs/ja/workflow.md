@@ -24,7 +24,7 @@ Skill 内部の挙動は `skills/<name>/SKILL.md` を参照してください。
 
 ### 1. Issue 作成フェーズ — `/issue`
 
-Issue の要件を明確化します。新規作成（`/issue "title"`）と既存 Issue の精査（`/issue 123`）の 2 モードがあります。曖昧性検出、受入条件の分類、verify commandの割り当て、サブ Issue への分割を行います。`triaged` ラベルのない既存 Issue を精査する際には triage の実行を自動で連鎖し、単独の Issue であれば 1 回の `/issue` で triage + Issue 作成の双方が完了します。詳細: [`skills/issue/SKILL.md`](../../skills/issue/SKILL.md)
+Issue の要件を明確化します。新規作成（`/issue "title"`）と既存 Issue の精査（`/issue 123`）の 2 モードがあります。曖昧性検出、受入条件の分類、verify command の割り当て、サブ Issue への分割を行います。`triaged` ラベルのない既存 Issue を精査する際には triage の実行を自動で連鎖し、単独の Issue であれば 1 回の `/issue` で triage + Issue 作成の双方が完了します。詳細: [`skills/issue/SKILL.md`](../../skills/issue/SKILL.md)
 
 **`/issue` と `/spec` の責務境界**: [docs/product.md — 責務境界表](product.md#spec-design-boundary)
 
