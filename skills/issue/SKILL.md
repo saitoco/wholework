@@ -275,7 +275,11 @@ After confirming auto-resolved items, record them in an "Auto-Resolved Ambiguity
 
 > **Note**: Always use the Write tool for temp files. Shell redirects trigger confirmation prompts.
 
-### Step 9: Set Blocked-by Dependencies
+### Step 9: Title Drift Check
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/title-normalizer.md` and follow the "Title Drift Check" section. Detect semantic drift between the current title and the updated Issue body, and update the title if drift is found.
+
+### Step 10: Set Blocked-by Dependencies
 
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh $NUMBER
@@ -283,13 +287,13 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh $NUMBER
 
 Exit code 0: no open blockers. Exit code 2: open blockers (relationship set, continue). Exit code 1: error (warn and continue).
 
-### Step 10: Scope Assessment (sub-issue splitting)
+### Step 11: Scope Assessment (sub-issue splitting)
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md`.
 
-**For L/XL issues: run parallel investigation (Step 10a → 10b → 10c).**
+**For L/XL issues: run parallel investigation (Step 11a → 11b → 11c).**
 
-#### Step 10a: Parallel Investigation (Scope / Risk / Precedent Agents)
+#### Step 11a: Parallel Investigation (Scope / Risk / Precedent Agents)
 
 Get steering doc paths with Glob. Launch 3 agents in parallel:
 
@@ -306,11 +310,11 @@ Task(subagent_type="precedent-agent", description="Precedent investigation",
 
 On failure: fall back to standard scope assessment.
 
-#### Step 10b: Split Proposal (integrate results)
+#### Step 11b: Split Proposal (integrate results)
 
 Integrate outputs into a structured split proposal: sub-issue boundaries (from scope + risk data), size estimates, parallelization groups, key design decisions (from precedent data). Present via AskUserQuestion.
 
-#### Step 10c: Create sub-issues (after approval)
+#### Step 11c: Create sub-issues (after approval)
 
 Run the standard sub-issue creation flow (New Issue Creation Step 8, procedures 2–8).
 
@@ -318,11 +322,11 @@ Run the standard sub-issue creation flow (New Issue Creation Step 8, procedures 
 
 (For non-L/XL or fallback: run standard split assessment. Size XL → L change applies when no split is needed.)
 
-### Step 11: Issue Retrospective
+### Step 12: Issue Retrospective
 
 Same as New Issue Creation Step 9.
 
-### Step 12: Opportunistic Verification
+### Step 13: Opportunistic Verification
 
 Same as New Issue Creation Step 10.
 

@@ -48,3 +48,39 @@
   - `/spec` での drift 検出ソースは Issue body のみ（`docs/product.md` の `/issue` (What) vs `/spec` (How) 境界に沿う）
   - drift 検出後の再生成は既存の naming convention をそのまま適用
 - `docs/structure.md` のモジュール一覧の description は "issue title normalization" のままで更新不要（drift check は normalization の拡張であり範囲内）
+
+## Spec Retrospective
+
+### Minor observations
+- Nothing to note
+
+### Judgment rationale
+- Nothing to note
+
+### Uncertainty resolution
+- Nothing to note
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+`modules/title-normalizer.md` の `## Output` セクションは「呼び出し元が `gh issue edit` を実行する」設計を前提としているが、新設した「Title Drift Check」サブセクションはモジュール内部で直接 `gh issue edit` を実行する。この2パターンが同一モジュール内に混在し、モジュールの責任境界が不明瞭になっている（SHOULD）。将来 Output セクションを2パートに分割して責任境界を明記することで改善できる。
+
+### Recurring issues
+
+今回の変更規模（SKILL.md のステップ挿入とリナンバリング）としてはレビューイシューが最小限に抑えられており、繰り返しパターンは特になし。
+
+### Acceptance criteria verification difficulty
+
+Pre-merge 条件3件はすべて `section_contains` / `grep` ヒントが整備されており PASS 判定が容易だった。Post-merge 条件はいずれも `verify-type: opportunistic` で適切にマークされており、UNCERTAIN 対応が不要だった。

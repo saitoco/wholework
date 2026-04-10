@@ -38,6 +38,35 @@ Normalize the Issue title following the naming convention below.
 - `bug: login fails` → `auth: Fix authentication error on login`
 - `design: Add noun-ending rule` (already ends without verb) → `design: Add noun-ending rule`
 
+### Title Drift Check
+
+After updating the Issue body, check for semantic drift between the current title and the updated body.
+
+**Input:**
+- **Current Issue title**: the title before any body update
+- **Updated Issue body**: the full body content after update
+
+**Processing:**
+
+1. Read the current Issue title and the updated Issue body
+2. Assess whether the body's scope, purpose, or target has changed significantly from what the title describes
+3. **Drift criteria** — classify as drift when any of the following apply:
+   - The body describes a clearly broader or narrower scope than the title
+   - The body's primary subject or component differs from the title
+   - The body's goal or purpose has changed substantially
+4. **If drift is detected:**
+   - Generate a new title following the naming convention: `component: concise description starting with a verb`
+   - Apply the same component determination criteria as the normalization rules above
+   - Update the title via:
+     ```bash
+     gh issue edit "$NUMBER" --title "$new_title"
+     ```
+   - Output the before/after in skill output:
+     ```
+     Title updated: "{old_title}" → "{new_title}"
+     ```
+5. **If no drift detected**: do nothing (no output)
+
 ## Output
 
 Normalized title string. The caller applies it as the `--title` argument to `gh issue edit`.
