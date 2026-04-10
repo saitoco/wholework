@@ -20,7 +20,7 @@ Skills that Read this file should evaluate each post-merge condition against the
 
 | Type | Criteria | Examples |
 |------|---------|---------|
-| `auto` | An acceptance check (`<!-- verify: ... -->`) is actually attached | File existence check, grep pattern match, test execution |
+| `auto` | A verify command (`<!-- verify: ... -->`) is actually attached | File existence check, grep pattern match, test execution |
 | `opportunistic` | Condition text matches the pattern "verify X when `/skill-name` is run" | "Confirm doc impact check runs when `/spec` is executed" |
 | `manual` | Does not match either of the above | "Confirm no dialog appears", "Visual browser verification" |
 

@@ -45,7 +45,7 @@ When invoked via `run-verify.sh` (`--dangerously-skip-permissions` environment),
 | Location | Interactive mode | Non-interactive mode |
 |------|-----------|---------------------|
 | Step 1: uncommitted changes check | Output error and abort if uncommitted changes exist | Same |
-| Step 5 (verify each condition) Step 2 (conditions with acceptance checks): `command` hint permission | Execute after user approval | `--dangerously-skip-permissions` removes confirmation requirement. Execute directly |
+| Step 5 (verify each condition) Step 2 (conditions with verify commands): `command` hint permission | Execute after user approval | `--dangerously-skip-permissions` removes confirmation requirement. Execute directly |
 | Step 10: create improvement proposal Issue | Auto-create Issue | Same |
 
 ## Steps
@@ -106,10 +106,10 @@ gh issue view "$NUMBER" --json body
 
 Parse acceptance condition checkboxes:
 
-**Resolving `{{base_url}}` to production URL**: If acceptance checks contain `{{base_url}}`, Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to fetch `PRODUCTION_URL` from `.wholework.yml` (key: `production-url: "https://example.com"`). Then replace `{{base_url}}` with `PRODUCTION_URL` before passing to verify-executor.
+**Resolving `{{base_url}}` to production URL**: If verify commands contain `{{base_url}}`, Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to fetch `PRODUCTION_URL` from `.wholework.yml` (key: `production-url: "https://example.com"`). Then replace `{{base_url}}` with `PRODUCTION_URL` before passing to verify-executor.
 
 - If `PRODUCTION_URL` is found: run browser verification with the replaced URL
-- If `PRODUCTION_URL` is empty (not configured): treat acceptance checks containing `{{base_url}}` as UNCERTAIN, noting "`production-url` is not configured in `.wholework.yml`" in the remarks column
+- If `PRODUCTION_URL` is empty (not configured): treat verify commands containing `{{base_url}}` as UNCERTAIN, noting "`production-url` is not configured in `.wholework.yml`" in the remarks column
 
 - If there are no section divisions, target all unchecked items
 - If sections are divided into "Pre-merge (auto verify)" and "Post-merge":
@@ -134,16 +134,16 @@ When referencing CI job results, determine whether the failure is infrastructure
 
 **Fall back to local tests** (when infrastructure failure is determined):
 
-1. Ignore CI results; fetch local test commands from `command` acceptance checks and run them
-2. For acceptance conditions without `command` acceptance checks, fall back with AI judgment
+1. Ignore CI results; fetch local test commands from `command` verify commands and run them
+2. For acceptance conditions without `command` verify commands, fall back with AI judgment
 3. If local tests pass: **treat as PASS via alternative verification** (note "CI infrastructure failure; verified via local tests" in details)
 4. If local tests fail: treat as FAIL (problem with the test code itself)
 
 **Note**: The infrastructure failure determination errs on the safe side. If not detected, it remains UNCERTAIN/FAIL rather than becoming an incorrect PASS.
 
-#### Step 2: Conditions with Acceptance Checks
+#### Step 2: Conditions with Verify Commands
 
-For conditions with `<!-- verify: ... -->`, Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md` and follow the "Processing Steps" section's translation table to translate and execute acceptance checks. Mode: **full** (`command` hints are also treated as execution targets; however, actual execution is only after user approval).
+For conditions with `<!-- verify: ... -->`, Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md` and follow the "Processing Steps" section's translation table to translate and execute verify commands. Mode: **full** (`command` hints are also treated as execution targets; however, actual execution is only after user approval).
 
 **Security note for `command` hints**: In full mode, "execute `command` hints" means:
 - **Interactive mode**: present the command to the user and execute only after approval. Treat suspicious commands as UNCERTAIN.
@@ -294,7 +294,7 @@ As the final step of the workflow, verify conducts a retrospective of the entire
 | code | Implementation rework (fixup/amend patterns in commit history, number of review comment incorporations), design deviation patterns, rework cause analysis | git log, `## Code Retrospective` section in Spec | Detect fixup/amend patterns with `git log --oneline`; check code retrospective section when reading Spec |
 | review | Review effectiveness (were comments accurate, anything missed), review comment trends, oversight patterns | PR review comments, `## Review Retrospective` section in Spec, verification results | Check whether FAIL items were detected in review; check review retrospective section when reading Spec |
 | merge | Merge process issues (conflicts, CI failures, etc.) | git log, PR status | Check merge commit messages for conflict resolution traces |
-| verify | FAIL root causes, acceptance check inconsistencies | Verification results | Analyze Step 5 results |
+| verify | FAIL root causes, verify command inconsistencies | Verification results | Analyze Step 5 results |
 
 > **Note: Obligation to verify factual claims**: When writing factual claims such as "fixed" or "resolved", confirm the corresponding commit exists with `git log --oneline` before recording. Factual claims without commit verification can lead to incorrect PASS judgments.
 
@@ -338,7 +338,7 @@ As the final step of the workflow, verify conducts a retrospective of the entire
      - (observations on merge process issues, etc.)
 
      #### verify
-     - (observations on FAIL root causes, acceptance check inconsistencies, etc.)
+     - (observations on FAIL root causes, verify command inconsistencies, etc.)
 
      ### Improvement Proposals
      - (list improvement proposals here, or "N/A" if none)
@@ -423,7 +423,7 @@ If `gh label create` fails, output a warning and continue (does not affect Issue
 **Create Issue and add verify commands**:
 
 - Normalize title following `${CLAUDE_PLUGIN_ROOT}/modules/title-normalizer.md` processing steps, then create Issues in standard format (background, purpose, acceptance conditions) with `gh issue create --label "retro/verify"` for each improvement proposal
-- **Add verify commands to acceptance conditions**: add acceptance checks like `<!-- verify: grep "{keyword}" "{target file}" -->` to the created Issue's acceptance conditions. Extract keywords from acceptance condition text and infer target files from proposal content (improves automation accuracy for `/auto --batch`). Create Issue without verify commands if they cannot be determined
+- **Add verify commands to acceptance conditions**: add verify commands like `<!-- verify: grep "{keyword}" "{target file}" -->` to the created Issue's acceptance conditions. Extract keywords from acceptance condition text and infer target files from proposal content (improves automation accuracy for `/auto --batch`). Create Issue without verify commands if they cannot be determined
 - If Issue creation fails, output error log to stderr, skip, and continue verify (does not affect exit code)
 - Output created Issue number to terminal
 

@@ -52,7 +52,7 @@ Reads Layer 1 declarations; dynamically detects any missing information in-sessi
 
 ### MCP Tool Detection: Declaration-first Fallback
 
-Applied when `/issue` proposes `mcp_call` acceptance checks:
+Applied when `/issue` proposes `mcp_call` verify commands:
 
 ```
 1. MCP_TOOLS is non-empty (declared)  → trust declaration, skip ToolSearch

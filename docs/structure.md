@@ -60,9 +60,9 @@ Skills are being actively migrated from a private repository. Each skill lives i
 ### Modules
 
 Key modules:
-- `modules/verify-patterns.md` — acceptance check pattern accuracy guidelines
+- `modules/verify-patterns.md` — verify command pattern accuracy guidelines
 - `modules/verify-classifier.md` — post-merge condition verifiability classification
-- `modules/verify-executor.md` — acceptance check command translation and execution
+- `modules/verify-executor.md` — verify command translation and execution
 - `modules/worktree-lifecycle.md` — shared worktree Entry/Exit lifecycle for all skills
 - `modules/test-runner.md` — quality check execution and result analysis
 - `modules/size-workflow-table.md` — Size-to-workflow decision table

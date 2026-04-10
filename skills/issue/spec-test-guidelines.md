@@ -12,7 +12,7 @@ For changes in the following categories, include **bats behavior tests** in acce
 | **hooks configuration** (the `hooks` section in settings.json) | Hook errors block tool execution | Matcher patterns, stdout/stderr handling, exit codes |
 | **allowed-tools changes** (SKILL.md `allowed-tools`) | Misconfiguration prevents tool execution; security risk | Permission pattern matching |
 | **Environment setup scripts** (install.sh, etc.) | Errors can corrupt user environments | Install/uninstall behavior |
-| **Scripts called via skills** | Claude Code Bash tool quirks (escaping, etc.) can cause runtime failures | bats unit tests (pre-merge) + `command` acceptance check via real invocation (post-merge) |
+| **Scripts called via skills** | Claude Code Bash tool quirks (escaping, etc.) can cause runtime failures | bats unit tests (pre-merge) + `command` verify command via real invocation (post-merge) |
 
 **Example acceptance criteria entry:**
 ```markdown
@@ -22,11 +22,11 @@ For changes in the following categories, include **bats behavior tests** in acce
 **Test file location:**
 - Place under `tests/` (follow existing bats test patterns if any)
 
-**Supplementary: bats tests vs. `command` acceptance checks**
+**Supplementary: bats tests vs. `command` verify commands**
 
 bats tests (in mock environments) cannot detect all integration-level issues. For example, the Claude Code Bash tool escaping exclamation marks with backslashes (Issue #249) does not occur in bats with mock `gh` — it only appears during real API calls.
 
-`command` acceptance checks run via the Claude Code Bash tool during `/verify`, so they function as integration tests. For scripts invoked via skills, add a `command` hint in the post-merge section to validate real-environment behavior:
+`command` verify commands run via the Claude Code Bash tool during `/verify`, so they function as integration tests. For scripts invoked via skills, add a `command` hint in the post-merge section to validate real-environment behavior:
 
 ```markdown
 ### Post-merge
@@ -122,7 +122,7 @@ When designing script tests, verify:
 
 ## Specifying individual changed skills in validate-skill-syntax.py
 
-In `validate-skill-syntax.py` acceptance checks, prefer specifying individual changed skills rather than all of `skills/`:
+In `validate-skill-syntax.py` verify commands, prefer specifying individual changed skills rather than all of `skills/`:
 
 Specifying all of `skills/` can cause false failures due to unrelated issues (e.g., merge conflict remnants in other issues' skills).
 

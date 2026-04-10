@@ -1,16 +1,16 @@
 # verify-executor
 
-Parse and execute acceptance check commands.
+Parse and execute verify commands.
 
 ## Purpose
 
-Parse acceptance checks (`<!-- verify: ... -->`) attached to Issue acceptance criteria, execute the corresponding verification processing, and return results.
+Parse verify commands (`<!-- verify: ... -->`) attached to Issue acceptance criteria, execute the corresponding verification processing, and return results.
 
 ## Input
 
 The following information is passed from the caller:
 
-- **Acceptance check list**: List of acceptance conditions containing `<!-- verify: ... -->` (condition text and verification command pairs)
+- **Verify command list**: List of acceptance conditions containing `<!-- verify: ... -->` (condition text and verification command pairs)
 - **Execution mode**: `safe` or `full`
   - `safe`: Do not execute `command` hints; return UNCERTAIN (for `/review`). If a PR number is provided, attempt CI reference fallback
   - `full`: Also execute `command` hints (for `/verify`)
@@ -18,8 +18,8 @@ The following information is passed from the caller:
 
 ## Processing Steps
 
-1. Parse each acceptance check, extracting the command name and arguments
-2. **Resolve `{{base_url}}` placeholder**: If acceptance check URLs contain `{{base_url}}`, the calling skill is expected to have already resolved it to the actual URL before passing. verify-executor does not interpret the placeholder and uses the URL as received (if unresolved `{{base_url}}` remains, treat as UNCERTAIN).
+1. Parse each verify command, extracting the command name and arguments
+2. **Resolve `{{base_url}}` placeholder**: If verify command URLs contain `{{base_url}}`, the calling skill is expected to have already resolved it to the actual URL before passing. verify-executor does not interpret the placeholder and uses the URL as received (if unresolved `{{base_url}}` remains, treat as UNCERTAIN).
 
 2a. **Process `--when` modifier**: If the check arguments include `--when="shell_condition"`, process as follows:
    1. Extract `--when="shell_condition"` from the argument string, separating it from the main command arguments
@@ -128,7 +128,7 @@ Get detailed job information via `gh api` and check for the following patterns:
 ## Output Format
 
 ```markdown
-## Acceptance Check Execution Results
+## Verify Command Execution Results
 
 | # | Condition | Verification Command | Result | Details |
 |---|-----------|---------------------|--------|---------|

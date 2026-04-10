@@ -1,6 +1,6 @@
 ---
 name: risk-agent
-description: Risk Investigation: assess test impact, acceptance check effects, and breaking change potential (for L/XL Issue parallel investigation)
+description: Risk Investigation: assess test impact, verify command effects, and breaking change potential (for L/XL Issue parallel investigation)
 tools: Read, Glob, Grep
 model: sonnet
 ---
@@ -9,7 +9,7 @@ model: sonnet
 
 ## Purpose
 
-Used in the parallel investigation phase for L/XL Issues. Investigate the impact on existing tests and acceptance checks, and the potential for breaking changes to public interfaces, then output a risk matrix.
+Used in the parallel investigation phase for L/XL Issues. Investigate the impact on existing tests and verify commands, and the potential for breaking changes to public interfaces, then output a risk matrix.
 
 ## Input
 
@@ -35,9 +35,9 @@ Investigate test files under the `tests/` directory:
    - Grep search test code for change target file names and feature names
    - Evaluate the likelihood that changes will break existing tests
 
-2. **Acceptance check impact investigation**:
-   - Grep search Spec files under `docs/spec/` for acceptance checks (`<!-- verify: ... -->`) referencing the change targets
-   - Identify acceptance checks that may FAIL due to the changes
+2. **Verify command impact investigation**:
+   - Grep search Spec files under `docs/spec/` for verify commands (`<!-- verify: ... -->`) referencing the change targets
+   - Identify verify commands that may FAIL due to the changes
 
 ### 3. Breaking Change Investigation
 
@@ -68,7 +68,7 @@ For each risk item, evaluate impact level (High/Medium/Low) and probability (Hig
 ### Test Impact
 
 - **Affected test files**: (none / list of file paths)
-- **Acceptance checks at risk of failure**: (none / Spec path and condition content)
+- **Verify commands at risk of failure**: (none / Spec path and condition content)
 
 ### Breaking Change Potential
 

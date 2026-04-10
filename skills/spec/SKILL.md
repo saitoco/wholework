@@ -289,9 +289,9 @@ Save the implementation plan to `docs/spec/issue-$NUMBER-short-title.md`.
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-patterns.md` and follow the "Processing Steps" guidelines (especially "3. Pre-verification of target file format").
 
-**Notes and acceptance check consistency (immediately after creating acceptance checks):**
+**Notes and verify command consistency (immediately after creating verify commands):**
 
-If Notes contain implementation direction statements, verify they do not contradict the corresponding acceptance checks. Correct discrepancies immediately.
+If Notes contain implementation direction statements, verify they do not contradict the corresponding verify commands. Correct discrepancies immediately.
 
 **Section rename — update verify commands simultaneously:**
 
@@ -300,7 +300,7 @@ If implementation steps include section renaming (e.g., `## Implementation Steps
 **verify-type tag check:**
 
 If post-merge conditions in the Issue body have `<!-- verify-type: ... -->` tags, read `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md` and verify:
-- `auto`-tagged conditions without acceptance checks — consider adding them
+- `auto`-tagged conditions without verify commands — consider adding them
 - `opportunistic`-tagged conditions align with `verify-classifier.md`'s `opportunistic` definition
 
 **Spec filename rules:**
@@ -309,7 +309,7 @@ If post-merge conditions in the Issue body have `<!-- verify-type: ... -->` tags
 - Translate Japanese titles to English
 - Example: Issue #76 "Specのファイル名に短いタイトルを追加する" → `issue-76-issue-spec-short-title.md`
 
-**Acceptance check sync rule:**
+**Verify command sync rule:**
 
 Copy `<!-- verify: ... -->` hints from the Issue body's `## Acceptance Criteria > Pre-merge` section into the Spec's `## Verification > Pre-merge` section verbatim. Do not rewrite independently.
 
