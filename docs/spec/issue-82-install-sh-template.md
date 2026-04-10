@@ -131,3 +131,26 @@ Step 2 分岐の結果を受けて Phase B を実装:
 6. 副次変更として repo-root 絶対パス `Bash(/Users/saito/src/wholework/scripts/*.sh *)` を template から削除（Issue 本文の Auto-Resolved Ambiguity Points に準拠。相対パス `scripts/*.sh *` エントリが dev モードをカバー）
 
 これにより、他ユーザが clone 後に `./install.sh` を実行すれば環境別の settings.json が生成される状態を実現。
+
+## Phase B Review Retrospective (PR #85)
+
+### Spec vs. 実装の乖離パターン
+
+- Spec の Phase B Implementation Summary（Step 1–6）と PR #85 の実装は完全一致。Spec 乖離は検出されなかった
+- clean test の結果記録（Phase A Clean Test Results）を Spec に事前追記してから PR を作成したため、review フェーズで前提の食い違いによる指摘が発生しなかった
+
+### 繰り返し発生している問題
+
+- なし。今回の Phase B 実装は過去の #78、#80 での学びを踏まえて設計されており、同種の指摘は再発していない
+
+### 受入条件検証の難易度
+
+- `file_contains ".gitignore" ".claude/settings.json"` は literal text match であり、コメント行の記述や `.claude/settings.json.template` のプレフィックスマッチでも PASS になる点に留意が必要だった。実際には `.claude/*` パターンで ignore されているため `git check-ignore` での確認が最も正確だが、そのためには `command` hint が必要で safe mode で UNCERTAIN になる
+- 代替案: `command "git check-ignore .claude/settings.json > /dev/null"` を `/verify` 段階で実行する post-merge 条件に移す案があり得る
+
+### Review findings (PR #85)
+
+- **install.sh:29 — atomic write (SHOULD)**: 対応済み。temp file + `mv` パターンに変更し、`trap` で一時ファイルを削除
+- **install.sh:29 — sed delimiter conflict (CONSIDER)**: コメント追記のみ。実装変更は POSIX システムの `$HOME` 制約から不要
+- **docs/structure.md:164 — git pull note (CONSIDER)**: 対応済み。`after git pull whenever the template has changed` を追記
+- **README.md — 直接言及なし (CONSIDER)**: スキップ。既存のアンカーリンク経由で十分と判断
