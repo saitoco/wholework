@@ -9,9 +9,11 @@ node_modules/
 .claude/worktrees/
 
 # Un-ignore repo-level Claude Code settings (overrides global gitignore which ignores .claude/)
+# Note: .claude/settings.json is a generated file (by install.sh from the template)
+# and is intentionally ignored so each user can have their own $HOME substituted.
 !.claude/
 .claude/*
-!.claude/settings.json
+!.claude/settings.json.template
 
 # OS files
 .DS_Store
