@@ -187,3 +187,11 @@
 
 - **モジュール標準構造**: 新規モジュール `next-action-guide.md` は `worktree-lifecycle.md` などの 4 セクション（Purpose / Input / Processing Steps / Output）を踏襲する。`docs/tech.md` の Coding Conventions「新規コンポーネントの入力インターフェース」に準拠。
 - **Read 指示の書式**: 抽出されたモジュール参照は `read ${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md and follow the "Processing Steps" section` 形式で記述する（#716 のパターン、tech.md 準拠）。
+
+## spec retrospective
+
+- **Spec 作成の所感**: 8 skill の Completion Report セクションを Grep で一括特定し、各セクションの出力パターンを比較することで、統一モジュールに必要な入力インターフェース（SKILL_NAME / RESULT / ISSUE_NUMBER / PR_NUMBER / SIZE / ROUTE / BLOCKED_BY_OPEN）を抽出できた。`/spec` Step 18 の ROUTE ベース 2 択ロジックが既存の参照実装として機能しており、そこから一般化する形で設計できた。
+- **曖昧性の解決**: Issue body に既存の "Auto-Resolved Ambiguity Points" セクションがあったため、推奨ロジック方式（LLM 文脈理解）と `/triage` の次アクション（`/issue` 推奨）は追加質問なしで確定できた。`--non-interactive` モードと整合。
+- **スコープ確定のポイント**: `docs/ja/structure.md` は `/doc translate` で自動生成されるため対象外、`docs/structure.md` の Modules セクションとカウント (22 → 23) のみが更新対象であることを特定した。これにより対象ファイルを 10 件に確定。
+- **想定リスク**: `/verify` および `/auto --batch` での PASS 時の次アクション案内抑制ルールをモジュール側で扱う必要があり、判定テーブルで `RESULT=success AND SKILL_NAME IN (verify, auto-batch)` のケースを明示する必要がある。実装時に見落とすと「何もしない」動作が崩れる。
+- **検証計画**: 16 件の pre-merge acceptance check と 5 件の post-merge acceptance check で、モジュール作成・8 skill 更新・structure.md 同期を網羅。`grep` と `section_contains` で機械的に検証可能にした。
