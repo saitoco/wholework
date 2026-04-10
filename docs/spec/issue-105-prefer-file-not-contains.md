@@ -36,3 +36,17 @@
 - 追加場所: `verify-type tag check` と `Spec filename rules` の間（既存の verify command ガイドライン群と隣接させる）
 - `modules/verify-patterns.md` 行32に count aggregation の `command` hint に関する既存ガイドラインがあるが、テキスト除去（`-eq 0` 形式）に特化した指針はないため、SKILL.md に追加する
 - SKILL.md body は English 規約のため、追加テキストは英語で記述する
+
+## Code Retrospective
+
+### Deviations from Design
+
+- コミットプレフィックスに `chore:` の代わりに `feat:` を使用した（Issue Type: Task → `chore:` が正しい）
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
