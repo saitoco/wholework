@@ -25,8 +25,16 @@ if [ -z "${HOME:-}" ]; then
 fi
 
 # Substitute ${HOME} with the actual home path.
-# Use a sed delimiter that is unlikely to appear in filesystem paths.
-sed "s|\${HOME}|${HOME}|g" "$TEMPLATE" > "$OUTPUT"
+# Use a sed delimiter (|) that is unlikely to appear in filesystem paths.
+# Note: if $HOME itself contains `|` or `\`, the sed command would break —
+# but POSIX systems always use `/` in paths, so this is not a practical concern.
+#
+# Atomic write pattern: write to a temp file first, then rename.
+# This prevents a corrupted/empty settings.json if sed fails mid-stream.
+TMP_OUTPUT="${OUTPUT}.tmp"
+trap 'rm -f "$TMP_OUTPUT"' EXIT
+sed "s|\${HOME}|${HOME}|g" "$TEMPLATE" > "$TMP_OUTPUT"
+mv "$TMP_OUTPUT" "$OUTPUT"
 
 echo "Generated $OUTPUT from $TEMPLATE"
 echo "HOME substituted as: $HOME"

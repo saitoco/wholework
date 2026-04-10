@@ -161,7 +161,7 @@ claude --plugin-dir <path-to-wholework>
 
 Skills are discovered as `wholework:<skill-name>`. Claude Code sets `${CLAUDE_PLUGIN_ROOT}` to the plugin directory at runtime, which skills and modules use to reference scripts and modules.
 
-**Why `./install.sh`?** `.claude/settings.json` is generated from `.claude/settings.json.template` with the user's actual `$HOME` substituted for `${HOME}`. Claude Code does not expand `${HOME}` or `~/` inside `permissions.allow`, so each developer must materialize the template locally. The generated `.claude/settings.json` is gitignored. Run `./install.sh` once after clone, and again whenever `.claude/settings.json.template` changes.
+**Why `./install.sh`?** `.claude/settings.json` is generated from `.claude/settings.json.template` with the user's actual `$HOME` substituted for `${HOME}`. Claude Code does not expand `${HOME}` or `~/` inside `permissions.allow`, so each developer must materialize the template locally. The generated `.claude/settings.json` is gitignored. Run `./install.sh` once after clone, and again after `git pull` whenever `.claude/settings.json.template` has changed.
 
 <!-- ## Module Dependencies（Optional）
 
