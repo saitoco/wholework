@@ -303,6 +303,10 @@ If post-merge conditions in the Issue body have `<!-- verify-type: ... -->` tags
 - `auto`-tagged conditions without verify commands — consider adding them
 - `opportunistic`-tagged conditions align with `verify-classifier.md`'s `opportunistic` definition
 
+**Text removal verify command preference:**
+
+For verifying text removal (deletion or replacement of specific strings), `file_not_contains` checks are preferred over broad `command "test $(grep ...) -eq 0"` form. `file_not_contains` produces deterministic PASS/FAIL in `/review` safe mode; broad `command` grep form becomes UNCERTAIN. Decompose into per-file `file_not_contains` checks when possible; use `command` only when `file_not_contains` cannot express the condition.
+
 **Spec filename rules:**
 - `short-title` generated from Issue title
 - English, kebab-case, max 30 characters
