@@ -24,6 +24,7 @@ A YAML file placed at the project root. Declares the capabilities and tools avai
 ```yaml
 # .wholework.yml
 copilot-review: true          # GitHub Copilot review integration
+coderabbit-review: true       # CodeRabbit AI review integration
 opportunistic-verify: true    # Opportunistic verification (auto-run post-merge conditions)
 skill-proposals: true         # Skill proposal feature
 capabilities:
@@ -81,7 +82,7 @@ Keeps the SKILL.md core lightweight; environment-dependent logic (Domain) is loa
 | `skills/spec/figma-design-phase.md` | `/spec` | UI design requirements auto-detected | UI/Design |
 | `skills/spec/codebase-search.md` | `/spec` | `SPEC_DEPTH=full` | Depth-based codebase investigation |
 | `skills/spec/external-spec.md` | `/spec` | External spec dependencies present | External document reference |
-| `skills/review/external-review-phase.md` | `/review` | `copilot-review` or `claude-code-review` is true | External review tool integration |
+| `skills/review/external-review-phase.md` | `/review` | `copilot-review`, `claude-code-review`, or `coderabbit-review` is true | External review tool integration |
 | `skills/review/skill-dev-recheck.md` | `/review` | `validate-skill-syntax.py` exists | Skill development project-specific |
 | `skills/issue/spec-test-guidelines.md` | `/issue` | `validate-skill-syntax.py` exists | Skill development test recommendations |
 | `skills/verify/browser-verify-phase.md` | `/verify` | `HAS_BROWSER_CAPABILITY=true` | Browser verification |
@@ -265,8 +266,9 @@ While Layers 1–3 control "which parts of a skill to load," `--when` provides e
 ```
 .wholework.yml (Layer 1)
   │
-  ├─→ copilot-review ──→ whether /review Reads external-review-phase.md (Layer 3)
-  ├─→ capabilities.mcp ─→ whether /issue proposes mcp_call hints (Layer 2)
+  ├─→ copilot-review ────→ whether /review Reads external-review-phase.md (Layer 3)
+  ├─→ coderabbit-review ─→ whether /review Reads external-review-phase.md (Layer 3)
+  ├─→ capabilities.mcp ──→ whether /issue proposes mcp_call hints (Layer 2)
   ├─→ capabilities.browser → whether adapter resolves browser (Layer 4)
   └─→ production-url ───→ whether verify-executor resolves {{base_url}} (Layer 4)
 

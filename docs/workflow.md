@@ -86,6 +86,7 @@ Integrates PR acceptance criteria verification, multi-perspective code review, a
 # .wholework.yml
 copilot-review: true        # Enable GitHub Copilot review (wait and handle findings in Step 6)
 claude-code-review: true    # Enable official Claude Code Review (wait and handle findings in Step 6)
+coderabbit-review: true     # Enable CodeRabbit AI review (wait and handle findings in Step 6)
 review-bug: false           # Disable review-bug agent in Step 9 (only review-spec runs)
 ```
 

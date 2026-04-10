@@ -4,9 +4,9 @@
 
 Read `modules/detect-config-markers.md` and follow the "Processing Steps" section to detect setting values from `.wholework.yml`.
 
-Retain the detection results (`HAS_COPILOT_REVIEW`, `HAS_CLAUDE_CODE_REVIEW`) and use them for the following determination:
+Retain the detection results (`HAS_COPILOT_REVIEW`, `HAS_CLAUDE_CODE_REVIEW`, `HAS_CODERABBIT_REVIEW`) and use them for the following determination:
 
-- If both tools are `false`: skip all of Step 7 (7.1–7.4) and proceed to Step 8
+- If all three tools are `false`: skip all of Step 7 (7.1–7.6) and proceed to Step 8
 
 ---
 
@@ -80,7 +80,7 @@ The script:
 
 Skip this step if `HAS_CLAUDE_CODE_REVIEW=false` or if Claude Code Review timed out.
 
-**With `--review-only` mode**: skip 7.4 and proceed to Step 8.
+**With `--review-only` mode**: skip 7.4 and proceed to 7.5.
 
 After review completion, if issues exist, apply them using the same procedure as 7.2:
 
@@ -91,6 +91,46 @@ After review completion, if issues exist, apply them using the same procedure as
 
 ```markdown
 ## Claude Code Review Response
+
+### Fixed Issues
+- filename:line — issue summary → fix content
+
+### Skipped Issues
+- filename:line — issue summary (skip reason)
+```
+
+**If no issues**: skip this section and proceed to 7.5.
+
+### 7.5. Wait for CodeRabbit Review
+
+Skip this step if `HAS_CODERABBIT_REVIEW=false`.
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/wait-external-review.sh "$NUMBER" coderabbit
+```
+
+The script:
+- Waits until the CodeRabbit review is complete (max timeout: 5 minutes)
+- Outputs issue content when review is complete
+- Returns exit code 1 on timeout
+
+**On timeout**: do not treat as an error; proceed to the next step.
+
+### 7.6. Apply CodeRabbit Issues
+
+Skip this step if `HAS_CODERABBIT_REVIEW=false` or if the CodeRabbit review timed out.
+
+**With `--review-only` mode**: skip 7.6 and proceed to Step 8.
+
+After review completion, if issues exist, apply them using the same procedure as 7.2:
+
+1. **Assess each issue** (requires fix / does not require fix)
+2. **Fix work**: Edit → git add → git commit → git push
+   - Commit message: `"Address CodeRabbit review: {fix summary}"`
+3. **Record results**:
+
+```markdown
+## CodeRabbit Review Response
 
 ### Fixed Issues
 - filename:line — issue summary → fix content
@@ -120,6 +160,12 @@ Use the following template when generating the Step 14.1 summary body. Generate 
 | Filename | Line | Issue | Response | Fix/Skip reason |
 |---------|------|-------|----------|----------------|
 | config.py | 28 | Missing type hint | Resolved | Added return type hint |
+
+### CodeRabbit Review Response
+
+| Filename | Line | Issue | Response | Fix/Skip reason |
+|---------|------|-------|----------|----------------|
+| main.sh | 10 | Unquoted variable | Resolved | Added double quotes around `$VAR` |
 ```
 
 **If no external tool response (when Step 7 was skipped or settings are disabled)**: omit the corresponding external tool section.

@@ -41,7 +41,7 @@
 
     | パターン | 条件 | 例 |
     |----------|------|---|
-    | マーカー検出 | `.wholework.yml` の YAML キー | `review/external-review-phase.md`（`copilot-review: true` または `claude-code-review: true` のときに読み込む） |
+    | マーカー検出 | `.wholework.yml` の YAML キー | `review/external-review-phase.md`（`copilot-review: true`、`claude-code-review: true`、または `coderabbit-review: true` のときに読み込む） |
     | ファイル存在 | 特定ファイルの存在 | `review/skill-dev-recheck.md`（`scripts/validate-skill-syntax.py` が存在するときに読み込む） |
 
 ## テスト戦略

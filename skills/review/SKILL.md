@@ -30,7 +30,7 @@ If `--auto` is absent, run the normal steps below.
 
 If ARGUMENTS contains `--review-only` (and `--auto` is absent), set `REVIEW_ONLY=true` for reference in subsequent processing.
 
-- With `--review-only`: skip Steps 7.2 (Copilot issue resolution), 12, 13, 14, and retrospective
+- With `--review-only`: skip Steps 7.2 (Copilot issue resolution), 7.4 (Claude Code Review issue resolution), 7.6 (CodeRabbit issue resolution), 12, 13, 14, and retrospective
 - Status label transitions are not made after Step 11 completes (maintain `phase/review`)
 - When combining `--auto` and `--review-only`, the `--auto` section passes `--review-only` to `run-review.sh` as an argument, which passes it through to ARGUMENTS for branching control in SKILL.md
 
@@ -166,13 +166,14 @@ Store detection results:
 ```
 HAS_COPILOT_REVIEW: true if copilot-review: true is set (default: false)
 HAS_CLAUDE_CODE_REVIEW: true if claude-code-review: true is set (default: false)
+HAS_CODERABBIT_REVIEW: true if coderabbit-review: true is set (default: false)
 SKIP_REVIEW_BUG: true if review-bug: false is set (default: false)
 ```
 
-After detection, follow `external-review-phase.md`'s Step 7 procedure for external review waiting/issue resolution. Both copilot-review and claude-code-review use the same "wait → resolve" flow (switch reviewer type via the second argument to `wait-external-review.sh`).
+After detection, follow `external-review-phase.md`'s Step 7 procedure for external review waiting/issue resolution. All three reviewer types use the same "wait → resolve" flow (switch reviewer type via the second argument to `wait-external-review.sh`).
 
-- If both `HAS_COPILOT_REVIEW=false` and `HAS_CLAUDE_CODE_REVIEW=false`: skip all of Step 7 and proceed to Step 8
-- With `--review-only` mode: skip issue resolution (Steps 7.2, 7.4)
+- If all three (`HAS_COPILOT_REVIEW`, `HAS_CLAUDE_CODE_REVIEW`, `HAS_CODERABBIT_REVIEW`) are `false`: skip all of Step 7 and proceed to Step 8
+- With `--review-only` mode: skip issue resolution (Steps 7.2, 7.4, 7.6)
 
 ---
 

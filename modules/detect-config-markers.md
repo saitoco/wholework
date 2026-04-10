@@ -30,6 +30,7 @@ From the loaded content, search for each YAML key in the marker definition table
 |----------|----------|------------------|------------------------|
 | `copilot-review` | `HAS_COPILOT_REVIEW` | `true` | `false` |
 | `claude-code-review` | `HAS_CLAUDE_CODE_REVIEW` | `true` | `false` |
+| `coderabbit-review` | `HAS_CODERABBIT_REVIEW` | `true` | `false` |
 | `review-bug` | `SKIP_REVIEW_BUG` | `false` (enabled) | `false`-treated as true. If `review-bug: false` then `SKIP_REVIEW_BUG=true` |
 | `opportunistic-verify` | `HAS_OPPORTUNISTIC_VERIFY` | `true` | `false` |
 | `skill-proposals` | `HAS_SKILL_PROPOSALS` | `true` | `false` |
@@ -54,6 +55,7 @@ Provide detection results as the following variables to the calling skill:
 ```
 HAS_COPILOT_REVIEW: true if copilot-review: true is set (default: false)
 HAS_CLAUDE_CODE_REVIEW: true if claude-code-review: true is set (default: false)
+HAS_CODERABBIT_REVIEW: true if coderabbit-review: true is set (default: false)
 SKIP_REVIEW_BUG: true if review-bug: false is set (default: false)
 HAS_OPPORTUNISTIC_VERIFY: true if opportunistic-verify: true is set (default: false)
 HAS_SKILL_PROPOSALS: true if skill-proposals: true is set (default: false)

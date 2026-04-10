@@ -146,6 +146,21 @@ mock `gh` スクリプトは `{"author":{"login":"coderabbitai"},"state":"COMMEN
 - 受入条件を pre-merge 機械検証（11 件）+ post-merge manual verify（4 件）に分類
 - Copilot 側の設定手順書は対象外
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- `external-review-phase.md` の Step 7.4 末尾で「proceed to Step 8」となっていたが、Step 7.5/7.6 追加後は「proceed to 7.5」に修正が必要だった点がSpec に明示されていなかった。実装時に気づき修正済み。
+- Step 7.2 の「proceed to 7.3」に相当する記述も「proceed to Step 8」のままだったため「proceed to 7.3」に修正した（同種の問題）。
+
+### Rework
+
+- `external-review-phase.md` の `--review-only` mode の skip 先を `7.4 → Step 8` のままにしていたが、7.5/7.6 追加後に `7.4 → 7.5` への修正が必要で、最初のEditで漏れており再修正が必要だった。
+
 ## spec retrospective
 
 ### Minor observations
@@ -161,3 +176,17 @@ mock `gh` スクリプトは `{"author":{"login":"coderabbitai"},"state":"COMMEN
 ### Uncertainty resolution
 
 - **CodeRabbit bot login**: `coderabbitai[bot]` / `coderabbitai` と想定。一般知識に基づく推定だが、実装時の WebFetch または公開 PR の `gh api` 実行で確認する手順を Spec の Uncertainty セクションに明記した。影響範囲は Step 1（case 文）と Step 5（bats mock）に限定されるため、万一異なっても修正コストは低い。
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+SKILL.md に `--review-only` の skip 対象の説明が 2 箇所（Line 33 と Line 176）あり、本 PR で Line 176 は更新されたが Line 33 が漏れていた。同じ情報を複数の場所に記述する構造は、どちらか片方が更新漏れになりやすい。SHOULD 指摘として検出し修正済み。
+
+### 繰り返し指摘パターン
+
+code フェーズの Code Retrospective に「7.4 の proceed 先が漏れており再修正が必要だった」という記録がある。同様に今回も Step 7 追加時の関連箇所（SKILL.md Line 33）への波及更新が漏れていた。複数ステップが追加される場合は「既存の関連記述を全文検索して影響確認」するパターンを Spec の実装手順に追記すると防止できる。
+
+### 受け入れ条件の検証容易性
+
+全 11 件の Pre-merge 条件が `grep` / `github_check` で機械検証可能な形で記述されており、CI もすべて SUCCESS。UNCERTAIN が 0 件で検証が非常にスムーズだった。grep 中心の verify 設計が効果的だった。
