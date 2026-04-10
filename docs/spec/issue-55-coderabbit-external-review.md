@@ -190,3 +190,33 @@ code フェーズの Code Retrospective に「7.4 の proceed 先が漏れてお
 ### 受け入れ条件の検証容易性
 
 全 11 件の Pre-merge 条件が `grep` / `github_check` で機械検証可能な形で記述されており、CI もすべて SUCCESS。UNCERTAIN が 0 件で検証が非常にスムーズだった。grep 中心の verify 設計が効果的だった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 11 件の Pre-merge verify 条件はすべて `grep` / `github_check` ベースで記述され、UNCERTAIN 0 件を達成した。grep 中心の verify 設計が acceptance condition の質として非常に有効。
+- `docs/tech.md` 変更を独立した verify item にせず実装手順での網羅に留めた判断は適切だった（verify 時に問題なし）。
+- 11 件は推奨上限 10 件を 1 件超過しているが、すべて機械検証可能であったため実用上の影響はなかった。
+
+#### design
+- `external-review-phase.md` のステップ連鎖（`7.4 → proceed to Step 8`）を `7.4 → 7.5` に修正する必要があった点は Spec に明示されておらず、実装時に気づいた Design Gap。連鎖するステップが多い場合、追加ステップによる proceed/skip 先の更新箇所を Spec の実装手順に網羅的に記載するパターンが有効と考えられる。
+
+#### code
+- `external-review-phase.md` の `--review-only` skip 先の記述が 2 箇所あり（Line 33 / Line 176 相当）、片方の更新漏れで再修正が必要だった。Code Retrospective で記録されているとおり、複数箇所に同一情報が存在するパターンの弱点が顕在化した。
+
+#### review
+- SKILL.md Line 33 と Line 176 の乖離を review フェーズが正確に検出し修正済み。Review Retrospective の「複数箇所更新時の全文検索確認」提案は妥当。
+- レビュー指摘 1 件（SHOULD）、迅速に対応済み。レビューの精度・効率ともに問題なし。
+
+#### merge
+- PR #89 はコンフリクトなし、CI 全 PASS でクリーンにマージ。問題なし。
+
+#### verify
+- Pre-merge 11 件すべて即時 PASS。FAIL=0, UNCERTAIN=0。grep ベースの verify 設計が今回の最大の成功要因。
+- Post-merge 4 件は `verify-type: manual` のため自動検証対象外。`phase/verify` ラベルを維持してユーザー確認待ちとした（設計通りの動作）。
+- `COPILOT_REVIEW_TIMEOUT` の命名が 3 ツール共有の実態と乖離している点は spec retrospective でも指摘済み。将来 Issue で対処予定。
+
+### Improvement Proposals
+- `COPILOT_REVIEW_TIMEOUT` 環境変数を 3 ツール共有を明示した名前（例: `EXTERNAL_REVIEW_TIMEOUT`）にリネームする（backward compat を考慮した移行手順も含む）。Code 改善。
