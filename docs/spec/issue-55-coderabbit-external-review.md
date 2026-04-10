@@ -131,3 +131,33 @@ mock `gh` スクリプトは `{"author":{"login":"coderabbitai"},"state":"COMMEN
 ### 依存関係
 
 本 Spec は Copilot と Claude Code Review のコード自体には変更を加えない。pre-merge の検証項目はすべて CodeRabbit の追加点のみを対象とする。Copilot / Claude Code Review の live 動作確認は post-merge (P1 / P2) でユーザが手動実施する。
+
+## issue retrospective
+
+### 曖昧点の解決根拠
+
+- **対応範囲**: 背景の「CodeRabbit, Claude Code Review などにも対応できるよう汎用的なセットアップ」という文言を受けて、ユーザー確認で「Copilot + Claude Code Review 両方の live 確認 + CodeRabbit 新規追加」に確定。Claude Code Review は既存実装があるため新規実装は不要で、live 確認のみスコープに入れた。
+- **動作確認基準**: ユーザー確認で「post-merge の live PR 確認」に確定。mock ベースの bats テスト（既存 + CodeRabbit 用追加分）を pre-merge で担保しつつ、3 リビュアーそれぞれを実 PR 上で確認する post-merge manual verify を付与。
+- **汎用化の抽象化レベル**（自動解決）: 現行は既に「reviewer type 引数 + `.wholework.yml` marker + `detect-config-markers.md` 表」という汎用パターン。新規追加は case 文 + marker 行 + テストケースで完結するため、プラグイン機構等の追加抽象化は不要と判断した。
+
+### 主要な方針決定
+
+- Sub-issue 分割は見送り（既存パターン踏襲の単一凝集スコープ）
+- 受入条件を pre-merge 機械検証（11 件）+ post-merge manual verify（4 件）に分類
+- Copilot 側の設定手順書は対象外
+
+## spec retrospective
+
+### Minor observations
+
+- `docs/tech.md` と `docs/ja/tech.md` のマーカー検出例は 1 行のみの変更であり、専用の pre-merge verify item を設けるほどではない。Implementation Steps では明示しているため実装漏れのリスクは低い。
+- `COPILOT_REVIEW_TIMEOUT` 環境変数の命名が 3 ツール共有の実態と乖離しているが、backward compat を優先して本 Issue では触れない判断とした。
+
+### Judgment rationale
+
+- **Timeout 環境変数**: Plugin 機構導入を含む 3 つの代替案を検討した上で、いずれも本 Issue のスコープに対してオーバーエンジニアリングと判断。 Alternatives Considered セクションに記録済み。
+- **Simplicity rule**: Pre-merge verify items が 11 件（上限 10）を 1 件超過。docs/tech.md 変更を別 verify item にせず Changed Files + Implementation Steps での網羅で十分と判断した。
+
+### Uncertainty resolution
+
+- **CodeRabbit bot login**: `coderabbitai[bot]` / `coderabbitai` と想定。一般知識に基づく推定だが、実装時の WebFetch または公開 PR の `gh api` 実行で確認する手順を Spec の Uncertainty セクションに明記した。影響範囲は Step 1（case 文）と Step 5（bats mock）に限定されるため、万一異なっても修正コストは低い。
