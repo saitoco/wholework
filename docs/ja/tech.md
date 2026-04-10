@@ -33,6 +33,7 @@
   | verify | はい | マージ後の状態を独立して検証。先行フェーズの判断に影響されてはならない |
 
 - **`/auto` Skill**: spec→code→review→merge→verify を `run-*.sh` 経由で順次連鎖するオーケストレーター。各フェーズは `claude -p --dangerously-skip-permissions` で独立プロセスとして実行され、フレッシュなコンテキストと完全なパーミッションバイパスを保証。追加機能: `phase/*` ラベル未設定時は Issue トリアージ/リファインから自動開始、`phase/ready` 未設定時は `/spec` を自動実行、`--batch N` はバックログから N 件の XS/S Issue を処理、XL Issue はサブ Issue の依存グラフ（`blockedBy`）を読み取り独立サブ Issue を並列実行（worktree 分離）してから依存するものを順次実行、`--base {branch}` は main の代わりにリリースブランチをターゲットにする。
+  - **2 階層オーケストレーション**: `/auto` 自体（親オーケストレーター）はユーザーの Claude Code セッション内で動作し、LLM 推論による適応的判断（ラベル状態評価、Size ベースルーティング、サブ Issue 依存グラフ解析）を行う。XL Issue の場合、`run-auto-sub.sh`（子オーケストレーター）が各サブ Issue の全フェーズシーケンスを実行する。`run-auto-sub.sh` は純粋な bash スクリプトであり `claude -p` を呼び出さず、Size に基づく決定的な if/case ルーティングを使用する。これは技術的制約ではなく意図的な設計選択: 現在のフェーズルーティングは決定的であり各フェーズは `run-*.sh` により自己完結しているため、子オーケストレーターレベルでの LLM 推論はコスト増のみで利点がない。適応的リカバリが必要になった場合（例: code 失敗後の spec 再実行、review 結果に基づく戦略変更）、`run-auto-sub.sh` を `claude -p` オーケストレーターにアップグレードする方向になる。
 - **サブエージェント分割**: 2 つの Skill で使用:
   - `/issue`（L/XL）: 3 つの独立サブエージェント（`scope-agent`、`risk-agent`、`precedent-agent`）による並列調査で、変更スコープ、リスク、前例を同時分析。
   - `/review`: 2 グループに分割 — Spec 準拠レビュー（`review-spec`）とバグ検出（`review-bug`）— 2 段階検証（検出→検証サブエージェント）で偽陽性を排除。
@@ -47,9 +48,29 @@
     | ファイル存在 | 特定ファイルの存在 | `review/skill-dev-recheck.md`（`scripts/validate-skill-syntax.py` が存在する時に読み込み） |
 
 - **工数最適化戦略（3 軸）**: `claude -p` 呼び出しにおける実行コストと品質を制御する 3 つの軸。軸ごとの CLI サポート状況と Wholework の採用方針:
-  - **軸 1 — Model selection**（`--model`）: 実装済み。Sonnet がデフォルト、`run-spec.sh --opus` で L サイズ Spec に Opus を使用。追加対応不要。
-  - **軸 2 — Adaptive Thinking**（`--effort`）: `claude -p` は `low/medium/high/max` レベルをサポート（`claude --help` で確認済み）。`run-*.sh` ではまだ未使用。medium effort + Opus advisor の組み合わせで、デフォルト effort の Sonnet と同等品質を低コストで達成可能（Anthropic ベンチマークによる）。`run-*.sh` への実装はフォローアップ Issue。
+  - **軸 1 — Model selection**（`--model`）: 実装済み。Sonnet がデフォルト、`run-spec.sh --opus` で L サイズ Spec に Opus を使用。レビュー確認済み。
+  - **軸 2 — Adaptive Thinking**（`--effort`）: `claude -p` は `low/medium/high/max` レベルをサポート（`claude --help` で確認済み）。`run-*.sh` にフェーズ別 effort レベルを実装済み（下記マトリクス参照）。medium effort + Opus advisor の組み合わせで、デフォルト effort の Sonnet と同等品質を低コストで達成可能（Anthropic ベンチマークによる）。
   - **軸 3 — Advisor 戦略**（`advisor_20260301`）: Anthropic API ベータ機能（`advisor-tool-2026-03-01` ヘッダー必須）。`--betas` フラグで有効化 — API キーユーザーのみ、OAuth/サブスクリプション認証（`run-*.sh` のデフォルト）では利用不可。パフォーマンス向上: Sonnet + Opus advisor で SWE-bench +2.7 pp、コスト -11.9%（Sonnet 単体比）、Haiku + Opus advisor で BrowseComp 41.2%（単体 19.7% 比）、コスト -85%（Sonnet 比）。`run-*.sh` への実装はフォローアップ Issue。
+
+  **フェーズ別 model・effort マトリクス**（`ssot_for: model-effort-matrix`）:
+
+  | コンポーネント | フェーズ | Model | Effort | 根拠 |
+  |-----------|-------|-------|--------|-----------|
+  | run-spec.sh | spec | Sonnet（L では `--opus` で Opus） | max | 設計品質が最重要。Spec エラーは全後続フェーズに波及。`/auto` は L サイズのみ `--opus` を渡す（XL は spec 前に分割） |
+  | run-code.sh | code | Sonnet | high | 実装には十分な推論が必要 |
+  | run-review.sh | review | Sonnet | high | レビューオーケストレーション。サブエージェントが深い分析を担当 |
+  | run-issue.sh | issue | Sonnet | high | L/XL スコープ分析とサブ Issue 分割に十分なオーケストレーションが必要 |
+  | run-verify.sh | verify | Sonnet | medium | 構造化された受入テスト。中程度の複雑度 |
+  | run-merge.sh | merge | Sonnet | low | 機械的なマージ操作。最小限の推論で十分 |
+  | review-bug | review | Opus | — | バグ検出には最高精度が必要（サブエージェント、effort は親から継承） |
+  | review-spec | review | Opus | — | Spec 逸脱検出には高精度が必要（サブエージェント、effort は親から継承） |
+  | review-light | review | Sonnet | — | 軽量統合レビュー（サブエージェント、effort は親から継承） |
+  | scope-agent | issue（L/XL のみ） | Opus | — | `/issue` Step 11a で L/XL 並列調査に使用。スコープ特定精度がサブ Issue 分割判断に直結 |
+  | risk-agent | issue（L/XL のみ） | Opus | — | `/issue` Step 11a で L/XL 並列調査に使用。リスク評価精度が受入条件品質を向上 |
+  | precedent-agent | issue（L/XL のみ） | Opus | — | `/issue` Step 11a で L/XL 並列調査に使用。前例抽出が受入条件品質を向上 |
+  | triage（skill） | triage | Sonnet | — | メタデータ割り当て。Sonnet で十分（直接呼び出し、effort 未設定） |
+
+  SSoT 注記: このマトリクスは全 model・effort 設定の唯一の信頼できる情報源（Single Source of Truth）です。run-*.sh、agents、skills の model/effort を変更する場合は、まずこのテーブルを更新してください。
 
 ## テスト戦略
 
