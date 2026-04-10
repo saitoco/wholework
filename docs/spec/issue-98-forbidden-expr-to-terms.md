@@ -50,3 +50,17 @@
 - 受入条件8（`section_not_contains Acceptance check`）は現時点でパスしているが、#94 マージ後に Acceptance check が Forbidden Expressions に追加されるためフェイルに転じる。本 Issue では Step 2 でこれを除去する
 - `docs/ja/tech.md` の用語移行スコープルール（「Forbidden Expressions に非推奨用語を追加する」）も英語側と合わせて「Terms の 'Formerly called' に追加する」に更新する
 - 日本語ミラーの受入条件はDesign file除去のみ検証するが、実装時は Issue Spec・Verify hint・Dispatch（・Acceptance check）も同様に `docs/ja/tech.md` から除去すること
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- 受入条件8（`section_not_contains Acceptance check`）は Spec 作成時点では "pending (#94 マージ後にフェイルになる)" と注記されていたが、実装時点でも #94 は未マージのため Acceptance check は Forbidden Expressions に存在せず、条件は既にパスしていた。Spec の Step 2 では「#94 マージ後に Acceptance check 行も削除」と記載されていたが、実際は削除対象行がなかったため削除処理をスキップした。
+
+### Rework
+
+- N/A
