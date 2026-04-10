@@ -221,6 +221,13 @@ If the issue title or body contains "rename", "renaming", or similar, run `grep 
 
 Pre-investigate exclusion conditions (historical records, terminology definitions, comparison contexts) and note them in the Spec's "Exclusions" section. Reflect `grep -v` exclusions in `command` hints.
 
+**Post-replacement scan checklist:**
+
+After completing find-and-replace, scan the changed files for these patterns introduced by mechanical substitution:
+- **Article consistency**: check that articles (a/an) are correct after noun replacement (e.g., "an old-term" → "an new-term" should become "a new-term" when appropriate)
+- **Compound noun redundancy**: check for word doubling when replacing compound nouns (e.g., "old-term commands" → "new-term commands" but "new-term term commands" is redundant)
+- **Japanese boundary space**: check that spacing between Japanese text and replaced English terms is correct after substitution
+
 **Multi-file change grep coverage check:**
 
 For changes affecting many files with a common pattern, run `grep -rl '<keyword>' <dir>` to enumerate all affected files and cross-check against the Spec's changed-files list.
