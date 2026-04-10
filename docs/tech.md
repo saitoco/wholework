@@ -3,6 +3,7 @@ type: steering
 ssot_for:
   - tech-stack
   - forbidden-expressions
+  - gotchas
 ---
 
 # Tech
@@ -89,3 +90,13 @@ In gradual migration, there is a period where deprecated terms remain in the sam
 
 - Applies to all Issues that include adding deprecated terms to Forbidden Expressions
 - If "not included," handle deprecated term replacement in a follow-up Issue and reference its Issue number
+
+## Gotchas
+
+### `.claude/settings.json` is not hot-reloaded
+
+`.claude/settings.json` is cached at session start and **is not reloaded during the session**. Changes to `permissions.allow` patterns (or any other settings) take effect only after restarting the Claude Code session.
+
+**Implication**: After modifying `settings.json`, always restart the session before testing whether the new permission patterns work correctly.
+
+**False-negative risk with in-session probes**: Verifying a new `permissions.allow` pattern by probing within the same session where the old config was loaded can yield false negatives. The probe may succeed (or fail) based on the cached config, not the updated one — masking whether the new pattern actually works. Always restart the session before running permission verification probes.
