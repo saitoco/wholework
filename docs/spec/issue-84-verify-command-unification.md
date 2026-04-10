@@ -264,3 +264,17 @@ When assigning `<!-- verify-type: auto -->` to a condition, a `<!-- verify: ... 
 - **Terms SSOT 正本と一般文書の過渡的不整合**: 「Acceptance check」系 83 occurrences の広範置換を同 Issue に含めるか後続 Issue に分離するか → 後続 Issue に分離（`docs/tech.md` Terminology Migration Scope Rule 準拠）。Scope Declaration で明示
 - **ambiguity 検出 0 件**: 本 Issue の受入条件は Spec 段階で新たな ambiguity を発見せず。Issue フェーズで AskUserQuestion を通じて全決定を行い、Auto-Resolved として記録済みだったため
 
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+- `docs/ja/tech.md:62` の書式不整合が review-spec エージェントで SHOULD として検出された。Code Retrospective に記録された「acceptance condition を満たすための日本語→英語括弧変更」は実装の正当な判断だが、日本語ミラーファイル内での書式一貫性（全角括弧）を損なう副作用があった。今後、日本語ファイルの acceptance condition には日本語パターンを直接使用するか、書式一貫性への影響を Spec の Notes に記載することで事前対処できる。
+
+### 繰り返し発生する問題
+
+- 特になし。本 PR は機械的な用語置換であり、同種の問題は発生しなかった。
+
+### 受入条件検証の困難さ
+
+- 全22条件中22件が PASS。UNCERTAIN なし。`command` 型条件（Phase D 2件）は CI reference fallback で問題なく代替確認できた。`file_not_contains` と `grep` の組み合わせによる正/負両面確認パターン（Phase B/C）は精度が高く、今後も再利用できる設計。
+
