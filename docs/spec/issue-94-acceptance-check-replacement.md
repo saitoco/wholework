@@ -120,3 +120,33 @@ Issue #84 で verify command への用語統一を実施したが、Scope Declar
 - **#84 との関係**: #84 が "verify hint" → "verify command" を実施済み。本 Issue は残りの "acceptance check" → "verify command" を完了する
 - **#98 との関係**: #98 が本 Issue 完了後に Forbidden Expressions の用語エントリを Terms に統合する（本 Issue で追加した "Acceptance check" エントリも含む）
 - **自動解決した曖昧性**: 見出しの Title Case 維持、フロントマター内の置換、テーブル行頭の大文字維持（全て英語の慣例に従う）
+
+## Issue Retrospective
+
+### 曖昧性解消の判断根拠
+
+- **全出現箇所が L2 用途**: コードベース調査の結果、"acceptance check" の全出現箇所（22 ファイル・70+ 箇所）が L2（`<!-- verify: ... -->` 構造）を指していた。L1（受入条件一般）を指す "acceptance check" は存在しない。従って L1/L2 判別の実作業は不要で、機械的全置換が可能
+- **Forbidden Expressions 追加**: #84 では "Verify hint" のみ Forbidden Expressions に追加済み。"Acceptance check" も同様に追加して旧用語の再混入を防止する
+- **日本語 "受入チェック"**: docs/ja/ の 3 ファイルで使用。Terms SSOT に従い "verify command" に統一（カタカナ化しない方針は #84 の議論で確定済み）
+
+### Q&A からのポリシー決定
+
+- Size L の判定: 22 ファイルで 11+ の L 基準を満たすが、機械的置換で複雑度は低い。XL 分割は不要
+
+### 受入条件の変更理由
+
+- 元の Issue body には受入条件がなかったため、全面的に追加
+- 主要ファイル 7 件の個別 `file_not_contains` チェック + 広範 `command` チェック（grep ベース）の 2 層構成で漏れを防止
+- Forbidden Expressions 更新を受入条件に追加（元の Scope には含まれていなかった）
+
+## Spec Retrospective
+
+### Minor observations
+- 機械的置換タスクのため Spec の付加価値は低い。Changed Files の正確な列挙と置換ルールの明文化が主な成果物
+- Issue body の残存数 "33 ファイル・116 箇所" と Spec 調査時の "20 ファイル・70 箇所" に差異がある。これは Issue 作成時点では case-insensitive で "acceptance criteria" も含めてカウントしていたため。Spec では L2 用途の "acceptance check" のみを正確にカウントした
+
+### Judgment rationale
+- Nothing to note
+
+### Uncertainty resolution
+- Nothing to note
