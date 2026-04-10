@@ -38,3 +38,14 @@
 - `docs/ja/structure.md` は `/doc translate ja` で生成された翻訳ファイルではなく手動管理ファイルのため、実装ステップに含める
 - test.yml の新ジョブは既存の `bats` と `validate-syntax` ジョブと並列実行可能（依存関係なし）
 - docs/spec/ は歴史的参照を含むため除外。docs/product.md と docs/ja/product.md は "Formerly called" / "旧称" フィルタで除外
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
