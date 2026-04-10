@@ -472,6 +472,22 @@ For each Steering Document loaded above, use AI judgment to identify sections th
 
 Do not auto-fix any detected narrative drift. Accumulate all findings as drift report items and pass them to Step 7 (normalization proposals). Each finding should include: the Steering Document and section name, the drift category, a brief description of the gap, and a suggested update direction for the user to evaluate.
 
+**Terms consistency check:**
+
+This check runs only when the `--deep` flag is enabled.
+
+**Step 1 — Deprecated term detection:**
+
+Scan the Terms table in Steering Documents that carry `ssot_for: terminology` in their frontmatter (typically `docs/product.md`). Extract all entries that have a "Formerly called" annotation, collecting the deprecated alias for each term. For each deprecated alias, Grep implementation files (`skills/*/SKILL.md`, `modules/*.md`, `agents/*.md`) for occurrences. Exclude matches within the Terms table itself and within `docs/spec/` files (disposable specs). Add each match to the drift report as "Deprecated term in use" — each finding should include: Steering Document name, section name ("Terms"), drift category, deprecated alias and its replacement term, and file/line locations.
+
+**Step 2 — Missing term detection:**
+
+Retrieve the list of terms already registered in the Terms table from the Steering Documents identified above. Using AI judgment, extract domain-specific nouns and concepts from implementation files (`skills/*/SKILL.md`, `modules/*.md`, `agents/*.md`) that appear in 3 or more distinct files. Exclude generic programming terms (e.g., "step", "file", "skill", "PR", "Issue", "commit"). Cross-reference candidates against the existing Terms table entries and add unregistered candidates to the drift report as "Missing term" — each finding should include: the unregistered term, number of files it appears in, example locations, and a suggested addition direction.
+
+**Output:**
+
+Accumulate all Terms consistency check findings in the drift report alongside the narrative drift findings above, and pass them to Step 7 (normalization proposals). Do not auto-fix any Terms consistency drift.
+
 **Content classification based on dynamic SSoT mapping:**
 
 Based on the constructed SSoT mapping, determine the "source of truth (Single Source of Truth)" for each section/description. Detect references by dynamically searching other files (README.md, CLAUDE.md etc.) with Grep for information corresponding to each SSoT file's `ssot_for` category.
