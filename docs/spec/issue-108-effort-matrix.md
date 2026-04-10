@@ -133,3 +133,18 @@ Nothing to note（初回作成のため変更なし）
 ### Uncertainty resolution
 
 - `--effort` が sub-agents に継承されるかどうかは Claude Code の内部動作に依存するが、Anthropic のドキュメントから推定。実装後に run-review.sh + review-bug の動作で間接的に確認可能
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A（Spec の実装ステップに従い、設計通りに実装完了）
+
+### Design Gaps/Ambiguities
+
+- Spec の `run-verify.sh` 行番号指定（L76-80）は実際のファイルと一致（`tee` を使ったパイプ構造の claude コマンド部分）。ただし `--effort` の挿入位置は `--dangerously-skip-permissions` の直前であり、Spec の「L76-80 に追加」という記述は行番号変動リスクがある。次回から行番号ではなくコンテキストで指定するとよい
+- echo 出力の "Effort: X" を追加する位置について Spec では「echo 出力に追加」と記述されており、具体的な挿入箇所が「Model: sonnet」の直後であることは自明だったが、明示するとより良い
+
+### Rework
+
+- N/A（全ステップ一発で完了、rework なし）
