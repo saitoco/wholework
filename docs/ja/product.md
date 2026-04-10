@@ -148,6 +148,7 @@ Describe success metrics here. -->
 | `/auto` | spec→code→review→merge→verify を `claude -p` 経由で非対話的に連鎖させるオーケストレータ Skill。`phase/*` ラベルがない場合は Issue の triage から自動開始、`phase/ready` がない場合は `/spec` を自動実行。`--batch N` はバックログから XS/S の Issue を N 件処理、XL Issue は独立サブ Issue を並列実行（worktree 分離）。`--base {branch}` はリリースブランチを対象にする | 開発ワークフロー |
 | 受入条件項目（Acceptance condition） | Issue の受入条件のうち、1件の検証可能な要件項目。チェックリストの1行として現れ、verify command と対になることが多い | /issue、/verify |
 | 受入条件（Acceptance criteria） | Issue の受入条件の全体セット。Issue 本文の `## Acceptance Criteria` に定義される。個別の受入条件項目の集合 | /issue、/verify |
+| 自動検証（auto-verify） | `/verify` が実行する自動検証プロセス。各受入条件項目の verify command を実行し、パスした条件にチェックを入れ、失敗時に Issue を再オープンする | /verify Skill |
 | ドリフト（Drift） | 文書化された仕様（Steering Documents または Spec）と実際のコード実装の間の意味的乖離。`/audit drift` で検出される | /audit Skill |
 | フォークコンテキスト | メイン会話に影響を与えない Skill 実行モード | Claude Code |
 | パッチ経路（Patch route） | XS/S サイズの Issue 向けのワークフロー経路。Pull Request を作成せず main ブランチに直接コミットする | 開発ワークフロー |
@@ -163,3 +164,4 @@ Describe success metrics here. -->
 | サブエージェント | Task ツールで起動されるサブエージェント。結果のみをメインエージェントに返す | Claude Code |
 | サブ Issue（Sub-issue） | XL Issue 分割における子 Issue。`/auto` が `blockedBy` 依存グラフを読み取り、独立サブ Issue を並列実行（worktree 分離）、依存先完了後に後続サブ Issue を順次実行する | 開発ワークフロー |
 | verify command | `<!-- verify: ... -->` 形式の HTML コメント。受入条件に機械的に検証可能な方法を付与する。旧称「verification hint / Acceptance check / 受入チェック」 | /issue、/verify |
+| verify command タイプ（verify command type） | verify command の先頭トークン（例: `file_exists`、`grep`、`section_contains`、`command`）。受入条件に適用するチェック方法を識別する | /issue、/verify |
