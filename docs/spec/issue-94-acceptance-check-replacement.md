@@ -165,3 +165,25 @@ Issue #84 で verify command への用語統一を実施したが、Scope Declar
 ### Rework
 
 - 広範 grep コマンド hint の修正: 初回コミット後に Step 10 で FAIL が判明。verify command hint に除外パターン追加が必要だった（`| Acceptance check |` 行の除外）。Spec と Issue body 両方を修正してリコミット
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+機械的置換タスク特有のパターンで、Spec の置換ルール（「単数/複数を保持」）が想定していなかった変換アーティファクトが複数発生した：
+
+1. **冠詞の不整合**: "An acceptance check" → "An verify command"（"An" のまま残存）。Spec のルールは単数/複数形の保持のみで、冠詞変化（An → A）を対象外としていた
+2. **複合名詞の冗長**: "acceptance check commands" → "verify command commands"。"verify command" 自体が "command" を含む複合名詞のため、複数形 "commands" との組み合わせで "command commands" という重複が生じた
+3. **日本語テキストとのスペース**: "受入チェック" は日本語文字列として直接隣接可能だが、"verify command"（英語）に置換後は前後の日本語文字との間にスペースが必要
+
+将来の用語置換 Issue では、Spec に「元の用語が母音始まり/子音始まりかを確認し冠詞を調整する」「置換後の用語が compound noun の場合は複数形との組み合わせを確認する」「日本語ドキュメントでの英語挿入後はスペース規則を確認する」の3点を明示的に追加すべき。
+
+### Recurring issues
+
+7 ファイル・9 箇所の修正が全て同一の根本原因（機械的置換の後処理不足）から発生した。これは単発ではなく構造的な見落とし。類似の用語置換タスクでは、置換後のスキャン（"An [子音始まり]"、"[term] [term]-related", 日本語境界スペース）をチェックリストに含めることで再発防止できる。
+
+### Acceptance criteria verification difficulty
+
+2 件の UNCERTAIN（広範 grep command チェック）が発生した。`command` hint の grep は CI でカバーされておらず、safe モードでは UNCERTAIN になる。改善案：
+- `command "test ... -eq 0"` 形式ではなく、主要ファイルを個別に `file_not_contains` に分解すると safe モードで PASS/FAIL を確定できる
+- または広範チェック用の CI ジョブを追加してCIフォールバックを有効化する
