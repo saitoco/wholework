@@ -31,7 +31,7 @@ wholework/
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   └── workflows/
-│       ├── test.yml             # CI: bats tests and skill syntax validation
+│       ├── test.yml             # CI: bats tests, skill syntax validation, and forbidden expressions check
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
 ├── tests/               # Bats test files for scripts (25 files)
 │   ├── <script-name>.bats
@@ -136,7 +136,7 @@ Key modules:
 
 ### CI Workflows
 
-- `.github/workflows/test.yml` — runs bats tests and `validate-skill-syntax.py` on push/PR
+- `.github/workflows/test.yml` — runs bats tests, `validate-skill-syntax.py`, and forbidden expressions check on push/PR
 - `.github/workflows/kanban-automation.yml` — auto-moves issues to project board columns on `phase/*` label events
 
 ### Install

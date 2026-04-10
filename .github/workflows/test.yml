@@ -34,3 +34,21 @@ jobs:
 
       - name: Validate skill syntax
         run: python3 scripts/validate-skill-syntax.py skills/
+
+  check-forbidden-expressions:
+    name: Forbidden Expressions check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for forbidden expressions
+        run: |
+          if grep -ri 'acceptance check' skills/ modules/ agents/ tests/ docs/ \
+            | grep -v 'docs/spec/' \
+            | grep -v 'Formerly called' \
+            | grep -v '旧称' \
+            | grep -v '| Acceptance check |'; then
+            echo "Forbidden expression 'acceptance check' detected"
+            exit 1
+          fi
