@@ -1,3 +1,5 @@
+日本語 | [English](README.md)
+
 # Wholework
 
 自律的な GitHub ワークフローのための、Spec ファーストな Claude Code Skill 群。

@@ -1,3 +1,5 @@
+[日本語](README.ja.md) | English
+
 # Wholework
 
 Spec-first Claude Code skills for autonomous GitHub workflows.
