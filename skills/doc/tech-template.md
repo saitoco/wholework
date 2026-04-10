@@ -26,7 +26,7 @@ Describe coding conventions and naming rules.
 
 ## Forbidden Expressions（Optional）
 
-Describe expressions/terms that are prohibited and their recommended alternatives.
+Describe expressions that are technically prohibited and their recommended alternatives. For deprecated wording, use the "Formerly called" field in Terms.
 
 | Expression | Reason | Alternative |
 |-----------|--------|-------------|
