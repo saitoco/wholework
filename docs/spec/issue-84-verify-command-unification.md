@@ -278,3 +278,31 @@ When assigning `<!-- verify-type: auto -->` to a condition, a `<!-- verify: ... 
 
 - 全22条件中22件が PASS。UNCERTAIN なし。`command` 型条件（Phase D 2件）は CI reference fallback で問題なく代替確認できた。`file_not_contains` と `grep` の組み合わせによる正/負両面確認パターン（Phase B/C）は精度が高く、今後も再利用できる設計。
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec self-review で Issue 本文の false-positive パターン（`--> hint`）を事前に発見・修正できた。`/spec` フェーズでのターゲットファイル確認（verify-patterns.md section 3）が機能した典型例。
+- テーブル行削除検出パターン（`file_not_contains "| X |"`）と positive 確認の組み合わせはこのカテゴリの Issue に再利用できる設計。
+
+#### design
+- N/A（spec が設計も兼ねる構成であり、別途設計フェーズなし）
+
+#### code
+- `docs/ja/tech.md:62` にて英語パターン（`changed to "verify command")`）を acceptance condition に合わせて挿入したが、日本語ミラーファイルの全角括弧書式と不整合が生じた。今後、日本語ファイル向けの acceptance condition には日本語パターンを直接使用するか、書式への影響を Spec Notes に記載することで事前対処が可能。
+
+#### review
+- review-spec エージェントが `docs/ja/tech.md:62` の書式不整合を SHOULD として正確に検出。実装上の正当な判断（acceptance condition を満たすための書式変更）だったが、副作用を事前に Spec に記載しておくことで SHOULD 指摘を防げた。
+
+#### merge
+- 単一クリーンコミット（`4579917 Issue #84: Unify terminology to verify command (#87)`）で完了。fixup・revert なし、スムーズなマージ。
+
+#### verify
+- 全22条件が PASS。`file_not_contains` + `grep` の正/負両面確認パターンが正確に機能した。
+- Phase D `command` 型条件（validate-skill-syntax.py + bats）も 33/33 テスト全通過。
+- ポストマージ manual 条件 1件は `phase/verify` ラベルで追跡中。
+
+### Improvement Proposals
+- 日本語ミラーファイルの acceptance condition は日本語パターンを直接使用するか、英語パターン挿入による書式不整合リスクを Spec Notes に明示することを `/spec` ガイドラインに追記する（`docs/ja/*` 対象 Issue に適用）
+
