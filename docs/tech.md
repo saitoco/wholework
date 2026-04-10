@@ -52,6 +52,11 @@ ssot_for:
     | Marker detection | YAML key in `.wholework.yml` | `review/external-review-phase.md` (read when `copilot-review: true`, `claude-code-review: true`, or `coderabbit-review: true`) |
     | File existence | Specific file presence | `review/skill-dev-recheck.md` (read when `scripts/validate-skill-syntax.py` exists) |
 
+- **Effort optimization strategy (3 axes)**: Three axes for controlling execution cost and quality in `claude -p` invocations. CLI support status and Wholework adoption policy per axis:
+  - **Axis 1 — Model selection** (`--model`): Already implemented. Sonnet is the default; `run-spec.sh --opus` switches to Opus for L-size specs. No further action needed.
+  - **Axis 2 — Adaptive Thinking** (`--effort`): `claude -p` supports `low/medium/high/max` levels (confirmed via `claude --help`). Not yet used in `run-*.sh`. Combining medium effort with an Opus advisor achieves quality comparable to default-effort Sonnet at lower cost (per Anthropic benchmarks). Implementation in `run-*.sh` is a follow-up Issue.
+  - **Axis 3 — Advisor strategy** (`advisor_20260301`): Anthropic API beta feature (`advisor-tool-2026-03-01` header required). Enabled via the `--betas` flag — API key users only; not available with OAuth/subscription auth (the `run-*.sh` default). Performance gains: Sonnet + Opus advisor achieves SWE-bench +2.7 pp and cost −11.9% vs. Sonnet alone; Haiku + Opus advisor achieves BrowseComp 41.2% (vs. 19.7% solo) and cost −85% vs. Sonnet. Implementation in `run-*.sh` is a follow-up Issue.
+
 ## Testing Strategy
 
 | Tool | Purpose | When |
