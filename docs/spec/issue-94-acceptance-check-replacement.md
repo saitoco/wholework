@@ -96,7 +96,7 @@ Issue #84 で verify command への用語統一を実施したが、Scope Declar
 
 #### 広範チェック
 
-- <!-- verify: command "test $(grep -ri 'acceptance check' skills/ modules/ agents/ tests/ docs/environment-adaptation.md docs/workflow.md docs/structure.md docs/tech.md skills/doc/ skills/audit/ skills/spec/ skills/issue/spec-test-guidelines.md 2>/dev/null | grep -v 'Formerly called' | wc -l) -eq 0" --> skills/、modules/、agents/、tests/、対象 docs/ から L2 用途の "acceptance check" が全て除去されている
+- <!-- verify: command "test $(grep -ri 'acceptance check' skills/ modules/ agents/ tests/ docs/environment-adaptation.md docs/workflow.md docs/structure.md docs/tech.md skills/doc/ skills/audit/ skills/spec/ skills/issue/spec-test-guidelines.md 2>/dev/null | grep -v 'Formerly called' | grep -v '| Acceptance check |' | wc -l) -eq 0" --> skills/、modules/、agents/、tests/、対象 docs/ から L2 用途の "acceptance check" が全て除去されている
 - <!-- verify: command "test $(grep -r '受入チェック' docs/ja/ 2>/dev/null | grep -v '旧称' | wc -l) -eq 0" --> `docs/ja/` から L2 用途の "受入チェック" が全て除去されている
 
 #### Forbidden Expressions 更新
