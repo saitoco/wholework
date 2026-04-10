@@ -187,3 +187,37 @@ Issue #84 で verify command への用語統一を実施したが、Scope Declar
 2 件の UNCERTAIN（広範 grep command チェック）が発生した。`command` hint の grep は CI でカバーされておらず、safe モードでは UNCERTAIN になる。改善案：
 - `command "test ... -eq 0"` 形式ではなく、主要ファイルを個別に `file_not_contains` に分解すると safe モードで PASS/FAIL を確定できる
 - または広範チェック用の CI ジョブを追加してCIフォールバックを有効化する
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受入条件の設計は全体として適切だった。主要ファイル7件の個別 `file_not_contains` + 広範 `command` チェックの2層構成は有効
+- Issue body に受入条件がなかったため Spec 側で全面追加したが、Issue の本来の要件として最初から含めておくべきだった
+- Forbidden Expressions テーブルエントリが広範 grep チェックに引っかかる問題は、受入条件設計時に予見できた可能性がある。`| Acceptance check |` 除外パターンの必要性を先読みして hint に含めておくと rework を防げた
+
+#### design
+- 設計内容自体は実装と大きく乖離しなかった（Python スクリプト化は手段の変更だが目的は同じ）
+- Changed Files の正確な列挙が実装の指針となり有効だった
+
+#### code
+- 主な rework 要因は「Acceptance check」(capital A) の2パス処理必要性と、Forbidden Expressions 追加後の grep 自己参照問題。いずれも受入条件設計またはスクリプト設計段階で対策可能だった
+- 将来の用語置換タスクでは、置換後スキャン（冠詞変化、複合名詞、日本語境界スペース）をスクリプトのpost-checkとして組み込む価値がある
+
+#### review
+- 7ファイル・9箇所の後処理不足が同一根本原因から発生したことをレビューが検出し、パターン化された指摘につながった。有効なレビューだった
+- `/verify` では全13条件がPASSし、レビュー指摘された問題がすべて修正済みであることを確認できた
+
+#### merge
+- PR #103 でのスカッシュマージは問題なく完了。コンフリクトなし
+- bats 266テスト全通過により、マージ品質は確保されていた
+
+#### verify
+- 全13条件がPASS（再実行でも一致）。受入条件の設計が適切で自動検証が完全に機能した
+- 広範 grep コマンドの除外パターン（`| Acceptance check |`）が正しく機能し、Forbidden Expressions 追加後も誤検知なし
+- `/review` での2件の UNCERTAIN（broad command が safe モードで実行不可）は `/verify` の full モードで解消された。このパターンは設計通り
+
+### Improvement Proposals
+- 用語置換 Issue の受入条件設計として、除外対象（Forbidden Expressions テーブル行、歴史的参照等）を先読みして `grep -v` パターンを hint に含める慣例を Spec に追記することを検討する
+- 広範 grep を `command "test $(grep ...) -eq 0"` 形式で書く場合、`/review`（safe モード）では UNCERTAIN になることが確認されたが、これは既知の設計上の制約であり許容範囲内
