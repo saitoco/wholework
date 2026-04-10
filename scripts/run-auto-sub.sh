@@ -132,6 +132,9 @@ case "$SIZE" in
     acquire_patch_lock
     "$SCRIPT_DIR/run-code.sh" "$SUB_NUMBER" --patch ${BASE_FLAG:-}
     release_patch_lock
+
+    echo "--- verify phase: issue #${SUB_NUMBER} ---"
+    run_verify_with_retry "$SUB_NUMBER" "${BASE_BRANCH:-}"
     ;;
   S)
     echo "--- code phase (patch): issue #${SUB_NUMBER} ---"

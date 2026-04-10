@@ -89,6 +89,7 @@ Keeps the SKILL.md core lightweight; environment-dependent logic (Domain) is loa
 | `skills/issue/spec-test-guidelines.md` | `/issue` | `validate-skill-syntax.py` exists | Skill development test recommendations |
 | `skills/verify/browser-verify-phase.md` | `/verify` | `HAS_BROWSER_CAPABILITY=true` | Browser verification |
 | `skills/issue/mcp-call-guidelines.md` | `/issue` | `MCP_TOOLS` non-empty | MCP tool detection |
+| `skills/doc/translate-phase.md` | `/doc` | `translate` subcommand | Translation generation |
 
 ## Layer 4: Execution (verify-executor + adapter)
 

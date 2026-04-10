@@ -79,22 +79,22 @@ Integrates PR acceptance criteria verification, multi-perspective code review, a
 | Size | Review mode | Behavior |
 |------|-------------|----------|
 | XS, S | skip (early exit) | Exits with "review not required" message (patch route) |
-| M | light | Runs Step 9 as lightweight integrated review (1 agent) |
+| M | light | Runs Step 10 as lightweight integrated review (1 agent) |
 | L, XL | full | Runs all steps |
 
 **External review tool integration**: Create `.wholework.yml` at the project root and set values to enable (all disabled by default):
 
 ```yaml
 # .wholework.yml
-copilot-review: true        # Enable GitHub Copilot review (wait and handle findings in Step 6)
-claude-code-review: true    # Enable official Claude Code Review (wait and handle findings in Step 6)
-coderabbit-review: true     # Enable CodeRabbit AI review (wait and handle findings in Step 6)
+copilot-review: true        # Enable GitHub Copilot review (wait and handle findings in Step 7)
+claude-code-review: true    # Enable official Claude Code Review (wait and handle findings in Step 7)
+coderabbit-review: true     # Enable CodeRabbit AI review (wait and handle findings in Step 7)
 review-bug: false           # Disable review-bug agent in Step 9 (only review-spec runs)
 ```
 
 If `.wholework.yml` does not exist, all settings are treated as default (disabled).
 
-**`--review-only` option**: `/review {PR number} --review-only` stops after review posting (Step 10) and skips fixes (Steps 11–13). Fixes are delegated to the user or Copilot. The `phase/review` status label remains unchanged.
+**`--review-only` option**: `/review {PR number} --review-only` stops after multi-perspective code review (Step 10) and skips Steps 11–14 and retrospective. Fixes are delegated to the user or Copilot. The `phase/review` status label remains unchanged.
 
 ### 5. Merge Phase — `/merge`
 

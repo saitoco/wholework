@@ -95,7 +95,7 @@ Determine the review mode using ARGUMENTS and the linked Issue's Size, and store
 |------|-------------|----------|
 | `XS` | skip | Early exit (patch route) |
 | `S`  | skip | Early exit (patch route) |
-| `M`  | light | Run Step 9 as lightweight integrated review (1 agent) |
+| `M`  | light | Run Step 10 as lightweight integrated review (1 agent) |
 | `L`  | full | Run all steps |
 | `XL` | full | Run all steps |
 
