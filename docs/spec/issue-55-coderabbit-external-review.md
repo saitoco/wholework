@@ -146,6 +146,21 @@ mock `gh` スクリプトは `{"author":{"login":"coderabbitai"},"state":"COMMEN
 - 受入条件を pre-merge 機械検証（11 件）+ post-merge manual verify（4 件）に分類
 - Copilot 側の設定手順書は対象外
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- `external-review-phase.md` の Step 7.4 末尾で「proceed to Step 8」となっていたが、Step 7.5/7.6 追加後は「proceed to 7.5」に修正が必要だった点がSpec に明示されていなかった。実装時に気づき修正済み。
+- Step 7.2 の「proceed to 7.3」に相当する記述も「proceed to Step 8」のままだったため「proceed to 7.3」に修正した（同種の問題）。
+
+### Rework
+
+- `external-review-phase.md` の `--review-only` mode の skip 先を `7.4 → Step 8` のままにしていたが、7.5/7.6 追加後に `7.4 → 7.5` への修正が必要で、最初のEditで漏れており再修正が必要だった。
+
 ## spec retrospective
 
 ### Minor observations
