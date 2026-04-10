@@ -6,6 +6,8 @@ ssot_for:
   - gotchas
 ---
 
+English | [日本語](ja/tech.md)
+
 # Tech
 
 ## Language and Runtime

@@ -4,6 +4,8 @@ ssot_for:
   - figma-workflow
 ---
 
+English | [日本語](ja/figma-best-practices.md)
+
 # Figma Best Practices Guide
 
 This guide summarizes best practices for UI designers creating Figma design files to maximize code generation accuracy by AI agents (Claude + Figma MCP).

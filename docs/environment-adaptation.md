@@ -4,6 +4,8 @@ ssot_for:
   - environment-adaptation-architecture
 ---
 
+English | [日本語](ja/environment-adaptation.md)
+
 # Environment Adaptation Architecture
 
 ## Overview

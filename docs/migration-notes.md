@@ -5,6 +5,8 @@ ssot_for:
   - english-conversion-checklist
 ---
 
+English | [日本語](ja/migration-notes.md)
+
 # Migration Notes
 
 ---

@@ -6,6 +6,8 @@ ssot_for:
   - terminology
 ---
 
+English | [日本語](ja/product.md)
+
 # Product
 
 ## Vision

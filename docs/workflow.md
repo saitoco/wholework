@@ -5,6 +5,8 @@ ssot_for:
   - label-transitions
 ---
 
+English | [日本語](ja/workflow.md)
+
 # Development Workflow
 
 ## Overview

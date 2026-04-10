@@ -1,3 +1,5 @@
+[English](../figma-best-practices.md) | 日本語
+
 # Figma ベストプラクティスガイド
 
 本ガイドは、AI エージェント（Claude + Figma MCP）によるコード生成精度を最大化するための、UI デザイナーが Figma デザインファイルを作成する際のベストプラクティスをまとめたものです。

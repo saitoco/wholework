@@ -1,3 +1,5 @@
+[English](../migration-notes.md) | 日本語
+
 # Migration Notes
 
 ---

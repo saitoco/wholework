@@ -5,6 +5,8 @@ ssot_for:
   - agent-includes-catalog
 ---
 
+English | [日本語](ja/structure.md)
+
 # Structure
 
 ## Directory Layout（Required）
