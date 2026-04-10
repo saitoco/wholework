@@ -49,7 +49,7 @@ ssot_for:
 
     | Pattern | Condition | Example |
     |---------|-----------|---------|
-    | Marker detection | YAML key in `.wholework.yml` | `review/external-review-phase.md` (read when `copilot-review: true` or `claude-code-review: true`) |
+    | Marker detection | YAML key in `.wholework.yml` | `review/external-review-phase.md` (read when `copilot-review: true`, `claude-code-review: true`, or `coderabbit-review: true`) |
     | File existence | Specific file presence | `review/skill-dev-recheck.md` (read when `scripts/validate-skill-syntax.py` exists) |
 
 ## Testing Strategy
