@@ -49,3 +49,38 @@ Risk Notes の実装前検証として、`.claude/settings.json` の hot-reload 
 **結果**: プロンプトは発生せず、コマンドは実行された。残存する他のパターンで `scripts/get-issue-size.sh 80` にマッチするものは存在しないため、**settings.json はセッション開始時にキャッシュされ、hot-reload されない**と結論。
 
 **影響**: 同一セッション内での `~/` 展開動作検証（プローブ方式）は hot-reload 不在により偽陰性リスクがあり、採用不可。Post-merge 検証はセッション再起動を伴う実地確認（本 Issue の acceptance criteria 通り）で行う方針とした。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Acceptance conditions were well-structured with mechanically verifiable `file_contains`/`file_not_contains` checks for pre-merge conditions — no ambiguity in what constitutes passing
+- The `verify-type: manual` post-merge condition is appropriate: `.claude/settings.json` hot-reload behavior (discovered via pre-investigation) means that in-session probe testing would produce false negatives, making session-restart live testing the only reliable verification method
+- The issue retrospective section proactively documented the hot-reload finding, which is an important insight for future work on settings.json
+
+#### design
+- The implementation was a straightforward 1-file patch (1 insertion, 2 deletions in `.claude/settings.json`)
+- No spec retrospective section existed (the spec was created concurrently with the issue retrospective in a single commit — patch-route workflow)
+- Design decision (use `~/` expansion over install.sh generation) was validated by prior usage evidence in `docs/migration-notes.md` and SKILL.md frontmatter
+
+#### code
+- Single clean commit (`ea770ad`) with no fixup/amend patterns — implementation was executed correctly on the first attempt
+- Patch route (direct commit to main) was appropriate for this XS-size change
+- No rework detected
+
+#### review
+- No code review (patch route for XS issue) — appropriate given the minimal scope
+- The pre-implementation hot-reload investigation served as a self-review mechanism to validate the approach before committing
+
+#### merge
+- Direct commit to main with `closes #80` in commit message — clean merge with no conflicts
+- Issue was closed automatically via the commit message
+
+#### verify
+- All 3 pre-merge conditions: PASS (verified via `file_not_contains` and `file_contains` checks)
+- Post-merge manual condition appropriately deferred to user verification
+- The `~/` expansion effectiveness in `.claude/settings.json` `permissions.allow` context remains the key open question — the manual post-merge condition captures this correctly
+
+### Improvement Proposals
+- The `.claude/settings.json` hot-reload behavior finding (session-cached, not reloaded dynamically) is a useful operational insight worth documenting in project docs (e.g., `docs/notes.md` or similar). This would help future developers understand why settings changes require a session restart to take effect, and why in-session probe testing of permission patterns is unreliable.
