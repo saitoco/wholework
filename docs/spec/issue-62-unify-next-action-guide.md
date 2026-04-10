@@ -226,3 +226,34 @@
 
 - pre-merge 16 件はすべて `file_exists`/`grep`/`section_contains`/`command`(CI fallback) で機械的に検証可能だった。UNCERTAIN が0件で、今後の Issue 設計の参考になる。
 - 検証が難しい post-merge 条件（opportunistic verify）は適切に分離されており、今回のレビューフェーズでの過検証（UNCERTAIN 多発）を防げた。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body に "Auto-Resolved Ambiguity Points" セクションが存在したため、Spec 作成時の曖昧点解決が不要だった。これが Spec 作業の高速化に貢献した。
+- `docs/ja/structure.md` をスコープ外と判断したことで対象ファイルを10件に確定できた点は適切なスコープ管理だった。
+
+#### design
+- 4セクション構造（Purpose / Input / Processing Steps / Output）の標準フォーマットをそのまま採用できた。新モジュールの設計が既存モジュール（`worktree-lifecycle.md` など）のパターンを踏襲しており、一貫性が高い。
+- LLM 文脈理解に委ねる判定方式（ルールテーブルではなく）は実装のシンプルさにつながった。ルールテーブル方式より柔軟性と保守性が高い。
+
+#### code
+- `skills/auto/SKILL.md` Step 6（On Failure）への参照漏れが1件あった。Spec に「Step 6（On Failure）も同様に `RESULT=fail` で参照」と明記されていたにもかかわらず、`{success|fail}` の記述で両方カバーできると誤解した。横断修正時は Spec のフェーズ別指示を独立ステップで分けた記述が有効。
+- `$PR_NUMBER` と `$NUMBER` の変数名不一致も修正された。横断修正時は既存変数名を Spec 実装ステップに明記するか、変数名の一貫性チェックを追加すると防げる。
+
+#### review
+- review-bug エージェントが HIGH SIGNAL フィルタとして機能し、実際の課題（Step 6 漏れ、変数名誤り）を正確に2件検出できた。偽陽性を多く排除した点が効果的だった。
+- pre-merge 16件が全て機械的検証可能（UNCERTAIN 0件）だったことはレビューの確実性向上に寄与した。
+
+#### merge
+- PR #79 がスカッシュマージされ、コンフリクトなしで main にマージされた。横断的変更（10ファイル）でも衝突なしで完了した。
+
+#### verify
+- 全16件の pre-merge 条件が PASS。re-run での結果変化なし。
+- post-merge opportunistic 条件（5件）は `verify-type: opportunistic` で適切に分離されており、自動検証対象外として正しく処理できた。
+- `phase/verify` ラベルが既に設定済みで、Issue は CLOSED 状態を維持。
+
+### Improvement Proposals
+- N/A
