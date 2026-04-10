@@ -413,10 +413,10 @@ grep -r "{keyword}" {target file or directory}
 - **If judged as resolved**: skip Issue creation and output to terminal (e.g., "Skipping due to freshness check: {title} (may already be resolved in main)")
 - **If unresolved or cannot determine**: proceed to the next step (Issue creation)
 
-**Create Issue and add verify hints**:
+**Create Issue and add verify commands**:
 
 - Normalize title following `${CLAUDE_PLUGIN_ROOT}/modules/title-normalizer.md` processing steps, then create Issues in standard format (background, purpose, acceptance conditions) with `gh issue create` for each improvement proposal
-- **Add verify hints to acceptance conditions**: add acceptance checks like `<!-- verify: grep "{keyword}" "{target file}" -->` to the created Issue's acceptance conditions. Extract keywords from acceptance condition text and infer target files from proposal content (improves automation accuracy for `/auto --batch`). Create Issue without verify hints if they cannot be determined
+- **Add verify commands to acceptance conditions**: add acceptance checks like `<!-- verify: grep "{keyword}" "{target file}" -->` to the created Issue's acceptance conditions. Extract keywords from acceptance condition text and infer target files from proposal content (improves automation accuracy for `/auto --batch`). Create Issue without verify commands if they cannot be determined
 - If Issue creation fails, output error log to stderr, skip, and continue verify (does not affect exit code)
 - Output created Issue number to terminal
 

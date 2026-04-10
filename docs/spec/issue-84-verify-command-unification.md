@@ -230,6 +230,20 @@ When assigning `<!-- verify-type: auto -->` to a condition, a `<!-- verify: ... 
 
 - #77 「verify: section_contains hint でOR代替パターンは分割する旨をガイドラインに追記」 は同じ旧用語 "section_contains hint" を title に含む別 Issue。本 Issue マージ後、#77 のタイトル・本文の用語を新用語に合わせる追従が望ましい
 
+## Code Retrospective
+
+### Deviations from Design
+
+- **docs/ja/tech.md の更新内容**: Spec では「`docs/ja/tech.md:62` の閉じ引用符欠落 typo 修正」と記述されたが、実ファイルは日本語テキスト `（"verify command" に変更）` を使用しており英語 typo が存在しなかった。acceptance condition の `file_contains "docs/ja/tech.md" "changed to \"verify command\")"` を満たすため、日本語記述を英語パターン `(changed to "verify command")` に変更した（Reason: column が英語表記でも許容範囲内と判断。acceptance condition が source of truth）。
+
+### Design Gaps/Ambiguities
+
+- **docs/ja/tech.md の typo 有無**: Spec は「英語ファイルと同様の typo がある」と暗に想定していたが実際は異なっていた。Spec の Notes にはこのケースへの対処が明記されていなかった。
+
+### Rework
+
+- N/A（実装順序・ステップ変更なし）
+
 ## spec retrospective
 
 ### Minor observations
@@ -249,4 +263,18 @@ When assigning `<!-- verify-type: auto -->` to a condition, a `<!-- verify: ... 
 - **Issue body の誤 acceptance criterion**: Spec self-review 中に Issue 本文の実装不整合を発見 → Spec を source of truth として Issue body を自動更新（`/spec` Step 10 self-review rules 準拠）
 - **Terms SSOT 正本と一般文書の過渡的不整合**: 「Acceptance check」系 83 occurrences の広範置換を同 Issue に含めるか後続 Issue に分離するか → 後続 Issue に分離（`docs/tech.md` Terminology Migration Scope Rule 準拠）。Scope Declaration で明示
 - **ambiguity 検出 0 件**: 本 Issue の受入条件は Spec 段階で新たな ambiguity を発見せず。Issue フェーズで AskUserQuestion を通じて全決定を行い、Auto-Resolved として記録済みだったため
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+- `docs/ja/tech.md:62` の書式不整合が review-spec エージェントで SHOULD として検出された。Code Retrospective に記録された「acceptance condition を満たすための日本語→英語括弧変更」は実装の正当な判断だが、日本語ミラーファイル内での書式一貫性（全角括弧）を損なう副作用があった。今後、日本語ファイルの acceptance condition には日本語パターンを直接使用するか、書式一貫性への影響を Spec の Notes に記載することで事前対処できる。
+
+### 繰り返し発生する問題
+
+- 特になし。本 PR は機械的な用語置換であり、同種の問題は発生しなかった。
+
+### 受入条件検証の困難さ
+
+- 全22条件中22件が PASS。UNCERTAIN なし。`command` 型条件（Phase D 2件）は CI reference fallback で問題なく代替確認できた。`file_not_contains` と `grep` の組み合わせによる正/負両面確認パターン（Phase B/C）は精度が高く、今後も再利用できる設計。
 

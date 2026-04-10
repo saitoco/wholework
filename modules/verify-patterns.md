@@ -97,8 +97,8 @@ When verifying identifiers (variable names, function names, constant names) with
 | Target | Convention | How to Handle |
 |--------|-----------|---------------|
 | Shell script variables | Uppercase (e.g., `CREATED_LINKS`) | Write in uppercase |
-| Python function/variable names | snake_case (e.g., `validate_verify_hints`) | Write in the exact same form as implementation |
-| Constant names | UPPER_SNAKE_CASE (e.g., `KNOWN_VERIFY_COMMANDS`) | Write in uppercase |
+| Python function/variable names | snake_case (e.g., `validate_verify_commands`) | Write in the exact same form as implementation |
+| Constant names | UPPER_SNAKE_CASE (e.g., `KNOWN_VERIFY_COMMAND_TYPES`) | Write in uppercase |
 
 **Examples:**
 - ❌ `grep "created_links" "script.sh"` — shell scripts use uppercase variables, so no match

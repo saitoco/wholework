@@ -191,7 +191,7 @@ If Size is `XL` but splitting is not needed, read `${CLAUDE_PLUGIN_ROOT}/modules
 1. Propose split plan via AskUserQuestion (sub-issue count, scope of each, dependencies)
 2. After approval, create sub-issues with `gh issue create`
 3. Redistribute acceptance criteria; retain only cross-cutting conditions in the parent
-3a. Run lightweight refinement loop per sub-issue (steering doc alignment, verify hint assignment, lightweight ambiguity detection, auto-resolution, record unresolved points, update body)
+3a. Run lightweight refinement loop per sub-issue (steering doc alignment, verify command assignment, lightweight ambiguity detection, auto-resolution, record unresolved points, update body)
 4. Set parent-child relationships via `addSubIssue` GraphQL mutation
 5. Set sub-issue dependencies with `addBlockedBy` if applicable
 6. Apply `phase/issue` label to each sub-issue
