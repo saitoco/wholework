@@ -133,3 +133,32 @@ Nothing to note（初回作成のため変更なし）
 ### Uncertainty resolution
 
 - `--effort` が sub-agents に継承されるかどうかは Claude Code の内部動作に依存するが、Anthropic のドキュメントから推定。実装後に run-review.sh + review-bug の動作で間接的に確認可能
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A（Spec の実装ステップに従い、設計通りに実装完了）
+
+### Design Gaps/Ambiguities
+
+- Spec の `run-verify.sh` 行番号指定（L76-80）は実際のファイルと一致（`tee` を使ったパイプ構造の claude コマンド部分）。ただし `--effort` の挿入位置は `--dangerously-skip-permissions` の直前であり、Spec の「L76-80 に追加」という記述は行番号変動リスクがある。次回から行番号ではなくコンテキストで指定するとよい
+- echo 出力の "Effort: X" を追加する位置について Spec では「echo 出力に追加」と記述されており、具体的な挿入箇所が「Model: sonnet」の直後であることは自明だったが、明示するとより良い
+
+### Rework
+
+- N/A（全ステップ一発で完了、rework なし）
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Nothing to note — review-specエージェントが全実装ステップを確認し、Specとの乖離は検出されなかった。受入条件10件全てPASSで、追加の修正は不要だった。
+
+### Recurring Issues
+
+Nothing to note — review-bug×2エージェントとも問題を検出せず、ドキュメント一貫性も問題なし。フォルスポジティブは2件除外（run-verify.shのteeパイプはdiff外の既存挙動、Specファイル日本語はCLAUDE.md準拠）。
+
+### Acceptance Criteria Verification Difficulty
+
+Nothing to note — 全10件がgrep/section_contains等の静的コマンドで確認でき、UNCERTAIN・POST-MERGEはゼロ。verify命令の設計が適切で、自動検証の精度が高かった。

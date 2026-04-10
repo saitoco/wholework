@@ -13,6 +13,7 @@ fi
 
 echo "=== run-merge.sh: Starting /merge for PR #${PR_NUMBER} ==="
 echo "Model: sonnet"
+echo "Effort: low"
 echo "Permissions: skip (autonomous mode)"
 echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
@@ -45,6 +46,7 @@ set +e
 ANTHROPIC_MODEL=claude-sonnet-4-6 \
   env -u CLAUDECODE claude -p "$PROMPT" \
     --model claude-sonnet-4-6 \
+    --effort low \
     --dangerously-skip-permissions
 EXIT_CODE=$?
 set -e

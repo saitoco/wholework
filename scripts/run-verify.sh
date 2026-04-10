@@ -34,6 +34,7 @@ done
 
 echo "=== run-verify.sh: Starting /verify for Issue #${ISSUE_NUMBER} ==="
 echo "Model: sonnet"
+echo "Effort: medium"
 echo "Permissions: skip (autonomous mode)"
 echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
@@ -77,6 +78,7 @@ set +e
 ANTHROPIC_MODEL=claude-sonnet-4-6 \
   env -u CLAUDECODE claude -p "$PROMPT" \
     --model claude-sonnet-4-6 \
+    --effort medium \
     --dangerously-skip-permissions 2>&1 | tee "$VERIFY_TMPOUT"
 EXIT_CODE=$?
 set -e
