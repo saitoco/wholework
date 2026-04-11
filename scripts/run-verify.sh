@@ -79,7 +79,7 @@ fi
 VERIFY_TMPOUT=$(mktemp)
 set +e
 ANTHROPIC_MODEL=claude-sonnet-4-6 \
-  env -u CLAUDECODE claude -p "$PROMPT" \
+  env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
     --model claude-sonnet-4-6 \
     --effort medium \
     --dangerously-skip-permissions 2>&1 | tee "$VERIFY_TMPOUT"

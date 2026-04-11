@@ -27,13 +27,13 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (6 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (28 files)
+├── scripts/             # Utility scripts used by skills and agents (29 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   └── workflows/
 │       ├── test.yml             # CI: bats tests, skill syntax validation, and forbidden expressions check
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
-├── tests/               # Bats test files for scripts (25 files)
+├── tests/               # Bats test files for scripts (26 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -120,6 +120,9 @@ Key modules:
 - `scripts/log-permission.sh` — log permission events (JSON output)
 - `scripts/opportunistic-search.sh` — opportunistic skill search
 - `scripts/triage-backlog-filter.sh` — filter backlog for triage
+
+**Process management:**
+- `scripts/claude-watchdog.sh` — watchdog wrapper for `claude -p` invocations (hang detection + 1 retry)
 
 **Skill runners:**
 - `scripts/run-auto-sub.sh` — run auto workflow for sub-issues

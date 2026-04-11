@@ -63,7 +63,7 @@ ARGUMENTS: ${ISSUE_NUMBER} --non-interactive"
 # See: https://github.com/anthropics/claude-code/issues/22362
 set +e
 ANTHROPIC_MODEL="${MODEL}" \
-  env -u CLAUDECODE claude -p "$PROMPT" \
+  env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
     --model "${MODEL}" \
     --effort max \
     --dangerously-skip-permissions

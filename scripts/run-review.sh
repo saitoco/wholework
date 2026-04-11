@@ -55,7 +55,7 @@ ARGUMENTS: ${ARGUMENTS}"
 # See: https://github.com/anthropics/claude-code/issues/22362
 set +e
 ANTHROPIC_MODEL=claude-sonnet-4-6 \
-  env -u CLAUDECODE claude -p "$PROMPT" \
+  env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
     --model claude-sonnet-4-6 \
     --effort high \
     --dangerously-skip-permissions
