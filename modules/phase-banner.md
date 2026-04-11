@@ -25,3 +25,17 @@ Display Issue/PR title and URL at skill start for identification.
 
 ## Output
 Phase identification banner displayed to terminal.
+
+## Notes
+
+The banner format above applies to **SKILL.md (LLM-executed)** skills only.
+
+For `run-*.sh` shell scripts, a separate helper `scripts/phase-banner.sh` is used instead.
+Its `print_start_banner` function outputs a different format:
+```
+Issue: #N TITLE
+URL: URL
+```
+
+This is an intentional 2-layer design: SKILL.md module defines the LLM-executed banner format,
+while `scripts/phase-banner.sh` defines the shell-executed banner format for `run-*.sh`.
