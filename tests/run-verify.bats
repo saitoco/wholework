@@ -22,6 +22,21 @@ echo "CLAUDECODE=${CLAUDECODE:-__UNSET__}" >> "$CLAUDE_CALL_LOG"
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/claude"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test issue title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/issues/123"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
 }
 
 teardown() {
