@@ -19,7 +19,11 @@ if [[ $# -gt 0 ]]; then
   exit 1
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 echo "=== run-issue.sh: Starting /issue for issue #${ISSUE_NUMBER} ==="
+source "$SCRIPT_DIR/phase-banner.sh"
+print_start_banner "issue" "$ISSUE_NUMBER"
 echo "Model: sonnet"
 echo "Effort: high"
 echo "Permissions: skip (autonomous mode)"
@@ -30,7 +34,6 @@ echo "---"
 # /issue has context: fork, so calling it via claude -p "/issue N" prevents
 # --dangerously-skip-permissions from propagating to the fork sub-agent (#284)
 # By passing SKILL.md body directly, we bypass frontmatter interpretation
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILL_FILE="${SCRIPT_DIR}/../skills/issue/SKILL.md"
 
 if [[ ! -f "$SKILL_FILE" ]]; then
@@ -64,6 +67,7 @@ set -e
 
 echo "---"
 echo "=== run-issue.sh: Finished /issue for issue #${ISSUE_NUMBER} ==="
+print_end_banner "issue" "$ISSUE_NUMBER"
 echo "Exit code: ${EXIT_CODE}"
 echo "Finished at: $(date '+%Y-%m-%d %H:%M:%S')"
 exit $EXIT_CODE

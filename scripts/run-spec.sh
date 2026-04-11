@@ -28,7 +28,11 @@ if ! [[ "$ISSUE_NUMBER" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 echo "=== run-spec.sh: Starting /spec for issue #${ISSUE_NUMBER} ==="
+source "$SCRIPT_DIR/phase-banner.sh"
+print_start_banner "issue" "$ISSUE_NUMBER"
 echo "Model: ${MODEL}"
 echo "Effort: max"
 echo "Permissions: skip (autonomous mode)"
@@ -36,7 +40,6 @@ echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
 
 # Pass SKILL.md body directly as prompt (avoids context: fork issue)
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILL_FILE="${SCRIPT_DIR}/../skills/spec/SKILL.md"
 
 if [[ ! -f "$SKILL_FILE" ]]; then
@@ -69,6 +72,7 @@ set -e
 
 echo "---"
 echo "=== run-spec.sh: Finished /spec for issue #${ISSUE_NUMBER} ==="
+print_end_banner "issue" "$ISSUE_NUMBER"
 echo "Exit code: ${EXIT_CODE}"
 echo "Finished at: $(date '+%Y-%m-%d %H:%M:%S')"
 exit $EXIT_CODE

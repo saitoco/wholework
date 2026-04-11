@@ -11,7 +11,11 @@ if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 echo "=== run-merge.sh: Starting /merge for PR #${PR_NUMBER} ==="
+source "$SCRIPT_DIR/phase-banner.sh"
+print_start_banner "pr" "$PR_NUMBER"
 echo "Model: sonnet"
 echo "Effort: low"
 echo "Permissions: skip (autonomous mode)"
@@ -21,7 +25,6 @@ echo "---"
 # Pass SKILL.md body directly as prompt (same pattern as run-review.sh)
 # /merge has no context: fork, but uses the same approach for consistency
 # See: #284 (context: fork permission non-propagation issue)
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILL_FILE="${SCRIPT_DIR}/../skills/merge/SKILL.md"
 
 if [[ ! -f "$SKILL_FILE" ]]; then
@@ -53,6 +56,7 @@ set -e
 
 echo "---"
 echo "=== run-merge.sh: Finished /merge for PR #${PR_NUMBER} ==="
+print_end_banner "pr" "$PR_NUMBER"
 echo "Exit code: ${EXIT_CODE}"
 echo "Finished at: $(date '+%Y-%m-%d %H:%M:%S')"
 exit $EXIT_CODE
