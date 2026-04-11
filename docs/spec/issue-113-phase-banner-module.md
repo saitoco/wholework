@@ -279,3 +279,17 @@
 
 ### Rework
 - N/A
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+`modules/phase-banner.md` の Processing Steps に記述されたバナーフォーマット（`--- /SKILL_NAME #N ---` / `TITLE` / `URL` / `---`）と、`scripts/phase-banner.sh` の `print_start_banner` が実際に出力するフォーマット（`Issue: #N TITLE` / `URL: URL`）が異なる。これは Spec の Notes に「SKILL.md は start banner のみ」「run-*.sh は start + end 両方」という意図的な2-layer設計として明記されているが、モジュール内の記述が run-*.sh フォーマットを参照していないため、将来 LLM が phase-banner.md を読む際に誤解する可能性がある。モジュールに「run-*.sh の出力フォーマットは `phase-banner.sh` を参照」という注記を追加することを検討する。
+
+### Recurring Issues
+
+- 特筆事項なし
+
+### Acceptance Criteria Verification Difficulty
+
+- 全8条件が `file_exists` / `grep` / `file_contains` / `github_check` の verify command で機械的に検証可能であり、UNCERTAIN は0件。verify command の設計が適切で自動検証効率が高かった。
