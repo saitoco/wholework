@@ -49,3 +49,29 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec は "### Step 10: Create Spec" セクション内の SHOULD constraints table への1行追加という単純・明確な設計。受け入れ条件の verify コマンドも `section_contains` / `grep` と適切に分割されており、自動検証が完全に機能した。
+
+#### design
+- 設計は実装と完全一致（1行追加のみ）。Auto-resolved ambiguity（配置先の選定、grep OR 構文の分割）も事前にSpec内に記録されており追跡可能。
+
+#### code
+- コミット1件（b995e50）、1ファイル1行追加のみ。fixup/amend なし。設計逸脱なし。
+
+#### review
+- Issue #86 はパッチルート（直接 main へのコミット）のため PR なし。レビューコメントなし。
+
+#### merge
+- パッチルートでコンフリクトなし。直接 main にコミット済み。
+
+#### verify
+- 全3条件が PASS。verify コマンドが正確で自動検証が完全に機能。
+- opportunistic 条件（Post-merge）は次回 permission pattern 変更 Issue の `/spec` 実行時に確認予定。
+
+### Improvement Proposals
+- N/A
