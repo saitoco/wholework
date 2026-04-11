@@ -95,9 +95,9 @@ Key modules:
 | review-bug | `agents/review-bug.md` | Bug/Logic Error Detection (HIGH SIGNAL) |
 | review-light | `agents/review-light.md` | Lightweight Integrated review (all 4 perspectives) |
 | review-spec | `agents/review-spec.md` | Spec/Documentation review |
-| scope-agent | `agents/scope-agent.md` | Scope investigation for L/XL issues |
-| risk-agent | `agents/risk-agent.md` | Risk investigation for L/XL issues |
-| precedent-agent | `agents/precedent-agent.md` | Precedent investigation from similar issues |
+| issue-scope | `agents/issue-scope.md` | Scope investigation for L/XL issues |
+| issue-risk | `agents/issue-risk.md` | Risk investigation for L/XL issues |
+| issue-precedent | `agents/issue-precedent.md` | Precedent investigation from similar issues |
 
 ### Scripts
 
