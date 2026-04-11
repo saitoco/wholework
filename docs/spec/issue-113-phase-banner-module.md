@@ -268,3 +268,14 @@
 
 ### Uncertainty resolution
 - Nothing to note
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- Spec の Implementation Steps で「SCRIPT_DIR を=== 行の前に移動する必要があるスクリプト」として run-issue.sh, run-spec.sh, run-review.sh, run-merge.sh が挙げられていたが、実際には run-code.sh と run-verify.sh も同じ状況（SCRIPT_DIR がStarting行より後に定義）であり、全6スクリプトで前方移動が必要だった。run-auto-sub.sh のみ既に前方に定義されていた点は Spec と一致。
+
+### Rework
+- N/A
