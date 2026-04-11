@@ -18,8 +18,8 @@
 
 ### Pre-merge
 
-- <!-- verify: grep "change.track" "skills/code/SKILL.md" --> `/code` スキルに change tracking comment 投稿ステップが追加されている
-- <!-- verify: grep "change.track" "skills/review/SKILL.md" --> `/review` スキルに change tracking 用語が追加されている
+- <!-- verify: grep "Change.Track" "skills/code/SKILL.md" --> `/code` スキルに change tracking comment 投稿ステップが追加されている
+- <!-- verify: grep "Change.Track" "skills/review/SKILL.md" --> `/review` スキルに change tracking 用語が追加されている
 
 ### Post-merge
 
@@ -31,3 +31,31 @@
 - `/review` Step 13.3 は既に policy change 検出時にコメントを投稿する仕組みを持っている。本 Issue の実装はこの既存機構に change tracking の用語を追加し、明示的に位置づけるもの。新たなロジックの追加は不要。
 - `/code` Step 10 の case 1（全 PASS、チェックボックス更新のみ）は仕様変更に該当しないため、change tracking の対象外とする。case 2（verify command 書き換え）と Step 11 の auto-append のみが対象。
 - コメント投稿は条件付き：Issue body/Spec に実際の変更がなかった場合はスキップする。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- verify command パターン `change.track` が実装後のテキスト（`Change Tracking`、大文字始まり）にマッチしないことが verify 実行時に判明し、パターンを `Change.Track` に修正した。Spec では実装前の想定パターンを記載していたが、実装後の実際のテキストと不一致になった。設計フェーズでの verify command 記述時にコンテンツの大文字小文字を事前確認する必要がある
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- verify command パターン修正のため、Issue body・Spec の両方を追加コミットで更新する必要が生じた（実装コミットとは別に `fix:` コミットが発生）
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+- Spec の Implementation Step 1 が「Step 11 末尾」と記述しているが、実装は Step 12 直前の独立したポストステップとして挿入されている。意味的には合理的な配置だが、Spec 文言との乖離が生じた。verify command に依存しない記述的な配置指定（「Step N の末尾」）は、実装後に Spec が追認する形で修正されることが多い。Spec には配置の意図（「PR 作成後のポストステップ」）を記述する方が、文言の揺れを防ぎやすい。
+
+### 繰り返し指摘パターン
+
+- 特になし（CONSIDER 指摘のみ、MUST/SHOULD なし）
+
+### 受け入れ条件検証の難易度
+
+- Pre-merge 条件 2件はいずれも `grep` verify command で明確に検証可能（PASS）。Post-merge 条件は `opportunistic` タグ付きで `/verify` フェーズに委ねる設計になっており、UNCERTAIN なし。verify command の設計として問題なし。
