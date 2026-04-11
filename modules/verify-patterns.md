@@ -107,6 +107,15 @@ When verifying identifiers (variable names, function names, constant names) with
 
 **Procedure:** Read or Grep the target file to confirm the actual casing of identifiers, then use that exact form in the pattern.
 
+**`file_contains` is case-sensitive — match keyword casing to implementation:**
+
+`file_contains` uses fixed-string matching and is **case-sensitive**. When verifying natural language keywords (e.g., description text, section headings, comments), ensure the keyword in the verify command exactly matches the case used in the implementation.
+
+- ❌ `file_contains "SKILL.md" "partial description"` — FAIL if implementation writes "Partial description" (uppercase P)
+- ✅ Use **lowercase** keywords in `file_contains` only when the implementation is confirmed to use lowercase
+
+**Best practice:** When writing a `file_contains` hint with a lowercase keyword, confirm that the implementation also writes it in lowercase. If the implementation may use sentence-start capitalization or mixed case, prefer `grep` with a flexible pattern (e.g., `grep "[Pp]artial description"`) over `file_contains`.
+
 ### 5. Verify Commands When Adding New Command Types to Documentation
 
 For issues involving documentation changes such as adding new command types to verify command tables, recommend combining `grep` for existence checks with `section_contains` to also verify the correctness of description text (purpose, guidance wording, etc.).
