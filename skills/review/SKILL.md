@@ -588,11 +588,11 @@ Assess whether any changes contradict the acceptance criteria (verify command te
 4. Write to `.tmp/issue-body-$ISSUE_NUMBER.md`
 5. `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh "$ISSUE_NUMBER" .tmp/issue-body-$ISSUE_NUMBER.md`
 
-### 13.3. Post Change Reason Comment (only on policy change detection)
+### 13.3. Post Change Tracking Comment (only on policy change detection)
 
 Format:
 ```markdown
-## Acceptance Criteria Update
+## Change Tracking (by /review)
 
 ### Change Reason
 - Review issue ({Copilot/Claude}) led to {change summary}

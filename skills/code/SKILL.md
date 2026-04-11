@@ -299,6 +299,34 @@ closes #$NUMBER
 
 When creating a PR, compare the Spec verification methods against the Issue acceptance conditions. If the Issue acceptance conditions are missing verification items, fetch the current Issue body with `gh issue view $NUMBER --json body`, build the updated body with the missing items appended, pre-create the directory with `mkdir -p .tmp`, write the updated body to `.tmp/issue-body-$NUMBER.md` with Write tool, update with `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh $NUMBER .tmp/issue-body-$NUMBER.md`. After update, delete the temp file with `rm -f .tmp/issue-body-$NUMBER.md`.
 
+**Change tracking comment (post-PR):**
+
+After creating the PR, if any of the following changes occurred during Step 10 or Step 11, post a change tracking comment to the Issue:
+
+- Step 10 case 2: verify command was rewritten (FAIL → corrected hint)
+- Step 10 Spec sync: Spec verify commands were updated to match Issue body
+- Step 11 auto-append: acceptance conditions were appended to the Issue body
+
+If none of the above changes occurred, skip this step.
+
+When changes occurred, write the comment body to `.tmp/change-tracking-$NUMBER.md` with the Write tool, then post:
+
+```bash
+mkdir -p .tmp
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $NUMBER .tmp/change-tracking-$NUMBER.md
+rm -f .tmp/change-tracking-$NUMBER.md
+```
+
+Comment format:
+
+```markdown
+## Change Tracking (by /code)
+
+### Changes Made
+- {change summary 1 — what was changed and why}
+- {change summary 2}
+```
+
 ### Step 12: Code Retrospective
 
 Append retrospective information to the Spec and commit.
