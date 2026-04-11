@@ -45,3 +45,17 @@
 ### Rework
 
 - verify command パターン修正のため、Issue body・Spec の両方を追加コミットで更新する必要が生じた（実装コミットとは別に `fix:` コミットが発生）
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+- Spec の Implementation Step 1 が「Step 11 末尾」と記述しているが、実装は Step 12 直前の独立したポストステップとして挿入されている。意味的には合理的な配置だが、Spec 文言との乖離が生じた。verify command に依存しない記述的な配置指定（「Step N の末尾」）は、実装後に Spec が追認する形で修正されることが多い。Spec には配置の意図（「PR 作成後のポストステップ」）を記述する方が、文言の揺れを防ぎやすい。
+
+### 繰り返し指摘パターン
+
+- 特になし（CONSIDER 指摘のみ、MUST/SHOULD なし）
+
+### 受け入れ条件検証の難易度
+
+- Pre-merge 条件 2件はいずれも `grep` verify command で明確に検証可能（PASS）。Post-merge 条件は `opportunistic` タグ付きで `/verify` フェーズに委ねる設計になっており、UNCERTAIN なし。verify command の設計として問題なし。
