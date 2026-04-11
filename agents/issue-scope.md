@@ -1,5 +1,5 @@
 ---
-name: scope-agent
+name: issue-scope
 description: Scope Investigation: identify change targets and impact scope (for L/XL Issue parallel investigation)
 tools: Read, Glob, Grep, Bash(git log:*, git diff:*)
 model: opus
@@ -74,7 +74,7 @@ Organize the investigation results by structuring file dependencies in text form
 (describe dependencies in text format)
 
 Example:
-- `skills/issue/SKILL.md` → `agents/scope-agent.md` (Task spawn)
+- `skills/issue/SKILL.md` → `agents/issue-scope.md` (Task spawn)
 - `docs/structure.md` → assumes existence of the above agent files
 
 ### Investigation Summary

@@ -274,9 +274,9 @@ No breaking interface changes. The agent files retain their standard structure (
 - `review-bug`: `レビュー: バグ/ロジックエラー検出...` → `Review: Bug/Logic Error Detection (HIGH SIGNAL)...`
 - `review-light`: `レビュー: 軽量統合（全4観点）...` → `Review: Lightweight Integrated (all 4 perspectives)...`
 - `review-spec`: `レビュー: 仕様・ドキュメント系...` → `Review: Spec/Documentation...`
-- `scope-agent`: `スコープ調査: ...` → `Scope Investigation: ...`
-- `risk-agent`: `リスク調査: ...` → `Risk Investigation: ...`
-- `precedent-agent`: `前例調査: ...` → `Precedent Investigation: ...`
+- `issue-scope`: `スコープ調査: ...` → `Scope Investigation: ...`
+- `issue-risk`: `リスク調査: ...` → `Risk Investigation: ...`
+- `issue-precedent`: `前例調査: ...` → `Precedent Investigation: ...`
 
 **Simplifications applied (opportunistic, agent behavior unchanged):**
 - Verbose numbered Bash/Grep step sequences simplified to intent-level descriptions where the outcome is clear from context
