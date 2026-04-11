@@ -294,6 +294,7 @@ When defining acceptance criteria, explicitly consider:
 - Reference updates in existing files (tables, links, etc.)
 - For new modules: include docs/structure.md module table and Mermaid graph updates in changed-files list
 - Consistency with existing patterns (naming conventions, structural patterns)
+- `docs/ja/*` files (Japanese mirror files): use Japanese-format patterns in verify commands to avoid unintended format changes; if an English pattern must be used, note the format impact explicitly in Notes
 
 Save the implementation plan to `docs/spec/issue-$NUMBER-short-title.md`.
 
