@@ -59,6 +59,8 @@ In `--non-interactive` mode (invoked via `run-code.sh` with `claude -p`), AskUse
 
 Determine the route based on Size (Project field preferred → label fallback) and option flags.
 
+Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="issue", ENTITY_NUMBER=$NUMBER, SKILL_NAME="code".
+
 First, fetch Size (run before route detection):
 
 ```bash

@@ -65,6 +65,8 @@ git status
   "Error: Cannot run verify because there are uncommitted changes. Run `git stash` or `git commit`, then re-run `/verify $NUMBER`."
 - **Clean** → continue
 
+Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="issue", ENTITY_NUMBER=$NUMBER, SKILL_NAME="verify".
+
 ### Step 2: Detect and Update Base Branch
 
 If ARGUMENTS contains `--base {branch}`, use that as `BASE_BRANCH`. Otherwise, search for a merged PR linked to the Issue and fetch `baseRefName`:

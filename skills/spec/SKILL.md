@@ -40,6 +40,8 @@ Parse ARGUMENTS to extract the Issue number and mode options:
 gh issue view $NUMBER --json title,body,labels
 ```
 
+Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="issue", ENTITY_NUMBER=$NUMBER, SKILL_NAME="spec".
+
 Run `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh $NUMBER` and store the result in `ISSUE_TYPE`:
 - Value (`Bug`/`Feature`/`Task`) stored as-is
 - Empty string: `ISSUE_TYPE=unset`

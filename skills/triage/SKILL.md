@@ -72,6 +72,8 @@ gh issue view 123 --json number,title,body,labels && echo "---" && gh issue view
 gh issue view $NUMBER --json title,body,labels
 ```
 
+Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="issue", ENTITY_NUMBER=$NUMBER, SKILL_NAME="triage".
+
 - If the `triaged` label is already present, skip and notify the user
 
 ### Step 2: Duplicate Candidate Detection

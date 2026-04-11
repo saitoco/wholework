@@ -64,6 +64,8 @@ Run `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh $ISSUE_NUMBER` and store th
 
 If Issue number cannot be extracted, set `TYPE=` (empty string).
 
+Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="pr", ENTITY_NUMBER=$NUMBER, SKILL_NAME="review".
+
 ### Step 2: Worktree Entry
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Entry" section.
