@@ -38,3 +38,14 @@
 - [Issue 自動解決] 配置: constraint checklist（Step 10 SHOULD constraints table）に決定。既存パターン（`Verify existing parser behavior`、`Argument parser edge cases` など "when X, do Y" 形式の12件）と一致するため自動解決
 - [Issue 自動解決] grep OR 構文 `\|` → 2つの独立した grep コマンドに分割（verify コマンドの移植性向上、各フレーズの存在を個別に保証）
 - `docs/ja/` 配下に `skills/spec/SKILL.md` の日本語ミラーは存在しないため、日本語ミラー更新不要
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
