@@ -23,7 +23,8 @@
    - `WATCHDOG_TIMEOUT` env var, default `600` (seconds; 10 minutes is sufficient to avoid false positives since real hangs produce 0 bytes from startup)
    - Takes full command as positional args (`"$@"`) and runs it in background, redirecting output to a temp file
    - Streams output in real-time using `tail -f "$tmpout" &` — allows `run-verify.sh`'s `tee` pipe to receive output incrementally
-   - Watchdog loop: checks `wc -c < "$tmpout"` every 10 seconds; kills process if file size unchanged for `WATCHDOG_TIMEOUT` seconds
+   - Check interval: `_CHECK_INTERVAL=$(( WATCHDOG_TIMEOUT < 10 ? WATCHDOG_TIMEOUT : 10 ))` — dynamically derived as `min(WATCHDOG_TIMEOUT, 10)` so small timeout values (e.g., `WATCHDOG_TIMEOUT=2` in tests) work without waiting a full 10-second polling interval
+   - Watchdog loop: checks `wc -c < "$tmpout"` every `_CHECK_INTERVAL` seconds; kills process if file size unchanged for `WATCHDOG_TIMEOUT` seconds
    - Tracks watchdog-triggered kills with a local flag (`_watchdog_killed=true`)
    - Contains variable named `retry` and/or comment "retry" to satisfy acceptance criteria grep
    - Retries once (`retry`) only when `_watchdog_killed=true`; normal non-zero exits are passed through without retry
@@ -64,3 +65,14 @@
 - **`run-auto-sub.sh` 除外確認**: `grep -n "claude -p" scripts/run-auto-sub.sh` でヒットなし。`run-*.sh` を呼ぶオーケストレーターのみ（Issue 本文と一致）
 - **リトライ条件**: ウォッチドッグによる kill 時のみリトライ（`_watchdog_killed=true`）。`claude` の通常エラー終了はリトライしない
 - **`tail -f` のフラッシュ遅延**: `sleep 1` 後に `tail` を kill することで残存出力を確実にフラッシュする
+
+## Code Retrospective
+
+### Deviations from Design
+- **`_CHECK_INTERVAL` の動的計算**: Spec は "10秒固定" としていたが、`WATCHDOG_TIMEOUT=2` などの小さい値でテストが10秒待ち状態になる問題を回避するため、`min(WATCHDOG_TIMEOUT, 10)` で CHECK_INTERVAL を動的に計算した。これにより小タイムアウト値のテストも高速に動作する。
+
+### Design Gaps/Ambiguities
+- Spec の test cases に `WATCHDOG_TIMEOUT=2` + `sleep 60` を使う想定があったが、固定 CHECK_INTERVAL=10 だと最初のチェックまで10秒待つため test が遅くなる懸念があった。動的計算で解決した。
+
+### Rework
+- N/A（設計変更は事前に気づいて初回実装で対応済み）
