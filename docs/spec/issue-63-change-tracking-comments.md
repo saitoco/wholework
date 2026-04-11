@@ -59,3 +59,28 @@
 ### 受け入れ条件検証の難易度
 
 - Pre-merge 条件 2件はいずれも `grep` verify command で明確に検証可能（PASS）。Post-merge 条件は `opportunistic` タグ付きで `/verify` フェーズに委ねる設計になっており、UNCERTAIN なし。verify command の設計として問題なし。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- verify command パターン（`Change.Track`）は大文字小文字を正確に反映した形で記述されており、検証時に問題なくマッチした（Code Retrospective で修正済みの最終形）。Spec に記録された「設計フェーズで実装後テキストの大文字小文字を事前確認する」という知見は有効な改善提案。
+
+#### design
+- Implementation Step 1 の配置記述（「Step 11 末尾」）と実際の実装（Step 12 直前の独立ポストステップ）の乖離は Review Retrospective で指摘済み。意味的には合理的な配置だが、Spec 文言の精度向上余地あり。「Step N の末尾」より「PR 作成後のポストステップ」のような意図ベースの記述の方が実装との乖離を防ぎやすい。
+
+#### code
+- verify command パターンの不一致（`change.track` → `Change.Track`）による rework が発生し、追加 fix コミットが必要になった。実装前に verify command のマッチ対象となるテキストを確認する習慣を持つことで防止可能。
+
+#### review
+- CONSIDER 指摘のみで MUST/SHOULD なし。Pre-merge 条件の verify command が全 PASS であることをレビュー時点では確認できないが、Post-merge の `opportunistic` 設計は適切に判断されていた。
+
+#### merge
+- PR #117 のスカッシュマージで単一コミット（98b421a）として main に統合。コンフリクトなし、CI 問題なし。
+
+#### verify
+- Pre-merge 2条件ともに `grep "Change.Track"` で即時 PASS。Post-merge の opportunistic 条件 2件は `<!-- verify: ... -->` ヒントなしのため自動検証対象外で、ユーザー検証ガイドとして提示。UNCERTAIN/FAIL なし、理想的な verify 実行。
+
+### Improvement Proposals
+- N/A
