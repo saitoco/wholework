@@ -41,6 +41,7 @@ wholework/
 │   ├── product.md       # Project vision, non-goals, terminology (steering)
 │   ├── tech.md          # Tech stack, architecture decisions, forbidden expressions (steering)
 │   ├── workflow.md      # Development workflow phases and label transitions (project)
+│   ├── adapter-guide.md    # Adapter authoring guide for project-specific capabilities (project)
 │   ├── figma-best-practices.md # Figma MCP UI design guidelines (project)
 │   ├── migration-notes.md # Interface change records per migration issue (project)
 │   ├── environment-adaptation.md # Environment adaptation architecture (4-layer) (project)
