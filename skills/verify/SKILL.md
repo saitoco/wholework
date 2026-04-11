@@ -121,6 +121,23 @@ Parse acceptance condition checkboxes:
 
 ### Step 5: Verify Each Condition
 
+**Patch route detection (run before verification):**
+
+If PR_NUMBER (from Step 2) is empty and any acceptance condition contains `github_check "gh pr checks"`, treat those conditions as UNCERTAIN with the following guidance:
+
+> PR does not exist (patch route). Use `github_check "gh run list"` form instead. See `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md`.
+
+Example replacement:
+```
+# Before (patch route incompatible)
+github_check "gh pr checks" "Run bats tests"
+
+# After (patch route compatible)
+github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success"
+```
+
+Do not attempt to run `github_check "gh pr checks"` conditions in patch route Issues — mark as UNCERTAIN immediately and skip execution.
+
 Verification priority:
 
 #### Step 1: CI Infrastructure Failure Detection (only when referencing CI results)

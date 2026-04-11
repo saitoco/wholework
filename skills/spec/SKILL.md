@@ -283,6 +283,7 @@ SHOULD constraints (best practices, manual check — examples):
 | Read instruction for extracted modules | When extracting to a module, write Read instruction as "read `${CLAUDE_PLUGIN_ROOT}/modules/xxx.md` and follow the `Processing Steps` section" | #716 |
 | `git add -f` for .gitignore targets | Note `git add -f` requirement in implementation steps for `.gitignore`-tracked files | #901 |
 | Post-merge skill name alignment | Verify skill name in `## Verification > Post-merge` matches the target skill in Issue purpose | #684 |
+| Patch route CI verify | For patch route Issues (no PR), use `github_check "gh run list"` instead of `github_check "gh pr checks"` (no PR exists in patch route). See `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md` | #112 |
 
 **SHOULD-level acceptance criteria consideration:**
 

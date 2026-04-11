@@ -40,6 +40,18 @@ When assigning `<!-- verify-type: auto -->` to a condition, a `<!-- verify: ... 
 - `verify-type: auto` is assigned only to conditions that have a verify command (a `auto` without a verify command is equivalent to skipping verification, which contradicts user expectations)
 - If a verify command cannot be provided, classify as `opportunistic` or `manual` instead
 
+### Patch Route CI Verification Note
+
+For Issues implemented via the patch route (direct commit to main, no PR), `github_check "gh pr checks"` **cannot be used** — no PR exists in the patch route.
+
+Use the `github_check "gh run list"` form instead:
+
+```
+github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success"
+```
+
+When `/verify` detects `github_check "gh pr checks"` in an acceptance condition for a patch-route Issue (PR_NUMBER is empty), it treats the condition as UNCERTAIN and recommends switching to the `gh run list` form.
+
 ## Output
 
 Assign the `<!-- verify-type: auto|opportunistic|manual -->` tag to the end of each post-merge condition. Place the tag one half-width space before the line break at the end of the condition text.
