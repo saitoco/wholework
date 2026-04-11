@@ -69,10 +69,24 @@ After updating the Issue body, check for semantic drift between the current titl
 
 ## Output
 
-Normalized title string. The caller applies it as the `--title` argument to `gh issue edit`.
+### Caller-Executed (Normalization)
+
+Returns the normalized title string. The caller applies it as the `--title` argument to `gh issue edit`.
 
 Since the title string may contain shell metacharacters, the caller should pass it safely via a variable:
 
 ```bash
 gh issue edit "$NUMBER" --title "$normalized_title"
 ```
+
+### Internally Executed (Drift Check)
+
+When drift is detected, this module directly executes `gh issue edit` internally — the caller does not need to handle the title update.
+
+The before/after is output to the terminal:
+
+```
+Title updated: "{old_title}" → "{new_title}"
+```
+
+If no drift is detected, no output is produced and no action is taken.
