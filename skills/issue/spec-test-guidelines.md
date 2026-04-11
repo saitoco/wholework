@@ -52,6 +52,36 @@ For bats test verification, use `github_check` hints which directly reference CI
 - [ ] <!-- verify: command "python3 scripts/validate-skill-syntax.py skills/" --> Syntax validation passes
 ```
 
+## Verify commands for SKILL.md and module file changes
+
+When acceptance criteria include conditions that verify the content of SKILL.md or module files (e.g., "new step added", "option described"), `grep` or `file_contains` verify commands can be applied to post-merge conditions as well — not just pre-merge.
+
+**When to apply:**
+- Post-merge conditions that check SKILL.md text content
+- Post-merge conditions that check module file (`modules/*.md`) additions or changes
+- Conditions like "feature X is documented" or "guideline Y is described in SKILL.md"
+
+**Recommended patterns:**
+
+Using `grep` (simple keyword search):
+```markdown
+- [ ] <!-- verify: grep "keyword" "skills/foo/SKILL.md" --> Feature X is documented in SKILL.md
+```
+
+Using `file_contains` (substring match — preferred when checking a specific phrase):
+```markdown
+- [ ] <!-- verify: file_contains "skills/foo/SKILL.md" "expected phrase" --> Feature X is described
+```
+
+Using `section_contains` (section-scoped search — useful when the phrase could appear elsewhere):
+```markdown
+- [ ] <!-- verify: section_contains "modules/foo.md" "## Section Name" "expected text" --> Section contains expected content
+```
+
+**Background:** Post-merge conditions that involve SKILL.md or module file content were often left without verify commands, requiring manual review. Since these files are text-based and their changes are deterministic, `grep` and `file_contains` can automate these checks reliably.
+
+**Note:** `file_contains` and `section_contains` are available as verify command types alongside `grep`. Use `section_contains` when the target phrase is expected only within a specific section to avoid false positives from other occurrences.
+
 ## Boundary value test case recommendations
 
 When testing scripts that take numeric or string arguments, always include **boundary values** in addition to normal values. Missing boundary tests can cause unexpected production behavior or security risks (per review feedback on gh-label-transition.sh, Issue #854).
