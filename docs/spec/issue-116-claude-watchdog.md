@@ -76,3 +76,33 @@
 
 ### Rework
 - N/A（設計変更は事前に気づいて初回実装で対応済み）
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec の verify commands が実装をカバーするよう精密に設計されており、`file_exists`/`grep`/`command` の組み合わせで5条件すべてが自動検証可能だった。
+- `bats tests/` の verify command は `command` type（full mode のみ）として設定されており、`/verify` での実行を前提にした適切な設計。
+
+#### design
+- Spec の Changed Files 列挙が正確で、実装後も差異なし。
+- `_CHECK_INTERVAL` の動的計算は Spec に記載がなかったが、Code Retrospective で事前に記録・整理されており透明性が高い。
+
+#### code
+- 初回実装で完結（Rework なし）。`_CHECK_INTERVAL` の改善も含め、設計意図を超えた品質を達成。
+- パッチ経路（PR なし、直接 main コミット）での実装が Size S に合致しており、適切なルート選択。
+
+#### review
+- パッチ経路のため正式レビューなし。全 bats テスト PASS が品質保証の主要手段となっており、テスト設計の充実度が重要だった。
+- bats tests に watchdog 動作（timeout/retry/WATCHDOG_TIMEOUT カスタム）を網羅したテストケースが含まれており、レビュー不在を補完できていた。
+
+#### merge
+- 直接 main へのコミット（パッチ経路）。コンフリクト・CI 失敗なし。
+
+#### verify
+- 全5条件 PASS（exit code 0 確認済み）。手動条件1件（`/auto N` 実行時のハング再現）は verify-type: manual のため自動検証対象外。
+- `bats tests/` の実行で test plan 1..273 に対して全 ok の結果を確認。
+
+### Improvement Proposals
+- N/A
