@@ -13,7 +13,11 @@ if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 echo "=== run-review.sh: Starting /review for PR #${PR_NUMBER} ==="
+source "$SCRIPT_DIR/phase-banner.sh"
+print_start_banner "pr" "$PR_NUMBER"
 echo "Model: sonnet"
 echo "Effort: high"
 echo "Permissions: skip (autonomous mode)"
@@ -24,7 +28,6 @@ echo "---"
 # /review has context: fork, so calling it via claude -p "/review N" prevents
 # --dangerously-skip-permissions from propagating to the fork sub-agent (#284)
 # By passing SKILL.md body directly, we bypass frontmatter interpretation
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILL_FILE="${SCRIPT_DIR}/../skills/review/SKILL.md"
 
 if [[ ! -f "$SKILL_FILE" ]]; then
@@ -61,6 +64,7 @@ set -e
 
 echo "---"
 echo "=== run-review.sh: Finished /review for PR #${PR_NUMBER} ==="
+print_end_banner "pr" "$PR_NUMBER"
 echo "Exit code: ${EXIT_CODE}"
 echo "Finished at: $(date '+%Y-%m-%d %H:%M:%S')"
 exit $EXIT_CODE

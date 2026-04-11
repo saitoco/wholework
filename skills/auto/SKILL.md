@@ -29,6 +29,8 @@ Extract the Issue number from ARGUMENTS. Examples: `ARGUMENTS = "279"` → `NUMB
 
 If `--batch N` flag is present (e.g., `ARGUMENTS = "--batch 5"`): record `BATCH_SIZE = 5` and branch to the "Batch Mode (--batch N)" section (**skip Steps 2–6**). No Issue number needed.
 
+Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="issue", ENTITY_NUMBER=$NUMBER, SKILL_NAME="auto".
+
 ### Step 2: Route Detection and Base Branch
 
 Detect `--patch`/`--pr`, `--review=full`/`--review=light`, and `--base {branch}` flags from ARGUMENTS.

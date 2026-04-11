@@ -32,7 +32,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 echo "=== run-verify.sh: Starting /verify for Issue #${ISSUE_NUMBER} ==="
+source "$SCRIPT_DIR/phase-banner.sh"
+print_start_banner "issue" "$ISSUE_NUMBER"
 echo "Model: sonnet"
 echo "Effort: medium"
 echo "Permissions: skip (autonomous mode)"
@@ -43,7 +47,6 @@ echo "---"
 # /verify has context: fork, so calling it via claude -p "/verify N" prevents
 # --dangerously-skip-permissions from propagating to the fork sub-agent (#284)
 # By passing SKILL.md body directly, we bypass frontmatter interpretation
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILL_FILE="${SCRIPT_DIR}/../skills/verify/SKILL.md"
 
 if [[ ! -f "$SKILL_FILE" ]]; then
@@ -92,6 +95,7 @@ rm -f "$VERIFY_TMPOUT"
 
 echo "---"
 echo "=== run-verify.sh: Finished /verify for Issue #${ISSUE_NUMBER} ==="
+print_end_banner "issue" "$ISSUE_NUMBER"
 echo "Exit code: ${EXIT_CODE}"
 echo "Finished at: $(date '+%Y-%m-%d %H:%M:%S')"
 exit $EXIT_CODE

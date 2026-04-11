@@ -243,6 +243,8 @@ gh issue view $NUMBER --json body,title,labels
 gh issue view $NUMBER --json comments
 ```
 
+Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="issue", ENTITY_NUMBER=$NUMBER, SKILL_NAME="issue".
+
 Detect embedded links in body and comments; fetch GitHub-hosted attachments via WebFetch or Read. Use attachment content and all comments as context for subsequent steps.
 
 ### Step 2: Auto-chain to triage (if `triaged` label is absent)

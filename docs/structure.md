@@ -23,11 +23,11 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill definition (required)
 │       └── *.md         # Auxiliary phase/guideline files (optional)
-├── modules/             # Shared modules referenced by skills (23 files)
+├── modules/             # Shared modules referenced by skills (24 files)
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (6 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (27 files)
+├── scripts/             # Utility scripts used by skills and agents (28 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   └── workflows/
@@ -85,6 +85,7 @@ Key modules:
 - `modules/lighthouse-adapter.md` — Lighthouse performance audit adapter
 - `modules/measurement-scope.md` — measurement scope definition
 - `modules/next-action-guide.md` — unified next action guidance for all skills
+- `modules/phase-banner.md` — phase identification banner display for skills
 
 ### Agents
 
@@ -98,6 +99,9 @@ Key modules:
 | precedent-agent | `agents/precedent-agent.md` | Precedent investigation from similar issues |
 
 ### Scripts
+
+**Phase banner:**
+- `scripts/phase-banner.sh` — sourceable helper providing `print_start_banner` / `print_end_banner` functions for run-*.sh scripts
 
 **GitHub API utilities:**
 - `scripts/gh-graphql.sh` — GraphQL query executor with caching

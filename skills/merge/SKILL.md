@@ -62,6 +62,8 @@ Note: Always wrap `$NUMBER` in double quotes.
   - User selects "Abort": Stop processing (do not proceed to subsequent steps)
   - User selects "Treat as conflict": Proceed to Step 2 (Resolve Conflicts)
 
+Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="pr", ENTITY_NUMBER=$NUMBER, SKILL_NAME="merge".
+
 ### Step 2: Worktree Entry
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Entry section" to create a worktree.
