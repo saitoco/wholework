@@ -235,3 +235,36 @@
 - **テストの gh mock**: `phase-banner.sh` が `gh issue/pr view N --json title -q '.title'` を呼ぶため、mock は `-q` 引数を解析して適切な値 (title 文字列 / URL 文字列) を返す必要がある
 - **`/issue` の New Issue Creation フロー**: 新規作成では Issue 番号が未確定のため、Step 1 (情報収集) 時点ではバナーを表示できない。Step 6 (Create Issue) 後に表示するか、新規作成フローではスキップする。推奨: 新規作成フローではスキップ（番号確定は作成後で、その後すぐ完了するため）
 - **Auto-resolved ambiguity**: shell helper 関数インターフェースは `(entity_type, entity_number)` の 2 引数。SKILL.md は start banner のみ。配置は番号抽出直後。
+
+## Issue Retrospective
+
+### スコープ拡大の経緯
+
+初版は `run-*.sh`（7 本）のみを対象としていたが、ユーザーからインタラクティブ実行（`/issue`, `/spec` 等）も含めたいとの要望があり、さらに shared module でロジックを正規化する方針に決定。
+
+### 曖昧性解決の判断根拠
+
+| 曖昧性 | 解決方法 | 根拠 |
+|--------|---------|------|
+| gh コマンド失敗時のフォールバック | 自動解決 → 空で続行 | 既存パターンと一致。取得失敗でフェーズ停止は過剰 |
+| テストなしスクリプトのテスト追加 | 自動解決 → スコープ外 | run-spec.sh, run-auto-sub.sh のテスト新規追加は別 Issue |
+| Finished 行の表示 | 自動解決 → 両方に表示 | ユーザー確認済み |
+| `/doc`, `/audit` の除外 | 自動解決 → 対象外 | Issue/PR 番号を引数に取らないスキルは不要 |
+| Size M → L 変更 | 自動解決 | スコープ拡大で 22 ファイル（XL→横展開-1→L） |
+
+### 主要なポリシー判断
+
+- 正規化アプローチ: shared module + shell helper の二層構造
+- PR-based scripts: PR タイトル・URL を表示（Issue 逆引き不要）
+
+## Spec Retrospective
+
+### Minor observations
+- SCRIPT_DIR の定義位置が `run-*.sh` 間で統一されておらず、一部はバナー出力後に定義されている。本 Issue で前方移動するが、今後の `run-*.sh` テンプレート化を検討する余地がある。
+
+### Judgment rationale
+- SKILL.md は start banner のみとした。Completion Report + next-action-guide が既に end marker の役割を果たしており、重複回避。
+- `/issue` New Issue Creation フローでは Issue 番号が未確定のためバナーをスキップ。番号確定後（Step 6 後）に表示する選択肢もあったが、新規作成後はすぐ完了するため効果が薄い。
+
+### Uncertainty resolution
+- Nothing to note
