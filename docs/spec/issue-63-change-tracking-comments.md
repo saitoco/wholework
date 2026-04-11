@@ -18,8 +18,8 @@
 
 ### Pre-merge
 
-- <!-- verify: grep "change.track" "skills/code/SKILL.md" --> `/code` スキルに change tracking comment 投稿ステップが追加されている
-- <!-- verify: grep "change.track" "skills/review/SKILL.md" --> `/review` スキルに change tracking 用語が追加されている
+- <!-- verify: grep "Change.Track" "skills/code/SKILL.md" --> `/code` スキルに change tracking comment 投稿ステップが追加されている
+- <!-- verify: grep "Change.Track" "skills/review/SKILL.md" --> `/review` スキルに change tracking 用語が追加されている
 
 ### Post-merge
 
