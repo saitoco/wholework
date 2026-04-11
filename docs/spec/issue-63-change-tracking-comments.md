@@ -31,3 +31,17 @@
 - `/review` Step 13.3 は既に policy change 検出時にコメントを投稿する仕組みを持っている。本 Issue の実装はこの既存機構に change tracking の用語を追加し、明示的に位置づけるもの。新たなロジックの追加は不要。
 - `/code` Step 10 の case 1（全 PASS、チェックボックス更新のみ）は仕様変更に該当しないため、change tracking の対象外とする。case 2（verify command 書き換え）と Step 11 の auto-append のみが対象。
 - コメント投稿は条件付き：Issue body/Spec に実際の変更がなかった場合はスキップする。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- verify command パターン `change.track` が実装後のテキスト（`Change Tracking`、大文字始まり）にマッチしないことが verify 実行時に判明し、パターンを `Change.Track` に修正した。Spec では実装前の想定パターンを記載していたが、実装後の実際のテキストと不一致になった。設計フェーズでの verify command 記述時にコンテンツの大文字小文字を事前確認する必要がある
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- verify command パターン修正のため、Issue body・Spec の両方を追加コミットで更新する必要が生じた（実装コミットとは別に `fix:` コミットが発生）
