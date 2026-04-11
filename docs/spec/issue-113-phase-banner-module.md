@@ -293,3 +293,30 @@
 ### Acceptance Criteria Verification Difficulty
 
 - 全8条件が `file_exists` / `grep` / `file_contains` / `github_check` の verify command で機械的に検証可能であり、UNCERTAIN は0件。verify command の設計が適切で自動検証効率が高かった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- SCRIPT_DIR 前方移動が必要なスクリプト数が Spec では4本（run-issue.sh, run-spec.sh, run-review.sh, run-merge.sh）と記述されていたが、実際には6本（上記4本 + run-code.sh, run-verify.sh）が必要だった。Spec の調査精度に改善余地がある。
+- 2-layer 設計（SKILL.md 用 markdown module + run-*.sh 用 shell helper）の判断は適切。実装とよく一致している。
+
+#### design
+- N/A
+
+#### code
+- SCRIPT_DIR 前方移動の対象スクリプト数に Spec との乖離があったが、実装時に発見・対処されリワークは発生しなかった。
+
+#### review
+- `modules/phase-banner.md` 内のバナーフォーマット（`--- /SKILL_NAME #N ---` 形式）と `scripts/phase-banner.sh` が実際に出力するフォーマット（`Issue: #N TITLE` / `URL: URL`）の不整合が指摘された。これは意図的な2-layer設計だが、モジュール内の記述が将来の LLM 読み取り時に誤解を招く可能性がある。
+
+#### merge
+- クリーンマージ（FF-only、コンフリクトなし）。
+
+#### verify
+- 全8件の Pre-merge 条件が PASS（FAIL・UNCERTAIN 0件）。verify command の設計が優秀で、全条件を `file_exists` / `grep` / `file_contains` / `github_check` で機械的に検証できた。
+- Post-merge に `verify-type: opportunistic` 条件が2件残存。これらはユーザーによる動作確認が必要な項目であり、予定通りの動作。
+
+### Improvement Proposals
+- `modules/phase-banner.md` のバナーフォーマット記述（`--- /SKILL_NAME #N ---` 形式）と `scripts/phase-banner.sh` が出力する実際のフォーマット（`Issue: #N TITLE` / `URL: URL`）の乖離を解消するため、モジュールに「run-*.sh の出力フォーマットは `phase-banner.sh` を参照」という注記を追加することを検討する。
