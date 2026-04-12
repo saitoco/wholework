@@ -108,9 +108,21 @@ MOCK
     end_time=$(date +%s)
     elapsed=$((end_time - start_time))
 
-    # Should complete well under 30 seconds (default 600s would take much longer)
+    # Should complete well under 30 seconds (default 1800s would take much longer)
     [ "$elapsed" -lt 30 ]
     [ "$status" -ne 0 ]
+}
+
+@test "heartbeat: diagnostic message emitted during silence" {
+    cat > "$MOCK_DIR/cmd.sh" <<'MOCK'
+#!/bin/bash
+sleep 60
+MOCK
+    chmod +x "$MOCK_DIR/cmd.sh"
+
+    run env WATCHDOG_TIMEOUT=3 WATCHDOG_HEARTBEAT_INTERVAL=2 bash "$SCRIPT" bash "$MOCK_DIR/cmd.sh"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"watchdog: still waiting"* ]]
 }
 
 @test "no retry: watchdog fires only once on second hang" {

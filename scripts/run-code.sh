@@ -63,6 +63,20 @@ fi
 echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
 
+# Cleanup stale worktrees/branches from previous failed runs
+WORKTREE_PATH="${SCRIPT_DIR}/../.claude/worktrees/code+issue-${ISSUE_NUMBER}"
+WORKTREE_BRANCH="worktree-code+issue-${ISSUE_NUMBER}"
+if [[ -d "$WORKTREE_PATH" ]]; then
+  echo "run-code.sh: stale worktree detected, cleaning up: $WORKTREE_PATH"
+  git worktree remove --force "$WORKTREE_PATH" 2>/dev/null \
+    || echo "Warning: Failed to remove stale worktree: $WORKTREE_PATH"
+fi
+if git branch --list "$WORKTREE_BRANCH" 2>/dev/null | grep -q .; then
+  echo "run-code.sh: stale branch detected, cleaning up: $WORKTREE_BRANCH"
+  git branch -D "$WORKTREE_BRANCH" 2>/dev/null \
+    || echo "Warning: Failed to delete stale branch: $WORKTREE_BRANCH"
+fi
+
 # Pass SKILL.md body directly as prompt (avoids context: fork issue)
 # /code has context: fork, so calling it via claude -p "/code N" prevents
 # --dangerously-skip-permissions from propagating to the fork sub-agent (#284)
