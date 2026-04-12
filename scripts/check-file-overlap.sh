@@ -53,8 +53,9 @@ ISSUE_FILE_PAIRS=""
 while IFS= read -r issue_num; do
   [[ -z "$issue_num" ]] && continue
 
-  # Search for Spec file
-  SPEC_FILES=$(find "$REPO_ROOT/docs/spec" -name "issue-${issue_num}-*.md" 2>/dev/null || true)
+  # Search for Spec file (spec-path is configurable via .wholework.yml)
+  SPEC_DIR="$REPO_ROOT/$("$SCRIPT_DIR/get-config-value.sh" spec-path "docs/spec")"
+  SPEC_FILES=$(find "$SPEC_DIR" -name "issue-${issue_num}-*.md" 2>/dev/null || true)
 
   if [[ -z "$SPEC_FILES" ]]; then
     echo "Warning: Spec not found for Issue #${issue_num}. Skipping." >&2
