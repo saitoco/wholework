@@ -198,3 +198,28 @@ Design decisions (from Issue #122):
 ### Acceptance criteria verification difficulty
 - 8件の Pre-merge 条件すべてが静的検証（`section_contains` / `file_contains` / `grep` / `command`）で PASS 判定可能な設計になっており、UNCERTAIN は発生しなかった。`command "python3 scripts/validate-skill-syntax.py skills/"` は safe モードでは UNCERTAIN になるが、CI 参照フォールバックで PASS を確定できた。verify コマンドの精度は良好。
 - 改善提案: `modules/domain-loader.md` の新規追加に対する検証条件が明示的に含まれていなかった（Layer 3 テーブルや structure.md の Modules list 経由で間接的にカバー）。新規モジュール追加時の acceptance criteria テンプレートに「当該モジュールファイルが存在すること」のチェックを含めると、より直接的な検証になる。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件 8 件すべてが静的検証系コマンド（`section_contains` / `file_contains` / `grep` / `command`）に落とし込まれており、verify で UNCERTAIN 発生なく全件 PASS 判定できた。条件粒度と verify コマンドのマッピングは適切。
+
+#### design
+- 設計は Implementation Steps 1〜7 で段階分解されており、verify 時の条件とほぼ 1 対 1 で対応していた。ただし、新規追加モジュール `modules/domain-loader.md` 自体の存在確認条件が Issue 側になく、Layer 3 テーブルや structure.md の Modules list 経由での間接カバーに留まっている点は review 段階でも指摘済み。
+
+#### code
+- 実装は Spec 通り忠実に反映。Code Retrospective にあった module count (24→25) 更新も verify 時点では整合が取れており、追加後 regression なし。
+
+#### review
+- Review で検出した 3 件は CONSIDER レベルで、FAIL に繋がる致命的な見落としはなかった。verify 全件 PASS で結果的に review の判断も妥当だった。
+
+#### merge
+- Squash merge（PR #128 → main: commit `ae95231`）は正常完了。conflict 解決痕跡なし。
+
+#### verify
+- 全 8 件 Pre-merge 条件が PASS。FAIL / UNCERTAIN ともにゼロ。verify コマンドの翻訳・実行フローに不整合なし。Post-merge opportunistic 1 件はユーザー検証項目として適切にガイドを提示。
+
+### Improvement Proposals
+- N/A
