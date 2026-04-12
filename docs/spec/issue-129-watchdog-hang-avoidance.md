@@ -145,3 +145,33 @@
 ### Acceptance Criteria Verification Difficulty
 
 - `command "bats tests/claude-watchdog.bats"` は safe モードでは UNCERTAIN（CI 実行中）となった。CI が IN_PROGRESS の場合は結果待ちとなるため、verify 実行タイミングと CI 完了タイミングの関係が重要。今回は Validate skill syntax と Forbidden Expressions check が SUCCESS で主要な品質チェックは通過しており、問題なし。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件に verify コマンドが適切に付与されており、3件すべてが自動検証可能だった。pre-merge と post-merge のセクション分割が明確で、opportunistic 条件の扱いが適切。
+- `grep "WATCHDOG_TIMEOUT"` と `grep -i "cleanup\|leftover\|stale"` は実装対象のファイルと検索キーワードが正確に対応しており、曖昧さなし。
+
+#### design
+- Spec の設計方針（タイムアウト延長 + heartbeat + stale cleanup）が実装に忠実に反映された。不採用オプション（stream-json、リトライ戦略改善）の除外理由も明記されており、設計判断の妥当性が高い。
+- Notes に worktree ブランチ命名の根拠（`/` → `+` 変換）が記載されており、実装での不確実性を事前にカバーしていた。
+
+#### code
+- Code Retrospective によれば逸脱・手戻りなし（N/A）。ただし `WORKTREE_PATH` の `+` 変換について「実際の EnterWorktree 出力から明示的に確認できなかった」という Design Gap が残っており、review フェーズで解消された点は記録に値する。
+
+#### review
+- Review Retrospective によれば逸脱なし。WORKTREE_PATH のパス名検証（`+` 変換）が review で解消されており、有効なレビューが行われた。
+- `command "bats tests/claude-watchdog.bats"` が CI 実行中のため UNCERTAIN となったが、主要な品質チェックは SUCCESS。
+
+#### merge
+- PR #131 として clean merge。commit `0290a76` で確認済み。コンフリクト・CI 失敗の痕跡なし。
+
+#### verify
+- Pre-merge 3件すべて PASS（`grep` 2件 + `bats` テスト 8件 OK）。
+- Post-merge の opportunistic 条件（watchdog timeout なし完遂、stale worktree 非蓄積）は実環境検証が必要なため、`phase/verify` ラベル付きで Issue をクローズ済みのまま残す。
+
+### Improvement Proposals
+
+- N/A
