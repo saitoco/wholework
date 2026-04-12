@@ -23,7 +23,7 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill definition (required)
 │       └── *.md         # Auxiliary phase/guideline files (optional)
-├── modules/             # Shared modules referenced by skills (24 files)
+├── modules/             # Shared modules referenced by skills (25 files)
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (6 files)
 │   └── <agent-name>.md
