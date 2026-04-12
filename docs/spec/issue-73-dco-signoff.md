@@ -122,3 +122,17 @@ Issue Q&A で確定した方針:
 ### Rework
 
 - N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- `dco.yml` の実装において、Spec は `tim-actions/dco@master` の使用を指定していたが、Spec・Issue ともに `tim-actions/get-pr-commits` との組み合わせが必要な点（`commits` 入力が `required: true`）を記載していなかった。Specに外部Actionの正しい使い方（必要な前ステップ含む）を明記しておく必要がある。
+
+### Recurring issues
+
+- 特になし。外部Actionの誤用は `dco.yml` のみで発生した。
+
+### Acceptance criteria verification difficulty
+
+- verify command はすべてファイル内容チェック（`file_contains`）のため PASS 判定は容易だった。しかし受け入れ条件「`.github/workflows/dco.yml` に `tim-actions/dco` を使用した Signed-off-by チェック workflow が実装されている」という条件はファイルの存在と文字列の有無のみを検証しており、Actionが正しく動作するかどうか（`commits` 入力が適切に渡されているか）まで検証できていない。CI FAILがなければ見落としていた可能性がある。Verify command で `github_check` を使った CI PASS 検証を追加する改善余地がある。
