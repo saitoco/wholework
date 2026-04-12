@@ -131,3 +131,17 @@
 ### Rework
 
 - N/A
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- 逸脱なし。すべての実装ステップが Spec 定義と一致していた。Code Retrospective の Design Gaps で懸念されていた `WORKTREE_PATH` のディレクトリ命名（`code+issue-$NUMBER`）については、review フェーズで worktree 実例（`review/pr-131` → `review+pr-131`）から `+` 変換が正しく行われることを確認し、懸念を解消できた。
+
+### Recurring Issues
+
+- 特になし。SHOULD レベルの指摘（stale worktree テストの欠如）は Spec 要件外であり、`2>/dev/null ||` で安全に処理されているため問題ない。
+
+### Acceptance Criteria Verification Difficulty
+
+- `command "bats tests/claude-watchdog.bats"` は safe モードでは UNCERTAIN（CI 実行中）となった。CI が IN_PROGRESS の場合は結果待ちとなるため、verify 実行タイミングと CI 完了タイミングの関係が重要。今回は Validate skill syntax と Forbidden Expressions check が SUCCESS で主要な品質チェックは通過しており、問題なし。
