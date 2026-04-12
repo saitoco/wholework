@@ -143,6 +143,75 @@ Adapters are valuable when multiple implementation choices must be abstracted �
 
 If pre/post processing customization is needed in the future (e.g., argument transformation, result normalization), it should be added as a hook mechanism (e.g., `.wholework/hooks/mcp-pre.sh`) rather than an adapter. This is outside the current implementation scope.
 
+### Custom Verify Command Handlers
+
+A mechanism for adding project-local custom verification commands. Place a Markdown handler file at `.wholework/verify-commands/{name}.md` to register a custom verify command named `{name}`.
+
+#### Declaration Path
+
+```
+.wholework/verify-commands/{name}.md
+```
+
+No capability declaration is required. Placing the file is sufficient to activate the handler.
+
+#### Dispatch Convention
+
+The command name in `<!-- verify: {name} "arg" -->` is matched against the handler filename (without extension). Example: `<!-- verify: api-contract "endpoint" -->` dispatches to `.wholework/verify-commands/api-contract.md`.
+
+**Built-in priority**: If `{name}` matches a built-in command (e.g., `file_exists`, `grep`), the built-in is always used and the handler file is ignored with a warning.
+
+#### Handler Contract
+
+Custom handler files follow a four-section Markdown structure (same as adapter contracts):
+
+```markdown
+# {name} verify command handler
+
+**Safe mode:** compatible   ← or "uncertain" (see below)
+
+## Purpose
+
+{Description of what this handler verifies}
+
+## Input
+
+- **Arguments**: {arguments accepted by this command}
+
+## Processing Steps
+
+{Step-by-step verification logic — executed by the LLM when dispatched}
+
+## Output
+
+- **Result**: PASS / FAIL / UNCERTAIN
+- **Detail**: Description of verification result
+```
+
+#### Result Format
+
+Custom handlers must return one of:
+
+- **PASS**: Verification condition satisfied
+- **FAIL**: Verification condition not satisfied (include detailed reason)
+- **UNCERTAIN**: Cannot be determined automatically (include detailed reason)
+
+#### Safe Mode Self-Declaration
+
+Each handler self-declares its safe-mode compatibility near the top of the file:
+
+| Declaration | Behavior |
+|-------------|----------|
+| `**Safe mode:** compatible` | Handler executes in both safe and full modes |
+| `**Safe mode:** uncertain` | Handler returns UNCERTAIN in safe mode; executes only in full mode |
+| (not declared) | Treated as `uncertain` — returns UNCERTAIN in safe mode |
+
+Use `compatible` only for side-effect-free checks (file reads, static analysis, etc.). Use `uncertain` for any handler that calls external services or executes shell commands.
+
+#### Relationship to Adapter Pattern
+
+Custom verify command handlers differ from adapters in a key way: handlers are designed for a single implementation with no tool-selection branching. The adapter pattern (see `### Adapter Pattern` below) adds value when multiple tool implementations must be abstracted. Handlers are simpler — one handler file, one verification approach — and do not require the 3-layer resolution order that adapters use.
+
 ### Adapter Contract Template
 
 Adapters follow a unified contract. Users can create custom adapters by following this template and placing them at the project-local or user-global path above.
@@ -296,6 +365,7 @@ While Layers 1–3 control "which parts of a skill to load," `--when` provides e
 ToolSearch (Layer 2) ─→ dynamic MCP tool detection (fallback when not declared)
 command -v (Layer 2) ─→ CLI tool availability check (inside adapters, inside --when)
 --when (Layer 4) ────→ per-acceptance-condition environment gate (planned)
+verify-executor (Layer 4) ─→ .wholework/verify-commands/*.md (project-local custom handlers)
 ```
 
 ## Extension Guide

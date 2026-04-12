@@ -108,6 +108,14 @@ When using `file_contains` or `section_contains` with a compound string like `"k
 
 When MCP tools are available, use ToolSearch with `select:<tool_name>` to confirm existence and read-only nature before proposing `mcp_call` hints.
 
+**Custom verify command handlers (project-local):**
+
+Projects can extend the built-in command set by placing handler Markdown files at `.wholework/verify-commands/{name}.md`. Once placed, the custom command is available as `<!-- verify: {name} "arg" -->` in Issue acceptance criteria — no capability declaration is required.
+
+- To add a custom command, place `.wholework/verify-commands/{name}.md` following the handler contract in `docs/environment-adaptation.md` Layer 4
+- Use `<!-- verify: {name} "arg" --> condition description` in acceptance criteria the same way as built-in commands
+- For full handler contract details and the safe-mode self-declaration spec, see the "Custom Verify Command Handlers" section in `docs/environment-adaptation.md`
+
 **`--when` modifier (conditional verification):**
 
 Append `--when="shell_condition"` to any check to skip it when the condition is not met (returns SKIPPED):
