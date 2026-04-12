@@ -78,6 +78,7 @@ Keeps the SKILL.md core lightweight; environment-dependent logic (Domain) is loa
 |---------|----------------|---------|
 | Marker-detection | Value in `.wholework.yml` | `external-review-phase.md` (Read when `copilot-review: true`) |
 | File-existence | Presence of a specific file | `skill-dev-recheck.md` (Read when `validate-skill-syntax.py` exists) |
+| Directory-scan | `.wholework/domains/{skill}/` Glob | Project-local domain files (loaded when files exist) |
 
 ### Domain Files (exhaustive)
 
@@ -92,6 +93,9 @@ Keeps the SKILL.md core lightweight; environment-dependent logic (Domain) is loa
 | `skills/verify/browser-verify-phase.md` | `/verify` | `HAS_BROWSER_CAPABILITY=true` | Browser verification |
 | `skills/issue/mcp-call-guidelines.md` | `/issue` | `MCP_TOOLS` non-empty | MCP tool detection |
 | `skills/doc/translate-phase.md` | `/doc` | `translate` subcommand | Translation generation |
+| `.wholework/domains/{skill}/*.md` | `/spec`, `/code`, `/review` | Directory scan (files exist in `.wholework/domains/{skill}/`) | Project-local (user-defined) |
+
+**Project-local Domain files** are discovered via directory scan: at skill startup, the `domain-loader` module Globs `.wholework/domains/{skill}/*.md` and reads all found files in alphabetical order. Unlike bundled Domain files which use marker-detection or file-existence conditions, project-local Domain files are loaded unconditionally when present — placing a `.md` file in the directory is sufficient to activate it. This mechanism is implemented in `modules/domain-loader.md` and invoked by `/spec`, `/code`, and `/review` skills.
 
 ## Layer 4: Execution (verify-executor + adapter)
 

@@ -119,6 +119,10 @@ Get Size (Project field first, label fallback):
 ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh "$ISSUE_NUMBER" 2>/dev/null
 ```
 
+**Project-local Domain files (if present):**
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/domain-loader.md` and follow the "Processing Steps" section with `SKILL_NAME=review`. Domain file content provides additional review perspectives and domain-specific checks.
+
 ### Step 4: Label Transition (review start)
 
 If Issue number was extracted:

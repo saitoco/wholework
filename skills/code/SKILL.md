@@ -171,6 +171,10 @@ Use Glob to check whether the following steering documents exist in `docs/`, the
 
 Use information from steering documents for coding convention compliance, file placement, and naming consistency during implementation. If `docs/tech.md` is Read, reference the `## Forbidden Expressions` section and avoid using prohibited expressions in code comments, variable names, commit messages, and new documents.
 
+**Project-local Domain files (if present):**
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/domain-loader.md` and follow the "Processing Steps" section with `SKILL_NAME=code`. Domain file content provides additional implementation guidelines and constraints.
+
 ### Step 8: Implement
 
 Implement the code following the "Implementation Steps" in the Spec.

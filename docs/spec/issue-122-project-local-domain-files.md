@@ -175,3 +175,26 @@ Design decisions (from Issue #122):
 
 ### Uncertainty resolution
 - Nothing to note. The Glob + Read mechanism is well-understood and has no external dependencies.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A. Implementation followed the Spec's 7 steps exactly as designed.
+
+### Design Gaps/Ambiguities
+- The module count in `docs/structure.md` (24 files) needed updating to 25 after adding `domain-loader.md`. This was not listed in the Spec's changed files or implementation steps but was caught by the documentation consistency check.
+
+### Rework
+- N/A. No rework was needed.
+
+## Review Retrospective
+
+### Spec vs. implementation divergence patterns
+- 構造的な乖離なし。実装は Spec の Implementation Steps 1〜7 をそのまま忠実に反映。Code Retrospective に記録された module count 更新 (24→25) も期待通り反映済みで、Spec の "Changed Files" リストから漏れていた点は Code 段階で適切に検知・補正された。
+
+### Recurring issues
+- Nothing to note. Review で検出した3件はすべて CONSIDER レベルで、かつ観点も独立（tree 配置／入力バリデーション／優先順位）しており、workflow 改善に繋がる反復パターンは見られない。
+
+### Acceptance criteria verification difficulty
+- 8件の Pre-merge 条件すべてが静的検証（`section_contains` / `file_contains` / `grep` / `command`）で PASS 判定可能な設計になっており、UNCERTAIN は発生しなかった。`command "python3 scripts/validate-skill-syntax.py skills/"` は safe モードでは UNCERTAIN になるが、CI 参照フォールバックで PASS を確定できた。verify コマンドの精度は良好。
+- 改善提案: `modules/domain-loader.md` の新規追加に対する検証条件が明示的に含まれていなかった（Layer 3 テーブルや structure.md の Modules list 経由で間接的にカバー）。新規モジュール追加時の acceptance criteria テンプレートに「当該モジュールファイルが存在すること」のチェックを含めると、より直接的な検証になる。
