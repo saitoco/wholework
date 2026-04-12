@@ -28,6 +28,7 @@ capabilities:
   mcp:                        # 利用可能な MCP ツール
     - mf_list_quotes
     - mf_list_invoices
+  invoice-api: true           # カスタム capability → HAS_INVOICE_API_CAPABILITY=true
 ```
 
 設計根拠: MCP セッションの可用性やツールのインストール状態は実行時に変動する可能性がある。静的な宣言により再現性のある挙動を保証。
@@ -42,7 +43,8 @@ Layer 1 の宣言を読み込み、不足している情報をセッション内
 
 | メカニズム | 検出対象 | 使用元 |
 |------------|----------|--------|
-| `detect-config-markers.md` | `.wholework.yml` の各フラグ → 環境変数 | `/review`、`/verify`、`/issue` |
+| `detect-config-markers.md` (固定マッピング) | `.wholework.yml` の既知フラグ → 環境変数 | `/review`、`/verify`、`/issue` |
+| `detect-config-markers.md` (動的マッピング) | 任意の `capabilities.{name}: true` → `HAS_{UPPERCASE_NAME}_CAPABILITY` 変数 | `detect-config-markers.md` を Read する全 Skill |
 | `ToolSearch` | セッション内の MCP ツール可用性 | `/issue`（宣言なし時）、`verify-executor`（`mcp_call` 実行時） |
 | `command -v` | CLI ツールの可用性 | `browser-adapter`（browser-use CLI）、`lighthouse-adapter`（lighthouse） |
 

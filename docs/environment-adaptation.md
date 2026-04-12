@@ -34,6 +34,7 @@ capabilities:
   mcp:                        # Available MCP tools
     - mf_list_quotes
     - mf_list_invoices
+  invoice-api: true           # Custom capability → HAS_INVOICE_API_CAPABILITY=true
 ```
 
 Design rationale: MCP session availability and tool installation state can vary at runtime. Static declarations ensure reproducible behavior.
@@ -48,7 +49,8 @@ Reads Layer 1 declarations; dynamically detects any missing information in-sessi
 
 | Mechanism | Detection Target | Used By |
 |-----------|----------------|---------|
-| `detect-config-markers.md` | Each flag in `.wholework.yml` → environment variables | `/review`, `/verify`, `/issue` |
+| `detect-config-markers.md` (fixed mappings) | Known flags in `.wholework.yml` → environment variables | `/review`, `/verify`, `/issue` |
+| `detect-config-markers.md` (dynamic mapping) | Any `capabilities.{name}: true` → `HAS_{UPPERCASE_NAME}_CAPABILITY` variable | All skills that Read `detect-config-markers.md` |
 | `ToolSearch` | MCP tool availability in session | `/issue` (no declaration), `verify-executor` (on `mcp_call` execution) |
 | `command -v` | CLI tool availability | `browser-adapter` (browser-use CLI), `lighthouse-adapter` (lighthouse) |
 

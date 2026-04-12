@@ -24,7 +24,7 @@ Read `.wholework.yml` from the project root using the Read tool.
 
 From the loaded content, search for each YAML key in the marker definition table below and extract values.
 
-**Marker Definition Table (exhaustive):**
+**Marker Definition Table (fixed mappings):**
 
 | YAML Key | Variable | Value When `true` | Value When `false`/Unset |
 |----------|----------|------------------|------------------------|
@@ -37,6 +37,12 @@ From the loaded content, search for each YAML key in the marker definition table
 | `production-url` | `PRODUCTION_URL` | URL string (extract value as-is) | `""` |
 | `capabilities.browser` | `HAS_BROWSER_CAPABILITY` | `true` | `false` |
 | `capabilities.mcp` | `MCP_TOOLS` | Comma-separated tool name list | `""` |
+
+**Dynamic Capability Mapping:**
+
+Any `capabilities.{name}` boolean key not listed in the table above (except `capabilities.mcp`) is dynamically mapped to `HAS_{UPPERCASE_NAME}_CAPABILITY`. When `true`, the variable is set to `true`; when `false` or unset, it is set to `false`. The `{UPPERCASE_NAME}` is derived by uppercasing the key and replacing hyphens with underscores.
+
+Example: `capabilities.invoice-api: true` → `HAS_INVOICE_API_CAPABILITY=true`
 
 **YAML Parsing Rules:**
 - Interpret each line in `key: value` format
