@@ -109,3 +109,44 @@
 | `next-action-guide.md` verify FAIL 行 | L57 |
 | Spec append テンプレ (`/auto` Steps 4a/4b) | `skills/auto/SKILL.md` L189–196, L236–243 |
 | 既存 `## Post-verify fix` 出現 | ゼロ (新規) |
+
+## issue retrospective
+
+### Triage (from /issue 141 initial creation)
+
+- Type=Task, Size=L, Priority=medium, Value=3
+- 2-axis 判定: 推定 4–5 ファイル (M 相当) + complexity 加算 (新規概念 "fix cycle" の導入、複数 skill に跨る変更、docs/workflow 更新) → +1 で L
+
+### 主要判断根拠 (from /issue 141 refinement with parallel investigation)
+
+Step 11 parallel investigation (scope / risk / precedent) 結果を統合し以下を auto-resolve:
+
+- **ラベル名前空間**: `fix-cycle` 単独 (NOT `phase/fix-cycle`)。`gh-label-transition.sh` PHASE_LABELS 非干渉。
+- **Size 保持機構**: 新規不要。`get-issue-size.sh` 二層ルックアップ (Project field + `size/*` label) で reopen 耐性自動達成。
+- **Spec append 主体**: `/code` 側 (commit 直後に append + 追加コミット、`/auto` Step 4a/4b 同型)。
+- **ラベル色**: `#c5def5` (retro/verify と同色)。
+- **`--patch`/`--pr` 明示フラグ共存**: 明示時は fix-cycle 検出をスキップ(ユーザ意図優先、silent route 変更防止)。
+- **下位互換**: fix-cycle ラベル必須。ラベル無し reopen は従来の Size-based routing(レガシー扱い)。
+
+### Scope Assessment
+
+分割不要、L 維持。単一 coherent な機能追加で AC も単一スコープ、8 ファイル直接変更 < XL 閾値 (11)、functional 依存が強いため分割すると cross-issue coordination コスト増。
+
+## spec retrospective
+
+### Minor observations
+
+- **decimal step number 禁止との干渉**: `/code` SKILL.md の既存 Step 順序 (Step 0, 1, 2, ...) に fix-cycle 検出を挿入する際、`Step 0.5` が validate-skill-syntax.py の MUST 制約に触れる。実装時は既存 Step を 1 つずつ後ろ倒す必要があり、Spec 中の「Step N」参照 (L67, L113 等) を壊さないよう注意。同様に `/code` Step 10 付近の Post-verify fix append も decimal 回避でリナンバー必要。
+- **`/verify` allowed-tools 追加**: `gh label list:*` が未認可のため `skills/verify/SKILL.md` frontmatter の allowed-tools に追加する必要あり。本 Spec の changed-files には明記済み(Tool Dependencies section)。Issue #136 で先日 SHOULD 制約化した「新規 `gh` コマンドパターン追加時の allowed-tools 記載」を最初に適用する事例になる。
+
+### Judgment rationale
+
+- **patch→PR フォールバック閾値を導入しない判断**: Issue body で preliminary `FAIL + UNCERTAIN >= 3` と仮置きしていたが、spec 段階で改めて評価した結果「FAIL 件数が多くても patch で複数 commit 積めば対応可能」「閾値ロジックは実装複雑度の割に使用頻度が低い」ため導入せずユーザが `--pr` で明示上書きする運用とした。Issue body の残課題として提示していた項目を Spec で no-op 判断。
+- **`/audit stats` Work Origin に fix-cycle segment 追加しない判断**: fix-cycle は Work Origin (由来) ではなく state (reopen 後状態) のため既存分類と直交、重複することが調査で判明。既存 First-try success rate 計算 (reopen 検出ベース) で fix cycle を経た Issue が自動的に First-try=false になる事を確認済み。`/audit stats` は改修不要。
+- **`tests/run-code.bats` / `tests/run-verify.bats` 拡張のスコープ外化**: 新経路の行ベース bats テスト追加は Issue #141 本体のスコープ外とし、Post-merge AC #1 (実運用の XL Issue で動作確認) でカバー。将来 bats テスト追加の follow-up Issue を切る。
+
+### Uncertainty resolution
+
+- **`gh-label-transition.sh` の PHASE_LABELS 非干渉**: agent 調査 + コード確認 (L13 ハードコード、L61-67 phase/* のみ remove) で完全に確認済み。fix-cycle が非 phase/* 名前空間にある限り既存冪等化バグ(#39/#132)の再発リスクなし。`file_not_contains` Pre-merge verify で静的に保証。
+- **`get-issue-size.sh` の reopen 耐性**: Project field lookup (L32-47) + `size/*` label fallback (L50-65) の二層構造、どちらも reopen で消失しない。Size 保持のための新規機構は本当に不要。
+- **既存 Spec append パターンの転用**: `/auto` Step 4a/4b (L189-196, L236-243) の Edit-append + git add/commit/push パターンが完成されており、`## Post-verify fix` も同じ道具立てで実装可能。`### Fix Cycle N` サブセクション連番で冪等化 (既存 `## Post-verify fix` 検出時は新規サブセクションを追記)。
