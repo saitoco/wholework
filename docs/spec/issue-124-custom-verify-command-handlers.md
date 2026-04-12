@@ -88,3 +88,33 @@ Issue で確定した設計方針:
 ### 受入条件検証の難易度
 
 - 全5条件が `section_contains` / `file_contains` で記述されており、すべて PASS で確認できた。verify command の選定は適切。UNCERTAIN なし。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue Design Decisions セクションに発見パス・ディスパッチ方式・safe-mode 宣言等の設計方針が詳細に記述されており、曖昧さは小さかった。
+- 受入条件がすべて `section_contains` / `file_contains` で表現されており、auto-verify 精度が高かった。
+
+#### design
+- Spec の実装手順と Changed Files が実際の変更と一致しており、設計有効性は高い。
+- `docs/ja/` 翻訳ファイルは実装対象外と Notes に明記されており、スコープが明確だった。
+
+#### code
+- コミット `6eeaddc` で到達不能ロジック（Step e の名前衝突警告）の修正が行われており、1件の fixup が発生した。Review で乖離が検出され修正されたため、code フェーズ単体では設計見落としがあったが、review フェーズで補完された。
+
+#### review
+- レビューにより到達不能ロジック（Step a の早期リターンによる Step e のスキップ）が検出された。設計意図を仕様文書から読み取ってロジックの到達可能性を検証できたことは、Review の有効性を示している。
+- SHOULD イシュー1件のみで重大な問題はなかった。
+
+#### merge
+- PR #133 は `2026-04-12T10:33:40Z` にマージ完了。コンフリクトや CI 失敗の痕跡はなし。
+
+#### verify
+- 全5条件 PASS。FAIL/UNCERTAIN なし。verify command の設計（`section_contains` / `file_contains`）が適切で、自動検証が問題なく完了した。
+- Post-merge opportunistic 条件（テストハンドラの実際のディスパッチ確認）は手動確認が必要。
+
+### Improvement Proposals
+
+- N/A
