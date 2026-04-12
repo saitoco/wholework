@@ -159,6 +159,7 @@ Key differences from other tools:
 | Acceptance condition | A single verifiable requirement item within an Issue's acceptance criteria. Appears as one checklist row; typically paired with a verify command | /issue, /verify | 受入条件項目 |
 | Acceptance criteria | The complete set of acceptance conditions for an Issue, defined under `## Acceptance Criteria` in the Issue body. L1 collection of L2 individual acceptance conditions | /issue, /verify | 受入条件 |
 | auto-verify | The automated verification process run by `/verify`. Executes verify commands for each acceptance condition, checks off passing conditions, and reopens the Issue on failure | /verify Skill | 自動検証 |
+| Domain file | Auxiliary Markdown loaded conditionally by a Skill via marker detection, file existence, or directory scan — supplements the SKILL.md core with environment- or project-specific logic while keeping the core lightweight. Project-local customization is supported through `.wholework/domains/{skill}/` | Skill development | Domain file |
 | Drift | Semantic divergence between documented specifications (Steering Documents or Specs) and actual code implementation. Detected by `/audit drift` | /audit Skill | ドリフト |
 | Fork context | A Skill execution mode that does not affect the main conversation | Claude Code | fork コンテキスト |
 | Patch route | Workflow path for XS/S-sized Issues; commits directly to the main branch without creating a Pull Request | Development workflow | パッチ経路 |
