@@ -148,3 +148,17 @@
 
 ### Uncertainty resolution
 - Nothing to note
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 実装は Spec と完全に一致。Spec の実装ステップ表（run-*.sh の各スクリプト・行番号まで指定）が精密だったため、乖離リスクが非常に低かった。今後も機械的な変更（引数追加・フォーマット変更）には行番号指定の Spec が有効。
+
+### Recurring issues
+
+- 今回の変更はシンプルで一貫したパターン（7本の run-*.sh に同一変更を適用）。同種の繰り返し変更では、verify command で1ファイルのみチェックし代表性に頼る戦略が有効（今回 `run-code.sh` 代表）。ただし変更漏れリスクは残るため、実際に7本すべて変更されているか CI bats テストが間接的に保証している。
+
+### Acceptance criteria verification difficulty
+
+- アクセプタンス基準9条件のうち8条件が `section_not_contains`/`file_not_contains`/`grep` 等の静的チェックで PASS 確認済み。`command "bats tests/phase-banner.bats"` のみ CI 待ちが必要だったが、最終的に CI SUCCESS で PASS 確認済み。verify command の設計が適切で UNCERTAIN が最小化されていた。
