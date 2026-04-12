@@ -103,3 +103,34 @@
 ### 受入条件検証難易度
 
 全5条件が `file_exists`, `section_contains`, `file_contains`, `grep` の静的コマンドで構成されており、safe mode での自動検証が完全に可能だった。UNCERTAINが0件で、verify commandの設計が適切だった。Post-merge条件は `opportunistic` タイプで適切に分類されている。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue の受入条件は全て静的検証コマンドで構成されており、自動検証の設計精度が高かった。
+- `sync Bidirectional Normalization` の2出口（reverse-generation と normalization）という複雑なケースも Spec 段階で明示的に言及されており、実装者の判断指針となった。
+
+#### design
+- Spec 内で「新規 `### Step N: Commit and Push Guide` を追加」という指示と「Step 5 末尾にインライン追記」を示唆する Notes 節が矛盾していた。既存ステップ番号への影響を考慮する観点が欠けていた。
+- 改善提案: Spec 作成時に「既存ステップ番号への影響」を明示的に検討する設計チェックリスト項目を追加すると良い。
+
+#### code
+- `sync Bidirectional Normalization` の reverse-generation 完了点でインライン方式を採用（Spec の新規ステップ追加方式ではなく）。既存ステップ番号を繰り上げる変更範囲の大きさを避けるための合理的判断だった。
+- `init Wizard` の Step 5 の exit 記述を修正してから Step 6 を追加するという Spec にない追加修正が発生したが、整合性維持のために必要だった。
+
+#### review
+- Spec 内矛盾（新規ステップ追加 vs インライン追記）について review で言及されており、将来の Spec 品質向上につながる観点が共有された。
+- PR #139 はレビューコメント1件で完了。実装品質は高く、大きな問題は検出されなかった。
+
+#### merge
+- FF マージ（PR #139 → commit `6da7837`）で問題なく完了。コンフリクトなし。
+
+#### verify
+- 全5件の Pre-merge 条件が PASS。静的検証コマンドのみで構成されており UNCERTAIN 0件。
+- Post-merge opportunistic 条件（2件）はユーザー検証待ち。これは適切な分類。
+- 今回の検証で特段の問題は検出されなかった。
+
+### Improvement Proposals
+- N/A
