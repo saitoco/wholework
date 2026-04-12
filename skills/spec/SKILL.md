@@ -300,6 +300,7 @@ When defining acceptance criteria, explicitly consider:
 - Config marker additions (.wholework.yml)
 - Reference updates in existing files (tables, links, etc.)
 - For new modules: include $STEERING_DOCS_PATH/structure.md module table and Mermaid graph updates in changed-files list
+- For new output directories (e.g., `docs/stats/`, `docs/reports/`): include $STEERING_DOCS_PATH/structure.md Directory Layout tree update in changed-files list (single-file outputs such as `docs/report.md` are excluded)
 - Consistency with existing patterns (naming conventions, structural patterns)
 - `docs/ja/*` files (Japanese mirror files): use Japanese-format patterns in verify commands to avoid unintended format changes; if an English pattern must be used, note the format impact explicitly in Notes
 
