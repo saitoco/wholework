@@ -61,6 +61,21 @@
 - マージ後に `/doc translate {lang}` を実行したとき、`skills/doc/*-template.md` が翻訳対象候補から自動的に除外される（手動除外が不要になる）
 - `docs/spec/issue-58-doc-translate.md` で実装済みの翻訳対象判定ロジックが引き続き動作する（Document Traversal 経由のため、frontmatter 除去により自然に除外されることを確認）
 
+## Spec Retrospective
+
+N/A
+
+## Code Retrospective
+
+### Deviations from Design
+- Spec Implementation Step 2 specifies "3 つのテンプレートファイルから frontmatter ブロックを除去する" first, and Step 2 was "Template Definitions テーブルを拡張する". These were implemented in the correct order, but an additional micro-step was added: a descriptive sentence about `type: steering` was inserted into the section text (not just the table) to satisfy the `section_contains "type: steering"` verify command. The Spec's table-only approach would have failed the verify check since the string "type: steering" would not appear as a combined string in the table rows (which only show "steering" in the type column).
+
+### Design Gaps/Ambiguities
+- The verify command `section_contains "skills/doc/SKILL.md" "## Template Definitions" "type: steering"` searches for the literal string "type: steering", but the Template Definitions table only includes "steering" as the value (without the "type:" prefix). To make this verify command PASS, a prose note was added to the section explicitly containing the string "type: steering".
+
+### Rework
+- Initial commit of SKILL.md changes (steps 2-4) was followed by a fix commit to add the "type: steering" string to the Template Definitions section description, because the verify command failed in the first pass.
+
 ## Notes
 
 - **検証item数が light 上限 (5) を超える**: Issue body の `## Acceptance Criteria > Pre-merge` が 6 件あるため、verify command sync ルールに従い 6 件を verbatim でコピーした。実装ステップは 4 件（上限内）。
