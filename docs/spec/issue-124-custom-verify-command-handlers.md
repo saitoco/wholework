@@ -60,3 +60,17 @@ Issue で確定した設計方針:
 - **`docs/ja/environment-adaptation.md`** および **`docs/ja/structure.md`** は翻訳出力ファイル（`/doc translate ja` 生成）のため実装対象外。
 - **ビルトイン衝突時の警告出力先**: verify-executor の出力結果テーブルの Details 列に警告文言を含める（新規ログ機構の導入は不要）。
 - **Glob scan のタイミング**: verify-executor が呼び出されるたびに Glob scan を行う（キャッシュ不要、ファイル数は実用上小規模を想定）。#122 domain-loader と同方式。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- `section_contains` の境界判定において、コードブロック内に `## Purpose` 等の h2 見出しが存在する場合、テキスト検索で誤って境界として検出される可能性がある。verify-executor の LLM 実装はコードブロック内の擬似見出しを無視するため実運用に問題はないが、機械的な境界検出を行う場合（テスト等）は注意が必要。
+
+### Rework
+
+- N/A
