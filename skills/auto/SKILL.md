@@ -189,7 +189,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
 4. **Commit and push**:
    ```bash
    git add $SPEC_PATH/issue-$NUMBER-*.md
-   git commit -m "Add issue retrospective for issue #$NUMBER
+   git commit -s -m "Add issue retrospective for issue #$NUMBER
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
    git push origin main
@@ -236,7 +236,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
 4. **Commit and push**:
    ```bash
    git add $SPEC_PATH/issue-$NUMBER-*.md
-   git commit -m "Add auto retrospective for issue #$NUMBER
+   git commit -s -m "Add auto retrospective for issue #$NUMBER
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
    git push origin main

@@ -260,7 +260,7 @@ Include `closes #N` only when the base branch is `main` (GitHub auto-close via `
 git add <changed files>
 # If BASE_BRANCH is main: "{prefix} <summary> (closes #$NUMBER)"
 # If BASE_BRANCH is not main: "{prefix} <summary>"
-git commit -m "{prefix} <summary>
+git commit -s -m "{prefix} <summary>
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 ```
@@ -370,7 +370,7 @@ If there are items under "Deviations from Design" (reordering of implementation 
 4. Commit (push is done in Step 13 Worktree Exit):
    ```bash
    git add $SPEC_PATH/issue-$NUMBER-*.md
-   git commit -m "Add code retrospective for issue #$NUMBER
+   git commit -s -m "Add code retrospective for issue #$NUMBER
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
    ```

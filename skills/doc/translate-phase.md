@@ -141,7 +141,7 @@ If "No" is selected, display "Translation files were generated but not committed
 ```bash
 git status
 git add README.md README.{lang}.md docs/ 
-git commit -m "docs: regenerate {lang} translations
+git commit -s -m "docs: regenerate {lang} translations
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 git push origin HEAD

@@ -520,7 +520,7 @@ Commit the Spec (push is done in Step 14 Worktree Exit):
 
 ```bash
 git add $SPEC_PATH/issue-$NUMBER-short-title.md
-git commit -m "Add design for issue #$NUMBER"
+git commit -s -m "Add design for issue #$NUMBER"
 ```
 
 ### Step 13: Spec Retrospective
@@ -571,7 +571,7 @@ Reflect on the specification phase and present improvement suggestions to the us
 4. Additional commit (push in Step 14 Worktree Exit):
    ```bash
    git add $SPEC_PATH/issue-$NUMBER-short-title.md
-   git commit -m "Add retrospective notes for issue #$NUMBER"
+   git commit -s -m "Add retrospective notes for issue #$NUMBER"
    ```
 
 ### Step 14: Worktree Exit (merge-to-main)
