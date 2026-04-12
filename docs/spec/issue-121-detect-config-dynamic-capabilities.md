@@ -48,3 +48,14 @@ Issue 本文の Auto-Resolved Ambiguity Points より：
 - **新規 capabilities キーの型**: boolean のみ対応。`capabilities.mcp` の list 型は特殊パースのため、新規キーは boolean 限定。list が必要な場合は固定テーブルに明示追加
 - **テーブルの位置づけ変更**: 「既知の固定マッピング」テーブルとして位置づけ変更し、動的マッピングルールを別途追記
 - **adapter-resolver.md**: 変更不要（`.wholework.yml` 宣言済み capability は動的変数生成されるため、フォールバックは未宣言 capability のみ）
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A（実装は Spec の通り）
+
+### Design Gaps/Ambiguities
+- `docs/ja/environment-adaptation.md`（日本語版）の更新が Spec の Changed Files に記載されていなかった。英語版と同期して日本語版も更新した
+
+### Rework
+- N/A
