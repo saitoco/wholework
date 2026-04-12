@@ -38,3 +38,14 @@
 - `agents/*.md` に `STEERING_DOCS_PATHS` 参照なし（grep 確認済み）、更新不要
 - ドキュメントファイル（README.md 等）に `STEERING_DOCS_PATHS` 参照なし、更新不要
 - 後方互換性不要（内部変数、他プロジェクトへの影響なし）
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
