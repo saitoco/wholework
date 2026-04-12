@@ -61,3 +61,14 @@
 - 旧 2 条件（pre-merge）→ 新 2 条件（pre-merge）+ opportunistic 1 条件（post-merge）。
 - verify コマンドを `file_contains "output director"` と `section_contains ... "structure.md"` に統一し、具体的な文言を要求せずルールの追加場所と内容を検証。
 - post-merge opportunistic 条件を追加し、次回の実機適用で自動検知できるように。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
