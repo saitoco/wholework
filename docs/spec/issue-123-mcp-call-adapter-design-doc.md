@@ -54,3 +54,32 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Acceptance conditions were specific and verifiable from the start: all 3 conditions had `<!-- verify: ... -->` commands attached, which enabled full auto-verification.
+- The design decision (ToolSearch直接を維持) was clarified in the Issue body itself, so no additional ambiguity resolution was needed during spec phase.
+
+#### design
+- Spec matched implementation exactly: 2 files changed (`docs/environment-adaptation.md`, `modules/verify-executor.md`) as planned.
+- No design deviations or gaps detected.
+
+#### code
+- Single clean commit (`6885ef4`): 13 lines added, 1 line modified. No fixup/amend patterns.
+- Patch route (no PR): issue was small enough for direct commit to main.
+
+#### review
+- Patch route — no PR review. Given the minimal scope (documentation-only change), skipping PR review was appropriate.
+
+#### merge
+- No merge issues. Patch route commit applied cleanly to main.
+
+#### verify
+- All 3 `section_contains` and `grep` conditions passed on first run.
+- Verify commands were well-matched to the acceptance criteria, enabling clean auto-verification.
+
+### Improvement Proposals
+- N/A
