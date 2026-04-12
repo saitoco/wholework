@@ -321,7 +321,7 @@ Get steering doc paths with Glob. Launch 3 agents in parallel:
 
 ```text
 Task(subagent_type="issue-scope", description="Scope investigation",
-  prompt="Issue=$NUMBER, Steering Documents=$STEERING_DOCS_PATHS, Issue body=<full text>")
+  prompt="Issue=$NUMBER, Steering Documents=$STEERING_DOCS_FILES, Issue body=<full text>")
 
 Task(subagent_type="issue-risk", description="Risk investigation",
   prompt="Issue=$NUMBER, Issue body=<full text>")

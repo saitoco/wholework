@@ -283,7 +283,7 @@ If `SKIP_REVIEW_BUG=true`, specify in the prompt to run only review-light's spec
 
 3. **Get steering doc paths**:
    - Glob for `$STEERING_DOCS_PATH/product.md`, `$STEERING_DOCS_PATH/tech.md`, `$STEERING_DOCS_PATH/structure.md`
-   - Record existing paths comma-separated as `STEERING_DOCS_PATHS`
+   - Record existing paths comma-separated as `STEERING_DOCS_FILES`
 
 4. **Launch 1 `review-light` agent**:
 
@@ -291,7 +291,7 @@ If `SKIP_REVIEW_BUG=true`, specify in the prompt to run only review-light's spec
    Task(
      subagent_type="review-light",
      description="Lightweight integrated review (all 4 aspects)",
-     prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_PATHS, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json"
+     prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_FILES, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json"
    )
    ```
 
@@ -323,7 +323,7 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
 
 2.5. **Get steering doc paths**:
    - Glob for `$STEERING_DOCS_PATH/product.md`, `$STEERING_DOCS_PATH/tech.md`, `$STEERING_DOCS_PATH/structure.md`
-   - Record comma-separated as `STEERING_DOCS_PATHS` (empty string if none exist)
+   - Record comma-separated as `STEERING_DOCS_FILES` (empty string if none exist)
 
 3. **Launch agents in parallel**:
    - `SKIP_REVIEW_BUG=true`: launch **review-spec only** (skip review-bug)
@@ -335,7 +335,7 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
    Task(
      subagent_type="review-spec",
      description="Spec review",
-     prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_PATHS, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json"
+     prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_FILES, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json"
    )
 
    Task(
