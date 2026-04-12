@@ -1,0 +1,76 @@
+# Issue #53: doc: ファイルのコミット・プッシュまでを範囲にする
+
+## Overview
+
+`/doc` 系のドキュメント書き出しサブコマンド（`init`, `product`, `tech`, `structure`, `sync`, `sync --deep`, `sync {doc}`, `add`, `project`）の末尾で、AskUserQuestion による commit/push ガイドを追加する。共有モジュール `modules/doc-commit-push.md` を新設し、各サブコマンドの終端から Read 指示で呼び出す。`translate` は既存実装のため対象外。
+
+確定済み設計方針（Issue Q&A）:
+- 対象範囲: ファイルを書き出す 9 サブコマンド全て（translate 除外）
+- 実装パターン: 共有モジュール `modules/doc-commit-push.md` 新設
+- Q&A 形式: `translate-phase.md` Step 5 の 2 択（"Yes, commit and push" / "No, skip"）
+- コミットメッセージ: `docs: <SUMMARY>` + Co-Authored-By 行（SUMMARY は呼び出し側が input で指定）
+- 変更なしスキップ: `git status --porcelain` 結果が空なら silent exit
+- コミット粒度: 1 サブコマンド = 1 コミット
+- `allowed-tools` 変更: 不要（既存宣言で充足）
+
+## Changed Files
+
+- `modules/doc-commit-push.md`: 新規作成。Purpose / Input (`SUMMARY` 変数) / Processing Steps (git status → AskUserQuestion → git add/commit/push) / Output の 4 節構造
+- `skills/doc/SKILL.md`: `Individual Create/Update`, `init Wizard`, `sync Bidirectional Normalization` (reverse-generation 完了点 + normalization 完了点の両方), `sync Individual Reverse-Generation`, `add — Register Existing Document`, `project — Create New Project Document` の各セクション末尾に commit/push ガイドの Read 指示を追加
+- `docs/structure.md`: Key Files > Modules リストに `modules/doc-commit-push.md` エントリを追加（既存の `doc-checker.md` エントリと対称配置）
+
+## Implementation Steps
+
+1. `modules/doc-commit-push.md` を新規作成（→ 受入条件 1, 2, 3）
+   - 4 節標準構造（Purpose / Input / Processing Steps / Output）に従う
+   - Purpose: `/doc` 系サブコマンドが書き出したファイル変更のコミット・プッシュをユーザーに確認・実行する
+   - Input: `SUMMARY` — コミットメッセージ本文用のサマリー文字列（呼び出し側が設定、例: `"sync steering documents (reverse-generation)"`）
+   - Processing Steps:
+     1. `git status --porcelain` を実行し出力が空なら silent exit（「変更なし」）
+     2. 変更サマリー（`git status` の短い表示）を表示
+     3. AskUserQuestion で 2 択提示: "Yes, commit and push" / "No, skip"
+     4. "No" 選択: "Changes left uncommitted. Run `git status` to review, or re-run the /doc command later." と表示して exit
+     5. "Yes" 選択: `git add -A`（もしくは変更パスに限定）→ `git commit -m "docs: ${SUMMARY}\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"` → `git push origin HEAD` を実行
+     6. コミットハッシュ・push 結果を表示して exit
+   - Output: 副作用（コミット・プッシュ）のみ。戻り値なし
+
+2. `skills/doc/SKILL.md` の対象 6 セクション末尾に commit/push ガイド Read 指示を追加（→ 受入条件 4）
+   - 追加位置: 各セクションの最終 Step の直後、次の `---` セパレータ or `##` 見出しの直前
+   - 追加形式: 新規 `### Step N: Commit and Push Guide` を追加し、内容は `Read \`${CLAUDE_PLUGIN_ROOT}/modules/doc-commit-push.md\` and follow the "Processing Steps" section with \`SUMMARY="<subcommand-specific summary>"\`.` とする
+   - 対象セクションと SUMMARY 文字列（例）:
+     - `Individual Create/Update` → `SUMMARY="update {doc}"` （{doc} は product/tech/structure）
+     - `init Wizard` → `SUMMARY="init steering documents"`
+     - `sync Bidirectional Normalization` (reverse-generation 出口) → `SUMMARY="sync (reverse-generation)"`
+     - `sync Bidirectional Normalization` (normalization 出口) → `SUMMARY="sync (normalization)"`
+     - `sync Individual Reverse-Generation` → `SUMMARY="sync {doc} (reverse-generation)"`
+     - `add — Register Existing Document` → `SUMMARY="register {path} as project document"`
+     - `project — Create New Project Document` → `SUMMARY="create project document {name}"`
+   - sync Bidirectional Normalization は Step 5 末尾（reverse-generation 完了時）と Step 9 末尾（normalization 完了時）の両方に Read 指示を追加する
+
+3. `docs/structure.md` の Key Files > Modules リストに新モジュールを追記（→ Changed Files 整合）
+   - 追記位置: 既存行 `- \`modules/doc-checker.md\` — documentation consistency checker` の直後
+   - 追記内容: `- \`modules/doc-commit-push.md\` — commit/push guide for /doc subcommand outputs`
+
+## Verification
+
+### Pre-merge
+
+- <!-- verify: file_exists "modules/doc-commit-push.md" --> 共有モジュール `modules/doc-commit-push.md` が作成されている
+- <!-- verify: section_contains "modules/doc-commit-push.md" "## Processing Steps" "AskUserQuestion" --> `modules/doc-commit-push.md` の Processing Steps に AskUserQuestion による commit/push 確認フロー（Yes/No 選択肢）が記載されている
+- <!-- verify: section_contains "modules/doc-commit-push.md" "## Processing Steps" "git push" --> `modules/doc-commit-push.md` に `git status` → `git add` → `git commit` → `git push` の実行手順が含まれている
+- <!-- verify: file_contains "skills/doc/SKILL.md" "doc-commit-push.md" --> `skills/doc/SKILL.md` から `modules/doc-commit-push.md` を参照する Read 指示が追加されている
+- <!-- verify: grep "doc-commit-push" "docs/structure.md" --> `docs/structure.md` の Modules リストに `modules/doc-commit-push.md` が追記されている
+
+### Post-merge
+
+- `/doc sync --deep` を実行してドキュメントを更新した直後、commit/push 確認の AskUserQuestion が表示され、Yes を選ぶと commit/push が完了することを確認 <!-- verify-type: opportunistic -->
+- `/doc add {path}`, `/doc project`, `/doc tech` 等の他サブコマンド実行後も同様に commit/push 確認が表示されることを確認 <!-- verify-type: opportunistic -->
+
+## Notes
+
+- **既存実装との一貫性**: `skills/doc/translate-phase.md` Step 5〜6 が同等の Q&A → git commit/push パターンを持つ。本モジュールはその設計を抽出・一般化したもの。将来 `translate-phase.md` も本モジュールに移行する余地があるが本 Issue スコープ外。
+- **`docs/ja/structure.md`**: 翻訳出力ファイル（`/doc translate ja` 生成）のため実装対象外。
+- **SUMMARY 文字列の具体値**: 実装時に呼び出し側サブコマンドの context に応じて決定する。placeholders（`{doc}`, `{path}`, `{name}`）は呼び出し時点の実値で展開される想定。モジュール側は文字列を受け取ってそのままコミットメッセージ本文に埋め込むのみ。
+- **`sync Bidirectional Normalization` の 2 出口**: reverse-generation (Steps 2–5) と normalization (Steps 6–9) の両フローで commit/push 機会があるため、それぞれの完了点に Read 指示を置く必要がある。どちらか一方の出口からは必ず commit/push ガイドを通過する設計。
+- **`git add -A` vs 変更パス限定**: モジュール側で `git add -A` を使用（呼び出し側の変更が docs/ 以下に限定される前提で安全）。ユースケース拡張で限定が必要になった場合は Input を拡張できる余地を残す。
+- **`AskUserQuestion` の挙動**: Claude Code 環境下でのみ動作。`claude -p --dangerously-skip-permissions` では自動的に「最初の選択肢」が選ばれる前提（既存 translate-phase.md と同方針）。
