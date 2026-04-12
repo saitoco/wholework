@@ -162,3 +162,33 @@
 ### Acceptance criteria verification difficulty
 
 - アクセプタンス基準9条件のうち8条件が `section_not_contains`/`file_not_contains`/`grep` 等の静的チェックで PASS 確認済み。`command "bats tests/phase-banner.bats"` のみ CI 待ちが必要だったが、最終的に CI SUCCESS で PASS 確認済み。verify command の設計が適切で UNCERTAIN が最小化されていた。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue Retrospectiveに記録された5点の曖昧性（verify command false positive含む）が全て `/issue` フェーズで自動解決されており、verify フェーズへの持ち越しはなかった
+- `file_not_contains 'label="Issue"'` の修正（false positive防止）は verify command 設計の典型的な落とし穴を示す良い事例。動的生成文字列とリテラル文字列の区別を設計段階で意識する必要がある
+
+#### design
+- 設計が実装に精密に対応（Spec Retrospectiveに記録通り）。行番号指定まで含む Spec は機械的変更に有効で、verify でも実装乖離の疑念が不要だった
+- `run-auto-sub.sh` のスコープ外判定・`echo "---"` セパレータ保持の判断が Spec で明示されており、verify での混乱がなかった
+
+#### code
+- Code Retrospectiveに記録された `_fetch_entity_info` 直接モック方式への変更は1回のリワークで収束。bats テスト8件全PASS確認済み
+- リワーク1回は小規模で設計意図からの軽微な乖離。今後の bats テスト設計では mock 関数の引数マッチングを事前に確認する
+
+#### review
+- Review Retrospectiveに記録通り、実装は Spec と完全一致。review での指摘は最小化されていた
+- 代表ファイル（`run-code.sh`）のみ verify command で確認する戦略は、7本のスクリプト変更のうち1本を代表させる。実際に全7本変更されていることは bats テストが間接保証しており、今回は妥当だった
+
+#### merge
+- PRマージは FF-only で完了。コンフリクトなし（変更はすべて独立ファイルまたは単純追加）
+
+#### verify
+- 9条件すべて PASS（UNCERTAIN・FAIL なし）。verify command の設計品質が高く、自動検証率100%
+- Post-merge opportunistic 条件（`/auto` フェーズ遷移表示）は環境依存のため自動検証不可。`phase/verify` ラベルを維持して opportunistic verify に委ねる運用は適切
+
+### Improvement Proposals
+- N/A
