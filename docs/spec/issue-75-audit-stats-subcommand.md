@@ -42,6 +42,20 @@
 - Highlights セクションが乖離の大きい segment を自動ピックアップする
 - companion Issue (`/verify` Step 13 への `retro/verify` ラベル付与) が merge された後、Work Origin セクションで retrospective 由来 Issue が分離表示される
 
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。Spec の実装ステップ通りに実装した。
+
+### Design Gaps/Ambiguities
+
+- stats サブコマンドの Step 1 では `gh issue view N --json timelineItems` を使用するが、Spec の Changed Files には `allowed-tools` の変更が記載されていなかった。実装時に不足を検出し、`gh issue view:*` を allowed-tools に追加した (Spec の記載漏れ)。
+
+### Rework
+
+- なし。
+
 ## Notes
 
 - `docs/stats/` ディレクトリは初回実行時に `mkdir -p docs/stats` で自動作成する (Issue body の保存フォーマット節準拠)。`.gitignore` 追加は行わない (履歴追跡のためコミット前提)。
