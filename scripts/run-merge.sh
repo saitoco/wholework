@@ -15,7 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "=== run-merge.sh: Starting /merge for PR #${PR_NUMBER} ==="
 source "$SCRIPT_DIR/phase-banner.sh"
-print_start_banner "pr" "$PR_NUMBER"
+print_start_banner "pr" "$PR_NUMBER" "merge"
 echo "Model: sonnet"
 echo "Effort: low"
 echo "Permissions: skip (autonomous mode)"
@@ -56,7 +56,7 @@ set -e
 
 echo "---"
 echo "=== run-merge.sh: Finished /merge for PR #${PR_NUMBER} ==="
-print_end_banner "pr" "$PR_NUMBER"
+print_end_banner "pr" "$PR_NUMBER" "merge"
 echo "Exit code: ${EXIT_CODE}"
 echo "Finished at: $(date '+%Y-%m-%d %H:%M:%S')"
 exit $EXIT_CODE

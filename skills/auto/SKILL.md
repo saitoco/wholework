@@ -136,15 +136,24 @@ Run each phase via `run-*.sh`. Each script launches an independent process with 
 
 **pr route (4 phases):**
 
-1. code phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER --pr [--base {branch}]` via Bash (timeout: 600000)
+Phase transition output format: output `[N/M] phase_name` before each phase, and `[N/M] phase_name → done (details)` after success. Example:
+```
+[1/4] code
+(run-code.sh output)
+[1/4] code → done (PR #125)
+[2/4] review
+...
+```
+
+1. Output `[1/4] code`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER --pr [--base {branch}]` via Bash (timeout: 600000); on success output `[1/4] code → done (PR #N)`
 2. If code fails: go to Step 6
 3. Extract PR number: `gh pr list --head "*issue-$NUMBER-*" --json number -q '.[0].number'` (also handles worktree branch names like `worktree-issue-*`)
 4. If PR number cannot be fetched: report error and go to Step 6
-5. review phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh $PR_NUMBER [--light|--full]` via Bash (timeout: 600000) (M→`--light`, L→`--full`)
+5. Output `[2/4] review`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh $PR_NUMBER [--light|--full]` via Bash (timeout: 600000) (M→`--light`, L→`--full`); on success output `[2/4] review → done`
 6. If review fails: go to Step 6
-7. merge phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh $PR_NUMBER` via Bash (timeout: 600000)
+7. Output `[3/4] merge`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh $PR_NUMBER` via Bash (timeout: 600000); on success output `[3/4] merge → done`
 8. If merge fails: go to Step 6
-9. verify phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh $NUMBER [--base ${BASE_BRANCH}]` via Bash (timeout: 600000)
+9. Output `[4/4] verify`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh $NUMBER [--base ${BASE_BRANCH}]` via Bash (timeout: 600000); on success output `[4/4] verify → done`
 10. Based on verify result, proceed to Step 5 or Step 6
 
 ### Step 4b: Issue Retrospective Transcription (XS patch route only)
@@ -248,7 +257,15 @@ Determine the close flow for the parent Issue based on all sub-issue execution r
 
 ### Step 5: Completion Report
 
-If all phases succeeded, report completion. **For XL routes, also output "Auto retrospective recorded in Spec".**
+If all phases succeeded, output the completion banner:
+```
+/auto #N complete
+TITLE
+URL
+```
+Followed by a result table (one row per phase with status).
+
+**For XL routes, also output "Auto retrospective recorded in Spec".**
 
 Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
 - `SKILL_NAME=auto`
@@ -257,7 +274,15 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 
 ### Step 6: On Failure: Stop and Report Error
 
-If any phase exits with a non-zero exit code, stop processing and report the error to the user. Do not invoke subsequent phases.
+If any phase exits with a non-zero exit code, stop processing and output the stopped banner:
+```
+/auto #N stopped at PHASE
+TITLE
+URL
+```
+Followed by a result table (one row per phase; use `-` for unexecuted phases).
+
+Do not invoke subsequent phases.
 
 - code phase failure: error in branch creation, implementation, tests, or PR creation
 - review phase failure: review wait timeout, fix failure, retry limit reached

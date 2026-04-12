@@ -16,10 +16,9 @@ Display Issue/PR title and URL at skill start for identification.
    - PR: `gh pr view $N --json title,url`
 2. Output banner format (at skill start, after number extraction):
    ```
-   --- /SKILL_NAME #N ---
+   /SKILL_NAME #N
    TITLE
    URL
-   ---
    ```
 3. If `gh` command fails, output banner without title/URL (skip silently)
 
@@ -28,14 +27,11 @@ Phase identification banner displayed to terminal.
 
 ## Notes
 
-The banner format above applies to **SKILL.md (LLM-executed)** skills only.
+Both SKILL.md (LLM-executed) skills and `run-*.sh` shell scripts use the same `/SKILL_NAME #N` format.
 
-For `run-*.sh` shell scripts, a separate helper `scripts/phase-banner.sh` is used instead.
-Its `print_start_banner` function outputs a different format:
+For `run-*.sh` shell scripts, `scripts/phase-banner.sh` provides `print_start_banner` / `print_end_banner` functions that accept `skill_name` as a third argument and output the same unified format:
 ```
-Issue: #N TITLE
-URL: URL
+/skill_name #N
+TITLE
+URL
 ```
-
-This is an intentional 2-layer design: SKILL.md module defines the LLM-executed banner format,
-while `scripts/phase-banner.sh` defines the shell-executed banner format for `run-*.sh`.
