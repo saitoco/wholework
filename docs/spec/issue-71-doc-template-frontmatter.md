@@ -76,6 +76,34 @@ N/A
 ### Rework
 - Initial commit of SKILL.md changes (steps 2-4) was followed by a fix commit to add the "type: steering" string to the Template Definitions section description, because the verify command failed in the first pass.
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body の「Auto-Resolved Ambiguity Points」セクションで事前に曖昧さが解消されており、Spec 作成時の方針決定は明確だった。
+- `## Spec Retrospective` は N/A — 特筆すべき問題はなし。
+
+#### design
+- `## Spec Retrospective` は N/A。設計方針（Template Definitions テーブル拡張 + prepend）は妥当で、実装との乖離も最小限。
+
+#### code
+- **verify command と実装の齟齬**: `section_contains "## Template Definitions" "type: steering"` はテーブルのカラム値が "steering" のみであることを考慮しておらず、初回実装でfail → fixup コミット（2e15115）が発生。
+- rework はコミット1回分にとどまったが、verify command の文字列設計（テーブル値 vs 複合キー）を spec 段階で精査することで防げた。
+
+#### review
+- PRなし（patch route で直接 main にコミット）。コードレビューは実施されていない。rework はコードレビューでは検出できない性質（verify command 文字列設計の問題）だったため、影響は軽微。
+
+#### merge
+- PRなし。patch route（直接 main コミット）で実装 → fixup コミットの計3コミット構成。conflictなし、CI failures なし。
+
+#### verify
+- 全6条件 PASS。post-merge 条件4件は `verify-type: manual` のため自動検証対象外。
+- `section_contains "## Template Definitions" "type: steering"` の PASS は、code フェーズのfixup（prose文追加）によって達成されたもの。verify command 設計時点でのテーブル値と検索文字列の整合性チェックが今後の改善点。
+
+### Improvement Proposals
+- **verify command 設計ガイドライン**: `section_contains` でテーブルのカラム値を検索する場合、テーブルセルに含まれる値（例: `steering`）と、"key: value" 形式の複合文字列（例: `type: steering`）は同一視できない。Spec 策定時に verify command の検索文字列がファイル内に実際に出現するかを確認する習慣、または `/issue` スキルに「verify command 文字列の出現確認ステップ」を追加することが有効。
+
 ## Notes
 
 - **検証item数が light 上限 (5) を超える**: Issue body の `## Acceptance Criteria > Pre-merge` が 6 件あるため、verify command sync ルールに従い 6 件を verbatim でコピーした。実装ステップは 4 件（上限内）。
