@@ -111,7 +111,7 @@
 
 6. `skills/code/SKILL.md` を更新 (parallel with 5): 同様に Step 0 or 早期ステップに設定検出を追加、`docs/spec` → `$SPEC_PATH`、`docs/tech.md` / `docs/structure.md` → `$STEERING_DOCS_PATH/...`。(→ acceptance criterion 6)
 
-7. `skills/verify/SKILL.md` を更新 (parallel with 5): 既存の `detect-config-markers.md` 読み込み箇所（Step 8/12 付近）で `SPEC_PATH` 取得もあわせて行うよう明記。以降の `docs/spec` → `$SPEC_PATH`。Glob パターン `docs/spec/issue-"$NUMBER"-*.md` → `$SPEC_PATH/issue-"$NUMBER"-*.md`。(→ acceptance criterion 7)
+7. `skills/verify/SKILL.md` を更新 (parallel with 5): Step 4（`{{base_url}}` 解決の直前）に `detect-config-markers.md` の一括 Read を挿入し、`SPEC_PATH`、`STEERING_DOCS_PATH`、`PRODUCTION_URL` をまとめて取得。以降の個別 Read 参照（line 175, 200）は「Step 4 で取得済み変数を再利用」に変更。`docs/spec` → `$SPEC_PATH` に置換。(→ acceptance criterion 7)
 
 8. `skills/auto/SKILL.md` を更新 (parallel with 5): Step 0 or 早期ステップに設定検出を追加、`docs/spec` → `$SPEC_PATH`。(→ acceptance criterion 8)
 
@@ -211,6 +211,22 @@
 ### 変更の網羅性
 
 `grep -rn 'docs/spec' .` の結果（28 ファイル、68 occurrences）と `grep -rnE 'docs/(product|tech|structure)\.md' .` の結果を変更対象ファイルリストと照合。historical records（`docs/spec/issue-*.md` 内の `docs/spec` 記述）は過去記録として変更対象外。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `verify/SKILL.md` の `detect-config-markers.md` 参照: Spec では「既存の Read 箇所に `SPEC_PATH` 取得を追加」と記載していたが、実装では Step 4（`{{base_url}}` 解決の直前）に統合した 1 回の Read として整理した。既存の line 175, 200 の個別参照をキャッシュ済み変数の再利用に変更したため、実際の動作はより効率的になった。
+- `triage/SKILL.md` の挿入位置: Spec では「Fallback level determination の直前」と暗示していたが、実装では "Argument Parsing" と "Command Execution Constraints" の後、"Single Issue Execution" セクションの前に "Configuration Detection" セクションとして追加した。これにより全コマンド（single/bulk/backlog）に共通で設定検出が適用される。
+- `doc/SKILL.md` の挿入位置: Spec の Step 9 では「各ルーティング先で `$SPEC_PATH` を使う箇所に設定検出を追加」と記載していたが、実装では "Command Routing" の直前に "Configuration Detection" セクションを設け、全コマンド共通の一元検出とした。これによりコマンドルーティング先ごとの重複 Read が不要になった。
+
+### Design Gaps/Ambiguities
+
+- `detect-config-markers.md` の既存参照整理: 実装時に `verify/SKILL.md` の line 175（Browser capability check）と line 200（Browser-verifiable case exclusion）に既存の `detect-config-markers.md` 個別 Read 指示があることが判明。これらを Step 4 での一括取得で代替するよう更新した。Spec には「既存 Read 箇所に追加」とあったが、重複を避けるため整理が必要だった。
+
+### Rework
+
+- N/A
 
 ## spec retrospective
 
