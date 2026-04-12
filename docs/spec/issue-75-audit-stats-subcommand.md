@@ -56,6 +56,20 @@
 
 - なし。
 
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+- 全9つのPre-merge受け入れ条件がPASSで、Specと実装の乖離なし。Code Retrospectiveで `allowed-tools` への `gh issue view:*` 追加がSpec記載漏れとして記録されていたが、PRで正しく修正されていた。Specのchanged-filesに `allowed-tools` 変更を含める習慣が定着していない可能性がある。
+
+### 繰り返しイシュー
+
+- 今回のCONSIDERイシュー2件はいずれもSKILL.mdとSteering Documentの連携不足に由来する。新しい出力ディレクトリ（`docs/stats/`）を生成するSkillを追加する際は、`docs/structure.md`のディレクトリレイアウトも同時に更新するチェックリストが有効。
+
+### 受け入れ条件検証難易度
+
+- Pre-merge条件9件すべてが `file_contains` / `section_contains` で機械的に検証可能だった。verify commandの精度が高く、UNCERTAIN件数はゼロ。read-only SKILL.md追加タスクは verify command設計が容易な傾向がある。
+
 ## Notes
 
 - `docs/stats/` ディレクトリは初回実行時に `mkdir -p docs/stats` で自動作成する (Issue body の保存フォーマット節準拠)。`.gitignore` 追加は行わない (履歴追跡のためコミット前提)。
