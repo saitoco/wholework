@@ -35,7 +35,7 @@ The following information is passed from the caller:
 
 3. **Resolve custom verify command handlers**: Before looking up the translation table, check whether the command name is a custom handler:
 
-   a. **Built-in priority check**: If the command name matches a built-in command in the translation table below (e.g., `file_exists`, `grep`, `section_contains`), use the built-in processing directly. Skip custom handler lookup.
+   a. **Built-in priority check**: If the command name matches a built-in command in the translation table below (e.g., `file_exists`, `grep`, `section_contains`), also Glob `.wholework/verify-commands/{name}.md`; if a shadowing handler file is found, output a warning in the Details column (e.g., "Warning: custom handler `file_exists.md` ignored — built-in takes priority"). Then use the built-in processing directly. Skip custom handler lookup in step b.
 
    b. **Custom handler lookup** (only for non-built-in command names): Glob `.wholework/verify-commands/{name}.md` where `{name}` is the command name from the verify comment. Perform this scan on each verify-executor invocation (no caching).
 
@@ -45,7 +45,7 @@ The following information is passed from the caller:
 
    d. **Handler not found**: Return UNCERTAIN (no built-in match and no custom handler file found).
 
-   e. **Name collision warning**: If a custom handler file exists but its name matches a built-in command name, output a warning in the Details column of the result table (e.g., "Warning: custom handler `file_exists.md` ignored — built-in takes priority") and use the built-in.
+   e. *(Collision warning is handled in step a above.)*
 
    f. **Result format**: Custom handlers must return one of PASS, FAIL, or UNCERTAIN. The handler's Processing Steps describe the verification logic; execute them and map the outcome to these three values.
 
