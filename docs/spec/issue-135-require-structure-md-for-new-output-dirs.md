@@ -18,6 +18,32 @@
 ### Related Issues
 - 兄弟 Issue #136 (ghコマンドの allowed-tools 必須化) は同じ verify retrospective から派生した別トピック。依存関係なしで並行実装可能。
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue の ambiguity points が auto-resolved 形式で記録されており、verify command の設計変更（`file_contains "docs/stats"` → `section_contains "structure.md"`）の根拠が明確。具体的な文言ではなく配置場所を検証する設計は適切。
+- post-merge の opportunistic 条件追加により、ルールの「実効性」を将来の /spec 実行で自然に観測できる仕組みを設けた点が良い。
+
+#### design
+- Refinement Retrospective に設計決定が記録されている。Mermaid graph 更新対象外・AC2 削除・配置位置の判断が文書化されており、設計上の迷いが残っていない。
+
+#### code
+- XS patch ルート: `skills/spec/SKILL.md` への 1 行追記（コミット `ad0c023`）のみ。リワークなし。適切なサイズ分類と実装。
+
+#### review
+- Patch ルート（XS）のため formal review なし。XS タスクとして適切。
+
+#### merge
+- Direct commit to main（patch ルート）。`closes #135` をコミットメッセージに含めたが、GitHub は直接プッシュのコミットメッセージでは Issue を自動クローズしない（PR merge 時のみ）。そのため /verify で手動クローズが必要だった。XS patch ルートの既知の挙動。
+
+#### verify
+- 全ての自動検証対象条件（pre-merge 2 件）が PASS。post-merge opportunistic 条件は将来確認待ち。verify command の実行は Grep ベースで確実に動作した。
+
+### Improvement Proposals
+- N/A
+
 ## Refinement Retrospective
 
 ### Design decisions (確定事項)
