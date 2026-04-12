@@ -136,3 +136,35 @@ Issue Q&A で確定した方針:
 ### Acceptance criteria verification difficulty
 
 - verify command はすべてファイル内容チェック（`file_contains`）のため PASS 判定は容易だった。しかし受け入れ条件「`.github/workflows/dco.yml` に `tim-actions/dco` を使用した Signed-off-by チェック workflow が実装されている」という条件はファイルの存在と文字列の有無のみを検証しており、Actionが正しく動作するかどうか（`commits` 入力が適切に渡されているか）まで検証できていない。CI FAILがなければ見落としていた可能性がある。Verify command で `github_check` を使った CI PASS 検証を追加する改善余地がある。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue に「Auto-Resolved Ambiguity Points」セクションがあり、実装前に決定事項が明文化されていた点は効果的だった
+- ただし Spec の `dco.yml` 参考スニペットに `tim-actions/get-pr-commits` との組み合わせが記載されておらず、外部 Action の必須入力（`commits: required: true`）への言及が欠落していた。これが CI FAIL の根本原因となった
+- `skills/review/external-review-phase.md` の行番号参照（88, 128）がファイル実態と一致していなかった。Spec 作成時の実ファイル検証が不十分だった
+
+#### design
+- N/A（設計フェーズは spec に統合）
+
+#### code
+- `external-review-phase.md` の行 88, 128 は `git commit -m` 形式が存在せず、コーダーが意図を補完して形式変更で対応した。Spec の行番号ズレによる軽微な対応コストが発生した
+- それ以外の置換箇所はすべて Spec 通りに実装され、リワークなし
+
+#### review
+- レビューが `tim-actions/dco@master` の `commits: required: true` 未設定バグを検出（MUST issue）。これは CI FAIL として発現しており、レビューなしではマージ後に気付く可能性があった
+- Spec の記述ミスを実際の `action.yml` 参照で補完した良い例。外部 Action 使用時はレビュー時に `action.yml` を確認する習慣が有効
+
+#### merge
+- `git log` で確認: `a2f7937 Issue #73: Add DCO workflow and update commit templates (#142)` — クリーンなスカッシュマージ
+- コンフリクトなし、CI 修正後に正常マージ完了
+
+#### verify
+- 5件すべての `file_contains` 検証が PASS。ファイル内容ベースの verify command は自動検証が容易
+- Post-merge opportunistic 条件（DCO check の PASS/FAIL 動作）は実際の PR CI が必要なため未チェックのまま。これは設計通りの判断
+
+### Improvement Proposals
+- CI workflow の受け入れ条件に `file_contains` だけでなく `github_check "gh run list --workflow=dco.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success"` 形式の verify command を追加することで、Action の設定ミスを /verify 段階で検出できる。外部 GitHub Action を導入する Issue のテンプレートとして整備する価値がある
+- `/spec` で外部 GitHub Action を参照スニペットに含める場合、Action の `action.yml` を確認して必須入力（`required: true`）をスニペットに反映するステップを追加することを検討する
