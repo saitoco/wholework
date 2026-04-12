@@ -139,3 +139,28 @@ MOCK
     # Should remove phase/verify
     grep -q -- "--remove-label phase/verify" "$GH_CALL_LOG"
 }
+
+@test "regression: target label not included in remove list during normal transition (else branch)" {
+    # Mock gh to return phase/spec as current label for 'issue view' calls
+    # This simulates the bug scenario: transitioning from phase/spec to phase/ready
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+if [ "\$1" = "issue" ] && [ "\$2" = "view" ]; then
+    echo "phase/spec"
+else
+    echo "\$@" >> "$GH_CALL_LOG"
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 42 ready
+    [ "$status" -eq 0 ]
+    # Should add phase/ready
+    grep -q -- "--add-label phase/ready" "$GH_CALL_LOG"
+    # Should NOT remove phase/ready (target label must be excluded from remove list)
+    run grep -- "--remove-label phase/ready" "$GH_CALL_LOG"
+    [ "$status" -ne 0 ]
+    # Should still remove the previous phase label
+    grep -q -- "--remove-label phase/spec" "$GH_CALL_LOG"
+}

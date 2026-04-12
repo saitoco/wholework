@@ -66,10 +66,12 @@ if [ -n "$TARGET_PHASE" ] && echo "$CURRENT_LABELS" | grep -qx "$TARGET_LABEL"; 
     done
     gh issue edit "$ISSUE_NUMBER" "${REMOVE_ARGS[@]}"
 else
-    # Build --remove-label flags for all phase/* labels
+    # Build --remove-label flags for all phase/* labels except the target label
     REMOVE_ARGS=()
     for label in $PHASE_LABELS; do
-        REMOVE_ARGS+=(--remove-label "$label")
+        if [ "$label" != "$TARGET_LABEL" ]; then
+            REMOVE_ARGS+=(--remove-label "$label")
+        fi
     done
 
     # Add target phase label if specified
