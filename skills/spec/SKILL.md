@@ -88,6 +88,10 @@ Check whether the following steering documents exist under `docs/` using Glob, t
 
 Use the referenced documents as the codebase exploration starting point, for technical constraints, design priorities, and terminology consistency.
 
+**Project-local Domain files (if present):**
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/domain-loader.md` and follow the "Processing Steps" section with `SKILL_NAME=spec`. Domain file content supplements steering documents as additional context for codebase investigation and design.
+
 ### Step 6: Codebase Investigation
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/measurement-scope.md` and follow its measurement scope guidelines when recording quantitative data (file counts, line counts, grep hit counts, etc.) in the Spec.
