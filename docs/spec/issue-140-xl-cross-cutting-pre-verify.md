@@ -66,3 +66,33 @@ N/A
 ### Rework
 
 - なし。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec の受入条件はすべて `<!-- verify: ... -->` 付きで設計されており、自動検証精度が高かった。
+- Spec Retrospective は N/A（設計上の問題なし）。
+
+#### design
+- 実装は Spec の手順通りに完了。設計とのズレなし。
+- patch route（PR なし）での直接 main コミット実装。
+
+#### code
+- リワークなし。`ee10fc9` 1コミットで実装完了。
+- Code Retrospective でも「Spec の実装手順通り」と記録されており、設計と実装の一致を確認。
+
+#### review
+- PR なし（patch route）のため、コードレビューは実施されていない。
+- 変更範囲が `skills/auto/SKILL.md` の 1ファイルのみと小規模だったため、patch route の判断は適切。
+
+#### merge
+- patch route で直接 main にコミット・プッシュ。コンフリクトなし。
+
+#### verify
+- Pre-merge 全3条件 PASS（grep 2件 + 構文検証 1件）。
+- Post-merge 条件（opportunistic）は XL Issue での `/auto` 実行確認が必要であり、ユーザー検証ガイドとして提示した。
+
+### Improvement Proposals
+- N/A
