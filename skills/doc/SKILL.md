@@ -62,11 +62,11 @@ For any other ARGUMENTS: display "Usage: /doc [init|init --deep|product|tech|str
 Each steering document's template is defined in the following individual files.
 Read them when templates are needed within the workflow.
 
-| Document | Template file |
-|----------|--------------|
-| product.md | `skills/doc/product-template.md` |
-| tech.md | `skills/doc/tech-template.md` |
-| structure.md | `skills/doc/structure-template.md` |
+| Document | Template file | type | ssot_for |
+|----------|--------------|------|----------|
+| product.md | `skills/doc/product-template.md` | steering | vision, non-goals, terminology |
+| tech.md | `skills/doc/tech-template.md` | steering | tech-stack, coding-conventions, forbidden-expressions |
+| structure.md | `skills/doc/structure-template.md` | steering | directory-layout, agent-includes-catalog |
 
 ---
 
@@ -183,6 +183,18 @@ If the file is not found, display the following error and abort:
 ```
 Error: template file `skills/doc/{doc}-template.md` not found.
 wholework is not correctly installed. Reinstall the wholework plugin via `/plugin install wholework@saitoco-wholework`.
+```
+
+Look up the `type` and `ssot_for` values for `{doc}` from the Template Definitions table and prepend the following frontmatter block before writing with Write:
+
+```yaml
+---
+type: {type}
+ssot_for:
+  - {ssot_for_item_1}
+  - {ssot_for_item_2}
+  ...
+---
 ```
 
 Fill in the template with collected information and save to `docs/{doc}.md` with Write.
@@ -387,7 +399,19 @@ If `docs/{doc}.md` already exists:
 
 ### Step 5: Execute Save
 
-Save with Write based on the Step 4 selection result. After processing all files, display the list of saved files.
+Save with Write based on the Step 4 selection result. When creating a new file (`docs/{doc}.md` does not exist), look up the `type` and `ssot_for` values for `{doc}` from the Template Definitions table and prepend the frontmatter block before the generated content:
+
+```yaml
+---
+type: {type}
+ssot_for:
+  - {ssot_for_item_1}
+  - {ssot_for_item_2}
+  ...
+---
+```
+
+After processing all files, display the list of saved files.
 
 Regardless of the number of files saved, display the following message to complete:
 
