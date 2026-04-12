@@ -1,7 +1,7 @@
 ---
 name: audit
-description: Detect documentation/implementation drift and auto-generate Issues (`/audit drift`), and detect structural fragility (`/audit fragility`). AI detects semantic drift between Steering Documents + Project Documents and codebase implementation, and auto-generates Issues for code-side fixes. Where `/doc sync` proposes documentation-side fixes, `/audit` is the complementary skill that creates Issues for code-side fixes. Running without arguments executes both drift and fragility perspectives in an integrated run.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash(gh issue create:*, gh issue list:*, gh issue edit:*, gh label create:*, ls:*, mkdir:*, rm:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*)
+description: Detect documentation/implementation drift and auto-generate Issues (`/audit drift`), and detect structural fragility (`/audit fragility`). AI detects semantic drift between Steering Documents + Project Documents and codebase implementation, and auto-generates Issues for code-side fixes. Where `/doc sync` proposes documentation-side fixes, `/audit` is the complementary skill that creates Issues for code-side fixes. Running without arguments executes both drift and fragility perspectives in an integrated run. `/audit stats` aggregates Issue metadata across the project and generates a project health diagnostic report (throughput / composition / First-try success / Backlog Health, etc.), providing a third lens for project health alongside drift and fragility detection.
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(gh issue create:*, gh issue list:*, gh issue view:*, gh issue edit:*, gh label create:*, ls:*, mkdir:*, rm:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*)
 ---
 
 # audit: Documentation × Implementation Drift Detection
@@ -16,9 +16,11 @@ If ARGUMENTS is `drift` or starts with `drift` (including options like `--dry-ru
 
 If ARGUMENTS is `fragility` or starts with `fragility` (including options like `--dry-run`, `--limit N`): execute the "fragility subcommand" section and exit.
 
+If ARGUMENTS is `stats` or starts with `stats` (including options like `--since DATE`, `--limit N`, `--no-save`): execute the "stats Subcommand" section and exit.
+
 If ARGUMENTS is empty (no arguments), `--dry-run`, or starts with `--limit`: execute the "Integrated Execution (drift + fragility)" section and exit.
 
-For any other ARGUMENTS: display "Usage: /audit [drift|fragility] [--dry-run] [--limit N] (running `/audit` without arguments executes drift + fragility integrated run)" and exit.
+For any other ARGUMENTS: display "Usage: /audit [drift|fragility|stats] [--dry-run] [--limit N] [--since DATE] [--no-save] (running `/audit` without arguments executes drift + fragility integrated run)" and exit.
 
 ---
 
@@ -181,6 +183,177 @@ Set Type and Size from AI estimation of drift scope (update project fields via `
 **After generation:**
 
 Display the list of generated Issue numbers and titles, then exit.
+
+---
+
+## stats Subcommand
+
+Aggregate Issue metadata across the project and generate a project health diagnostic report. This is a read-only tool — it generates new `docs/stats/YYYY-MM-DD.md` files only, and does not edit existing files or create Issues.
+
+### Option Parsing
+
+Parse the following options from ARGUMENTS:
+
+- `--since DATE`: aggregation start date (default: 90 days before today; format: `YYYY-MM-DD`)
+- `--limit N`: maximum number of Issues to fetch (default: 500)
+- `--no-save`: skip saving to `docs/stats/`; output to stdout only
+
+---
+
+### Step 1: Data Collection
+
+**Fetch Issue list:**
+
+```bash
+gh issue list --state all --json number,title,body,labels,createdAt,closedAt,state --limit {N}
+```
+
+Filter to Issues created on or after `--since DATE`. If `--since` is not specified, use 90 days before today as the default.
+
+**Fetch timeline items for each Issue (for reopen and phase label transition analysis):**
+
+For each Issue in the filtered list:
+
+```bash
+gh issue view {number} --json timelineItems
+```
+
+Extract the following from `timelineItems`:
+
+- **Reopen events**: `ReopenedEvent` entries → mark the Issue as having reopen history
+- **Phase label transition history**: `LabeledEvent` and `UnlabeledEvent` entries for `phase/*` labels → record the sequence of phase transitions in chronological order
+
+**Spec file existence check (for retrospective presence):**
+
+Use Glob to check whether `docs/spec/issue-{number}-*.md` exists for each Issue. Record existence as a boolean (do not read Spec content).
+
+---
+
+### Step 2: Computation
+
+#### Success/Failure Definitions (3 levels, displayed simultaneously)
+
+- **First-try success** (strictest): Issue reached `phase/done` AND has no reopen history
+- **Completed**: Issue reached `phase/done` (reopen history does not affect this)
+- **Rework**: number of times the phase sequence went from `phase/verify` back to `phase/code`
+
+#### Content Segment Classification (MVP: keyword-based)
+
+Classify each Issue by checking whether its title or body contains any of the following keywords (case-sensitive partial match). Assign the first matching segment in order; if none match, assign "other".
+
+| Segment | Keywords |
+|---------|---------|
+| ui/design | `UI`, `デザイン`, `画面`, `レイアウト`, `Figma`, `design` |
+| backend | `API`, `サーバー`, `サーバ`, `DB`, `データベース`, `backend` |
+| infra | `CI`, `CD`, `Docker`, `環境`, `deploy`, `インフラ`, `runner` |
+| docs | `ドキュメント`, `doc`, `README`, `CLAUDE.md`, `文書` |
+| test | `テスト`, `test`, `bats`, `spec` |
+| other | (none of the above) |
+
+This section is structured as an independent subsection to allow future replacement with LLM-based classification.
+
+#### Work Origin Classification
+
+Classify each Issue based on its labels:
+
+- `audit/drift` label present → audit (drift)
+- `audit/fragility` label present → audit (fragility)
+- `retro/verify` label present → retrospective
+- None of the above → manual
+
+Note: `retro/verify` label may not yet exist in the repository. When the label is absent or no Issue has it, the "retrospective" category will show 0 — this is expected behavior. Once the companion Issue adding `retro/verify` label assignment to `/verify` Step 13 is merged, retrospective-derived Issues will be separated automatically.
+
+#### Trend Analysis (30-day window × 3)
+
+Split the past 90 days into three 30-day windows (window 1: oldest, window 3: most recent). For each window, compute:
+
+- Created: number of Issues created in the window
+- Closed: number of Issues closed in the window
+- Net: Closed − Created
+- Open end: total Open Issues at the end of the window
+
+#### Backlog Health Thresholds
+
+- **Stale candidates**: Open Issues with no update for 90 or more days (same set as age ≥ 90d Open)
+- **Untriaged candidates**: Open Issues without the `triaged` label
+
+#### Highlights Auto-Detection Logic
+
+Collect items meeting any of the following criteria to display in the Highlights section:
+
+- Failure rate for a specific Size, Type, or Content segment is 2x or more above the overall average
+- Trend direction (Net) is the same direction for 2 or more consecutive 30-day windows (↑↑ or ↓↓)
+- Backlog net change in the most recent window has worsened by 20% or more
+
+Highlights contain only auto-detected items. Do not include interpretation or inference in the report.
+
+---
+
+### Step 3: Report Generation
+
+Generate a Markdown report containing all 6 sections below. Output to stdout.
+
+#### Section 1: Highlights
+
+List items that meet the auto-detection criteria from Step 2. If no items meet the criteria, output "No highlights detected."
+
+Do not interpret or infer. Only enumerate items that meet the detection thresholds.
+
+#### Section 2: Flow
+
+Display Created / Closed / Net / Open end for each of the three 30-day windows in table format.
+
+```
+| Window | Period | Created | Closed | Net | Open end |
+|--------|--------|---------|--------|-----|----------|
+| W1 (oldest) | YYYY-MM-DD – YYYY-MM-DD | N | N | N | N |
+| W2 | ... | N | N | N | N |
+| W3 (recent) | ... | N | N | N | N |
+```
+
+#### Section 3: Composition
+
+Display counts by Type, Size, and Priority. Also show the ratio change for the most recent 30-day window vs. the prior two windows combined.
+
+#### Section 4: Work Origin
+
+Display distribution of audit (drift) / audit (fragility) / retrospective / manual. Include percentage of total.
+
+If the `retro/verify` label does not exist, display "retrospective" as 0 with a note: "(retro/verify label not yet assigned — will be separated once companion Issue is merged)".
+
+#### Section 5: Outcome
+
+Display the following:
+
+- **By Size**: First-try success rate, Completed rate, and average Rework count for each Size
+- **Phase regression points**: which `phase/verify → phase/code` regressions occurred most frequently
+- **By Content segment**: First-try success rate and reopen rate vs. overall average for each segment
+- **Trend**: First-try success rate per 30-day window × 3
+
+#### Section 6: Backlog Health
+
+Display the following:
+
+- Total Open Issue count
+- Age distribution: 0–7d / 7–30d / 30–90d / 90d+
+- Stale candidate count (≥ 90d, same as 90d+ Open)
+- Untriaged candidate count (Open without `triaged` label)
+
+---
+
+### Step 4: Save
+
+If `--no-save` is specified: output to stdout only and exit.
+
+If `--no-save` is not specified:
+
+1. Determine today's date in `YYYY-MM-DD` format
+2. Create directory if it does not exist:
+   ```bash
+   mkdir -p docs/stats
+   ```
+3. Write report content to `docs/stats/YYYY-MM-DD.md` (overwrite if the file already exists for the same date)
+4. Display: "Report saved to docs/stats/YYYY-MM-DD.md"
 
 ---
 
