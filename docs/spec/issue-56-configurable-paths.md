@@ -262,3 +262,35 @@ Nothing to note. 今回の指摘（SHOULD 1件、CONSIDER 3件）はすべて独
 
 - 受け入れ条件10件すべて verify command（`section_contains`, `grep`, `command`）が設定されており、9件が PASS、1件が CI 代替検証で PASS となった。UNCERTAIN が0件で verify command の質は高い。
 - `docs/structure.md` への `get-config-value.sh` 追加が受け入れ条件に含まれていなかった点は、Spec での网羅性チェック（スクリプト追加時の構造文書更新）を verify command に含める改善が有効。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件は主要 4 skill（spec/code/verify/auto）の `SPEC_PATH` 参照に絞られており、verify command が網羅的に設定されていた。pre-merge 10件すべてが PASS し、UNCERTAIN / FAIL はゼロ。検証負荷と網羅性のバランスは良好。
+- Post-merge は opportunistic-verify 2件のみで、実運用での動作確認（カスタムパス + 後方互換）を明確に後段に回した設計。verify フェーズで自動化を追わず手動検証に委ねる切り分けは妥当。
+
+#### design
+- 変数参照への機械的置換という方針は適切で、Alternatives Considered で 3 案（インライン grep / `detect-config-markers.md` 直接呼び出し / 専用ヘルパー）を比較した結果として `get-config-value.sh` を採用した判断は明快。
+- `STEERING_DOCS_PATH`（単数）と既存 `STEERING_DOCS_PATHS`（複数）の命名衝突懸念は spec retrospective で触れられていたが、今回はスコープ外として共存を許容。将来のリネーム候補として記録されている点は健全。
+
+#### code
+- Deviations from Design に 3 件の挿入位置変更（verify/triage/doc）が記録されており、いずれも実装時に全コマンド共通化・Read 重複排除の観点で設計を改善する方向の調整。design からの意図的な最適化であり、手戻りではない。
+- fixup/amend コミットは git log に検出されず、大規模な置換（47+ 箇所）にもかかわらず Rework が N/A となったのは良好なサイン。
+
+#### review
+- review retrospective に「Spec の Changed Files セクションに `docs/structure.md` の更新が漏れていた」という改善点が記録されており、レビューが spec の網羅性不足を捕捉できた。
+- SHOULD 1件 + CONSIDER 3件の指摘でいずれも独立パターン。recurring pattern は検出されず、レビュー効率は高い。
+
+#### merge
+- PR #137 は通常の squash merge で完了。コンフリクト解決や CI 再実行の痕跡は git log になし。
+
+#### verify
+- pre-merge 10件すべてが PASS。UNCERTAIN / FAIL はゼロで、verify command 品質が高く機械的な検証が機能した。
+- Post-merge 2件は `verify-type: opportunistic` で意図的に手動検証に回されており、Step 9 の判定で `phase/verify` ラベルを維持するロジックが正しく機能した。
+
+### Improvement Proposals
+
+- Spec の Changed Files セクションに「新規スクリプト追加時は `docs/structure.md` Key Files テーブルを必ず更新する」旨を明文化し、チェックリスト化する（review retrospective で既に指摘済み、skill 基盤レベルの改善候補）。
+- `STEERING_DOCS_PATH`（単数）と `STEERING_DOCS_PATHS`（複数）の命名衝突について、将来のリネーム方針を別 Issue で追跡する（skill 基盤改善候補）。
