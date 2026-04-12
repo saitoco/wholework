@@ -108,3 +108,17 @@ Issue Q&A で確定した方針:
 - **既存履歴の sign-off 遡及**: 既存コミットに遡及適用するには `git rebase -i --signoff` が必要だが、本 Issue スコープ外（CI は新規 PR のみチェック、既存コミットは `tim-actions/dco` のデフォルト設定次第。本 Spec は新規 PR からの適用のみを想定）。
 - **DCO check の scope**: `tim-actions/dco@master` は PR に含まれる全 commit を検査。既存 main の commit は対象外。将来 main のリライトが必要になった場合は別 Issue で対応。
 - **`settings.json` の `Skill(...)` 変更**: 不要（既存 skills への commit template 変更のみ、新 skill 追加なし）。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `skills/review/external-review-phase.md` の行 88, 128 は Spec で「`git commit -m` を `git commit -s -m` に置換」と記載されていたが、実際のファイルには `git commit -m` が存在せず `Commit message: "..."` 形式だった。意図を補完し、7.4/7.6 セクションのコミット記述を `Commit with \`git commit -s -m ...\`` 形式に統一した（7.2 との形式一貫性も向上）。
+
+### Design Gaps/Ambiguities
+
+- Spec の行番号（88, 128）は実際のファイル内容と一致しなかった。`git commit -m` のGrepで確認したところ line 47 のみが該当。Spec 作成時の行番号ズレと推定。
+
+### Rework
+
+- N/A
