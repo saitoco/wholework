@@ -117,3 +117,17 @@
 - worktree ブランチ命名の根拠: EnterWorktree は `code/issue-$NUMBER` という名前に対し `worktree-code+issue-$NUMBER` ブランチを作成する（`/` → `+` 変換、`worktree-` プレフィックス付与 — EnterWorktree 実行時の出力 "branch worktree-spec+issue-129" で確認済み）
 - WATCHDOG_HEARTBEAT_INTERVAL のデフォルト 60s は production では heartbeat が 60s ごとに出力される。テストでは `WATCHDOG_HEARTBEAT_INTERVAL=2` など短い値を指定してテスト時間を抑える
 - run-code.bats の git モックはデフォルト `exit 0` のみで CI/CD 環境でも safe（実際の git コマンドを呼ばない）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- `run-code.sh` の `WORKTREE_PATH` に指定するディレクトリ名が spec では `code+issue-$NUMBER`（`+` 区切り）だが、実際の EnterWorktree の動作（`code/issue-$NUMBER` → ディレクトリは `code/issue-$NUMBER`）と一致するか未検証。Spec Notes に「branch worktree-code+issue-$NUMBER」と記載があり、ブランチ名については確認済みだが、ディレクトリパスの `+` 変換については実際の EnterWorktree 出力から明示的に確認できなかった。cleanup 処理は `2>/dev/null ||` で失敗を無視するため、パス不一致でも安全に動作する。
+
+### Rework
+
+- N/A
