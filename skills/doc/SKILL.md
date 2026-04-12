@@ -61,6 +61,7 @@ For any other ARGUMENTS: display "Usage: /doc [init|init --deep|product|tech|str
 
 Each steering document's template is defined in the following individual files.
 Read them when templates are needed within the workflow.
+The `type` and `ssot_for` values here are the SSoT for frontmatter (`type: steering` + `ssot_for` block) prepended when writing to `docs/{doc}.md`.
 
 | Document | Template file | type | ssot_for |
 |----------|--------------|------|----------|
