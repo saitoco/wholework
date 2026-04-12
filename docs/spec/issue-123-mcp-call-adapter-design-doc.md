@@ -43,3 +43,14 @@
 - 実装変更なし（verify-executor の mcp_call 実行ロジックは変更しない）
 - `docs/ja/environment-adaptation.md` は翻訳出力ファイルのため実装対象外（`/doc translate` で別途更新）
 - doc-checker 対象：今回の変更は docs/ 内のドキュメント追記のみで、スキル・スクリプト・ワークフロー変更ではないため README.md / workflow.md 更新不要
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
