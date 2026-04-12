@@ -89,3 +89,17 @@
 ### Rework
 
 - 特になし
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+`sync Bidirectional Normalization` の reverse-generation 出口において、Spec の「新規 `### Step N: Commit and Push Guide` を追加」指示と Notes 節の「Step 5 末尾にインライン追記」指示が矛盾していた。実装者は Notes 節の記述を優先してインライン方式を採用し、その理由をCode Retrospectiveに記録した。この種の Spec 内矛盾は、将来のSpec作成時に「既存ステップ番号への影響」を明示的に検討する設計ポイントとして意識するとよい。
+
+### 繰り返し問題
+
+特になし。
+
+### 受入条件検証難易度
+
+全5条件が `file_exists`, `section_contains`, `file_contains`, `grep` の静的コマンドで構成されており、safe mode での自動検証が完全に可能だった。UNCERTAINが0件で、verify commandの設計が適切だった。Post-merge条件は `opportunistic` タイプで適切に分類されている。
