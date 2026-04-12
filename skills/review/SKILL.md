@@ -174,6 +174,8 @@ HAS_COPILOT_REVIEW: true if copilot-review: true is set (default: false)
 HAS_CLAUDE_CODE_REVIEW: true if claude-code-review: true is set (default: false)
 HAS_CODERABBIT_REVIEW: true if coderabbit-review: true is set (default: false)
 SKIP_REVIEW_BUG: true if review-bug: false is set (default: false)
+SPEC_PATH: path from spec-path (default: "docs/spec")
+STEERING_DOCS_PATH: path from steering-docs-path (default: "docs")
 ```
 
 After detection, follow `external-review-phase.md`'s Step 7 procedure for external review waiting/issue resolution. All three reviewer types use the same "wait → resolve" flow (switch reviewer type via the second argument to `wait-external-review.sh`).
@@ -276,11 +278,11 @@ If `SKIP_REVIEW_BUG=true`, specify in the prompt to run only review-light's spec
    - Write `gh pr view "$NUMBER" --json files` result to `.tmp/pr-files-$NUMBER.json`
 
 2. **Get Spec path**:
-   - Glob for `docs/spec/issue-$ISSUE_NUMBER-*.md`
+   - Glob for `$SPEC_PATH/issue-$ISSUE_NUMBER-*.md`
    - Record path if found; empty string if not
 
 3. **Get steering doc paths**:
-   - Glob for `docs/product.md`, `docs/tech.md`, `docs/structure.md`
+   - Glob for `$STEERING_DOCS_PATH/product.md`, `$STEERING_DOCS_PATH/tech.md`, `$STEERING_DOCS_PATH/structure.md`
    - Record existing paths comma-separated as `STEERING_DOCS_PATHS`
 
 4. **Launch 1 `review-light` agent**:
@@ -316,11 +318,11 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
    - Write `gh pr view "$NUMBER" --json files` result to `.tmp/pr-files-$NUMBER.json`
 
 2. **Get Spec path**:
-   - If Issue number extracted: Glob for `docs/spec/issue-$ISSUE_NUMBER-*.md`
+   - If Issue number extracted: Glob for `$SPEC_PATH/issue-$ISSUE_NUMBER-*.md`
    - Record path if found; empty string if not
 
 2.5. **Get steering doc paths**:
-   - Glob for `docs/product.md`, `docs/tech.md`, `docs/structure.md`
+   - Glob for `$STEERING_DOCS_PATH/product.md`, `$STEERING_DOCS_PATH/tech.md`, `$STEERING_DOCS_PATH/structure.md`
    - Record comma-separated as `STEERING_DOCS_PATHS` (empty string if none exist)
 
 3. **Launch agents in parallel**:
@@ -694,11 +696,11 @@ Reflect on the review phase; record improvement proposals in the Spec only. Issu
 
 1. Identify improvements from Steps 8 and 10 results
 2. **Write review retrospective to Spec**:
-   - Append `## review retrospective` section to the end of `docs/spec/issue-$ISSUE_NUMBER-*.md` using Edit tool
+   - Append `## review retrospective` section to the end of `$SPEC_PATH/issue-$ISSUE_NUMBER-*.md` using Edit tool
    - Create subsections for each of the 3 aspects; write "Nothing to note" for aspects with nothing to record
    - Commit and push:
      ```bash
-     git add docs/spec/issue-$ISSUE_NUMBER-*.md
+     git add $SPEC_PATH/issue-$ISSUE_NUMBER-*.md
      git commit -m "Add review retrospective for issue #$ISSUE_NUMBER
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"

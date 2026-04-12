@@ -108,7 +108,9 @@ gh issue view "$NUMBER" --json body
 
 Parse acceptance condition checkboxes:
 
-**Resolving `{{base_url}}` to production URL**: If verify commands contain `{{base_url}}`, Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to fetch `PRODUCTION_URL` from `.wholework.yml` (key: `production-url: "https://example.com"`). Then replace `{{base_url}}` with `PRODUCTION_URL` before passing to verify-executor.
+**Resolving configuration values**: Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to fetch configuration values from `.wholework.yml`. Retain `SPEC_PATH`, `STEERING_DOCS_PATH`, and `PRODUCTION_URL` for use in subsequent steps.
+
+**Resolving `{{base_url}}` to production URL**: If verify commands contain `{{base_url}}`, replace `{{base_url}}` with `PRODUCTION_URL` before passing to verify-executor.
 
 - If `PRODUCTION_URL` is found: run browser verification with the replaced URL
 - If `PRODUCTION_URL` is empty (not configured): treat verify commands containing `{{base_url}}` as UNCERTAIN, noting "`production-url` is not configured in `.wholework.yml`" in the remarks column
@@ -172,7 +174,7 @@ For conditions with `<!-- verify: ... -->`, Read `${CLAUDE_PLUGIN_ROOT}/modules/
 
 **Browser verification command (`browser_check`, `browser_screenshot`) processing flow:**
 
-First check `HAS_BROWSER_CAPABILITY`. If not yet fetched, Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` at this point to fetch it. Reuse the value if already fetched. Only if `HAS_BROWSER_CAPABILITY=true`, Read `skills/verify/browser-verify-phase.md` and follow the "Inside Step 2: Browser Verification Command Processing Flow" section. If `HAS_BROWSER_CAPABILITY` is unset or false, treat browser verification commands as UNCERTAIN.
+First check `HAS_BROWSER_CAPABILITY` (fetched via `detect-config-markers.md` in Step 4). Reuse the value. Only if `HAS_BROWSER_CAPABILITY=true`, Read `skills/verify/browser-verify-phase.md` and follow the "Inside Step 2: Browser Verification Command Processing Flow" section. If `HAS_BROWSER_CAPABILITY` is unset or false, treat browser verification commands as UNCERTAIN.
 
 #### Step 3: No Hints → Attempt Verification with AI Judgment
 
@@ -197,7 +199,7 @@ The following cannot be auto-verified:
 - Subjective UI/UX evaluations
 - Conditions starting with "The user..." (requires user action)
 
-**Prerequisite check before browser-verifiable case exclusion**: Before making this determination, confirm that `HAS_BROWSER_CAPABILITY` has been fetched within the same `/verify` execution flow. If not yet fetched, Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` at this point to fetch it.
+**Prerequisite check before browser-verifiable case exclusion**: Before making this determination, confirm that `HAS_BROWSER_CAPABILITY` has been fetched (via `detect-config-markers.md` in Step 4).
 
 **Browser-verifiable case exclusion**: Only if `HAS_BROWSER_CAPABILITY=true` is confirmed via the above steps, Read `skills/verify/browser-verify-phase.md` and follow the "Inside Step 4: Browser-Verifiable Case Exclusion" section for classification. If `HAS_BROWSER_CAPABILITY` is unset or false, treat conditions with browser verification commands as UNCERTAIN.
 
@@ -309,7 +311,7 @@ As the final step of the workflow, verify conducts a retrospective of the entire
 | Phase | Retrospective dimension | Information source | Detection method |
 |---------|-------------|--------|---------|
 | issue | Acceptance condition quality (ambiguity, verifiability, gaps), ambiguity resolution history, decision validity | `## Issue Retrospective` section in Spec (also search `## Spec Retrospective` for backward compatibility) | Check issue retrospective section when reading Spec |
-| spec | Design validity (deviations from implementation, oversights), design decision validity, use of minor observations | Spec, `## Spec Retrospective` section in Spec (also search `## Design Retrospective` for backward compatibility), PR diff | Compare `docs/spec/issue-$NUMBER-*.md` with diff; check spec retrospective (or design retrospective) section when reading Spec |
+| spec | Design validity (deviations from implementation, oversights), design decision validity, use of minor observations | Spec, `## Spec Retrospective` section in Spec (also search `## Design Retrospective` for backward compatibility), PR diff | Compare `$SPEC_PATH/issue-$NUMBER-*.md` with diff; check spec retrospective (or design retrospective) section when reading Spec |
 | code | Implementation rework (fixup/amend patterns in commit history, number of review comment incorporations), design deviation patterns, rework cause analysis | git log, `## Code Retrospective` section in Spec | Detect fixup/amend patterns with `git log --oneline`; check code retrospective section when reading Spec |
 | review | Review effectiveness (were comments accurate, anything missed), review comment trends, oversight patterns | PR review comments, `## Review Retrospective` section in Spec, verification results | Check whether FAIL items were detected in review; check review retrospective section when reading Spec |
 | merge | Merge process issues (conflicts, CI failures, etc.) | git log, PR status | Check merge commit messages for conflict resolution traces |
@@ -321,7 +323,7 @@ As the final step of the workflow, verify conducts a retrospective of the entire
 
 1. Collect information:
    - Confirm Issue body with `gh issue view "$NUMBER" --json body` (reuse if already fetched in Step 3)
-   - Read Spec (if `docs/spec/issue-$NUMBER-*.md` exists)
+   - Read Spec (if `$SPEC_PATH/issue-$NUMBER-*.md` exists)
      - Extract `## Issue Retrospective` section (result of `/issue` retrospective; also search `## Spec Retrospective` for backward compatibility)
      - Extract `## Spec Retrospective` section (result of `/spec` retrospective; also search `## Design Retrospective` for backward compatibility)
      - Extract `## Code Retrospective` section (result of `/code` retrospective)
@@ -332,7 +334,7 @@ As the final step of the workflow, verify conducts a retrospective of the entire
    - Integrate content from each phase's retrospective
    - Cross-reference information sources in the retrospective dimensions table with collected retrospective information to detect improvement patterns across the entire workflow
 3. **Persist retrospective results to Spec**:
-   - If Spec (`docs/spec/issue-$NUMBER-*.md`) does not exist: skip persistence and output to terminal only
+   - If Spec (`$SPEC_PATH/issue-$NUMBER-*.md`) does not exist: skip persistence and output to terminal only
    - If Spec exists, add `## Verify Retrospective` section at the end
    - Include improvement proposals if any, or "N/A" if none
    - Use the following template:
@@ -365,7 +367,7 @@ As the final step of the workflow, verify conducts a retrospective of the entire
    - Append section at end of Spec with Edit tool
    - Commit (push is done in Step 11 Worktree Exit):
      ```bash
-     git add docs/spec/issue-"$NUMBER"-*.md
+     git add $SPEC_PATH/issue-"$NUMBER"-*.md
      git commit -m "Add verify retrospective for issue #$NUMBER
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
@@ -385,7 +387,7 @@ Only if `.wholework.yml` in the project has `opportunistic-verify: true`, Read `
 
 ### Step 13: Collect Improvement Proposals and Create Issues
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/title-normalizer.md` and follow the "Processing Steps" section to normalize titles (used for Issue title normalization when creating Issues). Also Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to detect `.wholework.yml` settings and fetch `HAS_SKILL_PROPOSALS` (if already fetched and detected in Step 12's `opportunistic-verify.md` processing, reuse the result).
+Read `${CLAUDE_PLUGIN_ROOT}/modules/title-normalizer.md` and follow the "Processing Steps" section to normalize titles (used for Issue title normalization when creating Issues). Reuse `HAS_SKILL_PROPOSALS` already fetched via `detect-config-markers.md` in Step 4 (if `opportunistic-verify.md` in Step 12 fetched it again, reuse that result).
 
 Extract text from `### Improvement Proposals` sections in each Spec retrospective section (spec, design, code, review, verify, auto).
 

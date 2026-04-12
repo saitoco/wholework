@@ -23,10 +23,12 @@ Use AskUserQuestion to collect:
 
 ### Step 2: Reference Steering Documents (if present)
 
-Check whether the following steering documents exist under `docs/` using Glob, then read only those that exist:
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH` and `STEERING_DOCS_PATH` for use in subsequent steps.
 
-- `docs/product.md` — project vision, Non-Goals, Terms (terminology consistency)
-- `docs/tech.md` — Forbidden Expressions (to avoid prohibited terms)
+Check whether the following steering documents exist using Glob, then read only those that exist:
+
+- `$STEERING_DOCS_PATH/product.md` — project vision, Non-Goals, Terms (terminology consistency)
+- `$STEERING_DOCS_PATH/tech.md` — Forbidden Expressions (to avoid prohibited terms)
 
 **If none exist, skip this step and proceed to the next.**
 
@@ -130,7 +132,7 @@ Append `--when="shell_condition"` to any check to skip it when the condition is 
 
 **MCP tool detection and mcp_call proposal (conditional):**
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and retrieve `MCP_TOOLS`. If non-empty, read `skills/issue/mcp-call-guidelines.md` and follow the "Declaration Priority" section. If empty, skip `mcp_call` hints.
+Reuse `MCP_TOOLS` already fetched via `detect-config-markers.md` in Step 2. If non-empty, read `skills/issue/mcp-call-guidelines.md` and follow the "Declaration Priority" section. If empty, skip `mcp_call` hints.
 
 **Assign verify-type tags to post-merge conditions:**
 
@@ -160,7 +162,7 @@ Refer to `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md`'s "Sources to inv
 | Aspect | Content | Source |
 |--------|---------|--------|
 | Existing patterns | Similar implementations/conventions | Project source code (Grep/Read) |
-| Past knowledge | Retrospectives from similar issues/specs | `docs/spec/*.md`. Skip if absent |
+| Past knowledge | Retrospectives from similar issues/specs | `$SPEC_PATH/*.md`. Skip if absent |
 | Trade-offs | Pros and cons of each option | Codebase + Steering Docs |
 
 Format with investigation results + recommended option + alternative + confirmation question, or with "no related patterns" note as fallback.

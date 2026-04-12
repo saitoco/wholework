@@ -36,7 +36,7 @@ Investigate test files under the `tests/` directory:
    - Evaluate the likelihood that changes will break existing tests
 
 2. **Verify command impact investigation**:
-   - Grep search Spec files under `docs/spec/` for verify commands (`<!-- verify: ... -->`) referencing the change targets
+   - Grep search Spec files under `$SPEC_PATH/` for verify commands (`<!-- verify: ... -->`) referencing the change targets (note: `$SPEC_PATH` is resolved by the calling skill from `.wholework.yml`, default: `docs/spec`)
    - Identify verify commands that may FAIL due to the changes
 
 ### 3. Breaking Change Investigation

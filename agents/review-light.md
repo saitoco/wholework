@@ -27,7 +27,7 @@ The following information is passed from the caller via prompt:
 - **PR number**: `$NUMBER`
 - **Issue number**: `$ISSUE_NUMBER` (optional)
 - **Type**: Issue Type (`Bug` / `Feature` / `Task` / empty string; optional)
-- **Spec path**: `docs/spec/issue-$ISSUE_NUMBER-*.md` (optional)
+- **Spec path**: `$SPEC_PATH/issue-$ISSUE_NUMBER-*.md` (optional; `$SPEC_PATH` is resolved by the calling skill from `.wholework.yml`, default: `docs/spec`)
 - **Steering Documents paths**: Comma-separated file paths (optional)
 - **PR diff file path**: `.tmp/pr-diff-$NUMBER.txt`
 - **Changed files list path**: `.tmp/pr-files-$NUMBER.json`
@@ -48,7 +48,7 @@ Analyze the PR diff and detect issues for each perspective:
 **Perspective 1: Spec Deviation**
 - Consistency between Spec acceptance criteria/implementation steps and the PR diff
 - Whether the change scope deviates from the Issue's purpose
-- Violations of Steering Documents (docs/tech.md, etc.) — prohibited expressions, conventions
+- Violations of Steering Documents (`$STEERING_DOCS_PATH/tech.md`, etc.) — prohibited expressions, conventions
 
 **Perspective 2: Edge Cases and Robustness**
 - Handling of boundary values (0 items, maximum values, empty strings, etc.)

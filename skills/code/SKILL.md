@@ -140,7 +140,9 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER code
 
 ### Step 5: Load Spec
 
-Search for `docs/spec/issue-$NUMBER-*.md` and read the Spec to review the implementation plan.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH` and `STEERING_DOCS_PATH` for use in subsequent steps.
+
+Search for `$SPEC_PATH/issue-$NUMBER-*.md` and read the Spec to review the implementation plan.
 
 If no Spec exists, read the requirements from the Issue body and implement accordingly.
 
@@ -162,14 +164,14 @@ If the Spec has an "Uncertainties" section, before implementing:
 
 ### Step 7: Reference Steering Documents (if present)
 
-Use Glob to check whether the following steering documents exist in `docs/`, then Read only those that exist:
+Use Glob to check whether the following steering documents exist, then Read only those that exist:
 
-- `docs/tech.md` — Coding conventions, Architecture Decisions (check for convention compliance), Forbidden Expressions (avoid prohibited expressions)
-- `docs/structure.md` — Directory structure, Key Files (check file placement)
+- `$STEERING_DOCS_PATH/tech.md` — Coding conventions, Architecture Decisions (check for convention compliance), Forbidden Expressions (avoid prohibited expressions)
+- `$STEERING_DOCS_PATH/structure.md` — Directory structure, Key Files (check file placement)
 
 **If not present, skip this step and proceed to the next.**
 
-Use information from steering documents for coding convention compliance, file placement, and naming consistency during implementation. If `docs/tech.md` is Read, reference the `## Forbidden Expressions` section and avoid using prohibited expressions in code comments, variable names, commit messages, and new documents.
+Use information from steering documents for coding convention compliance, file placement, and naming consistency during implementation. If `$STEERING_DOCS_PATH/tech.md` is Read, reference the `## Forbidden Expressions` section and avoid using prohibited expressions in code comments, variable names, commit messages, and new documents.
 
 **Project-local Domain files (if present):**
 
@@ -232,7 +234,7 @@ Handle results as follows:
    - Display a warning and continue
    - Do not fix UNCERTAIN hints — they will be re-verified in the `/verify` phase after merge
 
-**Spec sync (when verify commands are modified):** If Issue body verify commands (`<!-- verify: ... -->`) are modified, also apply the same fix to the "Verification > Pre-merge" section in the Spec (`docs/spec/issue-$NUMBER-*.md`). Updating only the Issue body without updating the Spec will cause discrepancies flagged in the review retrospective.
+**Spec sync (when verify commands are modified):** If Issue body verify commands (`<!-- verify: ... -->`) are modified, also apply the same fix to the "Verification > Pre-merge" section in the Spec (`$SPEC_PATH/issue-$NUMBER-*.md`). Updating only the Issue body without updating the Spec will cause discrepancies flagged in the review retrospective.
 
 ### Step 11: Commit, Push, or Create PR
 
@@ -363,11 +365,11 @@ If there are items under "Deviations from Design" (reordering of implementation 
 
 **Steps:**
 1. If no retrospective information, write "N/A"
-2. Append `## Code Retrospective` section after `## Spec Retrospective` in the Spec (`docs/spec/issue-$NUMBER-*.md`) using the Edit tool
+2. Append `## Code Retrospective` section after `## Spec Retrospective` in the Spec (`$SPEC_PATH/issue-$NUMBER-*.md`) using the Edit tool
 3. If "Deviations from Design" exist, also update the "Implementation Steps" section in the Spec to match the actual implementation
 4. Commit (push is done in Step 13 Worktree Exit):
    ```bash
-   git add docs/spec/issue-$NUMBER-*.md
+   git add $SPEC_PATH/issue-$NUMBER-*.md
    git commit -m "Add code retrospective for issue #$NUMBER
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"

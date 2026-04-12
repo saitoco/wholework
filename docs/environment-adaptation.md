@@ -29,6 +29,8 @@ copilot-review: true          # GitHub Copilot review integration
 coderabbit-review: true       # CodeRabbit AI review integration
 opportunistic-verify: true    # Opportunistic verification (auto-run post-merge conditions)
 skill-proposals: true         # Skill proposal feature
+spec-path: custom/specs       # Spec file save location (default: docs/spec)
+steering-docs-path: custom/docs  # Steering Documents directory (default: docs)
 capabilities:
   browser: true               # Browser-based verification available
   mcp:                        # Available MCP tools

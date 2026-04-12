@@ -45,7 +45,9 @@ Then collect documents using the following procedure:
 
 **Load Steering Documents:**
 
-Search for `docs/product.md`, `docs/tech.md`, `docs/structure.md` with Glob and Read any that exist. If none exist, display "Steering Documents not found. Run `/doc init`." and exit with error.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH` and `STEERING_DOCS_PATH` for use in subsequent steps.
+
+Search for `$STEERING_DOCS_PATH/product.md`, `$STEERING_DOCS_PATH/tech.md`, `$STEERING_DOCS_PATH/structure.md` with Glob and Read any that exist. If none exist, display "Steering Documents not found. Run `/doc init`." and exit with error.
 
 **Load Project Documents:**
 
@@ -53,7 +55,7 @@ Following the document traversal pattern from `/doc`, dynamically detect `type: 
 
 1. Search the entire repository with Grep for the `type: project` pattern limited to `*.md` files, getting a list of candidate file paths
 2. Skip files matching these exclusion patterns:
-   - Paths starting with `docs/spec/`
+   - Paths starting with `$SPEC_PATH/`
    - Paths containing `node_modules/`
    - Paths starting with `.git/`
    - Paths starting with `.tmp/`
@@ -225,7 +227,7 @@ Extract the following from `timelineItems`:
 
 **Spec file existence check (for retrospective presence):**
 
-Use Glob to check whether `docs/spec/issue-{number}-*.md` exists for each Issue. Record existence as a boolean (do not read Spec content).
+Use Glob to check whether `$SPEC_PATH/issue-{number}-*.md` exists for each Issue. Record existence as a boolean (do not read Spec content).
 
 ---
 

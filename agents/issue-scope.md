@@ -17,7 +17,7 @@ The following information is passed from the caller via prompt:
 
 - **Issue number**: `$NUMBER`
 - **Issue body**: Background, purpose, and acceptance criteria text from the Issue
-- **Steering Documents paths**: `docs/product.md`, `docs/tech.md`, `docs/structure.md`, etc. (those that exist)
+- **Steering Documents paths**: `$STEERING_DOCS_PATH/product.md`, `$STEERING_DOCS_PATH/tech.md`, `$STEERING_DOCS_PATH/structure.md`, etc. (those that exist; `$STEERING_DOCS_PATH` is resolved by the calling skill from `.wholework.yml`, default: `docs`)
 
 ## Processing Steps
 
@@ -42,7 +42,7 @@ Use the extracted keywords to investigate with Glob/Grep/Read:
 
 3. **Review Steering Documents**:
    - Read provided Steering Documents paths if they exist; check file placement and naming conventions
-   - Identify related files from Key Files and Agent list tables in `docs/structure.md`
+   - Identify related files from Key Files and Agent list tables in `$STEERING_DOCS_PATH/structure.md`
 
 4. **Check similar changes in git history**:
    - Review recent change patterns with `git log --oneline --name-only -20`
@@ -75,7 +75,7 @@ Organize the investigation results by structuring file dependencies in text form
 
 Example:
 - `skills/issue/SKILL.md` → `agents/issue-scope.md` (Task spawn)
-- `docs/structure.md` → assumes existence of the above agent files
+- `$STEERING_DOCS_PATH/structure.md` → assumes existence of the above agent files
 
 ### Investigation Summary
 

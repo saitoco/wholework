@@ -25,10 +25,10 @@ The following information is passed from the caller via prompt:
 - **PR number**: `$NUMBER`
 - **Issue number**: `$ISSUE_NUMBER`
 - **Type**: Issue Type (`Bug` / `Feature` / `Task` / empty string)
-- **Spec path**: `docs/spec/issue-$ISSUE_NUMBER-*.md` (empty string if not found)
+- **Spec path**: `$SPEC_PATH/issue-$ISSUE_NUMBER-*.md` (empty string if not found; `$SPEC_PATH` is resolved by the calling skill from `.wholework.yml`, default: `docs/spec`)
 - **PR diff file path**: Path to the file containing output of `gh pr diff "$NUMBER"` (e.g., `.tmp/pr-diff-$NUMBER.txt`)
 - **Changed files list path**: Path to the file containing output of `gh pr view "$NUMBER" --json files` (e.g., `.tmp/pr-files-$NUMBER.json`)
-- **Steering Documents paths**: `docs/product.md`, `docs/tech.md`, `docs/structure.md` (existing files only; empty string if none exist)
+- **Steering Documents paths**: `$STEERING_DOCS_PATH/product.md`, `$STEERING_DOCS_PATH/tech.md`, `$STEERING_DOCS_PATH/structure.md` (existing files only; empty string if none exist; `$STEERING_DOCS_PATH` is resolved by the calling skill from `.wholework.yml`, default: `docs`)
 
 ## Processing Steps
 
@@ -63,13 +63,13 @@ Execute only when a Spec path is provided:
 
 Read the non-empty Steering Documents paths provided and perform the following cross-references:
 
-- `docs/product.md`: Whether the PR changes contradict the project vision/Non-Goals; whether terms match the Terms section; whether consistent with Future Direction policies
-- `docs/tech.md`: Whether technical choices align with Architecture Decisions. Also run **Forbidden Expressions auto-scan** (see below)
-- `docs/structure.md`: Whether file placement follows directory structure conventions
+- `$STEERING_DOCS_PATH/product.md`: Whether the PR changes contradict the project vision/Non-Goals; whether terms match the Terms section; whether consistent with Future Direction policies
+- `$STEERING_DOCS_PATH/tech.md`: Whether technical choices align with Architecture Decisions. Also run **Forbidden Expressions auto-scan** (see below)
+- `$STEERING_DOCS_PATH/structure.md`: Whether file placement follows directory structure conventions
 
-**Forbidden Expressions Auto-Scan (only when docs/tech.md is provided):**
+**Forbidden Expressions Auto-Scan (only when `$STEERING_DOCS_PATH/tech.md` is provided):**
 
-Reference the `## Forbidden Expressions` section in `docs/tech.md` and cross-reference the text portions of the PR diff (comments, string literals, documentation changes) against each Forbidden Expression. If detected, output as a SHOULD-level finding and suggest replacement with the alternative expression.
+Reference the `## Forbidden Expressions` section in `$STEERING_DOCS_PATH/tech.md` and cross-reference the text portions of the PR diff (comments, string literals, documentation changes) against each Forbidden Expression. If detected, output as a SHOULD-level finding and suggest replacement with the alternative expression.
 
 **If no Steering Documents are provided**: Skip this perspective and report no issues.
 

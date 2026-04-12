@@ -64,6 +64,12 @@ gh issue view 123 --json number,title,body,labels && echo "---" && gh issue view
 
 ---
 
+## Configuration Detection
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `STEERING_DOCS_PATH` for use in subsequent steps.
+
+---
+
 ## Single Issue Execution (`/triage 123`)
 
 ### Step 1: Issue Information Retrieval
@@ -165,7 +171,7 @@ Named queries to use (`--query <n>` format): `get-projects-with-fields`, `get-is
 Determine the fallback level using this flow:
 
 ```
-1. Does docs/product.md exist with type: steering?
+1. Does $STEERING_DOCS_PATH/product.md exist with type: steering?
    → Yes: Level 1 (full precision)
    → No: next
 2. Does README.md or CLAUDE.md exist with project purpose/constraint descriptions?
@@ -300,8 +306,8 @@ Based on all issue information retrieved in Step 1, Claude directly classifies a
 **Load Steering Documents once at the start of Phase 2 (fallback level determination):**
 
 ```
-1. Does docs/product.md exist with type: steering?
-   → Yes: Level 1 (full precision) — Read product.md / tech.md
+1. Does $STEERING_DOCS_PATH/product.md exist with type: steering?
+   → Yes: Level 1 (full precision) — Read $STEERING_DOCS_PATH/product.md / $STEERING_DOCS_PATH/tech.md
    → No: next
 2. Does README.md or CLAUDE.md exist?
    → Yes: Level 2 (medium precision) — Read README.md / CLAUDE.md to extract policy
@@ -442,8 +448,8 @@ gh issue list --state open --json number,title,body,labels,comments --limit $LIM
 Phase 1b results are the "analysis target issue list". Impact calculation (blocking/mention aggregation) references Phase 1a full data. Alignment scoring and duplicate/stale analysis run only on Phase 1b target issues.
 
 - Check Steering Documents with Glob and Read if they exist:
-  - `docs/product.md` — Vision / Non-Goals reference
-  - `docs/tech.md` — technical policy reference
+  - `$STEERING_DOCS_PATH/product.md` — Vision / Non-Goals reference
+  - `$STEERING_DOCS_PATH/tech.md` — technical policy reference
 - Comment history is already retrieved via `--json comments` above; no individual fetch needed
 
 **Fallback level determination (execute after loading Steering Documents):**
@@ -451,7 +457,7 @@ Phase 1b results are the "analysis target issue list". Impact calculation (block
 Determine the fallback level using this flow and use it in Steps 2 and 3:
 
 ```
-1. Does docs/product.md exist with type: steering?
+1. Does $STEERING_DOCS_PATH/product.md exist with type: steering?
    → Yes: Level 1 (full precision)
    → No: next
 2. Does README.md or CLAUDE.md exist with project purpose/constraint descriptions?
@@ -461,7 +467,7 @@ Determine the fallback level using this flow and use it in Steps 2 and 3:
 
 | Level | Description | Alignment source |
 |-------|-------------|-----------------|
-| Level 1 | Steering Documents available (full precision) | product.md / tech.md |
+| Level 1 | Steering Documents available (full precision) | $STEERING_DOCS_PATH/product.md / $STEERING_DOCS_PATH/tech.md |
 | Level 2 | README/CLAUDE.md only (medium precision) | Approximate from README.md / CLAUDE.md |
 | Level 3 | GitHub data only (minimal) | Type correction only |
 
