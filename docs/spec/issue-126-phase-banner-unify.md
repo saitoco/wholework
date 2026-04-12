@@ -123,6 +123,20 @@
 - false positive 検出: `file_not_contains` の対象文字列がソースコードに存在しない場合を verify-patterns.md のガイドラインに照らして修正
 - スコープ制限: `run-auto-sub.sh` のフェーズマーカーや `echo "---"` セパレータはバナーフォーマットとは機能的に異なるため除外
 
+## Code Retrospective
+
+### Deviations from Design
+
+- bats テストの `gh` モックを関数エクスポート方式から `_fetch_entity_info` 直接モック方式に変更。Spec では `gh` コマンドをモック関数で置換すると記載されていたが、`gh issue view N --json title -q '.title'` の引数パターンとモック関数の実装がずれ、テスト1-2が失敗した。`_fetch_entity_info` を直接モックする方式が正確で簡潔なため採用。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- `tests/phase-banner.bats`: 初回実装時に `gh` モック関数の引数マッチングが誤っており、テスト1-2が失敗。`_fetch_entity_info` を直接モックする方式に修正して解決（1回のリワーク）。
+
 ## spec retrospective
 
 ### Minor observations
