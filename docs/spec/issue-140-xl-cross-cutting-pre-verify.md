@@ -48,3 +48,21 @@ XL Issue の `/auto` オーケストレーションで、各レベルの sub-iss
 - **`Grep` 追加理由**: verify-executor.md の `file_contains` / `grep` タイプが Grep ツールを使用するため。現在の `/auto` allowed-tools に Grep が含まれていない。
 - **挿入位置**: aggregate-update の item 3（`gh-label-transition.sh`）直後。行番号ではなくコードコンテキスト（`${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER <aggregated phase>`）で指定。
 - **docs/workflow.md・README.md・CLAUDE.md 更新不要**: 変更は XL オーケストレーションの内部実装（ベストエフォート警告追加）であり、ワークフローフェーズや外部から見える動作に変化なし。
+
+## Spec Retrospective
+
+N/A
+
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。Spec の実装手順通りに実施した。
+
+### Design Gaps/Ambiguities
+
+- なし。Spec は明確で実装上の問題は発生しなかった。
+
+### Rework
+
+- なし。
