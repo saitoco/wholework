@@ -42,6 +42,12 @@ exit 0
 MOCK
     chmod +x "$MOCK_DIR/claude"
 
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
 if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
@@ -169,6 +175,22 @@ teardown() {
     run bash "$SCRIPT" 123 --base
     [ "$status" -eq 1 ]
     [[ "$output" == *"--base requires a branch name"* ]]
+}
+
+@test "cleanup: stale branch detected and cleaned up before execution" {
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "branch" && "$2" == "--list" ]]; then
+    echo "  worktree-code+issue-123"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"stale branch"* ]]
 }
 
 @test "error: claude command fails with non-zero exit code" {
