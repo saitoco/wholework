@@ -59,3 +59,28 @@ Issue 本文の Auto-Resolved Ambiguity Points より：
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件が6件すべて `section_not_contains` / `section_contains` / `grep` で自動検証可能な形式で設計されており、品質が高い。変更対象ファイル（`modules/detect-config-markers.md`, `docs/environment-adaptation.md`）と条件が1対1に対応し、曖昧さがない。
+
+#### design
+- Spec の Changed Files に日本語版ドキュメント（`docs/ja/environment-adaptation.md`）が含まれていなかった点が唯一の設計上のギャップ（Code Retrospective に記録済み）。実装範囲が小さく設計の正確性は高い。
+
+#### code
+- 実装コミット1件（`f64798a`）と Code Retrospective コミット1件（`75ef424`）のみ。fixup / amend パターンなし。パッチルートで直接 main にコミットされており、レビューなしで完結。
+
+#### review
+- パッチルート（PR なし）のため、フォーマルなレビューは行われていない。変更内容がドキュメントモジュールのみで影響範囲が限定的なため、妥当な判断。
+
+#### merge
+- パッチルート（直接 `main` へのコミット）。コンフリクトなし、CI の問題なし。
+
+#### verify
+- 全6条件 PASS。パッチルートのため PR が存在せず、`github_check "gh pr checks"` 形式のコマンドは使用されていない（適切な設計）。verify コマンドはすべて静的ファイル検証で完結しており、信頼性が高い。
+
+### Improvement Proposals
+- N/A
