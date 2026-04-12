@@ -282,6 +282,7 @@ SHOULD constraints (best practices, manual check — examples):
 | Argument parser edge cases | Include unclosed quotes, empty values, invalid chars, escape edge cases in test case lists | #672 |
 | Verify existing parser behavior | When reusing parsers/libraries, include steps to verify actual behavior (quoting, spaces) in the Spec | #825 |
 | New tools in allowed-tools | When introducing new tools (MCP, ToolSearch), include allowed-tools addition in acceptance criteria | #690 |
+| New gh command patterns in allowed-tools | When adding new `gh` subcommand patterns (`gh issue view:*`, `gh run list:*`, etc.), include `allowed-tools` frontmatter update in Spec's changed-files list | #75 |
 | KNOWN_TOOLS sync | When adding tools to allowed-tools, also include `validate-skill-syntax.py` KNOWN_TOOLS update | #760 |
 | Shared module reference paths | Use full `${CLAUDE_PLUGIN_ROOT}/modules/xxx.md` paths (no abbreviations) | tech.md |
 | False positive exclusion set | Note false-positive exclusion policy for broadly-used terms (Task, Agent, etc.) in validation implementations | #810 |
