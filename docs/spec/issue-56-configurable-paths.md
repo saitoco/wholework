@@ -1,5 +1,41 @@
 # Issue #56: config: Spec 保存場所のパスをプロジェクト単位で設定可能に
 
+## issue retrospective
+
+### Ambiguity Resolution
+
+5つの曖昧ポイントを検出、2つユーザー確認、3つ自動解決:
+
+**ユーザー確認で解決:**
+1. **キー名規則**: flat kebab-case (`spec-path`, `steering-docs-path`) を選択。既存 `production-url` と同パターン。
+2. **実装方針**: ヘルパー導入を選択。`detect-config-markers.md` に `SPEC_PATH` / `STEERING_DOCS_PATH` 変数追加 → 各 SKILL.md/モジュールで変数参照に置換。
+
+**自動解決:**
+3. **デフォルト値**: 現行値 (`docs/spec`, `docs`) を維持、後方互換性確保
+4. **Steering Documents 粒度**: 1ディレクトリのみ（Issue 本文指示通り）
+5. **マイグレーション**: 既存ファイル移動は本 Issue スコープ外
+
+### Title Normalization
+
+- **旧**: `config: Spec 保存場所などのパスをプロジェクト単位で設定可能にする`
+- **新**: `config: Spec 保存場所のパスをプロジェクト単位で設定可能に`
+
+タイトル正規化ルール（noun-ending, 末尾の「する」削除）を適用。「など」も除去し焦点を明確化（Steering Documents もスコープだが主要対象は Spec パス）。
+
+### Scope Impact
+
+- `docs/spec` 参照: 27件（spec, code, review, auto, verify SKILL.md）
+- `docs/` 参照: 20件（主に modules/）
+- スクリプト: `check-file-overlap.sh` 1件
+- 合計 47+ 箇所の置換が必要
+
+実装は機械的だが網羅性が重要。ヘルパー導入によりフォールバック（デフォルト値）が単一箇所 (`detect-config-markers.md`) に集約され、今後の保守性も向上。
+
+### Verify Command Design
+
+- 10件の pre-merge 条件で 主要 SKILL.md の変数参照を個別検証
+- 2件の post-merge opportunistic 条件で実運用検証（カスタムパス動作 + 後方互換）
+
 ## Overview
 
 `.wholework.yml` に `spec-path` と `steering-docs-path` を追加し、Spec 保存場所と Steering Documents 格納ディレクトリをプロジェクト単位で設定可能にする。既存 SKILL.md / モジュール / スクリプトで `docs/spec` / `docs/` がハードコードされている箇所を、`detect-config-markers.md` が出力する `$SPEC_PATH` / `$STEERING_DOCS_PATH` 変数参照に置換する。デフォルト値は現行の `docs/spec` / `docs` を維持し、後方互換性を確保する。
@@ -175,3 +211,23 @@
 ### 変更の網羅性
 
 `grep -rn 'docs/spec' .` の結果（28 ファイル、68 occurrences）と `grep -rnE 'docs/(product|tech|structure)\.md' .` の結果を変更対象ファイルリストと照合。historical records（`docs/spec/issue-*.md` 内の `docs/spec` 記述）は過去記録として変更対象外。
+
+## spec retrospective
+
+### Minor observations
+
+- `STEERING_DOCS_PATH`（単数形、ディレクトリ）と既存 `STEERING_DOCS_PATHS`（複数形、カンマ区切りパスリスト）が共存する点は命名がやや紛らわしい。将来的に `/review` / `/issue` 側の複数形変数をリネームするか、本 Issue で導入する単数形を別名（例: `STEERING_DIR`）にするか検討の余地あり。今回はスコープ外として両立。
+- Issue 本文の acceptance criteria は主要 4 skill（spec/code/verify/auto）のみ `SPEC_PATH` 参照を検証対象としているが、実装上は `/review` / `/issue` / `/audit` / `/doc` / `/triage` / agents / modules も変更対象となる。criterion 10（`validate-skill-syntax.py PASS`）でまとめて網羅される想定。
+- `/doc` skill は Steering Documents を管理する skill 本体であり、書き込み先を `$STEERING_DOCS_PATH` 化することで自己参照的になる。実装時に `/doc sync` や `/doc product` の Glob / Write パスの整合を丁寧に確認する必要あり。
+
+### Judgment rationale
+
+- **ヘルパースクリプト `get-config-value.sh` の新設**: bash 環境から `.wholework.yml` を読む方法として、インライン grep ではなく専用ヘルパーを採用。理由: `detect-config-markers.md` の YAML Parsing Rules との整合、bats テスト容易性、将来の他スクリプトでの再利用可能性。
+- **Agent 側での設定検出を採用しない**: Agent ファイル (`review-spec.md` 等) は独立 context で動作するが、`.wholework.yml` 検出は親 skill 側が既に行うため、解決済パスを Task プロンプトに埋め込んで渡す形式が妥当。Agent 側の変更はデフォルト値の表記のみで動作上の追加処理は不要。
+- **Project Documents を変更対象に含めない**: Issue 本文の "Project Documents は既に任意のパス配置可能（frontmatter `type: project` で判別）" に準拠。`docs/workflow.md` 等の参照はリテラルのまま。
+- **CI 設定 `.github/workflows/test.yml` を変更対象に含めない**: wholework 自身の CI は wholework リポジトリ内部で動作する固定構成。ユーザープロジェクト用の設定可能パスとは別軸。
+
+### Uncertainty resolution
+
+- **設定検出ステップの挿入位置**: 各 skill の既存パターンに合わせて柔軟に決定（実装 Step 5-9 で個別判断）。Uncertainty セクションに記載し、実装時に `/verify` / `/issue` / `/review` の既存パターンを参照。
+- **`/doc` skill の書き込みパス変数化**: `STEERING_DOCS_PATH` を使用する方針で確定。実装 Step 9 で `/doc` SKILL.md 全体の一貫性を確認する責務を明示。
