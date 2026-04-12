@@ -1,7 +1,7 @@
 ---
 name: auto
 description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*), Read
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*), Read, Grep
 ---
 
 # Autonomous Execution
@@ -113,6 +113,15 @@ Run each phase via `run-*.sh`. Each script launches an independent process with 
       - All children at `phase/verify` or later (verify/done) → parent becomes `phase/verify`
       - All children at `phase/done` → handled by close flow judgment (Step 4c); do not aggregate-update here
    3. Update parent with `${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER <aggregated phase>`
+
+   **After aggregate-update, cross-cutting condition pre-verification (best-effort)**:
+   When a level completes, proactively check the parent XL Issue's cross-cutting Acceptance Criteria:
+   1. Fetch parent Issue body: `gh issue view $NUMBER --json body -q '.body'`
+   2. Extract `<!-- verify: ... -->` commands from the Acceptance Criteria sections (pre-merge and post-merge)
+   3. Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md` and execute each verify command in full mode
+   4. For each FAIL result: output a warning and continue (best-effort cross-cutting condition detection)
+      Format: "Warning: cross-cutting condition failed: [condition text]. Run `/verify $NUMBER` to confirm."
+   5. Continue to the next level regardless of results (authoritative verification is done by `/verify $NUMBER`)
 
 3. **On failure**:
    - Add failed sub-issue numbers to the failure set
