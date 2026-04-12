@@ -247,3 +247,18 @@
 
 - **設定検出ステップの挿入位置**: 各 skill の既存パターンに合わせて柔軟に決定（実装 Step 5-9 で個別判断）。Uncertainty セクションに記載し、実装時に `/verify` / `/issue` / `/review` の既存パターンを参照。
 - **`/doc` skill の書き込みパス変数化**: `STEERING_DOCS_PATH` を使用する方針で確定。実装 Step 9 で `/doc` SKILL.md 全体の一貫性を確認する責務を明示。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec の Changed Files セクションに `docs/structure.md` の更新が含まれていなかった。新規スクリプト（`scripts/get-config-value.sh`）追加時は `docs/structure.md` の Key Files テーブル更新が必要だが、Spec にスコープとして明示されていなかった。将来のスクリプト追加 Issue では Spec 段階で「Changed Files: docs/structure.md（Key Files テーブル更新）」を明示する。
+
+### Recurring issues
+
+Nothing to note. 今回の指摘（SHOULD 1件、CONSIDER 3件）はすべて独立した類型で、繰り返しパターンは見られなかった。
+
+### Acceptance criteria verification difficulty
+
+- 受け入れ条件10件すべて verify command（`section_contains`, `grep`, `command`）が設定されており、9件が PASS、1件が CI 代替検証で PASS となった。UNCERTAIN が0件で verify command の質は高い。
+- `docs/structure.md` への `get-config-value.sh` 追加が受け入れ条件に含まれていなかった点は、Spec での网羅性チェック（スクリプト追加時の構造文書更新）を verify command に含める改善が有効。
