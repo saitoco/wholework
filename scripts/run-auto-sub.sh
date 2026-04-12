@@ -89,7 +89,7 @@ run_verify_with_retry() {
 
 echo "=== run-auto-sub.sh: Starting sub-issue #${SUB_NUMBER} ==="
 source "$SCRIPT_DIR/phase-banner.sh"
-print_start_banner "issue" "$SUB_NUMBER"
+print_start_banner "issue" "$SUB_NUMBER" "auto"
 echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 if [[ -n "$BASE_BRANCH" ]]; then
   echo "Base branch: ${BASE_BRANCH}"
@@ -196,6 +196,6 @@ esac
 
 echo "---"
 echo "=== run-auto-sub.sh: Completed sub-issue #${SUB_NUMBER} ==="
-print_end_banner "issue" "$SUB_NUMBER"
+print_end_banner "issue" "$SUB_NUMBER" "auto"
 echo "Finished at: $(date '+%Y-%m-%d %H:%M:%S')"
 exit 0

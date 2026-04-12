@@ -36,7 +36,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "=== run-verify.sh: Starting /verify for Issue #${ISSUE_NUMBER} ==="
 source "$SCRIPT_DIR/phase-banner.sh"
-print_start_banner "issue" "$ISSUE_NUMBER"
+print_start_banner "issue" "$ISSUE_NUMBER" "verify"
 echo "Model: sonnet"
 echo "Effort: medium"
 echo "Permissions: skip (autonomous mode)"
@@ -95,7 +95,7 @@ rm -f "$VERIFY_TMPOUT"
 
 echo "---"
 echo "=== run-verify.sh: Finished /verify for Issue #${ISSUE_NUMBER} ==="
-print_end_banner "issue" "$ISSUE_NUMBER"
+print_end_banner "issue" "$ISSUE_NUMBER" "verify"
 echo "Exit code: ${EXIT_CODE}"
 echo "Finished at: $(date '+%Y-%m-%d %H:%M:%S')"
 exit $EXIT_CODE

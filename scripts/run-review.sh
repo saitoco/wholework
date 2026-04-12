@@ -17,7 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "=== run-review.sh: Starting /review for PR #${PR_NUMBER} ==="
 source "$SCRIPT_DIR/phase-banner.sh"
-print_start_banner "pr" "$PR_NUMBER"
+print_start_banner "pr" "$PR_NUMBER" "review"
 echo "Model: sonnet"
 echo "Effort: high"
 echo "Permissions: skip (autonomous mode)"
@@ -64,7 +64,7 @@ set -e
 
 echo "---"
 echo "=== run-review.sh: Finished /review for PR #${PR_NUMBER} ==="
-print_end_banner "pr" "$PR_NUMBER"
+print_end_banner "pr" "$PR_NUMBER" "review"
 echo "Exit code: ${EXIT_CODE}"
 echo "Finished at: $(date '+%Y-%m-%d %H:%M:%S')"
 exit $EXIT_CODE

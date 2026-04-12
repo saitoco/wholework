@@ -16,20 +16,20 @@ _fetch_entity_info() {
 }
 
 # Print start banner with title/URL
-# Args: entity_type ("issue"|"pr"), entity_number
+# Args: entity_type ("issue"|"pr"), entity_number, skill_name
 print_start_banner() {
-  local entity_type="$1" entity_number="$2"
+  local entity_type="$1" entity_number="$2" skill_name="${3:-}"
   _fetch_entity_info "$entity_type" "$entity_number"
-  local label; [[ "$entity_type" == "pr" ]] && label="PR" || label="Issue"
-  echo "${label}: #${entity_number} ${_ENTITY_TITLE}"
-  echo "URL: ${_ENTITY_URL}"
+  echo "/${skill_name} #${entity_number}"
+  echo "${_ENTITY_TITLE}"
+  echo "${_ENTITY_URL}"
 }
 
 # Print end banner with cached title/URL
-# Args: entity_type ("issue"|"pr"), entity_number
+# Args: entity_type ("issue"|"pr"), entity_number, skill_name
 print_end_banner() {
-  local entity_type="$1" entity_number="$2"
-  local label; [[ "$entity_type" == "pr" ]] && label="PR" || label="Issue"
-  echo "${label}: #${entity_number} ${_ENTITY_TITLE}"
-  echo "URL: ${_ENTITY_URL}"
+  local entity_type="$1" entity_number="$2" skill_name="${3:-}"
+  echo "/${skill_name} #${entity_number}"
+  echo "${_ENTITY_TITLE}"
+  echo "${_ENTITY_URL}"
 }

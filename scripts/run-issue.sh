@@ -23,7 +23,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "=== run-issue.sh: Starting /issue for issue #${ISSUE_NUMBER} ==="
 source "$SCRIPT_DIR/phase-banner.sh"
-print_start_banner "issue" "$ISSUE_NUMBER"
+print_start_banner "issue" "$ISSUE_NUMBER" "issue"
 echo "Model: sonnet"
 echo "Effort: high"
 echo "Permissions: skip (autonomous mode)"
@@ -67,7 +67,7 @@ set -e
 
 echo "---"
 echo "=== run-issue.sh: Finished /issue for issue #${ISSUE_NUMBER} ==="
-print_end_banner "issue" "$ISSUE_NUMBER"
+print_end_banner "issue" "$ISSUE_NUMBER" "issue"
 echo "Exit code: ${EXIT_CODE}"
 echo "Finished at: $(date '+%Y-%m-%d %H:%M:%S')"
 exit $EXIT_CODE

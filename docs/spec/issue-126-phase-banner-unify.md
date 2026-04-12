@@ -123,6 +123,20 @@
 - false positive 検出: `file_not_contains` の対象文字列がソースコードに存在しない場合を verify-patterns.md のガイドラインに照らして修正
 - スコープ制限: `run-auto-sub.sh` のフェーズマーカーや `echo "---"` セパレータはバナーフォーマットとは機能的に異なるため除外
 
+## Code Retrospective
+
+### Deviations from Design
+
+- bats テストの `gh` モックを関数エクスポート方式から `_fetch_entity_info` 直接モック方式に変更。Spec では `gh` コマンドをモック関数で置換すると記載されていたが、`gh issue view N --json title -q '.title'` の引数パターンとモック関数の実装がずれ、テスト1-2が失敗した。`_fetch_entity_info` を直接モックする方式が正確で簡潔なため採用。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- `tests/phase-banner.bats`: 初回実装時に `gh` モック関数の引数マッチングが誤っており、テスト1-2が失敗。`_fetch_entity_info` を直接モックする方式に修正して解決（1回のリワーク）。
+
 ## spec retrospective
 
 ### Minor observations
@@ -134,3 +148,17 @@
 
 ### Uncertainty resolution
 - Nothing to note
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 実装は Spec と完全に一致。Spec の実装ステップ表（run-*.sh の各スクリプト・行番号まで指定）が精密だったため、乖離リスクが非常に低かった。今後も機械的な変更（引数追加・フォーマット変更）には行番号指定の Spec が有効。
+
+### Recurring issues
+
+- 今回の変更はシンプルで一貫したパターン（7本の run-*.sh に同一変更を適用）。同種の繰り返し変更では、verify command で1ファイルのみチェックし代表性に頼る戦略が有効（今回 `run-code.sh` 代表）。ただし変更漏れリスクは残るため、実際に7本すべて変更されているか CI bats テストが間接的に保証している。
+
+### Acceptance criteria verification difficulty
+
+- アクセプタンス基準9条件のうち8条件が `section_not_contains`/`file_not_contains`/`grep` 等の静的チェックで PASS 確認済み。`command "bats tests/phase-banner.bats"` のみ CI 待ちが必要だったが、最終的に CI SUCCESS で PASS 確認済み。verify command の設計が適切で UNCERTAIN が最小化されていた。
