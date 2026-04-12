@@ -67,6 +67,10 @@ Do not create verify command items for translation output files. These are auto-
 
 Assign hints on a best-effort basis. Inaccuracies are handled by `/verify`'s AI fallback.
 
+**Table cell value vs. compound key string mismatch:**
+
+When using `file_contains` or `section_contains` with a compound string like `"key: value"`, be aware that markdown table cells often contain only the cell value (e.g., `steering`) and not the full compound string (e.g., `type: steering`). If the target file uses a markdown table to represent structured data, the compound key string will not match the table cell content. In such cases, search for the standalone value (`"steering"`) or add prose text that contains the compound string to make verification reliable.
+
 **Prefer dedicated commands over `command` hints:**
 
 `command` hints run generic shell commands and become UNCERTAIN in `/review` safe mode. Use dedicated commands when possible:
