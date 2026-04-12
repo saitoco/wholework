@@ -236,6 +236,10 @@ Which section do you want to update? Please describe the update content.
 
 Apply the update content specified in Step 8 with Edit.
 
+### Step 10: Commit and Push Guide
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-commit-push.md` and follow the "Processing Steps" section with `SUMMARY="update {doc}"`. This step is reached from both the new creation flow (after Step 6) and the update flow (after Step 9).
+
 ---
 
 ## init Wizard
@@ -277,7 +281,11 @@ After creation, check remaining uncreated files.
 
 If uncreated files remain, return to Step 3.
 
-When all are created, display "All steering documents have been created." and exit.
+When all are created, display "All steering documents have been created." and proceed to Step 6.
+
+### Step 6: Commit and Push Guide
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-commit-push.md` and follow the "Processing Steps" section with `SUMMARY="init steering documents"`.
 
 ---
 
@@ -426,6 +434,8 @@ Regardless of the number of files saved, display the following message to comple
 sync (reverse-generation) complete.
 To normalize Steering Documents and project files, run `/doc sync` again.
 ```
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-commit-push.md` and follow the "Processing Steps" section with `SUMMARY="sync (reverse-generation)"`.
 
 ### Step 6: Content Classification
 
@@ -582,6 +592,10 @@ If integration operations (absorb/move/delete) occurred, Grep the following file
 
 If references are found, display before/after diff then update. Skip if no references found. After updating, display the list of updated files and change count.
 
+### Step 10: Commit and Push Guide
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-commit-push.md` and follow the "Processing Steps" section with `SUMMARY="sync (normalization)"`.
+
 ---
 
 ## sync Individual Reverse-Generation
@@ -601,6 +615,8 @@ After completion, display:
 sync individual reverse-generation complete.
 To bidirectionally normalize all documents, run `/doc sync` without arguments.
 ```
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-commit-push.md` and follow the "Processing Steps" section with `SUMMARY="sync {doc} (reverse-generation)"`.
 
 ---
 
@@ -681,6 +697,10 @@ Display the following message to complete:
 Run `/doc` to check registration status.
 Run `/doc sync` to reflect in SSoT mapping.
 ```
+
+### Step 6: Commit and Push Guide
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-commit-push.md` and follow the "Processing Steps" section with `SUMMARY="register {path} as project document"`.
 
 ---
 
@@ -787,6 +807,10 @@ docs/{name}.md has been created.
 Run `/doc` to check registration status.
 Run `/doc sync` to reflect in SSoT mapping.
 ```
+
+### Step 7: Commit and Push Guide
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-commit-push.md` and follow the "Processing Steps" section with `SUMMARY="create project document {name}"`.
 
 ---
 

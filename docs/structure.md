@@ -81,6 +81,7 @@ Key modules:
 - `modules/adapter-resolver.md` — 3-layer adapter resolution (project-local → user-global → bundled)
 - `modules/opportunistic-verify.md` — opportunistic verification at skill completion
 - `modules/doc-checker.md` — documentation consistency checker
+- `modules/doc-commit-push.md` — commit/push guide for /doc subcommand outputs
 - `modules/domain-loader.md` — project-local domain file discovery and loading
 - `modules/skill-help.md` — shared `--help` output formatter for skills
 - `modules/skill-dev-checks.md` — cross-skill consistency validation

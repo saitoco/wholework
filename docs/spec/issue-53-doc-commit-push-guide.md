@@ -74,3 +74,32 @@
 - **`sync Bidirectional Normalization` の 2 出口**: reverse-generation (Steps 2–5) と normalization (Steps 6–9) の両フローで commit/push 機会があるため、それぞれの完了点に Read 指示を置く必要がある。どちらか一方の出口からは必ず commit/push ガイドを通過する設計。
 - **`git add -A` vs 変更パス限定**: モジュール側で `git add -A` を使用（呼び出し側の変更が docs/ 以下に限定される前提で安全）。ユースケース拡張で限定が必要になった場合は Input を拡張できる余地を残す。
 - **`AskUserQuestion` の挙動**: Claude Code 環境下でのみ動作。`claude -p --dangerously-skip-permissions` では自動的に「最初の選択肢」が選ばれる前提（既存 translate-phase.md と同方針）。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `sync Bidirectional Normalization` の reverse-generation 完了点（Step 5 末尾）への追加は、Spec の「新規 `### Step N: Commit and Push Guide` を追加し」という形式ではなく、Step 5 の末尾にインライン追記する形を採用した。理由: Step 5（reverse-generation exit）と Step 6（normalization の開始）の間に新規ステップ番号を挿入すると既存の Steps 6–9 を全て繰り上げ変更する必要があり、変更範囲が大きくなるため。Notes 節の「Step 5 末尾に Read 指示を追加する」という表現がこのインライン方式を支持していると判断した。
+- `init Wizard` の Step 5 の「and exit」を「and proceed to Step 6」に変更した上で Step 6 を追加した。Spec の「最終 Step の直後に追加」では既存 Step 5 の exit 記述と矛盾が生じるため、Step 5 も合わせて修正した。
+
+### Design Gaps/Ambiguities
+
+- Spec の「追加形式: 新規 `### Step N: Commit and Push Guide` を追加し」という指示と「Step 5 末尾（reverse-generation 完了時）と Step 9 末尾（normalization 完了時）の両方に Read 指示を追加する」という Notes 節の記述が若干矛盾していた（前者は新規ステップ、後者は既存ステップへの追記を示唆）。`sync Bidirectional Normalization` のケースで判断が必要だった。
+
+### Rework
+
+- 特になし
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+`sync Bidirectional Normalization` の reverse-generation 出口において、Spec の「新規 `### Step N: Commit and Push Guide` を追加」指示と Notes 節の「Step 5 末尾にインライン追記」指示が矛盾していた。実装者は Notes 節の記述を優先してインライン方式を採用し、その理由をCode Retrospectiveに記録した。この種の Spec 内矛盾は、将来のSpec作成時に「既存ステップ番号への影響」を明示的に検討する設計ポイントとして意識するとよい。
+
+### 繰り返し問題
+
+特になし。
+
+### 受入条件検証難易度
+
+全5条件が `file_exists`, `section_contains`, `file_contains`, `grep` の静的コマンドで構成されており、safe mode での自動検証が完全に可能だった。UNCERTAINが0件で、verify commandの設計が適切だった。Post-merge条件は `opportunistic` タイプで適切に分類されている。
