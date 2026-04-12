@@ -78,11 +78,13 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh $NUMBER --dry-run
 
 ### Step 5: Reference Steering Documents (if present)
 
-Check whether the following steering documents exist under `docs/` using Glob, then read only those that exist:
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH` and `STEERING_DOCS_PATH` for use in subsequent steps.
 
-- `docs/structure.md` — directory layout, Key Files (starting point for codebase investigation)
-- `docs/tech.md` — tech stack, Architecture Decisions (technical constraints), Coding Conventions
-- `docs/product.md` — project vision, Non-Goals, Terms (design priority, terminology)
+Check whether the following steering documents exist using Glob, then read only those that exist:
+
+- `$STEERING_DOCS_PATH/structure.md` — directory layout, Key Files (starting point for codebase investigation)
+- `$STEERING_DOCS_PATH/tech.md` — tech stack, Architecture Decisions (technical constraints), Coding Conventions
+- `$STEERING_DOCS_PATH/product.md` — project vision, Non-Goals, Terms (design priority, terminology)
 
 **If none exist, skip this step.**
 
@@ -165,7 +167,7 @@ Refer to `ambiguity-detector.md`'s "Sources to investigate" column and investiga
 | Aspect | Content | Source |
 |--------|---------|--------|
 | Existing patterns | Similar implementations/conventions | Project source code (Grep/Read) |
-| Past knowledge | Retrospectives from similar issues/specs | `docs/spec/*.md`. Skip if absent |
+| Past knowledge | Retrospectives from similar issues/specs | `$SPEC_PATH/*.md`. Skip if absent |
 | Trade-offs | Pros and cons of each option | Codebase + Steering Docs |
 
 Format Q&A based on investigation results (with recommendation if found, with "no related patterns" note if not found).
@@ -297,11 +299,11 @@ When defining acceptance criteria, explicitly consider:
 - Workflow-impacting doc sync (docs/workflow.md, README.md — for workflow phase/skill behavior/routing changes)
 - Config marker additions (.wholework.yml)
 - Reference updates in existing files (tables, links, etc.)
-- For new modules: include docs/structure.md module table and Mermaid graph updates in changed-files list
+- For new modules: include $STEERING_DOCS_PATH/structure.md module table and Mermaid graph updates in changed-files list
 - Consistency with existing patterns (naming conventions, structural patterns)
 - `docs/ja/*` files (Japanese mirror files): use Japanese-format patterns in verify commands to avoid unintended format changes; if an English pattern must be used, note the format impact explicitly in Notes
 
-Save the implementation plan to `docs/spec/issue-$NUMBER-short-title.md`.
+Save the implementation plan to `$SPEC_PATH/issue-$NUMBER-short-title.md`.
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-patterns.md` and follow the "Processing Steps" guidelines (especially "3. Pre-verification of target file format").
 
@@ -362,7 +364,7 @@ Check for missing items. Continuing.
 
 Before writing "no change needed" for a file in the changed-files section, verify with grep or similar. Unverified "no change needed" judgments lead to implementation oversights (example: #749).
 
-**Simplicity rule (see docs/tech.md "Spec Simplicity Rules"):**
+**Simplicity rule (see $STEERING_DOCS_PATH/tech.md "Spec Simplicity Rules"):**
 
 Keep implementation step count and pre-merge verification item count within the SPEC_DEPTH limit (light: 5 each; full: 10 each). Group related steps if limits are exceeded.
 
@@ -515,7 +517,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/title-normalizer.md` and follow the "Title D
 Commit the Spec (push is done in Step 14 Worktree Exit):
 
 ```bash
-git add docs/spec/issue-$NUMBER-short-title.md
+git add $SPEC_PATH/issue-$NUMBER-short-title.md
 git commit -m "Add design for issue #$NUMBER"
 ```
 
@@ -566,7 +568,7 @@ Reflect on the specification phase and present improvement suggestions to the us
 3. Edit tool to append spec retrospective to Spec end
 4. Additional commit (push in Step 14 Worktree Exit):
    ```bash
-   git add docs/spec/issue-$NUMBER-short-title.md
+   git add $SPEC_PATH/issue-$NUMBER-short-title.md
    git commit -m "Add retrospective notes for issue #$NUMBER"
    ```
 
@@ -597,7 +599,7 @@ rm -f .tmp/issue-comment-$NUMBER.md
 Template:
 - `## Design Complete`
 - `### Implementation Steps` — numbered list with dependencies and acceptance criteria mapping
-- Spec link: `[issue-$NUMBER-short-title.md](https://github.com/{REPO}/blob/main/docs/spec/issue-$NUMBER-short-title.md)`
+- Spec link: `[issue-$NUMBER-short-title.md](https://github.com/{REPO}/blob/main/$SPEC_PATH/issue-$NUMBER-short-title.md)`
 
 ### Step 16: Label Transition (design complete)
 

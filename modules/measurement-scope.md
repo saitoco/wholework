@@ -27,7 +27,7 @@ When recording quantitative survey results in Specs, follow these rules.
 **Good examples:**
 
 ```
-Scattered file count: 22 (under `~/.claude/`, .md files only, excluding `docs/spec/`)
+Scattered file count: 22 (under `~/.claude/`, .md files only, excluding `$SPEC_PATH/`)
 ```
 
 ```

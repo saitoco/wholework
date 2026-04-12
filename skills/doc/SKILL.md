@@ -24,6 +24,12 @@ If ARGUMENTS contains `--help`, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.m
 
 ---
 
+## Configuration Detection
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH` and `STEERING_DOCS_PATH` for use in subsequent steps.
+
+---
+
 ## Command Routing
 
 If ARGUMENTS is empty: execute status display (see "Status Display" section below) and exit.
@@ -33,9 +39,9 @@ If ARGUMENTS is `init`: execute the "init wizard" section and exit.
 If ARGUMENTS is `init --deep`: enable `--deep` flag and execute the "init wizard" section and exit.
 
 If ARGUMENTS is `product`, `tech`, or `structure`:
-- `/doc product` → create/update `docs/product.md`
-- `/doc tech` → create/update `docs/tech.md`
-- `/doc structure` → create/update `docs/structure.md`
+- `/doc product` → create/update `$STEERING_DOCS_PATH/product.md`
+- `/doc tech` → create/update `$STEERING_DOCS_PATH/tech.md`
+- `/doc structure` → create/update `$STEERING_DOCS_PATH/structure.md`
 
 Execute the "Individual Create/Update" section and exit.
 
@@ -61,7 +67,7 @@ For any other ARGUMENTS: display "Usage: /doc [init|init --deep|product|tech|str
 
 Each steering document's template is defined in the following individual files.
 Read them when templates are needed within the workflow.
-The `type` and `ssot_for` values here are the SSoT for frontmatter (`type: steering` + `ssot_for` block) prepended when writing to `docs/{doc}.md`.
+The `type` and `ssot_for` values here are the SSoT for frontmatter (`type: steering` + `ssot_for` block) prepended when writing to `$STEERING_DOCS_PATH/{doc}.md`.
 
 | Document | Template file | type | ssot_for |
 |----------|--------------|------|----------|
@@ -77,7 +83,7 @@ Common frontmatter-based document traversal procedure used in status display and
 
 1. Search the entire repository with Grep for the `type: project\|type: steering` pattern limited to `*.md` files, getting a list of candidate file paths
 2. Skip files matching these exclusion patterns:
-   - Paths starting with `docs/spec/` (specification documents)
+   - Paths starting with `$SPEC_PATH/` (specification documents)
    - Paths containing `node_modules/` (external dependencies)
    - Paths starting with `.git/` (Git management files)
    - Paths starting with `.tmp/` (temporary files)
@@ -128,7 +134,7 @@ Create or update the `{doc}` (product / tech / structure) document specified in 
 
 ### Step 1: File Existence Check
 
-Check for the existence of `docs/{doc}.md` with Glob.
+Check for the existence of `$STEERING_DOCS_PATH/{doc}.md` with Glob.
 
 If it exists, proceed to "update flow". If not, proceed to "new creation flow".
 
@@ -198,13 +204,13 @@ ssot_for:
 ---
 ```
 
-Fill in the template with collected information and save to `docs/{doc}.md` with Write.
+Fill in the template with collected information and save to `$STEERING_DOCS_PATH/{doc}.md` with Write.
 
-Check whether the `docs/` directory exists with Glob for `docs/` (do not use `Bash(ls:docs)` as it errors when the directory doesn't exist). If it doesn't exist, display the following error and abort:
+Check whether the `$STEERING_DOCS_PATH/` directory exists with Glob for `$STEERING_DOCS_PATH/` (do not use Bash ls as it errors when the directory doesn't exist). If it doesn't exist, display the following error and abort:
 
 ```
-Error: docs/ directory not found.
-Manually run `mkdir docs` then re-run the command.
+Error: $STEERING_DOCS_PATH/ directory not found.
+Manually run `mkdir -p $STEERING_DOCS_PATH` then re-run the command.
 ```
 
 ### Step 5: Confirm Generation Result
@@ -320,7 +326,7 @@ Search with Glob `**/*.md` and skip files matching these exclusion conditions:
 
 - **Protected files**: CLAUDE.md, README.md (skip; not targets for content absorption/movement/deletion)
 - **Existing managed targets**: files with `type: steering` or `type: project` in frontmatter (read beginning to check `type` field; skip if present)
-- **Spec documents**: files under `docs/spec/`
+- **Spec documents**: files under `$SPEC_PATH/`
 - **Package management directories**: files under `node_modules/`, `.git/`, `vendor/`
 - **Temporary file directories**: files under `.tmp/`
 - **wholework-managed directories**: files under `skills/`, `modules/`, `agents/` (if applicable)
@@ -371,11 +377,11 @@ Extraction policy for each document:
 
 ### Step 3: Display Draft
 
-Check for the `docs/` directory with Glob. If it doesn't exist, display the following error and abort:
+Check for the `$STEERING_DOCS_PATH/` directory with Glob. If it doesn't exist, display the following error and abort:
 
 ```
-Error: docs/ directory not found.
-Manually run `mkdir docs` then re-run the command.
+Error: $STEERING_DOCS_PATH/ directory not found.
+Manually run `mkdir -p $STEERING_DOCS_PATH` then re-run the command.
 ```
 
 Process one file at a time in recommended order (product → tech → structure).
@@ -388,19 +394,19 @@ For each file:
 
 Ask the user with AskUserQuestion to select a save method for each file.
 
-If `docs/{doc}.md` does not exist:
+If `$STEERING_DOCS_PATH/{doc}.md` does not exist:
 - "Save"
 - "Revise and save"
 - "Skip"
 
-If `docs/{doc}.md` already exists:
+If `$STEERING_DOCS_PATH/{doc}.md` already exists:
 - "Overwrite"
 - "Check diff"
 - "Skip"
 
 ### Step 5: Execute Save
 
-Save with Write based on the Step 4 selection result. When creating a new file (`docs/{doc}.md` does not exist), look up the `type` and `ssot_for` values for `{doc}` from the Template Definitions table and prepend the frontmatter block before the generated content:
+Save with Write based on the Step 4 selection result. When creating a new file (`$STEERING_DOCS_PATH/{doc}.md` does not exist), look up the `type` and `ssot_for` values for `{doc}` from the Template Definitions table and prepend the frontmatter block before the generated content:
 
 ```yaml
 ---
@@ -503,7 +509,7 @@ This check runs only when the `--deep` flag is enabled.
 
 **Step 1 — Deprecated term detection:**
 
-Scan the Terms table in Steering Documents that carry `ssot_for: terminology` in their frontmatter (typically `docs/product.md`). Extract all entries that have a "Formerly called" annotation, collecting the deprecated alias for each term. For each deprecated alias, Grep implementation files (`skills/*/SKILL.md`, `modules/*.md`, `agents/*.md`) for occurrences. Exclude matches within the Terms table itself and within `docs/spec/` files (disposable specs). Add each match to the drift report as "Deprecated term in use" — each finding should include: Steering Document name, section name ("Terms"), drift category, deprecated alias and its replacement term, and file/line locations.
+Scan the Terms table in Steering Documents that carry `ssot_for: terminology` in their frontmatter (typically `docs/product.md`). Extract all entries that have a "Formerly called" annotation, collecting the deprecated alias for each term. For each deprecated alias, Grep implementation files (`skills/*/SKILL.md`, `modules/*.md`, `agents/*.md`) for occurrences. Exclude matches within the Terms table itself and within `$SPEC_PATH/` files (disposable specs). Add each match to the drift report as "Deprecated term in use" — each finding should include: Steering Document name, section name ("Terms"), drift category, deprecated alias and its replacement term, and file/line locations.
 
 **Step 2 — Missing term detection:**
 
@@ -572,7 +578,7 @@ If integration operations (absorb/move/delete) occurred, Grep the following file
 - CLAUDE.md (protected but update reference links)
 - README.md (protected but update reference links)
 - `skills/*/SKILL.md`
-- `docs/spec/*.md` (best effort)
+- `$SPEC_PATH/*.md` (best effort)
 
 If references are found, display before/after diff then update. Skip if no references found. After updating, display the list of updated files and change count.
 
@@ -583,9 +589,9 @@ If references are found, display before/after diff then update. Skip if no refer
 Execute when ARGUMENTS is in `sync {doc}` format. Reverse-generate only the 1 document corresponding to `{doc}`.
 
 Corresponding `{doc}` and target files:
-- `sync product` → reverse-generate only `docs/product.md`
-- `sync tech` → reverse-generate only `docs/tech.md`
-- `sync structure` → reverse-generate only `docs/structure.md`
+- `sync product` → reverse-generate only `$STEERING_DOCS_PATH/product.md`
+- `sync tech` → reverse-generate only `$STEERING_DOCS_PATH/tech.md`
+- `sync structure` → reverse-generate only `$STEERING_DOCS_PATH/structure.md`
 
 Execute "sync Bidirectional Normalization" Step 2 (Reverse-Generation Flow — Explore Analysis Sources) and draft generation, then execute Steps 3–5 (Reverse-Generation Flow — Display Draft, Select Save Method, Execute Save) targeting only the specified document.
 

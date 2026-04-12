@@ -23,6 +23,8 @@ copilot-review: true          # GitHub Copilot レビュー連携
 coderabbit-review: true       # CodeRabbit AI レビュー連携
 opportunistic-verify: true    # オポチュニスティック検証（post-merge 条件の自動実行）
 skill-proposals: true         # Skill 提案機能
+spec-path: custom/specs       # Spec ファイルの保存場所（デフォルト: docs/spec）
+steering-docs-path: custom/docs  # Steering Documents のディレクトリ（デフォルト: docs）
 capabilities:
   browser: true               # ブラウザベース検証が利用可能
   mcp:                        # 利用可能な MCP ツール

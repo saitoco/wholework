@@ -162,12 +162,14 @@ Phase transition output format: output `[N/M] phase_name` before each phase, and
 
 The XS patch route does not go through the `/spec` phase, so no Spec file exists. To allow the `/verify` improvement proposal pipeline to collect the issue retrospective, create a Spec file and transcribe it using the following steps.
 
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH` for use in subsequent steps.
+
 1. **Check for issue retrospective in Issue comments**:
    - Fetch all Issue comments: `gh issue view "$NUMBER" --json comments -q '.comments[].body'`
    - Search for comments containing a `## Issue Retrospective` section
    - If not found: skip this entire step (no transcription needed if no issue retrospective)
 
-2. **Determine Spec file path**: `docs/spec/issue-$NUMBER-<short-title>.md`
+2. **Determine Spec file path**: `$SPEC_PATH/issue-$NUMBER-<short-title>.md`
    - Generate `short-title` as English kebab-case from Issue title (e.g., `xs-patch-retro`)
    - If an existing Spec file is found, use it
 
@@ -177,7 +179,7 @@ The XS patch route does not go through the `/spec` phase, so no Spec file exists
 
 4. **Commit and push**:
    ```bash
-   git add docs/spec/issue-$NUMBER-*.md
+   git add $SPEC_PATH/issue-$NUMBER-*.md
    git commit -m "Add issue retrospective for issue #$NUMBER
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
@@ -190,7 +192,9 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 
 For XL routes only, create a parent Issue Spec file and record a retrospective of the entire orchestration.
 
-1. **Determine Spec file path**: `docs/spec/issue-$NUMBER-<short-title>.md`
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH` for use in subsequent steps.
+
+1. **Determine Spec file path**: `$SPEC_PATH/issue-$NUMBER-<short-title>.md`
    - Generate `short-title` as English kebab-case from Issue title (e.g., `xl-orchestration-retrospective`)
    - If an existing Spec file is found, use it and append `## Auto Retrospective` section
 
@@ -222,7 +226,7 @@ For XL routes only, create a parent Issue Spec file and record a retrospective o
 
 4. **Commit and push**:
    ```bash
-   git add docs/spec/issue-$NUMBER-*.md
+   git add $SPEC_PATH/issue-$NUMBER-*.md
    git commit -m "Add auto retrospective for issue #$NUMBER
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"

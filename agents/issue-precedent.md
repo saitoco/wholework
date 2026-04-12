@@ -9,7 +9,7 @@ model: opus
 
 ## Purpose
 
-Used in the parallel investigation phase for L/XL Issues. Search and extract similar patterns from retrospective sections of Specs under `docs/spec/`, and summarize past success/failure patterns and learnings.
+Used in the parallel investigation phase for L/XL Issues. Search and extract similar patterns from retrospective sections of Specs under `$SPEC_PATH/` (resolved by the calling skill from `.wholework.yml`, default: `docs/spec`), and summarize past success/failure patterns and learnings.
 
 ## Input
 
@@ -29,10 +29,10 @@ Analyze the provided Issue body to identify:
 
 ### 2. Similar Spec Search
 
-Investigate all Spec files under `docs/spec/`:
+Investigate all Spec files under `$SPEC_PATH/`:
 
 1. **Keyword search**:
-   - Grep search `docs/spec/` using primary keywords from the Issue body
+   - Grep search `$SPEC_PATH/` using primary keywords from the Issue body
    - Identify Specs dealing with similar change targets (same skill, module, or operation)
 
 2. **Collect retrospective sections**:
@@ -57,7 +57,7 @@ Analyze the collected retrospective information for:
 
 | Spec | Similarity | Issue Number |
 |------|------------|-------------|
-| `docs/spec/issue-N-*.md` | (what is similar) | #N |
+| `$SPEC_PATH/issue-N-*.md` | (what is similar) | #N |
 
 ### Past Pattern Summary
 

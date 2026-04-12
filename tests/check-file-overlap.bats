@@ -16,6 +16,9 @@ setup() {
     # Symlink the real script into temp scripts dir
     ln -s "$REAL_SCRIPT" "$REPO_DIR/scripts/check-file-overlap.sh"
 
+    # Symlink the real get-config-value.sh into temp scripts dir
+    ln -s "$PROJECT_ROOT/scripts/get-config-value.sh" "$REPO_DIR/scripts/get-config-value.sh"
+
     # Capture log for get-sub-issue-graph.sh calls
     GRAPH_CALL_LOG="$BATS_TEST_TMPDIR/graph_calls.log"
     export GRAPH_CALL_LOG
@@ -150,4 +153,32 @@ MOCK_EOF
     run bash "$SCRIPT" 999
     [ "$status" -eq 0 ]
     grep -q "999" "$GRAPH_CALL_LOG"
+}
+
+@test "success: custom spec-path in .wholework.yml is used for spec lookup" {
+    set_sub_issues 101 102
+    # Create custom spec directory
+    mkdir -p "$REPO_DIR/custom/specs"
+    # Create .wholework.yml pointing to custom path
+    echo "spec-path: custom/specs" > "$REPO_DIR/.wholework.yml"
+    # Create spec files under custom path
+    {
+        echo "# Spec for Issue #101"
+        echo ""
+        echo "## 変更対象ファイル"
+        echo "- \`skills/auto/SKILL.md\`"
+    } > "$REPO_DIR/custom/specs/issue-101-test.md"
+    {
+        echo "# Spec for Issue #102"
+        echo ""
+        echo "## 変更対象ファイル"
+        echo "- \`skills/auto/SKILL.md\`"
+    } > "$REPO_DIR/custom/specs/issue-102-test.md"
+
+    cd "$REPO_DIR"
+    run bash "$SCRIPT" 100
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'skills/auto/SKILL.md'* ]]
+    [[ "$output" == *'101'* ]]
+    [[ "$output" == *'102'* ]]
 }

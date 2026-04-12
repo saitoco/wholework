@@ -35,6 +35,8 @@ From the loaded content, search for each YAML key in the marker definition table
 | `opportunistic-verify` | `HAS_OPPORTUNISTIC_VERIFY` | `true` | `false` |
 | `skill-proposals` | `HAS_SKILL_PROPOSALS` | `true` | `false` |
 | `production-url` | `PRODUCTION_URL` | URL string (extract value as-is) | `""` |
+| `spec-path` | `SPEC_PATH` | Path string (extract value as-is) | `docs/spec` |
+| `steering-docs-path` | `STEERING_DOCS_PATH` | Path string (extract value as-is) | `docs` |
 | `capabilities.browser` | `HAS_BROWSER_CAPABILITY` | `true` | `false` |
 | `capabilities.mcp` | `MCP_TOOLS` | Comma-separated tool name list | `""` |
 
@@ -49,6 +51,7 @@ Example: `capabilities.invoice-api: true` → `HAS_INVOICE_API_CAPABILITY=true`
 - Boolean values determined by `true` / `false` (case-insensitive)
 - `review-bug` has inverse mapping: `review-bug: false` → `SKIP_REVIEW_BUG=true` (skip bug detection), `review-bug: true` → `SKIP_REVIEW_BUG=false` (bug detection enabled)
 - `production-url` is treated as URL string with quotes removed
+- `spec-path` and `steering-docs-path` are treated as path strings with quotes removed (same handling as `production-url`)
 - If key does not exist, use default value
 - Comment lines (lines starting with `#`) are ignored
 - Nested values under `capabilities:` section are interpreted as `capabilities.{key}`. Both inline hash format (`capabilities: { browser: true }`) and block format (`capabilities:\n  browser: true`) are supported. If `capabilities:` section is undefined, all capability variables are `false`
@@ -66,6 +69,8 @@ SKIP_REVIEW_BUG: true if review-bug: false is set (default: false)
 HAS_OPPORTUNISTIC_VERIFY: true if opportunistic-verify: true is set (default: false)
 HAS_SKILL_PROPOSALS: true if skill-proposals: true is set (default: false)
 PRODUCTION_URL: URL string extracted from production-url (default: "")
+SPEC_PATH: path string extracted from spec-path (default: "docs/spec")
+STEERING_DOCS_PATH: path string extracted from steering-docs-path (default: "docs")
 HAS_BROWSER_CAPABILITY: true if capabilities.browser: true is set (default: false)
 MCP_TOOLS: tool name list from capabilities.mcp (comma-separated, default: "")
 ```
