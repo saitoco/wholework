@@ -131,6 +131,18 @@ An adapter encapsulates a capability (e.g., `browser`). It selects the tool-spec
 
 An adapter operates in three steps: detection → command translation → execution delegation.
 
+#### Adapter Pattern Application Requirements
+
+Adapters are valuable when multiple implementation choices must be abstracted — for example, `browser` (browser-use CLI vs Playwright MCP) or `lighthouse` (CLI detection), where tool selection, command translation, and fallback branching are required.
+
+#### Why `mcp_call` Does Not Use an Adapter
+
+`mcp_call` uses ToolSearch directly and bypasses the adapter layer. The reason: ToolSearch is the only detection and invocation mechanism for MCP tools within a Claude session. Unlike `browser` or `lighthouse`, there is no choice between multiple implementations, so adding an adapter layer would increase complexity without any functional benefit.
+
+#### Future Extension Policy
+
+If pre/post processing customization is needed in the future (e.g., argument transformation, result normalization), it should be added as a hook mechanism (e.g., `.wholework/hooks/mcp-pre.sh`) rather than an adapter. This is outside the current implementation scope.
+
 ### Adapter Contract Template
 
 Adapters follow a unified contract. Users can create custom adapters by following this template and placing them at the project-local or user-global path above.
