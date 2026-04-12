@@ -1,11 +1,3 @@
----
-type: steering
-ssot_for:
-  - tech-stack
-  - coding-conventions
-  - forbidden-expressions
----
-
 # Tech
 
 ## Language and Runtime（Required）

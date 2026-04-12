@@ -1,10 +1,3 @@
----
-type: steering
-ssot_for:
-  - directory-layout
-  - agent-includes-catalog
----
-
 # Structure
 
 ## Directory Layout（Required）

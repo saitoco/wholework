@@ -1,11 +1,3 @@
----
-type: steering
-ssot_for:
-  - vision
-  - non-goals
-  - terminology
----
-
 # Product
 
 ## Vision（Required）
