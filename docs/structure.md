@@ -49,6 +49,7 @@ wholework/
 │   └── spec/            # Issue specifications
 ├── .wholework/          # Project-local Wholework configuration (user-managed, not tracked in wholework repo)
 │   ├── adapters/        # Verification adapter overrides
+│   ├── verify-commands/ # Project-local custom verify command handlers
 │   └── domains/         # Project-local Domain files
 │       ├── spec/        # Domain files for /spec
 │       ├── code/        # Domain files for /code

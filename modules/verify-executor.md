@@ -33,7 +33,23 @@ The following information is passed from the caller:
 
    When no `--when` modifier is present, proceed to Step 3 as before.
 
-3. Execute verification according to the translation table below:
+3. **Resolve custom verify command handlers**: Before looking up the translation table, check whether the command name is a custom handler:
+
+   a. **Built-in priority check**: If the command name matches a built-in command in the translation table below (e.g., `file_exists`, `grep`, `section_contains`), use the built-in processing directly. Skip custom handler lookup.
+
+   b. **Custom handler lookup** (only for non-built-in command names): Glob `.wholework/verify-commands/{name}.md` where `{name}` is the command name from the verify comment. Perform this scan on each verify-executor invocation (no caching).
+
+   c. **Handler found**: Read the handler Markdown file. Check for a safe-mode declaration in the handler (a line near the top of the file in the form `**Safe mode:** compatible` or `**Safe mode:** uncertain`):
+      - Declared `compatible` → execute in both safe and full modes following the handler's Processing Steps
+      - Declared `uncertain` or not declared → in safe mode, return UNCERTAIN; in full mode, execute following the handler's Processing Steps
+
+   d. **Handler not found**: Return UNCERTAIN (no built-in match and no custom handler file found).
+
+   e. **Name collision warning**: If a custom handler file exists but its name matches a built-in command name, output a warning in the Details column of the result table (e.g., "Warning: custom handler `file_exists.md` ignored — built-in takes priority") and use the built-in.
+
+   f. **Result format**: Custom handlers must return one of PASS, FAIL, or UNCERTAIN. The handler's Processing Steps describe the verification logic; execute them and map the outcome to these three values.
+
+4. Execute verification according to the translation table below:
 
 | Verification Command | Processing |
 |---------------------|-----------|
@@ -61,13 +77,13 @@ The following information is passed from the caller:
 | `mcp_call "tool_name" "description"` | **Mode-dependent**: `safe` → return UNCERTAIN (to prevent external API calls). `full` → Use ToolSearch with `select:<tool_name>` (tool_name in `server_name__tool_name` fully qualified format, no spaces) to find the tool, and **only** call MCP tools clearly identified as read-only verification. Do not call tools with any possibility of writes, deletions, or external transmissions; return UNCERTAIN (with reason). Also return UNCERTAIN if ToolSearch is unavailable or tool call is blocked by permissions (include detailed reason). Evaluate result against description using AI judgment for PASS/FAIL. Return UNCERTAIN if tool not found (include detailed reason). Best-effort due to subjective elements. For the rationale of using ToolSearch directly (bypassing the adapter layer), see the Adapter Pattern section in `docs/environment-adaptation.md` |
 | `github_check "gh_command" "expected_value"` | **Mode-dependent**: In safe mode, use allowlist approach. Allowlist: `gh issue view`, `gh pr view`, `gh pr checks`, `gh api` (no `--method` or `--method GET`). If allowlist matches → run `gh_command` in Bash and confirm output contains `expected_value` (if `expected_value` is omitted, confirm output is non-empty). If not in allowlist → return UNCERTAIN. `full` → no restrictions; run `gh_command` in Bash (timeout: 30 seconds) |
 
-4. Treat syntax errors (unknown command names, missing arguments, etc.) as UNCERTAIN
-5. Classify each condition's verification result:
+5. Treat syntax errors (unknown command names, missing arguments, etc.) as UNCERTAIN
+6. Classify each condition's verification result:
    - **PASS**: Condition is met
    - **FAIL**: Condition is not met
    - **UNCERTAIN**: Cannot be automatically determined (safe mode command, syntax error, etc.)
    - **SKIPPED**: Environment condition (`--when`) was not met; skipped execution
-6. Organize results according to the output format
+7. Organize results according to the output format
 
 ### Basic Authentication Support
 
