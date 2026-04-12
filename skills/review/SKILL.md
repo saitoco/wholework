@@ -531,7 +531,7 @@ Fix all MUST issues. Claude decides whether to fix SHOULD/CONSIDER issues.
 1. **Task management with TaskCreate/TaskUpdate**: create a task per issue to fix
 2. **Edit files using Edit tool**
 3. **Stage with git add**
-4. **Commit with `git commit -m "Address review feedback: {fix summary}"`**
+4. **Commit with `git commit -s -m "Address review feedback: {fix summary}"`**
 5. **Push with git push**
 
 ### 12.3. Lightweight Re-check
@@ -701,7 +701,7 @@ Reflect on the review phase; record improvement proposals in the Spec only. Issu
    - Commit and push:
      ```bash
      git add $SPEC_PATH/issue-$ISSUE_NUMBER-*.md
-     git commit -m "Add review retrospective for issue #$ISSUE_NUMBER
+     git commit -s -m "Add review retrospective for issue #$ISSUE_NUMBER
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
      git push origin HEAD

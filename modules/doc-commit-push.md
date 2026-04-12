@@ -23,7 +23,7 @@ Runs `git status --porcelain` first; if there are no changes, exits silently wit
 5. If "Yes, commit and push" is selected:
    ```bash
    git add -A
-   git commit -m "docs: ${SUMMARY}
+   git commit -s -m "docs: ${SUMMARY}
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
    git push origin HEAD

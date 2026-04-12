@@ -108,3 +108,31 @@ Issue Q&A で確定した方針:
 - **既存履歴の sign-off 遡及**: 既存コミットに遡及適用するには `git rebase -i --signoff` が必要だが、本 Issue スコープ外（CI は新規 PR のみチェック、既存コミットは `tim-actions/dco` のデフォルト設定次第。本 Spec は新規 PR からの適用のみを想定）。
 - **DCO check の scope**: `tim-actions/dco@master` は PR に含まれる全 commit を検査。既存 main の commit は対象外。将来 main のリライトが必要になった場合は別 Issue で対応。
 - **`settings.json` の `Skill(...)` 変更**: 不要（既存 skills への commit template 変更のみ、新 skill 追加なし）。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `skills/review/external-review-phase.md` の行 88, 128 は Spec で「`git commit -m` を `git commit -s -m` に置換」と記載されていたが、実際のファイルには `git commit -m` が存在せず `Commit message: "..."` 形式だった。意図を補完し、7.4/7.6 セクションのコミット記述を `Commit with \`git commit -s -m ...\`` 形式に統一した（7.2 との形式一貫性も向上）。
+
+### Design Gaps/Ambiguities
+
+- Spec の行番号（88, 128）は実際のファイル内容と一致しなかった。`git commit -m` のGrepで確認したところ line 47 のみが該当。Spec 作成時の行番号ズレと推定。
+
+### Rework
+
+- N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- `dco.yml` の実装において、Spec は `tim-actions/dco@master` の使用を指定していたが、Spec・Issue ともに `tim-actions/get-pr-commits` との組み合わせが必要な点（`commits` 入力が `required: true`）を記載していなかった。Specに外部Actionの正しい使い方（必要な前ステップ含む）を明記しておく必要がある。
+
+### Recurring issues
+
+- 特になし。外部Actionの誤用は `dco.yml` のみで発生した。
+
+### Acceptance criteria verification difficulty
+
+- verify command はすべてファイル内容チェック（`file_contains`）のため PASS 判定は容易だった。しかし受け入れ条件「`.github/workflows/dco.yml` に `tim-actions/dco` を使用した Signed-off-by チェック workflow が実装されている」という条件はファイルの存在と文字列の有無のみを検証しており、Actionが正しく動作するかどうか（`commits` 入力が適切に渡されているか）まで検証できていない。CI FAILがなければ見落としていた可能性がある。Verify command で `github_check` を使った CI PASS 検証を追加する改善余地がある。

@@ -27,6 +27,10 @@ For development setup, see [docs/structure.md](docs/structure.md#install).
 
 See [`docs/structure.md`](docs/structure.md) for the full directory layout and installation conventions.
 
+## Contributing
+
+Contributions require a DCO sign-off on every commit. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE).

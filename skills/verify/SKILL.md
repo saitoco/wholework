@@ -368,7 +368,7 @@ As the final step of the workflow, verify conducts a retrospective of the entire
    - Commit (push is done in Step 11 Worktree Exit):
      ```bash
      git add $SPEC_PATH/issue-"$NUMBER"-*.md
-     git commit -m "Add verify retrospective for issue #$NUMBER
+     git commit -s -m "Add verify retrospective for issue #$NUMBER
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
      ```

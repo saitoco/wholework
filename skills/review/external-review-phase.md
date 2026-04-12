@@ -44,7 +44,7 @@ After review completion, if issues exist:
 2. **Fix work**: manage tasks with TaskCreate/TaskUpdate
    - Edit files with Edit tool
    - Stage with `git add`
-   - Commit with `git commit -m "Address Copilot review: {fix summary}"`
+   - Commit with `git commit -s -m "Address Copilot review: {fix summary}"`
    - Push with `git push`
 
 3. **Record results** (used in Step 14 summary posting):
@@ -86,7 +86,7 @@ After review completion, if issues exist, apply them using the same procedure as
 
 1. **Assess each issue** (requires fix / does not require fix)
 2. **Fix work**: Edit → git add → git commit → git push
-   - Commit message: `"Address Claude Code Review: {fix summary}"`
+   - Commit with `git commit -s -m "Address Claude Code Review: {fix summary}"`
 3. **Record results**:
 
 ```markdown
@@ -126,7 +126,7 @@ After review completion, if issues exist, apply them using the same procedure as
 
 1. **Assess each issue** (requires fix / does not require fix)
 2. **Fix work**: Edit → git add → git commit → git push
-   - Commit message: `"Address CodeRabbit review: {fix summary}"`
+   - Commit with `git commit -s -m "Address CodeRabbit review: {fix summary}"`
 3. **Record results**:
 
 ```markdown
