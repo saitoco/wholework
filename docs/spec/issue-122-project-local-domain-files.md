@@ -175,3 +175,14 @@ Design decisions (from Issue #122):
 
 ### Uncertainty resolution
 - Nothing to note. The Glob + Read mechanism is well-understood and has no external dependencies.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A. Implementation followed the Spec's 7 steps exactly as designed.
+
+### Design Gaps/Ambiguities
+- The module count in `docs/structure.md` (24 files) needed updating to 25 after adding `domain-loader.md`. This was not listed in the Spec's changed files or implementation steps but was caught by the documentation consistency check.
+
+### Rework
+- N/A. No rework was needed.
