@@ -78,3 +78,32 @@
 - `gh issue view N --json timelineItems` は reopen 判定と phase label 遷移履歴の解析に用いる。`/audit stats` の実行時は `--limit` Issue 全件に対して順次 API コールするため、`--limit` のデフォルト 500 は rate limit への配慮として機能する。
 - Content segment の keyword-based 分類は MVP。将来 LLM 分類へ拡張可能なよう、分類ロジックを独立サブセクションとして記述する (SKILL.md 内で「Content segment 分類 (MVP: keyword-based)」と見出しで明示)。
 - Highlights は「解釈/推論はレポートに含めない」方針に従い、自動検出のみを記載する。SKILL.md にも「解釈しない。検出閾値に該当する項目のみ列挙する」と明記する。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec の `Changed Files` に `allowed-tools` への `gh issue view:*` 追加が記載されていなかった。実装時に Code Retrospective で記録されており、設計段階での見落としパターン。新規 API コールを追加する Skill 変更では、`allowed-tools` 更新を Changed Files に含める習慣が定着していない。
+- Issue body の「Auto-Resolved Ambiguity Points」で3点の曖昧性が自動解決されており、Issue品質は高かった。
+
+#### design
+- Spec は Issue #75 設計に正確に準拠しており、乖離なし。`docs/stats/` という新規出力ディレクトリを生成する Skill を追加したが、`docs/structure.md` の更新が Spec の Changed Files に含まれていなかった（review retrospective で指摘済み）。
+
+#### code
+- Deviations なし。Spec の実装ステップ通りに実装された。`allowed-tools` 追加漏れを実装者が自律的に検出し修正した点は健全。
+
+#### review
+- Pre-merge 全9条件 PASS、UNCERTAIN ゼロ。`file_contains`/`section_contains` による機械的検証が高精度で機能した。read-only SKILL.md 追加タスクは verify command 設計が容易な傾向を再確認。
+- `docs/structure.md` 更新漏れが review で指摘されたが、スコープ判断として本 PR では修正されなかった（別途改善 Issue 化が望ましい）。
+
+#### merge
+- コミット `402c353` でスカッシュマージ。コンフリクトなし、CI クリーン。
+
+#### verify
+- Pre-merge 9条件すべて PASS（再実行でも同一結果、idempotent）。
+- Post-merge 8条件はすべて `verify-type` タグのみ（`<!-- verify: ... -->` ヒントなし）→ ユーザー検証ガイドとして提示。opportunistic 条件は実際に `/audit stats` を実行して確認が必要。
+
+### Improvement Proposals
+- 新規出力ディレクトリ（`docs/stats/` 等）を生成する Skill を Spec に記載する際は、`docs/structure.md` の更新も Changed Files に含めるチェックリストを `/spec` SKILL.md に追加する。
+- Skill が新規 `gh` コマンドを使用する場合、Spec の Changed Files に `allowed-tools` の更新を必須記載項目として明示する。
