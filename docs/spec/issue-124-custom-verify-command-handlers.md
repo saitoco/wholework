@@ -74,3 +74,17 @@ Issue で確定した設計方針:
 ### Rework
 
 - N/A
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+- verify-executor.md の Step e（名前衝突警告）が到達不能ロジックになっていた。設計意図（「ビルトイン名と衝突するハンドラファイルが存在する場合に警告を出す」）は Issue Design Decisions に明記されていたが、実装では Step a の早期リターンにより Step e に到達できなかった。Spec（`docs/environment-adaptation.md`）に「警告が出る」と記述されていたため乖離として検出できた。今後の同種 Issue では「早期リターンするステップの後続に検出ロジックを置くパターン」を到達可能性の視点でレビューすること。
+
+### 繰り返しイシューの有無
+
+- 今回の SHOULD イシュー1件のみ。繰り返しパターンは検出されず。
+
+### 受入条件検証の難易度
+
+- 全5条件が `section_contains` / `file_contains` で記述されており、すべて PASS で確認できた。verify command の選定は適切。UNCERTAIN なし。
