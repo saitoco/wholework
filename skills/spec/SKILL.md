@@ -293,6 +293,7 @@ SHOULD constraints (best practices, manual check — examples):
 | Patch route CI verify | For patch route Issues (no PR), use `github_check "gh run list"` instead of `github_check "gh pr checks"` (no PR exists in patch route). See `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md` | #112 |
 | Permission pattern verification | When implementation includes `settings.json` `permissions.allow` pattern changes, test with simple invocation only (no shell operators: `2>&1`, `|`, `&&`); restart the session before testing (settings.json is not hot-reloaded); ensure no conflicting pre-approval in `settings.local.json` | #82 |
 | GitHub Actions workflow CI verify | When `.github/workflows/*.yml` is changed, include both `file_contains` (config content) and `github_check "gh run list"` (CI execution result) in acceptance criteria. See `${CLAUDE_PLUGIN_ROOT}/modules/verify-patterns.md` | #73 |
+| External GitHub Action required inputs | When `.github/workflows/*.yml` is in the changed files and references an external Action, check the Action's `action.yml` (via WebFetch or repository reference) and verify all `required: true` inputs are included in the snippet | #144 |
 
 **SHOULD-level acceptance criteria consideration:**
 
