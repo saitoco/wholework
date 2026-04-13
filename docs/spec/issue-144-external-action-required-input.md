@@ -43,3 +43,33 @@ N/A
 
 ### Rework
 - なし。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec（`## Overview`, `## Implementation Steps`）が明確で、追加する行の内容がそのまま記載されていた。曖昧さゼロ。
+- 受け入れ条件のverifyコマンドが `grep "action.yml"` / `grep "required.*true"` と適切に設計され、単一のSHOULD constraints表行で両ACが同時にマッチする設計は効率的。
+- Post-merge条件に `verify-type: opportunistic` が明示されており、自動検証と手動検証の区別が明確。
+
+#### design
+- Spec Retrospective: N/A（Spec自体が実装ステップの記述を兼ねており、design phaseとして別途設計は不要なサイズ感だった）。
+- コンパニオンIssue #143との設計一貫性（同じSHOULD constraints表への追加）がRetroで確認できた。
+
+#### code
+- Code Retrospective: 偏差なし、リワークなし。単一行追加というXSサイズの作業で、Specの記述通りに完結した。
+- コミット: `783bbe9 Add design for issue #144` → `ac44d52 feat: add external GitHub Action required inputs validation` → `01dbce0 Add code retrospective for issue #144` の順で、fixup/amendパターンなし。
+
+#### review
+- パッチルート（PR不在）のため正式レビューは行われていない。単一行の低リスク変更であり、レビュー省略は妥当な判断。
+
+#### merge
+- パッチルートによる直接mainコミット。コンフリクトなし、CI FAILなし。
+
+#### verify
+- 両Pre-merge条件が即座にPASSし、verifyコマンド設計の有効性が確認された。
+- Post-mergeのopportunistic条件はユーザー検証待ちの適切な状態。
+
+### Improvement Proposals
+- N/A
