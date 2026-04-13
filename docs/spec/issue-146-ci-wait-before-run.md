@@ -116,3 +116,35 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 承認条件は全て `file_exists` / `file_contains` verify コマンド付きで記述されており、自動検証可能な形式だった
+- Spec の Implementation Steps も具体的な bash スニペットが含まれており、実装者の解釈余地が少なく設計された
+- `run-verify.sh` の patch route スキップ条件が Issue 本文から Spec に引き継がれ、承認条件にも反映されていた点は優れた仕様転写
+
+#### design
+- 設計は実装と完全に一致（Code Retrospective に "N/A"）。スニペット付き Spec が設計意図の正確な伝達に有効だった
+- `|| true` の扱いと patch route スキップロジックが明示されており、実装判断を不要にした
+
+#### code
+- テストモックの `timeout` 追加という設計時に明示されていなかった課題があったが、実装時に自己解決されている
+- patch route（PR なし）での直接 main コミット形式のため、review フェーズが省略された。小規模変更では妥当だが、テスト追加を伴うためレビューがあった方が望ましかった可能性がある
+
+#### review
+- PR なし（patch route）のためフォーマルなレビューは行われなかった
+- bats テストの mock 漏れ（timeout モック）はレビューがあれば事前に検出できた可能性がある
+
+#### merge
+- patch route のため直接 main へコミット。コンフリクトなし
+
+#### verify
+- 全 7 件の pre-merge 条件が PASS
+- 2 件の post-merge opportunistic 条件はユーザー検証が必要（実際の `/auto` 実行環境が必要）
+- PR なし（patch route）のため `gh pr checks` 系の verify コマンドは使用されていなかったため、patch route の UNCERTAIN 判定ロジックは今回は不要だった
+
+### Improvement Proposals
+- N/A
