@@ -42,3 +42,18 @@ Issue #73（DCO 導入）の verify レトロスペクティブにて、`file_co
 ## Notes
 
 なし
+
+## Spec Retrospective
+
+（スペック段階での記録なし）
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A（Spec の実装ステップ通りに実装）
+
+### Design Gaps/Ambiguities
+- なし
+
+### Rework
+- なし
