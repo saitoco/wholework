@@ -41,3 +41,14 @@
 - 変更は各ファイル 1 箇所ずつのテキスト追加のみ。テスト更新不要（ガイドライン変更であり、スクリプトロジック変更なし）
 - ドキュメント更新不要（既存 skill/module の内容変更であり、新規追加/削除なし）
 - `section_contains "modules/verify-patterns.md" "### 3." "literal"` の動作: `### 3. Pre-Check Target File Format (Cross-Referencing)` セクションが対象。`### 4.` の前までの範囲に "literal" が含まれていれば PASS
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A（Spec の実装ステップに完全に従った）
+
+### Design Gaps/Ambiguities
+- `## Code Retrospective` の追記先として Spec は「`## Spec Retrospective` の後」と指示しているが、Spec Retrospective が存在しないケースの処理が明示されていなかった。ファイル末尾に追記することで対処した。
+
+### Rework
+- N/A（修正なし、一発で実装完了）
