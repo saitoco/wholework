@@ -54,3 +54,17 @@
 - `--marketplace NAME` のデフォルト値 `saitoco-wholework` は、Issue body の Auto-Resolved Ambiguity Points で確定済み
 - plugin update 後の再起動は自動化しない（Issue body の Auto-Resolved: restart の自動化は行わず、メッセージで案内する方針）
 - `docs/structure.md` の "Why `./install.sh`?" 節（line 188）は新機能について追記する（既存の `${HOME}` 展開説明は保持）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A（Spec の実装手順をそのまま実施）
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
