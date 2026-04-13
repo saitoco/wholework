@@ -130,6 +130,7 @@ Setup: Create labels with `scripts/setup-labels.sh`.
 | `phase/verify` | Acceptance test phase | `/merge` | `/verify` |
 | `phase/done` | Complete | `/verify` (no post-merge conditions) | — |
 | (no label) | Backlog / not started | — | `/verify` (on FAIL) |
+| `fix-cycle` | Post-verify fix cycle marker | `/verify` (on FAIL) | (manual / future cleanup) |
 
 ### XL Parent Issue Phase Management
 
@@ -157,6 +158,24 @@ Adding `closes #N` to PR body auto-closes the Issue on merge (GitHub standard fe
   - PASS → Complete (remove phase/verify label)
   - FAIL → gh issue reopen + remove all phase/* → return to fix cycle
 ```
+
+### Post-verify Fix Cycle
+
+When `/verify` detects a FAIL among auto-verification targets, it reopens the Issue and attaches the `fix-cycle` label (alongside removing all `phase/*` labels). This triggers the post-verify fix cycle:
+
+```
+/verify FAIL → gh issue reopen + add fix-cycle label + remove phase/*
+  ↓
+/code N  (or /auto N)
+  └─ Detects fix-cycle label + OPEN state
+  └─ Forces patch route regardless of original Size
+  └─ Bypasses XL guard, phase/ready check, and Size-based routing
+  └─ Appends ## Post-verify fix section to Spec (preserves fix context as cross-phase memory)
+  ↓
+/verify N  (re-verify after fix)
+```
+
+The original `size/*` label is preserved throughout (not modified). `get-issue-size.sh`'s two-layer lookup (Project field → `size/*` label) retains the original Size across reopen/close cycles, so `/audit stats` Size-based analysis remains accurate.
 
 ### Triage-Related Labels
 

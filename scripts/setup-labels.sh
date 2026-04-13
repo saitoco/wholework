@@ -21,6 +21,7 @@ LABELS=(
     "type/bug|#D73A4A|Type: bug"
     "type/feature|#0075CA|Type: feature"
     "type/task|#E4E669|Type: task"
+    "fix-cycle|#c5def5|Post-verify fix cycle marker — preserves original Size while routing through patch"
 )
 
 for entry in "${LABELS[@]}"; do

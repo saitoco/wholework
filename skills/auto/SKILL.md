@@ -54,6 +54,21 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh "$NUMBER" 2>/dev/null
 
 ### Step 3: `phase/ready` Label Check
 
+**Fix-cycle Pre-check (run before phase/* label evaluation):**
+
+If ARGUMENTS does NOT contain `--patch` or `--pr`:
+
+```bash
+gh issue view "$NUMBER" --json state,labels -q '{state: .state, labels: [.labels[].name]}'
+```
+
+If state == "OPEN" and labels contains "fix-cycle":
+- Set `ROUTE=patch` (fix-cycle detected — bypass phase/* state machine and XL sub-issue graph)
+- Run: `${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER --patch` (plus `--base {BASE_BRANCH}` if set)
+- After the script completes, proceed to Step 5 (completion report) — skip the rest of Step 3 and Step 4
+
+If ARGUMENTS contains `--patch` or `--pr`, skip fix-cycle detection (explicit user intent takes precedence).
+
 Fetch labels with `gh issue view $NUMBER --json labels -q '.labels[].name'` and branch based on label state:
 
 - **`phase/ready` label present**: proceed to the next step
@@ -88,6 +103,8 @@ Run each phase via `run-*.sh`. Each script launches an independent process with 
 ---
 
 **XL route: sub-issue dependency graph with parallel execution (`run-auto-sub.sh` checks each sub-issue's `phase/ready` and auto-runs spec if not set):**
+
+**Defensive fix-cycle check before sub-issue graph expansion**: before calling `get-sub-issue-graph.sh`, verify fix-cycle label is not present. If detected (state==OPEN and fix-cycle label), redirect to patch route via `run-code.sh $NUMBER --patch` and skip the XL graph expansion entirely. This guards against edge cases where the pre-check in Step 3 was bypassed.
 
 1. **Fetch dependency graph**:
    ```bash
