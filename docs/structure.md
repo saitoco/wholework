@@ -55,7 +55,7 @@ wholework/
 │       ├── spec/        # Domain files for /spec
 │       ├── code/        # Domain files for /code
 │       └── review/      # Domain files for /review
-├── install.sh           # Generate .claude/settings.json from template (run after clone)
+├── install.sh           # Sync settings.json, marketplace, and plugin (run after clone or pull)
 ├── CONTRIBUTING.md      # Contribution guide (DCO sign-off instructions)
 ├── LICENSE              # Apache License 2.0
 ├── README.md            # Project overview
@@ -186,6 +186,8 @@ claude --plugin-dir <path-to-wholework>
 Skills are discovered as `wholework:<skill-name>`. Claude Code sets `${CLAUDE_PLUGIN_ROOT}` to the plugin directory at runtime, which skills and modules use to reference scripts and modules.
 
 **Why `./install.sh`?** `.claude/settings.json` is generated from `.claude/settings.json.template` with the user's actual `$HOME` substituted for `${HOME}`. Claude Code does not expand `${HOME}` or `~/` inside `permissions.allow`, so each developer must materialize the template locally. The generated `.claude/settings.json` is gitignored. Run `./install.sh` once after clone, and again after `git pull` whenever `.claude/settings.json.template` has changed.
+
+`./install.sh` also runs `claude plugin marketplace update` and `claude plugin update` to keep the local plugin in sync with the latest version in the repository. Use `--no-plugin` to skip the plugin update steps (settings.json regeneration only). Use `--marketplace NAME` to override the marketplace name (default: `saitoco-wholework`).
 
 <!-- ## Module Dependencies（Optional）
 

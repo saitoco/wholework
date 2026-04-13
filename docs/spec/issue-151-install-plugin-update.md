@@ -54,3 +54,31 @@
 - `--marketplace NAME` のデフォルト値 `saitoco-wholework` は、Issue body の Auto-Resolved Ambiguity Points で確定済み
 - plugin update 後の再起動は自動化しない（Issue body の Auto-Resolved: restart の自動化は行わず、メッセージで案内する方針）
 - `docs/structure.md` の "Why `./install.sh`?" 節（line 188）は新機能について追記する（既存の `${HOME}` 展開説明は保持）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A（Spec の実装手順をそのまま実施）
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Nothing to note. All 4 implementation steps in the Spec matched the PR diff exactly. The Code Retrospective also confirms no deviations.
+
+### Recurring Issues
+
+- Nothing to note. No repeated issue patterns observed. The change was a single-file shell script addition with clean separation of argument parsing and execution logic.
+
+### Acceptance Criteria Verification Difficulty
+
+- Nothing to note. All 6 pre-merge conditions used `file_contains` verify commands and resolved to PASS automatically. Verify command quality was high — no UNCERTAIN results occurred.
