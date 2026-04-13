@@ -51,6 +51,16 @@ Factors to **decrease** size by one step:
 | L    | pr        | Branch + PR, full review | Required | Yes |
 | XL   | split guidance | Guide to split into sub-issues | Required | — |
 
+### Fix-cycle Override
+
+When an Issue has the `fix-cycle` label and is OPEN, the route resolves to `patch` regardless of Size. This override is scoped to post-verify fix cycles and does not affect XL split guidance for new work.
+
+| Condition | Route | Notes |
+|-----------|-------|-------|
+| `fix-cycle` label present + state OPEN | patch | Bypasses Size routing, XL guard, and `phase/ready` check |
+| `--patch`/`--pr` flag explicitly set | (flag takes precedence) | fix-cycle detection is skipped |
+| No `fix-cycle` label | normal Size-based routing | — |
+
 ### Phase-Level Light/Full Mapping
 
 | Phase | patch (XS/S) | pr (M/L) |
