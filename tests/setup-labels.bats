@@ -25,20 +25,20 @@ teardown() {
     rm -rf "$MOCK_DIR"
 }
 
-@test "success: creates 10 labels" {
+@test "success: creates 11 labels" {
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
-    # gh label create must be called 10 times (6 phase/* + triaged + 3 type/*)
-    [ "$(grep -c 'label create' "$GH_CALL_LOG")" -eq 10 ]
+    # gh label create must be called 11 times (6 phase/* + triaged + 3 type/* + fix-cycle)
+    [ "$(grep -c 'label create' "$GH_CALL_LOG")" -eq 11 ]
 }
 
 @test "success: each label uses --force flag" {
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
     [ -s "$GH_CALL_LOG" ]
-    # All 10 calls must include --force
+    # All 11 calls must include --force
     force_count=$(grep -c -- '--force' "$GH_CALL_LOG")
-    [ "$force_count" -eq 10 ]
+    [ "$force_count" -eq 11 ]
 }
 
 @test "success: correct label names" {
@@ -54,6 +54,7 @@ teardown() {
     grep -q 'label create type/bug' "$GH_CALL_LOG"
     grep -q 'label create type/feature' "$GH_CALL_LOG"
     grep -q 'label create type/task' "$GH_CALL_LOG"
+    grep -q 'label create fix-cycle' "$GH_CALL_LOG"
 }
 
 @test "success: correct colors (without # prefix)" {
@@ -70,7 +71,7 @@ teardown() {
 @test "success: completion message includes label count" {
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"10"* ]]
+    [[ "$output" == *"11"* ]]
 }
 
 @test "error: gh command failure propagates" {
