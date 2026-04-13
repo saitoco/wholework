@@ -270,12 +270,23 @@ On failure: what to do if different from expected
 
 ### Step 9: Apply Verification Results
 
-Assuming Issues are auto-closed via `closes #N` in PR body on merge, take the following actions based on verification results.
+First, detect the current Issue state:
+
+```bash
+gh issue view "$NUMBER" --json state --jq '.state'
+```
 
 **Conditions subject to reopen judgment**:
 - All pre-merge conditions (with or without hints)
 - Post-merge conditions with hints (`<!-- verify: ... -->`)
 - **Post-merge conditions without hints are excluded** (user verification items)
+
+Branch on Issue state:
+
+- `OPEN` → Issue OPEN path (auto-close disabled; see below)
+- `CLOSED` → Issue CLOSED path (standard flow; see below)
+
+#### When Issue is CLOSED (standard flow via `closes #N`)
 
 Judgment:
 
@@ -297,6 +308,32 @@ Judgment:
     gh issue reopen "$NUMBER"
     gh label list --search fix-cycle | grep -q '^fix-cycle' || gh label create fix-cycle --color c5def5 --description "Post-verify fix cycle marker — preserves original Size while routing through patch"
     gh issue edit "$NUMBER" --add-label "fix-cycle"
+    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER"
+    ```
+  - User selects the next action (`/code`, `/spec`, or `/issue`) to return to the fix cycle
+
+#### When Issue is OPEN (auto-close disabled)
+
+When the repository has GitHub's "Auto-close issues with merged linked pull requests" setting disabled, Issues remain OPEN after merge even when the PR body contains `closes #N`.
+
+Judgment:
+
+- **All auto-verification target conditions are PASS or SKIPPED**:
+  - Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->` or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body
+  - **If unchecked opportunistic or manual conditions remain**: assign `phase/verify` (Issue remains OPEN; do not close):
+    ```bash
+    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
+    ```
+    Inform the user: "Manually check the remaining opportunistic/manual conditions, then re-run `/verify $NUMBER` to complete."
+  - **If all conditions are checked**: assign `phase/done` and close:
+    ```bash
+    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" done
+    gh issue close "$NUMBER"
+    ```
+  - **Even if post-merge conditions without hints are unchecked, do not close the Issue** (present user verification guide only)
+- **Auto-verification targets include FAIL or UNCERTAIN**:
+  - Remove all `phase/*` labels (Issue is already OPEN; no reopen needed):
+    ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER"
     ```
   - User selects the next action (`/code`, `/spec`, or `/issue`) to return to the fix cycle
