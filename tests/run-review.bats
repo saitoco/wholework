@@ -33,10 +33,21 @@ if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
   fi
   exit 0
 fi
+if [[ "$1" == "pr" && "$2" == "checks" ]]; then
+  exit 0
+fi
 echo ""
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/gh"
+
+    # Mock timeout to pass through (avoids dependency on system timeout availability)
+    cat > "$MOCK_DIR/timeout" <<'MOCK'
+#!/bin/bash
+shift  # Remove the timeout duration argument
+exec "$@"
+MOCK
+    chmod +x "$MOCK_DIR/timeout"
 }
 
 teardown() {
@@ -118,6 +129,13 @@ teardown() {
     grep -q "ARGUMENTS: 123" "$CLAUDE_CALL_LOG"
     ! grep -q "ARGUMENTS: 123 --light" "$CLAUDE_CALL_LOG"
     ! grep -q "ARGUMENTS: 123 --full" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: wait-ci-checks.sh is called before claude" {
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Waiting for CI checks on PR #123"* ]]
+    [[ "$output" == *"CI check wait complete for PR #123"* ]]
 }
 
 @test "error: claude command fails with non-zero exit code" {

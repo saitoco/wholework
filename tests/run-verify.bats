@@ -33,10 +33,26 @@ if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
   fi
   exit 0
 fi
+if [[ "$1" == "pr" && "$2" == "list" && "$*" == *"--search"* ]]; then
+  # Default: no associated PR found (patch route)
+  echo ""
+  exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "checks" ]]; then
+  exit 0
+fi
 echo ""
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/gh"
+
+    # Mock timeout to pass through (avoids dependency on system timeout availability)
+    cat > "$MOCK_DIR/timeout" <<'MOCK'
+#!/bin/bash
+shift  # Remove the timeout duration argument
+exec "$@"
+MOCK
+    chmod +x "$MOCK_DIR/timeout"
 }
 
 teardown() {
@@ -108,6 +124,41 @@ MOCK
     # Default mock outputs nothing special and exits 0
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
+}
+
+@test "success: skips CI wait when no associated PR found (patch route)" {
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"No PR found for issue #123 (patch route), skipping CI wait"* ]]
+}
+
+@test "success: calls wait-ci-checks.sh when associated PR is found" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test issue title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/issues/123"
+  fi
+  exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "list" && "$*" == *"--search"* ]]; then
+  echo "99"
+  exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "checks" ]]; then
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Waiting for CI checks on PR #99"* ]]
+    [[ "$output" == *"CI check wait complete for PR #99"* ]]
 }
 
 @test "error: claude command fails with non-zero exit code" {
