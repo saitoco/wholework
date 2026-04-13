@@ -151,6 +151,24 @@ PR 本文に `closes #N` を付けると、マージ時に Issue が自動クロ
   - FAIL → gh issue reopen + phase/* をすべて削除 → 修正サイクルに戻る
 ```
 
+### Auto-close が無効の場合
+
+GitHub リポジトリ設定「Auto-close issues with merged linked pull requests」が無効になっているリポジトリでは、PR 本文に `closes #N` があってもマージ後に Issue が OPEN のままになる。
+
+`/verify` は実行時に Issue の状態を検出し（`gh issue view --json state`）、異なるクローズフローを適用する:
+
+```
+/code: PR 本文に `closes #N` を追加（標準フローと同じ）
+  ↓
+/merge: マージ → Issue は OPEN のまま（auto-close が無効）
+  ↓
+/verify: Issue OPEN 状態を検出
+  - 全 auto-verify PASS + 全条件チェック済み → phase/done + gh issue close
+  - 全 auto-verify PASS + opportunistic/manual 未チェックあり → phase/verify（Issue は OPEN を維持）
+    → ユーザーが残り条件を手動チェック後、/verify N を再実行
+  - FAIL/UNCERTAIN → phase/* ラベルを削除（Issue は OPEN を維持、修正サイクルに戻る）
+```
+
 ### Triage 関連ラベル
 
 | ラベル | 意味 | 付与者 |

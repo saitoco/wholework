@@ -177,6 +177,24 @@ When `/verify` detects a FAIL among auto-verification targets, it reopens the Is
 
 The original `size/*` label is preserved throughout (not modified). `get-issue-size.sh`'s two-layer lookup (Project field → `size/*` label) retains the original Size across reopen/close cycles, so `/audit stats` Size-based analysis remains accurate.
 
+### When Auto-close is Disabled
+
+When the GitHub repository setting "Auto-close issues with merged linked pull requests" is disabled, Issues remain OPEN after merge even when the PR body contains `closes #N`.
+
+`/verify` detects the Issue state at runtime (`gh issue view --json state`) and applies a different close flow:
+
+```
+/code: Add `closes #N` to PR body (same as standard flow)
+  ↓
+/merge: Merge → Issue remains OPEN (auto-close is disabled)
+  ↓
+/verify: Detect Issue OPEN state
+  - All auto-verify PASS + all conditions checked → phase/done + gh issue close
+  - All auto-verify PASS + opportunistic/manual unchecked → phase/verify (Issue stays OPEN)
+    → User manually checks remaining conditions, then re-runs /verify N
+  - FAIL/UNCERTAIN → Remove phase/* labels (Issue stays OPEN; return to fix cycle)
+```
+
 ### Triage-Related Labels
 
 | Label | Meaning | Assigned by |
