@@ -104,3 +104,15 @@
 - `run-verify.sh` の PR 検出に使う `gh pr list --search "is:merged linked:issue:$ISSUE_NUMBER"` は GitHub の `linked:issue` 検索クオリファイアを使用。PR が見つからない場合（patch route）はスキップする
 - `gh pr checks --watch` は gh CLI 標準の event-driven 待機機構で、内部で 60s 間隔ポーリング（`--interval 60` で指定）するが呼び出し側は `timeout` + `--watch` のみでよい
 - docs/structure.md のファイル数カウント（29 → 30）は wait-ci-checks.sh 追加による更新
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- bats テストで `timeout` が PATH モックで上書きできるか確認が必要だった（wait-ci-checks.sh は絶対パス呼び出しのため PATH モックが通らない懸念）。実際には wait-ci-checks.sh 内で `timeout` を PATH 経由で呼ぶため、各 bats テストの setup() に timeout モックを追加することで解決した
+- run-merge.sh / run-review.sh では `"$SCRIPT_DIR/wait-ci-checks.sh"` と絶対パスで呼ぶため、既存テストが timeout コマンドの有無に依存するリスクがあった。timeout モック追加で macOS 環境での可搬性も確保した
+
+### Rework
+- N/A
