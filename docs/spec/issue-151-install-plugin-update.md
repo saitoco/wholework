@@ -82,3 +82,34 @@
 ### Acceptance Criteria Verification Difficulty
 
 - Nothing to note. All 6 pre-merge conditions used `file_contains` verify commands and resolved to PASS automatically. Verify command quality was high — no UNCERTAIN results occurred.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Acceptance conditions were clearly defined with `file_contains` verify commands covering all 6 functional requirements. No ambiguity in the conditions.
+- Auto-Resolved Ambiguity Points in the issue body (default marketplace name, `claude` CLI absence behavior, restart policy) were well-documented, eliminating spec interpretation risk.
+
+#### design
+- Design matched implementation exactly per the Code Retrospective. No oversights or deviations were detected.
+- The escape hatch approach (`--no-plugin`, `--marketplace NAME`, `command -v claude` guard) was well-designed for backward compatibility.
+
+#### code
+- No fixup/amend patterns in commit history. Single clean commit merged via PR #153.
+- Implementation followed the 4-step spec plan precisely with no deviations.
+
+#### review
+- Review was effective. All pre-merge acceptance conditions were verifiable and passed. No missed issues.
+- The review retrospective confirms no spec-vs-implementation divergences.
+
+#### merge
+- Clean squash merge via PR #153. No conflict markers or CI failures.
+
+#### verify
+- All 6 pre-merge conditions: PASS via `file_contains` verify commands.
+- Post-merge 3 conditions: `verify-type: manual` with no verify hints — deferred to user verification as intended.
+- Issue labeled `phase/verify` due to remaining unchecked manual conditions.
+
+### Improvement Proposals
+- N/A
