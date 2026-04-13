@@ -1,7 +1,7 @@
 ---
 name: audit
 description: Detect documentation/implementation drift and auto-generate Issues (`/audit drift`), and detect structural fragility (`/audit fragility`). AI detects semantic drift between Steering Documents + Project Documents and codebase implementation, and auto-generates Issues for code-side fixes. Where `/doc sync` proposes documentation-side fixes, `/audit` is the complementary skill that creates Issues for code-side fixes. Running without arguments executes both drift and fragility perspectives in an integrated run. `/audit stats` aggregates Issue metadata across the project and generates a project health diagnostic report (throughput / composition / First-try success / Backlog Health, etc.), providing a third lens for project health alongside drift and fragility detection.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash(gh issue create:*, gh issue list:*, gh issue view:*, gh issue edit:*, gh label create:*, ls:*, mkdir:*, rm:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*)
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(gh issue create:*, gh issue list:*, gh issue view:*, gh issue edit:*, gh label create:*, ls:*, mkdir:*, rm:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-priority.sh:*)
 ---
 
 # audit: Documentation × Implementation Drift Detection
@@ -238,6 +238,18 @@ Use Glob to check whether `$SPEC_PATH/issue-{number}-*.md` exists for each Issue
 - **First-try success** (strictest): Issue reached `phase/done` AND has no reopen history
 - **Completed**: Issue reached `phase/done` (reopen history does not affect this)
 - **Rework**: number of times the phase sequence went from `phase/verify` back to `phase/code`
+
+#### Composition (Type / Size / Priority)
+
+For each Issue in the filtered list, resolve Type, Size, and Priority from GitHub Projects fields (with label fallback) by calling the helper scripts:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh {number}      # -> Bug / Feature / Task (empty if unset)
+${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh {number}      # -> XS / S / M / L / XL (exit 1 if unset)
+${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-priority.sh {number}  # -> urgent / high / medium / low (exit 1 if unset)
+```
+
+Classify as "unset" when the script exits with a non-zero status or outputs an empty string. The `gh-graphql.sh --cache` flag used internally in each script deduplicates GraphQL requests for the same Issue.
 
 #### Content Segment Classification (MVP: keyword-based)
 
