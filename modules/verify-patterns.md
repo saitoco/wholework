@@ -157,6 +157,30 @@ When a skill (`skills/*/SKILL.md`) delegates part of its processing to a shared 
 2. Determine whether that logic is directly written in the skill file or delegated to a module
 3. If delegated, specify the delegate module file as the `grep` / `file_contains` target
 
+### 7. GitHub Actions Workflow Changes — Combine file_contains and github_check
+
+When `.github/workflows/*.yml` is a change target in an Issue, `file_contains` alone cannot detect GitHub Actions configuration errors (e.g., missing required options). This was discovered in the #73 (DCO introduction) verify retrospective: `file_contains ".github/workflows/dco.yml" "tim-actions/dco"` PASSed despite the CI failing due to a missing `commits: required: true` setting.
+
+**Recommended pattern:**
+
+Combine `file_contains` (config content existence) with `github_check "gh run list"` (CI execution result):
+
+```
+<!-- verify: file_contains ".github/workflows/dco.yml" "tim-actions/dco" --> Configuration content exists
+<!-- verify: github_check "gh run list --workflow=dco.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> CI run succeeded
+```
+
+**Role of each verify command:**
+
+| Command | Role | What it detects |
+|---------|------|-----------------|
+| `file_contains` | Config content existence | Confirms the workflow file contains the intended action/step |
+| `github_check "gh run list"` | CI execution result | Detects misconfiguration (missing required options, invalid syntax, etc.) that `file_contains` cannot catch |
+
+**Note on `gh run list` vs `gh pr checks`:**
+
+For patch route Issues (no PR), `gh pr checks` is not available. Always use `gh run list` for CI result verification. See `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md` for details.
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.

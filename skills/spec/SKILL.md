@@ -292,6 +292,7 @@ SHOULD constraints (best practices, manual check — examples):
 | Post-merge skill name alignment | Verify skill name in `## Verification > Post-merge` matches the target skill in Issue purpose | #684 |
 | Patch route CI verify | For patch route Issues (no PR), use `github_check "gh run list"` instead of `github_check "gh pr checks"` (no PR exists in patch route). See `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md` | #112 |
 | Permission pattern verification | When implementation includes `settings.json` `permissions.allow` pattern changes, test with simple invocation only (no shell operators: `2>&1`, `|`, `&&`); restart the session before testing (settings.json is not hot-reloaded); ensure no conflicting pre-approval in `settings.local.json` | #82 |
+| GitHub Actions workflow CI verify | When `.github/workflows/*.yml` is changed, include both `file_contains` (config content) and `github_check "gh run list"` (CI execution result) in acceptance criteria. See `${CLAUDE_PLUGIN_ROOT}/modules/verify-patterns.md` | #73 |
 
 **SHOULD-level acceptance criteria consideration:**
 
