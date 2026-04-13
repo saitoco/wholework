@@ -237,13 +237,18 @@ Handle results as follows:
    - Update Issue body with `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh $NUMBER .tmp/issue-body-$NUMBER.md`
    - After update, delete temp file with `rm -f .tmp/issue-body-$NUMBER.md`
 2. If any hints FAIL:
-   - Check the post-implementation file state and generate the correct verification command
-   - **Rewrite the hint with the correct one** rather than removing it
-   - Example: `file_contains "settings.json" "gh project"` FAILs → check actual file content and rewrite to `file_contains "settings.json" "Skill(triage)"`
-   - Pre-create directory with `mkdir -p .tmp`
-   - Write updated Issue body to `.tmp/issue-body-$NUMBER.md` with Write tool
-   - Update with `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh $NUMBER .tmp/issue-body-$NUMBER.md`
-   - After update, delete temp file with `rm -f .tmp/issue-body-$NUMBER.md`
+   - **Determine the FAIL cause** for each failing `section_contains`/`file_contains` hint:
+     - **"Spec-derived literal string absent"** — The Spec mandates a keyword that the implementation file should literally contain, but it is missing from the file:
+       - **First choice: Add the literal string to the implementation file.** The verify command is correct — update the implementation to include the required text.
+       - Example: `section_contains "skills/verify/SKILL.md" "Step 9" "Issue OPEN"` FAILs because "Issue OPEN" is absent from the implementation → add that text to the appropriate section in `skills/verify/SKILL.md`.
+     - **"Miscalibrated hint"** — The keyword was incorrectly specified (wrong file path, wrong string that was never intended to be in the file, etc.):
+       - **Rewrite the hint with the correct one** rather than removing it.
+       - Example: `file_contains "settings.json" "gh project"` FAILs → check actual file content and rewrite to `file_contains "settings.json" "Skill(triage)"`
+   - For any hints that were rewritten (miscalibrated hint case):
+     - Pre-create directory with `mkdir -p .tmp`
+     - Write updated Issue body to `.tmp/issue-body-$NUMBER.md` with Write tool
+     - Update with `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh $NUMBER .tmp/issue-body-$NUMBER.md`
+     - After update, delete temp file with `rm -f .tmp/issue-body-$NUMBER.md`
 3. If any hints are UNCERTAIN (syntax errors, etc.):
    - Display a warning and continue
    - Do not fix UNCERTAIN hints — they will be re-verified in the `/verify` phase after merge

@@ -57,6 +57,10 @@ Decision criteria (for single-line text verification):
 
 ### 3. Pre-Check Target File Format (Cross-Referencing)
 
+**Literal string requirement for `section_contains`/`file_contains`:**
+
+`section_contains` and `file_contains` use fixed-string matching. The keyword must be literally present in the target implementation file for the command to PASS. When a verify command FAILs because the literal string is absent from the file, the correct fix is to **add the missing text to the implementation** — not to rewrite the hint. Rewriting the hint is appropriate only when the keyword was incorrectly specified (miscalibrated hint).
+
 When designing `grep`/`file_contains` patterns, follow this cross-reference procedure.
 
 **Cross-Reference Procedure:**
