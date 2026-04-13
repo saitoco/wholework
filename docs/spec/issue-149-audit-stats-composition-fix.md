@@ -108,3 +108,35 @@ Nothing to note. No repeated patterns of the same issue type were detected. The 
 ### Acceptance Criteria Verification Difficulty
 
 Nothing to note. All 6 pre-merge acceptance conditions used clear `file_exists`, `file_contains`, and `grep` verify commands that resolved to PASS without ambiguity. No UNCERTAIN results occurred.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue の背景・目的・受け入れ条件・Design Notes・Related が過不足なく記述されており、Spec に直接反映できる品質だった。
+- Pre-merge の 6 条件はすべて `file_exists` / `file_contains` / `grep` で機械的に検証可能。条件の曖昧さはなかった。
+- Spec に `.claude/settings.json.template` が sensitive file 扱いで直接編集できないという制約の記載がなく、実装者が都度発見・対処する必要があった。
+
+#### design
+- 設計は `get-issue-size.sh` の既存パターンへの準拠という明快な方針で、設計判断のブレがなかった。
+- `settings.json.template` への記載を Spec の実装ステップに含めており、実装スコープは正確に定義されていた。
+
+#### code
+- 単一のスカッシュマージコミットで完了。fixup/amend パターンなし。
+- `settings.json.template` の sensitive file 制約を Python スクリプトで回避した（Code Retrospective 記載）。この回避策はコードの品質に影響しないが、実装フローの摩擦として記録に値する。
+
+#### review
+- `review-bug` / `review-spec` どちらの観点からも FAIL/UNCERTAIN なし（Review Retrospective 記載）。
+- Spec とのずれが検出されなかった。accept criteria の verify コマンドも review 時点で整合していた。
+
+#### merge
+- `010f19a` (Add design) → `b7a6544` (squash merge PR #150) の 2 コミット構成。コンフリクトなし。
+
+#### verify
+- 全 6 pre-merge 条件が PASS。verify コマンドの文法・パスに問題なし。
+- Post-merge の opportunistic 条件（`/audit stats` 実行確認）は `verify-type: opportunistic` のみでverify hint なし。ユーザー確認待ちとして `phase/verify` ラベルを付与。
+- verify コマンドの整合性は良好。改善点なし。
+
+### Improvement Proposals
+- `.claude/settings.json.template` は Edit/Write ツールで直接編集できない（sensitive file 制約）。Spec テンプレートまたは `${CLAUDE_PLUGIN_ROOT}/modules/` の実装ガイドに「`.claude/` 以下のファイル編集は Python/Bash 経由を使用すること」という注記を追加すると、実装者の試行錯誤を削減できる。
