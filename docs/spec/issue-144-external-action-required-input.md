@@ -28,3 +28,18 @@
 ### Post-merge
 
 - `.github/workflows/*.yml` の作成・変更を含む Issue に対して `/spec` を実行すると、実装ステップまたは Spec の Notes に `action.yml` 参照と `required: true` 入力の確認が提案されることを確認
+
+## Spec Retrospective
+
+N/A
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec の実装ステップ通りに `skills/spec/SKILL.md` の Step 10 SHOULD constraints 表末尾（`| GitHub Actions workflow CI verify | ...` 行の直後）に1行追加した。
+
+### Design Gaps/Ambiguities
+- なし。Spec の記述（追加する行の内容含む）が明確で、実装に迷いは生じなかった。
+
+### Rework
+- なし。
