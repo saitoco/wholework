@@ -283,6 +283,9 @@ gh issue view "$NUMBER" --json state --jq '.state'
 
 Branch on Issue state:
 
+- `OPEN` → Issue OPEN path (auto-close disabled; see below)
+- `CLOSED` → Issue CLOSED path (standard flow; see below)
+
 #### When Issue is CLOSED (standard flow via `closes #N`)
 
 Judgment:
