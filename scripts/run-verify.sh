@@ -43,6 +43,14 @@ echo "Permissions: skip (autonomous mode)"
 echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
 
+# Detect associated PR for CI wait (patch route has no PR)
+VERIFY_PR_NUMBER=$(gh pr list --search "is:merged linked:issue:$ISSUE_NUMBER" --json number -q '.[0].number' 2>/dev/null || echo "")
+if [[ -n "$VERIFY_PR_NUMBER" ]]; then
+  "$SCRIPT_DIR/wait-ci-checks.sh" "$VERIFY_PR_NUMBER"
+else
+  echo "No PR found for issue #${ISSUE_NUMBER} (patch route), skipping CI wait" >&2
+fi
+
 # Pass SKILL.md body directly as prompt (avoids context: fork issue)
 # /verify has context: fork, so calling it via claude -p "/verify N" prevents
 # --dangerously-skip-permissions from propagating to the fork sub-agent (#284)

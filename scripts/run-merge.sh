@@ -22,6 +22,9 @@ echo "Permissions: skip (autonomous mode)"
 echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
 
+# Wait for CI checks to complete before running claude
+"$SCRIPT_DIR/wait-ci-checks.sh" "$PR_NUMBER"
+
 # Pass SKILL.md body directly as prompt (same pattern as run-review.sh)
 # /merge has no context: fork, but uses the same approach for consistency
 # See: #284 (context: fork permission non-propagation issue)

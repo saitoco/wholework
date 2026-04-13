@@ -24,6 +24,9 @@ echo "Permissions: skip (autonomous mode)"
 echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
 
+# Wait for CI checks to complete before running claude
+"$SCRIPT_DIR/wait-ci-checks.sh" "$PR_NUMBER"
+
 # Pass SKILL.md body directly as prompt (avoids context: fork issue)
 # /review has context: fork, so calling it via claude -p "/review N" prevents
 # --dangerously-skip-permissions from propagating to the fork sub-agent (#284)

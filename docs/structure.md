@@ -27,7 +27,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (6 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (29 files)
+├── scripts/             # Utility scripts used by skills and agents (30 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   └── workflows/
@@ -135,6 +135,7 @@ Key modules:
 
 **Process management:**
 - `scripts/claude-watchdog.sh` — watchdog wrapper for `claude -p` invocations (hang detection + 1 retry)
+- `scripts/wait-ci-checks.sh` — wait for required CI checks to complete on a PR before running claude
 
 **Skill runners:**
 - `scripts/run-auto-sub.sh` — run auto workflow for sub-issues

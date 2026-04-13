@@ -120,6 +120,12 @@ In gradual migration, there is a period where deprecated terms remain in the sam
 - Applies to all Issues that include adding deprecated terms to Forbidden Expressions
 - If "not included," handle deprecated term replacement in a follow-up Issue and reference its Issue number
 
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WHOLEWORK_CI_TIMEOUT_SEC` | `1200` | Maximum wait time in seconds for `wait-ci-checks.sh`. Set to a lower value (e.g., `60`) to test timeout behavior. |
+
 ## Gotchas
 
 ### `.claude/settings.json` is not hot-reloaded
