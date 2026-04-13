@@ -128,6 +128,7 @@ Key modules:
 **Project utilities:**
 - `scripts/get-issue-size.sh` — get issue size label
 - `scripts/get-issue-type.sh` — get issue type label
+- `scripts/get-issue-priority.sh` — get issue priority field
 - `scripts/get-sub-issue-graph.sh` — build sub-issue dependency graph
 - `scripts/log-permission.sh` — log permission events (JSON output)
 - `scripts/opportunistic-search.sh` — opportunistic skill search

@@ -17,6 +17,7 @@
     "allow": [
       "Bash(scripts/get-issue-size.sh *)",
       "Bash(scripts/get-issue-type.sh *)",
+      "Bash(scripts/get-issue-priority.sh *)",
       "Bash(scripts/get-sub-issue-graph.sh *)",
       "Bash(scripts/gh-issue-edit.sh *)",
       "Bash(scripts/gh-issue-comment.sh *)",
