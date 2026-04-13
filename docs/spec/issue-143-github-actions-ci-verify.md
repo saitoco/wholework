@@ -43,6 +43,34 @@ Issue #73（DCO 導入）の verify レトロスペクティブにて、`file_co
 
 なし
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec の実装ステップが具体的で明確だった。変更対象ファイル・挿入位置・追加内容が全て明記されており、実装の迷いがなかった。
+- AC の verify command が偽陽性回避を意識した精緻な設計（`grep "gh run list"` / `grep ".github/workflows.*github_check"` のように既存テキストとの区別が考慮されている）だった。
+
+#### design
+- N/A（レトロスペクティブ記録なし）
+
+#### code
+- パッチルートで実装。`modules/verify-patterns.md` と `skills/spec/SKILL.md` への変更のみで、Spec の設計通りに実装された。
+- rework なし。
+
+#### review
+- パッチルートのため PR レビューなし。小規模なドキュメント追加であり、レビュー省略に問題はなかった。
+
+#### merge
+- 直接 main への commit/push（パッチルート）。コンフリクトなし。
+
+#### verify
+- Pre-merge 3条件すべて PASS。verify command が適切に設計されており、自動検証が正確に機能した。
+- Post-merge 条件（`verify-type: opportunistic`）は手動確認待ち。実際の `/spec` 実行による動作確認が必要。
+
+### Improvement Proposals
+- N/A
+
 ## Spec Retrospective
 
 （スペック段階での記録なし）
