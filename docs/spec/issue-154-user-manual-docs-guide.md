@@ -73,3 +73,17 @@
 - **Terms の扱い**: `docs/product.md` の `## Terms` を SSoT として維持。`docs/guide/index.md` から参照リンクで到達可能にする
 - **翻訳**: 本 Issue では英語版のみ。`/doc translate ja` を後続 Issue で実行し `docs/ja/guide/` を生成する（frontmatter `type: project` により自動で翻訳対象になる）
 - **#155 との関係**: 本 Issue の `quick-start.md > Next Steps` は静的案内、#155（動的ヒント）は skill 完了時の動的表示で相補的。両者は並行せず、#155 は #154 の customization.md / quick-start.md を前提に blocked-by される
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Step 2 と Step 3 を並列で説明しているが実装は単一コミットに統合。コンテキスト効率のため一括作成（Spec は「parallel with 1/2」と記載していたが実質的に分離コミットのメリットがないため）。
+
+### Design Gaps/Ambiguities
+
+- `quick-start.md` の Next Steps で `/wholework:doc init`（フル名）と `/doc init`（ショート名）のどちらを使うか Spec に明示がなかった。verify command が `/doc init` リテラルを要求していたため、初回コミット後に修正が必要になった。フル名で書いた場合のフォールバック（`/doc init` を必ず含める）が明示されていれば防げた。
+
+### Rework
+
+- `docs/guide/quick-start.md` の Next Steps の `/wholework:doc init` → `/doc init` (or `/wholework:doc init`) に修正（verify command FAIL → Fix で追加コミット）。
