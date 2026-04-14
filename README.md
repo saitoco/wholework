@@ -23,9 +23,29 @@ Skills are available as `wholework:<skill-name>` (e.g., `/wholework:review`, `/w
 
 For development setup, see [docs/structure.md](docs/structure.md#install).
 
-## Repository structure
+## 🚀 Quick Start
 
-See [`docs/structure.md`](docs/structure.md) for the full directory layout and installation conventions.
+New to Wholework? The [Quick Start guide](docs/guide/quick-start.md) walks you through installation and your first `/auto` run in 10–15 minutes.
+
+## 🔄 Workflow Overview
+
+Wholework covers the full development lifecycle through six composable skills:
+
+```mermaid
+flowchart LR
+    A[Issue] -->|/issue| B[Clarify]
+    B -->|/spec| C[Design]
+    C -->|/code| D[Implement]
+    D -->|/review| E[Review]
+    E -->|/merge| F[Merge]
+    F -->|/verify| G[Verify]
+```
+
+Run the full cycle with a single command: `/auto N`. For a deeper look at each phase and size-based routing, see the [Workflow Overview](docs/guide/workflow.md).
+
+## 🛠️ Customization
+
+Wholework adapts to your project through `.wholework.yml` (feature flags and paths), `.wholework/domains/` (per-skill instructions), and adapters (tool integrations). See the [Customization guide](docs/guide/customization.md) for details.
 
 ## Contributing
 
