@@ -12,7 +12,7 @@ English | [日本語](ja/product.md)
 
 ## Vision
 
-Distribute a spec-first development workflow for Claude Code users — from Issue creation through post-merge verification — as a composable set of Skills that work on any GitHub project. Every phase (issue → spec → code → review → merge → verify) is an independent Skill that can be adopted incrementally, configured per project, and extended via adapters.
+Distribute a issue-driven development workflow for Claude Code users — from Issue creation through post-merge verification — as a composable set of Skills that work on any GitHub project. Every phase (issue → spec → code → review → merge → verify) is an independent Skill that can be adopted incrementally, configured per project, and extended via adapters.
 
 ## Workflow Overview
 
