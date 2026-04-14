@@ -101,8 +101,8 @@
 - `d36a2af` として main に直接コミット（patch route）。コンフリクトなし。
 
 #### verify
-- 条件 1〜5 はすべて PASS（実装・テスト共に確認済み）。
-- 条件 6（CI PASS）が UNCERTAIN: verify 実行時点で CI run（`883354c`）が in_progress だったため判定不能。CI が実際に失敗しているわけではなく、retrospective commit のプッシュ直後に verify が実行されたことが原因。
+- 第 1 回 verify: 条件 1〜5 は PASS。条件 6（CI PASS）は UNCERTAIN（retrospective commit プッシュ直後の in_progress 状態で判定不能）。
+- 第 2 回 verify（2026-04-14）: 全 6 条件 PASS を確認。条件 6 は CI run `b2b0329`（2026-04-14T04:50:12Z）が success として完了したため PASS。第 1 回 UNCERTAIN は一時的な in_progress 状態が原因であり、実装上の問題ではなかったことが確認された。
 
 ### Improvement Proposals
 - verify 実行時に CI が in_progress の場合、UNCERTAIN として Issue を reopen するのではなく「pending」扱いにして、CI 完了後に再 verify を促すフローを検討すること。現在の設計では CI が単に実行中の状態でも reopen + fix-cycle ラベルが付与されてしまい、誤ったシグナルになる。
