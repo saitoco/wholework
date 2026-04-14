@@ -80,3 +80,30 @@
 
 ### Rework
 - Issue body の受入条件 6 の verify command（`gh pr checks` → `gh run list`）を patch route に適合する形に更新した。Spec では既に修正済みだったが、Issue body との同期が必要だったため修正と変更追跡コメントを実施した。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec は実装コードを正確に記述しており設計の乖離なし。verify command の patch route 非互換問題を Spec 側で正しく検出・修正済みだったが、Issue body への同期が遅延した（Code phase で対処）。
+
+#### design
+- N/A（本 Issue には design phase なし）
+
+#### code
+- 実装はスペック通りで、設計逸脱なし。`gh` モックの if/elif vs case 差異は機能的に等価。Issue body sync の rework が 1 件発生したが軽微。
+
+#### review
+- patch route のため PR なし、review は実施されなかった。
+
+#### merge
+- `d36a2af` として main に直接コミット（patch route）。コンフリクトなし。
+
+#### verify
+- 条件 1〜5 はすべて PASS（実装・テスト共に確認済み）。
+- 条件 6（CI PASS）が UNCERTAIN: verify 実行時点で CI run（`883354c`）が in_progress だったため判定不能。CI が実際に失敗しているわけではなく、retrospective commit のプッシュ直後に verify が実行されたことが原因。
+
+### Improvement Proposals
+- verify 実行時に CI が in_progress の場合、UNCERTAIN として Issue を reopen するのではなく「pending」扱いにして、CI 完了後に再 verify を促すフローを検討すること。現在の設計では CI が単に実行中の状態でも reopen + fix-cycle ラベルが付与されてしまい、誤ったシグナルになる。
+- `/spec` または `/code` フェーズで verify command の route 互換性（`gh pr checks` vs `gh run list`）を自動チェックし、patch route の Issue には patch route 互換の verify command を強制するバリデーションを追加することを検討。Issue body と Spec の間で verify command の不整合が発生しやすいため。
