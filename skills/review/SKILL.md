@@ -744,6 +744,8 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 - `ISSUE_NUMBER=$ISSUE_NUMBER`
 - `RESULT=success`
 
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/steering-hint.md` and follow the "Processing Steps" section.
+
 ---
 
 ## Review Aspects

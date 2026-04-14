@@ -657,6 +657,8 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 - `RESULT=success`
 - `BLOCKED_BY_OPEN=$HAS_OPEN_BLOCKING`
 
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/steering-hint.md` and follow the "Processing Steps" section.
+
 ---
 
 ## Notes

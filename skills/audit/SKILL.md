@@ -184,7 +184,9 @@ Set Type and Size from AI estimation of drift scope (update project fields via `
 
 **After generation:**
 
-Display the list of generated Issue numbers and titles, then exit.
+Display the list of generated Issue numbers and titles.
+
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/steering-hint.md` and follow the "Processing Steps" section.
 
 ---
 
@@ -369,6 +371,8 @@ If `--no-save` is not specified:
 3. Write report content to `docs/stats/YYYY-MM-DD.md` (overwrite if the file already exists for the same date)
 4. Display: "Report saved to docs/stats/YYYY-MM-DD.md"
 
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/steering-hint.md` and follow the "Processing Steps" section.
+
 ---
 
 ## fragility Subcommand
@@ -496,7 +500,9 @@ Set Type and Size from AI estimation of fragility scope (update project fields v
 
 **After generation:**
 
-Display the list of generated Issue numbers and titles, then exit.
+Display the list of generated Issue numbers and titles.
+
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/steering-hint.md` and follow the "Processing Steps" section.
 
 ---
 
@@ -560,4 +566,6 @@ Generate Issues using the appropriate label based on each item's `lens`:
 - Items with `lens: drift` → assign `audit/drift` label (same procedure as drift subcommand Step 5)
 - Items with `lens: fragility` → assign `audit/fragility` label (same procedure as fragility subcommand Step 5)
 
-Display the list of generated Issue numbers and titles grouped by `lens`, then exit.
+Display the list of generated Issue numbers and titles grouped by `lens`.
+
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/steering-hint.md` and follow the "Processing Steps" section.

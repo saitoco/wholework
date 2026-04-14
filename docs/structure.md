@@ -23,7 +23,7 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill definition (required)
 │       └── *.md         # Auxiliary phase/guideline files (optional)
-├── modules/             # Shared modules referenced by skills (25 files)
+├── modules/             # Shared modules referenced by skills (27 files)
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (6 files)
 │   └── <agent-name>.md
@@ -98,6 +98,7 @@ Key modules:
 - `modules/measurement-scope.md` — measurement scope definition
 - `modules/next-action-guide.md` — unified next action guidance for all skills
 - `modules/phase-banner.md` — phase identification banner display for skills
+- `modules/steering-hint.md` — dynamic hint recommending `/doc init` when steering docs are absent
 
 ### Agents
 

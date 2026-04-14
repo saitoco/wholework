@@ -428,6 +428,8 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 - `SIZE={fetched size}`
 - `RESULT={success|blocked}`
 
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/steering-hint.md` and follow the "Processing Steps" section.
+
 ---
 
 ## Behavior Test Recommendations

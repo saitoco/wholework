@@ -34,6 +34,7 @@ From the loaded content, search for each YAML key in the marker definition table
 | `review-bug` | `SKIP_REVIEW_BUG` | `false` (enabled) | `false`-treated as true. If `review-bug: false` then `SKIP_REVIEW_BUG=true` |
 | `opportunistic-verify` | `HAS_OPPORTUNISTIC_VERIFY` | `true` | `false` |
 | `skill-proposals` | `HAS_SKILL_PROPOSALS` | `true` | `false` |
+| `steering-hint` | `HAS_STEERING_HINT` | `true` | `true` (default true; `false` when `steering-hint: false`) |
 | `production-url` | `PRODUCTION_URL` | URL string (extract value as-is) | `""` |
 | `spec-path` | `SPEC_PATH` | Path string (extract value as-is) | `docs/spec` |
 | `steering-docs-path` | `STEERING_DOCS_PATH` | Path string (extract value as-is) | `docs` |
@@ -50,6 +51,7 @@ Example: `capabilities.invoice-api: true` → `HAS_INVOICE_API_CAPABILITY=true`
 - Interpret each line in `key: value` format
 - Boolean values determined by `true` / `false` (case-insensitive)
 - `review-bug` has inverse mapping: `review-bug: false` → `SKIP_REVIEW_BUG=true` (skip bug detection), `review-bug: true` → `SKIP_REVIEW_BUG=false` (bug detection enabled)
+- `steering-hint` has inverse mapping: `steering-hint: false` → `HAS_STEERING_HINT=false` (hint suppressed), unset or `steering-hint: true` → `HAS_STEERING_HINT=true` (default enabled)
 - `production-url` is treated as URL string with quotes removed
 - `spec-path` and `steering-docs-path` are treated as path strings with quotes removed (same handling as `production-url`)
 - If key does not exist, use default value
@@ -68,6 +70,7 @@ HAS_CODERABBIT_REVIEW: true if coderabbit-review: true is set (default: false)
 SKIP_REVIEW_BUG: true if review-bug: false is set (default: false)
 HAS_OPPORTUNISTIC_VERIFY: true if opportunistic-verify: true is set (default: false)
 HAS_SKILL_PROPOSALS: true if skill-proposals: true is set (default: false)
+HAS_STEERING_HINT: false if steering-hint: false is set (default: true)
 PRODUCTION_URL: URL string extracted from production-url (default: "")
 SPEC_PATH: path string extracted from spec-path (default: "docs/spec")
 STEERING_DOCS_PATH: path string extracted from steering-docs-path (default: "docs")
