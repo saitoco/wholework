@@ -77,3 +77,17 @@
 
 - Non-Goals: 既存の Narrative Semantic Drift Check / Terms consistency check / SSoT duplication check の振る舞い変更なし；すべての新検出結果は drift report のみ（auto-fix なし）；`/doc sync`（--deep なし）への追加なし
 - Step 7 の "Drift report" 説明はStep 6 の新サブセクションで "drift report items" と記述していることとの整合性を保つこと
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
