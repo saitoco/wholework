@@ -65,3 +65,18 @@
 - **複数 open PR 存在時の挙動**: 先頭 1 件を採用、警告なし。Issue body の方針通り。
 - **closed PR は検出対象外**: `--state open` を明示することで、ユーザーが意図的にクローズした PR の再利用を防ぐ。
 - **run-auto-sub.sh は変更不要**: XL sub-issue 経由でも `run-code.sh` を呼び出すため、本修正が自動で効く。
+
+## Spec Retrospective
+
+(スペック側のレトロスペクティブはなし)
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A（スペックの実装コード例をそのまま適用した）
+
+### Design Gaps/Ambiguities
+- `gh` モックの拡張方法について Spec では「case 文パターンで拡張」と記載があったが、実際には if/elif チェーンで実装した。既存テストが if/elif パターンを使っており、それとの一貫性を優先した。機能的には同等。
+
+### Rework
+- Issue body の受入条件 6 の verify command（`gh pr checks` → `gh run list`）を patch route に適合する形に更新した。Spec では既に修正済みだったが、Issue body との同期が必要だったため修正と変更追跡コメントを実施した。
