@@ -66,6 +66,8 @@ wholework/
 
 ## Key Files（Required）
 
+> **Maintenance rule**: Keep the tables and lists in this section aligned with the actual files. When a file listed below is added, removed, renamed, or has its role/description changed, update the corresponding entry here in the same change. `/audit drift` detects divergence but manual upkeep is still expected.
+
 ### Skills
 
 Skills are being actively migrated from a private repository. Each skill lives in `skills/<skill-name>/SKILL.md`. Many skills also include auxiliary `.md` files for sub-phases or specialized guidelines (e.g., `external-review-phase.md`, `codebase-search.md`). See the `skills/` directory for the current list.
