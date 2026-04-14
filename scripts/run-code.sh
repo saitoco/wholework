@@ -63,6 +63,20 @@ fi
 echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
 
+# Idempotency guard: skip if open PR already exists for this issue
+if [[ "$ROUTE_FLAG" == "--pr" ]]; then
+  EXISTING_PR=$(gh pr list --head "*issue-${ISSUE_NUMBER}-*" --state open --json number -q '.[0].number' 2>/dev/null || true)
+  if [[ -n "$EXISTING_PR" ]]; then
+    echo "=== run-code.sh: Existing PR #${EXISTING_PR} detected for issue #${ISSUE_NUMBER}, skipping /code ==="
+    echo "PR: $(gh pr view ${EXISTING_PR} --json url -q '.url')"
+    print_end_banner "issue" "$ISSUE_NUMBER" "code"
+    echo "Next actions:"
+    echo "  - /review ${EXISTING_PR}"
+    echo "  - /auto ${ISSUE_NUMBER}"
+    exit 0
+  fi
+fi
+
 # Cleanup stale worktrees/branches from previous failed runs
 WORKTREE_PATH="${SCRIPT_DIR}/../.claude/worktrees/code+issue-${ISSUE_NUMBER}"
 WORKTREE_BRANCH="worktree-code+issue-${ISSUE_NUMBER}"

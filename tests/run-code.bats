@@ -209,3 +209,97 @@ MOCK
     [[ "$output" == *"Finished /code for issue #789"* ]]
     [[ "$output" == *"Exit code: 42"* ]]
 }
+
+@test "idempotency guard: --pr with no existing PR calls claude normally" {
+    # Default mock returns empty for gh pr list → guard not triggered
+    run bash "$SCRIPT" 123 --pr
+    [ "$status" -eq 0 ]
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+    grep -q "ARGUMENTS: 123 --pr --non-interactive" "$CLAUDE_CALL_LOG"
+}
+
+@test "idempotency guard: --pr with existing PR skips claude and exits 0" {
+    # Override gh mock to return existing PR number for pr list
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test issue title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/issues/123"
+  fi
+  exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+  echo "456"
+  exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "view" ]]; then
+  echo "https://github.com/test/repo/pull/456"
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 123 --pr
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Existing PR #456 detected for issue #123, skipping /code"* ]]
+    # claude should NOT have been called
+    [ ! -f "$CLAUDE_CALL_LOG" ]
+}
+
+@test "idempotency guard: --patch with existing PR calls claude normally" {
+    # Override gh mock to return existing PR number
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test issue title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/issues/123"
+  fi
+  exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+  echo "456"
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 123 --patch
+    [ "$status" -eq 0 ]
+    # Guard should NOT trigger for --patch route; claude should be called
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "idempotency guard: no route flag with existing PR calls claude normally" {
+    # Override gh mock to return existing PR number
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test issue title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/issues/123"
+  fi
+  exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+  echo "456"
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    # Guard should NOT trigger when no route flag; claude should be called
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
