@@ -98,7 +98,7 @@ This design minimizes setup cost and allows teams to adopt individual workflow p
 
 Describe success metrics here. -->
 
-## Competitors / Alternatives
+## Alternatives
 
 ### SDD Frameworks / Methodologies
 
