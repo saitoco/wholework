@@ -121,3 +121,37 @@ Steering Documents 未整備のまま wholework 経由で一定数（5 件以上
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受入条件はすべて `file_exists` / `file_contains` による明確な検証可能条件として設計されており品質が高い
+- Post-merge条件に `verify-type: opportunistic` を使用してユーザー確認項目を適切に分類している
+- `/audit` drift/fragility/integrated でのヒント到達不能という構造的な観察をNotesに記録しており、設計判断の透明性が高い
+- `steering-hint` のデフォルトが `true`（有効）という他キーと異なる逆転デフォルト設計についてNotesで注意喚起されている
+
+#### design
+- 実装はSpecと完全一致。Specに記載がなかった `detect-config-markers.md` の YAML Parsing Rules追加は一貫性のための適切な判断
+- モジュール自己完結設計（`.wholework.yml`をモジュール内で直接Read）は呼び出し元の事前チェック不要で拡張性が高い
+
+#### code
+- リワーク無し。3コミット（design追加、実装、code retrospective追加）でクリーンな実装
+- パッチルートでの直接commitは適切（XS/S サイズ相当）
+
+#### review
+- パッチルート（直接mainへのコミット）のため、PRレビューフェーズなし
+- コード変更は追加のみ（新規モジュール + 既存skillへの1行追加）でリスクが低く、PRレビュー省略は妥当
+
+#### merge
+- パッチルートで直接mainにコミット。競合なし
+- `git commit -s` によるDCO署名が適切に付与されている
+
+#### verify
+- Pre-merge条件7件すべてPASS
+- Post-merge opportunistic条件3件は `phase/verify` として適切に分類
+- verify commandはすべてシンプルな `file_exists`/`file_contains` で、実行が確実
+
+### Improvement Proposals
+- N/A
