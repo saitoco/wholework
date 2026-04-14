@@ -22,7 +22,7 @@ coderabbit-review: true     # Wait for CodeRabbit review before merging
 review-bug: false           # Disable bug-detection agent in /review
 
 # Post-skill verification
-opportunistic-verify: true  # Run quick acceptance checks at skill completion
+opportunistic-verify: true  # Run quick verify commands at skill completion
 
 # Skill improvement proposals
 skill-proposals: true       # Generate Wholework improvement issues during /verify
