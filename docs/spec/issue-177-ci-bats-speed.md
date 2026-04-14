@@ -28,7 +28,7 @@ CI/CD ワークフロー (`test.yml`) の bats テスト実行時間が約540秒
 
 ### Pre-merge
 
-- <!-- verify: file_exists "docs/spec/issue-N-*.md" --> 調査結果（どのテストファイル / ステップが時間消費主因か）が Spec に記録されている
+- <!-- verify: file_exists "docs/spec/issue-177-ci-bats-speed.md" --> 調査結果（どのテストファイル / ステップが時間消費主因か）が Spec に記録されている
 - <!-- verify: grep "--jobs" ".github/workflows/test.yml" --> CI workflow に `--jobs` による並列化施策が実装されている
 - <!-- verify: file_exists ".github/workflows/test.yml" --> `.github/workflows/test.yml` が実装施策を反映している
 - <!-- verify: github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> CI が成功している
