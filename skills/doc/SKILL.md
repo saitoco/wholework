@@ -501,7 +501,7 @@ For each Steering Document loaded above, use AI judgment to identify sections th
 - Codebase analysis results retained in this step (entry points, dependency graph, directory roles, etc.)
 - Implementation files loaded in "Scan implementation code" above (`skills/*/SKILL.md`, `modules/*.md`, `agents/*.md`, `scripts/*.sh`)
 
-**Detect drift in 3 categories (missing coverage, partial description, obsolete mention):**
+**Detect drift in 4 categories (missing coverage, partial description, obsolete mention, skill coverage gap):**
 
 | Category | Definition | Example |
 |---|---|---|
