@@ -22,7 +22,8 @@ CI/CD ワークフロー (`test.yml`) の bats テスト実行時間が約540秒
 
 ## Implementation Steps
 
-1. `.github/workflows/test.yml` の `Run bats tests` ステップを変更: `run: bats tests/` → `run: bats --jobs 4 tests/` (→ 受け入れ基準 B, C)
+1. `.github/workflows/test.yml` の `Install bats` ステップに `parallel` を追加: `sudo apt-get install -y bats` → `sudo apt-get install -y bats parallel`
+2. `.github/workflows/test.yml` の `Run bats tests` ステップを変更: `run: bats tests/` → `run: bats --jobs 4 tests/`
 
 ## Verification
 
@@ -42,3 +43,17 @@ CI/CD ワークフロー (`test.yml`) の bats テスト実行時間が約540秒
 - **bats バージョン要件**: `--jobs` フラグは bats-core v1.3.0 以降。ubuntu-latest (24.04) の apt パッケージは bats 1.10.0 系であり対応済みと想定。実装前に `bats --version` で確認すること（v1.3.0 未満の場合は npm install -g bats で upgrade）。
 - **並列安全性**: `gh-graphql.bats` の `CACHE_DIR` は `$PROJECT_ROOT/.tmp/gh-graphql-cache` の固定パスを使用するが、bats `--jobs` はファイル単位で並列化するため同一ファイル内のテストはシリアル実行される。ファイル間での競合なし。
 - **期待される短縮効果**: テスト実行 ~480秒 → ~120〜150秒（65〜75%短縮）。CI 全体 ~540秒 → ~200〜230秒を目標とする。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `bats --jobs 4` は GNU Parallel (`parallel` コマンド) を必要とするため、`Install bats` ステップに `sudo apt-get install -y parallel` を追加。当初の設計ではコマンド1行の変更のみを想定していたが、依存関係のインストールが追加ステップとして必要だった。
+
+### Design Gaps/Ambiguities
+
+- Notes セクションに「bats バージョン確認」は記載されていたが、GNU Parallel の依存関係については言及がなかった。ローカルテスト時に `parallel: command not found` エラーで判明。
+
+### Rework
+
+- N/A
