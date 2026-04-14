@@ -4,7 +4,7 @@ English | [日本語](README.ja.md)
 
 Issue-driven Claude Code skills for autonomous GitHub workflows.
 
-## Why Wholework
+## 🌐 Why Wholework
 
 1. **Issue-to-spec design** — Issues define *what* and *when it's done*; specs break down *how* to get there. Verifiable acceptance criteria come first — and where possible, are checked automatically.
 2. **Full-phase workflow with size-based routing** — `/issue → /spec → /code → /review → /merge → /verify` covers the entire lifecycle from requirements to post-merge verification.

@@ -4,7 +4,7 @@
 
 自律的な GitHub ワークフローのための、Issue 駆動の Claude Code Skill 群。
 
-## なぜ Wholework か
+## 🌐 なぜ Wholework か
 
 1. **Issue から Spec への設計** — Issue は *何を* と *いつ完了とみなすか* を定義し、Spec は *どうやって* そこに到達するかを分解します。検証可能な受入条件を最優先とし、可能な限り自動チェックします。
 2. **Size に応じたルーティングを備えた全フェーズワークフロー** — `/issue → /spec → /code → /review → /merge → /verify` が、要件定義からマージ後の検証までライフサイクル全体をカバーします。
