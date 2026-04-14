@@ -27,6 +27,9 @@ opportunistic-verify: true  # Run quick verify commands at skill completion
 # Skill improvement proposals
 skill-proposals: true       # Generate Wholework improvement issues during /verify
 
+# Steering hint (enabled by default; set to false to opt out)
+steering-hint: false        # Suppress the "/doc init" hint shown when steering docs are missing
+
 # Custom paths (defaults shown)
 spec-path: docs/spec              # Where specs are stored
 steering-docs-path: docs          # Where steering documents live

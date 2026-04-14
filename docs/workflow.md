@@ -11,7 +11,21 @@ English | [日本語](ja/workflow.md)
 
 ## Overview
 
-Overview of the development workflow using Claude Code Skills. See [docs/product.md](product.md) for flow diagrams.
+Overview of the development workflow using Claude Code Skills.
+
+```mermaid
+flowchart TD
+    G0["/doc manages foundation documents"] -.->|"product/tech/structure"| A
+    A["File Issue"] -->|"/triage (optional)"| T["Triage"]
+    T -.->|"normalize title, set Type/Size"| A
+    A -->|"/issue"| B["Clarify requirements"]
+    B -->|"/spec"| C["Design spec"]
+    C -->|"/code"| E["Implement, test, create PR"]
+    E -->|"/review"| F["PR review"]
+    F -->|"/merge"| G["Merge PR"]
+    G -->|"/verify"| H["Acceptance testing"]
+    H -->|"FAIL"| I["gh issue reopen → fix cycle"]
+```
 
 **Full workflow**: `/issue` → `/auto` (spec auto-execution) → code → review → merge → verify (or `/spec` → `/code` → `/review` → `/merge` → `/verify`)
 

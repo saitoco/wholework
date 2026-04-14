@@ -8,8 +8,18 @@ This page explains what each Wholework skill does, when to use it, and how issue
 
 ## The Six Phases
 
-```
-/issue → /spec → /code → /review → /merge → /verify
+```mermaid
+flowchart TD
+    G0["/doc manages foundation documents"] -.->|"product/tech/structure"| A
+    A["File Issue"] -->|"/triage (optional)"| T["Triage"]
+    T -.->|"normalize title, set Type/Size"| A
+    A -->|"/issue"| B["Clarify requirements"]
+    B -->|"/spec"| C["Design spec"]
+    C -->|"/code"| E["Implement, test, create PR"]
+    E -->|"/review"| F["PR review"]
+    F -->|"/merge"| G["Merge PR"]
+    G -->|"/verify"| H["Acceptance testing"]
+    H -->|"FAIL"| I["gh issue reopen → fix cycle"]
 ```
 
 You can run each phase manually, or let `/auto` handle the sequence for you.
