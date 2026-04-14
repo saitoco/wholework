@@ -77,3 +77,32 @@
 
 - Non-Goals: 既存の Narrative Semantic Drift Check / Terms consistency check / SSoT duplication check の振る舞い変更なし；すべての新検出結果は drift report のみ（auto-fix なし）；`/doc sync`（--deep なし）への追加なし
 - Step 7 の "Drift report" 説明はStep 6 の新サブセクションで "drift report items" と記述していることとの整合性を保つこと
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+The heading "Detect drift in 3 categories" was not updated to "4 categories" when Skill Coverage Gap was added as a 4th category. This is a text-level consistency gap between a heading and its associated table — the verify commands (file_contains) only check keyword existence and cannot detect numerical or enumeration inconsistencies within prose. Future Specs should add explicit verify conditions for heading text when a count or enumeration in a heading is expected to change.
+
+### Recurring issues
+
+- None in this PR. Single isolated heading-count inconsistency.
+
+### Acceptance criteria verification difficulty
+
+- All 4 verify commands were PASS-able via automated file_contains checks. The 5th condition (--deep flag scope) required reading the SKILL.md section text, which was clear and unambiguous.
+- The heading-count inconsistency (the only issue found) was not coverable by any of the existing verify commands — it required AI judgment during the review. Adding a `file_contains "skills/doc/SKILL.md" "4 categories"` verify condition to the acceptance criteria would have caught this automatically.

@@ -129,7 +129,7 @@ Issue に Type（`bug`/`feature`/`task`）、Size（XS–XL）、Priority を付
 
 ### `/doc` — 基盤ドキュメント管理
 
-`docs/` のプロジェクト基盤情報を保守します。各ドキュメントは YAML frontmatter の `type` フィールドで役割を宣言します（Steering Documents は `type: steering`、運用ドキュメントは `type: project`）。`/doc sync` は両タイプを識別して正規化します。`/doc sync --deep` はコードベース分析（エントリポイント、依存グラフ、テストファイル、コメント/docstring）に加え、既存 .md ファイルの統合スキャン（4 パターン分類、吸収先判定）を実行します。`/doc init --deep` と `/doc {doc} --deep` は新規ファイルに対して同等のインライン分析を行い、質問フローなしでドラフトを自動生成します。`/doc translate {lang}` は英語ドキュメント（README.md、Steering Documents、Project Documents）の翻訳を `docs/{lang}/` および `README.{lang}.md` 配下に生成し、commit と push を自動で行います。詳細: [`skills/doc/SKILL.md`](../../skills/doc/SKILL.md)
+プロジェクトの基盤情報を `docs/` で保守します。各ドキュメントは YAML フロントマターの `type` フィールドで種別を定義します（Steering Documents は `type: steering`、運用ドキュメントは `type: project`）。`/doc sync` は `type: steering` と `type: project` のドキュメントを識別し、すべてを正規化します。`workflow.md`（`type: project`）もその対象です。各 Skill は条件付きでこれらのドキュメントを参照し、存在しない場合はスキップします（後方互換性）。`/doc sync --deep` はコードベース分析（エントリーポイント、依存グラフ、テストファイル、コメント/docstring）と既存 .md ファイルの統合スキャン（4 パターン分類、吸収対象判定）、構造的アンチパターン検出（SSoT 逆方向参照、ポインタのみセクション、Skill Coverage Gap）を含む拡張逆生成オプションを実行します。`/doc init --deep` と `/doc {doc} --deep` は新規作成時に同等のインライン分析を行い、質問フローを介さずにドラフトを自動生成します。`/doc translate {lang}` は英語ドキュメント（README.md、Steering Documents、Project Documents）の翻訳を指定言語（BCP 47 / ISO 639-1 言語コード。例: `ja`、`ko`、`zh-cn`）で `docs/{lang}/` および `README.{lang}.md` に生成し、自動でコミット・プッシュします。詳細: [`skills/doc/SKILL.md`](../../skills/doc/SKILL.md)
 
 ### `/audit` — ドリフト・フラジリティ検出
 
