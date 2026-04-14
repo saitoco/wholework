@@ -106,3 +106,32 @@ The heading "Detect drift in 3 categories" was not updated to "4 categories" whe
 
 - All 4 verify commands were PASS-able via automated file_contains checks. The 5th condition (--deep flag scope) required reading the SKILL.md section text, which was clear and unambiguous.
 - The heading-count inconsistency (the only issue found) was not coverable by any of the existing verify commands — it required AI judgment during the review. Adding a `file_contains "skills/doc/SKILL.md" "4 categories"` verify condition to the acceptance criteria would have caught this automatically.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec was clear and concise. Acceptance conditions mapped 1:1 to implementation steps with specific verify commands. The `--deep` scope was documented in both the acceptance conditions and implementation steps.
+- Condition 5 (no verify command) correctly noted the verification approach inline ("This sub-step runs only when the `--deep` flag is enabled." 記述で仕様明示), reducing ambiguity.
+
+#### design
+- No design phase for this issue (XS/S route, direct patch to main). N/A.
+
+#### code
+- Single squash-merge commit (`5ba052e`). No rework or fixup pattern detected in git log.
+- One review comment (CONSIDER: heading count "3 categories" → "4 categories") was incorporated before merge, confirmed by PR comment. Clean implementation cycle.
+
+#### review
+- Review effectiveness was high: caught the heading-count inconsistency (`3 categories` vs actual 4) that file_contains verify commands could not detect.
+- The review Retrospective (already in Spec) correctly identified that a `file_contains "skills/doc/SKILL.md" "4 categories"` verify condition would have made this automatically catchable. This is a valid pattern for future Issues: when a numeric count in a heading is expected to change, add an explicit file_contains verify condition for the updated count string.
+
+#### merge
+- Clean FF merge via PR #176. No conflicts, no CI failures at merge time. One job was IN_PROGRESS during review but resolved cleanly.
+
+#### verify
+- All 5 auto-verify conditions PASS. 1 manual post-merge condition remains (`verify-type: manual`).
+- The `file_contains` commands were effective for keyword-presence checks. The one gap (heading count) was already captured in the review retrospective with an actionable improvement proposal.
+
+### Improvement Proposals
+- N/A
