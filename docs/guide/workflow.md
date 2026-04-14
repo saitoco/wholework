@@ -184,9 +184,9 @@ Run periodically — for example, after a sprint or milestone — to keep docs, 
 | Reviewing a PR someone else created | `/review PR_NUMBER` |
 | Bulk-process small backlog issues | `/auto --batch 10` |
 
-## Fix Cycle
+## Fixing After Verify Fails
 
-If `/verify` fails, Wholework reopens the issue and adds a `fix-cycle` label. Running `/auto N` or `/code N` again detects this label and routes through patch regardless of size — keeping fix cycles fast.
+If `/verify` fails, Wholework reopens the issue and removes all `phase/*` labels. Run `/code --patch N` to apply a small fix with a direct commit to main (Size unchanged), or `/code --pr N` for a larger fix with a new branch and PR. For cases requiring design changes, run `/spec N` to revisit the spec first.
 
 ## Further Reading
 

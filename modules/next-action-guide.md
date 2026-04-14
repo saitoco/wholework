@@ -54,7 +54,7 @@ Use the table below as guidance. Contextual factors (e.g., whether acceptance cr
 | `review`   | success | any                                 | `/merge {PR_NUMBER}`     | `/auto {ISSUE_NUMBER}`         |
 | `merge`    | success | any                                 | `/verify {ISSUE_NUMBER}` | `/auto {ISSUE_NUMBER}`         |
 | `verify`   | success (PASS) | any                          | (no guidance)            | —                              |
-| `verify`   | fail    | any                                 | `/code {ISSUE_NUMBER}`   | `/auto {ISSUE_NUMBER}`         | <!-- fix-cycle label auto-applied by /verify; /code and /auto detect it and force patch route -->
+| `verify`   | fail    | any                                 | `/code {ISSUE_NUMBER}`   | `/auto {ISSUE_NUMBER}`         |
 | `auto`     | success | any                                 | (no guidance)            | —                              |
 | `auto`     | fail    | any                                 | `/code {ISSUE_NUMBER}`   | manual investigation           |
 

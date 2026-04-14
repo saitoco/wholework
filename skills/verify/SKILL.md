@@ -302,15 +302,25 @@ Judgment:
     ```
   - Confirm the Issue is closed. If not closed, close with `gh issue close "$NUMBER"` (handles cases like XL parent Issues not auto-closed by PR's `closes #N`)
   - **Even if post-merge conditions without hints are unchecked, do not reopen the Issue** (present user verification guide only)
-- **Auto-verification targets include FAIL or UNCERTAIN**:
-  - Reopen Issue and attach `fix-cycle` label (idempotent), then remove all `phase/*` labels:
+- **Auto-verification targets include FAIL**:
+  - Reopen Issue and remove all `phase/*` labels:
     ```bash
     gh issue reopen "$NUMBER"
-    gh label list --search fix-cycle | grep -q '^fix-cycle' || gh label create fix-cycle --color c5def5 --description "Post-verify fix cycle marker — preserves original Size while routing through patch"
-    gh issue edit "$NUMBER" --add-label "fix-cycle"
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER"
     ```
-  - User selects the next action (`/code`, `/spec`, or `/issue`) to return to the fix cycle
+  - Output guidance for the user:
+    ```
+    Issue #N を再オープンしました。以下のいずれかで修正してください:
+    - `/code --patch N` — Size を変えずに main 直コミットで修正（小さな修正）
+    - `/code --pr N` — 新規ブランチ + PR で修正（Size L の大きな修正）
+    - `/spec N` — Spec から見直し（根本的な設計変更が必要な場合）
+    ```
+- **UNCERTAIN のみ（FAIL なし、UNCERTAIN ≥1）**:
+  - Assign `phase/verify` label without reopening the Issue:
+    ```bash
+    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
+    ```
+  - Notify user: "Auto-verification contains UNCERTAIN items. Please manually re-verify the flagged conditions, then re-run `/verify $NUMBER` to complete."
 
 #### When Issue is OPEN (auto-close disabled)
 
@@ -331,12 +341,18 @@ Judgment:
     gh issue close "$NUMBER"
     ```
   - **Even if post-merge conditions without hints are unchecked, do not close the Issue** (present user verification guide only)
-- **Auto-verification targets include FAIL or UNCERTAIN**:
+- **Auto-verification targets include FAIL**:
   - Remove all `phase/*` labels (Issue is already OPEN; no reopen needed):
     ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER"
     ```
   - User selects the next action (`/code`, `/spec`, or `/issue`) to return to the fix cycle
+- **UNCERTAIN のみ（FAIL なし、UNCERTAIN ≥1）**:
+  - Assign `phase/verify` label (Issue remains OPEN):
+    ```bash
+    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
+    ```
+  - Notify user: "Auto-verification contains UNCERTAIN items. Please manually re-verify the flagged conditions, then re-run `/verify $NUMBER` to complete."
 
 ### Step 10: Retrospective (Full Workflow Review)
 

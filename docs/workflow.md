@@ -144,7 +144,6 @@ Setup: Create labels with `scripts/setup-labels.sh`.
 | `phase/verify` | Acceptance test phase | `/merge` | `/verify` |
 | `phase/done` | Complete | `/verify` (no post-merge conditions) | — |
 | (no label) | Backlog / not started | — | `/verify` (on FAIL) |
-| `fix-cycle` | Post-verify fix cycle marker | `/verify` (on FAIL) | (manual / future cleanup) |
 
 ### XL Parent Issue Phase Management
 
@@ -173,18 +172,17 @@ Adding `closes #N` to PR body auto-closes the Issue on merge (GitHub standard fe
   - FAIL → gh issue reopen + remove all phase/* → return to fix cycle
 ```
 
-### Post-verify Fix Cycle
+### Verify Fail Flow
 
-When `/verify` detects a FAIL among auto-verification targets, it reopens the Issue and attaches the `fix-cycle` label (alongside removing all `phase/*` labels). This triggers the post-verify fix cycle:
+When `/verify` detects a FAIL among auto-verification targets, it reopens the Issue and removes all `phase/*` labels. The user then selects the next action manually:
 
 ```
-/verify FAIL → gh issue reopen + add fix-cycle label + remove phase/*
+/verify FAIL → gh issue reopen + remove all phase/*
   ↓
-/code N  (or /auto N)
-  └─ Detects fix-cycle label + OPEN state
-  └─ Forces patch route regardless of original Size
-  └─ Bypasses XL guard, phase/ready check, and Size-based routing
-  └─ Appends ## Post-verify fix section to Spec (preserves fix context as cross-phase memory)
+User selects:
+  - /code --patch N  — fix with direct commit to main (small fix, Size unchanged)
+  - /code --pr N     — fix with new branch + PR (larger fix, Size L)
+  - /spec N          — revisit design (when root cause requires redesign)
   ↓
 /verify N  (re-verify after fix)
 ```

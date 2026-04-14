@@ -61,39 +61,11 @@ MOCK
     chmod +x "$MOCK_DIR/cmd.sh"
 
     run env WATCHDOG_TIMEOUT=2 bash "$SCRIPT" bash "$MOCK_DIR/cmd.sh"
-    # Should be non-zero (killed by watchdog, then retry also killed)
+    # Should be non-zero (killed by watchdog)
     [ "$status" -ne 0 ]
     [[ "$output" == *"watchdog: no output for 2s, killing process"* ]]
 }
 
-@test "retry: second invocation occurs after watchdog kill" {
-    COUNTER_FILE="$BATS_TEST_TMPDIR/invocation_count"
-    echo "0" > "$COUNTER_FILE"
-
-    cat > "$MOCK_DIR/cmd.sh" <<MOCK
-#!/bin/bash
-count=\$(cat "$COUNTER_FILE")
-count=\$((count + 1))
-echo \$count > "$COUNTER_FILE"
-if [[ \$count -eq 1 ]]; then
-    # First invocation: produce no output and hang — trigger watchdog
-    sleep 60
-else
-    # Second invocation (retry): succeed normally
-    echo "retry succeeded"
-    exit 0
-fi
-MOCK
-    chmod +x "$MOCK_DIR/cmd.sh"
-
-    run env WATCHDOG_TIMEOUT=2 bash "$SCRIPT" bash "$MOCK_DIR/cmd.sh"
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"watchdog: retrying once..."* ]]
-    [[ "$output" == *"retry succeeded"* ]]
-
-    # Verify exactly 2 invocations occurred
-    [ "$(cat "$COUNTER_FILE")" -eq 2 ]
-}
 
 @test "WATCHDOG_TIMEOUT env var: custom value takes effect" {
     cat > "$MOCK_DIR/cmd.sh" <<'MOCK'
@@ -125,7 +97,7 @@ MOCK
     [[ "$output" == *"watchdog: still waiting"* ]]
 }
 
-@test "no retry: watchdog fires only once on second hang" {
+@test "no retry: watchdog kills and does not retry" {
     COUNTER_FILE="$BATS_TEST_TMPDIR/invocation_count"
     echo "0" > "$COUNTER_FILE"
 
@@ -134,14 +106,15 @@ MOCK
 count=\$(cat "$COUNTER_FILE")
 count=\$((count + 1))
 echo \$count > "$COUNTER_FILE"
-# Both invocations hang — watchdog fires twice but only retries once
+# Hang to trigger watchdog kill
 sleep 60
 MOCK
     chmod +x "$MOCK_DIR/cmd.sh"
 
     run env WATCHDOG_TIMEOUT=2 bash "$SCRIPT" bash "$MOCK_DIR/cmd.sh"
     [ "$status" -ne 0 ]
+    [[ "$output" == *"retrying disabled"* ]]
 
-    # Verify exactly 2 invocations (original + 1 retry), no more
-    [ "$(cat "$COUNTER_FILE")" -eq 2 ]
+    # Verify command was invoked exactly once (no retry)
+    [ "$(cat "$COUNTER_FILE")" -eq 1 ]
 }

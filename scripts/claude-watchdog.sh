@@ -1,6 +1,6 @@
 #!/bin/bash
 # claude-watchdog.sh - Watchdog wrapper for claude -p invocations
-# Detects hangs (no output for WATCHDOG_TIMEOUT seconds) and kills + retries once.
+# Detects hangs (no output for WATCHDOG_TIMEOUT seconds) and kills the process.
 # Usage: claude-watchdog.sh <command> [args...]
 #
 # Environment variables:
@@ -14,7 +14,7 @@ WATCHDOG_HEARTBEAT_INTERVAL="${WATCHDOG_HEARTBEAT_INTERVAL:-60}"
 # Check interval is min(WATCHDOG_TIMEOUT, 10) to keep tests fast with small timeouts
 _CHECK_INTERVAL=$(( WATCHDOG_TIMEOUT < 10 ? WATCHDOG_TIMEOUT : 10 ))
 
-# Global flag: set to true when watchdog triggers a kill (used to decide retry)
+# Global flag: set to true when watchdog triggers a kill
 _watchdog_killed=false
 
 _run_with_watchdog() {
@@ -78,15 +78,11 @@ if [[ $# -eq 0 ]]; then
   exit 1
 fi
 
-# Run with 1 retry on watchdog-triggered kill
 _run_with_watchdog "$@"
 _final_exit=$?
 
 if [[ "$_watchdog_killed" == "true" ]]; then
-  echo "watchdog: retrying once..." >&2
-  # retry
-  _run_with_watchdog "$@"
-  _final_exit=$?
+  echo "watchdog: retrying disabled; please re-run the skill manually" >&2
 fi
 
 exit "$_final_exit"
