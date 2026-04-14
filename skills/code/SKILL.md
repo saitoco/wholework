@@ -73,20 +73,6 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh "$NUMBER" 2>/dev/null
 
 If ARGUMENTS contains `--base {branch}`, use that value as `BASE_BRANCH`. If `--base` is not specified, default to `BASE_BRANCH=main` (backward compatibility).
 
-**Fix-cycle Detection (run before flag/size evaluation):**
-
-If ARGUMENTS does NOT contain `--patch` or `--pr`:
-
-```bash
-gh issue view "$NUMBER" --json state,labels -q '{state: .state, labels: [.labels[].name]}'
-```
-
-If state == "OPEN" and labels contains "fix-cycle":
-- Set `ROUTE=patch` (fix-cycle detected — bypass Size routing, XL guard, and `phase/ready` check)
-- Skip the Flag precedence and Size auto-detection blocks below; proceed directly to Step 1
-
-If ARGUMENTS contains `--patch` or `--pr`, skip fix-cycle detection (explicit user intent takes precedence).
-
 **Flag precedence (explicit flag > Size auto-detection)**:
 - ARGUMENTS contains `--patch` → **patch route** (direct commit to BASE_BRANCH, no PR). Even if Size is `XL`, `--patch` takes precedence — skip the XL check and run as patch route
 - ARGUMENTS contains `--pr` → **pr route** (branch + PR flow)
@@ -381,24 +367,6 @@ If there are items under "Deviations from Design" (reordering of implementation 
 
 - No deviations: no need to update Spec implementation steps
 - Deviations exist: revise Spec implementation steps to match actual implementation and include in the same commit
-
-**Post-verify fix append (run only when fix-cycle was detected in Step 0):**
-
-When ROUTE=patch was set because fix-cycle label was detected (not because of `--patch` flag), append a `## Post-verify fix` section to the Spec before committing the retrospective:
-
-1. Check if Spec exists (`$SPEC_PATH/issue-$NUMBER-*.md`). If not, output a warning and skip.
-2. Check for existing section:
-   ```bash
-   grep -q "^## Post-verify fix" "$SPEC_PATH/issue-$NUMBER-*.md"
-   ```
-   - If section does not exist: append new `## Post-verify fix` section with `### Fix Cycle 1` subsection
-   - If section exists: count existing `### Fix Cycle N` subsections and append `### Fix Cycle N+1`
-3. Content to record (4 fixed items):
-   - `- **対象 AC**:` — the failed acceptance condition(s) that triggered this fix
-   - `- **修正内容**:` — summary of the fix applied
-   - `- **コミット**: <sha>` — the commit hash of the fix (use `git rev-parse --short HEAD`)
-   - `- **判断根拠**:` — reasoning behind the approach taken
-4. Stage and commit together with the retrospective in the commit below
 
 **Steps:**
 1. If no retrospective information, write "N/A"

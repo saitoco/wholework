@@ -492,16 +492,6 @@ Keep implementation step count and pre-merge verification item count within the 
 
 ## Notes
 (if applicable)
-
-## Post-verify fix
-
-**(Appended by `/code` after each fix-cycle run. Do not include in initial Spec draft.)**
-
-### Fix Cycle 1
-- **対象 AC**: (the failed acceptance condition that triggered this fix)
-- **修正内容**: (summary of the fix applied)
-- **コミット**: <sha>
-- **判断根拠**: (reasoning behind the approach taken)
 ```
 
 **Self-review (internal consistency check) (SPEC_DEPTH=full only):**

@@ -173,6 +173,17 @@
 | Size | L (13 files、pr route + full review) |
 | Value | 4 (信頼性向上 + 維持コスト削減、全 Issue に波及) |
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A（全ステップを Spec の Implementation Steps どおりに実施）
+
+### Design Gaps/Ambiguities
+- `tests/setup-labels.bats` の `--force` 件数チェック（Spec では「--force の 11 回期待も 10 に変更」と記載）は、既存テストコードを確認したところ `@test "success: each label uses --force flag"` のコメント内にのみ件数が記載されていたため、その記述も 10 に変更した。Spec の記述は実態に沿っており問題なし。
+
+### Rework
+- N/A
+
 ## spec retrospective
 
 ### Minor observations
@@ -191,3 +202,17 @@
 
 - **設計時の未解決**: なし。Issue 本文の Auto-Resolved 5 項目で主要な選択肢は事前確定。codebase 調査で追加発見した論点（`_watchdog_killed` 扱い、OPEN path の guidance 対応範囲、docs/ja の同期可否）はいずれも Notes で記録済み
 - **検証方針**: Size L の `/code --patch` 動作は既存機能のため新規検証不要。実装時は Step 4 の guidance 文面と Step 3 の UNCERTAIN-only 分岐挙動を Post-merge 観測で確認（verify command では section_contains のみ、挙動は manual）
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+なし。Spec の implementation steps と差分は完全に整合。13 ファイルの変更はすべて Spec 記載通りに実施されており、Code Retrospective にも「N/A」と記録されている。
+
+### 繰り返し問題
+
+なし。SHOULD issue が 2 件検出されたが、いずれも Spec の Judgment rationale に設計上の意図的省略として記録済みのケースだった。レビュー時に Spec の judgment rationale を事前に参照することで false positive を効率的に識別できた。
+
+### 受入条件検証の難易度
+
+受入条件 18 件中 17 件は `file_not_contains` / `file_contains` / `section_contains` で PASS、1 件（bats tests CI）は IN_PROGRESS のため UNCERTAIN。CI 完了後に `/verify 165` で確認が必要。`file_not_contains` を複数ファイルに対して繰り返す verify command は冗長だが、各ファイルへの言及が独立しているため集約の実益は小さい。
