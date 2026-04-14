@@ -79,6 +79,20 @@
 
 - 特になし。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+特になし。全 22 件の受入条件が PASS。Spec に記載された設計（frontmatter、ssot_for 宣言、絵文字制限、セクション構成）は実装と完全に一致していた。
+
+### Recurring issues
+
+ナビゲーションリンク（相互リンク）の欠如が `workflow.md`・`customization.md`・`troubleshooting.md` の 3 ファイルで共通して観察された。Issue の Post-merge 条件には「各ページから関連ページへの相互リンク」が含まれているが、Pre-merge 条件には verify コマンドが設定されておらず、自動検証不可（UNCERTAIN/スキップ）となった。ドキュメント内のナビゲーション品質は verify コマンドで機械的に検証しにくいため、コードレビュー時に目視確認を要する。
+
+### Acceptance criteria verification difficulty
+
+受入条件の 22 項目はすべて `file_exists` / `file_contains` / `section_contains` / `file_not_contains` で構成されており、safe mode での自動検証率 100%（UNCERTAIN なし）。verify コマンドの設計が適切で機械的検証がしやすい構成だった。一方、相互リンク確認・絵文字使用の目視確認・10-15 分での onboarding 成功の検証は Post-merge 手動条件として分離されており、設計の判断として妥当。
+
 ## Notes
 
 - **Simplicity rule 超過について**: light 用の verify 項目数上限は 5 だが、Issue body の受入条件 pre-merge は 22 項目あり全てそのままコピーした（1:1 対応で `/verify` の自動判定が確実になることを優先）。step 数は 5 に収めグループ化で対応
