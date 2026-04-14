@@ -101,3 +101,37 @@
 - **Terms の扱い**: `docs/product.md` の `## Terms` を SSoT として維持。`docs/guide/index.md` から参照リンクで到達可能にする
 - **翻訳**: 本 Issue では英語版のみ。`/doc translate ja` を後続 Issue で実行し `docs/ja/guide/` を生成する（frontmatter `type: project` により自動で翻訳対象になる）
 - **#155 との関係**: 本 Issue の `quick-start.md > Next Steps` は静的案内、#155（動的ヒント）は skill 完了時の動的表示で相補的。両者は並行せず、#155 は #154 の customization.md / quick-start.md を前提に blocked-by される
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec の受入条件設計が優れていた。全22件が `file_exists` / `file_contains` / `section_contains` / `file_not_contains` で構成され、自動検証率 100%（UNCERTAIN なし）
+- Auto-Resolved Ambiguity Points セクションが充実しており、`ssot_for` の付与対象・用語集の扱い・既存 workflow.md との重複回避など、実装判断の根拠が記録されている
+- 1件の前提ミス: CONTRIBUTING.md に `docs/structure.md` リンクが存在する前提で Spec が書かれていたが、実際は存在しなかった。Code Retrospective で適切に記録・対処されており、ドリフトとして残らなかった
+
+#### design
+- N/A（本 Issue は `/spec` のみで設計。`/design` は使用していない）
+
+#### code
+- 実装は Spec の設計に忠実で、リワークなし
+- CONTRIBUTING.md リンクの不存在という設計前提の誤りを発見・対処した判断（`## Contributing` への追加を省略）は適切
+- 5ファイルの同時新設 + README 改訂 + 2ファイル更新を1コミットにまとめた構成は明快
+
+#### review
+- SHOULD レベルの問題（3ページのナビゲーションリンク欠如）を検出。Pre-merge では修正せず Post-merge 条件として委ねる判断は妥当
+- 22件の受入条件を全件 PASS 確認し、CI が IN_PROGRESS でも merge を進める判断は適切（DCO・syntax・Forbidden Expressions が SUCCESS であったため）
+- レビューコメントのスキップ判断（SHOULD = merge 後 follow-up 推奨）が明示的に記録されており、見落としではないことが追跡可能
+
+#### merge
+- スカッシュマージ（#157）でクリーンにマージ完了。コンフリクトなし
+- CI の `Run bats tests` が IN_PROGRESS のまま merge されたが、DCO・syntax・Forbidden Expressions がすべて SUCCESS であったため問題なし
+
+#### verify
+- 全22件 PASS。Issue CLOSED 確認済み。`phase/verify` ラベルを付与（Post-merge manual/opportunistic 条件が残存）
+- `section_contains "docs/guide/quick-start.md" "Next Steps" "/doc init"` の検証で、実際の見出しが `🧭 Next Steps`（絵文字付き）だったが、section_contains の部分一致で正常に PASS となった。絵文字付き見出しと verify コマンドの文字列の照合は verify-executor の実装依存のため、今後の注意点として認識する
+
+### Improvement Proposals
+- **ドキュメントページ間の相互リンク不足**（code improvement）: `docs/guide/workflow.md`・`docs/guide/customization.md`・`docs/guide/troubleshooting.md` の3ページに他ガイドページへの Navigation リンクがない。Post-merge 手動検証条件として残存中。各ページ末尾に `## Navigation` セクション（`index.md` + 関連ページリンク）を追加する follow-up Issue を作成することを推奨
+- **絵文字付き見出しと section_contains verify コマンドの整合性確認**（skill infrastructure improvement）: `section_contains` が絵文字付き見出し（`🧭 Next Steps`）でも部分一致で動作することを確認したが、verify-executor の実装がこの挙動を保証しているかどうかドキュメントに明記されていない。`verify-executor.md` の `section_contains` の説明に「見出し文字列は部分一致」であることを明記することを推奨
