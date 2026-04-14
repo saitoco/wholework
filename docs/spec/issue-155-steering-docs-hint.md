@@ -106,3 +106,18 @@ Steering Documents 未整備のまま wholework 経由で一定数（5 件以上
 - **`steering-hint` デフォルト true**: `detect-config-markers.md` の既存キーと異なり、`steering-hint` はデフォルト `true`（有効）。`false` 設定で抑制。Marker Definition Table の値説明はこの逆転に注意。
 
 - **モジュール自己完結設計**: `steering-hint.md` はモジュール内で `.wholework.yml` を直接 Read する（呼び出し元での事前チェック不要）。detect-config-markers.md への追加は設定スキーマの公式認識のため。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- `/audit` drift/fragility/integrated でのヒント到達不能はSpec Notesに記載済み。構造上は全サブコマンドに追加して問題なし（モジュール内でスキップ）
+- `detect-config-markers.md` の YAML Parsing Rules に `steering-hint` の逆転マッピング説明を追加した（Specには言及なかったが、他の逆転キー `review-bug` との一貫性のため）
+
+### Rework
+
+- N/A
