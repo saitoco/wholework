@@ -173,6 +173,17 @@
 | Size | L (13 files、pr route + full review) |
 | Value | 4 (信頼性向上 + 維持コスト削減、全 Issue に波及) |
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A（全ステップを Spec の Implementation Steps どおりに実施）
+
+### Design Gaps/Ambiguities
+- `tests/setup-labels.bats` の `--force` 件数チェック（Spec では「--force の 11 回期待も 10 に変更」と記載）は、既存テストコードを確認したところ `@test "success: each label uses --force flag"` のコメント内にのみ件数が記載されていたため、その記述も 10 に変更した。Spec の記述は実態に沿っており問題なし。
+
+### Rework
+- N/A
+
 ## spec retrospective
 
 ### Minor observations
