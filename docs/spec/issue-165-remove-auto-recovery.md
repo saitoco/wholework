@@ -129,3 +129,65 @@
 **docs/workflow.md の section 書き換え方針:**
 
 `### Post-verify Fix Cycle` 見出しは見出しごと置換。新見出しは `### Verify Fail Flow`（または同等の fix-cycle 非依存な名前）。本文は「verify FAIL → Issue reopen + phase/* 削除 → `/code --patch N`（同 Size patch）/ `/code --pr N`（新規ブランチ）/ `/spec N`（設計見直し）を手動で選択」の 3 択ガイドに書き換える。直後の「The original `size/*` label is preserved throughout...」段落は fix-cycle 非依存（Size 保持は reopen/close サイクルでも成り立つ事実）のため維持可能だが、`reopen/close cycles` という文脈のみ残して fix-cycle への言及部分だけ削除する。
+
+## issue retrospective
+
+### fix-cycle 参照の全件精査による具体化
+
+`grep -rln "fix-cycle"` で 14 ファイルの参照箇所を洗い出し、以下に分類:
+
+| カテゴリ | 件数 | ファイル |
+|---------|------|----------|
+| 作成・付与ロジック | 3 | `verify/SKILL.md`, `setup-labels.sh`, `tests/setup-labels.bats` |
+| 参照・ルーティング | 5 | `auto/SKILL.md`, `code/SKILL.md`, `spec/SKILL.md`, `next-action-guide.md`, `size-workflow-table.md` |
+| ドキュメント | 3 | `product.md`, `workflow.md`, `docs/guide/workflow.md` |
+| 歴史 Spec（保持） | 3 | `docs/spec/issue-{141,161,163}-*.md` |
+
+歴史 Spec は disposable 原則により削除対象外。
+
+### 素案からの主な変更
+
+- **スコープ拡大**: 3 ファイル → **13 ファイル**（verify/auto/code/spec/modules/scripts/tests/docs）
+- **Size 変更**: M → **L**（per-file 変更は deletion 中心で複雑度は低いが、ファイル数で L）
+- **行番号ピンポイント**: 各 SKILL.md の修正対象 line 番号を明記
+- **Spec template の `## Post-verify fix` section も削除**: 当初想定外だったが fix-cycle 専用セクションなので合わせて廃止
+- **#162/#163 を閉鎖済みと明記**: 除去方針により obsolete
+
+### Auto-Resolved 判断の根拠
+
+- **既存 fix-cycle ラベル付き Issue**: マイグレーションなし。参照ロジック除去後は inert。破壊的 label 削除よりも自然消滅が安全
+- **setup-labels.sh のラベル削除**: 既存 label の削除ロジックは追加しない（既存 Issue の label 履歴を破壊するため）
+- **Post-verify fix section**: Spec disposable 原則により通常 retrospective で代替可能
+- **Size L + /code --patch**: 既存の `--patch` フラグが Size override する挙動で対応可能、実装追加不要
+
+### Sub-issue splitting 判定
+
+**不要**。A/B/C は概念的に一体の「自動復旧機能の除去」。分割するとマージ順序によって half-state（watchdog retry だけ残る等）が発生するリスクが増す。13 ファイルだが per-file は deletion 中心で並行レビュー可能。
+
+### Triage 結果
+
+| 項目 | 値 |
+|------|-----|
+| Type | Task (refactoring) |
+| Priority | high (自動復旧の誤作動が実害を出している) |
+| Size | L (13 files、pr route + full review) |
+| Value | 4 (信頼性向上 + 維持コスト削減、全 Issue に波及) |
+
+## spec retrospective
+
+### Minor observations
+
+- Pre-merge verify 項目数が 18 件で full template 推奨上限 10 を上回っている。各項目は独立した file/section 検査であり、集約すると粒度を失う。Issue 本文の受入条件と逐語同期するため Spec 側では集約せず、「件数が多い場合の扱い」は運用ルール化の余地あり（例: `file_not_contains` を複数パスまとめて `grep -rL` で検査する verify command type の導入）
+- `docs/ja/*` に fix-cycle 言及がなかった（`docs/ja/` 配下は翻訳遅延のため古い状態）。ミラーファイル未同期を前提に本 Issue の scope は `docs/*` (英) のみとした。`docs/ja/*` は別 Issue での一括同期対象
+- `_watchdog_killed` フラグは retry 廃止後も新メッセージ分岐条件として残すのが最小変更。完全クリーンアップ（フラグ自体も削除）を追求すると kill 検知ロジックを `_run_with_watchdog` の return code や trap に寄せる必要が出て、変更範囲が拡大する
+
+### Judgment rationale
+
+- **FAIL/UNCERTAIN 分岐の分離**: 「FAIL 含む → reopen」「UNCERTAIN のみ → 通知」を CLOSED/OPEN 両 path で対称に適用。CLOSED + UNCERTAIN only の場合、Issue は CLOSED のまま phase/verify ラベルを付与する（GitHub は closed issue に対するラベル付与を許容）。これにより「要判断」状態を残しつつ自動 reopen の副作用を回避する
+- **guidance の配置範囲**: Issue 本文の受入条件は CLOSED path の reopen メッセージのみ要求。OPEN path の FAIL 分岐は既存の "User selects the next action" 文言を維持し、scope を逸脱しない。将来の一貫性のため follow-up Issue 候補
+- **kill 時メッセージの上書き方針**: `retrying once...` の位置（`exit` 直前の `if _watchdog_killed` ブロック）に同条件で `retrying disabled...` を配置。内部ループの `killing process` メッセージは残す。両方の verify (`file_not_contains "retrying once"` + `file_contains "retrying disabled"`) を満たす最小変更
+
+### Uncertainty resolution
+
+- **設計時の未解決**: なし。Issue 本文の Auto-Resolved 5 項目で主要な選択肢は事前確定。codebase 調査で追加発見した論点（`_watchdog_killed` 扱い、OPEN path の guidance 対応範囲、docs/ja の同期可否）はいずれも Notes で記録済み
+- **検証方針**: Size L の `/code --patch` 動作は既存機能のため新規検証不要。実装時は Step 4 の guidance 文面と Step 3 の UNCERTAIN-only 分岐挙動を Post-merge 観測で確認（verify command では section_contains のみ、挙動は manual）
