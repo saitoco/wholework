@@ -119,7 +119,7 @@ After `/auto` completes successfully:
 
 You have completed the core workflow. Here are recommended next steps to get more out of Wholework:
 
-- **Set up Steering Documents** — Run `/wholework:doc init` to create `docs/product.md`, `docs/tech.md`, and `docs/structure.md`. These documents guide every phase and significantly improve skill output quality. Without them, skills use defaults; with them, outputs align to your project's conventions and architecture decisions.
+- **Set up Steering Documents** — Run `/doc init` (or `/wholework:doc init`) to create `docs/product.md`, `docs/tech.md`, and `docs/structure.md`. These documents guide every phase and significantly improve skill output quality. Without them, skills use defaults; with them, outputs align to your project's conventions and architecture decisions.
 
 - **Customize behavior** — Read [customization.md](customization.md) to learn how to configure `.wholework.yml` (e.g., enable opportunistic verify, set a production URL), add project-specific domain files in `.wholework/domains/`, and create adapters for your tools.
 
