@@ -77,6 +77,10 @@ This design minimizes setup cost and allows teams to adopt individual workflow p
 
 > **Implementation guideline for Skills**: always check whether an optional dependency exists before using it. If absent, skip the step or substitute a default value. Do not error out.
 
+## User Manual
+
+User-facing documentation is maintained under `docs/guide/`. It covers installation, the quick-start tutorial, workflow overview, customization, and troubleshooting — designed for evaluators and new users, complementing the developer-focused Steering Documents.
+
 ## Future Direction
 
 - **`.wholework.yml` configuration customization**: Allow per-project configuration of paths such as the Spec storage location (default: `docs/spec/`). This reduces friction when adopting Wholework in projects with existing directory structures.
