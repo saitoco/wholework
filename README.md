@@ -23,9 +23,44 @@ Skills are available as `wholework:<skill-name>` (e.g., `/wholework:review`, `/w
 
 For development setup, see [docs/structure.md](docs/structure.md#install).
 
-## Repository structure
+## 🚀 Quick Start
 
-See [`docs/structure.md`](docs/structure.md) for the full directory layout and installation conventions.
+New to Wholework? The [Quick Start Guide](docs/guide/quick-start.md) walks you through installing Wholework and running your first `/auto` command end-to-end in 10–15 minutes.
+
+## 🔄 Workflow Overview
+
+Wholework covers the full development lifecycle as a chain of independent skills:
+
+```
+/triage → /issue → /spec → /code → /review → /merge → /verify
+```
+
+Run each phase individually, or use `/auto` to chain them automatically. Size-based routing determines the workflow path: XS/S issues commit directly to main; M/L issues create a Pull Request; XL issues are split into sub-issues.
+
+```mermaid
+flowchart TD
+    A["File Issue"] -->|"/triage (optional)"| T["Triage"]
+    T -.->|"normalize title, set Type/Size"| A
+    A -->|"/issue"| B["Clarify requirements"]
+    B -->|"/spec"| C["Design spec"]
+    C -->|"/code"| E["Implement, test, create PR"]
+    E -->|"/review"| F["PR review"]
+    F -->|"/merge"| G["Merge PR"]
+    G -->|"/verify"| H["Acceptance testing"]
+    H -->|"FAIL"| I["gh issue reopen → fix cycle"]
+```
+
+For a detailed guide to each command, see [docs/guide/workflow.md](docs/guide/workflow.md).
+
+## 🛠️ Customization
+
+Wholework works out of the box, and adapts to your project through three layers:
+
+- **`.wholework.yml`** — Enable features like `opportunistic-verify`, set a `production-url`, or point to a custom `spec-path`
+- **`.wholework/domains/`** — Inject project-specific instructions into individual skills (e.g., testing conventions, API patterns)
+- **Adapters** — Replace or extend verify command handlers for your environment
+
+See [docs/guide/customization.md](docs/guide/customization.md) for the full reference.
 
 ## Contributing
 
