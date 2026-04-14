@@ -15,7 +15,7 @@ jobs:
       - name: Install bats
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y bats
+          sudo apt-get install -y bats parallel
 
       - name: Run bats tests
         run: bats --jobs 4 tests/
