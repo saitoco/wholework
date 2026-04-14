@@ -65,6 +65,20 @@
 - README および `docs/guide/` 配下の絵文字使用は主要見出し近傍に留まり、本文段落・リスト項目への連発がない（レビュー時に目視確認）
 - `/doc sync` 実行時に `docs/guide/` 配下が Project Documents として認識され、normalization 対象に含まれる
 
+## Code Retrospective
+
+### Deviations from Design
+
+- README の `## Repository structure` 削除後、`CONTRIBUTING.md` 経由の `docs/structure.md` リンクは「CONTRIBUTING.md 側に既に記載あれば維持、なければ `## Contributing` 節にリンクを含める形で維持」という Spec の指示があったが、CONTRIBUTING.md を確認したところ構造ドキュメントへのリンクは元々なく、かつ README の `## Contributing` 節も一行のみで追加は冗長と判断。`docs/structure.md#install` リンクは既存 `## Install` 節に残っているため、`docs/structure.md` への参照は保持されていると判断し、`## Contributing` へのリンク追加は省略した。
+
+### Design Gaps/Ambiguities
+
+- Spec の Step 4 では「CONTRIBUTING 経由の `docs/structure.md` リンクは別途維持」と記載されているが、CONTRIBUTING.md を確認すると構造ドキュメントへのリンクは存在しなかった。Spec 作成時の前提（CONTRIBUTING に structure.md リンクがある）が実態と異なっていた。
+
+### Rework
+
+- 特になし。
+
 ## Notes
 
 - **Simplicity rule 超過について**: light 用の verify 項目数上限は 5 だが、Issue body の受入条件 pre-merge は 22 項目あり全てそのままコピーした（1:1 対応で `/verify` の自動判定が確実になることを優先）。step 数は 5 に収めグループ化で対応
