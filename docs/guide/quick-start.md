@@ -4,6 +4,8 @@ ssot_for:
   - user-onboarding-flow
 ---
 
+English | [日本語](../ja/guide/quick-start.md)
+
 # 🚀 Quick Start
 
 Get from zero to your first autonomous `/auto` run in 10–15 minutes.

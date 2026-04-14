@@ -2,6 +2,8 @@
 type: project
 ---
 
+English | [日本語](../ja/guide/troubleshooting.md)
+
 # 🔧 Troubleshooting
 
 Common issues and how to fix them.

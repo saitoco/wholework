@@ -2,6 +2,8 @@
 type: project
 ---
 
+English | [日本語](../ja/guide/workflow.md)
+
 # 🔄 Workflow Overview
 
 This page explains what each Wholework skill does, when to use it, and how issues flow through the system.

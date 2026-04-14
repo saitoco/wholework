@@ -4,6 +4,8 @@ ssot_for:
   - customization-entry-points
 ---
 
+English | [日本語](../ja/guide/customization.md)
+
 # 🛠️ Customization
 
 Wholework adapts to your project through three layers of configuration: `.wholework.yml` for feature flags, `.wholework/domains/` for skill-phase instructions, and adapters for tool integration.

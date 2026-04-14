@@ -2,15 +2,15 @@
 
 # Wholework
 
-自律的な GitHub ワークフローのための、Issue 駆動の Claude Code Skill 群。
+自律的な GitHub ワークフローのための Issue 駆動型 Claude Code スキル。
 
-## 🌐 なぜ Wholework か
+## 🌐 なぜ Wholework なのか
 
-1. **Issue から Spec への設計** — Issue は *何を* と *いつ完了とみなすか* を定義し、Spec は *どうやって* そこに到達するかを分解します。検証可能な受入条件を最優先とし、可能な限り自動チェックします。
-2. **Size に応じたルーティングを備えた全フェーズワークフロー** — `/issue → /spec → /code → /review → /merge → /verify` が、要件定義からマージ後の検証までライフサイクル全体をカバーします。
-3. **自律実行** — `/auto` は Issue の Size に応じてフェーズを連鎖させ、必要に応じてワークフロー全体を人手を介さず実行します。
-4. **手元の環境で動く** — GitHub と Claude Code の上で動作します。標準的な GitHub Flow に従っており、任意のフェーズで介入できます。
-5. **ソフトウェア開発にとどまらない** — Issue 駆動のあらゆるプロジェクトに適用できます: Web サイト、ドキュメント、IaC、リサーチ、OSS 運営など。
+1. **Issue-to-spec 設計** — Issue が *何を* と *完了条件* を定義し、spec が *どう進めるか* を分解します。検証可能な受け入れ基準を最優先とし、可能な限り自動でチェックします。
+2. **サイズに応じたルーティングを備えたフルフェーズワークフロー** — `/issue → /spec → /code → /review → /merge → /verify` が要件定義からマージ後の検証まで、ライフサイクル全体をカバーします。
+3. **自律実行** — `/auto` は Issue のサイズに応じてフェーズを連鎖させ、必要なときは人手を介さずにワークフロー全体を実行します。
+4. **手持ちのツールで動く** — GitHub と Claude Code 上で動作します。標準的な GitHub Flow に沿っているので、どのフェーズでも介入できます。
+5. **ソフトウェア開発を超えて** — Issue 駆動型のあらゆるプロジェクトに適用できます: Web サイト、ドキュメント、IaC、リサーチ、OSS 運用など。
 
 ## インストール
 
@@ -19,14 +19,30 @@
 /plugin install wholework@saitoco-wholework
 ```
 
-Skill は `wholework:<skill-name>` として利用可能です（例: `/wholework:review`、`/wholework:code`）。
+スキルは `wholework:<skill-name>` として利用できます（例: `/wholework:review`、`/wholework:code`）。
 
 開発環境のセットアップについては [docs/ja/structure.md](docs/ja/structure.md#install) を参照してください。
 
-## リポジトリ構成
+## 🚀 クイックスタート
 
-ディレクトリレイアウトとインストール規約の全体像は [`docs/ja/structure.md`](docs/ja/structure.md) を参照してください。
+Wholework を初めて使いますか？ [クイックスタートガイド](docs/ja/guide/quick-start.md) が、インストールから最初の `/auto` 実行までを 10〜15 分で案内します。
+
+## 🔄 ワークフロー概要
+
+Wholework は 6 つの組み合わせ可能なスキルで開発ライフサイクル全体をカバーします。
+
+`/issue` → `/spec` → `/code` → `/review` → `/merge` → `/verify`
+
+1 つのコマンドでフルサイクルを実行: `/auto N`。各フェーズの詳細とサイズベースのルーティングについては [ワークフロー概要](docs/ja/guide/workflow.md) を参照してください。
+
+## 🛠️ カスタマイズ
+
+Wholework は `.wholework.yml`（フィーチャーフラグとパス）、`.wholework/domains/`（スキルごとの指示）、adapter（ツール連携）を通じてプロジェクトに適応します。詳細は [カスタマイズガイド](docs/ja/guide/customization.md) を参照してください。
+
+## コントリビュート
+
+すべてのコミットで DCO sign-off が必要です。詳細は [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
 
 ## ライセンス
 
-Apache License 2.0。[LICENSE](LICENSE) を参照してください。
+Apache License 2.0. [LICENSE](LICENSE) を参照してください。

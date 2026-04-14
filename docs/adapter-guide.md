@@ -4,6 +4,8 @@ ssot_for:
   - adapter-authoring-guide
 ---
 
+English | [日本語](ja/adapter-guide.md)
+
 # Adapter Authoring Guide
 
 A step-by-step guide for creating project-specific capability adapters for Wholework.

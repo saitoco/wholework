@@ -2,6 +2,8 @@
 type: project
 ---
 
+English | [日本語](../ja/guide/index.md)
+
 # 📖 Wholework User Guide
 
 Welcome to the Wholework user guide. This guide is for anyone who uses Claude Code and GitHub Issues to drive their work — developers, technical writers, researchers, or anyone who follows an issue-driven workflow.
