@@ -508,6 +508,7 @@ For each Steering Document loaded above, use AI judgment to identify sections th
 | Missing coverage | An important pattern present in the implementation has no mention at all in the Steering Document | A newly introduced agent is not mentioned in Architecture Decisions |
 | Partial description | An existing description mentions only specific cases, leaving other instances of the same pattern undocumented | "Sub-agent splitting: `/review` splits…" with no mention of `/issue`'s parallel investigation sub-agents |
 | Obsolete mention | A description refers to an element that no longer exists in the implementation | A reference to a deleted agent or removed flag |
+| Skill Coverage Gap | A skill exists in `skills/*/SKILL.md` but has no independent top-level section heading in the Steering Document | `/triage` exists in `skills/` but is mentioned only within a subsection, without an independent heading |
 
 **Output findings as drift report:**
 
@@ -528,6 +529,20 @@ Retrieve the list of terms already registered in the Terms table from the Steeri
 **Output:**
 
 Accumulate all Terms consistency check findings in the drift report alongside the narrative drift findings above, and pass them to Step 7 (normalization proposals). Do not auto-fix any Terms consistency drift.
+
+**Structural Antipattern Detection (--deep only):**
+
+This sub-step runs only when the `--deep` flag is enabled.
+
+**SSoT Reverse Reference Check:**
+
+For each file with `ssot_for` frontmatter, scan all sections. If a section's content primarily consists of a reference pointing to another file (e.g., "See docs/X.md for Y") where the referenced content logically belongs in the current file's `ssot_for` category, flag it as a "SSoT Reverse Reference" antipattern — the SSoT file is delegating its own content outward.
+
+**Pointer-only Section Detection:**
+
+For each `type: steering` file, scan all sections. If a section contains no substantive content — only pointer/reference text (e.g., "See README.md for the skill list.") with no bullets, tables, or descriptive sentences beyond the pointer — flag it as a "Pointer-only Section" antipattern.
+
+Accumulate all findings as drift report items and pass them to Step 7 (normalization proposals). Do not auto-fix any detected structural antipatterns.
 
 **Content classification based on dynamic SSoT mapping:**
 
@@ -552,7 +567,7 @@ Based on Step 6 classification results, propose one of 3 actions for each item:
 
 - **Absorb**: incorporate descriptions from analysis source/implementation code into Steering Documents and replace original descriptions with reference links. Check for duplicate content in Steering Documents before executing
 - **Reference**: replace duplicate descriptions in analysis source/implementation code with reference links to Steering Documents (when Steering Documents already have the information). Treat Steering Documents as the source of truth; other files hold references to them
-- **Drift report**: report drift between implementation code and Steering Documents (no auto-fix, ask for user judgment). When `--deep` is enabled, narrative semantic drift check findings (Missing coverage / Partial description / Obsolete mention) are also surfaced through this path and never auto-fixed
+- **Drift report**: report drift between implementation code and Steering Documents (no auto-fix, ask for user judgment). When `--deep` is enabled, narrative semantic drift check findings (Missing coverage / Partial description / Obsolete mention / Skill Coverage Gap) and structural antipattern detection findings (SSoT Reverse Reference, Pointer-only Section) are also surfaced through this path and never auto-fixed
 
 If `--deep` flag is enabled and Step 2's .md integration scan results exist, add integration proposals for Pattern 2–4 unintegrated .md files to the existing proposal table:
 
