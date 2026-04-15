@@ -56,3 +56,17 @@ patch route（Size XS/S、PR なし）の Issue で `/spec` が `github_check "g
 - 挿入テキストに半角 `!` が含まれないことを確認済み（validate-skill-syntax.py MUST 制約準拠）
 - `gh run list` の `--workflow` オプション省略形を提供するが、プロジェクトに複数 CI ワークフローがある場合は LLM が判断して `--workflow=<filename>` を付与する設計にした
 - 受入条件 2・3 は Issue body に verify command がなかったため、Spec で追加設計し Issue body を更新（verify command sync rule 準拠）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
