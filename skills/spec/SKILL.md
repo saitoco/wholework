@@ -378,6 +378,10 @@ After `## Verification > Pre-merge` is finalized and the Issue body is updated, 
 | Text change | `SKILL.md`: change "old text" → "new text" |
 | Content addition | `SKILL.md`: add XXX section to Step N |
 
+**Shell script bash compat note:**
+
+When Changed Files includes shell scripts (`scripts/*.sh`, hook scripts, etc.), add a bash compat note to each entry. Example: `scripts/foo.sh`: add bar function — bash 3.2+ compatible. This prevents issues like using `mapfile` (bash 4+) that fails on macOS system bash (bash 3.2).
+
 **"No change needed" pre-verification rule:**
 
 Before writing "no change needed" for a file in the changed-files section, verify with grep or similar. Unverified "no change needed" judgments lead to implementation oversights (example: #749).
