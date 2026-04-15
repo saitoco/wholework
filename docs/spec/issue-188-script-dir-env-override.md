@@ -188,3 +188,32 @@ Size L: 17 scripts の一斉適用 (6-10 files を超える) + CI-sensitive (+1)
 - 子プロセスへの `WHOLEWORK_SCRIPT_DIR` 伝播: `env -u CLAUDECODE` は `CLAUDECODE` のみ削除のため env var は保持される。BATS テストで 1 回 `export` すれば `run-auto-sub.sh` → `run-verify.sh` 等のチェーン全段で override が効く。Notes セクションに明文化
 - `set -u` 下での `${VAR:-default}` 安全性: `:-` は unset/empty 両方で default に fallback するため nounset エラーにならない。`set -euo pipefail` を使用する setup-labels.sh 等でも問題なし
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- count 集約型 verify command の anti-pattern (`test $(... | wc -l) -eq 0`) を Spec 段階で発見・除外できた。`modules/verify-patterns.md` を `/issue` 実行時に照会していれば Issue 段階で防げた可能性あり（spec retrospective に記録済み）
+- `/issue` での verify command 設計時に verify-patterns.md の関連セクションを明示的に参照する運用強化は改善余地あり
+
+#### design
+- 4 代表スクリプトの `file_contains` verify + CI PASS + post-merge opportunistic という検証構造は適切。全 17 スクリプトへの包括的検証を pre-merge に含めず、代表件のみに絞った判断は verify 実行効率の観点からも妥当
+
+#### code
+- 17 スクリプトへの同一パターン一斉適用で rework なし。macOS BSD sed の制約により Python で代替したが（code retrospective 記録済み）、実装品質への影響なし
+- `docs/tech.md` の Environment Variables テーブルへの `WHOLEWORK_SCRIPT_DIR` 追記は Spec 未明示だったが、文書整備として適切な追加（review retrospective 記録済み）
+
+#### review
+- review retrospective で「条件8の CI in_progress → UNCERTAIN」パターンに言及あり。CI 完了後に `/review` 実行するか `gh pr checks` allowlist コマンドを使う提案も含まれており、今回の verify 結果と一致
+
+#### merge
+- 1 コミット（`chore: unify SCRIPT_DIR env var override and BATS mock strategy`）でクリーンにマージ。コンフリクトなし
+
+#### verify
+- 条件 1〜7（`file_contains` × 6、`section_contains` × 1）はすべて PASS
+- 条件 8（`github_check "gh run list --workflow=test.yml --limit=1 ..."`）は UNCERTAIN：マージ直後にverifyを実行したため、main ブランチの最新 CI 実行が `in_progress` 状態。PR ブランチ（`worktree-issue-188-script-dir-env-override`）の過去実行はすべて `success` であり実装の正しさは担保されている
+- verify コマンドの `--limit=1` は「最新の完了済み実行」ではなく「最新の実行（進行中を含む）」を返すため、マージ直後の実行タイミングと相性が悪い
+
+### Improvement Proposals
+- `/verify` がマージ直後に実行される場合、`github_check` の CI PASS 条件は `in_progress` のまま UNCERTAIN になりやすい。`gh run list` で in_progress を除外する `--status completed` フィルタを verify command 側に追加するか、review retrospective の提案通り `gh pr checks` 形式（allowlist 内）を採用するパターンを `modules/verify-patterns.md` に追記することを検討する
+
