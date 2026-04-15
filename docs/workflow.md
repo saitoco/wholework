@@ -138,6 +138,14 @@ Assigns Type (`bug`/`feature`/`task`), Size (XS–XL), and Priority to Issues. I
 
 Maintains project foundation information in `docs/`. Each document declares its role via the YAML frontmatter `type` field (`type: steering` for Steering Documents, `type: project` for operational documents). `/doc sync` identifies both types and normalizes them. `/doc sync --deep` adds codebase analysis (entry points, dependency graphs, test files, comments/docstrings) plus integrated scanning of existing .md files (4-pattern classification, absorption target determination) plus structural antipattern detection (SSoT Reverse Reference, Pointer-only Section, Skill Coverage Gap). `/doc init --deep` and `/doc {doc} --deep` perform equivalent inline analysis for new files, auto-generating drafts without a question flow. `/doc translate {lang}` generates translations of English documentation (README.md, Steering Documents, Project Documents) under `docs/{lang}/` and `README.{lang}.md`, then commits and pushes automatically. Details: [`skills/doc/SKILL.md`](../skills/doc/SKILL.md)
 
+**Translation Sync**: `docs/*.md` and `docs/guide/*.md` have 1:1 counterparts under `docs/ja/` (`docs/ja/*.md` and `docs/ja/guide/*.md`). To check which files are out of sync, run:
+
+```sh
+bash scripts/check-translation-sync.sh
+```
+
+To regenerate all translations, run `/doc translate ja`. This command generates updated Japanese translations for all English documentation and commits them automatically.
+
 ### `/audit` — Drift and Fragility Detection
 
 `/audit drift` uses AI to detect semantic drift between Steering Documents + Project Documents and codebase implementation, automatically generating Issues for code-side fixes. Complementary to `/doc sync` (which proposes document-side fixes). `/audit fragility` detects structurally fragile areas (missing tests for core modules, Architecture Decision violations, etc.) and generates risk-improvement Issues. `/audit` (no arguments) runs both drift + fragility perspectives together. `/audit stats` aggregates Issue metadata (throughput, composition, First-try success rate, Backlog Health, etc.) across the project and generates a project health diagnostic report, serving as a third lens alongside drift and fragility. Details: [`skills/audit/SKILL.md`](../skills/audit/SKILL.md)
