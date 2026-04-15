@@ -1,0 +1,81 @@
+name: Bug Report
+description: Report a bug or unexpected behavior in Wholework skills or scripts.
+title: "[Bug]: "
+labels: ["type/bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in as much detail as possible.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe the bug...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+      placeholder: Describe what you expected...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Step-by-step instructions to reproduce the issue.
+      placeholder: |
+        1. Run `/wholework:code 123`
+        2. Observe output...
+    validations:
+      required: true
+
+  - type: textarea
+    id: skill
+    attributes:
+      label: Which skill or script is affected?
+      description: e.g., `/code`, `/spec`, `/review`, `run-code.sh`, `gh-label-transition.sh`
+      placeholder: skill or script name
+    validations:
+      required: false
+
+  - type: input
+    id: claude-version
+    attributes:
+      label: Claude Code version
+      description: Output of `claude --version`
+      placeholder: e.g., 1.2.3
+    validations:
+      required: false
+
+  - type: input
+    id: gh-version
+    attributes:
+      label: GitHub CLI version
+      description: Output of `gh --version`
+      placeholder: e.g., gh version 2.x.x
+    validations:
+      required: false
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: e.g., macOS 15.4, Ubuntu 24.04
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Logs, screenshots, or any other information that might help.
+    validations:
+      required: false

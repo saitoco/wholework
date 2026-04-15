@@ -52,6 +52,11 @@ Wholework adapts to your project through `.wholework.yml` (feature flags and pat
 
 Wholework skills perform `gh`, `git`, and file-write operations on your repository. `/auto` uses `--dangerously-skip-permissions` to bypass permission prompts for unattended execution. See [SECURITY.md](SECURITY.md) for a full description of side effects and required permissions.
 
+## Support
+
+- **Bug reports & feature requests** — open an issue via [GitHub Issues](https://github.com/saitoco/wholework/issues/new/choose). Templates are provided for bug reports and feature requests.
+- **Security concerns** — see [SECURITY.md](SECURITY.md) for the full description of side effects, required permissions, and permission-bypass behavior.
+
 ## Contributing
 
 Contributions require a DCO sign-off on every commit. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.

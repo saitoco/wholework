@@ -30,6 +30,10 @@ wholework/
 ├── scripts/             # Utility scripts used by skills and agents (30 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.yml       # Bug report Issue Form
+│   │   ├── feature_request.yml  # Feature request Issue Form
+│   │   └── config.yml           # Disables blank (templateless) issues
 │   └── workflows/
 │       ├── test.yml             # CI: bats tests, skill syntax validation, and forbidden expressions check
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board

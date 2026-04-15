@@ -1,0 +1,64 @@
+name: Feature Request
+description: Suggest a new feature or improvement for Wholework.
+title: "[Feature]: "
+labels: ["type/feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. Please describe your idea as clearly as possible.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or motivation
+      description: What problem does this feature solve? What workflow pain point does it address?
+      placeholder: I'm always frustrated when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe the solution you would like. Include how it would integrate with existing skills or scripts if applicable.
+      placeholder: It would be great if...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe any alternative approaches or workarounds you have considered.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Relevant skill or area
+      description: Which skill or area of Wholework does this relate to?
+      options:
+        - "/issue"
+        - "/spec"
+        - "/code"
+        - "/review"
+        - "/merge"
+        - "/verify"
+        - "/auto"
+        - "/triage"
+        - "Scripts / utilities"
+        - "Documentation"
+        - "CI / GitHub Actions"
+        - "Other"
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Any other information, mockups, or references that support this request.
+    validations:
+      required: false
