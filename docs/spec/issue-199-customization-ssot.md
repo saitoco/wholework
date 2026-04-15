@@ -37,3 +37,14 @@
 - `docs/ja/guide/customization.md` は修正対象外（`/doc translate` で自動生成）
 - 追加する SSoT 宣言文には "SSoT" の文字列を含めること（verify command `section_contains` が固定文字列マッチのため）
 - detect-config-markers.md への追加は Purpose セクションの末尾が適切
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
