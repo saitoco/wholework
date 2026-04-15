@@ -131,6 +131,14 @@ Issue に Type（`bug`/`feature`/`task`）、Size（XS–XL）、Priority を付
 
 プロジェクトの基盤情報を `docs/` で保守します。各ドキュメントは YAML フロントマターの `type` フィールドで種別を定義します（Steering Documents は `type: steering`、運用ドキュメントは `type: project`）。`/doc sync` は `type: steering` と `type: project` のドキュメントを識別し、すべてを正規化します。`workflow.md`（`type: project`）もその対象です。各 Skill は条件付きでこれらのドキュメントを参照し、存在しない場合はスキップします（後方互換性）。`/doc sync --deep` はコードベース分析（エントリーポイント、依存グラフ、テストファイル、コメント/docstring）と既存 .md ファイルの統合スキャン（4 パターン分類、吸収対象判定）、構造的アンチパターン検出（SSoT 逆方向参照、ポインタのみセクション、Skill Coverage Gap）を含む拡張逆生成オプションを実行します。`/doc init --deep` と `/doc {doc} --deep` は新規作成時に同等のインライン分析を行い、質問フローを介さずにドラフトを自動生成します。`/doc translate {lang}` は英語ドキュメント（README.md、Steering Documents、Project Documents）の翻訳を指定言語（BCP 47 / ISO 639-1 言語コード。例: `ja`、`ko`、`zh-cn`）で `docs/{lang}/` および `README.{lang}.md` に生成し、自動でコミット・プッシュします。詳細: [`skills/doc/SKILL.md`](../../skills/doc/SKILL.md)
 
+**翻訳同期**: `docs/*.md` と `docs/guide/*.md` は `docs/ja/` 配下に 1:1 の対応ファイル（`docs/ja/*.md` および `docs/ja/guide/*.md`）を持ちます。どのファイルが非同期かを確認するには次のコマンドを実行してください:
+
+```sh
+bash scripts/check-translation-sync.sh
+```
+
+全翻訳を再生成するには `/doc translate ja` を実行します。英語ドキュメントの更新済み日本語訳を生成し、自動でコミットされます。
+
 ### `/audit` — ドリフト・フラジリティ検出
 
 `/audit drift` は AI を用いて Steering Documents + Project Documents とコードベース実装の意味的乖離を検出し、コード側修正の Issue を自動生成します。`/doc sync`（ドキュメント側修正を提案）の相補的位置付け。`/audit fragility` は構造的に脆弱な箇所（コアモジュールのテスト欠如、Architecture Decision 違反など）を検出しリスク改善 Issue を生成します。`/audit`（引数なし）は drift + fragility の両観点を一緒に実行します。`/audit stats` はプロジェクト全体の Issue メタデータ（スループット、構成、First-try 成功率、Backlog Health など）を集約してプロジェクト健全性診断レポートを生成し、drift と fragility に並ぶ第 3 のレンズとなります。詳細: [`skills/audit/SKILL.md`](../../skills/audit/SKILL.md)
