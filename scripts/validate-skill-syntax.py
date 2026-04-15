@@ -490,6 +490,7 @@ KNOWN_VERIFY_COMMAND_TYPES: Dict[str, Tuple[int, int]] = {
     'dir_not_exists': (1, 1),
     'file_contains': (2, 2),
     'file_not_contains': (2, 2),
+    'files_not_contain': (2, 2),
     'grep': (2, 2),
     'command': (1, 1),
     'json_field': (3, 3),

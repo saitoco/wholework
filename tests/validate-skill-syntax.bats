@@ -493,6 +493,7 @@ description: A test skill
 - [ ] <!-- verify: grep "pattern" "some/file.txt" --> grep matches
 - [ ] <!-- verify: command "python3 scripts/validate-skill-syntax.py skills/" --> command runs
 - [ ] <!-- verify: browser_check "http://localhost:3000" "title" --> browser ok
+- [ ] <!-- verify: files_not_contain "modules/**/*.md" "deprecated-text" --> no deprecated text
 EOF
 
     run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
