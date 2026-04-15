@@ -51,6 +51,41 @@ Routines can elevate wholework from "locally-invoked CLI skills" to a "cloud-res
 | phase-transition executor | `issues.labeled` (e.g., `phase/spec-ready`, `phase/code-ready`) | Kick corresponding skill (`/spec`, `/code`) |
 | verify-on-merge | `pull_request.closed` (merged) | `/verify` — eliminate the "manual verify forgotten" failure mode |
 
+#### Setup Runbook — auto-triage (`issues.opened` → `/triage`)
+
+This runbook documents the steps to configure the auto-triage routine via the Claude Code web UI. The routine fires on `issues.opened` and runs `/triage N` to assign Type/Priority/Size/Value immediately.
+
+**Prerequisites**
+
+- Claude Code account with Routines access (Pro/Max/Team/Enterprise)
+- GitHub repository connected to Claude Code (required for webhook delivery)
+
+**Configuration Steps**
+
+1. Open the Claude Code web UI and navigate to **Routines**
+2. Click **New Routine** and select trigger type: **GitHub Webhook**
+3. Configure trigger:
+   - **Event**: `issues.opened`
+   - **Repository**: select the target repository
+4. Configure the action prompt:
+   ```
+   /triage {{event.issue.number}}
+   ```
+5. Save the routine — Claude Code generates a webhook endpoint and registers it to the GitHub repository automatically
+6. Verify delivery: open a new test issue and confirm the routine fires within 30–60 seconds
+
+**Idempotence**
+
+`/triage` detects the `triaged` label at startup. If the label is already present, it skips all assignment operations and exits cleanly. This ensures safe re-delivery on webhook retry without double-processing.
+
+**Quota Impact**
+
+Each `issues.opened` event consumes one routine quota slot (Pro: 5/day, Max: 15/day). On low-traffic repositories, quota is rarely a concern. On high-traffic repositories, consider whether every new issue warrants immediate triage or whether a cron-based batch (Tier 3) is more quota-efficient.
+
+**Expected Outcome**
+
+Within 60 seconds of issue creation, `/triage` applies Type, Priority, Size, and Value assignments via Project fields (or fallback `type/*`, `priority/*`, `size/*`, `value/*` labels).
+
 ### Tier 2 — Per-PR Shepherd
 
 Assign one routine per PR, managing lifecycle in a single persistent session:
