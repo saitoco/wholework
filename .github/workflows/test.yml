@@ -15,10 +15,10 @@ jobs:
       - name: Install bats
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y bats parallel
+          sudo apt-get install -y bats
 
       - name: Run bats tests
-        run: bats --jobs 4 tests/
+        run: bats tests/
 
   validate-syntax:
     name: Validate skill syntax
