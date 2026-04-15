@@ -20,3 +20,33 @@ Not planned for split (single-scope, XS)
 ### Changes Made
 - verify command 1 のヒントを修正: `section_contains "skills/audit/SKILL.md" "Label assignment" "triaged"` → `section_contains "skills/audit/SKILL.md" "Issue Generation" "triaged"` — `**Label assignment:**` が Markdown heading ではなく bold text のため `section_contains` がセクションを発見できなかった。実際の記述が含まれる heading `### Step 5: Issue Generation` を対象に変更した。
 - Pre-merge チェックボックスを全件 PASS でチェック済みに更新
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Verify command の escape artifact（`\\"` 等）が Issue 作成時に混入し、後から修正が必要になった。Issue Retrospective に記録済み。
+- Section heading を `**Label assignment:**`（bold text）と誤認していた点が `/code` 時に発覚。`section_contains` は Markdown heading のみ対象のため、実際の heading (`### Step 5: Issue Generation`) に修正された。Spec 作成時により慎重に heading 種別を確認する必要がある。
+
+#### design
+- N/A（設計フェーズなし、XS スコープ）
+
+#### code
+- パッチルート（直接 main コミット）。`09cf274` の1コミットで完了。リワーク不要。
+- Spec の Change Tracking に verify command heading 修正が記録されており、code フェーズでの品質確認が適切に機能した。
+
+#### review
+- PR なし（パッチルート）。コードレビューは実施されなかった。
+- XS スコープのため影響範囲が限定的でリスクは低かった。
+
+#### merge
+- パッチルートで main 直接コミット。マージコンフリクトや CI 失敗なし。
+
+#### verify
+- 全3条件がPASS。`section_contains` と `file_contains` が正しく動作することを確認。
+- Post-merge に `<!-- verify-type: manual -->` の未チェック条件が1件残存。将来の skill 追加時に `docs/tech.md` Forbidden Expressions が参照されることを手動で確認する必要がある。
+- パッチルートのため PR チェックではなく `git log` での確認が主な手段となった。
+
+### Improvement Proposals
+- N/A
