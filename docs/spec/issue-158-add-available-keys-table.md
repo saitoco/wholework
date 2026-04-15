@@ -66,3 +66,17 @@
 ### Rework
 
 - N/A（手戻りなし）
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+特記なし。Spec と PR diff が完全に一致しており、乖離は発生しなかった。ドキュメント追加系の Issue では Spec に挿入箇所・列構成・キー一覧が明確に定義されていたため、乖離の余地が少ない。
+
+### 繰り返し問題
+
+特記なし。今回は純粋なドキュメント追加であり、MUST/SHOULD/CONSIDER いずれの問題も検出されなかった。
+
+### 受入条件の検証難易度
+
+問題なし。`file_contains` および `section_contains` による verify command が適切で、偽陽性を防ぐ工夫（`file_contains` から `section_contains` への変更）がすでに Issue 本文の「自動解決した曖昧点」として記録されており、verify command の精度が高かった。UNCERTAIN 0 件。
