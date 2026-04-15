@@ -22,7 +22,7 @@ CI/CD ワークフロー (`test.yml`) の bats テスト実行時間が約540秒
 
 ## Implementation Steps
 
-1. `.github/workflows/test.yml` の `Install bats` ステップに `parallel` を追加: `sudo apt-get install -y bats` → `sudo apt-get install -y bats parallel`
+1. `.github/workflows/test.yml` の `Install bats` ステップに `parallel` を追加: `sudo apt-get install -y bats` → `sudo apt-get install -y bats parallel`（external package dependencies: `bats` (bats-core), `parallel` (GNU Parallel)）
 2. `.github/workflows/test.yml` の `Run bats tests` ステップを変更: `run: bats tests/` → `run: bats --jobs 4 tests/`
 
 ## Verification
