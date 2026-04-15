@@ -40,3 +40,14 @@
 - `docs/ja/structure.md` は `/doc translate` によって生成される翻訳ミラーのため、今回の変更対象外。英語原文 (`docs/structure.md`) を更新することで次回の翻訳実行時に反映される。
 - `check-translation-sync.sh` はすでに `mapfile` から `while IFS= read -r` 形式に修正済み（Issue #173 での対応）。今回は macOS CI 追加のみが対象。
 - Issue body の受入条件は2件、Spec の Pre-merge 検証は3件（github_check を追加）。github_check はGitHub Actionsワークフロー変更のSHOULD制約（#73参照）に従い意図的に追加。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
