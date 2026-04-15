@@ -80,3 +80,28 @@
 ### 受入条件の検証難易度
 
 問題なし。`file_contains` および `section_contains` による verify command が適切で、偽陽性を防ぐ工夫（`file_contains` から `section_contains` への変更）がすでに Issue 本文の「自動解決した曖昧点」として記録されており、verify command の精度が高かった。UNCERTAIN 0 件。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 本文に「自動解決した曖昧点」セクションを設け、`steering-hint` スコープ追加と verify command 精度改善の判断を事前記録していた。これにより Spec 設計が明確になり、手戻りゼロを達成した優良事例。
+
+#### design
+- Spec は挿入箇所・列構成・全 13 キーを完全に定義しており、実装者の裁量が入る余地がなかった。設計の粒度が適切。
+
+#### code
+- コードレトロスペクティブ通り、手戻りなし。単純なドキュメント追加のため設計逸脱のリスクが低く、Spec 通りに一発実装が成功した。
+
+#### review
+- MUST/SHOULD/CONSIDER 0 件。EN/JA テーブル整合性・相対パス解決・全 13 キー網羅をレビューで確認済み。ドキュメント系 Issue では verify command が全 PASS の場合レビューも問題が出にくく、review のコストが適切に低くなっている。
+
+#### merge
+- PR #184 は FF-only でクリーンマージ（2026-04-15T02:43:50Z）。コンフリクトなし。
+
+#### verify
+- 全 6 条件が PASS（FAIL: 0, UNCERTAIN: 0）。`section_contains` の採用により偽陽性ゼロを達成。verify command の精度設計を Issue 作成時点で行うパターンの効果を確認。
+
+### Improvement Proposals
+- N/A
