@@ -27,6 +27,8 @@ Open Claude Code and run:
 
 Verify the installation by typing `/wholework:` — you should see the available skills in the autocomplete list.
 
+Wholework will automatically create the labels it needs on first run — no manual setup required.
+
 ## Step 2 — Create a Sample Issue
 
 In your GitHub repository, create an Issue with the following title and body. You can copy and paste these directly.

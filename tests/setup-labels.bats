@@ -1,7 +1,9 @@
 #!/usr/bin/env bats
 
 # Tests for setup-labels.sh
-# Mocks the gh command by placing it at the front of PATH
+# Mocks the gh command by placing it at the front of PATH.
+# gh-graphql.sh (called via absolute SCRIPT_DIR path) internally calls "gh api graphql",
+# so environment detection is controlled by how the mock gh handles "api graphql" calls.
 
 SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/setup-labels.sh"
 
@@ -13,9 +15,20 @@ setup() {
     GH_CALL_LOG="$BATS_TEST_TMPDIR/gh_calls.log"
     export GH_CALL_LOG
 
+    # Default gh mock:
+    # - "api graphql": returns "1" (simulates all GitHub features available)
+    # - "label list": returns empty (no existing labels)
+    # - everything else: logs and succeeds
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
+if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
+    echo "1"
+    exit 0
+fi
 echo "$@" >> "$GH_CALL_LOG"
+if [ "$1" = "label" ] && [ "$2" = "list" ]; then
+    echo ""
+fi
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/gh"
@@ -25,61 +38,346 @@ teardown() {
     rm -rf "$MOCK_DIR"
 }
 
-@test "success: creates 10 labels" {
-    run bash "$SCRIPT"
-    [ "$status" -eq 0 ]
-    # gh label create must be called 10 times (6 phase/* + triaged + 3 type/*)
-    [ "$(grep -c 'label create' "$GH_CALL_LOG")" -eq 10 ]
+# Helper: count gh label create calls in log
+count_label_creates() {
+    grep -c 'label create' "$GH_CALL_LOG" 2>/dev/null || echo 0
 }
 
-@test "success: each label uses --force flag" {
-    run bash "$SCRIPT"
-    [ "$status" -eq 0 ]
-    [ -s "$GH_CALL_LOG" ]
-    # All 10 calls must include --force
-    force_count=$(grep -c -- '--force' "$GH_CALL_LOG")
-    [ "$force_count" -eq 10 ]
+# Helper: check if a label appears in create calls
+label_created() {
+    grep -q "label create $1" "$GH_CALL_LOG" 2>/dev/null
 }
 
-@test "success: correct label names" {
+# --- Environment: Projects + Issue Types both available ---
+# Only always-group labels (11) should be created
+
+@test "env=full: only always-group labels created when all features available" {
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
-    grep -q 'label create phase/issue' "$GH_CALL_LOG"
-    grep -q 'label create phase/spec' "$GH_CALL_LOG"
-    grep -q 'label create phase/ready' "$GH_CALL_LOG"
-    grep -q 'label create phase/code' "$GH_CALL_LOG"
-    grep -q 'label create phase/review' "$GH_CALL_LOG"
-    grep -q 'label create phase/verify' "$GH_CALL_LOG"
-    grep -q 'label create triaged' "$GH_CALL_LOG"
-    grep -q 'label create type/bug' "$GH_CALL_LOG"
-    grep -q 'label create type/feature' "$GH_CALL_LOG"
-    grep -q 'label create type/task' "$GH_CALL_LOG"
+    [ "$(count_label_creates)" -eq 11 ]
 }
 
-@test "success: correct colors (without # prefix)" {
+@test "env=full: phase/* labels all present" {
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
-    # phase/* labels use 1B4F8A, triage-related use unique colors
-    [ "$(grep -c -- '--color 1B4F8A' "$GH_CALL_LOG")" -eq 6 ]
-    grep -q -- '--color 0E8A16' "$GH_CALL_LOG"
-    grep -q -- '--color D73A4A' "$GH_CALL_LOG"
-    grep -q -- '--color 0075CA' "$GH_CALL_LOG"
-    grep -q -- '--color E4E669' "$GH_CALL_LOG"
+    label_created "phase/issue"
+    label_created "phase/spec"
+    label_created "phase/ready"
+    label_created "phase/code"
+    label_created "phase/review"
+    label_created "phase/verify"
+    label_created "phase/done"
 }
 
-@test "success: completion message includes label count" {
+@test "env=full: always-group non-phase labels present" {
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"10"* ]]
+    label_created "triaged"
+    label_created "retro/verify"
+    label_created "audit/drift"
+    label_created "audit/fragility"
 }
 
-@test "error: gh command failure propagates" {
+@test "env=full: fallback-group type/* labels NOT created when Issue Types available" {
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    run grep "label create type/" "$GH_CALL_LOG"
+    [ "$status" -ne 0 ]
+}
+
+@test "env=full: fallback-group size/* labels NOT created when Size field available" {
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    run grep "label create size/" "$GH_CALL_LOG"
+    [ "$status" -ne 0 ]
+}
+
+# --- Environment: all features unavailable ---
+# All 11 always + 17 fallback = 28 labels
+
+@test "env=none: all 28 labels created when no features available" {
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
+if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
+    echo "0"
+    exit 0
+fi
+echo "$@" >> "$GH_CALL_LOG"
+if [ "$1" = "label" ] && [ "$2" = "list" ]; then
+    echo ""
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    [ "$(count_label_creates)" -eq 28 ]
+}
+
+@test "env=none: fallback type/* labels created when Issue Types unavailable" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
+    echo "0"
+    exit 0
+fi
+echo "$@" >> "$GH_CALL_LOG"
+if [ "$1" = "label" ] && [ "$2" = "list" ]; then
+    echo ""
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    label_created "type/bug"
+    label_created "type/feature"
+    label_created "type/task"
+}
+
+@test "env=none: fallback size/* labels created when Size field unavailable" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
+    echo "0"
+    exit 0
+fi
+echo "$@" >> "$GH_CALL_LOG"
+if [ "$1" = "label" ] && [ "$2" = "list" ]; then
+    echo ""
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    label_created "size/XS"
+    label_created "size/S"
+    label_created "size/M"
+    label_created "size/L"
+    label_created "size/XL"
+}
+
+@test "env=none: fallback value/* labels created when Value field unavailable" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
+    echo "0"
+    exit 0
+fi
+echo "$@" >> "$GH_CALL_LOG"
+if [ "$1" = "label" ] && [ "$2" = "list" ]; then
+    echo ""
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    label_created "value/1"
+    label_created "value/5"
+}
+
+@test "env=none: fallback priority/* labels created when Priority field unavailable" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
+    echo "0"
+    exit 0
+fi
+echo "$@" >> "$GH_CALL_LOG"
+if [ "$1" = "label" ] && [ "$2" = "list" ]; then
+    echo ""
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    label_created "priority/urgent"
+    label_created "priority/high"
+    label_created "priority/medium"
+    label_created "priority/low"
+}
+
+# --- Idempotency: existing labels are not re-created without --force ---
+
+@test "idempotent: existing label is skipped without --force" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
+    echo "1"
+    exit 0
+fi
+echo "$@" >> "$GH_CALL_LOG"
+if [ "$1" = "label" ] && [ "$2" = "list" ]; then
+    echo "phase/issue"
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    # phase/issue must NOT appear in create calls
+    run grep "label create phase/issue " "$GH_CALL_LOG"
+    [ "$status" -ne 0 ]
+}
+
+@test "idempotent: non-existing label is created even when others exist" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
+    echo "1"
+    exit 0
+fi
+echo "$@" >> "$GH_CALL_LOG"
+if [ "$1" = "label" ] && [ "$2" = "list" ]; then
+    echo "phase/issue"
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    label_created "phase/spec"
+}
+
+# --- --force flag ---
+
+@test "--force: existing labels are created with --force flag" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
+    echo "1"
+    exit 0
+fi
+echo "$@" >> "$GH_CALL_LOG"
+if [ "$1" = "label" ] && [ "$2" = "list" ]; then
+    echo "phase/issue"
+    echo "phase/spec"
+    echo "phase/ready"
+    echo "phase/code"
+    echo "phase/review"
+    echo "phase/verify"
+    echo "phase/done"
+    echo "triaged"
+    echo "retro/verify"
+    echo "audit/drift"
+    echo "audit/fragility"
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" --force
+    [ "$status" -eq 0 ]
+    # All 11 always-group labels must be created with --force
+    [ "$(count_label_creates)" -eq 11 ]
+    [ "$(grep -c -- '--force' "$GH_CALL_LOG")" -eq 11 ]
+}
+
+@test "--force: --force flag is NOT used without the option" {
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    run grep -- '--force' "$GH_CALL_LOG"
+    [ "$status" -ne 0 ]
+}
+
+# --- --no-fallback flag ---
+
+@test "--no-fallback: only always-group labels created even when features unavailable" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
+    echo "0"
+    exit 0
+fi
+echo "$@" >> "$GH_CALL_LOG"
+if [ "$1" = "label" ] && [ "$2" = "list" ]; then
+    echo ""
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" --no-fallback
+    [ "$status" -eq 0 ]
+    [ "$(count_label_creates)" -eq 11 ]
+    run grep "label create type/" "$GH_CALL_LOG"
+    [ "$status" -ne 0 ]
+}
+
+# --- gh api graphql (detection) failure handling ---
+
+@test "env-detect-fail: api graphql failure treated as unavailable (fallback created)" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
+    exit 1
+fi
+echo "$@" >> "$GH_CALL_LOG"
+if [ "$1" = "label" ] && [ "$2" = "list" ]; then
+    echo ""
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    # When detection fails, fallback labels should be created
+    label_created "type/bug"
+    label_created "size/XS"
+}
+
+# --- Error propagation ---
+
+@test "error: gh label create failure propagates" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
+    echo "1"
+    exit 0
+fi
+if [ "$1" = "label" ] && [ "$2" = "list" ]; then
+    echo ""
+    exit 0
+fi
 exit 1
 MOCK
     chmod +x "$MOCK_DIR/gh"
 
     run bash "$SCRIPT"
     [ "$status" -ne 0 ]
+}
+
+# --- Correct colors ---
+
+@test "colors: all 7 phase/* labels use 1B4F8A" {
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    [ "$(grep -- '--color 1B4F8A' "$GH_CALL_LOG" | grep 'phase/' | wc -l | tr -d ' ')" -eq 7 ]
+}
+
+@test "colors: triaged uses 0E8A16" {
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    grep -q "label create triaged" "$GH_CALL_LOG"
+    grep -q "0E8A16" "$GH_CALL_LOG"
+}
+
+# --- Completion message ---
+
+@test "output: completion message includes count" {
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Label setup complete"* ]]
+    [[ "$output" == *"11"* ]]
 }

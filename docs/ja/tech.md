@@ -75,6 +75,44 @@
 
   SSoT 備考: このマトリクスがすべてのモデル・effort 設定の唯一の真実。`run-*.sh`、agents、skills でモデル/effort を変更する際は、まずこの表を更新すること
 
+## Wholework ラベル管理
+
+`scripts/setup-labels.sh` は Wholework が管理するすべてのラベルの**唯一の真実（SSoT）**です。すべてのラベル名・色・説明はここで定義します。
+
+### ラベルグループ
+
+| グループ | 数 | ラベル | 作成条件 |
+|----------|-----|--------|----------|
+| 常時 | 11 | `phase/*`（7）、`triaged`、`retro/verify`、`audit/drift`、`audit/fragility` | 常に作成 |
+| フォールバック | 17 | `type/*`（3）、`priority/*`（4）、`size/*`（5）、`value/*`（5） | 対応する GitHub 機能が未構成の場合に作成（以下参照） |
+
+### 自動ブートストラップ
+
+`scripts/gh-label-transition.sh` は `phase/*` ラベルの遷移を試みた際に対象ラベルがリポジトリに存在しない場合、自動的に `setup-labels.sh` を実行します。Plugin インストールのみのユーザー（リポジトリ clone 不要）が手動で `setup-labels.sh` を実行する必要はありません。初回のスキル実行時に自動起動されます。
+
+### フォールバックラベルの検出条件
+
+フォールバックラベルは対応する GitHub 機能が未構成の場合に作成されます。検出条件は `setup-labels.sh` 内のインラインコメントにも記載しています：
+
+| フォールバックグループ | 検出関数 | チェック対象 |
+|----------------------|---------|------------|
+| `type/*` | `detect_issue_types()` | GitHub Issue Types（`issueTypes` API） |
+| `priority/*` | `detect_projects_field("Priority")` | Projects V2 Priority フィールド |
+| `size/*` | `detect_projects_field("Size")` | Projects V2 Size フィールド |
+| `value/*` | `detect_projects_field("Value")` | Projects V2 Value フィールド |
+
+検出失敗（API エラー、権限不足など）は「未構成」扱いとし、フォールバックラベルを作成してワークフローを先に進めます。
+
+### 変更ルール
+
+Wholework 内でラベルを追加・変更・削除する場合（skills、scripts、modules 問わず）、同一 PR で `scripts/setup-labels.sh` も更新してください：
+
+- **ラベル参照の追加**（`gh label create`、`--add-label`、`grep 'label-name'` など）: 検出条件コメントを付けて `ALWAYS_LABELS` または `FALLBACK_LABELS` に追加する
+- **ラベル名や色の変更**: `setup-labels.sh` 内のエントリを更新する
+- **ラベル参照の削除**: `setup-labels.sh` からエントリを削除する
+
+このルールによりコード上のラベル参照と SSoT 定義のドリフトを防ぎます。将来の `/audit drift` 検出では、コードベース内のラベル参照集合と `setup-labels.sh` で定義された集合の一致チェックを行う予定です。
+
 ## テスト戦略
 
 | ツール | 目的 | タイミング |
