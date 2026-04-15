@@ -70,3 +70,29 @@ patch route（Size XS/S、PR なし）の Issue で `/spec` が `github_check "g
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue bodyの受入条件2と3にはverify commandがなかったが、Spec作成時に追加してIssue bodyを更新した（verify command sync rule準拠）。Issue作成時点での受入条件の自動検証可能性が不完全だった。
+
+#### design
+- Spec設計はIssue要件に忠実で偏差なし。`/spec`と`/code`の両フェーズへの追加が明確に設計されており、実装上の問題はなかった。
+
+#### code
+- コミット履歴: design(5c8aefe) → feat(f68a8dd) → retrospective(ae570ea)の3コミットでクリーン。fixupやamendはなし。リワークなし。
+
+#### review
+- パッチルートのためPRなし。コードレビューは実施されていない。
+
+#### merge
+- パッチルートでmain直コミット。マージコンフリクトなし。
+
+#### verify
+- 全3条件がPASS。verify commandが正確で、grep/section_containsベースの検証が有効に機能した。
+- 受入条件2のsection_containsで「Patch route verify command」を検索し、Step 10セクション内（行367）に正しく発見された。
+
+### Improvement Proposals
+- N/A
