@@ -19,7 +19,7 @@ if [[ $# -gt 0 ]]; then
   exit 1
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 
 echo "=== run-issue.sh: Starting /issue for issue #${ISSUE_NUMBER} ==="
 source "$SCRIPT_DIR/phase-banner.sh"

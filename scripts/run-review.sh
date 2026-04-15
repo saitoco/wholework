@@ -13,7 +13,7 @@ if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 
 echo "=== run-review.sh: Starting /review for PR #${PR_NUMBER} ==="
 source "$SCRIPT_DIR/phase-banner.sh"

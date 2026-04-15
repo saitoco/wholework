@@ -32,7 +32,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 
 echo "=== run-verify.sh: Starting /verify for Issue #${ISSUE_NUMBER} ==="
 source "$SCRIPT_DIR/phase-banner.sh"

@@ -143,6 +143,34 @@ Issue body の初版には `command "test $(grep -lF '$SCRIPT_DIR/' scripts/*.sh
 
 Size L: 17 scripts の一斉適用 (6-10 files を超える) + CI-sensitive (+1) + 新規規約導入 (+1) = L 相当 (XL への昇格は single-purpose refactor のため不要)
 
+## Code Retrospective
+
+### Deviations from Design
+
+- `docs/tech.md` の Environment Variables テーブルへの `WHOLEWORK_SCRIPT_DIR` 追加は Spec に明示されていなかったが、`WHOLEWORK_CI_TIMEOUT_SEC` との整合性と Notes の記述（「`WHOLEWORK_CI_TIMEOUT_SEC` と整合」）から追加が適切と判断した
+
+### Design Gaps/Ambiguities
+
+- macOS の BSD sed は複雑なシェル展開パターンを含む文字列の置換に非対応（`-i` の区切り文字エスケープ問題）。Spec は実装手法を明示していなかったため Python で代替した。Linux 環境の GNU sed では問題ないが、macOS での開発時は Python スクリプトが確実
+
+### Rework
+
+- N/A（設計通りに実装完了）
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- `docs/tech.md` の Environment Variables テーブルへの `WHOLEWORK_SCRIPT_DIR` 追加はSpecに明示されていなかったが、Code Retrospectiveで「`WHOLEWORK_CI_TIMEOUT_SEC` との整合性から追加が適切と判断」と記録されており、適切なドキュメント整備として評価。Spec段階でEnvironment Variablesテーブルへの追記を明示しておくと、レビュー時の確認漏れを防げた。
+
+### Recurring issues
+
+- 特記なし。17スクリプトへの同一パターン適用という性質上、個別の問題は発生しなかった。
+
+### Acceptance criteria verification difficulty
+
+- 条件1〜7はすべてfile_contains/section_containsでPASSと判定できた。条件8（CI PASS）のみIN_PROGRESSでUNCERTAIN。`github_check "gh run list ..."` はsafeモードのallowlistに含まれないため、CIの完了まで待機する必要があった。今後、batsテストのCI PASSを事前条件とするIssueでは、CIが完了したタイミングで`/review`を実行するか、`gh pr checks`のallowlist内コマンドを活用するverify commandにすることで、より確実な自動判定が可能。
+
 ## spec retrospective
 
 ### Minor observations
