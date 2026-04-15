@@ -36,7 +36,7 @@ if ! [[ "$NUMBER" =~ ^[0-9]+$ ]]; then
     exit 1
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 
 # Phase 1: Get from Issue Types GraphQL API
 GQL_QUERY='query($owner:String!,$repo:String!,$num:Int!){repository(owner:$owner,name:$repo){issue(number:$num){issueType{name}}}}'

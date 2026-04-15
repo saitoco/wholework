@@ -22,7 +22,7 @@ if ! [[ "$PARENT_NUMBER" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 
 # Fetch sub-issues + blockedBy in a single GraphQL call
 RAW_JSON=$("$SCRIPT_DIR/gh-graphql.sh" --query get-sub-issues -F "num=$PARENT_NUMBER")

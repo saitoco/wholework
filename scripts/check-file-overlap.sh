@@ -32,7 +32,7 @@ if ! [[ "$PARENT_NUMBER" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Get sub-issue list (OPEN sub-issues only)

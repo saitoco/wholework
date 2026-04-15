@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 PHASE_LABELS="phase/issue phase/spec phase/ready phase/code phase/review phase/verify phase/done"
 
 if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then

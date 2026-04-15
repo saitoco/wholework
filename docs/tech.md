@@ -131,6 +131,15 @@ This rule prevents drift between label references in code and the SSoT definitio
 | **validate-skill-syntax.py** | SKILL.md syntax validation (half-width `!` detection, frontmatter validation) | Pre-merge |
 | **Verify commands** (`<!-- verify: ... -->`) | Mechanical verification of acceptance criteria (file existence, text content, command execution) | At `/verify` skill execution |
 
+### BATS Mocking Convention
+
+Scripts under `scripts/` resolve sibling helpers through `SCRIPT_DIR`, which is
+overridable via the `WHOLEWORK_SCRIPT_DIR` environment variable. BATS tests set
+`export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` and place mock helpers (e.g.
+`$MOCK_DIR/gh-graphql.sh`) under the mock directory. This allows per-test
+substitution of arbitrary sibling scripts without falling back to mocking
+lower-level tools such as `gh api graphql`.
+
 ## Forbidden Expressions
 
 | Expression | Reason | Alternative |
@@ -164,6 +173,7 @@ In gradual migration, there is a period where deprecated terms remain in the sam
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `WHOLEWORK_CI_TIMEOUT_SEC` | `1200` | Maximum wait time in seconds for `wait-ci-checks.sh`. Set to a lower value (e.g., `60`) to test timeout behavior. |
+| `WHOLEWORK_SCRIPT_DIR` | *(auto-resolved)* | Override the `SCRIPT_DIR` used by `scripts/*.sh` when resolving sibling helpers. Used in BATS tests to redirect calls to a mock directory. In production, leave unset (auto-resolves to the script's own directory). |
 
 ## Gotchas
 

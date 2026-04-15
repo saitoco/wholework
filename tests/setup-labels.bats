@@ -1,9 +1,9 @@
 #!/usr/bin/env bats
 
 # Tests for setup-labels.sh
-# Mocks the gh command by placing it at the front of PATH.
-# gh-graphql.sh (called via absolute SCRIPT_DIR path) internally calls "gh api graphql",
-# so environment detection is controlled by how the mock gh handles "api graphql" calls.
+# Uses WHOLEWORK_SCRIPT_DIR to redirect gh-graphql.sh calls to a mock directory.
+# The gh mock handles label operations only; environment detection is controlled
+# by placing a gh-graphql.sh mock under MOCK_DIR.
 
 SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/setup-labels.sh"
 
@@ -11,20 +11,21 @@ setup() {
     MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
     mkdir -p "$MOCK_DIR"
     export PATH="$MOCK_DIR:$PATH"
+    export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
 
     GH_CALL_LOG="$BATS_TEST_TMPDIR/gh_calls.log"
     export GH_CALL_LOG
 
-    # Default gh mock:
-    # - "api graphql": returns "1" (simulates all GitHub features available)
-    # - "label list": returns empty (no existing labels)
-    # - everything else: logs and succeeds
+    # Default gh-graphql.sh mock: returns 1 (all GitHub features available)
+    cat > "$MOCK_DIR/gh-graphql.sh" <<'MOCK'
+#!/bin/bash
+echo "1"
+MOCK
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
+
+    # Default gh mock: handles label list and create operations (no api graphql handling)
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
-if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
-    echo "1"
-    exit 0
-fi
 echo "$@" >> "$GH_CALL_LOG"
 if [ "$1" = "label" ] && [ "$2" = "list" ]; then
     echo ""
@@ -96,19 +97,11 @@ label_created() {
 # All 11 always + 17 fallback = 28 labels
 
 @test "env=none: all 28 labels created when no features available" {
-    cat > "$MOCK_DIR/gh" <<'MOCK'
+    cat > "$MOCK_DIR/gh-graphql.sh" <<'MOCK'
 #!/bin/bash
-if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
-    echo "0"
-    exit 0
-fi
-echo "$@" >> "$GH_CALL_LOG"
-if [ "$1" = "label" ] && [ "$2" = "list" ]; then
-    echo ""
-fi
-exit 0
+echo "0"
 MOCK
-    chmod +x "$MOCK_DIR/gh"
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
 
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
@@ -116,19 +109,11 @@ MOCK
 }
 
 @test "env=none: fallback type/* labels created when Issue Types unavailable" {
-    cat > "$MOCK_DIR/gh" <<'MOCK'
+    cat > "$MOCK_DIR/gh-graphql.sh" <<'MOCK'
 #!/bin/bash
-if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
-    echo "0"
-    exit 0
-fi
-echo "$@" >> "$GH_CALL_LOG"
-if [ "$1" = "label" ] && [ "$2" = "list" ]; then
-    echo ""
-fi
-exit 0
+echo "0"
 MOCK
-    chmod +x "$MOCK_DIR/gh"
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
 
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
@@ -138,19 +123,11 @@ MOCK
 }
 
 @test "env=none: fallback size/* labels created when Size field unavailable" {
-    cat > "$MOCK_DIR/gh" <<'MOCK'
+    cat > "$MOCK_DIR/gh-graphql.sh" <<'MOCK'
 #!/bin/bash
-if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
-    echo "0"
-    exit 0
-fi
-echo "$@" >> "$GH_CALL_LOG"
-if [ "$1" = "label" ] && [ "$2" = "list" ]; then
-    echo ""
-fi
-exit 0
+echo "0"
 MOCK
-    chmod +x "$MOCK_DIR/gh"
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
 
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
@@ -162,19 +139,11 @@ MOCK
 }
 
 @test "env=none: fallback value/* labels created when Value field unavailable" {
-    cat > "$MOCK_DIR/gh" <<'MOCK'
+    cat > "$MOCK_DIR/gh-graphql.sh" <<'MOCK'
 #!/bin/bash
-if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
-    echo "0"
-    exit 0
-fi
-echo "$@" >> "$GH_CALL_LOG"
-if [ "$1" = "label" ] && [ "$2" = "list" ]; then
-    echo ""
-fi
-exit 0
+echo "0"
 MOCK
-    chmod +x "$MOCK_DIR/gh"
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
 
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
@@ -183,19 +152,11 @@ MOCK
 }
 
 @test "env=none: fallback priority/* labels created when Priority field unavailable" {
-    cat > "$MOCK_DIR/gh" <<'MOCK'
+    cat > "$MOCK_DIR/gh-graphql.sh" <<'MOCK'
 #!/bin/bash
-if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
-    echo "0"
-    exit 0
-fi
-echo "$@" >> "$GH_CALL_LOG"
-if [ "$1" = "label" ] && [ "$2" = "list" ]; then
-    echo ""
-fi
-exit 0
+echo "0"
 MOCK
-    chmod +x "$MOCK_DIR/gh"
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
 
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
@@ -210,10 +171,6 @@ MOCK
 @test "idempotent: existing label is skipped without --force" {
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
-if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
-    echo "1"
-    exit 0
-fi
 echo "$@" >> "$GH_CALL_LOG"
 if [ "$1" = "label" ] && [ "$2" = "list" ]; then
     echo "phase/issue"
@@ -232,10 +189,6 @@ MOCK
 @test "idempotent: non-existing label is created even when others exist" {
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
-if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
-    echo "1"
-    exit 0
-fi
 echo "$@" >> "$GH_CALL_LOG"
 if [ "$1" = "label" ] && [ "$2" = "list" ]; then
     echo "phase/issue"
@@ -254,10 +207,6 @@ MOCK
 @test "--force: existing labels are created with --force flag" {
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
-if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
-    echo "1"
-    exit 0
-fi
 echo "$@" >> "$GH_CALL_LOG"
 if [ "$1" = "label" ] && [ "$2" = "list" ]; then
     echo "phase/issue"
@@ -293,19 +242,11 @@ MOCK
 # --- --no-fallback flag ---
 
 @test "--no-fallback: only always-group labels created even when features unavailable" {
-    cat > "$MOCK_DIR/gh" <<'MOCK'
+    cat > "$MOCK_DIR/gh-graphql.sh" <<'MOCK'
 #!/bin/bash
-if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
-    echo "0"
-    exit 0
-fi
-echo "$@" >> "$GH_CALL_LOG"
-if [ "$1" = "label" ] && [ "$2" = "list" ]; then
-    echo ""
-fi
-exit 0
+echo "0"
 MOCK
-    chmod +x "$MOCK_DIR/gh"
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
 
     run bash "$SCRIPT" --no-fallback
     [ "$status" -eq 0 ]
@@ -314,21 +255,14 @@ MOCK
     [ "$status" -ne 0 ]
 }
 
-# --- gh api graphql (detection) failure handling ---
+# --- gh-graphql.sh (detection) failure handling ---
 
-@test "env-detect-fail: api graphql failure treated as unavailable (fallback created)" {
-    cat > "$MOCK_DIR/gh" <<'MOCK'
+@test "env-detect-fail: gh-graphql.sh failure treated as unavailable (fallback created)" {
+    cat > "$MOCK_DIR/gh-graphql.sh" <<'MOCK'
 #!/bin/bash
-if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
-    exit 1
-fi
-echo "$@" >> "$GH_CALL_LOG"
-if [ "$1" = "label" ] && [ "$2" = "list" ]; then
-    echo ""
-fi
-exit 0
+exit 1
 MOCK
-    chmod +x "$MOCK_DIR/gh"
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
 
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
@@ -342,10 +276,6 @@ MOCK
 @test "error: gh label create failure propagates" {
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
-if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
-    echo "1"
-    exit 0
-fi
 if [ "$1" = "label" ] && [ "$2" = "list" ]; then
     echo ""
     exit 0

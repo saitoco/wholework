@@ -35,7 +35,7 @@ if ! [[ "$SUB_NUMBER" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 
 # Process lock (prevents main branch conflicts on patch route)
 # Generate project-specific lock directory by hashing the repository root path

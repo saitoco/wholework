@@ -19,7 +19,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 
 usage() {
     echo "Usage: $(basename "$0") <issue-number> [--dry-run]"
