@@ -204,16 +204,16 @@ Size L: 17 scripts の一斉適用 (6-10 files を超える) + CI-sensitive (+1)
 - `docs/tech.md` の Environment Variables テーブルへの `WHOLEWORK_SCRIPT_DIR` 追記は Spec 未明示だったが、文書整備として適切な追加（review retrospective 記録済み）
 
 #### review
-- review retrospective で「条件8の CI in_progress → UNCERTAIN」パターンに言及あり。CI 完了後に `/review` 実行するか `gh pr checks` allowlist コマンドを使う提案も含まれており、今回の verify 結果と一致
+- review retrospective で「条件8の CI in_progress → UNCERTAIN」パターンに言及あり。今回の再実行（CI 完了後）で条件8が PASS となり、パターンの記録が正確であることを確認
 
 #### merge
 - 1 コミット（`chore: unify SCRIPT_DIR env var override and BATS mock strategy`）でクリーンにマージ。コンフリクトなし
 
 #### verify
-- 条件 1〜7（`file_contains` × 6、`section_contains` × 1）はすべて PASS
-- 条件 8（`github_check "gh run list --workflow=test.yml --limit=1 ..."`）は UNCERTAIN：マージ直後にverifyを実行したため、main ブランチの最新 CI 実行が `in_progress` 状態。PR ブランチ（`worktree-issue-188-script-dir-env-override`）の過去実行はすべて `success` であり実装の正しさは担保されている
-- verify コマンドの `--limit=1` は「最新の完了済み実行」ではなく「最新の実行（進行中を含む）」を返すため、マージ直後の実行タイミングと相性が悪い
+- 初回 verify: 条件 1〜7 PASS、条件 8 UNCERTAIN（マージ直後で CI が `in_progress`）
+- 再実行（今回）: 全 8 条件すべて PASS（CI 完了後に実行したため条件8も `success` 確認）
+- `github_check "gh run list --limit=1 ..."` はマージ直後（CI 実行中）に呼ぶと `in_progress` を返して UNCERTAIN になる。CI 完了を待って再実行する運用が必要
 
 ### Improvement Proposals
-- `/verify` がマージ直後に実行される場合、`github_check` の CI PASS 条件は `in_progress` のまま UNCERTAIN になりやすい。`gh run list` で in_progress を除外する `--status completed` フィルタを verify command 側に追加するか、review retrospective の提案通り `gh pr checks` 形式（allowlist 内）を採用するパターンを `modules/verify-patterns.md` に追記することを検討する
+- `/verify` がマージ直後に実行される場合、`github_check` の CI PASS 条件は `in_progress` のまま UNCERTAIN になりやすい。`gh run list` で in_progress を除外する `--status completed` フィルタを verify command 側に追加するか、`gh pr checks` 形式（allowlist 内）を採用するパターンを `modules/verify-patterns.md` に追記することを検討する
 
