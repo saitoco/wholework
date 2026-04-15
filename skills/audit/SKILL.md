@@ -178,6 +178,8 @@ After Issue generation, assign the following label:
 
 If the `audit/drift` label doesn't exist, create it with `gh label create` (color: `#e4e669`).
 
+Do not assign the `triaged` label when creating Issues. The `triaged` label is assigned by the `/triage` skill after triage is actually executed; pre-assigning it causes the Issue to be skipped by the triage pipeline, leaving Type/Size/Priority/Value unset.
+
 **Type/Size assignment:**
 
 Set Type and Size from AI estimation of drift scope (update project fields via `${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh`).
@@ -493,6 +495,8 @@ After Issue generation, assign the following label:
 - `audit/fragility`: tracking label indicating the fragility was detected by the audit skill
 
 If the `audit/fragility` label doesn't exist, create it with `gh label create` (color: `#f9d0c4`).
+
+Do not assign the `triaged` label when creating Issues. The `triaged` label is assigned by the `/triage` skill after triage is actually executed; pre-assigning it causes the Issue to be skipped by the triage pipeline, leaving Type/Size/Priority/Value unset.
 
 **Type/Size assignment:**
 

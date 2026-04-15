@@ -146,6 +146,7 @@ lower-level tools such as `gh api graphql`.
 |------------|--------|-------------|
 | Half-width `!` (in SKILL.md body, outside code fences and inline code) | Claude Code's Bash permission checker misdetects it as zsh history expansion, causing errors at skill execution | Full-width "！" or rephrased expression |
 | Acceptance check | Term redesign (changed to "verify command") | "verify command" |
+| Assigning the `triaged` label when creating Issues (in `gh issue create --label` or `gh issue edit --add-label`) | `triaged` marks that triage was actually executed; pre-assigning it causes the `triage-backlog-filter.sh` to skip the Issue, leaving Type/Size/Priority/Value unset | Omit `triaged` from Issue creation; the triage skill assigns it after running `/triage` |
 
 ## Terminology Migration Scope Rule
 
