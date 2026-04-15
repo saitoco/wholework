@@ -48,3 +48,28 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 体と Spec 設計が明確で、受入条件は全て verify コマンドで自動検証可能な形式に整備されていた。SSoT 宣言文に "SSoT" の固定文字列を含める制約が Notes に明記されており、verify command との整合が事前に考慮されていた。
+
+#### design
+- 「実質的な SSoT は既に存在するが文書上で明示されていない」という問題分析が的確で、新規ドキュメント作成不要という判断（既存 customization.md を活用）はスコープ最小化として適切。
+
+#### code
+- パッチルート（main 直コミット）での実装。commits: `24ba7e9` (design) → `b7b4698` (実装) → `4c1c5dc` (code retro) と整然としており、リワーク（fixup/amend）なし。
+
+#### review
+- パッチルートのため PR レビューなし。変更範囲が2ファイルの1行追加ずつと小さく、PR 不要判断は妥当。
+
+#### merge
+- `closes #199` により Issue が自動クローズ。コンフリクト痕跡なし。
+
+#### verify
+- Pre-merge 3条件すべて PASS。Post-merge の2条件は `verify-type: manual` で自動検証対象外。`phase/verify` ラベルを付与してユーザー確認待ちとした。verify コマンドの品質は高く、全条件が明確に自動判定できた。
+
+### Improvement Proposals
+- N/A
