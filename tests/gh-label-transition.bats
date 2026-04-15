@@ -4,6 +4,7 @@
 # Mock external commands (gh) by placing them at the front of PATH
 
 SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/gh-label-transition.sh"
+SCRIPTS_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts"
 
 setup() {
     MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
@@ -14,12 +15,34 @@ setup() {
     GH_CALL_LOG="$BATS_TEST_TMPDIR/gh_calls.log"
     export GH_CALL_LOG
 
+    # Record file for verifying setup-labels.sh calls
+    SETUP_LABELS_CALL_LOG="$BATS_TEST_TMPDIR/setup_labels_calls.log"
+    export SETUP_LABELS_CALL_LOG
+
+    # Default gh mock: label list returns existing phase/* labels
     cat > "$MOCK_DIR/gh" <<MOCK
 #!/bin/bash
 echo "\$@" >> "$GH_CALL_LOG"
+if [ "\$1" = "label" ] && [ "\$2" = "list" ]; then
+    echo "phase/issue"
+    echo "phase/spec"
+    echo "phase/ready"
+    echo "phase/code"
+    echo "phase/review"
+    echo "phase/verify"
+    echo "phase/done"
+fi
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/gh"
+
+    # Default setup-labels.sh mock: records calls, succeeds
+    cat > "$MOCK_DIR/setup-labels.sh" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$SETUP_LABELS_CALL_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/setup-labels.sh"
 }
 
 teardown() {
@@ -125,6 +148,10 @@ MOCK
 #!/bin/bash
 if [ "\$1" = "issue" ] && [ "\$2" = "view" ]; then
     echo "phase/verify"
+elif [ "\$1" = "label" ] && [ "\$2" = "list" ]; then
+    # Return all phase/* labels so auto-bootstrap is not triggered
+    echo "phase/issue"; echo "phase/spec"; echo "phase/ready"
+    echo "phase/code"; echo "phase/review"; echo "phase/verify"; echo "phase/done"
 else
     echo "\$@" >> "$GH_CALL_LOG"
 fi
@@ -147,6 +174,10 @@ MOCK
 #!/bin/bash
 if [ "\$1" = "issue" ] && [ "\$2" = "view" ]; then
     echo "phase/spec"
+elif [ "\$1" = "label" ] && [ "\$2" = "list" ]; then
+    # Return all phase/* labels so auto-bootstrap is not triggered
+    echo "phase/issue"; echo "phase/spec"; echo "phase/ready"
+    echo "phase/code"; echo "phase/review"; echo "phase/verify"; echo "phase/done"
 else
     echo "\$@" >> "$GH_CALL_LOG"
 fi
@@ -163,4 +194,56 @@ MOCK
     [ "$status" -ne 0 ]
     # Should still remove the previous phase label
     grep -q -- "--remove-label phase/spec" "$GH_CALL_LOG"
+}
+
+# --- Auto-bootstrap tests ---
+
+@test "bootstrap: setup-labels.sh triggered when target phase/* label missing from repo" {
+    # gh mock: label list returns empty (no phase labels in repo), issue view returns ""
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GH_CALL_LOG"
+if [ "\$1" = "label" ] && [ "\$2" = "list" ]; then
+    echo ""
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 99 code
+    [ "$status" -eq 0 ]
+    # Confirm setup-labels.sh ran by checking label create appears in call log
+    grep -q "label create" "$GH_CALL_LOG"
+    # Confirm gh-label-transition.sh still added the target label
+    grep -q -- "--add-label phase/code" "$GH_CALL_LOG"
+}
+
+@test "bootstrap: setup-labels.sh NOT triggered when target phase/* label already exists in repo" {
+    # Default mock already returns all phase/* labels from label list
+    run bash "$SCRIPT" 99 code
+    [ "$status" -eq 0 ]
+    # No label create calls - setup-labels.sh was not triggered
+    run grep "label create" "$GH_CALL_LOG"
+    [ "$status" -ne 0 ]
+    # Target label still added to the issue
+    grep -q -- "--add-label phase/code" "$GH_CALL_LOG"
+}
+
+@test "bootstrap: gh-label-transition.sh continues with warning when setup-labels.sh fails" {
+    # gh mock: label list returns empty (triggers bootstrap), label create fails
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GH_CALL_LOG"
+if [ "\$1" = "label" ] && [ "\$2" = "create" ]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 99 code
+    # Must exit 0 (continues despite bootstrap failure)
+    [ "$status" -eq 0 ]
+    # Target label still added to the issue
+    grep -q -- "--add-label phase/code" "$GH_CALL_LOG"
 }

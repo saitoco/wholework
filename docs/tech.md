@@ -5,6 +5,7 @@ ssot_for:
   - forbidden-expressions
   - gotchas
   - model-effort-matrix
+  - labels
 ---
 
 English | [日本語](ja/tech.md)
@@ -83,6 +84,44 @@ English | [日本語](ja/tech.md)
   | triage (skill) | triage | Sonnet | — | Metadata assignment; Sonnet sufficient. Invoked inline (no `run-*.sh` wrapper) — including when `/auto` chains triage for unlabeled issues — so effort is not set |
 
   SSoT note: This matrix is the single source of truth for all model and effort settings. When changing model/effort in run-*.sh, agents, or skills, update this table first.
+
+## Wholework Label Management
+
+`scripts/setup-labels.sh` is the **single source of truth (SSoT)** for all labels managed by Wholework. All label names, colors, and descriptions are defined there.
+
+### Label Groups
+
+| Group | Count | Labels | Creation condition |
+|-------|-------|--------|-------------------|
+| Always | 11 | `phase/*` (7), `triaged`, `retro/verify`, `audit/drift`, `audit/fragility` | Always created |
+| Fallback | 17 | `type/*` (3), `priority/*` (4), `size/*` (5), `value/*` (5) | Created when corresponding GitHub feature is unavailable (see below) |
+
+### Auto-bootstrap
+
+`scripts/gh-label-transition.sh` auto-runs `setup-labels.sh` the first time a `phase/*` label transition is attempted and the target label does not exist in the repository. This means Plugin-install users (without repo clone) do not need to run `setup-labels.sh` manually — it is invoked automatically on first skill execution.
+
+### Fallback Label Detection Conditions
+
+Fallback labels are created when the corresponding GitHub feature is unavailable. Detection conditions are also documented as inline comments in `setup-labels.sh`:
+
+| Fallback group | Detection function | Feature checked |
+|----------------|-------------------|-----------------|
+| `type/*` | `detect_issue_types()` | GitHub Issue Types (`issueTypes` API) |
+| `priority/*` | `detect_projects_field("Priority")` | Projects V2 Priority field |
+| `size/*` | `detect_projects_field("Size")` | Projects V2 Size field |
+| `value/*` | `detect_projects_field("Value")` | Projects V2 Value field |
+
+Detection failure (API error, permission issue) is treated as "unavailable" — fallback labels are created to ensure the workflow can proceed.
+
+### Modification Rules
+
+When adding, changing, or removing labels anywhere in Wholework (skills, scripts, modules), the same PR **must** also update `scripts/setup-labels.sh`:
+
+- **Adding a label reference** (`gh label create`, `--add-label`, `grep 'label-name'`, etc.): add the label to `ALWAYS_LABELS` or `FALLBACK_LABELS` with its detection condition comment.
+- **Changing a label name or color**: update the entry in `setup-labels.sh`.
+- **Removing a label reference**: remove the entry from `setup-labels.sh`.
+
+This rule prevents drift between label references in code and the SSoT definition. Future `/audit drift` detection will use the set of label references in the codebase vs. the set defined in `setup-labels.sh` to flag inconsistencies.
 
 ## Testing Strategy
 

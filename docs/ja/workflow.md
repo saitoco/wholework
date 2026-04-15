@@ -147,7 +147,7 @@ bash scripts/check-translation-sync.sh
 
 `phase/*` ラベルを使って Issue の進捗を可視化します。各スキルはワークフロー進行に合わせて自動でラベルを管理します。
 
-セットアップ: `scripts/setup-labels.sh` でラベルを作成します。
+セットアップ: Wholework は初回実行時に必要なラベルを自動作成します。Plugin ユーザーが手動でラベルを作成する必要はありません。ラベルを強制的に再作成する場合は `scripts/setup-labels.sh` を手動実行してください。
 
 ### ラベル遷移マップ
 

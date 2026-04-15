@@ -10,6 +10,7 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PHASE_LABELS="phase/issue phase/spec phase/ready phase/code phase/review phase/verify phase/done"
 
 if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
@@ -73,6 +74,16 @@ else
             REMOVE_ARGS+=(--remove-label "$label")
         fi
     done
+
+    # Auto-bootstrap: if target label doesn't exist in the repo, run setup-labels.sh
+    if [ -n "$TARGET_PHASE" ]; then
+        TARGET_LABEL_EXISTS=""
+        TARGET_LABEL_EXISTS=$(gh label list --limit 200 --json name --jq '.[].name' 2>/dev/null \
+            | grep -x "phase/$TARGET_PHASE" || true)
+        if [ -z "$TARGET_LABEL_EXISTS" ]; then
+            "$SCRIPT_DIR/setup-labels.sh" || echo "Warning: label bootstrap failed, continuing" >&2
+        fi
+    fi
 
     # Add target phase label if specified
     if [ -n "$TARGET_PHASE" ]; then

@@ -83,6 +83,38 @@ Plugin インストール（`/plugin install wholework@saitoco-wholework`）の�
 - **日本語ミラー同期**: `docs/ja/tech.md` / `docs/ja/workflow.md` / `docs/ja/guide/quick-start.md` の同期は `/code` 実装で同 PR 内に含める。verify コマンドは英語版のみを対象とし、日本語版の文字列一致は目視確認に委ねる
 - **Size=S 維持根拠**: 変更ファイル数 8（script 2 + test 2 + docs 4; うち docs/ja ミラーは機械的追随）。Spec Simplicity Rules の light 上限（5 step / 10 verification）内に収まる
 
+## Code Retrospective
+
+### Deviations from Design
+
+- **Fallback label count**: Spec says "15 labels" for FALLBACK_LABELS but lists type/* (3) + priority/* (4) + size/* (5) + value/* (5) = 17. Implemented 17 as correct based on the actual label list; the count "15" in the Spec was an arithmetic error.
+- **Auto-bootstrap placement**: Spec says "before `--add-label`". Implemented in the ELSE branch only (not in the IF branch where target label is already on the issue). This is correct: the IF branch is an idempotency shortcut when the label is already assigned to the issue, and in that case bootstrap is not needed.
+- **Test mock strategy for gh-graphql.sh**: Spec did not specify how to mock `gh-graphql.sh` (called via absolute `$SCRIPT_DIR` path, bypassing PATH mocking). Resolved by mocking `gh api graphql` in the gh mock to return the detection count directly ("0" or "1"), since gh-graphql.sh internally calls `gh api graphql`.
+
+### Design Gaps/Ambiguities
+
+- **Fallback count arithmetic error in Spec**: The Spec states "15 labels" for FALLBACK_LABELS but the listed groups sum to 17. The mismatch was identified during implementation and the correct count (17) was used.
+- **SCRIPT_DIR-based absolute path calls**: `setup-labels.sh` calls `"$SCRIPT_DIR/gh-graphql.sh"` with an absolute path, which bypasses PATH-based mocking in BATS tests. The test design needed to account for this by mocking at the `gh api graphql` level instead of at the `gh-graphql.sh` level.
+- **`CREATED_COUNT` semantics**: The counter increments for all labels processed (including skipped ones), so the completion message reflects "labels processed" not "labels created". This is intentional for clarity.
+
+### Rework
+
+- **setup-labels.bats rewrite**: Initial test design used a `gh-graphql.sh` mock in MOCK_DIR, assuming PATH-based resolution would work. When tests failed (all features treated as unavailable), investigated and found the absolute path issue. Rewrote tests to mock at the `gh api graphql` level — required a full rewrite of the mock strategy.
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+No structural divergences between Spec and PR diff. The code retrospective section already captured the known deviations (fallback count arithmetic error, auto-bootstrap placement in ELSE branch only, SCRIPT_DIR-based path bypass of test mocks). All were correctly handled during implementation with appropriate documentation.
+
+### Recurring Issues
+
+The `SCRIPT_DIR`-based absolute path pattern (calling `"$SCRIPT_DIR/helper.sh"` instead of allowing PATH override) is a recurring pattern in Wholework scripts that complicates BATS test mocking. The test mock strategy had to fall back to mocking at the `gh api graphql` level rather than at the helper script level. This could be addressed in a future refactoring by introducing a consistent test-override mechanism (e.g., environment variable to override SCRIPT_DIR in tests).
+
+### Acceptance Criteria Verification Difficulty
+
+All 10 pre-merge conditions were auto-verified with `file_contains`, `file_exists`, and `github_check` — a well-structured set of verify commands. No UNCERTAIN results. The `github_check "gh pr checks" "Run bats tests"` condition correctly deferred to CI, which had already completed successfully. No improvements needed for verify commands on this Issue.
+
 ## Auto-Resolved Ambiguity Points
 
 - **`phase/done` の扱い**: 既存 `gh-label-transition.sh` / opportunistic-verify.md で使用されているが setup-labels.sh に未定義 → 常時作成群に追加（ドリフト解消）

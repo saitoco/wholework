@@ -154,7 +154,7 @@ To regenerate all translations, run `/doc translate ja`. This command generates 
 
 Uses `phase/*` labels to visualize Issue progress. Each skill automatically manages labels as the workflow advances.
 
-Setup: Create labels with `scripts/setup-labels.sh`.
+Setup: Wholework automatically creates the labels it needs on first run. Manual label creation is not required for Plugin users. To force re-create all labels, run `scripts/setup-labels.sh` manually.
 
 ### Label Transition Map
 
