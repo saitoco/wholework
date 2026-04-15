@@ -231,6 +231,37 @@ Comma-separated multiple indices are supported. Use `--uncheck` to uncheck.
 
 ### Step 7: Post Comment on Issue
 
+**Comment body format:**
+
+Do not include checkbox format in the comment body. Do not duplicate Issue body checkboxes in the comment — the Issue body is the SSoT; checkboxes added to comments are not persisted when the comment is updated.
+
+Use the following format for the comment body:
+
+```
+## Acceptance Test Results
+
+### Auto Verification
+| Condition | Result | Details |
+|-----------|--------|---------|
+| Condition 1 | PASS | Summary of verification method |
+| Condition 2 | FAIL | Reason for failure |
+| Condition 3 | UNCERTAIN | Reason auto-determination is not possible |
+| Condition 4 | SKIPPED | Not executed due to unmet environment conditions |
+
+### Items Requiring User Verification
+
+**1. Condition content**
+
+Verification steps:
+1. What to do (specific action: run command, access URL, etc.)
+2. Where (terminal, browser, specific directory)
+3. What to look for (output/state to verify)
+
+Verification command: `specific command`
+Success criteria: what output/state indicates success
+On failure: what to do if different from expected
+```
+
 Write body to `.tmp/issue-comment-$NUMBER.md` with Write tool, then pass to script:
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh "$NUMBER" ".tmp/issue-comment-$NUMBER.md"
