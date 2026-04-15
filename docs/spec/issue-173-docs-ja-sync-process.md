@@ -89,3 +89,34 @@ explaining the correspondence and how to regenerate translations.
   (コードリファレンスのため翻訳不要)
 - `check-translation-sync.sh` は常に exit 0 — out-of-sync 検知でもプロセスを止めない設計
   (CI チェックで使う場合は `--fail-if-outdated` フラグ追加を別 Issue で検討)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 本文の不正確な記述（`docs/ja/guide/` が存在しない）をスペック調査で発見・修正した。Issue 作成時の前提確認不足だったが、spec フェーズで早期に修正できた点は良好。
+- 受け入れ条件に verify コマンドが付与されており、自動検証が可能な品質で記述されていた。
+
+#### design
+- 設計は実装と高い整合性があり、変更ファイルと実装ステップが1対1で対応していた。
+- bash バージョン互換性要件（macOS system bash 3.2）が設計に含まれていなかった点が唯一の設計漏れ。シェルスクリプトを伴う Spec では対象環境の bash バージョンを明記する習慣が望ましい。
+
+#### code
+- `mapfile` (bash 4+) から `while IFS= read -r` への書き直しが1回発生（macOS bash 3.2 互換性）。Spec の Design Gaps に記録済み。
+- パッチルート（PR なし）で直接 main にコミット。5コミットで段階的に実装された構成は追跡しやすい。
+
+#### review
+- パッチルート実装のため正式コードレビューなし。bash 互換性問題は PR レビューがあれば初期コミットで検出可能だった可能性がある。
+- パッチルートのシェルスクリプト実装では、互換性テストを CI で自動実行する仕組みが有効。
+
+#### merge
+- パッチルートで直接 main へコミット。コンフリクトなし。
+
+#### verify
+- 全条件 PASS。`file_contains` コマンドで5箇所の参照を確認し、実装の整合性を確認。
+- `verify-type: manual` が付与されているが verify コマンドも存在する条件について、自動検証が正常に機能した。`verify-type: auto` への変更を検討しても良い。
+
+### Improvement Proposals
+- シェルスクリプトを含む Spec では対象環境の bash バージョン要件を明記するガイドラインを追加する（例: "bash 3.2+ compatible" を Changed Files に注記）
+- パッチルートで実装されるシェルスクリプトについて、CI に bash 互換性テスト（macOS 環境での実行確認）を追加することを検討する
