@@ -12,6 +12,13 @@
 4. **手持ちのツールで動く** — GitHub と Claude Code 上で動作します。標準的な GitHub Flow に沿っているので、どのフェーズでも介入できます。
 5. **ソフトウェア開発を超えて** — Issue 駆動型のあらゆるプロジェクトに適用できます: Web サイト、ドキュメント、IaC、リサーチ、OSS 運用など。
 
+## 動作要件
+
+- **Claude Code** — 最新安定版
+- **[gh](https://cli.github.com/)** — GitHub CLI。Issue/PR 操作に使用
+- **git** — バージョン管理
+- **[jq](https://jqlang.github.io/jq/)** — JSON プロセッサ。verify コマンドが内部で使用
+
 ## インストール
 
 ```sh

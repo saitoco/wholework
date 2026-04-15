@@ -1,3 +1,10 @@
 {
-  "name": "wholework"
+  "name": "wholework",
+  "description": "Issue-driven Claude Code skills for autonomous GitHub workflows",
+  "author": {
+    "name": "Saito & Co.",
+    "email": "saito@saito.co"
+  },
+  "homepage": "https://github.com/saitoco/wholework",
+  "version": "0.1.0"
 }

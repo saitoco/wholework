@@ -12,6 +12,13 @@ Issue-driven Claude Code skills for autonomous GitHub workflows.
 4. **Works with what you have** — Runs on GitHub and Claude Code. Follows standard GitHub Flow; you can step in at any phase.
 5. **Beyond software development** — Applies to any issue-driven project: websites, documentation, IaC, research, OSS operations.
 
+## Requirements
+
+- **Claude Code** — latest stable version
+- **[gh](https://cli.github.com/)** — GitHub CLI, used for Issue/PR operations
+- **git** — version control
+- **[jq](https://jqlang.github.io/jq/)** — JSON processor, used internally by verify commands
+
 ## Install
 
 ```sh
