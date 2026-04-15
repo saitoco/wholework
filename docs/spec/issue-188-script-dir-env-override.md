@@ -143,6 +143,20 @@ Issue body の初版には `command "test $(grep -lF '$SCRIPT_DIR/' scripts/*.sh
 
 Size L: 17 scripts の一斉適用 (6-10 files を超える) + CI-sensitive (+1) + 新規規約導入 (+1) = L 相当 (XL への昇格は single-purpose refactor のため不要)
 
+## Code Retrospective
+
+### Deviations from Design
+
+- `docs/tech.md` の Environment Variables テーブルへの `WHOLEWORK_SCRIPT_DIR` 追加は Spec に明示されていなかったが、`WHOLEWORK_CI_TIMEOUT_SEC` との整合性と Notes の記述（「`WHOLEWORK_CI_TIMEOUT_SEC` と整合」）から追加が適切と判断した
+
+### Design Gaps/Ambiguities
+
+- macOS の BSD sed は複雑なシェル展開パターンを含む文字列の置換に非対応（`-i` の区切り文字エスケープ問題）。Spec は実装手法を明示していなかったため Python で代替した。Linux 環境の GNU sed では問題ないが、macOS での開発時は Python スクリプトが確実
+
+### Rework
+
+- N/A（設計通りに実装完了）
+
 ## spec retrospective
 
 ### Minor observations
