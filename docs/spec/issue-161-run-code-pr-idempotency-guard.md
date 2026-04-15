@@ -103,6 +103,7 @@
 #### verify
 - 第 1 回 verify: 条件 1〜5 は PASS。条件 6（CI PASS）は UNCERTAIN（retrospective commit プッシュ直後の in_progress 状態で判定不能）。
 - 第 2 回 verify（2026-04-14）: 全 6 条件 PASS を確認。条件 6 は CI run `b2b0329`（2026-04-14T04:50:12Z）が success として完了したため PASS。第 1 回 UNCERTAIN は一時的な in_progress 状態が原因であり、実装上の問題ではなかったことが確認された。
+- 第 3 回 verify（2026-04-15）: 全 6 条件 PASS を再確認。実装に問題なし。Issue は OPEN 状態（パッチルート + auto-close disabled）。残存 opportunistic/manual 条件（#7, #8, #9）未チェックのため `phase/verify` を付与。
 
 ### Improvement Proposals
 - verify 実行時に CI が in_progress の場合、UNCERTAIN として Issue を reopen するのではなく「pending」扱いにして、CI 完了後に再 verify を促すフローを検討すること。現在の設計では CI が単に実行中の状態でも reopen + fix-cycle ラベルが付与されてしまい、誤ったシグナルになる。
