@@ -22,7 +22,7 @@
 
 set -euo pipefail
 
-CACHE_DIR=".tmp/gh-graphql-cache"
+CACHE_DIR="${GH_GRAPHQL_CACHE_DIR:-.tmp/gh-graphql-cache}"
 CACHE_ENABLED=false
 CACHE_TTL=300
 QUERY_NAME=""

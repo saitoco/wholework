@@ -9,13 +9,11 @@ SCRIPT="$PROJECT_ROOT/scripts/get-issue-priority.sh"
 
 setup() {
     cd "$PROJECT_ROOT"
+    export GH_GRAPHQL_CACHE_DIR="$BATS_TEST_TMPDIR/gh-graphql-cache"
 
     MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
     mkdir -p "$MOCK_DIR"
     export PATH="$MOCK_DIR:$PATH"
-
-    # Clear cache to prevent cross-test pollution
-    rm -rf "$PROJECT_ROOT/.tmp/gh-graphql-cache"
 
     # Default gh mock (can be overridden per test)
     cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
@@ -48,7 +46,6 @@ MOCK_EOF
 
 teardown() {
     rm -rf "$MOCK_DIR"
-    rm -rf "$PROJECT_ROOT/.tmp/gh-graphql-cache"
 }
 
 # GraphQL response helper: with Priority field
@@ -84,7 +81,7 @@ graphql_without_priority() {
 
 @test "success: get all valid priority values from project field" {
     for priority in urgent high medium low; do
-        rm -rf "$PROJECT_ROOT/.tmp/gh-graphql-cache"
+        rm -rf "$GH_GRAPHQL_CACHE_DIR"
         export MOCK_GRAPHQL_RESPONSE
         MOCK_GRAPHQL_RESPONSE="$(graphql_with_priority "$priority")"
         run bash "$SCRIPT" 101
