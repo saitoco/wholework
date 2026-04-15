@@ -15,7 +15,7 @@ Skills that Read this file should reference the tables below for Size determinat
 ### Size Determination Flow
 
 ```
-Estimated file count → Provisional Size → Complexity adjustment (±1 step) → Final Size → Workflow selection
+Estimated file count → Provisional Size → Complexity adjustment (±1 step) → CI dependency check → Final Size → Workflow selection
 ```
 
 ### Axis 1: Change Scope (Quantitative) — Determine provisional Size by file count estimate
@@ -40,6 +40,20 @@ Factors to **decrease** size by one step:
 - Simple lateral extension of existing patterns (copy & adapt)
 - Documentation-only changes
 - Bug fixes with clear root cause
+
+### CI Dependency Minimum Override
+
+After applying Axes 1–2, if the changed files match any of the following patterns, upgrade the Final Size to **Size M at minimum** (PR route required; CI runs before merge):
+
+| Pattern | Examples | Reason |
+|---------|----------|--------|
+| CI workflow changes | `.github/workflows/*.yml` | CI configuration changes cannot be validated without CI itself running |
+| Test parallelization / fixture shared-structure changes | `tests/` parallelization flags, shared mock fixture additions | Race conditions and fixture interference only manifest under concurrent execution |
+| CI-environment-dependent verification changes | Changes that rely on CI-specific environment variables, services, or timing | Cannot replicate CI environment locally; merge-first detection risks breaking main |
+
+**Minimum upgrade target: Size M** (PR route; CI runs before merge)
+
+Note: This override is additive — if Axes 1–2 already produce L or XL, that result is preserved. The override only raises the floor to M; it does not cap at M.
 
 ### Size-to-Workflow Mapping Table
 

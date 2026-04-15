@@ -144,7 +144,7 @@ Detect priority information from the title or body and reflect it in the project
 
 ### Step 6: Size Assignment (Projects field)
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` and follow the "Processing Steps" section's Size determination flow (2-axis method) to determine Size.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` and follow the "Processing Steps" section's Size determination flow (2-axis + CI dependency check) to determine Size.
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/project-field-update.md` and execute Steps 1→2→3→4 from the "Priority / Size Field Update" section to set Size. Complete on GraphQL success; only execute Step 5 label fallback on failure.
 

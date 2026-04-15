@@ -29,7 +29,7 @@ flowchart TD
 
 The main flow is `/issue` → `/spec` → `/code` → `/review` → `/merge` → `/verify`. `/auto` chains these phases automatically based on Issue Size and labels; see [Orchestration](#orchestration) for routing details.
 
-**Size-based routing**: The Issue's Size property determines the workflow path (patch vs. PR, review depth, spec depth). See [`modules/size-workflow-table.md`](../modules/size-workflow-table.md) for the decision table (Size determination 2-axis criteria + Size→workflow mapping).
+**Size-based routing**: The Issue's Size property determines the workflow path (patch vs. PR, review depth, spec depth). See [`modules/size-workflow-table.md`](../modules/size-workflow-table.md) for the decision table (Size determination 2-axis + CI dependency check + Size→workflow mapping).
 
 Main branch protection rules: see [CLAUDE.md](../CLAUDE.md).
 
