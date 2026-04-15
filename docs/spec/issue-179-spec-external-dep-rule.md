@@ -61,3 +61,28 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec は SPEC_DEPTH=light で作成。受入基準に verify コマンド（`grep`）が付いており、自動検証可能な設計になっている。Issue の発生経緯（#177 レトロスペクティブ）も明確に記載されており、issue → spec 間の追跡性が良好。
+
+#### design
+- 変更範囲が2ファイルと小さく、Spec の Implementation Steps が具体的な差分レベルで記述されており、設計の曖昧さが少なかった。
+
+#### code
+- コミット構成: `Add design for issue #179` → `chore: add external command dependencies convention to /spec SKILL` → `Add code retrospective for issue #179` の3コミット。fixup/amend パターンなし、リワークなし。patch route で直コミットされており、スムーズな実装だった。
+
+#### review
+- PR なし（patch route）。CI 事前検知が働かない。変更内容がドキュメント追記のみ（SKILL.md の SHOULD 制約テーブル行追加と Spec の遡及更新）のため、機能リグレッションリスクは低かった。
+
+#### merge
+- 直コミット（patch route）。コンフリクトなし、マージプロセスに問題なし。
+
+#### verify
+- 2条件ともに `grep` verify コマンドが付いており、自動 PASS を確認。verify コマンドのパターン（`external.*depend\|depend.*package\|install.*step`）は実際の追加文言と一致しており、verify コマンドの精度は良好だった。
+
+### Improvement Proposals
+- N/A
