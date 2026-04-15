@@ -45,3 +45,14 @@
 - Self-review ブロックから削除する 5 行: `- **Verification conditions vs. Issue body acceptance criteria consistency check**:` で始まるエントリ（5 行: 箇条書きヘッダー + 4 サブ箇条書き）
 - 削除後の Self-review ブロックには Post-merge skill name alignment の箇条書きが最後のエントリとして残る
 - `auto-update Issue body` のテキストは Step 1 の新セクション内に含まれるため、Self-review からの削除後も grep 検索でヒットする
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
