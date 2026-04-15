@@ -55,3 +55,32 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受入条件は明確で検証可能。`file_contains` と `grep` の verify コマンドが適切に設定されており、自動検証が機能した。
+- 後方互換性の確認（条件3）が `verify-type: manual` で設定されており、自動化できない項目の区別が適切に行われていた。
+
+#### design
+- Spec の Changed Files と Implementation Steps が実装内容と一致しており、設計と実装の乖離はなかった。
+- `glob に一致するファイルが 0 件の場合は PASS` というエッジケースが Notes に明記されており、設計の完成度が高かった。
+
+#### code
+- パッチルート（直接 main コミット）で実装。3 ファイル、3 行の追加という最小限の変更で完結した。
+- fixup/amend なし。リワークなし。設計通りの実装が一発で完了している。
+
+#### review
+- PR なし（パッチルート）のため、正式なレビューは実施されていない。変更量が極めて小さく（3 行）、リスクは低い。
+
+#### merge
+- パッチルートで main に直接コミット。コンフリクトなし。
+
+#### verify
+- 自動検証対象 2 条件はいずれも PASS。
+- 条件3（`file_not_contains` の後方互換維持）は `verify-type: manual` のため手動確認が残る。verify-executor.md を見ると `file_not_contains` は維持されているため、ユーザーが確認すれば PASS になる見込み。
+
+### Improvement Proposals
+- N/A
