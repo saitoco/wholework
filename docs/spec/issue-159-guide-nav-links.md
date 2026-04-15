@@ -45,3 +45,18 @@
 - Issue #154 レビュー時に SHOULD レベルの問題として検出された項目
 - `quick-start.md` を対象外とする判断は自動解決済み（Issue 本文の自動解決済み曖昧性ポイント参照）
 - 日本語ミラーファイル（`docs/ja/guide/`）は Issue の受入条件に含まれないが、翻訳の一貫性を維持するため同時に更新する
+
+## Spec Retrospective
+
+（/spec フェーズが記入）
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec の実装ステップ通りに実施した。
+
+### Design Gaps/Ambiguities
+- なし。Spec は明確で実装に迷う箇所がなかった。
+
+### Rework
+- なし。
