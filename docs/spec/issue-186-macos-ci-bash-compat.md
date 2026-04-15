@@ -51,3 +51,28 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body の受入条件は2件だったが、Spec で `github_check` による CI 実行確認（3件目）を追加した。Issue と Spec の条件数が一致していないが、これは意図的な追加であり有効な判断。
+
+#### design
+- 実装ステップが明確で変更対象ファイルが2件（`test.yml`、`docs/structure.md`）と最小限。設計どおりに実装された。
+
+#### code
+- 1コミット（`6462580`）で完結。fixup/amend なし、手戻りゼロ。シンプルな変更に対して理想的な実装フロー。
+
+#### review
+- パッチルートのため PR レビューなし。変更規模が小さく（CIジョブ追加のみ）、レビュースキップが妥当な判断。
+
+#### merge
+- パッチルート（main への直接コミット）。コンフリクトなし。
+
+#### verify
+- 2件の `grep` 検証コマンドがともに PASS。verify コマンドが実装内容と正確に対応しており、検証の精度が高い。
+
+### Improvement Proposals
+- N/A
