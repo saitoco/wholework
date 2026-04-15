@@ -68,6 +68,17 @@ explaining the correspondence and how to regenerate translations.
 - `bash scripts/check-translation-sync.sh` を実行し、docs/ja/* との対応状況一覧が出力される
 - docs/workflow.md の Translation Sync 段落に docs/guide/ ↔ docs/ja/guide/ の対応が明記されている
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- `mapfile` (bash 4+) was used initially in `check-translation-sync.sh`, causing failure on macOS system bash (3.2). Changed to `while IFS= read -r` loop for compatibility. The spec did not mention bash version compatibility requirements.
+
+### Rework
+- `check-translation-sync.sh` was rewritten once after initial implementation to replace `mapfile` with `while read` for macOS bash 3.2 compatibility.
+
 ## Notes
 
 - `docs/ja/guide/` は Issue 作成時点では存在しないとされていたが、調査の結果すでに全ファイルが揃っている
