@@ -65,3 +65,28 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body の受入れ条件4（「格上げの最低 Size が明示されている」）には verify コマンドが付いていなかったが、Spec の Verification セクションには `file_contains "modules/size-workflow-table.md" "Size M"` が記載されていた。Issue body と Spec の verify コマンドが同期していない状態で進んだ。AI 判定で正しく PASS できたが、本来は Issue body にも verify コマンドを付与すべきだった。
+
+#### design
+- 設計通りの実装。Spec の Changed Files と実際の変更が一致。`docs/workflow.md` の追加対応は軽微で適切だった。
+
+#### code
+- 単一コミット（c908d40）でクローズ。fixup/amend なし。リワークなし。patch route として最小限の変更で実装されており品質良好。
+
+#### review
+- patch route のためレビューなし。変更が2ファイルの文書追記のみであり、patch route 選択は妥当。本 Issue 自体が「CI 依存の変更は Size M 以上」というルールの対象外（doc-only 変更）であることも自己矛盾なく整合している。
+
+#### merge
+- patch route 直接コミット。コンフリクトなし。
+
+#### verify
+- 全自動検証対象（4条件）が PASS。Post-merge manual 条件（次回 triage での観測）は自動検証不可のため `phase/verify` ラベルで保留。
+
+### Improvement Proposals
+- Issue body の受入れ条件と Spec の verify コマンドを同期させる仕組みが欲しい。`/spec` で Spec に verify コマンドを追記した場合、Issue body の対応する条件にも同じ verify コマンドを追加するか、少なくとも不一致を警告する処理を `/spec` または `/code` に追加すると精度が上がる。
