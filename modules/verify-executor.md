@@ -76,7 +76,7 @@ The following information is passed from the caller:
 | `browser_check "url" "selector" ["expected_text"]` | **Mode-dependent**: `safe` → return UNCERTAIN (to prevent browser operations). `full` → Read `${CLAUDE_PLUGIN_ROOT}/modules/adapter-resolver.md`, resolve adapter by capability name `browser`, and delegate processing. Pass command type `browser_check` and arguments `url`, `selector`, `expected_text` |
 | `browser_screenshot "url" "description"` | **Mode-dependent**: `safe` → return UNCERTAIN. `full` → Read `${CLAUDE_PLUGIN_ROOT}/modules/adapter-resolver.md`, resolve adapter by capability name `browser`, and delegate. Pass command type `browser_screenshot` and arguments `url`, `description`. Best-effort due to subjective elements |
 | `mcp_call "tool_name" "description"` | **Mode-dependent**: `safe` → return UNCERTAIN (to prevent external API calls). `full` → Use ToolSearch with `select:<tool_name>` (tool_name in `server_name__tool_name` fully qualified format, no spaces) to find the tool, and **only** call MCP tools clearly identified as read-only verification. Do not call tools with any possibility of writes, deletions, or external transmissions; return UNCERTAIN (with reason). Also return UNCERTAIN if ToolSearch is unavailable or tool call is blocked by permissions (include detailed reason). Evaluate result against description using AI judgment for PASS/FAIL. Return UNCERTAIN if tool not found (include detailed reason). Best-effort due to subjective elements. For the rationale of using ToolSearch directly (bypassing the adapter layer), see the Adapter Pattern section in `docs/environment-adaptation.md` |
-| `github_check "gh_command" "expected_value"` | **Mode-dependent**: In safe mode, use allowlist approach. Allowlist: `gh issue view`, `gh pr view`, `gh pr checks`, `gh api` (no `--method` or `--method GET`). If allowlist matches → run `gh_command` in Bash and confirm output contains `expected_value` (if `expected_value` is omitted, confirm output is non-empty). If not in allowlist → return UNCERTAIN. `full` → no restrictions; run `gh_command` in Bash (timeout: 30 seconds) |
+| `github_check "gh_command" "expected_value"` | **Mode-dependent**: In safe mode, use allowlist approach. Allowlist: `gh issue view`, `gh pr view`, `gh pr checks`, `gh api` (no `--method` or `--method GET`). If allowlist matches → run `gh_command` in Bash. If output contains `in_progress` → **PENDING** (detail: "CI job is in_progress; re-verify after CI completes"). Otherwise, confirm output contains `expected_value` (if `expected_value` is omitted, confirm output is non-empty). If not in allowlist → return UNCERTAIN. `full` → no restrictions; run `gh_command` in Bash (timeout: 30 seconds). Same `in_progress` detection applies in full mode |
 
 5. Treat syntax errors (unknown command names, missing arguments, etc.) as UNCERTAIN
 6. Classify each condition's verification result:
@@ -84,6 +84,7 @@ The following information is passed from the caller:
    - **FAIL**: Condition is not met
    - **UNCERTAIN**: Cannot be automatically determined (safe mode command, syntax error, etc.)
    - **SKIPPED**: Environment condition (`--when`) was not met; skipped execution
+   - **PENDING**: CI job is in_progress; temporary execution state, re-verify after CI completes
 7. Organize results according to the output format
 
 ### Basic Authentication Support
@@ -118,7 +119,8 @@ When processing `command` hints in safe mode with a PR number provided:
 3. Determine based on match result:
    - Related job is **SUCCESS** → **PASS** (detail: "Alternative verification via CI job `job-name` success")
    - Related job is **FAILURE** → First determine if failure is due to CI infrastructure (step 3a)
-   - Related job is **incomplete** (PENDING, etc.) → **UNCERTAIN** (detail: "CI incomplete")
+   - Related job status is **IN_PROGRESS** → **PENDING** (detail: "CI job is in_progress; re-verify after CI completes")
+   - Related job is **incomplete** (QUEUED, etc.) → **UNCERTAIN** (detail: "CI incomplete")
    - Cannot **identify** corresponding job → **UNCERTAIN** (detail: "Could not identify corresponding CI job")
 
 3a. **CI infrastructure failure determination** (for FAILURE jobs):
@@ -157,5 +159,6 @@ Get detailed job information via `gh api` and check for the following patterns:
 - PASS: N items
 - FAIL: N items
 - UNCERTAIN: N items
+- PENDING: N items
 - SKIPPED: N items
 ```

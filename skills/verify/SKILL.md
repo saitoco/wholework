@@ -246,7 +246,8 @@ Use the following format for the comment body:
 | Condition 1 | PASS | Summary of verification method |
 | Condition 2 | FAIL | Reason for failure |
 | Condition 3 | UNCERTAIN | Reason auto-determination is not possible |
-| Condition 4 | SKIPPED | Not executed due to unmet environment conditions |
+| Condition 4 | PENDING | CI is in_progress; re-run after CI completes |
+| Condition 5 | SKIPPED | Not executed due to unmet environment conditions |
 
 ### Items Requiring User Verification
 
@@ -281,7 +282,8 @@ Output in the following format to terminal:
 | Condition 1 | ✅ PASS | Summary of verification method |
 | Condition 2 | ❌ FAIL | Reason for failure |
 | Condition 3 | ⚠️ UNCERTAIN | Reason auto-determination is not possible |
-| Condition 4 | ⏭️ SKIPPED | Not executed due to unmet environment conditions |
+| Condition 4 | ⏳ PENDING | CI is in_progress; re-run after CI completes |
+| Condition 5 | ⏭️ SKIPPED | Not executed due to unmet environment conditions |
 
 ### Items Requiring User Verification
 
@@ -346,6 +348,12 @@ Judgment:
     - `/code --pr N` — 新規ブランチ + PR で修正（Size L の大きな修正）
     - `/spec N` — Spec から見直し（根本的な設計変更が必要な場合）
     ```
+- **PENDING のみ（FAIL なし、PENDING ≥1）**:
+  - Assign `phase/verify` label without reopening the Issue:
+    ```bash
+    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
+    ```
+  - Notify user: "CI が実行中のため一部の条件が PENDING です。CI 完了後に `/verify $NUMBER` を再実行してください。"
 - **UNCERTAIN のみ（FAIL なし、UNCERTAIN ≥1）**:
   - Assign `phase/verify` label without reopening the Issue:
     ```bash
@@ -378,6 +386,12 @@ Judgment:
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER"
     ```
   - User selects the next action (`/code`, `/spec`, or `/issue`) to return to the fix cycle
+- **PENDING のみ（FAIL なし、PENDING ≥1）**:
+  - Assign `phase/verify` label (Issue remains OPEN):
+    ```bash
+    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
+    ```
+  - Notify user: "CI が実行中のため一部の条件が PENDING です。CI 完了後に `/verify $NUMBER` を再実行してください。"
 - **UNCERTAIN のみ（FAIL なし、UNCERTAIN ≥1）**:
   - Assign `phase/verify` label (Issue remains OPEN):
     ```bash
