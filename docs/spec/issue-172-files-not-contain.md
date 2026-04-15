@@ -41,3 +41,17 @@
 - `files_not_contain` は `file_not_contains` の複数ファイル版。引数形式は `(2, 2)` で同じ（glob_pattern, text）
 - glob に一致するファイルが 0 件の場合は PASS（検査対象なし = 含むファイルなし）
 - Issue #165 の spec retrospective から提案された改善。14 件の `file_not_contains` を数件の `files_not_contain` に集約可能
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
