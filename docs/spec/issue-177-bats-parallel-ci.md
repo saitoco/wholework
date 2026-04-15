@@ -89,3 +89,33 @@ Nothing to note. review-light 軽量統合レビューで全4観点 Issue 検出
 ### Acceptance criteria verification difficulty
 
 Nothing to note. 4条件中3条件は既にチェック済みで、残り1条件（PR CI bats tests pass）も `github_check` safe mode で直接確認できた。UNCERTAIN なし。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue #177 は一度目の試み（`bats --jobs 4` 単純追加）が race condition で失敗・リバートされた後に作成された第二仕様。根本原因（`GH_GRAPHQL_CACHE_DIR` の共有）を正確に特定し、隔離手順を具体的に記述した高品質な spec だった。
+- spec に verify コマンドが含まれており（`grep "GH_GRAPHQL_CACHE_DIR"` など）、Issue 受け入れ条件に直接反映されていた。前回 spec（`issue-177-ci-bats-speed.md`）で指摘された「spec の verify コマンドが Issue に反映されない」問題がこの spec では改善されていた。
+
+#### design
+- 変更ファイル6件とその変更内容が実装ステップに 1:1 で対応。実装と完全整合。
+- `tests/gh-graphql.bats` の `cache_setup()` / `cache_teardown()` 関数が `setup()` 変数を参照できるかについては spec 時点で明示されていなかったが、Code Retrospective に記録済み。設計品質は高い。
+
+#### code
+- fixup/amend パターンなし。PR #182 の1コミット（`62c1a01`）でクリーンに実装。
+- PR route 採用（Issue #180 の CI 依存度 Size M 格上げルールに従い正しく選択）。CI 事前検証により race condition の再発がなかったことを確認してからマージできた。
+
+#### review
+- review-light（軽量統合レビュー）実施。全4観点（Spec 乖離・エッジケース・セキュリティ・ドキュメント）で Issue 検出なし。
+- `bats --jobs $(nproc)` の動的並列数設定について、review コメントに明示的な言及がなかったが、正しい設計判断（ubuntu-latest の 2 vCPU に自動適応）。
+
+#### merge
+- PR #182 が 2026-04-15T01:50:44Z にマージ。PR route が正常に機能し、CI（`Run bats tests` ×2: 2m49s / 2m51s）が success してからマージ。前回失敗（~9分でシリアル実行）に対して 69% の時間短縮を達成。
+
+#### verify
+- 全4条件 PASS。UNCERTAIN/FAIL なし。CI 実行時間は 2m49〜2m51s（対応前 ~540s 比 69% 削減）。
+- Post-merge 条件（verify-type: manual）が残っているため `phase/verify` ラベルで管理中。ユーザーによる GitHub Actions 履歴での実測確認が必要。
+
+### Improvement Proposals
+- N/A
