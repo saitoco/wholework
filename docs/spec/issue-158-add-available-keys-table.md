@@ -51,3 +51,18 @@
 | `capabilities.{name}` | boolean | `false` | Dynamic capability mapping (e.g., `capabilities.invoice-api: true`) |
 
 `docs/ja/guide/customization.md` は日本語ミラーのため、表の Key 列は英語のまま維持し、Description のみ日本語化する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A（設計通りに実装）
+
+### Design Gaps/Ambiguities
+
+- Spec の挿入箇所定義「All keys are optional.」段落の直後）は明確で曖昧さなし
+- `docs/ja/guide/customization.md` の参照リンクパスは `../../../modules/detect-config-markers.md` が正しいが、実際のファイル配置を確認すると `docs/ja/guide/` からは `../../..` が必要なため `../../../modules/detect-config-markers.md` と記載（ルートから `modules/` へのパス）
+
+### Rework
+
+- N/A（手戻りなし）
