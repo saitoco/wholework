@@ -160,6 +160,7 @@ Key modules:
 - `scripts/validate-permissions.sh` — validate skill directory ↔ name: field consistency
 - `scripts/validate-skill-syntax.py` — validate SKILL.md frontmatter and syntax
 - `scripts/check-file-overlap.sh` — detect file overlap between repos
+- `scripts/check-translation-sync.sh` — check translation sync status of docs/ja/* against docs/*
 - `scripts/setup-labels.sh` — create GitHub labels for workflow
 - `scripts/test-skills.sh` — run all skill tests
 - `scripts/wait-external-review.sh` — wait for external review completion
