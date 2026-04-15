@@ -108,3 +108,7 @@ For details on writing custom adapters and verify command handlers, see [docs/ad
 Steering Documents (`docs/product.md`, `docs/tech.md`, `docs/structure.md`) are the primary way to give Wholework deep project context. Skills read them automatically when present.
 
 Run `/doc init` to generate an initial set from your codebase. Run `/doc sync` to keep them in sync as your project evolves.
+
+---
+
+← [User Guide](index.md)

@@ -87,3 +87,4 @@ claude --plugin-dir /path/to/wholework
 
 - [github.com/saitoco/wholework](https://github.com/saitoco/wholework/issues) で issue を開く
 - 類似問題が既存 issue にないかを確認
+- [ユーザーガイド](index.md) — ガイドページ一覧

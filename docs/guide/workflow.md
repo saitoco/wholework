@@ -193,3 +193,4 @@ If `/verify` fails, Wholework reopens the issue and removes all `phase/*` labels
 ## Further Reading
 
 For internal skill behavior, label transitions, and developer-facing details, see [docs/workflow.md](../workflow.md).
+- [User Guide](index.md) — Overview of all guide pages

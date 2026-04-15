@@ -189,3 +189,4 @@ Steering Documents（`docs/product.md`、`tech.md`、`structure.md`）と `docs/
 ## さらに読む
 
 スキル内部の挙動、ラベル遷移、開発者向け詳細は [docs/ja/workflow.md](../workflow.md) を参照してください。
+- [ユーザーガイド](index.md) — ガイドページ一覧

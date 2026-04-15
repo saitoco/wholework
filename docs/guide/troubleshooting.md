@@ -91,3 +91,4 @@ For unattended runs via `/auto`, ensure the issue is triaged (has a `phase/*` or
 
 - Open an issue at [github.com/saitoco/wholework](https://github.com/saitoco/wholework/issues)
 - Check existing issues for similar problems
+- [User Guide](index.md) — Overview of all guide pages
