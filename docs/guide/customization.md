@@ -46,6 +46,26 @@ capabilities:
 
 All keys are optional. If `.wholework.yml` does not exist, all settings use their defaults.
 
+### Available Keys
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `copilot-review` | boolean | `false` | Wait for GitHub Copilot review before merging |
+| `claude-code-review` | boolean | `false` | Wait for Claude Code Review before merging |
+| `coderabbit-review` | boolean | `false` | Wait for CodeRabbit review before merging |
+| `review-bug` | boolean | `true` | Run bug-detection agent in `/review` |
+| `opportunistic-verify` | boolean | `false` | Run quick verify commands at skill completion |
+| `skill-proposals` | boolean | `false` | Generate Wholework improvement issues during `/verify` |
+| `steering-hint` | boolean | `true` | Show `/doc init` hint when steering docs are missing |
+| `production-url` | string | `""` | Production URL for browser-based verify commands |
+| `spec-path` | string | `docs/spec` | Where specs are stored |
+| `steering-docs-path` | string | `docs` | Where steering documents live |
+| `capabilities.browser` | boolean | `false` | Enable Playwright-based verify commands |
+| `capabilities.mcp` | list | `[]` | MCP tool names available to skills |
+| `capabilities.{name}` | boolean | `false` | Dynamic capability mapping (e.g., `capabilities.invoice-api: true`) |
+
+For the full reference including implementation details and YAML parsing rules, see [`modules/detect-config-markers.md`](../../modules/detect-config-markers.md).
+
 ## `.wholework/domains/`
 
 Domain files let you add project-specific instructions to individual skill phases without modifying Wholework itself.
