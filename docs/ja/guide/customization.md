@@ -40,6 +40,26 @@ capabilities:
 
 すべてのキーはオプションです。`.wholework.yml` が存在しない場合、すべての設定はデフォルトで動作します。
 
+### Available Keys
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `copilot-review` | boolean | `false` | マージ前に GitHub Copilot review を待つ |
+| `claude-code-review` | boolean | `false` | マージ前に Claude Code Review を待つ |
+| `coderabbit-review` | boolean | `false` | マージ前に CodeRabbit review を待つ |
+| `review-bug` | boolean | `true` | `/review` でバグ検出 agent を実行する |
+| `opportunistic-verify` | boolean | `false` | スキル完了時に軽量 verify command を実行する |
+| `skill-proposals` | boolean | `false` | `/verify` 中に Wholework 改善 issue を生成する |
+| `steering-hint` | boolean | `true` | steering docs が欠如している場合に `/doc init` ヒントを表示する |
+| `production-url` | string | `""` | ブラウザベース verify command 用の本番 URL |
+| `spec-path` | string | `docs/spec` | spec の保存先 |
+| `steering-docs-path` | string | `docs` | steering document の配置先 |
+| `capabilities.browser` | boolean | `false` | Playwright ベースの verify command を有効化する |
+| `capabilities.mcp` | list | `[]` | スキルから利用できる MCP ツール名 |
+| `capabilities.{name}` | boolean | `false` | 動的 capability マッピング（例: `capabilities.invoice-api: true`） |
+
+実装の詳細や YAML パースルールを含む完全なリファレンスは [`modules/detect-config-markers.md`](../../../modules/detect-config-markers.md) を参照してください。
+
 ## `.wholework/domains/`
 
 Domain ファイルは Wholework 本体を変更せずに、個々のスキルフェーズへプロジェクト固有の指示を追加する仕組みです。
