@@ -56,3 +56,29 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 本文の受け入れ条件には明確な grep verify コマンドが付与されており、高い自動検証精度を実現。Spec のリトロスペクティブセクションも含めて問題なし。
+
+#### design
+- Spec のデザインはシンプルかつ正確。実装変更（セクション移動）と Spec 記述が一致していた。
+
+#### code
+- パッチルート（main 直コミット）で実装。Code Retrospective でも逸脱・手戻りなし。`ed3b4cb` で Code Retrospective 追加、`dccbf3f` で機能実装という2コミット構成も整理されていた。
+
+#### review
+- パッチルート（PR なし）のため正式レビューなし。変更スコープは限定的（SKILL.md 1ファイルのセクション移動）であり、PR 不要の判断は妥当。
+
+#### merge
+- main 直コミットで競合なし。
+
+#### verify
+- Pre-merge 条件2件とも即時 PASS。grep verify コマンドが適切に設計されていた。
+- Post-merge 条件（opportunistic）は verify コマンドなしのため、ユーザー検証が必要な状態として `phase/verify` ラベルを付与。
+
+### Improvement Proposals
+- N/A
