@@ -47,3 +47,17 @@
 - SPEC_DEPTH=light のため ambiguity resolution / uncertainty detection はスキップ
 - 遡及更新（`docs/spec/issue-177-ci-bats-speed.md`）は規約適用の実例として追加する（Issue #177 は既に完了済みで再実装はしない）
 - SHOULD 制約の追加のため `validate-skill-syntax.py` の MUST 違反チェック対象外
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
