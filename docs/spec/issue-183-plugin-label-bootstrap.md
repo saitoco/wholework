@@ -121,3 +121,33 @@ All 10 pre-merge conditions were auto-verified with `file_contains`, `file_exist
 - **Auto-bootstrap の具体箇所**: `gh-label-transition.sh` の `--add-label` 直前に配置（全 phase 遷移で最下層の 1 箇所のみ）
 - **冪等性の実装方法**: `gh label list` で既存ラベル集合を 1 回取得 → 未存在のみ作成。`--force` フラグでオプトイン上書き
 - **ja ミラーファイルの verify command**: 英語版のみを verify 対象にし、ja 同期は Notes で明示（過剰な verify command 追加を避ける）
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue Retrospective セクションは Spec に含まれていないが、Issue 本文の「Auto-Resolved Ambiguity Points」節で曖昧さの解消経緯が詳細に記録されている。受け入れ条件は `file_contains` / `file_exists` / `github_check` で構成されており、全10条件がauto-verifiable — 質の高い条件設計。
+- 「`--force` と冪等性の矛盾」は Spec 策定段階で既に検出・解消されており、Issue 本文の AC が事前に整合性調整されている（ドリフト防止の好事例）。
+
+#### design
+- Spec で fallback label 数の算術誤差（15 → 実際は 17）が発生。実装時に正しく修正されたが、Spec 段階での計算見落としは再現リスクがある。リスト形式で列挙する場合は合計を自動導出するか、合計記載を省略する規約が望ましい。
+- 実装方針（既存 skill への組み込み + auto-bootstrap at `gh-label-transition.sh`）は的確で、実装との乖離なし。
+
+#### code
+- `SCRIPT_DIR`-based absolute path パターンが BATS テストのモック戦略に影響し、test の書き直しが発生（`setup-labels.bats` full rewrite）。Code Retrospective に詳細記録済み。
+- fixup/amend パターンは `git log` で確認できず、rework は test mock 戦略の変更のみ。実装フローは概ね一発。
+
+#### review
+- Review Retrospective によれば、Spec vs 実装の構造的乖離なし。Code Retrospective で捕捉済みの逸脱（fallback count、auto-bootstrap 配置）は実装段階で適切に処理済み。
+- `SCRIPT_DIR`-based absolute path 問題が recurring issue として指摘されており、将来の改善候補として記録されている。
+
+#### merge
+- PR #187 は squash merge でメインに取り込み済み。conflict マーカーなし。CI はすべて pass（Run bats tests 2m50s, Forbidden Expressions check, Validate skill syntax）。
+
+#### verify
+- 全10条件 PASS。UNCERTAIN なし。verify command の設計が良く、auto-verification 率 100%。
+- `github_check "gh pr checks" "Run bats tests"` は PR ルートで有効に機能した。
+
+### Improvement Proposals
+- `SCRIPT_DIR`-based absolute path パターン（`"$SCRIPT_DIR/helper.sh"` 形式）は BATS テストのモックを困難にする。テスト環境でのパス解決を環境変数で上書き可能にする仕組み（例: `WHOLEWORK_SCRIPT_DIR` 環境変数）を導入することで、モック戦略を PATH レベルに統一できる。
