@@ -51,3 +51,17 @@
 - オーバーライドルールはあくまで **加算的**（Axis 2 の ±1 ステップと独立）。LOC/file count ベース判定は廃止しない（Non-Goals 準拠）
 - 格上げパターンは「ファイルパスベースのヒューリスティック」として設計。高度な自動判定は Non-Goals
 - 既存 auto-memory `feedback_ci_sensitive_size_m.md` と同内容を distributable layer（`size-workflow-table.md`）へ昇格させる位置付け
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- `docs/workflow.md` にも「2-axis criteria」という記述があったが Spec では変更対象として挙げられていなかった。doc-checker で検出し合わせて更新した（軽微な追加対応）。
+
+### Rework
+
+- N/A
