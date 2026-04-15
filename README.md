@@ -48,6 +48,10 @@ Run the full cycle with a single command: `/auto N`. For a deeper look at each p
 
 Wholework adapts to your project through `.wholework.yml` (feature flags and paths), `.wholework/domains/` (per-skill instructions), and adapters (tool integrations). See the [Customization guide](docs/guide/customization.md) for details.
 
+## Security
+
+Wholework skills perform `gh`, `git`, and file-write operations on your repository. `/auto` uses `--dangerously-skip-permissions` to bypass permission prompts for unattended execution. See [SECURITY.md](SECURITY.md) for a full description of side effects and required permissions.
+
 ## Contributing
 
 Contributions require a DCO sign-off on every commit. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
