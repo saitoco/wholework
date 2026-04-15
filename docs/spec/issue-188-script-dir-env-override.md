@@ -124,3 +124,39 @@ Issue body の初版には `command "test $(grep -lF '$SCRIPT_DIR/' scripts/*.sh
 ### Tool Dependencies
 
 すべての実装は既存の bash / grep / bats / gh でカバーでき、allowed-tools の追加は不要。
+
+## issue retrospective
+
+### 曖昧点解消の判断根拠
+
+- **方式選定 (env var override vs PATH 解決化)**: env var override を採用。Issue #183 retrospective (`Recurring Issues` セクション) が明示的に推奨しており、既存 `$SCRIPT_DIR/helper.sh` 呼び出しを書き換えずに済むため差分最小。PATH 解決化は他スクリプトへの副作用 (PATH 先頭の内容に依存) を受けやすく、リスク高
+- **スコープ (全 17 scripts 一斉 vs 最小限)**: 全 scripts 一斉適用を採用。CI-sensitive Size M 以上ルールと、将来の BATS テスト追加時に同じ問題が再発する構造的リスクの排除を優先。規約として定着させる
+- **BATS テスト検証 (setup-labels.bats 書き直し vs 既存維持)**: 書き直し採用。PATH ベースのモックに統一することで今後の BATS テスト追加時のテンプレートとして機能させる
+
+### Key Policy Decisions
+
+- `WHOLEWORK_SCRIPT_DIR` 変数名は `WHOLEWORK_CI_TIMEOUT_SEC` (`docs/tech.md` Environment Variables) と整合
+- `${WHOLEWORK_SCRIPT_DIR:-$(...)}` フォールバック形式により本番動作は完全後方互換
+- `docs/tech.md` Testing Strategy セクションに BATS モック規約を記載し、未来の BATS テスト追加時に参照できるようにする
+
+### Size 判定
+
+Size L: 17 scripts の一斉適用 (6-10 files を超える) + CI-sensitive (+1) + 新規規約導入 (+1) = L 相当 (XL への昇格は single-purpose refactor のため不要)
+
+## spec retrospective
+
+### Minor observations
+
+- 初版 Issue body に含まれていた count 集約型 `command` verify hint (`test $(grep -l ... | wc -l) -eq 0`) は、`modules/verify-patterns.md` #32 学習 (#364 由来) の anti-pattern に該当していた。加えて `'\\$SCRIPT_DIR/'` のエスケープが bash + grep BRE で literal `\\` 扱いになり実際には `$SCRIPT_DIR/` を検出できない false positive も内包していた。Spec 段階で発見し、`-F` (fixed string) 形式 + post-merge opportunistic への移動で整理した
+- `/issue` 実行時に verify-patterns.md の count 集約回避ガイドラインが照会されていれば Issue 段階で anti-pattern の投入を防げた可能性がある。`/issue` での verify command 設計時に verify-patterns.md の関連セクションを明示的に照会する運用強化を検討する余地あり
+
+### Judgment rationale
+
+- **comprehensive check の pre-merge 除外**: 4 代表 scripts の `file_contains` + CI PASS + 将来のレビュー時 opportunistic 確認で本 Issue の価値 (rework 防止) は担保されると判断。network 集約 command は PR-level の自動化価値に対して `/review` safe mode での UNCERTAIN コストが上回る
+- **docs/ja/tech.md を本 PR のスコープ外に**: `/doc translate {lang}` による post-merge 同期前提の翻訳除外ルールに従い、本 PR では `docs/tech.md` のみ更新。変更のレビュー範囲を英語版に集中させる
+
+### Uncertainty resolution
+
+- 子プロセスへの `WHOLEWORK_SCRIPT_DIR` 伝播: `env -u CLAUDECODE` は `CLAUDECODE` のみ削除のため env var は保持される。BATS テストで 1 回 `export` すれば `run-auto-sub.sh` → `run-verify.sh` 等のチェーン全段で override が効く。Notes セクションに明文化
+- `set -u` 下での `${VAR:-default}` 安全性: `:-` は unset/empty 両方で default に fallback するため nounset エラーにならない。`set -euo pipefail` を使用する setup-labels.sh 等でも問題なし
+
