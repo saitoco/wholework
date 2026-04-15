@@ -356,6 +356,14 @@ Warning: acceptance criteria count does not match verification item count.
 Check for missing items. Continuing.
 ```
 
+**Verification conditions vs. Issue body acceptance criteria consistency check (regardless of SPEC_DEPTH):**
+
+After creating `## Verification > Pre-merge`, compare Spec items against Issue body items to reflect verify commands:
+- List each Spec `## Verification > Pre-merge` item
+- Compare against Issue body `## Acceptance Criteria > Pre-merge` items
+- Detect: Spec items not in Issue body (omission), or mismatched `<!-- verify: ... -->` hints
+- If mismatched, auto-update Issue body (use Spec's `## Verification > Pre-merge` as source of truth): `mkdir -p .tmp`, write to `.tmp/issue-body-$NUMBER.md`, update with `gh-issue-edit.sh`, delete temp file
+
 **Changed-file modification types (examples, both templates):**
 
 | Type | Example notation |
@@ -506,11 +514,6 @@ Before committing the Spec, verify internal consistency:
 - **Template file reference workflow check** (only if implementation steps include reading a template file):
   - Verify fallback behavior (error message, default value) when the template file is missing is documented in implementation steps
   - Verify consistent use of structured format (fixed text) vs. placeholder format (variable content)
-- **Verification conditions vs. Issue body acceptance criteria consistency check**:
-  - List each Spec `## Verification > Pre-merge` item
-  - Compare against Issue body `## Acceptance Criteria > Pre-merge` items
-  - Detect: Spec items not in Issue body (omission), or mismatched `<!-- verify: ... -->` hints
-  - If mismatched, auto-update Issue body (use Spec's `## Verification > Pre-merge` as source of truth)
 - **Post-merge skill name alignment**: if `## Verification > Post-merge` mentions a target skill name (`/foo`), verify it matches the target skill in the Issue purpose
 
 ### Step 11: Title Drift Check
