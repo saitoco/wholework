@@ -6,6 +6,8 @@ Shared module for detecting configuration values in `.wholework.yml`.
 
 Parse and extract configuration values from `.wholework.yml` at the project root and provide them as variables that each skill can reference uniformly. Designed so that adding a new configuration item requires only adding a row to the marker definition table in this file.
 
+For user-facing documentation and the SSoT key reference, see [docs/guide/customization.md](../docs/guide/customization.md).
+
 ## Input
 
 Information provided by the calling skill: none (directly reads `.wholework.yml` from the project root)

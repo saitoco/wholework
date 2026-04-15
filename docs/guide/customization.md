@@ -48,6 +48,8 @@ All keys are optional. If `.wholework.yml` does not exist, all settings use thei
 
 ### Available Keys
 
+This table is the **single source of truth (SSoT)** for all `.wholework.yml` configuration keys. Update this table when adding or changing keys.
+
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `copilot-review` | boolean | `false` | Wait for GitHub Copilot review before merging |
