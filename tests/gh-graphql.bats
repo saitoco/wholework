@@ -15,6 +15,10 @@ setup() {
     GH_CALL_LOG="$BATS_TEST_TMPDIR/gh_calls.log"
     export GH_CALL_LOG
 
+    export GH_GRAPHQL_CACHE_DIR="$BATS_TEST_TMPDIR/gh-graphql-cache"
+    CACHE_DIR="$GH_GRAPHQL_CACHE_DIR"
+    export CACHE_DIR
+
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
 echo "$@" >> "$GH_CALL_LOG"
@@ -138,8 +142,6 @@ teardown() {
 }
 
 # --- Cache tests ---
-
-CACHE_DIR="$PROJECT_ROOT/.tmp/gh-graphql-cache"
 
 cache_setup() {
     rm -rf "$CACHE_DIR"
