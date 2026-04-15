@@ -52,3 +52,13 @@ jobs:
             echo "Forbidden expression 'acceptance check' detected"
             exit 1
           fi
+
+  macos-shell:
+    name: macOS shell compatibility
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run shell scripts on macOS
+        run: bash scripts/check-translation-sync.sh

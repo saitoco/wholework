@@ -35,7 +35,7 @@ wholework/
 │   │   ├── feature_request.yml  # Feature request Issue Form
 │   │   └── config.yml           # Disables blank (templateless) issues
 │   └── workflows/
-│       ├── test.yml             # CI: bats tests, skill syntax validation, and forbidden expressions check
+│       ├── test.yml             # CI: bats tests, skill syntax validation, forbidden expressions check, and macOS shell compatibility test
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
 ├── tests/               # Bats test files for scripts (27 files)
 │   ├── <script-name>.bats
@@ -167,7 +167,7 @@ Key modules:
 
 ### CI Workflows
 
-- `.github/workflows/test.yml` — runs bats tests, `validate-skill-syntax.py`, and forbidden expressions check on push/PR
+- `.github/workflows/test.yml` — runs bats tests, `validate-skill-syntax.py`, forbidden expressions check, and macOS shell compatibility test on push/PR
 - `.github/workflows/dco.yml` — enforces DCO `Signed-off-by:` on all pull request commits
 - `.github/workflows/kanban-automation.yml` — auto-moves issues to project board columns on `phase/*` label events
 
