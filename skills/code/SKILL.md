@@ -206,6 +206,11 @@ If sync is required, update the target documents (`README.md`, `docs/workflow.md
 
 ### Step 10: Verify Command Consistency
 
+**Patch route verify command check:**
+
+If patch route (Size is `XS`/`S` or `--patch` flag), before running verify-executor, scan the Issue body's `## Acceptance Criteria > Pre-merge` for `github_check "gh pr checks"` entries.
+- If found: output "Warning: patch route — `github_check "gh pr checks"` is incompatible. Auto-fixing to `github_check "gh run list"` form." and replace each with `github_check "gh run list"` form (add `--workflow=<filename>` if there are multiple workflow files under `.github/workflows/`). Update Issue body via `gh-issue-edit.sh`. Also update Spec verify commands (`$SPEC_PATH/issue-$NUMBER-*.md`) with the same fix.
+
 **Resolving `{{base_url}}` to localhost**: If verify commands contain `{{base_url}}`, resolve it before passing to verify-executor:
 
 1. If environment variable `LOCAL_BASE_URL` is set, use that value
