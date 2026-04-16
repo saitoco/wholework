@@ -78,3 +78,17 @@ run-spec.sh は `SKILL_FILE="${SCRIPT_DIR}/../skills/spec/SKILL.md"` で SKILL.m
 ### patch lock テストの範囲
 
 `acquire_patch_lock` の成功 (mkdir + PATCH_LOCK_DIR の存在確認) と `release_patch_lock` の成功 (rmdir + 不在確認) をテストする。timeout (300s) シナリオは sleep mock の複雑性ゆえ scope 外。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- verify コマンドの `file_contains "tests/run-auto-sub.bats" "Size: XS"` / `"Size: L"` が miscalibrated だった。Spec ではテスト名パターンを `"Size: XS"` と想定していたが、実際には bats の `@test` 名は `"Size XS:"` (コロン位置が異なる) になる。これは run-auto-sub.sh のログ出力 `echo "Size: ${SIZE}"` と混同した可能性がある。verify hint は `"Size XS"` / `"Size L"` に修正した。
+
+### Rework
+
+- N/A
