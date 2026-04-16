@@ -120,6 +120,32 @@ fix 方針：①全 `run-*.sh` で `--non-interactive` 付与、②全 skill で
 - **Auto-Resolved Ambiguity Points の移動**: Issue #208 body の `## Auto-Resolved Ambiguity Points` セクションは /issue phase で既に解決済みとして記録されており、本 Spec 内では参照のみで重複記載しない
 - **docs/workflow.md の更新は不要**: 本変更はフェーズ/ルーティングを変えず、既存フェーズ内部の autonomous 挙動のみを変更するため、docs/workflow.md は対象外
 
+## issue retrospective
+
+### 曖昧点解決の判断根拠
+
+本 Issue は `/auto --batch 5` 実行中に観測された `run-issue.sh` の interactive prompt 停止バグを起点に起票した。初稿作成時点で既に scope と approach をユーザー選択で確定済みだったが、/issue refinement 中の調査で **既存 `code` / `verify` skill には既に `--non-interactive` フラグパターンが存在し、本 Issue の提案 approach と真逆のポリシー（exit with error）を採用している** ことが判明した。
+
+### 主要な方針決定（Q&A）
+
+| 論点 | 選択 | 理由 |
+|------|------|------|
+| 既存 code/verify との矛盾解消 | 全 skill を auto-resolve に統一 | 完了率優先。batch モードで途中停止させない方針と整合 |
+| 対象 skill スコープ | 全 skill に拡張 | 1 Issue で一貫パターン適用。将来の skill 追加時にも統一ルールが使える |
+| Step 9 Scope Assessment 等の高負荷判定 | autonomous ではスキップ | sub-issue 分割のような誤判定リスクが大きい操作は skip + 警告、本体処理は継続 |
+| sub-issue 分割判断 | 分割なし・単一 L Issue のまま | 同一パターンの横展開で、分割すると整合性が保ちにくい |
+
+### Auto-Resolved 曖昧点
+
+- **検知メカニズム**（env var vs フラグ）: 既存 code/verify skill の `--non-interactive` フラグパターンを踏襲。環境変数は不採用
+- **retrospective 記録フォーマット**: 既存 retrospective セクションに `## Autonomous Auto-Resolve Log` サブセクションを追加する形式で統一
+
+### 受入条件変更の理由
+
+初稿の Pre-merge 条件は `file_contains "autonomous"` ベースだったが、調査で既存 skill が `--non-interactive` という具体的なフラグ名を使用していることが判明し、検証条件も `file_contains "non-interactive"` / `file_contains "auto-resolve"` に変更した。これにより既存コードベースとの一貫性を担保できる。
+
+また、wrapper script (`run-issue.sh` / `run-review.sh` / `run-merge.sh`) の変更条件を追加した。これらは現状 `--non-interactive` を付与しておらず、skill 側だけ対応しても実効性がないため。
+
 ## spec retrospective
 
 ### Minor observations
