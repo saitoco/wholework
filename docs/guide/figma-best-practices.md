@@ -4,7 +4,7 @@ ssot_for:
   - figma-workflow
 ---
 
-English | [日本語](ja/figma-best-practices.md)
+English | [日本語](../ja/guide/figma-best-practices.md)
 
 # Figma Best Practices Guide
 

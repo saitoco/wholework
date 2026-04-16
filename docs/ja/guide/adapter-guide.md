@@ -1,4 +1,4 @@
-[English](../adapter-guide.md) | 日本語
+[English](../../guide/adapter-guide.md) | 日本語
 
 # Adapter 執筆ガイド
 
@@ -209,7 +209,7 @@ Step 2（Execution）では `mcp_call "invoice_list" {} "items"` を以下に変
 Please create a Wholework adapter for the {SERVICE_NAME} capability in this project.
 
 Read the adapter authoring guide first:
-https://raw.githubusercontent.com/saitoco/wholework/main/docs/adapter-guide.md
+https://raw.githubusercontent.com/saitoco/wholework/main/docs/guide/adapter-guide.md
 
 Then create `.wholework/adapters/{capability}-adapter.md` following the contract template
 in the guide. The adapter should support the following verify commands:
@@ -235,7 +235,7 @@ to an Issue for pre-merge verification.
 Please create a Wholework adapter for the invoice service in this project.
 
 Read the adapter authoring guide first:
-https://raw.githubusercontent.com/saitoco/wholework/main/docs/adapter-guide.md
+https://raw.githubusercontent.com/saitoco/wholework/main/docs/guide/adapter-guide.md
 
 Then create `.wholework/adapters/invoice-adapter.md` following the contract template
 in the guide. The adapter should support the following verify commands:

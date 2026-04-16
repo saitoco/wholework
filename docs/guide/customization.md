@@ -103,7 +103,7 @@ Wholework uses an adapter pattern to abstract tool access (browser automation, C
 
 This means you can override any built-in adapter for your project without forking Wholework. A project-local adapter in `.wholework/adapters/` shadows the bundled version.
 
-For details on writing custom adapters and verify command handlers, see [docs/adapter-guide.md](../adapter-guide.md).
+For details on writing custom adapters and verify command handlers, see [docs/guide/adapter-guide.md](adapter-guide.md).
 
 ## Steering Documents
 
