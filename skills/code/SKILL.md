@@ -33,11 +33,7 @@ If `--auto` is not present, proceed with mode detection below.
   internal execution flag.
 -->
 
-If ARGUMENTS contains the `--non-interactive` flag, operate in **non-interactive mode** (set when invoked autonomously via `run-code.sh`). In this mode, AskUserQuestion cannot be used — follow these constraints:
-
-- Output an error message and exit with non-zero instead of using AskUserQuestion
-- Exit with error if Size label is not set (guide to set the Size label)
-- Exit with error if `size/XL` (guide to split into sub-issues)
+If ARGUMENTS contains the `--non-interactive` flag, operate in **non-interactive mode** (set when invoked autonomously via `run-code.sh`). In this mode, AskUserQuestion cannot be used — see `## Error Handling in Non-Interactive Mode` below for the complete policy.
 
 In interactive mode (no flag), use AskUserQuestion to follow the normal steps.
 
@@ -119,7 +115,7 @@ For sizes other than XS: run `gh issue view $NUMBER --json labels -q '.labels[].
 
 - `phase/ready` label present: proceed to the next step
 - `phase/ready` label absent:
-  - Confirm via AskUserQuestion (non-interactive mode: output that `phase/ready` is not set, guide "run `/spec $NUMBER` to complete the design, then run `/code $NUMBER` interactively", then abort)
+  - Confirm via AskUserQuestion (non-interactive mode: auto-resolve — proceed without Spec; read requirements from Issue body directly and continue; record the decision in the Spec's `## Autonomous Auto-Resolve Log` subsection)
     - "Continue": proceed with execution
     - "Abort": stop processing and guide "run `/spec $NUMBER`", then exit
 
@@ -156,12 +152,13 @@ If the Spec has a "Notes" section, cross-reference each item against the impleme
 If the Spec has an "Uncertainties" section, before implementing:
 
 1. Verify each uncertainty using the confirmation method described
-2. If official documentation URLs are listed, review the spec information recorded there; use AskUserQuestion for any unclear points (non-interactive mode: output the unclear details and guide "run `/code {Issue number}` interactively to handle", then abort)
+2. If official documentation URLs are listed, review the spec information recorded there; use AskUserQuestion for any unclear points (non-interactive mode: auto-resolve — proceed with best-effort interpretation; record the unclear details and chosen interpretation in the Spec's `## Autonomous Auto-Resolve Log` subsection)
 3. If operational verification is needed, confirm with a simple verification script or bats test
-4. If implementation approach is problematic based on verification results, report to user via AskUserQuestion (non-interactive mode: output the problem details and guide "run `/code {Issue number}` interactively to handle", then abort)
+4. If implementation approach is problematic based on verification results, report to user via AskUserQuestion (non-interactive mode: auto-resolve — proceed with the most conservative approach; record the problem details and chosen approach in the Spec's `## Autonomous Auto-Resolve Log` subsection)
 
 **If uncertainties cannot be verified, or the design premise turns out to be incorrect:**
-- Abort implementation and propose Spec revision
+- In interactive mode: abort implementation and propose Spec revision
+- In non-interactive mode: auto-resolve by proceeding with best-effort implementation; note the unresolved uncertainty in the Spec's `## Autonomous Auto-Resolve Log` subsection
 
 ### Step 7: Reference Steering Documents (if present)
 
