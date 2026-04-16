@@ -317,8 +317,10 @@ When `--batch N` is detected in Step 1, process N small backlog Issues sequentia
 gh issue list --state open --label triaged --json number,title,labels,createdAt --limit 200
 ```
 
-**Filtering criteria** (exclude Issues matching any of these):
-- Issues with `size/M`, `size/L`, or `size/XL` labels (large Issues are excluded from batch)
+### Filtering criteria
+
+For each candidate, call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`;
+exclude Issues where Size is M, L, or XL (Projects V2 field first, label fallback).
 
 Sort by `createdAt` descending (newest first) and select the top N. Targets: Issues with no Size set, XS, or S.
 
@@ -329,7 +331,8 @@ Process the selected N Issues **sequentially** (serially):
 1. Check Issue labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
 2. **If no `phase/*` labels**: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh $NUMBER` (issue triage → Size setting → `phase/ready` assignment)
    - On failure: output a warning and skip to the next Issue (do not abort the entire batch)
-3. Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh $NUMBER` (all phases spec→code→review→merge→verify, auto-starting from the current `phase/*` state)
+3. Re-check Size: call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`; if Size is M, L, or XL: output a warning and skip to the next Issue (do not abort the entire batch)
+4. Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh $NUMBER` (all phases spec→code→review→merge→verify, auto-starting from the current `phase/*` state)
    - On failure: output a warning and skip to the next Issue (do not abort the entire batch)
 
 ### Batch Completion Report
