@@ -3,8 +3,12 @@
 #
 # Wholework's permission patterns require absolute paths (Claude Code does not
 # expand ${HOME} or ~/ inside permissions.allow), so each user must materialize
-# the template with their actual $HOME. Run this script once after `git clone`
-# and again whenever .claude/settings.json.template changes.
+# the template with their actual $HOME and repo path. Run this script once after
+# `git clone` and again whenever .claude/settings.json.template changes.
+#
+# Tokens substituted in the template:
+#   ${HOME}           — the user's home directory (for marketplace plugin cache paths)
+#   ${WHOLEWORK_ROOT} — this repo's absolute path (for `claude --plugin-dir` usage)
 #
 # Usage: ./install.sh [--no-plugin] [--marketplace NAME]
 #
@@ -53,7 +57,7 @@ if [ -z "${HOME:-}" ]; then
   exit 1
 fi
 
-# Substitute ${HOME} with the actual home path.
+# Substitute ${HOME} and ${WHOLEWORK_ROOT} with actual paths.
 # Use a sed delimiter (|) that is unlikely to appear in filesystem paths.
 # Note: if $HOME itself contains `|` or `\`, the sed command would break —
 # but POSIX systems always use `/` in paths, so this is not a practical concern.
@@ -62,11 +66,14 @@ fi
 # This prevents a corrupted/empty settings.json if sed fails mid-stream.
 TMP_OUTPUT="${OUTPUT}.tmp"
 trap 'rm -f "$TMP_OUTPUT"' EXIT
-sed "s|\${HOME}|${HOME}|g" "$TEMPLATE" > "$TMP_OUTPUT"
+sed -e "s|\${HOME}|${HOME}|g" \
+    -e "s|\${WHOLEWORK_ROOT}|${SCRIPT_DIR}|g" \
+    "$TEMPLATE" > "$TMP_OUTPUT"
 mv "$TMP_OUTPUT" "$OUTPUT"
 
 echo "Generated $OUTPUT from $TEMPLATE"
 echo "HOME substituted as: $HOME"
+echo "WHOLEWORK_ROOT substituted as: $SCRIPT_DIR"
 
 # Plugin update (skipped when --no-plugin is specified)
 if [ "$NO_PLUGIN" = false ]; then

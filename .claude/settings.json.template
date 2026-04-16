@@ -40,7 +40,8 @@
       "Bash(scripts/run-auto-sub.sh *)",
       "Bash(scripts/run-issue.sh *)",
       "Bash(python3 scripts/validate-skill-syntax.py *)",
-      "Bash(${HOME}/.claude/plugins/cache/saitoco-wholework/wholework/*/scripts/*.sh *)"
+      "Bash(${HOME}/.claude/plugins/cache/saitoco-wholework/wholework/*/scripts/*.sh *)",
+      "Bash(${WHOLEWORK_ROOT}/scripts/*.sh *)"
     ]
   }
 }
