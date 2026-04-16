@@ -127,8 +127,9 @@ The `github_check` condition (bats test CI PASS) was PENDING at review time beca
 - squash merge で競合なし。クリーンな実装。
 
 #### verify
-- 条件 1-8 はすべて PASS（ファイル存在・内容確認）。
-- 条件 9 (bats テスト CI PASS) は in_progress のため PENDING。CI 完了後に `/verify 195` を再実行が必要。
+- 条件 1-9 はすべて PASS（ファイル存在・内容確認・CI PASS）。
+- 前回の `/verify` 実行時は条件 9（bats テスト CI PASS）が PENDING（CI in_progress）だったが、今回の再実行で CI 完了確認（success）し PASS に昇格。
+- Post-merge 条件 10（opportunistic）は次回関連 PR レビュー時の手動確認のため未チェックのまま。`phase/verify` ラベルで管理。
 
 ### Improvement Proposals
 - `/spec` が verify hint を生成する際、bats テスト名で頻用される文字列パターン（`@test "XXX"` の命名規則）を考慮し、`file_contains` のキーワードをテスト名形式に合わせて生成するよう `/spec` プロンプトにガイダンスを追加することを検討する。
