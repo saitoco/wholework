@@ -61,7 +61,7 @@ The following information is passed from the caller:
 | `file_not_contains "path" "text"` | Search with Grep and confirm no match |
 | `files_not_contain "glob_pattern" "text"` | Expand glob_pattern with Glob tool; search each matched file for "text" using Grep; PASS if no files contain it, FAIL listing files that match. If no files match the glob, PASS. Safe-mode compatible. |
 | `grep "pattern" "path"` | Regex match using Grep. **PASS when match is found**. To assert absence (no match), use `file_not_contains` instead |
-| `command "cmd"` | **Mode-dependent**: `safe` → attempt CI reference fallback (see below); return UNCERTAIN if no match. `full` → execute command in Bash (timeout: 60 seconds; exit code 0 = success) |
+| `command "cmd"` | **Mode-dependent**: `safe` → attempt CI reference fallback (see below); return UNCERTAIN if no match. `full` → execute command in a bash subprocess (`bash -c 'cmd'`; timeout: 60 seconds; exit code 0 = success). **Note**: The command always runs in a bash subprocess regardless of the user's default shell. Shell-dependent glob patterns (e.g., `**` with zsh globstar) behave as bash glob, which may produce unexpected results. Use `find` for cross-shell compatible file enumeration (e.g., `find tests -name '*.bats'` instead of `tests/**/*.bats`) |
 | `json_field "path" ".key" "value"` | Read file, parse JSON, and confirm field value |
 | `section_contains "path" "heading" "text"` | Read file and confirm fixed string "text" is present within the specified markdown heading section (from the specified heading line to just before the next heading of the same or higher level, or end of file). The heading argument uses **partial match**: the "heading" string only needs to appear anywhere within the heading line (after stripping leading `#` symbols and spaces), so `"Next Steps"` matches both `## Next Steps` and `## 🧭 Next Steps`. |
 | `section_not_contains "path" "heading" "text"` | Read file and confirm fixed string "text" is NOT present within the specified markdown heading section. Uses the same heading **partial match** rule as `section_contains`. |
@@ -95,7 +95,7 @@ For Basic authentication in `browser_check` / `browser_screenshot`, refer to the
 
 `http_status`, `html_check`, `api_check`, `build_success`, `lighthouse_check`, and `github_check` are specialized commands for web app, build, and GitHub state verification. Key differentiators from `command`:
 
-- **`command`**: General-purpose command execution. Returns UNCERTAIN in safe mode (may use CI reference fallback). Only executed in full mode
+- **`command`**: General-purpose command execution. Returns UNCERTAIN in safe mode (may use CI reference fallback). Only executed in full mode. Commands run in a bash subprocess (`bash -c`); avoid shell-dependent glob patterns (e.g., `**`) and use `find` for reliable file enumeration
 - **`http_status`**: Specialized for HTTP response code verification. In safe mode, runs URL security check (`${CLAUDE_PLUGIN_ROOT}/modules/browser-verify-security.md`) and blocks private IPs; external URLs verified with curl. Timeout prevents connection blocking (connect: 5s, total: 10s)
 - **`html_check`**: Specialized for HTML structure verification. curl + pup with CSS selector evaluation. Can run in safe mode with URL security check. UNCERTAIN if `pup` is not installed
 - **`api_check`**: Specialized for JSON API response verification (GET only). curl + jq for field extraction and comparison. Can run in safe mode with URL security check
