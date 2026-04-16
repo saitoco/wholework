@@ -49,3 +49,33 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Acceptance conditions were well-structured with clear verify commands (`file_contains`, `section_contains`). The two-keyword approach for condition 3 ("first") effectively captured the ordering requirement without over-constraining the wording.
+- Post-merge condition was correctly classified as `verify-type: manual` — user-observable behavior (note appearing during skill execution) cannot be auto-verified.
+
+#### design
+- Spec accurately described the 3 files to modify and the exact implementation steps. No deviations between spec and implementation detected.
+- The explicit instruction to include "doc sync --deep" and "first" as keywords in `docs/workflow.md` directly mapped to the verify commands, enabling end-to-end traceability.
+
+#### code
+- Single clean commit (`99fc118`) with no fixup/amend pattern. Code Retrospective confirms N/A for all dimensions.
+- Patch route (Size S) was appropriate — pure documentation change with no logic modification.
+
+#### review
+- No review phase (patch route). No issues found during verify.
+
+#### merge
+- Direct commit to main. No conflicts, no CI failures.
+
+#### verify
+- All 3 pre-merge conditions PASS on first run.
+- No `github_check "gh pr checks"` conditions (patch route), so no compatibility issues.
+- `section_contains` correctly scoped to the `/audit` section header, preventing false positives from other occurrences of "first" in the document.
+
+### Improvement Proposals
+- N/A
