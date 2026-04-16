@@ -133,6 +133,7 @@ Key modules:
 - `scripts/gh-pr-review.sh` — post PR reviews
 
 **Project utilities:**
+- `scripts/get-config-value.sh` — extract a configuration value from `.wholework.yml`
 - `scripts/get-issue-size.sh` — get issue size label
 - `scripts/get-issue-type.sh` — get issue type label
 - `scripts/get-issue-priority.sh` — get issue priority field
