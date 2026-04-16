@@ -185,6 +185,46 @@ Combine `file_contains` (config content existence) with `github_check "gh run li
 
 For patch route Issues (no PR), `gh pr checks` is not available. Always use `gh run list` for CI result verification. See `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md` for details.
 
+### 8. Policy change Issues — Verify Old Policy Deletion with file_not_contains
+
+When an Issue involves replacing an existing policy with a new one (e.g., changing error handling strategy, changing fallback behavior), verify commands must confirm not only that the new policy text is present but also that the old policy text has been removed.
+
+**Background**: Policy change PRs frequently leave residual old policy text as inline comments or surrounding context outside the directly changed lines. CI and tests cannot detect such residual text — only human review can catch it (occurred in #208).
+
+**Recommended Pattern:**
+
+Add `file_not_contains` (or `section_not_contains`) alongside `file_contains` to verify deletion of old policy keywords:
+
+```
+<!-- verify: file_contains "skills/code/SKILL.md" "auto-resolve" -->  New policy is present
+<!-- verify: file_not_contains "skills/code/SKILL.md" "exit with non-zero" -->  Old policy keyword deleted
+```
+
+**Concrete example — replacing "exit with error" with "auto-resolve":**
+
+```markdown
+## Acceptance Criteria
+
+### Pre-merge (auto-verified)
+- [ ] <!-- verify: file_contains "skills/code/SKILL.md" "auto-resolve" --> New policy description is present
+- [ ] <!-- verify: file_not_contains "skills/code/SKILL.md" "exit with non-zero" --> Old policy keyword has been removed
+```
+
+**When to use `section_not_contains` instead of `file_not_contains`:**
+
+If the old policy keyword may legitimately appear elsewhere in the file (e.g., in background sections, retrospectives, or "bad example" code fences), use `section_not_contains` to limit the scope:
+
+```
+<!-- verify: section_not_contains "skills/code/SKILL.md" "## Error Handling" "exit with non-zero" -->
+```
+
+**Decision procedure:**
+
+1. Identify the old policy keywords that the change is supposed to remove (e.g., "exit with non-zero", "abort immediately")
+2. Check whether those keywords may legitimately remain elsewhere in the file (retrospectives, background, bad-example code fences)
+3. If a file-wide check is safe: use `file_not_contains`
+4. If scope must be limited to a specific section: use `section_not_contains "path" "## Heading" "keyword"`
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
