@@ -42,3 +42,31 @@
 - `docs/ja/tech.md` はミラーファイルのため、英語版 `docs/tech.md` と同時に修正する
 - `削除済み` は `docs/ja/tech.md` line 29 に1箇所のみ存在（`grep -n "削除済み" docs/ja/tech.md` で確認済み）
 - 変更は機械的なテキスト置換のみで、ロジックへの影響なし
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec は簡潔かつ正確で、実装と完全に一致した。変更対象ファイルと変更内容が明示されており、曖昧点なし。
+- `/audit` による drift 検出から Issue 化までの流れが機能しており、Spec の品質も適切だった。
+
+#### design
+- 設計は機械的なテキスト置換のみで複雑さなし。`docs/tech.md` と `docs/ja/tech.md` の両方を同時修正する判断も正しい。
+
+#### code
+- 実装は単一コミット（`91440e5`）で完結、2ファイル・2行変更のみ。rework（fixup/amend）なし。
+- パッチルート（main 直コミット）が適切に選択されており、PR を経由しない小規模修正の典型例。
+
+#### review
+- パッチルートのため PR レビューなし。変更が機械的テキスト置換で影響範囲が明確なため、レビュー省略は妥当。
+
+#### merge
+- パッチルートで main 直コミット。コンフリクトなし、CI への影響なし。
+
+#### verify
+- 全条件（Pre-merge 2件）が PASS。verify コマンド（`file_not_contains`）が適切に機能した。
+- Post-merge 条件は `verify-type: manual` で正しくユーザー確認に委譲。
+
+### Improvement Proposals
+- N/A
