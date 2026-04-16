@@ -92,3 +92,17 @@ run-spec.sh は `SKILL_FILE="${SCRIPT_DIR}/../skills/spec/SKILL.md"` で SKILL.m
 ### Rework
 
 - N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. All Spec-specified test cases were implemented as described. The verify hint correction (`"Size: XS"` → `"Size XS"`) was pre-identified and documented in Code Retrospective before review, demonstrating good self-correction during implementation.
+
+### Recurring issues
+
+Nothing to note. No repeated issue patterns were observed across the two test files.
+
+### Acceptance criteria verification difficulty
+
+The `github_check` condition (bats test CI PASS) was PENDING at review time because CI was still running. This is expected behavior for a test-addition PR. Consider adding a note in future Specs that CI-dependent verify conditions may be PENDING on first review attempt — this is acceptable and `/merge` should wait for CI completion before proceeding.
