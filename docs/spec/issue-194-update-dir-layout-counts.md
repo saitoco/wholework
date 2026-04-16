@@ -43,3 +43,30 @@ Update the file count annotations in both the English and Japanese mirror files 
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec correctly identified the format mismatch in verify commands (grep pattern assumed contiguous `scripts/ (X files)` but actual structure.md uses a comment between directory name and count). The extended-regex fix was included in the Spec before implementation began — good proactive calibration.
+- Japanese mirror file (`docs/ja/structure.md`) was noted as out-of-scope for acceptance criteria but updated in the same change for consistency — appropriate pragmatic decision.
+
+#### design
+- N/A (no design phase for this small documentation update)
+
+#### code
+- Single clean commit with no rework. The verify-command format fix was handled at the spec level, so code implementation required no iteration.
+
+#### review
+- Patch route (no PR). Appropriate for this size of change (two-line edit across two documentation files). No review concerns.
+
+#### merge
+- Direct commit to main (patch route). Clean, no conflicts.
+
+#### verify
+- Both pre-merge conditions PASS. Key observation: the verify commands use `bash -c '...'` syntax, which means globbing inside the single-quoted string is handled by bash (not zsh). Running the `tests/**/*.bats` glob in bash without `globstar` enabled means `**` behaves like `*/`, matching only subdirectories — so top-level files are not double-counted. Running the same glob directly in zsh would return 64 (double-counting) due to zsh's default recursive `**` expansion — a potential source of false FAILs for maintainers debugging verify commands manually.
+- Post-merge condition (他のカウント表記箇所がないか確認) has no verify hint and was deferred to user verification as designed.
+
+### Improvement Proposals
+- The `tests/**/*.bats` glob in verify commands is shell-dependent (produces different results in bash vs zsh). Consider replacing with `find tests -name "*.bats"` in future verify commands for portability, or add a note in `modules/verify-executor.md` that `command` and `bash -c` verify commands run in bash context (important for maintainers writing verify commands).
