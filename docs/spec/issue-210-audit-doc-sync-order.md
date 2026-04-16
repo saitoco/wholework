@@ -35,3 +35,17 @@
 - Size=S（patch route、SPEC_DEPTH=light）。直接 main にコミットする想定。
 - 検出ロジック自体は `/audit drift` と `/doc sync --deep` の双方に残す（セーフティネット）。運用規律（ドキュメント誘導）で重複を解消する方針。
 - `docs/ja/workflow.md` は `docs/workflow.md` の 1:1 翻訳ミラーのため同期更新対象に含めた。verify command は英語版 `docs/workflow.md` のみを対象とするため、日本語ミラー側の文言は自然な日本語に訳してよい（英語キーワード `doc sync --deep` / `first` を含める必要はない）。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
