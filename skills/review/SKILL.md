@@ -26,6 +26,17 @@ If ARGUMENTS contains `--auto`:
 
 If `--auto` is absent, run the normal steps below.
 
+## Non-Interactive Mode Behavior
+
+If ARGUMENTS contains `--non-interactive` (set automatically by `run-review.sh`), operate in **non-interactive mode**. In this mode, `AskUserQuestion` cannot be used.
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md` and follow the "Non-Interactive Mode Handling" section for the three-tier policy (auto-resolve / skip / hard-error). The specific branching at each step is noted inline below.
+
+Key per-step behavior in non-interactive mode:
+- **Any AskUserQuestion during review comment resolution** (Steps 7.2, 7.4, 7.6): auto-resolve using model judgment (apply the fix that best matches the review comment intent); record the decision in the Auto-Resolve Log as an issue comment
+- **External review timeout waiting**: auto-resolve by proceeding without waiting (the review results may be incomplete; note this in the review summary)
+- **Unclear review comment intent**: auto-resolve by adopting the most conservative interpretation (e.g., add a comment rather than delete code)
+
 ## Review-only Mode (--review-only)
 
 If ARGUMENTS contains `--review-only` (and `--auto` is absent), set `REVIEW_ONLY=true` for reference in subsequent processing.

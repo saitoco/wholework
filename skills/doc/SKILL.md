@@ -142,7 +142,7 @@ If it exists, proceed to "update flow". If not, proceed to "new creation flow".
 
 If `--deep` flag is enabled, skip the AskUserQuestion flow. If analysis results are already available (e.g., called from `init --deep`), use them; otherwise run the `--deep` mode processing from "sync Bidirectional Normalization" Step 2 (codebase analysis + existing .md file integrated scan) inline. Reference entry points, dependency relations, and existing .md content to embed appropriate content in each section for auto-generated draft. Skip Step 3 (Optional section confirmation) and leave Optional section headings and descriptions wrapped in HTML comments (`<!-- ... -->`), so subsequent sync commands can stably recognize section structure.
 
-If `--deep` flag is disabled, collect Required section information step by step with AskUserQuestion.
+If `--deep` flag is disabled, collect Required section information step by step with AskUserQuestion (non-interactive mode: auto-resolve — infer content from codebase analysis; proceed as if `--deep` flag were enabled).
 
 **For product.md:**
 
@@ -170,7 +170,7 @@ Question 2: What are the Key Files (description of important files)?
 
 ### Step 3: Optional Section Confirmation
 
-Ask with AskUserQuestion whether to add Optional sections.
+Ask with AskUserQuestion whether to add Optional sections (non-interactive mode: skip — wrap Optional section headings and descriptions in HTML comments; this is a High-Stakes Decision since optional section preference is user-specific).
 
 If adding, collect the content and include it. If skipping, wrap the Optional section headings and descriptions from the template in HTML comments (`<!-- ... -->`). This allows subsequent sync commands and other skills to identify the section structure.
 
@@ -579,7 +579,7 @@ Display proposals in table format (filename, content summary, action, change sum
 
 ### Step 8: Select Approval Method
 
-Ask with AskUserQuestion for a bulk approval option:
+Ask with AskUserQuestion for a bulk approval option (non-interactive mode: skip — bulk approvals are a High-Stakes Decision; output "[non-interactive mode] Skipping high-stakes action: bulk sync approval. To apply sync proposals, run `/doc sync` interactively." and exit this section):
 - "Apply all"
 - "Confirm one by one"
 - "Skip all"

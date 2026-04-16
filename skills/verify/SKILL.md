@@ -40,13 +40,16 @@ If ARGUMENTS contains the `--non-interactive` flag, operate in **non-interactive
 
 ## Error Handling in Non-Interactive Mode
 
-When invoked via `run-verify.sh` (`--dangerously-skip-permissions` environment), take the following alternative actions at each step:
+When invoked via `run-verify.sh` (`--dangerously-skip-permissions` environment), apply **auto-resolve + log** at each decision point instead of aborting (except hard-error cases).
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md` and follow the "Non-Interactive Mode Handling" section. Per-step behavior:
 
 | Location | Interactive mode | Non-interactive mode |
 |------|-----------|---------------------|
-| Step 1: uncommitted changes check | Output error and abort if uncommitted changes exist | Same |
-| Step 5 (verify each condition) Step 2 (conditions with verify commands): `command` hint permission | Execute after user approval | `--dangerously-skip-permissions` removes confirmation requirement. Execute directly |
-| Step 10: create improvement proposal Issue | Auto-create Issue | Same |
+| Step 1: uncommitted changes check | Output error and abort if uncommitted changes exist | Same (hard-error: uncommitted changes cannot be auto-resolved) |
+| Step 5 (verify each condition) Step 2 (conditions with verify commands): `command` hint permission | Execute after user approval | `--dangerously-skip-permissions` removes confirmation requirement. Execute directly (auto-resolve) |
+| Step 10: create improvement proposal Issue | Auto-create Issue | Same (auto-resolve) |
+| Any other AskUserQuestion during verification | Ask user | Auto-resolve: adopt the safest interpretation (treat ambiguous conditions as UNCERTAIN rather than PASS); record decision in the Spec's `## Autonomous Auto-Resolve Log` subsection |
 
 ## Steps
 

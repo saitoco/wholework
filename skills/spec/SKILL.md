@@ -8,6 +8,17 @@ allowed-tools: Bash(gh issue view:*, gh issue create:*, gh issue edit:*, gh issu
 
 Read Issue requirements, investigate the codebase, and create an implementation plan as a Spec file.
 
+## Non-Interactive Mode Behavior
+
+If ARGUMENTS contains `--non-interactive` (set automatically by `run-spec.sh`), operate in **non-interactive mode**. In this mode, `AskUserQuestion` cannot be used.
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md` and follow the "Non-Interactive Mode Handling" section for the three-tier policy (auto-resolve / skip / hard-error). The specific branching at each step is noted inline below.
+
+Key per-step behavior in non-interactive mode:
+- **Step 6** (Codebase Investigation — conflict detection, `SPEC_DEPTH=full`): auto-resolve the conflict using model judgment (note the resolution in the Spec's "Notes" section); record the decision in the Auto-Resolve Log posted as an issue retrospective comment
+- **Step 7** (Ambiguity Resolution): auto-resolve each ambiguity point using model judgment; record decisions in the Auto-Resolve Log
+- **Step 8** (Uncertainty): verify using the documented method if possible; if verification fails and the design premise is incorrect, record the issue in the Spec's "Notes" section and continue with best-effort implementation approach rather than aborting
+
 ## Steps
 
 ### Step 0: Mode Detection

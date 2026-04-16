@@ -45,13 +45,14 @@ In interactive mode (no flag), use AskUserQuestion to follow the normal steps.
 
 In `--non-interactive` mode (invoked via `run-code.sh` with `claude -p`), AskUserQuestion is not available (the process would hang).
 
-**Policy**: At any step that would call AskUserQuestion, output a clear error message and immediately abort, **exiting with a non-zero exit code**.
+**Policy**: At any step that would call AskUserQuestion, apply **auto-resolve + log** instead of aborting.
 
-- Output the error details clearly
-- Include the choices/intent that would have been presented as reference for manual handling
-- Guide the user to resume interactively (e.g., run `/code {Issue number}` interactively)
-- Explicitly state "Aborting" and do not execute any further steps
-- **Exit the process with a non-zero exit code (e.g., `exit 1`) via Bash** so that `run-code.sh` / Agent tool via `/auto` can detect the failure
+Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md` and follow the "Non-Interactive Mode Handling" section. In summary:
+- **auto-resolve**: adopt the most reasonable default choice using model judgment, then record the decision in the Spec's `## Autonomous Auto-Resolve Log` subsection
+- **skip**: for High-Stakes Decisions (see module for exhaustive list), output a warning and continue without executing the risky action
+- **hard-error abort** (exceptions — these still exit with non-zero):
+  - Size label is not set (cannot determine patch vs. pr route; guide to set Size label, then abort)
+  - Size is `XL` (requires sub-issue splitting before coding; guide to split the Issue, then abort)
 
 ## Steps
 

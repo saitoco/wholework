@@ -23,17 +23,18 @@ If `--auto` is not present, proceed with the normal steps below.
 
 > **Note**: Running `/merge 88` from an interactive session spawns a fork sub-agent via `context: fork`. Output is not streamed, but a summary is returned upon completion.
 
-## Error Handling in Non-Interactive Mode
+## Non-Interactive Mode Behavior
 
-In `--auto` mode (invoked via `run-merge.sh` with `claude -p`), AskUserQuestion is not available (the process would hang).
+If ARGUMENTS contains `--non-interactive` (set automatically by `run-merge.sh`), operate in **non-interactive mode**. In this mode, `AskUserQuestion` cannot be used.
 
-**Policy**: At any step that would call AskUserQuestion, output a clear error message and exit with a non-zero exit code instead.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md` and follow the "Non-Interactive Mode Handling" section for the three-tier policy (auto-resolve / skip / hard-error). Apply **auto-resolve + log** at each step instead of aborting.
 
-- Output the error details clearly
-- Include the choices/intent that would have been presented via AskUserQuestion as reference for manual handling
-- Guide the user to resume interactively (e.g., run `/merge {PR number}` interactively)
-- Explicitly state "Aborting" and do not execute any further steps
-- **Exit the process with a non-zero exit code (e.g., `exit 1`) via Bash** so that `run-merge.sh` / Agent tool via `/auto` can detect the failure
+Key per-step behavior in non-interactive mode:
+- **Step 1: mergeable=false, reason=review_pending** (or other non-conflict reason): auto-resolve by proceeding with the merge attempt anyway; record the decision in the Auto-Resolve Log as an issue comment. If the merge ultimately fails, exit with non-zero so the caller can detect it
+- **Step 3 (Resolve Conflicts) — multiple conflicting files**: auto-resolve by attempting sequential resolution of each file; record the decisions in the Auto-Resolve Log. If resolution fails for any file, run `git rebase --abort` and exit with non-zero
+- **Step 3 (Resolve Conflicts) — complex conflict**: auto-resolve using the conservative merging strategy (include both sides where possible); record the decision in the Auto-Resolve Log
+- **Step 3 — test failures after conflict resolution**: auto-resolve by outputting test failure details and exiting with non-zero (test failures are not safe to ignore)
+- **Step 3 — push rejected**: auto-resolve by exiting with non-zero (remote branch updates require human intervention)
 
 ## Steps
 
@@ -58,7 +59,7 @@ Note: Always wrap `$NUMBER` in double quotes.
 - **isDraft is true**: Run `gh pr ready "$NUMBER"` to un-draft, then continue
 - **mergeable=true**: Proceed directly to Step 4 (Execute Squash Merge)
 - **mergeable=false, reason=conflicts**: Proceed to Step 3 (Resolve Conflicts)
-- **Other (e.g., reason=review_pending)**: Report the error and reason, then use AskUserQuestion to ask the user how to proceed (non-interactive mode: output PR state details and reason, guide to run `/merge {PR number}` interactively, then abort)
+- **Other (e.g., reason=review_pending)**: Report the error and reason, then use AskUserQuestion to ask the user how to proceed (non-interactive mode: auto-resolve — see "Non-Interactive Mode Behavior" section)
   - User selects "Abort": Stop processing (do not proceed to subsequent steps)
   - User selects "Treat as conflict": Proceed to Step 2 (Resolve Conflicts)
 
@@ -84,7 +85,7 @@ git checkout "${headRefName}"
 Note: Always wrap `headRefName` in double quotes to prevent shell injection.
 
 If checkout fails (branch not found, etc.):
-- Report the error via AskUserQuestion and abort (non-interactive mode: output the error details, guide to run `/merge {PR number}` interactively, then abort)
+- Report the error via AskUserQuestion and abort (non-interactive mode: output the error details and exit with non-zero — checkout failure cannot be auto-resolved)
 
 #### Step 2: Run Rebase
 
@@ -95,7 +96,7 @@ git rebase origin/"${BASE_BRANCH}"
 After running rebase:
 - **Conflicts detected**: Proceed to Step 3
 - **No conflicts (completed successfully)**: Proceed to Step 6 (Run Tests)
-- **Other errors** (network error, permission error, etc.): Run `git rebase --abort`, report to user via AskUserQuestion and abort (non-interactive mode: run `git rebase --abort`, output the error details, guide to run `/merge {PR number}` interactively, then abort)
+- **Other errors** (network error, permission error, etc.): Run `git rebase --abort`, report to user via AskUserQuestion and abort (non-interactive mode: run `git rebase --abort`, output the error details, and exit with non-zero — rebase errors cannot be auto-resolved)
 
 #### Step 3: Assess Conflicting Files
 
@@ -104,7 +105,7 @@ git diff --name-only --diff-filter=U
 ```
 
 - **Single file**: Attempt automatic resolution (proceed to Step 4)
-- **Multiple files**: Confirm with user via AskUserQuestion (non-interactive mode: output list of conflicting files, run `git rebase --abort`, guide to run `/merge {PR number}` interactively, then abort)
+- **Multiple files**: Confirm with user via AskUserQuestion (non-interactive mode: auto-resolve — see "Non-Interactive Mode Behavior" section; attempt sequential resolution)
   - User approves: Resolve each file in sequence
   - User declines: Abort rebase with `git rebase --abort` and exit
 
@@ -121,10 +122,10 @@ Read the conflicting file with Read, analyze both sides of the conflict:
    - Choose one side
    - Create new integrated code
 4. If deemed complex (e.g., different parts of the same function, conflicting logic changes):
-   - Confirm resolution approach via AskUserQuestion (non-interactive mode: output conflict details, run `git rebase --abort`, guide to run `/merge {PR number}` interactively, then abort)
+   - Confirm resolution approach via AskUserQuestion (non-interactive mode: auto-resolve — see "Non-Interactive Mode Behavior" section; use conservative merge strategy and record decision in Auto-Resolve Log)
    - User declines: Abort rebase with `git rebase --abort` and exit
 5. If no appropriate resolution can be found:
-   - Request manual resolution via AskUserQuestion (non-interactive mode: output conflict details, run `git rebase --abort`, guide to run `/merge {PR number}` interactively, then abort)
+   - Request manual resolution via AskUserQuestion (non-interactive mode: run `git rebase --abort` and exit with non-zero — unresolvable conflicts cannot be auto-resolved)
    - Abort with `git rebase --abort` and exit
 
 Update the file with Edit to remove conflict markers.
@@ -153,7 +154,7 @@ To identify the test command:
 2. If a test command is found, run it
 3. Check test results:
    - **Success**: Proceed to Step 7
-   - **Failure**: Report to user via AskUserQuestion and confirm whether to continue (non-interactive mode: output test failure details, guide that "the local branch is preserved in the post-rebase state; run `/merge {PR number}` interactively to handle", then abort)
+   - **Failure**: Report to user via AskUserQuestion and confirm whether to continue (non-interactive mode: output test failure details and exit with non-zero — test failures after conflict resolution cannot be safely ignored)
      - User declines: Stop automated processing. Inform user: "The local branch is preserved in the post-rebase state. Handle manually as needed."
 4. If no test command is found, skip and continue
 
@@ -169,7 +170,7 @@ Note: Always wrap `headRefName` in double quotes to prevent shell injection.
 
 1. Do not automatically switch to `--force`
 2. Run `git fetch origin "${headRefName}"` to fetch the latest state
-3. Report via AskUserQuestion: "Remote branch has new commits; push was rejected" (non-interactive mode: output push rejection details, guide that "the local branch is preserved in the post-rebase state; run `/merge {PR number}` interactively to handle", then abort)
+3. Report via AskUserQuestion: "Remote branch has new commits; push was rejected" (non-interactive mode: output push rejection details and exit with non-zero — remote branch updates require human intervention)
 4. Ask the user for next steps:
    - Rebase again → return to Step 2 (Run Rebase)
    - Abort → guide: "The local branch is preserved in the post-rebase state. You can reset to the remote state with `git reset --hard "origin/${headRefName}"` or handle manually." then exit

@@ -52,7 +52,7 @@ SKILL_BODY=$(tail -n +"$((FRONTMATTER_END + 1))" "$SKILL_FILE")
 
 PROMPT="${SKILL_BODY}
 
-ARGUMENTS: ${ISSUE_NUMBER}"
+ARGUMENTS: ${ISSUE_NUMBER} --non-interactive"
 
 # Specify --model and ANTHROPIC_MODEL both (workaround for -p mode bug)
 # See: https://github.com/anthropics/claude-code/issues/22362

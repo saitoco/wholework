@@ -90,11 +90,11 @@ teardown() {
     grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
 }
 
-@test "success: ARGUMENTS contains the issue number" {
+@test "success: ARGUMENTS contains issue number and --non-interactive" {
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
 
-    grep -q "PROMPT_CONTAINS_ARGUMENTS=ARGUMENTS: 123" "$CLAUDE_CALL_LOG"
+    grep -q "PROMPT_CONTAINS_ARGUMENTS=ARGUMENTS: 123 --non-interactive" "$CLAUDE_CALL_LOG"
 }
 
 @test "success: ANTHROPIC_MODEL environment variable is set to sonnet" {

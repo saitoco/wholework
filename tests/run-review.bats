@@ -16,9 +16,25 @@ setup() {
 
     cat > "$MOCK_DIR/claude" <<'MOCK'
 #!/bin/bash
-echo "$@" >> "$CLAUDE_CALL_LOG"
 echo "ANTHROPIC_MODEL=$ANTHROPIC_MODEL" >> "$CLAUDE_CALL_LOG"
 echo "CLAUDECODE=${CLAUDECODE:-__UNSET__}" >> "$CLAUDE_CALL_LOG"
+# Check for -p flag and log the prompt presence
+for arg in "$@"; do
+    case "$arg" in
+        -p) echo "FLAG_P=1" >> "$CLAUDE_CALL_LOG" ;;
+        --model) echo "FLAG_MODEL=1" >> "$CLAUDE_CALL_LOG" ;;
+        --dangerously-skip-permissions) echo "FLAG_SKIP_PERMS=1" >> "$CLAUDE_CALL_LOG" ;;
+    esac
+done
+# Log the prompt content (second argument after -p)
+FOUND_P=0
+for arg in "$@"; do
+    if [[ $FOUND_P -eq 1 ]]; then
+        echo "PROMPT_CONTAINS_ARGUMENTS=$(echo "$arg" | grep -o 'ARGUMENTS:.*' | head -1)" >> "$CLAUDE_CALL_LOG"
+        break
+    fi
+    [[ "$arg" == "-p" ]] && FOUND_P=1
+done
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/claude"
@@ -71,15 +87,19 @@ teardown() {
     [ "$status" -eq 0 ]
 
     # Verify claude was called with correct arguments
-    # Direct SKILL.md body mode: prompt contains ARGUMENTS: 123
-    grep -q "ARGUMENTS: 123" "$CLAUDE_CALL_LOG"
-    grep -q -- "--model claude-sonnet-4-6" "$CLAUDE_CALL_LOG"
-    grep -q -- "--dangerously-skip-permissions" "$CLAUDE_CALL_LOG"
-    # Should use direct prompt, not skill invocation (/review 123)
-    ! grep -q -- "-p /review 123" "$CLAUDE_CALL_LOG"
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+    grep -q "FLAG_MODEL=1" "$CLAUDE_CALL_LOG"
+    grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
 
     # Verify ANTHROPIC_MODEL environment variable was set
     grep -q "ANTHROPIC_MODEL=claude-sonnet-4-6" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: ARGUMENTS contains --non-interactive flag" {
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+
+    grep -q "PROMPT_CONTAINS_ARGUMENTS=ARGUMENTS: 123 --non-interactive" "$CLAUDE_CALL_LOG"
 }
 
 @test "success: output shows start and finish messages" {
@@ -100,35 +120,33 @@ teardown() {
     grep -q "CLAUDECODE=__UNSET__" "$CLAUDE_CALL_LOG"
 }
 
-@test "success: --review-only flag is passed through to ARGUMENTS" {
+@test "success: --review-only flag is passed through to ARGUMENTS with --non-interactive" {
     run bash "$SCRIPT" 123 --review-only
     [ "$status" -eq 0 ]
 
-    # ARGUMENTS: 123 --review-only should be present
-    grep -q "ARGUMENTS: 123 --review-only" "$CLAUDE_CALL_LOG"
+    # ARGUMENTS: 123 --review-only --non-interactive should be present
+    grep -q "PROMPT_CONTAINS_ARGUMENTS=ARGUMENTS: 123 --review-only --non-interactive" "$CLAUDE_CALL_LOG"
 }
 
-@test "success: --light flag is passed through to ARGUMENTS" {
+@test "success: --light flag is passed through to ARGUMENTS with --non-interactive" {
     run bash "$SCRIPT" 123 --light
     [ "$status" -eq 0 ]
 
-    grep -q "ARGUMENTS: 123 --light" "$CLAUDE_CALL_LOG"
+    grep -q "PROMPT_CONTAINS_ARGUMENTS=ARGUMENTS: 123 --light --non-interactive" "$CLAUDE_CALL_LOG"
 }
 
-@test "success: --full flag is passed through to ARGUMENTS" {
+@test "success: --full flag is passed through to ARGUMENTS with --non-interactive" {
     run bash "$SCRIPT" 123 --full
     [ "$status" -eq 0 ]
 
-    grep -q "ARGUMENTS: 123 --full" "$CLAUDE_CALL_LOG"
+    grep -q "PROMPT_CONTAINS_ARGUMENTS=ARGUMENTS: 123 --full --non-interactive" "$CLAUDE_CALL_LOG"
 }
 
-@test "success: no extra flags does not include --light or --full in ARGUMENTS" {
+@test "success: no extra flags includes only --non-interactive in ARGUMENTS" {
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
 
-    grep -q "ARGUMENTS: 123" "$CLAUDE_CALL_LOG"
-    ! grep -q "ARGUMENTS: 123 --light" "$CLAUDE_CALL_LOG"
-    ! grep -q "ARGUMENTS: 123 --full" "$CLAUDE_CALL_LOG"
+    grep -q "PROMPT_CONTAINS_ARGUMENTS=ARGUMENTS: 123 --non-interactive" "$CLAUDE_CALL_LOG"
 }
 
 @test "success: wait-ci-checks.sh is called before claude" {
