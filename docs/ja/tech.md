@@ -128,6 +128,8 @@ Wholework 内でラベルを追加・変更・削除する場合（skills、scri
 | 半角 `!`（SKILL.md 本文、コードフェンス外およびインラインコード外） | Claude Code の Bash 権限チェッカーが zsh の履歴展開と誤検出し、スキル実行時にエラーとなる | 全角「！」または言い換え |
 | Acceptance check | 用語リデザイン（"verify command" に変更） | "verify command" |
 
+**非推奨用語**: 上記表に加えて、`docs/product.md` § Terms の「旧称（Formerly called）」に列挙された用語は新規コンテンツ（コードコメント、ドキュメント、コミットメッセージ、Spec ファイルなど）で使用してはならない。現行リストは `docs/product.md` § Terms を参照すること。新たな非推奨用語が生じた場合は `docs/product.md` § Terms に 'Formerly called' エントリとして追記すれば十分で、この表の更新は不要。
+
 ## 用語移行スコープルール
 
 Terms の 'Formerly called'（段階的用語移行）に非推奨用語を追加する Issue を作成する際、同一ファイル内の非推奨用語置換をスコープに含めるかを明示すること。

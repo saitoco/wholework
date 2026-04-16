@@ -148,6 +148,8 @@ lower-level tools such as `gh api graphql`.
 | Acceptance check | Term redesign (changed to "verify command") | "verify command" |
 | Assigning the `triaged` label when creating Issues (in `gh issue create --label` or `gh issue edit --add-label`) | `triaged` marks that triage was actually executed; pre-assigning it causes the `triage-backlog-filter.sh` to skip the Issue, leaving Type/Size/Priority/Value unset | Omit `triaged` from Issue creation; the triage skill assigns it after running `/triage` |
 
+**Deprecated terms**: In addition to the expressions listed above, any term marked as 'Formerly called' in `docs/product.md` § Terms must not be used in new content (code comments, documentation, commit messages, Spec files, etc.). Refer to `docs/product.md` § Terms for the current list. When a new deprecated term arises, add a 'Formerly called' entry to `docs/product.md` § Terms — no update to this table is required.
+
 ## Terminology Migration Scope Rule
 
 When creating an Issue that adds deprecated terms to Terms 'Formerly called' (gradual terminology migration), explicitly state whether replacing deprecated terms within the same file is included in scope.
