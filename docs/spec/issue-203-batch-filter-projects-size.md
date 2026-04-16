@@ -66,3 +66,17 @@
 
 **`section_not_contains` と `### Filtering criteria` 見出しの関係:**
 `section_not_contains "skills/auto/SKILL.md" "Filtering criteria" "labels"` が正しく機能するには、verify-executor が "Filtering criteria" をMarkdown見出し行（`#` で始まる行）として認識できる必要がある。現在の `**Filtering criteria**` はbold textであり見出しではないため、実装ステップ1で `### Filtering criteria` 見出しに変換することが必須。
+
+## Issue Retrospective
+
+### Ambiguity Resolution
+
+3 件の曖昧点を検出し、すべて自動解決:
+
+1. **Size 未設定の扱い**: 候補に含め、triage 後に再チェック。既存設計「Targets: Issues with no Size set, XS, or S」と整合。triage で M+ が判明した場合はスキップ
+2. **実装場所**: `skills/auto/SKILL.md` Batch Mode セクションのテキスト変更のみ。`get-issue-size.sh` は既存で変更不要
+3. **パフォーマンス**: 候補ごとの `get-issue-size.sh` 呼び出しは既存パターン (`gh issue view` per-issue) と同等
+
+### Policy Decisions
+
+- Pre-merge verify command は SKILL.md のセクション内容検証 (`section_contains`, `section_not_contains`) を使用。batch モードの動作テストは post-merge opportunistic で実施
