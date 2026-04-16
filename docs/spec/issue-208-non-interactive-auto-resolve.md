@@ -179,3 +179,19 @@ fix 方針：①全 `run-*.sh` で `--non-interactive` 付与、②全 skill で
 
 - **`--auto` 名称衝突**（merge skill）: Spec では Implementation Step 7 で1つずつ分類する方針とした（Uncertainty セクションに明記）
 - **secondary skill の各判定**: Step 9 実装時に文脈評価する方針（Uncertainty セクションに明記）
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+- `skills/code/SKILL.md` の Line 36-40（非 interactive mode 宣言ブロック）に旧ポリシー（exit with non-zero）の記述が残存し、Line 44-55 の `## Error Handling in Non-Interactive Mode`（auto-resolve + log）と矛盾していた。横展開実装では「既存セクションのポリシー変更」と「インライン注記の更新」が独立した作業になるため、古い記述の見落としが発生しやすいパターン。
+- Step 3 `phase/ready` チェックおよび Step 6 不確実性検証のインライン注記も同様に旧 abort ポリシーが残存。これらは PR diff の変更行外（既存行）だったため、CI やテストでは検出されなかった。
+
+### 繰り返し問題の可能性
+
+- 横展開（lateral extension）パターンの PR では、既存行のインライン注記更新漏れがレビューの主要な指摘点になる傾向がある。verify コマンドは変更後ファイルの `file_contains` 検証のみで、「旧ポリシー記述の削除確認」は行っていない。将来的な verify コマンドの改善として `file_not_contains "旧ポリシーキーワード"` の追加が有効かもしれない。
+
+### 受け入れ条件の検証難易度
+
+- 全10条件が `file_contains` で検証可能な状態で、UNCERTAIN は 0件。verify command の精度は高かった。
+- ただし「矛盾する記述の削除」は `file_not_contains` を追加することで検証可能だが、今回の条件には含まれていなかった。policy 変更系の Issue では削除確認条件の追加を検討する価値がある。
