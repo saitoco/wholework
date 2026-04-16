@@ -46,6 +46,17 @@
 
 - Size が Projects フィールドに M と設定された triaged Issue を含む状態で `/auto --batch 1` を実行し、当該 Issue がスキップされることを確認する (verify-type: opportunistic)
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
 ## Notes
 
 **Auto-Resolved Ambiguity Points (from Issue body):**
