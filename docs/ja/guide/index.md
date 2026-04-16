@@ -22,6 +22,8 @@ Wholework の事前経験は不要です。
 | [ワークフロー概要](workflow.md) | 各スキルの役割と使うタイミングを理解 |
 | [カスタマイズ](customization.md) | `.wholework.yml`、project domain、adapter の設定 |
 | [トラブルシューティング](troubleshooting.md) | よくある問題の解決: 認証エラー、plugin 失敗、verify 失敗 |
+| [Adapter 執筆ガイド](adapter-guide.md) | MCP サーバー、CLI ツール、外部サービス向けのプロジェクト固有 adapter を作成 |
+| [Figma ベストプラクティス](figma-best-practices.md) | AI コード生成精度を最大化する Figma デザインファイルの作成方法 |
 
 ## 用語
 

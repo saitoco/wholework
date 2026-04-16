@@ -34,11 +34,9 @@ wholework/
 │   ├── product.md       # プロジェクトビジョン、非ゴール、用語（steering）
 │   ├── tech.md          # 技術スタック、アーキテクチャ決定、禁止表現（steering）
 │   ├── workflow.md      # 開発ワークフローのフェーズとラベル遷移（project）
-│   ├── adapter-guide.md    # プロジェクト固有 capability 向け adapter 執筆ガイド（project）
-│   ├── figma-best-practices.md # Figma MCP UI デザインガイドライン（project）
 │   ├── migration-notes.md # 移行 issue ごとのインターフェース変更記録（project）
 │   ├── environment-adaptation.md # 環境適応アーキテクチャ（4 層）（project）
-│   ├── guide/           # ユーザー向けマニュアル（index、quick-start、workflow、customization、troubleshooting）（project）
+│   ├── guide/           # ユーザー向けマニュアル（index、quick-start、workflow、customization、troubleshooting、guide/adapter-guide.md、guide/figma-best-practices.md）（project）
 │   ├── {lang}/          # /doc translate {lang} が生成する言語別翻訳（docs/{lang}/）
 │   ├── spec/            # Issue 仕様
 │   └── stats/           # プロジェクト健全性診断レポート（/audit stats が生成、YYYY-MM-DD.md）

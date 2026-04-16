@@ -4,7 +4,7 @@ ssot_for:
   - adapter-authoring-guide
 ---
 
-English | [日本語](ja/adapter-guide.md)
+English | [日本語](../ja/guide/adapter-guide.md)
 
 # Adapter Authoring Guide
 
@@ -233,7 +233,7 @@ Replace the placeholders and paste the prompt into Claude Code.
 Please create a Wholework adapter for the {SERVICE_NAME} capability in this project.
 
 Read the adapter authoring guide first:
-https://raw.githubusercontent.com/saitoco/wholework/main/docs/adapter-guide.md
+https://raw.githubusercontent.com/saitoco/wholework/main/docs/guide/adapter-guide.md
 
 Then create `.wholework/adapters/{capability}-adapter.md` following the contract template
 in the guide. The adapter should support the following verify commands:
@@ -259,7 +259,7 @@ to an Issue for pre-merge verification.
 Please create a Wholework adapter for the invoice service in this project.
 
 Read the adapter authoring guide first:
-https://raw.githubusercontent.com/saitoco/wholework/main/docs/adapter-guide.md
+https://raw.githubusercontent.com/saitoco/wholework/main/docs/guide/adapter-guide.md
 
 Then create `.wholework/adapters/invoice-adapter.md` following the contract template
 in the guide. The adapter should support the following verify commands:

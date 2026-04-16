@@ -1,4 +1,4 @@
-[English](../figma-best-practices.md) | 日本語
+[English](../../guide/figma-best-practices.md) | 日本語
 
 # Figma ベストプラクティスガイド
 

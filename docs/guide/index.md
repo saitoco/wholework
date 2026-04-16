@@ -26,6 +26,8 @@ No prior Wholework experience required.
 | [Workflow Overview](workflow.md) | Understand what each skill does and when to use it |
 | [Customization](customization.md) | Configure `.wholework.yml`, project domains, and adapters |
 | [Troubleshooting](troubleshooting.md) | Fix common issues: auth errors, plugin failures, verify failures |
+| [Adapter Authoring Guide](adapter-guide.md) | Write project-specific adapters for MCP servers, CLI tools, and external services |
+| [Figma Best Practices](figma-best-practices.md) | Design Figma files for optimal AI code generation accuracy |
 
 ## Terminology
 
