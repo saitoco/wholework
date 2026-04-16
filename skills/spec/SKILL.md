@@ -263,6 +263,15 @@ When removing or changing variable assignments, explicitly list all usage locati
 
 For Specs involving new/modified bats tests, explicitly specify the input data format (markdown condition line format, JSON structure, command output format) that the test target script expects. Include test data format details in the Spec's Notes section.
 
+**bats test verify command: `@test` name pattern check:**
+
+When creating `file_contains` verify commands targeting `.bats` test files, inspect the actual `@test` names in the file first (using Grep/Read). Test name conventions vary — colon position, capitalization, and word order differ between test files (e.g., `@test "Size XS: ..."` vs. `@test "Size: XS ..."`) — so deriving the keyword from a description alone is unreliable.
+
+Steps:
+1. Grep the target `.bats` file for `@test` to collect test names: `grep "@test" tests/foo.bats`
+2. Identify the test name matching the acceptance condition
+3. Extract a unique, stable substring from the actual test name as the `file_contains` keyword
+
 **Mermaid diagram node ID naming check:**
 
 If implementation steps include Mermaid diagram updates, check existing node ID naming patterns and apply them consistently to new nodes.
