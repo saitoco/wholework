@@ -20,8 +20,8 @@ Update the file count annotations in both the English and Japanese mirror files 
 
 ### Pre-merge
 
-- <!-- verify: bash -c 'actual=$(ls scripts/*.sh | wc -l | tr -d " "); grep -q "scripts/ (${actual} files)" docs/structure.md' --> `docs/structure.md` の scripts/ ファイル数が実際の値と一致
-- <!-- verify: bash -c 'actual=$(ls tests/*.bats tests/**/*.bats 2>/dev/null | wc -l | tr -d " "); grep -q "tests/ (${actual} files)" docs/structure.md' --> `docs/structure.md` の tests/ ファイル数が実際の値と一致
+- <!-- verify: bash -c 'actual=$(ls scripts/*.sh | wc -l | tr -d " "); grep -qE "scripts/[^(]*\(${actual} files\)" docs/structure.md' --> `docs/structure.md` の scripts/ ファイル数が実際の値と一致
+- <!-- verify: bash -c 'actual=$(ls tests/*.bats tests/**/*.bats 2>/dev/null | wc -l | tr -d " "); grep -qE "tests/[^(]*\(${actual} files\)" docs/structure.md' --> `docs/structure.md` の tests/ ファイル数が実際の値と一致
 
 ### Post-merge
 
@@ -32,3 +32,14 @@ Update the file count annotations in both the English and Japanese mirror files 
 - Acceptance criteria counts `ls scripts/*.sh` only (.sh files), excluding `scripts/validate-skill-syntax.py`. Structure.md will record 32 (shell scripts only). The .py file is not counted by the acceptance criteria command.
 - `docs/ja/structure.md` is a Japanese mirror and has the same outdated counts. It is not covered by the acceptance criteria verify commands but should be updated in the same change for consistency.
 - Current actual counts (verified at spec time): `scripts/*.sh` = 32, `tests/*.bats` = 32 (up from 30/27 at issue creation due to additional files added since then).
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- Verify commands in both Issue and Spec were miscalibrated: the pattern `grep -q "scripts/ (${actual} files)"` assumed the text `scripts/ (X files)` appears as a contiguous substring in structure.md, but the actual format is `scripts/             # Utility scripts used by skills and agents (X files)` (count appears after a long comment). Both verify commands were corrected to use extended regex (`grep -qE "scripts/[^(]*\(${actual} files\)"`) that skips the comment text between the directory name and the count.
+
+### Rework
+- N/A
