@@ -37,16 +37,66 @@ SemVer permits breaking changes in minor bumps during 0.x. Wholework follows thi
 
 ## Judging Bump Level from Closed Issues
 
-When preparing a release, review the set of closed Issues since the last tag. For each Issue, classify:
+When preparing a release, review the set of closed Issues since the last tag. Claude Code can discover and classify these automatically.
 
-1. Read the Issue title + closing commit + body
-2. Classify per the table above
-3. Aggregate: the highest classification wins
-   - If any issue is breaking → treat the release as breaking (minor pre-1.0)
-   - Else if any issue is additive → minor
-   - Else (all fixes only) → patch
+### Discovery Procedure
 
-**Ask Claude Code**: "Since v{prev}, here are the closed Issues: #N, #M, ... What bump level?" — the AI should apply this table and return a single bump level with rationale per Issue.
+1. **Find the previous tag**:
+   ```sh
+   git describe --tags --abbrev=0
+   ```
+
+2. **List commits since that tag** (to extract `closes #N` references):
+   ```sh
+   git log <prev-tag>..HEAD --pretty=format:'%H %s'
+   ```
+   Parse `closes #N`, `fixes #N`, `(closes #N)` patterns from commit messages.
+
+3. **List Issues closed after the tag date** (catches Issues closed outside commit messages):
+   ```sh
+   TAG_DATE=$(git log -1 --format=%aI <prev-tag>)
+   gh issue list --state closed --search "closed:>${TAG_DATE}" --json number,title,closedAt,labels --limit 200
+   ```
+
+4. **Merge the two sources, de-duplicate**, and retrieve each Issue body for classification:
+   ```sh
+   gh issue view <N> --json title,body,labels
+   ```
+
+### Classification Procedure
+
+For each discovered Issue:
+
+1. Read the Issue title + body + `closing commit message`
+2. Classify per the "Bump Level Rules" table above (Added / Changed / Fixed / Breaking)
+3. Aggregate with highest-wins rule:
+   - Any Breaking Issue → release is breaking (minor pre-1.0 / major post-1.0)
+   - Any Additive Issue → minor
+   - Only Fixes → patch
+
+### Exclusions
+
+Skip from the count:
+- Issues closed as `not planned` or merged into another Issue (no code impact)
+- Parent tracker Issues (`phase/verify` placeholder) where all work is in sub-issues (count sub-issues instead)
+- Refactors/cleanup with no user-visible change → patch
+
+### Ambiguity Handling
+
+If any Issue cannot be classified unambiguously, Claude Code must:
+1. Surface that Issue with a proposed classification and rationale
+2. Ask the user to confirm before applying
+3. Only proceed to tag/bump after confirmation
+
+### Example Invocation
+
+User: "Next release level?" or "Prepare v{next} release notes"
+
+Claude Code response flow:
+1. Run discovery commands above
+2. Present a table: `| # | Title | Category | Rationale |`
+3. Propose bump level with one-sentence justification
+4. Ask for confirmation before running the Release Procedure below
 
 ## Known Precedents and Exceptions
 
