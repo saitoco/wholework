@@ -48,8 +48,8 @@
 - <!-- verify: file_exists "tests/run-auto-sub.bats" --> `tests/run-auto-sub.bats` が存在する
 - <!-- verify: file_contains "tests/run-spec.bats" "frontmatter" --> `tests/run-spec.bats` に SKILL.md frontmatter parsing 関連のテストが含まれている
 - <!-- verify: file_contains "tests/run-spec.bats" "claude-sonnet-4-6" --> `tests/run-spec.bats` に Sonnet モデル指定の検証が含まれている
-- <!-- verify: file_contains "tests/run-auto-sub.bats" "Size: XS" --> `tests/run-auto-sub.bats` に Size XS 分岐テストが含まれている
-- <!-- verify: file_contains "tests/run-auto-sub.bats" "Size: L" --> `tests/run-auto-sub.bats` に Size L 分岐テストが含まれている
+- <!-- verify: file_contains "tests/run-auto-sub.bats" "Size XS" --> `tests/run-auto-sub.bats` に Size XS 分岐テストが含まれている
+- <!-- verify: file_contains "tests/run-auto-sub.bats" "Size L" --> `tests/run-auto-sub.bats` に Size L 分岐テストが含まれている
 - <!-- verify: file_contains "tests/run-auto-sub.bats" "PATCH_LOCK" --> `tests/run-auto-sub.bats` に patch lock 機構のテストが含まれている
 - <!-- verify: file_contains "tests/run-auto-sub.bats" "phase/ready" --> `tests/run-auto-sub.bats` に phase/ready ラベル検出による spec skip テストが含まれている
 - <!-- verify: github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> bats テスト CI が PASS する
@@ -78,3 +78,31 @@ run-spec.sh は `SKILL_FILE="${SCRIPT_DIR}/../skills/spec/SKILL.md"` で SKILL.m
 ### patch lock テストの範囲
 
 `acquire_patch_lock` の成功 (mkdir + PATCH_LOCK_DIR の存在確認) と `release_patch_lock` の成功 (rmdir + 不在確認) をテストする。timeout (300s) シナリオは sleep mock の複雑性ゆえ scope 外。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- verify コマンドの `file_contains "tests/run-auto-sub.bats" "Size: XS"` / `"Size: L"` が miscalibrated だった。Spec ではテスト名パターンを `"Size: XS"` と想定していたが、実際には bats の `@test` 名は `"Size XS:"` (コロン位置が異なる) になる。これは run-auto-sub.sh のログ出力 `echo "Size: ${SIZE}"` と混同した可能性がある。verify hint は `"Size XS"` / `"Size L"` に修正した。
+
+### Rework
+
+- N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. All Spec-specified test cases were implemented as described. The verify hint correction (`"Size: XS"` → `"Size XS"`) was pre-identified and documented in Code Retrospective before review, demonstrating good self-correction during implementation.
+
+### Recurring issues
+
+Nothing to note. No repeated issue patterns were observed across the two test files.
+
+### Acceptance criteria verification difficulty
+
+The `github_check` condition (bats test CI PASS) was PENDING at review time because CI was still running. This is expected behavior for a test-addition PR. Consider adding a note in future Specs that CI-dependent verify conditions may be PENDING on first review attempt — this is acceptable and `/merge` should wait for CI completion before proceeding.
