@@ -91,6 +91,20 @@ N/A
 
 - なし。
 
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+特記なし。ドキュメント移動のみの変更で、Spec の全ステップが正確に実装されていた。
+
+### 繰り返し問題
+
+特記なし。
+
+### 受け入れ基準検証困難度
+
+14項目すべてが verify コマンド付きで、`file_exists`/`file_not_exists`/`section_contains`/`file_not_contains`/`file_contains` の各コマンドで自動検証可能だった。すべて PASS で UNCERTAIN なし。verify コマンドの網羅性が高く、今後のリファレンスとして有効。
+
 ## Notes
 
 - `docs/adapter-guide.md` 内の raw GitHub URL (`raw.githubusercontent.com/saitoco/wholework/main/docs/adapter-guide.md`) が2箇所 × 英語/日本語版で計4箇所存在する。これらは外部プロジェクトの `.wholework.yml` からの WebFetch 参照先となっているため、移動後のパスに更新が必要
