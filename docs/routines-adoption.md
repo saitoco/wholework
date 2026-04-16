@@ -45,46 +45,83 @@ Routines can elevate wholework from "locally-invoked CLI skills" to a "cloud-res
 
 ### Tier 1 — Webhook-reactive
 
-| Routine | Trigger | Action |
-|---|---|---|
-| auto-triage | `issues.opened` | `/triage N` — assign Type/Priority/Size/Value immediately |
-| phase-transition executor | `issues.labeled` (e.g., `phase/spec-ready`, `phase/code-ready`) | Kick corresponding skill (`/spec`, `/code`) |
-| verify-on-merge | `pull_request.closed` (merged) | `/verify` — eliminate the "manual verify forgotten" failure mode |
+| Routine | Trigger | Action | Status |
+|---|---|---|---|
+| auto-triage | `schedule` (hourly/daily) | inline prompt invoking `gh` CLI, or `/triage` as project skill | **redesigned** — Issues webhook events not supported (see Learnings Log 2026-04-16) |
+| phase-transition executor | (Issues webhook) | Kick corresponding skill (`/spec`, `/code`) | **blocked** — depends on future Issues webhook support |
+| verify-on-merge | `pull_request.closed` (merged) | `/verify` (via project skill) — eliminate the "manual verify forgotten" failure mode | viable |
 
-#### Setup Runbook — auto-triage (`issues.opened` → `/triage`)
+#### Setup Runbook — auto-triage (schedule-based batch)
 
-This runbook documents the steps to configure the auto-triage routine via the Claude Code web UI. The routine fires on `issues.opened` and runs `/triage N` to assign Type/Priority/Size/Value immediately.
+This runbook documents the steps to configure the auto-triage routine via the Claude Code web UI. The original design (`issues.opened` → `/triage`) is not viable because Routines GitHub webhook support is currently limited to Pull Request and Release events only. The runbook below uses a schedule-based trigger with an inline prompt that processes untriaged Issues in batch.
 
 **Prerequisites**
 
 - Claude Code account with Routines access (Pro/Max/Team/Enterprise)
-- GitHub repository connected to Claude Code (required for webhook delivery)
+- GitHub repository connected to Claude Code (`/web-setup` grants clone access; webhook triggers separately require installing the Claude GitHub App)
+- Target repository contains the `triaged` label (created automatically on first use, or pre-create via `gh label create triaged`)
+
+**Action Prompt Options**
+
+Two patterns work in the Routines runtime. Choose based on whether the target repository has wholework skills committed to `.claude/skills/`:
+
+**Option A — Inline prompt (skill-independent, works on any repo):**
+
+```
+You are running in a Claude Code Routine (cloud environment).
+Execute these steps autonomously without asking for confirmation.
+Use only `gh` CLI — do not reference plugin paths.
+
+Step 1: List untriaged open issues
+  Run: gh issue list --state open --search "-label:triaged" --json number,title,body --limit 10
+
+Step 2: For each issue returned, classify:
+  - Type: Bug / Feature / Task (from title + body keywords)
+  - Size: XS / S / M / L / XL (estimate from scope in body)
+  - Priority: urgent / high / medium / low (only if explicitly stated)
+
+Step 3: Apply labels (run each command individually, no && chaining):
+  - gh issue edit <N> --add-label "type/<type>"
+  - gh issue edit <N> --add-label "size/<size>"
+  - gh issue edit <N> --add-label "priority/<priority>"   (skip if not detected)
+  - gh issue edit <N> --add-label "triaged"
+
+Step 4: Post a single summary comment via:
+  gh issue comment <N> --body "Auto-triage: Type=<type>, Size=<size>, Priority=<priority or none>"
+
+Step 5: Output a results table summarizing all processed issues.
+```
+
+**Option B — Project skill (requires `.claude/skills/triage/` committed to the target repo):**
+
+```
+/triage --limit 10
+```
+
+Routines load project skills from the cloned repository's `.claude/skills/` directory but do **not** load plugin-distributed skills. For wholework's own repository this works because `skills/` is structured as both plugin and project skills; for other repositories, either vendor wholework's skill into `.claude/skills/` or use Option A.
 
 **Configuration Steps**
 
 1. Open the Claude Code web UI and navigate to **Routines**
-2. Click **New Routine** and select trigger type: **GitHub Webhook**
-3. Configure trigger:
-   - **Event**: `issues.opened`
-   - **Repository**: select the target repository
-4. Configure the action prompt:
-   ```
-   /triage {{event.issue.number}}
-   ```
-5. Save the routine — Claude Code generates a webhook endpoint and registers it to the GitHub repository automatically
-6. Verify delivery: open a new test issue and confirm the routine fires within 30–60 seconds
+2. Click **New Routine**
+3. Name the routine (e.g., `wholework-auto-triage`) and paste one of the action prompt options above
+4. Select the target repository
+5. Select environment (Default is fine for `gh` CLI; ensure network access is enabled)
+6. Under **Select a trigger**, choose **Schedule** and pick a frequency (daily weekday morning is a reasonable default)
+7. Save the routine
+8. Verify delivery: click **Run now** on the routine's detail page and confirm the test run processes any currently-untriaged Issues
 
 **Idempotence**
 
-`/triage` detects the `triaged` label at startup. If the label is already present, it skips all assignment operations and exits cleanly. This ensures safe re-delivery on webhook retry without double-processing.
+Both options are idempotent via the `-label:triaged` filter at Step 1 / `--search` predicate: already-triaged Issues are excluded from the listing, so repeated invocations (scheduled or manual re-run) will not reprocess the same Issue. This replaces the prior design's reliance on `/triage`'s in-skill label detection, which is still effective but now redundant with the list-level filter.
 
 **Quota Impact**
 
-Each `issues.opened` event consumes one routine quota slot (Pro: 5/day, Max: 15/day). On low-traffic repositories, quota is rarely a concern. On high-traffic repositories, consider whether every new issue warrants immediate triage or whether a cron-based batch (Tier 3) is more quota-efficient.
+One routine invocation per scheduled fire processes up to N Issues in a single batch (N = `--limit` in the prompt). Compared to the original per-Issue webhook design (one invocation per `issues.opened`), schedule-based batch is significantly more quota-efficient on active repositories, at the cost of triage latency (Issues wait for the next scheduled run rather than triaging on creation).
 
 **Expected Outcome**
 
-Within 60 seconds of issue creation, `/triage` applies Type, Priority, Size, and Value assignments via Project fields (or fallback `type/*`, `priority/*`, `size/*`, `value/*` labels).
+On each scheduled fire, all Issues matching `-label:triaged` up to the configured limit receive Type/Size/Priority labels (via label fallback) and a summary comment. Project v2 field updates are omitted by default in Option A because inline prompts cannot invoke wholework's `project-field-update.md` module; use Option B when Project v2 fields are required.
 
 ### Tier 2 — Per-PR Shepherd
 
@@ -147,16 +184,77 @@ Currently `phase/*` labels are managed inside skill implementations. If routines
 
 Current `/verify` auto-reopens Issue on FAIL. Under routine execution this may be too aggressive (the FAIL might need human interpretation before reopening). Propose `mode: auto-reopen | notify-only` flag.
 
+### Q7. Skill distribution for Routines consumers
+
+The 2026-04-16 PoC revealed that plugin-distributed skills are not loaded in the Routines runtime — only project skills (`.claude/skills/` in the cloned repository) are visible. This creates a distribution fork for wholework:
+
+- **(a) Dual distribution** — maintain both plugin manifest and a parallel `.claude/skills/` tree. Doubles file layout and forces every path-resolution token (`${CLAUDE_PLUGIN_ROOT}` vs `${CLAUDE_SKILL_DIR}`) to work in both contexts.
+- **(b) Setup-script install** — cloud environment setup script clones the wholework plugin and installs it before each run. Adds per-run install overhead and requires users to configure a custom environment.
+- **(c) Inline-prompt patterns only** — give up on invoking wholework skills from Routines, use hand-written inline prompts per routine. Loses composability but has zero distribution friction.
+
+No decision yet. verify-on-merge implementation (Tier 1 next step) will be the forcing function: whichever path is taken for `/verify` sets the pattern for subsequent routines.
+
 ## Rollout Plan
 
-1. **PoC: auto-triage routine** — `issues.opened` → `/triage N`. Minimal, low-risk, high-frequency value. Gather data on quota consumption, idempotence behavior, label race conditions
-2. **verify-on-merge** — immediate ROI, eliminates manual-forget failure mode
+1. **PoC: auto-triage routine** — originally planned as `issues.opened` → `/triage N`; revised 2026-04-16 to `schedule` + inline-prompt (see Learnings Log). Minimal, low-risk value. Gather data on quota consumption, idempotence, skill distribution
+2. **verify-on-merge** (`pull_request.closed` → `/verify`) — immediate ROI, eliminates manual-forget failure mode. Forcing function for Q7 skill-distribution decision
 3. **Nightly batch auto** — routine-ize existing `/auto --batch`, validate Q1 timing decision
-4. **Phase-transition executor** — core of state-machine vision, triggers `/auto` deconstruction discussion
-5. **Per-PR shepherd** — most ambitious, maximum value, deferred until earlier tiers prove quota/idempotence assumptions
+4. **Phase-transition executor** — blocked on Issues webhook support (see Tier 1 table). Revisit when Anthropic expands event coverage
+5. **Per-PR shepherd** — most ambitious, maximum value, deferred until earlier tiers prove quota/idempotence/distribution assumptions
 
 ## Learnings Log
 
 PoC findings and decisions will be appended here as they accumulate. Each entry should include date, tier, observation, and any design adjustment.
 
-(No entries yet.)
+### 2026-04-16 — auto-triage PoC (Tier 1)
+
+**Context**
+
+Attempted to configure the auto-triage routine in the Claude Code web UI following the runbook in this document (pre-revision version). Three runtime constraints surfaced during setup that invalidate the original design and force a rewrite of both the Tier 1 table and the Setup Runbook.
+
+**Observations**
+
+- **Supported GitHub webhook events are Pull Request and Release only.** The Claude Code web UI event picker does not expose `issues.opened` or any Issues-category event. This matches the official docs (https://code.claude.com/docs/en/routines, "Supported events" section, confirmed 2026-04-16). Prior runbook text that referenced `issues.opened` → `/triage N` was not implementable. Anthropic's Threads post mentions "More event sources are coming soon" (https://www.threads.com/@claudeai/post/DXHotXUADxk), so Issues events may land later; treat this as blocked-by-feature-availability rather than a permanent constraint.
+
+- **Plugin-distributed skills are not loaded in the Routines runtime.** An action prompt of `/triage N` did not resolve — the remote Claude Code session started but terminated without invoking the skill. Per the official docs: "The session can run shell commands, use skills committed to the cloned repository, and call any connectors you include." This means only **project skills** (`.claude/skills/` committed to the cloned repository) are available, not plugin skills loaded from a marketplace. wholework's skill distribution needs a project-skill vendor path (or a setup-script install path) for Routines-driven execution.
+
+- **Schedule trigger + inline `gh` CLI prompt is the minimum viable pattern.** A manually-fired test routine running an inline prompt (list untriaged Issues, classify with `gh`, apply labels, post comment) succeeded end-to-end on Issue #206: labels `triaged`, `type/feature`, `size/xs` were applied and an auto-triage comment was posted. This confirms `gh` CLI is available and authenticated in the Routines runtime, `gh issue edit --add-label` writes succeed, and inline prompts without slash-command dependencies execute correctly.
+
+- **quota observations (limited, PoC scope).** Only two routine invocations were consumed during the PoC (one failed `/triage` attempt, one successful inline run on #206). Meaningful per-day quota profiling requires sustained operation under organic Issue creation rates, deferred to post-rollout monitoring. Note: schedule-based batch (single invocation covers N Issues) is inherently more quota-efficient than the originally-planned per-Issue webhook model would have been, regardless of exact numbers.
+
+- **idempotence confirmed at the list-filter level.** The inline prompt's `gh issue list --search "-label:triaged"` predicate guarantees already-triaged Issues are excluded from each batch, so scheduled re-runs (or `Run now` during debugging) do not reprocess Issues. This is a stronger idempotence guarantee than the prior design's reliance on `/triage`'s in-skill label detection, because it short-circuits before any classification work.
+
+**Design adjustments**
+
+- **Tier 1 table rewritten.** auto-triage moved from `issues.opened` webhook to `schedule` trigger with inline-prompt execution; phase-transition executor marked as blocked pending Issues webhook support; verify-on-merge remains viable because `pull_request.closed` is supported.
+- **Setup Runbook rewritten.** Original webhook-based flow replaced with a schedule-based flow offering two action-prompt options: (A) inline `gh` CLI prompt for any repository, (B) `/triage` as a project skill for repositories that vendor wholework's `.claude/skills/`.
+- **New open question (Q7) added below** tracking plugin-vs-project skill distribution strategy for Routines consumers.
+
+**Stop / Disable Procedure**
+
+If the auto-triage routine needs to be paused or removed:
+
+1. Open the Claude Code web UI and navigate to **Routines**
+2. Locate the `wholework-auto-triage` routine
+3. Choose one of:
+   - **Disable (reversible)** — toggle the routine to `disabled`. The schedule stops firing; re-enable by toggling back.
+   - **Delete (irreversible)** — remove the routine entirely. Re-enabling requires re-running the full setup runbook.
+4. Verify: `Run now` is no longer available (or no longer effective) for the disabled routine.
+
+Prefer **disable** over **delete** for temporary pauses. Reserve **delete** for genuine decommissioning.
+
+**Tier 1 next step recommendation**
+
+Based on what was learned, the ordered next steps are:
+
+1. **verify-on-merge** (`pull_request.closed` → `/verify`) — the PR webhook is officially supported and `/verify` already has idempotence semantics, so this is the lowest-risk next routine. Requires vendoring `.claude/skills/verify/` (or equivalent inline-prompt rewrite of the critical path) because `/verify` is a plugin skill today.
+2. **Refactor wholework for Routines compatibility** — generalize scripts/modules to work under `${CLAUDE_SKILL_DIR}` (project-skill context) in addition to `${CLAUDE_PLUGIN_ROOT}`. Alternatively, commit to a setup-script-based plugin install pattern inside the cloud environment. Whichever path is chosen needs to be documented and test-covered before Tier 1 expansion.
+3. **Keep the schedule-based auto-triage enabled** to accumulate real quota data (currently insufficient signal from the 2-invocation PoC) and surface edge cases before scaling to more routines.
+4. **phase-transition executor deferred** until Issues webhook support ships. Revisit when Anthropic announces expanded event coverage.
+
+Deferred explicitly: `/merge` routine-ization remains out of scope (destructive action, human-in-the-loop mandatory per Design Principles).
+
+**Related Issues**
+
+- Setup runbook (pre-revision): #189 (closed)
+- This PoC: #191
