@@ -106,3 +106,29 @@ Nothing to note. No repeated issue patterns were observed across the two test fi
 ### Acceptance criteria verification difficulty
 
 The `github_check` condition (bats test CI PASS) was PENDING at review time because CI was still running. This is expected behavior for a test-addition PR. Consider adding a note in future Specs that CI-dependent verify conditions may be PENDING on first review attempt — this is acceptable and `/merge` should wait for CI completion before proceeding.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue Retrospective および Spec Retrospective セクションが存在しない。これ自体は問題ではないが（#195 は Spec 段階で設計議論が少なかったため）、今後 `/issue` と `/spec` が retrospective セクションを追加する際にフォーマット統一を意識すること。
+
+#### design
+- N/A（Spec Retrospective セクションなし）
+
+#### code
+- verify hint の誤校正 (`"Size: XS"` → `"Size XS"`) が Code Retrospective に記録されており、実装中に自己修正されている。これは `/spec` 段階で verify hint を生成する際に、bats テスト名の命名規則をより正確に反映させる余地があることを示す。
+
+#### review
+- PR #205 のレビューは 1 件。CI PENDING 条件を `/review` 段階で UNCERTAIN として記録し、`/merge` を CI 完了後に実施した判断は適切。
+
+#### merge
+- squash merge で競合なし。クリーンな実装。
+
+#### verify
+- 条件 1-8 はすべて PASS（ファイル存在・内容確認）。
+- 条件 9 (bats テスト CI PASS) は in_progress のため PENDING。CI 完了後に `/verify 195` を再実行が必要。
+
+### Improvement Proposals
+- `/spec` が verify hint を生成する際、bats テスト名で頻用される文字列パターン（`@test "XXX"` の命名規則）を考慮し、`file_contains` のキーワードをテスト名形式に合わせて生成するよう `/spec` プロンプトにガイダンスを追加することを検討する。
