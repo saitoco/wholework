@@ -109,3 +109,31 @@ N/A
 
 - `docs/adapter-guide.md` 内の raw GitHub URL (`raw.githubusercontent.com/saitoco/wholework/main/docs/adapter-guide.md`) が2箇所 × 英語/日本語版で計4箇所存在する。これらは外部プロジェクトの `.wholework.yml` からの WebFetch 参照先となっているため、移動後のパスに更新が必要
 - `docs/spec/issue-119-adapter-guide.md` は過去の Spec ファイルであり、歴史的記録として旧パスのまま保持する（更新対象外）
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec Retrospective は N/A。受入条件 14 件すべてに verify コマンドが付与されており、曖昧さなし。
+- `docs/structure.md` の更新方法のみ軽微な曖昧さがあったが、Code Retrospective で言及済み。
+
+#### design
+- 設計の妥当性に問題なし。変更ファイル一覧・実装ステップ・verify コマンドがすべて正確に対応。
+
+#### code
+- 実装は Spec の全ステップをそのまま実行。リワークなし。
+- `docs/structure.md` の description 更新方法は Spec に厳密な指定がなかったが、自然な方法で解決。
+
+#### review
+- レビューはすべての条件が自動検証可能であることを確認済み。FAIL/UNCERTAIN ゼロで実装品質が高かった。
+
+#### merge
+- スカッシュマージ 1 コミット（PR #204）。コンフリクトなし、CI 通過。
+
+#### verify
+- 全 14 条件 PASS。Post-merge の opportunistic 条件（`/audit drift`）はユーザー検証として残存。
+- すべて `file_exists`/`file_not_exists`/`section_contains`/`file_not_contains`/`file_contains` で自動検証可能な構成で、UNCERTAIN ゼロを達成。
+
+### Improvement Proposals
+- N/A
