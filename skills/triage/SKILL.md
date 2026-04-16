@@ -732,6 +732,8 @@ Total: 1 circular dependency, 1 resolved blocked-by, 1 orphan dependency
 
 After each perspective's analysis is complete, always run the application flow. Ask for user approval via AskUserQuestion before applying.
 
+**(non-interactive mode: skip this entire step — the approval flow across all perspectives is a High-Stakes Decision due to bulk application scope. Output "[non-interactive mode] Skipping high-stakes action: backlog analysis approval flow. To apply analysis results, run `/triage --backlog` interactively." and proceed to the next step.)**
+
 **Value perspective application flow:**
 
 1. Ask for user approval (use AskUserQuestion):

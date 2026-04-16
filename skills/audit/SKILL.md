@@ -133,7 +133,7 @@ Display drift detection results in table format:
 
 If `--limit N` is specified, select N items in descending severity order. Exclude duplicates ("existing #N") from the count.
 
-Ask the user with AskUserQuestion:
+Ask the user with AskUserQuestion (non-interactive mode: auto-resolve — automatically select "Generate all" for non-duplicate items up to `--limit N`; record the decision in an issue comment):
 
 - "Generate all": generate Issues for all non-duplicate drift items
 - "Select": enter item numbers to generate separated by commas (e.g., 1,3,5)
@@ -451,7 +451,7 @@ Display fragility detection results in table format:
 
 If `--limit N` is specified, select N items in descending severity order. Exclude duplicates from the count.
 
-Ask the user with AskUserQuestion:
+Ask the user with AskUserQuestion (non-interactive mode: auto-resolve — automatically select "Generate all" for non-duplicate items up to `--limit N`; record the decision in an issue comment):
 
 - "Generate all": generate Issues for all non-duplicate fragility items
 - "Select": enter item numbers to generate separated by commas (e.g., 1,3)
@@ -555,7 +555,7 @@ Display drift and fragility detection results in an integrated table with a `len
 
 If `--limit N` is specified, select N items in descending severity order. Exclude duplicates from the count.
 
-Ask the user with AskUserQuestion:
+Ask the user with AskUserQuestion (non-interactive mode: auto-resolve — automatically select "Generate all" for non-duplicate items up to `--limit N`; record the decision in an issue comment):
 
 - "Generate all": generate Issues for all non-duplicate items
 - "Select": enter item numbers to generate separated by commas

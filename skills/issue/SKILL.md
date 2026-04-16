@@ -10,6 +10,16 @@ If ARGUMENTS is a number, refine an existing issue; if a string, create a new on
 
 If ARGUMENTS contains `--help`, read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.md` and output help following the "Processing Steps" section. Do not execute further steps.
 
+## Non-Interactive Mode Behavior
+
+If ARGUMENTS contains `--non-interactive` (set automatically by `run-issue.sh`), operate in **non-interactive mode**. In this mode, `AskUserQuestion` cannot be used.
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md` and follow the "Non-Interactive Mode Handling" section for the three-tier policy (auto-resolve / skip / hard-error). The specific branching at each step is noted inline below.
+
+Key per-step behavior in non-interactive mode:
+- **New Issue Creation Step 5 / Existing Issue Step 7** (Clarification Questions): auto-resolve each ambiguity point using model judgment; record decisions in the Auto-Resolve Log posted as an issue retrospective comment
+- **Existing Issue Step 11** (Scope Assessment / sub-issue splitting): **skip** (High-Stakes Decision — sub-issue splitting is irreversible); output warning and continue without splitting
+
 ---
 
 ## New Issue Creation
@@ -190,6 +200,8 @@ If `triaged` is present: skip this step.
 
 ### Step 9: Scope Assessment (sub-issue splitting)
 
+**(non-interactive mode: skip this entire step — sub-issue splitting is a High-Stakes Decision. Output: "[non-interactive mode] Skipping high-stakes action: sub-issue splitting. To perform this action, run `/issue {number}` interactively." then proceed to Step 10.)**
+
 Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` and use its XL definition (11+ files or multiple independent features) as the split threshold.
 
 Analyze the issue background and acceptance criteria to determine whether sub-issue splitting is needed.
@@ -310,6 +322,8 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh $NUMBER
 Exit code 0: no open blockers. Exit code 2: open blockers (relationship set, continue). Exit code 1: error (warn and continue).
 
 ### Step 11: Scope Assessment (sub-issue splitting)
+
+**(non-interactive mode: skip this entire step — sub-issue splitting is a High-Stakes Decision. Output: "[non-interactive mode] Skipping high-stakes action: sub-issue splitting. To perform this action, run `/issue {number}` interactively." then proceed to Step 12.)**
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md`.
 
