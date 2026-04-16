@@ -146,6 +146,22 @@ fix 方針：①全 `run-*.sh` で `--non-interactive` 付与、②全 skill で
 
 また、wrapper script (`run-issue.sh` / `run-review.sh` / `run-merge.sh`) の変更条件を追加した。これらは現状 `--non-interactive` を付与しておらず、skill 側だけ対応しても実効性がないため。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- `run-auto-sub.sh` への `--non-interactive` 付与は Spec に記載されていたが（Scope > Wrapper script の変更）、`run-auto-sub.sh` は `claude -p` を呼び出さない pure bash script のため対象外と判断した（docs/tech.md "Two-tier orchestration" 参照）。Spec の Changed Files / Implementation Steps にも記載がなかったため、この判断は仕様内。
+- `skills/merge/SKILL.md` の非-interactive mode インライン表記（`(non-interactive mode: ...)` 各箇所）について、全箇所を `auto-resolve` 方針に更新した。Spec では Implementation Step 7 で「`In --auto mode` 表記を `In --non-interactive mode` に修正」と記述されていたが、新規 `## Non-Interactive Mode Behavior` セクションを追加した上でインライン注記も更新する形に変更した。
+
+### Design Gaps/Ambiguities
+
+- `run-merge.sh` の `--non-interactive` 付与は Spec で明示されていたが、`skills/merge/SKILL.md` の既存 `## Error Handling in Non-Interactive Mode` セクションが `--auto` モードの説明として書かれていた。Spec の Notes に「delegation flag (`--auto`) と旧 non-interactive mode naming が混在」とある通り、実装でセクション名を `## Non-Interactive Mode Behavior` に統一して整理した。
+- `skills/merge/SKILL.md` の hard-error ケース（checkout 失敗、push rejected 等）は auto-resolve 不可のため exit non-zero を維持した。これは `modules/ambiguity-detector.md` の Hard-Stakes 定義に明示。
+
+### Rework
+
+- なし（設計通りの横展開実装）。
+
 ## spec retrospective
 
 ### Minor observations
