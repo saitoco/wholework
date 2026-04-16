@@ -20,13 +20,13 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（6 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（30 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（32 ファイル）
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   └── workflows/
 │       ├── test.yml             # CI: bats テスト、スキル構文検証、禁止表現チェック
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
-├── tests/               # スクリプトの Bats テストファイル（27 ファイル）
+├── tests/               # スクリプトの Bats テストファイル（32 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents
