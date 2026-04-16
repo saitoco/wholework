@@ -28,6 +28,8 @@ For any other ARGUMENTS: display "Usage: /audit [drift|fragility|stats] [--dry-r
 
 Detect semantic drift between Steering Documents + Project Documents and codebase implementation, and generate Issues for code-side fixes.
 
+> **Note:** Run `/doc sync --deep` first to normalize document-side drift, then run `/audit drift` to detect remaining semantic drift that requires code-side fixes. This keeps `/audit drift` focused on drift that cannot be resolved by updating documentation alone.
+
 ### Option Parsing
 
 Parse the following options from ARGUMENTS:

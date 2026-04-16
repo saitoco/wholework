@@ -141,7 +141,7 @@ bash scripts/check-translation-sync.sh
 
 ### `/audit` — ドリフト・フラジリティ検出
 
-`/audit drift` は AI を用いて Steering Documents + Project Documents とコードベース実装の意味的乖離を検出し、コード側修正の Issue を自動生成します。`/doc sync`（ドキュメント側修正を提案）の相補的位置付け。`/audit fragility` は構造的に脆弱な箇所（コアモジュールのテスト欠如、Architecture Decision 違反など）を検出しリスク改善 Issue を生成します。`/audit`（引数なし）は drift + fragility の両観点を一緒に実行します。`/audit stats` はプロジェクト全体の Issue メタデータ（スループット、構成、First-try 成功率、Backlog Health など）を集約してプロジェクト健全性診断レポートを生成し、drift と fragility に並ぶ第 3 のレンズとなります。詳細: [`skills/audit/SKILL.md`](../../skills/audit/SKILL.md)
+`/audit drift` は AI を用いて Steering Documents + Project Documents とコードベース実装の意味的乖離を検出し、コード側修正の Issue を自動生成します。最良の結果を得るには、まず `/doc sync --deep` を実行してドキュメント側の drift を吸収してから `/audit drift` を実行することを推奨します。これにより `/audit drift` をドキュメント更新だけでは解消できない意味的乖離の検出に集中できます。`/audit fragility` は構造的に脆弱な箇所（コアモジュールのテスト欠如、Architecture Decision 違反など）を検出しリスク改善 Issue を生成します。`/audit`（引数なし）は drift + fragility の両観点を一緒に実行します。`/audit stats` はプロジェクト全体の Issue メタデータ（スループット、構成、First-try 成功率、Backlog Health など）を集約してプロジェクト健全性診断レポートを生成し、drift と fragility に並ぶ第 3 のレンズとなります。詳細: [`skills/audit/SKILL.md`](../../skills/audit/SKILL.md)
 
 ## ラベル管理
 
