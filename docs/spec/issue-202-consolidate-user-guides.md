@@ -73,6 +73,24 @@
 
 - `/audit drift` 実行時に `docs/guide/` と実装・参照パスに関するドリフトが検出されないこと
 
+## Spec Retrospective
+
+N/A
+
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。Spec の実装ステップをそのまま順番通りに実行した。
+
+### Design Gaps/Ambiguities
+
+- `docs/structure.md` の更新方法について Spec には「`adapter-guide.md` と `figma-best-practices.md` の2行を `docs/` 直下エントリから削除し、`guide/` 行の description を更新して adapter-guide と figma-best-practices を含める」とあったが、`guide/` 行の description が長くなり可読性に懸念があった。最終的には「guide/adapter-guide.md、guide/figma-best-practices.md」を括弧内に追記する形で対応した。
+
+### Rework
+
+- なし。
+
 ## Notes
 
 - `docs/adapter-guide.md` 内の raw GitHub URL (`raw.githubusercontent.com/saitoco/wholework/main/docs/adapter-guide.md`) が2箇所 × 英語/日本語版で計4箇所存在する。これらは外部プロジェクトの `.wholework.yml` からの WebFetch 参照先となっているため、移動後のパスに更新が必要
