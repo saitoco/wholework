@@ -195,3 +195,34 @@ fix 方針：①全 `run-*.sh` で `--non-interactive` 付与、②全 skill で
 
 - 全10条件が `file_contains` で検証可能な状態で、UNCERTAIN は 0件。verify command の精度は高かった。
 - ただし「矛盾する記述の削除」は `file_not_contains` を追加することで検証可能だが、今回の条件には含まれていなかった。policy 変更系の Issue では削除確認条件の追加を検討する価値がある。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 全10 pre-merge 条件が `file_contains` で構成され、キーワード（`non-interactive` / `auto-resolve`）が実装パターンと正確に対応していた。verify command の精度が高く UNCERTAIN が0件になった要因は、issue retrospective で既存コードベースの命名規則を調査したうえで条件を設計したことにある。
+- spec の Uncertainty セクションに merge skill の naming 衝突と secondary skills の判定点が明記されており、verify 実行時点で両者とも解決済みであることを確認できた。
+
+#### design
+- Spec の Changed Files と Implementation Steps が実装と整合しており、設計通りの横展開が行われた。
+- `ambiguity-detector.md` への共通ガイダンス集約により、各 skill 側の記述量を抑える設計が機能した。
+
+#### code
+- Code Retrospective によるとリワークはなし。`run-auto-sub.sh` 除外の判断が Spec の Uncertainty 外であったにも関わらず適切にドキュメント化されていた。
+- `skills/merge/SKILL.md` の `--auto` と `--non-interactive` の混在整理（Spec の Uncertainty に記載済み）が実装で適切に解決されていた。
+
+#### review
+- `skills/code/SKILL.md` の旧ポリシー記述残存（Line 36-40 vs 44-55 矛盾）が検出された。横展開 PR では変更行外のインライン注記更新漏れがレビューの主要指摘点になる傾向があり、今後の類似 PR で注意が必要。
+- Review Retrospective で `file_not_contains "旧ポリシーキーワード"` 条件の追加提案が記録されており、verify 側でも同様の観点を確認した。
+
+#### merge
+- クリーンな FF マージ、コンフリクトなし。
+
+#### verify
+- 全10 pre-merge 条件が初回実行で PASS。
+- Post-merge 4条件（opportunistic 2件・manual 2件）はユーザー確認ガイドとして提示し、チェックボックスは更新しなかった。
+- `phase/verify` ラベルを付与（未確認の opportunistic/manual 条件が残存するため）。
+
+### Improvement Proposals
+- policy 変更系 Issue の受け入れ条件には `file_not_contains "旧ポリシーキーワード"` を追加し、古いポリシー記述の削除を自動検証する（review retrospective の提案を verify でも追認）
