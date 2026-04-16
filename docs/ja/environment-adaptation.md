@@ -151,9 +151,9 @@ Adapter は複数の実装選択肢を抽象化する必要がある場合に価
 
 capability 宣言は不要です。ファイルを置くだけでハンドラが有効化されます。
 
-#### ディスパッチ規約
+#### 名前解決規約
 
-`<!-- verify: {name} "arg" -->` のコマンド名がハンドラのファイル名（拡張子なし）と照合されます。例: `<!-- verify: api-contract "endpoint" -->` は `.wholework/verify-commands/api-contract.md` にディスパッチされます。
+`<!-- verify: {name} "arg" -->` のコマンド名がハンドラのファイル名（拡張子なし）と照合されます。例: `<!-- verify: api-contract "endpoint" -->` は `.wholework/verify-commands/api-contract.md` に解決されます。
 
 **ビルトイン優先**: `{name}` がビルトインコマンド（例: `file_exists`、`grep`）と一致する場合、常にビルトインが使われ、ハンドラファイルは警告とともに無視されます。
 
@@ -176,7 +176,7 @@ capability 宣言は不要です。ファイルを置くだけでハンドラが
 
 ## Processing Steps
 
-{ステップごとの検証ロジック — ディスパッチ時に LLM が実行する}
+{ステップごとの検証ロジック — ハンドラ解決時に LLM が実行する}
 
 ## Output
 

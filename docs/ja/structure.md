@@ -36,7 +36,9 @@ wholework/
 │   ├── workflow.md      # 開発ワークフローのフェーズとラベル遷移（project）
 │   ├── migration-notes.md # 移行 issue ごとのインターフェース変更記録（project）
 │   ├── environment-adaptation.md # 環境適応アーキテクチャ（4 層）（project）
-│   ├── guide/           # ユーザー向けマニュアル（index、quick-start、workflow、customization、troubleshooting、guide/adapter-guide.md、guide/figma-best-practices.md）（project）
+│   ├── versioning.md    # リリース versioning ポリシー（project）
+│   ├── routines-adoption.md # Routines 採用ロードマップと PoC 知見（project）
+│   ├── guide/           # ユーザー向けマニュアル（index、quick-start、workflow、customization、troubleshooting、adapter-guide、figma-best-practices）（project）
 │   ├── {lang}/          # /doc translate {lang} が生成する言語別翻訳（docs/{lang}/）
 │   ├── spec/            # Issue 仕様
 │   └── stats/           # プロジェクト健全性診断レポート（/audit stats が生成、YYYY-MM-DD.md）

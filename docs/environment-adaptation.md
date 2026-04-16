@@ -157,9 +157,9 @@ A mechanism for adding project-local custom verification commands. Place a Markd
 
 No capability declaration is required. Placing the file is sufficient to activate the handler.
 
-#### Dispatch Convention
+#### Name Resolution Convention
 
-The command name in `<!-- verify: {name} "arg" -->` is matched against the handler filename (without extension). Example: `<!-- verify: api-contract "endpoint" -->` dispatches to `.wholework/verify-commands/api-contract.md`.
+The command name in `<!-- verify: {name} "arg" -->` is matched against the handler filename (without extension). Example: `<!-- verify: api-contract "endpoint" -->` resolves to `.wholework/verify-commands/api-contract.md`.
 
 **Built-in priority**: If `{name}` matches a built-in command (e.g., `file_exists`, `grep`), the built-in is always used and the handler file is ignored with a warning.
 
@@ -182,7 +182,7 @@ Custom handler files follow a four-section Markdown structure (same as adapter c
 
 ## Processing Steps
 
-{Step-by-step verification logic — executed by the LLM when dispatched}
+{Step-by-step verification logic — executed by the LLM when this handler is resolved}
 
 ## Output
 
