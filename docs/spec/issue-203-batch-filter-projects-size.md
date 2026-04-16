@@ -67,6 +67,34 @@
 **`section_not_contains` と `### Filtering criteria` 見出しの関係:**
 `section_not_contains "skills/auto/SKILL.md" "Filtering criteria" "labels"` が正しく機能するには、verify-executor が "Filtering criteria" をMarkdown見出し行（`#` で始まる行）として認識できる必要がある。現在の `**Filtering criteria**` はbold textであり見出しではないため、実装ステップ1で `### Filtering criteria` 見出しに変換することが必須。
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 本文から 3 件の曖昧点を自動解決して Spec を作成。実装範囲（SKILL.md テキスト変更のみ）と既存スクリプト再利用の方針が明確で、設計判断に問題なし。
+- `section_not_contains` の検証が機能するために `### Filtering criteria` Markdown 見出しへの変換が必要であることを Spec に明記した点は、verify コマンドと実装が連動した良い設計。
+
+#### design
+- spec と同フェーズ（patch route のため別途 design フェーズなし）。N/A。
+
+#### code
+- 単一コミット `1f2f9df` で実装完了。fixup/amend パターンなし。Code Retrospective も偏差・ギャップ・rework すべて N/A と記録されており、クリーンな実装。
+
+#### review
+- patch route のため review フェーズなし。N/A。
+
+#### merge
+- patch route のため PR merge なし。main への直接コミット。競合・CI 失敗の痕跡なし。
+
+#### verify
+- 3 件の pre-merge 条件がすべて PASS。
+- Post-merge opportunistic 条件（Projects V2 フィールドでの実動作確認）はユーザー検証に委ねられており、適切な verify-type: opportunistic 設定になっている。
+- verify コマンド（`section_contains`・`section_not_contains`）が意図通りに動作し、verify pipeline の有効性を確認。
+
+### Improvement Proposals
+- N/A
+
 ## Issue Retrospective
 
 ### Ambiguity Resolution
