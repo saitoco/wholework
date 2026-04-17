@@ -307,8 +307,12 @@ If `SKIP_REVIEW_BUG=true`, specify in the prompt to run only review-light's spec
    ```
 
 5. **Pass results to Step 10**:
-   - Extract `path`, `line`, `body`, `severity` from `review-light` output; generate line comments JSON and Review body (same processing as full mode 10.2)
-   - Write to `.tmp/review-comments-$NUMBER.json` and `.tmp/review-body-$NUMBER.md`
+   - Extract `path`, `line`, `body`, `severity` from `review-light` output
+   - Issues where `path` is not `null` → add to line comments array (with `side: "RIGHT"`)
+   - Issues where `path` is `null` → merge into "General Comments" section of Review body (**MUST issues MUST be included in General Comments** — even with `path: null`, MUST is the basis for `event=REQUEST_CHANGES`, so not including in Review body leaves it unclear what the problem is)
+   - `mkdir -p .tmp`
+   - Write line comments array to `.tmp/review-comments-$NUMBER.json` (JSON array format)
+   - Write Review body (acceptance criteria table + CI status + General Comments + issue count summary) to `.tmp/review-body-$NUMBER.md`
 
 6. **Proceed to Step 10** (skip 10.1–10.3)
 

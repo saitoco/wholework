@@ -64,7 +64,8 @@ Execute according to the command conversion table below based on the detected to
 
 **`browser_screenshot` execution steps:**
 
-1. Open page with `browser-use open "<url>"` (same steps as above for Basic auth)
+1. Open page with `browser-use open "<url>"`
+   - With Basic auth: Do not embed credentials in URL; establish auth session in advance with `browser-use eval` before opening page. **Do NOT write `PREVIEW_BASIC_USER` / `PREVIEW_BASIC_PASS` values directly in the command line string** (use environment variable references or temp files to pass the `Authorization` header so credentials don't appear in process list, shell history, or logs)
 2. Generate temp file path and save screenshot to that path
    - Example (shell): `screenshot_path="$(mktemp /tmp/verify-screenshot-XXXXXX.png)"`
    - Example (browser-use): `browser-use screenshot "$screenshot_path"`
@@ -84,7 +85,8 @@ Execute according to the command conversion table below based on the detected to
 
 **`browser_screenshot` execution steps:**
 
-1. Open URL with `browser_navigate` (same steps as above for Basic auth)
+1. Open URL with `browser_navigate`
+   - With Basic auth: Attach `Authorization: Basic <base64(user:pass)>` to the `extraHTTPHeaders` option (do NOT use `http://user:pass@...` format — prevents scheme downgrade and URL corruption with `:` `@` in credentials)
 2. Take screenshot with `browser_take_screenshot`
 3. AI visually judges based on `description` (best-effort due to subjective elements)
 4. Close browser with `browser_close`
