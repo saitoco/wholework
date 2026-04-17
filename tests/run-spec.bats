@@ -143,11 +143,11 @@ teardown() {
     grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
 }
 
-@test "success: --opus switches model to claude-opus-4-6" {
+@test "success: --opus switches model to claude-opus-4-7" {
     run bash "$SCRIPT" 123 --opus
     [ "$status" -eq 0 ]
-    grep -q "MODEL_VALUE=claude-opus-4-6" "$CLAUDE_CALL_LOG"
-    grep -q "ANTHROPIC_MODEL=claude-opus-4-6" "$CLAUDE_CALL_LOG"
+    grep -q "MODEL_VALUE=claude-opus-4-7" "$CLAUDE_CALL_LOG"
+    grep -q "ANTHROPIC_MODEL=claude-opus-4-7" "$CLAUDE_CALL_LOG"
 }
 
 @test "error: SKILL.md not found when file is absent" {
