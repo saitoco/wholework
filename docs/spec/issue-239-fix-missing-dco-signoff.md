@@ -96,3 +96,28 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件は全 Pre-merge 項目に verify コマンドが付与されており、自動検証精度が高かった。Post-merge 条件は opportunistic タグで明示されており、手動検証の対象が明確だった。
+
+#### design
+- Spec の設計は実装内容と高い一致度を示した。`external-review-phase.md` のフォーマット差異 (コードブロック vs 箇条書き) は Code Retrospective に記録済み。acceptance criteria 外のファイルも scope に明記されており対応が漏れなかった。
+
+#### code
+- パッチルート 1 コミットで完結。fixup/amend パターンなし、レビューコメント取り込みなし。Code Retrospective に設計逸脱の記録あり。
+
+#### review
+- パッチルートのため PR レビューなし。評価対象外。
+
+#### merge
+- `closes #239` 付き直コミットでクリーンにクローズ。コンフリクトなし。
+
+#### verify
+- 全 7 自動検証条件が PASS。Post-merge の opportunistic 条件 1 件が未チェックのまま残存 (`phase/verify` ラベルで管理)。verify コマンドの grep/file_contains は正常機能した。
+
+### Improvement Proposals
+- N/A
