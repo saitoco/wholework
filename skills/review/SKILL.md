@@ -189,7 +189,11 @@ SPEC_PATH: path from spec-path (default: "docs/spec")
 STEERING_DOCS_PATH: path from steering-docs-path (default: "docs")
 ```
 
-After detection, follow `external-review-phase.md`'s Step 7 procedure for external review waiting/issue resolution. All three reviewer types use the same "wait → resolve" flow (switch reviewer type via the second argument to `wait-external-review.sh`).
+After detection, follow `external-review-phase.md`'s Step 7 procedure for external review waiting/issue resolution. For each enabled reviewer type, execute the "wait → resolve" flow in sequence:
+
+- **Copilot** (`HAS_COPILOT_REVIEW=true`): Steps 7.1–7.2 (`wait-external-review.sh "$NUMBER" copilot`)
+- **Claude Code Review** (`HAS_CLAUDE_CODE_REVIEW=true`): Steps 7.3–7.4 (`wait-external-review.sh "$NUMBER" claude-code-review`)
+- **CodeRabbit** (`HAS_CODERABBIT_REVIEW=true`): Steps 7.5–7.6 (`wait-external-review.sh "$NUMBER" coderabbit`)
 
 - If all three (`HAS_COPILOT_REVIEW`, `HAS_CLAUDE_CODE_REVIEW`, `HAS_CODERABBIT_REVIEW`) are `false`: skip all of Step 7 and proceed to Step 8
 - With `--review-only` mode: skip issue resolution (Steps 7.2, 7.4, 7.6)
