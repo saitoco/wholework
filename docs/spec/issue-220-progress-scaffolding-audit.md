@@ -48,3 +48,14 @@ Intentional progress outputs to preserve (Preserved section of audit report):
 - Completion/error reports at end of skills — user feedback on workflow result
 
 The `docs/reports/` directory already exists but is absent from `docs/structure.md` Directory Layout. Steps 3 and 4 correct this.
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation followed Spec steps 1–4 as designed.
+
+### Design Gaps/Ambiguities
+- None identified. The pre-determined findings in the Notes section were accurate and confirmed by the audit scan.
+
+### Rework
+- None.
