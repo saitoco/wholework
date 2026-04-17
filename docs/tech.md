@@ -62,7 +62,7 @@ English | [日本語](ja/tech.md)
 - **Distributable-first improvement principle**: Improvements identified through retrospectives must be reflected in distributable components (Skills, Agents, Modules, Scripts). CLAUDE.md, Steering Documents, and Project Documents are user-repository-specific artifacts that are not distributed as part of the Wholework plugin — improvements made only to these documents do not reach other Wholework users. When a retrospective identifies an improvement, the implementation target should be the distributable layer; updating only non-distributable artifacts is insufficient.
 - **Effort optimization strategy (3 axes)**: Three axes for controlling execution cost and quality in `claude -p` invocations. CLI support status and Wholework adoption policy per axis:
   - **Axis 1 — Model selection** (`--model`): Already implemented. Sonnet is the default; `run-spec.sh --opus` switches to Opus for L-size specs. Reviewed and confirmed.
-  - **Axis 2 — Adaptive Thinking** (`--effort`): `claude -p` supports `low/medium/high/max` levels (confirmed via `claude --help`). Implemented in `run-*.sh` with phase-specific effort levels (see matrix below). Combining medium effort with an Opus advisor achieves quality comparable to default-effort Sonnet at lower cost (per Anthropic benchmarks).
+  - **Axis 2 — Adaptive Thinking** (`--effort`): `claude -p` supports `low/medium/high/xhigh/max` levels (confirmed via `claude --help`). Implemented in `run-*.sh` with phase-specific effort levels (see matrix below). Combining medium effort with an Opus advisor achieves quality comparable to default-effort Sonnet at lower cost (per Anthropic benchmarks).
   - **Axis 3 — Advisor strategy** (`advisor_20260301`): Anthropic API beta feature (`advisor-tool-2026-03-01` header required). Enabled via the `--betas` flag — API key users only; not available with OAuth/subscription auth (the `run-*.sh` default). Performance gains: Sonnet + Opus advisor achieves SWE-bench +2.7 pp and cost −11.9% vs. Sonnet alone; Haiku + Opus advisor achieves BrowseComp 41.2% (vs. 19.7% solo) and cost −85% vs. Sonnet. Implementation in `run-*.sh` is a follow-up Issue.
 
 ### Phase-specific model and effort matrix
@@ -71,7 +71,7 @@ English | [日本語](ja/tech.md)
 
 | Component | Phase | Model | Effort | Rationale |
 |-----------|-------|-------|--------|-----------|
-| run-spec.sh | spec | Sonnet (Opus via `--opus` for L) | max | Design quality is critical; spec errors propagate to all subsequent phases. `/auto` passes `--opus` for L-size only (XL is split before spec) |
+| run-spec.sh | spec | Sonnet (Opus via `--opus` for L) | Sonnet: max; Opus: xhigh (default), max (explicit `--max`) | Design quality is critical; spec errors propagate to all subsequent phases. `/auto` passes `--opus` for L-size only (XL is split before spec) |
 | run-code.sh | code | Sonnet | high | Implementation requires thorough reasoning |
 | run-review.sh | review | Sonnet | high | Review orchestration; sub-agents handle deep analysis |
 | run-issue.sh | issue | Sonnet | high | L/XL scope analysis and sub-issue splitting require thorough orchestration |

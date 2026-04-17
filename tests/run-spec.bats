@@ -179,3 +179,15 @@ SKILL
     [ "$status" -eq 0 ]
     grep -q "CLAUDECODE=__UNSET__" "$CLAUDE_CALL_LOG"
 }
+
+@test "success: --opus default effort is xhigh" {
+    run bash "$SCRIPT" 123 --opus
+    [ "$status" -eq 0 ]
+    grep -q "EFFORT_VALUE=xhigh" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: --opus --max explicit effort is max" {
+    run bash "$SCRIPT" 123 --opus --max
+    [ "$status" -eq 0 ]
+    grep -q "EFFORT_VALUE=max" "$CLAUDE_CALL_LOG"
+}

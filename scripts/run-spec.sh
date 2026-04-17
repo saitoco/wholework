@@ -1,23 +1,29 @@
 #!/bin/bash
 # run-spec.sh - Autonomous /spec execution with Sonnet model
-# Usage: run-spec.sh <issue-number> [--opus]
+# Usage: run-spec.sh <issue-number> [--opus] [--max]
 
 set -euo pipefail
-ISSUE_NUMBER="${1:?Usage: run-spec.sh <issue-number> [--opus]}"
+ISSUE_NUMBER="${1:?Usage: run-spec.sh <issue-number> [--opus] [--max]}"
 shift
 
 # Parse options
-# Default: --model sonnet (override: --model opus with --opus flag)
+# Default: --model sonnet, --effort max (Opus path: xhigh by default, max with --max)
 MODEL="sonnet"
+EFFORT="max"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --opus)
       MODEL="opus"
+      EFFORT="xhigh"
+      shift
+      ;;
+    --max)
+      EFFORT="max"
       shift
       ;;
     *)
       echo "Error: Invalid option: $1" >&2
-      echo "Usage: run-spec.sh <issue-number> [--opus]" >&2
+      echo "Usage: run-spec.sh <issue-number> [--opus] [--max]" >&2
       exit 1
       ;;
   esac
@@ -35,7 +41,7 @@ echo "=== run-spec.sh: Starting /spec for issue #${ISSUE_NUMBER} ==="
 source "$SCRIPT_DIR/phase-banner.sh"
 print_start_banner "issue" "$ISSUE_NUMBER" "spec"
 echo "Model: ${MODEL}"
-echo "Effort: max"
+echo "Effort: ${EFFORT}"
 echo "Permissions: skip (autonomous mode)"
 echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
@@ -66,7 +72,7 @@ set +e
 ANTHROPIC_MODEL="${MODEL}" \
   env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
     --model "${MODEL}" \
-    --effort max \
+    --effort "${EFFORT}" \
     --dangerously-skip-permissions
 EXIT_CODE=$?
 set -e
