@@ -250,7 +250,7 @@ If `--deep` flag is enabled, before proceeding to Step 3's creation target selec
 
 ### Step 1: Check Current State
 
-Check the existence of Steering Documents (`type: steering`) using the same logic as the "Status Display" section.
+Follow the "Document Traversal (common procedure)" section to collect target files from the entire repository using frontmatter-based traversal. Identify which steering documents (`type: steering`) exist and which are missing.
 
 ### Step 2: Display Uncreated Files
 
@@ -441,7 +441,23 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-commit-push.md` and follow the "Processi
 
 **Load analysis sources and Steering Documents:**
 
-Explore and load analysis sources (README.md, CLAUDE.md, etc.) using the same procedure as "Step 2 (Reverse-Generation Flow — Explore Analysis Sources)". If the `--deep` flag is enabled, also Read `${CLAUDE_PLUGIN_ROOT}/modules/codebase-analysis.md` and follow the "Processing Steps" section to run codebase analysis; retain the extracted results (entry points, dependency graph, directory roles, etc.) for use in subsequent steps including the Narrative Semantic Drift Check.
+Search for the following files in the project root with Glob (deduplicate files matching multiple patterns, read each only once):
+
+- `*.md` (all Markdown in root. Captures README.md, CONTRIBUTING.md, ARCHITECTURE.md etc.)
+- `README.*` (README files regardless of extension. Supplements non-Markdown formats like .rst, .txt)
+- `package.json`, `Gemfile`, `requirements.txt`, `go.mod`, `Cargo.toml`, `pyproject.toml`, `tsconfig.json`, `Makefile`
+- `CLAUDE.md`
+- `.github/*.md`, `.github/**/*.md` (PR/Issue templates etc.)
+- `.github/workflows/*.yml` (CI/CD configuration)
+- `docs/**/*.md` (all Markdown including subdirectories. But skip files with a `type` field in frontmatter. After retrieving with Glob, check for `type` field by reading the beginning of each file. If many matches, prioritize files directly under `docs/` and limit to 15)
+- `Dockerfile`, `docker-compose.yml`, `.env.example` (infrastructure configuration)
+- `justfile`, `Taskfile.yml`, `Brewfile` (task runner type)
+
+Read existing files with Read and retain as analysis targets.
+
+If no analysis source files are found, display "No analysis sources found. Run in a project with README.md, package.json, etc." and exit.
+
+If the `--deep` flag is enabled, also Read `${CLAUDE_PLUGIN_ROOT}/modules/codebase-analysis.md` and follow the "Processing Steps" section to run codebase analysis; retain the extracted results (entry points, dependency graph, directory roles, etc.) for use in subsequent steps including the Narrative Semantic Drift Check.
 
 **Collect normalization targets via frontmatter-based traversal:**
 
