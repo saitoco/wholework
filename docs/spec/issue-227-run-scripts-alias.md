@@ -59,6 +59,20 @@
 - 参照 Issue で `/auto N` を実行し、CLI ログで alias 表示（`Model: sonnet` / `Model: opus`）を確認
 - ベンチマーク #226 実施手順に「一時的に pin へ戻す」注意書きが追加されている
 
+## Code Retrospective
+
+### Deviations from Design
+
+- なし
+
+### Design Gaps/Ambiguities
+
+- `run-verify.bats` のモックは `echo "$@"` で全引数をログするため `grep -q -- "--model sonnet"` の形式で検証可能（run-spec.bats とは異なるモック構造）。Spec には記載がなかったが、テスト更新時に確認して対処した。
+
+### Rework
+
+- なし
+
 ## Notes
 
 ### run-spec.sh の verify 対応
