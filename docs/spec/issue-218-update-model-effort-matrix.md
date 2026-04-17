@@ -51,3 +51,28 @@ Update the "Phase-specific model and effort matrix" section in `docs/tech.md` to
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec は docs-only 更新として明確にスコープが限定されており、受け入れ条件も verify コマンド付きで精度高く記述されている。7条件すべてが文字列マッチングで自動検証可能であった。Spec の品質は高い
+
+#### design
+- 挿入ポイントの記述（`triage (skill)` 行後）が #231 によるテーブル行追加により実際の挿入位置とずれたが、Code Retrospective に正確に記録されており設計記録として適切
+
+#### code
+- コミット `0566a0b` 1件で完結。リワークなし。Spec の挿入ポイントずれは柔軟に対応されており、実装品質は良好
+
+#### review
+- patch ルート（直コミット）のため PR レビューなし。docs-only かつ検証条件付きの変更であり、正式 PR レビューなしでも問題は生じていない
+
+#### merge
+- patch ルート直コミット（`closes #218` 付き）。CI / コンフリクトなし
+
+#### verify
+- 7件すべて PASS。verify コマンドが文字列マッチ形式で適切に設定されており、自動検証が完全に機能した。Post-merge 条件（audit drift / docs/ja 翻訳）は verify-type ヒントのみで verify コマンドなし — 翻訳更新の自動検証コマンドを追加すれば次回の自動化率が向上する
+
+### Improvement Proposals
+- Post-merge 条件「`docs/ja/tech.md` 翻訳版が更新済み」に `<!-- verify: file_contains "docs/ja/tech.md" "xhigh" -->` 形式の verify コマンドを付与することで、翻訳更新の自動検証が可能になる。翻訳系 Issue のテンプレートに verify コマンド付与を標準化することを検討する
