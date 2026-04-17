@@ -52,3 +52,14 @@
 - `section_contains "docs/tech.md" "## Labels" "12"` — tech.md の実際の見出しは "## Wholework Label Management" であり "## Labels" とは完全一致しない。verify-executor は heading の部分一致マッチを使用するため "Labels" (複数形) が "Label Management" の "Label" と一致しない可能性がある。`/verify` 時に UNCERTAIN になった場合はポストマージ確認で補完すること。
 - `docs/ja/tech.md` の更新はアクセプタンス基準に検証コマンドがないため自己チェックのみ。
 - `retro/code` ラベルは setup-labels.sh の auto-bootstrap 機構 (gh-label-transition.sh 経由) により初回スキル実行時に自動作成される。SKILL.md に個別のラベル存在チェックは不要。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- `section_contains "docs/tech.md" "## Labels" "12"` の verify command は Spec Notes 通り UNCERTAIN となった。実際の見出しは `## Wholework Label Management` であり、"Labels" (複数形) と部分一致しない。/verify 時にポストマージ確認で補完する予定。
+
+### Rework
+- N/A
