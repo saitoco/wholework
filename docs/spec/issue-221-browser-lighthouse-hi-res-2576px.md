@@ -57,3 +57,31 @@ Claude Opus 4.7 は最大 2,576 px (long edge) の高解像度画像をサポー
 
 ### Rework
 - `modules/browser-adapter.md` の Token budget セクションの末尾文言を1回修正（"scale-factor conversion" という語の除去）。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件は5つすべて verify コマンド付きで定義されており、自動検証可能な品質。`file_not_contains` による禁止表現チェックも含まれており、Spec の注意書きと対になっている。
+- Specの Notes に「scale-factor conversion を誤って追加しないよう注意」と明記されていたにもかかわらず、実装時に同語を含む表現が生成された。注意書きの効果が限定的だったことが示唆される。
+
+#### design
+- 設計は実装と一致。変更対象ファイル（browser-adapter.md, lighthouse-adapter.md）と追加セクション（Token budget, Notes）が明確に指定されており、逸脱なし。
+
+#### code
+- 実装コミット（bc91c7c）後に fix コミット（41a88f2）が1件。"scale-factor conversion" という禁止語を含む表現を1回書き直した。
+- `file_not_contains` verify コマンドが実際にこの誤りを捕捉したことが確認されており、フィードバックループが機能した例といえる。
+
+#### review
+- パッチルート（direct commit to main）のため、正式な PR レビューなし。小規模変更（+16行）でパッチルートとして妥当。
+
+#### merge
+- `closes #221` を含む初回コミット後、fix コミットで直接 main に push。コンフリクトなし。
+
+#### verify
+- 全5件の pre-merge 条件が PASS。`section_contains` による特定セクション内検索が正常動作。
+- Post-merge 条件2件（`verify-type: manual`）は自動検証対象外であり、手動確認として残存。これは正しい動作。
+
+### Improvement Proposals
+- N/A
