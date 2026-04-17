@@ -59,7 +59,6 @@ fi
 # 2. Extract Issues without triaged label, apply --limit, and output
 echo "$ISSUES_JSON" | jq -r '
     [.[] | select(
-        (.labels | map(.name) | index("triaged") | not) and
-        (.labels | map(.name) | any(startswith("phase/")) | not)
+        (.labels | map(.name) | index("triaged") | not)
     ) | .number] | .[]
 ' | head -n "$LIMIT"

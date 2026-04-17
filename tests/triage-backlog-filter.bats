@@ -113,19 +113,19 @@ MOCK
     [[ "$output" == *"--assignee"* ]] || [[ "$stderr" == *"--assignee"* ]]
 }
 
-@test "excludes issues with phase/* labels" {
+@test "includes issues with phase/* labels when not triaged" {
     GH_ISSUE_LIST_RESPONSE='[
         {"number":1,"title":"Issue 1","labels":[]},
         {"number":2,"title":"Issue 2","labels":[{"name":"phase/verify"}]},
         {"number":3,"title":"Issue 3","labels":[{"name":"phase/code"}]},
-        {"number":4,"title":"Issue 4","labels":[]}
+        {"number":4,"title":"Issue 4","labels":[{"name":"triaged"}]}
     ]'
     export GH_ISSUE_LIST_RESPONSE
 
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"1"* ]]
-    [[ "$output" == *"4"* ]]
-    ! echo "$output" | grep -q "^2$"
-    ! echo "$output" | grep -q "^3$"
+    echo "$output" | grep -q "^1$"
+    echo "$output" | grep -q "^2$"
+    echo "$output" | grep -q "^3$"
+    ! echo "$output" | grep -q "^4$"
 }
