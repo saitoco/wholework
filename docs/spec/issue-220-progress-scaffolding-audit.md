@@ -48,3 +48,25 @@ Intentional progress outputs to preserve (Preserved section of audit report):
 - Completion/error reports at end of skills — user feedback on workflow result
 
 The `docs/reports/` directory already exists but is absent from `docs/structure.md` Directory Layout. Steps 3 and 4 correct this.
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation followed Spec steps 1–4 as designed.
+
+### Design Gaps/Ambiguities
+- None identified. The pre-determined findings in the Notes section were accurate and confirmed by the audit scan.
+
+### Rework
+- None.
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+The Spec file (Overview, line 7) stated "補助ファイル 9ファイル" but the actual count was 12. This figure was propagated verbatim into the audit report's Findings section, creating a factual inaccuracy. The audit conclusion (zero redundant scaffolding) was unaffected, but it shows that pre-determined quantitative claims in Spec files are not automatically verified against current state during `/code`. Consider adding a `<!-- verify: command "..." -->` hint for numeric scope claims when precision matters.
+
+### Recurring Issues
+Nothing to note. Only one SHOULD issue found; no recurring pattern.
+
+### Acceptance Criteria Verification Difficulty
+Nothing to note. All 4 pre-merge conditions were `file_exists` / `section_contains` commands, all resolved as PASS without ambiguity. No UNCERTAINs. Verify commands were well-formed and accurately reflected the deliverables.

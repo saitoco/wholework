@@ -41,6 +41,7 @@ wholework/
 │   ├── guide/           # ユーザー向けマニュアル（index、quick-start、workflow、customization、troubleshooting、adapter-guide、figma-best-practices）（project）
 │   ├── {lang}/          # /doc translate {lang} が生成する言語別翻訳（docs/{lang}/）
 │   ├── spec/            # Issue 仕様
+│   ├── reports/         # 最適化・監査レポート
 │   └── stats/           # プロジェクト健全性診断レポート（/audit stats が生成、YYYY-MM-DD.md）
 ├── .wholework/          # プロジェクトローカルな Wholework 設定（ユーザー管理、wholework リポジトリでは追跡しない）
 │   ├── adapters/        # 検証 adapter のオーバーライド
