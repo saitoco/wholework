@@ -320,7 +320,15 @@ Reuse all open issues data already retrieved in Step 1 to calculate Impact (no a
 
 - `Impact = min(10, blocking × 3 + mentions × 1 + parent_flag × 2 + shared_flag × 2)`
 - Alignment: Level 1 (-3 to 5), Level 2 (-2 to 3), Level 3 (Type correction -1 to 1)
-- Use normalization table to convert to Value 1–5 (same table as backlog analysis)
+- Use the following normalization table to convert raw scores to Value 1–5 (thresholds adjust by fallback level to avoid skewed distribution):
+
+  | Value | Level 1 (raw -3 to 16) | Level 2 (raw -2 to 13) | Level 3 (raw -1 to 11) |
+  |-------|------------------------|------------------------|------------------------|
+  | 5 | 10–16 | 9–13 | 8–11 |
+  | 4 | 7–9 | 6–8 | 5–7 |
+  | 3 | 4–6 | 3–5 | 3–4 |
+  | 2 | 1–3 | 1–2 | 1–2 |
+  | 1 | 0 or below | 0 or below | 0 or below |
 
 **Output JSON schema:**
 

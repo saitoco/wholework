@@ -287,7 +287,16 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER issue
 
 ### Step 4: Reference Steering Documents (if present)
 
-Same as New Issue Creation Step 2.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH` and `STEERING_DOCS_PATH` for use in subsequent steps.
+
+Check whether the following steering documents exist using Glob, then read only those that exist:
+
+- `$STEERING_DOCS_PATH/product.md` — project vision, Non-Goals, Terms (terminology consistency)
+- `$STEERING_DOCS_PATH/tech.md` — Forbidden Expressions (to avoid prohibited terms)
+
+**If none exist, skip this step and proceed to the next.**
+
+Use the referenced documents in subsequent steps for vision alignment, terminology consistency, and forbidden expression avoidance.
 
 ### Step 5: Ambiguity Detection
 
@@ -295,11 +304,21 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md`. Get Size with `get-i
 
 ### Step 6: Classify Acceptance Criteria and Assign Verify Commands
 
-Same as New Issue Creation Step 4. Propose "Pre-merge" / "Post-merge" section split for existing issues lacking sections.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-patterns.md` and follow the "Processing Steps" section guidelines to design verify command patterns.
+
+Follow the full procedure defined in "New Issue Creation → Step 4: Classify Acceptance Criteria and Assign Verify Commands" above: classify each acceptance criterion as "pre-merge" or "post-merge", assign verify commands using the supported command table, apply translation document exclusions, prefer dedicated commands over `command` hints, apply `--when` modifiers, perform MCP tool detection, and assign verify-type tags to post-merge conditions.
+
+Propose "Pre-merge" / "Post-merge" section split for existing issues lacking sections.
 
 ### Step 7: Clarification Questions
 
-Collect ambiguity points and missing information. Process with priority sort → auto-resolution → pre-investigation → user Q&A (same approach as New Issue Creation Step 5).
+Collect ambiguity points and missing information. Process as follows:
+
+**Priority sort:** Sort ambiguity points from Step 5 in descending order of impact (scope of effect on acceptance criteria text, degree of propagation to implementation approach).
+
+**Auto-resolution:** After priority sorting, check auto-resolution conditions from lowest-priority items upward. Auto-resolve when all of the following hold: uniquely inferrable from existing codebase patterns; same judgment made in past similar issues (in retrospectives); acceptance criteria text is unaffected regardless of which option is chosen. Present items not meeting any condition to the user.
+
+**Pre-investigation (for each unresolved ambiguity point):** Refer to `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md`'s "Sources to investigate" column and investigate sequentially (no sub-agents). Format with investigation results + recommended option + alternative + confirmation question, or with "no related patterns" note as fallback.
 
 After confirming auto-resolved items, record them in an "Auto-Resolved Ambiguity Points" section appended to the issue body (combined with Step 8 body update). Skip the record if no items were auto-resolved.
 
@@ -352,7 +371,15 @@ Integrate outputs into a structured split proposal: sub-issue boundaries (from s
 
 #### Step 11c: Create sub-issues (after approval)
 
-Run the standard sub-issue creation flow (New Issue Creation Step 8, procedures 2–8).
+Run the standard sub-issue creation flow (New Issue Creation Step 9, procedures 2–8):
+2. Create sub-issues with `gh issue create`
+3. Redistribute acceptance criteria; retain only cross-cutting conditions in the parent
+3a. Run lightweight refinement loop per sub-issue (steering doc alignment, verify command assignment, lightweight ambiguity detection, auto-resolution, record unresolved points, update body)
+4. Set parent-child relationships via `addSubIssue` GraphQL mutation
+5. Set sub-issue dependencies with `addBlockedBy` if applicable
+6. Apply `phase/issue` label to each sub-issue
+7. Run lightweight triage for each sub-issue (skip Steps 1, 1.5, 7; inherit Type/Priority from parent; determine Size individually per sub-issue scope)
+8. Parent phase management: auto-close when all sub-issues done (no cross-cutting conditions); phase/verify + notify when cross-cutting conditions remain
 
 ---
 
@@ -360,11 +387,18 @@ Run the standard sub-issue creation flow (New Issue Creation Step 8, procedures 
 
 ### Step 12: Issue Retrospective
 
-Same as New Issue Creation Step 9.
+Post a retrospective comment to the issue covering: judgment rationale for ambiguity resolution, key policy decisions from Q&A, and reasons for acceptance criteria changes. Always create the section (write "Nothing to note" if no content).
+
+```bash
+mkdir -p .tmp
+# write to .tmp/issue-comment-$NUMBER.md
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $NUMBER .tmp/issue-comment-$NUMBER.md
+rm -f .tmp/issue-comment-$NUMBER.md
+```
 
 ### Step 13: Opportunistic Verification
 
-Same as New Issue Creation Step 10.
+If `opportunistic-verify: true` is set in `.wholework.yml`, read `${CLAUDE_PLUGIN_ROOT}/modules/opportunistic-verify.md` and follow "Processing Steps". Skill name: `/issue`. Skip if not set.
 
 ---
 
