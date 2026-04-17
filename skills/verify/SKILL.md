@@ -476,6 +476,9 @@ As the final step of the workflow, verify conducts a retrospective of the entire
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
      ```
+     ```bash
+     git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
+     ```
 
 ### Step 11: Worktree Exit (merge-to-main)
 

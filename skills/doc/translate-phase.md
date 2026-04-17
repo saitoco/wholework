@@ -144,6 +144,13 @@ git add README.md README.{lang}.md docs/
 git commit -s -m "docs: regenerate {lang} translations
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+```
+
+```bash
+git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
+```
+
+```bash
 git push origin HEAD
 ```
 

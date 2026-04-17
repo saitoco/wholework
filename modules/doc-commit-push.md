@@ -26,6 +26,11 @@ Runs `git status --porcelain` first; if there are no changes, exits silently wit
    git commit -s -m "docs: ${SUMMARY}
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+   ```
+   ```bash
+   git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
+   ```
+   ```bash
    git push origin HEAD
    ```
 6. Display the commit hash and push result to confirm completion.

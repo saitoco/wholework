@@ -120,3 +120,4 @@ The following 3 issues were created for changes that require redesign or multi-s
 | #233 | `skills/audit/SKILL.md` | Expand 4 cross-subcommand "same procedure" references to inline steps |
 | #234 | `skills/doc/SKILL.md` | Expand 2 cross-section references in sync/init flows |
 | #235 | `skills/review/SKILL.md` | Enumerate all three reviewer types explicitly in "wait → resolve" flow description |
+| #239 | Multiple SKILL.md files | Sub-agent sign-off non-compliance; add DCO assertion guards to enforce `Signed-off-by:` in all commits |

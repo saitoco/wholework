@@ -721,6 +721,11 @@ Reflect on the review phase; record improvement proposals in the Spec only. Issu
      git commit -s -m "Add review retrospective for issue #$ISSUE_NUMBER
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+     ```
+     ```bash
+     git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
+     ```
+     ```bash
      git push origin HEAD
      ```
 3. **If improvement proposals exist**: record in review retrospective only (do not create issues; proposals are aggregated in `/verify`)

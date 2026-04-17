@@ -558,6 +558,10 @@ git add $SPEC_PATH/issue-$NUMBER-short-title.md
 git commit -s -m "Add design for issue #$NUMBER"
 ```
 
+```bash
+git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
+```
+
 ### Step 13: Spec Retrospective
 
 **SPEC_DEPTH=full only. Skip if SPEC_DEPTH=light.**
@@ -607,6 +611,9 @@ Reflect on the specification phase and present improvement suggestions to the us
    ```bash
    git add $SPEC_PATH/issue-$NUMBER-short-title.md
    git commit -s -m "Add retrospective notes for issue #$NUMBER"
+   ```
+   ```bash
+   git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
    ```
 
 ### Step 14: Worktree Exit (merge-to-main)

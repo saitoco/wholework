@@ -280,6 +280,8 @@ Handle results as follows:
 
 Include `closes #N` only when the base branch is `main` (GitHub auto-close via `closes #N` only works when merging to the default branch).
 
+**DCO compliance: use `git commit -s` to add `Signed-off-by:`. Do NOT use the global HEREDOC pattern from `~/.claude/CLAUDE.md` — it omits `-s`.**
+
 ```bash
 git add <changed files>
 # If BASE_BRANCH is main: "{prefix} <summary> (closes #$NUMBER)"
@@ -287,6 +289,10 @@ git add <changed files>
 git commit -s -m "{prefix} <summary>
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+```
+
+```bash
+git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
 ```
 
 Push is done in Step 13 Worktree Exit (merge-to-main pattern). Label transition happens after push completes (after Step 13).
@@ -397,6 +403,9 @@ If there are items under "Deviations from Design" (reordering of implementation 
    git commit -s -m "Add code retrospective for issue #$NUMBER
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+   ```
+   ```bash
+   git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
    ```
    - **For pr route**: also push from within the worktree:
      ```bash

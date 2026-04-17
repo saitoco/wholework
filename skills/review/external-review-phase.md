@@ -45,6 +45,7 @@ After review completion, if issues exist:
    - Edit files with Edit tool
    - Stage with `git add`
    - Commit with `git commit -s -m "Address Copilot review: {fix summary}"`
+   - Verify sign-off: `git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }`
    - Push with `git push`
 
 3. **Record results** (used in Step 14 summary posting):
@@ -87,6 +88,7 @@ After review completion, if issues exist, apply them using the same procedure as
 1. **Assess each issue** (requires fix / does not require fix)
 2. **Fix work**: Edit → git add → git commit → git push
    - Commit with `git commit -s -m "Address Claude Code Review: {fix summary}"`
+   - Verify sign-off: `git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }`
 3. **Record results**:
 
 ```markdown
@@ -127,6 +129,7 @@ After review completion, if issues exist, apply them using the same procedure as
 1. **Assess each issue** (requires fix / does not require fix)
 2. **Fix work**: Edit → git add → git commit → git push
    - Commit with `git commit -s -m "Address CodeRabbit review: {fix summary}"`
+   - Verify sign-off: `git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }`
 3. **Record results**:
 
 ```markdown
