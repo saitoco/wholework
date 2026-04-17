@@ -42,3 +42,33 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件に `verify:` コマンドが全条件に付与されており、自動検証率100%を達成。
+- `file_not_contains` / `file_contains` による具体的な jq パターン指定で、意図が明確に検証可能だった。
+
+#### design
+- Spec の実装手順（ファイル名・行番号・変更内容）が正確で、実装との乖離なし。
+- patch route（直接 main コミット）の判断は適切。変更規模（2ファイル・数行）に対して PR オーバーヘッドは不要だった。
+
+#### code
+- 単一クリーンコミット（fixup/amend なし）で実装完了。設計からの逸脱なし。
+- テスト置換（excludes → includes）が設計通りに実施された。
+
+#### review
+- patch route のため PR レビューなし。変更規模・リスクを考慮すると適切な判断。
+
+#### merge
+- 直接 main へのコミット。競合なし、CI 影響（`triage-backlog-filter.bats`）なし。
+
+#### verify
+- CI の `run-auto-sub.bats` 失敗（Issue #219 関連）が本 Issue の検証に影響しないことを正確に識別できた。
+- ローカルテスト実行で `triage-backlog-filter.bats` 全8テストのパスを確認し、CI失敗が無関係であることを担保できた。
+- `github_check` に `gh run list` 形式（patch route 互換）を使用したことで、PR 不在でも適切に検証できた。
+
+### Improvement Proposals
+- N/A
