@@ -781,6 +781,7 @@ Documentation consistency check (review-spec aspect 2, review-light aspect 4) ve
 - No missing updates in README/CLAUDE.md/workflow.md etc.
 - Paths and command examples match implementation
 - When adding/modifying documentation, body descriptions and tables/lists are consistent
+- When top-level `docs/*.md` files are changed, the corresponding `docs/ja/` mirror files are also updated (excluding `docs/spec/`, `docs/reports/`, and `docs/ja/` subdirectories)
 
 For Python script changes, additionally verify:
 
