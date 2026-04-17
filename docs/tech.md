@@ -65,25 +65,27 @@ English | [日本語](ja/tech.md)
   - **Axis 2 — Adaptive Thinking** (`--effort`): `claude -p` supports `low/medium/high/max` levels (confirmed via `claude --help`). Implemented in `run-*.sh` with phase-specific effort levels (see matrix below). Combining medium effort with an Opus advisor achieves quality comparable to default-effort Sonnet at lower cost (per Anthropic benchmarks).
   - **Axis 3 — Advisor strategy** (`advisor_20260301`): Anthropic API beta feature (`advisor-tool-2026-03-01` header required). Enabled via the `--betas` flag — API key users only; not available with OAuth/subscription auth (the `run-*.sh` default). Performance gains: Sonnet + Opus advisor achieves SWE-bench +2.7 pp and cost −11.9% vs. Sonnet alone; Haiku + Opus advisor achieves BrowseComp 41.2% (vs. 19.7% solo) and cost −85% vs. Sonnet. Implementation in `run-*.sh` is a follow-up Issue.
 
-  **Phase-specific model and effort matrix** (`ssot_for: model-effort-matrix`):
+### Phase-specific model and effort matrix
 
-  | Component | Phase | Model | Effort | Rationale |
-  |-----------|-------|-------|--------|-----------|
-  | run-spec.sh | spec | Sonnet (Opus via `--opus` for L) | max | Design quality is critical; spec errors propagate to all subsequent phases. `/auto` passes `--opus` for L-size only (XL is split before spec) |
-  | run-code.sh | code | Sonnet | high | Implementation requires thorough reasoning |
-  | run-review.sh | review | Sonnet | high | Review orchestration; sub-agents handle deep analysis |
-  | run-issue.sh | issue | Sonnet | high | L/XL scope analysis and sub-issue splitting require thorough orchestration |
-  | run-verify.sh | verify | Sonnet | medium | Structured acceptance testing; moderate complexity |
-  | run-merge.sh | merge | Sonnet | low | Mechanical merge operation; minimal reasoning needed |
-  | review-bug | review | Opus | — | Bug detection requires highest accuracy (sub-agent, effort inherited from parent) |
-  | review-spec | review | Opus | — | Spec deviation requires high accuracy (sub-agent, effort inherited from parent) |
-  | review-light | review | Sonnet | — | Lightweight integrated review (sub-agent, effort inherited from parent) |
-  | issue-scope | issue (L/XL only) | Opus | — | Called by `/issue` Step 11a for L/XL parallel investigation. Scope identification accuracy is critical for sub-issue boundary decisions |
-  | issue-risk | issue (L/XL only) | Opus | — | Called by `/issue` Step 11a for L/XL parallel investigation. Risk assessment accuracy improves acceptance criteria quality |
-  | issue-precedent | issue (L/XL only) | Opus | — | Called by `/issue` Step 11a for L/XL parallel investigation. Precedent extraction improves acceptance criteria quality |
-  | triage (skill) | triage | Sonnet | — | Metadata assignment; Sonnet sufficient. Invoked inline (no `run-*.sh` wrapper) — including when `/auto` chains triage for unlabeled issues — so effort is not set |
+(`ssot_for: model-effort-matrix`)
 
-  SSoT note: This matrix is the single source of truth for all model and effort settings. When changing model/effort in run-*.sh, agents, or skills, update this table first.
+| Component | Phase | Model | Effort | Rationale |
+|-----------|-------|-------|--------|-----------|
+| run-spec.sh | spec | Sonnet (Opus via `--opus` for L) | max | Design quality is critical; spec errors propagate to all subsequent phases. `/auto` passes `--opus` for L-size only (XL is split before spec) |
+| run-code.sh | code | Sonnet | high | Implementation requires thorough reasoning |
+| run-review.sh | review | Sonnet | high | Review orchestration; sub-agents handle deep analysis |
+| run-issue.sh | issue | Sonnet | high | L/XL scope analysis and sub-issue splitting require thorough orchestration |
+| run-verify.sh | verify | Sonnet | medium | Structured acceptance testing; moderate complexity |
+| run-merge.sh | merge | Sonnet | low | Mechanical merge operation; minimal reasoning needed |
+| review-bug | review | Opus | — | Bug detection requires highest accuracy (sub-agent, effort inherited from parent) |
+| review-spec | review | Opus | — | Spec deviation requires high accuracy (sub-agent, effort inherited from parent) |
+| review-light | review | Sonnet | — | Lightweight integrated review (sub-agent, effort inherited from parent) |
+| issue-scope | issue (L/XL only) | Opus | — | Called by `/issue` Step 11a for L/XL parallel investigation. Scope identification accuracy is critical for sub-issue boundary decisions |
+| issue-risk | issue (L/XL only) | Opus | — | Called by `/issue` Step 11a for L/XL parallel investigation. Risk assessment accuracy improves acceptance criteria quality |
+| issue-precedent | issue (L/XL only) | Opus | — | Called by `/issue` Step 11a for L/XL parallel investigation. Precedent extraction improves acceptance criteria quality |
+| triage (skill) | triage | Sonnet | — | Metadata assignment; Sonnet sufficient. Invoked inline (no `run-*.sh` wrapper) — including when `/auto` chains triage for unlabeled issues — so effort is not set |
+
+SSoT note: Model values in run-*.sh use CLI aliases (sonnet/opus); update this table when changing model/effort in run-*.sh, agents, or skills.
 
 ## Wholework Label Management
 

@@ -101,7 +101,7 @@ teardown() {
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
 
-    grep -q "ANTHROPIC_MODEL=claude-sonnet-4-6" "$CLAUDE_CALL_LOG"
+    grep -q "ANTHROPIC_MODEL=sonnet" "$CLAUDE_CALL_LOG"
 }
 
 @test "success: CLAUDECODE env var is not inherited by claude subprocess" {

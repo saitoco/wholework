@@ -78,13 +78,13 @@ teardown() {
     # Verify claude was called with correct arguments
     # Direct SKILL.md body mode: prompt contains ARGUMENTS: 123
     grep -q "ARGUMENTS: 123" "$CLAUDE_CALL_LOG"
-    grep -q -- "--model claude-sonnet-4-6" "$CLAUDE_CALL_LOG"
+    grep -q -- "--model sonnet" "$CLAUDE_CALL_LOG"
     grep -q -- "--dangerously-skip-permissions" "$CLAUDE_CALL_LOG"
     # Should use direct prompt, not skill invocation (/verify 123)
     ! grep -q -- "-p /verify 123" "$CLAUDE_CALL_LOG"
 
     # Verify ANTHROPIC_MODEL environment variable was set
-    grep -q "ANTHROPIC_MODEL=claude-sonnet-4-6" "$CLAUDE_CALL_LOG"
+    grep -q "ANTHROPIC_MODEL=sonnet" "$CLAUDE_CALL_LOG"
 }
 
 @test "success: output shows start and finish messages" {

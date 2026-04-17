@@ -92,7 +92,7 @@ teardown() {
     grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
 
     # Verify ANTHROPIC_MODEL environment variable was set
-    grep -q "ANTHROPIC_MODEL=claude-sonnet-4-6" "$CLAUDE_CALL_LOG"
+    grep -q "ANTHROPIC_MODEL=sonnet" "$CLAUDE_CALL_LOG"
 }
 
 @test "success: ARGUMENTS contains --non-interactive flag" {

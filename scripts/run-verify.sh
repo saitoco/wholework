@@ -86,9 +86,9 @@ fi
 # See: https://github.com/anthropics/claude-code/issues/22362
 VERIFY_TMPOUT=$(mktemp)
 set +e
-ANTHROPIC_MODEL=claude-sonnet-4-6 \
+ANTHROPIC_MODEL=sonnet \
   env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
-    --model claude-sonnet-4-6 \
+    --model sonnet \
     --effort medium \
     --dangerously-skip-permissions 2>&1 | tee "$VERIFY_TMPOUT"
 EXIT_CODE=$?
