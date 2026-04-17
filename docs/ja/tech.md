@@ -59,20 +59,22 @@
 
 (`ssot_for: model-effort-matrix`)
 
+エントリはワークフロー順（triage → issue → spec → code → review → merge → verify）でグループ化: まずオーケストレーションスクリプト、次にフェーズ別のサブエージェント、最後に skill のみのエントリ。
+
 | コンポーネント | フェーズ | モデル | Effort | 根拠 |
 |-----------|-------|-------|--------|-----------|
+| run-issue.sh | issue | Sonnet | high | L/XL のスコープ分析とサブ issue 分割には徹底したオーケストレーションが必要 |
 | run-spec.sh | spec | Sonnet（L では `--opus` で Opus） | max | 設計品質が重要、spec のエラーは後続全フェーズに波及する。`/auto` は L サイズのみ `--opus` を渡す（XL は spec 前に分割済み） |
 | run-code.sh | code | Sonnet | high | 実装には徹底した推論が必要 |
 | run-review.sh | review | Sonnet | high | レビューのオーケストレーション、深い分析はサブエージェントが担う |
-| run-issue.sh | issue | Sonnet | high | L/XL のスコープ分析とサブ issue 分割には徹底したオーケストレーションが必要 |
-| run-verify.sh | verify | Sonnet | medium | 構造化された受入テスト、中程度の複雑度 |
 | run-merge.sh | merge | Sonnet | low | 機械的なマージ操作、推論は最小限でよい |
-| review-bug | review | Opus | — | バグ検出は最高精度が必要（サブエージェント、effort は親から継承） |
-| review-spec | review | Opus | — | Spec 逸脱は高精度が必要（サブエージェント、effort は親から継承） |
-| review-light | review | Sonnet | — | 軽量統合レビュー（サブエージェント、effort は親から継承） |
+| run-verify.sh | verify | Sonnet | medium | 構造化された受入テスト、中程度の複雑度 |
 | issue-scope | issue（L/XL のみ） | Opus | — | `/issue` Step 11a で L/XL 並列調査向けに呼び出される。スコープ特定精度はサブ issue 境界判断に直結 |
 | issue-risk | issue（L/XL のみ） | Opus | — | `/issue` Step 11a で L/XL 並列調査向けに呼び出される。リスク評価精度が受入条件品質を高める |
 | issue-precedent | issue（L/XL のみ） | Opus | — | `/issue` Step 11a で L/XL 並列調査向けに呼び出される。前例抽出が受入条件品質を高める |
+| review-bug | review | Opus | — | バグ検出は最高精度が必要（サブエージェント、effort は親から継承） |
+| review-spec | review | Opus | — | Spec 逸脱は高精度が必要（サブエージェント、effort は親から継承） |
+| review-light | review | Sonnet | — | 軽量統合レビュー（サブエージェント、effort は親から継承） |
 | triage（skill） | triage | Sonnet | — | メタデータ付与、Sonnet で十分。インライン実行（`run-*.sh` ラッパーなし）— `/auto` が未ラベル issue に triage を連鎖させる場合も含む — のため effort は設定しない |
 
 SSoT 備考: run-*.sh のモデル値は CLI エイリアス（sonnet/opus）を使用する。run-*.sh、agents、skills でモデル/effort を変更する際はこの表を更新すること。

@@ -69,20 +69,22 @@ English | [日本語](ja/tech.md)
 
 (`ssot_for: model-effort-matrix`)
 
+Entries are grouped by workflow order (triage → issue → spec → code → review → merge → verify): orchestration scripts first, then sub-agents per phase, then skill-only entries.
+
 | Component | Phase | Model | Effort | Rationale |
 |-----------|-------|-------|--------|-----------|
+| run-issue.sh | issue | Sonnet | high | L/XL scope analysis and sub-issue splitting require thorough orchestration |
 | run-spec.sh | spec | Sonnet (Opus via `--opus` for L) | Sonnet: max; Opus: xhigh (default), max (explicit `--max`) | Design quality is critical; spec errors propagate to all subsequent phases. `/auto` passes `--opus` for L-size only (XL is split before spec) |
 | run-code.sh | code | Sonnet | high | Implementation requires thorough reasoning |
 | run-review.sh | review | Sonnet | high | Review orchestration; sub-agents handle deep analysis |
-| run-issue.sh | issue | Sonnet | high | L/XL scope analysis and sub-issue splitting require thorough orchestration |
-| run-verify.sh | verify | Sonnet | medium | Structured acceptance testing; moderate complexity |
 | run-merge.sh | merge | Sonnet | low | Mechanical merge operation; minimal reasoning needed |
-| review-bug | review | Opus | — | Bug detection requires highest accuracy (sub-agent, effort inherited from parent) |
-| review-spec | review | Opus | — | Spec deviation requires high accuracy (sub-agent, effort inherited from parent) |
-| review-light | review | Sonnet | — | Lightweight integrated review (sub-agent, effort inherited from parent) |
+| run-verify.sh | verify | Sonnet | medium | Structured acceptance testing; moderate complexity |
 | issue-scope | issue (L/XL only) | Opus | — | Called by `/issue` Step 11a for L/XL parallel investigation. Scope identification accuracy is critical for sub-issue boundary decisions |
 | issue-risk | issue (L/XL only) | Opus | — | Called by `/issue` Step 11a for L/XL parallel investigation. Risk assessment accuracy improves acceptance criteria quality |
 | issue-precedent | issue (L/XL only) | Opus | — | Called by `/issue` Step 11a for L/XL parallel investigation. Precedent extraction improves acceptance criteria quality |
+| review-bug | review | Opus | — | Bug detection requires highest accuracy (sub-agent, effort inherited from parent) |
+| review-spec | review | Opus | — | Spec deviation requires high accuracy (sub-agent, effort inherited from parent) |
+| review-light | review | Sonnet | — | Lightweight integrated review (sub-agent, effort inherited from parent) |
 | triage (skill) | triage | Sonnet | — | Metadata assignment; Sonnet sufficient. Invoked inline (no `run-*.sh` wrapper) — including when `/auto` chains triage for unlabeled issues — so effort is not set |
 | merge (skill) | merge | Sonnet | — | Mechanical merge operation; `model: sonnet` fixed in frontmatter. Effort not set (skill invocation; `run-merge.sh` sets `low` effort) |
 | verify (skill) | verify | Sonnet | — | Structured acceptance testing; `model: sonnet` fixed in frontmatter. Effort not set (skill invocation; `run-verify.sh` sets `medium` effort) |
