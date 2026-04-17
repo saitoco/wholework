@@ -46,11 +46,11 @@
    git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
    ```
 
-2. `skills/spec/SKILL.md`, `skills/review/SKILL.md`, `skills/verify/SKILL.md` — 各 `git commit` コードブロック直後に同じ assertion guard を追加する (→ 受入条件 2, 3, 4)
+2. `skills/spec/SKILL.md`, `skills/review/SKILL.md`, `skills/verify/SKILL.md` — 各 `git commit` コードブロック直後に同じ assertion guard を追加する (→ 受入条件 2, 3, 4)。`skills/review/SKILL.md` は元のコードブロックに `git push origin HEAD` が含まれていたため、commit/guard/push の 3 ブロックに分割して追加した。
 
-3. `modules/doc-commit-push.md` — Step 5 の `git commit` 行直後 (`git push origin HEAD` の前) に assertion guard を追加する (→ 受入条件 5)
+3. `modules/doc-commit-push.md` — Step 5 の `git commit` 行直後 (`git push origin HEAD` の前) に assertion guard を追加する (→ 受入条件 5)。元のブロックを commit/guard/push の 3 ブロックに分割した。
 
-4. `skills/review/external-review-phase.md`, `skills/doc/translate-phase.md` — 各 `git commit` 行直後に assertion guard を追加する (scope 記載、acceptance criteria 外)
+4. `skills/review/external-review-phase.md` — commit 手順 (7.2, 7.4, 7.6) の箇条書きにおいて、Commit 行の直下に `- Verify sign-off: ...` の箇条書き形式で assertion guard を追加した (コードブロックではなくインライン形式を選択した理由: 元の手順が箇条書きで記述されており、コードブロックでは構造が浮く)。`skills/doc/translate-phase.md` は commit がコードブロック形式だったため、commit/guard/push の 3 ブロックに分割して追加した (scope 記載、acceptance criteria 外)。
 
 5. `docs/reports/literalism-audit.md` — "### Follow-up Issues" テーブルに以下を追記する (→ 受入条件 7):
    ```
@@ -81,3 +81,18 @@
 - 方針 3 (post-commit amend) は非採用 — recovery flow は複雑かつ事後修正のため、副作用として "Amended: " や "amend" が commit history に混入するリスクがある
 - `skills/code/SKILL.md` のみ DCO 警告を追加 (最も sign-off 欠落が頻発するフェーズ、かつ acceptance criteria 6 が明示的に要求)
 - `external-review-phase.md` と `translate-phase.md` は acceptance criteria に含まれないが Issue scope に記載があるため対応対象とする
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Specには`external-review-phase.md`の対象として行番号 L47/L88/L129 が挙げられているが、これらはコードブロックではなく箇条書きテキスト内のインライン記述だった。コードブロック直後への追加ではなく、コミット行の直下の箇条書きとして guard を追加する形で対応した。`translate-phase.md` はコードブロック形式だったためSpec通り別ブロックで追加した。
+- `skills/review/SKILL.md` の review retrospective commit は、specが「L721 直後に追加」と記載しているが、実際は `git push origin HEAD` との関係上、push の前にガードを挿入する必要があったため、commit ブロックと push ブロックを分離する形で対応した。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
