@@ -87,7 +87,7 @@ SSoT 備考: run-*.sh のモデル値は CLI エイリアス（sonnet/opus）を
 
 | グループ | 数 | ラベル | 作成条件 |
 |----------|-----|--------|----------|
-| 常時 | 11 | `phase/*`（7）、`triaged`、`retro/verify`、`audit/drift`、`audit/fragility` | 常に作成 |
+| 常時 | 12 | `phase/*`（7）、`triaged`、`retro/verify`、`retro/code`、`audit/drift`、`audit/fragility` | 常に作成 |
 | フォールバック | 17 | `type/*`（3）、`priority/*`（4）、`size/*`（5）、`value/*`（5） | 対応する GitHub 機能が未構成の場合に作成（以下参照） |
 
 ### 自動ブートストラップ

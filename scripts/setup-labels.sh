@@ -10,7 +10,7 @@
 #   --no-fallback   Skip environment detection; only create always-group labels
 #
 # Label groups:
-#   Always-group (11 labels): phase/*, triaged, retro/verify, audit/drift, audit/fragility
+#   Always-group (12 labels): phase/*, triaged, retro/verify, retro/code, audit/drift, audit/fragility
 #   Fallback-group (17 labels): type/*, priority/*, size/*, value/*
 #     Created when corresponding GitHub feature (Issue Types / Projects field) is unavailable.
 #     Use --no-fallback to skip environment detection and omit this group entirely.
@@ -50,6 +50,7 @@ ALWAYS_LABELS=(
     "phase/done|1B4F8A|Complete"
     "triaged|0E8A16|Triaged"
     "retro/verify|5319E7|Verify retrospective attached"
+    "retro/code|5319E7|Code retrospective follow-up"
     "audit/drift|D93F0B|Audit: documentation drift detected"
     "audit/fragility|E4E669|Audit: structural fragility detected"
 )

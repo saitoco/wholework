@@ -55,7 +55,7 @@ label_created() {
 @test "env=full: only always-group labels created when all features available" {
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
-    [ "$(count_label_creates)" -eq 11 ]
+    [ "$(count_label_creates)" -eq 12 ]
 }
 
 @test "env=full: phase/* labels all present" {
@@ -75,6 +75,7 @@ label_created() {
     [ "$status" -eq 0 ]
     label_created "triaged"
     label_created "retro/verify"
+    label_created "retro/code"
     label_created "audit/drift"
     label_created "audit/fragility"
 }
@@ -96,7 +97,7 @@ label_created() {
 # --- Environment: all features unavailable ---
 # All 11 always + 17 fallback = 28 labels
 
-@test "env=none: all 28 labels created when no features available" {
+@test "env=none: all 29 labels created when no features available" {
     cat > "$MOCK_DIR/gh-graphql.sh" <<'MOCK'
 #!/bin/bash
 echo "0"
@@ -105,7 +106,7 @@ MOCK
 
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
-    [ "$(count_label_creates)" -eq 28 ]
+    [ "$(count_label_creates)" -eq 29 ]
 }
 
 @test "env=none: fallback type/* labels created when Issue Types unavailable" {
@@ -218,6 +219,7 @@ if [ "$1" = "label" ] && [ "$2" = "list" ]; then
     echo "phase/done"
     echo "triaged"
     echo "retro/verify"
+    echo "retro/code"
     echo "audit/drift"
     echo "audit/fragility"
 fi
@@ -227,9 +229,9 @@ MOCK
 
     run bash "$SCRIPT" --force
     [ "$status" -eq 0 ]
-    # All 11 always-group labels must be created with --force
-    [ "$(count_label_creates)" -eq 11 ]
-    [ "$(grep -c -- '--force' "$GH_CALL_LOG")" -eq 11 ]
+    # All 12 always-group labels must be created with --force
+    [ "$(count_label_creates)" -eq 12 ]
+    [ "$(grep -c -- '--force' "$GH_CALL_LOG")" -eq 12 ]
 }
 
 @test "--force: --force flag is NOT used without the option" {
@@ -250,7 +252,7 @@ MOCK
 
     run bash "$SCRIPT" --no-fallback
     [ "$status" -eq 0 ]
-    [ "$(count_label_creates)" -eq 11 ]
+    [ "$(count_label_creates)" -eq 12 ]
     run grep "label create type/" "$GH_CALL_LOG"
     [ "$status" -ne 0 ]
 }
@@ -309,5 +311,5 @@ MOCK
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
     [[ "$output" == *"Label setup complete"* ]]
-    [[ "$output" == *"11"* ]]
+    [[ "$output" == *"12"* ]]
 }
