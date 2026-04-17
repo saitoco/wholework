@@ -114,4 +114,4 @@ Claude Opus 4.7 supports images up to **2576 px** on the long edge (~3.75 MP), c
 - For pixel-level detail or small text: use the full 2576 px resolution.
 - When using Playwright MCP's `browser_take_screenshot`, the screenshot width can be controlled via `browser_resize` before capture.
 
-No scale-factor conversion is needed: Opus 4.7 returns pointing and bounding-box coordinates in actual pixels (1:1 mapping).
+Coordinates are 1:1 with actual pixels on Opus 4.7 — no coordinate scaling is required.
