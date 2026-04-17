@@ -46,3 +46,14 @@ Claude Opus 4.7 は最大 2,576 px (long edge) の高解像度画像をサポー
 
 - `file_not_contains "modules/browser-adapter.md" "scale-factor conversion"` は現時点の browser-adapter.md に該当文字列が存在しないため、変更なしで PASS する。実装時に "scale-factor conversion" を誤って追加しないよう注意すること。
 - lighthouse-adapter.md は現在 AI ビジョンでスクリーンショットを判定する機能を持たないが、将来の視覚検証統合を見越した能力文書として 2576px 記載を追加する。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- Specの Notes セクションに「scale-factor conversion を誤って追加しないよう注意」と記載されていたが、Token budget セクションの説明文として "No scale-factor conversion is needed" という表現を使用してしまった。verify check で FAIL となり、当該表現を "Coordinates are 1:1 with actual pixels on Opus 4.7 — no coordinate scaling is required." に修正して対応した。
+
+### Rework
+- `modules/browser-adapter.md` の Token budget セクションの末尾文言を1回修正（"scale-factor conversion" という語の除去）。
