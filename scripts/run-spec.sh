@@ -11,7 +11,7 @@ MODEL="claude-sonnet-4-6"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --opus)
-      MODEL="claude-opus-4-6"
+      MODEL="claude-opus-4-7"
       shift
       ;;
     *)
