@@ -63,3 +63,30 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Acceptance condition 7 (`section_contains "docs/tech.md" "## Labels" "12"`) の verify command で `"## Labels"` が実際の見出し `"## Wholework Label Management"` と一致しない問題を Spec の Notes セクションで事前に警告していた。設計品質として適切な自己チェックが機能していた。
+
+#### design
+- 設計通りの実装。変更対象ファイルと手順が明確に定義されており、実装との乖離なし。
+
+#### code
+- パッチルート（直コミット）で実装。fixup/amend なし。`closes #241` による自動クローズが機能。
+
+#### review
+- パッチルートのため PR レビューなし。`retro/code` ラベル付与のような軽微な変更には適切な判断。
+
+#### merge
+- 直コミットによるパッチルート。コンフリクトなし。
+
+#### verify
+- 条件7の `section_contains "docs/tech.md" "## Labels" "12"` は Spec の予測通り直接実行できず、`grep` による代替検証で PASS 判定。`section_contains` の部分一致ロジックが `"Labels"` と `"Label Management"` を一致させない既知問題の再確認。
+- 条件8（opportunistic）は `/code` の実際の実行が必要なため UNCERTAIN。これは想定内の結果。
+- 自動検証対象（Pre-merge 7条件）はすべて PASS。
+
+### Improvement Proposals
+- `section_contains` verify command の見出し部分一致ロジックを改善し、`"## Labels"` が `"## Wholework Label Management"` にマッチするようサブストリング一致をサポートすること（現状は完全な見出しレベルでのマッチが要求されている可能性がある）。該当モジュール: `modules/verify-executor.md`
