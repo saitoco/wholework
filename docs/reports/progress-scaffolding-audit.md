@@ -11,7 +11,7 @@ No removals or rewrites were necessary.
 
 ## Findings
 
-Patterns searched across all 10 `skills/*/SKILL.md` files, 9 skill auxiliary files, and 27 `modules/*.md` files:
+Patterns searched across all 10 `skills/*/SKILL.md` files, 12 skill auxiliary files, and 27 `modules/*.md` files:
 
 | Pattern | Matches Found | Redundant? |
 |---------|--------------|-----------|
