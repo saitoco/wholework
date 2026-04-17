@@ -342,6 +342,8 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
      - review-bug agent 1 (diff bug scan): focus on diff and detect clear bugs
      - review-bug agent 2 (security scan): detect security issues and invalid logic in changed code
 
+   Launch these subagents in a single message to ensure parallel fan-out (Opus 4.7 may otherwise serialize the spawns):
+
    ```text
    Task(
      subagent_type="review-spec",
