@@ -47,3 +47,14 @@ this is a complementary check, not a replacement.
 - `doc-checker.md` の Processing Steps 2 で `docs/{lang}/` は明示的に除外されているため、本 Issue の追記は doc-checker を補完する独立したチェックとして位置付ける
 - Issue body の Auto-Resolved Ambiguity Points で実装箇所が確定済み（モジュール新設なし、SKILL.md 直接追記）
 - 対象ドキュメント範囲: `docs/*.md` トップレベルのみ（`docs/spec/`・`docs/reports/` 配下を除く）
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
