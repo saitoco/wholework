@@ -31,3 +31,14 @@
 ### Post-merge
 
 - 次回 `/triage` bulk 実行で `phase/issue` + `triaged` 欠落な既存 Issue (#220 / #221 / #222 等) がピックアップされる
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
