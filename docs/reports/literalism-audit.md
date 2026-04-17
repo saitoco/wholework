@@ -10,7 +10,7 @@
 
 | Category | Count |
 |----------|-------|
-| Total findings | 14 |
+| Total findings | 16 |
 | Inline rewrites applied | 9 |
 | Follow-up issues created | 3 |
 
@@ -51,6 +51,23 @@
 | 310 | `same processing as full mode 10.2` (light mode step 10.0) — critical MUST-issue handling not repeated | HIGH |
 
 **Issue at line 310**: Light mode step 10.0 defers entirely to full mode 10.2 for processing rules. Full mode 10.2 contains the critical requirement that MUST-labeled issues must be placed in General Comments (not section-level comments). Omitting this in light mode means a literal reader executing light mode will skip this requirement.
+
+#### skills/triage/SKILL.md (1 finding — LOW)
+
+| Line | Pattern | Risk |
+|------|---------|------|
+| 323 | `Use normalization table to convert to Value 1–5 (same table as backlog analysis)` | LOW |
+
+**Issue**: The original text referenced an implicit cross-section normalization table. Fixed inline by adding an explicit normalization table with thresholds for each fallback level. Note: the section heading at lines 182 and 317 (`**Value scoring (same logic as backlog analysis):**`) still contains a residual cross-reference phrase; tracked for cleanup.
+
+#### skills/doc/SKILL.md (2 findings — MEDIUM)
+
+| Line | Pattern | Risk |
+|------|---------|------|
+| 253 | `using the same logic as the "Status Display" section` | MEDIUM |
+| 444 | `using the same procedure as "Step 2 (Reverse-Generation Flow...)"` | MEDIUM |
+
+**Issue**: Two cross-section references in the sync and init flows require navigating to different sections of the same large document. Under literal interpretation, the referenced procedures may be skipped. Tracked as follow-up #234.
 
 #### skills/audit/SKILL.md (4 findings — LOW)
 
