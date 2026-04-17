@@ -394,7 +394,35 @@ Parse the following options from ARGUMENTS (same system as drift):
 
 ### Step 1: Context Collection
 
-Execute the same procedure as drift's Step 1 (run `${CLAUDE_PLUGIN_ROOT}/modules/codebase-analysis.md` + load Steering Documents / Project Documents + fetch existing open Issues).
+Read `${CLAUDE_PLUGIN_ROOT}/modules/codebase-analysis.md` and follow the "Processing Steps" section to execute cross-codebase analysis.
+
+Then collect documents using the following procedure:
+
+**Load Steering Documents:**
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH` and `STEERING_DOCS_PATH` for use in subsequent steps.
+
+Search for `$STEERING_DOCS_PATH/product.md`, `$STEERING_DOCS_PATH/tech.md`, `$STEERING_DOCS_PATH/structure.md` with Glob and Read any that exist. If none exist, display "Steering Documents not found. Run `/doc init`." and exit with error.
+
+**Load Project Documents:**
+
+Following the document traversal pattern from `/doc`, dynamically detect `type: project` documents using this procedure:
+
+1. Search the entire repository with Grep for the `type: project` pattern limited to `*.md` files, getting a list of candidate file paths
+2. Skip files matching these exclusion patterns:
+   - Paths starting with `$SPEC_PATH/`
+   - Paths containing `node_modules/`
+   - Paths starting with `.git/`
+   - Paths starting with `.tmp/`
+3. Read each candidate file and collect its contents
+
+**Fetch existing open Issues (for duplicate check):**
+
+```bash
+gh issue list --state open --json number,title,body --limit 100
+```
+
+The retrieved issue list is used for duplicate checking in Step 3 (after fragility detection).
 
 ---
 
@@ -431,7 +459,11 @@ If the same location applies to both, prioritize drift and skip the fragility si
 
 ### Step 3: Duplicate Check
 
-Follow the same procedure as drift's Step 3 to check for duplicates with existing open Issues. Display duplicates as "duplicate (existing Issue #N)" in the results report.
+Semantically compare the detected fragility against existing open Issues retrieved in Step 1.
+
+Reference titles and bodies; if the content is similar to an existing Issue (pointing out the same fragility), judge as duplicate and skip. Duplicate check is AI-judgment-based.
+
+Display duplicates as "duplicate (existing Issue #N)" in the results report.
 
 ---
 
@@ -567,10 +599,89 @@ Ask the user with AskUserQuestion (non-interactive mode: auto-resolve — automa
 
 ### Step 4: Issue Generation
 
-Generate Issues using the appropriate label based on each item's `lens`:
+Generate Issues in `/issue` standard format for approved items. Apply the Issue body format, label assignment, and Type/Size assignment based on each item's `lens`:
 
-- Items with `lens: drift` → assign `audit/drift` label (same procedure as drift subcommand Step 5)
-- Items with `lens: fragility` → assign `audit/fragility` label (same procedure as fragility subcommand Step 5)
+**For items with `lens: drift`:**
+
+Each Issue body:
+
+```markdown
+## Background
+
+{Context where the drift was found, quoting the relevant Steering/Project Document section}
+
+## Purpose
+
+{Problem resolved by the fix}
+
+## Acceptance Conditions
+
+### Pre-merge (automated verification)
+
+- [ ] <!-- verify: {verify command} --> {condition 1}
+- [ ] {condition 2}
+
+### Post-merge
+
+- [ ] {verification items}
+```
+
+**Label assignment:**
+
+After Issue generation, assign the following label:
+
+- `audit/drift`: tracking label indicating the drift was detected by the audit skill
+
+If the `audit/drift` label doesn't exist, create it with `gh label create` (color: `#e4e669`).
+
+Do not assign the `triaged` label when creating Issues. The `triaged` label is assigned by the `/triage` skill after triage is actually executed; pre-assigning it causes the Issue to be skipped by the triage pipeline, leaving Type/Size/Priority/Value unset.
+
+**Type/Size assignment:**
+
+Set Type and Size from AI estimation of drift scope (update project fields via `${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh`).
+
+---
+
+**For items with `lens: fragility`:**
+
+Each Issue body:
+
+```markdown
+## Background
+
+{Context where the fragility was found, quoting the relevant Steering/Project Document section}
+
+## Purpose
+
+{Risk reduced by the improvement}
+
+## Acceptance Conditions
+
+### Pre-merge (automated verification)
+
+- [ ] <!-- verify: {verify command} --> {condition 1}
+- [ ] {condition 2}
+
+### Post-merge
+
+- [ ] {verification items}
+```
+
+**Label assignment:**
+
+After Issue generation, assign the following label:
+
+- `audit/fragility`: tracking label indicating the fragility was detected by the audit skill
+
+If the `audit/fragility` label doesn't exist, create it with `gh label create` (color: `#f9d0c4`).
+
+Do not assign the `triaged` label when creating Issues. The `triaged` label is assigned by the `/triage` skill after triage is actually executed; pre-assigning it causes the Issue to be skipped by the triage pipeline, leaving Type/Size/Priority/Value unset.
+
+**Type/Size assignment:**
+
+Set Type and Size from AI estimation of fragility scope (update project fields via `${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh`).
+
+---
 
 Display the list of generated Issue numbers and titles grouped by `lens`.
 
