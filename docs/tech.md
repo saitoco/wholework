@@ -84,6 +84,8 @@ English | [日本語](ja/tech.md)
 | issue-risk | issue (L/XL only) | Opus | — | Called by `/issue` Step 11a for L/XL parallel investigation. Risk assessment accuracy improves acceptance criteria quality |
 | issue-precedent | issue (L/XL only) | Opus | — | Called by `/issue` Step 11a for L/XL parallel investigation. Precedent extraction improves acceptance criteria quality |
 | triage (skill) | triage | Sonnet | — | Metadata assignment; Sonnet sufficient. Invoked inline (no `run-*.sh` wrapper) — including when `/auto` chains triage for unlabeled issues — so effort is not set |
+| merge (skill) | merge | Sonnet | — | Mechanical merge operation; `model: sonnet` fixed in frontmatter. Effort not set (skill invocation; `run-merge.sh` sets `low` effort) |
+| verify (skill) | verify | Sonnet | — | Structured acceptance testing; `model: sonnet` fixed in frontmatter. Effort not set (skill invocation; `run-verify.sh` sets `medium` effort) |
 
 SSoT note: Model values in run-*.sh use CLI aliases (sonnet/opus); update this table when changing model/effort in run-*.sh, agents, or skills.
 
