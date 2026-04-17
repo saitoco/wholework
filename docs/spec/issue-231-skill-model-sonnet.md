@@ -24,3 +24,33 @@
 - Priority: medium (SSoT 整合の性質上、緊急性は低いが戦略レポート §2.4 に沿う)
 - Size: XS (2 skill × 1 行 + docs/tech.md 2 行追加)
 - Value: 2 (Impact=0 / Alignment=3; コスト最適化・SSoT 整合)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 設計は的確。`file_contains` / `section_contains` / `github_check` の組み合わせで全条件が自動検証可能な形式になっており、verify 実行がスムーズだった
+- スコープ絞り込み（merge/verify のみ）の根拠が明示されており、実装範囲の誤解が生じなかった
+
+#### design
+- N/A（設計フェーズなし。XS サイズのため spec → code 直結）
+
+#### code
+- パッチルート（main 直コミット）で処理。単一コミット `c83ba4e`、diff 4 行（3 ファイル）と非常にクリーン
+- fixup/amend なし。一発でクローズ
+
+#### review
+- パッチルートのため formal review なし。CI（Validate skill syntax）が唯一のゲート
+- CI は全 4 ジョブ成功（Run bats tests / macOS shell compatibility / Forbidden Expressions check / Validate skill syntax）
+
+#### merge
+- パッチルート（PR なし）。`closes #231` をコミットメッセージに含めて直接クローズ
+- 問題なし
+
+#### verify
+- 全 5 条件が PASS。条件 5 (`github_check "gh run list"`) がパッチルートでも有効に機能した
+- Post-merge opportunistic 条件（Opus 4.7 での動作確認）は手動検証待ち
+
+### Improvement Proposals
+- N/A
