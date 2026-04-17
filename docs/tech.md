@@ -87,6 +87,8 @@ English | [日本語](ja/tech.md)
 | merge (skill) | merge | Sonnet | — | Mechanical merge operation; `model: sonnet` fixed in frontmatter. Effort not set (skill invocation; `run-merge.sh` sets `low` effort) |
 | verify (skill) | verify | Sonnet | — | Structured acceptance testing; `model: sonnet` fixed in frontmatter. Effort not set (skill invocation; `run-verify.sh` sets `medium` effort) |
 
+**Opus 4.7 effort calibration**: Opus 4.7 enforces strict effort calibration — `low` and `medium` aggressively scope to literal task requirements. `max` carries a diminishing returns risk (overthinking) with Opus 4.7; reserve it for intelligence-demanding experimental tasks only. `xhigh` is the Opus 4.7 recommended default for most coding and agentic use cases. Sub-agent `model: opus` / `model: sonnet` alias values in agent frontmatter auto-resolve to Opus 4.7.
+
 SSoT note: Model values in run-*.sh use CLI aliases (sonnet/opus); update this table when changing model/effort in run-*.sh, agents, or skills.
 
 ## Wholework Label Management
