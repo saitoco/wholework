@@ -59,6 +59,20 @@
 - 参照 Issue で `/auto N` を実行し、CLI ログで alias 表示（`Model: sonnet` / `Model: opus`）を確認
 - ベンチマーク #226 実施手順に「一時的に pin へ戻す」注意書きが追加されている
 
+## Code Retrospective
+
+### Deviations from Design
+
+- なし
+
+### Design Gaps/Ambiguities
+
+- `run-verify.bats` のモックは `echo "$@"` で全引数をログするため `grep -q -- "--model sonnet"` の形式で検証可能（run-spec.bats とは異なるモック構造）。Spec には記載がなかったが、テスト更新時に確認して対処した。
+
+### Rework
+
+- なし
+
 ## Notes
 
 ### run-spec.sh の verify 対応
@@ -72,3 +86,17 @@
 ### patch route: github_check 変換
 
 Issue body の `github_check "gh pr checks" "Run bats tests"` は PR ルート用。Size=S のパッチルートでは PR が存在しないため、`github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'"` に変換した（ワークフローファイルが複数あるため `--workflow=test.yml` を付与）。
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+記録なし。スクリプト・テスト・docs/tech.md のすべての変更が Spec 通りに実装されていた。
+
+### 繰り返し発生する問題
+
+英語版ドキュメントを更新した際に日本語版（`docs/ja/`）の同期が漏れるパターンが発生した（docs/ja/tech.md の見出し昇格と SSoT note 更新が未反映）。今後は英語版を変更する際に `docs/ja/` の対応ファイルを必ずチェックリストに含めるべき。
+
+### 受け入れ基準の検証難易度
+
+記録なし（UNCERTAIN ゼロ、verify コマンドはすべて正確）。ただし過去 Issue（#195）の Spec で verify 条件のターゲット文字列が安定しない値（`claude-sonnet-4-6`）に依存していたため、エイリアス移行後に条件が無効化されていた。今後 verify 条件記述時は、参照先文字列が将来変更される可能性があるか（定数か変数か）を意識する。

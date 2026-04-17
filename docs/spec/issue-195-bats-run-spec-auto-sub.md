@@ -47,7 +47,7 @@
 - <!-- verify: file_exists "tests/run-spec.bats" --> `tests/run-spec.bats` が存在する
 - <!-- verify: file_exists "tests/run-auto-sub.bats" --> `tests/run-auto-sub.bats` が存在する
 - <!-- verify: file_contains "tests/run-spec.bats" "frontmatter" --> `tests/run-spec.bats` に SKILL.md frontmatter parsing 関連のテストが含まれている
-- <!-- verify: file_contains "tests/run-spec.bats" "claude-sonnet-4-6" --> `tests/run-spec.bats` に Sonnet モデル指定の検証が含まれている
+- <!-- verify: file_contains "tests/run-spec.bats" "sonnet" --> `tests/run-spec.bats` に Sonnet モデル指定の検証が含まれている（Issue #227 により alias 形式に更新済み）
 - <!-- verify: file_contains "tests/run-auto-sub.bats" "Size XS" --> `tests/run-auto-sub.bats` に Size XS 分岐テストが含まれている
 - <!-- verify: file_contains "tests/run-auto-sub.bats" "Size L" --> `tests/run-auto-sub.bats` に Size L 分岐テストが含まれている
 - <!-- verify: file_contains "tests/run-auto-sub.bats" "PATCH_LOCK" --> `tests/run-auto-sub.bats` に patch lock 機構のテストが含まれている

@@ -7,11 +7,12 @@ ISSUE_NUMBER="${1:?Usage: run-spec.sh <issue-number> [--opus]}"
 shift
 
 # Parse options
-MODEL="claude-sonnet-4-6"
+# Default: --model sonnet (override: --model opus with --opus flag)
+MODEL="sonnet"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --opus)
-      MODEL="claude-opus-4-7"
+      MODEL="opus"
       shift
       ;;
     *)

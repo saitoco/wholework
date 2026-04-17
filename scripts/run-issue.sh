@@ -57,9 +57,9 @@ ARGUMENTS: ${ISSUE_NUMBER} --non-interactive"
 # Specify --model and ANTHROPIC_MODEL both (workaround for -p mode bug)
 # See: https://github.com/anthropics/claude-code/issues/22362
 set +e
-ANTHROPIC_MODEL=claude-sonnet-4-6 \
+ANTHROPIC_MODEL=sonnet \
   env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
-    --model claude-sonnet-4-6 \
+    --model sonnet \
     --effort high \
     --dangerously-skip-permissions
 EXIT_CODE=$?
