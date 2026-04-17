@@ -99,9 +99,10 @@
 - PR #228 はクリーンなマージ。コンフリクトなし
 
 #### verify
-- 12 条件が PASS、条件13（bats テスト CI）が PENDING（in_progress）
+- 全 13 条件が PASS（再実行時点で bats CI `success` を確認）
 - verify コマンドはすべて正確に機能（UNCERTAIN ゼロ）
 - PR ルート用の `github_check "gh pr checks"` がパッチルート向けに `gh run list --workflow=test.yml` へ変換されていた点は適切
+- 初回 verify 実行時は CI が in_progress で PENDING 判定だったが、`/verify` 再実行でアイデンポテントに PASS へ更新できた（phase/verify → phase/done への遷移は post-merge 条件が未消化のため保留）
 
 ### Improvement Proposals
 - `docs/` 内の英語ファイル変更時に `docs/ja/` の対応ファイルを必ずチェックするルールを `/code` または `/review` スキルのステップへ明示的に追記する（英語版 → 日本語版同期漏れの再発防止）
