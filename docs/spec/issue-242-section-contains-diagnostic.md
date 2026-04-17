@@ -21,3 +21,29 @@
    - 元のパターンは `\|` (BRE エスケープ) を使っているが ripgrep では `|` が正しい構文。候補見出しリストの仕様確認に絞って明確化。
 4. **Purpose 節に英語診断例と最大件数を追記** — 実装者への仕様伝達を明確化。
 5. **Related Issues セクションを追加** — `Related to #241`
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue Retrospective が ambiguity resolution を丁寧にドキュメント化しており、実装者への仕様伝達が明確だった。
+- AC1 の verify command (`grep "no heading matched|..."`) は小文字パターンだが、実装は大文字 `No heading matched` を採用したため、grep が技術的に不一致になった。verify 実行時は AI 判定で PASS としたが、verify command の精度としては惜しい点。
+
+#### design
+- Spec なし（patch route）。Issue 本文と Issue Retrospective のみで設計を記録。小規模な変更として妥当。
+
+#### code
+- 単一クリーンコミット `70f1dd5`。fixup/amend パターンなし。パッチルートの直 commit として適切。
+
+#### review
+- パッチルート（PR なし）のため review なし。verify-executor.md 単独の軽微な仕様追加であり、レビュー省略は妥当。
+
+#### merge
+- main への直接コミット（パッチルート）。競合なし。
+
+#### verify
+- AC1 の grep パターン `no heading matched`（小文字）と実装の `No heading matched`（大文字 N）の不一致を検出。AI 判定で PASS としたが、verify command の作成ガイドラインとして「仕様文字列の大文字小文字は `[Nn]o` のようにブラケット表記でカバーする」か「`-i` フラグ相当の考慮を加える」ことを検討できる。
+
+### Improvement Proposals
+- verify command で docs/spec の仕様文字列を検索する場合、大文字小文字の揺れに対応するため `[Nn]o heading matched` のようなブラケット正規表現パターン、または verify-executor.md に「grep コマンドはデフォルト大文字小文字区別あり。実装テキストの正確なケースと一致させること」という注記を追加することを検討する。これにより verify command の精度が向上し、AI 判定への依存を減らせる。
