@@ -70,3 +70,28 @@ Nothing to note. Only one SHOULD issue found; no recurring pattern.
 
 ### Acceptance Criteria Verification Difficulty
 Nothing to note. All 4 pre-merge conditions were `file_exists` / `section_contains` commands, all resolved as PASS without ambiguity. No UNCERTAINs. Verify commands were well-formed and accurately reflected the deliverables.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec pre-determined the audit findings (zero redundant scaffolding) in the Notes section — accelerated implementation, and the conclusion proved accurate. However, the numeric scope claim ("補助ファイル 9ファイル") was inaccurate (actual: 12); this was propagated verbatim into the audit report and caught only in review. Spec-level quantitative claims without a corresponding verify command carry silent inaccuracy risk.
+
+#### design
+- No design phase separate from spec. Spec doubled as design and was well-aligned with implementation. No gaps identified.
+
+#### code
+- Zero rework. Implementation was a pure documentation task (creating the audit report + structure.md corrections). Commit history shows a single clean commit in PR #240 with no fixups.
+
+#### review
+- Review correctly caught the "9ファイル vs 12ファイル" inaccuracy as a SHOULD issue, flagged it without blocking merge (conclusion was unaffected). Review also suggested adding `<!-- verify: command "..." -->` hints for numeric scope claims — a constructive, forward-looking observation.
+
+#### merge
+- Clean FF merge via PR #240 on 2026-04-17. No conflicts, no CI failures.
+
+#### verify
+- All 4 pre-merge conditions: PASS. Post-merge condition (#5) is `verify-type: manual` — not auto-verifiable; deferred to user. Phase label transitioned to `phase/verify` pending manual confirmation.
+
+### Improvement Proposals
+- For Spec files containing numeric scope claims (file counts, line counts, etc.), consider adding a `<!-- verify: command "find ... | wc -l" -->` hint in the corresponding acceptance condition to catch count drift automatically.
