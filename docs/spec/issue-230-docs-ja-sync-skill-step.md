@@ -58,3 +58,31 @@ this is a complementary check, not a replacement.
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body の Pre-merge セクションのみに verify コマンドが付与されており、Post-merge 条件（ユーザー検証が必要な行動観察系）はヒントなし。設計として適切。
+- verify コマンド `section_contains` の heading 引数がファイルの実際の見出し文字列と一致しており、精度が高かった。
+
+#### design
+- Spec は Issue body の Auto-Resolved Ambiguity Points を基に直接実装箇所を確定。モジュール新設なし、SKILL.md 直接追記の最小変更方針は適切。
+
+#### code
+- パッチルートで直接 main にコミット。リワークなし（fixup/amend パターンなし）。
+- `docs/ja/tech.md` 同期は Issue #227 のレビューフィードバックで対処済みであり、本 Issue #230 は再発防止の構造化として機能した。
+
+#### review
+- パッチルートのため `/review` は実行されず。Issue 自体が #227 のレビューフィードバック（Copilot 検出）を起点としており、Issue creation → spec → code → verify の短縮フローで完結した。
+
+#### merge
+- パッチルート（PR なし）。`closes #230` コミットで自動クローズ。衝突なし。
+
+#### verify
+- 全条件 PASS。verify コマンドの `section_contains` 指定が正確で、自動検証が完全に機能した。
+- PR 未存在（パッチルート）のため `github_check "gh pr checks"` 形式の verify コマンドは不使用。パッチルートに適した verify コマンド選択ができていた。
+
+### Improvement Proposals
+- N/A
