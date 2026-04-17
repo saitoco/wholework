@@ -49,3 +49,7 @@ Get `categories.{category}.score` from the JSON output (0-1 scale).
 
 - **Result**: PASS / FAIL / UNCERTAIN
 - **Details**: Description of verification result (include reason for FAIL / UNCERTAIN)
+
+## Notes
+
+**High-resolution model support**: Claude Opus 4.7 supports images up to **2576 px** on the long edge. If visual verification is integrated into Lighthouse workflows in the future, screenshots at up to 2576 px can be passed directly — each image costs up to **4,784 tokens/image** at full resolution. No scale-factor conversion is required (coordinates are 1:1 with actual pixels on Opus 4.7).

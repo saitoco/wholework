@@ -103,3 +103,15 @@ Return the execution result as one of:
 
 - **Result**: PASS / FAIL / UNCERTAIN
 - **Details**: Description of verification result (include reason for FAIL / UNCERTAIN)
+
+## Token budget
+
+Claude Opus 4.7 supports images up to **2576 px** on the long edge (~3.75 MP), compared to 1568 px in earlier models. At full resolution, each image costs up to **4,784 tokens/image** — approximately 3× the token cost of a 1568 px image.
+
+**Downsampling guidance**: When token budget is constrained (e.g., many screenshots in a single verify run or a cost-sensitive pipeline), downsample before passing the screenshot to the model:
+
+- For UI layout and text legibility checks: 1280 px on the long edge is typically sufficient.
+- For pixel-level detail or small text: use the full 2576 px resolution.
+- When using Playwright MCP's `browser_take_screenshot`, the screenshot width can be controlled via `browser_resize` before capture.
+
+No scale-factor conversion is needed: Opus 4.7 returns pointing and bounding-box coordinates in actual pixels (1:1 mapping).
