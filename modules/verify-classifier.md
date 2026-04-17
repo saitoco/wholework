@@ -40,6 +40,33 @@ When assigning `<!-- verify-type: auto -->` to a condition, a `<!-- verify: ... 
 - `verify-type: auto` is assigned only to conditions that have a verify command (a `auto` without a verify command is equivalent to skipping verification, which contradicts user expectations)
 - If a verify command cannot be provided, classify as `opportunistic` or `manual` instead
 
+### Translation File Condition Verification
+
+Conditions that require verifying a translate update (e.g., "Update `docs/ja/tech.md`
+to reflect changes") can be automatically verified using `file_contains` or `grep`.
+Do not default to `verify-type: manual` for translation conditions — attach a verify
+command and classify as `auto`.
+
+**Pattern: `file_contains "docs/ja/xxx.md" "keyword"`**
+
+Pick a keyword that must appear in the translated file after the update:
+
+```markdown
+- [ ] Update `docs/ja/tech.md` with the new section
+  <!-- verify: file_contains "docs/ja/tech.md" "翻訳後のキーワード" -->
+  <!-- verify-type: auto -->
+```
+
+Keyword selection tips:
+- Use a term that is unique to the added/changed content (a section heading or a key concept)
+- Prefer Japanese terms that are unlikely to appear elsewhere in the file
+
+When a keyword cannot be identified, fall back to `grep` with a broader pattern:
+
+```markdown
+<!-- verify: grep "translate" docs/ja/tech.md -->
+```
+
 ### Patch Route CI Verification Note
 
 For Issues implemented via the patch route (direct commit to main, no PR), `github_check "gh pr checks"` **cannot be used** — no PR exists in the patch route.
