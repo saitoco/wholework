@@ -73,6 +73,39 @@
 
 - なし
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body のフォールバック方針（ANTHROPIC_MODEL alias 非対応時）と Spec の `### ANTHROPIC_MODEL` 節が一致しており、設計品質は高い
+- verify コマンドのターゲット文字列が将来変わりうる値（model ID）に依存するリスクを Spec で明示的に注記したのは有効（Notes セクション）
+- `file_contains "scripts/run-spec.sh" "--model sonnet"` が変数展開のため直接マッチしない問題をコメント追加で回避する方針を Spec に明記した点は再利用可能なパターン
+
+#### design
+- 実装との乖離なし（Code Retrospective に記録済み）
+- `run-verify.bats` のモック構造（`echo "$@"`）が `run-spec.bats` と異なる点は Spec 未記載だったが、実装時に発見・対処された。今後は bats モック構造の差異をスコープ記載に含めると良い
+
+#### code
+- 実装は Spec 通り。フィックスアップ・amend なし
+- `run-verify.bats` のモック差異は実装中に発見・対処された。リワークなし
+
+#### review
+- Copilot レビューが `docs/ja/tech.md` の同期漏れを検出し、PR 内でフォローアップコミットとして修正された
+- これはレビューが機能した好例（英語版変更時の日本語版漏れというよくあるパターンを捕捉）
+- また `docs/spec/issue-195-bats-run-spec-auto-sub.md` の古い verify 条件（`claude-sonnet-4-6` → `sonnet`）が副次的に修正された点もレビューの成果
+
+#### merge
+- PR #228 はクリーンなマージ。コンフリクトなし
+
+#### verify
+- 12 条件が PASS、条件13（bats テスト CI）が PENDING（in_progress）
+- verify コマンドはすべて正確に機能（UNCERTAIN ゼロ）
+- PR ルート用の `github_check "gh pr checks"` がパッチルート向けに `gh run list --workflow=test.yml` へ変換されていた点は適切
+
+### Improvement Proposals
+- `docs/` 内の英語ファイル変更時に `docs/ja/` の対応ファイルを必ずチェックするルールを `/code` または `/review` スキルのステップへ明示的に追記する（英語版 → 日本語版同期漏れの再発防止）
+
 ## Notes
 
 ### run-spec.sh の verify 対応
