@@ -39,3 +39,14 @@
 ### Post-merge
 
 - 意図的にテスト失敗を残した状態で `/code N --patch --non-interactive` を dry-run 相当で実行すると Step 11 (Commit) に進まずに abort することを確認
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
