@@ -105,6 +105,27 @@
 - `/auto` 実行中に watchdog kill が発生した場合でも、期待状態に到達していればバッチが継続する
 - `.wholework.yml` で `watchdog-timeout-seconds: 3600` に変更した repo で、30 分超の Size L タスクが kill なしで完遂する
 
+## Spec Retrospective
+
+N/A (no spec phase issues noted)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の `get-config-value.sh` パス指定が `/Users/saito/src/wholework/scripts/get-config-value.sh` という絶対パスだったが、正しく `$SCRIPT_DIR/get-config-value.sh` に変更した。Spec のコードスニペットは例示用と判断し、実装では既存の `SCRIPT_DIR` パターンに従った
+- `run-review.sh` / `run-merge.sh` の reconcile 呼び出しには issue 番号が必要なため、`gh-extract-issue-from-pr.sh` で PR から issue 番号を動的に取得するパターンを採用した (Spec では省略されていた詳細)
+- Spec では `--route patch|pr` オプションも Usage に記載されていたが、`code-patch`/`code-pr` という phase 名でルートを直接表現できるため、`--route` フラグは実装を省略した
+
+### Design Gaps/Ambiguities
+
+- `run-review.sh` と `run-merge.sh` は PR 番号を主引数に取るため、reconcile に必要な issue 番号をどう取得するかが Spec では未記載。実装では `gh-extract-issue-from-pr.sh` を利用し、取得失敗時はスキップ (reconcile なし) とした
+- `watchdog-reconcile.sh` の `spec` phase では `spec-path` を `get-config-value.sh` で取得するが、WHOLEWORK_SCRIPT_DIR が mock に向いている場合 mock の `get-config-value.sh` が呼ばれる。テストで `MOCK_SPEC_PATH` env 変数を使って mock を制御した
+
+### Rework
+
+- bats テスト作成時、`verify` phase の `--json state` / `--json labels` 呼び出し分岐を単一の `gh` mock で処理するため、`$*` でフラグを判別するパターンに修正した
+
 ## Notes
 
 - **Size 超過注意**: 光テンプレートの pre-merge 上限 (5 項目) を大きく超え 17 項目となる。6 つの run-*.sh 個別検証が Issue の性質上必須 (1 スクリプトで実装漏れがあれば false positive が残る) のため、verify command は per-file 維持。実装ステップ側は 5 ステップ内にグルーピング済み
