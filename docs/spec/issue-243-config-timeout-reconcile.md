@@ -150,3 +150,28 @@ review-light エージェントが `docs/ja/guide/customization.md` 未更新・
 ### 受け入れ条件検証の難易度
 
 Nothing to note。17 項目中 16 項目が `file_exists`/`file_contains` で直接検証可能。残り 1 項目（`command` bats テスト実行）は CI "Run bats tests" SUCCESS による代替検証が機能し UNCERTAIN ゼロで完了した。6 つの run-*.sh を個別に verify している設計（Notes に記載）は正しい選択であり、実装漏れを確実に検出できる。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec は Issue body の二層防御アーキテクチャ（Layer 2 config / Layer 3 reconcile）を正確に反映しており、受け入れ条件の質が高かった。`file_exists`/`file_contains` で直接検証できる条件が多く、verify 自動化率が 100%（17 項目中 17 項目）だった。
+
+#### design
+- Spec 内の `get-config-value.sh` パス指定が絶対パスだったが、Code 実装時に正しく `$SCRIPT_DIR` 相対パスへ修正された（Code Retrospective に記録済み）。Spec での省略（`run-review.sh`/`run-merge.sh` での issue 番号取得方法）は実装時に `gh-extract-issue-from-pr.sh` で解決された。設計の骨格は堅固だった。
+
+#### code
+- `run-review.sh`/`run-merge.sh` での reconcile issue 番号取得という未記載詳細を実装者が適切に補完した。`--route` フラグは phase 名（`code-patch`/`code-pr`）で代替できるため省略。rework は bats テストの mock パターン修正のみで軽微だった。
+
+#### review
+- review-light による false positive（`docs/ja/` 未更新・`docs/structure.md` 未記載）が 2 件あったが、いずれも実ファイル確認で否定された。verify でのバックストップが機能したため運用影響なし。partial diff view による誤検知が再発パターンとして記録済み。
+
+#### merge
+- PR #245 が単一 squash commit `fd3e093` でクリーンにマージされた。コンフリクトなし。CI（Run bats tests）も GREEN でマージ。
+
+#### verify
+- 全 17 項目 PASS、UNCERTAIN ゼロ。bats テスト 35 件すべて PASS を確認（`bats tests/claude-watchdog.bats tests/watchdog-reconcile.bats`）。post-merge の opportunistic 条件 2 件はユーザー検証待ち（長時間実行環境での実証）のため `phase/verify` ラベルを付与。
+
+### Improvement Proposals
+- N/A
