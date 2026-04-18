@@ -51,3 +51,31 @@ Reference: `docs/reports/claude-opus-4-7-optimization-strategy.md` §2.3, §5.3 
 ### Rework
 
 - N/A（ワンパスで実装完了）
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件の設計が巧妙: `section_contains ... "採用"` は「採用」「非採用」どちらの結論でも PASS するため、スパイク結果に依存しない条件設計になっている（Notes に明示済み）
+- `## Comparison` セクションの `--full` 比較要件、`## Recommendation` セクションの結論要件が明確で検証コマンドが書きやすかった
+
+#### design
+- N/A（設計フェーズのレビューなし。設計は Spec の Implementation Steps に相当）
+
+#### code
+- ワンパス実装完了。Code Retrospective で指摘された通り、「user-invoked only = 自動化非互換」という最重要非採用理由が Spec の実装ステップには明示されていなかったが、実装時に発見・記録された
+- パッチルート（main 直コミット）で実装。PR プロセスなし
+
+#### review
+- PR レビューなし（パッチルート）。スパイクレポートという性質上、コードレビューより内容レビューが重要だが、レビュープロセスは省略された
+
+#### merge
+- パッチルート。コンフリクトや CI 失敗なし
+
+#### verify
+- 全3条件 PASS。verify コマンド（`file_exists`, `section_contains`×2）が適切に設計されており、自動検証が完全に機能した
+- Post-merge の2条件（manual）は「非採用」の結論から実質的に条件4は不該当、条件5はレポートに理由が詳細に記録されているため手動確認で容易に PASS できる
+
+### Improvement Proposals
+- N/A
