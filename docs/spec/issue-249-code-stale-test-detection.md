@@ -53,3 +53,16 @@
 ### Rework
 
 - N/A
+
+## Issue Retrospective
+
+### 判断根拠
+
+- **Type=Task**: `skills/code/SKILL.md` Step 8 への手順追記。機能追加ではなくスキルの品質ガード強化
+- **Priority=medium**: 再発防止策だが直近の緊急度は低い。Issue #248（hard-error abort）と合わせて段階的に対処
+- **Size=S**: 変更対象は `skills/code/SKILL.md` の Step 8 セクションのみ。grep コマンド例と定義文を数行追記するだけ
+- **Value=2**: Impact=1（#248 からの mention）、Alignment=+2（`/code` ワークフローの実装品質ガード）。Raw=3 → Level 1 テーブルで Value 2
+
+### 曖昧点の自動解決
+
+- **「removed literal」フレーズ**: SKILL.md は英語で記述されるため、日本語「削除されたリテラル」ではなく英語 "removed literal" を AC verify hint のターゲット文字列とした（`section_contains "Step 8" "removed literal"`）。実装者がこのフレーズを採用しない場合は `/verify` の AI fallback でカバー
