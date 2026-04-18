@@ -55,12 +55,23 @@ mock が返す REPO_ROOT を bats が自動生成する `$BATS_TEST_TMPDIR/test-
 
 - <!-- verify: file_contains "tests/run-auto-sub.bats" "BATS_TEST_TMPDIR" --> mock git の `rev-parse --show-toplevel` 出力がテスト固有ディレクトリ（`$BATS_TEST_TMPDIR` 配下）を返す
 - <!-- verify: file_not_contains "tests/run-auto-sub.bats" "/tmp/test-repo" --> ハードコードされた `/tmp/test-repo` 参照が除去されている
-- <!-- verify: file_not_contains "tests/run-auto-sub.bats" "/tmp/claude-auto-patch-lock-" --> ハードコードされた lock パス（glob 含む）が除去され、テスト固有 hash 由来のパスに置き換わっている
+- <!-- verify: file_not_contains "tests/run-auto-sub.bats" "claude-auto-patch-lock-*" --> ハードコードされた lock glob パス（`ls /tmp/claude-auto-patch-lock-*` 形式）が除去され、テスト固有 hash 由来のパスに置き換わっている
 - <!-- verify: command "bats --jobs $(nproc) tests/run-auto-sub.bats" --> 並行実行で全 13 テストが PASS する
 
 ### Post-merge
 
 - main にマージ後、直近 20 件の CI 実行で test 200 の flaky 失敗が観測されないことを確認
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- Verify command #3 (`file_not_contains "tests/run-auto-sub.bats" "/tmp/claude-auto-patch-lock-"`) was miscalibrated: the path prefix legitimately remains in teardown/mock/assertion. Rewrote to `file_not_contains ... "claude-auto-patch-lock-*"` which correctly checks that the glob wildcard pattern is absent.
+
+### Rework
+- N/A
 
 ## Notes
 
