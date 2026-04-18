@@ -68,15 +68,15 @@ exit 0
 MOCK
     chmod +x "$MOCK_DIR/run-verify.sh"
 
-    # Mock git: rev-parse --show-toplevel returns /tmp/test-repo (for PATCH_LOCK_DIR computation)
+    # Mock git: rev-parse --show-toplevel returns per-test directory (for PATCH_LOCK_DIR computation)
     # run-auto-sub.sh calls: git -C "${SCRIPT_DIR}/.." rev-parse --show-toplevel
-    cat > "$MOCK_DIR/git" <<'MOCK'
+    cat > "$MOCK_DIR/git" <<MOCK
 #!/bin/bash
-if [[ "$1" == "-C" && "$3" == "rev-parse" && "$4" == "--show-toplevel" ]]; then
-    echo "/tmp/test-repo"
+if [[ "\$1" == "-C" && "\$3" == "rev-parse" && "\$4" == "--show-toplevel" ]]; then
+    echo "${BATS_TEST_TMPDIR}/test-repo"
     exit 0
 fi
-if [[ "$1" == "pull" ]]; then
+if [[ "\$1" == "pull" ]]; then
     exit 0
 fi
 exit 0
@@ -111,8 +111,8 @@ MOCK
 
 teardown() {
     rm -rf "$MOCK_DIR"
-    # Clean up any leftover patch lock from the test repo hash
-    LOCK_HASH=$(echo "/tmp/test-repo" | cksum | awk '{print $1}')
+    # Clean up any leftover patch lock from the per-test repo hash
+    LOCK_HASH=$(echo "$BATS_TEST_TMPDIR/test-repo" | cksum | awk '{print $1}')
     rmdir "/tmp/claude-auto-patch-lock-${LOCK_HASH}" 2>/dev/null || true
 }
 
@@ -255,10 +255,11 @@ MOCK
     export LOCK_CHECK_FILE
 
     # Override run-code.sh to verify lock dir exists during execution
-    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+    LOCK_HASH=$(echo "$BATS_TEST_TMPDIR/test-repo" | cksum | awk '{print $1}')
+    cat > "$MOCK_DIR/run-code.sh" <<MOCK
 #!/bin/bash
-echo "$@" >> "$RUN_CODE_LOG"
-ls /tmp/claude-auto-patch-lock-* 2>/dev/null && echo "LOCK_EXISTS" > "$LOCK_CHECK_FILE" || true
+echo "\$@" >> "\$RUN_CODE_LOG"
+[ -d "/tmp/claude-auto-patch-lock-${LOCK_HASH}" ] && echo "LOCK_EXISTS" > "\$LOCK_CHECK_FILE" || true
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/run-code.sh"
@@ -271,6 +272,6 @@ MOCK
     grep -q "LOCK_EXISTS" "$LOCK_CHECK_FILE"
 
     # Lock released after script completes
-    LOCK_HASH=$(echo "/tmp/test-repo" | cksum | awk '{print $1}')
+    LOCK_HASH=$(echo "$BATS_TEST_TMPDIR/test-repo" | cksum | awk '{print $1}')
     [ ! -d "/tmp/claude-auto-patch-lock-${LOCK_HASH}" ]
 }
