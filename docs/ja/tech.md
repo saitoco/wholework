@@ -34,7 +34,7 @@
   | merge | 必要 | 判断は Spec + PR メタデータで完結、レビューコンテキストを持ち越さない |
   | verify | 必要 | マージ後の状態を独立検証する、前フェーズの判断に影響されてはならない |
 
-- **`/auto` スキル**: `run-*.sh` 経由で spec→code→review→merge→verify を順次連鎖させるオーケストレーター。各フェーズは `claude -p --dangerously-skip-permissions` で独立プロセスとして実行され、フレッシュなコンテキストと完全な権限バイパスを保証する。追加機能: `phase/*` ラベル未設定時は issue triage/refinement から自動開始、`phase/ready` がない場合は `/spec` を自動実行、`--batch N` はバックログから N 個の XS/S Issue を処理、XL Issue はサブ issue 依存グラフ（`blockedBy`）を読んで独立サブ issue を並列実行（worktree 分離）し依存先は順次実行、`--base {branch}` でリリースブランチ対象
+- **`/auto` スキル**: `run-*.sh` 経由で spec→code→review→merge→verify を順次連鎖させるオーケストレーター。各フェーズは設定可能なパーミッションモード（デフォルト: `--dangerously-skip-permissions`、`.wholework.yml` に `permission-mode: auto` を設定すると `--permission-mode auto`）で `claude -p` 独立プロセスとして実行され、フレッシュなコンテキスト分離を保証する。追加機能: `phase/*` ラベル未設定時は issue triage/refinement から自動開始、`phase/ready` がない場合は `/spec` を自動実行、`--batch N` はバックログから N 個の XS/S Issue を処理、XL Issue はサブ issue 依存グラフ（`blockedBy`）を読んで独立サブ issue を並列実行（worktree 分離）し依存先は順次実行、`--base {branch}` でリリースブランチ対象
   - **2 階層オーケストレーション**: `/auto` 本体（親オーケストレーター）はユーザーの Claude Code セッションで動作し、LLM 推論を使った適応的判断を行う（ラベル状態の評価、サイズベースのルーティング、サブ issue 依存関係分析）。XL Issue については `run-auto-sub.sh`（子オーケストレーター）が各サブ issue のフルフェーズシーケンスを実行する。`run-auto-sub.sh` は `claude -p` を呼び出さない純粋な bash スクリプトで、Size に基づく決定的な if/case ルーティングを用いる。これは技術的制約ではなく意図的な設計選択である: 現行のフェーズルーティングは決定的で、各フェーズは `run-*.sh` で自己完結しているため、子オーケストレーター階層での LLM 推論はコストのみ増え利益が無い。適応的リカバリが必要になった場合（code 失敗後に spec を再実行、レビュー結果に基づく戦略調整など）、`run-auto-sub.sh` を `claude -p` オーケストレーターにアップグレードするのが前進ルート
 - **サブエージェント分割**: 2 つのスキルで使用:
   - `/issue`（L/XL）: 3 つの独立サブエージェント（`issue-scope`、`issue-risk`、`issue-precedent`）による並列調査で、変更スコープ、リスク、前例を同時に分析する

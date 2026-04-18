@@ -143,3 +143,31 @@ MOCK
     [[ "$output" == *"Finished /merge for PR #789"* ]]
     [[ "$output" == *"Exit code: 42"* ]]
 }
+
+@test "permission-mode: auto in .wholework.yml passes --permission-mode auto" {
+    cat > "$MOCK_DIR/claude" <<'MOCK'
+#!/bin/bash
+for arg in "$@"; do
+    case "$arg" in
+        --dangerously-skip-permissions) echo "FLAG_SKIP_PERMS=1" >> "$CLAUDE_CALL_LOG" ;;
+        --permission-mode) echo "FLAG_PERM_MODE=1" >> "$CLAUDE_CALL_LOG" ;;
+    esac
+done
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/claude"
+    echo "permission-mode: auto" > "$BATS_TEST_TMPDIR/.wholework.yml"
+    cd "$BATS_TEST_TMPDIR"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    grep -q "FLAG_PERM_MODE=1" "$CLAUDE_CALL_LOG"
+    ! grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "permission-mode: bypass in .wholework.yml uses --dangerously-skip-permissions" {
+    echo "permission-mode: bypass" > "$BATS_TEST_TMPDIR/.wholework.yml"
+    cd "$BATS_TEST_TMPDIR"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
+}

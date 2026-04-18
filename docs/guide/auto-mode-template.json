@@ -1,0 +1,13 @@
+{
+  "autoMode": {
+    "description": "Recommended allow rules for wholework /auto workflow. Copy this into .claude/settings.local.json (gitignored) and restart Claude Code before using permission-mode: auto.",
+    "allow": [
+      "gh issue: wholework skills create, update, comment on, and close GitHub Issues as part of the automated workflow (e.g. gh issue create, gh issue edit, gh issue comment, gh issue close)",
+      "gh pr: wholework skills create, review, and merge pull requests as part of the automated workflow (e.g. gh pr create, gh pr review, gh pr merge, gh pr edit)",
+      "gh label: wholework scripts manage phase labels on Issues and PRs during label transitions (e.g. gh label create, gh issue edit --add-label, gh issue edit --remove-label)",
+      "gh api: wholework scripts query GitHub API for Projects V2 fields (Size, Priority, Type, Value) and GraphQL mutations needed for automated issue management",
+      "gh run: wholework scripts check CI run status while waiting for checks to complete before proceeding to the next phase (e.g. gh run list, gh run view)",
+      "git push origin main: wholework /code skill with patch route (XS/S size) commits directly to main and pushes — this is intentional for small changes that bypass PR review"
+    ]
+  }
+}

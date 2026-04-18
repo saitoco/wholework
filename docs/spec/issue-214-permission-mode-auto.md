@@ -98,3 +98,31 @@ Issue 側で auto-resolve 済み:
 ### Count note
 
 本 Spec の Pre-merge verification は Issue 本文から verbatim 同期しており 15 件。SPEC_DEPTH=light の推奨上限（5 件）を超過するが、Issue 側で粒度が細かく分割された verify command を再集約すると情報欠損となるためそのまま保持する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- **permission-mode 解決タイミング**: Spec の「WATCHDOG_TIMEOUT ブロックの直後に追加」という配置指示に対し、`echo "Permissions:"` メッセージを動的にするため SCRIPT_DIR 設定直後（echo ブロックの前）に配置した。これにより起動バナーの Permissions 行も動的に表示される。Spec の意図（動的 echo）を満たすための合理的な逸脱。
+
+### Design Gaps/Ambiguities
+
+- **autoMode の実際のフォーマット**: Spec は `autoMode.allowRules[]` と記述しているが、`claude auto-mode defaults` の実際の出力は `{ "allow": [], "soft_deny": [], "environment": [] }` 構造であることが判明。テンプレートの AC は `autoMode` 文字列の存在のみチェックするため、実際のフォーマット（`autoMode.allow[]`）に合わせて実装した。Spec の `allowRules` は設計時の仮定であり、実際の CLI 仕様とは異なる。
+
+### Rework
+
+- N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+`docs/tech.md` Architecture Decisions section was not listed in the Spec's Changed Files, but it contained an outdated description of `/auto`'s permission mechanism that needed updating. The Spec listed `docs/guide/customization.md` and `SECURITY.md` as documentation targets, but missed `docs/tech.md` even though it directly describes the changed behavior. When a configuration flag controlling behavior is added, the Architecture Decisions section of tech.md should always be included in the Changed Files list.
+
+### Recurring issues
+
+Nothing to note.
+
+### Acceptance criteria verification difficulty
+
+All 15 pre-merge conditions were auto-verifiable (grep, file_exists, file_contains, section_contains, CI reference). Zero UNCERTAINs. The verify commands were well-specified. The `section_contains` checks for SECURITY.md worked correctly once the worktree file path was used (there was a path confusion between the main repo and worktree during initial verification). No improvement needed for the verify commands themselves.
