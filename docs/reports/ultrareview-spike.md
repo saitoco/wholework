@@ -1,3 +1,5 @@
+English | [日本語](../ja/reports/ultrareview-spike.md)
+
 # Ultrareview Spike Report: `/review --ultra` Option Evaluation
 
 **Report date**: 2026-04-18
