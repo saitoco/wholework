@@ -40,3 +40,14 @@
 
 - 追記位置は `command` 行の既存 Note（glob ポータビリティ注記）の直後が最も文脈的に適切と判断（自動解決済み）
 - `bats --jobs N` の GNU parallel 依存（macOS でのシーケンシャル fallback）は Non-Goal（別 Issue で追跡）
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
