@@ -59,3 +59,31 @@ Sonnet で動作する 5 つの `run-*.sh` (code / review / merge / verify / iss
   - Opus 4.7 との関連 → 直接なし
   - レポート配置先 → `docs/reports/sonnet-effort-recalibration.md` に固定
 - **structure.md 更新不要**: `docs/reports/` は既に `docs/structure.md` に記載済み (line 55)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Implementation Steps 4 (run-*.sh update) and 5 (bats tests) were skipped as designed: all Recommendations were "Maintain", so no script changes were needed. This aligns with the "変更なしのケース" note in the Spec.
+
+### Design Gaps/Ambiguities
+
+- Issue body verify command had `github_check "gh run list" "Run bats tests"` while the Spec already had the correct `github_check "gh pr checks" "Run bats tests"`. The `gh run list` output does not include job names, making the hint miscalibrated. Fixed the Issue body to match the Spec in Step 10.
+
+### Rework
+
+- N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. Implementation fully aligns with the Spec: all required sections present, all 5 scripts covered, Step 4/5 skipped as designed for "all Maintain" result.
+
+### Recurring issues
+
+Nothing to note. No recurring issues observed in this PR.
+
+### Acceptance criteria verification difficulty
+
+All 3 pre-merge conditions verified as PASS automatically. Verify commands were well-calibrated — `file_exists`, `section_contains`, and `github_check "gh pr checks"` all resolved cleanly. No UNCERTAINs.
