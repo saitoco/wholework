@@ -43,6 +43,11 @@ production-url: https://yourapp.example.com
 # Increase for slow repos, Size L+ tasks, or slow machines
 watchdog-timeout-seconds: 3600
 
+# Permission mode for /auto subprocess (default: bypass)
+# "auto" uses --permission-mode auto with allow rules template (see docs/guide/auto-mode-template.json)
+# "bypass" uses --dangerously-skip-permissions (backward compatible)
+permission-mode: auto
+
 # Optional capabilities
 capabilities:
   browser: true             # Enable Playwright-based verify commands
@@ -70,6 +75,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `capabilities.mcp` | list | `[]` | MCP tool names available to skills |
 | `capabilities.{name}` | boolean | `false` | Dynamic capability mapping (e.g., `capabilities.invoice-api: true`) |
 | `watchdog-timeout-seconds` | integer | `1800` | Watchdog timeout in seconds before killing a silent `claude -p` process. Increase for slow repos, Size L+ tasks, or slow machines (e.g., `3600`). Values ≤0 fall back to the default. |
+| `permission-mode` | string | `"bypass"` | Permission mode for `/auto` subprocess. `auto` enables `--permission-mode auto` with allow rules template (see `docs/guide/auto-mode-template.json`); `bypass` uses `--dangerously-skip-permissions`. |
 
 For the full reference including implementation details and YAML parsing rules, see [`modules/detect-config-markers.md`](../../modules/detect-config-markers.md).
 

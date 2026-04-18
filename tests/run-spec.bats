@@ -191,3 +191,45 @@ SKILL
     [ "$status" -eq 0 ]
     grep -q "EFFORT_VALUE=max" "$CLAUDE_CALL_LOG"
 }
+
+@test "permission-mode: auto config passes --permission-mode auto" {
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "auto" ;;
+    *) echo "$DEFAULT" ;;
+esac
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+    cat > "$MOCK_DIR/claude" <<'MOCK'
+#!/bin/bash
+for arg in "$@"; do
+    case "$arg" in
+        --dangerously-skip-permissions) echo "FLAG_SKIP_PERMS=1" >> "$CLAUDE_CALL_LOG" ;;
+        --permission-mode) echo "FLAG_PERM_MODE=1" >> "$CLAUDE_CALL_LOG" ;;
+    esac
+done
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/claude"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    grep -q "FLAG_PERM_MODE=1" "$CLAUDE_CALL_LOG"
+    ! grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "permission-mode: bypass config uses --dangerously-skip-permissions" {
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    *) echo "$DEFAULT" ;;
+esac
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
+}

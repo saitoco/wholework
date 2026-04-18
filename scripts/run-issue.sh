@@ -21,12 +21,21 @@ fi
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 
+PERMISSION_MODE=$("$SCRIPT_DIR/get-config-value.sh" permission-mode bypass 2>/dev/null || echo bypass)
+if [[ "$PERMISSION_MODE" == "auto" ]]; then
+  PERMISSION_FLAG="--permission-mode auto"
+  _PERM_LABEL="permission-mode auto (with allow rules template)"
+else
+  PERMISSION_FLAG="--dangerously-skip-permissions"
+  _PERM_LABEL="skip (autonomous mode)"
+fi
+
 echo "=== run-issue.sh: Starting /issue for issue #${ISSUE_NUMBER} ==="
 source "$SCRIPT_DIR/phase-banner.sh"
 print_start_banner "issue" "$ISSUE_NUMBER" "issue"
 echo "Model: sonnet"
 echo "Effort: high"
-echo "Permissions: skip (autonomous mode)"
+echo "Permissions: ${_PERM_LABEL}"
 echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
 
@@ -68,7 +77,7 @@ ANTHROPIC_MODEL=sonnet \
   env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
     --model sonnet \
     --effort high \
-    --dangerously-skip-permissions
+    $PERMISSION_FLAG
 EXIT_CODE=$?
 set -e
 
