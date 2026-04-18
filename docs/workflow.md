@@ -98,7 +98,7 @@ Automatically verifies post-merge acceptance conditions. All conditions PASS com
 
 ### `/auto` — Full Workflow Automation
 
-Orchestrator that chains Core Phases sequentially, running each as an independent `claude -p --dangerously-skip-permissions` process for context isolation. `/auto 123 [--patch|--pr] [--review=full|--review=light]` drives the end-to-end workflow with Size-based routing:
+Orchestrator that chains Core Phases sequentially, running each as an independent `claude -p` process for context isolation. By default uses `--dangerously-skip-permissions`; set `permission-mode: auto` in `.wholework.yml` to use `--permission-mode auto` instead (see [SECURITY.md](../SECURITY.md)). `/auto 123 [--patch|--pr] [--review=full|--review=light]` drives the end-to-end workflow with Size-based routing:
 
 - **patch XS/S**: spec (if needed) → code → verify
 - **pr M/L**: spec (if needed) → code → review (M → `--light`, L → `--full`) → merge → verify

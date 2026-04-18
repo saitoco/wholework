@@ -50,7 +50,7 @@ Wholework adapts to your project through `.wholework.yml` (feature flags and pat
 
 ## 🔒 Security
 
-Wholework skills perform `gh`, `git`, and file-write operations on your repository. `/auto` uses `--dangerously-skip-permissions` to bypass permission prompts for unattended execution. See [SECURITY.md](SECURITY.md) for a full description of side effects and required permissions.
+Wholework skills perform `gh`, `git`, and file-write operations on your repository. `/auto` uses `--dangerously-skip-permissions` by default, or `--permission-mode auto` when `permission-mode: auto` is set in `.wholework.yml`. See [SECURITY.md](SECURITY.md) for a full description of side effects, required permissions, and permission mode options.
 
 ## 💬 Support
 
