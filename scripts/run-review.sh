@@ -57,14 +57,33 @@ ARGUMENTS: ${ARGUMENTS}"
 
 # Specify --model and ANTHROPIC_MODEL both (workaround for -p mode bug)
 # See: https://github.com/anthropics/claude-code/issues/22362
+WATCHDOG_TIMEOUT=$("$SCRIPT_DIR/get-config-value.sh" watchdog-timeout-seconds 1800 2>/dev/null || echo 1800)
+if ! echo "$WATCHDOG_TIMEOUT" | grep -qE '^[0-9]+$' || [[ "$WATCHDOG_TIMEOUT" -le 0 ]]; then
+  echo "Warning: invalid watchdog-timeout-seconds '${WATCHDOG_TIMEOUT}', using default 1800" >&2
+  WATCHDOG_TIMEOUT=1800
+fi
+
 set +e
 ANTHROPIC_MODEL=sonnet \
+  WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
   env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
     --model sonnet \
     --effort high \
     --dangerously-skip-permissions
 EXIT_CODE=$?
 set -e
+
+if [[ $EXIT_CODE -eq 143 ]]; then
+  _REVIEW_ISSUE=$("$SCRIPT_DIR/gh-extract-issue-from-pr.sh" "$PR_NUMBER" 2>/dev/null \
+    | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('issue_number',''))" 2>/dev/null || echo "")
+  if [[ -n "$_REVIEW_ISSUE" ]]; then
+    if "$SCRIPT_DIR/watchdog-reconcile.sh" review "$_REVIEW_ISSUE" --pr "$PR_NUMBER"; then
+      EXIT_CODE=0
+    fi
+  else
+    echo "watchdog-reconcile: could not extract issue number from PR #${PR_NUMBER}, skipping reconcile" >&2
+  fi
+fi
 
 echo "---"
 echo "=== run-review.sh: Finished /review for PR #${PR_NUMBER} ==="
