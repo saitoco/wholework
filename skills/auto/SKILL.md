@@ -199,7 +199,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 
 **Skip this step for all routes other than XL.**
 
-For XL routes only, create a parent Issue Spec file and record a retrospective of the entire orchestration.
+For XL routes only, create a parent Spec file and record a retrospective of the entire orchestration.
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH` for use in subsequent steps.
 
