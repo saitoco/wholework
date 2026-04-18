@@ -136,3 +136,17 @@ N/A (no spec phase issues noted)
   - reconcile ロジックは共有 helper 集約 (各 run-*.sh に重複実装しない)
   - reconcile は `closes #N` パターン一致で十分
 - **却下アプローチの記録**: stream-json 化とサブプロセスツリー CPU ライブネスは副作用分析の結果不採用 (詳細は Issue body Design Considerations)
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+Nothing to note。全 17 項目の受け入れ条件が PASS。Spec に記載された Layer 2（config timeout）・Layer 3（post-kill reconcile）の両層とも、6 つの run-*.sh・共有 helper・bats テスト・ドキュメント（英語・日本語両方）が揃って実装されており、Spec との乖離は確認されなかった。
+
+### 再発イシューパターン
+
+review-light エージェントが `docs/ja/guide/customization.md` 未更新・`docs/structure.md` のスクリプト未記載を指摘したが、いずれも実コードを確認した結果 false positive だった。エージェントが diff の partial view から判断する前に実ファイルを確認しなかった可能性がある。verify ステップで false positive を除去できたため運用上の問題はなかった。
+
+### 受け入れ条件検証の難易度
+
+Nothing to note。17 項目中 16 項目が `file_exists`/`file_contains` で直接検証可能。残り 1 項目（`command` bats テスト実行）は CI "Run bats tests" SUCCESS による代替検証が機能し UNCERTAIN ゼロで完了した。6 つの run-*.sh を個別に verify している設計（Notes に記載）は正しい選択であり、実装漏れを確実に検出できる。
