@@ -50,3 +50,33 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec はシンプルで実装箇所と検証コマンドが明確に対応しており、ambiguity なし。
+- 受入条件の verify コマンドが `section_contains` ベースで実装内容に直接マッピングされており、自動検証の品質が高い。
+
+#### design
+- 変更対象が `skills/code/SKILL.md` の 2 箇所（Error Handling セクションと Step 9）に絞られており、設計の scope が適切。
+- Spec の Implementation Steps が実際の実装コミット（+10 行のみ）と正確に一致しており、設計と実装の乖離なし。
+
+#### code
+- `fc83586` の 1 コミットで完結。リワークや fixup なし。
+- patch route / pr route / interactive mode の 3 分岐を 10 行で表現しており、実装効率が高い。
+
+#### review
+- patch route を介した直コミットのため PR レビューなし。
+- 受入条件の検証は `/verify` の自動検証で完全カバーされており、手動確認不要な範囲は正確に PASS。
+
+#### merge
+- patch route（main への直接コミット）。コンフリクトマーカーなし。CI 検証は別途 GitHub Actions で担保。
+
+#### verify
+- 3 つの事前マージ条件すべて PASS（section_contains による静的検証）。
+- Post-merge の手動条件（`verify-type: manual`）が 1 件残っており、`phase/verify` ラベルを割り当て。ユーザーによる dry-run 確認が必要。
+
+### Improvement Proposals
+- N/A
