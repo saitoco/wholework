@@ -6,6 +6,8 @@ ssot_for:
   - open-questions
 ---
 
+English | [日本語](ja/routines-adoption.md)
+
 # Routines Adoption
 
 Long-term initiative document for adopting Claude Code's Routines feature into wholework. Captures direction, open questions, tier roadmap, and PoC learnings as they accumulate across sessions.

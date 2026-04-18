@@ -50,7 +50,7 @@ Wholework は `.wholework.yml`（フィーチャーフラグとパス）、`.who
 
 ## 🔒 セキュリティ
 
-Wholework のスキルは `gh`、`git`、ファイル書き込みなどの操作をリポジトリに対して実行します。`/auto` は無人実行のために `--dangerously-skip-permissions` を使い permission prompt をバイパスします。副作用と必要な権限の全容は [SECURITY.md](SECURITY.md) を参照してください。
+Wholework のスキルは `gh`、`git`、ファイル書き込みなどの操作をリポジトリに対して実行します。`/auto` はデフォルトで `--dangerously-skip-permissions` を使用し、`.wholework.yml` で `permission-mode: auto` を設定した場合は `--permission-mode auto` を使用します。副作用、必要な権限、permission mode オプションの全容は [SECURITY.md](SECURITY.md) を参照してください。
 
 ## 💬 サポート
 

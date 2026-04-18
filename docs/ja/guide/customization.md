@@ -37,6 +37,11 @@ production-url: https://yourapp.example.com
 # 遅い repo、Size L 以上のタスク、または低速マシンでは増やすことを推奨
 watchdog-timeout-seconds: 3600
 
+# /auto サブプロセスの permission mode（デフォルト: bypass）
+# "auto" は --permission-mode auto を allow rules テンプレートと共に使用（docs/guide/auto-mode-template.json 参照）
+# "bypass" は --dangerously-skip-permissions を使用（後方互換）
+permission-mode: auto
+
 # オプション capability
 capabilities:
   browser: true             # Playwright ベースの verify command を有効化
@@ -45,6 +50,8 @@ capabilities:
 すべてのキーはオプションです。`.wholework.yml` が存在しない場合、すべての設定はデフォルトで動作します。
 
 ### Available Keys
+
+このテーブルは `.wholework.yml` の全設定キーにおける **Single Source of Truth (SSoT)** です。キーを追加・変更する際はこのテーブルを更新してください。
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
@@ -62,6 +69,7 @@ capabilities:
 | `capabilities.mcp` | list | `[]` | スキルから利用できる MCP ツール名 |
 | `capabilities.{name}` | boolean | `false` | 動的 capability マッピング（例: `capabilities.invoice-api: true`） |
 | `watchdog-timeout-seconds` | integer | `1800` | watchdog が silent な `claude -p` プロセスを kill するまでのタイムアウト秒数。遅い repo、Size L 以上のタスク、低速マシンでは増やす（例: `3600`）。0 以下の値はデフォルトにフォールバック。 |
+| `permission-mode` | string | `"bypass"` | `/auto` サブプロセスの permission mode。`auto` は `--permission-mode auto` を allow rules テンプレートと共に有効化（`docs/guide/auto-mode-template.json` 参照）; `bypass` は `--dangerously-skip-permissions` を使用。 |
 
 実装の詳細や YAML パースルールを含む完全なリファレンスは [`modules/detect-config-markers.md`](../../../modules/detect-config-markers.md) を参照してください。
 

@@ -6,6 +6,8 @@ ssot_for:
   - pre-1.0-policy
 ---
 
+English | [日本語](ja/versioning.md)
+
 # Versioning Policy
 
 This document is the SSoT for Wholework's versioning rules. Claude Code sessions should consult this before bumping `.claude-plugin/plugin.json` or tagging a release.
