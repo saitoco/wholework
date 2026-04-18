@@ -66,3 +66,28 @@
 ### 曖昧点の自動解決
 
 - **「removed literal」フレーズ**: SKILL.md は英語で記述されるため、日本語「削除されたリテラル」ではなく英語 "removed literal" を AC verify hint のターゲット文字列とした（`section_contains "Step 8" "removed literal"`）。実装者がこのフレーズを採用しない場合は `/verify` の AI fallback でカバー
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 設計はシンプルかつ正確。`section_contains` verify hint の keyword 選択（"tests/"、"removed literal"、"grep"）が実装テキストと一致しており、3条件すべて即座に PASS。曖昧点の自動解決（"removed literal" フレーズの英語化）が適切で `/verify` での追加 fallback 不要だった。
+
+#### design
+- 変更対象が `skills/code/SKILL.md` の Step 8 のみという明確な設計。実装ステップの逸脱なし（Code Retrospective: N/A）。
+
+#### code
+- patch route（Size=S）として 1 コミット（`b3ce8b4`）で完結。fixup/amend パターンなし、レビューコメントの取り込み回数ゼロ。リワークなし。
+
+#### review
+- patch route のため PR レビューなし。verify コマンドがすべて PASS したことから、実装品質に問題はなかった。
+
+#### merge
+- patch route で main への直接コミット。コンフリクトなし、CI 実行なし（SKILL.md 変更は bats テスト対象外）。
+
+#### verify
+- 3条件 PASS、1条件 manual（post-merge）。manual 条件は `/verify` の自動化スコープ外であり手動確認に委ねる設計が適切だった。verify command の一貫性に問題なし。
+
+### Improvement Proposals
+- N/A
