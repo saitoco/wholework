@@ -49,6 +49,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md` and follow the "Non-I
 - **hard-error abort** (exceptions — these still exit with non-zero):
   - Size label is not set (cannot determine patch vs. pr route; guide to set Size label, then abort)
   - Size is `XL` (requires sub-issue splitting before coding; guide to split the Issue, then abort)
+  - patch route: test FAIL persists after 1 repair attempt (cannot push failing tests to main; fix tests manually then re-run `/code $NUMBER --patch`, then abort)
 
 ## Steps
 
@@ -223,6 +224,15 @@ Skip this sub-step if no out-of-scope remediations are identified.
 ### Step 9: Run Tests
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/test-runner.md` and follow the "Processing Steps" section to run tests.
+
+**Test FAIL handling (when test-runner.md reports FAIL):**
+
+1. Attempt to fix the failing tests (1 repair attempt)
+2. Re-run tests
+3. If tests still FAIL after the repair attempt:
+   - **patch route (non-interactive mode)**: hard-error abort — output "Tests still FAIL after one repair attempt. Fix tests manually, then re-run `/code $NUMBER --patch`." and exit with non-zero
+   - **patch route (interactive mode)**: use AskUserQuestion to let the user decide (abort / continue)
+   - **pr route**: continue — CI will detect the failure; report remaining failures in the completion message
 
 **Additional validation (run after tests):**
 
