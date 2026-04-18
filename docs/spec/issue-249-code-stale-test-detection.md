@@ -39,3 +39,17 @@
 - SPEC_DEPTH=light（Size=S、patch route）
 - 検知手順はマークダウン記述（SKILL.md）への追加のみ。bats テスト変更は不要（SKILL.md は直接 bats テストの対象外）
 - doc 影響なし（README.md・docs/workflow.md・CLAUDE.md はいずれも code skill Step 8 を参照していないことを grep で確認済み）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
