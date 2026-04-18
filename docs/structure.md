@@ -27,7 +27,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (6 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (32 files)
+├── scripts/             # Utility scripts used by skills and agents (34 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -37,7 +37,7 @@ wholework/
 │   └── workflows/
 │       ├── test.yml             # CI: bats tests, skill syntax validation, forbidden expressions check, and macOS shell compatibility test
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
-├── tests/               # Bats test files for scripts (32 files)
+├── tests/               # Bats test files for scripts (33 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -147,6 +147,7 @@ Key modules:
 
 **Process management:**
 - `scripts/claude-watchdog.sh` — watchdog wrapper for `claude -p` invocations (hang detection + 1 retry)
+- `scripts/watchdog-reconcile.sh` — post-kill state reconciler; verifies expected phase state after watchdog kill (exit 143) and upgrades to exit 0 if state was reached
 - `scripts/wait-ci-checks.sh` — wait for required CI checks to complete on a PR before running claude
 
 **Skill runners:**

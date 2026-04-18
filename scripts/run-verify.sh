@@ -84,9 +84,16 @@ fi
 
 # Specify --model and ANTHROPIC_MODEL both (workaround for -p mode bug)
 # See: https://github.com/anthropics/claude-code/issues/22362
+WATCHDOG_TIMEOUT=$("$SCRIPT_DIR/get-config-value.sh" watchdog-timeout-seconds 1800 2>/dev/null || echo 1800)
+if ! echo "$WATCHDOG_TIMEOUT" | grep -qE '^[0-9]+$' || [[ "$WATCHDOG_TIMEOUT" -le 0 ]]; then
+  echo "Warning: invalid watchdog-timeout-seconds '${WATCHDOG_TIMEOUT}', using default 1800" >&2
+  WATCHDOG_TIMEOUT=1800
+fi
+
 VERIFY_TMPOUT=$(mktemp)
 set +e
 ANTHROPIC_MODEL=sonnet \
+  WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
   env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
     --model sonnet \
     --effort medium \
@@ -100,6 +107,12 @@ if grep -q "VERIFY_FAILED" "$VERIFY_TMPOUT"; then
   EXIT_CODE=1
 fi
 rm -f "$VERIFY_TMPOUT"
+
+if [[ $EXIT_CODE -eq 143 ]]; then
+  if "$SCRIPT_DIR/watchdog-reconcile.sh" verify "$ISSUE_NUMBER"; then
+    EXIT_CODE=0
+  fi
+fi
 
 echo "---"
 echo "=== run-verify.sh: Finished /verify for Issue #${ISSUE_NUMBER} ==="

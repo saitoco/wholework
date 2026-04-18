@@ -33,6 +33,10 @@ steering-docs-path: docs          # steering documents の配置先
 # ブラウザベース verify command 用の本番 URL
 production-url: https://yourapp.example.com
 
+# watchdog タイムアウト（デフォルト: 1800 秒）
+# 遅い repo、Size L 以上のタスク、または低速マシンでは増やすことを推奨
+watchdog-timeout-seconds: 3600
+
 # オプション capability
 capabilities:
   browser: true             # Playwright ベースの verify command を有効化
@@ -57,6 +61,7 @@ capabilities:
 | `capabilities.browser` | boolean | `false` | Playwright ベースの verify command を有効化する |
 | `capabilities.mcp` | list | `[]` | スキルから利用できる MCP ツール名 |
 | `capabilities.{name}` | boolean | `false` | 動的 capability マッピング（例: `capabilities.invoice-api: true`） |
+| `watchdog-timeout-seconds` | integer | `1800` | watchdog が silent な `claude -p` プロセスを kill するまでのタイムアウト秒数。遅い repo、Size L 以上のタスク、低速マシンでは増やす（例: `3600`）。0 以下の値はデフォルトにフォールバック。 |
 
 実装の詳細や YAML パースルールを含む完全なリファレンスは [`modules/detect-config-markers.md`](../../../modules/detect-config-markers.md) を参照してください。
 

@@ -105,6 +105,27 @@
 - `/auto` 実行中に watchdog kill が発生した場合でも、期待状態に到達していればバッチが継続する
 - `.wholework.yml` で `watchdog-timeout-seconds: 3600` に変更した repo で、30 分超の Size L タスクが kill なしで完遂する
 
+## Spec Retrospective
+
+N/A (no spec phase issues noted)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の `get-config-value.sh` パス指定が `/Users/saito/src/wholework/scripts/get-config-value.sh` という絶対パスだったが、正しく `$SCRIPT_DIR/get-config-value.sh` に変更した。Spec のコードスニペットは例示用と判断し、実装では既存の `SCRIPT_DIR` パターンに従った
+- `run-review.sh` / `run-merge.sh` の reconcile 呼び出しには issue 番号が必要なため、`gh-extract-issue-from-pr.sh` で PR から issue 番号を動的に取得するパターンを採用した (Spec では省略されていた詳細)
+- Spec では `--route patch|pr` オプションも Usage に記載されていたが、`code-patch`/`code-pr` という phase 名でルートを直接表現できるため、`--route` フラグは実装を省略した
+
+### Design Gaps/Ambiguities
+
+- `run-review.sh` と `run-merge.sh` は PR 番号を主引数に取るため、reconcile に必要な issue 番号をどう取得するかが Spec では未記載。実装では `gh-extract-issue-from-pr.sh` を利用し、取得失敗時はスキップ (reconcile なし) とした
+- `watchdog-reconcile.sh` の `spec` phase では `spec-path` を `get-config-value.sh` で取得するが、WHOLEWORK_SCRIPT_DIR が mock に向いている場合 mock の `get-config-value.sh` が呼ばれる。テストで `MOCK_SPEC_PATH` env 変数を使って mock を制御した
+
+### Rework
+
+- bats テスト作成時、`verify` phase の `--json state` / `--json labels` 呼び出し分岐を単一の `gh` mock で処理するため、`$*` でフラグを判別するパターンに修正した
+
 ## Notes
 
 - **Size 超過注意**: 光テンプレートの pre-merge 上限 (5 項目) を大きく超え 17 項目となる。6 つの run-*.sh 個別検証が Issue の性質上必須 (1 スクリプトで実装漏れがあれば false positive が残る) のため、verify command は per-file 維持。実装ステップ側は 5 ステップ内にグルーピング済み
@@ -115,3 +136,17 @@
   - reconcile ロジックは共有 helper 集約 (各 run-*.sh に重複実装しない)
   - reconcile は `closes #N` パターン一致で十分
 - **却下アプローチの記録**: stream-json 化とサブプロセスツリー CPU ライブネスは副作用分析の結果不採用 (詳細は Issue body Design Considerations)
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+Nothing to note。全 17 項目の受け入れ条件が PASS。Spec に記載された Layer 2（config timeout）・Layer 3（post-kill reconcile）の両層とも、6 つの run-*.sh・共有 helper・bats テスト・ドキュメント（英語・日本語両方）が揃って実装されており、Spec との乖離は確認されなかった。
+
+### 再発イシューパターン
+
+review-light エージェントが `docs/ja/guide/customization.md` 未更新・`docs/structure.md` のスクリプト未記載を指摘したが、いずれも実コードを確認した結果 false positive だった。エージェントが diff の partial view から判断する前に実ファイルを確認しなかった可能性がある。verify ステップで false positive を除去できたため運用上の問題はなかった。
+
+### 受け入れ条件検証の難易度
+
+Nothing to note。17 項目中 16 項目が `file_exists`/`file_contains` で直接検証可能。残り 1 項目（`command` bats テスト実行）は CI "Run bats tests" SUCCESS による代替検証が機能し UNCERTAIN ゼロで完了した。6 つの run-*.sh を個別に verify している設計（Notes に記載）は正しい選択であり、実装漏れを確実に検出できる。
