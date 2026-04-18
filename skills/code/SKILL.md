@@ -182,6 +182,28 @@ Implement the code following the "Implementation Steps" in the Spec.
 - Use TaskCreate/TaskUpdate to manage tasks while working
 - Commit after each step completes
 
+#### Stale Test Assertion Check
+
+After completing implementation changes to files under `scripts/`, `modules/`, or `skills/`, check whether any removed literal strings remain as stale assertions in `tests/`.
+
+**Removed literals** are string constants that appear as `-` lines in `git diff` (excluding comment-only lines and whitespace-only changes).
+
+Steps:
+1. Extract removed literals from the diff:
+   ```bash
+   git diff HEAD -- scripts/ modules/ skills/ | grep '^-' | grep -v '^---' | grep -v '^\s*#'
+   ```
+2. For each non-trivial string constant found (e.g., model IDs, command names, flag values), search `tests/` for residual occurrences:
+   ```bash
+   grep -rn "REMOVED_LITERAL" tests/ | grep -v '^\s*#'
+   ```
+3. If any matches are found in `tests/`, output a warning and update the stale assertions before committing:
+   ```
+   Warning: stale test assertion found — "REMOVED_LITERAL" remains in tests/. Update the assertion to match the new value.
+   ```
+
+Skip this check if no files under `scripts/`, `modules/`, or `skills/` were changed.
+
 #### Follow-up Issue Creation
 
 If scope-out remediations are identified during implementation, create a follow-up Issue using the `retro/code` label:
