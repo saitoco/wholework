@@ -38,15 +38,14 @@ fi
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 
 # Process lock (prevents main branch conflicts on patch route)
-# Generate project-specific lock directory by hashing the repository root path
 REPO_ROOT="$(git -C "${SCRIPT_DIR}/.." rev-parse --show-toplevel 2>/dev/null || (cd "${SCRIPT_DIR}/.." && pwd))"
-LOCK_HASH=$(echo "$REPO_ROOT" | cksum | awk '{print $1}')
-PATCH_LOCK_DIR="/tmp/claude-auto-patch-lock-${LOCK_HASH}"
+PATCH_LOCK_DIR="${REPO_ROOT}/.tmp/claude-auto-patch-lock"
 
 acquire_patch_lock() {
   local timeout=300
   local elapsed=0
   echo "Patch route commits directly to main, running sequentially (waiting for lock...)"
+  mkdir -p "$(dirname "$PATCH_LOCK_DIR")"
   while ! mkdir "$PATCH_LOCK_DIR" 2>/dev/null; do
     if [[ $elapsed -ge $timeout ]]; then
       echo "Error: Patch lock acquisition timeout (${timeout}s)" >&2

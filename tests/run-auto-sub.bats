@@ -111,9 +111,8 @@ MOCK
 
 teardown() {
     rm -rf "$MOCK_DIR"
-    # Clean up any leftover patch lock from the per-test repo hash
-    LOCK_HASH=$(echo "$BATS_TEST_TMPDIR/test-repo" | cksum | awk '{print $1}')
-    rmdir "/tmp/claude-auto-patch-lock-${LOCK_HASH}" 2>/dev/null || true
+    # Clean up any leftover patch lock
+    rmdir "$BATS_TEST_TMPDIR/test-repo/.tmp/claude-auto-patch-lock" 2>/dev/null || true
 }
 
 @test "error: no arguments" {
@@ -255,11 +254,10 @@ MOCK
     export LOCK_CHECK_FILE
 
     # Override run-code.sh to verify lock dir exists during execution
-    LOCK_HASH=$(echo "$BATS_TEST_TMPDIR/test-repo" | cksum | awk '{print $1}')
     cat > "$MOCK_DIR/run-code.sh" <<MOCK
 #!/bin/bash
 echo "\$@" >> "\$RUN_CODE_LOG"
-[ -d "/tmp/claude-auto-patch-lock-${LOCK_HASH}" ] && echo "LOCK_EXISTS" > "\$LOCK_CHECK_FILE" || true
+[ -d "$BATS_TEST_TMPDIR/test-repo/.tmp/claude-auto-patch-lock" ] && echo "LOCK_EXISTS" > "\$LOCK_CHECK_FILE" || true
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/run-code.sh"
@@ -272,6 +270,5 @@ MOCK
     grep -q "LOCK_EXISTS" "$LOCK_CHECK_FILE"
 
     # Lock released after script completes
-    LOCK_HASH=$(echo "$BATS_TEST_TMPDIR/test-repo" | cksum | awk '{print $1}')
-    [ ! -d "/tmp/claude-auto-patch-lock-${LOCK_HASH}" ]
+    [ ! -d "$BATS_TEST_TMPDIR/test-repo/.tmp/claude-auto-patch-lock" ]
 }
