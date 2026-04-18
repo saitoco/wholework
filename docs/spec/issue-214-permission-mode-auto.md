@@ -112,3 +112,17 @@ Issue 側で auto-resolve 済み:
 ### Rework
 
 - N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+`docs/tech.md` Architecture Decisions section was not listed in the Spec's Changed Files, but it contained an outdated description of `/auto`'s permission mechanism that needed updating. The Spec listed `docs/guide/customization.md` and `SECURITY.md` as documentation targets, but missed `docs/tech.md` even though it directly describes the changed behavior. When a configuration flag controlling behavior is added, the Architecture Decisions section of tech.md should always be included in the Changed Files list.
+
+### Recurring issues
+
+Nothing to note.
+
+### Acceptance criteria verification difficulty
+
+All 15 pre-merge conditions were auto-verifiable (grep, file_exists, file_contains, section_contains, CI reference). Zero UNCERTAINs. The verify commands were well-specified. The `section_contains` checks for SECURITY.md worked correctly once the worktree file path was used (there was a path confusion between the main repo and worktree during initial verification). No improvement needed for the verify commands themselves.
