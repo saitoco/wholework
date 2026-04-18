@@ -73,3 +73,17 @@ Sonnet で動作する 5 つの `run-*.sh` (code / review / merge / verify / iss
 ### Rework
 
 - N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. Implementation fully aligns with the Spec: all required sections present, all 5 scripts covered, Step 4/5 skipped as designed for "all Maintain" result.
+
+### Recurring issues
+
+Nothing to note. No recurring issues observed in this PR.
+
+### Acceptance criteria verification difficulty
+
+All 3 pre-merge conditions verified as PASS automatically. Verify commands were well-calibrated — `file_exists`, `section_contains`, and `github_check "gh pr checks"` all resolved cleanly. No UNCERTAINs.
