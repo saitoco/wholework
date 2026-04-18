@@ -51,3 +51,28 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受入条件に verify コマンドが明示されており自動検証可能な形式。Spec の実装ステップも明確で実装との整合性が高い。
+
+#### design
+- 実装内容（`command` 行への Note 追記）がそのまま Spec に記述されており、設計と実装の乖離なし。追記位置の判断（既存 Note 直後）も適切。
+
+#### code
+- コミット数2件（実装 + コードレトロ追記）でリワークなし。fixup/amend パターンなし。クリーンな実装。
+
+#### review
+- パッチルートのため PR レビューなし。ドキュメント修正のみのシンプルな変更で PR 不要の判断は妥当。
+
+#### merge
+- パッチルート（直コミット）で main へ直接マージ。コンフリクトなし。
+
+#### verify
+- Pre-merge 条件 2件ともPASS。Post-merge の manual 条件は macOS 環境での実際の動作確認が必要で自動検証対象外（適切な分類）。
+
+### Improvement Proposals
+- N/A
