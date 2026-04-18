@@ -126,3 +126,31 @@ Nothing to note.
 ### Acceptance criteria verification difficulty
 
 All 15 pre-merge conditions were auto-verifiable (grep, file_exists, file_contains, section_contains, CI reference). Zero UNCERTAINs. The verify commands were well-specified. The `section_contains` checks for SECURITY.md worked correctly once the worktree file path was used (there was a path confusion between the main repo and worktree during initial verification). No improvement needed for the verify commands themselves.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 側の auto-resolve 記録が充実しており、spec フェーズでの曖昧性は最小だった。`autoMode` の実際の JSON フォーマット（`allowRules` vs `allow[]`）がコード実装時まで未検証だった点は spec の設計前提（Design Premises セクション）に明示されていたため、許容範囲の技術的前提。
+
+#### design
+- Changed Files リストに `docs/tech.md` が漏れていた（review retrospective で指摘）。`/auto` のパーミッション機構を変更する際は Architecture Decisions セクションを持つ `docs/tech.md` を Changed Files に含める汎用ルールとして定着させるべき。
+
+#### code
+- `permission-mode` 解決タイミングの配置逸脱（Spec: WATCHDOG_TIMEOUT ブロック後 → 実装: echo ブロック前）は動的バナー表示のための合理的な逸脱で問題なし。
+- `autoMode` フォーマット（`allowRules` → `allow[]`）の差異は実装時の CLI 確認で解決済み。Spec の Design Premises に「コード実装時に確認」と明示していたためプロセスとして機能した。
+
+#### review
+- `docs/tech.md` の漏れを検出できた点は有効。15 条件全てが auto-verifiable であることを確認しており、verify コマンドの品質も高かった。
+
+#### merge
+- 高速マージ。コンフリクトなし。
+
+#### verify
+- 15/15 pre-merge 条件が全 PASS。407/407 bats テストが全 PASS。
+- Post-merge 2 条件は `verify-type: manual` として正しく設計されており（実際の `/auto` 完走・destructive pattern 阻止を環境依存で確認するため）、UNCERTAIN でなく意図的な manual 判定。
+- phase/verify ラベルを付与し、ユーザーによる manual 確認を待機。
+
+### Improvement Proposals
+- `docs/tech.md` の Architecture Decisions セクションをSpec の Changed Files チェックリストに自動含めるルールの検討（`/auto` のパーミッション・モデル変更系の Issue で繰り返し漏れるリスクがある）
