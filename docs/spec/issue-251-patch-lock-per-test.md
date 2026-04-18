@@ -78,3 +78,30 @@ mock が返す REPO_ROOT を bats が自動生成する `$BATS_TEST_TMPDIR/test-
 - `teardown()` で cleanup する lock パスも `$BATS_TEST_TMPDIR/test-repo` ベースに統一する必要がある（Step 2）。`teardown()` は各テスト終了後に呼ばれるため、per-test の `BATS_TEST_TMPDIR` が利用可能
 - test 200 の mock run-code.sh はグローバルな setup() 内の mock を上書きするが、LOCK_HASH はそのテスト固有の `$BATS_TEST_TMPDIR` から計算するため独立性が保たれる
 - `BATS_TEST_TMPDIR` は bats が各テスト開始前に設定する環境変数で、`teardown()` でも同じ値が利用可能
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body に根本原因・再現手順・修正箇所が詳細に記載されており、Spec への転記がスムーズだった。受け入れ基準に verify コマンドが付与されていて自動検証しやすい形式だった
+
+#### design
+- N/A（issue フェーズで設計情報が完結していた）
+
+#### code
+- Code Retrospective より: verify コマンド #3 の `file_not_contains` ターゲット文字列が当初誤っていた（`/tmp/claude-auto-patch-lock-` は teardown/mock に正当に残る）。`claude-auto-patch-lock-*`（glob パターン文字列）に修正して正しい検証になった。「verify コマンドのターゲット文字列は実装コードをよく読んで設計する」という教訓
+- リワークなし。パッチルートで 1 コミットで完了
+
+#### review
+- パッチルートのため PR レビューなし
+
+#### merge
+- パッチルート（直コミット）。`closes #251` を含むコミットメッセージで Issue が自動クローズ
+
+#### verify
+- macOS 環境では `nproc` が未インストールのため `bats --jobs $(nproc) tests/run-auto-sub.bats` が直接実行できなかった。`parallel` コマンドも未インストールで並行実行不可。シーケンシャル実行（全 13 テスト PASS）で代替検証した
+- 並行実行の verify コマンドで `$(nproc)` を使うのは macOS 非互換。ローカル verify 環境での代替手段を Issue 受け入れ条件に記載するか、verify-executor で自動変換する仕組みがあると精度が上がる
+
+### Improvement Proposals
+- verify コマンド内の `$(nproc)` は macOS で失敗する。verify-executor の `command` ヒント実行時に `nproc` が未インストールの場合 `sysctl -n hw.logicalcpu` にフォールバックするか、Issue テンプレートでポータブルな書き方を案内する仕組みを検討する
