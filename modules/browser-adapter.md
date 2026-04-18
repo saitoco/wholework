@@ -67,7 +67,7 @@ Execute according to the command conversion table below based on the detected to
 1. Open page with `browser-use open "<url>"`
    - With Basic auth: Do not embed credentials in URL; establish auth session in advance with `browser-use eval` before opening page. **Do NOT write `PREVIEW_BASIC_USER` / `PREVIEW_BASIC_PASS` values directly in the command line string** (use environment variable references or temp files to pass the `Authorization` header so credentials don't appear in process list, shell history, or logs)
 2. Generate temp file path and save screenshot to that path
-   - Example (shell): `screenshot_path="$(mktemp /tmp/verify-screenshot-XXXXXX.png)"`
+   - Example (shell): `mkdir -p .tmp && screenshot_path="$(mktemp .tmp/verify-screenshot-XXXXXX.png)"`
    - Example (browser-use): `browser-use screenshot "$screenshot_path"`
 3. Read screenshot image at `"$screenshot_path"` using the Read tool, and AI visually judges based on `description`
 4. Delete temp file after judgment (`rm -f "$screenshot_path"`)
