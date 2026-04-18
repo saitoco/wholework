@@ -39,10 +39,10 @@ echo "Permissions: ${_PERM_LABEL}"
 echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
 
-# Pass SKILL.md body directly as prompt (avoids context: fork issue)
-# /issue has context: fork, so calling it via claude -p "/issue N" prevents
-# --dangerously-skip-permissions from propagating to the fork sub-agent (#284)
-# By passing SKILL.md body directly, we bypass frontmatter interpretation
+# Pass SKILL.md body directly as prompt to inject --non-interactive into ARGUMENTS.
+# claude -p "/issue N" invokes the skill with no ARGUMENTS override, so the
+# --non-interactive flag cannot be passed that way. Appending "ARGUMENTS: N --non-interactive"
+# to the body text is the only way to set the flag for non-interactive execution.
 SKILL_FILE="${SCRIPT_DIR}/../skills/issue/SKILL.md"
 
 if [[ ! -f "$SKILL_FILE" ]]; then
