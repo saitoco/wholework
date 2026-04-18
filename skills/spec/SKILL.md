@@ -316,6 +316,7 @@ SHOULD constraints (best practices, manual check — examples):
 | External GitHub Action required inputs | When `.github/workflows/*.yml` is in the changed files and references an external Action, check the Action's `action.yml` (via WebFetch or repository reference) and verify all `required: true` inputs are included in the snippet | #144 |
 | External command dependencies | When Implementation Steps use commands with external dependencies (packages requiring installation: apt packages, brew formulas, npm modules, OS-specific binaries), include install steps for each package explicitly | #179 |
 | Audit report Findings/Remediation consistency | When Implementation Steps include audit report generation: add a step to verify that each row in the Remediation table has a corresponding entry in the Findings section | #238 |
+| Architecture Decisions impact | When adding new `.wholework.yml` keys or new CLI flags passed to `claude -p` in `run-*.sh`, check the Architecture Decisions section in `docs/tech.md` and include `tech.md` in the Changed Files list | #250 |
 
 **SHOULD-level acceptance criteria consideration:**
 
