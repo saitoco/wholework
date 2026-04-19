@@ -83,8 +83,6 @@ User-facing documentation is maintained under `docs/guide/`. It covers installat
   - **Infrastructure / IaC**: Terraform/Pulumi definitions, Kubernetes manifests, CI/CD pipeline setup
   - **OSS operations**: RFC process, CHANGELOG management, automated release notes
   - **Business / planning**: marketing campaign management, product roadmap, legal documents
-- **Progressive disclosure for specialized content (Core/Domain split)**: Extract specialized content currently embedded in Skill bodies (UI design, Skill development, etc.) into auxiliary files loaded only in relevant projects. This keeps Core lightweight while enabling domain-specific extensions.
-- **Adapter pattern for capability-based extension**: Abstract tool access (browser, CI, external services) behind an adapter layer and switch Skill behavior based on capability availability. Adapters operate in three steps (detect → translate command → delegate execution) and resolve in priority order: project-local → user-global → bundled. This decouples Skill bodies from specific tools, allowing the same Skill to work across different environments (with or without Playwright, with or without CI integration, etc.).
 
 <!-- ## Success Metrics (Optional)
 
