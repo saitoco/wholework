@@ -85,3 +85,33 @@ bats テストでその動作を検証する。
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件は全て `file_contains` / `grep` / `command` / `github_check` の verify コマンドが付与されており、自動検証可能な形式で記述されていた
+- パッチルート（PR なし）であることを Spec Notes に明示し、`github_check "gh run list"` 形式を使用するよう記載されていた点は適切
+
+#### design
+- 英語ドキュメント更新時の `docs/ja/` 翻訳ファイル同期が Spec の実装ステップに含まれていなかった。doc-checker が検出して対応（commit 0876284）したが、Spec テンプレートまたは `/spec` スキルで翻訳同期タスクの明示をサポートしていれば、この漏れを防げた可能性がある
+- 変更ファイルの列挙と実装ステップの粒度は適切だった
+
+#### code
+- デザインからの逸脱なし。リワークなし
+- 翻訳ファイル同期（commit 0876284）が Spec 外の追加コミットになったが、doc-checker モジュールによる自動検出で対応できており、実装品質への影響なし
+
+#### review
+- パッチルート（Size S）のため PR レビューなし。コードの変更範囲が小さく（翻訳テーブルへの列追加 + 新規スクリプト）、レビューなしでも品質を維持できた
+
+#### merge
+- パッチルート（main への直接コミット）。コンフリクトなし
+
+#### verify
+- 5条件が PASS、1条件が PENDING（CI in_progress）
+- CI の最新ラン（2026-04-19T15:45:47Z）が実行中のため PENDING。1つ前のラン（2026-04-19T15:45:02Z）は success であり、実装品質は問題ない可能性が高い
+- Post-merge opportunistic 条件は実際の Issue での動作確認が必要（自動検証対象外）
+
+### Improvement Proposals
+- `/spec` スキルの実装ステップテンプレートに「英語ドキュメントを更新した場合は `docs/ja/` の対応ファイルも更新リストに含める」チェック項目を追加することで、翻訳同期漏れを Spec 段階で防止できる
