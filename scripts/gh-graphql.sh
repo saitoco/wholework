@@ -210,7 +210,7 @@ if [ "$HAS_OWNER" = false ] || [ "$HAS_REPO" = false ]; then
 
     # Cache miss or cache disabled: fetch from API
     if [ -z "$REPO_INFO" ]; then
-        REPO_INFO=$(gh repo view --json owner,name --jq '[.owner.login,.name] | @tsv')
+        REPO_INFO=$(gh repo view --json owner,name --jq '[.owner.login,.name] | @tsv') || { echo "Error: gh repo view failed — check GitHub authentication and repository access" >&2; exit 1; }
         # Save to cache if enabled
         if [ "$CACHE_ENABLED" = true ]; then
             echo "$REPO_INFO" > "$REPO_CACHE"

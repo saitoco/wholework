@@ -131,6 +131,28 @@ teardown() {
     [[ "$output" == *"empty query"* ]]
 }
 
+@test "error: gh repo view failure exits with error message" {
+    # Override mock to make gh repo view fail
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GH_CALL_LOG"
+if [[ "$1" == "repo" && "$2" == "view" ]]; then
+    echo "error: could not resolve authentication" >&2
+    exit 1
+fi
+if [[ "$1" == "api" && "$2" == "graphql" ]]; then
+    echo '{"data":{"result":"ok"}}'
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 'query($owner:String!){repository(owner:$owner){id}}'
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"repo view"* ]]
+}
+
 @test "success: backslash-exclamation in query is sanitized" {
     run bash "$SCRIPT" 'query($owner:String\!,$repo:String\!){repository(owner:$owner,name:$repo){id}}'
     [ "$status" -eq 0 ]
