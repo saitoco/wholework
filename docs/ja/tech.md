@@ -42,7 +42,7 @@
 - **`/doc` スキル**: プロジェクト基盤ドキュメント管理。Steering Documents（`product.md`、`tech.md`、`structure.md`）とプロジェクトドキュメントを管理する。主要操作: `sync`（双方向の正規化とドリフト検出、`--deep` で拡張コードベース解析）、`init`（初期セットアップウィザード）、`add` / `project`（ドキュメント登録）、`translate {lang}`（多言語翻訳生成）。`/audit` の補完として機能: `/doc sync` はドキュメント側の修正を提案し、`/audit drift` はコード側の修正を Issue 化する
 - **サブエージェント分割**: 2 つのスキルで使用:
   - `/issue`（L/XL）: 3 つの独立サブエージェント（`issue-scope`、`issue-risk`、`issue-precedent`）による並列調査で、変更スコープ、リスク、前例を同時に分析する
-  - `/review`: 2 グループに分割する — Spec 準拠レビュー（`review-spec`）とバグ検出（`review-bug`）。2 段階検証（検出→検証サブエージェント）で偽陽性を排除
+  - `/review`: Full モードでは 2 グループに分割する — Spec 準拠レビュー（`review-spec`）とバグ検出（`review-bug`）。2 段階検証（検出→検証サブエージェント）で偽陽性を排除。Light モードでは統合エージェント（`review-light`）1 つで 4 観点（spec・bug・エッジケース・ドキュメント）をまとめて担当
 - **共有モジュールパターン**: 複数スキルを横断する共通処理を `modules/*.md` に切り出し、"Read and follow" パターンで参照する
 - **Spec ファースト（使い捨て）**: Spec はタスク完了後の成果物として保守しない。Spec-anchored および Spec-as-source アプローチは採用しない。理由: (1) LLM の非決定性により同じ spec が同じコード再生成を保証しない、(2) spec 保守コストがコード保守コストに上乗せになる
 - **プログレッシブ・ディスクロージャー（Core/Domain 分離）**: SKILL.md 本文にはプロジェクト種別やツールに依存しない汎用ロジックだけを記す。特定ツール（Figma、Copilot など）やプロジェクト種別（スキル開発、IaC など）に固有のロジックは補助ファイル（`skills/{name}/xxx-phase.md`）に切り出し、該当するときだけ読み込む。判断基準: 「このツール/プロジェクト種別を使わないプロジェクトでもこのロジックが必要か？」— No なら切り出す
@@ -52,6 +52,9 @@
     |---------|-----------|---------|
     | Marker 検出 | `.wholework.yml` の YAML キー | `review/external-review-phase.md`（`copilot-review: true`、`claude-code-review: true`、`coderabbit-review: true` のいずれかで読み込み） |
     | ファイル存在 | 特定ファイルの存在 | `review/skill-dev-recheck.md`（`scripts/validate-skill-syntax.py` が存在すれば読み込み） |
+    | MCP 可用性 | Claude Code セッションに MCP ツールが存在 | `spec/figma-design-phase.md`（Figma MCP ツールが ToolSearch でロードされた場合に読み込み） |
+    | 深度ルーティング | スキル呼び出しモード（`--full` / `--light`） | `spec/codebase-search.md`（`--full` で読み込み、`--light` ではスキップ） |
+    | Capability フラグ | `.wholework.yml` の `capabilities.{name}: true` | `verify/browser-verify-phase.md`（`HAS_BROWSER_CAPABILITY=true` で読み込み） |
 
 - **配布物ファースト改善原則**: レトロスペクティブで特定された改善は、配布物（Skills、Agents、Modules、Scripts）に反映すること。CLAUDE.md、Steering Documents、Project Documents はユーザーリポジトリ固有の成果物であり、Wholework plugin の一部として配布されない — これらのドキュメントだけに加えた改善は他の Wholework ユーザーに届かない。レトロスペクティブで改善が特定された場合、実装対象は配布レイヤーとすべきであり、配布対象外の成果物だけを更新することは不十分である
 - **Effort 最適化戦略（3 軸）**: `claude -p` 呼び出しで実行コストと品質を制御する 3 軸。軸ごとの CLI サポート状況と Wholework の採用方針:
