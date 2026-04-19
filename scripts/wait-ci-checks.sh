@@ -8,5 +8,11 @@ set -euo pipefail
 PR_NUMBER="${1:?Usage: wait-ci-checks.sh <pr-number>}"
 TIMEOUT_SEC="${WHOLEWORK_CI_TIMEOUT_SEC:-1200}"
 echo "Waiting for CI checks on PR #${PR_NUMBER} (timeout: ${TIMEOUT_SEC}s)..." >&2
-timeout "$TIMEOUT_SEC" gh pr checks "$PR_NUMBER" --watch --interval 60 --required || true
+if command -v timeout >/dev/null 2>&1; then
+    timeout "$TIMEOUT_SEC" gh pr checks "$PR_NUMBER" --watch --interval 60 --required || true
+elif command -v gtimeout >/dev/null 2>&1; then
+    gtimeout "$TIMEOUT_SEC" gh pr checks "$PR_NUMBER" --watch --interval 60 --required || true
+else
+    gh pr checks "$PR_NUMBER" --watch --interval 60 --required || true
+fi
 echo "CI check wait complete for PR #${PR_NUMBER}" >&2

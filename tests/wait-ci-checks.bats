@@ -96,3 +96,30 @@ MOCK
     [ "$status" -eq 0 ]
     [[ "$output" == *"CI check wait complete for PR #88"* ]]
 }
+
+@test "success: uses gtimeout when timeout is not available" {
+    GTIMEOUT_CALL_LOG="$BATS_TEST_TMPDIR/gtimeout_calls.log"
+    export GTIMEOUT_CALL_LOG
+
+    rm -f "$MOCK_DIR/timeout"
+    cat > "$MOCK_DIR/gtimeout" <<'MOCK'
+#!/bin/bash
+shift
+echo "gtimeout called: $@" >> "$GTIMEOUT_CALL_LOG"
+exec "$@"
+MOCK
+    chmod +x "$MOCK_DIR/gtimeout"
+
+    run env PATH="$MOCK_DIR" /bin/bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    grep -q "pr checks 88" "$GTIMEOUT_CALL_LOG"
+    [[ "$output" == *"CI check wait complete for PR #88"* ]]
+}
+
+@test "success: runs gh directly when neither timeout nor gtimeout is available" {
+    rm -f "$MOCK_DIR/timeout"
+
+    run env PATH="$MOCK_DIR" /bin/bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"CI check wait complete for PR #88"* ]]
+}
