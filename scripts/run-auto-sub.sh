@@ -42,25 +42,39 @@ REPO_ROOT="$(git -C "${SCRIPT_DIR}/.." rev-parse --show-toplevel 2>/dev/null || 
 PATCH_LOCK_DIR="${REPO_ROOT}/.tmp/claude-auto-patch-lock"
 
 acquire_patch_lock() {
-  local timeout=300
+  local timeout="${WHOLEWORK_PATCH_LOCK_TIMEOUT:-300}"
+  local log_interval="${WHOLEWORK_PATCH_LOCK_LOG_INTERVAL:-60}"
   local elapsed=0
+  local last_log=0
+  local existing_pid=""
   echo "Patch route commits directly to main, running sequentially (waiting for lock...)"
   mkdir -p "$(dirname "$PATCH_LOCK_DIR")"
   while ! mkdir "$PATCH_LOCK_DIR" 2>/dev/null; do
+    existing_pid=$(cat "$PATCH_LOCK_DIR/pid" 2>/dev/null || true)
+    if [[ -n "$existing_pid" ]] && ! kill -0 "$existing_pid" 2>/dev/null; then
+      echo "Stale lock detected (pid=$existing_pid is not running), reclaiming..." >&2
+      rm -rf "$PATCH_LOCK_DIR"
+      continue
+    fi
     if [[ $elapsed -ge $timeout ]]; then
       echo "Error: Patch lock acquisition timeout (${timeout}s)" >&2
       exit 1
     fi
+    if [[ $((elapsed - last_log)) -ge $log_interval ]]; then
+      echo "waiting for lock held by pid=${existing_pid:-unknown} (age=${elapsed}s)" >&2
+      last_log=$elapsed
+    fi
     sleep 2
     elapsed=$((elapsed + 2))
   done
+  echo "$$" > "${PATCH_LOCK_DIR}/pid"
   # Set EXIT trap after acquiring lock (prevents releasing another process's lock on early exit)
   trap 'release_patch_lock' EXIT
   echo "Patch lock acquired: ${PATCH_LOCK_DIR}"
 }
 
 release_patch_lock() {
-  rmdir "$PATCH_LOCK_DIR" 2>/dev/null || true
+  rm -rf "$PATCH_LOCK_DIR" 2>/dev/null || true
 }
 
 run_verify_with_retry() {
