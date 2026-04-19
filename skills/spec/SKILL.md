@@ -268,6 +268,12 @@ Steps:
 2. Identify the test name matching the acceptance condition
 3. Extract a unique, stable substring from the actual test name as the `file_contains` keyword
 
+**bats test self-reference exclusion check:**
+
+When Implementation Steps include a pattern-detection script (e.g., grep-based forbidden-expression checks), check if the corresponding bats test file will contain the detection targets as test fixtures. If so, explicitly include a self-reference exclusion in the Implementation Steps to prevent false positives.
+
+Example: add `grep -v 'tests/xxx.bats'` to the script invocation so the test fixture file is excluded from detection.
+
 **Mermaid diagram node ID naming check:**
 
 If implementation steps include Mermaid diagram updates, check existing node ID naming patterns and apply them consistently to new nodes.
@@ -302,6 +308,7 @@ SHOULD constraints (best practices, manual check — examples):
 | KNOWN_TOOLS sync | When adding tools to allowed-tools, also include `validate-skill-syntax.py` KNOWN_TOOLS update | #760 |
 | Shared module reference paths | Use full `${CLAUDE_PLUGIN_ROOT}/modules/xxx.md` paths (no abbreviations) | tech.md |
 | False positive exclusion set | Note false-positive exclusion policy for broadly-used terms (Task, Agent, etc.) in validation implementations | #810 |
+| bats self-reference exclusion | When a detection script's bats test file contains the detected patterns as test fixtures, add self-reference exclusion (`grep -v 'tests/xxx.bats'`) to the script invocation in Implementation Steps to prevent false positives | #272 |
 | `settings.json` Skill entry | Include `settings.json` `Skill(skill-name)` permission for new skills | #725 |
 | Read instruction for extracted modules | When extracting to a module, write Read instruction as "read `${CLAUDE_PLUGIN_ROOT}/modules/xxx.md` and follow the `Processing Steps` section" | #716 |
 | `git add -f` for .gitignore targets | Note `git add -f` requirement in implementation steps for `.gitignore`-tracked files | #901 |
