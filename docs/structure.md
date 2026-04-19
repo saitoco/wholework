@@ -27,7 +27,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (6 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (35 files)
+├── scripts/             # Utility scripts used by skills and agents (36 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -137,6 +137,7 @@ Key modules:
 
 **Project utilities:**
 - `scripts/get-config-value.sh` — extract a configuration value from `.wholework.yml`
+- `scripts/get-verify-permission.sh` — extract permission value from a verify command handler file
 - `scripts/get-issue-size.sh` — get issue size label
 - `scripts/get-issue-type.sh` — get issue type label
 - `scripts/get-issue-priority.sh` — get issue priority field

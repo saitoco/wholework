@@ -172,6 +172,7 @@ Custom handler files follow a four-section Markdown structure (same as adapter c
 # {name} verify command handler
 
 **Safe mode:** compatible   ← or "uncertain" (see below)
+**Permission:** always_allow   ← or "always_ask" (see below)
 
 ## Purpose
 
@@ -210,6 +211,18 @@ Each handler self-declares its safe-mode compatibility near the top of the file:
 | (not declared) | Treated as `uncertain` — returns UNCERTAIN in safe mode |
 
 Use `compatible` only for side-effect-free checks (file reads, static analysis, etc.). Use `uncertain` for any handler that calls external services or executes shell commands.
+
+#### Permission Self-Declaration
+
+Each handler self-declares its permission requirement near the top of the file:
+
+| Declaration | Behavior |
+|-------------|----------|
+| `**Permission:** always_allow` | Command confirmed side-effect-free; always permitted without user confirmation |
+| `**Permission:** always_ask` | Command has side effects or calls external services; user confirmation required before execution |
+| (not declared) | Treated as `always_ask` (conservative default) |
+
+Use `always_allow` only when the handler is fully read-only with no external writes or mutations. This declaration is designed for 1:1 mapping to Anthropic Managed Agents `permission_policy` in a future migration.
 
 #### Relationship to Adapter Pattern
 
