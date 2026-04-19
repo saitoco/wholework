@@ -90,3 +90,31 @@ English and Japanese mirror files need updating.
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件は `file_exists`、`grep`、`command` の verify ヒントを完備しており、自動検証率が高い設計になっていた。
+- `<!-- verify-type: manual -->` の post-merge 条件（XL フロー実行確認）は次回 `/auto` 実行時まで手動確認が必要な性質であり、適切に分離されている。
+
+#### design
+- 設計（Spec）は実装と齟齬なく対応。6 件の `@test` ケースが Spec の Implementation Steps に明示されており、verify 結果と整合。
+
+#### code
+- パッチルート（PR なし、`closes #260` を直接コミット）での実装。commit 2件（実装 + コードレトロ）で完結しており、リワークなし。
+- `bats` テスト全 6 件 PASS。設計で想定した正常グラフ・サイクル・孤立依存・空グラフの各ケースを網羅。
+
+#### review
+- PR なし（パッチルート）のため正式レビューなし。テスト自体の内容は bats 実行で直接検証済み。
+
+#### merge
+- 直接 main コミット。コンフリクトなし。
+
+#### verify
+- 全 5 件の pre-merge 条件が PASS。CI ランなし（ローカル bats 実行で代替）。
+- Post-merge の manual 条件が残存するため `phase/verify` ラベルを付与。次回 XL Issue 実行後に `/verify 260` を再実行して完了させること。
+
+### Improvement Proposals
+- N/A
