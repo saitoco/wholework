@@ -79,3 +79,14 @@ blockedBy nodes format: `{"number": N}` (number field only; state is not used by
 **Structure.md count discrepancy:** `docs/structure.md` currently says "33 files" but there
 are already 34 `.bats` files in `tests/`. Adding this file brings the total to 35. Both
 English and Japanese mirror files need updating.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
