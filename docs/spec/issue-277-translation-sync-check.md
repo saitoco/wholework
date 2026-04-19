@@ -25,3 +25,31 @@
 ### Background 補完
 
 背景文中の `（, 等）` の欠落していたファイル名を Issue #276 Spec の retro から補完: `（docs/environment-adaptation.md`、`docs/structure.md` 等）
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件の verify コマンドが Issue Retrospective で修正されており（`grep "docs/ja"` → `grep "translation"`）、偽陽性リスクへの対処が適切だった。Issue 段階での verify コマンド設計の重要性が示されている。
+
+#### design
+- N/A（Spec には設計セクションなし、patch 直コミットで処理）
+
+#### code
+- commit `5f21a88` で `skills/spec/SKILL.md` に 4 行追加のみ。シンプルな変更で実装完了。
+- rework なし（fixup/amend なし）
+
+#### review
+- PR なしの patch ルート。コードレビューなし。変更が 4 行追加のみのため影響は限定的。
+
+#### merge
+- `closes #277` を含む直コミットで patch ルート。merge conflict なし。
+
+#### verify
+- 自動検証対象の条件1は PASS。
+- Post-merge opportunistic 条件（`verify-type: opportunistic`）は hints なしのため自動検証対象外、ユーザー検証ガイドとして残存。
+- `phase/verify` ラベルを付与。opportunistic 条件の確認後に `phase/done` へ移行予定。
+
+### Improvement Proposals
+- N/A
