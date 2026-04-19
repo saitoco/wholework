@@ -320,6 +320,7 @@ SHOULD constraints (best practices, manual check — examples):
 | External command dependencies | When Implementation Steps use commands with external dependencies (packages requiring installation: apt packages, brew formulas, npm modules, OS-specific binaries), include install steps for each package explicitly | #179 |
 | Audit report Findings/Remediation consistency | When Implementation Steps include audit report generation: add a step to verify that each row in the Remediation table has a corresponding entry in the Findings section | #238 |
 | Architecture Decisions impact | When adding new `.wholework.yml` keys or new CLI flags passed to `claude -p` in `run-*.sh`, check the Architecture Decisions section in `docs/tech.md` and include `tech.md` in the Changed Files list | #250 |
+| Documentation condition step | When acceptance criteria contain a "documentation condition" (e.g., "X is documented", "document X", "ドキュメント化"), add a corresponding documentation step to Implementation Steps — omitting it leaves the condition permanently unchecked | #273 |
 
 **SHOULD-level acceptance criteria consideration:**
 
