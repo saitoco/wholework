@@ -59,3 +59,17 @@
 - 検証コマンド数が light テンプレートの上限 5 に対して 6 件（Issue body 全 AC を verbatim コピーしたため）
 - `docs/ja/tech.md` の model-effort matrix は既に英語版から drift 済み（`merge（skill）`, `verify（skill）` が欠落）。本 Issue スコープは `/auto`, `/audit`, `/doc` 追加のみとし、既存 drift の修正は別途 Issue 対応とする
 - fork-context verify コマンドは `grep "| auto |"` 形式（Issue Auto-Resolved Ambiguity Points に記載の通り、テーブル行マッチパターンを採用）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。Spec の Implementation Steps に記載された正確な行テキストをそのまま適用した
+
+### Design Gaps/Ambiguities
+
+- `docs/ja/tech.md` の model-effort matrix は Spec Notes に記載の通り既に英語版から drift 済み（`merge（skill）`, `verify（skill）` が欠落）。日本語版の追加挿入位置は `triage（skill）` の直後（既存 drift を温存し本 Issue スコープの 3 行のみ追加）
+
+### Rework
+
+- なし
