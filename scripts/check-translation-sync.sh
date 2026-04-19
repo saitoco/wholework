@@ -34,7 +34,7 @@ printf '%s\n' "$(printf '─%.0s' $(seq 1 80))"
 outdated_count=0
 missing_count=0
 
-for en_file in "${SOURCE_FILES[@]}"; do
+for en_file in "${SOURCE_FILES[@]+"${SOURCE_FILES[@]}"}"; do
   # Derive the docs/ja/* counterpart path
   ja_file="${en_file/docs\//docs/ja/}"
 
