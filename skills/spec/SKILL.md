@@ -226,6 +226,10 @@ If SPEC_DEPTH=full and `scripts/validate-skill-syntax.py` exists, read `${CLAUDE
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-checker.md` and use the "Impact Assessment" section to decide whether to include documentation files in the changed-files list.
 
+**`docs/ja/` translation sync check:**
+
+When Changed Files includes top-level `docs/*.md` English documents (excluding `docs/spec/`, `docs/reports/`, and `docs/ja/` subdirectories), also list the corresponding `docs/ja/` translation mirror files in the Changed Files section and include a translation sync step in Implementation Steps.
+
 **Rename-type Issue grep check:**
 
 If the issue title or body contains "rename", "renaming", or similar, run `grep -rn 'old-name' .` (all results, no filtering), then per-file with `grep -c`. Add any files not in the changed-files list. Record hit counts in the Spec. Also check:
