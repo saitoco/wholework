@@ -43,6 +43,7 @@ From the loaded content, search for each YAML key in the marker definition table
 | `capabilities.browser` | `HAS_BROWSER_CAPABILITY` | `true` | `false` |
 | `capabilities.mcp` | `MCP_TOOLS` | Comma-separated tool name list | `""` |
 | `watchdog-timeout-seconds` | `WATCHDOG_TIMEOUT_SECONDS` | Integer string (extract as-is; use `1800` if ≤0 or non-numeric) | `1800` |
+| `permission-mode` | `PERMISSION_MODE` | String value (extract value as-is) | `"bypass"` |
 
 **Dynamic Capability Mapping:**
 
@@ -81,4 +82,5 @@ STEERING_DOCS_PATH: path string extracted from steering-docs-path (default: "doc
 HAS_BROWSER_CAPABILITY: true if capabilities.browser: true is set (default: false)
 MCP_TOOLS: tool name list from capabilities.mcp (comma-separated, default: "")
 WATCHDOG_TIMEOUT_SECONDS: integer from watchdog-timeout-seconds (default: "1800"; falls back to "1800" if ≤0 or non-numeric)
+PERMISSION_MODE: string extracted from permission-mode (default: "bypass")
 ```
