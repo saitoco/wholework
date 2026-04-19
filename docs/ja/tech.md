@@ -33,9 +33,13 @@
   | review | 必要 | 実装フェーズのバイアスを継がず、クリーンな視点でコードをレビューする |
   | merge | 必要 | 判断は Spec + PR メタデータで完結、レビューコンテキストを持ち越さない |
   | verify | 必要 | マージ後の状態を独立検証する、前フェーズの判断に影響されてはならない |
+  | auto | 不要 | 親オーケストレーターはユーザーの Claude Code セッションで実行される、各子フェーズは `run-*.sh` 経由で独立した `claude -p` プロセスとして実行 |
+  | audit | 不要 | ドリフト・脆弱性検出はユーザーセッションで実行される、前フェーズのバイアスを避ける必要なし |
+  | doc | 不要 | ドキュメント管理はユーザーセッションで実行される、前フェーズのバイアスを避ける必要なし |
 
 - **`/auto` スキル**: `run-*.sh` 経由で spec→code→review→merge→verify を順次連鎖させるオーケストレーター。各フェーズは設定可能なパーミッションモード（デフォルト: `--dangerously-skip-permissions`、`.wholework.yml` に `permission-mode: auto` を設定すると `--permission-mode auto`）で `claude -p` 独立プロセスとして実行され、フレッシュなコンテキスト分離を保証する。追加機能: `phase/*` ラベル未設定時は issue triage/refinement から自動開始、`phase/ready` がない場合は `/spec` を自動実行、`--batch N` はバックログから N 個の XS/S Issue を処理、XL Issue はサブ issue 依存グラフ（`blockedBy`）を読んで独立サブ issue を並列実行（worktree 分離）し依存先は順次実行、`--base {branch}` でリリースブランチ対象
   - **2 階層オーケストレーション**: `/auto` 本体（親オーケストレーター）はユーザーの Claude Code セッションで動作し、LLM 推論を使った適応的判断を行う（ラベル状態の評価、サイズベースのルーティング、サブ issue 依存関係分析）。XL Issue については `run-auto-sub.sh`（子オーケストレーター）が各サブ issue のフルフェーズシーケンスを実行する。`run-auto-sub.sh` は `claude -p` を呼び出さない純粋な bash スクリプトで、Size に基づく決定的な if/case ルーティングを用いる。これは技術的制約ではなく意図的な設計選択である: 現行のフェーズルーティングは決定的で、各フェーズは `run-*.sh` で自己完結しているため、子オーケストレーター階層での LLM 推論はコストのみ増え利益が無い。適応的リカバリが必要になった場合（code 失敗後に spec を再実行、レビュー結果に基づく戦略調整など）、`run-auto-sub.sh` を `claude -p` オーケストレーターにアップグレードするのが前進ルート
+- **`/doc` スキル**: プロジェクト基盤ドキュメント管理。Steering Documents（`product.md`、`tech.md`、`structure.md`）とプロジェクトドキュメントを管理する。主要操作: `sync`（双方向の正規化とドリフト検出、`--deep` で拡張コードベース解析）、`init`（初期セットアップウィザード）、`add` / `project`（ドキュメント登録）、`translate {lang}`（多言語翻訳生成）。`/audit` の補完として機能: `/doc sync` はドキュメント側の修正を提案し、`/audit drift` はコード側の修正を Issue 化する
 - **サブエージェント分割**: 2 つのスキルで使用:
   - `/issue`（L/XL）: 3 つの独立サブエージェント（`issue-scope`、`issue-risk`、`issue-precedent`）による並列調査で、変更スコープ、リスク、前例を同時に分析する
   - `/review`: 2 グループに分割する — Spec 準拠レビュー（`review-spec`）とバグ検出（`review-bug`）。2 段階検証（検出→検証サブエージェント）で偽陽性を排除
@@ -76,6 +80,9 @@
 | review-spec | review | Opus | — | Spec 逸脱は高精度が必要（サブエージェント、effort は親から継承） |
 | review-light | review | Sonnet | — | 軽量統合レビュー（サブエージェント、effort は親から継承） |
 | triage（skill） | triage | Sonnet | — | メタデータ付与、Sonnet で十分。インライン実行（`run-*.sh` ラッパーなし）— `/auto` が未ラベル issue に triage を連鎖させる場合も含む — のため effort は設定しない |
+| auto（skill） | orchestration | Sonnet | — | 親オーケストレーター、ユーザーの Claude Code セッションでインライン実行（`run-*.sh` ラッパーなし）。各子フェーズはフェーズ固有の effort で `run-*.sh` 経由で実行される。スキルレベルでは effort を設定しない |
+| audit（skill） | audit | Sonnet | — | ドリフト・脆弱性検出と統計、Sonnet で十分。インライン実行（`run-*.sh` ラッパーなし）のため effort は設定しない |
+| doc（skill） | doc | Sonnet | — | ドキュメント管理、Sonnet で十分。インライン実行（`run-*.sh` ラッパーなし）のため effort は設定しない |
 
 SSoT 備考: run-*.sh のモデル値は CLI エイリアス（sonnet/opus）を使用する。run-*.sh、agents、skills でモデル/effort を変更する際はこの表を更新すること。
 
