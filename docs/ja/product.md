@@ -143,6 +143,7 @@ Describe success metrics here. -->
 | Acceptance condition | Issue の受入条件内の、検証可能な単一要件項目。チェックリストの 1 行として現れ、通常 verify command と対になる | /issue, /verify | 受入条件項目 |
 | Acceptance criteria | Issue の受入条件の完全な集合。Issue 本文の `## Acceptance Criteria` 配下に定義される。L1 の集合としての L2 個別受入条件群 | /issue, /verify | 受入条件 |
 | auto-verify | `/verify` が実行する自動検証プロセス。各受入条件の verify command を実行し、合格条件にチェックを入れ、失敗時に Issue を reopen する | /verify Skill | 自動検証 |
+| Capability | `.wholework.yml` `capabilities.*`（例: `capabilities.browser: true`）で宣言する機能の可用性。`HAS_{NAME}_CAPABILITY` 環境変数に変換され、スキルが補助ファイルの読み込みや adapter の呼び出し前に確認する。実行環境に応じたプログレッシブ・ディスクロージャーを実現する | スキル開発、設定 | Capability |
 | Domain file | スキルから marker 検出、ファイル存在確認、ディレクトリスキャンによって条件付きで読み込まれる補助 Markdown。SKILL.md のコアを補い、環境やプロジェクト固有のロジックを加えつつコアを軽量に保つ。プロジェクトローカルのカスタマイズは `.wholework/domains/{skill}/` で対応 | スキル開発 | Domain file |
 | Drift | ドキュメント化された仕様（Steering Documents や Spec）と実際のコード実装とのあいだの意味的乖離。`/audit drift` で検出 | /audit Skill | ドリフト |
 | Fork context | メインの対話に影響を与えないスキル実行モード | Claude Code | fork コンテキスト |
