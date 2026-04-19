@@ -338,6 +338,8 @@ Save the implementation plan to `$SPEC_PATH/issue-$NUMBER-short-title.md`.
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-patterns.md` and follow the "Processing Steps" guidelines (especially "3. Pre-verification of target file format").
 
+For acceptance conditions where exact string matching is unreliable (semantic equivalence, subjective quality, meaning-level intent), consider the `rubric` verify command instead of hard-pattern commands. See `modules/verify-patterns.md` §9 for selection criteria.
+
 **Notes and verify command consistency (immediately after creating verify commands):**
 
 If Notes contain implementation direction statements, verify they do not contradict the corresponding verify commands. Correct discrepancies immediately.

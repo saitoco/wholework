@@ -174,6 +174,8 @@ For conditions with `<!-- verify: ... -->`, Read `${CLAUDE_PLUGIN_ROOT}/modules/
 - **Interactive mode**: present the command to the user and execute only after approval. Treat suspicious commands as UNCERTAIN.
 - **Non-interactive mode** (`--dangerously-skip-permissions` environment): no approval required. Execute commands directly. `command` hints are written in Issue bodies managed by repository maintainers and are treated as trusted commands. Do not use in repositories where external contributors have write access.
 
+**`rubric` commands**: Processed via the same verify-executor translation table. In full mode, the grader receives the Issue body, git diff, and any files explicitly named in the rubric text as input. Returns PASS, FAIL, or UNCERTAIN; FAIL includes a natural-language gap description. Returns UNCERTAIN in safe mode.
+
 **Syntax errors** (unknown commands, missing arguments, etc.) → treat as UNCERTAIN and fall back to AI judgment. Record error details in the remarks column of the results table.
 
 **Browser verification command (`browser_check`, `browser_screenshot`) processing flow:**
@@ -181,6 +183,8 @@ For conditions with `<!-- verify: ... -->`, Read `${CLAUDE_PLUGIN_ROOT}/modules/
 First check `HAS_BROWSER_CAPABILITY` (fetched via `detect-config-markers.md` in Step 4). Reuse the value. Only if `HAS_BROWSER_CAPABILITY=true`, Read `skills/verify/browser-verify-phase.md` and follow the "Inside Step 2: Browser Verification Command Processing Flow" section. If `HAS_BROWSER_CAPABILITY` is unset or false, treat browser verification commands as UNCERTAIN.
 
 #### Step 3: No Hints → Attempt Verification with AI Judgment
+
+**Responsibility boundary with `rubric`**: Step 3 is an implicit fallback for conditions that lack a `<!-- verify: ... -->` hint — it applies best-effort AI judgment opportunistically. `rubric` is an explicit opt-in declared at Issue creation time, processed in Step 2 via the verify-executor translation table. The two paths coexist: `rubric` for declared semantic judgment, Step 3 for hint-less fallback.
 
 If the condition follows the pattern "command X works" or "tests pass", Read `${CLAUDE_PLUGIN_ROOT}/modules/test-runner.md` and follow the "Processing Steps" section to run tests.
 
