@@ -541,13 +541,6 @@ grep -r "{keyword}" {target file or directory}
 - **If judged as resolved**: skip Issue creation and output to terminal (e.g., "Skipping due to freshness check: {title} (may already be resolved in main)")
 - **If unresolved or cannot determine**: proceed to the next step (Issue creation)
 
-**Ensure `retro/verify` label exists (run once before creating Issues, best-effort):**
-
-```bash
-gh label list --limit 100 | grep -q "retro/verify" || gh label create "retro/verify" --color "#c5def5" --description "Auto-created from /verify retrospective improvement proposal"
-```
-If `gh label create` fails, output a warning and continue (does not affect Issue creation).
-
 **Create Issue and add verify commands**:
 
 - Normalize title following `${CLAUDE_PLUGIN_ROOT}/modules/title-normalizer.md` processing steps, then create Issues in standard format (background, purpose, acceptance conditions) with `gh issue create --label "retro/verify"` for each improvement proposal. Do not add the `triaged` label; the `triaged` label is assigned by the `/triage` skill after triage is actually executed.
