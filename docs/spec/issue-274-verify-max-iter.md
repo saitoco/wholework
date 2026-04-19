@@ -68,3 +68,17 @@
 - `run-auto-sub.sh` は exit code ではなく出力内容で判断する LLM ではないため、max iterations 到達時に run-verify.sh が exit 0 を返すと run-auto-sub.sh は "成功" と判断する。XL route での sub-issue 処理中に max iterations に到達した場合の run-auto-sub.sh 対応は本 Issue のスコープ外（フォローアップ Issue で対応）
 - pre-merge 検証項目が 8 件で SPEC_DEPTH=light の推奨上限（5件）を超えているが、Issue 本体の受け入れ条件から全て verbatim コピーのため維持する
 - patch route のため `github_check "gh pr checks"` → `github_check "gh run list --workflow=test.yml ..."` に変換済み（PR が存在しないため）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `skills/auto/SKILL.md` の変更対象として Spec には「patch/pr route の verify フェーズ結果判定に注記を追加」と記載されていたが、pr route の Step 10 記述も同様に更新した（Spec の記述は「Step 4」とまとめていたが、実際には patch route の Step 5 と pr route の Step 10 の両方に適用）。
+
+### Design Gaps/Ambiguities
+
+- `docs/ja/tech.md` は Spec の Changed Files リストに明示されていなかったが、`docs/tech.md` を更新したため `docs/ja/` ミラーの同期も必要と判断して追加実装した。
+
+### Rework
+
+- N/A
