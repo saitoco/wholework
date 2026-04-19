@@ -60,21 +60,40 @@ setup() {
   [ "${lines[2]}" = "https://github.com/example/repo/pull/88" ]
 }
 
-@test "print_start_banner with missing third argument does not error" {
+@test "print_start_banner with missing third argument errors with non-zero exit" {
   run print_start_banner "issue" "1"
 
-  [ "$status" -eq 0 ]
-  [ "${lines[0]}" = "/ #1" ]
+  [ "$status" -ne 0 ]
 }
 
-@test "print_end_banner with missing third argument does not error" {
-  _ENTITY_TITLE="Test Title"
-  _ENTITY_URL="https://github.com/example/repo/issues/1"
-
+@test "print_end_banner with missing third argument errors with non-zero exit" {
   run print_end_banner "issue" "1"
 
-  [ "$status" -eq 0 ]
-  [ "${lines[0]}" = "/ #1" ]
+  [ "$status" -ne 0 ]
+}
+
+@test "print_start_banner with invalid empty entity_type errors" {
+  run print_start_banner "" "42" "code"
+
+  [ "$status" -ne 0 ]
+}
+
+@test "print_start_banner with invalid empty entity_number errors" {
+  run print_start_banner "issue" "" "code"
+
+  [ "$status" -ne 0 ]
+}
+
+@test "print_start_banner with invalid empty skill_name errors" {
+  run print_start_banner "issue" "42" ""
+
+  [ "$status" -ne 0 ]
+}
+
+@test "print_end_banner with invalid empty skill_name errors" {
+  run print_end_banner "issue" "42" ""
+
+  [ "$status" -ne 0 ]
 }
 
 @test "output does not contain old Issue: prefix" {
