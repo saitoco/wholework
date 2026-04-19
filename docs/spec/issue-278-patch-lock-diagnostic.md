@@ -56,3 +56,33 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件は明確かつ自動検証可能な形式（`file_contains`、`grep`、`command` hint）で設計されており、ambiguity は観察されなかった
+- 観測タイムラインと調査ヒントが詳細で、原因仮説（stale empty directory、orphaned lock、race）も妥当
+
+#### design
+- 設計は実装と概ね一致。`WHOLEWORK_PATCH_LOCK_LOG_INTERVAL` の追加はテスト容易性のための小さな逸脱であり、設計判断として妥当
+- `rmdir` → `rm -rf` の切替は `.DS_Store` 問題の根本回避として適切に文書化されている
+
+#### code
+- 単一コミットで実装完了（`a07e347`）。rework なし
+- `WHOLEWORK_PATCH_LOCK_LOG_INTERVAL` 環境変数の追加により bats テストで短時間に診断ログ出力を検証できる設計は良い
+
+#### review
+- patch route のため formal review なし。bats テスト15件（stale PID reclaim・診断ログのテストを含む）でカバーされており、品質は確保されている
+
+#### merge
+- main 直コミット（patch route）。コンフリクトなし
+
+#### verify
+- 全3件の auto-verify 条件が PASS
+- Post-merge manual 条件2件（実運用での確認）は `/auto --batch` の長時間実行が必要なため自動検証不可なのは適切
+- bats テストが lock の動作を十分にカバーしており、verify コマンドとの整合性が高い
+
+### Improvement Proposals
+- N/A
