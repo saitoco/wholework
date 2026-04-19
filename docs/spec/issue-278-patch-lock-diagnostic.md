@@ -42,3 +42,17 @@
 - **bash 3.2 互換性**: `kill -0`, `cat`, `rm -rf` すべて bash 3.2 互換
 - **テスト時 timeout**: 300s はテスト実行時間が長すぎるため、環境変数 `WHOLEWORK_PATCH_LOCK_TIMEOUT` で上書き可能にする (bats テスト用に 5s 等を指定)
 - **Issue body verify 更新**: AC2 の verify hint を `"lock.*timeout\|timeout.*lock\|stale"` → `"kill -0\|stale"` に具体化（stale 検出ロジックを直接検証する）。これに合わせて Issue body 側も自動更新
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec では `WHOLEWORK_PATCH_LOCK_TIMEOUT` のみ明示したが、60s 診断ログをテストするために `WHOLEWORK_PATCH_LOCK_LOG_INTERVAL` も追加した。テストで 2s 間隔を使い、4s timeout で診断ログ出力を短時間で確認できるようにした。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
