@@ -74,3 +74,14 @@ bats テストでその動作を検証する。
 - `github_check` も読み取り専用ケースが多いが外部 API のため `always_ask` に分類
 - 実際の enforcement（`always_allow` 宣言に基づいた実行制御）は本 Issue のスコープ外。将来の Managed Agents 移植のための宣言形式導入のみ
 - patch route（Size S）のため PR が存在しない。`gh pr checks` は使用不可。CI 確認は `gh run list` で行う（Issue 本文の `github_check "gh pr checks"` を `gh run list` 形式に自動修正済み）
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- `docs/ja/` 翻訳ファイル（`environment-adaptation.md`, `structure.md`）への同期が Spec に記載されていなかった。doc-checker モジュールが検出したため追加対応した。
+
+### Rework
+- N/A
