@@ -165,6 +165,7 @@ capability 宣言は不要です。ファイルを置くだけでハンドラが
 # {name} verify command handler
 
 **Safe mode:** compatible   ← または "uncertain"（下記参照）
+**Permission:** always_allow   ← または "always_ask"（下記参照）
 
 ## Purpose
 
@@ -203,6 +204,18 @@ capability 宣言は不要です。ファイルを置くだけでハンドラが
 | （未宣言） | `uncertain` として扱う — safe モードで UNCERTAIN を返す |
 
 `compatible` は副作用のないチェック（ファイル読み取り、静的解析など）にのみ使います。外部サービス呼び出しや shell コマンド実行を行うハンドラには `uncertain` を使います。
+
+#### Permission 自己宣言
+
+各ハンドラはファイル冒頭近くで permission 要件を自己宣言します:
+
+| 宣言 | 挙動 |
+|-------------|----------|
+| `**Permission:** always_allow` | 副作用なし確認済み; ユーザー確認なしで常時許可 |
+| `**Permission:** always_ask` | 副作用あり or 外部サービス呼び出し; 実行前にユーザー確認が必要 |
+| （未宣言） | `always_ask` として扱う（保守側のデフォルト） |
+
+`always_allow` は完全に読み取り専用で外部書き込みや変更がない場合にのみ使います。この宣言は将来の Anthropic Managed Agents `permission_policy` への 1:1 マッピングを想定して設計されています。
 
 #### Adapter パターンとの関係
 
