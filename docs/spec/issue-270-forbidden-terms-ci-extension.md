@@ -53,6 +53,21 @@ Deprecated terms to detect (source: `docs/product.md` § Terms, Formerly called 
 - CI 上で意図的に deprecated term を含むコミットを試験的に追加し、`check-forbidden-expressions` job が失敗することを確認 <!-- verify-type: manual -->
 - `docs/product.md` Terms の `Formerly called` を更新した際に CI 側も追随するフローがドキュメント化されている <!-- verify-type: manual -->
 
+## Code Retrospective
+
+### Deviations from Design
+- **`check_term` function instead of inline loop**: Spec suggested inline grep per-term in the loop. Used a `check_term` function with captured output (`$()`) for cleaner code and avoiding double-grep.
+- **Case-sensitive matching for "Issue Spec"**: Spec suggested `-riE '\bIssue Spec\b'` but `tests/gh-label-transition.bats` has `for phase in issue spec ready code review` which matched case-insensitively. Changed to `-rE` (no `-i`) to avoid the false positive.
+- **Added `tests/check-forbidden-expressions.bats` exclusion**: Test file itself contains deprecated terms as test fixtures. Added `grep -v 'tests/check-forbidden-expressions.bats'` to standard exclusions. Not explicitly mentioned in Spec but necessary to prevent self-referential false positives.
+- **Renamed bats test with Japanese chars**: Test name `exclusion: line with Japanese 旧称 marker exits 0` was renamed to `exclusion: line with kyusho Japanese legacy marker exits 0` because Japanese in bats test names causes parse failure (per Issue #226 guidance).
+
+### Design Gaps/Ambiguities
+- Spec Notes mentioned `grep -v 'Issue Spec[a-z]'` for "Issue Specification" exclusion, but did not cover the `tests/gh-label-transition.bats` false positive where "issue spec" appears as two separate array items in a for loop (case-insensitive match would catch them).
+- Spec Notes did not address the self-referential test file problem (the bats test file needs to contain deprecated terms as fixtures to test detection).
+
+### Rework
+- Script had to be modified after initial implementation because `bash scripts/check-forbidden-expressions.sh` flagged the test file itself and `tests/gh-label-transition.bats`. Two changes: (1) added test file exclusion, (2) changed "Issue Spec" to case-sensitive. Added 1 iteration.
+
 ## Notes
 
 - **Known false positives in current codebase** (must be excluded in the script):
