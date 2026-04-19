@@ -68,6 +68,37 @@ Deprecated terms to detect (source: `docs/product.md` § Terms, Formerly called 
 ### Rework
 - Script had to be modified after initial implementation because `bash scripts/check-forbidden-expressions.sh` flagged the test file itself and `tests/gh-label-transition.bats`. Two changes: (1) added test file exclusion, (2) changed "Issue Spec" to case-sensitive. Added 1 iteration.
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue の自動解決で実装アプローチ (c) が適切に選択された。`shared procedure document` の追加も Background から正確に抽出された。
+- Spec の Notes セクションで既知の false positive リスク（`skills/spec/SKILL.md`、`docs/reports/` 等）を事前列挙したことは有益だった。
+- 一方、テストファイル自身が検出対象の deprecated terms をフィクスチャとして含む「自己参照問題」については Notes に記載があったが、Implementation Steps には反映されていなかった。これが 1 回の rework の原因となった。
+
+#### design
+- 設計は実装と概ね一致。`check_term` 関数の導入は Spec の inline ループより明確で有効な改善だった。
+- 設計の明示的な変更点として、`tests/check-forbidden-expressions.bats` 除外と `Issue Spec` の case-sensitive 化が Implementation Steps に含まれていなかった。
+
+#### code
+- Rework 1 回: スクリプトが自ファイル（`tests/check-forbidden-expressions.bats`）と `tests/gh-label-transition.bats` を誤検出。既知リスクが実装ステップに反映されていなかったことが原因。
+- fixup/amend パターンなし。コミット `3e8843d` 一本で完了。
+
+#### review
+- パッチルート（main 直コミット）のため PR レビューなし。CI (`test.yml`) が success で通過しており代替品質担保として機能した。
+
+#### merge
+- パッチルート。コンフリクトなし、クリーンなマージ。
+
+#### verify
+- 10 件の自動検証条件が全 PASS。verify コマンドの設計精度は高かった。
+- 手動条件 2 件が残存: (1) CI 上での意図的 deprecated term コミット試験、(2) Formerly called 更新フローのドキュメント化。条件 (2) は実装スコープに含まれていなかったため未達成の可能性あり。
+
+### Improvement Proposals
+- Spec の実装ステップに「テストファイル自己参照除外」を明示的に記載するパターンを標準化する: bats テストが検出対象用語をフィクスチャとして含む場合、除外ルールを Implementation Steps に含めることで rework を防げる
+- 受け入れ条件に「更新フローのドキュメント化」を含める場合、ドキュメント追記を同一 PR/コミットのスコープに含めることを Spec に明記する（手動条件として残すと長期間未チェックになりやすい）
+
 ## Notes
 
 - **Known false positives in current codebase** (must be excluded in the script):
