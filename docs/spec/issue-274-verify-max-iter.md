@@ -82,3 +82,28 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec の Changed Files と Implementation Steps が1対1で対応しており、受け入れ条件への参照番号も明示されていた。patch route であることが Notes に明記されており、`github_check "gh pr checks"` → `gh run list` の変換理由が自己説明的だった。受け入れ条件の曖昧さなし。
+
+#### design
+- Code Retrospective に記録された通り、`skills/auto/SKILL.md` の変更対象（patch route のみ記述 → pr route にも適用）は Spec の記述の粒度不足。ただし実装側が適切に判断・補完しており影響なし。`docs/ja/tech.md` の同期漏れも実装側で補完済み。
+
+#### code
+- `git log --oneline` で fixup/amend パターンは検出されず。実装コミット（1d092b0）後にコード retrospective コミット（a5c3547）と日本語同期コミット（8809349）のみ。実質的なリワークなし。
+
+#### review
+- PR なし（patch route）。レビューコメント該当なし。
+
+#### merge
+- patch route（main 直コミット）のため merge コミットなし。コンフリクト痕跡なし。CI で success を確認済み。
+
+#### verify
+- 全8条件 PASS（自動検証）。verify コマンドの構文エラー・UNCERTAIN なし。`github_check "gh run list"` 形式（patch route 互換形式）が正常に動作した。post-merge opportunistic 条件が1件残存するため `phase/verify` に遷移。
+
+### Improvement Proposals
+- N/A
