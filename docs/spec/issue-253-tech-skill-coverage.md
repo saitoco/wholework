@@ -73,3 +73,28 @@
 ### Rework
 
 - なし
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec の Implementation Steps に行テキストが verbatim で記載されており、実装・検証が単純かつ確実に行えた。verify コマンド数が light テンプレート上限（5件）を超えて6件になっているが、全 AC を網羅するために許容された設計上の判断。
+
+#### design
+- `docs/ja/tech.md` の model-effort matrix に既存 drift（`merge（skill）`, `verify（skill）` 欠落）があるが、本 Issue スコープを `/auto`, `/audit`, `/doc` 追加のみと明示。残留 drift は別 Issue 対応とする設計判断が Notes に記録されており適切。
+
+#### code
+- 実装は Spec の正確なテキストをそのまま適用。Rework なし、逸脱なし。patch ルート（PR なし）で直コミット済み。
+
+#### review
+- PR が存在しないため Review フェーズは実施されていない（patch ルート）。コミット `3fbe927` で docs/tech.md と docs/ja/tech.md に合計14行追加。レビューなしでも AC がすべて PASS したことから、Spec の検証コマンド精度が高く自己検証が機能した。
+
+#### merge
+- 直コミット（patch ルート）。コンフリクトなし。
+
+#### verify
+- 全6条件が PASS。verify コマンドは `grep "| auto |"` 等のテーブル行マッチパターンを使用しており、Auto-Resolved Ambiguity Points での設計変更（`section_contains` から `grep` への変更）が正しく機能した。Post-merge の manual 条件（`/doc sync --deep` 再実行、`docs/ja/tech.md` 目視確認）は未検証のため `phase/verify` ラベルを付与。
+
+### Improvement Proposals
+- N/A
