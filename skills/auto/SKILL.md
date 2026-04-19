@@ -142,6 +142,7 @@ Run each phase via `run-*.sh`. Each script launches an independent process with 
 3. **XS only**: transcribe issue retrospective to Spec (see Step 4b)
 4. verify phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh $NUMBER [--base ${BASE_BRANCH}]` via Bash (timeout: 600000)
 5. Based on verify result, proceed to Step 5 or Step 6
+   - If verify output contains `MAX_ITERATIONS_REACHED`: max iterations has been reached; stop chained execution and proceed to Step 5 (human judgment required — do not re-run verify automatically)
 
 **pr route (4 phases):**
 
@@ -164,6 +165,7 @@ Phase transition output format: output `[N/M] phase_name` before each phase, and
 8. If merge fails: go to Step 6
 9. Output `[4/4] verify`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh $NUMBER [--base ${BASE_BRANCH}]` via Bash (timeout: 600000); on success output `[4/4] verify → done`
 10. Based on verify result, proceed to Step 5 or Step 6
+    - If verify output contains `MAX_ITERATIONS_REACHED`: max iterations has been reached; stop chained execution and proceed to Step 5 (human judgment required — do not re-run verify automatically)
 
 ### Step 4b: Issue Retrospective Transcription (XS patch route only)
 

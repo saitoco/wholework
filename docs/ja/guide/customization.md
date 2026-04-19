@@ -42,6 +42,10 @@ watchdog-timeout-seconds: 3600
 # "bypass" は --dangerously-skip-permissions を使用（後方互換）
 permission-mode: auto
 
+# verify reopen ループの最大試行回数（default: 3、max: 20）
+# N 回 FAIL した時点で reopen を停止し、Issue を phase/verify に留めて人間の判断を促す
+verify-max-iterations: 3
+
 # オプション capability
 capabilities:
   browser: true             # Playwright ベースの verify command を有効化
@@ -70,6 +74,7 @@ capabilities:
 | `capabilities.{name}` | boolean | `false` | 動的 capability マッピング（例: `capabilities.invoice-api: true`） |
 | `watchdog-timeout-seconds` | integer | `1800` | watchdog が silent な `claude -p` プロセスを kill するまでのタイムアウト秒数。遅い repo、Size L 以上のタスク、低速マシンでは増やす（例: `3600`）。0 以下の値はデフォルトにフォールバック。 |
 | `permission-mode` | string | `"bypass"` | `/auto` サブプロセスの permission mode。`auto` は `--permission-mode auto` を allow rules テンプレートと共に有効化（`docs/guide/auto-mode-template.json` 参照）; `bypass` は `--dangerously-skip-permissions` を使用。 |
+| `verify-max-iterations` | integer | `3` | verify-reopen ループの最大試行回数。N 回 FAIL した時点で停止し、Issue を `phase/verify` に留めて人間の判断を促す。0 以下、20 超、または非数値の場合は `3` にフォールバック。 |
 
 実装の詳細や YAML パースルールを含む完全なリファレンスは [`modules/detect-config-markers.md`](../../../modules/detect-config-markers.md) を参照してください。
 

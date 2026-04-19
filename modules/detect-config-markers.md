@@ -44,6 +44,7 @@ From the loaded content, search for each YAML key in the marker definition table
 | `capabilities.mcp` | `MCP_TOOLS` | Comma-separated tool name list | `""` |
 | `watchdog-timeout-seconds` | `WATCHDOG_TIMEOUT_SECONDS` | Integer string (extract as-is; use `1800` if ≤0 or non-numeric) | `1800` |
 | `permission-mode` | `PERMISSION_MODE` | String value (extract value as-is) | `"bypass"` |
+| `verify-max-iterations` | `VERIFY_MAX_ITERATIONS` | Integer string (extract as-is; use `3` if ≤0, non-numeric, or >20) | `3` |
 
 **Dynamic Capability Mapping:**
 
@@ -59,6 +60,7 @@ Example: `capabilities.invoice-api: true` → `HAS_INVOICE_API_CAPABILITY=true`
 - `production-url` is treated as URL string with quotes removed
 - `spec-path` and `steering-docs-path` are treated as path strings with quotes removed (same handling as `production-url`)
 - `watchdog-timeout-seconds` is treated as an integer: extract the numeric string; if the value is ≤0 or non-numeric, fall back to the default `1800` and log a warning
+- `verify-max-iterations` is treated as an integer: extract the numeric string; if the value is ≤0, non-numeric, or >20, fall back to the default `3` and log a warning
 - If key does not exist, use default value
 - Comment lines (lines starting with `#`) are ignored
 - Nested values under `capabilities:` section are interpreted as `capabilities.{key}`. Both inline hash format (`capabilities: { browser: true }`) and block format (`capabilities:\n  browser: true`) are supported. If `capabilities:` section is undefined, all capability variables are `false`
@@ -83,4 +85,5 @@ HAS_BROWSER_CAPABILITY: true if capabilities.browser: true is set (default: fals
 MCP_TOOLS: tool name list from capabilities.mcp (comma-separated, default: "")
 WATCHDOG_TIMEOUT_SECONDS: integer from watchdog-timeout-seconds (default: "1800"; falls back to "1800" if ≤0 or non-numeric)
 PERMISSION_MODE: string extracted from permission-mode (default: "bypass")
+VERIFY_MAX_ITERATIONS: integer from verify-max-iterations (default: "3"; falls back to "3" if ≤0, non-numeric, or >20)
 ```

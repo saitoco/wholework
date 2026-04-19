@@ -3,7 +3,7 @@ name: verify
 description: Acceptance test. Automatically verifies post-merge acceptance conditions and updates Issue checkboxes (`/verify 123`). Use after `/merge`. Reopens Issue on FAIL to return to the fix cycle.
 context: fork
 model: sonnet
-allowed-tools: Bash(git checkout:*, git pull:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
+allowed-tools: Bash(git checkout:*, git pull:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
 ---
 
 # Acceptance Test
@@ -112,7 +112,7 @@ gh issue view "$NUMBER" --json body
 
 Parse acceptance condition checkboxes:
 
-**Resolving configuration values**: Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to fetch configuration values from `.wholework.yml`. Retain `SPEC_PATH`, `STEERING_DOCS_PATH`, and `PRODUCTION_URL` for use in subsequent steps.
+**Resolving configuration values**: Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to fetch configuration values from `.wholework.yml`. Retain `SPEC_PATH`, `STEERING_DOCS_PATH`, `PRODUCTION_URL`, and `VERIFY_MAX_ITERATIONS` for use in subsequent steps.
 
 **Resolving `{{base_url}}` to production URL**: If verify commands contain `{{base_url}}`, replace `{{base_url}}` with `PRODUCTION_URL` before passing to verify-executor.
 
@@ -340,18 +340,44 @@ Judgment:
   - Confirm the Issue is closed. If not closed, close with `gh issue close "$NUMBER"` (handles cases like XL parent Issues not auto-closed by PR's `closes #N`)
   - **Even if post-merge conditions without hints are unchecked, do not reopen the Issue** (present user verification guide only)
 - **Auto-verification targets include FAIL**:
-  - Reopen Issue and remove all `phase/*` labels:
+  - Check iteration counter before reopening:
     ```bash
-    gh issue reopen "$NUMBER"
-    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER"
+    CURRENT_ITERATION=$(${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh "$NUMBER")
+    NEXT_ITERATION=$((CURRENT_ITERATION + 1))
     ```
-  - Output guidance for the user:
-    ```
-    Issue #N を再オープンしました。以下のいずれかで修正してください:
-    - `/code --patch N` — Size を変えずに main 直コミットで修正（小さな修正）
-    - `/code --pr N` — 新規ブランチ + PR で修正（Size L の大きな修正）
-    - `/spec N` — Spec から見直し（根本的な設計変更が必要な場合）
-    ```
+  - If `NEXT_ITERATION < VERIFY_MAX_ITERATIONS` (limit not yet reached):
+    - Post a comment with the updated counter marker:
+      ```
+      <!-- verify-iteration: ${NEXT_ITERATION} -->
+      Verification FAIL (iteration ${NEXT_ITERATION}/${VERIFY_MAX_ITERATIONS}). Reopening Issue for fix cycle.
+      ```
+    - Reopen Issue and remove all `phase/*` labels:
+      ```bash
+      gh issue reopen "$NUMBER"
+      ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER"
+      ```
+    - Output guidance for the user:
+      ```
+      Issue #N を再オープンしました。以下のいずれかで修正してください:
+      - `/code --patch N` — Size を変えずに main 直コミットで修正（小さな修正）
+      - `/code --pr N` — 新規ブランチ + PR で修正（Size L の大きな修正）
+      - `/spec N` — Spec から見直し（根本的な設計変更が必要な場合）
+      ```
+  - If `NEXT_ITERATION >= VERIFY_MAX_ITERATIONS` (limit reached):
+    - Post a comment with the max-iterations notice:
+      ```
+      <!-- verify-iteration: ${NEXT_ITERATION} -->
+      max iterations reached (${NEXT_ITERATION}/${VERIFY_MAX_ITERATIONS}). Stopping verify-reopen loop. Issue stays in phase/verify for human judgment.
+      ```
+    - Assign `phase/verify` label without reopening (Issue remains CLOSED):
+      ```bash
+      ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
+      ```
+    - Output `MAX_ITERATIONS_REACHED` to terminal followed by guidance:
+      ```
+      MAX_ITERATIONS_REACHED
+      verify-reopen ループが上限（${VERIFY_MAX_ITERATIONS}回）に達しました。Issue #N は phase/verify に留まります。手動で調査・修正してください。
+      ```
 - **PENDING のみ（FAIL なし、PENDING ≥1）**:
   - Assign `phase/verify` label without reopening the Issue:
     ```bash
@@ -385,11 +411,37 @@ Judgment:
     ```
   - **Even if post-merge conditions without hints are unchecked, do not close the Issue** (present user verification guide only)
 - **Auto-verification targets include FAIL**:
-  - Remove all `phase/*` labels (Issue is already OPEN; no reopen needed):
+  - Check iteration counter before processing:
     ```bash
-    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER"
+    CURRENT_ITERATION=$(${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh "$NUMBER")
+    NEXT_ITERATION=$((CURRENT_ITERATION + 1))
     ```
-  - User selects the next action (`/code`, `/spec`, or `/issue`) to return to the fix cycle
+  - If `NEXT_ITERATION < VERIFY_MAX_ITERATIONS` (limit not yet reached):
+    - Post a comment with the updated counter marker:
+      ```
+      <!-- verify-iteration: ${NEXT_ITERATION} -->
+      Verification FAIL (iteration ${NEXT_ITERATION}/${VERIFY_MAX_ITERATIONS}). Issue stays open for fix cycle.
+      ```
+    - Remove all `phase/*` labels (Issue is already OPEN; no reopen needed):
+      ```bash
+      ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER"
+      ```
+    - User selects the next action (`/code`, `/spec`, or `/issue`) to return to the fix cycle
+  - If `NEXT_ITERATION >= VERIFY_MAX_ITERATIONS` (limit reached):
+    - Post a comment with the max-iterations notice:
+      ```
+      <!-- verify-iteration: ${NEXT_ITERATION} -->
+      max iterations reached (${NEXT_ITERATION}/${VERIFY_MAX_ITERATIONS}). Stopping verify-reopen loop. Issue stays in phase/verify for human judgment.
+      ```
+    - Assign `phase/verify` label (Issue remains OPEN):
+      ```bash
+      ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
+      ```
+    - Output `MAX_ITERATIONS_REACHED` to terminal followed by guidance:
+      ```
+      MAX_ITERATIONS_REACHED
+      verify-reopen ループが上限（${VERIFY_MAX_ITERATIONS}回）に達しました。Issue #N は phase/verify に留まります。手動で調査・修正してください。
+      ```
 - **PENDING のみ（FAIL なし、PENDING ≥1）**:
   - Assign `phase/verify` label (Issue remains OPEN):
     ```bash

@@ -48,6 +48,10 @@ watchdog-timeout-seconds: 3600
 # "bypass" uses --dangerously-skip-permissions (backward compatible)
 permission-mode: auto
 
+# Verify reopen loop limit (default: 3, max: 20)
+# Stops the verify-reopen cycle after N failures; Issue stays in phase/verify for human judgment
+verify-max-iterations: 3
+
 # Optional capabilities
 capabilities:
   browser: true             # Enable Playwright-based verify commands
@@ -76,6 +80,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `capabilities.{name}` | boolean | `false` | Dynamic capability mapping (e.g., `capabilities.invoice-api: true`) |
 | `watchdog-timeout-seconds` | integer | `1800` | Watchdog timeout in seconds before killing a silent `claude -p` process. Increase for slow repos, Size L+ tasks, or slow machines (e.g., `3600`). Values ≤0 fall back to the default. |
 | `permission-mode` | string | `"bypass"` | Permission mode for `/auto` subprocess. `auto` enables `--permission-mode auto` with allow rules template (see `docs/guide/auto-mode-template.json`); `bypass` uses `--dangerously-skip-permissions`. |
+| `verify-max-iterations` | integer | `3` | Limit verify-reopen loop iterations; stops at N failures and leaves Issue in `phase/verify` for human judgment. Values ≤0, >20, or non-numeric fall back to `3`. |
 
 For the full reference including implementation details and YAML parsing rules, see [`modules/detect-config-markers.md`](../../modules/detect-config-markers.md).
 
