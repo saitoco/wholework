@@ -37,8 +37,8 @@ English | [日本語](ja/tech.md)
   | Skill | Fork needed | Reason |
   |-------|-------------|--------|
   | triage | No | No need to avoid prior-phase bias; independence not required |
-  | issue | Yes | L/XL parallel investigation requires independence; sub-agents run in isolated context |
-  | spec | Yes | Reads Issue and investigates codebase independently; not influenced by prior conversation |
+  | issue | Conditional | Shared when invoked directly; fork when via run-issue.sh (sub-agents run in isolated context for L/XL parallel investigation) |
+  | spec | Conditional | Shared when invoked directly; fork when via run-spec.sh |
   | code | Yes | Reads Spec and executes independently; not influenced by pre-implementation context |
   | review | Yes | Reviews code from a clean perspective without inheriting implementation phase bias |
   | merge | Yes | Decision completes with Spec + PR metadata; does not carry over review context |
