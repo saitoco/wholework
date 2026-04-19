@@ -225,6 +225,31 @@ If the old policy keyword may legitimately appear elsewhere in the file (e.g., i
 3. If a file-wide check is safe: use `file_not_contains`
 4. If scope must be limited to a specific section: use `section_not_contains "path" "## Heading" "keyword"`
 
+### 9. When to Use `rubric` vs hard-pattern
+
+`rubric` is designed for acceptance conditions where hard-pattern commands are structurally weak.
+
+**Use `rubric` when:**
+
+| Category | Why hard-pattern fails | Example |
+|----------|----------------------|---------|
+| Semantic equivalence | Wording may vary without changing meaning; `file_contains` requires exact string | `rubric "Documentation adequately explains the rubric command behavior"` |
+| Subjective evaluation | UI quality, UX, readability — no fixed string to match | `rubric "The error message is clear and actionable"` |
+| Multi-line conceptual presence | An idea expressed across paragraphs; `grep` only matches single lines | `rubric "The module covers all three return values"` |
+| Full-width / half-width variation | Japanese content may use either form; `file_contains` is exact-match | `rubric "The section is written in Japanese"` |
+| Behavioral intent | The condition is about runtime behavior, not file content | `rubric "The grader adopts an adversarial stance as described in the issue"` |
+
+**Use hard-pattern (`file_contains`, `grep`, etc.) when:**
+
+- The implementation must contain a specific literal string (model ID, command name, flag value, URL)
+- CI determinism is required (the condition must never be UNCERTAIN due to LLM variance)
+- The condition is purely structural (file exists, section heading present)
+
+**Selection guideline:**
+
+If you can write the exact string the implementation will contain, prefer hard-pattern.
+If the condition is about meaning, intent, quality, or natural-language content where exact strings are uncertain, prefer `rubric`.
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
