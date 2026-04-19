@@ -4,6 +4,11 @@
 
 Collect and organize design information for Issues that require UI design.
 
+## MCP Availability Check
+
+First, ToolSearch for `mcp__plugin_figma_figma__get_design_context` to verify Figma MCP availability.
+If unavailable, skip this phase entirely and proceed to the next step in the calling skill.
+
 ## Auto-detection Criteria
 
 | Judgment | Issue characteristics |

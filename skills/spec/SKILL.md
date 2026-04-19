@@ -216,11 +216,7 @@ After codebase investigation, identify uncertainty items.
 
 **Run regardless of SPEC_DEPTH (UI changes are independent of Size).**
 
-First check Figma MCP availability: ToolSearch for `mcp__plugin_figma_figma__get_design_context`. If unavailable, skip this step entirely and proceed to Step 10.
-
-If Figma MCP is available, analyze the Issue content to auto-determine whether UI design is needed. **Skip this step entirely and proceed to Step 10 if UI design is not needed.**
-
-If UI design is needed, read `skills/spec/figma-design-phase.md` and follow its steps.
+Read `skills/spec/figma-design-phase.md` and follow its steps.
 
 ### Step 10: Create Spec
 
