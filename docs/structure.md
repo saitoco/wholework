@@ -27,7 +27,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (6 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (34 files)
+├── scripts/             # Utility scripts used by skills and agents (35 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -37,7 +37,7 @@ wholework/
 │   └── workflows/
 │       ├── test.yml             # CI: bats tests, skill syntax validation, forbidden expressions check, and macOS shell compatibility test
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
-├── tests/               # Bats test files for scripts (35 files)
+├── tests/               # Bats test files for scripts (36 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -164,6 +164,7 @@ Key modules:
 - `scripts/validate-skill-syntax.py` — validate SKILL.md frontmatter and syntax
 - `scripts/check-file-overlap.sh` — detect file overlap between repos
 - `scripts/check-translation-sync.sh` — check translation sync status of docs/ja/* against docs/*
+- `scripts/check-forbidden-expressions.sh` — detect deprecated terms from docs/product.md § Terms
 - `scripts/setup-labels.sh` — create GitHub labels for workflow
 - `scripts/test-skills.sh` — run all skill tests
 - `scripts/wait-external-review.sh` — wait for external review completion
