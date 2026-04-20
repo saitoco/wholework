@@ -73,3 +73,28 @@
 ### Acceptance Criteria Verification Difficulty
 
 - UNCERTAIN なし。全条件が静的 grep・rubric・bats・CI チェックで確定的に判定可能だった。verify command の網羅性は良好。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 本文に root cause と scope 縮小経緯が詳細に記載されており、spec との整合性確認が容易だった。4 層→2 層の意思決定プロセスが明示されていた点は今後の spec 品質の参考になる。
+
+#### design
+- 初版 4 層設計から 2 層への scope 縮小(UNKNOWN retry と SKILL.md 分岐を除外)は実装結果と完全に一致。設計判断が正確だった。`docs/structure.md` 同期はスペック外だったが doc-checker で自動検出されており、スペックに doc 更新の要否を明示すると完全性が上がる。
+
+#### code
+- リワークなし、1 回の実装で完了。commit history は squash merge で PR #285 として 1 コミット。fixup/amend パターンなし。doc-checker によるスペック外追加(docs/structure.md)は自動検出された軽微な補足。
+
+#### review
+- PR #285 には 1 レビュー・1 コメント。`gh pr view` 失敗時の空文字列 fallback (`|| echo ""`) が誤警告トリガーになり得るパターンへの指摘があり、`-n` チェックとの組み合わせが防御パターンとして共有された。verify で UNCERTAIN なし — レビューで見逃した条件ゼロ。
+
+#### merge
+- PR #285 を通じたクリーンマージ。CI 全 pass 確認後マージ。コンフリクトなし。
+
+#### verify
+- 6 条件すべて PASS。file_not_contains・rubric×2・grep・command(bats)・github_check の多様な verify command が機能した。post-merge opportunistic 条件(実 Issue での `/auto` 実行確認)のみユーザー検証待ち。`phase/verify` ラベルで追跡中。
+
+### Improvement Proposals
+- N/A
