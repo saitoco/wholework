@@ -2,56 +2,47 @@
 
 ## Overview
 
-`/review` に意味レベルのレビュー観点を opt-in で宣言できる経路を追加する。#271 で導入した `<!-- verify: rubric "text" -->`(AC の意味判定)と対称の設計で、PR レビュー観点の意味判定経路を pre-merge 側にも拡張する。
+`/verify` の `<!-- verify: rubric "text" -->` marker を `/review` からも grader 実行できるようにする。既存の `/review` Step 8(Static Acceptance Criteria Verification)が `modules/verify-executor.md` を safe モードで呼び出しているが、現状の verify-executor は `rubric` コマンドを safe モードで UNCERTAIN に落とすため grader が呼ばれていない。
 
-Issue 本文に新規 `## Review Criteria` セクションを導入し、`<!-- review: rubric "text" -->` marker で観点を宣言する。`/review` は既存 Step 10.3 の直後に新しいサブステップ `10.4. Review Rubric Grading` を追加して、marker を抽出し grader を呼び出し、結果を PR コメントに integrate する。grader の設計(adversarial スタンス、入力範囲、戻り値契約)は `modules/verify-executor.md` の Rubric Command Semantics を参照する形で、重複実装を避ける。
+この挙動は #276 で導入された Permission 宣言との不整合(`rubric` は `always_allow` = 副作用なしで自動実行可)であり、`rubric` の safe モード扱いを「grader 実行」に変更することで、`/review` でも pre-merge 時点で AC の意味判定を働かせる。
 
-`/review` は PR diff と Issue 本文の読取が責務で副作用なし(`always_allow` 相当)のため、review rubric は `/review` 実行中は常に grader を呼ぶ(#271 の verify: rubric が safe-mode で UNCERTAIN を返すのとは挙動が異なる)。Spec は grader に入力しない(Issue=WHAT / Spec=HOW 原則の維持)。
+新 marker namespace(`review:` 等)、新セクション(`## Review Criteria`)、新モジュール(`review-rubric-phase.md`)はいずれも導入しない。設計の全体は既存の "Rubric Command Semantics" セクションと `verify: rubric` marker にそのまま乗る。
 
 ## Changed Files
 
-- `skills/review/SKILL.md`: Step 10 配下に `### 10.4. Review Rubric Grading` サブセクションを追加(Issue 本文の `## Review Criteria` セクションから `<!-- review: rubric "text" -->` marker を抽出して review-rubric-phase.md に従い grader を呼び、結果を Review body(Step 11 の出力)に "Review Rubric Results" 表として integrate)
-- `skills/review/review-rubric-phase.md`: 新規作成。grader 呼び出し契約(adversarial スタンス、入力範囲 = Issue 本文 + PR diff + rubric text 内で明示言及されたファイル、`Spec files are not passed to the grader` の明記、戻り値 PASS / FAIL / UNCERTAIN と FAIL 時の gap 記述、Managed Agents `permission_policy: always_allow` portability)を記述。shared semantics は `modules/verify-executor.md` の Rubric Command Semantics への参照で重複実装を避ける
-- `skills/issue/SKILL.md`: Step 4(Classify Acceptance Criteria and Assign Verify Commands)の末尾付近に Review Criteria 宣言ガイダンスセクションを追加(新規セクション `## Review Criteria`、marker syntax `<!-- review: rubric "text" -->`、AC との役割分担)。併せて "Standard Format" に `## Review Criteria` のサンプル行を追加
-- `modules/verify-patterns.md`: 既存 §9 の後に `### 10. When to Use \`review: rubric\` vs \`verify: rubric\`` セクションを追加(verify: AC の post-merge 充足判定、review: PR 品質の pre-merge 観点判定 の違いと使い分け)
-- `tests/review-rubric.bats`: 新規作成。Issue 本文からの `## Review Criteria` セクション抽出、`<!-- review: rubric "text" -->` marker パース、`skills/review/review-rubric-phase.md` の存在と必要文言の shallow 検証 — bash 3.2+ 互換(grep / awk のみ使用、mapfile 等 bash 4+ 機能は使わない)
+- `modules/verify-executor.md`: (a) 翻訳テーブルの `rubric` 行を `**Mode-dependent**: safe/full 共に grader を呼ぶ(always_allow, no side effects)` に変更、(b) "Rubric Command Semantics" の "Safe mode behavior" 節を書き換え — 旧 "returns UNCERTAIN in safe mode" を削除し、`always_allow` Permission 宣言との整合、および safe モードでも grader を呼ぶ理由(副作用なし・Managed Agents `permission_policy: always_allow` portability)を記述
+- `modules/verify-patterns.md`: §9(`rubric` 使い所ガイド)に `/review` pre-merge でも grader が走る旨を追記。`verify: rubric` を AC に書くと pre-merge(`/review`)と post-merge(`/verify`)の両時点で意味判定される運用メリットを説明
+- `tests/review-rubric-safe.bats`: 新規作成。(i) `modules/verify-executor.md` の `rubric` 翻訳テーブル行が safe モードでも grader 実行する旨を記述していること、(ii) "Safe mode behavior" 節が `always_allow` への言及を含み、旧 "returns UNCERTAIN" を含まないこと、(iii) `modules/verify-patterns.md` に `/review` pre-merge 言及が含まれることを shallow に検証 — bash 3.2+ 互換(grep / awk のみ使用、LLM 応答自体の assertion はしない)
 
 ## Implementation Steps
 
-1. `skills/review/review-rubric-phase.md` を新規作成(module standard 4-section structure: Purpose / Input / Processing Steps / Output)。内容: (a) grader input scope — Issue body (Background, Purpose, Acceptance Criteria, Review Criteria sections) と `gh pr diff $NUMBER` と rubric text 内で明示言及されたファイル。Spec files are not passed to the grader。(b) adversarial system prompt 指定。(c) 戻り値 PASS / FAIL / UNCERTAIN、FAIL 時は gap の自然言語記述。(d) shared design は `modules/verify-executor.md` の "Rubric Command Semantics" セクションを参照。(e) Managed Agents `permission_policy: always_allow` への portability を注記 (→ AC 2, 3, 4, 5, 6)
+1. `modules/verify-executor.md` の `rubric` 翻訳テーブル行(現 L82)を書き換える。旧: `**Mode-dependent**: safe → return UNCERTAIN. full → invoke grader ...`。新: `**Mode-dependent**: safe/full 共に grader を呼ぶ(always_allow Permission 宣言により副作用なし)。grader は adversarial system prompt で ...(以下既存)` — Mode 境界で挙動が変わらない旨を明示 (→ AC 1)
 
-2. `skills/review/SKILL.md` の Step 10.3 直後に `### 10.4. Review Rubric Grading` サブセクションを追加。処理: (i) Issue 本文から `## Review Criteria` セクションを抽出(存在しなければ skip)、(ii) セクション内の `<!-- review: rubric "text" -->` marker を列挙、(iii) 各 marker について `skills/review/review-rubric-phase.md` を Read して "Processing Steps" に従い grader を呼ぶ、(iv) 結果の PASS / FAIL / UNCERTAIN + gap を収集、(v) Step 11 の Review body 生成直前に "## Review Rubric Results" 表として追加 (→ AC 1)
+2. `modules/verify-executor.md` の "Rubric Command Semantics" の "Safe mode behavior" 節(現 L103-104)を書き換える。旧: `rubric returns UNCERTAIN in safe mode. Semantic grading requires full access to git diff and may trigger tool use; this is reserved for full mode.`。新: safe / full 共に grader を呼ぶこと、`always_allow` Permission 宣言(#276)が safe モードでの自動実行許可を意味すること、`/review` Step 8 経由(safe モード)でも rubric が走ることで pre-merge 意味判定が可能になる旨を 3〜5 文で記述 (→ AC 2, 3)
 
-3. `skills/issue/SKILL.md` Step 4 の "Custom verify command handlers" セクション直前付近に新規サブセクション "Review Criteria section (optional)" を追加。内容: (a) `## Review Criteria` は optional、意味レベルのレビュー観点宣言用、(b) marker syntax `<!-- review: rubric "text" -->` は `verify:` と対称、(c) AC(post-merge 充足)と Review Criteria(pre-merge 品質)の役割分担、(d) Issue = WHAT を崩さない(Spec ではなく Issue 側に置く)。併せて "Standard Format" コードブロック内に `## Review Criteria` サンプル行を 1 例追加 (→ AC 7, 8)
+3. `modules/verify-patterns.md` §9(`rubric` 使い所ガイド)の末尾に `/review` pre-merge 時点でも grader が走ることを追記(2〜3 文)。AC に書いた `verify: rubric` は `/verify` post-merge で checkbox 更新と意味判定、`/review` pre-merge で grader 結果コメント表示、という 2 フェーズ運用を説明 (→ AC 4)
 
-4. `modules/verify-patterns.md` の §9(既存の `rubric` 使い所ガイド)の後に `### 10. When to Use \`review: rubric\` vs \`verify: rubric\`` セクションを追加。内容: (a) `verify: rubric` は post-merge、AC 項目として実装成果物 vs 要件の充足を判定。(b) `review: rubric` は pre-merge、PR diff vs レビュー観点(アーキテクチャ整合、命名一貫性、エラーハンドリング方針等)の適合を判定。(c) 評価タイミングと対象が異なるため Issue 内でセクションを分ける (→ AC 9)
-
-5. `tests/review-rubric.bats` を新規作成。bats テストで (i) サンプル Issue 本文テキストから `## Review Criteria` セクションが抽出できること、(ii) セクション内の `<!-- review: rubric "text" -->` marker 数が期待通り parse できること、(iii) `skills/review/review-rubric-phase.md` が存在し `Spec files are not passed to the grader` と `adversarial` を含むこと、(iv) `skills/review/SKILL.md` に `review: rubric` および "10.4" 相当のセクション見出しが存在することを shallow に検証(LLM 応答そのものは mock せず assertion しない)。bash 3.2+ 互換(mapfile など bash 4+ 機能は避ける) (→ AC 10, 11)
+4. `tests/review-rubric-safe.bats` を新規作成。bats テストで以下を shallow に検証: (i) `modules/verify-executor.md` に `rubric` と safe/full 併記 + `always_allow` の整合記述が存在、(ii) "Safe mode behavior" 節に `returns UNCERTAIN in safe mode` が存在**しない**、(iii) `modules/verify-patterns.md` に `/review` pre-merge 言及がある。bash 3.2+ 互換(grep / awk のみ、mapfile 等 bash 4+ 機能は避ける)。LLM 応答そのものは mock せず assertion しない (→ AC 5, 6)
 
 ## Verification
 
 ### Pre-merge
-- <!-- verify: file_contains "skills/review/SKILL.md" "review: rubric" --> `skills/review/SKILL.md` に `<!-- review: rubric "text" -->` marker 処理フロー(Step 10.4 相当)が追加されている
-- <!-- verify: file_exists "skills/review/review-rubric-phase.md" --> `skills/review/review-rubric-phase.md` が新規作成されている
-- <!-- verify: file_contains "skills/review/review-rubric-phase.md" "adversarial" --> 新規モジュールに adversarial スタンスの指定が明記されている
-- <!-- verify: file_contains "skills/review/review-rubric-phase.md" "Spec files are not passed to the grader" --> 新規モジュールに Spec を grader に渡さない旨が明記されている
-- <!-- verify: grep "PASS.*FAIL.*UNCERTAIN\|FAIL.*gap" "skills/review/review-rubric-phase.md" --> 戻り値 PASS / FAIL / UNCERTAIN と FAIL 時の gap 記述が記述されている
-- <!-- verify: file_contains "skills/review/review-rubric-phase.md" "verify-executor.md" --> 新規モジュールから `modules/verify-executor.md` の Rubric Command Semantics への参照(重複実装回避)が記述されている
-- <!-- verify: file_contains "skills/issue/SKILL.md" "Review Criteria" --> `skills/issue/SKILL.md` に `## Review Criteria` セクションのガイダンスが追加されている
-- <!-- verify: file_contains "skills/issue/SKILL.md" "review: rubric" --> `skills/issue/SKILL.md` に `<!-- review: rubric "text" -->` marker の記述ガイダンスが追加されている
-- <!-- verify: file_contains "modules/verify-patterns.md" "review: rubric" --> `modules/verify-patterns.md` に review rubric と verify rubric の使い分けガイドラインが追加されている
-- <!-- verify: command "find tests -name '*review-rubric*.bats' -o -name '*review_rubric*.bats' -type f | grep -q ." --> review rubric の marker 抽出・dispatch を検証する bats テストが追加されている
+- <!-- verify: file_not_contains "modules/verify-executor.md" "safe` → return UNCERTAIN. `full` → invoke grader" --> `modules/verify-executor.md` の `rubric` 翻訳テーブル行から「safe → UNCERTAIN」の記述が削除されている
+- <!-- verify: section_not_contains "modules/verify-executor.md" "Rubric Command Semantics" "returns UNCERTAIN in safe mode" --> "Safe mode behavior" 節から "returns UNCERTAIN in safe mode" の記述が削除または更新されている
+- <!-- verify: section_contains "modules/verify-executor.md" "Rubric Command Semantics" "always_allow" --> "Safe mode behavior" 節に `always_allow` 宣言との整合が記述されている
+- <!-- verify: file_contains "modules/verify-patterns.md" "/review" --> `modules/verify-patterns.md` rubric 使い所ガイドに `/review` pre-merge 言及が追記されている
+- <!-- verify: command "find tests -name '*rubric*safe*.bats' -o -name '*review-rubric*.bats' -type f | grep -q ." --> safe モード経路の rubric dispatch を検証する bats テストが追加されている
 - <!-- verify: github_check "gh pr checks" "Run bats tests" --> 追加されたテストを含む全 bats テストが CI で PASS する
+- <!-- verify: rubric "変更が既存 AC 構造・marker syntax(`## Acceptance Criteria`, `<!-- verify: ... -->`)・他 verify command の safe/full 挙動を一切壊していない(rubric 以外の command は挙動変化なし)" --> 既存 AC 構造・他 verify command への影響ゼロ
 
 ### Post-merge
-- 実 PR で `## Review Criteria` セクションに `<!-- review: rubric "text" -->` を宣言し、`/review` 経由で観点ごとに PASS / FAIL / UNCERTAIN と gap を含むコメントが投稿されることを確認(verify-type: opportunistic)
+- 実 PR で AC に `<!-- verify: rubric "text" -->` を含めると、`/review` のコメントに grader 結果(PASS/FAIL/UNCERTAIN + gap)が表示されることを確認(verify-type: opportunistic)
 
 ## Notes
 
-- **#271 実装を前提**: `modules/verify-executor.md` の "Rubric Command Semantics" セクションが merge 済みで、adversarial スタンス / grader 入力範囲 / 戻り値契約が定義されている。本 Issue の `review-rubric-phase.md` はこれを参照する形で重複実装を避ける
-- **Step 10.4 の命名**: 既存 `### 10.0`〜`### 10.3` と同じパターンで `### 10.4. Review Rubric Grading` を使う(`### Step 10.4` は validator の `validate_decimal_steps` で弾かれる — `### Step N.M` 形式のみ検出対象で、`### N.M.` 形式は許可されている)
-- **safe / full モード扱い**: `/review` は基本 safe-mode で動き verify-executor 経由で AC 側の `<!-- verify: rubric -->` を UNCERTAIN として扱うが、review rubric は `/review` phase の中核機能で常に grader を呼ぶ(別レイヤ)。この挙動差は `review-rubric-phase.md` で明記する
-- **Issue=WHAT 原則の維持**: AC(post-merge, 実装成果物評価)と Review Criteria(pre-merge, PR diff 評価)は同じ Issue に共存するが、評価タイミング・対象・用途が異なる。両方とも Issue 側にあり、Spec(HOW)には依存しない
-- **Multi-perspective Code Review との共存**: Step 10.0–10.3 の既存レビューパスは残し、10.4 は opt-in 追加として作用する(Issue 本文に `## Review Criteria` が無ければ no-op)。既存挙動への影響ゼロ
-- **bats テストの粒度**: `review: rubric` は LLM grader を呼ぶが、#271 `tests/verify-rubric.bats` と同じ方針で shallow test に留める — 文書存在・必要文言・セクション構造の検証のみで、LLM 応答自体の assertion は行わない
-- **Managed Agents portability**: 将来 `/review` phase を Managed Agents Outcome に移植する際、review rubric は `permission_policy: always_allow` で 1:1 マップされる(verify rubric と同じ)
+- **元案(2026-04-20)からの転換**: 当初は `## Review Criteria` 新設 + `<!-- review: rubric "text" -->` 新 namespace + `review-rubric-phase.md` 新 module を提案していたが、(a) `/review` Step 8 が既に verify-executor を safe モードで呼び出し AC 検証済みである事実、(b) #276 で `rubric` が `always_allow` 宣言済みである事実、から「既存経路の挙動修正のみで目的達成可能」と判断した。新概念・新 namespace・新 module はいずれもゼロ
+- **Permission 層との整合修復**: `rubric` の Permission `always_allow` と Mode safe → UNCERTAIN の挙動は元々矛盾しており(他 `always_allow` コマンドは safe モードで実行される)、本変更はその不整合の修復。副次的に verify-executor 自体の健全化にも寄与
+- **grader 入力範囲**: safe モードでも grader 入力範囲(Issue body + git diff + 言及ファイル、Spec 除外)は full モードと同じ。`/review` 実行時の git diff は PR diff を指す。この解釈は既存の Rubric Command Semantics の記述そのままで、本 Issue で追加記述は不要
+- **既存 AC 互換性**: `verify: rubric` を持たない AC、および他 verify command(`file_exists`, `command`, `build_success` 等)の safe/full 挙動はいずれも変更なし
+- **bats テストの粒度**: 既存 `tests/verify-rubric.bats`(#271)と同じ方針で shallow test に留める。文書存在・必要文言・削除された古い文言の 3 点検証のみで、LLM 応答自体の assertion は行わない
+- **Managed Agents portability 維持**: 単一 namespace(`verify:`)で `always_allow` portability 契約を保持。将来 `/review` phase を Managed Agents Outcome に移植する際も `rubric` は 1:1 マップ可能
