@@ -49,3 +49,30 @@
 - **CI 反映**: 既存 CI 設定は `tests/*.bats` を glob で全実行する形と想定(bats 呼出の shell 展開頻度は review-rubric-safe.bats 追加時と同じパターンが動作した実績あり)
 - **`command` hint の UNCERTAIN 扱い**: AC 5 の `command "bats ..."` は safe モード(`/review`)で UNCERTAIN を返すが、CI 反映(AC 6 の `github_check`)で担保される
 - **Issue との整合**: Issue 本文の AC 7 項目と本 Spec Verification > Pre-merge の 7 項目は 1:1 対応
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue の AC は 7 件すべてに verify command 付き。rubric (AC 7) による semantic validation の組み込みも適切。Post-merge 条件なし。
+
+#### design
+- Spec の実装ステップは各 bats ファイルの test 内容と 1:1 対応しており設計の明確さは高い。
+- Code Retrospective（PR #282 diff より）: `domain-loader.bats` で `-i` フラグを追加（`grep -qiE`）。モジュール内テキストの大文字混在への対処で意図に合致した小修正。
+
+#### code
+- Code Retrospective より: N/A 設計通り実装。Rework なし。
+
+#### review
+- Review Retrospective より: MUST/SHOULD/CONSIDER 0件。実装と Spec が完全一致。AC 5 (`command "bats..."`) safe モードで UNCERTAIN → AC 6 CI fallback で代替 PASS という 2 条件の組み合わせ設計は妥当。
+
+#### merge
+- 本 verify 実行時点では PR #282 は未マージ（OPEN）。通常フロー（merge → verify）が守られなかった。
+
+#### verify
+- `/verify 281` が PR マージ前に実行されたため、条件 1〜5 が「ファイル未存在」で FAIL。これは実装コードの問題ではなく verify のタイミング起因。
+- 条件 7 (rubric) は PR #282 diff を proxy として評価し PASS 判定。
+
+### Improvement Proposals
+- `/verify` スキルが OPEN PR 存在・未マージ状態で呼び出された場合、"PR #N is open but not merged — run `/verify` after merging" という早期警告を Step 2 に追加することで、タイミング起因のフォールス FAIL を防げる。
