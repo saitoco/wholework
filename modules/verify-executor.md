@@ -98,7 +98,7 @@ The grader system prompt explicitly instructs adversarial judgment: enumerate ga
 **Return values:**
 - `PASS` — implementation satisfies the acceptance condition
 - `FAIL` — implementation does not satisfy the condition; includes a natural-language description of the gap
-- `UNCERTAIN` — cannot be determined (safe mode, insufficient evidence, etc.)
+- `UNCERTAIN` — cannot be determined (insufficient evidence, syntax error, etc.)
 
 **Safe mode behavior:**
 `rubric` invokes the grader in both `safe` and `full` modes. The `always_allow` permission declaration (#276) confirms that the grader has no side effects and is safe for automatic execution — the same guarantee that allows `file_exists`, `grep`, and `section_contains` to run in safe mode. Restricting `rubric` to full mode while declaring it `always_allow` would be a Permission-Mode inconsistency. As a result, `/review` Step 8 (which calls verify-executor in safe mode) now runs the rubric grader, enabling semantic acceptance condition judgment at pre-merge time.
