@@ -1,30 +1,23 @@
-# Issue #284: fix: run-merge.sh の no-op false-success(CI wait 早期 return + mergeable UNKNOWN 未処理 + post-validation 欠如)
+# Issue #284: fix: run-merge.sh の no-op false-success(CI wait 早期 return + post-validation 欠如)
 
 ## Overview
 
-`/auto 281` merge phase の観測で `run-merge.sh` が 33 秒 exit 0 で返るが PR 未マージという no-op false-success が発生。3 層の root cause(CI 待機早期 return / mergeable=UNKNOWN 未処理 / post-validation 欠如)に対する 4 箇所の多層防御修正を加え、no-op を 3 層いずれかで遮断する。rubric と hard-pattern の併用で実装意図も semantic に検証する。
+`/auto 281` merge phase の観測で `run-merge.sh` が 33 秒 exit 0 で返るが PR 未マージという no-op false-success が発生。2 層(予防: `wait-ci-checks.sh` の `--required` 依存除去 / 防衛: `run-merge.sh` の post-claude 段階に `gh pr view --json state` による MERGED 検証追加)で遮断する。初版の 4 層案から scope 縮小(UNKNOWN retry と SKILL.md 分岐追加は冗長と判断)。
 
 ## Changed Files
 
-- `scripts/wait-ci-checks.sh`: `gh pr checks --watch --interval 60 --required` から `--required` 依存を外し、required 未設定リポジトリでも全 check 完了を待機するロジックに変更。bash 3.2+ 互換
-- `scripts/gh-pr-merge-status.sh`: `MERGEABLE=UNKNOWN` または `mergeStateStatus=UNKNOWN` 時、3 秒 backoff × 最大 5 回 retry を追加。retry 全失敗時は現状通り `{reason: unknown}` を返す。bash 3.2+ 互換
-- `skills/merge/SKILL.md`: Step 1 分岐テーブル(現 L61-65)に `reason: unknown` 明示 branch を追加 — 1 回 sleep 10s → 再 `gh-pr-merge-status.sh` 呼出、それでも unknown なら非対話モード auto-resolve で merge attempt 続行
-- `scripts/run-merge.sh`: claude -p 完了後に `gh pr view $PR_NUMBER --json state` 確認の post-validation を追加。`state != "MERGED"` なら warning 出力 + exit 1。bash 3.2+ 互換
-- `tests/wait-ci-checks.bats`: `--required` 非依存挙動の検証テスト追加
-- `tests/gh-pr-merge-status.bats`: UNKNOWN retry 挙動の検証テスト追加(mock gh を連続 UNKNOWN→MERGEABLE の順に応答させる)
-- `tests/run-merge.bats`: post-validation 挙動の検証テスト追加(mock claude + mock gh で state != MERGED 時 exit 1 確認)
+- `scripts/wait-ci-checks.sh`: `gh pr checks --watch --interval 60 --required` から `--required` 除去、全 check を watch 対象にする(required 未設定環境でも機能)。bash 3.2+ 互換
+- `scripts/run-merge.sh`: 既存 watchdog reconcile ロジック(現 L76-86)より後ろに `gh pr view $PR_NUMBER --json state` 確認の post-validation を追加。`state != "MERGED"` なら `EXIT_CODE=1` 上書き + warning 出力。bash 3.2+ 互換
+- `tests/wait-ci-checks.bats`: `--required` 非依存の挙動検証ケース追加
+- `tests/run-merge.bats`: post-validation 挙動検証ケース追加(mock gh で `state` を `OPEN`/`MERGED` に切替えて exit code を確認)
 
 ## Implementation Steps
 
-1. `scripts/wait-ci-checks.sh:11-17` を変更 — `timeout $TIMEOUT_SEC gh pr checks "$PR_NUMBER" --watch --interval 60 --required` の `--required` 除去。代替案: `gh pr checks "$PR" --watch --interval 60`(全 check 対象に監視)を `|| true` 付きで実行。既存の `command -v timeout`/`gtimeout`/素実行の 3 分岐構造は維持 (→ AC 1, 2)
+1. `scripts/wait-ci-checks.sh:11-17` を変更 — 既存の `command -v timeout`/`gtimeout`/素実行の 3 分岐構造は維持したまま、各 `gh pr checks` 呼出から `--required` を除去する。コメント L6 の仕様注記も整合更新 (→ AC 1, 2)
 
-2. `scripts/gh-pr-merge-status.sh:44-65` を変更 — `JSON=$(gh pr view "$PR" --json mergeable,mergeStateStatus)` を `for` loop 内(`i=1..5`)でラップ。MERGEABLE/STATE 取得後に `if [[ "$MERGEABLE" == "UNKNOWN" || "$STATE" == "UNKNOWN" ]]; then sleep 3; continue; fi` を追加。5 回 retry 後も UNKNOWN なら現状最終 else 節に落ちる (→ AC 3, 4)
+2. `scripts/run-merge.sh` の現 `echo "---"`(L86 前後)直前に post-validation ブロックを挿入 — EXIT_CODE が 0 のときのみ `gh pr view "$PR_NUMBER" --json state -q .state 2>/dev/null` で state を取得し、`MERGED` でなければ warning を stderr 出力して `EXIT_CODE=1` に上書き。watchdog reconcile の後ろに置くことで、reconcile で 0 になった場合も再確認する (→ AC 3, 4)
 
-3. `skills/merge/SKILL.md` Step 1(L61-65)の mergeability 分岐テーブルに `reason: unknown` branch を追加 — 「**reason=unknown**: 10 秒待機後、`${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh "$NUMBER"` を再実行。再取得も unknown なら非対話モードでは auto-resolve で Step 4 へ進む(対話モードでは user 判断)」を書き足す (→ AC 5)
-
-4. `scripts/run-merge.sh:73-86` の EXIT_CODE 判定直後(現 L86 の `echo "---"` 直前)に post-validation ブロックを挿入 — `if [[ $EXIT_CODE -eq 0 ]]; then local PR_STATE=$(gh pr view "$PR_NUMBER" --json state -q .state 2>/dev/null || echo ""); if [[ "$PR_STATE" != "MERGED" ]]; then echo "Warning: /merge exited 0 but PR #${PR_NUMBER} is not MERGED (state=${PR_STATE}); reporting no-op failure" >&2; EXIT_CODE=1; fi; fi` (→ AC 6, 7)
-
-5. `tests/{wait-ci-checks,gh-pr-merge-status,run-merge}.bats` に上記挙動を検証するテストケースを追加(各ファイルの既存 setup/mock パターンを踏襲) (→ AC 8, 9)
+3. `tests/wait-ci-checks.bats` / `tests/run-merge.bats` に上記挙動の検証を追加 — `tests/wait-ci-checks.bats` は mock gh の呼出引数に `--required` が含まれないことを assert。`tests/run-merge.bats` は mock gh の `pr view --json state` 応答を `OPEN`/`MERGED` で切替え、exit code の期待値を assert (→ AC 5, 6)
 
 ## Verification
 
@@ -32,12 +25,9 @@
 
 - <!-- verify: file_not_contains "scripts/wait-ci-checks.sh" "--watch --interval 60 --required" --> `wait-ci-checks.sh` から `--watch --interval 60 --required` の固定組合せが除去されている
 - <!-- verify: rubric "scripts/wait-ci-checks.sh は required check 未設定のリポジトリでも全 CI check の完了を待機する実装になっている(--required 依存なし)" --> wait 実装が required 非依存
-- <!-- verify: grep "UNKNOWN" "scripts/gh-pr-merge-status.sh" --> `gh-pr-merge-status.sh` に UNKNOWN 処理が追加されている
-- <!-- verify: rubric "scripts/gh-pr-merge-status.sh は MERGEABLE=UNKNOWN または mergeStateStatus=UNKNOWN 時に backoff 付き retry を行う実装を含む" --> UNKNOWN retry 実装
-- <!-- verify: file_contains "skills/merge/SKILL.md" "reason: unknown" --> `skills/merge/SKILL.md` Step 1 分岐に `reason: unknown` の明示ハンドリングが追加されている
 - <!-- verify: grep "PR_STATE\|state.*MERGED\|mergedAt" "scripts/run-merge.sh" --> `run-merge.sh` の post-claude 段階に merge 実行検証ロジックが追加されている
-- <!-- verify: rubric "scripts/run-merge.sh は claude -p 完了後に PR の state を gh pr view で確認し、MERGED でなければ非 0 exit する post-validation を含む" --> post-validation 実装
-- <!-- verify: command "bats tests/wait-ci-checks.bats tests/gh-pr-merge-status.bats tests/run-merge.bats" --> 既存 3 bats の更新テスト含む全テストがローカル PASS する
+- <!-- verify: rubric "scripts/run-merge.sh は claude -p 完了後に PR の state を gh pr view で確認し、MERGED でなければ非 0 exit する post-validation を含む(既存 watchdog reconcile より後ろに配置)" --> post-validation 実装
+- <!-- verify: command "bats tests/wait-ci-checks.bats tests/run-merge.bats" --> 更新された 2 bats がローカル PASS する
 - <!-- verify: github_check "gh pr checks" "Run bats tests" --> 全 bats テストが CI で PASS する
 
 ### Post-merge
@@ -46,12 +36,11 @@
 
 ## Notes
 
-- **多層防御の狙い**: 4 箇所の修正(wait-ci-checks / gh-pr-merge-status / merge SKILL Step 1 / run-merge post-validation)はいずれも独立に no-op 検知可能。1 箇所の regression でも他 3 層で抑止できる
-- **run-merge.sh post-validation の位置**: 現行の watchdog kill 時の reconcile ロジック(L76-86)より後ろ(`echo "---"` 直前)に配置。watchdog reconcile で EXIT_CODE=0 になった場合でも post-validation で再確認できる
-- **UNKNOWN retry の合計待機時間**: 3s × 5 = 15s(worst case)。wait-ci-checks の後続で走るため、CI 完了直後の GitHub internal state 計算時間を吸収するには十分と判断
-- **`gh pr view --json state -q .state`**: SPEC 追加時点で `gh-pr-merge-status.sh` が既に `gh pr view` を使っているので allowed-tools 追加は不要(merge SKILL.md/run-merge.sh の`gh`汎用許可で covered)
-- **bats test input format**: mock gh で JSON 出力を stub する方式は既存 `tests/gh-pr-merge-status.bats` の `make_gh_mock` ヘルパーを再利用。新たに連続応答を返す mock helper(初回 UNKNOWN → 2 回目以降 MERGEABLE)を追加する必要あり
-- **self-reference exclusion**: 本件のテストは `.bats` 自身が検証対象文字列(`--required`, `UNKNOWN` 等)を含むが、検証対象は `scripts/*.sh` / `skills/merge/SKILL.md` のみで bats ファイルは含まれないため、false positive 懸念は軽微。必要なら tests/*.bats を検証パスから除外
-- **rubric + hard-pattern 併用**: 静的 grep だけでは「retry 実装かどうか」を意味レベルで捉えきれないため、各層に `rubric` 付き AC を用意して grader に意図確認を委譲
-- **#283 との補完**: #283 は verify 側で未マージ PR を検知する保険。本 Issue は merge 側の元栓を閉じる。両方マージされれば二重防御
-- **Architecture Decisions impact 確認**: 本変更は `.wholework.yml` 新キー追加や `claude -p` CLI flag 変更を含まないため、`docs/tech.md` Architecture Decisions への影響なし。`tech.md` 更新不要
+- **scope 縮小の経緯**: 初版は 4 層防御(wait-ci-checks / gh-pr-merge-status UNKNOWN retry / merge SKILL.md reason:unknown 分岐 / post-validation)を提案。trade-off 分析で「wait-ci-checks が正しく待てば mergeable=UNKNOWN 滞在は稀」「SKILL.md 分岐追加は prompt-based で将来 drift の種」という観点から中間 2 層を削除。post-validation で silent failure を顕在化できれば rare な model misfire は下流 orchestrator で対処可能
+- **post-validation の位置**: 現行 watchdog kill 時 reconcile ロジック(L76-86)より後ろ。reconcile で EXIT_CODE=0 になったケースでも post-validation で再確認できる二重防御的な配置
+- **UNKNOWN retry が不要な理由**: GitHub の mergeable 計算は CI 完了後は秒単位で完了する。wait-ci-checks が全 check 完了まで待てば、その後の `gh pr view` は CLEAN/BLOCKED 等の決定的 state を返す確率が高い。稀に UNKNOWN が残っても post-validation が検知して exit 1 を返すので silent failure にはならない
+- **bats test の mock 方針**: 既存 `tests/wait-ci-checks.bats` の `setup` で `MOCK_DIR` + PATH prepend パターン、`tests/run-merge.bats` の `CLAUDE_CALL_LOG` 記録パターンをそのまま再利用。新 mock は不要
+- **self-reference 懸念なし**: 検証対象は `scripts/*.sh` のみ。bats ファイルに `--required` や `MERGED` 等の文字列が含まれても verify command が bats を直接 grep しないため false positive 懸念は軽微
+- **rubric + hard-pattern 併用**: 静的 grep だけでは「post-validation が既存 reconcile より後ろに配置されているか」を意味レベルで捉えきれないため、`rubric` で grader に意図確認を委譲(2 箇所)
+- **#283 との補完**: #283 は verify 側の保険(未マージ PR 検知で早期 FAIL)、既に `/verify` SKILL.md に実装済み(Step 2 の OPEN_PR 検知ロジック L91-103 で確認)。本 Issue は merge 側の元栓。両方揃うことで二重防御
+- **Architecture Decisions impact なし**: 本変更は `.wholework.yml` 新キー追加や `claude -p` CLI flag 変更を含まないため `docs/tech.md` 更新不要
