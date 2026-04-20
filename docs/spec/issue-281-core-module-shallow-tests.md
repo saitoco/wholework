@@ -50,6 +50,17 @@
 - **`command` hint の UNCERTAIN 扱い**: AC 5 の `command "bats ..."` は safe モード(`/review`)で UNCERTAIN を返すが、CI 反映(AC 6 の `github_check`)で担保される
 - **Issue との整合**: Issue 本文の AC 7 項目と本 Spec Verification > Pre-merge の 7 項目は 1:1 対応
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A（設計通り実装）
+
+### Design Gaps/Ambiguities
+- `domain-loader.bats` の discovery 契約テストで `-i` フラグを追加（`grep -qiE`）。"Glob" は大文字、"Discover" は大文字、"load" は小文字と混在するため、case-insensitive にした方が将来変更に頑健と判断。Spec では `grep -qiE "Glob|Discover|load"` という形は明示されていなかったが意図に合致。
+
+### Rework
+- N/A
+
 ## Verify Retrospective
 
 ### Phase-by-Phase Review
