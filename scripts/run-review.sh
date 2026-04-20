@@ -26,6 +26,7 @@ fi
 
 echo "=== run-review.sh: Starting /review for PR #${PR_NUMBER} ==="
 source "$SCRIPT_DIR/phase-banner.sh"
+source "$SCRIPT_DIR/watchdog-defaults.sh"
 print_start_banner "pr" "$PR_NUMBER" "review"
 echo "Model: sonnet"
 echo "Effort: high"
@@ -66,11 +67,7 @@ ARGUMENTS: ${ARGUMENTS}"
 
 # Specify --model and ANTHROPIC_MODEL both (workaround for -p mode bug)
 # See: https://github.com/anthropics/claude-code/issues/22362
-WATCHDOG_TIMEOUT=$("$SCRIPT_DIR/get-config-value.sh" watchdog-timeout-seconds 1800 2>/dev/null || echo 1800)
-if ! echo "$WATCHDOG_TIMEOUT" | grep -qE '^[0-9]+$' || [[ "$WATCHDOG_TIMEOUT" -le 0 ]]; then
-  echo "Warning: invalid watchdog-timeout-seconds '${WATCHDOG_TIMEOUT}', using default 1800" >&2
-  WATCHDOG_TIMEOUT=1800
-fi
+load_watchdog_timeout "$SCRIPT_DIR"
 
 set +e
 ANTHROPIC_MODEL=sonnet \

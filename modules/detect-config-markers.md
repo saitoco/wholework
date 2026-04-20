@@ -42,7 +42,7 @@ From the loaded content, search for each YAML key in the marker definition table
 | `steering-docs-path` | `STEERING_DOCS_PATH` | Path string (extract value as-is) | `docs` |
 | `capabilities.browser` | `HAS_BROWSER_CAPABILITY` | `true` | `false` |
 | `capabilities.mcp` | `MCP_TOOLS` | Comma-separated tool name list | `""` |
-| `watchdog-timeout-seconds` | `WATCHDOG_TIMEOUT_SECONDS` | Integer string (extract as-is; use `1800` if ≤0 or non-numeric) | `1800` |
+| `watchdog-timeout-seconds` | `WATCHDOG_TIMEOUT_SECONDS` | Integer string (extract as-is; use `1800` if ≤0 or non-numeric) | `1800` (see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT`) |
 | `permission-mode` | `PERMISSION_MODE` | String value (extract value as-is) | `"bypass"` |
 | `verify-max-iterations` | `VERIFY_MAX_ITERATIONS` | Integer string (extract as-is; use `3` if ≤0, non-numeric, or >20) | `3` |
 
@@ -59,7 +59,7 @@ Example: `capabilities.invoice-api: true` → `HAS_INVOICE_API_CAPABILITY=true`
 - `steering-hint` has inverse mapping: `steering-hint: false` → `HAS_STEERING_HINT=false` (hint suppressed), unset or `steering-hint: true` → `HAS_STEERING_HINT=true` (default enabled)
 - `production-url` is treated as URL string with quotes removed
 - `spec-path` and `steering-docs-path` are treated as path strings with quotes removed (same handling as `production-url`)
-- `watchdog-timeout-seconds` is treated as an integer: extract the numeric string; if the value is ≤0 or non-numeric, fall back to the default `1800` and log a warning
+- `watchdog-timeout-seconds` is treated as an integer: extract the numeric string; if the value is ≤0 or non-numeric, fall back to the default `1800` (see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT`) and log a warning
 - `verify-max-iterations` is treated as an integer: extract the numeric string; if the value is ≤0, non-numeric, or >20, fall back to the default `3` and log a warning
 - If key does not exist, use default value
 - Comment lines (lines starting with `#`) are ignored
@@ -83,7 +83,7 @@ SPEC_PATH: path string extracted from spec-path (default: "docs/spec")
 STEERING_DOCS_PATH: path string extracted from steering-docs-path (default: "docs")
 HAS_BROWSER_CAPABILITY: true if capabilities.browser: true is set (default: false)
 MCP_TOOLS: tool name list from capabilities.mcp (comma-separated, default: "")
-WATCHDOG_TIMEOUT_SECONDS: integer from watchdog-timeout-seconds (default: "1800"; falls back to "1800" if ≤0 or non-numeric)
+WATCHDOG_TIMEOUT_SECONDS: integer from watchdog-timeout-seconds (default: "1800" (see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT`); falls back to "1800" if ≤0 or non-numeric)
 PERMISSION_MODE: string extracted from permission-mode (default: "bypass")
 VERIFY_MAX_ITERATIONS: integer from verify-max-iterations (default: "3"; falls back to "3" if ≤0, non-numeric, or >20)
 ```
