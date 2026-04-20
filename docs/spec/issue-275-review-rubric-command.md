@@ -60,3 +60,17 @@
 ### Rework
 
 - `tests/review-rubric-safe.bats` の test #2 ("Rubric Command Semantics section mentions always_allow for safe mode") で awk range が機能せず FAIL。awk パターンを修正して再実行し PASS を確認
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+変更が非常に局所的（rubric 1行 + Rubric Command Semantics 節 + verify-patterns.md §9 + bats テスト）だったため、Spec との乖離は発生しなかった。唯一の修正は Return values リストの "safe mode" 記述（Spec 未言及の残存テキスト）であり、Spec に書くべきだったが書かれていなかったケース。
+
+### 繰り返し指摘パターン
+
+同種の指摘なし（変更規模が小さいため）。ただし、secion 内 Return values のような「変更対象セクション外の関連記述」を Spec でカバーしていない点は今後も発生しうる。
+
+### 受入条件検証の困難さ
+
+全 AC が静的検証可能（file_not_contains / section_contains 等）で UNCERTAIN は 0 件。rubric AC も grader が PASS を返した。verify command の品質が高く、検証負荷が低かった。
