@@ -74,3 +74,33 @@
 ### 受入条件検証の困難さ
 
 全 AC が静的検証可能（file_not_contains / section_contains 等）で UNCERTAIN は 0 件。rubric AC も grader が PASS を返した。verify command の品質が高く、検証負荷が低かった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue の AC は全て静的検証可能な verify command を持ち、UNCERTAIN ゼロ。rubric AC も明確に定義されており、grader が迷いなく PASS を返した
+- 元案(新 namespace + 新モジュール)から既存経路の修正のみへのピボットは適切だった。変更規模が最小化され、verify での FAIL リスクも低かった
+
+#### design
+- Spec の Implementation Steps は実装と 1:1 に対応。唯一の gap は `tests/verify-rubric.bats` の既存テスト更新（Code Retrospective 記載）で、Spec は明示していなかったが stale assertion の修正は Spec の意図に沿っている
+- "Return values" リストの残存 "safe mode" 記述は Spec の変更スコープに含まれていなかったが、Code フェーズで発見・修正済み
+
+#### code
+- `tests/review-rubric-safe.bats` の test #2 (awk range pattern) で macOS BSD awk の挙動差による FAIL が発生し、`{f=1; next}` で修正。awk のポータビリティ考慮が Spec に記載されていれば rework を避けられた
+- `tests/verify-rubric.bats` の stale assertion 更新は小規模で問題なし
+
+#### review
+- PR #280 のレビューで全 AC が静的検証可能と確認。awk range pattern の問題は review 時点では未検出(ローカル実行で発見)
+- 変更規模が局所的（5ファイル、64行変更）のため review 負荷が低く、漏れなし
+
+#### merge
+- FF-only マージで競合なし。Spec コミット 2回（design追加・rewrite）の後、PR #280 がスクワッシュマージされた。クリーンなマージ経路
+
+#### verify
+- 7条件すべて PASS。CI も "Run bats tests" PASS。verify command の品質が高く 1回のパスで完了
+- Post-merge opportunistic 条件（実 PR での grader 結果表示確認）は手動確認待ち
+
+### Improvement Proposals
+- N/A
