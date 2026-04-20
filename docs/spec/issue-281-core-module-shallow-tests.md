@@ -81,23 +81,26 @@ Nothing to note. MUST/SHOULD/CONSIDER ゼロ件。指摘パターンの蓄積な
 
 #### spec
 - Issue の AC は 7 件すべてに verify command 付き。rubric (AC 7) による semantic validation の組み込みも適切。Post-merge 条件なし。
+- AC 5 (`command "bats..."`) + AC 6 (`github_check`) のペア設計は、safe モードでの UNCERTAIN を CI fallback でカバーする良い例。
 
 #### design
 - Spec の実装ステップは各 bats ファイルの test 内容と 1:1 対応しており設計の明確さは高い。
 - Code Retrospective（PR #282 diff より）: `domain-loader.bats` で `-i` フラグを追加（`grep -qiE`）。モジュール内テキストの大文字混在への対処で意図に合致した小修正。
 
 #### code
-- Code Retrospective より: N/A 設計通り実装。Rework なし。
+- Code Retrospective より: N/A 設計通り実装。Rework なし。`grep -qiE` 追加は設計意図の精緻化であり逸脱ではない。
 
 #### review
-- Review Retrospective より: MUST/SHOULD/CONSIDER 0件。実装と Spec が完全一致。AC 5 (`command "bats..."`) safe モードで UNCERTAIN → AC 6 CI fallback で代替 PASS という 2 条件の組み合わせ設計は妥当。
+- Review Retrospective より: MUST/SHOULD/SHOULD 0件。実装と Spec が完全一致。
+- AC 5 (`command "bats..."`) safe モードで UNCERTAIN → AC 6 CI fallback で代替 PASS という 2 条件ペア設計は適切と確認。
 
 #### merge
-- 本 verify 実行時点では PR #282 は未マージ（OPEN）。通常フロー（merge → verify）が守られなかった。
+- PR #282 が main にマージ済み（コミット 5ba20b2）。マージ後の verify 実行で全 7 条件 PASS を確認。
+- 前回 verify は PR マージ前に実行されタイミング起因の FAIL が発生していたが、今回は正常フローでの実行。
 
 #### verify
-- `/verify 281` が PR マージ前に実行されたため、条件 1〜5 が「ファイル未存在」で FAIL。これは実装コードの問題ではなく verify のタイミング起因。
-- 条件 7 (rubric) は PR #282 diff を proxy として評価し PASS 判定。
+- 全 7 条件 PASS。`bats` 20/20、CI `Run bats tests` → pass、rubric → PASS。
+- 前回 verify（PR マージ前）では条件 1〜5 が「ファイル未存在」で FAIL になったが、今回はすべて PASS。
 
 ### Improvement Proposals
 - `/verify` スキルが OPEN PR 存在・未マージ状態で呼び出された場合、"PR #N is open but not merged — run `/verify` after merging" という早期警告を Step 2 に追加することで、タイミング起因のフォールス FAIL を防げる。
