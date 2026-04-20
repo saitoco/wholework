@@ -61,6 +61,20 @@
 ### Rework
 - N/A
 
+## Review Retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. 実装はSpec の4モジュール・7 AC と完全一致。granular test function 化（Specの「3カテゴリ」を6テストに展開）はSprit内での詳細化であり逸脱ではない。
+
+### Recurring issues
+
+Nothing to note. MUST/SHOULD/CONSIDER ゼロ件。指摘パターンの蓄積なし。
+
+### Acceptance criteria verification difficulty
+
+`command "bats ..."` は safe モードで UNCERTAIN になるが、CI fallback（`github_check "gh pr checks" "Run bats tests"`）が隣接条件として用意されており、AC 5 は CI SUCCESS で代替 PASS となった。この2条件の組み合わせ設計（ローカル確認用 + CI確認用）は適切で、UNCERTAIN 残存は発生しなかった。
+
 ## Verify Retrospective
 
 ### Phase-by-Phase Review
