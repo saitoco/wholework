@@ -36,7 +36,7 @@ MOCK
 echo "abc"
 MOCK
     chmod +x "$MOCK_DIR/get-config-value.sh"
-    run bash -c "source '$SCRIPT_DIR/watchdog-defaults.sh'; load_watchdog_timeout '$MOCK_DIR'; echo \$WATCHDOG_TIMEOUT"
+    run bash -c "source '$SCRIPT_DIR/watchdog-defaults.sh'; load_watchdog_timeout '$MOCK_DIR' 2>/dev/null; echo \$WATCHDOG_TIMEOUT"
     [ "$status" -eq 0 ]
     [ "$output" = "1800" ]
 }
@@ -47,7 +47,7 @@ MOCK
 echo "-1"
 MOCK
     chmod +x "$MOCK_DIR/get-config-value.sh"
-    run bash -c "source '$SCRIPT_DIR/watchdog-defaults.sh'; load_watchdog_timeout '$MOCK_DIR'; echo \$WATCHDOG_TIMEOUT"
+    run bash -c "source '$SCRIPT_DIR/watchdog-defaults.sh'; load_watchdog_timeout '$MOCK_DIR' 2>/dev/null; echo \$WATCHDOG_TIMEOUT"
     [ "$status" -eq 0 ]
     [ "$output" = "1800" ]
 }
