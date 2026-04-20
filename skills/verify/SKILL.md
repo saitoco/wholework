@@ -88,6 +88,20 @@ BASE_BRANCH=$(echo "$EXTRACT_RESULT" | python3 -c "import json,sys; print(json.l
 
 Default to `BASE_BRANCH=main` if no PR is found or base branch cannot be fetched.
 
+If `--base` is not specified and `PR_NUMBER` is empty, search for an OPEN PR before checking out:
+
+```bash
+OPEN_PR=$(gh pr list --search "closes #$ISSUE_NUMBER" --state open --json number,title --jq ".[0].number")
+```
+
+If `OPEN_PR` is not empty, output `VERIFY_FAILED` and abort:
+
+```
+VERIFY_FAILED
+Warning: PR #$OPEN_PR is open but not yet merged.
+/verify is designed to run after merge. Please merge PR #$OPEN_PR first, then re-run `/verify $ISSUE_NUMBER`.
+```
+
 ```bash
 git checkout "${BASE_BRANCH}"
 ```
