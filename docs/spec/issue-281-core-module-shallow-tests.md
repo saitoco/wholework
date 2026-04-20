@@ -50,6 +50,31 @@
 - **`command` hint の UNCERTAIN 扱い**: AC 5 の `command "bats ..."` は safe モード(`/review`)で UNCERTAIN を返すが、CI 反映(AC 6 の `github_check`)で担保される
 - **Issue との整合**: Issue 本文の AC 7 項目と本 Spec Verification > Pre-merge の 7 項目は 1:1 対応
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A（設計通り実装）
+
+### Design Gaps/Ambiguities
+- `domain-loader.bats` の discovery 契約テストで `-i` フラグを追加（`grep -qiE`）。"Glob" は大文字、"Discover" は大文字、"load" は小文字と混在するため、case-insensitive にした方が将来変更に頑健と判断。Spec では `grep -qiE "Glob|Discover|load"` という形は明示されていなかったが意図に合致。
+
+### Rework
+- N/A
+
+## Review Retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. 実装はSpec の4モジュール・7 AC と完全一致。granular test function 化（Specの「3カテゴリ」を6テストに展開）はSprit内での詳細化であり逸脱ではない。
+
+### Recurring issues
+
+Nothing to note. MUST/SHOULD/CONSIDER ゼロ件。指摘パターンの蓄積なし。
+
+### Acceptance criteria verification difficulty
+
+`command "bats ..."` は safe モードで UNCERTAIN になるが、CI fallback（`github_check "gh pr checks" "Run bats tests"`）が隣接条件として用意されており、AC 5 は CI SUCCESS で代替 PASS となった。この2条件の組み合わせ設計（ローカル確認用 + CI確認用）は適切で、UNCERTAIN 残存は発生しなかった。
+
 ## Verify Retrospective
 
 ### Phase-by-Phase Review
