@@ -72,6 +72,12 @@ print_start_banner() { echo "Starting /$3 for issue #$2"; }
 print_end_banner() { echo "Finished /$3 for issue #$2"; }
 MOCK
 
+    # Mock watchdog-defaults.sh (sourced by run-spec.sh via WHOLEWORK_SCRIPT_DIR)
+    cat > "$MOCK_DIR/watchdog-defaults.sh" <<'MOCK'
+WATCHDOG_TIMEOUT_DEFAULT=1800
+load_watchdog_timeout() { WATCHDOG_TIMEOUT=1800; }
+MOCK
+
     # Mock gh for phase-banner title/url lookups
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
