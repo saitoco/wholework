@@ -58,3 +58,18 @@
 ### Rework
 
 - N/A: 1 回の実装で完了。
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- 実装は全体的にスペック通り。`--required` 除去・post-validation 追加ともに仕様通りの位置に実装された。
+- スペック外の追加（docs/structure.md更新）は Code Retrospective で既に捕捉されており、レビュー時に再指摘となったが実用上問題なし。スペックに doc 更新が必要な場合は実装ステップに明示するとより明確になる。
+
+### Recurring Issues
+
+- `gh pr view` 失敗時の空文字列 fallback（`|| echo ""`）が誤警告トリガーになり得るパターンは今後の bash スクリプトでも注意が必要。API 呼び出し失敗時は空文字列チェック（`-n`）を併用するのが一貫した防御パターンとなる。
+
+### Acceptance Criteria Verification Difficulty
+
+- UNCERTAIN なし。全条件が静的 grep・rubric・bats・CI チェックで確定的に判定可能だった。verify command の網羅性は良好。
