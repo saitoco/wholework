@@ -141,11 +141,14 @@ Describe success metrics here. -->
 | Acceptance condition | Issue の受入条件内の、検証可能な単一要件項目。チェックリストの 1 行として現れ、通常 verify command と対になる | /issue, /verify | 受入条件項目 |
 | Acceptance criteria | Issue の受入条件の完全な集合。Issue 本文の `## Acceptance Criteria` 配下に定義される。L1 の集合としての L2 個別受入条件群 | /issue, /verify | 受入条件 |
 | Adapter | ツールアクセス（ブラウザ、CI、Lighthouse、外部サービス）を抽象化する capability ベースの拡張レイヤー。3 ステップで動作（detect → translate command → delegate execution）し、優先順位順に解決する: プロジェクトローカル（`.wholework/adapters/`）→ ユーザーグローバル → バンドル済み（`modules/*-adapter.md`） | スキル開発、verify | Adapter |
+| Ambiguity point | Issue 本文中の複数解釈が可能な要件・制約・条件。`/issue` と `/spec` が ambiguity-detector パターンテーブルで検出し、ユーザー確認またはコードベースのパターンに基づく Auto-resolution で解消する | /issue, /spec | 曖昧点 |
+| Auto-resolution | モデル判断（最小リスク優先、既存パターン整合）で曖昧点を非対話的に解決する手段。選択肢と根拠は Auto-Resolve Log として Retrospective に記録される。skip（高影響行動の保留）や hard-error（前提条件未充足）とは別の tier | /issue, /spec、非インタラクティブモード | 自動解決 |
 | auto-verify | `/verify` が実行する自動検証プロセス。各受入条件の verify command を実行し、合格条件にチェックを入れ、失敗時に Issue を reopen する | /verify Skill | 自動検証 |
 | Capability | `.wholework.yml` `capabilities.*`（例: `capabilities.browser: true`）で宣言する機能の可用性。`HAS_{NAME}_CAPABILITY` 環境変数に変換され、スキルが補助ファイルの読み込みや adapter の呼び出し前に確認する。実行環境に応じたプログレッシブ・ディスクロージャーを実現する | スキル開発、設定 | Capability |
 | Domain file | スキルから marker 検出、ファイル存在確認、ディレクトリスキャンによって条件付きで読み込まれる補助 Markdown。SKILL.md のコアを補い、環境やプロジェクト固有のロジックを加えつつコアを軽量に保つ。プロジェクトローカルのカスタマイズは `.wholework/domains/{skill}/` で対応 | スキル開発 | Domain file |
 | Drift | ドキュメント化された仕様（Steering Documents や Spec）と実際のコード実装とのあいだの意味的乖離。`/audit drift` で検出 | /audit Skill | ドリフト |
 | Fork context | メインの対話に影響を与えないスキル実行モード | Claude Code | fork コンテキスト |
+| Non-interactive mode | `run-*.sh` 経由で `claude -p --dangerously-skip-permissions` から呼び出されるスキル実行モード。`AskUserQuestion` が使えないため、意思決定点で 3-tier ポリシー（auto-resolve / skip / hard-error）を適用する。`ARGUMENTS` 内の `--non-interactive` で判定される | run-*.sh、/auto | 非インタラクティブモード |
 | Patch route | XS/S サイズ Issue のワークフロー経路。Pull Request を作成せず main ブランチに直接コミットする | 開発ワークフロー | パッチ経路 |
 | Phase label | Issue の現在のワークフローステージを示す `phase/*` GitHub ラベル（例: `phase/issue`、`phase/spec`、`phase/ready`、`phase/code`） | 開発ワークフロー | フェーズラベル |
 | PR route | M/L サイズ Issue のワークフロー経路。マージ前にコードレビュー用の Pull Request を作成する | 開発ワークフロー | PR 経路 |
