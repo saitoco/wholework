@@ -37,7 +37,7 @@ wholework/
 │   └── workflows/
 │       ├── test.yml             # CI: bats tests, skill syntax validation, forbidden expressions check, and macOS shell compatibility test
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
-├── tests/               # Bats test files for scripts (37 files)
+├── tests/               # Bats test files for scripts (40 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -76,7 +76,20 @@ wholework/
 
 ### Skills
 
-Skills are being actively migrated from a private repository. Each skill lives in `skills/<skill-name>/SKILL.md`. Many skills also include auxiliary `.md` files for sub-phases or specialized guidelines (e.g., `external-review-phase.md`, `codebase-search.md`). See the `skills/` directory for the current list.
+Each skill lives in `skills/<skill-name>/SKILL.md`. Many skills include auxiliary `.md` files for sub-phases or specialized guidelines (e.g., `external-review-phase.md`, `codebase-search.md`).
+
+| Skill | Path | Role |
+|---|---|---|
+| issue | `skills/issue/SKILL.md` | Issue creation and refinement (What-level) |
+| spec | `skills/spec/SKILL.md` | Issue specification and implementation plan (How-level) |
+| code | `skills/code/SKILL.md` | Local implementation (patch/PR route) |
+| review | `skills/review/SKILL.md` | PR review (acceptance criteria + multi-perspective) |
+| merge | `skills/merge/SKILL.md` | Squash merge and branch deletion |
+| verify | `skills/verify/SKILL.md` | Post-merge acceptance testing |
+| auto | `skills/auto/SKILL.md` | Orchestrator chaining spec→code→review→merge→verify |
+| triage | `skills/triage/SKILL.md` | Title normalization and Type/Size/Priority/Value assignment |
+| audit | `skills/audit/SKILL.md` | Drift and fragility detection; auto-generate Issues |
+| doc | `skills/doc/SKILL.md` | Steering/project document management and normalization |
 
 ### Modules
 

@@ -159,6 +159,8 @@ Key differences from other tools:
 | PR route | Workflow path for M/L-sized Issues; creates a Pull Request for code review before merging | Development workflow | PR 経路 |
 | Project Documents | Workflow and operational procedure documents for the project. Stored under `docs/` | /doc Skill | Project Documents |
 | Retrospective | A section appended to the Spec after each Skill run, recording observations, decisions, and uncertainty resolutions from that phase. Accumulates execution history across workflow phases | Development workflow | レトロスペクティブ |
+| safe mode | Verify execution mode used by `/review` (pre-merge). External command execution and side-effectful verify commands are restricted and fall back to CI reference; returns UNCERTAIN for commands that cannot be safely evaluated pre-merge. Paired with `full mode` | /review, verify-executor, verify-classifier | safe モード |
+| full mode | Verify execution mode used by `/verify` (post-merge). All verify commands execute without the `safe mode` restrictions, including shell commands and external service calls. Paired with `safe mode` | /verify, verify-executor | full モード |
 | Shared module | A procedure document stored in `modules/*.md` and referenced by multiple Skills via the "Read and follow" pattern. Formerly called "shared procedure document" | Skill development | 共有モジュール |
 | Size | A complexity/effort estimate (XS/S/M/L/XL) assigned during triage. Determines the workflow route (patch vs. PR) and Spec depth | /triage Skill | サイズ |
 | Skill | A Claude Code extension. Processing steps are described in `skills/<n>/SKILL.md` and invoked with `/<n>` | Claude Code | スキル |
