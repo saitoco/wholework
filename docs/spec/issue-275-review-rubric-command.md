@@ -46,3 +46,31 @@
 - **既存 AC 互換性**: `verify: rubric` を持たない AC、および他 verify command(`file_exists`, `command`, `build_success` 等)の safe/full 挙動はいずれも変更なし
 - **bats テストの粒度**: 既存 `tests/verify-rubric.bats`(#271)と同じ方針で shallow test に留める。文書存在・必要文言・削除された古い文言の 3 点検証のみで、LLM 応答自体の assertion は行わない
 - **Managed Agents portability 維持**: 単一 namespace(`verify:`)で `always_allow` portability 契約を保持。将来 `/review` phase を Managed Agents Outcome に移植する際も `rubric` は 1:1 マップ可能
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `tests/verify-rubric.bats` の既存テスト "safe mode returns UNCERTAIN for rubric" を更新した。Spec には明記されていなかったが、変更後の `modules/verify-executor.md` には "returns UNCERTAIN in safe mode" の文言が存在しなくなるため stale assertion となり、テストが失敗する。Spec Step 4 の shallow test 方針に従い同ファイルを更新した
+
+### Design Gaps/Ambiguities
+
+- `awk '/Rubric Command Semantics/,/^### /'` の range pattern は、start 行と end 行が同じパターン (`^### `) にマッチする場合に macOS BSD awk で単一行しか出力しないことが判明。`{f=1; next}` を使い start 行をスキップする形に修正した (tests/review-rubric-safe.bats)
+
+### Rework
+
+- `tests/review-rubric-safe.bats` の test #2 ("Rubric Command Semantics section mentions always_allow for safe mode") で awk range が機能せず FAIL。awk パターンを修正して再実行し PASS を確認
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+変更が非常に局所的（rubric 1行 + Rubric Command Semantics 節 + verify-patterns.md §9 + bats テスト）だったため、Spec との乖離は発生しなかった。唯一の修正は Return values リストの "safe mode" 記述（Spec 未言及の残存テキスト）であり、Spec に書くべきだったが書かれていなかったケース。
+
+### 繰り返し指摘パターン
+
+同種の指摘なし（変更規模が小さいため）。ただし、secion 内 Return values のような「変更対象セクション外の関連記述」を Spec でカバーしていない点は今後も発生しうる。
+
+### 受入条件検証の困難さ
+
+全 AC が静的検証可能（file_not_contains / section_contains 等）で UNCERTAIN は 0 件。rubric AC も grader が PASS を返した。verify command の品質が高く、検証負荷が低かった。

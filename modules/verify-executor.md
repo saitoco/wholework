@@ -79,7 +79,7 @@ The following information is passed from the caller:
 | `browser_screenshot "url" "description"` | **Mode-dependent**: `safe` → return UNCERTAIN. `full` → Read `${CLAUDE_PLUGIN_ROOT}/modules/adapter-resolver.md`, resolve adapter by capability name `browser`, and delegate. Pass command type `browser_screenshot` and arguments `url`, `description`. Best-effort due to subjective elements | `always_ask` |
 | `mcp_call "tool_name" "description"` | **Mode-dependent**: `safe` → return UNCERTAIN (to prevent external API calls). `full` → Use ToolSearch with `select:<tool_name>` (tool_name in `server_name__tool_name` fully qualified format, no spaces) to find the tool, and **only** call MCP tools clearly identified as read-only verification. Do not call tools with any possibility of writes, deletions, or external transmissions; return UNCERTAIN (with reason). Also return UNCERTAIN if ToolSearch is unavailable or tool call is blocked by permissions (include detailed reason). Evaluate result against description using AI judgment for PASS/FAIL. Return UNCERTAIN if tool not found (include detailed reason). Best-effort due to subjective elements. For the rationale of using ToolSearch directly (bypassing the adapter layer), see the Adapter Pattern section in `docs/environment-adaptation.md` | `always_ask` |
 | `github_check "gh_command" "expected_value"` | **Mode-dependent**: In safe mode, use allowlist approach. Allowlist: `gh issue view`, `gh pr view`, `gh pr checks`, `gh api` (no `--method` or `--method GET`). If allowlist matches → run `gh_command` in Bash. If output contains `in_progress` → **PENDING** (detail: "CI job is in_progress; re-verify after CI completes"). Otherwise, confirm output contains `expected_value` (if `expected_value` is omitted, confirm output is non-empty). If not in allowlist → return UNCERTAIN. `full` → no restrictions; run `gh_command` in Bash (timeout: 30 seconds). Same `in_progress` detection applies in full mode | `always_ask` |
-| `rubric "text"` | **Mode-dependent**: `safe` → return UNCERTAIN. `full` → invoke grader with adversarial system prompt; pass Issue body, git diff, and any files explicitly named in "text" as input; return PASS, FAIL, or UNCERTAIN; FAIL includes a natural-language gap description. Spec files are not passed to the grader. | `always_allow` |
+| `rubric "text"` | **Mode-independent**: invoke grader in both `safe` and `full` modes (`always_allow` — no side effects; see "Safe mode behavior" below). Invoke grader with adversarial system prompt; pass Issue body, git diff, and any files explicitly named in "text" as input; return PASS, FAIL, or UNCERTAIN; FAIL includes a natural-language gap description. Spec files are not passed to the grader. | `always_allow` |
 
 ### Rubric Command Semantics
 
@@ -98,10 +98,10 @@ The grader system prompt explicitly instructs adversarial judgment: enumerate ga
 **Return values:**
 - `PASS` — implementation satisfies the acceptance condition
 - `FAIL` — implementation does not satisfy the condition; includes a natural-language description of the gap
-- `UNCERTAIN` — cannot be determined (safe mode, insufficient evidence, etc.)
+- `UNCERTAIN` — cannot be determined (insufficient evidence, syntax error, etc.)
 
 **Safe mode behavior:**
-`rubric` returns UNCERTAIN in safe mode. Semantic grading requires full access to git diff and may trigger tool use; this is reserved for full mode (`/verify`).
+`rubric` invokes the grader in both `safe` and `full` modes. The `always_allow` permission declaration (#276) confirms that the grader has no side effects and is safe for automatic execution — the same guarantee that allows `file_exists`, `grep`, and `section_contains` to run in safe mode. Restricting `rubric` to full mode while declaring it `always_allow` would be a Permission-Mode inconsistency. As a result, `/review` Step 8 (which calls verify-executor in safe mode) now runs the rubric grader, enabling semantic acceptance condition judgment at pre-merge time.
 
 **Responsibility boundary with Step 3 AI judgment fallback:**
 Step 3 AI judgment is an implicit, opportunistic fallback for conditions that lack a `<!-- verify: ... -->` hint. `rubric` is an explicit opt-in declared at Issue creation time. Use `rubric` when you want semantic judgment to be a first-class verification path, not a fallback.
