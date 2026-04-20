@@ -117,7 +117,7 @@ When using `file_contains` or `section_contains` with a compound string like `"k
 | `browser_screenshot` | `browser_screenshot "url" "description"` | Browser screenshot with AI visual judgment. **Note: only in `/verify` (full) mode** |
 | `mcp_call` | `mcp_call "tool_name" "description"` | MCP tool call with AI judgment. Use `server_name__tool_name` format. **Note: only in `/verify` (full) mode** |
 | `github_check` | `github_check "gh_command" "expected_value"` | GitHub state verification. Safe mode: read-only operations only |
-| `rubric` | `rubric "text"` | Semantic-level natural-language judgment via LLM grader. Safe mode returns UNCERTAIN; full mode performs adversarial grading. See `modules/verify-patterns.md` §9 for selection criteria. |
+| `rubric` | `rubric "text"` | Semantic-level natural-language judgment via LLM grader. Runs in both safe and full modes (`always_allow` — no side effects); grader is invoked at both `/review` pre-merge and `/verify` post-merge. See `modules/verify-patterns.md` §9 for selection criteria. |
 
 When MCP tools are available, use ToolSearch with `select:<tool_name>` to confirm existence and read-only nature before proposing `mcp_call` hints.
 

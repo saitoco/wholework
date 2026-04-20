@@ -174,7 +174,7 @@ For conditions with `<!-- verify: ... -->`, Read `${CLAUDE_PLUGIN_ROOT}/modules/
 - **Interactive mode**: present the command to the user and execute only after approval. Treat suspicious commands as UNCERTAIN.
 - **Non-interactive mode** (`--dangerously-skip-permissions` environment): no approval required. Execute commands directly. `command` hints are written in Issue bodies managed by repository maintainers and are treated as trusted commands. Do not use in repositories where external contributors have write access.
 
-**`rubric` commands**: Processed via the same verify-executor translation table. In full mode, the grader receives the Issue body, git diff, and any files explicitly named in the rubric text as input. Returns PASS, FAIL, or UNCERTAIN; FAIL includes a natural-language gap description. Returns UNCERTAIN in safe mode.
+**`rubric` commands**: Processed via the same verify-executor translation table. Runs in both safe and full modes (`always_allow` — no side effects); the grader receives the Issue body, git diff, and any files explicitly named in the rubric text as input. Returns PASS, FAIL, or UNCERTAIN; FAIL includes a natural-language gap description.
 
 **Syntax errors** (unknown commands, missing arguments, etc.) → treat as UNCERTAIN and fall back to AI judgment. Record error details in the remarks column of the results table.
 
