@@ -46,6 +46,8 @@ if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
     echo "test PR title"
   elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
     echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".state"* ]]; then
+    echo "MERGED"
   fi
   exit 0
 fi
@@ -170,4 +172,81 @@ MOCK
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
     grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "post-validation: exits 1 when PR state is OPEN after claude succeeds" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".state"* ]]; then
+    echo "OPEN"
+  fi
+  exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "checks" ]]; then
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Warning:"* ]]
+}
+
+@test "post-validation: exits 0 when PR state is MERGED after claude succeeds" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".state"* ]]; then
+    echo "MERGED"
+  fi
+  exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "checks" ]]; then
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+}
+
+@test "post-validation: exits 0 when gh pr view fails (API error — no false alarm)" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".state"* ]]; then
+    exit 1
+  fi
+  exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "checks" ]]; then
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"Warning:"* ]]
 }

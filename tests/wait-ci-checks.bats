@@ -123,3 +123,23 @@ MOCK
     [ "$status" -eq 0 ]
     [[ "$output" == *"CI check wait complete for PR #88"* ]]
 }
+
+@test "success: does not pass --required flag to gh pr checks" {
+    GH_CALL_LOG="$BATS_TEST_TMPDIR/gh_calls.log"
+    export GH_CALL_LOG
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+echo "gh $@" >> "$GH_CALL_LOG"
+if [[ "$1" == "pr" && "$2" == "checks" ]]; then
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    grep -q "pr checks 88" "$GH_CALL_LOG"
+    ! grep -q "\-\-required" "$GH_CALL_LOG"
+}

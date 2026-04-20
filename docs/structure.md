@@ -163,7 +163,7 @@ Key modules:
 **Process management:**
 - `scripts/claude-watchdog.sh` — watchdog wrapper for `claude -p` invocations (hang detection + 1 retry)
 - `scripts/watchdog-reconcile.sh` — post-kill state reconciler; verifies expected phase state after watchdog kill (exit 143) and upgrades to exit 0 if state was reached
-- `scripts/wait-ci-checks.sh` — wait for required CI checks to complete on a PR before running claude
+- `scripts/wait-ci-checks.sh` — wait for all CI checks to complete on a PR before running claude
 
 **Skill runners:**
 - `scripts/run-auto-sub.sh` — run auto workflow for sub-issues
