@@ -19,3 +19,31 @@
 
 - Type: Bug、Size: XS、Value: 2（Impact=0 / Alignment=1, Level 1）
 - Duplicate / stale / dependency 異常なし
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue Retrospective で verify コマンドを `command` hint から `file_contains` に置換した判断は適切。`/review` safe mode での UNCERTAIN 回避につながった。
+- 受け入れ条件に3つの独立した観点（エントリ存在・説明文内容・集合等価性）を分離したことで、rubric の判定精度が向上した。
+
+#### design
+- N/A（設計フェーズなし。XS サイズのドキュメント修正のため直接実装）
+
+#### code
+- コミット `aa575e5` で1行追加のみ。fixup/amend パターンなし。リワーク 0。
+- 実装は Issue Retrospective で定義した「プロジェクトユーティリティセクション内に追加」方針に沿っており、設計逸脱なし。
+
+#### review
+- N/A（PR レビューなし。パッチルートでの直コミット）
+
+#### merge
+- パッチルート（main 直コミット）。コンフリクトなし。
+
+#### verify
+- 全3条件 PASS。パッチルートのため PR_NUMBER 未設定だったが、`file_contains` と `rubric` は PR 不要のコマンドのみで構成されており問題なし。
+- 英語版・日本語版のエントリ集合比較は rubric が適切に処理できた。
+
+### Improvement Proposals
+- N/A
