@@ -71,18 +71,10 @@ User-facing documentation is maintained under `docs/guide/`. It covers installat
 
 ## Future Direction
 
-- **`.wholework.yml` configuration customization**: Allow per-project configuration of paths such as the Spec storage location (default: `docs/spec/`). This reduces friction when adopting Wholework in projects with existing directory structures.
-- **Workflow optimization (3 axes)**: Combine Model selection (different models per skill/phase), Adaptive Thinking (`--effort` for dynamic reasoning depth control), and Advisor strategy (Opus advisor for cost-efficient quality) to optimize workflow quality, speed, and cost. See `docs/tech.md` Architecture Decisions for the current phase-specific matrix (`ssot_for: model-effort-matrix`).
-- **Context isolation strategy (countering context rot)**: Because Spec acts as cross-phase memory, each Skill can run in a fork context without losing information between phases. Actively fork-contexting execution-phase Skills prevents context rot.
-  - **Shared context** (`/issue` + `/spec`): the interactive phases where requirements and design are refined. Implicit context (reasons for rejected options, etc.) has value, so context is shared. Note: when invoked via `/auto` (i.e., `run-issue.sh` / `run-spec.sh`), these also run in fork context as independent `claude -p` processes.
-  - **Fork context** (`/code`, `/review`, `/merge`, `/verify`): execution phases. Each reads the required information from the Spec and runs independently. All four Skills operate in fork context.
-  - **`/auto` hybrid approach**: `/auto` invokes each Skill via `run-*.sh` as `claude -p --dangerously-skip-permissions`, ensuring context isolation and full permission bypass between phases. `/auto` itself acts as a lightweight orchestrator; information passes only through Spec. When no `phase/*` label is set, `/auto` auto-starts from issue triage/refinement; when `phase/ready` is absent it auto-runs `/spec` before proceeding. `--batch N` processes N XS/S Issues from the backlog in sequence. XL Issues read the sub-issue `blockedBy` dependency graph and run independent sub-issues in parallel (worktree isolation), sequencing dependents after their blockers complete. `--base {branch}` targets a release branch instead of main.
-- **Expanding target project types**: The current primary use case is application and web development, but the goal is to generalize to any GitHub project where the "Issue → spec → artifact → review" flow applies. Common thread: requirements defined in Issues, a design document, a deliverable, and a review step.
-  - **Documentation / content**: technical docs, API documentation, translation projects, book authoring (GitBook-style)
-  - **Data / research**: data analysis pipelines, ML model development, academic papers (LaTeX + Git)
-  - **Infrastructure / IaC**: Terraform/Pulumi definitions, Kubernetes manifests, CI/CD pipeline setup
-  - **OSS operations**: RFC process, CHANGELOG management, automated release notes
-  - **Business / planning**: marketing campaign management, product roadmap, legal documents
+- **Configuration surface expansion**: Widen the set of Skill behaviors exposed through `.wholework.yml` so projects can adapt Wholework without patching Skills. New configurable behaviors are added as Skills generalize.
+- **Workflow optimization (3 axes)**: Balance quality, speed, and cost by tuning Model selection, Adaptive Thinking (`--effort`), and Advisor strategy. The phase-specific matrix in `docs/tech.md` (`ssot_for: model-effort-matrix`) is re-tuned as new models and usage data become available.
+- **Context isolation as a first-class constraint**: Keep execution-phase Skills in fork context and preserve Spec as cross-phase memory, so new Skills compose without inheriting context rot from earlier phases.
+- **Expanding target project types**: Generalize beyond application/web development to any GitHub project where "Issue → spec → artifact → review" applies — documentation/content, data/research, infrastructure/IaC, OSS operations, and business/planning domains.
 
 <!-- ## Success Metrics (Optional)
 
