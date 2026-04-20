@@ -88,7 +88,7 @@ fi
 # Post-validation: guard against silent no-op (claude exits 0 but merge never happened)
 if [[ $EXIT_CODE -eq 0 ]]; then
   PR_STATE=$(gh pr view "$PR_NUMBER" --json state -q .state 2>/dev/null || echo "")
-  if [[ "$PR_STATE" != "MERGED" ]]; then
+  if [[ -n "$PR_STATE" && "$PR_STATE" != "MERGED" ]]; then
     echo "Warning: PR #${PR_NUMBER} state is '${PR_STATE}', not MERGED. Merge may have failed." >&2
     EXIT_CODE=1
   fi
