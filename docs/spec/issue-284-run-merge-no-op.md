@@ -44,3 +44,17 @@
 - **rubric + hard-pattern 併用**: 静的 grep だけでは「post-validation が既存 reconcile より後ろに配置されているか」を意味レベルで捉えきれないため、`rubric` で grader に意図確認を委譲(2 箇所)
 - **#283 との補完**: #283 は verify 側の保険(未マージ PR 検知で早期 FAIL)、既に `/verify` SKILL.md に実装済み(Step 2 の OPEN_PR 検知ロジック L91-103 で確認)。本 Issue は merge 側の元栓。両方揃うことで二重防御
 - **Architecture Decisions impact なし**: 本変更は `.wholework.yml` 新キー追加や `claude -p` CLI flag 変更を含まないため `docs/tech.md` 更新不要
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A: 実装はスペック通り。`docs/structure.md` と `docs/ja/structure.md` の "required CI checks" 記述更新を追加(スペックに明示なかったが doc-checker で検出)。
+
+### Design Gaps/Ambiguities
+
+- N/A: スペックの実装ステップは明確で曖昧な点なし。`docs/structure.md` 同期はスペックの範囲外だったが doc-checker モジュールで自動検出できた。
+
+### Rework
+
+- N/A: 1 回の実装で完了。
