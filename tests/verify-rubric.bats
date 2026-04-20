@@ -20,8 +20,8 @@ VERIFY_PATTERNS="$PROJECT_ROOT/modules/verify-patterns.md"
     grep -qE "PASS.*FAIL.*UNCERTAIN|FAIL.*gap" "$VERIFY_EXECUTOR"
 }
 
-@test "verify-executor: safe mode returns UNCERTAIN for rubric" {
-    grep -qE "rubric.*safe.*UNCERTAIN|safe.*rubric.*UNCERTAIN|safe mode.*rubric|rubric.*returns UNCERTAIN in safe mode" "$VERIFY_EXECUTOR"
+@test "verify-executor: rubric invokes grader in both safe and full modes" {
+    grep -q "Mode-independent" "$VERIFY_EXECUTOR"
 }
 
 @test "verify-executor: Spec files not passed to grader" {

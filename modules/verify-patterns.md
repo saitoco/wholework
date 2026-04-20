@@ -250,6 +250,9 @@ If the old policy keyword may legitimately appear elsewhere in the file (e.g., i
 If you can write the exact string the implementation will contain, prefer hard-pattern.
 If the condition is about meaning, intent, quality, or natural-language content where exact strings are uncertain, prefer `rubric`.
 
+**Two-phase verification with `rubric`:**
+When `verify: rubric` is declared in an acceptance condition, the grader runs at both pre-merge and post-merge phases. During `/review` (safe mode, pre-merge), the rubric grader executes and its PASS/FAIL/UNCERTAIN result appears in the review comment — enabling early detection of semantic gaps before the PR is merged. During `/verify` (full mode, post-merge), the same grader runs again and updates the acceptance condition checkbox.
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
