@@ -405,7 +405,7 @@ Spawn the orchestration-recovery sub-agent via Task to diagnose the unknown fail
    - Validation checks: JSON parseable, required keys (`action`, `rationale`, `steps`) present, `action` in `{retry, skip, recover, abort}`, `steps` length ≤ 5, no forbidden ops (`force_push`, `reset_hard`, `close_issue`, `merge_pr`, `direct_push_main`)
    - If validation fails (exit non-zero): fall back to stop-and-report (see below)
 
-5. **Dispatch on action**:
+5. **Act on recovery plan**:
    - `action=retry`: re-run the failed phase once (same `run-*.sh` call with same arguments); if it fails again, fall back to stop-and-report
    - `action=skip`: treat the phase as complete and continue to the next phase
    - `action=recover`: execute `steps` sequentially; if all steps succeed, continue to the next phase; if any step fails, fall back to stop-and-report
