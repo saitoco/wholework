@@ -21,3 +21,34 @@
 - Size: XS（`skills/spec/SKILL.md` への doc-only 追加、1 ファイル）
 - Value: 2（Impact=0, Alignment=1 / Level 1）
 - Priority: 未指定（body に優先度シグナルなし）
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue Retrospective（`/issue` 実行時）が `modules/spec-template.md` 不存在を事前に検出し AC を修正したことで、Spec の整合性が高かった
+- `grep` パターンから `rubric` + `file_contains` への変更は適切：既存の "section headings" にマッチする false positive を回避した設計判断
+
+#### design
+- N/A（`## Spec Retrospective` セクションは存在しない）
+- 設計はシンプルで SHOULD constraints テーブルへの 1 行追加のみ。oversized な設計変更なし
+
+#### code
+- パッチルート（直コミット）で1行変更のみ。fixup/amend なし、rework なし
+- `e08ca2a` の単一コミットで完結しており、実装が明確にスコープされていた
+
+#### review
+- パッチルート（PR なし）のため正式レビューなし
+- XS サイズの doc-only 変更のため省略は妥当
+
+#### merge
+- 直接 main にコミット（パッチルート）。コンフリクトなし
+
+#### verify
+- 両条件が初回 PASS。検証コマンドの設計（rubric + file_contains）が効果的に機能した
+- `rubric` が SHOULD constraints テーブルへの追加を意味論的に確認し、`file_contains` が具体的な文字列存在を補完する二重確認は良いパターン
+- Post-merge opportunistic 条件（見出しレベルが次回 `/spec` で明記されるか）は自然な長期観察設計
+
+### Improvement Proposals
+- N/A
