@@ -27,7 +27,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (7 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (43 files)
+├── scripts/             # Utility scripts used by skills and agents (45 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -37,7 +37,7 @@ wholework/
 │   └── workflows/
 │       ├── test.yml             # CI: bats tests, skill syntax validation, forbidden expressions check, and macOS shell compatibility test
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
-├── tests/               # Bats test files for scripts (50 files)
+├── tests/               # Bats test files for scripts (53 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -174,6 +174,8 @@ Key modules:
 - `scripts/worktree-merge-push.sh` — acquire short-lived patch lock and merge worktree branch + push to main (with rebase retry)
 - `scripts/detect-wrapper-anomaly.sh` — detect known failure patterns in shell wrapper output and generate Auto Retrospective markdown fragments
 - `scripts/validate-recovery-plan.sh` — validate recovery plan JSON from orchestration-recovery sub-agent (schema check + forbidden ops guard)
+- `scripts/apply-fallback.sh` — Tier 2 bash projection of `modules/orchestration-fallbacks.md`; detects known symptom anchors from wrapper logs and dispatches recovery handlers (initial full-impl: dco-signoff-missing-autofix)
+- `scripts/spawn-recovery-subagent.sh` — Tier 3 recovery orchestrator invoked by `run-auto-sub.sh`; spawns `agents/orchestration-recovery` via `claude -p`, validates the returned plan with `validate-recovery-plan.sh`, and enforces concurrency via `WHOLEWORK_MAX_RECOVERY_SUBAGENTS` mkdir-based slot locks
 
 **Skill runners:**
 - `scripts/run-auto-sub.sh` — run auto workflow for sub-issues

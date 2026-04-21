@@ -114,7 +114,7 @@
 - <!-- verify: file_exists "scripts/apply-fallback.sh" --> Tier 2 fallback 適用 bash wrapper が作成されている
 - <!-- verify: rubric "scripts/run-auto-sub.sh defines run_phase_with_recovery wrapping non-verify run-*.sh invocations (at least code, review, and merge phases). On non-zero wrapper exit, the function tries: (1) reconcile-phase-state.sh <phase> <issue> --check-completion with grep for matches_expected:true, (2) apply-fallback.sh <phase> <issue> --log <log-file>, (3) spawn-recovery-subagent.sh <phase> <issue> --log <log-file>. Each tier returns 0 on recovery. Existing run_verify_with_retry is retained unchanged." --> 3-tier adaptive recovery が run-auto-sub.sh に実装され、既存 inline retry は維持
 - <!-- verify: rubric "scripts/spawn-recovery-subagent.sh follows the existing run-*.sh claude -p invocation pattern (ANTHROPIC_MODEL set, env -u CLAUDECODE, claude-watchdog.sh, claude -p with --model sonnet --effort medium). It strips frontmatter from agents/orchestration-recovery.md using awk and embeds the body plus the input JSON (phase, exit_code, log tail 200 lines, reconcile snapshot) in the prompt. A CLAUDE_BIN environment variable is honored so tests can substitute a mock binary. The script does not use a non-existent --agent CLI flag." --> claude -p 呼出形状が既存 run-*.sh precedent に一致し agent body を prompt 埋込している
-- <!-- verify: rubric "scripts/spawn-recovery-subagent.sh delegates safety guard to scripts/validate-recovery-plan.sh (the SSoT introduced in #316) for JSON schema validation (required keys action/rationale/steps), forbidden ops enforcement (force_push / reset_hard / close_issue / merge_pr / direct_push_main substring check), and step-count cap (≤5). On validator non-zero exit, the script aborts. The script does NOT reimplement validation logic locally." --> Safety guard が validate-recovery-plan.sh に集約され本 script から呼び出されている
+- <!-- verify: rubric "scripts/spawn-recovery-subagent.sh delegates safety guard to scripts/validate-recovery-plan.sh (the SSoT introduced in #316) for JSON schema validation (required keys action/rationale/steps), forbidden ops enforcement (force_push / reset_hard / close_issue / merge_pr / direct_push_main substring check), and step-count cap (<=5). On validator non-zero exit, the script aborts. The script does NOT reimplement validation logic locally." --> Safety guard が validate-recovery-plan.sh (SSoT) に委譲され #316 と共有される
 - <!-- verify: rubric "scripts/spawn-recovery-subagent.sh implements concurrency control via WHOLEWORK_MAX_RECOVERY_SUBAGENTS env var (default 1) using mkdir-based slot locks at .tmp/recovery-subagent-slot-<N> (following worktree-merge-push.sh precedent: mkdir atomicity, PID stamp, stale-lock reclaim via kill -0, trap EXIT cleanup). When all slots are occupied, the script aborts immediately with non-zero exit (no polling). flock is NOT used (macOS compatibility)." --> mkdir-based concurrency 制御が実装されている
 - <!-- verify: rubric "scripts/apply-fallback.sh dispatches on symptom_anchor via a case statement detected from the --log file. The dco-signoff-missing-autofix handler is fully implemented (detects missing Signed-off-by, runs git commit --amend -s --no-edit and git push --force-with-lease on the current worktree branch only). Unknown anchors return 1 to escalate to Tier 3. The script references modules/orchestration-fallbacks.md anchor names in pointer comments for unimplemented handlers." --> apply-fallback.sh が catalog projection として実装されている
 - <!-- verify: rubric "docs/tech.md Architecture Decisions section removes the 'pure bash, does not invoke claude -p' claim for run-auto-sub.sh and documents the 3-tier adaptive recovery model with the WHOLEWORK_MAX_RECOVERY_SUBAGENTS cap; docs/ja/tech.md mirrors the update in Japanese." --> tech.md (英+日) の two-tier orchestration 記述が 3-tier recovery モデルに更新されている
@@ -158,6 +158,19 @@
 - **`/auto` 親オーケストレーターとの Tier 重複**: `/auto` SKILL.md Step 6 と `run_phase_with_recovery` は **異なるレイヤー** での recovery (親: wrapper 外部、子: wrapper 内部) のため重複は許容
 - **Follow-up (スコープ外)**: (1) `run_verify_with_retry` と新ラッパの収束、(2) `apply-fallback.sh` の残 anchor 昇格、(3) `/auto` SKILL.md の `validate-recovery-plan.sh` 呼出を bash script 経由に refactor、(4) `docs/structure.md` の事前 tests/ count drift の整合 (独立 Issue)
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation followed the Spec's steps in order; no reordering or omissions required.
+
+### Design Gaps/Ambiguities
+- **PID selection in bats slot-lock tests**: The Spec did not specify what PID to use for "live" vs "dead" PID in bats concurrency tests. Used `$$` (current shell PID) for "live" slot and `999999999` (exceeds max PID on any realistic system) for "stale" slot. Straightforward to resolve but not documented in Spec.
+- **`run_phase_with_recovery` second argument for review/merge phases**: Spec says `"$issue"` is the second parameter passed to the runner, but review/merge use PR_NUMBER as first arg, not issue number. The wrapper passes PR_NUMBER as "issue" for review/merge — log files and Tier 1 reconcile use that value. Tier 1 reconcile gracefully fails (no `matches_expected:true` match) and falls through to Tier 2/3 for those phases. Acceptable behavior per Spec intent.
+- **`apply-fallback.sh` suppressed stderr in Tier 2 call**: Added `2>/dev/null` to `apply-fallback.sh` call in `run_phase_with_recovery` so fallback errors don't surface unless debugging. Not in Spec but improves UX.
+
+### Rework
+- **Tests 7 & 8 in spawn-recovery-subagent.bats**: Initial PID values (99999 for "live", 0 for "stale") caused test failures — PID 99999 might be running on the test machine, and `kill -0 0` kills the process group. Fixed on first attempt to `$$` and `999999999`. No code rework needed.
+
 ## spec retrospective
 
 ### Minor observations
@@ -175,3 +188,18 @@
 
 - **`claude -p` stdout からの JSON 抽出堅牢性**: sub-agent が自然言語の前後説明を付けた際の挙動。`/code` フェーズで `CLAUDE_BIN` mock を使った bats テスト (prose + JSON + prose パターン) で検証する設計とし、python3 による balanced-brace 抽出ロジックを Implementation Step 2 に明記した。
 - **`agents/orchestration-recovery.md` の frontmatter stripping 互換性**: `run-*.sh` 全般で同じ awk パターン (`NR>1 && /^---$/{print NR; exit}`) が precedent として確立済みのため reuse する。`/code` 実装前に `head -5 agents/orchestration-recovery.md` で形式確認する手順を Uncertainty セクションに記録した。
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+- **`validate-recovery-plan.sh` の `cmd` フィールド未検証**: セキュリティ上の MUST issue として検出された。Safety guard が `op` フィールドのみをチェックしており、`run_command` 経由での forbidden ops 迂回が可能な設計上のギャップ。Issue body の acceptance criteria では「Forbidden ops 拒否」が SSoT に委譲されている旨が明示されているが、`cmd` フィールドへの適用が Spec 設計フェーズで見落とされた。汎用 `run_command` op を持つ際は、op 名だけでなくコマンド内容も禁止パターンと照合する必要があるというパターンが新たに確認された。
+- **`retry` action での runner args 損失（SHOULD）**: `spawn-recovery-subagent.sh` が phase/issue のみを受け取り、元の runner スクリプトと引数を引き継がない設計。M/L size の review/merge フェーズでは `--light/--full/--base` が失われる。Code Retrospective でも言及済みの既知制約だが、review 段階で再確認された。
+
+### 繰り返し問題
+
+- なし（本 PR で初見の問題が主体）
+
+### 受け入れ基準検証の難易度
+
+- rubric 条件が 5件あり、全て LLM grader による semantic 判定が必要。`cmd` フィールドの未検証問題は rubric 5（"Safety guard が validate-recovery-plan.sh (SSoT) に委譲される"）が PASS を返したが、より細粒度の条件（`cmd` フィールドの検証を明示）があれば `/review` の受け入れ基準 PASS だけでなく security gap も事前に捕捉できた可能性がある。将来の Issue では `rubric` 条件を「委譲先が `op` と `cmd` の両フィールドを検証する」レベルまで明示することで検証漏れを防げる。

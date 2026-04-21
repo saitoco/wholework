@@ -61,6 +61,42 @@ run_verify_with_retry() {
   fi
 }
 
+run_phase_with_recovery() {
+  local phase issue runner_script exit_code log_file
+  phase="$1"; issue="$2"; runner_script="$3"; shift 3
+
+  mkdir -p .tmp
+  log_file=".tmp/wrapper-out-${issue}-${phase}.log"
+
+  set +e
+  "$runner_script" "$issue" "$@" > "$log_file" 2>&1
+  exit_code=$?
+  set -e
+
+  [[ $exit_code -eq 0 ]] && return 0
+
+  # Tier 1: reconciler (bash, cheap) — completion check
+  # See modules/orchestration-fallbacks.md (Observe-Diagnose-Act pattern)
+  if "$SCRIPT_DIR/reconcile-phase-state.sh" "$phase" "$issue" --check-completion 2>/dev/null | grep -q '"matches_expected":true'; then
+    echo "[recovery] tier1 reconciler: phase completed despite wrapper exit $exit_code"
+    return 0
+  fi
+
+  # Tier 2: fallback catalog (bash, cheap) — known pattern recovery
+  if "$SCRIPT_DIR/apply-fallback.sh" "$phase" "$issue" --log "$log_file" 2>/dev/null; then
+    echo "[recovery] tier2 fallback catalog: recovered"
+    return 0
+  fi
+
+  # Tier 3: recovery sub-agent via claude -p (expensive, unknown anomaly only)
+  if "$SCRIPT_DIR/spawn-recovery-subagent.sh" "$phase" "$issue" --log "$log_file" --exit-code "$exit_code"; then
+    echo "[recovery] tier3 sub-agent: recovered"
+    return 0
+  fi
+
+  return $exit_code
+}
+
 echo "=== run-auto-sub.sh: Starting sub-issue #${SUB_NUMBER} ==="
 source "$SCRIPT_DIR/phase-banner.sh"
 print_start_banner "issue" "$SUB_NUMBER" "auto"
@@ -104,21 +140,21 @@ echo "Size: ${SIZE}"
 case "$SIZE" in
   XS)
     echo "--- code phase (patch): issue #${SUB_NUMBER} ---"
-    "$SCRIPT_DIR/run-code.sh" "$SUB_NUMBER" --patch ${BASE_FLAG:-}
+    run_phase_with_recovery "code" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --patch ${BASE_FLAG:-}
 
     echo "--- verify phase: issue #${SUB_NUMBER} ---"
     run_verify_with_retry "$SUB_NUMBER" "${BASE_BRANCH:-}"
     ;;
   S)
     echo "--- code phase (patch): issue #${SUB_NUMBER} ---"
-    "$SCRIPT_DIR/run-code.sh" "$SUB_NUMBER" --patch ${BASE_FLAG:-}
+    run_phase_with_recovery "code" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --patch ${BASE_FLAG:-}
 
     echo "--- verify phase: issue #${SUB_NUMBER} ---"
     run_verify_with_retry "$SUB_NUMBER" "${BASE_BRANCH:-}"
     ;;
   M)
     echo "--- code phase (pr): issue #${SUB_NUMBER} ---"
-    "$SCRIPT_DIR/run-code.sh" "$SUB_NUMBER" --pr ${BASE_FLAG:-}
+    run_phase_with_recovery "code" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --pr ${BASE_FLAG:-}
 
     PR_NUMBER=$(gh pr list --json number,headRefName 2>/dev/null | jq -r ".[] | select(.headRefName == \"worktree-code+issue-${SUB_NUMBER}\") | .number" | head -1 || true)
     if [[ -z "$PR_NUMBER" ]]; then
@@ -128,17 +164,17 @@ case "$SIZE" in
     echo "PR number: ${PR_NUMBER}"
 
     echo "--- review phase (light): PR #${PR_NUMBER} ---"
-    "$SCRIPT_DIR/run-review.sh" "$PR_NUMBER" --light
+    run_phase_with_recovery "review" "$PR_NUMBER" "$SCRIPT_DIR/run-review.sh" --light
 
     echo "--- merge phase: PR #${PR_NUMBER} ---"
-    "$SCRIPT_DIR/run-merge.sh" "$PR_NUMBER"
+    run_phase_with_recovery "merge" "$PR_NUMBER" "$SCRIPT_DIR/run-merge.sh"
 
     echo "--- verify phase: issue #${SUB_NUMBER} ---"
     run_verify_with_retry "$SUB_NUMBER" "${BASE_BRANCH:-}"
     ;;
   L)
     echo "--- code phase (pr): issue #${SUB_NUMBER} ---"
-    "$SCRIPT_DIR/run-code.sh" "$SUB_NUMBER" --pr ${BASE_FLAG:-}
+    run_phase_with_recovery "code" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --pr ${BASE_FLAG:-}
 
     PR_NUMBER=$(gh pr list --json number,headRefName 2>/dev/null | jq -r ".[] | select(.headRefName == \"worktree-code+issue-${SUB_NUMBER}\") | .number" | head -1 || true)
     if [[ -z "$PR_NUMBER" ]]; then
@@ -148,10 +184,10 @@ case "$SIZE" in
     echo "PR number: ${PR_NUMBER}"
 
     echo "--- review phase (full): PR #${PR_NUMBER} ---"
-    "$SCRIPT_DIR/run-review.sh" "$PR_NUMBER" --full
+    run_phase_with_recovery "review" "$PR_NUMBER" "$SCRIPT_DIR/run-review.sh" --full
 
     echo "--- merge phase: PR #${PR_NUMBER} ---"
-    "$SCRIPT_DIR/run-merge.sh" "$PR_NUMBER"
+    run_phase_with_recovery "merge" "$PR_NUMBER" "$SCRIPT_DIR/run-merge.sh"
 
     echo "--- verify phase: issue #${SUB_NUMBER} ---"
     run_verify_with_retry "$SUB_NUMBER" "${BASE_BRANCH:-}"

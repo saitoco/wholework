@@ -50,8 +50,14 @@ else:
     if len(plan["steps"]) > 5:
         errors.append(f"'steps' has {len(plan['steps'])} entries; maximum is 5")
 
-    # forbidden op check (case-insensitive substring match on 'op' field)
+    # forbidden op check (case-insensitive substring match on 'op' and 'cmd' fields)
     forbidden_ops = ["force_push", "reset_hard", "close_issue", "merge_pr", "direct_push_main"]
+    # forbidden cmd patterns applied to run_command steps
+    import re as _re
+    forbidden_cmd_patterns = [
+        r"--force\b", r"-f\s", r"push\s.*origin\s.*(main|master)",
+        r"reset\s+--hard", r"gh\s+issue\s+close", r"gh\s+pr\s+merge",
+    ]
     for i, step in enumerate(plan["steps"]):
         if not isinstance(step, dict):
             errors.append(f"steps[{i}] is not an object")
@@ -60,6 +66,11 @@ else:
         for forbidden in forbidden_ops:
             if forbidden in op_value:
                 errors.append(f"steps[{i}] contains forbidden op '{forbidden}' in op='{step.get('op')}'")
+        if op_value == "run_command":
+            cmd_value = str(step.get("cmd", ""))
+            for pattern in forbidden_cmd_patterns:
+                if _re.search(pattern, cmd_value):
+                    errors.append(f"steps[{i}] run_command contains forbidden pattern in cmd='{step.get('cmd')}'")
 
 if errors:
     for e in errors:
