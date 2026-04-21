@@ -162,7 +162,7 @@ Phase transition output format: output `[N/M] phase_name` before each phase, and
 
 1. Output `[1/4] code`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER --pr [--base {branch}]` via Bash (timeout: 600000); on success output `[1/4] code → done (PR #N)`
 2. If code fails: go to Step 6
-3. Extract PR number: `gh pr list --head "*issue-$NUMBER-*" --json number -q '.[0].number'` (also handles worktree branch names like `worktree-issue-*`)
+3. Extract PR number via client-side filter (handles worktree branch names like `worktree-issue-*`): `gh pr list --json number,headRefName --jq ".[] | select(.headRefName | contains(\"issue-$NUMBER-\")) | .number" | head -1`
 4. If PR number cannot be fetched: report error and go to Step 6
 5. Output `[2/4] review`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh $PR_NUMBER [--light|--full]` via Bash (timeout: 600000) (M→`--light`, L→`--full`); on success output `[2/4] review → done`
 6. If review fails: go to Step 6

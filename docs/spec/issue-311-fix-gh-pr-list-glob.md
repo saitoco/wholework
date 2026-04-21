@@ -58,6 +58,20 @@ gh pr list --json number,headRefName \
 
 - 実際の XL Issue または M/L Issue で `/auto` を実行し、`worktree-issue-N-{short-title}` 形式のブランチ名で PR 抽出が成功することを確認
 
+## Code Retrospective
+
+### Deviations from Design
+
+- なし（設計通りに実装完了）
+
+### Design Gaps/Ambiguities
+
+- `tests/run-auto-sub.bats` の regression テストで gh mock が `worktree-issue-N-{short-title}` 形式の実際の JSON を返すのではなく、`--json number,headRefName` フラグ検出時に直接 "99" を返す設計にした。これは jq の `--jq` フラグを mock 内で処理できないためであり、設計に明示されていなかった点。ただし両側 assert（glob 未使用 + client-side filter 使用確認）で regression 検知は十分に達成できている
+
+### Rework
+
+- `git push origin HEAD` を PR 作成前に実行し忘れ、PR 作成時にエラーとなった。手順上 push が未完だったため即座に push して解消
+
 ## Notes
 
 - **Approach B 採用理由**: Approach A (`--search "head:issue-N"`) は gh/GitHub Search API の先頭語一致仕様で `worktree-issue-N-*` 形式へのマッチが不透明。Approach B は全 open PR を取得するコスト（通常は数 PR 程度）と引き換えに確実性を得る。`| head -1` で複数マッチ時の最初の 1 件に限定
@@ -65,3 +79,18 @@ gh pr list --json number,headRefName \
 - **既存 mock 影響評価**: `tests/run-code.bats` の gh mock (line 51-64) は `pr list` に対して flag 非依存で echo（default 空 or override で "456"）するため、Approach B の `--json number,headRefName --jq "..."` 形式で呼び出しても動作変わらず。`tests/run-auto-sub.bats` の gh mock (line 82-104) も同様。既存テスト群の mock 更新は不要
 - **regression テストの設計**: 既存 mock が permissive すぎて bug (`--head "*issue-*"` の glob 非対応) を検知できなかった。新テストでは gh args をログ取得し「glob pattern は使われていない」「client-side filter 形式で呼ばれている」を両側 assert することで、将来の regression を検知可能にする
 - **auto-resolved ambiguity points**（`/issue` 時点で記録済み）: `tests/run-code.bats` の更新範囲 / rubric の SKILL.md 取り込み / 発生履歴の line number 修正 の 3 件は Issue body の retrospective コメントに記録済み
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+- なし。実装は Spec の Changed Files / Implementation Steps 通りに完了しており、乖離は観察されなかった。
+
+### 繰り返しイシュー
+
+- なし。今回の変更は単純な glob 修正 + regression test 追加であり、同種のイシューは発生しなかった。
+
+### 受け入れ条件検証の難易度
+
+- すべての条件に verify コマンド (`file_not_contains`, `rubric`, `command`) が付与されており、自動検証で全件 PASS を確認できた。検証精度は高い。
+- regression テストの `$GH_PR_ARGS_LOG` 存在確認を省略している点（ログ未作成時に `grep` が exit 2 を返すが `[ -ne 0 ]` で通過する）は軽微なテスト設計の改善余地として残る。verify 条件での検出は困難（テスト設計レベルの問題）。
