@@ -56,21 +56,23 @@ CATALOG="$PROJECT_ROOT/modules/orchestration-fallbacks.md"
 }
 
 @test "orchestration-fallbacks: each Rationale section contains at least one Issue reference (#N)" {
-    # Extract each block from ## heading to next ## or EOF and check Rationale has #NNN
+    # Extract each block from ## heading to next ## or EOF and check Rationale has #NNN.
+    # found_rationale persists across ### boundaries so Rationale need not be the last subsection.
     awk '
         /^## / {
-            if (in_entry && in_rationale && !has_ref) {
+            if (in_entry && found_rationale && !has_ref) {
                 missing_ref++
             }
             in_entry = /^## / && !/^## (Purpose|Input|Pointer|Output|Operational)/ ? 1 : 0
             in_rationale = 0
+            found_rationale = 0
             has_ref = 0
         }
-        in_entry && /^### Rationale/ { in_rationale = 1 }
+        in_entry && /^### Rationale/ { in_rationale = 1; found_rationale = 1 }
         in_entry && in_rationale && /^### / && !/^### Rationale/ { in_rationale = 0 }
         in_entry && in_rationale && /#[0-9]/ { has_ref = 1 }
         END {
-            if (in_entry && in_rationale && !has_ref) missing_ref++
+            if (in_entry && found_rationale && !has_ref) missing_ref++
             exit (missing_ref > 0) ? 1 : 0
         }
     ' "$CATALOG"
