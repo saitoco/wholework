@@ -163,6 +163,7 @@ Key modules:
 - `scripts/triage-backlog-filter.sh` — filter backlog for triage
 
 **Process management:**
+- `scripts/auto-checkpoint.sh` — checkpoint helper for `/auto --resume`: atomic read/write/delete of single-Issue verify counter and batch remaining list (subcommands: `read_single`, `write_single`, `delete_single`, `read_batch`, `write_batch`, `update_batch`, `delete_batch`)
 - `scripts/watchdog-defaults.sh` — sourceable helper providing `WATCHDOG_TIMEOUT_DEFAULT` constant and `load_watchdog_timeout` function for run-*.sh scripts
 - `scripts/claude-watchdog.sh` — watchdog wrapper for `claude -p` invocations (hang detection + 1 retry)
 - `scripts/reconcile-phase-state.sh` — general-purpose state reconciler for precondition and completion checks across all phases; outputs JSON v1 per `modules/phase-state.md` SSoT (supersedes watchdog-reconcile.sh)
