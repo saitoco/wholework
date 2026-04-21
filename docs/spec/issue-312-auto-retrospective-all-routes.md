@@ -54,3 +54,17 @@
 - XS patch route での Spec 未存在時は Step 4b パターン（Issue Retrospective 有無に関わらず `# Issue #N: title` ヘッダ付きで新規作成）に準じる
 - `/verify` Step 13 はすでに "auto" を scan 対象として列挙しているが、Step 10 の注記が "XL route retrospective" に限定されており、M/L/patch で Auto Retrospective が存在しなかったため機能していなかった。今回の Step 4a 拡張で `/auto` が Spec に書くようになることで既存の Step 13 scan が自動的に機能する
 - Auto-resolve: Issue body では「XS/S patch route での Spec 未存在時の挙動」を自動解決済み（Step 4b パターンに準じて新規作成）として記録
+
+## Code Retrospective
+
+### Deviations from Design
+
+- なし（Spec の実装ステップ通りに実施）
+
+### Design Gaps/Ambiguities
+
+- Step 4a の "XS/S" をどう扱うか Spec では "M/L/patch route" とまとめて記載されていたが、XS patch route は Spec 未存在の可能性があるため、Spec 未存在時処理を同ステップ内に統合して記述した（Spec の Notes にある方針通り）
+
+### Rework
+
+- なし
