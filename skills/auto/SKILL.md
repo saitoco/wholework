@@ -1,7 +1,7 @@
 ---
 name: auto
 description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues; `--batch N1 N2 ...` processes the explicitly listed Issues in order.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*), Read, Grep, Write
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*), Read, Grep, Write, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Autonomous Execution
@@ -335,23 +335,89 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 - `ISSUE_NUMBER=$NUMBER`
 - `RESULT=success`
 
-### Step 6: On Failure: Stop and Report Error
+### Step 6: On Failure: 3-Tier Recovery
 
-If any phase exits with a non-zero exit code:
+If any phase exits with a non-zero exit code, apply the following 3-tier recovery hierarchy before stopping.
 
-**Anomaly detection**: Before proceeding to manual recovery or stopping, run the wrapper anomaly detector to capture known failure patterns:
+**Always first**: Write the failed phase's output to `.tmp/wrapper-out-$NUMBER-$PHASE.log` using the Write tool (needed by Tier 2 anomaly detector).
 
-1. Write the failed phase's output to `.tmp/wrapper-out-$NUMBER-$PHASE.log` using the Write tool
-2. Run the detector:
-   ```bash
-   ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh --log .tmp/wrapper-out-$NUMBER-$PHASE.log --exit-code $EXIT_CODE --issue $NUMBER --phase $PHASE
+---
+
+#### Tier 1 (Observe): State Reconciliation
+
+Run the completion check for the failed phase:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh <phase> $NUMBER --check-completion
+```
+
+Parse the JSON output. If `matches_expected: true`: the phase actually succeeded despite wrapper exit non-zero — override to success and continue to the next phase (skip Tier 2 and Tier 3).
+
+If `matches_expected: false`: proceed to Tier 2.
+
+---
+
+#### Tier 2 (Known pattern): Anomaly Detector + Fallback Catalog
+
+Run the anomaly detector:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh --log .tmp/wrapper-out-$NUMBER-$PHASE.log --exit-code $EXIT_CODE --issue $NUMBER --phase $PHASE
+```
+
+If detector output is non-empty (known pattern matched):
+- Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` to get `SPEC_PATH`
+- Append the detector output to the Spec file (`$SPEC_PATH/issue-$NUMBER-*.md`) under `## Auto Retrospective`, and commit and push
+- Read `${CLAUDE_PLUGIN_ROOT}/modules/orchestration-fallbacks.md` and follow the catalog entry matching the detected pattern to apply the recovery steps
+- If the catalog's recovery succeeds, continue to the next phase (skip Tier 3)
+- If the catalog's recovery fails, proceed to Tier 3
+
+If detector output is empty (unknown pattern): proceed to Tier 3.
+
+---
+
+#### Tier 3 (Unknown): Recovery Sub-Agent
+
+Spawn the orchestration-recovery sub-agent via Task to diagnose the unknown failure and produce a recovery plan:
+
+1. Collect inputs:
+   - `phase`: the failed phase name (e.g., `code-pr`, `review`, `merge`, `verify`)
+   - `exit_code`: wrapper exit code
+   - `log_tail`: last 200 lines of `.tmp/wrapper-out-$NUMBER-$PHASE.log`
+   - `reconcile_snapshot`: JSON output from the Tier 1 `reconcile-phase-state.sh --check-completion` call
+   - `issue_number`: `$NUMBER`
+   - `issue_labels`: output of `gh issue view $NUMBER --json labels -q '.labels[].name'`
+   - `pr_number`: `$PR_NUMBER` if available, otherwise empty string
+   - `branch`: current worktree branch if available
+
+2. Spawn the sub-agent:
    ```
-3. If detector output is non-empty: read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` to get `SPEC_PATH`, then append the detector output to the Spec file (`$SPEC_PATH/issue-$NUMBER-*.md`) under `## Auto Retrospective`, and commit and push
-4. Delete the temp file: `rm -f .tmp/wrapper-out-$NUMBER-$PHASE.log`
+   Task: agents/orchestration-recovery.md
+   Prompt: (pass all inputs from step 1)
+   ```
 
-**Manual recovery hand-off**: If the parent session manually recovers from a shell wrapper failure and continues to subsequent phases instead of stopping here, complete the remaining phases via manual recovery first, then follow Step 4a (after all phases are done) to append anomaly details and improvement proposals to the Spec's `## Auto Retrospective > ### Orchestration Anomalies` and `### Improvement Proposals` sections, then proceed to Step 5. This ensures orchestration-level anomalies are captured in the skill-proposals pipeline with a complete Execution Summary. Note: if the anomaly detector (step above) already detected and appended a known pattern, skip the `### Orchestration Anomalies` / `### Improvement Proposals` append in Step 4a to avoid duplicate entries; only add the Execution Summary.
+3. Write the sub-agent's output (the raw JSON) to `.tmp/recovery-plan-$NUMBER-$PHASE.json` using the Write tool.
 
-Otherwise (no manual recovery), stop processing and output the stopped banner:
+4. **Safety guard** — validate the recovery plan:
+   ```bash
+   ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh .tmp/recovery-plan-$NUMBER-$PHASE.json
+   ```
+   - Validation checks: JSON parseable, required keys (`action`, `rationale`, `steps`) present, `action` in `{retry, skip, recover, abort}`, `steps` length ≤ 5, no forbidden ops (`force_push`, `reset_hard`, `close_issue`, `merge_pr`, `direct_push_main`)
+   - If validation fails (exit non-zero): fall back to stop-and-report (see below)
+
+5. **Dispatch on action**:
+   - `action=retry`: re-run the failed phase once (same `run-*.sh` call with same arguments); if it fails again, fall back to stop-and-report
+   - `action=skip`: treat the phase as complete and continue to the next phase
+   - `action=recover`: execute `steps` sequentially; if all steps succeed, continue to the next phase; if any step fails, fall back to stop-and-report
+   - `action=abort`: fall back to stop-and-report immediately
+
+6. Clean up: `rm -f .tmp/recovery-plan-$NUMBER-$PHASE.json .tmp/wrapper-out-$NUMBER-$PHASE.log`
+
+---
+
+#### Stop-and-Report Fallback
+
+If all tiers are exhausted without recovery, stop processing and output the stopped banner:
 ```
 /auto #N stopped at PHASE
 TITLE
@@ -365,6 +431,8 @@ Do not invoke subsequent phases.
 - review phase failure: review wait timeout, fix failure, retry limit reached
 - merge phase failure: invalid PR state (not approved, CI failure), conflict resolution failure
 - verify phase failure: acceptance condition FAIL, Issue reopened
+
+**Manual recovery hand-off**: If the parent session manually recovers and continues to subsequent phases instead of stopping here, complete the remaining phases via manual recovery first, then follow Step 4a (after all phases are done) to append anomaly details and improvement proposals to the Spec's `## Auto Retrospective > ### Orchestration Anomalies` and `### Improvement Proposals` sections, then proceed to Step 5. Note: if the Tier 2 anomaly detector already appended a known pattern, skip the `### Orchestration Anomalies` / `### Improvement Proposals` append in Step 4a to avoid duplicate entries.
 
 Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
 - `SKILL_NAME=auto`

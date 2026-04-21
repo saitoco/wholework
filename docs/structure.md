@@ -25,9 +25,9 @@ wholework/
 │       └── *.md         # Auxiliary phase/guideline files (optional)
 ├── modules/             # Shared modules referenced by skills (29 files)
 │   └── <module-name>.md
-├── agents/              # Agent definitions (6 files)
+├── agents/              # Agent definitions (7 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (40 files)
+├── scripts/             # Utility scripts used by skills and agents (41 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -133,6 +133,7 @@ Key modules:
 | issue-scope | `agents/issue-scope.md` | Scope investigation for L/XL issues |
 | issue-risk | `agents/issue-risk.md` | Risk investigation for L/XL issues |
 | issue-precedent | `agents/issue-precedent.md` | Precedent investigation from similar issues |
+| orchestration-recovery | `agents/orchestration-recovery.md` | Recovery diagnostician for unknown orchestration failures |
 
 ### Scripts
 
@@ -168,6 +169,7 @@ Key modules:
 - `scripts/wait-ci-checks.sh` — wait for all CI checks to complete on a PR before running claude
 - `scripts/worktree-merge-push.sh` — acquire short-lived patch lock and merge worktree branch + push to main (with rebase retry)
 - `scripts/detect-wrapper-anomaly.sh` — detect known failure patterns in shell wrapper output and generate Auto Retrospective markdown fragments
+- `scripts/validate-recovery-plan.sh` — validate recovery plan JSON from orchestration-recovery sub-agent (schema check + forbidden ops guard)
 
 **Skill runners:**
 - `scripts/run-auto-sub.sh` — run auto workflow for sub-issues
