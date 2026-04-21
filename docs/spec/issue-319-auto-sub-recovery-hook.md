@@ -189,6 +189,37 @@
 - **`claude -p` stdout からの JSON 抽出堅牢性**: sub-agent が自然言語の前後説明を付けた際の挙動。`/code` フェーズで `CLAUDE_BIN` mock を使った bats テスト (prose + JSON + prose パターン) で検証する設計とし、python3 による balanced-brace 抽出ロジックを Implementation Step 2 に明記した。
 - **`agents/orchestration-recovery.md` の frontmatter stripping 互換性**: `run-*.sh` 全般で同じ awk パターン (`NR>1 && /^---$/{print NR; exit}`) が precedent として確立済みのため reuse する。`/code` 実装前に `head -5 agents/orchestration-recovery.md` で形式確認する手順を Uncertainty セクションに記録した。
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body には Design Sketch・Auto-Resolve Log・acceptance criteria が詳細に記述されており、Spec 側で追加判断が必要だったのは 3 点（flock 非互換 → mkdir-based、SSoT 解釈の redirect、apply-fallback.sh MVP スコープ）に限定された。Issue phase の品質が高いほど Spec の追加コストが下がるパターンの典型例。
+- Issue body の Auto-Resolve Log で `flock` が採用されていたが、macOS 互換性問題により Spec で `mkdir-based slot lock` に overrideされた。Issue 作成側が macOS 互換制約（`scripts/worktree-merge-push.sh` の precedent）を知っていれば Issue 段階で正しい方式を選択できた可能性がある。
+
+#### design
+- 設計決定はおおむね有効。`validate-recovery-plan.sh` SSoT の再解釈（Issue body 字面と実際の shipped SSoT との乖離）を Spec が正しく吸収した。
+- `retry` action で元の runner args（`--light/--full/--base` 等）が spawn-recovery-subagent.sh に引き継がれないギャップが設計時点で見落とされた（Code Retrospective で記録）。M/L size の review/merge フェーズでオプションが失われるリスク。
+
+#### code
+- Spec の実装ステップに忠実に従い大きな逸脱なし。PID 選択の bats テスト問題は 1 回の修正で解決（rework 最小）。
+- `apply-fallback.sh` の stderr 抑制（`2>/dev/null`）など Spec 未記述の UX 改善を適切に判断している。
+
+#### review
+- セキュリティ重要度 MUST の gap が検出された：`validate-recovery-plan.sh` が当初 `op` フィールドのみを検証しており、`run_command` op の `cmd` フィールドへの forbidden pattern 適用漏れ。commit `931cfdb` で修正済み（merge 前）。
+- rubric 条件が "safety guard を validate-recovery-plan.sh に委譲する" というレベルに留まっており、`cmd` フィールドまで明示していなかったため、review 前の `/verify` でこの gap を事前検出できなかった。rubric 条件に security-critical な検証詳細（"validates both `op` and `cmd` fields"）を明示することで `/review` の safety check を強化できる。
+- `retry` action での runner args 損失は SHOULD 相当として検出されたが修正はスコープ外とされた（follow-up）。
+
+#### merge
+- PR #332 は clean にマージ。コンフリクトマーカーなし。merge commit に conflict 解消の痕跡なし。
+
+#### verify
+- 全 10 件の Pre-merge 条件が PASS。Post-merge 条件（manual/opportunistic）は自動検証対象外でユーザー検証に委譲。
+- github_check "gh pr checks" "Run bats tests" が PASS（3m46s）。CI infrastructure 障害なし。
+
+### Improvement Proposals
+- rubric 条件でセキュリティ critical なフィールド（例：`op` と `cmd` の両方の検証）を明示的に記述するガイドラインを`modules/verify-executor.md` の rubric セクションに追加することで、`/review` 段階での事前 gap 検出精度を高める。
+
 ## review retrospective
 
 ### Spec vs. 実装乖離パターン
