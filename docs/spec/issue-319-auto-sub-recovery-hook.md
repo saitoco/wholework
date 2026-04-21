@@ -188,3 +188,18 @@
 
 - **`claude -p` stdout からの JSON 抽出堅牢性**: sub-agent が自然言語の前後説明を付けた際の挙動。`/code` フェーズで `CLAUDE_BIN` mock を使った bats テスト (prose + JSON + prose パターン) で検証する設計とし、python3 による balanced-brace 抽出ロジックを Implementation Step 2 に明記した。
 - **`agents/orchestration-recovery.md` の frontmatter stripping 互換性**: `run-*.sh` 全般で同じ awk パターン (`NR>1 && /^---$/{print NR; exit}`) が precedent として確立済みのため reuse する。`/code` 実装前に `head -5 agents/orchestration-recovery.md` で形式確認する手順を Uncertainty セクションに記録した。
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+- **`validate-recovery-plan.sh` の `cmd` フィールド未検証**: セキュリティ上の MUST issue として検出された。Safety guard が `op` フィールドのみをチェックしており、`run_command` 経由での forbidden ops 迂回が可能な設計上のギャップ。Issue body の acceptance criteria では「Forbidden ops 拒否」が SSoT に委譲されている旨が明示されているが、`cmd` フィールドへの適用が Spec 設計フェーズで見落とされた。汎用 `run_command` op を持つ際は、op 名だけでなくコマンド内容も禁止パターンと照合する必要があるというパターンが新たに確認された。
+- **`retry` action での runner args 損失（SHOULD）**: `spawn-recovery-subagent.sh` が phase/issue のみを受け取り、元の runner スクリプトと引数を引き継がない設計。M/L size の review/merge フェーズでは `--light/--full/--base` が失われる。Code Retrospective でも言及済みの既知制約だが、review 段階で再確認された。
+
+### 繰り返し問題
+
+- なし（本 PR で初見の問題が主体）
+
+### 受け入れ基準検証の難易度
+
+- rubric 条件が 5件あり、全て LLM grader による semantic 判定が必要。`cmd` フィールドの未検証問題は rubric 5（"Safety guard が validate-recovery-plan.sh (SSoT) に委譲される"）が PASS を返したが、より細粒度の条件（`cmd` フィールドの検証を明示）があれば `/review` の受け入れ基準 PASS だけでなく security gap も事前に捕捉できた可能性がある。将来の Issue では `rubric` 条件を「委譲先が `op` と `cmd` の両フィールドを検証する」レベルまで明示することで検証漏れを防げる。
