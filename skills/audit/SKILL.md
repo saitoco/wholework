@@ -1,7 +1,7 @@
 ---
 name: audit
-description: Detect documentation/implementation drift and auto-generate Issues (`/audit drift`), and detect structural fragility (`/audit fragility`). AI detects semantic drift between Steering Documents + Project Documents and codebase implementation, and auto-generates Issues for code-side fixes. Where `/doc sync` proposes documentation-side fixes, `/audit` is the complementary skill that creates Issues for code-side fixes. Running without arguments executes both drift and fragility perspectives in an integrated run. `/audit stats` aggregates Issue metadata across the project and generates a project health diagnostic report (throughput / composition / First-try success / Backlog Health, etc.), providing a third lens for project health alongside drift and fragility detection.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash(gh issue create:*, gh issue list:*, gh issue view:*, gh issue edit:*, gh label create:*, ls:*, mkdir:*, rm:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-priority.sh:*)
+description: Detect documentation/implementation drift and auto-generate Issues (`/audit drift`), and detect structural fragility (`/audit fragility`). AI detects semantic drift between Steering Documents + Project Documents and codebase implementation, and auto-generates Issues for code-side fixes. Where `/doc sync` proposes documentation-side fixes, `/audit` is the complementary skill that creates Issues for code-side fixes. Running without arguments executes both drift and fragility perspectives in an integrated run. `/audit stats` aggregates Issue metadata across the project and generates a project health diagnostic report (throughput / composition / First-try success / Backlog Health, etc.), providing a third lens for project health alongside drift and fragility detection. `/audit recoveries` reads the cross-Issue orchestration recovery log (`docs/reports/orchestration-recoveries.md`) and files Issues for recurring patterns that exceed a frequency threshold.
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(gh issue create:*, gh issue list:*, gh issue view:*, gh issue edit:*, gh label create:*, ls:*, mkdir:*, rm:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-priority.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*)
 ---
 
 # audit: Documentation × Implementation Drift Detection
@@ -18,9 +18,11 @@ If ARGUMENTS is `fragility` or starts with `fragility` (including options like `
 
 If ARGUMENTS is `stats` or starts with `stats` (including options like `--since DATE`, `--limit N`, `--no-save`): execute the "stats Subcommand" section and exit.
 
+If ARGUMENTS is `recoveries` or starts with `recoveries` (including options like `--dry-run`, `--limit N`, `--threshold K`): execute the "recoveries subcommand" section and exit.
+
 If ARGUMENTS is empty (no arguments), `--dry-run`, or starts with `--limit`: execute the "Integrated Execution (drift + fragility)" section and exit.
 
-For any other ARGUMENTS: display "Usage: /audit [drift|fragility|stats] [--dry-run] [--limit N] [--since DATE] [--no-save] (running `/audit` without arguments executes drift + fragility integrated run)" and exit.
+For any other ARGUMENTS: display "Usage: /audit [drift|fragility|stats|recoveries] [--dry-run] [--limit N] [--since DATE] [--no-save] [--threshold K] (running `/audit` without arguments executes drift + fragility integrated run)" and exit.
 
 ---
 
@@ -531,6 +533,154 @@ Do not assign the `triaged` label when creating Issues. The `triaged` label is a
 **Type/Size assignment:**
 
 Set Type and Size from AI estimation of fragility scope (update project fields via `${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh`).
+
+**After generation:**
+
+Display the list of generated Issue numbers and titles.
+
+Then read `${CLAUDE_PLUGIN_ROOT}/modules/steering-hint.md` and follow the "Processing Steps" section.
+
+---
+
+## recoveries Subcommand
+
+Read the cross-Issue orchestration recovery log and file Issues for patterns that exceed a frequency threshold. Mirrors the drift/fragility subcommand structure.
+
+### Option Parsing
+
+Parse the following options from ARGUMENTS:
+
+- `--dry-run`: display candidates only without generating Issues
+- `--limit N`: limit Issue generation to N items (in descending frequency order)
+- `--threshold K`: minimum recurrence count to qualify as a candidate (default: 3)
+
+---
+
+### Step 1: Context Collection
+
+**Read the recovery log:**
+
+Read `docs/reports/orchestration-recoveries.md`. If the file does not exist, display "Recovery log not found: docs/reports/orchestration-recoveries.md. Recovery events are written by /auto Step 4a." and exit.
+
+**Fetch existing open Issues (for duplicate check):**
+
+```bash
+gh issue list --state open --json number,title,body --limit 100
+```
+
+Write the JSON to `.tmp/open-issues-recoveries.json`.
+
+---
+
+### Step 2: Candidate Detection
+
+Run the candidate detection script:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh docs/reports/orchestration-recoveries.md --threshold ${K} --issues-json .tmp/open-issues-recoveries.json
+```
+
+Where `${K}` is the value from `--threshold` (default: 3).
+
+The script outputs `<symptom-short>\t<count>` lines for each qualifying candidate.
+
+---
+
+### Step 3: Duplicate Check
+
+For each candidate from Step 2, perform a semantic duplicate check against the open Issues retrieved in Step 1:
+
+- The `collect-recovery-candidates.sh` script already excludes exact substring matches
+- Additionally apply AI-based semantic match: if a candidate symptom-short is semantically equivalent to an existing Issue's title or body, mark as duplicate and skip
+- Display duplicates as "duplicate (existing Issue #N)" in the results table
+
+---
+
+### Step 4: Results Output
+
+Display recovery candidate results in table format:
+
+```
+| No | Symptom | Occurrences | Duplicate |
+|----|---------|-------------|-----------|
+| 1  | gh-pr-list-head-glob | 4 | - |
+| 2  | verify-timeout-exceeded | 3 | existing #311 |
+```
+
+Clean up temp file: `rm -f .tmp/open-issues-recoveries.json`
+
+**In `--dry-run` mode**: display the table and exit (do not generate Issues).
+
+**In normal mode**:
+
+If `--limit N` is specified, select N items in descending frequency order. Exclude duplicates from the count.
+
+Ask the user with AskUserQuestion (non-interactive mode: auto-resolve — automatically select "Generate all" for non-duplicate items up to `--limit N`; record the decision in an Issue comment):
+
+- "Generate all": generate Issues for all non-duplicate candidates
+- "Select": enter item numbers to generate separated by commas (e.g., 1,3)
+- "Cancel": exit without generating Issues
+
+If "Cancel": display "Issue generation cancelled." and exit.
+
+---
+
+### Step 5: Issue Generation
+
+Generate Issues for approved candidates.
+
+Each Issue body:
+
+```markdown
+## Background
+
+Recurring orchestration recovery pattern detected by `/audit recoveries`:
+- Symptom: {symptom-short}
+- Occurrences: {count} (threshold: {K})
+- Recent examples from `docs/reports/orchestration-recoveries.md`:
+  {quote 1-3 representative Diagnosis + Recovery Applied sections}
+
+## Purpose
+
+{Describe what structural fix would prevent recurrence of this recovery pattern}
+
+## Acceptance Conditions
+
+### Pre-merge (automated verification)
+
+- [ ] <!-- verify: {verify command} --> {condition 1}
+- [ ] {condition 2}
+
+### Post-merge
+
+- [ ] {verification items}
+```
+
+**Label assignment:**
+
+After Issue generation, assign `audit/fragility` (recovery patterns are structural fragility by nature).
+
+Do not assign the `triaged` label.
+
+**Type/Size assignment:**
+
+Set Type and Size from AI estimation of recovery pattern scope (update project fields via `${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh`).
+
+**Update log entries after filing:**
+
+For each filed Issue, update the corresponding log entries in `docs/reports/orchestration-recoveries.md`:
+
+Find all entries where `symptom-short` matches and `Improvement Candidate` is `未起票`. Replace `- 未起票` with `- 起票済み #NNN` (where NNN is the new Issue number) using the Edit tool.
+
+Commit the log update:
+
+```bash
+git add docs/reports/orchestration-recoveries.md
+git commit -s -m "chore: update recovery log after /audit recoveries filing
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+git push origin HEAD 2>/dev/null || git push origin main
+```
 
 **After generation:**
 
