@@ -33,3 +33,17 @@
 ## Notes
 
 なし
+
+## Code Retrospective
+
+### Deviations from Design
+
+- 変更イメージの「If the file does not exist, skip this sub-step.」という末尾表現の代わりに、先頭に「If `scripts/validate-skill-syntax.py` does not exist, skip this subsection entirely.」を配置した。条件の否定（存在しない場合のskip）を先に明示する方が読み手にとって明確なため。
+
+### Design Gaps/Ambiguities
+
+- なし
+
+### Rework
+
+- なし
