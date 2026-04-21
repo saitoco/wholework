@@ -324,7 +324,7 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 
 If any phase exits with a non-zero exit code:
 
-**Manual recovery hand-off**: If the parent session manually recovers from a shell wrapper failure and continues to subsequent phases instead of stopping here, first follow Step 4a to append anomaly details and improvement proposals to the Spec's `## Auto Retrospective > ### Orchestration Anomalies` and `### Improvement Proposals` sections, then proceed to the next phase. This ensures orchestration-level anomalies are captured in the skill-proposals pipeline.
+**Manual recovery hand-off**: If the parent session manually recovers from a shell wrapper failure and continues to subsequent phases instead of stopping here, complete the remaining phases via manual recovery first, then follow Step 4a (after all phases are done) to append anomaly details and improvement proposals to the Spec's `## Auto Retrospective > ### Orchestration Anomalies` and `### Improvement Proposals` sections, then proceed to Step 5. This ensures orchestration-level anomalies are captured in the skill-proposals pipeline with a complete Execution Summary.
 
 Otherwise (no manual recovery), stop processing and output the stopped banner:
 ```
