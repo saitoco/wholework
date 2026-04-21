@@ -339,7 +339,10 @@ Push is done in Step 13 Worktree Exit (merge-to-main pattern). Label transition 
 
 **For pr route (branch + PR)**:
 
+Before creating the PR, emit a progress line so the watchdog resets its silence counter:
+
 ```bash
+echo "progress: Creating PR for issue #$NUMBER..."
 gh pr create --title "Issue #$NUMBER: {summary of changes}" --base "${BASE_BRANCH}" --body "..."
 ```
 
@@ -447,8 +450,9 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
    ```bash
    git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
    ```
-   - **For pr route**: also push from within the worktree:
+   - **For pr route**: also push from within the worktree (emit a progress line first so the watchdog resets its silence counter):
      ```bash
+     echo "progress: Pushing branch to origin for issue #$NUMBER..."
      git push origin HEAD
      ```
 

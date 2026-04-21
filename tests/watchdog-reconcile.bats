@@ -273,6 +273,103 @@ MOCK_EOF
     [ "$status" -eq 2 ]
 }
 
+@test "code-pr: stage2 worktree with implementation commits exists and push and create PR succeed -> exit 0" {
+    WORKTREE_DIR="$BATS_TEST_TMPDIR/.claude/worktrees/code+issue-55"
+    mkdir -p "$WORKTREE_DIR"
+
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "0"
+    exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "create" ]]; then
+    exit 0
+fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "-C" ]]; then shift 2; fi
+case "$1" in
+    log)       echo "abc1234 feat: implement feature (closes #55)" ;;
+    rev-parse) echo "worktree-code+issue-55" ;;
+    push)      exit 0 ;;
+    *)         exit 0 ;;
+esac
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" code-pr 55
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"reconciled"* ]]
+}
+
+@test "code-pr: stage2 worktree exists but no closes-#N commit -> exit 143" {
+    WORKTREE_DIR="$BATS_TEST_TMPDIR/.claude/worktrees/code+issue-55"
+    mkdir -p "$WORKTREE_DIR"
+
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "0"
+    exit 0
+fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "-C" ]]; then shift 2; fi
+case "$1" in
+    log) echo "abc1234 feat: implement feature without closing marker" ;;
+    *)   exit 0 ;;
+esac
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" code-pr 55
+    [ "$status" -eq 143 ]
+    [[ "$output" == *"not reached"* ]]
+}
+
+@test "code-pr: stage2 push fails -> exit 143" {
+    WORKTREE_DIR="$BATS_TEST_TMPDIR/.claude/worktrees/code+issue-55"
+    mkdir -p "$WORKTREE_DIR"
+
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "0"
+    exit 0
+fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "-C" ]]; then shift 2; fi
+case "$1" in
+    log)       echo "abc1234 feat: implement feature (closes #55)" ;;
+    rev-parse) echo "worktree-code+issue-55" ;;
+    push)      exit 1 ;;
+    *)         exit 0 ;;
+esac
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" code-pr 55
+    [ "$status" -eq 143 ]
+    [[ "$output" == *"not reached"* ]]
+}
+
 # --- review phase ---
 
 @test "review: PR comment with Review Summary -> exit 0" {
