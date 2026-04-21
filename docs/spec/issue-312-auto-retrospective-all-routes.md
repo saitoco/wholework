@@ -68,3 +68,17 @@
 ### Rework
 
 - なし
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- なし。Spec の実装ステップと PR diff は完全に一致。受入基準 4 件全 PASS。
+
+### Recurring Issues
+
+- Step 6 「Manual recovery hand-off」の実行タイミング（mid-execution vs. post-execution）が Spec レベルで未定義だったため、review で SHOULD 課題として検出・修正が必要になった。手順内の cross-reference（「Step 4a を follow してから次 phase に進む」）を書く際は実行タイミングを明示する慣習を設けると再発を防げる。
+
+### Acceptance Criteria Verification Difficulty
+
+- 受入基準は全て `rubric` または `grep` verify command で適切に定義されており UNCERTAIN はゼロ。`grep "Orchestration Anomalies"` のような機械検証可能な verify command を組み合わせるパターンは良好な実践例。
