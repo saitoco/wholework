@@ -47,3 +47,29 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue受け入れ条件は verifiable な形式で記述されており、`command` + `rubric` の組み合わせで曖昧さを排除。特にrubricの条件文が「`found_rationale` 変数が `###` 境界を越えて持続する」という実装の意図を正確に表現しており、grep では判定できない振る舞いをカバーしている点が良好。
+
+#### design
+- Specの実装ステップが具体的で、コミット内容との乖離なし。`found_rationale` 導入と4箇所の変更点が全て正確に記述されていた。
+
+#### code
+- fixup/amendパターンなし。設計通りのシングルコミット実装（`2de10bb`）。reworkゼロ。Spec記述と diff が一致。
+
+#### review
+- patchルートのため正式PRレビューなし。rubric検証がセマンティックレビューの代替として機能し、entry-scoped な振る舞いを正しく評価。
+
+#### merge
+- patchルート（main直コミット）。コンフリクトなし。
+
+#### verify
+- 両条件ともPASS。条件1（batsテスト）はコマンド実行で直接確認、条件2（rubric）はdiff解析で意味的に確認。FAIL・UNCERTAINなし。
+- PR番号が存在しないpatchルートのため、`github_check "gh pr checks"` 形式は使用されていないが、`command` + `rubric` の組み合わせで検証を完結できた。
+
+### Improvement Proposals
+- N/A
