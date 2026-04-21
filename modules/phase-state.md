@@ -31,15 +31,15 @@ For precondition checks, `reconcile-phase-state.sh` verifies whether the require
 
 ### Phase Table
 
-| Phase | Precondition | Success Signature (Completion) |
-|-------|-------------|-------------------------------|
-| issue | Issue exists and state != CLOSED | `triaged` label on issue |
-| spec | `phase/issue` or `phase/spec` label on issue | `$SPEC_PATH/issue-N-*.md` exists AND `phase/(ready\|code\|review\|merge\|verify\|done)` label |
-| code-patch | `phase/ready` label on issue, Spec exists | `git log origin/main --grep="closes #N"` returns ≥1 commit |
-| code-pr | `phase/ready` label on issue, Spec exists | Open PR on `worktree-code+issue-N` branch (#310 SSoT) |
-| review | PR is OPEN | PR has a comment containing `## Review Summary` |
-| merge | PR is OPEN and reviewDecision is APPROVED | `gh pr view --json state == MERGED` |
-| verify | Issue has `phase/verify` label or is CLOSED | Issue is CLOSED or has `phase/(verify\|done)` label |
+| Phase | Precondition | Success Signature (Completion) | Implementation Status |
+|-------|-------------|-------------------------------|----------------------|
+| issue | Issue exists and state != CLOSED | `triaged` label on issue | Implemented |
+| spec | `phase/issue` or `phase/spec` label on issue | `$SPEC_PATH/issue-N-*.md` exists AND `phase/(ready\|code\|review\|merge\|verify\|done)` label | Implemented |
+| code-patch | `phase/ready` label on issue, Spec exists | `git log origin/main --grep="closes #N"` returns ≥1 commit | Precondition: `phase/ready` — Implemented; Spec exists — future scope. Completion: Implemented |
+| code-pr | `phase/ready` label on issue, Spec exists | Open PR on `worktree-code+issue-N` branch (#310 SSoT) | Precondition: `phase/ready` — Implemented; Spec exists — future scope. Completion: Implemented |
+| review | PR is OPEN | PR has a comment containing `## Review Summary` | Implemented |
+| merge | PR is OPEN and reviewDecision is APPROVED | `gh pr view --json state == MERGED` | Implemented |
+| verify | Issue has `phase/verify` label or is CLOSED | Issue is CLOSED or has `phase/(verify\|done)` label | Implemented |
 
 **Note**: Stage 2 recovery (push + PR creation for code-pr after watchdog kill) is delegated to #316 recovery sub-agent. `reconcile-phase-state.sh` performs inspection only — no recovery actions.
 
