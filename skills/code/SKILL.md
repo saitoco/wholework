@@ -99,8 +99,14 @@ Generate a short description from the title (e.g., "add-implement-skill").
 Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Entry section" to create a worktree.
 
 **Worktree naming convention (by route):**
-- **patch route**: `patch/issue-$NUMBER`
-- **pr route**: `issue-$NUMBER-<short-description>` (same as branch name)
+
+> **SSoT**: This section is the single source of truth for worktree naming in `/code`. All scripts and modules must derive their naming from this section.
+
+Both patch and pr routes use the same name: `code/issue-$NUMBER`
+
+EnterWorktree converts `/` to `+`, resulting in:
+- Worktree dir: `.claude/worktrees/code+issue-$NUMBER`
+- Branch: `worktree-code+issue-$NUMBER`
 
 Record the `ENTERED_WORKTREE` variable for use in subsequent steps.
 

@@ -40,3 +40,31 @@
 - **`gh pr list --head` 挙動**: 現行コード `--head "code+issue-${ISSUE_NUMBER}"` は実ブランチ名 `worktree-code+issue-${ISSUE_NUMBER}` と prefix 不一致により無マッチが懸念される。Step 3 では実ブランチ名ベース（例: `--head "worktree-code+issue-${ISSUE_NUMBER}"`）に揃えることで、Stage 1 の PR 存在判定を実運用と整合させる。
 - **Auto-Resolve Log（Issue 側で確定済み）**: SSoT 配置先は `skills/code/SKILL.md` Step 2（AC rubric 「どちらか一方に SSoT が明記」と整合）。`_find_code_worktree` の 2段階探索は単一パターンに簡素化（workaround 除去、wholework の no-backwards-compat-shims 方針と整合）。
 - **"No change needed" pre-verification 結果**: `scripts/run-code.sh` / `tests/run-code.bats` / `tests/watchdog-reconcile.bats` の無変更判断は grep で実検証済み（Step 6 codebase investigation 時）。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `tests/watchdog-reconcile.bats` に変更なしの予定だったが、mock コメント（`# gh pr list --head "issue-N-*" ...`）が旧パターンを参照していたため、新 SSoT パターン（`worktree-code+issue-N`）に更新した。Spec の "変更なし（grep 検証済み）" は実行パスに影響するコードに限定した判断であり、コメント更新は追加スコープとして受容。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Spec と実装の乖離なし。`tests/watchdog-reconcile.bats` のコメント更新（実行パス非影響）は Code Retrospective で既に記録済み。
+
+### Recurring Issues
+
+- 特記事項なし。
+
+### Acceptance Criteria Verification Difficulty
+
+- 4条件すべて自動検証可能。`github_check` 条件は CI SUCCESS により PASS。UNCERTAIN ゼロ、verify コマンドの精度は高い。

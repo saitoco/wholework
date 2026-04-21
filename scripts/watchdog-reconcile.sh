@@ -10,7 +10,7 @@
 #   issue       triaged label exists on the issue
 #   spec        spec file exists under spec-path + phase/ready or later label
 #   code-patch  origin/main has a commit matching "closes #<issue_number>"
-#   code-pr     an open PR for issue-<issue_number>-* branch exists
+#   code-pr     an open PR for worktree-code+issue-<issue_number> branch exists
 #   review      PR has a comment containing "## Review Summary"
 #   merge       PR state is MERGED
 #   verify      issue is CLOSED or has phase/verify or phase/done label
@@ -99,36 +99,21 @@ _find_code_worktree() {
   repo_root=$(cd "$SCRIPT_DIR/.." && pwd)
   local worktree_base="$repo_root/.claude/worktrees"
 
-  # Primary: code+issue-N (run-code.sh managed)
   if [[ -d "$worktree_base/code+issue-${ISSUE_NUMBER}" ]]; then
     echo "$worktree_base/code+issue-${ISSUE_NUMBER}"
     return 0
   fi
 
-  # Fallback: issue-N-* (SKILL.md pr-route naming convention)
-  local dir
-  for dir in "$worktree_base/issue-${ISSUE_NUMBER}-"*; do
-    if [[ -d "$dir" ]]; then
-      echo "$dir"
-      return 0
-    fi
-  done
-
   return 1
 }
 
 _reconcile_code_pr() {
-  # Stage 1: open PR exists (check both naming patterns used by SKILL.md and run-code.sh)
+  # Stage 1: open PR exists for the SSoT branch name
   local pr_count
-  pr_count=$(gh pr list --head "issue-${ISSUE_NUMBER}-*" --state open --json number -q 'length' 2>/dev/null) || {
+  pr_count=$(gh pr list --head "worktree-code+issue-${ISSUE_NUMBER}" --state open --json number -q 'length' 2>/dev/null) || {
     echo "watchdog-reconcile: gh pr list failed for issue #$ISSUE_NUMBER" >&2
     exit 2
   }
-  if [[ "${pr_count:-0}" -eq 0 ]]; then
-    local pr_count2
-    pr_count2=$(gh pr list --head "code+issue-${ISSUE_NUMBER}" --state open --json number -q 'length' 2>/dev/null) || true
-    pr_count="${pr_count2:-0}"
-  fi
   if [[ "${pr_count:-0}" -gt 0 ]]; then
     return 0
   fi
