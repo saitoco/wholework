@@ -231,3 +231,17 @@
 ### Improvement Proposals
 
 N/A
+
+## review retrospective
+
+### Spec divergence patterns
+
+The SKILL.md frontmatter changes (adding `worktree-merge-push.sh` to `allowed-tools` in 5 skill files) were necessary for the implementation but not listed in the spec's Changed Files or Tool Dependencies sections. The spec's "新規ツール権限の追加なし" note refers to Claude tool permissions, not bash allowed-tools entries; however, future specs should explicitly enumerate SKILL.md frontmatter updates when a new script is introduced to prevent reviewers from treating these as out-of-scope changes.
+
+### Recurring issues
+
+The conflict marker grep pattern `grep -rn '<<<<<<' .` was migrated as-is from the LLM-executed `worktree-lifecycle.md` step. The LLM was smart enough to filter false positives (documentation backticks, test echo commands), but the shell script equivalent treated any grep match as a real conflict. This regression was not caught by tests because the bats tests use isolated temp directories. Going forward, when migrating LLM-side checks to shell scripts, explicitly verify that the script's pattern is tight enough to avoid false positives that the LLM would have filtered implicitly. Fixed by anchoring to `^<<<<<<`.
+
+### Acceptance criteria verification difficulty
+
+All 6 pre-merge conditions used either `rubric` or `command` hints and were deterministically verifiable. No UNCERTAIN results. The rubric conditions effectively caught the semantic requirements. No improvements needed for verify commands in this spec.
