@@ -160,7 +160,8 @@ if [[ $EXIT_CODE -eq 143 ]]; then
   else
     _RECONCILE_PHASE="code-pr"
   fi
-  if "$SCRIPT_DIR/watchdog-reconcile.sh" "$_RECONCILE_PHASE" "$ISSUE_NUMBER"; then
+  _reconcile_out=$("$SCRIPT_DIR/reconcile-phase-state.sh" "$_RECONCILE_PHASE" "$ISSUE_NUMBER" --check-completion 2>/dev/null) || true
+  if echo "$_reconcile_out" | grep -q '"matches_expected":true'; then
     EXIT_CODE=0
   fi
 fi

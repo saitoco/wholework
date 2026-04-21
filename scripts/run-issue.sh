@@ -79,7 +79,8 @@ EXIT_CODE=$?
 set -e
 
 if [[ $EXIT_CODE -eq 143 ]]; then
-  if "$SCRIPT_DIR/watchdog-reconcile.sh" issue "$ISSUE_NUMBER"; then
+  _reconcile_out=$("$SCRIPT_DIR/reconcile-phase-state.sh" issue "$ISSUE_NUMBER" --check-completion 2>/dev/null) || true
+  if echo "$_reconcile_out" | grep -q '"matches_expected":true'; then
     EXIT_CODE=0
   fi
 fi
