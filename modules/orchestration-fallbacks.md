@@ -136,7 +136,7 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ### Rationale
 - CI flake is a known pattern in shared infrastructure; retrying once is a standard mitigation
-- Runtime integration (automatic re-trigger from `run-*.sh`) is deferred to a follow-up Issue
+- Runtime integration (automatic re-trigger from `run-*.sh`) is deferred to a follow-up Issue; see #315 (catalog entry) for context
 - `scripts/wait-ci-checks.sh` already handles the wait logic; re-trigger is the missing piece
 
 ---
