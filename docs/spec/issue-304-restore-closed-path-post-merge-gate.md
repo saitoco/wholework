@@ -73,6 +73,20 @@
 
 - なし。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+なし。CLOSED 経路への OPEN 経路同型ロジックの移植は Spec 記載の実装ステップと完全に一致しており、構造的な乖離は見られなかった。
+
+### Recurring issues
+
+なし。単一の CLOSED/OPEN 経路不整合を修正する明確なスコープで、同種の指摘が重複する箇所はなかった。
+
+### Acceptance criteria verification difficulty
+
+なし。`rubric` verify がセマンティックな検証を担い、`github_check` が CI 状態を確認する 2 段構えにより、3 条件すべてが PASS と判定できた。UNCERTAIN 発生もなく、verify コマンドの精度は適切だった。
+
 ## Notes
 
 - **bats テストが LLM 経路を直接検証できない制約**: SKILL.md の CLOSED/OPEN 経路判定は LLM 解釈のため bats で直接再現できない。代わりに (a) pre-merge の `rubric` verify で SKILL.md 修正の意味的検証、(b) bats 回帰テストで下位 script (`gh-label-transition.sh`) の `--remove-label phase/done` 挙動を保証する二段構え。#289 Spec Notes の設計方針を踏襲
