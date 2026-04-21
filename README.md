@@ -4,12 +4,14 @@ English | [日本語](README.ja.md)
 
 GitHub issue-driven Claude Code skills for agentic work.
 
+A workflow harness for the Claude Code agent — turns your issues into shipped, verified work.
+
 ## 🌐 Why Wholework
 
 1. **Issue-to-spec design** — Issues define *what* and *when it's done*; specs break down *how* to get there. Verifiable acceptance criteria come first — and where possible, are checked automatically.
 2. **Full-phase workflow with size-based routing** — `/issue → /spec → /code → /review → /merge → /verify` covers the entire lifecycle from requirements to post-merge verification.
-3. **Autonomous execution** — `/auto` chains phases based on issue size and runs the full workflow without human intervention when you want it to.
-4. **Works with what you have** — Runs on GitHub and Claude Code. Follows standard GitHub Flow; you can step in at any phase.
+3. **Agentic execution** — `/auto` chains phases based on issue size and runs the full workflow without human intervention when you want it to.
+4. **Works with what you have** — Runs on your existing GitHub repo and standard GitHub Flow. Step in at any phase.
 5. **Beyond software development** — Applies to any issue-driven project: websites, documentation, IaC, research, OSS operations.
 
 ## 📋 Requirements
