@@ -346,11 +346,16 @@ Branch on Issue state:
 Judgment:
 
 - **All auto-verification target conditions are PASS or SKIPPED (0 FAIL/UNCERTAIN among auto-verification targets; SKIPPED is ignored as environment conditions were unmet)**:
-  - Remove all `phase/*` labels and assign `phase/done` (also handles cases where `phase/code` persists in patch route). Opportunistic conditions are checked post-hoc by `modules/opportunistic-verify.md`; manual conditions are informational only and do not block completion:
+  - Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->` or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body
+  - **If unchecked opportunistic or manual conditions remain**: assign `phase/verify` (Issue remains CLOSED; do not reopen):
+    ```bash
+    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
+    ```
+    Inform the user: "Manually check the remaining opportunistic/manual conditions, then re-run `/verify $NUMBER` to complete."
+  - **If all conditions are checked**: assign `phase/done`. Confirm the Issue is closed. If not closed, close with `gh issue close "$NUMBER"` (handles cases like XL parent Issues not auto-closed by PR's `closes #N`):
     ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" done
     ```
-  - Confirm the Issue is closed. If not closed, close with `gh issue close "$NUMBER"` (handles cases like XL parent Issues not auto-closed by PR's `closes #N`)
   - **Even if post-merge conditions without hints are unchecked, do not reopen the Issue** (present user verification guide only)
 - **Auto-verification targets include FAIL**:
   - Check iteration counter before reopening:

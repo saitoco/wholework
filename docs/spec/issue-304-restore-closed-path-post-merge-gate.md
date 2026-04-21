@@ -58,6 +58,35 @@
 
 - 本 Issue マージ後 1 週間以内に、新規 CLOSED され Post-merge に未チェックの opportunistic/manual 条件が残る Issue が `phase/verify` に留まることを 1 件以上実例で確認
 
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。Spec の実装ステップを順序通りに実行した。
+
+### Design Gaps/Ambiguities
+
+- CLOSED 経路の「Even if post-merge conditions without hints are unchecked, do not reopen the Issue」の注記を (a-2) 全 checked ブロック内に配置した。Spec は「(a-2) 内に残置」と記載しており整合している。
+- Step 10 の verify コマンド整合性チェックで `github_check "gh pr checks"` が PR 未作成のため UNCERTAIN となったが、これは pr route では通常の挙動（PR 作成後に CI が実行される）。
+
+### Rework
+
+- なし。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+なし。CLOSED 経路への OPEN 経路同型ロジックの移植は Spec 記載の実装ステップと完全に一致しており、構造的な乖離は見られなかった。
+
+### Recurring issues
+
+なし。単一の CLOSED/OPEN 経路不整合を修正する明確なスコープで、同種の指摘が重複する箇所はなかった。
+
+### Acceptance criteria verification difficulty
+
+なし。`rubric` verify がセマンティックな検証を担い、`github_check` が CI 状態を確認する 2 段構えにより、3 条件すべてが PASS と判定できた。UNCERTAIN 発生もなく、verify コマンドの精度は適切だった。
+
 ## Notes
 
 - **bats テストが LLM 経路を直接検証できない制約**: SKILL.md の CLOSED/OPEN 経路判定は LLM 解釈のため bats で直接再現できない。代わりに (a) pre-merge の `rubric` verify で SKILL.md 修正の意味的検証、(b) bats 回帰テストで下位 script (`gh-label-transition.sh`) の `--remove-label phase/done` 挙動を保証する二段構え。#289 Spec Notes の設計方針を踏襲
