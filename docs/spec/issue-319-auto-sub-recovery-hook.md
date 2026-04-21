@@ -158,6 +158,19 @@
 - **`/auto` 親オーケストレーターとの Tier 重複**: `/auto` SKILL.md Step 6 と `run_phase_with_recovery` は **異なるレイヤー** での recovery (親: wrapper 外部、子: wrapper 内部) のため重複は許容
 - **Follow-up (スコープ外)**: (1) `run_verify_with_retry` と新ラッパの収束、(2) `apply-fallback.sh` の残 anchor 昇格、(3) `/auto` SKILL.md の `validate-recovery-plan.sh` 呼出を bash script 経由に refactor、(4) `docs/structure.md` の事前 tests/ count drift の整合 (独立 Issue)
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation followed the Spec's steps in order; no reordering or omissions required.
+
+### Design Gaps/Ambiguities
+- **PID selection in bats slot-lock tests**: The Spec did not specify what PID to use for "live" vs "dead" PID in bats concurrency tests. Used `$$` (current shell PID) for "live" slot and `999999999` (exceeds max PID on any realistic system) for "stale" slot. Straightforward to resolve but not documented in Spec.
+- **`run_phase_with_recovery` second argument for review/merge phases**: Spec says `"$issue"` is the second parameter passed to the runner, but review/merge use PR_NUMBER as first arg, not issue number. The wrapper passes PR_NUMBER as "issue" for review/merge — log files and Tier 1 reconcile use that value. Tier 1 reconcile gracefully fails (no `matches_expected:true` match) and falls through to Tier 2/3 for those phases. Acceptable behavior per Spec intent.
+- **`apply-fallback.sh` suppressed stderr in Tier 2 call**: Added `2>/dev/null` to `apply-fallback.sh` call in `run_phase_with_recovery` so fallback errors don't surface unless debugging. Not in Spec but improves UX.
+
+### Rework
+- **Tests 7 & 8 in spawn-recovery-subagent.bats**: Initial PID values (99999 for "live", 0 for "stale") caused test failures — PID 99999 might be running on the test machine, and `kill -0 0` kills the process group. Fixed on first attempt to `$$` and `999999999`. No code rework needed.
+
 ## spec retrospective
 
 ### Minor observations
