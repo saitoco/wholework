@@ -94,3 +94,35 @@ gh pr list --json number,headRefName \
 
 - すべての条件に verify コマンド (`file_not_contains`, `rubric`, `command`) が付与されており、自動検証で全件 PASS を確認できた。検証精度は高い。
 - regression テストの `$GH_PR_ARGS_LOG` 存在確認を省略している点（ログ未作成時に `grep` が exit 2 を返すが `[ -ne 0 ]` で通過する）は軽微なテスト設計の改善余地として残る。verify 条件での検出は困難（テスト設計レベルの問題）。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body の受け入れ条件はすべて verify コマンド付き（`file_not_contains`, `rubric`, `command`）で記述されており、自動検証可能な質の高い条件セットだった。
+- `## Auto-Resolved Ambiguity Points` セクションで `/issue` 時点の曖昧性解決が記録されており、トレーサビリティが良好。
+- Post-merge manual 条件（`verify-type: manual`）は実際の `/auto` 実行でしか確認できない性質のものであり、自動化は困難。この設計は適切。
+
+#### design
+- Spec の Changed Files / Implementation Steps 通りに実装が完了しており、設計と実装の乖離は観察されなかった。
+- Approach A (--search) と Approach B (client-side filter) の採用比較が Spec に明示されており、設計判断のトレーサビリティが良好。
+
+#### code
+- `git push origin HEAD` の push 忘れを Code Retrospective に記録済み（即座に解消）。
+- 新 regression テストで「glob 未使用」「client-side filter 使用」を両側 assert する設計は堅牢。ただし `$GH_PR_ARGS_LOG` 存在確認の省略はテスト設計上の軽微な gap（未来の改善余地）。
+
+#### review
+- Spec vs. 実装の乖離なし。受け入れ条件検証の精度が高く、review での見逃し事項もなかった。
+- `regression テストの $GH_PR_ARGS_LOG` 省略問題は review でも検出されなかった（テスト設計レベルの観察難易度が高い）。
+
+#### merge
+- PR #320 は通常の squash merge で完了。マージ時の conflict・CI 失敗は観察されなかった（git log に conflict 解消 commit なし）。
+
+#### verify
+- 7 つの Auto-verify 条件すべてが 1 回目で PASS。re-open サイクルなし。
+- `file_not_contains` 3 件 + `rubric` 2 件 + `command` (bats) 2 件という条件設計は検証粒度として適切。
+- Post-merge manual 条件は `phase/verify` 留まりとなるため、実際の `/auto` 実行による確認が残タスク。
+
+### Improvement Proposals
+- N/A
