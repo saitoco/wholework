@@ -76,3 +76,17 @@ Spec retrospective (per-Issue, disposable) との役割分担:
 ### Rework
 
 - `tests/audit-recoveries.bats` のテスト名 (c) に日本語（`起票済み`）を含めたため bats の parse エラー（0 tests executed）が発生。SKILL.md の注意事項「bats test names must be in English」を見落とし。ASCII に修正後に再実行して PASS 確認。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+特記なし。Spec に記載された全受入条件が実装に反映されており、スコープ逸脱なし。
+
+### Recurring issues
+
+SHOULD issue が 1 件: `collect-recovery-candidates.sh` の Python `-c` 文字列へのパス埋め込みパターン。同様の Python ワンライナーを bash スクリプトに埋め込む場合は `sys.argv` 経由でパスを渡すことを標準パターンとして意識すること。
+
+### Acceptance criteria verification difficulty
+
+全6件が PASS で UNCERTAIN なし。`file_exists` と `github_check` 系は verify 精度が高い。`rubric` 系3件も内容が十分具体的で PASS 判定が容易だった。Verify コマンドの品質は良好。
