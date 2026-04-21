@@ -75,6 +75,13 @@ Analyze `+` lines in the PR diff and detect the following patterns using HIGH SI
 - Hardcoded credentials (API keys, passwords, tokens)
 - Permission settings that unintentionally grant write access to all users (e.g., `chmod 777`)
 
+**LLM-to-Shell Pattern Migration Risks:**
+When the PR replaces an LLM-executed check with a grep/awk/sed shell script pattern (e.g., migrating conflict marker detection from LLM to `grep -rn '<<<<<<' .`):
+- Check if the pattern may match false positives in test fixture files (e.g., `.bats` files containing `echo '<<<<<<'` as test data)
+- Check if the pattern may match documentation examples in code fences or backtick-enclosed content (e.g., SKILL.md or module files that demonstrate the pattern)
+- Check if an exclusion mechanism (`grep -v`, `--exclude`, path scoping, etc.) is absent for known false positive sources
+- Report at SHOULD level if false positive sources exist and no exclusions are present
+
 ### 2. False Positive Filtering
 
 For each detected issue, verify whether it should be flagged:
