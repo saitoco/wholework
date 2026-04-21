@@ -97,3 +97,21 @@
 **bats テストの自己参照 exclusion:**
 - `tests/orchestration-recovery.bats` は forbidden op 文字列 (`force_push` 等) をテストフィクスチャとして含む
 - `validate-recovery-plan.sh` は JSON を入力とするため、.bats ファイル自体を処理することはなく自己参照問題は発生しない
+
+## Spec Retrospective
+
+(Spec フェーズで記録済み)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- bats テストで `<(echo "$plan")` (process substitution) から `$BATS_TEST_TMPDIR/plan.json` への temp file パターンに変更: 既存テストの bats パターンと合わせて信頼性を高めるため
+
+### Design Gaps/Ambiguities
+
+- なし
+
+### Rework
+
+- なし
