@@ -60,3 +60,28 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件に具体的な grep パターン（`(29 files)`, `41 ファイル` 等）と rubric を組み合わせた設計は高品質。Spec の曖昧点自動解決も検証精度向上に貢献した。
+
+#### design
+- Changed Files, Implementation Steps が明確で実装との乖離なし。N/A。
+
+#### code
+- パッチルート（main 直コミット）で1コミット完結（b5e1b14）。リワークなし。英語版・日本語版 structure.md への並行追記も漏れなし。
+
+#### review
+- パッチルートのため PR レビューなし。変更スコープが極小（2ファイル2行追記）なため実質的なリスクなし。
+
+#### merge
+- パッチルート直コミット。コンフリクトなし。
+
+#### verify
+- 全5条件が初回実行で PASS。grep 条件は精度が高く誤検知リスクが低い。rubric 条件も git diff で追記が明確に確認できた。
+
+### Improvement Proposals
+- N/A
