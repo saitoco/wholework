@@ -33,3 +33,17 @@
 
 - `found_rationale` は `## ` 境界でリセットされるが `### ` 境界ではリセットされないため、Rationale が中間セクションになった場合でも正しく機能する
 - 既存の `in_rationale` フラグは `has_ref` の蓄積範囲（Rationale 内のみ）を限定する役割を引き続き担う（削除不可）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
