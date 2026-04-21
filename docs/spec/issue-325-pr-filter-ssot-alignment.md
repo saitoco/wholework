@@ -75,3 +75,17 @@
 ### Rework
 
 - test 11 の mock 修正: 最初のテスト実行で test 11 が FAIL となり、1 回の修正（mock を JSON 形式に変更）で解決。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+特筆事項なし。実装は Spec の変更対象を全て網羅しており、逸脱（test 11 の mock 追加）は Code Retrospective セクションに正直に記録済み。Spec に test 11 のオーバーライド mock への言及がなかった点は `## Design Gaps/Ambiguities` で既に捕捉されている。
+
+### Recurring issues
+
+特筆事項なし。単発の issue であり、パターン的な繰り返しは見られない。
+
+### Acceptance criteria verification difficulty
+
+全条件 PASS。`bats` の `command` 型 verify は safe モードで CI reference fallback を使用しており問題なく解決できた。1 件の CONSIDER レベル指摘（negative test の欠如）あり。テスト内の positive case のみでの検証は今後の Issue で繰り返し発生しやすいパターンのため、verify rubric で「negative case の有無」を明示的に問うことを検討してもよい。
