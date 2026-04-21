@@ -67,3 +67,22 @@ setup() {
   run bash "$SCRIPT" "$PLAN_FILE"
   [ "$status" -eq 0 ]
 }
+
+@test "orchestration-recovery: run_command with --force fails" {
+  echo '{"action":"recover","rationale":"force push attempt","steps":[{"op":"run_command","cmd":"git push --force origin main"}]}' > "$PLAN_FILE"
+  run bash "$SCRIPT" "$PLAN_FILE"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"forbidden pattern"* ]]
+}
+
+@test "orchestration-recovery: run_command with push to main fails" {
+  echo '{"action":"recover","rationale":"direct push","steps":[{"op":"run_command","cmd":"git push origin main"}]}' > "$PLAN_FILE"
+  run bash "$SCRIPT" "$PLAN_FILE"
+  [ "$status" -eq 1 ]
+}
+
+@test "orchestration-recovery: run_command with safe command passes" {
+  echo '{"action":"recover","rationale":"safe amend","steps":[{"op":"run_command","cmd":"git commit --amend -s --no-edit"}]}' > "$PLAN_FILE"
+  run bash "$SCRIPT" "$PLAN_FILE"
+  [ "$status" -eq 0 ]
+}
