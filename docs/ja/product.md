@@ -130,6 +130,7 @@ Describe success metrics here. -->
 | 用語 | 定義 | コンテキスト | 日本語訳 |
 |------|------------|---------|---------|
 | `/auto` | `claude -p` を介して非対話的に spec→code→review→merge→verify を連鎖させるオーケストレータースキル。`phase/*` ラベルが未設定の場合は issue triage から自動開始、`phase/ready` が無い場合は `/spec` を自動実行。`--batch N` はバックログから N 個の XS/S Issue を処理、XL Issue は独立サブ issue を並列実行（worktree 分離）する。`--base {branch}` でリリースブランチを対象にする。旧称: 'Dispatch' | 開発ワークフロー | `/auto` |
+| AC | 「Acceptance Criteria」の略称（インデックス参照時は個別の「Acceptance condition」の略、例: `AC1`, `AC2`）。Issue Retrospective、スキル出力、レビューコメントでの簡略表記として使用 | /issue, /spec, /review, /verify | AC |
 | Acceptance condition | Issue の受入条件内の、検証可能な単一要件項目。チェックリストの 1 行として現れ、通常 verify command と対になる | /issue, /verify | 受入条件項目 |
 | Acceptance criteria | Issue の受入条件の完全な集合。Issue 本文の `## Acceptance Criteria` 配下に定義される。L1 の集合としての L2 個別受入条件群 | /issue, /verify | 受入条件 |
 | Adapter | ツールアクセス（ブラウザ、CI、Lighthouse、外部サービス）を抽象化する capability ベースの拡張レイヤー。3 ステップで動作（detect → translate command → delegate execution）し、優先順位順に解決する: プロジェクトローカル（`.wholework/adapters/`）→ ユーザーグローバル → バンドル済み（`modules/*-adapter.md`） | スキル開発、verify | Adapter |
