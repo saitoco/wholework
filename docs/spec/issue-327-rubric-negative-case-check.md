@@ -47,3 +47,31 @@ Issue #325 と #326 のレトロスペクティブで、`rubric` verify command 
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 本文に「Auto-Resolved Ambiguity Points」セクションがあり、verify コマンドの精度向上（`file_contains` → `section_contains`）が明記されていた。設計品質が高く、verify 時の誤 PASS リスクを事前に排除している。
+- Spec はシンプルかつ実装手順が具体的で、ギャップなし。
+
+#### design
+- N/A（設計フェーズは Spec 作成のみ。逸脱なし）
+
+#### code
+- 実装は1コミット（`4605bf4`）で完結。fixup/amend なし。
+- Spec の実装手順（Adversarial stance サブセクション末尾への1行追記）を正確に実行。
+
+#### review
+- Patch ルートのため PR レビューなし。1行の追記のみであり、レビュー省略は妥当な判断。
+
+#### merge
+- Patch ルート（main 直コミット）。コンフリクトなし。
+
+#### verify
+- 自動検証 2 条件いずれも PASS（`section_contains` と `grep`）。
+- Post-merge の manual 条件は実際の rubric 実行後の動作確認が必要なため、ユーザー検証として残存。これは適切な分類。
+
+### Improvement Proposals
+- N/A
