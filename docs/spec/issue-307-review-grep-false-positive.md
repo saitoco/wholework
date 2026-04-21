@@ -46,3 +46,32 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec は簡潔で変更対象ファイルと追加テキストが明確に定義されており、実装への迷いが生じる余地がなかった。
+- Auto-Resolved Ambiguity Points（Issue body 内）が3件記録されている：(1) verify command を grep パターンから rubric に変更（日本語マッチ回避）、(2) 実装対象を `agents/review-bug.md` にも拡張、(3) AC2 を github_check に切り替え（patch route 対応）。spec 作成時点でこれらを検知・解消できており、後工程での手戻りが防止された。
+
+#### design
+- 実装ステップが1ファイルへの1箇所追加に限定されており、設計の逸脱リスクが低かった。実際に実装はSpec通りに完遂された（Code Retrospective: N/A）。
+
+#### code
+- 実装は単一コミット（a22acb0）で完結。fixup/amend なし。rework なし。
+- PR を経由しない patch route であったため、review による指摘は発生していない。
+
+#### review
+- patch route のため `/review` は実行されていない。review phase をスキップしても問題ない規模の変更だった（1ファイル・7行追加）。
+- Post-merge の手動条件（実際の `/review` 実行で新チェック項目が反映されることを確認）は未検証のまま phase/verify に留まっている。
+
+#### merge
+- PR なしの直接 main マージ（patch route）。コンフリクト・CI 失敗なし。
+
+#### verify
+- Pre-merge 条件2件はいずれも PASS。verify command の設計（rubric + github_check）が適切で、auto-verify が完全に機能した。
+- Post-merge 手動条件（verify-type: manual）は未チェック。手動確認後に `/verify 307` の再実行が必要。
+
+### Improvement Proposals
+- N/A
