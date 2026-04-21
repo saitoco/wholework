@@ -119,6 +119,19 @@ When using `file_contains` or `section_contains` with a compound string like `"k
 | `github_check` | `github_check "gh_command" "expected_value"` | GitHub state verification. Safe mode: read-only operations only |
 | `rubric` | `rubric "text"` | Semantic-level natural-language judgment via LLM grader. Runs in both safe and full modes (`always_allow` — no side effects); grader is invoked at both `/review` pre-merge and `/verify` post-merge. See `modules/verify-patterns.md` §9 for selection criteria. |
 
+**rubric + supplementary file_contains / section_contains:**
+
+When using `rubric` and the target file and section are predictable in advance, add `file_contains` or `section_contains` alongside it to increase verification accuracy. The supplementary check provides a mechanical safety net for cases where `rubric` may PASS despite content being in the wrong location.
+
+Example:
+
+```
+<!-- verify: rubric "modules/example.md §3 includes guidance on the new pattern" -->
+<!-- verify: section_contains "modules/example.md" "### 3." "new_pattern_keyword" -->
+```
+
+See `modules/verify-patterns.md` §9 for the full guideline and applicability conditions.
+
 When MCP tools are available, use ToolSearch with `select:<tool_name>` to confirm existence and read-only nature before proposing `mcp_call` hints.
 
 **Custom verify command handlers (project-local):**

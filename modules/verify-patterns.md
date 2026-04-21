@@ -253,6 +253,35 @@ If the condition is about meaning, intent, quality, or natural-language content 
 **Two-phase verification with `rubric`:**
 When `verify: rubric` is declared in an acceptance condition, the grader runs at both pre-merge and post-merge phases. During `/review` (safe mode, pre-merge), the rubric grader executes and its PASS/FAIL/UNCERTAIN result appears in the review comment — enabling early detection of semantic gaps before the PR is merged. During `/verify` (full mode, post-merge), the same grader runs again and updates the acceptance condition checkbox.
 
+**Combining `rubric` with supplementary `file_contains` / `section_contains`:**
+
+When using `rubric` and the implementation file and section are predictable in advance, add `file_contains` or `section_contains` as a supplementary check alongside `rubric`. This compensates for LLM variance in semantic judgment by providing a mechanical structural safety net: `rubric` verifies semantic quality (meaning and completeness); the supplementary check independently confirms that the target keyword exists in the expected location.
+
+When to apply:
+- The target implementation file is known (not TBD or contingent on implementation choices)
+- The target section heading is predictable in advance
+- The `rubric` condition involves natural language content in a specific file section
+
+When NOT to apply:
+- The implementation location is unknown or developer-determined
+- The `rubric` condition is purely behavioral (runtime behavior, not file content)
+
+Recommended pattern:
+
+```
+<!-- verify: rubric "description of semantic quality expected" -->
+<!-- verify: section_contains "path/to/file.md" "## Target Section" "representative keyword" -->
+```
+
+Example:
+
+```markdown
+- [ ] <!-- verify: rubric "modules/verify-patterns.md §9 includes guidance on combining rubric with file_contains as supplementary verification" --> Combination guidance is present
+- [ ] <!-- verify: section_contains "modules/verify-patterns.md" "### 9." "file_contains" --> §9 contains the keyword `file_contains`
+```
+
+The `section_contains` check catches cases where content was added to the wrong section or omitted entirely — false positives that `rubric` alone may miss due to LLM variance.
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
