@@ -131,3 +131,34 @@
 
 `rubric` 系の verify コマンドが多く、safe mode では全て AI 判定。今回は実装が spec に忠実だったため実質的な問題はなかった。
 verify コマンドを `file_contains "skills/auto/SKILL.md" "Tier 3 (Unknown): Recovery Sub-Agent"` などの `file_contains` 型に変換できれば、将来的に自動判定精度が上がる。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec ファイルは `docs/spec/issue-316-orchestration-recovery-agent.md` として作成済み。Issue body の Scope (Design Sketch) を忠実に反映しており、acceptance criteria と実装ステップの対応が明確だった。
+- `## Spec Retrospective` セクションは存在するが内容が "(Spec フェーズで記録済み)" のみで空。具体的な観察が欠けているが、設計の質は問題なかった。
+
+#### design
+- 3 層 recovery 階層（Tier 1/2/3）の設計は Issue body の設計スケッチと一致し、安全ガード（forbidden ops・step上限）の責務分離も明確だった。
+- bats テストでの `<(echo "$plan")` → `$BATS_TEST_TMPDIR/plan.json` パターン変更は既存テストとの整合性のための小さな逸脱であり、設計上の問題ではない。
+
+#### code
+- 禁止用語 "Dispatch" の混入 (fix commit あり: `fix: replace deprecated term 'Dispatch' in skills/auto/SKILL.md Step 6`) が唯一のコードリワーク。
+- fixup! / amend パターンは観察されず、全体的に実装品質は高かった。
+
+#### review
+- Review コメントにより forbidden expressions violation が検知され修正 commit が追加された。Review が期待通りに機能した。
+- rubric ベースの verify コマンドが多いため、pre-merge の safe mode review では全て AI 判定に依存する。精度向上の余地あり（`file_contains` 型への部分置換）。
+
+#### merge
+- PR #340 が単一 merge commit (`04a42d6`) でクリーンに main に統合された。コンフリクトなし。
+
+#### verify
+- 全 6 条件が PASS。CI（`Run bats tests`）も pass を確認。
+- Post-merge の `verify-type: manual` 条件 2 件が残存するため `phase/verify` に遷移。
+
+### Improvement Proposals
+- rubric 型 verify コマンドは自動判定精度が低い。実装がどのファイルのどのセクションに書かれるか事前にわかる場合は、`file_contains` や `section_contains` を補足的に追加することで `rubric` の精度を補完できる。例: `<!-- verify: file_contains "skills/auto/SKILL.md" "Tier 3 (Unknown): Recovery Sub-Agent" -->` を条件3に追加する。
+- `/code` フェーズ完了後に `bash scripts/check-forbidden-expressions.sh` をローカル実行するステップを実装チェックリスト（または `/code` SKILL.md）に追加し、CI でのみ検知される forbidden expressions 違反を事前に防ぐ。
