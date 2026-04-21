@@ -346,12 +346,7 @@ Branch on Issue state:
 Judgment:
 
 - **All auto-verification target conditions are PASS or SKIPPED (0 FAIL/UNCERTAIN among auto-verification targets; SKIPPED is ignored as environment conditions were unmet)**:
-  - Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->` or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body
-  - **If unchecked opportunistic or manual conditions remain**: assign `phase/verify` label and remove all other `phase/*` labels:
-    ```bash
-    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
-    ```
-  - **If no unchecked opportunistic or manual conditions remain**: remove all `phase/*` labels and assign `phase/done` (also handles cases where `phase/code` persists in patch route):
+  - Remove all `phase/*` labels and assign `phase/done` (also handles cases where `phase/code` persists in patch route). Opportunistic conditions are checked post-hoc by `modules/opportunistic-verify.md`; manual conditions are informational only and do not block completion:
     ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" done
     ```

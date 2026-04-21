@@ -69,3 +69,31 @@
 - **既存 60 件のバックフィルは対象外**: Issue の Non-Goals に明記済み
 - **bats テストが LLM 経路を直接検証できない制約**: `/verify` SKILL.md の判定ロジックは LLM 解釈のため bats で直接再現できない。代わりに (a) pre-merge の `rubric` verify command で SKILL.md への修正反映を意味レベルで検証、(b) bats 回帰テストで下位 script (`gh-label-transition.sh`) の `phase/verify` 除去が不変であることを保証
 - **参考先行例**: #39 (patch route の phase/done ラベル遷移), #132 (gh-label-transition: target ラベル消失バグ)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。実装ステップ 1〜4 をすべて Spec 通りに実施した。
+
+### Design Gaps/Ambiguities
+
+- Spec の Changed Files には `docs/workflow.md` の L168-169 「必要であれば明確化」と記載されていたが、実際に読んでみると phase/done の Assigned by 列「/verify (no post-merge conditions)」が旧挙動を示していたため、明確化ではなく修正（「/verify (on all auto-verify PASS/SKIPPED)」）が必要だった。
+
+### Rework
+
+- なし。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+特記なし。Spec の実装ステップ 1〜4 が PR diff と完全に対応しており、構造的な乖離は検出されなかった。
+
+### Recurring issues
+
+特記なし。4つの観点（Spec乖離・バグ/ロジック・steering document整合性・ドキュメント整合性）すべてで問題は検出されなかった。同種の問題の繰り返しはなし。
+
+### Acceptance criteria verification difficulty
+
+特記なし。`rubric` verify command は Spec 記載内容と diff を照合して問題なく判定できた。`github_check` は CI ステータス直接確認で明確に PASS。UNCERTAIN 判定はゼロ。verify command の精度は良好。

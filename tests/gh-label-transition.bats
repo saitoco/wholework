@@ -85,6 +85,13 @@ teardown() {
     grep -q "\-\-remove-label phase/issue" "$GH_CALL_LOG"
 }
 
+@test "regression (#289): transition to done removes phase/verify" {
+    run bash "$SCRIPT" 289 done
+    [ "$status" -eq 0 ]
+    grep -q "\-\-add-label phase/done" "$GH_CALL_LOG"
+    grep -q "\-\-remove-label phase/verify" "$GH_CALL_LOG"
+}
+
 @test "success: remove all phase labels without adding (no target-phase)" {
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
