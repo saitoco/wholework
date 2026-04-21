@@ -109,3 +109,18 @@ N/A
 ### Rework
 
 - なし
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- **VERIFY_ITERATION_COUNT インクリメント未記述**: Code Retrospective に「`/auto` 自身がカウントアップ責務を持つとして SKILL.md に記述した」と明記されていたが、実際には SKILL.md にインクリメントステップが存在しなかった。Spec の `Implementation Steps` に increment のタイミングを明示していなかったことが根因。今後の Spec では「カウント変更を行う操作」について変更前後の値と変更タイミングを具体的に記述する。
+
+### Recurring Issues
+
+- `cmd_update_batch` の jq 失敗時ガード漏れは、atomic write のパターン（write → mv）は実装されているが read-then-write パスのエラーハンドリングが漏れていた。Spec に「既存ファイルを入力とする書き込み操作は jq 失敗時のガードも明記する」旨を今後追加する。
+- `delete_batch` テストの欠落: Spec Step 4 で列挙した 5 件のテストケースが `delete_single` を含むが `delete_batch` を含んでいなかった。checkpoint の対称性から `write_batch` と `delete_batch` はペアでテストを定義する。
+
+### Acceptance Criteria Verification Difficulty
+
+- verify コマンドはすべて rubric / file_exists / github_check の3種類で構成されており、UNCERTAIN は発生しなかった。github_check による CI 結果確認が verify 条件に含まれていたため、CI 完了後のレビューでは迷わずに判定できた。
