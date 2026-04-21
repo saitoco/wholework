@@ -95,3 +95,29 @@
 - **「phase/verify 滞留」問題への本質対処は別 Issue**: #289 が解決しようとした manual 条件による滞留問題は本 Issue では戻さない。長期滞留監視や manual 条件の AC 設計見直し等は follow-up Issue で扱う
 - **既 `phase/done` 誤遷移 Issue の復旧は Non-Goal**: 既にセッションで手動復旧済み（17 件の `phase/verify` 戻し + 12 件の `phase/done` 正当化）。本 Issue のスコープ外
 - **Reference 先行例**: #289 (今回の回帰を導入した Issue), #39 (patch route の phase/done ラベル遷移), #132 (gh-label-transition の target ラベル消失バグ)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue の root cause（CLOSED/OPEN 経路不整合）が明確で、修正アプローチ（OPEN 経路ロジックの移植）は最小変更で最大効果。Auto-Resolved Ambiguity Points セクションで実装時の判断揺れを事前解消しており、spec 品質は高かった。
+
+#### design
+- CLOSED 経路を OPEN 経路と同型にする設計は明快で、実装と 1:1 に対応。docs/workflow.md / docs/ja/workflow.md の同期も scope に含まれており、ドキュメント整合性が保たれた。
+
+#### code
+- git log --oneline で fixup/amend パターンなし。単一コミット (90dd53b) でクリーンな実装。Spec の実装ステップを順序通りに実行し、設計逸脱なし。
+
+#### review
+- Code Retrospective, Review Retrospective ともに "なし"。rubric verify が SKILL.md 修正の意味的検証を担い、github_check が CI 状態を確認する 2 段構えが機能した。レビュー指摘の見落としなし。
+
+#### merge
+- 単一 PR #305、コンフリクト解消の痕跡なし。クリーンなマージ。
+
+#### verify
+- 全 Pre-merge 条件 PASS。Post-merge `<!-- verify-type: manual -->` 条件が未チェックのため `phase/verify` を維持（Issue CLOSED のまま）。
+- 今回の verify 実行自体が「CLOSED + 未チェック manual → phase/verify」シナリオを実例で示しており、修正の正しさを動的に確認できた。
+
+### Improvement Proposals
+- N/A
