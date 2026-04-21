@@ -236,7 +236,9 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/test-runner.md` and follow the "Processing S
 
 **Additional validation (run after tests):**
 
-After tests complete, run skill syntax validation locally:
+If `scripts/validate-skill-syntax.py` does not exist, skip this subsection entirely.
+
+If `scripts/validate-skill-syntax.py` exists, run skill syntax validation locally:
 
 ```bash
 python3 scripts/validate-skill-syntax.py skills/
