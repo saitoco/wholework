@@ -304,3 +304,18 @@ recover scope は最小限（label 同期 / skip to completed phase のみ）に
 ### Rework
 
 - **bats テスト 15 番のモック修正**: `code-pr completion: open PR exists` テストで gh モックの引数マッチが失敗。Shell が single quotes を剥ぐため `"$*" == *"-q length"*` に修正が必要だった（1 回の修正で解決）。
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- **SSoT の precondition 実装ギャップ**: `modules/phase-state.md` の Phase Table が定義する precondition（code: Spec exists、review: CI green/pending、merge: CI green/no conflict）のうち、実装しているのは一部のみ（code: `phase/ready` label のみ、review: PR OPEN のみ、merge: PR OPEN + APPROVED のみ）。SSoT とスクリプトの双方向参照が保証されていないため、Phase Table を更新しても実装には反映されない構造。今後の Issue では SSoT テーブルと実装のギャップを acceptance criteria として明示し、verify command で検証することが推奨される。
+- **docs/structure.md ファイルカウント更新漏れ**: 新規モジュール追加時にファイルカウントコメントの更新が漏れた（27→28 未更新）。module 追加 PR では `docs/structure.md` の `(N files)` コメントの更新を acceptance criteria に含めるか、verify command として自動検出するパターンの追加が推奨される。
+
+### Recurring Issues
+
+- **Spec と実装の precondition 定義の非対称性**: Spec は設計意図（goal state）を記述し、実装は初期スコープのみを実装するパターンが本 Issue でも繰り返されている。`--warn-only` 段階導入の意図は Risk Notes に記載されているが、precondition テーブル自体は完全形で記述されており実装との差分が追跡しにくい。今後は Spec テーブルに「実装状況」列を追加するか、未実装行に `(future)` マークを付与することで追跡性を改善できる。
+
+### Acceptance Criteria Verification Difficulty
+
+- **rubric verify command の限界**: `_precondition_code_common()` が Spec exists チェックを実装しているかは rubric 条件で検証されているが、「実装通り」か「完全仕様通り」かの違いを自動判定するのは困難。SSoT テーブルの全 precondition が実装されているかのカバレッジ検証には bats テストでの網羅的な parametrize テストが有効（例: 各 phase の precondition 条件ごとのテストケース）。
