@@ -493,11 +493,15 @@ Group all collected documents (`type: steering` and `type: project`) by same dir
 
 **Scan implementation code:**
 
+If `scripts/validate-skill-syntax.py` exists or `skills/` directory exists (skill-dev project):
+
 Also load the following files with Glob:
 - `skills/*/SKILL.md`
 - `modules/*.md`
 - `agents/*.md`
 - `scripts/*.sh`
+
+If neither condition is met, skip this block entirely.
 
 **Cross-skill consistency check:**
 
@@ -515,7 +519,7 @@ For each Steering Document loaded above, use AI judgment to identify sections th
 
 - The narrative section text from each Steering Document
 - Codebase analysis results retained in this step (entry points, dependency graph, directory roles, etc.)
-- Implementation files loaded in "Scan implementation code" above (`skills/*/SKILL.md`, `modules/*.md`, `agents/*.md`, `scripts/*.sh`)
+- Implementation files loaded in "Scan implementation code" above (`skills/*/SKILL.md`, `modules/*.md`, `agents/*.md`, `scripts/*.sh`) — available only when skill-dev project condition is met
 
 **Detect drift in 4 categories (missing coverage, partial description, obsolete mention, skill coverage gap):**
 
@@ -524,7 +528,7 @@ For each Steering Document loaded above, use AI judgment to identify sections th
 | Missing coverage | An important pattern present in the implementation has no mention at all in the Steering Document | A newly introduced agent is not mentioned in Architecture Decisions |
 | Partial description | An existing description mentions only specific cases, leaving other instances of the same pattern undocumented | "Sub-agent splitting: `/review` splits…" with no mention of `/issue`'s parallel investigation sub-agents |
 | Obsolete mention | A description refers to an element that no longer exists in the implementation | A reference to a deleted agent or removed flag |
-| Skill Coverage Gap | A skill exists in `skills/*/SKILL.md` but has no independent top-level section heading in the Steering Document | `/triage` exists in `skills/` but is mentioned only within a subsection, without an independent heading |
+| Skill Coverage Gap | A skill exists in `skills/*/SKILL.md` but has no independent top-level section heading in the Steering Document — **skill-dev projects only** (skipped when skill-dev condition is not met) | `/triage` exists in `skills/` but is mentioned only within a subsection, without an independent heading |
 
 **Output findings as drift report:**
 
@@ -532,7 +536,7 @@ Do not auto-fix any detected narrative drift. Accumulate all findings as drift r
 
 **Terms consistency check:**
 
-This check runs only when the `--deep` flag is enabled.
+This check runs only when the `--deep` flag is enabled and `scripts/validate-skill-syntax.py` exists or `skills/` directory exists (skill-dev project). If the skill-dev condition is not met, skip this entire block.
 
 **Step 1 — Deprecated term detection:**
 
