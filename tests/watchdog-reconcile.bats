@@ -235,7 +235,7 @@ MOCK_EOF
 @test "code-pr: open PR exists -> exit 0" {
     cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
 #!/bin/bash
-# gh pr list --head "issue-N-*" --state open --json number -q 'length'
+# gh pr list --head "worktree-code+issue-N" --state open --json number -q 'length'
 echo "1"
 exit 0
 MOCK_EOF
