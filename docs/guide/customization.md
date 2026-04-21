@@ -43,6 +43,9 @@ production-url: https://yourapp.example.com
 # Increase for slow repos, Size L+ tasks, or slow machines
 watchdog-timeout-seconds: 3600
 
+# Patch lock timeout for parallel XL sub-issue execution (default: 3600 seconds)
+patch-lock-timeout: 3600
+
 # Permission mode for /auto subprocess (default: bypass)
 # "auto" uses --permission-mode auto with allow rules template (see docs/guide/auto-mode-template.json)
 # "bypass" uses --dangerously-skip-permissions (backward compatible)
@@ -79,6 +82,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `capabilities.mcp` | list | `[]` | MCP tool names available to skills |
 | `capabilities.{name}` | boolean | `false` | Dynamic capability mapping (e.g., `capabilities.invoice-api: true`) |
 | `watchdog-timeout-seconds` | integer | `1800` | Watchdog timeout in seconds before killing a silent `claude -p` process. Increase for slow repos, Size L+ tasks, or slow machines (e.g., `3600`). Values ≤0 fall back to the default. |
+| `patch-lock-timeout` | integer | `3600` | Patch lock acquisition timeout in seconds. Increase when XL parallel sub-issues time out waiting for the lock. Values ≤0 or non-numeric fall back to `3600`. |
 | `permission-mode` | string | `"bypass"` | Permission mode for `/auto` subprocess. `auto` enables `--permission-mode auto` with allow rules template (see `docs/guide/auto-mode-template.json`); `bypass` uses `--dangerously-skip-permissions`. |
 | `verify-max-iterations` | integer | `3` | Limit verify-reopen loop iterations; stops at N failures and leaves Issue in `phase/verify` for human judgment. Values ≤0, >20, or non-numeric fall back to `3`. |
 

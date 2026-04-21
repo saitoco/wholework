@@ -37,6 +37,9 @@ production-url: https://yourapp.example.com
 # 遅い repo、Size L 以上のタスク、または低速マシンでは増やすことを推奨
 watchdog-timeout-seconds: 3600
 
+# XL 並列 sub-issue 実行時の patch lock タイムアウト（デフォルト: 3600 秒）
+patch-lock-timeout: 3600
+
 # /auto サブプロセスの permission mode（デフォルト: bypass）
 # "auto" は --permission-mode auto を allow rules テンプレートと共に使用（docs/guide/auto-mode-template.json 参照）
 # "bypass" は --dangerously-skip-permissions を使用（後方互換）
@@ -73,6 +76,7 @@ capabilities:
 | `capabilities.mcp` | list | `[]` | スキルから利用できる MCP ツール名 |
 | `capabilities.{name}` | boolean | `false` | 動的 capability マッピング（例: `capabilities.invoice-api: true`） |
 | `watchdog-timeout-seconds` | integer | `1800` | watchdog が silent な `claude -p` プロセスを kill するまでのタイムアウト秒数。遅い repo、Size L 以上のタスク、低速マシンでは増やす（例: `3600`）。0 以下の値はデフォルトにフォールバック。 |
+| `patch-lock-timeout` | integer | `3600` | patch lock 取得タイムアウト秒数。XL 並列 sub-issue がロック待ちでタイムアウトする場合に増やす。0 以下または非数値の場合は `3600` にフォールバック。 |
 | `permission-mode` | string | `"bypass"` | `/auto` サブプロセスの permission mode。`auto` は `--permission-mode auto` を allow rules テンプレートと共に有効化（`docs/guide/auto-mode-template.json` 参照）; `bypass` は `--dangerously-skip-permissions` を使用。 |
 | `verify-max-iterations` | integer | `3` | verify-reopen ループの最大試行回数。N 回 FAIL した時点で停止し、Issue を `phase/verify` に留めて人間の判断を促す。0 以下、20 超、または非数値の場合は `3` にフォールバック。 |
 
