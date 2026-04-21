@@ -61,3 +61,17 @@
 - 旧命名 `worktree-issue-${N}-<short-description>` や `worktree-patch+issue-${N}` 等の旧形式への対応は追加しない（#310 の SSoT で廃止済み）
 - `tests/run-auto-sub.bats` setup() の default mock 変更は、tests 165 (Size M), 174 (Size L), 231 (--base flag) が PR 番号抽出を正しく完了するために必要
 - tests 253, 280 は `--patch` / no-route で guard が発動しないため mock 更新はテスト通過に不要だが、一貫性のため更新する
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `tests/run-auto-sub.bats` test 11 "phase/ready absent: run-spec.sh is called" も `echo "99"` を返す gh mock を持っており、JSON 形式への更新が必要だった。Spec では setup() default mock と `#311 regression` test のみ言及していたが、test 11 の独立 mock も同様に更新した。
+
+### Design Gaps/Ambiguities
+
+- Spec の「テスト強化」箇所に `tests/run-auto-sub.bats:238` と setup() のみ記載されていたが、同ファイル内のオーバーライド mock を持つ test 11 も影響を受けることが実装時に判明した。Spec に test 11 の mock 更新を追記しておくべきだった。
+
+### Rework
+
+- test 11 の mock 修正: 最初のテスト実行で test 11 が FAIL となり、1 回の修正（mock を JSON 形式に変更）で解決。
