@@ -1,7 +1,7 @@
 ---
 name: auto
-description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues; `--batch N1 N2 ...` processes the explicitly listed Issues in order.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*), Read, Grep, Write, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
+description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues; `--batch N1 N2 ...` processes the explicitly listed Issues in order. `--resume N` resumes a single Issue (restores verify counter from checkpoint); `--batch --resume` resumes an interrupted batch from `.tmp/auto-batch-state.json`.
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*), Read, Grep, Write, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Autonomous Execution
@@ -27,10 +27,18 @@ If ARGUMENTS contains `--help`, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.m
 
 Extract the Issue number from ARGUMENTS. Examples: `ARGUMENTS = "279"` → `NUMBER = 279`; `ARGUMENTS = "279 --patch"` → `NUMBER = 279, ROUTE_FLAG = --patch`
 
-If `--batch` flag is present: collect all consecutive numeric tokens following `--batch`, stopping at any non-numeric token or ARGUMENTS end.
+**`--resume` detection (single-Issue resume):**
 
-- If exactly 1 numeric token collected (e.g., `ARGUMENTS = "--batch 5"`): record `BATCH_SIZE = 5` (Count mode) and branch to `### Count mode (--batch N)` in the "Batch Mode (--batch)" section (**skip Steps 2–6**)
-- If 2 or more numeric tokens collected (e.g., `ARGUMENTS = "--batch 123 124 125"`): record `BATCH_LIST = [123, 124, 125]` (List mode) and branch to `### List mode (--batch N1 N2 ...)` in the "Batch Mode (--batch)" section (**skip Steps 2–6**)
+If ARGUMENTS contains `--resume` but NOT `--batch`: record `RESUME_MODE=true` and extract the numeric token following `--resume` as `NUMBER`. Output a log line: "Resume mode: restoring checkpoint for issue #$NUMBER". Proceed to Step 2 as normal (checkpoint restoration happens in Step 4 before the verify loop).
+
+**`--batch` detection:**
+
+If `--batch` flag is present:
+
+- If `--resume` is present AND no numeric tokens follow `--batch` (i.e., `ARGUMENTS = "--batch --resume"` or similar with no numbers after `--batch`): record `RESUME_BATCH=true` and branch to `### Resume mode (--batch --resume)` in the "Batch Mode (--batch)" section (**skip Steps 2–6**)
+- Else: collect all consecutive numeric tokens following `--batch`, stopping at any non-numeric token or ARGUMENTS end.
+  - If exactly 1 numeric token collected (e.g., `ARGUMENTS = "--batch 5"`): record `BATCH_SIZE = 5` (Count mode) and branch to `### Count mode (--batch N)` in the "Batch Mode (--batch)" section (**skip Steps 2–6**)
+  - If 2 or more numeric tokens collected (e.g., `ARGUMENTS = "--batch 123 124 125"`): record `BATCH_LIST = [123, 124, 125]` (List mode) and branch to `### List mode (--batch N1 N2 ...)` in the "Batch Mode (--batch)" section (**skip Steps 2–6**)
 
 No Issue number needed for batch mode.
 
@@ -89,6 +97,13 @@ Run each phase via `run-*.sh`. Each script launches an independent process with 
 **Execution pattern:**
 - Each `run-*.sh` runs as a blocking call (`timeout: 600000`) in sequence
 - PR number extraction is run by the parent session with `gh pr list` (included in `allowed-tools`)
+
+**VERIFY_ITERATION_COUNT initialization (single-Issue routes only — skip for batch modes):**
+
+Before running any phase, initialize `VERIFY_ITERATION_COUNT`:
+- If `RESUME_MODE=true`: call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh read_single $NUMBER` and set `VERIFY_ITERATION_COUNT` to the returned value. Output: "Restored verify_iteration_count=$VERIFY_ITERATION_COUNT from checkpoint."
+  - After restoring, also perform a label conflict check: fetch live labels with `gh issue view $NUMBER --json labels -q '.labels[].name'`. If the issue is already at `phase/done` (label `phase/done` present), the checkpoint is stale — call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`, set `VERIFY_ITERATION_COUNT=0`, and output: "Checkpoint discarded: live labels show phase/done."
+- If `RESUME_MODE` is not set (normal mode): set `VERIFY_ITERATION_COUNT=0`
 
 ---
 
@@ -149,9 +164,12 @@ Each phase follows the Observe → Diagnose → Act pattern (same as pr route; s
 3. If code fails: completion check `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-patch $NUMBER --check-completion` — if `matches_expected: true`, override to success; otherwise go to Step 6
 4. **XS only**: transcribe issue retrospective to Spec (see Step 4b)
 5. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh verify $NUMBER --check-precondition --warn-only`
-6. verify phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh $NUMBER [--base ${BASE_BRANCH}]` via Bash (timeout: 600000)
-7. Based on verify result, proceed to Step 5 or Step 6
-   - If verify output contains `MAX_ITERATIONS_REACHED`: max iterations has been reached; stop chained execution and proceed to Step 5 (human judgment required — do not re-run verify automatically)
+6. Increment counter: `VERIFY_ITERATION_COUNT=$((VERIFY_ITERATION_COUNT + 1))`
+7. Save checkpoint: `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh write_single $NUMBER $VERIFY_ITERATION_COUNT`
+8. verify phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh $NUMBER [--base ${BASE_BRANCH}]` via Bash (timeout: 600000)
+9. Based on verify result, proceed to Step 5 or Step 6
+   - If verify output contains `MAX_ITERATIONS_REACHED`: max iterations has been reached; delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`); stop chained execution and proceed to Step 5 (human judgment required — do not re-run verify automatically)
+   - On verify success: delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`) and proceed to Step 5
 
 **pr route (4 phases):**
 
@@ -183,9 +201,12 @@ Full phase sequence:
 10. Output `[3/4] merge`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh $PR_NUMBER` via Bash (timeout: 600000); on success output `[3/4] merge → done`
 11. If merge fails: completion check `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh merge $NUMBER --pr $PR_NUMBER --check-completion` — if `matches_expected: true`, override to success; otherwise go to Step 6
 12. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh verify $NUMBER --check-precondition --warn-only`
-13. Output `[4/4] verify`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh $NUMBER [--base ${BASE_BRANCH}]` via Bash (timeout: 600000); on success output `[4/4] verify → done`
-14. Based on verify result, proceed to Step 5 or Step 6
-    - If verify output contains `MAX_ITERATIONS_REACHED`: max iterations has been reached; stop chained execution and proceed to Step 5 (human judgment required — do not re-run verify automatically)
+13. Increment counter: `VERIFY_ITERATION_COUNT=$((VERIFY_ITERATION_COUNT + 1))`
+14. Save checkpoint: `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh write_single $NUMBER $VERIFY_ITERATION_COUNT`
+15. Output `[4/4] verify`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh $NUMBER [--base ${BASE_BRANCH}]` via Bash (timeout: 600000); on success output `[4/4] verify → done`
+16. Based on verify result, proceed to Step 5 or Step 6
+    - If verify output contains `MAX_ITERATIONS_REACHED`: max iterations has been reached; delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`); stop chained execution and proceed to Step 5 (human judgment required — do not re-run verify automatically)
+    - On verify success: delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`) and proceed to Step 5
 
 ### Step 4b: Issue Retrospective Transcription (XS patch route only)
 
@@ -483,14 +504,38 @@ Process the selected N Issues **sequentially** (serially):
 
 許容 Size: XS/S/M/L。ユーザが明示指定した以上、その意思は heuristic より強いシグナルのため Size 制限を緩和する。XL のみ例外で、警告を出して当該 Issue を skip し、残りの Issue は継続処理する（XL はサブ Issue 依存グラフによる並列実行経路を持ち、batch の直列処理と噛み合わないため）。
 
+**Batch checkpoint initialization (List mode only):**
+
+At the start of List mode, write the full batch state:
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh write_batch "N1 N2 N3" "" ""
+```
+(first arg: space-separated full list in double quotes — quoting is required when the list contains spaces; second and third args: empty strings for completed and failed)
+
 Process each Issue in `BATCH_LIST` in order:
 
 1. Check Issue labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
 2. **If no `phase/*` labels**: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh $NUMBER` (issue triage → Size setting → `phase/ready` assignment)
-   - On failure: output a warning and skip to the next Issue (do not abort the entire batch)
-3. Re-check Size: call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`; if Size is XL: output a warning and skip to the next Issue (do not abort the entire batch)
+   - On failure: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
+3. Re-check Size: call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`; if Size is XL: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
 4. Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh $NUMBER` (all phases spec→code→review→merge→verify, auto-starting from the current `phase/*` state)
-   - On failure: output a warning and skip to the next Issue (do not abort the entire batch)
+   - On success: call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER complete`
+   - On failure: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
+
+After all Issues are processed, delete the batch checkpoint:
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_batch
+```
+
+### Resume mode (--batch --resume)
+
+Entered from Step 1 when `--batch --resume` is detected with no numeric tokens after `--batch`.
+
+1. Call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh read_batch` and capture the output as `REMAINING`.
+2. If `REMAINING` is empty: output "No resume target found. Run `/auto --batch N1 N2 ...` to start a new batch." and exit.
+3. Output a log line: "Resuming batch: remaining issues = $REMAINING"
+4. Treat `REMAINING` as `BATCH_LIST` and process each Issue following the same steps as `### List mode (--batch N1 N2 ...)`.
+   - Note: do NOT call `write_batch` again at the start (the existing `.tmp/auto-batch-state.json` is the live state); only call `update_batch` and `delete_batch` as per List mode.
 
 ### Batch Completion Report
 
@@ -507,3 +552,69 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 - Detailed logic for each phase (review comment handling, conflict resolution, etc.) is delegated to each skill
 - `auto` itself does not post Issue comments (posted individually within each phase)
 - Skills are installed via the plugin marketplace and referenced through `${CLAUDE_PLUGIN_ROOT}` at runtime
+
+## Checkpoint Design
+
+### reconciler-first / checkpoint-as-hint
+
+`/auto --resume N` resumes a single Issue after interruption. The authority for the current phase is **GitHub labels + `reconcile-phase-state.sh`** — the checkpoint is a hint only.
+
+| Information | Authority source (SSoT) | Checkpoint role |
+|-------------|------------------------|-----------------|
+| Current phase | GitHub labels (`phase/*`) + `reconcile-phase-state.sh` | Not consulted (labels take priority) |
+| PR number | `gh pr list` (live query) | Not stored |
+| Route (patch/pr/XL) | Derived from Size | Not stored |
+| **verify iteration_count** | None (in-run variable only) | **Persisted** (cross-run limit management) |
+| **Batch remaining list** | None | **Persisted** (incomplete Issue list) |
+
+When checkpoint and labels conflict, labels win and the checkpoint is discarded (stale).
+
+### Checkpoint file schemas (JSON v1)
+
+```json
+// .tmp/auto-state-NUMBER.json  (single Issue)
+{
+  "schema_version": "v1",
+  "issue_number": 317,
+  "verify_iteration_count": 2,
+  "last_update": "2026-04-22T16:10:05Z"
+}
+```
+
+```json
+// .tmp/auto-batch-state.json  (batch)
+{
+  "schema_version": "v1",
+  "mode": "list",
+  "remaining": [104, 105],
+  "completed": [101, 102],
+  "failed": [103],
+  "last_update": "2026-04-22T16:10:05Z"
+}
+```
+
+Writes are **atomic**: write to `*.json.tmp` then `mv` to the target path to prevent corrupt reads on interruption.
+
+### Stale checkpoint detection
+
+A checkpoint is considered stale and must be discarded when either of the following holds:
+
+1. **issue_number mismatch**: the `issue_number` field in `.tmp/auto-state-NUMBER.json` does not match `NUMBER` (handled by `auto-checkpoint.sh read_single` — returns 0 and exits 0)
+2. **Label conflict**: live GitHub labels show `phase/done` for the issue while a checkpoint exists (handled by `/auto` Step 4 initialization — calls `delete_single` and resets count to 0)
+
+In both cases, the label + reconciler state is the authority and the checkpoint is dropped.
+
+### Checkpoint cleanup triggers
+
+| Event | Cleanup action |
+|-------|---------------|
+| Verify loop succeeds | `delete_single $NUMBER` |
+| `MAX_ITERATIONS_REACHED` | `delete_single $NUMBER` |
+| Issue CLOSED / `phase/done` detected at resume | `delete_single $NUMBER` (stale label conflict path) |
+| Batch fully processed | `delete_batch` |
+
+`.tmp/` files are gitignored and are not committed.
+
+### Scope
+
+XL route checkpoint (sub-issue dependency graph + parallel worktree state) is out of scope for this implementation. XL sub-issues can each be individually resumed with `/auto --resume N` on their sub-issue numbers.

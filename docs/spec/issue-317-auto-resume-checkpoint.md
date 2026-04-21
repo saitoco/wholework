@@ -91,3 +91,36 @@ XL route (sub-issue 並列実行) は本 Issue のスコープ外。
 **スコープ外**: XL route 向け checkpoint 拡張 (sub-issue 依存グラフ + worktree 並列状態) は follow-up Issue で対応。
 
 **`--batch --resume` と Count mode**: `--batch N` (Count mode) では `.tmp/auto-batch-state.json` は生成しない。`--batch --resume` 実行時にファイルが存在しない場合は "No resume target found" で即終了。
+
+## Spec Retrospective
+
+N/A
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec では `docs/structure.md` のスクリプトカウント更新は明示されていなかったが、実装中に 41→42 (scripts) および 46→50 (tests) のカウント不整合を発見し追加修正した。docs/ja/structure.md も同様に更新。これはdoc-checkerが検出した追加修正で、Spec の範囲外の副次的な修正。
+
+### Design Gaps/Ambiguities
+
+- Spec の `## Implementation Steps` Step 2 に `VERIFY_ITERATION_COUNT` のカウントアップ（+1）について明示がなかった。verify run 後にカウントを更新するロジックが SKILL.md に必要だが、Spec では書き込みタイミング（`write_single $NUMBER $VERIFY_ITERATION_COUNT`）のみ指定されており、カウントアップ自体が誰の責務かが曖昧。今回は `/auto` 自身がカウントアップ責務を持つとして SKILL.md に記述した。
+
+### Rework
+
+- なし
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- **VERIFY_ITERATION_COUNT インクリメント未記述**: Code Retrospective に「`/auto` 自身がカウントアップ責務を持つとして SKILL.md に記述した」と明記されていたが、実際には SKILL.md にインクリメントステップが存在しなかった。Spec の `Implementation Steps` に increment のタイミングを明示していなかったことが根因。今後の Spec では「カウント変更を行う操作」について変更前後の値と変更タイミングを具体的に記述する。
+
+### Recurring Issues
+
+- `cmd_update_batch` の jq 失敗時ガード漏れは、atomic write のパターン（write → mv）は実装されているが read-then-write パスのエラーハンドリングが漏れていた。Spec に「既存ファイルを入力とする書き込み操作は jq 失敗時のガードも明記する」旨を今後追加する。
+- `delete_batch` テストの欠落: Spec Step 4 で列挙した 5 件のテストケースが `delete_single` を含むが `delete_batch` を含んでいなかった。checkpoint の対称性から `write_batch` と `delete_batch` はペアでテストを定義する。
+
+### Acceptance Criteria Verification Difficulty
+
+- verify コマンドはすべて rubric / file_exists / github_check の3種類で構成されており、UNCERTAIN は発生しなかった。github_check による CI 結果確認が verify 条件に含まれていたため、CI 完了後のレビューでは迷わずに判定できた。

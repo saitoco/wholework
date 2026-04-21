@@ -108,6 +108,10 @@ If `phase/ready` is absent, `/auto` auto-runs `/spec` first. If no `phase/*` lab
 
 **`--batch N`**: Bulk-processes N XS/S Issues from the backlog in newest-first order. **`--batch N1 N2 ...`**: Processes the explicitly listed Issues in the specified order (all Sizes except XL accepted).
 
+**`--resume N`**: Resumes a single interrupted Issue. The authority for the current phase is GitHub labels + `reconcile-phase-state.sh` (reconciler-first). The checkpoint file (`.tmp/auto-state-N.json`) carries only the verify iteration counter; phase state is re-read from live labels, so the correct step is automatically detected. Main use case: restoring the verify counter after an interruption in the verify loop.
+
+**`--batch --resume`**: Resumes an interrupted batch run. Reads `.tmp/auto-batch-state.json` (written automatically when `--batch N1 N2 ...` starts) to restore the remaining Issue list. If the file is absent or `remaining` is empty, exits with "No resume target found". Issues are processed in the same order as the original batch.
+
 **Release branch workflow (`--base` option)**: Use `--base` to consolidate multiple Issue changes on a release branch (e.g., `release/v2.0`) before merging to main.
 
 ```
