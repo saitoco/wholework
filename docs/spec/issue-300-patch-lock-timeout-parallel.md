@@ -79,3 +79,14 @@
 - `existing_sub` はロックディレクトリの `sub-issue` ファイルから読む。旧バージョンの `run-auto-sub.sh` が lock を保持している場合は `unknown` が表示される
 - `docs/ja/guide/customization.md` は top-level `docs/*.md` ではないが、`English | [日本語]` リンクが存在するため翻訳同期を含める
 - `docs/tech.md` の Architecture Decisions を確認済み。`patch-lock-timeout` は bash スクリプト内ロジックで使用するものであり、`claude -p` への CLI フラグ渡しには該当しないため更新不要
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A（設計通りに実装）
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
