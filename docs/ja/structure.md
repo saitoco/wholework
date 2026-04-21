@@ -16,7 +16,7 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # スキル定義（必須）
 │       └── *.md         # 補助的な phase/ガイドラインファイル（任意）
-├── modules/             # スキルから参照される共有モジュール（27 ファイル）
+├── modules/             # スキルから参照される共有モジュール（28 ファイル）
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（6 ファイル）
 │   └── <agent-name>.md
