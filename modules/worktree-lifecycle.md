@@ -31,7 +31,10 @@ The calling skill enters the worktree with the following steps:
 
 The calling skill exits the worktree with the following steps after completing commits:
 
-**When `ENTERED_WORKTREE=false`**: Skip this section and run normal `git push origin main` (or `git push origin $BASE_BRANCH`).
+**When `ENTERED_WORKTREE=false`**: Skip this section and run the merge-push script without `--from` (lock+push only):
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh [--base "$BASE_BRANCH"]
+```
 
 **When `ENTERED_WORKTREE=true`**:
 
@@ -39,29 +42,15 @@ The calling skill exits the worktree with the following steps after completing c
 
 2. Retain `WORKTREE_BRANCH` with the branch name worked on in the worktree (confirmable after calling EnterWorktree)
 
-3. Merge the worktree branch into main (or `BASE_BRANCH`):
-   ```bash
-   git merge $WORKTREE_BRANCH --ff-only
-   ```
-   - If FF merge fails: Run `git pull --rebase origin main` (or `git pull --rebase origin $BASE_BRANCH`) then retry
+3. Run the new script which acquires a short-lived lock, merges the worktree branch into the base branch, performs the conflict marker check, and pushes — all as a single atomic unit:
 
-4. **Conflict marker residue check**: After merging, confirm no conflict markers remain:
    ```bash
-   grep -rn '<<<<<<' .
+   ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh --from "$WORKTREE_BRANCH" [--base "$BASE_BRANCH"]
    ```
-   - If markers detected: Output the following error message, skip push, and abort (do not cleanup either — retain branch so user can resolve conflicts manually):
-     ```
-     Error: Conflict markers remain. Please resolve conflicts manually then push.
-     ```
-   - If no markers detected: Proceed to next step (push)
 
-5. Push to remote:
-   ```bash
-   git push origin main
-   ```
-   (If BASE_BRANCH is not main: `git push origin $BASE_BRANCH`)
+   The script handles: lock acquisition (PID stamping, stale detection, configurable timeout via `patch-lock-timeout` in `.wholework.yml`, default 300s), `git merge --ff-only` (with `git pull --rebase` retry on FF failure), conflict marker check, `git push origin <base>`, and lock release via EXIT trap. On script failure (non-zero exit), abort and skip cleanup.
 
-6. **Cleanup** (output warning and continue if any command fails):
+4. **Cleanup** (output warning and continue if any command fails):
    ```bash
    git worktree remove ".claude/worktrees/$WORKTREE_NAME" 2>/dev/null || echo "Warning: Failed to remove worktree directory. Please remove manually: .claude/worktrees/$WORKTREE_NAME"
    git branch -d "$WORKTREE_BRANCH" 2>/dev/null || echo "Warning: Failed to delete branch. Please delete manually: $WORKTREE_BRANCH"

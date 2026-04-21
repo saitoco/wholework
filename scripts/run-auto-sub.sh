@@ -37,52 +37,6 @@ fi
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 
-# Process lock (prevents main branch conflicts on patch route)
-REPO_ROOT="$(git -C "${SCRIPT_DIR}/.." rev-parse --show-toplevel 2>/dev/null || (cd "${SCRIPT_DIR}/.." && pwd))"
-PATCH_LOCK_DIR="${REPO_ROOT}/.tmp/claude-auto-patch-lock"
-
-acquire_patch_lock() {
-  local yml_timeout
-  yml_timeout=$("$SCRIPT_DIR/get-config-value.sh" patch-lock-timeout "" 2>/dev/null || true)
-  { echo "$yml_timeout" | grep -qE '^[0-9]+$' && [[ "$yml_timeout" -gt 0 ]]; } || yml_timeout=""
-  local timeout="${WHOLEWORK_PATCH_LOCK_TIMEOUT:-${yml_timeout:-3600}}"
-  local log_interval="${WHOLEWORK_PATCH_LOCK_LOG_INTERVAL:-30}"
-  local elapsed=0
-  local last_log=0
-  local existing_pid=""
-  local existing_sub=""
-  echo "Patch route commits directly to main, running sequentially (waiting for lock...)"
-  mkdir -p "$(dirname "$PATCH_LOCK_DIR")"
-  while ! mkdir "$PATCH_LOCK_DIR" 2>/dev/null; do
-    existing_pid=$(cat "$PATCH_LOCK_DIR/pid" 2>/dev/null || true)
-    existing_sub=$(cat "$PATCH_LOCK_DIR/sub-issue" 2>/dev/null || true)
-    if [[ -n "$existing_pid" ]] && ! kill -0 "$existing_pid" 2>/dev/null; then
-      echo "Stale lock detected (pid=$existing_pid is not running), reclaiming..." >&2
-      rm -rf "$PATCH_LOCK_DIR"
-      continue
-    fi
-    if [[ $elapsed -ge $timeout ]]; then
-      echo "Error: Patch lock acquisition timeout (${timeout}s)" >&2
-      exit 1
-    fi
-    if [[ $((elapsed - last_log)) -ge $log_interval ]]; then
-      echo "waiting for lock held by pid=${existing_pid:-unknown} sub-issue=#${existing_sub:-unknown} (age=${elapsed}s, my sub-issue=#${SUB_NUMBER})" >&2
-      last_log=$elapsed
-    fi
-    sleep 2
-    elapsed=$((elapsed + 2))
-  done
-  echo "$$" > "${PATCH_LOCK_DIR}/pid"
-  echo "${SUB_NUMBER}" > "${PATCH_LOCK_DIR}/sub-issue"
-  # Set EXIT trap after acquiring lock (prevents releasing another process's lock on early exit)
-  trap 'release_patch_lock' EXIT
-  echo "Patch lock acquired: ${PATCH_LOCK_DIR}"
-}
-
-release_patch_lock() {
-  rm -rf "$PATCH_LOCK_DIR" 2>/dev/null || true
-}
-
 run_verify_with_retry() {
   local issue_num="$1"
   local base_branch="${2:-}"
@@ -149,20 +103,14 @@ echo "Size: ${SIZE}"
 case "$SIZE" in
   XS)
     echo "--- code phase (patch): issue #${SUB_NUMBER} ---"
-    # Patch route commits directly to main, run sequentially (trap set inside acquire_patch_lock)
-    acquire_patch_lock
     "$SCRIPT_DIR/run-code.sh" "$SUB_NUMBER" --patch ${BASE_FLAG:-}
-    release_patch_lock
 
     echo "--- verify phase: issue #${SUB_NUMBER} ---"
     run_verify_with_retry "$SUB_NUMBER" "${BASE_BRANCH:-}"
     ;;
   S)
     echo "--- code phase (patch): issue #${SUB_NUMBER} ---"
-    # Patch route commits directly to main, run sequentially (trap set inside acquire_patch_lock)
-    acquire_patch_lock
     "$SCRIPT_DIR/run-code.sh" "$SUB_NUMBER" --patch ${BASE_FLAG:-}
-    release_patch_lock
 
     echo "--- verify phase: issue #${SUB_NUMBER} ---"
     run_verify_with_retry "$SUB_NUMBER" "${BASE_BRANCH:-}"
