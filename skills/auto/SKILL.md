@@ -391,7 +391,7 @@ URL
 ```
 Followed by a result table (one row per phase with status).
 
-**For XL routes, also output "Auto retrospective recorded in Spec".**
+**If an Auto Retrospective was recorded in the Spec (XL routes: always; M/L/patch routes: when orchestration anomalies were detected), also output "Auto retrospective recorded in Spec".**
 
 Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
 - `SKILL_NAME=auto`
