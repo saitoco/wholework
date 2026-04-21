@@ -42,15 +42,20 @@ REPO_ROOT="$(git -C "${SCRIPT_DIR}/.." rev-parse --show-toplevel 2>/dev/null || 
 PATCH_LOCK_DIR="${REPO_ROOT}/.tmp/claude-auto-patch-lock"
 
 acquire_patch_lock() {
-  local timeout="${WHOLEWORK_PATCH_LOCK_TIMEOUT:-300}"
-  local log_interval="${WHOLEWORK_PATCH_LOCK_LOG_INTERVAL:-60}"
+  local yml_timeout
+  yml_timeout=$("$SCRIPT_DIR/get-config-value.sh" patch-lock-timeout "" 2>/dev/null || true)
+  { echo "$yml_timeout" | grep -qE '^[0-9]+$' && [[ "$yml_timeout" -gt 0 ]]; } || yml_timeout=""
+  local timeout="${WHOLEWORK_PATCH_LOCK_TIMEOUT:-${yml_timeout:-3600}}"
+  local log_interval="${WHOLEWORK_PATCH_LOCK_LOG_INTERVAL:-30}"
   local elapsed=0
   local last_log=0
   local existing_pid=""
+  local existing_sub=""
   echo "Patch route commits directly to main, running sequentially (waiting for lock...)"
   mkdir -p "$(dirname "$PATCH_LOCK_DIR")"
   while ! mkdir "$PATCH_LOCK_DIR" 2>/dev/null; do
     existing_pid=$(cat "$PATCH_LOCK_DIR/pid" 2>/dev/null || true)
+    existing_sub=$(cat "$PATCH_LOCK_DIR/sub-issue" 2>/dev/null || true)
     if [[ -n "$existing_pid" ]] && ! kill -0 "$existing_pid" 2>/dev/null; then
       echo "Stale lock detected (pid=$existing_pid is not running), reclaiming..." >&2
       rm -rf "$PATCH_LOCK_DIR"
@@ -61,13 +66,14 @@ acquire_patch_lock() {
       exit 1
     fi
     if [[ $((elapsed - last_log)) -ge $log_interval ]]; then
-      echo "waiting for lock held by pid=${existing_pid:-unknown} (age=${elapsed}s)" >&2
+      echo "waiting for lock held by pid=${existing_pid:-unknown} sub-issue=#${existing_sub:-unknown} (age=${elapsed}s, my sub-issue=#${SUB_NUMBER})" >&2
       last_log=$elapsed
     fi
     sleep 2
     elapsed=$((elapsed + 2))
   done
   echo "$$" > "${PATCH_LOCK_DIR}/pid"
+  echo "${SUB_NUMBER}" > "${PATCH_LOCK_DIR}/sub-issue"
   # Set EXIT trap after acquiring lock (prevents releasing another process's lock on early exit)
   trap 'release_patch_lock' EXIT
   echo "Patch lock acquired: ${PATCH_LOCK_DIR}"
