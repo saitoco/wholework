@@ -163,7 +163,7 @@ Key modules:
 **Process management:**
 - `scripts/watchdog-defaults.sh` — sourceable helper providing `WATCHDOG_TIMEOUT_DEFAULT` constant and `load_watchdog_timeout` function for run-*.sh scripts
 - `scripts/claude-watchdog.sh` — watchdog wrapper for `claude -p` invocations (hang detection + 1 retry)
-- `scripts/watchdog-reconcile.sh` — post-kill state reconciler; verifies expected phase state after watchdog kill (exit 143) and upgrades to exit 0 if state was reached
+- `scripts/reconcile-phase-state.sh` — general-purpose state reconciler for precondition and completion checks across all phases; outputs JSON v1 per `modules/phase-state.md` SSoT (supersedes watchdog-reconcile.sh)
 - `scripts/wait-ci-checks.sh` — wait for all CI checks to complete on a PR before running claude
 - `scripts/worktree-merge-push.sh` — acquire short-lived patch lock and merge worktree branch + push to main (with rebase retry)
 - `scripts/detect-wrapper-anomaly.sh` — detect known failure patterns in shell wrapper output and generate Auto Retrospective markdown fragments
