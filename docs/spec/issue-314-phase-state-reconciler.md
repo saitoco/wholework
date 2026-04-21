@@ -319,3 +319,34 @@ recover scope は最小限（label 同期 / skip to completed phase のみ）に
 ### Acceptance Criteria Verification Difficulty
 
 - **rubric verify command の限界**: `_precondition_code_common()` が Spec exists チェックを実装しているかは rubric 条件で検証されているが、「実装通り」か「完全仕様通り」かの違いを自動判定するのは困難。SSoT テーブルの全 precondition が実装されているかのカバレッジ検証には bats テストでの網羅的な parametrize テストが有効（例: 各 phase の precondition 条件ごとのテストケース）。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件の品質は高い: 全9件のpre-merge条件に verify コマンドが付与され、自動検証可能な形で設計されていた。post-merge 3件は `verify-type: manual` で明示されており、自動verify対象の混入なし。
+- Spec に記載された auto-resolve 3件（CLI命名・exit code・issue precondition）はいずれも一意に解決可能な設計で、ambiguity が不必要に増えなかった。
+
+#### design
+- Phase Table と実装の precondition ギャップが review retrospective で検出された: Phase Table は完全形（CI green、Spec exists など）で記述されているが、実装は初期スコープのみ（`phase/ready` label、PR OPEN）。Spec テーブルに「実装状況」列または `(future)` マークを追加することで追跡性を改善できる。
+- JSON schema の SSoT 化（`modules/phase-state.md` 新設、`schema_version: "v1"` 必須キー）により下流 Issue (#315/#316/#317/#319) への後方互換性担保が設計レベルで達成された。
+
+#### code
+- run-*.sh の completion check 方式変更（exit code → JSON `matches_expected:true` パース）は設計外だったが、より堅牢な実装となった。`--warn-only` 既定では exit 0 が常に返るため exit code 依存では機能しない点を実装中に発見し、自律的に修正している。
+- bats テスト数 (推定 52→実際 48) の差分は Stage 2 tests 削除によるもので、機能的な仕様逸脱はなし。
+
+#### review
+- docs/structure.md のファイルカウント更新漏れ (27→28) が review 後に PR 内で修正された。このパターンは繰り返し発生しているため、module 追加 PR の verify command として自動検出する仕組みが有効。
+- precondition 実装ギャップをレビュアーが検出し、コメントしたことでドキュメント化されたが、本 Issue 内で修正されなかった。次の機会には「SSoT と実装の対応」を acceptance criteria に含めるべき。
+
+#### merge
+- PR #328 は clean merge（fast-forward）。コンフリクトなし。CI grep-gate が新設され watchdog-reconcile.sh の再導入を永続的に防止する仕組みが整った。
+
+#### verify
+- 全9条件が PASS。bats 48件全通過により実装品質を確認。
+- Post-merge 3件は `verify-type: manual` で正しく分類されており、`phase/verify` を付与して状態遷移が適切に処理された。
+
+### Improvement Proposals
+- **`modules/phase-state.md` Phase Table に実装状況列を追加**: SSoT と実装のギャップを追跡するため、`実装状況` 列（例: `✅ 実装済`, `🔲 future scope`）をテーブルに追加する。これにより precondition の partial implementation が Spec 上で明確になり、`rubric` での検証精度も向上する。
+- **module 追加 PR の verify command にファイルカウント検証を追加**: `docs/structure.md` と `docs/ja/structure.md` のモジュール数コメントが新規追加に追従しているか確認する `grep "28 files\|28 modules" docs/structure.md` 形式の verify command を標準化する。
