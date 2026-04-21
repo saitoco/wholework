@@ -159,7 +159,7 @@ bash scripts/check-translation-sync.sh
 | `phase/code` | 実装フェーズ | `/code` | `/review` |
 | `phase/review` | レビューフェーズ | `/review` | `/merge` |
 | `phase/verify` | 受入テストフェーズ | `/merge` | `/verify` |
-| `phase/done` | 完了 | `/verify`（全 auto-verify PASS/SKIPPED 時） | — |
+| `phase/done` | 完了 | `/verify`（全 auto-verify PASS + 全 post-merge 条件 checked 時） | — |
 | （ラベルなし） | バックログ / 未着手 | — | `/verify`（FAIL 時） |
 
 ### XL 親 Issue のフェーズ管理
@@ -185,7 +185,8 @@ PR 本文に `closes #N` を追加すると、マージ時に Issue が自動ク
 /merge: マージ → Issue 自動クローズ
   ↓
 /verify: クローズ済み Issue を検証
-  - 全 auto-verify PASS/SKIPPED → phase/done（opportunistic/manual 条件は完了をブロックしない）
+  - 全 auto-verify PASS + 全 post-merge 条件 checked → phase/done
+  - 全 auto-verify PASS + opportunistic/manual 未チェックあり → phase/verify（Issue は CLOSED のまま）
   - FAIL → gh issue reopen + 全 phase/* 除去 → fix サイクルへ戻る
 ```
 
