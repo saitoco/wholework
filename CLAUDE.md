@@ -1,6 +1,6 @@
 # Wholework
 
-Issue-driven Claude Code skills for autonomous GitHub workflows.
+GitHub issue-driven Claude Code skills for agentic work.
 
 ## Language Conventions
 

@@ -2,7 +2,7 @@ English | [日本語](README.ja.md)
 
 # Wholework
 
-Issue-driven Claude Code skills for autonomous GitHub workflows.
+GitHub issue-driven Claude Code skills for agentic work.
 
 ## 🌐 Why Wholework
 

@@ -2,7 +2,7 @@
 
 # Wholework
 
-自律的な GitHub ワークフローのための Issue 駆動型 Claude Code スキル。
+エージェンティック・ワークのための GitHub Issue 駆動型 Claude Code スキル。
 
 ## 🌐 なぜ Wholework なのか
 
