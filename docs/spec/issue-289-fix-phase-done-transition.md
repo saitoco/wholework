@@ -97,3 +97,34 @@
 ### Acceptance criteria verification difficulty
 
 特記なし。`rubric` verify command は Spec 記載内容と diff を照合して問題なく判定できた。`github_check` は CI ステータス直接確認で明確に PASS。UNCERTAIN 判定はゼロ。verify command の精度は良好。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Root cause が Spec に明確に記載されており（SKILL.md の CLOSED 経路における opportunistic/manual チェック分岐）、実装者が迷わず修正箇所を特定できた。Spec の品質は高い。
+- `Changed Files` で「`docs/workflow.md` L168-169: 必要であれば明確化」という曖昧な表現があったが、実際には修正が必要だった（`Code Retrospective` に記録済み）。Spec 作成時にファイルを実際に確認して「修正が必要」と明記しておくとより正確。
+
+#### design
+- 設計はシンプルで正確。CLOSED 経路の条件分岐を削除するという単純な変更であり、OPEN 経路・XL 親 Issue フローへの影響範囲が Notes に明記されていた点は優れた設計文書。
+- `/auto`・`run-verify.sh`・`gh-label-transition.sh` が修正不要であることも Spec の Notes で根拠とともに説明されており、verify 時の調査コストを削減できた。
+
+#### code
+- リワーク・fixup・amend なし。クリーンな実装。
+- Spec との乖離は `docs/workflow.md` の 1 箇所のみ（明確化 → 修正）で、それも `Code Retrospective` に記録されている。
+
+#### review
+- 4 観点すべてで問題検出なし。verify でも全条件 PASS のため、review の判定は正確だった。
+- `rubric` verify command が pre-merge 時点で意味レベルの検証を行えており、review と verify の二重チェックが機能している。
+
+#### merge
+- PR #291 がクリーンにマージ（squash merge）。コンフリクトなし。
+- マージ後の CI（bats）も pass 確認済み。
+
+#### verify
+- 全条件（rubric + github_check）が初回 verify で PASS。verify-reopen ループなし。
+- Post-merge manual 条件（1 週間後の audit stats 確認）はユーザー検証ガイドとして適切に提示できた。
+
+### Improvement Proposals
+- N/A
