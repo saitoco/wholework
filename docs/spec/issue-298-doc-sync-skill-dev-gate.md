@@ -52,3 +52,28 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body と Spec の実装ステップが明確に対応しており、3箇所の gate 追加箇所が具体的に記述されていた。受け入れ条件も rubric/grep/command と適切なコマンドが割り当てられていた。
+
+#### design
+- Spec の Notes セクションに既存の gate 表現との差分（既存: `validate-skill-syntax.py` 存在チェックのみ、新規: `skills/` ディレクトリ存在も含む広条件）が明記されており、判断根拠が残っている。設計品質は良好。
+
+#### code
+- 実装は1コミット（7行追加、3行変更）で完結。リワークなし。Spec の実装ステップ3項目に完全対応。
+
+#### review
+- patch route（main直コミット）のため PR レビューは実施されていない。小規模変更（10行以下）かつ rubric で意味的検証を行ったため、レビュー省略の判断は妥当。
+
+#### merge
+- patch route で main に直接マージ。コンフリクトなし。
+
+#### verify
+- 全3条件（rubric/grep/command）が PASS。Post-merge の manual 条件2件は非自動検証対象のため user verification guide として提示。verify コマンドの設計が適切で自動判定に成功した。
+
+### Improvement Proposals
+- N/A
