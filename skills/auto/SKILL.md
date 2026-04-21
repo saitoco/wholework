@@ -202,19 +202,28 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
    git push origin main
    ```
 
-### Step 4a: Auto Retrospective (XL route only)
+### Step 4a: Auto Retrospective
 
-**Skip this step for all routes other than XL.**
+**Conditions to run this step:**
 
-For XL routes only, create a parent Spec file and record a retrospective of the entire orchestration.
+- **XL route**: always run — record orchestration results for all sub-issues
+- **M/L/patch route**: run only when the parent session detects **any** of the following orchestration anomalies; skip if no anomalies are detected:
+  - (a) A shell wrapper (`run-code.sh`, `run-auto-sub.sh`, etc.) exited non-zero, but subsequent state was manually recovered
+  - (b) A phase that should have transitioned automatically was manually invoked by the parent session
+  - (c) `/auto` completed with behavior that differs from the original spec
+
+If no anomalies are detected (M/L/patch route), skip this step — do not record an empty section.
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH` for use in subsequent steps.
 
 1. **Determine Spec file path**: `$SPEC_PATH/issue-$NUMBER-<short-title>.md`
    - Generate `short-title` as English kebab-case from Issue title (e.g., `xl-orchestration-retrospective`)
    - If an existing Spec file is found, use it and append `## Auto Retrospective` section
+   - **If Spec file does not exist** (e.g., XS patch route without spec phase): create a new Spec file with `# Issue #$NUMBER: $TITLE` header, then append `## Auto Retrospective` section
 
 2. **Create (or update) Spec file**:
+
+   **XL route** — record full sub-issue summary:
    ```markdown
    # Issue #$NUMBER: $TITLE
 
@@ -234,7 +243,26 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
    - **Result column criteria**: exit code 0 → `SUCCESS`, non-zero exit code → `FAILED (exit code N)`, dependency skip → `SKIPPED (blocked by #X)`
    - **Improvement proposal guidance**: document structural issues from parallel execution (conflicts, PR extraction failures, verify chain FAILs, etc.) and their fixes. `/verify`'s Step 13 reads `### Improvement Proposals` and creates Issues from them
 
-3. **Fetch issue retrospective from Issue comments and transcribe to Spec**:
+   **M/L/patch route** — append orchestration anomaly record (append to existing Spec; create new Spec with header if none exists):
+   ```markdown
+   ## Auto Retrospective
+
+   ### Execution Summary
+   | Phase | Route | Result | Notes |
+   |-------|-------|--------|-------|
+   | code  | pr    | SUCCESS (manual PR extract fallback) | run-auto-sub.sh exit 1 but PR #N already created |
+   | review | pr   | SUCCESS | manual invocation after wrapper failure |
+   | merge | pr    | SUCCESS | manual invocation |
+   | verify | -    | SUCCESS | |
+
+   ### Orchestration Anomalies
+   - (describe each anomaly: which script, what exit code, what state, how manually recovered)
+
+   ### Improvement Proposals
+   - (list structural improvements to prevent recurrence. "N/A" if none)
+   ```
+
+3. **Fetch issue retrospective from Issue comments and transcribe to Spec** (XL route only):
    - Fetch all Issue comments: `gh issue view "$NUMBER" --json comments -q '.comments[].body'`
    - Search for comments containing `## Issue Retrospective`
    - If found: append `## Issue Retrospective` section at end of Spec file (naturally referenced by `/verify`'s Spec reading)
@@ -294,7 +322,11 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 
 ### Step 6: On Failure: Stop and Report Error
 
-If any phase exits with a non-zero exit code, stop processing and output the stopped banner:
+If any phase exits with a non-zero exit code:
+
+**Manual recovery hand-off**: If the parent session manually recovers from a shell wrapper failure and continues to subsequent phases instead of stopping here, complete the remaining phases via manual recovery first, then follow Step 4a (after all phases are done) to append anomaly details and improvement proposals to the Spec's `## Auto Retrospective > ### Orchestration Anomalies` and `### Improvement Proposals` sections, then proceed to Step 5. This ensures orchestration-level anomalies are captured in the skill-proposals pipeline with a complete Execution Summary.
+
+Otherwise (no manual recovery), stop processing and output the stopped banner:
 ```
 /auto #N stopped at PHASE
 TITLE

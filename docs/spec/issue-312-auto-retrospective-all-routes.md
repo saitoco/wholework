@@ -54,3 +54,31 @@
 - XS patch route での Spec 未存在時は Step 4b パターン（Issue Retrospective 有無に関わらず `# Issue #N: title` ヘッダ付きで新規作成）に準じる
 - `/verify` Step 13 はすでに "auto" を scan 対象として列挙しているが、Step 10 の注記が "XL route retrospective" に限定されており、M/L/patch で Auto Retrospective が存在しなかったため機能していなかった。今回の Step 4a 拡張で `/auto` が Spec に書くようになることで既存の Step 13 scan が自動的に機能する
 - Auto-resolve: Issue body では「XS/S patch route での Spec 未存在時の挙動」を自動解決済み（Step 4b パターンに準じて新規作成）として記録
+
+## Code Retrospective
+
+### Deviations from Design
+
+- なし（Spec の実装ステップ通りに実施）
+
+### Design Gaps/Ambiguities
+
+- Step 4a の "XS/S" をどう扱うか Spec では "M/L/patch route" とまとめて記載されていたが、XS patch route は Spec 未存在の可能性があるため、Spec 未存在時処理を同ステップ内に統合して記述した（Spec の Notes にある方針通り）
+
+### Rework
+
+- なし
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- なし。Spec の実装ステップと PR diff は完全に一致。受入基準 4 件全 PASS。
+
+### Recurring Issues
+
+- Step 6 「Manual recovery hand-off」の実行タイミング（mid-execution vs. post-execution）が Spec レベルで未定義だったため、review で SHOULD 課題として検出・修正が必要になった。手順内の cross-reference（「Step 4a を follow してから次 phase に進む」）を書く際は実行タイミングを明示する慣習を設けると再発を防げる。
+
+### Acceptance Criteria Verification Difficulty
+
+- 受入基準は全て `rubric` または `grep` verify command で適切に定義されており UNCERTAIN はゼロ。`grep "Orchestration Anomalies"` のような機械検証可能な verify command を組み合わせるパターンは良好な実践例。
