@@ -87,3 +87,33 @@
 ### 受け入れ条件検証困難度
 
 全条件が自動検証可能（file_exists, grep, command/CI参照, rubric）で UNCERTAIN なし。verify コマンドの設計は適切。`rubric` 2件も明確な記述で grader が判断しやすかった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec は Issue body の Auto-Resolved Ambiguity Points（Step 6 統合先）をそのまま引き継いで記述しており、設計意図が明確に文書化されている。
+- Post-merge 条件を `verify-type: manual` として E2E フロー確認に割り当てた設計は適切。自動検証できない環境依存フローを正確に分類できている。
+
+#### design
+- 設計通りに実装。Spec → 実装間の逸脱なし。
+- Review Retrospective で指摘された「新機能と既存フローの相互作用による重複書き込みリスク」は、SKILL.md の Manual recovery hand-off の注釈で対処されている（"if the anomaly detector already detected and appended a known pattern, skip the Orchestration Anomalies / Improvement Proposals append"）。
+
+#### code
+- fixup/amend なし、rework なし。コミットは 1 件でクリーンな実装。
+- bash 3.2+ 互換制約（連想配列不使用）を Spec Notes で事前文書化し、`if/elif grep -q` ブロック形式を選択した判断は適切。
+
+#### review
+- Review で SHOULD 1件・CONSIDER 1件のみ検出。品質は高い。
+- SHOULD 問題（重複書き込みリスク）は Code 段階で見落とされていたが、review で発見し実装側で対処済み。
+
+#### merge
+- マージは FF で完了。コンフリクトなし。
+
+#### verify
+- 全 6 pre-merge 条件が PASS。bats 8/8 PASS、rubric 2件も明確に PASS 判定。
+- Post-merge の manual 条件（E2E フロー確認）が未チェックのため `phase/verify` を割り当て。
+
+### Improvement Proposals
+- N/A
