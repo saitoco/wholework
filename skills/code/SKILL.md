@@ -185,6 +185,12 @@ Implement the code following the "Implementation Steps" in the Spec.
 
 #### Stale Test Assertion Check
 
+**Existence gate**: skip this check if any of the following conditions hold:
+- `tests/` directory does not exist
+- None of the target directories (`scripts/`, `modules/`, `skills/`) exist
+
+(`scripts/`, `modules/`, and `skills/` are wholework-specific directory names; other projects may use different naming conventions such as `src/`, `lib/`.)
+
 After completing implementation changes to files under `scripts/`, `modules/`, or `skills/`, check whether any removed literal strings remain as stale assertions in `tests/`.
 
 **Removed literals** are string constants that appear as `-` lines in `git diff` (excluding comment-only lines and whitespace-only changes).
@@ -202,8 +208,6 @@ Steps:
    ```
    Warning: stale test assertion found — "REMOVED_LITERAL" remains in tests/. Update the assertion to match the new value.
    ```
-
-Skip this check if no files under `scripts/`, `modules/`, or `skills/` were changed.
 
 #### Follow-up Issue Creation
 
