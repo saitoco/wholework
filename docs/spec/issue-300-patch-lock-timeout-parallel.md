@@ -90,3 +90,33 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件は具体的な数値閾値（1800秒以上）付きで rubric として記述されており、自動検証に適した形式だった
+- `file_contains` と `rubric` の組み合わせで異なる検証深度をカバーしており、適切な条件設計
+
+#### design
+- Changed Files と Implementation Steps が実装と完全一致。設計からの逸脱なし
+- `.wholework.yml` 読み込みの優先度（環境変数 > yml > デフォルト）が設計で明示されており、実装者の判断余地を適切に制限していた
+
+#### code
+- 5コミットで論理単位ごとに分割された clean な patch route 実装
+- fixup/amend なし。rework なし
+- `docs/ja/guide/customization.md` の翻訳同期も漏れなく実施（Specの Notes に記載あり）
+
+#### review
+- パッチルートのため PR review なし。N/A
+
+#### merge
+- パッチルートで直接 main へコミット。コンフリクトなし。クリーン
+
+#### verify
+- 全3条件 PASS。Post-merge manual 条件はユーザー検証ガイドとして提示
+- rubric の閾値（1800s）は保守的に設定されており、実装値（3600s）が上回ることを適切に許容
+
+### Improvement Proposals
+- N/A
