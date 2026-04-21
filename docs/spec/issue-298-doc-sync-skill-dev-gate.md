@@ -38,3 +38,17 @@
 - 条件式の表現は `If scripts/validate-skill-syntax.py exists or skills/ directory exists:` の形式で統一する（既存の line 504 の gate 表現 `If scripts/validate-skill-syntax.py exists, ...` より広い条件）
 - **Scan implementation code** ブロックの直後にある **Cross-skill consistency check**（line 502-504）はすでに `validate-skill-syntax.py` 存在チェックで gate されており変更不要
 - **Narrative Semantic Drift Check** の **Input sources for comparison** 3行目（implementation files）はブロック gate の影響を受けるため、条件付き利用であることを示す注記を追加する（Step 2 で対応）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
