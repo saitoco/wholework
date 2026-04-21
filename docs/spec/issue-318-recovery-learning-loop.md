@@ -60,3 +60,19 @@ Spec retrospective (per-Issue, disposable) との役割分担:
 - **`/audit` 統合実行への recoveries 含有見送り**: 既存 drift+fragility 統合挙動へのスコープ拡大を避けるため `recoveries` は明示指定のみ。成熟後に別 Issue で統合を検討
 - **翻訳同期**: `docs/ja/workflow.md`・`docs/ja/structure.md` は機械翻訳ではなく日本語形式の変更のみ (recoveries 追記)。`/code` 実装者が日本語で直接編集する
 - **verify 件数**: Issue 受入条件 6 件に対し Spec verification も 6 件 (light 上限 5 を 1 件超過。verbatim copy ルール優先)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `skills/auto/SKILL.md` Step 4a の既存ステップ番号を維持するため、新規 recovery event append ロジックを「ステップ 4」として挿入し、従来の「commit and push」を「ステップ 5」に繰り下げた。Spec では「Spec retrospective の git add/commit/push と同一フロー」としか記載されておらず、ステップ番号付与は実装判断。
+- `skills/auto/SKILL.md` の `allowed-tools` に `Edit` を追加（Spec 未記載）。validate-skill-syntax.py によって skill 本文中で Edit ツールを使用しているが frontmatter に含まれていないエラーが検出されたため追加。
+
+### Design Gaps/Ambiguities
+
+- `collect-recovery-candidates.sh` の重複チェック（`--issues-json`）は substring match（`grep -qF "$sym"`）を使用。Spec では「symptom-short が issue title に含まれる」と記載されており literal match として解釈した。semantic match はスクリプトではなく `/audit recoveries` Step 3 の LLM 判断層で行う設計との整合。
+- Spec の bats テスト説明 "(b) threshold — K=3 で head 件数が 2 件絞り込まれる" の「2 件絞り込まれる」は「2 件が通過する」の意味と解釈し、fixture に `code-pr-extraction-fail`（3 回）を追加してテスト条件を満たした。
+
+### Rework
+
+- `tests/audit-recoveries.bats` のテスト名 (c) に日本語（`起票済み`）を含めたため bats の parse エラー（0 tests executed）が発生。SKILL.md の注意事項「bats test names must be in English」を見落とし。ASCII に修正後に再実行して PASS 確認。
