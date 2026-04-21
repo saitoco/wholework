@@ -158,6 +158,20 @@
 - **`/auto` 親オーケストレーターとの Tier 重複**: `/auto` SKILL.md Step 6 と `run_phase_with_recovery` は **異なるレイヤー** での recovery (親: wrapper 外部、子: wrapper 内部) のため重複は許容
 - **Follow-up (スコープ外)**: (1) `run_verify_with_retry` と新ラッパの収束、(2) `apply-fallback.sh` の残 anchor 昇格、(3) `/auto` SKILL.md の `validate-recovery-plan.sh` 呼出を bash script 経由に refactor、(4) `docs/structure.md` の事前 tests/ count drift の整合 (独立 Issue)
 
-## Spec Retrospective
+## spec retrospective
 
-(Spec フェーズで記録済み)
+### Minor observations
+
+- Issue body が既に詳細な Design Sketch・Auto-Resolve Log・acceptance criteria を含んでおり、Spec 側での追加判断は 3 点 (flock 非互換 / SSoT 再解釈 / apply-fallback 初期スコープ) に限定できた。Issue phase の品質が高いほど Spec の追加コストは下がる典型例。
+- `docs/structure.md` の tests/ count は既に 1 件ズレ (`50 files` 記述 vs actual 51)。本 Issue では +3 して `53 files` に揃えるが、pre-existing drift の整合は別 Issue に委譲する旨を Notes に記録した。
+
+### Judgment rationale
+
+- **`flock` → mkdir-based slot lock**: Issue body は `flock` を提案していたが macOS 標準環境未インストール。`scripts/worktree-merge-push.sh` の既存 mkdir-based locking (atomic mkdir + PID stamp + stale reclaim + trap EXIT) を precedent として採用することで、追加依存ゼロ・パターン統一を両立させた。
+- **Safety guard SSoT を `validate-recovery-plan.sh` に redirect**: Issue body 字面は `spawn-recovery-subagent.sh` を SSoT と記述していたが、#316 で既に `scripts/validate-recovery-plan.sh` が SSoT として shipped・`/auto` SKILL.md からも呼ばれている。新 script からも同 SSoT を呼び出すことで「単一 source」意図を満たしつつ schema/forbidden ops/step 上限の重複実装を回避した。
+- **`apply-fallback.sh` 初期スコープを MVP に絞る**: 4 anchor 全 full-impl はコストが高く shipping を遅らせる。`dco-signoff-missing-autofix` のみ full-impl、他は default case で Tier 3 escalate とし、catalog anchor 名を pointer comment で残す方針とした。使用頻度データが出揃った anchor から follow-up で昇格可能。
+
+### Uncertainty resolution
+
+- **`claude -p` stdout からの JSON 抽出堅牢性**: sub-agent が自然言語の前後説明を付けた際の挙動。`/code` フェーズで `CLAUDE_BIN` mock を使った bats テスト (prose + JSON + prose パターン) で検証する設計とし、python3 による balanced-brace 抽出ロジックを Implementation Step 2 に明記した。
+- **`agents/orchestration-recovery.md` の frontmatter stripping 互換性**: `run-*.sh` 全般で同じ awk パターン (`NR>1 && /^---$/{print NR; exit}`) が precedent として確立済みのため reuse する。`/code` 実装前に `head -5 agents/orchestration-recovery.md` で形式確認する手順を Uncertainty セクションに記録した。
