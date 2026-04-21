@@ -68,3 +68,28 @@
 ### Acceptance Criteria Verification Difficulty
 
 - 4条件すべて自動検証可能。`github_check` 条件は CI SUCCESS により PASS。UNCERTAIN ゼロ、verify コマンドの精度は高い。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue の受入条件は明確で曖昧さなし（4条件すべて自動検証可能）。SSoT 配置先と 2段階探索廃止のトレードオフも Issue 本文で明示済み。
+
+#### design
+- Spec の設計は実装と整合。"変更なし" 判断は実行パスの grep に限定したものであり、コメント行への影響は設計スコープ外とした判断は妥当。Code Retrospective でキャプチャ済み。
+
+#### code
+- `tests/watchdog-reconcile.bats` の mock コメントが旧パターン参照だったため追加修正が発生（Code Retrospective 記録済み）。実行パス非影響のため品質リスクは低い。パターン変更時はコメント行も grep チェック対象に含めると将来の "no change needed" 誤判定を防げる。
+
+#### review
+- Review Retrospective によれば Spec との乖離なし、verify コマンド精度も高い評価。bats コメント修正は review 時に検出・承認された。
+
+#### merge
+- PR #321 経由でクリーンにマージ。CI（Run bats tests・Forbidden Expressions・Validate skill syntax・macOS shell compatibility）全 pass。
+
+#### verify
+- 4条件すべて PASS。Post-merge manual 条件（`/auto` フルフロー確認）が残るため `phase/verify` に移行。verify コマンドは全条件で適切に機能した。
+
+### Improvement Proposals
+- N/A
