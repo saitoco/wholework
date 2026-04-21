@@ -27,7 +27,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (6 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (39 files)
+├── scripts/             # Utility scripts used by skills and agents (40 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -166,6 +166,7 @@ Key modules:
 - `scripts/watchdog-reconcile.sh` — post-kill state reconciler; verifies expected phase state after watchdog kill (exit 143) and upgrades to exit 0 if state was reached
 - `scripts/wait-ci-checks.sh` — wait for all CI checks to complete on a PR before running claude
 - `scripts/worktree-merge-push.sh` — acquire short-lived patch lock and merge worktree branch + push to main (with rebase retry)
+- `scripts/detect-wrapper-anomaly.sh` — detect known failure patterns in shell wrapper output and generate Auto Retrospective markdown fragments
 
 **Skill runners:**
 - `scripts/run-auto-sub.sh` — run auto workflow for sub-issues
