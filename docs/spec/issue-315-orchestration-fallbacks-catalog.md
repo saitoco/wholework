@@ -54,3 +54,14 @@ scope は catalog 本体の新設に限定。`scripts/run-auto-sub.sh` の `run_
 
 ### Rework
 - `modules/orchestration-fallbacks.md` の `ci-flake-retry` Rationale に `#315` 参照を追加する修正コミットが 1 件発生
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+Spec との差異なし。6 エントリ・5 セクション・pointer コメント・ドキュメント同期 — すべて Spec 通りに実装されており、構造的な乖離は検出されなかった。
+
+### Recurring Issues
+CONSIDER 1 件（`tests/orchestration-fallbacks.bats:58` の awk が Rationale を最後セクション前提）のみ。同種の繰り返しはなく、Code Retrospective で既に認識・記録済みの既知制限と一致。
+
+### Acceptance Criteria Verification Difficulty
+全 5 条件が PASS。`command "bats ..."` ヒントは safe モードで直接実行できないが、CI "Run bats tests" SUCCESS への参照で PASS 判定に成功した。`{{base_url}}` や UNCERTAIN 多発なし。verify コマンドの精度は良好だった。
