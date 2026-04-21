@@ -68,6 +68,14 @@ exit 0
 MOCK
     chmod +x "$MOCK_DIR/run-verify.sh"
 
+    # Mock get-config-value.sh: returns empty string for any key (default behavior)
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
     # Mock git: rev-parse --show-toplevel returns per-test directory (for PATCH_LOCK_DIR computation)
     # run-auto-sub.sh calls: git -C "${SCRIPT_DIR}/.." rev-parse --show-toplevel
     cat > "$MOCK_DIR/git" <<MOCK
@@ -317,5 +325,40 @@ MOCK
     run bash "$SCRIPT" 42
     [ "$status" -eq 1 ]
     [[ "$output" == *"waiting for lock held by pid="* ]]
+    [[ "$output" == *"sub-issue=#"* ]]
     [[ "$output" == *"Patch lock acquisition timeout"* ]]
+}
+
+@test "PATCH_LOCK: timeout is read from .wholework.yml via get-config-value.sh" {
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    # Override get-config-value.sh to return 5 seconds for patch-lock-timeout
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "patch-lock-timeout" ]]; then
+    echo "5"
+    exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    # Pre-create lock dir with current (live) process PID to force waiting
+    LOCK_DIR="$BATS_TEST_TMPDIR/test-repo/.tmp/claude-auto-patch-lock"
+    mkdir -p "$LOCK_DIR"
+    echo "$$" > "$LOCK_DIR/pid"
+
+    # No WHOLEWORK_PATCH_LOCK_TIMEOUT override — must use yml value of 5
+    unset WHOLEWORK_PATCH_LOCK_TIMEOUT
+    export WHOLEWORK_PATCH_LOCK_LOG_INTERVAL=2
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Patch lock acquisition timeout (5s)"* ]]
 }
