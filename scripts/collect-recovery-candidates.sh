@@ -64,10 +64,10 @@ if [ -n "$ISSUES_JSON" ] && [ -f "$ISSUES_JSON" ]; then
   # Extract titles from JSON array: [{"number": N, "title": "..."}]
   ISSUE_TITLES="$(python3 -c "
 import json, sys
-data = json.load(open('$ISSUES_JSON'))
+data = json.load(open(sys.argv[1]))
 for item in data:
     print(item.get('title', ''))
-" 2>/dev/null || true)"
+" "$ISSUES_JSON" 2>/dev/null || true)"
 fi
 
 # Parse the recovery file.
