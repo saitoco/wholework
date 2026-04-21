@@ -42,3 +42,15 @@ scope は catalog 本体の新設に限定。`scripts/run-auto-sub.sh` の `run_
 - **対象外**: `scripts/run-auto-sub.sh` の `run_verify_with_retry` の書き換え（#319 の tier 2 で catalog を参照する形で統合）、CI flake retry / DCO auto-fix の実行時統合（別 Issue）、catalog 内容の shell library 化
 - **bats 入力データ形式**: catalog ファイルは標準 Markdown。`awk '/^## /' / '/^### /'` で見出しを抽出可能。Rationale の Issue 参照は `grep -E '#[0-9]+'` で検出。bash 3.2+ 互換のため `mapfile` / 連想配列は避け、while read ループで処理する
 - **structure.md モジュール件数**: 現行 `(28 files)` から `(29 files)` に更新。`docs/ja/structure.md` も同時更新
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A（Spec 通りに実装）
+
+### Design Gaps/Ambiguities
+- `ci-flake-retry` エントリの Rationale セクションに Issue 参照 (`#NNN`) がなく、bats テスト 9 番（`each Rationale section contains at least one Issue reference (#N)`）が FAIL した。Spec の「Rationale に少なくとも 1 件の Issue/Spec 参照」という要件をカタログ記述時に見落としていた。`#315` への参照を追加して修正済み
+- bats テスト 9 番で使用した awk スクリプト（per-entry Rationale 参照チェック）は、Rationale セクションが最後のセクションである前提で動作する実装になっている。将来エントリのセクション順序が変わった場合は再確認が必要
+
+### Rework
+- `modules/orchestration-fallbacks.md` の `ci-flake-retry` Rationale に `#315` 参照を追加する修正コミットが 1 件発生
