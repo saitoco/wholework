@@ -234,3 +234,58 @@ recover scope は最小限（label 同期 / skip to completed phase のみ）に
 - #113: 新規 shared module 設立パターン (phase-banner.md) → phase-state.md の設計テンプレート
 - #132: label transition 非対称性の教訓 → 全 phase 対称な precondition/completion 呼び出し
 - #284: post-validation idiom (wrapper exit 0 でも state 再確認) → 本 Issue の completion check が同 idiom の汎化
+
+## issue retrospective
+
+### 判断経緯
+
+3 エージェント（issue-scope / issue-risk / issue-precedent）による並列調査を実施し、以下の重要な設計決定を行った:
+
+**recover scope の最小化（user 確認済）**
+- precondition check 不整合時の "recover" 挙動は本 Issue では label 同期・skip to completed phase のみに限定
+- catalog lookup は #315 へ、sub-agent recovery は #316 へ、run-auto-sub.sh 経由の tier 3 は #319 へ明示的に委譲
+- 理由: 本 Issue を foundation に特化させ、dependency を clean に保つため
+
+**watchdog-reconcile.sh の完全削除（user 確認済）**
+- thin wrapper 化（後方互換優先）より完全削除を選択
+- 理由: 6 本の run-*.sh 呼び出し元を一貫して更新する方が single responsibility 原則に合致
+- Risk mitigation: CI grep-gate (`grep -r watchdog-reconcile scripts/ && exit 1`) を `.github/workflows/test.yml` に追加
+
+**precondition の段階導入（risk agent 提案を採用）**
+- gh API の eventual consistency で false-positive 発生の懸念を agent が特定
+- 対応: `--warn-only` デフォルト → 2 週間以上の運用後に `--strict` 昇格の 2 段階導入
+
+**Stage 2 recovery の位置づけ明確化（precedent agent 発見）**
+- #308 で watchdog-reconcile.sh に追加された Stage 2（worktree commit → push + PR 作成）は本 Issue の「検査のみ」責務では退行する
+- #316 recovery sub-agent で再実装することを Spec に明記、過渡期の退行を Auto Retrospective で検知
+
+**JSON schema の SSoT 化（scope agent 提案）**
+- 下流 #315/#316/#317/#319 が全て本 reconciler の state snapshot JSON に依存
+- `schema_version: "v1"` を必須キーに含め、後方互換の防線を設置
+
+### 方針決定
+
+- **Sub-issue split しない**: 14 ファイルは L 上限（10）を超えるが、6 本の run-*.sh 更新は watchdog-reconcile.sh 削除と一体のため分割不可
+- **Parallel investigation の有用性**: 3 agent の並列実行で 14 ファイルの具体的影響、9 件のリスク、9 件の類似 Spec からの設計パターンを抽出
+
+## spec retrospective
+
+### Minor observations
+
+- 既存 `watchdog-reconcile.sh` が既に phase dispatcher + bash 3.2+ 互換 + 32 件 bats カバレッジを持つため、実質「汎化 + precondition 追加 + module 化 + SKILL.md 統合」の refactoring タスクとなった。issue retrospective の「機能退行なし」前提は妥当
+- `docs/reports/watchdog-recovery-strategy.md` (#308) に Stage 2 の設計意図が残っており、#316 実装時の参照資料として利用可能
+
+### Judgment rationale
+
+- **Spec ambiguity 3 件すべて auto-resolve**: CLI 命名 (SSoT 踏襲)、exit code convention (Issue body 指定採用)、issue phase precondition (対称性追加) — いずれも既存パターンから一意に導出可能で user 問い合わせ不要
+- **Alternatives Considered に thin wrapper 案と precondition 追加のみ案を明記**: 「完全置換」選択の根拠を後追い可能にし、将来同種の refactoring 判断時の参照点にする
+- **Implementation Steps を 9 件に圧縮**: 14 ファイル変更のうち、6 本 run-*.sh 更新と 2 件削除は同一 Step に統合し、simplicity rule の 10 件上限内に収めた
+
+### Uncertainty resolution
+
+- Uncertainty 該当なし: gh / git API は既存 `watchdog-reconcile.sh` で使用済のため未検証 API 依存なし
+- 運用観察（2 週間の false-positive 率測定）は post-merge manual 条件として明記済。`--strict` 昇格は別 Issue で data-driven に判断
+
+### Improvement Proposals
+
+- **`docs/tech.md` Architecture Decisions への reconcile-phase-state.sh 記述追加**: 本 Issue のスコープには含めなかったが、`/auto` オーケストレーションの adaptive recovery 設計が明確化した時点で `docs/tech.md` に "orchestration reliability" セクションとして記述する価値あり。#314 完了後、#315〜#319 の進捗を見て別 Issue で検討
