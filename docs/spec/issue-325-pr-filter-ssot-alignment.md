@@ -89,3 +89,28 @@
 ### Acceptance criteria verification difficulty
 
 全条件 PASS。`bats` の `command` 型 verify は safe モードで CI reference fallback を使用しており問題なく解決できた。1 件の CONSIDER レベル指摘（negative test の欠如）あり。テスト内の positive case のみでの検証は今後の Issue で繰り返し発生しやすいパターンのため、verify rubric で「negative case の有無」を明示的に問うことを検討してもよい。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec は変更対象ファイルと行番号を明示しており、実装指示として十分だった。ただし `tests/run-auto-sub.bats` の test 11 がオーバーライド mock を持つことを見落としており、Code Retrospective に記録された通り実装時に判明した。Spec 作成時に影響テスト一覧を列挙する習慣があると、こうした見落としを防げる。
+
+#### design
+- `--jq` フラグから `| jq -r` パイプ形式への変更は Issue body に記載されていなかったが、bats mock の testability を高める合理的な判断として Spec に記録されている。設計上の選択が明示的に文書化されており、今後の参照に有用。
+
+#### code
+- test 11 の mock 修正で 1 回のリワークが発生した（Code Retrospective 記録済み）。Spec に影響テストを列挙することで防げたリワーク。
+
+#### review
+- Review Retrospective に「negative test の欠如」という CONSIDER レベル指摘がある。verify でもこの指摘が有効であることが確認できた。rubric verify command でネガティブケース検証の有無を明示的に問う形式を検討する価値がある。
+
+#### merge
+- PR #326 は clean merge。コンフリクトなし。
+
+#### verify
+- 全7条件 PASS。`file_not_contains`、`rubric`、`command` の各 verify command が正常動作した。Post-merge manual 条件が残っており、`phase/verify` ラベルを付与してユーザー確認待ちとした。
+
+### Improvement Proposals
+- `rubric` verify command に「negative case（誤ったブランチ名でマッチしないことの検証）の有無」を明示的に問う形式を標準化する。review と verify の両レトロスペクティブで同じ gap が指摘されており、改善優先度が高い。
