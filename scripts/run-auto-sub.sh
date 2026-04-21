@@ -37,6 +37,7 @@ fi
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 
+# See modules/orchestration-fallbacks.md#verify-sync-retry
 run_verify_with_retry() {
   local issue_num="$1"
   local base_branch="${2:-}"
