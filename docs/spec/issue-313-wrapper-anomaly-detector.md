@@ -59,3 +59,17 @@
 - **`Write` の allowed-tools 追加**: 失敗ログを `.tmp/` に保存するために Write ツールが必要。現在の auto SKILL.md allowed-tools に Write が未登録のため追加が必要。
 - **bash 3.2+ 互換**: macOS system bash は bash 3.2 のため、`declare -A`（bash 4+）を使用した連想配列は不可。パターンテーブルは `if/elif grep -q` ブロック形式で実装する。
 - **detector の入力**: `--log` はファイルパス。parent session は Bash ツール結果（失敗 wrapper の stdout/stderr）を Write ツールで `.tmp/wrapper-out-$NUMBER-$PHASE.log` に書き出し、detector に渡す。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- 設計通りに実装。特筆すべき逸脱なし。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
