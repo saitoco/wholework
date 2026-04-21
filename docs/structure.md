@@ -27,7 +27,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (7 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (42 files)
+├── scripts/             # Utility scripts used by skills and agents (43 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -90,7 +90,7 @@ Each skill lives in `skills/<skill-name>/SKILL.md`. Many skills include auxiliar
 | verify | `skills/verify/SKILL.md` | Post-merge acceptance testing |
 | auto | `skills/auto/SKILL.md` | Orchestrator chaining spec→code→review→merge→verify |
 | triage | `skills/triage/SKILL.md` | Title normalization and Type/Size/Priority/Value assignment |
-| audit | `skills/audit/SKILL.md` | Drift and fragility detection; auto-generate Issues |
+| audit | `skills/audit/SKILL.md` | Drift, fragility, and recovery pattern detection; auto-generate Issues |
 | doc | `skills/doc/SKILL.md` | Steering/project document management and normalization |
 
 ### Modules
@@ -153,6 +153,7 @@ Key modules:
 - `scripts/gh-pr-review.sh` — post PR reviews
 
 **Project utilities:**
+- `scripts/collect-recovery-candidates.sh` — parse `docs/reports/orchestration-recoveries.md`; count symptom-short frequency; exclude filed entries; apply `--threshold K` filter; output `<symptom-short>\t<count>` candidates; accepts `--issues-json PATH` for duplicate detection
 - `scripts/get-config-value.sh` — extract a configuration value from `.wholework.yml`
 - `scripts/get-verify-permission.sh` — extract permission value from a verify command handler file
 - `scripts/get-issue-size.sh` — get issue size label

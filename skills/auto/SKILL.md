@@ -304,14 +304,56 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
    - If found: append `## Issue Retrospective` section at end of Spec file (naturally referenced by `/verify`'s Spec reading)
    - If not found: skip (XL Issues not going through `/issue` may not have this)
 
-4. **Commit and push**:
+4. **Append recovery events to orchestration-recoveries.md** (before Spec retrospective commit):
+
+   Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` to confirm `SPEC_PATH` (already retained from step 1 of this section).
+
+   Determine whether any of the following sources contributed recovery events during this run:
+
+   | Source | When to append | Dependency |
+   |--------|---------------|------------|
+   | Source 1: `fallback-catalog` | A catalog entry in `orchestration-fallbacks.md` was applied during Tier 2 recovery | Available (#315 shipped) |
+   | Source 2: `recovery-sub-agent` | The `orchestration-recovery` sub-agent produced a successful recovery plan during Tier 3 recovery | #316 ship 後に有効 (skip this source until #316 ships) |
+   | Source 3: `wrapper-anomaly-detector` | `detect-wrapper-anomaly.sh` detected a known failure pattern during Tier 2 recovery | Available (#313 shipped) |
+
+   For each applicable source, prepend a new entry block to `docs/reports/orchestration-recoveries.md` (after the header comment line `<!-- Log entries appear below, newest first. -->`). Use the Write/Edit tool. Entry format:
+
+   ```markdown
+   ## YYYY-MM-DD HH:MM UTC: <symptom-short>
+
+   ### Context
+   - Issue #N, phase: <phase>
+   - Source: <fallback-catalog|recovery-sub-agent|wrapper-anomaly-detector>
+   - Wrapper: <run-*.sh name>, exit code: <N>
+   - Log tail: "<last relevant log line>"
+
+   ### Diagnosis
+   - <observed state and root cause>
+
+   ### Recovery Applied
+   - <catalog anchor or sub-agent plan excerpt or manual steps>
+
+   ### Outcome
+   - <success|partial|failed>
+
+   ### Improvement Candidate
+   - <未起票|起票済み #NNN|N/A (resolved by known catalog)>
+   ```
+
+   If no sources contributed recovery events, skip the append (do not create an empty entry).
+
+   Add `docs/reports/orchestration-recoveries.md` to the same `git add` in the next step.
+
+5. **Commit and push**:
    ```bash
-   git add $SPEC_PATH/issue-$NUMBER-*.md
+   git add $SPEC_PATH/issue-$NUMBER-*.md docs/reports/orchestration-recoveries.md
    git commit -s -m "Add auto retrospective for issue #$NUMBER
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
    git push origin main
    ```
+
+   If no recovery events were appended, omit `docs/reports/orchestration-recoveries.md` from `git add` (only add it when it was actually modified).
 
 ### Step 4c: XL Parent Issue Close Flow (XL route only)
 
