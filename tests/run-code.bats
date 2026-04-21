@@ -219,7 +219,7 @@ MOCK
 }
 
 @test "idempotency guard: --pr with existing PR skips claude and exits 0" {
-    # Override gh mock to return existing PR number for pr list
+    # Override gh mock to return JSON for pr list so jq filter drives extraction
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
 if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
@@ -231,7 +231,7 @@ if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
   exit 0
 fi
 if [[ "$1" == "pr" && "$2" == "list" ]]; then
-  echo "456"
+  echo '[{"headRefName":"worktree-code+issue-123","number":456}]'
   exit 0
 fi
 if [[ "$1" == "pr" && "$2" == "view" ]]; then
@@ -251,7 +251,7 @@ MOCK
 }
 
 @test "idempotency guard: --patch with existing PR calls claude normally" {
-    # Override gh mock to return existing PR number
+    # Override gh mock to return JSON for pr list (guard is skipped for --patch)
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
 if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
@@ -263,7 +263,7 @@ if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
   exit 0
 fi
 if [[ "$1" == "pr" && "$2" == "list" ]]; then
-  echo "456"
+  echo '[{"headRefName":"worktree-code+issue-123","number":456}]'
   exit 0
 fi
 echo ""
@@ -278,7 +278,7 @@ MOCK
 }
 
 @test "idempotency guard: no route flag with existing PR calls claude normally" {
-    # Override gh mock to return existing PR number
+    # Override gh mock to return JSON for pr list (guard is skipped when no route flag)
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
 if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
@@ -290,7 +290,7 @@ if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
   exit 0
 fi
 if [[ "$1" == "pr" && "$2" == "list" ]]; then
-  echo "456"
+  echo '[{"headRefName":"worktree-code+issue-123","number":456}]'
   exit 0
 fi
 echo ""

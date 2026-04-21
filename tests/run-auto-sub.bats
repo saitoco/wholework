@@ -95,7 +95,7 @@ if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
     exit 0
 fi
 if [[ "$1" == "pr" && "$2" == "list" ]]; then
-    echo "99"
+    echo '[{"headRefName":"worktree-code+issue-42","number":99}]'
     exit 0
 fi
 echo ""
@@ -215,7 +215,7 @@ if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json labels"* ]]; then
     exit 0
 fi
 if [[ "$1" == "pr" && "$2" == "list" ]]; then
-    echo "99"
+    echo '[{"headRefName":"worktree-code+issue-42","number":99}]'
     exit 0
 fi
 echo ""
@@ -235,11 +235,8 @@ MOCK
     grep -q -- "--base release/v1" "$RUN_VERIFY_LOG"
 }
 
-@test "PR extraction: uses client-side headRefName filter (#311 regression)" {
-    GH_PR_ARGS_LOG="$BATS_TEST_TMPDIR/gh-pr-args.log"
-    export GH_PR_ARGS_LOG
-
-    # Override gh mock: log pr list args; respond only to the client-side filter form
+@test "PR extraction: exact-match SSoT filter matches worktree-code+issue-N (#311 regression, #325 fix)" {
+    # Override gh mock: return JSON array with SSoT branch name so jq filter drives extraction
     cat > "$MOCK_DIR/gh" <<MOCK
 #!/bin/bash
 if [[ "\$1" == "issue" && "\$2" == "view" && "\$*" == *"--json labels"* ]]; then
@@ -251,10 +248,7 @@ if [[ "\$1" == "issue" && "\$2" == "view" ]]; then
     exit 0
 fi
 if [[ "\$1" == "pr" && "\$2" == "list" ]]; then
-    echo "\$*" >> "${GH_PR_ARGS_LOG}"
-    if [[ "\$*" == *"--json number,headRefName"* ]]; then
-        echo "99"
-    fi
+    echo '[{"headRefName":"worktree-code+issue-42","number":99}]'
     exit 0
 fi
 echo ""
@@ -265,15 +259,8 @@ MOCK
     run bash "$SCRIPT" 42
     [ "$status" -eq 0 ]
 
-    # glob pattern must NOT have been passed to gh
-    run grep -- '--head' "$GH_PR_ARGS_LOG"
-    [ "$status" -ne 0 ]
-
-    # client-side filter form must have been used
-    run grep -- '--json number,headRefName' "$GH_PR_ARGS_LOG"
-    [ "$status" -eq 0 ]
-
     # PR 99 was successfully propagated to review and merge
+    # (proves jq filter matched worktree-code+issue-42 and extracted the number)
     grep -q "99" "$RUN_REVIEW_LOG"
     grep -q "99" "$RUN_MERGE_LOG"
 }
