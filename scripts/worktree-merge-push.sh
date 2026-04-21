@@ -84,7 +84,7 @@ if [[ -n "$FROM_BRANCH" ]]; then
     git merge "$FROM_BRANCH" --ff-only
   fi
 
-  conflict_output=$(grep -rn '<<<<<<' . 2>/dev/null || true)
+  conflict_output=$(grep -rn '^<<<<<<' . 2>/dev/null || true)
   if [[ -n "$conflict_output" ]]; then
     echo "Error: Conflict markers remain. Please resolve conflicts manually then push." >&2
     exit 1
