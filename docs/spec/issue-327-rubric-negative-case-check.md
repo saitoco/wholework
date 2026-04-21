@@ -33,3 +33,17 @@ Issue #325 と #326 のレトロスペクティブで、`rubric` verify command 
 
 - Auto-resolved: 実装場所は "Adversarial stance" サブセクション内に追記。既存のスタンス記述に続けて negative case 観点を追加するのが最も自然な統合位置のため（Issue 本文より）。
 - Auto-resolved: verify コマンドは `section_contains "modules/verify-executor.md" "Rubric Command Semantics" "negative"` を使用。セクション特定により、"negative" がファイルの別箇所に偶発的に現れた場合の誤 PASS を防ぐ（Issue 本文より）。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
