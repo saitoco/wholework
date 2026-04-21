@@ -35,6 +35,12 @@ jobs:
       - name: Validate skill syntax
         run: python3 scripts/validate-skill-syntax.py skills/
 
+      - name: Detect residual watchdog-reconcile references
+        run: |
+          if grep -r watchdog-reconcile scripts/; then
+            echo "Residual watchdog-reconcile reference found in scripts/"; exit 1
+          fi
+
   check-forbidden-expressions:
     name: Forbidden Expressions check
     runs-on: ubuntu-latest
