@@ -75,7 +75,7 @@ echo "---"
 
 # Idempotency guard: skip if open PR already exists for this issue
 if [[ "$ROUTE_FLAG" == "--pr" ]]; then
-  EXISTING_PR=$(gh pr list --state open --json number,headRefName --jq ".[] | select(.headRefName | contains(\"issue-${ISSUE_NUMBER}-\")) | .number" 2>/dev/null | head -1 || true)
+  EXISTING_PR=$(gh pr list --state open --json number,headRefName 2>/dev/null | jq -r ".[] | select(.headRefName == \"worktree-code+issue-${ISSUE_NUMBER}\") | .number" | head -1 || true)
   if [[ -n "$EXISTING_PR" ]]; then
     echo "=== run-code.sh: Existing PR #${EXISTING_PR} detected for issue #${ISSUE_NUMBER}, skipping /code ==="
     echo "PR: $(gh pr view ${EXISTING_PR} --json url -q '.url')"
