@@ -1,6 +1,6 @@
 ---
 name: auto
-description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues.
+description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues; `--batch N1 N2 ...` processes the explicitly listed Issues in order.
 allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*), Read, Grep
 ---
 
@@ -27,7 +27,12 @@ If ARGUMENTS contains `--help`, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.m
 
 Extract the Issue number from ARGUMENTS. Examples: `ARGUMENTS = "279"` → `NUMBER = 279`; `ARGUMENTS = "279 --patch"` → `NUMBER = 279, ROUTE_FLAG = --patch`
 
-If `--batch N` flag is present (e.g., `ARGUMENTS = "--batch 5"`): record `BATCH_SIZE = 5` and branch to the "Batch Mode (--batch N)" section (**skip Steps 2–6**). No Issue number needed.
+If `--batch` flag is present: collect all consecutive numeric tokens following `--batch`, stopping at any non-numeric token or ARGUMENTS end.
+
+- If exactly 1 numeric token collected (e.g., `ARGUMENTS = "--batch 5"`): record `BATCH_SIZE = 5` (Count mode) and branch to `### Count mode (--batch N)` in the "Batch Mode (--batch)" section (**skip Steps 2–6**)
+- If 2 or more numeric tokens collected (e.g., `ARGUMENTS = "--batch 123 124 125"`): record `BATCH_LIST = [123, 124, 125]` (List mode) and branch to `### List mode (--batch N1 N2 ...)` in the "Batch Mode (--batch)" section (**skip Steps 2–6**)
+
+No Issue number needed for batch mode.
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="issue", ENTITY_NUMBER=$NUMBER, SKILL_NAME="auto".
 
@@ -309,24 +314,32 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 - `ISSUE_NUMBER=$NUMBER`
 - `RESULT=fail`
 
-## Batch Mode (--batch N)
+## Batch Mode (--batch)
 
-When `--batch N` is detected in Step 1, process N small backlog Issues sequentially (skip Steps 2–6).
+When `--batch` is detected in Step 1, process Issues sequentially (skip Steps 2–6).
 
-### Fetch Batch Candidates
+Two modes:
+- **Count mode** (`--batch N`): selects the N most recent XS/S Issues from the backlog
+- **List mode** (`--batch N1 N2 ...`): processes the explicitly listed Issues in the user-specified order (任意の Issue 番号を空白区切りで指定)
+
+### Count mode (--batch N)
+
+既存の `--batch N` の挙動は変更せず後方互換で維持する。
+
+#### Fetch Batch Candidates
 
 ```bash
 gh issue list --state open --label triaged --json number,title,labels,createdAt --limit 200
 ```
 
-### Filtering criteria
+#### Filtering criteria
 
 For each candidate, call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`;
 exclude Issues where Size is M, L, or XL (Projects V2 field first, label fallback).
 
 Sort by `createdAt` descending (newest first) and select the top N. Targets: Issues with no Size set, XS, or S.
 
-### Process Each Issue
+#### Process Each Issue
 
 Process the selected N Issues **sequentially** (serially):
 
@@ -337,9 +350,26 @@ Process the selected N Issues **sequentially** (serially):
 4. Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh $NUMBER` (all phases spec→code→review→merge→verify, auto-starting from the current `phase/*` state)
    - On failure: output a warning and skip to the next Issue (do not abort the entire batch)
 
+### List mode (--batch N1 N2 ...)
+
+`BATCH_LIST` に記録された Issue 番号を、ユーザが渡した順序（指定順）で順次処理する（並び替えなし）。
+
+候補取得（Fetch Batch Candidates）および `createdAt` ソートは List mode では行わない。
+
+許容 Size: XS/S/M/L。ユーザが明示指定した以上、その意思は heuristic より強いシグナルのため Size 制限を緩和する。XL のみ例外で、警告を出して当該 Issue を skip し、残りの Issue は継続処理する（XL はサブ Issue 依存グラフによる並列実行経路を持ち、batch の直列処理と噛み合わないため）。
+
+Process each Issue in `BATCH_LIST` in order:
+
+1. Check Issue labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
+2. **If no `phase/*` labels**: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh $NUMBER` (issue triage → Size setting → `phase/ready` assignment)
+   - On failure: output a warning and skip to the next Issue (do not abort the entire batch)
+3. Re-check Size: call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`; if Size is XL: output a warning and skip to the next Issue (do not abort the entire batch)
+4. Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh $NUMBER` (all phases spec→code→review→merge→verify, auto-starting from the current `phase/*` state)
+   - On failure: output a warning and skip to the next Issue (do not abort the entire batch)
+
 ### Batch Completion Report
 
-After all N Issues are processed, report results (success/skip/failure) for each Issue.
+After all Issues are processed, report results (success/skip/failure) for each Issue.
 
 Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
 - `SKILL_NAME=auto`

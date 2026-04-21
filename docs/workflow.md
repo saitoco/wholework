@@ -106,7 +106,7 @@ Orchestrator that chains Core Phases sequentially, running each as an independen
 
 If `phase/ready` is absent, `/auto` auto-runs `/spec` first. If no `phase/*` label is set, it starts from issue triage/refinement. Details: [`skills/auto/SKILL.md`](../skills/auto/SKILL.md)
 
-**`--batch N`**: Bulk-processes N XS/S Issues from the backlog in newest-first order.
+**`--batch N`**: Bulk-processes N XS/S Issues from the backlog in newest-first order. **`--batch N1 N2 ...`**: Processes the explicitly listed Issues in the specified order (all Sizes except XL accepted).
 
 **Release branch workflow (`--base` option)**: Use `--base` to consolidate multiple Issue changes on a release branch (e.g., `release/v2.0`) before merging to main.
 
