@@ -166,7 +166,7 @@ Setup: Wholework automatically creates the labels it needs on first run. Manual 
 | `phase/code` | Implementation phase | `/code` | `/review` |
 | `phase/review` | Review phase | `/review` | `/merge` |
 | `phase/verify` | Acceptance test phase | `/merge` | `/verify` |
-| `phase/done` | Complete | `/verify` (no post-merge conditions) | — |
+| `phase/done` | Complete | `/verify` (on all auto-verify PASS/SKIPPED) | — |
 | (no label) | Backlog / not started | — | `/verify` (on FAIL) |
 
 ### XL Parent Issue Phase Management
@@ -192,7 +192,7 @@ Adding `closes #N` to PR body auto-closes the Issue on merge (GitHub standard fe
 /merge: Merge → Issue auto-closes
   ↓
 /verify: Verify closed Issue
-  - PASS → Complete (remove phase/verify label)
+  - All auto-verify PASS/SKIPPED → phase/done (opportunistic/manual conditions don't block)
   - FAIL → gh issue reopen + remove all phase/* → return to fix cycle
 ```
 
