@@ -45,3 +45,17 @@
 - ISSUE_TYPE=Task のため Uncertainty・UI Design セクションは省略
 - existence gate の 2 条件（`tests/` 存在チェック + 対象ディレクトリ存在チェック）は論理 OR（どちらか 1 つでも欠ければ skip）
 - 末尾の "Skip this check if no files were changed" は、git diff が空結果を返すため自然に skip される。明示 gate にすることで意図が明確になる
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
