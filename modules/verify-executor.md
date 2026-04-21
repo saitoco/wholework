@@ -94,6 +94,7 @@ Spec files are not passed to the grader. This enforces the Issue=WHAT / Spec=HOW
 
 **Adversarial stance:**
 The grader system prompt explicitly instructs adversarial judgment: enumerate gaps strictly, prefer UNCERTAIN over PASS when ambiguous. This guards against the bias of an LLM judging its own outputs favorably.
+Explicitly ask whether the implementation tests negative cases (e.g., inputs that should NOT match, invalid values that should be rejected). Testing only positive cases while omitting negative case coverage is a common gap.
 
 **Return values:**
 - `PASS` — implementation satisfies the acceptance condition
