@@ -91,3 +91,21 @@ XL route (sub-issue 並列実行) は本 Issue のスコープ外。
 **スコープ外**: XL route 向け checkpoint 拡張 (sub-issue 依存グラフ + worktree 並列状態) は follow-up Issue で対応。
 
 **`--batch --resume` と Count mode**: `--batch N` (Count mode) では `.tmp/auto-batch-state.json` は生成しない。`--batch --resume` 実行時にファイルが存在しない場合は "No resume target found" で即終了。
+
+## Spec Retrospective
+
+N/A
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec では `docs/structure.md` のスクリプトカウント更新は明示されていなかったが、実装中に 41→42 (scripts) および 46→50 (tests) のカウント不整合を発見し追加修正した。docs/ja/structure.md も同様に更新。これはdoc-checkerが検出した追加修正で、Spec の範囲外の副次的な修正。
+
+### Design Gaps/Ambiguities
+
+- Spec の `## Implementation Steps` Step 2 に `VERIFY_ITERATION_COUNT` のカウントアップ（+1）について明示がなかった。verify run 後にカウントを更新するロジックが SKILL.md に必要だが、Spec では書き込みタイミング（`write_single $NUMBER $VERIFY_ITERATION_COUNT`）のみ指定されており、カウントアップ自体が誰の責務かが曖昧。今回は `/auto` 自身がカウントアップ責務を持つとして SKILL.md に記述した。
+
+### Rework
+
+- なし
