@@ -74,11 +74,12 @@ if [[ $EXIT_CODE -eq 143 ]]; then
   _MERGE_ISSUE=$("$SCRIPT_DIR/gh-extract-issue-from-pr.sh" "$PR_NUMBER" 2>/dev/null \
     | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('issue_number',''))" 2>/dev/null || echo "")
   if [[ -n "$_MERGE_ISSUE" ]]; then
-    if "$SCRIPT_DIR/watchdog-reconcile.sh" merge "$_MERGE_ISSUE" --pr "$PR_NUMBER"; then
+    _reconcile_out=$("$SCRIPT_DIR/reconcile-phase-state.sh" merge "$_MERGE_ISSUE" --pr "$PR_NUMBER" --check-completion 2>/dev/null) || true
+    if echo "$_reconcile_out" | grep -q '"matches_expected":true'; then
       EXIT_CODE=0
     fi
   else
-    echo "watchdog-reconcile: could not extract issue number from PR #${PR_NUMBER}, skipping reconcile" >&2
+    echo "reconcile-phase-state: could not extract issue number from PR #${PR_NUMBER}, skipping reconcile" >&2
   fi
 fi
 
