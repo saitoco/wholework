@@ -119,7 +119,7 @@ case "$SIZE" in
     echo "--- code phase (pr): issue #${SUB_NUMBER} ---"
     "$SCRIPT_DIR/run-code.sh" "$SUB_NUMBER" --pr ${BASE_FLAG:-}
 
-    PR_NUMBER=$(gh pr list --head "*issue-${SUB_NUMBER}-*" --json number -q '.[0].number' 2>/dev/null || true)
+    PR_NUMBER=$(gh pr list --json number,headRefName --jq ".[] | select(.headRefName | contains(\"issue-${SUB_NUMBER}-\")) | .number" 2>/dev/null | head -1 || true)
     if [[ -z "$PR_NUMBER" ]]; then
       echo "Error: Could not retrieve PR number for issue #${SUB_NUMBER}" >&2
       exit 1
@@ -139,7 +139,7 @@ case "$SIZE" in
     echo "--- code phase (pr): issue #${SUB_NUMBER} ---"
     "$SCRIPT_DIR/run-code.sh" "$SUB_NUMBER" --pr ${BASE_FLAG:-}
 
-    PR_NUMBER=$(gh pr list --head "*issue-${SUB_NUMBER}-*" --json number -q '.[0].number' 2>/dev/null || true)
+    PR_NUMBER=$(gh pr list --json number,headRefName --jq ".[] | select(.headRefName | contains(\"issue-${SUB_NUMBER}-\")) | .number" 2>/dev/null | head -1 || true)
     if [[ -z "$PR_NUMBER" ]]; then
       echo "Error: Could not retrieve PR number for issue #${SUB_NUMBER}" >&2
       exit 1

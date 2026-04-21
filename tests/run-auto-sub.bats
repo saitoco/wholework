@@ -235,6 +235,49 @@ MOCK
     grep -q -- "--base release/v1" "$RUN_VERIFY_LOG"
 }
 
+@test "PR extraction: uses client-side headRefName filter (#311 regression)" {
+    GH_PR_ARGS_LOG="$BATS_TEST_TMPDIR/gh-pr-args.log"
+    export GH_PR_ARGS_LOG
+
+    # Override gh mock: log pr list args; respond only to the client-side filter form
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+if [[ "\$1" == "issue" && "\$2" == "view" && "\$*" == *"--json labels"* ]]; then
+    echo "phase/ready"
+    echo "triaged"
+    exit 0
+fi
+if [[ "\$1" == "issue" && "\$2" == "view" ]]; then
+    exit 0
+fi
+if [[ "\$1" == "pr" && "\$2" == "list" ]]; then
+    echo "\$*" >> "${GH_PR_ARGS_LOG}"
+    if [[ "\$*" == *"--json number,headRefName"* ]]; then
+        echo "99"
+    fi
+    exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+
+    # glob pattern must NOT have been passed to gh
+    run grep -- '--head' "$GH_PR_ARGS_LOG"
+    [ "$status" -ne 0 ]
+
+    # client-side filter form must have been used
+    run grep -- '--json number,headRefName' "$GH_PR_ARGS_LOG"
+    [ "$status" -eq 0 ]
+
+    # PR 99 was successfully propagated to review and merge
+    grep -q "99" "$RUN_REVIEW_LOG"
+    grep -q "99" "$RUN_MERGE_LOG"
+}
+
 @test "Size XS: lock dir is NOT created by run-auto-sub wrapper" {
     cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
 #!/bin/bash
