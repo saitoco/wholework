@@ -97,3 +97,37 @@
 **bats テストの自己参照 exclusion:**
 - `tests/orchestration-recovery.bats` は forbidden op 文字列 (`force_push` 等) をテストフィクスチャとして含む
 - `validate-recovery-plan.sh` は JSON を入力とするため、.bats ファイル自体を処理することはなく自己参照問題は発生しない
+
+## Spec Retrospective
+
+(Spec フェーズで記録済み)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- bats テストで `<(echo "$plan")` (process substitution) から `$BATS_TEST_TMPDIR/plan.json` への temp file パターンに変更: 既存テストの bats パターンと合わせて信頼性を高めるため
+
+### Design Gaps/Ambiguities
+
+- なし
+
+### Rework
+
+- なし
+
+## Review Retrospective
+
+### Spec vs. 実装乖離パターン
+
+特になし。実装はSpecの設計スケッチに忠実で、allowed-tools/model の選定、input/output schema、step op vocabulary も spec 通りだった。
+
+### 繰り返し発生 issue
+
+`Forbidden Expressions check` CI FAILURE が発生。原因: `skills/auto/SKILL.md` Step 6 の新規追加テキストに廃止用語 "Dispatch" が混入していた。実装時に `check-forbidden-expressions.sh` のローカル実行が省略されたと思われる。
+改善提案: `/code` 完了後にローカルで `bash scripts/check-forbidden-expressions.sh` を実行するステップを実装チェックリストに追加することで、CI では初めて検知される類の違反を事前に防げる。
+
+### 受け入れ条件検証難易度
+
+`rubric` 系の verify コマンドが多く、safe mode では全て AI 判定。今回は実装が spec に忠実だったため実質的な問題はなかった。
+verify コマンドを `file_contains "skills/auto/SKILL.md" "Tier 3 (Unknown): Recovery Sub-Agent"` などの `file_contains` 型に変換できれば、将来的に自動判定精度が上がる。
