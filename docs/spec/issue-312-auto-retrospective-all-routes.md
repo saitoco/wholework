@@ -82,3 +82,29 @@
 ### Acceptance Criteria Verification Difficulty
 
 - 受入基準は全て `rubric` または `grep` verify command で適切に定義されており UNCERTAIN はゼロ。`grep "Orchestration Anomalies"` のような機械検証可能な verify command を組み合わせるパターンは良好な実践例。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec の設計は Issue 要件を忠実に反映。XS/S patch route での Spec 未存在時の挙動を Auto-resolve として Issue body に記録し、Spec Notes に引き継ぐ構造は有効。Issue 受入基準は `rubric` + `grep` の組み合わせで機械検証可能に設計されており UNCERTAIN ゼロを達成。
+
+#### design
+- 実装との乖離なし。Spec の "M/L/patch route" まとめ表現に XS/S が含意されていたが、明示度の点でやや曖昧な部分があった。Code Retrospective でこれを検知し、Step 4a 内で Spec 未存在時処理として統合対応した。
+
+#### code
+- Spec の実装ステップ通りに実施、リワークなし。XS/S route の Spec 未存在処理を既存の Step 4b パターンに準じて統合した判断は適切。
+
+#### review
+- Review で Step 6 "Manual recovery hand-off" の実行タイミング曖昧性（mid-execution vs. post-execution）を SHOULD として検出・修正。受入基準 4 件全 PASS。CONSIDER レベルの Step 5 完了メッセージ非通知問題はスキップ（手動回復時はユーザーが主体的に操作しているため実害小と判断）。
+- 見逃し：なし。
+
+#### merge
+- クリーンマージ。コンフリクトなし。
+
+#### verify
+- 全 4 条件 PASS。post-merge `verify-type: manual` 条件（意図的 wrapper 失敗シナリオ）は手動検証待ち。phase/verify ラベル割り当て済み。
+
+### Improvement Proposals
+- `/auto` Step 5 完了メッセージに M/L/patch route で orchestration 異常を記録した際の "Auto retrospective recorded in Spec" 通知を追加する（review で CONSIDER として検出、今回スキップ → 別 Issue 候補）
