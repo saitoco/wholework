@@ -17,6 +17,9 @@ setup() {
     export RUN_REVIEW_LOG="$BATS_TEST_TMPDIR/run-review.log"
     export RUN_MERGE_LOG="$BATS_TEST_TMPDIR/run-merge.log"
     export RUN_VERIFY_LOG="$BATS_TEST_TMPDIR/run-verify.log"
+    export RECONCILE_LOG="$BATS_TEST_TMPDIR/reconcile.log"
+    export APPLY_FALLBACK_LOG="$BATS_TEST_TMPDIR/apply-fallback.log"
+    export SPAWN_RECOVERY_LOG="$BATS_TEST_TMPDIR/spawn-recovery.log"
 
     # Mock phase-banner.sh (sourced by run-auto-sub.sh)
     cat > "$MOCK_DIR/phase-banner.sh" <<'MOCK'
@@ -67,6 +70,28 @@ echo "$@" >> "$RUN_VERIFY_LOG"
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/run-verify.sh"
+
+    # Mock recovery helpers: default behavior (exit 1 = no recovery) for happy-path tests
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    cat > "$MOCK_DIR/apply-fallback.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$APPLY_FALLBACK_LOG"
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/apply-fallback.sh"
+
+    cat > "$MOCK_DIR/spawn-recovery-subagent.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$SPAWN_RECOVERY_LOG"
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/spawn-recovery-subagent.sh"
 
     # Mock git: used by run_verify_with_retry on verify failure (pull --ff-only)
     cat > "$MOCK_DIR/git" <<MOCK
@@ -263,6 +288,98 @@ MOCK
     # (proves jq filter matched worktree-code+issue-42 and extracted the number)
     grep -q "99" "$RUN_REVIEW_LOG"
     grep -q "99" "$RUN_MERGE_LOG"
+}
+
+@test "run-auto-sub: phase exit nonzero + tier1 reconcile matches_expected=true: override to success" {
+    # run-code.sh exits 1, but tier1 reconciler says phase completed
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$RUN_CODE_LOG"
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":true}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"tier1 reconciler"* ]]
+}
+
+@test "run-auto-sub: phase exit nonzero + tier1 fails + tier2 apply-fallback succeeds: recover" {
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$RUN_CODE_LOG"
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    # tier1 returns no match
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    # tier2 succeeds
+    cat > "$MOCK_DIR/apply-fallback.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$APPLY_FALLBACK_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/apply-fallback.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"tier2 fallback catalog"* ]]
+    [ -f "$APPLY_FALLBACK_LOG" ]
+}
+
+@test "run-auto-sub: phase exit nonzero + tier1+tier2 fail + tier3 spawn succeeds: recover" {
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$RUN_CODE_LOG"
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    # tier1 no match, tier2 fails, tier3 succeeds
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    cat > "$MOCK_DIR/spawn-recovery-subagent.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$SPAWN_RECOVERY_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/spawn-recovery-subagent.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"tier3 sub-agent"* ]]
+    [ -f "$SPAWN_RECOVERY_LOG" ]
+}
+
+@test "run-auto-sub: all tiers fail: propagate original exit code" {
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$RUN_CODE_LOG"
+exit 2
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 2 ]
 }
 
 @test "Size XS: lock dir is NOT created by run-auto-sub wrapper" {
