@@ -289,3 +289,18 @@ recover scope は最小限（label 同期 / skip to completed phase のみ）に
 ### Improvement Proposals
 
 - **`docs/tech.md` Architecture Decisions への reconcile-phase-state.sh 記述追加**: 本 Issue のスコープには含めなかったが、`/auto` オーケストレーションの adaptive recovery 設計が明確化した時点で `docs/tech.md` に "orchestration reliability" セクションとして記述する価値あり。#314 完了後、#315〜#319 の進捗を見て別 Issue で検討
+
+## Code Retrospective
+
+### Deviations from Design
+
+- **run-*.sh の呼び出しパターン変更**: Spec は単純な `if reconcile-phase-state.sh ...; then EXIT_CODE=0` 置換を想定していたが、`--warn-only` デフォルトでは exit 0 が常に返るため実用的でない。JSON output の `matches_expected:true` を直接 grep する方式に変更した。これにより `--strict`/`--warn-only` モードに依存せず確実な completion 判定が可能になった。
+- **bats テスト数**: Spec は推定 52 ケースと記載したが、Stage 2 tests (4 件) を削除した結果 48 ケースとなった。機能的には仕様を満たしている。
+
+### Design Gaps/Ambiguities
+
+- **`--warn-only` と completion check の整合性**: Spec は run-*.sh の completion check で `--strict`/`--warn-only` を明示していなかった。実装では JSON 解析方式を採用したが、SKILL.md の説明（"exit 0 completed, exit 1 mismatch"）との整合性が不明確。後続の verify フェーズで明確化が推奨される。
+
+### Rework
+
+- **bats テスト 15 番のモック修正**: `code-pr completion: open PR exists` テストで gh モックの引数マッチが失敗。Shell が single quotes を剥ぐため `"$*" == *"-q length"*` に修正が必要だった（1 回の修正で解決）。
