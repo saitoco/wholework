@@ -54,3 +54,17 @@
 ### Rework
 
 - N/A
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Spec と実装の乖離なし。`tests/watchdog-reconcile.bats` のコメント更新（実行パス非影響）は Code Retrospective で既に記録済み。
+
+### Recurring Issues
+
+- 特記事項なし。
+
+### Acceptance Criteria Verification Difficulty
+
+- 4条件すべて自動検証可能。`github_check` 条件は CI SUCCESS により PASS。UNCERTAIN ゼロ、verify コマンドの精度は高い。
