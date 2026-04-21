@@ -208,3 +208,26 @@
 
 - 新スクリプトは `mkdir`, `kill -0`, `rm -rf`, `cat`, `grep`, `git`, `trap` のみ使用 — すべて bash 3.2 互換
 - `mapfile` (bash 4+) や `[[ ... =~ ... ]]` の高度な機能は使用しない
+
+## spec retrospective
+
+### Minor observations
+
+- worktree-lifecycle.md が `/spec`, `/code patch`, `/verify` の 3 経路から共有されている影響を spec 段階で網羅できた。lock 範囲の拡張（patch route 限定 → 全 main push）が単なる副作用ではなく設計上のプラスである点を Notes に明記
+- run-auto-sub.sh の `REPO_ROOT="$(git -C "${SCRIPT_DIR}/.." ...)"` 計算は plugin 経由 install ではユーザーの project repo を指さない可能性があるが、現状の `run-auto-sub.sh` は同等の問題を抱えており既存挙動を変えない範囲で新スクリプトは CWD ベースを採用。lock dir 位置の plugin/project ずれは別 Issue で扱うべき潜在課題
+
+### Judgment rationale
+
+- **lock を新スクリプトに集約 vs worktree-lifecycle.md にインライン**: PID stamping を維持するため単一プロセスで lock のライフサイクルを完結させる必要があり、新スクリプト集約を採用（user 確認済）
+- **lock dir 名の維持**: 内部識別子のため変更による直接的なユーザー利益はゼロ。一方テスト・既存運用への disruption はゼロ → 維持
+- **`patch-lock-timeout` キー名の維持**: `.wholework.yml` を編集済みのユーザーへの breaking change を回避。説明文のみ新セマンティクスに更新
+- **デフォルト値 300 の選定**: lock 保持時間が数秒（merge --ff-only + push）のため 300s は 100x 余裕。fail-fast 原則と矛盾せず、ネットワーク不調時の保険値としても十分
+
+### Uncertainty resolution
+
+- `git rev-parse --show-toplevel` が worktree 内から実行された場合の挙動: worktree path を返す（main repo path ではない）。本 Spec では新スクリプトを ExitWorktree(keep) **直後** に呼ぶ前提のため CWD は main repo であり問題なし。Spec 内に明記
+- AC #4 の verify command 精度: 旧版の `file_contains "patch-lock-timeout"` は key 存在のみを検証していたため、default 値 300 と参照先の更新を確認できる rubric に置換。Issue 本文も同期更新済
+
+### Improvement Proposals
+
+N/A
