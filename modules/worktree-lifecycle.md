@@ -48,7 +48,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh [--base "$BASE_BRANCH"]
    ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh --from "$WORKTREE_BRANCH" [--base "$BASE_BRANCH"]
    ```
 
-   The script handles: lock acquisition (PID stamping, stale detection, configurable timeout via `patch-lock-timeout` in `.wholework.yml`, default 300s), `git merge --ff-only` (with `git pull --rebase` retry on FF failure), conflict marker check, `git push origin <base>`, and lock release via EXIT trap. On script failure (non-zero exit), abort and skip cleanup.
+   The script handles: lock acquisition (PID stamping, stale detection, configurable timeout via `patch-lock-timeout` in `.wholework.yml`, default 300s), `git merge --ff-only` (with `git pull --rebase` retry on FF failure, see `modules/orchestration-fallbacks.md#ff-only-merge-fallback`), conflict marker check, `git push origin <base>`, and lock release via EXIT trap. On script failure (non-zero exit), abort and skip cleanup.
 
 4. **Cleanup** (output warning and continue if any command fails):
    ```bash

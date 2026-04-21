@@ -78,12 +78,14 @@ acquire_lock() {
 acquire_lock
 
 if [[ -n "$FROM_BRANCH" ]]; then
+  # See modules/orchestration-fallbacks.md#ff-only-merge-fallback
   if ! git merge "$FROM_BRANCH" --ff-only; then
     echo "FF merge failed, attempting git pull --rebase origin ${BASE_BRANCH}..." >&2
     git pull --rebase origin "$BASE_BRANCH"
     git merge "$FROM_BRANCH" --ff-only
   fi
 
+  # See modules/orchestration-fallbacks.md#conflict-marker-residual
   conflict_output=$(grep -rn '^<<<<<<' . 2>/dev/null || true)
   if [[ -n "$conflict_output" ]]; then
     echo "Error: Conflict markers remain. Please resolve conflicts manually then push." >&2
