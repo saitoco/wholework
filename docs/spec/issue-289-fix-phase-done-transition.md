@@ -69,3 +69,17 @@
 - **既存 60 件のバックフィルは対象外**: Issue の Non-Goals に明記済み
 - **bats テストが LLM 経路を直接検証できない制約**: `/verify` SKILL.md の判定ロジックは LLM 解釈のため bats で直接再現できない。代わりに (a) pre-merge の `rubric` verify command で SKILL.md への修正反映を意味レベルで検証、(b) bats 回帰テストで下位 script (`gh-label-transition.sh`) の `phase/verify` 除去が不変であることを保証
 - **参考先行例**: #39 (patch route の phase/done ラベル遷移), #132 (gh-label-transition: target ラベル消失バグ)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。実装ステップ 1〜4 をすべて Spec 通りに実施した。
+
+### Design Gaps/Ambiguities
+
+- Spec の Changed Files には `docs/workflow.md` の L168-169 「必要であれば明確化」と記載されていたが、実際に読んでみると phase/done の Assigned by 列「/verify (no post-merge conditions)」が旧挙動を示していたため、明確化ではなく修正（「/verify (on all auto-verify PASS/SKIPPED)」）が必要だった。
+
+### Rework
+
+- なし。
