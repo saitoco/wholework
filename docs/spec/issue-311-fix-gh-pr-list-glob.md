@@ -58,6 +58,20 @@ gh pr list --json number,headRefName \
 
 - 実際の XL Issue または M/L Issue で `/auto` を実行し、`worktree-issue-N-{short-title}` 形式のブランチ名で PR 抽出が成功することを確認
 
+## Code Retrospective
+
+### Deviations from Design
+
+- なし（設計通りに実装完了）
+
+### Design Gaps/Ambiguities
+
+- `tests/run-auto-sub.bats` の regression テストで gh mock が `worktree-issue-N-{short-title}` 形式の実際の JSON を返すのではなく、`--json number,headRefName` フラグ検出時に直接 "99" を返す設計にした。これは jq の `--jq` フラグを mock 内で処理できないためであり、設計に明示されていなかった点。ただし両側 assert（glob 未使用 + client-side filter 使用確認）で regression 検知は十分に達成できている
+
+### Rework
+
+- `git push origin HEAD` を PR 作成前に実行し忘れ、PR 作成時にエラーとなった。手順上 push が未完だったため即座に push して解消
+
 ## Notes
 
 - **Approach B 採用理由**: Approach A (`--search "head:issue-N"`) は gh/GitHub Search API の先頭語一致仕様で `worktree-issue-N-*` 形式へのマッチが不透明。Approach B は全 open PR を取得するコスト（通常は数 PR 程度）と引き換えに確実性を得る。`| head -1` で複数マッチ時の最初の 1 件に限定
