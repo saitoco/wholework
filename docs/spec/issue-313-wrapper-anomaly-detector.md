@@ -73,3 +73,17 @@
 ### Rework
 
 - N/A
+
+## Review Retrospective
+
+### Spec vs. 実装乖離パターン
+
+特筆すべき乖離なし。受け入れ条件 6 件が全て PASS。ただし、Step 6 の新「Anomaly detection」ブロックと既存の「Manual recovery hand-off」が同一セクションへの書き込みを両方記述しており、手動リカバリーパスでの重複書き込みリスクが生まれていた。この種の「新機能と既存フローの相互作用による曖昧さ」は Issue spec に明示されていなかったため、Code 段階で見落とされた。Spec ではフロー統合時の既存セクションとの相互作用を明示すると今後の実装・レビューで早期発見できる。
+
+### 繰り返し問題
+
+今回は SHOULD 1件・CONSIDER 1件のみで品質は高い。SHOULD 問題（重複書き込みリスク）は「新機能追加時の既存フローとの相互作用チェック」が漏れたケース。verify コマンドでこの種の相互作用を事前検証する rubric を設計段階で書いておくと効果的。
+
+### 受け入れ条件検証困難度
+
+全条件が自動検証可能（file_exists, grep, command/CI参照, rubric）で UNCERTAIN なし。verify コマンドの設計は適切。`rubric` 2件も明確な記述で grader が判断しやすかった。
