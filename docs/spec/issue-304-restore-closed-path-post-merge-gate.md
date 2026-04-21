@@ -116,8 +116,9 @@
 - 単一 PR #305、コンフリクト解消の痕跡なし。クリーンなマージ。
 
 #### verify
-- 全 Pre-merge 条件 PASS。Post-merge `<!-- verify-type: manual -->` 条件が未チェックのため `phase/verify` を維持（Issue CLOSED のまま）。
-- 今回の verify 実行自体が「CLOSED + 未チェック manual → phase/verify」シナリオを実例で示しており、修正の正しさを動的に確認できた。
+- 初回 verify 実行（前回）: 全 Pre-merge 条件 PASS。Post-merge `<!-- verify-type: manual -->` 条件が未チェックのため `phase/verify` を維持（Issue CLOSED のまま）。これは修正の正しさを動的に確認する実例となった。
+- 2 回目 verify 実行（今回）: Post-merge 手動条件が `[x]` 確認済みとなり、全条件 PASS で `phase/done` へ遷移。修正サイクル全体が正常完了。
+- 2 段階の verify 実行（手動確認待ち → 確認完了）が意図通りのフローを証明した。
 
 ### Improvement Proposals
 - N/A
