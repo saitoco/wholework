@@ -118,12 +118,17 @@ _find_code_worktree() {
 }
 
 _reconcile_code_pr() {
-  # Stage 1: open PR exists
+  # Stage 1: open PR exists (check both naming patterns used by SKILL.md and run-code.sh)
   local pr_count
   pr_count=$(gh pr list --head "issue-${ISSUE_NUMBER}-*" --state open --json number -q 'length' 2>/dev/null) || {
     echo "watchdog-reconcile: gh pr list failed for issue #$ISSUE_NUMBER" >&2
     exit 2
   }
+  if [[ "${pr_count:-0}" -eq 0 ]]; then
+    local pr_count2
+    pr_count2=$(gh pr list --head "code+issue-${ISSUE_NUMBER}" --state open --json number -q 'length' 2>/dev/null) || true
+    pr_count="${pr_count2:-0}"
+  fi
   if [[ "${pr_count:-0}" -gt 0 ]]; then
     return 0
   fi

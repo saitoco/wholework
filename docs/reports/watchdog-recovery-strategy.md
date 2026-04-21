@@ -58,12 +58,15 @@ These echo statements ensure at least one stdout line is emitted after the longe
 
 `_reconcile_code_pr` gains a Stage 2 block:
 
-1. Determine the expected worktree directory: `.claude/worktrees/code+issue-${ISSUE_NUMBER}`
-2. If the directory exists and `git -C <dir> log --oneline` contains a line matching `closes #${ISSUE_NUMBER}`:
+1. Locate the worktree via `_find_code_worktree`: searches `.claude/worktrees/code+issue-${ISSUE_NUMBER}` first (run-code.sh naming), then `.claude/worktrees/issue-${ISSUE_NUMBER}-*` (SKILL.md pr-route naming)
+2. If found and `git -C <dir> log --oneline` contains a line matching `closes #${ISSUE_NUMBER}`:
    - Run `git -C <dir> push origin HEAD`
-   - Run `gh pr create --head "worktree-code+issue-${ISSUE_NUMBER}" --base main --title "(watchdog recovery) Issue #${ISSUE_NUMBER}" --body "Auto-created by watchdog-reconcile after watchdog kill."`
+   - Detect the actual branch name via `git -C <dir> rev-parse --abbrev-ref HEAD`
+   - Run `gh pr create --head "<branch>" --base main --title "(watchdog recovery) Issue #${ISSUE_NUMBER}" --body "Auto-created by watchdog-reconcile after watchdog kill."`
    - On success: return 0 (reconciled)
    - On failure: return 1 (exit 143 continues)
 3. If the directory does not exist or no matching commit is found: fall through to existing exit 143 behavior
+
+Stage 1 also checks both naming patterns: `issue-${ISSUE_NUMBER}-*` and `code+issue-${ISSUE_NUMBER}` to maintain symmetry with `_find_code_worktree`.
 
 Safety note: Stage 2 only acts when a commit already contains `closes #N`, meaning the LLM completed its implementation intent. This minimizes the risk of pushing partial work.
