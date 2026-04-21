@@ -124,3 +124,34 @@ N/A
 ### Acceptance Criteria Verification Difficulty
 
 - verify コマンドはすべて rubric / file_exists / github_check の3種類で構成されており、UNCERTAIN は発生しなかった。github_check による CI 結果確認が verify 条件に含まれていたため、CI 完了後のレビューでは迷わずに判定できた。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec Retrospective は N/A。設計方針（reconciler-first）の責務分担や stale 判定の2パターンはこの Spec で明確に定義されており、受け入れ条件も rubric による semantic 判定で適切に設定されていた。
+
+#### design
+- VERIFY_ITERATION_COUNT のインクリメントタイミングが Spec の `Implementation Steps` に明示されておらず、Code 実装で「`/auto` 自身がカウントアップ」と解釈したが初期実装でそのステップが欠落していた。今後の Spec では「カウント変更操作」のタイミングと責務担当者を明記する。
+- `docs/structure.md` のスクリプトカウント更新は Spec 対象外だったが、doc-checker が不整合を検出して追加修正が必要になった。ドキュメント整合性チェックを Spec の verification に含めるか検討の余地あり。
+
+#### code
+- PR #343 のコミット履歴に "Address review feedback: add VERIFY_ITERATION_COUNT increment and robustness" という rework コミットが1件存在。レビュー指摘を受けた修正であり、Spec の曖昧さが起因。
+- Spec 未記載の副次修正（structure.md カウント修正）が1コミット追加された。
+
+#### review
+- レビューが効果的に機能し、VERIFY_ITERATION_COUNT のインクリメント欠落、`cmd_update_batch` の jq エラーガード漏れ、`delete_batch` テスト欠落を検出・修正させた。
+- Review Retrospective で指摘された問題はすべて rework コミットで対応されており、マージ前に品質が担保された。
+
+#### merge
+- squash merge（PR #343）で競合なし。マージコミット `8c402c7` のみ。
+
+#### verify
+- Pre-merge 5条件すべて PASS（rubric ×3、file_exists ×1、github_check ×1）。UNCERTAIN/FAIL なし。
+- `github_check "gh pr checks" "Run bats tests"` が2つの CI run でいずれも pass（3分46秒、3分55秒）を確認。
+- Post-merge manual 条件3件（verify loop 中断→resume、batch 中断→resume、stale 判定実機確認）は手動検証待ち。
+
+### Improvement Proposals
+- Spec の `Implementation Steps` でカウント変更操作（increment/decrement/reset）を記述する際は変更前後の値と変更タイミング（どの操作の前 or 後）を必ず明記する。
+- `write_batch` のようにファイルを読み込んで書き戻す操作は、jq 失敗時のガード（`|| die "..."` 等）を Spec 段階で明示する。
