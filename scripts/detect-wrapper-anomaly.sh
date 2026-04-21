@@ -53,6 +53,7 @@ PATTERN_NAME=""
 ANOMALY_DESC=""
 IMPROVEMENT_HINT=""
 
+# Pattern matching (first match wins; only one pattern is reported per run)
 if grep -q "Could not retrieve PR number" "$LOG_FILE"; then
   PATTERN_NAME="pr-extraction-failure"
   ANOMALY_DESC="PR extraction failed in phase \`$PHASE\` (exit code $EXIT_CODE): \`Could not retrieve PR number\` detected in wrapper output. See #311 for root cause (gh pr list glob non-support)."
