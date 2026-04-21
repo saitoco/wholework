@@ -49,6 +49,25 @@ List mode の挙動:
 - Claude Code 上で `/auto --batch 123 124 125 126` 形式（空白区切り）を実行し、指定された全 Issue が指定順序で処理されることをユーザが確認する
 - Claude Code 上で既存の `/auto --batch N`（最新 N 件の XS/S）形式が後方互換で動作することをユーザが確認する
 
+## Spec Retrospective
+
+N/A
+
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。実装ステップは Spec 通りに進行した。
+
+### Design Gaps/Ambiguities
+
+- `## Batch Mode (--batch N)` セクションのリネーム後（→ `## Batch Mode (--batch)`）、Count mode / List mode の 2 サブセクション構成に再編する際、Spec に記載のサブセクションヘッダーが `###` (h3) か `####` (h4) か明示されていなかったが、既存の Batch Mode サブセクションが `### Fetch Batch Candidates` 等の h3 だったため、Count mode の内部見出しを `####` (h4) に降格し整合させた。
+- ドキュメント同期 (docs/tech.md, docs/workflow.md, docs/ja/) の更新が Spec の「Changed Files」に含まれていなかったが、doc-checker の impact criteria に基づき更新対象と判断し追記した。
+
+### Rework
+
+- なし。
+
 ## Notes
 
 ### Post-merge 手動確認について
