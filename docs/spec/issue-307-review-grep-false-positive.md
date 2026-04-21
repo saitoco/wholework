@@ -35,3 +35,14 @@
 ### Post-merge
 
 - 実際に LLM 側チェックをシェルスクリプトに移譲する実装 Issue で `/review` を実行した際、新規チェックリスト項目が review 結果に反映されることを確認
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
