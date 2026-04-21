@@ -117,3 +117,19 @@ teardown() {
     [ "$status" -eq 0 ]
     [ "$output" = "0" ]
 }
+
+@test "cleanup: delete_batch removes batch checkpoint file" {
+    bash "$SCRIPT" write_batch "10 11 12" "" ""
+    [ -f ".tmp/auto-batch-state.json" ]
+
+    run bash "$SCRIPT" delete_batch
+    [ "$status" -eq 0 ]
+    [ ! -f ".tmp/auto-batch-state.json" ]
+
+    run bash "$SCRIPT" delete_batch
+    [ "$status" -eq 0 ]
+
+    run bash "$SCRIPT" read_batch
+    [ "$status" -eq 0 ]
+    [ "$output" = "" ]
+}

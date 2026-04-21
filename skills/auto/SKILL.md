@@ -164,9 +164,10 @@ Each phase follows the Observe → Diagnose → Act pattern (same as pr route; s
 3. If code fails: completion check `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-patch $NUMBER --check-completion` — if `matches_expected: true`, override to success; otherwise go to Step 6
 4. **XS only**: transcribe issue retrospective to Spec (see Step 4b)
 5. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh verify $NUMBER --check-precondition --warn-only`
-6. Save checkpoint: `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh write_single $NUMBER $VERIFY_ITERATION_COUNT`
-7. verify phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh $NUMBER [--base ${BASE_BRANCH}]` via Bash (timeout: 600000)
-8. Based on verify result, proceed to Step 5 or Step 6
+6. Increment counter: `VERIFY_ITERATION_COUNT=$((VERIFY_ITERATION_COUNT + 1))`
+7. Save checkpoint: `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh write_single $NUMBER $VERIFY_ITERATION_COUNT`
+8. verify phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh $NUMBER [--base ${BASE_BRANCH}]` via Bash (timeout: 600000)
+9. Based on verify result, proceed to Step 5 or Step 6
    - If verify output contains `MAX_ITERATIONS_REACHED`: max iterations has been reached; delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`); stop chained execution and proceed to Step 5 (human judgment required — do not re-run verify automatically)
    - On verify success: delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`) and proceed to Step 5
 
@@ -200,9 +201,10 @@ Full phase sequence:
 10. Output `[3/4] merge`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh $PR_NUMBER` via Bash (timeout: 600000); on success output `[3/4] merge → done`
 11. If merge fails: completion check `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh merge $NUMBER --pr $PR_NUMBER --check-completion` — if `matches_expected: true`, override to success; otherwise go to Step 6
 12. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh verify $NUMBER --check-precondition --warn-only`
-13. Save checkpoint: `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh write_single $NUMBER $VERIFY_ITERATION_COUNT`
-14. Output `[4/4] verify`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh $NUMBER [--base ${BASE_BRANCH}]` via Bash (timeout: 600000); on success output `[4/4] verify → done`
-15. Based on verify result, proceed to Step 5 or Step 6
+13. Increment counter: `VERIFY_ITERATION_COUNT=$((VERIFY_ITERATION_COUNT + 1))`
+14. Save checkpoint: `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh write_single $NUMBER $VERIFY_ITERATION_COUNT`
+15. Output `[4/4] verify`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh $NUMBER [--base ${BASE_BRANCH}]` via Bash (timeout: 600000); on success output `[4/4] verify → done`
+16. Based on verify result, proceed to Step 5 or Step 6
     - If verify output contains `MAX_ITERATIONS_REACHED`: max iterations has been reached; delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`); stop chained execution and proceed to Step 5 (human judgment required — do not re-run verify automatically)
     - On verify success: delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`) and proceed to Step 5
 
@@ -506,9 +508,9 @@ Process the selected N Issues **sequentially** (serially):
 
 At the start of List mode, write the full batch state:
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh write_batch "<N1 N2 ...>" "" ""
+${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh write_batch "N1 N2 N3" "" ""
 ```
-(first arg: space-separated full list; second and third args: empty strings for completed and failed)
+(first arg: space-separated full list in double quotes — quoting is required when the list contains spaces; second and third args: empty strings for completed and failed)
 
 Process each Issue in `BATCH_LIST` in order:
 

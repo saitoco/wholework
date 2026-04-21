@@ -185,17 +185,23 @@ cmd_update_batch() {
   ts=$(_now)
 
   if [[ "$action" == "complete" ]]; then
-    jq --argjson n "$number" --arg ts "$ts" '
+    if ! jq --argjson n "$number" --arg ts "$ts" '
       .remaining = ([.remaining[] | select(. != $n)]) |
       .completed = (.completed + [$n]) |
       .last_update = $ts
-    ' "$path" > "$tmp_path"
+    ' "$path" > "$tmp_path"; then
+      rm -f "$tmp_path"
+      return 1
+    fi
   else
-    jq --argjson n "$number" --arg ts "$ts" '
+    if ! jq --argjson n "$number" --arg ts "$ts" '
       .remaining = ([.remaining[] | select(. != $n)]) |
       .failed = (.failed + [$n]) |
       .last_update = $ts
-    ' "$path" > "$tmp_path"
+    ' "$path" > "$tmp_path"; then
+      rm -f "$tmp_path"
+      return 1
+    fi
   fi
   mv "$tmp_path" "$path"
 }
