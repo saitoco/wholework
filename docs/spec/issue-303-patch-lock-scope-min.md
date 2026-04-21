@@ -245,3 +245,36 @@ The conflict marker grep pattern `grep -rn '<<<<<<' .` was migrated as-is from t
 ### Acceptance criteria verification difficulty
 
 All 6 pre-merge conditions used either `rubric` or `command` hints and were deterministically verifiable. No UNCERTAIN results. The rubric conditions effectively caught the semantic requirements. No improvements needed for verify commands in this spec.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec stage was thorough: identified the shared impact of `worktree-lifecycle.md` across `/spec`, `/code patch`, and `/verify` routes and noted the lock scope expansion (patch route only → all main pushes) as a design plus, not a side effect.
+- AC#4 was proactively upgraded from `file_contains` (key existence only) to `rubric` (semantic check of both default value and consumer reference). This improved automation accuracy.
+- No improvement proposals from the Spec retrospective.
+
+#### design
+- The design (single new script `worktree-merge-push.sh`) was correctly chosen to keep PID stamping within a single process lifecycle. The alternative (inline in `worktree-lifecycle.md`) would have broken stale PID detection.
+- Spec notes did not enumerate SKILL.md `allowed-tools` frontmatter updates as a changed file, though the implementation required adding `worktree-merge-push.sh` to 5 SKILL.md files. Future specs should list SKILL.md frontmatter changes explicitly when a new script is introduced.
+
+#### code
+- Single squash commit with no fixup/amend patterns. Clean implementation.
+- The conflict marker grep pattern (`grep -rn '<<<<<<' .`) was migrated as-is from the LLM-executed step, creating a false-positive risk on documentation and test files. This regression was not caught by bats tests (isolated temp dirs don't contain docs). Caught at review stage and fixed (`^<<<<<<` anchor).
+
+#### review
+- Review was effective: caught the 1 critical bug (conflict marker grep false positive) before merge.
+- The review retrospective correctly identifies the migration pattern risk: LLM-executed checks use implicit judgment to filter false positives; shell script equivalents need explicit pattern tightening.
+- 0 SHOULD/CONSIDER issues; only 1 MUST, which was resolved cleanly.
+
+#### merge
+- Single squash commit, no conflicts, all CI jobs passed (DCO, bats, validate-skill-syntax, forbidden-expressions, macOS shell compat).
+
+#### verify
+- All 6 pre-merge conditions PASS: 13/13 and 9/9 bats tests passed; 4 rubric conditions confirmed via grep and file reads.
+- 2 post-merge manual conditions remain (verify-type: manual) requiring real XL Issue `/auto` execution to confirm parallel run behavior.
+- Verify commands were well-designed: rubric conditions for semantic checks, command conditions for test suite runs. No UNCERTAIN or FAIL results.
+
+### Improvement Proposals
+- When migrating LLM-executed checks to shell scripts, add a checklist item to verify the grep/awk pattern does not false-positive on documentation or test fixture files. The implicit LLM filter does not carry over to shell context.
