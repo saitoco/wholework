@@ -89,3 +89,32 @@ VERIFY_PR_NUMBER=$(gh pr list --search "is:merged linked:issue:$ISSUE_NUMBER" --
 - `WHOLEWORK_CI_TIMEOUT_SEC` を patch route の main branch CI wait にも適用（`wait-ci-checks.sh` 内と同じ変数で統一）
 - `skills/verify/SKILL.md` の PR lookup (line 79, `closes #$ISSUE_NUMBER`) はテキスト検索で正しく動作しており、修正対象外
 - `gh run watch` が存在しない環境（非常に古い gh CLI）での自動解決: `2>/dev/null || true` でエラーを吸収し、後続の LLM 実行で判断させる（既存の `wait-ci-checks.sh` の `|| true` と同じ戦略）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。Spec の実装ステップを忠実に実施した。
+
+### Design Gaps/Ambiguities
+
+- regression test の `WHOLEWORK_SCRIPT_DIR` オーバーライドアプローチが問題: `WHOLEWORK_SCRIPT_DIR` を設定すると `claude-watchdog.sh` など他のスクリプトも mock dir から探されてしまい、テストが失敗した。Spec では言及されていなかった制約。回避策として `WHOLEWORK_SCRIPT_DIR` オーバーライドを削除し、PATH 上の mock `gh` だけで検証する方法に変更した。
+
+### Rework
+
+- regression test を 1 回修正: `WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` を使ってサイドチャネル検証（`wait-ci-checks.sh` 呼び出しログ）を試みたが、他のスクリプト（`claude-watchdog.sh` 等）が mock dir に存在せずスクリプトがエラー終了した。オーバーライドを削除し、出力メッセージの有無で検証する方式に変更した。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+なし。Spec の設計ステップ・実装メモに沿った実装で、review phase での Spec 乖離は確認されなかった。
+
+### Recurring issues
+
+- `gh run list --json X --jq '.[0].X'` の jq null 問題: 空配列 `[]` に対して `.[0].X` は `null` を返すが、`if [[ -n "$_RUN_ID" ]]` チェックは `"null"` を non-empty と判定する。今回は `// empty` で修正したが、同パターンが他スクリプトにも存在する可能性がある。今後 `gh ... --json X --jq '...'` を使う際は `// empty` をデフォルトで付与するか、`!= "null"` チェックを追加する規約を検討する価値がある。
+- テストモックが `echo ""` を使っているが実際の `gh run list` は `null`（jq literal）を返す点が乖離していた。mock 設計時に jq null の挙動を意識することが再発防止になる。
+
+### Acceptance criteria verification difficulty
+
+- rubric 条件 2 件 + command 条件 1 件、すべて PASS（CI 参照含む）。検証困難な UNCERTAIN は 0 件。verify command の設計は適切だった。
