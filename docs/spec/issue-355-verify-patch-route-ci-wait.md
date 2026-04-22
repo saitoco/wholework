@@ -89,3 +89,17 @@ VERIFY_PR_NUMBER=$(gh pr list --search "is:merged linked:issue:$ISSUE_NUMBER" --
 - `WHOLEWORK_CI_TIMEOUT_SEC` を patch route の main branch CI wait にも適用（`wait-ci-checks.sh` 内と同じ変数で統一）
 - `skills/verify/SKILL.md` の PR lookup (line 79, `closes #$ISSUE_NUMBER`) はテキスト検索で正しく動作しており、修正対象外
 - `gh run watch` が存在しない環境（非常に古い gh CLI）での自動解決: `2>/dev/null || true` でエラーを吸収し、後続の LLM 実行で判断させる（既存の `wait-ci-checks.sh` の `|| true` と同じ戦略）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。Spec の実装ステップを忠実に実施した。
+
+### Design Gaps/Ambiguities
+
+- regression test の `WHOLEWORK_SCRIPT_DIR` オーバーライドアプローチが問題: `WHOLEWORK_SCRIPT_DIR` を設定すると `claude-watchdog.sh` など他のスクリプトも mock dir から探されてしまい、テストが失敗した。Spec では言及されていなかった制約。回避策として `WHOLEWORK_SCRIPT_DIR` オーバーライドを削除し、PATH 上の mock `gh` だけで検証する方法に変更した。
+
+### Rework
+
+- regression test を 1 回修正: `WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` を使ってサイドチャネル検証（`wait-ci-checks.sh` 呼び出しログ）を試みたが、他のスクリプト（`claude-watchdog.sh` 等）が mock dir に存在せずスクリプトがエラー終了した。オーバーライドを削除し、出力メッセージの有無で検証する方式に変更した。
