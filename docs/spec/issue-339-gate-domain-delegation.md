@@ -74,3 +74,17 @@ Phase 1 (#292) で `skills/code/SKILL.md` および `skills/doc/SKILL.md` に挿
 - `skills/doc/skill-dev-sync.md` の `load_when` は `file_exists_any: [scripts/validate-skill-syntax.py, skills/]` (OR 評価)。`validate-skill-syntax.py` が存在しない環境で `skills/` のみ存在する場合、Cross-skill consistency check は domain file 内の内部ガードでスキップする。
 - Pre-merge 検証条件が 6 件で SPEC_DEPTH=light の 5 件制限を超えているが、Issue body からの verbatim コピーを優先して全件記載する。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- コミットプレフィックス: Issue Type が Task なので Spec では `chore:` を使うべきだったが、`feat:` を使用した。内容は正しい（機能移譲）。実害なし。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
