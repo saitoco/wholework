@@ -107,6 +107,19 @@ Explicitly ask whether the implementation tests negative cases (e.g., inputs tha
 **Responsibility boundary with Step 3 AI judgment fallback:**
 Step 3 AI judgment is an implicit, opportunistic fallback for conditions that lack a `<!-- verify: ... -->` hint. `rubric` is an explicit opt-in declared at Issue creation time. Use `rubric` when you want semantic judgment to be a first-class verification path, not a fallback.
 
+**Security-sensitive validator rubric guidelines:**
+When writing rubric conditions for Issues that implement security-sensitive validators (e.g., input filtering, forbidden command detection, recovery plan validation), explicitly name ALL security-critical sub-fields in the rubric text — not only the top-level operation field.
+
+Motivation: A validator restricting the `op` field of an action object may also require validation of `cmd` (the command sub-field of `run_command` ops). A rubric that names only `op` cannot detect the gap where `cmd` coverage was omitted, and the `/review` phase will miss it as a pre-merge issue (root cause of the gap identified in Issue #319).
+
+**Guideline**: Name both the top-level field and each security-critical sub-field explicitly in the rubric text. Example:
+
+```
+rubric "validate-recovery-plan.sh checks both op and cmd fields: op filters allowed operations, cmd applies forbidden pattern checks to run_command arguments"
+```
+
+This makes sub-field coverage an explicit semantic assertion, allowing the grader to detect missing `cmd` (or other sub-field) checks before merge.
+
 **Managed Agents migration intent:**
 `always_allow` permission is set on `rubric` for 1:1 portability to Anthropic Managed Agents `permission_policy` in a future migration.
 
