@@ -61,7 +61,7 @@ if [[ -n "$VERIFY_PR_NUMBER" ]]; then
 else
   # patch route: wait for the latest branch workflow run
   _WAIT_BRANCH="${BASE_BRANCH:-main}"
-  _RUN_ID=$(gh run list --branch "$_WAIT_BRANCH" --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || echo "")
+  _RUN_ID=$(gh run list --branch "$_WAIT_BRANCH" --limit 1 --json databaseId --jq '.[0].databaseId // empty' 2>/dev/null || echo "")
   if [[ -n "$_RUN_ID" ]]; then
     TIMEOUT_SEC="${WHOLEWORK_CI_TIMEOUT_SEC:-1200}"
     echo "Waiting for ${_WAIT_BRANCH} branch CI run #${_RUN_ID} (patch route, timeout: ${TIMEOUT_SEC}s)..." >&2
