@@ -326,6 +326,7 @@ SHOULD constraints (best practices, manual check — examples):
 | Architecture Decisions impact | When adding new `.wholework.yml` keys or new CLI flags passed to `claude -p` in `run-*.sh`, check the Architecture Decisions section in `docs/tech.md` and include `tech.md` in the Changed Files list | #250 |
 | Documentation condition step | When acceptance criteria contain a "documentation condition" (e.g., "X is documented", "document X", "ドキュメント化"), add a corresponding documentation step to Implementation Steps — omitting it leaves the condition permanently unchecked | #273 |
 | New subsection heading level | When Implementation Steps describe adding a new subsection to a target implementation file, explicitly specify the heading level (e.g., h4/`####`) so `/code` implementers do not need to infer the level from the surrounding document structure | #296 |
+| Counter variable change | When describing counter variable changes (increment/decrement/reset) in Implementation Steps, explicitly state: the value before the change, the value after the change, and the timing of the change (before or after which operation) | #344 |
 
 **SHOULD-level acceptance criteria consideration:**
 
