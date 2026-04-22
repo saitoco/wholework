@@ -48,6 +48,38 @@ Total wall-clock: 約 2 時間
 
 None — 本 run では orchestration-fallbacks catalog (#315), recovery sub-agent (#316), wrapper anomaly detector (#313) のいずれも発火せず、`docs/reports/orchestration-recoveries.md` への append はスキップ。
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue の受入条件は rubric コマンドで 3 件（条件1〜3）が明確に自動検証可能に設計されていた。条件4（全 sub-issue の phase/done 到達）はヒントなしで依存関係 chain の到達状態を確認する形で合理的。
+- Issue Retrospective の Auto-Resolve Log（Phase 1 gate 実箇所数訂正 3→5、Domain file 所在確認など）は問題なく機能し、sub-issue 設計精度の向上に貢献した。
+
+#### design
+- 6 sub-issue（2A→2B→2C/2D/2F/2G）の依存関係グラフが Spec に正確に反映され、XL /auto の parallel execution で活用された。
+- Sub 2E（verify-patterns.md Section 6）の除外判断は /issue 段階での調査により根拠付けられ、余計な Sub-issue 作成を防いだ。
+
+#### code
+- 全 6 sub-issue が単一コミット（patch route: #336/#337/#338/#339）または PR 経由（#334/#335）で完結。fixup/amend パターンなし。
+- Level 3 の 4 本並列（#336-#339）は #303 の patch-lock スコープ縮小により競合なく完走（Auto Retrospective に記録済み）。
+
+#### review
+- PR route を取った #334（L）と #335（M）はそれぞれ PR #353/#354 でレビュー済み。patch route の 4 件（S/XS）は PR なし。規模に応じた適切なルート選択。
+- 今回の /verify で発見した FAIL は条件4（sub-issue の phase/done 到達待ち）のみで、実装品質上の問題ではない。
+
+#### merge
+- 全 sub-issue がマージ時にコンフリクトなし。CI も通過（patch route は CI なし）。
+- Auto Retrospective が記録した Level 3 並列 4 件（~41 min）は適切なパフォーマンスを示した。
+
+#### verify
+- 条件1〜3は rubric grader による初回判定で PASS。docs/environment-adaptation.md の Domain File Frontmatter Schema セクション、9 本の Domain file の frontmatter 宣言、domain-loader の load_when/後方互換実装がすべて確認された。
+- 条件4は FAIL: sub-issues #335/#336/#337/#338/#339 が phase/done 未到達（Post-merge 手動確認条件未チェック）。実装は完了しており、phase 遷移待ちの状態。
+- `/verify` が patch route sub-issue で直前 PR の CI を参照した挙動は #355 として起票済み（Auto Retrospective 参照）。
+
+### Improvement Proposals
+- N/A（本 Spec で新たに発見された改善提案なし。#355 は Auto Retrospective で起票済み）
+
 ## Issue Retrospective
 
 (/issue phase 実施時の retrospective を #293 コメントから転記)
