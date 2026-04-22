@@ -49,3 +49,17 @@ Phase 2 (#293) の抽出作業。`skills/spec/SKILL.md` Step 10 の MUST/SHOULD 
 
 - `skills/spec/SKILL.md` L225 の `skill-dev-checks.md` ロード条件から `validate-skill-syntax.py` 言及を除去する理由: `skill-dev-checks.md` が持つ settings.json・shared module・tool dependency チェックは `validate-skill-syntax.py` の存在を前提としない。MUST/SHOULD Constraint Checklist (validator 依存知識) を domain file に分離したことにより、L225 の条件から `validate-skill-syntax.py` 言及が不要となる
 - L510 テンプレート例の変更: `validate-skill-syntax.py` 固有コマンドを汎用コマンドに差し替えるため `bash scripts/validate-permissions.sh` に変更。テンプレートの説明目的は維持される
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
