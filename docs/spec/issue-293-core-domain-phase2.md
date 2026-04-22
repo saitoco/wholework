@@ -39,9 +39,10 @@ Total wall-clock: 約 2 時間
 
 ### Improvement Proposals
 
-1. **`/verify` が patch route sub-issue で直前 PR の CI を参照する挙動**: Level 3 の 4 本（#336/#337/#338/#339、全て patch route）の `/verify` phase が "Waiting for CI checks on PR #354" と出力していた。PR #354 は Level 2 (#335) の merged PR であり、patch route sub-issue には PR が存在しないはず。CI wait 対象の PR 決定ロジックが stale state を参照している可能性。main 直 commit の patch route では CI wait 対象を main branch の最新 workflow run に切り替えるべき。
+1. **`/verify` が patch route sub-issue で直前 PR の CI を参照する挙動** — **起票済み #355**: Level 3 の 4 本（#336/#337/#338/#339、全て patch route）の `/verify` phase が "Waiting for CI checks on PR #354" と出力していた。PR #354 は Level 2 (#335) の merged PR であり、patch route sub-issue には PR が存在しないはず。CI wait 対象の PR 決定ロジックが stale state を参照している可能性。main 直 commit の patch route では CI wait 対象を main branch の最新 workflow run に切り替えるべき。
    - 影響: 今回は CI が既に成功済みの PR #354 を参照したため無害だったが、実態と乖離した wait 対象選択は将来のトラブル源。
    - 提案: `skills/verify/SKILL.md` の CI wait 対象選択ロジックを調査し、patch route では main 直近の workflow run を参照するよう分岐を追加。
+   - 備考: 本 Improvement Proposal は 2026-04-22 の XL run OV 時点で手動起票済（#312 の自動起票パイプラインを pre-empt した operator ミス）。`/verify 293` Step 13 は「起票済み」注記を見て重複起票を skip することを期待。
 
 ### Recovery Events Appended
 
