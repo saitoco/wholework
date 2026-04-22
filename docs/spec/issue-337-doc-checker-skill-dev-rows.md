@@ -68,3 +68,17 @@
 - /doc skill は現在 doc-checker.md を直接参照しておらず、今 Issue のスコープには含めない。
 - `/doc` が将来 doc-checker.md を利用するようになった場合、同一のロード経路が自動的に適用される。
 - Pre-merge 検収 6 項目は light limit（5 項）をわずかに超えるが、Issue body の受け入れ基準をそのまま転記したため維持する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
