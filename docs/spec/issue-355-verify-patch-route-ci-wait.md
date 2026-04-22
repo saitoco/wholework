@@ -118,3 +118,29 @@ VERIFY_PR_NUMBER=$(gh pr list --search "is:merged linked:issue:$ISSUE_NUMBER" --
 ### Acceptance criteria verification difficulty
 
 - rubric 条件 2 件 + command 条件 1 件、すべて PASS（CI 参照含む）。検証困難な UNCERTAIN は 0 件。verify command の設計は適切だった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body に再現手順・根本原因・変更ファイルが明記されており、Spec として情報密度が高かった。verify 条件には rubric (×2) + command (×1) が適切に設定され、UNCERTAIN ゼロで自動検証が完了した。
+
+#### design
+- Spec の実装ステップが具体的（行番号・コードブロック付き）で、code phase でのデビエーションがゼロだった。他スクリプト (`run-auto-sub.sh:159`, `reconcile-phase-state.sh:194`) との一貫性を根拠に記載しており、設計決定の理由が明確。
+
+#### code
+- `WHOLEWORK_SCRIPT_DIR` オーバーライドによるサイドチャネル検証を試みたが失敗し、出力メッセージ検証方式に変更した（1 回の rework）。Spec では言及されていない制約だが、回避策はシンプルで影響は限定的だった。
+- `gh run list --json X --jq '.[0].X'` が空配列に対して `null` を返し `[[ -n ]]` チェックを通過する問題を発見。`// empty` で修正済み。同パターンが他スクリプトにも存在する可能性がある。
+
+#### review
+- Spec 乖離なし・recurring issues として jq null 問題を Code Retrospective に記録済み。PR review 1 件、コメント 1 件でクリーンなレビューだった。
+
+#### merge
+- 単一コミットでクリーンにマージ。コンフリクトなし。
+
+#### verify
+- 全3条件 PASS (rubric ×2, bats テスト ×1)。FAIL/UNCERTAIN ゼロ。post-merge manual 条件 3 件は環境依存のため `phase/verify` で残留。
+
+### Improvement Proposals
+- `gh ... --json X --jq '.[0].X'` パターンは空配列で `null` を返すため、`[[ -n ]]` チェックが誤検知する。このパターンを使う箇所には `// empty` をデフォルトで付与するか、`!= "null"` チェックを追加する規約を `docs/` に記載することを検討する。
