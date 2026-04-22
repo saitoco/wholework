@@ -88,3 +88,32 @@ Phase 1 (#292) で `skills/code/SKILL.md` および `skills/doc/SKILL.md` に挿
 
 - N/A
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec の Notes セクションが設計の意図（`load_when` proxy 採用理由、OR 評価の挙動、内部ガードの役割）を明示しており、review/verify フェーズでの判断根拠として有効に機能した。
+- Pre-merge 検証条件が6件（SPEC_DEPTH=lightの5件制限を超過）であることへの注記あり。rubric ベースの条件設計は今回のケースで正確に機能し、全件 PASS を達成した。
+
+#### design
+- Domain file 3ファイルすべてが Sub 2A スキーマ（`type: domain` + `skill:` + `load_when:`）に準拠して設計・実装されており、設計判断の妥当性が確認できた。
+- `stale-test-check.md` の `load_when` に `validate-skill-syntax.py` を proxy として採用する設計判断は Spec の Notes で明示され、実装でも内部ガードが正しく引き継がれた。
+
+#### code
+- コミットプレフィックスが `chore:` の代わりに `feat:` が使われたが、機能的な影響なし（Code Retrospective に記録済み）。
+- リワークなし。実装がSpec の Implementation Steps に正確に従っており、5箇所のgate置き換えが1コミットで完結した。
+
+#### review
+- Patchルート（PRなし）のため正式なコードレビューフェーズなし。
+
+#### merge
+- Patchルート（直接 main へコミット）。マージコンフリクトや CI 失敗なし。コミット `255b1fd` に `Signed-off-by` あり。
+
+#### verify
+- 全6条件が rubric コマンドで自動検証され PASS。verify コマンドの一貫性に問題なし。
+- Post-merge の手動確認条件2件（`verify-type: manual`）は自動検証対象外のため `phase/verify` を割り当て、ユーザー確認待ちの状態に正しく遷移した。
+
+### Improvement Proposals
+- N/A
+
