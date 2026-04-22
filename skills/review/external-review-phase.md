@@ -1,3 +1,10 @@
+---
+type: domain
+skill: review
+load_when:
+  marker: [copilot-review, claude-code-review, coderabbit-review]
+---
+
 # External Review Step
 
 ## Step 7 Prerequisites: External Review Tool Settings

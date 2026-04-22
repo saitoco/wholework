@@ -1,3 +1,10 @@
+---
+type: domain
+skill: issue
+load_when:
+  capability: mcp
+---
+
 # MCP Tool Detection and mcp_call Proposal Guidelines (Domain File)
 
 This file is loaded only when `MCP_TOOLS` obtained from `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` is non-empty. If `MCP_TOOLS` is empty, this file is not loaded and `mcp_call` hints are not proposed.

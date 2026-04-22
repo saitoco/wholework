@@ -1,3 +1,8 @@
+---
+type: domain
+skill: spec
+---
+
 # External Specification Check
 
 ## Purpose

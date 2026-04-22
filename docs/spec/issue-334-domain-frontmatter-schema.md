@@ -73,3 +73,17 @@ Phase 2 (#293) foundation work. Define a frontmatter-driven Domain file registra
 **Verification count note**: Pre-merge verification items (13) exceeds SPEC_DEPTH=light limit (5) due to 9 individual `file_contains` checks from Issue body plus 2 supplementary `section_contains` checks (added per verify-patterns.md §9 for `rubric` conditions with known target files). Verbatim Issue body items are preserved; 2 supplementary items are added and will sync to Issue body.
 
 **Scope boundary**: This issue adds frontmatter as metadata only. `modules/domain-loader.md` and SKILL.md conditional Read instructions are unchanged. Parsing and routing by domain-loader based on this frontmatter is Phase 2B scope (#293 sub-issue 2B).
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A: Implementation followed Spec steps 1–4 in order without deviation.
+
+### Design Gaps/Ambiguities
+
+- `validate-skill-syntax.py` does not validate non-SKILL.md files, so frontmatter in Domain files (`.md` files under `skills/`) is not validated by the syntax checker. This is expected — Domain files are not skills — but means frontmatter schema conformance relies on manual review or a future dedicated linter (Phase 2B or later).
+
+### Rework
+
+- N/A
