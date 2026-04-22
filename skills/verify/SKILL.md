@@ -71,6 +71,21 @@ git status
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="issue", ENTITY_NUMBER=$NUMBER, SKILL_NAME="verify".
 
+**pre-check: all-checked, no-implementation pattern**
+
+After the banner, detect the false-ready state: all acceptance conditions are pre-checked (`[x]`) but no implementation commit or merged PR exists for this issue. If detected, output a warning and continue (do not abort).
+
+1. Fetch Issue body: `gh issue view "$NUMBER" --json body`
+2. Count total checkboxes and checked (`[x]`) items in the Acceptance Criteria section
+3. If all conditions are checked:
+   - Check for merged PR: `gh pr list --search "closes #$NUMBER" --state merged --json number --jq 'length'`
+   - Check for direct commits: `git log --oneline --grep="#$NUMBER" -20`
+   - If no implementation commit or merged PR is found (both return 0 results), output the following warning and continue:
+     ```
+     Warning: All acceptance conditions are pre-checked but no implementation commit or PR was found for issue #$NUMBER. This may be a false-ready state.
+     ```
+4. Continue with normal verify flow
+
 ### Step 2: Detect and Update Base Branch
 
 If ARGUMENTS contains `--base {branch}`, use that as `BASE_BRANCH`. Otherwise, search for a merged PR linked to the Issue and fetch `baseRefName`:
