@@ -26,15 +26,14 @@ The following information is passed from the caller:
 
 When changes fall into any of the following categories, include the corresponding document files as targets for change:
 
-**Change Types (exhaustive):**
+**Change Types (generic, exhaustive):**
 
 | Change Type | Affected Documents |
 |------------|-------------------|
-| Skill addition, change, or deletion | `README.md` (skill list), `docs/workflow.md` (skill list, phase descriptions), `CLAUDE.md` (skill list, dev flow) |
-| Agent/shared module addition, change, or deletion | `docs/workflow.md` (modules/agents list table), `README.md` (if applicable) |
 | Workflow phase changes | `docs/workflow.md`, `README.md`, `CLAUDE.md` |
 | Project structure changes (directory/file placement) | `README.md` (project structure), `docs/workflow.md` (if applicable), `$STEERING_DOCS_PATH/structure.md` (Directory Layout / Key Files) |
-| Script addition, change, or deletion | `README.md` (setup instructions, script descriptions), `docs/workflow.md` (if applicable) |
+
+**Skill-dev supplement**: If `scripts/validate-skill-syntax.py` exists, additionally read `${CLAUDE_PLUGIN_ROOT}/modules/skill-dev-doc-impact.md` and apply its Change Type entries.
 
 **Default document list**: Refer to the list in "Input" section under "Documents to check (defaults when omitted)".
 

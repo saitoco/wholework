@@ -111,6 +111,7 @@ When multiple `load_when` keys are specified, all conditions are evaluated with 
 | `skills/spec/external-spec.md` | `/spec` | External spec dependencies present | _(none — runtime-detected)_ | External document reference |
 | `skills/review/external-review-phase.md` | `/review` | `copilot-review`, `claude-code-review`, or `coderabbit-review` is true | `marker: [copilot-review, claude-code-review, coderabbit-review]` | External review tool integration |
 | `skills/review/skill-dev-recheck.md` | `/review` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development project-specific |
+| `modules/skill-dev-doc-impact.md` | `/spec`, `/code` (via `doc-checker.md`) | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development project-specific Change Types |
 | `skills/issue/spec-test-guidelines.md` | `/issue` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development test recommendations |
 | `skills/verify/browser-verify-phase.md` | `/verify` | `HAS_BROWSER_CAPABILITY=true` | `capability: browser` | Browser verification |
 | `skills/issue/mcp-call-guidelines.md` | `/issue` | `MCP_TOOLS` non-empty | `capability: mcp` | MCP tool detection |

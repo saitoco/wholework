@@ -104,6 +104,7 @@ load_when:
 | `skills/spec/external-spec.md` | `/spec` | 外部 spec 依存が存在 | _（なし — 実行時検出）_ | 外部ドキュメント参照 |
 | `skills/review/external-review-phase.md` | `/review` | `copilot-review`/`claude-code-review`/`coderabbit-review` のいずれかが true | `marker: [copilot-review, claude-code-review, coderabbit-review]` | 外部レビューツール連携 |
 | `skills/review/skill-dev-recheck.md` | `/review` | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発プロジェクト固有 |
+| `modules/skill-dev-doc-impact.md` | `/spec`、`/code`（`doc-checker.md` 経由） | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発プロジェクト固有 Change Types |
 | `skills/issue/spec-test-guidelines.md` | `/issue` | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発テスト推奨事項 |
 | `skills/verify/browser-verify-phase.md` | `/verify` | `HAS_BROWSER_CAPABILITY=true` | `capability: browser` | ブラウザ検証 |
 | `skills/issue/mcp-call-guidelines.md` | `/issue` | `MCP_TOOLS` が空でない | `capability: mcp` | MCP ツール検出 |
