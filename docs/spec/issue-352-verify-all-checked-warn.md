@@ -53,3 +53,14 @@ Issue の Auto-Resolved Ambiguity Points に従い:
 - pre-check は Step 1 に含まれるため `section_contains "### Step 1" "pre-check"` で検証可能
 - 実装テキスト中の "pre-check"（小文字）が `grep "pre-check"` にマッチし、"no implementation commit or merged PR" が `grep "no.*implementation"` にマッチすることを確認済み
 - `git log --grep="#$NUMBER"` はパッチルート（PR なし）でのコミット確認に対応するため両方チェックする
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
