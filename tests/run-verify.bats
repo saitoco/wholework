@@ -33,12 +33,20 @@ if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
   fi
   exit 0
 fi
-if [[ "$1" == "pr" && "$2" == "list" && "$*" == *"--search"* ]]; then
+if [[ "$1" == "pr" && "$2" == "list" && "$*" == *"--head"* ]]; then
   # Default: no associated PR found (patch route)
   echo ""
   exit 0
 fi
 if [[ "$1" == "pr" && "$2" == "checks" ]]; then
+  exit 0
+fi
+if [[ "$1" == "run" && "$2" == "list" ]]; then
+  # Default: no CI runs found (patch route, skip CI wait)
+  echo ""
+  exit 0
+fi
+if [[ "$1" == "run" && "$2" == "watch" ]]; then
   exit 0
 fi
 echo ""
@@ -126,10 +134,10 @@ MOCK
     [ "$status" -eq 0 ]
 }
 
-@test "success: skips CI wait when no associated PR found (patch route)" {
+@test "success: skips CI wait when no associated PR found and no CI runs (patch route)" {
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
-    [[ "$output" == *"No PR found for issue #123 (patch route), skipping CI wait"* ]]
+    [[ "$output" == *"No CI runs found for main branch (patch route), skipping CI wait"* ]]
 }
 
 @test "success: calls wait-ci-checks.sh when associated PR is found" {
@@ -143,7 +151,7 @@ if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
   fi
   exit 0
 fi
-if [[ "$1" == "pr" && "$2" == "list" && "$*" == *"--search"* ]]; then
+if [[ "$1" == "pr" && "$2" == "list" && "$*" == *"--head"* ]]; then
   echo "99"
   exit 0
 fi
@@ -159,6 +167,46 @@ MOCK
     [ "$status" -eq 0 ]
     [[ "$output" == *"Waiting for CI checks on PR #99"* ]]
     [[ "$output" == *"CI check wait complete for PR #99"* ]]
+}
+
+@test "patch route: does not wait on prior merged PR when no branch PR exists" {
+    # Simulate: --head returns empty (no branch PR), but a run exists on main.
+    # Expected: wait-ci-checks.sh is NOT called; main branch CI wait is attempted.
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test issue title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/issues/123"
+  fi
+  exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "list" && "$*" == *"--head"* ]]; then
+  # No PR for this branch (patch route)
+  echo ""
+  exit 0
+fi
+if [[ "$1" == "run" && "$2" == "list" ]]; then
+  # Return a run ID for main branch CI wait
+  echo "9999"
+  exit 0
+fi
+if [[ "$1" == "run" && "$2" == "watch" ]]; then
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    # wait-ci-checks.sh must NOT have been called (no "Waiting for CI checks on PR" message)
+    [[ "$output" != *"Waiting for CI checks on PR"* ]]
+    # Main branch CI wait should have been triggered
+    [[ "$output" == *"Waiting for main branch CI run #9999 (patch route"* ]]
+    [[ "$output" == *"CI run #9999 complete"* ]]
 }
 
 @test "error: claude command fails with non-zero exit code" {

@@ -54,11 +54,28 @@ echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
 
 # Detect associated PR for CI wait (patch route has no PR)
-VERIFY_PR_NUMBER=$(gh pr list --search "is:merged linked:issue:$ISSUE_NUMBER" --json number -q '.[0].number' 2>/dev/null || echo "")
+VERIFY_PR_NUMBER=$(gh pr list --head "worktree-code+issue-${ISSUE_NUMBER}" --state merged --json number -q '.[0].number' 2>/dev/null || echo "")
 if [[ -n "$VERIFY_PR_NUMBER" ]]; then
+  # pr route: wait for the associated PR's CI checks
   "$SCRIPT_DIR/wait-ci-checks.sh" "$VERIFY_PR_NUMBER"
 else
-  echo "No PR found for issue #${ISSUE_NUMBER} (patch route), skipping CI wait" >&2
+  # patch route: wait for the latest branch workflow run
+  _WAIT_BRANCH="${BASE_BRANCH:-main}"
+  _RUN_ID=$(gh run list --branch "$_WAIT_BRANCH" --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || echo "")
+  if [[ -n "$_RUN_ID" ]]; then
+    TIMEOUT_SEC="${WHOLEWORK_CI_TIMEOUT_SEC:-1200}"
+    echo "Waiting for ${_WAIT_BRANCH} branch CI run #${_RUN_ID} (patch route, timeout: ${TIMEOUT_SEC}s)..." >&2
+    if command -v timeout >/dev/null 2>&1; then
+      timeout "$TIMEOUT_SEC" gh run watch "$_RUN_ID" --interval 60 2>/dev/null || true
+    elif command -v gtimeout >/dev/null 2>&1; then
+      gtimeout "$TIMEOUT_SEC" gh run watch "$_RUN_ID" --interval 60 2>/dev/null || true
+    else
+      gh run watch "$_RUN_ID" --interval 60 2>/dev/null || true
+    fi
+    echo "CI run #${_RUN_ID} complete" >&2
+  else
+    echo "No CI runs found for ${_WAIT_BRANCH} branch (patch route), skipping CI wait" >&2
+  fi
 fi
 
 # Pass SKILL.md body directly as prompt (avoids context: fork issue)
