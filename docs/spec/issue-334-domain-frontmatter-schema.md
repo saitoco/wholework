@@ -74,6 +74,31 @@ Phase 2 (#293) foundation work. Define a frontmatter-driven Domain file registra
 
 **Scope boundary**: This issue adds frontmatter as metadata only. `modules/domain-loader.md` and SKILL.md conditional Read instructions are unchanged. Parsing and routing by domain-loader based on this frontmatter is Phase 2B scope (#293 sub-issue 2B).
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec の Notes セクションに auto-resolve 判断が詳細に記載されており、曖昧な設計決定（runtime-detected files の `load_when` 省略、`capability: mcp` の意味的拡張、`marker` の配列リスト記法）が明確に文書化されていた。Issue 条件の品質は高く、13 条件すべてが機械的に検証可能な verify コマンド付き。
+
+#### design
+- N/A（design フェーズなし。Spec = design）。Spec の実装ステップは明確で、実際の実装と乖離なし。
+
+#### code
+- fixup/amend パターンなし。実装は Spec ステップ 1–4 の順序に従い一発で完了。rework なし。
+
+#### review
+- PR #353 にレビューコメントなし（self-merge）。frontmatter は metadata のみの変更で副作用なし、リスクが低いため self-merge は妥当。
+
+#### merge
+- Fast-forward マージ、コンフリクトなし。CI 通過。
+
+#### verify
+- 13 条件すべて PASS。Post-merge の opportunistic 条件（手動動作確認）が 1 件残存。`capability: mcp` の list semantics 拡張は Phase 2B（domain-loader）で正式に対応予定（Notes に記録済み）。
+
+### Improvement Proposals
+- N/A
+
 ## Code Retrospective
 
 ### Deviations from Design
