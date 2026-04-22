@@ -57,3 +57,14 @@ This mirrors the `load_when` frontmatter schema's explicit condition declaration
 **Content unchanged**: Both gate conditions already had the correct logic. Only the format changes:
 - spec/SKILL.md: SPEC_DEPTH=full AND validate-skill-syntax.py exists (both conditions already present)
 - doc/SKILL.md: validate-skill-syntax.py exists (already present)
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
