@@ -63,3 +63,29 @@ Phase 2 (#293) の抽出作業。`skills/spec/SKILL.md` Step 10 の MUST/SHOULD 
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受入条件はすべて verify コマンド付きで記述されており、自動検証率が高い設計だった。`file_exists`、`file_contains`、`file_not_contains`、`rubric` を組み合わせて7条件をカバー。
+
+#### design
+- Spec の Changed Files リストが正確で、実装との乖離がゼロだった。Notes セクションで L225 条件変更の理由（`validate-skill-syntax.py` 非依存化）を明示しており、将来の変更時の参照価値が高い。
+
+#### code
+- 単一コミット（11478d3）で実装完結。fixup/amend パターンなし。Code Retrospective は全て N/A で、Spec に忠実な実装だった。
+
+#### review
+- パッチルート（直接 main コミット）のため PR レビューなし。変更規模（小規模な抽出作業）に対して適切なルート選択。
+
+#### merge
+- main 直コミット。コンフリクトなし。クリーンなマージ。
+
+#### verify
+- 7つの pre-merge 条件すべてが初回 verify で PASS。verify コマンドの精度が高かった。
+- Post-merge の manual/opportunistic 条件 2件は手動確認待ち（phase/verify 割り当て済み）。
+
+### Improvement Proposals
+- N/A
