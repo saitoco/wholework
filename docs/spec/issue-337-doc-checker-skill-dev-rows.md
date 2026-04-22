@@ -82,3 +82,32 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec は簡潔かつ実装と一致。受け入れ条件 6 項目すべてに verify コマンドが付与されており、自動検証率が高かった。
+- Post-merge 条件がすべて手動確認（manual/opportunistic）であり、verify コマンドなしで自動判定不可。これは設計上の妥当な決定（実行環境依存の動作確認のため）。
+
+#### design
+- 設計通りに 4 ファイルが変更され、逸脱なし。
+- Spec の Notes セクションで `load_when` が文書化目的であることが明記されており、実際のロード経路（doc-checker.md の条件付きロード指示）との関係が明確に整理されている。
+
+#### code
+- 単一コミット（7ab6175）で実装完了。fixup/amend パターンなし。
+- Code Retrospective の Deviations/Rework がすべて N/A であり、実装は設計通りにスムーズに完了した。
+
+#### review
+- パッチルートのため PR レビューなし。コードの変更量が小さく（24 行追加・4 行削除）、レビューなしでもリスクは低い。
+
+#### merge
+- パッチルート（main 直コミット）。マージコンフリクトなし、CI なし。
+
+#### verify
+- 全 6 Pre-merge 条件が PASS。`rubric` コマンドによるセマンティック判定が有効に機能した。
+- Post-merge の manual/opportunistic 条件（2 項）が未確認のまま残存。`phase/verify` を付与し再実行待ち。
+
+### Improvement Proposals
+- N/A
