@@ -109,6 +109,7 @@ When multiple `load_when` keys are specified, all conditions are evaluated with 
 | `skills/spec/figma-design-phase.md` | `/spec` | UI design requirements auto-detected | _(none — runtime-detected)_ | UI/Design |
 | `skills/spec/codebase-search.md` | `/spec` | `SPEC_DEPTH=full` | `spec_depth: full` | Depth-based codebase investigation |
 | `skills/spec/external-spec.md` | `/spec` | External spec dependencies present | _(none — runtime-detected)_ | External document reference |
+| `skills/spec/skill-dev-constraints.md` | `/spec` | `SPEC_DEPTH=full` and `validate-skill-syntax.py` present | `file_exists_any: [scripts/validate-skill-syntax.py]` and `spec_depth: full` | Skill development MUST/SHOULD constraint checklist |
 | `skills/review/external-review-phase.md` | `/review` | `copilot-review`, `claude-code-review`, or `coderabbit-review` is true | `marker: [copilot-review, claude-code-review, coderabbit-review]` | External review tool integration |
 | `skills/review/skill-dev-recheck.md` | `/review` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development project-specific |
 | `modules/skill-dev-doc-impact.md` | `/spec`, `/code` (via `doc-checker.md`) | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development project-specific Change Types |

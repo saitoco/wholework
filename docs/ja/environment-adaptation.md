@@ -102,6 +102,7 @@ load_when:
 | `skills/spec/figma-design-phase.md` | `/spec` | UI 設計要件を自動検出 | _（なし — 実行時検出）_ | UI/デザイン |
 | `skills/spec/codebase-search.md` | `/spec` | `SPEC_DEPTH=full` | `spec_depth: full` | 深度ベースのコードベース調査 |
 | `skills/spec/external-spec.md` | `/spec` | 外部 spec 依存が存在 | _（なし — 実行時検出）_ | 外部ドキュメント参照 |
+| `skills/spec/skill-dev-constraints.md` | `/spec` | `SPEC_DEPTH=full` かつ `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` AND `spec_depth: full` | スキル開発 MUST/SHOULD 制約チェックリスト |
 | `skills/review/external-review-phase.md` | `/review` | `copilot-review`/`claude-code-review`/`coderabbit-review` のいずれかが true | `marker: [copilot-review, claude-code-review, coderabbit-review]` | 外部レビューツール連携 |
 | `skills/review/skill-dev-recheck.md` | `/review` | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発プロジェクト固有 |
 | `modules/skill-dev-doc-impact.md` | `/spec`、`/code`（`doc-checker.md` 経由） | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発プロジェクト固有 Change Types |
