@@ -26,7 +26,7 @@ Discover and load Domain files for the calling skill from two sources: bundled D
 
 1. Glob `.wholework/domains/{SKILL_NAME}/*.md`
 2. If no files found: output nothing and return (silent skip)
-3. For each discovered file (alphabetical order): Read the file. The content becomes part of the skill's execution context, influencing subsequent steps.
+3. For each discovered Markdown file (alphabetical order): Read the file. The content becomes part of the skill's execution context, influencing subsequent steps.
 
 ### Summary Output
 
