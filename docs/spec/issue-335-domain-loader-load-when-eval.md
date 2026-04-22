@@ -75,3 +75,34 @@ The 5 typed `load_when:` keys (established in Sub 2A #334): `file_exists_any`, `
 **`skill:` array handling for current files**: All 9 bundled Domain files use `skill: <string>` (single value). Array form (`skill: [a, b]`) is documented for future shared Domain files.
 
 **`capability: mcp` semantic extension** (from #334 Notes): `capability: mcp` uses list-non-empty semantics instead of boolean `true` check. domain-loader evaluates this by checking `capabilities.mcp` list length, consistent with how detect-config-markers sets `MCP_TOOLS`.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec specified "20 lines" for domain-loader.md change; the actual rewrite expanded from 21 to 59 lines to fully document both phases, the load_when evaluation table, and `skill:` array handling with examples. This was necessary to create a self-contained, actionable module.
+- Added a `## load_when Evaluation` section as a dedicated subsection (Spec listed it as part of Processing Steps); separating it as a standalone section improves readability and aligns with the reference table format used in other modules.
+- The Markdown repair commit (adding the word "Markdown" to Phase 2 step 3) was needed to retain the pre-existing bats test "domain-loader: Markdown file type is documented" that would have failed with the rewrite.
+
+### Design Gaps/Ambiguities
+
+- The Spec said "20 lines" for the module change but the implementation required more to properly document all 5 typed keys, AND semantics, `skill:` array handling, and both phases.
+- The Spec's Processing Steps template listed the `## load_when Evaluation` subsection inline; the decision to make it a top-level section was a local judgment call for consistency with module conventions.
+
+### Rework
+
+- One repair commit required after initial implementation: the word "Markdown" was omitted from the Phase 2 project-local files description, causing the pre-existing test to fail. Fixed by adding "Markdown" to the step 3 description.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. The PR was documentation-only; the Code Retrospective in the Spec itself documented the 20→59 line expansion with justification. No structural divergence between Spec and PR diff.
+
+### Recurring issues
+
+Nothing to note. No repeated issues of the same kind detected. The single rework (Markdown keyword omission) was a one-off and already documented.
+
+### Acceptance criteria verification difficulty
+
+Nothing to note. All 7 pre-merge conditions verified cleanly: 2 `file_*` checks (no ambiguity), 4 `rubric` checks (all passed on first evaluation with clear evidence in diff), 1 `github_check` (CI SUCCESS). No UNCERTAINs. Verify commands were accurate and sufficient for this documentation-focused PR.

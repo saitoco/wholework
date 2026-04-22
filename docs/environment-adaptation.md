@@ -117,7 +117,9 @@ When multiple `load_when` keys are specified, all conditions are evaluated with 
 | `skills/doc/translate-phase.md` | `/doc` | `translate` subcommand | `arg_starts_with: translate` | Translation generation |
 | `.wholework/domains/{skill}/*.md` | `/spec`, `/code`, `/review` | Directory scan (files exist in `.wholework/domains/{skill}/`) | _(N/A — unconditional when present)_ | Project-local (user-defined) |
 
-**Project-local Domain files** are discovered via directory scan: at skill startup, the `domain-loader` module Globs `.wholework/domains/{skill}/*.md` and reads all found files in alphabetical order. Unlike bundled Domain files which use marker-detection or file-existence conditions, project-local Domain files are loaded unconditionally when present — placing a `.md` file in the directory is sufficient to activate it. This mechanism is implemented in `modules/domain-loader.md` and invoked by `/spec`, `/code`, and `/review` skills.
+**Bundled Domain files** are discovered by the `domain-loader` module via Glob of `${CLAUDE_PLUGIN_ROOT}/skills/{SKILL_NAME}/*.md`. For each file, the module checks the `type: domain` frontmatter field; files without it are skipped. If `load_when:` is present, the module evaluates all typed keys with AND semantics and loads the file only when all conditions are true. If `load_when:` is absent, the file is loaded unconditionally (backward compatible).
+
+**Project-local Domain files** are discovered via directory scan: at skill startup, the `domain-loader` module Globs `.wholework/domains/{skill}/*.md` and reads all found files in alphabetical order. Unlike bundled Domain files which support conditional loading via `load_when:`, project-local Domain files are loaded unconditionally when present — placing a `.md` file in the directory is sufficient to activate it. This mechanism is implemented in `modules/domain-loader.md` and invoked by `/spec`, `/code`, and `/review` skills.
 
 ## Layer 4: Execution (verify-executor + adapter)
 
