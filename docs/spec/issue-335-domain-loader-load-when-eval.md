@@ -106,3 +106,34 @@ Nothing to note. No repeated issues of the same kind detected. The single rework
 ### Acceptance criteria verification difficulty
 
 Nothing to note. All 7 pre-merge conditions verified cleanly: 2 `file_*` checks (no ambiguity), 4 `rubric` checks (all passed on first evaluation with clear evidence in diff), 1 `github_check` (CI SUCCESS). No UNCERTAINs. Verify commands were accurate and sufficient for this documentation-focused PR.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue の受入条件は明確で自動検証可能な形式で記述されていた。7件の pre-merge 条件（`file_contains`, `rubric` x4, `file_exists`, `github_check`）はすべて曖昧さなく評価できた。
+- Spec note に「Pre-merge 検証件数（7）が SPEC_DEPTH=light 上限（5）を超えるが、Issue body からの verbatim コピーのため保持」と記載されており、issue/spec 間の整合性管理が適切に行われていた。
+
+#### design
+- Spec の実装ステップは詳細かつ実用的で、コード retrospective で記録された逸脱（20行→59行）も Spec 自体に明記されていた。設計と実装の追跡性が高い。
+- `## load_when Evaluation` セクションを Processing Steps のインラインから独立セクションに格上げした判断は、他モジュールとの整合性から合理的。
+
+#### code
+- 修正コミットが1件（"Markdown" キーワード抜け）発生。既存テストの失敗で検出され、コード retrospective に記録済み。スコープは小さく、実装品質への影響は軽微。
+- `git log --oneline` で確認: PR #354 は1コミットで完結（squash merge）。fixup/amend パターンなし。
+
+#### review
+- PR #354 のレビューは COMMENTED (1件) のみで、すべての受入条件が PASS と記録されていた。レビューが受入条件検証として機能しており、有効だった。
+- 今回の verify で発見した FAIL なし。レビューの見落としは確認されない。
+
+#### merge
+- PR #354 はクリーンにマージ（コンフリクトなし、CI 全 pass）。Fast-forward 形式で main に統合済み。
+
+#### verify
+- 7件の自動検証条件すべてが PASS。FAIL/UNCERTAIN なし。
+- 条件1の `file_contains` を Grep ツールで実行した際にパス解決の問題（worktree 内から main リポジトリのパスを参照）が発生したが、Read ツールで直接確認して PASS と判定した。Grep のパス指定が worktree 環境でリポジトリルート相対にならない場合は Read で補完する運用が有効。
+- post-merge 手動条件（verify-type: manual）が1件残存。`phase/verify` を付与してユーザー確認待ち。
+
+### Improvement Proposals
+- N/A
