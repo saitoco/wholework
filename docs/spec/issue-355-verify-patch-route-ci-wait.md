@@ -103,3 +103,18 @@ VERIFY_PR_NUMBER=$(gh pr list --search "is:merged linked:issue:$ISSUE_NUMBER" --
 ### Rework
 
 - regression test を 1 回修正: `WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` を使ってサイドチャネル検証（`wait-ci-checks.sh` 呼び出しログ）を試みたが、他のスクリプト（`claude-watchdog.sh` 等）が mock dir に存在せずスクリプトがエラー終了した。オーバーライドを削除し、出力メッセージの有無で検証する方式に変更した。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+なし。Spec の設計ステップ・実装メモに沿った実装で、review phase での Spec 乖離は確認されなかった。
+
+### Recurring issues
+
+- `gh run list --json X --jq '.[0].X'` の jq null 問題: 空配列 `[]` に対して `.[0].X` は `null` を返すが、`if [[ -n "$_RUN_ID" ]]` チェックは `"null"` を non-empty と判定する。今回は `// empty` で修正したが、同パターンが他スクリプトにも存在する可能性がある。今後 `gh ... --json X --jq '...'` を使う際は `// empty` をデフォルトで付与するか、`!= "null"` チェックを追加する規約を検討する価値がある。
+- テストモックが `echo ""` を使っているが実際の `gh run list` は `null`（jq literal）を返す点が乖離していた。mock 設計時に jq null の挙動を意識することが再発防止になる。
+
+### Acceptance criteria verification difficulty
+
+- rubric 条件 2 件 + command 条件 1 件、すべて PASS（CI 参照含む）。検証困難な UNCERTAIN は 0 件。verify command の設計は適切だった。
