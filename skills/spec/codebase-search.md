@@ -1,3 +1,10 @@
+---
+type: domain
+skill: spec
+load_when:
+  spec_depth: full
+---
+
 # Codebase Cross-Cutting Investigation
 
 ## Purpose

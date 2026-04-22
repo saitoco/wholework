@@ -83,20 +83,39 @@ Keeps the SKILL.md core lightweight; environment-dependent logic (Domain) is loa
 | File-existence | Presence of a specific file | `skill-dev-recheck.md` (Read when `validate-skill-syntax.py` exists) |
 | Directory-scan | `.wholework/domains/{skill}/` Glob | Project-local domain files (loaded when files exist) |
 
+### Domain File Frontmatter Schema
+
+Each bundled Domain file declares its identity and load condition via YAML frontmatter at the top of the file:
+
+```yaml
+---
+type: domain
+skill: {skill_name}   # single skill name or array (when shared across multiple skills)
+load_when:
+  file_exists_any: [path1, path2]  # file/directory existence (OR evaluation)
+  marker: {yaml_key}                # YAML key in .wholework.yml (true check)
+  capability: {name}                # capabilities.{name}: true check
+  arg_starts_with: {prefix}         # ARGUMENTS leading string check
+  spec_depth: {level}               # /spec SPEC_DEPTH condition (full/light)
+---
+```
+
+When multiple `load_when` keys are specified, all conditions are evaluated with AND semantics. Unspecified keys are ignored. The `load_when` block may be omitted entirely for Domain files whose load condition is runtime-detected inside the file body.
+
 ### Domain Files (exhaustive)
 
-| File | Skill | Load Condition | Domain |
-|------|-------|---------------|--------|
-| `skills/spec/figma-design-phase.md` | `/spec` | UI design requirements auto-detected | UI/Design |
-| `skills/spec/codebase-search.md` | `/spec` | `SPEC_DEPTH=full` | Depth-based codebase investigation |
-| `skills/spec/external-spec.md` | `/spec` | External spec dependencies present | External document reference |
-| `skills/review/external-review-phase.md` | `/review` | `copilot-review`, `claude-code-review`, or `coderabbit-review` is true | External review tool integration |
-| `skills/review/skill-dev-recheck.md` | `/review` | `validate-skill-syntax.py` exists | Skill development project-specific |
-| `skills/issue/spec-test-guidelines.md` | `/issue` | `validate-skill-syntax.py` exists | Skill development test recommendations |
-| `skills/verify/browser-verify-phase.md` | `/verify` | `HAS_BROWSER_CAPABILITY=true` | Browser verification |
-| `skills/issue/mcp-call-guidelines.md` | `/issue` | `MCP_TOOLS` non-empty | MCP tool detection |
-| `skills/doc/translate-phase.md` | `/doc` | `translate` subcommand | Translation generation |
-| `.wholework/domains/{skill}/*.md` | `/spec`, `/code`, `/review` | Directory scan (files exist in `.wholework/domains/{skill}/`) | Project-local (user-defined) |
+| File | Skill | Load Condition | `load_when` | Domain |
+|------|-------|---------------|-------------|--------|
+| `skills/spec/figma-design-phase.md` | `/spec` | UI design requirements auto-detected | _(none — runtime-detected)_ | UI/Design |
+| `skills/spec/codebase-search.md` | `/spec` | `SPEC_DEPTH=full` | `spec_depth: full` | Depth-based codebase investigation |
+| `skills/spec/external-spec.md` | `/spec` | External spec dependencies present | _(none — runtime-detected)_ | External document reference |
+| `skills/review/external-review-phase.md` | `/review` | `copilot-review`, `claude-code-review`, or `coderabbit-review` is true | `marker: [copilot-review, claude-code-review, coderabbit-review]` | External review tool integration |
+| `skills/review/skill-dev-recheck.md` | `/review` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development project-specific |
+| `skills/issue/spec-test-guidelines.md` | `/issue` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development test recommendations |
+| `skills/verify/browser-verify-phase.md` | `/verify` | `HAS_BROWSER_CAPABILITY=true` | `capability: browser` | Browser verification |
+| `skills/issue/mcp-call-guidelines.md` | `/issue` | `MCP_TOOLS` non-empty | `capability: mcp` | MCP tool detection |
+| `skills/doc/translate-phase.md` | `/doc` | `translate` subcommand | `arg_starts_with: translate` | Translation generation |
+| `.wholework/domains/{skill}/*.md` | `/spec`, `/code`, `/review` | Directory scan (files exist in `.wholework/domains/{skill}/`) | _(N/A — unconditional when present)_ | Project-local (user-defined) |
 
 **Project-local Domain files** are discovered via directory scan: at skill startup, the `domain-loader` module Globs `.wholework/domains/{skill}/*.md` and reads all found files in alphabetical order. Unlike bundled Domain files which use marker-detection or file-existence conditions, project-local Domain files are loaded unconditionally when present — placing a `.md` file in the directory is sufficient to activate it. This mechanism is implemented in `modules/domain-loader.md` and invoked by `/spec`, `/code`, and `/review` skills.
 

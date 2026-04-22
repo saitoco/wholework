@@ -1,3 +1,8 @@
+---
+type: domain
+skill: spec
+---
+
 # UI Design Phase
 
 ## Purpose

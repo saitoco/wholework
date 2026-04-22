@@ -1,3 +1,10 @@
+---
+type: domain
+skill: issue
+load_when:
+  file_exists_any: [scripts/validate-skill-syntax.py]
+---
+
 # Behavior Test Recommendation Guidelines (/issue supplement)
 
 This file is loaded only in skill development repositories where `scripts/validate-skill-syntax.py` exists.

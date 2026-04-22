@@ -1,3 +1,10 @@
+---
+type: domain
+skill: verify
+load_when:
+  capability: browser
+---
+
 # Browser Verification Phase (Domain File)
 
 Prerequisite: Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` before reading this file and have `HAS_BROWSER_CAPABILITY` already fetched.

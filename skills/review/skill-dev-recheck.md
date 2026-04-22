@@ -1,3 +1,10 @@
+---
+type: domain
+skill: review
+load_when:
+  file_exists_any: [scripts/validate-skill-syntax.py]
+---
+
 # Skill Development Re-check (/review supplement)
 
 This file is loaded only in skill development repositories where `scripts/validate-skill-syntax.py` exists.

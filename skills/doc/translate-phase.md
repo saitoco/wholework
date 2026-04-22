@@ -1,3 +1,10 @@
+---
+type: domain
+skill: doc
+load_when:
+  arg_starts_with: translate
+---
+
 # Translation Generation Phase
 
 `{lang}` is a BCP 47 / ISO 639-1 language code (e.g., `ja`, `ko`, `zh-cn`, `pt-br`, `fr`). Language name resolution is delegated to the LLM's built-in knowledge — no mapping table is maintained. See BCP 47 (IETF RFC 5646) and ISO 639-1 for language code reference.
