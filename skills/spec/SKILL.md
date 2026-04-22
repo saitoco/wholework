@@ -222,7 +222,9 @@ Read `skills/spec/figma-design-phase.md` and follow its steps.
 
 **Prerequisite: all codebase investigation in Step 6 must be complete.**
 
-If SPEC_DEPTH=full and `scripts/validate-skill-syntax.py` exists, read `${CLAUDE_PLUGIN_ROOT}/modules/skill-dev-checks.md` and follow it at the relevant point in Step 10. Skip if SPEC_DEPTH=light or the file does not exist.
+If `scripts/validate-skill-syntax.py` does not exist, skip this step. Skip also if SPEC_DEPTH=light.
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-dev-checks.md` and follow it at the relevant point in Step 10.
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-checker.md` and use the "Impact Assessment" section to decide whether to include documentation files in the changed-files list.
 

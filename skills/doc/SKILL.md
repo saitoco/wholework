@@ -505,7 +505,9 @@ If neither condition is met, skip this block entirely.
 
 **Cross-skill consistency check:**
 
-If `scripts/validate-skill-syntax.py` exists, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-dev-checks.md` and follow the "Cross-Skill Consistency Check" section to run cross-cutting checks. Include detected inconsistencies in the drift report in Step 7 (normalization proposals).
+If `scripts/validate-skill-syntax.py` does not exist, skip this step entirely.
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-dev-checks.md` and follow the "Cross-Skill Consistency Check" section to run cross-cutting checks. Include detected inconsistencies in the drift report in Step 7 (normalization proposals).
 
 **Narrative Semantic Drift Check (--deep only):**
 
