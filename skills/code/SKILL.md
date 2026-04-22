@@ -191,29 +191,7 @@ Implement the code following the "Implementation Steps" in the Spec.
 
 #### Stale Test Assertion Check
 
-**Existence gate**: skip this check if any of the following conditions hold:
-- `tests/` directory does not exist
-- None of the target directories (`scripts/`, `modules/`, `skills/`) exist
-
-(`scripts/`, `modules/`, and `skills/` are wholework-specific directory names; other projects may use different naming conventions such as `src/`, `lib/`.)
-
-After completing implementation changes to files under `scripts/`, `modules/`, or `skills/`, check whether any removed literal strings remain as stale assertions in `tests/`.
-
-**Removed literals** are string constants that appear as `-` lines in `git diff` (excluding comment-only lines and whitespace-only changes).
-
-Steps:
-1. Extract removed literals from the diff:
-   ```bash
-   git diff HEAD -- scripts/ modules/ skills/ | grep '^-' | grep -v '^---' | grep -v '^\s*#'
-   ```
-2. For each non-trivial string constant found (e.g., model IDs, command names, flag values), search `tests/` for residual occurrences:
-   ```bash
-   grep -rn "REMOVED_LITERAL" tests/ | grep -v '^\s*#'
-   ```
-3. If any matches are found in `tests/`, output a warning and update the stale assertions before committing:
-   ```
-   Warning: stale test assertion found — "REMOVED_LITERAL" remains in tests/. Update the assertion to match the new value.
-   ```
+If `scripts/validate-skill-syntax.py` exists, Read `${CLAUDE_PLUGIN_ROOT}/skills/code/stale-test-check.md` and follow the "Processing Steps" section.
 
 #### Follow-up Issue Creation
 
@@ -246,15 +224,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/test-runner.md` and follow the "Processing S
 
 **Additional validation (run after tests):**
 
-If `scripts/validate-skill-syntax.py` does not exist, skip this subsection entirely.
-
-If `scripts/validate-skill-syntax.py` exists, run skill syntax validation locally:
-
-```bash
-python3 scripts/validate-skill-syntax.py skills/
-```
-
-This is equivalent to the CI `validate-syntax` job and detects invalid `allowed-tools` patterns or YAML frontmatter syntax errors before reaching CI. If validation fails, fix the issues before continuing (same as test failures).
+If `scripts/validate-skill-syntax.py` exists, Read `${CLAUDE_PLUGIN_ROOT}/skills/code/skill-dev-validation.md` and follow the "Processing Steps" section.
 
 **Documentation consistency check (run after validation):**
 
