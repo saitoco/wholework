@@ -107,7 +107,7 @@ Key modules:
 - `modules/opportunistic-verify.md` — opportunistic verification at skill completion
 - `modules/doc-checker.md` — documentation consistency checker
 - `modules/doc-commit-push.md` — commit/push guide for /doc subcommand outputs
-- `modules/domain-loader.md` — project-local domain file discovery and loading
+- `modules/domain-loader.md` — bundled and project-local Domain file discovery and conditional loading
 - `modules/skill-help.md` — shared `--help` output formatter for skills
 - `modules/skill-dev-checks.md` — cross-skill consistency validation
 - `modules/codebase-analysis.md` — codebase analysis for `/doc` deep mode
