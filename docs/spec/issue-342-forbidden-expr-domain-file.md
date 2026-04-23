@@ -79,3 +79,28 @@
 
 - `scripts/check-forbidden-expressions.sh` の存在を確認（ファイル実在済み）
 - 実装パターンは `skill-dev-validation.md`（`validate-skill-syntax.py` 実行 Domain file）に倣う想定
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body の受入条件は当初 `SKILL.md` 直接追加前提だったが、`/issue` フェーズで #293 CLOSED 確認後に Domain file 方針へ自動修正された。曖昧点解決の根拠も明示されており品質は高い。
+
+#### design
+- `skill-dev-validation.md` パターンを踏襲したシンプルな設計。`load_when: file_exists_any` による条件付きロードも適切。Spec の実装ステップが具体的で実装者が迷わない内容。
+
+#### code
+- 手戻りなし（Code Retrospective は全 N/A）。実装コミット1本で完結。Spec の設計通りに実装された。
+
+#### review
+- PRは作成されず patch route で直接コミット。CI での forbidden expressions チェックが通過（実装自体にチェック対象の禁止用語なし）。
+
+#### merge
+- patch route（直接 main コミット）。マージコンフリクトなし。
+
+#### verify
+- 全3条件が PASS。`file_exists` + `grep` の組み合わせで実装を適切に検証できた。verify command の設計が良好で自動検証が完全に機能した。
+
+### Improvement Proposals
+- N/A
