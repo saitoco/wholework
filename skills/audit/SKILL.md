@@ -98,6 +98,7 @@ Cross-reference the Steering Documents, Project Documents, and codebase analysis
 | workflow.md skill list vs actual skills | Match Glob results of `skills/*/SKILL.md` against skill names/subcommands listed in workflow.md |
 | workflow.md phase descriptions vs SKILL.md implementation | Compare phase role descriptions (routing, options, etc.) with actual behavior in SKILL.md via Read |
 | workflow.md path references vs actual files | Extract path references (like `skills/<name>/SKILL.md`) with Grep → verify file existence with Glob |
+| `docs/environment-adaptation.md` Layer 3 Domain Files table vs bundled Domain file frontmatter | (1) Glob `${CLAUDE_PLUGIN_ROOT}/skills/**/*.md` and `${CLAUDE_PLUGIN_ROOT}/modules/**/*.md`; for each file Read its frontmatter and collect files with `type: domain` → "actual Domain files". (2) Read `docs/environment-adaptation.md` → extract all rows from the "Domain Files (exhaustive)" table under Layer 3. (3) Report three drift sub-types: **table-missing** — a file has `type: domain` frontmatter but is not listed in the table; **file-or-frontmatter-missing** — a table row's file does not exist or lacks `type: domain` frontmatter; **load_when-mismatch** — the `load_when` column value in the table differs from the `load_when:` block in the file's frontmatter |
 
 **Severity scoring (AI judgment):**
 
