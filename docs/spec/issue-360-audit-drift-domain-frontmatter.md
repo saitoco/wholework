@@ -38,3 +38,28 @@
 
 - ISSUE_TYPE=Task のため Uncertainty・UI Design セクション省略
 - drift subcommand の Integrated Execution (`/audit` 引数なし) は Step 1–3 を drift subcommand へ委譲しているため、drift subcommand Step 2 への追加のみで統合実行にも反映される
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 本文・Spec ともにシンプルで明確。3種類の drift sub-type が明示されており、実装範囲に曖昧さなし。
+
+#### design
+- Spec の実装ステップが 1 行追加のみと明快で、実際の diff（1 line insertion）と一致している。設計の妥当性は高い。
+
+#### code
+- 実装コミット 33ab7ec は 1 行追加のみ。fixup/amend なし。patch ルートとして適切なスコープ。
+
+#### review
+- patch ルート（PR なし）のため正式なコードレビューなし。変更が 1 行の documentation 追加であり、review 省略のリスクは低い。
+
+#### merge
+- main 直コミット（patch ルート）。競合なし、CI への影響なし（SKILL.md 変更のみ）。
+
+#### verify
+- rubric と section_contains の 2 条件はいずれも PASS。post-merge の手動条件（実際に `/audit drift` を実行して table-missing 検出を確認）が未実施。
+
+### Improvement Proposals
+- N/A
