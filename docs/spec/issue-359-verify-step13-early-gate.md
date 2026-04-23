@@ -37,3 +37,14 @@ This change adds an early gate immediately before the classification step in Ste
 - `HAS_SKILL_PROPOSALS` is already fetched in Step 4 via `detect-config-markers.md`; no additional fetch needed at the gate
 - The duplicate check and freshness check for Code improvements still run normally when `HAS_SKILL_PROPOSALS=false` (all proposals are treated as Code improvements and go through those checks)
 - Parent issue: #294 (Core/Domain 分離 Phase 3)
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
