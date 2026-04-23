@@ -47,6 +47,17 @@
 
 - wholework 自身で `/verify` を実行し、skill-infra 分類が Domain file 経由で従来通り発動する (project-local Domain loader が `.wholework/domains/verify/` を load する) ことを手動確認 <!-- verify-type: manual -->
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
 ## Notes
 
 **非インタラクティブモードでの自動解決:**
