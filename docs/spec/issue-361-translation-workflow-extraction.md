@@ -78,3 +78,28 @@ Core/Domain 分離 Phase 4 (#295) の一部。`skills/code/SKILL.md:235`、`skil
 ### Acceptance criteria verification difficulty
 
 - 全7項目が `file_exists` / `file_contains` / `rubric` で明確に記述されており、UNCERTAIN なし。`rubric` 条件3・7 は意味的判断が必要だったが、diff が明確なため判定は容易だった。verify command 品質は良好。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ基準7項目が全て `file_exists` / `file_contains` / `rubric` で記述されており曖昧さなし。Post-merge 条件を `verify-type: manual` で正しく分類済み。
+
+#### design
+- Spec の実装ステップが Changed Files に基づき明確に分割されており、逸脱なし。`skills/spec/SKILL.md` の置換範囲（spec-creation context での Changed Files 追加も含む）が Spec に明記されていれば完璧だったが、Code Retrospective に Design Gap として記録されており対処済み。
+
+#### code
+- コミット1件（#366 マージコミット）で全変更を実施。fixup/amend パターンなし、レビューコメント取り込みによるreworkなし。クリーンな実装。
+
+#### review
+- PR #366 レビューで全7条件 PASS、CI 全ジョブ SUCCESS を確認済み。line comment 1件（CONSIDER）は修正対象外として正しく判断。review での見落としなし。
+
+#### merge
+- マージコミット `5527960` で正常マージ。コンフリクトなし。
+
+#### verify
+- 全7つの Pre-merge 条件が PASS。rubric 条件（3・7）も diff が明確なため PASS 判定が容易。Post-merge の manual 条件1件が残存、`phase/verify` を割り当て済み。
+
+### Improvement Proposals
+- N/A
