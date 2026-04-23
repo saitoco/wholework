@@ -76,15 +76,16 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banne
 After the banner, detect the false-ready state: all acceptance conditions are pre-checked (`[x]`) but no implementation commit or merged PR exists for this issue. If detected, output a warning and continue (do not abort).
 
 1. Fetch Issue body: `gh issue view "$NUMBER" --json body`
-2. Count total checkboxes and checked (`[x]`) items in the Acceptance Criteria section
-3. If all conditions are checked:
+2. **Metadata-only implementation-type check**: If the Issue body contains the `<!-- implementation-type: metadata-only -->` marker, skip the false-ready detection below and continue with the normal verify flow. Metadata-only routes (e.g., issues whose implementation is purely `gh issue edit` or other GitHub-metadata changes that intentionally produce no file commits or PRs) have no implementation commit or merged PR by design, so the commit/PR check would always fire as a false positive.
+3. Count total checkboxes and checked (`[x]`) items in the Acceptance Criteria section
+4. If all conditions are checked:
    - Check for merged PR: `gh pr list --search "closes #$NUMBER" --state merged --json number --jq 'length'`
    - Check for direct commits: `git log --oneline --grep="#$NUMBER" -20`
    - If no implementation commit or merged PR is found (both return 0 results), output the following warning and continue:
      ```
      Warning: All acceptance conditions are pre-checked but no implementation commit or PR was found for issue #$NUMBER. This may be a false-ready state.
      ```
-4. Continue with normal verify flow
+5. Continue with normal verify flow
 
 ### Step 2: Detect and Update Base Branch
 
