@@ -175,7 +175,7 @@ Size L: 17 scripts の一斉適用 (6-10 files を超える) + CI-sensitive (+1)
 
 ### Minor observations
 
-- 初版 Issue body に含まれていた count 集約型 `command` verify hint (`test $(grep -l ... | wc -l) -eq 0`) は、`modules/verify-patterns.md` #32 学習 (#364 由来) の anti-pattern に該当していた。加えて `'\\$SCRIPT_DIR/'` のエスケープが bash + grep BRE で literal `\\` 扱いになり実際には `$SCRIPT_DIR/` を検出できない false positive も内包していた。Spec 段階で発見し、`-F` (fixed string) 形式 + post-merge opportunistic への移動で整理した
+- 初版 Issue body に含まれていた count 集約型 `command` verify command (`test $(grep -l ... | wc -l) -eq 0`) は、`modules/verify-patterns.md` #32 学習 (#364 由来) の anti-pattern に該当していた。加えて `'\\$SCRIPT_DIR/'` のエスケープが bash + grep BRE で literal `\\` 扱いになり実際には `$SCRIPT_DIR/` を検出できない false positive も内包していた。Spec 段階で発見し、`-F` (fixed string) 形式 + post-merge opportunistic への移動で整理した
 - `/issue` 実行時に verify-patterns.md の count 集約回避ガイドラインが照会されていれば Issue 段階で anti-pattern の投入を防げた可能性がある。`/issue` での verify command 設計時に verify-patterns.md の関連セクションを明示的に照会する運用強化を検討する余地あり
 
 ### Judgment rationale

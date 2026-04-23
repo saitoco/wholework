@@ -17,7 +17,7 @@ Migrate `docs/tech.md` from claude-config to wholework as a steering document. T
    - **Language and Runtime**: Bash/Shell, Markdown, Python, GitHub Actions (same as claude-config but in English)
    - **Key Dependencies**: Claude Code CLI, GitHub CLI, GitHub Copilot, bats
    - **Architecture Decisions**: rewrite for plugin architecture — remove symlink deploy, add plugin-dir model, keep fork context table, skills-based workflow, shared module pattern, spec-first, progressive disclosure
-   - **Testing Strategy**: simplify — bats, validate-skill-syntax.py, acceptance checks (3 tools only)
+   - **Testing Strategy**: simplify — bats, validate-skill-syntax.py, verify commands (3 tools only)
    - **Forbidden Expressions**: translate existing table to English, keep terminology migration scope rule
    - **No Coding Conventions section** — all redistributed or deleted
 
@@ -54,13 +54,13 @@ Migrate `docs/tech.md` from claude-config to wholework as a steering document. T
 ## Code Retrospective
 
 ### Deviations from Design
-- The "caller condition" phrase was not included in the initial write of the Caller Condition Propagation section in skill-dev-checks.md. The acceptance check `grep "caller condition"` failed, requiring a fix to include that exact phrase in the section text. Added "caller condition branching" wording to align with the acceptance check.
+- The "caller condition" phrase was not included in the initial write of the Caller Condition Propagation section in skill-dev-checks.md. The verify command `grep "caller condition"` failed, requiring a fix to include that exact phrase in the section text. Added "caller condition branching" wording to align with the verify command.
 
 ### Design Gaps/Ambiguities
 - N/A
 
 ### Rework
-- skill-dev-checks.md Caller Condition Propagation section: initial wording described "execution conditions dependent on the caller" but did not include the literal phrase "caller condition" required by the acceptance check. Reworded to include "caller condition branching" and "caller condition" explicitly.
+- skill-dev-checks.md Caller Condition Propagation section: initial wording described "execution conditions dependent on the caller" but did not include the literal phrase "caller condition" required by the verify command. Reworded to include "caller condition branching" and "caller condition" explicitly.
 
 ## Review Retrospective
 
@@ -88,7 +88,7 @@ All 14 pre-merge conditions verified as PASS with mechanical checks. The one CON
 - N/A (design was embedded in the spec)
 
 #### code
-- One rework: `caller condition` phrase was not included in the initial write of skill-dev-checks.md. The acceptance check `grep "caller condition"` failed, requiring a targeted fix. This type of literal-phrase mismatch between acceptance check and implementation wording is a common pattern in text-matching acceptance checks.
+- One rework: `caller condition` phrase was not included in the initial write of skill-dev-checks.md. The verify command `grep "caller condition"` failed, requiring a targeted fix. This type of literal-phrase mismatch between verify command and implementation wording is a common pattern in text-matching verify commands.
 
 #### review
 - Review caught the step number reference issue (`Step 6` vs `Step 7`) — a non-obvious migration artifact. Good catch. The issue was noted at CONSIDER level and not blocking, which was appropriate given the doc is steering-level and the error was cosmetic.
@@ -101,7 +101,7 @@ All 14 pre-merge conditions verified as PASS with mechanical checks. The one CON
 - All 14 pre-merge conditions PASS. One post-merge opportunistic condition (`/spec` references Forbidden Expressions) deferred to user verification — appropriate for behavioral confirmation that cannot be auto-verified without actually running `/spec`.
 
 ### Improvement Proposals
-- For migration tasks translating step-number references between repositories, add `file_not_contains` acceptance checks for specific step numbers that differ between source and target (e.g., `file_not_contains "docs/tech.md" "Step 6"`). This would catch migration artifacts mechanically without relying on review.
+- For migration tasks translating step-number references between repositories, add `file_not_contains` verify commands for specific step numbers that differ between source and target (e.g., `file_not_contains "docs/tech.md" "Step 6"`). This would catch migration artifacts mechanically without relying on review.
 
 ## Notes
 

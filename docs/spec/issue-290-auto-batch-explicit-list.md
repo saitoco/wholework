@@ -74,9 +74,9 @@ N/A
 
 Post-merge は `verify-type: manual` で、ユーザが Claude Code から手動で `/auto --batch ...` を実行して確認する前提。本 Spec 実装は SKILL.md のドキュメント化（プロンプト更新）であり、自動 bats テストは対象外（`/auto` の引数パースは SKILL.md 内の LLM プロンプトとして解釈されるため、シェルスクリプトのように bats で直接テストできない）。
 
-### frontmatter description の verify hint 強化
+### frontmatter description の verify command 強化
 
-Issue 本文の元の verify hint は `file_contains "--batch"` だったが、既存テキストに既にマッチするため実質 no-op。Spec 側で `file_contains "--batch N1 N2"` に強化した（SSoT は Spec 側 — `/spec` 完了後に Issue 本文も同期される）。
+Issue 本文の元の verify command は `file_contains "--batch"` だったが、既存テキストに既にマッチするため実質 no-op。Spec 側で `file_contains "--batch N1 N2"` に強化した（SSoT は Spec 側 — `/spec` 完了後に Issue 本文も同期される）。
 
 ### 判別ルールの根拠
 

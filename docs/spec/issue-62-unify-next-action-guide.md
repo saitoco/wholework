@@ -177,7 +177,7 @@
 - **`docs/ja/structure.md` の同期**: 翻訳ドキュメント `docs/ja/structure.md`（16 行目「22 ファイル」、52〜75 行目モジュール一覧）も同様の更新が必要だが、`/doc translate ja` で再生成される auto-generated ファイルのため本 Issue では更新対象外。後続の `/doc translate ja` 実行時に自動同期される。
 - **Risk Note (Issue body より)**: `docs/spec/issue-51-review-early-exit-pr-hint.md` に `/review` 早期終了メッセージ文言を grep する受入ヒントが 3 件存在（`"need to run a review explicitly"`, `"/review $PR_NUMBER --light"`, `"main branch protection"`）。#51 は CLOSED 済みだが、本 Issue で `/review` の早期終了メッセージを書き換える際は該当文言を保持する。新モジュール参照を追加しても既存 grep 対象文字列は削除しない。
 - **Risk Note (Spec Changed Files 漏れ)**: #58 / #72 で繰り返し発生した失敗パターン（横断的変更の Spec 変更対象ファイル列挙漏れ）を予防するため、Spec 作成段階で `grep -rn 'Completion Report\|Completion report\|Next:' skills/` で全該当箇所を網羅確認済み。8 skill すべての Completion Report 位置を Implementation Steps に明記。
-- **Risk Note (verify ヒント偽陽性)**: 8 skill すべてで `grep "next-action-guide"` を使うが、`next-action-guide` は新規文字列で既存と衝突しないことを `grep -r "next-action-guide" .` で確認済み（0 件）。偽陽性リスクなし。
+- **Risk Note (verify command偽陽性)**: 8 skill すべてで `grep "next-action-guide"` を使うが、`next-action-guide` は新規文字列で既存と衝突しないことを `grep -r "next-action-guide" .` で確認済み（0 件）。偽陽性リスクなし。
 - **Auto-Resolved Ambiguity Points (Issue body より転記)**:
 
   | 項目 | 解決内容 | 根拠 |
@@ -209,7 +209,7 @@
 - **曖昧性の解決**: Issue body に既存の "Auto-Resolved Ambiguity Points" セクションがあったため、推奨ロジック方式（LLM 文脈理解）と `/triage` の次アクション（`/issue` 推奨）は追加質問なしで確定できた。`--non-interactive` モードと整合。
 - **スコープ確定のポイント**: `docs/ja/structure.md` は `/doc translate` で自動生成されるため対象外、`docs/structure.md` の Modules セクションとカウント (22 → 23) のみが更新対象であることを特定した。これにより対象ファイルを 10 件に確定。
 - **想定リスク**: `/verify` および `/auto --batch` での PASS 時の次アクション案内抑制ルールをモジュール側で扱う必要があり、判定テーブルで `RESULT=success AND SKILL_NAME IN (verify, auto-batch)` のケースを明示する必要がある。実装時に見落とすと「何もしない」動作が崩れる。
-- **検証計画**: 16 件の pre-merge acceptance check と 5 件の post-merge acceptance check で、モジュール作成・8 skill 更新・structure.md 同期を網羅。`grep` と `section_contains` で機械的に検証可能にした。
+- **検証計画**: 16 件の pre-merge verify command と 5 件の post-merge verify command で、モジュール作成・8 skill 更新・structure.md 同期を網羅。`grep` と `section_contains` で機械的に検証可能にした。
 
 ## review retrospective
 

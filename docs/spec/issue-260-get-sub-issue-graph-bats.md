@@ -96,7 +96,7 @@ English and Japanese mirror files need updating.
 ### Phase-by-Phase Review
 
 #### spec
-- 受け入れ条件は `file_exists`、`grep`、`command` の verify ヒントを完備しており、自動検証率が高い設計になっていた。
+- 受け入れ条件は `file_exists`、`grep`、`command` の verify commandを完備しており、自動検証率が高い設計になっていた。
 - `<!-- verify-type: manual -->` の post-merge 条件（XL フロー実行確認）は次回 `/auto` 実行時まで手動確認が必要な性質であり、適切に分離されている。
 
 #### design

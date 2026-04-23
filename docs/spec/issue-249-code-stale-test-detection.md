@@ -4,7 +4,7 @@
 
 `/code` Step 8（実装フェーズ）で `scripts/`・`modules/`・`skills/` 配下のファイルを変更した際、除去されたリテラル文字列（diff の `-` 行として現れる文字列定数）が `tests/` 配下の `.bats` ファイルに残存していないかを grep で検知し、残存があれば警告を出力する手順を Step 8 に追加する。
 
-背景：`/code --patch` が `scripts/run-spec.sh` の `claude-opus-4-6` を `claude-opus-4-7` に置換した際、`tests/run-spec.bats` に stale アサーション `claude-opus-4-6` が残存して CI test が FAIL した（Issue #215）。Spec の AC verify hint は実装ファイル側のみを検証するためテスト側 stale を検知できず、patch route では CI required gate がないためローカルでテストが失敗しても commit が通るリスクがある。
+背景：`/code --patch` が `scripts/run-spec.sh` の `claude-opus-4-6` を `claude-opus-4-7` に置換した際、`tests/run-spec.bats` に stale アサーション `claude-opus-4-6` が残存して CI test が FAIL した（Issue #215）。Spec の AC verify command は実装ファイル側のみを検証するためテスト側 stale を検知できず、patch route では CI required gate がないためローカルでテストが失敗しても commit が通るリスクがある。
 
 ## Changed Files
 
@@ -65,14 +65,14 @@
 
 ### 曖昧点の自動解決
 
-- **「removed literal」フレーズ**: SKILL.md は英語で記述されるため、日本語「削除されたリテラル」ではなく英語 "removed literal" を AC verify hint のターゲット文字列とした（`section_contains "Step 8" "removed literal"`）。実装者がこのフレーズを採用しない場合は `/verify` の AI fallback でカバー
+- **「removed literal」フレーズ**: SKILL.md は英語で記述されるため、日本語「削除されたリテラル」ではなく英語 "removed literal" を AC verify command のターゲット文字列とした（`section_contains "Step 8" "removed literal"`）。実装者がこのフレーズを採用しない場合は `/verify` の AI fallback でカバー
 
 ## Verify Retrospective
 
 ### Phase-by-Phase Review
 
 #### spec
-- 設計はシンプルかつ正確。`section_contains` verify hint の keyword 選択（"tests/"、"removed literal"、"grep"）が実装テキストと一致しており、3条件すべて即座に PASS。曖昧点の自動解決（"removed literal" フレーズの英語化）が適切で `/verify` での追加 fallback 不要だった。
+- 設計はシンプルかつ正確。`section_contains` verify command の keyword 選択（"tests/"、"removed literal"、"grep"）が実装テキストと一致しており、3条件すべて即座に PASS。曖昧点の自動解決（"removed literal" フレーズの英語化）が適切で `/verify` での追加 fallback 不要だった。
 
 #### design
 - 変更対象が `skills/code/SKILL.md` の Step 8 のみという明確な設計。実装ステップの逸脱なし（Code Retrospective: N/A）。

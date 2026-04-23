@@ -41,7 +41,7 @@
 - **設計上の判断**: `rmdir` → `rm -rf` への切替は `.DS_Store` 等の副作用ファイルを吸収するため (`rmdir` 非空時失敗問題の根本回避)。lock dir 内の想定ファイルは `pid` のみなので `rm -rf` でも安全
 - **bash 3.2 互換性**: `kill -0`, `cat`, `rm -rf` すべて bash 3.2 互換
 - **テスト時 timeout**: 300s はテスト実行時間が長すぎるため、環境変数 `WHOLEWORK_PATCH_LOCK_TIMEOUT` で上書き可能にする (bats テスト用に 5s 等を指定)
-- **Issue body verify 更新**: AC2 の verify hint を `"lock.*timeout\|timeout.*lock\|stale"` → `"kill -0\|stale"` に具体化（stale 検出ロジックを直接検証する）。これに合わせて Issue body 側も自動更新
+- **Issue body verify 更新**: AC2 の verify command を `"lock.*timeout\|timeout.*lock\|stale"` → `"kill -0\|stale"` に具体化（stale 検出ロジックを直接検証する）。これに合わせて Issue body 側も自動更新
 
 ## Code Retrospective
 

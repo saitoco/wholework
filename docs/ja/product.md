@@ -154,6 +154,6 @@ Describe success metrics here. -->
 | Steering Documents | 基盤ドキュメント（product/tech/structure）の総称。`docs/` 配下に保存 | /doc Skill | Steering Documents |
 | Sub-agent | Task ツール経由で起動されるサブエージェント。メインエージェントには結果のみを返す | Claude Code | サブエージェント |
 | Sub-issue | XL Issue を分解した子 Issue。`/auto` は `blockedBy` 依存グラフを読み、独立サブ issue を並列実行（worktree 分離）し、依存先はブロッカー完了後に順次実行する | 開発ワークフロー | サブ Issue |
-| verify command | `<!-- verify: ... -->` 形式の HTML コメント。受入条件に機械検証可能な方法を付与する。旧称: "verification hint / Acceptance check" | /issue, /verify | verify command |
+| verify command | `<!-- verify: ... -->` 形式の HTML コメント。受入条件に機械検証可能な方法を付与する。旧称: 'verification hint', 'verify hint', 'verify ヒント', '検証ヒント', 'Acceptance check' | /issue, /verify | verify command |
 | verify command type | verify command の先頭トークン（例: `file_exists`、`grep`、`section_contains`、`command`）。受入条件に適用する検査方法を識別する | /issue, /verify | verify command タイプ |
 | Worktree | XL Issue のサブ issue を並列実行するために `/auto` が使用する git worktree。各サブ issue の実装を独自の作業ツリーに隔離し、ファイルの競合を防ぐ。ライフサイクル（作成/エントリー/終了/クリーンアップ）は `modules/worktree-lifecycle.md` で管理される | `/auto`、`/code`、`/spec` | Worktree |

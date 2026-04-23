@@ -2,7 +2,7 @@
 
 ## Overview
 
-`/review` の safe モードでは `command "test $(grep ...) -eq 0"` 形式の verify hint が UNCERTAIN になる（Issue #94 レビューレトロスペクティブで確認）。一方、同じテキスト除去確認を個別の `file_not_contains` に分解すると safe モードでも PASS/FAIL を確定できる。
+`/review` の safe モードでは `command "test $(grep ...) -eq 0"` 形式の verify command が UNCERTAIN になる（Issue #94 レビューレトロスペクティブで確認）。一方、同じテキスト除去確認を個別の `file_not_contains` に分解すると safe モードでも PASS/FAIL を確定できる。
 
 `skills/spec/SKILL.md` の Step 10 にある verify command 選択ガイドライン群に、テキスト除去確認は可能な限り個別 `file_not_contains` に分解するという指針を追加する。
 

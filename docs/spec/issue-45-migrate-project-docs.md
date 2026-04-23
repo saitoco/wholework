@@ -58,7 +58,7 @@ claude-config から残り 2 つの Project Documents (`workflow.md`, `figma-bes
 - workflow.md 内の skill 名 (`/issue`, `/spec`, etc.)、相対パス (`../skills/...`)、`.wholework.yml`、`docs/product.md` 等の参照はそのまま維持 (Wholework でも有効)
 - structure.md は #43 で更新済み (`product.md` のエントリ追加)。同じパターンで 2 ファイルを追加
 - `~/.claude/docs/workflow.md` (グローバル版) とは別管理。本ファイルはリポ内 Project Document として配置
-- Verify hints: Issue 本文の `section_contains` で heading が `## ` だけのパターンは不正なため、`grep` / `file_contains` ベースに改善。Issue 本文も同期更新
+- verify commands: Issue 本文の `section_contains` で heading が `## ` だけのパターンは不正なため、`grep` / `file_contains` ベースに改善。Issue 本文も同期更新
 
 ## Auto-Resolved Ambiguity Points
 

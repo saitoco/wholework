@@ -24,7 +24,7 @@ Post-merge の 4 条件すべてに `<!-- verify-type: opportunistic -->` タグ
 
 ### 設計判断
 
-- **Pre-merge 3 つ目**(両フローへの付与確認)には verify hint を付けず、reviewer の目視確認に委ねた。`grep -c` での回数チェックは `verify-patterns.md` で antipattern とされており、`section_contains` でも Step 13 全体が大きすぎて意味をなさないため。Code improvement / Skill infrastructure improvement の分岐後に統合された Issue 生成 flow があり、そこで一度ラベル付与すれば両カテゴリをカバーできる構造的な単純さもある。
+- **Pre-merge 3 つ目**(両フローへの付与確認)には verify command を付けず、reviewer の目視確認に委ねた。`grep -c` での回数チェックは `verify-patterns.md` で antipattern とされており、`section_contains` でも Step 13 全体が大きすぎて意味をなさないため。Code improvement / Skill infrastructure improvement の分岐後に統合された Issue 生成 flow があり、そこで一度ラベル付与すれば両カテゴリをカバーできる構造的な単純さもある。
 - **既存 Issue への retrofit はしない**方針を維持: 履歴データの一貫性を壊すリスクがあり、`/audit stats` 側で「label 導入以前は その他 扱い」と明示する設計の方が clean。
 
 ### 関連
@@ -57,7 +57,7 @@ Post-merge の 4 条件すべてに `<!-- verify-type: opportunistic -->` タグ
 #### verify
 - Pre-merge 3条件すべて PASS を確認。
 - Post-merge 4条件は `<!-- verify-type: opportunistic -->` で、次回の `/verify` Step 13 実行時や `/audit drift|fragility` 実行時に自然に検証される設計。
-- Pre-merge 3条件目（両フローでの `retro/verify` 付与）は verify hint なし → AI 判定で検証。SKILL.md line 425 「This applies to both Code improvement and Skill infrastructure improvement categories.」で確認できた。
+- Pre-merge 3条件目（両フローでの `retro/verify` 付与）は verify command なし → AI 判定で検証。SKILL.md line 425 「This applies to both Code improvement and Skill infrastructure improvement categories.」で確認できた。
 
 ### Improvement Proposals
 - N/A

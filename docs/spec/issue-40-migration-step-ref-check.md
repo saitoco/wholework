@@ -2,7 +2,7 @@
 
 ## Overview
 
-Add a convention to `modules/skill-dev-checks.md` for migration tasks: when translating step-number references from a source repository, add `file_not_contains` acceptance checks for the source step numbers that should not appear in the migrated file. Detected in #36 where claude-config's `Code review (Step 6)` reference survived migration.
+Add a convention to `modules/skill-dev-checks.md` for migration tasks: when translating step-number references from a source repository, add `file_not_contains` verify commands for the source step numbers that should not appear in the migrated file. Detected in #36 where claude-config's `Code review (Step 6)` reference survived migration.
 
 ## Changed Files
 
@@ -10,7 +10,7 @@ Add a convention to `modules/skill-dev-checks.md` for migration tasks: when tran
 
 ## Implementation Steps
 
-1. Add a new `#### Migration Step-Number Reference Check` subsection to `modules/skill-dev-checks.md` under "### Design-Time Checks", placed after the "#### SKILL.md Validation Constraint Check" subsection. Content: when changed files include migration from another repository, add `file_not_contains` acceptance checks for source-specific step numbers, workflow names, or other repository-specific references that should not survive migration. Include the #36 `Code review (Step 6)` example. (→ acceptance criteria A, B, C)
+1. Add a new `#### Migration Step-Number Reference Check` subsection to `modules/skill-dev-checks.md` under "### Design-Time Checks", placed after the "#### SKILL.md Validation Constraint Check" subsection. Content: when changed files include migration from another repository, add `file_not_contains` verify commands for source-specific step numbers, workflow names, or other repository-specific references that should not survive migration. Include the #36 `Code review (Step 6)` example. (→ acceptance criteria A, B, C)
 
 ## Verification
 

@@ -124,7 +124,7 @@
 
 ### 繰り返し発生 issue
 
-`Forbidden Expressions check` CI FAILURE が発生。原因: `skills/auto/SKILL.md` Step 6 の新規追加テキストに廃止用語 "Dispatch" が混入していた。実装時に `check-forbidden-expressions.sh` のローカル実行が省略されたと思われる。
+`Forbidden Expressions check` CI FAILURE が発生。原因: `skills/auto/SKILL.md` Step 6 の新規追加テキストに廃止用語 "/auto" が混入していた。実装時に `check-forbidden-expressions.sh` のローカル実行が省略されたと思われる。
 改善提案: `/code` 完了後にローカルで `bash scripts/check-forbidden-expressions.sh` を実行するステップを実装チェックリストに追加することで、CI では初めて検知される類の違反を事前に防げる。
 
 ### 受け入れ条件検証難易度
@@ -145,7 +145,7 @@ verify コマンドを `file_contains "skills/auto/SKILL.md" "Tier 3 (Unknown): 
 - bats テストでの `<(echo "$plan")` → `$BATS_TEST_TMPDIR/plan.json` パターン変更は既存テストとの整合性のための小さな逸脱であり、設計上の問題ではない。
 
 #### code
-- 禁止用語 "Dispatch" の混入 (fix commit あり: `fix: replace deprecated term 'Dispatch' in skills/auto/SKILL.md Step 6`) が唯一のコードリワーク。
+- 禁止用語 "/auto" の混入 (fix commit あり: `fix: replace deprecated term '/auto' in skills/auto/SKILL.md Step 6`) が唯一のコードリワーク。
 - fixup! / amend パターンは観察されず、全体的に実装品質は高かった。
 
 #### review

@@ -108,7 +108,7 @@
 
 #### verify
 - All 6 pre-merge conditions: PASS via `file_contains` verify commands.
-- Post-merge 3 conditions: `verify-type: manual` with no verify hints — deferred to user verification as intended.
+- Post-merge 3 conditions: `verify-type: manual` with no verify commands — deferred to user verification as intended.
 - Issue labeled `phase/verify` due to remaining unchecked manual conditions.
 
 ### Improvement Proposals

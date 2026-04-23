@@ -75,7 +75,7 @@
 
 ### Design Gaps/Ambiguities
 
-- Spec の Implementation Steps では "narrative" キーワードの出現位置について明示がなく、大文字/小文字の混在に起因する `file_contains` の失敗リスクが書かれていなかった。acceptance check は case-sensitive であるため、実装時に lowercase 確認が必要。
+- Spec の Implementation Steps では "narrative" キーワードの出現位置について明示がなく、大文字/小文字の混在に起因する `file_contains` の失敗リスクが書かれていなかった。verify command は case-sensitive であるため、実装時に lowercase 確認が必要。
 
 ### Rework
 
@@ -86,7 +86,7 @@
 ### Phase-by-Phase Review
 
 #### spec
-- Spec の実装ステップに `file_contains` チェックの case-sensitivity に関する注記がなく、"Partial description"（大文字P）と書いてしまう典型的な落とし穴が記載されていなかった。acceptance check キーワードの大文字/小文字要件を Spec 段階で明示する習慣が有効。
+- Spec の実装ステップに `file_contains` チェックの case-sensitivity に関する注記がなく、"Partial description"（大文字P）と書いてしまう典型的な落とし穴が記載されていなかった。verify command キーワードの大文字/小文字要件を Spec 段階で明示する習慣が有効。
 
 #### design
 - 設計方針（AI判定ベース / auto-fix しない / --deep 限定 / 3検出カテゴリ）は実装と一致。Issue 議論から継承した設計方針が Spec に明示されており、実装への転写は正確だった。
@@ -96,7 +96,7 @@
 - 変更ファイルは `skills/doc/SKILL.md` のみで設計通り。スコープ逸脱なし。
 
 #### review
-- patch ルート（直接 main commit）のため PR レビューなし。acceptance check がすべて `file_contains` / `section_contains` パターンで構成されており、自動検証で十分な信頼性を確保できた。
+- patch ルート（直接 main commit）のため PR レビューなし。verify command がすべて `file_contains` / `section_contains` パターンで構成されており、自動検証で十分な信頼性を確保できた。
 
 #### merge
 - 直接 main へのコミット（patch ルート）。コンフリクトなし。

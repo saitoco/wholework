@@ -66,7 +66,7 @@ Update the file count annotations in both the English and Japanese mirror files 
 
 #### verify
 - Both pre-merge conditions PASS. Key observation: the verify commands use `bash -c '...'` syntax, which means globbing inside the single-quoted string is handled by bash (not zsh). Running the `tests/**/*.bats` glob in bash without `globstar` enabled means `**` behaves like `*/`, matching only subdirectories — so top-level files are not double-counted. Running the same glob directly in zsh would return 64 (double-counting) due to zsh's default recursive `**` expansion — a potential source of false FAILs for maintainers debugging verify commands manually.
-- Post-merge condition (他のカウント表記箇所がないか確認) has no verify hint and was deferred to user verification as designed.
+- Post-merge condition (他のカウント表記箇所がないか確認) has no verify command and was deferred to user verification as designed.
 
 ### Improvement Proposals
 - The `tests/**/*.bats` glob in verify commands is shell-dependent (produces different results in bash vs zsh). Consider replacing with `find tests -name "*.bats"` in future verify commands for portability, or add a note in `modules/verify-executor.md` that `command` and `bash -c` verify commands run in bash context (important for maintainers writing verify commands).

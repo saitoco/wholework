@@ -7,7 +7,7 @@
 翻訳方針（Issue body の Design Decisions より）:
 - カタカナ技術用語: Skill → スキル、Sub-agent → サブエージェント
 - プロダクト固有識別子: Spec、`/auto`、Steering Documents、Project Documents → 原語保持
-- 明確な対訳あり: Acceptance check → 受入チェック、Shared module → 共有モジュール
+- 明確な対訳あり: verify command → 受入チェック、Shared module → 共有モジュール
 - 混成: Fork context → fork コンテキスト
 
 ## Changed Files
@@ -38,7 +38,7 @@
 - <!-- verify: section_contains "docs/product.md" "## Terms" "スキル" --> Skill の日本語訳「スキル」が記入されている
 - <!-- verify: section_contains "docs/product.md" "## Terms" "共有モジュール" --> Shared module の日本語訳「共有モジュール」が記入されている
 - <!-- verify: section_contains "docs/product.md" "## Terms" "サブエージェント" --> Sub-agent の日本語訳「サブエージェント」が記入されている
-- <!-- verify: section_contains "docs/product.md" "## Terms" "受入チェック" --> Acceptance check の日本語訳「受入チェック」が記入されている
+- <!-- verify: section_contains "docs/product.md" "## Terms" "受入チェック" --> verify command の日本語訳「受入チェック」が記入されている
 - <!-- verify: section_contains "skills/doc/product-template.md" "## Terms" "日本語訳" --> `skills/doc/product-template.md` の `## Terms` テンプレートも `日本語訳` 列を持つ構造に更新されている
 
 ### Post-merge
@@ -79,7 +79,7 @@
 |-------|------|-----|
 | 確立されたカタカナ技術用語 | カタカナ化 | Skill → スキル、Sub-agent → サブエージェント |
 | プロダクト固有識別子 | 原語保持 | Spec、`/auto`、Steering Documents、Project Documents |
-| 日本語に明確な対訳あり | 日本語訳 | Acceptance check → 受入チェック、Shared module → 共有モジュール |
+| 日本語に明確な対訳あり | 日本語訳 | verify command → 受入チェック、Shared module → 共有モジュール |
 | 混成 | 併記 | Fork context → fork コンテキスト |
 
 ### Related Issues
