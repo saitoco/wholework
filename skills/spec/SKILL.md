@@ -228,7 +228,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-checker.md` and use the "Impact Assessme
 
 **`docs/ja/` translation sync check:**
 
-When Changed Files includes top-level `docs/*.md` English documents (excluding `docs/spec/`, `docs/reports/`, and `docs/ja/` subdirectories), also list the corresponding `docs/ja/` translation mirror files in the Changed Files section and include a translation sync step in Implementation Steps.
+If `docs/translation-workflow.md` exists, read it and follow the sync procedure.
 
 **Rename-type Issue grep check:**
 
