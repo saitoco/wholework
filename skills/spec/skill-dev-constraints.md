@@ -1,9 +1,23 @@
 ---
 type: domain
 skill: spec
+domain: skill-dev
 load_when:
   file_exists_any: [scripts/validate-skill-syntax.py]
   spec_depth: full
+applies_to_proposals:
+  file_patterns:
+    - skills/spec/SKILL.md
+    - modules/*.md
+  content_keywords:
+    - SKILL.md
+    - ${CLAUDE_PLUGIN_ROOT}
+    - skill-dev
+    - validate-skill-syntax
+    - spec constraints
+  rewrite_target:
+    - from: skills/spec/SKILL.md
+      to: skills/spec/skill-dev-constraints.md
 ---
 
 # Skill Development Constraint Checklist

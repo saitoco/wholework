@@ -1,8 +1,22 @@
 ---
 type: domain
 skill: review
+domain: skill-dev
 load_when:
   file_exists_any: [scripts/validate-skill-syntax.py]
+applies_to_proposals:
+  file_patterns:
+    - skills/review/SKILL.md
+    - scripts/validate-skill-syntax.py
+  content_keywords:
+    - SKILL.md
+    - validate-skill-syntax
+    - skill-dev
+    - review
+    - ${CLAUDE_PLUGIN_ROOT}
+  rewrite_target:
+    - from: skills/review/SKILL.md
+      to: skills/review/skill-dev-recheck.md
 ---
 
 # Skill Development Re-check (/review supplement)

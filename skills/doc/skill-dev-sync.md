@@ -1,8 +1,22 @@
 ---
 type: domain
 skill: doc
+domain: skill-dev
 load_when:
   file_exists_any: [scripts/validate-skill-syntax.py, skills/]
+applies_to_proposals:
+  file_patterns:
+    - skills/doc/SKILL.md
+    - skills/*/SKILL.md
+  content_keywords:
+    - SKILL.md
+    - modules/*.md
+    - agents/*.md
+    - skill-dev
+    - sync
+  rewrite_target:
+    - from: skills/doc/SKILL.md
+      to: skills/doc/skill-dev-sync.md
 ---
 
 # Skill Development Sync (/doc supplement)

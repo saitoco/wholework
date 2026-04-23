@@ -76,3 +76,31 @@
 ### product.md Terms との関係
 
 `docs/product.md` § Terms には既に "Domain file" のエントリがある。新たに導入する semantic identifier としての "domain" は `docs/environment-adaptation.md` の Domain Terminology セクションで canonical 定義を持たせる方針（環境適応アーキテクチャの内部概念のため product.md への昇格は #350/#351 完了後に検討）。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A（Spec の実装ステップに沿って実施、順番・内容の逸脱なし）
+
+### Design Gaps/Ambiguities
+
+- `modules/skill-dev-doc-impact.md` は `skill:` キーを持たない（複数 skill から間接ロードされる設計）。この場合、`rewrite_target.from` に何を指定するかが Spec に明示されていなかった。`doc-checker.md` 経由でロードされる設計なので `from: modules/doc-checker.md` を採用したが、#350 の classifier 実装時に調整が必要な可能性がある。
+
+### Rework
+
+- N/A
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Nothing to note. PR diff は Spec の実装ステップに完全に沿っており、構造的な逸脱なし。承認基準 4 件すべてが PASS（自動検証可能な形式で記述されており、verify コマンドが効果的に機能した）。
+
+### Recurring Issues
+
+Nothing to note. skill-dev Domain file 7 本にほぼ同一の frontmatter ブロックを追記する繰り返し作業だったが、各ファイルで `file_patterns`/`content_keywords` の内容がファイル用途に応じて適切に分化されており、品質問題は発見されなかった。
+
+### Acceptance Criteria Verification Difficulty
+
+Nothing to note. `rubric`・`section_contains`・`grep` コマンドで 4 件全て自動判定可能な形式で記述されており、UNCERTAIN ゼロ。`rewrite_target.from` の妥当性（`modules/skill-dev-doc-impact.md` の `from: modules/doc-checker.md` 選択）は Code Retrospective で設計判断が文書化されていたため、レビュー時の確認コストが低かった。

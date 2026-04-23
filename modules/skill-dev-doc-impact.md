@@ -1,7 +1,21 @@
 ---
 type: domain
+domain: skill-dev
 load_when:
   file_exists_any: [scripts/validate-skill-syntax.py]
+applies_to_proposals:
+  file_patterns:
+    - modules/doc-checker.md
+    - skills/*/SKILL.md
+  content_keywords:
+    - doc-checker
+    - SKILL.md
+    - skill-dev
+    - doc-impact
+    - ${CLAUDE_PLUGIN_ROOT}
+  rewrite_target:
+    - from: modules/doc-checker.md
+      to: modules/skill-dev-doc-impact.md
 ---
 
 # Skill Development Doc Impact

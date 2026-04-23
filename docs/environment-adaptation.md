@@ -83,6 +83,18 @@ Keeps the SKILL.md core lightweight; environment-dependent logic (Domain) is loa
 | File-existence | Presence of a specific file | `skill-dev-recheck.md` (Read when `validate-skill-syntax.py` exists) |
 | Directory-scan | `.wholework/domains/{skill}/` Glob | Project-local domain files (loaded when files exist) |
 
+### Domain Terminology
+
+Three distinct senses of "Domain" are used in Wholework. To eliminate ambiguity, the following canonical definitions apply:
+
+| Concept | Meaning | Example |
+|---------|---------|---------|
+| `.wholework/domains/{skill}/` | Directory where project-local Domain files are placed (scoped by wholework skill name) | `.wholework/domains/verify/` |
+| frontmatter `skill:` | The wholework skill name a Domain file attaches to | `skill: spec` |
+| frontmatter `domain:` | Semantic domain identifier (e.g. skill-dev, web-dev, data-sci) | `domain: skill-dev` |
+
+Classifier output (future `domain-classifier.md`, #350) echoes the frontmatter `domain:` key value directly — inference from naming conventions is not performed.
+
 ### Domain File Frontmatter Schema
 
 Each bundled Domain file declares its identity and load condition via YAML frontmatter at the top of the file:
@@ -91,16 +103,30 @@ Each bundled Domain file declares its identity and load condition via YAML front
 ---
 type: domain
 skill: {skill_name}   # single skill name or array (when shared across multiple skills)
+domain: {identifier}  # semantic domain identifier (e.g. skill-dev); required when applies_to_proposals is declared
 load_when:
   file_exists_any: [path1, path2]  # file/directory existence (OR evaluation)
   marker: {yaml_key}                # YAML key in .wholework.yml (true check)
   capability: {name}                # capabilities.{name}: true check
   arg_starts_with: {prefix}         # ARGUMENTS leading string check
   spec_depth: {level}               # /spec SPEC_DEPTH condition (full/light)
+applies_to_proposals:               # optional; declares how to classify improvement proposal Issues into this Domain
+  file_patterns:                    # glob patterns of Core files the proposal touches (OR evaluation)
+    - skills/*/SKILL.md
+    - modules/*.md
+  content_keywords:                 # keywords in the proposal body identifying it as a candidate for this Domain (OR evaluation)
+    - SKILL.md
+    - ${CLAUDE_PLUGIN_ROOT}
+    - skill-dev
+  rewrite_target:                   # Core path → Domain path rewrite rules
+    - from: skills/code/SKILL.md    # Core file path
+      to: skills/code/skill-dev-validation.md  # this Domain file's exact path
 ---
 ```
 
 When multiple `load_when` keys are specified, all conditions are evaluated with AND semantics. Unspecified keys are ignored. The `load_when` block may be omitted entirely for Domain files whose load condition is runtime-detected inside the file body.
+
+`applies_to_proposals` is optional. When declared, it enables future classifier logic (#350) to route improvement proposal Issues into the appropriate Domain file. `file_patterns` and `content_keywords` are evaluated with OR semantics — a proposal matching either criterion is a candidate for this Domain. `domain:` is required when `applies_to_proposals` is declared; Domain files that do not declare `applies_to_proposals` may omit `domain:`. Priority resolution when multiple Domains match simultaneously is handled by `domain-classifier.md` (#350).
 
 ### Domain Files (exhaustive)
 

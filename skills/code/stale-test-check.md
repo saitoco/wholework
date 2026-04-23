@@ -1,8 +1,22 @@
 ---
 type: domain
 skill: code
+domain: skill-dev
 load_when:
   file_exists_any: [scripts/validate-skill-syntax.py]
+applies_to_proposals:
+  file_patterns:
+    - skills/code/SKILL.md
+    - tests/*.bats
+  content_keywords:
+    - SKILL.md
+    - stale
+    - tests/
+    - skill-dev
+    - bats
+  rewrite_target:
+    - from: skills/code/SKILL.md
+      to: skills/code/stale-test-check.md
 ---
 
 # Stale Test Assertion Check (/code supplement)
