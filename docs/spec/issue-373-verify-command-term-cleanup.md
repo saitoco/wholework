@@ -111,13 +111,13 @@ deprecated語 (`verify command` / `verify command` / `verify command` / `verify 
 
 ### Deviations from Design
 
-- **Spec Step 1 スコープ拡張**: Spec の実装ステップは verify-related 4 変体の `docs/spec/` 置換のみを記述していたが、`grep -v 'docs/spec/'` 除外削除 (Step 5) により他の deprecated 語 (Dispatch, Design file, Issue Spec, acceptance check, shared procedure document) が CI に引っかかることが判明。Spec に記載のない範囲まで `docs/spec/` 全 deprecated 語を一括置換してスコープを拡張した。Issue body の「全置換対象」原則に準拠した判断。
-- **bats テスト名の ASCII 化**: Spec が `@test "detection: verify ヒント exits 1"` 等の日本語テスト名を記述していたが、コードの注記「bats test @test names must be in English (ASCII)」に従い ASCII 名 (`verify katakana hint`, `kensho hint`) に変更した。
+- **Spec Step 1 スコープ拡張**: Spec の実装ステップは verify-related 4 変体の `docs/spec/` 置換のみを記述していたが、`grep -v 'docs/spec/'` 除外削除 (Step 5) によりその他の deprecated 語（5 種類）が CI に引っかかることが判明。Spec に記載のない範囲まで `docs/spec/` 全 deprecated 語を一括置換してスコープを拡張した。Issue body の「全置換対象」原則に準拠した判断。
+- **bats テスト名の ASCII 化**: Spec が `@test "detection: verify katakana hint exits 1"` 等の日本語テスト名を記述していたが、コードの注記「bats test @test names must be in English (ASCII)」に従い ASCII 名 (`verify katakana hint`, `kensho hint`) に変更した。
 
 ### Design Gaps/Ambiguities
 
 - **docs/spec/ 除外削除と他 deprecated 語の相互作用**: Spec は verify-related 4 変体の置換後に `grep -v 'docs/spec/'` を削除すれば CI が通過すると想定していたが、他の deprecated 語が docs/spec/ に残存していることが考慮されていなかった。実装時に発見し auto-resolve で対処。
-- **macOS sed の `\b` 非対応**: `sed -i '' 's/\bDesign file\b/.../g'` が macOS (BSD sed) では機能しないため Python の `re.sub` に切り替えた。
+- **macOS sed の `\b` 非対応**: `sed -i '' 's/\b<deprecated_term>\b/.../g'` が macOS (BSD sed) では機能しないため Python の `re.sub` に切り替えた。
 
 ### Rework
 
