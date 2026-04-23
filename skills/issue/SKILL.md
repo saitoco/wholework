@@ -230,8 +230,9 @@ Analyze the issue background and acceptance criteria to determine whether sub-is
 
 **When splitting is not needed (skip):** small changes (single feature, few files) or clear single-scope acceptance criteria.
 
-**Changing Size when no split is needed:**
-If Size is `XL` but splitting is not needed, read `${CLAUDE_PLUGIN_ROOT}/modules/project-field-update.md` and update Size XL → L (steps 1→2→3→4). Use label fallback (step 5) only if GraphQL fails. When GitHub Projects is not configured, step 1 returns empty `projectsV2.nodes` and automatically falls through to step 5.
+**Size change rules (both directions):**
+- **No split needed**: If Size is `XL` but splitting is not needed, read `${CLAUDE_PLUGIN_ROOT}/modules/project-field-update.md` and update Size XL → L (steps 1→2→3→4). Use label fallback (step 5) only if GraphQL fails. When GitHub Projects is not configured, step 1 returns empty `projectsV2.nodes` and automatically falls through to step 5.
+- **Split executed**: After completing the split procedure below, if the current Size is not `XL`, read `${CLAUDE_PLUGIN_ROOT}/modules/project-field-update.md` and update parent Size → XL (steps 1→2→3→4). Use label fallback (step 5) only if GraphQL fails. This ensures routing consistency: downstream skills (`/auto`, etc.) use Size=XL to select the sub-issue route for parent issues.
 
 **Procedure:**
 1. Propose split plan via AskUserQuestion (sub-issue count, scope of each, dependencies)
@@ -243,6 +244,7 @@ If Size is `XL` but splitting is not needed, read `${CLAUDE_PLUGIN_ROOT}/modules
 6. Apply `phase/issue` label to each sub-issue
 7. Run lightweight triage for each sub-issue (skip Steps 1, 1.5, 7; inherit Type/Priority from parent; determine Size individually per sub-issue scope)
 8. Parent phase management: auto-close when all sub-issues done (no cross-cutting conditions); phase/verify + notify when cross-cutting conditions remain
+9. **Upgrade parent Size to XL**: If the current parent Size is not already `XL`, read `${CLAUDE_PLUGIN_ROOT}/modules/project-field-update.md` and update parent Size → XL (steps 1→2→3→4). Use label fallback (step 5) only if GraphQL fails.
 
 **GraphQL commands (examples):**
 ```bash
@@ -394,10 +396,11 @@ Run the standard sub-issue creation flow (New Issue Creation Step 9, procedures 
 6. Apply `phase/issue` label to each sub-issue
 7. Run lightweight triage for each sub-issue (skip Steps 1, 1.5, 7; inherit Type/Priority from parent; determine Size individually per sub-issue scope)
 8. Parent phase management: auto-close when all sub-issues done (no cross-cutting conditions); phase/verify + notify when cross-cutting conditions remain
+9. **Upgrade parent Size to XL**: If the current parent Size is not already `XL`, read `${CLAUDE_PLUGIN_ROOT}/modules/project-field-update.md` and update parent Size → XL (steps 1→2→3→4). Use label fallback (step 5) only if GraphQL fails. This ensures routing consistency: downstream skills (`/auto`, etc.) use Size=XL to select the sub-issue route for parent issues.
 
 ---
 
-(For non-L/XL or fallback: run standard split assessment. Size XL → L change applies when no split is needed.)
+(For non-L/XL or fallback: run standard split assessment. Size change rules: Size XL → L when no split is needed; Size → XL when split is executed.)
 
 ### Step 12: Issue Retrospective
 
