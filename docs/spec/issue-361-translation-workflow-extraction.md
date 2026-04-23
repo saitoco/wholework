@@ -63,3 +63,18 @@ Core/Domain 分離 Phase 4 (#295) の一部。`skills/code/SKILL.md:235`、`skil
 ### Rework
 
 - N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 実装は Spec 実装ステップ 1〜4 に完全準拠。逸脱なし。
+- 唯一の注意点: `skills/spec/SKILL.md` の置換が「spec-creation context での Changed Files 追加」を暗黙的にした件は Code Retrospective に Design Gap として記録済みであり、review での指摘と重複している。
+
+### Recurring issues
+
+- Nothing to note — 同種 issue は今回1件のみ。CONSIDER レベルのため修正対象外。
+
+### Acceptance criteria verification difficulty
+
+- 全7項目が `file_exists` / `file_contains` / `rubric` で明確に記述されており、UNCERTAIN なし。`rubric` 条件3・7 は意味的判断が必要だったが、diff が明確なため判定は容易だった。verify command 品質は良好。
