@@ -136,3 +136,39 @@ Spec の Code Retrospective セクション自身が、置換対象の deprecate
 ### 受け入れ基準検証難易度
 
 12/13 条件が PASS。残り 1 件（CI）は実際の CI failure として明確。UNCERTAIN は 0 件で verify command の質は良好。rubric 検証条件も正確で問題なし。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue retrospective セクションが Spec に存在しないため issue フェーズの振り返りは不明
+- 受入条件は全13件のうち12件が事前チェック済み（[x]）で品質は高い
+- 条件10（rubric）と条件13（CI）が未チェックで残っていたが、いずれも実装後に検証が必要なもの（CI は実行が必要、rubric は product.md 確認が必要）であり、適切な設計
+
+#### design
+- Spec 自身が実装対象の deprecated 語をそのまま引用したため、docs/spec/ 除外削除後に CI が FAIL する再帰的問題が発生（Code Retrospective に記録）
+- macOS sed の `\b` 非対応という実装環境依存の問題が Spec に記載なく、コード実装時に発見
+
+#### code
+- 実装コミットは1件（merge commit）にまとまっており、fixup/amend パターンは確認されない
+- Spec のスコープ外（verify-related 以外の deprecated 語）の置換が必要となり、実装時にスコープを拡張
+- 2段階置換が必要だったことは設計ギャップだったが、auto-resolve で適切に対処
+
+#### review
+- CI failure（Spec ファイルの deprecated 語引用）が唯一の MUST issue として適切に検出された
+- UNCERTAIN 0件、PASS 12/13 という高品質な verify command 設計により review の負担が軽減
+- Spec retrospective セクション自身が CI スキャン対象になる再帰的問題は review が指摘済み
+
+#### merge
+- merge commit `8534977` は squash merge で1件にまとまっており、コンフリクトなし
+- マージ後の `git pull` タイミングで変更が反映（/verify 開始時点では未取得だったが、Step 2 の git pull で解決）
+
+#### verify
+- 13条件すべてが PASS（うち2件は今回 /verify で確認）
+- CI job 名の表示名（"Forbidden Expressions check"）と job ID（"check-forbidden-expressions"）の不一致により、verify command の expected string が出力に含まれないが、ワークフロー YAML でのマッピング確認により PASS と判断
+- Post-merge の opportunistic/manual 条件（#371 修正確認）はユーザー確認が必要
+
+### Improvement Proposals
+- verify command `github_check "gh pr checks" "check-forbidden-expressions"` は CI job の display name "Forbidden Expressions check" と literal 不一致になる。`github_check` は job ID でも一致できるよう、またはワークフロー YAML と display name 両方を探索する改善を検討
+- Spec retrospective セクションで deprecated 語を「引用」する際に CI スキャンに引っかかる再帰的問題の対策として、Spec 記述ガイドに「deprecated 語を直接引用せず説明的記述か `旧称:` 接頭辞を使う」旨を追記することを検討
