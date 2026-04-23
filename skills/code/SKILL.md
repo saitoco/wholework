@@ -232,7 +232,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-checker.md` and follow the "Impact asses
 
 If sync is required, update the target documents (`README.md`, `docs/workflow.md`, etc.) before committing.
 
-**`docs/ja/` sync check:** If any top-level `docs/*.md` files (excluding `docs/spec/`, `docs/reports/`, and `docs/ja/` subdirectories) are in the changed file list, check the corresponding `docs/ja/` mirror files and update them if they are out of sync with the English originals.
+**`docs/ja/` sync check:** If `docs/translation-workflow.md` exists, read it and follow the sync procedure.
 
 ### Step 10: Verify Command Consistency
 
