@@ -76,3 +76,17 @@
 ### product.md Terms との関係
 
 `docs/product.md` § Terms には既に "Domain file" のエントリがある。新たに導入する semantic identifier としての "domain" は `docs/environment-adaptation.md` の Domain Terminology セクションで canonical 定義を持たせる方針（環境適応アーキテクチャの内部概念のため product.md への昇格は #350/#351 完了後に検討）。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A（Spec の実装ステップに沿って実施、順番・内容の逸脱なし）
+
+### Design Gaps/Ambiguities
+
+- `modules/skill-dev-doc-impact.md` は `skill:` キーを持たない（複数 skill から間接ロードされる設計）。この場合、`rewrite_target.from` に何を指定するかが Spec に明示されていなかった。`doc-checker.md` 経由でロードされる設計なので `from: modules/doc-checker.md` を採用したが、#350 の classifier 実装時に調整が必要な可能性がある。
+
+### Rework
+
+- N/A
