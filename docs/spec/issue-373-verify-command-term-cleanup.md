@@ -122,3 +122,17 @@ deprecated語 (`verify command` / `verify command` / `verify command` / `verify 
 ### Rework
 
 - docs/spec/ の deprecated 語置換を 2 段階で実施 (verify-related → 残余全語)。Spec が段階的置換を想定していなかったため追加イテレーションが発生した。
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+Spec の Code Retrospective セクション自身が、置換対象の deprecated 語をそのまま引用していたため CI が FAIL した。Spec を retrospective の記録先として使う際に「Spec ファイル自身が docs/spec/ CI スキャン対象になる」という再帰的問題が発生。根本原因: `docs/spec/` 除外削除後の CI スキャン範囲拡大が、Spec ファイルを書く sub-agent 自身のコンテキストに反映されていなかった。再発防止: Spec の retrospective 記述ガイドとして「deprecated 語を引用する場合は具体的な語を直接書かず説明的記述（例: deprecated 語 N 種類）を使うか、`旧称:` 接頭辞を付けて CI 例外フィルタを活用する」を周知することが有効。
+
+### 繰り返し Issue
+
+なし。本レビューでの MUST issue は 1 件のみ（CI failure）で、単一の根本原因。
+
+### 受け入れ基準検証難易度
+
+12/13 条件が PASS。残り 1 件（CI）は実際の CI failure として明確。UNCERTAIN は 0 件で verify command の質は良好。rubric 検証条件も正確で問題なし。
