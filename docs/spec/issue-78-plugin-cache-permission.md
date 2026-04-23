@@ -16,7 +16,7 @@
 
 2段階ワイルドカードが動作しない場合の対応は実装者が Issue 背景（「2段階ワイルドカードの動作確認: 要検証」）を読み判断する。結果は Post-merge 条件で検証される。
 
-### verify ヒントの確認
+### verify commandの確認
 
 - `file_contains ".claude/settings.json" "plugins/cache/saitoco-wholework"` — 追加エントリにマッチ ✓
 - `grep "wholework/\*/scripts" ".claude/settings.json"` — ハッシュ部が `*` ワイルドカードであることを検証（`\*` は正規表現でリテラル `*`）✓

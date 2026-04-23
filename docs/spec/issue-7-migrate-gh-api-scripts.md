@@ -166,7 +166,7 @@
 
 #### spec
 - 受け入れ条件は具体的かつ検証可能。file_exists/file_not_contains/command/grep の組み合わせで15条件が明確に自動検証できた
-- 「マージ後」セクションの3条件（全 bats テスト、実行権限、install.sh）は verify ヒントなしのため自動検証対象外だったが、重要なリグレッションリスクになり得る
+- 「マージ後」セクションの3条件（全 bats テスト、実行権限、install.sh）は verify commandなしのため自動検証対象外だったが、重要なリグレッションリスクになり得る
 
 #### design
 - 設計と実装の主な乖離（gh-check-blocking.sh の PATH 優先方式）は code レトロに記録済み。設計書としての品質は高く、verify 時点で問題を再発見する必要はなかった

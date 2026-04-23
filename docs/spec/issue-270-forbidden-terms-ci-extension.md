@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `check-forbidden-expressions` CI job in `.github/workflows/test.yml` currently detects only `acceptance check` via an inline `grep` command. The other deprecated terms listed in `docs/product.md` § Terms (Formerly called column) — `Design file`, `Issue Spec`, `Dispatch`, `verification hint`, `shared procedure document` — are not checked.
+The `check-forbidden-expressions` CI job in `.github/workflows/test.yml` currently detects only `verify command` via an inline `grep` command. The other deprecated terms listed in `docs/product.md` § Terms (Formerly called column) — `Spec`, `Spec`, `/auto`, `verify command`, `Shared module` — are not checked.
 
 Create `scripts/check-forbidden-expressions.sh` covering all 6 deprecated terms with the same exclusion logic as the existing check. Update the CI to call the script. This makes the detection logic independently testable with bats.
 
@@ -10,12 +10,12 @@ Deprecated terms to detect (source: `docs/product.md` § Terms, Formerly called 
 
 | Deprecated term | Current term |
 |----------------|--------------|
-| Dispatch | `/auto` |
-| Design file | Spec |
-| Issue Spec | Spec |
-| verification hint | verify command |
-| acceptance check | verify command |
-| shared procedure document | Shared module |
+| /auto | `/auto` |
+| Spec | Spec |
+| Spec | Spec |
+| verify command | verify command |
+| verify command | verify command |
+| Shared module | Shared module |
 
 ## Changed Files
 
@@ -39,12 +39,12 @@ Deprecated terms to detect (source: `docs/product.md` § Terms, Formerly called 
 
 - <!-- verify: file_exists "scripts/check-forbidden-expressions.sh" --> `scripts/check-forbidden-expressions.sh` が作成されている
 - <!-- verify: grep "check-forbidden-expressions" ".github/workflows/test.yml" --> `.github/workflows/test.yml` の `check-forbidden-expressions` job が新スクリプトを呼び出している
-- <!-- verify: grep "Design file" "scripts/check-forbidden-expressions.sh" --> `Design file` が検出対象に含まれている
-- <!-- verify: grep "Issue Spec" "scripts/check-forbidden-expressions.sh" --> `Issue Spec` が検出対象に含まれている
-- <!-- verify: grep "Dispatch" "scripts/check-forbidden-expressions.sh" --> `Dispatch` が検出対象に含まれている
-- <!-- verify: grep "verification hint" "scripts/check-forbidden-expressions.sh" --> `verification hint` が検出対象に含まれている
-- <!-- verify: grep "shared procedure document" "scripts/check-forbidden-expressions.sh" --> `shared procedure document` が検出対象に含まれている
-- <!-- verify: grep "acceptance check" "scripts/check-forbidden-expressions.sh" --> 既存の `acceptance check` 検出ロジックが新スクリプトに移植・維持されている
+- <!-- verify: grep "Spec" "scripts/check-forbidden-expressions.sh" --> `Spec` が検出対象に含まれている
+- <!-- verify: grep "Spec" "scripts/check-forbidden-expressions.sh" --> `Spec` が検出対象に含まれている
+- <!-- verify: grep "/auto" "scripts/check-forbidden-expressions.sh" --> `/auto` が検出対象に含まれている
+- <!-- verify: grep "verify command" "scripts/check-forbidden-expressions.sh" --> `verify command` が検出対象に含まれている
+- <!-- verify: grep "Shared module" "scripts/check-forbidden-expressions.sh" --> `Shared module` が検出対象に含まれている
+- <!-- verify: grep "verify command" "scripts/check-forbidden-expressions.sh" --> 既存の `verify command` 検出ロジックが新スクリプトに移植・維持されている
 - <!-- verify: file_exists ".github/workflows/test.yml" --> `.github/workflows/test.yml` が維持されている
 
 ### Post-merge
@@ -57,29 +57,29 @@ Deprecated terms to detect (source: `docs/product.md` § Terms, Formerly called 
 
 ### Deviations from Design
 - **`check_term` function instead of inline loop**: Spec suggested inline grep per-term in the loop. Used a `check_term` function with captured output (`$()`) for cleaner code and avoiding double-grep.
-- **Case-sensitive matching for "Issue Spec"**: Spec suggested `-riE '\bIssue Spec\b'` but `tests/gh-label-transition.bats` has `for phase in issue spec ready code review` which matched case-insensitively. Changed to `-rE` (no `-i`) to avoid the false positive.
+- **Case-sensitive matching for "Spec"**: Spec suggested `-riE '\bIssue Spec\b'` but `tests/gh-label-transition.bats` has `for phase in issue spec ready code review` which matched case-insensitively. Changed to `-rE` (no `-i`) to avoid the false positive.
 - **Added `tests/check-forbidden-expressions.bats` exclusion**: Test file itself contains deprecated terms as test fixtures. Added `grep -v 'tests/check-forbidden-expressions.bats'` to standard exclusions. Not explicitly mentioned in Spec but necessary to prevent self-referential false positives.
 - **Renamed bats test with Japanese chars**: Test name `exclusion: line with Japanese 旧称 marker exits 0` was renamed to `exclusion: line with kyusho Japanese legacy marker exits 0` because Japanese in bats test names causes parse failure (per Issue #226 guidance).
 
 ### Design Gaps/Ambiguities
-- Spec Notes mentioned `grep -v 'Issue Spec[a-z]'` for "Issue Specification" exclusion, but did not cover the `tests/gh-label-transition.bats` false positive where "issue spec" appears as two separate array items in a for loop (case-insensitive match would catch them).
+- Spec Notes mentioned `grep -v 'Spec[a-z]'` for "Issue Specification" exclusion, but did not cover the `tests/gh-label-transition.bats` false positive where "issue spec" appears as two separate array items in a for loop (case-insensitive match would catch them).
 - Spec Notes did not address the self-referential test file problem (the bats test file needs to contain deprecated terms as fixtures to test detection).
 
 ### Rework
-- Script had to be modified after initial implementation because `bash scripts/check-forbidden-expressions.sh` flagged the test file itself and `tests/gh-label-transition.bats`. Two changes: (1) added test file exclusion, (2) changed "Issue Spec" to case-sensitive. Added 1 iteration.
+- Script had to be modified after initial implementation because `bash scripts/check-forbidden-expressions.sh` flagged the test file itself and `tests/gh-label-transition.bats`. Two changes: (1) added test file exclusion, (2) changed "Spec" to case-sensitive. Added 1 iteration.
 
 ## Verify Retrospective
 
 ### Phase-by-Phase Review
 
 #### spec
-- Issue の自動解決で実装アプローチ (c) が適切に選択された。`shared procedure document` の追加も Background から正確に抽出された。
+- Issue の自動解決で実装アプローチ (c) が適切に選択された。`Shared module` の追加も Background から正確に抽出された。
 - Spec の Notes セクションで既知の false positive リスク（`skills/spec/SKILL.md`、`docs/reports/` 等）を事前列挙したことは有益だった。
 - 一方、テストファイル自身が検出対象の deprecated terms をフィクスチャとして含む「自己参照問題」については Notes に記載があったが、Implementation Steps には反映されていなかった。これが 1 回の rework の原因となった。
 
 #### design
 - 設計は実装と概ね一致。`check_term` 関数の導入は Spec の inline ループより明確で有効な改善だった。
-- 設計の明示的な変更点として、`tests/check-forbidden-expressions.bats` 除外と `Issue Spec` の case-sensitive 化が Implementation Steps に含まれていなかった。
+- 設計の明示的な変更点として、`tests/check-forbidden-expressions.bats` 除外と `Spec` の case-sensitive 化が Implementation Steps に含まれていなかった。
 
 #### code
 - Rework 1 回: スクリプトが自ファイル（`tests/check-forbidden-expressions.bats`）と `tests/gh-label-transition.bats` を誤検出。既知リスクが実装ステップに反映されていなかったことが原因。
@@ -102,11 +102,11 @@ Deprecated terms to detect (source: `docs/product.md` § Terms, Formerly called 
 ## Notes
 
 - **Known false positives in current codebase** (must be excluded in the script):
-  - `skills/spec/SKILL.md`: `# Issue Specification` — substring match of "Issue Spec". Use `grep -v 'Issue Spec[a-z]'` or `\bIssue Spec\b` to exclude "Issue Specification"
-  - `docs/guide/figma-best-practices.md`: "Figma design files" — contains "design file" as substring. Use `\bDesign file\b` (word boundary) to avoid matching "design files" plural form
-  - `docs/reports/sonnet-effort-recalibration.md`: "command dispatch" — generic English use of "dispatch". Add `docs/reports/` path exclusion or use case-sensitive matching for "Dispatch"
-  - `docs/tech.md` line 166: `| Acceptance check |` — Forbidden Expressions table row. Excluded by `grep -iv "| acceptance check |"` filter
+  - `skills/spec/SKILL.md`: `# Issue Specification` — substring match of "Spec". Use `grep -v 'Spec[a-z]'` or `\bIssue Spec\b` to exclude "Issue Specification"
+  - `docs/guide/figma-best-practices.md`: "Figma design files" — contains "Spec" as substring. Use `\bDesign file\b` (word boundary) to avoid matching "design files" plural form
+  - `docs/reports/sonnet-effort-recalibration.md`: "command dispatch" — generic English use of "dispatch". Add `docs/reports/` path exclusion or use case-sensitive matching for "/auto"
+  - `docs/tech.md` line 166: `| verify command |` — Forbidden Expressions table row. Excluded by `grep -iv "| verify command |"` filter
 - **Bash 3.2+ compatibility**: avoid `mapfile`/`readarray`; use `while IFS= read -r` for array population if needed. The DEPRECATED_TERMS array definition `DEPRECATED_TERMS=(...)` is compatible with bash 3.2+.
 - **Test directory isolation**: bats tests should create a temp directory with controlled content to avoid scanning the real repo; use `BATS_TEST_TMPDIR` for isolated fixtures
-- **Exclusion generalization**: the `grep -iv "| $term |"` exclusion uses the term as a literal substring of the table-row pattern. This handles the existing `| Acceptance check |` exclusion and extends it to all terms generically.
-- Issue retrospective: auto-resolved ambiguity (from Issue body) — implementation approach (c) = standalone script chosen for bats testability; `shared procedure document` included as 6th term per Background section; verify commands target `scripts/check-forbidden-expressions.sh` not `test.yml`
+- **Exclusion generalization**: the `grep -iv "| $term |"` exclusion uses the term as a literal substring of the table-row pattern. This handles the existing `| verify command |` exclusion and extends it to all terms generically.
+- Issue retrospective: auto-resolved ambiguity (from Issue body) — implementation approach (c) = standalone script chosen for bats testability; `Shared module` included as 6th term per Background section; verify commands target `scripts/check-forbidden-expressions.sh` not `test.yml`

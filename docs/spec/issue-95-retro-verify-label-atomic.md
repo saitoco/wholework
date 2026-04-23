@@ -3,7 +3,7 @@
 ## Issue Retrospective
 
 ### Judgment Rationale
-- Pre-merge 条件 2 の acceptance check を修正: `section_not_contains` は固定文字列マッチングのため、`.*` を含むパターンは常に PASS してしまう。実際の SKILL.md テキスト `gh issue edit {issue_number} --add-label` に合わせた `file_not_contains` に変更
+- Pre-merge 条件 2 の verify command を修正: `section_not_contains` は固定文字列マッチングのため、`.*` を含むパターンは常に PASS してしまう。実際の SKILL.md テキスト `gh issue edit {issue_number} --add-label` に合わせた `file_not_contains` に変更
 - `gh label create` の事前チェックは維持する判断: `gh issue create --label` はラベル未存在時にエラーになるため、削除対象は `gh issue edit --add-label` のみ
 
 ### Key Decisions
@@ -18,7 +18,7 @@
 ### Phase-by-Phase Review
 
 #### spec
-- Spec は作成されていないが、Issue Retrospective で acceptance check の `section_not_contains` から `file_not_contains` への修正を事前に実施済み。検証精度の向上につながった。
+- Spec は作成されていないが、Issue Retrospective で verify command の `section_not_contains` から `file_not_contains` への修正を事前に実施済み。検証精度の向上につながった。
 
 #### design
 - N/A（このIssueは設計フェーズなし）

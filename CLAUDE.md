@@ -31,6 +31,10 @@ When migrating Skills from private repositories to this public repo:
 
 See `docs/structure.md` if present for the current directory layout.
 
+## 用語
+
+- `verify hint` / `verification hint` / `verify ヒント` / `検証ヒント` は deprecated。常に `verify command` を使用する (SSoT: `docs/product.md § Terms`)。
+
 ## Notes
 
 This CLAUDE.md covers only wholework-specific conventions. Global rules (workflow commands, branch protection, commit style, etc.) are managed in `~/.claude/CLAUDE.md`.

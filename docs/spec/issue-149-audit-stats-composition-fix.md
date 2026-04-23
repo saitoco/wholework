@@ -135,7 +135,7 @@ Nothing to note. All 6 pre-merge acceptance conditions used clear `file_exists`,
 
 #### verify
 - 全 6 pre-merge 条件が PASS。verify コマンドの文法・パスに問題なし。
-- Post-merge の opportunistic 条件（`/audit stats` 実行確認）は `verify-type: opportunistic` のみでverify hint なし。ユーザー確認待ちとして `phase/verify` ラベルを付与。
+- Post-merge の opportunistic 条件（`/audit stats` 実行確認）は `verify-type: opportunistic` のみでverify command なし。ユーザー確認待ちとして `phase/verify` ラベルを付与。
 - verify コマンドの整合性は良好。改善点なし。
 
 ### Improvement Proposals

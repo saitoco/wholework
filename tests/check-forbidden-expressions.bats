@@ -24,10 +24,10 @@ setup() {
   [[ "$output" == *"verification hint"* ]]
 }
 
-@test "exclusion: term in docs/spec exits 0" {
+@test "detection: term in docs/spec exits 1" {
   echo "use verification hint here" > docs/spec/spec.md
   run bash "$SCRIPT"
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 1 ]
 }
 
 @test "exclusion: line with Formerly called exits 0" {
@@ -80,6 +80,24 @@ setup() {
 
 @test "detection: Issue Spec exact match exits 1" {
   echo "Do not use Issue Spec format" > docs/guide.md
+  run bash "$SCRIPT"
+  [ "$status" -eq 1 ]
+}
+
+@test "detection: verify hint exits 1" {
+  echo "use verify hint here" > skills/bad.md
+  run bash "$SCRIPT"
+  [ "$status" -eq 1 ]
+}
+
+@test "detection: verify katakana hint exits 1" {
+  echo "use verify ヒント here" > skills/bad.md
+  run bash "$SCRIPT"
+  [ "$status" -eq 1 ]
+}
+
+@test "detection: kensho hint exits 1" {
+  echo "use 検証ヒント here" > skills/bad.md
   run bash "$SCRIPT"
   [ "$status" -eq 1 ]
 }

@@ -12,7 +12,7 @@
 
 - 既存精査フローの Step 2 と完全に同じ記述パターン（`triaged` ラベル確認 → triage/SKILL.md の Single Execution Step 2 から実行）を新規作成フローにも適用する
 
-### Verify Hint Corrections (Refinement)
+### Verify Command Corrections (Refinement)
 
 - **`section_contains ... "Step 2"` の偽陽性修正**: New Issue Creation セクションには既存の "Step 2: Reference Steering Documents" があり、変更なしでも PASS になる問題を検出。`"Single Execution"` に変更し、triage SKILL.md の実行セクション参照を正確に検証するよう修正。
 - **`grep "triaged"` の偽陽性修正**: 既存精査フロー（Existing Issue Refinement）に "triaged" が既に存在するため、ファイル全体の grep では常に PASS になる問題を検出。`section_contains ... "## New Issue Creation" "triaged"` に変更し、New Issue Creation セクション内での参照に限定。
@@ -27,7 +27,7 @@
 ### Phase-by-Phase Review
 
 #### spec
-- XS サイズのパッチルートのため Spec ファイルは作成されなかった。Issue Retrospective セクションにて verify hint の偽陽性修正（`grep "triaged"` → `section_contains ... "triaged"`、`section_contains ... "Step 2"` → `section_contains ... "Single Execution"`）が行われており、受け入れ条件の品質向上に繋がっていた。
+- XS サイズのパッチルートのため Spec ファイルは作成されなかった。Issue Retrospective セクションにて verify command の偽陽性修正（`grep "triaged"` → `section_contains ... "triaged"`、`section_contains ... "Step 2"` → `section_contains ... "Single Execution"`）が行われており、受け入れ条件の品質向上に繋がっていた。
 
 #### design
 - N/A（Spec なし・パッチルート）
@@ -43,7 +43,7 @@
 
 #### verify
 - 全5件の自動検証条件がすべて PASS。Post-merge に `opportunistic` 条件が1件残っており、ユーザー確認待ち（`/issue "test title"` で実際にメタデータ自動設定を確認）。
-- Issue Retrospective での verify hint 修正（偽陽性対策）が機能しており、条件1〜4は `section_contains` を使った正確なスコープ限定検証で正しく PASS を判定できた。
+- Issue Retrospective での verify command 修正（偽陽性対策）が機能しており、条件1〜4は `section_contains` を使った正確なスコープ限定検証で正しく PASS を判定できた。
 
 ### Improvement Proposals
 - N/A

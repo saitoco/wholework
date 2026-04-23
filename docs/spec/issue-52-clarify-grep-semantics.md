@@ -2,7 +2,7 @@
 
 ## Overview
 
-`modules/verify-executor.md` の acceptance check 変換表 line 46（`grep` コマンド行）に、セマンティクスの明示と `file_not_contains` への誘導を 1 行で追記する。verify command を書くユーザーが `grep` の exit code 感覚で「マッチしなければ PASS」と誤解するケースを防ぐ。
+`modules/verify-executor.md` の verify command 変換表 line 46（`grep` コマンド行）に、セマンティクスの明示と `file_not_contains` への誘導を 1 行で追記する。verify command を書くユーザーが `grep` の exit code 感覚で「マッチしなければ PASS」と誤解するケースを防ぐ。
 
 ## Changed Files
 

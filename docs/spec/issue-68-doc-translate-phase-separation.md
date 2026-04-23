@@ -99,7 +99,7 @@
 - コンフリクトなし、CI 影響なし
 
 #### verify
-- 全 6 条件が PASS。acceptance check ヒントの精度が高く、auto-verify が完全に機能した
+- 全 6 条件が PASS。verify command ヒントの精度が高く、auto-verify が完全に機能した
 - 後処理 Post-merge 条件（`/doc translate ja` 実行確認）は auto-verify 対象外のユーザー検証項目として正しく分類済み
 
 ### Improvement Proposals

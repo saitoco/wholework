@@ -61,7 +61,7 @@
 ### Phase-by-Phase Review
 
 #### spec
-- Issue本文にAuto-Resolved Ambiguity Pointsセクションがあり、スコープ（README.md除外、workflow.md確認のみ）が明確に定義されていた。acceptance conditionは全てverify hintを持ち、自動検証しやすい設計だった。
+- Issue本文にAuto-Resolved Ambiguity Pointsセクションがあり、スコープ（README.md除外、workflow.md確認のみ）が明確に定義されていた。acceptance conditionは全てverify commandを持ち、自動検証しやすい設計だった。
 
 #### design
 - 実装ステップが3つのみの小規模変更で、設計と実装の乖離なし。Spec変更後の実装もSpecに記載の通りに行われた。

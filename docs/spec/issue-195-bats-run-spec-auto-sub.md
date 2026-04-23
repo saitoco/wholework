@@ -87,7 +87,7 @@ run-spec.sh は `SKILL_FILE="${SCRIPT_DIR}/../skills/spec/SKILL.md"` で SKILL.m
 
 ### Design Gaps/Ambiguities
 
-- verify コマンドの `file_contains "tests/run-auto-sub.bats" "Size: XS"` / `"Size: L"` が miscalibrated だった。Spec ではテスト名パターンを `"Size: XS"` と想定していたが、実際には bats の `@test` 名は `"Size XS:"` (コロン位置が異なる) になる。これは run-auto-sub.sh のログ出力 `echo "Size: ${SIZE}"` と混同した可能性がある。verify hint は `"Size XS"` / `"Size L"` に修正した。
+- verify コマンドの `file_contains "tests/run-auto-sub.bats" "Size: XS"` / `"Size: L"` が miscalibrated だった。Spec ではテスト名パターンを `"Size: XS"` と想定していたが、実際には bats の `@test` 名は `"Size XS:"` (コロン位置が異なる) になる。これは run-auto-sub.sh のログ出力 `echo "Size: ${SIZE}"` と混同した可能性がある。verify command は `"Size XS"` / `"Size L"` に修正した。
 
 ### Rework
 
@@ -97,7 +97,7 @@ run-spec.sh は `SKILL_FILE="${SCRIPT_DIR}/../skills/spec/SKILL.md"` で SKILL.m
 
 ### Spec vs. implementation divergence patterns
 
-Nothing to note. All Spec-specified test cases were implemented as described. The verify hint correction (`"Size: XS"` → `"Size XS"`) was pre-identified and documented in Code Retrospective before review, demonstrating good self-correction during implementation.
+Nothing to note. All Spec-specified test cases were implemented as described. The verify command correction (`"Size: XS"` → `"Size XS"`) was pre-identified and documented in Code Retrospective before review, demonstrating good self-correction during implementation.
 
 ### Recurring issues
 
@@ -118,7 +118,7 @@ The `github_check` condition (bats test CI PASS) was PENDING at review time beca
 - N/A（Spec Retrospective セクションなし）
 
 #### code
-- verify hint の誤校正 (`"Size: XS"` → `"Size XS"`) が Code Retrospective に記録されており、実装中に自己修正されている。これは `/spec` 段階で verify hint を生成する際に、bats テスト名の命名規則をより正確に反映させる余地があることを示す。
+- verify command の誤校正 (`"Size: XS"` → `"Size XS"`) が Code Retrospective に記録されており、実装中に自己修正されている。これは `/spec` 段階で verify command を生成する際に、bats テスト名の命名規則をより正確に反映させる余地があることを示す。
 
 #### review
 - PR #205 のレビューは 1 件。CI PENDING 条件を `/review` 段階で UNCERTAIN として記録し、`/merge` を CI 完了後に実施した判断は適切。
@@ -132,4 +132,4 @@ The `github_check` condition (bats test CI PASS) was PENDING at review time beca
 - Post-merge 条件 10（opportunistic）は次回関連 PR レビュー時の手動確認のため未チェックのまま。`phase/verify` ラベルで管理。
 
 ### Improvement Proposals
-- `/spec` が verify hint を生成する際、bats テスト名で頻用される文字列パターン（`@test "XXX"` の命名規則）を考慮し、`file_contains` のキーワードをテスト名形式に合わせて生成するよう `/spec` プロンプトにガイダンスを追加することを検討する。
+- `/spec` が verify command を生成する際、bats テスト名で頻用される文字列パターン（`@test "XXX"` の命名規則）を考慮し、`file_contains` のキーワードをテスト名形式に合わせて生成するよう `/spec` プロンプトにガイダンスを追加することを検討する。

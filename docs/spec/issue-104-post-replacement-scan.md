@@ -2,11 +2,11 @@
 
 ## Overview
 
-Issue #94（Acceptance check → verify command 置換）のコードレトロスペクティブで、機械的置換後に7ファイル・9箇所の修正が必要になった。根本原因は置換後スキャンの欠如。
+Issue #94（verify command → verify command 置換）のコードレトロスペクティブで、機械的置換後に7ファイル・9箇所の修正が必要になった。根本原因は置換後スキャンの欠如。
 
 検出されたパターン:
-- 冠詞の不整合: "An acceptance check" → "An verify command"（"An" のまま残存）
-- 複合名詞の冗長: "acceptance check commands" → "verify command commands"（重複）
+- 冠詞の不整合: "An verify command" → "An verify command"（"An" のまま残存）
+- 複合名詞の冗長: "verify command commands" → "verify command commands"（重複）
 - 日本語テキストとのスペース不足: 日本語文字列隣接での英語置換後のスペース欠如
 
 `skills/spec/SKILL.md` の Step 10「Rename-type Issue grep check」セクションに後処理チェックリストを追記する。

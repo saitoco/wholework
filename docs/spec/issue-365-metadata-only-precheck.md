@@ -27,7 +27,7 @@
 
 #### spec
 - Issue body に `<!-- implementation-type: metadata-only -->` マーカーという実装ガイドとして機能する記述があり、受入条件の意図が明確だった。
-- Post-merge 条件が `verify-type: opportunistic` のみでverify hintを持たないため自動検証できず、ユーザー検証ガイドに留まる。Opportunistic 条件にはverify hintを付与することを検討する価値がある。
+- Post-merge 条件が `verify-type: opportunistic` のみでverify commandを持たないため自動検証できず、ユーザー検証ガイドに留まる。Opportunistic 条件にはverify commandを付与することを検討する価値がある。
 
 #### design
 - ソリューション選択（マーカー方式）は Issue body の「対処案の例」どおりの実装で、設計と実装の乖離なし。
@@ -45,10 +45,10 @@
 - 直コミット（patch route）でマージ競合なし。コミットメッセージに `closes #365` が含まれており標準的。
 
 #### verify
-- Pre-merge 条件1（verify hintあり）: PASS — `grep` verify command が正常動作し、実装の有無を正確に検出。
+- Pre-merge 条件1（verify commandあり）: PASS — `grep` verify command が正常動作し、実装の有無を正確に検出。
 - Post-merge 条件2（verify-type: opportunistic、hintなし）: 自動検証対象外。Issue #364 相当のケースで実際に `/verify` を実行するまで確認できない。
 - iter 1 でPAIL → 再オープン → iter 2でPASS の流れは verify-reopen ループが正常に機能したことを示す。
 
 ### Improvement Proposals
 - Auto Retrospective の改善提案（`reconcile-phase-state.sh` の無条件実行、`detect-wrapper-anomaly.sh` への no-commit パターン追加）を継承。これらは本 Issue の verify 自体への観察ではなく `/auto` オーケストレーション全体への改善提案として記録済み。
-- Opportunistic 条件にもverify hint（例: `<!-- verify: command "..." -->` ）を付与するガイドラインを Issue 作成時に推奨することで、自動消化率を向上できる。
+- Opportunistic 条件にもverify command（例: `<!-- verify: command "..." -->` ）を付与するガイドラインを Issue 作成時に推奨することで、自動消化率を向上できる。

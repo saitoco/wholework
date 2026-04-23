@@ -106,7 +106,7 @@
 - ソート後の行数は 18（既存 9 件 + 新規 9 件）
 - Python ソートチェックは `str.lower` を key 関数として使用。`/auto` は先頭（`/` の ASCII 47 が `a` の 97 より小さい）
 - `grep "受入条件" "docs/product.md"` は「受入条件項目」も部分一致するため、Acceptance criteria の日本語訳「受入条件」が存在すれば必ず PASS する
-- `docs/ja/product.md` のソート順は英語版の順序に合わせる（日本語ファイルのアルファベットソート検証は acceptance check に含まれていないが、一貫性のため揃える）
+- `docs/ja/product.md` のソート順は英語版の順序に合わせる（日本語ファイルのアルファベットソート検証は verify command に含まれていないが、一貫性のため揃える）
 - Scope Declaration（Issue 本文より）: コードベース内の用語置換は含まない（後続 Issue #94 で対応）
 
 ## Code Retrospective
@@ -128,7 +128,7 @@
 ### Phase-by-Phase Review
 
 #### spec
-- Spec に18用語の最終ソート順が明示されており、実装と完全に一致した。Python ソートチェックコマンドを acceptance check に組み込んだことで、機械的な検証が可能になった点は特に有効だった。
+- Spec に18用語の最終ソート順が明示されており、実装と完全に一致した。Python ソートチェックコマンドを verify command に組み込んだことで、機械的な検証が可能になった点は特に有効だった。
 
 #### design
 - Issue Retrospective・Spec Retrospective セクションは存在しないが、Spec の実装ステップが変更ファイル単位で明確に記述されており、設計通りの実装が行われた。
@@ -143,7 +143,7 @@
 - `d418e43` で直接 main にコミット（closes #96）。コンフリクトなし。
 
 #### verify
-- 全15件が初回検証で PASS。acceptance check の設計が精緻で（section_contains、grep、command の使い分け）、自動検証カバレッジが100%だった。Python コマンドによるソート検証は再現性が高く有用。
+- 全15件が初回検証で PASS。verify command の設計が精緻で（section_contains、grep、command の使い分け）、自動検証カバレッジが100%だった。Python コマンドによるソート検証は再現性が高く有用。
 
 ### Improvement Proposals
 

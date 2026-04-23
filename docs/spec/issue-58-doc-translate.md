@@ -175,7 +175,7 @@ translate セクション内の Step 3（翻訳指示）では、以下の保持
 
 **Risk**: `doc sync --deep` が `docs/ja/` を誤って吸収候補にするリスクを特定。`allowed-tools` への git パターン追加が必要なことを確認。受入条件に反映済み。
 
-**Precedent**: 既存の `/doc` サブコマンド追加パターン（routing if-chain + Usage 更新）を踏襲すべきこと、LLM 生成物には確認フロー（AskUserQuestion）を挟む慣例があることを確認。過去の verify ヒント偽陽性（#35）の教訓を Risk Notes に反映。
+**Precedent**: 既存の `/doc` サブコマンド追加パターン（routing if-chain + Usage 更新）を踏襲すべきこと、LLM 生成物には確認フロー（AskUserQuestion）を挟む慣例があることを確認。過去の verify command偽陽性（#35）の教訓を Risk Notes に反映。
 
 ### 受入条件の変更理由
 
@@ -247,17 +247,17 @@ translate セクション内の Step 3（翻訳指示）では、以下の保持
 - 2段構えの除外ロジック（frontmatter 非保持 → Document Traversal 自然除外、`sync --deep` 明示除外）は将来の読み手にとって分かりにくい可能性がある（Spec Retrospective に記録済み）
 
 #### code
-- 3点の実装偏差（allowed-tools 分割、structure.md コメント形式、workflow.md 追記）はいずれもリワークとして記録済み。allowed-tools 形式の偏差は verify ヒント `grep "Bash(git"` との整合が必要となったことが直接原因であり、ヒントのパターンが実装形式を拘束する副作用が発生した
+- 3点の実装偏差（allowed-tools 分割、structure.md コメント形式、workflow.md 追記）はいずれもリワークとして記録済み。allowed-tools 形式の偏差は verify command `grep "Bash(git"` との整合が必要となったことが直接原因であり、ヒントのパターンが実装形式を拘束する副作用が発生した
 
 #### review
 - Spec-実装乖離の3点はレビュー前に code retrospective に記録されており、トレーサビリティは確保されていた
-- `allowed-tools` エントリ形式の未指定が verify ヒントのパターンに影響するという連鎖は、review フェーズでの改善提案として有効だったが、提案として残っていない
+- `allowed-tools` エントリ形式の未指定が verify commandのパターンに影響するという連鎖は、review フェーズでの改善提案として有効だったが、提案として残っていない
 
 #### merge
 - PR #67 として単一コミットでクリーンにマージ完了。コンフリクト・CI障害なし
 
 #### verify
-- 11条件すべて PASS、FAIL/UNCERTAIN ゼロ。grep/section_contains ベースの verify ヒントは安定して機能した
+- 11条件すべて PASS、FAIL/UNCERTAIN ゼロ。grep/section_contains ベースの verify commandは安定して機能した
 - Post-merge 5条件はすべて `verify-type: manual`。`/doc translate` の実行結果確認（翻訳品質・リンク切れ・sync 誤検知）は手動確認を要するため、適切な分類
 
 ### Improvement Proposals

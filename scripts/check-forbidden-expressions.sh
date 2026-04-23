@@ -12,6 +12,9 @@ DEPRECATED_TERMS=(
   "verification hint"
   "acceptance check"
   "shared procedure document"
+  "verify hint"
+  "verify ヒント"
+  "検証ヒント"
 )
 
 check_term() {
@@ -22,7 +25,6 @@ check_term() {
   local result
   # shellcheck disable=SC2086
   result=$(grep $grep_flags "$pattern" $SCAN_DIRS \
-    | grep -v 'docs/spec/' \
     | grep -v 'Formerly called' \
     | grep -v '旧称' \
     | grep -v 'tests/check-forbidden-expressions.bats' \

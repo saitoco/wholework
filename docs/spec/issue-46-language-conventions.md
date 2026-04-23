@@ -41,7 +41,7 @@
 
 #### verify
 - pre-merge 3条件すべて PASS（既にチェック済みを冪等再確認）
-- post-merge の opportunistic 条件 3件は自動検証対象外（`verify-type: opportunistic` で verify ヒントなし）。実際の Skill 実行時に確認が必要
+- post-merge の opportunistic 条件 3件は自動検証対象外（`verify-type: opportunistic` で verify commandなし）。実際の Skill 実行時に確認が必要
 
 ### Improvement Proposals
 - N/A
