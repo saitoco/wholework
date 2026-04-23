@@ -143,6 +143,8 @@ Parse acceptance condition checkboxes:
 
 **Resolving configuration values**: Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to fetch configuration values from `.wholework.yml`. Retain `SPEC_PATH`, `STEERING_DOCS_PATH`, `PRODUCTION_URL`, and `VERIFY_MAX_ITERATIONS` for use in subsequent steps.
 
+Read `${CLAUDE_PLUGIN_ROOT}/modules/domain-loader.md` and follow the "Processing Steps" section with `SKILL_NAME=verify`. Domain file content provides Skill infrastructure improvement classification criteria for Step 13.
+
 **Resolving `{{base_url}}` to production URL**: If verify commands contain `{{base_url}}`, replace `{{base_url}}` with `PRODUCTION_URL` before passing to verify-executor.
 
 - If `PRODUCTION_URL` is found: run browser verification with the replaced URL
@@ -593,14 +595,9 @@ Integrate improvement proposals collected from multiple phases, removing only ex
 
 **Early gate — if `HAS_SKILL_PROPOSALS=false`**: skip classification. Treat all proposals as Code improvements and proceed directly to the Code improvement handler (duplicate check → freshness check → create Issues). No skill-infra classification, no skip-count log.
 
-**If `HAS_SKILL_PROPOSALS=true`**: classify each improvement proposal by the following criteria.
+**If `HAS_SKILL_PROPOSALS=true`**: classify each improvement proposal using the criteria from the Domain file loaded in Step 4 (`.wholework/domains/verify/`). If no Domain file was loaded, treat all proposals as Code improvements.
 
-- **Skill infrastructure improvement**: improvement proposals matching any of the following (examples):
-  - Proposals for changes to skill commands themselves (`/spec`, `/verify`, `/review`, etc.) (e.g., "Should add a step to `/spec`")
-  - References to files under `~/.claude/` (e.g., "Should improve `${CLAUDE_PLUGIN_ROOT}/modules/xxx.md`")
-  - References to skill-specific filenames like `SKILL.md`, `modules/*.md`, `agents/*.md`
-  - **Classification note**: Generic path names like `scripts/`, `docs/` are classified as skill infrastructure improvement only when referenced in the context of the skill infrastructure (behavior of `/verify`, `modules/` files). Improvement proposals for `scripts/` or `docs/` in external repositories are treated as code improvements
-- **Code improvement**: improvement proposals not falling into the above (proposals for code, configuration, tests, CI, etc. in the current repository)
+- **Code improvement**: improvement proposals not falling into the Skill infrastructure improvement criteria above (proposals for code, configuration, tests, CI, etc. in the current repository)
 
 After classifying collected improvement proposals, create Issues per the following rules (auto-execute without confirmation):
 

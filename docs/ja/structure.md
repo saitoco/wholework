@@ -50,7 +50,8 @@ wholework/
 │   └── domains/         # プロジェクトローカルの Domain files
 │       ├── spec/        # /spec の Domain files
 │       ├── code/        # /code の Domain files
-│       └── review/      # /review の Domain files
+│       ├── review/      # /review の Domain files
+│       └── verify/      # /verify の Domain files
 ├── install.sh           # settings.json、marketplace、plugin の同期（clone/pull 後に実行）
 ├── CONTRIBUTING.md      # コントリビュートガイド（DCO sign-off 手順）
 ├── LICENSE              # Apache License 2.0

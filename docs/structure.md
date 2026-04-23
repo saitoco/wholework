@@ -61,7 +61,8 @@ wholework/
 │   └── domains/         # Project-local Domain files
 │       ├── spec/        # Domain files for /spec
 │       ├── code/        # Domain files for /code
-│       └── review/      # Domain files for /review
+│       ├── review/      # Domain files for /review
+│       └── verify/      # Domain files for /verify
 ├── install.sh           # Sync settings.json, marketplace, and plugin (run after clone or pull)
 ├── CONTRIBUTING.md      # Contribution guide (DCO sign-off instructions)
 ├── LICENSE              # Apache License 2.0

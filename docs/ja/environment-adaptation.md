@@ -110,11 +110,11 @@ load_when:
 | `skills/verify/browser-verify-phase.md` | `/verify` | `HAS_BROWSER_CAPABILITY=true` | `capability: browser` | ブラウザ検証 |
 | `skills/issue/mcp-call-guidelines.md` | `/issue` | `MCP_TOOLS` が空でない | `capability: mcp` | MCP ツール検出 |
 | `skills/doc/translate-phase.md` | `/doc` | `translate` サブコマンド | `arg_starts_with: translate` | 翻訳生成 |
-| `.wholework/domains/{skill}/*.md` | `/spec`、`/code`、`/review` | ディレクトリスキャン（`.wholework/domains/{skill}/` にファイル存在） | _（N/A — 存在すれば無条件）_ | プロジェクトローカル（ユーザー定義） |
+| `.wholework/domains/{skill}/*.md` | `/spec`、`/code`、`/review`、`/verify` | ディレクトリスキャン（`.wholework/domains/{skill}/` にファイル存在） | _（N/A — 存在すれば無条件）_ | プロジェクトローカル（ユーザー定義） |
 
 **バンドル Domain ファイル** は `domain-loader` モジュールが `${CLAUDE_PLUGIN_ROOT}/skills/{SKILL_NAME}/*.md` を Glob することで発見されます。各ファイルに対して `type: domain` frontmatter フィールドを確認し、存在しないファイルはスキップされます。`load_when:` が存在する場合、モジュールはすべての typed キーを AND セマンティクスで評価し、すべての条件が true のときのみファイルをロードします。`load_when:` が存在しない場合は無条件でロードされます（後方互換）。
 
-**プロジェクトローカル Domain ファイル** はディレクトリスキャンで発見されます。スキル起動時に `domain-loader` モジュールが `.wholework/domains/{skill}/*.md` を Glob し、見つかったファイルをアルファベット順にすべて読み込みます。`load_when:` による条件付きロードをサポートするバンドル Domain ファイルと異なり、プロジェクトローカル Domain ファイルは存在すれば無条件でロードされます — ディレクトリに `.md` ファイルを置くだけで有効化されます。この仕組みは `modules/domain-loader.md` で実装され、`/spec`、`/code`、`/review` スキルから呼び出されます。
+**プロジェクトローカル Domain ファイル** はディレクトリスキャンで発見されます。スキル起動時に `domain-loader` モジュールが `.wholework/domains/{skill}/*.md` を Glob し、見つかったファイルをアルファベット順にすべて読み込みます。`load_when:` による条件付きロードをサポートするバンドル Domain ファイルと異なり、プロジェクトローカル Domain ファイルは存在すれば無条件でロードされます — ディレクトリに `.md` ファイルを置くだけで有効化されます。この仕組みは `modules/domain-loader.md` で実装され、`/spec`、`/code`、`/review`、`/verify` スキルから呼び出されます。
 
 ## Layer 4: Execution（verify-executor + adapter）
 
