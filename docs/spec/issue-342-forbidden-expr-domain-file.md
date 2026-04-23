@@ -42,3 +42,17 @@
 
 - `load_when: file_exists_any: [scripts/check-forbidden-expressions.sh]` — `skill-dev-validation.md` の `file_exists_any: [scripts/validate-skill-syntax.py]` と同じ条件型を採用。wholework リポジトリ以外ではスクリプトが存在しないため、`load_when` で条件付きロードにする
 - Domain file の追加によって `skills/code/SKILL.md` 自体の domain-loader 呼び出し箇所（Step 7）は変更不要。`load_when` 条件が `forbidden-expressions-check.md` 側で制御するため
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
