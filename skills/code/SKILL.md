@@ -226,6 +226,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/test-runner.md` and follow the "Processing S
 
 If `scripts/validate-skill-syntax.py` exists, Read `${CLAUDE_PLUGIN_ROOT}/skills/code/skill-dev-validation.md` and follow the "Processing Steps" section.
 
+If `scripts/check-forbidden-expressions.sh` exists, Read `${CLAUDE_PLUGIN_ROOT}/skills/code/forbidden-expressions-check.md` and follow the "Processing Steps" section.
+
 **Documentation consistency check (run after validation):**
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-checker.md` and follow the "Impact assessment criteria" section to determine whether documentation sync updates are needed for files changed during implementation.
