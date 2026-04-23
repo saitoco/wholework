@@ -589,7 +589,11 @@ Integrate improvement proposals collected from multiple phases, removing only ex
 
 **If no improvement proposals**: proceed to completion report.
 
-**If improvement proposals exist**: classify each improvement proposal by the following criteria.
+**If improvement proposals exist**:
+
+**Early gate — if `HAS_SKILL_PROPOSALS=false`**: skip classification. Treat all proposals as Code improvements and proceed directly to the Code improvement handler (duplicate check → freshness check → create Issues). No skill-infra classification, no skip-count log.
+
+**If `HAS_SKILL_PROPOSALS=true`**: classify each improvement proposal by the following criteria.
 
 - **Skill infrastructure improvement**: improvement proposals matching any of the following (examples):
   - Proposals for changes to skill commands themselves (`/spec`, `/verify`, `/review`, etc.) (e.g., "Should add a step to `/spec`")
@@ -601,7 +605,7 @@ Integrate improvement proposals collected from multiple phases, removing only ex
 After classifying collected improvement proposals, create Issues per the following rules (auto-execute without confirmation):
 
 - **Code improvement**: always create Issue
-- **Skill infrastructure improvement**: only create Issue if `HAS_SKILL_PROPOSALS=true`. If `false`, skip Issue creation and output the count of skipped proposals to terminal (e.g., "Detected N skill infrastructure improvement proposals, but skipping Issue creation because `skill-proposals` marker is disabled.")
+- **Skill infrastructure improvement**: create Issue (reached only when `HAS_SKILL_PROPOSALS=true`)
 
 For proposals to be Issue-ized:
 
