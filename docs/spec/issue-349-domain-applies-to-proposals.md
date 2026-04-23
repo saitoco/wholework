@@ -90,3 +90,17 @@
 ### Rework
 
 - N/A
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Nothing to note. PR diff は Spec の実装ステップに完全に沿っており、構造的な逸脱なし。承認基準 4 件すべてが PASS（自動検証可能な形式で記述されており、verify コマンドが効果的に機能した）。
+
+### Recurring Issues
+
+Nothing to note. skill-dev Domain file 7 本にほぼ同一の frontmatter ブロックを追記する繰り返し作業だったが、各ファイルで `file_patterns`/`content_keywords` の内容がファイル用途に応じて適切に分化されており、品質問題は発見されなかった。
+
+### Acceptance Criteria Verification Difficulty
+
+Nothing to note. `rubric`・`section_contains`・`grep` コマンドで 4 件全て自動判定可能な形式で記述されており、UNCERTAIN ゼロ。`rewrite_target.from` の妥当性（`modules/skill-dev-doc-impact.md` の `from: modules/doc-checker.md` 選択）は Code Retrospective で設計判断が文書化されていたため、レビュー時の確認コストが低かった。
