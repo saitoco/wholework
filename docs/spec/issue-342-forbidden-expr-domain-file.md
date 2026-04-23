@@ -56,3 +56,26 @@
 ### Rework
 
 - N/A
+
+## Issue Retrospective (/issue #342)
+
+### 自動解決した曖昧点
+
+| 曖昧点 | 採用した選択肢 | 根拠 |
+|-------|-------------|------|
+| 実装対象ファイル | `skills/code/forbidden-expressions-check.md`（新規 Domain file）+ `skills/code/SKILL.md` Step 9 に明示的参照 | #293 (Core/Domain 分離 Phase 2) が CLOSED 済みであることを確認。既存の `skill-dev-validation.md` と `stale-test-check.md` が同パターンで Domain file として実装されており、一貫性のある実装方針を採用 |
+| ブロッカー関係 | "Blocked by #293" の記述を削除し「完了により実装可能」と更新 | `gh issue view 293` で CLOSED を確認。Issue body と Related Issues セクションの記述を最新状態に同期 |
+| verify command 追加 | `file_exists "skills/code/forbidden-expressions-check.md"` を追加 | Domain file を新規作成する方針に変更したため、ファイル存在確認が適切。`skill-dev-validation.md` パターンとの整合性 |
+
+### 受入条件変更の理由
+
+元の受入条件は `skills/code/SKILL.md` に直接ステップを追加する前提だったが、#293 完了後の Domain file 方針に整合させるため、以下の変更を行った：
+
+1. `file_exists "skills/code/forbidden-expressions-check.md"` を追加（Domain file 新規作成の確認）
+2. `grep "check-forbidden-expressions" "skills/code/forbidden-expressions-check.md"` を追加（Domain file 内のコマンド確認）
+3. `grep "check-forbidden-expressions" "skills/code/SKILL.md"` は継続して有効（SKILL.md が Domain file への参照を含むため）
+
+### 特記事項
+
+- `scripts/check-forbidden-expressions.sh` の存在を確認（ファイル実在済み）
+- 実装パターンは `skill-dev-validation.md`（`validate-skill-syntax.py` 実行 Domain file）に倣う想定
