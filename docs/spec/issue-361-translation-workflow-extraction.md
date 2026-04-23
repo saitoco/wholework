@@ -49,3 +49,17 @@ Core/Domain 分離 Phase 4 (#295) の一部。`skills/code/SKILL.md:235`、`skil
 - `skills/spec/SKILL.md` の "docs/ja/* files (Japanese mirror files): use Japanese-format patterns in verify commands" は Issue body では line 297 と記載されているが、現在のファイルでは line 301 付近に位置する（編集によりシフト）。いずれにせよこのガイダンスは翻訳運用ではなく verify command 品質に関するものであり、今回の退避対象外。
 - `docs/translation-workflow.md` は top-level `docs/*.md` ファイルであるため、`docs/ja/translation-workflow.md` を同時作成することで自らの同期ルールに準拠する（step 3）。
 - `check-translation-sync.sh` は変更不要 — 同スクリプトは `docs/*.md` ↔ `docs/ja/` 間の timestamp 差分を検出するものであり、新規ファイルは自動的に対象に含まれる。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- Spec の実装ステップ 2 では「inline 同期ロジック（除外リスト・更新指示）を削除し、一文に置き換える」と記載されていた。`skills/spec/SKILL.md` の docs/ja/ translation sync check セクションは「除外リスト・更新指示」に加えて「Changed Files に翻訳ミラーを追加し Implementation Steps に追加する」という記述を含んでいたが、これらも同期手順として `docs/translation-workflow.md` に移譲できる内容であり、まとめて一文に置き換えた。
+
+### Rework
+
+- N/A
