@@ -284,6 +284,10 @@ If implementation steps include Mermaid diagram updates, check existing node ID 
 
 **Constraint checklist (MUST/SHOULD):** When designing implementation steps for SKILL.md/modules/agents changes, read `${CLAUDE_PLUGIN_ROOT}/skills/spec/skill-dev-constraints.md` and follow the constraint checklist if loaded in Step 5.
 
+**read-then-write jq failure guard:**
+
+When Implementation Steps describe an operation that reads an existing file and writes back the modified result (read-then-write), explicitly state the jq failure guard (e.g., `|| die "..."`) in Implementation Steps.
+
 **SHOULD-level acceptance criteria consideration:**
 
 When defining acceptance criteria, explicitly consider:
