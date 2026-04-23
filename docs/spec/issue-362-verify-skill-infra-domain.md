@@ -58,6 +58,33 @@
 ### Rework
 - N/A
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec の Notes セクションで load_when キー選択・挿入位置・Core 残存範囲の 3 つの曖昧点を事前に自動解決して記録しており、Issue body の受け入れ条件と Spec の設計が一致していた。
+
+#### design
+- N/A（Spec が設計文書を兼ねた。Code Retrospective に偏差・ギャップなし）
+
+#### code
+- 単一クリーンコミット（8dd2c34）でfixup/amendなし。設計どおりの実装。
+
+#### review
+- パッチルートのため PR レビューなし。検証はすべて `/verify` 段階に委ねられた。rubric コマンドが semantic judgment を担い、レビュー不在を補完できた。
+
+#### merge
+- main 直コミット（patch route）。コンフリクトなし。
+
+#### verify
+- 6 条件すべて PASS。`file_exists`・`file_contains`・`rubric` の組み合わせで構造確認とセマンティック確認を自動化できた。
+- Post-merge 手動条件（verify-type: manual）は設計上必然で問題なし。
+- 注意: project-local Domain files は現状 `load_when` を評価せず無条件ロード（仕様）。`skill-infra-classify.md` の `load_when: marker: skill-proposals` は将来評価実装のための metadata であり、`HAS_SKILL_PROPOSALS` gate が Step 13 側でガードするため実害はない。
+
+### Improvement Proposals
+- N/A
+
 ## Notes
 
 **非インタラクティブモードでの自動解決:**
