@@ -1,8 +1,22 @@
 ---
 type: domain
 skill: issue
+domain: skill-dev
 load_when:
   file_exists_any: [scripts/validate-skill-syntax.py]
+applies_to_proposals:
+  file_patterns:
+    - skills/issue/SKILL.md
+    - skills/*/SKILL.md
+  content_keywords:
+    - SKILL.md
+    - bats
+    - spec
+    - test
+    - skill-dev
+  rewrite_target:
+    - from: skills/issue/SKILL.md
+      to: skills/issue/spec-test-guidelines.md
 ---
 
 # Behavior Test Recommendation Guidelines (/issue supplement)
