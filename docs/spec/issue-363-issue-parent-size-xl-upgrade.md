@@ -39,3 +39,32 @@ Step 9（新規 Issue flow）と Step 11/Step 11c（既存 Issue refinement flow
 ## Notes
 
 検証項目 3（section_contains Step 9 "XL"）、4（section_contains Step 11 "XL"）、5（file_contains "project-field-update.md"）は実装前の既存コードですでに通過条件を満たしている。rubric 条件（項目 1, 2, 6）の充足が本 Issue の実質的な要件であり、実装ステップ 1, 2 で対応する。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 起票の経緯（`/issue 295` 実行中のユーザー指摘）が Spec に明記されており、動機が追跡可能。
+- 検証項目 3, 4, 5 が「実装前から通過している」という事実が Notes に明記されており、rubric 条件が本質的な検証項目であることが明確だった。良い設計。
+- Spec に「Step 11c の procedures 2–8 → 2–9 に更新」と記載したが、実装では参照テキスト（"procedures 2–8"）の更新が漏れた（手順 item 9 自体は追加されており機能的な影響はない）。次回類似 Spec ではテキスト変更箇所を明示的に列挙する。
+
+#### design
+- Patch ルート（Size S、単一ファイル）として正確に分類されており、Design Complete コメントでステップが簡潔に記述された。
+
+#### code
+- 単一コミット `a735327`、fixup/amend なし。クリーンな実装。
+- Step 9 では "Size change rules (both directions):" という見出しでまとめ、bullet 形式で対称的に記述した点が良い。Spec の実装ステップより実際の記述が改善されている。
+
+#### review
+- Patch ルートのためコードレビューなし。単一ファイル・小規模変更なのでリスクは低い。
+
+#### merge
+- Direct commit to main。コンフリクトなし。
+
+#### verify
+- 全 6 条件が初回で PASS。verify コマンドの設計（rubric + section_contains + file_contains）が適切で、自動検証率が高かった。
+- post-merge 条件は opportunistic（手動確認）のため phase/verify で留め置き。
+
+### Improvement Proposals
+- N/A
