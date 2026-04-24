@@ -169,6 +169,11 @@ lower-level tools such as `gh api graphql`.
 
 **Deprecated terms**: In addition to the expressions listed above, any term marked as 'Formerly called' in `docs/product.md` § Terms must not be used in new content (code comments, documentation, commit messages, Spec files, etc.). Refer to `docs/product.md` § Terms for the current list. When a new deprecated term arises, add a 'Formerly called' entry to `docs/product.md` § Terms — no update to this table is required.
 
+**Spec Retrospective: quoting deprecated terms**
+When citing deprecated terms in Spec retrospective sections (e.g., `## Code Retrospective`, `## Spec Retrospective`), avoid directly writing the specific deprecated string. Spec files under `docs/spec/` are included in CI scans (`SCAN_DIRS` in `scripts/check-forbidden-expressions.sh`), so direct quotation causes scan failures. Instead, use one of:
+- **Descriptive language**: describe without quoting the term (e.g., "N deprecated terms" instead of the term itself)
+- **`旧称:` prefix**: write `旧称: <term>` (e.g., `旧称: verify hint`) — the CI exclusion filter skips lines containing `旧称`
+
 ## Terminology Migration Scope Rule
 
 When creating an Issue that adds deprecated terms to Terms 'Formerly called' (gradual terminology migration), explicitly state whether replacing deprecated terms within the same file is included in scope.

@@ -145,6 +145,11 @@ Wholework 内でラベルを追加・変更・削除する場合（skills、scri
 
 **非推奨用語**: 上記表に加えて、`docs/product.md` § Terms の「旧称（Formerly called）」に列挙された用語は新規コンテンツ（コードコメント、ドキュメント、コミットメッセージ、Spec ファイルなど）で使用してはならない。現行リストは `docs/product.md` § Terms を参照すること。新たな非推奨用語が生じた場合は `docs/product.md` § Terms に 'Formerly called' エントリとして追記すれば十分で、この表の更新は不要。
 
+**Spec Retrospective: 非推奨用語の引用**
+Spec の retrospective セクション（例: `## Code Retrospective`、`## Spec Retrospective`）で非推奨用語を引用する場合、具体的な deprecated 文字列を直接書かないこと。`docs/spec/` 配下の Spec ファイルは CI スキャン対象（`scripts/check-forbidden-expressions.sh` の `SCAN_DIRS`）であるため、直接引用するとスキャンが FAIL する。代わりに以下のいずれかを使用すること:
+- **説明的記述**: 用語自体を引用せずに件数などで説明する（例: 用語名そのものの代わりに「N 個の deprecated 語」）
+- **`旧称:` 接頭辞**: `旧称: <用語>` と書く（例: `旧称: verify hint`）— CI 除外フィルタは `旧称` を含む行をスキップする
+
 ## 用語移行スコープルール
 
 Terms の 'Formerly called'（段階的用語移行）に非推奨用語を追加する Issue を作成する際、同一ファイル内の非推奨用語置換をスコープに含めるかを明示すること。
