@@ -65,3 +65,28 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body と Spec の受け入れ条件が一致しており、verify コマンドも明確。`file_contains` / `file_not_contains` の組み合わせでドキュメント変更を過不足なく検証できている。
+
+#### design
+- 変更スコープが明確（2ファイル、2行）で設計の逸脱なし。`filesystem-scope.md` の整合性修正を AC 外として明示している点は適切。
+
+#### code
+- リワークなし。1コミットでシンプルに完結。patch route の小規模変更として妥当。
+
+#### review
+- PR なし（patch route）。レビューなし。小規模ドキュメント修正のためリスクは低い。
+
+#### merge
+- 競合なし。main へ直コミット。
+
+#### verify
+- 自動検証 2 条件ともに PASS。post-merge の manual 条件（`scripts/worktree-merge-push.sh` との整合確認）はユーザー検証に委ねられている。この条件には verify command がなく、自動化できない。将来的に `grep "git grep" scripts/worktree-merge-push.sh` 相当の `file_contains` verify command を付与すれば自動化可能。
+
+### Improvement Proposals
+- Post-merge 手動条件に verify command を追加してフル自動化できる（`<!-- verify: file_contains "scripts/worktree-merge-push.sh" "git grep" -->`）。今後の類似 Issue では verify command の付与を検討する。
