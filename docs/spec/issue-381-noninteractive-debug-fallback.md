@@ -36,3 +36,14 @@ Background: Issue #378 `/code` run in non-interactive mode had to auto-resolve b
 
 - ISSUE_TYPE=Task のため Uncertainty および UI Design セクションは省略
 - 追加するテキストは 1 行（テーブル行）のみ。`skill-dev-constraints.md` は docs/ 配下でなく `skills/spec/` 配下のため翻訳同期不要
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
