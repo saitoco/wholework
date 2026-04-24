@@ -62,3 +62,28 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec と AC が一致しており、rubric 条件がすべて実装内容を正確に捕捉できた。Spec の Auto-Resolved Ambiguity Points によって実装ロケーション（SKILL.md Step 13 本体）が事前に確定されており、曖昧さなく検証できた。
+
+#### design
+- Spec の Implementation Steps が実装と 1:1 対応しており、設計逸脱なし。書き換えスコープ（Pre-merge AC verify command + AC テキストのみ、Background/Purpose は保持）の明確化が AC でも反映されており、rubric 検証で正確に確認できた。
+
+#### code
+- Code Retrospective はすべて N/A。patch route（直接 main コミット）で実装完了。リワークなし。SKILL.md への変更のみで、skill-infra-classify.md は変更不要と事前判断されており、その通り実装された。
+
+#### review
+- patch route（PR なし）のため PR レビューなし。rubric 条件 8 つが実質的なレビュー機能を担い、すべて PASS。
+
+#### merge
+- patch route で直接 main にコミット。コンフリクトなし、CI に影響する変更なし。
+
+#### verify
+- 8 条件すべて PASS。grep 条件 2 つは迅速に確認、rubric 条件 6 つも SKILL.md Step 13 の記述と AC が 1:1 対応しており判定が容易だった。Post-merge 3 条件はすべて manual（verify-type: manual）で auto-verify 対象外、phase/verify を割り当て。
+
+### Improvement Proposals
+- N/A
