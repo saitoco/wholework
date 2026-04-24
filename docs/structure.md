@@ -23,7 +23,7 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill definition (required)
 │       └── *.md         # Auxiliary phase/guideline files (optional)
-├── modules/             # Shared modules referenced by skills (29 files)
+├── modules/             # Shared modules referenced by skills (31 files)
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (7 files)
 │   └── <agent-name>.md
@@ -37,7 +37,7 @@ wholework/
 │   └── workflows/
 │       ├── test.yml             # CI: bats tests, skill syntax validation, forbidden expressions check, and macOS shell compatibility test
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
-├── tests/               # Bats test files for scripts (53 files)
+├── tests/               # Bats test files for scripts (54 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -126,6 +126,7 @@ Key modules:
 - `modules/phase-banner.md` — phase identification banner display for skills
 - `modules/steering-hint.md` — dynamic hint recommending `/doc init` when steering docs are absent
 - `modules/orchestration-fallbacks.md` — orchestration-level fallback pattern reference catalog (consumed by #319 tier 2, #316 recovery sub-agent, #318 learning loop)
+- `modules/domain-classifier.md` — improvement proposal Domain classification (composable, LLM-in-context)
 
 ### Agents
 

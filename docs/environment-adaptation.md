@@ -93,7 +93,7 @@ Three distinct senses of "Domain" are used in Wholework. To eliminate ambiguity,
 | frontmatter `skill:` | The wholework skill name a Domain file attaches to | `skill: spec` |
 | frontmatter `domain:` | Semantic domain identifier (e.g. skill-dev, web-dev, data-sci) | `domain: skill-dev` |
 
-Classifier output (future `domain-classifier.md`, #350) echoes the frontmatter `domain:` key value directly — inference from naming conventions is not performed.
+Classifier output (`domain-classifier.md`) echoes the frontmatter `domain:` key value directly — inference from naming conventions is not performed.
 
 ### Domain File Frontmatter Schema
 
@@ -126,7 +126,7 @@ applies_to_proposals:               # optional; declares how to classify improve
 
 When multiple `load_when` keys are specified, all conditions are evaluated with AND semantics. Unspecified keys are ignored. The `load_when` block may be omitted entirely for Domain files whose load condition is runtime-detected inside the file body.
 
-`applies_to_proposals` is optional. When declared, it enables future classifier logic (#350) to route improvement proposal Issues into the appropriate Domain file. `file_patterns` and `content_keywords` are evaluated with OR semantics — a proposal matching either criterion is a candidate for this Domain. `domain:` is required when `applies_to_proposals` is declared; Domain files that do not declare `applies_to_proposals` may omit `domain:`. Priority resolution when multiple Domains match simultaneously is handled by `domain-classifier.md` (#350).
+`applies_to_proposals` is optional. When declared, it enables classifier logic (`domain-classifier.md`) to route improvement proposal Issues into the appropriate Domain file. `file_patterns` and `content_keywords` are evaluated with OR semantics — a proposal matching either criterion is a candidate for this Domain. `domain:` is required when `applies_to_proposals` is declared; Domain files that do not declare `applies_to_proposals` may omit `domain:`. Priority resolution when multiple Domains match simultaneously is handled by `domain-classifier.md`.
 
 ### Domain Files (exhaustive)
 

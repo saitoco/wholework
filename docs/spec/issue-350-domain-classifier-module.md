@@ -78,6 +78,20 @@
 - skill-dev プロジェクトで `skills/code/SKILL.md` 改善提案を classifier に通すと `domain: skill-dev` + 書き換え先 Domain file path が返ることを手動確認 <!-- verify-type: manual -->
 - どの Domain にも該当しない一般的な提案（例: docs/product.md の追記）を classifier に通すと `domain: none` が返ることを手動確認 <!-- verify-type: manual -->
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- Spec の Notes に「`rewrite_target` は `applies_to_proposals` の下位フィールド」と記載があったが、モジュールの Processing Steps と Output では `rewrite_target` を独立したフィールド名として使用する設計。実装では Spec Notes の指摘どおり `applies_to_proposals.rewrite_target` として参照することを明記し、Output の field 名は `rewrite_target` のままとした（Issue body の Interface 定義と一致）。
+
+### Rework
+
+- N/A
+
 ## Notes
 
 - **スキーマ差異（Issue body vs. 実装）**: Issue body では `domain` / `applies_to_proposals` / `rewrite_target` を 3 つの独立した frontmatter キーとして記述しているが、#349 の実際の実装では `rewrite_target` は `applies_to_proposals` の下位フィールド（`applies_to_proposals.rewrite_target`）として追加された（`skills/spec/skill-dev-constraints.md` 等で確認済み）。モジュール実装は実際のスキーマ（ネスト）を反映する。出力フィールド名 `rewrite_target` はそのまま保持。
@@ -90,3 +104,17 @@
   - ワイルドカード解決: LLM 意味的マッチ (Option 1)、一意選択不能時のみ `ambiguous`
   - Core フォールバック: `domain: none`
   - `ambiguous` 発火条件: ワイルドカード解決時のみ（複数 Domain マッチは優先順位ルールで解決）
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+特になし。モジュール実装は Spec と全観点で一致しており、Code Retrospective（code フェーズ追記済み）に設計上のスキーマ差異（`rewrite_target` のネスト）が正確に記録されている。
+
+### 繰り返し指摘
+
+特になし。全 4 観点でレビュー指摘なし（MUST/SHOULD/CONSIDER ゼロ）。
+
+### 受け入れ基準の検証難易度
+
+特になし。11 件の pre-merge 条件すべて PASS。verify command の精度が高く、UNCERTAIN ゼロで完全自動検証できた。rubric 条件も適切に設計されており、意味的検証が有効に機能した。
