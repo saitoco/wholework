@@ -173,7 +173,7 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 ## conflict-marker-residual
 
 ### Symptom
-- `grep -rn '^<<<<<<' .` finds conflict marker lines (`<<<<<<<`, `=======`, `>>>>>>>`) in tracked files
+- `git grep -l '^<<<<<<'` finds tracked files containing conflict marker lines (`<<<<<<<`, `=======`, `>>>>>>>`)
 - Indicates an incomplete merge or rebase resolution
 
 ### Applicable Phases
@@ -181,7 +181,7 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 - merge
 
 ### Fallback Steps
-1. Run `grep -rn '^<<<<<<' . 2>/dev/null` to identify files containing conflict markers
+1. Run `git grep -l '^<<<<<<' 2>/dev/null` to identify files containing conflict markers
 2. Open each file and resolve the conflict manually by choosing the correct version
 3. Stage the resolved files: `git add <file>`
 4. Complete the merge or rebase: `git merge --continue` or `git rebase --continue`

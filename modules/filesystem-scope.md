@@ -72,6 +72,5 @@ Grep(pattern="keyword", type="sh")        # Good
 ## Implementation Reference
 
 - `scripts/worktree-merge-push.sh` — uses `git grep` for conflict marker detection
-- `modules/orchestration-fallbacks.md` — documents the `grep -rn '^<<<<<<' .` pattern
-  (historical reference; `worktree-merge-push.sh` uses `git grep` instead)
+- `modules/orchestration-fallbacks.md` — documents conflict marker detection using `git grep -l '^<<<<<<'` (consistent with `worktree-merge-push.sh`)
 - `skills/spec/SKILL.md` — rename-issue grep uses `.` as CWD; must be run from repo root
