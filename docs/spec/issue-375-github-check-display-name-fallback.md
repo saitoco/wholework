@@ -25,3 +25,17 @@
 
 ### Post-merge
 - `/verify` を実行したとき、`github_check "gh pr checks" "check-forbidden-expressions"` が display name マッピングを経て PASS を返すことを確認する <!-- verify-type: opportunistic -->
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
