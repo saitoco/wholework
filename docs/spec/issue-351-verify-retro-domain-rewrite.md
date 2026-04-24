@@ -48,3 +48,17 @@
 - `skill-infra-classify.md` は #295 Sub 4B で既に新設済み（worktree で確認済み）。frontmatter に `applies_to_proposals` は不要（このファイルは Skill-infra vs Code 分類基準を提供するものであり、自身が classifier の入力となる Domain file ではない）
 - 書き換えスコープ: Pre-merge AC の verify command path 引数 + AC テキスト中の明示的ファイルパス参照のみ。Background / Purpose などコンテキスト記述のパス言及は保持（文脈情報として有用）
 - HAS_OPEN_BLOCKING=true: #295 がオープンだが worktree で skill-infra-classify.md の存在を確認済みのため、#295 Sub 4B は実質完了と判断し実装可能
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
