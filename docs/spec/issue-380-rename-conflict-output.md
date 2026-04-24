@@ -22,8 +22,19 @@
 
 - <!-- verify: grep "conflict_files" "scripts/worktree-merge-push.sh" --> `scripts/worktree-merge-push.sh` の変数名が `conflict_files` に変更されている
 - <!-- verify: file_not_contains "scripts/worktree-merge-push.sh" "conflict_output" --> `conflict_output` の参照がすべて削除されている
-- <!-- verify: command "bash -c 'cd /tmp && git init test-rename-$$; cd test-rename-$$; echo test > f.txt; git add f.txt; git commit -m init; bash $(git rev-parse --show-toplevel 2>/dev/null || echo .)/scripts/worktree-merge-push.sh --help 2>&1 || true; cd /tmp; rm -rf test-rename-$$'" --> スクリプトが構文エラーなく起動できる
+- <!-- verify: command "bash -n scripts/worktree-merge-push.sh" --> スクリプトが構文エラーなく起動できる
 
 ### Post-merge
 
 - `scripts/worktree-merge-push.sh` の `conflict_files` が正しく動作することを `/auto` 実行等で確認する
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- Specの3番目のverify command (`bash -c 'cd /tmp && git init ...'`) が miscalibrated だった。`git rev-parse --show-toplevel` が一時gitリポジトリを指してしまいスクリプトが見つからなかった。`bash -n scripts/worktree-merge-push.sh` に書き換えて修正。
+
+### Rework
+- N/A
