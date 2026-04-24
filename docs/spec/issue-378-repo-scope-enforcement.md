@@ -95,6 +95,37 @@ Claude Code 上で Wholework の skill（`/auto`, `/issue`, `/spec`, `/code`, `/
 
 - 4 条件すべてが `rubric`, `file_exists`, `section_contains` で自動判定可能であり、UNCERTAIN なし。verify command の設計として良い事例：`rubric` で意味的判定、`file_exists`/`section_contains` でファイル存在・内容を補完する組み合わせが機能した。
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ基準の設計は良好: `rubric` で意味的判定、`file_exists`/`section_contains` でファイル存在・内容を補完する組み合わせが全4条件で UNCERTAIN なしに機能した
+- `docs/reports/repo-scope-audit.md` の「原因」セクションに TCC 言及を要求する `section_contains` verify command は、レポートの核心情報を機械的に検証可能にした良設計
+
+#### design
+- 実機トレース（Step 1: `fs_usage` / Console.app）が `--non-interactive` 実行では不可能という前提を Spec が考慮していなかった。macOS システムレベルのデバッグを含む Spec では「非インタラクティブ時は静的解析で代替」の旨を明記しておくと `/code` の auto-resolve を減らせる
+- 対策範囲は `worktree-merge-push.sh` の1か所のみで十分だったが、Spec では「調査結果次第で複数モジュール」と開放的に書いており、対象が絞り切れていなかった
+
+#### code
+- bats テストモックのリワーク: `grep -rn '^<<<<<<' .` ベースのモックを `git grep -l '^<<<<<<'` 対応に更新が必要だった。bash コマンドの出力形式変更に追随するテストモックの更新コストは Spec 実装ステップに「テストモックも更新すること」として明示するとよい
+- 変数名 `conflict_output` が、`git grep -l`（ファイル名のみ）への変更後も変わらず残っている。動作上は問題ないが命名が内容と乖離している
+
+#### review
+- CONSIDER 指摘が同一行 (`worktree-merge-push.sh:90`) に2件集中したが、これは同一変更点への複数観点であり、`/review` でなく `/verify` フォローアップとして積み残した判断は適切
+- 変数名 `conflict_output` の命名乖離が review で指摘されたが fix されなかった。Micro-rework（変数リネームのみ）は `/verify` フォローアップとして起票するのが適切
+
+#### merge
+- PR #379 はコンフリクトなしでクリーンにマージ。CI も既存テスト（bats モック更新後）でパス
+
+#### verify
+- Pre-merge 全4条件が PASS。verify command の設計が検証精度に直結した好例
+- Post-merge 3条件すべてが `verify-type: manual`（macOS TCC プロンプトの目視確認）で自動化不能。主要因が Claude Code ランタイム側（仮説 c）の場合、skill 変更のみでは解消しない可能性があり、post-merge 検証は慎重に実施すること
+
+### Improvement Proposals
+- `conflict_output` 変数を `conflict_files` にリネームして内容と命名を一致させる（`scripts/worktree-merge-push.sh`）
+- macOS システムレベルの実機トレース（`fs_usage`）を要する Spec 実装ステップに「非インタラクティブモード時は静的解析で代替」の明記を規約化する（`docs/` または `modules/` のガイドライン）
+
 ## Auto-Resolved Ambiguity Points（`/issue` phase より転記）
 
 - **Issue タイプを「バグ調査 + 修正」として定式化** — 理由: 観測事象は意図しない副作用であり修正対象と判断
