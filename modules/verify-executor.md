@@ -163,6 +163,18 @@ For Basic authentication in `browser_check` / `browser_screenshot`, refer to the
 - `lighthouse_check`: Returns UNCERTAIN in safe mode (to prevent external command execution risk). Intended for use with `/verify` (full mode)
 - `github_check`: Can run in safe mode via allowlist. Only `gh issue view`, `gh pr view`, `gh pr checks`, `gh api` (GET) are allowed. Write operations (`gh issue create`, `gh pr merge`, etc.) are blocked and return UNCERTAIN
 
+### Shell Script Syntax Check
+
+For verifying shell script syntax, use `command "bash -n <path>"` rather than `cd`-based execution patterns.
+
+**Recommended form:**
+```
+command "bash -n scripts/your-script.sh"
+```
+
+**Working directory pitfall:**
+`bash -c 'cd /tmp && ...'` patterns change the working directory during execution. When used for syntax-checking scripts that reference sibling files via relative paths, the changed working directory causes path resolution failures — the script loses track of relative paths to its dependencies. `bash -n` performs a syntax check without executing the script, avoiding this side effect entirely.
+
 ### CI Reference Fallback (safe mode + PR number present)
 
 When processing `command` hints in safe mode with a PR number provided:
