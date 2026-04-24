@@ -1,136 +1,138 @@
-# リポジトリ外ファイルシステムアクセス調査レポート
+English | [日本語](../ja/reports/repo-scope-audit.md)
 
-**Issue**: #378 skills: 実行時のリポジトリ外ファイルシステムアクセスを調査・抑止  
-**Date**: 2026-04-24  
-**Status**: 対策実施済み（pre-merge）
+# Repository-Boundary Filesystem Access Audit
 
----
-
-## 再現手順
-
-1. macOS で Claude Code を新規セッションとして起動する
-2. システム設定 > プライバシーとセキュリティで Claude Code の「写真」「Apple Music」「メディアとApple Music」許可を revoke してから開始する
-3. Wholework をプラグインとして有効化し、リポジトリを開いた状態にする
-4. 任意の skill（例: `/issue "dummy"` または `/spec 378`）を実行する
-5. 実行中に「"Claude"が写真ライブラリ/Apple Music/メディアライブラリにアクセスしようとしています」等の TCC プロンプトが順次表示されるのを観測する
+**Issue**: #378 skills: restrict repository-boundary filesystem access during skill execution
+**Date**: 2026-04-24
+**Status**: Mitigated (pre-merge)
 
 ---
 
-## 原因
+## Reproduction Steps
 
-### macOS TCC (Transparency, Consent, and Control) の仕組み
+1. Launch Claude Code as a fresh session on macOS
+2. Under System Settings > Privacy & Security, revoke Claude Code's "Photos", "Apple Music", and "Media & Apple Music" permissions before starting (to re-trigger the TCC prompts)
+3. Enable Wholework as a plugin and open the repository
+4. Run any skill (e.g., `/issue "dummy"` or `/spec 378`)
+5. Observe macOS TCC prompts such as "Claude wants to access your Photos library / Apple Music / Media library" appearing during execution
 
-macOS TCC は以下の保護対象ディレクトリへのアクセスを監視し、初回アクセス時に許可ダイアログを表示する:
+---
 
-- `~/Pictures/Photos Library.photoslibrary`（写真ライブラリ）
-- `~/Music/`（Apple Music / ミュージックライブラリ）
-- `~/Movies/`（メディアライブラリ）
+## Root Cause
 
-TCC は単なる Python/SQLite 読み取りだけでなく、**opendir() / readdir() などのファイルシステム列挙 API が保護対象パスをまたぐ**際にも発動する。したがって、`grep -r .` や `find . -name "*"` のような再帰スキャンが TCC 対象パスを含む親ディレクトリを起点に実行されると、明示的にそれらのファイルを読もうとしていなくても TCC プロンプトが表示される。
+### How macOS TCC (Transparency, Consent, and Control) works
 
-### 仮説の評価
+macOS TCC monitors access to these protected directories and displays an authorization dialog on first access:
 
-静的解析の結果、3つの仮説を評価した:
+- `~/Pictures/Photos Library.photoslibrary` (Photos library)
+- `~/Music/` (Apple Music / music library)
+- `~/Movies/` (media library)
 
-| 仮説 | 内容 | 評価 |
-|------|------|------|
-| a | Claude Code の Glob/Grep/Read ツールがスコープ未指定の呼び出しで広範囲をスキャン | **該当可能性あり**（後述） |
-| b | bash スクリプト内の `grep -rn ... .` が意図しない CWD で実行 | **部分的に該当**（後述） |
-| c | Claude Code ランタイム側の挙動（Spotlight/mdfind 連携等） | **主要因と推定**（後述） |
+TCC fires not only on explicit reads via Python/SQLite but also whenever **filesystem enumeration APIs such as `opendir()` / `readdir()` cross into protected paths**. Therefore, a recursive scan like `grep -r .` or `find . -name "*"` rooted in an ancestor directory that contains TCC-protected paths can trigger the prompts even without an explicit attempt to read those files.
 
-#### 仮説 a: Glob/Grep ツール呼び出し
+### Evaluation of hypotheses
 
-`skills/doc/SKILL.md` に以下の記述がある:
+Static analysis produced three hypotheses:
+
+| Hypothesis | Description | Assessment |
+|------------|-------------|------------|
+| a | Claude Code's Glob/Grep/Read tools invoked without an explicit scope perform broad scans | **Plausible contributor** (see below) |
+| b | A `grep -rn ... .` inside a bash script runs with an unintended CWD | **Partial contributor** (see below) |
+| c | Claude Code runtime behavior (e.g., Spotlight/mdfind integration) | **Probable primary cause** (see below) |
+
+#### Hypothesis a: Glob / Grep tool invocations
+
+`skills/doc/SKILL.md` contains the instruction:
 
 ```
 Search with Glob `**/*.md` ...
 ```
 
-`path` パラメータなしの `Glob("**/*.md")` 呼び出しは、Claude Code 内部でカレントディレクトリ（CWD）を起点とする。通常 CWD はリポジトリルートなので安全だが、スキル実行コンテキストによっては CWD がリポジトリ外に設定される可能性がある。`modules/filesystem-scope.md` にガイダンスを追加することでこのリスクを文書化した。
+A `Glob("**/*.md")` call without a `path` parameter uses the current working directory (CWD) as the base inside Claude Code. CWD is normally the repository root and therefore safe, but under certain skill-execution contexts it might be set outside the repository. Adding guidance in `modules/filesystem-scope.md` documents this risk.
 
-#### 仮説 b: bash スクリプトの `grep -rn '^<<<<<<' .`
+#### Hypothesis b: The bash `grep -rn '^<<<<<<' .` call
 
-`scripts/worktree-merge-push.sh:89` に以下のコードが存在する:
+`scripts/worktree-merge-push.sh:89` previously contained:
 
 ```bash
 conflict_output=$(grep -rn '^<<<<<<' . 2>/dev/null || true)
 ```
 
-このスクリプトはリポジトリルート（`git rev-parse --show-toplevel`）から実行されるため、通常は `.` = リポジトリルートとなりリポジトリ外には出ない。ただし:
+This script runs from the repository root (`git rev-parse --show-toplevel`), so `.` normally equals the repo root and the scan stays inside the repository. However:
 
-- `grep -rn` はシンボリックリンクをたどる可能性がある
-- `.git/` ディレクトリ内のオブジェクトファイルも対象になる
-- git submodule がリポジトリ外を参照している場合にも波及する
+- `grep -rn` may follow symbolic links
+- Object files under `.git/` also become targets
+- Git submodules pointing outside the repository propagate the scan
 
-この箇所は `git grep -l '^<<<<<<'` に置き換えることで、**git が管理するトラックされたファイルのみ**に検索スコープを限定できる。
+Replacing the call with `git grep -l '^<<<<<<'` confines the search to **tracked files only**.
 
-#### 仮説 c: Claude Code ランタイムの挙動（主要因と推定）
+#### Hypothesis c: Claude Code runtime behavior (probable primary cause)
 
-静的解析でリポジトリ外パスへの明示的なハードコードは発見されなかった。TCC プロンプトが**任意の skill 実行の初期段階**で現れる（特定の bash コマンド実行後ではなく、LLM がツールを起動し始めた段階で発生）ことから、以下が主要因として推定される:
+Static analysis found no explicit hardcoded references to paths outside the repository. Because the TCC prompts appear in the **early stage of any skill execution** (right when the LLM begins invoking tools, not after a specific bash command), the likely primary cause is:
 
-- **Claude Code の内部ファイルインデックス処理**: Claude Code（Electron アプリ）が新規セッション開始時やプロジェクト読み込み時に、ファイルシステムをインデックスするために FSEvents API を利用する。この際、`$HOME` 配下を走査する場合がある
-- **Glob ツールの OS-level 実装**: `Glob("**/*.md")` 等の呼び出しが OS の `opendir()/readdir()` を通じてファイルシステムを列挙する際、pattern が十分に制限されていないと TCC 対象ディレクトリをまたぐ
+- **Claude Code internal file-indexing**: Claude Code (Electron app) uses the FSEvents API to index the filesystem when a new session starts or a project is loaded. This may walk `$HOME`.
+- **OS-level Glob implementation**: `Glob("**/*.md")` and similar calls enumerate the filesystem via `opendir()` / `readdir()`; if the pattern is not sufficiently bounded, the enumeration can cross TCC-protected directories.
 
-この仮説が正しい場合、skill 側だけでは完全な対処は困難だが、以下の対策でリスクを低減できる:
-1. すべての Glob/Grep 呼び出しに明示的なスコープ付き `path` を指定する
-2. bash スクリプトで `git grep` を使用してスコープを tracked files に限定する
+If this hypothesis holds, skill-side fixes alone cannot fully eliminate the prompts, but the following mitigations reduce the risk:
 
----
-
-## 該当箇所
-
-| ファイル | 行番号 | 問題内容 | 優先度 |
-|----------|--------|----------|--------|
-| `scripts/worktree-merge-push.sh` | 89 | `grep -rn '^<<<<<<' .` — スコープが CWD 配下全体 | High |
-| `modules/orchestration-fallbacks.md` | 176, 184 | `grep -rn '^<<<<<<' .` のドキュメント（スクリプトは修正済み、ドキュメントは歴史的参照として残す） | Low |
-| `skills/spec/SKILL.md` | 235 | `grep -rn 'old-name' .` — リポジトリルートからの実行であること未明示 | Medium |
-| `skills/doc/SKILL.md` | 333 | `Glob **/*.md` — `path` パラメータが明示されていない | Medium |
+1. Supply an explicit scope-bounded `path` to every Glob/Grep call
+2. Use `git grep` in bash scripts so the scope stays limited to tracked files
 
 ---
 
-## 対策
+## Offending Sites
 
-### 実施済み（本 PR）
-
-1. **`scripts/worktree-merge-push.sh`**  
-   `grep -rn '^<<<<<<' .` を `git grep -l '^<<<<<<'` に変更。  
-   `git grep` は git が管理するトラックされたファイルのみを検索するため、リポジトリ境界を越えたスキャンが発生しない。
-
-2. **`modules/filesystem-scope.md`（新規）**  
-   Glob/Grep/Read ツールおよび bash スクリプトのファイルアクセススコープ制限ガイダンスを追加。許可されるベースパス・禁止パターン・推奨パターンを文書化。
-
-3. **`skills/spec/SKILL.md`**  
-   rename-issue grep（`grep -rn 'old-name' .`）の実行条件として「リポジトリルートから実行すること」を明記し、`modules/filesystem-scope.md` への参照を追加。
-
-4. **`docs/structure.md`**  
-   modules 数カウント更新（31 → 32）と `filesystem-scope.md` エントリ追加。
-
-### 未対処（フォローアップ推奨）
-
-- `skills/doc/SKILL.md:333` の `Glob **/*.md` に `path` パラメータを明示する（優先度: Medium）
-- `modules/orchestration-fallbacks.md:184` のドキュメントを `git grep` 推奨に更新する（優先度: Low）
-- Claude Code ランタイム側の挙動については Claude Code 本体 Issue として起票が必要（skill 側での対処不能）
+| File | Line | Issue | Priority |
+|------|------|-------|----------|
+| `scripts/worktree-merge-push.sh` | 89 | `grep -rn '^<<<<<<' .` — scope spans everything under CWD | High |
+| `modules/orchestration-fallbacks.md` | 176, 184 | Documentation example using `grep -rn '^<<<<<<' .` (script is fixed; the doc text is retained as historical reference) | Low |
+| `skills/spec/SKILL.md` | 235 | `grep -rn 'old-name' .` — does not explicitly state the command must run from the repository root | Medium |
+| `skills/doc/SKILL.md` | 333 | `Glob **/*.md` — no `path` parameter | Medium |
 
 ---
 
-## 検証結果
+## Mitigations
 
-### Pre-merge 検証
+### Applied (this PR)
 
-| 項目 | 状態 | 備考 |
-|------|------|------|
-| `scripts/worktree-merge-push.sh` での `grep -rn` 使用なし | ✅ PASS | `git grep -l` に変更済み |
-| `modules/filesystem-scope.md` 作成済み | ✅ PASS | スコープ制限ガイダンス記載 |
-| `skills/spec/SKILL.md` に scope 注記追加済み | ✅ PASS | CWD 明示注記追加済み |
-| `docs/reports/repo-scope-audit.md` 存在 | ✅ PASS | 本ファイル |
+1. **`scripts/worktree-merge-push.sh`**
+   Replaced `grep -rn '^<<<<<<' .` with `git grep -l '^<<<<<<'`. Because `git grep` only scans tracked files, it cannot cross the repository boundary.
 
-### Post-merge 検証
+2. **`modules/filesystem-scope.md` (new)**
+   Added a module that documents filesystem-access scoping guidance for Glob / Grep / Read tools and bash scripts: permitted base paths, forbidden patterns, and recommended patterns.
 
-新規 Claude Code セッションで TCC プロンプトが表示されなくなるかを以下で確認:
+3. **`skills/spec/SKILL.md`**
+   Annotated the rename-issue grep call (`grep -rn 'old-name' .`) to require execution from the repository root, and added a cross-reference to `modules/filesystem-scope.md`.
 
-1. システム設定 > プライバシーとセキュリティで Claude Code の写真・Apple Music・メディアアクセスを revoke
-2. 新規セッションで `/issue "dummy title"` を実行
-3. `/code N` および `/verify N` を実行
-4. TCC プロンプトが表示されないことを確認
+4. **`docs/structure.md`**
+   Updated the modules count (31 → 32) and added an entry for `filesystem-scope.md`.
 
-**注意**: 仮説 c（Claude Code ランタイム挙動）が主要因の場合、本 PR の変更のみでは post-merge の手動検証で TCC プロンプトが解消しない可能性がある。その場合は `modules/filesystem-scope.md` に "Claude Code 本体への Issue 起票が必要" と追記し、Issue #378 の post-merge AC を「ガイダンス追加のみ」に縮小する。
+### Deferred (recommended follow-ups)
+
+- Add an explicit `path` parameter to the `Glob **/*.md` call in `skills/doc/SKILL.md:333` (priority: Medium)
+- Update the documentation in `modules/orchestration-fallbacks.md:184` to recommend `git grep` (priority: Low)
+- File an issue against Claude Code itself for the runtime-level behavior (skills cannot fully address hypothesis c)
+
+---
+
+## Verification Results
+
+### Pre-merge verification
+
+| Item | Status | Notes |
+|------|--------|-------|
+| `scripts/worktree-merge-push.sh` no longer uses `grep -rn` | ✅ PASS | Switched to `git grep -l` |
+| `modules/filesystem-scope.md` created | ✅ PASS | Scope-limit guidance captured |
+| `skills/spec/SKILL.md` carries the scope annotation | ✅ PASS | Explicit CWD note added |
+| `docs/reports/repo-scope-audit.md` exists | ✅ PASS | This file |
+
+### Post-merge verification
+
+Manual check that TCC prompts no longer appear in a fresh Claude Code session:
+
+1. Revoke Claude Code's Photos, Apple Music, and Media permissions in System Settings > Privacy & Security
+2. Start a fresh session and run `/issue "dummy title"`
+3. Run `/code N` and `/verify N`
+4. Confirm that no TCC prompts appear
+
+**Caveat**: If hypothesis c (Claude Code runtime behavior) is the primary cause, the changes in this PR alone may not eliminate the prompts in the post-merge manual check. In that case, amend `modules/filesystem-scope.md` to note "an upstream issue against Claude Code is required" and narrow Issue #378's post-merge acceptance criteria to "documentation guidance only".
