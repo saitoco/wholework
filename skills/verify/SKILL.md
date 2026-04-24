@@ -605,6 +605,29 @@ After classifying collected improvement proposals, create Issues per the followi
 - **Code improvement**: always create Issue
 - **Skill infrastructure improvement**: create Issue (reached only when `HAS_SKILL_PROPOSALS=true`)
 
+**Domain-classifier invocation (Skill infrastructure improvement only):**
+
+For each proposal classified as Skill infrastructure improvement, before creating the Issue, invoke `${CLAUDE_PLUGIN_ROOT}/modules/domain-classifier.md` to determine whether the target file path should be rewritten to a Domain file path:
+
+1. **Build Domain files input list**: use Glob to collect `skills/*/*.md`, `modules/*.md`, and `.wholework/domains/*/*.md`. Read each file and retain only those whose frontmatter declares `applies_to_proposals`. Scope is not restricted to Domain files loaded by `domain-loader.md` for `/verify` — classifier scope spans all skills. If no qualifying Domain files are found, skip the classifier and proceed to Issue creation with Core target unchanged (fallback).
+
+2. **Run classifier**: Read `${CLAUDE_PLUGIN_ROOT}/modules/domain-classifier.md` and follow the "Processing Steps" section. Input: the proposal text + the Domain file contents collected in step 1. If the classifier fails (error), fall back to Core target Issue creation without modification.
+
+3. **Branch on `domain` field of the classifier output**:
+   - **Specific domain** (e.g., `skill-dev`) with non-null `rewrite_target`: Rewrite the Issue body before `gh issue create`:
+     - Pre-merge AC lines: replace path arguments inside `<!-- verify: ... -->` annotations (e.g., `<!-- verify: file_exists "skills/verify/SKILL.md" -->` → `<!-- verify: file_exists "skills/verify/skill-dev-constraints.md" -->`)
+     - AC text: replace explicit file path references in the visible acceptance condition text
+     - Background / Purpose sections: preserve path mentions unchanged (context descriptions; not rewritten)
+   - **`domain: ambiguous`**: Preserve Core target. Append the following section to the Issue body before `gh issue create`:
+     ```markdown
+     ## Domain Classification
+
+     - **classifier result**: `ambiguous`
+     - **reason**: {fallback_reason from classifier output}
+     - **action required**: 本 Issue の対象ファイル path は `/spec` 実行時に Core / Domain どちらを対象とするか確定してください
+     ```
+   - **`domain: none`** or classifier fails: Preserve Core target. Proceed to Issue creation without modification (existing behavior).
+
 For proposals to be Issue-ized:
 
 **Duplicate check against existing Issues (always run before creating Issues):**
