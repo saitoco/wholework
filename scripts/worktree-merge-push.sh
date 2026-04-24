@@ -86,7 +86,8 @@ if [[ -n "$FROM_BRANCH" ]]; then
   fi
 
   # See modules/orchestration-fallbacks.md#conflict-marker-residual
-  conflict_output=$(grep -rn '^<<<<<<' . 2>/dev/null || true)
+  # Use git grep to limit scope to tracked files only (avoids scanning outside repo root)
+  conflict_output=$(git grep -l '^<<<<<<' 2>/dev/null || true)
   if [[ -n "$conflict_output" ]]; then
     echo "Error: Conflict markers remain. Please resolve conflicts manually then push." >&2
     exit 1
