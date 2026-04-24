@@ -29,3 +29,14 @@
 
 - Issue body で「305行目、444行目は `docs/**/*.md` のようにベースパスを明示」とあるが、実際の 305 行目・444 行目は `*.md`（root 直下の Markdown）を対象とする Glob であり、`docs/**/*.md` ではない。ただしこの相違は本 Issue の修正対象（line 333）に影響しない。
 - `file_contains "skills/doc/SKILL.md" "path"` は既存の他 `path` 出現でも PASS するが、Issue body の verify command を verbatim コピーしているため変更しない。実質的な正確性は criteria 1（`file_not_contains`）が担保する。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
