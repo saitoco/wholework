@@ -330,7 +330,7 @@ If `--deep` flag is enabled, in addition to codebase analysis, run **existing .m
 
 **Scan scope (entire repository excluding protected targets):**
 
-Search with Glob `**/*.md` and skip files matching these exclusion conditions:
+Use Glob `**/*.md` with `path: "."` and skip files matching these exclusion conditions:
 
 - **Protected files**: CLAUDE.md, README.md (skip; not targets for content absorption/movement/deletion)
 - **Existing managed targets**: files with `type: steering` or `type: project` in frontmatter (read beginning to check `type` field; skip if present)
