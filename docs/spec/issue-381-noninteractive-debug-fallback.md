@@ -47,3 +47,28 @@ Background: Issue #378 `/code` run in non-interactive mode had to auto-resolve b
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body の受け入れ条件と Spec の Verification セクションが完全に一致しており、verify コマンドが Spec 設計時に既に正確に書かれていた。Issue の条件は曖昧さがなく検証可能だった。
+
+#### design
+- Spec は追加テキスト1行を完全に明記しており、実装者の判断余地がゼロ。単一責任の変更に対して適切な粒度。
+
+#### code
+- fixup/amend パターンなし。実装コミット1本（closes #381）で完了。Code Retrospective も N/A で設計通りの実装を確認。
+
+#### review
+- patch ルートのため PR/レビューなし。変更規模（1行追加）に対して適切な判断。
+
+#### merge
+- main への直コミット。コンフリクトなし、CI 不要の metadata-adjacent な変更。
+
+#### verify
+- 3条件すべて初回で PASS。verify コマンド（`grep`, `file_contains`）が実装テキストと正確に対応。Spec の Verification セクションと Issue の Acceptance Criteria が1対1で同期されており、コマンド設計の品質が高かった。
+
+### Improvement Proposals
+- N/A
