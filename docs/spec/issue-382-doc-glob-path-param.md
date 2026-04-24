@@ -40,3 +40,31 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec は簡潔で明確。Issue 本文と受け入れ基準が一致しており、曖昧さなし。
+- Notes セクションで `file_contains "path"` の偽陽性リスクを事前に認識・記録している点は良い設計。
+
+#### design
+- 変更対象が1行・1ファイルという最小スコープ。設計と実装の乖離なし。
+
+#### code
+- fixup/amend パターンなし、rework なし。1コミットで完結。
+- patch route（PR なし、直接 main コミット）が適切に選択されている。
+
+#### review
+- PR なし（patch route）のため review フェーズなし。変更が trivial（1行）であることから skip は妥当。
+
+#### merge
+- 直接 main へのコミット。コンフリクトなし。
+
+#### verify
+- 両 auto-verification 条件が PASS。verify コマンドは適切。
+- `file_contains "skills/doc/SKILL.md" "path"` は既存 `path` 出現でも PASS する偽陽性リスクを Spec Notes が指摘済み。`file_not_contains` で実質的な正確性は担保されており問題なし。
+
+### Improvement Proposals
+- N/A
