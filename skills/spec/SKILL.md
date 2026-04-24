@@ -232,7 +232,7 @@ If `docs/translation-workflow.md` exists, read it and follow the sync procedure.
 
 **Rename-type Issue grep check:**
 
-If the issue title or body contains "rename", "renaming", or similar, run `grep -rn 'old-name' .` (all results, no filtering), then per-file with `grep -c`. Add any files not in the changed-files list. Record hit counts in the Spec. Also check:
+If the issue title or body contains "rename", "renaming", or similar, run `grep -rn 'old-name' .` from the repository root (must be inside the repo — not from `~` or a parent directory; see `modules/filesystem-scope.md`), then per-file with `grep -c`. Add any files not in the changed-files list. Record hit counts in the Spec. Also check:
 - Concept names without slashes (section headings, Mermaid labels, table text)
 - Context-embedded short forms (e.g., "old-name で", "old-name の")
 - Path link references (relative paths in docs)

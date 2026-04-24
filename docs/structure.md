@@ -23,7 +23,7 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill definition (required)
 │       └── *.md         # Auxiliary phase/guideline files (optional)
-├── modules/             # Shared modules referenced by skills (31 files)
+├── modules/             # Shared modules referenced by skills (32 files)
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (7 files)
 │   └── <agent-name>.md
@@ -127,6 +127,7 @@ Key modules:
 - `modules/steering-hint.md` — dynamic hint recommending `/doc init` when steering docs are absent
 - `modules/orchestration-fallbacks.md` — orchestration-level fallback pattern reference catalog (consumed by #319 tier 2, #316 recovery sub-agent, #318 learning loop)
 - `modules/domain-classifier.md` — improvement proposal Domain classification (composable, LLM-in-context)
+- `modules/filesystem-scope.md` — filesystem access scope constraints and approved patterns for skills/scripts
 
 ### Agents
 
