@@ -54,3 +54,14 @@
 - `tests/orchestration-fallbacks.bats` はスキーマ検証テスト（構造・必須セクション・Issue 参照の有無）のみ。コマンド例の変更によるテスト更新は不要
 - `docs/reports/repo-scope-audit.md`（行 88）には旧パターンを「historical reference」と記録しているが、`docs/reports/` は sync 対象外のスナップショットのため更新不要
 - `filesystem-scope.md` 行 75–76 の更新は AC 外だが、変更後に記述が不正確になるため一括修正する
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
