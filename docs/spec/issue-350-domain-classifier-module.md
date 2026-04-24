@@ -78,6 +78,20 @@
 - skill-dev プロジェクトで `skills/code/SKILL.md` 改善提案を classifier に通すと `domain: skill-dev` + 書き換え先 Domain file path が返ることを手動確認 <!-- verify-type: manual -->
 - どの Domain にも該当しない一般的な提案（例: docs/product.md の追記）を classifier に通すと `domain: none` が返ることを手動確認 <!-- verify-type: manual -->
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- Spec の Notes に「`rewrite_target` は `applies_to_proposals` の下位フィールド」と記載があったが、モジュールの Processing Steps と Output では `rewrite_target` を独立したフィールド名として使用する設計。実装では Spec Notes の指摘どおり `applies_to_proposals.rewrite_target` として参照することを明記し、Output の field 名は `rewrite_target` のままとした（Issue body の Interface 定義と一致）。
+
+### Rework
+
+- N/A
+
 ## Notes
 
 - **スキーマ差異（Issue body vs. 実装）**: Issue body では `domain` / `applies_to_proposals` / `rewrite_target` を 3 つの独立した frontmatter キーとして記述しているが、#349 の実際の実装では `rewrite_target` は `applies_to_proposals` の下位フィールド（`applies_to_proposals.rewrite_target`）として追加された（`skills/spec/skill-dev-constraints.md` 等で確認済み）。モジュール実装は実際のスキーマ（ネスト）を反映する。出力フィールド名 `rewrite_target` はそのまま保持。
