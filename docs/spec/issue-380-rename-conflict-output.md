@@ -38,3 +38,29 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- acceptance condition 3条件すべてに `<!-- verify: ... -->` が付いており、自動検証可能な設計は良好。
+- 3番目の verify command が初期設計で miscalibrated (`bash -c 'cd /tmp && git init ...'` 形式) だった。一時 git リポジトリに切り替わりスクリプトパスを見失うパターン。Spec 段階で `bash -n` 形式に修正済み（Code Retrospective に記録）。
+
+#### design
+- 変更スコープが明確（行 90-91 の 2 箇所のみ）で設計通りに実装完了。逸脱なし。
+
+#### code
+- リネームのみの小変更。fixup/amend パターンなし。ワンパスで完了。
+
+#### review
+- patch route（PR なし）のため review フェーズはスキップ。変数リネームのみなのでレビューコストは低い。
+
+#### merge
+- 直コミット（`2ca0b30`）で問題なし。コンフリクトなし。
+
+#### verify
+- 3条件すべて PASS。`grep`/`file_not_contains`/`command "bash -n"` の組み合わせが効果的に機能した。
+
+### Improvement Proposals
+- `bash -c 'cd /tmp && ...'` 形式の verify command はスクリプトパスを見失いやすい（一時 git リポジトリへの切り替えによる副作用）。シェルスクリプト構文チェックには `command "bash -n <path>"` を推奨するガイドラインを verify command のベストプラクティスドキュメントに追記することを検討する。
