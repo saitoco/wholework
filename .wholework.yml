@@ -1,2 +1,3 @@
 opportunistic-verify: true
 skill-proposals: true
+permission-mode: auto
