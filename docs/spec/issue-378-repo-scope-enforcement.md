@@ -80,6 +80,21 @@ Claude Code 上で Wholework の skill（`/auto`, `/issue`, `/spec`, `/code`, `/
 
 - テスト `tests/worktree-merge-push.bats` の conflict marker テストが `grep -rn '^<<<<<<' .` ベースのモックを使用しており、`git grep -l '^<<<<<<'` への変更後に FAIL。モックを git サブコマンドルーティング方式に更新した
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+実装は Spec の受け入れ基準をすべて満たした（4 条件 PASS）。ただし以下の構造的パターンを記録する:
+- `worktree-merge-push.sh` の `grep -rn` → `git grep -l` 変換は動作的に正しいが、変数名 `conflict_output` が内容の変化（行番号付き → ファイル名のみ）を反映していない。Spec の実装ステップに「変数命名も更新すること」を明記すべきだった。
+
+### Recurring issues
+
+- CONSIDER 指摘 2 件がいずれも同一行 (`worktree-merge-push.sh:90`) に集中し、変数名 + exit code 処理の 2 観点から同一の変更を指している。この種の「関連する複数 CONSIDER が同一箇所に集まる」ケースは `/review` でなく `/verify` フォローアップとして積み残すのが適切。
+
+### Acceptance criteria verification difficulty
+
+- 4 条件すべてが `rubric`, `file_exists`, `section_contains` で自動判定可能であり、UNCERTAIN なし。verify command の設計として良い事例：`rubric` で意味的判定、`file_exists`/`section_contains` でファイル存在・内容を補完する組み合わせが機能した。
+
 ## Auto-Resolved Ambiguity Points（`/issue` phase より転記）
 
 - **Issue タイプを「バグ調査 + 修正」として定式化** — 理由: 観測事象は意図しない副作用であり修正対象と判断
