@@ -104,3 +104,17 @@
   - ワイルドカード解決: LLM 意味的マッチ (Option 1)、一意選択不能時のみ `ambiguous`
   - Core フォールバック: `domain: none`
   - `ambiguous` 発火条件: ワイルドカード解決時のみ（複数 Domain マッチは優先順位ルールで解決）
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+特になし。モジュール実装は Spec と全観点で一致しており、Code Retrospective（code フェーズ追記済み）に設計上のスキーマ差異（`rewrite_target` のネスト）が正確に記録されている。
+
+### 繰り返し指摘
+
+特になし。全 4 観点でレビュー指摘なし（MUST/SHOULD/CONSIDER ゼロ）。
+
+### 受け入れ基準の検証難易度
+
+特になし。11 件の pre-merge 条件すべて PASS。verify command の精度が高く、UNCERTAIN ゼロで完全自動検証できた。rubric 条件も適切に設計されており、意味的検証が有効に機能した。
