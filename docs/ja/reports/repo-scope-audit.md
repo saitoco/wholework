@@ -110,9 +110,9 @@ conflict_output=$(grep -rn '^<<<<<<' . 2>/dev/null || true)
 
 ### 未対処（フォローアップ推奨）
 
-- `skills/doc/SKILL.md:333` の `Glob **/*.md` に `path` パラメータを明示する（優先度: Medium）
-- `modules/orchestration-fallbacks.md:184` のドキュメントを `git grep` 推奨に更新する（優先度: Low）
-- Claude Code ランタイム側の挙動については Claude Code 本体 Issue として起票が必要（skill 側での対処不能）
+- `skills/doc/SKILL.md:333` の `Glob **/*.md` に `path` パラメータを明示する（優先度: Medium） — [#382](https://github.com/saitoco/wholework/issues/382) で追跡中
+- `modules/orchestration-fallbacks.md:184` のドキュメントを `git grep` 推奨に更新する（優先度: Low） — [#383](https://github.com/saitoco/wholework/issues/383) で追跡中
+- Claude Code ランタイム側の挙動については Claude Code 本体 Issue として起票が必要（skill 側での対処不能） — 未起票
 
 ---
 

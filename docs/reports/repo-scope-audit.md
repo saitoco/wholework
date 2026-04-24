@@ -109,9 +109,9 @@ If this hypothesis holds, skill-side fixes alone cannot fully eliminate the prom
 
 ### Deferred (recommended follow-ups)
 
-- Add an explicit `path` parameter to the `Glob **/*.md` call in `skills/doc/SKILL.md:333` (priority: Medium)
-- Update the documentation in `modules/orchestration-fallbacks.md:184` to recommend `git grep` (priority: Low)
-- File an issue against Claude Code itself for the runtime-level behavior (skills cannot fully address hypothesis c)
+- Add an explicit `path` parameter to the `Glob **/*.md` call in `skills/doc/SKILL.md:333` (priority: Medium) — tracked in [#382](https://github.com/saitoco/wholework/issues/382)
+- Update the documentation in `modules/orchestration-fallbacks.md:184` to recommend `git grep` (priority: Low) — tracked in [#383](https://github.com/saitoco/wholework/issues/383)
+- File an issue against Claude Code itself for the runtime-level behavior (skills cannot fully address hypothesis c) — not yet filed
 
 ---
 
