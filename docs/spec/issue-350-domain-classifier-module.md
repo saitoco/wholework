@@ -118,3 +118,28 @@
 ### 受け入れ基準の検証難易度
 
 特になし。11 件の pre-merge 条件すべて PASS。verify command の精度が高く、UNCERTAIN ゼロで完全自動検証できた。rubric 条件も適切に設計されており、意味的検証が有効に機能した。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body に Auto-Resolved Ambiguity Points セクションが設けられており、設計論点（優先順位ルール・ワイルドカード解決・Core フォールバック・ambiguous 発火条件）が全て事前解決されていた。受け入れ条件 11 件は全て機械検証可能な形で定義されており、品質が高い。
+
+#### design
+- Spec は Issue body の設計方針を忠実に反映しており乖離なし。schema 差異（`rewrite_target` が `applies_to_proposals` の下位フィールド）を Notes に正確に記録しており、設計判断の追跡可能性が確保されている。
+
+#### code
+- 実装の rework なし。Code Retrospective に記録されたスキーマ差異はドキュメント整合性の問題であり、コード上のバグではなく適切に対処済み。
+
+#### review
+- レビュー指摘ゼロ（MUST/SHOULD/CONSIDER いずれも 0 件）。Spec との乖離なし。受け入れ基準の検証精度も高く、pre-merge 段階で UNCERTAIN が発生しなかった。
+
+#### merge
+- マージプロセスに問題なし。コンフリクトなし。CI 全ジョブ PASS。
+
+#### verify
+- Pre-merge 11 条件すべて PASS。FAIL/UNCERTAIN/PENDING ゼロで完全自動検証達成。github_check 条件（CI bats tests）のチェックボックスが未更新だったため verify 時に更新した。Post-merge 2 条件は verify-type: manual のため手動確認待ち（phase/verify）。
+
+### Improvement Proposals
+- N/A
