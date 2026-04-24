@@ -39,3 +39,29 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件が明確で検証可能。OR パターンの false positive を避けるため rubric + grep の補完方式を選択した設計判断は適切。
+
+#### design
+- Spec の設計はシンプル。`verify-executor.md` への1行追加で完結する最小変更として正確にスコープされていた。
+
+#### code
+- 実装コミット1件（1行変更）で完結。fixup/amend なし、クリーンな実装。設計からの逸脱なし。
+
+#### review
+- Patch route のため PR レビューなし。Spec と verify commands が品質ゲートとして機能した。
+
+#### merge
+- Patch route 直コミット。コンフリクトなし、CI 不要のシンプルなマージ。
+
+#### verify
+- Pre-merge 条件（rubric × 2 + grep × 1）はすべて PASS。
+- Post-merge opportunistic 条件は runtime 動作確認が必要のためユーザー検証へ委譲。phase/verify に留まる設計は適切。
+
+### Improvement Proposals
+- N/A
