@@ -166,12 +166,23 @@ MOCK
 }
 
 @test "conflict markers cause abort with non-zero exit and no push" {
-    echo "<<<<<<< HEAD" > "$BATS_TEST_TMPDIR/test-repo/conflict.txt"
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GIT_LOG"
+if [[ "\$1" == "rev-parse" && "\$2" == "--show-toplevel" ]]; then
+    echo "${BATS_TEST_TMPDIR}/test-repo"
+    exit 0
+fi
+if [[ "\$1" == "grep" ]]; then
+    echo "conflict.txt"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
 
     run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch"
     [ "$status" -ne 0 ]
     [[ "$output" == *"Conflict markers remain"* ]]
     ! grep -q "push" "$GIT_LOG"
-
-    rm -f "$BATS_TEST_TMPDIR/test-repo/conflict.txt"
 }
