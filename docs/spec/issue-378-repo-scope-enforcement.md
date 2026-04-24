@@ -64,6 +64,22 @@ Claude Code 上で Wholework の skill（`/auto`, `/issue`, `/spec`, `/code`, `/
 - Size M のまま進行。Step 1 のトレース結果で影響範囲が拡大した場合（複数 scripts / module への大規模修正が必要など）は L に re-size
 - bash compat note: `scripts/worktree-merge-push.sh` を編集する場合、bash 3.2+ 互換を維持する（macOS 標準 bash 対応）
 
+## Code Retrospective
+
+### Deviations from Design
+
+- 実機トレース（Step 1: `fs_usage` / Console.app）は `--non-interactive` モードのため実施不可。代わりに静的解析と macOS TCC の挙動原則から仮説評価を行い、`docs/reports/repo-scope-audit.md` に記録した
+- Step 3 の「scope guard 実装」は `worktree-merge-push.sh` の `grep -rn` → `git grep` 変換のみ実施（他に bash 側の `$HOME` 起点スキャンは発見されなかったため追加変更なし）
+- Step 5（再現確認）は post-merge 手動検証として defer（非インタラクティブモードでの TCC 再現は困難）
+
+### Design Gaps/Ambiguities
+
+- Spec の「実機トレース（Step 1）」が非インタラクティブ実行では不可能な前提で設計されていた。`--non-interactive` 時は静的解析 + 仮説評価で代替する旨を Spec に記録すべきだったが、実装時に auto-resolve した
+
+### Rework
+
+- テスト `tests/worktree-merge-push.bats` の conflict marker テストが `grep -rn '^<<<<<<' .` ベースのモックを使用しており、`git grep -l '^<<<<<<'` への変更後に FAIL。モックを git サブコマンドルーティング方式に更新した
+
 ## Auto-Resolved Ambiguity Points（`/issue` phase より転記）
 
 - **Issue タイプを「バグ調査 + 修正」として定式化** — 理由: 観測事象は意図しない副作用であり修正対象と判断
