@@ -126,6 +126,31 @@ Nothing to note. All 8 verify commands resolved cleanly (7 `grep` commands + 1 `
 ### Improvement Proposals
 - N/A
 
+## Verify Retrospective (Re-run 2026-05-03)
+
+### Phase-by-Phase Review
+
+#### spec
+- 受入条件は明確かつ検証可能。ambiguityはなし。
+
+#### design
+- Specの実装指示と実際の実装が完全に一致。
+
+#### code
+- 全7ファイルの`setup()`に隔離blockが一貫して実装されており、reworkなし。
+
+#### review
+- PR #392レビューで問題検出なし。verify全条件PASS。
+
+#### merge
+- squash-mergeで衝突なし。CI成功。
+
+#### verify
+- 再実行確認：条件1〜9すべてPASS。条件10（opportunistic）はすでに`[x]`済み。`phase/done`を適用。
+
+### Improvement Proposals
+- N/A
+
 ## Auto Retrospective
 
 ### Execution Summary
