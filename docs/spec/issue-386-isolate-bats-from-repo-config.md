@@ -99,3 +99,29 @@ Nothing to note. No review issues found across any perspective.
 ### Acceptance Criteria Verification Difficulty
 
 Nothing to note. All 8 verify commands resolved cleanly (7 `grep` commands + 1 `rubric`). The unique marker comment string `# Isolate test from repo .wholework.yml` served as an effective verify target with no false-positive risk.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue retrospective section is absent from the Spec (only Code/Review retrospectives). The root cause analysis and fix approach were clear and well-documented. No ambiguity was flagged in the Issue body; the two auto-resolved ambiguity points (scope of 7 files, no `scripts/get-config-value.sh` changes) were correctly pre-resolved.
+
+#### design
+- Design (Spec) accurately predicted the implementation. The `setup()` insertion position (`before MOCK_DIR=` line) and the isolation block content (`echo "permission-mode: bypass" > "$BATS_TEST_TMPDIR/.wholework.yml"` + `cd "$BATS_TEST_TMPDIR"`) were specified precisely, leaving no deviation in implementation.
+
+#### code
+- Single squash-merge commit `b542d98`. No fixup/amend patterns in the 7-file change — clean first-pass implementation. The isolation block is identical across all 7 files.
+
+#### review
+- One review was conducted on PR #392 (1 review comment). No FAIL items were found in verify; review appears to have validated correctness pre-merge.
+
+#### merge
+- Merged via PR #392 squash-merge to main without conflicts. No CI failures during merge.
+
+#### verify
+- Conditions 1–8 (Pre-merge) all PASS. Condition 9 (Post-merge CI) is PENDING because the test.yml workflow run is in_progress at verify time. Condition 10 (opportunistic manual check) deferred to user.
+- The PENDING state is expected — the CI run was triggered by commits just before `/verify` ran. No actionable issue.
+
+### Improvement Proposals
+- N/A
