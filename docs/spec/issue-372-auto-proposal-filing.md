@@ -67,3 +67,17 @@ Option 1（共有モジュール化）を採用：Improvement Proposal 収集・
 
 ### Rework
 - N/A — 一発で実装が確定。
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+`skills/verify/SKILL.md` の Step 13 冒頭に残る `title-normalizer.md` 読み込みと、`modules/retro-proposals.md` の Step 1 での再読み込みが二重になっている（CONSIDER 指摘）。モジュールを self-contained 設計に変更したことが Spec の実装ステップ 2 の記述（「title-normalizer 読込みは Step 13 冒頭に残す」）と矛盾している。Spec 更新か実装調整のいずれかで整合を取る改善余地がある。
+
+### Recurring Issues
+
+なし。
+
+### Acceptance Criteria Verification Difficulty
+
+Pre-merge 条件3件はすべて `rubric` タイプで、diffから機械的に判定可能だった（UNCERTAIN 0件）。`rubric` タイプは verify-executor による自動判定が難しいが、今回はdiffが明確でAI判定が安定していた。Post-merge の実機確認条件1件は `opportunistic` タイプとして適切に設定されており、verify commandの精度は良好。
