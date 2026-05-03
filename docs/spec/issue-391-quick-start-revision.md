@@ -103,3 +103,30 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body の受入条件が 9 件から Spec で 5 件に統合された（両言語版をそれぞれ 1 件にまとめ rubric 化）。この統合は整理として適切だった。
+- Auto-resolve セクションが Issue body に明記されており、ambiguity の透明性が高い。XS patch route における言語ポリシーのレイヤー分離（採用者向け doc vs. wholework リポジトリの Issue）の判断は妥当。
+
+#### design
+- Spec の設計通りに実装されており、実装との乖離はなし。日本語版サンプル Issue タイトルが Spec に記載されていなかった点（Code Retrospective で指摘済み）は小さなギャップだが verify には影響しない。
+
+#### code
+- 実装コミット `4b9982d` 1件のみ、fixup/amend パターンなし。4ファイル（`docs/guide/quick-start.md`、`docs/ja/guide/quick-start.md`、`README.md`、`README.ja.md`）をまとめて変更しており、patch route として適切な規模。
+
+#### review
+- XS patch route のため PR なし、レビューなし。受入条件がシンプルかつ rubric で意味的に検証されているため、レビューなしでも品質確保できた。
+
+#### merge
+- 直接 main へのコミット（patch route）。コンフリクトなし、クリーン。
+
+#### verify
+- 全 5 Pre-merge 条件が初回 verify で PASS。FAIL なし、再オープンなし。rubric 条件（条件3〜5）も意図通りに動作した。
+- Post-merge の 2 条件（実機検証、triage 自動補正確認）は `<!-- verify-type: manual -->` のためユーザー確認待ち。`phase/verify` ラベルを付与して案内済み。
+
+### Improvement Proposals
+- N/A
