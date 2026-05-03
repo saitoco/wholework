@@ -118,3 +118,43 @@ none
 - 成功フレーズパターン `"完了しました|commit and push"` は Issue #365 の実際の出力に基づく（"Direct commit and push to main が完了しました"）。
 - `run-auto-sub.sh` の更新は bash path をカバーする。LLM path（`skills/auto/SKILL.md` 直接実行）での exit_code=0 検出は今回スコープ外（SKILL.md の patch-route completion check 無条件化は Issue #365 Improvement Proposals 参照）。
 - bats テスト入力データ: `echo "..." > "$LOG_FILE"` で 1 行テキストを書き込む。スクリプトは `grep -qiE` でパターンマッチするため、ログ内容は 1 行で十分。
+
+## issue retrospective
+
+### 曖昧ポイントの自動解決
+
+非対話モードで以下の 3 つの曖昧ポイントを自動解決した。
+
+#### 1. リカバリスコープ（auto-resolved）
+
+- **決定**: スコープは検出ルール追加のみ。Purpose の「run-code.sh 再実行 → エスカレーション」は `apply-fallback.sh` への follow-up として別 Issue で扱う
+- **根拠**: AC が Detection のみを記述しており、リカバリ実装は AC に明示されていない。最少リスクオプションとして Detection スコープに確定
+- **他の候補**: `apply-fallback.sh` に silent-no-op ハンドラーを追加してリカバリまで含める → スコープ過大と判断し不採用
+
+#### 2. exit_code=0 の検出アーキテクチャ（auto-resolved）
+
+- **決定**: `detect-wrapper-anomaly.sh` を exit_code=0 ケースに対応させ、スクリプト内で git log を直接確認する設計を採用。呼び出し側（auto SKILL.md 等）も exit_code=0 時に呼び出すよう更新が必要
+- **根拠**: 現在 `detect-wrapper-anomaly.sh` は non-zero exit のみを対象とするが、silent no-op は exit 0 のため呼び出し変更が必要。スクリプト内完結が既存設計と一貫している
+- **他の候補**: `reconcile-phase-state.sh` 側で検出 → 既存の phase state 管理の責務と混在するため不採用
+
+#### 3. verify command 精度（auto-resolved）
+
+- **決定**: AC1 の grep パターンを `silent.no.op\|silent_no_op` に改善（元の `exit_code.*0` は uppercase `EXIT_CODE` に不一致の恐れ）。呼び出し変更 AC を rubric で追加。bats テスト AC を追加
+- **根拠**: 元パターン `LLM.*success\|exit_code.*0` は実装の変数名規則（UPPER_SNAKE_CASE）に一致しにくい。`silent.no.op` はパターン名として実装で使われる可能性が高い
+
+### 主要変更点
+
+- **Post-merge AC の classify 修正**: `verify-type: opportunistic` → `verify-type: manual` に修正（手動再現が必要なシナリオのため、opportunistic の「skill 実行時に副次検証」パターンに非該当）
+- **新 AC 追加**: exit_code=0 呼び出し変更（rubric）と bats テスト追加の AC を新規追加
+
+## spec retrospective
+
+### Minor observations
+- Nothing to note.
+
+### Judgment rationale
+- `run-auto-sub.sh` の更新を選択した理由: `detect-wrapper-anomaly.sh` の呼び出しが LLM path（SKILL.md）と bash path（run-auto-sub.sh）の 2 箇所に分散しているが、AC3 の rubric は "or" でいずれかで良い。bash path のみのカバーは意図的スコープ限定であり、LLM path の patch-route completion check 無条件化は Issue #365 の別 Improvement Proposal に委ねる。
+- `elif [[ "$EXIT_CODE" == "0" ]]; then` をチェーン末尾に置く理由: 既存の 4 パターンは trigger 文字列が exit_code=0 シナリオに出現しないため順序依存なし。末尾が自然な配置。
+
+### Uncertainty resolution
+- Nothing to note (design was straightforward; no significant uncertainties at spec time).
