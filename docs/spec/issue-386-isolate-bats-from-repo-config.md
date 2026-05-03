@@ -85,3 +85,17 @@ bats tests/run-code.bats
 ### Rework
 
 - N/A
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Nothing to note. All 7 files match the design exactly; isolation block position (before `MOCK_DIR=`) and content are consistent across all files.
+
+### Recurring Issues
+
+Nothing to note. No review issues found across any perspective.
+
+### Acceptance Criteria Verification Difficulty
+
+Nothing to note. All 8 verify commands resolved cleanly (7 `grep` commands + 1 `rubric`). The unique marker comment string `# Isolate test from repo .wholework.yml` served as an effective verify target with no false-positive risk.
