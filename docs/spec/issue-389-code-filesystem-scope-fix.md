@@ -48,3 +48,17 @@
 - `modules/codebase-analysis.md` の Grep の一部（Step 3 のソースディレクトリ指定等）は既に特定ディレクトリを記述しているが、`path` 引数の明示指示として統一する
 - テスト変更不要: 挙動回帰確認は `/code` の 1 回実行で十分（Issue Notes に記載）
 - `section_contains "### Step 7" "path"` は修正後のテキスト（`path="$STEERING_DOCS_PATH"`）に "path" が含まれることを確認する。修正前の `$STEERING_DOCS_PATH` にも "path" が含まれるため verify としては保守的な検証。rubric による意味的確認（AC1）と組み合わせることで実質的な確認となる
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A（Spec の実装ステップに完全準拠）
+
+### Design Gaps/Ambiguities
+
+- `modules/doc-checker.md` の line 49 (`$STEERING_DOCS_PATH/*.md` → `*.md` with Glob (path: `$STEERING_DOCS_PATH`)) は Processing Steps 内の記述だが、Spec では "2 箇所" と記載。実際に確認すると Input 節（lines 15-16 の 2 行）+ Processing Steps 節（line 49）の計 3 箇所が変更対象だった。Spec の "2 箇所" は Input 節と Processing Steps 節（各 1 箇所として計 2 箇所）を指しており、実際の変更行数（3 行）とは異なる。意図は同一のため機能的な問題なし
+
+### Rework
+
+- N/A
