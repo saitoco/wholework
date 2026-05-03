@@ -147,6 +147,17 @@ none
 - **Post-merge AC の classify 修正**: `verify-type: opportunistic` → `verify-type: manual` に修正（手動再現が必要なシナリオのため、opportunistic の「skill 実行時に副次検証」パターンに非該当）
 - **新 AC 追加**: exit_code=0 呼び出し変更（rubric）と bats テスト追加の AC を新規追加
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
 ## spec retrospective
 
 ### Minor observations
