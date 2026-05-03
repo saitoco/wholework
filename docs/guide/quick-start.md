@@ -8,7 +8,7 @@ English | [日本語](../ja/guide/quick-start.md)
 
 # 🚀 Quick Start
 
-Get from zero to your first autonomous `/auto` run in 10–15 minutes.
+Walk through `/issue` → `/code` → `/verify` on a sample Issue in about 5 minutes.
 
 ## Prerequisites
 
@@ -44,42 +44,55 @@ Add a hello world script
 ```markdown
 ## Background
 
-We need a simple script to verify the project setup.
+We need a simple shell script to verify the project setup.
 
-## Goal
+## Purpose
 
-Create a shell script that prints "Hello, Wholework!" when run.
+Add `scripts/hello.sh` that prints "Hello, Wholework!" when run.
 
 ## Acceptance Criteria
 
-- [ ] `scripts/hello.sh` exists
-- [ ] Running `bash scripts/hello.sh` outputs `Hello, Wholework!`
+### Pre-merge (auto-verified)
+
+- [ ] <!-- verify: file_exists "scripts/hello.sh" --> `scripts/hello.sh` exists
+- [ ] <!-- verify: command "bash scripts/hello.sh | grep -qF 'Hello, Wholework!'" --> Running `bash scripts/hello.sh` outputs `Hello, Wholework!`
 ```
 
-Note the Issue number (e.g., `#42`) — you will use it in the next step.
+Note the Issue number (e.g., `#42`) — you will use it in the next steps.
 
-## Step 3 — Run `/auto`
+## Step 3 — Run `/issue`
 
 In Claude Code, run:
 
 ```
-/auto 42
+/issue 42
 ```
 
 Replace `42` with your actual Issue number.
 
-Wholework will:
+`/issue` triages the Issue: it assigns a Size label (XS for this sample), sets Type to Feature, and adds the `phase/ready` label. You can observe the triage result in the Issue metadata on GitHub.
 
-1. Triage and size the Issue (XS or S — small enough for a direct commit)
-2. Run `/spec` to create an implementation plan
-3. Run `/code` to implement the script and commit to main
-4. Run `/verify` to confirm the acceptance criteria are met
+## Step 4 — Run `/code`
 
-You will see phase banners like `/spec #42`, `/code #42`, `/verify #42` as it progresses.
+```
+/code 42
+```
 
-## Step 4 — Check the Results
+`/code` reads the Issue, implements `scripts/hello.sh`, and commits directly to main (this is the XS patch route — no spec phase or pull request). You can watch the commit appear in your repository.
 
-When `/auto` finishes, check the following:
+> **Note on XS patch route**: For XS Issues, Wholework skips the `/spec` phase and commits directly. A retrospective spec file (`docs/spec/issue-N-*.md`) is auto-generated for use by the `/verify` phase.
+
+## Step 5 — Run `/verify`
+
+```
+/verify 42
+```
+
+`/verify` checks the acceptance criteria defined in the Issue: it confirms `scripts/hello.sh` exists and outputs the expected string, then closes the Issue and checks the checkboxes.
+
+## Step 6 — Check the Results
+
+When `/verify` finishes, check the following:
 
 - The Issue should be **closed** on GitHub
 - `scripts/hello.sh` should exist in your repository
@@ -87,9 +100,9 @@ When `/auto` finishes, check the following:
 
 If anything looks wrong, see [Troubleshooting](troubleshooting.md).
 
-## Step 5 — Try a PR-based Workflow
+## Step 7 — Try the Full Automated Workflow
 
-For larger changes (Size M or L), Wholework creates a pull request instead of committing directly. To try this, create a more complex Issue and run `/auto` again — Wholework will route it through a full spec → code → review → merge → verify cycle.
+Ready for more? Create a more complex Issue (Size M or L) and run `/auto` — Wholework will route it through a full spec → code → review → merge → verify cycle automatically.
 
 ## 🧭 Next Steps
 

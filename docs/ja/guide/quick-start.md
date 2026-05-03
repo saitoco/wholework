@@ -2,7 +2,7 @@
 
 # 🚀 クイックスタート
 
-10〜15 分でゼロから最初の `/auto` 自動実行までたどり着きます。
+サンプル Issue を使って `/issue` → `/code` → `/verify` を約 5 分で体験します。
 
 ## 前提条件
 
@@ -30,7 +30,7 @@ GitHub リポジトリで以下のタイトルと本文で Issue を作成しま
 **タイトル:**
 
 ```
-Add a hello world script
+hello world スクリプトを追加する
 ```
 
 **本文:**
@@ -38,42 +38,55 @@ Add a hello world script
 ```markdown
 ## Background
 
-We need a simple script to verify the project setup.
+プロジェクトのセットアップ確認用にシンプルなシェルスクリプトが必要。
 
-## Goal
+## Purpose
 
-Create a shell script that prints "Hello, Wholework!" when run.
+`scripts/hello.sh` を追加し、実行すると「Hello, Wholework!」と出力されるようにする。
 
 ## Acceptance Criteria
 
-- [ ] `scripts/hello.sh` exists
-- [ ] Running `bash scripts/hello.sh` outputs `Hello, Wholework!`
+### Pre-merge (auto-verified)
+
+- [ ] <!-- verify: file_exists "scripts/hello.sh" --> `scripts/hello.sh` が存在する
+- [ ] <!-- verify: command "bash scripts/hello.sh | grep -qF 'Hello, Wholework!'" --> `bash scripts/hello.sh` を実行すると `Hello, Wholework!` が出力される
 ```
 
 Issue 番号（例: `#42`）を控えておいてください — 次のステップで使います。
 
-## Step 3 — `/auto` を実行
+## Step 3 — `/issue` を実行
 
 Claude Code で実行:
 
 ```
-/auto 42
+/issue 42
 ```
 
 `42` は実際の Issue 番号に置き換えてください。
 
-Wholework は以下を行います:
+`/issue` は Issue を triage します: Size ラベル（このサンプルでは XS）を付与し、Type を Feature に設定し、`phase/ready` ラベルを追加します。GitHub の Issue メタデータで triage 結果を確認できます。
 
-1. Issue を triage してサイズを付与（XS または S — 直接コミットで十分な小ささ）
-2. `/spec` で実装計画を作成
-3. `/code` でスクリプトを実装し main にコミット
-4. `/verify` で受入条件が満たされたことを確認
+## Step 4 — `/code` を実行
 
-進行中は `/spec #42`、`/code #42`、`/verify #42` のようなフェーズバナーが表示されます。
+```
+/code 42
+```
 
-## Step 4 — 結果を確認
+`/code` は Issue を読み込み、`scripts/hello.sh` を実装して main に直接コミットします（これが XS patch route です — spec フェーズや pull request はありません）。リポジトリにコミットが追加されるのを確認できます。
 
-`/auto` が完了したら以下を確認:
+> **XS patch route について**: XS サイズの Issue では、Wholework は `/spec` フェーズをスキップして直接コミットします。`/verify` フェーズで使用するために、retrospective spec ファイル（`docs/spec/issue-N-*.md`）が自動生成されます。
+
+## Step 5 — `/verify` を実行
+
+```
+/verify 42
+```
+
+`/verify` は Issue に定義された受入条件をチェックします: `scripts/hello.sh` が存在し期待通りの文字列を出力することを確認し、Issue をクローズしてチェックボックスにチェックを入れます。
+
+## Step 6 — 結果を確認
+
+`/verify` が完了したら以下を確認:
 
 - GitHub で Issue が **クローズ** されているはず
 - リポジトリに `scripts/hello.sh` が存在するはず
@@ -81,9 +94,9 @@ Wholework は以下を行います:
 
 何かおかしい場合は [トラブルシューティング](troubleshooting.md) を参照してください。
 
-## Step 5 — PR ベースのワークフローを試す
+## Step 7 — フル自動ワークフローを試す
 
-より大きな変更（Size M や L）の場合、Wholework は直接コミットする代わりに pull request を作成します。これを試すには、より複雑な Issue を作成してもう一度 `/auto` を実行してください — Wholework が spec → code → review → merge → verify のフルサイクルでルーティングします。
+もっと大きな挑戦をしたいですか？より複雑な Issue（Size M や L）を作成して `/auto` を実行してください — Wholework が spec → code → review → merge → verify のフルサイクルを自動で実行します。
 
 ## 🧭 次のステップ
 

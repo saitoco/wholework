@@ -34,7 +34,7 @@ Claude Code エージェントのためのワークフロー・ハーネス — 
 
 ## 🚀 クイックスタート
 
-Wholework を初めて使いますか？ [クイックスタートガイド](docs/ja/guide/quick-start.md) が、インストールから最初の `/auto` 実行までを 10〜15 分で案内します。
+Wholework を初めて使いますか？ [クイックスタートガイド](docs/ja/guide/quick-start.md) が、インストールから最初の手動 `/issue` → `/code` → `/verify` サイクルまでを約 5 分で案内します。
 
 全トピックを俯瞰したい場合は [ユーザーガイドのインデックス](docs/ja/guide/index.md) を参照してください。
 

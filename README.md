@@ -34,7 +34,7 @@ For development setup, see [docs/structure.md](docs/structure.md#install).
 
 ## 🚀 Quick Start
 
-New to Wholework? The [Quick Start guide](docs/guide/quick-start.md) walks you through installation and your first `/auto` run in 10–15 minutes.
+New to Wholework? The [Quick Start guide](docs/guide/quick-start.md) walks you through installation and your first manual `/issue` → `/code` → `/verify` cycle in about 5 minutes.
 
 For a broader overview of every topic, see the [User Guide index](docs/guide/index.md).
 
