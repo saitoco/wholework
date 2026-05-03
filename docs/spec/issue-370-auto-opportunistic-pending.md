@@ -81,3 +81,34 @@ Issue #365 verify iter 2 でこのパターンが確認された: Issue が `pha
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 本文の verify command を section_contains 2 つに分割する形で設計した点は適切。ripgrep の ERE/BRE 曖昧性を事前に排除し、Step 5 スコープに限定することで誤検知リスクも低減。
+- 受入条件の自動解決（3 点）が Issue フェーズで記録されており、設計判断の根拠が明確に追跡可能。
+
+#### design
+- Spec の実装手順（Step 5 の置き換え前/後コード）が実際の実装と一致。設計偏差なし。
+- patch route XS のため Spec は最小限の構成で十分だった。
+
+#### code
+- commit 3ee3208 の 1 コミットで実装完了。fixup/amend パターンなし。
+- commit 7f447e4 でコード回顧録を追加（プロセス通り）。
+- コード回顧録はすべて N/A — 実装はシンプルなテキスト追加で、リワークなし。
+
+#### review
+- patch route XS のため review フェーズなし（/review 未実行）。
+
+#### merge
+- patch route による直接 main コミット。コンフリクトなし、マージプロセス上の問題なし。
+
+#### verify
+- pre-merge 2 条件ともに PASS。verify command の設計（section_contains）が意図通り機能。
+- post-merge 条件は verify-type: opportunistic（/auto 実行での手動確認）。Issue は phase/verify に遷移し、ユーザーによる opportunistic 確認を待つ状態。
+- FAIL なし。verify command の不整合なし。
+
+### Improvement Proposals
+- N/A
