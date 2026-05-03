@@ -37,7 +37,7 @@ For precondition checks, `reconcile-phase-state.sh` verifies whether the require
 | spec | `phase/issue` or `phase/spec` label on issue | `$SPEC_PATH/issue-N-*.md` exists AND `phase/(ready\|code\|review\|merge\|verify\|done)` label | Implemented |
 | code-patch | `phase/ready` label on issue, Spec exists | `git log origin/main --grep="closes #N"` returns ≥1 commit | Precondition: `phase/ready` — Implemented; Spec exists — future scope. Completion: Implemented |
 | code-pr | `phase/ready` label on issue, Spec exists | Open PR on `worktree-code+issue-N` branch (#310 SSoT) | Precondition: `phase/ready` — Implemented; Spec exists — future scope. Completion: Implemented |
-| review | PR is OPEN | PR has a comment containing `## Review Summary` | Implemented |
+| review | PR is OPEN | PR has a comment containing `## Review Response Summary` | Implemented |
 | merge | PR is OPEN and reviewDecision is APPROVED | `gh pr view --json state == MERGED` | Implemented |
 | verify | Issue has `phase/verify` label or is CLOSED | Issue is CLOSED or has `phase/(verify\|done)` label | Implemented |
 

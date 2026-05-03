@@ -224,10 +224,10 @@ _completion_review() {
 
   local actual_json="{\"pr_number\":${PR_NUMBER}}"
 
-  if echo "$comments" | grep -q "## Review Summary"; then
-    _emit_result "true" "Review Summary found in PR #${PR_NUMBER} comments" "$actual_json"
+  if echo "$comments" | grep -q "## Review Response Summary"; then
+    _emit_result "true" "Review Response Summary found in PR #${PR_NUMBER} comments" "$actual_json"
   else
-    _handle_mismatch "Review Summary not found in PR #${PR_NUMBER} comments" "$actual_json"
+    _handle_mismatch "Review Response Summary not found in PR #${PR_NUMBER} comments" "$actual_json"
   fi
 }
 

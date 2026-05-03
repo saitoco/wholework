@@ -284,10 +284,10 @@ MOCK_EOF
 
 # --- review completion ---
 
-@test "review completion: PR comment with Review Summary -> matches_expected true" {
+@test "review completion: PR comment with Review Response Summary -> matches_expected true" {
     cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
 #!/bin/bash
-echo "## Review Summary"
+echo "## Review Response Summary"
 echo "All good"
 exit 0
 MOCK_EOF
