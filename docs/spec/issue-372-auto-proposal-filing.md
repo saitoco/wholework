@@ -56,3 +56,14 @@ Option 1（共有モジュール化）を採用：Improvement Proposal 収集・
 - XL route でアノマリーなし（`### Improvement Proposals` が "N/A"）の場合、共有モジュールは "No improvement proposals" を出力して return するため、冗長な動作はない。
 - `/verify` Step 13 が先に実行された場合（通常の M/L pr-route）、共有モジュール内の open Issues 重複チェックが、`/verify` Step 13 で既に起票されたものをスキップするため、二重起票は発生しない。
 - `docs/structure.md` の modules/ファイル数: 追加前 32 files（`ls modules/ | wc -l` で確認）→ 追加後 33 files
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — 実装は Spec の実装ステップどおりに進行し、設計からの逸脱なし。
+
+### Design Gaps/Ambiguities
+- `modules/retro-proposals.md` の Processing Steps 中に domain-loader の呼び出し（`SKILL_NAME=verify`）を追加したが、Spec の Input 欄には domain file content の受け渡しが明記されていなかった。モジュールが self-contained である（/auto から呼び出した際も domain-loader が使えること）ように、モジュール内部で `domain-loader.md` を読み込む設計とした。
+
+### Rework
+- N/A — 一発で実装が確定。
