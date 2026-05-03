@@ -27,7 +27,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (7 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (46 files)
+├── scripts/             # Utility scripts used by skills and agents (47 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -37,7 +37,7 @@ wholework/
 │   └── workflows/
 │       ├── test.yml             # CI: bats tests, skill syntax validation, forbidden expressions check, and macOS shell compatibility test
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
-├── tests/               # Bats test files for scripts (54 files)
+├── tests/               # Bats test files for scripts (55 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -160,6 +160,7 @@ Key modules:
 **Project utilities:**
 - `scripts/collect-recovery-candidates.sh` — parse `docs/reports/orchestration-recoveries.md`; count symptom-short frequency; exclude filed entries; apply `--threshold K` filter; output `<symptom-short>\t<count>` candidates; accepts `--issues-json PATH` for duplicate detection
 - `scripts/get-config-value.sh` — extract a configuration value from `.wholework.yml`
+- `scripts/handle-permission-mode-failure.sh` — diagnose `permission-mode: auto` failures and print remediation hint to stderr (heuristic: exit!=0 AND elapsed<=30s)
 - `scripts/get-verify-permission.sh` — extract permission value from a verify command handler file
 - `scripts/get-issue-size.sh` — get issue size label
 - `scripts/get-issue-type.sh` — get issue type label

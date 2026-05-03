@@ -69,6 +69,7 @@ ARGUMENTS: ${ARGUMENTS}"
 # See: https://github.com/anthropics/claude-code/issues/22362
 load_watchdog_timeout "$SCRIPT_DIR"
 
+SECONDS=0
 set +e
 ANTHROPIC_MODEL=sonnet \
   WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
@@ -78,6 +79,7 @@ ANTHROPIC_MODEL=sonnet \
     $PERMISSION_FLAG
 EXIT_CODE=$?
 set -e
+"$SCRIPT_DIR/handle-permission-mode-failure.sh" "$EXIT_CODE" "$SECONDS" "$PERMISSION_MODE"
 
 if [[ $EXIT_CODE -eq 143 ]]; then
   _REVIEW_ISSUE=$("$SCRIPT_DIR/gh-extract-issue-from-pr.sh" "$PR_NUMBER" 2>/dev/null \

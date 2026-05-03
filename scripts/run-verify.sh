@@ -114,6 +114,7 @@ fi
 load_watchdog_timeout "$SCRIPT_DIR"
 
 VERIFY_TMPOUT=$(mktemp)
+SECONDS=0
 set +e
 ANTHROPIC_MODEL=sonnet \
   WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
@@ -123,6 +124,7 @@ ANTHROPIC_MODEL=sonnet \
     $PERMISSION_FLAG 2>&1 | tee "$VERIFY_TMPOUT"
 EXIT_CODE=$?
 set -e
+"$SCRIPT_DIR/handle-permission-mode-failure.sh" "$EXIT_CODE" "$SECONDS" "$PERMISSION_MODE"
 
 # Output marker detection: non-zero exit if VERIFY_FAILED is present
 if grep -q "VERIFY_FAILED" "$VERIFY_TMPOUT"; then

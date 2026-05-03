@@ -80,6 +80,7 @@ ARGUMENTS: ${ISSUE_NUMBER} --non-interactive"
 # See: https://github.com/anthropics/claude-code/issues/22362
 load_watchdog_timeout "$SCRIPT_DIR"
 
+SECONDS=0
 set +e
 ANTHROPIC_MODEL="${MODEL}" \
   WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
@@ -89,6 +90,7 @@ ANTHROPIC_MODEL="${MODEL}" \
     $PERMISSION_FLAG
 EXIT_CODE=$?
 set -e
+"$SCRIPT_DIR/handle-permission-mode-failure.sh" "$EXIT_CODE" "$SECONDS" "$PERMISSION_MODE"
 
 if [[ $EXIT_CODE -eq 143 ]]; then
   _reconcile_out=$("$SCRIPT_DIR/reconcile-phase-state.sh" spec "$ISSUE_NUMBER" --check-completion 2>/dev/null) || true
