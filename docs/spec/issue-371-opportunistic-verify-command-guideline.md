@@ -20,3 +20,29 @@
 - 元の単一 pre-merge 条件 (脆弱な regex alternation grep) を 3 条件に分割: (a) セクション見出し追加検出、(b) rubric による意味的妥当性、(c) Processing Steps 配下への配置確認
 - post-merge 条件は `verify-type: opportunistic` を維持し、文言を「`/issue` skill による運用」と「`/verify` での `auto` 自動消化事例の確認」に明確化
 - Scope セクションを追加し対象外を明示
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 対象ファイルの特定・AC 構造の設計を含む Issue Retrospective が残っており、質の高い AC が設計された。rubric + supplementary check パターン (§9 準拠) を採用したことで verify の精度が向上した
+
+#### design
+- Scope を明確に絞り (1ファイル、Size XS)、`verify-classifier.md` を変更しない判断は適切。実装との乖離なし
+
+#### code
+- commit は `14221c1` の 1 件のみ。fixup や amend パターンなし。実装は diff 32行の最小変更で完結
+
+#### review
+- PR #374 にレビューコメントなし。CI チェックなし (patch ルートではなく PR ルート)。レビューが実施されていないため、見落としリスクの事後評価は不可
+
+#### merge
+- PR #374 が 2026-04-23 にマージ。コンフリクトなし
+
+#### verify
+- pre-merge 3条件すべて PASS。post-merge 1条件 (`verify-type: opportunistic`) は verify command なし のため auto-verify 対象外。Issue は `phase/verify` で CLOSED を維持
+- post-merge 条件自体が本 Issue の改善対象 (「opportunistic 条件に verify command を付けるべき」) の例として、verify command なしの opportunistic 条件のままになっており、本ガイドラインの適用が自身には及んでいない点はやや皮肉だが、「実際の運用事例確認」という性質上、事前に verify command を付けることが困難なため許容範囲
+
+### Improvement Proposals
+- N/A
