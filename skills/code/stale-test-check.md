@@ -42,7 +42,7 @@ Steps:
    ```
 2. For each non-trivial string constant found (e.g., model IDs, command names, flag values), search `tests/` for residual occurrences:
    ```bash
-   grep -rn "REMOVED_LITERAL" tests/ | grep -v '^\s*#'
+   git grep -n "REMOVED_LITERAL" -- 'tests/*' | grep -v '^\s*#'
    ```
 3. If any matches are found in `tests/`, output a warning and update the stale assertions before committing:
    ```
