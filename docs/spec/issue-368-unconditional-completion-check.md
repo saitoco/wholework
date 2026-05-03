@@ -42,3 +42,19 @@
 - PR route の step 2 から "on success output `[1/4] code → done (PR #N)`" を削除し、step 3 の completion check 後（`matches_expected: true` 確認後）に移動する。これにより false success 時に `[1/4] code → done` と誤表示されることも防ぐ
 - Auto-resolved ambiguity は Issue body の "Auto-Resolved Ambiguity Points" セクションに記録済み（AC1/AC2 verify command の変更理由、`run-auto-sub.sh` スコープ除外理由を含む）
 - `validate-skill-syntax.py` 制約: 新規テキストに半角 `!` なし、小数ステップ番号なし ✓
+
+## spec retrospective
+
+### Minor observations
+
+- PR route の step 2 に "on success output `[1/4] code → done (PR #N)`" が含まれており、step 3 を無条件チェックに変更する際に step 2 からこの出力も移動する必要があった（単純な step 3 の書き換えだけでは不完全）。今後同様の「成功時出力が Act ステップに含まれているパターン」では、Diagnose ステップへの移動も Set として設計すること
+- Issue body の Auto-Resolved Ambiguity Points に verify command の変更理由が既に詳細に記録されていたため、/spec の Step 7 (Ambiguity Resolution) は実質スキップできた
+
+### Judgment rationale
+
+- `run-auto-sub.sh` をスコープ外とした判断: Issue body に明示的な除外理由（XL 経路の別問題）が記録済みのため、Spec でも引き継いだ
+- Issue body background の「exit code 143 のみ」という記述と実装の「If code fails（任意の非 0）」の差異は、実装方針への影響がないと判断してコンフリクトとしてメモのみ
+
+### Uncertainty resolution
+
+- Nothing to note
