@@ -385,13 +385,25 @@ Determine the close flow for the parent Issue based on all sub-issue execution r
 
 ### Step 5: Completion Report
 
-If all phases succeeded, output the completion banner:
-```
-/auto #N complete
-TITLE
-URL
-```
-Followed by a result table (one row per phase with status).
+If all phases succeeded:
+
+1. **Check for opportunistic pending state**: Run `gh issue view $NUMBER --json labels --jq '.labels[].name'`
+
+2. **If output contains `phase/verify` (opportunistic pending)**: output the partial success — opportunistic pending banner:
+   ```
+   /auto #N partial success — opportunistic pending
+   TITLE
+   URL
+   ```
+   Followed by a result table (one row per phase with status). Post-merge opportunistic conditions remain unchecked; run `/verify $NUMBER` after confirming them manually.
+
+3. **If output does not contain `phase/verify`**: output the completion banner:
+   ```
+   /auto #N complete
+   TITLE
+   URL
+   ```
+   Followed by a result table (one row per phase with status).
 
 **If an Auto Retrospective was recorded in the Spec (XL routes: always; M/L/patch routes: when orchestration anomalies were detected), also output "Auto retrospective recorded in Spec".**
 
