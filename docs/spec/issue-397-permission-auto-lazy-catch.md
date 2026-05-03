@@ -101,3 +101,34 @@ threshold 30 秒の根拠: claude CLI cold start (3-8s) + auth/plan check + auto
 ### Acceptance criteria verification difficulty
 
 - 承認基準の `rubric` 条件（テストが exit 0 を assert しているか）はファイルの直接確認で PASS 判定できたが、「implicit vs explicit assertion」の解釈次第で UNCERTAIN になりうる。今後 `rubric` 条件に「`run` + `[ "$status" -eq 0 ]` を使用していること」と明記することで曖昧さを減らせる。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- threshold 値が `/issue` 段階の auto-resolve（10 秒）から `/spec` 段階で 30 秒に再調整された。cold start 時間の考慮が Issue 作成時に不十分だったが、spec フェーズで早期修正できた点は良好。
+- Auto-Resolved Ambiguity Points が Spec に明示引き継ぎされており、verify フェーズでの再確認コストが低かった。
+
+#### design
+- 設計はシンプルな heuristic ベースで、Spec に「bash 3.2 互換性」「SECONDS builtin」「`set +e` 直前への挿入位置」が具体的に記載されており実装の曖昧さがなかった。
+- Spec の Changed Files セクションが実装との差異なし（run-verify.sh のみ `SECONDS=0` の挿入位置が `VERIFY_TMPOUT=$(mktemp)` 後であったが、意図の範囲内）。
+
+#### code
+- N/A: rework なし、fixup/amend なし。Spec 通りの実装。
+- `run-spec.bats` でのモック漏れによる CI 10 テスト失敗が発生（review retrospective で言及済み）。
+
+#### review
+- レビューコメントが 1 件（CI 失敗の調査・修正が含まれた）。`run-spec.bats` モック漏れが pre-merge のレビューで検出・修正されており、マージ前に問題解消できた。
+- `WHOLEWORK_SCRIPT_DIR` を使うテストへの新スクリプトのモック追加漏れは recurring pattern。Spec に事前チェックポイントを追加すれば再発防止が期待できる。
+
+#### merge
+- 単一マージコミット（PR #402）でクリーンにマージ。コンフリクトなし。
+
+#### verify
+- 全 12 件の Pre-merge 条件が PASS。`bats tests/` 607/607 all ok。
+- `rubric` 条件での exit 0 の implicit assertion（bats で `run` を使わない場合の暗黙的 exit code 検証）が UNCERTAIN リスクを持つ。今後 bats テストでは `run bash "$SCRIPT" ...` + `[ "$status" -eq 0 ]` を明示的に使うことを推奨。
+
+### Improvement Proposals
+- `WHOLEWORK_SCRIPT_DIR` を使う bats テストへ新スクリプトを追加する際に、モックを追加するよう Spec のチェックリストに追記する（再発防止）。
+- bats の exit code 検証を `rubric` 条件で要求する際は、`run` + `[ "$status" -eq 0 ]` パターンを明示的に rubric テキストに含めることで UNCERTAIN リスクを排除する。
