@@ -169,7 +169,7 @@ If the Spec has an "Uncertainties" section, before implementing:
 
 ### Step 7: Reference Steering Documents (if present)
 
-Use Glob to check whether the following steering documents exist, then Read only those that exist:
+Use Glob with `path="$STEERING_DOCS_PATH"` to check whether the following steering documents exist, then Read only those that exist:
 
 - `$STEERING_DOCS_PATH/tech.md` — Coding conventions, Architecture Decisions (check for convention compliance), Forbidden Expressions (avoid prohibited expressions)
 - `$STEERING_DOCS_PATH/structure.md` — Directory structure, Key Files (check file placement)

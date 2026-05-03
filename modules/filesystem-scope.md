@@ -75,3 +75,6 @@ Grep(pattern="keyword", type="sh")        # Good
 - `modules/orchestration-fallbacks.md` — documents conflict marker detection using `git grep -l '^<<<<<<'` (consistent with `worktree-merge-push.sh`)
 - `skills/spec/SKILL.md` — rename-issue grep uses `.` as CWD; must be run from repo root
 - `skills/code/stale-test-check.md` — uses `git grep -n` to scan tracked test files only (compliant with this module)
+- `skills/code/SKILL.md` — Step 7 steering docs existence check uses Glob with explicit `path="$STEERING_DOCS_PATH"` (compliant with this module)
+- `modules/codebase-analysis.md` — entry point, dependency, test, and docstring Glob/Grep calls use explicit `path` argument pointing to the target directory (compliant with this module)
+- `modules/doc-checker.md` — `$STEERING_DOCS_PATH` document candidate listing uses `Glob("*.md", path="$STEERING_DOCS_PATH")` form (compliant with this module)
