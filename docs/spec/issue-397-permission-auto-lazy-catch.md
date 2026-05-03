@@ -87,3 +87,17 @@ threshold 30 秒の根拠: claude CLI cold start (3-8s) + auth/plan check + auto
 ### Rework
 
 - N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- N/A: Spec と PR diff の間に構造的な乖離はなかった。ヘルパーのロジック・引数・exit 0 ポリシー・6 ファイルへの挿入位置はすべて Spec 通り。
+
+### Recurring issues
+
+- `run-spec.bats` のみ `WHOLEWORK_SCRIPT_DIR=$MOCK_DIR` を設定するパターンを採用しており、新しいヘルパースクリプトが追加されるたびにモック追加が必要になる。今回はこのモックが漏れ、CI が 10 テスト失敗した。`/code` フェーズで同様のモックパターンを採用する他のテストへの横展開確認が不足していた可能性がある。Spec に「`WHOLEWORK_SCRIPT_DIR` を使うテストファイルにはモックを追加すること」のチェックポイントを設けることで再発防止が期待できる。
+
+### Acceptance criteria verification difficulty
+
+- 承認基準の `rubric` 条件（テストが exit 0 を assert しているか）はファイルの直接確認で PASS 判定できたが、「implicit vs explicit assertion」の解釈次第で UNCERTAIN になりうる。今後 `rubric` 条件に「`run` + `[ "$status" -eq 0 ]` を使用していること」と明記することで曖昧さを減らせる。
