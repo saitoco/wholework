@@ -169,3 +169,33 @@ none
 
 ### Uncertainty resolution
 - Nothing to note (design was straightforward; no significant uncertainties at spec time).
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 本文の `## Auto-Resolved Ambiguity Points` が Spec `## issue retrospective` に引き継がれており、曖昧ポイントの解決根拠が明示されている。特に「LLM path（SKILL.md）は今回スコープ外」という意図的スコープ限定が Spec Notes にも明示されており、verify 時に誤判定を防ぐ情報が揃っていた。
+- AC3 rubric の "OR" 条件は `run-auto-sub.sh` 更新のみで満たせるよう設計されており、verify で PASS 判定を得やすい構造だった。
+
+#### design
+- 実装ステップ 1〜3 はすべて Spec の設計通りに実装されており、逸脱なし。
+- `detect-wrapper-anomaly.sh` のパターン追加場所（`watchdog-kill` ブロックの後）は適切。既存パターンと順序依存がないことが Notes で説明されている。
+
+#### code
+- 単一のクリーンな実装コミット（`3839c8b`）。fixup/amend パターンなし。
+- `run-auto-sub.sh` 変更は最小限（`[[ $exit_code -eq 0 ]] && return 0` を if ブロックに展開し anomaly 検出を追加）。
+- `skills/auto/SKILL.md` は意図的に非更新（スコープ限定の判断）。
+
+#### review
+- パッチルートのため review フェーズなし。
+
+#### merge
+- main への直接 push（パッチルート）。コンフリクトなし。
+
+#### verify
+- 4 条件すべて PASS。成功フレーズパターン（`完了しました|commit and push`）は Issue #365 実例に基づくが、他の成功フレーズが検出漏れとなる可能性あり（下記 Improvement Proposals 参照）。
+
+### Improvement Proposals
+- `skills/auto/SKILL.md` の非 XL ルートにも exit_code=0 時の `detect-wrapper-anomaly.sh` 呼び出しを追加する（Spec Notes および Issue #365 Improvement Proposals で言及済みの未対応スコープ）。Issue #365 の実際の発生パスは LLM-executed path であり、bash path のみのカバーでは同種異常が再発した場合に検出できない。
+- 成功フレーズパターン `"完了しました|commit and push"` は Issue #365 実例に基づく狭い定義。英語成功フレーズ（`"successfully committed"`, `"done"` 等）を追加するか、フレーズベースではなく commit 有無のみで判定する方式への変更を検討する。
