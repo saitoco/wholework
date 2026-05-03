@@ -43,6 +43,17 @@
 - Auto-resolved ambiguity は Issue body の "Auto-Resolved Ambiguity Points" セクションに記録済み（AC1/AC2 verify command の変更理由、`run-auto-sub.sh` スコープ除外理由を含む）
 - `validate-skill-syntax.py` 制約: 新規テキストに半角 `!` なし、小数ステップ番号なし ✓
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
 ## spec retrospective
 
 ### Minor observations
