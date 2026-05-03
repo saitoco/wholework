@@ -125,3 +125,21 @@ Nothing to note. All 8 verify commands resolved cleanly (7 `grep` commands + 1 `
 
 ### Improvement Proposals
 - N/A
+
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| code  | pr    | SUCCESS | run-code.sh exit 0, PR #392 created |
+| review | pr   | SUCCESS (Tier 3 skip) | run-review.sh exit 0; reconciler returned matches_expected=false (header pattern mismatch); orchestration-recovery sub-agent issued action=skip |
+| merge | pr    | SUCCESS | run-merge.sh exit 0, PR #392 squash-merged |
+| verify | -    | SUCCESS (manual opportunistic) | run-verify.sh iteration 1: post-merge CI PENDING; iteration 2: 9/10 PASS; parent session ran `bats tests/run-*.bats` to fulfill the manual opportunistic condition |
+
+### Orchestration Anomalies
+- **review reconciler header pattern mismatch**: `reconcile-phase-state.sh review --check-completion` searches PR comments for the literal string `Review Summary`, but the `/review` skill posts a comment titled `## Review Response Summary`. The reconciler returned `matches_expected: false` despite review actually succeeding (PR comment present, CI green, label transitioned to `phase/review`). Tier 2 anomaly detector returned empty (unknown pattern); Tier 3 `orchestration-recovery` sub-agent diagnosed the divergence and issued `action: skip`, which validated the actual success state.
+- **post-merge opportunistic verify required parent intervention**: `run-verify.sh` correctly identified the post-merge opportunistic condition (`bats tests/` manual check) as out-of-scope for skill execution and left it unchecked, leaving the issue at `phase/verify`. The parent session executed `bats tests/run-*.bats` directly, confirmed all PASS, edited the issue body to mark the condition `[x]`, then transitioned to `phase/done`.
+
+### Improvement Proposals
+- **Align reconciler review-completion pattern with skill output**: update `scripts/reconcile-phase-state.sh` (or its review-phase detector) to match `## Review Response Summary` (current skill output) in addition to or instead of `Review Summary`. Without this fix, every M/L Issue passing through `/auto` will hit a Tier 3 sub-agent invocation in the review phase, wasting an LLM round-trip and adding noise to retrospectives.
+- **Add a wrapper-anomaly-detector pattern for the reconciler/skill header divergence**: once the alignment fix is in flight, also add a `detect-wrapper-anomaly.sh` rule for this specific pattern so the recovery is handled at Tier 2 (catalog) rather than Tier 3 (sub-agent) until the underlying divergence is resolved.
