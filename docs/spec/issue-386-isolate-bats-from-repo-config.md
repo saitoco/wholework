@@ -71,3 +71,17 @@ bats tests/run-code.bats
 - **検出マーカー**: `# Isolate test from repo .wholework.yml` コメントを設置。`permission-mode: bypass` 単独 grep は run-code.bats:319-329 の既存テスト本文で既に true となるため、setup() への新規追加を区別できない。コメント文字列はリポジトリ全体で他箇所に存在しない一意な検出マーカーとして機能する。
 - **`scripts/get-config-value.sh` 構造変更は対象外**: Issue Purpose で確認済み。本 Issue ではテスト隔離のみに集中し、`WHOLEWORK_CONFIG_PATH` 等の env 経路導入は別 Issue で扱う。
 - **#385 との整合**: `permission-mode: bypass` を明示書き込みするため、#385（permission-mode デフォルト反転）マージ後も bats テストの挙動は変わらない。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
