@@ -92,3 +92,14 @@
 - `docs/translation-workflow.md` は top-level `docs/*.md` を対象とするため `docs/guide/quick-start.md` には自動同期は適用されないが、本 Spec では英語版・日本語版の両方を同時に手動更新する
 - 時間表記の「約 5 分」は手動 3 ステップ × 1〜3 分の合計目安。Post-merge の実機検証で乖離が判明した場合は数字を再調整 (フォローアップ Issue 起票)
 - 旧 Step 5 の PR ワークフロー紹介は新 Step 7 に移動し、`/auto` をより大きな Issue で試す導線として再フレーム。`/auto` 自体は依然として推奨ワークフローだが、初回体験では明示的に避ける
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- 日本語版サンプル Issue のタイトルは Spec に記載がなかったため「hello world スクリプトを追加する」と設定した。英語版タイトル `Add a hello world script` の直訳。
+
+### Rework
+- N/A
