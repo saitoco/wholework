@@ -6,6 +6,9 @@
 SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/run-merge.sh"
 
 setup() {
+    # Isolate test from repo .wholework.yml
+    echo "permission-mode: bypass" > "$BATS_TEST_TMPDIR/.wholework.yml"
+    cd "$BATS_TEST_TMPDIR"
     MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
     mkdir -p "$MOCK_DIR"
     export PATH="$MOCK_DIR:$PATH"
