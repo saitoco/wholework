@@ -73,7 +73,15 @@ run_phase_with_recovery() {
   exit_code=$?
   set -e
 
-  [[ $exit_code -eq 0 ]] && return 0
+  if [[ $exit_code -eq 0 ]]; then
+    local anomaly_out
+    anomaly_out=$("$SCRIPT_DIR/detect-wrapper-anomaly.sh" --log "$log_file" --exit-code 0 --issue "$issue" --phase "$phase" 2>/dev/null || true)
+    if [[ -n "$anomaly_out" ]]; then
+      echo "[anomaly] silent no-op detected in ${phase}:"
+      echo "$anomaly_out"
+    fi
+    return 0
+  fi
 
   # Tier 1: reconciler (bash, cheap) — completion check
   # See modules/orchestration-fallbacks.md (Observe-Diagnose-Act pattern)

@@ -74,3 +74,25 @@ setup() {
     [[ "$output" == *"merge"* ]]
     [[ "$output" == *"exit code 2"* ]]
 }
+
+@test "silent no-op: detects exit_code=0 with success phrase and no recent commit" {
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/git" <<'MOCK'
+#!/bin/bash
+# mock git: returns empty output for all subcommands
+exit 0
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/git"
+    echo "実装が完了しました。commit and push も完了しています。" > "$LOG_FILE"
+    run env PATH="$BATS_TEST_TMPDIR/bin:$PATH" bash "$SCRIPT" --log "$LOG_FILE" --exit-code 0 --issue 365 --phase code
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"silent-no-op"* ]]
+    [[ "$output" == *"### Orchestration Anomalies"* ]]
+}
+
+@test "silent no-op: no detection when exit_code=0 but no success phrase" {
+    echo "Execution finished normally." > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 0 --issue 365 --phase code
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
