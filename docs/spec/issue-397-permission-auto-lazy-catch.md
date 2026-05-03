@@ -73,3 +73,31 @@ threshold 30 秒の根拠: claude CLI cold start (3-8s) + auth/plan check + auto
 ### `run-*.sh` 改変の影響範囲
 
 `set +e` 直前の `SECONDS=0` 挿入は副作用なし（`SECONDS` は bash builtin で自動リセット）。`set -e` 直後のヘルパー呼び出しは `set -e` 解除後・143 reconcile 前で、ヘルパーが exit 0 を返す前提なので `set -e` の再有効化を待たずに進む。既存 `EXIT_CODE` 変数は保持される。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A: 実装ステップはすべて Spec 通りに実行した。run-verify.sh のみ `VERIFY_TMPOUT=$(mktemp)` の後に `SECONDS=0` を挿入したが、Spec の「`set +e` 直前」という意図には合致している。
+
+### Design Gaps/Ambiguities
+
+- N/A: Spec は十分に詳細で、実装中に解釈の余地が生じる箇所はなかった。
+
+### Rework
+
+- N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- N/A: Spec と PR diff の間に構造的な乖離はなかった。ヘルパーのロジック・引数・exit 0 ポリシー・6 ファイルへの挿入位置はすべて Spec 通り。
+
+### Recurring issues
+
+- `run-spec.bats` のみ `WHOLEWORK_SCRIPT_DIR=$MOCK_DIR` を設定するパターンを採用しており、新しいヘルパースクリプトが追加されるたびにモック追加が必要になる。今回はこのモックが漏れ、CI が 10 テスト失敗した。`/code` フェーズで同様のモックパターンを採用する他のテストへの横展開確認が不足していた可能性がある。Spec に「`WHOLEWORK_SCRIPT_DIR` を使うテストファイルにはモックを追加すること」のチェックポイントを設けることで再発防止が期待できる。
+
+### Acceptance criteria verification difficulty
+
+- 承認基準の `rubric` 条件（テストが exit 0 を assert しているか）はファイルの直接確認で PASS 判定できたが、「implicit vs explicit assertion」の解釈次第で UNCERTAIN になりうる。今後 `rubric` 条件に「`run` + `[ "$status" -eq 0 ]` を使用していること」と明記することで曖昧さを減らせる。

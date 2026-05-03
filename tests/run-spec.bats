@@ -69,6 +69,13 @@ exec "$@"
 MOCK
     chmod +x "$MOCK_DIR/claude-watchdog.sh"
 
+    # Mock handle-permission-mode-failure.sh (always silent, exits 0)
+    cat > "$MOCK_DIR/handle-permission-mode-failure.sh" <<'MOCK'
+#!/bin/bash
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/handle-permission-mode-failure.sh"
+
     # Mock phase-banner.sh (sourced by run-spec.sh)
     cat > "$MOCK_DIR/phase-banner.sh" <<'MOCK'
 print_start_banner() { echo "Starting /$3 for issue #$2"; }
