@@ -120,8 +120,8 @@ Nothing to note. All 8 verify commands resolved cleanly (7 `grep` commands + 1 `
 - Merged via PR #392 squash-merge to main without conflicts. No CI failures during merge.
 
 #### verify
-- Conditions 1–8 (Pre-merge) all PASS. Condition 9 (Post-merge CI) is PENDING because the test.yml workflow run is in_progress at verify time. Condition 10 (opportunistic manual check) deferred to user.
-- The PENDING state is expected — the CI run was triggered by commits just before `/verify` ran. No actionable issue.
+- Conditions 1–8 (Pre-merge) all PASS. Condition 9 (Post-merge CI) confirmed PASS on re-run (`test.yml` conclusion = `success`). Condition 10 (opportunistic manual check) deferred to user.
+- Previous run reported condition 9 as PENDING (CI was in_progress); resolved on re-run. No actionable issue.
 
 ### Improvement Proposals
 - N/A
