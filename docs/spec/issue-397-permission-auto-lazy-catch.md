@@ -73,3 +73,17 @@ threshold 30 秒の根拠: claude CLI cold start (3-8s) + auth/plan check + auto
 ### `run-*.sh` 改変の影響範囲
 
 `set +e` 直前の `SECONDS=0` 挿入は副作用なし（`SECONDS` は bash builtin で自動リセット）。`set -e` 直後のヘルパー呼び出しは `set -e` 解除後・143 reconcile 前で、ヘルパーが exit 0 を返す前提なので `set -e` の再有効化を待たずに進む。既存 `EXIT_CODE` 変数は保持される。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A: 実装ステップはすべて Spec 通りに実行した。run-verify.sh のみ `VERIFY_TMPOUT=$(mktemp)` の後に `SECONDS=0` を挿入したが、Spec の「`set +e` 直前」という意図には合致している。
+
+### Design Gaps/Ambiguities
+
+- N/A: Spec は十分に詳細で、実装中に解釈の余地が生じる箇所はなかった。
+
+### Rework
+
+- N/A
