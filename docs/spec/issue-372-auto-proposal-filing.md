@@ -81,3 +81,30 @@ Option 1（共有モジュール化）を採用：Improvement Proposal 収集・
 ### Acceptance Criteria Verification Difficulty
 
 Pre-merge 条件3件はすべて `rubric` タイプで、diffから機械的に判定可能だった（UNCERTAIN 0件）。`rubric` タイプは verify-executor による自動判定が難しいが、今回はdiffが明確でAI判定が安定していた。Post-merge の実機確認条件1件は `opportunistic` タイプとして適切に設定されており、verify commandの精度は良好。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec の実装ステップ 2 に「title-normalizer 読込みは Step 13 冒頭に残す」と記述されているが、モジュールを self-contained 設計にした際に矛盾が発生（Review Retrospective で指摘済み）。この Spec の記述が Code 実装 → Review でも一貫して参照され、実態と乖離したまま残った。Spec 修正か実装調整のどちらかで整合を取る改善余地あり。
+
+#### design
+- N/A — 採用方針（Option 1）が Issue body に明記されており、設計判断は Issue 段階で確定していた。Spec はその具体化として機能した。
+
+#### code
+- N/A — 実装は Spec どおりで逸脱なし。一発確定。
+
+#### review
+- `title-normalizer.md` の二重読み込みパターン（Step 13 冒頭 + `modules/retro-proposals.md` Step 1）が CONSIDER 指摘された。FAIL や UNCERTAIN ではなく CONSIDER に留まり merge されたが、将来の改善候補として記録されている。
+
+#### merge
+- N/A — PR #395 はクリーンにマージされた。CI / コンフリクト問題なし。
+
+#### verify
+- CI（test.yml）が in_progress のため条件 4 が PENDING。CI 完了後の再実行が必要。
+- Pre-merge 条件 3 件は rubric タイプで diff から安定判定できた。verify コマンド設計の精度は良好。
+- opportunistic 条件（実機確認）は `/auto` 実行が必要なため、ユーザー手動確認に委ねている。
+
+### Improvement Proposals
+- `skills/verify/SKILL.md` Step 13 冒頭の `title-normalizer.md` 読み込みと `modules/retro-proposals.md` Step 1 での再読み込みの二重化を解消する。モジュール self-contained 設計に合わせ、Step 13 冒頭の読み込みを削除するか、モジュール側で「既にロード済みの場合はスキップ」の設計にする。
