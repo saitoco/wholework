@@ -20,7 +20,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（7 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（45 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（46 ファイル）
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   └── workflows/
