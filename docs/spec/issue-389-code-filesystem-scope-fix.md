@@ -62,3 +62,28 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 受け入れ条件は rubric + section_contains の組み合わせで自動検証可能に設計されており、品質は高い。条件6（結果同等性の Spec 確認）が Spec 本文の内容を参照するため、Spec が存在しない場合に UNCERTAIN となりうる点は想定内のトレードオフ
+
+#### design
+- Spec は変更箇所・実装ステップ・結果同等性の根拠を網羅しており、設計の有効性が高い。"2 箇所" 記述と実際 3 行変更の不一致は Code Retrospective に既記録済み。設計判断の有効性に問題なし
+
+#### code
+- 実装コミット（3a542be）は Spec の実装ステップに完全準拠。fixup/amend パターンなし。4 ファイル 11 行変更（+11/-8）と Size S 想定に合致
+
+#### review
+- パッチルート（直コミット）のため PR レビューなし。変更内容は表記修正のみで結果同等性があり、レビュー省略のリスクは最小限
+
+#### merge
+- 直コミット（パッチルート）。merge コンフリクトなし
+
+#### verify
+- 全6プリマージ条件が PASS。条件8（TCC プロンプト体感的減少）は manual 検証のため phase/verify を継続。verify コマンドの一貫性に問題なし
+
+### Improvement Proposals
+- N/A
