@@ -69,3 +69,31 @@
 ### Uncertainty resolution
 
 - Nothing to note
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body の "Auto-Resolved Ambiguity Points" に verify command 変更理由が詳細に記録されていたため、Spec の Ambiguity Resolution ステップを実質スキップできた。Issue 側での事前整備が効いた例
+- PR route step 2 に「成功時出力」が埋め込まれており、step 3 の無条件チェック化に際して出力移動も必要だった点が spec retrospective に記録済み。設計時に「Diagnose と Act の出力タイミング分離」を考慮するパターンとして有用
+
+#### design
+- Spec の実装ステップが変更前後の diff 形式で明示されており、実装ブレが生じなかった。受入条件の verify command も Issue 側で auto-resolve 済みだったため整合性が保たれていた
+
+#### code
+- 実装コミット 1 件（`4159f1e`）のみ、6行変更（3挿入/3削除）。fixup/amend なし。Spec の設計通りに一発で実装が完了している
+
+#### review
+- patch route のため PR レビューなし。verify コマンドの `file_not_contains` + `grep "unconditional"` + `rubric` の 3 層構成が事前レビュー（pre-merge verify）として機能し、実装の正確性を機械的に担保した
+
+#### merge
+- patch route (直接 main コミット)。merge conflict なし、CI 不要のシンプルな経路
+
+#### verify
+- pre-merge 条件 3 件すべて初回で PASS
+- post-merge opportunistic 条件（Issue #365 シナリオ再現）は手動確認が必要。自動化が困難なシナリオ再現系の条件は `verify-type: opportunistic` が適切な分類
+- verify コマンドの設計品質が高い: `file_not_contains`（削除の確認）→ `grep "unconditional"`（追加の確認）→ `rubric`（意味論的整合性）の 3 段階で漏れなく検証できた
+
+### Improvement Proposals
+- N/A
