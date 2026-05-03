@@ -4,7 +4,9 @@
 
 `#385` で `.wholework.yml` の `permission-mode` デフォルトを `bypass` → `auto` に反転する前に、Pro plan ユーザー（`--permission-mode auto` 非対応）への UX セーフガードを整備する。
 
-`scripts/run-*.sh` 6 ファイルで `claude -p $PERMISSION_FLAG` を実行した直後に、共通ヘルパー `scripts/handle-permission-mode-failure.sh` を呼ぶ。ヘルパーは `PERMISSION_MODE == "auto"` かつ `exit_code != 0` かつ `elapsed <= 10` の条件で診断 stderr を出力し、`.wholework.yml` への `permission-mode: bypass` 設定方法を案内する。それ以外は silent return。ヘルパー自身は常に exit 0 で、既存の `EXIT_CODE` 保存・後段ロジック（reconcile / 終了 banner / exit 伝播）には一切手を入れない。
+`scripts/run-*.sh` 6 ファイルで `claude -p $PERMISSION_FLAG` を実行した直後に、共通ヘルパー `scripts/handle-permission-mode-failure.sh` を呼ぶ。ヘルパーは `PERMISSION_MODE == "auto"` かつ `exit_code != 0` かつ `elapsed <= 30` の条件で診断 stderr を出力し、`.wholework.yml` への `permission-mode: bypass` 設定方法を案内する。それ以外は silent return。ヘルパー自身は常に exit 0 で、既存の `EXIT_CODE` 保存・後段ロジック（reconcile / 終了 banner / exit 伝播）には一切手を入れない。
+
+threshold 30 秒の根拠: claude CLI cold start (3-8s) + auth/plan check + auto-mode soft_deny abort のラウンドトリップを安全側に包含し、かつ mid-flow 失敗（通常 60s+）を拾わない。
 
 ## Changed Files
 
@@ -15,15 +17,15 @@
 - `scripts/run-merge.sh`: same wrap pattern (around lines 63 / 71)
 - `scripts/run-verify.sh`: same wrap pattern (around lines 117 / 125)
 - `scripts/run-issue.sh`: same wrap pattern (around lines 71 / 79)
-- `tests/handle-permission-mode-failure.bats`: new file — 4 cases (auto+short, auto+long, bypass, exit-zero) — bash 3.2+ compatible
+- `tests/handle-permission-mode-failure.bats`: new file — 4 cases (auto+short=5s, auto+long=60s, bypass, exit-zero) — bash 3.2+ compatible
 
 ## Implementation Steps
 
-1. Create `scripts/handle-permission-mode-failure.sh` with 3 positional args (`exit_code`, `elapsed`, `permission_mode`). Print diagnostic to stderr only when all conditions match (`permission_mode == "auto"` AND `exit_code != 0` AND `elapsed -le 10`). Exit 0 unconditionally. (→ acceptance criteria: helper file_exists / "Claude Max" grep / "permission-mode: bypass" grep)
+1. Create `scripts/handle-permission-mode-failure.sh` with 3 positional args (`exit_code`, `elapsed`, `permission_mode`). Print diagnostic to stderr only when all conditions match (`permission_mode == "auto"` AND `exit_code != 0` AND `elapsed -le 30`). Exit 0 unconditionally. (→ acceptance criteria: helper file_exists / "Claude Max" grep / "permission-mode: bypass" grep)
 
 2. In each `scripts/run-*.sh` (6 files), insert `SECONDS=0` immediately before `set +e` and `"$SCRIPT_DIR/handle-permission-mode-failure.sh" "$EXIT_CODE" "$SECONDS" "$PERMISSION_MODE"` immediately after `set -e` (before the existing `if [[ $EXIT_CODE -eq 143 ]]` block). Do not modify existing reconcile / banner / exit propagation logic. (parallel with 1) (→ acceptance criteria: 6 run-*.sh grep checks)
 
-3. Create `tests/handle-permission-mode-failure.bats` with 4 `@test` cases: (a) auto + elapsed=5 + exit=1 → stderr non-empty + status 0, (b) auto + elapsed=30 + exit=1 → stderr empty + status 0, (c) bypass + elapsed=5 + exit=1 → stderr empty + status 0, (d) auto + elapsed=5 + exit=0 → stderr empty + status 0. Use `BATS_TEST_TMPDIR` isolation pattern consistent with `tests/get-config-value.bats`. (after 1) (→ acceptance criteria: bats file_exists / rubric / `bats tests/` PASS)
+3. Create `tests/handle-permission-mode-failure.bats` with 4 `@test` cases: (a) auto + elapsed=5 + exit=1 → stderr non-empty + status 0, (b) auto + elapsed=60 + exit=1 → stderr empty + status 0, (c) bypass + elapsed=5 + exit=1 → stderr empty + status 0, (d) auto + elapsed=5 + exit=0 → stderr empty + status 0. Use `BATS_TEST_TMPDIR` isolation pattern consistent with `tests/get-config-value.bats`. (after 1) (→ acceptance criteria: bats file_exists / rubric / `bats tests/` PASS)
 
 ## Verification
 
@@ -39,7 +41,7 @@
 - <!-- verify: grep "handle-permission-mode-failure" "scripts/run-verify.sh" --> `run-verify.sh` がヘルパーを呼ぶ
 - <!-- verify: grep "handle-permission-mode-failure" "scripts/run-issue.sh" --> `run-issue.sh` がヘルパーを呼ぶ
 - <!-- verify: file_exists "tests/handle-permission-mode-failure.bats" --> bats テストが新規作成されている
-- <!-- verify: rubric "tests/handle-permission-mode-failure.bats が (1) permission-mode auto + 短時間 (elapsed=5) + exit_code=1 で診断 stderr が出る (2) permission-mode auto + 長時間 (elapsed=30) + exit_code=1 で診断 stderr が出ない (3) permission-mode bypass + elapsed=5 + exit_code=1 で診断 stderr が出ない の 3 ケースを網羅し、いずれも helper が exit 0 で終了することを assert している" --> heuristic の 3 ケースとヘルパー exit code 0 が単体テストでカバーされている
+- <!-- verify: rubric "tests/handle-permission-mode-failure.bats が (1) permission-mode auto + 短時間 (elapsed=5) + exit_code=1 で診断 stderr が出る (2) permission-mode auto + 長時間 (elapsed=60) + exit_code=1 で診断 stderr が出ない (3) permission-mode bypass + elapsed=5 + exit_code=1 で診断 stderr が出ない の 3 ケースを網羅し、いずれも helper が exit 0 で終了することを assert している" --> heuristic の 3 ケースとヘルパー exit code 0 が単体テストでカバーされている
 - <!-- verify: command "bats tests/" --> 全 bats テストが PASS する
 
 ### Post-merge
@@ -50,7 +52,7 @@
 
 ### bats テストの長時間ケース再現
 
-「`elapsed=30` の長時間ケース」は実時間を 30 秒待たず、ヘルパーの第 2 引数に `30` を直接渡すことで再現する。`SECONDS` builtin の挙動を模倣する必要はない（ヘルパーは引数を受け取るのみ）。
+「`elapsed=60` の長時間ケース」は実時間を 60 秒待たず、ヘルパーの第 2 引数に `60` を直接渡すことで再現する。`SECONDS` builtin の挙動を模倣する必要はない（ヘルパーは引数を受け取るのみ）。`elapsed=60` は threshold 30s の境界から十分離れた値として選択。
 
 ### bash 3.2 互換性
 
@@ -65,7 +67,7 @@
 `/issue 397` の retrospective で 3 点が auto-resolve 済み（Issue body の "Auto-Resolved Ambiguity Points" セクション参照）。本 Spec はこれを前提とする:
 
 1. Helper exit code: 常に 0
-2. Threshold: 固定 10 秒
+2. Threshold: 固定 30 秒（`/issue` 後の議論で 10 秒 → 30 秒に再調整、claude CLI cold start を包含）
 3. `run-*.sh` の exit 伝播: 既存パターン維持
 
 ### `run-*.sh` 改変の影響範囲
