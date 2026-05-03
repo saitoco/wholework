@@ -27,7 +27,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (7 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (45 files)
+├── scripts/             # Utility scripts used by skills and agents (46 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
