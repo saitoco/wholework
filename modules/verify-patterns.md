@@ -282,6 +282,38 @@ Example:
 
 The `section_contains` check catches cases where content was added to the wrong section or omitted entirely — false positives that `rubric` alone may miss due to LLM variance.
 
+### 10. Opportunistic Post-Merge Conditions — Attach Verify Commands and Prefer auto Classification
+
+When writing post-merge conditions that are mechanically verifiable, attach a `<!-- verify: ... -->` verify command and classify them as `verify-type: auto` rather than `verify-type: opportunistic`.
+
+**Background**: Conditions tagged `verify-type: opportunistic` without a verify command fall into "Items Requiring User Verification" in `/verify` output and are excluded from automatic consumption in `/auto` runs. This was observed in #365, where post-merge conditions could not be automatically consumed because they lacked verify commands.
+
+**Priority rule: `auto` over `opportunistic`**
+
+If a post-merge condition can be verified mechanically — file existence, text content, CI result — attach a verify command and omit the `verify-type: opportunistic` tag (the default classification is `auto` when a verify command is present). Reserve `verify-type: opportunistic` only for conditions that genuinely require runtime observation or human judgment that cannot be expressed as a mechanical check.
+
+**Decision procedure:**
+
+1. For each post-merge condition, ask: "Can this be verified with a `grep`, `file_contains`, `github_check`, or similar command?"
+2. If yes: attach the verify command; omit `verify-type: opportunistic` (defaults to `auto`)
+3. If no: retain `verify-type: opportunistic` without forcing an inaccurate verify command
+
+**Examples:**
+
+| Condition | Avoid | Prefer |
+|-----------|-------|--------|
+| "New section heading exists in docs" | No verify command → `verify-type: opportunistic` (manual) | `grep "^### Target Heading" "docs/..."` → `verify-type: auto` |
+| "CI workflow passes after merge" | `verify-type: opportunistic` (manual) | `github_check "gh run list --workflow=ci.yml ..."` → `verify-type: auto` |
+| "Feature works correctly in real usage" | — | `verify-type: opportunistic` (human judgment required) |
+
+**Recommended pattern for mechanically verifiable post-merge conditions:**
+
+```
+- [ ] <!-- verify: grep "pattern" "path" --> Condition description
+```
+
+Omitting `verify-type: opportunistic` when a verify command is attached is correct — conditions with verify commands are classified as `auto` by default.
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
