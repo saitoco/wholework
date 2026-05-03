@@ -56,3 +56,28 @@ Option 1（共有モジュール化）を採用：Improvement Proposal 収集・
 - XL route でアノマリーなし（`### Improvement Proposals` が "N/A"）の場合、共有モジュールは "No improvement proposals" を出力して return するため、冗長な動作はない。
 - `/verify` Step 13 が先に実行された場合（通常の M/L pr-route）、共有モジュール内の open Issues 重複チェックが、`/verify` Step 13 で既に起票されたものをスキップするため、二重起票は発生しない。
 - `docs/structure.md` の modules/ファイル数: 追加前 32 files（`ls modules/ | wc -l` で確認）→ 追加後 33 files
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — 実装は Spec の実装ステップどおりに進行し、設計からの逸脱なし。
+
+### Design Gaps/Ambiguities
+- `modules/retro-proposals.md` の Processing Steps 中に domain-loader の呼び出し（`SKILL_NAME=verify`）を追加したが、Spec の Input 欄には domain file content の受け渡しが明記されていなかった。モジュールが self-contained である（/auto から呼び出した際も domain-loader が使えること）ように、モジュール内部で `domain-loader.md` を読み込む設計とした。
+
+### Rework
+- N/A — 一発で実装が確定。
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+`skills/verify/SKILL.md` の Step 13 冒頭に残る `title-normalizer.md` 読み込みと、`modules/retro-proposals.md` の Step 1 での再読み込みが二重になっている（CONSIDER 指摘）。モジュールを self-contained 設計に変更したことが Spec の実装ステップ 2 の記述（「title-normalizer 読込みは Step 13 冒頭に残す」）と矛盾している。Spec 更新か実装調整のいずれかで整合を取る改善余地がある。
+
+### Recurring Issues
+
+なし。
+
+### Acceptance Criteria Verification Difficulty
+
+Pre-merge 条件3件はすべて `rubric` タイプで、diffから機械的に判定可能だった（UNCERTAIN 0件）。`rubric` タイプは verify-executor による自動判定が難しいが、今回はdiffが明確でAI判定が安定していた。Post-merge の実機確認条件1件は `opportunistic` タイプとして適切に設定されており、verify commandの精度は良好。
