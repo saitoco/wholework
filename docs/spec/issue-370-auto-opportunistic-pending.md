@@ -70,3 +70,14 @@ Issue #365 verify iter 2 でこのパターンが確認された: Issue が `pha
 | 1 | verify command の OR パターン | `section_contains` 2 つに分割 | ripgrep は ERE を使用するため `\|` がリテラル解釈されるリスクがある。`section_contains` で Step 5 スコープに限定することで誤検知も防げる |
 | 2 | opportunistic pending 状態の検知方法 | verify 後に `gh issue view` でラベル確認 | ラベル確認は最もシンプルかつ確実。`phase/verify` が verify 後も残っている = opportunistic pending |
 | 3 | post-merge 条件の verify-type | opportunistic | `/auto` を実行して確認する性質のため機械的な verify command は不適切 |
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
