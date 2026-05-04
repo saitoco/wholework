@@ -120,6 +120,15 @@ rubric "validate-recovery-plan.sh checks both op and cmd fields: op filters allo
 
 This makes sub-field coverage an explicit semantic assertion, allowing the grader to detect missing `cmd` (or other sub-field) checks before merge.
 
+**Exit code verification pattern in rubric text:**
+When a rubric condition requires exit code verification (e.g., "script exits with 0 on success, non-zero on error"), the rubric text must explicitly name the `run` + `[ "$status" -eq 0 ]` assertion pattern:
+
+```
+rubric "script.sh exits 0 on valid input: bats test uses run bash script.sh and [ \"$status\" -eq 0 ]"
+```
+
+The implicit assertion pattern (`bash "$SCRIPT" ...` without `run`) relies on bats `set -e` behavior and can yield UNCERTAIN judgment from the grader. By naming `run bash "$SCRIPT" ...` + `[ "$status" -eq 0 ]` explicitly in the rubric text, the grader can detect bats tests that lack an explicit status assertion.
+
 **Managed Agents migration intent:**
 `always_allow` permission is set on `rubric` for 1:1 portability to Anthropic Managed Agents `permission_policy` in a future migration.
 
