@@ -30,3 +30,26 @@
 
 - `detect-wrapper-anomaly.sh` は `--log <path>` で渡された特定のログファイルのみをスキャンするため、bats テストファイル自体に `successfully committed` が含まれても自己参照誤検知は発生しない
 - 現行パターン `grep -qiE "..."` は `-i` フラグで大文字小文字を区別しないため、`Successfully committed` 等も一致する
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec の実装ステップ通りに実装完了。
+
+### Design Gaps/Ambiguities
+- なし。
+
+### Rework
+- なし。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- なし。実装は Spec の Implementation Steps に完全に準拠しており、3フレーズの追加とテストケースがすべて期待通り実装されていた。
+
+### Recurring issues
+- verify コマンド構文の問題（ripgrep 非互換の `\|` 表記）が AC2 で検出された。verify-executor は ripgrep を使用するが、AC 作成時に `\|` を alternation として記述したため、実際の検証で FAIL/UNCERTAIN になる可能性がある。verify コマンドを書く際は bare `|` を使うよう、Issue テンプレートまたはドキュメントにガイドラインを追記することで再発防止が期待できる。
+- pre-existing な Forbidden Expressions 違反（main の別 Spec ファイル）が pull_request CI で検出され、ブロッカーとなった。main ブランチの健全性チェックを定期的に行うか、push イベント CI と pull_request イベント CI の結果を明確に区別する仕組みが有効かもしれない。
+
+### Acceptance criteria verification difficulty
+- AC2 の verify コマンド `grep "pushed to\|changes have been committed"` が ripgrep 非互換のため、verify-executor での自動検証が FAIL/UNCERTAIN になる可能性があった。実際には `pushed to` と `changes have been committed` をそれぞれ個別の Grep 呼び出しで確認した。verify コマンドは bare `|` を使用する（例: `grep "pushed to|changes have been committed"`）ことで verify-executor との互換性が保たれる。

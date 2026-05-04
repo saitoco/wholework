@@ -71,7 +71,7 @@ elif grep -q "watchdog: kill and state not reached" "$LOG_FILE"; then
   ANOMALY_DESC="Watchdog killed the process in phase \`$PHASE\` (exit code $EXIT_CODE): \`watchdog: kill and state not reached\` detected. The phase did not complete within the timeout."
   IMPROVEMENT_HINT="Increase \`watchdog-timeout-seconds\` in \`.wholework.yml\` or improve liveness signals (progress output) to prevent false-positive kills. Related: #308."
 elif [[ "$EXIT_CODE" == "0" ]]; then
-  if grep -qiE "完了しました|commit and push" "$LOG_FILE" && \
+  if grep -qiE "完了しました|commit and push|successfully committed|pushed to|changes have been committed" "$LOG_FILE" && \
      ! git log --oneline -5 2>/dev/null | grep -q "#${ISSUE_NUMBER}"; then
     PATTERN_NAME="silent-no-op"
     ANOMALY_DESC="LLM reported success in phase \`$PHASE\` (exit code 0) but no commit for #$ISSUE_NUMBER found in recent git log. Possible silent no-op: output indicated completion but no code was committed. Reference: #365."
