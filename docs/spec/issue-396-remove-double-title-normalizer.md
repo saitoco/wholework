@@ -46,3 +46,30 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件は `file_not_contains` / `file_contains` / `grep` の 3 パターンで明確に検証可能に設計されており、曖昧さがない。
+- Issue body の「Auto-Resolved Ambiguity Points」に、修正前の状態確認クライテリア（修正後に意図的に FAIL になるため削除）を明示的に記載しており、意思決定の透明性が高い。
+
+#### design
+- Spec が「`skills/verify/SKILL.md` 1 ファイルのみ変更」と明示しており、実装範囲が明確だった。
+- `modules/retro-proposals.md` の self-contained 設計維持について Notes に記載されており、設計判断の根拠が残っている。
+
+#### code
+- 1 行変更（1 insertion, 1 deletion）で完結。fixup/amend なし、リワークなし。Spec 通りに実装。
+
+#### review
+- パッチルート（PR なし）のため、コードレビューは未実施。変更が 1 行と小さく、自動検証で十分カバーできた。
+
+#### merge
+- main へのダイレクトコミット。コンフリクトなし、CI 問題なし。
+
+#### verify
+- 3 条件すべて PASS。verify コマンドが実装対象のファイル内容を直接検証する設計で、誤判定リスクがない。
+
+### Improvement Proposals
+- N/A
