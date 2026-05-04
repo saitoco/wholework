@@ -32,3 +32,17 @@
 
 - `modules/retro-proposals.md` の self-contained 設計は維持する（`/auto` Step 4a からも直接呼び出されるため）
 - 削除後も `HAS_SKILL_PROPOSALS` の reuse 文は Step 13 に残す（`retro-proposals.md` の Input として必要）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A（Spec 通りに実装）
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
