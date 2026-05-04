@@ -30,3 +30,14 @@
 
 - `detect-wrapper-anomaly.sh` は `--log <path>` で渡された特定のログファイルのみをスキャンするため、bats テストファイル自体に `successfully committed` が含まれても自己参照誤検知は発生しない
 - 現行パターン `grep -qiE "..."` は `-i` フラグで大文字小文字を区別しないため、`Successfully committed` 等も一致する
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec の実装ステップ通りに実装完了。
+
+### Design Gaps/Ambiguities
+- なし。
+
+### Rework
+- なし。
