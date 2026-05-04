@@ -582,7 +582,7 @@ Only if `.wholework.yml` in the project has `opportunistic-verify: true`, Read `
 
 ### Step 13: Collect Improvement Proposals and Create Issues
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/title-normalizer.md` and follow the "Processing Steps" section to normalize titles (used for Issue title normalization when creating Issues). Reuse `HAS_SKILL_PROPOSALS` already fetched via `detect-config-markers.md` in Step 4 (if `opportunistic-verify.md` in Step 12 fetched it again, reuse that result).
+Reuse `HAS_SKILL_PROPOSALS` already fetched via `detect-config-markers.md` in Step 4 (if `opportunistic-verify.md` in Step 12 fetched it again, reuse that result).
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/retro-proposals.md` and follow the "Processing Steps" section.
 
