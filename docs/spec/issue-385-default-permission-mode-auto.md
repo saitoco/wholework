@@ -121,3 +121,23 @@ Spec 作成時の自動解決:
 1. **SECURITY.md の `### Migration` 配置**: `## Permission Modes` 直下のサブ見出しとして配置（top-level `## Migration` ではなく）。理由: migration はモード選択の一部であり、上位コンテキストを保つ方が読み手の流れが自然。
 2. **`### bypass mode` 見出しの新表記**: `### bypass mode (legacy)` を採用。alternative の `(opt-out)` よりも legacy が「過去 default だった」歴史性を伝えやすく、product.md vision との整合性も高い。
 3. **README.md の 1 行 description における auto / bypass の語順**: auto を先頭に配置し、bypass を opt-in として後置。`(line 55: 1 sentence)` 単一行のため副節として処理。
+
+## spec retrospective
+
+### Minor observations
+
+- Issue body の auto-resolved 「翻訳ドキュメントは `/doc translate` に委ねる」と `docs/translation-workflow.md`「skill 実行時に `docs/ja/` を sync する義務」が衝突していた。Spec 段階で conflict detection が機能し、translation-workflow.md 優先に解決して Changed Files に ja mirror を追加した。Issue refinement 段階でこの conflict が拾えていれば手戻りが無かった点は学び。
+- `section_contains "SECURITY.md" "### Choosing a Mode" "default"` 等の verify command は flip 前後で word "default" がどちらにも登場するため、flip 方向の検証としては弱い。verbatim copy ルール優先で本 Spec では維持したが、より厳密な検証が必要な場合は rubric への置き換えを検討する余地がある。
+
+### Judgment rationale
+
+- **`scripts/spawn-recovery-subagent.sh` を反転対象に含める**: `run-*.sh` と同じ `get-config-value.sh permission-mode <fallback>` パターンで permission-mode を読む consumer として動作整合上含めるべきと判断。Issue body 旧版で抜けていたが、Issue refinement round 2 で Acceptance Criteria に明示追加済み。
+- **`handle-permission-mode-failure.sh` のメッセージは未変更**: helper の trigger 条件（`PERMISSION_MODE == "auto"` AND `exit_code != 0` AND `elapsed <= 30`）は default 値とは独立で、remediation 文言「switch to bypass」は default 反転後も正しい案内のまま。touch しないことで bats test（`tests/handle-permission-mode-failure.bats`）への影響もゼロ。
+- **`docs/ja/environment-adaptation.md` を Changed Files から除外**: `permission-mode` への言及が無いため content 変更不要と判定（grep で確認済み）。translation-workflow.md の sync 義務は「内容変更があれば」が前提で、無変更ファイルまで touch は不要。
+- **`README.ja.md` を本 PR 対象外**: structure.md line 70 で `README.{lang}.md` は `/doc translate {lang}` 生成物と定義されており、英語原文に追随する hand-maintenance 対象では無い。本 PR merge 後に `/doc translate ja` で同期させる運用に従う。
+
+### Uncertainty resolution
+
+- **`SECURITY.md` 新 `### Migration` サブ見出しの位置**: `## Permission Modes` 直下に配置（top-level `## Migration` ではなく）。`section_contains "SECURITY.md" "## Permission" "Migration"` の verify が PASS するためには `## Permission Modes` セクション内に "Migration" 文字列が含まれる必要があり、これを満たす配置として確定。
+- **`docs/guide/customization.md` 表のセル値検証**: 既存の `file_contains "default: auto"` は YAML 例コメント（line 49）のみを捕捉し、Available Keys 表（line 86）の `\`"auto"\`` セル値は捕捉できない。Issue body 側で rubric を追加済みのため、この弱点は補完されている。
+- **bats テストへの影響**: `tests/run-*.bats` は setup() で permission-mode を明示設定するため default 反転に非依存。`tests/handle-permission-mode-failure.bats` は diagnostic message を assert するため helper を touch しない方針で影響ゼロ。`tests/spawn-recovery-subagent.bats` は get-config-value.sh モックで bypass 返却を hardcode しており影響ゼロ。Step 9 の `bats tests/` で全数確認する。
