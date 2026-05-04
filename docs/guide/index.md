@@ -28,6 +28,7 @@ No prior Wholework experience required.
 | [Troubleshooting](troubleshooting.md) | Fix common issues: auth errors, plugin failures, verify failures |
 | [Adapter Authoring Guide](adapter-guide.md) | Write project-specific adapters for MCP servers, CLI tools, and external services |
 | [Figma Best Practices](figma-best-practices.md) | Design Figma files for optimal AI code generation accuracy |
+| [Scripting Guide](scripting.md) | Shell scripting conventions: jq `// empty` guard, error handling |
 
 ## Terminology
 

@@ -39,7 +39,7 @@ wholework/
 │   ├── versioning.md    # リリース versioning ポリシー（project）
 │   ├── routines-adoption.md # Routines 採用ロードマップと PoC 知見（project）
 │   ├── translation-workflow.md # docs/ja/ ミラー同期ルールと手順（project）
-│   ├── guide/           # ユーザー向けマニュアル（index、quick-start、workflow、customization、troubleshooting、adapter-guide、figma-best-practices）（project）
+│   ├── guide/           # ユーザー向けマニュアル（index、quick-start、workflow、customization、troubleshooting、adapter-guide、figma-best-practices、scripting）（project）
 │   ├── {lang}/          # /doc translate {lang} が生成する言語別翻訳（docs/{lang}/）
 │   ├── spec/            # Issue 仕様
 │   ├── reports/         # 最適化・監査レポート
