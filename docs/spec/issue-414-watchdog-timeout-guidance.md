@@ -53,3 +53,17 @@ Issue #385 の `/auto` 実行中に `run-code.sh` の `claude` プロセスが w
 - AC1 の `grep "thinking"` は実装後に新規追加するテキストで満たされる（実装前は存在しない）
 - `docs/guide/customization.md` は `docs/` 直下ではなく `docs/guide/` にあるが、`docs/ja/guide/customization.md` という日本語ミラーが存在するため、`translation-workflow.md` の sync 趣旨に則り日本語ミラーも更新する
 - README.md はすでに `customization.md` へのリンクを持つ（L51: `See the [Customization guide](docs/guide/customization.md) for details`）ため本 Issue の対象外
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
