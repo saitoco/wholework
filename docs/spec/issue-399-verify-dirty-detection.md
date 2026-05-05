@@ -29,3 +29,29 @@
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec が実装後に作成されたため、事前の設計合意ドキュメントとしての役割を果たせていない。ただし Issue 本文の "Auto-Resolved Ambiguity Points" が Spec の代替として機能しており、判定スコープの根拠が明確に記録されている点は良い。
+
+#### design
+- 判定スコープを `docs/spec/issue-N-*.md` のみに限定した設計は適切。Issue #393 の発生パターンに対して最小スコープで対応しており、過度な一般化を避けている。
+
+#### code
+- 1コミットで完了。Code Retrospective に rework なしと記録されており、実装がシンプルだったことを裏付けている。
+
+#### review
+- patch route のため PR レビューなし。SKILL.md の変更だがコードの影響範囲が Step 1 のみかつロジックが単純なため、レビューなしでも品質上の問題はなかった。
+
+#### merge
+- 直接 main コミット（patch route）。コンフリクトなし、クリーンなマージ。
+
+#### verify
+- 3条件すべて PASS。verify コマンド（`section_contains` / `section_not_contains`）が適切に実装検証をカバーしており、自動検証が高精度で機能した。
+- Post-merge opportunistic 条件（実際のシナリオ再現確認）は自動検証不可のため user-deferred のまま。この種の統合シナリオテストには bats テスト化が有効だが、今回のスコープ外。
+
+### Improvement Proposals
+- 今後同様のシナリオ検証が必要な条件には `command "bats tests/..."` 形式の verify command を付与することで自動検証に昇格できる。opportunistic 条件を bats テストでカバーすることを検討する（別 Issue として起票可）。
