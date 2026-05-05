@@ -36,6 +36,32 @@
 - 既存の `watchdog-kill` パターンが先に一致するシナリオ（watchdogタイムアウト後に reconciler も失敗する #386 のケース）では、`reconciler-header-mismatch` は検出されない（first-match-wins仕様）。本パターンはウォッチドッグ kill なしで reconciler が `matches_expected: false` を返すケース（ヘッダー乖離）を主ターゲットとする
 - `detect-wrapper-anomaly.sh` は現在 `run-auto-sub.sh` から exit_code=0 の場合のみ呼び出される。非ゼロ exit_code でのパターン検出は将来的な `run-auto-sub.sh` 拡張に委ねる（本 Issue のスコープ外）
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- accept criteria の `grep "Review Summary"` と Spec の検出条件 `grep -q "Review Response Summary"` が不整合のまま設計された。Code Retrospective に記録された rework の根本原因。Spec 策定時に verify command と実装文字列の整合を明示的に確認するプロセスがあれば防げた。
+
+#### design
+- `run-review.sh` の変更スコープを ambiguity 3 で「実装詳細に委任」としたが、Spec の Changed Files セクションには `run-review.sh` の変更内容が明記されている。委任と記述の不整合は軽微だが、Spec の SSoT 性を損なう。
+
+#### code
+- `Review Response Summary` → `Review Summary` への変更と bats テスト修正という rework が発生（Code Retrospective 記録済み）。Spec の verify command と実装の文字列整合を実装前に確認することで防止可能。
+
+#### review
+- パッチルートのため PR レビューなし。rework はコードレビューで指摘できた可能性があるが、S サイズでの省略判断は妥当。
+
+#### merge
+- パッチルート（直接 main コミット）。競合なし。
+
+#### verify
+- CI FAIL の根本原因は Issue #394 の実装とは無関係（`docs/spec/issue-385-default-permission-mode-auto.md` の `verify hint` 表記）。`Run bats tests` ジョブは SUCCESS。Forbidden Expressions check の CI failure は既存ノイズで、Issue #394 の受け入れ条件としての CI success 判定を阻害している。この既存ノイズは `docs/spec/issue-401-detect-dirty-working-tree.md` にも記録済みであり、別 Issue での対応が必要。
+
+### Improvement Proposals
+- Spec 策定時に verify command で使用する文字列と実装での検出文字列の整合を明示的に確認するチェックポイントを `/spec` ワークフローに追加することを検討（Issue #394 の rework パターンの再発防止）
+- `Forbidden Expressions check` の対象を PR 差分ファイルに限定するか、既存 Spec ファイルの `verify hint` 表記を一括修正する Issue を作成することで CI ノイズを除去する（`docs/spec/issue-401` 関連）
+
 ## Code Retrospective
 
 ### Deviations from Design
