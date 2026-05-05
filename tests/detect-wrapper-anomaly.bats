@@ -159,3 +159,27 @@ MOCK
     [ "$status" -eq 0 ]
     [ -z "$output" ]
 }
+
+@test "code completed no PR: detects matches_expected false with phase code-pr" {
+    printf '"matches_expected":false\n"phase":"code-pr"\n' > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 143 --issue 385 --phase code
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"code-completed-no-pr"* ]]
+    [[ "$output" == *"### Orchestration Anomalies"* ]]
+    [[ "$output" == *"### Improvement Proposals"* ]]
+    [[ "$output" == *"#415"* ]]
+}
+
+@test "code completed no PR: no detection when only matches_expected false present" {
+    printf '"matches_expected":false\nno relevant context here\n' > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 143 --issue 385 --phase code
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
+@test "code completed no PR: no detection when only phase code-pr present" {
+    printf '"phase":"code-pr"\nsome other content\n' > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 143 --issue 385 --phase code
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
