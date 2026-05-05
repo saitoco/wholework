@@ -40,7 +40,8 @@ steering-docs-path: docs          # Where steering documents live
 production-url: https://yourapp.example.com
 
 # Watchdog timeout (default: 1800 seconds)
-# Increase for slow repos, Size L+ tasks, or slow machines
+# Claude's extended thinking time on Size L+ tasks (especially Opus with high effort)
+# can produce silent periods exceeding 1800 seconds. Set to 3600 for meta-development.
 watchdog-timeout-seconds: 3600
 
 # Patch lock timeout for main-branch push (default: 300 seconds; lock is held only during git merge + push)
@@ -81,7 +82,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `capabilities.browser` | boolean | `false` | Enable Playwright-based verify commands |
 | `capabilities.mcp` | list | `[]` | MCP tool names available to skills |
 | `capabilities.{name}` | boolean | `false` | Dynamic capability mapping (e.g., `capabilities.invoice-api: true`) |
-| `watchdog-timeout-seconds` | integer | `1800` | Watchdog timeout in seconds before killing a silent `claude -p` process. Increase for slow repos, Size L+ tasks, or slow machines (e.g., `3600`). Values ≤0 fall back to the default. |
+| `watchdog-timeout-seconds` | integer | `1800` | Watchdog timeout in seconds before killing a silent `claude -p` process. Claude's extended thinking time on Size L+ tasks (especially Opus with high effort) can produce silent periods exceeding 1800 seconds; set to `3600` for meta-development or Size L+ work. Values ≤0 fall back to the default. |
 | `patch-lock-timeout` | integer | `300` | Lock acquisition timeout in seconds for `git merge --ff-only` + `git push origin main` (the only protected critical section). The default is generous since the lock is held only for seconds. Increase only if push consistently fails to acquire. Values ≤0 or non-numeric fall back to `300`. |
 | `permission-mode` | string | `"auto"` | Permission mode for `/auto` subprocess. `auto` enables `--permission-mode auto` with allow rules template (see `docs/guide/auto-mode-template.json`); `bypass` uses `--dangerously-skip-permissions` (legacy / opt-out). |
 | `verify-max-iterations` | integer | `3` | Limit verify-reopen loop iterations; stops at N failures and leaves Issue in `phase/verify` for human judgment. Values ≤0, >20, or non-numeric fall back to `3`. |

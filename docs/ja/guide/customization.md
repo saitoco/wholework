@@ -34,7 +34,8 @@ steering-docs-path: docs          # steering documents の配置先
 production-url: https://yourapp.example.com
 
 # watchdog タイムアウト（デフォルト: 1800 秒）
-# 遅い repo、Size L 以上のタスク、または低速マシンでは増やすことを推奨
+# Size L+ タスク（特に Opus / xhigh effort）では claude の長い思考時間により
+# 1800 秒を超える silent 期間が発生しうる。メタ開発用途では 3600 を推奨。
 watchdog-timeout-seconds: 3600
 
 # main ブランチへの push 用 lock タイムアウト（デフォルト: 300 秒、lock は git merge + push 中のみ保持）
@@ -75,7 +76,7 @@ capabilities:
 | `capabilities.browser` | boolean | `false` | Playwright ベースの verify command を有効化する |
 | `capabilities.mcp` | list | `[]` | スキルから利用できる MCP ツール名 |
 | `capabilities.{name}` | boolean | `false` | 動的 capability マッピング（例: `capabilities.invoice-api: true`） |
-| `watchdog-timeout-seconds` | integer | `1800` | watchdog が silent な `claude -p` プロセスを kill するまでのタイムアウト秒数。遅い repo、Size L 以上のタスク、低速マシンでは増やす（例: `3600`）。0 以下の値はデフォルトにフォールバック。 |
+| `watchdog-timeout-seconds` | integer | `1800` | watchdog が silent な `claude -p` プロセスを kill するまでのタイムアウト秒数。Size L+ タスク（特に Opus / xhigh effort）では claude の長い思考時間により 1800 秒を超える silent 期間が発生しうる。メタ開発や Size L+ 作業では `3600` を推奨。0 以下の値はデフォルトにフォールバック。 |
 | `patch-lock-timeout` | integer | `300` | `git merge --ff-only` + `git push origin main` の lock 取得タイムアウト秒数。lock 保持は数秒のためデフォルトは余裕値。push 取得が常時失敗する場合のみ増やす。0 以下または非数値の場合は `300` にフォールバック。 |
 | `permission-mode` | string | `"auto"` | `/auto` サブプロセスの permission mode。`auto` は `--permission-mode auto` を allow rules テンプレートと共に有効化（`docs/guide/auto-mode-template.json` 参照）; `bypass` は `--dangerously-skip-permissions` を使用（レガシー / オプトアウト）。 |
 | `verify-max-iterations` | integer | `3` | verify-reopen ループの最大試行回数。N 回 FAIL した時点で停止し、Issue を `phase/verify` に留めて人間の判断を促す。0 以下、20 超、または非数値の場合は `3` にフォールバック。 |
