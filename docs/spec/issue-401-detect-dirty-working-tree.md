@@ -46,3 +46,17 @@
 ## Notes
 
 - なし
+
+## Code Retrospective
+
+### Deviations from Design
+
+- なし
+
+### Design Gaps/Ambiguities
+
+- `detect-wrapper-anomaly.sh` のパターンマッチ順序: 新しい `dirty-working-tree` パターンは `watchdog-kill` の後、`EXIT_CODE == 0` チェックの前に配置。Spec の挿入位置指定通りで問題なし。
+
+### Rework
+
+- なし
