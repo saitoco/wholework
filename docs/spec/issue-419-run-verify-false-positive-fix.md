@@ -46,3 +46,17 @@
 - New test name recommendation: `@test "false-positive: VERIFY_FAILED in body text does not cause non-zero exit"` — mock claude outputs `"This AC mentions the VERIFY_FAILED scenario from issue #393"` (not at line start), asserts `[ "$status" -eq 0 ]`
 - `tests/run-verify.bats` will contain "VERIFY_FAILED" as a test fixture string, but the pattern `^VERIFY_FAILED` checks only verify output temp files, not source files — no self-reference exclusion needed
 - Verify commands copied verbatim from Issue body `## Acceptance Criteria > Pre-merge`
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- Spec Step 2 noted updating "near line 77" and "also apply consistent phrasing near line 123 (open PR case)". The line 123 context was a description line (`If \`OPEN_PR\` is not empty, output \`VERIFY_FAILED\` and abort:`) that did not itself say "standalone line" or "line-anchored" — updated it to match the same wording for consistency.
+
+### Rework
+
+- N/A
