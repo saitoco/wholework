@@ -252,6 +252,37 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ---
 
+## code-completed-no-pr
+
+### Symptom
+- `run-code.sh` exits with code 143 (watchdog kill) and the wrapper log contains a line matching `reconcile-phase-state result:` with `"matches_expected":false` and `"phase":"code-pr"`
+- `scripts/detect-wrapper-anomaly.sh` emits pattern: `code-completed-no-pr`
+- The worktree branch contains commits (implementation was completed) but no open PR exists for that branch
+
+### Applicable Phases
+- code (PR route)
+
+### Fallback Steps
+1. Identify the worktree branch: `git branch | grep "worktree-code+issue-N"` (where N is the issue number)
+2. Check out the worktree branch: `git checkout worktree-code+issue-N`
+3. Rebase onto the latest main to incorporate any concurrent patches: `git rebase origin/main`
+4. Push the branch to the remote: `git push origin worktree-code+issue-N`
+5. Create the PR: `gh pr create --title "Issue #N: <summary>" --base main --body "..."`
+6. Continue with `/review <PR-number>` to proceed to the review phase
+
+### Escalation
+- If `git rebase` encounters conflicts, resolve each conflict manually, then `git rebase --continue`; if conflicts cannot be resolved safely, abort with `git rebase --abort` and request human intervention
+- If the worktree directory has already been cleaned up (`.claude/worktrees/` entry is absent), recover commits from `git reflog` or the orphaned worktree branch
+- Recovery sub-agent (#316) can be invoked when the root cause of the anomaly is unclear or the rebase conflicts are complex
+
+### Rationale
+- First observed in Issue #385: watchdog kill after all commits were complete but before `gh pr create` was executed; the parent session manually ran rebase + push + PR creation
+- `reconcile-phase-state.sh` `_completion_code_pr()` returns `matches_expected:false` only when the expected PR is absent (the sole mismatch case); combined with `"phase":"code-pr"` in the JSON output, this uniquely identifies the code-completed-no-pr scenario
+- `run-code.sh` now logs `reconcile-phase-state result:` (added in #415) so Tier 2 can detect this pattern from the wrapper log; prior to this change, `_reconcile_out` was silently discarded and Tier 2 would return empty output (unknown pattern)
+- The `code-completed-no-pr` check precedes `watchdog-kill` in the detector to win the first-match-wins priority, since both signatures can co-occur in the same log
+
+---
+
 ## Operational Notes
 
 This catalog is consumed by:
