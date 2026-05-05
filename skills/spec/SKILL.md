@@ -310,6 +310,16 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-patterns.md` and follow the "Processi
 
 For acceptance conditions where exact string matching is unreliable (semantic equivalence, subjective quality, meaning-level intent), consider the `rubric` verify command instead of hard-pattern commands. See `modules/verify-patterns.md` §9 for selection criteria.
 
+**String-matching verify command existence check:**
+
+For string-matching verify commands (`grep`, `file_contains`, `file_not_contains`, `section_contains`), confirm the search pattern actually appears (or will appear) in the implementation target file before finalizing the Spec:
+
+1. For `grep "<pattern>" "<file>"` and `file_contains "<file>" "<pattern>"`: open the target file and confirm the exact pattern string is present, or confirm it is a string the implementation will introduce. If the file does not yet exist, record the expected pattern in the Spec's "Uncertainties" section.
+2. For `file_not_contains "<file>" "<pattern>"`: confirm the pattern currently exists in the file (for removal verification) or document why its absence is the expected final state.
+3. For `section_contains "<file>" "<section>" "<pattern>"`: verify both that the section heading exists in the file and that the search pattern appears within that section (or will after implementation).
+
+If a pattern cannot be confirmed at Spec creation time, record the uncertainty explicitly (file path, section, pattern) in the Spec's "Uncertainties" section so `/code` can verify it before implementation.
+
 **Notes and verify command consistency (immediately after creating verify commands):**
 
 If Notes contain implementation direction statements, verify they do not contradict the corresponding verify commands. Correct discrepancies immediately.
