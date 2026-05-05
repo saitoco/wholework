@@ -47,6 +47,35 @@
 
 - なし
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body の verify command 形式に曖昧さがあり（`grep -E "A\|B"` vs 分割）、自動解決した記録が `## 自動解決した曖昧ポイント` に残っている。解決方針は合理的で実装と整合している。
+- Changed Files と Implementation Steps が具体的で、Spec としての品質は高い。
+
+#### design
+- 設計変更は Spec に反映済み。`## dirty-working-tree` エントリのスキーマ（Symptom / Applicable Phases / Fallback Steps / Escalation / Rationale）は既存パターンと一貫している。
+
+#### code
+- Code Retrospective より: 実装逸脱・リワークともになし。パターンマッチ挿入位置（watchdog-kill の後、EXIT_CODE == 0 チェックの前）は Spec 指定通り。
+
+#### review
+- Review Retrospective より: `ANOMALY_DESC` の `#393` 参照がテストでアサートされていない漏れを検出し修正済み（SHOULD→対応）。
+- `EXIT_CODE` ガード欠如の CONSIDER 指摘はスキップ（既存パターンとの一貫性を優先）。
+- Forbidden Expressions check CI 失敗は PR #408 の変更と無関係の既存ファイル (`docs/spec/issue-385-default-permission-mode-auto.md`) によるノイズ。レビュー判断に影響しなかったが、既存 spec ファイルのクリーンアップが必要。
+
+#### merge
+- PR #408 でコンフリクトなく正常マージ。CI は Forbidden Expressions check 以外は全 SUCCESS。
+
+#### verify
+- 全4 pre-merge 条件が PASS。`grep` + `rubric` の組み合わせにより、ファイル存在確認と意味的検証を両立。
+- Post-merge の `verify-type: opportunistic` 条件が未チェックのため `phase/verify` に遷移。次回シナリオ発生時に手動確認が必要。
+
+### Improvement Proposals
+- `docs/spec/issue-385-default-permission-mode-auto.md` に残存する `verify hint` 表記が CI Forbidden Expressions check を誤作動させるノイズ源。別 Issue で修正すること（Skill infrastructure 改善）。
+
 ## Code Retrospective
 
 ### Deviations from Design
