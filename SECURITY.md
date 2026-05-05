@@ -1,6 +1,6 @@
 # Security Policy
 
-This document describes the side effects, required permissions, and permission-bypass behavior of Wholework skills. Reviewers and users should read this before running Wholework in their repositories.
+This document describes the side effects, required permissions, and permission mode options of Wholework skills. Reviewers and users should read this before running Wholework in their repositories.
 
 ## Side Effects
 
