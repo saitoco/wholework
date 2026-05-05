@@ -26,3 +26,28 @@
 - Duplicate candidates: なし
 - Stale check: 起票直後のため対象外
 - Dependency check: blocked-by なし
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 起票と同時に Spec も作成済み。Acceptance Criteria は `file_not_contains` / `section_contains` / `file_contains` の組合せで pre-merge verify 可能な構成が取られており、曖昧さなし。workflow.md 回帰確認条件（条件6）を明示的に追加しており、削除方向の変更が誤って SSoT を壊さないことを担保している点が適切。
+
+#### design
+- 実装方針は明確（tech.md の運用仕様段落を参照リンク1行に置換、設計判断は残す）。docs/ja/tech.md も同時更新しており、翻訳対称性を維持した。
+
+#### code
+- 実装はコミット1本（`61d0d8c`）で完結。2ファイル変更のみの最小変更。fixup/amend なし、コードレトロスペクティブ課題なし。
+
+#### review
+- PR なし（patch route）のためレビューコメントなし。XS サイズの機械的変更であり、verify コマンドによる自動確認で代替。
+
+#### merge
+- patch route で直接 main コミット。コンフリクトなし。Signed-off-by あり。
+
+#### verify
+- 全6条件 PASS。`file_not_contains` 2件・`section_contains` 2件・`file_contains` 2件がすべて期待通りに機能。Post-merge に manual 条件が1件残存（次回 `/auto` 運用仕様変更時の実地確認）。
+
+### Improvement Proposals
+- N/A
