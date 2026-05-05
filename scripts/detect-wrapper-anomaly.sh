@@ -70,6 +70,10 @@ elif grep -q "watchdog: kill and state not reached" "$LOG_FILE"; then
   PATTERN_NAME="watchdog-kill"
   ANOMALY_DESC="Watchdog killed the process in phase \`$PHASE\` (exit code $EXIT_CODE): \`watchdog: kill and state not reached\` detected. The phase did not complete within the timeout."
   IMPROVEMENT_HINT="Increase \`watchdog-timeout-seconds\` in \`.wholework.yml\` or improve liveness signals (progress output) to prevent false-positive kills. Related: #308."
+elif grep -q "VERIFY_FAILED" "$LOG_FILE" && grep -q "uncommitted" "$LOG_FILE"; then
+  PATTERN_NAME="dirty-working-tree"
+  ANOMALY_DESC="Verify failed due to uncommitted changes in phase \`$PHASE\` (exit code $EXIT_CODE): \`VERIFY_FAILED\` and \`uncommitted\` detected in wrapper output. The verify skill cannot run when uncommitted changes are present in the working tree. Reference: #393."
+  IMPROVEMENT_HINT="Run \`git status\` to identify uncommitted files. If the files are unrelated to issue #$ISSUE_NUMBER, notify and retry via \`run-verify.sh $ISSUE_NUMBER\`. If the files are related to the issue (unexpected edits), abort and investigate before retrying. See \`modules/orchestration-fallbacks.md#dirty-working-tree\` for the full recovery procedure."
 elif [[ "$EXIT_CODE" == "0" ]]; then
   if grep -qiE "完了しました|commit and push|successfully committed|pushed to|changes have been committed" "$LOG_FILE" && \
      ! git log --oneline -5 2>/dev/null | grep -q "#${ISSUE_NUMBER}"; then

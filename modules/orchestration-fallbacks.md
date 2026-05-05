@@ -200,6 +200,32 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ---
 
+## dirty-working-tree
+
+### Symptom
+- `/verify` outputs `VERIFY_FAILED` and `Cannot run verify because there are uncommitted changes`
+- `scripts/detect-wrapper-anomaly.sh` emits pattern: `dirty-working-tree`
+
+### Applicable Phases
+- verify
+
+### Fallback Steps
+1. Run `git status` to list uncommitted files in the working tree
+2. Determine whether each uncommitted file is related to the current issue:
+   - **Unrelated files** (e.g., editor swap files, incidental modifications to unrelated paths): stage and commit or stash the files, then retry verify via `run-verify.sh <issue-num>`; notify the operator of the stashed/committed files
+   - **Related files** (unexpected edits to issue-specific implementation files): abort the verify run and investigate why uncommitted changes remain before retrying
+3. After cleanup, re-run `run-verify.sh <issue-num>`
+
+### Escalation
+- If the uncommitted changes cannot be safely classified as related or unrelated, escalate to recovery sub-agent (#316) for diagnosis
+- If the dirty working tree recurs after cleanup, inspect whether a prior skill phase left uncommitted edits and report as a new anomaly
+
+### Rationale
+- First observed in Issue #393 retrospective: anomaly detector returned empty output because this pattern was not cataloged, blocking Tier 2 automatic recovery
+- `scripts/detect-wrapper-anomaly.sh` (pattern: `dirty-working-tree`) now detects the `VERIFY_FAILED` + `uncommitted` co-occurrence and emits this catalog anchor for Tier 2 lookup
+
+---
+
 ## Operational Notes
 
 This catalog is consumed by:

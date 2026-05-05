@@ -46,3 +46,32 @@
 ## Notes
 
 - なし
+
+## Code Retrospective
+
+### Deviations from Design
+
+- なし
+
+### Design Gaps/Ambiguities
+
+- `detect-wrapper-anomaly.sh` のパターンマッチ順序: 新しい `dirty-working-tree` パターンは `watchdog-kill` の後、`EXIT_CODE == 0` チェックの前に配置。Spec の挿入位置指定通りで問題なし。
+
+### Rework
+
+- なし
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Spec の実装ステップ1で `ANOMALY_DESC` に `#393` 参照を含めることが指定されていたが、テストのアサーションでこの参照が検証されていなかった。Spec とコードは整合しているが、テストが Spec の要求を完全にカバーしていない漏れパターン。
+
+### Recurring Issues
+
+- なし。今回のレビューで発見した指摘は1件のみで、再発パターンとして記録できるほどの頻度ではない。
+
+### Acceptance Criteria Verification Difficulty
+
+- 全 AC が `grep` と `rubric` を組み合わせており、auto-verify は安定して PASS。UNCERTAIN は発生しなかった。
+- CI の `Forbidden Expressions check` が PR とは無関係の既存ファイル（`docs/spec/issue-385-default-permission-mode-auto.md`）で失敗しており、PR 単位のアクセプタンス検証に外部ノイズが混入するパターン。既存ファイルの `verify hint` 表記を修正する別 Issue が必要。
