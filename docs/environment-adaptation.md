@@ -75,13 +75,16 @@ Keeps the SKILL.md core lightweight; environment-dependent logic (Domain) is loa
 
 "Is this logic needed for projects that do not use the target tool or project type?" → If No, extract it as a Domain file.
 
-### Extraction Patterns
+### Extraction Patterns (exhaustive)
 
 | Pattern | Condition Check | Example |
 |---------|----------------|---------|
-| Marker-detection | Value in `.wholework.yml` | `external-review-phase.md` (Read when `copilot-review: true`) |
-| File-existence | Presence of a specific file | `skill-dev-recheck.md` (Read when `validate-skill-syntax.py` exists) |
-| Directory-scan | `.wholework/domains/{skill}/` Glob | Project-local domain files (loaded when files exist) |
+| Marker-detection | YAML key in `.wholework.yml` | `review/external-review-phase.md` (Read when `copilot-review: true`, `claude-code-review: true`, or `coderabbit-review: true`) |
+| File-existence | Specific file presence | `review/skill-dev-recheck.md` (Read when `scripts/validate-skill-syntax.py` exists) |
+| MCP-availability | MCP tool present in Claude Code session | `spec/figma-design-phase.md` (Read when Figma MCP tools are loaded via ToolSearch) |
+| Depth-routing | Skill invocation mode (`--full` / `--light`) | `spec/codebase-search.md` (Read in `--full` mode; skipped in `--light`) |
+| Capability-flag | `.wholework.yml` `capabilities.{name}: true` | `verify/browser-verify-phase.md` (Read when `HAS_BROWSER_CAPABILITY=true`) |
+| Directory-scan | `.wholework/domains/{skill}/` Glob | Project-local domain files (loaded unconditionally when files exist) |
 
 ### Domain Terminology
 

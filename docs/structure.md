@@ -129,6 +129,8 @@ Key modules:
 - `modules/domain-classifier.md` — improvement proposal Domain classification (composable, LLM-in-context)
 - `modules/retro-proposals.md` — Improvement Proposal collection and Issue creation (shared by /verify Step 13 and /auto Step 4a)
 - `modules/filesystem-scope.md` — filesystem access scope constraints and approved patterns for skills/scripts
+- `modules/phase-state.md` — phase preconditions/success signatures and `reconcile-phase-state.sh` JSON v1 schema (SSoT)
+- `modules/skill-dev-doc-impact.md` — skill-development project Change Types for `/spec` and `/code` (via `doc-checker.md`)
 
 ### Agents
 

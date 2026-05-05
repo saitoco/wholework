@@ -5,7 +5,6 @@ ssot_for:
   - forbidden-expressions
   - gotchas
   - model-effort-matrix
-  - labels
 ---
 
 English | [日本語](ja/tech.md)
@@ -44,7 +43,7 @@ English | [日本語](ja/tech.md)
   | merge | Yes | Decision completes with Spec + PR metadata; does not carry over review context |
   | verify | Yes | Verifies post-merge state independently; must not be influenced by prior phase decisions |
   | auto | No | Parent orchestrator runs in the user's Claude Code session; each child phase runs as an independent `claude -p` process via `run-*.sh` |
-  | audit | No | Drift and fragility detection runs in user's session; no prior-phase bias to avoid |
+  | audit | No | Drift, fragility, and recovery pattern detection runs in user's session; no prior-phase bias to avoid |
   | doc | No | Document management runs in user's session; no prior-phase bias to avoid |
 
 - **`/auto` skill**: Orchestrator that chains spec→code→review→merge→verify sequentially via `run-*.sh`. Each phase runs as an independent `claude -p` process with configurable permission mode (`--permission-mode auto` by default; `--dangerously-skip-permissions` when `permission-mode: bypass` is set in `.wholework.yml`), guaranteeing fresh context isolation. Additional capabilities: auto-starts from issue triage/refinement when no `phase/*` label is set; auto-runs `/spec` when `phase/ready` is absent; `--batch N` processes N XS/S Issues from the backlog; `--batch N1 N2 ...` processes the explicitly listed Issues in order (all Sizes except XL accepted); XL Issues read the sub-issue dependency graph (`blockedBy`) and execute independent sub-issues in parallel (worktree isolation) before sequencing dependent ones; `--base {branch}` targets a release branch instead of main. `verify-max-iterations` (default: 3, max: 20, configurable via `.wholework.yml`) caps the verify-reopen loop; when the counter reaches the limit, the Issue stays in `phase/verify` and awaits human judgment. The `/auto` skill detects `MAX_ITERATIONS_REACHED` in verify output and stops the chain instead of looping indefinitely. **`--resume N`** and **`--batch --resume`** restore interrupted runs: the current phase is re-read from live GitHub labels (reconciler-first authority), while the checkpoint file (`.tmp/auto-state-N.json` for single Issues, `.tmp/auto-batch-state.json` for batch) carries only the verify iteration counter or remaining batch list. Checkpoint writes are atomic (`*.json.tmp` → `mv`); stale checkpoints (issue_number mismatch or `phase/done` conflict with live labels) are discarded in favor of label state. See `scripts/auto-checkpoint.sh` for the checkpoint helper implementation.
@@ -56,16 +55,7 @@ English | [日本語](ja/tech.md)
   - `/review`: Full mode splits into two groups — Spec compliance review (`review-spec`) and bug detection (`review-bug`) — with two-stage verification (detection→verification sub-agents) to eliminate false positives. Light mode uses a single integrated agent (`review-light`) covering all 4 perspectives (spec, bug, edge cases, documentation).
 - **Shared module pattern**: Common processing across multiple skills is extracted to `modules/*.md`, referenced using the "Read and follow" pattern.
 - **Spec-first (disposable)**: Spec is not maintained as an artifact after task completion. Spec-anchored and Spec-as-source approaches are not adopted. Reasons: (1) LLM non-determinism means the same spec does not guarantee the same code regeneration; (2) spec maintenance cost adds overhead to code maintenance cost.
-- **Progressive disclosure (Core/Domain separation)**: SKILL.md body contains only generic logic independent of project type or tool. Logic specific to particular tools (Figma, Copilot, etc.) or project types (skill development, IaC, etc.) is extracted to auxiliary files (`skills/{name}/xxx-phase.md`), read only when applicable. Decision criterion: "Is this logic needed in projects that don't use this tool/project type?" — If No, extract it.
-  - **Extraction patterns (standard) (exhaustive)**:
-
-    | Pattern | Condition | Example |
-    |---------|-----------|---------|
-    | Marker detection | YAML key in `.wholework.yml` | `review/external-review-phase.md` (read when `copilot-review: true`, `claude-code-review: true`, or `coderabbit-review: true`) |
-    | File existence | Specific file presence | `review/skill-dev-recheck.md` (read when `scripts/validate-skill-syntax.py` exists) |
-    | MCP availability | MCP tool present in Claude Code session | `spec/figma-design-phase.md` (read when Figma MCP tools are loaded via ToolSearch) |
-    | Depth routing | Skill invocation mode (`--full` / `--light`) | `spec/codebase-search.md` (read in `--full` mode; skipped in `--light`) |
-    | Capability flag | `.wholework.yml` `capabilities.{name}: true` | `verify/browser-verify-phase.md` (read when `HAS_BROWSER_CAPABILITY=true`) |
+- **Progressive disclosure (Core/Domain separation)**: SKILL.md body contains only generic logic independent of project type or tool. Logic specific to particular tools (Figma, Copilot, etc.) or project types (skill development, IaC, etc.) is extracted to auxiliary files (`skills/{name}/xxx-phase.md`), read only when applicable. Decision criterion: "Is this logic needed in projects that don't use this tool/project type?" — If No, extract it. For the exhaustive list of extraction patterns (Marker-detection / File-existence / MCP-availability / Depth-routing / Capability-flag / Directory-scan), see [docs/environment-adaptation.md § Extraction Patterns](environment-adaptation.md#extraction-patterns-exhaustive) (SSoT: `environment-adaptation-architecture`).
 
 - **Distributable-first improvement principle**: Improvements identified through retrospectives must be reflected in distributable components (Skills, Agents, Modules, Scripts). CLAUDE.md, Steering Documents, and Project Documents are user-repository-specific artifacts that are not distributed as part of the Wholework plugin — improvements made only to these documents do not reach other Wholework users. When a retrospective identifies an improvement, the implementation target should be the distributable layer; updating only non-distributable artifacts is insufficient.
 - **Effort optimization strategy (3 axes)**: Three axes for controlling execution cost and quality in `claude -p` invocations. CLI support status and Wholework adoption policy per axis:
