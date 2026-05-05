@@ -1,6 +1,6 @@
 # Security Policy
 
-This document describes the side effects, required permissions, and permission-bypass behavior of Wholework skills. Reviewers and users should read this before running Wholework in their repositories.
+This document describes the side effects, required permissions, and permission mode options of Wholework skills. Reviewers and users should read this before running Wholework in their repositories.
 
 ## Side Effects
 
@@ -44,24 +44,14 @@ The `/auto` skill chains all phases (spec → code → review → merge → veri
 Set in `.wholework.yml`:
 
 ```yaml
-# bypass mode (default — backward compatible)
-permission-mode: bypass
-
-# auto mode (recommended for Max users)
+# auto mode (default — recommended)
 permission-mode: auto
+
+# bypass mode (legacy / opt-out)
+permission-mode: bypass
 ```
 
-### bypass mode (default)
-
-Uses `--dangerously-skip-permissions`, which bypasses all Claude Code permission prompts:
-
-- File reads/writes, shell commands, and tool calls execute without asking for confirmation
-- All side effects described above occur without user approval per operation
-- Phase-to-phase context is isolated (each subprocess starts fresh)
-
-This is the default to avoid breaking changes for existing users.
-
-### permission-mode auto
+### auto mode (default)
 
 Uses `--permission-mode auto`, which runs the Claude Code auto-mode classifier. Auto mode applies guardrails: operations are classified as ALLOW, soft_deny (requires approval), or BLOCK. This is safer than bypass because the evaluation framework remains active.
 
@@ -79,6 +69,14 @@ To resolve these conflicts, copy the recommended allow rules template into `.cla
 
 After applying the template, restart Claude Code (settings are cached at session start and are not hot-reloaded).
 
+### bypass mode (legacy)
+
+Uses `--dangerously-skip-permissions`, which bypasses all Claude Code permission prompts:
+
+- File reads/writes, shell commands, and tool calls execute without asking for confirmation
+- All side effects described above occur without user approval per operation
+- Phase-to-phase context is isolated (each subprocess starts fresh)
+
 ### Security comparison: auto + least privilege vs bypass
 
 `permission-mode auto` with the minimal allow rules template is safer than bypass for two reasons:
@@ -87,6 +85,20 @@ After applying the template, restart Claude Code (settings are cached at session
 2. **Defense in depth**: allow rules are pinpoint exceptions within the auto-mode evaluation framework. bypass skips the evaluator entirely — there is no framework to catch unexpected actions.
 
 Note: if allow rules are written broadly (e.g., `gh *` or `git push *` blanket allow), this safety advantage narrows. The template enumerates only the subcommand-level patterns wholework actually uses.
+
+### Migration
+
+**Upgrading from the old default (bypass → auto)**
+
+If you have not set `permission-mode` in `.wholework.yml`, `/auto` now uses `auto` mode. To continue using `bypass`, add this line to your `.wholework.yml`:
+
+```yaml
+permission-mode: bypass
+```
+
+**Non-Max plan users (Pro, etc.)**
+
+`--permission-mode auto` requires the Claude Code Max plan. If you are on a non-Max plan and run `/auto` without explicitly setting `permission-mode: bypass`, the subprocess will exit early. `scripts/handle-permission-mode-failure.sh` detects this condition at runtime and prints a diagnostic with the remediation step (`permission-mode: bypass` in `.wholework.yml`) to stderr, so the failure is never silent.
 
 ## Required Tools and Authentication
 

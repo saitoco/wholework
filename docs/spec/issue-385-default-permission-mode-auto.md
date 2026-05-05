@@ -77,7 +77,7 @@
 allowed-tools 追加は不要（既存の `Edit` / `Read` / `Bash` のみで完結）。
 
 ### Bash Command Patterns
-- なし（テスト実行は既存の `bats tests/` を `command` verify hint 経由で行うのみ）
+- なし（テスト実行は既存の `bats tests/` を `command` verify command 経由で行うのみ）
 
 ### Built-in Tools
 - `Read`, `Edit`: ファイル読み書き

@@ -130,7 +130,7 @@ INPUT JSON:
 ${INPUT_JSON}"
 
 # --- Invoke claude -p (following run-*.sh precedent) ---
-PERMISSION_MODE=$("$SCRIPT_DIR/get-config-value.sh" permission-mode bypass 2>/dev/null || echo bypass)
+PERMISSION_MODE=$("$SCRIPT_DIR/get-config-value.sh" permission-mode auto 2>/dev/null || echo auto)
 if [[ "$PERMISSION_MODE" == "auto" ]]; then
   PERMISSION_FLAG="--permission-mode auto"
 else

@@ -17,6 +17,18 @@ setup() {
     CLAUDE_CALL_LOG="$BATS_TEST_TMPDIR/claude_calls.log"
     export CLAUDE_CALL_LOG
 
+    # Mock get-config-value.sh: return "auto" for permission-mode (new default)
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "auto" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
     # Mock claude: log flags, model, effort, ANTHROPIC_MODEL, CLAUDECODE, ARGUMENTS
     cat > "$MOCK_DIR/claude" <<'MOCK'
 #!/bin/bash
@@ -26,6 +38,7 @@ for arg in "$@"; do
         -p) echo "FLAG_P=1" >> "$CLAUDE_CALL_LOG" ;;
         --model) echo "FLAG_MODEL=1" >> "$CLAUDE_CALL_LOG" ;;
         --dangerously-skip-permissions) echo "FLAG_SKIP_PERMS=1" >> "$CLAUDE_CALL_LOG" ;;
+        --permission-mode) echo "FLAG_PERM_MODE=1" >> "$CLAUDE_CALL_LOG" ;;
         --effort) echo "FLAG_EFFORT=1" >> "$CLAUDE_CALL_LOG" ;;
     esac
 done
@@ -153,10 +166,11 @@ teardown() {
     grep -q "EFFORT_VALUE=max" "$CLAUDE_CALL_LOG"
 }
 
-@test "success: --dangerously-skip-permissions is passed" {
+@test "success: --permission-mode auto is passed by default" {
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
-    grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
+    grep -q "FLAG_PERM_MODE=1" "$CLAUDE_CALL_LOG"
+    ! grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
 }
 
 @test "success: --opus switches model to opus" {

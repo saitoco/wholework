@@ -15,7 +15,7 @@ fi
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 
-PERMISSION_MODE=$("$SCRIPT_DIR/get-config-value.sh" permission-mode bypass 2>/dev/null || echo bypass)
+PERMISSION_MODE=$("$SCRIPT_DIR/get-config-value.sh" permission-mode auto 2>/dev/null || echo auto)
 if [[ "$PERMISSION_MODE" == "auto" ]]; then
   PERMISSION_FLAG="--permission-mode auto"
   _PERM_LABEL="permission-mode auto (with allow rules template)"
