@@ -377,7 +377,7 @@ MOCK_EOF
     [[ "$output" == *'"issue_state":"CLOSED"'* ]]
 }
 
-@test "verify completion: issue OPEN + phase/verify label -> matches_expected true" {
+@test "verify completion: issue OPEN + phase/verify label -> matches_expected false" {
     cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
 #!/bin/bash
 if [[ "$*" == *"--json state"* ]]; then
@@ -391,8 +391,8 @@ MOCK_EOF
     export PATH="$MOCK_DIR:$PATH"
 
     run bash "$SCRIPT" verify 42 --check-completion --strict
-    [ "$status" -eq 0 ]
-    [[ "$output" == *'"matches_expected":true'* ]]
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
 }
 
 @test "verify completion: issue OPEN + phase/done label -> matches_expected true" {
