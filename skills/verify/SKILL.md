@@ -3,7 +3,7 @@ name: verify
 description: Acceptance test. Automatically verifies post-merge acceptance conditions and updates Issue checkboxes (`/verify 123`). Use after `/merge`. Reopens Issue on FAIL to return to the fix cycle.
 context: fork
 model: sonnet
-allowed-tools: Bash(git checkout:*, git pull:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
+allowed-tools: Bash(git checkout:*, git pull:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
 ---
 
 # Acceptance Test
@@ -58,26 +58,25 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md` and follow the "Non-I
 
 ### Step 1: Check Working Directory Safety
 
+Run the dirty file classifier:
+
 ```bash
-git status
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh $NUMBER
 ```
 
-- **Clean** → continue
-- **Uncommitted changes present** → check if all dirty files are unrelated to the current Issue:
-  1. Get the list of dirty files: `git status --short`
-  2. Identify **unrelated files**: files matching `docs/spec/issue-N-*.md` where N ≠ $NUMBER
-  3. Identify **other dirty files**: any dirty files that are not unrelated spec files
+Handle by exit code:
 
-  - **All dirty files are unrelated** (every dirty file matches `docs/spec/issue-N-*.md` with a different Issue number):
-    - **Interactive mode**: Present the following choice via AskUserQuestion — "Unrelated dirty files detected (e.g., `docs/spec/issue-N-*.md` for a different Issue). Stash and continue, or abort?"
-      - "Stash and continue": run `git stash`, then continue
-      - "Abort": stop and guide user to run `git stash` or `git commit`, then re-run `/verify $NUMBER`
-    - **Non-interactive mode**: Auto-stash — run `git stash`, then continue
-  - **Other dirty files present** (related dirty files or non-spec dirty files exist): output error message and abort.
-    Output the `VERIFY_FAILED` marker at the start of the error message (`run-verify.sh` detects this marker to propagate the error):
-    "VERIFY_FAILED"
-    Then output the error message:
-    "Error: Cannot run verify because there are uncommitted changes. Run `git stash` or `git commit`, then re-run `/verify $NUMBER`."
+- **Exit 0 (clean)** → continue
+- **Exit 2 (all dirty files are unrelated spec files)** → the script printed the file paths to stdout:
+  - **Interactive mode**: Present the following choice via AskUserQuestion — "Unrelated dirty files detected (e.g., `docs/spec/issue-N-*.md` for a different Issue). Stash and continue, or abort?"
+    - "Stash and continue": run `git stash`, then continue
+    - "Abort": stop and guide user to run `git stash` or `git commit`, then re-run `/verify $NUMBER`
+  - **Non-interactive mode**: Auto-stash — run `git stash`, then continue
+- **Exit 1 (related or non-spec dirty files present)**: output error message and abort.
+  Output the `VERIFY_FAILED` marker at the start of the error message (`run-verify.sh` detects this marker to propagate the error):
+  "VERIFY_FAILED"
+  Then output the error message:
+  "Error: Cannot run verify because there are uncommitted changes. Run `git stash` or `git commit`, then re-run `/verify $NUMBER`."
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="issue", ENTITY_NUMBER=$NUMBER, SKILL_NAME="verify".
 
