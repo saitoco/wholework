@@ -247,6 +247,10 @@ Verify each condition:
    - UNCERTAIN — cannot auto-determine
    - POST-MERGE — condition to verify after merge
 
+**`file_contains` exact match check:**
+
+For `file_contains` verify commands, verify that the pattern is an exact substring of the implementation code in the PR diff. Shell quoting causes false negatives: `get-config-value.sh permission-mode auto` will not match `"$SCRIPT_DIR/get-config-value.sh" permission-mode auto`. When a FAIL result stems from a quoting or path-prefix discrepancy rather than a genuine implementation gap, report it as a spec quality issue requiring a verify command update.
+
 ### Checkbox Updates
 
 For "Pre-merge (auto-verified)" conditions that PASS in Step 7 verification, update Issue checkboxes:
