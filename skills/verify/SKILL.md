@@ -47,7 +47,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md` and follow the "Non-I
 
 | Location | Interactive mode | Non-interactive mode |
 |------|-----------|---------------------|
-| Step 1: uncommitted changes check | Output error and abort if uncommitted changes exist | Same (hard-error: uncommitted changes cannot be auto-resolved) |
+| Step 1: uncommitted changes check | Output error and abort if uncommitted changes exist; if all dirty files are unrelated spec files for other Issues (`docs/spec/issue-N-*.md` with N ≠ $NUMBER), offer stash-and-continue or abort | Unrelated spec files (other Issue's `docs/spec/issue-N-*.md`): auto-stash and continue. Related or other dirty files: hard-error abort |
 | Step 5 (verify each condition) Step 2 (conditions with verify commands): `command` hint permission | Execute after user approval | `--dangerously-skip-permissions` removes confirmation requirement. Execute directly (auto-resolve) |
 | Step 10: create improvement proposal Issue | Auto-create Issue | Same (auto-resolve) |
 | Any other AskUserQuestion during verification | Ask user | Auto-resolve: adopt the safest interpretation (treat ambiguous conditions as UNCERTAIN rather than PASS); record decision in the Spec's `## Autonomous Auto-Resolve Log` subsection |
@@ -62,12 +62,22 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md` and follow the "Non-I
 git status
 ```
 
-- **Uncommitted changes present** → output error message and abort:
-  Output the `VERIFY_FAILED` marker at the start of the error message (`run-verify.sh` detects this marker to propagate the error):
-  "VERIFY_FAILED"
-  Then output the error message:
-  "Error: Cannot run verify because there are uncommitted changes. Run `git stash` or `git commit`, then re-run `/verify $NUMBER`."
 - **Clean** → continue
+- **Uncommitted changes present** → check if all dirty files are unrelated to the current Issue:
+  1. Get the list of dirty files: `git status --short`
+  2. Identify **unrelated files**: files matching `docs/spec/issue-N-*.md` where N ≠ $NUMBER
+  3. Identify **other dirty files**: any dirty files that are not unrelated spec files
+
+  - **All dirty files are unrelated** (every dirty file matches `docs/spec/issue-N-*.md` with a different Issue number):
+    - **Interactive mode**: Present the following choice via AskUserQuestion — "Unrelated dirty files detected (e.g., `docs/spec/issue-N-*.md` for a different Issue). Stash and continue, or abort?"
+      - "Stash and continue": run `git stash`, then continue
+      - "Abort": stop and guide user to run `git stash` or `git commit`, then re-run `/verify $NUMBER`
+    - **Non-interactive mode**: Auto-stash — run `git stash`, then continue
+  - **Other dirty files present** (related dirty files or non-spec dirty files exist): output error message and abort.
+    Output the `VERIFY_FAILED` marker at the start of the error message (`run-verify.sh` detects this marker to propagate the error):
+    "VERIFY_FAILED"
+    Then output the error message:
+    "Error: Cannot run verify because there are uncommitted changes. Run `git stash` or `git commit`, then re-run `/verify $NUMBER`."
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="issue", ENTITY_NUMBER=$NUMBER, SKILL_NAME="verify".
 
