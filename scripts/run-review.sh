@@ -88,6 +88,8 @@ if [[ $EXIT_CODE -eq 143 ]]; then
     _reconcile_out=$("$SCRIPT_DIR/reconcile-phase-state.sh" review "$_REVIEW_ISSUE" --pr "$PR_NUMBER" --check-completion 2>/dev/null) || true
     if echo "$_reconcile_out" | grep -q '"matches_expected":true'; then
       EXIT_CODE=0
+    else
+      echo "reconcile-phase-state result: $_reconcile_out"
     fi
   else
     echo "reconcile-phase-state: could not extract issue number from PR #${PR_NUMBER}, skipping reconcile" >&2

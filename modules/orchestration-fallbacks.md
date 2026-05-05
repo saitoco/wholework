@@ -226,6 +226,32 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ---
 
+## reconciler-header-mismatch
+
+### Symptom
+- `run-review.sh` logs `reconcile-phase-state result:` with `"matches_expected":false` and `Review Response Summary` in the wrapper log
+- `scripts/detect-wrapper-anomaly.sh` emits pattern: `reconciler-header-mismatch`
+
+### Applicable Phases
+- review
+
+### Fallback Steps
+1. Inspect the PR comment on the Issue's associated PR to check whether `## Review Response Summary` is present
+2. If the header is missing: re-run `/review` for the PR to regenerate the review comment with the expected header
+3. If the header is present but uses a different casing or wording (e.g., `## Review Summary` instead of `## Review Response Summary`): check `modules/phase-state.md` for the canonical expected signature and align the skill output with it
+4. After the header is corrected, re-run `reconcile-phase-state.sh` to confirm `matches_expected:true`
+
+### Escalation
+- If the review skill consistently outputs a different header than what `modules/phase-state.md` specifies, update the phase-state signature to match the actual skill output and open a follow-up Issue to track the drift
+- Recovery sub-agent (#316) can be invoked when the root cause of the header mismatch is unclear
+
+### Rationale
+- First observed in Issue #386: after watchdog timeout, `reconcile-phase-state.sh` returned `matches_expected:false` because `## Review Response Summary` was absent from the PR comment
+- `_reconcile_out` was not written to the wrapper log, preventing Tier 2 pattern detection; `run-review.sh` now logs `reconcile-phase-state result:` in the else branch
+- `scripts/detect-wrapper-anomaly.sh` (pattern: `reconciler-header-mismatch`) detects the `matches_expected:false` + `Review Response Summary` co-occurrence for Tier 2 lookup
+
+---
+
 ## Operational Notes
 
 This catalog is consumed by:

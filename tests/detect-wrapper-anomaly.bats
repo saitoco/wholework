@@ -135,3 +135,27 @@ MOCK
     [ "$status" -eq 0 ]
     [ -z "$output" ]
 }
+
+@test "reconciler header mismatch: detects matches_expected false with Review Summary" {
+    printf '"matches_expected":false\nreview: Review Summary not found in PR comment\n' > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 143 --issue 386 --phase review
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"reconciler-header-mismatch"* ]]
+    [[ "$output" == *"### Orchestration Anomalies"* ]]
+    [[ "$output" == *"### Improvement Proposals"* ]]
+    [[ "$output" == *"#394"* ]]
+}
+
+@test "reconciler header mismatch: no detection when only matches_expected false present" {
+    printf '"matches_expected":false\nno relevant context here\n' > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 143 --issue 386 --phase review
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
+@test "reconciler header mismatch: no detection when only Review Summary present" {
+    echo "review: Review Summary found successfully" > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 143 --issue 386 --phase review
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
