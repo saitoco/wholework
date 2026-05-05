@@ -70,6 +70,31 @@ Pre-merge verification 6 件は light の 5 件制限を超えるが、`/issue` 
 
 新パターンの実装で `--phase` を制約条件に含めない。呼び出し側（`run-auto-sub.sh`）が phase=code 時にのみ呼ぶ前提。これは `dirty-working-tree`（verify phase 専用シグネチャだが phase 制約なし）の前例に揃える。
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Acceptance Criteria 6 件すべてに verify command が付与されており、自動検証可能な条件設計だった。`rubric` （意味的検証）+ `section_contains` × 2（構造補助）の組み合わせはカバレッジとして適切。Spec Notes に 6 件制限超過の明示的合意記録あり（透明性高い）。
+
+#### design
+- Spec の実装ステップ 1〜4 が diff と完全整合。Changed Files と実装方針の記述粒度が高く、コード phase での判断余地がほぼ不要だった。
+
+#### code
+- Rework なし、design deviation なし。`_reconcile_out` echo の追加が検出の前提条件であることが Spec Notes で明記されており、bats テストで間接検証する設計も機能した。
+
+#### review
+- review-light 全4観点で問題検出ゼロ。CI 全ジョブ SUCCESS。レビューコメントなし。PR #422 のレビューは効率的だった。
+
+#### merge
+- クリーンな FF merge（a043d3a）。コンフリクトなし。
+
+#### verify
+- Pre-merge 6 件すべて PASS。verify command に不整合・曖昧さなし。Post-merge manual 条件（watchdog 再現シナリオ）は未チェックのまま残存（phase/verify 移行済み）。
+
+### Improvement Proposals
+- N/A
+
 ## Code Retrospective
 
 ### Deviations from Design
