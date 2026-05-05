@@ -137,6 +137,21 @@ MOCK
     [ "$status" -eq 0 ]
 }
 
+@test "false-positive: VERIFY_FAILED in body text does not cause non-zero exit" {
+    # Claude outputs VERIFY_FAILED embedded mid-line in body text (not at line start)
+    cat > "$MOCK_DIR/claude" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$CLAUDE_CALL_LOG"
+echo "ANTHROPIC_MODEL=$ANTHROPIC_MODEL" >> "$CLAUDE_CALL_LOG"
+echo "This AC mentions the VERIFY_FAILED scenario from issue #393"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/claude"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+}
+
 @test "success: skips CI wait when no associated PR found and no CI runs (patch route)" {
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
