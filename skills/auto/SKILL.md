@@ -389,21 +389,35 @@ If all phases succeeded:
 
 1. **Check for opportunistic pending state**: Run `gh issue view $NUMBER --json labels --jq '.labels[].name'`
 
-2. **If output contains `phase/verify` (opportunistic pending)**: output the partial success — opportunistic pending banner:
+2. **CI FAIL/recovery scan (build Notes before result table):**
+
+   Scan the run-*.sh output captured in the LLM context during Step 4 for CI check failures and auto-recovery events in each phase:
+
+   - **CI check failure**: `gh pr checks`-style output lines containing `fail` or `FAILED` (e.g., `Run bats / bats (push) fail`)
+   - **Review auto-fix**: phrases such as `MUST issue resolved` / `MUST issue auto-resolved`, or commit messages beginning with `Fix:` added as follow-up commits in the review phase
+
+   For each phase where a CI failure or auto-fix is detected, record a concise one-line Notes value for the result table:
+   - Example: `1 CI fail → fixed in abc1234`
+   - Example: `1 MUST issue auto-resolved`
+   - Example: `2 CI fails → fixed; 1 MUST issue resolved` (multiple events in one phase)
+
+   If nothing is detected for a phase, leave Notes as `—`.
+
+3. **If output from step 1 contains `phase/verify` (opportunistic pending)**: output the partial success — opportunistic pending banner:
    ```
    /auto #N partial success — opportunistic pending
    TITLE
    URL
    ```
-   Followed by a result table (one row per phase with status). Post-merge opportunistic conditions remain unchecked; run `/verify $NUMBER` after confirming them manually.
+   Followed by a result table (one row per phase with status, Notes from step 2). Post-merge opportunistic conditions remain unchecked; run `/verify $NUMBER` after confirming them manually.
 
-3. **If output does not contain `phase/verify`**: output the completion banner:
+4. **If output from step 1 does not contain `phase/verify`**: output the completion banner:
    ```
    /auto #N complete
    TITLE
    URL
    ```
-   Followed by a result table (one row per phase with status).
+   Followed by a result table (one row per phase with status, Notes from step 2).
 
 **If an Auto Retrospective was recorded in the Spec (XL routes: always; M/L/patch routes: when orchestration anomalies were detected), also output "Auto retrospective recorded in Spec".**
 
