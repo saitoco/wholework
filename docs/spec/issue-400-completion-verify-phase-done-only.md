@@ -69,3 +69,17 @@
 ### Rework
 
 - N/A
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Nothing to note. 実装は Spec と完全に一致しており、4ファイルすべての変更が設計書の記述と対応している。
+
+### Recurring Issues
+
+Nothing to note. 本 PR は単一の grep パターン修正とそのテスト・ドキュメント更新のみで、複数の同種 issue は発生していない。
+
+### Acceptance Criteria Verification Difficulty
+
+Nothing to note. 4件の verify command（file_not_contains×3、grep×1）はすべて自動判定可能で UNCERTAIN なし。Forbidden Expressions check CI の FAILURE は PR #413 とは無関係の既存ファイル (`docs/spec/issue-401-detect-dirty-working-tree.md`) 由来であり、本 PR の受入条件検証には影響なし。別 Issue での対応が必要（Issue #401 コンテキストで既にトラッキング済み）。
