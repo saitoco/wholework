@@ -73,7 +73,7 @@ Handle by exit code:
     - "Abort": stop and guide user to run `git stash` or `git commit`, then re-run `/verify $NUMBER`
   - **Non-interactive mode**: Auto-stash — run `git stash`, then continue
 - **Exit 1 (related or non-spec dirty files present)**: output error message and abort.
-  Output the `VERIFY_FAILED` marker at the start of the error message (`run-verify.sh` detects this marker to propagate the error):
+  Output the `VERIFY_FAILED` marker as a standalone line (line-anchored: `run-verify.sh` detects it with `^VERIFY_FAILED` pattern):
   "VERIFY_FAILED"
   Then output the error message:
   "Error: Cannot run verify because there are uncommitted changes. Run `git stash` or `git commit`, then re-run `/verify $NUMBER`."
@@ -119,7 +119,7 @@ If `--base` is not specified and `PR_NUMBER` is empty, search for an OPEN PR bef
 OPEN_PR=$(gh pr list --search "closes #$ISSUE_NUMBER" --state open --json number,title --jq ".[0].number")
 ```
 
-If `OPEN_PR` is not empty, output `VERIFY_FAILED` and abort:
+If `OPEN_PR` is not empty, output `VERIFY_FAILED` as a standalone line (line-anchored: `run-verify.sh` detects it with `^VERIFY_FAILED` pattern) and abort:
 
 ```
 VERIFY_FAILED
