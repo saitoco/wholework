@@ -69,3 +69,17 @@ Pre-merge verification 6 件は light の 5 件制限を超えるが、`/issue` 
 ### `--phase` 制約なし（Issue body Auto-Resolved 3）
 
 新パターンの実装で `--phase` を制約条件に含めない。呼び出し側（`run-auto-sub.sh`）が phase=code 時にのみ呼ぶ前提。これは `dirty-working-tree`（verify phase 専用シグネチャだが phase 制約なし）の前例に揃える。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。実装ステップ 1〜4 をすべて Spec どおりに実行した。
+
+### Design Gaps/Ambiguities
+
+- `scripts/run-code.sh` の `_reconcile_out` echo は `exit 143` 判定ブロック内にのみ存在するため、正常終了・他エラー終了では log に出力されない。これは Spec の意図通り（Tier 2 は EXIT_CODE=143 のみを対象とする前提）であり、設計ギャップではない。
+
+### Rework
+
+- なし。
