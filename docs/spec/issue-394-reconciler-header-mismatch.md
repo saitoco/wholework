@@ -56,7 +56,8 @@
 - パッチルート（直接 main コミット）。競合なし。
 
 #### verify
-- CI FAIL の根本原因は Issue #394 の実装とは無関係（`docs/spec/issue-385-default-permission-mode-auto.md` の deprecated 用語残存）。`Run bats tests` ジョブは SUCCESS。Forbidden Expressions check の CI failure は既存ノイズで、Issue #394 の受け入れ条件としての CI success 判定を阻害している。この既存ノイズは `docs/spec/issue-401-detect-dirty-working-tree.md` にも記録済みであり、別 Issue での対応が必要（Issue #410 で修正済み）。
+- 初回検証（2026-05-05以前）: CI FAIL の根本原因は Issue #394 の実装とは無関係（`docs/spec/issue-385-default-permission-mode-auto.md` の deprecated 用語残存）。`Run bats tests` ジョブは SUCCESS。Forbidden Expressions check の CI failure は既存ノイズで、Issue #394 の受け入れ条件としての CI success 判定を阻害していた。この既存ノイズは `docs/spec/issue-401-detect-dirty-working-tree.md` にも記録済みであり、別 Issue での対応が必要（Issue #410 で修正済み）。
+- 再検証（2026-05-05）: Issue #410 の修正が main に取り込まれた後、CI `test.yml` が `success` を返すことを確認。全4条件 PASS。Issue を `phase/done` でクローズ。
 
 ### Improvement Proposals
 - Spec 策定時に verify command で使用する文字列と実装での検出文字列の整合を明示的に確認するチェックポイントを `/spec` ワークフローに追加することを検討（Issue #394 の rework パターンの再発防止）
