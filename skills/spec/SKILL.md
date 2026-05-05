@@ -278,6 +278,10 @@ When Implementation Steps include a pattern-detection script (e.g., grep-based f
 
 Example: add `grep -v 'tests/xxx.bats'` to the script invocation so the test fixture file is excluded from detection.
 
+**WHOLEWORK_SCRIPT_DIR mock addition check:**
+
+If implementation steps include adding a new script under `scripts/` (including subdirectories), check if any bats test file sets `export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"`. If so, explicitly include adding a mock file for the new script under `$MOCK_DIR` in the Implementation Steps.
+
 **Mermaid diagram node ID naming check:**
 
 If implementation steps include Mermaid diagram updates, check existing node ID naming patterns and apply them consistently to new nodes.
