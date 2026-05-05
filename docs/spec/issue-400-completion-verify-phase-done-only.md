@@ -43,7 +43,7 @@
 ### Pre-merge
 
 - <!-- verify: file_not_contains "scripts/reconcile-phase-state.sh" "phase/(verify|done)" --> `scripts/reconcile-phase-state.sh` の `_completion_verify` で `phase/verify` を許容する旧パターン `phase/(verify|done)` が削除されている
-- <!-- verify: file_not_contains "tests/reconcile-phase-state.bats" "phase/verify label -> matches_expected true" --> `tests/reconcile-phase-state.bats` の「`phase/verify` → `matches_expected true`」を主張する旧テストが削除または変更されている
+- <!-- verify: file_not_contains "tests/reconcile-phase-state.bats" "completion: issue OPEN + phase/verify label -> matches_expected true" --> `tests/reconcile-phase-state.bats` の「`phase/verify` → `matches_expected true`」を主張する旧テストが削除または変更されている
 - <!-- verify: grep "phase/verify.*false" "tests/reconcile-phase-state.bats" --> `tests/reconcile-phase-state.bats` に「`phase/verify` 状態では `matches_expected: false` を返す」テストが追加されている
 - <!-- verify: file_not_contains "modules/phase-state.md" "phase/(verify" --> `modules/phase-state.md` の verify 成功署名から `phase/(verify` が削除され SSoT が更新されている
 
@@ -55,3 +55,17 @@
 
 - Step 3 の `modules/phase-state.md` 更新はイシュー本文の受入条件には含まれていないが、同ファイルが `reconcile-phase-state.sh` の成功署名の SSoT であるため、スクリプト側の変更と整合させる必要がある。Spec に追加の verify コマンドを設けた（Issue 本文は 3 件、Spec は 4 件）。
 - `scripts/reconcile-phase-state.sh` line 404-407 の `_precondition_verify` が `phase/verify` を参照しているのは「verify フェーズ開始条件の確認」であり、今回の修正対象（completion check）とは別。変更不要。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A（設計どおりに実装）
+
+### Design Gaps/Ambiguities
+
+- AC2 の verify command `file_not_contains "tests/reconcile-phase-state.bats" "phase/verify label -> matches_expected true"` が miscalibrated であることを実装中に発見。`"phase/verify label -> matches_expected true"` は precondition テスト (line 635: `"verify precondition: issue has phase/verify label -> matches_expected true"`) にもマッチするため FAIL となる。`"completion: issue OPEN + phase/verify label -> matches_expected true"` に修正して Issue body と Spec の両方を更新した。
+
+### Rework
+
+- N/A
