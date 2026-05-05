@@ -67,3 +67,32 @@ Issue #385 の `/auto` 実行中に `run-code.sh` の `claude` プロセスが w
 ### Rework
 
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec の実装ステップが実際の変更箇所（YAML コメント L42-43、テーブル L84）と正確に一致しており、設計精度は高い。
+- AC1 の verify command が `section_contains "watchdog-timeout-seconds"` から `grep "thinking"` に自動解決されたことが Issue 本文の Auto-Resolved Ambiguity Table に明記されており、判断根拠が透明。
+
+#### design
+- 日本語ミラー（`docs/ja/guide/customization.md`）の更新必要性を Notes で明示しており、翻訳同期の見落とし防止が設計段階で組み込まれていた。
+- README.md 対象外の根拠（既存リンクの存在）も Spec に記録されており、スコープ判断が追跡可能。
+
+#### code
+- コミット履歴（`Add design #414` → `docs: add watchdog-timeout-seconds guidance` → `Add code retrospective #414`）はクリーンで fixup/amend なし。
+- Code Retrospective にて逸脱・ギャップ・手戻りのいずれも N/A であり、設計通りの実装。
+
+#### review
+- patch route（直コミット）のため PR なし、レビューコメントなし。docs のみの変更であり、patch route の選択は適切。
+
+#### merge
+- main への直コミットで競合・CI 失敗なし。
+
+#### verify
+- `grep "thinking"` および `rubric` の両 verify command が想定通りに PASS。
+- Post-merge manual 条件は手動確認必須のため `phase/verify` を割り当て済み。verify command の設計は適切で ambiguity なし。
+
+### Improvement Proposals
+- N/A
