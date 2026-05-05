@@ -155,3 +155,35 @@ Spec 作成時の自動解決:
 - **`SECURITY.md` 新 `### Migration` サブ見出しの位置**: `## Permission Modes` 直下に配置（top-level `## Migration` ではなく）。`section_contains "SECURITY.md" "## Permission" "Migration"` の verify が PASS するためには `## Permission Modes` セクション内に "Migration" 文字列が含まれる必要があり、これを満たす配置として確定。
 - **`docs/guide/customization.md` 表のセル値検証**: 既存の `file_contains "default: auto"` は YAML 例コメント（line 49）のみを捕捉し、Available Keys 表（line 86）の `\`"auto"\`` セル値は捕捉できない。Issue body 側で rubric を追加済みのため、この弱点は補完されている。
 - **bats テストへの影響**: `tests/run-*.bats` は setup() で permission-mode を明示設定するため default 反転に非依存。`tests/handle-permission-mode-failure.bats` は diagnostic message を assert するため helper を touch しない方針で影響ゼロ。`tests/spawn-recovery-subagent.bats` は get-config-value.sh モックで bypass 返却を hardcode しており影響ゼロ。Step 9 の `bats tests/` で全数確認する。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body の auto-resolve「翻訳は `/doc translate` に委ねる」と `translation-workflow.md` の sync 義務が衝突していたが、Spec 段階で検出・解決された。この conflict が Issue refinement 段階で拾えていれば Spec 修正の手戻りが無かった。
+- `section_contains "SECURITY.md" "### Choosing a Mode" "default"` は flip 前後どちらでも "default" が当該セクションに登場するため、実際には反転方向を検証できない弱い verify command であることが verify 実行時に改めて確認された（Spec ではすでに記録済み）。
+
+#### design
+- 設計は「既存パターンの fallback 値差し替え」という単純な構造で、設計から実装への乖離なし。SECURITY.md restructure も Spec の Step 3 通りに実施された。
+
+#### code
+- 実装はクリーン。フォールバック値の差し替えのみで、周辺ロジック（`PERMISSION_FLAG` 分岐、`_PERM_LABEL` など）への不要な変更なし。
+- ただし verify commands 3〜9（scripts 関連）で pattern discrepancy を検出: verify command は `get-config-value.sh permission-mode auto`（スペース区切り）を検索するが、実際のコードは `"$SCRIPT_DIR/get-config-value.sh" permission-mode auto`（`.sh` の直後に `"` が存在）であり、grep での exact match が失敗する。実装の意図は満たされているが、verify command の pattern が実装パターンと一致していない。AI 判断で PASS としたが、verify command の品質課題として記録する。
+
+#### review
+- review retrospective にて verify commands の品質を「すべて適切に定義」と評価していたが、上記 pattern discrepancy（conditions 3〜9）は review 段階で検出されなかった。`file_contains` の exact match 動作（スクリプトパスの引用符による違い）を review 時にも確認する習慣が必要。
+- bats テストの追加（`tests/run-spec.bats` への `permission-mode: bypass` 明示設定）は review で正しく評価された。
+
+#### merge
+- PR #409 でクリーンにマージ。`closes #385` で Issue が自動クローズ。
+- "Forbidden Expressions check" が一方の CI run（25352042691）で FAILURE、もう一方（25352040953）で SUCCESS。flaky check の可能性あり。マージには影響なかったが、CI 安定性の観点で要注視。
+
+#### verify
+- 全 21 pre-merge 条件が PASS。CI "Run bats tests" SUCCESS で condition 21 も PASS。
+- verify command pattern discrepancy（conditions 3〜9）: `file_contains` の検索文字列がスクリプト引用符スタイルと不一致で exact grep が失敗するが、AI 判断で PASS。今後同様のスクリプト呼び出しを検証する verify command では `permission-mode auto` など不変部分のみを検索文字列にするか、`grep` コマンドで引用符を含む pattern を明示することを推奨。
+- Post-merge 3 条件（manual）は未確認のため `phase/verify` で留め置き。
+
+### Improvement Proposals
+- **verify command pattern の改善**: スクリプト内の関数呼び出しを `file_contains` で検証する場合、引用符の有無に依存しない部分文字列（例: `permission-mode auto`）を検索対象とするか、より明示的な `grep` コマンドを使用することを推奨。`"$SCRIPT_DIR/get-config-value.sh" permission-mode auto` のような shell quoting は grep pattern と不一致になりやすい。
+- **review チェックリストへの追加**: `file_contains` verify command のパターンが実装コードの exact substring と一致しているかを review 段階で確認する項目を checklist に追加することを検討。
