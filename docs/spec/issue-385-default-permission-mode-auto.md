@@ -187,3 +187,30 @@ Spec 作成時の自動解決:
 ### Improvement Proposals
 - **verify command pattern の改善**: スクリプト内の関数呼び出しを `file_contains` で検証する場合、引用符の有無に依存しない部分文字列（例: `permission-mode auto`）を検索対象とするか、より明示的な `grep` コマンドを使用することを推奨。`"$SCRIPT_DIR/get-config-value.sh" permission-mode auto` のような shell quoting は grep pattern と不一致になりやすい。
 - **review チェックリストへの追加**: `file_contains` verify command のパターンが実装コードの exact substring と一致しているかを review 段階で確認する項目を checklist に追加することを検討。
+
+## Auto Retrospective
+
+### Execution Summary
+
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| spec | pr (L) | SUCCESS | 別セッションで `/spec 385` を完走済み（worktree-spec+issue-385、commit 12a42b4 + 854b476） |
+| code | pr (L) | SUCCESS (manual recovery) | `run-code.sh` の `claude` プロセスが watchdog により 1800s silent timeout で kill (exit 143)。実装 3 commit は worktree 内で完了していたが、PR 作成・branch push 直前に kill された。Parent session が手動で uncommitted spec terminology 修正 (`verify hint` → `verify command`) を commit、main へ rebase、branch push、PR #409 作成を実施 |
+| review | pr (L), full | SUCCESS | `/review 409 --full` で MUST 1 件・SHOULD 1 件 resolved、SHOULD 1 件 skipped (`spawn-recovery-subagent.bats`)。CI 再実行で全 PASS |
+| merge | pr (L) | SUCCESS | `/merge 409` でクリーンマージ、Issue auto-close |
+| verify | - | PARTIAL (opportunistic-pending) | 21 pre-merge 条件すべて PASS。post-merge 3 条件はすべて `verify-type: manual` のため未チェック残存 → `phase/verify` 維持 |
+
+### Orchestration Anomalies
+
+1. **`run-code.sh` watchdog 1800s silent timeout (exit 143)**: 内部 `claude -p` プロセスが 1800 秒間 stdout に出力せず watchdog に kill された。実装作業（3 commit）と push 前作業（spec terminology fix）は worktree 内で完了済みだったが、PR 作成・push 直前で kill。`reconcile-phase-state.sh code-pr 385 --check-completion` は `matches_expected: false`（PR 未作成）を返した。Tier 2 anomaly detector (`detect-wrapper-anomaly.sh`) は空出力を返し（unknown pattern）、Tier 3 recovery sub-agent を起動せず parent session が手動で recovery を実施。
+2. **手動 recovery 実施内容**:
+   - uncommitted spec change（`verify hint` → `verify command` terminology fix）を `Fix: align Spec terminology with verify command convention` として commit
+   - worktree 分岐後に main が進んでいた（`#404` `#401` の commit が main にマージ済み）ため `git rebase origin/main` を実施。conflict なし。
+   - permission-mode 関連 bats（4 ファイル）のサンプル実行で全 PASS 確認後、`git push -u origin worktree-code+issue-385`、`gh pr create` で PR #409 を作成。
+3. **PR #409 への review-driven push**: review phase 内で `tests/run-spec.bats` の setup() に `get-config-value.sh` mock 追加とテスト名更新（`--permission-mode auto is passed by default`）が push された。新デフォルトを explicit に assert する強化で、本 Issue の意図と整合。
+
+### Improvement Proposals
+
+- **長時間 silent process の watchdog 上限の検討**: claude モデルの長い思考時間（特に Opus / xhigh effort）で 1800 秒を超える silent 期間が発生する可能性がある。`watchdog-timeout-seconds` を `.wholework.yml` で project 単位で延長する運用を検討すべき（既に設定可能だが本 PR の Issue 対応中は default の 1800s で kill された）。Wholework リポジトリ自身では Size L Issue で 30 分超の silent 期間が発生し得るため、`.wholework.yml` に `watchdog-timeout-seconds: 3600` 等を設定する運用ガイダンスを README / customization.md に追加することを検討。
+- **anomaly detector の "watchdog kill + 実装完了 + push 前" パターン未対応**: 本 anomaly は実装完了状態で watchdog kill されたパターンだが、`detect-wrapper-anomaly.sh` は空出力（unknown）を返した。worktree 内に commit が存在するが PR が未作成、というシグネチャを Tier 2 catalog に追加することを検討（known pattern: `code-completed-no-pr`）。recovery 手順は: rebase onto main → push branch → create PR → continue review。
+- **post-merge manual 条件の opportunistic 残存**: 本 Issue の post-merge 3 条件はすべて `verify-type: manual` で auto-verify 不可。`/auto` 完了時に `phase/verify` 残存となる。これは設計通りだが、`/auto` の完了 banner で「opportunistic-pending」を明示し、ユーザーに manual 確認手順（specifically Pro プラン環境での #397 lazy-catch 確認）を促すメッセージが有用。既に Step 5 で部分実装されているが、manual 確認内容のガイダンスをより具体的に出力することを検討。
