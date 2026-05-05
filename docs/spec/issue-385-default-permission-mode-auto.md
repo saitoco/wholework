@@ -96,6 +96,20 @@ Issue body の Auto-Resolved Ambiguity Points には「本 Issue では英語原
 - `README.ja.md` は `README.{lang}.md` として `/doc translate {lang}` で再生成される運用（structure.md line 70）のため、本 PR の対象外とし、後続の `/doc translate ja` で同期させる
 - 既存 Issue body の rubric "docs/ja/ 配下の該当翻訳... もしくは followup Issue に切り出されている旨が PR 本文に明記されている" は permissive で、本方針でも PASS する。Spec 側で具体ファイルを Changed Files に明示することで実装上の見落としを防ぐ
 
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+特筆なし。全 accept criteria はテスト失敗を除いてすべて PASS。実装変更はシンプルなフォールバック値の差し替えのみで、乖離は発生していない。
+
+### 繰り返し問題
+
+`WHOLEWORK_SCRIPT_DIR` をモック化するテスト（`run-spec.bats`）が `get-config-value.sh` をモックしておらず、フォールバック値に依存していた。フォールバック値変更時に直ちに壊れるテストパターン。同パターンが他の `run-*.bats` に存在しないことを確認済み（他のテストは `WHOLEWORK_SCRIPT_DIR` を上書きしていないか、`.wholework.yml` に実 `get-config-value.sh` からアクセスできる）。今後スクリプトのフォールバック値を変更する場合は `WHOLEWORK_SCRIPT_DIR` モック利用テストの `get-config-value.sh` モック有無を確認すること。
+
+### verify command 品質
+
+verify commands はすべて適切に定義されており、UNCERTAIN は 1 件（`command "bats tests/"` → safe mode, CI reference fallback）のみで CI で FAIL が検出できた。`bats tests/` の CI fallback は有効に機能した。
+
 ### `handle-permission-mode-failure.sh` の診断メッセージは変更不要
 
 既存の remediation 文言（`switch to bypass by adding to .wholework.yml: permission-mode: bypass`）は default 反転後も正しい案内のまま。helper の trigger 条件（`PERMISSION_MODE == "auto"` AND `exit_code != 0` AND `elapsed <= 30`）は default 値とは独立で、本 Issue でメッセージ変更は不要。
