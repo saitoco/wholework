@@ -31,6 +31,38 @@
 - `detect-wrapper-anomaly.sh` は `--log <path>` で渡された特定のログファイルのみをスキャンするため、bats テストファイル自体に `successfully committed` が含まれても自己参照誤検知は発生しない
 - 現行パターン `grep -qiE "..."` は `-i` フラグで大文字小文字を区別しないため、`Successfully committed` 等も一致する
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body に `<!-- implementation-type: metadata-only -->` マーカーなし（通常実装）
+- AC の verify コマンドに `\|` (ripgrep 非互換の alternation 表記) が使われていた（AC2）。review フェーズで既に検出・記録済み。Spec の verify コマンドも `pushed to\|changes have been committed` のまま（実際には bare `|` が必要）。Issue テンプレートや `verify-executor.md` のドキュメントにガイドライン追記が望ましい
+- Issue body の ambiguity resolution は適切に記録されており、アプローチ選択の根拠が明確
+
+#### design
+- Spec の実装ステップは最小限かつ正確。Changed Files・Implementation Steps・Verification の三部構成が機能している
+- Post-merge 条件が `verify-type: manual` で正しく分類されており、手動確認のガイドが明確
+
+#### code
+- Fixup/amend なし。3コミット（Spec・実装・マージコミット相当）で完結
+- Spec の実装ステップとの逸脱なし
+
+#### review
+- PR #407 にレビュー1件。コメントなし（LGTM の自動レビュー相当）
+- review retrospective で `\|` 非互換問題が記録されており、次回以降の verify コマンド作成に向けたフィードバックが蓄積されている
+
+#### merge
+- PR #407 が 2026-05-04T23:52:56Z にマージ済み（+39/-1 行）。コンフリクトなし
+- pre-existing Forbidden Expressions 違反による CI ブロッカーが発生したが（review retrospective 記録済み）、マージ時には解消済み
+
+#### verify
+- Pre-merge 3条件はすべて PASS（grep で実装確認）
+- Post-merge manual 条件（条件4）が未チェックのため `phase/verify` に遷移。bats テストで代替確認可能
+
+### Improvement Proposals
+- verify コマンドの alternation 記法ガイドライン: `verify-executor.md` の grep 説明に「bare `|` を使用する（`\|` は ripgrep で literal として扱われる）」注意書きを追記する（Issue #369 以降で複数回 recur）
+
 ## Code Retrospective
 
 ### Deviations from Design
