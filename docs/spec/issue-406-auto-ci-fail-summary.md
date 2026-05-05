@@ -40,3 +40,14 @@
 
 - 抽出ソースは「Step 4 の run-*.sh Bash 呼び出しで得た LLM コンテキスト」であり、出力ファイルの保存は不要
 - XL ルートの Auto Retrospective（Step 4a）は既に Notes カラムに詳細情報を含む。本変更は M/L/patch ルートの通常成功時にも CI 情報を提供することが目的
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
