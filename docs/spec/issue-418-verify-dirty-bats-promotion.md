@@ -49,6 +49,20 @@ Issue #399 の verify retrospective で提起された改善提案。`/verify` S
 
 - <!-- verify: command "gh issue view 399 --json body --jq '.body' | grep -q 'verify-dirty-detection'" --> Issue #399 の post-merge 条件に `verify-dirty-detection.bats` を参照する verify command が追加されている
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A: implementation steps followed the Spec exactly. The only adaptation was adding `touch docs/spec/.gitkeep && git add && git commit` in bats `setup()` to track the `docs/spec/` directory, ensuring `git status --short` shows individual file paths rather than the directory root. This matches the real-world state (where `docs/spec/` is already tracked) and the Spec Note requiring an initial commit for `git stash` compatibility.
+
+### Design Gaps/Ambiguities
+
+- The Spec's Note about requiring an initial commit for `git stash` was correct, but a further subtlety emerged: `git status --short` shows untracked directories as a single entry (e.g., `?? docs/`) rather than individual files unless the parent directory is already tracked. The test setup needed a `.gitkeep` commit to match the real-world behavior.
+
+### Rework
+
+- Test cases 2 and 5 initially failed because the test repo had an untracked `docs/` directory. Fixed by adding `touch docs/spec/.gitkeep` + initial commit in `setup()`.
+
 ## Notes
 
 - `check-verify-dirty.sh` は `git status --short` のみ使用し、シブリングスクリプト呼び出しを行わない。既存 bats テストの `WHOLEWORK_SCRIPT_DIR` MOCK_DIR に mock の追加は不要
