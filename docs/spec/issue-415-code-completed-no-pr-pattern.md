@@ -83,3 +83,19 @@ Pre-merge verification 6 件は light の 5 件制限を超えるが、`/issue` 
 ### Rework
 
 - なし。
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- なし。Spec の実装ステップ 1〜4 はすべて diff と完全に整合していた。Code Retrospective でも「Deviations from Design: なし」が記録されており、Spec 品質は高い。
+
+### Recurring Issues
+
+- なし。review-light 全4観点で確認済みの問題はゼロ件。パターン重複も見られない。
+
+### Acceptance Criteria Verification Difficulty
+
+- `rubric` 条件（AC3）はルーブリック判定を要するが、Fallback Steps の記述が明確であり AI 判定で PASS を確定できた。UNCERTAIN は発生しなかった。
+- `section_contains` （AC4、AC5）は diff から直接確認可能で、verify command の品質は高い。
+- 全 6 件の pre-merge 条件がすべて PASS。verify command の精度に問題なし。
