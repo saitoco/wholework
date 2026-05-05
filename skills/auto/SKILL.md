@@ -409,7 +409,19 @@ If all phases succeeded:
    TITLE
    URL
    ```
-   Followed by a result table (one row per phase with status, Notes from step 2). Post-merge opportunistic conditions remain unchecked; run `/verify $NUMBER` after confirming them manually.
+   Followed by a result table (one row per phase with status, Notes from step 2).
+
+   Then enumerate unchecked post-merge conditions from the Issue body:
+   1. Fetch Issue body: `gh issue view $NUMBER --json body -q '.body'`
+   2. Locate the post-merge section (lines after `### Post-merge` or `## Post-merge` heading, up to the next `##` heading or end of file)
+   3. Extract all lines matching `- [ ]` within that section
+   4. For each extracted line, strip the `- [ ]` prefix and remove any `<!-- verify: ... -->` HTML comment substrings, then trim whitespace to produce human-readable condition text
+   5. Display the conditions:
+      - If 1–5 conditions: list each on its own line, prefixed with `  - `
+      - If 6 or more: list the first 5 with `  - ` prefix, then output `  ... and N more` (where N is the total count minus 5)
+      - If 0 conditions: omit the list (output nothing after the result table)
+
+   After the list (or result table if no conditions), output: "Run \`/verify $NUMBER\` after confirming them manually."
 
 4. **If output from step 1 does not contain `phase/verify`**: output the completion banner:
    ```
