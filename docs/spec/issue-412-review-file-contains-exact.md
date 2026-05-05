@@ -38,3 +38,17 @@ Add a note to `skills/review/SKILL.md` Step 8 instructing the reviewer to cross-
 - 追加箇所は Step 8 の条件分類リスト（PASS/FAIL/UNCERTAIN/POST-MERGE）の直後、`### Checkbox Updates` の前（`skills/review/SKILL.md` L248〜L250 間）
 - 挿入する注記はノート形式（箇条書きではなく `**bold heading:**` 形式）。Issue body の "スコープは `file_contains` に限定" の auto-resolve 決定に従い、`grep` や他のコマンドは対象外
 - verify command 1（rubric）はセマンティック検証、verify command 2/3（grep）は機械的補助確認として組み合わせ使用
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
