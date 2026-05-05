@@ -60,3 +60,18 @@
 ### Rework
 
 - N/A
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+特筆事項なし。Spec 記載のステップ 1–3 がすべて diff と 1:1 対応しており、乖離なし。
+
+### 繰り返し課題
+
+特筆事項なし。レビュー指摘事項 0 件。
+
+### 受け入れ条件検証難易度
+
+- AC1 (`grep "\"\\^VERIFY_FAILED\""`): verify コマンドの `\\^` エスケープ解釈が若干複雑 — 実際には `grep -q "^VERIFY_FAILED"` という文字列が存在するかの確認であり、直接 Grep で `\^VERIFY_FAILED` を検索することで判断可能だった。
+- AC4 (`command "bats tests/run-verify.bats"`): safe モードのため CI 参照フォールバックを使用 (PASS 確定)。verify コマンドとして `command` を使用した場合、`/review` フェーズでは常に CI 依存になる — CI が未完了の場合は UNCERTAIN になる点に留意が必要だが、今回は問題なし。
