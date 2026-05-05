@@ -51,3 +51,31 @@
 
 ### Rework
 - N/A
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Design decision (Option A: Notes column enrichment) was appropriate for the lightweight scope. The implementation plan matched the final implementation exactly.
+- No ambiguities in acceptance conditions — section_contains + rubric combination was well-chosen for a documentation-change Issue.
+
+#### design
+- N/A (spec phase handled design)
+
+#### code
+- Single commit (dec05e5), no fixup/amend patterns. Clean implementation matching the spec.
+
+#### review
+- Patch route — no review phase.
+
+#### merge
+- Patch route via direct commit to main. No conflicts.
+
+#### verify
+- Both pre-merge conditions (section_contains + rubric) PASS.
+- One post-merge opportunistic condition remains unchecked — requires a future `/auto` run with actual CI FAIL → recovery to confirm behavioral correctness.
+- The rubric condition with 3 explicit elements (extraction source, display position, display format) enabled precise semantic verification without ambiguity.
+
+### Improvement Proposals
+- N/A
