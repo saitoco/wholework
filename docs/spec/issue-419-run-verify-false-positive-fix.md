@@ -75,3 +75,32 @@
 
 - AC1 (`grep "\"\\^VERIFY_FAILED\""`): verify コマンドの `\\^` エスケープ解釈が若干複雑 — 実際には `grep -q "^VERIFY_FAILED"` という文字列が存在するかの確認であり、直接 Grep で `\^VERIFY_FAILED` を検索することで判断可能だった。
 - AC4 (`command "bats tests/run-verify.bats"`): safe モードのため CI 参照フォールバックを使用 (PASS 確定)。verify コマンドとして `command` を使用した場合、`/review` フェーズでは常に CI 依存になる — CI が未完了の場合は UNCERTAIN になる点に留意が必要だが、今回は問題なし。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 根本原因・再現ステップ・変更ファイルがSpecに明確に記述され、実装との乖離は一切なかった。
+- line 123 の整合性対応（SKILL.md の2箇所への "line-anchored" 統一）がSpecで明示されており、実装者が見落とさなかった点は良い設計。
+
+#### design
+- N/A（設計フェーズは spec と統合）
+
+#### code
+- 単一クリーンコミット（14954c6）、fixup/amend なし。Specの全ステップが diff と1:1対応。
+- Code Retrospective が記録した「line 123 の文脈の差異」は軽微だが、Specに明示されていたため実装で正しく処理された。
+
+#### review
+- レビューコメント0件（MUST/SHOULD/CONSIDER すべてゼロ）。CI全件PASS。効果的なレビューだった。
+- Review Retrospective が AC1 verify コマンドの `\\^` エスケープの複雑さを指摘済み。今後 `file_contains "scripts/run-verify.sh" "^VERIFY_FAILED"` を代替として検討できる（同等の検証がより読みやすい形で可能）。
+
+#### merge
+- PR #420 でコンフリクトなし・クリーンマージ。
+
+#### verify
+- Pre-merge 4件すべて PASS（grep, file_contains×2, command）。bats 14件全件PASS（ok 8 false-positive テストを含む）。
+- Post-merge opportunistic 条件（`/verify 401` 再実行）はユーザー検証待ち（phase/verify 割り当て済み）。
+
+### Improvement Proposals
+- AC1 の verify コマンド (`grep "\"\\^VERIFY_FAILED\"" "scripts/run-verify.sh"`) は機能するが、エスケープ解釈が複雑。同等検証なら `file_contains "scripts/run-verify.sh" "^VERIFY_FAILED"` がより明瞭（将来の類似Issueでの参考例として記録）。
