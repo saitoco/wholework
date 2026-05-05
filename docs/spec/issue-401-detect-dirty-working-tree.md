@@ -74,7 +74,7 @@
 - Post-merge の `verify-type: opportunistic` 条件が未チェックのため `phase/verify` に遷移。次回シナリオ発生時に手動確認が必要。
 
 ### Improvement Proposals
-- `docs/spec/issue-385-default-permission-mode-auto.md` に残存する `verify hint` 表記が CI Forbidden Expressions check を誤作動させるノイズ源。別 Issue で修正すること（Skill infrastructure 改善）。
+- `docs/spec/issue-385-default-permission-mode-auto.md` に残存していた deprecated 用語表記が CI Forbidden Expressions check を誤作動させるノイズ源だった（Issue #410 で修正済み）。
 
 ## Code Retrospective
 
@@ -103,4 +103,4 @@
 ### Acceptance Criteria Verification Difficulty
 
 - 全 AC が `grep` と `rubric` を組み合わせており、auto-verify は安定して PASS。UNCERTAIN は発生しなかった。
-- CI の `Forbidden Expressions check` が PR とは無関係の既存ファイル（`docs/spec/issue-385-default-permission-mode-auto.md`）で失敗しており、PR 単位のアクセプタンス検証に外部ノイズが混入するパターン。既存ファイルの `verify hint` 表記を修正する別 Issue が必要。
+- CI の `Forbidden Expressions check` が PR とは無関係の既存ファイル（`docs/spec/issue-385-default-permission-mode-auto.md`）で失敗しており、PR 単位のアクセプタンス検証に外部ノイズが混入するパターン。既存ファイルの deprecated 用語表記を修正する別 Issue が必要（Issue #410 で対応済み）。

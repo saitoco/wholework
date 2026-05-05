@@ -56,11 +56,11 @@
 - パッチルート（直接 main コミット）。競合なし。
 
 #### verify
-- CI FAIL の根本原因は Issue #394 の実装とは無関係（`docs/spec/issue-385-default-permission-mode-auto.md` の `verify hint` 表記）。`Run bats tests` ジョブは SUCCESS。Forbidden Expressions check の CI failure は既存ノイズで、Issue #394 の受け入れ条件としての CI success 判定を阻害している。この既存ノイズは `docs/spec/issue-401-detect-dirty-working-tree.md` にも記録済みであり、別 Issue での対応が必要。
+- CI FAIL の根本原因は Issue #394 の実装とは無関係（`docs/spec/issue-385-default-permission-mode-auto.md` の deprecated 用語残存）。`Run bats tests` ジョブは SUCCESS。Forbidden Expressions check の CI failure は既存ノイズで、Issue #394 の受け入れ条件としての CI success 判定を阻害している。この既存ノイズは `docs/spec/issue-401-detect-dirty-working-tree.md` にも記録済みであり、別 Issue での対応が必要（Issue #410 で修正済み）。
 
 ### Improvement Proposals
 - Spec 策定時に verify command で使用する文字列と実装での検出文字列の整合を明示的に確認するチェックポイントを `/spec` ワークフローに追加することを検討（Issue #394 の rework パターンの再発防止）
-- `Forbidden Expressions check` の対象を PR 差分ファイルに限定するか、既存 Spec ファイルの `verify hint` 表記を一括修正する Issue を作成することで CI ノイズを除去する（`docs/spec/issue-401` 関連）
+- `Forbidden Expressions check` の対象を PR 差分ファイルに限定するか、既存 Spec ファイルの deprecated 用語表記を一括修正する Issue を作成することで CI ノイズを除去する（`docs/spec/issue-401` 関連、Issue #410 で対応済み）
 
 ## Code Retrospective
 

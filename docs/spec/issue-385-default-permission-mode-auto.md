@@ -195,7 +195,7 @@ Spec 作成時の自動解決:
 | Phase | Route | Result | Notes |
 |-------|-------|--------|-------|
 | spec | pr (L) | SUCCESS | 別セッションで `/spec 385` を完走済み（worktree-spec+issue-385、commit 12a42b4 + 854b476） |
-| code | pr (L) | SUCCESS (manual recovery) | `run-code.sh` の `claude` プロセスが watchdog により 1800s silent timeout で kill (exit 143)。実装 3 commit は worktree 内で完了していたが、PR 作成・branch push 直前に kill された。Parent session が手動で uncommitted spec terminology 修正 (`verify hint` → `verify command`) を commit、main へ rebase、branch push、PR #409 作成を実施 |
+| code | pr (L) | SUCCESS (manual recovery) | `run-code.sh` の `claude` プロセスが watchdog により 1800s silent timeout で kill (exit 143)。実装 3 commit は worktree 内で完了していたが、PR 作成・branch push 直前に kill された。Parent session が手動で uncommitted spec terminology 修正（deprecated 用語 → `verify command` への用語統一）を commit、main へ rebase、branch push、PR #409 作成を実施 |
 | review | pr (L), full | SUCCESS | `/review 409 --full` で MUST 1 件・SHOULD 1 件 resolved、SHOULD 1 件 skipped (`spawn-recovery-subagent.bats`)。CI 再実行で全 PASS |
 | merge | pr (L) | SUCCESS | `/merge 409` でクリーンマージ、Issue auto-close |
 | verify | - | PARTIAL (opportunistic-pending) | 21 pre-merge 条件すべて PASS。post-merge 3 条件はすべて `verify-type: manual` のため未チェック残存 → `phase/verify` 維持 |
@@ -204,7 +204,7 @@ Spec 作成時の自動解決:
 
 1. **`run-code.sh` watchdog 1800s silent timeout (exit 143)**: 内部 `claude -p` プロセスが 1800 秒間 stdout に出力せず watchdog に kill された。実装作業（3 commit）と push 前作業（spec terminology fix）は worktree 内で完了済みだったが、PR 作成・push 直前で kill。`reconcile-phase-state.sh code-pr 385 --check-completion` は `matches_expected: false`（PR 未作成）を返した。Tier 2 anomaly detector (`detect-wrapper-anomaly.sh`) は空出力を返し（unknown pattern）、Tier 3 recovery sub-agent を起動せず parent session が手動で recovery を実施。
 2. **手動 recovery 実施内容**:
-   - uncommitted spec change（`verify hint` → `verify command` terminology fix）を `Fix: align Spec terminology with verify command convention` として commit
+   - uncommitted spec change（deprecated verify 用語 → `verify command` への用語統一 terminology fix）を `Fix: align Spec terminology with verify command convention` として commit
    - worktree 分岐後に main が進んでいた（`#404` `#401` の commit が main にマージ済み）ため `git rebase origin/main` を実施。conflict なし。
    - permission-mode 関連 bats（4 ファイル）のサンプル実行で全 PASS 確認後、`git push -u origin worktree-code+issue-385`、`gh pr create` で PR #409 を作成。
 3. **PR #409 への review-driven push**: review phase 内で `tests/run-spec.bats` の setup() に `get-config-value.sh` mock 追加とテスト名更新（`--permission-mode auto is passed by default`）が push された。新デフォルトを explicit に assert する強化で、本 Issue の意図と整合。
