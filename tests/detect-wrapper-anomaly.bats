@@ -117,6 +117,7 @@ MOCK
     run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 393 --phase verify
     [ "$status" -eq 0 ]
     [[ "$output" == *"dirty-working-tree"* ]]
+    [[ "$output" == *"#393"* ]]
     [[ "$output" == *"### Orchestration Anomalies"* ]]
     [[ "$output" == *"### Improvement Proposals"* ]]
 }
