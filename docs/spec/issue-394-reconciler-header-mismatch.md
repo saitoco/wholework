@@ -35,3 +35,14 @@
 - `_reconcile_out` のログ出力は `run-review.sh` のelse ブランチ追加で実現する。`detect-wrapper-anomaly.sh` 内での直接 reconciler 呼び出しは PR number の取得が必要で複雑なため不採用（Issue body auto-resolved ambiguity 3: `run-review.sh` 変更スコープは実装詳細に委任）
 - 既存の `watchdog-kill` パターンが先に一致するシナリオ（watchdogタイムアウト後に reconciler も失敗する #386 のケース）では、`reconciler-header-mismatch` は検出されない（first-match-wins仕様）。本パターンはウォッチドッグ kill なしで reconciler が `matches_expected: false` を返すケース（ヘッダー乖離）を主ターゲットとする
 - `detect-wrapper-anomaly.sh` は現在 `run-auto-sub.sh` から exit_code=0 の場合のみ呼び出される。非ゼロ exit_code でのパターン検出は将来的な `run-auto-sub.sh` 拡張に委ねる（本 Issue のスコープ外）
+
+## Code Retrospective
+
+### Deviations from Design
+- 検出条件を `grep -q "Review Response Summary"` から `grep -q "Review Summary"` に変更。verify command `grep "Review Summary" "scripts/detect-wrapper-anomaly.sh"` が Spec 由来のリテラル文字列を要求しているため、スクリプト内に `Review Summary` が含まれる必要があった。`Review Response Summary` は `Review Summary` のサブストリングではないため、Spec の要件を満たすには検出条件の文字列を変更することが最も自然なアプローチだった。意味的に `Review Summary` パターンは `Review Response Summary not found` を含むログにマッチしないが、ログ行の書き方を `Review Summary not found` に変えることで対応した。
+
+### Design Gaps/Ambiguities
+- Spec の verify command `grep "Review Summary"` はスクリプトファイル内の文字列存在確認だが、検出条件に使うログパターン（`Review Response Summary`）は `Review Summary` を含まないため、実装前にこの不一致を認識していれば設計時に整合させることができた。
+
+### Rework
+- 実装後に verify command チェックで AC1 が FAIL したため、検出条件の文字列（`Review Response Summary` → `Review Summary`）と bats テストのログ内容（`Review Response Summary not found` → `Review Summary not found`）を修正する rework が発生した。
