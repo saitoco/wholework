@@ -39,7 +39,7 @@ For precondition checks, `reconcile-phase-state.sh` verifies whether the require
 | code-pr | `phase/ready` label on issue, Spec exists | Open PR on `worktree-code+issue-N` branch (#310 SSoT) | Precondition: `phase/ready` — Implemented; Spec exists — future scope. Completion: Implemented |
 | review | PR is OPEN | PR has a comment containing `## Review Response Summary` | Implemented |
 | merge | PR is OPEN and reviewDecision is APPROVED | `gh pr view --json state == MERGED` | Implemented |
-| verify | Issue has `phase/verify` label or is CLOSED | Issue is CLOSED or has `phase/(verify\|done)` label | Implemented |
+| verify | Issue has `phase/verify` label or is CLOSED | Issue is CLOSED or has `phase/done` label | Implemented |
 
 **Note**: Stage 2 recovery (push + PR creation for code-pr after watchdog kill) is delegated to #316 recovery sub-agent. `reconcile-phase-state.sh` performs inspection only — no recovery actions.
 

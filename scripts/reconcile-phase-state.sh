@@ -268,10 +268,10 @@ _completion_verify() {
     return
   fi
 
-  if echo "$labels" | grep -qE '^phase/(verify|done)$'; then
-    _emit_result "true" "issue #${ISSUE_NUMBER} has phase/verify or phase/done label" "$actual_json"
+  if echo "$labels" | grep -q '^phase/done$'; then
+    _emit_result "true" "issue #${ISSUE_NUMBER} has phase/done label" "$actual_json"
   else
-    _handle_mismatch "issue #${ISSUE_NUMBER} is OPEN with no phase/verify or phase/done label" "$actual_json"
+    _handle_mismatch "issue #${ISSUE_NUMBER} is OPEN with no phase/done label" "$actual_json"
   fi
 }
 
