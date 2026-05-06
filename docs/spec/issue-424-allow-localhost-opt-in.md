@@ -62,3 +62,33 @@
 - `api_check` の arg count: (3, 3) — `"URL"`, `"jq_expression"`, `"expected_value"` (全 arg 必須)
 - `--allow-localhost` 除外 regex: `r'\s*--allow-localhost\b'`。`--when` 除外の直後に `args_str_for_count` に対して適用
 - dev サーバライフサイクル管理（起動・終了込み）や他 private IP の opt-in は Out of Scope（別 Issue 対応）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- `section_contains` verify command の PASS 確認では、簡易 `grep -A5` では不十分なケースがある（セクション内の対象文字列が 5 行以上先にある場合）。Python スクリプトによる正確な section boundary チェックが必要だった。実装自体は正しく、verify command もPASSしていることを確認済み。
+
+### Rework
+
+- N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 実装は Spec 通りに正確に対応している。`KNOWN_VERIFY_COMMAND_TYPES` への追加、`--allow-localhost` の arg count 除外正規表現、モジュールドキュメント更新がすべて一致。
+
+### Recurring issues
+
+- `browser-verify-security.md` が `browser_check`/`browser_screenshot` 向けの "Processing Steps" セクションと `http_status`/`html_check`/`api_check` 向けの "http_status URL Security Policy" セクションを同一ファイルに持ち、localhost ポリシーが異なる（前者は許可、後者はブロック）。ドキュメントを読む際に混乱が生じうる。将来の同種変更では Processing Steps セクションへの注釈（「このセクションは browser コマンド専用」旨）追加を検討する。
+- `except ValueError` フォールバックでのフラグ除外の一貫性: `--when=` を除外する際に `--allow-localhost` も除外リストに追加しなかったため、稀なエッジケースで false-positive が生じうる。将来フラグを追加する際は同フォールバックへの追加も漏れなく行う必要がある。
+
+### Acceptance criteria verification difficulty
+
+- Pre-merge 条件はすべて `grep`/`file_contains`/`section_contains` で自動検証可能な形式になっており品質が高い。UNCERTAIN が 0 件だった。
+- `section_contains` の実装には section boundary の正確な判定（Python スクリプト相当）が必要であることを Code Retrospective で指摘済み。verify command の精度向上は別 Issue での対応が望ましい。
