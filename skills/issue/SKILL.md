@@ -106,9 +106,9 @@ When using `file_contains` or `section_contains` with a compound string like `"k
 | `section_contains` | `section_contains "path" "heading" "text"` | Text within a markdown section (heading to next same-or-higher-level heading) |
 | `section_not_contains` | `section_not_contains "path" "heading" "text"` | Text absence within a markdown section |
 | `symlink` | `symlink "path" "target"` | Symlink verification |
-| `http_status` | `http_status "URL" "CODE"` | HTTP response code. Safe mode blocks private IPs (including localhost) |
-| `html_check` | `html_check "URL" "selector" "--exists"` / `html_check "URL" "selector" "--count=N"` | HTML structure verification using CSS selectors |
-| `api_check` | `api_check "URL" "jq_expression" "expected_value"` | JSON API response verification (GET only) |
+| `http_status` | `http_status "URL" "CODE"` / `http_status "URL" "CODE" --allow-localhost` | HTTP response code. Safe mode blocks private IPs (including localhost). Add `--allow-localhost` to opt-in to localhost access in safe mode (other private IPs remain blocked) |
+| `html_check` | `html_check "URL" "selector" "--exists"` / `html_check "URL" "selector" "--count=N"` / (with `--allow-localhost`) | HTML structure verification using CSS selectors. Add `--allow-localhost` to opt-in to localhost access in safe mode |
+| `api_check` | `api_check "URL" "jq_expression" "expected_value"` / (with `--allow-localhost`) | JSON API response verification (GET only). Add `--allow-localhost` to opt-in to localhost access in safe mode |
 | `http_header` | `http_header "URL" "Header-Name" "expected_value"` | HTTP response header value |
 | `http_redirect` | `http_redirect "source_URL" "expected_destination" "expected_status"` | HTTP redirect verification |
 | `build_success` | `build_success "CMD"` | Build command success. **Note: only in `/verify` (full) mode. Use only safe build/validation commands** |
