@@ -92,3 +92,28 @@
 
 - Pre-merge 条件はすべて `grep`/`file_contains`/`section_contains` で自動検証可能な形式になっており品質が高い。UNCERTAIN が 0 件だった。
 - `section_contains` の実装には section boundary の正確な判定（Python スクリプト相当）が必要であることを Code Retrospective で指摘済み。verify command の精度向上は別 Issue での対応が望ましい。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Acceptance Criteria が全て `grep`/`file_contains`/`section_contains` で自動検証可能な形式になっており、UNCERTAIN 0 件という高品質。Issue Retrospective セクションは存在しない（`/issue` スキップルートのため）。
+
+#### design
+- Spec 通りの実装が確認できた。`KNOWN_VERIFY_COMMAND_TYPES` 追加・`--allow-localhost` arg count 除外・モジュールドキュメント更新がすべて一致。
+
+#### code
+- rework なし（fixup/amend パターン不検出）。Code Retrospective で `section_contains` の section boundary 判定精度の注意点を記録済み。
+
+#### review
+- Review Retrospective で `browser-verify-security.md` の dual-audience 問題（browser系/http_status系が混在）と `except ValueError` フォールバックでのフラグ除外漏れリスクを記録済み。verify PASS を通じてこれらの問題が実装レベルでは影響していないことを確認。
+
+#### merge
+- PR #428 が正常にマージ（コミット `0e90121`）。コンフリクト・CI 失敗の痕跡なし。
+
+#### verify
+- 全 7 件の pre-merge 条件が PASS。post-merge は `<!-- verify-type: manual -->` のため手動検証待ち。`phase/verify` ラベル付与済み。
+
+### Improvement Proposals
+- N/A
