@@ -56,6 +56,17 @@ Only block the following addresses in safe mode and return UNCERTAIN. No restric
 - `::1` (IPv6 localhost)
 - `fc00::/7` (IPv6 unique local addresses)
 
+### `--allow-localhost` Opt-in
+
+When `--allow-localhost` is present in the verify command, `127.0.0.0/8` (localhost) is permitted even in safe mode. All other addresses in the block list (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, cloud metadata endpoints, IPv6 private ranges) remain blocked regardless of this flag.
+
+| Flag | safe mode localhost | Other private IPs |
+|------|--------------------|--------------------|
+| (none) | **Block → UNCERTAIN** | Block → UNCERTAIN |
+| `--allow-localhost` | **Allowed** | Block → UNCERTAIN |
+
+This is an explicit opt-in: the caller must deliberately add `--allow-localhost` to enable localhost access. The flag has no effect in full mode (full mode already allows all addresses).
+
 ### Handling Preview URLs from Deployments API
 
 Preview URLs obtained from the GitHub Deployments API (`gh api repos/:owner/:repo/deployments`) are from GitHub's trusted service data, not from Issue body (external input), so they are not subject to the safe mode restriction "return UNCERTAIN for Issue-body-derived URLs".
