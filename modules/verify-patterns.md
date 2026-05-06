@@ -315,6 +315,20 @@ If a post-merge condition can be verified mechanically — file existence, text 
 
 Omitting `verify-type: opportunistic` when a verify command is attached is correct — conditions with verify commands are classified as `auto` by default.
 
+### 11. Manual AC Quick Reference — Replace with automatable/rubric
+
+When an acceptance condition is tagged `<!-- verify-type: manual -->`, check if it can be replaced with an automatable verify command before finalizing. Use the table below as a quick reference:
+
+| Pattern often written as `manual` | Replacement candidate | Example |
+|-----------------------------------|-----------------------|---------|
+| Command X succeeds | `command "X"` / `build_success "X"` | `build_success "npm run build"` |
+| URL X returns expected response | `http_status "URL" "200"` / `html_check` / `api_check` | `http_status "https://example.com/api" "200"` |
+| Component / feature is coherent (semantic check) | `rubric "..."` | `rubric "The new component renders without errors and matches the design spec"` |
+| Output file is generated | `file_exists "path"` | `file_exists "dist/bundle.js"` |
+| File contains expected content | `file_contains "path" "keyword"` | `file_contains "config.json" "feature_flag"` |
+
+If a replacement is possible, update the verify command in both the Spec and the Issue body AC. Combining `rubric` with `file_contains`/`section_contains` is also effective (see §9).
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.

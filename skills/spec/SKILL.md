@@ -333,6 +333,7 @@ If implementation steps include section renaming (e.g., `## Implementation Steps
 If post-merge conditions in the Issue body have `<!-- verify-type: ... -->` tags, read `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md` and verify:
 - `auto`-tagged conditions without verify commands — consider adding them
 - `opportunistic`-tagged conditions align with `verify-classifier.md`'s `opportunistic` definition
+- `manual`-tagged conditions — for each, consult `${CLAUDE_PLUGIN_ROOT}/modules/verify-patterns.md §11` quick reference and check if it can be replaced with `file_exists` / `file_contains` / `http_status` / `rubric`. If replaceable, update the verify command in both the Spec and Issue body AC.
 
 **Text removal verify command preference:**
 
