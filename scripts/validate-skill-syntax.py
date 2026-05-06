@@ -498,6 +498,8 @@ KNOWN_VERIFY_COMMAND_TYPES: Dict[str, Tuple[int, int]] = {
     'section_not_contains': (3, 3),
     'symlink': (2, 2),
     'http_status': (2, 2),
+    'html_check': (3, 3),
+    'api_check': (3, 3),
     'http_header': (3, 3),
     'http_redirect': (3, 3),
     'build_success': (1, 1),
@@ -612,6 +614,8 @@ def validate_verify_commands(body: str) -> List[str]:
             continue
         # Exclude --when modifier from argument count
         args_str_for_count = re.sub(r'\s*--when=(?:"[^"\\]*(?:\\.[^"\\]*)*"|[^\s]+)', '', args_str)
+        # Exclude --allow-localhost flag from argument count
+        args_str_for_count = re.sub(r'\s*--allow-localhost\b', '', args_str_for_count)
         try:
             parsed_args = _parse_verify_args(args_str_for_count)
         except ValueError:
