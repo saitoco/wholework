@@ -49,3 +49,14 @@
 AC3 の verify command を Issue body の `section_contains "skills/spec/SKILL.md" "verify-type tag check" "manual"` から `file_contains "skills/spec/SKILL.md" "manual"` に修正した。
 
 理由: SKILL.md において "verify-type tag check" はマークダウン見出し行（`#` プレフィックス）ではなく太字段落（`**verify-type tag check:**`）として記述されているため、`section_contains` は UNCERTAIN を返す。`file_contains "skills/spec/SKILL.md" "manual"` は単純かつ確実な代替（"manual" は現時点で SKILL.md に 0 件、実装後に verify-type tag check ブロックへ導入される）。Issue body を同様に更新した。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Spec の実装ステップ通りに実装完了。
+
+### Design Gaps/Ambiguities
+- `modules/verify-patterns.md` の `## Output` セクション直前に挿入するという設計は正確で、問題なく適用できた。
+
+### Rework
+- N/A
