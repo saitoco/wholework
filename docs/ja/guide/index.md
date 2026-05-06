@@ -24,6 +24,7 @@ Wholework の事前経験は不要です。
 | [トラブルシューティング](troubleshooting.md) | よくある問題の解決: 認証エラー、plugin 失敗、verify 失敗 |
 | [Adapter 執筆ガイド](adapter-guide.md) | MCP サーバー、CLI ツール、外部サービス向けのプロジェクト固有 adapter を作成 |
 | [Figma ベストプラクティス](figma-best-practices.md) | AI コード生成精度を最大化する Figma デザインファイルの作成方法 |
+| [スクリプトガイド](scripting.md) | シェルスクリプトの規約: jq の `// empty` ガード、エラー処理 |
 
 ## 用語
 
