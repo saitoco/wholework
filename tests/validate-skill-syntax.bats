@@ -595,6 +595,26 @@ EOF
     [[ "$output" == *"0 error"* ]]
 }
 
+@test "success: verify command with --allow-localhost flag passes validation" {
+    mkdir -p "$PROJECT_ROOT/skills/myskill"
+    cat > "$PROJECT_ROOT/skills/myskill/SKILL.md" <<'EOF'
+---
+name: myskill
+description: A test skill
+---
+
+# Test Skill
+
+- [ ] <!-- verify: http_status "http://localhost:3000/" "200" --allow-localhost --> localhost returns 200
+- [ ] <!-- verify: html_check "http://localhost:3000/" "h1" "--exists" --allow-localhost --> h1 exists on localhost
+- [ ] <!-- verify: api_check "http://localhost:3000/api" ".status" "ok" --allow-localhost --> API returns ok
+EOF
+
+    run python3 "$REAL_SCRIPT" "$PROJECT_ROOT/skills"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"0 error"* ]]
+}
+
 # --- multiple path specifications ---
 
 @test "success: two skill file paths are both validated" {
