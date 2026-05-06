@@ -97,3 +97,33 @@ Proposal D 採用に伴い `modules/verify-patterns.md` への追記に確定。
 ### Proposal B・C の取り扱い
 
 今回スコープ外とした Proposal B（verify retrospective）と Proposal C（新規モジュール + bats テスト）は、Out of Scope セクションに明記した。必要に応じて別 Issue として起票することを推奨する。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue Retrospective に 3 つの曖昧ポイントの解決根拠が丁寧に記録されており、Proposal D+A 選択の妥当性は明確。
+- AC の精度向上（`rubric` / `grep` / `file_contains` / `command` の組み合わせ）は良質な設計パターン。
+
+#### design
+- 実装ステップが Spec の設計通りに完了。偏差なし。
+- `modules/verify-patterns.md` への §11 追加と `/spec` SKILL.md への1行追記という最小変更で目的を達成しており、スコープ管理が適切。
+
+#### code
+- Code Retrospective で記録済みの通り、Rework なし。実装は単直。
+- AC3 の verify command を `section_contains` から `file_contains` に非対話モードで自動修正した判断は合理的（SKILL.md 内の "verify-type tag check" が Markdown 見出しではなく太字段落であるという構造的事実に基づく）。
+
+#### review
+- patch route（直接コミット）のため PR レビューなし。構文チェック（validate-skill-syntax.py: 0 error/0 warning）は通過済み。
+- `/verify` 実行時に全4条件が初回 PASS → 実装品質は高い。
+
+#### merge
+- patch route で main に直接コミット。コンフリクトなし。
+
+#### verify
+- 全4条件が初回 PASS。verify command の設計（rubric + grep + file_contains + command の組み合わせ）が機能的に適切だった。
+- 特記事項: `rubric` が「クイックリファレンステーブルが追加されている」という意味的条件を PASS 判定するのに適した verify command として機能した。
+
+### Improvement Proposals
+- N/A
