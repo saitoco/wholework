@@ -142,10 +142,14 @@ When multiple `load_when` keys are specified, all conditions are evaluated with 
 | `skills/review/external-review-phase.md` | `/review` | `copilot-review`, `claude-code-review`, or `coderabbit-review` is true | `marker: [copilot-review, claude-code-review, coderabbit-review]` | External review tool integration |
 | `skills/review/skill-dev-recheck.md` | `/review` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development project-specific |
 | `modules/skill-dev-doc-impact.md` | `/spec`, `/code` (via `doc-checker.md`) | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development project-specific Change Types |
+| `skills/code/forbidden-expressions-check.md` | `/code` | `check-forbidden-expressions.sh` exists | `file_exists_any: [scripts/check-forbidden-expressions.sh]` | Forbidden expression pre-check |
+| `skills/code/skill-dev-validation.md` | `/code` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development syntax validation |
+| `skills/code/stale-test-check.md` | `/code` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development stale test check |
 | `skills/issue/spec-test-guidelines.md` | `/issue` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development test recommendations |
 | `skills/verify/browser-verify-phase.md` | `/verify` | `HAS_BROWSER_CAPABILITY=true` | `capability: browser` | Browser verification |
 | `skills/issue/mcp-call-guidelines.md` | `/issue` | `MCP_TOOLS` non-empty | `capability: mcp` | MCP tool detection |
 | `skills/doc/translate-phase.md` | `/doc` | `translate` subcommand | `arg_starts_with: translate` | Translation generation |
+| `skills/doc/skill-dev-sync.md` | `/doc` | `validate-skill-syntax.py` or `skills/` exists | `file_exists_any: [scripts/validate-skill-syntax.py, skills/]` | Skill development sync |
 | `.wholework/domains/{skill}/*.md` | `/spec`, `/code`, `/review`, `/verify` | Directory scan (files exist in `.wholework/domains/{skill}/`) | _(N/A — unconditional when present)_ | Project-local (user-defined) |
 
 **Bundled Domain files** are discovered by the `domain-loader` module via Glob of `${CLAUDE_PLUGIN_ROOT}/skills/{SKILL_NAME}/*.md`. For each file, the module checks the `type: domain` frontmatter field; files without it are skipped. If `load_when:` is present, the module evaluates all typed keys with AND semantics and loads the file only when all conditions are true. If `load_when:` is absent, the file is loaded unconditionally (backward compatible).

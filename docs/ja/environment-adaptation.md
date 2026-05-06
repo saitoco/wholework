@@ -132,10 +132,14 @@ applies_to_proposals:               # 省略可; 改善提案 Issue をこの Do
 | `skills/review/external-review-phase.md` | `/review` | `copilot-review`/`claude-code-review`/`coderabbit-review` のいずれかが true | `marker: [copilot-review, claude-code-review, coderabbit-review]` | 外部レビューツール連携 |
 | `skills/review/skill-dev-recheck.md` | `/review` | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発プロジェクト固有 |
 | `modules/skill-dev-doc-impact.md` | `/spec`、`/code`（`doc-checker.md` 経由） | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発プロジェクト固有 Change Types |
+| `skills/code/forbidden-expressions-check.md` | `/code` | `check-forbidden-expressions.sh` が存在 | `file_exists_any: [scripts/check-forbidden-expressions.sh]` | 禁止表現事前チェック |
+| `skills/code/skill-dev-validation.md` | `/code` | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発構文検証 |
+| `skills/code/stale-test-check.md` | `/code` | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発陳腐化テストチェック |
 | `skills/issue/spec-test-guidelines.md` | `/issue` | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発テスト推奨事項 |
 | `skills/verify/browser-verify-phase.md` | `/verify` | `HAS_BROWSER_CAPABILITY=true` | `capability: browser` | ブラウザ検証 |
 | `skills/issue/mcp-call-guidelines.md` | `/issue` | `MCP_TOOLS` が空でない | `capability: mcp` | MCP ツール検出 |
 | `skills/doc/translate-phase.md` | `/doc` | `translate` サブコマンド | `arg_starts_with: translate` | 翻訳生成 |
+| `skills/doc/skill-dev-sync.md` | `/doc` | `validate-skill-syntax.py` または `skills/` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py, skills/]` | スキル開発同期 |
 | `.wholework/domains/{skill}/*.md` | `/spec`、`/code`、`/review`、`/verify` | ディレクトリスキャン（`.wholework/domains/{skill}/` にファイル存在） | _（N/A — 存在すれば無条件）_ | プロジェクトローカル（ユーザー定義） |
 
 **バンドル Domain ファイル** は `domain-loader` モジュールが `${CLAUDE_PLUGIN_ROOT}/skills/{SKILL_NAME}/*.md` を Glob することで発見されます。各ファイルに対して `type: domain` frontmatter フィールドを確認し、存在しないファイルはスキップされます。`load_when:` が存在する場合、モジュールはすべての typed キーを AND セマンティクスで評価し、すべての条件が true のときのみファイルをロードします。`load_when:` が存在しない場合は無条件でロードされます（後方互換）。
