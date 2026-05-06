@@ -62,3 +62,17 @@
 - `api_check` の arg count: (3, 3) — `"URL"`, `"jq_expression"`, `"expected_value"` (全 arg 必須)
 - `--allow-localhost` 除外 regex: `r'\s*--allow-localhost\b'`。`--when` 除外の直後に `args_str_for_count` に対して適用
 - dev サーバライフサイクル管理（起動・終了込み）や他 private IP の opt-in は Out of Scope（別 Issue 対応）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- `section_contains` verify command の PASS 確認では、簡易 `grep -A5` では不十分なケースがある（セクション内の対象文字列が 5 行以上先にある場合）。Python スクリプトによる正確な section boundary チェックが必要だった。実装自体は正しく、verify command もPASSしていることを確認済み。
+
+### Rework
+
+- N/A
