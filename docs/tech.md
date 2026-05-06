@@ -26,6 +26,7 @@ English | [日本語](ja/tech.md)
 | GitHub CLI (`gh`) | Issue/PR operations, GitHub API access |
 | GitHub Copilot | Code review (Step 7), automatic implementation from Issues |
 | bats (Bash Automated Testing System) | Shell script testing |
+| jq | JSON processor used by verify-executor / gh-graphql / get-issue-* helpers |
 
 ## Architecture Decisions
 

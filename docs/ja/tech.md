@@ -17,6 +17,7 @@
 | GitHub CLI (`gh`) | Issue/PR 操作、GitHub API アクセス |
 | GitHub Copilot | コードレビュー（Step 7）、Issue からの自動実装 |
 | bats (Bash Automated Testing System) | シェルスクリプトのテスト |
+| jq | JSON プロセッサー。verify-executor / gh-graphql / get-issue-* ヘルパーで使用 |
 
 ## アーキテクチャ決定
 
