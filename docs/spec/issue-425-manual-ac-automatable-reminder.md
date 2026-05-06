@@ -60,3 +60,40 @@ AC3 の verify command を Issue body の `section_contains "skills/spec/SKILL.m
 
 ### Rework
 - N/A
+
+## Issue Retrospective
+
+### 曖昧ポイントの解決根拠
+
+**[1] 採用 Proposal (A/B/C/D) の選択**
+
+Proposal は 4 つが列挙されており、どの組み合わせを実装するか明記されていなかった。非対話モードにて以下の観点から **D + A** に自動解決した:
+
+- **Proposal D**（`modules/verify-patterns.md` に早見表追加）: 既存ファイルへのセクション追加のみ。新規ファイル作成不要で最もリスクが低い。Distributable-first 原則（共有モジュール拡張）にも合致する。
+- **Proposal A**（`/spec` SKILL.md の verify-type tag check に追記）: `/spec` Step 10 にすでに `verify-type tag check` ステップが存在するため、`manual` タグへの言及追加が最も自然な拡張ポイント。
+- **Proposal B**（verify retrospective への追加）と **Proposal C**（新規モジュール + bats テスト）はスコープと複雑度が高く、別 Issue での対応が望ましいと判断。
+
+**[2] モジュール選択: `verify-patterns.md` vs 新規 `manual-ac-reviewer.md`**
+
+Proposal D 採用に伴い `modules/verify-patterns.md` への追記に確定。新規モジュール作成は不要。
+
+**[3] スキル選択: `/spec` vs `/verify` SKILL.md**
+
+`/spec` SKILL.md の Step 10 にある `verify-type tag check` ブロックが最適な挿入ポイント。`/verify` への追加は Proposal B のスコープであり、今回は対象外とした。
+
+### 受入条件の変更理由
+
+元の「## Acceptance Criteria の方向性」は「または」を多用した方向性の列挙にとどまっていたため、以下の構造に変換した:
+
+| 変更内容 | 理由 |
+|---|---|
+| Pre-merge/Post-merge セクション分割 | 標準フォーマットへの準拠 |
+| `rubric` verify command の追加（AC1）| 早見表の内容は自然言語的な品質確認であり、`file_contains` より `rubric` が適切 |
+| `grep "build_success"` の追加（AC2）| `build_success` は現在 `verify-patterns.md` に不在。新規追加の機械的確認として有効 |
+| `section_contains` の追加（AC3）| `/spec` SKILL.md の特定セクションへの追記を精度よく確認 |
+| `command "python3 scripts/validate-skill-syntax.py"` の追加（AC4）| SKILL.md 変更時の構文チェック（spec-test-guidelines.md 準拠） |
+| Proposal C 条件付き bats テスト（旧 AC3）を削除 | Proposal C を今回のスコープ外とした |
+
+### Proposal B・C の取り扱い
+
+今回スコープ外とした Proposal B（verify retrospective）と Proposal C（新規モジュール + bats テスト）は、Out of Scope セクションに明記した。必要に応じて別 Issue として起票することを推奨する。
