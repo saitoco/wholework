@@ -8,7 +8,7 @@ English | [日本語](../ja/guide/quick-start.md)
 
 # 🚀 Quick Start
 
-Walk through `/issue` → `/code` → `/verify` on a sample Issue in about 5 minutes.
+Walk through `/issue` → `/code` → `/verify` on a sample Issue in about 10 minutes.
 
 ## Prerequisites
 

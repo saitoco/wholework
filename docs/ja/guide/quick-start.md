@@ -2,7 +2,7 @@
 
 # 🚀 クイックスタート
 
-サンプル Issue を使って `/issue` → `/code` → `/verify` を約 5 分で体験します。
+サンプル Issue を使って `/issue` → `/code` → `/verify` を約 10 分で体験します。
 
 ## 前提条件
 
