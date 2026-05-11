@@ -47,3 +47,17 @@ UI 再現案件 (旧サイトのフレームワーク移行、Figma デザイン
 - **AC 数値の整合**: 本 Spec の Verification > Pre-merge は 5 items (Issue body も 5 items に同期更新; 元の Issue body は 10 items だったが light template Simplicity Rule に従い consolidate)
 - **`visual-reproduction.md` の本文内容**: failure modes / 原則 / tooling / workflow / anti-patterns / exemplar の 6 章は #441 retrospective comments と Issue body 中の Background セクションを SSoT として整合
 - 同パターンの参考実装: `docs/environment-adaptation.md` (`type: project`、4-layer architecture の methodology)、`docs/translation-workflow.md` (`type: project`、ja mirror sync の methodology)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A (実装ステップは Spec 通りに実施。Step 1-5 の並列化は Spec 記載の通り実行)
+
+### Design Gaps/Ambiguities
+
+- `skills/spec/visual-diff-guidance.md` へのリンク挿入位置が Spec に「Primary Application Scenarios サブセクション末尾、または専用の "See also" サブセクション」と記載されていたが、具体的な挿入位置はファイルの構造を確認した上で "Problem `visual_diff` Solves" セクションの直前に挿入した (論理的に最も自然な位置)
+
+### Rework
+
+- N/A
