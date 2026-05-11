@@ -91,3 +91,17 @@ N/A
 ### Rework
 
 - `allowed-tools` 漏れによる追加コミット（`fix: add check-eager-load-capability.sh to audit allowed-tools`）が発生した。Spec の「Changed Files」セクションに `allowed-tools` 更新を明示しておくべきだった。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. 実装は Spec と完全一致。`docs/ja/structure.md` の追加は `docs/translation-workflow.md` 起因でコードリトロスペクティブに記録済み。
+
+### Recurring issues
+
+Nothing to note. 単発の SHOULD issue（bats テスト変数名）のみ。同種パターンの繰り返しなし。
+
+### Acceptance criteria verification difficulty
+
+検収基準 3 条件すべて `section_contains` / `rubric` コマンドで PASS に判定できた。verify command の品質は問題なし。macOS 互換性 CI がカバーしないスクリプト（`check-eager-load-capability.sh`）の mac 動作確認は POST-MERGE 課題として残る。将来的に macOS shell compatibility CI の対象スクリプトリストに新規スクリプトを自動追加する仕組みを検討する価値がある。
