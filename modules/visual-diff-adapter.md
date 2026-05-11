@@ -117,8 +117,12 @@ Composite the three images (Before / After / Diff highlight) side by side using 
 ```bash
 node -e "
 const sharp = require('sharp');
+const { PNG } = require('pngjs');
+const fs = require('fs');
+const imgData = PNG.sync.read(fs.readFileSync('.tmp/visual-diff-${run_id}/${viewport}-${state}-ref.png'));
+const imgHeight = imgData.height;
 sharp({
-  create: { width: 3 * ${viewport}, height: implHeight, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } }
+  create: { width: 3 * ${viewport}, height: imgHeight, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } }
 }).composite([
   { input: '.tmp/visual-diff-${run_id}/${viewport}-${state}-ref.png', left: 0, top: 0 },
   { input: '.tmp/visual-diff-${run_id}/${viewport}-${state}-impl.png', left: ${viewport}, top: 0 },
