@@ -64,3 +64,20 @@
 - AC3 は 2 つの verify command を 1 つの受入条件にまとめたもの（issue/SKILL.md は "Extension Guide"、spec/SKILL.md は "environment-adaptation.md" でそれぞれ確認）
 - 追加するテキストに半角 `!` は含まない（validate-skill-syntax.py の forbidden expression チェックに対応済み）
 - `docs/environment-adaptation.md` 自体は変更しない（Extension Guide Step 0 は commit `fcecee2` で既に明文化済み）
+
+## spec retrospective
+
+### Minor observations
+
+- Issue body の AC3 は 2 つの verify command を 1 チェックボックスにまとめている（issue/SKILL.md: "Extension Guide"、spec/SKILL.md: "environment-adaptation.md"）。verify executor での実行順序に依存しないため問題なし。
+- 調査の結果、変更対象は SKILL.md 2 ファイルのみで複雑性は低かった。既存の Extension Guide Step 0 が well-defined だったため、参照するだけで設計が完結した。
+
+### Judgment rationale
+
+- non-interactive モードで実行。Issue body の Auto-Resolved Ambiguity Points（挿入位置: issue/SKILL.md → Step 4 冒頭、spec/SKILL.md → Step 6）をそのまま採用。
+- ISSUE_TYPE=Task のため Uncertainty・UI Design セクションを省略。
+- Changed Files は 2 ファイルのみ（skills/issue/SKILL.md, skills/spec/SKILL.md）。docs/structure.md 等への波及なし。
+
+### Uncertainty resolution
+
+- 調査時点で不確実な点なし。environment-adaptation.md の Extension Guide Step 0 が既に整備されており、参照文言の確認も完了。
