@@ -28,6 +28,8 @@ Use `visual_diff` as the **primary** verify command for UI reproduction cases:
 
 The key characteristic of these cases: a **reference URL** (live site, staging, or design artifact) exists and the **implementation URL** must visually match it.
 
+For a complete methodology covering all three failure modes (narrow PASS criteria, spec vs. reference confusion, incomplete state coverage), see [docs/visual-reproduction.md](../../docs/visual-reproduction.md).
+
 ### Problem `visual_diff` Solves
 
 Without `visual_diff`, AI verification of UI reproduction relies on `file_contains`, `getComputedStyle`-based `command` checks, and `browser_screenshot` (single URL subjective review). These approaches share a common weakness: **verification scope selection bias** — the AI confirms elements it chose to check, but cannot guarantee coverage of the entire layout. Regressions in unchecked areas pass silently.

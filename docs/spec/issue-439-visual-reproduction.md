@@ -47,3 +47,31 @@ UI 再現案件 (旧サイトのフレームワーク移行、Figma デザイン
 - **AC 数値の整合**: 本 Spec の Verification > Pre-merge は 5 items (Issue body も 5 items に同期更新; 元の Issue body は 10 items だったが light template Simplicity Rule に従い consolidate)
 - **`visual-reproduction.md` の本文内容**: failure modes / 原則 / tooling / workflow / anti-patterns / exemplar の 6 章は #441 retrospective comments と Issue body 中の Background セクションを SSoT として整合
 - 同パターンの参考実装: `docs/environment-adaptation.md` (`type: project`、4-layer architecture の methodology)、`docs/translation-workflow.md` (`type: project`、ja mirror sync の methodology)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A (実装ステップは Spec 通りに実施。Step 1-5 の並列化は Spec 記載の通り実行)
+
+### Design Gaps/Ambiguities
+
+- `skills/spec/visual-diff-guidance.md` へのリンク挿入位置が Spec に「Primary Application Scenarios サブセクション末尾、または専用の "See also" サブセクション」と記載されていたが、具体的な挿入位置はファイルの構造を確認した上で "Problem `visual_diff` Solves" セクションの直前に挿入した (論理的に最も自然な位置)
+
+### Rework
+
+- N/A
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Nothing to note. 実装は Spec のすべての実装ステップに準拠。`visual-diff-guidance.md` へのリンク挿入位置の微調整は Design Gaps/Ambiguities として Code Retrospective 内にすでに記録済み。
+
+### Recurring Issues
+
+Nothing to note. MUST/SHOULD 指摘なし。review-light 4 視点すべてクリーン。ドキュメントのみの PR は Edge Cases・Security の視点が N/A になる性質があり、今後同種の PR ではこれを前提として review に臨める。
+
+### Acceptance Criteria Verification Difficulty
+
+Nothing to note. 全 AC が `file_exists` / `file_contains` / `file_not_contains` / `rubric` / `github_check` の組み合わせで構成されており、safe モードで UNCERTAIN ゼロ (10/10 PASS)。ドキュメント系 Issue の AC 設計モデルケースとして参照可能。
