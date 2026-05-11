@@ -129,7 +129,7 @@ sharp({
 
 The resulting 3-panel image layout: `[ Before (ref) | After (impl) | Diff highlight ]`
 
-#### 5d. Frontend Visual Review Sub-Agent Dispatch
+#### 5d. Frontend Visual Review Sub-Agent Invocation
 
 Collect all 3-panel images and spawn the `frontend-visual-review` sub-agent via Task:
 
