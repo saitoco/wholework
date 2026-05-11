@@ -47,7 +47,7 @@
   - `/review`: Full モードでは 2 グループに分割する — Spec 準拠レビュー（`review-spec`）とバグ検出（`review-bug`）。2 段階検証（検出→検証サブエージェント）で偽陽性を排除。Light モードでは統合エージェント（`review-light`）1 つで 4 観点（spec・bug・エッジケース・ドキュメント）をまとめて担当
 - **共有モジュールパターン**: 複数スキルを横断する共通処理を `modules/*.md` に切り出し、"Read and follow" パターンで参照する
 - **Spec ファースト（使い捨て）**: Spec はタスク完了後の成果物として保守しない。Spec-anchored および Spec-as-source アプローチは採用しない。理由: (1) LLM の非決定性により同じ spec が同じコード再生成を保証しない、(2) spec 保守コストがコード保守コストに上乗せになる
-- **プログレッシブ・ディスクロージャー（Core/Domain 分離）**: SKILL.md 本文にはプロジェクト種別やツールに依存しない汎用ロジックだけを記す。特定ツール（Figma、Copilot など）やプロジェクト種別（スキル開発、IaC など）に固有のロジックは補助ファイル（`skills/{name}/xxx-phase.md`）に切り出し、該当するときだけ読み込む。判断基準: 「このツール/プロジェクト種別を使わないプロジェクトでもこのロジックが必要か？」— No なら切り出す
+- **プログレッシブ・ディスクロージャー（Core/Domain 分離）**: SKILL.md 本文にはプロジェクト種別やツールに依存しない汎用ロジックだけを記す。特定ツール（Figma、Copilot など）やプロジェクト種別（スキル開発、IaC など）に固有のロジックは補助ファイル（`skills/{name}/xxx-phase.md`）に切り出し、該当するときだけ読み込む。判断基準: 「このツール/プロジェクト種別を使わないプロジェクトでもこのロジックが必要か？」— No なら切り出す。**この判断基準は実行ロジックだけでなくガイダンス（適用シナリオ、判断基準、使い分け表）にも適用される** — capability 固有のガイダンスを eager-load される共通モジュール（`modules/verify-patterns.md` など）に置くと、domain 外プロジェクトでも skill 起動時に毎回フルトークンコストが発生する。代わりに `load_when: capability: {name}` gate を持つ Domain file を使うこと（参考: Issue #441 visual-diff capability + `skills/spec/visual-diff-guidance.md`）
   - **切り出しパターン（標準）（網羅的）**:
 
     | パターン | 条件 | 例 |

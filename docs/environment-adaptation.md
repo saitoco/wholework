@@ -444,11 +444,38 @@ verify-executor (Layer 4) ─→ .wholework/verify-commands/*.md (project-local 
 
 ### Adding a new capability
 
+**Step 0: Existing pattern survey (prerequisite)**
+
+Before designing the new mechanism, enumerate the existing adapters and capabilities to confirm whether the new requirement fits the established adapter-resolver lazy chain:
+
+- List all rows in `modules/verify-executor.md` translation table that delegate via `adapter-resolver.md` (e.g., `browser_check`, `browser_screenshot`, `lighthouse_check`)
+- List all bundled adapters under `modules/{capability}-adapter.md` (e.g., `browser-adapter.md`, `lighthouse-adapter.md`)
+- Confirm that adding a new capability following the same pattern (Core 1-row + bundled adapter + `HAS_{CAP}_CAPABILITY` gate) covers the requirement before introducing a new mechanism
+
+Skipping this step risks designing a redundant mechanism that overlaps with existing `adapter-resolver.md` functionality (Issue #441 initially proposed a "bundled custom verify handler resolution" mechanism before re-evaluation revealed adapter-resolver already provided the same 3-layer resolution).
+
 1. Create `modules/{capability}-adapter.md` (refer to `modules/browser-adapter.md`)
 2. Add the capability to the description in `modules/adapter-resolver.md`
 3. Add the new command to the translation table in `verify-executor.md`, delegating via adapter-resolver
 4. Add `capabilities.{name}` to the marker table in `modules/detect-config-markers.md`
 5. Add to the Key Files table in `docs/structure.md`
+6. **(Guidance content)** If the capability requires usage guidance (application scenarios, comparison with existing verify commands, decision criteria for adopting it), create a Domain file `skills/{skill-name}/{capability}-guidance.md` with frontmatter `type: domain`, `skill: {skill}`, `load_when: capability: {capability}` instead of adding sections to eager-loaded shared modules (e.g., `modules/verify-patterns.md`). Reference implementations: `skills/verify/browser-verify-phase.md` (`capability: browser`), `skills/spec/visual-diff-guidance.md` (`capability: visual-diff`, added via Issue #441).
+
+### Eager-load vs Lazy-load classification (per extension element)
+
+Use this table to estimate domain-external overhead before finalizing the extension design. Goal: keep eager-load overhead under ~200 tokens for any new capability addition.
+
+| Element | Load type | Domain-external overhead | Notes |
+|---------|-----------|--------------------------|-------|
+| `modules/{capability}-adapter.md` | Lazy | 0 | Read only when verify command is invoked |
+| Bundled sub-agent (`agents/{name}.md`) | Lazy | 0 | Task-spawned from adapter Processing Steps |
+| `skills/{skill}/{capability}-guidance.md` (Domain file) | Lazy (capability gate) | 0 | Read only when `HAS_{CAP}_CAPABILITY=true` |
+| `modules/verify-executor.md` translation table row | Eager | ~30 tokens / row | Always read by `/review` and `/verify` |
+| `modules/adapter-resolver.md` capability example | Eager | ~10 tokens / word | Single-word capability additions |
+| `modules/detect-config-markers.md` marker row | Eager | ~20 tokens / row | Always read at config detection |
+| `docs/structure.md` Key Modules entry | Eager | ~30 tokens / row | Steering doc — referenced by every skill |
+| `docs/environment-adaptation.md` table entries | Eager | ~70 tokens / row | Architecture doc referenced for design |
+| **`modules/verify-patterns.md` guidance section** | **Eager** | **~1500 tokens / section** | **Avoid — use Domain file per Step 6 instead** |
 
 ### Adding new Domain logic
 
