@@ -90,3 +90,31 @@
 - `--jq '.data.repository.issue'` で `number` + `timelineItems` を含む Issue オブジェクト全体を返す。呼び出し側で `.timelineItems.nodes` を参照する
 - `timelineItems` の `first: 100` 上限は Issue 本文に Out of Scope として明記済み（pagination 対応は別 Issue）
 - bats テストは `gh api graphql` を mock しているので実際のクエリ内容（`timelineItems` キーワード）は `api_call` ログ文字列から確認する
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- `section_contains` ヒントの verify executor 実装（awk ベース）が Section 境界を正確に特定できているか、初回確認時にコマンドが誤っていた（awk の終了条件が `^### ` で同一見出し行を除外できていなかった）。verify-executor 実装上は問題ないが、ローカル確認スクリプトの書き方に注意が必要
+
+### Rework
+
+- N/A
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Nothing to note. 実装は Spec と完全一致。クエリの変数名（`$owner/$repo/$num`）、返却フィールド（`number + timelineItems`）、イベント種別（`LABELED_EVENT/UNLABELED_EVENT/REOPENED_EVENT`）すべて仕様通り。
+
+### Recurring Issues
+
+Nothing to note. レビュー観点（Spec 整合・エッジケース・セキュリティ・ドキュメント）で問題は検出されなかった。
+
+### Acceptance Criteria Verification Difficulty
+
+Nothing to note. 7 条件すべて PASS。`command` 型ヒント（bats テスト・bash 構文チェック）は safe モードで CI 参照フォールバックにより解決。verify command の品質は良好。

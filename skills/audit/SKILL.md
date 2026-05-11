@@ -224,7 +224,8 @@ Filter to Issues created on or after `--since DATE`. If `--since` is not specifi
 For each Issue in the filtered list:
 
 ```bash
-gh issue view {number} --json timelineItems
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query get-issue-timeline -F num={number} \
+    --jq '.data.repository.issue'
 ```
 
 Extract the following from `timelineItems`:

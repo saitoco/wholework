@@ -107,6 +107,15 @@ teardown() {
     [[ "$api_call" == *"blockedBy"* ]]
 }
 
+@test "success: --query get-issue-timeline resolves named query" {
+    run bash "$SCRIPT" --query get-issue-timeline -F num=444
+    [ "$status" -eq 0 ]
+    grep -q "api graphql" "$GH_CALL_LOG"
+    local api_call
+    api_call=$(grep "api graphql" "$GH_CALL_LOG")
+    [[ "$api_call" == *"timelineItems"* ]]
+}
+
 @test "error: --query with unknown name" {
     run bash "$SCRIPT" --query unknown-query-name
     [ "$status" -eq 1 ]

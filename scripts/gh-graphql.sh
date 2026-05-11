@@ -61,6 +61,9 @@ get_named_query() {
         get-blocked-by)
             printf '%s' 'query($owner:String!,$repo:String!,$num:Int!){repository(owner:$owner,name:$repo){issue(number:$num){blockedBy(first:100){nodes{number title state}}}}}'
             ;;
+        get-issue-timeline)
+            printf '%s' 'query($owner:String!,$repo:String!,$num:Int!){repository(owner:$owner,name:$repo){issue(number:$num){number timelineItems(itemTypes:[LABELED_EVENT,UNLABELED_EVENT,REOPENED_EVENT],first:100){nodes{__typename ... on LabeledEvent{label{name}createdAt} ... on UnlabeledEvent{label{name}createdAt} ... on ReopenedEvent{createdAt}}}}}}'
+            ;;
         *)
             echo "Error: unknown query name: $name" >&2
             return 1
