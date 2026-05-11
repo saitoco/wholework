@@ -91,6 +91,33 @@
 - `timelineItems` の `first: 100` 上限は Issue 本文に Out of Scope として明記済み（pagination 対応は別 Issue）
 - bats テストは `gh api graphql` を mock しているので実際のクエリ内容（`timelineItems` キーワード）は `api_call` ログ文字列から確認する
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ基準 7 条件すべてに `<!-- verify: ... -->` ヒントが付与されており、検証可能性が高い。曖昧な条件なし。
+- `section_contains` ヒントのセクション名（`### Step 1: Data Collection`）が実ファイルの見出しと完全一致しており、UNCERTAIN を踏まずに PASS できた。
+
+#### design
+- 実装手順が Spec の Implementation Steps と完全一致。クエリ文字列・変数名・返却フィールドすべて仕様通り。設計偏差なし。
+
+#### code
+- 実装コミットは 1 件（b97886d）。fixup/amend なし、rework なし。Spec 処方通りのクリーンな実装。
+
+#### review
+- PR #448 でレビューが実施され、全 4 観点（Spec 整合・エッジケース・セキュリティ・ドキュメント）で問題なし。CI 全ジョブ SUCCESS。レビューコメント指摘なし。
+
+#### merge
+- PR #448 が単一コミットでクリーンにマージ。コンフリクトなし。
+
+#### verify
+- 初回実行で全 7 条件 PASS。CI 参照なしで `bats tests/gh-graphql.bats`（command ヒント）も直接実行で PASS（テスト22件すべて成功）。
+- Post-merge 手動条件（`/audit stats` 再実行確認）が未チェック。`phase/verify` で残留。
+
+### Improvement Proposals
+- N/A
+
 ## Code Retrospective
 
 ### Deviations from Design
