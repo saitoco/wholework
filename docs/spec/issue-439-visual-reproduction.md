@@ -61,3 +61,17 @@ UI 再現案件 (旧サイトのフレームワーク移行、Figma デザイン
 ### Rework
 
 - N/A
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Nothing to note. 実装は Spec のすべての実装ステップに準拠。`visual-diff-guidance.md` へのリンク挿入位置の微調整は Design Gaps/Ambiguities として Code Retrospective 内にすでに記録済み。
+
+### Recurring Issues
+
+Nothing to note. MUST/SHOULD 指摘なし。review-light 4 視点すべてクリーン。ドキュメントのみの PR は Edge Cases・Security の視点が N/A になる性質があり、今後同種の PR ではこれを前提として review に臨める。
+
+### Acceptance Criteria Verification Difficulty
+
+Nothing to note. 全 AC が `file_exists` / `file_contains` / `file_not_contains` / `rubric` / `github_check` の組み合わせで構成されており、safe モードで UNCERTAIN ゼロ (10/10 PASS)。ドキュメント系 Issue の AC 設計モデルケースとして参照可能。
