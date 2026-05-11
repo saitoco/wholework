@@ -93,7 +93,7 @@ Bundled default:
 1440  (desktop)
 ```
 
-Add `768` (tablet) when the Issue body mentions tablet breakpoints or the design system declares distinct tablet styles.
+Add `768` (tablet) when the Issue body mentions tablet breakpoints or the design system declares distinct tablet styles. This conditional applies only when Priority 1 (project-local override) and Priority 2 (AskUserQuestion) are both skipped; a project-local viewport declaration takes precedence and is used as-is.
 
 ### Step 3: Extract Pages and Navigation Contexts from Issue Body
 
@@ -149,7 +149,7 @@ Apply collapsing conservatively — when in doubt, emit separate entries to pres
 - `{{ref_url}}`: Replaced by the reference URL at verify time (declared in `.wholework.yml` or Issue body)
 - `{{base_url}}`: Replaced by the implementation URL at verify time (resolved via `LOCAL_BASE_URL` or `http://localhost:3000`)
 
-**State label convention**: State labels in `--states=` are opaque identifiers (see `skills/spec/visual-diff-guidance.md` § State Label Convention). Document the action sequence for each label in the `### State Mapping` subsection generated in Step 4.
+**State label convention**: State labels in `--states=` are opaque identifiers (see `skills/spec/visual-diff-guidance.md` § State Label Convention). Navigation context is encoded into the state label where distinct visual behavior is expected (e.g., `menu-open@home-active` represents the `menu-open` state while the home navigation link is active). Document the action sequence for each combined label in the `### State Mapping` subsection generated in Step 4.
 
 ### Step 6: Output
 
