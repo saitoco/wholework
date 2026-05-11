@@ -41,6 +41,7 @@ From the loaded content, search for each YAML key in the marker definition table
 | `spec-path` | `SPEC_PATH` | Path string (extract value as-is) | `docs/spec` |
 | `steering-docs-path` | `STEERING_DOCS_PATH` | Path string (extract value as-is) | `docs` |
 | `capabilities.browser` | `HAS_BROWSER_CAPABILITY` | `true` | `false` |
+| `capabilities.visual-diff` | `HAS_VISUAL_DIFF_CAPABILITY` | `true` | `false` |
 | `capabilities.mcp` | `MCP_TOOLS` | Comma-separated tool name list | `""` |
 | `watchdog-timeout-seconds` | `WATCHDOG_TIMEOUT_SECONDS` | Integer string (extract as-is; use `1800` if ≤0 or non-numeric) | `1800` (see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT`) |
 | `permission-mode` | `PERMISSION_MODE` | String value (extract value as-is) | `"auto"` |
@@ -84,6 +85,7 @@ PRODUCTION_URL: URL string extracted from production-url (default: "")
 SPEC_PATH: path string extracted from spec-path (default: "docs/spec")
 STEERING_DOCS_PATH: path string extracted from steering-docs-path (default: "docs")
 HAS_BROWSER_CAPABILITY: true if capabilities.browser: true is set (default: false)
+HAS_VISUAL_DIFF_CAPABILITY: true if capabilities.visual-diff: true is set (default: false)
 MCP_TOOLS: tool name list from capabilities.mcp (comma-separated, default: "")
 WATCHDOG_TIMEOUT_SECONDS: integer from watchdog-timeout-seconds (default: "1800" (see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT`); falls back to "1800" if ≤0 or non-numeric)
 PERMISSION_MODE: string extracted from permission-mode (default: "auto")

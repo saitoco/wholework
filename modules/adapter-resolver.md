@@ -24,6 +24,7 @@ Derive the variable name from the capability name (e.g., `browser`) using the na
 
 - `browser` → `HAS_BROWSER_CAPABILITY`
 - `mcp` → `HAS_MCP_CAPABILITY`
+- `visual-diff` → `HAS_VISUAL_DIFF_CAPABILITY`
 
 Check the variable value:
 
