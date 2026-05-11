@@ -92,3 +92,32 @@
 ### Uncertainty resolution
 
 - 調査時点で不確実な点なし。environment-adaptation.md の Extension Guide Step 0 が既に整備されており、参照文言の確認も完了。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC3 は 2 つの verify command を 1 チェックボックスにまとめた設計（`grep "Extension Guide"` for issue/SKILL.md、`grep "environment-adaptation.md"` for spec/SKILL.md）。両 grep が独立しているため検証順序依存なく PASS 判定可能だった。設計として問題なし。
+- Spec 段階で挿入位置の Ambiguity Points を自動解決し、Issue body と完全に一致する実装指針を提供できた。
+
+#### design
+- N/A（設計ドキュメントの変更なし）
+
+#### code
+- patch route（直コミット）で実装。fixup/amend なし、rework なし。コミット `8f1378b` 1 件で完了。
+- Code Retrospective（コミット `bd4a52e`）も N/A の確認済み。実装の複雑性が低く（SKILL.md 2 ファイル、各数行の追加）、設計通りに一発で完了した。
+
+#### review
+- patch route のため PR レビューなし。/review フェーズは経由していない。
+- verify command による自動検証（grep 4件 + syntax validation 1件）が Review の代替として機能し、全件 PASS を確認。
+
+#### merge
+- patch route（main 直コミット）のため、マージコンフリクトや CI 待ちなし。シンプルなライフサイクル。
+
+#### verify
+- 全4条件が初回実行で PASS。verify command の設計が明快（grep + syntax check）で、誤検知・偽陰性の余地なし。
+- Post-merge manual 条件（2件）は verify-type: manual のため自動検証対象外。phase/verify で留め置き、ユーザーによる手動確認を案内。
+
+### Improvement Proposals
+- N/A
