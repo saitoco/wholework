@@ -64,6 +64,36 @@ Domain 外プロジェクト (`HAS_VISUAL_DIFF_CAPABILITY=false`) では `domain
 
 - V1〜V4 はすべて file_exists / file_contains / section_contains で自動判定でき、verify command が適切だった。V5 (github_check) も問題なく機能した。UNCERTAIN はゼロ。verify command の品質良好。
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body の設計再考経緯が詳細に記述されており、当初案の撤回理由 (Core 改修問題・Label 増殖・config key 増殖) が明確。Spec は Issue body の WHAT を忠実に実装計画に落とし込んでいる。
+- 受け入れ条件 V1〜V4 はすべて `file_exists` / `file_contains` / `section_contains` で機械的に判定可能な検証可能 AC。V5 `github_check` も CI gate として適切。AC の品質良好。
+
+#### design
+- Spec は `visual-diff-guidance.md` (#441) との同パターン実装を宣言し、実装もその通りに実現された。設計と実装の乖離なし。
+- Step 2 viewport デフォルトのインライン条件分岐の適用スコープが `review retrospective` で指摘されたが、実装時に「only when Priority 1 and 2 skipped」の明記で解消。
+
+#### code
+- コミット: `3317da1` の 1 回のクリーンな実装コミット。fixup/amend なし。
+- PR #450 はすべての CI チェック (bats tests, Forbidden Expressions, Validate skill syntax, macOS shell compatibility, DCO) が pass。
+
+#### review
+- Step 2 の viewport bundled default のインライン条件分岐の tier 間スコープ明記が review で追加された (SHOULD レベル)。
+- V1〜V5 すべての AC が verify で PASS したことは、review の「verify command の品質良好、UNCERTAIN はゼロ」評価が正確だったことを裏付ける。
+
+#### merge
+- PR #450 は `main` ブランチへのクリーンな FF merge。コンフリクトなし。
+
+#### verify
+- 全 5 条件 PASS、FAIL/UNCERTAIN ゼロ。verify command の自動判定率 100%。
+- Post-merge opportunistic 条件 (実プロジェクト適用テスト) は環境依存のため手動確認待ち。Issue は `phase/verify` に留まる。
+
+### Improvement Proposals
+- N/A
+
 ## Notes
 
 - 三位一体: #441 (visual_diff 実装、`skills/spec/visual-diff-guidance.md`) / 本 Issue #438 (state enumeration scaffold) / #439 (methodology guide `docs/visual-reproduction.md`) は同じ `capability: visual-diff` gate で連動し、いずれも domain 外プロジェクトでは lazy load (eager overhead ゼロ)
