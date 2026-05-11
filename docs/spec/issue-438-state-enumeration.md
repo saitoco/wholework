@@ -50,6 +50,20 @@ Domain 外プロジェクト (`HAS_VISUAL_DIFF_CAPABILITY=false`) では `domain
 
 - N/A
 
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+- `skills/spec/visual-state-enumeration.md` Step 2 の bundled default にインライン条件分岐 (`Add 768 when...`) があり、Priority 1/2 との優先関係が記述されていなかった。3-tier 解決順序の説明に "only applies when Priority 1 and 2 are skipped" の明記を追加して解決。Domain file の step 内インライン条件は tier 間の適用スコープを明示する必要がある。
+
+### 繰り返し Issue
+
+- なし。今回の SHOULD issues はいずれも Domain file 設計の新パターン（navigation_context エンコーディング、viewport 条件付きデフォルト）に起因するもの。繰り返しパターンは見られない。
+
+### 受け入れ条件検証の難易度
+
+- V1〜V4 はすべて file_exists / file_contains / section_contains で自動判定でき、verify command が適切だった。V5 (github_check) も問題なく機能した。UNCERTAIN はゼロ。verify command の品質良好。
+
 ## Notes
 
 - 三位一体: #441 (visual_diff 実装、`skills/spec/visual-diff-guidance.md`) / 本 Issue #438 (state enumeration scaffold) / #439 (methodology guide `docs/visual-reproduction.md`) は同じ `capability: visual-diff` gate で連動し、いずれも domain 外プロジェクトでは lazy load (eager overhead ゼロ)
