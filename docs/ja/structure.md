@@ -20,7 +20,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（47 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（48 ファイル）
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -191,6 +191,7 @@ wholework/
 - `scripts/run-verify.sh` — verify スキル実行
 
 **ツーリング:**
+- `scripts/check-eager-load-capability.sh` — eager-load 共通モジュール（verify-patterns.md、verify-executor.md）への capability guidance 混入検出スクリプト；/audit drift Step 2 から呼び出される
 - `scripts/validate-permissions.sh` — skill ディレクトリと name: フィールドの一貫性を検証
 - `scripts/validate-skill-syntax.py` — SKILL.md frontmatter と構文を検証
 - `scripts/check-file-overlap.sh` — リポジトリ間のファイル重複検出

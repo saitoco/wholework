@@ -27,7 +27,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (47 files)
+├── scripts/             # Utility scripts used by skills and agents (48 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -198,6 +198,7 @@ Key modules:
 - `scripts/run-verify.sh` — run verify skill
 
 **Tooling:**
+- `scripts/check-eager-load-capability.sh` — detect capability guidance mixed into eager-load shared modules (verify-patterns.md, verify-executor.md); called from /audit drift Step 2
 - `scripts/validate-permissions.sh` — validate skill directory ↔ name: field consistency
 - `scripts/validate-skill-syntax.py` — validate SKILL.md frontmatter and syntax
 - `scripts/check-file-overlap.sh` — detect file overlap between repos

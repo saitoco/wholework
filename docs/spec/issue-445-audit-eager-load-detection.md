@@ -71,3 +71,37 @@
 - bash 3.2+ 互換: `mapfile` や `associative array` は使用禁止。`while read -r` ループと通常の配列を使用する
 - `modules/verify-executor.md` の「adapter-resolver に delegate していない built-in command 行の詳細除外」は今回スコープ外。セクション見出しレベルの grep で十分な機械的検出が可能と判断（Auto-Resolve: Issue 本文の明示スコープに絞ることで実装の確実性を優先）
 - `docs/structure.md` のスクリプト数は実測 46 .sh + 1 .py = 47 ファイル（2026-05-11 時点）。本 Issue で 48 になる
+
+## Spec Retrospective
+
+N/A
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Step 5（自己参照除外確認）: 「確認が不要なことを確認する」ステップとして残していたが、実装を確認した上でコミット内に明示的な記述は不要と判断し省略した。機能上の影響なし。
+- `docs/ja/structure.md` の更新: 設計ステップには記載がなかったが、`docs/translation-workflow.md` に従い `docs/structure.md` 更新時のミラー同期を実施した。
+
+### Design Gaps/Ambiguities
+
+- `skills/audit/SKILL.md` の `allowed-tools` への `check-eager-load-capability.sh` 追加が設計に記載されていなかった。`scripts/validate-skill-syntax.py` が本文参照スクリプトの `allowed-tools` 未記載を検出したため、修正コミットを追加した。
+- 実行時の false positive チェック（本番 repo での実行）で `lighthouse` capability が `modules/verify-executor.md` の `### Differentiation Between ...` 見出しに検出された。これは true positive（`lighthouse_check` の動作説明がある）であり、設計想定の範囲内。
+
+### Rework
+
+- `allowed-tools` 漏れによる追加コミット（`fix: add check-eager-load-capability.sh to audit allowed-tools`）が発生した。Spec の「Changed Files」セクションに `allowed-tools` 更新を明示しておくべきだった。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. 実装は Spec と完全一致。`docs/ja/structure.md` の追加は `docs/translation-workflow.md` 起因でコードリトロスペクティブに記録済み。
+
+### Recurring issues
+
+Nothing to note. 単発の SHOULD issue（bats テスト変数名）のみ。同種パターンの繰り返しなし。
+
+### Acceptance criteria verification difficulty
+
+検収基準 3 条件すべて `section_contains` / `rubric` コマンドで PASS に判定できた。verify command の品質は問題なし。macOS 互換性 CI がカバーしないスクリプト（`check-eager-load-capability.sh`）の mac 動作確認は POST-MERGE 課題として残る。将来的に macOS shell compatibility CI の対象スクリプトリストに新規スクリプトを自動追加する仕組みを検討する価値がある。
