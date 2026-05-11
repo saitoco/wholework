@@ -148,6 +148,7 @@ When multiple `load_when` keys are specified, all conditions are evaluated with 
 | `skills/issue/spec-test-guidelines.md` | `/issue` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development test recommendations |
 | `skills/verify/browser-verify-phase.md` | `/verify` | `HAS_BROWSER_CAPABILITY=true` | `capability: browser` | Browser verification |
 | `skills/spec/visual-diff-guidance.md` | `/spec` | `HAS_VISUAL_DIFF_CAPABILITY=true` | `capability: visual-diff` | Visual reproduction verify guidance |
+| `skills/spec/visual-state-enumeration.md` | `/spec` | `HAS_VISUAL_DIFF_CAPABILITY=true` | `capability: visual-diff` | Visual reproduction state enumeration scaffold |
 | `skills/issue/mcp-call-guidelines.md` | `/issue` | `MCP_TOOLS` non-empty | `capability: mcp` | MCP tool detection |
 | `skills/doc/translate-phase.md` | `/doc` | `translate` subcommand | `arg_starts_with: translate` | Translation generation |
 | `skills/doc/skill-dev-sync.md` | `/doc` | `validate-skill-syntax.py` or `skills/` exists | `file_exists_any: [scripts/validate-skill-syntax.py, skills/]` | Skill development sync |
