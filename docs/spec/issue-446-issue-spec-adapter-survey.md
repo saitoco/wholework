@@ -65,6 +65,17 @@
 - 追加するテキストに半角 `!` は含まない（validate-skill-syntax.py の forbidden expression チェックに対応済み）
 - `docs/environment-adaptation.md` 自体は変更しない（Extension Guide Step 0 は commit `fcecee2` で既に明文化済み）
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
 ## spec retrospective
 
 ### Minor observations
