@@ -36,6 +36,20 @@ Domain 外プロジェクト (`HAS_VISUAL_DIFF_CAPABILITY=false`) では `domain
 
 - サンプル UI 再現 Issue (`capabilities.visual-diff: true` 宣言済) で `/spec` を実行し、`## State Enumeration` セクションが Spec に含まれ、state 直積から `<!-- verify: visual_diff ... -->` 形式の AC entry が auto-generate されることを実機で確認 <!-- verify-type: opportunistic -->
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
 ## Notes
 
 - 三位一体: #441 (visual_diff 実装、`skills/spec/visual-diff-guidance.md`) / 本 Issue #438 (state enumeration scaffold) / #439 (methodology guide `docs/visual-reproduction.md`) は同じ `capability: visual-diff` gate で連動し、いずれも domain 外プロジェクトでは lazy load (eager overhead ゼロ)
