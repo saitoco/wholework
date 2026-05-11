@@ -105,3 +105,34 @@ Nothing to note. 単発の SHOULD issue（bats テスト変数名）のみ。同
 ### Acceptance criteria verification difficulty
 
 検収基準 3 条件すべて `section_contains` / `rubric` コマンドで PASS に判定できた。verify command の品質は問題なし。macOS 互換性 CI がカバーしないスクリプト（`check-eager-load-capability.sh`）の mac 動作確認は POST-MERGE 課題として残る。将来的に macOS shell compatibility CI の対象スクリプトリストに新規スクリプトを自動追加する仕組みを検討する価値がある。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec の設計は実装と整合しており、概ね適切だった。
+- `allowed-tools` の更新が Changed Files セクションから漏れていたことで Code フェーズの rework が発生した。Spec テンプレートまたは設計チェックリストに `allowed-tools` 更新を明示すると再発防止になる。
+
+#### design
+- 受け入れ条件は `section_contains` / `rubric` の2種で十分に機械検証可能な形式で設計されており、verify フェーズでの ambiguity はなかった。
+
+#### code
+- `allowed-tools` 漏れによる追加コミット（fixup 相当）が発生。Spec の Changed Files が完全でなかったことが原因。
+- `docs/ja/structure.md` のミラー同期は設計未記載だが `docs/translation-workflow.md` の規約に従い実施され、実害なし。
+
+#### review
+- review retrospective に特記事項なし。bats テスト変数名の SHOULD 指摘のみ。
+- macOS 互換性 CI 対象スクリプトの自動追加については review 時点で未検出の懸案として残っている。
+
+#### merge
+- PR #452 でクリーンなマージ（conflict なし）。コミット整合性に問題なし。
+
+#### verify
+- 全 pre-merge 条件（3件）が PASS。false positive なし。
+- Post-merge の opportunistic 条件2件（false positive チェック、regression fixture 確認）が未チェックのため `phase/verify` を付与。手動確認後に `/verify 445` 再実行で完了となる。
+- `check-eager-load-capability.sh` 実行時に `lighthouse` が `modules/verify-executor.md` で検出されたが、これは true positive（`lighthouse_check` 動作説明が見出しレベルで記載）であり設計想定内。
+
+### Improvement Proposals
+- Spec テンプレートの Changed Files セクションに「`allowed-tools` の変更」チェック項目を追加する。`skills/*/SKILL.md` に新規スクリプト参照を追加した場合、`allowed-tools` 更新が必須であることを明示する（Skill infrastructure improvement）。
+- macOS 互換性 CI（`test-shell-compat.yml` 等）の対象スクリプトリストに新規スクリプトを自動追加する仕組みを検討する。`scripts/` に `.sh` ファイルが追加されたとき CI 定義を更新するフックまたはチェックスクリプトとして実装可能（Skill infrastructure improvement）。
