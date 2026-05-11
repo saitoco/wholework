@@ -23,9 +23,9 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill definition (required)
 │       └── *.md         # Auxiliary phase/guideline files (optional)
-├── modules/             # Shared modules referenced by skills (33 files)
+├── modules/             # Shared modules referenced by skills (34 files)
 │   └── <module-name>.md
-├── agents/              # Agent definitions (7 files)
+├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
 ├── scripts/             # Utility scripts used by skills and agents (47 files)
 │   └── <script-name>.{sh,py}
@@ -37,7 +37,7 @@ wholework/
 │   └── workflows/
 │       ├── test.yml             # CI: bats tests, skill syntax validation, forbidden expressions check, and macOS shell compatibility test
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
-├── tests/               # Bats test files for scripts (56 files)
+├── tests/               # Bats test files for scripts (57 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -121,6 +121,7 @@ Key modules:
 - `modules/browser-adapter.md` — browser-based verification adapter
 - `modules/browser-verify-security.md` — browser verification security checks
 - `modules/lighthouse-adapter.md` — Lighthouse performance audit adapter
+- `modules/visual-diff-adapter.md` — visual diff (3-panel composite) verification adapter
 - `modules/measurement-scope.md` — measurement scope definition
 - `modules/next-action-guide.md` — unified next action guidance for all skills
 - `modules/phase-banner.md` — phase identification banner display for skills
@@ -143,6 +144,7 @@ Key modules:
 | issue-risk | `agents/issue-risk.md` | Risk investigation for L/XL issues |
 | issue-precedent | `agents/issue-precedent.md` | Precedent investigation from similar issues |
 | orchestration-recovery | `agents/orchestration-recovery.md` | Recovery diagnostician for unknown orchestration failures |
+| frontend-visual-review | `agents/frontend-visual-review.md` | Visual gap enumeration from 3-panel comparison images (spawned by visual-diff-adapter) |
 
 ### Scripts
 

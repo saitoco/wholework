@@ -147,6 +147,7 @@ When multiple `load_when` keys are specified, all conditions are evaluated with 
 | `skills/code/stale-test-check.md` | `/code` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development stale test check |
 | `skills/issue/spec-test-guidelines.md` | `/issue` | `validate-skill-syntax.py` exists | `file_exists_any: [scripts/validate-skill-syntax.py]` | Skill development test recommendations |
 | `skills/verify/browser-verify-phase.md` | `/verify` | `HAS_BROWSER_CAPABILITY=true` | `capability: browser` | Browser verification |
+| `skills/spec/visual-diff-guidance.md` | `/spec` | `HAS_VISUAL_DIFF_CAPABILITY=true` | `capability: visual-diff` | Visual reproduction verify guidance |
 | `skills/issue/mcp-call-guidelines.md` | `/issue` | `MCP_TOOLS` non-empty | `capability: mcp` | MCP tool detection |
 | `skills/doc/translate-phase.md` | `/doc` | `translate` subcommand | `arg_starts_with: translate` | Translation generation |
 | `skills/doc/skill-dev-sync.md` | `/doc` | `validate-skill-syntax.py` or `skills/` exists | `file_exists_any: [scripts/validate-skill-syntax.py, skills/]` | Skill development sync |
@@ -176,6 +177,7 @@ Executes verification commands. Tool-specific processing is delegated to adapter
 | `command`, `build_success` | UNCERTAIN (CI fallback) | Execute |
 | `lighthouse_check` | UNCERTAIN | Delegate to `lighthouse-adapter.md` via adapter-resolver; CLI detection inside adapter |
 | `browser_check`, `browser_screenshot` | UNCERTAIN | Capability declaration check (`HAS_BROWSER_CAPABILITY`), then delegate via adapter-resolver; returns UNCERTAIN if not declared |
+| `visual_diff` | UNCERTAIN | Capability declaration check (`HAS_VISUAL_DIFF_CAPABILITY`), then delegate via adapter-resolver; default 3-panel composite (pixelmatch + sharp) |
 | `mcp_call` | UNCERTAIN | ToolSearch + read-only restriction |
 
 ### Adapter Pattern
@@ -192,7 +194,7 @@ An adapter operates in three steps: detection → command translation → execut
 
 #### Adapter Pattern Application Requirements
 
-Adapters are valuable when multiple implementation choices must be abstracted — for example, `browser` (browser-use CLI vs Playwright MCP) or `lighthouse` (CLI detection), where tool selection, command translation, and fallback branching are required.
+Adapters are valuable when multiple implementation choices must be abstracted — for example, `browser` (browser-use CLI vs Playwright MCP), `lighthouse` (CLI detection), or `visual-diff` (Playwright/browser-use + sharp + pixelmatch combination), where tool selection, command translation, and fallback branching are required.
 
 #### Why `mcp_call` Does Not Use an Adapter
 

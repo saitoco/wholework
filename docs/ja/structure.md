@@ -16,9 +16,9 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # スキル定義（必須）
 │       └── *.md         # 補助的な phase/ガイドラインファイル（任意）
-├── modules/             # スキルから参照される共有モジュール（33 ファイル）
+├── modules/             # スキルから参照される共有モジュール（34 ファイル）
 │   └── <module-name>.md
-├── agents/              # エージェント定義（7 ファイル）
+├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
 ├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（47 ファイル）
 │   └── <script-name>.{sh,py}
@@ -30,7 +30,7 @@ wholework/
 │   └── workflows/
 │       ├── test.yml             # CI: bats テスト、スキル構文検証、禁止表現チェック、macOS シェル互換性テスト
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
-├── tests/               # スクリプトの Bats テストファイル（56 ファイル）
+├── tests/               # スクリプトの Bats テストファイル（57 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents
@@ -114,6 +114,7 @@ wholework/
 - `modules/browser-adapter.md` — ブラウザベース検証 adapter
 - `modules/browser-verify-security.md` — ブラウザ検証のセキュリティチェック
 - `modules/lighthouse-adapter.md` — Lighthouse パフォーマンス監査 adapter
+- `modules/visual-diff-adapter.md` — visual diff（3-panel composite）検証 adapter
 - `modules/measurement-scope.md` — 計測スコープ定義
 - `modules/next-action-guide.md` — 全スキル共通の次アクション案内
 - `modules/phase-banner.md` — スキル用フェーズ識別バナー表示
@@ -136,6 +137,7 @@ wholework/
 | issue-risk | `agents/issue-risk.md` | L/XL issue のリスク調査 |
 | issue-precedent | `agents/issue-precedent.md` | 類似 issue からの前例調査 |
 | orchestration-recovery | `agents/orchestration-recovery.md` | 未知の orchestration 失敗に対する recovery 診断 |
+| frontend-visual-review | `agents/frontend-visual-review.md` | 3-panel 比較画像からの視覚的差分列挙（visual-diff-adapter から spawn） |
 
 ### Scripts
 

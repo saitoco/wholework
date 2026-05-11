@@ -137,6 +137,7 @@ applies_to_proposals:               # 省略可; 改善提案 Issue をこの Do
 | `skills/code/stale-test-check.md` | `/code` | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発陳腐化テストチェック |
 | `skills/issue/spec-test-guidelines.md` | `/issue` | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発テスト推奨事項 |
 | `skills/verify/browser-verify-phase.md` | `/verify` | `HAS_BROWSER_CAPABILITY=true` | `capability: browser` | ブラウザ検証 |
+| `skills/spec/visual-diff-guidance.md` | `/spec` | `HAS_VISUAL_DIFF_CAPABILITY=true` | `capability: visual-diff` | 視覚再現 verify ガイダンス |
 | `skills/issue/mcp-call-guidelines.md` | `/issue` | `MCP_TOOLS` が空でない | `capability: mcp` | MCP ツール検出 |
 | `skills/doc/translate-phase.md` | `/doc` | `translate` サブコマンド | `arg_starts_with: translate` | 翻訳生成 |
 | `skills/doc/skill-dev-sync.md` | `/doc` | `validate-skill-syntax.py` または `skills/` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py, skills/]` | スキル開発同期 |
@@ -166,6 +167,7 @@ applies_to_proposals:               # 省略可; 改善提案 Issue をこの Do
 | `command`、`build_success` | UNCERTAIN（CI フォールバック） | 実行 |
 | `lighthouse_check` | UNCERTAIN | adapter-resolver 経由で `lighthouse-adapter.md` に委譲、CLI 検出は adapter 内 |
 | `browser_check`、`browser_screenshot` | UNCERTAIN | capability 宣言チェック（`HAS_BROWSER_CAPABILITY`）後に adapter-resolver 経由で委譲、未宣言なら UNCERTAIN |
+| `visual_diff` | UNCERTAIN | capability 宣言チェック（`HAS_VISUAL_DIFF_CAPABILITY`）後に adapter-resolver 経由で委譲、デフォルト 3-panel composite（pixelmatch + sharp） |
 | `mcp_call` | UNCERTAIN | ToolSearch + read-only 制約 |
 
 ### Adapter パターン
@@ -182,7 +184,7 @@ Adapter は 3 ステップで動作します: 検出 → コマンド変換 → 
 
 #### Adapter パターン適用要件
 
-Adapter は複数の実装選択肢を抽象化する必要がある場合に価値があります — 例えば `browser`（browser-use CLI vs Playwright MCP）や `lighthouse`（CLI 検出）では、ツール選択、コマンド変換、フォールバック分岐が必要です。
+Adapter は複数の実装選択肢を抽象化する必要がある場合に価値があります — 例えば `browser`（browser-use CLI vs Playwright MCP）、`lighthouse`（CLI 検出）、`visual-diff`（Playwright/browser-use + sharp + pixelmatch の組み合わせ）では、ツール選択、コマンド変換、フォールバック分岐が必要です。
 
 #### なぜ `mcp_call` は adapter を使わないのか
 
