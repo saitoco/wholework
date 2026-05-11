@@ -152,6 +152,16 @@ Steps:
 
 **Skip** if no tool detection is included in the implementation steps.
 
+**Adapter pattern survey (regardless of SPEC_DEPTH; only when applicable):**
+
+If the Issue body's verify commands include command types not present in the `modules/verify-executor.md` built-in translation table, follow `docs/environment-adaptation.md` Extension Guide Step 0 before accepting the new command type:
+1. Enumerate all rows in `modules/verify-executor.md` that delegate via `adapter-resolver.md`
+2. List all bundled adapters under `modules/{capability}-adapter.md`
+3. Confirm whether the proposed command type can be expressed using existing `adapter-resolver` patterns
+4. If expressible, note the recommended approach in the Spec's "Notes" section
+
+**Skip** if all Issue body verify commands use built-in command types.
+
 ### Step 7: Ambiguity Resolution (clarify)
 
 **SPEC_DEPTH=full only. Skip if SPEC_DEPTH=light.**

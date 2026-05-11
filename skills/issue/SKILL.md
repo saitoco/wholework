@@ -52,6 +52,15 @@ New issue creation flow has no Size yet (treat as unset). Follow the "size routi
 
 ### Step 4: Classify Acceptance Criteria and Assign Verify Commands
 
+**Existing adapter pattern survey (only when proposing a new verify command type):**
+
+If a requirement cannot be expressed using any command from the supported commands table below, before proposing a new custom handler mechanism, follow `docs/environment-adaptation.md` Extension Guide Step 0:
+- Enumerate all rows in `modules/verify-executor.md` translation table that delegate via `adapter-resolver.md` (e.g., `browser_check`, `lighthouse_check`)
+- List all bundled adapters under `modules/{capability}-adapter.md`
+- Confirm that the new requirement cannot be expressed by adding a new capability following the existing `adapter-resolver` pattern before proposing a new mechanism
+
+If expressible via existing `adapter-resolver` patterns, prefer that approach over proposing a new mechanism.
+
 Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-patterns.md` and follow the "Processing Steps" section guidelines to design verify command patterns.
 
 After ambiguity detection, classify each acceptance criterion as "pre-merge" or "post-merge" and assign verify commands.
