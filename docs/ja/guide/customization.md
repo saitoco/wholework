@@ -80,6 +80,7 @@ capabilities:
 | `patch-lock-timeout` | integer | `300` | `git merge --ff-only` + `git push origin main` の lock 取得タイムアウト秒数。lock 保持は数秒のためデフォルトは余裕値。push 取得が常時失敗する場合のみ増やす。0 以下または非数値の場合は `300` にフォールバック。 |
 | `permission-mode` | string | `"auto"` | `/auto` サブプロセスの permission mode。`auto` は `--permission-mode auto` を allow rules テンプレートと共に有効化（`docs/guide/auto-mode-template.json` 参照）; `bypass` は `--dangerously-skip-permissions` を使用（レガシー / オプトアウト）。 |
 | `verify-max-iterations` | integer | `3` | verify-reopen ループの最大試行回数。N 回 FAIL した時点で停止し、Issue を `phase/verify` に留めて人間の判断を促す。0 以下、20 超、または非数値の場合は `3` にフォールバック。 |
+| `retro-proposals-upstream` | string | `""` | Upstream リポジトリ (`owner/repo`) — `/verify` レトロスペクティブから得られた Skill infrastructure improvement 提案の起票先。設定すると、対象提案はサニタイズ（regex で絶対パスと下流固有 Issue 番号を除去、LLM でビジネス文脈用語を除去）されて upstream リポジトリへ起票される。下流リポジトリへの起票はスキップされる。未設定時は従来どおり下流リポジトリへ起票（後方互換）。 |
 
 実装の詳細や YAML パースルールを含む完全なリファレンスは [`modules/detect-config-markers.md`](../../../modules/detect-config-markers.md) を参照してください。
 
