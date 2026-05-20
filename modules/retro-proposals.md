@@ -80,9 +80,9 @@ Called by:
          ```bash
          gh issue create --repo "$RETRO_PROPOSALS_UPSTREAM" --title "{normalized title}" --label "retro/verify" --body "{sanitized body}"
          ```
-         If creation fails, output error log to stderr, skip, and continue (does not affect exit code).
+         If creation fails, output error log to stderr and proceed to steps 8–10 for this proposal (downstream fallback — do not lose the proposal).
 
-      c. Skip downstream creation for this proposal — do not proceed to steps 8–10 for this proposal.
+      c. Skip downstream creation for this proposal only when upstream Issue creation succeeded — do not proceed to steps 8–10 for this proposal.
 
       d. Output to terminal: `"Routed to upstream {RETRO_PROPOSALS_UPSTREAM}#{issue_number}; skipping downstream creation"`
 
