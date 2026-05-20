@@ -52,3 +52,11 @@
 - **bats test 自己参照除外**: 検出対象 (`/Users/...`, `#[0-9]+`) を fixture として含むため、`check-forbidden-expressions.sh` や `/audit drift` の grep 系チェックから `tests/retro-proposals.bats` を除外する必要がある場合は follow-up
 - **AC count**: 8 件 (>5; light template の上限超過警告)。Issue body の AC を verbatim sync しているため統合不可。warning を許容
 - **Mock 追加**: 既存 bats テストには `gh-graphql.sh` mock が用意されているが、`gh issue create --repo` は直接 `gh` を呼ぶため bats 側で `gh` コマンドの stub を `$BATS_TEST_TMPDIR/bin/gh` に配置し `PATH` を切り替えるパターンを採用 (`tests/get-config-value.bats` の WORK_DIR cd パターンを参考)
+
+## Auto Retrospective
+
+### Orchestration Anomalies
+- **[code-completed-no-pr]** Watchdog killed the process in phase `code-pr` (exit code 143) after code-pr completed its commits but before PR creation: `matches_expected:false` and `phase:code-pr` detected in reconcile-phase-state output. The run-code.sh phase exited without creating a PR. Reference: #415.
+
+### Improvement Proposals
+- Follow the recovery procedure at `modules/orchestration-fallbacks.md#code-completed-no-pr`: checkout the worktree branch, rebase onto latest main, push the branch, and create the PR with `gh pr create`, then continue with `/review`.
