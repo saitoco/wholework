@@ -53,6 +53,20 @@
 - **AC count**: 8 件 (>5; light template の上限超過警告)。Issue body の AC を verbatim sync しているため統合不可。warning を許容
 - **Mock 追加**: 既存 bats テストには `gh-graphql.sh` mock が用意されているが、`gh issue create --repo` は直接 `gh` を呼ぶため bats 側で `gh` コマンドの stub を `$BATS_TEST_TMPDIR/bin/gh` に配置し `PATH` を切り替えるパターンを採用 (`tests/get-config-value.bats` の WORK_DIR cd パターンを参考)
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Step 7.4.c と Step 10 で upstream 起票失敗時の挙動が矛盾していた。7.4.c は無条件に downstream スキップと記述していたが、Step 10 は "upstream creation succeeded" を条件にしていた。分岐ロジックの条件節を 2 箇所に分けて書くと整合性が崩れやすい。今後は「成功時のみスキップ」という条件を step 7.4 内に一か所集約し、step 10 は cross-reference にとどめる設計を検討する。
+
+### Recurring issues
+
+特になし。
+
+### Acceptance criteria verification difficulty
+
+UNCERTAIN ゼロ — すべて file_contains / rubric / file_exists / github_check で自動検証できた。ただし、呼び出し側スキル (`/verify`, `/auto`) が新 Input 変数 `RETRO_PROPOSALS_UPSTREAM` を明示的に渡していない点は verify command では検出できない設計上のギャップ。モジュール Input セクションだけでなく、呼び出し側スキルの verify command を AC に含めることで次回以降の検出精度が上がる。
+
 ## Auto Retrospective
 
 ### Orchestration Anomalies
