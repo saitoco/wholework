@@ -23,12 +23,25 @@ if [[ "$1" == "repo" && "$2" == "view" ]]; then
     printf "testowner\ttestrepo\n"
     exit 0
 fi
-# Response for: gh api graphql ... (called via --cache without --jq)
+# Response for: gh api graphql ... (handles optional --jq for non-cache path)
 if [[ "$1" == "api" && "$2" == "graphql" ]]; then
+    shift 2
+    JQ_EXPR=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --jq) JQ_EXPR="$2"; shift 2 ;;
+            *) shift ;;
+        esac
+    done
     if [ -n "$MOCK_GRAPHQL_RESPONSE" ]; then
-        echo "$MOCK_GRAPHQL_RESPONSE"
+        RESPONSE="$MOCK_GRAPHQL_RESPONSE"
     else
-        echo '{"data":{"repository":{"issue":{"projectItems":{"nodes":[]}}}}}'
+        RESPONSE='{"data":{"repository":{"issue":{"projectItems":{"nodes":[]}}}}}'
+    fi
+    if [ -n "$JQ_EXPR" ]; then
+        echo "$RESPONSE" | jq "$JQ_EXPR"
+    else
+        echo "$RESPONSE"
     fi
     exit 0
 fi
@@ -133,4 +146,50 @@ graphql_without_size() {
     run bash "$SCRIPT" 105
     [ "$status" -eq 0 ]
     [ "$output" = "L" ]
+}
+
+@test "--no-cache bypasses GraphQL cache and returns fresh value" {
+    export MOCK_GRAPHQL_RESPONSE
+
+    # First call: populate cache with M
+    MOCK_GRAPHQL_RESPONSE="$(graphql_with_size "M")"
+    run bash "$SCRIPT" 200
+    [ "$status" -eq 0 ]
+    [ "$output" = "M" ]
+
+    # Update mock to return L (new value after triage mutation)
+    MOCK_GRAPHQL_RESPONSE="$(graphql_with_size "L")"
+
+    # Without --no-cache: cache hit returns the old value M
+    run bash "$SCRIPT" 200
+    [ "$status" -eq 0 ]
+    [ "$output" = "M" ]
+
+    # With --no-cache: bypasses cache, returns fresh value L
+    run bash "$SCRIPT" --no-cache 200
+    [ "$status" -eq 0 ]
+    [ "$output" = "L" ]
+}
+
+@test "--no-cache works correctly without prior cache" {
+    export MOCK_GRAPHQL_RESPONSE
+    MOCK_GRAPHQL_RESPONSE="$(graphql_with_size "S")"
+    run bash "$SCRIPT" --no-cache 201
+    [ "$status" -eq 0 ]
+    [ "$output" = "S" ]
+}
+
+@test "--no-cache falls back to label when project field has no size" {
+    export MOCK_GRAPHQL_RESPONSE
+    MOCK_GRAPHQL_RESPONSE="$(graphql_without_size)"
+    export MOCK_LABEL_OUTPUT="size/M"
+    run bash "$SCRIPT" --no-cache 202
+    [ "$status" -eq 0 ]
+    [ "$output" = "M" ]
+}
+
+@test "error: unknown option is rejected" {
+    run bash "$SCRIPT" --unknown 123
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Error"* ]]
 }

@@ -56,6 +56,20 @@
 
 - triage 未実施の Issue（`phase/*` ラベルなし・Size 未設定）を含む `/auto --batch <Issue 番号>` を実行し、`run-auto-sub.sh` が `Error: Size is not set` で中断せず正常に処理が進むことを実環境で確認する <!-- verify-type: opportunistic -->
 
+## Code Retrospective
+
+### Deviations from Design
+
+- Specの実装ステップ4では「`tests/get-issue-size.bats` に `--no-cache` 動作テスト追加」として mock を変更せずテストを追加することを想定していたが、実際には `--no-cache` 時に `gh-graphql.sh` の non-cache パスが `--jq` を `gh api graphql` に渡す挙動を mock が処理しないため、テスト失敗が発生した。mock の `gh api graphql` ハンドラに `--jq` 処理を追加する修正を行い、これを別コミットとした。
+
+### Design Gaps/Ambiguities
+
+- Spec の Notes §「bats テスト Mock 互換性」に「run-auto-sub.bats の Mock は引数を無視するため `--no-cache` 追加でも既存テストはそのまま通過する」と記載されていたが、`get-issue-size.bats` の mock における `gh api graphql` の `--jq` 引数処理については言及がなかった。`--no-cache` 時は non-cache パスが `--jq` を `gh` コマンドに渡すため、既存 mock が `--jq` を無視して生 JSON を返し、テストが失敗するケースが生じた。
+
+### Rework
+
+- `tests/get-issue-size.bats`: 1回目のコミットでテスト追加後、テスト失敗を確認して mock の `gh api graphql` ハンドラに `--jq` 処理を追加する修正を2回目のコミットとして実施。
+
 ## Notes
 
 ### 実装ファイル選択の確定

@@ -3,7 +3,10 @@
 # Script to retrieve the Size of a GitHub Issue
 #
 # Usage:
-#   scripts/get-issue-size.sh <issue-number>
+#   scripts/get-issue-size.sh [--no-cache] <issue-number>
+#
+# Options:
+#   --no-cache  Bypass the GraphQL response cache (use immediately after triage for freshness)
 #
 # Priority:
 #   1. Project field (GraphQL)
@@ -15,8 +18,30 @@
 
 set -euo pipefail
 
+# Parse flags
+NO_CACHE=false
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --no-cache)
+            NO_CACHE=true
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -*)
+            echo "Error: unknown option: $1" >&2
+            exit 1
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 <issue-number>" >&2
+    echo "Usage: $0 [--no-cache] <issue-number>" >&2
     exit 1
 fi
 
@@ -29,12 +54,18 @@ fi
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 
+# CACHE_FLAG is --cache by default; empty when --no-cache is specified
+CACHE_FLAG="--cache"
+if [ "$NO_CACHE" = true ]; then
+    CACHE_FLAG=""
+fi
+
 # Phase 1: Get from Project field
 GQL_QUERY='query($owner:String!,$repo:String!,$num:Int!){repository(owner:$owner,name:$repo){issue(number:$num){projectItems(first:10){nodes{fieldValues(first:20){nodes{... on ProjectV2ItemFieldSingleSelectValue{field{... on ProjectV2SingleSelectField{name}}value:name}}}}}}}}'
 
 PROJECT_SIZE=""
 PROJECT_SIZE=$(
-    "$SCRIPT_DIR/gh-graphql.sh" --cache "$GQL_QUERY" -F num="$NUMBER" \
+    "$SCRIPT_DIR/gh-graphql.sh" $CACHE_FLAG "$GQL_QUERY" -F num="$NUMBER" \
         --jq '.data.repository.issue.projectItems.nodes[].fieldValues.nodes[] | select(.field.name=="Size") | .value' \
         2>/dev/null | head -1 | tr -d '"' || true
 )
