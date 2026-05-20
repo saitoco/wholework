@@ -47,6 +47,7 @@ From the loaded content, search for each YAML key in the marker definition table
 | `permission-mode` | `PERMISSION_MODE` | String value (extract value as-is) | `"auto"` |
 | `verify-max-iterations` | `VERIFY_MAX_ITERATIONS` | Integer string (extract as-is; use `3` if ≤0, non-numeric, or >20) | `3` |
 | `patch-lock-timeout` | `PATCH_LOCK_TIMEOUT_SECONDS` | Integer string (extract as-is; use `300` if ≤0 or non-numeric) | `300` (used by `scripts/worktree-merge-push.sh`) |
+| `retro-proposals-upstream` | `RETRO_PROPOSALS_UPSTREAM` | String value (extract value as-is; upstream repository in `owner/repo` format) | `""` |
 
 **Dynamic Capability Mapping:**
 
@@ -64,6 +65,7 @@ Example: `capabilities.invoice-api: true` → `HAS_INVOICE_API_CAPABILITY=true`
 - `watchdog-timeout-seconds` is treated as an integer: extract the numeric string; if the value is ≤0 or non-numeric, fall back to the default `1800` (see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT`) and log a warning
 - `verify-max-iterations` is treated as an integer: extract the numeric string; if the value is ≤0, non-numeric, or >20, fall back to the default `3` and log a warning
 - `patch-lock-timeout` is treated as an integer: extract the numeric string; if the value is ≤0 or non-numeric, fall back to the default `300` (used by `scripts/worktree-merge-push.sh`)
+- `retro-proposals-upstream` is treated as a string (`owner/repo` format) with quotes removed (same handling as `production-url`)
 - If key does not exist, use default value
 - Comment lines (lines starting with `#`) are ignored
 - Nested values under `capabilities:` section are interpreted as `capabilities.{key}`. Both inline hash format (`capabilities: { browser: true }`) and block format (`capabilities:\n  browser: true`) are supported. If `capabilities:` section is undefined, all capability variables are `false`
@@ -91,4 +93,5 @@ WATCHDOG_TIMEOUT_SECONDS: integer from watchdog-timeout-seconds (default: "1800"
 PERMISSION_MODE: string extracted from permission-mode (default: "auto")
 VERIFY_MAX_ITERATIONS: integer from verify-max-iterations (default: "3"; falls back to "3" if ≤0, non-numeric, or >20)
 PATCH_LOCK_TIMEOUT_SECONDS: integer from patch-lock-timeout (default: "300"; falls back to "300" if ≤0 or non-numeric)
+RETRO_PROPOSALS_UPSTREAM: upstream repository (owner/repo) from retro-proposals-upstream (default: "")
 ```
