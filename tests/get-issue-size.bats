@@ -134,3 +134,49 @@ graphql_without_size() {
     [ "$status" -eq 0 ]
     [ "$output" = "L" ]
 }
+
+@test "--no-cache bypasses GraphQL cache and returns fresh value" {
+    export MOCK_GRAPHQL_RESPONSE
+
+    # First call: populate cache with M
+    MOCK_GRAPHQL_RESPONSE="$(graphql_with_size "M")"
+    run bash "$SCRIPT" 200
+    [ "$status" -eq 0 ]
+    [ "$output" = "M" ]
+
+    # Update mock to return L (new value after triage mutation)
+    MOCK_GRAPHQL_RESPONSE="$(graphql_with_size "L")"
+
+    # Without --no-cache: cache hit returns the old value M
+    run bash "$SCRIPT" 200
+    [ "$status" -eq 0 ]
+    [ "$output" = "M" ]
+
+    # With --no-cache: bypasses cache, returns fresh value L
+    run bash "$SCRIPT" --no-cache 200
+    [ "$status" -eq 0 ]
+    [ "$output" = "L" ]
+}
+
+@test "--no-cache works correctly without prior cache" {
+    export MOCK_GRAPHQL_RESPONSE
+    MOCK_GRAPHQL_RESPONSE="$(graphql_with_size "S")"
+    run bash "$SCRIPT" --no-cache 201
+    [ "$status" -eq 0 ]
+    [ "$output" = "S" ]
+}
+
+@test "--no-cache falls back to label when project field has no size" {
+    export MOCK_GRAPHQL_RESPONSE
+    MOCK_GRAPHQL_RESPONSE="$(graphql_without_size)"
+    export MOCK_LABEL_OUTPUT="size/M"
+    run bash "$SCRIPT" --no-cache 202
+    [ "$status" -eq 0 ]
+    [ "$output" = "M" ]
+}
+
+@test "error: unknown option is rejected" {
+    run bash "$SCRIPT" --unknown 123
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Error"* ]]
+}

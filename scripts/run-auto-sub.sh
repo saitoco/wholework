@@ -115,7 +115,7 @@ fi
 echo "---"
 
 # Determine route by fetching Size (before spec phase)
-SIZE=$("$SCRIPT_DIR/get-issue-size.sh" "$SUB_NUMBER" 2>/dev/null || true)
+SIZE=$("$SCRIPT_DIR/get-issue-size.sh" --no-cache "$SUB_NUMBER" 2>/dev/null || true)
 
 # spec phase: run only if phase/ready label is not present
 LABELS=$(gh issue view "$SUB_NUMBER" --json labels -q '.labels[].name' 2>/dev/null || true)
@@ -130,7 +130,7 @@ fi
 
 # Re-fetch SIZE after spec phase in case spec set the Size label
 if [[ -z "$SIZE" ]]; then
-  SIZE=$("$SCRIPT_DIR/get-issue-size.sh" "$SUB_NUMBER" 2>/dev/null || true)
+  SIZE=$("$SCRIPT_DIR/get-issue-size.sh" --no-cache "$SUB_NUMBER" 2>/dev/null || true)
 fi
 if [[ -z "$SIZE" ]]; then
   echo "Error: Size is not set for issue #${SUB_NUMBER}" >&2
