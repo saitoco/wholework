@@ -74,3 +74,31 @@ UNCERTAIN ゼロ — すべて file_contains / rubric / file_exists / github_che
 
 ### Improvement Proposals
 - Follow the recovery procedure at `modules/orchestration-fallbacks.md#code-completed-no-pr`: checkout the worktree branch, rebase onto latest main, push the branch, and create the PR with `gh pr create`, then continue with `/review`.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Design is well-structured. Notes section details important implementation concerns (bash 3.2+ compatibility, bats test structure, `gh issue create --repo` auth prerequisite).
+- The auto-resolved ambiguity points (A1/A2/A3) in the Issue body were referenced in the Spec and correctly guided implementation.
+
+#### design
+- Spec divergence in Step 7.4.c / Step 10 (upstream failure handling) was identified at review phase and corrected before merge. This pattern of conditional-skip logic spread across two steps is a structural risk noted in the review retrospective.
+
+#### code
+- Single main commit with no fixup/amend patterns. `code-completed-no-pr` Watchdog anomaly occurred but code was correct.
+
+#### review
+- Review correctly identified the Step 7.4.c / Step 10 conditional divergence. No conditions were missed that would have caused FAIL in verify.
+
+#### merge
+- Clean squash merge (#470 → main). No conflicts.
+
+#### verify
+- All 8 pre-merge conditions: PASS.
+- Verify command bug detected: condition 8 uses `--json name,conclusion` but `gh pr checks` does not expose a `conclusion` field; the valid field is `state`. The command failed with "Unknown JSON field: conclusion". Alternative verification via `--json name,state` confirmed `SUCCESS`. This bug should be fixed in the Issue template or the verify command pattern for future Issues.
+- Post-merge opportunistic condition remains unchecked (requires real downstream test environment).
+
+### Improvement Proposals
+- `gh pr checks` verify command pattern: `--json name,conclusion` is invalid; use `--json name,state` and check for `SUCCESS` (not `success`). The existing Issue template or a verify command linter should catch this field name mismatch to prevent silent fallback to alternative verification.
