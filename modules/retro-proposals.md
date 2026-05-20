@@ -15,6 +15,7 @@ Called by:
 - `SPEC_PATH`: path to spec directory (from `detect-config-markers.md`)
 - `NUMBER`: Issue number
 - `HAS_SKILL_PROPOSALS`: `true` if `skill-proposals: true` in `.wholework.yml` (from `detect-config-markers.md`)
+- `RETRO_PROPOSALS_UPSTREAM`: upstream repository in `owner/repo` format (from `detect-config-markers.md`); `""` if `retro-proposals-upstream` is unset
 
 ## Processing Steps
 
@@ -63,6 +64,30 @@ Called by:
         ```
       - **`domain: none`** or classifier fails: Preserve Core target. Proceed to Issue creation without modification.
 
+   4. **Upstream Routing + Sanitization** (Skill infrastructure improvement only, when `RETRO_PROPOSALS_UPSTREAM` is non-empty):
+
+      Evaluate condition: `RETRO_PROPOSALS_UPSTREAM` is non-empty AND the proposal is classified as Skill infrastructure improvement.
+
+      **If condition is met (upstream routing)**:
+
+      a. Apply hybrid sanitization to the Issue body in two passes:
+         - **Regex pass** (mechanical, deterministic):
+           - Replace absolute paths: `s|/Users/[^[:space:]]*|<absolute-path>|g`
+           - Replace downstream-specific Issue numbers: `s/#[0-9][0-9]*/#<downstream-issue>/g`
+         - **LLM pass** (semantic): submit the regex-sanitized body to the LLM with the following instruction: "Remove business-specific terms (company names, product names, ticker symbols, monetary amounts, and other business-context identifiers) by replacing each occurrence with `[redacted]`. Preserve all technical content (file paths, function names, code snippets, workflow descriptions)."
+
+      b. Create Issue in the upstream repository using the sanitized body:
+         ```bash
+         gh issue create --repo "$RETRO_PROPOSALS_UPSTREAM" --title "{normalized title}" --label "retro/verify" --body "{sanitized body}"
+         ```
+         If creation fails, output error log to stderr and proceed to steps 8–10 for this proposal (downstream fallback — do not lose the proposal).
+
+      c. Skip downstream creation for this proposal only when upstream Issue creation succeeded — do not proceed to steps 8–10 for this proposal.
+
+      d. Output to terminal: `"Routed to upstream {RETRO_PROPOSALS_UPSTREAM}#{issue_number}; skipping downstream creation"`
+
+      **If condition is not met** (`RETRO_PROPOSALS_UPSTREAM` is empty, or proposal is Code improvement): skip step 7.4 and proceed to step 8 for this proposal (downstream fallback path — backward-compatible behavior).
+
 8. **Duplicate check against existing Issues** (always run before creating Issues):
 
    ```bash
@@ -83,6 +108,7 @@ Called by:
    - **If unresolved or cannot determine**: proceed to Issue creation
 
 10. **Create Issues**: For each non-duplicate, non-resolved proposal:
+    - **Skip downstream creation when upstream routed**: If the proposal was routed to upstream in Step 7.4 (condition was met and upstream Issue creation succeeded), skip `gh issue create` for this proposal and continue to the next proposal.
     - Normalize title following `title-normalizer.md` processing steps, then create Issues in standard format (background, purpose, acceptance conditions) with `gh issue create --label "retro/verify"` for each improvement proposal. Do not add the `triaged` label; the `triaged` label is assigned by the `/triage` skill after triage is actually executed.
     - **Add verify commands to acceptance conditions**: add verify commands like `<!-- verify: grep "{keyword}" "{target file}" -->` to the created Issue's acceptance conditions. Extract keywords from acceptance condition text and infer target files from proposal content (improves automation accuracy for `/auto --batch`). Create Issue without verify commands if they cannot be determined.
     - If Issue creation fails, output error log to stderr, skip, and continue (does not affect exit code).

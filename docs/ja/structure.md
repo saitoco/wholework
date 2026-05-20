@@ -30,7 +30,7 @@ wholework/
 │   └── workflows/
 │       ├── test.yml             # CI: bats テスト、スキル構文検証、禁止表現チェック、macOS シェル互換性テスト
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
-├── tests/               # スクリプトの Bats テストファイル（57 ファイル）
+├── tests/               # スクリプトの Bats テストファイル（59 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents
