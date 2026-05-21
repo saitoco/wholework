@@ -89,6 +89,35 @@ When a task involves replacing or auditing `~/.claude/` path references:
 
 ---
 
+## BATS Mock Check: `gh api graphql --jq` When Adding Cache Bypass Flags
+
+When adding a `--no-cache` or similar cache-bypass flag to scripts that call `gh-graphql.sh`, verify that the corresponding BATS mocks correctly handle the `gh api graphql --jq` code path.
+
+### Background
+
+This guideline was extracted from the Issue #458 retrospective: adding `--no-cache` to `get-issue-size.sh` opened the `gh-graphql.sh` code path where `gh api graphql --jq <filter>` is called directly (bypassing the local cache layer). The existing `get-issue-size.bats` mock intercepted `gh api graphql` at the binary level but ignored the `--jq` argument, returning raw GraphQL JSON. Since `gh api graphql --jq` applies a jq filter and returns filtered output, the mock produced incorrect output and caused test failures.
+
+### Recommended Pattern
+
+Use the `WHOLEWORK_SCRIPT_DIR` mock pattern instead of intercepting `gh api graphql` at the binary level:
+
+1. Set `export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` in the test setup
+2. Place a mock `gh-graphql.sh` under `$MOCK_DIR/` that returns **already-filtered output** — the output a real `gh api graphql --jq <filter>` call would produce
+3. Do **not** mock `gh api graphql` at the binary level — this hides `--jq` argument handling and causes failures when the cache-bypass path is active
+
+This approach tests the script's behavior without coupling to `gh api graphql`'s internal argument parsing.
+
+### Checklist for Adding Cache Bypass Flags
+
+When adding `--no-cache`, `--bypass-cache`, or similar flags to a script:
+
+- [ ] Identify which code path the new flag opens (e.g., `gh-graphql.sh` called without `--cache`)
+- [ ] Check whether existing BATS mocks intercept `gh api graphql` directly — if so, update them to use the `WHOLEWORK_SCRIPT_DIR` + mock `gh-graphql.sh` pattern
+- [ ] Verify that mock `gh-graphql.sh` returns pre-filtered output (matching what `gh api graphql --jq` would produce), not raw GraphQL JSON
+- [ ] Run the full test suite (`bats tests/`) with the cache-bypass path exercised to confirm no regressions
+
+---
+
 ## Issue #23: Utility Skills Migration (triage, audit, doc)
 
 7 files were migrated from claude-config to wholework: `skills/triage/SKILL.md`, `skills/audit/SKILL.md`, `skills/doc/SKILL.md`, `skills/doc/product-template.md`, `skills/doc/tech-template.md`, and `skills/doc/structure-template.md`. All Japanese text (frontmatter `description` field, section headings, body text, inline comments) was translated to English. All files are new creations. Opportunistic simplification was applied.

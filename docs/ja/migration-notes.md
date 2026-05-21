@@ -82,6 +82,35 @@ grep -rEn '(~|\$HOME)/.claude/' <path>
 
 ---
 
+## BATS mock チェック: cache bypass フラグ追加時の `gh api graphql --jq` 引数処理
+
+`gh-graphql.sh` を呼び出すスクリプトに `--no-cache` 等の cache bypass フラグを追加する際は、対応する BATS mock が `gh api graphql --jq` のコードパスを正しく処理できるか確認すること。
+
+### 背景
+
+このガイドラインは Issue #458 のレトロスペクティブから抽出された。`get-issue-size.sh` に `--no-cache` を追加すると、キャッシュ層をバイパスして `gh api graphql --jq <filter>` を直接呼び出す `gh-graphql.sh` のコードパスが開く。既存の `get-issue-size.bats` mock はバイナリレベルで `gh api graphql` を横取りしていたが、`--jq` 引数を無視して生の GraphQL JSON を返していた。`gh api graphql --jq` は jq フィルターを適用してフィルター済み出力を返すため、mock が不正な出力を生成してテスト失敗が発生した。
+
+### 推奨パターン
+
+バイナリレベルで `gh api graphql` を横取りする代わりに、`WHOLEWORK_SCRIPT_DIR` mock パターンを使うこと:
+
+1. テストの setup で `export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` を設定する
+2. `$MOCK_DIR/` に mock `gh-graphql.sh` を配置し、**フィルター済み出力**（実際の `gh api graphql --jq <filter>` が返す出力）を返すようにする
+3. バイナリレベルで `gh api graphql` を mock **しない** — これにより `--jq` 引数処理が隠蔽され、cache bypass パスが有効なときにテスト失敗が発生する
+
+このアプローチにより、`gh api graphql` の内部引数解析に依存せずスクリプトの振る舞いをテストできる。
+
+### cache bypass フラグ追加時のチェックリスト
+
+スクリプトに `--no-cache`、`--bypass-cache`、または同等のフラグを追加する際:
+
+- [ ] 新フラグが開くコードパスを特定する（例: `--cache` なしで呼び出される `gh-graphql.sh`）
+- [ ] 既存の BATS mock がバイナリレベルで `gh api graphql` を横取りしていないか確認し、している場合は `WHOLEWORK_SCRIPT_DIR` + mock `gh-graphql.sh` パターンに更新する
+- [ ] mock `gh-graphql.sh` が生の GraphQL JSON ではなくフィルター済み出力（`gh api graphql --jq` が返す値）を返すことを確認する
+- [ ] cache bypass パスを実行した状態でフルテストスイート（`bats tests/`）を実行し、リグレッションがないことを確認する
+
+---
+
 ## Issue #23: Utility Skills Migration (triage, audit, doc)
 
 7 files were migrated from claude-config to wholework: `skills/triage/SKILL.md`, `skills/audit/SKILL.md`, `skills/doc/SKILL.md`, `skills/doc/product-template.md`, `skills/doc/tech-template.md`, and `skills/doc/structure-template.md`. All Japanese text (frontmatter `description` field, section headings, body text, inline comments) was translated to English. All files are new creations. Opportunistic simplification was applied.
