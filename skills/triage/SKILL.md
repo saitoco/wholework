@@ -154,50 +154,7 @@ Named queries to use (`--query <n>` format): `get-projects-with-fields`, `get-is
 
 Estimate the scope of change from the issue body's acceptance conditions and technical notes, and set the project's Size field. Determine in 5 levels: XS/S/M/L/XL.
 
-**Verify-after-write (run after Steps 1→4 succeed)**:
-
-After the GraphQL mutation in Step 4 completes with exit 0, verify that the Size was actually persisted by reading it back with cache bypass. This detects GitHub eventual consistency delays and cases where the LLM skipped the mutation.
-
-1. Read back the Size immediately after the mutation:
-   ```bash
-   ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh --no-cache $NUMBER
-   ```
-2. Compare the returned value against the determined Size (e.g., `XS`, `M`):
-   - If they match → verification passed. Step 6 is complete.
-   - If they do not match (or the script returns empty / exit 1) → proceed to retry loop below.
-3. Retry loop (max 3 attempts, increasing wait):
-   - Attempt 1: wait 1 second, then re-read:
-     ```bash
-     sleep 1
-     ```
-     ```bash
-     ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh --no-cache $NUMBER
-     ```
-     If the value now matches → verification passed. Step 6 is complete.
-   - Attempt 2: wait 2 seconds, then re-read:
-     ```bash
-     sleep 2
-     ```
-     ```bash
-     ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh --no-cache $NUMBER
-     ```
-     If the value now matches → verification passed. Step 6 is complete.
-   - Attempt 3: wait 3 seconds, then re-read:
-     ```bash
-     sleep 3
-     ```
-     ```bash
-     ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh --no-cache $NUMBER
-     ```
-     If the value now matches → verification passed. Step 6 is complete.
-4. If all 3 retries fail (value still does not match or remains empty): fall back to label assignment as per Step 5 of `project-field-update.md`:
-   ```bash
-   gh label create "size/$SIZE" --force
-   ```
-   ```bash
-   gh issue edit $NUMBER --remove-label "size/XS" --remove-label "size/S" --remove-label "size/M" --remove-label "size/L" --remove-label "size/XL" --add-label "size/$SIZE"
-   ```
-   This guarantees that `get-issue-size.sh` can resolve the Size via Phase 2 (label fallback) even if the Project field did not persist.
+**Verify-after-write**: After Steps 1→4 succeed, read `${CLAUDE_PLUGIN_ROOT}/modules/project-field-update.md` and follow the "Verify-after-write" procedure from the "Updating Priority / Size Fields" section.
 
 ### Step 7: Value Assignment (Projects field)
 

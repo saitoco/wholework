@@ -37,7 +37,54 @@ Information provided by the calling skill:
    ```bash
    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query update-field-value -F projectId="$PROJECT_ID" -F itemId="$ITEM_ID" -F fieldId="$FIELD_ID" -F optionId="$OPTION_ID"
    ```
-   - **If successful → processing complete. Skip step 5.**
+   - **If successful → proceed to verify-after-write below. Skip step 5.**
+
+#### Verify-after-write (for Size field; run after step 4 succeeds)
+
+After the GraphQL mutation in step 4 completes with exit 0, verify that the Size value was actually persisted by reading it back with cache bypass. This detects GitHub eventual consistency delays.
+
+1. Read back the Size immediately after the mutation:
+   ```bash
+   ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh --no-cache $NUMBER
+   ```
+2. Compare the returned value against the determined Size (e.g., `XS`, `M`):
+   - If they match → verification passed. Processing complete.
+   - If they do not match (or the script returns empty / exit 1) → proceed to retry loop below.
+3. Retry loop (max 3 attempts, increasing wait):
+   - Attempt 1: wait 1 second, then re-read:
+     ```bash
+     sleep 1
+     ```
+     ```bash
+     ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh --no-cache $NUMBER
+     ```
+     If the value now matches → verification passed. Processing complete.
+   - Attempt 2: wait 2 seconds, then re-read:
+     ```bash
+     sleep 2
+     ```
+     ```bash
+     ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh --no-cache $NUMBER
+     ```
+     If the value now matches → verification passed. Processing complete.
+   - Attempt 3: wait 3 seconds, then re-read:
+     ```bash
+     sleep 3
+     ```
+     ```bash
+     ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh --no-cache $NUMBER
+     ```
+     If the value now matches → verification passed. Processing complete.
+4. If all 3 retries fail (value still does not match or remains empty): fall back to label assignment as per step 5:
+   ```bash
+   gh label create "size/$SIZE" --force
+   ```
+   ```bash
+   gh issue edit $NUMBER --remove-label "size/XS" --remove-label "size/S" --remove-label "size/M" --remove-label "size/L" --remove-label "size/XL" --add-label "size/$SIZE"
+   ```
+   This guarantees that `get-issue-size.sh` can resolve the Size via label fallback even if the Project field did not persist.
+
+**For Priority/Value fields:** No read-back helper is currently available. When eventual consistency issues arise for these fields, extend this verify-after-write pattern using an appropriate API query to read back the field value.
 
 5. Label fallback (only if steps 1-4 failed):
    - Auto-create label if it does not exist:
