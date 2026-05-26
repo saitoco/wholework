@@ -33,7 +33,7 @@
   | code | 必要 | Spec を読み独立して実行する、実装前のコンテキストの影響を受けない |
   | review | 必要 | 実装フェーズのバイアスを継がず、クリーンな視点でコードをレビューする |
   | merge | 必要 | 判断は Spec + PR メタデータで完結、レビューコンテキストを持ち越さない |
-  | verify | 必要 | マージ後の状態を独立検証する、前フェーズの判断に影響されてはならない |
+  | verify | 不要 | 大部分が機械的処理（verify command 実行 + checkbox 更新）、manual AC 確認には fork コンテキストで実行できない AskUserQuestion が必要、FAIL → /code（fork）で再実行するため bias 伝播リスクは低い |
   | auto | 不要 | 親オーケストレーターはユーザーの Claude Code セッションで実行される、各子フェーズは `run-*.sh` 経由で独立した `claude -p` プロセスとして実行 |
   | audit | 不要 | ドリフト・脆弱性検出はユーザーセッションで実行される、前フェーズのバイアスを避ける必要なし |
   | doc | 不要 | ドキュメント管理はユーザーセッションで実行される、前フェーズのバイアスを避ける必要なし |
@@ -77,7 +77,6 @@
 | run-code.sh | code | Sonnet | high | 実装には徹底した推論が必要 |
 | run-review.sh | review | Sonnet | high | レビューのオーケストレーション、深い分析はサブエージェントが担う |
 | run-merge.sh | merge | Sonnet | low | 機械的なマージ操作、推論は最小限でよい |
-| run-verify.sh | verify | Sonnet | medium | 構造化された受入テスト、中程度の複雑度 |
 | issue-scope | issue（L/XL のみ） | Opus | — | `/issue` Step 11a で L/XL 並列調査向けに呼び出される。スコープ特定精度はサブ issue 境界判断に直結 |
 | issue-risk | issue（L/XL のみ） | Opus | — | `/issue` Step 11a で L/XL 並列調査向けに呼び出される。リスク評価精度が受入条件品質を高める |
 | issue-precedent | issue（L/XL のみ） | Opus | — | `/issue` Step 11a で L/XL 並列調査向けに呼び出される。前例抽出が受入条件品質を高める |
