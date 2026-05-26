@@ -110,3 +110,23 @@
 ### Section rename impact check
 
 - `skills/verify/SKILL.md` 内の section 番号は変更しない（Step 1, Step 2, ... の番号体系維持）。`section_contains` verify command を持つ参照側 (もし存在すれば) への影響なし
+
+## spec retrospective
+
+### Minor observations
+- Skill tool の skill→skill 呼び出し可否は未検証。Notes に Uncertainty として記録済み。`/code` 実装時に実機で確認し、動かなければ "Read and follow" 慣行へフォールバック
+- AC count が full template 上限 10 件ちょうど。これ以上の AC 追加要求があれば実装ステップの整理（共通化）が必要
+- 影響範囲は最終的に 13 ファイル（skills 2 + scripts 3 + modules 1 + docs 5 + tests 2）。Size L 維持で妥当だが、複数 skill にまたがるため `/code` で worktree 内の並行編集はせず順次編集すべき
+
+### Judgment rationale
+- **XL sub-issue verify を parent /auto session に委譲**: bash subprocess 内で AskUserQuestion が user に届かない構造的制約のため。並列実行の利点は code/review/merge に保持され、verify は manual AC 確認のため本質的に serial で問題なし
+- **run-verify.sh 完全削除**: 「verify は parent context」原則の徹底のため deprecation shim を残さない。CI/cron 用途は当面 `/auto` 経由でカバー
+- **VERIFY_FAILED marker 削除**: wrapper exit code への配線が不要になるため。skill 内エラー出力で十分
+
+### Uncertainty resolution
+- **A1 (XL sub-issue verify 実行場所)**: parent /auto session で serial 実行に決定。run-auto-sub.sh から verify を取り除く（Implementation Step 7, 8）
+- **A2 (run-verify.sh 扱い)**: 完全削除に決定（Implementation Step 8）
+- **A3 (VERIFY_FAILED marker)**: 削除に決定（Implementation Step 4）
+- **A4 (verify-iteration counter)**: 維持に決定（Implementation Step 5 で言及）
+- **A5 (/verify 内 worktree)**: 維持に決定（変更不要）
+- **未解決 (Skill tool skill→skill)**: Notes に記録し /code 時に検証。動かなければ "Read and follow" 慣行へ
