@@ -24,3 +24,31 @@
 - 削除した AC: 「§9 に補完パターン例追加」「§9 に `numeric` キーワード含有」
 - 残した AC: skill 側 (issue + spec) の rubric AC 生成箇所への注記追加（rubric)
 - 残した Post-merge AC: 実 Issue での目視確認 (opportunistic)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue AC は rubric 条件のみで十分に意味的判断が可能な構成。本 Issue 自体が「rubric AC に file_contains 補完を加える」テーマであり、verify 条件が rubric ベースになっている点でメタな一貫性がある。
+- scope 縮小（§9 非改修）の判断が Spec に明記されており、後から意図が追跡できる状態。
+
+#### design
+- 実装は 2 ファイルへの 1〜2 行追加のみ。Spec との乖離なし。シンプルで過不足なし。
+
+#### code
+- patch route（PR なし）での直接コミット。XS サイズとして適切。
+- fixup/amend パターンなし。クリーンな実装（コミット 2 件: 実装 + Issue retrospective）。
+
+#### review
+- patch route のため PR review 工程なし。verify の PASS により実装の正確さを事後確認。
+
+#### merge
+- 直接 main へのコミット。競合なし。
+
+#### verify
+- rubric grader が両ファイル（`skills/issue/SKILL.md` L144、`skills/spec/SKILL.md` L323）の注記追加を正確に検証し PASS。
+- opportunistic 条件（実 Issue での目視確認）が残っており phase/verify 状態で完了。
+
+### Improvement Proposals
+- N/A（シンプルな XS 実装で問題なく完了）
