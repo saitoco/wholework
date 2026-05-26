@@ -123,6 +123,7 @@
 #### verify
 - Pre-merge 全10条件 PASS。Post-merge 3条件（verify-type: manual）は実際のシステム動作確認が必要なため未確認（phase/verify 維持）。
 - `docs/ja/reports/` 配下のレポートに run-verify.sh 参照が残っていたが、履歴系文書として適切に除外判定できた。rubric の「履歴/サンプル系を除く」という記述が docs/spec/ および docs/ja/reports/ の扱いに十分な指針を提供していた。
+- **再 verify 実行（2026-05-26）**: Post-merge 3条件（verify-type: manual）が全てチェック済みであることを確認。全条件 PASS → phase/done 遷移完了。Issue #485 は正式にクローズ。
 
 ### Improvement Proposals
 - **Spec の Changed Files に影響連鎖を明記する習慣を導入**: 機能削除時、削除対象を参照する関連ファイルを「影響連鎖」として Changed Files に列挙し、cleanup AC を設けることを標準化する（detect-wrapper-anomaly.sh パターンの再発防止）。
