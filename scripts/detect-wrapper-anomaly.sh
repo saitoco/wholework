@@ -77,7 +77,7 @@ elif grep -q "watchdog: kill and state not reached" "$LOG_FILE"; then
 elif grep -q "VERIFY_FAILED" "$LOG_FILE" && grep -q "uncommitted" "$LOG_FILE"; then
   PATTERN_NAME="dirty-working-tree"
   ANOMALY_DESC="Verify failed due to uncommitted changes in phase \`$PHASE\` (exit code $EXIT_CODE): \`VERIFY_FAILED\` and \`uncommitted\` detected in wrapper output. The verify skill cannot run when uncommitted changes are present in the working tree. Reference: #393."
-  IMPROVEMENT_HINT="Run \`git status\` to identify uncommitted files. If the files are unrelated to issue #$ISSUE_NUMBER, notify and retry via \`run-verify.sh $ISSUE_NUMBER\`. If the files are related to the issue (unexpected edits), abort and investigate before retrying. See \`modules/orchestration-fallbacks.md#dirty-working-tree\` for the full recovery procedure."
+  IMPROVEMENT_HINT="Run \`git status\` to identify uncommitted files. If the files are unrelated to issue #$ISSUE_NUMBER, notify and retry via \`/verify $ISSUE_NUMBER\`. If the files are related to the issue (unexpected edits), abort and investigate before retrying. See \`modules/orchestration-fallbacks.md#dirty-working-tree\` for the full recovery procedure."
 elif grep -q '"matches_expected":false' "$LOG_FILE" && grep -q "Review Summary" "$LOG_FILE"; then
   PATTERN_NAME="reconciler-header-mismatch"
   ANOMALY_DESC="Reconciler detected header mismatch in phase \`$PHASE\` (exit code $EXIT_CODE): \`matches_expected:false\` and \`Review Summary\` pattern detected in wrapper output. The reconciler could not find \`## Review Response Summary\` in the PR comment, indicating a mismatch between the skill output header and the reconciler's expected pattern. Reference: #394."

@@ -59,34 +59,6 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ---
 
-## verify-sync-retry
-
-### Symptom
-- `/verify` skill exits non-zero on the first attempt
-- Local branch is behind remote main (e.g., a concurrent patch was merged between the verify run and the current state)
-
-### Applicable Phases
-- verify (via `scripts/run-auto-sub.sh` `run_verify_with_retry`)
-
-### Fallback Steps
-1. Run `run-verify.sh <issue-num>` (first attempt)
-2. On failure: log `verify FAILED: syncing with git pull --ff-only and retrying (1/1)`
-3. Run `git pull --ff-only`; if this fails, report as FAIL without retry
-4. Re-run `run-verify.sh <issue-num>` (second attempt, maximum 1 retry)
-5. Propagate the result of the second attempt regardless of outcome
-
-### Escalation
-- If `git pull --ff-only` fails (diverged history), report FAIL immediately without retrying verify
-- If the second verify attempt also fails, mark the Issue `phase/verify` and await human judgment (verify loop cap applies: `verify-max-iterations` in `.wholework.yml`, default 3)
-- Persistent verify failures after the retry cap escalate to recovery sub-agent (#316) when available
-
-### Rationale
-- Inline logic in `scripts/run-auto-sub.sh` `run_verify_with_retry()` (lines 40–61)
-- The 1-retry design is intentional: more retries mask genuine failures; `verify-max-iterations` provides the outer cap
-- See also: #308 (orchestration improvement series)
-
----
-
 ## gh-pr-list-head-glob
 
 ### Symptom
@@ -212,9 +184,9 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 ### Fallback Steps
 1. Run `git status` to list uncommitted files in the working tree
 2. Determine whether each uncommitted file is related to the current issue:
-   - **Unrelated files** (e.g., editor swap files, incidental modifications to unrelated paths): stage and commit or stash the files, then retry verify via `run-verify.sh <issue-num>`; notify the operator of the stashed/committed files
+   - **Unrelated files** (e.g., editor swap files, incidental modifications to unrelated paths): stage and commit or stash the files, then retry verify via `/verify <issue-num>`; notify the operator of the stashed/committed files
    - **Related files** (unexpected edits to issue-specific implementation files): abort the verify run and investigate why uncommitted changes remain before retrying
-3. After cleanup, re-run `run-verify.sh <issue-num>`
+3. After cleanup, re-run `/verify <issue-num>`
 
 ### Escalation
 - If the uncommitted changes cannot be safely classified as related or unrelated, escalate to recovery sub-agent (#316) for diagnosis
