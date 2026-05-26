@@ -1,12 +1,12 @@
 ---
 name: auto
 description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues; `--batch N1 N2 ...` processes the explicitly listed Issues in order. `--resume N` resumes a single Issue (restores verify counter from checkpoint); `--batch --resume` resumes an interrupted batch from `.tmp/auto-batch-state.json`.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*), Read, Edit, Glob, Grep, Write, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Autonomous Execution
 
-Receive an Issue number and run spec (when needed)→code→review→merge→verify in sequence using Size-based routing. Each phase runs via `run-*.sh` using `claude -p --dangerously-skip-permissions` for a fresh context with full permission bypass.
+Receive an Issue number and run spec (when needed)→code→review→merge→verify in sequence using Size-based routing. code/review/merge phases run via `run-*.sh` using `claude -p --dangerously-skip-permissions` for a fresh context with full permission bypass. verify runs as a Skill invocation in the parent session (enabling AskUserQuestion for manual AC confirmation).
 
 If ARGUMENTS contains `--help`, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
 
@@ -166,7 +166,7 @@ Each phase follows the Observe → Diagnose → Act pattern (same as pr route; s
 5. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh verify $NUMBER --check-precondition --warn-only`
 6. Increment counter: `VERIFY_ITERATION_COUNT=$((VERIFY_ITERATION_COUNT + 1))`
 7. Save checkpoint: `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh write_single $NUMBER $VERIFY_ITERATION_COUNT`
-8. verify phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh $NUMBER [--base ${BASE_BRANCH}]` via Bash (timeout: 600000)
+8. verify phase: invoke `Skill(skill="wholework:verify", args="$NUMBER")` in the parent session (enables AskUserQuestion for manual AC confirmation)
 9. Based on verify result, proceed to Step 5 or Step 6
    - If verify output contains `MAX_ITERATIONS_REACHED`: max iterations has been reached; delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`); stop chained execution and proceed to Step 5 (human judgment required — do not re-run verify automatically)
    - On verify success: delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`) and proceed to Step 5
@@ -203,7 +203,7 @@ Full phase sequence:
 12. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh verify $NUMBER --check-precondition --warn-only`
 13. Increment counter: `VERIFY_ITERATION_COUNT=$((VERIFY_ITERATION_COUNT + 1))`
 14. Save checkpoint: `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh write_single $NUMBER $VERIFY_ITERATION_COUNT`
-15. Output `[4/4] verify`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh $NUMBER [--base ${BASE_BRANCH}]` via Bash (timeout: 600000); on success output `[4/4] verify → done`
+15. Output `[4/4] verify`, then invoke `Skill(skill="wholework:verify", args="$NUMBER")` in the parent session (enables AskUserQuestion for manual AC confirmation); on success output `[4/4] verify → done`
 16. Based on verify result, proceed to Step 5 or Step 6
     - If verify output contains `MAX_ITERATIONS_REACHED`: max iterations has been reached; delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`); stop chained execution and proceed to Step 5 (human judgment required — do not re-run verify automatically)
     - On verify success: delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`) and proceed to Step 5
@@ -356,6 +356,28 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
    If no recovery events were appended, omit `docs/reports/orchestration-recoveries.md` from `git add` (only add it when it was actually modified).
 
 6. **Collect and create Improvement Proposal Issues**: Read `${CLAUDE_PLUGIN_ROOT}/modules/retro-proposals.md` and follow the "Processing Steps" section. Use `SPEC_PATH` and `HAS_SKILL_PROPOSALS` already retained from this step's `detect-config-markers.md` call. If the shared module returns no proposals, skip silently.
+
+### Step 4d: XL Sub-issue Verify (XL route only)
+
+**Skip this step for all routes other than XL.**
+
+Run after all sub-issue levels complete (after Step 4a Auto Retrospective) and before Step 4c close flow.
+
+Collect all sub-issue numbers from `get-sub-issue-graph.sh` output (all sub-issues that reached `phase/done` or `phase/verify`), then append the parent issue number: `[sub_issue_1, sub_issue_2, ..., $NUMBER]`.
+
+For each issue number in this list, **serially** in the parent session:
+
+```
+Skill(skill="wholework:verify", args="$N")
+```
+
+This runs verify in the parent context, enabling AskUserQuestion for manual AC confirmation on each issue.
+
+**Skip any sub-issue that**:
+- was skipped due to a dependency failure (in the failure set from Step 4 execution)
+- already has `phase/done` label (already verified and closed in a prior run)
+
+Continue to the next issue even if one verify invocation ends in FAIL or MAX_ITERATIONS_REACHED — the close flow in Step 4c will assess the final state.
 
 ### Step 4c: XL Parent Issue Close Flow (XL route only)
 
