@@ -130,3 +130,19 @@
 - **A4 (verify-iteration counter)**: 維持に決定（Implementation Step 5 で言及）
 - **A5 (/verify 内 worktree)**: 維持に決定（変更不要）
 - **未解決 (Skill tool skill→skill)**: Notes に記録し /code 時に検証。動かなければ "Read and follow" 慣行へ
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+記録なし。実装はすべての Spec ステップに沿っており、10 件の pre-merge AC が全 PASS。
+
+### 繰り返し指摘パターン
+
+2 件の SHOULD 指摘があり、いずれも「削除した機能の後処理」カテゴリ:
+1. `detect-wrapper-anomaly.sh` の `VERIFY_FAILED` 検出パターンが dead code 化 — `run-verify.sh` 削除で経路消滅したが、スクリプトとドキュメントが旧状態のまま残った。`run-verify.sh` 削除時に同スクリプト内の `dirty-working-tree` パターンも合わせて cleanup する AC を設けておくべきだった。
+2. Step 4d の `--base` フラグ伝播が Spec に記載されていなかった — 旧 `run-verify.sh` 呼び出しでは `[--base ${BASE_BRANCH}]` 伝播を明記していたが、Skill 呼び出しへの置き換え時に引き継がれなかった。Spec の変更ファイル一覧に「伝播すべきフラグ」を明記する慣行があると防げた。
+
+### 受け入れ条件検証の難易度
+
+UNCERTAIN なし。全条件が file-based か bats CI で機械的に検証可能。`section_contains` verify command で 5 行以上離れた内容を参照した場合に grep -A5 が不十分で一時 FAIL 判定になったが、ファイル直読みで補完。Spec の verify command はそのままで問題なし。
