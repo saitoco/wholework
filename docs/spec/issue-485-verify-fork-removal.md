@@ -179,3 +179,25 @@
 ### 受け入れ条件検証の難易度
 
 UNCERTAIN なし。全条件が file-based か bats CI で機械的に検証可能。`section_contains` verify command で 5 行以上離れた内容を参照した場合に grep -A5 が不十分で一時 FAIL 判定になったが、ファイル直読みで補完。Spec の verify command はそのままで問題なし。
+
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| code | pr | SUCCESS (watchdog kill, reconciled) | 1800s silent → SIGTERM、`reconcile-phase-state.sh code-pr --check-completion` で PR #498 検出により override success |
+| review | pr | SUCCESS (header drift, manual override) | exit 0、CI 全 PASS、AC 全 PASS、MUST 0 / SHOULD 2 (→ #503, #504)。ただし PR comment header が `## レビュー回答サマリ` (JA) で SSoT `## Review Response Summary` (EN) と不一致 → reconciler mismatch、実体は成功のため manual override |
+| merge | pr | SUCCESS | PR #498 MERGED |
+| verify | — | SUCCESS (Skill tool path) | 旧 /auto SKILL が削除済 run-verify.sh を呼ぼうとしたが、新設計通り Skill tool 経由で /verify 起動。10/10 auto PASS、3 manual pending |
+
+### Orchestration Anomalies
+
+- **[code-watchdog-late-completion]** code phase で実装完了後に watchdog 1800s 沈黙で SIGTERM (PID 81299)。`reconcile-phase-state.sh code-pr --check-completion` が PR #498 OPEN を検出し override success。#469 でも同パターン発生 (recurring)
+- **[review-header-language-drift]** review skill が PR comment を `## レビュー回答サマリ` (日本語) で投稿。`modules/phase-state.md` SSoT は `## Review Response Summary` (英語) を期待。`reconcile-phase-state.sh review --check-completion` が mismatch を返したが、CI/AC/MUST 全て問題なしのため実体は成功
+- **[stale-skill-mid-chain]** /auto セッションは PR #498 マージ前に開始したため旧 `skills/auto/SKILL.md` をロード (run-verify.sh 呼び出し版)。マージ後 verify phase 時に script が削除済となり呼び出し不可。新設計通り Skill tool で `/verify` を起動して回避
+
+### Improvement Proposals
+
+- **watchdog kill 後の code-pr 自動 reconcile**: 現状 reconcile は /auto Step 4 で手動実行。run-code.sh 側で exit 0 を返した後の /auto handling は `reconcile-phase-state result:` ログから anomaly detector が拾うが、log 出力タイミングと watchdog SIGTERM の race がある可能性。同パターンの再発を踏まえ、run-code.sh 内で SIGTERM 検出時に自動 reconcile + exit code 上書きする (run-verify.sh が exit 143 で行うのと同様の処理) を検討
+- **review skill output 言語の SSoT 化**: `modules/phase-state.md` の expected signature と `skills/review/SKILL.md` の出力 header が言語不一致。同期するか、reconcile-phase-state.sh が JA/EN 両方を許容するかのどちらか。recommend: phase-state.md を JA/EN regex match 化 (skill 出力言語の独立性維持)
+- **同 PR 内 skill 変更時の旧版実行リスク**: /auto は parent context で実行され SKILL.md を session 開始時にロード。同 PR が parent skill 自体を変更すると、マージ後の chain 内で stale skill が動く。Skill tool は新版を invoke するため部分的に救済可能だが、orchestration logic 自体が古い場合の corner case が残る。recommend: SKILL.md 変更を含む PR は /auto による self-modification 制限 (warning または stop-at-spec) を spec 段階でガイドライン化 — ただし follow-up #503 (Changed Files に影響連鎖 cleanup 明記) と部分的に重なるため、issue として独立起票するか #503 にスコープ追加するか判断要
