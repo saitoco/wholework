@@ -320,6 +320,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-patterns.md` and follow the "Processi
 
 For acceptance conditions where exact string matching is unreliable (semantic equivalence, subjective quality, meaning-level intent), consider the `rubric` verify command instead of hard-pattern commands. See `modules/verify-patterns.md` §9 for selection criteria.
 
+In particular, when the rubric's grader description contains a numeric literal, constant name, or threshold value (e.g., `BREAKEVEN_THRESHOLD_PCT = 10.0`), add a `file_contains` hint for the corresponding constant alongside the `rubric` to enable deterministic verification of the value (see `modules/verify-patterns.md` §9).
+
 **String-matching verify command existence check:**
 
 For string-matching verify commands (`grep`, `file_contains`, `file_not_contains`, `section_contains`), confirm the search pattern actually appears (or will appear) in the implementation target file before finalizing the Spec:

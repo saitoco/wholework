@@ -141,6 +141,8 @@ Example:
 
 See `modules/verify-patterns.md` §9 for the full guideline and applicability conditions.
 
+In particular, when the rubric's grader description contains a numeric literal, constant name, or threshold value (e.g., `BREAKEVEN_THRESHOLD_PCT = 10.0`), add a `file_contains` hint for the corresponding constant alongside the `rubric` to enable deterministic verification of the value.
+
 When MCP tools are available, use ToolSearch with `select:<tool_name>` to confirm existence and read-only nature before proposing `mcp_call` hints.
 
 **Custom verify command handlers (project-local):**
