@@ -95,6 +95,39 @@
 - **manual AC 数が多い場合の UX**: post-merge に manual AC が 4+ 件ある Issue で AskUserQuestion を 4 回繰り返すと冗長。一括提示（multiSelect で「全 PASS」/「個別判定」を 1st step で問う）を実装するか、initial Issue 起票時に manual AC 数を抑える運用ルールを併用するかは `/code` 時に判断
 - **detect-wrapper-anomaly.sh の dirty-working-tree パターン**: 現在 verify wrapper exit code を起点に検出している。`run-verify.sh` 削除後は同パターンが他の wrapper (run-code.sh 等) からの異常検出のみに使われる。`dirty-working-tree` anomaly 自体は維持し、IMPROVEMENT_HINT の手動オペレータ向けメッセージのみ更新
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec retrospective が `## spec retrospective` セクションに詳細記録されており品質は高い。AC count が 10 件ちょうど（上限）で設計変更への余地が狭い点を注記していたが、実装ではすべての条件が充足された。
+- Specの「Changed Files」が13ファイルと広範で、size L の実装として適切に範囲を管理していた。
+
+#### design
+- Spec retrospective の "Judgment rationale" に主要な設計判断（XL sub-issue verify の parent 委譲、run-verify.sh 完全削除、VERIFY_FAILED marker 削除）が明文化されており、実装との乖離なし。
+- `detect-wrapper-anomaly.sh` の dead code 化（`VERIFY_FAILED` 検出パターンが run-verify.sh 削除で経路消滅）が Spec では cleanup AC として設けられなかった。Review retrospective でも指摘されている。これはSpecの変更ファイル一覧に影響連鎖を明記する習慣で防げた可能性がある。
+
+#### code
+- 実装コミット649f307はsquash merge（5コミット）で、各作業ステップが明確に分離されており読みやすい。
+- reviewコメント（1件）を取り込んだ痕跡は見当たらない（review timeのコメントが実装前に行われたことを示唆）。fixup/amend パターンは確認されず、設計から実装への一本道。
+- Spec の「Implementation Uncertainty: Skill tool の skill→skill 呼び出し可否」は実機で検証され、Skill tool 経由で正常動作することが確認された。
+
+#### review
+- PR #498 に review が1件あり、accept済み。review retrospective では2件の SHOULD 指摘（detect-wrapper-anomaly.sh の dead code 化、Step 4d の --base フラグ伝播が Spec に未記載）が記録されている。
+- 2件のSHOULD指摘はいずれも「削除した機能の後処理が Spec に書かれなかった」パターン。影響連鎖の追跡を Spec の Changed Files セクションに組み込むことで防げる。
+- 10件の pre-merge AC が全て PASS であり、review が見落とした FAIL はなし。
+
+#### merge
+- PR #498 は正常にsquash merge済み（2026-05-26）。コンフリクト解消の痕跡なし。
+
+#### verify
+- Pre-merge 全10条件 PASS。Post-merge 3条件（verify-type: manual）は実際のシステム動作確認が必要なため未確認（phase/verify 維持）。
+- `docs/ja/reports/` 配下のレポートに run-verify.sh 参照が残っていたが、履歴系文書として適切に除外判定できた。rubric の「履歴/サンプル系を除く」という記述が docs/spec/ および docs/ja/reports/ の扱いに十分な指針を提供していた。
+
+### Improvement Proposals
+- **Spec の Changed Files に影響連鎖を明記する習慣を導入**: 機能削除時、削除対象を参照する関連ファイルを「影響連鎖」として Changed Files に列挙し、cleanup AC を設けることを標準化する（detect-wrapper-anomaly.sh パターンの再発防止）。
+- **フラグ伝播の明示化**: `run-*.sh` から Skill 呼び出しへの移行時、「伝播すべきフラグ」（例: `--base`）を Spec の変更ファイル一覧に明記する慣行を整備する（Step 4d の `--base` フラグ未伝播パターンの再発防止）。
+
 ### bats test mock 追加チェック
 
 - `run-auto-sub.bats` の `WHOLEWORK_SCRIPT_DIR=$MOCK_DIR` 経由で `run-verify.sh` mock が配置されていたが、削除に伴い該当 mock も削除する必要がある（Implementation Step 10 で対応）
