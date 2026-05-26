@@ -188,7 +188,6 @@ wholework/
 - `scripts/run-merge.sh` — merge スキル実行
 - `scripts/run-review.sh` — review スキル実行
 - `scripts/run-spec.sh` — spec スキル実行
-- `scripts/run-verify.sh` — verify スキル実行
 
 **ツーリング:**
 - `scripts/check-eager-load-capability.sh` — eager-load 共通モジュール（verify-patterns.md、verify-executor.md）への capability guidance 混入検出スクリプト；/audit drift Step 2 から呼び出される

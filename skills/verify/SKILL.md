@@ -1,9 +1,8 @@
 ---
 name: verify
 description: Acceptance test. Automatically verifies post-merge acceptance conditions and updates Issue checkboxes (`/verify 123`). Use after `/merge`. Reopens Issue on FAIL to return to the fix cycle.
-context: fork
 model: sonnet
-allowed-tools: Bash(git checkout:*, git pull:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
+allowed-tools: Bash(git checkout:*, git pull:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
 ---
 
 # Acceptance Test
@@ -12,45 +11,9 @@ Receive an Issue number and automatically verify post-merge acceptance condition
 
 If ARGUMENTS contains `--help`, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.md` and follow the "Processing Steps" section to output help, then stop.
 
-## Autonomous Mode (--auto)
+## Mode
 
-If ARGUMENTS contains the `--auto` flag, delegate as follows:
-
-> **Note**: This mode only works when invoked via `/auto` (direct `run-verify.sh` call). Running `/verify 123 --auto` directly from an interactive session spawns a fork sub-agent via `context: fork`, making it appear unresponsive because output is not streamed. In interactive sessions, run `/verify 123` without `--auto`.
-
-1. Extract the Issue number from ARGUMENTS (numeric part)
-2. Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-verify.sh $NUMBER` via Bash
-3. Exit after the script completes (do not execute subsequent steps)
-
-If `--auto` is not present, proceed with mode detection below.
-
-## Mode Detection
-
-<!-- Flag role separation:
-  --auto: Used when the user runs `/verify 123 --auto`. Delegates to run-verify.sh and exits.
-  --non-interactive: Automatically added when run-verify.sh calls the verify SKILL internally.
-                     Indicates autonomous execution mode in `--dangerously-skip-permissions` environment.
-  This two-layer design separates --auto as a user delegation flag and --non-interactive as an
-  internal execution flag.
--->
-
-If ARGUMENTS contains the `--non-interactive` flag, operate in **non-interactive mode** (set when invoked autonomously via `run-verify.sh`).
-
-- **Non-interactive mode**: autonomous execution in `--dangerously-skip-permissions` environment. Follow the "Non-interactive mode" column in the error handling table below
-- **Interactive mode** (no flag): run normal steps
-
-## Error Handling in Non-Interactive Mode
-
-When invoked via `run-verify.sh` (`--dangerously-skip-permissions` environment), apply **auto-resolve + log** at each decision point instead of aborting (except hard-error cases).
-
-Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md` and follow the "Non-Interactive Mode Handling" section. Per-step behavior:
-
-| Location | Interactive mode | Non-interactive mode |
-|------|-----------|---------------------|
-| Step 1: uncommitted changes check | Output error and abort if uncommitted changes exist; if all dirty files are unrelated spec files for other Issues (`docs/spec/issue-N-*.md` with N ≠ $NUMBER), offer stash-and-continue or abort | Unrelated spec files (other Issue's `docs/spec/issue-N-*.md`): auto-stash and continue. Related or other dirty files: hard-error abort |
-| Step 5 (verify each condition) Step 2 (conditions with verify commands): `command` hint permission | Execute after user approval | `--dangerously-skip-permissions` removes confirmation requirement. Execute directly (auto-resolve) |
-| Step 10: create improvement proposal Issue | Auto-create Issue | Same (auto-resolve) |
-| Any other AskUserQuestion during verification | Ask user | Auto-resolve: adopt the safest interpretation (treat ambiguous conditions as UNCERTAIN rather than PASS); record decision in the Spec's `## Autonomous Auto-Resolve Log` subsection |
+Always interactive — runs in the caller's context (no wrapper script). `AskUserQuestion` is available throughout all steps.
 
 ## Steps
 
@@ -67,15 +30,10 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh $NUMBER
 Handle by exit code:
 
 - **Exit 0 (clean)** → continue
-- **Exit 2 (all dirty files are unrelated spec files)** → the script printed the file paths to stdout:
-  - **Interactive mode**: Present the following choice via AskUserQuestion — "Unrelated dirty files detected (e.g., `docs/spec/issue-N-*.md` for a different Issue). Stash and continue, or abort?"
-    - "Stash and continue": run `git stash`, then continue
-    - "Abort": stop and guide user to run `git stash` or `git commit`, then re-run `/verify $NUMBER`
-  - **Non-interactive mode**: Auto-stash — run `git stash`, then continue
-- **Exit 1 (related or non-spec dirty files present)**: output error message and abort.
-  Output the `VERIFY_FAILED` marker as a standalone line (line-anchored: `run-verify.sh` detects it with `^VERIFY_FAILED` pattern):
-  "VERIFY_FAILED"
-  Then output the error message:
+- **Exit 2 (all dirty files are unrelated spec files)** → the script printed the file paths to stdout: Present the following choice via AskUserQuestion — "Unrelated dirty files detected (e.g., `docs/spec/issue-N-*.md` for a different Issue). Stash and continue, or abort?"
+  - "Stash and continue": run `git stash`, then continue
+  - "Abort": stop and guide user to run `git stash` or `git commit`, then re-run `/verify $NUMBER`
+- **Exit 1 (related or non-spec dirty files present)**: output error message and abort:
   "Error: Cannot run verify because there are uncommitted changes. Run `git stash` or `git commit`, then re-run `/verify $NUMBER`."
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="issue", ENTITY_NUMBER=$NUMBER, SKILL_NAME="verify".
@@ -119,11 +77,10 @@ If `--base` is not specified and `PR_NUMBER` is empty, search for an OPEN PR bef
 OPEN_PR=$(gh pr list --search "closes #$ISSUE_NUMBER" --state open --json number,title --jq ".[0].number")
 ```
 
-If `OPEN_PR` is not empty, output `VERIFY_FAILED` as a standalone line (line-anchored: `run-verify.sh` detects it with `^VERIFY_FAILED` pattern) and abort:
+If `OPEN_PR` is not empty, output an error and abort:
 
 ```
-VERIFY_FAILED
-Warning: PR #$OPEN_PR is open but not yet merged.
+Error: PR #$OPEN_PR is open but not yet merged.
 /verify is designed to run after merge. Please merge PR #$OPEN_PR first, then re-run `/verify $ISSUE_NUMBER`.
 ```
 
@@ -252,6 +209,25 @@ The following cannot be auto-verified:
 
 **Browser-verifiable case exclusion**: Only if `HAS_BROWSER_CAPABILITY=true` is confirmed via the above steps, Read `skills/verify/browser-verify-phase.md` and follow the "Inside Step 4: Browser-Verifiable Case Exclusion" section for classification. If `HAS_BROWSER_CAPABILITY` is unset or false, treat conditions with browser verification commands as UNCERTAIN.
 
+#### Step 5: Manual AC Confirmation via AskUserQuestion
+
+After all auto-verification steps above, check the Issue body for any post-merge conditions marked `<!-- verify-type: manual -->` that are still unchecked (`- [ ]`).
+
+For each unchecked manual condition, invoke `AskUserQuestion` to prompt the user:
+
+- **Question**: "Condition: {condition text} — Please confirm this condition."
+- **Options**:
+  - "PASS" — condition is confirmed
+  - "FAIL" — condition failed; needs a fix
+  - "SKIP" — skip this condition for now (leave unchecked)
+
+Record each response as the condition's result:
+- **PASS** → treat the same as auto-verification PASS (checkbox updated in Step 6, contributes to overall PASS judgment in Step 9)
+- **FAIL** → treat the same as auto-verification FAIL (checkbox remains unchecked, triggers reopen logic in Step 9)
+- **SKIP** → leave unchecked; exclude from PASS/FAIL judgment (same as "Cannot auto-verify" items)
+
+**Multi-condition batching**: If there are 4 or more manual conditions, first ask a single AskUserQuestion: "There are {N} manual conditions to confirm. Confirm each individually, or mark all as PASS?" with options "Confirm individually" and "Mark all PASS". If "Mark all PASS" is selected, record all as PASS without individual questions.
+
 ### Step 6: Update Checkboxes
 
 Identify the checkbox indices (1-based) of conditions that PASSed and pass to the script:
@@ -271,10 +247,11 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh "$NUMBER" --checkbox 1,3 --check
 Comma-separated multiple indices are supported. Use `--uncheck` to uncheck.
 
 **Handling partial PASS:**
-- PASS conditions → immediately update to `- [x]`
-- FAIL conditions → leave as `- [ ]`
+- PASS conditions (auto-verified or confirmed PASS in Step 5 manual confirmation) → immediately update to `- [x]`
+- FAIL conditions (auto-verified or FAIL in Step 5 manual confirmation) → leave as `- [ ]`
 - SKIPPED conditions → leave as `- [ ]` (not executed due to unmet environment conditions)
 - Cannot auto-verify → leave as `- [ ]` (deferred to user verification)
+- SKIP response in Step 5 manual confirmation → leave as `- [ ]`
 - **Post-merge + no hints conditions** → do not update checkboxes (maintain `- [ ]`)
 - **Re-runs**: re-verify all conditions (idempotent). Re-verify even if already checked; report via comment if result changes
 
@@ -361,7 +338,8 @@ gh issue view "$NUMBER" --json state --jq '.state'
 **Conditions subject to reopen judgment**:
 - All pre-merge conditions (with or without hints)
 - Post-merge conditions with hints (`<!-- verify: ... -->`)
-- **Post-merge conditions without hints are excluded** (user verification items)
+- Post-merge `<!-- verify-type: manual -->` conditions confirmed as PASS or FAIL in Step 5 (SKIP responses are excluded)
+- **Post-merge conditions without hints (and no verify-type marker) are excluded** (user verification items)
 
 Branch on Issue state:
 
@@ -373,12 +351,12 @@ Branch on Issue state:
 Judgment:
 
 - **All auto-verification target conditions are PASS or SKIPPED (0 FAIL/UNCERTAIN among auto-verification targets; SKIPPED is ignored as environment conditions were unmet)**:
-  - Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->` or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body
+  - Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->` or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body (manual conditions SKIPped in Step 5 remain unchecked)
   - **If unchecked opportunistic or manual conditions remain**: assign `phase/verify` (Issue remains CLOSED; do not reopen):
     ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
     ```
-    Inform the user: "Manually check the remaining opportunistic/manual conditions, then re-run `/verify $NUMBER` to complete."
+    Inform the user: "Unchecked opportunistic/manual conditions remain. Re-run `/verify $NUMBER` when ready to confirm them."
   - **If all conditions are checked**: assign `phase/done`. Confirm the Issue is closed. If not closed, close with `gh issue close "$NUMBER"` (handles cases like XL parent Issues not auto-closed by PR's `closes #N`):
     ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" done
@@ -443,12 +421,12 @@ When the repository has GitHub's "Auto-close issues with merged linked pull requ
 Judgment:
 
 - **All auto-verification target conditions are PASS or SKIPPED**:
-  - Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->` or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body
+  - Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->` or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body (manual conditions SKIPped in Step 5 remain unchecked)
   - **If unchecked opportunistic or manual conditions remain**: assign `phase/verify` (Issue remains OPEN; do not close):
     ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
     ```
-    Inform the user: "Manually check the remaining opportunistic/manual conditions, then re-run `/verify $NUMBER` to complete."
+    Inform the user: "Unchecked opportunistic/manual conditions remain. Re-run `/verify $NUMBER` when ready to confirm them."
   - **If all conditions are checked**: assign `phase/done` and close:
     ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" done

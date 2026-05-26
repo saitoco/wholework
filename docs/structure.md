@@ -195,7 +195,6 @@ Key modules:
 - `scripts/run-merge.sh` — run merge skill
 - `scripts/run-review.sh` — run review skill
 - `scripts/run-spec.sh` — run spec skill
-- `scripts/run-verify.sh` — run verify skill
 
 **Tooling:**
 - `scripts/check-eager-load-capability.sh` — detect capability guidance mixed into eager-load shared modules (verify-patterns.md, verify-executor.md); called from /audit drift Step 2

@@ -19,7 +19,6 @@ setup() {
     export RUN_CODE_LOG="$BATS_TEST_TMPDIR/run-code.log"
     export RUN_REVIEW_LOG="$BATS_TEST_TMPDIR/run-review.log"
     export RUN_MERGE_LOG="$BATS_TEST_TMPDIR/run-merge.log"
-    export RUN_VERIFY_LOG="$BATS_TEST_TMPDIR/run-verify.log"
     export RECONCILE_LOG="$BATS_TEST_TMPDIR/reconcile.log"
     export APPLY_FALLBACK_LOG="$BATS_TEST_TMPDIR/apply-fallback.log"
     export SPAWN_RECOVERY_LOG="$BATS_TEST_TMPDIR/spawn-recovery.log"
@@ -67,13 +66,6 @@ exit 0
 MOCK
     chmod +x "$MOCK_DIR/run-merge.sh"
 
-    cat > "$MOCK_DIR/run-verify.sh" <<'MOCK'
-#!/bin/bash
-echo "$@" >> "$RUN_VERIFY_LOG"
-exit 0
-MOCK
-    chmod +x "$MOCK_DIR/run-verify.sh"
-
     # Mock recovery helpers: default behavior (exit 1 = no recovery) for happy-path tests
     cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
 #!/bin/bash
@@ -95,16 +87,6 @@ echo "$@" >> "$SPAWN_RECOVERY_LOG"
 exit 1
 MOCK
     chmod +x "$MOCK_DIR/spawn-recovery-subagent.sh"
-
-    # Mock git: used by run_verify_with_retry on verify failure (pull --ff-only)
-    cat > "$MOCK_DIR/git" <<MOCK
-#!/bin/bash
-if [[ "\$1" == "pull" ]]; then
-    exit 0
-fi
-exit 0
-MOCK
-    chmod +x "$MOCK_DIR/git"
 
     # Mock gh: default phase/ready label present, pr list returns PR 99
     cat > "$MOCK_DIR/gh" <<'MOCK'
@@ -190,16 +172,16 @@ MOCK
     [ ! -f "$RUN_MERGE_LOG" ]
 }
 
-@test "Size M: run-code.sh --pr, run-review.sh --light, run-merge.sh, run-verify.sh are called" {
+@test "Size M: run-code.sh --pr, run-review.sh --light, run-merge.sh called; verify is NOT called (deferred to parent /auto)" {
     run bash "$SCRIPT" 42
     [ "$status" -eq 0 ]
     grep -q "42 --pr" "$RUN_CODE_LOG"
     grep -q -- "--light" "$RUN_REVIEW_LOG"
     [ -f "$RUN_MERGE_LOG" ]
-    [ -f "$RUN_VERIFY_LOG" ]
+    [ ! -f "$BATS_TEST_TMPDIR/run-verify.log" ]
 }
 
-@test "Size L: run-code.sh --pr, run-review.sh --full, run-merge.sh, run-verify.sh are called" {
+@test "Size L: run-code.sh --pr, run-review.sh --full, run-merge.sh called; verify is NOT called (deferred to parent /auto)" {
     cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
 #!/bin/bash
 echo "L"
@@ -212,7 +194,7 @@ MOCK
     grep -q "42 --pr" "$RUN_CODE_LOG"
     grep -q -- "--full" "$RUN_REVIEW_LOG"
     [ -f "$RUN_MERGE_LOG" ]
-    [ -f "$RUN_VERIFY_LOG" ]
+    [ ! -f "$BATS_TEST_TMPDIR/run-verify.log" ]
 }
 
 @test "Size XL: exits with error about sub-issue splitting" {
@@ -256,11 +238,11 @@ MOCK
     [ -f "$RUN_SPEC_LOG" ]
 }
 
-@test "--base flag propagates to run-code.sh and run-verify.sh for Size M" {
+@test "--base flag propagates to run-code.sh for Size M; verify is NOT called by run-auto-sub.sh (deferred to parent /auto)" {
     run bash "$SCRIPT" 42 --base release/v1
     [ "$status" -eq 0 ]
     grep -q -- "--base release/v1" "$RUN_CODE_LOG"
-    grep -q -- "--base release/v1" "$RUN_VERIFY_LOG"
+    [ ! -f "$BATS_TEST_TMPDIR/run-verify.log" ]
 }
 
 @test "PR extraction: exact-match SSoT filter matches worktree-code+issue-N (#311 regression, #325 fix)" {

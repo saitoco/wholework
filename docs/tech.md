@@ -42,7 +42,7 @@ English | [日本語](ja/tech.md)
   | code | Yes | Reads Spec and executes independently; not influenced by pre-implementation context |
   | review | Yes | Reviews code from a clean perspective without inheriting implementation phase bias |
   | merge | Yes | Decision completes with Spec + PR metadata; does not carry over review context |
-  | verify | Yes | Verifies post-merge state independently; must not be influenced by prior phase decisions |
+  | verify | No | Mostly mechanical (verify command execution + checkbox update); manual AC confirmation requires AskUserQuestion which cannot run in fork context; FAIL → /code (fork) re-runs so bias propagation risk is low |
   | auto | No | Parent orchestrator runs in the user's Claude Code session; each child phase runs as an independent `claude -p` process via `run-*.sh` |
   | audit | No | Drift, fragility, and recovery pattern detection runs in user's session; no prior-phase bias to avoid |
   | doc | No | Document management runs in user's session; no prior-phase bias to avoid |
@@ -77,7 +77,6 @@ Entries are grouped by workflow order (triage → issue → spec → code → re
 | run-code.sh | code | Sonnet | high | Implementation requires thorough reasoning |
 | run-review.sh | review | Sonnet | high | Review orchestration; sub-agents handle deep analysis |
 | run-merge.sh | merge | Sonnet | low | Mechanical merge operation; minimal reasoning needed |
-| run-verify.sh | verify | Sonnet | medium | Structured acceptance testing; moderate complexity |
 | issue-scope | issue (L/XL only) | Opus | — | Called by `/issue` Step 11a for L/XL parallel investigation. Scope identification accuracy is critical for sub-issue boundary decisions |
 | issue-risk | issue (L/XL only) | Opus | — | Called by `/issue` Step 11a for L/XL parallel investigation. Risk assessment accuracy improves acceptance criteria quality |
 | issue-precedent | issue (L/XL only) | Opus | — | Called by `/issue` Step 11a for L/XL parallel investigation. Precedent extraction improves acceptance criteria quality |
@@ -86,7 +85,7 @@ Entries are grouped by workflow order (triage → issue → spec → code → re
 | review-light | review | Sonnet | — | Lightweight integrated review (sub-agent, effort inherited from parent) |
 | triage (skill) | triage | Sonnet | — | Metadata assignment; Sonnet sufficient. Invoked inline (no `run-*.sh` wrapper) — including when `/auto` chains triage for unlabeled issues — so effort is not set |
 | merge (skill) | merge | Sonnet | — | Mechanical merge operation; `model: sonnet` fixed in frontmatter. Effort not set (skill invocation; `run-merge.sh` sets `low` effort) |
-| verify (skill) | verify | Sonnet | — | Structured acceptance testing; `model: sonnet` fixed in frontmatter. Effort not set (skill invocation; `run-verify.sh` sets `medium` effort) |
+| verify (skill) | verify | Sonnet | — | Structured acceptance testing; `model: sonnet` fixed in frontmatter. Runs in caller's context (no wrapper script); effort not set at the skill level |
 | auto (skill) | orchestration | Sonnet | — | Parent orchestrator; runs in the user's Claude Code session inline (no `run-*.sh` wrapper). Each child phase runs via `run-*.sh` with phase-specific effort. Effort not set at the skill level |
 | audit (skill) | audit | Sonnet | — | Drift/fragility detection and stats; Sonnet sufficient. Invoked inline (no `run-*.sh` wrapper), so effort is not set |
 | doc (skill) | doc | Sonnet | — | Document management; Sonnet sufficient. Invoked inline (no `run-*.sh` wrapper), so effort is not set |

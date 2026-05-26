@@ -1,5 +1,6 @@
 #!/bin/bash
-# run-auto-sub.sh - Execute all phases (spec->code->review->merge->verify) for each sub-issue
+# run-auto-sub.sh - Execute code→review→merge phases for each sub-issue.
+# verify is deferred to the parent /auto session (issue #485)
 #
 # Usage: run-auto-sub.sh <sub-issue-number> [--base <branch>]
 
@@ -36,30 +37,6 @@ if ! [[ "$SUB_NUMBER" =~ ^[0-9]+$ ]]; then
 fi
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
-
-# See modules/orchestration-fallbacks.md#verify-sync-retry
-run_verify_with_retry() {
-  local issue_num="$1"
-  local base_branch="${2:-}"
-
-  if [[ -n "$base_branch" ]]; then
-    "$SCRIPT_DIR/run-verify.sh" "$issue_num" --base "$base_branch" && return 0
-  else
-    "$SCRIPT_DIR/run-verify.sh" "$issue_num" && return 0
-  fi
-
-  echo "verify FAILED: syncing with git pull --ff-only and retrying (1/1)"
-  if ! git pull --ff-only; then
-    echo "git pull --ff-only failed: reporting as FAIL without retry" >&2
-    return 1
-  fi
-
-  if [[ -n "$base_branch" ]]; then
-    "$SCRIPT_DIR/run-verify.sh" "$issue_num" --base "$base_branch"
-  else
-    "$SCRIPT_DIR/run-verify.sh" "$issue_num"
-  fi
-}
 
 run_phase_with_recovery() {
   local phase issue runner_script exit_code log_file
@@ -144,21 +121,16 @@ fi
 
 echo "Size: ${SIZE}"
 
-# Execute phases according to Size-based route
+# Execute phases according to Size-based route.
+# verify is deferred to the parent /auto session (issue #485)
 case "$SIZE" in
   XS)
     echo "--- code phase (patch): issue #${SUB_NUMBER} ---"
     run_phase_with_recovery "code" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --patch ${BASE_FLAG:-}
-
-    echo "--- verify phase: issue #${SUB_NUMBER} ---"
-    run_verify_with_retry "$SUB_NUMBER" "${BASE_BRANCH:-}"
     ;;
   S)
     echo "--- code phase (patch): issue #${SUB_NUMBER} ---"
     run_phase_with_recovery "code" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --patch ${BASE_FLAG:-}
-
-    echo "--- verify phase: issue #${SUB_NUMBER} ---"
-    run_verify_with_retry "$SUB_NUMBER" "${BASE_BRANCH:-}"
     ;;
   M)
     echo "--- code phase (pr): issue #${SUB_NUMBER} ---"
@@ -176,9 +148,6 @@ case "$SIZE" in
 
     echo "--- merge phase: PR #${PR_NUMBER} ---"
     run_phase_with_recovery "merge" "$PR_NUMBER" "$SCRIPT_DIR/run-merge.sh"
-
-    echo "--- verify phase: issue #${SUB_NUMBER} ---"
-    run_verify_with_retry "$SUB_NUMBER" "${BASE_BRANCH:-}"
     ;;
   L)
     echo "--- code phase (pr): issue #${SUB_NUMBER} ---"
@@ -196,9 +165,6 @@ case "$SIZE" in
 
     echo "--- merge phase: PR #${PR_NUMBER} ---"
     run_phase_with_recovery "merge" "$PR_NUMBER" "$SCRIPT_DIR/run-merge.sh"
-
-    echo "--- verify phase: issue #${SUB_NUMBER} ---"
-    run_verify_with_retry "$SUB_NUMBER" "${BASE_BRANCH:-}"
     ;;
   *)
     echo "Error: Unknown Size: ${SIZE}" >&2
