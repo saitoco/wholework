@@ -9,6 +9,48 @@ English | [日本語](ja/migration-notes.md)
 
 # Migration Notes
 
+## Issue #485: run-verify.sh removal and /verify fork abolition
+
+### Summary
+
+`/verify` no longer runs in a forked (`claude -p`) process. It now runs in the caller's context (parent session), enabling `AskUserQuestion` for interactive manual AC confirmation.
+
+### Interface Changes
+
+#### `scripts/run-verify.sh` — deleted
+
+The `run-verify.sh` wrapper script has been deleted. All direct invocations must be replaced.
+
+| Before | After |
+|--------|-------|
+| `bash scripts/run-verify.sh $NUMBER` | `Skill(skill="wholework:verify", args="$NUMBER")` in the parent session |
+| `bash scripts/run-verify.sh $NUMBER --base release/v1` | `Skill(skill="wholework:verify", args="$NUMBER --base release/v1")` |
+
+CI/cron jobs that called `run-verify.sh` directly should use `/auto $NUMBER` instead, or invoke `/verify $NUMBER` interactively.
+
+#### `skills/verify/SKILL.md` — `--auto` / `--non-interactive` flags removed
+
+The `--auto` and `--non-interactive` flags are no longer recognized. `/verify` always runs interactively.
+
+| Before | After |
+|--------|-------|
+| `/verify 123 --auto` | `/verify 123` |
+| `/verify 123 --non-interactive` | `/verify 123` (flags silently ignored or may error) |
+
+#### `skills/auto/SKILL.md` — verify invocation pattern changed
+
+The `/auto` skill no longer calls `run-verify.sh` via Bash. It now invokes the verify skill directly in the parent session.
+
+| Before | After |
+|--------|-------|
+| `run \`scripts/run-verify.sh $NUMBER\` via Bash (timeout: 600000)` | `Skill(skill="wholework:verify", args="$NUMBER")` |
+
+#### `scripts/run-auto-sub.sh` — verify phase removed
+
+`run-auto-sub.sh` no longer runs the verify phase for sub-issues. Verify is deferred to the parent `/auto` session (Step 4d in `skills/auto/SKILL.md`).
+
+Downstream callers that relied on `run-auto-sub.sh` to run verify must add an explicit verify step in their orchestration.
+
 ---
 
 ## English Conversion Checklist
