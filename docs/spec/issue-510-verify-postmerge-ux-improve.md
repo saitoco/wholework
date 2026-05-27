@@ -58,3 +58,34 @@
 - 実装対象は `skills/verify/SKILL.md` のみ。bats テスト (スクリプト) には変更なし。CI チェック (AC6) は既存テストの通過確認
 - 実装ステップ数 5 = light 上限。Pre-merge 検証項目は 6 件 (Issue AC 駆動のため light 上限 5 を 1 件超えるが、Issue body 準拠のため全件収録)
 - post-merge briefing は新 Step 7 として旧 Step 7 (Post Comment) の直前に挿入する。旧 Step 7 の番号は新 Step 9 へ繰り下がる
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body の AC 設計は明確。rubric ベースの pre-merge 検証 6 件 + manual 4 件の構成はスコープ分離が適切。
+- 「AC6 の `github_check` を `gh run list` 形式に自動変更」という auto-resolved ambiguity がIssue bodyに記録されており、パッチルート対応が設計段階で考慮されていた点は良好。
+- Specの実装ステップ記述は Changed Files、Implementation Steps、Verification の三部構成で簡潔。
+
+#### design
+- Spec の設計 (pre-merge 先行確定 + post-merge briefing + intelligence) と実装 diff が一致。設計逸脱なし。
+- 旧 Step 5 の inner Step 5 削除と新 Step 7/8 挿入による step 繰り下げは、Spec の "旧 Step 7-13 を新 Step 9-15 へ繰り下げ" 記述どおりに実装されている。
+
+#### code
+- コミット履歴は Spec 追加 → 実装の 2 コミットのみ。fixup/amend パターンなし。
+- 実装 diff は SKILL.md の 88 行追加 / 41 行削除で、設計に沿った Step 追加と番号繰り下げが確認できる。
+
+#### review
+- PR が存在しないパッチルートのため PR review コメントは存在しない。CI (bats tests) が success であることが自動検証で確認済み。
+
+#### merge
+- パッチルート (direct commit to main)。PR merge プロセスなし。2 コミットとも sign-off あり。
+
+#### verify
+- Pre-merge AC 6 件はすべて PASS（rubric 5 件 + github_check 1 件）。
+- Post-merge manual AC 4 件は実機確認が必要なため UNCERTAIN/保留扱い（AskUserQuestion 動作はユーザが実際に `/verify N` を実行しないと確認不可）。
+- `github_check "gh run list"` 形式がパッチルートで正常に機能することを確認。
+
+### Improvement Proposals
+- N/A
