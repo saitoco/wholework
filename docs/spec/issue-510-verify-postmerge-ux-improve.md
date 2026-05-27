@@ -89,3 +89,22 @@
 
 ### Improvement Proposals
 - N/A
+
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| issue | — | SUCCESS | AC 2 件 (gh pr checks → gh run list、不適切 supplementary 削除) を refinement で修正 |
+| spec | — | SUCCESS | Spec 作成・コミット・プッシュ |
+| code | patch | SUCCESS (watchdog kill, manual fallback) | run-code.sh 1800s 沈黙 → SIGTERM (exit 143)。worktree branch `worktree-code+issue-510` に implementation commit `407fcb1` 完了済み、main へ未 merge。parent session で `worktree-merge-push.sh --from worktree-code+issue-510` 手動実行で復旧 |
+| verify | — | SUCCESS (Skill tool path) | 6/6 pre-merge auto PASS、4 post-merge manual pending。新 /verify 設計通り Skill tool 経由起動・post-merge briefing + Claude 実行可能性判定が動作確認できた |
+
+### Orchestration Anomalies
+
+- **[code-watchdog-merge-push-incomplete]** code phase で implementation commit 完了後、`worktree-merge-push.sh` 段階で watchdog 1800s 沈黙 → SIGTERM。`reconcile-phase-state.sh code-patch --check-completion` が `matches_expected:false` (commit on main 不在) を返したが、worktree 内には完了済 commit が残存。`worktree-merge-push.sh --from` 手動実行で復旧。これは #469 (code-completed-no-pr / pr route) と類似だが patch route 版 (PR 不在のため "merge-push incomplete" として区別)
+- **(recurring)** watchdog 1800s kill は #469 / #485 / #510 で 3 回連続発生。実装完了後の長時間処理 (PR creation, merge-push, GitHub API レイテンシ) が原因。`.wholework.yml` の `watchdog-timeout-seconds: 3600` 等の延長を user 側で設定する short-term workaround は可能だが、code-watchdog 後の自動 reconcile + fallback が根本対策
+
+### Improvement Proposals
+
+- **patch route の code phase に code-completed-no-pr 相当の自動 reconcile + merge-push fallback を追加**: 現在 `code-completed-no-pr` (pr route) は `orchestration-fallbacks.md` にエントリ済みで `detect-wrapper-anomaly.sh` で自動検出されるが、patch route の "implementation commit 完了済 + main 未 merge" パターン (本 anomaly) は未対応。`apply-fallback.sh` で同 worktree branch を merge-push する自動 fallback を追加すれば、3 connsecutive 発生中の摩擦が解消する。新規 anomaly pattern: `code-patch-merge-push-incomplete`、catalog anchor 名: `code-patch-merge-push-incomplete`
