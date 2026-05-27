@@ -23,7 +23,7 @@
 
 2. **Step 6 改修** (→ AC1): 対象を「pre-merge PASS conditions の checkbox flip のみ」に変更する。post-merge AC 処理に入る前にこの flip を実行し、GitHub Issue body を即時更新することで pre-merge 成果を確定させる旨を明記する
 
-3. **新 Step 7: post-merge briefing 追加** (→ AC2): post-merge AC の個別処理に入る前に AC 一覧を表示するステップを旧 Step 7 の直前に挿入する。表示内容: post-merge AC の総件数 + 各条件の要約テキスト + 条件タイプ (auto-verify hint あり / manual) + manual 条件への Claude 実行可能性の 1 行クイックプレビュー。このステップでは実行も AskUserQuestion も行わない
+3. **新 Step 7: post-merge briefing 追加** (→ AC2): post-merge AC の個別処理に入る前に AC 一覧を表示するステップを旧 Step 7 の直前に挿入する。表示内容: post-merge AC の総件数 + 各条件の要約テキスト + 条件タイプ (`<!-- verify: ... -->` コマンドあり / manual) + manual 条件への Claude 実行可能性の 1 行クイックプレビュー。このステップでは実行も AskUserQuestion も行わない
 
 4. **新 Step 8: post-merge processing 追加** (→ AC3, AC4, AC5):
    - Step 8a: `<!-- verify: ... -->` hint を持つ post-merge 条件を auto-verify する (inner Steps 1-4 と同ロジック)

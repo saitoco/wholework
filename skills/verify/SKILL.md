@@ -120,10 +120,12 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/domain-loader.md` and follow the "Processing
 - If there are no section divisions, target all unchecked items
 - If sections are divided into "Pre-merge (auto verify)" and "Post-merge":
   - **Pre-merge**: treat all conditions as auto-verification targets (with or without hints)
-  - **Post-merge + with hints** (`<!-- verify: ... -->`): treat as auto-verification targets
-  - **Post-merge + without hints**: not an auto-verification target. Present as user verification guide only; do not update checkboxes
+  - **Post-merge + with hints** (`<!-- verify: ... -->`): auto-verification targets — processed in Step 8a
+  - **Post-merge + without hints**: manual conditions — processed in Step 8b (Claude executability judgment + verification guide or per-condition AskUserQuestion)
 
-### Step 5: Verify Each Condition
+### Step 5: Verify Each Condition (Pre-merge Only)
+
+**Scope**: This step processes **pre-merge conditions only**. Post-merge conditions (hint-based and manual) are processed in Steps 7–8, after pre-merge results are locked into the Issue. If the Issue has no section divisions, treat all conditions as pre-merge and process them here.
 
 **Patch route detection (run before verification):**
 
@@ -209,28 +211,11 @@ The following cannot be auto-verified:
 
 **Browser-verifiable case exclusion**: Only if `HAS_BROWSER_CAPABILITY=true` is confirmed via the above steps, Read `skills/verify/browser-verify-phase.md` and follow the "Inside Step 4: Browser-Verifiable Case Exclusion" section for classification. If `HAS_BROWSER_CAPABILITY` is unset or false, treat conditions with browser verification commands as UNCERTAIN.
 
-#### Step 5: Manual AC Confirmation via AskUserQuestion
+### Step 6: Update Pre-merge Checkboxes (Immediate Lock-in)
 
-After all auto-verification steps above, check the Issue body for any post-merge conditions marked `<!-- verify-type: manual -->` that are still unchecked (`- [ ]`).
+**Scope**: Update checkboxes for **pre-merge PASS conditions only**. This step executes before post-merge processing (Steps 7–8), ensuring pre-merge results are locked into the GitHub Issue body regardless of post-merge outcomes. Post-merge PASS conditions are updated at the end of Step 8.
 
-For each unchecked manual condition, invoke `AskUserQuestion` to prompt the user:
-
-- **Question**: "Condition: {condition text} — Please confirm this condition."
-- **Options**:
-  - "PASS" — condition is confirmed
-  - "FAIL" — condition failed; needs a fix
-  - "SKIP" — skip this condition for now (leave unchecked)
-
-Record each response as the condition's result:
-- **PASS** → treat the same as auto-verification PASS (checkbox updated in Step 6, contributes to overall PASS judgment in Step 9)
-- **FAIL** → treat the same as auto-verification FAIL (checkbox remains unchecked, triggers reopen logic in Step 9)
-- **SKIP** → leave unchecked; exclude from PASS/FAIL judgment (same as "Cannot auto-verify" items)
-
-**Multi-condition batching**: If there are 4 or more manual conditions, first ask a single AskUserQuestion: "There are {N} manual conditions to confirm. Confirm each individually, or mark all as PASS?" with options "Confirm individually" and "Mark all PASS". If "Mark all PASS" is selected, record all as PASS without individual questions.
-
-### Step 6: Update Checkboxes
-
-Identify the checkbox indices (1-based) of conditions that PASSed and pass to the script:
+Identify the checkbox indices (1-based) of **pre-merge** conditions that PASSed and pass to the script:
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh "$NUMBER" --checkbox <pass-indices> --check
 # Example: if 1st and 3rd acceptance conditions PASS
@@ -246,16 +231,78 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh "$NUMBER" --checkbox 1,3 --check
 
 Comma-separated multiple indices are supported. Use `--uncheck` to uncheck.
 
-**Handling partial PASS:**
-- PASS conditions (auto-verified or confirmed PASS in Step 5 manual confirmation) → immediately update to `- [x]`
-- FAIL conditions (auto-verified or FAIL in Step 5 manual confirmation) → leave as `- [ ]`
+**Handling partial PASS (pre-merge only):**
+- Pre-merge PASS conditions (auto-verified) → immediately update to `- [x]`
+- Pre-merge FAIL conditions (auto-verified) → leave as `- [ ]`
 - SKIPPED conditions → leave as `- [ ]` (not executed due to unmet environment conditions)
 - Cannot auto-verify → leave as `- [ ]` (deferred to user verification)
-- SKIP response in Step 5 manual confirmation → leave as `- [ ]`
-- **Post-merge + no hints conditions** → do not update checkboxes (maintain `- [ ]`)
+- **Post-merge conditions (all types)** → do not update here; post-merge PASS conditions are updated at the end of Step 8
 - **Re-runs**: re-verify all conditions (idempotent). Re-verify even if already checked; report via comment if result changes
 
-### Step 7: Post Comment on Issue
+### Step 7: Post-merge Briefing
+
+Before beginning individual post-merge AC processing, display an overview of all post-merge ACs. This step is **informational only** — no verification is executed and no `AskUserQuestion` is invoked.
+
+If there are no post-merge ACs, skip this step.
+
+Output the following overview to terminal:
+
+## Post-merge Acceptance Conditions ({N} total)
+
+| # | Condition (summary) | Type | Claude Executable? |
+|---|---------------------|------|--------------------|
+| 1 | {summary text} | auto-verify (hint) | — |
+| 2 | {summary text} | manual | Yes — `{candidate command/approach}` |
+| 3 | {summary text} | manual | No (requires manual inspection) |
+
+**Column guidance:**
+- **N**: total count of post-merge ACs
+- **Type**: `auto-verify (hint)` if `<!-- verify: ... -->` is present; `manual` if `<!-- verify-type: manual -->` or no hint
+- **Claude Executable?**: for manual conditions only — quick preview judgment based on condition text (rubric detailed in Step 8b). For executable conditions, show the candidate command or approach. For non-executable conditions, show "No (requires manual inspection)". For auto-verify conditions, show "—".
+
+### Step 8: Post-merge Processing
+
+Process post-merge ACs in two sub-steps, then flip checkboxes for PASS results.
+
+#### Step 8a: Auto-verify Post-merge Conditions with Hints
+
+For post-merge conditions that have `<!-- verify: ... -->` hints, apply the same verification logic as inner Steps 1–4 of Step 5 (CI failure detection, verify command execution via `verify-executor.md`, AI judgment fallback, cannot-auto-verify deferral). Record each result as PASS, FAIL, UNCERTAIN, or PENDING.
+
+#### Step 8b: Manual Post-merge Conditions
+
+For each unchecked post-merge condition marked `<!-- verify-type: manual -->` (or without any `<!-- verify: ... -->` command and without a `verify-type` marker — treat as manual):
+
+**1. Claude Executability Judgment (rubric-based)**
+
+Evaluate whether Claude can directly execute the verification based on the condition text:
+
+- **Executable examples**: `curl` URL reachability check, `gh` command result judgment, file/directory existence check (`test -f`, `test -d`), `git log`/`git status` result inspection, process listing (`ps`, `pgrep`)
+- **Non-executable examples**: browser visual inspection, user action observation in production environment, UI/UX evaluation, external service dashboard confirmation
+
+**2a. If executable: present per-condition AskUserQuestion**
+
+For each executable condition, ask:
+- **Question**: "Condition {N}: Claude can verify with `{command/approach}`. Execute?"
+- **Options**:
+  - "Claude Execute" — Claude runs the command/approach and judges PASS or FAIL
+  - "Manual Verification (Show Guide)" — display verification guide; leave checkbox unchecked
+  - "SKIP" — skip for now; leave checkbox unchecked
+
+If "Claude Execute" is selected: run the command/approach → judge PASS or FAIL → record result for checkbox flip.
+
+**2b. If not executable: display verification guide only**
+
+Output a verification guide to terminal (specific URL / expected command / expected state). Do **not** invoke `AskUserQuestion`. Leave checkbox unchecked. The user completes manual verification and re-runs `/verify $NUMBER` when ready.
+
+**Post-Step 8 checkpoint: flip post-merge PASS checkboxes**
+
+After all post-merge conditions are processed, identify conditions that resulted in PASS (Step 8a auto-verify PASS or Step 8b "Claude Execute" PASS) and update their checkboxes:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh "$NUMBER" --checkbox <post-merge-pass-indices> --check
+```
+
+### Step 9: Post Comment on Issue
 
 **Comment body format:**
 
@@ -295,7 +342,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh "$NUMBER" ".tmp/issue-comment-
 rm -f .tmp/issue-comment-$NUMBER.md
 ```
 
-### Step 8: Output Summary to Terminal
+### Step 10: Output Summary to Terminal
 
 Output in the following format to terminal:
 
@@ -327,7 +374,7 @@ Success criteria: what output/state indicates success
 On failure: what to do if different from expected
 ```
 
-### Step 9: Apply Verification Results
+### Step 11: Apply Verification Results
 
 First, detect the current Issue state:
 
@@ -338,7 +385,7 @@ gh issue view "$NUMBER" --json state --jq '.state'
 **Conditions subject to reopen judgment**:
 - All pre-merge conditions (with or without hints)
 - Post-merge conditions with hints (`<!-- verify: ... -->`)
-- Post-merge `<!-- verify-type: manual -->` conditions confirmed as PASS or FAIL in Step 5 (SKIP responses are excluded)
+- Post-merge `<!-- verify-type: manual -->` conditions confirmed as PASS or FAIL in Step 8 (SKIP responses are excluded)
 - **Post-merge conditions without hints (and no verify-type marker) are excluded** (user verification items)
 
 Branch on Issue state:
@@ -351,7 +398,7 @@ Branch on Issue state:
 Judgment:
 
 - **All auto-verification target conditions are PASS or SKIPPED (0 FAIL/UNCERTAIN among auto-verification targets; SKIPPED is ignored as environment conditions were unmet)**:
-  - Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->` or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body (manual conditions SKIPped in Step 5 remain unchecked)
+  - Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->` or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body (manual conditions SKIPped in Step 8 remain unchecked)
   - **If unchecked opportunistic or manual conditions remain**: assign `phase/verify` (Issue remains CLOSED; do not reopen):
     ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
@@ -421,7 +468,7 @@ When the repository has GitHub's "Auto-close issues with merged linked pull requ
 Judgment:
 
 - **All auto-verification target conditions are PASS or SKIPPED**:
-  - Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->` or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body (manual conditions SKIPped in Step 5 remain unchecked)
+  - Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->` or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body (manual conditions SKIPped in Step 8 remain unchecked)
   - **If unchecked opportunistic or manual conditions remain**: assign `phase/verify` (Issue remains OPEN; do not close):
     ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
@@ -478,7 +525,7 @@ Judgment:
     ```
   - Notify user: "Auto-verification contains UNCERTAIN items. Please manually re-verify the flagged conditions, then re-run `/verify $NUMBER` to complete."
 
-### Step 10: Retrospective (Full Workflow Review)
+### Step 12: Retrospective (Full Workflow Review)
 
 As the final step of the workflow, verify conducts a retrospective of the entire Issue lifecycle.
 
@@ -494,7 +541,7 @@ As the final step of the workflow, verify conducts a retrospective of the entire
 | code | Implementation rework (fixup/amend patterns in commit history, number of review comment incorporations), design deviation patterns, rework cause analysis | git log, `## Code Retrospective` section in Spec | Detect fixup/amend patterns with `git log --oneline`; check code retrospective section when reading Spec |
 | review | Review effectiveness (were comments accurate, anything missed), review comment trends, oversight patterns | PR review comments, `## Review Retrospective` section in Spec, verification results | Check whether FAIL items were detected in review; check review retrospective section when reading Spec |
 | merge | Merge process issues (conflicts, CI failures, etc.) | git log, PR status | Check merge commit messages for conflict resolution traces |
-| verify | FAIL root causes, verify command inconsistencies | Verification results | Analyze Step 5 results |
+| verify | FAIL root causes, verify command inconsistencies | Verification results | Analyze Step 5/8 results |
 
 > **Note: Obligation to verify factual claims**: When writing factual claims such as "fixed" or "resolved", confirm the corresponding commit exists with `git log --oneline` before recording. Factual claims without commit verification can lead to incorrect PASS judgments.
 
@@ -555,7 +602,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
      git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
      ```
 
-### Step 11: Worktree Exit (merge-to-main)
+### Step 13: Worktree Exit (merge-to-main)
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Exit: merge-to-main section" to exit the worktree.
 
@@ -563,13 +610,13 @@ Behavior differs based on `ENTERED_WORKTREE`:
 - `ENTERED_WORKTREE=true`: ExitWorktree("keep") → merge → push → cleanup
 - `ENTERED_WORKTREE=false`: run `git push origin main` normally
 
-### Step 12: Opportunistic Verification
+### Step 14: Opportunistic Verification
 
 Only if `.wholework.yml` in the project has `opportunistic-verify: true`, Read `${CLAUDE_PLUGIN_ROOT}/modules/opportunistic-verify.md` and follow the "Processing Steps" section to run opportunistic verification. The skill name is `/verify`. Skip this step if not configured.
 
-### Step 13: Collect Improvement Proposals and Create Issues
+### Step 15: Collect Improvement Proposals and Create Issues
 
-Reuse `HAS_SKILL_PROPOSALS` already fetched via `detect-config-markers.md` in Step 4 (if `opportunistic-verify.md` in Step 12 fetched it again, reuse that result).
+Reuse `HAS_SKILL_PROPOSALS` already fetched via `detect-config-markers.md` in Step 4 (if `opportunistic-verify.md` in Step 14 fetched it again, reuse that result).
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/retro-proposals.md` and follow the "Processing Steps" section.
 
