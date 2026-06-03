@@ -43,6 +43,17 @@
 
 - `reconcile-phase-state.sh review <issue> --pr <pr> --check-completion` が `## レビュー回答サマリ` ヘッダーを含む PR で `matches_expected:true` を返すことを手動確認（該当環境がある場合）
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
 ## Notes
 
 - Auto-Resolved Ambiguity Points（Issue body より転記）:
@@ -51,3 +62,18 @@
   - **github_check の形式**: `gh run list --workflow=test.yml` 形式に統一（PR route/patch route 両方で動作するため）。
 - `grep -qE` は bash 3.2+ 互換（macOS system bash でも動作）。
 - docs/ja/ 同期不要（変更対象は `modules/` と `scripts/` と `tests/`、いずれも `docs/` 以下ではない）。
+
+## review retrospective
+
+### Spec vs. Implementation Divergence
+
+実装ステップ 3 では bats テストを `@test "review completion: no Review Summary comment -> mismatch"` の「直後」に追加と指定していたが、実際は EN pass テストの直後（"no Review Summary" テストの直前）に挿入された。テスト順序は EN pass → JA pass → fail の論理グループになっており機能上の問題はない。次回以降の Spec では挿入位置をテスト名で「直前」/「直後」双方向から明示するか、グループ番号で指定するとよい。
+
+### Recurring Issues
+
+特になし。
+
+### Acceptance Criteria Verification Difficulty
+
+全 6 条件を PASS で判定できた。`github_check` 条件のみ実際の CI 実行結果参照が必要だったが、`gh run list` で確認可能。`section_contains` 条件が 2 件あり verify コマンドの精度を要したが、いずれも明確にマッチした。UNCERTAIN は 0 件。
+
