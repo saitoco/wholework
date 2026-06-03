@@ -43,6 +43,17 @@
 
 - `reconcile-phase-state.sh review <issue> --pr <pr> --check-completion` が `## レビュー回答サマリ` ヘッダーを含む PR で `matches_expected:true` を返すことを手動確認（該当環境がある場合）
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
 ## Notes
 
 - Auto-Resolved Ambiguity Points（Issue body より転記）:
