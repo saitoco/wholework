@@ -8,7 +8,7 @@
 
 1. pr route の Issue を merge する
 2. `/verify N` を実行（post-merge モード）
-3. Issue の受入条件に `<!-- verify: github_check "gh pr checks" "Run bats tests" -->` が含まれる
+3. Issue の受入条件に `<!-- verify: github_check "gh run list --workflow=test.yml" "Run bats tests" -->` が含まれる
 4. verify SKILL.md Step 2 で `PR_NUMBER` が解決済み（非空）であるにもかかわらず、verify-executor.md が `gh pr checks` をそのまま実行
 5. verify worktree ブランチ `verify/issue-N` に PR が紐づいていないため `gh pr checks` が失敗 → FAIL/UNCERTAIN の誤判定
 
@@ -39,8 +39,8 @@
 
 - <!-- verify: rubric "modules/verify-executor.md の github_check ハンドラが、PR 番号引数を持たない `gh pr checks` コマンドに対して、post-merge コンテキストで解決済みの merged PR 番号（PR_NUMBER もしくは gh pr list --search 'closes #N' --state merged による解決結果）を注入してから実行するフォールバックを実装しており、verify worktree ブランチに PR が無くても誤 FAIL/UNCERTAIN にならない" --> post-merge での PR 番号解決・注入フォールバックが実装されている
 - <!-- verify: file_contains "modules/verify-executor.md" "PR number injection" --> `verify-executor.md` の `github_check` ハンドラに PR number injection ロジックの記述が含まれる
-- <!-- verify: github_check "gh pr checks" "Run bats tests" --> CI の bats テストが green
-- <!-- verify: github_check "gh pr checks" "Validate skill syntax" --> CI の skill 構文検証が green
+- <!-- verify: github_check "gh run list --workflow=test.yml" "Run bats tests" --> CI の bats テストが green
+- <!-- verify: github_check "gh run list --workflow=test.yml" "Validate skill syntax" --> CI の skill 構文検証が green
 
 ### Post-merge
 
@@ -51,3 +51,14 @@
 - **Auto-resolved ambiguities**（Issue body に記載済み）:
   - 実装箇所 = `modules/verify-executor.md` の `github_check` ハンドラ（`verify SKILL.md Step 5` 前処理ではない）。根拠: verify-executor.md が既に `PR_NUMBER` を Input として受け取る設計；Issue #515 spec の verify retrospective が "verify-executor の github_check ハンドラ" と明示特定；SKILL.md Step 5/8a は共に verify-executor.md に委譲するため verify-executor.md 修正で両ステップをカバー
   - 適用モード = safe/full 両モード（PR_NUMBER が利用可能な場合）。根拠: `gh pr checks` は safe モードの allowlist に含まれており、safe モードでも同様の誤判定が発生し得る
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- Step 10 verify command sync: Spec の verify コマンド（2件）が `gh pr checks` のままだった（Reproduction Steps 記述と verify コメントの 2 箇所）。Python replace(..., 1) が最初の出現のみ置換したため 1 件が残存。2 回目の replace で対応。
