@@ -299,6 +299,21 @@ MOCK_EOF
     [[ "$output" == *'"matches_expected":true'* ]]
 }
 
+@test "review completion: PR comment with Japanese header -> matches_expected true" {
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+echo "## レビュー回答サマリ"
+echo "All good"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" review 42 --pr 10 --check-completion --strict
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"matches_expected":true'* ]]
+}
+
 @test "review completion: no Review Summary comment -> mismatch (strict exit 1)" {
     cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
 #!/bin/bash
