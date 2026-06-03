@@ -100,5 +100,23 @@
 - 全 6 条件 PASS。`github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'"` がマージ直後の初回実行で空文字列を返した。原因はマージ push がトリガーした main 上の CI run が in_progress（`conclusion` が null）だったため。再実行で `success` を取得し PASS 確定。
 
 ### Improvement Proposals
-- **`github_check` の `gh run list` 形式における in_progress 検出**: `--json conclusion --jq '.[0].conclusion'` 形式は CI 実行中に `conclusion=null`（空文字列）を返すが、verify-executor の PENDING 検出はリテラル `in_progress` 文字列を探すため、この形式では PENDING に分類されない。merge 直後に verify を走らせる auto フローでは、CI 完走前の単発実行で空文字列 → "success" 不一致となり、誤って FAIL/UNCERTAIN 判定されるリスクがある。`gh run list` 形式の github_check では `status` フィールド（`in_progress`/`completed`）も参照して PENDING を返す、もしくは verify-executor が `gh run list` 由来の空 conclusion を PENDING として扱うよう改善する余地がある。今回は再試行で success に到達したため実害なし。
+- **`github_check` の `gh run list` 形式における in_progress 検出**: `--json conclusion --jq '.[0].conclusion'` 形式は CI 実行中に `conclusion=null`（空文字列）を返すが、verify-executor の PENDING 検出はリテラル `in_progress` 文字列を探すため、この形式では PENDING に分類されない。merge 直後に verify を走らせる auto フローでは、CI 完走前の単発実行で空文字列 → "success" 不一致となり、誤って FAIL/UNCERTAIN 判定されるリスクがある。`gh run list` 形式の github_check では `status` フィールド（`in_progress`/`completed`）も参照して PENDING を返す、もしくは verify-executor が `gh run list` 由来の空 conclusion を PENDING として扱うよう改善する余地がある。今回は再試行で success に到達したため実害なし。（→ Issue #523 起票済み）
+
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| issue | pr | SUCCESS | phase/* ラベル無し → run-issue.sh で triage、Size M 確定、phase/issue 付与 |
+| spec | pr | SUCCESS | run-spec.sh、phase/ready 到達 |
+| code | pr | SUCCESS | PR #519 作成 |
+| review | pr | SUCCESS | --light、MUST 指摘 0、CI 全 green |
+| merge | pr | SUCCESS | squash merge、phase/verify 遷移 |
+| verify | - | SUCCESS (manual worktree-merge recovery) | 全 6 AC PASS。worktree exit の FF merge が concurrent push で失敗 → cherry-pick で手動 recovery |
+
+### Orchestration Anomalies
+- **verify worktree exit の FF merge 失敗 → 手動 recovery**: verify Step 13（merge-to-main）で `worktree-merge-push.sh --from worktree-verify+issue-505 --base main` が exit 128（`fatal: Not possible to fast-forward, aborting.`）。原因は verify 作業中に別の /auto 実行が #517 の verify retrospective（`f305822`）を origin/main へ push し、local/remote main が worktree ブランチ（`0a33f9e` ベース）より 1 コミット先行したこと。`worktree-merge-push.sh` の FF fallback は `git pull --rebase origin main`（local base を remote に追従）のみで、worktree ブランチを更新後の base へ rebase しないため復旧不能だった。変更ファイルは別 Spec（#505 vs #517）で非衝突のため、parent session が `git cherry-pick b0aa50a` → `git push origin main`（f305822..d84705f）で手動 recovery（Signed-off-by 保持を確認）。worktree/branch は cleanup 済み。Issue #505 自体の verify 結果（全 AC PASS、phase/done、CLOSED）には影響なし。
+
+### Improvement Proposals
+- **`worktree-merge-push.sh` の FF fallback を worktree-branch-behind-base ケースに拡張**: 現行の FF fallback（`modules/orchestration-fallbacks.md#ff-only-merge-fallback`）は local base が remote より遅れているケース（`git pull --rebase origin <base>`）のみを扱い、concurrent push により local base が worktree ブランチより先行したケース（worktree ブランチが base の祖先でない）を扱えない。FF 失敗時に worktree ブランチを更新後の base へ rebase（非衝突なら cherry-pick）してから ff-merge を再試行するフォールバックを追加すべき。patch-lock は push クリティカルセクションを保護するが base 分岐自体は防げないため、複数 /auto 並行実行時に再発しうる。
 

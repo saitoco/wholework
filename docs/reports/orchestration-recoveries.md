@@ -63,3 +63,23 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+
+## 2026-06-03 16:15 UTC: verify worktree FF merge failed (concurrent push advanced base)
+
+### Context
+- Issue #505, phase: verify (Step 13 worktree exit, merge-to-main)
+- Source: fallback-catalog
+- Wrapper: worktree-merge-push.sh, exit code: 128
+- Log tail: "fatal: Not possible to fast-forward, aborting."
+
+### Diagnosis
+- A concurrent /auto run pushed #517's verify retrospective (`f305822`) to origin/main while the #505 verify worktree (branched from `0a33f9e`) was active. Local/remote main advanced one commit ahead of the worktree branch, so the worktree branch was no longer an ancestor of base. The `ff-only-merge-fallback` (`git pull --rebase origin main`) only syncs the local base to remote — it does not rebase the worktree branch onto an advanced base — so it could not resolve the divergence (`git merge-base --is-ancestor main <branch>` → NO).
+
+### Recovery Applied
+- Consulted `modules/orchestration-fallbacks.md#ff-only-merge-fallback`; its steps did not cover the worktree-branch-behind-base case. Changed files were on a different Spec (#505 vs #517) and non-conflicting, so the parent session cherry-picked the single retrospective commit onto base: `git cherry-pick b0aa50a` → `git push origin main` (`f305822..d84705f`). Verified `Signed-off-by` preserved. Worktree + branch cleaned up.
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票 (retro-proposals via /auto Step 4a で起票予定): `worktree-merge-push.sh` の FF fallback を worktree-branch-behind-base ケースに拡張し、worktree ブランチを更新後の base へ rebase/cherry-pick してから ff-merge を再試行する。
