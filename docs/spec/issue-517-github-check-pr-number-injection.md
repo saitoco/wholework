@@ -62,3 +62,32 @@
 
 ### Rework
 - Step 10 verify command sync: Spec の verify コマンド（2件）が `gh pr checks` のままだった（Reproduction Steps 記述と verify コメントの 2 箇所）。Python replace(..., 1) が最初の出現のみ置換したため 1 件が残存。2 回目の replace で対応。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受入条件は明確（rubric / file_contains / github_check×2）。Auto-resolved ambiguities（実装箇所 = verify-executor.md ハンドラ、適用 = safe/full 両モード）は #515 spec の verify retrospective と整合し的確。
+
+#### design
+- root cause（verify-executor.md が Input の PR_NUMBER を github_check ハンドラで使っていない）を正確に特定。pr route post-merge では PR_NUMBER 非空なのに patch-route 検出を素通りするギャップの分析が正しい。
+
+#### code
+- 実装は正確（safe/full 両モードに PR number injection、直後トークンが整数かの二重注入ガードあり）。fixup/amend なし。
+- ただし Step 10 で AC の `github_check` ヒントを patch route 互換化するため `gh pr checks` → `gh run list --workflow=test.yml` に変更した際、**expected_value をジョブ名のまま残した**（`"Run bats tests"` / `"Validate skill syntax"`）。
+
+#### review
+- patch route のため review フェーズなし（spec deviation の事前検出機会なし）。上記 verify command miscalibration は review でも検出されないパス。
+
+#### merge
+- patch route のため merge フェーズなし（main 直コミット 0098780）。
+
+#### verify
+- pre-merge 4/4 PASS（rubric=実装確認、file_contains=L82 確認、github_check×2=CI ジョブ実 conclusion を `gh run view --json jobs` で success 確認）。
+- **verify command inconsistency（重要）**: 条件3/4 の `github_check "gh run list --workflow=test.yml" "Run bats tests"` は、`gh run list` が **run レベル出力**（conclusion 列 `success`、ジョブ名は非出力）のため、expected_value にジョブ名を指定すると literal 一致せず、display-name fallback（job **key** 照合）にも乗らず（`Run bats tests` は key ではなく name）厳密には FAIL になる。本 verify は CI ジョブの実 conclusion を権威データ（`gh run view 26896756338 --json jobs`）で確認し PASS と判定したが、hint as-written は誤判定リスクを持つ。
+- **dogfooding**: 今回マージした PR number injection 入り verify-executor.md を使用。条件が `gh run list` 形式で `gh pr checks` でなかったため injection 自体は発火しなかったが、ハンドラがエラーなく動作することは確認。
+
+### Improvement Proposals
+
+- **`github_check "gh pr checks" "<job-name>"` を patch route 互換の `gh run list` 形式へ変換する際の expected_value 規約を明文化する**: `gh run list` は run レベル出力（`STATUS / conclusion / TITLE / WORKFLOW / BRANCH / ...`）でジョブ名を含まないため、`gh pr checks`（ジョブ名で一致）から `gh run list` へ変換する場合は expected_value を **ジョブ名から run conclusion (`success`) へ変更**し、`gh run list --workflow=X --limit=1 --json conclusion --jq '.[0].conclusion'` "success" 形式にする必要がある。現状 `modules/verify-classifier.md` / `skills/verify/SKILL.md` Step 5 / `skills/issue/spec-test-guidelines.md` の patch-route 変換ガイダンスは workflow 指定の例は示すが、「expected_value をジョブ名から `success` へ変えること」を明示していないため、#517 code phase のように job-name を残す miscalibration が再発しうる。代替案として、`github_check` ハンドラの `gh run list` 系コマンドに対し、expected_value がジョブ名のとき `gh run view <run-id> --json jobs` でジョブ別 conclusion を解決する fallback を追加する案もある。
