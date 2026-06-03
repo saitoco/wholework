@@ -41,6 +41,20 @@ fix #1（本 Issue のスコープ）: mutation の成功（exit 0 かつ `proje
 
 - merge 後に `/triage` または `/issue` で Size を設定し、Projects V2 Size フィールドが正しく設定され、eventual-consistency 遅延時にも `size/*` ラベルへ冗長フォールバックしないことを実運用で確認 <!-- verify-type: opportunistic -->
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A（設計通りに実装）
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
 ## Notes
 
 ### Step 4 の変更詳細
