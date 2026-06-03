@@ -77,3 +77,28 @@
 
 全 6 条件を PASS で判定できた。`github_check` 条件のみ実際の CI 実行結果参照が必要だったが、`gh run list` で確認可能。`section_contains` 条件が 2 件あり verify コマンドの精度を要したが、いずれも明確にマッチした。UNCERTAIN は 0 件。
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受け入れ条件 6 件はいずれも verify command 付きで自動検証可能。曖昧さなし。`github_check` を `gh run list --workflow=test.yml` 形式に統一した判断は妥当（PR/patch 両 route 対応）。
+
+#### design
+- 設計は実装と整合。review retrospective が指摘したテスト挿入位置の微小な乖離（実装ステップ 3 の「直後」指定 vs 実挿入位置）は論理グループ（EN pass → JA pass → fail）として正しく、機能影響なし。
+
+#### code
+- 手戻りなし（Code Retrospective: N/A）。`grep -qE` による bash 3.2+ 互換実装でクリーン。fixup/amend なし。
+
+#### review
+- review-light が 4 視点を実行し MUST 指摘ゼロ。AC 6/6 PASS、CI 全 SUCCESS を pre-merge で確認済み。verify 段階で FAIL/UNCERTAIN ゼロだったことから review の見落としなし。
+
+#### merge
+- squash merge 正常完了、コンフリクトなし。merge precondition チェックで `reviewDecision` が空（必須レビュアー未設定リポジトリ）の warning が出たが warn-only で非ブロック（stage-1 gradual rollout の既知挙動）。問題なし。
+
+#### verify
+- 全 6 条件 PASS。`github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'"` がマージ直後の初回実行で空文字列を返した。原因はマージ push がトリガーした main 上の CI run が in_progress（`conclusion` が null）だったため。再実行で `success` を取得し PASS 確定。
+
+### Improvement Proposals
+- **`github_check` の `gh run list` 形式における in_progress 検出**: `--json conclusion --jq '.[0].conclusion'` 形式は CI 実行中に `conclusion=null`（空文字列）を返すが、verify-executor の PENDING 検出はリテラル `in_progress` 文字列を探すため、この形式では PENDING に分類されない。merge 直後に verify を走らせる auto フローでは、CI 完走前の単発実行で空文字列 → "success" 不一致となり、誤って FAIL/UNCERTAIN 判定されるリスクがある。`gh run list` 形式の github_check では `status` フィールド（`in_progress`/`completed`）も参照して PENDING を返す、もしくは verify-executor が `gh run list` 由来の空 conclusion を PENDING として扱うよう改善する余地がある。今回は再試行で success に到達したため実害なし。
+
