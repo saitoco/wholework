@@ -90,3 +90,31 @@ fix #1（本 Issue のスコープ）: mutation の成功（exit 0 かつ `proje
 
 - `skills/triage/SKILL.md`、`skills/issue/SKILL.md` は「Complete on GraphQL success; only execute Step 5 label fallback on failure」の記述のままで意味的に整合する。変更不要。
 - bats テスト変更なし（module の LLM 実行ステップ変更のみで shell script 変更なし）。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC は rubric（挙動変更の意味検証）+ section_contains（warn 記述）+ github_check×2 の構成で UNCERTAIN なし。auto-resolved scope（fix #1 のみ、#2/#3 除外、Value は #457 へ）は妥当。
+
+#### design
+- root cause（mutation 成功は `projectV2Item.id` 返却で判定可能なのに read-back 不一致を失敗扱いしていた）を正確に特定。warn-only 再設計はクリーン。
+
+#### code
+- Spec 通り、deviation/rework なし。`MUTATION_EXIT=$?` を jq 代入前に保持する exit-code 順序はレビューで補正（#518 内で resolved）。
+
+#### review
+- light review が exit-code 保持順序（`MUTATION_EXIT=$?`）の必要性を検出し SHOULD として resolved、Important 注記更新を CONSIDER として resolved、regression tests を SHOULD skip。MUST なし。LLM 実行向け pseudo-bash の shell-script 化を見据えた良い指摘。
+
+#### merge
+- squash merge クリーン、CI 全 green、コンフリクトなし。
+
+#### verify
+- pre-merge 4/4 PASS（rubric=実装確認 / section_contains=warn / github_check×2）。
+- **#517 fix の実 pr-route dogfooding 確認**: 条件3/4 の `github_check "gh pr checks"` が、verify worktree ブランチ（PR 非紐づけ）上で #517 の PR number injection により `gh pr checks 524` に書き換わり、ジョブ名 `Run bats tests` / `Validate skill syntax` で正しく PASS 判定。これは #517（PR number injection）の post-merge opportunistic 条件「pr route Issue で merge 後に /verify を実行し gh pr checks ヒントが merged PR を参照して PASS する」を実環境で初めて確認したもの。
+- post-merge opportunistic 条件（eventual-consistency 遅延時の冗長ラベルフォールバック抑止）は遅延再現が必要なため未チェック・phase/verify 維持。
+
+### Improvement Proposals
+
+- N/A — exit-code 保持順序（`MUTATION_EXIT=$?` を command substitution の直後に保持）の観察は #518 のレビューで当該コードについて resolved 済み。「他モジュールへの横断 sweep」は投機的で現時点で具体的欠陥が未確認のため、backlog noise 削減方針（#484 の Improvement Proposal 三層判定）に照らし新規起票はしない。再発が観測された時点で起票する。
