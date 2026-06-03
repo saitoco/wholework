@@ -90,4 +90,25 @@
 
 ### Improvement Proposals
 
-- **`github_check "gh pr checks" "<job-name>"` を patch route 互換の `gh run list` 形式へ変換する際の expected_value 規約を明文化する**: `gh run list` は run レベル出力（`STATUS / conclusion / TITLE / WORKFLOW / BRANCH / ...`）でジョブ名を含まないため、`gh pr checks`（ジョブ名で一致）から `gh run list` へ変換する場合は expected_value を **ジョブ名から run conclusion (`success`) へ変更**し、`gh run list --workflow=X --limit=1 --json conclusion --jq '.[0].conclusion'` "success" 形式にする必要がある。現状 `modules/verify-classifier.md` / `skills/verify/SKILL.md` Step 5 / `skills/issue/spec-test-guidelines.md` の patch-route 変換ガイダンスは workflow 指定の例は示すが、「expected_value をジョブ名から `success` へ変えること」を明示していないため、#517 code phase のように job-name を残す miscalibration が再発しうる。代替案として、`github_check` ハンドラの `gh run list` 系コマンドに対し、expected_value がジョブ名のとき `gh run view <run-id> --json jobs` でジョブ別 conclusion を解決する fallback を追加する案もある。
+- **`github_check "gh pr checks" "<job-name>"` を patch route 互換の `gh run list` 形式へ変換する際の expected_value 規約を明文化する**: `gh run list` は run レベル出力（`STATUS / conclusion / TITLE / WORKFLOW / BRANCH / ...`）でジョブ名を含まないため、`gh pr checks`（ジョブ名で一致）から `gh run list` へ変換する場合は expected_value を **ジョブ名から run conclusion (`success`) へ変更**し、`gh run list --workflow=X --limit=1 --json conclusion --jq '.[0].conclusion'` "success" 形式にする必要がある。現状 `modules/verify-classifier.md` / `skills/verify/SKILL.md` Step 5 / `skills/issue/spec-test-guidelines.md` の patch-route 変換ガイダンスは workflow 指定の例は示すが、「expected_value をジョブ名から `success` へ変えること」を明示していないため、#517 code phase のように job-name を残す miscalibration が再発しうる。代替案として、`github_check` ハンドラの `gh run list` 系コマンドに対し、expected_value がジョブ名のとき `gh run view <run-id> --json jobs` でジョブ別 conclusion を解決する fallback を追加する案もある。（→ #521 起票済み）
+
+## Auto Retrospective
+
+### Execution Summary
+
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| issue | patch | SUCCESS | run-issue.sh で refinement + phase ラベル付与（bulk triage は phase 未付与のため） |
+| spec | patch | SUCCESS | run-spec.sh（Sonnet/max） |
+| code | patch | SUCCESS | main 直コミット 0098780 |
+| verify | - | SUCCESS (opportunistic pending) | worktree merge ff-only 失敗 → 手動 cherry-pick で復旧 |
+
+### Orchestration Anomalies
+
+- **worktree-merge-push.sh が /verify Step 13（worktree exit / merge-to-main）で ff-only abort**: verify worktree ブランチ `worktree-verify+issue-517` は main@8b7fa49 を起点に作成されたが、長時間の verify 実行中に並行して #505 の PR #519 が main にマージされ（main が 8b7fa49 → 0a33f9e へ前進）、worktree ブランチと main が 8b7fa49 で分岐した。`git merge --ff-only worktree-verify+issue-517` が "Not possible to fast-forward, aborting" で失敗。`orchestration-fallbacks.md#ff-only-merge-fallback`（`git pull --rebase` retry）は「origin が push 中に前進した」ケース向けで、main は既に origin と同期済みだったため発火せず復旧できなかった。
+  - **手動復旧**: verify retro コミット（spec への追記のみ、#505 と別ファイルで非競合）を main へ `git cherry-pick 924325a` → `git push`（0a33f9e..f305822）。worktree ブランチがチェックアウト中で rebase 不可だったため cherry-pick を選択。worktree 削除・ブランチ force-delete でクリーンアップ。
+  - Tier 1〜3 の自動 recovery（reconcile / fallback-catalog / wrapper-anomaly-detector / recovery-sub-agent）はいずれも経由しない純手動復旧のため、`docs/reports/orchestration-recoveries.md` への追記は行わない（3 ソースいずれも非該当）。
+
+### Improvement Proposals
+
+- **worktree-merge-push.sh の ff-only-merge-fallback に「base 前進による worktree ブランチ分岐」ケースを追加する**: 現状の fallback（`git pull --rebase` retry）は「push 直前に origin が前進した」ケースのみを想定し、「長時間フェーズ実行中に base（main）へ並行マージが入り、worktree ブランチの分岐点が stale になった」ケースを救えない。`git merge --ff-only` 失敗時に、worktree ブランチを最新 base へ rebase（または非競合変更を `--no-ff` マージ / cherry-pick）してから再マージ・push する fallback を追加すべき。verify/spec/code は worktree 内で数分〜十数分かかるため、並行 `/auto` や手動マージで base が前進する race は再発性が高い。
