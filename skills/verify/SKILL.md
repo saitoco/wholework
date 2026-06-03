@@ -376,7 +376,7 @@ On failure: what to do if different from expected
 
 ### Step 11: Apply Verification Results
 
-First, detect the current Issue state:
+First, detect the current Issue state and record as `ISSUE_STATE`:
 
 ```bash
 gh issue view "$NUMBER" --json state --jq '.state'
@@ -388,42 +388,52 @@ gh issue view "$NUMBER" --json state --jq '.state'
 - Post-merge `<!-- verify-type: manual -->` conditions confirmed as PASS or FAIL in Step 8 (SKIP responses are excluded)
 - **Post-merge conditions without hints (and no verify-type marker) are excluded** (user verification items)
 
-Branch on Issue state:
+Apply the following judgment based on the verification results (exhaustive):
 
-- `OPEN` → Issue OPEN path (auto-close disabled; see below)
-- `CLOSED` → Issue CLOSED path (standard flow; see below)
+**(a) All auto-verification target conditions are PASS or SKIPPED (0 FAIL/UNCERTAIN among auto-verification targets; SKIPPED is ignored as environment conditions were unmet):**
 
-#### When Issue is CLOSED (standard flow via `closes #N`)
-
-Judgment:
-
-- **All auto-verification target conditions are PASS or SKIPPED (0 FAIL/UNCERTAIN among auto-verification targets; SKIPPED is ignored as environment conditions were unmet)**:
-  - Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->` or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body (manual conditions SKIPped in Step 8 remain unchecked)
-  - **If unchecked opportunistic or manual conditions remain**: assign `phase/verify` (Issue remains CLOSED; do not reopen):
+- Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->` or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body (manual conditions SKIPped in Step 8 remain unchecked)
+- **If unchecked opportunistic or manual conditions remain**: assign `phase/verify` (Issue state unchanged):
     ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
     ```
     Inform the user: "Unchecked opportunistic/manual conditions remain. Re-run `/verify $NUMBER` when ready to confirm them."
-  - **If all conditions are checked**: assign `phase/done`. Confirm the Issue is closed. If not closed, close with `gh issue close "$NUMBER"` (handles cases like XL parent Issues not auto-closed by PR's `closes #N`):
+- **If all conditions are checked**: assign `phase/done`, then close the Issue only when `ISSUE_STATE` is `OPEN` (handles both auto-close disabled repos and XL parent Issues not auto-closed by PR's `closes #N`):
     ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" done
     ```
-  - **Even if post-merge conditions without hints are unchecked, do not reopen the Issue** (present user verification guide only)
-- **Auto-verification targets include FAIL**:
-  - Check iteration counter before reopening:
     ```bash
-    CURRENT_ITERATION=$(${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh "$NUMBER")
-    NEXT_ITERATION=$((CURRENT_ITERATION + 1))
+    # Run only when ISSUE_STATE is OPEN (CLOSED Issues are already closed)
+    gh issue close "$NUMBER"
     ```
-  - If `NEXT_ITERATION < VERIFY_MAX_ITERATIONS` (limit not yet reached):
-    - Post a comment with the updated counter marker:
-      ```
-      <!-- verify-iteration: ${NEXT_ITERATION} -->
-      Verification FAIL (iteration ${NEXT_ITERATION}/${VERIFY_MAX_ITERATIONS}). Reopening Issue for fix cycle.
-      ```
-    - Reopen Issue and remove all `phase/*` labels:
+- **Even if post-merge conditions without hints are unchecked, do not reopen or close the Issue** (present user verification guide only)
+
+**(b) Auto-verification targets include FAIL:**
+
+Check iteration counter:
+```bash
+CURRENT_ITERATION=$(${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh "$NUMBER")
+NEXT_ITERATION=$((CURRENT_ITERATION + 1))
+```
+
+- If `NEXT_ITERATION < VERIFY_MAX_ITERATIONS` (limit not yet reached):
+    - Post a comment with the updated counter marker (text varies by `ISSUE_STATE`):
+      - When `ISSUE_STATE` is `CLOSED`:
+        ```
+        <!-- verify-iteration: ${NEXT_ITERATION} -->
+        Verification FAIL (iteration ${NEXT_ITERATION}/${VERIFY_MAX_ITERATIONS}). Reopening Issue for fix cycle.
+        ```
+      - When `ISSUE_STATE` is `OPEN`:
+        ```
+        <!-- verify-iteration: ${NEXT_ITERATION} -->
+        Verification FAIL (iteration ${NEXT_ITERATION}/${VERIFY_MAX_ITERATIONS}). Issue stays open for fix cycle.
+        ```
+    - When `ISSUE_STATE` is `CLOSED`: reopen the Issue:
       ```bash
       gh issue reopen "$NUMBER"
+      ```
+    - Remove all `phase/*` labels (state-independent):
+      ```bash
       ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER"
       ```
     - Output guidance for the user:
@@ -433,13 +443,13 @@ Judgment:
       - `/code --pr N` — 新規ブランチ + PR で修正（Size L の大きな修正）
       - `/spec N` — Spec から見直し（根本的な設計変更が必要な場合）
       ```
-  - If `NEXT_ITERATION >= VERIFY_MAX_ITERATIONS` (limit reached):
+- If `NEXT_ITERATION >= VERIFY_MAX_ITERATIONS` (limit reached):
     - Post a comment with the max-iterations notice:
       ```
       <!-- verify-iteration: ${NEXT_ITERATION} -->
       max iterations reached (${NEXT_ITERATION}/${VERIFY_MAX_ITERATIONS}). Stopping verify-reopen loop. Issue stays in phase/verify for human judgment.
       ```
-    - Assign `phase/verify` label without reopening (Issue remains CLOSED):
+    - Assign `phase/verify` label (Issue state unchanged):
       ```bash
       ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
       ```
@@ -448,82 +458,22 @@ Judgment:
       MAX_ITERATIONS_REACHED
       verify-reopen ループが上限（${VERIFY_MAX_ITERATIONS}回）に達しました。Issue #N は phase/verify に留まります。手動で調査・修正してください。
       ```
-- **PENDING のみ（FAIL なし、PENDING ≥1）**:
-  - Assign `phase/verify` label without reopening the Issue:
-    ```bash
-    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
-    ```
-  - Notify user: "CI が実行中のため一部の条件が PENDING です。CI 完了後に `/verify $NUMBER` を再実行してください。"
-- **UNCERTAIN のみ（FAIL なし、UNCERTAIN ≥1）**:
-  - Assign `phase/verify` label without reopening the Issue:
-    ```bash
-    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
-    ```
-  - Notify user: "Auto-verification contains UNCERTAIN items. Please manually re-verify the flagged conditions, then re-run `/verify $NUMBER` to complete."
 
-#### When Issue is OPEN (auto-close disabled)
+**(c) PENDING only (no FAIL, PENDING ≥1):**
 
-When the repository has GitHub's "Auto-close issues with merged linked pull requests" setting disabled, Issues remain OPEN after merge even when the PR body contains `closes #N`.
-
-Judgment:
-
-- **All auto-verification target conditions are PASS or SKIPPED**:
-  - Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->` or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body (manual conditions SKIPped in Step 8 remain unchecked)
-  - **If unchecked opportunistic or manual conditions remain**: assign `phase/verify` (Issue remains OPEN; do not close):
+- Assign `phase/verify` label (Issue state unchanged):
     ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
     ```
-    Inform the user: "Unchecked opportunistic/manual conditions remain. Re-run `/verify $NUMBER` when ready to confirm them."
-  - **If all conditions are checked**: assign `phase/done` and close:
-    ```bash
-    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" done
-    gh issue close "$NUMBER"
-    ```
-  - **Even if post-merge conditions without hints are unchecked, do not close the Issue** (present user verification guide only)
-- **Auto-verification targets include FAIL**:
-  - Check iteration counter before processing:
-    ```bash
-    CURRENT_ITERATION=$(${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh "$NUMBER")
-    NEXT_ITERATION=$((CURRENT_ITERATION + 1))
-    ```
-  - If `NEXT_ITERATION < VERIFY_MAX_ITERATIONS` (limit not yet reached):
-    - Post a comment with the updated counter marker:
-      ```
-      <!-- verify-iteration: ${NEXT_ITERATION} -->
-      Verification FAIL (iteration ${NEXT_ITERATION}/${VERIFY_MAX_ITERATIONS}). Issue stays open for fix cycle.
-      ```
-    - Remove all `phase/*` labels (Issue is already OPEN; no reopen needed):
-      ```bash
-      ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER"
-      ```
-    - User selects the next action (`/code`, `/spec`, or `/issue`) to return to the fix cycle
-  - If `NEXT_ITERATION >= VERIFY_MAX_ITERATIONS` (limit reached):
-    - Post a comment with the max-iterations notice:
-      ```
-      <!-- verify-iteration: ${NEXT_ITERATION} -->
-      max iterations reached (${NEXT_ITERATION}/${VERIFY_MAX_ITERATIONS}). Stopping verify-reopen loop. Issue stays in phase/verify for human judgment.
-      ```
-    - Assign `phase/verify` label (Issue remains OPEN):
-      ```bash
-      ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
-      ```
-    - Output `MAX_ITERATIONS_REACHED` to terminal followed by guidance:
-      ```
-      MAX_ITERATIONS_REACHED
-      verify-reopen ループが上限（${VERIFY_MAX_ITERATIONS}回）に達しました。Issue #N は phase/verify に留まります。手動で調査・修正してください。
-      ```
-- **PENDING のみ（FAIL なし、PENDING ≥1）**:
-  - Assign `phase/verify` label (Issue remains OPEN):
+- Notify user: "CI が実行中のため一部の条件が PENDING です。CI 完了後に `/verify $NUMBER` を再実行してください。"
+
+**(d) UNCERTAIN only (no FAIL, UNCERTAIN ≥1):**
+
+- Assign `phase/verify` label (Issue state unchanged):
     ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
     ```
-  - Notify user: "CI が実行中のため一部の条件が PENDING です。CI 完了後に `/verify $NUMBER` を再実行してください。"
-- **UNCERTAIN のみ（FAIL なし、UNCERTAIN ≥1）**:
-  - Assign `phase/verify` label (Issue remains OPEN):
-    ```bash
-    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
-    ```
-  - Notify user: "Auto-verification contains UNCERTAIN items. Please manually re-verify the flagged conditions, then re-run `/verify $NUMBER` to complete."
+- Notify user: "Auto-verification contains UNCERTAIN items. Please manually re-verify the flagged conditions, then re-run `/verify $NUMBER` to complete."
 
 ### Step 12: Retrospective (Full Workflow Review)
 
