@@ -82,4 +82,4 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票 (retro-proposals via /auto Step 4a で起票予定): `worktree-merge-push.sh` の FF fallback を worktree-branch-behind-base ケースに拡張し、worktree ブランチを更新後の base へ rebase/cherry-pick してから ff-merge を再試行する。
+- 起票済み #522（worktree-merge-push: 長時間フェーズ中の base 前進による ff-only 失敗の rebase フォールバックを追加）。本 #505 verify での再発は #522 の優先度を補強する。提案内容: `worktree-merge-push.sh` の FF fallback を worktree-branch-behind-base ケースに拡張し、worktree ブランチを更新後の base へ rebase/cherry-pick してから ff-merge を再試行する。
