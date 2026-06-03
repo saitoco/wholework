@@ -41,6 +41,34 @@ fix #1（本 Issue のスコープ）: mutation の成功（exit 0 かつ `proje
 
 - merge 後に `/triage` または `/issue` で Size を設定し、Projects V2 Size フィールドが正しく設定され、eventual-consistency 遅延時にも `size/*` ラベルへ冗長フォールバックしないことを実運用で確認 <!-- verify-type: opportunistic -->
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A（設計通りに実装）
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- 実装は Spec 通りで divergence なし。ただしレビューで `MUTATION_EXIT=$?` が jq 代入前に必要という点が発覚 — Spec の実装ステップに「mutation の exit code を `$?` で保持する前に jq を実行しない」旨の明示がなかった。LLM 実行向けの pseudo-bash としては意図が伝わるが、将来 shell script 化した場合に確実なバグになる。Spec の Implementation Steps に exit code 保持順序を明示する習慣が望ましい。
+
+### Recurring Issues
+
+- exit code 保持パターン（`MUTATION_EXIT=$?` を先に保存）は shell script への変換を見据えると共通ベストプラクティス。他のモジュールで同様のパターン（command substitution の直後に別コマンドを実行）がある場合は一括で確認する価値がある。
+
+### Acceptance Criteria Verification Difficulty
+
+- rubric / section_contains の verify command は全て PASS で判定容易だった。github_check も CI GREEN で問題なし。UNCERTAIN なし。verify command の質は良好。
+
 ## Notes
 
 ### Step 4 の変更詳細
