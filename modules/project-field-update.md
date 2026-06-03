@@ -14,7 +14,7 @@ Information provided by the calling skill:
 
 ### Updating Priority / Size Fields
 
-**Important: Execute steps 1→2→3→4 in order. If the GraphQL mutation in step 4 succeeds, processing is complete. Execute the label fallback in step 5 only if steps 1-4 fail.**
+**Important: Execute steps 1→2→3→4 in order. If the GraphQL mutation in step 4 succeeds (exit 0 and `projectV2Item.id` returned), processing is complete. Execute the label fallback in step 5 only if steps 1–4 fail (i.e., mutation error in step 4).**
 
 1. Dynamically fetch projects linked to the repository:
    ```bash
@@ -36,10 +36,11 @@ Information provided by the calling skill:
 4. Set the field value and capture the mutation result:
    ```bash
    MUTATION_RESULT=$(${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query update-field-value -F projectId="$PROJECT_ID" -F itemId="$ITEM_ID" -F fieldId="$FIELD_ID" -F optionId="$OPTION_ID")
+   MUTATION_EXIT=$?
    RETURNED_ID=$(echo "$MUTATION_RESULT" | jq -r '.data.updateProjectV2ItemFieldValue.projectV2Item.id // empty')
    ```
-   - **If exit code is 0 and `RETURNED_ID` is non-empty → mutation succeeded. Field write confirmed. Proceed to verify-after-write (warn-only) below. Skip step 5.**
-   - **If exit code is non-0 or `RETURNED_ID` is empty → mutation failed. Proceed to step 5 (label fallback).**
+   - **If `MUTATION_EXIT` is 0 and `RETURNED_ID` is non-empty → mutation succeeded. Field write confirmed. Proceed to verify-after-write (warn-only) below. Skip step 5.**
+   - **If `MUTATION_EXIT` is non-0 or `RETURNED_ID` is empty → mutation failed. Proceed to step 5 (label fallback).**
 
 #### Verify-after-write (for Size field; warn-only eventual-consistency monitoring)
 
