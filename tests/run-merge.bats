@@ -310,3 +310,20 @@ MOCK
     [[ "$output" == *"Warning:"* ]]
     [[ "$output" == *"skipping reconcile"* ]]
 }
+
+@test "extraction failure: falls back to PR-state check and exits 0 when gh api fails (no false alarm)" {
+    cat > "$MOCK_DIR/gh-extract-issue-from-pr.sh" <<'MOCK'
+#!/bin/bash
+echo ""
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/gh-extract-issue-from-pr.sh"
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"Warning:"*"not MERGED"* ]]
+}
