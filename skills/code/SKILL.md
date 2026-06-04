@@ -154,6 +154,11 @@ If no Spec exists, read the requirements from the Issue body and implement accor
 
 If the Spec has a "Notes" section, cross-reference each item against the implementation steps and recognize them as constraints/specifications to consider during implementation. Skip this step if there is no "Notes" section.
 
+**Phase Handoff read (after loading Spec):**
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Read Procedure" section.
+Parameters: `SPEC_PATH`, `ISSUE_NUMBER=$NUMBER`, `PHASE_NAME=code`.
+
 ### Step 6: Verify Uncertainties (only if present in Spec)
 
 If the Spec has an "Uncertainties" section, before implementing:
@@ -418,7 +423,11 @@ If there are items under "Deviations from Design" (reordering of implementation 
 1. If no retrospective information, write "N/A"
 2. Append `## Code Retrospective` section after `## Spec Retrospective` in the Spec (`$SPEC_PATH/issue-$NUMBER-*.md`) using the Edit tool
 3. If "Deviations from Design" exist, also update the "Implementation Steps" section in the Spec to match the actual implementation
-4. Commit (push is done in Step 13 Worktree Exit):
+4. **Phase Handoff write** (before commit):
+   Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Write Procedure" section.
+   Parameters: `SPEC_PATH`, `ISSUE_NUMBER=$NUMBER`, `PHASE_NAME=code`.
+   The handoff is staged with the Spec in the same `git add` and committed together.
+5. Commit (push is done in Step 13 Worktree Exit):
    ```bash
    git add $SPEC_PATH/issue-$NUMBER-*.md
    git commit -s -m "Add code retrospective for issue #$NUMBER

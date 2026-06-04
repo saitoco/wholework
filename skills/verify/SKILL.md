@@ -112,6 +112,12 @@ Parse acceptance condition checkboxes:
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/domain-loader.md` and follow the "Processing Steps" section with `SKILL_NAME=verify`. Domain file content provides Skill infrastructure improvement classification criteria for Step 13.
 
+**Phase Handoff read** (verify is the last execution phase — read only, no write):
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Read Procedure" section.
+Parameters: `SPEC_PATH`, `ISSUE_NUMBER=$NUMBER`, `PHASE_NAME=verify`.
+This is an early Spec read specifically for Phase Handoff context; SPEC_PATH is now known from detect-config-markers above.
+
 **Resolving `{{base_url}}` to production URL**: If verify commands contain `{{base_url}}`, replace `{{base_url}}` with `PRODUCTION_URL` before passing to verify-executor.
 
 - If `PRODUCTION_URL` is found: run browser verification with the replaced URL
