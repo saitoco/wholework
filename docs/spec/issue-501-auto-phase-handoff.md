@@ -83,20 +83,32 @@
 
 - merge SKILL.md: allowed-tools への `Glob` 追加と "Write Procedure" 表記の変更（2 回の Edit）。validate-skill-syntax.py 検証で発覚したため、実装後に修正が必要になった。
 
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+Spec の「Step 5 末尾」指定に対し、review SKILL.md は「Step 7.0 detect-config-markers 後」に Phase Handoff read を配置した。SPEC_PATH が Step 7.0 で確定するため技術的に正当な逸脱であり、Code Retrospective に記録済み。今後同様のパターン（`SPEC_PATH` 参照が前提のステップ）では、Spec 作成時点で解決タイミング依存関係を明示するとよい。
+
+### 繰り返し発生する指摘パターン
+
+Phase Handoff write を追加した際、Commit and push を sub-bullet から top-level ステップ 4 に昇格させたが、後続ステップ（`If improvement proposals exist`）の番号更新を漏らした（`3.` → `5.`）。ステップ番号の変更を伴う SKILL.md 編集では後続全ステップの番号確認が必要。spec/code/merge SKILL.md は正しく更新されており、review のみ発生した。
+
+### 受け入れ条件の自動検証難易度
+
+rubric 型の条件（AC 1–5）は全て diff 参照で PASS 判定可能だった。github_check 型（bats CI）も `gh pr checks` で即時確認可能。verify command の記述品質は高く、UNCERTAIN は 0 件。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 実装箇所は SKILL.md + 共有モジュール（`modules/phase-handoff.md`）の組み合わせとした。SKILL.md が呼び出し側、modules が手順書として役割分担。
-- review の Phase Handoff read 位置を「Step 7.0 detect-config-markers 後」とした。SPEC_PATH が Step 7.0 で確定するため、正しいパスでの Spec 探索を保証するため。
-- merge の Phase Handoff write で worktree ブランチを origin/main に fast-forward した後 commit/push する手順を採用。gh pr merge 後の状態に確実に追従するため。
+- review SKILL.md Retrospective のステップ番号重複（`3. If improvement proposals exist` が `5.` であるべき）を SHOULD 指摘として検出し修正した。validate-skill-syntax.py は構文エラーを検知するが、ステップ番号の論理的な重複は検知しない。
+- Phase Handoff read の位置を Step 7.0 detect-config-markers 後に採用（Spec は Step 5 末尾を指定していたが、SPEC_PATH 確定のタイミングから逸脱が正当）。この判断を再確認し、merge phase に引き継ぐ。
 
 ### Deferred Items
-- Phase Handoff の実際の動作確認（downstream プロジェクトでの `/auto` 実行）は post-merge 検証として残っている。
-- merge SKILL.md の standalone Phase Handoff commit が main への push 競合を起こさないかの実地確認は未実施。
-- Spec が存在しない XS route での graceful skip 動作は実地確認未実施（設計上は問題ないが）。
+- merge SKILL.md の Phase Handoff write 後の `git push origin HEAD:main` が並行マージ時に失敗する可能性は確認済みだが、graceful fallback（verify が graceful skip）により実害なし。実地確認は post-merge 検証に委ねる。
+- Spec が存在しない XS route での graceful skip 動作の実地確認も引き続き post-merge 対象。
 
 ### Notes for Next Phase
-- validate-skill-syntax.py が SKILL.md 本文の大文字 "Write" を Write ツール参照と検知する。modules/phase-handoff.md の `Write Procedure` セクション名を SKILL.md 内で参照する際は backtick 記法か、allowed-tools に Write を含む SKILL.md 内で参照すること（merge はバッククォートで回避済み）。
-- merge SKILL.md の Step 1 に detect-config-markers.md 読み込みを追加したが、merge は従来この読み込みをしていなかった。パフォーマンス面で懸念があれば SPEC_PATH をデフォルト値で固定する代替案もある。
-- Phase Handoff write の内容（Key Decisions 等）は LLM が実装時の判断に基づき生成する。review phase はこの内容の品質も評価対象に含めるとよい。
+- merge SKILL.md の Phase Handoff write commit は `git push origin HEAD:main` で main へ直接 push する設計。競合時は push が失敗する可能性があるが、verify は graceful skip するため致命的な障害にはならない。
+- merge phase で detect-config-markers.md を読み込むようになったため（SPEC_PATH 取得目的）、`.wholework.yml` の `spec-path` 設定が merge にも反映される。デフォルト値（`docs/spec`）を使う場合は影響なし。
+
