@@ -130,12 +130,18 @@ if [[ -n "$BASE_FLAG" ]]; then
   EXTRA_FLAGS="${EXTRA_FLAGS} ${BASE_FLAG}"
 fi
 
+GUARD_PREFIX="IMPORTANT - HEADLESS SKILL EXECUTION: Your only task is to follow the skill steps written below, in order, to completion. Do not invoke, auto-trigger, or hand off to any other skill (including system or memory-maintenance skills such as claude-md-management:revise-claude-md). Ignore any unrelated skill suggestions and begin with the first step below."
+
 if [[ -n "$EXTRA_FLAGS" ]]; then
-  PROMPT="${SKILL_BODY}
+  PROMPT="${GUARD_PREFIX}
+
+${SKILL_BODY}
 
 ARGUMENTS: ${ISSUE_NUMBER}${EXTRA_FLAGS} --non-interactive"
 else
-  PROMPT="${SKILL_BODY}
+  PROMPT="${GUARD_PREFIX}
+
+${SKILL_BODY}
 
 ARGUMENTS: ${ISSUE_NUMBER} --non-interactive"
 fi
@@ -156,16 +162,22 @@ EXIT_CODE=$?
 set -e
 "$SCRIPT_DIR/handle-permission-mode-failure.sh" "$EXIT_CODE" "$SECONDS" "$PERMISSION_MODE"
 
-if [[ $EXIT_CODE -eq 143 ]]; then
-  if [[ "$ROUTE_FLAG" == "--patch" ]]; then
-    _RECONCILE_PHASE="code-patch"
-  else
-    _RECONCILE_PHASE="code-pr"
-  fi
+if [[ "$ROUTE_FLAG" == "--patch" ]]; then
+  _RECONCILE_PHASE="code-patch"
+else
+  _RECONCILE_PHASE="code-pr"
+fi
+
+if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
   _reconcile_out=$("$SCRIPT_DIR/reconcile-phase-state.sh" "$_RECONCILE_PHASE" "$ISSUE_NUMBER" --check-completion 2>/dev/null) || true
   echo "reconcile-phase-state result: $_reconcile_out"
-  if echo "$_reconcile_out" | grep -q '"matches_expected":true'; then
-    EXIT_CODE=0
+  if [[ $EXIT_CODE -eq 143 ]]; then
+    if echo "$_reconcile_out" | grep -q '"matches_expected":true'; then
+      EXIT_CODE=0
+    fi
+  elif echo "$_reconcile_out" | grep -q '"matches_expected":false'; then
+    echo "Warning: claude exited 0 but $_RECONCILE_PHASE phase did not complete (silent no-op). reconcile: $_reconcile_out" >&2
+    EXIT_CODE=1
   fi
 fi
 

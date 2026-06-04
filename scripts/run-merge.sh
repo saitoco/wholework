@@ -52,7 +52,11 @@ if [[ -z "$FRONTMATTER_END" ]]; then
   exit 1
 fi
 SKILL_BODY=$(tail -n +"$((FRONTMATTER_END + 1))" "$SKILL_FILE")
-PROMPT="${SKILL_BODY}
+GUARD_PREFIX="IMPORTANT - HEADLESS SKILL EXECUTION: Your only task is to follow the skill steps written below, in order, to completion. Do not invoke, auto-trigger, or hand off to any other skill (including system or memory-maintenance skills such as claude-md-management:revise-claude-md). Ignore any unrelated skill suggestions and begin with the first step below."
+
+PROMPT="${GUARD_PREFIX}
+
+${SKILL_BODY}
 
 ARGUMENTS: ${PR_NUMBER} --non-interactive"
 
@@ -72,25 +76,30 @@ EXIT_CODE=$?
 set -e
 "$SCRIPT_DIR/handle-permission-mode-failure.sh" "$EXIT_CODE" "$SECONDS" "$PERMISSION_MODE"
 
-if [[ $EXIT_CODE -eq 143 ]]; then
-  _MERGE_ISSUE=$("$SCRIPT_DIR/gh-extract-issue-from-pr.sh" "$PR_NUMBER" 2>/dev/null \
-    | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('issue_number',''))" 2>/dev/null || echo "")
+_MERGE_ISSUE=$("$SCRIPT_DIR/gh-extract-issue-from-pr.sh" "$PR_NUMBER" 2>/dev/null \
+  | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('issue_number',''))" 2>/dev/null || echo "")
+
+if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
   if [[ -n "$_MERGE_ISSUE" ]]; then
     _reconcile_out=$("$SCRIPT_DIR/reconcile-phase-state.sh" merge "$_MERGE_ISSUE" --pr "$PR_NUMBER" --check-completion 2>/dev/null) || true
-    if echo "$_reconcile_out" | grep -q '"matches_expected":true'; then
-      EXIT_CODE=0
+    if [[ $EXIT_CODE -eq 143 ]]; then
+      if echo "$_reconcile_out" | grep -q '"matches_expected":true'; then
+        EXIT_CODE=0
+      fi
+    elif echo "$_reconcile_out" | grep -q '"matches_expected":false'; then
+      echo "Warning: claude exited 0 but merge phase did not complete (silent no-op). reconcile: $_reconcile_out" >&2
+      EXIT_CODE=1
     fi
   else
     echo "reconcile-phase-state: could not extract issue number from PR #${PR_NUMBER}, skipping reconcile" >&2
-  fi
-fi
-
-# Post-validation: guard against silent no-op (claude exits 0 but merge never happened)
-if [[ $EXIT_CODE -eq 0 ]]; then
-  PR_STATE=$(gh pr view "$PR_NUMBER" --json state -q .state 2>/dev/null || echo "")
-  if [[ -n "$PR_STATE" && "$PR_STATE" != "MERGED" ]]; then
-    echo "Warning: PR #${PR_NUMBER} state is '${PR_STATE}', not MERGED. Merge may have failed." >&2
-    EXIT_CODE=1
+    # Fallback: check PR state directly when issue extraction fails
+    if [[ $EXIT_CODE -eq 0 ]]; then
+      PR_STATE=$(gh pr view "$PR_NUMBER" --json state -q .state 2>/dev/null || echo "")
+      if [[ -n "$PR_STATE" && "$PR_STATE" != "MERGED" ]]; then
+        echo "Warning: PR #${PR_NUMBER} state is '${PR_STATE}', not MERGED. Merge may have failed." >&2
+        EXIT_CODE=1
+      fi
+    fi
   fi
 fi
 

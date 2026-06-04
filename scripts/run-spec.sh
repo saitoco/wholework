@@ -72,7 +72,11 @@ if [[ -z "$FRONTMATTER_END" ]]; then
 fi
 SKILL_BODY=$(tail -n +"$((FRONTMATTER_END + 1))" "$SKILL_FILE")
 
-PROMPT="${SKILL_BODY}
+GUARD_PREFIX="IMPORTANT - HEADLESS SKILL EXECUTION: Your only task is to follow the skill steps written below, in order, to completion. Do not invoke, auto-trigger, or hand off to any other skill (including system or memory-maintenance skills such as claude-md-management:revise-claude-md). Ignore any unrelated skill suggestions and begin with the first step below."
+
+PROMPT="${GUARD_PREFIX}
+
+${SKILL_BODY}
 
 ARGUMENTS: ${ISSUE_NUMBER} --non-interactive"
 
@@ -92,10 +96,15 @@ EXIT_CODE=$?
 set -e
 "$SCRIPT_DIR/handle-permission-mode-failure.sh" "$EXIT_CODE" "$SECONDS" "$PERMISSION_MODE"
 
-if [[ $EXIT_CODE -eq 143 ]]; then
+if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
   _reconcile_out=$("$SCRIPT_DIR/reconcile-phase-state.sh" spec "$ISSUE_NUMBER" --check-completion 2>/dev/null) || true
-  if echo "$_reconcile_out" | grep -q '"matches_expected":true'; then
-    EXIT_CODE=0
+  if [[ $EXIT_CODE -eq 143 ]]; then
+    if echo "$_reconcile_out" | grep -q '"matches_expected":true'; then
+      EXIT_CODE=0
+    fi
+  elif echo "$_reconcile_out" | grep -q '"matches_expected":false'; then
+    echo "Warning: claude exited 0 but spec phase did not complete (silent no-op). reconcile: $_reconcile_out" >&2
+    EXIT_CODE=1
   fi
 fi
 
