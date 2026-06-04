@@ -3,7 +3,7 @@ name: merge
 description: Squash-merge a PR and delete the remote branch (`/merge 88`). Use when merging review-approved, CI-passing PRs. Automatically attempts conflict resolution when conflicts occur.
 context: fork
 model: sonnet
-allowed-tools: Bash(gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*), Read, Edit, Grep, EnterWorktree, ExitWorktree
+allowed-tools: Bash(gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*), Read, Edit, Grep, Glob, EnterWorktree, ExitWorktree
 ---
 
 # Squash Merge
@@ -45,9 +45,17 @@ Key per-step behavior in non-interactive mode:
 
 1. Fetch PR metadata:
    ```bash
-   gh pr view "$NUMBER" --json headRefName,baseRefName,isDraft
+   gh pr view "$NUMBER" --json headRefName,baseRefName,isDraft,body,title
    ```
    Record `baseRefName` as `BASE_BRANCH`. If `BASE_BRANCH` is not `main` (e.g., `release/v2.0`), the Issue will not be auto-closed on merge — inform the user after Step 3 completes.
+
+   **Early Issue number extraction** (for Phase Handoff): from the PR `body`/`title`, extract the related Issue number (`closes #N`, `Issue #N`, etc.) and record as `ISSUE_NUMBER`.
+
+   **Detect config markers** (for Phase Handoff): Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH` for use in Phase Handoff steps.
+
+   **Phase Handoff read** (merge receives handoff from review phase):
+   Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Read Procedure" section.
+   Parameters: `SPEC_PATH`, `ISSUE_NUMBER`, `PHASE_NAME=merge`. (If ISSUE_NUMBER is not yet determined, skip with log.)
 
 2. Determine mergeability:
    ```bash
@@ -187,6 +195,33 @@ If the PR body contains `closes #N` and `BASE_BRANCH` is `main`, the Issue will 
 
 If `BASE_BRANCH` is not `main`, inform the user after merge:
 "Since the base branch is `{BASE_BRANCH}`, `closes #N` will not auto-close the Issue. The Issue will be closed when `{BASE_BRANCH}` is merged to main. You may manually run `gh issue close {ISSUE_NUMBER}` if needed."
+
+**Phase Handoff write** (after squash merge, before label transition):
+
+merge is an intermediate phase — write the Phase Handoff so verify can read it.
+
+1. Align the worktree branch with origin/main (which now contains the squash commit):
+   ```bash
+   git fetch origin
+   git merge origin/main --ff-only
+   ```
+2. Glob `$SPEC_PATH/issue-$ISSUE_NUMBER-*.md` to locate the Spec (now on main):
+   - If not found: output `[phase-handoff] No Spec found — skipping handoff write.` and continue
+3. If Spec found: Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the `Write Procedure` section.
+   Parameters: `SPEC_PATH`, `ISSUE_NUMBER`, `PHASE_NAME=merge`.
+4. Commit and push to main:
+   ```bash
+   git add $SPEC_PATH/issue-$ISSUE_NUMBER-*.md
+   git commit -s -m "Add merge phase handoff for issue #$ISSUE_NUMBER
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+   ```
+   ```bash
+   git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
+   ```
+   ```bash
+   git push origin HEAD:main
+   ```
 
 ### Step 5: Label Transition (after successful merge)
 

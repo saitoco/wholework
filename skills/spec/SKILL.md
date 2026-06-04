@@ -608,7 +608,11 @@ Reflect on the specification phase and present improvement suggestions to the us
 1. Write "Nothing to note" in each section if nothing to record
 2. If issue retrospective found, transfer it first (Edit tool to prepend to Spec)
 3. Edit tool to append spec retrospective to Spec end
-4. Additional commit (push in Step 14 Worktree Exit):
+4. **Phase Handoff write** (spec is the first execution phase — write only, no read):
+   Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Write Procedure" section.
+   Parameters: `SPEC_PATH`, `ISSUE_NUMBER=$NUMBER`, `PHASE_NAME=spec`.
+   Include the handoff write in the same commit (next step).
+5. Additional commit (push in Step 14 Worktree Exit):
    ```bash
    git add $SPEC_PATH/issue-$NUMBER-short-title.md
    git commit -s -m "Add retrospective notes for issue #$NUMBER"

@@ -16,7 +16,7 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # スキル定義（必須）
 │       └── *.md         # 補助的な phase/ガイドラインファイル（任意）
-├── modules/             # スキルから参照される共有モジュール（34 ファイル）
+├── modules/             # スキルから参照される共有モジュール（35 ファイル）
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
@@ -119,6 +119,7 @@ wholework/
 - `modules/measurement-scope.md` — 計測スコープ定義
 - `modules/next-action-guide.md` — 全スキル共通の次アクション案内
 - `modules/phase-banner.md` — スキル用フェーズ識別バナー表示
+- `modules/phase-handoff.md` — phase 間 Phase Handoff 要約の read/write（cross-phase context carryover）
 - `modules/steering-hint.md` — steering docs が無い場合に `/doc init` を促す動的ヒント
 - `modules/orchestration-fallbacks.md` — orchestration レベルの fallback パターン参照カタログ（#319 tier 2・#316 recovery sub-agent・#318 learning loop から参照）
 - `modules/domain-classifier.md` — 改善提案の Domain 分類（composable、LLM-in-context）

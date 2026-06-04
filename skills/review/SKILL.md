@@ -189,6 +189,11 @@ SPEC_PATH: path from spec-path (default: "docs/spec")
 STEERING_DOCS_PATH: path from steering-docs-path (default: "docs")
 ```
 
+**Phase Handoff read** (after SPEC_PATH is determined):
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Read Procedure" section.
+Parameters: `SPEC_PATH`, `ISSUE_NUMBER=$ISSUE_NUMBER`, `PHASE_NAME=review`.
+
 After detection, follow `external-review-phase.md`'s Step 7 procedure for external review waiting/issue resolution. For each enabled reviewer type, execute the "wait → resolve" flow in sequence:
 
 - **Copilot** (`HAS_COPILOT_REVIEW=true`): Steps 7.1–7.2 (`wait-external-review.sh "$NUMBER" copilot`)
@@ -723,7 +728,11 @@ Reflect on the review phase; record improvement proposals in the Spec only. Issu
 2. **Write review retrospective to Spec**:
    - Append `## review retrospective` section to the end of `$SPEC_PATH/issue-$ISSUE_NUMBER-*.md` using Edit tool
    - Create subsections for each of the 3 aspects; write "Nothing to note" for aspects with nothing to record
-   - Commit and push:
+3. **Phase Handoff write** (before commit):
+   Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Write Procedure" section.
+   Parameters: `SPEC_PATH`, `ISSUE_NUMBER=$ISSUE_NUMBER`, `PHASE_NAME=review`.
+   Include the handoff write in the same `git add` and commit as the retrospective.
+4. Commit and push:
      ```bash
      git add $SPEC_PATH/issue-$ISSUE_NUMBER-*.md
      git commit -s -m "Add review retrospective for issue #$ISSUE_NUMBER
@@ -736,7 +745,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
      ```bash
      git push origin HEAD
      ```
-3. **If improvement proposals exist**: record in review retrospective only (do not create issues; proposals are aggregated in `/verify`)
+5. **If improvement proposals exist**: record in review retrospective only (do not create issues; proposals are aggregated in `/verify`)
 
 ## Worktree Exit (push-and-remove)
 
