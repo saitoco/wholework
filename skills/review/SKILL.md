@@ -745,7 +745,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
      ```bash
      git push origin HEAD
      ```
-3. **If improvement proposals exist**: record in review retrospective only (do not create issues; proposals are aggregated in `/verify`)
+5. **If improvement proposals exist**: record in review retrospective only (do not create issues; proposals are aggregated in `/verify`)
 
 ## Worktree Exit (push-and-remove)
 
