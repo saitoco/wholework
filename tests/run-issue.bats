@@ -1,10 +1,10 @@
 #!/usr/bin/env bats
 
 # Tests for run-issue.sh
-# Mock claude command by placing it at the front of PATH
+# Mocks: claude, claude-watchdog.sh, phase-banner.sh, gh, reconcile-phase-state.sh
+#        (via MOCK_DIR + WHOLEWORK_SCRIPT_DIR)
 
 SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/run-issue.sh"
-SKILLS_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/skills/issue"
 
 setup() {
     # Isolate test from repo .wholework.yml
@@ -13,30 +13,45 @@ setup() {
     MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
     mkdir -p "$MOCK_DIR"
     export PATH="$MOCK_DIR:$PATH"
+    export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
 
     # Record file for verifying claude calls
     CLAUDE_CALL_LOG="$BATS_TEST_TMPDIR/claude_calls.log"
     export CLAUDE_CALL_LOG
 
+    # Mock get-config-value.sh: return "bypass" by default
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    # Mock claude: log flags, ANTHROPIC_MODEL, CLAUDECODE, ARGUMENTS, GUARD
     cat > "$MOCK_DIR/claude" <<'MOCK'
 #!/bin/bash
-# Log all arguments (truncated to avoid huge SKILL.md content)
 echo "ARGS_COUNT=$#" >> "$CLAUDE_CALL_LOG"
-# Check for -p flag and log the prompt presence
 for arg in "$@"; do
     case "$arg" in
         -p) echo "FLAG_P=1" >> "$CLAUDE_CALL_LOG" ;;
         --model) echo "FLAG_MODEL=1" >> "$CLAUDE_CALL_LOG" ;;
         --dangerously-skip-permissions) echo "FLAG_SKIP_PERMS=1" >> "$CLAUDE_CALL_LOG" ;;
+        --permission-mode) echo "FLAG_PERM_MODE=1" >> "$CLAUDE_CALL_LOG" ;;
     esac
 done
 echo "ANTHROPIC_MODEL=$ANTHROPIC_MODEL" >> "$CLAUDE_CALL_LOG"
 echo "CLAUDECODE=${CLAUDECODE:-__UNSET__}" >> "$CLAUDE_CALL_LOG"
-# Log the prompt content (second argument after -p)
 FOUND_P=0
 for arg in "$@"; do
     if [[ $FOUND_P -eq 1 ]]; then
         echo "PROMPT_CONTAINS_ARGUMENTS=$(echo "$arg" | grep -o 'ARGUMENTS:.*' | head -1)" >> "$CLAUDE_CALL_LOG"
+        if echo "$arg" | grep -q 'IMPORTANT - HEADLESS SKILL EXECUTION'; then
+            echo "PROMPT_HAS_GUARD=1" >> "$CLAUDE_CALL_LOG"
+        fi
         break
     fi
     [[ "$arg" == "-p" ]] && FOUND_P=1
@@ -44,6 +59,28 @@ done
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/claude"
+
+    cat > "$MOCK_DIR/claude-watchdog.sh" <<'MOCK'
+#!/bin/bash
+exec "$@"
+MOCK
+    chmod +x "$MOCK_DIR/claude-watchdog.sh"
+
+    cat > "$MOCK_DIR/handle-permission-mode-failure.sh" <<'MOCK'
+#!/bin/bash
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/handle-permission-mode-failure.sh"
+
+    cat > "$MOCK_DIR/phase-banner.sh" <<'MOCK'
+print_start_banner() { echo "Starting /$3 for issue #$2"; }
+print_end_banner() { echo "Finished /$3 for issue #$2"; }
+MOCK
+
+    cat > "$MOCK_DIR/watchdog-defaults.sh" <<'MOCK'
+WATCHDOG_TIMEOUT_DEFAULT=1800
+load_watchdog_timeout() { WATCHDOG_TIMEOUT=1800; }
+MOCK
 
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
@@ -59,6 +96,24 @@ echo ""
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/gh"
+
+    # Mock reconcile-phase-state.sh: default returns empty (no false alarm)
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    # Create SKILL.md fixture
+    mkdir -p "$BATS_TEST_TMPDIR/skills/issue"
+    cat > "$BATS_TEST_TMPDIR/skills/issue/SKILL.md" <<'SKILL'
+---
+type: skill
+---
+# Issue Skill Body
+This is the skill body content used for testing.
+SKILL
 }
 
 teardown() {
@@ -87,7 +142,6 @@ teardown() {
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
 
-    # Verify claude was called with -p flag
     grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
     grep -q "FLAG_MODEL=1" "$CLAUDE_CALL_LOG"
     grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
@@ -112,7 +166,6 @@ teardown() {
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
 
-    # Verify CLAUDECODE was stripped by env -u
     grep -q "CLAUDECODE=__UNSET__" "$CLAUDE_CALL_LOG"
 }
 
@@ -126,7 +179,6 @@ teardown() {
 }
 
 @test "error: claude command fails with non-zero exit code" {
-    # Override mock claude to exit with code 42
     cat > "$MOCK_DIR/claude" <<'MOCK'
 #!/bin/bash
 echo "$@" >> "$CLAUDE_CALL_LOG"
@@ -142,7 +194,16 @@ MOCK
     [[ "$output" == *"Exit code: 42"* ]]
 }
 
-@test "permission-mode: auto in .wholework.yml passes --permission-mode auto" {
+@test "permission-mode: auto config passes --permission-mode auto" {
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "auto" ;;
+    *) echo "$DEFAULT" ;;
+esac
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
     cat > "$MOCK_DIR/claude" <<'MOCK'
 #!/bin/bash
 for arg in "$@"; do
@@ -154,18 +215,55 @@ done
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/claude"
-    echo "permission-mode: auto" > "$BATS_TEST_TMPDIR/.wholework.yml"
-    cd "$BATS_TEST_TMPDIR"
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
     grep -q "FLAG_PERM_MODE=1" "$CLAUDE_CALL_LOG"
     ! grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
 }
 
-@test "permission-mode: bypass in .wholework.yml uses --dangerously-skip-permissions" {
-    echo "permission-mode: bypass" > "$BATS_TEST_TMPDIR/.wholework.yml"
-    cd "$BATS_TEST_TMPDIR"
+@test "permission-mode: bypass uses --dangerously-skip-permissions" {
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
     grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "guard: prompt contains HEADLESS SKILL EXECUTION guard text" {
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    grep -q "PROMPT_HAS_GUARD=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "reconcile: exit 0 + matches_expected:false results in exit 1" {
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false,"phase":"issue"}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Warning:"*"silent no-op"* ]]
+}
+
+@test "reconcile: exit 0 + matches_expected:true results in exit 0" {
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":true,"phase":"issue"}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+}
+
+@test "reconcile: exit 0 + empty reconcile output results in exit 0 (no false alarm)" {
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"Warning:"* ]]
 }

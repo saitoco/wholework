@@ -29,7 +29,7 @@ exit 0
 MOCK
     chmod +x "$MOCK_DIR/get-config-value.sh"
 
-    # Mock claude: log flags, model, effort, ANTHROPIC_MODEL, CLAUDECODE, ARGUMENTS
+    # Mock claude: log flags, model, effort, ANTHROPIC_MODEL, CLAUDECODE, ARGUMENTS, GUARD
     cat > "$MOCK_DIR/claude" <<'MOCK'
 #!/bin/bash
 echo "ARGS_COUNT=$#" >> "$CLAUDE_CALL_LOG"
@@ -44,11 +44,14 @@ for arg in "$@"; do
 done
 echo "ANTHROPIC_MODEL=$ANTHROPIC_MODEL" >> "$CLAUDE_CALL_LOG"
 echo "CLAUDECODE=${CLAUDECODE:-__UNSET__}" >> "$CLAUDE_CALL_LOG"
-# Extract ARGUMENTS line from prompt (arg after -p)
+# Extract ARGUMENTS line and guard text from prompt (arg after -p)
 FOUND_P=0
 for arg in "$@"; do
     if [[ $FOUND_P -eq 1 ]]; then
         echo "PROMPT_CONTAINS_ARGUMENTS=$(echo "$arg" | grep -o 'ARGUMENTS:.*' | head -1)" >> "$CLAUDE_CALL_LOG"
+        if echo "$arg" | grep -q 'IMPORTANT - HEADLESS SKILL EXECUTION'; then
+            echo "PROMPT_HAS_GUARD=1" >> "$CLAUDE_CALL_LOG"
+        fi
         break
     fi
     [[ "$arg" == "-p" ]] && FOUND_P=1
@@ -100,6 +103,14 @@ MOCK
 WATCHDOG_TIMEOUT_DEFAULT=1800
 load_watchdog_timeout() { WATCHDOG_TIMEOUT=1800; }
 MOCK
+
+    # Mock reconcile-phase-state.sh: default returns empty (no false alarm)
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
 
     # Mock gh for phase-banner title/url lookups
     cat > "$MOCK_DIR/gh" <<'MOCK'
@@ -262,4 +273,45 @@ MOCK
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
     grep -q "FLAG_SKIP_PERMS=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "guard: prompt contains HEADLESS SKILL EXECUTION guard text" {
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    grep -q "PROMPT_HAS_GUARD=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "reconcile: exit 0 + matches_expected:false results in exit 1" {
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false,"phase":"spec"}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Warning:"*"silent no-op"* ]]
+}
+
+@test "reconcile: exit 0 + matches_expected:true results in exit 0" {
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":true,"phase":"spec"}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+}
+
+@test "reconcile: exit 0 + empty reconcile output results in exit 0 (no false alarm)" {
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"Warning:"* ]]
 }
