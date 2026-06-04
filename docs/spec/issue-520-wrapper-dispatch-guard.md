@@ -215,3 +215,32 @@ run-merge.sh のリファクタリング（inline PR-state ガード → reconci
 
 - verify command はすべて有効構文。rubric 条件の判定も問題なし（GUARD_PREFIX の文言一致確認は diff 確認で可能）。
 - EXIT_CODE=143 + 抽出失敗の挙動変更は verify command では検出できない種類の変更（動作回帰）。Spec への行動変更の明示がレビューで有効だった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC は rubric×2（ガード文 / exit-0 reconcile）+ grep + github_check×2 の構成で UNCERTAIN なし。Opus spec がスコープを #368/#369 と非重複に整理し、run-issue の exit-0 ガードが `triaged` 完了シグネチャ依存である Uncertainty を `/code` 向けに明記した点が的確。
+
+#### design
+- body passthrough を維持しつつガード文を prepend、exit 143 ブロックを exit 0 へ拡張して silent-fail ハードガードを追加する設計はクリーン。run-merge の inline PR-state ガードを reconcile ベースへ統一する判断も妥当。
+
+#### code
+- Spec の Implementation Steps 1〜7 を順守、deviation/rework なし。run-code.bats の SKILL.md パス解決差異・wait-ci-checks.sh のモック必須化は手順内で自明として処理。
+
+#### review
+- full review が run-merge.sh リファクタ（inline PR-state → reconcile 統一）で旧テスト相当の新テストが抜けていた点を検出し run-merge.bats を追加（1 件 resolved）。MUST なし。EXIT_CODE=143 挙動変更は verify command で検出不能だが Spec の行動変更明示がレビューで有効だった。
+
+#### merge
+- squash merge クリーン、CI 全 green、コンフリクトなし。
+
+#### verify
+- pre-merge 5/5 PASS（rubric: 5 wrapper のガード文 + exit-0 reconcile / grep: matches_expected:false / github_check×2: CI green）。
+- **#517 fix の実 pr-route dogfooding（2 度目）**: 条件4/5 の `github_check "gh pr checks"` が verify worktree（PR 非紐づけ）上で #517 の PR number injection により `gh pr checks 525` へ書き換わり、ジョブ名で正しく PASS。#517 の fix が安定的に機能することを再確認。
+- post-merge manual 条件（`/auto` 実運用での mis-dispatch silent no-op 非再発モニタ）は縦断観察が必要なため未チェック・phase/verify 維持。
+- なお本 Issue の成果（ガード文 + exit-0 reconcile）はマージにより run-*.sh に反映済みで、以降の `/auto` 実行から有効。
+
+### Improvement Proposals
+
+- **テスト置き換え/リファクタ時の「削除テストのシナリオ網羅」チェックを review または spec のガイドラインに明文化する**: 本 Issue の review で、run-merge.sh のリファクタ（inline PR-state ガード → reconcile 統一）に伴い旧テスト「post-validation: exits 0 when gh pr view fails」が削除されたが、等価な新テスト（抽出失敗 + gh API 失敗 → false alarm なし）が抜け落ちていた（review が検出し run-merge.bats を追加して解消）。実装が正しくても、テストを置き換える際に「削除した（または書き換えた）テストが検証していたシナリオを新テストが全てカバーしているか」の網羅性確認が漏れるパターンは汎用的に再発しうる。review-bug perspective または spec の制約チェックリストに「テスト置き換え時は削除テストのカバーシナリオを新テストで全て担保する」旨を明記することで、レビュー検出に依存せず構造的に防止できる。
