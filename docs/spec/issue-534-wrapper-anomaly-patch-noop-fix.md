@@ -80,3 +80,31 @@
 - 変更は `scripts/detect-wrapper-anomaly.sh` と `tests/detect-wrapper-anomaly.bats` の 2 ファイルのみ
 - verify コマンド全4件 PASS 済み（チェックボックス更新完了）
 - `origin/main` 文字列が `file_contains` verify に含まれるため、verify フェーズは機械的に確認可能
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受入条件は全 4 件が verify command 付き（grep / rubric / file_contains / github_check）で、機械検証可能性が高い。`/issue` リファインメントで `file_contains "origin/main"` 補足条件が追加され、rubric 単独より検証粒度が向上した
+
+#### design
+- Spec の Implementation Steps が実装と 1:1 で一致。`_found_on_origin` フラグによる段階的分岐の構造まで設計通りに実装され、設計と実装の乖離はゼロ
+- 実装アプローチ（直接 git fetch vs reconcile 委譲）とフェーズ限定範囲は `/issue` 段階で自動解決済み。spec phase が判断を再検討せず踏襲したため手戻りなし
+
+#### code
+- Code Retrospective に「設計から実装まで一発で完了、テスト 2 件も即時 pass」と記録。fixup/amend パターンなし、rework ゼロ
+- `set -uo pipefail` 環境での `!` 付きパイプライン挙動と未定義変数スコープを事前確認しており、bash 互換性への配慮が適切
+
+#### review
+- patch route（Size S）のため review フェーズはスキップ。N/A
+
+#### merge
+- patch route のため main 直コミット（`1d0e953`）。merge フェーズ・コンフリクトなし
+
+#### verify
+- 全 4 条件 PASS、FAIL ゼロ。verify command と実装の不整合なし
+- Issue は patch route の `closes #534` で merge 時に自動クローズ済み（ISSUE_STATE=CLOSED）。verify は phase/done 遷移のみ実施
+
+### Improvement Proposals
+- N/A（`git fetch origin main` の base ブランチハードコードは Phase Handoff で明示的にスコープ外として deferred 済み。patch route + 非 main base は稀なエッジケースであり、現時点で起票は見送り）
