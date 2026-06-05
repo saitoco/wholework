@@ -39,3 +39,15 @@ python3 scripts/validate-skill-syntax.py skills/
 ```
 
 Verify that all SKILL.md files pass syntax validation.
+
+## Retrospective Guard
+
+Before committing the review retrospective to the Spec:
+
+1. Run forbidden expressions check to detect any deprecated terms introduced by the retrospective content:
+   ```bash
+   bash scripts/check-forbidden-expressions.sh
+   ```
+2. If violations are detected: fix the retrospective text before committing
+   - Use descriptive language instead of quoting deprecated terms directly (e.g., write `旧称: <term>` or describe without quoting the term)
+3. If no violations: proceed with commit

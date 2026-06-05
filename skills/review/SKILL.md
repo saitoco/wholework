@@ -2,7 +2,7 @@
 name: review
 description: PR review (`/review 88`). Automatically runs acceptance criteria verification, multi-perspective code review, issue resolution, and summary posting. Use after `/code` creates a PR and before `/merge` (`--light`/`--full` to adjust depth).
 context: fork
-allowed-tools: Bash(gh pr view:*, gh pr diff:*, gh pr comment:*, gh issue view:*, gh issue edit:*, gh issue create:*, gh issue list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-external-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, wc:*, diff:*, git log:*, git diff:*, git show:*, git add:*, git commit:*, git push:*, git fetch:*, git checkout:*, git worktree:*, git branch:*, python3:*), Read, Write, Edit, Glob, Grep, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree
+allowed-tools: Bash(gh pr view:*, gh pr diff:*, gh pr comment:*, gh issue view:*, gh issue edit:*, gh issue create:*, gh issue list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-external-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, wc:*, diff:*, git log:*, git diff:*, git show:*, git add:*, git commit:*, git push:*, git fetch:*, git checkout:*, git worktree:*, git branch:*, python3:*), Read, Write, Edit, Glob, Grep, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree
 ---
 
 # PR Review
@@ -274,14 +274,18 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh "$ISSUE_NUMBER" .tmp/issue-body-$
 
 ## Step 9: CI Status Check
 
-After Step 7, check the PR's overall CI status:
+After Step 7, wait for all CI checks to reach terminal state, then check the PR's overall CI status:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh "$NUMBER"
+```
 
 ```bash
 gh pr view "$NUMBER" --json statusCheckRollup
 ```
 
 - **All jobs SUCCESS (or SKIPPED)**: note CI is successful and proceed
-- **PENDING/IN_PROGRESS jobs**: note CI is running and proceed
+- **PENDING/IN_PROGRESS jobs** (after wait timeout): note CI wait timed out; list pending checks and proceed with caution
 - **FAILURE jobs**: list failed job names and statuses; suggest fixes where possible. If `scripts/validate-skill-syntax.py` exists, also read `skills/review/skill-dev-recheck.md` and follow the "Step 8: Additional Suggestions on CI Failure" section.
 
 ---
@@ -728,11 +732,12 @@ Reflect on the review phase; record improvement proposals in the Spec only. Issu
 2. **Write review retrospective to Spec**:
    - Append `## review retrospective` section to the end of `$SPEC_PATH/issue-$ISSUE_NUMBER-*.md` using Edit tool
    - Create subsections for each of the 3 aspects; write "Nothing to note" for aspects with nothing to record
-3. **Phase Handoff write** (before commit):
+3. If `scripts/check-forbidden-expressions.sh` exists, Read `${CLAUDE_PLUGIN_ROOT}/skills/review/skill-dev-recheck.md` and follow the "Retrospective Guard" section.
+4. **Phase Handoff write** (before commit):
    Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Write Procedure" section.
    Parameters: `SPEC_PATH`, `ISSUE_NUMBER=$ISSUE_NUMBER`, `PHASE_NAME=review`.
    Include the handoff write in the same `git add` and commit as the retrospective.
-4. Commit and push:
+5. Commit and push:
      ```bash
      git add $SPEC_PATH/issue-$ISSUE_NUMBER-*.md
      git commit -s -m "Add review retrospective for issue #$ISSUE_NUMBER
@@ -745,7 +750,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
      ```bash
      git push origin HEAD
      ```
-5. **If improvement proposals exist**: record in review retrospective only (do not create issues; proposals are aggregated in `/verify`)
+6. **If improvement proposals exist**: record in review retrospective only (do not create issues; proposals are aggregated in `/verify`)
 
 ## Worktree Exit (push-and-remove)
 

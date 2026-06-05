@@ -100,3 +100,47 @@
 - **Domain 確定**: CI 全チェック完了確認は `/review` の Core 挙動のため `skills/review/SKILL.md` Step 9 を直接修正する。forbidden-expressions retrospective guard は wholework 固有の skill-dev 関心事のため Domain file（`skill-dev-recheck.md` / `forbidden-expressions-check.md`）へ切り出し、Core SKILL.md から条件付き参照する。
 - **CI wait のタイムアウト**: `wait-ci-checks.sh` は `WHOLEWORK_CI_TIMEOUT_SEC`（デフォルト 1200s）でタイムアウトする。タイムアウト後も PENDING が残る場合は「proceed with caution」として警告し処理を継続する（ハードストップはしない）。
 - **`check-forbidden-expressions.sh` のスコープ**: ガードは spec ファイルだけでなく SCAN_DIRS 全体（skills/, modules/, agents/, tests/, docs/）を対象とする。これは既存の `forbidden-expressions-check.md` と同じ invocation 方法（`bash scripts/check-forbidden-expressions.sh` 無引数）で実現できる。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の実装ステップ 3（`skills/code/SKILL.md` Step 12）では「旧 Step 3 以降を 4→5→6→7 に繰り上げる」と記載されていたが、元のステップ数は 5（旧3→4, 旧4→5, 旧5→6）であり「7」には達しない。記述の数え間違いと判断し、実際には 6 ステップ構成（新 step 3 挿入後）に実装した。
+
+### Design Gaps/Ambiguities
+
+- Spec の「旧 Step 3 以降を 4→5→6→7 に繰り上げる」という記述は元ステップ数と合わない（元が 5 ステップのため最大 6 まで）。実装では矛盾なく新 step 3 挿入・旧3→4・旧4→5・旧5→6 に繰り上げを実施した。
+
+### Rework
+
+- なし
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- REVIEW_DEPTH=light（`--light` フラグによる明示的指定）で実行した
+- 外部レビューツール（Copilot/Claude Code Review/CodeRabbit）はすべて未設定のため Step 7 全体スキップ
+- MUST/SHOULD 問題なし（CONSIDER 1件: regression test）のため Step 12 スキップ
+
+### Deferred Items
+- Regression test（CONSIDER）: SKILL.md プロシージャー変更に対する自動テストは将来的な改善課題
+- Post-merge の opportunistic 検証は観察のみ（Step 9 で CI 全 SUCCESS 確認済み）
+
+### Notes for Next Phase
+- すべての Pre-merge 受け入れ条件が PASS、CI 全ジョブ SUCCESS
+- MUST/SHOULD 問題なし → `/merge 540` で merge 可能
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Nothing to note. PR diff はすべての Spec 実装ステップに準拠しており、ステップ番号の偏差（skills/code/SKILL.md で Spec 記述「7 まで繰り上げ」→実装「6 まで」）は Code Retrospective に適切に文書化済み。
+
+### Recurring Issues
+
+Nothing to note. レビューで発見した CONSIDER 1件（regression test 未追加）は SKILL.md プロシージャー変更特有のもので、同種の繰り返し問題ではない。
+
+### Acceptance Criteria Verification Difficulty
+
+Nothing to note. Pre-merge 3件すべて PASS（rubric 2件 + file_contains 1件）。UNCERTAIN なし。verify command が well-specified で自動判定が容易だった。`rubric` 条件は具体的なファイル名と期待内容を明示しており、grader が迷わず PASS/FAIL を判定できた。
