@@ -57,3 +57,29 @@
 - Step 3a の実行条件: run-spec.sh が Step 3 で実際に呼ばれた場合のみ。`phase/ready` が Step 3 入室時に既にあった場合（spec スキップ）はスキップ
 - XL route は sub-issue graph で各 sub-issue の route を独立管理するため、本 Step 3a は XL sub-issue の route 変更には影響しない（`run-auto-sub.sh` 管理外）
 - ユーザが `--patch`/`--pr`/`--review=...` を明示指定した場合は再判定で上書きしない既存の優先挙動を維持
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- None
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Step 3a を Step 3 と Step 4 の間に挿入（Spec の実装計画通り）
+- XL route は `run-auto-sub.sh` 管理下のため本 step では扱わないことを明示した
+- `--patch`/`--pr`/`--review=...` の明示指定時は再判定しない条件も明記
+
+### Deferred Items
+- 実運用での動作確認（post-merge manual AC）は verify phase に委譲
+
+### Notes for Next Phase
+- AC1（`file_contains "--no-cache"`）・AC2（`rubric`）ともに pre-merge で PASS 済み
+- CI（test.yml）の success 確認は main マージ後に verify phase で実施
