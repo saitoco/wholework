@@ -263,6 +263,47 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ---
 
+## mid-run-api-error
+
+### Symptom
+- forked session (`claude -p`) exits with non-zero exit code mid-run
+- Log contains API connection/error patterns: `APIConnectionError`, `Request timed out`,
+  `overloaded_error`, or `529.*Overload`
+- Issue state: OPEN, phase label may be missing or inconsistent
+
+### Applicable Phases
+- Any phase running via `run-*.sh` (spec, code, review, merge, verify)
+
+### Fallback Steps
+1. Run `reconcile-phase-state.sh <phase> <issue> --check-completion` and parse the JSON output
+2. If `matches_expected: true`: phase completed before the API error; override to success and continue
+3. If `matches_expected: false`:
+   a. Inspect restoration hints from `actual` JSON:
+      - `spec_file`: spec file path if found (indicates spec phase completed; existing field)
+      - `hint_recent_commit`: recent commit referencing the issue (indicates code was committed)
+      - `hint_pr_state`: PR state if a PR exists for the issue
+   b. Restore the phase label based on hints:
+      - `spec_file` is null: spec not created; restore `phase/spec` label and retry spec
+      - `spec_file` present, no PR, no recent commit: spec done, label lost; restore `phase/ready`
+      - hint_recent_commit present (commit without PR): code committed; restore `phase/code`
+      - hint_pr_state is OPEN: PR exists; restore `phase/review` or `phase/merge`
+   c. Retry the failed phase once via the corresponding `run-*.sh <issue_number>`
+
+### Escalation
+- If retry fails again with an API error: stop with stop-and-report; persistent API failure requires manual intervention
+- If retry fails with a different error: escalate to Tier 3 (recovery sub-agent)
+- Maximum 1 retry per API error occurrence; no further looping
+
+### Rationale
+- Introduced in #500: forked sessions failing mid-run due to API connection errors left issues in
+  OPEN state with missing phase labels; `reconcile-phase-state.sh` Tier 1 could not fully restore
+  state because labels were absent
+- `reconcile-phase-state.sh` enhancement (#500) adds restoration hints to mismatch output,
+  enabling the parent session to restore the correct phase label before retrying
+- See also: #483 (parent XL issue), #314 (reconcile-phase-state), #313 (wrapper anomaly detector)
+
+---
+
 ## Operational Notes
 
 This catalog is consumed by:

@@ -516,6 +516,10 @@ If detector output is non-empty (known pattern matched):
 - Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` to get `SPEC_PATH`
 - Append the detector output to the Spec file (`$SPEC_PATH/issue-$NUMBER-*.md`) under `## Auto Retrospective`, and commit and push
 - Read `${CLAUDE_PLUGIN_ROOT}/modules/orchestration-fallbacks.md` and follow the catalog entry matching the detected pattern to apply the recovery steps
+- **`mid-run-api-error` pattern**: run `reconcile-phase-state.sh <phase> $NUMBER --check-completion`;
+  if `matches_expected: true` override to success; if `matches_expected: false` inspect
+  `hint_*` fields in `actual` JSON to restore the phase label, then retry the failed phase
+  once via the corresponding `run-*.sh` script
 - If the catalog's recovery succeeds, continue to the next phase (skip Tier 3)
 - If the catalog's recovery fails, proceed to Tier 3
 
