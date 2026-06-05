@@ -183,3 +183,26 @@ MOCK
     [ "$status" -eq 0 ]
     [ -z "$output" ]
 }
+
+@test "API connection error: detects APIConnectionError pattern" {
+    echo "anthropic.APIConnectionError: Connection error." > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 500 --phase spec
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"mid-run-api-error"* ]]
+    [[ "$output" == *"### Orchestration Anomalies"* ]]
+    [[ "$output" == *"### Improvement Proposals"* ]]
+}
+
+@test "API connection error: detects Request timed out pattern" {
+    echo "Error: Request timed out after 60 seconds" > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 500 --phase code
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"mid-run-api-error"* ]]
+}
+
+@test "API connection error: no detection when log has no API error pattern" {
+    echo "Some unrelated error occurred." > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 500 --phase spec
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"mid-run-api-error"* ]]
+}

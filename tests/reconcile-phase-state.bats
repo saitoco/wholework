@@ -813,3 +813,32 @@ MOCK_EOF
     [ "$precondition_status" -eq 0 ]
     [ "$completion_status" -eq 0 ]
 }
+
+@test "spec completion: spec exists + no ready label -> mismatch includes hint_recent_commit and hint_pr_state" {
+    SPEC_DIR="$BATS_TEST_TMPDIR/docs/spec-hints"
+    mkdir -p "$SPEC_DIR"
+    touch "$SPEC_DIR/issue-500-my-spec.md"
+    export MOCK_SPEC_PATH="$SPEC_DIR"
+
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "issue" ]]; then echo "phase/spec"; exit 0; fi
+echo "OPEN"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "log" ]]; then echo "abc1234 Add spec for issue #500"; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" spec 500 --check-completion --strict
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
+    [[ "$output" == *'"hint_recent_commit"'* ]]
+    [[ "$output" == *'"hint_pr_state"'* ]]
+}
