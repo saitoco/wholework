@@ -47,7 +47,9 @@ watchdog-timeout-seconds: 3600
 # Patch lock timeout for main-branch push (default: 300 seconds; lock is held only during git merge + push)
 patch-lock-timeout: 300
 
-# Paths excluded from dirty-file detection during /verify (gitignore-style glob list)
+# Paths excluded from dirty-file detection during /verify
+# Supported: dir/** prefix match; simple bash globs (*, ?, [...]) for full-path match
+# Not supported: intermediate ** (e.g. a/**/b) or negation patterns (!)
 verify-ignore-paths:
   - vault/**
   - vault/.obsidian/**
@@ -92,7 +94,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `permission-mode` | string | `"auto"` | Permission mode for `/auto` subprocess. `auto` enables `--permission-mode auto` with allow rules template (see `docs/guide/auto-mode-template.json`); `bypass` uses `--dangerously-skip-permissions` (legacy / opt-out). |
 | `verify-max-iterations` | integer | `3` | Limit verify-reopen loop iterations; stops at N failures and leaves Issue in `phase/verify` for human judgment. Values ≤0, >20, or non-numeric fall back to `3`. |
 | `retro-proposals-upstream` | string | `""` | Upstream repository (`owner/repo`) for routing Skill infrastructure improvement proposals from `/verify` retrospectives. When set, such proposals are sanitized (regex strips absolute paths and downstream issue numbers; LLM removes business-context terms) and filed to this repository; downstream filing is skipped. Unset means downstream filing as before (backward-compatible). |
-| `verify-ignore-paths` | list | `[]` | Glob patterns (gitignore format, block list) of paths to exclude from dirty-file detection in `/verify`. Files matching any pattern are silently ignored and reported on stderr. Unset means no exclusions. |
+| `verify-ignore-paths` | list | `[]` | Glob patterns (block list) of paths to exclude from dirty-file detection in `/verify`. Supported: `dir/**` prefix match (any file inside a directory), simple bash globs (`*`, `?`, `[...]`) for full-path match. Not supported: intermediate `**` (e.g. `a/**/b`) or negation patterns (`!`). Files matching any pattern are silently ignored and reported on stderr. Unset means no exclusions. |
 
 For the full reference including implementation details and YAML parsing rules, see [`modules/detect-config-markers.md`](../../modules/detect-config-markers.md).
 

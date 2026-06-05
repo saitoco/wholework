@@ -67,7 +67,7 @@ Example: `capabilities.invoice-api: true` → `HAS_INVOICE_API_CAPABILITY=true`
 - `verify-max-iterations` is treated as an integer: extract the numeric string; if the value is ≤0, non-numeric, or >20, fall back to the default `3` and log a warning
 - `patch-lock-timeout` is treated as an integer: extract the numeric string; if the value is ≤0 or non-numeric, fall back to the default `300` (used by `scripts/worktree-merge-push.sh`)
 - `retro-proposals-upstream` is treated as a string (`owner/repo` format) with quotes removed (same handling as `production-url`)
-- `verify-ignore-paths` is written in block list format (`- pattern`), parsed the same way as `capabilities.mcp`. Each entry is a glob pattern (gitignore style). If undefined or an empty list, `VERIFY_IGNORE_PATHS=""`
+- `verify-ignore-paths` is written in block list format (`- pattern`), parsed the same way as `capabilities.mcp`. Each entry is a glob pattern. Supported: `dir/**` prefix match and simple bash globs (`*`, `?`, `[...]`); intermediate `**` (e.g. `a/**/b`) and negation (`!`) are not supported. If undefined or an empty list, `VERIFY_IGNORE_PATHS=""`
 - If key does not exist, use default value
 - Comment lines (lines starting with `#`) are ignored
 - Nested values under `capabilities:` section are interpreted as `capabilities.{key}`. Both inline hash format (`capabilities: { browser: true }`) and block format (`capabilities:\n  browser: true`) are supported. If `capabilities:` section is undefined, all capability variables are `false`
