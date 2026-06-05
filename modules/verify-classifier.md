@@ -79,6 +79,8 @@ github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '
 
 When `/verify` detects `github_check "gh pr checks"` in an acceptance condition for a patch-route Issue (PR_NUMBER is empty), it treats the condition as UNCERTAIN and recommends switching to the `gh run list` form.
 
+**Note:** When converting from `github_check "gh pr checks" "JOB_NAME"`, also replace the `expected_value` from the job name to `"success"`. `gh run list` outputs a run-level table (STATUS / conclusion / TITLE / WORKFLOW / ...) and does not include job names — specifying a job name as `expected_value` will never match and will always FAIL even when CI is green.
+
 ## Output
 
 Assign the `<!-- verify-type: auto|opportunistic|manual -->` tag to the end of each post-merge condition. Place the tag one half-width space before the line break at the end of the condition text.

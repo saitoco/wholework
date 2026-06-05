@@ -388,7 +388,7 @@ After creating `## Verification > Pre-merge`, compare Spec items against Issue b
 **Patch route verify command check:**
 
 After `## Verification > Pre-merge` is finalized and the Issue body is updated, if Size is `XS` or `S` (patch route — no PR exists), scan `## Verification > Pre-merge` in the Spec for `github_check "gh pr checks"` entries.
-- If found: output "Warning: patch route — `github_check "gh pr checks"` is incompatible (no PR exists in patch route). Auto-fixing to `github_check "gh run list"` form." and replace each with `github_check "gh run list --limit=1 --json conclusion --jq '.[0].conclusion'"` (add `--workflow=<filename>` if there are multiple workflow files under `.github/workflows/`). Update Spec file using Edit tool. Also update Issue body via `gh-issue-edit.sh`.
+- If found: output "Warning: patch route — `github_check "gh pr checks"` is incompatible (no PR exists in patch route). Auto-fixing to `github_check "gh run list"` form." and replace each with `github_check "gh run list --limit=1 --json conclusion --jq '.[0].conclusion'" "success"` (change `expected_value` from the job name to `"success"` — `gh run list` outputs run-level conclusion, not job names; add `--workflow=<filename>` if there are multiple workflow files under `.github/workflows/`). Update Spec file using Edit tool. Also update Issue body via `gh-issue-edit.sh`.
 
 **Changed-file modification types (examples, both templates):**
 
