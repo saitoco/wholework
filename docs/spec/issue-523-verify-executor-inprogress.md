@@ -41,3 +41,30 @@
 ## Notes
 
 なし
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- None
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `gh_command contains --json conclusion AND output is empty string → PENDING` の条件を safe モード・full モード両方に追加した。full モードは既存の「Same in_progress detection ... apply in full mode」文言を更新して明示する形を採用した（別途処理を追加するよりも保守性が高い）
+- `--json conclusion` をキーとしたため `--json status,conclusion` など他フィールドとの組み合わせにも対応する（部分一致）
+- `detail` メッセージは既存の `in_progress` 検出と差別化して「CI run conclusion is null (in_progress)」とし、発生理由を明確にした
+
+### Deferred Items
+- `gh run list` 形式で status フィールドを追加参照する案（Spec で言及）はスコープ外とした。空 conclusion での PENDING 検出で十分であり、status フィールドを参照するには `gh run list --json conclusion,status` への変換が必要なため
+- full モードでの timeout 挙動は既存の 30s のままで変更なし
+
+### Notes for Next Phase
+- `/verify` フェーズでの実動作確認（Post-merge AC）は Issue #505 のような実事例で確認すること
+- 変更は 1 行修正のみ（safe モード用 AND 条件追加 + full モード説明更新）なので review 負荷は低い
