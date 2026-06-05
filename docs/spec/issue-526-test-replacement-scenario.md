@@ -47,3 +47,32 @@
 
 - `skills/spec/skill-dev-constraints.md` は `load_when: spec_depth: full` かつ `file_exists_any: [scripts/validate-skill-syntax.py]` のため、Wholework 自身の開発 (L/XL) の場合のみロードされる。汎用プロジェクトへの適用は `agents/review-bug.md` 側の変更（Step 1）が担う。
 - フィルター criterion 4 ("Insufficient test coverage") との区別: 新ブロックの Note 行で明示。テスト置き換え時の regression 検出は criterion 4 の対象外であるため、既存フィルター条件の変更は不要。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `agents/review-bug.md` に "Test Replacement Scenario Coverage" ブロックを `### 1. Bug/Logic Error Detection` 内の LLM-to-Shell Pattern Migration Risks の直後に配置 — 既存パターンとの流れを維持し一貫性を保つ
+- `skills/spec/skill-dev-constraints.md` の `bats self-reference exclusion` 行の直後に新 SHOULD 制約行を配置 — bats テスト関連制約の近傍に置くことで文脈的な関連性を明示
+- commit prefix を `feat:` で統一 — Issue Type は Task だが additive なガイドライン追加はfeatureとして解釈（`chore:` のほうが厳密だが変更済みのためそのまま）
+
+### Deferred Items
+- `spec_depth: full` ロック条件により `skill-dev-constraints.md` は Wholework 自身の L/XL 開発時のみロード — 汎用プロジェクトへの普及は `agents/review-bug.md` 側が担う（Spec Notes 参照）
+
+### Notes for Next Phase
+- verify phase では rubric チェック（review-bug agent への追加）と CI green を確認すること
+- post-merge observation: 次に bats テスト置き換えを含む PR がレビューされた際に、削除テストのシナリオ網羅が実際に捕捉されるか観察する
