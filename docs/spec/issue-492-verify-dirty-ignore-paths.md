@@ -156,12 +156,12 @@ Spec と PR diff の間に構造的な乖離なし。`--untracked-files=all` へ
 - `_is_ignored` が "gitignore format" と宣伝しているにもかかわらず bash `case` グロブの制約で中間 `**` がサポートされない点は、将来の verify command 追加時に注意が必要（CONSIDER として inline comment を投稿済み）。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light 採用（Issue Size M + `--light` フラグ）: 全5件の pre-merge AC は PASS。CI bats tests も SUCCESS 確認
-- MUST 問題なし → Step 12 の実装修正はスキップ。SHOULD/CONSIDER の inline comment はauthorの裁量に委ねる
-- レビュー結果: SHOULD 1件（YAML末尾空白）+ CONSIDER 3件（detect-config-markers補足・bash glob制約ドキュメント・"silently"表現）
+- PR #531 を `main` ブランチへスカッシュマージ（`gh pr merge --squash --delete-branch`）
+- `mergeable=true, ci_status=success, review_status=approved` — コンフリクトなし、テストスキップ（CI 通過済み）
+- `closes #492` が PR body に含まれるため、`main` マージにより Issue #492 は自動クローズ
 
 ### Deferred Items
 - SHOULD: `check-verify-dirty.sh` のYAMLパターン末尾空白トリム未対応（通常のYAML編集では発生しにくいためスキップ判断）
@@ -169,5 +169,6 @@ Spec と PR diff の間に構造的な乖離なし。`--untracked-files=all` へ
 - CONSIDER: docs/guide/customization.md の "silently" 表現修正（日本語版は正確）
 
 ### Notes for Next Phase
-- 全 pre-merge AC が PASS → `/merge 531` でマージ可能
-- post-merge AC: trading リポジトリの `.wholework.yml` に `verify-ignore-paths: ["vault/**"]` を設定して手動確認が必要
+- post-merge AC: trading リポジトリの `.wholework.yml` に `verify-ignore-paths: ["vault/**"]` を設定し、`vault/` のみ dirty な状態で `/auto N` の verify フェーズが警告のみで継続することを手動確認する
+- pre-merge verify command は全 PASS 済み（CI bats tests SUCCESS 含む）
+- None of the deferred SHOULD/CONSIDER items are blocking for verify
