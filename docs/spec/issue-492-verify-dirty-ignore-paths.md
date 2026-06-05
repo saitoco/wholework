@@ -200,7 +200,7 @@ Spec と PR diff の間に構造的な乖離なし。`--untracked-files=all` へ
 
 #### verify
 - 全 pre-merge AC（5件）が PASS。決定的検証（`file_contains`/`github_check`）に加え、ローカル bats 実行で新規シナリオ4件（vault のみ→exit 0 / vault+scripts→exit 1 / `.obsidian`→exit 0 / unrelated spec→exit 2 回帰）の実挙動を確認。FAIL/UNCERTAIN なし。
-- post-merge AC（trading 実プロジェクトでの目視確認）は外部 private repo 依存のため manual deferred。Issue は `phase/verify` に留め、確認後の `/verify 492` 再実行で `phase/done` 遷移。
+- post-merge AC（trading 実プロジェクトでの目視確認）は外部 private repo 依存のため初回 verify では manual deferred（`phase/verify` 保留）。その後ユーザーが下流プロジェクトで `verify-ignore-paths` を設定し動作確認、`/verify 492` 再実行で当該条件を PASS としてチェック → 全条件 PASS で `phase/done` 遷移・完了。外部リポジトリ依存の manual 条件が「ユーザー確認 → /verify 再実行」フローで正しくクローズできることを確認。
 
 ### Improvement Proposals
 - **`verify-ignore-paths` の glob セマンティクス明確化**: ドキュメント（`customization.md`）が "gitignore format" を称するが、実装は `dir/**` プレフィックス形式と単純 `case` glob のみ対応で、gitignore の中間 `**`（`a/**/b`）や否定（`!`）は非対応。ドキュメント表現を実サポート範囲に合わせて修正するか、対応グロブ範囲を明記すべき（review で CONSIDER 投稿済み）。
