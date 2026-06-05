@@ -422,12 +422,13 @@ If there are items under "Deviations from Design" (reordering of implementation 
 **Steps:**
 1. If no retrospective information, write "N/A"
 2. Append `## Code Retrospective` section after `## Spec Retrospective` in the Spec (`$SPEC_PATH/issue-$NUMBER-*.md`) using the Edit tool
-3. If "Deviations from Design" exist, also update the "Implementation Steps" section in the Spec to match the actual implementation
-4. **Phase Handoff write** (before commit):
+3. If `scripts/check-forbidden-expressions.sh` exists, Read `${CLAUDE_PLUGIN_ROOT}/skills/code/forbidden-expressions-check.md` and follow the "Retrospective Guard" section.
+4. If "Deviations from Design" exist, also update the "Implementation Steps" section in the Spec to match the actual implementation
+5. **Phase Handoff write** (before commit):
    Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Write Procedure" section.
    Parameters: `SPEC_PATH`, `ISSUE_NUMBER=$NUMBER`, `PHASE_NAME=code`.
    The handoff is staged with the Spec in the same `git add` and committed together.
-5. Commit (push is done in Step 13 Worktree Exit):
+6. Commit (push is done in Step 13 Worktree Exit):
    ```bash
    git add $SPEC_PATH/issue-$NUMBER-*.md
    git commit -s -m "Add code retrospective for issue #$NUMBER
