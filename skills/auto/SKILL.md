@@ -65,6 +65,17 @@ If no flags, fetch Size to auto-detect route:
 ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh "$NUMBER" 2>/dev/null
 ```
 
+Set `REVIEW_DEPTH` from flags or Size (used unchanged in Step 4 unless Step 3a refreshes it):
+
+| Condition | REVIEW_DEPTH |
+|---|---|
+| `--review=full` flag present | `--full` |
+| `--review=light` flag present | `--light` |
+| `--patch` flag present | (not applicable — patch route) |
+| Auto-detect or `--pr` without `--review=...`: Size M | `--light` |
+| Auto-detect or `--pr` without `--review=...`: Size L | `--full` |
+| Auto-detect or `--pr` without `--review=...`: other/unset | `--light` (safe fallback) |
+
 ### Step 3: `phase/ready` Label Check
 
 Fetch labels with `gh issue view $NUMBER --json labels -q '.labels[].name'` and branch based on label state:
@@ -217,7 +228,7 @@ Full phase sequence:
 4. Extract PR number via exact-match filter (matches SSoT branch name worktree-code+issue-N established by #310): `gh pr list --json number,headRefName | jq -r ".[] | select(.headRefName == \"worktree-code+issue-$NUMBER\") | .number" | head -1`
 5. If PR number cannot be fetched: report error and go to Step 6
 6. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh review $NUMBER --pr $PR_NUMBER --check-precondition --warn-only`
-7. Output `[2/4] review`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh $PR_NUMBER [--light|--full]` via Bash (timeout: 600000) (M→`--light`, L→`--full`); on success output `[2/4] review → done`
+7. Output `[2/4] review`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh $PR_NUMBER $REVIEW_DEPTH` via Bash (timeout: 600000) (REVIEW_DEPTH set in Step 2, refreshed by Step 3a if applicable); on success output `[2/4] review → done`
 8. If review fails: completion check `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh review $NUMBER --pr $PR_NUMBER --check-completion` — if `matches_expected: true`, override to success; otherwise go to Step 6
 9. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh merge $NUMBER --pr $PR_NUMBER --check-precondition --warn-only`
 10. Output `[3/4] merge`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh $PR_NUMBER` via Bash (timeout: 600000); on success output `[3/4] merge → done`
