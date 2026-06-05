@@ -145,3 +145,29 @@ Nothing to note. レビューで発見した CONSIDER 1件（regression test 未
 ### Acceptance Criteria Verification Difficulty
 
 Nothing to note. Pre-merge 3件すべて PASS（rubric 2件 + file_contains 1件）。UNCERTAIN なし。verify command が well-specified で自動判定が容易だった。`rubric` 条件は具体的なファイル名と期待内容を明示しており、grader が迷わず PASS/FAIL を判定できた。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC を rubric 2件 + file_contains 1件で検証可能化。#538 の ambiguous Domain Classification を /spec が適切に分解: CI 全チェック完了確認は Core（`skills/review/SKILL.md` Step 9）、forbidden-expressions guard は Domain file（`skill-dev-recheck.md` / `forbidden-expressions-check.md`）+ `skills/code/SKILL.md` 条件付き参照。責務分離が明確で実装一発通過に寄与。
+
+#### design
+- Core/Domain 分解が妥当。実装ステップ3の番号記述ミス（「7 まで繰り上げ」だが元は5ステップ）は実装側で矛盾なく解釈・文書化済み（実害なし）。
+
+#### code
+- 一発全 CI 通過、rework ゼロ。新規 Domain file `forbidden-expressions-check.md` 追加 + 既存 `skill-dev-recheck.md` 拡張。
+
+#### review
+- ⚠️ **本バグの再現を本 run の review 自身が示した**: /review（#540）が main の**未修正** `skills/review/SKILL.md` を使用したため、bats チェックが IN_PROGRESS の段階で「CI 全 SUCCESS」と報告した（#500 に続き2度目の再現）。今回は FAILURE ではなく IN_PROGRESS だったため実害はなく、親 /auto が merge 前に `wait-ci-checks.sh` で全チェック完了を確認してから merge した。本 PR でマージされた修正（Step 9 の全チェック terminal 待機）が次回 /review からこの挙動を直接解消する。
+- review CONSIDER 1件（regression test 未追加）。SKILL.md プロシージャ変更特有で必須ではない。
+
+#### merge
+- mergeable=true、squash merge、conflict なし。親セッションが review の CI 報告を鵜呑みにせず `wait-ci-checks.sh` で全チェック完了を確認してから merge した（防御的運用）。
+
+#### verify
+- Pre-merge 3/3 PASS（rubric 2 + file_contains 1）。Post-merge 2件（opportunistic）は guard 有効化後の今後 run での観察が必要なため deferred → `phase/verify`。
+
+### Improvement Proposals
+- N/A — 本 Issue 自体が #500 で発見した「/review の CI-pass 誤報告」バグの fix であり、本 run で再現した review の premature CI-pass 報告は本 PR の修正で解消される。review CONSIDER（regression test 未追加）は SKILL.md プロシージャ変更で必須ではなく新規 Issue 化は見送り。
