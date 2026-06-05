@@ -82,6 +82,13 @@ When the PR replaces an LLM-executed check with a grep/awk/sed shell script patt
 - Check if an exclusion mechanism (`grep -v`, `--exclude`, path scoping, etc.) is absent for known false positive sources
 - Report at SHOULD level if false positive sources exist and no exclusions are present
 
+**Test Replacement Scenario Coverage:**
+When the PR deletes or replaces existing test cases (lines starting with `-` that contain `@test`, test function definitions, or similar markers):
+- Identify the scenarios and behaviors verified by the deleted tests (inspect test names and assertion logic in `-` lines)
+- Check whether new or remaining tests cover all those deleted-test scenarios
+- Report at SHOULD level if a deleted test's scenario is not covered by any new or remaining test
+- Note: this is distinct from "Insufficient test coverage" (filter criterion 4); it detects coverage regression when existing tests are replaced, not missing tests for new code
+
 ### 2. False Positive Filtering
 
 For each detected issue, verify whether it should be flagged:

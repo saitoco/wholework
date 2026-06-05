@@ -57,6 +57,7 @@ SHOULD constraints (best practices, manual check — examples):
 | Shared module reference paths | Use full `${CLAUDE_PLUGIN_ROOT}/modules/xxx.md` paths (no abbreviations) | tech.md |
 | False positive exclusion set | Note false-positive exclusion policy for broadly-used terms (Task, Agent, etc.) in validation implementations | #810 |
 | bats self-reference exclusion | When a detection script's bats test file contains the detected patterns as test fixtures, add self-reference exclusion (`grep -v 'tests/xxx.bats'`) to the script invocation in Implementation Steps to prevent false positives | #272 |
+| Test replacement scenario coverage | When implementation includes deleting or replacing existing test cases (e.g., bats `@test` blocks), verify that all scenarios covered by deleted tests are present in new or remaining tests | #526 |
 | `settings.json` Skill entry | Include `settings.json` `Skill(skill-name)` permission for new skills | #725 |
 | Read instruction for extracted modules | When extracting to a module, write Read instruction as "read `${CLAUDE_PLUGIN_ROOT}/modules/xxx.md` and follow the `Processing Steps` section" | #716 |
 | `git add -f` for .gitignore targets | Note `git add -f` requirement in implementation steps for `.gitignore`-tracked files | #901 |
