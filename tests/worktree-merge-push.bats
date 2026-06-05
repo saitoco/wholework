@@ -165,6 +165,82 @@ MOCK
     grep -q "push origin release/v1" "$GIT_LOG"
 }
 
+@test "--from with base-diverged triggers worktree rebase fallback" {
+    WORKTREE_PATH="$BATS_TEST_TMPDIR/fake-worktree"
+    mkdir -p "$WORKTREE_PATH"
+
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GIT_LOG"
+if [[ "\$1" == "rev-parse" && "\$2" == "--show-toplevel" ]]; then
+    echo "${BATS_TEST_TMPDIR}/test-repo"
+    exit 0
+fi
+if [[ "\$1" == "merge" ]]; then
+    COUNT_FILE="${BATS_TEST_TMPDIR}/merge_count"
+    count=0
+    [ -f "\$COUNT_FILE" ] && count=\$(cat "\$COUNT_FILE")
+    count=\$((count + 1))
+    echo "\$count" > "\$COUNT_FILE"
+    # First two merge attempts fail; third succeeds
+    [ "\$count" -le 2 ] && exit 1
+    exit 0
+fi
+if [[ "\$1" == "worktree" && "\$2" == "list" ]]; then
+    printf "worktree ${WORKTREE_PATH}\nbranch refs/heads/test-branch\n\n"
+    exit 0
+fi
+# git -C <path> rebase origin/main
+if [[ "\$1" == "-C" && "\$3" == "rebase" ]]; then
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"base may have diverged"* ]]
+    grep -q "worktree list --porcelain" "$GIT_LOG"
+    grep -q "rebase origin/main" "$GIT_LOG"
+    grep -q "push origin main" "$GIT_LOG"
+}
+
+@test "--from with base-diverged and rebase conflict aborts and exits non-zero" {
+    WORKTREE_PATH="$BATS_TEST_TMPDIR/fake-worktree"
+    mkdir -p "$WORKTREE_PATH"
+
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GIT_LOG"
+if [[ "\$1" == "rev-parse" && "\$2" == "--show-toplevel" ]]; then
+    echo "${BATS_TEST_TMPDIR}/test-repo"
+    exit 0
+fi
+if [[ "\$1" == "merge" ]]; then
+    exit 1
+fi
+if [[ "\$1" == "pull" ]]; then
+    exit 0
+fi
+if [[ "\$1" == "worktree" && "\$2" == "list" ]]; then
+    printf "worktree ${WORKTREE_PATH}\nbranch refs/heads/test-branch\n\n"
+    exit 0
+fi
+# git -C <path> rebase origin/main fails (conflict)
+if [[ "\$1" == "-C" && "\$3" == "rebase" && "\$4" != "--abort" ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Rebase"*"failed with conflicts"* ]]
+    ! grep -q "push" "$GIT_LOG"
+}
+
 @test "conflict markers cause abort with non-zero exit and no push" {
     cat > "$MOCK_DIR/git" <<MOCK
 #!/bin/bash

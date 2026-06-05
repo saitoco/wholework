@@ -46,16 +46,24 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 1. Log the FF failure to stderr: `echo "FF merge failed, attempting git pull --rebase origin <base>..." >&2`
 2. Run `git pull --rebase origin <base-branch>` to bring the local branch up to date with remote
 3. Re-attempt `git merge <worktree-branch> --ff-only`
-4. If the second attempt also fails, propagate the error (do not loop)
+4. If the second attempt also fails (base advanced while worktree was running — local base is already in sync with origin but worktree branch has diverged):
+   a. Log to stderr: `echo "FF merge still failed; base may have diverged. Rebasing ..." >&2`
+   b. Detect the worktree path for FROM_BRANCH via `git worktree list --porcelain | awk -v b="refs/heads/<from>" '/^worktree /{p=$2} $0 == "branch " b {print p; exit}'`
+   c. If a worktree path is found: run `git -C <worktree-path> rebase origin/<base-branch>` (rebase from inside the checked-out worktree, which avoids the "already checked out" error); on conflict, run `git -C <worktree-path> rebase --abort 2>/dev/null || true` and exit 1
+   d. If no worktree path is found (branch not checked out in any worktree): run `git rebase <base-branch> <from-branch>`; on conflict, run `git rebase --abort 2>/dev/null || true` and exit 1
+   e. On successful rebase: re-attempt `git merge <worktree-branch> --ff-only` (third attempt); failure propagates via `set -e`
 
 ### Escalation
 - If `git pull --rebase` itself fails (e.g., rebase conflict), abort with a non-zero exit and output an error message requesting manual conflict resolution
-- If two consecutive FF-merge failures occur, hand off to recovery sub-agent (#316) or request human intervention
+- If the rebase in step 4 encounters conflicts, abort rebase and exit 1 — hand off to recovery sub-agent (#316) or request human intervention
+- Automatic rebase is attempted only once; no further looping after step 4e failure
 
 ### Rationale
-- Inline logic in `scripts/worktree-merge-push.sh` (lines 81–85)
+- Inline logic in `scripts/worktree-merge-push.sh`
 - `git pull --rebase` is preferred over `git merge origin/<base>` to preserve a linear history
-- See also: #314 (phase state reconciler), #308 (orchestration improvement series)
+- Step 4 (base-diverged rebase) added in #522: the existing `git pull --rebase` retry (steps 1–3) only handles the case where local base lags origin; when local base is already in sync with origin but the worktree branch was forked before a concurrent merge advanced base, a second ff-only failure occurs and worktree-branch rebase is required
+- `git -C <worktree-path> rebase` is preferred over `git rebase <base> <branch>` when the branch is checked out in a worktree, because git rejects rebase of a branch that is currently checked out elsewhere ("already checked out")
+- See also: #314 (phase state reconciler), #308 (orchestration improvement series), #517 (incident that triggered #522)
 
 ---
 
