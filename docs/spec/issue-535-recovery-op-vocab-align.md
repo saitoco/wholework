@@ -59,3 +59,32 @@ agent と executor の recover step 規約が三重に不一致:
 - **executor コード変更なし**: `spawn-recovery-subagent.sh` の recover 分岐は既に `run_command` / `git_commit_amend_signoff` をサポート（line 225-237）。本 Issue は agent 側の語彙・schema を executor に合わせる SSoT 整合であり、executor の op 実装は追加しない（代替案: executor に名前付き op を実装する方向は surface 拡大のため不採用。#535 retrospective 参照）。
 - **セキュリティ境界（/review で要確認）**: 本 fix により recovery sub-agent が run_command で feature branch への push + PR 作成を自動実行可能になる。ただし (1) `run_command` は既存機能で新規能力追加ではない、(2) `validate-recovery-plan.sh` の forbidden（force-push / main 直 push / `gh pr merge` / `gh issue close`）と agent Constraints（破壊的 fs 禁止）でガード、(3) PR は通常の review/merge ゲートを通る。/review は agent の run_command ガイダンスが forbidden 境界を逸脱しないか確認すること。
 - **bats モック**: 復旧テストは git/gh を MOCK_DIR でモックし実 push/PR を発生させない。既存テストの mock パターン（`make_claude_mock`、`WHOLEWORK_SCRIPT_DIR`）を踏襲。
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Specの実装ステップ（1→2の順序）を忠実に実施した。
+
+### Design Gaps/Ambiguities
+- Specでは「setup の MOCK_DIR に git/gh の最小モック」と記述されていたが、既存setupは他テストの副作用を避けるためtest関数内に局所的に配置した。これはbatsの慣用パターンに沿った選択であり機能的問題はない。
+- Specのbats例示「`$SCRIPT code 42 --log`」は`--log`引数で終端しており実ファイルパスが必要だが、既存テストの`$LOG_FILE`変数パターンを踏襲して自然に解決した。
+
+### Rework
+- なし。初回実装でテスト（ok 10）がPASSし修正不要だった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- executor SSoTアプローチ採用：agent側op語彙をexecutorの実実装（run_command/git_commit_amend_signoff）に一致させ、executor側コードは変更しない
+- batsテストはtest関数内にgit/ghモックを局所配置（setup関数は変更なし）
+- watchdog-kill-before-PRの例示JSONはSpecの3-step構成（add+commit→push→gh pr create）で実装
+
+### Deferred Items
+- CI実行結果のgithub_checkはPR #542作成後に確認が必要（/verifyフェーズ）
+- post-merge: 実運用でwatchdog-kill-before-PRシナリオを再現し自動復旧を確認する（manual）
+
+### Notes for Next Phase
+- /review はsecurity境界を確認すること：run_commandガイダンスがforbidden境界（force-push/main直push/gh pr merge/gh issue close）を逸脱しないか
+- validate-recovery-plan.shのforbiddenパターンは変更なし（既存ガード維持）
+- `agents/orchestration-recovery.md`の"This agent is a read-only diagnostician"という記述が変更後も整合しているか確認推奨（実際は診断のみ、実行はexecutorが行う構造は維持）
