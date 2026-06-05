@@ -141,6 +141,27 @@ _completion_issue() {
   fi
 }
 
+# Append restoration hints to an actual JSON object for phase label recovery.
+# Input: existing actual JSON string (must end with })
+# Output: JSON with hint_recent_commit and hint_pr_state appended
+_append_hints_to_actual() {
+  local json="$1"
+
+  local recent_commit
+  recent_commit=$(git log --oneline -1 --grep="#${ISSUE_NUMBER}" 2>/dev/null | head -1 || true)
+  local hint_commit_val="null"
+  [[ -n "$recent_commit" ]] && hint_commit_val="\"$(_escape_json "$recent_commit")\""
+
+  local pr_state
+  pr_state=$(gh pr list --search "closes #${ISSUE_NUMBER}" --state all --json state \
+    -q '.[0].state' 2>/dev/null || true)
+  local hint_pr_val="null"
+  [[ -n "$pr_state" ]] && hint_pr_val="\"$(_escape_json "$pr_state")\""
+
+  printf '%s,"hint_recent_commit":%s,"hint_pr_state":%s}' \
+    "${json%\}}" "$hint_commit_val" "$hint_pr_val"
+}
+
 _completion_spec() {
   local spec_path
   spec_path=$("$SCRIPT_DIR/get-config-value.sh" spec-path "docs/spec" 2>/dev/null) || spec_path="docs/spec"
@@ -159,14 +180,16 @@ _completion_spec() {
   local actual_json="{\"labels\":${labels_json},\"spec_file\":${spec_val}}"
 
   if [[ -z "$spec_file" ]]; then
-    _handle_mismatch "spec file not found under ${spec_path} for issue #${ISSUE_NUMBER}" "$actual_json"
+    _handle_mismatch "spec file not found under ${spec_path} for issue #${ISSUE_NUMBER}" \
+      "$(_append_hints_to_actual "$actual_json")"
     return
   fi
 
   if echo "$labels" | grep -qE '^phase/(ready|code|review|merge|verify|done)$'; then
     _emit_result "true" "spec file found and phase label is ready-or-later for issue #${ISSUE_NUMBER}" "$actual_json"
   else
-    _handle_mismatch "spec file found but no ready-or-later phase label for issue #${ISSUE_NUMBER}" "$actual_json"
+    _handle_mismatch "spec file found but no ready-or-later phase label for issue #${ISSUE_NUMBER}" \
+      "$(_append_hints_to_actual "$actual_json")"
   fi
 }
 
