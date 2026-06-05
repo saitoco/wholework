@@ -279,12 +279,12 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 2. If `matches_expected: true`: phase completed before the API error; override to success and continue
 3. If `matches_expected: false`:
    a. Inspect restoration hints from `actual` JSON:
-      - `hint_spec_file`: spec file path if found (indicates spec phase completed)
+      - `spec_file`: spec file path if found (indicates spec phase completed; existing field)
       - `hint_recent_commit`: recent commit referencing the issue (indicates code was committed)
       - `hint_pr_state`: PR state if a PR exists for the issue
    b. Restore the phase label based on hints:
-      - No hint_spec_file: spec not created; restore `phase/spec` label and retry spec
-      - hint_spec_file present, no PR, no recent commit: spec done, label lost; restore `phase/ready`
+      - `spec_file` is null: spec not created; restore `phase/spec` label and retry spec
+      - `spec_file` present, no PR, no recent commit: spec done, label lost; restore `phase/ready`
       - hint_recent_commit present (commit without PR): code committed; restore `phase/code`
       - hint_pr_state is OPEN: PR exists; restore `phase/review` or `phase/merge`
    c. Retry the failed phase once via the corresponding `run-*.sh <issue_number>`

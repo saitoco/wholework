@@ -78,9 +78,8 @@ For precondition checks, `reconcile-phase-state.sh` verifies whether the require
 | `actual.commits_found` | boolean | When git log is checked | `true` if matching commit found on origin/main |
 | `actual.spec_file` | string\|null | When spec is checked | Path to spec file, or `null` if not found |
 | `actual.issue_state` | string | When issue state is checked | `"OPEN"` or `"CLOSED"` |
-| `actual.hint_spec_file` | string\|null | When phase label mismatch detected | Path to spec file if found, otherwise `null`. Added for phase label recovery. |
-| `actual.hint_recent_commit` | string\|null | When phase label mismatch detected | Most recent git commit referencing the issue, or `null`. |
-| `actual.hint_pr_state` | string\|null | When phase label mismatch detected | PR state (`"OPEN"`, `"MERGED"`, `"CLOSED"`) if found, otherwise `null`. |
+| `actual.hint_recent_commit` | string\|null | When phase label mismatch detected | Most recent git commit referencing the issue, or `null`. Added for phase label recovery. |
+| `actual.hint_pr_state` | string\|null | When phase label mismatch detected | PR state (`"OPEN"`, `"MERGED"`, `"CLOSED"`) if found, otherwise `null`. Added for phase label recovery. |
 | `diagnosis` | string | Always | One-line human-readable description |
 
 **Exit codes:**
