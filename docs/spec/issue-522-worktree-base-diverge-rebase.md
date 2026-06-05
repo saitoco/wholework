@@ -58,3 +58,35 @@
 - **worktree checked out 中の rebase 問題**: `git rebase $BASE $FROM_BRANCH` は worktree で checkout 中のブランチに対して失敗（"already checked out"）するため、`git -C "$worktree_path" rebase origin/$BASE_BRANCH`（worktree 内での rebase）を優先する。
 - **bash 3.2+ 互換**: `awk -v` は POSIX awk で対応済み、`git -C` は git 1.8.5+ で利用可能。`mapfile` 等の bash 4+ 機能は不使用。
 - **競合時の挙動変更なし**: 既存の競合時 abort（conflict-marker-residual チェック）は維持される。新フォールバックも競合時は rebase --abort して exit 1 し、従来同様にユーザーへ委ねる。
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+- 乖離なし。Spec記載の4ファイルがすべて変更されており、Implementation Steps と PR diff が 1:1 で対応している。
+
+### 繰り返しイシュー
+
+- 特になし。CONSIDERイシュー1件（elseブランチのテスト）のみで、同種の繰り返しパターンはなし。
+
+### 受け入れ条件検証の難易度
+
+- verify commandはすべて適切に機能した（rubric×2, grep×1, github_check×1）。
+- `github_check "gh run list ..."` はsafeモードのallowlistに含まれないが、PR statusCheckRollupで代替検証できた。今後、CI green検証には `github_check "gh pr checks $PR_NUMBER" "Run bats tests"` 形式を使うとsafeモードでも直接実行可能になる（改善余地）。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- REVIEW_DEPTH=light（Size=M + --lightフラグ）で4側面統合レビューを実施。MUST/SHOULDイシューなし。
+- `review-light` サブエージェントタイプが環境に存在しないため、インラインで4側面レビューを実施した。
+- CONSIDER 1件（elseブランチテスト未追加）はスキップ — Spec Notesで言及済みの稀ケースでMUSTではない。
+
+### Deferred Items
+- elseブランチ（FROM_BRANCHがworktreeにない場合の`git rebase $BASE $FROM`）のテストカバレッジ追加を将来のフォローアップIssueとして検討可能。
+- Post-merge条件（長時間フェーズ中のbase前進を再現して手動確認）は/verify後に実施。
+
+### Notes for Next Phase
+- MUSTイシューなし → `/merge 532` で直接マージ可能。
+- 受け入れ条件は4/4 PASS（Post-mergeは別途）。全CIジョブSUCCESS。
+- `review-light`エージェントタイプが利用できない場合は4側面をインラインで実施するフォールバックが機能することを確認。
