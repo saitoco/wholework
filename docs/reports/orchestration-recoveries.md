@@ -64,6 +64,46 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
+## 2026-06-05 02:39 UTC: false-positive silent-no-op on patch route (#523, #526)
+
+### Context
+- Issue #523 and #526, phase: code (patch route, `/auto --batch`)
+- Source: wrapper-anomaly-detector
+- Wrapper: run-code.sh (via run-auto-sub.sh), exit code: 0
+- Log tail: "[silent-no-op] LLM reported success in phase code (exit 0) but no commit for #N found in recent git log"
+
+### Diagnosis
+- `detect-wrapper-anomaly.sh` checked the local git log for a `closes #N` commit immediately after `run-code.sh`, but patch-route `/code` pushes the commit to origin/main via `worktree-merge-push.sh`. The local main branch was not yet synced, so the detector saw no commit and false-flagged a silent no-op. The authoritative check (`reconcile-phase-state.sh code-patch --check-completion`, which queries origin/main) returned `matches_expected:true` — commits `df3c7a7` (#523) and `fb487cc` (#526) were merged.
+
+### Recovery Applied
+- No code recovery needed (benign false positive). Parent session reconciled the true state via `git pull` + `reconcile-phase-state.sh --check-completion` and continued; `update_batch` marked both complete.
+
+### Outcome
+- success (benign false positive; no work lost)
+
+### Improvement Candidate
+- 未起票 (retro-proposals via #523/#526 verify retrospective で起票予定): `detect-wrapper-anomaly.sh` should `git fetch` / consult origin/<base> (or defer to `reconcile-phase-state.sh --check-completion`) before concluding a patch-route silent no-op.
+
+## 2026-06-05 01:40 UTC: watchdog kill before PR creation; recovery sub-agent op unsupported (#522)
+
+### Context
+- Issue #522, phase: code (pr route, `/auto --batch`)
+- Source: recovery-sub-agent
+- Wrapper: run-code.sh (via run-auto-sub.sh), exit code: 1
+- Log tail: "[spawn-recovery] action=recover ... ERROR: unsupported op 'push_branch' in step 1"
+
+### Diagnosis
+- `run-code.sh --pr` was watchdog-killed after implementing the change in worktree `code+issue-522` (+107 lines across 4 files) but before commit/PR creation (#385 pattern). Tier 1 reconcile (no PR) and Tier 2 fallback did not resolve; Tier 3 `spawn-recovery-subagent` produced a plan with `op=push_branch`, which the recovery executor does not support → exit 1.
+
+### Recovery Applied
+- Parent session manually recovered: committed the worktree changes with sign-off, pushed `worktree-code+issue-522`, created PR #532, then ran `run-review.sh --light` (MUST 0, CI green) and `run-merge.sh` (squash, closes #522).
+
+### Outcome
+- success (manual)
+
+### Improvement Candidate
+- 未起票 (retro-proposals via #522 verify retrospective で起票予定): add a supported `push_branch` recovery op (commit→push→PR create) to the recovery executor / `validate-recovery-plan.sh`, or constrain the recovery sub-agent to emit only supported ops. Would have automated the #385 watchdog-kill-before-PR recovery.
+
 ## 2026-06-03 16:15 UTC: verify worktree FF merge failed (concurrent push advanced base)
 
 ### Context

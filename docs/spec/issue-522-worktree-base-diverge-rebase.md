@@ -90,3 +90,24 @@
 - closes #522 がPR bodyに含まれ、BASE_BRANCH=main → Issue #522は自動クローズ済み。
 - 変更対象は `scripts/worktree-merge-push.sh`、`modules/orchestration-fallbacks.md`、`modules/worktree-lifecycle.md`、`tests/worktree-merge-push.bats` の4ファイル。
 - Post-merge verify commandは「長時間フェーズ中のbase前進を再現し手動確認」（verify-type: manual）のみ残存。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 4件（rubric×2 / grep / github_check）自動検証可能。base-diverged ケースの自動復旧 + 競合時 abort + bats テストまで網羅した良質な AC。
+
+#### code
+- **watchdog kill による中断（#385 パターン）**: `/auto --batch` の code phase（pr route）で `run-code.sh 522 --pr` が実装完了後・commit/PR 作成前に watchdog kill された。worktree `code+issue-522` 内に未コミットの実装（worktree-merge-push.sh の rebase fallback + tests 等 4ファイル, +107行）が残存していた。
+- run-auto-sub.sh の内部リカバリが Tier 3（recovery sub-agent）まで escalation したが、生成された recovery plan の `op=push_branch` が **recovery executor で未サポート**（`ERROR: unsupported op 'push_branch'`）のため復旧失敗し exit 1。
+- 親セッションが手動リカバリ: worktree の変更を commit（sign-off 付き）→ push → PR #532 作成 → review(--light, MUST 0) → merge。
+
+#### review / merge
+- 手動リカバリ後の review・merge はクリーン（CI 全 green、AC 4/4、squash merge で closes #522）。
+
+#### verify
+- pre-merge AC 4/4 PASS（bats 11/11、test 9/10 が base-diverged ケース）。post-merge manual 1件が未チェックのため phase/verify 維持。
+
+### Improvement Proposals
+- **recovery executor に `push_branch` op を追加（または recovery sub-agent の op 語彙を制限）**: watchdog kill が「実装完了・commit/PR 作成前」に発生した #385 パターンでは、worktree に未コミットの実装が残る。recovery sub-agent はこれを検知して `op=push_branch`（commit + push + PR 作成相当）の復旧プランを生成したが、`validate-recovery-plan.sh` / recovery executor がこの op をサポートせず復旧に失敗した。(a) `push_branch`（commit→push→PR create）を安全な recovery op として実装する、または (b) sub-agent のプロンプトで生成可能な op をサポート済みのものに制限する、のいずれかで、この頻出パターンの自動復旧を可能にすべき。今回は親セッションが手動で完遂したが、自動化されていれば手動介入は不要だった。

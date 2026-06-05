@@ -76,3 +76,19 @@
 ### Notes for Next Phase
 - verify phase では rubric チェック（review-bug agent への追加）と CI green を確認すること
 - post-merge observation: 次に bats テスト置き換えを含む PR がレビューされた際に、削除テストのシナリオ網羅が実際に捕捉されるか観察する
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 2件（rubric / github_check）自動検証可能。`agents/review-bug.md`（汎用）と `skills/spec/skill-dev-constraints.md`（Wholework 自身向け）の二段構えの設計が妥当。
+
+#### code
+- 実装はクリーン（commit `fb487cc` が closes #526 で main マージ済み）。ただし #523 と同様、`/auto --batch` patch route の code phase で **false-positive silent-no-op アノマリ**が検出された（detector が origin/main push 前に local git log を確認したため）。
+
+#### verify
+- pre-merge AC 2/2 PASS。post-merge opportunistic 1件が未チェックのため phase/verify 維持。
+
+### Improvement Proposals
+- **silent-no-op detector の patch-route race**（#523 verify retrospective と同一論点、retro-proposals 側で重複排除）: `detect-wrapper-anomaly.sh` が patch-route の origin/main push 前に local git log を検査するため false positive となる。本バッチで #523・#526 の 2 件発生。改善詳細は #523 の提案を参照。

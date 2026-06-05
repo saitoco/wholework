@@ -68,3 +68,19 @@
 ### Notes for Next Phase
 - `/verify` フェーズでの実動作確認（Post-merge AC）は Issue #505 のような実事例で確認すること
 - 変更は 1 行修正のみ（safe モード用 AND 条件追加 + full モード説明更新）なので review 負荷は低い
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 2件はいずれも自動検証可能（grep + rubric）。曖昧さなし、UNCERTAIN 0。
+
+#### code
+- 実装はクリーン（commit `df3c7a7` が closes #523 で main にマージ済み）。ただし `/auto --batch` の code phase で **false-positive silent-no-op アノマリ**が検出された: `detect-wrapper-anomaly.sh` が `run-code.sh` 直後に local git log で commit を確認したが「commit 未検出」と誤判定。実際は patch-route の commit が `worktree-merge-push.sh` 経由で origin/main へ push 済みだった。
+
+#### verify
+- 全 2 AC PASS。post-merge 条件なし → phase/done、CLOSED 維持。
+
+### Improvement Proposals
+- **silent-no-op detector の patch-route race を解消**: `detect-wrapper-anomaly.sh` は `run-code.sh` 直後に local git log で `closes #N` commit を検査するが、patch route は `worktree-merge-push.sh` 経由で origin/main へ push するため、local main が未同期のタイミングで「commit 未検出」= silent-no-op と誤検出する（本バッチで #523・#526 の 2 件で発生）。検出前に `git fetch origin <base>` してから origin/<base> も照合する、または `reconcile-phase-state.sh code-patch --check-completion`（origin/main を権威として参照）の結果を優先するよう改善すべき。誤検出は exit 0 を阻害しないが、Spec の Auto Retrospective にノイズを残す。

@@ -91,3 +91,19 @@ template is also missing `"success"` in the replacement form.
 - All 3 pre-merge AC conditions verified PASS (rubric, grep, CI green).
 - This is a patch route commit — no PR exists; `/verify` will run directly on main after push.
 - Post-merge AC is opportunistic: check next patch-route Issue's CI verify AC for `expected_value="success"` form.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 3件（rubric / grep / github_check）いずれも自動検証可能。根本原因（`skills/spec/SKILL.md` Step 10 のテンプレートに `"success"` 未含有）まで spec が特定できており質が高い。
+
+#### code
+- docs-only 3ファイル追記でクリーン。`/auto --batch` patch route でアノマリなし、commit `f1fd8e0` が closes #521 で main マージ済み。
+
+#### verify
+- pre-merge AC 3/3 PASS（`github_check` self-demonstration で CI green も確認）。post-merge opportunistic 1件が未チェックのため phase/verify 維持。
+
+### Improvement Proposals
+- N/A
