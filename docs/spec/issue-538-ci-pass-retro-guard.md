@@ -116,17 +116,31 @@
 - なし
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `/review` の CI wait を `wait-ci-checks.sh "$NUMBER"` として Step 9 の `gh pr view` の直前に挿入した（非-SKILL.md の Domain file でなく SKILL.md 直接修正）
-- `/code` と `/review` の retrospective guard は Domain file（`forbidden-expressions-check.md` / `skill-dev-recheck.md`）の "Retrospective Guard" セクションとして切り出し、各 SKILL.md から `check-forbidden-expressions.sh` 存在チェック付きで条件参照する方式を採用した
-- PENDING 記述を "after wait timeout" に変更し、タイムアウト後も継続できることを明示した
+- REVIEW_DEPTH=light（`--light` フラグによる明示的指定）で実行した
+- 外部レビューツール（Copilot/Claude Code Review/CodeRabbit）はすべて未設定のため Step 7 全体スキップ
+- MUST/SHOULD 問題なし（CONSIDER 1件: regression test）のため Step 12 スキップ
 
 ### Deferred Items
-- `/review` の Retrospective Guard は `skill-dev-recheck.md` を読んで実行するため、wholework 以外の非 skill-dev プロジェクトでは実行されない（設計通り）
-- Post-merge の opportunistic 検証は観察のみ
+- Regression test（CONSIDER）: SKILL.md プロシージャー変更に対する自動テストは将来的な改善課題
+- Post-merge の opportunistic 検証は観察のみ（Step 9 で CI 全 SUCCESS 確認済み）
 
 ### Notes for Next Phase
-- PR #540 が CI を通過するか確認が必要（allowed-tools に `wait-ci-checks.sh:*` を追加しているため、`validate-skill-syntax.py` の allowed-tools パターン検証が通るか注意）
-- Retrospective Guard セクションの内容が「旧称:」prefix や descriptive language の使用例として分かりやすいかレビューで確認すること
+- すべての Pre-merge 受け入れ条件が PASS、CI 全ジョブ SUCCESS
+- MUST/SHOULD 問題なし → `/merge 540` で merge 可能
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Nothing to note. PR diff はすべての Spec 実装ステップに準拠しており、ステップ番号の偏差（skills/code/SKILL.md で Spec 記述「7 まで繰り上げ」→実装「6 まで」）は Code Retrospective に適切に文書化済み。
+
+### Recurring Issues
+
+Nothing to note. レビューで発見した CONSIDER 1件（regression test 未追加）は SKILL.md プロシージャー変更特有のもので、同種の繰り返し問題ではない。
+
+### Acceptance Criteria Verification Difficulty
+
+Nothing to note. Pre-merge 3件すべて PASS（rubric 2件 + file_contains 1件）。UNCERTAIN なし。verify command が well-specified で自動判定が容易だった。`rubric` 条件は具体的なファイル名と期待内容を明示しており、grader が迷わず PASS/FAIL を判定できた。
