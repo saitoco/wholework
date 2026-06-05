@@ -90,6 +90,28 @@ Fetch labels with `gh issue view $NUMBER --json labels -q '.labels[].name'` and 
   - If expected `phase/*` label state is not reached after re-fetch, go to Step 6 (error report)
   - On issue failure, go to Step 6 (error report)
 
+### Step 3a: Post-Spec Size Refresh
+
+**Run only when** `run-spec.sh` was called and succeeded in Step 3 (i.e., spec was executed — not when `phase/ready` was already set at Step 3 entry, and not when Size was XS which skips spec). Also skip if `--patch`, `--pr`, or `--review=...` flag is present in ARGUMENTS (preserve explicit-flag priority behavior).
+
+Re-fetch Size to detect updates made by the spec phase:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh --no-cache "$NUMBER" 2>/dev/null
+```
+
+Update ROUTE and REVIEW_DEPTH based on the refreshed Size:
+
+| Refreshed Size | Route | Review depth |
+|---|---|---|
+| XS or S | patch | — |
+| M | pr | `--light` |
+| L | pr | `--full` |
+| XL | sub_issue | — |
+| unset | pr | (safe fallback) |
+
+If route changed from Step 2, output a log line: "Post-spec Size refresh: Size updated to {NEW_SIZE}, route re-determined as {NEW_ROUTE}." Proceed to Step 4 using the updated ROUTE and REVIEW_DEPTH.
+
 ### Step 4: Autonomous Execution (run-*.sh)
 
 Run each phase via `run-*.sh`. Each script launches an independent process with `claude -p --dangerously-skip-permissions` for a fresh context and full permission bypass.
