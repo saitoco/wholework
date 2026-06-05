@@ -30,7 +30,7 @@ while IFS= read -r line; do
     path="${path##* -> }"
   fi
   dirty_files+=("$path")
-done < <(git status --short 2>/dev/null | grep -v '^$' || true)
+done < <(git status --short --untracked-files=all 2>/dev/null | grep -v '^$' || true)
 
 # Clean working directory
 if [[ ${#dirty_files[@]} -eq 0 ]]; then
@@ -58,14 +58,17 @@ if [[ -f ".wholework.yml" ]]; then
 fi
 
 # Check if a file matches any ignore pattern
+# Handles both "file/path" and "dir/" (trailing slash from untracked directory entries)
 _is_ignored() {
   local file="$1" pat
+  local file_stripped="${file%/}"
   for pat in "${ignore_patterns[@]+"${ignore_patterns[@]}"}"; do
     if [[ "$pat" == *"/**" ]]; then
       local pfx="${pat%/**}"
-      [[ "$file" == "$pfx/"* ]] && return 0
+      [[ "$file_stripped" == "$pfx" || "$file_stripped" == "$pfx/"* ]] && return 0
     else
       case "$file" in $pat) return 0 ;; esac
+      case "$file_stripped" in $pat) return 0 ;; esac
     fi
   done
   return 1
