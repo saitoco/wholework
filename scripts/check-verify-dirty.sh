@@ -30,11 +30,63 @@ while IFS= read -r line; do
     path="${path##* -> }"
   fi
   dirty_files+=("$path")
-done < <(git status --short 2>/dev/null | grep -v '^$' || true)
+done < <(git status --short --untracked-files=all 2>/dev/null | grep -v '^$' || true)
 
 # Clean working directory
 if [[ ${#dirty_files[@]} -eq 0 ]]; then
   exit 0
+fi
+
+# Load verify-ignore-paths from .wholework.yml (block list format)
+ignore_patterns=()
+if [[ -f ".wholework.yml" ]]; then
+  in_section=false
+  while IFS= read -r line; do
+    case "$line" in \#*) continue ;; esac
+    if [[ "$line" =~ ^verify-ignore-paths[[:space:]]*: ]]; then
+      in_section=true; continue
+    fi
+    if $in_section; then
+      if [[ "$line" =~ ^[[:space:]]*-[[:space:]]+(.*) ]]; then
+        p="${BASH_REMATCH[1]//\'/}"; p="${p//\"/}"
+        ignore_patterns+=("$p")
+      elif [[ "$line" =~ ^[^[:space:]] ]]; then
+        in_section=false
+      fi
+    fi
+  done < ".wholework.yml"
+fi
+
+# Check if a file matches any ignore pattern
+# Handles both "file/path" and "dir/" (trailing slash from untracked directory entries)
+_is_ignored() {
+  local file="$1" pat
+  local file_stripped="${file%/}"
+  for pat in "${ignore_patterns[@]+"${ignore_patterns[@]}"}"; do
+    if [[ "$pat" == *"/**" ]]; then
+      local pfx="${pat%/**}"
+      [[ "$file_stripped" == "$pfx" || "$file_stripped" == "$pfx/"* ]] && return 0
+    else
+      case "$file" in $pat) return 0 ;; esac
+      case "$file_stripped" in $pat) return 0 ;; esac
+    fi
+  done
+  return 1
+}
+
+# Apply ignore filter before classification
+ignored_files=()
+filtered=()
+for f in "${dirty_files[@]}"; do
+  if _is_ignored "$f"; then ignored_files+=("$f")
+  else filtered+=("$f"); fi
+done
+if [[ ${#ignored_files[@]} -gt 0 ]]; then
+  for f in "${ignored_files[@]}"; do
+    echo "Warning: ignoring dirty file excluded by verify-ignore-paths: $f" >&2
+  done
+  if [[ ${#filtered[@]} -eq 0 ]]; then exit 0; fi
+  dirty_files=("${filtered[@]}")
 fi
 
 # Classify each dirty file

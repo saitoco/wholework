@@ -81,3 +81,55 @@ make_dirty() {
     run bash "$REAL_SCRIPT" 123
     [ "$status" -eq 1 ]
 }
+
+@test "verify-ignore-paths: vault only dirty -> exit 0 with warning" {
+    cd "$REPO_DIR"
+    cat > .wholework.yml <<'EOF'
+verify-ignore-paths:
+  - vault/**
+EOF
+    git add .wholework.yml && git commit -q -m "add config"
+    make_dirty "vault/knowledge/note.md"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ "Warning: ignoring dirty file excluded by verify-ignore-paths" ]]
+}
+
+@test "verify-ignore-paths: vault and scripts both dirty -> exit 1" {
+    cd "$REPO_DIR"
+    cat > .wholework.yml <<'EOF'
+verify-ignore-paths:
+  - vault/**
+EOF
+    git add .wholework.yml && git commit -q -m "add config"
+    make_dirty "vault/note.md"
+    make_dirty "scripts/foo.sh"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 1 ]
+}
+
+@test "verify-ignore-paths: .obsidian workspace dirty -> exit 0" {
+    cd "$REPO_DIR"
+    cat > .wholework.yml <<'EOF'
+verify-ignore-paths:
+  - vault/.obsidian/**
+EOF
+    git add .wholework.yml && git commit -q -m "add config"
+    make_dirty "vault/.obsidian/workspace.json"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ "Warning: ignoring dirty file excluded by verify-ignore-paths" ]]
+}
+
+@test "verify-ignore-paths: unrelated spec dirty -> exit 2 regression check" {
+    cd "$REPO_DIR"
+    cat > .wholework.yml <<'EOF'
+verify-ignore-paths:
+  - vault/**
+EOF
+    git add .wholework.yml && git commit -q -m "add config"
+    make_dirty "docs/spec/issue-999-unrelated.md"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"docs/spec/issue-999-unrelated.md"* ]]
+}

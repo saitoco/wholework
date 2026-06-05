@@ -120,3 +120,54 @@
 - **`verify-ignore-paths` 未設定時**: `ignore_patterns` 配列が空になるため `_is_ignored` は常に return 1。`ignored_files` も空で既存分類に影響なし。
 - **`${ignore_patterns[@]+"${ignore_patterns[@]}"}` パターン**: bash の `set -u` 下での空配列展開エラー回避（bash 3.2 で `"${arr[@]}"` が空配列で unbound variable エラーになる場合の対策）。
 - **文字列マッチ verify command 確認**: 4つの `file_contains` verify command はすべて実装により新たに追加される文字列を対象とする（現時点では存在しない）。実装時に確認が必要。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `git status --short` を `git status --short --untracked-files=all` に変更: Spec の実装例は `git status --short` を使用していたが、未追跡ディレクトリが `vault/` のように単一エントリとして表示されるため、`vault/.obsidian/**` 等のサブパターンがマッチしない問題が発生。`--untracked-files=all` で個別ファイル表示に変更した
+- `_is_ignored` にディレクトリエントリ（トレーリングスラッシュ）のストリップ処理を追加: `--untracked-files=all` 採用後は主にファイル単位で表示されるが、念のため `file_stripped="${file%/}"` でトレーリングスラッシュを除去し、`pfx==file_stripped` の exact match も追加した
+- bats テストの `git commit` 追加: Spec の擬似コードにはなかったが、`.wholework.yml` 自体がテスト内で untracked として dirty 扱いされることを防ぐため `git add && git commit` をテスト内に追加した
+- bats テストのアサーション変更: Spec は `[ "$output" = "" ]`（警告は stderr のため stdout 空）と想定していたが、bats 1.13.0 では `run` が stdout/stderr を `$output` に合算するため、`[[ "$output" =~ "Warning: ignoring dirty file excluded by verify-ignore-paths" ]]` に変更した
+
+### Design Gaps/Ambiguities
+
+- Spec の Note「bats では run コマンドは stdout のみキャプチャする」は bats < 1.7 の挙動。bats 1.7+ (1.13.0 実環境) では stdout/stderr が合算される。Spec の注記が古かった
+- 未追跡ディレクトリのエントリ表示 (`vault/`) の挙動が Spec で考慮されていなかった。`--untracked-files=all` で解決
+
+### Rework
+
+- テスト 3 件（7, 9, 10）が初回テスト実行で失敗: `git status` の表示形式の問題（ディレクトリ単位表示）と bats の出力合算の問題が原因。スクリプト修正とテストアサーション修正で対応した
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+Spec と PR diff の間に構造的な乖離なし。`--untracked-files=all` への変更・bats テストのアサーション変更は Code Retrospective に記録済みで、review 時点で把握済みの逸脱。
+
+### 繰り返し問題
+
+同種の問題は検出されなかった。
+
+### 受け入れ基準検証の難度
+
+- 4 件の `file_contains` AC はすべて明確で検証容易。
+- `github_check "Run bats tests"` AC は初回実行時未チェックだったが、CI 完了後に PASS を確認してチェックボックスを更新した。
+- `_is_ignored` が "gitignore format" と宣伝しているにもかかわらず bash `case` グロブの制約で中間 `**` がサポートされない点は、将来の verify command 追加時に注意が必要（CONSIDER として inline comment を投稿済み）。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- REVIEW_DEPTH=light 採用（Issue Size M + `--light` フラグ）: 全5件の pre-merge AC は PASS。CI bats tests も SUCCESS 確認
+- MUST 問題なし → Step 12 の実装修正はスキップ。SHOULD/CONSIDER の inline comment はauthorの裁量に委ねる
+- レビュー結果: SHOULD 1件（YAML末尾空白）+ CONSIDER 3件（detect-config-markers補足・bash glob制約ドキュメント・"silently"表現）
+
+### Deferred Items
+- SHOULD: `check-verify-dirty.sh` のYAMLパターン末尾空白トリム未対応（通常のYAML編集では発生しにくいためスキップ判断）
+- CONSIDER: detect-config-markers.md への `VERIFY_IGNORE_PATHS` コンシューマ補足の追加
+- CONSIDER: docs/guide/customization.md の "silently" 表現修正（日本語版は正確）
+
+### Notes for Next Phase
+- 全 pre-merge AC が PASS → `/merge 531` でマージ可能
+- post-merge AC: trading リポジトリの `.wholework.yml` に `verify-ignore-paths: ["vault/**"]` を設定して手動確認が必要
