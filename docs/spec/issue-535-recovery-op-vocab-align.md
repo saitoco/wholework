@@ -73,18 +73,31 @@ agent と executor の recover step 規約が三重に不一致:
 - なし。初回実装でテスト（ok 10）がPASSし修正不要だった。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- executor SSoTアプローチ採用：agent側op語彙をexecutorの実実装（run_command/git_commit_amend_signoff）に一致させ、executor側コードは変更しない
-- batsテストはtest関数内にgit/ghモックを局所配置（setup関数は変更なし）
-- watchdog-kill-before-PRの例示JSONはSpecの3-step構成（add+commit→push→gh pr create）で実装
+- MUST issue なし（全 AC PASS、CI 全ジョブ green）
+- CONSIDER 1件（bats テストの負ケース不足）はフォローアップ Issue が妥当と判断、本 PR で修正不要
+- security 境界確認済み：run_command ガイダンスは forbidden 境界を逸脱しない
 
 ### Deferred Items
-- CI実行結果のgithub_checkはPR #542作成後に確認が必要（/verifyフェーズ）
+- 負ケーステスト（run_command mid-step failure）: フォローアップ Issue で対応
 - post-merge: 実運用でwatchdog-kill-before-PRシナリオを再現し自動復旧を確認する（manual）
 
 ### Notes for Next Phase
-- /review はsecurity境界を確認すること：run_commandガイダンスがforbidden境界（force-push/main直push/gh pr merge/gh issue close）を逸脱しないか
-- validate-recovery-plan.shのforbiddenパターンは変更なし（既存ガード維持）
-- `agents/orchestration-recovery.md`の"This agent is a read-only diagnostician"という記述が変更後も整合しているか確認推奨（実際は診断のみ、実行はexecutorが行う構造は維持）
+- 全 AC PASS・CI green・MUST issue なし → `/merge 542` でマージ可能
+- Post-merge verify: Tier 3 が unsupported op エラーなく自動復旧することを実運用で確認する
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Spec の実装ステップと PR diff に構造的な乖離はなし。"write to filesystem" constraint の削除は `run_command` パラダイムへの必然的変更で Spec の意図（破壊的 fs 禁止）とも整合しているが、この削除が intentional かどうかを Spec に明示しておくと将来の読者に親切。
+
+### Recurring Issues
+
+特になし。今回は単一ファイル修正（agent）+ テスト追加の小規模 PR で、類似パターンの問題は出なかった。
+
+### Acceptance Criteria Verification Difficulty
+
+全 5 条件が verify command 付きで定義されており、rubric/file_not_contains/file_contains/github_check が適切に使い分けられている。UNCERTAIN なし。Security 境界確認の rubric は Spec の Notes セクション（"/review は agent の run_command ガイダンスが forbidden 境界を逸脱しないか確認すること"）に明示されており、引き継ぎが機能した。
