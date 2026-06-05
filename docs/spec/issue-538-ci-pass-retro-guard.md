@@ -100,3 +100,33 @@
 - **Domain 確定**: CI 全チェック完了確認は `/review` の Core 挙動のため `skills/review/SKILL.md` Step 9 を直接修正する。forbidden-expressions retrospective guard は wholework 固有の skill-dev 関心事のため Domain file（`skill-dev-recheck.md` / `forbidden-expressions-check.md`）へ切り出し、Core SKILL.md から条件付き参照する。
 - **CI wait のタイムアウト**: `wait-ci-checks.sh` は `WHOLEWORK_CI_TIMEOUT_SEC`（デフォルト 1200s）でタイムアウトする。タイムアウト後も PENDING が残る場合は「proceed with caution」として警告し処理を継続する（ハードストップはしない）。
 - **`check-forbidden-expressions.sh` のスコープ**: ガードは spec ファイルだけでなく SCAN_DIRS 全体（skills/, modules/, agents/, tests/, docs/）を対象とする。これは既存の `forbidden-expressions-check.md` と同じ invocation 方法（`bash scripts/check-forbidden-expressions.sh` 無引数）で実現できる。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の実装ステップ 3（`skills/code/SKILL.md` Step 12）では「旧 Step 3 以降を 4→5→6→7 に繰り上げる」と記載されていたが、元のステップ数は 5（旧3→4, 旧4→5, 旧5→6）であり「7」には達しない。記述の数え間違いと判断し、実際には 6 ステップ構成（新 step 3 挿入後）に実装した。
+
+### Design Gaps/Ambiguities
+
+- Spec の「旧 Step 3 以降を 4→5→6→7 に繰り上げる」という記述は元ステップ数と合わない（元が 5 ステップのため最大 6 まで）。実装では矛盾なく新 step 3 挿入・旧3→4・旧4→5・旧5→6 に繰り上げを実施した。
+
+### Rework
+
+- なし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `/review` の CI wait を `wait-ci-checks.sh "$NUMBER"` として Step 9 の `gh pr view` の直前に挿入した（非-SKILL.md の Domain file でなく SKILL.md 直接修正）
+- `/code` と `/review` の retrospective guard は Domain file（`forbidden-expressions-check.md` / `skill-dev-recheck.md`）の "Retrospective Guard" セクションとして切り出し、各 SKILL.md から `check-forbidden-expressions.sh` 存在チェック付きで条件参照する方式を採用した
+- PENDING 記述を "after wait timeout" に変更し、タイムアウト後も継続できることを明示した
+
+### Deferred Items
+- `/review` の Retrospective Guard は `skill-dev-recheck.md` を読んで実行するため、wholework 以外の非 skill-dev プロジェクトでは実行されない（設計通り）
+- Post-merge の opportunistic 検証は観察のみ
+
+### Notes for Next Phase
+- PR #540 が CI を通過するか確認が必要（allowed-tools に `wait-ci-checks.sh:*` を追加しているため、`validate-skill-syntax.py` の allowed-tools パターン検証が通るか注意）
+- Retrospective Guard セクションの内容が「旧称:」prefix や descriptive language の使用例として分かりやすいかレビューで確認すること
