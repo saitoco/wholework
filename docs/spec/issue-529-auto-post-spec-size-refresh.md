@@ -83,3 +83,29 @@
 ### Notes for Next Phase
 - AC1（`file_contains "--no-cache"`）・AC2（`rubric`）ともに pre-merge で PASS 済み
 - CI（test.yml）の success 確認は main マージ後に verify phase で実施
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 品質は良好。`file_contains` + `rubric` のペアで pre-merge を機械検証可能にし、スコープ節で XS / フラグ明示 / `--batch` の除外を明確化。Step 3a の挿入位置（Step 3 と Step 4 の間）も適切に特定されていた。
+
+#### design
+- 設計は実装と乖離なし。`get-issue-size.sh --no-cache` の既存サポートを再利用し新規スクリプト追加を回避した点は妥当。
+- 軽微: Step 3a が `REVIEW_DEPTH` 変数を更新する一方、Step 4 の review 呼び出し（line 220）は依然として Size から再導出（`M→--light, L→--full`）しており、変数の配線がやや冗長。
+
+#### code
+- rework なし。design 通り単一ファイル（`skills/auto/SKILL.md`）への patch で完結。patch route で main 直コミット。
+
+#### review
+- N/A（Size S・patch route のため review phase なし）。
+
+#### merge
+- N/A（patch route 直コミット。コンフリクトなし）。
+
+#### verify
+- auto 検証対象（AC1 / AC2 / AC3）全 PASS。AC3 は patch route 非互換の `gh pr checks` を `/issue` リファイン時に `gh run list` 形式へ修正済みで、verify command の route 整合性に問題なし。AC4（manual・実運用確認）は runtime 依存のため未チェックで `phase/verify` 保留。
+
+### Improvement Proposals
+- （低優先）Step 4 の review 深度選択（line 220）が Step 3a で再判定した値ではなく Size から再導出している。Step 3a の refresh 済み値を明示参照する形にすると、将来 Step 2 の stale Size に起因する回帰を構造的に防げる。LLM ナラティブ上は Step 3a が Step 4 直前で Size を更新するため現状でも正しく流れるため、優先度は低い。
