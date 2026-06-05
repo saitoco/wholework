@@ -64,3 +64,30 @@ template is also missing `"success"` in the replacement form.
 - No bats tests needed: these are documentation-only changes to `.md` files.
 - `skills/spec/SKILL.md` is not in the issue AC rubric check locations, but fixing the auto-fix
   template directly prevents the root cause of the miscalibration.
+
+## Code Retrospective
+
+### Deviations from Design
+- Used `feat:` commit prefix instead of `chore:` (Issue Type is Task → `chore:` per mapping table). The commit was created before running `get-issue-type.sh` — incorrect ordering of Step 11.
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Added explicit **Note** paragraphs to both `modules/verify-classifier.md` and `skills/verify/SKILL.md` rather than modifying existing text, to minimize diff noise while making the rule prominent.
+- Fixed `skills/spec/SKILL.md` auto-fix template to include `"success"` as the explicit second argument, closing the root-cause gap from Issue #517.
+- Kept changes minimal (3 files, doc-only) — no code logic changes needed.
+
+### Deferred Items
+- None. All three spec-identified files were updated.
+
+### Notes for Next Phase
+- All 3 pre-merge AC conditions verified PASS (rubric, grep, CI green).
+- This is a patch route commit — no PR exists; `/verify` will run directly on main after push.
+- Post-merge AC is opportunistic: check next patch-route Issue's CI verify AC for `expected_value="success"` form.
