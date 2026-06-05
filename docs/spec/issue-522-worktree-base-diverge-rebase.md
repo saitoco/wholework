@@ -75,18 +75,18 @@
 - `github_check "gh run list ..."` はsafeモードのallowlistに含まれないが、PR statusCheckRollupで代替検証できた。今後、CI green検証には `github_check "gh pr checks $PR_NUMBER" "Run bats tests"` 形式を使うとsafeモードでも直接実行可能になる（改善余地）。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light（Size=M + --lightフラグ）で4側面統合レビューを実施。MUST/SHOULDイシューなし。
-- `review-light` サブエージェントタイプが環境に存在しないため、インラインで4側面レビューを実施した。
-- CONSIDER 1件（elseブランチテスト未追加）はスキップ — Spec Notesで言及済みの稀ケースでMUSTではない。
+- PR #532 を `--squash --delete-branch` でmainへマージ。全CI（bats, lint, DCO）SUCCESS確認後マージ実施。
+- ローカルブランチ削除時に別worktree（`code+issue-522`）が使用中でエラーが発生したが、リモートブランチ削除・squash merge自体は成功。ローカルブランチはworktree削除時に手動クリーンアップ。
+- `--non-interactive` モードで実行、コンフリクトなし（mergeable=MERGEABLE、Step 3スキップ）。
 
 ### Deferred Items
-- elseブランチ（FROM_BRANCHがworktreeにない場合の`git rebase $BASE $FROM`）のテストカバレッジ追加を将来のフォローアップIssueとして検討可能。
-- Post-merge条件（長時間フェーズ中のbase前進を再現して手動確認）は/verify後に実施。
+- `code+issue-522` worktreeが残存している（ローカルブランチ `worktree-code+issue-522` も含む）。worktree削除後にブランチを手動削除することを推奨。
+- Post-merge手動verify（長時間フェーズ中のbase前進再現テスト）は `/verify` フェーズで実施予定。
 
 ### Notes for Next Phase
-- MUSTイシューなし → `/merge 532` で直接マージ可能。
-- 受け入れ条件は4/4 PASS（Post-mergeは別途）。全CIジョブSUCCESS。
-- `review-light`エージェントタイプが利用できない場合は4側面をインラインで実施するフォールバックが機能することを確認。
+- closes #522 がPR bodyに含まれ、BASE_BRANCH=main → Issue #522は自動クローズ済み。
+- 変更対象は `scripts/worktree-merge-push.sh`、`modules/orchestration-fallbacks.md`、`modules/worktree-lifecycle.md`、`tests/worktree-merge-push.bats` の4ファイル。
+- Post-merge verify commandは「長時間フェーズ中のbase前進を再現し手動確認」（verify-type: manual）のみ残存。
