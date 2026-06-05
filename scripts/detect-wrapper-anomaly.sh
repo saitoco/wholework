@@ -87,11 +87,22 @@ elif grep -qiE "APIConnectionError|Request timed out|overloaded_error|529.*[Oo]v
   ANOMALY_DESC="API connection error in phase \`$PHASE\` (exit code $EXIT_CODE): API connection/overload pattern detected in wrapper output. The forked session terminated mid-run before phase completion."
   IMPROVEMENT_HINT="Follow the recovery procedure at \`modules/orchestration-fallbacks.md#mid-run-api-error\`: run reconcile-phase-state.sh to check actual completion, restore the phase label if needed, then retry the phase once with the corresponding run-*.sh script."
 elif [[ "$EXIT_CODE" == "0" ]]; then
-  if grep -qiE "完了しました|commit and push|successfully committed|pushed to|changes have been committed" "$LOG_FILE" && \
-     ! git log --oneline -5 2>/dev/null | grep -q "#${ISSUE_NUMBER}"; then
-    PATTERN_NAME="silent-no-op"
-    ANOMALY_DESC="LLM reported success in phase \`$PHASE\` (exit code 0) but no commit for #$ISSUE_NUMBER found in recent git log. Possible silent no-op: output indicated completion but no code was committed. Reference: #365."
-    IMPROVEMENT_HINT="Re-run \`run-code.sh $ISSUE_NUMBER\` to retry the code phase. If a second run also fails to produce a commit, escalate to manual implementation. See Issue #365 for a known case of this pattern."
+  if grep -qiE "完了しました|commit and push|successfully committed|pushed to|changes have been committed" "$LOG_FILE"; then
+    if ! git log --oneline -5 2>/dev/null | grep -q "#${ISSUE_NUMBER}"; then
+      _found_on_origin=false
+      if [[ "$PHASE" == "code-patch" ]]; then
+        if git fetch origin main 2>/dev/null; then
+          if git log origin/main --oneline -5 2>/dev/null | grep -q "#${ISSUE_NUMBER}"; then
+            _found_on_origin=true
+          fi
+        fi
+      fi
+      if [[ "$_found_on_origin" == "false" ]]; then
+        PATTERN_NAME="silent-no-op"
+        ANOMALY_DESC="LLM reported success in phase \`$PHASE\` (exit code 0) but no commit for #$ISSUE_NUMBER found in recent git log. Possible silent no-op: output indicated completion but no code was committed. Reference: #365."
+        IMPROVEMENT_HINT="Re-run \`run-code.sh $ISSUE_NUMBER\` to retry the code phase. If a second run also fails to produce a commit, escalate to manual implementation. See Issue #365 for a known case of this pattern."
+      fi
+    fi
   fi
 fi
 

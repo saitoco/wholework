@@ -206,3 +206,35 @@ MOCK
     [ "$status" -eq 0 ]
     [[ "$output" != *"mid-run-api-error"* ]]
 }
+
+@test "silent no-op: no false positive for code-patch when commit found on origin/main" {
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/git" <<'MOCK'
+#!/bin/bash
+case "$*" in
+  "log origin/main --oneline -5")
+    echo "abc1234 chore: implement fix closes #523"
+    ;;
+esac
+exit 0
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/git"
+    echo "実装が完了しました。commit and push も完了しています。" > "$LOG_FILE"
+    run env PATH="$BATS_TEST_TMPDIR/bin:$PATH" bash "$SCRIPT" --log "$LOG_FILE" --exit-code 0 --issue 523 --phase code-patch
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
+@test "silent no-op: code-patch triggers detection when commit absent on both local and origin/main" {
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/git" <<'MOCK'
+#!/bin/bash
+exit 0
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/git"
+    echo "実装が完了しました。commit and push も完了しています。" > "$LOG_FILE"
+    run env PATH="$BATS_TEST_TMPDIR/bin:$PATH" bash "$SCRIPT" --log "$LOG_FILE" --exit-code 0 --issue 526 --phase code-patch
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"silent-no-op"* ]]
+    [[ "$output" == *"### Orchestration Anomalies"* ]]
+}
