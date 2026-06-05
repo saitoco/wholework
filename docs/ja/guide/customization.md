@@ -41,6 +41,11 @@ watchdog-timeout-seconds: 3600
 # main ブランチへの push 用 lock タイムアウト（デフォルト: 300 秒、lock は git merge + push 中のみ保持）
 patch-lock-timeout: 300
 
+# /verify のダーティファイル検出から除外するパス（gitignore 形式の glob リスト）
+verify-ignore-paths:
+  - vault/**
+  - vault/.obsidian/**
+
 # /auto サブプロセスの permission mode（デフォルト: auto）
 # "auto" は --permission-mode auto を allow rules テンプレートと共に使用（docs/guide/auto-mode-template.json 参照）
 # "bypass" は --dangerously-skip-permissions を使用（レガシー / オプトアウト）
@@ -81,6 +86,7 @@ capabilities:
 | `permission-mode` | string | `"auto"` | `/auto` サブプロセスの permission mode。`auto` は `--permission-mode auto` を allow rules テンプレートと共に有効化（`docs/guide/auto-mode-template.json` 参照）; `bypass` は `--dangerously-skip-permissions` を使用（レガシー / オプトアウト）。 |
 | `verify-max-iterations` | integer | `3` | verify-reopen ループの最大試行回数。N 回 FAIL した時点で停止し、Issue を `phase/verify` に留めて人間の判断を促す。0 以下、20 超、または非数値の場合は `3` にフォールバック。 |
 | `retro-proposals-upstream` | string | `""` | Upstream リポジトリ (`owner/repo`) — `/verify` レトロスペクティブから得られた Skill infrastructure improvement 提案の起票先。設定すると、対象提案はサニタイズ（regex で絶対パスと下流固有 Issue 番号を除去、LLM でビジネス文脈用語を除去）されて upstream リポジトリへ起票される。下流リポジトリへの起票はスキップされる。未設定時は従来どおり下流リポジトリへ起票（後方互換）。 |
+| `verify-ignore-paths` | list | `[]` | `/verify` のダーティファイル検出から除外するパスの glob パターン（gitignore 形式、block list）。いずれかのパターンにマッチするファイルは除外され stderr に警告出力される。未設定時は除外なし。 |
 
 実装の詳細や YAML パースルールを含む完全なリファレンスは [`modules/detect-config-markers.md`](../../../modules/detect-config-markers.md) を参照してください。
 
