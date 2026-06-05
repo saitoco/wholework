@@ -183,6 +183,35 @@ MOCK
     [[ "$output" == *"action=skip"* ]]
 }
 
+@test "spawn-recovery: watchdog-kill-before-PR - run_command steps for commit and push and PR exit 0 without unsupported-op error" {
+    # Minimal git/gh mocks that record invocations to RUNNER_LOG
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "git $*" >> "$RUNNER_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+echo "gh $*" >> "$RUNNER_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    # watchdog-kill-before-PR recover plan: commit -> push feature branch -> gh pr create
+    make_claude_mock '{"action":"recover","rationale":"Watchdog killed run-code.sh after implementation but before commit or PR creation. Recovering via commit, push, and PR creation.","steps":[{"op":"run_command","cmd":"git add -A && git commit -s -m feat-implement-42"},{"op":"run_command","cmd":"git push origin worktree-code+issue-42"},{"op":"run_command","cmd":"gh pr create --base main --head worktree-code+issue-42 --title Issue42 --body closes42"}]}'
+    cd "$BATS_TEST_TMPDIR"
+
+    run bash "$SCRIPT" code 42 --log "$LOG_FILE"
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"unsupported op"* ]]
+    [[ "$output" == *"all recovery steps completed"* ]]
+    [ -f "$RUNNER_LOG" ]
+    grep -q "git" "$RUNNER_LOG"
+    grep -q "gh" "$RUNNER_LOG"
+}
+
 # Integration test: tagged with 'integration', excluded from CI runs
 # @test "spawn-recovery integration: real claude -p returns valid JSON" {
 #     # tags: integration
