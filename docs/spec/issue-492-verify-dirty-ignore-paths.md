@@ -139,19 +139,35 @@
 
 - テスト 3 件（7, 9, 10）が初回テスト実行で失敗: `git status` の表示形式の問題（ディレクトリ単位表示）と bats の出力合算の問題が原因。スクリプト修正とテストアサーション修正で対応した
 
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+Spec と PR diff の間に構造的な乖離なし。`--untracked-files=all` への変更・bats テストのアサーション変更は Code Retrospective に記録済みで、review 時点で把握済みの逸脱。
+
+### 繰り返し問題
+
+同種の問題は検出されなかった。
+
+### 受け入れ基準検証の難度
+
+- 4 件の `file_contains` AC はすべて明確で検証容易。
+- `github_check "Run bats tests"` AC は初回実行時未チェックだったが、CI 完了後に PASS を確認してチェックボックスを更新した。
+- `_is_ignored` が "gitignore format" と宣伝しているにもかかわらず bash `case` グロブの制約で中間 `**` がサポートされない点は、将来の verify command 追加時に注意が必要（CONSIDER として inline comment を投稿済み）。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `git status --short --untracked-files=all` を採用: 未追跡ディレクトリが単一エントリで表示される問題を回避し、glob パターンが個別ファイルに正確にマッチするよう変更
-- bats テストで `.wholework.yml` を `git commit` してから dirty ファイルを作成: 設定ファイル自体が dirty 検出対象に入ることを防ぐ実装パターン
-- bats 1.13.0 の combined output に合わせてテストアサーションを `=~ "Warning:"` に変更: 警告が確認できることと exit 0 の両方をアサート
+- REVIEW_DEPTH=light 採用（Issue Size M + `--light` フラグ）: 全5件の pre-merge AC は PASS。CI bats tests も SUCCESS 確認
+- MUST 問題なし → Step 12 の実装修正はスキップ。SHOULD/CONSIDER の inline comment はauthorの裁量に委ねる
+- レビュー結果: SHOULD 1件（YAML末尾空白）+ CONSIDER 3件（detect-config-markers補足・bash glob制約ドキュメント・"silently"表現）
 
 ### Deferred Items
-- `--untracked-files=all` は大規模リポジトリで遅くなる可能性あり（フォローアップ考慮事項だがスコープ外）
-- bats の出力挙動の変化に関するドキュメントはなし（テスト内コメントで十分と判断）
+- SHOULD: `check-verify-dirty.sh` のYAMLパターン末尾空白トリム未対応（通常のYAML編集では発生しにくいためスキップ判断）
+- CONSIDER: detect-config-markers.md への `VERIFY_IGNORE_PATHS` コンシューマ補足の追加
+- CONSIDER: docs/guide/customization.md の "silently" 表現修正（日本語版は正確）
 
 ### Notes for Next Phase
-- PR #531 のスクリプト変更（`--untracked-files=all` 追加）が既存テスト 1-6 の動作に影響しないことを CI で確認すること
-- 4 つの `file_contains` verify command は実装前に PASS が確認されている（Issue チェックボックス更新済み）
-- `github_check "gh pr checks" "Run bats tests"` の AC は CI が通過後に `/verify` で確認
+- 全 pre-merge AC が PASS → `/merge 531` でマージ可能
+- post-merge AC: trading リポジトリの `.wholework.yml` に `verify-ignore-paths: ["vault/**"]` を設定して手動確認が必要
