@@ -50,3 +50,33 @@
 - 実装アプローチとフェーズ限定範囲は Issue 自動解決済み（Issue #534 `## 自動解決された曖昧ポイント` 参照）
 - 修正スコープは `PHASE == "code-patch"` のみ。`run-auto-sub.sh` 経由 XL サブ issue では `--phase "code"` が渡されるため本修正の対象外
 - `reconcile-phase-state.sh` は `--grep="closes #N"` で commit を検索するが、`detect-wrapper-anomaly.sh` は `grep "#N"` を使用。この差異は今回のスコープ外（どちらも commit 存在確認として有効）
+
+## Code Retrospective
+
+### Deviations from Design
+- None: 実装ステップはSpecの通りに実施。単一条件式の展開 → `_found_on_origin` フラグ導入による段階的分岐の構造も設計通り
+
+### Design Gaps/Ambiguities
+- `set -uo pipefail` 環境での `!` 付きパイプラインの動作: `-e`(errexit) が設定されていないため、parenの中で非ゼロ終了が起きてもスクリプトが落ちないことを確認。既存コード（line 91）も同パターンを使用済みで問題なし
+- `_found_on_origin` 変数のスコープ: `set -u` 環境での未定義変数エラーを避けるため、`if [[ "$PHASE" == "code-patch" ]]` ブロックの前に初期化済み
+
+### Rework
+- None: 設計から実装まで一発で完了。テスト2件も即時 pass
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `git fetch origin main` + `origin/main` チェック方式を採用（reconcile 委譲より自己完結でシンプル）
+- スコープは `PHASE == "code-patch"` のみに限定（他フェーズは origin push を行わないため影響なし）
+- `_found_on_origin` フラグ変数で判定を整理（`set -uo pipefail` 環境でも安全）
+- 既存テストへの影響なし（`--phase code` での既存テストは `_found_on_origin` が false のまま通る）
+
+### Deferred Items
+- `git fetch origin main` は main ブランチをハードコードしているが、BASE_BRANCH が main 以外の場合への対応はスコープ外
+- 全テスト 25/25 green で CI 通過を確認済みだが、実際の `/auto --batch` 環境での end-to-end 確認は post-merge
+
+### Notes for Next Phase
+- 変更は `scripts/detect-wrapper-anomaly.sh` と `tests/detect-wrapper-anomaly.bats` の 2 ファイルのみ
+- verify コマンド全4件 PASS 済み（チェックボックス更新完了）
+- `origin/main` 文字列が `file_contains` verify に含まれるため、verify フェーズは機械的に確認可能
