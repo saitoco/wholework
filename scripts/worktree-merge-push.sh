@@ -82,7 +82,24 @@ if [[ -n "$FROM_BRANCH" ]]; then
   if ! git merge "$FROM_BRANCH" --ff-only; then
     echo "FF merge failed, attempting git pull --rebase origin ${BASE_BRANCH}..." >&2
     git pull --rebase origin "$BASE_BRANCH"
-    git merge "$FROM_BRANCH" --ff-only
+    if ! git merge "$FROM_BRANCH" --ff-only; then
+      echo "FF merge still failed; base may have diverged. Rebasing ..." >&2
+      worktree_path=$(git worktree list --porcelain | awk -v b="refs/heads/${FROM_BRANCH}" '/^worktree /{p=$2} $0 == "branch " b {print p; exit}')
+      if [[ -n "$worktree_path" ]]; then
+        if ! git -C "$worktree_path" rebase "origin/${BASE_BRANCH}"; then
+          git -C "$worktree_path" rebase --abort 2>/dev/null || true
+          echo "Error: Rebase of ${FROM_BRANCH} onto origin/${BASE_BRANCH} failed with conflicts. Resolve manually." >&2
+          exit 1
+        fi
+      else
+        if ! git rebase "$BASE_BRANCH" "$FROM_BRANCH"; then
+          git rebase --abort 2>/dev/null || true
+          echo "Error: Rebase of ${FROM_BRANCH} onto ${BASE_BRANCH} failed with conflicts. Resolve manually." >&2
+          exit 1
+        fi
+      fi
+      git merge "$FROM_BRANCH" --ff-only
+    fi
   fi
 
   # See modules/orchestration-fallbacks.md#conflict-marker-residual
