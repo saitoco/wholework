@@ -274,9 +274,11 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query add-blocked-by -F issueId="$
 
 Post a retrospective comment to the issue covering: judgment rationale for ambiguity resolution, key policy decisions from Q&A, and reasons for acceptance criteria changes. Always create the section (write "Nothing to note" if no content).
 
+The comment body must use `## Issue Retrospective` as the top-level heading (canonical key used by `/auto` Step 4b and `/verify`).
+
 ```bash
 mkdir -p .tmp
-# write to .tmp/issue-comment-$NUMBER.md
+# write to .tmp/issue-comment-$NUMBER.md with heading: ## Issue Retrospective
 ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $NUMBER .tmp/issue-comment-$NUMBER.md
 rm -f .tmp/issue-comment-$NUMBER.md
 ```
@@ -417,9 +419,11 @@ Run the standard sub-issue creation flow (New Issue Creation Step 9, procedures 
 
 Post a retrospective comment to the issue covering: judgment rationale for ambiguity resolution, key policy decisions from Q&A, and reasons for acceptance criteria changes. Always create the section (write "Nothing to note" if no content).
 
+The comment body must use `## Issue Retrospective` as the top-level heading (canonical key used by `/auto` Step 4b and `/verify`).
+
 ```bash
 mkdir -p .tmp
-# write to .tmp/issue-comment-$NUMBER.md
+# write to .tmp/issue-comment-$NUMBER.md with heading: ## Issue Retrospective
 ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $NUMBER .tmp/issue-comment-$NUMBER.md
 rm -f .tmp/issue-comment-$NUMBER.md
 ```
