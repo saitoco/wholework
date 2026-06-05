@@ -172,3 +172,37 @@ Spec と PR diff の間に構造的な乖離なし。`--untracked-files=all` へ
 - post-merge AC: trading リポジトリの `.wholework.yml` に `verify-ignore-paths: ["vault/**"]` を設定し、`vault/` のみ dirty な状態で `/auto N` の verify フェーズが警告のみで継続することを手動確認する
 - pre-merge verify command は全 PASS 済み（CI bats tests SUCCESS 含む）
 - None of the deferred SHOULD/CONSIDER items are blocking for verify
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 受入条件は明確で検証容易（4件の `file_contains` + 1件の `github_check`）。`/issue` 段階で bats テストファイル名の誤り（`check-verify-dirty.bats` → 実在の `verify-dirty-detection.bats`）を実ファイル確認で修正済みで、spec/code に正しいパスが伝播した。
+- パス解決方式（スクリプト直接パース）を Auto-Resolved Ambiguity Points で事前確定したことで、code フェーズで `/verify` SKILL.md を変更せず済んだ。
+
+#### design
+- 設計は概ね妥当だが、環境固有挙動の見落としで2点のギャップが code フェーズで顕在化:
+  - `git status --short` が未追跡ディレクトリを単一エントリ（`vault/`）で表示するため `vault/.obsidian/**` 等のサブパターンがマッチしない → `--untracked-files=all` で解決
+  - bats 1.7+ では `run` が stdout/stderr を `$output` に合算する（Spec の注記は bats <1.7 の古い挙動）→ アサーションを stderr 文字列マッチに変更
+- 設計段階で検証環境（git/bats）のバージョン挙動を確認していれば事前に防げた可能性。
+
+#### code
+- テスト3件（test 7/9/10）が初回失敗 → スクリプト（`--untracked-files=all`、トレーリングスラッシュ処理）とテストアサーション修正で対応。design ギャップ起因で本質的な手戻りではない。
+- bash 3.2 互換（配列・`[[ =~ ]]`・`case` glob、`mapfile` 不使用、`set -u` 下の空配列展開ガード）を維持。
+
+#### review
+- light レビューで MUST 問題なし。`_is_ignored` が "gitignore format" を称するが bash `case` glob では中間 `**` 非対応である点を CONSIDER として inline コメント投稿。
+- Spec vs 実装の乖離は Code Retrospective に記録済みで、review 時点で把握済みの逸脱。
+
+#### merge
+- スカッシュマージ（`--squash --delete-branch`）。コンフリクトなし、CI 通過済み。問題なし。
+
+#### verify
+- 全 pre-merge AC（5件）が PASS。決定的検証（`file_contains`/`github_check`）に加え、ローカル bats 実行で新規シナリオ4件（vault のみ→exit 0 / vault+scripts→exit 1 / `.obsidian`→exit 0 / unrelated spec→exit 2 回帰）の実挙動を確認。FAIL/UNCERTAIN なし。
+- post-merge AC（trading 実プロジェクトでの目視確認）は外部 private repo 依存のため manual deferred。Issue は `phase/verify` に留め、確認後の `/verify 492` 再実行で `phase/done` 遷移。
+
+### Improvement Proposals
+- **`verify-ignore-paths` の glob セマンティクス明確化**: ドキュメント（`customization.md`）が "gitignore format" を称するが、実装は `dir/**` プレフィックス形式と単純 `case` glob のみ対応で、gitignore の中間 `**`（`a/**/b`）や否定（`!`）は非対応。ドキュメント表現を実サポート範囲に合わせて修正するか、対応グロブ範囲を明記すべき（review で CONSIDER 投稿済み）。
+- **検証環境バージョン依存の Spec 注記の鮮度**: bats の `run` 出力挙動（<1.7 vs 1.7+）の注記が古く code で手戻りを誘発。Spec で外部ツール挙動を前提にする場合は実環境バージョンの確認を推奨。
+- いずれも非ブロッキング。Phase Handoff の deferred SHOULD（YAML パターン末尾空白トリム）/ CONSIDER（detect-config-markers コンシューマ補足、customization.md "silently" 表現）も軽微。
