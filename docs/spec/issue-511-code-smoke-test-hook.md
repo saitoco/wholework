@@ -147,19 +147,19 @@
 - Nothing to note. 全7条件に verify command が付与されており、`file_contains` / `section_contains` / `rubric` による自動判定が可能だった。`command` 条件は CI fallback ("Validate skill syntax" SUCCESS) で PASS 確認でき、UNCERTAIN はゼロ。verify command の品質は高く、手動判定不要だった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST/SHOULD 問題ゼロ → COMMENT イベントで review 投稿。Step 12/13 はスキップ。
-- review-spec: CONSIDER 3件 (Progressive Disclosure design note、日本語混在表記、Terms Context 列) — いずれもマージブロックなし。
-- review-bug×2: HIGH SIGNAL 問題なし。verify-executor.md Read placement・SKIPPED/UNCERTAIN 分岐・backward compat 全て設計通り実装確認済み。
-- 受け入れ条件7件全 PASS、CI 全 SUCCESS。
+- mergeable=false/reason=unknown は CI 結果未集計タイミングの誤判定と判断し、非インタラクティブモードの auto-resolve ポリシーに従いマージを続行した。
+- PR #545 は conflicts なしのスカッシュマージ成功 (closes #511)。BASE_BRANCH=main のため Issue は自動クローズ。
+- コンフリクト解消ステップは不要 (Step 3 スキップ)。
 
 ### Deferred Items
-- `permission-mode auto` 下の MCP 呼び出し実機挙動 (UNCERTAIN vs hang) の確認は post-merge manual AC に委譲 (code phase から継続)。
-- Spec に `## Smoke Test` セクションがある実ケースの動作確認は post-merge opportunistic AC。
-- docs/ja/workflow.md の "実機 external" 表記は CONSIDER のみ — 必要であれば後続 doc 改善 Issue で対応。
+- `permission-mode auto` 下の MCP 呼び出し実機挙動 (UNCERTAIN vs hang) の確認は post-merge manual AC に委譲 (code/review phase から継続)。
+- Spec に `## Smoke Test` セクションがある実ケースの動作確認は post-merge opportunistic verify。
+- docs/ja/workflow.md の "実機 external" 表記改善は必要なら後続 doc Issue で対応。
 
-### Notes for Next Phase (merge)
-- PR #545 は COMMENT review 投稿済み (MUST 問題なし)。直接 `/merge 545` 実行可能。
-- 全 CI SUCCESS、受け入れ条件全 PASS を確認済み。
+### Notes for Next Phase (verify)
+- verify command は `python3 scripts/validate-skill-syntax.py skills/` 含む7条件。全 CI SUCCESS 確認済み。
+- `skills/code/SKILL.md` の `#### Smoke Test` サブセクション、`ToolSearch` allowed-tools、`SKIPPED` 分岐の存在を重点確認。
+- post-merge manual AC (MCP smoke 実機) は verify opportunistic モードで実施予定。
