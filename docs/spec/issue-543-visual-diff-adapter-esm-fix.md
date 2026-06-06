@@ -80,3 +80,38 @@ bundled `visual-diff-adapter` (`modules/visual-diff-adapter.md`) の Step 5b/5c 
 
 - 埋め込み Node スクリプトは lint/コンパイル対象外。書き換え時はスコープミス・変数未定義に特に注意すること (cf. #441 spec retrospective: Step 5c の `implHeight` 未定義バグ記録あり)
 - Step 5b/5c の書き換えは async 処理を含むため async IIFE `(async () => { ... })();` でラップし、callback 形式の `.toFile(fn, cb)` は `await .toFile(fn)` に統一する
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. 実装ステップはすべて Spec の順序通りに実行した。Step 3 検出変更 → Step 5b 書き換え → Step 5c 書き換え → Notes 追記の順序で完了。
+
+### Design Gaps/Ambiguities
+
+- `node -e` の Bash スクリプト埋め込みで `${variable}` のエスケープが必要。Spec の実装例ではバックスラッシュなしで `${run_id}` と書かれているが、実際の Node スクリプト文字列内で shell 変数展開されないよう `\${run_id}` にエスケープが必要。Spec では「概ね次の形」として示されており、詳細なエスケープは実装時の判断に委ねられていたため問題なし。
+
+### Rework
+
+- None. 初回実装で全 AC を満たし、rework は発生しなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `require('pixelmatch').default ?? require('pixelmatch')` (インライン interop 形) を採用。dynamic `import()` は Step 5b の async 化追加リファクタが必要で低リスク形を優先。
+- PNG decode/encode を pngjs から sharp raw RGBA に統一し、pngjs 依存を構造的に排除（`pnpm add -D pngjs` 不要）。
+- Step 5b/5c を async IIFE でラップし、callback `.toFile(fn, cb)` を `await .toFile(fn)` に統一。
+- Step 3 pixelmatch detection を実 load + `typeof (p.default??p) === 'function'` チェックに変更（`require.resolve` パス解決のみでは ESM/CJS 形状不保証）。
+- follow-on 2 件（worktree node_modules → #443 リンク / 画像高さ不一致 caveat）を Notes に記録（新規起票は未確認の問題への先行起票を避けるため保留）。
+
+### Deferred Items
+- worktree node_modules 問題は #443 で追跡中。本 Issue ではアダプタ注記のリンクのみ。
+- ref/impl 画像高さ不一致は post-merge の koganezawa-com#58 再走で確認予定。再現した場合は別 Issue 起票。
+- post-merge verify は koganezawa-com#58 の再走が必要（手動 AC）。
+
+### Notes for Next Phase
+- 変更ファイルは `modules/visual-diff-adapter.md` のみ。
+- 全 pre-merge AC（4 件）は file_contains/file_not_contains + rubric いずれも PASS 確認済み。
+- Node スクリプト内の `\${run_id}` 等のエスケープは意図的（Bash 変数展開防止）。
+- patch route で直接 main にマージ済み（PR なし）。
