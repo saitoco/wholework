@@ -669,6 +669,7 @@ Refer to `skills/review/external-review-phase.md`'s "Step 14: External Review Re
 Template:
 ```markdown
 ## Review Response Summary
+<!-- review-summary -->
 
 ### Claude Review Response
 
@@ -690,6 +691,8 @@ Template:
 - Updated condition: {before} → {after}
 - Issue comment: posted
 ```
+
+The `<!-- review-summary -->` marker line must be included verbatim even when the heading is localized. `reconcile-phase-state.sh` detects review completion via this language-independent marker.
 
 **If no Claude response (Step 11 skipped)**: omit Claude section.
 

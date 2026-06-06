@@ -61,3 +61,44 @@
 - **Forbidden Expressions 回避**: `skills/review/SKILL.md` のマーカー（`<!--` に半角 `!` を含む）は、テンプレートの ` ```markdown ` コードフェンス内、および注記プロースでは inline code バッククォートで囲んで記述する（半角 `!` の禁止はコードフェンス・inline code 外のみ対象）。
 - **スコープ = review phase のみ**（Issue 自動解決済み）: reconcile-phase-state.sh の他フェーズ（issue/spec/code-patch/code-pr/merge/verify）の成功署名はラベル・git state・PR state・英語 gh キーワードで検出しており、ローカライズ脆弱なのは review の見出しのみ。汎用化は対象外。
 - **マーカー欠落リスク**: review LLM がマーカーを出力しないケースは、保持した既存テキスト署名 fallback が受ける（defense-in-depth）。
+
+## Code Retrospective
+
+### Deviations from Design
+- None（Spec の実装手順どおりに実装完了）
+
+### Design Gaps/Ambiguities
+- push タイミング: Worktreeエントリー後の最初の push は Step 11 のPR作成時にエラーになった（`aborted: you must first push the current branch to a remote`）。Step 12 で push してから PR を作成する流れへ修正した。Spec ではこのタイミングについて言及なし。
+
+### Rework
+- None（1回の実装で全52テストPASSを確認）
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Nothing to note. PR diff は Spec の実装手順（SKILL.md マーカー追加、reconcile grep 更新、phase-state.md SSoT 更新、bats テスト追加）に完全準拠しており、逸脱は検出されなかった。
+
+### Recurring Issues
+
+Nothing to note. 問題は一切検出されなかった（MUST: 0、SHOULD: 0、CONSIDER: 0）。
+
+### Acceptance Criteria Verification Difficulty
+
+Nothing to note. 全8条件を機械検証可能な形で設計されており、UNCERTAIN は発生しなかった。file_contains×5 と rubric×2 の組み合わせ（機械検証 + セマンティック検証）のパターンは有効に機能した。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- 全8受け入れ条件 PASS（file_contains×5、rubric×2、github_check×1）
+- MUST 問題なし、COMMENT イベントでレビュー投稿
+- Type=Bug の重点観点（Perspective 2 edge cases + 回帰テスト）も問題なし
+
+### Deferred Items
+- Post-merge AC: 次回 `/auto` review phase でのローカライズ見出し + reconcile `matches_expected:true` の実運用確認
+
+### Notes for Next Phase
+- 全 CI ジョブ SUCCESS（DCO、Run bats tests ×2、Validate skill syntax ×2、Forbidden Expressions ×2、macOS shell compatibility ×2）
+- PR #544 マージ準備完了
+- MUST 問題なし、`/merge 544` で進める
