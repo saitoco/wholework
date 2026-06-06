@@ -62,6 +62,24 @@
 - **スコープ = review phase のみ**（Issue 自動解決済み）: reconcile-phase-state.sh の他フェーズ（issue/spec/code-patch/code-pr/merge/verify）の成功署名はラベル・git state・PR state・英語 gh キーワードで検出しており、ローカライズ脆弱なのは review の見出しのみ。汎用化は対象外。
 - **マーカー欠落リスク**: review LLM がマーカーを出力しないケースは、保持した既存テキスト署名 fallback が受ける（defense-in-depth）。
 
+## Phase Handoff
+<!-- phase: merge -->
+
+### Key Decisions
+- PR #544 をスカッシュマージ（`worktree-code+issue-528` → main）。CI全PASS・approved済みで conflicts なし
+- `<!-- review-summary -->` HTML コメントマーカーを review completion の primary 検出シグナルとして採用。既存テキスト署名（`## Review Response Summary` / `## レビュー回答サマリ`）は後方互換 fallback として保持（defense-in-depth）
+- bash 3.2+ 互換の `POSIX [[:space:]]` でマーカー内部空白の揺れを許容するよう grep パターンを設計
+- bats テスト 52件全PASS（新規2件含む）を CI で確認してからマージ
+
+### Deferred Items
+- post-merge 実運用検証: 次回以降の `/auto` review phase で日本語ローカライズ見出しが投稿されても `matches_expected:true` になることを観察する（verify phase では自動検証不可）
+- review LLM がマーカーを省略するケースが実運用で発生した場合のモニタリング（fallback 有効性の確認）
+
+### Notes for Next Phase
+- verify phase では post-merge 検証コマンドの実行を試みること（Spec の `## Verification / Post-merge` セクション参照）
+- `scripts/reconcile-phase-state.sh` の `_completion_review()` 変更は他フェーズ（issue/spec/code/merge/verify）の検出ロジックには影響しない（review phase 専用修正）
+- 今後 review LLM がローカライズした見出しを出力した際に false-negative recovery が発生しないことを `/auto` ログで確認する
+
 ## Code Retrospective
 
 ### Deviations from Design
