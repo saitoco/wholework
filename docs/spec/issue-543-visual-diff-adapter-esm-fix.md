@@ -143,3 +143,32 @@ bundled `visual-diff-adapter` (`modules/visual-diff-adapter.md`) の Step 5b/5c 
 ### 参照の更新
 
 - worktree node_modules gap が wholework 側で **#443** として既にトラッキングされていることを発見し、参照に追加 (元本文は downstream の koganezawa-com#45 のみ参照)。#441=CLOSED / #437=OPEN を確認。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec は Size を S→XS に正しく再判定し、Root Cause / Changed Files / Implementation Steps を的確に記述。実装は Spec の順序通りに完了し deviation なし。
+- 独立した `## Spec Retrospective` セクションは未生成（patch route で軽量だったため）。実害はないが、Code Retrospective が design gap（`node -e` 内 `${var}` のエスケープが実装例で未明示）を捕捉済み。
+
+#### design
+- 設計判断（interop はインライン `.default ??`、pngjs→sharp 統一、follow-on は新規起票せず注記）はいずれも妥当で、実装・検証まで一貫。dynamic import を避けた判断は async 化リファクタ回避として適切。
+
+#### code
+- rework ゼロ。初回実装で全 4 AC を満たす。fixup/amend パターンなし（clean な単一 fix commit `ebf894c`）。
+- async IIFE ラップと callback→`await .toFile()` 統一は Spec 未明示だが必要な実装判断として正しく追加された。
+
+#### review
+- patch route (XS) のため review フェーズなし (N/A)。
+- ただし重要な観察: 本 adapter の diff 生成ロジックは **markdown 内の埋め込み Node スクリプト**であり lint/CI/test の対象外。#441 (`implHeight` 未定義) も #543 (ESM interop / pnpm pngjs / async 化) も、lint 不可視の埋め込みスクリプトの runtime 失敗で、実 dogfooding でしか検出されなかった。同一クラスの欠陥が 2 回連続で発生している。
+
+#### merge
+- patch route で main 直コミット。conflict なし。clean。
+
+#### verify
+- pre-merge AC 4 件すべて PASS。verify command（`file_not_contains` / `file_contains` / `rubric`）が実装と完全一致し、UNCERTAIN/FAIL ゼロ。Issue refinement 時の cross-reference（naive 形除去を `file_not_contains` で確認、`.raw()` を `file_contains` で確認）が機能した。
+- post-merge manual 条件は外部プロジェクト (koganezawa-com#58) の runtime 再走が必須で本コンテキストから実行不可のため pending 維持（設計通りで gap ではない）。Issue は CLOSED のまま `phase/verify`。
+
+### Improvement Proposals
+- **埋め込み Node スクリプトの実行可能テスト不在**: `modules/visual-diff-adapter.md` の Step 5b/5c は markdown 内の `node -e` スクリプトで lint/CI/test がかからず、runtime バグ（#441 implHeight, #543 ESM interop/pnpm/async）が実 dogfooding まで露見しない。fixture PNG に対して埋め込みスクリプトを抽出・実走する smoke test、または埋め込み JS の構文/契約チェックを追加し、この欠陥クラスを pre-merge で捕捉する仕組みを検討すべき。（既存の #437 親考察 / #443 worktree node_modules とは別軸の testability gap。）
