@@ -171,4 +171,9 @@ bundled `visual-diff-adapter` (`modules/visual-diff-adapter.md`) の Step 5b/5c 
 - post-merge manual 条件は外部プロジェクト (koganezawa-com#58) の runtime 再走が必須で本コンテキストから実行不可のため pending 維持（設計通りで gap ではない）。Issue は CLOSED のまま `phase/verify`。
 
 ### Improvement Proposals
-- **埋め込み Node スクリプトの実行可能テスト不在**: `modules/visual-diff-adapter.md` の Step 5b/5c は markdown 内の `node -e` スクリプトで lint/CI/test がかからず、runtime バグ（#441 implHeight, #543 ESM interop/pnpm/async）が実 dogfooding まで露見しない。fixture PNG に対して埋め込みスクリプトを抽出・実走する smoke test、または埋め込み JS の構文/契約チェックを追加し、この欠陥クラスを pre-merge で捕捉する仕組みを検討すべき。（既存の #437 親考察 / #443 worktree node_modules とは別軸の testability gap。）
+- **埋め込み Node スクリプトの実行可能テスト不在**: `modules/visual-diff-adapter.md` の Step 5b/5c は markdown 内の `node -e` スクリプトで lint/CI/test がかからず、runtime バグ（#441 implHeight, #543 ESM interop/pnpm/async）が実 dogfooding まで露見しない。fixture PNG に対して埋め込みスクリプトを抽出・実走する smoke test、または埋め込み JS の構文/契約チェックを追加し、この欠陥クラスを pre-merge で捕捉する仕組みを検討すべき。（既存の #437 親考察 / #443 worktree node_modules とは別軸の testability gap。）→ **#546 (retro/verify) として起票済み。**
+
+### Post-merge Confirmation (verify re-run)
+- post-merge manual 条件をユーザーが下流 koganezawa-com#58 の再走で確認: diff highlight 生成 → 3-panel composite → `frontend-visual-review` レポート生成まで完走。`TypeError: pixelmatch is not a function` / `MODULE_NOT_FOUND (pngjs)` は不発生で、ESM interop / pnpm 非hoist 修正が実環境で有効と確定。
+- follow-on の画像高さ不一致は本再走で**再現せず**、別 Issue 起票は不要と判断 (adapter Notes の caveat は維持)。
+- 全 5 条件 PASS → Issue #543 を phase/done でクローズ。
