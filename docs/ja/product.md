@@ -149,6 +149,7 @@ Describe success metrics here. -->
 | Retrospective | 各スキル実行後に Spec に追記されるセクション。そのフェーズの観察、判断、不確実性の解消を記録する。ワークフローフェーズ横断の実行履歴を蓄積する | 開発ワークフロー | レトロスペクティブ |
 | Shared module | `modules/*.md` に保存され、複数スキルから "Read and follow" パターンで参照される手順ドキュメント。旧称: "shared procedure document" | スキル開発 | 共有モジュール |
 | Size | triage で割り当てられる複雑度/工数の見積もり（XS/S/M/L/XL）。ワークフロー経路（patch vs PR）と Spec の深度を決める | /triage Skill | サイズ |
+| Smoke Test | `/code` が commit/push 前に実行するオプショナルな最小 behavioral sanity check。Spec の `## Smoke Test` セクションに既存の full-mode verify command（例: `mcp_call`, `command`）で定義する。`/verify` より早く code phase 内で behavioral 不整合を検知できる。opt-in: Spec にセクションがある場合のみ動作 | /spec, /code | Smoke Test |
 | Skill | Claude Code の拡張。処理ステップが `skills/<n>/SKILL.md` に記述され、`/<n>` で呼び出される | Claude Code | スキル |
 | Spec | `/spec` により作成される実装計画ドキュメント。`docs/spec/issue-N-short-title.md` に保存される。**各スキル実行後の Retrospective も蓄積し、ワークフロー横断のメモリとして機能する**。旧称: 'Design file' / 'Issue Spec' | 開発ワークフロー | Spec |
 | Steering Documents | 基盤ドキュメント（product/tech/structure）の総称。`docs/` 配下に保存 | /doc Skill | Steering Documents |

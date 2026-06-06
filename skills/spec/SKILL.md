@@ -411,6 +411,10 @@ Before writing "no change needed" for a file in the changed-files section, verif
 
 Keep implementation step count and pre-merge verification item count within the SPEC_DEPTH limit (light: 5 each; full: 10 each). Group related steps if limits are exceeded.
 
+**Smoke Test section consideration:**
+
+When the Issue involves real external or MCP tool calls (examples: verify commands include `mcp_call`, or `capabilities.mcp` is configured and the Issue body references an MCP tool), propose an optional `## Smoke Test` section in the Spec. Record at least one full-mode verify command (`mcp_call` / `command` / `http_status`) there. Use plain bullets (`- `) with no checkboxes, same as the Verification section. `/code` will execute this section in full mode before commit/push.
+
 **SPEC_DEPTH=light — lightweight template (5-section structure):**
 
 **Type-based section control (light template, exhaustive):**
@@ -442,6 +446,11 @@ Keep implementation step count and pre-merge verification item count within the 
 
 ### Post-merge
 - confirmation item 1
+
+## Smoke Test
+
+**(Optional. Include only when the Issue involves real external or MCP tool calls. Use existing verify commands — mcp_call, command, http_status, etc. Omit if not applicable.)**
+- <!-- verify: mcp_call "tool_name" '{"arg":"value"}' "expected_keyword" --> smoke check description
 
 ## Notes
 (if applicable)
@@ -499,6 +508,11 @@ Keep implementation step count and pre-merge verification item count within the 
 ### Post-merge
 - confirmation item 1
 - confirmation item 2
+
+## Smoke Test
+
+**(Optional. Include only when the Issue involves real external or MCP tool calls. Use existing verify commands — mcp_call, command, http_status, etc. Omit if not applicable.)**
+- <!-- verify: mcp_call "tool_name" '{"arg":"value"}' "expected_keyword" --> smoke check description
 
 ## UI Design
 

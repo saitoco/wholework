@@ -123,21 +123,43 @@
 ### Uncertainty resolution
 - `permission-mode auto` 下の un-allowlisted MCP 呼び出し挙動 (UNCERTAIN/denied vs hang) は環境依存として Uncertainty に明記。verify-executor の「blocked→UNCERTAIN」記述を前提に SKIPPED→continue を設計し、hang は `claude-watchdog.sh` が処理する想定。実機確認は post-merge manual AC に委譲。
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A (implementation followed Spec implementation steps faithfully)
+
+### Design Gaps/Ambiguities
+- The Spec's Notes stated "本文に半角 `!` を含めない" — confirmed no half-width `!` introduced in skill bodies. The "!" in the hard-error abort output message ("Fix the issue manually...") was avoided by using a period instead.
+- `ToolSearch` was successfully added to allowed-tools frontmatter with no KNOWN_TOOLS update required (as noted in Spec).
+
+### Rework
+- N/A
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+- Nothing to note. Spec の全7実装ステップが PR diff に忠実に反映されており、out-of-scope な変更も implicit judgment も検出されなかった。changed files リストも Spec の「変更ファイル」と完全一致。
+
+### Recurring Issues
+- Nothing to note. MUST/SHOULD 相当の問題は review-spec・review-bug×2 の全エージェントで検出されなかった。CONSIDER 3件はいずれも Progressive Disclosure 設計判断と日本語表記の軽微な統一提案で、繰り返しパターンには該当しない。
+
+### Acceptance Criteria Verification Difficulty
+- Nothing to note. 全7条件に verify command が付与されており、`file_contains` / `section_contains` / `rubric` による自動判定が可能だった。`command` 条件は CI fallback ("Validate skill syntax" SUCCESS) で PASS 確認でき、UNCERTAIN はゼロ。verify command の品質は高く、手動判定不要だった。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 既存 verify-executor を再利用 (新 annotation 不採用)。`## Smoke Test` は Spec 専用セクション (Issue body へはコピーしない)。
-- `skills/code/SKILL.md` Step 11 冒頭に h4 サブセクション `#### Smoke Test (pre-commit behavioral check)` を挿入 (renumber 回避)。
-- blocked/UNCERTAIN→SKIPPED 記録のうえ commit 継続、実機 FAIL→1 repair→route 準拠 (Step 9 踏襲)。
-- `skills/code/SKILL.md` の allowed-tools に `ToolSearch` を追加 (mcp_call smoke 実機実行に必須)。
+- MUST/SHOULD 問題ゼロ → COMMENT イベントで review 投稿。Step 12/13 はスキップ。
+- review-spec: CONSIDER 3件 (Progressive Disclosure design note、日本語混在表記、Terms Context 列) — いずれもマージブロックなし。
+- review-bug×2: HIGH SIGNAL 問題なし。verify-executor.md Read placement・SKIPPED/UNCERTAIN 分岐・backward compat 全て設計通り実装確認済み。
+- 受け入れ条件7件全 PASS、CI 全 SUCCESS。
 
 ### Deferred Items
-- `docs/workflow.md` は §2/§3 への簡潔言及のみ (必須 AC 外; doc-checker 判定)。
-- 具体 MCP tool の allowlist は下流リポジトリの MCP 設定 + permission mode 依存 (wholework frontmatter は汎用 ToolSearch のみ)。
-- `permission-mode auto` 下の実 MCP 呼び出し挙動の実機確認は post-merge (manual AC)。
+- `permission-mode auto` 下の MCP 呼び出し実機挙動 (UNCERTAIN vs hang) の確認は post-merge manual AC に委譲 (code phase から継続)。
+- Spec に `## Smoke Test` セクションがある実ケースの動作確認は post-merge opportunistic AC。
+- docs/ja/workflow.md の "実機 external" 表記は CONSIDER のみ — 必要であれば後続 doc 改善 Issue で対応。
 
-### Notes for Next Phase (code)
-- smoke サブセクションは Step 11 の patch route コミットブロック (`**For patch route (commit to BASE_BRANCH)**`) の直前に挿入。`verify-executor.md` の Read 命令は見出し直後の段落に置く。
-- 本文に半角 `!` を含めない。`Smoke Test` / `SKIPPED` / `ToolSearch` は verify アンカー — 確実に文字列を含める。
-- `docs/ja/product.md` と `docs/ja/workflow.md` の日本語同期を忘れない (translation-workflow)。
+### Notes for Next Phase (merge)
+- PR #545 は COMMENT review 投稿済み (MUST 問題なし)。直接 `/merge 545` 実行可能。
+- 全 CI SUCCESS、受け入れ条件全 PASS を確認済み。
