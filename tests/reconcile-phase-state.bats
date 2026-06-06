@@ -328,6 +328,37 @@ MOCK_EOF
     [[ "$output" == *'"matches_expected":false'* ]]
 }
 
+@test "review completion: localized heading with review-summary marker -> matches_expected true" {
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+echo "## レビューレスポンスサマリー"
+echo "<!-- review-summary -->"
+echo "All good"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" review 42 --pr 10 --check-completion --strict
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"matches_expected":true'* ]]
+}
+
+@test "review completion: marker only (no heading) -> matches_expected true" {
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+echo "<!-- review-summary -->"
+echo "Some content"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" review 42 --pr 10 --check-completion --strict
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"matches_expected":true'* ]]
+}
+
 @test "review completion: missing --pr flag -> exit 2" {
     run bash "$SCRIPT" review 42 --check-completion
     [ "$status" -eq 2 ]
