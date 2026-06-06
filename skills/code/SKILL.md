@@ -2,7 +2,7 @@
 name: code
 description: Local implementation (`/code 123`). Size auto-detection routes XS/S→patch (direct commit to main), M/L→branch+PR. Override with `--patch`/`--pr`.
 context: fork
-allowed-tools: Bash(gh issue view:*, gh issue edit:*, gh issue list:*, gh issue create:*, git checkout:*, git pull:*, git add:*, git status:*, git diff:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh pr create:*, gh pr comment:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, python3:*, bats:*), Glob, Grep, Read, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree
+allowed-tools: Bash(gh issue view:*, gh issue edit:*, gh issue list:*, gh issue create:*, git checkout:*, git pull:*, git add:*, git status:*, git diff:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh pr create:*, gh pr comment:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, python3:*, bats:*), Glob, Grep, Read, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, ToolSearch
 ---
 
 # Local Implementation
@@ -284,6 +284,27 @@ Handle results as follows:
 **Spec sync (when verify commands are modified):** If Issue body verify commands (`<!-- verify: ... -->`) are modified, also apply the same fix to the "Verification > Pre-merge" section in the Spec (`$SPEC_PATH/issue-$NUMBER-*.md`). Updating only the Issue body without updating the Spec will cause discrepancies flagged in the review retrospective.
 
 ### Step 11: Commit, Push, or Create PR
+
+#### Smoke Test (pre-commit behavioral check)
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md` and follow the "Processing Steps" section to run verify commands in **full mode**. Target: the `## Smoke Test` section of the Spec loaded in Step 5 (`$SPEC_PATH/issue-$NUMBER-*.md`).
+
+If the Spec has no `## Smoke Test` section, skip this subsection entirely (no-op — backward compatible with existing behavior).
+
+When a `## Smoke Test` section is present:
+
+1. Emit a progress line so the watchdog resets its silence counter:
+   ```bash
+   echo "progress: Running smoke test for issue #$NUMBER..."
+   ```
+2. Extract all `<!-- verify: ... -->` commands from the `## Smoke Test` section and run them via verify-executor in **full mode**. `ToolSearch` is in allowed-tools so `mcp_call` smoke checks can invoke MCP tools.
+3. Handle results:
+   - **All PASS**: proceed to the patch/pr commit block below.
+   - **Any FAIL**: attempt one repair, re-run smoke. If still FAIL:
+     - **patch route (non-interactive mode)**: hard-error abort — output "Smoke test still FAIL after one repair attempt. Fix the issue manually, then re-run `/code $NUMBER --patch`." and exit with non-zero
+     - **patch route (interactive mode)**: use AskUserQuestion to let the user decide (abort / continue)
+     - **pr route**: continue — CI/verify will catch it; report remaining failures in the completion message
+   - **Any UNCERTAIN or SKIPPED** (permission/classifier blocked, `--when` condition unmet, ToolSearch unavailable, etc.): record as `SKIPPED` in both the Step 12 Code Retrospective "Smoke Test" row and the completion message, and proceed to commit (do not silent-adopt a fallback value; do not hard-block on the environment limitation).
 
 **For patch route (commit to BASE_BRANCH)**:
 
