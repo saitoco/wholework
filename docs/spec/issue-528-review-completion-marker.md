@@ -61,3 +61,31 @@
 - **Forbidden Expressions 回避**: `skills/review/SKILL.md` のマーカー（`<!--` に半角 `!` を含む）は、テンプレートの ` ```markdown ` コードフェンス内、および注記プロースでは inline code バッククォートで囲んで記述する（半角 `!` の禁止はコードフェンス・inline code 外のみ対象）。
 - **スコープ = review phase のみ**（Issue 自動解決済み）: reconcile-phase-state.sh の他フェーズ（issue/spec/code-patch/code-pr/merge/verify）の成功署名はラベル・git state・PR state・英語 gh キーワードで検出しており、ローカライズ脆弱なのは review の見出しのみ。汎用化は対象外。
 - **マーカー欠落リスク**: review LLM がマーカーを出力しないケースは、保持した既存テキスト署名 fallback が受ける（defense-in-depth）。
+
+## Code Retrospective
+
+### Deviations from Design
+- None（Spec の実装手順どおりに実装完了）
+
+### Design Gaps/Ambiguities
+- push タイミング: Worktreeエントリー後の最初の push は Step 11 のPR作成時にエラーになった（`aborted: you must first push the current branch to a remote`）。Step 12 で push してから PR を作成する流れへ修正した。Spec ではこのタイミングについて言及なし。
+
+### Rework
+- None（1回の実装で全52テストPASSを確認）
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- マーカー検出を grep OR の先頭に置き、既存テキスト署名を fallback として保持（defense-in-depth）
+- POSIX `[[:space:]]` を使用してマーカー内部の空白揺れを許容（bash 3.2+ 互換）
+- bats テストを2件追加：「localized heading + marker」と「marker only」で両パターンを網羅
+
+### Deferred Items
+- review LLM がマーカーを出力しないケースの実運用検証（Post-merge AC）
+- Push タイミング（Worktree内での最初のpushが必要）は動作確認済み
+
+### Notes for Next Phase
+- 全52 bats テストPASS、CI push 済み（PR #544）
+- verify コマンドは `github_check` のみPENDING（CI完了待ち）、その他7件はPASS確認済み
+- forbidden expressions チェック PASS、skill syntax validation PASS
