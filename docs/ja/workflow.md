@@ -38,7 +38,7 @@ Issue の要件を明確化します。2 つのモード: 新規作成（`/issue
 
 ### 2. `/spec` — 仕様策定
 
-Issue 要件からコードベースを調査し Spec（`docs/spec/issue-N-short-title.md`）を作成します。設計完了時に Size→ワークフローのルーティングを行い、Size に基づいて次アクション（`/code --patch` / `/code`）を提示します。`--light` は軽量設計（あいまいさ解消、不確実性検出、セルフレビューなどを省略）、`--full` はフル設計。オプション省略時は Size ラベルから自動判定します（M → `--light`、L/XL → `--full`）。詳細: [`skills/spec/SKILL.md`](../../skills/spec/SKILL.md)
+Issue 要件からコードベースを調査し Spec（`docs/spec/issue-N-short-title.md`）を作成します。設計完了時に Size→ワークフローのルーティングを行い、Size に基づいて次アクション（`/code --patch` / `/code`）を提示します。`--light` は軽量設計（あいまいさ解消、不確実性検出、セルフレビューなどを省略）、`--full` はフル設計。オプション省略時は Size ラベルから自動判定します（M → `--light`、L/XL → `--full`）。実機 external/MCP 呼び出しを伴う Issue では optional な `## Smoke Test` セクションを生成します。詳細: [`skills/spec/SKILL.md`](../../skills/spec/SKILL.md)
 
 ### 3. `/code` — 実装
 
@@ -49,7 +49,7 @@ Spec に基づいて設計を実装します。サイズベースのルーティ
 - **GitHub Copilot**: Issue で "Assign to Copilot" を選択
 - **手動**: ユーザーが手動で実装
 
-**Spec 参照**: 実装時は `docs/spec/issue-N-short-title.md` に保存された Spec を参照します。Spec には対象ファイル、実装手順、検証方法が含まれます。Spec が存在しない場合は Issue 本文から要件を読み取ります。
+**Spec 参照**: 実装時は `docs/spec/issue-N-short-title.md` に保存された Spec を参照します。Spec には対象ファイル、実装手順、検証方法が含まれます。Spec が存在しない場合は Issue 本文から要件を読み取ります。Spec に `## Smoke Test` セクションがある場合、`/code` は commit/push 前にそこに記述された verify command を full mode で実行し behavioral 不整合を早期検知します。
 
 詳細: [`skills/code/SKILL.md`](../../skills/code/SKILL.md)
 
