@@ -73,20 +73,21 @@ agent と executor の recover step 規約が三重に不一致:
 - なし。初回実装でテスト（ok 10）がPASSし修正不要だった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST issue なし（全 AC PASS、CI 全ジョブ green）
-- CONSIDER 1件（bats テストの負ケース不足）はフォローアップ Issue が妥当と判断、本 PR で修正不要
-- security 境界確認済み：run_command ガイダンスは forbidden 境界を逸脱しない
+- PR #542 を squash merge（`--squash --delete-branch`）で main にマージ完了
+- BASE_BRANCH=main のため `closes #535` により Issue #535 は自動クローズされる
+- merge phase での conflict 解決は不要（mergeable=true, reason=clean, CI green, review approved）
 
 ### Deferred Items
-- 負ケーステスト（run_command mid-step failure）: フォローアップ Issue で対応
-- post-merge: 実運用でwatchdog-kill-before-PRシナリオを再現し自動復旧を確認する（manual）
+- 負ケーステスト（run_command mid-step failure）: フォローアップ Issue で対応（review phase から引き継ぎ）
+- post-merge manual verify: Tier 3 が unsupported op エラーなく watchdog-kill-before-PR シナリオで自動復旧することを実運用で確認する
 
 ### Notes for Next Phase
-- 全 AC PASS・CI green・MUST issue なし → `/merge 542` でマージ可能
-- Post-merge verify: Tier 3 が unsupported op エラーなく自動復旧することを実運用で確認する
+- Spec の Post-merge Verification に manual verify command あり（Tier 3 実運用確認）
+- verify phase では post-merge verify command（manual）に対して `/verify 535` で対応予定
+- セキュリティ境界確認済み（review phase）：run_command ガイダンスは forbidden 境界を逸脱しない
 
 ## Review Retrospective
 
