@@ -45,7 +45,7 @@ Clarifies Issue requirements. Two modes: new creation (`/issue "title"`) and exi
 
 ### 2. `/spec` — Specification
 
-Investigates the codebase from Issue requirements and creates a Spec (`docs/spec/issue-N-short-title.md`). On design completion, performs Size→workflow routing and presents the next action based on Size (`/code --patch` / `/code`). `--light` for lightweight design (omits ambiguity resolution, uncertainty detection, self-review, etc.), `--full` for full design. When the option is omitted, auto-determines from the Size label (M → `--light`, L/XL → `--full`). Details: [`skills/spec/SKILL.md`](../skills/spec/SKILL.md)
+Investigates the codebase from Issue requirements and creates a Spec (`docs/spec/issue-N-short-title.md`). On design completion, performs Size→workflow routing and presents the next action based on Size (`/code --patch` / `/code`). `--light` for lightweight design (omits ambiguity resolution, uncertainty detection, self-review, etc.), `--full` for full design. When the option is omitted, auto-determines from the Size label (M → `--light`, L/XL → `--full`). For Issues involving real external or MCP tool calls, generates an optional `## Smoke Test` section in the Spec. Details: [`skills/spec/SKILL.md`](../skills/spec/SKILL.md)
 
 ### 3. `/code` — Implementation
 
@@ -56,7 +56,7 @@ Three implementation paths:
 - **GitHub Copilot**: Select "Assign to Copilot" in the Issue
 - **Manual**: User implements manually
 
-**Spec reference**: During implementation, reference the Spec saved at `docs/spec/issue-N-short-title.md`. The Spec contains target files, implementation steps, and verification methods. If no Spec exists, read requirements from the Issue body.
+**Spec reference**: During implementation, reference the Spec saved at `docs/spec/issue-N-short-title.md`. The Spec contains target files, implementation steps, and verification methods. If no Spec exists, read requirements from the Issue body. If the Spec includes a `## Smoke Test` section, `/code` runs those verify commands in full mode before commit/push to detect behavioral mismatches early.
 
 Details: [`skills/code/SKILL.md`](../skills/code/SKILL.md)
 
