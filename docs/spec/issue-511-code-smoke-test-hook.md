@@ -163,3 +163,29 @@
 - verify command は `python3 scripts/validate-skill-syntax.py skills/` 含む7条件。全 CI SUCCESS 確認済み。
 - `skills/code/SKILL.md` の `#### Smoke Test` サブセクション、`ToolSearch` allowed-tools、`SKIPPED` 分岐の存在を重点確認。
 - post-merge manual AC (MCP smoke 実機) は verify opportunistic モードで実施予定。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec (issue)
+- 受入条件は WHAT レベルで明確。全7件に verify command (`file_contains` / `section_contains` / `rubric` / `command`) が付与され自動判定可能だった。ambiguity はユーザー確認3点で解消済みで、verify phase で UNCERTAIN ゼロ。Issue=WHAT / Spec=HOW の境界に従い専用構文等の実装詳細を Notes に降格した判断も適切。
+
+#### design (spec)
+- 設計は実装に忠実 (Code Retrospective: deviations N/A)。`ToolSearch` 追加・h4 サブセクション挿入 (renumber 回避) などの HOW 判断が code phase で問題なく反映された。`permission-mode auto` 下の MCP 挙動を Uncertainty に明記し実機確認を manual AC に委譲したのは妥当。
+
+#### code
+- rework なし。Spec の「半角 `!` 回避」制約を hard-error メッセージで正しく回避 (period 使用)。`ToolSearch` 追加で KNOWN_TOOLS 更新不要を確認。
+
+#### review
+- full mode (review-spec + review-bug×2) で MUST/SHOULD ゼロ、CONSIDER 3件 (Progressive Disclosure 設計判断・日本語表記統一) はマージブロックなし。Spec↔実装 divergence なし。
+
+#### merge
+- conflict なしスカッシュマージ (closes #511)。mergeable=false/reason=unknown は CI 集計タイミングの誤判定として auto-resolve しマージ続行 — 妥当。
+
+#### verify
+- pre-merge 全7件 PASS (冪等再確認、FAIL/UNCERTAIN ゼロ)。post-merge 2件 (opportunistic + manual) は本 run で実行不可のため deferred (phase/verify 維持、Issue は CLOSED のまま)。
+- **(解消済み観察)** `skills/code/SKILL.md` に `ToolSearch` が欠けており mcp_call の full-mode 実機実行が latent に UNCERTAIN だった点を本 Issue で発見・解消。full-mode で verify-executor を呼ぶ他 skill を確認したところ、主要消費者の `verify` は既に ToolSearch 保有、`review` は safe mode (mcp_call は実行せず UNCERTAIN のため ToolSearch 不要)。残る `auto`/`audit` の full-mode mcp_call は稀な best-effort ケースで緊急度は低い。
+
+### Improvement Proposals
+- N/A — ワークフロー全 phase がクリーン (rework・MUST/SHOULD・conflict・FAIL いずれもゼロ)。ToolSearch の latent gap は主要 full-mode 消費者 (code/verify) で解消済み。残る auto/audit の full-mode mcp_call は稀なため独立 Issue 化は見送り。
