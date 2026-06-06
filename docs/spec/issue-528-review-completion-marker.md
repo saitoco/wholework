@@ -73,19 +73,32 @@
 ### Rework
 - None（1回の実装で全52テストPASSを確認）
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Nothing to note. PR diff は Spec の実装手順（SKILL.md マーカー追加、reconcile grep 更新、phase-state.md SSoT 更新、bats テスト追加）に完全準拠しており、逸脱は検出されなかった。
+
+### Recurring Issues
+
+Nothing to note. 問題は一切検出されなかった（MUST: 0、SHOULD: 0、CONSIDER: 0）。
+
+### Acceptance Criteria Verification Difficulty
+
+Nothing to note. 全8条件を機械検証可能な形で設計されており、UNCERTAIN は発生しなかった。file_contains×5 と rubric×2 の組み合わせ（機械検証 + セマンティック検証）のパターンは有効に機能した。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- マーカー検出を grep OR の先頭に置き、既存テキスト署名を fallback として保持（defense-in-depth）
-- POSIX `[[:space:]]` を使用してマーカー内部の空白揺れを許容（bash 3.2+ 互換）
-- bats テストを2件追加：「localized heading + marker」と「marker only」で両パターンを網羅
+- 全8受け入れ条件 PASS（file_contains×5、rubric×2、github_check×1）
+- MUST 問題なし、COMMENT イベントでレビュー投稿
+- Type=Bug の重点観点（Perspective 2 edge cases + 回帰テスト）も問題なし
 
 ### Deferred Items
-- review LLM がマーカーを出力しないケースの実運用検証（Post-merge AC）
-- Push タイミング（Worktree内での最初のpushが必要）は動作確認済み
+- Post-merge AC: 次回 `/auto` review phase でのローカライズ見出し + reconcile `matches_expected:true` の実運用確認
 
 ### Notes for Next Phase
-- 全52 bats テストPASS、CI push 済み（PR #544）
-- verify コマンドは `github_check` のみPENDING（CI完了待ち）、その他7件はPASS確認済み
-- forbidden expressions チェック PASS、skill syntax validation PASS
+- 全 CI ジョブ SUCCESS（DCO、Run bats tests ×2、Validate skill syntax ×2、Forbidden Expressions ×2、macOS shell compatibility ×2）
+- PR #544 マージ準備完了
+- MUST 問題なし、`/merge 544` で進める
