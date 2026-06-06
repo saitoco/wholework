@@ -59,3 +59,45 @@ agent と executor の recover step 規約が三重に不一致:
 - **executor コード変更なし**: `spawn-recovery-subagent.sh` の recover 分岐は既に `run_command` / `git_commit_amend_signoff` をサポート（line 225-237）。本 Issue は agent 側の語彙・schema を executor に合わせる SSoT 整合であり、executor の op 実装は追加しない（代替案: executor に名前付き op を実装する方向は surface 拡大のため不採用。#535 retrospective 参照）。
 - **セキュリティ境界（/review で要確認）**: 本 fix により recovery sub-agent が run_command で feature branch への push + PR 作成を自動実行可能になる。ただし (1) `run_command` は既存機能で新規能力追加ではない、(2) `validate-recovery-plan.sh` の forbidden（force-push / main 直 push / `gh pr merge` / `gh issue close`）と agent Constraints（破壊的 fs 禁止）でガード、(3) PR は通常の review/merge ゲートを通る。/review は agent の run_command ガイダンスが forbidden 境界を逸脱しないか確認すること。
 - **bats モック**: 復旧テストは git/gh を MOCK_DIR でモックし実 push/PR を発生させない。既存テストの mock パターン（`make_claude_mock`、`WHOLEWORK_SCRIPT_DIR`）を踏襲。
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Specの実装ステップ（1→2の順序）を忠実に実施した。
+
+### Design Gaps/Ambiguities
+- Specでは「setup の MOCK_DIR に git/gh の最小モック」と記述されていたが、既存setupは他テストの副作用を避けるためtest関数内に局所的に配置した。これはbatsの慣用パターンに沿った選択であり機能的問題はない。
+- Specのbats例示「`$SCRIPT code 42 --log`」は`--log`引数で終端しており実ファイルパスが必要だが、既存テストの`$LOG_FILE`変数パターンを踏襲して自然に解決した。
+
+### Rework
+- なし。初回実装でテスト（ok 10）がPASSし修正不要だった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST issue なし（全 AC PASS、CI 全ジョブ green）
+- CONSIDER 1件（bats テストの負ケース不足）はフォローアップ Issue が妥当と判断、本 PR で修正不要
+- security 境界確認済み：run_command ガイダンスは forbidden 境界を逸脱しない
+
+### Deferred Items
+- 負ケーステスト（run_command mid-step failure）: フォローアップ Issue で対応
+- post-merge: 実運用でwatchdog-kill-before-PRシナリオを再現し自動復旧を確認する（manual）
+
+### Notes for Next Phase
+- 全 AC PASS・CI green・MUST issue なし → `/merge 542` でマージ可能
+- Post-merge verify: Tier 3 が unsupported op エラーなく自動復旧することを実運用で確認する
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Spec の実装ステップと PR diff に構造的な乖離はなし。"write to filesystem" constraint の削除は `run_command` パラダイムへの必然的変更で Spec の意図（破壊的 fs 禁止）とも整合しているが、この削除が intentional かどうかを Spec に明示しておくと将来の読者に親切。
+
+### Recurring Issues
+
+特になし。今回は単一ファイル修正（agent）+ テスト追加の小規模 PR で、類似パターンの問題は出なかった。
+
+### Acceptance Criteria Verification Difficulty
+
+全 5 条件が verify command 付きで定義されており、rubric/file_not_contains/file_contains/github_check が適切に使い分けられている。UNCERTAIN なし。Security 境界確認の rubric は Spec の Notes セクション（"/review は agent の run_command ガイダンスが forbidden 境界を逸脱しないか確認すること"）に明示されており、引き継ぎが機能した。

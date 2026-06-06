@@ -65,7 +65,7 @@ Output a single JSON object (no markdown fences, no surrounding text) with exact
   "action": "<retry|skip|recover|abort>",
   "rationale": "<one or two sentences explaining the diagnosis and chosen action>",
   "steps": [
-    { "op": "<operation_name>", "detail": "<optional detail>" }
+    { "op": "run_command", "cmd": "<shell command to execute>" }
   ]
 }
 ```
@@ -80,18 +80,32 @@ Output a single JSON object (no markdown fences, no surrounding text) with exact
 
 | op | Meaning |
 |----|---------|
-| `push_branch` | Push the current worktree branch to origin |
-| `create_pr` | Create a PR from the worktree branch |
-| `transition_label` | Run `gh-label-transition.sh` to advance the phase label |
-| `extract_pr_number` | Re-fetch PR number via `gh pr list` |
-| `wait_ci` | Wait for CI checks before proceeding |
-| `noop` | No operation; used when no steps are needed (e.g., action=skip) |
+| `run_command` | Execute an arbitrary safe shell command (`cmd` field required). Use this to express any recovery action: stage and commit changes, push a feature branch, run `gh pr create`, run `gh-label-transition.sh`, etc. `cmd` is passed to `subprocess.run(shell=True)`. |
+| `git_commit_amend_signoff` | Amend the last commit to add DCO sign-off (`git commit --amend -s --no-edit`). No `cmd` field required. |
 
 **Constraints:**
 - `steps` must have at most 5 entries
-- Do not include ops that write to the filesystem, force-push, reset, close issues, merge PRs, or push directly to main outside the `code --patch` flow
-- If the appropriate action is `retry` or `skip`, `steps` may be an empty array `[]`
-- If the appropriate action is `abort`, `steps` should be an empty array `[]`
+- Do not include commands that force-push, push directly to main/master, reset hard, close issues, or merge PRs
+- If the appropriate action is `retry` or `skip`, `steps` must be an empty array `[]`
+- If the appropriate action is `abort`, `steps` must be an empty array `[]`
+
+**Watchdog-kill-before-PR recovery example (commit→push feature branch→`gh pr create`):**
+
+When the log shows a watchdog kill after implementation was complete but before commit or PR creation (untracked/modified files present in the worktree branch):
+
+```json
+{
+  "action": "recover",
+  "rationale": "Watchdog killed run-code.sh after implementation but before commit or PR creation. Recovering by committing uncommitted changes, pushing the feature branch, and creating the PR.",
+  "steps": [
+    { "op": "run_command", "cmd": "git add -A && git commit -s -m 'feat: implement issue #N (closes #N)\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>'" },
+    { "op": "run_command", "cmd": "git push origin worktree-code+issue-N" },
+    { "op": "run_command", "cmd": "gh pr create --base main --head worktree-code+issue-N --title 'Issue #N: summary' --body 'closes #N'" }
+  ]
+}
+```
+
+Replace `N` and `worktree-code+issue-N` with actual values from `issue_number` and `branch` inputs. Use `gh-label-transition.sh` in a fourth `run_command` step if the phase label also needs advancing.
 
 ## Output
 
