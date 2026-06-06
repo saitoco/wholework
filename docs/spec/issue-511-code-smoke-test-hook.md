@@ -135,20 +135,31 @@
 ### Rework
 - N/A
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+- Nothing to note. Spec の全7実装ステップが PR diff に忠実に反映されており、out-of-scope な変更も implicit judgment も検出されなかった。changed files リストも Spec の「変更ファイル」と完全一致。
+
+### Recurring Issues
+- Nothing to note. MUST/SHOULD 相当の問題は review-spec・review-bug×2 の全エージェントで検出されなかった。CONSIDER 3件はいずれも Progressive Disclosure 設計判断と日本語表記の軽微な統一提案で、繰り返しパターンには該当しない。
+
+### Acceptance Criteria Verification Difficulty
+- Nothing to note. 全7条件に verify command が付与されており、`file_contains` / `section_contains` / `rubric` による自動判定が可能だった。`command` 条件は CI fallback ("Validate skill syntax" SUCCESS) で PASS 確認でき、UNCERTAIN はゼロ。verify command の品質は高く、手動判定不要だった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `skills/spec/SKILL.md` に SHOULD consideration ブロック "Smoke Test section consideration" を追加し、両テンプレートに `## Smoke Test` optional セクションを挿入 (full: `## Verification` と `## UI Design` の間; light: `## Verification` と `## Notes` の間)。
-- `skills/code/SKILL.md` Step 11 冒頭に `#### Smoke Test (pre-commit behavioral check)` サブセクションを挿入。verify-executor.md Read は見出し直後の段落に配置 (skill-dev-checks Read Instruction Placement Rule)。
-- blocked/UNCERTAIN → `SKIPPED` として retrospective + completion message に記録して commit 継続。実機 FAIL → 1 repair → route 準拠。backward compat: `## Smoke Test` 不在時は no-op。
-- `ToolSearch` を allowed-tools に追加。`docs/product.md` Terms 追加、`docs/workflow.md` §2/§3 言及、`docs/ja/` 同期を全て完了。
+- MUST/SHOULD 問題ゼロ → COMMENT イベントで review 投稿。Step 12/13 はスキップ。
+- review-spec: CONSIDER 3件 (Progressive Disclosure design note、日本語混在表記、Terms Context 列) — いずれもマージブロックなし。
+- review-bug×2: HIGH SIGNAL 問題なし。verify-executor.md Read placement・SKIPPED/UNCERTAIN 分岐・backward compat 全て設計通り実装確認済み。
+- 受け入れ条件7件全 PASS、CI 全 SUCCESS。
 
 ### Deferred Items
-- `permission-mode auto` 下の un-allowlisted MCP 呼び出し挙動 (UNCERTAIN vs hang) の実機確認は post-merge (manual AC)。
-- Spec に `## Smoke Test` セクションがある実ケースでの動作確認は post-merge opportunistic AC。
+- `permission-mode auto` 下の MCP 呼び出し実機挙動 (UNCERTAIN vs hang) の確認は post-merge manual AC に委譲 (code phase から継続)。
+- Spec に `## Smoke Test` セクションがある実ケースの動作確認は post-merge opportunistic AC。
+- docs/ja/workflow.md の "実機 external" 表記は CONSIDER のみ — 必要であれば後続 doc 改善 Issue で対応。
 
-### Notes for Next Phase (review)
-- PR #545 変更: `skills/spec/SKILL.md`, `skills/code/SKILL.md`, `docs/product.md`, `docs/workflow.md`, `docs/ja/product.md`, `docs/ja/workflow.md`。
-- verify アンカー ("Smoke Test" / "SKIPPED" / "ToolSearch") は全ファイルで確認済み。
-- bats 674 tests PASS、validate-skill-syntax.py PASS、forbidden-expressions PASS。
+### Notes for Next Phase (merge)
+- PR #545 は COMMENT review 投稿済み (MUST 問題なし)。直接 `/merge 545` 実行可能。
+- 全 CI SUCCESS、受け入れ条件全 PASS を確認済み。
