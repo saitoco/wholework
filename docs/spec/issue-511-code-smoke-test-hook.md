@@ -123,21 +123,32 @@
 ### Uncertainty resolution
 - `permission-mode auto` 下の un-allowlisted MCP 呼び出し挙動 (UNCERTAIN/denied vs hang) は環境依存として Uncertainty に明記。verify-executor の「blocked→UNCERTAIN」記述を前提に SKIPPED→continue を設計し、hang は `claude-watchdog.sh` が処理する想定。実機確認は post-merge manual AC に委譲。
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A (implementation followed Spec implementation steps faithfully)
+
+### Design Gaps/Ambiguities
+- The Spec's Notes stated "本文に半角 `!` を含めない" — confirmed no half-width `!` introduced in skill bodies. The "!" in the hard-error abort output message ("Fix the issue manually...") was avoided by using a period instead.
+- `ToolSearch` was successfully added to allowed-tools frontmatter with no KNOWN_TOOLS update required (as noted in Spec).
+
+### Rework
+- N/A
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
-- 既存 verify-executor を再利用 (新 annotation 不採用)。`## Smoke Test` は Spec 専用セクション (Issue body へはコピーしない)。
-- `skills/code/SKILL.md` Step 11 冒頭に h4 サブセクション `#### Smoke Test (pre-commit behavioral check)` を挿入 (renumber 回避)。
-- blocked/UNCERTAIN→SKIPPED 記録のうえ commit 継続、実機 FAIL→1 repair→route 準拠 (Step 9 踏襲)。
-- `skills/code/SKILL.md` の allowed-tools に `ToolSearch` を追加 (mcp_call smoke 実機実行に必須)。
+- `skills/spec/SKILL.md` に SHOULD consideration ブロック "Smoke Test section consideration" を追加し、両テンプレートに `## Smoke Test` optional セクションを挿入 (full: `## Verification` と `## UI Design` の間; light: `## Verification` と `## Notes` の間)。
+- `skills/code/SKILL.md` Step 11 冒頭に `#### Smoke Test (pre-commit behavioral check)` サブセクションを挿入。verify-executor.md Read は見出し直後の段落に配置 (skill-dev-checks Read Instruction Placement Rule)。
+- blocked/UNCERTAIN → `SKIPPED` として retrospective + completion message に記録して commit 継続。実機 FAIL → 1 repair → route 準拠。backward compat: `## Smoke Test` 不在時は no-op。
+- `ToolSearch` を allowed-tools に追加。`docs/product.md` Terms 追加、`docs/workflow.md` §2/§3 言及、`docs/ja/` 同期を全て完了。
 
 ### Deferred Items
-- `docs/workflow.md` は §2/§3 への簡潔言及のみ (必須 AC 外; doc-checker 判定)。
-- 具体 MCP tool の allowlist は下流リポジトリの MCP 設定 + permission mode 依存 (wholework frontmatter は汎用 ToolSearch のみ)。
-- `permission-mode auto` 下の実 MCP 呼び出し挙動の実機確認は post-merge (manual AC)。
+- `permission-mode auto` 下の un-allowlisted MCP 呼び出し挙動 (UNCERTAIN vs hang) の実機確認は post-merge (manual AC)。
+- Spec に `## Smoke Test` セクションがある実ケースでの動作確認は post-merge opportunistic AC。
 
-### Notes for Next Phase (code)
-- smoke サブセクションは Step 11 の patch route コミットブロック (`**For patch route (commit to BASE_BRANCH)**`) の直前に挿入。`verify-executor.md` の Read 命令は見出し直後の段落に置く。
-- 本文に半角 `!` を含めない。`Smoke Test` / `SKIPPED` / `ToolSearch` は verify アンカー — 確実に文字列を含める。
-- `docs/ja/product.md` と `docs/ja/workflow.md` の日本語同期を忘れない (translation-workflow)。
+### Notes for Next Phase (review)
+- PR #545 変更: `skills/spec/SKILL.md`, `skills/code/SKILL.md`, `docs/product.md`, `docs/workflow.md`, `docs/ja/product.md`, `docs/ja/workflow.md`。
+- verify アンカー ("Smoke Test" / "SKIPPED" / "ToolSearch") は全ファイルで確認済み。
+- bats 674 tests PASS、validate-skill-syntax.py PASS、forbidden-expressions PASS。
