@@ -115,3 +115,31 @@ bundled `visual-diff-adapter` (`modules/visual-diff-adapter.md`) の Step 5b/5c 
 - 全 pre-merge AC（4 件）は file_contains/file_not_contains + rubric いずれも PASS 確認済み。
 - Node スクリプト内の `\${run_id}` 等のエスケープは意図的（Bash 変数展開防止）。
 - patch route で直接 main にマージ済み（PR なし）。
+
+## Issue Retrospective
+
+### Triage
+
+- **Type=Bug / Size=S / Value=3 / Priority=未指定**
+- Size=S 判定理由: 変更対象は実質 `modules/visual-diff-adapter.md` の 1 ファイルだが、Step 5b/5c の埋め込み Node スクリプトを sharp raw decode へ書き換える非自明な logic change を含むため、root-cause 明確な bug fix (−1) と script logic change (+1) が相殺し S。patch route + Spec 必須となり、正確なコードは `/spec` で確定する。(/spec フェーズで XS に再判定)
+- Priority は本文に明示指定なし (「blocker」表現は技術的詰まりを指す記述でありプライオリティ指定ではない) のためスキップ。
+
+### Q&A による方針決定
+
+- **pngjs の扱い (AC2)**: ユーザー確認の結果「sharp 統一のみ」を採用。pngjs 参照を Step 5b/5c から全廃し sharp raw RGBA に統一する単一パスに AC を確定。adapter は既に sharp を必須検出し Step 5c も sharp composite 済みで、追加依存ゼロ・pnpm hoist 問題の構造的回避・AC の機械検証可能化 (file_not_contains で pngjs 排除確認) という利点が決め手。「pngjs 直接依存明文化」の代替案は不採用 (Scope §2 に明記)。
+
+### 自動解決した曖昧ポイント
+
+- **pixelmatch interop 記法**: `require('pixelmatch').default ?? require('pixelmatch')` のインライン形を採用 (dynamic import は async 化リファクタが必要なため不採用)。両形とも AC を満たし文面に影響しないため自動解決。
+- **follow-on 制約の記録方法**: worktree node_modules は既存 #443 で追跡済みのため新規起票せず adapter 注記でリンク。画像高さ不一致は未実測のため post-merge 再走での再現確認まで adapter 注記の caveat に留める (先行起票を回避)。
+
+### Acceptance Criteria の変更理由
+
+- 各 pre-merge AC に verify command を付与 (元の本文は plain checkbox のみだった)。意味判定は `rubric`、機械的安全網として naive 形除去を `file_not_contains` (`const pixelmatch = require('pixelmatch');` / `require('pngjs')` / `require.resolve('pixelmatch')`)、sharp raw 採用を `file_contains ".raw()"` で補強。
+- AC2 を OR から「sharp 統一」単一パスに確定 (上記 Q&A)。
+- AC4 (follow-on 記録) を「adapter ドキュメントの注記として記録」へ具体化し、`file_contains "#443"` で worktree gap トラッカーへのリンクを検証可能化。
+- post-merge 条件は実プロジェクト (koganezawa-com#58) での runtime 再走が必須なため `verify-type: manual` を維持。
+
+### 参照の更新
+
+- worktree node_modules gap が wholework 側で **#443** として既にトラッキングされていることを発見し、参照に追加 (元本文は downstream の koganezawa-com#45 のみ参照)。#441=CLOSED / #437=OPEN を確認。
