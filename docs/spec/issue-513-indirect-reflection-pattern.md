@@ -33,3 +33,29 @@
 |--------|--------|------|
 | `grep "間接反映\\|indirect.*reflect\\|downstream.*script"` | `grep "indirect"` | 単純化・macOS 互換性向上 |
 | `file_contains "modules/verify-patterns.md" "command"` | `rubric "..." + file_contains "indirect"` | trivially PASS を回避し意味的チェックを追加 |
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- XS routes skip the spec phase; the Spec file was created in Step 4b (post-code) by transcribing the issue retrospective only. No pre-implementation design observations.
+
+#### code
+- Direct main commit via patch route (ce8d804). Single file change (modules/verify-patterns.md, +39 lines) — clean, atomic, no fixup/amend cycles.
+- Code phase auto-fixed Issue checkboxes (pre-merge 1,2) as part of the patch flow.
+
+#### review
+- N/A (patch route — no PR, no review phase).
+
+#### merge
+- Patch route bypasses /merge. Direct push to main succeeded on first attempt; no conflicts.
+
+#### verify
+- AC1 grep simplification (issue retrospective) paid off: `grep "indirect"` deterministically PASS post-implementation; would have been brittle with original `\|` alternation against BSD grep.
+- AC2 rubric + file_contains supplement worked as designed: rubric semantically confirmed classification guidance; file_contains "indirect" provided the mechanical safety net to avoid false-UNCERTAIN.
+- Post-merge AC is intentionally manual (future-event observation: "next similar Issue") — correctly left unchecked, `phase/verify` retained for follow-up.
+
+### Improvement Proposals
+- N/A
+
