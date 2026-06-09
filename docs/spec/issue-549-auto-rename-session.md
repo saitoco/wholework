@@ -90,3 +90,37 @@
 - **タイムアウト 5000ms の妥当性**: `gh issue view` がネットワーク遅延込みで 1-3 秒、余裕を見て 5 秒。既存 `PermissionRequest` hook と同値で一貫性を保つ
 - **hook 失敗時の安全性**: hook が空出力で終わると Claude Code 側は既存セッション名を保持する。`set -eu` を使わないのは、jq 失敗・gh 失敗で hook 全体が落ちて意図しない side effect が出るのを避けるため
 - **CI への影響**: 新規 bats ファイルは `.github/workflows/test.yml` の `bats --jobs $(nproc) tests/` に自動で含まれる。CI 設定変更は不要
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `set -eu` を使わない設計を採用：hook 失敗時に空出力で安全に抜けるため（gh/jq 失敗で既存セッション名を破壊しない）
+- `case` 文による分岐（`--batch` → `--resume` → generic N）を選択：bash 3.2 互換を維持しつつ可読性を確保
+- bats テストは mock `gh` を `PATH` に差し込む方式（`apply-fallback.bats` と同パターン）
+- `jq -n --arg title "$TITLE"` でセッション名の JSON エスケープを委譲：手動エスケープのバグリスクを排除
+
+### Deferred Items
+- truncate の UTF-8 正確性は「概ね 50 文字、稀にバイト境界で切れる」と割り切り（Spec Notes 参照）
+- 既存ユーザへの template 適用は `./install.sh` 手動再実行に委ね、自動化は Non-Goals
+- `github_check "gh pr checks" "bats"` の verify は CI 完走後 `/verify` フェーズで確認
+
+### Notes for Next Phase
+- PR #550 の CI bats テストが pass することを確認（次フェーズの主要チェック）
+- install.sh の再実行案内を PR 本文に記載済み
+- docs/structure.md の scripts カウントは 48 で現在の実装数と一致（main の先行記載が偶然一致）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の Step 2 で `jq '.hooks.UserPromptSubmit = [...]'` による settings.json.template 編集を想定。実装では `.new` ファイル経由のアトミックな置換パターンで実施（設計と同等）。
+- bats テストの --resume ケースで、デフォルト mock が返すタイトルが「auto: Add auto-rename of session title」であったため、resume 形式 (`auto #123 (resume): ...`) に組み合わせると 52 文字になりトランケートが発生。テストを issue 456 (`"Short title"`) に変更して解決。
+
+### Design Gaps/Ambiguities
+
+- Spec の truncate 実装方針として `awk` による文字数判定が記載されていたが、Notes で「安全策として bash の `${#var}` を使う」と補足されていた。実装では bash `${#var}` + `${TITLE:0:49}` を採用（Spec Notes と一致）。
+
+### Rework
+
+- bats テスト test 3（--resume ケース）を、タイトル長によるトランケート問題で 1 回修正（issue 456 の短いタイトルに変更）。
