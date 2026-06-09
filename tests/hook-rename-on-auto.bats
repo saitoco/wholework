@@ -10,6 +10,12 @@ setup() {
     mkdir -p "$MOCK_DIR"
     export PATH="$MOCK_DIR:$PATH"
 
+    # Set CLAUDE_PROJECT_DIR with session-auto-rename: true so existing tests pass opt-in check
+    PROJ_DIR="$BATS_TEST_TMPDIR/wholework-proj"
+    mkdir -p "$PROJ_DIR"
+    echo "session-auto-rename: true" > "$PROJ_DIR/.wholework.yml"
+    export CLAUDE_PROJECT_DIR="$PROJ_DIR"
+
     # Default mock gh: return a fixed title for issue 123
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
@@ -143,4 +149,31 @@ MOCK
     INPUT='{}'
     OUTPUT=$(echo "$INPUT" | bash "$SCRIPT")
     [ -z "$OUTPUT" ]
+}
+
+@test "no .wholework.yml produces empty output" {
+    EMPTY_DIR="$BATS_TEST_TMPDIR/empty-proj"
+    mkdir -p "$EMPTY_DIR"
+    INPUT='{"prompt":"/auto 123"}'
+    OUTPUT=$(CLAUDE_PROJECT_DIR="$EMPTY_DIR" echo "$INPUT" | CLAUDE_PROJECT_DIR="$EMPTY_DIR" bash "$SCRIPT")
+    [ -z "$OUTPUT" ]
+}
+
+@test "session-auto-rename: false produces empty output" {
+    OPT_OUT_DIR="$BATS_TEST_TMPDIR/optout-proj"
+    mkdir -p "$OPT_OUT_DIR"
+    echo "session-auto-rename: false" > "$OPT_OUT_DIR/.wholework.yml"
+    INPUT='{"prompt":"/auto 123"}'
+    OUTPUT=$(echo "$INPUT" | CLAUDE_PROJECT_DIR="$OPT_OUT_DIR" bash "$SCRIPT")
+    [ -z "$OUTPUT" ]
+}
+
+@test "session-auto-rename: true fires hook and returns sessionTitle" {
+    OPT_IN_DIR="$BATS_TEST_TMPDIR/optin-proj"
+    mkdir -p "$OPT_IN_DIR"
+    echo "session-auto-rename: true" > "$OPT_IN_DIR/.wholework.yml"
+    INPUT='{"prompt":"/auto 123"}'
+    OUTPUT=$(echo "$INPUT" | CLAUDE_PROJECT_DIR="$OPT_IN_DIR" bash "$SCRIPT")
+    TITLE=$(echo "$OUTPUT" | jq -r '.hookSpecificOutput.sessionTitle')
+    [ "$TITLE" = "auto #123: Add auto-rename of session title" ]
 }

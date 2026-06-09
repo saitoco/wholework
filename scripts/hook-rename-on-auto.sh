@@ -4,6 +4,13 @@
 # Silent exit (empty output) on no match or gh failure to preserve existing session name.
 
 INPUT=$(cat)
+
+# Opt-in check: session-auto-rename must be true in .wholework.yml
+WHOLEWORK_YML="${CLAUDE_PROJECT_DIR:-}/.wholework.yml"
+if [ ! -f "$WHOLEWORK_YML" ] || ! grep -q "^session-auto-rename:[[:space:]]*true" "$WHOLEWORK_YML"; then
+  exit 0
+fi
+
 PROMPT=$(echo "$INPUT" | jq -r '.prompt // ""')
 
 # Early exit: not starting with /auto

@@ -12,6 +12,8 @@ wholework/
 ├── .claude-plugin/      # Plugin マニフェストディレクトリ
 │   ├── plugin.json      # Plugin マニフェスト（name: "wholework"）
 │   └── marketplace.json # Marketplace マニフェスト（name: "saitoco-wholework"）
+├── hooks/               # Plugin レベルの hook 定義
+│   └── hooks.json       # UserPromptSubmit hook（session-auto-rename opt-in）
 ├── skills/              # Claude Code スキル（1 スキル 1 サブディレクトリ）
 │   └── <skill-name>/
 │       ├── SKILL.md     # スキル定義（必須）

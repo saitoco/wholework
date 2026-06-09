@@ -109,3 +109,55 @@ Issue body の AC4/AC5 は `file_contains ".claude-plugin/plugin.json"` を veri
 ### 既存 `.claude/settings.json.template` エントリの扱い
 
 当面は残す（plugin hook との二重起動になるが、両方が opt-in チェックを通過した場合は同じ JSON を出力するため冪等。先に exit したほうの出力が使われ、後発は無害）。Plugin 経由配布が定着したら別 Issue で削除を検討。
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+Spec と PR diff の間に構造的乖離はなし。全 acceptance criteria が実装済みで、変更スコープも Issue 目的と一致。spec 段階で verify command を `plugin.json` → `hooks/hooks.json` に修正済みのため、review フェーズでの乖離指摘は不要だった（spec の事前整合が review 負荷を下げた）。
+
+### 再発パターン
+
+CONSIDER レベル 2 件（bats テストの冗長な環境変数プレフィックス、`:-` フォールバックの意図曖昧さ）。いずれも動作に影響しないスタイル/明確さの問題。同種の問題はテストコードで再発しやすい（env 変数設定を pipe の前後両方に置くパターン）。次回 bats テスト作成時に `echo "$INPUT" | ENV=VALUE bash "$SCRIPT"` の最小形式を守ることで防止できる。
+
+### 承認条件検証難易度
+
+全 7 件が `file_contains` / `github_check` で自動検証可能だった（UNCERTAIN ゼロ）。verify command が具体的なファイル名と文字列を指定する形式のため、精度が高い。CI bats テストは `github_check "gh pr checks" "bats"` で正確に照合できた。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST/SHOULD 指摘なし → fix work スキップ、COMMENT イベントで review 投稿
+- CONSIDER 2 件（bats テスト冗長プレフィックス、`:-` フォールバック意図曖昧さ）は動作に影響しないためスキップ
+- 承認条件 7/7 PASS（CI bats テスト含む）を確認済み
+
+### Deferred Items
+- CONSIDER 指摘 2 件を fix しなかった（merge ブロッカーではないため）
+- post-merge 手動確認 2 件は merge 後のオペレーター確認に委ねる
+
+### Notes for Next Phase
+- merge は `/merge 553` で直接実行可能（MUST/SHOULD なし、CI 全 SUCCESS）
+- post-merge 手動確認（別リポジトリでの opt-in/opt-out 動作検証）が残っている
+
+### Deferred Items
+- 既存 `.claude/settings.json.template` の `UserPromptSubmit` hook エントリは残存（二重起動だが冪等）。Plugin 配布定着後に削除 Issue を別途起票予定
+- AC7（`github_check "gh pr checks" "bats"`）は PR 作成後 CI で確認
+
+### Notes for Next Phase
+- `hooks/hooks.json` が Claude Code plugin hooks schema として正しいかどうかは CI（bats は PASS、hooks の実動作は手動後確認）
+- PR #553 作成済み。Post-merge 手動確認 2 項目が残っている
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None — 実装ステップはすべて Spec 通りに実行。順番の変更なし。
+
+### Design Gaps/Ambiguities
+
+- `docs/ja/structure.md` の同期が Spec の Changed Files リストに含まれていなかった。`docs/structure.md` を変更したため `docs/translation-workflow.md` の手順に従い `docs/ja/structure.md` も更新した（追加コミットで対応）。
+
+### Rework
+
+- None

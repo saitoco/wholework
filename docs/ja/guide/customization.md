@@ -17,6 +17,9 @@ claude-code-review: true    # マージ前に Claude Code Review を待つ
 coderabbit-review: true     # マージ前に CodeRabbit review を待つ
 review-bug: false           # /review でバグ検出 agent を無効化
 
+# /auto 実行時のセッションタイトル自動リネーム
+session-auto-rename: true   # /auto N 実行時にセッションタイトルを Issue 番号とタイトルにリネーム
+
 # スキル後検証
 opportunistic-verify: true  # スキル完了時に軽量 verify command を実行
 
@@ -76,6 +79,7 @@ capabilities:
 | `review-bug` | boolean | `true` | `/review` でバグ検出 agent を実行する |
 | `opportunistic-verify` | boolean | `false` | スキル完了時に軽量 verify command を実行する |
 | `skill-proposals` | boolean | `false` | `/verify` 中に Wholework 改善 issue を生成する |
+| `session-auto-rename` | boolean | `false` | `/auto N` 実行時にセッションタイトルを Issue 番号とタイトルにリネームする |
 | `steering-hint` | boolean | `true` | steering docs が欠如している場合に `/doc init` ヒントを表示する |
 | `production-url` | string | `""` | ブラウザベース verify command 用の本番 URL |
 | `spec-path` | string | `docs/spec` | spec の保存先 |

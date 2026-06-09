@@ -19,6 +19,8 @@ wholework/
 ├── .claude-plugin/      # Plugin manifest directory
 │   ├── plugin.json      # Plugin manifest (name: "wholework")
 │   └── marketplace.json # Marketplace manifest (name: "saitoco-wholework")
+├── hooks/               # Plugin-level hook definitions
+│   └── hooks.json       # UserPromptSubmit hook (session-auto-rename opt-in)
 ├── skills/              # Claude Code skills (one subdirectory per skill)
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill definition (required)
