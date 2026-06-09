@@ -92,21 +92,22 @@
 - **CI への影響**: 新規 bats ファイルは `.github/workflows/test.yml` の `bats --jobs $(nproc) tests/` に自動で含まれる。CI 設定変更は不要
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light で実施（Size M + --light フラグ）：軽量統合レビュー（4観点）のみ、full-mode 2エージェント並列は不要と判断
-- MUST/SHOULD 問題ゼロのため修正作業なし。CONSIDER 2件はスキップ（うち1件はSpec承認済みの既知妥協点）
-- 全受け入れ条件 PASS・全 CI SUCCESS を確認してレビュー完了
+- mergeable=true / CI success / approved の状態でスカッシュマージを実行（コンフリクト解消不要）
+- PR #550 を `--squash --delete-branch` でマージ。ブランチ `worktree-code+issue-549` は削除済み
+- BASE_BRANCH=main のため `closes #549` による Issue 自動クローズが機能する
 
 ### Deferred Items
-- `--batch --flag N` のような異常入力テストケースは CONSIDER レベルの欠落。後続 Issue での改善候補
-- truncate の UTF-8 バイト数問題は Spec Notes で承認済み妥協点として継続保留
-- Post-merge 検証（セッション名自動変更の実動作確認）は merge 後に手動実施
+- Post-merge 手動検証（セッション名自動変更の実動作確認）は verify フェーズまたはユーザによる手動実施
+- `--batch --flag N` 異常入力テストケースの追加は後続 Issue での改善候補として継続保留
+- truncate の UTF-8 バイト数問題は Spec Notes 承認済み妥協点として継続保留
 
 ### Notes for Next Phase
-- MUST 問題なし → `/merge 550` で即マージ可能
-- Post-merge 受け入れ条件（手動）: `/auto 123` 実行時のセッション名変更、`./install.sh` 再実行で template 変更が既存ユーザに適用される確認
+- verify フェーズ: Post-merge 受け入れ条件（`/auto 123` 実行時のセッション名変更、`./install.sh` 再実行）は手動検証が必要
+- 既存ユーザへの影響: `./install.sh` 再実行で settings.json.template の `UserPromptSubmit` hook が適用される旨を確認すること
+- CI bats テスト 13 件はマージ前に全 PASS 確認済み
 
 ## Code Retrospective
 
