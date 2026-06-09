@@ -125,28 +125,21 @@ CONSIDER レベル 2 件（bats テストの冗長な環境変数プレフィッ
 全 7 件が `file_contains` / `github_check` で自動検証可能だった（UNCERTAIN ゼロ）。verify command が具体的なファイル名と文字列を指定する形式のため、精度が高い。CI bats テストは `github_check "gh pr checks" "bats"` で正確に照合できた。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST/SHOULD 指摘なし → fix work スキップ、COMMENT イベントで review 投稿
-- CONSIDER 2 件（bats テスト冗長プレフィックス、`:-` フォールバック意図曖昧さ）は動作に影響しないためスキップ
-- 承認条件 7/7 PASS（CI bats テスト含む）を確認済み
+- mergeable=true（CI success、review approved）を確認してそのままスクワッシュマージ実行
+- BASE_BRANCH=main のため `closes #552` により Issue は自動クローズされる
+- 競合なし・コンフリクト解消ステップ不要でクリーンマージ完了
 
 ### Deferred Items
-- CONSIDER 指摘 2 件を fix しなかった（merge ブロッカーではないため）
-- post-merge 手動確認 2 件は merge 後のオペレーター確認に委ねる
+- post-merge 手動確認 2 件（opt-in あり/なしリポジトリでの `/auto N` セッションリネーム動作検証）は verify フェーズまたはオペレーター手動確認に委ねる
+- 既存 `.claude/settings.json.template` の `UserPromptSubmit` hook エントリ残存（二重起動だが冪等）。Plugin 配布定着後に別 Issue で削除予定
 
 ### Notes for Next Phase
-- merge は `/merge 553` で直接実行可能（MUST/SHOULD なし、CI 全 SUCCESS）
-- post-merge 手動確認（別リポジトリでの opt-in/opt-out 動作検証）が残っている
-
-### Deferred Items
-- 既存 `.claude/settings.json.template` の `UserPromptSubmit` hook エントリは残存（二重起動だが冪等）。Plugin 配布定着後に削除 Issue を別途起票予定
-- AC7（`github_check "gh pr checks" "bats"`）は PR 作成後 CI で確認
-
-### Notes for Next Phase
-- `hooks/hooks.json` が Claude Code plugin hooks schema として正しいかどうかは CI（bats は PASS、hooks の実動作は手動後確認）
-- PR #553 作成済み。Post-merge 手動確認 2 項目が残っている
+- post-merge verify command はすべて `file_contains` / `github_check` 形式のため自動検証可能
+- `hooks/hooks.json` の plugin hook 実動作は手動確認が必要（bats は PASS 済み）
+- Issue #552 は main マージにより自動クローズされているはず
 
 ## Code Retrospective
 
