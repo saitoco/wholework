@@ -1,6 +1,6 @@
 #!/bin/bash
 # UserPromptSubmit hook: auto-rename session title on /auto invocation
-# Outputs {"hookSpecificOutput":{"sessionTitle":"..."}} when prompt matches /auto pattern.
+# Outputs {"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","sessionTitle":"..."}} when prompt matches /auto pattern.
 # Silent exit (empty output) on no match or gh failure to preserve existing session name.
 
 INPUT=$(cat)
@@ -66,4 +66,4 @@ if [ ${#TITLE} -gt 50 ]; then
   TITLE="${TITLE:0:49}…"
 fi
 
-jq -n --arg title "$TITLE" '{"hookSpecificOutput":{"sessionTitle":$title}}'
+jq -n --arg title "$TITLE" '{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","sessionTitle":$title}}'

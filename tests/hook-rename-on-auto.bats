@@ -41,7 +41,9 @@ teardown() {
     INPUT='{"prompt":"/auto 123"}'
     OUTPUT=$(echo "$INPUT" | bash "$SCRIPT")
     TITLE=$(echo "$OUTPUT" | jq -r '.hookSpecificOutput.sessionTitle')
+    EVENT=$(echo "$OUTPUT" | jq -r '.hookSpecificOutput.hookEventName')
     [ "$TITLE" = "auto #123: Add auto-rename of session title" ]
+    [ "$EVENT" = "UserPromptSubmit" ]
 }
 
 @test "numbered /auto 123 --patch (flag after number) sets same sessionTitle" {
