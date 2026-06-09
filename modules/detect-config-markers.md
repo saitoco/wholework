@@ -36,6 +36,7 @@ From the loaded content, search for each YAML key in the marker definition table
 | `review-bug` | `SKIP_REVIEW_BUG` | `false` (enabled) | `false`-treated as true. If `review-bug: false` then `SKIP_REVIEW_BUG=true` |
 | `opportunistic-verify` | `HAS_OPPORTUNISTIC_VERIFY` | `true` | `false` |
 | `skill-proposals` | `HAS_SKILL_PROPOSALS` | `true` | `false` |
+| `session-auto-rename` | `HAS_SESSION_AUTO_RENAME` | `true` | `false` |
 | `steering-hint` | `HAS_STEERING_HINT` | `true` | `true` (default true; `false` when `steering-hint: false`) |
 | `production-url` | `PRODUCTION_URL` | URL string (extract value as-is) | `""` |
 | `spec-path` | `SPEC_PATH` | Path string (extract value as-is) | `docs/spec` |
@@ -84,6 +85,7 @@ HAS_CODERABBIT_REVIEW: true if coderabbit-review: true is set (default: false)
 SKIP_REVIEW_BUG: true if review-bug: false is set (default: false)
 HAS_OPPORTUNISTIC_VERIFY: true if opportunistic-verify: true is set (default: false)
 HAS_SKILL_PROPOSALS: true if skill-proposals: true is set (default: false)
+HAS_SESSION_AUTO_RENAME: true if session-auto-rename: true is set (default: false)
 HAS_STEERING_HINT: false if steering-hint: false is set (default: true)
 PRODUCTION_URL: URL string extracted from production-url (default: "")
 SPEC_PATH: path string extracted from spec-path (default: "docs/spec")

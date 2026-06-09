@@ -23,6 +23,9 @@ claude-code-review: true    # Wait for Claude Code Review before merging
 coderabbit-review: true     # Wait for CodeRabbit review before merging
 review-bug: false           # Disable bug-detection agent in /review
 
+# Session title auto-rename when /auto is invoked
+session-auto-rename: true   # Rename session title to issue number and title when /auto N is invoked
+
 # Post-skill verification
 opportunistic-verify: true  # Run quick verify commands at skill completion
 
@@ -82,6 +85,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `review-bug` | boolean | `true` | Run bug-detection agent in `/review` |
 | `opportunistic-verify` | boolean | `false` | Run quick verify commands at skill completion |
 | `skill-proposals` | boolean | `false` | Generate Wholework improvement issues during `/verify` |
+| `session-auto-rename` | boolean | `false` | Rename session title to issue number and title when `/auto N` is invoked |
 | `steering-hint` | boolean | `true` | Show `/doc init` hint when steering docs are missing |
 | `production-url` | string | `""` | Production URL for browser-based verify commands |
 | `spec-path` | string | `docs/spec` | Where specs are stored |
