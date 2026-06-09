@@ -137,3 +137,28 @@
 ### 受け入れ条件の検証難易度
 
 6件すべて `file_exists` / `file_contains` / `github_check` verify command で静的に検証可能で、UNCERTAIN が発生しなかった。verify command の設計が適切であった。Post-merge 条件（セッション名の実動作確認）は手動検証が必要で、これは `<!-- verify-type: manual -->` で正しく分類されている。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 要件は明確で、Non-Goals まで含めて十分に整理されていた。verify command の網羅性も高く、UNCERTAIN なし
+
+#### spec
+- 命名規則・truncate 仕様の auto-resolve が適切に機能。`.claude/` 配下の Edit 不可制約と install.sh 生成フローを早期に発見できた
+
+#### code
+- 既存 `scripts/log-permission.sh` のパターン踏襲で実装が素直。bash 3.2 互換と UTF-8 truncate の安全側設計が効いている
+
+#### review
+- light レビューで MUST issue ゼロ、CI 全 pass。テストカバレッジが十分
+
+#### merge
+- 特記なし。CI 二重実行は正常
+
+#### verify
+- Pre-merge 6 件、Post-merge 4 件すべて PASS。Post-merge は manual 分類だが、hook script への直接 stdin 流し込みで Claude 実行可能だった（statusline 観察に頼らず PASS 確定）
+
+### Improvement Proposals
+- N/A
