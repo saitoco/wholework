@@ -1,3 +1,4 @@
 opportunistic-verify: true
 skill-proposals: true
 permission-mode: auto
+session-auto-rename: true
