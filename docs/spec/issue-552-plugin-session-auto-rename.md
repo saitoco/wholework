@@ -154,3 +154,34 @@ CONSIDER レベル 2 件（bats テストの冗長な環境変数プレフィッ
 ### Rework
 
 - None
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec 段階で Issue body の verify command を `.claude-plugin/plugin.json` → `hooks/hooks.json` に修正済み（Issue body 自体の AC4/AC5 も同期更新）。これにより code/review/verify 全段で乖離なし
+- `Auto-Resolve Log` セクションで根拠を 3 件明示（plugin hooks 配置先、`.wholework.yml` 読み込み方式、bats setup 更新必要性）。非対話モードでの自動決定の透明性が高い
+
+#### design
+- 3 本柱（マーカー登録 / opt-in チェック / plugin hook 登録）への分解は最小スコープで spec → 実装 → verify の全フェーズで構造変更なし
+- Changed Files リストに `docs/ja/structure.md` が漏れていた点が code フェーズで追加対応に発展（既知 gap）
+
+#### code
+- Spec 通り 5 ステップを実装、design からの乖離なし
+- `docs/ja/structure.md` の翻訳ミラー同期は code フェーズの retrospective に既記録済み。次回以降、`docs/structure.md` を変更する Spec では `docs/ja/structure.md` も Changed Files に明示すべし
+
+#### review
+- light review で MUST/SHOULD 指摘ゼロ、CONSIDER 2 件のみ（bats テストの env 変数プレフィックス冗長、`:-` フォールバックの意図曖昧さ）
+- 全 acceptance criteria PASS、CI 全 SUCCESS、構造的乖離なしで一発承認
+
+#### merge
+- mergeable=true・review approved・CI 全 SUCCESS でクリーンマージ
+- `closes #552` で Issue 自動クローズ済み
+
+#### verify
+- 全 7 件の pre-merge AC を `file_contains` / `github_check` で自動検証 PASS。UNCERTAIN/FAIL ゼロ
+- post-merge AC 2 件は manual（別リポジトリ+別セッション要件）のためガイド表示のみ。Issue は `phase/verify` で残置、Issue 本文の post-merge チェックボックス未確定
+
+### Improvement Proposals
+- N/A
