@@ -90,3 +90,49 @@
 - **タイムアウト 5000ms の妥当性**: `gh issue view` がネットワーク遅延込みで 1-3 秒、余裕を見て 5 秒。既存 `PermissionRequest` hook と同値で一貫性を保つ
 - **hook 失敗時の安全性**: hook が空出力で終わると Claude Code 側は既存セッション名を保持する。`set -eu` を使わないのは、jq 失敗・gh 失敗で hook 全体が落ちて意図しない side effect が出るのを避けるため
 - **CI への影響**: 新規 bats ファイルは `.github/workflows/test.yml` の `bats --jobs $(nproc) tests/` に自動で含まれる。CI 設定変更は不要
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- REVIEW_DEPTH=light で実施（Size M + --light フラグ）：軽量統合レビュー（4観点）のみ、full-mode 2エージェント並列は不要と判断
+- MUST/SHOULD 問題ゼロのため修正作業なし。CONSIDER 2件はスキップ（うち1件はSpec承認済みの既知妥協点）
+- 全受け入れ条件 PASS・全 CI SUCCESS を確認してレビュー完了
+
+### Deferred Items
+- `--batch --flag N` のような異常入力テストケースは CONSIDER レベルの欠落。後続 Issue での改善候補
+- truncate の UTF-8 バイト数問題は Spec Notes で承認済み妥協点として継続保留
+- Post-merge 検証（セッション名自動変更の実動作確認）は merge 後に手動実施
+
+### Notes for Next Phase
+- MUST 問題なし → `/merge 550` で即マージ可能
+- Post-merge 受け入れ条件（手動）: `/auto 123` 実行時のセッション名変更、`./install.sh` 再実行で template 変更が既存ユーザに適用される確認
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の Step 2 で `jq '.hooks.UserPromptSubmit = [...]'` による settings.json.template 編集を想定。実装では `.new` ファイル経由のアトミックな置換パターンで実施（設計と同等）。
+- bats テストの --resume ケースで、デフォルト mock が返すタイトルが「auto: Add auto-rename of session title」であったため、resume 形式 (`auto #123 (resume): ...`) に組み合わせると 52 文字になりトランケートが発生。テストを issue 456 (`"Short title"`) に変更して解決。
+
+### Design Gaps/Ambiguities
+
+- Spec の truncate 実装方針として `awk` による文字数判定が記載されていたが、Notes で「安全策として bash の `${#var}` を使う」と補足されていた。実装では bash `${#var}` + `${TITLE:0:49}` を採用（Spec Notes と一致）。
+
+### Rework
+
+- bats テスト test 3（--resume ケース）を、タイトル長によるトランケート問題で 1 回修正（issue 456 の短いタイトルに変更）。
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+記録事項なし。PR diff と Spec の受け入れ条件の整合性は良好。実装のすべての分岐（`--batch`/`--resume`/番号付き/非マッチ）が Spec 設計通りに実装されており、乖離は検出されなかった。
+
+### 繰り返し問題
+
+記録事項なし。今回のレビューで同種の問題が複数件検出されることはなかった。
+
+### 受け入れ条件の検証難易度
+
+6件すべて `file_exists` / `file_contains` / `github_check` verify command で静的に検証可能で、UNCERTAIN が発生しなかった。verify command の設計が適切であった。Post-merge 条件（セッション名の実動作確認）は手動検証が必要で、これは `<!-- verify-type: manual -->` で正しく分類されている。

@@ -173,6 +173,7 @@ Key modules:
 - `scripts/get-issue-priority.sh` — get issue priority field
 - `scripts/get-sub-issue-graph.sh` — build sub-issue dependency graph
 - `scripts/get-verify-iteration.sh` — read highest `<!-- verify-iteration: N -->` marker from Issue comments
+- `scripts/hook-rename-on-auto.sh` — UserPromptSubmit hook: auto-rename session title when prompt matches `/auto` pattern
 - `scripts/log-permission.sh` — log permission events (JSON output)
 - `scripts/opportunistic-search.sh` — opportunistic skill search
 - `scripts/triage-backlog-filter.sh` — filter backlog for triage
