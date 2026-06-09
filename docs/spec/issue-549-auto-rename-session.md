@@ -92,23 +92,21 @@
 - **CI への影響**: 新規 bats ファイルは `.github/workflows/test.yml` の `bats --jobs $(nproc) tests/` に自動で含まれる。CI 設定変更は不要
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `set -eu` を使わない設計を採用：hook 失敗時に空出力で安全に抜けるため（gh/jq 失敗で既存セッション名を破壊しない）
-- `case` 文による分岐（`--batch` → `--resume` → generic N）を選択：bash 3.2 互換を維持しつつ可読性を確保
-- bats テストは mock `gh` を `PATH` に差し込む方式（`apply-fallback.bats` と同パターン）
-- `jq -n --arg title "$TITLE"` でセッション名の JSON エスケープを委譲：手動エスケープのバグリスクを排除
+- REVIEW_DEPTH=light で実施（Size M + --light フラグ）：軽量統合レビュー（4観点）のみ、full-mode 2エージェント並列は不要と判断
+- MUST/SHOULD 問題ゼロのため修正作業なし。CONSIDER 2件はスキップ（うち1件はSpec承認済みの既知妥協点）
+- 全受け入れ条件 PASS・全 CI SUCCESS を確認してレビュー完了
 
 ### Deferred Items
-- truncate の UTF-8 正確性は「概ね 50 文字、稀にバイト境界で切れる」と割り切り（Spec Notes 参照）
-- 既存ユーザへの template 適用は `./install.sh` 手動再実行に委ね、自動化は Non-Goals
-- `github_check "gh pr checks" "bats"` の verify は CI 完走後 `/verify` フェーズで確認
+- `--batch --flag N` のような異常入力テストケースは CONSIDER レベルの欠落。後続 Issue での改善候補
+- truncate の UTF-8 バイト数問題は Spec Notes で承認済み妥協点として継続保留
+- Post-merge 検証（セッション名自動変更の実動作確認）は merge 後に手動実施
 
 ### Notes for Next Phase
-- PR #550 の CI bats テストが pass することを確認（次フェーズの主要チェック）
-- install.sh の再実行案内を PR 本文に記載済み
-- docs/structure.md の scripts カウントは 48 で現在の実装数と一致（main の先行記載が偶然一致）
+- MUST 問題なし → `/merge 550` で即マージ可能
+- Post-merge 受け入れ条件（手動）: `/auto 123` 実行時のセッション名変更、`./install.sh` 再実行で template 変更が既存ユーザに適用される確認
 
 ## Code Retrospective
 
@@ -124,3 +122,17 @@
 ### Rework
 
 - bats テスト test 3（--resume ケース）を、タイトル長によるトランケート問題で 1 回修正（issue 456 の短いタイトルに変更）。
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+記録事項なし。PR diff と Spec の受け入れ条件の整合性は良好。実装のすべての分岐（`--batch`/`--resume`/番号付き/非マッチ）が Spec 設計通りに実装されており、乖離は検出されなかった。
+
+### 繰り返し問題
+
+記録事項なし。今回のレビューで同種の問題が複数件検出されることはなかった。
+
+### 受け入れ条件の検証難易度
+
+6件すべて `file_exists` / `file_contains` / `github_check` verify command で静的に検証可能で、UNCERTAIN が発生しなかった。verify command の設計が適切であった。Post-merge 条件（セッション名の実動作確認）は手動検証が必要で、これは `<!-- verify-type: manual -->` で正しく分類されている。
