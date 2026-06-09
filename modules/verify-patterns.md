@@ -330,6 +330,45 @@ When an acceptance condition is tagged `<!-- verify-type: manual -->`, check if 
 
 If a replacement is possible, update the verify command in both the Spec and the Issue body AC. Combining `rubric` with `file_contains`/`section_contains` is also effective (see §9).
 
+### 12. Indirect Reflection Pattern — Classify as post-merge manual or command type
+
+When the acceptance condition involves functionality implemented through an intermediate function (e.g., `to_markdown()`) that is automatically reflected in a target script without directly modifying it, pre-merge `rubric` verify commands become UNCERTAIN.
+
+**Background**: In Issues that add features (e.g., column additions) to a target script (e.g., `daily_routine.py`) without directly editing it, the diff does not include the target script. The rubric grader judges "no code change" and returns UNCERTAIN (this false-UNCERTAIN risk arises whenever an indirect-reflection pattern propagates changes automatically without modifying the target script).
+
+**Classification rule:**
+
+| Condition type | Verify command to use | Reason |
+|---------------|----------------------|--------|
+| AC for indirect-reflection pattern | `command "bin/target-script 2>&1 \| grep keyword"` or post-merge `verify-type: manual` | Target script is absent from diff; `rubric` becomes UNCERTAIN |
+| Direct code change AC | `rubric` / `file_contains` / `grep` | Target file is in diff; hard-pattern and rubric both work |
+
+**Detection criteria for indirect reflection:**
+
+An AC falls under this pattern when ALL of the following apply:
+1. The target script (the one whose behavior changes) is not directly modified in this Issue
+2. The change is propagated automatically via an intermediate function or data structure
+3. The AC verifies runtime behavior of the unmodified target script
+
+**Recommended pattern:**
+
+```markdown
+- [ ] <!-- verify: command "python3 bin/daily_routine.py 2>&1 | grep new_column_name" --> New column appears in output
+```
+
+Or classify as post-merge manual when live runtime execution is unavailable in CI:
+
+```markdown
+- [ ] New column appears in `daily_routine.py` output <!-- verify-type: manual -->
+```
+
+**Decision procedure:**
+
+1. Identify whether the target script is in the diff — if not, this is an indirect-reflection AC
+2. If indirect: use `command "bin/target-script 2>&1 | grep keyword"` for mechanical verification
+3. If CI cannot execute the command: classify as `verify-type: manual` (post-merge)
+4. Do NOT use pre-merge `rubric` for indirect-reflection ACs — the grader cannot observe the diff-absent file and will return UNCERTAIN
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
