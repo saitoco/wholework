@@ -109,3 +109,33 @@ Issue body の AC4/AC5 は `file_contains ".claude-plugin/plugin.json"` を veri
 ### 既存 `.claude/settings.json.template` エントリの扱い
 
 当面は残す（plugin hook との二重起動になるが、両方が opt-in チェックを通過した場合は同じ JSON を出力するため冪等。先に exit したほうの出力が使われ、後発は無害）。Plugin 経由配布が定着したら別 Issue で削除を検討。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `hooks/hooks.json` を新規作成して plugin-level hook 登録（`plugin.json` への hooks フィールド追加ではない）
+- opt-in チェックは `CLAUDE_PROJECT_DIR/.wholework.yml` を直接 `grep -q` で参照（`get-config-value.sh` 呼び出しではなく bash 3.2 互換の直接 grep を採用）
+- `docs/ja/structure.md` は Spec の Changed Files に含まれていなかったが、`translation-workflow.md` 準拠で追加更新した
+
+### Deferred Items
+- 既存 `.claude/settings.json.template` の `UserPromptSubmit` hook エントリは残存（二重起動だが冪等）。Plugin 配布定着後に削除 Issue を別途起票予定
+- AC7（`github_check "gh pr checks" "bats"`）は PR 作成後 CI で確認
+
+### Notes for Next Phase
+- `hooks/hooks.json` が Claude Code plugin hooks schema として正しいかどうかは CI（bats は PASS、hooks の実動作は手動後確認）
+- PR #553 作成済み。Post-merge 手動確認 2 項目が残っている
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None — 実装ステップはすべて Spec 通りに実行。順番の変更なし。
+
+### Design Gaps/Ambiguities
+
+- `docs/ja/structure.md` の同期が Spec の Changed Files リストに含まれていなかった。`docs/structure.md` を変更したため `docs/translation-workflow.md` の手順に従い `docs/ja/structure.md` も更新した（追加コミットで対応）。
+
+### Rework
+
+- None
