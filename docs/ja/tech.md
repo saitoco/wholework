@@ -73,7 +73,7 @@
 | コンポーネント | フェーズ | モデル | Effort | 根拠 |
 |-----------|-------|-------|--------|-----------|
 | run-issue.sh | issue | Sonnet | high | L/XL のスコープ分析とサブ issue 分割には徹底したオーケストレーションが必要 |
-| run-spec.sh | spec | Sonnet（L では `--opus` で Opus） | max | 設計品質が重要、spec のエラーは後続全フェーズに波及する。`/auto` は L サイズのみ `--opus` を渡す（XL は spec 前に分割済み） |
+| run-spec.sh | spec | Sonnet（L では `--opus` で Opus；`--fable` で Fable 5） | Sonnet: max；Opus: xhigh（デフォルト）、max（`--max` 明示）；Fable 5: high（デフォルト）、max（`--max` 明示） | 設計品質が重要、spec のエラーは後続全フェーズに波及する。`/auto` は L サイズのみ `--opus` を渡す（XL は spec 前に分割済み） |
 | run-code.sh | code | Sonnet | high | 実装には徹底した推論が必要 |
 | run-review.sh | review | Sonnet | high | レビューのオーケストレーション、深い分析はサブエージェントが担う |
 | run-merge.sh | merge | Sonnet | low | 機械的なマージ操作、推論は最小限でよい |

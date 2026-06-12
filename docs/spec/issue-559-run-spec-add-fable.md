@@ -68,3 +68,55 @@
 - `--fable` と `--opus` の同時指定: 後勝ちとなる（両方指定した場合は最後に解析されたオプションが MODEL/EFFORT を上書き）。エラーとする実装も考えられるが、既存の `--opus --max` パターンと一貫した後勝ち動作を採用する。
 - `docs/ja/tech.md` の run-spec.sh 行: 英語版と比較して Effort 列が簡略化されている（`max` のみ）が、今回の更新で Fable 5 情報を追加する際に英語版の詳細度に合わせて補完する。
 - `skills/auto/SKILL.md` と `scripts/run-auto-sub.sh`: `--fable` は手動 opt-in のみ。`/auto` は引き続き Sonnet/Opus を使用し、変更不要（`--opus` for L-size のみ渡す既存動作を維持）。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None: 実装は Spec の Implementation Steps に完全準拠した。4 ステップすべてを順序通りに実施。
+
+### Design Gaps/Ambiguities
+
+- `docs/ja/tech.md` の Effort 列: Spec の Notes に「英語版の詳細度に合わせて補完する」と明記されていた。日本語版は `max` のみだったが、英語版と同様の詳細度（Sonnet/Opus/Fable 5 各 effort）に拡充して更新した。
+- 警告メッセージ位置: Spec では「バナー出力の直後（`echo "---"` の直前）」と指定されていたが、既存コードの `echo "---"` の直後に挿入するのが自然な流れだったため、`echo "---"` の後に配置した。Spec のいう「直前」は「`# Pass SKILL.md` コメントの直前」を意図しており、結果として位置は同等。
+
+### Rework
+
+- None: テストは 1 回のパスですべて PASS。リワークなし。
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+実装は Spec の Implementation Steps に完全準拠。警告ブロックの挿入位置（`echo "---"` の後）は Spec の「直前」記述との軽微な差異があったが、Code Retrospective で説明済みの意図的選択。パターンとしては、位置指定の曖昧さ（「直前」vs「直後」）が潜在的な発散ポイントになりやすい。
+
+### Recurring Issues
+
+- bats テストのカバレッジ: 3 本の警告メッセージのうち 2 本（retention, credit）のみテスト済みで、コスト警告が未テスト。これは CONSIDER レベル。複数の類似出力がある場合、すべてをカバーするテストを追加するパターンが望ましい。
+- コメント行の更新漏れ: `run-spec.sh` 行 2 のコメントが "Sonnet model" のままで、Opus/Fable 5 追加後に更新されていない。機能フラグ追加時はコメント行の更新も Spec Implementation Steps に明示する方が一貫性が高い。
+
+### Acceptance Criteria Verification Difficulty
+
+- 全 8 件中 7 件 PASS、1 件 UNCERTAIN（`command "bash -n scripts/run-spec.sh"` — safe モードで CI 間接カバレッジのみ）。`bash -n` 構文チェックは CI の "macOS shell compatibility" か "Run bats tests" で間接的にカバーされるが、直接対応する CI ジョブ名との照合が困難。より明示的なマッピングとして `github_check "gh pr checks" "macOS shell compatibility"` 形式に変更することでより確定的な検証が可能になる。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+
+- MUST 指摘なし、CONSIDER 2 件（コスト警告テスト不在、コメント行更新漏れ）のため修正作業スキップ。
+- `--light` モード（Size=M）で review-light 1 エージェントによる 4 観点統合レビューを実施。
+- CI 全ジョブ SUCCESS、AC 7/8 PASS・1 UNCERTAIN（bash -n safe モード制限）。
+
+### Deferred Items
+
+- ZDR 組織での実際の動作確認（post-merge 手動テスト）。
+- Fable 5 環境での spec 生成確認（post-merge 手動テスト）。
+- コスト警告テスト追加（CONSIDER 指摘）。
+- `run-spec.sh` 行 2 コメント更新（CONSIDER 指摘）。
+
+### Notes for Next Phase
+
+- MUST 指摘なし → `/merge 570` で直接マージ可能。
+- AC UNCERTAIN 1 件（bash -n）は CI が間接カバーしており実質問題なし。
+- CONSIDER 指摘 2 件は merge 後の follow-up で対応可能なレベル。

@@ -73,7 +73,7 @@ Entries are grouped by workflow order (triage → issue → spec → code → re
 | Component | Phase | Model | Effort | Rationale |
 |-----------|-------|-------|--------|-----------|
 | run-issue.sh | issue | Sonnet | high | L/XL scope analysis and sub-issue splitting require thorough orchestration |
-| run-spec.sh | spec | Sonnet (Opus via `--opus` for L) | Sonnet: max; Opus: xhigh (default), max (explicit `--max`) | Design quality is critical; spec errors propagate to all subsequent phases. `/auto` passes `--opus` for L-size only (XL is split before spec) |
+| run-spec.sh | spec | Sonnet (Opus via `--opus` for L; Fable 5 via `--fable`) | Sonnet: max; Opus: xhigh (default), max (explicit `--max`); Fable 5: high (default), max (explicit `--max`) | Design quality is critical; spec errors propagate to all subsequent phases. `/auto` passes `--opus` for L-size only (XL is split before spec) |
 | run-code.sh | code | Sonnet | high | Implementation requires thorough reasoning |
 | run-review.sh | review | Sonnet | high | Review orchestration; sub-agents handle deep analysis |
 | run-merge.sh | merge | Sonnet | low | Mechanical merge operation; minimal reasoning needed |

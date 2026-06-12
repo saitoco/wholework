@@ -318,3 +318,34 @@ MOCK
     [ "$status" -eq 0 ]
     [[ "$output" != *"Warning:"* ]]
 }
+
+@test "success: --fable switches model to claude-fable-5" {
+    run bash "$SCRIPT" 123 --fable
+    [ "$status" -eq 0 ]
+    grep -q "MODEL_VALUE=claude-fable-5" "$CLAUDE_CALL_LOG"
+    grep -q "ANTHROPIC_MODEL=claude-fable-5" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: --fable default effort is high" {
+    run bash "$SCRIPT" 123 --fable
+    [ "$status" -eq 0 ]
+    grep -q "EFFORT_VALUE=high" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: --fable --max explicit effort is max" {
+    run bash "$SCRIPT" 123 --fable --max
+    [ "$status" -eq 0 ]
+    grep -q "EFFORT_VALUE=max" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: --fable outputs retention warning" {
+    run bash "$SCRIPT" 123 --fable
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"retention"* ]]
+}
+
+@test "success: --fable outputs credit warning" {
+    run bash "$SCRIPT" 123 --fable
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"credit"* ]]
+}
