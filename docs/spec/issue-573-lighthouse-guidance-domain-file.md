@@ -27,3 +27,20 @@
 - Type: Task（モジュール再構成・Progressive disclosure 原則準拠）
 - Size: XS（対象ファイル2件・既存パターンの横展開）
 - Value: 3（Impact=4: shared_flag=2×2、Alignment=2）
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- audit/drift 起票 → triage の流れで AC3 の「常に PASS する verify command」（exit 0 固定スクリプトの command 直叩き）が検出・修正された。verify command の実効性チェックが triage 段で機能した好例
+
+#### code
+- XS patch で Domain file 新規作成 + verify-executor.md からのガイダンス抽出を完了。AC 4 件は実装直後にすべて成立
+
+#### verify
+- pre-merge 4/4 PASS。post-merge opportunistic 条件は本 verify 実行の domain-loader 評価そのものが観測機会となり Claude Execute で PASS（capabilities.lighthouse 未設定 → 非ロード確認）
+- **検出した積み残し**: 新規 Domain file が `docs/environment-adaptation.md` の Layer 3 Domain Files table（exhaustive）に未登録。Issue の AC には含まれないが、次回 `/audit drift` の table-missing 検出対象。Improvement Proposal として起票する
+
+### Improvement Proposals
+- `docs/environment-adaptation.md`（+ ja ミラー）の Layer 3 Domain Files table に `skills/verify/lighthouse-guidance.md` の行（load_when: `capability: lighthouse`）を追加する。新規 Domain file 追加時のテーブル同期は #573 のスコープ外だったが、exhaustive table の整合維持に必要
