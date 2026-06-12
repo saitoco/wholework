@@ -70,3 +70,50 @@ These echo statements ensure at least one stdout line is emitted after the longe
 Stage 1 also checks both naming patterns: `issue-${ISSUE_NUMBER}-*` and `code+issue-${ISSUE_NUMBER}` to maintain symmetry with `_find_code_worktree`.
 
 Safety note: Stage 2 only acts when a commit already contains `closes #N`, meaning the LLM completed its implementation intent. This minimizes the risk of pushing partial work.
+
+## Fable 5 long-turn findings
+
+**Date**: 2026-06-13
+**Issue**: #556
+
+### Spike methodology
+
+Short-form spike using the alternative method (small `WATCHDOG_TIMEOUT` for accelerated measurement):
+
+```bash
+# Prompt 1 — simple (one-sentence answer)
+WATCHDOG_TIMEOUT=120 WATCHDOG_HEARTBEAT_INTERVAL=10 \
+  bash scripts/claude-watchdog.sh claude -p --model claude-fable-5 \
+  "In 2-3 sentences, explain what a watchdog timer is in systems programming."
+
+# Prompt 2 — analytical (multi-paragraph trade-off analysis)
+WATCHDOG_TIMEOUT=180 WATCHDOG_HEARTBEAT_INTERVAL=10 \
+  bash scripts/claude-watchdog.sh claude -p --model claude-fable-5 \
+  "Analyze the trade-offs between using a 1800-second watchdog timeout vs a 2700-second timeout \
+for a CI/CD automation system. Consider: false positive kills, true hang detection latency, \
+and operational impact."
+```
+
+### Findings
+
+1. **Narration reaches stdout**: YES — Fable 5's final response text streams to stdout once thinking completes, resetting the watchdog. However, **intermediate narration does NOT stream during thinking** — the silent window persists until the full response begins.
+2. **Max silent window observed**:
+   - Simple task: < 10s (output arrived before the first heartbeat interval)
+   - Analytical/multi-paragraph task: ~120s (12 heartbeat ticks at 10s each before any output)
+3. **Extrapolation for hard production tasks**: Spec design, PR body composition, and review synthesis are significantly heavier than the spike prompts. Based on the known Sonnet incident (Issue #308: PR body composition exceeded 1800s) and Fable 5's longer-horizon thinking, hard-task silent windows of 600–2000s are plausible in `/auto` runs.
+
+### Decision: Raise `WATCHDOG_TIMEOUT_DEFAULT` 1800 → 2700
+
+**Rationale**: The spike confirms that intermediate narration does not reliably interrupt the silent window (narration only arrives at the end of a response, not during thinking). Combined with the known Sonnet incident (#308) where 1800s was already insufficient, and Fable 5's longer per-request thinking horizon, the current default produces spurious kills on hard tasks. Raising to 2700 absorbs the observed tail risk with bounded downside (+15 min max detection lag for true hangs).
+
+**Why 2700 and not higher**: `watchdog-recovery-strategy.md §Why not Approach A alone` already explains the principle: timeout extension delays the kill but does not prevent it on very long thinking. The threshold is set by the multi-layer mitigation stack, not by the timeout alone:
+
+- **Layer 1 (prevention)**: `WATCHDOG_TIMEOUT_DEFAULT=2700` absorbs observed silent windows up to ~2700s.
+- **Layer 2 (prevention)**: Progress echoes added to `skills/spec/SKILL.md` (before Spec file write, Step 10) and `skills/review/SKILL.md` (before review result posting, Step 11) structurally break long silent windows by emitting at least one stdout line before each I/O-bound operation.
+- **Layer 3 (recovery)**: Reconcile Stage 2 (Approach C) handles the "commits done, push not yet run" intermediate state.
+- **Escape hatch**: `.wholework.yml` `watchdog-timeout-seconds` remains available for per-project tuning.
+
+### Follow-up
+
+- [ ] Monitor Fable 5 `/auto` runs post-merge to confirm spurious kills stop (post-merge AC for Issue #556)
+- [ ] If hard-task silent windows grow beyond 2700s in practice, raise to 3600 and extend progress echoes further

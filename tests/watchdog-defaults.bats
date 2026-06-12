@@ -13,10 +13,10 @@ teardown() {
     rm -rf "$MOCK_DIR"
 }
 
-@test "sourcing sets WATCHDOG_TIMEOUT_DEFAULT=1800" {
+@test "sourcing sets WATCHDOG_TIMEOUT_DEFAULT=2700" {
     run bash -c "source '$SCRIPT_DIR/watchdog-defaults.sh'; echo \$WATCHDOG_TIMEOUT_DEFAULT"
     [ "$status" -eq 0 ]
-    [ "$output" = "1800" ]
+    [ "$output" = "2700" ]
 }
 
 @test "load_watchdog_timeout sets WATCHDOG_TIMEOUT from get-config-value.sh" {

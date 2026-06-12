@@ -1,7 +1,7 @@
 #!/bin/bash
 # sourceable helper — do not execute directly
 
-WATCHDOG_TIMEOUT_DEFAULT=1800
+WATCHDOG_TIMEOUT_DEFAULT=2700
 
 load_watchdog_timeout() {
   local script_dir="$1"

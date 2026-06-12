@@ -314,6 +314,11 @@ When defining acceptance criteria, explicitly consider:
 - Consistency with existing patterns (naming conventions, structural patterns)
 - `docs/ja/*` files (Japanese mirror files): use Japanese-format patterns in verify commands to avoid unintended format changes; if an English pattern must be used, note the format impact explicitly in Notes
 
+Before writing the Spec file, emit a progress line so the watchdog resets its silence counter:
+```bash
+echo "progress: Writing Spec for issue #$NUMBER..."
+```
+
 Save the implementation plan to `$SPEC_PATH/issue-$NUMBER-short-title.md`.
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-patterns.md` and follow the "Processing Steps" guidelines (especially "3. Pre-verification of target file format").

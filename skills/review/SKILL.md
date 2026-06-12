@@ -452,6 +452,11 @@ Reason: {explanation}"""
 
 Integrate Steps 7 (acceptance criteria verification), 8 (CI status), and 10 (parallel review) and post as a GitHub Pull Request Review.
 
+Before posting, emit a progress line so the watchdog resets its silence counter:
+```bash
+echo "progress: Posting review results for PR #$NUMBER..."
+```
+
 1. `mkdir -p .tmp`
 2. **When Step 9 was run (both full and light mode)**: `.tmp/review-body-$NUMBER.md` already generated in Step 9 (no Write needed). **When Step 9 was entirely skipped** (only when Issue number was not extractable and Step 7 was also skipped): write Review body (acceptance criteria table + CI status) to `.tmp/review-body-$NUMBER.md`
 3. Post review to PR via script:
