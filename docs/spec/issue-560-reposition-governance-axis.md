@@ -47,3 +47,35 @@
 - **スコープ外**: `README.md`・`docs/guide/` の index 以外のページ・`docs/workflow.md` は Issue 提案で明示的に対象外。既存 Differentiation Summary の 4 bullet は削除せず維持（Issue 自動解決済み曖昧ポイント #3）
 - **用語規約**: プロダクト名は「Wholework」、名前空間は「wholework」。deprecated 用語（verify hint 等、`docs/product.md § Terms` の Formerly called 列）を新規文章で使用しない（`check-forbidden-expressions.sh` の検出対象）
 - **bash 互換**: シェルスクリプト変更なし（ドキュメントのみ）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- commit prefix に `feat:` を使用したが、Issue Type が Task のため本来は `chore:` が正しかった。Step 8 で実装完了後に即コミットしたため、Step 11 のprefix判定ステップより先に確定してしまった。機能的な影響はなし
+
+### Design Gaps/Ambiguities
+
+- None
+
+### Rework
+
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- governance-and-verification harness テーゼを Vision の先頭段落に独立させ、既存の Skills 配布説明を第2段落に移動（旧 Vision を破棄せず継承する形）
+- Alternatives セクションは既存3サブセクションの後に「### Anthropic-Official Agentic Development」を追加（SDD/Plugin/GitHub Workflow Assistants とは別カテゴリとして独立配置）
+- Differentiation Summary は「Against Managed Agents + Outcomes」見出し付きの新段落を既存4 bullet の後に追加（既存 bullet は全て維持）
+- Future Direction は governance 深化 bullet を先頭に挿入し、既存4 bullet は順序維持で継承
+
+### Deferred Items
+- `/audit drift` による product.md と実装の drift 検出: Post-merge で手動確認（受入条件）
+- `commit prefix` 修正（今回 `feat:` を誤って使用）: 次回パッチ相当のコミットで注意
+
+### Notes for Next Phase
+- 4ファイル（docs/product.md, docs/ja/product.md, docs/guide/index.md, docs/ja/guide/index.md）をすべて同一コミットに含めたため、translation-sync は IN_SYNC
+- 6つのpre-merge verify commandは全PASS（チェックボックス更新済み）
+- bats 697 tests PASS、forbidden-expressions PASS、translation-sync PASS
