@@ -193,6 +193,7 @@ Key modules:
 - `scripts/spawn-recovery-subagent.sh` — Tier 3 recovery orchestrator invoked by `run-auto-sub.sh`; spawns `agents/orchestration-recovery` via `claude -p`, validates the returned plan with `validate-recovery-plan.sh`, and enforces concurrency via `WHOLEWORK_MAX_RECOVERY_SUBAGENTS` mkdir-based slot locks
 
 **Skill runners:**
+- `scripts/guard-prefix.sh` — shared GUARD_PREFIX definition sourced by all run-*.sh; includes anti-early-stop and boundary reminders for autonomous execution
 - `scripts/run-auto-sub.sh` — run auto workflow for sub-issues
 - `scripts/run-code.sh` — run code skill
 - `scripts/run-issue.sh` — run issue skill
