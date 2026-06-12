@@ -11,6 +11,8 @@ model: sonnet
 
 Analyze PR diff and perform lightweight checks across the following 4 perspectives (at a concise confirmation level, not the depth of full-mode 2-agent parallel). Based on the HIGH SIGNAL principle, report only confirmed issues:
 
+Note: Like `review-bug`, avoid excessive self-suppression. Report findings with confidence and severity tags rather than pre-filtering; downstream verification handles false positives.
+
 1. **Spec deviation** — Consistency with Spec and design documents
 2. **Edge cases and robustness** — Boundary values, failure behavior, cleanup omissions
 3. **Security and safety** — Shell injection, hardcoded secrets
