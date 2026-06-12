@@ -59,23 +59,25 @@
 - なし（fallback テストの更新は1回で完了）。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- SHOULD issue（customization.md デフォルト値 1800→2700 未更新）を fix として適用。MUST 非存在を確認してマージ可と判断。
-- light モードで実行（Size=M）。review-light エージェント定義を参照してインライン4観点チェックを実施。
+- PR #568 を squash merge（`--squash --delete-branch`）で main にマージ。`closes #556` により Issue は自動クローズ。
+- `mergeable=true, reason=clean` で conflicts なし。Step 3（コンフリクト解消）はスキップ。
+- review フェーズの doc fix コミット（2ac1337: customization.md デフォルト値更新）は PR ブランチに含まれており、squash に含まれた。
 
 ### Deferred Items
 
-- `docs/reports/claude-fable-5-impact-strategy.md` 内の `1800` 参照（報告書のコンテキストとして historical 記述）は変更対象外と判断（過去の状況説明）。
-- post-merge AC（Fable 5 `/auto` 実行での再発観測）は引き続き defer。
+- post-merge AC（Fable 5 `/auto` 実行での watchdog 誤 kill 再発観測）は引き続き defer — 運用観測が必要。
+- `docs/reports/claude-fable-5-impact-strategy.md` 内の historical `1800` 参照は変更対象外（review フェーズ判断を継承）。
 
 ### Notes for Next Phase
 
-- review-summary コメント投稿済み（<!-- review-summary --> マーカー含む）
-- PR ブランチに doc fix コミット追加済み（2ac1337）— merge フェーズで squash 可否を確認すること
-- mock 定数（他テストの `WATCHDOG_TIMEOUT_DEFAULT=1800`）は意図的 — merge フェーズで指摘不要
+- verify フェーズは post-merge AC の観察が主。コード変更は squash 済みで main に存在。
+- `WATCHDOG_TIMEOUT_DEFAULT=2700` が `scripts/watchdog-defaults.sh` に反映済み。
+- `bats tests/watchdog-defaults.bats` は CI で 5/5 green 確認済み（verify コマンドとして再実行可能）。
+- mock 定数（他テストの `WATCHDOG_TIMEOUT_DEFAULT=1800`）は意図的 — verify フェーズでも指摘不要。
 
 ## review retrospective
 
