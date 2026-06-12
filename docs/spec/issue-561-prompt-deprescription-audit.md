@@ -45,3 +45,52 @@ Fable 5（`run-spec.sh --fable`）採用フェーズを対象に、`skills/spec/
 - **A/B test methodology**: ベースラインと de-prescription バリアントで同一 closed Issue を再 spec。一時スワップ後は必ず元の SKILL.md を復元する（`git checkout skills/spec/SKILL.md` で安全に復元可能）
 - **Translation sync**: `docs/reports/` は `docs/translation-workflow.md` の除外対象。日本語ミラー不要
 - **Auto-resolved ambiguity** (issue 本文から移管): (1) レポートファイルパス `docs/reports/de-prescription-audit.md` は既存命名規則（kebab-case + 内容記述）に沿って決定。(2) AC3（`github_check "gh pr checks" "Run bats tests"`）は変更なしクローズ時も CI green のため verify は常に成立する
+
+## Code Retrospective
+
+### Deviations from Design
+
+- **Step 3 (A/B test execution) は省略**: 実装ステップでは `run-spec.sh --fable <N>` を用いた実際の A/B 実験を想定していたが、非対話型自律モード（run-code.sh）での Fable 5 コスト（$10/$50/MTok）を伴う高コスト LLM 呼び出しは auto-resolve ポリシーで延期対象のため実行しなかった。Not-adopted パスで完結（Step 5 の `.tmp/SKILL-deprescription.md` 作成も省略）。
+- **実装ステップ Step 2 も省略**: de-prescription バリアントファイル `.tmp/SKILL-deprescription.md` は A/B テスト用中間成果物であり、A/B を実行しない場合は不要。代わりに審査結果のテキストをレポート Appendix に記載した。
+
+### Design Gaps/Ambiguities
+
+- **Spec は「not-adopted でも完結可能」と記載しているが、その場合に Steps 2-3 を省略してよいかは明記されていなかった**: 実装時に auto-resolve で判断した。Spec Notes の "Not-adopted path" 説明に Steps 2-3 省略可否を追記することで将来のあいまいさを防げる。
+
+### Rework
+
+- なし
+
+## Autonomous Auto-Resolve Log
+
+- **Step 3 (A/B test) の省略判断**: Fable 5 ($10/$50/MTok) を `--non-interactive` モードで実行することは高コスト行為のため auto-resolve ポリシー（high-stakes financial action = skip）に従い実行しなかった。結論: Not adopted（経験的データなし）として記録し、Issue クローズ可能な状態にした。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- COMMENT event でレビュー投稿（MUST 問題なし → REQUEST_CHANGES 不要）
+- 全受け入れ条件 PASS（AC3 は `[ ]` → CI 確認後 `[x]` に更新）
+- review-light エージェント未登録のため 4 アスペクトをインラインで実行（問題なし）
+
+### Deferred Items
+- 実際の A/B テスト（Fable 5）は引き続き次回インタラクティブセッションへ延期（/review では変更なし）
+
+### Notes for Next Phase
+- MUST issues なし → `/merge 571` で即座にマージ可能
+- 全 CI ジョブ SUCCESS、全受け入れ条件 PASS
+- `docs/reports/de-prescription-audit.md` の存在と内容の整合性は確認済み
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. コード実装は Spec の "Not-adopted path" に完全準拠しており、Spec と PR diff の間に構造的乖離はなかった。Code Retrospective も適切に文書化されており、review 側で追加指摘は不要だった。
+
+### Recurring issues
+
+Nothing to note. ドキュメントのみの変更であり、同種問題の繰り返しパターンは検出されなかった。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note. 全4条件（rubric×2、file_exists×1、github_check×1）が問題なく検証できた。UNCERTAIN ゼロ。verify コマンドの構文・対象が適切で、not-adopted パスでも全条件が成立した。AC3 の Issue 本文注記（「変更なしクローズの場合も CI は green のため verify は常に成立する」）の通りの結果となった。
