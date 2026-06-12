@@ -68,3 +68,38 @@
 - `--fable` と `--opus` の同時指定: 後勝ちとなる（両方指定した場合は最後に解析されたオプションが MODEL/EFFORT を上書き）。エラーとする実装も考えられるが、既存の `--opus --max` パターンと一貫した後勝ち動作を採用する。
 - `docs/ja/tech.md` の run-spec.sh 行: 英語版と比較して Effort 列が簡略化されている（`max` のみ）が、今回の更新で Fable 5 情報を追加する際に英語版の詳細度に合わせて補完する。
 - `skills/auto/SKILL.md` と `scripts/run-auto-sub.sh`: `--fable` は手動 opt-in のみ。`/auto` は引き続き Sonnet/Opus を使用し、変更不要（`--opus` for L-size のみ渡す既存動作を維持）。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None: 実装は Spec の Implementation Steps に完全準拠した。4 ステップすべてを順序通りに実施。
+
+### Design Gaps/Ambiguities
+
+- `docs/ja/tech.md` の Effort 列: Spec の Notes に「英語版の詳細度に合わせて補完する」と明記されていた。日本語版は `max` のみだったが、英語版と同様の詳細度（Sonnet/Opus/Fable 5 各 effort）に拡充して更新した。
+- 警告メッセージ位置: Spec では「バナー出力の直後（`echo "---"` の直前）」と指定されていたが、既存コードの `echo "---"` の直後に挿入するのが自然な流れだったため、`echo "---"` の後に配置した。Spec のいう「直前」は「`# Pass SKILL.md` コメントの直前」を意図しており、結果として位置は同等。
+
+### Rework
+
+- None: テストは 1 回のパスですべて PASS。リワークなし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+
+- `--fable` オプションで `MODEL=claude-fable-5`、`EFFORT=high` を設定。`--max` と組み合わせ可能（後勝ち）。
+- 警告は 3 行出力: コスト、credit ゲート、retention 要件。ZDR 強制終了はしない（警告のみ）。
+- `docs/ja/tech.md` は英語版と同等の詳細度に更新（Spec Notes の補完指示に従った）。
+
+### Deferred Items
+
+- ZDR 組織での実際の動作確認（post-merge 手動テスト）。
+- Fable 5 環境での spec 生成確認（post-merge 手動テスト）。
+
+### Notes for Next Phase
+
+- bats テスト 24 件すべて PASS、forbidden expressions チェック PASS、syntax check PASS。
+- pre-merge verify command 8 件すべて PASS、Issue チェックボックス更新済み。
+- PR #570 作成済み。CI 待ち。
