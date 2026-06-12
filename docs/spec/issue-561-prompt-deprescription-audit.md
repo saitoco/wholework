@@ -66,19 +66,31 @@ Fable 5（`run-spec.sh --fable`）採用フェーズを対象に、`skills/spec/
 - **Step 3 (A/B test) の省略判断**: Fable 5 ($10/$50/MTok) を `--non-interactive` モードで実行することは高コスト行為のため auto-resolve ポリシー（high-stakes financial action = skip）に従い実行しなかった。結論: Not adopted（経験的データなし）として記録し、Issue クローズ可能な状態にした。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Not-adopted パスを採用: A/B テスト（Fable 5）は非対話型自律モードでの高コスト行為のため実行せず、レポートのみを成果物とした
-- `docs/reports/de-prescription-audit.md` に 3 候補（Step 6 light、Step 7 Q&A table、Step 8 detection criteria）の分類・代替テキスト・採用見送り結論を記録
-- `skills/spec/SKILL.md` は完全に変更なし
+- COMMENT event でレビュー投稿（MUST 問題なし → REQUEST_CHANGES 不要）
+- 全受け入れ条件 PASS（AC3 は `[ ]` → CI 確認後 `[x]` に更新）
+- review-light エージェント未登録のため 4 アスペクトをインラインで実行（問題なし）
 
 ### Deferred Items
-- 実際の A/B テスト（Fable 5 モデルを用いた対話型実行）は次回インタラクティブセッションに延期
-- de-prescription バリアントの `.tmp/SKILL-deprescription.md` 作成も同様に延期
+- 実際の A/B テスト（Fable 5）は引き続き次回インタラクティブセッションへ延期（/review では変更なし）
 
 ### Notes for Next Phase
-- PR #571 の CI（bats テスト）が green であることを確認（SKILL.md 変更なしのため問題なし）
-- AC3 `github_check "gh pr checks" "Run bats tests"` は CI 完了後に PASS となる
-- rubric 条件（AC1、AC4）は変更なし（SKILL.md 未変更）で PASS 済み
-- 不採用結論のため `/verify` では `docs/reports/de-prescription-audit.md` の存在と内容を確認するのみ
+- MUST issues なし → `/merge 571` で即座にマージ可能
+- 全 CI ジョブ SUCCESS、全受け入れ条件 PASS
+- `docs/reports/de-prescription-audit.md` の存在と内容の整合性は確認済み
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. コード実装は Spec の "Not-adopted path" に完全準拠しており、Spec と PR diff の間に構造的乖離はなかった。Code Retrospective も適切に文書化されており、review 側で追加指摘は不要だった。
+
+### Recurring issues
+
+Nothing to note. ドキュメントのみの変更であり、同種問題の繰り返しパターンは検出されなかった。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note. 全4条件（rubric×2、file_exists×1、github_check×1）が問題なく検証できた。UNCERTAIN ゼロ。verify コマンドの構文・対象が適切で、not-adopted パスでも全条件が成立した。AC3 の Issue 本文注記（「変更なしクローズの場合も CI は green のため verify は常に成立する」）の通りの結果となった。
