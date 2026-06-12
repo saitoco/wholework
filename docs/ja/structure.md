@@ -134,7 +134,7 @@ wholework/
 
 | Agent | パス | 説明 |
 |---|---|---|
-| review-bug | `agents/review-bug.md` | バグ/ロジックエラー検出（HIGH SIGNAL） |
+| review-bug | `agents/review-bug.md` | バグ/ロジックエラー検出（coverage-first、confidence+severity タグ付き） |
 | review-light | `agents/review-light.md` | 軽量統合レビュー（4 観点すべて） |
 | review-spec | `agents/review-spec.md` | Spec/ドキュメントレビュー |
 | issue-scope | `agents/issue-scope.md` | L/XL issue のスコープ調査 |

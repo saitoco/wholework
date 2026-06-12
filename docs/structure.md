@@ -141,7 +141,7 @@ Key modules:
 
 | Agent | Path | Description |
 |---|---|---|
-| review-bug | `agents/review-bug.md` | Bug/Logic Error Detection (HIGH SIGNAL) |
+| review-bug | `agents/review-bug.md` | Bug/Logic Error Detection (coverage-first, confidence+severity tagged) |
 | review-light | `agents/review-light.md` | Lightweight Integrated review (all 4 perspectives) |
 | review-spec | `agents/review-spec.md` | Spec/Documentation review |
 | issue-scope | `agents/issue-scope.md` | Scope investigation for L/XL issues |

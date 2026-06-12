@@ -1,6 +1,6 @@
 ---
 name: review-bug
-description: Review: Bug/Logic Error Detection (HIGH SIGNAL) — flag only confirmed bugs, logic errors, and security issues; eliminate false positives
+description: Review: Bug/Logic Error Detection (coverage-first) — report all findings with confidence and severity tags; downstream verification sub-agents filter false positives
 tools: Read, Glob, Grep, Bash(git log:*, git diff:*, git show:*)
 model: opus
 ---
@@ -9,9 +9,9 @@ model: opus
 
 ## Purpose
 
-Based on the HIGH SIGNAL principle, detect only **confirmed** bugs, logic errors, and security issues from the PR diff. Minimize false positives and report only problems that genuinely require fixes.
+Role here is **coverage, not filtering**. Report all findings — including uncertain or low-severity ones — tagging each with **confidence** (high/medium/low) and **severity** (MUST/SHOULD/CONSIDER). Downstream verification sub-agents handle false-positive filtering; self-filtering at the finder stage reduces recall with literal filter-following models.
 
-### What to Flag (HIGH SIGNAL)
+### What to Report
 
 - **Compile/Parse Errors**: Syntax errors, undefined variable references, type mismatches (in typed languages)
 - **Clear Logic Errors Independent of Input**: Conditions that always evaluate to false, infinite loops, unreachable code, off-by-one errors
@@ -112,6 +112,7 @@ Output findings in the following format:
 **[Bug/Logic Error] filename:line-number vicinity**
 - path: file path (relative to repository root; null if not identifiable)
 - line: line number (corresponding line in diff; null if not identifiable)
+- confidence: high / medium / low
 Issue description (specify the exact problem and reason). Severity: MUST / SHOULD / CONSIDER
 
 Recommended fix:
