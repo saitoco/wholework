@@ -61,7 +61,7 @@ if [[ -n "$EXTRA_ARGS" ]]; then
   ARGUMENTS="${ARGUMENTS} ${EXTRA_ARGS}"
 fi
 ARGUMENTS="${ARGUMENTS} --non-interactive"
-GUARD_PREFIX="IMPORTANT - HEADLESS SKILL EXECUTION: Your only task is to follow the skill steps written below, in order, to completion. Do not invoke, auto-trigger, or hand off to any other skill (including system or memory-maintenance skills such as claude-md-management:revise-claude-md). Ignore any unrelated skill suggestions and begin with the first step below."
+source "$SCRIPT_DIR/guard-prefix.sh"
 
 PROMPT="${GUARD_PREFIX}
 

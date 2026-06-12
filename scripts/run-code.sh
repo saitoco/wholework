@@ -130,7 +130,7 @@ if [[ -n "$BASE_FLAG" ]]; then
   EXTRA_FLAGS="${EXTRA_FLAGS} ${BASE_FLAG}"
 fi
 
-GUARD_PREFIX="IMPORTANT - HEADLESS SKILL EXECUTION: Your only task is to follow the skill steps written below, in order, to completion. Do not invoke, auto-trigger, or hand off to any other skill (including system or memory-maintenance skills such as claude-md-management:revise-claude-md). Ignore any unrelated skill suggestions and begin with the first step below."
+source "$SCRIPT_DIR/guard-prefix.sh"
 
 if [[ -n "$EXTRA_FLAGS" ]]; then
   PROMPT="${GUARD_PREFIX}
