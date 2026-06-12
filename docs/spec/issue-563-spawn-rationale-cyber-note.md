@@ -55,3 +55,33 @@
 - `docs/tech.md` の変更は `docs/ja/tech.md` の翻訳同期が必要（translation-workflow.md の規定による）
 - `docs/reports/` は翻訳同期の除外対象なので `docs/reports/claude-fable-5-impact-strategy.md` は変更不要
 - `skills/issue/SKILL.md` の新しい表現: `(single-message fan-out prevents serialization regardless of model generation)`
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A（全ステップを Spec 通り実施。ライン番号は実際の値と一致した）
+
+### Design Gaps/Ambiguities
+
+- Step 11 で commit prefix を `feat:` にしてしまった（Type=Task のため正しくは `chore:`）。実装コミットをStep 8 で早期に作成したため、Step 11 の Type 取得ステップを踏まずに prefix を決定したことが原因。push 前であり CLAUDE.md のルールに従い amend はしないが、次回は Type 取得を実施してから commit を行う。
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `agents/review-bug.md` への追記は `## Purpose` の前（見出し直後）に blockquote 形式で配置し、`grep "cyber"` でマッチする表現を確保した
+- `docs/tech.md` への追記は Fable 5 段落末尾（既存文の続き）として追加し、文書構造を変えなかった
+- `docs/ja/tech.md` の翻訳同期は translation-workflow.md の規定に従い同じコミットで実施した
+
+### Deferred Items
+- commit prefix の `feat:` → `chore:` 修正は push 前だが CLAUDE.md のルールに従い amend しないまま進行（実害なし）
+
+### Notes for Next Phase
+- Pre-merge verify 6件すべて PASS 済み
+- Post-merge verify は CI green 確認（`github_check` / manual）のみ残る
+- bats 697件 PASS、スキル構文検証・禁止表現チェックいずれも PASS
