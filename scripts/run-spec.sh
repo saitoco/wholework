@@ -1,9 +1,9 @@
 #!/bin/bash
 # run-spec.sh - Autonomous /spec execution with Sonnet model
-# Usage: run-spec.sh <issue-number> [--opus] [--max]
+# Usage: run-spec.sh <issue-number> [--opus] [--fable] [--max]
 
 set -euo pipefail
-ISSUE_NUMBER="${1:?Usage: run-spec.sh <issue-number> [--opus] [--max]}"
+ISSUE_NUMBER="${1:?Usage: run-spec.sh <issue-number> [--opus] [--fable] [--max]}"
 shift
 
 # Parse options
@@ -17,13 +17,18 @@ while [[ $# -gt 0 ]]; do
       EFFORT="xhigh"
       shift
       ;;
+    --fable)
+      MODEL="claude-fable-5"
+      EFFORT="high"
+      shift
+      ;;
     --max)
       EFFORT="max"
       shift
       ;;
     *)
       echo "Error: Invalid option: $1" >&2
-      echo "Usage: run-spec.sh <issue-number> [--opus] [--max]" >&2
+      echo "Usage: run-spec.sh <issue-number> [--opus] [--fable] [--max]" >&2
       exit 1
       ;;
   esac
@@ -55,6 +60,11 @@ echo "Effort: ${EFFORT}"
 echo "Permissions: ${_PERM_LABEL}"
 echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
+if [[ "$MODEL" == "claude-fable-5" ]]; then
+  echo "WARNING: Fable 5 opt-in — cost \$10/\$50 per MTok (2x Opus 4.8, ~3.3x Sonnet)"
+  echo "WARNING: Usage credits required after 2026-06-22 (subscription plans)"
+  echo "WARNING: 30-day retention required — ZDR organizations not supported"
+fi
 
 # Pass SKILL.md body directly as prompt (avoids context: fork issue)
 SKILL_FILE="${SCRIPT_DIR}/../skills/spec/SKILL.md"
