@@ -107,6 +107,10 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/domain-loader.md` and follow the "Processing
 
 ### Step 6: Codebase Investigation
 
+**Read existing retrospective sections (before codebase investigation):**
+
+If a Spec file already exists for this Issue (from a prior `/spec` run), read any retrospective sections it contains (e.g., `## Spec Retrospective`, `## Code Retrospective`) before proceeding with codebase investigation. These sections carry forward decisions and pitfalls from earlier phases — reading them avoids repeating known mistakes and preserves design continuity.
+
 Read `${CLAUDE_PLUGIN_ROOT}/modules/measurement-scope.md` and follow its measurement scope guidelines when recording quantitative data (file counts, line counts, grep hit counts, etc.) in the Spec.
 
 **Based on SPEC_DEPTH:**
@@ -608,6 +612,14 @@ Reflect on the specification phase and present improvement suggestions to the us
 3. **Persist spec retrospective**:
    - Append `## spec retrospective` section to the end of the Spec
    - If improvements exist, record in spec retrospective only (do not create issues; improvement proposals are aggregated in the `/verify` phase)
+
+**Retrospective writing discipline:**
+
+- One entry per learning — do not bundle multiple lessons into a single bullet
+- Record both corrections (what was wrong) and confirmed approaches (what worked and why)
+- Link related entries across retrospective sections when one finding affects another
+- Do not duplicate what the repository or git history already records (commit messages, PR descriptions, file diffs) — note only the reasoning and judgment that is not captured elsewhere
+- Update or delete entries found to be incorrect in subsequent runs; stale or wrong entries degrade memory quality
 
 **Spec retrospective template:**
 ```markdown

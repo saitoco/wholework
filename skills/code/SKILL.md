@@ -159,6 +159,10 @@ If the Spec has a "Notes" section, cross-reference each item against the impleme
 Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Read Procedure" section.
 Parameters: `SPEC_PATH`, `ISSUE_NUMBER=$NUMBER`, `PHASE_NAME=code`.
 
+**Read existing retrospective sections (before starting implementation):**
+
+If the Spec contains any retrospective sections (e.g., `## Spec Retrospective`, `## Code Retrospective`) from prior phases, read them before starting implementation. These sections carry forward decisions, pitfalls, and confirmed approaches from earlier phases — reading them avoids repeating known mistakes and aligns implementation with prior design resolutions.
+
 ### Step 6: Verify Uncertainties (only if present in Spec)
 
 If the Spec has an "Uncertainties" section, before implementing:
@@ -418,6 +422,14 @@ Append retrospective information to the Spec and commit.
 - Deviations from the design (what deviated and why)
 - Design gaps/ambiguities (problems found during implementation)
 - Rework (where rework occurred and the cause)
+
+**Retrospective writing discipline:**
+
+- One entry per learning — do not bundle multiple lessons into a single bullet
+- Record both corrections (what was wrong) and confirmed approaches (what worked and why)
+- Link related entries across retrospective sections when one finding affects another
+- Do not duplicate what the repository or git history already records (commit messages, PR descriptions, file diffs) — note only the reasoning and judgment that is not captured elsewhere
+- Update or delete entries found to be incorrect in subsequent runs; stale or wrong entries degrade memory quality
 
 **Template:**
 ```markdown
