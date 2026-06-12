@@ -379,7 +379,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md`.
 
 #### Step 11a: Parallel Investigation (Scope / Risk / Precedent Agents)
 
-Get steering doc paths with Glob. Launch these 3 subagents in a single message to ensure parallel fan-out (Opus 4.7 may otherwise serialize the spawns):
+Get steering doc paths with Glob. Launch these 3 subagents in a single message to ensure parallel fan-out (single-message fan-out prevents serialization regardless of model generation):
 
 ```text
 Task(subagent_type="issue-scope", description="Scope investigation",

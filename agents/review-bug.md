@@ -7,6 +7,8 @@ model: opus
 
 # Review: Bug/Logic Error Detection
 
+> **Note (Fable 5):** When running on Fable 5, security-related queries (shell injection, secrets, LLM-to-Shell risks) may be automatically routed to Opus 4.8 via the cyber classifier (transparent via CLI). Do not evaluate security coverage assuming Fable 5 execution.
+
 ## Purpose
 
 Role here is **coverage, not filtering**. Report all findings — including uncertain or low-severity ones — tagging each with **confidence** (high/medium/low) and **severity** (MUST/SHOULD/CONSIDER). Downstream verification sub-agents handle false-positive filtering; self-filtering at the finder stage reduces recall with literal filter-following models.
