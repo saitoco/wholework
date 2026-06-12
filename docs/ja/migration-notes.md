@@ -4,6 +4,50 @@
 
 ---
 
+## Issue #485: run-verify.sh 削除と /verify fork 廃止
+
+### 概要
+
+`/verify` はフォーク（`claude -p`）プロセスで実行されなくなった。呼び出し元コンテキスト（親セッション）で実行されるようになり、インタラクティブな手動 AC 確認のための `AskUserQuestion` が使用可能になった。
+
+### インターフェース変更
+
+#### `scripts/run-verify.sh` — 削除
+
+`run-verify.sh` ラッパースクリプトは削除された。直接呼び出しはすべて置き換えが必要。
+
+| 変更前 | 変更後 |
+|--------|-------|
+| `bash scripts/run-verify.sh $NUMBER` | 親セッションで `Skill(skill="wholework:verify", args="$NUMBER")` |
+| `bash scripts/run-verify.sh $NUMBER --base release/v1` | `Skill(skill="wholework:verify", args="$NUMBER --base release/v1")` |
+
+`run-verify.sh` を直接呼び出していた CI/cron ジョブは `/auto $NUMBER` を使用するか、`/verify $NUMBER` をインタラクティブに実行すること。
+
+#### `skills/verify/SKILL.md` — `--auto` / `--non-interactive` フラグ削除
+
+`--auto` と `--non-interactive` フラグは認識されなくなった。`/verify` は常にインタラクティブに実行される。
+
+| 変更前 | 変更後 |
+|--------|-------|
+| `/verify 123 --auto` | `/verify 123` |
+| `/verify 123 --non-interactive` | `/verify 123`（フラグは無視またはエラーになる可能性あり） |
+
+#### `skills/auto/SKILL.md` — verify 呼び出しパターン変更
+
+`/auto` スキルは Bash 経由で `run-verify.sh` を呼び出さなくなった。親セッションで verify スキルを直接呼び出す。
+
+| 変更前 | 変更後 |
+|--------|-------|
+| `run \`scripts/run-verify.sh $NUMBER\` via Bash (timeout: 600000)` | `Skill(skill="wholework:verify", args="$NUMBER")` |
+
+#### `scripts/run-auto-sub.sh` — verify フェーズ削除
+
+`run-auto-sub.sh` はサブ issue の verify フェーズを実行しなくなった。verify は親 `/auto` セッションに委ねられる（`skills/auto/SKILL.md` Step 4d）。
+
+`run-auto-sub.sh` の verify 実行に依存していた下流の呼び出し元は、オーケストレーションに明示的な verify ステップを追加する必要がある。
+
+---
+
 ## 英語変換チェックリスト
 
 スクリプトを移行する際、すべての日本語テキストが英語に翻訳されていることを確認するためのチェックリスト。

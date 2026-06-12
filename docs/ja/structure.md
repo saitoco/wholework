@@ -186,6 +186,7 @@ wholework/
 - `scripts/spawn-recovery-subagent.sh` — `run-auto-sub.sh` が呼び出す Tier 3 recovery オーケストレーター。`claude -p` で `agents/orchestration-recovery` を spawn し、`validate-recovery-plan.sh` で plan を検証し、`WHOLEWORK_MAX_RECOVERY_SUBAGENTS` による mkdir-based スロットロックで並列性を制御する
 
 **Skill runners:**
+- `scripts/guard-prefix.sh` — 全 run-*.sh がソースする共有 GUARD_PREFIX 定義。自律実行向けのアーリーストップ防止とバウンダリリマインダーを含む
 - `scripts/run-auto-sub.sh` — サブ issue 向け auto ワークフロー実行
 - `scripts/run-code.sh` — code スキル実行
 - `scripts/run-issue.sh` — issue スキル実行

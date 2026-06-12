@@ -90,7 +90,9 @@ Entries are grouped by workflow order (triage → issue → spec → code → re
 | audit (skill) | audit | Sonnet | — | Drift/fragility detection and stats; Sonnet sufficient. Invoked inline (no `run-*.sh` wrapper), so effort is not set |
 | doc (skill) | doc | Sonnet | — | Document management; Sonnet sufficient. Invoked inline (no `run-*.sh` wrapper), so effort is not set |
 
-**Opus 4.7 effort calibration**: Opus 4.7 enforces strict effort calibration — `low` and `medium` aggressively scope to literal task requirements. `max` carries a diminishing returns risk (overthinking) with Opus 4.7; reserve it for intelligence-demanding experimental tasks only. `xhigh` is the Opus 4.7 recommended default for most coding and agentic use cases. Sub-agent `model: opus` / `model: sonnet` alias values in agent frontmatter auto-resolve to Opus 4.7.
+**Opus 4.8 effort calibration**: Opus 4.8 enforces strict effort calibration — `low` and `medium` aggressively scope to literal task requirements. `max` carries a diminishing returns risk (overthinking) with Opus 4.8; reserve it for intelligence-demanding experimental tasks only. `xhigh` is the Opus 4.8 recommended default for most coding and agentic use cases. Sub-agent `model: opus` / `model: sonnet` alias values in agent frontmatter auto-resolve to the current Opus (4.8).
+
+**Fable 5 (Mythos class)**: Fable 5 (`claude-fable-5`) is a tier above Opus and is **not** reachable via the `opus` alias — the explicit model string `claude-fable-5` is required. Adoption is **opt-in only** (never a default model swap) due to hard constraints: cost $10/$50 per MTok (2× Opus 4.8, ~3.3× Sonnet 4.6), 30-day retention required (zero-data-retention orgs not supported), and usage-credit gated on subscription plans after 2026-06-22. Skills that expose a Fable 5 opt-in (e.g., `/spec --fable`) document it per-skill. See `docs/reports/claude-fable-5-impact-strategy.md` §3.3 and §5.2 for adoption guidance.
 
 SSoT note: Model values in run-*.sh use CLI aliases (sonnet/opus); update this table when changing model/effort in run-*.sh, agents, or skills.
 

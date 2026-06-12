@@ -88,6 +88,10 @@
 | audit（skill） | audit | Sonnet | — | ドリフト・脆弱性検出と統計、Sonnet で十分。インライン実行（`run-*.sh` ラッパーなし）のため effort は設定しない |
 | doc（skill） | doc | Sonnet | — | ドキュメント管理、Sonnet で十分。インライン実行（`run-*.sh` ラッパーなし）のため effort は設定しない |
 
+**Opus 4.8 effort calibration**: Opus 4.8 は厳格な effort キャリブレーションを適用する — `low` と `medium` は文字通りのタスク要件に積極的にスコープを絞る。`max` は Opus 4.8 では過剰思考のリスク（diminishing returns）があるため、知的要求の高い実験的タスクにのみ使用する。`xhigh` が Opus 4.8 の多くのコーディング・エージェントユースケースにおける推奨デフォルト。エージェント frontmatter の `model: opus` / `model: sonnet` エイリアス値は現在の Opus（4.8）に auto-resolve する。
+
+**Fable 5（Mythos クラス）**: Fable 5（`claude-fable-5`）は Opus より上のティアであり、`opus` エイリアスでは**到達できない** — 明示的なモデル文字列 `claude-fable-5` が必要。以下のハード制約によりデフォルトモデル変更ではなく**オプトイン**のみ許可: コスト $10/$50 per MTok（Opus 4.8 の 2 倍、Sonnet 4.6 の 3.3 倍）、30 日 retention 必須（ゼロデータ保持 org は非対応）、2026-06-22 以降はサブスクリプションの usage credit ゲート。Fable 5 オプトインを公開するスキル（例: `/spec --fable`）はスキル単位でドキュメント化する。採用ガイダンスは `docs/reports/claude-fable-5-impact-strategy.md` §3.3 および §5.2 を参照。
+
 SSoT 備考: run-*.sh のモデル値は CLI エイリアス（sonnet/opus）を使用する。run-*.sh、agents、skills でモデル/effort を変更する際はこの表を更新すること。
 
 ## Wholework ラベル管理
