@@ -66,20 +66,20 @@ Fable 5（`run-spec.sh --fable`）採用フェーズを対象に、`skills/spec/
 - **Step 3 (A/B test) の省略判断**: Fable 5 ($10/$50/MTok) を `--non-interactive` モードで実行することは高コスト行為のため auto-resolve ポリシー（high-stakes financial action = skip）に従い実行しなかった。結論: Not adopted（経験的データなし）として記録し、Issue クローズ可能な状態にした。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- COMMENT event でレビュー投稿（MUST 問題なし → REQUEST_CHANGES 不要）
-- 全受け入れ条件 PASS（AC3 は `[ ]` → CI 確認後 `[x]` に更新）
-- review-light エージェント未登録のため 4 アスペクトをインラインで実行（問題なし）
+- PR #571 をスカッシュマージ（`--squash --delete-branch`）で main にマージ
+- `closes #561` が body に含まれるため Issue は自動クローズ
+- mergeable=true / CI success / review approved の全条件が揃っていたため即時マージ
 
 ### Deferred Items
-- 実際の A/B テスト（Fable 5）は引き続き次回インタラクティブセッションへ延期（/review では変更なし）
+- 実際の A/B テスト（Fable 5 de-prescription）は今後のインタラクティブセッションへ引き続き延期（not-adopted として記録済み）
 
 ### Notes for Next Phase
-- MUST issues なし → `/merge 571` で即座にマージ可能
-- 全 CI ジョブ SUCCESS、全受け入れ条件 PASS
-- `docs/reports/de-prescription-audit.md` の存在と内容の整合性は確認済み
+- `docs/reports/de-prescription-audit.md` がmainに含まれる（opportunistic verify 対象）
+- `skills/spec/SKILL.md` は変更なし（not-adopted パス）
+- verify フェーズでは post-merge 受け入れ条件「実 `/auto` 実行で品質退行なし」を opportunistic 観測対象として記録すること
 
 ## review retrospective
 
