@@ -44,3 +44,31 @@ The writing discipline follows Fable 5 memory-surface guidance: one learning per
 - No doc update (README.md, workflow.md) required — no new skills or phases added; internal step-level behavior change only
 - Auto-resolved ambiguity points from Issue body are carried over verbatim (see Issue body § Auto-Resolved Ambiguity Points)
 - Step 13 and Step 12 note: the writing discipline rules should be placed as a named block (e.g., `**Retrospective writing discipline:**`) before the template block so they are clearly visible as authoring guidelines, not part of the template itself
+
+## Code Retrospective
+
+### Deviations from Design
+- None — implementation followed the 4-step plan exactly
+
+### Design Gaps/Ambiguities
+- The Spec called for "linking related entries" as a discipline rule; this was included in both Step 12 and Step 13 additions, but the Issue AC rubric did not check for it. It is present in the implementation and adds value beyond the minimum rubric requirement.
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Added "retrospective reading guidance" to Step 5 of `/code` (after Phase Handoff read block) and Step 6 of `/spec` (before measurement-scope.md line) — these are the first natural points where the Spec is loaded, making the guidance immediately actionable.
+- Used `**Retrospective writing discipline:**` named block (as specified in Spec Notes) before each template block in Step 12 and Step 13, so the rules are visually distinct from the template itself.
+- Writing discipline includes 5 rules: one-entry-per-learning, record corrections AND confirmed approaches, link related entries, no-git-history-duplication, update/delete stale entries.
+
+### Deferred Items
+- Behavioral observation of whether `/auto` actually reduces duplicate/conflicting retrospective entries is a post-merge manual verification item (AC post-merge, verify-type: manual).
+- No follow-up Issues created — the implementation is complete and self-contained.
+
+### Notes for Next Phase
+- All 5 pre-merge ACs verified PASS (section_contains, rubric ×4, github_check CI).
+- Changes are purely additive text insertions in two SKILL.md files — no logic, no scripts, no tests modified. Low regression risk.
+- The `link related entries` discipline rule is present in both additions even though the rubric did not check for it — verify should confirm the full discipline list matches the AC intent.
