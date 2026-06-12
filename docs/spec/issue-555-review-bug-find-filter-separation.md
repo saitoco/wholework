@@ -71,19 +71,33 @@ N/A
 - `downstream` は現在 `agents/review-bug.md` に存在しない → Step 1 の Purpose 書き換えで追加
 - `file_contains "skills/review/SKILL.md" "Step 10.3"` は現行ファイル line 401 に "Pass integrated results to Step 10.3" として確認済み（変更不要）
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+`review-light.md` への注記追加で、注記内容とOutput Formatの不整合が発生した。注記が "confidence and severity tags" を指示したが、Output Formatに confidence フィールドの定義がなかった。注記と出力形式を同一コミットで整合させる（または `review-output-format.md` の共通形式を先に更新してから参照させる）ことで防げる。
+
+### Recurring Issues
+
+`review-bug.md` と `review-light.md` は Output Format が類似構造だが独立定義されている。`review-bug.md` の format 変更（confidence 追加）が `review-light.md` に波及しなかった。複数エージェントに共通する format 変更は `review-output-format.md` の共通テンプレートを更新することで一括適用できる。
+
+### Acceptance Criteria Verification Difficulty
+
+全6件とも verify command で即時自動判定可能（UNCERTAIN なし）。verify command の精度は良好。Post-merge 条件（実 PR での review-bug 所見数の目視確認）は手動確認として適切に分類されている。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- coverage-first 方針への切り替え: Purpose セクション本文を丸ごと置き換え、downstream 検証段へのフィルタ委譲を明示した
-- `confidence` フィールドを Output Format の `- line:` 直後に追加（Spec 指定通り）
-- `review-light.md` への注記は Purpose 1段落目の直後に挿入（自然な読み順）
-- `docs/structure.md` + `docs/ja/structure.md` の両方を更新（translation-workflow.md に従う）
+- `review-light.md` Output Format に `- confidence: high / medium / low` フィールドを追加（注記と出力形式を整合）
+- CONSIDER 所見（"downstream verification handles false positives" の不正確な表現）は実害が限定的のためスキップ
+- validate-skill-syntax.py: 全10スキル PASS
 
 ### Deferred Items
-- post-merge 確認（実 PR で review-bug の所見が抑制されすぎないこと）は `/review` 後の目視確認として残置
+- post-merge 確認（実 PR で review-bug の所見が抑制されすぎないこと）は引き続き残置
+- "downstream verification handles false positives" の表現改善は次の機会での対応候補
 
 ### Notes for Next Phase
-- 変更ファイル: `agents/review-bug.md`, `agents/review-light.md`, `docs/structure.md`, `docs/ja/structure.md`
-- 全 6 件の pre-merge verify commands は PASS 済み（Issue チェックボックス更新済み）
-- `skills/review/SKILL.md` は変更なし（Step 10.3 は現状維持）
+- 変更ファイル: `agents/review-bug.md`, `agents/review-light.md`（confidence field 追加）, `docs/structure.md`, `docs/ja/structure.md`
+- 全 6 件の pre-merge verify commands は PASS
+- CI: 全ジョブ SUCCESS（DCO, Run bats tests, Validate skill syntax, Forbidden Expressions check, macOS shell compatibility）
