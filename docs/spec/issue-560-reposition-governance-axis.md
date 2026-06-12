@@ -62,6 +62,31 @@
 
 - None
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec は Fable 5 opt-in（`run-spec.sh 560 --fable`）で生成された初の実例。AC 6 件すべてに verify command が揃い、UNCERTAIN 0 件。Size を M→S に正しく再判定し、patch ルートへの短縮が機能した
+
+#### design
+- 4 ファイル（EN/JA × product.md/guide-index）の同一コミット同期方針が translation-sync IN_SYNC を構造的に保証した
+
+#### code
+- 手戻りなし。bats 697 / forbidden-expressions / translation-sync すべて green。commit prefix（feat: を docs 変更に使用）の軽微な逸脱が Code Retrospective に自己記録された
+
+#### review
+- patch ルートのため review フェーズなし（S 再判定による正当な短縮）
+
+#### merge
+- patch ルートのため merge フェーズなし
+
+#### verify
+- pre-merge 6/6 PASS（再検証、冪等）。post-merge manual（/audit drift）は #558 の同種条件と合わせて次回 audit 実行で消化予定として SKIP
+
+### Improvement Proposals
+- N/A（commit prefix の逸脱は軽微で Code Retrospective の自己認識で十分）
+
 ## Phase Handoff
 <!-- phase: code -->
 
