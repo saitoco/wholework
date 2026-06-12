@@ -59,21 +59,34 @@
 - なし（fallback テストの更新は1回で完了）。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- `WATCHDOG_TIMEOUT_DEFAULT` を 1800 → 2700 に変更（spike 計測: 分析タスクで ~120s silent window、ナレーションは最終出力としては到達するが思考中は未到達）
-- progress echo を `skills/spec/SKILL.md` Step 10（Spec 書き込み直前）と `skills/review/SKILL.md` Step 11（レビュー投稿直前）に追加
-- 短縮 spike 代替手法（WATCHDOG_TIMEOUT=180 で測定）を採用し、測定結果を `docs/reports/watchdog-recovery-strategy.md` に追記
+- SHOULD issue（customization.md デフォルト値 1800→2700 未更新）を fix として適用。MUST 非存在を確認してマージ可と判断。
+- light モードで実行（Size=M）。review-light エージェント定義を参照してインライン4観点チェックを実施。
 
 ### Deferred Items
 
-- `docs/reports/claude-fable-5-impact-strategy.md` の TODO チェックボックス（spike 完了後のチェック）は本 Issue スコープ外として defer
-- post-merge AC（Fable 5 `/auto` 実行での再発観測）は手動観測タスクとして defer
+- `docs/reports/claude-fable-5-impact-strategy.md` 内の `1800` 参照（報告書のコンテキストとして historical 記述）は変更対象外と判断（過去の状況説明）。
+- post-merge AC（Fable 5 `/auto` 実行での再発観測）は引き続き defer。
 
 ### Notes for Next Phase
 
-- 全 pre-merge verify command が PASS 済み（rubric×2、grep×2、file_contains×1、command×1）— review フェーズで再確認不要
-- stale test assertion check で `tests/watchdog-defaults.bats` の fallback テスト（2 件）と `tests/claude-watchdog.bats` のコメントも更新済み
-- mock 定数（他テストファイルの `WATCHDOG_TIMEOUT_DEFAULT=1800`）は意図的に更新しなかった（動作値ではなくモック）— review で指摘が来た場合は意図的な判断と説明できる
+- review-summary コメント投稿済み（<!-- review-summary --> マーカー含む）
+- PR ブランチに doc fix コミット追加済み（2ac1337）— merge フェーズで squash 可否を確認すること
+- mock 定数（他テストの `WATCHDOG_TIMEOUT_DEFAULT=1800`）は意図的 — merge フェーズで指摘不要
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- なし。実装は Spec の acceptance criteria と step-by-step 指示に正確に対応していた。code フェーズのハンドオフが詳細で、review フェーズの再確認コストが低かった。
+
+### Recurring issues
+
+- `docs/guide/customization.md`（と日本語ミラー）の `.wholework.yml` デフォルト値記載が `scripts/watchdog-defaults.sh` の変更に追随していなかった。デフォルト値変更時は customization.md のテーブルと例示コメントも変更対象ファイルとして Spec の changed-files リストに追記するとよい。
+
+### Acceptance criteria verification difficulty
+
+- 全条件に verify command が付与されており、`bats` コマンドは CI 参照 fallback で PASS を確認できた（safe モードで command hint を直接実行不可だが CI SUCCESS で代替検証可能）。UNCERTAIN は0件。verify command の品質は高かった。
