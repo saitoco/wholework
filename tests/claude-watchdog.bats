@@ -80,7 +80,7 @@ MOCK
     end_time=$(date +%s)
     elapsed=$((end_time - start_time))
 
-    # Should complete well under 30 seconds (default 1800s would take much longer)
+    # Should complete well under 30 seconds (default 2700s would take much longer)
     [ "$elapsed" -lt 30 ]
     [ "$status" -ne 0 ]
 }

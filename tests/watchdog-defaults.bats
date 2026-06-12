@@ -38,7 +38,7 @@ MOCK
     chmod +x "$MOCK_DIR/get-config-value.sh"
     run bash -c "source '$SCRIPT_DIR/watchdog-defaults.sh'; load_watchdog_timeout '$MOCK_DIR' 2>/dev/null; echo \$WATCHDOG_TIMEOUT"
     [ "$status" -eq 0 ]
-    [ "$output" = "1800" ]
+    [ "$output" = "2700" ]
 }
 
 @test "load_watchdog_timeout falls back to default on negative value" {
@@ -49,7 +49,7 @@ MOCK
     chmod +x "$MOCK_DIR/get-config-value.sh"
     run bash -c "source '$SCRIPT_DIR/watchdog-defaults.sh'; load_watchdog_timeout '$MOCK_DIR' 2>/dev/null; echo \$WATCHDOG_TIMEOUT"
     [ "$status" -eq 0 ]
-    [ "$output" = "1800" ]
+    [ "$output" = "2700" ]
 }
 
 @test "load_watchdog_timeout prints warning to stderr on invalid value" {
