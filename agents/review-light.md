@@ -78,6 +78,7 @@ Output findings in the following format:
 **[Spec Deviation] filename:line-number vicinity**
 - path: file path (relative to repository root; null if not identifiable)
 - line: line number (corresponding line in diff; null if not identifiable)
+- confidence: high / medium / low
 Issue description. Severity: MUST / SHOULD / CONSIDER
 
 Recommended fix:
@@ -88,6 +89,7 @@ Recommended fix:
 **[Edge Case/Robustness] filename:line-number vicinity**
 - path: file path (relative to repository root; null if not identifiable)
 - line: line number (corresponding line in diff; null if not identifiable)
+- confidence: high / medium / low
 Issue description. Severity: MUST / SHOULD / CONSIDER
 
 Recommended fix:
