@@ -99,6 +99,33 @@
 
 - 全 8 件中 7 件 PASS、1 件 UNCERTAIN（`command "bash -n scripts/run-spec.sh"` — safe モードで CI 間接カバレッジのみ）。`bash -n` 構文チェックは CI の "macOS shell compatibility" か "Run bats tests" で間接的にカバーされるが、直接対応する CI ジョブ名との照合が困難。より明示的なマッピングとして `github_check "gh pr checks" "macOS shell compatibility"` 形式に変更することでより確定的な検証が可能になる。
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 8 件すべてに verify command が付与され、grep 引数逆順バグ等 4 件の曖昧性が /issue で事前解決されていた。UNCERTAIN 0 件（verify full mode では bash -n も直接実行で確定 PASS）
+
+#### design
+- Spec の Changed Files と実装は完全一致。「警告のみ・強制終了しない」graceful degrade 方針が実装にそのまま反映された
+
+#### code
+- 手戻りなし。--fable 系 bats テスト 5 件が同時追加され、回帰防止が機能
+
+#### review
+- CONSIDER 2 件（コスト警告の未テスト、line 2 コメントの陳腐化）が記録されたが、いずれも軽微で follow-up 扱いは妥当
+
+#### merge
+- conflicts なし、即時 squash merge
+
+#### verify
+- pre-merge 8/8 PASS（bats 24/24 ローカル green）
+- post-merge AC2（ZDR graceful degrade）は擬似環境 bats テストを verify 内で作成・実行して PASS 確認（claude mock の ZDR 拒否ケースで警告出力・非クラッシュ・exit code 伝播を検証）
+- post-merge AC1（--fable での実 spec 生成）は次 Issue #560 の spec フェーズで `run-spec.sh 560 --fable` として実機検証する設計（バッチ進行と検証の統合）
+
+### Improvement Proposals
+- N/A（review CONSIDER 2 件は軽微につき Issue 化見送り。post-merge 検証の進行は Issue コメントに記録済み）
+
 ## Phase Handoff
 <!-- phase: merge -->
 
