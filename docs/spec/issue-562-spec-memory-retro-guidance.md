@@ -56,6 +56,31 @@ The writing discipline follows Fable 5 memory-surface guidance: one learning per
 ### Rework
 - None
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 4 件が rubric + section_contains のペア構成で、意味的検証と構造的安全網の両立ができていた。UNCERTAIN 0 件
+
+#### design
+- 4-step 計画と実装の乖離なし。記述規律に Issue AC の最低要件を超える「関連エントリのリンク」規則が含まれ、価値を追加した
+
+#### code
+- 手戻りなし。patch ルートで spec→code が単一チェーンで完了
+
+#### review
+- patch ルートのため review フェーズなし
+
+#### merge
+- patch ルートのため merge フェーズなし
+
+#### verify
+- pre-merge 5/5 PASS。post-merge 観測条件（実 /auto での retrospective 参照効果）は適用直後のため SKIP — 直後の #563 が最初の観測機会
+
+### Improvement Proposals
+- N/A
+
 ## Phase Handoff
 <!-- phase: code -->
 
