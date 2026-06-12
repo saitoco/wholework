@@ -155,22 +155,20 @@ This semantics is designed for 1:1 portability to Anthropic Managed Agents `perm
 
 For Basic authentication in `browser_check` / `browser_screenshot`, refer to the browser adapter's Processing Steps (Step 3: Basic Authentication Setup) resolved via `${CLAUDE_PLUGIN_ROOT}/modules/adapter-resolver.md`. Auth info retrieval, attachment, and masking using `PREVIEW_BASIC_USER` / `PREVIEW_BASIC_PASS` environment variables are managed centrally in the browser-adapter.
 
-### Differentiation Between `http_status` / `html_check` / `api_check` / `build_success` / `lighthouse_check` / `github_check` and `command`
+### Differentiation Between `http_status` / `html_check` / `api_check` / `build_success` / `github_check` and `command`
 
-`http_status`, `html_check`, `api_check`, `build_success`, `lighthouse_check`, and `github_check` are specialized commands for web app, build, and GitHub state verification. Key differentiators from `command`:
+`http_status`, `html_check`, `api_check`, `build_success`, and `github_check` are specialized commands for web app, build, and GitHub state verification. Key differentiators from `command`:
 
 - **`command`**: General-purpose command execution. Returns UNCERTAIN in safe mode (may use CI reference fallback). Only executed in full mode. Commands run in a bash subprocess (`bash -c`); avoid shell-dependent glob patterns (e.g., `**`) and use `find` for reliable file enumeration
 - **`http_status`**: Specialized for HTTP response code verification. In safe mode, runs URL security check (`${CLAUDE_PLUGIN_ROOT}/modules/browser-verify-security.md`) and blocks private IPs; external URLs verified with curl. Timeout prevents connection blocking (connect: 5s, total: 10s). `--allow-localhost` flag opts in to localhost access even in safe mode
 - **`html_check`**: Specialized for HTML structure verification. curl + pup with CSS selector evaluation. Can run in safe mode with URL security check. UNCERTAIN if `pup` is not installed. `--allow-localhost` flag opts in to localhost access even in safe mode
 - **`api_check`**: Specialized for JSON API response verification (GET only). curl + jq for field extraction and comparison. Can run in safe mode with URL security check. `--allow-localhost` flag opts in to localhost access even in safe mode
 - **`build_success`**: Specialized for build command success verification. Only executed in full mode. Timeout is 120 seconds (`command` is 60 seconds)
-- **`lighthouse_check`**: Specialized for Lighthouse score verification. Only executed in full mode. Delegates to `lighthouse-adapter.md` via adapter-resolver, which handles CLI detection
 - **`github_check`**: Specialized for GitHub state verification. In safe mode, only read-only commands (`gh issue view`, `gh pr view`, `gh pr checks`, `gh api` GET) are executed via allowlist. Non-allowlist items return UNCERTAIN
 
 **Safe mode handling:**
 - `http_status` / `html_check` / `api_check`: Can run in safe mode with URL security check. Private IP access is blocked; external URLs executed with curl (see `${CLAUDE_PLUGIN_ROOT}/modules/browser-verify-security.md` for blocking policy). `--allow-localhost` flag allows `127.0.0.0/8` access even in safe mode
 - `build_success` / `command`: Return UNCERTAIN in safe mode (to prevent arbitrary command execution risk). Intended for use with `/verify` (full mode)
-- `lighthouse_check`: Returns UNCERTAIN in safe mode (to prevent external command execution risk). Intended for use with `/verify` (full mode)
 - `github_check`: Can run in safe mode via allowlist. Only `gh issue view`, `gh pr view`, `gh pr checks`, `gh api` (GET) are allowed. Write operations (`gh issue create`, `gh pr merge`, etc.) are blocked and return UNCERTAIN
 
 ### Shell Script Syntax Check
