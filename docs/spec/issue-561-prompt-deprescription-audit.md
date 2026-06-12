@@ -81,6 +81,31 @@ Fable 5（`run-spec.sh --fable`）採用フェーズを対象に、`skills/spec/
 - `skills/spec/SKILL.md` は変更なし（not-adopted パス）
 - verify フェーズでは post-merge 受け入れ条件「実 `/auto` 実行で品質退行なし」を opportunistic 観測対象として記録すること
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- not-adopted パスを Spec 段階から第一級の結末として設計していたため、A/B 未実施でも全 AC が成立する構造だった。rubric 2 件 + file_exists + github_check の構成は spike 系 Issue の良い雛形
+
+#### design
+- mechanical / reasoning の分類テーブルが監査レポートにそのまま反映され、設計と成果物が一致
+
+#### code
+- SKILL.md を変更しない判断（実証データなしでの de-prescription 見送り）は distributable-first 原則に忠実。手戻りなし
+
+#### review
+- Spec の Not-adopted path への完全準拠を確認、追加指摘なし
+
+#### merge
+- conflicts なし、即時 squash merge
+
+#### verify
+- pre-merge 4/4 PASS、UNCERTAIN 0。post-merge opportunistic 条件は「SKILL.md 不変＝退行ベクトル不存在 + 本バッチの Fable 5 実 /auto 実行で退行観測なし」により Claude Execute で PASS。全条件成立で phase/done
+
+### Improvement Proposals
+- N/A
+
 ## review retrospective
 
 ### Spec vs. implementation divergence patterns
