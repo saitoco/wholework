@@ -45,3 +45,40 @@ Fable 5（`run-spec.sh --fable`）採用フェーズを対象に、`skills/spec/
 - **A/B test methodology**: ベースラインと de-prescription バリアントで同一 closed Issue を再 spec。一時スワップ後は必ず元の SKILL.md を復元する（`git checkout skills/spec/SKILL.md` で安全に復元可能）
 - **Translation sync**: `docs/reports/` は `docs/translation-workflow.md` の除外対象。日本語ミラー不要
 - **Auto-resolved ambiguity** (issue 本文から移管): (1) レポートファイルパス `docs/reports/de-prescription-audit.md` は既存命名規則（kebab-case + 内容記述）に沿って決定。(2) AC3（`github_check "gh pr checks" "Run bats tests"`）は変更なしクローズ時も CI green のため verify は常に成立する
+
+## Code Retrospective
+
+### Deviations from Design
+
+- **Step 3 (A/B test execution) は省略**: 実装ステップでは `run-spec.sh --fable <N>` を用いた実際の A/B 実験を想定していたが、非対話型自律モード（run-code.sh）での Fable 5 コスト（$10/$50/MTok）を伴う高コスト LLM 呼び出しは auto-resolve ポリシーで延期対象のため実行しなかった。Not-adopted パスで完結（Step 5 の `.tmp/SKILL-deprescription.md` 作成も省略）。
+- **実装ステップ Step 2 も省略**: de-prescription バリアントファイル `.tmp/SKILL-deprescription.md` は A/B テスト用中間成果物であり、A/B を実行しない場合は不要。代わりに審査結果のテキストをレポート Appendix に記載した。
+
+### Design Gaps/Ambiguities
+
+- **Spec は「not-adopted でも完結可能」と記載しているが、その場合に Steps 2-3 を省略してよいかは明記されていなかった**: 実装時に auto-resolve で判断した。Spec Notes の "Not-adopted path" 説明に Steps 2-3 省略可否を追記することで将来のあいまいさを防げる。
+
+### Rework
+
+- なし
+
+## Autonomous Auto-Resolve Log
+
+- **Step 3 (A/B test) の省略判断**: Fable 5 ($10/$50/MTok) を `--non-interactive` モードで実行することは高コスト行為のため auto-resolve ポリシー（high-stakes financial action = skip）に従い実行しなかった。結論: Not adopted（経験的データなし）として記録し、Issue クローズ可能な状態にした。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Not-adopted パスを採用: A/B テスト（Fable 5）は非対話型自律モードでの高コスト行為のため実行せず、レポートのみを成果物とした
+- `docs/reports/de-prescription-audit.md` に 3 候補（Step 6 light、Step 7 Q&A table、Step 8 detection criteria）の分類・代替テキスト・採用見送り結論を記録
+- `skills/spec/SKILL.md` は完全に変更なし
+
+### Deferred Items
+- 実際の A/B テスト（Fable 5 モデルを用いた対話型実行）は次回インタラクティブセッションに延期
+- de-prescription バリアントの `.tmp/SKILL-deprescription.md` 作成も同様に延期
+
+### Notes for Next Phase
+- PR #571 の CI（bats テスト）が green であることを確認（SKILL.md 変更なしのため問題なし）
+- AC3 `github_check "gh pr checks" "Run bats tests"` は CI 完了後に PASS となる
+- rubric 条件（AC1、AC4）は変更なし（SKILL.md 未変更）で PASS 済み
+- 不採用結論のため `/verify` では `docs/reports/de-prescription-audit.md` の存在と内容を確認するのみ
