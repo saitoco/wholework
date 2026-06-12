@@ -4,7 +4,9 @@
 
 ## Vision
 
-Claude Code ユーザーが Issue 作成からマージ後の検証までを通して使える Issue 駆動型の開発ワークフローを、あらゆる GitHub プロジェクトで動作する組み合わせ可能なスキル群として配布します。各フェーズ（issue → spec → code → review → merge → verify）は独立したスキルであり、段階的に採用でき、プロジェクトごとに設定でき、adapter で拡張できます。
+Wholework は、自律的なコーディング agent を実 GitHub リポジトリで安全に走らせるための **governance-and-verification harness** です。作業を GitHub Issues・Specs・PRs・Labels・Retrospectives に外部化することで、人間・将来のセッション・チームが作業を可視化し、gate し、監査できる状態を保ちつつ、マージ後に成果物が受入条件を満たしているかを検証します。
+
+この harness は、Issue 作成からマージ後の検証までの各フェーズをカバーする、組み合わせ可能な Claude Code Skills 群として配布されます。各フェーズ（issue → spec → code → review → merge → verify）は独立したスキルであり、段階的に採用でき、プロジェクトごとに設定でき、adapter で拡張できます。
 
 ## ワークフロー概要
 
@@ -63,6 +65,7 @@ Wholework が機能するための必須依存は以下のみです:
 
 ## 今後の方向性
 
+- **Governance and verification の深化**: コーディング agent の自律性が高まるにつれ、価値の重心はオーケストレーションから governance（要件の捕捉・変更の gate・結果の検証・監査証跡の維持）へ移る。Wholework のロードマップはモデルの自律性向上に合わせて harness の各層を深化させることを優先する
 - **設定サーフェスの拡張**: `.wholework.yml` を通じて設定可能なスキル挙動の範囲を広げ、スキルに手を入れずにプロジェクトへ適応できるようにする。スキルが汎化するにつれて新たな設定可能項目を追加していく
 - **ワークフロー最適化（3軸）**: Model 選択、Adaptive Thinking（`--effort`）、Advisor 戦略の 3 軸を調整し、品質・速度・コストのバランスを取る。フェーズ別マトリクス（`docs/tech.md` Architecture Decisions, `ssot_for: model-effort-matrix`）は新しいモデルや利用データが得られるたびに再調整する
 - **コンテキスト分離を一級制約として扱う**: 実行フェーズのスキルは fork コンテキストに保ち、Spec をフェーズ横断のメモリとして維持することで、新しいスキルが過去フェーズのコンテキスト腐敗を引き継がずに合成できる状態を守る
@@ -114,9 +117,15 @@ Describe success metrics here. -->
 | [Sweep](https://sweep.dev/) | AI GitHub issue → PR エージェント | Issue triage → PR 作成 | GitHub App（OSS + 有償） |
 | [Ellipsis](https://www.ellipsis.dev/) | AI PR レビュー + 自動修正 | PR レビュー | SaaS（GitHub/GitLab、YC W24） |
 
+### Anthropic 公式 Agentic 開発
+
+| 製品 | 性質 | Outcome ループ | 認証 | 配布形態 |
+|---------|--------|--------------|------|-------------|
+| Managed Agents + Outcomes | Anthropic 第一者の自律 agent プラットフォーム | `define_outcome` → 自律実行 → rubric 採点 → 修正 | API key / Anthropic ホスト型 | ホスト型サービス |
+
 ### 差別化サマリ
 
-**Wholework の差別化ポイント**: GitHub Issue と PR を中心とした、spec 作成からマージ後の検証までのエンドツーエンドワークフローを、Claude Code のネイティブ機能（Skills、CLAUDE.md）のみで完結させる。外部サービスや専用 IDE は不要。
+**Wholework の差別化ポイント**: GitHub 上の自律コーディング agent のための governance-and-verification harness — 要件の捕捉からマージ後の受入テストまでを、Claude Code のネイティブ機能（Skills、CLAUDE.md）のみで完結させる。外部サービスや専用 IDE は不要。
 
 他ツールとの主な違い:
 
@@ -124,6 +133,15 @@ Describe success metrics here. -->
 - **GitHub ネイティブ**: Issues/PRs/Labels がワークフローの骨格 — 専用 IDE（Kiro のような）、タスク管理 JSON（Taskmaster のような）、独自ファイルシステム（GSD の `.planning/` や BMAD の `bmad/` のような）は不要
 - **サイズベースのルーティング**: XS〜XL のサイズに応じて patch/pr 経路、レビュー深度、Spec 粒度を自動調整する仕組みは他ツールには見られない
 - **マージ後検証**: マージ後の受入テストを独立した `/verify` フェーズとして持つツールはごく少数
+
+**Managed Agents + Outcomes との対比**
+
+Anthropic の Managed Agents + Outcomes は隣接する Outcome rubric ループ（outcome 定義 → 自律実行 → 採点 → 修正）を提供する。Wholework の持続的差別化要因:
+
+1. **GitHub ネイティブ成果物** — 作業の記録は Issue・PR・Labels・レビュースレッドとしてチームが既に使う場に残る（不透明なサーバーセッションではない）
+2. **サブスク / OAuth 認証** — Wholework は Claude Code のサブスクリプション経路で動作し、Managed Agents は API key と Anthropic ホスト型コンテナを必要とする
+3. **段階的採用** — ホスト型 agent スタック全体にコミットせず `/review` や `/verify` だけを採用できる
+4. **人間 review gate がファーストクラス** — Outcomes は rubric で自律採点するが、Wholework は Issue・PR・AC 確認の各ポイントで人間の承認を挿入する
 
 ## 用語
 

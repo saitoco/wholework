@@ -12,7 +12,9 @@ English | [日本語](ja/product.md)
 
 ## Vision
 
-Distribute a issue-driven development workflow for Claude Code users — from Issue creation through post-merge verification — as a composable set of Skills that work on any GitHub project. Every phase (issue → spec → code → review → merge → verify) is an independent Skill that can be adopted incrementally, configured per project, and extended via adapters.
+Wholework is a **governance-and-verification harness** for running autonomous coding agents safely on real GitHub repositories. It externalizes work onto GitHub Issues, Specs, PRs, Labels, and Retrospectives so humans, future sessions, and teams can see, gate, and audit it — then verifies that the delivered artifact matches the acceptance criteria after merge.
+
+The harness is distributed as a composable set of Claude Code Skills covering every phase from Issue creation through post-merge verification. Each phase (issue → spec → code → review → merge → verify) is an independent Skill that can be adopted incrementally, configured per project, and extended via adapters.
 
 ## Workflow Overview
 
@@ -71,6 +73,7 @@ User-facing documentation is maintained under `docs/guide/`. It covers installat
 
 ## Future Direction
 
+- **Governance and verification depth**: As coding agents grow more autonomous, the value shifts from orchestration to governance — capturing requirements, gating changes, verifying outcomes, and maintaining an audit trail. Wholework's roadmap prioritizes deepening each layer of the harness as model autonomy grows.
 - **Configuration surface expansion**: Widen the set of Skill behaviors exposed through `.wholework.yml` so projects can adapt Wholework without patching Skills. New configurable behaviors are added as Skills generalize.
 - **Workflow optimization (3 axes)**: Balance quality, speed, and cost by tuning Model selection, Adaptive Thinking (`--effort`), and Advisor strategy. The phase-specific matrix in `docs/tech.md` (`ssot_for: model-effort-matrix`) is re-tuned as new models and usage data become available.
 - **Context isolation as a first-class constraint**: Keep execution-phase Skills in fork context and preserve Spec as cross-phase memory, so new Skills compose without inheriting context rot from earlier phases.
@@ -122,9 +125,15 @@ Describe success metrics here. -->
 | [Sweep](https://sweep.dev/) | AI GitHub issue → PR agent | Issue triage → PR creation | GitHub App (OSS + paid) |
 | [Ellipsis](https://www.ellipsis.dev/) | AI PR review + auto-fix | PR review | SaaS (GitHub/GitLab, YC W24) |
 
+### Anthropic-Official Agentic Development
+
+| Product | Nature | Outcome loop | Auth | Distribution |
+|---------|--------|--------------|------|-------------|
+| Managed Agents + Outcomes | Anthropic first-party autonomous agent platform | `define_outcome` → run → rubric grading → revise | API key / Anthropic-hosted | Hosted service |
+
 ### Differentiation Summary
 
-**Wholework's differentiating points**: An end-to-end workflow centered on GitHub Issues and PRs — from spec authoring through post-merge verification — implemented entirely with Claude Code's native capabilities (Skills, CLAUDE.md). No external services or dedicated IDEs required.
+**Wholework's differentiating points**: A governance-and-verification harness for autonomous coding agents on GitHub — from requirements capture through post-merge acceptance testing — implemented entirely with Claude Code's native capabilities (Skills, CLAUDE.md). No external services or dedicated IDEs required.
 
 Key differences from other tools:
 
@@ -132,6 +141,15 @@ Key differences from other tools:
 - **GitHub-native**: Issues/PRs/Labels are the workflow backbone — no dedicated IDE (like Kiro), no task-management JSON (like Taskmaster), no proprietary filesystem (like GSD's `.planning/` or BMAD's `bmad/`).
 - **Size-based routing**: Automatically adjusting the patch/pr route, review depth, and spec granularity based on XS–XL size is not found in other tools.
 - **Post-merge verification**: Few tools have a dedicated `/verify` phase for independent post-merge acceptance testing.
+
+**Against Managed Agents + Outcomes**
+
+Anthropic's Managed Agents + Outcomes offers an adjacent outcome-rubric loop (define outcome → run autonomously → grade → revise). Wholework's durable differentiators against this comparison:
+
+1. **GitHub-native artifacts** — the record of work is Issues, PRs, Labels, and review threads a team already lives in, not an opaque server session.
+2. **Subscription / OAuth auth** — Wholework runs on the Claude Code subscription path; Managed Agents requires API keys and Anthropic-hosted containers.
+3. **Incremental adoption** — a team can adopt `/review` alone or `/verify` alone without committing to a hosted-agent stack.
+4. **Human review gates as first-class** — Outcomes grade against a rubric autonomously; Wholework inserts human approval at Issue, PR, and AC-confirmation points.
 
 ## Terms
 

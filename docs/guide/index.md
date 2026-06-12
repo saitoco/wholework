@@ -6,11 +6,11 @@ English | [日本語](../ja/guide/index.md)
 
 # 📖 Wholework User Guide
 
-Welcome to the Wholework user guide. This guide is for anyone who uses Claude Code and GitHub Issues to drive their work — developers, technical writers, researchers, or anyone who follows an issue-driven workflow.
+Welcome to the Wholework user guide. Wholework is a governance-and-verification harness for running autonomous coding agents safely on real GitHub repositories — it captures requirements in Issues, gates changes through human review, and verifies outcomes against acceptance criteria after merge. This guide is for anyone who uses Claude Code and GitHub Issues to drive their work: developers, technical writers, researchers, or anyone who wants a structured, auditable way to work with AI agents on a real repository.
 
 ## Who this guide is for
 
-Wholework automates the journey from a GitHub Issue to a merged, verified pull request. This guide assumes:
+Wholework turns the governance-and-verification loop — from Issue creation through post-merge acceptance testing — into a set of composable Skills you can adopt one at a time. This guide assumes:
 
 - You have Claude Code installed and running
 - You have a GitHub repository you want to work with

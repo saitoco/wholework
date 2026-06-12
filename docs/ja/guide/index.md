@@ -2,11 +2,11 @@
 
 # 📖 Wholework ユーザーガイド
 
-Wholework ユーザーガイドへようこそ。本ガイドは Claude Code と GitHub Issues を使って仕事を駆動するすべての人 — 開発者、テクニカルライター、研究者、issue 駆動型ワークフローに従うあらゆる人 — 向けです。
+Wholework ユーザーガイドへようこそ。Wholework は、自律的なコーディング agent を実 GitHub リポジトリで安全に走らせるための governance-and-verification harness です。要件を Issue に捕捉し、人間レビューを通じて変更を gate し、マージ後に受入条件に対して結果を検証します。本ガイドは Claude Code と GitHub Issues を使って仕事を駆動するすべての人向けです — 開発者、テクニカルライター、研究者、AI agent と構造化された監査可能な形で実リポジトリ上で作業したいあらゆる人。
 
 ## 対象読者
 
-Wholework は GitHub Issue からマージされ検証された pull request までの道のりを自動化します。本ガイドは以下を前提とします:
+Wholework は、governance-and-verification ループ（Issue 作成からマージ後の受入テストまで）を段階的に採用できる組み合わせ可能なスキル群に変換します。本ガイドは以下を前提とします:
 
 - Claude Code がインストールされ動作している
 - 作業対象の GitHub リポジトリがある
