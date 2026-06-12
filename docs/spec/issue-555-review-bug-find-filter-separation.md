@@ -86,18 +86,18 @@ N/A
 全6件とも verify command で即時自動判定可能（UNCERTAIN なし）。verify command の精度は良好。Post-merge 条件（実 PR での review-bug 所見数の目視確認）は手動確認として適切に分類されている。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `review-light.md` Output Format に `- confidence: high / medium / low` フィールドを追加（注記と出力形式を整合）
-- CONSIDER 所見（"downstream verification handles false positives" の不正確な表現）は実害が限定的のためスキップ
-- validate-skill-syntax.py: 全10スキル PASS
+- PR #566 は mergeable=true（CI PASS、review APPROVED）でありコンフリクトなし、スカッシュマージを即実行
+- BASE_BRANCH=main のため `closes #555` による Issue 自動クローズが有効
+- フェーズハンドオフは review→merge でローテーション（review handoff を本内容で置き換え）
 
 ### Deferred Items
-- post-merge 確認（実 PR で review-bug の所見が抑制されすぎないこと）は引き続き残置
+- post-merge 確認（実 PR で review-bug の所見が抑制されすぎないこと）は verify フェーズで目視確認
 - "downstream verification handles false positives" の表現改善は次の機会での対応候補
 
 ### Notes for Next Phase
 - 変更ファイル: `agents/review-bug.md`, `agents/review-light.md`（confidence field 追加）, `docs/structure.md`, `docs/ja/structure.md`
-- 全 6 件の pre-merge verify commands は PASS
-- CI: 全ジョブ SUCCESS（DCO, Run bats tests, Validate skill syntax, Forbidden Expressions check, macOS shell compatibility）
+- 全 6 件の pre-merge verify commands は PASS（review フェーズで確認済み）
+- post-merge verify: 実 PR の `/review --full` で review-bug 所見が適切に報告されること（抑制過多でないこと）を 1 件以上で目視確認すること
