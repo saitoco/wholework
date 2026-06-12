@@ -104,6 +104,9 @@ WATCHDOG_TIMEOUT_DEFAULT=1800
 load_watchdog_timeout() { WATCHDOG_TIMEOUT=1800; }
 MOCK
 
+    # Real guard-prefix.sh (sourced via WHOLEWORK_SCRIPT_DIR)
+    cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/guard-prefix.sh" "$MOCK_DIR/guard-prefix.sh"
+
     # Mock reconcile-phase-state.sh: default returns empty (no false alarm)
     cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
 #!/bin/bash

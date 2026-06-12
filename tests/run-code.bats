@@ -81,6 +81,9 @@ WATCHDOG_TIMEOUT_DEFAULT=1800
 load_watchdog_timeout() { WATCHDOG_TIMEOUT=1800; }
 MOCK
 
+    # Real guard-prefix.sh (sourced via WHOLEWORK_SCRIPT_DIR)
+    cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/guard-prefix.sh" "$MOCK_DIR/guard-prefix.sh"
+
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
 exit 0
