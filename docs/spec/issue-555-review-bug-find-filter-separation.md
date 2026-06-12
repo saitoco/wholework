@@ -85,6 +85,35 @@ N/A
 
 全6件とも verify command で即時自動判定可能（UNCERTAIN なし）。verify command の精度は良好。Post-merge 条件（実 PR での review-bug 所見数の目視確認）は手動確認として適切に分類されている。
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Pre-merge AC 6 件はすべて verify command 付きで即時自動判定可能だった（UNCERTAIN 0 件）。`/issue` refinement での `grep` 引数順序修正・`section_not_contains` 追加が機能した
+- Pre-merge AC が SPEC_DEPTH=light の 5 件上限を超過していたが、Issue body の verify command verbatim コピー方針により問題なく処理された
+
+#### design
+- Spec の Implementation Steps と実装の乖離なし（Code Retrospective: Deviations None）
+- `section_not_contains` の Purpose セクションスコープ判断（残留検知の false-negative 防止）は妥当だった
+
+#### code
+- 単一コミット（PR #566 squash）で完了。fixup/amend パターンなし、手戻りなし
+
+#### review
+- review フェーズで 1 件の指摘を解決、1 件をスキップ。review retrospective に「review-light の注記と Output Format の不整合」が記録され、同コミットで整合化された
+- `review-bug.md` と `review-light.md` の Output Format 独立定義による波及漏れが Recurring Issue として記録済み（共通テンプレート `review-output-format.md` 更新での一括適用が改善案）
+
+#### merge
+- コンフリクトなし、CI 全ジョブ PASS、squash merge 即時完了。問題なし
+
+#### verify
+- Pre-merge 6 件すべて PASS（再検証、冪等）
+- Post-merge manual 条件（実 PR `/review --full` での所見抑制過多でないことの目視確認）は単独実行不能のため SKIP。後続 Issue の auto 実行時の `/review` で観察可能。`phase/verify` を残した
+
+### Improvement Proposals
+- review-bug/review-light の Output Format を `review-output-format.md` の共通テンプレートに集約し、複数 finder agent への format 変更を一括適用可能にする（review retrospective の Recurring Issues より昇格）
+
 ## Phase Handoff
 <!-- phase: merge -->
 
