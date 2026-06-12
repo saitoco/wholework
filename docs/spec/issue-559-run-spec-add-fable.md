@@ -84,22 +84,39 @@
 
 - None: テストは 1 回のパスですべて PASS。リワークなし。
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+実装は Spec の Implementation Steps に完全準拠。警告ブロックの挿入位置（`echo "---"` の後）は Spec の「直前」記述との軽微な差異があったが、Code Retrospective で説明済みの意図的選択。パターンとしては、位置指定の曖昧さ（「直前」vs「直後」）が潜在的な発散ポイントになりやすい。
+
+### Recurring Issues
+
+- bats テストのカバレッジ: 3 本の警告メッセージのうち 2 本（retention, credit）のみテスト済みで、コスト警告が未テスト。これは CONSIDER レベル。複数の類似出力がある場合、すべてをカバーするテストを追加するパターンが望ましい。
+- コメント行の更新漏れ: `run-spec.sh` 行 2 のコメントが "Sonnet model" のままで、Opus/Fable 5 追加後に更新されていない。機能フラグ追加時はコメント行の更新も Spec Implementation Steps に明示する方が一貫性が高い。
+
+### Acceptance Criteria Verification Difficulty
+
+- 全 8 件中 7 件 PASS、1 件 UNCERTAIN（`command "bash -n scripts/run-spec.sh"` — safe モードで CI 間接カバレッジのみ）。`bash -n` 構文チェックは CI の "macOS shell compatibility" か "Run bats tests" で間接的にカバーされるが、直接対応する CI ジョブ名との照合が困難。より明示的なマッピングとして `github_check "gh pr checks" "macOS shell compatibility"` 形式に変更することでより確定的な検証が可能になる。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- `--fable` オプションで `MODEL=claude-fable-5`、`EFFORT=high` を設定。`--max` と組み合わせ可能（後勝ち）。
-- 警告は 3 行出力: コスト、credit ゲート、retention 要件。ZDR 強制終了はしない（警告のみ）。
-- `docs/ja/tech.md` は英語版と同等の詳細度に更新（Spec Notes の補完指示に従った）。
+- MUST 指摘なし、CONSIDER 2 件（コスト警告テスト不在、コメント行更新漏れ）のため修正作業スキップ。
+- `--light` モード（Size=M）で review-light 1 エージェントによる 4 観点統合レビューを実施。
+- CI 全ジョブ SUCCESS、AC 7/8 PASS・1 UNCERTAIN（bash -n safe モード制限）。
 
 ### Deferred Items
 
 - ZDR 組織での実際の動作確認（post-merge 手動テスト）。
 - Fable 5 環境での spec 生成確認（post-merge 手動テスト）。
+- コスト警告テスト追加（CONSIDER 指摘）。
+- `run-spec.sh` 行 2 コメント更新（CONSIDER 指摘）。
 
 ### Notes for Next Phase
 
-- bats テスト 24 件すべて PASS、forbidden expressions チェック PASS、syntax check PASS。
-- pre-merge verify command 8 件すべて PASS、Issue チェックボックス更新済み。
-- PR #570 作成済み。CI 待ち。
+- MUST 指摘なし → `/merge 570` で直接マージ可能。
+- AC UNCERTAIN 1 件（bash -n）は CI が間接カバーしており実質問題なし。
+- CONSIDER 指摘 2 件は merge 後の follow-up で対応可能なレベル。
