@@ -100,23 +100,23 @@
 - 全 8 件中 7 件 PASS、1 件 UNCERTAIN（`command "bash -n scripts/run-spec.sh"` — safe モードで CI 間接カバレッジのみ）。`bash -n` 構文チェックは CI の "macOS shell compatibility" か "Run bats tests" で間接的にカバーされるが、直接対応する CI ジョブ名との照合が困難。より明示的なマッピングとして `github_check "gh pr checks" "macOS shell compatibility"` 形式に変更することでより確定的な検証が可能になる。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- MUST 指摘なし、CONSIDER 2 件（コスト警告テスト不在、コメント行更新漏れ）のため修正作業スキップ。
-- `--light` モード（Size=M）で review-light 1 エージェントによる 4 観点統合レビューを実施。
-- CI 全ジョブ SUCCESS、AC 7/8 PASS・1 UNCERTAIN（bash -n safe モード制限）。
+- PR #570 は mergeable=true（CI success、review approved）のため conflict 解消なしで直接スカッシュマージを実施。
+- `gh pr merge --squash --delete-branch` でリモートブランチを削除し、worktree は ExitWorktree(remove) でクリーンアップ。
+- BASE_BRANCH=main のため `closes #559` による Issue 自動クローズが機能する。
 
 ### Deferred Items
 
 - ZDR 組織での実際の動作確認（post-merge 手動テスト）。
 - Fable 5 環境での spec 生成確認（post-merge 手動テスト）。
-- コスト警告テスト追加（CONSIDER 指摘）。
-- `run-spec.sh` 行 2 コメント更新（CONSIDER 指摘）。
+- コスト警告テスト追加（review CONSIDER 指摘）。
+- `run-spec.sh` 行 2 コメント更新（review CONSIDER 指摘）。
 
 ### Notes for Next Phase
 
-- MUST 指摘なし → `/merge 570` で直接マージ可能。
-- AC UNCERTAIN 1 件（bash -n）は CI が間接カバーしており実質問題なし。
-- CONSIDER 指摘 2 件は merge 後の follow-up で対応可能なレベル。
+- verify フェーズでは post-merge 手動テスト項目（`--fable` による spec 生成、ZDR graceful degrade）を確認すること。
+- AC UNCERTAIN 1 件（bash -n）は CI 間接カバーのみ — verify で `bash -n scripts/run-spec.sh` を直接実行して確定的に確認推奨。
+- CONSIDER 指摘 2 件（コスト警告テスト、コメント行）は verify scope 外だが follow-up Issue 候補として記録しておく。
