@@ -58,6 +58,51 @@
 
 - なし（fallback テストの更新は1回で完了）。
 
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|--------|--------|-------|
+| issue | pr | SUCCESS | triage from no phase/* labels |
+| spec | pr | SUCCESS | |
+| code | pr | SUCCESS (watchdog kill, reconcile override) | watchdog killed claude after 1800s silence; PR #568 already created; in-wrapper reconcile returned matches_expected:true and run-code.sh exited 0 — no manual recovery needed |
+| review | pr | SUCCESS | 1 SHOULD issue resolved |
+| merge | pr | SUCCESS | |
+| verify | - | SUCCESS | pre-merge 4/4 PASS, post-merge 1 SKIPPED (operational observation) |
+
+### Orchestration Anomalies
+- code phase: `run-code.sh 556 --pr` hit the 1800s watchdog kill (`watchdog: no output for 1800s, killing process`) during post-PR processing under the OLD default — the exact failure mode this Issue addresses. The wrapper's unconditional completion check (reconcile Stage 2 / Layer 3) detected PR #568 OPEN and overrode to success; exit code was 0 and the parent session continued the chain without manual intervention.
+- Self-referential validation: the incident is live evidence for the 1800→2700 raise merged by this very Issue. Post-merge runs (#557 onward) execute under 2700s.
+
+### Improvement Proposals
+- N/A (the observed anomaly is the problem this Issue fixed; recovery layers worked as designed)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 4 件すべてに verify command（rubric + grep のペア構成含む）が付与され、UNCERTAIN 0 件。`grep "silent.window"` の正規表現挙動まで Spec Notes に明記され、実装がそれに正確に追随した
+
+#### design
+- 条件付き実装ステップ（spike 結果による分岐）が明確で、短縮計測代替手法の提示が実際に採用された。設計と実装の乖離なし
+
+#### code
+- spike は代替手法（小 WATCHDOG_TIMEOUT での短縮計測）で実施。fallback テストの更新必要性が stale assertion check で発見され 1 回で完了（手戻りなし）
+- code フェーズ自体が旧 1800s デフォルトで watchdog kill に遭遇し、reconcile Layer 3 で自動復旧 — 本 Issue の動機を実地で裏付けた（Auto Retrospective 参照）
+
+#### review
+- customization.md（EN/JA）のデフォルト値記載がスクリプト変更に追随していない点を review が検出・修正。デフォルト値変更時は customization.md を Changed Files に含める教訓が review retrospective に記録済み
+
+#### merge
+- conflicts なし、squash merge 即時完了
+
+#### verify
+- pre-merge 4/4 PASS（bats ローカル 5/5 green）。post-merge 観測条件は SKIP（変更後デフォルトでの運用観測は後続 /auto 実行が担う）
+
+### Improvement Proposals
+- N/A（review retrospective の customization.md 教訓は #556 内で対処済み。watchdog 異常は本 Issue 自体が修正）
+
 ## Phase Handoff
 <!-- phase: merge -->
 
