@@ -70,6 +70,31 @@
 
 - N/A
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 6 件すべてに削除系（file_not_contains）と維持系（grep）のペアが揃い、「除去 + 温存」の両面を機械検証できた。verify-patterns §8 の適用例として良質
+
+#### design
+- Spec のライン番号参照が実ファイルと一致し、設計の鮮度が高かった
+
+#### code
+- 手戻りなし。commit prefix の Type 不整合（feat: vs chore:）が Code Retrospective に自己記録された（#560 でも同種の逸脱 — 既知の繰り返しパターン）
+
+#### review
+- patch ルートのため review フェーズなし
+
+#### merge
+- patch ルートのため merge フェーズなし
+
+#### verify
+- pre-merge 6/6 PASS、post-merge auto（CI green）も PASS でチェック更新。残る manual 1 件は「該当時」条件付き観測（cyber-classifier fallback 未発生のため対象事象なし）で SKIP
+
+### Improvement Proposals
+- commit prefix の Type 不整合が #560（feat: for docs）と #563（feat: for Task）で連続発生。/code の commit ステップで Type 取得を prefix 決定の前提にする順序強制が改善候補（軽微のため今回は起票見送り、再発時に Issue 化）
+
 ## Phase Handoff
 <!-- phase: code -->
 
