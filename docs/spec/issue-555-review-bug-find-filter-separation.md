@@ -43,6 +43,24 @@
 
 - 実 PR の `/review --full` で、変更前と比べ review-bug の報告所見が抑制されすぎていない（検証段で適切に絞り込まれている）ことを 1 件以上で目視確認 <!-- verify-type: manual -->
 
+## Spec Retrospective
+
+N/A
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None
+
+### Design Gaps/Ambiguities
+
+- None
+
+### Rework
+
+- None
+
 ## Notes
 
 - `/review` Step 10.x の検証段（Step 10.3 の false-positive フィルタ）は現状維持。`skills/review/SKILL.md` の変更は不要
@@ -52,3 +70,20 @@
 - `severity` (小文字) は現在 `agents/review-bug.md` に存在しない（現行は大文字 "Severity"）→ Step 1 で Output Format に `- confidence: high / medium / low` フィールドと、Purpose 本文に小文字 "severity" を追加することで充足
 - `downstream` は現在 `agents/review-bug.md` に存在しない → Step 1 の Purpose 書き換えで追加
 - `file_contains "skills/review/SKILL.md" "Step 10.3"` は現行ファイル line 401 に "Pass integrated results to Step 10.3" として確認済み（変更不要）
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- coverage-first 方針への切り替え: Purpose セクション本文を丸ごと置き換え、downstream 検証段へのフィルタ委譲を明示した
+- `confidence` フィールドを Output Format の `- line:` 直後に追加（Spec 指定通り）
+- `review-light.md` への注記は Purpose 1段落目の直後に挿入（自然な読み順）
+- `docs/structure.md` + `docs/ja/structure.md` の両方を更新（translation-workflow.md に従う）
+
+### Deferred Items
+- post-merge 確認（実 PR で review-bug の所見が抑制されすぎないこと）は `/review` 後の目視確認として残置
+
+### Notes for Next Phase
+- 変更ファイル: `agents/review-bug.md`, `agents/review-light.md`, `docs/structure.md`, `docs/ja/structure.md`
+- 全 6 件の pre-merge verify commands は PASS 済み（Issue チェックボックス更新済み）
+- `skills/review/SKILL.md` は変更なし（Step 10.3 は現状維持）
