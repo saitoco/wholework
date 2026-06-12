@@ -39,3 +39,54 @@
 - Spike 計測の代替手法: `WATCHDOG_TIMEOUT=300 bash scripts/claude-watchdog.sh claude -p --model claude-fable-5 "..."` のように小さい WATCHDOG_TIMEOUT で短縮計測も可能。heartbeat ログが最大 silent window の証拠となる。
 - `docs/reports/claude-fable-5-impact-strategy.md` の TODO チェックボックス（"Spike `claude-watchdog.sh` stdout cadence under Fable 5..."）は spike 完了後に任意でチェック可能だが、本 Spec の acceptance criteria には含めない（`docs/reports/` は verify 対象外）。
 - `grep "silent.window"` は `.` が正規表現ワイルドカードとして動作し "silent window"（スペース）にマッチする。実装で `silent window` という表現を使えば AC1 の grep hint が PASS する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Step 1 の spike で `run-spec.sh --model claude-fable-5` を使わず、短縮計測代替手法（`WATCHDOG_TIMEOUT=120/180 bash scripts/claude-watchdog.sh claude -p --model claude-fable-5 "..."`）を採用した。非インタラクティブモードでの長時間試走は watchdog タイムアウトや環境制約のリスクがあるため、Spec Notes が提示する代替手法を選択した。
+- Step 2 のレポート記録で、AC1 の grep パターン `silent.window` に合わせた表現（"silent window"）を各所に使用した。Spec Notes に明示されていた通り。
+- `tests/watchdog-defaults.bats` の fallback テスト（non-numeric/negative value → デフォルト値を返す）も 1800 → 2700 に更新が必要だった（Spec Notes には「テスト名と assertion を更新」とあるが、stale test assertion check で fallback テストも対象と判明した）。
+- `tests/claude-watchdog.bats` のコメント行に "default 1800s" の記述があり、これも 2700 に更新した。モック定数（他のテストファイルの `WATCHDOG_TIMEOUT_DEFAULT=1800`）は動作値ではないため更新対象外と判断。
+
+### Design Gaps/Ambiguities
+
+- Spec の「1〜2 回試走し計測」という記述は本格的なフェーズ試走（`run-spec.sh` 経由）を示唆しているが、代替手法との使い分け基準が明確でなかった。非インタラクティブモードでは代替手法が適切と auto-resolve した。
+- fallback テストの更新必要性は Spec に明示されていなかったが、stale assertion check で発見できた。
+
+### Rework
+
+- なし（fallback テストの更新は1回で完了）。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+
+- SHOULD issue（customization.md デフォルト値 1800→2700 未更新）を fix として適用。MUST 非存在を確認してマージ可と判断。
+- light モードで実行（Size=M）。review-light エージェント定義を参照してインライン4観点チェックを実施。
+
+### Deferred Items
+
+- `docs/reports/claude-fable-5-impact-strategy.md` 内の `1800` 参照（報告書のコンテキストとして historical 記述）は変更対象外と判断（過去の状況説明）。
+- post-merge AC（Fable 5 `/auto` 実行での再発観測）は引き続き defer。
+
+### Notes for Next Phase
+
+- review-summary コメント投稿済み（<!-- review-summary --> マーカー含む）
+- PR ブランチに doc fix コミット追加済み（2ac1337）— merge フェーズで squash 可否を確認すること
+- mock 定数（他テストの `WATCHDOG_TIMEOUT_DEFAULT=1800`）は意図的 — merge フェーズで指摘不要
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- なし。実装は Spec の acceptance criteria と step-by-step 指示に正確に対応していた。code フェーズのハンドオフが詳細で、review フェーズの再確認コストが低かった。
+
+### Recurring issues
+
+- `docs/guide/customization.md`（と日本語ミラー）の `.wholework.yml` デフォルト値記載が `scripts/watchdog-defaults.sh` の変更に追随していなかった。デフォルト値変更時は customization.md のテーブルと例示コメントも変更対象ファイルとして Spec の changed-files リストに追記するとよい。
+
+### Acceptance criteria verification difficulty
+
+- 全条件に verify command が付与されており、`bats` コマンドは CI 参照 fallback で PASS を確認できた（safe モードで command hint を直接実行不可だが CI SUCCESS で代替検証可能）。UNCERTAIN は0件。verify command の品質は高かった。
