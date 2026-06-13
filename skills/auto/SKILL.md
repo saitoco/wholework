@@ -671,8 +671,16 @@ Process each Issue in `BATCH_LIST` in order:
    - On failure: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
 3. Re-check Size: call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`; if Size is XL: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
 4. Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh $NUMBER` (all phases spec→code→review→merge→verify, auto-starting from the current `phase/*` state)
-   - On success: call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER complete`
+   - On success: proceed to step 5
    - On failure: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
+5. **Verify orchestration** (after run-auto-sub.sh success):
+   - Re-fetch current labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
+   - If `phase/verify` is present in labels:
+     - If `--non-interactive` is NOT in ARGUMENTS: invoke `Skill(skill="wholework:verify", args="$NUMBER")` in the parent session
+       - On success: call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER complete`
+       - On failure or output contains `MAX_ITERATIONS_REACHED`: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER fail`; skip to the next Issue
+     - If `--non-interactive` IS in ARGUMENTS: output "Skipping verify for #$NUMBER (non-interactive mode); phase/verify remains"; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER complete`
+   - If `phase/verify` is NOT in labels: call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER complete`
 
 After all Issues are processed, delete the batch checkpoint:
 ```

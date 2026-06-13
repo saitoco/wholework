@@ -53,6 +53,20 @@
 
 - 次回 `/auto --batch` 実行時、AC 検証可能な Issue が `phase/done` に到達することを観察 <!-- verify-type: observation event=auto-run -->
 
+## Code Retrospective
+
+### Deviations from Design
+
+- 実装内容はSpecの Implementation Steps と完全に一致。逸脱なし。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
 ## Notes
 
 - `run-auto-sub.sh` line 3 and 125 に `# verify is deferred to the parent /auto session (issue #485)` コメントがあり、本実装はその設計意図を List mode で実現するもの
@@ -61,3 +75,33 @@
 - Non-interactive mode 検出: ARGUMENTS に `--non-interactive` が含まれる場合（`claude -p` 経由で `/auto` が呼ばれる場合）は verify をスキップ。`update_batch complete` は呼ぶ（run-auto-sub.sh 自体は成功しているため）
 - `tests/auto-batch.bats` は LLM 実行スキル（SKILL.md）のテストであるため、shell スクリプトの動作を直接テストするのではなく、SKILL.md の構造的な内容（文字列の存在）を検証する方式を採用
 - 自動解決 (Non-interactive mode): Issue body の「実装アプローチ」「テストファイル」「非対話モード条件」は全て auto-resolve 済み（Issue body の `## Auto-Resolved Ambiguity Points` 参照）
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- 実装は Spec の Implementation Steps と完全に一致。逸脱なし。Pre-merge AC 3件すべて PASS。
+
+### Recurring Issues
+
+- Nothing to note.
+
+### Acceptance Criteria Verification Difficulty
+
+- verify command（`section_contains`, `file_exists`, `command`）はすべて有効な構文で正確に記述されていた。UNCERTAIN ゼロ。`command "bats tests/auto-batch.bats"` は safe モードで CI 代替検証が機能した。テスト内ヘルパー関数 `list_mode_section()` が未使用（CONSIDER）と step 5 の label 再フェッチ失敗パス未定義（CONSIDER）の2件指摘。いずれも MUST/SHOULD なし。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- REVIEW_DEPTH=light（--light フラグ + Size=M 両方一致）で review-light 統合レビューを実行
+- MUST/SHOULD 指摘なし。CONSIDER 2件（テストヘルパー未使用、step 5 失敗パス未定義）はスキップ
+- 全 pre-merge AC PASS、全 CI ジョブ SUCCESS 確認済み
+
+### Deferred Items
+- post-merge AC（observation 型: event=auto-run）は `/verify` フェーズで評価
+- CONSIDER 2件は /merge 後も問題なし — 将来の改善として残す
+
+### Notes for Next Phase
+- PR 全ジョブ SUCCESS、MUST/SHOULD 指摘ゼロ。`/merge 619` に進める
+- tests/auto-batch.bats の `list_mode_section()` 未使用ヘルパーは `/merge` フェーズに影響しない
