@@ -229,20 +229,33 @@ Tier 0 コンテキストでの「escalate to Tier 3」は、既存 Step 9 FAIL 
 
 - None. All verification commands passed on first implementation.
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Nothing to note. Implementation followed the Spec exactly — no structural gaps detected between Spec and PR diff. The Code Retrospective (added in code phase) already documents zero deviations. The one SHOULD-level review finding (`"No such file or directory"` infra over-classification) is acknowledged in the Spec's Uncertainty section as an accepted heuristic trade-off, not a divergence.
+
+### Recurring Issues
+
+- Nothing to note. Only 1 confirmed finding across 2 independent review-bug agents (1 SHOULD, no MUST). No recurring pattern of bugs or design issues. 2 of 3 raw findings were rejected as false positives: one for being acknowledged in the Spec Uncertainty section, one for applying shell-script reasoning to a natural-language SKILL.md instruction.
+
+### Acceptance Criteria Verification Difficulty
+
+- Nothing to note. All 10 pre-merge ACs reached PASS with no UNCERTAINs. The `command "bash -n ..."` AC was resolved cleanly via CI reference fallback (Run bats tests passed). The `rubric` AC ran the grader and confirmed all 5 Tier 0 requirements. The `section_contains "### Step 9"` heading partial-match worked as expected (documented in the Spec verification notes). No verify command updates needed.
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の Implementation Step 3 に記載の Tier 0 テンプレートをそのまま SKILL.md Step 9 に挿入した。半角感嘆符なし（Forbidden Expressions 準拠）。
-- `test-failure-classify.sh` は `--log <file>` + stdout カテゴリ + exit 0/1 パターンで実装。`apply-fallback.sh`/`detect-wrapper-anomaly.sh` と同じ I/F。
-- `docs/ja/structure.md` の sync は Spec Changed Files に明示されていなかったが `docs/translation-workflow.md` ルールで必要。同じコミットで更新した。
+- SHOULD finding on `"No such file or directory"` infra over-classification skipped — explicitly acknowledged in Spec Uncertainty section; safety guard bounds impact to missed auto-repair only.
+- All 10 pre-merge ACs: PASS. All CI jobs: SUCCESS. review-spec: no issues. COMMENT event (no MUST → not REQUEST_CHANGES).
+- validate-skill-syntax.py: 0 errors, 0 warnings across all 8 SKILL.md files.
 
 ### Deferred Items
-- AC8 (`github_check "gh pr checks" "Run bats tests"`) は CI 完了後に `/verify` で確認。
-- Post-merge observation（fix-cycle での Tier 0 自動修復観察）は次回 fix-cycle まで未確定。
-- `fixture` 検出パターン（ヒューリスティック）の実フレームワーク出力への精度は bats テストで代表ケースを確認済みだが、網羅的ではない。
+- Post-merge observation (fix-cycle での Tier 0 自動修復観察) は次回 fix-cycle まで未確定。
+- `"No such file or directory"` infra over-classification (SHOULD) — accepted trade-off per Spec Uncertainty; may be refined in a follow-up Issue if real-world false positives emerge.
 
 ### Notes for Next Phase
-- PR #612。CI が通れば `/review` → `/merge` → `/verify` の通常フローへ。
-- 全 729 bats テストが PASS（新規 8 件含む）、`validate-skill-syntax.py` と `check-forbidden-expressions.sh` もクリーン。
-- verify で確認すべき未チェック AC: AC8 (`github_check "gh pr checks" "Run bats tests"`) のみ。他 AC1-7/AC9/AC10 はチェック済み。
+- No MUST issues. Proceed with `/merge 612`.
+- PR is ready to merge: all ACs PASS, all CI PASS, no blocking review findings.
+- Post-merge: run `/verify 586` to confirm AC8 (github_check CI) and observe Post-merge AC (Tier 0 auto-repair observation on next fix-cycle).
