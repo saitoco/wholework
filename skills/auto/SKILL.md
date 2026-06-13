@@ -493,6 +493,17 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 - `ISSUE_NUMBER=$NUMBER`
 - `RESULT=success`
 
+**Event-based observation scan (auto-run event, runs after Completion Report regardless of success/failure):**
+
+Run `${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh --event auto-run`
+
+If the returned JSON array is non-empty, for each matched Issue:
+1. Re-evaluate the matched observation AC using AI judgment on whether today's `/auto` run satisfies the condition
+2. If PASS: update the AC checkbox in the Issue body via `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh`
+3. If all ACs for the Issue are now checked: run `${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh <issue_number> done` and close the Issue with `gh issue close <issue_number>`
+
+If the array is empty, skip silently.
+
 ### Step 6: On Failure: 3-Tier Recovery
 
 If any phase exits with a non-zero exit code, apply the following 3-tier recovery hierarchy before stopping.

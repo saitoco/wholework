@@ -776,6 +776,20 @@ Since the retrospective push (`git push origin HEAD`) is complete, call ExitWork
 
 If `opportunistic-verify: true` is set in `.wholework.yml`, read `${CLAUDE_PLUGIN_ROOT}/modules/opportunistic-verify.md` and follow "Processing Steps". Skill name: `/review`. Skip if not set.
 
+**Event-based observation scan (runs regardless of `opportunistic-verify` setting):**
+
+After the opportunistic verification above (or in its place if `opportunistic-verify` is not set), scan for observation-type ACs that match this review's event:
+
+- If `REVIEW_DEPTH=full`: run `${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh --event pr-review-full`
+- If `REVIEW_DEPTH=light`: run `${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh --event pr-review-light`
+
+If the returned JSON array is non-empty, for each matched Issue:
+1. Re-evaluate the matched observation AC using the verify-executor in full mode (AI judgment on whether today's review event satisfies the condition)
+2. If PASS: update the AC checkbox in the Issue body via `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh`
+3. If all ACs for the Issue are now checked: run `${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh <issue_number> done` and close the Issue with `gh issue close <issue_number>`
+
+If the array is empty, skip silently.
+
 ## Completion Report
 
 **Completion report (always use this format):**
