@@ -112,3 +112,36 @@ Domain file（`skills/triage/skill-dev-verify-audit.md`）は `validate-skill-sy
 ### 翻訳同期
 
 変更対象は `skills/triage/` 配下のみ（`docs/*.md` 非対象）のため `docs/ja/` 同期不要。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Step 7 の見出し文字列は「AC Verify Command Integrity Audit」（英語）とし、SKILL.md 本文中の説明テキストに「verify command audit patterns」を含めることで、verify command `grep "verify command audit"` パターンマッチを確保した。Spec の仮見出しに含まれた「AC verify command 整合性監査」（日本語）は本文には含めなかった（英語優先の SKILL.md 規約に従う）。
+
+### Design Gaps/Ambiguities
+
+- Stale test assertion check: SKILL.md から削除されたステップ見出し文字列（`Step 7: Value Assignment` 等）を `tests/` で検索したが、triage SKILL.md の内部ステップ名をテストは直接参照していないため stale assertion なし。
+- `validate-skill-syntax.py` はドメインファイル（`skill-dev-verify-audit.md`）を検証対象外とすることを Spec が明示していたため、domain file の frontmatter バリデーションは手動で確認した（`type: domain`, `skill: triage` の存在確認）。
+
+### Rework
+
+- N/A（1 回の実装で完了、リワークなし）
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Step 7 を「AC Verify Command Integrity Audit」（英語見出し）として配置し、本文テキストに「verify command audit patterns」を含めることで verify command の `grep "verify command audit"` マッチを確保した
+- Domain file は `load_when` なし（無条件ロード）を採用し、全リポジトリで監査を保証する設計とした（Spec Auto-Resolve Log に従う）
+- Step 7 を Step 6（Size Assignment）直後に配置し、旧 Step 7-10 を 8-11 に繰り下げた（Pattern 4 の patch route チェックに Size 情報が必要なため）
+- bats テスト全 706 件 PASS（exit code 0）、validate-skill-syntax.py 全 10 skill PASS
+
+### Deferred Items
+- github_check "gh pr checks" "Run bats tests" の verify は CI で確認（PR #608 作成済み、未チェック）
+- Post-merge 観察（次回 `/triage --backlog` で監査コメント投稿を確認）は opportunistic
+
+### Notes for Next Phase
+- PR #608 をレビュー時、domain file の `## Non-Destructive Audit Behavior` セクションが非破壊的振る舞い（コメント投稿のみ、Issue body 自動書き換えなし）を正しく記述しているか確認する
+- rubric verify command の意味チェック: SKILL.md + skill-dev-verify-audit.md が together して非破壊的監査を仕様化していることを確認する
+- CI bats テストの完了後に Issue #584 の最後のチェックボックス（github_check）が green になることを確認する
