@@ -150,3 +150,21 @@ phase/verify 滞留の「真の WIP」と「観測待ち」を区別するため
 ### 受け入れ条件検証の困難さ
 
 - bats テストの `$stderr` 変数は bats バージョンに依存する。テスト設計時に「stderr に出力される warning を検証する」場合は `run 2>&1` か `--separate-stderr` を使う必要があり、テンプレートとして明記すると良い。`$stderr` を直接参照する assertion は実際には機能しないケースがある（今回の test 324 の UNCERTAIN 要素）。
+
+## Phase Handoff
+<!-- phase: merge -->
+
+### Key Decisions
+- PR #603 を squash merge（`--delete-branch` 付き）。`closes #583` がPR bodyに含まれ BASE_BRANCH=main のため Issue は自動クローズ
+- mergeable=false/reason=unknown の状態で non-interactive auto-resolve としてマージ続行。実際のマージは成功（GH API の mergeable 判定タイミングの問題と判断）
+- Phase Handoff の prior handoff は存在しなかった（review phase からの引き継ぎなし）
+
+### Deferred Items
+- 既存 7 Issue（#555, #556, #557, #562, #563, #567, #569）の `observation event=<該当>` への migration は post-merge 手動確認タスクとして残存
+- `fix-cycle` event の emitter 実装は follow-up Issue 対象（Spec に明示）
+- `/audit stats` の新メトリクス（滞留期間 median/p95/max、observation 待ち数）の動作確認は post-merge 観察
+
+### Notes for Next Phase
+- verify phase では post-merge 観察 AC（`next /review --full` 実行で `event=pr-review-full` を持つ Issue が自動チェックされるか）を確認する
+- `scripts/opportunistic-search.sh --event <name>` の `--event` フィルタ動作を実際の review/auto 実行で観察すること
+- `/audit stats` コマンドで新メトリクスが想定値を返すか verify する
