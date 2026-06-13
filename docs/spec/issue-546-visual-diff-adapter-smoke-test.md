@@ -82,3 +82,36 @@
 - **`npm install --no-save`**: CI で一時インストール。`package.json` を作成しない。CI の実行ごとに fresh install されるため package-lock.json 汚染なし
 - **Spec simplicity rule 超過**: Size M (light mode 推奨 5 items) に対して AC が 11 items。issue 側で AC がすでに確定しているため全量を Spec に転写している
 - **既存テスト影響なし**: 既存 14 ケース (shallow contract test) は変更なし; smoke test を末尾に追加
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Step 5b スクリプトの実行方法: Spec では tmp_dir に fixture をコピーしてから `node -e` を実行するとしていたが、bats の `local` 変数スコープと `$tmp_dir` の shell interpolation を利用して node スクリプト内にパスを直接埋め込む形を採用した（Spec の意図通り）。
+- `stale-test-check.md` で指摘される「削除されたリテラルが tests/ に残存していないか」のチェックを実施。本変更では既存テストのアサーション削除なし、新規追加のみのため問題なし。
+
+### Design Gaps/Ambiguities
+
+- Spec では Step 2 の smoke test で「fixture PNG を `.tmp/` にコピー」と記載していたが、bats の cleanup 要件を考慮して `mktemp -d` で一時ディレクトリを作成し `rm -rf` でクリーンアップする形が適切と判断。Spec の表現と実装は意図的に一致している。
+- `node -e "..."` スクリプト内への shell 変数 (`$tmp_dir`) の埋め込みは、bats の文字列インジェクションリスクが低いシナリオ（`mktemp -d` の出力はパスのみ）であり採用した。
+
+### Rework
+
+- なし。実装は Spec の設計通りに1パスで完了した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- fixture PNG を Python stdlib (struct + zlib) で生成（Node/npm 不依存、CI でも問題なし）
+- smoke test の skip 戦略: `node -e "require.resolve('sharp'); require.resolve('pixelmatch')"` が失敗した場合 `skip`（ローカルでは skip、CI では通過予定）
+- regression test は 2ケース（undefinedHeight による ReferenceError と MODULE_NOT_FOUND）で #441/#543 の再発クラスをカバー
+
+### Deferred Items
+- Step 5c（3-panel composite）の smoke test は本 Issue scope 外のため未実装（Step 5b で pixelmatch + sharp の基本 API 動作を確認できれば十分と判断）
+- CI 上での実走確認（fixture で PASS / regression で FAIL）は post-merge の opportunistic verify で確認
+
+### Notes for Next Phase
+- CI の `Run bats tests` ジョブで Node setup が追加されているため、PR merge 後に CI が green になることを確認すること
+- ローカルテスト (bats tests/) 全716ケース PASS 済み（新規3ケースは skip-graceful 1件 + PASS 2件）
+- `github_check "gh pr checks" "Run bats tests"` の AC は CI 完了後に `/verify` で確認が必要
