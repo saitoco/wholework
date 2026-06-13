@@ -194,3 +194,44 @@ Directory-level specification is also supported:
 ```markdown
 - [ ] <!-- verify: command "python3 scripts/validate-skill-syntax.py skills/<name>" --> Syntax validation passes
 ```
+
+## AC Design Guidelines for PoC and Measurement Issues
+
+For spike / PoC / measurement-type Issues, the AC must explicitly state whether **実測 (actual measurement — execute and measure)** or **試算 (estimation — design analysis / calculation is sufficient)** is expected. Omitting this distinction allows the code phase to silently narrow scope from "run and measure" to "analyze and estimate" without any machine-detectable signal.
+
+### Definitions
+
+| Term | Meaning |
+|------|---------|
+| **実測** | The code phase must actually run the target process and capture measurement artifacts (logs, result files, timing data, etc.) |
+| **試算** | Design-level analysis or back-of-envelope calculation is sufficient; the code phase may substitute a PoC or architectural analysis |
+
+### Pattern: 実測 required
+
+When actual execution and measurement are required, include a `file_exists` verify command for the measurement artifact alongside the keyword/content check. Do not rely on keyword `grep` alone — it cannot detect scope narrowing from run→estimate.
+
+```markdown
+- [ ] <!-- verify: file_exists ".tmp/spike-result.md" --> Measurement artifact exists (confirms actual execution)
+- [ ] <!-- verify: grep "実測" "docs/spec/issue-N-title.md" --> Spec records measured result
+```
+
+The `file_exists` check is the machine-verifiable signal that execution actually occurred. Without it, a keyword grep of "実測" passes even if the implementation only contains analysis text.
+
+### Pattern: 試算 acceptable
+
+When estimation or design analysis is sufficient, mark the AC explicitly so the code phase can make the scope decision openly rather than silently:
+
+```markdown
+- [ ] <!-- verify: grep "試算" "docs/spec/issue-N-title.md" --> Spec records estimation approach (試算可: code phase may substitute design analysis)
+```
+
+Include the phrase "試算可" in the AC text to signal that code-phase scope narrowing is an explicit, delegated choice — not a silent deviation.
+
+### Anti-pattern: keyword grep only
+
+```markdown
+<!-- avoid: keyword grep alone cannot detect run→estimate scope narrowing -->
+- [ ] <!-- verify: grep "PoC|比較|fan-out" "docs/spec/issue-N-title.md" --> PoC result described
+```
+
+A grep for output-related keywords will pass whether the implementation ran anything or only wrote analysis text. Always pair keyword checks with `file_exists` for measurement artifacts when 実測 is required.
