@@ -126,3 +126,29 @@
 ### AC 検証の難易度
 
 - すべての verify コマンドが機械的に PASS/FAIL を判定でき、UNCERTAIN は 0 件だった。`bats tests/audit-retention.bats` の CI fallback では「Run bats tests」全体が FAILURE だったため、最初は UNCERTAIN と判断しそうになったが、CI ログを確認して `audit-retention.bats` 固有テストがすべて PASS していることを確認できた。CI 全体の失敗と個別ファイルの成否を区別するためのログ調査手順が有効だった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC が 9 件、すべて grep / section_contains / rubric / command の自動 verify command 付き設計。verify を完全自動化
+- Icebox 滞留メトリクスを Spec 設計段階で組み込んだ判断が機能（initial scope の phase/verify 滞留のみだったが拡張）
+
+#### code
+- compute-escalation-level.sh の新規作成と bats テスト 15 件の包括カバー
+- setup-labels.sh への `stale-verify` ラベル追加が漏れなく完了
+
+#### review
+- review-light で問題なし
+
+#### merge
+- clean な squash merge
+
+#### verify
+- pre-merge AC 9 件全 PASS
+- post-merge AC 1 件は opportunistic → 次回 `/audit stats --retention` 実行時に観察
+
+### Improvement Proposals
+- N/A
+
