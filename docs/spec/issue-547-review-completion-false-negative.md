@@ -61,3 +61,46 @@
 - 新パターンは elif チェーンの `reconciler-header-mismatch`（line 81-84）直後、`mid-run-api-error`（`grep -qiE "APIConnectionError..."`）の直前に配置する。`reconciler-header-mismatch` が先にチェックされるため、ログに "Review Summary" が含まれるケースは既存パターンで処理され、新パターンには到達しない（first-match-wins による排他）
 - bats テストの Case 2（排他確認）では `"phase":"review"` + `"matches_expected":false` + `"Review Summary"` を含むログを用い、出力が `reconciler-header-mismatch` であることを確認する。新パターン名が出力されないことは確認不要（`reconciler-header-mismatch` が優先される点のみ確認すれば十分）
 - **Auto-resolve**: Issue body の recovery Step 1 は `reconcile-phase-state.sh --no-cache review --pr <N>` と記述しているが、`reconcile-phase-state.sh` に `--no-cache` オプションは存在しない（grep 確認済み）。recovery 手順の実装では `reconcile-phase-state.sh review --pr <N>` を使用する（`--no-cache` なし）。この変更は reconcile-phase-state.sh の内部実装詳細であり、recovery 手順の本質（reconcile 再実行）には影響しない
+
+## Code Retrospective
+
+### Deviations from Design
+- 設計通りに実装完了。逸脱なし。
+
+### Design Gaps/Ambiguities
+- `reconcile-phase-state.sh` に `--no-cache` オプションが存在しないことが発覚したが、Spec Notes の Auto-resolve 節で既に記録・解決済みであり、recovery 手順には `--no-cache` なしの形式を使用した。
+- recovery 手順の Fallback Steps を Issue body 指定の 5 段階から 4 段階に整理（Step 3 に サマリ見出しのローカライズ対応 follow-up Issue 起票を統合）。本質的な内容は変わらない。
+
+### Rework
+- なし。実装は1回で完了した。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Fallback Steps 数の記述（Spec 実装ステップが「3 段階」、Code Retrospective が「4 段階に整理」と記録）が一致しておらず、Spec テキスト側が未更新のままマージされた。Spec の Implementation Steps と Code Retrospective を同一コミットで同期させることで防げる。
+
+### Recurring issues
+
+- なし。今回の CONSIDER 指摘は新規パターンであり、繰り返し問題ではない。
+
+### Acceptance criteria verification difficulty
+
+- rubric verify command（AC7）は今回初めて `safe` モードで grader 実行され、PASS 判定。verify command の設計（adversarial grader の明示的使用）は適切。
+- AC2 の verify command パターン（`matches_expected.*false.*phase.*review`）が実装コード（`'"phase":"review"'`）と正確に一致しない。verify command 記述と実装パターンを同期させるルールを Spec テンプレートに追加すると品質向上する。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- 全 AC（AC1-AC8）が PASS。MUST/SHOULD issue なし → `REQUEST_CHANGES` イベントではなく `COMMENT` イベントで投稿。
+- rubric AC7 は elif チェーンによる排他性と 4 段階 recovery 手順の存在を確認して PASS 判定。潜在的なデッドコード（`reconciler-header-mismatch` が常に先行して `review-completion-false-negative` が本番で発火しない可能性）は CONSIDER として記録。
+- review-light モード実行（REVIEW_DEPTH=light、Issue size M）。CONSIDER 5件を line comments として投稿。
+
+### Deferred Items
+- `review-completion-false-negative` パターンが本番環境でデッドコードになりうる問題（`reconcile-phase-state.sh` の診断文が常に "Review Response Summary not found" を含むため `reconciler-header-mismatch` が常に先に発火する）は CONSIDER として記録のみ。修正は out of scope。
+- AC2 verify command と実装 grep パターンの不一致修正は /verify フェーズで対応可能。
+
+### Notes for Next Phase
+- 全 AC PASS、CI 全 SUCCESS → `/merge 609` で merge 進行可能。
+- CONSIDER 5件はすべてスキップ推奨（機能影響なし）。

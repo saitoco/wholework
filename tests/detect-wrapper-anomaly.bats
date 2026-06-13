@@ -252,3 +252,26 @@ MOCK
     [[ "$output" == *"silent-no-op"* ]]
     [[ "$output" == *"### Orchestration Anomalies"* ]]
 }
+
+@test "review-completion-false-negative: detects matches_expected false with phase review" {
+    printf '"matches_expected":false\n"phase":"review"\n' > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 547 --phase review
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"review-completion-false-negative"* ]]
+    [[ "$output" == *"### Orchestration Anomalies"* ]]
+}
+
+@test "review-completion-false-negative: reconciler-header-mismatch takes priority when Review Summary present" {
+    printf '"matches_expected":false\n"phase":"review"\nreconcile-phase-state result: Review Summary found\n' > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 547 --phase review
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"reconciler-header-mismatch"* ]]
+    [[ "$output" != *"review-completion-false-negative"* ]]
+}
+
+@test "review-completion-false-negative: no detection for unrelated log" {
+    echo "Some unrelated error occurred in the code phase." > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 547 --phase code
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"review-completion-false-negative"* ]]
+}
