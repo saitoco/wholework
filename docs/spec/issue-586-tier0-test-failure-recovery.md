@@ -259,3 +259,29 @@ Tier 0 コンテキストでの「escalate to Tier 3」は、既存 Step 9 FAIL 
 - Run `/verify 586` to confirm AC8 (`github_check` CI green on main) and observe post-merge AC.
 - All pre-merge ACs (1–7, 9–10) already PASS; verify focus should be AC8 (CI on main) and the post-merge behavioral observation.
 - `test-failure-classify.sh` is now on main — can be exercised in the next fix-cycle to validate Tier 0 auto-repair flow end-to-end.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Tier 0 を「既存 3-tier の前段」として位置づけ、ロジック誤り・テストインフラ誤りは即時に Tier 3 へフォールスルーする責務分離設計が明確だった
+- AC が 10 件と多めだが、すべて grep / file_exists / command / rubric / section_contains / github_check の自動 verify command 付き設計
+
+#### code
+- `test-failure-classify.sh` の新規作成と SKILL.md Step 9 への Tier 0 セクション追加が完了
+- bats テストで 5 パターンの分類検出を新規カバー
+
+#### review
+- review-light で 1 件 skip（false positive と思われる）。CI 全件 PASS
+
+#### merge
+- 注: orchestration recovery sub-agent (tier3) が一度発火したが正常復旧。run-auto-sub.sh の exit code は 0
+
+#### verify
+- pre-merge AC 10 件全 PASS
+- post-merge AC 1 件は observation event=fix-cycle → 次回 fix-cycle 発生時に観察
+
+### Improvement Proposals
+- N/A
+
