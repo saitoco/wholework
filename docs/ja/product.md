@@ -161,6 +161,7 @@ Anthropic の Managed Agents + Outcomes は隣接する Outcome rubric ループ
 | Fork context | メインの対話に影響を与えないスキル実行モード | Claude Code | fork コンテキスト |
 | Non-interactive mode | `run-*.sh` 経由で `claude -p --dangerously-skip-permissions` から呼び出されるスキル実行モード。`AskUserQuestion` が使えないため、意思決定点で 3-tier ポリシー（auto-resolve / skip / hard-error）を適用する。`ARGUMENTS` 内の `--non-interactive` で判定される | run-*.sh、/auto | 非対話モード |
 | Patch route | XS/S サイズ Issue のワークフロー経路。Pull Request を作成せず main ブランチに直接コミットする | 開発ワークフロー | パッチ経路 |
+| Phase Handoff | `modules/phase-handoff.md` に実装されたフェーズ横断の構造化サマリー機構。各フェーズは終了前に Handoff を書き込み、次フェーズが開始時に読み込む。次ステップの作業コンテキスト（AC 確認結果、スコープ注記、残存リスクなど）を伝達する。実行履歴を記録する Retrospective とは異なる概念。主に code → review → merge → verify のパスで使用 | /code、/merge、/review、/verify | Phase Handoff |
 | Phase label | Issue の現在のワークフローステージを示す `phase/*` GitHub ラベル（例: `phase/issue`、`phase/spec`、`phase/ready`、`phase/code`） | 開発ワークフロー | フェーズラベル |
 | PR route | M/L サイズ Issue のワークフロー経路。マージ前にコードレビュー用の Pull Request を作成する | 開発ワークフロー | PR 経路 |
 | Project Documents | プロジェクトのワークフローや運用手順ドキュメント。`docs/` 配下に保存 | /doc Skill | Project Documents |
