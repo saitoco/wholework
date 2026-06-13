@@ -85,7 +85,10 @@ Detect: Issues with Size XS or S (patch route) whose AC uses
 The patch route commits directly to `main` without creating a PR. Therefore,
 `gh pr checks` will never find a matching pull request and the check always FAILs.
 
-Size information is available from Step 6 (Size Assignment) when this Step 7 runs.
+Detection approach:
+- In Single Issue Execution: read the Size assigned in Step 6 (Size Assignment)
+- In Bulk Execution (Step 3 substep 8): read the `size` field from the Step 2 classification
+  JSON for the current issue
 
 Fix: Replace `github_check "gh pr checks"` with a `github_check "gh run list"` form,
 for example:
@@ -137,6 +140,8 @@ If no patterns match, skip without posting.
 ```
 
 ### Posting the Comment
+
+`$NUMBER` refers to the current Issue number (in Bulk Execution, the per-loop issue number).
 
 ```bash
 mkdir -p .tmp
