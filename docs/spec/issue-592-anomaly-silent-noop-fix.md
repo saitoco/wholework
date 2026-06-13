@@ -53,3 +53,31 @@
 - Step 3(a) の既存 mock 更新（`-5` → `-20`）は Issue AC には明記されていないが、Step 2 の窓拡大に伴い `bats tests/detect-wrapper-anomaly.bats` を green に保つために必須。
 - Step 2(a) の phase 名拡張（`"code"` を追加）は PR route の code phase でも発動する。PR route では commit が origin/main ではなく feature branch に push されるため、origin/main 検索では `_found_on_origin=false` になる可能性がある。ただし reconcile-success gate（Step 1）が優先されるため、reconcile 出力が存在する通常ケースでは false-positive は発生しない。reconcile 出力が存在しない例外ケースでの影響は許容範囲内と判断（Issue #592 の原因は reconcile gate の欠如であり phase 名拡張は secondary fix）。
 - 検出窓の拡大は local check（`git log --oneline`）と origin check（`git log origin/main --oneline`）の両方に適用する。Issue body は line 91（local check）のみ言及しているが、origin check も同様の問題があるため両方更新する。
+
+## Code Retrospective
+
+### Deviations from Design
+- None (implementation exactly matched the Spec steps)
+
+### Design Gaps/Ambiguities
+- The Spec correctly noted that the `elif` structure for the reconcile-success gate must be nested inside `elif [[ "$EXIT_CODE" == "0" ]]; then`, not as a top-level `if`. The implementation followed this correctly but required careful reading of the existing code structure.
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Used `elif` (not a nested `if`) for the reconcile-success gate to integrate cleanly with the existing `elif [[ "$EXIT_CODE" == "0" ]]; then` block without restructuring the entire pattern-matching chain.
+- Applied `-20` window to both local and origin/main checks for consistency, even though the Issue body only mentioned the local check.
+- Added the false-positive reproduction test with a log that includes BOTH `matches_expected:true` AND a success phrase ("commit and push") to make the suppression actually testable (a test with only reconcile data and no success phrase would pass trivially without the gate).
+
+### Deferred Items
+- PR route corner case: when reconcile output is absent and phase is `"code"`, origin/main check will now run but may yield `_found_on_origin=false` for feature branches. Accepted as low-impact since reconcile gate takes priority in normal runs.
+- Opportunistic verification (post-merge observation) deferred to the next `/auto --batch` run per the Post-merge AC.
+
+### Notes for Next Phase
+- All 6 pre-merge ACs verified PASS; bats tests 26/26 green.
+- No documentation changes needed (`detect-wrapper-anomaly.sh` is not mentioned in README or workflow docs).
+- The fix is purely internal to the anomaly detection script — no interface changes, no new flags.
