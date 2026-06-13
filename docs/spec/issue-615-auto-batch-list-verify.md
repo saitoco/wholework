@@ -76,20 +76,32 @@
 - `tests/auto-batch.bats` は LLM 実行スキル（SKILL.md）のテストであるため、shell スクリプトの動作を直接テストするのではなく、SKILL.md の構造的な内容（文字列の存在）を検証する方式を採用
 - 自動解決 (Non-interactive mode): Issue body の「実装アプローチ」「テストファイル」「非対話モード条件」は全て auto-resolve 済み（Issue body の `## Auto-Resolved Ambiguity Points` 参照）
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- 実装は Spec の Implementation Steps と完全に一致。逸脱なし。Pre-merge AC 3件すべて PASS。
+
+### Recurring Issues
+
+- Nothing to note.
+
+### Acceptance Criteria Verification Difficulty
+
+- verify command（`section_contains`, `file_exists`, `command`）はすべて有効な構文で正確に記述されていた。UNCERTAIN ゼロ。`command "bats tests/auto-batch.bats"` は safe モードで CI 代替検証が機能した。テスト内ヘルパー関数 `list_mode_section()` が未使用（CONSIDER）と step 5 の label 再フェッチ失敗パス未定義（CONSIDER）の2件指摘。いずれも MUST/SHOULD なし。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- step 5 (Verify orchestration) を List mode に追加。`run-auto-sub.sh` 成功後にラベル再フェッチし `phase/verify` 存在時に `Skill(skill="wholework:verify")` を呼ぶ設計を採用
-- `--non-interactive` 検出時はスキップして `update_batch complete` を呼ぶ（run-auto-sub.sh 自体は成功しているため）
-- `tests/auto-batch.bats` を構造的テスト（SKILL.md のキーワード存在確認）として新規作成。shell スクリプト動作テストではなく LLM スキル仕様テストとして位置付け
-- PR #619 を作成。全 pre-merge AC を PASS 確認済み
+- REVIEW_DEPTH=light（--light フラグ + Size=M 両方一致）で review-light 統合レビューを実行
+- MUST/SHOULD 指摘なし。CONSIDER 2件（テストヘルパー未使用、step 5 失敗パス未定義）はスキップ
+- 全 pre-merge AC PASS、全 CI ジョブ SUCCESS 確認済み
 
 ### Deferred Items
-- post-merge AC（次回 `/auto --batch` 実行時の観察）は observation 型のため `/verify` フェーズで評価
-- Resume mode (`--batch --resume`) は List mode と同じ steps に従うため step 5 継承は自動的（SKILL.md 変更不要）
+- post-merge AC（observation 型: event=auto-run）は `/verify` フェーズで評価
+- CONSIDER 2件は /merge 後も問題なし — 将来の改善として残す
 
 ### Notes for Next Phase
-- pre-merge AC 3件（section_contains, file_exists, command bats）全て PASS 確認済み。review フェーズで verify command の整合性に問題なし
-- Smoke Test セクションなし（スキップ）
-- 逸脱なし。Spec の Implementation Steps を忠実に実装
+- PR 全ジョブ SUCCESS、MUST/SHOULD 指摘ゼロ。`/merge 619` に進める
+- tests/auto-batch.bats の `list_mode_section()` 未使用ヘルパーは `/merge` フェーズに影響しない
