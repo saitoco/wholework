@@ -100,18 +100,35 @@
 - なし。実装は Spec の設計通りに1パスで完了した。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- fixture PNG を Python stdlib (struct + zlib) で生成（Node/npm 不依存、CI でも問題なし）
-- smoke test の skip 戦略: `node -e "require.resolve('sharp'); require.resolve('pixelmatch')"` が失敗した場合 `skip`（ローカルでは skip、CI では通過予定）
-- regression test は 2ケース（undefinedHeight による ReferenceError と MODULE_NOT_FOUND）で #441/#543 の再発クラスをカバー
+- MUST 課題なし (SHOULD 1件・CONSIDER 1件のみ)。SHOULD (Step 5c 未実装) は Spec Code Retrospective に「scope 外」と明記されており意図的決定のため SKIP。CONSIDER (async タイムアウトなし) も CI ジョブレベルタイムアウトで十分と判断し SKIP。
+- CI 全ジョブ SUCCESS (DCO, Run bats tests, Validate skill syntax, Forbidden Expressions check, macOS shell compatibility)。
+- github_check AC (CI bats job) を [x] に更新済み。
 
 ### Deferred Items
-- Step 5c（3-panel composite）の smoke test は本 Issue scope 外のため未実装（Step 5b で pixelmatch + sharp の基本 API 動作を確認できれば十分と判断）
-- CI 上での実走確認（fixture で PASS / regression で FAIL）は post-merge の opportunistic verify で確認
+- Step 5c (sharp.composite() 3-panel composite) smoke test は本 Issue scope 外として引き続き未実装。後続 Issue での対応候補。
+- pnpm non-hoist の直接テストは CI 環境 (npm) では不可。後続 Issue または別軸での対応。
 
 ### Notes for Next Phase
-- CI の `Run bats tests` ジョブで Node setup が追加されているため、PR merge 後に CI が green になることを確認すること
-- ローカルテスト (bats tests/) 全716ケース PASS 済み（新規3ケースは skip-graceful 1件 + PASS 2件）
-- `github_check "gh pr checks" "Run bats tests"` の AC は CI 完了後に `/verify` で確認が必要
+- MUST 課題なし。ブロッカーなくマージ可能。
+- `<!-- review-summary -->` コメント投稿済み。
+- post-merge AC: CI 上での runtime smoke test 実走確認は opportunistic verify で監視される。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- rubric 1 (`Step 5b/5c embedded Node scripts`) と rubric 2 (`#441/#543 再発クラス`) の 2 条件がいずれも UNCERTAIN に終わった。rubric 1 は Step 5b のみ実装され Step 5c が未テストのため、rubric テキストが実装スコープより広い。rubric 2 の pnpm non-hoist クラスは CI 環境 (npm install) では直接再現できず、文書化もされていない。Issue 作成時の rubric 条件が実装の意図的な制約（Step 5c 除外、pnpm 非再現）を事前に反映していなかったことが乖離の原因。
+- 改善提案: Step 5b と Step 5c を個別の rubric 条件に分離し、スコープ外の場合は `file_not_exists` 等で「存在しないことを確認」するのではなく、Issue の Out of scope セクションに明示して rubric テキストから外す。
+
+### Recurring issues
+
+- なし。本 PR 内で同種課題の繰り返しは観察されなかった。
+
+### Acceptance criteria verification difficulty
+
+- UNCERTAIN: 2 件（rubric 1、rubric 2）
+- rubric 1 に Step 5b と Step 5c をまとめて記述したことで、部分実装の場合に判定が曖昧になる。原子的検証のためには 1 rubric = 1 スコープが望ましい。
+- rubric 2 の pnpm non-hoist 句は CI 環境では検証不能。rubric テキストに「または当該クラスをカバーできない理由を文書化」という OR 節が付いているにもかかわらず、bats ファイルに文書化がないため UNCERTAIN を招いた。verify コマンドに `rubric` を使う場合は OR 条件の片方（文書化）を確実に満たすようにする。
