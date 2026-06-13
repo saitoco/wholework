@@ -360,6 +360,9 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
    - Glob for `$STEERING_DOCS_PATH/product.md`, `$STEERING_DOCS_PATH/tech.md`, `$STEERING_DOCS_PATH/structure.md`
    - Record comma-separated as `STEERING_DOCS_FILES` (empty string if none exist)
 
+2.6. **Transcription divergence check** (skill-dev repositories only):
+   If `scripts/validate-skill-syntax.py` exists, read `${CLAUDE_PLUGIN_ROOT}/skills/review/skill-dev-recheck.md` and follow the "Transcription Divergence Check" section. Record any findings for inclusion in the review results.
+
 3. **Launch agents in parallel**:
    - `SKIP_REVIEW_BUG=true`: launch **review-spec only** (skip review-bug)
    - `SKIP_REVIEW_BUG=false`: launch **review-spec + review-bug×2 in parallel**
