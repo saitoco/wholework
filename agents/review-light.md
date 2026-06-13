@@ -57,6 +57,11 @@ Analyze the PR diff and detect issues for each perspective:
 - Processing on external command failure or file read failure
 - Temporary file cleanup omissions
 
+**Date/File-Naming Semantics Cross-Check:**
+When the PR diff contains `date +%` or `date -u +%` used in a file path expression:
+- Check the generator function or script for the same artifact family (off-diff context) and existing artifact file names (`ls` of the output directory) to confirm the date naming convention
+- If the naming convention in the diff differs from the generator (e.g., execution date vs. previous business day), report at MUST level — the path match will deterministically fail
+
 **Perspective 3: Security and Safety**
 - Shell injection (locations where user input is passed directly to shell commands)
 - Hardcoded secrets (API keys, passwords, tokens, etc.)

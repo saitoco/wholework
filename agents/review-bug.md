@@ -91,6 +91,13 @@ When the PR deletes or replaces existing test cases (lines starting with `-` tha
 - Report at SHOULD level if a deleted test's scenario is not covered by any new or remaining test
 - Note: this is distinct from "Insufficient test coverage" (filter criterion 4); it detects coverage regression when existing tests are replaced, not missing tests for new code
 
+**Date/File-Naming Semantics Cross-Check:**
+When the PR diff contains `date +%` or `date -u +%` used in a file path expression (e.g., constructing a path like `report-$(date +%Y-%m-%d).md`):
+- Grep for the generator function or script that produces files with the same artifact family to confirm the date naming convention (e.g., whether it uses execution date vs. most-recent-closed-business-day offset)
+- Check `ls` of the artifact output directory to confirm actual file name patterns
+- If the date convention in the diff differs from the generator's convention, report at MUST level — the constructed path will deterministically never match the generated file names
+- If no existing generated artifacts can be found for comparison, report at SHOULD level to flag the unverified assumption
+
 ### 2. False Positive Filtering
 
 For each detected issue, verify whether it should be flagged:
