@@ -95,6 +95,32 @@
 
 - 既存テスト（pre-PR のもの）が暗黙的に fallback パスをカバーしているが、null 値の明示的テストが欠如していた（SHOULD として検出・修正済み）。verify command は既存のテスト実行コマンド（`bats tests/reconcile-phase-state.bats`）のみで、フォールバックパスの入力境界値を個別に検証するヒントがなかった。
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- #557 の Auto Retrospective 発の提案が、起票時点で実装候補 2 案（reopen タイムスタンプ / since-sha）と判定不能時フォールバック方針まで明記され、設計の迷いが少なかった
+
+#### spec
+- reopen タイムスタンプ案の採用と GraphQL クエリ（get-last-reopen）追加の判断が明確
+
+#### code
+- 5 ファイル変更（reconcile + phase-state.md + GraphQL クエリ + bats 31 行追加）。null 境界値テストの欠如が review で SHOULD 検出され同 PR 内で修正
+
+#### review
+- fallback パスの null 明示テスト欠如を検出（SHOULD）。検出→修正が PR 内で完結
+
+#### merge
+- conflicts なし、squash merge
+
+#### verify
+- pre-merge 3/3 PASS（bats 55/55、fix-cycle 3 ケース確認）。post-merge は実運用 fix-cycle イベント観測のため SKIP
+- 補足: #557 で実地に遭遇した false positive（旧 closes #N コミットへの誤マッチ）が、検出から 1 日以内に retro → Issue → 実装 → テスト化まで完結した
+
+### Improvement Proposals
+- N/A
+
 ## Phase Handoff
 <!-- phase: merge -->
 
