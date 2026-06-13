@@ -74,19 +74,33 @@
 ### Rework
 - なし。実装は1回で完了した。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Fallback Steps 数の記述（Spec 実装ステップが「3 段階」、Code Retrospective が「4 段階に整理」と記録）が一致しておらず、Spec テキスト側が未更新のままマージされた。Spec の Implementation Steps と Code Retrospective を同一コミットで同期させることで防げる。
+
+### Recurring issues
+
+- なし。今回の CONSIDER 指摘は新規パターンであり、繰り返し問題ではない。
+
+### Acceptance criteria verification difficulty
+
+- rubric verify command（AC7）は今回初めて `safe` モードで grader 実行され、PASS 判定。verify command の設計（adversarial grader の明示的使用）は適切。
+- AC2 の verify command パターン（`matches_expected.*false.*phase.*review`）が実装コード（`'"phase":"review"'`）と正確に一致しない。verify command 記述と実装パターンを同期させるルールを Spec テンプレートに追加すると品質向上する。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `reconciler-header-mismatch` の後段に elif を追加することで排他性を保証した（`reconciler-header-mismatch` が "Review Summary" 含む場合を先取りするため新パターンは "Review Summary" 不在のケースのみ到達する）
-- recovery 手順の `--no-cache` オプションは存在しないため省略し、`reconcile-phase-state.sh review --pr <N>` を使用した（Spec Notes に Auto-resolve として記録済み）
-- `orchestration-fallbacks.md` の新セクション位置は `reconciler-header-mismatch` と `code-completed-no-pr` の間（`---` 区切りの後）
+- 全 AC（AC1-AC8）が PASS。MUST/SHOULD issue なし → `REQUEST_CHANGES` イベントではなく `COMMENT` イベントで投稿。
+- rubric AC7 は elif チェーンによる排他性と 4 段階 recovery 手順の存在を確認して PASS 判定。潜在的なデッドコード（`reconciler-header-mismatch` が常に先行して `review-completion-false-negative` が本番で発火しない可能性）は CONSIDER として記録。
+- review-light モード実行（REVIEW_DEPTH=light、Issue size M）。CONSIDER 5件を line comments として投稿。
 
 ### Deferred Items
-- rubric verify command は /verify フェーズで評価される
-- CI bats ジョブ pass 確認（`github_check "gh pr checks" "Run bats tests"`）は PR #609 の CI 完了後に確認
+- `review-completion-false-negative` パターンが本番環境でデッドコードになりうる問題（`reconcile-phase-state.sh` の診断文が常に "Review Response Summary not found" を含むため `reconciler-header-mismatch` が常に先に発火する）は CONSIDER として記録のみ。修正は out of scope。
+- AC2 verify command と実装 grep パターンの不一致修正は /verify フェーズで対応可能。
 
 ### Notes for Next Phase
-- bats 全 29 テスト PASS 確認済み（新規 3 件含む）
-- forbidden-expressions-check と validate-skill-syntax もローカルで PASS
-- Issue body の AC1-AC6 チェックボックスを `[x]` に更新済み
+- 全 AC PASS、CI 全 SUCCESS → `/merge 609` で merge 進行可能。
+- CONSIDER 5件はすべてスキップ推奨（機能影響なし）。
