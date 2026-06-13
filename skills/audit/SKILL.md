@@ -300,9 +300,9 @@ Split the past 90 days into three 30-day windows (window 1: oldest, window 3: mo
 - **Stale candidates**: Open Issues with no update for 90 or more days (same set as age ≥ 90d Open)
 - **Untriaged candidates**: Open Issues without the `triaged` label
 
-#### phase/verify Dwell Time
+#### phase/verify Dwell Time (滞留期間)
 
-For each Issue that has (or had) a `phase/verify` label, compute the dwell time as:
+For each Issue that has (or had) a `phase/verify` label, compute the dwell time (滞留期間) as:
 - **Active Issues**: days from the most recent `phase/verify` LabeledEvent to today
 - **Past Issues**: days from the most recent `phase/verify` LabeledEvent to the most recent `phase/verify` UnlabeledEvent
 
