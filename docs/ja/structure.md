@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（50 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（51 ファイル）
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -32,7 +32,7 @@ wholework/
 │   └── workflows/
 │       ├── test.yml             # CI: bats テスト、スキル構文検証、禁止表現チェック、macOS シェル互換性テスト
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
-├── tests/               # スクリプトの Bats テストファイル（60 ファイル）
+├── tests/               # スクリプトの Bats テストファイル（62 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents
@@ -204,6 +204,7 @@ wholework/
 - `scripts/check-translation-sync.sh` — docs/ja/* と docs/* の翻訳同期状況を確認
 - `scripts/check-forbidden-expressions.sh` — docs/product.md § Terms の deprecated terms を検出
 - `scripts/setup-labels.sh` — ワークフロー用 GitHub ラベルを作成
+- `scripts/compute-escalation-level.sh` — phase/verify または Icebox 滞留期間のエスカレーションレベルを計算；`/audit stats --retention` の retire 提案コメントルーティングに使用
 - `scripts/test-skills.sh` — 全スキルテスト実行
 - `scripts/wait-external-review.sh` — 外部レビュー完了待ち
 
