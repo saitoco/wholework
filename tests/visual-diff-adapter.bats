@@ -60,5 +60,5 @@ ADAPTER_FILE="$PROJECT_ROOT/modules/visual-diff-adapter.md"
 }
 
 @test "visual-diff-adapter: normalized composite documented" {
-    grep -qE "正規化後|normalized" "$ADAPTER_FILE"
+    grep -q "normalized" "$ADAPTER_FILE"
 }

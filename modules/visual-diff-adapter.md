@@ -97,7 +97,7 @@ For each combination of (viewport, state):
 
 For each (viewport, state) pair, run a Node.js script via Bash to generate the diff highlight image using `pixelmatch`:
 
-Dimension normalization (pad-based) runs before `pixelmatch` to handle ref/impl height differences that arise from fullPage captures. Both images are padded to a common `max(width) × max(height)` using `sharp.extend` (right and bottom padding, white background), so size mismatches no longer cause errors.
+Dimension normalization (pad-based) runs before `pixelmatch` to handle ref/impl height differences that arise from fullPage captures. Both images are padded to a common `max(width) × max(height)` using `sharp.extend` (right and bottom padding, white background), so size mismatches no longer cause errors. The padded ref/impl images are saved to `ref-padded.png` / `impl-padded.png` for use in the Step 5c composite so all three panels share the same dimensions.
 
 ```bash
 node -e "
@@ -115,6 +115,9 @@ node -e "
       .raw().toBuffer();
   const refPadded = await padTo(ref.data, ref.info);
   const implPadded = await padTo(impl.data, impl.info);
+  // Save padded images so Step 5c composite uses normalized dimensions for all three panels
+  await sharp(refPadded, { raw: { width: W, height: H, channels: 4 } }).png().toFile('.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-ref-padded.png');
+  await sharp(implPadded, { raw: { width: W, height: H, channels: 4 } }).png().toFile('.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-impl-padded.png');
   const diff = Buffer.alloc(W * H * 4);
   pixelmatch(refPadded, implPadded, diff, W, H, { threshold: 0.1, includeAA: false });
   await sharp(diff, { raw: { width: W, height: H, channels: 4 } }).png().toFile('.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-diff.png');
@@ -126,7 +129,7 @@ node -e "
 
 Composite the three images (Before / After / Diff highlight) side by side using `sharp`:
 
-The composite canvas uses normalized dimensions (W × H from Step 5b) so all three panels have equal width and height. W is the normalized panel width (max of ref/impl widths) and H is the normalized height (max of ref/impl heights).
+The composite canvas uses normalized dimensions (W × H from Step 5b) so all three panels have equal width and height. W is the normalized panel width (max of ref/impl widths) and H is the normalized height (max of ref/impl heights). The Before/After panels use `ref-padded.png` / `impl-padded.png` (saved in Step 5b) so all three inputs share the same W × H dimensions.
 
 ```bash
 node -e "
@@ -137,8 +140,8 @@ node -e "
   await sharp({
     create: { width: 3 * W, height: H, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } }
   }).composite([
-    { input: '.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-ref.png', left: 0, top: 0 },
-    { input: '.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-impl.png', left: W, top: 0 },
+    { input: '.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-ref-padded.png', left: 0, top: 0 },
+    { input: '.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-impl-padded.png', left: W, top: 0 },
     { input: '.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-diff.png', left: 2 * W, top: 0 }
   ]).toFile('.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-3panel.png');
 })();
