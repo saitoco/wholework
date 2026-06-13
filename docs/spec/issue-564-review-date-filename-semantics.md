@@ -62,6 +62,25 @@ Add a "date/file-naming semantics cross-check" perspective to `agents/review-bug
 ### Rework
 - None
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- retro/verify 起票時点で rubric + 2 grep の構成が揃っており、トリアージ補正不要。曖昧点 2 件（対象スキル範囲・実装形式）は spec 段で /review 限定 + コアエージェント直接修正に着地
+
+#### spec
+- 「`spec` も対象に含めるか」の判断を /review のみへ限定し、capability 固有ドメインファイル分離も見送り。日付ベースファイルパスは横断パターンであるためコア注記が妥当
+
+#### code
+- review-bug.md と review-light.md に同じ Cross-Check ブロックを単一コミットで追加、手戻りなし
+
+#### verify
+- pre-merge 3/3 PASS。post-merge opportunistic は日付ファイルパス変更 PR の次回観測まで保留。観察対象がほぼ自明（Cross-Check ブロックが review-bug/review-light に常駐するため次のトリガー条件 PR で必然的に発火）
+
+### Improvement Proposals
+- N/A
+
 ## Phase Handoff
 <!-- phase: code -->
 
