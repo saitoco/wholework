@@ -103,16 +103,19 @@ N/A (design-only Issue; this Spec file is the implementation artifact)
 - The `\|` syntax issue (see Recurring Issues) did not cause FAIL/UNCERTAIN in practice, but represents a latent quality gap in verify command authoring.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- CONSIDER-only review: no MUST/SHOULD issues found. The ADR content fully satisfies all 4 acceptance criteria.
-- The grep `\|` syntax issue (AC2/AC3) was documented as a CONSIDER-level spec quality note; fix deferred to Issue owner or #583 implementation context.
+- PR #602 squash-merged into main; Issue #581 auto-closed via `closes #581` in PR body
+- mergeable status returned reason=unknown; proceeded with merge attempt as per non-interactive auto-resolve policy
+- BASE_BRANCH=main confirmed; no manual Issue close needed
+- SPEC_PATH=docs/spec (default), ISSUE_NUMBER=581
 
 ### Deferred Items
-- `verify-type: observation event=issue-583-merge` post-merge AC tracked until #583 merges.
-- grep `\|` → `|` or `file_contains` fix: deferred; Issue body AC is already [x] and rubric covers the content.
+- Implementation of `verify-type: observation event=<name>` grammar and per-skill firing points is delegated to Issue #583
+- Post-merge AC: verify that #583's implementation aligns with Option D at #583 merge time (`event=issue-583-merge`)
 
 ### Notes for Next Phase
-- No code changes were made in /review; merge can proceed directly (`/merge 602`).
-- Post-merge: when #583 merges, the observation event `issue-583-merge` should trigger re-evaluation of the post-merge AC.
+- The sole post-merge verification condition is tagged `verify-type: observation event=issue-583-merge` — verify phase should not block on this; it fires when #583 merges
+- All pre-merge ACs are automatable (file_exists, grep, rubric) and should pass cleanly
+- No source code changes in this PR — only a new Spec/ADR file; verify scope is documentation-only
