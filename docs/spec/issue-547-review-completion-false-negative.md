@@ -61,3 +61,32 @@
 - 新パターンは elif チェーンの `reconciler-header-mismatch`（line 81-84）直後、`mid-run-api-error`（`grep -qiE "APIConnectionError..."`）の直前に配置する。`reconciler-header-mismatch` が先にチェックされるため、ログに "Review Summary" が含まれるケースは既存パターンで処理され、新パターンには到達しない（first-match-wins による排他）
 - bats テストの Case 2（排他確認）では `"phase":"review"` + `"matches_expected":false` + `"Review Summary"` を含むログを用い、出力が `reconciler-header-mismatch` であることを確認する。新パターン名が出力されないことは確認不要（`reconciler-header-mismatch` が優先される点のみ確認すれば十分）
 - **Auto-resolve**: Issue body の recovery Step 1 は `reconcile-phase-state.sh --no-cache review --pr <N>` と記述しているが、`reconcile-phase-state.sh` に `--no-cache` オプションは存在しない（grep 確認済み）。recovery 手順の実装では `reconcile-phase-state.sh review --pr <N>` を使用する（`--no-cache` なし）。この変更は reconcile-phase-state.sh の内部実装詳細であり、recovery 手順の本質（reconcile 再実行）には影響しない
+
+## Code Retrospective
+
+### Deviations from Design
+- 設計通りに実装完了。逸脱なし。
+
+### Design Gaps/Ambiguities
+- `reconcile-phase-state.sh` に `--no-cache` オプションが存在しないことが発覚したが、Spec Notes の Auto-resolve 節で既に記録・解決済みであり、recovery 手順には `--no-cache` なしの形式を使用した。
+- recovery 手順の Fallback Steps を Issue body 指定の 5 段階から 4 段階に整理（Step 3 に サマリ見出しのローカライズ対応 follow-up Issue 起票を統合）。本質的な内容は変わらない。
+
+### Rework
+- なし。実装は1回で完了した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `reconciler-header-mismatch` の後段に elif を追加することで排他性を保証した（`reconciler-header-mismatch` が "Review Summary" 含む場合を先取りするため新パターンは "Review Summary" 不在のケースのみ到達する）
+- recovery 手順の `--no-cache` オプションは存在しないため省略し、`reconcile-phase-state.sh review --pr <N>` を使用した（Spec Notes に Auto-resolve として記録済み）
+- `orchestration-fallbacks.md` の新セクション位置は `reconciler-header-mismatch` と `code-completed-no-pr` の間（`---` 区切りの後）
+
+### Deferred Items
+- rubric verify command は /verify フェーズで評価される
+- CI bats ジョブ pass 確認（`github_check "gh pr checks" "Run bats tests"`）は PR #609 の CI 完了後に確認
+
+### Notes for Next Phase
+- bats 全 29 テスト PASS 確認済み（新規 3 件含む）
+- forbidden-expressions-check と validate-skill-syntax もローカルで PASS
+- Issue body の AC1-AC6 チェックボックスを `[x]` に更新済み
