@@ -47,6 +47,9 @@
   - `/review`: Full モードでは 2 グループに分割する — Spec 準拠レビュー（`review-spec`）とバグ検出（`review-bug`）。2 段階検証（検出→検証サブエージェント）で偽陽性を排除。Light モードでは統合エージェント（`review-light`）1 つで 4 観点（spec・bug・エッジケース・ドキュメント）をまとめて担当
 - **共有モジュールパターン**: 複数スキルを横断する共通処理を `modules/*.md` に切り出し、"Read and follow" パターンで参照する
 - **Spec ファースト（使い捨て）**: Spec はタスク完了後の成果物として保守しない。Spec-anchored および Spec-as-source アプローチは採用しない。理由: (1) LLM の非決定性により同じ spec が同じコード再生成を保証しない、(2) spec 保守コストがコード保守コストに上乗せになる
+- **フェーズ横断メモリ機構**: 新規フォークコンテキストで実行されるフェーズ間でコンテキストを引き継ぐための 2 つの補完的な仕組み。
+  - **Spec レトロスペクティブ**: 各フェーズが Spec に Retrospective セクションを追記し、観察・判断・不確実性の解消を記録する。使い捨て Spec 内に蓄積され、同一ファイルを通じて下流フェーズに引き継がれる。
+  - **Phase Handoff** (`modules/phase-handoff.md`): 生産フェーズが書き込み、消費フェーズが読み込む構造化サマリー（例: review → merge → verify）。AC 確認結果・スコープ注記・残存リスクなどの短命な引き継ぎシグナルを Spec 本文から切り離すことで、フォークコンテキストのフェーズが必要な情報だけを参照できる。Spec レトロスペクティブが「履歴」を格納するのに対し、Phase Handoff は「次ステップの作業コンテキスト」を伝達する。
 - **プログレッシブ・ディスクロージャー（Core/Domain 分離）**: SKILL.md 本文にはプロジェクト種別やツールに依存しない汎用ロジックだけを記す。特定ツール（Figma、Copilot など）やプロジェクト種別（スキル開発、IaC など）に固有のロジックは補助ファイル（`skills/{name}/xxx-phase.md`）に切り出し、該当するときだけ読み込む。判断基準: 「このツール/プロジェクト種別を使わないプロジェクトでもこのロジックが必要か？」— No なら切り出す。**この判断基準は実行ロジックだけでなくガイダンス（適用シナリオ、判断基準、使い分け表）にも適用される** — capability 固有のガイダンスを eager-load される共通モジュール（`modules/verify-patterns.md` など）に置くと、domain 外プロジェクトでも skill 起動時に毎回フルトークンコストが発生する。代わりに `load_when: capability: {name}` gate を持つ Domain file を使うこと（参考: Issue #441 visual-diff capability + `skills/spec/visual-diff-guidance.md`）
   - **切り出しパターン（標準）（網羅的）**:
 
@@ -83,6 +86,8 @@
 | review-bug | review | Opus | — | バグ検出は最高精度が必要（サブエージェント、effort は親から継承） |
 | review-spec | review | Opus | — | Spec 逸脱は高精度が必要（サブエージェント、effort は親から継承） |
 | review-light | review | Sonnet | — | 軽量統合レビュー（サブエージェント、effort は親から継承） |
+| orchestration-recovery | auto（リカバリ） | Sonnet | — | Bash Tier 1–2 が失敗したとき `spawn-recovery-subagent.sh` が起動する Tier 3 リカバリ診断エージェント。フェーズ状態を分析し最小リカバリプランを JSON で生成 |
+| frontend-visual-review | verify（visual-diff） | Opus | — | 3 パネル比較画像からビジュアルギャップを列挙。`visual_diff` verify コマンド向けに `modules/visual-diff-adapter.md` が起動 |
 | triage（skill） | triage | Sonnet | — | メタデータ付与、Sonnet で十分。インライン実行（`run-*.sh` ラッパーなし）— `/auto` が未ラベル issue に triage を連鎖させる場合も含む — のため effort は設定しない |
 | auto（skill） | orchestration | Sonnet | — | 親オーケストレーター、ユーザーの Claude Code セッションでインライン実行（`run-*.sh` ラッパーなし）。各子フェーズはフェーズ固有の effort で `run-*.sh` 経由で実行される。スキルレベルでは effort を設定しない |
 | audit（skill） | audit | Sonnet | — | ドリフト・脆弱性検出と統計、Sonnet で十分。インライン実行（`run-*.sh` ラッパーなし）のため effort は設定しない |
