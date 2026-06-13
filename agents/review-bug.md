@@ -114,7 +114,6 @@ Output findings in the following format:
 **[Bug/Logic Error] filename:line-number vicinity**
 - path: file path (relative to repository root; null if not identifiable)
 - line: line number (corresponding line in diff; null if not identifiable)
-- confidence: high / medium / low
 Issue description (specify the exact problem and reason). Severity: MUST / SHOULD / CONSIDER
 
 Recommended fix:

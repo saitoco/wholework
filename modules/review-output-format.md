@@ -24,6 +24,7 @@ Structure output following the shared finding format patterns and path/line spec
 **[Category] filename:near-line-number**
 - path: file path (relative to repository root; null if not identifiable)
 - line: line number (relevant line in diff; null if not identifiable)
+- confidence: high / medium / low
 Finding content. Severity: MUST / SHOULD / CONSIDER
 
 Recommended action:
