@@ -174,20 +174,45 @@
 ### Uncertainty resolution
 - Workflow ツールの permission-mode auto 下での可用性は Spike 1（レポート §Spike 1）が実証済みで、新規検証は不要だった。settings.json は Bash パターンのみを列挙し built-in tool は allowed-tools 経由で許可される構造を確認。
 
+## Code Retrospective
+
+### Deviations from Design
+- Spec の実装ステップを全て忠実に実行し、実質的な逸脱はなかった
+- `args` ベースのプロンプト変数（`args.number`、`args.issueNumber` など）は Workflow スクリプト内で参照したが、caller が `args` を渡す形式を明示する必要があった。workflow-guidance.md の Processing Steps に「args 渡し」の説明を追加済み
+
+### Design Gaps/Ambiguities
+- inline Workflow JS スクリプト内の `SKIP_BUG` 判定は `args && args.skipReviewBug` として記述したが、Spec には `SKIP_REVIEW_BUG` 変数をどのように `args` に渡すかが記載されていなかった。caller 側（SKILL.md）の Step 10 分岐パラグラフで `SKIP_REVIEW_BUG` を `args.skipReviewBug` として渡す旨を workflow-guidance.md の Processing Steps に記述することで吸収した
+- SKILL.md の half-width `!` 禁止制約は Phase Handoff に明記されており、Step 10 分岐パラグラフの文言を全角や言い換えで回避した
+
+### Rework
+- 特になし。全テスト（bats 697件、validate-skill-syntax、forbidden-expressions check、translation-sync）が 1 回目で PASS した
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Code Retrospective には「args 渡しの説明を追加済み」とあったが、実際の `workflow-guidance.md` Processing Steps Step 4 には args オブジェクト形式が記載されておらず、指摘後に修正が必要だった。Spec の「実装ステップ 3(c)」ではその旨を明記していたが、実装時に本文への反映が抜け落ちた。Spec の Design Gaps/Ambiguities セクションにあるような実装時の知見（args 渡し形式）は、Done として先に閉じるのではなく、Spec の当該実装ステップに直接補記するパターンが望ましい。
+
+### Recurring Issues
+
+N-vote / majority vote という表現が Spike レポートから引き継がれ、実装が 1-vote 相当（finding ごとに 1 つの refutation agent）であるにもかかわらずドキュメントに残存していた。Spike レポートの記述（「N-vote adversarial verify」）と実装コードの間にドキュメント乖離が生じた。Spike 段階の aspirational 記述をそのまま Domain file に転記する際は、実際の実装に合わせた表現に落とし込む確認が必要。
+
+### Acceptance Criteria Verification Difficulty
+
+verify command のカバレッジは良好だった（rubric×2、file_contains×3、grep×3、command×1、github_check×1）。唯一 `github_check "gh pr checks" "Run bats tests"` が PR 作成直後は PENDING（CI 未完了）のため `- [ ]` だったが、今回のレビューで CI が完了し PASS に更新できた。Spec の Notes for Next Phase にその旨が明記されており、予見された状況であった。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Workflow スクリプトは `scripts/review-workflow.js` ではなく Domain file `skills/review/workflow-guidance.md` に inline JS で埋め込む（Workflow ツールが inline 渡しを推奨 + scripts/ は .sh/.py 規約 + progressive disclosure）
-- `capabilities.workflow` は detect-config-markers.md に明示テーブル行を追加（browser/visual-diff precedent、rubric を決定的に PASS）
-- Execution Platform 列は routing SSoT のドキュメント化のみ（run-review.sh の実行基盤移行はしない）
+- SHOULD issueをすべて修正（N-vote→adversarial verification修正、args渡し手順の明示、finderPromptsのargsガード追加）し、CONSIDER issueはスキップ（SKILL.md line 135 は差分外・既存テキスト、docs/tech.md line 43 は将来の in-session 移行時に更新予定）
+- `finderResult.findings` undefinedガード（review-bugが指摘）は Workflow schemaバリデーション仕様（retries-on-mismatch）により REJECT（false positive）と判定、修正不要
+- 受け入れ基準10項目すべてPASS確認済み、Issue checkboxを全て[x]に更新
 
 ### Deferred Items
-- review の in-session 実移行は別 Issue（spike §Routing Recommendation の将来候補）
-- audit / issue L/XL / spec への Workflow 展開は /review 安定稼働後に別 Issue で評価
+- docs/tech.md の review 行 Execution Platform 記述（「In-session (Workflow opt-in...) / headless fallback」）は将来の run-review.sh headless→in-session 移行時に更新
+- skills/review/SKILL.md Step 3 の見出し「Project-local Domain files」はバンドル済み Domain file のロードを隠している。次の SKILL.md 修正機会に「Domain files (bundled + project-local)」へ改善を検討
 
 ### Notes for Next Phase
-- 【必須】`Workflow` を review SKILL.md allowed-tools に追加する際、`validate-skill-syntax.py` の `KNOWN_TOOLS` と `BODY_TOOL_CHECK_SKIP` の両方に `'Workflow'` を追加する（後者を忘れると spec/verify SKILL.md が body-tool-check で誤検知 FAIL）
-- SKILL.md 本文に half-width `!` を導入しない（validator 制約）
-- ja ミラー（`docs/ja/tech.md` / `docs/ja/guide/customization.md`）は英語版と同コミットで同期（git timestamp 一致で IN_SYNC）
-- 10.0–10.3 の static fan-out 本体は変更しない（fallback 経路温存が rubric AC 9 の合否条件）
+- merge フェーズ: all CIs SUCCESS、MUST issues なし、受け入れ基準全PASS → /merge 578 を実行可能
+- Post-merge 手動確認: `capabilities.workflow: true` 設定プロジェクトで `/review --full` を実行し、Workflow 経路完走と完了レポートのトークン使用量出力を確認する

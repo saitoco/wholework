@@ -25,18 +25,18 @@
 - **Plugin ディレクトリ配布**: `--plugin-dir` を使ったローカル Claude Code plugin として配布する。Claude Code は実行時に `${CLAUDE_PLUGIN_ROOT}` を plugin ディレクトリに設定し、skills/modules がこれを使って scripts や modules を参照する。公開配布は Claude Code marketplace（`.claude-plugin/marketplace.json`）経由で、ユーザーは `/plugin marketplace add saitoco/wholework` + `/plugin install wholework@saitoco-wholework` でインストールできる
 - **fork コンテキスト vs main コンテキスト**: コンテキスト分離レベルはスキル単位で設定する。Fork の動機は「独立性/安全性」（1M コンテキスト GA 以降、コスト/容量の動機はほぼ消失）。各スキルの fork 判断（網羅的）:
 
-  | スキル | Fork の要否 | 理由 |
-  |-------|-------------|--------|
-  | triage | 不要 | 前フェーズのバイアスを避ける必要なし、独立性も不要 |
-  | issue | 条件付き | 直接呼び出し時は shared、run-issue.sh 経由時は fork（L/XL 並列調査ではサブエージェントが分離コンテキストで実行） |
-  | spec | 条件付き | 直接呼び出し時は shared、run-spec.sh 経由時は fork |
-  | code | 必要 | Spec を読み独立して実行する、実装前のコンテキストの影響を受けない |
-  | review | 必要 | 実装フェーズのバイアスを継がず、クリーンな視点でコードをレビューする |
-  | merge | 必要 | 判断は Spec + PR メタデータで完結、レビューコンテキストを持ち越さない |
-  | verify | 不要 | 大部分が機械的処理（verify command 実行 + checkbox 更新）、manual AC 確認には fork コンテキストで実行できない AskUserQuestion が必要、FAIL → /code（fork）で再実行するため bias 伝播リスクは低い |
-  | auto | 不要 | 親オーケストレーターはユーザーの Claude Code セッションで実行される、各子フェーズは `run-*.sh` 経由で独立した `claude -p` プロセスとして実行 |
-  | audit | 不要 | ドリフト・脆弱性検出はユーザーセッションで実行される、前フェーズのバイアスを避ける必要なし |
-  | doc | 不要 | ドキュメント管理はユーザーセッションで実行される、前フェーズのバイアスを避ける必要なし |
+  | スキル | Fork の要否 | 実行基盤 | 理由 |
+  |-------|-------------|---------|--------|
+  | triage | 不要 | In-session | 前フェーズのバイアスを避ける必要なし、独立性も不要 |
+  | issue | 条件付き | headless（run-issue.sh）/ in-session（直接呼び出し） | 直接呼び出し時は shared、run-issue.sh 経由時は fork（L/XL 並列調査ではサブエージェントが分離コンテキストで実行） |
+  | spec | 条件付き | headless（run-spec.sh）/ in-session（直接呼び出し） | 直接呼び出し時は shared、run-spec.sh 経由時は fork |
+  | code | 必要 | headless（run-code.sh）/ in-session（直接呼び出し） | Spec を読み独立して実行する、実装前のコンテキストの影響を受けない |
+  | review | 必要 | In-session（Workflow opt-in: capabilities.workflow: true）/ headless フォールバック | 実装フェーズのバイアスを継がず、クリーンな視点でコードをレビューする |
+  | merge | 必要 | headless（run-merge.sh） | 判断は Spec + PR メタデータで完結、レビューコンテキストを持ち越さない |
+  | verify | 不要 | In-session | 大部分が機械的処理（verify command 実行 + checkbox 更新）、manual AC 確認には fork コンテキストで実行できない AskUserQuestion が必要、FAIL → /code（fork）で再実行するため bias 伝播リスクは低い |
+  | auto | 不要 | In-session | 親オーケストレーターはユーザーの Claude Code セッションで実行される、各子フェーズは `run-*.sh` 経由で独立した `claude -p` プロセスとして実行 |
+  | audit | 不要 | In-session | ドリフト・脆弱性検出はユーザーセッションで実行される、前フェーズのバイアスを避ける必要なし |
+  | doc | 不要 | In-session | ドキュメント管理はユーザーセッションで実行される、前フェーズのバイアスを避ける必要なし |
 
 - **`/auto` スキル**: `run-*.sh` 経由で spec→code→review→merge→verify を順次連鎖させるオーケストレーター。各フェーズは設定可能なパーミッションモード（デフォルト: `--permission-mode auto`、`.wholework.yml` に `permission-mode: bypass` を設定すると `--dangerously-skip-permissions`）で `claude -p` 独立プロセスとして実行され、フレッシュなコンテキスト分離を保証する。`verify-max-iterations`（デフォルト: 3、最大: 20、`.wholework.yml` で設定可能）が verify-reopen ループを上限で止める。カウンターが上限に達すると Issue は `phase/verify` に留まり人間の判断を待つ。`/auto` スキルは verify 出力の `MAX_ITERATIONS_REACHED` を検出し、無限ループの代わりに連鎖実行を停止する。フラグ動作・バッチ処理・レジューム・リリースブランチワークフローは [docs/workflow.md § Orchestration](../workflow.md#orchestration) を参照。
   - **2 階層オーケストレーション**: `/auto` 本体（親オーケストレーター）はユーザーの Claude Code セッションで動作し、LLM 推論を使った適応的判断を行う（ラベル状態の評価、サイズベースのルーティング、サブ issue 依存関係分析）。XL Issue については `run-auto-sub.sh`（子オーケストレーター）が各サブ issue のフルフェーズシーケンスを実行する。`run-auto-sub.sh` は bash オーケストレーションを維持しつつ、段階的適応リカバリを備える: (1) `reconcile-phase-state.sh` 完了チェック、(2) `apply-fallback.sh` 既知パターンリカバリ、(3) 未知異常時に `spawn-recovery-subagent.sh` が `claude -p` で `agents/orchestration-recovery` を起動。通常経路は bash のままコストと並列安定性を維持し、Tier 1–2 が失敗した場合のみ `claude -p` を診断に使用する。`WHOLEWORK_MAX_RECOVERY_SUBAGENTS` cap（デフォルト 1）により並列コストを制限する。
