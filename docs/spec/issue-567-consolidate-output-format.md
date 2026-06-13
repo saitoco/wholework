@@ -38,3 +38,29 @@ finder agent (review-bug, review-light, review-spec) の Output Format の `conf
 
 - `agents/review-spec.md` は既に `review-output-format` を参照している（AC5 は変更なしで既に PASS）。Step 4 は format 例示の整合のために必要
 - review-bug/light の Output Format から `confidence` を削除しても、各 agent は `## Output Format` 末尾の「Read review-output-format.md and follow」指示経由で confidence を出力し続ける
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- None: the Spec clearly specified which lines to add/remove in each agent file, making implementation straightforward
+
+### Rework
+- None: all 4 implementation steps completed on the first attempt; all 5 pre-merge ACs PASS
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Used `replace_all=true` for review-light.md to remove both instances of `- confidence: high / medium / low` in a single Edit call (Perspective 1 and 2 had identical surrounding context)
+- Used `replace_all=true` for review-spec.md to add `- confidence: high / medium / low` to all 3 perspectives in a single Edit call
+- Kept descriptive prose about confidence on line 14 of review-light.md — it is a Purpose explanation, not a format field definition
+
+### Deferred Items
+- Post-merge AC: observing that future format changes propagate to all 3 finder agents via the single shared template is intentionally left as opportunistic verification
+
+### Notes for Next Phase
+- All 5 pre-merge ACs are verified PASS; verify phase can confirm the remaining post-merge AC opportunistically
+- Implementation was a pure text reorganization with no behavioral change — the agents output confidence via `review-output-format.md` reference in both the before and after states; what changed is where the authoritative definition lives
