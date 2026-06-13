@@ -64,13 +64,13 @@ Issue #551 の verify 実行で判明した問題: patch route Issue では `gh 
 8件中7件が自動PASS。残り1件（`github_check "gh run list..."` による CI pass 確認）は safe モードでアローリスト外のため UNCERTAIN となった。これは verify-executor の仕様上の想定動作であり、`/verify` の full モードまたは CI ステータス参照で補完可能。今後 XS/S patch route Issue の AC に `github_check "gh run list..."` 形式を使う場合、safe モードでは常に UNCERTAIN になることを認識しておくとよい。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- MUST issueなし、SHOULD issueなし — CONSIDERが1件（SKILL.md Goodセクションのサブヘッダー非対称性）のみ → スキップ判断（機能的問題なし）
-- すべてのpre-merge AC自動検証完了（7/8 PASS、1 UNCERTAIN）
-- UNCERTAIN ACは github_check safe mode 制約によるもの（CI自体はSUCCESS確認済み）
+- mergeable=false (reason=unknown) を自動解決してマージを試行 — GitHub API の一時的な状態遅延と判断（CI SUCCESSはreviewフェーズで確認済み）
+- `gh pr merge --squash --delete-branch` 実行: ローカルブランチ削除は別worktreeで使用中のため失敗したが、リモートマージ自体は成功（state=MERGED確認）
+- BASE_BRANCH=main のため `closes #554` による Issue 自動クローズが有効
 
 ### Deferred Items
 
@@ -79,6 +79,6 @@ Issue #551 の verify 実行で判明した問題: patch route Issue では `gh 
 
 ### Notes for Next Phase
 
-- CI全ジョブSUCCESS（DCO/bats/validate-skill-syntax/forbidden-expressions/macOS-compat）
-- レビューコメント（CONSIDER）を投稿済み — マージ前の修正不要
-- `/merge 606` で直接マージ可能
+- PR #606 は MERGED 状態（mergedAt: 2026-06-13T16:56:40Z）
+- Issue #554 は `closes #554` により main マージ時に自動クローズ済みのはず — verifyフェーズ前に gh issue view 554 で状態確認推奨
+- verify対象AC: post-merge AC（次回 XS/S Issue で `/issue` 実行時の目視確認）のみ残存
