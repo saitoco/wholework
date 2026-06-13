@@ -265,8 +265,8 @@ Output the following overview to terminal:
 
 **Column guidance:**
 - **N**: total count of post-merge ACs
-- **Type**: `auto-verify (hint)` if `<!-- verify: ... -->` is present; `manual` if `<!-- verify-type: manual -->` or no hint
-- **Claude Executable?**: for manual conditions only — quick preview judgment based on condition text (rubric detailed in Step 8b). For executable conditions, show the candidate command or approach. For non-executable conditions, show "No (requires manual inspection)". For auto-verify conditions, show "—".
+- **Type**: `auto-verify (hint)` if `<!-- verify: ... -->` is present; `observation (<event-name>)` if `<!-- verify-type: observation event=* -->` is present; `manual` if `<!-- verify-type: manual -->` or no hint
+- **Claude Executable?**: for manual conditions only — quick preview judgment based on condition text (rubric detailed in Step 8b). For executable conditions, show the candidate command or approach. For non-executable conditions, show "No (requires manual inspection)". For auto-verify conditions, show "—". For observation conditions, show "— (waiting for event)".
 
 ### Step 8: Post-merge Processing
 
@@ -400,12 +400,12 @@ Apply the following judgment based on the verification results (exhaustive):
 
 **(a) All auto-verification target conditions are PASS or SKIPPED (0 FAIL/UNCERTAIN among auto-verification targets; SKIPPED is ignored as environment conditions were unmet):**
 
-- Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->` or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body (manual conditions SKIPped in Step 8 remain unchecked)
-- **If unchecked opportunistic or manual conditions remain**: assign `phase/verify` (Issue state unchanged):
+- Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->`, `<!-- verify-type: observation ... -->`, or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body (manual conditions SKIPped in Step 8 remain unchecked; observation conditions remain unchecked until their event fires)
+- **If unchecked opportunistic, observation, or manual conditions remain**: assign `phase/verify` (Issue state unchanged):
     ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
     ```
-    Inform the user: "Unchecked opportunistic/manual conditions remain. Re-run `/verify $NUMBER` when ready to confirm them."
+    Inform the user: "Unchecked opportunistic/observation/manual conditions remain. Re-run `/verify $NUMBER` when ready to confirm them (observation conditions are checked automatically when the specified event fires)."
 - **If all conditions are checked**: assign `phase/done`, then close the Issue only when `ISSUE_STATE` is `OPEN` (handles both auto-close disabled repos and XL parent Issues not auto-closed by PR's `closes #N`):
     ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" done
