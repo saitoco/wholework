@@ -80,3 +80,36 @@
 - Icebox の Project Status 取得は `gh-graphql.sh get-projects-with-fields` を使用（既存 stats の Size/Priority 取得と同パターン）
 - `compute-escalation-level.sh` は SKILL.md `--retention` セクションから直接呼び出す設計のため、bats テストが実装コードを直接検証する
 - setup-labels.sh のコメント内 label 件数（13 labels）は現行 12 から 1 増加
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `compute-escalation-level.sh` を独立スクリプトとして実装（SKILL.md から直接呼び出す設計のため bats テストで直接検証できる）
+- SKILL.md の `--retention` セクションは `### --retention Option` 見出し下にまとめ、`section_contains` による verify が機能するよう配置した
+- `stale-verify` ラベルは ALWAYS_LABELS グループに追加（fallback ではなく常時作成が必要な設計）
+- `docs/structure.md` / `docs/ja/structure.md` のファイルカウント修正は Spec 外だが、既存 discrepancy があったため本 PR で一括修正した
+
+### Deferred Items
+- `gh timelineItems` による phase/verify 遷移時刻の実際の取得ロジックは SKILL.md の指示として記述されているが、実行時に LLM が解釈して実行する形（shell スクリプトではなくスキルの手順として記述）
+- Icebox の Project Status 取得（`gh-graphql.sh get-projects-with-fields`）は既存メカニズムを流用する設計だが、GraphQL クエリの詳細は実行時に解釈される
+
+### Notes for Next Phase
+- bats テスト 15 件すべて PASS、skill 構文検証・禁止表現・翻訳同期もすべてクリア済み
+- Issue ボディのチェックボックス9件すべてチェック済み（/verify フェーズでの再確認不要）
+- Post-merge AC は `verify-type: opportunistic`（次回 `/audit stats --retention` 実行時に確認）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `docs/structure.md` / `docs/ja/structure.md` の更新は Spec の Changed Files に含まれていなかったが、新規スクリプト追加に伴いファイルカウント（50→51）とKey Filesエントリ追加が必要となったため実施。テスト数（60→62）の乖離（既存2件が未反映）も合わせて修正した。
+
+### Design Gaps/Ambiguities
+
+- `docs/structure.md` のテストファイルカウントが既に「60 files」と実際（61 files）でずれており、本 PR 前から discrepancy があった。Spec には触れられていなかったが、追加1件で 62 files となるため両方修正した。
+- translate-sync スクリプトは git のコミットタイムスタンプではなくファイルの内容差分を基準に同期状態を判定するため、未コミットの変更でも `IN_SYNC` と報告される（ja/ ファイルを同時に更新すれば問題なし）。
+
+### Rework
+
+- Issue ボディのチェックボックス更新で `sed` を使用したが、エスケープシーケンスの問題で一部の行が未置換になった。Python で再実行して全9件を確実にチェック済みとした。
