@@ -49,3 +49,55 @@ Extends `modules/visual-diff-adapter.md` to resolve two structural constraints i
 - `capture_mode` parameter name aligns with existing inputs (`viewports`, `states`); implementation may use a slightly different naming as long as the opt-out mechanism is documented. The AC2 verify pattern `capture_mode\|fullpage` (BRE alternation) tolerates either `capture_mode` as a keyword or `fullpage` as a literal value string.
 - AC3 verify `grep "extend\|pad\|max(width"` will match because: `extend` appears in `sharp.extend` API usage; `pad` in the description; `max(width` as notation for `Math.max(ref.info.width, impl.info.width)` mirroring the Issue body phrasing.
 - The `browser-use` CLI fullPage support may need a note if `--full-page` flag is unavailable; document the equivalent approach or note as unsupported in that case.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Step 5c canvas width computation: Spec said `width: 3 * W` using the normalized W. Implementation used `W` from re-reading the diff file metadata (`{ width: W, height: H } = await sharp(diff).metadata()`) rather than carrying W from Step 5b. This indirection is functionally identical but avoids passing W as a variable across bash heredoc boundaries.
+- browser-use CLI fullPage note: Added explicit fallback note ("if browser-use version does not support --full-page, fall back to omitting the flag") as the Spec's Notes section anticipated this uncertainty. Aligns with Spec Note about browser-use CLI fullPage support.
+
+### Design Gaps/Ambiguities
+
+- The Spec did not specify whether the `padTo` helper should be defined inline or extracted. Implemented as an inline async arrow function in the Node.js `-e` snippet for simplicity — no external helper file needed for a single-file module change.
+- `browser_take_screenshot` `fullPage` parameter form: The Spec listed `fullPage: true` but did not clarify whether the Playwright MCP tool accepts a named `fullPage` parameter or a positional boolean. Documented as `fullPage: true` (keyword argument form), which is the standard Playwright API shape.
+
+### Rework
+
+- None. Implementation proceeded directly from the Spec without rework.
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Step 5c composite referenced original unpadded `ref.png`/`impl.png` instead of padded variants. The Spec stated "3-panel composite は正規化後寸法で組む" but only covered the canvas dimensions (W×H); it did not explicitly specify that Before/After panel inputs must also be padded files. The AC4 verify command (`grep "正規化後\|normalized"`) passed on the canvas description alone, masking that panel inputs were unpadded.
+- Root pattern: Spec described the *canvas* normalization correctly but omitted a callout that the *input* images for ref/impl panels must also be the padded variants. Future specs for multi-step normalization pipelines should explicitly state which files are consumed at each downstream step.
+
+### Recurring Issues
+
+- Japanese string literal in test source code (`grep -qE "正規化後|normalized"` in `.bats`). CLAUDE.md specifies "Source code: English" but test strings mirrored the Japanese grep pattern from Issue body AC text. Avoid copying Japanese AC text directly into source-code assertions — translate to English equivalents.
+- No repeated issue patterns across aspects in this PR.
+
+### Acceptance Criteria Verification Difficulty
+
+- All 5 pre-merge ACs were grep/rubric-based and auto-verified cleanly (0 UNCERTAIN, 0 POST-MERGE in pre-merge section).
+- The rubric AC5 ("fullPage default + opt-out + pad normalization") was broad enough to PASS despite the Step 5c unpadded-input gap — the rubric checked policy documentation, not code-path completeness. Future rubric conditions should include "all downstream steps use padded outputs" when a normalization pipeline is introduced.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+
+- Fixed Step 5c composite: refPadded/implPadded now saved as `ref-padded.png`/`impl-padded.png` in Step 5b; Step 5c references these padded files so all three panels share W×H dimensions.
+- SHOULD issue (Step 5c unpadded reference) and CONSIDER issue (Japanese in test) both resolved in a single commit on the PR branch.
+- No policy changes detected; AC text and verify commands remain valid after fixes.
+
+### Deferred Items
+
+- post-merge manual AC: koganezawa-com#58 re-run with fullPage to confirm no dimension throw — caller's responsibility, not covered by adapter unit tests.
+- browser-use `--full-page` flag availability: actual verification requires a live browser-use installation.
+
+### Notes for Next Phase
+
+- CI re-run expected after review-feedback commit (849ea89) — all jobs should PASS.
+- No MUST issues; PR is ready to merge after CI confirms green.

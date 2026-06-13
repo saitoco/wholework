@@ -46,3 +46,19 @@ ADAPTER_FILE="$PROJECT_ROOT/modules/visual-diff-adapter.md"
 @test "visual-diff-adapter: Playwright tool detection documented" {
     grep -q "Playwright" "$ADAPTER_FILE"
 }
+
+@test "visual-diff-adapter: fullPage screenshot documented" {
+    grep -q "fullPage" "$ADAPTER_FILE"
+}
+
+@test "visual-diff-adapter: capture_mode opt-out documented" {
+    grep -qE "capture_mode|fullpage" "$ADAPTER_FILE"
+}
+
+@test "visual-diff-adapter: dimension normalization documented" {
+    grep -qE "extend|sharp\.extend" "$ADAPTER_FILE"
+}
+
+@test "visual-diff-adapter: normalized composite documented" {
+    grep -q "normalized" "$ADAPTER_FILE"
+}

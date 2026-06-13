@@ -17,6 +17,7 @@ The following information is passed from the caller:
 - **impl_url**: Implementation URL (e.g., local dev server or preview)
 - **viewports**: Comma-separated viewport widths in px (e.g., `390,1440`). All values required; no defaults.
 - **states**: Comma-separated interactive state labels (opaque labels; e.g., `default,menu-open`). All values required; no defaults. State label → action sequence mapping is the caller's responsibility.
+- **capture_mode**: (optional) `fullpage` (default) | `viewport`. When `fullpage`, the entire page height is captured by scrolling past the visible viewport. Set `capture_mode=viewport` to capture only the visible viewport (above-the-fold only).
 
 ## Processing Steps
 
@@ -82,19 +83,21 @@ For each combination of (viewport, state):
 
 1. Open page: `browser-use open "<url>"`
 2. Set viewport width (if supported): `browser-use eval "document.documentElement.style.width='${viewport}px'"`
-3. Capture: `browser-use screenshot ".tmp/visual-diff-${run_id}/${viewport}-${state}-ref.png"`
+3. Capture (default `capture_mode=fullpage`): `browser-use screenshot --full-page ".tmp/visual-diff-${run_id}/${viewport}-${state}-ref.png"`. When `capture_mode=viewport`, omit `--full-page` to capture only the visible area. Note: if the `browser-use` version does not support `--full-page`, fall back to omitting the flag and document the limitation in the result.
 4. Close: `browser-use close`
 
 **Playwright MCP screenshot steps:**
 
 1. Resize viewport: use `browser_resize` with `width=${viewport}`
 2. Navigate: `browser_navigate` to the URL
-3. Capture: `browser_take_screenshot` and save to the temp path
+3. Capture: `browser_take_screenshot` with `fullPage: true` (default `capture_mode=fullpage`). When `capture_mode=viewport`, omit `fullPage` (or set `fullPage: false`) to capture only the visible area.
 4. Close: `browser_close`
 
 #### 5b. Diff Highlight Generation
 
 For each (viewport, state) pair, run a Node.js script via Bash to generate the diff highlight image using `pixelmatch`:
+
+Dimension normalization (pad-based) runs before `pixelmatch` to handle ref/impl height differences that arise from fullPage captures. Both images are padded to a common `max(width) × max(height)` using `sharp.extend` (right and bottom padding, white background), so size mismatches no longer cause errors. The padded ref/impl images are saved to `ref-padded.png` / `impl-padded.png` for use in the Step 5c composite so all three panels share the same dimensions.
 
 ```bash
 node -e "
@@ -103,10 +106,21 @@ node -e "
   const pixelmatch = require('pixelmatch').default ?? require('pixelmatch');
   const ref = await sharp('.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-ref.png').ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const impl = await sharp('.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-impl.png').ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  const { width, height } = ref.info;
-  const diff = Buffer.alloc(width * height * 4);
-  pixelmatch(ref.data, impl.data, diff, width, height, { threshold: 0.1, includeAA: false });
-  await sharp(diff, { raw: { width, height, channels: 4 } }).png().toFile('.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-diff.png');
+  // Normalize dimensions: pad each image to max(width) x max(height) using sharp.extend
+  const W = Math.max(ref.info.width, impl.info.width);
+  const H = Math.max(ref.info.height, impl.info.height);
+  const padTo = async (buf, info) =>
+    sharp(buf, { raw: { width: info.width, height: info.height, channels: 4 } })
+      .extend({ top: 0, bottom: H - info.height, left: 0, right: W - info.width, background: { r: 255, g: 255, b: 255, alpha: 1 } })
+      .raw().toBuffer();
+  const refPadded = await padTo(ref.data, ref.info);
+  const implPadded = await padTo(impl.data, impl.info);
+  // Save padded images so Step 5c composite uses normalized dimensions for all three panels
+  await sharp(refPadded, { raw: { width: W, height: H, channels: 4 } }).png().toFile('.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-ref-padded.png');
+  await sharp(implPadded, { raw: { width: W, height: H, channels: 4 } }).png().toFile('.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-impl-padded.png');
+  const diff = Buffer.alloc(W * H * 4);
+  pixelmatch(refPadded, implPadded, diff, W, H, { threshold: 0.1, includeAA: false });
+  await sharp(diff, { raw: { width: W, height: H, channels: 4 } }).png().toFile('.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-diff.png');
 })();
 "
 ```
@@ -115,17 +129,20 @@ node -e "
 
 Composite the three images (Before / After / Diff highlight) side by side using `sharp`:
 
+The composite canvas uses normalized dimensions (W × H from Step 5b) so all three panels have equal width and height. W is the normalized panel width (max of ref/impl widths) and H is the normalized height (max of ref/impl heights). The Before/After panels use `ref-padded.png` / `impl-padded.png` (saved in Step 5b) so all three inputs share the same W × H dimensions.
+
 ```bash
 node -e "
 (async () => {
   const sharp = require('sharp');
-  const { height: imgHeight } = await sharp('.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-ref.png').metadata();
+  // Use normalized dimensions W x H computed in Step 5b (re-read from padded diff metadata)
+  const { width: W, height: H } = await sharp('.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-diff.png').metadata();
   await sharp({
-    create: { width: 3 * \${viewport}, height: imgHeight, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } }
+    create: { width: 3 * W, height: H, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } }
   }).composite([
-    { input: '.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-ref.png', left: 0, top: 0 },
-    { input: '.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-impl.png', left: \${viewport}, top: 0 },
-    { input: '.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-diff.png', left: 2 * \${viewport}, top: 0 }
+    { input: '.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-ref-padded.png', left: 0, top: 0 },
+    { input: '.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-impl-padded.png', left: W, top: 0 },
+    { input: '.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-diff.png', left: 2 * W, top: 0 }
   ]).toFile('.tmp/visual-diff-\${run_id}/\${viewport}-\${state}-3panel.png');
 })();
 "
@@ -196,4 +213,3 @@ See `modules/browser-adapter.md` Token budget section for per-image cost estimat
 - State label → action sequence mapping is the **caller's responsibility**. The adapter treats state labels as opaque strings. Callers must describe what navigation/interaction steps to perform to reach each state.
 - 3-panel default is the bundled implementation. Projects needing side-by-side only, odiff-based diff, or ROI cropping can override via `.wholework/adapters/visual-diff-adapter.md` using the existing 3-layer resolution.
 - **Follow-on constraint (worktree node_modules)**: When `/verify` runs in a fresh worktree, `node_modules` is absent and `sharp`/`pixelmatch` resolve as UNCERTAIN in Step 3. This is not `visual_diff`-specific — it affects all node-dependency command verifications and is tracked in wholework#443.
-- **Follow-on constraint (image height mismatch)**: `pixelmatch` requires ref and impl images to have identical dimensions. A height mismatch between Live and Impl screenshots will cause Step 5b to fail. This caveat could not be confirmed during the fix for the ESM/pngjs issues (Steps 5b/5c were not reached) and must be re-verified in a post-merge re-run. If reproduced, file a separate Issue.
