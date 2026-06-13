@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（49 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（50 ファイル）
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -32,7 +32,7 @@ wholework/
 │   └── workflows/
 │       ├── test.yml             # CI: bats テスト、スキル構文検証、禁止表現チェック、macOS シェル互換性テスト
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
-├── tests/               # スクリプトの Bats テストファイル（59 ファイル）
+├── tests/               # スクリプトの Bats テストファイル（60 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents
@@ -181,6 +181,7 @@ wholework/
 - `scripts/wait-ci-checks.sh` — claude 実行前に PR の全 CI チェック完了を待機
 - `scripts/worktree-merge-push.sh` — 短命な patch lock を取得し、worktree ブランチを merge + push（rebase retry 付き）
 - `scripts/detect-wrapper-anomaly.sh` — shell wrapper 出力の既知失敗パターンを検出し、Auto Retrospective の markdown 断片を生成
+- `scripts/test-failure-classify.sh` — テスト失敗出力を回復カテゴリに分類（snapshot/mock/fixture/logic/infra）。exit 0 = 修復可、exit 1 = 修復不可
 - `scripts/validate-recovery-plan.sh` — orchestration-recovery sub-agent が出力する recovery plan JSON を検証（schema チェック + forbidden ops ガード）
 - `scripts/apply-fallback.sh` — `modules/orchestration-fallbacks.md` の Tier 2 bash projection。wrapper ログから既知の symptom anchor を検出し recovery handler を dispatch する（初期 full-impl: dco-signoff-missing-autofix）
 - `scripts/spawn-recovery-subagent.sh` — `run-auto-sub.sh` が呼び出す Tier 3 recovery オーケストレーター。`claude -p` で `agents/orchestration-recovery` を spawn し、`validate-recovery-plan.sh` で plan を検証し、`WHOLEWORK_MAX_RECOVERY_SUBAGENTS` による mkdir-based スロットロックで並列性を制御する
