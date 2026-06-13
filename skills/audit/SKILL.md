@@ -176,6 +176,15 @@ Each Issue body:
 - [ ] {verification items}
 ```
 
+**Verify command validity check (before creating Issues):**
+
+Before calling `gh issue create`, validate each `<!-- verify: {verify command} -->` in the generated Issue body:
+
+1. **Known command type**: The command name must be a known type defined in `modules/verify-executor.md` (e.g., `file_exists`, `file_contains`, `section_contains`, `grep`, `command`, `github_check`, `rubric`, etc.). If the command type is unknown, replace it with a valid known type or remove the verify comment.
+2. **Non-empty arguments**: No argument may be an empty string (e.g., `file_not_contains "path" ""` — the empty second argument is invalid). If an empty argument is found, fix the command with a meaningful value or remove the verify comment.
+
+Fix any invalid verify commands before proceeding to Issue creation.
+
 **Label assignment:**
 
 After Issue generation, assign the following label:
