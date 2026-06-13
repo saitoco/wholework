@@ -22,6 +22,7 @@ KNOWN_TOOLS = {
     'AskUserQuestion', 'WebFetch', 'WebSearch',
     'NotebookEdit', 'EnterPlanMode', 'Task', 'Skill', 'ToolSearch', 'Agent',
     'EnterWorktree', 'ExitWorktree',
+    'Workflow',
 }
 
 # Tool names that must not appear in allowed-tools
@@ -32,8 +33,10 @@ FORBIDDEN_ALLOWED_TOOLS = {'AskUserQuestion'}
 # Tool names excluded from body tool usage checks
 # Task appears frequently as an Issue type name (Bug/Feature/Task), and Agent appears as
 # a subagent type name or product name (e.g. "GitHub Copilot Agent") in SKILL.md bodies,
-# so exclude them from tool usage checks to avoid false positives
-BODY_TOOL_CHECK_SKIP = {'Task', 'Agent', 'Skill'}
+# so exclude them from tool usage checks to avoid false positives.
+# Workflow is a common English word appearing in SKILL.md bodies (e.g. "Workflow-impacting",
+# "Full Workflow Review") unrelated to the Workflow tool, so also excluded.
+BODY_TOOL_CHECK_SKIP = {'Task', 'Agent', 'Skill', 'Workflow'}
 
 # Valid values for the context field
 VALID_CONTEXTS = {'fork'}

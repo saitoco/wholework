@@ -63,6 +63,7 @@ verify-max-iterations: 3
 # オプション capability
 capabilities:
   browser: true             # Playwright ベースの verify command を有効化
+  workflow: true            # /review --full で Workflow ベースのマルチエージェント実行を有効化
 ```
 
 すべてのキーはオプションです。`.wholework.yml` が存在しない場合、すべての設定はデフォルトで動作します。
@@ -85,6 +86,7 @@ capabilities:
 | `spec-path` | string | `docs/spec` | spec の保存先 |
 | `steering-docs-path` | string | `docs` | steering document の配置先 |
 | `capabilities.browser` | boolean | `false` | Playwright ベースの verify command を有効化する |
+| `capabilities.workflow` | boolean | `false` | `/review --full` で Workflow ベースのマルチエージェント実行を有効化する（opt-in; 未設定時は static Task fan-out にフォールバック） |
 | `capabilities.mcp` | list | `[]` | スキルから利用できる MCP ツール名 |
 | `capabilities.{name}` | boolean | `false` | 動的 capability マッピング（例: `capabilities.invoice-api: true`） |
 | `watchdog-timeout-seconds` | integer | `2700` | watchdog が silent な `claude -p` プロセスを kill するまでのタイムアウト秒数。Size L+ タスク（特に Opus / xhigh effort）では claude の長い思考時間により 2700 秒を超える silent 期間が発生しうる。メタ開発や Size L+ 作業では `3600` を推奨。0 以下の値はデフォルトにフォールバック。 |

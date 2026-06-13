@@ -2,7 +2,7 @@
 name: review
 description: PR review (`/review 88`). Automatically runs acceptance criteria verification, multi-perspective code review, issue resolution, and summary posting. Use after `/code` creates a PR and before `/merge` (`--light`/`--full` to adjust depth).
 context: fork
-allowed-tools: Bash(gh pr view:*, gh pr diff:*, gh pr comment:*, gh issue view:*, gh issue edit:*, gh issue create:*, gh issue list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-external-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, wc:*, diff:*, git log:*, git diff:*, git show:*, git add:*, git commit:*, git push:*, git fetch:*, git checkout:*, git worktree:*, git branch:*, python3:*), Read, Write, Edit, Glob, Grep, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree
+allowed-tools: Bash(gh pr view:*, gh pr diff:*, gh pr comment:*, gh issue view:*, gh issue edit:*, gh issue create:*, gh issue list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-external-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, wc:*, diff:*, git log:*, git diff:*, git show:*, git add:*, git commit:*, git push:*, git fetch:*, git checkout:*, git worktree:*, git branch:*, python3:*), Read, Write, Edit, Glob, Grep, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, Workflow
 ---
 
 # PR Review
@@ -187,6 +187,7 @@ HAS_CODERABBIT_REVIEW: true if coderabbit-review: true is set (default: false)
 SKIP_REVIEW_BUG: true if review-bug: false is set (default: false)
 SPEC_PATH: path from spec-path (default: "docs/spec")
 STEERING_DOCS_PATH: path from steering-docs-path (default: "docs")
+HAS_WORKFLOW_CAPABILITY: true if capabilities.workflow: true is set (default: false)
 ```
 
 **Phase Handoff read** (after SPEC_PATH is determined):
@@ -291,6 +292,8 @@ gh pr view "$NUMBER" --json statusCheckRollup
 ---
 
 ## Step 10: Multi-perspective Code Review (parallel execution)
+
+**Workflow path (opt-in)**: When `HAS_WORKFLOW_CAPABILITY=true` and `REVIEW_DEPTH=full`, follow the Processing Steps in `skills/review/workflow-guidance.md` (loaded in Step 3) to run a finder → adversarial verify pipeline using the Workflow tool. When `HAS_WORKFLOW_CAPABILITY=false` or unset (the default), run the static Task fan-out below (Steps 10.0–10.3) unchanged.
 
 **In light mode**: if `REVIEW_DEPTH=light` and Issue number was extracted (Step 7 ran), run 1-agent lightweight integrated review instead of 2-agent parallel (see 10.0). If Issue number was not extracted and Step 7 was skipped, run full mode (10.1–10.3) regardless of `REVIEW_DEPTH`.
 

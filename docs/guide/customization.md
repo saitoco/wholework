@@ -69,6 +69,7 @@ verify-max-iterations: 3
 # Optional capabilities
 capabilities:
   browser: true             # Enable Playwright-based verify commands
+  workflow: true            # Enable Workflow-based multi-agent execution in /review --full
 ```
 
 All keys are optional. If `.wholework.yml` does not exist, all settings use their defaults.
@@ -91,6 +92,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `spec-path` | string | `docs/spec` | Where specs are stored |
 | `steering-docs-path` | string | `docs` | Where steering documents live |
 | `capabilities.browser` | boolean | `false` | Enable Playwright-based verify commands |
+| `capabilities.workflow` | boolean | `false` | Enable Workflow-based multi-agent execution in `/review --full` (opt-in; falls back to static Task fan-out when unset) |
 | `capabilities.mcp` | list | `[]` | MCP tool names available to skills |
 | `capabilities.{name}` | boolean | `false` | Dynamic capability mapping (e.g., `capabilities.invoice-api: true`) |
 | `watchdog-timeout-seconds` | integer | `2700` | Watchdog timeout in seconds before killing a silent `claude -p` process. Claude's extended thinking time on Size L+ tasks (especially Opus with high effort) can produce silent periods exceeding 2700 seconds; set to `3600` for meta-development or Size L+ work. Values ≤0 fall back to the default. |

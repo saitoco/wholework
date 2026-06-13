@@ -34,18 +34,18 @@ English | [日本語](ja/tech.md)
 - **Plugin directory distribution**: Distributed as a local Claude Code plugin using `--plugin-dir`. Claude Code sets `${CLAUDE_PLUGIN_ROOT}` to the plugin directory at runtime, which skills and modules use to reference scripts and modules. Public distribution is via a Claude Code marketplace (`.claude-plugin/marketplace.json`) so users can install with `/plugin marketplace add saitoco/wholework` + `/plugin install wholework@saitoco-wholework`.
 - **fork context vs main context**: Context isolation level is set per skill. Fork justification: "independence/safety" (since 1M context GA, cost/capacity motivation has largely diminished). Fork decision per skill (exhaustive):
 
-  | Skill | Fork needed | Reason |
-  |-------|-------------|--------|
-  | triage | No | No need to avoid prior-phase bias; independence not required |
-  | issue | Conditional | Shared when invoked directly; fork when via run-issue.sh (sub-agents run in isolated context for L/XL parallel investigation) |
-  | spec | Conditional | Shared when invoked directly; fork when via run-spec.sh |
-  | code | Yes | Reads Spec and executes independently; not influenced by pre-implementation context |
-  | review | Yes | Reviews code from a clean perspective without inheriting implementation phase bias |
-  | merge | Yes | Decision completes with Spec + PR metadata; does not carry over review context |
-  | verify | No | Mostly mechanical (verify command execution + checkbox update); manual AC confirmation requires AskUserQuestion which cannot run in fork context; FAIL → /code (fork) re-runs so bias propagation risk is low |
-  | auto | No | Parent orchestrator runs in the user's Claude Code session; each child phase runs as an independent `claude -p` process via `run-*.sh` |
-  | audit | No | Drift, fragility, and recovery pattern detection runs in user's session; no prior-phase bias to avoid |
-  | doc | No | Document management runs in user's session; no prior-phase bias to avoid |
+  | Skill | Fork needed | Execution Platform | Reason |
+  |-------|-------------|-------------------|--------|
+  | triage | No | In-session | No need to avoid prior-phase bias; independence not required |
+  | issue | Conditional | headless (run-issue.sh) / in-session (direct) | Shared when invoked directly; fork when via run-issue.sh (sub-agents run in isolated context for L/XL parallel investigation) |
+  | spec | Conditional | headless (run-spec.sh) / in-session (direct) | Shared when invoked directly; fork when via run-spec.sh |
+  | code | Yes | headless (run-code.sh) / in-session (direct) | Reads Spec and executes independently; not influenced by pre-implementation context |
+  | review | Yes | In-session (Workflow opt-in via capabilities.workflow: true) / headless fallback | Reviews code from a clean perspective without inheriting implementation phase bias |
+  | merge | Yes | headless (run-merge.sh) | Decision completes with Spec + PR metadata; does not carry over review context |
+  | verify | No | In-session | Mostly mechanical (verify command execution + checkbox update); manual AC confirmation requires AskUserQuestion which cannot run in fork context; FAIL → /code (fork) re-runs so bias propagation risk is low |
+  | auto | No | In-session | Parent orchestrator runs in the user's Claude Code session; each child phase runs as an independent `claude -p` process via `run-*.sh` |
+  | audit | No | In-session | Drift, fragility, and recovery pattern detection runs in user's session; no prior-phase bias to avoid |
+  | doc | No | In-session | Document management runs in user's session; no prior-phase bias to avoid |
 
 - **`/auto` skill**: Orchestrator that chains spec→code→review→merge→verify sequentially via `run-*.sh`. Each phase runs as an independent `claude -p` process with configurable permission mode (`--permission-mode auto` by default; `--dangerously-skip-permissions` when `permission-mode: bypass` is set in `.wholework.yml`), guaranteeing fresh context isolation. `verify-max-iterations` (default: 3, max: 20, configurable via `.wholework.yml`) caps the verify-reopen loop; when the counter reaches the limit, the Issue stays in `phase/verify` and awaits human judgment. The `/auto` skill detects `MAX_ITERATIONS_REACHED` in verify output and stops the chain instead of looping indefinitely. For flag behavior, batch processing, resume, and release branch workflow, see [docs/workflow.md § Orchestration](workflow.md#orchestration).
   - **Two-tier orchestration**: `/auto` itself (parent orchestrator) runs in the user's Claude Code session and makes adaptive decisions using LLM reasoning (label state evaluation, Size-based routing, sub-issue dependency analysis). For XL Issues, `run-auto-sub.sh` (child orchestrator) runs each sub-issue's full phase sequence. `run-auto-sub.sh` is bash-orchestrated with a tiered adaptive recovery: (1) `reconcile-phase-state.sh` completion check, (2) `apply-fallback.sh` known-pattern recovery, (3) `spawn-recovery-subagent.sh` (`claude -p` to `agents/orchestration-recovery`) on unknown anomaly. Normal path stays bash to minimize cost and maximize parallel stability; `claude -p` is invoked only for diagnosis when tiers 1–2 fail, with a `WHOLEWORK_MAX_RECOVERY_SUBAGENTS` cap to bound parallel cost. The cap defaults to 1 (serial recovery) and can be raised by setting the env var explicitly.
