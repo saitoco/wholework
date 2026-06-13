@@ -48,6 +48,25 @@
 
 - None
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- retro/verify 起票時点で AC が file_contains + grep の構成で揃い、triage 補正不要
+
+#### spec
+- skill-dev-constraints.md への追記設計が単純で曖昧点 0
+
+#### code
+- XS patch で単一ファイルへの追記、手戻りなし
+
+#### verify
+- pre-merge 2/2 PASS。post-merge opportunistic は L 以上の spec 実行が観測機会で SKIP — skill-dev-constraints.md は spec phase のドメインファイルなので、L spec が実行されれば自然に発火する
+
+### Improvement Proposals
+- N/A
+
 ## Phase Handoff
 <!-- phase: code -->
 
