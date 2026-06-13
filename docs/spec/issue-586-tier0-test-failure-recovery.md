@@ -214,20 +214,48 @@ Tier 0 コンテキストでの「escalate to Tier 3」は、既存 Step 9 FAIL 
 - AC7 `section_contains "### Step 9"` は見出しの部分一致（`Step 9` が `Step 9: Run Tests` に一致）で機能することを verify-executor.md で確認。
 - 新スクリプトの権限は `.claude/settings.json.template` の `scripts/*.sh` ワイルドカードでカバーされ、settings.json 変更不要であることを確認。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- None. Implementation followed the Spec exactly: `test-failure-classify.sh` uses `--log <file>` interface + stdout category + exit 0/1 pattern; Tier 0 block inserted verbatim from Implementation Step 3; allowed-tools updated; structure.md updated with 50/60 file counts and new entry.
+
+### Design Gaps/Ambiguities
+
+- The `fixture` detection pattern (`expected .+, got .+`) is confirmed to be a heuristic with acknowledged false-positive risk (Spec Uncertainty section). The safety guard (tests/ only, max 1 retry, fallthrough on failure) bounds the impact regardless of misclassification.
+- `docs/ja/structure.md` sync was required (not explicitly called out in Spec Changed Files, but covered by the `docs/translation-workflow.md` rule). Updated counts and added Japanese entry for `test-failure-classify.sh` in the same commit as `docs/structure.md`.
+
+### Rework
+
+- None. All verification commands passed on first implementation.
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Nothing to note. Implementation followed the Spec exactly — no structural gaps detected between Spec and PR diff. The Code Retrospective (added in code phase) already documents zero deviations. The one SHOULD-level review finding (`"No such file or directory"` infra over-classification) is acknowledged in the Spec's Uncertainty section as an accepted heuristic trade-off, not a divergence.
+
+### Recurring Issues
+
+- Nothing to note. Only 1 confirmed finding across 2 independent review-bug agents (1 SHOULD, no MUST). No recurring pattern of bugs or design issues. 2 of 3 raw findings were rejected as false positives: one for being acknowledged in the Spec Uncertainty section, one for applying shell-script reasoning to a natural-language SKILL.md instruction.
+
+### Acceptance Criteria Verification Difficulty
+
+- Nothing to note. All 10 pre-merge ACs reached PASS with no UNCERTAINs. The `command "bash -n ..."` AC was resolved cleanly via CI reference fallback (Run bats tests passed). The `rubric` AC ran the grader and confirmed all 5 Tier 0 requirements. The `section_contains "### Step 9"` heading partial-match worked as expected (documented in the Spec verification notes). No verify command updates needed.
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Tier 0 は `skills/code/SKILL.md` Step 9 内に追加。test FAIL 時の最初のアクションで、修復可（snapshot/mock/fixture）のみ tests/ 限定・最大 1 回の自動修復を試み、修復不可（logic/infra）と失敗時は既存 Step 9 FAIL ハンドリングへフォールスルー。
-- 分類は新スクリプト `scripts/test-failure-classify.sh`（`--log <file>` → stdout カテゴリ → exit 0/1）に委譲。
-- rubric の 5 要件を満たす Tier 0 本文テンプレートを Implementation Step 3 に直接記載済み（実装知識の backfill）。
+- SHOULD finding on `"No such file or directory"` infra over-classification skipped — explicitly acknowledged in Spec Uncertainty section; safety guard bounds impact to missed auto-repair only.
+- All 10 pre-merge ACs: PASS. All CI jobs: SUCCESS. review-spec: no issues. COMMENT event (no MUST → not REQUEST_CHANGES).
+- validate-skill-syntax.py: 0 errors, 0 warnings across all 8 SKILL.md files.
 
 ### Deferred Items
-- フレームワーク別の実失敗出力に対する分類精度検証は bats fixture で実施（Uncertainty 参照）。
-- post-merge observation（fix-cycle で Tier 0 自動修復を観察）は次回 fix-cycle まで未確定。
+- Post-merge observation (fix-cycle での Tier 0 自動修復観察) は次回 fix-cycle まで未確定。
+- `"No such file or directory"` infra over-classification (SHOULD) — accepted trade-off per Spec Uncertainty; may be refined in a follow-up Issue if real-world false positives emerge.
 
 ### Notes for Next Phase
-- `skills/code/SKILL.md` allowed-tools への `${CLAUDE_PLUGIN_ROOT}/scripts/test-failure-classify.sh:*` 追加（Step 4）を必ず行うこと。漏れると「Validate skill syntax」CI が失敗する。
-- SKILL.md 本文には半角の感嘆符を入れない。Tier 0 ブロックは番号付きリスト（散文）で、トリプルバックティックのリテラル提示は不要。
-- structure.md は scripts `(50 files)` / tests `(60 files)` の両方を更新し、Scripts > Process management に新スクリプト項目を追加すること（AC9/AC10）。
-- bats テストは `test-failure-classify.sh` を直接呼ぶ（WHOLEWORK_SCRIPT_DIR モック不要、自己参照除外も不要）。
+- No MUST issues. Proceed with `/merge 612`.
+- PR is ready to merge: all ACs PASS, all CI PASS, no blocking review findings.
+- Post-merge: run `/verify 586` to confirm AC8 (github_check CI) and observe Post-merge AC (Tier 0 auto-repair observation on next fix-cycle).
