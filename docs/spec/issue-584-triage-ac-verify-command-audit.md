@@ -143,17 +143,18 @@ Domain file（`skills/triage/skill-dev-verify-audit.md`）は `validate-skill-sy
 - 全 9 AC に明示的 verify command があり、UNCERTAIN なし。rubric verify command（AC 7）は grader 実行なしで PASS/FAIL を判定可能であった（SKILL.md + Domain file が共同で非破壊的監査を仕様化していることが diff から自明）。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 全 AC PASS（9/9）、CI 全 SUCCESS、MUST 課題ゼロ。CONSIDER 課題 3 件を修正済み
-- Pattern 4 の "Detection approach:" ブロック追加と "Posting the Comment" `$NUMBER` 説明追加（追記のみ、既存 verify command との矛盾なし）
+- PR #608 をスカッシュマージ完了（`mergeable=MERGEABLE`、コンフリクトなし）
+- BASE_BRANCH=main のため `closes #584` により Issue が自動クローズ
+- `--non-interactive` モードで実行、`AskUserQuestion` 呼び出しなし
 
 ### Deferred Items
-- Post-merge 観察: 次回 `/triage --backlog` で監査コメントが新規 Issue に投稿されることを opportunistic で確認
-- Issue #584 の Post-merge AC は `/merge` 完了後に観察
+- Post-merge 観察: 次回 `/triage --backlog` 実行で verify command 監査コメントが新規 Issue に投稿されることを確認（opportunistic）
+- Issue #584 の Post-merge AC は opportunistic verify で観察
 
 ### Notes for Next Phase
-- MUST 課題なし、レビュー対応済み。`/merge 608` でマージ可能
-- AC 9（bats テスト green）は CI で確認済み（PASS）
-- Issue #584 の全 Pre-merge AC は `[x]` 完了
+- 全 Pre-merge AC（9/9）は review フェーズで PASS 確認済み
+- verify は Post-merge AC（`/triage --backlog` での監査コメント確認）のみが残タスク
+- CI（bats テスト）は merge 前に green 確認済み
