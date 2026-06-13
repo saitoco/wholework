@@ -90,17 +90,18 @@
 - AC2 の verify command パターン（`matches_expected.*false.*phase.*review`）が実装コード（`'"phase":"review"'`）と正確に一致しない。verify command 記述と実装パターンを同期させるルールを Spec テンプレートに追加すると品質向上する。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 全 AC（AC1-AC8）が PASS。MUST/SHOULD issue なし → `REQUEST_CHANGES` イベントではなく `COMMENT` イベントで投稿。
-- rubric AC7 は elif チェーンによる排他性と 4 段階 recovery 手順の存在を確認して PASS 判定。潜在的なデッドコード（`reconciler-header-mismatch` が常に先行して `review-completion-false-negative` が本番で発火しない可能性）は CONSIDER として記録。
-- review-light モード実行（REVIEW_DEPTH=light、Issue size M）。CONSIDER 5件を line comments として投稿。
+- PR #609 を squash merge（`--squash --delete-branch`）で main にマージ。`closes #547` が本文に含まれるため Issue は自動クローズ。
+- BASE_BRANCH=main のため `closes #547` による auto-close が有効。手動クローズ不要。
+- コンフリクトなし（`mergeable=true, reason=clean`）のため conflict resolution ステップをスキップ。
 
 ### Deferred Items
-- `review-completion-false-negative` パターンが本番環境でデッドコードになりうる問題（`reconcile-phase-state.sh` の診断文が常に "Review Response Summary not found" を含むため `reconciler-header-mismatch` が常に先に発火する）は CONSIDER として記録のみ。修正は out of scope。
+- `review-completion-false-negative` パターンが本番デッドコードになりうる問題（review フェーズ CONSIDER 記録）は post-merge 実運用監視で確認予定。
 - AC2 verify command と実装 grep パターンの不一致修正は /verify フェーズで対応可能。
 
 ### Notes for Next Phase
-- 全 AC PASS、CI 全 SUCCESS → `/merge 609` で merge 進行可能。
+- squash merge 完了・ブランチ削除済み。verify フェーズは Spec の Pre-merge verify command を実行して動作確認すること。
+- Post-merge AC「次回 `/auto` で review-completion-false-negative 発生時に Tier 2 auto-recovery が動作することを確認」は実運用ベースの確認のため verify スキップ可。
 - CONSIDER 5件はすべてスキップ推奨（機能影響なし）。
