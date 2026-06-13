@@ -46,6 +46,11 @@ From the loaded content, search for each YAML key in the marker definition table
 | `capabilities.workflow` | `HAS_WORKFLOW_CAPABILITY` | `true` | `false` |
 | `capabilities.mcp` | `MCP_TOOLS` | Comma-separated tool name list | `""` |
 | `watchdog-timeout-seconds` | `WATCHDOG_TIMEOUT_SECONDS` | Integer string (extract as-is; use `1800` if ≤0 or non-numeric) | `1800` (see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT`) |
+| `watchdog-timeout-spec-seconds` | `WATCHDOG_TIMEOUT_SPEC_SECONDS` | Integer string (extract as-is; use phase-specific default if ≤0 or non-numeric) | `""` (unset; falls through to global key or phase default `1800`) |
+| `watchdog-timeout-code-seconds` | `WATCHDOG_TIMEOUT_CODE_SECONDS` | Integer string (extract as-is; use phase-specific default if ≤0 or non-numeric) | `""` (unset; falls through to global key or phase default `1800`) |
+| `watchdog-timeout-review-seconds` | `WATCHDOG_TIMEOUT_REVIEW_SECONDS` | Integer string (extract as-is; use phase-specific default if ≤0 or non-numeric) | `""` (unset; falls through to global key or phase default `2000`) |
+| `watchdog-timeout-merge-seconds` | `WATCHDOG_TIMEOUT_MERGE_SECONDS` | Integer string (extract as-is; use phase-specific default if ≤0 or non-numeric) | `""` (unset; falls through to global key or phase default `600`) |
+| `watchdog-timeout-issue-seconds` | `WATCHDOG_TIMEOUT_ISSUE_SECONDS` | Integer string (extract as-is; use phase-specific default if ≤0 or non-numeric) | `""` (unset; falls through to global key or phase default `600`) |
 | `permission-mode` | `PERMISSION_MODE` | String value (extract value as-is) | `"auto"` |
 | `verify-max-iterations` | `VERIFY_MAX_ITERATIONS` | Integer string (extract as-is; use `3` if ≤0, non-numeric, or >20) | `3` |
 | `patch-lock-timeout` | `PATCH_LOCK_TIMEOUT_SECONDS` | Integer string (extract as-is; use `300` if ≤0 or non-numeric) | `300` (used by `scripts/worktree-merge-push.sh`) |
@@ -96,6 +101,11 @@ HAS_VISUAL_DIFF_CAPABILITY: true if capabilities.visual-diff: true is set (defau
 HAS_WORKFLOW_CAPABILITY: true if capabilities.workflow: true is set (default: false)
 MCP_TOOLS: tool name list from capabilities.mcp (comma-separated, default: "")
 WATCHDOG_TIMEOUT_SECONDS: integer from watchdog-timeout-seconds (default: "1800" (see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT`); falls back to "1800" if ≤0 or non-numeric)
+WATCHDOG_TIMEOUT_SPEC_SECONDS: integer from watchdog-timeout-spec-seconds (default: "" — unset; resolution handled by load_watchdog_timeout())
+WATCHDOG_TIMEOUT_CODE_SECONDS: integer from watchdog-timeout-code-seconds (default: "" — unset; resolution handled by load_watchdog_timeout())
+WATCHDOG_TIMEOUT_REVIEW_SECONDS: integer from watchdog-timeout-review-seconds (default: "" — unset; resolution handled by load_watchdog_timeout())
+WATCHDOG_TIMEOUT_MERGE_SECONDS: integer from watchdog-timeout-merge-seconds (default: "" — unset; resolution handled by load_watchdog_timeout())
+WATCHDOG_TIMEOUT_ISSUE_SECONDS: integer from watchdog-timeout-issue-seconds (default: "" — unset; resolution handled by load_watchdog_timeout())
 PERMISSION_MODE: string extracted from permission-mode (default: "auto")
 VERIFY_MAX_ITERATIONS: integer from verify-max-iterations (default: "3"; falls back to "3" if ≤0, non-numeric, or >20)
 PATCH_LOCK_TIMEOUT_SECONDS: integer from patch-lock-timeout (default: "300"; falls back to "300" if ≤0 or non-numeric)

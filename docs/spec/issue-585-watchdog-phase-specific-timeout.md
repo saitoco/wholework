@@ -142,7 +142,7 @@ Priority order (highest to lowest):
 - <!-- verify: grep "watchdog-timeout-spec-seconds" "docs/ja/guide/customization.md" --> `docs/ja/guide/customization.md` の翻訳が同期されている
 - <!-- verify: command "bash -n scripts/run-spec.sh && bash -n scripts/run-code.sh && bash -n scripts/run-review.sh && bash -n scripts/run-merge.sh && bash -n scripts/run-issue.sh" --> 5 本の run-*.sh が構文エラーなし
 - <!-- verify: command "bats tests/watchdog-defaults.bats" --> bats テストが green（フェーズ別 timeout 解決テストの新規追加含む）
-- <!-- verify: command "scripts/check-translation-sync.sh --fail-if-outdated" --> docs/guide/customization.md と docs/ja/guide/customization.md の翻訳同期が保たれている
+- <!-- verify: command "scripts/check-translation-sync.sh | grep 'customization.md' | grep -q IN_SYNC" --> docs/guide/customization.md と docs/ja/guide/customization.md の翻訳同期が保たれている
 
 ### Post-merge
 
@@ -155,3 +155,50 @@ Priority order (highest to lowest):
 - `eval` による間接変数参照は `${!var_name}` に代替可能（どちらも bash 3.2+ 対応）。どちらも許容。
 - `get-config-value.sh` は空文字列 default (`""`) をサポート。phase 別キー不在時の空文字判定に利用。
 - Issue body の Auto-Resolved Ambiguity Points で `docs/guide/customization.md` 更新と `--fail-if-outdated` の追加は既に自動解決済み。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `check-translation-sync.sh --fail-if-outdated` の verify command を `check-translation-sync.sh | grep 'customization.md' | grep -q IN_SYNC` に変更した。理由: `--fail-if-outdated` は全ファイルをチェックするため、本 Issue スコープ外の既存翻訳 lag（`docs/environment-adaptation.md`, `docs/product.md`, `docs/tech.md`）で常時 FAIL となる miscalibrated hint だったため。
+
+### Design Gaps/Ambiguities
+
+- `check-translation-sync.sh` が特定ファイルのフィルタリングをサポートしていないため、Issue 作成時の Auto-Resolved ambiguity「`--fail-if-outdated` を追加」では不十分だった。新キーが `customization.md` に IN_SYNC であることを確認するには grep ベースの命令に変更が必要だった。
+
+### Rework
+
+- なし。実装はSpec の手順通りに進行し、rework は発生しなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST 課題ゼロのため Step 12 の実装変更なし。全 AC を safe モードで検証し、14 件 PASS / 2 件 UNCERTAIN（CI fallback 不可）/ 2 件 POST-MERGE
+- `command` 型 AC（bash -n / 翻訳同期 grep）は対応 CI ジョブがなく UNCERTAIN となったが、実装品質には問題なし
+- Step 13 のポリシー変更なし（review phase で実装変更がなかったため）
+
+### Deferred Items
+- post-merge 観察条件（merge フェーズ 60s〜10 分完走、真のストール kill）は `/auto` 実行後に確認
+- AC14/AC16 の UNCERTAIN 解消（CI ジョブ追加または verify command 変更）は将来の改善 Issue で対処
+
+### Notes for Next Phase
+- 全 CI ジョブ（DCO/bats/validate-syntax/forbidden-expressions/macos-shell）が SUCCESS
+- MUST 課題なし。`/merge 610` で merge 可能
+- merge 後、post-merge AC（観察型 2 件）を `/auto` 実行時に観察する
+
+## review retrospective
+<!-- phase: review -->
+
+### Spec vs. Implementation Divergence Patterns
+
+- なし。実装は Spec 設計（4 段階優先解決、5 フェーズ別デフォルト、detect-config-markers 追加）に完全一致。code phase の Spec 乖離（verify command 変更）はすでに Code Retrospective で記録・正当化済みであり、review phase での新規乖離はない。
+
+### Recurring Issues
+
+- `command` 型 AC（AC14: bash -n 構文チェック、AC16: 翻訳同期 grep）が /review safe モードで UNCERTAIN になった。対応する CI ジョブが存在しないため CI reference fallback が機能しなかった。今後 `command` 型 AC を追加する際は対応する CI ジョブを同時に追加するか、`github_check` 型で代替を検討する。
+
+### Acceptance Criteria Verification Difficulty
+
+- AC14（`bash -n run-*.sh`）: CI に bash -n 専用ジョブが存在せず UNCERTAIN。改善案: `.github/workflows/test.yml` に `bash -n scripts/run-*.sh` を実行するジョブを追加する、または AC を `file_exists` + AI judgment に切り替える。
+- AC16（翻訳同期 grep）: macOS shell compatibility ジョブは `check-translation-sync.sh` を実行するが grep フィルタなし。`github_check` 型に変更して CI ジョブ成功を検証する形式も有効。
