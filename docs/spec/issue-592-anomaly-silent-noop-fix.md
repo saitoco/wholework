@@ -65,6 +65,30 @@
 ### Rework
 - None
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 起票時に 3 修正（gate / phase 名拡張 / 検出窓拡大）を 1 Issue に統合する判断が triage で適切に S サイズへ確定。AC は triage で 6 件（grep × 5 + bats × 1）に拡張され、false-positive 再現テストの追加要求も追加された（良いトリアージ補正）
+
+#### spec
+- `elif` 構造のネスト位置（既存 `EXIT_CODE == 0` ブロック内）への配置を Design Gaps に明示記録。実装が正確に追随
+
+#### code
+- 手戻りなし。`scripts/detect-wrapper-anomaly.sh` の修正と `tests/detect-wrapper-anomaly.bats` への 3 ケース追加（ok 24/25/26）が単一コミットで完了
+
+#### verify
+- pre-merge 6/6 PASS。**特に重要**: 新規追加した bats `ok 25 silent no-op: suppressed when reconcile confirms matches_expected true and commits_found true` が green — これは本セッションで起きた #580/#576 の false positive を構造的に再現するテスト。回帰テストとして恒久的に守られる
+- post-merge opportunistic は次回 `/auto --batch` 観測機会で SKIP
+
+### 効果検証
+
+このセッションの retrospective 起票 (#592) → 1 サイクル内で実装・テスト化・main 反映まで完結（約 25 分）。本 Issue 自体が #580/#576 の root cause 修正であり、**自己診断 → 自己修復ループの典型例**として `docs/reports/auto-session-performance-2026-06-13.md` の評価セクションが示した「retro → Issue → /auto の自己修復」サイクルを実証する追加事例。
+
+### Improvement Proposals
+- N/A
+
 ## Phase Handoff
 <!-- phase: code -->
 
