@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (50 files)
+├── scripts/             # Utility scripts used by skills and agents (51 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -39,7 +39,7 @@ wholework/
 │   └── workflows/
 │       ├── test.yml             # CI: bats tests, skill syntax validation, forbidden expressions check, and macOS shell compatibility test
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
-├── tests/               # Bats test files for scripts (60 files)
+├── tests/               # Bats test files for scripts (62 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -211,6 +211,7 @@ Key modules:
 - `scripts/check-translation-sync.sh` — check translation sync status of docs/ja/* against docs/*
 - `scripts/check-forbidden-expressions.sh` — detect deprecated terms from docs/product.md § Terms
 - `scripts/setup-labels.sh` — create GitHub labels for workflow
+- `scripts/compute-escalation-level.sh` — compute escalation level for phase/verify or Icebox dwell time; used by `/audit stats --retention` for retire-proposal comment routing
 - `scripts/test-skills.sh` — run all skill tests
 - `scripts/wait-external-review.sh` — wait for external review completion
 
