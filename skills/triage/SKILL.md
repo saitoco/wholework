@@ -156,7 +156,13 @@ Estimate the scope of change from the issue body's acceptance conditions and tec
 
 **Verify-after-write**: After Steps 1→4 succeed, read `${CLAUDE_PLUGIN_ROOT}/modules/project-field-update.md` and follow the "Verify-after-write" procedure from the "Updating Priority / Size Fields" section.
 
-### Step 7: Value Assignment (Projects field)
+### Step 7: AC Verify Command Integrity Audit
+
+Read `${CLAUDE_PLUGIN_ROOT}/skills/triage/skill-dev-verify-audit.md` for the verify command audit patterns and follow the "Processing Steps" section.
+
+Skip this step if the issue body contains no `<!-- verify: ... -->` patterns.
+
+### Step 8: Value Assignment (Projects field)
 
 Since the Value field is a SingleSelect type, update it using the same Steps 1→2→3→4 from `project-field-update.md`'s "Priority / Size Field Update" section (always calculate and update regardless of existing Value):
 
@@ -201,7 +207,7 @@ Reuse the full open issues data already retrieved in Step 2 to calculate Impact 
 
 **Skip when Projects is not configured**: Same as Step 5/6.
 
-### Step 8: Lightweight Analysis
+### Step 9: Lightweight Analysis
 
 Using the full open issues data already retrieved in Step 2, run the following two lightweight analyses (minimal additional API calls).
 
@@ -225,13 +231,13 @@ Extract `Blocked by #N` patterns from the issue body and check the status of blo
 2. If found, use already-retrieved data from Step 2 if the blocked-by issue is included. Otherwise, check status with `gh issue view N --json state,title`
 3. If the blocked-by issue is CLOSED: report as "resolved dependency (#N is CLOSED)"
 
-### Step 9: Triage Marker
+### Step 10: Triage Marker
 
 ```bash
 gh issue edit $NUMBER --add-label "triaged"
 ```
 
-### Step 10: Completion Report
+### Step 11: Completion Report
 
 Output a summary of the processing results to the user:
 
@@ -380,6 +386,9 @@ for each issue in Step 2 results:
      - Write comment body to `.tmp/triage-duplicate-comment-$NUMBER.md` using the Write tool
      - Post: `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $NUMBER .tmp/triage-duplicate-comment-$NUMBER.md`
      - Delete: `rm -f .tmp/triage-duplicate-comment-$NUMBER.md`
+  8. AC verify command audit: if the issue body contains `<!-- verify: ... -->` patterns,
+     read ${CLAUDE_PLUGIN_ROOT}/skills/triage/skill-dev-verify-audit.md and follow the
+     "Processing Steps" section. Post audit comment if issues are found (non-destructive).
 ```
 
 **Error handling:**

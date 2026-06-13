@@ -112,3 +112,48 @@ Domain file（`skills/triage/skill-dev-verify-audit.md`）は `validate-skill-sy
 ### 翻訳同期
 
 変更対象は `skills/triage/` 配下のみ（`docs/*.md` 非対象）のため `docs/ja/` 同期不要。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Step 7 の見出し文字列は「AC Verify Command Integrity Audit」（英語）とし、SKILL.md 本文中の説明テキストに「verify command audit patterns」を含めることで、verify command `grep "verify command audit"` パターンマッチを確保した。Spec の仮見出しに含まれた「AC verify command 整合性監査」（日本語）は本文には含めなかった（英語優先の SKILL.md 規約に従う）。
+
+### Design Gaps/Ambiguities
+
+- Stale test assertion check: SKILL.md から削除されたステップ見出し文字列（`Step 7: Value Assignment` 等）を `tests/` で検索したが、triage SKILL.md の内部ステップ名をテストは直接参照していないため stale assertion なし。
+- `validate-skill-syntax.py` はドメインファイル（`skill-dev-verify-audit.md`）を検証対象外とすることを Spec が明示していたため、domain file の frontmatter バリデーションは手動で確認した（`type: domain`, `skill: triage` の存在確認）。
+
+### Rework
+
+- N/A（1 回の実装で完了、リワークなし）
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Spec と実装は完全一致。Step 7 配置（Size Assignment 直後）、5 パターン構成、非破壊的振る舞い仕様のいずれも Spec の設計通り実装されていた。
+
+### Recurring Issues
+
+- CONSIDER 課題が 2 種（Pattern 4 の Bulk Execution Size 参照先未明示、$NUMBER コンテキスト未明示）は同一のルート原因（Single Issue / Bulk Execution の二コンテキストをまたぐ変数説明）。Domain file 記述ガイドラインとして「Bulk Execution での変数参照元を明示せよ」を今後のパターンとして意識する価値がある。
+
+### Acceptance Criteria Verification Difficulty
+
+- 全 9 AC に明示的 verify command があり、UNCERTAIN なし。rubric verify command（AC 7）は grader 実行なしで PASS/FAIL を判定可能であった（SKILL.md + Domain file が共同で非破壊的監査を仕様化していることが diff から自明）。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- 全 AC PASS（9/9）、CI 全 SUCCESS、MUST 課題ゼロ。CONSIDER 課題 3 件を修正済み
+- Pattern 4 の "Detection approach:" ブロック追加と "Posting the Comment" `$NUMBER` 説明追加（追記のみ、既存 verify command との矛盾なし）
+
+### Deferred Items
+- Post-merge 観察: 次回 `/triage --backlog` で監査コメントが新規 Issue に投稿されることを opportunistic で確認
+- Issue #584 の Post-merge AC は `/merge` 完了後に観察
+
+### Notes for Next Phase
+- MUST 課題なし、レビュー対応済み。`/merge 608` でマージ可能
+- AC 9（bats テスト green）は CI で確認済み（PASS）
+- Issue #584 の全 Pre-merge AC は `[x]` 完了
