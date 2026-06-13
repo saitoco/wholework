@@ -96,18 +96,18 @@
 - 既存テスト（pre-PR のもの）が暗黙的に fallback パスをカバーしているが、null 値の明示的テストが欠如していた（SHOULD として検出・修正済み）。verify command は既存のテスト実行コマンド（`bats tests/reconcile-phase-state.bats`）のみで、フォールバックパスの入力境界値を個別に検証するヒントがなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Size=M Bug fix に対して review-light（light mode）を適用。全 4 観点を 1 エージェントで確認する軽量統合レビューが適切と判断
-- SHOULD issue（null fallback パステスト欠如）は解決済み（テスト追加）。CONSIDER issue（モックコメント不明確）はスタイル上の懸念のみのためスキップ
-- MUST issues なし → COMMENT イベントで投稿、`/merge` 進行可
+- mergeable=true、CI全ジョブ SUCCESS、レビュー承認済みのため直接 squash merge を実行
+- conflicts なし（Step 3 スキップ）、conflict resolution worktree 不要
+- `closes #569` + BASE_BRANCH=main のため Issue は自動クローズされる
 
 ### Deferred Items
-- CONSIDER: fix-cycle テストのモックコメント補足（スタイルのみ、機能影響なし）
-- `code-pr` completion check の false positive リスク（コードフェーズから引き継ぎ、今回スコープ外）
+- Post-merge 検証（次回 verify FAIL → reopen → code 再実行サイクルで `matches_expected:false` の実観察）は運用中の実サイクルでのみ確認可能
+- `code-pr` completion check の false positive リスク（スコープ外・引き継ぎ）
 
 ### Notes for Next Phase
-- tests/reconcile-phase-state.bats は 55 テスト（fix-cycle 3 件：false positive・正常完了・null fallback）
-- CI 全ジョブ SUCCESS（DCO・bats・validate-skill-syntax・forbidden-expressions・macOS compat）
-- MUST issues なし。/merge 実行可
+- squash merge 完了。PR #577 は MERGED 状態、ブランチ `worktree-code+issue-569` は削除済み
+- tests/reconcile-phase-state.bats 55 テスト全通過（fix-cycle 3 件含む）を CI で確認済み
+- verify phase では post-merge 観察項目（fix-cycle での `matches_expected:false`）の確認が主タスク
