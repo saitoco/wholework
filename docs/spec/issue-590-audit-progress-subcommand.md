@@ -59,3 +59,60 @@ The subcommand is standalone — it is not included in the no-argument `/audit` 
 - Status 重複時の優先順位: Done > Blocked > Stale > In progress > Pending（例: OPEN + phase/code + OPEN blocker → Blocked）
 - `progress` サブコマンドは引数なし `/audit` 実行には含めない（特定 XL を指定する必要があるため）
 - `docs/structure.md` の tests カウントは 63 と記載されているが実際は 64 ファイル（既存ドリフト）。本 Issue で `audit-progress.bats` 追加後は 65 になるため、ドリフト修正も兼ねて 63→65 に更新する
+
+## issue retrospective
+
+### 曖昧ポイントの自動解決（non-interactive mode）
+
+`/issue 590 --non-interactive` で以下の 3 つの曖昧ポイントを自動解決した。
+
+**1. "Failed" 判定基準（HIGH IMPACT）**
+
+Issue 提案の出力フォーマットに Failed カテゴリがあったが、Wholework の既存ラベル体系に "failed" ラベルが存在しないことが判明。`stale-verify` ラベル（「phase/verify で 60 日以上停滞」）が意味的に最も近傍。
+
+**決定**: Failed → Stale に改名し、`stale-verify` ラベル保持を判定基準とする。ステータス分類基準テーブルを Issue body に追加。
+
+**2. `get-sub-issue-graph.sh` 拡張 vs 新スクリプト（MEDIUM IMPACT）**
+
+既存 `get-sub-issue-graph.sh` は OPEN sub-issue のみを返す `/auto` コア依存スクリプト。`/audit progress` に必要な「全 sub-issue（CLOSED 含む）+ labels + timestamps」には対応不可。
+
+**決定**: `scripts/get-sub-issue-progress.sh` を新規作成する。既存スクリプトは変更なし。
+
+**3. 24h アクティビティの `linked:#N` フィルタ（MEDIUM IMPACT）**
+
+`gh issue list --search "linked:#<parent>"` は GitHub 標準検索では機能しない（`linked:` 修飾子は公式サポート外）。
+
+**決定**: GraphQL で全 sub-issue の `updatedAt` を取得し、シェル側で 24h フィルタリングを行う。
+
+## spec retrospective
+
+### Minor observations
+
+- `tests/` のファイルカウント（structure.md: 63、実際: 64）に既存ドリフトがあった。本 Issue での追加後に 65 になるため、ドリフト修正も兼ねて更新する
+- `get-sub-issues-all` query の設計は `get-sub-issues` を参照して一貫性を保てた
+
+### Judgment rationale
+
+- SPEC_DEPTH=light（Size M）のため実装ステップを 5 ステップに制約。`gh-graphql.sh` 更新と `get-sub-issue-progress.sh` 作成を別ステップとしたのは依存関係（1→2）が明確なため
+- Status の優先順位（Done > Blocked > Stale > In progress > Pending）は Issue body の分類基準テーブルから自明に導出できたが、重複ケースの扱いが未定義だったため Spec の Notes で明示
+
+### Uncertainty resolution
+
+- `docs/structure.md` のテスト数カウントが実際と乖離していることをファイルカウントで確認。Spec Notes に記録して `/code` フェーズで対応させる
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- `get-sub-issue-progress.sh` は新規スクリプトとして作成（`get-sub-issue-graph.sh` は `/auto` コアのため変更しない）
+- `gh-graphql.sh` に `get-sub-issues-all` named query を追加（OPEN+CLOSED、labels+timestamps 取得）
+- Status 優先順位: Done > Blocked > Stale > In progress > Pending
+
+### Deferred Items
+- `run-auto-sub.sh` event log (#600) との統合は本 Issue スコープ外。#600 着地後に別 Issue で検討
+- `docs/structure.md` の tests カウントドリフト（63→64）の修正も本 Issue 内で兼ねて対応する
+
+### Notes for Next Phase
+- `allowed-tools` に `get-sub-issue-progress.sh:*` の追加を忘れずに（SKILL.md frontmatter）
+- `audit-progress.bats` の mock 設定は `get-sub-issue-graph.bats` と同じパターン（WHOLEWORK_SCRIPT_DIR + MOCK_GRAPHQL_RESPONSE 環境変数）
+- `docs/structure.md` の scripts カウント: 51→52、tests カウント: 63→65（既存ドリフト修正込み）
