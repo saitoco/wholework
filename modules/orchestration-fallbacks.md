@@ -232,6 +232,32 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ---
 
+## review-completion-false-negative
+
+### Symptom
+- `run-review.sh` exits with non-zero and the wrapper log contains `"matches_expected":false` and `"phase":"review"` but neither `Review Response Summary` nor `レビュー回答サマリ` appears in the log
+- `scripts/detect-wrapper-anomaly.sh` emits pattern: `review-completion-false-negative`
+- Likely cause: LLM omitted the `<!-- review-summary -->` marker and used a non-standard (localized) heading not covered by existing fallback signatures
+
+### Applicable Phases
+- review
+
+### Fallback Steps
+1. Re-run `reconcile-phase-state.sh review --pr <N>` to check whether a cache-related false negative caused the mismatch; if the result flips to `matches_expected:true`, continue normally
+2. Run `gh pr view <N> --comments` to inspect PR comments directly; check whether a summary-style comment exists (any heading containing "review", "summary", "サマリ", "レビュー", etc.)
+3. If a summary comment exists but `<!-- review-summary -->` marker is absent: edit the comment via `gh api repos/{owner}/{repo}/issues/comments/<comment-id> -f body="<!-- review-summary -->\n<original-body>"` to prepend the marker, then re-run `reconcile-phase-state.sh review --pr <N>` to confirm `matches_expected:true`. If the heading is a localized variant not covered by existing fallback signatures, open a follow-up Issue to add the regex to `scripts/reconcile-phase-state.sh`
+4. If no summary comment is found in the PR: the review skill did not complete — re-run `/review <PR>` to regenerate the review comment
+
+### Escalation
+- Recovery sub-agent (#316) can be invoked when the root cause is unclear or none of the fallback steps resolve the mismatch
+
+### Rationale
+- First observed during Issue #528 implementation: PR #544 had a review summary comment with heading `## レビューレスポンスサマリー` (not covered by existing fallback signatures) and the `<!-- review-summary -->` marker was absent; `reconcile-phase-state.sh` returned `matches_expected:false` and `run-review.sh` exited non-zero; Tier 2 `detect-wrapper-anomaly.sh` returned empty output (pattern not cataloged)
+- Issue #528 introduced `<!-- review-summary -->` as the primary signature in `modules/phase-state.md`, resolving the root cause; this catalog entry serves as the safety net when LLM omits the marker and uses a non-standard heading simultaneously
+- Exclusivity with `reconciler-header-mismatch`: the `elif` chain in `scripts/detect-wrapper-anomaly.sh` ensures that logs containing `Review Summary` are caught by `reconciler-header-mismatch` first; `review-completion-false-negative` fires only when that pattern does not match
+
+---
+
 ## code-completed-no-pr
 
 ### Symptom
