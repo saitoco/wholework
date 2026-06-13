@@ -190,7 +190,7 @@ PR 本文に `closes #N` を追加すると、マージ時に Issue が自動ク
   ↓
 /verify: クローズ済み Issue を検証
   - 全 auto-verify PASS + 全 post-merge 条件 checked → phase/done
-  - 全 auto-verify PASS + opportunistic/manual 未チェックあり → phase/verify（Issue は CLOSED のまま）
+  - 全 auto-verify PASS + opportunistic/observation/manual 未チェックあり → phase/verify（Issue は CLOSED のまま）
   - FAIL → gh issue reopen + 全 phase/* 除去 → fix サイクルへ戻る
 ```
 
@@ -224,7 +224,7 @@ GitHub リポジトリ設定「Auto-close issues with merged linked pull request
   ↓
 /verify: Issue が OPEN と検出
   - 全 auto-verify PASS + 全条件チェック済み → phase/done + gh issue close
-  - 全 auto-verify PASS + opportunistic/manual 未チェック → phase/verify（Issue OPEN のまま）
+  - 全 auto-verify PASS + opportunistic/observation/manual 未チェック → phase/verify（Issue OPEN のまま）
     → ユーザーが残条件を手動チェック後、/verify N を再実行
   - FAIL/UNCERTAIN → phase/* ラベル除去（Issue OPEN のまま、fix サイクルへ戻る）
 ```

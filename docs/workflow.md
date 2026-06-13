@@ -197,7 +197,7 @@ Adding `closes #N` to PR body auto-closes the Issue on merge (GitHub standard fe
   ↓
 /verify: Verify closed Issue
   - All auto-verify PASS + all post-merge conditions checked → phase/done
-  - All auto-verify PASS + opportunistic/manual unchecked → phase/verify (Issue stays CLOSED)
+  - All auto-verify PASS + opportunistic/observation/manual unchecked → phase/verify (Issue stays CLOSED)
   - FAIL → gh issue reopen + remove all phase/* → return to fix cycle
 ```
 
@@ -231,7 +231,7 @@ When the GitHub repository setting "Auto-close issues with merged linked pull re
   ↓
 /verify: Detect Issue OPEN state
   - All auto-verify PASS + all conditions checked → phase/done + gh issue close
-  - All auto-verify PASS + opportunistic/manual unchecked → phase/verify (Issue stays OPEN)
+  - All auto-verify PASS + opportunistic/observation/manual unchecked → phase/verify (Issue stays OPEN)
     → User manually checks remaining conditions, then re-runs /verify N
   - FAIL/UNCERTAIN → Remove phase/* labels (Issue stays OPEN; return to fix cycle)
 ```
