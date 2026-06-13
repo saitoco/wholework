@@ -61,18 +61,33 @@
 - `tests/auto.bats` を初稿（`declare -f` 方式）→ 修正版（直接関数呼び出し方式）に 1 回書き直した
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `skills/auto/SKILL.md` の Step 3a 末尾（「Proceed to Step 4 using...」の直前）に route demotion 専用ブロックを追加。既存ログ出力行は変更せず、その後に新ブロックを挿入した
-- bats テストは SKILL.md の構造テスト（内容確認のみ、外部コマンド呼び出しなし）とし、WHOLEWORK_SCRIPT_DIR モックは不要
-- `docs/structure.md` のテストファイル数が既に実態（64件）からずれていたため、新ファイル追加分を含めて 65 に更新した
+- SHOULD 指摘（Step 4 への ROUTE ディスパッチ宣言追加）を対応済み（commit fbc8151）
+- Step 4 の既存 prose セクション（"patch route XS/S" / "pr route"）が ROUTE=patch を正しくカバーしていることを確認。機能的に完全
+- bats テストの `[ "$status" -eq 0 ]` 未記述は CONSIDER でスキップ（リスク低）
 
 ### Deferred Items
-- Step 4 の pr/patch ルート分岐コード自体（`run-auto-sub.sh` または `skills/auto/SKILL.md` Step 4 本文）は変更なし。route demotion 発生時に Step 4 が実際に patch シーケンスを選択するかは、Step 4 の「ROUTE 変数に基づく分岐」ロジックに依存する（既存ロジックで対応済みか要確認）
-- post-merge 観察条件（M→XS 再判定 Issue が patch ルートで完走）は observation event で自動評価される
+- tests/auto.bats:14 の status チェック不足（CONSIDER、スキップ）— 別 Issue で対応を検討
+- post-merge 観察条件（M→XS 再判定 Issue が patch ルートで完走）は observation event で自動評価
 
 ### Notes for Next Phase
-- PR #620 がマージされたら、次回 `/auto` バッチで M→XS 再判定 Issue の実行時間が短縮されたかを観察する
-- review フェーズでは「Step 4 本文に route demotion 分岐が反映されているか」を spec 照合として確認することを推奨（本 PR の実装は Step 3a 仕様追加のみ）
-- forbidden expressions チェックは通過済み、validate-skill-syntax.py もエラーなし
+- MUST 問題なし、CI 全 SUCCESS。`/merge 620` を実行可能
+- validate-skill-syntax.py: 0 errors — merge ブロック要因なし
+- PR branch: `worktree-code+issue-616`（review 対応コミット含む）
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Step 4 の ROUTE ディスパッチが prose 形式のため、暗黙的な依存関係が生まれやすい。今回の SHOULD 指摘（Step 4 に明示的な ROUTE ディスパッチ宣言がない）はこのパターンの典型例。Spec に「Step 3a の結果が Step 4 に伝搬する」という接続を明記しておくと将来の Spec 照合が容易になる。
+
+### Recurring Issues
+
+- Nothing to note。単一種類の指摘（接続の暗黙性）のみで、同種問題の繰り返しは検出されなかった。
+
+### Acceptance Criteria Verification Difficulty
+
+- Pre-merge の verify コマンド（grep + command）は CI 参照フォールバックが機能し PASS 判定を効率的に取得できた。UNCERTAIN なし。
+- Post-merge 条件（observation event=auto-run）は opportunistic-search.sh で自動評価される設計で適切。verify コマンドの追加は不要。
