@@ -50,6 +50,23 @@ Extends `modules/visual-diff-adapter.md` to resolve two structural constraints i
 - AC3 verify `grep "extend\|pad\|max(width"` will match because: `extend` appears in `sharp.extend` API usage; `pad` in the description; `max(width` as notation for `Math.max(ref.info.width, impl.info.width)` mirroring the Issue body phrasing.
 - The `browser-use` CLI fullPage support may need a note if `--full-page` flag is unavailable; document the equivalent approach or note as unsupported in that case.
 
+## Phase Handoff
+<!-- phase: merge -->
+
+### Key Decisions
+- Squash-merged PR #607 directly (mergeable=true, CI=success, review=approved) — no conflict resolution needed
+- BASE_BRANCH=main confirmed so `closes #548` will auto-close Issue #548 upon merge
+- Worktree `merge/pr-607` created for Phase Handoff write isolation
+
+### Deferred Items
+- Post-merge verification: koganezawa-com#58 を fullPage で再走し、ページ全体の 3-panel が寸法 throw なく生成されることを確認 (記載済み Post-merge AC)
+- None other — all pre-merge ACs verified by review phase prior to merge
+
+### Notes for Next Phase
+- verify phase should run pre-merge verify commands (grep fullPage, capture_mode, extend/pad, normalized composite) against the squash-merged main
+- AC1–AC4 are all grep-based checks on `modules/visual-diff-adapter.md` — low flake risk
+- Post-merge AC (koganezawa-com#58 re-run) requires external repo access; may be SKIP if environment unavailable
+
 ## Code Retrospective
 
 ### Deviations from Design
