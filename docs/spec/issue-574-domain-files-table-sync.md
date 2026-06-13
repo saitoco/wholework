@@ -33,3 +33,19 @@
 | Size | XS（2ドキュメントファイル、ドキュメントのみ変更） |
 | Priority | 未検出 |
 | Value | 2（Impact=0、Alignment=1） |
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- #573 Verify Retrospective からの自動生成 Issue で AC が完備しており、曖昧点 0。JA verify command の維持判断（translation exclusion ルールの例外適用）が retrospective に明示された
+
+#### code
+- XS patch で EN/JA テーブル各 1 行追加、手戻りなし
+
+#### verify
+- pre-merge 3/3 PASS。post-merge opportunistic は table-missing 検出ロジックの直接再実行で Claude Execute PASS。retrospective → Issue → 修正 → 検証のループが 1 サイクルで完結した
+
+### Improvement Proposals
+- N/A（ただし上流課題として記録: 新規 Domain file 追加時に environment-adaptation.md テーブル同期を Changed Files へ含める規約があれば #574 自体が不要だった。同種の再発があれば /spec ガイドライン Issue として起票する）
