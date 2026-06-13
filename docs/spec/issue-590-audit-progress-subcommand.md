@@ -100,19 +100,31 @@ Issue 提案の出力フォーマットに Failed カテゴリがあったが、
 
 - `docs/structure.md` のテスト数カウントが実際と乖離していることをファイルカウントで確認。Spec Notes に記録して `/code` フェーズで対応させる
 
+## Code Retrospective
+
+### Deviations from Design
+- Spec の実装ステップは「1 → 2 → 3 (並行) → 4 → 5」を想定していたが、実際には 1・3・5 を並行コミット、2・4 を順次コミットした。機能的な差異はない
+
+### Design Gaps/Ambiguities
+- `jq` の `reduce`/`error` を使わない単純なパイプで構築できた (`get-sub-issue-progress.sh` は `get-sub-issue-graph.sh` より大幅にシンプル)
+- `audit-progress.bats` のテストケースを 4 件（Spec の想定 3 件より 1 件多い no-arg エラーケースを追加）にすることで、引数検証も網羅した
+
+### Rework
+- なし（設計どおりに 1 パスで実装完了）
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
-- `get-sub-issue-progress.sh` は新規スクリプトとして作成（`get-sub-issue-graph.sh` は `/auto` コアのため変更しない）
-- `gh-graphql.sh` に `get-sub-issues-all` named query を追加（OPEN+CLOSED、labels+timestamps 取得）
-- Status 優先順位: Done > Blocked > Stale > In progress > Pending
+- `get-sub-issue-progress.sh` を新規スクリプトとして作成（`get-sub-issue-graph.sh` は `/auto` コアのため変更なし）
+- `gh-graphql.sh` に `get-sub-issues-all` named query を追加（OPEN+CLOSED、全フィールド対応）
+- Status 優先順位 Done > Blocked > Stale > In progress > Pending を SKILL.md に明示
 
 ### Deferred Items
-- `run-auto-sub.sh` event log (#600) との統合は本 Issue スコープ外。#600 着地後に別 Issue で検討
-- `docs/structure.md` の tests カウントドリフト（63→64）の修正も本 Issue 内で兼ねて対応する
+- `run-auto-sub.sh` event log (#600) との統合は本 Issue スコープ外
+- post-merge 確認（実 XL Issue での進捗確認）は `/verify` フェーズで observation イベント待ち
 
 ### Notes for Next Phase
-- `allowed-tools` に `get-sub-issue-progress.sh:*` の追加を忘れずに（SKILL.md frontmatter）
-- `audit-progress.bats` の mock 設定は `get-sub-issue-graph.bats` と同じパターン（WHOLEWORK_SCRIPT_DIR + MOCK_GRAPHQL_RESPONSE 環境変数）
-- `docs/structure.md` の scripts カウント: 51→52、tests カウント: 63→65（既存ドリフト修正込み）
+- 全 pre-merge verify コマンドが PASS 済み（checkboxes 更新済み）
+- bats テスト 4 ケース green（no-arg / empty XL / mixed states / all done）
+- PR #621 作成済み。`base: main` なので `closes #590` 有効
