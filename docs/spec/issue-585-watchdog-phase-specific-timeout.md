@@ -171,18 +171,34 @@ Priority order (highest to lowest):
 - なし。実装はSpec の手順通りに進行し、rework は発生しなかった。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `check-translation-sync.sh --fail-if-outdated` を使った AC の代わりに customization.md 専用の grep コマンドに変更した（全ファイルチェックで既存 lag により false FAIL するため）
-- `eval` による間接変数参照を採用（bash 3.2+ 互換; `${!var}` も同等）
-- 既存テスト（WATCHDOG_TIMEOUT_DEFAULT fallback 等）は後方互換パスで引き続き通過することを確認済み
+- MUST 課題ゼロのため Step 12 の実装変更なし。全 AC を safe モードで検証し、14 件 PASS / 2 件 UNCERTAIN（CI fallback 不可）/ 2 件 POST-MERGE
+- `command` 型 AC（bash -n / 翻訳同期 grep）は対応 CI ジョブがなく UNCERTAIN となったが、実装品質には問題なし
+- Step 13 のポリシー変更なし（review phase で実装変更がなかったため）
 
 ### Deferred Items
-- `docs/environment-adaptation.md`, `docs/product.md`, `docs/tech.md` の翻訳 lag は本 Issue スコープ外（既存の lag で本変更起因ではない）
-- post-merge 観察条件（merge フェーズ 60s〜10分完走、真のストール kill）は実際の `/auto` 実行後に確認
+- post-merge 観察条件（merge フェーズ 60s〜10 分完走、真のストール kill）は `/auto` 実行後に確認
+- AC14/AC16 の UNCERTAIN 解消（CI ジョブ追加または verify command 変更）は将来の改善 Issue で対処
 
 ### Notes for Next Phase
-- PR #610 は全 16 pre-merge AC チェック済み（Issue body の checkbox 完了）
-- 全 715 bats テスト PASS（新規 5 テスト含む）
-- 翻訳同期チェックは `check-translation-sync.sh | grep 'customization.md' | grep -q IN_SYNC` の形式に修正済み（Spec および Issue body 両方）
+- 全 CI ジョブ（DCO/bats/validate-syntax/forbidden-expressions/macos-shell）が SUCCESS
+- MUST 課題なし。`/merge 610` で merge 可能
+- merge 後、post-merge AC（観察型 2 件）を `/auto` 実行時に観察する
+
+## review retrospective
+<!-- phase: review -->
+
+### Spec vs. Implementation Divergence Patterns
+
+- なし。実装は Spec 設計（4 段階優先解決、5 フェーズ別デフォルト、detect-config-markers 追加）に完全一致。code phase の Spec 乖離（verify command 変更）はすでに Code Retrospective で記録・正当化済みであり、review phase での新規乖離はない。
+
+### Recurring Issues
+
+- `command` 型 AC（AC14: bash -n 構文チェック、AC16: 翻訳同期 grep）が /review safe モードで UNCERTAIN になった。対応する CI ジョブが存在しないため CI reference fallback が機能しなかった。今後 `command` 型 AC を追加する際は対応する CI ジョブを同時に追加するか、`github_check` 型で代替を検討する。
+
+### Acceptance Criteria Verification Difficulty
+
+- AC14（`bash -n run-*.sh`）: CI に bash -n 専用ジョブが存在せず UNCERTAIN。改善案: `.github/workflows/test.yml` に `bash -n scripts/run-*.sh` を実行するジョブを追加する、または AC を `file_exists` + AI judgment に切り替える。
+- AC16（翻訳同期 grep）: macOS shell compatibility ジョブは `check-translation-sync.sh` を実行するが grep フィルタなし。`github_check` 型に変更して CI ジョブ成功を検証する形式も有効。
