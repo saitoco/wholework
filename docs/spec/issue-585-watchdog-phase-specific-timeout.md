@@ -202,3 +202,20 @@ Priority order (highest to lowest):
 
 - AC14（`bash -n run-*.sh`）: CI に bash -n 専用ジョブが存在せず UNCERTAIN。改善案: `.github/workflows/test.yml` に `bash -n scripts/run-*.sh` を実行するジョブを追加する、または AC を `file_exists` + AI judgment に切り替える。
 - AC16（翻訳同期 grep）: macOS shell compatibility ジョブは `check-translation-sync.sh` を実行するが grep フィルタなし。`github_check` 型に変更して CI ジョブ成功を検証する形式も有効。
+
+## Phase Handoff
+<!-- phase: merge -->
+
+### Key Decisions
+- PR #610 は MERGEABLE/CLEAN 状態でありコンフリクトなしのため、スカッシュマージを即時実行
+- `--squash --delete-branch` オプションでブランチ削除まで一括処理
+- Phase Handoff write は worktree を作成せずにリポジトリルートから実施（コンフリクトなし経路のため）
+
+### Deferred Items
+- Post-merge 観察項目（`merge` フェーズが 60s〜10分以内に完走するか）は実運用での確認が必要
+- 真のストール時のフェーズ別 timeout kill 動作の観察も post-merge 確認事項
+
+### Notes for Next Phase
+- verify コマンドは Spec の Pre-merge AC に verify command が 15 件記載されており、bats テスト含め全件チェック推奨
+- `scripts/watchdog-defaults.sh` の `load_watchdog_timeout` に `phase` 引数が追加されており、5 本の `run-*.sh` で正しく呼ばれているかを重点確認
+- `docs/guide/customization.md` と `docs/ja/guide/customization.md` の翻訳同期（IN_SYNC）も verify 対象
