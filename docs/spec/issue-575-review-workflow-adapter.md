@@ -174,20 +174,33 @@
 ### Uncertainty resolution
 - Workflow ツールの permission-mode auto 下での可用性は Spike 1（レポート §Spike 1）が実証済みで、新規検証は不要だった。settings.json は Bash パターンのみを列挙し built-in tool は allowed-tools 経由で許可される構造を確認。
 
+## Code Retrospective
+
+### Deviations from Design
+- Spec の実装ステップを全て忠実に実行し、実質的な逸脱はなかった
+- `args` ベースのプロンプト変数（`args.number`、`args.issueNumber` など）は Workflow スクリプト内で参照したが、caller が `args` を渡す形式を明示する必要があった。workflow-guidance.md の Processing Steps に「args 渡し」の説明を追加済み
+
+### Design Gaps/Ambiguities
+- inline Workflow JS スクリプト内の `SKIP_BUG` 判定は `args && args.skipReviewBug` として記述したが、Spec には `SKIP_REVIEW_BUG` 変数をどのように `args` に渡すかが記載されていなかった。caller 側（SKILL.md）の Step 10 分岐パラグラフで `SKIP_REVIEW_BUG` を `args.skipReviewBug` として渡す旨を workflow-guidance.md の Processing Steps に記述することで吸収した
+- SKILL.md の half-width `!` 禁止制約は Phase Handoff に明記されており、Step 10 分岐パラグラフの文言を全角や言い換えで回避した
+
+### Rework
+- 特になし。全テスト（bats 697件、validate-skill-syntax、forbidden-expressions check、translation-sync）が 1 回目で PASS した
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
-- Workflow スクリプトは `scripts/review-workflow.js` ではなく Domain file `skills/review/workflow-guidance.md` に inline JS で埋め込む（Workflow ツールが inline 渡しを推奨 + scripts/ は .sh/.py 規約 + progressive disclosure）
-- `capabilities.workflow` は detect-config-markers.md に明示テーブル行を追加（browser/visual-diff precedent、rubric を決定的に PASS）
-- Execution Platform 列は routing SSoT のドキュメント化のみ（run-review.sh の実行基盤移行はしない）
+- `capabilities.workflow` → `HAS_WORKFLOW_CAPABILITY` を detect-config-markers.md に明示テーブル行として追加（Dynamic Capability Mapping でも動作するが明示行の方が discoverability 高く rubric PASS 確実）
+- Workflow スクリプトは workflow-guidance.md に inline JS として埋め込み（`script` パラメータ渡し）。`args` オブジェクト経由で `number`、`issueNumber`、`type`、`specPath`、`steeringDocs`、`skipReviewBug` を受け取る設計
+- SKILL.md Step 10 冒頭に `HAS_WORKFLOW_CAPABILITY` 分岐パラグラフを追加し、fallback 経路（10.0–10.3）は本体変更なし
 
 ### Deferred Items
 - review の in-session 実移行は別 Issue（spike §Routing Recommendation の将来候補）
+- Workflow 経路の実際の end-to-end テスト（`capabilities.workflow: true` 設定プロジェクトでの完走確認）は Post-merge 手動確認として残存
 - audit / issue L/XL / spec への Workflow 展開は /review 安定稼働後に別 Issue で評価
 
 ### Notes for Next Phase
-- 【必須】`Workflow` を review SKILL.md allowed-tools に追加する際、`validate-skill-syntax.py` の `KNOWN_TOOLS` と `BODY_TOOL_CHECK_SKIP` の両方に `'Workflow'` を追加する（後者を忘れると spec/verify SKILL.md が body-tool-check で誤検知 FAIL）
-- SKILL.md 本文に half-width `!` を導入しない（validator 制約）
-- ja ミラー（`docs/ja/tech.md` / `docs/ja/guide/customization.md`）は英語版と同コミットで同期（git timestamp 一致で IN_SYNC）
-- 10.0–10.3 の static fan-out 本体は変更しない（fallback 経路温存が rubric AC 9 の合否条件）
+- `/review` Phase: workflow-guidance.md の Processing Steps を読み、`args` オブジェクトの渡し方が Step 10 分岐パラグラフとの整合を確認すること
+- `github_check "gh pr checks" "Run bats tests"` は CI PENDING（PR 作成直後）のため `- [ ]` のまま。CI 完了後 `/verify` で更新される
+- Post-merge: `capabilities.workflow: true` 設定プロジェクトで `/review --full` を実行し、Workflow 経路で完走すること、完了レポートにトークン使用量が出力されることを手動確認する
