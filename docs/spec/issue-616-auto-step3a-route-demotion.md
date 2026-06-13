@@ -48,3 +48,31 @@
 - `--patch` / `--pr` 等の明示フラグがある場合は Step 3a 自体がスキップされるため、route demotion は発生しない（既存の skip 条件が維持される）
 - `tests/auto.bats` は SKILL.md の構造テスト（ファイルへのスクリプト呼び出しなし）。WHOLEWORK_SCRIPT_DIR モックは不要
 - AC の post-merge 観察条件（observation event=auto-run）は既存の opportunistic-search.sh 仕組みで自動評価される
+
+## Code Retrospective
+
+### Deviations from Design
+- bats テストの `step3a_section` helper で `declare -f` を使った `bash -c "$(declare -f ...; ...)"` 方式は動作せず（bats 環境で SKILL_FILE 変数が引き継がれない）。関数を直接 top-level で定義し `run step3a_section "$SKILL_FILE"` で呼ぶ方式に変更した
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- `tests/auto.bats` を初稿（`declare -f` 方式）→ 修正版（直接関数呼び出し方式）に 1 回書き直した
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `skills/auto/SKILL.md` の Step 3a 末尾（「Proceed to Step 4 using...」の直前）に route demotion 専用ブロックを追加。既存ログ出力行は変更せず、その後に新ブロックを挿入した
+- bats テストは SKILL.md の構造テスト（内容確認のみ、外部コマンド呼び出しなし）とし、WHOLEWORK_SCRIPT_DIR モックは不要
+- `docs/structure.md` のテストファイル数が既に実態（64件）からずれていたため、新ファイル追加分を含めて 65 に更新した
+
+### Deferred Items
+- Step 4 の pr/patch ルート分岐コード自体（`run-auto-sub.sh` または `skills/auto/SKILL.md` Step 4 本文）は変更なし。route demotion 発生時に Step 4 が実際に patch シーケンスを選択するかは、Step 4 の「ROUTE 変数に基づく分岐」ロジックに依存する（既存ロジックで対応済みか要確認）
+- post-merge 観察条件（M→XS 再判定 Issue が patch ルートで完走）は observation event で自動評価される
+
+### Notes for Next Phase
+- PR #620 がマージされたら、次回 `/auto` バッチで M→XS 再判定 Issue の実行時間が短縮されたかを観察する
+- review フェーズでは「Step 4 本文に route demotion 分岐が反映されているか」を spec 照合として確認することを推奨（本 PR の実装は Step 3a 仕様追加のみ）
+- forbidden expressions チェックは通過済み、validate-skill-syntax.py もエラーなし
