@@ -33,3 +33,33 @@
 - 変更対象は `skills/spec/skill-dev-constraints.md` 単一ファイル（domain file）であり、skill/agent/script の追加・削除ではないため `docs/structure.md` や `docs/workflow.md` の更新は不要
 - **verify command 2 の弱さ（auto-resolve）**: `grep "Implementation Step|実装ステップ"` は実施前から "Implementation Steps" が複数箇所に存在するため、変更前後で PASS となり検証力が低い。意味のある検証は verify command 1（"Design Gaps" の初出確認）。verify command はイシューボディから verbatim コピーのため変更しないが、この弱さを記録する。
 - 追加する行の `Reference` 列には `#579` を使用（発生元は `#575` だが、ルール化 Issue は `#579`）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None
+
+### Design Gaps/Ambiguities
+
+- None
+
+### Rework
+
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- SHOULD 制約テーブル末尾に1行追加のみ（既存フォーマット踏襲）
+- verify command 2 の弱さ（変更前後で PASS）は Spec Notes に記録済み；verify 段での再確認不要
+- docs/structure.md・docs/workflow.md の更新は Spec Notes の明示方針に従い省略
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- verify command 1（file_contains "Design Gaps"）が核心検証；command 2 は補完的
+- 変更は skills/spec/skill-dev-constraints.md 1ファイル、1行追加のみ — 差分は極めて小さい
+- 700 bats tests PASS、validate-skill-syntax PASS、forbidden-expressions PASS 確認済み
