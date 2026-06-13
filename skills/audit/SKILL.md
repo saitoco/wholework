@@ -153,6 +153,22 @@ If "Cancel": display "Issue generation cancelled." and exit.
 
 Generate Issues in `/issue` standard format for approved drift items.
 
+**Table row addition verify commands:**
+
+When the detected drift involves adding a row to a documentation table (e.g., adding a new entry to a `| Name | Path | Role |` table in `docs/structure.md`), generate a `grep` + `section_contains` pair from the start — do not generate `grep` alone:
+
+```
+<!-- verify: grep "{row-keyword}" "{target-file}" -->
+<!-- verify: section_contains "{target-file}" "{section-heading}" "{row-keyword}" -->
+```
+
+- `{row-keyword}`: a keyword that uniquely identifies the new table row (e.g., the script name or module name being added)
+- `{section-heading}`: the section heading that contains the table. Selection rule:
+  - If the target table is under an existing named section (e.g., `### Scripts`), use that heading
+  - If the table has no named section of its own, use the parent section heading (e.g., `## Key Files（Required）`)
+
+**Rationale**: `grep` alone cannot verify that the keyword appears in the correct section. The `section_contains` command ensures the entry is placed in the expected table, not elsewhere in the file. This matches the guidance in `modules/verify-patterns.md §5`.
+
 Each Issue body:
 
 ```markdown
@@ -175,22 +191,6 @@ Each Issue body:
 
 - [ ] {verification items}
 ```
-
-**Table row addition verify commands:**
-
-When the detected drift involves adding a row to a documentation table (e.g., adding a new entry to a `| Name | Path | Role |` table in `docs/structure.md`), generate a `grep` + `section_contains` pair from the start — do not generate `grep` alone:
-
-```
-<!-- verify: grep "{row-keyword}" "{target-file}" -->
-<!-- verify: section_contains "{target-file}" "{section-heading}" "{row-keyword}" -->
-```
-
-- `{row-keyword}`: a keyword that uniquely identifies the new table row (e.g., the script name or module name being added)
-- `{section-heading}`: the section heading that contains the table. Selection rule:
-  - If the target table is under an existing named section (e.g., `### Scripts`), use that heading
-  - If the table has no named section of its own, use the parent section heading (e.g., `## Key Files（Required）`)
-
-**Rationale**: `grep` alone cannot verify that the keyword appears in the correct section. The `section_contains` command ensures the entry is placed in the expected table, not elsewhere in the file. This matches the guidance in `modules/verify-patterns.md §5`.
 
 **Verify command validity check (before creating Issues):**
 
