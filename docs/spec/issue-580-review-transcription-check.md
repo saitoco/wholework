@@ -56,6 +56,40 @@ Adding this detection perspective to `skill-dev-recheck.md` enables future revie
 ### Rework
 - None
 
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| spec | patch | SUCCESS | — |
+| code | patch | SUCCESS (after silent-no-op detection) | detect-wrapper-anomaly が初回 code 実行を silent-no-op として検出。run-auto-sub.sh の Tier 2 リトライで 2 回目に成功（commit c81aa61） |
+| verify | - | SUCCESS | pre-merge 2/2 PASS |
+
+### Orchestration Anomalies
+- code phase の 1 回目実行で wrapper exit 0 だがコミットなし（silent no-op、#365 pattern）。`detect-wrapper-anomaly.sh` が検出し、改善提案として "Re-run run-code.sh 580" を出力。`run-auto-sub.sh` がこの提案を読みリトライ実行、2 回目で正常コミット（c81aa61）。Tier 2 fallback-catalog（#315）+ wrapper-anomaly-detector（#313）が連携して機能した実例
+
+### Improvement Proposals
+- N/A（既存の Tier 2 recovery が機能した。silent no-op の根本原因（claude の応答内容と実 commit の乖離）の追跡は #365 で継続中）
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- retro/verify 起票時点で AC（file_contains + grep）が完備、triage 補正不要
+
+#### spec
+- skill-dev-recheck.md への追記設計が単純で曖昧点 0
+
+#### code
+- 1 回目 silent no-op → wrapper-anomaly-detector + Tier 2 リトライで 2 回目成功。**自動リカバリの実地動作の好例**。手戻りは Tier 2 内部で完結し、親セッションへの手動介入不要
+
+#### verify
+- pre-merge 2/2 PASS。post-merge opportunistic は spike 参照型実装 Issue の review 実行が観測機会で SKIP
+
+### Improvement Proposals
+- N/A（silent no-op recovery が機能した。recovery log には orchestration-recoveries.md 経由で記録される）
+
 ## Phase Handoff
 <!-- phase: code -->
 
