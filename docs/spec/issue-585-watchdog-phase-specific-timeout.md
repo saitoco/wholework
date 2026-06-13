@@ -219,3 +219,29 @@ Priority order (highest to lowest):
 - verify コマンドは Spec の Pre-merge AC に verify command が 15 件記載されており、bats テスト含め全件チェック推奨
 - `scripts/watchdog-defaults.sh` の `load_watchdog_timeout` に `phase` 引数が追加されており、5 本の `run-*.sh` で正しく呼ばれているかを重点確認
 - `docs/guide/customization.md` と `docs/ja/guide/customization.md` の翻訳同期（IN_SYNC）も verify 対象
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC が 16 件、すべて grep / file_exists / command / bats の自動 verify command 付き設計。verify を完全自動化できた
+- Auto-Resolved Ambiguity Points で `check-translation-sync.sh` への `--fail-if-outdated` 議論があったが、最終 AC は `grep "IN_SYNC"` 形式で実装され、機能した
+
+#### code
+- 5 本の run-*.sh への `load_watchdog_timeout "$SCRIPT_DIR" "<phase>"` 形式の一括追加が漏れなく完了
+- watchdog-defaults.bats のフェーズ別 timeout 解決テストが新規追加
+
+#### review
+- pre-merge AC 16 件全 PASS、review-light で問題なし
+
+#### merge
+- clean な squash merge
+
+#### verify
+- pre-merge AC 16 件全 PASS（grep + bash -n + bats + 翻訳同期チェック）
+- post-merge AC 2 件は observation event (auto-run / watchdog-kill) → 実運用観察対象
+
+### Improvement Proposals
+- N/A
+
