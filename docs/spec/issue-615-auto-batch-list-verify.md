@@ -53,6 +53,20 @@
 
 - 次回 `/auto --batch` 実行時、AC 検証可能な Issue が `phase/done` に到達することを観察 <!-- verify-type: observation event=auto-run -->
 
+## Code Retrospective
+
+### Deviations from Design
+
+- 実装内容はSpecの Implementation Steps と完全に一致。逸脱なし。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
 ## Notes
 
 - `run-auto-sub.sh` line 3 and 125 に `# verify is deferred to the parent /auto session (issue #485)` コメントがあり、本実装はその設計意図を List mode で実現するもの
@@ -61,3 +75,21 @@
 - Non-interactive mode 検出: ARGUMENTS に `--non-interactive` が含まれる場合（`claude -p` 経由で `/auto` が呼ばれる場合）は verify をスキップ。`update_batch complete` は呼ぶ（run-auto-sub.sh 自体は成功しているため）
 - `tests/auto-batch.bats` は LLM 実行スキル（SKILL.md）のテストであるため、shell スクリプトの動作を直接テストするのではなく、SKILL.md の構造的な内容（文字列の存在）を検証する方式を採用
 - 自動解決 (Non-interactive mode): Issue body の「実装アプローチ」「テストファイル」「非対話モード条件」は全て auto-resolve 済み（Issue body の `## Auto-Resolved Ambiguity Points` 参照）
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- step 5 (Verify orchestration) を List mode に追加。`run-auto-sub.sh` 成功後にラベル再フェッチし `phase/verify` 存在時に `Skill(skill="wholework:verify")` を呼ぶ設計を採用
+- `--non-interactive` 検出時はスキップして `update_batch complete` を呼ぶ（run-auto-sub.sh 自体は成功しているため）
+- `tests/auto-batch.bats` を構造的テスト（SKILL.md のキーワード存在確認）として新規作成。shell スクリプト動作テストではなく LLM スキル仕様テストとして位置付け
+- PR #619 を作成。全 pre-merge AC を PASS 確認済み
+
+### Deferred Items
+- post-merge AC（次回 `/auto --batch` 実行時の観察）は observation 型のため `/verify` フェーズで評価
+- Resume mode (`--batch --resume`) は List mode と同じ steps に従うため step 5 継承は自動的（SKILL.md 変更不要）
+
+### Notes for Next Phase
+- pre-merge AC 3件（section_contains, file_exists, command bats）全て PASS 確認済み。review フェーズで verify command の整合性に問題なし
+- Smoke Test セクションなし（スキップ）
+- 逸脱なし。Spec の Implementation Steps を忠実に実装
