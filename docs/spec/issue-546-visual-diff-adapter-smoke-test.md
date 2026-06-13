@@ -82,3 +82,53 @@
 - **`npm install --no-save`**: CI で一時インストール。`package.json` を作成しない。CI の実行ごとに fresh install されるため package-lock.json 汚染なし
 - **Spec simplicity rule 超過**: Size M (light mode 推奨 5 items) に対して AC が 11 items。issue 側で AC がすでに確定しているため全量を Spec に転写している
 - **既存テスト影響なし**: 既存 14 ケース (shallow contract test) は変更なし; smoke test を末尾に追加
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Step 5b スクリプトの実行方法: Spec では tmp_dir に fixture をコピーしてから `node -e` を実行するとしていたが、bats の `local` 変数スコープと `$tmp_dir` の shell interpolation を利用して node スクリプト内にパスを直接埋め込む形を採用した（Spec の意図通り）。
+- `stale-test-check.md` で指摘される「削除されたリテラルが tests/ に残存していないか」のチェックを実施。本変更では既存テストのアサーション削除なし、新規追加のみのため問題なし。
+
+### Design Gaps/Ambiguities
+
+- Spec では Step 2 の smoke test で「fixture PNG を `.tmp/` にコピー」と記載していたが、bats の cleanup 要件を考慮して `mktemp -d` で一時ディレクトリを作成し `rm -rf` でクリーンアップする形が適切と判断。Spec の表現と実装は意図的に一致している。
+- `node -e "..."` スクリプト内への shell 変数 (`$tmp_dir`) の埋め込みは、bats の文字列インジェクションリスクが低いシナリオ（`mktemp -d` の出力はパスのみ）であり採用した。
+
+### Rework
+
+- なし。実装は Spec の設計通りに1パスで完了した。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST 課題なし (SHOULD 1件・CONSIDER 1件のみ)。SHOULD (Step 5c 未実装) は Spec Code Retrospective に「scope 外」と明記されており意図的決定のため SKIP。CONSIDER (async タイムアウトなし) も CI ジョブレベルタイムアウトで十分と判断し SKIP。
+- CI 全ジョブ SUCCESS (DCO, Run bats tests, Validate skill syntax, Forbidden Expressions check, macOS shell compatibility)。
+- github_check AC (CI bats job) を [x] に更新済み。
+
+### Deferred Items
+- Step 5c (sharp.composite() 3-panel composite) smoke test は本 Issue scope 外として引き続き未実装。後続 Issue での対応候補。
+- pnpm non-hoist の直接テストは CI 環境 (npm) では不可。後続 Issue または別軸での対応。
+
+### Notes for Next Phase
+- MUST 課題なし。ブロッカーなくマージ可能。
+- `<!-- review-summary -->` コメント投稿済み。
+- post-merge AC: CI 上での runtime smoke test 実走確認は opportunistic verify で監視される。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- rubric 1 (`Step 5b/5c embedded Node scripts`) と rubric 2 (`#441/#543 再発クラス`) の 2 条件がいずれも UNCERTAIN に終わった。rubric 1 は Step 5b のみ実装され Step 5c が未テストのため、rubric テキストが実装スコープより広い。rubric 2 の pnpm non-hoist クラスは CI 環境 (npm install) では直接再現できず、文書化もされていない。Issue 作成時の rubric 条件が実装の意図的な制約（Step 5c 除外、pnpm 非再現）を事前に反映していなかったことが乖離の原因。
+- 改善提案: Step 5b と Step 5c を個別の rubric 条件に分離し、スコープ外の場合は `file_not_exists` 等で「存在しないことを確認」するのではなく、Issue の Out of scope セクションに明示して rubric テキストから外す。
+
+### Recurring issues
+
+- なし。本 PR 内で同種課題の繰り返しは観察されなかった。
+
+### Acceptance criteria verification difficulty
+
+- UNCERTAIN: 2 件（rubric 1、rubric 2）
+- rubric 1 に Step 5b と Step 5c をまとめて記述したことで、部分実装の場合に判定が曖昧になる。原子的検証のためには 1 rubric = 1 スコープが望ましい。
+- rubric 2 の pnpm non-hoist 句は CI 環境では検証不能。rubric テキストに「または当該クラスをカバーできない理由を文書化」という OR 節が付いているにもかかわらず、bats ファイルに文書化がないため UNCERTAIN を招いた。verify コマンドに `rubric` を使う場合は OR 条件の片方（文書化）を確実に満たすようにする。

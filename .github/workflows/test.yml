@@ -12,6 +12,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install npm packages for smoke tests
+        run: npm install --no-save sharp pixelmatch
+
       - name: Install bats
         run: |
           sudo apt-get update -q
