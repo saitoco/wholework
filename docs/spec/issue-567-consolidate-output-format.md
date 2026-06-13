@@ -50,6 +50,25 @@ finder agent (review-bug, review-light, review-spec) の Output Format の `conf
 ### Rework
 - None: all 4 implementation steps completed on the first attempt; all 5 pre-merge ACs PASS
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- トリアージが「既に true の verify command」（変更なしでも PASS する file_contains）を検出し、`section_not_contains` による「削除の実証」形式へ強化した。verify command の実効性検査が機能（#573 の AC3 修正と同パターン — トリアージ段の verify command 監査が定着）
+
+#### spec
+- 各 agent ファイルの追加/削除行を明示する設計で、実装が一発完了
+
+#### code
+- 手戻りなし。#555 の Verify Retrospective 発の改善提案が 1 サイクルで実装着地
+
+#### verify
+- pre-merge 5/5 PASS（UNCERTAIN 0）。post-merge は将来の format 変更イベント観測のため SKIP（参照構造は確立済み）
+
+### Improvement Proposals
+- N/A
+
 ## Phase Handoff
 <!-- phase: code -->
 
