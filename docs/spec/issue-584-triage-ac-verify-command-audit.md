@@ -158,3 +158,29 @@ Domain file（`skills/triage/skill-dev-verify-audit.md`）は `validate-skill-sy
 - 全 Pre-merge AC（9/9）は review フェーズで PASS 確認済み
 - verify は Post-merge AC（`/triage --backlog` での監査コメント確認）のみが残タスク
 - CI（bats テスト）は merge 前に green 確認済み
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Size を triage が M とした後、spec フェーズが「実態は patch route 想定（main 直コミット）の S」と再評価したが route 切り替えは行わず PR route で完遂。spec→code の SSoT 移譲（Size 再評価）は機能した
+- 9 件全 AC に明示的 verify command（grep / file_exists / rubric / github_check）を割り当てた設計が verify を自動化した
+
+#### code
+- 全 9 AC を一発 PASS。`grep "type: domain"` 形式の frontmatter 検証も watermark 形式で機能した
+- Domain file の load_when 条件は最終的に「無条件ロード」を採用（spec phase で「保証された責務化」の目的と整合させた）
+
+#### review
+- bats 318 件全 pass、review-light で MUST/CONSIDER なし。spec と実装が完全一致したため見落としなし
+
+#### merge
+- mergeable=MERGEABLE で clean な squash merge。issue auto-close 経由で `phase/review` → CLOSED 遷移
+
+#### verify
+- pre-merge AC 9 件全 PASS（grep + file_exists + rubric + github_check の網羅的自動化）
+- post-merge AC 1 件は opportunistic → 次回 `/triage --backlog` 実行時の観察対象。本 verify では SKIP
+
+### Improvement Proposals
+- N/A（design → implementation → verify の整合性が高く、改善提案なし）
+
