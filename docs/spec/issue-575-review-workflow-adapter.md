@@ -122,3 +122,72 @@
   - Other candidates: Dynamic Capability Mapping のみに依存（動作は同一だが暗黙的）
 - **Execution Platform 列 = routing SSoT のドキュメント化のみ（実行基盤の実移行はしない）** — reason: Issue scope は Workflow engine の opt-in 搭載であり実行基盤移行ではない。スコープを 5 項目に限定。
   - Other candidates: review を in-session に実移行（過剰スコープ、別 Issue 案件）
+
+## issue retrospective
+
+### 自動解決ログ（Auto-Resolve Log）
+
+非対話モードで実行。以下の ambiguity points を /issue フェーズで自動解決した。
+
+#### 1. `capabilities.workflow` verify command — `rubric` + `customization.md` check に置換
+
+**旧 AC**: detect-config-markers.md への grep
+
+**採択**: `rubric "modules/detect-config-markers.md resolves capabilities.workflow to HAS_WORKFLOW_CAPABILITY..."` + `file_contains "docs/guide/customization.md" "capabilities.workflow"` の2点に分割
+
+**理由**: `modules/detect-config-markers.md` は Dynamic Capability Mapping により明示エントリなしに `capabilities.workflow` → `HAS_WORKFLOW_CAPABILITY` を解決しうる。実装者が dynamic mapping を採用した場合、元の grep は両文字列とも現れず FAIL する。最小リスク: rubric（意味的検証）+ customization.md（必ず変更されるドキュメント）の組み合わせ。
+
+#### 2. `load_when` 検証強化
+
+**追加**: `file_contains "skills/review/workflow-guidance.md" "capability: workflow"`
+
+**理由**: `grep "load_when"` のみでは値を確認できない。`visual-diff-guidance.md` パターンに合わせ値の固定文字列検証を独立追加。
+
+#### 3. `bats テストが green` に verify command 追加
+
+**採択**: `github_check "gh pr checks" "Run bats tests"`
+
+**理由**: Pre-merge 条件に verify command が欠落。`.github/workflows/test.yml` のジョブ名を確認。Size=L → PR route のため `gh pr checks` 利用可能。
+
+#### 4. Post-merge fallback の `verify-type` 維持
+
+**採択**: `verify-type: opportunistic` を維持。
+
+**理由**: verify-classifier.md の「/skill-name 実行時に確認」パターンに合致。機械的 verify command を強制しない。
+
+#### 5. `customization.md` 記載の AC 欠落を補完
+
+**採択**: `file_contains "docs/guide/customization.md" "capabilities.workflow"` を新規 AC として追加。
+
+**理由**: Issue 本文 §2 に「ガイド文書 customization.md にも記載」と明記されていたが元の AC に未反映だった。
+
+## spec retrospective
+
+### Minor observations
+- Issue 本文 §1 が Workflow スクリプト配置を「実装時に確定」と未確定にしていた。spec で Domain file inline 埋め込みに確定。配置方針を Issue 段階で決めておくと code フェーズの判断負荷が下がる。
+
+### Judgment rationale
+- `Workflow` を allowed-tools に追加する際、`validate-skill-syntax.py` の `KNOWN_TOOLS` 同期だけでなく `BODY_TOOL_CHECK_SKIP` への追加も必要と判明。既存 spec/verify SKILL.md が本文に "Workflow" トークン（"Workflow-impacting"、"Full Workflow Review" 等）を含み、body tool check（`\bWorkflow\b`）が誤検知 FAIL するため。tool 名が一般英単語と衝突する場合の二重対応は Task/Agent/Skill と同じパターン。
+- capability 検出は Dynamic Capability Mapping で動作上は足りるが、precedent（browser/visual-diff の明示行）に揃えることで rubric（AC 1）を決定的に PASS させ discoverability も確保。
+- Workflow スクリプトを別ファイル化せず Domain file に inline 埋め込みとした。Workflow ツール自身が inline 渡しを推奨し、opt-in 経路でのみ context へ載る progressive disclosure に整合する。
+
+### Uncertainty resolution
+- Workflow ツールの permission-mode auto 下での可用性は Spike 1（レポート §Spike 1）が実証済みで、新規検証は不要だった。settings.json は Bash パターンのみを列挙し built-in tool は allowed-tools 経由で許可される構造を確認。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- Workflow スクリプトは `scripts/review-workflow.js` ではなく Domain file `skills/review/workflow-guidance.md` に inline JS で埋め込む（Workflow ツールが inline 渡しを推奨 + scripts/ は .sh/.py 規約 + progressive disclosure）
+- `capabilities.workflow` は detect-config-markers.md に明示テーブル行を追加（browser/visual-diff precedent、rubric を決定的に PASS）
+- Execution Platform 列は routing SSoT のドキュメント化のみ（run-review.sh の実行基盤移行はしない）
+
+### Deferred Items
+- review の in-session 実移行は別 Issue（spike §Routing Recommendation の将来候補）
+- audit / issue L/XL / spec への Workflow 展開は /review 安定稼働後に別 Issue で評価
+
+### Notes for Next Phase
+- 【必須】`Workflow` を review SKILL.md allowed-tools に追加する際、`validate-skill-syntax.py` の `KNOWN_TOOLS` と `BODY_TOOL_CHECK_SKIP` の両方に `'Workflow'` を追加する（後者を忘れると spec/verify SKILL.md が body-tool-check で誤検知 FAIL）
+- SKILL.md 本文に half-width `!` を導入しない（validator 制約）
+- ja ミラー（`docs/ja/tech.md` / `docs/ja/guide/customization.md`）は英語版と同コミットで同期（git timestamp 一致で IN_SYNC）
+- 10.0–10.3 の static fan-out 本体は変更しない（fallback 経路温存が rubric AC 9 の合否条件）
