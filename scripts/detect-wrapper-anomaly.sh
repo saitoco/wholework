@@ -87,12 +87,14 @@ elif grep -qiE "APIConnectionError|Request timed out|overloaded_error|529.*[Oo]v
   ANOMALY_DESC="API connection error in phase \`$PHASE\` (exit code $EXIT_CODE): API connection/overload pattern detected in wrapper output. The forked session terminated mid-run before phase completion."
   IMPROVEMENT_HINT="Follow the recovery procedure at \`modules/orchestration-fallbacks.md#mid-run-api-error\`: run reconcile-phase-state.sh to check actual completion, restore the phase label if needed, then retry the phase once with the corresponding run-*.sh script."
 elif [[ "$EXIT_CODE" == "0" ]]; then
-  if grep -qiE "完了しました|commit and push|successfully committed|pushed to|changes have been committed" "$LOG_FILE"; then
-    if ! git log --oneline -5 2>/dev/null | grep -q "#${ISSUE_NUMBER}"; then
+  if grep -q '"matches_expected":true' "$LOG_FILE" && grep -q '"commits_found":true' "$LOG_FILE"; then
+    : # reconcile confirmed commits — suppress silent-no-op detection (reconcile-first authority)
+  elif grep -qiE "完了しました|commit and push|successfully committed|pushed to|changes have been committed" "$LOG_FILE"; then
+    if ! git log --oneline -20 2>/dev/null | grep -q "#${ISSUE_NUMBER}"; then
       _found_on_origin=false
-      if [[ "$PHASE" == "code-patch" ]]; then
+      if [[ "$PHASE" == "code-patch" || "$PHASE" == "code" ]]; then
         if git fetch origin main 2>/dev/null; then
-          if git log origin/main --oneline -5 2>/dev/null | grep -q "#${ISSUE_NUMBER}"; then
+          if git log origin/main --oneline -20 2>/dev/null | grep -q "#${ISSUE_NUMBER}"; then
             _found_on_origin=true
           fi
         fi

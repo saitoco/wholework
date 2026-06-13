@@ -212,7 +212,7 @@ MOCK
     cat > "$BATS_TEST_TMPDIR/bin/git" <<'MOCK'
 #!/bin/bash
 case "$*" in
-  "log origin/main --oneline -5")
+  "log origin/main --oneline -20")
     echo "abc1234 chore: implement fix closes #523"
     ;;
 esac
@@ -221,6 +221,20 @@ MOCK
     chmod +x "$BATS_TEST_TMPDIR/bin/git"
     echo "実装が完了しました。commit and push も完了しています。" > "$LOG_FILE"
     run env PATH="$BATS_TEST_TMPDIR/bin:$PATH" bash "$SCRIPT" --log "$LOG_FILE" --exit-code 0 --issue 523 --phase code-patch
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
+@test "silent no-op: suppressed when reconcile confirms matches_expected true and commits_found true" {
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/git" <<'MOCK'
+#!/bin/bash
+# mock git: returns empty output for all subcommands
+exit 0
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/git"
+    printf 'reconcile-phase-state result: {"phase":"code-patch","matches_expected":true,"actual":{"commits_found":true}}\ncommit and push complete.\n' > "$LOG_FILE"
+    run env PATH="$BATS_TEST_TMPDIR/bin:$PATH" bash "$SCRIPT" --log "$LOG_FILE" --exit-code 0 --issue 576 --phase code
     [ "$status" -eq 0 ]
     [ -z "$output" ]
 }
