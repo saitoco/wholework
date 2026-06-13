@@ -186,7 +186,7 @@ if [[ "$ROUTE_FLAG" == "--pr" && $EXIT_CODE -eq 0 ]]; then
   _PR_NUM=$(echo "$_reconcile_out" | jq -r '.actual.pr_number // empty' 2>/dev/null || true)
   if [[ -n "$_PR_NUM" && "$_PR_NUM" =~ ^[0-9]+$ ]]; then
     _merge_status=$("$SCRIPT_DIR/gh-pr-merge-status.sh" "$_PR_NUM" 2>/dev/null || true)
-    if echo "$_merge_status" | grep -q '"reason":"conflicts"'; then
+    if echo "$_merge_status" | grep -q '"reason"[[:space:]]*:[[:space:]]*"conflicts"'; then
       echo "Warning: code phase completed but PR #${_PR_NUM} has conflicts with base." >&2
       echo "This is likely due to a concurrent merge on the base branch during code phase." >&2
       echo "PR diff (merge-base based) shows only this Issue's changes correctly -- do not mistake this for contamination." >&2
