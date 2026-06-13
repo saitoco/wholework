@@ -91,17 +91,18 @@
 - verify command（`section_contains`, `file_exists`, `command`）はすべて有効な構文で正確に記述されていた。UNCERTAIN ゼロ。`command "bats tests/auto-batch.bats"` は safe モードで CI 代替検証が機能した。テスト内ヘルパー関数 `list_mode_section()` が未使用（CONSIDER）と step 5 の label 再フェッチ失敗パス未定義（CONSIDER）の2件指摘。いずれも MUST/SHOULD なし。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light（--light フラグ + Size=M 両方一致）で review-light 統合レビューを実行
-- MUST/SHOULD 指摘なし。CONSIDER 2件（テストヘルパー未使用、step 5 失敗パス未定義）はスキップ
-- 全 pre-merge AC PASS、全 CI ジョブ SUCCESS 確認済み
+- mergeable=false, reason=unknown だったが non-interactive auto-resolve でマージを強行、成功した
+- `gh pr merge 619 --squash --delete-branch` によるスカッシュマージ完了
+- BASE_BRANCH=main のため `closes #615` により Issue は自動クローズされる
 
 ### Deferred Items
 - post-merge AC（observation 型: event=auto-run）は `/verify` フェーズで評価
-- CONSIDER 2件は /merge 後も問題なし — 将来の改善として残す
+- CONSIDER 2件（tests/auto-batch.bats の `list_mode_section()` 未使用ヘルパー、step 5 失敗パス未定義）は将来改善として残す
 
 ### Notes for Next Phase
-- PR 全ジョブ SUCCESS、MUST/SHOULD 指摘ゼロ。`/merge 619` に進める
-- tests/auto-batch.bats の `list_mode_section()` 未使用ヘルパーは `/merge` フェーズに影響しない
+- PR #619 はスカッシュマージ済み。Issue #615 は自動クローズ済み
+- post-merge AC は観察型（次回 `/auto --batch` 実行時に `phase/done` 到達を確認）— `/verify` で観察 AC のみ評価
+- `tests/auto-batch.bats` は既に main にあり、`bats tests/auto-batch.bats` で確認可能
