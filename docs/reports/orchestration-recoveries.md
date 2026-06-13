@@ -64,6 +64,30 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
+## 2026-06-13 14:30 UTC: silent-no-op recovered via wrapper-anomaly Tier 2 retry (#576, 2nd in session)
+
+### Context
+- Issue #576, phase: code (patch route, run-auto-sub.sh)
+- Source: wrapper-anomaly-detector + fallback-catalog (Tier 2)
+- Wrapper: run-code.sh, exit code: 0 (first attempt)
+- Log tail: "[anomaly] silent no-op detected in code: LLM reported success in phase `code` (exit code 0) but no commit for #576 found in recent git log"
+
+### Diagnosis
+- 初回 run-code.sh は wrapper exit 0 を返したが、`closes #576` を含むコミットが git log に見つからなかった（#365 silent no-op パターン）
+- 本セッション 2 件目の発生（#580 → #576 連続）
+
+### Recovery Applied
+- run-auto-sub.sh が anomaly detector の提案を読みリトライ実行
+- 2 回目の run-code.sh で正常にコミット c6a6170 を生成（skills/issue/spec-test-guidelines.md に PoC/measurement AC ガイダンスを追加）
+
+### Outcome
+- success — 親セッションへの手動介入不要。Tier 2 fallback が連続成功
+
+### Improvement Candidate
+- 未起票 (silent-no-op の発生頻度が上昇傾向。3 件目以降が発生した場合、予防策の起票を検討)
+
+---
+
 ## 2026-06-13 14:00 UTC: silent-no-op recovered via wrapper-anomaly Tier 2 retry
 
 ### Context

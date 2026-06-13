@@ -52,6 +52,40 @@ Issue #565 の verify retrospective で検出された問題：Spec は Spike 2 
 
 - None.
 
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| spec | patch | SUCCESS | — |
+| code | patch | SUCCESS (after silent-no-op detection) | detect-wrapper-anomaly が初回 code 実行を silent-no-op として検出。run-auto-sub.sh の Tier 2 リトライで 2 回目に成功（commit c6a6170） |
+| verify | - | SUCCESS | pre-merge 2/2 PASS |
+
+### Orchestration Anomalies
+- code phase の 1 回目実行で wrapper exit 0 だがコミットなし（silent no-op、#365 pattern）。`detect-wrapper-anomaly.sh` が検出し、改善提案として "Re-run run-code.sh 576" を出力。`run-auto-sub.sh` がリトライ実行、2 回目で正常コミット（c6a6170）。**本セッション 2 件目の silent-no-op 自動リカバリ**（#580 と連続）
+
+### Improvement Proposals
+- silent-no-op の発生頻度が #580 → #576 と連続している点は要観察。本セッション内では Tier 2 が正しく機能しているが、根本原因（claude の応答内容と実 commit の乖離）の追跡は #365 で継続中。発生頻度が高い場合は予防策（spec phase 末尾のサニティチェックなど）を検討する Issue 起票を検討
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- retro/verify 起票時点で AC が grep × 2 で揃い、triage 補正不要
+
+#### spec
+- 英日表記の選択（実測/試算は日本語のまま grep 対象、説明文は英語）の判断が Code Retrospective に明示記録された
+
+#### code
+- 1 回目 silent no-op → Tier 2 リトライで 2 回目成功。#580 と連続で同パターンが発生したが、いずれも自動リカバリで完結
+
+#### verify
+- pre-merge 2/2 PASS。post-merge opportunistic は spike 型 Issue 作成時の `/issue` 実行が観測機会で SKIP
+
+### Improvement Proposals
+- 本セッションで silent-no-op が #580/#576 で連続 2 回発生。Tier 2 自動リカバリで完結したが、頻度が上がる場合は予防策（事前ハートビート、code phase 開始確認 echo 等）の検討が必要。観察期間として次の数 Issue で頻度を測定し、3 件目以降が発生したら起票を検討
+
 ## Phase Handoff
 <!-- phase: code -->
 
