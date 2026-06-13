@@ -121,9 +121,20 @@ Update ROUTE and REVIEW_DEPTH based on the refreshed Size:
 | XL | sub_issue | — |
 | unset | pr | (safe fallback) |
 
-If route changed from Step 2, output a log line: "Post-spec Size refresh: Size updated to {NEW_SIZE}, route re-determined as {NEW_ROUTE}." Proceed to Step 4 using the updated ROUTE and REVIEW_DEPTH.
+If route changed from Step 2, output a log line: "Post-spec Size refresh: Size updated to {NEW_SIZE}, route re-determined as {NEW_ROUTE}."
+
+**Route demotion (pr → patch only):**
+
+If ROUTE changed from `pr` to `patch` (i.e., the prior ROUTE was `pr` and the refreshed ROUTE is `patch`):
+
+1. Output: "Post-spec route demotion: pr → patch, remaining phases re-planned"
+2. In Step 4, use the patch route sequence instead of the pr route sequence: run `code --patch` then `verify` (skip `review` and `merge`)
+
+Proceed to Step 4 using the updated ROUTE and REVIEW_DEPTH.
 
 ### Step 4: Autonomous Execution (run-*.sh)
+
+Select the route section below based on the current ROUTE value (set in Step 2 and potentially overridden by Step 3a's route demotion logic).
 
 Run each phase via `run-*.sh`. Each script launches an independent process with `claude -p --dangerously-skip-permissions` for a fresh context and full permission bypass.
 

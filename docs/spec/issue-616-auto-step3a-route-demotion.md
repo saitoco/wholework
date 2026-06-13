@@ -48,3 +48,46 @@
 - `--patch` / `--pr` 等の明示フラグがある場合は Step 3a 自体がスキップされるため、route demotion は発生しない（既存の skip 条件が維持される）
 - `tests/auto.bats` は SKILL.md の構造テスト（ファイルへのスクリプト呼び出しなし）。WHOLEWORK_SCRIPT_DIR モックは不要
 - AC の post-merge 観察条件（observation event=auto-run）は既存の opportunistic-search.sh 仕組みで自動評価される
+
+## Code Retrospective
+
+### Deviations from Design
+- bats テストの `step3a_section` helper で `declare -f` を使った `bash -c "$(declare -f ...; ...)"` 方式は動作せず（bats 環境で SKILL_FILE 変数が引き継がれない）。関数を直接 top-level で定義し `run step3a_section "$SKILL_FILE"` で呼ぶ方式に変更した
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- `tests/auto.bats` を初稿（`declare -f` 方式）→ 修正版（直接関数呼び出し方式）に 1 回書き直した
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- SHOULD 指摘（Step 4 への ROUTE ディスパッチ宣言追加）を対応済み（commit fbc8151）
+- Step 4 の既存 prose セクション（"patch route XS/S" / "pr route"）が ROUTE=patch を正しくカバーしていることを確認。機能的に完全
+- bats テストの `[ "$status" -eq 0 ]` 未記述は CONSIDER でスキップ（リスク低）
+
+### Deferred Items
+- tests/auto.bats:14 の status チェック不足（CONSIDER、スキップ）— 別 Issue で対応を検討
+- post-merge 観察条件（M→XS 再判定 Issue が patch ルートで完走）は observation event で自動評価
+
+### Notes for Next Phase
+- MUST 問題なし、CI 全 SUCCESS。`/merge 620` を実行可能
+- validate-skill-syntax.py: 0 errors — merge ブロック要因なし
+- PR branch: `worktree-code+issue-616`（review 対応コミット含む）
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Step 4 の ROUTE ディスパッチが prose 形式のため、暗黙的な依存関係が生まれやすい。今回の SHOULD 指摘（Step 4 に明示的な ROUTE ディスパッチ宣言がない）はこのパターンの典型例。Spec に「Step 3a の結果が Step 4 に伝搬する」という接続を明記しておくと将来の Spec 照合が容易になる。
+
+### Recurring Issues
+
+- Nothing to note。単一種類の指摘（接続の暗黙性）のみで、同種問題の繰り返しは検出されなかった。
+
+### Acceptance Criteria Verification Difficulty
+
+- Pre-merge の verify コマンド（grep + command）は CI 参照フォールバックが機能し PASS 判定を効率的に取得できた。UNCERTAIN なし。
+- Post-merge 条件（observation event=auto-run）は opportunistic-search.sh で自動評価される設計で適切。verify コマンドの追加は不要。
