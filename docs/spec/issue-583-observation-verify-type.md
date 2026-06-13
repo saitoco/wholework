@@ -97,6 +97,37 @@ phase/verify 滞留の「真の WIP」と「観測待ち」を区別するため
 - Step 4 の verify/SKILL.md 更新は AC に verify command がないが、Step 5 の docs/workflow.md 更新や Step 1 の classifier 更新が前提となる。Step 11 の `observation` 追加は後方互換（既存 Issues への影響なし）
 - Step 2 の bats 自己参照チェック: `tests/opportunistic-search.bats` に `verify-type: observation event=` を含む fixture を書くが、`opportunistic-search.sh` は `SCAN_DIRS` 対象外のため check-forbidden-expressions.sh には影響しない
 
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `opportunistic-search.sh --event <name>` はファイル変更なしでイベントベース AC スキャンを実現する設計を採用した。既存の `--dry-run` / 通常モードと直交する第3モードとして実装
+- `skills/auto/SKILL.md` の allowed-tools に `opportunistic-search.sh` と `gh-issue-edit.sh` を追加。Spec 未記載だったが `validate-skill-syntax.py` の必須チェックにより追加が必要と判明
+- `skills/audit/SKILL.md` に Section 7 を新設（既存の 6 セクションを壊さない後方互換な追加）
+
+### Deferred Items
+- 既存 7 Issue (#555, #556, #557, #562, #563, #567, #569) の AC を `observation event=<該当>` へ書き換える migration は post-merge manual AC として残存（GitHub API 経由のため自動 verify 不可）
+- `fix-cycle` イベントの emitter 実装は follow-up Issue に委譲（claude-watchdog.sh / run-auto-sub.sh 深部の変更が必要）
+
+### Notes for Next Phase
+- PR #603 の CI が通ることを確認してからマージを進めること（bats 追加があるため CI-sensitive）
+- Post-merge 後に observaton AC（event=pr-review-full）が次回 `/review --full` 実行で自動チェックされるかを観察し、Issue をクローズするか判断する
+- `skills/audit/SKILL.md` の Section 7 は stats サブコマンドの Step 4 Save（`docs/stats/YYYY-MM-DD.md` への書き出し）に含まれるため、次回 `/audit stats` 実行後にレポートを確認することを推奨
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `skills/audit/SKILL.md` にメトリクス追加に加え、日本語用語「滞留」を section header に追記した。理由: verify command が `grep "滞留" "skills/audit/SKILL.md"` を実行するため、英語の "dwell" だけでは AC8 が FAIL になる。AC の文字列と実装の整合をとるため追加した。
+
+### Design Gaps/Ambiguities
+
+- `validate-skill-syntax.py` が `skills/auto/SKILL.md` の本文中スクリプト参照をチェックするため、`opportunistic-search.sh` と `gh-issue-edit.sh` を `allowed-tools` に追加する必要があった（Spec には記載なし）。追加コミットで対処。
+
+### Rework
+
+- `skills/audit/SKILL.md` を2回コミット: 初回は英語のみで `dwell time` セクションを追加し、verify-executor 実行後に AC8（`grep "滞留"`）が FAIL であることが判明したため2回目のコミットで「滞留」を追記した。
+
 ### Auto-Resolve Log（非対話モード自動解決）
 
 | # | 曖昧ポイント | 採用した選択肢 | 根拠 |
