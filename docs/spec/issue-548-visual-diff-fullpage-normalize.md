@@ -49,3 +49,40 @@ Extends `modules/visual-diff-adapter.md` to resolve two structural constraints i
 - `capture_mode` parameter name aligns with existing inputs (`viewports`, `states`); implementation may use a slightly different naming as long as the opt-out mechanism is documented. The AC2 verify pattern `capture_mode\|fullpage` (BRE alternation) tolerates either `capture_mode` as a keyword or `fullpage` as a literal value string.
 - AC3 verify `grep "extend\|pad\|max(width"` will match because: `extend` appears in `sharp.extend` API usage; `pad` in the description; `max(width` as notation for `Math.max(ref.info.width, impl.info.width)` mirroring the Issue body phrasing.
 - The `browser-use` CLI fullPage support may need a note if `--full-page` flag is unavailable; document the equivalent approach or note as unsupported in that case.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Step 5c canvas width computation: Spec said `width: 3 * W` using the normalized W. Implementation used `W` from re-reading the diff file metadata (`{ width: W, height: H } = await sharp(diff).metadata()`) rather than carrying W from Step 5b. This indirection is functionally identical but avoids passing W as a variable across bash heredoc boundaries.
+- browser-use CLI fullPage note: Added explicit fallback note ("if browser-use version does not support --full-page, fall back to omitting the flag") as the Spec's Notes section anticipated this uncertainty. Aligns with Spec Note about browser-use CLI fullPage support.
+
+### Design Gaps/Ambiguities
+
+- The Spec did not specify whether the `padTo` helper should be defined inline or extracted. Implemented as an inline async arrow function in the Node.js `-e` snippet for simplicity — no external helper file needed for a single-file module change.
+- `browser_take_screenshot` `fullPage` parameter form: The Spec listed `fullPage: true` but did not clarify whether the Playwright MCP tool accepts a named `fullPage` parameter or a positional boolean. Documented as `fullPage: true` (keyword argument form), which is the standard Playwright API shape.
+
+### Rework
+
+- None. Implementation proceeded directly from the Spec without rework.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+
+- `capture_mode` parameter added to Input section with `fullpage` (default) | `viewport` values; viewport opt-out is documented in both browser-use and Playwright MCP steps.
+- Step 5b pad normalization uses `sharp.extend` with right/bottom padding and white background; W and H computed as `Math.max(ref.info.width, impl.info.width)` and `Math.max(ref.info.height, impl.info.height)`.
+- Step 5c re-reads W/H from diff file metadata rather than threading variables through bash heredoc — functionally identical but cleaner for a single-file module.
+- All 5 pre-merge AC verify commands PASS (4 grep + 1 rubric); checkboxes updated on the Issue.
+
+### Deferred Items
+
+- post-merge manual AC: koganezawa-com#58 re-run with fullPage to confirm no dimension throw — caller's responsibility, not covered by adapter unit tests.
+- browser-use `--full-page` flag availability: noted as "fall back to omitting the flag" if unsupported; actual verification requires a live browser-use installation.
+
+### Notes for Next Phase
+
+- PR #607 created; CI should run `.github/workflows/test.yml` (bats + validate-skill-syntax + forbidden-expressions).
+- No doc sync changes needed (only `modules/` and `tests/` modified, not `docs/*.md`).
+- The removed "Follow-on constraint (image height mismatch)" Note was the primary motivation for this Issue — reviewer should confirm it is gone from the module.
