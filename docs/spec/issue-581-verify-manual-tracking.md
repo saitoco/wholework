@@ -67,3 +67,36 @@ When the specified named event occurs (e.g., `event=pr-review-full`, `event=issu
 **Relation to #588**: Option D adoption is a prerequisite for meaningful `phase/verify` retention metrics. With `verify-type: observation`, the system can distinguish "genuine WIP (FAIL not yet fixed)" from "awaiting observation (conditions pending specific event)" — enabling the audit stats in #588 to report these separately.
 
 **verify-type: observation trigger mechanism (deferred to #583)**: Events are named strings (e.g., `issue-583-merge`, `pr-review-full`). When an event fires, `/verify` (or `opportunistic-search.sh --event`) re-evaluates all conditions tagged with matching `event=<name>`. Unknown event names fall back to `opportunistic` classification with a warning.
+
+## Spec Retrospective
+
+N/A (design-only Issue; this Spec file is the implementation artifact)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. The implementation plan stated "This Spec file is the implementation artifact" and no additional source files were changed.
+
+### Design Gaps/Ambiguities
+
+- The Spec file was already committed to main during the spec phase (`77f84fb`). When the code phase worktree was created, the branch had zero new commits relative to main. PR creation requires at least one new commit ahead of the base branch, so the retrospective commit (this edit) is the first and only code-phase contribution — creating the commit that makes the PR possible. This ordering (retrospective before PR) is the correct resolution for "implementation = spec file already on main."
+
+### Rework
+
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Implementation is the Spec file itself (ADR document). No source code changes were made. The retrospective commit is the only new commit in this PR, providing the required delta for PR creation.
+- All pre-merge verify commands PASS: `file_exists`, two `grep` checks, and `rubric` evaluation all confirmed the ADR content is complete.
+
+### Deferred Items
+- Full implementation of `verify-type: observation event=<name>` (grammar, event definitions, per-skill firing points) is delegated to #583 — explicitly stated in both the Spec and the Issue body.
+
+### Notes for Next Phase
+- Review should verify the ADR structure covers all four required elements: problem statement, 4 options with pros/cons, adopted option with rationale, and rejected alternatives with reasoning.
+- The post-merge AC uses `verify-type: observation event=issue-583-merge` — this is the first use of the new classification as a design example; reviewers may flag this as forward-reference.
+- No code files changed; the review diff is this Spec file only (retrospective + phase handoff sections).
