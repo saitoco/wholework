@@ -66,3 +66,34 @@
 - `gh-graphql.sh` の `get-issue-timeline` クエリ（既存）は `LABELED_EVENT` も含む `first:100` で取得するため、イベント数が多いと最新 reopen が切れる可能性がある。新たに `get-last-reopen`（`REOPENED_EVENT` のみ、`last:1`）を追加して対処。
 - タイムスタンプ取得失敗時のフォールバックは、初回実行（reopen なし）でも既存ヒューリスティックが正しく動作するため後退しない。
 - `git log --after="<ISO8601>"` はコミット author date を基準とする。reopen 後に作成されたコミットは reopen 以降の日時を持つため、フィルタが正しく機能する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `gh-graphql.sh` の `--jq` 出力はデフォルトで JSON 文字列クォートを含むため、`| tr -d '"'` でクォート除去を追加した。Spec にはこの処理の明示がなかったが、`git log --after=` に渡す際に必要なため追加。
+
+### Design Gaps/Ambiguities
+
+- Spec は `reopen_ts` の取得結果形式（jq がクォート付き文字列を返すこと）について言及していなかった。実装時に `"2024-01-01T00:00:00Z"` のようなクォート付き値が返ることを確認し、`tr -d '"'` で除去する処理を追加した。
+
+### Rework
+
+- 特になし。Spec の実装ステップに沿って実装でき、手戻りは発生しなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `gh-graphql.sh` に `get-last-reopen` クエリを追加し `_completion_code_patch()` 内で自己完結的に reopen タイムスタンプを取得する方式を採用（呼び出し元の変更不要）
+- jq 出力のクォートを `tr -d '"'` で除去してから `git log --after=` に渡す
+- フォールバック diagnosis に `"fix-cycle false positive possible"` を明記し、デバッグ可視性を維持
+
+### Deferred Items
+- タイムスタンプ取得失敗時のフォールバック動作の observability 向上（診断メッセージ強化）は今後の改善課題
+- `code-pr` completion check も同様の false positive リスクを持つ可能性があるが、今回のスコープ外
+
+### Notes for Next Phase
+- `tests/reconcile-phase-state.bats` は 54 テスト全通過（fix-cycle テスト 2 件追加含む）
+- `modules/phase-state.md` の code-patch completion signature 更新済み（`/review` 時に参照する SSoT）
+- PR body の Verification (pre-merge) は Issue のチェックボックス管理と分離しており、PR 上はインフォメーションのみ
