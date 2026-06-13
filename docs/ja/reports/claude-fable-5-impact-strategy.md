@@ -7,6 +7,9 @@
 **モデルリリース**: Claude Fable 5 / Claude Mythos 5 — 2026-06-09（[アナウンス](https://www.anthropic.com/news/claude-fable-5-mythos-5)）
 **対象範囲**: Mythos クラス model 登場後の Wholework の存在意義、および配布コンポーネント（skills, agents, scripts）と Steering Documents
 **ステータス**: 提案 — 実行計画は「Candidate Issues」（§8）を参照
+
+> ⚠️ **停止中のお知らせ（2026-06-13）**: 政府指令により、Anthropic が Fable 5（`claude-fable-5`）の API 提供を一時停止中です。API を呼び出すとエラーになる可能性が高いです。停止期間は未定ですが長期化はしない見込みです。下記の分析および Candidate Issues は、再開後も有効です。再開時は: 本ノートと `scripts/run-spec.sh` の停止警告行を削除してください。
+
 **関連**: `docs/reports/claude-opus-4-7-optimization-strategy.md` を踏まえて作成
 
 ## 1. エグゼクティブサマリー

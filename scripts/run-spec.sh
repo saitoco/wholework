@@ -61,6 +61,7 @@ echo "Permissions: ${_PERM_LABEL}"
 echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
 if [[ "$MODEL" == "claude-fable-5" ]]; then
+  echo "WARNING: Fable 5 is currently suspended (government directive to Anthropic, 2026-06-13~). API will likely return an error."
   echo "WARNING: Fable 5 opt-in — cost \$10/\$50 per MTok (2x Opus 4.8, ~3.3x Sonnet)"
   echo "WARNING: Usage credits required after 2026-06-22 (subscription plans)"
   echo "WARNING: 30-day retention required — ZDR organizations not supported"
