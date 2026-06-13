@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (51 files)
+├── scripts/             # Utility scripts used by skills and agents (52 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -39,7 +39,7 @@ wholework/
 │   └── workflows/
 │       ├── test.yml             # CI: bats tests, skill syntax validation, forbidden expressions check, and macOS shell compatibility test
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
-├── tests/               # Bats test files for scripts (63 files)
+├── tests/               # Bats test files for scripts (65 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -174,6 +174,7 @@ Key modules:
 - `scripts/get-issue-type.sh` — get issue type label
 - `scripts/get-issue-priority.sh` — get issue priority field
 - `scripts/get-sub-issue-graph.sh` — build sub-issue dependency graph
+- `scripts/get-sub-issue-progress.sh` — fetch all sub-issues (OPEN + CLOSED) under an XL parent issue with state, labels, timestamps, and blockedBy for `/audit progress`
 - `scripts/get-verify-iteration.sh` — read highest `<!-- verify-iteration: N -->` marker from Issue comments
 - `scripts/hook-rename-on-auto.sh` — UserPromptSubmit hook: auto-rename session title when prompt matches `/auto` pattern
 - `scripts/log-permission.sh` — log permission events (JSON output)

@@ -58,6 +58,9 @@ get_named_query() {
         get-sub-issues)
             printf '%s' 'query($owner:String!,$repo:String!,$num:Int!){repository(owner:$owner,name:$repo){issue(number:$num){subIssues(first:50){nodes{number title state blockedBy(first:20){nodes{number state}}}}}}}'
             ;;
+        get-sub-issues-all)
+            printf '%s' 'query($owner:String!,$repo:String!,$num:Int!){repository(owner:$owner,name:$repo){issue(number:$num){title subIssues(first:100){nodes{number title state createdAt closedAt updatedAt labels(first:20){nodes{name}} blockedBy(first:20){nodes{number state}}}}}}}'
+            ;;
         get-blocked-by)
             printf '%s' 'query($owner:String!,$repo:String!,$num:Int!){repository(owner:$owner,name:$repo){issue(number:$num){blockedBy(first:100){nodes{number title state}}}}}'
             ;;
