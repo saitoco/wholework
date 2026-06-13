@@ -78,3 +78,43 @@ Longest observed silent windows on *surviving* runs: ~660s (review phases), ~480
 ## Remaining Observation Conditions
 
 The 7 phase/verify issues carry only future-event observation conditions: real-PR `/review --full` finding volume (#555), watchdog kill recurrence (#556), early-stop absence (#557), retrospective reading effects (#562), cyber-classifier fallback (#563), format-change propagation (#567), and real fix-cycle reconcile behavior (#569). Each closes via `/verify N` when its triggering event occurs in normal operation.
+
+
+---
+
+## Evaluation and Improvement Proposals (added 2026-06-13)
+
+Reading this session's measured data as an empirical evaluation of Wholework + `/auto`, we filed six improvement issues (#583–#588).
+
+### What works (the core to preserve)
+
+1. **watchdog + 3-tier recovery**: 2 kills in 35+ wrapper phase runs (5.7%). One converted a false positive into a structural fix (#569); the other, post-#569, correctly detected a true stall. Beyond "stable" — a **self-diagnosing system**.
+2. **verify FAIL → reopen → fix cycle**: #557 resolved within the iteration cap (2/3). The CI-red verify correctly caught the code phase's inaccurate self-report of green.
+3. **retro → Issue → /auto self-repair**: #557 incident → #569 fix closed in **under 10 hours**. Outflow (5 issues filed) = inflow (5 consumed). The design goal demonstrated in practice.
+4. **Triage's unintended secondary value**: 3 issues had defective verify commands (false PASS / false FAIL) repaired at triage time — value beyond its stated responsibility (metadata assignment).
+5. **Dynamic Size reassessment (Step 3a)**: #560's M→S re-judge worked, route switched to patch, completed in 45 min.
+
+### Limits and gaps
+
+1. **Observation-type post-merge AC accumulation**: 7 of 14 issues remain at phase/verify (CLOSED but not fully done). "Future-event observation" and "opportunistic consumption" are mixed and accumulate.
+2. **Manual dependency in fix cycle**: #557's parent session manually fixed 5 test-mock files — beyond `/code`'s self-repair scope. Detected only after a 45-minute empty wrapper run; drags down autonomous completion rate.
+3. **Implicit triage audit of verify commands**: All 3 repairs were incidental discoveries by the triage executor. Not documented as a skill responsibility, no systematic guarantee.
+4. **Excessive headroom in uniform 2700s watchdog**: Longest observed silent windows: review 660s / code 480-540s / spec 480-540s — 4-5× headroom. True stalls detected slowly (even #557 waited 2700s).
+5. **Implicit dependency on a Fable 5 parent session**: The report's explicit "Fable 5 parent + Sonnet children" topology may have underwritten the 14-issue completion. Whether an Opus 4.8 parent delivers the same context coherence is untested under the Fable 5 suspension.
+
+### Filed improvement issues
+
+| # | Priority | Size | Content | Dependency |
+|---|---|---|---|---|
+| #583 | high | M | Introduce `verify-type: observation event=<name>`, event-driven auto re-evaluation, migrate the existing 7 issues | — |
+| #584 | high | M | Add an explicit "AC verify command audit" step to the triage skill + Domain file (5 systematized patterns) | — |
+| #585 | high | M | Phase-specific watchdog timeouts (spec/code 1800s, review 2000s, merge/issue 600s) + `.wholework.yml` keys | — |
+| #586 | medium | L | `/code` Tier 0 recovery (mock/snapshot/fixture auto-repair, `tests/` only, max 1 retry) | — |
+| #587 | medium | M | Spike: measure `/auto` continuous-run performance under an Opus 4.8 parent session (Fable 5 suspended) | — |
+| #588 | medium | M | Full audit-stats retention metrics (6 types) + retire-proposal escalation at 30/60/90 days | blocked by #583 |
+
+### Overall
+
+What this report shows is less "Wholework worked as designed" than the fact that **the self-diagnose / self-repair loop closes faster than expected**. A retrospective's Improvement Proposal being implemented in the same session — a 10-hour loop — is empirical evidence that Wholework's moat is not "a workflow scaffold" but **"a base where improvement accumulates"**.
+
+The two highest-leverage improvements are **"reduce half-complete states"** (#583, observation-AC classification) and **"promote triage's implicit value to a guaranteed responsibility"** (#584, verify-command audit). Both are lightweight to implement, with outsized effect.

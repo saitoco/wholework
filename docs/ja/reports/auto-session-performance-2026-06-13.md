@@ -78,3 +78,43 @@ Claude Fable 5（親オーケストレータ）+ Sonnet `claude -p` 子フェー
 ## 残存する観測条件
 
 phase/verify の 7 Issue が持つのは将来イベント観測型の条件のみ: 実 PR `/review --full` の所見量（#555）、watchdog kill 再発（#556）、early-stop 不発生（#557）、retrospective 参照効果（#562）、cyber-classifier fallback（#563）、format 変更の一括反映（#567）、実 fix-cycle での reconcile 挙動（#569）。それぞれ通常運用で該当イベントが発生した時点で `/verify N` によりクローズできる。
+
+
+---
+
+## 評価と改善提案（2026-06-13 追記）
+
+本セッションの実測データを Wholework + `/auto` の実態評価として読み解き、改善 Issue 6 件（#583–#588）を起票した。
+
+### 機能している（保持すべきコア）
+
+1. **watchdog + 3-tier recovery**: 35+ wrapper フェーズで kill 2 回（5.7%）、うち 1 回は false positive を構造修正（#569）に変換、もう 1 回は #569 修正後に正しく検出された真のストール。「安定」を超えて「**自己診断のあるシステム**」のレベル。
+2. **verify FAIL → reopen → fix サイクル**: #557 が iteration 上限内（2/3）で解決。code フェーズの自己報告（テスト green 申告）に対し CI red の verify が正しく不一致を検出。
+3. **retro → Issue → /auto の自己修復**: #557 incident → #569 修正が **10 時間以内に閉じた**。outflow（5 件起票）= inflow（5 件消化）も成立。設計目標が実証された瞬間。
+4. **triage の予期せぬ副次価値**: 3 件で verify command の欠陥（false PASS / false FAIL）を triage 段で検出修復。本来責務（メタデータ付与）を超えた価値。
+5. **Size 動的再判定（Step 3a）**: #560 で M→S が機能、route が patch に切替わって 45 分で完走。
+
+### 限界・改善余地
+
+1. **観測型 post-merge AC の滞留**: 14 Issue 中 7 件が phase/verify で残存（CLOSED だが完全 done ではない）。「将来イベント観測待ち」と「opportunistic で消化される」が混在し累積する。
+2. **fix-cycle の手動依存**: #557 で親セッションが「テストモック 5 ファイル」を手動修正。`/code` の自己修復範囲を超え、`/auto` の autonomous 完走率を引き下げる原因。45 分の空振り後に検出。
+3. **triage の verify command 監査が暗黙**: 3 件の修復は triage 実行者が偶発的に気づいた結果。skill 責務として明文化されておらず、体系的保証がない。
+4. **watchdog 2700s 一律の余裕過大**: 最長 silent window が review 660s / code 480-540s / spec 480-540s。2700s に対し 4-5 倍の余裕。真のストール検出が遅れる（#557 でも 2700s 待った）。
+5. **Fable 5 親セッションへの暗黙依存**: 本レポート明記の「Fable 5 親 + Sonnet 子」構成が今回の 14 Issue 完走の前提だった可能性。Fable 5 停止下で Opus 4.8 親が同じ context coherence を出せるかが未検証。
+
+### 起票した改善 Issue
+
+| # | Priority | Size | 内容 | 依存 |
+|---|---|---|---|---|
+| #583 | high | M | `verify-type: observation event=<name>` 導入 + イベント駆動自動再評価 + 既存 7 Issue migration | — |
+| #584 | high | M | triage skill に「AC verify command 整合性監査」明示ステップ + Domain file（5 パターン体系化） | — |
+| #585 | high | M | watchdog の phase 別 timeout（spec/code 1800s, review 2000s, merge/issue 600s）+ `.wholework.yml` キー | — |
+| #586 | medium | L | `/code` の Tier 0 リカバリ（mock/snapshot/fixture 自動修復、tests/ のみ、max 1 回） | — |
+| #587 | medium | M | Opus 4.8 親 `/auto` 連続実行パフォーマンス計測 spike（Fable 5 停止下） | — |
+| #588 | medium | M | audit-stats 完全版 retention メトリクス（6 種）+ retire 提案 30/60/90 days escalation | blocked by #583 |
+
+### 全体所感
+
+本レポートが示すのは「Wholework が設計どおりに動いた」というより、「**自己診断と自己修復のループが想定以上に短く閉じている**」事実。retrospective の Improvement Proposal が同セッション内で消化される 10 時間ループは、Wholework の moat が「workflow scaffold」ではなく「**改善が累積する基盤**」であることの実証になっている。
+
+改善の主軸は **「半完了状態を減らす」**（#583 観測型 AC 分類）と **「triage の暗黙価値を保証された責務にする」**（#584 verify command audit）の 2 点。両方とも実装は軽量、効果は大きい。
