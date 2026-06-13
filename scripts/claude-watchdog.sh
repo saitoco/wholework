@@ -91,9 +91,11 @@ if [[ "$_watchdog_killed" == "true" ]]; then
       _matched_count=$(echo "$_watchdog_event_results" | jq 'length' 2>/dev/null || echo 0)
       if [[ "$_matched_count" -gt 0 ]]; then
         _issue_numbers=$(echo "$_watchdog_event_results" | jq -r '.[].number' 2>/dev/null || true)
-        for _wk_issue in $_issue_numbers; do
-          gh issue comment "$_wk_issue" --body "watchdog-kill event observed — condition FAIL (AI judgment not available in shell context; re-run \`/verify ${_wk_issue}\` to update checkbox)" 2>/dev/null || true
-        done
+        if [[ -n "$_issue_numbers" ]]; then
+          for _wk_issue in $_issue_numbers; do
+            gh issue comment "$_wk_issue" --body "watchdog-kill event observed — condition FAIL (AI judgment not available in shell context; re-run \`/verify ${_wk_issue}\` to update checkbox)" 2>/dev/null || true
+          done
+        fi
       fi
     fi
   fi

@@ -167,8 +167,12 @@ teardown() {
     export MOCK_ISSUE_LIST='[{"number": 403}]'
     export MOCK_ISSUE_BODY_403='- [ ] /review skill creates review after execution <!-- verify-type: opportunistic -->'
 
-    run bash "$SCRIPT" --event unknown-event-xyz /review
+    # Merge stderr into stdout so the warning is captured in $output
+    run bash "$SCRIPT" --event unknown-event-xyz /review 2>&1
     [ "$status" -eq 0 ]
-    [[ "$output" == *"[]"* ]]
-    [[ "$stderr" == *"Warning: unknown event"* ]] || [[ "${lines[*]}" == *"Warning"* ]]
+    # Warning must be emitted for unknown event
+    [[ "$output" == *"Warning: unknown event 'unknown-event-xyz'"* ]]
+    # Fallback to opportunistic mode finds the matching issue
+    echo "$output" | grep -v "^Warning" | jq -e 'length == 1' > /dev/null
+    echo "$output" | grep -v "^Warning" | jq -e '.[0].number == 403' > /dev/null
 }
