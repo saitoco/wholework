@@ -196,17 +196,34 @@ _completion_spec() {
 _completion_code_patch() {
   git fetch origin main --quiet 2>/dev/null || _handle_error "git fetch failed"
 
+  local reopen_ts
+  reopen_ts=$("$SCRIPT_DIR/gh-graphql.sh" --query get-last-reopen \
+    -F "num=${ISSUE_NUMBER}" \
+    --jq '.data.repository.issue.timelineItems.nodes[0].createdAt' 2>/dev/null \
+    | tr -d '"' || true)
+
   local found=false
-  if git log origin/main --oneline --grep="closes #${ISSUE_NUMBER}" 2>/dev/null | grep -q .; then
-    found=true
-  fi
-
-  local actual_json="{\"commits_found\":${found}}"
-
-  if [[ "$found" == "true" ]]; then
-    _emit_result "true" "commit with closes #${ISSUE_NUMBER} found on origin/main" "$actual_json"
+  local actual_json
+  if [[ -n "$reopen_ts" && "$reopen_ts" != "null" ]]; then
+    if git log origin/main --after="$reopen_ts" --oneline --grep="closes #${ISSUE_NUMBER}" 2>/dev/null | grep -q .; then
+      found=true
+    fi
+    actual_json="{\"commits_found\":${found},\"reopen_ts\":\"$(_escape_json "$reopen_ts")\"}"
+    if [[ "$found" == "true" ]]; then
+      _emit_result "true" "fresh commit after reopen (${reopen_ts}) with closes #${ISSUE_NUMBER} found on origin/main" "$actual_json"
+    else
+      _handle_mismatch "no fresh commit after reopen (${reopen_ts}) with closes #${ISSUE_NUMBER} found on origin/main" "$actual_json"
+    fi
   else
-    _handle_mismatch "no commit with closes #${ISSUE_NUMBER} found on origin/main" "$actual_json"
+    if git log origin/main --oneline --grep="closes #${ISSUE_NUMBER}" 2>/dev/null | grep -q .; then
+      found=true
+    fi
+    actual_json="{\"commits_found\":${found}}"
+    if [[ "$found" == "true" ]]; then
+      _emit_result "true" "commit with closes #${ISSUE_NUMBER} found on origin/main (fallback: reopen timestamp unavailable; fix-cycle false positive possible)" "$actual_json"
+    else
+      _handle_mismatch "no commit with closes #${ISSUE_NUMBER} found on origin/main" "$actual_json"
+    fi
   fi
 }
 

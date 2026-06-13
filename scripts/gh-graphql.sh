@@ -64,6 +64,9 @@ get_named_query() {
         get-issue-timeline)
             printf '%s' 'query($owner:String!,$repo:String!,$num:Int!){repository(owner:$owner,name:$repo){issue(number:$num){number timelineItems(itemTypes:[LABELED_EVENT,UNLABELED_EVENT,REOPENED_EVENT],first:100){nodes{__typename ... on LabeledEvent{label{name}createdAt} ... on UnlabeledEvent{label{name}createdAt} ... on ReopenedEvent{createdAt}}}}}}'
             ;;
+        get-last-reopen)
+            printf '%s' 'query($owner:String!,$repo:String!,$num:Int!){repository(owner:$owner,name:$repo){issue(number:$num){timelineItems(itemTypes:[REOPENED_EVENT],last:1){nodes{... on ReopenedEvent{createdAt}}}}}}'
+            ;;
         *)
             echo "Error: unknown query name: $name" >&2
             return 1

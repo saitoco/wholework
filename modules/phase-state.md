@@ -35,7 +35,7 @@ For precondition checks, `reconcile-phase-state.sh` verifies whether the require
 |-------|-------------|-------------------------------|----------------------|
 | issue | Issue exists and state != CLOSED | `triaged` label on issue | Implemented |
 | spec | `phase/issue` or `phase/spec` label on issue | `$SPEC_PATH/issue-N-*.md` exists AND `phase/(ready\|code\|review\|merge\|verify\|done)` label | Implemented |
-| code-patch | `phase/ready` label on issue, Spec exists | `git log origin/main --grep="closes #N"` returns ≥1 commit | Precondition: `phase/ready` — Implemented; Spec exists — future scope. Completion: Implemented |
+| code-patch | `phase/ready` label on issue, Spec exists | `git log origin/main --after=<reopen_ts> --grep="closes #N"` returns ≥1 fresh commit (reopen timestamp obtained via `get-last-reopen`); falls back to `git log origin/main --grep="closes #N"` when reopen timestamp unavailable | Precondition: `phase/ready` — Implemented; Spec exists — future scope. Completion: Implemented |
 | code-pr | `phase/ready` label on issue, Spec exists | Open PR on `worktree-code+issue-N` branch (#310 SSoT) | Precondition: `phase/ready` — Implemented; Spec exists — future scope. Completion: Implemented |
 | review | PR is OPEN | PR has a comment containing `<!-- review-summary -->` marker (primary); or `## Review Response Summary` / `## レビュー回答サマリ` (fallback for marker-absent posts) | Implemented |
 | merge | PR is OPEN and reviewDecision is APPROVED | `gh pr view --json state == MERGED` | Implemented |
