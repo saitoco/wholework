@@ -48,3 +48,37 @@ Issue #551 の verify 実行で判明した問題: patch route Issue では `gh 
 - workflow ファイル名は `test.yml` を代表例として記載 (verify-classifier.md line 77 と整合)
 - route 判定ロジックの詳細は `modules/verify-classifier.md` § Patch Route CI Verification Note に委譲し、`/issue` 側では雛形と route 判定の入り口のみ提供する
 - `spec-test-guidelines.md` は SCAN_DIRS 対象 (`skills/`) に含まれるため、追加する patch route 例内の `jq` 式 `.[0].conclusion` が半角 `!` を含まないことを確認済み (問題なし)
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+特記なし。実装は Spec の各ステップと 1:1 で対応しており、構造的な乖離は検出されなかった。
+
+### 繰り返し発生する問題
+
+特記なし。CONSIDERが1件（SKILL.mdのGoodセクションにサブヘッダーがなく spec-test-guidelines.md と非対称）のみ。同種の問題の繰り返しはない。
+
+### 受け入れ条件の検証難度
+
+8件中7件が自動PASS。残り1件（`github_check "gh run list..."` による CI pass 確認）は safe モードでアローリスト外のため UNCERTAIN となった。これは verify-executor の仕様上の想定動作であり、`/verify` の full モードまたは CI ステータス参照で補完可能。今後 XS/S patch route Issue の AC に `github_check "gh run list..."` 形式を使う場合、safe モードでは常に UNCERTAIN になることを認識しておくとよい。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+
+- MUST issueなし、SHOULD issueなし — CONSIDERが1件（SKILL.md Goodセクションのサブヘッダー非対称性）のみ → スキップ判断（機能的問題なし）
+- すべてのpre-merge AC自動検証完了（7/8 PASS、1 UNCERTAIN）
+- UNCERTAIN ACは github_check safe mode 制約によるもの（CI自体はSUCCESS確認済み）
+
+### Deferred Items
+
+- Post-merge AC: 次回 XS/S Issue で `/issue` を実行した際の目視確認（opportunistic verify で追跡）
+- SKILL.md Good セクションのサブヘッダー非対称性（CONSIDER）: 将来の改善候補
+
+### Notes for Next Phase
+
+- CI全ジョブSUCCESS（DCO/bats/validate-skill-syntax/forbidden-expressions/macOS-compat）
+- レビューコメント（CONSIDER）を投稿済み — マージ前の修正不要
+- `/merge 606` で直接マージ可能
