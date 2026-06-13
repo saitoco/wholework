@@ -1,7 +1,7 @@
 ---
 name: audit
-description: Detect documentation/implementation drift and auto-generate Issues (`/audit drift`), and detect structural fragility (`/audit fragility`). AI detects semantic drift between Steering Documents + Project Documents and codebase implementation, and auto-generates Issues for code-side fixes. Where `/doc sync` proposes documentation-side fixes, `/audit` is the complementary skill that creates Issues for code-side fixes. Running without arguments executes both drift and fragility perspectives in an integrated run. `/audit stats` aggregates Issue metadata across the project and generates a project health diagnostic report (throughput / composition / First-try success / Backlog Health, etc.), providing a third lens for project health alongside drift and fragility detection. `/audit recoveries` reads the cross-Issue orchestration recovery log (`docs/reports/orchestration-recoveries.md`) and files Issues for recurring patterns that exceed a frequency threshold.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash(gh issue create:*, gh issue list:*, gh issue view:*, gh issue edit:*, gh label create:*, ls:*, mkdir:*, rm:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-priority.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-eager-load-capability.sh:*)
+description: Detect documentation/implementation drift and auto-generate Issues (`/audit drift`), and detect structural fragility (`/audit fragility`). AI detects semantic drift between Steering Documents + Project Documents and codebase implementation, and auto-generates Issues for code-side fixes. Where `/doc sync` proposes documentation-side fixes, `/audit` is the complementary skill that creates Issues for code-side fixes. Running without arguments executes both drift and fragility perspectives in an integrated run. `/audit stats` aggregates Issue metadata across the project and generates a project health diagnostic report (throughput / composition / First-try success / Backlog Health, etc.), providing a third lens for project health alongside drift and fragility detection. `/audit stats --retention` adds phase/verify and Icebox dwell metrics (median/p95/30-day threshold violations, verify-type breakdown, Icebox dwell, trigger candidates) with escalation-based retire-proposal comment posting (30/60/90 days for verify, 90/180 days for Icebox). `/audit recoveries` reads the cross-Issue orchestration recovery log (`docs/reports/orchestration-recoveries.md`) and files Issues for recurring patterns that exceed a frequency threshold.
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(gh issue create:*, gh issue list:*, gh issue view:*, gh issue edit:*, gh label create:*, ls:*, mkdir:*, rm:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-priority.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-eager-load-capability.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/compute-escalation-level.sh:*)
 ---
 
 # audit: Documentation × Implementation Drift Detection
@@ -16,13 +16,13 @@ If ARGUMENTS is `drift` or starts with `drift` (including options like `--dry-ru
 
 If ARGUMENTS is `fragility` or starts with `fragility` (including options like `--dry-run`, `--limit N`): execute the "fragility subcommand" section and exit.
 
-If ARGUMENTS is `stats` or starts with `stats` (including options like `--since DATE`, `--limit N`, `--no-save`): execute the "stats Subcommand" section and exit.
+If ARGUMENTS is `stats` or starts with `stats` (including options like `--since DATE`, `--limit N`, `--no-save`, `--retention`): execute the "stats Subcommand" section and exit.
 
 If ARGUMENTS is `recoveries` or starts with `recoveries` (including options like `--dry-run`, `--limit N`, `--threshold K`): execute the "recoveries subcommand" section and exit.
 
 If ARGUMENTS is empty (no arguments), `--dry-run`, or starts with `--limit`: execute the "Integrated Execution (drift + fragility)" section and exit.
 
-For any other ARGUMENTS: display "Usage: /audit [drift|fragility|stats|recoveries] [--dry-run] [--limit N] [--since DATE] [--no-save] [--threshold K] (running `/audit` without arguments executes drift + fragility integrated run)" and exit.
+For any other ARGUMENTS: display "Usage: /audit [drift|fragility|stats|recoveries] [--dry-run] [--limit N] [--since DATE] [--no-save] [--retention] [--threshold K] (running `/audit` without arguments executes drift + fragility integrated run)" and exit.
 
 ---
 
@@ -232,6 +232,7 @@ Parse the following options from ARGUMENTS:
 - `--since DATE`: aggregation start date (default: 90 days before today; format: `YYYY-MM-DD`)
 - `--limit N`: maximum number of Issues to fetch (default: 500)
 - `--no-save`: skip saving to `docs/stats/`; output to stdout only
+- `--retention`: enable retention analysis — compute phase/verify and Icebox dwell metrics, and post escalation-based retire-proposal comments
 
 ---
 
@@ -344,6 +345,31 @@ Scan each Issue currently labeled `phase/verify` (closed state) for unchecked (`
 
 Scan each Issue currently labeled `phase/verify` (closed state) for unchecked (`- [ ]`) lines containing `verify-type: opportunistic`. Count the number of such Issues.
 
+#### Manual Waiting Count
+
+Scan each Issue currently labeled `phase/verify` (closed state) for unchecked (`- [ ]`) lines containing `verify-type: manual`. Count the number of such Issues.
+
+#### 30-Day Threshold Violations
+
+For each Issue currently in `phase/verify`, compute the dwell time from the most recent `phase/verify` LabeledEvent to today. Collect all Issues with dwell time ≥ 30 days as threshold violation candidates. Record the list with Issue number, title, and dwell days.
+
+#### Icebox Dwell Time
+
+For Issues with Project Status=Icebox (fetched via `${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query get-projects-with-fields`), compute the dwell time as days from each Issue's `createdAt` to today.
+
+Compute the following aggregates across all Icebox Issues:
+- **Icebox count**: total number of Issues with Project Status=Icebox
+- **Median dwell time** (days)
+- **p95 dwell time** (days)
+
+#### Icebox Trigger Candidates
+
+For each Icebox Issue, scan the Issue body for re-evaluation trigger text (lines containing keywords such as 「再評価トリガー」, "re-evaluation trigger", or "trigger"). For each trigger found, apply heuristic judgment:
+- If the trigger references a specific Issue number (e.g., `#123`), check whether that Issue is CLOSED via `gh issue view`.
+- If the trigger references an event or condition, apply model judgment to estimate whether the condition may have been met.
+
+Record Issues where at least one trigger heuristic evaluates to true as "trigger fire candidates".
+
 #### Highlights Auto-Detection Logic
 
 Collect items meeting any of the following criteria to display in the Highlights section:
@@ -416,6 +442,80 @@ Display the following (computed from the Step 2 metrics):
 
 If there are no Issues currently in `phase/verify`, display "No Issues currently in phase/verify."
 
+### --retention Option
+
+**Skip this entire section when `--retention` is not specified.**
+
+When `--retention` is specified, append the following after Section 7.
+
+#### Section 8: phase/verify Retention Metrics
+
+Display the following table with threshold warnings:
+
+| Metric | Value | Threshold | Status |
+|--------|-------|-----------|--------|
+| phase/verify dwell (median) | N days | > 14 days | OK / WARNING |
+| phase/verify dwell (p95) | N days | > 30 days | OK / WARNING |
+| Observation waiting | N | > 10 | OK / WARNING |
+| Opportunistic waiting | N | > 10 | OK / WARNING |
+| Manual waiting | N | > 5 | OK / WARNING |
+| 30-day threshold violations | N | > 0 | OK / WARNING |
+
+List 30-day threshold violation Issues (if any) with Issue number, title, and dwell days.
+
+#### Section 9: Icebox Retention Metrics
+
+Display the following table with threshold warnings:
+
+| Metric | Value | Threshold | Status |
+|--------|-------|-----------|--------|
+| Icebox dwell (median) | N days | > 90 days | OK / WARNING |
+| Icebox dwell (p95) | N days | > 180 days | OK / WARNING |
+| Icebox count | N | — | — |
+| Trigger fire candidates | N | > 0 | OK / NOTIFY |
+
+List trigger fire candidate Issues (if any) with Issue number, title, and the matched trigger text.
+
+#### Retire-Proposal Comment Posting
+
+For each Issue currently in `phase/verify`, compute dwell days and call:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/compute-escalation-level.sh verify <dwell_days>
+```
+
+Route by escalation level:
+- **Level 0** (0–29 days): no action
+- **Level 1** (30–59 days): post observation guide reminder comment (suggest intentionally triggering the observation event)
+- **Level 2** (60–89 days): post retire candidate comment AND add `stale-verify` label via `gh issue edit --add-label stale-verify`
+- **Level 3** (90+ days): post "manual confirmation or remove observation condition" decision-prompt comment
+
+For each Icebox Issue, compute dwell days and call:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/compute-escalation-level.sh icebox <dwell_days>
+```
+
+Route by escalation level:
+- **Level 0** (0–89 days): no action
+- **Level 1** (90–179 days): post observation guide reminder comment
+- **Level 2** (180+ days): post retire candidate comment
+
+**Duplicate prevention**: before posting a comment, fetch existing comments via `gh issue view --json comments` and check for a comment containing the same escalation level marker (`<!-- escalation-level: N -->`). If found, skip that Issue — do not post a duplicate.
+
+Comment format (include escalation level marker for duplicate prevention):
+
+```markdown
+<!-- escalation-level: {N} -->
+## phase/verify Retention Notice (Level {N})
+
+This Issue has been in `phase/verify` for **{dwell_days} days**.
+
+{Level-specific message}
+```
+
+For Icebox comments, use `## Icebox Retention Notice (Level {N})` as the heading.
+
 ---
 
 ### Step 4: Save
@@ -429,7 +529,7 @@ If `--no-save` is not specified:
    ```bash
    mkdir -p docs/stats
    ```
-3. Write report content to `docs/stats/YYYY-MM-DD.md` (overwrite if the file already exists for the same date)
+3. Write report content to `docs/stats/YYYY-MM-DD.md` (overwrite if the file already exists for the same date). When `--retention` is specified, the Sections 8 and 9 retention output is included in the saved file.
 4. Display: "Report saved to docs/stats/YYYY-MM-DD.md"
 
 Then read `${CLAUDE_PLUGIN_ROOT}/modules/steering-hint.md` and follow the "Processing Steps" section.
