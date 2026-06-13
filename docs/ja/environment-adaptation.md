@@ -137,6 +137,7 @@ applies_to_proposals:               # 省略可; 改善提案 Issue をこの Do
 | `skills/code/stale-test-check.md` | `/code` | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発陳腐化テストチェック |
 | `skills/issue/spec-test-guidelines.md` | `/issue` | `validate-skill-syntax.py` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py]` | スキル開発テスト推奨事項 |
 | `skills/verify/browser-verify-phase.md` | `/verify` | `HAS_BROWSER_CAPABILITY=true` | `capability: browser` | ブラウザ検証 |
+| `skills/verify/lighthouse-guidance.md` | `/verify` | `HAS_LIGHTHOUSE_CAPABILITY=true` | `capability: lighthouse` | Lighthouse verify ガイダンス |
 | `skills/spec/visual-diff-guidance.md` | `/spec` | `HAS_VISUAL_DIFF_CAPABILITY=true` | `capability: visual-diff` | 視覚再現 verify ガイダンス |
 | `skills/spec/visual-state-enumeration.md` | `/spec` | `HAS_VISUAL_DIFF_CAPABILITY=true` | `capability: visual-diff` | 視覚再現 state enumeration scaffold |
 | `skills/issue/mcp-call-guidelines.md` | `/issue` | `MCP_TOOLS` が空でない | `capability: mcp` | MCP ツール検出 |
