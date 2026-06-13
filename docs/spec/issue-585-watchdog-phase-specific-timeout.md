@@ -155,3 +155,34 @@ Priority order (highest to lowest):
 - `eval` による間接変数参照は `${!var_name}` に代替可能（どちらも bash 3.2+ 対応）。どちらも許容。
 - `get-config-value.sh` は空文字列 default (`""`) をサポート。phase 別キー不在時の空文字判定に利用。
 - Issue body の Auto-Resolved Ambiguity Points で `docs/guide/customization.md` 更新と `--fail-if-outdated` の追加は既に自動解決済み。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `check-translation-sync.sh --fail-if-outdated` の verify command を `check-translation-sync.sh | grep 'customization.md' | grep -q IN_SYNC` に変更した。理由: `--fail-if-outdated` は全ファイルをチェックするため、本 Issue スコープ外の既存翻訳 lag（`docs/environment-adaptation.md`, `docs/product.md`, `docs/tech.md`）で常時 FAIL となる miscalibrated hint だったため。
+
+### Design Gaps/Ambiguities
+
+- `check-translation-sync.sh` が特定ファイルのフィルタリングをサポートしていないため、Issue 作成時の Auto-Resolved ambiguity「`--fail-if-outdated` を追加」では不十分だった。新キーが `customization.md` に IN_SYNC であることを確認するには grep ベースの命令に変更が必要だった。
+
+### Rework
+
+- なし。実装はSpec の手順通りに進行し、rework は発生しなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `check-translation-sync.sh --fail-if-outdated` を使った AC の代わりに customization.md 専用の grep コマンドに変更した（全ファイルチェックで既存 lag により false FAIL するため）
+- `eval` による間接変数参照を採用（bash 3.2+ 互換; `${!var}` も同等）
+- 既存テスト（WATCHDOG_TIMEOUT_DEFAULT fallback 等）は後方互換パスで引き続き通過することを確認済み
+
+### Deferred Items
+- `docs/environment-adaptation.md`, `docs/product.md`, `docs/tech.md` の翻訳 lag は本 Issue スコープ外（既存の lag で本変更起因ではない）
+- post-merge 観察条件（merge フェーズ 60s〜10分完走、真のストール kill）は実際の `/auto` 実行後に確認
+
+### Notes for Next Phase
+- PR #610 は全 16 pre-merge AC チェック済み（Issue body の checkbox 完了）
+- 全 715 bats テスト PASS（新規 5 テスト含む）
+- 翻訳同期チェックは `check-translation-sync.sh | grep 'customization.md' | grep -q IN_SYNC` の形式に修正済み（Spec および Issue body 両方）
