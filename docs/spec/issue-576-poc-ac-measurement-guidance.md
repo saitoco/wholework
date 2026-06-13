@@ -37,3 +37,32 @@ Issue #565 の verify retrospective で検出された問題：Spec は Spike 2 
 - `grep "file_exists"` は現行ファイル 28 行目に既存（`file_exists` と `file_exists_any` が含まれる）。新セクションでも計測成果物の検証パターンとして `file_exists` を使用するため、実装後も確実にマッチする
 - 対象ファイル `skills/issue/spec-test-guidelines.md` は `docs/*.md` ではないため翻訳同期（docs/ja/）対象外
 - このガイダンスは `/issue` スキルが `/issue` 実行時にのみ読み込む domain file（`file_exists_any: [scripts/validate-skill-syntax.py]` ゲート）であるため、distributable-first 原則を満たす（他の Wholework ユーザーが validate-skill-syntax.py を持つ skill-dev リポジトリで自動適用される）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. Implementation followed the Spec exactly — new section added at the end of `skills/issue/spec-test-guidelines.md` with 実測/試算 terminology and `file_exists` pattern examples as specified.
+
+### Design Gaps/Ambiguities
+
+- The Spec noted that "estimation allowed" should appear in AC text, but did not specify whether English or Japanese was preferred. Since the domain file uses English for section headings and pattern descriptions (consistent with the existing file style), and the Japanese terms 実測/試算 are preserved as grep targets, this was implemented with English-primary prose and Japanese key terms inline.
+
+### Rework
+
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Added the new section at the end of the file (after `## Specifying individual changed skills...`) as specified in the Spec — no structural changes to existing sections.
+- Used English-primary prose with inline Japanese terms (実測/試算) to match the existing file style while satisfying the grep-based AC verify commands.
+- Included both a positive pattern (実測 required → `file_exists` AC) and a negative pattern (anti-pattern: keyword grep only) for clarity.
+
+### Deferred Items
+- None — this is a self-contained documentation-only change with no follow-up needed.
+
+### Notes for Next Phase
+- The post-merge AC is opportunistic (spike 型 Issue 作成時に観察); no automated verification possible until a new spike-type Issue is created.
+- Both pre-merge verify commands PASS as confirmed during Step 10.
