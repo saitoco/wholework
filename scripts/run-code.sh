@@ -148,7 +148,7 @@ fi
 
 # Specify --model and ANTHROPIC_MODEL both (workaround for -p mode bug)
 # See: https://github.com/anthropics/claude-code/issues/22362
-load_watchdog_timeout "$SCRIPT_DIR"
+load_watchdog_timeout "$SCRIPT_DIR" "code"
 
 SECONDS=0
 set +e

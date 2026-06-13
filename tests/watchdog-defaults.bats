@@ -62,3 +62,62 @@ MOCK
     [ "$status" -eq 0 ]
     [[ "$output" == *"Warning"* ]]
 }
+
+@test "load_watchdog_timeout uses phase-specific default when phase is spec" {
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+echo ""
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+    run bash -c "source '$SCRIPT_DIR/watchdog-defaults.sh'; load_watchdog_timeout '$MOCK_DIR' 'spec' 2>/dev/null; echo \$WATCHDOG_TIMEOUT"
+    [ "$status" -eq 0 ]
+    [ "$output" = "1800" ]
+}
+
+@test "load_watchdog_timeout uses WATCHDOG_TIMEOUT_MERGE_DEFAULT when phase is merge" {
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+echo ""
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+    run bash -c "source '$SCRIPT_DIR/watchdog-defaults.sh'; load_watchdog_timeout '$MOCK_DIR' 'merge' 2>/dev/null; echo \$WATCHDOG_TIMEOUT"
+    [ "$status" -eq 0 ]
+    [ "$output" = "600" ]
+}
+
+@test "load_watchdog_timeout uses phase yml key when set" {
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+echo "900"
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+    run bash -c "source '$SCRIPT_DIR/watchdog-defaults.sh'; load_watchdog_timeout '$MOCK_DIR' 'spec'; echo \$WATCHDOG_TIMEOUT"
+    [ "$status" -eq 0 ]
+    [ "$output" = "900" ]
+}
+
+@test "load_watchdog_timeout falls back to global yml key when phase key is unset" {
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+if [ "$1" = "watchdog-timeout-spec-seconds" ]; then
+  echo ""
+else
+  echo "3600"
+fi
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+    run bash -c "source '$SCRIPT_DIR/watchdog-defaults.sh'; load_watchdog_timeout '$MOCK_DIR' 'spec'; echo \$WATCHDOG_TIMEOUT"
+    [ "$status" -eq 0 ]
+    [ "$output" = "3600" ]
+}
+
+@test "load_watchdog_timeout without phase argument uses WATCHDOG_TIMEOUT_DEFAULT" {
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+echo ""
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+    run bash -c "source '$SCRIPT_DIR/watchdog-defaults.sh'; load_watchdog_timeout '$MOCK_DIR' 2>/dev/null; echo \$WATCHDOG_TIMEOUT"
+    [ "$status" -eq 0 ]
+    [ "$output" = "2700" ]
+}
