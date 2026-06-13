@@ -50,3 +50,31 @@ Add a "date/file-naming semantics cross-check" perspective to `agents/review-bug
 - The trigger pattern `date +%` covers both `date +%Y-%m-%d` and `date -u +%Y-%m-%d` since `grep "date +%"` matches both forms
 - The cross-check is an off-diff context read: the agent must actively look at the generator script and the existing artifact directory, not just the diff lines
 - MUST severity is appropriate because the mismatch is deterministic — the guard is permanently inoperative, not just flaky
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- None
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Added the cross-check block to `review-bug.md` immediately before `### 2. False Positive Filtering` as specified — placement within Step 1 keeps all detection patterns grouped together
+- Added to `review-light.md` under Perspective 2 (Edge Cases and Robustness) rather than a new perspective — date/file-naming mismatches are a robustness issue (deterministic failure mode), not a security or spec deviation issue
+- Used `date +%` as the trigger pattern (covering both `date +%Y-%m-%d` and `date -u +%Y-%m-%d`) as specified in Notes
+
+### Deferred Items
+- Post-merge verification (opportunistic): a review run on a date-based file path change that demonstrates the new perspective in its output — cannot be verified pre-merge
+- No follow-up issues were created (implementation was straightforward, no scope-out remediations found)
+
+### Notes for Next Phase
+- Both verify commands (grep "date +%") PASS; rubric also PASS — all pre-merge ACs satisfied
+- The implementation is purely additive (no existing behavior changed); regression risk is minimal
+- The SHOULD/MUST severity logic is consistent with the existing `review-bug.md` pattern (MUST for deterministic failures, SHOULD for unverifiable assumptions)
