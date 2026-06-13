@@ -142,7 +142,7 @@ Priority order (highest to lowest):
 - <!-- verify: grep "watchdog-timeout-spec-seconds" "docs/ja/guide/customization.md" --> `docs/ja/guide/customization.md` の翻訳が同期されている
 - <!-- verify: command "bash -n scripts/run-spec.sh && bash -n scripts/run-code.sh && bash -n scripts/run-review.sh && bash -n scripts/run-merge.sh && bash -n scripts/run-issue.sh" --> 5 本の run-*.sh が構文エラーなし
 - <!-- verify: command "bats tests/watchdog-defaults.bats" --> bats テストが green（フェーズ別 timeout 解決テストの新規追加含む）
-- <!-- verify: command "scripts/check-translation-sync.sh --fail-if-outdated" --> docs/guide/customization.md と docs/ja/guide/customization.md の翻訳同期が保たれている
+- <!-- verify: command "scripts/check-translation-sync.sh | grep 'customization.md' | grep -q IN_SYNC" --> docs/guide/customization.md と docs/ja/guide/customization.md の翻訳同期が保たれている
 
 ### Post-merge
 
