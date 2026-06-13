@@ -55,7 +55,7 @@ label_created() {
 @test "env=full: only always-group labels created when all features available" {
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
-    [ "$(count_label_creates)" -eq 12 ]
+    [ "$(count_label_creates)" -eq 13 ]
 }
 
 @test "env=full: phase/* labels all present" {
@@ -106,7 +106,7 @@ MOCK
 
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
-    [ "$(count_label_creates)" -eq 29 ]
+    [ "$(count_label_creates)" -eq 30 ]
 }
 
 @test "env=none: fallback type/* labels created when Issue Types unavailable" {
@@ -229,9 +229,9 @@ MOCK
 
     run bash "$SCRIPT" --force
     [ "$status" -eq 0 ]
-    # All 12 always-group labels must be created with --force
-    [ "$(count_label_creates)" -eq 12 ]
-    [ "$(grep -c -- '--force' "$GH_CALL_LOG")" -eq 12 ]
+    # All 13 always-group labels must be created with --force
+    [ "$(count_label_creates)" -eq 13 ]
+    [ "$(grep -c -- '--force' "$GH_CALL_LOG")" -eq 13 ]
 }
 
 @test "--force: --force flag is NOT used without the option" {
@@ -252,7 +252,7 @@ MOCK
 
     run bash "$SCRIPT" --no-fallback
     [ "$status" -eq 0 ]
-    [ "$(count_label_creates)" -eq 12 ]
+    [ "$(count_label_creates)" -eq 13 ]
     run grep "label create type/" "$GH_CALL_LOG"
     [ "$status" -ne 0 ]
 }
@@ -311,5 +311,5 @@ MOCK
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
     [[ "$output" == *"Label setup complete"* ]]
-    [[ "$output" == *"12"* ]]
+    [[ "$output" == *"13"* ]]
 }
