@@ -142,6 +142,8 @@ Before running any phase, initialize `VERIFY_ITERATION_COUNT`:
 
 **XL route: sub-issue dependency graph with parallel execution (`run-auto-sub.sh` checks each sub-issue's `phase/ready` and auto-runs spec if not set):**
 
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `AUTO_MAX_CONCURRENT` (maximum concurrent sub-issue executions; default: 5).
+
 1. **Fetch dependency graph**:
    ```bash
    ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh $NUMBER
@@ -150,12 +152,33 @@ Before running any phase, initialize `VERIFY_ITERATION_COUNT`:
 
 2. **Run levels in order, in parallel**: Process each level in `execution_order` sequentially.
 
-   Run each level's sub-issues in parallel via Bash background (`&`), then wait for all to complete:
+   Run each level's sub-issues in parallel via Bash background (`&`) with concurrency capped at `AUTO_MAX_CONCURRENT`, then wait for all to complete:
    ```
    # For each level (in execution_order order):
    Skip sub-issues that depend on failed issues,
-   then run non-skipped sub-issues in background:
-     ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh $SUB_NUMBER &
+   then run non-skipped sub-issues with concurrency cap using AUTO_MAX_CONCURRENT:
+     RUNNING=0
+     PIDS=()
+     for each SUB in non-skipped sub-issues:
+       ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh $SUB_NUMBER &
+       PIDS+=($!)
+       RUNNING=$((RUNNING + 1))
+       if [ $RUNNING -ge $AUTO_MAX_CONCURRENT ]; then
+         # bash 4.3+: wait -n waits for any one child to finish
+         # bash 3.2 fallback (macOS): kill -0 polling
+         if (( BASH_VERSINFO[0] > 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] >= 3) )); then
+           wait -n
+         else
+           while true; do
+             for pid in "${PIDS[@]}"; do
+               if ! kill -0 "$pid" 2>/dev/null; then break 2; fi
+             done
+             sleep 1
+           done
+         fi
+         RUNNING=$((RUNNING - 1))
+       fi
+     done
    Wait for all processes with `wait`, check each process exit code
    ```
 

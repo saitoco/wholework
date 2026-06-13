@@ -69,6 +69,9 @@ verify-ignore-paths:
 # "bypass" uses --dangerously-skip-permissions (legacy / opt-out)
 permission-mode: auto
 
+# XL sub-issue parallel execution concurrency cap (default: 5)
+# auto-max-concurrent: 5
+
 # Verify reopen loop limit (default: 3, max: 20)
 # Stops the verify-reopen cycle after N failures; Issue stays in phase/verify for human judgment
 verify-max-iterations: 3
@@ -111,6 +114,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `patch-lock-timeout` | integer | `300` | Lock acquisition timeout in seconds for `git merge --ff-only` + `git push origin main` (the only protected critical section). The default is generous since the lock is held only for seconds. Increase only if push consistently fails to acquire. Values ≤0 or non-numeric fall back to `300`. |
 | `permission-mode` | string | `"auto"` | Permission mode for `/auto` subprocess. `auto` enables `--permission-mode auto` with allow rules template (see `docs/guide/auto-mode-template.json`); `bypass` uses `--dangerously-skip-permissions` (legacy / opt-out). |
 | `verify-max-iterations` | integer | `3` | Limit verify-reopen loop iterations; stops at N failures and leaves Issue in `phase/verify` for human judgment. Values ≤0, >20, or non-numeric fall back to `3`. |
+| `auto-max-concurrent` | integer | `5` | Maximum concurrent sub-issue executions in XL parallel route. Applies to each level of the dependency graph. Values ≤0 or non-numeric fall back to `5`. |
 | `retro-proposals-upstream` | string | `""` | Upstream repository (`owner/repo`) for routing Skill infrastructure improvement proposals from `/verify` retrospectives. When set, such proposals are sanitized (regex strips absolute paths and downstream issue numbers; LLM removes business-context terms) and filed to this repository; downstream filing is skipped. Unset means downstream filing as before (backward-compatible). |
 | `verify-ignore-paths` | list | `[]` | Glob patterns (block list) of paths to exclude from dirty-file detection in `/verify`. Supported: `dir/**` prefix match (any file inside a directory), simple bash globs (`*`, `?`, `[...]`) for full-path match. Not supported: intermediate `**` (e.g. `a/**/b`) or negation patterns (`!`). Files matching any pattern are silently ignored and reported on stderr. Unset means no exclusions. |
 
