@@ -134,6 +134,8 @@ Proceed to Step 4 using the updated ROUTE and REVIEW_DEPTH.
 
 ### Step 4: Autonomous Execution (run-*.sh)
 
+Select the route section below based on the current ROUTE value (set in Step 2 and potentially overridden by Step 3a's route demotion logic).
+
 Run each phase via `run-*.sh`. Each script launches an independent process with `claude -p --dangerously-skip-permissions` for a fresh context and full permission bypass.
 
 **Execution pattern:**
