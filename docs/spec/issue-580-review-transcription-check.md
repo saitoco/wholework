@@ -44,3 +44,30 @@ Adding this detection perspective to `skill-dev-recheck.md` enables future revie
 - SKILL.md reference step numbered 2.6 to fit between existing steps 2.5 and 3 in Step 10.2 — the existing 2.5 numbering is already non-sequential (historical), so 2.6 is consistent
 - No docs/ files need updating (changed files are under `skills/`, not `docs/`)
 - No bats test changes needed (modifying markdown files, not scripts)
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- None
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Added `## Transcription Divergence Check` section to `skill-dev-recheck.md` immediately after `## Retrospective Guard`, matching the existing naming style (no step number prefix, consistent with other cross-step concerns)
+- Added step 2.6 in `SKILL.md` Step 10.2 between step 2.5 and step 3, gated on `scripts/validate-skill-syntax.py` existence to preserve the skill-dev-only conditional loading pattern
+- Section uses SHOULD severity for divergence findings, consistent with the documentation quality classification (not a correctness bug)
+
+### Deferred Items
+- None — scope is narrow (markdown-only change) and fully implemented
+
+### Notes for Next Phase
+- Both Pre-merge ACs verified PASS: `file_contains "transcription"` and `grep "spike|aspirational|N-vote"` both match
+- Changed files: `skills/review/skill-dev-recheck.md` and `skills/review/SKILL.md` only; no docs/ updates needed per Spec Notes
+- validate-skill-syntax.py passed on all 10 skills; bats 700 tests all passed
