@@ -244,18 +244,18 @@ Tier 0 コンテキストでの「escalate to Tier 3」は、既存 Step 9 FAIL 
 - Nothing to note. All 10 pre-merge ACs reached PASS with no UNCERTAINs. The `command "bash -n ..."` AC was resolved cleanly via CI reference fallback (Run bats tests passed). The `rubric` AC ran the grader and confirmed all 5 Tier 0 requirements. The `section_contains "### Step 9"` heading partial-match worked as expected (documented in the Spec verification notes). No verify command updates needed.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- SHOULD finding on `"No such file or directory"` infra over-classification skipped — explicitly acknowledged in Spec Uncertainty section; safety guard bounds impact to missed auto-repair only.
-- All 10 pre-merge ACs: PASS. All CI jobs: SUCCESS. review-spec: no issues. COMMENT event (no MUST → not REQUEST_CHANGES).
-- validate-skill-syntax.py: 0 errors, 0 warnings across all 8 SKILL.md files.
+- PR #612 squash-merged to main with `--delete-branch`; Issue #586 will auto-close via `closes #586` in PR body.
+- No conflict resolution needed — `gh-pr-merge-status.sh` returned `mergeable: true, reason: clean`.
+- Label transition to `verify` queued after merge commit.
 
 ### Deferred Items
-- Post-merge observation (fix-cycle での Tier 0 自動修復観察) は次回 fix-cycle まで未確定。
-- `"No such file or directory"` infra over-classification (SHOULD) — accepted trade-off per Spec Uncertainty; may be refined in a follow-up Issue if real-world false positives emerge.
+- Post-merge AC (Tier 0 auto-repair observation on next fix-cycle) remains unconfirmed until the next `/code` run that triggers a repairable test failure.
+- `"No such file or directory"` infra over-classification (SHOULD from review) — accepted trade-off per Spec Uncertainty; monitor in practice.
 
 ### Notes for Next Phase
-- No MUST issues. Proceed with `/merge 612`.
-- PR is ready to merge: all ACs PASS, all CI PASS, no blocking review findings.
-- Post-merge: run `/verify 586` to confirm AC8 (github_check CI) and observe Post-merge AC (Tier 0 auto-repair observation on next fix-cycle).
+- Run `/verify 586` to confirm AC8 (`github_check` CI green on main) and observe post-merge AC.
+- All pre-merge ACs (1–7, 9–10) already PASS; verify focus should be AC8 (CI on main) and the post-merge behavioral observation.
+- `test-failure-classify.sh` is now on main — can be exercised in the next fix-cycle to validate Tier 0 auto-repair flow end-to-end.
