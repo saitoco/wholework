@@ -66,23 +66,38 @@ Extends `modules/visual-diff-adapter.md` to resolve two structural constraints i
 
 - None. Implementation proceeded directly from the Spec without rework.
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Step 5c composite referenced original unpadded `ref.png`/`impl.png` instead of padded variants. The Spec stated "3-panel composite は正規化後寸法で組む" but only covered the canvas dimensions (W×H); it did not explicitly specify that Before/After panel inputs must also be padded files. The AC4 verify command (`grep "正規化後\|normalized"`) passed on the canvas description alone, masking that panel inputs were unpadded.
+- Root pattern: Spec described the *canvas* normalization correctly but omitted a callout that the *input* images for ref/impl panels must also be the padded variants. Future specs for multi-step normalization pipelines should explicitly state which files are consumed at each downstream step.
+
+### Recurring Issues
+
+- Japanese string literal in test source code (`grep -qE "正規化後|normalized"` in `.bats`). CLAUDE.md specifies "Source code: English" but test strings mirrored the Japanese grep pattern from Issue body AC text. Avoid copying Japanese AC text directly into source-code assertions — translate to English equivalents.
+- No repeated issue patterns across aspects in this PR.
+
+### Acceptance Criteria Verification Difficulty
+
+- All 5 pre-merge ACs were grep/rubric-based and auto-verified cleanly (0 UNCERTAIN, 0 POST-MERGE in pre-merge section).
+- The rubric AC5 ("fullPage default + opt-out + pad normalization") was broad enough to PASS despite the Step 5c unpadded-input gap — the rubric checked policy documentation, not code-path completeness. Future rubric conditions should include "all downstream steps use padded outputs" when a normalization pipeline is introduced.
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- `capture_mode` parameter added to Input section with `fullpage` (default) | `viewport` values; viewport opt-out is documented in both browser-use and Playwright MCP steps.
-- Step 5b pad normalization uses `sharp.extend` with right/bottom padding and white background; W and H computed as `Math.max(ref.info.width, impl.info.width)` and `Math.max(ref.info.height, impl.info.height)`.
-- Step 5c re-reads W/H from diff file metadata rather than threading variables through bash heredoc — functionally identical but cleaner for a single-file module.
-- All 5 pre-merge AC verify commands PASS (4 grep + 1 rubric); checkboxes updated on the Issue.
+- Fixed Step 5c composite: refPadded/implPadded now saved as `ref-padded.png`/`impl-padded.png` in Step 5b; Step 5c references these padded files so all three panels share W×H dimensions.
+- SHOULD issue (Step 5c unpadded reference) and CONSIDER issue (Japanese in test) both resolved in a single commit on the PR branch.
+- No policy changes detected; AC text and verify commands remain valid after fixes.
 
 ### Deferred Items
 
 - post-merge manual AC: koganezawa-com#58 re-run with fullPage to confirm no dimension throw — caller's responsibility, not covered by adapter unit tests.
-- browser-use `--full-page` flag availability: noted as "fall back to omitting the flag" if unsupported; actual verification requires a live browser-use installation.
+- browser-use `--full-page` flag availability: actual verification requires a live browser-use installation.
 
 ### Notes for Next Phase
 
-- PR #607 created; CI should run `.github/workflows/test.yml` (bats + validate-skill-syntax + forbidden-expressions).
-- No doc sync changes needed (only `modules/` and `tests/` modified, not `docs/*.md`).
-- The removed "Follow-on constraint (image height mismatch)" Note was the primary motivation for this Issue — reviewer should confirm it is gone from the module.
+- CI re-run expected after review-feedback commit (849ea89) — all jobs should PASS.
+- No MUST issues; PR is ready to merge after CI confirms green.
