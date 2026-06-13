@@ -187,20 +187,32 @@
 ### Rework
 - 特になし。全テスト（bats 697件、validate-skill-syntax、forbidden-expressions check、translation-sync）が 1 回目で PASS した
 
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Code Retrospective には「args 渡しの説明を追加済み」とあったが、実際の `workflow-guidance.md` Processing Steps Step 4 には args オブジェクト形式が記載されておらず、指摘後に修正が必要だった。Spec の「実装ステップ 3(c)」ではその旨を明記していたが、実装時に本文への反映が抜け落ちた。Spec の Design Gaps/Ambiguities セクションにあるような実装時の知見（args 渡し形式）は、Done として先に閉じるのではなく、Spec の当該実装ステップに直接補記するパターンが望ましい。
+
+### Recurring Issues
+
+N-vote / majority vote という表現が Spike レポートから引き継がれ、実装が 1-vote 相当（finding ごとに 1 つの refutation agent）であるにもかかわらずドキュメントに残存していた。Spike レポートの記述（「N-vote adversarial verify」）と実装コードの間にドキュメント乖離が生じた。Spike 段階の aspirational 記述をそのまま Domain file に転記する際は、実際の実装に合わせた表現に落とし込む確認が必要。
+
+### Acceptance Criteria Verification Difficulty
+
+verify command のカバレッジは良好だった（rubric×2、file_contains×3、grep×3、command×1、github_check×1）。唯一 `github_check "gh pr checks" "Run bats tests"` が PR 作成直後は PENDING（CI 未完了）のため `- [ ]` だったが、今回のレビューで CI が完了し PASS に更新できた。Spec の Notes for Next Phase にその旨が明記されており、予見された状況であった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `capabilities.workflow` → `HAS_WORKFLOW_CAPABILITY` を detect-config-markers.md に明示テーブル行として追加（Dynamic Capability Mapping でも動作するが明示行の方が discoverability 高く rubric PASS 確実）
-- Workflow スクリプトは workflow-guidance.md に inline JS として埋め込み（`script` パラメータ渡し）。`args` オブジェクト経由で `number`、`issueNumber`、`type`、`specPath`、`steeringDocs`、`skipReviewBug` を受け取る設計
-- SKILL.md Step 10 冒頭に `HAS_WORKFLOW_CAPABILITY` 分岐パラグラフを追加し、fallback 経路（10.0–10.3）は本体変更なし
+- SHOULD issueをすべて修正（N-vote→adversarial verification修正、args渡し手順の明示、finderPromptsのargsガード追加）し、CONSIDER issueはスキップ（SKILL.md line 135 は差分外・既存テキスト、docs/tech.md line 43 は将来の in-session 移行時に更新予定）
+- `finderResult.findings` undefinedガード（review-bugが指摘）は Workflow schemaバリデーション仕様（retries-on-mismatch）により REJECT（false positive）と判定、修正不要
+- 受け入れ基準10項目すべてPASS確認済み、Issue checkboxを全て[x]に更新
 
 ### Deferred Items
-- review の in-session 実移行は別 Issue（spike §Routing Recommendation の将来候補）
-- Workflow 経路の実際の end-to-end テスト（`capabilities.workflow: true` 設定プロジェクトでの完走確認）は Post-merge 手動確認として残存
-- audit / issue L/XL / spec への Workflow 展開は /review 安定稼働後に別 Issue で評価
+- docs/tech.md の review 行 Execution Platform 記述（「In-session (Workflow opt-in...) / headless fallback」）は将来の run-review.sh headless→in-session 移行時に更新
+- skills/review/SKILL.md Step 3 の見出し「Project-local Domain files」はバンドル済み Domain file のロードを隠している。次の SKILL.md 修正機会に「Domain files (bundled + project-local)」へ改善を検討
 
 ### Notes for Next Phase
-- `/review` Phase: workflow-guidance.md の Processing Steps を読み、`args` オブジェクトの渡し方が Step 10 分岐パラグラフとの整合を確認すること
-- `github_check "gh pr checks" "Run bats tests"` は CI PENDING（PR 作成直後）のため `- [ ]` のまま。CI 完了後 `/verify` で更新される
-- Post-merge: `capabilities.workflow: true` 設定プロジェクトで `/review --full` を実行し、Workflow 経路で完走すること、完了レポートにトークン使用量が出力されることを手動確認する
+- merge フェーズ: all CIs SUCCESS、MUST issues なし、受け入れ基準全PASS → /merge 578 を実行可能
+- Post-merge 手動確認: `capabilities.workflow: true` 設定プロジェクトで `/review --full` を実行し、Workflow 経路完走と完了レポートのトークン使用量出力を確認する
