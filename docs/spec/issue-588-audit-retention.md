@@ -113,3 +113,32 @@
 ### Rework
 
 - Issue ボディのチェックボックス更新で `sed` を使用したが、エスケープシーケンスの問題で一部の行が未置換になった。Python で再実行して全9件を確実にチェック済みとした。
+
+## review retrospective
+
+### Spec と実装の乖離パターン
+
+- Spec では `setup-labels.sh` のコメント件数（12→13）の変更に言及していたが、`tests/setup-labels.bats` の更新については言及がなかった。結果として bats テストの更新漏れが発生し、CI が 5 件失敗した。Spec の Changed Files には「テストファイルの更新が必要な場合はそのファイルも列挙する」ルールを追加すると、このような漏れを事前に検知できる。
+
+### 繰り返し発生した問題
+
+- 特になし（今回の MUST 指摘は 1 件のみ）。
+
+### AC 検証の難易度
+
+- すべての verify コマンドが機械的に PASS/FAIL を判定でき、UNCERTAIN は 0 件だった。`bats tests/audit-retention.bats` の CI fallback では「Run bats tests」全体が FAILURE だったため、最初は UNCERTAIN と判断しそうになったが、CI ログを確認して `audit-retention.bats` 固有テストがすべて PASS していることを確認できた。CI 全体の失敗と個別ファイルの成否を区別するためのログ調査手順が有効だった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `tests/setup-labels.bats` の更新漏れ（always-group 件数 12→13、および 29→30）を review フェーズで検知・修正した。code フェーズで一括修正すべきだったが、review フェーズでの発見・修正により本 PR 内で完結した。
+- 自己 PR への `REQUEST_CHANGES` は GitHub が制限（422）するため、COMMENT レビューとして投稿した。MUST 指摘の内容は行コメントと review body に明記した。
+- review-light モード（`--light`）を使用し、1 エージェントで 4 アスペクト全てをカバーした。CI ログ調査により `audit-retention.bats` の個別合否を確認するステップが有効だった。
+
+### Deferred Items
+- Post-merge AC（`verify-type: opportunistic`）: 次回 `/audit stats --retention` 実行時に phase/verify 滞留メトリクスが出力されることを確認する。
+
+### Notes for Next Phase
+- `/merge` 前に CI を確認すること（`tests/setup-labels.bats` 修正をプッシュ済み、CI が green になってからマージ推奨）。
+- 今回の review で修正コミットを追加したため、PR ブランチは `worktree-code+issue-588` に 1 コミット追加されている。
