@@ -330,6 +330,35 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ---
 
+## code-base-conflict
+
+### Symptom
+- `run-code.sh` exits 0 (code phase completed) but outputs to stderr: `Warning: code phase completed but PR #<N> has conflicts with base`
+- PR diff (merge-base based) shows only this Issue's changes correctly — the warning indicates base advanced concurrently, not that the PR diff is contaminated
+
+### Applicable Phases
+- code (PR route)
+
+### Fallback Steps
+1. Run `git fetch origin main` to bring your local state up to date with the latest base branch
+2. Run `git checkout worktree-code+issue-<N>` to check out the worktree branch for this issue
+3. Run `git merge-tree --write-tree origin/main HEAD` to identify conflicting files and inspect the conflict content
+4. If the conflicting changes are **directly orthogonal** (e.g., independent argument additions, unrelated line edits in the same file): run `git merge origin/main`, resolve each conflict by integrating both changes, then `git push`
+5. If the conflicting changes are **functionally overlapping** (e.g., both branches implement the same feature differently): escalate to the parent session to decide which implementation to adopt before merging
+6. After conflict resolution, run `/merge <PR>` to proceed with the merge phase
+
+### Escalation
+- If the conflicts cannot be resolved safely (unclear which change takes precedence, complex multi-file entanglement): escalate to recovery sub-agent (#316) for diagnosis and resolution guidance
+- If `git merge origin/main` itself fails with unexpected errors, abort with `git merge --abort` and request human intervention
+
+### Rationale
+- First observed in Issue #541: a concurrent session merged a different Issue to main while the code phase was running, causing a shared source file's function signature to conflict; the parent session manually ran `git merge-tree` to identify the conflict, confirmed orthogonal changes, and resolved by integration
+- The warning is emitted by `scripts/run-code.sh` after the reconcile check block — EXIT_CODE is not changed (the implementation itself is complete); the warning is informational to enable resolution before `/merge`
+- `scripts/gh-pr-merge-status.sh` is reused (no new API call logic) to detect `mergeable: false, reason: conflicts`
+- See also: #483 (forked→single session migration reducing parallel execution risk), #465 (code normal-exit completion check), #535 (push branch recovery at watchdog kill)
+
+---
+
 ## Operational Notes
 
 This catalog is consumed by:
