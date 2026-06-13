@@ -100,21 +100,21 @@
 - なし。実装は Spec の設計通りに1パスで完了した。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST 課題なし (SHOULD 1件・CONSIDER 1件のみ)。SHOULD (Step 5c 未実装) は Spec Code Retrospective に「scope 外」と明記されており意図的決定のため SKIP。CONSIDER (async タイムアウトなし) も CI ジョブレベルタイムアウトで十分と判断し SKIP。
-- CI 全ジョブ SUCCESS (DCO, Run bats tests, Validate skill syntax, Forbidden Expressions check, macOS shell compatibility)。
-- github_check AC (CI bats job) を [x] に更新済み。
+- PR #611 をスクワッシュマージ（`gh pr merge --squash --delete-branch`）。mergeable=true、CI全ジョブSUCCESS、review APPROVED の状態でマージを実行。
+- BASE_BRANCH=main のため `closes #546` により Issue #546 は自動クローズ済み。
+- conflicts なし。rebase・コンフリクト解消ステップは不要だった。
 
 ### Deferred Items
-- Step 5c (sharp.composite() 3-panel composite) smoke test は本 Issue scope 外として引き続き未実装。後続 Issue での対応候補。
-- pnpm non-hoist の直接テストは CI 環境 (npm) では不可。後続 Issue または別軸での対応。
+- post-merge AC: CI 上での runtime smoke test 実走確認（fixture 画像で PASS / regression fixture で FAIL）は opportunistic verify で監視。
+- Step 5c (sharp.composite() 3-panel composite) smoke test は本 Issue scope 外。後続 Issue での対応候補。
 
 ### Notes for Next Phase
-- MUST 課題なし。ブロッカーなくマージ可能。
-- `<!-- review-summary -->` コメント投稿済み。
-- post-merge AC: CI 上での runtime smoke test 実走確認は opportunistic verify で監視される。
+- verify フェーズでは post-merge AC（CI runtime smoke test 実走ログ確認）を重点的に確認すること。
+- rubric 1（Step 5b/5c）と rubric 2（#441/#543 再発クラス）が UNCERTAIN で終わった経緯は review retrospective に記録済み。verify では CI ログで Step 5b 実走を直接確認することで補完可能。
+- pnpm non-hoist の直接テストは CI 環境（npm）では不可。bats 側の文書化で対応するか後続 Issue で検討。
 
 ## review retrospective
 
