@@ -128,20 +128,32 @@ Domain file（`skills/triage/skill-dev-verify-audit.md`）は `validate-skill-sy
 
 - N/A（1 回の実装で完了、リワークなし）
 
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Spec と実装は完全一致。Step 7 配置（Size Assignment 直後）、5 パターン構成、非破壊的振る舞い仕様のいずれも Spec の設計通り実装されていた。
+
+### Recurring Issues
+
+- CONSIDER 課題が 2 種（Pattern 4 の Bulk Execution Size 参照先未明示、$NUMBER コンテキスト未明示）は同一のルート原因（Single Issue / Bulk Execution の二コンテキストをまたぐ変数説明）。Domain file 記述ガイドラインとして「Bulk Execution での変数参照元を明示せよ」を今後のパターンとして意識する価値がある。
+
+### Acceptance Criteria Verification Difficulty
+
+- 全 9 AC に明示的 verify command があり、UNCERTAIN なし。rubric verify command（AC 7）は grader 実行なしで PASS/FAIL を判定可能であった（SKILL.md + Domain file が共同で非破壊的監査を仕様化していることが diff から自明）。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Step 7 を「AC Verify Command Integrity Audit」（英語見出し）として配置し、本文テキストに「verify command audit patterns」を含めることで verify command の `grep "verify command audit"` マッチを確保した
-- Domain file は `load_when` なし（無条件ロード）を採用し、全リポジトリで監査を保証する設計とした（Spec Auto-Resolve Log に従う）
-- Step 7 を Step 6（Size Assignment）直後に配置し、旧 Step 7-10 を 8-11 に繰り下げた（Pattern 4 の patch route チェックに Size 情報が必要なため）
-- bats テスト全 706 件 PASS（exit code 0）、validate-skill-syntax.py 全 10 skill PASS
+- 全 AC PASS（9/9）、CI 全 SUCCESS、MUST 課題ゼロ。CONSIDER 課題 3 件を修正済み
+- Pattern 4 の "Detection approach:" ブロック追加と "Posting the Comment" `$NUMBER` 説明追加（追記のみ、既存 verify command との矛盾なし）
 
 ### Deferred Items
-- github_check "gh pr checks" "Run bats tests" の verify は CI で確認（PR #608 作成済み、未チェック）
-- Post-merge 観察（次回 `/triage --backlog` で監査コメント投稿を確認）は opportunistic
+- Post-merge 観察: 次回 `/triage --backlog` で監査コメントが新規 Issue に投稿されることを opportunistic で確認
+- Issue #584 の Post-merge AC は `/merge` 完了後に観察
 
 ### Notes for Next Phase
-- PR #608 をレビュー時、domain file の `## Non-Destructive Audit Behavior` セクションが非破壊的振る舞い（コメント投稿のみ、Issue body 自動書き換えなし）を正しく記述しているか確認する
-- rubric verify command の意味チェック: SKILL.md + skill-dev-verify-audit.md が together して非破壊的監査を仕様化していることを確認する
-- CI bats テストの完了後に Issue #584 の最後のチェックボックス（github_check）が green になることを確認する
+- MUST 課題なし、レビュー対応済み。`/merge 608` でマージ可能
+- AC 9（bats テスト green）は CI で確認済み（PASS）
+- Issue #584 の全 Pre-merge AC は `[x]` 完了
