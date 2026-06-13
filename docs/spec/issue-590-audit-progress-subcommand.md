@@ -112,19 +112,29 @@ Issue 提案の出力フォーマットに Failed カテゴリがあったが、
 ### Rework
 - なし（設計どおりに 1 パスで実装完了）
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- 実装は Spec の全 6 要素（fetch/status/phase/time/activity/blocked）を忠実に実装。divergence なし
+- SKILL.md の `description:` フィールドが新サブコマンド追加時に更新されなかった（他の全サブコマンドは記載済み）。フロントマター更新を実装チェックリストに含めるべき構造的パターン
+
+### Recurring issues
+- SKILL.md の出力テンプレート（Step 4）と定義（Step 3）の整合性に軽微な gap（"no phase" カウントの出力先未定義）。LLM instructions では Step 3 と Step 4 を cross-check する観点が弱い傾向がある
+
+### Acceptance criteria verification difficulty
+- 全 8 AC に verify command が設定済みで UNCERTAIN なし。`command "bats..."` は CI reference fallback (SUCCESS) で PASS 確認
+- rubric AC のセマンティック判定は diff と SKILL.md の照合で問題なく実施できた
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `get-sub-issue-progress.sh` を新規スクリプトとして作成（`get-sub-issue-graph.sh` は `/auto` コアのため変更なし）
-- `gh-graphql.sh` に `get-sub-issues-all` named query を追加（OPEN+CLOSED、全フィールド対応）
-- Status 優先順位 Done > Blocked > Stale > In progress > Pending を SKILL.md に明示
+- SHOULD 2 件を修正: description フィールド更新 + no-phase 出力テンプレート追加
+- MUST 問題なし。CI 全ジョブ SUCCESS
 
 ### Deferred Items
-- `run-auto-sub.sh` event log (#600) との統合は本 Issue スコープ外
 - post-merge 確認（実 XL Issue での進捗確認）は `/verify` フェーズで observation イベント待ち
 
 ### Notes for Next Phase
-- 全 pre-merge verify コマンドが PASS 済み（checkboxes 更新済み）
-- bats テスト 4 ケース green（no-arg / empty XL / mixed states / all done）
-- PR #621 作成済み。`base: main` なので `closes #590` 有効
+- 全 pre-merge AC: 8/8 PASS
+- PR #621 は COMMENTED 状態（SHOULD 修正 push 済み）。merge ready
