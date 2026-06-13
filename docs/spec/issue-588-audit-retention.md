@@ -82,22 +82,21 @@
 - setup-labels.sh のコメント内 label 件数（13 labels）は現行 12 から 1 増加
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `compute-escalation-level.sh` を独立スクリプトとして実装（SKILL.md から直接呼び出す設計のため bats テストで直接検証できる）
-- SKILL.md の `--retention` セクションは `### --retention Option` 見出し下にまとめ、`section_contains` による verify が機能するよう配置した
-- `stale-verify` ラベルは ALWAYS_LABELS グループに追加（fallback ではなく常時作成が必要な設計）
-- `docs/structure.md` / `docs/ja/structure.md` のファイルカウント修正は Spec 外だが、既存 discrepancy があったため本 PR で一括修正した
+- CI green 確認済み（all checks passed）、PR #618 を squash merge し `worktree-code+issue-588` ブランチを削除した
+- Post-merge AC は `verify-type: opportunistic`（次回 `/audit stats --retention` 実行時に確認）のみ残存
+- code/review 2 件の Phase Handoff が共存していたため、merge フェーズで統合した（rotation の修正）
 
 ### Deferred Items
-- `gh timelineItems` による phase/verify 遷移時刻の実際の取得ロジックは SKILL.md の指示として記述されているが、実行時に LLM が解釈して実行する形（shell スクリプトではなくスキルの手順として記述）
-- Icebox の Project Status 取得（`gh-graphql.sh get-projects-with-fields`）は既存メカニズムを流用する設計だが、GraphQL クエリの詳細は実行時に解釈される
+- Post-merge AC（`verify-type: opportunistic`）: `/audit stats --retention` 実行時に phase/verify・Icebox 滞留メトリクスが実際に出力されることを確認する
+- Icebox の Project Status 取得（`gh-graphql.sh get-projects-with-fields` フロー）は実行時に LLM が解釈するため、実際の動作確認は opportunistic verify に委ねる
 
 ### Notes for Next Phase
-- bats テスト 15 件すべて PASS、skill 構文検証・禁止表現・翻訳同期もすべてクリア済み
-- Issue ボディのチェックボックス9件すべてチェック済み（/verify フェーズでの再確認不要）
-- Post-merge AC は `verify-type: opportunistic`（次回 `/audit stats --retention` 実行時に確認）
+- Pre-merge AC 9 件はすべて code/review フェーズで PASS 確認済み（/verify フェーズでの再検証不要）
+- `stale-verify` ラベルが `scripts/setup-labels.sh` に追加済み（`/setup-labels` 実行で自動作成される）
+- `bats tests/audit-retention.bats` 15 件は CI で green 確認済み
 
 ## Code Retrospective
 
@@ -127,18 +126,3 @@
 ### AC 検証の難易度
 
 - すべての verify コマンドが機械的に PASS/FAIL を判定でき、UNCERTAIN は 0 件だった。`bats tests/audit-retention.bats` の CI fallback では「Run bats tests」全体が FAILURE だったため、最初は UNCERTAIN と判断しそうになったが、CI ログを確認して `audit-retention.bats` 固有テストがすべて PASS していることを確認できた。CI 全体の失敗と個別ファイルの成否を区別するためのログ調査手順が有効だった。
-
-## Phase Handoff
-<!-- phase: review -->
-
-### Key Decisions
-- `tests/setup-labels.bats` の更新漏れ（always-group 件数 12→13、および 29→30）を review フェーズで検知・修正した。code フェーズで一括修正すべきだったが、review フェーズでの発見・修正により本 PR 内で完結した。
-- 自己 PR への `REQUEST_CHANGES` は GitHub が制限（422）するため、COMMENT レビューとして投稿した。MUST 指摘の内容は行コメントと review body に明記した。
-- review-light モード（`--light`）を使用し、1 エージェントで 4 アスペクト全てをカバーした。CI ログ調査により `audit-retention.bats` の個別合否を確認するステップが有効だった。
-
-### Deferred Items
-- Post-merge AC（`verify-type: opportunistic`）: 次回 `/audit stats --retention` 実行時に phase/verify 滞留メトリクスが出力されることを確認する。
-
-### Notes for Next Phase
-- `/merge` 前に CI を確認すること（`tests/setup-labels.bats` 修正をプッシュ済み、CI が green になってからマージ推奨）。
-- 今回の review で修正コミットを追加したため、PR ブランチは `worktree-code+issue-588` に 1 コミット追加されている。
