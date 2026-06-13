@@ -169,3 +169,65 @@ Tier 0 コンテキストでの「escalate to Tier 3」は、既存 Step 9 FAIL 
 - **bats テスト入力フォーマット**: 分類対象はテストランナーの生 stdout テキスト（bats/pytest/vitest の失敗出力）を `--log` ファイルに渡す。fixture は各カテゴリの代表的失敗スニペットを平文で与える。
 - **allowed-tools 追加が必須**: `validate-skill-syntax.py` は本文参照スクリプトが allowed-tools に含まれることを強制するため、Implementation Step 4 を省略すると「Validate skill syntax」CI が失敗する。
 - **settings.json.template の変更は不要**: 新規スキル追加ではない（既存 code スキルの修正）。`test-failure-classify.sh` は `.claude/settings.json.template` の `scripts/*.sh` ワイルドカード許可エントリでカバーされ、code スキルが呼ぶ既存スクリプト（`run-code.sh` 等）と同じ許可機構で動作する。`KNOWN_TOOLS`（base tool 名）への追加も不要（追加するのは `Bash(...)` 内のスクリプトパスであり base tool 名ではないため）。
+
+## issue retrospective
+
+### 自動解決した曖昧ポイント（non-interactive モード）
+
+今回の refinement で以下 5 つの曖昧ポイントを特定し、自動解決しました。
+
+**1. `test-failure-classify.sh` の出力インターフェース（AC への影響なし）**
+- 判断: Spec で設計する事項のため AC 変更は不要。実装時は `apply-fallback.sh` の exit 0/1 + stdout カテゴリ文字列パターンを参照すること。
+
+**2. "Tier 3 escalation" の意味**
+- 判断: Tier 0 をスキップして既存 Step 9 のフロー（1 general repair attempt → patch では abort、PR では continue）にフォールスルーすることを意味する。orchestration Tier 3（`run-auto-sub.sh` の recovery sub-agent）はフェーズレベルの話であり、テスト失敗後の自然なパスでそこに至る。
+- 根拠: 最小変更・最低リスク選択。既存動作を破壊しない。
+
+**3. AC4 の日本語パターン削除**
+- 変更前: `grep "Tier 0|test failure|テスト失敗構造化" "skills/code/SKILL.md"`
+- 変更後: `grep "Tier 0" "skills/code/SKILL.md"` + `file_contains "skills/code/SKILL.md" "test-failure-classify.sh"`
+- 理由: CLAUDE.md の言語規約により SKILL.md は英語で実装される。日本語パターン `テスト失敗構造化` は英語 SKILL.md には出現しない。単一の verify command で複数キーワードの alternation を使うより、2 つの独立した verify command に分割した方が失敗原因が明確。
+
+**4. rubric の安全ガード数不一致の修正**
+- 変更前: "(4 つの safety guards)" — rubric には 5 項目列挙
+- 変更後: "(5 つの要件)" — rubric と整合
+- 補足: rubric に supplementary `section_contains` を追加（verify-patterns.md §9 ガイドライン準拠）。`section_contains "skills/code/SKILL.md" "### Step 9" "test-failure-classify"` で Step 9 内への統合を機械的に確認。
+
+**5. AC6 の verify command 形式変更**
+- 変更前: `command "bats tests/test-failure-classify.bats"` — command hints は `/verify` full モードのみ有効、かつ safe モードで UNCERTAIN になる
+- 変更後: `github_check "gh pr checks" "Run bats tests"` — L-size は PR ルート、CI ジョブ名 "Run bats tests" を確認済み（.github/workflows/test.yml）
+- 根拠: verify-classifier.md の size-based routing 規約（Size M/L → PR ルート → `gh pr checks` 形式）
+
+## spec retrospective
+
+### Minor observations
+- Issue の既存 8 AC には、スクリプト/テスト追加時に structure.md の `(N files)` カウント更新を求める structure.md メンテナンス規約由来の AC が含まれていなかった。spec フェーズで 2 件（scripts 50 / tests 60）を追加し issue 本文へ同期した。スクリプト/モジュール追加 issue では、このファイルカウント保守 AC が /issue 時に漏れやすい。
+- `validate-skill-syntax.py` は「SKILL.md 本文で参照されるスクリプトは allowed-tools に含める」制約を強制する。これにより「スクリプト追加 + SKILL.md から参照」は最低 2 ファイル変更（スクリプト本体 + allowed-tools）になる。Implementation Step 4 として明示した。
+
+### Judgment rationale
+- Tier 0 ブロックの挿入位置は「test FAIL 時の最初のアクション（既存汎用 1-repair の前）」とした（spec 自動解決 C）。AC7（Step 9 内に参照）を満たし、既存フローを破壊しない最小変更。
+- 「Tier 3 escalation」は issue 自動解決 #2 を踏襲し、Tier 0 から既存 Step 9 FAIL ハンドリングへのフォールスルーと定義した。Tier 0 は `spawn-recovery-subagent.sh` を直接起動しない。`/auto` 実行時にフォールスルー経路が orchestration Tier 3 に自然到達する。
+- 分類スクリプトの I/F は `apply-fallback.sh` / `detect-wrapper-anomaly.sh` の `--log <file>` + stdout カテゴリ + exit 0/1 パターンに合わせた（spec 自動解決 A）。infra カテゴリを最優先評価にして他パターンとの共起リスクを排除した。
+
+### Uncertainty resolution
+- AC3 `grep "[Ss]napshot|mock|fixture"` は verify-executor で ripgrep alternation として解釈され、いずれかのキーワード出現で PASS することを verify-executor.md で確認。verify command 変更不要。
+- AC7 `section_contains "### Step 9"` は見出しの部分一致（`Step 9` が `Step 9: Run Tests` に一致）で機能することを verify-executor.md で確認。
+- 新スクリプトの権限は `.claude/settings.json.template` の `scripts/*.sh` ワイルドカードでカバーされ、settings.json 変更不要であることを確認。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- Tier 0 は `skills/code/SKILL.md` Step 9 内に追加。test FAIL 時の最初のアクションで、修復可（snapshot/mock/fixture）のみ tests/ 限定・最大 1 回の自動修復を試み、修復不可（logic/infra）と失敗時は既存 Step 9 FAIL ハンドリングへフォールスルー。
+- 分類は新スクリプト `scripts/test-failure-classify.sh`（`--log <file>` → stdout カテゴリ → exit 0/1）に委譲。
+- rubric の 5 要件を満たす Tier 0 本文テンプレートを Implementation Step 3 に直接記載済み（実装知識の backfill）。
+
+### Deferred Items
+- フレームワーク別の実失敗出力に対する分類精度検証は bats fixture で実施（Uncertainty 参照）。
+- post-merge observation（fix-cycle で Tier 0 自動修復を観察）は次回 fix-cycle まで未確定。
+
+### Notes for Next Phase
+- `skills/code/SKILL.md` allowed-tools への `${CLAUDE_PLUGIN_ROOT}/scripts/test-failure-classify.sh:*` 追加（Step 4）を必ず行うこと。漏れると「Validate skill syntax」CI が失敗する。
+- SKILL.md 本文には半角の感嘆符を入れない。Tier 0 ブロックは番号付きリスト（散文）で、トリプルバックティックのリテラル提示は不要。
+- structure.md は scripts `(50 files)` / tests `(60 files)` の両方を更新し、Scripts > Process management に新スクリプト項目を追加すること（AC9/AC10）。
+- bats テストは `test-failure-classify.sh` を直接呼ぶ（WHOLEWORK_SCRIPT_DIR モック不要、自己参照除外も不要）。
