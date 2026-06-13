@@ -36,8 +36,15 @@ For changes in the following categories, include **bats behavior tests** in acce
 | **Scripts called via skills** | Claude Code Bash tool quirks (escaping, etc.) can cause runtime failures | bats unit tests (pre-merge) + `command` verify command via real invocation (post-merge) |
 
 **Example acceptance criteria entry:**
+
+PR route (Size M/L):
 ```markdown
-- [ ] <!-- verify: github_check "gh pr checks" "Run bats tests" --> All bats tests pass
+- [ ] <!-- verify: github_check "gh pr checks" "Run bats tests" --> All bats tests pass (PR route)
+```
+
+patch route (Size XS/S):
+```markdown
+- [ ] <!-- verify: github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> CI (test.yml) all jobs pass (patch route)
 ```
 
 **Test file location:**
@@ -60,11 +67,19 @@ For bats test verification, use `github_check` hints which directly reference CI
 
 **Reason:** `github_check` explicitly references the CI job by name, providing more reliable automated verification than `command` hints which require CI Reference Fallback inference in safe mode.
 
-**Recommended pattern:**
+**Recommended patterns:**
 
+PR route (Size M/L):
 ```markdown
-- [ ] <!-- verify: github_check "gh pr checks" "Run bats tests" --> All bats tests pass
+- [ ] <!-- verify: github_check "gh pr checks" "Run bats tests" --> All bats tests pass (PR route)
 ```
+
+patch route (Size XS/S):
+```markdown
+- [ ] <!-- verify: github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> CI (test.yml) all jobs pass (patch route)
+```
+
+**Route selection:** Size XS/S → patch route → use `gh run list` form; Size M/L → PR route → use `gh pr checks` form. For detailed routing logic (UNCERTAIN handling when PR_NUMBER is absent, etc.), see `modules/verify-classifier.md` § Patch Route CI Verification Note.
 
 **Pattern to avoid (requires local execution or fallback inference):**
 
