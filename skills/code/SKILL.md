@@ -2,7 +2,7 @@
 name: code
 description: Local implementation (`/code 123`). Size auto-detection routes XS/S→patch (direct commit to main), M/L→branch+PR. Override with `--patch`/`--pr`.
 context: fork
-allowed-tools: Bash(gh issue view:*, gh issue edit:*, gh issue list:*, gh issue create:*, git checkout:*, git pull:*, git add:*, git status:*, git diff:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh pr create:*, gh pr comment:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, python3:*, bats:*), Glob, Grep, Read, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, ToolSearch
+allowed-tools: Bash(gh issue view:*, gh issue edit:*, gh issue list:*, gh issue create:*, git checkout:*, git pull:*, git add:*, git status:*, git diff:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh pr create:*, gh pr comment:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/test-failure-classify.sh:*, python3:*, bats:*), Glob, Grep, Read, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, ToolSearch
 ---
 
 # Local Implementation
@@ -221,6 +221,27 @@ Skip this sub-step if no out-of-scope remediations are identified.
 ### Step 9: Run Tests
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/test-runner.md` and follow the "Processing Steps" section to run tests.
+
+#### Tier 0: Structured Test-Failure Recovery
+
+On test FAIL, before the generic 1-repair-attempt flow below, run structured recovery:
+
+1. Write the failing test output to `.tmp/test-failure-recovery-$NUMBER.log`.
+2. Classify the failure before acting: run
+   `${CLAUDE_PLUGIN_ROOT}/scripts/test-failure-classify.sh --log .tmp/test-failure-recovery-$NUMBER.log`
+   and read the category from stdout.
+3. Route by category:
+   - `snapshot` / `mock` / `fixture` (repairable): perform at most one targeted auto-fix attempt for
+     that class (regenerate snapshot / rebuild mock expectations / update fixture literal). No loop.
+   - `logic` / `infra` (not repairable): skip Tier 0 and escalate immediately to Tier 3 — fall through
+     to the existing Step 9 FAIL handling below (in `/auto` this path reaches orchestration Tier 3 recovery).
+4. Safety guard — limit changes to the `tests/` directory: after the auto-fix, run `git status --porcelain`
+   and confirm only `tests/` paths changed. If any non-`tests/` file changed, revert the Tier 0 changes
+   (`git checkout -- <files>`) and fall through to the existing FAIL handling.
+5. Re-run tests once: PASS → continue to commit; still FAIL → fall through to the existing Step 9 FAIL
+   handling (generic 1-repair-attempt / route-specific abort/continue).
+6. Record the Tier 0 attempt (classification, files changed, outcome) in the Spec Code Retrospective (Step 12),
+   and append attempt details to `.tmp/test-failure-recovery-$NUMBER.log` for Tier 3 sub-agent reference.
 
 **Test FAIL handling (when test-runner.md reports FAIL):**
 
