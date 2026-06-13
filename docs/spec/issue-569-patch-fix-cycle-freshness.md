@@ -81,19 +81,33 @@
 
 - 特になし。Spec の実装ステップに沿って実装でき、手戻りは発生しなかった。
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Spec に `gh-graphql.sh --jq` 出力がクォート付き文字列を返すことへの言及がなく、`tr -d '"'` 処理が Code Retrospective で事後追記された。Spec の実装ステップではシェル出力のクォート処理を明示する習慣がない可能性がある。今後の Spec 記述では、外部コマンドの出力形式（特に jq の文字列クォート）を明示することを推奨する。
+
+### Recurring Issues
+
+- 特になし。今回の PR は範囲が小さく、同種の問題は検出されなかった。
+
+### Acceptance Criteria Verification Difficulty
+
+- 既存テスト（pre-PR のもの）が暗黙的に fallback パスをカバーしているが、null 値の明示的テストが欠如していた（SHOULD として検出・修正済み）。verify command は既存のテスト実行コマンド（`bats tests/reconcile-phase-state.bats`）のみで、フォールバックパスの入力境界値を個別に検証するヒントがなかった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `gh-graphql.sh` に `get-last-reopen` クエリを追加し `_completion_code_patch()` 内で自己完結的に reopen タイムスタンプを取得する方式を採用（呼び出し元の変更不要）
-- jq 出力のクォートを `tr -d '"'` で除去してから `git log --after=` に渡す
-- フォールバック diagnosis に `"fix-cycle false positive possible"` を明記し、デバッグ可視性を維持
+- Size=M Bug fix に対して review-light（light mode）を適用。全 4 観点を 1 エージェントで確認する軽量統合レビューが適切と判断
+- SHOULD issue（null fallback パステスト欠如）は解決済み（テスト追加）。CONSIDER issue（モックコメント不明確）はスタイル上の懸念のみのためスキップ
+- MUST issues なし → COMMENT イベントで投稿、`/merge` 進行可
 
 ### Deferred Items
-- タイムスタンプ取得失敗時のフォールバック動作の observability 向上（診断メッセージ強化）は今後の改善課題
-- `code-pr` completion check も同様の false positive リスクを持つ可能性があるが、今回のスコープ外
+- CONSIDER: fix-cycle テストのモックコメント補足（スタイルのみ、機能影響なし）
+- `code-pr` completion check の false positive リスク（コードフェーズから引き継ぎ、今回スコープ外）
 
 ### Notes for Next Phase
-- `tests/reconcile-phase-state.bats` は 54 テスト全通過（fix-cycle テスト 2 件追加含む）
-- `modules/phase-state.md` の code-patch completion signature 更新済み（`/review` 時に参照する SSoT）
-- PR body の Verification (pre-merge) は Issue のチェックボックス管理と分離しており、PR 上はインフォメーションのみ
+- tests/reconcile-phase-state.bats は 55 テスト（fix-cycle 3 件：false positive・正常完了・null fallback）
+- CI 全ジョブ SUCCESS（DCO・bats・validate-skill-syntax・forbidden-expressions・macOS compat）
+- MUST issues なし。/merge 実行可
