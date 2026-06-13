@@ -16,13 +16,37 @@ Information provided by the calling skill:
 
 Skills that Read this file should evaluate each post-merge condition against the classification criteria **in order from top to bottom**, assigning the `<!-- verify-type: TYPE -->` tag of the first matching type.
 
-### Classification Criteria (Priority: auto > opportunistic > manual)
+### Classification Criteria (Priority: auto > opportunistic > observation > manual)
 
 | Type | Criteria | Examples |
 |------|---------|---------|
 | `auto` | A verify command (`<!-- verify: ... -->`) is actually attached | File existence check, grep pattern match, test execution |
 | `opportunistic` | Condition text matches the pattern "verify X when `/skill-name` is run" | "Confirm doc impact check runs when `/spec` is executed" |
-| `manual` | Does not match either of the above | "Confirm no dialog appears", "Visual browser verification" |
+| `observation` | Condition is an event-driven observation that requires a specific trigger to fire | "Observe that the next `/review --full` auto-checks the condition" |
+| `manual` | Does not match any of the above | "Confirm no dialog appears", "Visual browser verification" |
+
+### observation Type: Event Values and Syntax
+
+`<!-- verify-type: observation event=<event-name> -->` marks a condition as an event-driven observation.
+The condition is **not** verified during a normal `/verify` run; instead, it is re-evaluated automatically when the specified event fires.
+
+**Valid `event-name` values (restricted by convention):**
+
+| Event name | When it fires |
+|------------|---------------|
+| `pr-review-full` | Next `/review --full` completion |
+| `pr-review-light` | Next `/review --light` completion |
+| `auto-run` | Next `/auto` completion (success or failure) |
+| `watchdog-kill` | When watchdog kill fires |
+| `fix-cycle` | When a verify FAIL → reopen → fix cycle activates (**definition only — emitter implementation is a follow-up**) |
+
+**Unknown event fallback**: if an unknown `event=` value is encountered, emit a warning to stderr:
+```
+Warning: unknown event '<name>', falling back to opportunistic treatment
+```
+Then treat the condition as `verify-type: opportunistic` (backward-compatible).
+
+**Syntax note**: The `event=` parameter is a required attribute of `verify-type: observation`. Omitting `event=` is treated as an unknown event and triggers the fallback above.
 
 ### Tag Assignment Example
 

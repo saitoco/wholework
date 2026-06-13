@@ -170,7 +170,7 @@ wholework/
 - `scripts/get-verify-iteration.sh` — Issue コメントから `<!-- verify-iteration: N -->` マーカーの最大値を読み取る
 - `scripts/hook-rename-on-auto.sh` — UserPromptSubmit hook: プロンプトが `/auto` パターンにマッチした場合にセッション名を自動リネーム
 - `scripts/log-permission.sh` — 権限イベントログ（JSON 出力）
-- `scripts/opportunistic-search.sh` — opportunistic スキル検索
+- `scripts/opportunistic-search.sh` — opportunistic スキル検索と observation イベントスキャン
 - `scripts/triage-backlog-filter.sh` — triage 向けバックログフィルタ
 
 **プロセス管理:**

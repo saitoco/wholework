@@ -300,6 +300,25 @@ Split the past 90 days into three 30-day windows (window 1: oldest, window 3: mo
 - **Stale candidates**: Open Issues with no update for 90 or more days (same set as age ≥ 90d Open)
 - **Untriaged candidates**: Open Issues without the `triaged` label
 
+#### phase/verify Dwell Time (滞留期間)
+
+For each Issue that has (or had) a `phase/verify` label, compute the dwell time (滞留期間) as:
+- **Active Issues**: days from the most recent `phase/verify` LabeledEvent to today
+- **Past Issues**: days from the most recent `phase/verify` LabeledEvent to the most recent `phase/verify` UnlabeledEvent
+
+Compute the following aggregates across all Issues currently in `phase/verify`:
+- **Median dwell time** (days)
+- **p95 dwell time** (days)
+- **Max dwell time** (days)
+
+#### Observation Waiting Count
+
+Scan each Issue currently labeled `phase/verify` (closed state) for unchecked (`- [ ]`) lines containing `verify-type: observation`. Count the number of such Issues.
+
+#### Opportunistic Remaining Count
+
+Scan each Issue currently labeled `phase/verify` (closed state) for unchecked (`- [ ]`) lines containing `verify-type: opportunistic`. Count the number of such Issues.
+
 #### Highlights Auto-Detection Logic
 
 Collect items meeting any of the following criteria to display in the Highlights section:
@@ -361,6 +380,16 @@ Display the following:
 - Age distribution: 0–7d / 7–30d / 30–90d / 90d+
 - Stale candidate count (≥ 90d, same as 90d+ Open)
 - Untriaged candidate count (Open without `triaged` label)
+
+#### Section 7: phase/verify Dwell and Observation Queue
+
+Display the following (computed from the Step 2 metrics):
+
+- **phase/verify dwell time** (current Issues in phase/verify): median / p95 / max (days)
+- **Observation waiting**: number of phase/verify Issues with unchecked `verify-type: observation` ACs
+- **Opportunistic remaining**: number of phase/verify Issues with unchecked `verify-type: opportunistic` ACs
+
+If there are no Issues currently in `phase/verify`, display "No Issues currently in phase/verify."
 
 ---
 

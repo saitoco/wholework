@@ -142,6 +142,17 @@ The `Permission` column in the translation table and the `**Permission:**` decla
 
 This semantics is designed for 1:1 portability to Anthropic Managed Agents `permission_policy` in a future migration. Actual enforcement based on the declared permission is out of scope for the current implementation; the table records intent only.
 
+### verify-type Interpretation Table
+
+When a condition carries a `<!-- verify-type: ... -->` marker, apply the following handling:
+
+| verify-type | How verify-executor handles it |
+|-------------|-------------------------------|
+| `auto` | Normal verify command processing (Steps 1–4 above) |
+| `opportunistic` | Processed by opportunistic-search.sh at skill completion; during normal `/verify` run, execute the attached verify command if present |
+| `observation` | **Skip during normal `/verify` run** — the condition is re-evaluated when the specified `event=<name>` fires via `opportunistic-search.sh --event <name>`. During skip, record as SKIPPED with detail: "observation: waiting for event=<event-name>". If the event is unknown, emit a warning and fall back to opportunistic treatment. |
+| `manual` | Processed in Step 8b (Claude executability judgment + verification guide or AskUserQuestion) |
+
 5. Treat syntax errors (unknown command names, missing arguments, etc.) as UNCERTAIN
 6. Classify each condition's verification result:
    - **PASS**: Condition is met

@@ -127,3 +127,52 @@ teardown() {
     [[ "$condition" != *"<!-- verify-type:"* ]]
     [[ "$condition" == *"/code skill can be verified after execution"* ]]
 }
+
+@test "event filter: --event matches observation conditions with matching event" {
+    export MOCK_ISSUE_LIST='[{"number": 400}]'
+    export MOCK_ISSUE_BODY_400='- [ ] Next /review --full auto-checks this condition <!-- verify-type: observation event=pr-review-full -->'
+
+    run bash "$SCRIPT" --event pr-review-full
+    [ "$status" -eq 0 ]
+    result="$output"
+    echo "$result" | jq -e 'length == 1' > /dev/null
+    echo "$result" | jq -e '.[0].number == 400' > /dev/null
+}
+
+@test "event filter: --event excludes opportunistic conditions" {
+    export MOCK_ISSUE_LIST='[{"number": 401}]'
+    export MOCK_ISSUE_BODY_401='- [ ] /review skill creates review after execution <!-- verify-type: opportunistic -->'
+
+    run bash "$SCRIPT" --event pr-review-full
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
+}
+
+@test "event filter: --event excludes non-matching event name" {
+    export MOCK_ISSUE_LIST='[{"number": 402}]'
+    export MOCK_ISSUE_BODY_402='- [ ] Next /auto auto-checks this condition <!-- verify-type: observation event=auto-run -->'
+
+    run bash "$SCRIPT" --event pr-review-full
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
+}
+
+@test "event filter: --event with dry-run returns empty array" {
+    run bash "$SCRIPT" --event pr-review-full --dry-run
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
+}
+
+@test "event filter: unknown event emits warning and falls back" {
+    export MOCK_ISSUE_LIST='[{"number": 403}]'
+    export MOCK_ISSUE_BODY_403='- [ ] /review skill creates review after execution <!-- verify-type: opportunistic -->'
+
+    # Merge stderr into stdout so the warning is captured in $output
+    run bash "$SCRIPT" --event unknown-event-xyz /review 2>&1
+    [ "$status" -eq 0 ]
+    # Warning must be emitted for unknown event
+    [[ "$output" == *"Warning: unknown event 'unknown-event-xyz'"* ]]
+    # Fallback to opportunistic mode finds the matching issue
+    echo "$output" | grep -v "^Warning" | jq -e 'length == 1' > /dev/null
+    echo "$output" | grep -v "^Warning" | jq -e '.[0].number == 403' > /dev/null
+}
