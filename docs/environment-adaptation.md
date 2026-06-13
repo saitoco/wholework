@@ -151,6 +151,7 @@ When multiple `load_when` keys are specified, all conditions are evaluated with 
 | `skills/spec/visual-diff-guidance.md` | `/spec` | `HAS_VISUAL_DIFF_CAPABILITY=true` | `capability: visual-diff` | Visual reproduction verify guidance |
 | `skills/spec/visual-state-enumeration.md` | `/spec` | `HAS_VISUAL_DIFF_CAPABILITY=true` | `capability: visual-diff` | Visual reproduction state enumeration scaffold |
 | `skills/issue/mcp-call-guidelines.md` | `/issue` | `MCP_TOOLS` non-empty | `capability: mcp` | MCP tool detection |
+| `skills/review/workflow-guidance.md` | `/review` | `HAS_WORKFLOW_CAPABILITY=true` | `capability: workflow` | Workflow execution guidance |
 | `skills/doc/translate-phase.md` | `/doc` | `translate` subcommand | `arg_starts_with: translate` | Translation generation |
 | `skills/doc/skill-dev-sync.md` | `/doc` | `validate-skill-syntax.py` or `skills/` exists | `file_exists_any: [scripts/validate-skill-syntax.py, skills/]` | Skill development sync |
 | `.wholework/domains/{skill}/*.md` | `/spec`, `/code`, `/review`, `/verify` | Directory scan (files exist in `.wholework/domains/{skill}/`) | _(N/A — unconditional when present)_ | Project-local (user-defined) |
