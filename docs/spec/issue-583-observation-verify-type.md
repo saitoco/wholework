@@ -168,3 +168,30 @@ phase/verify 滞留の「真の WIP」と「観測待ち」を区別するため
 - verify phase では post-merge 観察 AC（`next /review --full` 実行で `event=pr-review-full` を持つ Issue が自動チェックされるか）を確認する
 - `scripts/opportunistic-search.sh --event <name>` の `--event` フィルタ動作を実際の review/auto 実行で観察すること
 - `/audit stats` コマンドで新メトリクスが想定値を返すか verify する
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC を pre-merge (8 件、全 grep/command/rubric) と post-merge (3 件、observation/opportunistic/manual) に明確分離した設計が verify 段階で機能した。pre-merge は code phase で全件チェック完了、post-merge は event-driven により verify phase 滞留を最小化
+- migration の event 値マッピングは Spec フェーズで「決定する」と書かれていたが、実際には個別 Issue ごとの判断（特に #563/#567 の境界ケース）を要するため、解釈の余地が verify まで残った。次回の同種 Issue では Spec フェーズで具体的なマッピング案を提示すべき
+
+#### code
+- audit/SKILL.md に 2 回コミットが必要だった（初回英語のみ → 「滞留」追記）。Spec AC8 が `grep "滞留"` で日本語キーワードを要求していたが、code phase 開始時に AC のキーワードを再確認する習慣が抜けていた
+- allowed-tools 横断追加（auto/SKILL.md と review/SKILL.md）の漏れ検知が validate-skill-syntax.py で機能した
+
+#### review
+- bats テスト 324 の `$output == "[]"` 期待値が Spec の「フォールバック opportunistic 扱い」と矛盾していた点を review-light が検出。Spec とテスト期待値の整合確認は review の有効な発見ポイント
+
+#### merge
+- mergeable=false/reason=unknown 状態でも non-interactive auto-resolve でマージ進行し成功。GH API の判定遅延として処理する判断は妥当
+
+#### verify
+- pre-merge AC 8 件は全 PASS（grep + bats + rubric ベースで完全自動化済み）
+- post-merge AC 3 件は全 SKIP（observation event 待ち / opportunistic / manual 7 Issue migration）。phase/verify 維持は設計どおり
+- 7 Issue migration の event 値マッピング（特に #563/#567 の境界ケース、#569 の fix-cycle event 未実装問題）は人手判断必須のため、verify 自動化はここまでが限界
+
+### Improvement Proposals
+- N/A（observation verify-type 導入の本来目的は達成済み。fix-cycle emitter 実装は別 follow-up Issue で対応予定）
+
