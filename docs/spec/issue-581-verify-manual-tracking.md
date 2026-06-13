@@ -86,17 +86,33 @@ N/A (design-only Issue; this Spec file is the implementation artifact)
 
 - None.
 
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- None. The diff (adding Spec/Code Retrospective and Phase Handoff sections) is exactly the expected /code phase protocol output for a design-only Issue. No structural divergence between the ADR content and the Issue acceptance criteria.
+
+### Recurring Issues
+
+- **grep verify command `\|` syntax**: AC2 and AC3 use `\|` as alternation in `grep` verify commands, which is GNU grep BRE syntax. The verify-executor uses ripgrep where `\|` is a literal pipe character and `|` is alternation. Both commands match the Spec file's own verify comment lines (which contain `\|` as text) rather than the ADR content. The rubric (AC4) compensates by confirming actual content presence. This is a recurring spec quality pattern: when writing `grep` verify commands with alternation, use bare `|` for ripgrep compatibility or use separate `file_contains` commands.
+
+### Acceptance Criteria Verification Difficulty
+
+- All 4 pre-merge conditions verified automatically: 3 via structural checks (file_exists, grep), 1 via rubric grader.
+- UNCERTAIN count: 0. The rubric grader confirmed ADR completeness (problem, options, decision, rationale, rejected alternatives, delegation to #583) — high confidence PASS.
+- The `\|` syntax issue (see Recurring Issues) did not cause FAIL/UNCERTAIN in practice, but represents a latent quality gap in verify command authoring.
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Implementation is the Spec file itself (ADR document). No source code changes were made. The retrospective commit is the only new commit in this PR, providing the required delta for PR creation.
-- All pre-merge verify commands PASS: `file_exists`, two `grep` checks, and `rubric` evaluation all confirmed the ADR content is complete.
+- CONSIDER-only review: no MUST/SHOULD issues found. The ADR content fully satisfies all 4 acceptance criteria.
+- The grep `\|` syntax issue (AC2/AC3) was documented as a CONSIDER-level spec quality note; fix deferred to Issue owner or #583 implementation context.
 
 ### Deferred Items
-- Full implementation of `verify-type: observation event=<name>` (grammar, event definitions, per-skill firing points) is delegated to #583 — explicitly stated in both the Spec and the Issue body.
+- `verify-type: observation event=issue-583-merge` post-merge AC tracked until #583 merges.
+- grep `\|` → `|` or `file_contains` fix: deferred; Issue body AC is already [x] and rubric covers the content.
 
 ### Notes for Next Phase
-- Review should verify the ADR structure covers all four required elements: problem statement, 4 options with pros/cons, adopted option with rationale, and rejected alternatives with reasoning.
-- The post-merge AC uses `verify-type: observation event=issue-583-merge` — this is the first use of the new classification as a design example; reviewers may flag this as forward-reference.
-- No code files changed; the review diff is this Spec file only (retrospective + phase handoff sections).
+- No code changes were made in /review; merge can proceed directly (`/merge 602`).
+- Post-merge: when #583 merges, the observation event `issue-583-merge` should trigger re-evaluation of the post-merge AC.
