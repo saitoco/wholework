@@ -66,3 +66,48 @@
 - `gh-graphql.sh` の `get-issue-timeline` クエリ（既存）は `LABELED_EVENT` も含む `first:100` で取得するため、イベント数が多いと最新 reopen が切れる可能性がある。新たに `get-last-reopen`（`REOPENED_EVENT` のみ、`last:1`）を追加して対処。
 - タイムスタンプ取得失敗時のフォールバックは、初回実行（reopen なし）でも既存ヒューリスティックが正しく動作するため後退しない。
 - `git log --after="<ISO8601>"` はコミット author date を基準とする。reopen 後に作成されたコミットは reopen 以降の日時を持つため、フィルタが正しく機能する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `gh-graphql.sh` の `--jq` 出力はデフォルトで JSON 文字列クォートを含むため、`| tr -d '"'` でクォート除去を追加した。Spec にはこの処理の明示がなかったが、`git log --after=` に渡す際に必要なため追加。
+
+### Design Gaps/Ambiguities
+
+- Spec は `reopen_ts` の取得結果形式（jq がクォート付き文字列を返すこと）について言及していなかった。実装時に `"2024-01-01T00:00:00Z"` のようなクォート付き値が返ることを確認し、`tr -d '"'` で除去する処理を追加した。
+
+### Rework
+
+- 特になし。Spec の実装ステップに沿って実装でき、手戻りは発生しなかった。
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Spec に `gh-graphql.sh --jq` 出力がクォート付き文字列を返すことへの言及がなく、`tr -d '"'` 処理が Code Retrospective で事後追記された。Spec の実装ステップではシェル出力のクォート処理を明示する習慣がない可能性がある。今後の Spec 記述では、外部コマンドの出力形式（特に jq の文字列クォート）を明示することを推奨する。
+
+### Recurring Issues
+
+- 特になし。今回の PR は範囲が小さく、同種の問題は検出されなかった。
+
+### Acceptance Criteria Verification Difficulty
+
+- 既存テスト（pre-PR のもの）が暗黙的に fallback パスをカバーしているが、null 値の明示的テストが欠如していた（SHOULD として検出・修正済み）。verify command は既存のテスト実行コマンド（`bats tests/reconcile-phase-state.bats`）のみで、フォールバックパスの入力境界値を個別に検証するヒントがなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Size=M Bug fix に対して review-light（light mode）を適用。全 4 観点を 1 エージェントで確認する軽量統合レビューが適切と判断
+- SHOULD issue（null fallback パステスト欠如）は解決済み（テスト追加）。CONSIDER issue（モックコメント不明確）はスタイル上の懸念のみのためスキップ
+- MUST issues なし → COMMENT イベントで投稿、`/merge` 進行可
+
+### Deferred Items
+- CONSIDER: fix-cycle テストのモックコメント補足（スタイルのみ、機能影響なし）
+- `code-pr` completion check の false positive リスク（コードフェーズから引き継ぎ、今回スコープ外）
+
+### Notes for Next Phase
+- tests/reconcile-phase-state.bats は 55 テスト（fix-cycle 3 件：false positive・正常完了・null fallback）
+- CI 全ジョブ SUCCESS（DCO・bats・validate-skill-syntax・forbidden-expressions・macOS compat）
+- MUST issues なし。/merge 実行可

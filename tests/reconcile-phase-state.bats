@@ -845,6 +845,84 @@ MOCK_EOF
     [ "$completion_status" -eq 0 ]
 }
 
+@test "code-patch completion: fix-cycle false positive - pre-reopen commit only -> matches_expected false" {
+    cat > "$MOCK_DIR/gh-graphql.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "2024-01-01T00:00:00Z"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "log" ]]; then
+    if [[ "$*" == *"--after="* ]]; then
+        echo ""
+    else
+        echo "abc1234 feat: initial fix (closes #55)"
+    fi
+fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-patch 55 --check-completion --strict
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
+}
+
+@test "code-patch completion: fix-cycle - fresh commit after reopen -> matches_expected true" {
+    cat > "$MOCK_DIR/gh-graphql.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "2024-01-01T00:00:00Z"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "log" ]]; then
+    if [[ "$*" == *"--after="* ]]; then
+        echo "def5678 feat: fresh fix (closes #55)"
+    fi
+fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-patch 55 --check-completion --strict
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"matches_expected":true'* ]]
+}
+
+@test "code-patch completion: first cycle (no reopen) - null from API -> fallback -> matches_expected true" {
+    cat > "$MOCK_DIR/gh-graphql.sh" << 'MOCK_EOF'
+#!/bin/bash
+# Simulates gh-graphql.sh --jq output when no REOPENED_EVENT exists
+echo "null"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "log" ]]; then echo "abc1234 feat: fix (closes #55)"; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-patch 55 --check-completion --strict
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"matches_expected":true'* ]]
+    [[ "$output" == *'fix-cycle false positive possible'* ]]
+}
+
 @test "spec completion: spec exists + no ready label -> mismatch includes hint_recent_commit and hint_pr_state" {
     SPEC_DIR="$BATS_TEST_TMPDIR/docs/spec-hints"
     mkdir -p "$SPEC_DIR"
