@@ -98,21 +98,22 @@ phase/verify 滞留の「真の WIP」と「観測待ち」を区別するため
 - Step 2 の bats 自己参照チェック: `tests/opportunistic-search.bats` に `verify-type: observation event=` を含む fixture を書くが、`opportunistic-search.sh` は `SCAN_DIRS` 対象外のため check-forbidden-expressions.sh には影響しない
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `opportunistic-search.sh --event <name>` はファイル変更なしでイベントベース AC スキャンを実現する設計を採用した。既存の `--dry-run` / 通常モードと直交する第3モードとして実装
-- `skills/auto/SKILL.md` の allowed-tools に `opportunistic-search.sh` と `gh-issue-edit.sh` を追加。Spec 未記載だったが `validate-skill-syntax.py` の必須チェックにより追加が必要と判明
-- `skills/audit/SKILL.md` に Section 7 を新設（既存の 6 セクションを壊さない後方互換な追加）
+- bats テスト324（unknown event fallback）の assertion を修正: フォールバック実行が opportunistic 条件をマッチして issue を返すことを正しく検証する形に変更した（`run 2>&1` + warning + jq length check）
+- claude-watchdog.sh のロバスト性改善: `$_issue_numbers` の空チェックガードを追加（jq 失敗時の空ループを防止）
+- `skills/review/SKILL.md` の allowed-tools は既に `opportunistic-search.sh` と `gh-issue-edit.sh` を含んでおり、review-light が指摘した MUST は誤検知だった
 
 ### Deferred Items
-- 既存 7 Issue (#555, #556, #557, #562, #563, #567, #569) の AC を `observation event=<該当>` へ書き換える migration は post-merge manual AC として残存（GitHub API 経由のため自動 verify 不可）
-- `fix-cycle` イベントの emitter 実装は follow-up Issue に委譲（claude-watchdog.sh / run-auto-sub.sh 深部の変更が必要）
+- 既存 7 Issue (#555, #556, #557, #562, #563, #567, #569) の AC を `observation event=<該当>` へ書き換える migration は post-merge manual AC として残存
+- `fix-cycle` イベントの emitter 実装は follow-up Issue に委譲
+- `tests/opportunistic-search.bats` の `$stderr` 参照パターン（bats バージョン依存）の統一化は別途検討
 
 ### Notes for Next Phase
-- PR #603 の CI が通ることを確認してからマージを進めること（bats 追加があるため CI-sensitive）
-- Post-merge 後に observaton AC（event=pr-review-full）が次回 `/review --full` 実行で自動チェックされるかを観察し、Issue をクローズするか判断する
-- `skills/audit/SKILL.md` の Section 7 は stats サブコマンドの Step 4 Save（`docs/stats/YYYY-MM-DD.md` への書き出し）に含まれるため、次回 `/audit stats` 実行後にレポートを確認することを推奨
+- 修正コミット (48c4ab3) を含む CI (bats tests) が green になることを確認してからマージを進めること
+- Post-merge 後に observation AC（event=pr-review-light）が今回の `/review --light` 実行で自動チェックされるか観察する（本 review 自体が pr-review-light イベント）
+- `/audit stats` の Section 7 の動作確認は次回 `/audit stats` 実行後に推奨
 
 ## Code Retrospective
 
@@ -135,3 +136,17 @@ phase/verify 滞留の「真の WIP」と「観測待ち」を区別するため
 | 1 | watchdog-kill emitter の実装場所（SKILL.md vs claude-watchdog.sh） | claude-watchdog.sh に追加（shell レベル、AI 判定なし） | watchdog は SKILL.md ではなく shell script。既存の `_watchdog_killed` フラグを活用するのが最小コスト |
 | 2 | `--event` 時の skill name 引数の扱い | 省略可能に変更 | event スキャンは skill name に依存しない。既存テストとの互換は条件分岐で維持 |
 | 3 | skills/verify/SKILL.md の observation 処理（Step 8 で明示スキップ vs 黙示） | Step 7 type 表示に `observation` を追加し、Step 11 unchecked チェックに `observation` を含める。Step 8 で observation 条件は「event 待ち — スキップ」として扱う | verify-classifier.md の分類表と整合。手動確認も不要（event 発火時に自動再評価）なので Step 8b へのルーティングも不要 |
+
+## Review Retrospective
+
+### Spec と実装の乖離パターン
+
+- Spec では「unknown event フォールバック時に `verify-type: opportunistic` として扱う」と定義しているが、対応するテスト（test 324）は `$output == "[]"` を期待していた。フォールバックが正しく動作すると opportunistic 条件にマッチする issue を返すため、期待値が実装と矛盾していた。Spec とテスト期待値の整合確認が実装後の必須チェックとして重要。
+
+### 繰り返し問題
+
+- コンポーネント追加時に同種の複数箇所（skills/auto/SKILL.md と skills/review/SKILL.md の両方）に対して allowed-tools 追加が必要なケースでは、片方のみ対応する漏れが発生しやすい。今回は skills/review/SKILL.md が既存の allowed-tools に opportunistic-search.sh と gh-issue-edit.sh を含んでいたため問題なかったが、複数 skill への横断変更時は全対象 skill を一覧して確認するべき。
+
+### 受け入れ条件検証の困難さ
+
+- bats テストの `$stderr` 変数は bats バージョンに依存する。テスト設計時に「stderr に出力される warning を検証する」場合は `run 2>&1` か `--separate-stderr` を使う必要があり、テンプレートとして明記すると良い。`$stderr` を直接参照する assertion は実際には機能しないケースがある（今回の test 324 の UNCERTAIN 要素）。
