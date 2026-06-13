@@ -214,20 +214,35 @@ Tier 0 コンテキストでの「escalate to Tier 3」は、既存 Step 9 FAIL 
 - AC7 `section_contains "### Step 9"` は見出しの部分一致（`Step 9` が `Step 9: Run Tests` に一致）で機能することを verify-executor.md で確認。
 - 新スクリプトの権限は `.claude/settings.json.template` の `scripts/*.sh` ワイルドカードでカバーされ、settings.json 変更不要であることを確認。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- None. Implementation followed the Spec exactly: `test-failure-classify.sh` uses `--log <file>` interface + stdout category + exit 0/1 pattern; Tier 0 block inserted verbatim from Implementation Step 3; allowed-tools updated; structure.md updated with 50/60 file counts and new entry.
+
+### Design Gaps/Ambiguities
+
+- The `fixture` detection pattern (`expected .+, got .+`) is confirmed to be a heuristic with acknowledged false-positive risk (Spec Uncertainty section). The safety guard (tests/ only, max 1 retry, fallthrough on failure) bounds the impact regardless of misclassification.
+- `docs/ja/structure.md` sync was required (not explicitly called out in Spec Changed Files, but covered by the `docs/translation-workflow.md` rule). Updated counts and added Japanese entry for `test-failure-classify.sh` in the same commit as `docs/structure.md`.
+
+### Rework
+
+- None. All verification commands passed on first implementation.
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
-- Tier 0 は `skills/code/SKILL.md` Step 9 内に追加。test FAIL 時の最初のアクションで、修復可（snapshot/mock/fixture）のみ tests/ 限定・最大 1 回の自動修復を試み、修復不可（logic/infra）と失敗時は既存 Step 9 FAIL ハンドリングへフォールスルー。
-- 分類は新スクリプト `scripts/test-failure-classify.sh`（`--log <file>` → stdout カテゴリ → exit 0/1）に委譲。
-- rubric の 5 要件を満たす Tier 0 本文テンプレートを Implementation Step 3 に直接記載済み（実装知識の backfill）。
+- Spec の Implementation Step 3 に記載の Tier 0 テンプレートをそのまま SKILL.md Step 9 に挿入した。半角感嘆符なし（Forbidden Expressions 準拠）。
+- `test-failure-classify.sh` は `--log <file>` + stdout カテゴリ + exit 0/1 パターンで実装。`apply-fallback.sh`/`detect-wrapper-anomaly.sh` と同じ I/F。
+- `docs/ja/structure.md` の sync は Spec Changed Files に明示されていなかったが `docs/translation-workflow.md` ルールで必要。同じコミットで更新した。
 
 ### Deferred Items
-- フレームワーク別の実失敗出力に対する分類精度検証は bats fixture で実施（Uncertainty 参照）。
-- post-merge observation（fix-cycle で Tier 0 自動修復を観察）は次回 fix-cycle まで未確定。
+- AC8 (`github_check "gh pr checks" "Run bats tests"`) は CI 完了後に `/verify` で確認。
+- Post-merge observation（fix-cycle での Tier 0 自動修復観察）は次回 fix-cycle まで未確定。
+- `fixture` 検出パターン（ヒューリスティック）の実フレームワーク出力への精度は bats テストで代表ケースを確認済みだが、網羅的ではない。
 
 ### Notes for Next Phase
-- `skills/code/SKILL.md` allowed-tools への `${CLAUDE_PLUGIN_ROOT}/scripts/test-failure-classify.sh:*` 追加（Step 4）を必ず行うこと。漏れると「Validate skill syntax」CI が失敗する。
-- SKILL.md 本文には半角の感嘆符を入れない。Tier 0 ブロックは番号付きリスト（散文）で、トリプルバックティックのリテラル提示は不要。
-- structure.md は scripts `(50 files)` / tests `(60 files)` の両方を更新し、Scripts > Process management に新スクリプト項目を追加すること（AC9/AC10）。
-- bats テストは `test-failure-classify.sh` を直接呼ぶ（WHOLEWORK_SCRIPT_DIR モック不要、自己参照除外も不要）。
+- PR #612。CI が通れば `/review` → `/merge` → `/verify` の通常フローへ。
+- 全 729 bats テストが PASS（新規 8 件含む）、`validate-skill-syntax.py` と `check-forbidden-expressions.sh` もクリーン。
+- verify で確認すべき未チェック AC: AC8 (`github_check "gh pr checks" "Run bats tests"`) のみ。他 AC1-7/AC9/AC10 はチェック済み。
