@@ -83,3 +83,35 @@ XL 親 Issue の sub-issue を 50+ 件一括起票するためのヘルパーを
 - **`docs/guide/xl-decomposition.md` は `docs/guide/` 配下**: `check-translation-sync.sh` が `docs/guide/*.md` も対象にするため、`docs/ja/guide/xl-decomposition.md` 作成により MISSING_JA を解消する。
 - **Issue 本文の Auto-Resolved Ambiguity Points**: `/issue` フェーズで既に 3 件解決済み（コマンドオプション名、AC YAML 検証、verify-type タグ）。追加の曖昧ポイント解決は不要。
 - **WHOLEWORK_SCRIPT_DIR mock 不要**: 実装は `skills/issue/SKILL.md`（LLM ステップ）であり新規シェルスクリプトは追加しない。bats テストは構造テスト（SKILL.md 内容チェック）のみ。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- **`blocked_by` セカンドパスの明示化**: Spec の Step 3 には「(c) blocked_by 各参照について gh-graphql.sh --query add-blocked-by」と記述されていたが、前方参照（後続エントリが先行エントリを参照）に対応するため、SKILL.md では first pass（Issue 作成 + add-sub-issue）と second pass（blocked_by 設定）の 2 フェーズ構成を明示した。設計意図は同じだが SKILL.md では両フェーズを別ブロックとして分離した。
+
+### Design Gaps/Ambiguities
+
+- **`allowed-tools` の更新省略**: SKILL.md frontmatter の `allowed-tools` には既に `gh issue create:*` と `gh-graphql.sh:*` が含まれており、新規追加なし。新規ツール追加が不要だったため問題なし。
+- **DFS 実装詳細**: Spec では「DFS で循環検出」とのみ記述。SKILL.md にはアルゴリズムの疑似コードを追記して LLM 実行時の実装精度を向上させた。
+
+### Rework
+
+- なし（実装ステップ 1〜5 をSpec順通りに完了）
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `## Decomposition File Mode` を `## Standard Format` の直前（`## Label Transition on Close` の直後）に配置した。SKILL.md の既存セクション順序（新規/既存/ラベル/フォーマット）を維持するため
+- blocked_by 設定を second pass（全 Issue 作成後）に分離した。前方参照（後続エントリが先行エントリの id を参照）に対応するため
+- bats テストは構造テスト（SKILL.md grep）のみ。LLM 実行ロジックのユニットテストは不可能なため、ドキュメント存在確認に留めた
+
+### Deferred Items
+- フル auto-decomposition（LLM 解析 → YAML 自動生成）: Issue 本文に明示されたスコープ除外。follow-up Issue を起票することが Post-merge AC に含まれる
+- `examples/decomposition/` ディレクトリへの追加サンプル（Nuxt→Next 以外）: スコープ外
+
+### Notes for Next Phase
+- rubric AC (AC 7) はセマンティック評価: "validates YAML schema... detects circular dependencies via DFS... generates standard-format Issue bodies... uses gh-graphql.sh add-sub-issue + add-blocked-by mutations" — SKILL.md の Decomposition File Mode セクションで全要件をカバー済み
+- `docs/structure.md` の `examples/` エントリは SHOULD-level: Spec Notes に記載あり。更新済み
+- Post-merge AC は 2 件とも manual: 実 XL Issue での動作確認と follow-up Issue 起票
