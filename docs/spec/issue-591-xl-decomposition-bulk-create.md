@@ -99,19 +99,35 @@ XL 親 Issue の sub-issue を 50+ 件一括起票するためのヘルパーを
 
 - なし（実装ステップ 1〜5 をSpec順通りに完了）
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- `id` フィールドのパス安全性バリデーションが Spec に未記述だった。Spec の schema validation rules に「no path separators」制約を追記することで次回の同種機能実装時に明示できる（今回は SKILL.md を修正済み）
+- `docs/structure.md` のテスト数カウントがブランチ作成後に main で更新されたため逆行した。ブランチ期間が長い場合に発生しやすいパターン。Spec Notes に「directory count は近似値として扱う」旨を追記する方向で検討余地あり
+
+### Recurring Issues
+
+- なし（同種の問題は今回のみ検出）
+
+### Acceptance Criteria Verification Difficulty
+
+- 11 件中 11 件 PASS（UNCERTAIN/FAIL なし）。verify コマンドが適切に設定されており検証は容易だった
+- AC 7（rubric）はセマンティック評価: SKILL.md の実装内容が rubric 条件の 5 要件を明示的にカバーしているため PASS の根拠が明確だった
+- `command` hints（bats・check-translation-sync.sh）は CI 参照フォールバックで PASS 判定可能だった
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `## Decomposition File Mode` を `## Standard Format` の直前（`## Label Transition on Close` の直後）に配置した。SKILL.md の既存セクション順序（新規/既存/ラベル/フォーマット）を維持するため
-- blocked_by 設定を second pass（全 Issue 作成後）に分離した。前方参照（後続エントリが先行エントリの id を参照）に対応するため
-- bats テストは構造テスト（SKILL.md grep）のみ。LLM 実行ロジックのユニットテストは不可能なため、ドキュメント存在確認に留めた
+- SHOULD 問題 2 件を修正してコミット: テスト数カウント逆行（65→67）と `id` パス文字制限の追加
+- MUSTなし → COMMENT イベントでレビュー投稿（REQUEST_CHANGES なし）
+- テスト数は main の 66 ではなく 67 に更新（このPRで xl-decomposition.bats 追加のため）
 
 ### Deferred Items
-- フル auto-decomposition（LLM 解析 → YAML 自動生成）: Issue 本文に明示されたスコープ除外。follow-up Issue を起票することが Post-merge AC に含まれる
-- `examples/decomposition/` ディレクトリへの追加サンプル（Nuxt→Next 以外）: スコープ外
+- Post-merge AC 2 件（実 XL Issue での動作確認・follow-up Issue 起票）: manual 確認待ち
+- `id` フィールドの character validation は SKILL.md ドキュメントのみ追記。実行時の LLM がこれを遵守するかは LLM 判断に依存
 
 ### Notes for Next Phase
-- rubric AC (AC 7) はセマンティック評価: "validates YAML schema... detects circular dependencies via DFS... generates standard-format Issue bodies... uses gh-graphql.sh add-sub-issue + add-blocked-by mutations" — SKILL.md の Decomposition File Mode セクションで全要件をカバー済み
-- `docs/structure.md` の `examples/` エントリは SHOULD-level: Spec Notes に記載あり。更新済み
-- Post-merge AC は 2 件とも manual: 実 XL Issue での動作確認と follow-up Issue 起票
+- CI 全ジョブ SUCCESS、全 AC PASS のため merge 可能な状態
+- Post-merge AC は manual のため `/merge` 後に別途確認が必要
