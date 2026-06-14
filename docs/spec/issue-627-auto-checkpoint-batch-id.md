@@ -103,3 +103,26 @@
 ### Notes for Next Phase
 - Spec の Post-merge verification（並列 `/auto --batch` での state 非衝突、`/auto --resume --batch --batch-id <id>` での正しい batch 復元）が verify の主要確認事項
 - verify-type: observation の2件は自動実行不可のため手動またはSKIP扱いになる可能性あり
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 7件すべて grep / file_contains / rubric / command の自動 verify command 付き、verify を完全自動化
+- 後方互換 (BATCH_ID 省略 → 'default') を rubric で明示した設計が機能
+
+#### code
+- auto-checkpoint.sh への BATCH_ID 引数追加 + skills/auto/SKILL.md の List/Resume mode 更新 + active index 管理が完遂
+- bats 3 ケース（parallel write / resume / backward compat）で核心挙動をカバー
+
+#### review/merge
+- review-light 問題なし、clean な squash merge
+
+#### verify
+- pre-merge AC 7件全 PASS
+- post-merge AC 2件は observation event=concurrent-batch / batch-resume → 各イベント発生時に観察
+
+### Improvement Proposals
+- N/A
+
