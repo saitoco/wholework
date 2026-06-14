@@ -238,7 +238,9 @@ cmd_write_batch() {
     > "$tmp_path"
   mv "$tmp_path" "$path"
 
-  _add_to_active_index "$batch_id"
+  if ! _add_to_active_index "$batch_id"; then
+    echo "Warning: failed to register batch_id '$batch_id' in active index" >&2
+  fi
 }
 
 # -----------------------------------------------------------------------
