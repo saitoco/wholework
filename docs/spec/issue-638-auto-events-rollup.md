@@ -29,7 +29,7 @@
 
 - <!-- verify: file_exists "scripts/auto-events-rollup.sh" --> `scripts/auto-events-rollup.sh` が新規作成されている
 - <!-- verify: command "bash -n scripts/auto-events-rollup.sh" --> 構文エラーなし
-- <!-- verify: grep -- "--date\|--input\|--output-dir\|--cleanup" "scripts/auto-events-rollup.sh" --> 4 オプション (`--date` / `--input` / `--output-dir` / `--cleanup`) すべて実装されている
+- <!-- verify: grep -- "--date|--input|--output-dir|--cleanup" "scripts/auto-events-rollup.sh" --> 4 オプション (`--date` / `--input` / `--output-dir` / `--cleanup`) すべて実装されている
 - <!-- verify: grep "auto-events-rollup" "tests/auto-events-rollup.bats" --> bats テストファイル `tests/auto-events-rollup.bats` が新規作成されている
 - <!-- verify: command "bats tests/auto-events-rollup.bats" --> bats テストが green（最小 4 ケース: empty input / single session rollup / multi-session aggregation / cleanup rotation）
 - <!-- verify: rubric "scripts/auto-events-rollup.sh produces a markdown report under docs/reports/auto-events-rollup-YYYY-MM-DD.md with frontmatter (type/description/generated_by/generated_at), Sessions table, Phase Distribution table, Recovery Tier Invocations table, and Anomalies section, parsing the JSONL input with jq" --> 出力フォーマット 4 セクション（Sessions / Phase Distribution / Recovery Tier / Anomalies）と frontmatter 4 フィールドが仕様通り
@@ -48,3 +48,37 @@
 - `date -u +%Y-%m-%d` は macOS (BSD date) / Linux 共通で動作する
 - Size 計算のためのフィールド (`size`) は現在の event schema に存在しない。Sessions 表の Size 列はイベントに含まれる場合のみ表示し、ない場合は `-` とする
 - `phase_complete` event が存在しない phase の Duration は `-` とする (watchdog kill 等の異常終了)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- bats テスト数が 4 ではなく 5 ケース: empty input の frontmatter テストを独立させた（AC5 の「最小 4 ケース」は満たしつつ frontmatter 検証を独立させる方が可読性が高い）
+- `write_sessions_section` / `write_phase_dist_section` などのヘルパー関数で section データと header を一緒に出力するパターンを採用。Spec は「sections separate write」を明示していなかったが実装上まとめる方が DRY
+
+### Design Gaps/Ambiguities
+
+- verify command #3 の `\|` は ripgrep 文脈では literal backslash-pipe であり alternation ではない（GNU grep BRE の `\|` 挙動と混同されていた）。実装前に検証し `|`（bare pipe）に修正してから進めた
+- `anomaly` event は現在 `run-auto-sub.sh` に emit_event 呼び出しがなく（出力のみ）、Anomalies セクションは常に `- (none)` になる。将来 emit_event("anomaly", ...) が追加されれば自動的に機能する設計で対応済み
+
+### Rework
+
+- N/A（設計通り初回で完成）
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `\|` → `|` への verify command 修正を apply: Issue body と Spec の両方に反映し、齟齬なし
+- bash 3.2+ 互換を jq 一本で実現: `declare -A` や `mapfile` を一切使わず、jq の `group_by` / `map` / `sort_by` で集計ロジックをすべて処理
+- ヘルパー関数（`write_header`, `write_sessions_section` 等）を `{ ... } > FILE` ブロック内で呼ぶパターンを採用: 可読性と DRY を確保
+
+### Deferred Items
+- `anomaly` event emit は本 Issue スコープ外。`run-auto-sub.sh` への emit_event 追加は #630 関連で別途検討
+- 自動実行（cron / hook）は Issue body で明示的に別 Issue 扱いとなっている
+- Duration が midnight をまたぐ場合の `+86400` 補正を実装したが、実際のテストケースは未作成（エッジケース）
+
+### Notes for Next Phase
+- verify command #3 を `\|` → `|` に修正済み（Issue body と Spec 両方）: /review 時に元の形と比較しないよう注意
+- bats テストは 5 ケース（frontmatter テストを独立させたため）。AC の「最小 4 ケース」を超過しているが設計意図通り
+- `anomaly` セクションは現実装では常に `- (none)` となる（emit_event 未実装のため）: /review で設計上の制限として認識すること
