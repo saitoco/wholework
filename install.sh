@@ -87,9 +87,9 @@ if [ "$NO_PLUGIN" = false ]; then
   fi
 fi
 
-echo ""
-echo "Done. Restart Claude Code to apply the updated plugin."
-
 # Configure core.hooksPath so the DCO commit-msg hook applies to all worktrees.
 git -C "$SCRIPT_DIR" config core.hooksPath scripts/git-hooks
 echo "Configured core.hooksPath = scripts/git-hooks"
+
+echo ""
+echo "Done. Restart Claude Code to apply the updated plugin."
