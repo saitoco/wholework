@@ -43,3 +43,30 @@ Background: In a priority-ordered dict construction Issue, Spec instructions sai
 - `dict.update` の記述は `setdefault` の説明内で参照（別 AC は不要、Issue の Auto-Resolved Ambiguity Points 参照）
 - 挿入位置: "read-then-write jq failure guard" ブロック直後 ("**SHOULD-level acceptance criteria consideration:**" 直前)
 - SKILL.md はスキル定義ファイルのため `docs/ja/` 翻訳同期対象外
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- None
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Inserted guideline block verbatim from Spec between "read-then-write jq failure guard" and "SHOULD-level acceptance criteria consideration" — exact insertion point was unambiguous
+- Used `dict.update` reference within the `setdefault` block per Spec notes (no separate AC needed)
+- No doc sync needed: `skills/spec/SKILL.md` is not a `docs/*.md` file and is excluded from `docs/ja/` translation sync
+
+### Deferred Items
+- Post-merge opportunistic verification: observe that `/spec` no longer suggests `setdefault` for priority-ordered dict construction in real Issues
+
+### Notes for Next Phase
+- Both pre-merge ACs verified PASS locally (rubric + section_contains)
+- No test failures; bats 793 PASS, validate-skill-syntax PASS, forbidden-expressions PASS
+- Change is minimal (9 lines inserted into SKILL.md); verify phase should be straightforward
