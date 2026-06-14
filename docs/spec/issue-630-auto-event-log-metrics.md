@@ -135,20 +135,23 @@
 - `tests/emit-event.bats` テスト 6（lockdir fallback）で `export PATH="$MOCK_DIR"` のみ設定したことで `bash`, `rm` コマンドが見つからず失敗。`PATH` から `MOCK_DIR` を除いた上で別ディレクトリを先頭に置く形に修正した。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `emit_event()` を `scripts/emit-event.sh` に抽出して共有化。`run-auto-sub.sh`, `claude-watchdog.sh`, `wait-ci-checks.sh` が共通して source する設計を採用。
-- `OUTPUT_FORMAT_JSON=1` 環境変数を watchdog のプロセス死活モード切り替えシグナルとして使用。`--output-format json` との組み合わせで誤 kill を防ぐ。
-- `wait-ci-checks.sh` の ci_wait emission は `AUTO_EVENTS_LOG` 設定時のみ有効化（既存テストへの regression を避けるため）。
+- MUST issue（`tests/auto-sub-observability.bats` の setup() に emit-event.sh mock がなく CI テスト 57-59 が失敗）を 4 行の mock 追加で修正し、commit 7fe674c としてブランチに push した。スコープを最小限に保つ方針を採った。
+- SHOULD issues（runner 3 本の `2>&1` による stderr 混入、`emit_event` への JSON injection リスク、schema フィールド名の不正確さ）はレビュー中には修正せず defer とした。PR のスコープを変えずに review を完了させることを優先した。
+- レビューイベントタイプは `COMMENT`（`REQUEST_CHANGES` ではない）。MUST 問題を PR body の General Comments に記載したため、`gh-pr-review.sh` の REQUEST_CHANGES 判定（line comment の MUST severity で判定）が発動しなかった。
 
 ### Deferred Items
-- `run-spec.sh` の token_usage は Spec 設計のスコープ外（直接呼び出し）のため未対応。後続の retrospective レポート生成で spec phase コストが取れない点は既知の制限。
-- `concurrent_commit_detected` の `git log origin/main` が patch route で main に直接コミットする際に自分のコミットも検出してしまう可能性。現状は "since phase start" なのでリスクは限定的。
+- `run-code.sh:166`, `run-review.sh:89`, `run-merge.sh:80` の `2>&1` stderr 混入 → 60s 超セッションで `token_usage` event が emitted されない既知制限として残存。別途 fix が必要。
+- `scripts/emit-event.sh:22` の JSON injection リスク（git author 名に `"` や `\` が含まれる場合）— 未修正。
+- `docs/reports/event-log-schema.md` の `issue` フィールド説明が "Issue number" だが review/merge phase では PR 番号が入る点 — 未修正。
+- `docs/structure.md` および `docs/ja/structure.md` の tests/ ファイル数が 71 と記載されているが実際は 73 — 未修正。
 
 ### Notes for Next Phase
-- bats テスト `tests/claude-watchdog.bats` の `watchdog_kill` / `max_silent_window` テストは `AUTO_EVENTS_LOG` を設定して実際のファイルに書き込み確認する設計。CI で `flock` が利用可能かを確認すること。
-- `emit-event.sh` が source される前提で `AUTO_EVENTS_LOG` が未設定の場合は `command -v emit_event` が false になるため、watchdog と wait-ci-checks は emit_event を呼ばない。この guard が正しく機能することを verify phase で確認する。
+- review フェーズ中に commit 7fe674c をブランチに追加したため、merge 前に CI が通過していることを確認すること。
+- `emit_event` guard の動的動作（`AUTO_EVENTS_LOG` 未設定時に emit_event を呼ばない）は静的 verify command では確認困難。Post-merge 観察 AC として登録済み。
+- deferred SHOULD issues はブロッカーではないが、retrospective レポート生成の要件として `token_usage` event が実際に emitted されるかを verify phase で観察 AC として確認することを推奨する。
 
 ## Alternatives Considered
 
@@ -157,3 +160,21 @@
 ## Uncertainty
 
 - `--output-format stream-json --verbose` を使用すると `detect-wrapper-anomaly.sh` が JSON ストリームからパターンを検出できない懸念があった → `--output-format json` + TOKEN_USAGE_FILE へのリダイレクト + `jq -r .result` でテキスト補完するアプローチを採用することで解決する。
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- `tests/auto-sub-observability.bats` の setup() 更新漏れ: `run-auto-sub.sh` が `source "$SCRIPT_DIR/emit-event.sh"` に変わったとき、`tests/run-auto-sub.bats` は正しく更新されたが `tests/auto-sub-observability.bats` は更新されなかった。同一スクリプトをモックする複数のテストファイルが存在する場合、片方の更新漏れは CI でしか発覚しない。PR diff での確認対象として「source 先が変わったスクリプトをモックする全テストファイル」を明示的にチェックする習慣が必要。
+- `docs/reports/event-log-schema.md` の `issue` フィールド説明: "Issue number" と記載されているが、review/merge phase では `EMIT_ISSUE_NUMBER` に PR 番号がセットされるため実態と乖離している。フィールド名と説明が一致しない Spec ドキュメントのパターン。
+- `docs/structure.md` のファイル数: PR 追加前から 71 と記載されていたが実ファイル数は 73（手動更新の累積ずれ）。構造ドキュメントのファイル数は自動更新しないかぎり必ず陳腐化する。
+
+### Recurring Issues
+
+- `2>&1` を TOKEN_USAGE_FILE リダイレクトに使う同一バグが `run-code.sh`, `run-review.sh`, `run-merge.sh` の 3 箇所に同時に存在した。コピーペーストで伝播した設計上の欠陥。同じパターンをもつスクリプトに同じバグが伝播するリスクは高く、実装時のクロスファイル一貫性チェックが有効。
+- テストファイル数のドリフト（structure.md）は今回が初出ではない可能性が高い。ドキュメントの数値を grep ベースで自動検証する verify command が有効。
+
+### Acceptance Criteria Verification Difficulty
+
+- 全 AC が `grep` / `file_contains` / `file_exists` / `rubric` で静的に検証可能だった。UNCERTAIN はなし。
+- ただし `emit_event` guard（`AUTO_EVENTS_LOG` 未設定時に emit_event を呼ばない）の動的な振る舞いは verify command で静的に確認できない。Post-merge 観察 AC として登録されているが、verify-executor による事前確認が困難な AC の典型例。
