@@ -117,17 +117,17 @@ XL 親 Issue の sub-issue を 50+ 件一括起票するためのヘルパーを
 - `command` hints（bats・check-translation-sync.sh）は CI 参照フォールバックで PASS 判定可能だった
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- SHOULD 問題 2 件を修正してコミット: テスト数カウント逆行（65→67）と `id` パス文字制限の追加
-- MUSTなし → COMMENT イベントでレビュー投稿（REQUEST_CHANGES なし）
-- テスト数は main の 66 ではなく 67 に更新（このPRで xl-decomposition.bats 追加のため）
+- `docs/structure.md` および `docs/ja/structure.md` のコンフリクトを手動解消: `examples/` ディレクトリエントリを追加し、テスト数は 67 に更新（ブランチが xl-decomposition.bats を追加したため）
+- PR #623 は squash merge 済み（コミット 9ea6045）
+- ブランチ `worktree-code+issue-591` は削除済み
 
 ### Deferred Items
 - Post-merge AC 2 件（実 XL Issue での動作確認・follow-up Issue 起票）: manual 確認待ち
 - `id` フィールドの character validation は SKILL.md ドキュメントのみ追記。実行時の LLM がこれを遵守するかは LLM 判断に依存
 
 ### Notes for Next Phase
-- CI 全ジョブ SUCCESS、全 AC PASS のため merge 可能な状態
-- Post-merge AC は manual のため `/merge` 後に別途確認が必要
+- Issue #591 は `closes #591` により main マージ時に自動クローズ済み
+- Post-merge AC（実 XL Issue での動作確認・follow-up Issue 起票）は manual verification が必要
