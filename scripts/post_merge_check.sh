@@ -78,6 +78,7 @@ for NUMBER in "$@"; do
 
     # Write ACs to temp file and iterate via fd 3 to keep stdin free for user input
     TMP_ACS=$(mktemp /tmp/post-merge-acs-XXXXXX.txt)
+    trap 'rm -f "$TMP_ACS"' EXIT
     echo "$MANUAL_ACS" > "$TMP_ACS"
 
     PASS_COUNT=0
