@@ -93,17 +93,17 @@
 CONSIDER: `tests/audit-auto-session-full.bats` に正ケース（emit される）のテストは追加されたが、負ケース（`--narrative-draft` なしでは emit されない）のテストが不在。`event-log-schema.md` には "Only emitted when `--narrative-draft` flag is used" と明記されており、このスコープ境界を bats テストで保護するとより確実。AC には含まれないため merge を妨げないが、次 Issue での改善候補として記録する。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light（`--light` flag 指定）で実施。全4受け入れ基準が PASS、CI 全ジョブ pass、MUST/SHOULD issues なし。
-- CONSIDER issue (負ケーステスト欠如) は AC 要件を超えるものでありスキップ。PR コメントに記録済み。
+- PR #655 を squash merge（`--delete-branch`）で main にマージ。CI pass・approved 状態で mergeable=true。
+- Phase Handoff は review フェーズの内容を merge フェーズで上書き（rotation）。
 
 ### Deferred Items
-- 負ケーステスト (`auto-session-report-published` が `--narrative-draft` なしで emit されないことの検証) は次 Issue で対応可能。
-- `docs/structure.md` の test ファイル件数乖離 (74 vs 77) は本 Issue スコープ外の pre-existing debt。
+- 負ケーステスト（`--narrative-draft` なしで emit されないことの検証）は次 Issue 候補として review が記録済み。本 merge スコープ外。
+- `docs/structure.md` の test ファイル件数乖離は pre-existing debt、本スコープ外。
 
 ### Notes for Next Phase
-- MUST issues なし。`/merge 655` で直接進められる。
-- merge 後は `verify-type: observation event=auto-session-report-published` を持つ #632 AC が trigger されうる（`opportunistic-search.sh --event auto-session-report-published`）。
-- `docs/reports/event-log-schema.md` は translation sync 不要。
+- verify フェーズでは post-merge AC（なし）の確認のみ。
+- merge 後に `verify-type: observation event=auto-session-report-published` を持つ #632 AC が opportunistic-verify で trigger されうる。
+- `scripts/get-auto-session-report.sh` の `auto-session-report-published` emit が実際に動作するかは観測型 verify の対象。
