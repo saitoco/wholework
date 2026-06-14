@@ -62,3 +62,37 @@
 - `check-translation-sync.sh` は `--fail-if-outdated` なしで常に exit 0（informational モード）。AC 4 の自動検証は「スクリプト実行成功」の確認のみ。`docs/ja/tech.md` の実際の同期は実装の完全性で保証する。
 - 既存 bats テストには `WATCHDOG_TIMEOUT_ISSUE_DEFAULT` の値を明示的に検証するケースが存在しない（MERGE=600 のテストはあるが ISSUE は未テスト）。新規テスト追加は AC スコープ外。
 - per-effort 動的 timeout および モデル別 timeout 自動切替は本 Issue スコープ外（#596 Icebox）。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. すべての実装ステップを Spec の順序通りに実行した。
+
+### Design Gaps/Ambiguities
+
+- `docs/tech.md` の「Architecture Decisions セクション末尾」の挿入位置が Spec では `## Wholework Label Management` 直前と指定されていたが、実際には SSoT 注記行（`SSoT note: ...`）の直後かつ `## Wholework Label Management` 見出しの直前に挿入した。これは Spec の意図と一致し、問題なし。
+- `docs/ja/tech.md` の対応挿入位置は日本語版 SSoT 備考行（`SSoT 備考: ...`）直後。英語版と同じ構造で一致。
+
+### Rework
+
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `WATCHDOG_TIMEOUT_ISSUE_DEFAULT` を 600 → 1200 に変更（2× の余裕で Sonnet 4.6 親下での誤 kill を防ぐ）
+- コメントブロックを `WATCHDOG_TIMEOUT_SPEC_DEFAULT` 行の直前に追加（Spec 通り）
+- `docs/tech.md` に watchdog timeout calibration bullet を Architecture Decisions 末尾に追加
+- `docs/ja/tech.md` を同期（`check-translation-sync.sh` で IN_SYNC 確認済み）
+
+### Deferred Items
+- WATCHDOG_TIMEOUT_ISSUE_DEFAULT の bats テストケース（現在 ISSUE フェーズ用テストなし）は本 Issue スコープ外; 必要なら別 Issue で対応
+- per-effort 動的 timeout (#596 Icebox) は将来課題
+- モデル別 timeout 自動切替も将来課題（`.wholework.yml` 手動上書きで暫定対応）
+
+### Notes for Next Phase
+- post-merge AC は observation 型（Sonnet 4.6 親での次回 auto-run での自然観察）のため、/verify での自動確認は不要
+- 全 pre-merge verify コマンドは /code 内で PASS 確認済み（チェックボックスも更新済み）
+- 変更は 3 ファイルのみ（`scripts/watchdog-defaults.sh`, `docs/tech.md`, `docs/ja/tech.md`）。レビュー/verify の対象範囲は小さい
