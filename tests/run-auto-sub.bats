@@ -393,3 +393,129 @@ MOCK
     [ "$status" -eq 0 ]
     [ ! -d "$BATS_TEST_TMPDIR/test-repo/.tmp/claude-auto-patch-lock" ]
 }
+
+@test "post-spec size demotion M->XS: run-code.sh --patch is called and Post-spec is logged" {
+    CALL_COUNT_FILE="$BATS_TEST_TMPDIR/.size-call-count"
+    cat > "$MOCK_DIR/get-issue-size.sh" <<MOCK
+#!/bin/bash
+COUNT=\$(cat "$CALL_COUNT_FILE" 2>/dev/null || echo 0)
+COUNT=\$((COUNT + 1))
+echo "\$COUNT" > "$CALL_COUNT_FILE"
+if [[ "\$COUNT" -eq 1 ]]; then
+  echo "M"
+else
+  echo "XS"
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json labels"* ]]; then
+    echo "triaged"
+    exit 0
+fi
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
+    if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+        echo "test issue title"
+    elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+        echo "https://github.com/test/repo/issues/42"
+    fi
+    exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo '[{"headRefName":"worktree-code+issue-42","number":99}]'
+    exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "42 --patch" "$RUN_CODE_LOG"
+    [[ "$output" == *"Post-spec route demotion/upgrade"* ]]
+}
+
+@test "post-spec size upgrade S->M: run-code.sh --pr is called and Post-spec is logged" {
+    CALL_COUNT_FILE="$BATS_TEST_TMPDIR/.size-call-count"
+    cat > "$MOCK_DIR/get-issue-size.sh" <<MOCK
+#!/bin/bash
+COUNT=\$(cat "$CALL_COUNT_FILE" 2>/dev/null || echo 0)
+COUNT=\$((COUNT + 1))
+echo "\$COUNT" > "$CALL_COUNT_FILE"
+if [[ "\$COUNT" -eq 1 ]]; then
+  echo "S"
+else
+  echo "M"
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json labels"* ]]; then
+    echo "triaged"
+    exit 0
+fi
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
+    if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+        echo "test issue title"
+    elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+        echo "https://github.com/test/repo/issues/42"
+    fi
+    exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo '[{"headRefName":"worktree-code+issue-42","number":99}]'
+    exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "42 --pr" "$RUN_CODE_LOG"
+    [[ "$output" == *"Post-spec route demotion/upgrade"* ]]
+}
+
+@test "post-spec size unchanged XS->XS: Post-spec is not logged" {
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json labels"* ]]; then
+    echo "triaged"
+    exit 0
+fi
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
+    if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+        echo "test issue title"
+    elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+        echo "https://github.com/test/repo/issues/42"
+    fi
+    exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo '[{"headRefName":"worktree-code+issue-42","number":99}]'
+    exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"Post-spec route demotion/upgrade"* ]]
+}

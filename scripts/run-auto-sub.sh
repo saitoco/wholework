@@ -149,9 +149,13 @@ if ! echo "$LABELS" | grep -q "phase/ready"; then
   fi
 fi
 
-# Re-fetch SIZE after spec phase in case spec set the Size label
-if [[ -z "$SIZE" ]]; then
-  SIZE=$("$SCRIPT_DIR/get-issue-size.sh" --no-cache "$SUB_NUMBER" 2>/dev/null || true)
+# Always re-fetch SIZE after spec phase (spec may have re-judged the Size)
+# Mirror of skills/auto/SKILL.md Step 3a (Issue #616 for the parent path)
+INITIAL_SIZE="$SIZE"
+SIZE=$("$SCRIPT_DIR/get-issue-size.sh" --no-cache "$SUB_NUMBER" 2>/dev/null || true)
+if [[ -n "$INITIAL_SIZE" && "$INITIAL_SIZE" != "$SIZE" ]]; then
+  echo "${LOG_PREFIX} Post-spec route demotion/upgrade: ${INITIAL_SIZE} → ${SIZE}, remaining phases re-planned"
+  emit_event "size_refresh" "from=${INITIAL_SIZE}" "to=${SIZE}"
 fi
 if [[ -z "$SIZE" ]]; then
   echo "${LOG_PREFIX} Error: Size is not set for issue #${SUB_NUMBER}" >&2
