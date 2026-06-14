@@ -277,6 +277,18 @@ For each changed file, check for corresponding test files under `tests/` and inc
 
 When removing or changing variable assignments, explicitly list all usage locations (conditional branches, command arguments, output handling) in the implementation steps.
 
+**Feature deletion impact chain check:**
+
+When the Issue involves deleting a feature (script, function, variable, etc.), identify all files that reference the deleted target (impact chain) and include them in the changed-files list with cleanup ACs:
+
+1. Run `grep -rn '<deleted-target-name>' .` from the repository root to enumerate all referencing files
+2. For each file in the impact chain, add a changed-files entry: e.g., `scripts/foo.sh`: remove `<deleted-target>` reference
+3. Add a cleanup AC for each impact chain file: e.g., `<!-- verify: file_not_contains "scripts/foo.sh" "<deleted-target>" -->`
+
+**Skip** if the Issue does not involve feature deletion.
+
+*Example: Issue #485 retro — `detect-wrapper-anomaly.sh` retained a dead `VERIFY_FAILED` detection pattern after `run-verify.sh` was deleted because the impact chain was not listed in the Spec's Changed Files.*
+
 **bats test Spec input format:**
 
 For Specs involving new/modified bats tests, explicitly specify the input data format (markdown condition line format, JSON structure, command output format) that the test target script expects. Include test data format details in the Spec's Notes section.
