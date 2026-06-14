@@ -141,3 +141,24 @@ fi
 ### Notes for Next Phase
 - All 21 tests pass locally; verify CI (test.yml) is green before merging.
 - The fix is a minimal targeted change — only the conditional block replaced, no other logic changed.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 6件 + observation 1件のシンプル構成。grep + rubric + github_check + command の自動 verify で完全自動化
+- #616 の Step 3a 修正と対称な run-auto-sub.sh 側の修正という設計が明確だった
+
+#### code
+- patch route で main 直 commit、最小スコープ
+- bats 3 ケース (M→XS / S→M / Size 不変) で核心挙動をカバー、全 21 件 PASS
+
+#### verify
+- pre-merge AC 6件全 PASS（CI bats も last 3 runs success）
+- post-merge AC 1件は observation event=auto-run → 次回 spec phase で Size 変更時に観察
+
+### Improvement Proposals
+- N/A
+- 補足: 本セッション開始時に発見した #600 の flock regression を緊急パッチ (201c0a3) で修正。run-auto-sub.sh の emit_event が macOS で `flock: command not found` エラーになる問題を mkdir-based lock fallback で解消。
+
