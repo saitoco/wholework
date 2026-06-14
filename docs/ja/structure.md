@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（53 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（54 ファイル）
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -149,6 +149,7 @@ wholework/
 
 **Phase banner:**
 - `scripts/phase-banner.sh` — run-*.sh スクリプトで `print_start_banner` / `print_end_banner` 関数を提供する source 可能なヘルパー
+- `scripts/emit-event.sh` — `.tmp/auto-events.jsonl` への構造化 JSONL イベント emission を提供する source 可能なヘルパー; run-*.sh、claude-watchdog.sh、wait-ci-checks.sh が使用
 
 **GitHub API ユーティリティ:**
 - `scripts/gh-graphql.sh` — キャッシュ付き GraphQL クエリ実行
