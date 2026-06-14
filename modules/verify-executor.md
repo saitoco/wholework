@@ -194,6 +194,24 @@ command "bash -n scripts/your-script.sh"
 **Working directory pitfall:**
 `bash -c 'cd /tmp && ...'` patterns change the working directory during execution. When used for syntax-checking scripts that reference sibling files via relative paths, the changed working directory causes path resolution failures — the script loses track of relative paths to its dependencies. `bash -n` performs a syntax check without executing the script, avoiding this side effect entirely.
 
+### macOS Homebrew Python Compatibility
+
+`command` verify commands that include `pip install` fail on macOS Homebrew Python environments (externally-managed-environment, PEP 668). Homebrew Python enforces package isolation — direct `pip install` exits with code 1, causing verify FAIL.
+
+**Recommended alternatives:**
+
+1. **Virtual environment**: Install into `.venv` and invoke via `.venv/bin/python3`:
+   ```
+   command "python3 -m venv .venv && .venv/bin/python3 -m pip install -r requirements.txt -q && .venv/bin/python3 -c 'import mymodule'"
+   ```
+
+2. **Import-only test**: When the package is already available in the environment, skip installation and test the import directly:
+   ```
+   command "python3 -c 'import mymodule'"
+   ```
+
+These patterns work consistently across macOS Homebrew Python, Linux system Python, and CI environments.
+
 ### CI Reference Fallback (safe mode + PR number present)
 
 When processing `command` hints in safe mode with a PR number provided:
