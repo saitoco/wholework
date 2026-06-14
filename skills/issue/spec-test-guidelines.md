@@ -44,7 +44,7 @@ PR route (Size M/L):
 
 patch route (Size XS/S):
 ```markdown
-- [ ] <!-- verify: github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> CI (test.yml) all jobs pass (patch route)
+- [ ] <!-- verify: github_check "gh run list --workflow=test.yml --commit=$(git rev-parse HEAD) --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> CI (test.yml) all jobs pass (patch route)
 ```
 
 **Test file location:**
@@ -76,7 +76,7 @@ PR route (Size M/L):
 
 patch route (Size XS/S):
 ```markdown
-- [ ] <!-- verify: github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> CI (test.yml) all jobs pass (patch route)
+- [ ] <!-- verify: github_check "gh run list --workflow=test.yml --commit=$(git rev-parse HEAD) --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> CI (test.yml) all jobs pass (patch route)
 ```
 
 **Route selection:** Size XS/S → patch route → use `gh run list` form; Size M/L → PR route → use `gh pr checks` form. For detailed routing logic (UNCERTAIN handling when PR_NUMBER is absent, etc.), see `modules/verify-classifier.md` § Patch Route CI Verification Note.

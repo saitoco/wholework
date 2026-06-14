@@ -98,7 +98,7 @@ For Issues implemented via the patch route (direct commit to main, no PR), `gith
 Use the `github_check "gh run list"` form instead:
 
 ```
-github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success"
+github_check "gh run list --workflow=test.yml --commit=$(git rev-parse HEAD) --limit=1 --json conclusion --jq '.[0].conclusion'" "success"
 ```
 
 When `/verify` detects `github_check "gh pr checks"` in an acceptance condition for a patch-route Issue (PR_NUMBER is empty), it treats the condition as UNCERTAIN and recommends switching to the `gh run list` form.
