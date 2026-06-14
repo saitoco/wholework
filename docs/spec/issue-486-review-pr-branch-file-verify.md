@@ -54,3 +54,35 @@
 - Auto-Resolve Log (Issue #486 本文より転載):
   - **案 1 を採用**: verify-executor.md に PR_BRANCH 判定を追加（後方互換・必要時のみ PR ブランチ参照）
   - **対象コマンド**: file_exists / file_not_exists / file_contains / file_not_contains / grep の 5 種類（command・http_status・github_check 等はファイル読み取り非依存のため対象外）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- Spec の実装ステップ 3 は `skills/review/SKILL.md` Step 8 の変更前後を「Mode: **safe**, PR number: `$NUMBER`」→「Mode: **safe**, PR number: `$NUMBER`, PR_BRANCH: `$headRefName`」と明記していたが、実際のファイルには日本語テキスト「Step 8」のセクション内に対象行があり、検索パターンの調整が必要だった（grep で位置特定後に Edit した）。実装は仕様どおり。
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `PR_BRANCH` は `verify-executor.md` の Input セクションへ optional 項目として追加。`git show origin/<PR_BRANCH>:<path>` を使い、PR ブランチのファイル状態を参照する。
+- `file_not_exists` / `file_not_contains` は `git show` エラー時（削除済みファイル）を PASS とすることで false positive を防ぐ。
+- `PR_BRANCH` 未設定時はローカルファイルシステムへフォールバック（後方互換）。
+- `skills/review/SKILL.md` Step 8 の verify-executor 呼び出し行に `PR_BRANCH: $headRefName` を追加して、実際に機能するよう接続した。
+
+### Deferred Items
+- `dir_exists` / `dir_not_exists` は PR_BRANCH 対応対象外（Spec 明記の 5 コマンドのみ対応）。
+- post-merge での実際の削除系 PR レビューでの動作確認はマニュアル AC として残存。
+
+### Notes for Next Phase
+- pre-merge AC 4件は全て verify command で自動確認済み（チェックボックス更新済み）。
+- テスト（bats 819件）はすべて PASS。
+- `/verify` フェーズでは post-merge AC（削除系 PR での FALSE POSITIVE 検証）の手動確認が必要。
