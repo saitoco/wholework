@@ -34,7 +34,7 @@ wholework/
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用 decomposition YAML サンプル
-├── tests/               # スクリプトの Bats テストファイル（70 ファイル）
+├── tests/               # スクリプトの Bats テストファイル（71 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents
@@ -176,7 +176,7 @@ wholework/
 - `scripts/triage-backlog-filter.sh` — triage 向けバックログフィルタ
 
 **プロセス管理:**
-- `scripts/auto-checkpoint.sh` — `/auto --resume` 用チェックポイントヘルパー: 単一 Issue の verify カウンタと batch 残リストの atomic 読み書き削除（サブコマンド: `read_single`、`write_single`、`delete_single`、`read_batch`、`write_batch`、`update_batch`、`delete_batch`）
+- `scripts/auto-checkpoint.sh` — `/auto --resume` 用チェックポイントヘルパー: 単一 Issue の verify カウンタと batch 残リストの atomic 読み書き削除。BATCH_ID 名前空間化により並列 `--batch` セッション間の衝突を防止（サブコマンド: `read_single`、`write_single`、`delete_single`、`read_batch`、`write_batch`、`update_batch`、`delete_batch`、`list_active_batches`）
 - `scripts/watchdog-defaults.sh` — `WATCHDOG_TIMEOUT_DEFAULT` 定数と `load_watchdog_timeout` 関数を提供する run-*.sh 用 source 可能なヘルパー
 - `scripts/claude-watchdog.sh` — `claude -p` 呼び出し用の watchdog ラッパー（hang 検知 + 1 回リトライ）
 - `scripts/reconcile-phase-state.sh` — 全 phase の precondition チェックと completion チェックを行う汎用 state reconciler。`modules/phase-state.md` SSoT に基づく JSON v1 を出力（watchdog-reconcile.sh の後継）

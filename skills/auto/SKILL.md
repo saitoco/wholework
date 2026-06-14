@@ -1,6 +1,6 @@
 ---
 name: auto
-description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues; `--batch N1 N2 ...` processes the explicitly listed Issues in order. `--resume N` resumes a single Issue (restores verify counter from checkpoint); `--batch --resume` resumes an interrupted batch from `.tmp/auto-batch-state.json`.
+description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues; `--batch N1 N2 ...` processes the explicitly listed Issues in order (assigns a BATCH_ID for parallel-safe checkpointing). `--resume N` resumes a single Issue (restores verify counter from checkpoint); `--batch --resume` resumes an interrupted batch using `list_active_batches` to identify the target session.
 allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
@@ -703,44 +703,50 @@ Process the selected N Issues **sequentially** (serially):
 
 **Batch checkpoint initialization (List mode only):**
 
-At the start of List mode, write the full batch state:
+At the start of List mode, generate a BATCH_ID and write the full batch state:
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh write_batch "N1 N2 N3" "" ""
+BATCH_ID="${PPID}-$(date +%s)"
+${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh write_batch "$BATCH_ID" "N1 N2 N3" "" ""
 ```
-(first arg: space-separated full list in double quotes — quoting is required when the list contains spaces; second and third args: empty strings for completed and failed)
+(`BATCH_ID` is used for all subsequent checkpoint calls in this batch session; first list arg: space-separated full list in double quotes — quoting is required when the list contains spaces; remaining args: empty strings for completed and failed)
 
 Process each Issue in `BATCH_LIST` in order:
 
 1. Check Issue labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
 2. **If no `phase/*` labels**: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh $NUMBER` (issue triage → Size setting → `phase/ready` assignment)
-   - On failure: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
-3. Re-check Size: call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`; if Size is XL: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
+   - On failure: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
+3. Re-check Size: call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`; if Size is XL: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
 4. Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh $NUMBER` (all phases spec→code→review→merge→verify, auto-starting from the current `phase/*` state)
    - On success: proceed to step 5
-   - On failure: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
+   - On failure: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
 5. **Verify orchestration** (after run-auto-sub.sh success):
    - Re-fetch current labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
    - If `phase/verify` is present in labels:
      - If `--non-interactive` is NOT in ARGUMENTS: invoke `Skill(skill="wholework:verify", args="$NUMBER")` in the parent session
-       - On success: call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER complete`
-       - On failure or output contains `MAX_ITERATIONS_REACHED`: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER fail`; skip to the next Issue
-     - If `--non-interactive` IS in ARGUMENTS: output "Skipping verify for #$NUMBER (non-interactive mode); phase/verify remains"; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER complete`
-   - If `phase/verify` is NOT in labels: call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch $NUMBER complete`
+       - On success: call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER complete`
+       - On failure or output contains `MAX_ITERATIONS_REACHED`: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER fail`; skip to the next Issue
+     - If `--non-interactive` IS in ARGUMENTS: output "Skipping verify for #$NUMBER (non-interactive mode); phase/verify remains"; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER complete`
+   - If `phase/verify` is NOT in labels: call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER complete`
 
 After all Issues are processed, delete the batch checkpoint:
 ```
-${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_batch
+${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_batch "$BATCH_ID"
 ```
 
 ### Resume mode (--batch --resume)
 
 Entered from Step 1 when `--batch --resume` is detected with no numeric tokens after `--batch`.
 
-1. Call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh read_batch` and capture the output as `REMAINING`.
-2. If `REMAINING` is empty: output "No resume target found. Run `/auto --batch N1 N2 ...` to start a new batch." and exit.
-3. Output a log line: "Resuming batch: remaining issues = $REMAINING"
-4. Treat `REMAINING` as `BATCH_LIST` and process each Issue following the same steps as `### List mode (--batch N1 N2 ...)`.
-   - Note: do NOT call `write_batch` again at the start (the existing `.tmp/auto-batch-state.json` is the live state); only call `update_batch` and `delete_batch` as per List mode.
+1. Call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh list_active_batches` and capture the output as `ACTIVE_BATCH_IDS` (newline-separated list).
+   - If `ACTIVE_BATCH_IDS` is non-empty:
+     - In interactive mode: present candidates to user via AskUserQuestion to select a BATCH_ID
+     - In non-interactive mode: use the last line (most recent entry) as `BATCH_ID`
+   - If `ACTIVE_BATCH_IDS` is empty: fall back to `BATCH_ID="default"` (handles pre-BATCH_ID migration case where `.tmp/auto-batch-state.json` may exist from an older run)
+2. Call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh read_batch "$BATCH_ID"` and capture the output as `REMAINING`.
+3. If `REMAINING` is empty: output "No resume target found. Run `/auto --batch N1 N2 ...` to start a new batch." and exit.
+4. Output a log line: "Resuming batch: batch_id=$BATCH_ID, remaining issues = $REMAINING"
+5. Treat `REMAINING` as `BATCH_LIST` and process each Issue following the same steps as `### List mode (--batch N1 N2 ...)`.
+   - Note: do NOT call `write_batch` again at the start (the existing batch state file is the live state); only call `update_batch "$BATCH_ID"` and `delete_batch "$BATCH_ID"` as per List mode.
 
 ### Batch Completion Report
 
@@ -787,7 +793,9 @@ When checkpoint and labels conflict, labels win and the checkpoint is discarded 
 ```
 
 ```json
-// .tmp/auto-batch-state.json  (batch)
+// .tmp/auto-batch-state-${BATCH_ID}.json  (batch, per-session)
+// BATCH_ID="default" -> .tmp/auto-batch-state.json (backward compat)
+// BATCH_ID="12345-1718336400" -> .tmp/auto-batch-state-12345-1718336400.json
 {
   "schema_version": "v1",
   "mode": "list",
@@ -797,6 +805,19 @@ When checkpoint and labels conflict, labels win and the checkpoint is discarded 
   "last_update": "2026-04-22T16:10:05Z"
 }
 ```
+
+```json
+// .tmp/auto-batch-active.json  (active batch index)
+{
+  "schema_version": "v1",
+  "active_batch_ids": ["12345-1718336400", "67890-1718336500"],
+  "last_update": "2026-04-22T16:10:05Z"
+}
+```
+
+- `BATCH_ID` format: `${PPID}-$(date +%s)` (parent PID + Unix timestamp; bash 3.2+ compatible)
+- `"default"` BATCH_ID maps to `.tmp/auto-batch-state.json` and is not tracked in the active index
+- Parallel `/auto --batch` sessions each use a distinct BATCH_ID, so their state files do not collide
 
 Writes are **atomic**: write to `*.json.tmp` then `mv` to the target path to prevent corrupt reads on interruption.
 
@@ -816,7 +837,7 @@ In both cases, the label + reconciler state is the authority and the checkpoint 
 | Verify loop succeeds | `delete_single $NUMBER` |
 | `MAX_ITERATIONS_REACHED` | `delete_single $NUMBER` |
 | Issue CLOSED / `phase/done` detected at resume | `delete_single $NUMBER` (stale label conflict path) |
-| Batch fully processed | `delete_batch` |
+| Batch fully processed | `delete_batch "$BATCH_ID"` (also removes from active index) |
 
 `.tmp/` files are gitignored and are not committed.
 
