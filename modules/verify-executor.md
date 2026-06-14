@@ -131,6 +131,27 @@ rubric "script.sh exits 0 on valid input: bats test uses run bash script.sh and 
 
 The implicit assertion pattern (`bash "$SCRIPT" ...` without `run`) relies on bats `set -e` behavior and can yield UNCERTAIN judgment from the grader. By naming `run bash "$SCRIPT" ...` + `[ "$status" -eq 0 ]` explicitly in the rubric text, the grader can detect bats tests that lack an explicit status assertion.
 
+**File path resolution in rubric graders (worktree-safe reads):**
+When the rubric grader evaluates a file, it must read from the **current worktree** — not from the main branch. The calling skill must resolve file content to an **absolute path** in the worktree and either embed the content inline or confirm the grader's working directory is the worktree root before invocation.
+
+**Two approaches (prefer content embedding):**
+1. **Content embedding (preferred)**: Read the file from the worktree using `git show origin/<PR_BRANCH>:<path>` or by reading via absolute path (`$PWD/<path>`), then pass the content directly to the grader context.
+2. **`$PWD` trust (alternative)**: Confirm the grader runs with `$PWD` pointing to the worktree directory, so relative paths resolve correctly without a `git show main:<path>` fallback.
+
+**Why**: A calling skill that passes a bare file path string (e.g., `"skills/audit/SKILL.md"`) may allow the grader to independently resolve it via `git show main:<path>` or `gh repo view`, reading the main branch version instead of the PR branch. This produces incorrect FAIL verdicts for content that only exists in the PR branch.
+
+**Example (Issue #632, PR #651 — `/review` safe mode regression):**
+```bash
+# Root cause: rubric grader received a bare path and read main branch
+# rubric "skills/audit/SKILL.md contains 'rubric grader'"
+
+# Fix: calling skill reads file content from worktree before grader invocation
+content=$(git show origin/${PR_BRANCH}:skills/audit/SKILL.md)
+# Pass $content directly to grader, or use file_contains instead of rubric
+```
+
+The `/review` skill triggered this when running verify-executor in safe mode: the rubric grader resolved `skills/audit/SKILL.md` to the main branch rather than the PR branch worktree, causing a FAIL on content introduced by the PR. Calling skills must always make file content explicit before passing it to the grader.
+
 **Managed Agents migration intent:**
 `always_allow` permission is set on `rubric` for 1:1 portability to Anthropic Managed Agents `permission_policy` in a future migration.
 
