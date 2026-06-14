@@ -29,3 +29,33 @@
 - ISSUE_TYPE=Task のため Uncertainty セクションは省略
 - Step 11 の `gh-pr-review.sh` が既に各 review finding を PR inline comment として投稿している。そのため Step 12.2 の新手順は「未投稿の場合のみ投稿」という条件付きとし、二重投稿を防ぐ
 - verify command AC2 の `grep "inline.comment"` は `.` がワイルドカードであり `"inline comment"` (スペース含む) にマッチする。実装テキストに "PR inline comment" と記述することで確実に通る
+
+## Code Retrospective
+
+### Deviations from Design
+
+- コミットメッセージの prefix を `chore:` とすべきところを `feat:` で作成した（Issue type を commit 前に確認しなかった）。未プッシュのためコミット自体は正常に worktree 内に存在し、`closes #497` 参照も含まれている。CLAUDE.md の「amend 禁止」ルールに従い修正せず、このまま確定。
+
+### Design Gaps/Ambiguities
+
+- なし
+
+### Rework
+
+- なし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `skills/review/SKILL.md` の Step 12.2 Fix Work に新手順4（PR inline comment 投稿+URL記録）を挿入し、手順5のコミットメッセージに `Refs: $PR_COMMENT_URL` を追加した
+- Notes セクション末尾に全レビュー起因修正に適用されるポリシーを追記した（Step 12 内部・`/review` 完了後どちらにも適用）
+- 二重投稿防止: `gh-pr-review.sh` が Step 11 で既投稿の場合はスキップする条件を明示した
+
+### Deferred Items
+- Post-merge AC: `/review --full` 実行後の実 PR でのインラインコメント記録の目視確認（`verify-type: observation event=pr-review-full`）は verify フェーズに委ねる
+- コミット prefix の誤り (`feat:` ではなく `chore:`) は軽微な偏差として記録し修正しない
+
+### Notes for Next Phase
+- verify フェーズでは `rubric` と `grep "inline.comment"` の2つの Pre-merge AC が既にチェック済み（`[x]`）のため PASS 確認のみ
+- Post-merge AC は `observation event=pr-review-full` のため、次回 `/review --full` 実行時に自動検証される
