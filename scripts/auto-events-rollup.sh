@@ -219,8 +219,14 @@ ANOMALIES=$(printf '%s\n' "$FILTERED" | jq -rs '
 # Cleanup: remove target date entries from input
 if [[ "$CLEANUP" == "true" ]]; then
   TEMP_FILE="${INPUT_FILE}.tmp.$$"
-  grep -v "\"ts\":\"${TARGET_DATE}" "$INPUT_FILE" > "$TEMP_FILE" 2>/dev/null || true
-  mv "$TEMP_FILE" "$INPUT_FILE"
+  grep -v "\"ts\":\"${TARGET_DATE}" "$INPUT_FILE" > "$TEMP_FILE" 2>/dev/null
+  cleanup_exit=$?
+  if [[ $cleanup_exit -gt 1 ]]; then
+    rm -f "$TEMP_FILE"
+    echo "Warning: cleanup grep failed (exit ${cleanup_exit}), original file preserved" >&2
+  else
+    mv "$TEMP_FILE" "$INPUT_FILE"
+  fi
 fi
 
 echo "Rollup complete: ${OUTPUT_FILE}"
