@@ -64,3 +64,30 @@
 - `run-code.sh` は lines 165-168 で既に `code-patch`/`code-pr` を正しく使用しており変更不要
 - `spawn-recovery-subagent.sh` retry case の `*` フォールバック (`run-${PHASE}.sh`) は `review`/`merge` 等の他フェーズで引き続き機能する
 - `tests/spawn-recovery-subagent.bats` の既存 retry テストは PHASE=`code` で実行しており、fix 後は `*` フォールバックで動作するため壊れない (テストの更新は follow-up SHOULD)
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- Spec の Step 3 では `spawn-recovery-subagent.sh` の retry case の内部構造に echo を含む形式を示していたが、実装では case ブランチごとに個別の echo を追加した（より明確なログ出力のため）。動作に影響なし。
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `run-auto-sub.sh` の XS/S case に `code-patch`、M/L case に `code-pr` を渡すよう 4 箇所を変更
+- `spawn-recovery-subagent.sh` の retry case に `code-patch`/`code-pr` 専用分岐を追加し、それ以外は既存の `run-${PHASE}.sh` フォールバックに委ねる設計を維持
+- 既存テスト 21 件は全 PASS のまま; 新規回帰テスト 1 件追加 (合計 22 件)
+
+### Deferred Items
+- `tests/spawn-recovery-subagent.bats` の既存 retry テスト (PHASE=`code`) は `*` フォールバックで引き続き動作するが、`code-patch`/`code-pr` case の直接カバレッジなし → follow-up SHOULD
+- post-merge 観察 AC (auto-run event) はマニュアル確認待ち
+
+### Notes for Next Phase
+- `/verify` フェーズでは pre-merge 3 AC の grep チェックが全 PASS であることを確認すること
+- post-merge AC (`observation event=auto-run`) は次回 `/auto --batch` 実行時まで検証不可
