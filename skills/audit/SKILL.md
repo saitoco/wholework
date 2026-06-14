@@ -1009,8 +1009,6 @@ The generated report (`docs/reports/auto-session-{session-id}-{date}.md`) contai
 6. **Improvement Candidates Surfaced** — anomaly-derived improvement candidates (Tier 3 recoveries, unknown patterns)
 7. **Narrative Section (skeleton)** — TBD placeholders for "What worked", "Limits and gaps", "Improvement candidates surfaced", "Conclusion" (manual fill, or `--full` for LLM-assisted draft)
 
-The Narrative section is skeleton-only in this implementation. R3 will add LLM-assisted auto-fill of the narrative layer in a future Issue.
-
 ### Argument Parsing
 
 Parse from ARGUMENTS (after the `auto-session` prefix):
@@ -1046,15 +1044,16 @@ This step generates LLM drafts for the 4 narrative sections and inserts them int
 Run only when `--full` is present in ARGUMENTS.
 
 1. Read the generated report from the path output in Step 2
-2. Read `${CLAUDE_PLUGIN_ROOT}/skills/audit/auto-session-narrative-prompts.md` to load the prompt templates and few-shot examples
-3. For each of the 4 narrative sections, generate a draft using the report data as context and the corresponding prompt template:
+2. For each Issue number found in the Per-Issue Durations table of the report, fetch issue details: `gh issue view <N> --json title,body,labels` (provides richer context for narrative generation)
+3. Read `${CLAUDE_PLUGIN_ROOT}/skills/audit/auto-session-narrative-prompts.md` to load the prompt templates and few-shot examples
+4. For each of the 4 narrative sections, generate a draft using the report data and issue details as context and the corresponding prompt template:
    - **What worked**: Extract 3-5 elements that functioned as designed, grounded in the report data
    - **Limits and gaps**: Extract 3-5 structural observations where the system fell short or revealed a gap
    - **Improvement candidates surfaced**: For each Limits item, generate one improvement candidate with classification:
      - Run `gh issue list --search "<keyword>"` to check for existing open issues for each candidate
      - Classify as: "既存 #XXX に統合提案" / "Issue 起票候補" (include one-paragraph body skeleton) / "凍結推奨（trigger: XXX）"
    - **Conclusion**: Write 2-3 paragraph summary grounded in the session data and the three sections above
-4. Write all 4 drafts to `.tmp/narrative-draft-<session-id>.md` using the Write tool, structured as:
+5. Write all 4 drafts to `.tmp/narrative-draft-<session-id>.md` using the Write tool, structured as:
    ```markdown
    ### What worked
    {draft content}
@@ -1068,16 +1067,16 @@ Run only when `--full` is present in ARGUMENTS.
    ### Conclusion
    {draft content}
    ```
-5. Run the report script with the draft to insert it:
+6. Run the report script with the draft to insert it:
    ```bash
    "${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh" <session-id> --narrative-draft .tmp/narrative-draft-<session-id>.md --output <report-path>
    ```
    This replaces each "TBD — fill in after reviewing the session" placeholder with the draft content prefixed by `> [LLM draft — human review required]`
-6. Delete the temp file:
+7. Delete the temp file:
    ```bash
    rm -f .tmp/narrative-draft-<session-id>.md
    ```
-7. Output: "Narrative draft complete. Report contains `[LLM draft — human review required]` markers in all 4 narrative sections. Review and edit before committing."
+8. Output: "Narrative draft complete. Report contains `[LLM draft — human review required]` markers in all 4 narrative sections. Review and edit before committing."
 
 **Note**: No issues are filed automatically. The Improvement candidates section lists candidates for human review; filing is done manually via `/issue` or discarded. This preserves the human gate.
 
