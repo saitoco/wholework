@@ -237,3 +237,96 @@ This is the same concurrent-session interference dynamic noted in the primary ba
 
 - **#624 itself ended at `phase/verify`** because its post-merge AC5 is `verify-type: observation event=auto-run`. The auto-recover behavior in `run-merge.sh` only triggers when a real merge label transition is missed — which by definition is non-deterministic. AC5 closes when a future `/auto` run exercises the recovery path.
 - **#626 (the verify-command fix) is unprocessed.** The standard `--commit=$(git rev-parse HEAD)` form needs editing in `modules/verify-classifier.md` and `skills/issue/spec-test-guidelines.md`, plus migrating existing patch-route ACs. Defer to next session.
+
+---
+
+## Companion Session: `/auto --batch 583 584 585 586 587 588 589 590 591` (+ #600 mid-run)
+
+The "concurrent /auto session" referenced in the "Concurrent /auto Session Coexistence" section above was a separate Sonnet 4.6 parent orchestrator running `/auto --batch 583 584 585 586 587 588 589 590 591` in `--batch` List mode under user instruction to skip manual ACs (per `auto_batch_manual_ac_policy.md` memory). #600 was added to the batch mid-run by user request. The companion session ran spec → code → review → merge → verify (per-issue parent-Skill verify invocation) for all 10 issues over ~10h 25m of continuous execution (00:34:28 → 10:59:57 JST on 2026-06-14). This section records the companion side of the same paired run.
+
+### Companion Summary
+
+| Metric | Value |
+|--------|-------|
+| Issues fully processed (spec → code → review → merge → verify) | 10 (#583, #584, #585, #586, #587, #588, #589, #590, #591, #600) |
+| Fully closed (phase/done) | 0 |
+| phase/verify remaining (observation event / opportunistic / manual post-merge ACs) | 10 |
+| Wall-clock (continuous, idle excluded) | ~10h 25m (00:34:28 → 10:59:57 JST) |
+| Throughput (issues/hr incl. verify) | ~0.96 issues/hr |
+| Tier 3 recovery sub-agent invocations | 1 (#586 merge phase, action=recover, success) |
+| Watchdog kills | 1 (#587 run-issue.sh hit phase-specific 600s ISSUE timeout — but issue label transition completed first) |
+| Parent session manual interventions | 0 (one stray Edit to the wrong working tree was reverted; not a recovery) |
+| Verify FAIL → reopen fix cycles | 0 (all 10 verify invocations PASSed pre-merge ACs; post-merge ACs SKIPPED per user policy) |
+| Merge conflicts from concurrent commits | 0 |
+| Batch state file race observed | Yes (the primary session overwrote the companion's `.tmp/auto-batch-state.json` — see "Batch state file collision" below) |
+
+### Per-Issue Durations (Companion Side)
+
+Durations span `run-issue.sh` start (if triage was needed) through the parent-session `Skill(wholework:verify)` completion. The verify phase is **included** here (unlike the primary batch's table) because the companion session orchestrated verify between issues.
+
+| Issue | Size/Route | Total | triage | run-auto-sub | verify | PR | Notes |
+|-------|-----------|-------|--------|--------------|--------|-----|-------|
+| #583 | M / pr (light) | ~67m (00:34→01:33 + verify) | 8m | ~51m | ~15m | #603 | First issue; companion already had `phase/issue` triaged from the primary backlog |
+| #584 | M / pr (light) | ~70m (01:43→02:50 + verify) | 8m | ~53m | ~10m | #608 | Spec re-judged Size M→S but route stayed pr |
+| #585 | M / pr (light) | ~75m (02:47→04:00 + verify) | 9m | ~49m | ~17m | #610 | Clean run; introduced phase-specific watchdog timeouts |
+| #586 | L / pr (full) | ~90m (03:48→05:20 + verify) | (already triaged) | ~85m | ~5m (deferred details) | #612 | Largest; Tier 3 recovery sub-agent invoked during merge handoff |
+| #587 | M / pr (light) | ~90m (05:16→06:45 + verify) | watchdog kill at 600s (issue phase) — label transition completed before kill | ~63m | ~25m | #614 | Spike report-writing issue; phase-specific issue timeout (600s) too tight for high-effort triage |
+| #588 | M / pr (light) | ~75m (06:18→07:25 + verify) | 11m | ~53m | ~11m | #618 | Clean |
+| #589 | S in spec, run-auto-sub stayed on patch | ~45m (07:34→08:04 + verify) | 8m | ~29m | ~8m | (patch route, no PR) | Spec re-judged Size S→M but route stayed patch (same in-flight gap as primary batch's #581 / #548) |
+| #590 | M / pr (light) | ~75m (08:08→09:20 + verify) | 8m | ~46m | ~21m | #621 | Clean |
+| #591 | M / pr (light) | ~70m (09:04→10:14 + verify) | 8m | ~47m | ~15m | #623 | Post-merge AC2 was Claude-verifiable (follow-up Issue #594 existence check), PASS |
+| #600 | M / pr (light) | ~75m (10:01→11:14 + verify) | 9m | ~48m | ~18m | #625 | Added mid-batch by user request |
+
+### Tier 3 Recovery Event (#586)
+
+The companion session triggered the **second observed production Tier 3 recovery sub-agent invocation** during #586's merge phase (the first being #554 in the primary batch). The recovery succeeded cleanly:
+
+```
+--- merge phase: PR #612 ---
+[recovery] tier3 sub-agent: recovered
+--- merge phase: PR #612 ---
+...
+=== run-auto-sub.sh: Completed sub-issue #586 ===
+Exit code: 0
+```
+
+Different failure mode from #554's PR-creation race: #586's recovery occurred during the merge transition itself. The wrapper's exit code remained 0; the parent session detected no anomaly during the run. This is consistent with the primary batch's finding that the Tier 3 path can resolve in-wrapper without parent intervention. Two production recoveries in one day suggests Tier 3 is exercising real failure modes, not edge cases.
+
+### #587: Phase-Specific Watchdog Timeout Hit
+
+Issue #587 is the first observed kill caused by the phase-specific watchdog defaults introduced in #585 of this same session. The new defaults set `WATCHDOG_TIMEOUT_ISSUE_DEFAULT=600` (10 min), tightened from the prior universal 2700s. #587's triage was a high-effort spike-style refinement that required >600s of silent processing:
+
+```
+watchdog: still waiting, silent for 60s ... 540s ... 600s
+watchdog: no output for 600s, killing process (pid=42296)
+```
+
+The kill landed after the issue body had already been updated and `phase/issue` label transition had committed — the wrapper's tail-end cleanup was what got killed. Net effect: triage was effectively complete, but the wrapper reported a kill in its log. The parent session continued with `run-auto-sub.sh` against the (partially-cleaned) state and the issue completed normally.
+
+**Surfaced**: the 600s ISSUE phase timeout is too tight for high-effort triage with `Effort: high` and Sonnet model. The primary batch's `auto-parent-session-comparison-2026-06-14.md` measured triage silent windows at "60s or less," but that was on the Fable 5 model with lower per-token latency. Sonnet 4.6 triage can run silent for >600s on a single comprehensive refinement. Candidate adjustment: `WATCHDOG_TIMEOUT_ISSUE_DEFAULT` to 1200s for spike-style and refinement-heavy issues, or honor a per-issue Effort field.
+
+### Batch State File Collision
+
+The two parallel `/auto --batch` sessions both wrote to `.tmp/auto-batch-state.json` (the single batch state path used by `auto-checkpoint.sh`). The companion session's batch list `[584, 585, 586, 587, 588, 589, 590, 591, 600]` (remaining after #583 completed) was overwritten by the primary session's `[604, 605]` at ~15:53 UTC. The companion session detected the collision on the next read and fell back to processing its own original list directly (each issue confirmed OPEN before run-auto-sub.sh invocation), bypassing the corrupted state file.
+
+**Surfaced**: `auto-checkpoint.sh` batch state is shared across sessions. Two concurrent `--batch` runs always race — the file is single-writer-wins by atomic mv. The collision did not cause data loss (each session held its target list in-memory) but did defeat the resume-after-interruption use case for whichever session "lost" the write. This is an architectural concern not addressed by Issue #615 (verify orchestration) or any filed improvement issue. Candidate fix: namespace the file by parent session PID or batch ID — e.g., `.tmp/auto-batch-state-${BATCH_ID}.json`.
+
+### Verify Phase Behavior Under User Policy
+
+Per `auto_batch_manual_ac_policy.md` memory, the companion session invoked `Skill(wholework:verify)` for all 10 issues but treated post-merge manual / opportunistic / observation-type ACs as SKIPPED rather than running them. This produced uniform `phase/verify` terminal state across all 10 issues — identical to the primary batch's outcome by a different mechanism. The primary batch reached `phase/verify` by **not running verify at all**; the companion session reached it by **running verify and SKIPping the unverifiable**. Both paths arrive at the same backlog.
+
+One claudable post-merge AC was successfully verified: #591's AC2 ("follow-up Issue 起票確認") was verified by checking that #594 existed via `gh issue list`. This is the first observation that Claude-verifiable manual ACs can be auto-PASSed by a sufficiently capable verify policy, distinct from the observation-type pattern.
+
+### Improvement Issues Surfaced (Not Yet Filed)
+
+From this companion run, three structural observations warrant new issues:
+
+1. **Batch state file per-session namespace** — `.tmp/auto-batch-state.json` should namespace by PID or batch ID. Two parallel `--batch` runs corrupt each other's resume state. (Architectural; relates to the single-file design of `auto-checkpoint.sh`.)
+2. **ISSUE phase watchdog timeout calibration** — 600s is too tight for high-effort triage on Sonnet 4.6 / Opus 4.7 parents. Either raise the default to 1200s or expose an Effort-based dynamic timeout. (Observed via #587.)
+3. **Step 3a in-flight route demotion is incomplete in the run-auto-sub.sh path** — companion's #589 reproduces the primary batch's #581 / #548 finding. The fix proposed in #616 should be confirmed to cover the run-auto-sub.sh path explicitly. (Same root issue, different path.)
+
+These were left to user review rather than auto-filed (the companion session's retro-proposals harness already filed `retro/verify` issues per individual verify run; structural-cross-issue findings benefit from human triage.)
+
+### Companion Conclusion
+
+The companion session validates the primary batch's three notable claims (Tier 3 production-ready; concurrent merge safety; PR-route stability) and adds three of its own. (1) Two independent Tier 3 recovery events on the same day. (2) Zero merge conflicts across ~26 merges to `main` (16 primary + 10 companion) over 10.5 hours. (3) The verify orchestration design under user-away policy collapses to "phase/verify universal terminal state" regardless of whether verify ran — supporting #615's premise that batch verify orchestration needs structural rethinking rather than a per-skill fix.
