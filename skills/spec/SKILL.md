@@ -111,6 +111,16 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/domain-loader.md` and follow the "Processing
 
 If a Spec file already exists for this Issue (from a prior `/spec` run), read any retrospective sections it contains (e.g., `## Spec Retrospective`, `## Code Retrospective`) before proceeding with codebase investigation. These sections carry forward decisions and pitfalls from earlier phases — reading them avoids repeating known mistakes and preserves design continuity.
 
+**Credential/security policy alignment check (before codebase investigation):**
+
+When the Issue design involves credential storage, secret management, CI/CD secrets, API key handling, or access control, verify alignment with the target repository's credential or security policy before writing Implementation Steps:
+
+1. Search for policy documents: `grep -rl "credential\|security" docs/ SECURITY.md 2>/dev/null`
+2. Read identified policy files and note any design constraints (e.g., forbidden storage locations, required patterns)
+3. Record any detected policy conflicts in the Spec's "Notes" section and resolve the design approach accordingly
+
+**Skip** if the Issue does not involve credential or security-sensitive operations.
+
 Read `${CLAUDE_PLUGIN_ROOT}/modules/measurement-scope.md` and follow its measurement scope guidelines when recording quantitative data (file counts, line counts, grep hit counts, etc.) in the Spec.
 
 **Based on SPEC_DEPTH:**
