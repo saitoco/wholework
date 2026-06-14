@@ -38,3 +38,30 @@ When Spec descriptions include data output values — column names, enum values,
 - SKILL.md はプロジェクト規約上英語だが、多言語例として "コード値" を含む記述は許容される（`docs/ja/` translation sync は `docs/*.md` のみが対象であり、`skills/spec/SKILL.md` は対象外）
 - Auto-Resolved: Issue 本文の AC1 rubric が `skills/spec/SKILL.md または modules/skill-dev-checks.md` と両ファイルを対象にしていたが、`skills/spec/SKILL.md` のみを主対象とする — AC2 の `file_contains "skills/spec/SKILL.md"` が SKILL.md を必須チェックするため "または" は矛盾する。Step 10 がガイドラインの適切な追加先であり、`skill-dev-checks.md` はスキル開発チェック専用で汎用 Spec 記述ガイドには不適
 - 変更は `skills/spec/SKILL.md` のみ。doc-checker の Change Type "Skill addition, change, or deletion" に当たるが、外部インターフェース変更なし（コマンドシグネチャ・ワークフローフェーズ不変）のため README.md / docs/workflow.md / CLAUDE.md の更新は不要
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- The Spec specified `chore:` prefix for Task type, but initial commit used `feat:` prefix — caught and corrected before push via `git commit --amend`
+
+### Rework
+- Commit prefix amended from `feat:` to `chore:` to match Issue Type=Task mapping; no functional change
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Inserted **Data output value accuracy check** block in `skills/spec/SKILL.md` Step 10 after the `file_contains` supplement paragraph and before the **String-matching verify command existence check** section, matching the Spec insertion point exactly
+- Used `chore:` commit prefix (Issue Type=Task mapping)
+- No documentation sync required: change is internal to `skills/spec/SKILL.md`, no external interface change
+
+### Deferred Items
+- Post-merge: observe that `/spec` runs on Issues with enum/code values and verify the generated Spec cites actual code values with Japanese/English dual notation (AC marked `verify-type: opportunistic`)
+
+### Notes for Next Phase
+- Both pre-merge ACs PASS: rubric and file_contains verified locally
+- Change is a single-file guideline addition — no structural or interface changes; review scope is narrow
+- Watch for any half-width `!` in the added block (none present; confirmed by validate-skill-syntax.py PASS)
