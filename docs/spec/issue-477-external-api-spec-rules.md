@@ -95,3 +95,30 @@ Background: downstream project post-merge bugs caused by underdocumented actual 
 - Implementation is a simple Markdown addition; no bats test changes — all 823 tests passed with no modification
 - Pre-merge verify commands (3 grep + 3 rubric) all PASS; checkboxes updated in Issue body
 - `/verify` should focus on confirming the checklist text is properly scoped and readable in context of the existing `## JSON I/O Spec Check` section
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 3 つの AC は rubric + grep ペア構成。actual/error/test キーワード各 2 箇所出現で grep AC を確実化、rubric で意味検証も両立。
+
+#### design
+- 既存 "## JSON I/O Spec Check" の直後 "## External API Integration Checklist" 配置が論理的に整合。3 チェック項目を 1 セクションに集約で参照一元化。
+- Size S → XS demotion 成功。
+
+#### code
+- 1 ファイル・文書追記のみで完了、bats 823 件 PASS、rework なし。
+
+#### review
+- patch route のため非実行 (N/A)。
+
+#### merge
+- patch route のため非実行。worktree-merge-push.sh で main 直マージ成功。
+
+#### verify
+- Pre-merge 全 3 件 PASS。Post-merge manual は次回外部 API 統合 Spec での適用観察待ちで `phase/verify` 維持。
+
+### Improvement Proposals
+- N/A
+
