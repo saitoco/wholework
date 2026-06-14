@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (52 files)
+├── scripts/             # Utility scripts used by skills and agents (53 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -181,6 +181,7 @@ Key modules:
 - `scripts/hook-rename-on-auto.sh` — UserPromptSubmit hook: auto-rename session title when prompt matches `/auto` pattern
 - `scripts/log-permission.sh` — log permission events (JSON output)
 - `scripts/opportunistic-search.sh` — opportunistic skill search and observation event scan
+- `scripts/post_merge_check.sh` — bundle and run post-merge manual (verify-type: manual) ACs for multiple Issues in one session; prompts P/F/S per AC; transitions to phase/done on all-PASS or reopens on FAIL
 - `scripts/triage-backlog-filter.sh` — filter backlog for triage
 
 **Process management:**

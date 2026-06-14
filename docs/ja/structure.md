@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（51 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（53 ファイル）
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -173,6 +173,7 @@ wholework/
 - `scripts/hook-rename-on-auto.sh` — UserPromptSubmit hook: プロンプトが `/auto` パターンにマッチした場合にセッション名を自動リネーム
 - `scripts/log-permission.sh` — 権限イベントログ（JSON 出力）
 - `scripts/opportunistic-search.sh` — opportunistic スキル検索と observation イベントスキャン
+- `scripts/post_merge_check.sh` — 複数 Issue の post-merge 手動 AC（verify-type: manual）を 1 セッションでバンドル実行; AC ごとに P/F/S を対話入力; 全 PASS で phase/done 遷移、FAIL で reopen
 - `scripts/triage-backlog-filter.sh` — triage 向けバックログフィルタ
 
 **プロセス管理:**
