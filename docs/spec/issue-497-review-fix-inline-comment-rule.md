@@ -59,3 +59,29 @@
 ### Notes for Next Phase
 - verify フェーズでは `rubric` と `grep "inline.comment"` の2つの Pre-merge AC が既にチェック済み（`[x]`）のため PASS 確認のみ
 - Post-merge AC は `observation event=pr-review-full` のため、次回 `/review --full` 実行時に自動検証される
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec depth=light で Size S に適合。AC1 (rubric) と AC2 (grep) は実装容易な独立条件として設計され、検証時に短時間で PASS 判定可能だった。
+
+#### design
+- Step 12.2 への手順挿入と Notes ポリシー追記の二箇所変更で AC を満たす設計は適切。二重投稿防止条件も明示されている。
+
+#### code
+- 軽微な偏差: コミット prefix が `chore:` 期待のところ `feat:` で作成された (Code Retrospective 記録済)。verify 上は実装内容自体が AC を満たすため影響なし。
+
+#### review
+- patch route のためレビュー phase 非実行 (N/A)。
+
+#### merge
+- patch route のため merge phase 非実行。worktree-merge-push.sh による main 直マージ成功 (commit c4dae64)。
+
+#### verify
+- Pre-merge 2件とも PASS。Post-merge は observation event=pr-review-full で event 発火待ち、`phase/verify` 保留。
+
+### Improvement Proposals
+- N/A
+
