@@ -22,6 +22,11 @@ exit 0
 MOCK
     chmod +x "$MOCK_DIR/flock"
 
+    # Mock emit-event.sh (sourced by run-auto-sub.sh)
+    cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+emit_event() { :; }
+MOCK
+
     # Mock phase-banner.sh (sourced by run-auto-sub.sh)
     cat > "$MOCK_DIR/phase-banner.sh" <<'MOCK'
 print_start_banner() { echo "Starting /$3 for issue #$2"; }
