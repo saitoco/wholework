@@ -89,16 +89,17 @@
 - `command`型2件（bats/bash -n）はsafe modeでCI参照フォールバックを使用→SUCCESS確認。verify commandの品質は高い。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- SHOULD指摘（`_add_to_active_index`戻り値チェック）のみ修正。CONSIDERは留置。MUSTイシューなし→COMMENTイベントでPR Review投稿
-- review-lightエージェントが未登録のため、SKILL.mdのreview-light定義に従いインライン実行
+- PR #634 を `--squash --delete-branch` でマージ。`mergeable=true, ci_status=success, review_status=approved` のため競合解消・テスト実行不要
+- BASE_BRANCH=main のため `closes #627` が自動でIssueをクローズする
+- review フェーズから引き継いだ SHOULD指摘（`_add_to_active_index` 戻り値チェック）は実装済みでマージ済み
 
 ### Deferred Items
-- Post-merge AC (observation: concurrent-batch, batch-resume) の確認は /verify フェーズで実施
+- Post-merge AC 2件（observation: concurrent-batch / batch-resume）は /verify フェーズで実施
 - `_add_to_active_index` else分岐のエラーチェック非対称（CONSIDER）は留置
 
 ### Notes for Next Phase
-- MUSTイシューなし、全CIジョブSUCCESSのため `/merge 634` で進めてOK
-- `/verify` 時にPost-merge observation AC 2件（concurrent-batch / batch-resume）が残っていることを確認すること
+- Spec の Post-merge verification（並列 `/auto --batch` での state 非衝突、`/auto --resume --batch --batch-id <id>` での正しい batch 復元）が verify の主要確認事項
+- verify-type: observation の2件は自動実行不可のため手動またはSKIP扱いになる可能性あり
