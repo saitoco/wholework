@@ -53,3 +53,33 @@ patch route（Size XS/S）で使う `github_check "gh run list ..."` verify comm
 - `tests/verify-executor.bats` は `modules/verify-executor.md` の bash サブシェル実行という前提（`github_check` が `bash -c 'gh_command'` で実行されること）を前提とする動作テストも含む
 - `docs/structure.md` の tests ファイル数更新: 現在 69 files（`ls tests/*.bats | wc -l` = 69）→ 70 files
 - verify command の search pattern `--commit` は実装後に verify-classifier.md および spec-test-guidelines.md に存在する（現時点では未存在 — 実装が導入する文字列）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- 実装コミットのプレフィックスに `feat:` を使用した（Issue Type = Task なので正しくは `chore:`）。コミット後に気づいたため修正せず — 機能的影響なし
+
+### Design Gaps/Ambiguities
+
+- `docs/ja/structure.md` の sync が Implementation Steps に記載されていなかった。`docs/structure.md` 変更時は対応する `docs/ja/structure.md` も更新が必要（`docs/translation-workflow.md` の手続きに従う）
+
+### Rework
+
+- なし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `--commit=$(git rev-parse HEAD)` を `--limit=1` と併用する形でテンプレートに追加（Spec の Notes 通り）
+- `tests/verify-executor.bats` は bash サブシェルでの `git rev-parse HEAD` 展開を直接テストするシンプルな実装を採用
+
+### Deferred Items
+- 既存 Issue の AC 更新（`--limit=1` のみのまま残っている Issue の verify command 修正）は別 Issue 対応
+- `modules/orchestration-fallbacks.md` への並行セッション言及追記はスコープ外
+
+### Notes for Next Phase
+- 全テスト 776件 PASS、forbidden expressions チェック PASS
+- Pre-merge AC 3件すべて PASS（チェックボックス更新済み）
+- post-merge AC は observation event=auto-run（次回 patch route Issue の /verify 実行で観察）
