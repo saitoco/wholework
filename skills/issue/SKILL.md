@@ -454,7 +454,7 @@ Read the file at the specified path using the Read tool. Validate the schema:
 - `parent`: integer, required — an existing Issue number
 - `sub_issues`: list with at least one entry, required
 - Each entry requires:
-  - `id`: string, required — unique within YAML (used for `blocked_by` references)
+  - `id`: string, required — unique within YAML (used for `blocked_by` references); must contain only alphanumeric characters, hyphens, and underscores (no path separators or special characters)
   - `title`: string, required — component prefix + verb-first format recommended (warn but proceed if not)
   - `background`: optional string — TBD skeleton used if absent
   - `purpose`: optional string — title summary used if absent
