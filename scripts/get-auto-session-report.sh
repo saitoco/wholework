@@ -3,14 +3,16 @@
 # Reads .tmp/auto-events.jsonl filtered by session_id and renders a markdown report.
 #
 # Usage:
-#   get-auto-session-report.sh <session-id> [--output <path>] [--no-github]
+#   get-auto-session-report.sh <session-id> [--output <path>] [--no-github] [--narrative-draft <path>]
 #   get-auto-session-report.sh [--since <spec>]   # list mode: show distinct session_ids
 #
 # Options:
-#   <session-id>     Report for the specified session
-#   --output <path>  Output path (default: docs/reports/auto-session-<id>-<date>.md)
-#   --no-github      Skip gh issue/pr calls (for hermetic bats tests)
-#   --since <spec>   List mode: filter sessions by time (e.g. 24h, 2026-06-14)
+#   <session-id>              Report for the specified session
+#   --output <path>           Output path (default: docs/reports/auto-session-<id>-<date>.md)
+#   --no-github               Skip gh issue/pr calls (for hermetic bats tests)
+#   --narrative-draft <path>  Pre-generated narrative draft file; replaces TBD placeholders with
+#                             draft content prefixed by [LLM draft — human review required] marker
+#   --since <spec>            List mode: filter sessions by time (e.g. 24h, 2026-06-14)
 #
 # Environment:
 #   AUTO_EVENTS_LOG  Path to event log (default: .tmp/auto-events.jsonl)
@@ -27,6 +29,7 @@ OUTPUT_PATH=""
 NO_GITHUB=false
 LIST_MODE=false
 SINCE_SPEC="24h"
+NARRATIVE_DRAFT_PATH=""
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -38,6 +41,10 @@ while [[ $# -gt 0 ]]; do
     --no-github)
       NO_GITHUB=true
       shift
+      ;;
+    --narrative-draft)
+      NARRATIVE_DRAFT_PATH="${2:?--narrative-draft requires a path}"
+      shift 2
       ;;
     --since)
       LIST_MODE=true
@@ -347,7 +354,7 @@ ${IMPROVEMENT_CANDIDATES}
 
 ---
 
-## Narrative Section (manual / R3 LLM-assist)
+## Narrative Section (manual / --full LLM-assist)
 
 ### What worked
 TBD — fill in after reviewing the session
@@ -355,8 +362,58 @@ TBD — fill in after reviewing the session
 ### Limits and gaps
 TBD — fill in after reviewing the session
 
+### Improvement candidates surfaced
+TBD — fill in after reviewing the session
+
 ### Conclusion
 TBD — fill in after reviewing the session
 REPORT_EOF
+
+# Apply narrative draft if --narrative-draft was specified
+if [[ -n "$NARRATIVE_DRAFT_PATH" && -f "$NARRATIVE_DRAFT_PATH" ]]; then
+  python3 - "$OUTPUT_PATH" "$NARRATIVE_DRAFT_PATH" << 'PYTHON_EOF'
+import sys, re
+
+report_path = sys.argv[1]
+draft_path = sys.argv[2]
+
+with open(report_path, 'r') as f:
+    report = f.read()
+
+with open(draft_path, 'r') as f:
+    draft = f.read()
+
+# Extract per-section content from draft file
+# Sections are delimited by "### <name>" headings
+section_pattern = re.compile(r'^### (.+)$', re.MULTILINE)
+parts = section_pattern.split(draft)
+# parts[0] is pre-section text; then alternating name, content
+sections = {}
+for i in range(1, len(parts), 2):
+    name = parts[i].strip()
+    content = parts[i + 1].strip() if i + 1 < len(parts) else ''
+    sections[name] = content
+
+MARKER = '[LLM draft — human review required]'
+
+def replace_tbd(report_text, section_name, draft_content):
+    """Replace 'TBD — fill in after reviewing the session' under section_name with draft."""
+    pattern = re.compile(
+        r'(### ' + re.escape(section_name) + r'\n)TBD — fill in after reviewing the session',
+        re.MULTILINE
+    )
+    replacement = r'\1> ' + MARKER + '\n\n' + draft_content
+    return pattern.sub(replacement, report_text)
+
+for section_name, content in sections.items():
+    if content:
+        report = replace_tbd(report, section_name, content)
+
+with open(report_path, 'w') as f:
+    f.write(report)
+
+print("Narrative draft inserted into report.")
+PYTHON_EOF
+fi
 
 echo "Report written to: $OUTPUT_PATH"
