@@ -237,7 +237,7 @@ If any verify command contains `{{base_url}}`, resolve the Preview URL before pa
 
 Skip this step if no `{{base_url}}`-containing checks exist.
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md` and follow the "Processing Steps" translation table. Mode: **safe**, PR number: `$NUMBER`. For `command` hints, do not run directly — attempt CI reference fallback (`gh pr view "$NUMBER" --json statusCheckRollup` to check related job status). If CI cannot determine the result, treat as UNCERTAIN (note reason such as "corresponding CI job not identified").
+Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md` and follow the "Processing Steps" translation table. Mode: **safe**, PR number: `$NUMBER`, PR_BRANCH: `$headRefName`. For `command` hints, do not run directly — attempt CI reference fallback (`gh pr view "$NUMBER" --json statusCheckRollup` to check related job status). If CI cannot determine the result, treat as UNCERTAIN (note reason such as "corresponding CI job not identified").
 
 Verify each condition:
 
