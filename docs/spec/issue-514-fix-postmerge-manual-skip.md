@@ -44,3 +44,31 @@
 - review 側の強化（spec-deviation 検出）は本 Issue のスコープ外
 - ガードテキストは SKILL.md body 内に追加するため、半角 `!` は使用しない（CLAUDE.md の Forbidden Expression）
 - `skills/spec/SKILL.md` の `**Step recording rules:**` ブロックは SPEC_DEPTH=full テンプレート（2 箇所）と SPEC_DEPTH=light テンプレートの計 3 箇所あるが、実際の Spec 生成で使われるのはテンプレートの `## Implementation Steps` 節の直下のブロック（full テンプレートは line 498 付近、light テンプレートは別途）。両テンプレートに共通のルールとして追加する方が漏れがない。調査結果: SKILL.md の `**Step recording rules:**` は full テンプレート本文に 1 箇所（line 498 付近）、light テンプレートには記録ルールの記述がないため、full テンプレートの Step recording rules のみに追加する。
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- Spec Notes の調査結果（`**Step recording rules:**` が full テンプレートの 1 箇所のみ）が正確であり、light テンプレートには記録ルールがなかったため追加不要と判断できた。追加の調査コストなしに Spec を信頼して実装できた。
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `skills/code/SKILL.md` Step 8 の「Implement the code...」の直後に guard paragraph を挿入（`**Implementation scope: all Spec steps are required**`）。箇条書きではなく段落形式を採用し、verify-type と実装要否の独立性を明示した
+- `skills/spec/SKILL.md` の `**Step recording rules:**` 内の `**Acceptance criteria mapping**` 直後に bullet を追加。守備範囲は full テンプレートの 1 箇所のみ（light テンプレートには記録ルールブロックなし）
+- 半角 `!` 禁止制約を遵守し、ダッシュ（`—`）+ "not whether" 形式で否定表現を実現
+
+### Deferred Items
+- Post-merge AC（`observation event=auto-run`）: `/auto` で post-merge manual AC を含む Issue を実行した際の観察による確認。verify phase での対応事項
+- review 側強化（spec-deviation 検出で post-merge manual 項目の実装漏れを MUST 検出）は本 Issue スコープ外。別 Issue 対応
+
+### Notes for Next Phase
+- 変更は 2 ファイルへのテキスト追加のみ。コード変更・ロジック変更・テスト変更はない
+- 両 pre-merge AC（rubric + file_contains）が PASS 確認済み
+- bats テスト 771 件 PASS、forbidden-expressions チェック PASS、validate-skill-syntax PASS
