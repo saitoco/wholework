@@ -64,6 +64,29 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
+## 2026-06-14 16:01 UTC: code-patch-tier3-recovery
+
+### Context
+- Issue #489, phase: code-patch
+- Source: recovery-sub-agent
+- Wrapper: run-code-patch.sh, exit code: 1
+- Log tail: "Finished at: 2026-06-15 00:47:59"
+
+### Diagnosis
+- Claude exited 0 but produced no commit (silent no-op). The working tree is unmodified and origin/main has no 'closes #489' commit, so state is clean with no partial artifacts to clean up. A single retry is the minimal safe recovery — the /code skill may have silently skipped on the first run.
+
+### Recovery Applied
+- action=retry
+- steps: none
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+---
+
 ## 2026-06-15 00:25 UTC: Silent no-op when prior Issue's merge already satisfied AC (#490)
 
 ### Context
