@@ -38,6 +38,16 @@ git config --global format.signoff true
 
 Adding `Signed-off-by: Your Name <you@example.com>` to a commit certifies (under the DCO) that you have the right to submit this work under the Apache 2.0 license. It is **not** a copyright assignment — you retain ownership of your contribution.
 
+### Automatic hook enforcement
+
+Running `./install.sh` configures `core.hooksPath = scripts/git-hooks` for this repository. This setting is stored in `.git/config` and automatically inherited by all git worktrees, so the `commit-msg` hook runs on every commit and rejects any commit missing `Signed-off-by:`.
+
+To apply the hook manually (without re-running `./install.sh`):
+
+```sh
+git config core.hooksPath scripts/git-hooks
+```
+
 ### CI enforcement
 
 The `DCO` check in CI will fail if any commit in a pull request is missing the `Signed-off-by:` trailer. Fix missing sign-offs by amending commits (see above) before pushing again.

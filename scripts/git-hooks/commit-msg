@@ -1,0 +1,12 @@
+#!/bin/bash
+# DCO enforcement: require Signed-off-by in every commit message.
+set -e
+
+COMMIT_MSG_FILE="$1"
+
+if ! grep -q "^Signed-off-by:" "$COMMIT_MSG_FILE"; then
+  echo "Error: Commit is missing Signed-off-by. Use: git commit -s" >&2
+  exit 1
+fi
+
+exit 0
