@@ -86,3 +86,28 @@
 ### 受け入れ条件検証の困難さ
 
 特記なし。全 pre-merge AC が `rubric` + `file_contains` の組み合わせで検証可能であり、UNCERTAIN 件数はゼロだった。Post-merge AC は `observation: event=auto-run` 型であり、verify phase での確認が必要だが、これは設計上の意図である。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 設計が `rubric` + `file_contains` の組み合わせで両刀になっており、verify が静的検査と意味検査の両方で安定 PASS。Spec の Notes セクションでテンプレ箇所（full のみ）を事前に切り分けたため二重実装が起きていない。
+
+#### design
+- 「post-merge manual ＝ 検証方法」という命名規約の意味的注釈を code/spec 両方に置く「defense in depth」設計が、source ＝ guidance ＝ enforcement の整合に効いた。review 側スコープ外宣言も Issue 本文にあり、判断ブレなし。
+
+#### code
+- diff は 2 ファイルへのテキスト追加のみで、rework なし。Code Retrospective の「Spec を信頼して実装できた」記述と git log（spec→code 単発コミット→PR）が一致。
+
+#### review
+- light review 通過。本 Issue が「post-merge manual の実装漏れを review で MUST 検出する」ことを spec deviation 強化として別 Issue 化しており、現状 review-light の限界は許容範囲内。Review Retrospective に「乖離なし」と明記され妥当。
+
+#### merge
+- squash merge、コンフリクトなし。Merge Phase Handoff で post-merge observation 条件を verify に申し送り済みで、verify phase で迷子にならず適切に SKIPPED 判定できた。
+
+#### verify
+- Pre-merge 2 件: rubric 文言が L200 (`skills/code/SKILL.md`)、L502 (`skills/spec/SKILL.md`) と完全に整合。`file_contains` も両方 PASS。Post-merge observation は本来 `opportunistic-search.sh --event auto-run` が再評価する設計通り SKIPPED。
+
+### Improvement Proposals
+- N/A（本 Issue は Issue→Spec→Code→Review→Merge→Verify がスムーズに連鎖した好事例であり、改善提案を起こすほどの課題は検出されなかった）
