@@ -51,7 +51,22 @@ emit_event() {
   done
   json="${json}}"
   mkdir -p "$(dirname "${AUTO_EVENTS_LOG}")"
-  (flock -x 200; echo "${json}" >> "${AUTO_EVENTS_LOG}") 200>"${AUTO_EVENTS_LOG}.lock"
+  if command -v flock >/dev/null 2>&1; then
+    (flock -x 200; echo "${json}" >> "${AUTO_EVENTS_LOG}") 200>"${AUTO_EVENTS_LOG}.lock"
+  else
+    local lock_dir="${AUTO_EVENTS_LOG}.lockdir"
+    local tries=0
+    while ! mkdir "${lock_dir}" 2>/dev/null; do
+      tries=$((tries + 1))
+      if (( tries > 50 )); then
+        echo "${json}" >> "${AUTO_EVENTS_LOG}"
+        return 0
+      fi
+      sleep 0.1
+    done
+    echo "${json}" >> "${AUTO_EVENTS_LOG}"
+    rmdir "${lock_dir}" 2>/dev/null || true
+  fi
 }
 
 run_phase_with_recovery() {
