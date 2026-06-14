@@ -106,3 +106,63 @@ XL ルートで複数 sub-issue が同時に Tier 3 を起動した場合、`doc
 ### `#316` について
 
 Issue の背景に出てくる `#316` は、当初 Source 2 のブロッカーとして言及されていたが、`spawn-recovery-subagent.sh`（`#589` で実装）が #316 相当の機能を既に提供しているため、この Issue で Source 2 を有効化できる。
+
+## issue retrospective
+
+### 曖昧ポイント解決（Auto-Resolve Log）
+
+非インタラクティブモードで以下の3点を自動解決した:
+
+| 曖昧ポイント | 採用 | 根拠 |
+|------------|------|------|
+| 記録トリガー条件（成功のみ vs 成功・失敗問わず） | **成功時のみ** | 既存 SKILL.md Source 2 行の定義「successful recovery plan during Tier 3 recovery」に整合。失敗時記録は監査ノイズになりうる |
+| エントリ日時フォーマット（JST vs UTC） | **UTC** | 既存 SKILL.md の Entry format（`## YYYY-MM-DD HH:MM UTC`）が UTC を採用。一貫性を維持 |
+| tests/auto-recovery.bats（新規作成 vs 既存ファイル追記） | **新規作成** | AC が `tests/auto-recovery.bats` を明示的に指定。既存の `spawn-recovery-subagent.bats` は subagent 起動動作をテストする別概念 |
+
+### Verify Command 修正（AC audit 結果対応）
+
+Triage AC audit で2件の問題を検出し、Issue body 更新時に修正した:
+
+1. **Pattern 2 (常時PASS)**: `grep "recovery-sub-agent" "skills/auto/SKILL.md"` は文字列が既存（line 374, 384）なので常時PASS → `grep "recovery-sub-agent.*Available"` に修正
+2. **引数不足**: `section_not_contains "skills/auto/SKILL.md" "#316 ship 後に有効"` は引数が2つ（3つ必要） → `file_not_contains "skills/auto/SKILL.md" "#316 ship 後に有効"` に修正
+
+### Policy Decision
+
+- Post-merge 条件は `verify-type: observation event=auto-run` で維持。次回 `/auto` 実行時に Tier 3 が起動するかは不確定だが、event 型 observation が最も適切
+- Size M 確定（bats テスト新規追加 → CI minimum override により M に到達）
+
+## spec retrospective
+
+### Minor observations
+
+- `spawn-recovery-subagent.sh` への `write_recovery_entry()` 追加は、生産 Tier 3 発生事例（#554）がバッチ経由（`run-auto-sub.sh` → shell script）だったため、shell script 側が主要実装。SKILL.md Step 4a Source 2 は単一 Issue 親セッション分のみカバーする非対称構造が明確になった
+- XL ルートでの並行書き込みリスクを Notes に記録したが、`WHOLEWORK_MAX_RECOVERY_SUBAGENTS=1` により事実上シリアル化されているため許容範囲と判断
+
+### Judgment rationale
+
+- `spawn-recovery-subagent.sh` での直接書き込み vs SKILL.md Step 4a 経由の2経路を分離した。重複を防ぐため、バッチ/XL はスクリプト直書き込み、単一 Issue 親セッションは Step 4a が担当する設計とした
+- `write_recovery_entry()` 関数は bash 3.2+ 互換を維持するため Python3 を使用。日本語文字列（未起票）はスクリプトに直書きするのではなく Python 内で扱う形とした
+
+### Uncertainty resolution
+
+- `#316` への依存は `spawn-recovery-subagent.sh`（#589 実装済み）が代替していることが調査で確認でき、ブロッカーなしで Source 2 を有効化できると確認
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- `write_recovery_entry()` は `spawn-recovery-subagent.sh` 内に定義し、成功アクション（retry/skip/recover）の直後に呼び出す。`docs/reports/orchestration-recoveries.md` が存在しない場合はスキップ（graceful degradation）
+- SKILL.md Step 4a Source 2 は「単一 Issue 親セッションが Step 6 Tier 3 を Task tool 経由で実行した場合のみ」と限定し、バッチ/XL との重複を防ぐ
+- `tests/auto-recovery.bats` は新規作成（`spawn-recovery-subagent.bats` への追記ではなく）。テスト対象（記録動作）とテスト名（auto-recovery）の意味的対応が明確
+
+### Deferred Items
+
+- XL ルートでの並行 `write_recovery_entry()` による競合書き込みへの対処（`WHOLEWORK_MAX_RECOVERY_SUBAGENTS=1` で当面許容）
+- `action=retry` 失敗時（re-run が exit non-zero になる場合）の部分記録（`outcome=partial`）は未実装。現在は成功のみ記録
+
+### Notes for Next Phase
+
+- `write_recovery_entry()` は `set -euo pipefail` 環境下で動作するため、Python3 呼び出し失敗時にスクリプト全体が abort するリスクがある。必要なら `|| true` でラップするか検討
+- `docs/structure.md` と `docs/ja/structure.md` のテスト数更新（65 → 66）を忘れずに行う
+- `spawn-recovery-subagent.sh` の case 文では `skip` が `exit 0` で抜けるため、`write_recovery_entry` は `exit 0` の直前に呼び出す必要がある（後に記述すると実行されない）
