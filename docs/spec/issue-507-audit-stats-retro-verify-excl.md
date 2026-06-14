@@ -49,3 +49,21 @@ Step 2 Computation の Outcome 計算母集団が `filtered_issues` 全体であ
 - Section 5 の"Outcome 集計対象"注記は retro_verify_count が 0 の場合も常に表示する（除外処理が機能していることを明示するため）
 - Highlights 自動検出の 2x failure rate criterion は Section 5 の Outcome データを参照するため、Outcome Exclusion Filter 適用後のデータが自動的に使用される（Highlights セクション自体の変更は不要）
 - Section 4 (Work Origin) は `retro/verify` を独立カテゴリ "retrospective" として集計しており、除外適用外とすることで整合性が保たれる
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- SPEC_DEPTH=light (Size S / patch route) を採用。変更対象は `skills/audit/SKILL.md` 1ファイルのみでテキスト追記だけで完結するため full spec は不要と判断
+- Outcome Exclusion Filter は Step 2 Computation の独立サブセクションとして追加。Step 3 Section 5 への "出力" 参照とセットにすることで responsibility を明確化
+- Section 4 (Work Origin) の除外非適用はコードコメント型ではなくサブセクション内の明記で対応（AC3 rubric 要件を満たすため）
+
+### Deferred Items
+- `tests/audit-stats.bats` が存在しないため、テストカバレッジは追加なし。将来の bats テスト整備は別 Issue
+- saito/trading リポジトリでの実機確認（Post-merge AC 3件）は post-merge manual 扱い
+
+### Notes for Next Phase
+- 変更は `skills/audit/SKILL.md` の 2箇所: (1) `#### Work Origin Classification` 直後に `#### Outcome Exclusion Filter` を追加、(2) `#### Section 5: Outcome` 先頭に集計対象注記と `outcome_population` 使用の明記を追加
+- AC1: `section_contains "Section 5" "retro/verify"` — Section 5 内に "retro/verify" を含む文字列が必要
+- AC2: `section_contains "Outcome" "除外"` — Section 5 内に "除外" を含む文字列が必要（どちらも同じ "Section 5: Outcome" セクションにヒット）
+- AC3: rubric で Section 4 非適用明記を評価する。Outcome Exclusion Filter サブセクション内で明示すれば十分
