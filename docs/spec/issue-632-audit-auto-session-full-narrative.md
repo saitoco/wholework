@@ -157,3 +157,33 @@ R2（`/audit auto-session <id>`）が生成する data 層レポートの narrat
 - verify フェーズは Post-merge AC 2件（manual / observation）をカバーすること
 - `skills/audit/auto-session-narrative-prompts.md` の few-shot examples（2レポート参照）の品質は実際の `--full` 実行後に評価可能
 - `tests/audit-auto-session-full.bats` 3件はスクリプト層のみカバー。SKILL.md Step 3（LLM 推論部分）は手動 verify が必要
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- `/audit auto-session` の R2 拡張として scope が明確で、`--full` フラグの semantic も自然。few-shot examples を 2 つの既存手動レポートから抽出する設計は draft 品質の安定性に効く。
+
+#### design
+- LLM 推論部分（SKILL.md Step 3）は bats では検証不可能で、テストはスクリプト層のみカバーする設計は妥当。LLM-assisted phases の test 戦略を明文化する候補。
+- `[LLM draft — human review required]` マーカーで auto-issue-filing を禁止し human gate を維持する設計は #483 (forked-session orchestration) の思想と整合。
+
+#### code
+- 全 8 pre-merge AC を初回 PASS（review で 2 件 resolved、CONSIDER 2 件 skipped）。`/review` safe mode で rubric grader が main ブランチの SKILL.md を読んで FAIL 判定する誤りが発生（worktree 内 PR ブランチ版を読むべき）。これは rubric grader のファイル解決パスバグ。
+
+#### review
+- review-light で 1 MUST + 1 SHOULD を resolved、2 CONSIDER skip。`--full` の LLM 推論ロジックは review でも内部検証不能、結果として draft 品質確認は post-merge observation に委ねられる構造。
+
+#### merge
+- 並行作業なし。CI 全 green、squash merge で main 直行。conflict なし。
+
+#### verify
+- Pre-merge 8/8 PASS、Post-merge AC #9 (manual narrative draft 確認) と AC #10 (observation event=auto-session-report-published) は autonomous policy により SKIP。
+- 観察系 AC の trigger が `event=auto-session-report-published` であり、新しい event 名が必要。R1 の 6 event 種には含まれていない → event log schema 拡張が必要な可能性（既存 #650 の observation trigger 機構と関連）。
+
+### Improvement Proposals
+
+- **rubric grader のファイル解決パス明示化**: `/review` safe mode の rubric grader が worktree 内 PR ブランチを読まず main ブランチを読んでしまうバグ。`modules/verify-executor.md` の `rubric` セクションに「grader は calling skill から explicit absolute path を渡される」原則を追加する候補（既存 #471 と関連）。
+- **LLM-assisted phase の test 戦略**: `--full` の LLM 推論ロジックは bats では検証不可能。LLM-assisted skill phases では「スクリプト層 (deterministic) は bats でカバー、LLM 層は observation AC + manual review で検証」という test 戦略を `skills/spec/skill-dev-constraints.md` に明文化する候補（既存 #642 spec ブランチ条件全列挙と並ぶ原則）。
+- **`event=auto-session-report-published` event の log schema 追加**: AC #10 が新 event 名を参照しているが、現状 R1 の 6 event 種に該当なし。`/audit auto-session --full` 実行時に該当 event を emit する仕組みを追加する候補（#600 / #630 の延長線）。
