@@ -98,3 +98,32 @@
 - `/verify` フェーズでは post-merge AC（CI test.yml 全ジョブ成功）と observation AC（次回 /auto 実行での自動補正観察）を確認すること。
 - bats テスト 17/17 PASS、forbidden expressions チェック、skill syntax validation すべて通過済み。
 - PR なし（patch route）のため、CI は push 後の test.yml workflow で確認。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Triage で Size を当初提案の M から S に修正、verify command を `section_contains` (適用不可) から `grep` x2 に修正。Auto-Resolved Ambiguity Points に決定根拠を明記。triage layer の verify command audit が機能した良例。
+
+#### spec
+- Option A/B 比較を Issue 本文と Spec の両方で実施し、Option A を採用根拠（Tier 2/3 経路は exit nonzero 前提のため本ケース不適合）と共に明示。Spec 構成は idiomatic。
+
+#### code
+- patch route 直 commit。reconcile check の if/elif 末尾に EXIT_CODE=0 ガード付きで挿入。bats テストは既存 mock を `LABEL_TRANSITION_LOG` で拡張し新ケース #17 を追加（17/17 PASS）。コミット prefix が `feat:` になった点は手戻りなしで許容。
+
+#### review
+- patch route のため /review フェーズなし。
+
+#### merge
+- patch route の main 直 push。worktree-merge-push.sh 経路で衝突なく成功。本 Issue が修正対象としている merge→verify ラベル遷移漏れ自体は再現せず（皮肉な配置: 自身の修正コミットでは異常が起きなかった）。
+
+#### verify
+- Pre-merge 3 件すべて auto-PASS。
+- Post-merge AC4 (`gh run list --workflow=test.yml --limit=1`) は構造的問題: `--limit=1` は最新の任意 commit を取るため、並行する他 Issue (#600) の in_progress run と当たり「PENDING/UNCERTAIN」になる。実装 commit (3dec8ac8) の test.yml run は `success` を確認できたため AI 判定で PASS と判定。
+- Post-merge AC5 は `verify-type: observation event=auto-run`。次回 /auto 実行時の opportunistic-search で自動再評価される設計のため deferred。
+
+### Improvement Proposals
+
+- **`github_check "gh run list ..."` テンプレートの commit 絞り込み**: `--commit=$(git rev-parse HEAD)` を組み込んだ form を `modules/verify-classifier.md` および `skills/issue/spec-test-guidelines.md` の AC writing guide に標準として追加すべき。並行 /auto セッション環境で `--limit=1` 単独は安定しない。本セッションだけで複数回観測されたパターン。
+
