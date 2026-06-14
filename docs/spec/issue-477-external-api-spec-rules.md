@@ -67,3 +67,31 @@ Background: downstream project post-merge bugs caused by underdocumented actual 
 
 - **選択**: 手動ガイダンスとして追記（自動検知機構の追加は対象外）
 - **理由**: 自動検知機構の新規追加は本 Issue のスコープ外。ガイダンスとして既存フローに乗る形が最小リスク。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Added `## External API Integration Checklist` section to `skills/spec/external-spec.md` immediately before `## Output Format` as specified in the Spec
+- Trigger condition ("Apply this checklist when the Issue involves calling an external API") placed before the numbered checklist items to scope its applicability clearly
+- All three checklist items (actual response samples, error code list, test coverage) implemented exactly as specified in Spec
+
+### Deferred Items
+- Post-merge manual AC: confirming the checklist is applied in the next downstream external API integration Spec (manual observation, out of scope for this phase)
+- No follow-up Issues created (implementation was straightforward, no out-of-scope remediations identified)
+
+### Notes for Next Phase
+- Implementation is a simple Markdown addition; no bats test changes — all 823 tests passed with no modification
+- Pre-merge verify commands (3 grep + 3 rubric) all PASS; checkboxes updated in Issue body
+- `/verify` should focus on confirming the checklist text is properly scoped and readable in context of the existing `## JSON I/O Spec Check` section
