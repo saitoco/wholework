@@ -41,8 +41,13 @@ while [[ $# -gt 0 ]]; do
       ;;
     --since)
       LIST_MODE=true
-      SINCE_SPEC="${2:-24h}"
-      shift 2
+      if [[ $# -gt 1 && "${2:-}" != -* ]]; then
+        SINCE_SPEC="$2"
+        shift 2
+      else
+        SINCE_SPEC="24h"
+        shift
+      fi
       ;;
     -*)
       echo "Error: Unknown option: $1" >&2
@@ -63,12 +68,37 @@ if [[ "$LIST_MODE" == "true" ]] || [[ -z "$SESSION_ID" ]]; then
     echo "Run /auto to generate events."
     exit 0
   fi
-  echo "Sessions found in $AUTO_EVENTS_LOG:"
-  # Extract distinct session_ids with their first timestamp
-  jq -r 'select(.session_id != null and .session_id != "") | [.session_id, .ts] | @tsv' \
-    "$AUTO_EVENTS_LOG" 2>/dev/null | \
-    sort | awk -F'\t' '!seen[$1]++ { print $1 " (first event: " $2 ")" }' || \
-    echo "(no session_id fields found — run /auto after this update to populate)"
+  echo "Sessions found in $AUTO_EVENTS_LOG (--since $SINCE_SPEC):"
+  # Compute cutoff timestamp for --since filter
+  CUTOFF_TS=""
+  case "$SINCE_SPEC" in
+    *h)
+      HOURS="${SINCE_SPEC%h}"
+      if CUTOFF_EPOCH=$(date -j -v-"${HOURS}H" "+%Y-%m-%dT%H:%M:%SZ" 2>/dev/null) || \
+         CUTOFF_EPOCH=$(date -u -d "$HOURS hours ago" "+%Y-%m-%dT%H:%M:%SZ" 2>/dev/null); then
+        CUTOFF_TS="$CUTOFF_EPOCH"
+      fi
+      ;;
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9])
+      CUTOFF_TS="${SINCE_SPEC}T00:00:00Z"
+      ;;
+    *)
+      CUTOFF_TS=""
+      ;;
+  esac
+  # Extract distinct session_ids with their first timestamp, filtered by cutoff
+  if [[ -n "$CUTOFF_TS" ]]; then
+    jq -r --arg cutoff "$CUTOFF_TS" \
+      'select(.session_id != null and .session_id != "" and .ts >= $cutoff) | [.session_id, .ts] | @tsv' \
+      "$AUTO_EVENTS_LOG" 2>/dev/null | \
+      sort | awk -F'\t' '!seen[$1]++ { print $1 " (first event: " $2 ")" }' || \
+      echo "(no session_id fields found — run /auto after this update to populate)"
+  else
+    jq -r 'select(.session_id != null and .session_id != "") | [.session_id, .ts] | @tsv' \
+      "$AUTO_EVENTS_LOG" 2>/dev/null | \
+      sort | awk -F'\t' '!seen[$1]++ { print $1 " (first event: " $2 ")" }' || \
+      echo "(no session_id fields found — run /auto after this update to populate)"
+  fi
   exit 0
 fi
 
@@ -171,10 +201,10 @@ CONCURRENT_COMMITS=$(echo "$EVENTS_JSON" | jq '[.[] | select(.event == "concurre
 
 # Verify phase residuals: issues that have phase_start for verify but no phase_complete for verify
 VERIFY_RESIDUALS=$(echo "$EVENTS_JSON" | jq -r '
-  [.[] | select(.event == "sub_complete" and (.exit_code == "0" or .exit_code == 0))] |
-  [.[].issue] as $completed |
-  [.[] | select(.event == "phase_start" and .phase == "verify") | .issue] -
-  [.[] | select(.event == "phase_complete" and .phase == "verify") | .issue] |
+  . as $all |
+  [.[] | select(.event == "sub_complete" and (.exit_code == "0" or .exit_code == 0)) | .issue] as $completed |
+  ([$all[] | select(.event == "phase_start" and .phase == "verify") | .issue] -
+   [$all[] | select(.event == "phase_complete" and .phase == "verify") | .issue]) |
   unique |
   map(select(. as $i | $completed | contains([$i]) | not)) |
   .[]
@@ -251,19 +281,15 @@ else
   VERIFY_REMAINING="N/A (--no-github)"
 fi
 
-# Compute throughput (issues/hr from wall-clock)
+# Compute throughput (issues/hr from wall-clock, reusing epoch values computed above)
 THROUGHPUT="N/A"
 if [[ "$WALL_CLOCK" != "N/A" && "$ISSUES_PROCESSED" -gt 0 ]]; then
-  TOTAL_HOURS=$(echo "$EVENTS_JSON" | jq -r '
-    [.[] | .ts] | sort | [first, last] | map(
-      split("T") | .[1] | split(":") | map(tonumber) |
-      .[0]*3600 + .[1]*60 + .[2]
-    ) |
-    (.[1] - .[0]) / 3600
-  ' 2>/dev/null || echo "0")
-  if [[ "$TOTAL_HOURS" != "0" ]] && [[ "$TOTAL_HOURS" != "" ]]; then
-    THROUGHPUT=$(echo "$ISSUES_PROCESSED $TOTAL_HOURS" | awk '{printf "%.1f", $1/$2}')
-    THROUGHPUT="${THROUGHPUT} issues/hr"
+  if [[ -n "${START_EPOCH:-}" && -n "${END_EPOCH:-}" && "$END_EPOCH" -gt "$START_EPOCH" ]]; then
+    WALL_SEC_FOR_THROUGHPUT=$(( END_EPOCH - START_EPOCH ))
+    if [[ "$WALL_SEC_FOR_THROUGHPUT" -gt 0 ]]; then
+      THROUGHPUT=$(echo "$ISSUES_PROCESSED $WALL_SEC_FOR_THROUGHPUT" | awk '{printf "%.1f", $1/($2/3600)}')
+      THROUGHPUT="${THROUGHPUT} issues/hr"
+    fi
   fi
 fi
 
