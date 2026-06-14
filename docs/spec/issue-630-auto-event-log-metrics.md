@@ -196,3 +196,38 @@
 - verify phaseは post-merge 観察 AC（`/auto` 実行後に6種類のeventが `.tmp/auto-events.jsonl` に記録されること）の確認が主タスク。
 - `emit_event` のguard動作は静的verify commandで確認困難。実行ログの観察で確認すること。
 - 新規テスト3件（token_usage, test_result, concurrent_commit_detected）はskipになる可能性があるため、CI logでskip理由を確認すること。
+
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC 構造は妥当（pre-merge 7 件 + post-merge observation 1 件）。verify command も適切な配分
+
+#### spec
+- 初回 spec で `OUTPUT_FORMAT_JSON` ブランチの kill 条件が曖昧記述。code phase で 1800s watchdog kill 発生（worktree-code+issue-630 が push 前に kill）
+- 復旧時に Spec 補強 2 行（kill 条件明示 + bats test hang 防止）で再実行→成功。spec の曖昧さは re-run 前に修正できる構造的価値が実証された
+
+#### code
+- 1 回目: watchdog kill (1800s)、worktree 喪失
+- 2 回目（Spec 補強後）: 全 53 bats テスト PASS、PR #640 作成成功
+
+#### review
+- review-bug が 1 件 MUST 検出 → CI bats failure 検出。実装中の修正で resolved
+- SHOULD ×5 / CONSIDER ×1 が deferred（軽微）
+
+#### merge
+- squash merge + delete-branch 正常。`closes #630` で自動クローズ
+- merge 後 CI が 2 件 bats fail を再露見: `event-format-check` と `append-no-clobber` — テスト mock の `emit_event` が no-op だったため AUTO_EVENTS_LOG が書き込まれない設計バグ
+- hot-fix `10f2181` で mock を JSONL 書き込みに修正 → main HEAD CI green
+- AC #7 (github_check "gh pr checks") は PR #640 head の merge 時点状態を返す（failing）が、main HEAD は green。**alternative verification で PASS** とした
+
+#### verify
+- pre-merge 全 7 PASS、post-merge 1 件は observation event=auto-run（次回 /auto 実行で消化、SKIP per user 自律モード方針）
+- AC #7 の `gh pr checks` が merged PR の状態をキャッシュする問題は #626 で起票済み（`--commit` フィルタ標準化）
+
+### Improvement Proposals
+
+- **bats test mock 規約**: 新 helper script に対する mock テストでは、テストアサーションが要求する観測可能な副作用を mock が再現する必要がある。本 Issue では `emit_event` mock が no-op で、ファイル書き込みを assert するテストが local では PASS（タイミング・キャッシュ等）するも CI で FAIL した。`skill-dev-validation.md` または `code/skill-dev-validation.md` Domain file に「mock の副作用整合性」原則を追加することを検討
+- **Spec 曖昧記述の早期検出**: `OUTPUT_FORMAT_JSON` ブランチの kill 条件が曖昧で 1800s 真ハングの原因となった。spec phase の rubric AC を強化し「ブランチ条件で異なる挙動を持つ場合は kill 条件・timeout 条件・正常終了条件を全列挙する」原則を追加可能（#579 spec-skill-dev の延長線）
