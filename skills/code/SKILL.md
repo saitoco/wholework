@@ -282,6 +282,18 @@ If sync is required, update the target documents (`README.md`, `docs/workflow.md
 
 ### Step 10: Verify Command Consistency
 
+**AC consistency check (run before verify-executor):**
+
+After completing implementation — especially when a refactor changes the implementation means (e.g., switching from an MCP tool to a CLI command, renaming a flag, removing a dependency) — verify that the related Issue's Acceptance Criteria verify commands still reflect the current implementation:
+
+1. Re-read the AC section of Issue #$NUMBER (already fetched in Step 1)
+2. For each `<!-- verify: ... -->` command in the AC, check whether the command's target (file path, string literal, tool name, flag name) still matches the implementation after any refactoring
+3. If all verify commands still reflect the implementation accurately: proceed to the next check
+4. If any verify command is stale due to a refactor:
+   - **(a) Align implementation to AC**: if the AC's original intent is correct and the refactor deviated from it, update the implementation to satisfy the AC as written
+   - **(b) Update AC to match implementation**: if the refactor was intentional and the AC's verify command now tests the wrong thing, update the Issue body verify command to reflect the new implementation means (via `gh-issue-edit.sh`). This is the typical case when a refactor deliberately changes the implementation approach (e.g., switched from `mcp_call` to a CLI command, so the `allowed-tools` entry referencing the old MCP tool is now stale)
+   - Record the decision in the commit message or PR description
+
 **Patch route verify command check:**
 
 If patch route (Size is `XS`/`S` or `--patch` flag), before running verify-executor, scan the Issue body's `## Acceptance Criteria > Pre-merge` for `github_check "gh pr checks"` entries.
