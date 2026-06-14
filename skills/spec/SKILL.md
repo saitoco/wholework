@@ -252,6 +252,10 @@ If the issue title or body contains "rename", "renaming", or similar, run `grep 
 - Path link references (relative paths in docs)
 - Section number cross-references
 
+**`.claude/` files and `git add -f`:**
+
+Files under `.claude/` are in `.gitignore`, so `git add <file>` silently skips them. When grep finds hits in `.claude/` files, include them in the changed-files list and add a note to the Implementation Steps: "For `.claude/` files, use `git add -f` instead of `git add`."
+
 Pre-investigate exclusion conditions (historical records, terminology definitions, comparison contexts) and note them in the Spec's "Exclusions" section. Reflect `grep -v` exclusions in `command` hints.
 
 **Post-replacement scan checklist:**
