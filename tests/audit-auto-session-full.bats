@@ -84,6 +84,29 @@ DRAFT_EOF
     grep -q "\[LLM draft" "$OUTPUT_PATH"
 }
 
+@test "full mode: auto-session-report-published event is emitted after --narrative-draft" {
+    # Create a minimal draft file
+    cat > "$BATS_TEST_TMPDIR/draft-fixture.md" << 'DRAFT_EOF'
+### What worked
+1. Session ran without errors.
+
+### Limits and gaps
+1. No gaps identified.
+
+### Improvement candidates surfaced
+1. None.
+
+### Conclusion
+Clean session.
+DRAFT_EOF
+
+    run bash "$SCRIPT" "abc-999" --output "$OUTPUT_PATH" --narrative-draft "$BATS_TEST_TMPDIR/draft-fixture.md" --no-github
+    [ "$status" -eq 0 ]
+
+    # auto-session-report-published event must be appended to AUTO_EVENTS_LOG
+    grep -q "auto-session-report-published" "$AUTO_EVENTS_LOG"
+}
+
 @test "full mode: classification markers appear in narrative draft" {
     # Generate report then apply a draft containing all 3 classification markers
     run bash "$SCRIPT" "abc-999" --output "$OUTPUT_PATH" --no-github

@@ -204,3 +204,31 @@ Emitted by `run-auto-sub.sh` during the `code` phase when bats test output is de
 | `pattern` | Yes | Test pattern label (`unit`) |
 
 **Emission point**: `run-auto-sub.sh` `run_phase_with_recovery()`, after `wrapper_exit`, when bats output pattern (`N tests, N failures`) is found in the code phase log file.
+
+## New Events (introduced in #654)
+
+### 7. `auto-session-report-published`
+
+Emitted by `scripts/get-auto-session-report.sh` immediately after the `--narrative-draft` processing completes successfully.
+
+```json
+{
+  "ts": "2026-06-15T12:00:00Z",
+  "issue": 0,
+  "event": "auto-session-report-published",
+  "session_id": "abc-999",
+  "report_path": "docs/reports/auto-session-abc-999-2026-06-15.md"
+}
+```
+
+| Field | Required | Description |
+|---|---|---|
+| `ts` | Yes | ISO 8601 UTC timestamp |
+| `issue` | Yes | Always `0` (session-level event, not tied to a specific issue) |
+| `event` | Yes | `"auto-session-report-published"` |
+| `session_id` | Yes | Session ID the report was generated for |
+| `report_path` | Yes | Path to the generated report file |
+
+**Emission point**: `scripts/get-auto-session-report.sh`, after the Python narrative-draft insertion block completes, when `--narrative-draft` is specified and the draft file exists.
+
+**Scope**: Only emitted when `--narrative-draft` flag is used. Standard report generation (without `--narrative-draft`) does not emit this event.
