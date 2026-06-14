@@ -322,6 +322,12 @@ Example: add `grep -v 'tests/xxx.bats'` to the script invocation so the test fix
 
 If implementation steps include adding a new script under `scripts/` (including subdirectories), check if any bats test file sets `export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"`. If so, explicitly include adding a mock file for the new script under `$MOCK_DIR` in the Implementation Steps.
 
+**pytest fixture path CWD independence check:**
+
+When the Issue involves adding pytest tests that reference fixture files (detected by "test", "pytest", or "fixture" keywords in the Issue title/body, or when Acceptance Criteria describe pytest fixture file access), add the following note to the Spec's Notes section:
+
+> Pytest fixture file references must use `Path(__file__).parent / "fixtures" / "file"` (not CWD-relative paths like `Path("tests/fixtures/file")`). This ensures the test works regardless of the working directory at pytest invocation time — required in worktree environments and when pytest is run from a directory other than the repository root.
+
 **Mermaid diagram node ID naming check:**
 
 If implementation steps include Mermaid diagram updates, check existing node ID naming patterns and apply them consistently to new nodes.
