@@ -66,3 +66,45 @@ When the Issue involves adding pytest tests that reference fixture files (detect
 - 変更は `skills/spec/SKILL.md` の 1 ファイルのみ、6 行追加のみ
 - 全 verify command PASS（file_contains / section_contains / rubric / command）
 - bats 816 件全 PASS、構文検証・禁止表現チェック PASS
+
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| spec  | patch | SUCCESS | Spec 作成 commit |
+| code (initial) | patch | FAILED (silent no-op) | run-code.sh exit 1, reconcile commits_found=false |
+| code (retry)   | patch | SUCCESS | Tier 3 recovery action=retry で再実行、AC 全 PASS |
+| verify | -    | SUCCESS | Pre-merge 全 3 件 PASS、Post-merge opportunistic SKIPPED |
+
+### Orchestration Anomalies
+- **Tier 3 recovery (retry) 成功**: 初回 code phase は silent no-op (Claude exited 0 but no commit) で wrapper exit 1。recovery sub-agent が `action=retry, rationale="working tree clean, single retry minimal safe recovery"` を返却し、再実行で正常 commit。記録は `docs/reports/orchestration-recoveries.md` の "2026-06-14 16:01 UTC: code-patch-tier3-recovery" 参照。
+
+### Improvement Proposals
+- N/A (recovery sub-agent + retry pattern が想定どおり機能した。Tier 3 recovery の効果実証ケース)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC1 (file_contains), AC2 (rubric + section_contains "Step 10" "pytest"), AC3 (command syntax check) の三段構成。file_contains は最小限の存在確認、rubric+section_contains は条件付き記述の意味検証、command は構文ガードと役割分担が明確。
+
+#### design
+- 既存 "WHOLEWORK_SCRIPT_DIR mock addition check" ブロック直後への挿入位置選定が適切。"test"/"pytest"/"fixture" キーワード検出条件付き適用で既存 Spec 挙動への影響なし。
+
+#### code
+- 初回 silent no-op → Tier 3 retry で成功という rework パターン。Tier 3 sub-agent の判断 "single retry is the minimal safe recovery" が妥当だった。最終的に bats 816 件 PASS。
+
+#### review
+- patch route のため非実行 (N/A)。
+
+#### merge
+- patch route のため非実行。worktree-merge-push.sh で main 直マージ成功。
+
+#### verify
+- Pre-merge 全 3 件 PASS、Post-merge opportunistic は `phase/verify` 維持で他 skill 実行時に検証。
+
+### Improvement Proposals
+- N/A
+
