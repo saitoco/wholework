@@ -86,3 +86,47 @@
 - pre-merge AC 4件は全て verify command で自動確認済み（チェックボックス更新済み）。
 - テスト（bats 819件）はすべて PASS。
 - `/verify` フェーズでは post-merge AC（削除系 PR での FALSE POSITIVE 検証）の手動確認が必要。
+
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| spec  | patch | SUCCESS | Spec 作成、Size M→S demotion |
+| code (initial) | patch | FAILED (silent no-op) | run-code.sh exit 1, reconcile commits_found=false |
+| code (retry)   | patch | SUCCESS | Tier 3 recovery action=retry で再実行、AC 全 PASS |
+| verify | -    | SUCCESS | Pre-merge 全 4 件 PASS、Post-merge manual SKIPPED |
+
+### Orchestration Anomalies
+- **Tier 3 recovery (retry) 成功**: 初回 code phase は silent no-op で wrapper exit 1。Tier 3 sub-agent が `action=retry` を返し、再実行で正常 commit。記録は `docs/reports/orchestration-recoveries.md` 参照。
+- 連続して silent no-op パターン (#489, #486) が発生しており、`/spec` 完了直後の `/code` 段階で初回失敗→retry 成功となるパターンが頻発。watchdog タイムアウトや初期 LLM 反応性の問題が疑われる。
+
+### Improvement Proposals
+- 観測パターン: silent no-op → retry success の連続発生 (#489, #486 で連発)。`/code` 段階での初回失敗率が高い場合、retry のデフォルト試行回数を 2 → 3 に増やすか、`/spec` 完了直後の rest 時間挿入を検討する余地がある。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 4 つの AC (file_contains, grep, 2x rubric) で機能網羅。AC3 (削除済みファイル→PASS) と AC4 (後方互換) を rubric で検証する設計は意味検証として適切。
+
+#### design
+- `PR_BRANCH` optional input としての追加で後方互換確保。`skills/review/SKILL.md` Step 8 への `PR_BRANCH: $headRefName` 追加で実際に機能するよう接続した点も適切。
+- Size M → S demotion が機能した（実装範囲が 2 ファイルに収まった）。
+
+#### code
+- 初回 silent no-op → Tier 3 retry で成功。bats 819 件 PASS。最終的に pre-merge AC 4 件すべて自動 PASS、チェックボックス自動更新済み。
+
+#### review
+- patch route のため非実行 (N/A)。
+
+#### merge
+- patch route のため非実行。worktree-merge-push.sh で main 直マージ成功。
+
+#### verify
+- Pre-merge 全 4 件 PASS。Post-merge manual は `phase/verify` 維持で実 PR 観察待ち。
+
+### Improvement Proposals
+- See Auto Retrospective Improvement Proposals (silent no-op pattern 観測連発)。
+
