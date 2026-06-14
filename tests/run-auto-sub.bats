@@ -23,6 +23,13 @@ setup() {
     export APPLY_FALLBACK_LOG="$BATS_TEST_TMPDIR/apply-fallback.log"
     export SPAWN_RECOVERY_LOG="$BATS_TEST_TMPDIR/spawn-recovery.log"
 
+    # Mock flock: no-op to avoid macOS incompatibility (needed by emit_event)
+    cat > "$MOCK_DIR/flock" <<'MOCK'
+#!/bin/bash
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/flock"
+
     # Mock phase-banner.sh (sourced by run-auto-sub.sh)
     cat > "$MOCK_DIR/phase-banner.sh" <<'MOCK'
 print_start_banner() { echo "Starting /$3 for issue #$2"; }
