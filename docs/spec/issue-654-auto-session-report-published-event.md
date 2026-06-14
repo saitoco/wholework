@@ -78,19 +78,32 @@
 
 - None
 
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+記録なし。Spec と実装は完全一致。`emit-event.sh` の条件付き source、`declare -f emit_event` ガード、emit 呼び出し位置（`PYTHON_EOF` 直後・`fi` 直前）のすべてが Spec 記述通りに実装されていた。
+
+### 繰り返しの問題
+
+記録なし。レビュー全4視点（Spec 乖離・エッジケース・セキュリティ・ドキュメント整合性）で MUST/SHOULD issues は検出されなかった。
+
+### 受け入れ基準検証の難しさ
+
+CONSIDER: `tests/audit-auto-session-full.bats` に正ケース（emit される）のテストは追加されたが、負ケース（`--narrative-draft` なしでは emit されない）のテストが不在。`event-log-schema.md` には "Only emitted when `--narrative-draft` flag is used" と明記されており、このスコープ境界を bats テストで保護するとより確実。AC には含まれないため merge を妨げないが、次 Issue での改善候補として記録する。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- emit 呼び出しは `--narrative-draft` ブロック内の Python heredoc 終端 (`PYTHON_EOF`) 直後・`fi` 直前に配置した。これにより「`--narrative-draft` 完了時のみ emit」という設計を正確に実現。
-- `declare -f emit_event` ガードを採用し、emit-event.sh が見つからなくてもスクリプトが fallback する安全設計にした。
-- bats テストでは既存の `AUTO_EVENTS_LOG` fixture ファイルに append される形で event が書き込まれ、grep で検証した。
+- REVIEW_DEPTH=light（`--light` flag 指定）で実施。全4受け入れ基準が PASS、CI 全ジョブ pass、MUST/SHOULD issues なし。
+- CONSIDER issue (負ケーステスト欠如) は AC 要件を超えるものでありスキップ。PR コメントに記録済み。
 
 ### Deferred Items
-- `AUTO_EVENTS_LOG` への append は fixture events と混在するが、テストロジックとして問題ない（grep は事後追記行を検出可能）。
-- CI (bats 全件) の結果は PR #655 の CI で確認。
+- 負ケーステスト (`auto-session-report-published` が `--narrative-draft` なしで emit されないことの検証) は次 Issue で対応可能。
+- `docs/structure.md` の test ファイル件数乖離 (74 vs 77) は本 Issue スコープ外の pre-existing debt。
 
 ### Notes for Next Phase
-- 3 件の `file_contains` verify commands はすべて PASS 確認済み。PR merge 後は `github_check "gh pr checks"` の CI PASS を `/verify` で確認すること。
-- `docs/reports/event-log-schema.md` は `docs/reports/` 除外対象のため translation sync 不要、doc-checker 対象外。
-- structure.md の test ファイル件数 (74 files) は既存の pre-existing 乖離であり、本 Issue のスコープ外。
+- MUST issues なし。`/merge 655` で直接進められる。
+- merge 後は `verify-type: observation event=auto-session-report-published` を持つ #632 AC が trigger されうる（`opportunistic-search.sh --event auto-session-report-published`）。
+- `docs/reports/event-log-schema.md` は translation sync 不要。
