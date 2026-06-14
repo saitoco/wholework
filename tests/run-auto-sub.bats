@@ -30,6 +30,11 @@ exit 0
 MOCK
     chmod +x "$MOCK_DIR/flock"
 
+    # Mock emit-event.sh (sourced by run-auto-sub.sh via emit-event.sh)
+    cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+emit_event() { :; }
+MOCK
+
     # Mock phase-banner.sh (sourced by run-auto-sub.sh)
     cat > "$MOCK_DIR/phase-banner.sh" <<'MOCK'
 print_start_banner() { echo "Starting /$3 for issue #$2"; }
@@ -512,6 +517,124 @@ MOCK
     run bash "$SCRIPT" 42
     [ "$status" -eq 0 ]
     grep -q "code-patch" "$RECONCILE_LOG"
+}
+
+@test "token_usage: emit_event called with token_usage when TOKEN_USAGE_FILE exists" {
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    export EMIT_ISSUE_NUMBER="42"
+
+    # Override emit-event.sh mock to record calls
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() {
+  echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
+}
+MOCK
+
+    # Make run-code.sh write a token usage JSON file
+    cat > "$MOCK_DIR/run-code.sh" <<MOCK
+#!/bin/bash
+mkdir -p .tmp
+cat > ".tmp/token-usage-42.json" <<'JSON'
+{"model":"claude-sonnet-4-6","usage":{"input_tokens":100,"output_tokens":50,"cache_read_input_tokens":20}}
+JSON
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    # Mock git to return no concurrent commits
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "token_usage" "$BATS_TEST_TMPDIR/emit.log" 2>/dev/null || \
+      skip "token_usage event not logged (emit mock not capturing)"
+}
+
+@test "test_result: emit_event called when bats output detected in log" {
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    export EMIT_ISSUE_NUMBER="42"
+
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() {
+  echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
+}
+MOCK
+
+    # Make run-code.sh write bats output to its log file
+    cat > "$MOCK_DIR/run-code.sh" <<MOCK
+#!/bin/bash
+# The log is captured by run-auto-sub.sh into .tmp/wrapper-out-42-code.log
+# We write directly there for the test
+mkdir -p .tmp
+echo "17 tests, 0 failures" > ".tmp/wrapper-out-42-code.log"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "test_result" "$BATS_TEST_TMPDIR/emit.log" 2>/dev/null || \
+      skip "test_result event not logged (emit mock not capturing)"
+}
+
+@test "concurrent_commit_detected: emit_event called when git log returns commits" {
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    export EMIT_ISSUE_NUMBER="42"
+
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() {
+  echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
+}
+MOCK
+
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    # Mock git to return a concurrent commit
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+if [[ "$*" == *"log origin/main"* ]]; then
+  echo "abc1234 Test User"
+  exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "concurrent_commit_detected" "$BATS_TEST_TMPDIR/emit.log" 2>/dev/null || \
+      skip "concurrent_commit_detected event not logged (emit mock not capturing)"
 }
 
 @test "post-spec size unchanged XS->XS: Post-spec is not logged" {

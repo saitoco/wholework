@@ -124,6 +124,33 @@ MOCK
     [[ "$output" == *"CI check wait complete for PR #88"* ]]
 }
 
+@test "ci_wait: event emitted to AUTO_EVENTS_LOG when AUTO_EVENTS_LOG is set" {
+    EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    EMIT_DIR="$BATS_TEST_TMPDIR/emit-script-dir"
+    mkdir -p "$EMIT_DIR"
+    emit_event_src="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/emit-event.sh"
+    cp "$emit_event_src" "$EMIT_DIR/emit-event.sh"
+
+    run env AUTO_EVENTS_LOG="$EVENTS_LOG" \
+      EMIT_ISSUE_NUMBER="88" \
+      EMIT_PHASE_NAME="review" \
+      WHOLEWORK_SCRIPT_DIR="$EMIT_DIR" \
+      PATH="$MOCK_DIR:$PATH" \
+      bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    [ -f "$EVENTS_LOG" ]
+    grep -q '"event":"ci_wait"' "$EVENTS_LOG"
+    grep -q '"phase":"review"' "$EVENTS_LOG"
+}
+
+@test "ci_wait: no event emitted when AUTO_EVENTS_LOG is not set" {
+    EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    [ ! -f "$EVENTS_LOG" ]
+}
+
 @test "success: does not pass --required flag to gh pr checks" {
     GH_CALL_LOG="$BATS_TEST_TMPDIR/gh_calls.log"
     export GH_CALL_LOG

@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (53 files)
+├── scripts/             # Utility scripts used by skills and agents (54 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -156,6 +156,7 @@ Key modules:
 
 **Phase banner:**
 - `scripts/phase-banner.sh` — sourceable helper providing `print_start_banner` / `print_end_banner` functions for run-*.sh scripts
+- `scripts/emit-event.sh` — sourceable helper providing `emit_event()` for structured JSONL event emission to `.tmp/auto-events.jsonl`; used by run-*.sh, claude-watchdog.sh, and wait-ci-checks.sh
 
 **GitHub API utilities:**
 - `scripts/gh-graphql.sh` — GraphQL query executor with caching
