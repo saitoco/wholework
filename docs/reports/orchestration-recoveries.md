@@ -64,6 +64,29 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
+## 2026-06-14 18:02 UTC: code-patch-tier3-recovery
+
+### Context
+- Issue #486, phase: code-patch
+- Source: recovery-sub-agent
+- Wrapper: run-code-patch.sh, exit code: 143
+- Log tail: "Finished at: 2026-06-15 02:41:13"
+
+### Diagnosis
+- Exit code 143 is SIGTERM (watchdog kill after the 30-minute timeout). The reconcile snapshot confirms no commit with 'closes #486' exists on origin/main, so the phase produced zero persistent state — the worktree is either clean or contains uncommitted work that was not yet ready to land. Because the patch route commits directly to main, a partial commit would be unsafe; a clean retry is the lowest-risk path that allows the implementation to run to completion.
+
+### Recovery Applied
+- action=retry
+- steps: none
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+---
+
 ## 2026-06-14 16:01 UTC: code-patch-tier3-recovery
 
 ### Context
