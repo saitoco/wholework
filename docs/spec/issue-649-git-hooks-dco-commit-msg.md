@@ -82,3 +82,34 @@
 - Pre-merge AC は全て PASS 済み（review フェーズ確認済み）
 - verify で確認すべきポイント: `git config --get core.hooksPath` が新 worktree 環境で `scripts/git-hooks` を返すこと
 - Spec の Post-merge AC セクションに verify command が記載されていないため、verify フェーズで手動確認が必要
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Pre-merge AC 4 件すべて自動検証可能 (`file_exists` × 2、`file_contains` × 1、`github_check` × 1)。CI job 名 "Run bats tests" を spec 段階で明確化していたため UNCERTAIN ゼロ。
+- Post-merge manual AC は `git config --get core.hooksPath` という executable な手順を持つが、`verify-type: manual` のため batch mode では user 確認待ち。
+
+#### design
+- `core.hooksPath` + `scripts/git-hooks/` パターン採用。worktree 自動継承の git 構造的保証あり。
+- 既存 hook と競合なし。`install.sh` への 1 行追加で fresh clone 対応完了。
+
+#### code
+- 1 PR (#657) で完了。fixup/amend なし。
+- 変更ファイル 7 件 / 97 insertions（commit-msg hook 新規、bats テスト新規、install.sh / CONTRIBUTING.md / docs/structure.md 加筆）。
+
+#### review
+- light review で MUST/SHOULD なし。
+- DCO 自体の正しさは bats テスト 3 ケースで担保。
+
+#### merge
+- squash merge `--delete-branch` で main 直接マージ。CI 全 SUCCESS、conflict なし。
+- `closes #649` で Issue 自動クローズ。
+
+#### verify
+- Pre-merge AC 4 件全て PASS。Post-merge manual AC のみ手動確認待ちで `phase/verify` を維持。
+
+### Improvement Proposals
+- (CONSIDER) Post-merge manual AC の文言を「user が `install.sh` 適用後に `git config --get core.hooksPath` が `scripts/git-hooks` を返す」のように executable command 形式に整理し、`<!-- verify: command "..." -->` で auto-verify 化を検討。本 Issue スコープ外。
+
