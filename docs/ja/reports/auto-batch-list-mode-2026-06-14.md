@@ -150,3 +150,91 @@ PR number: 606
 `--batch` List モードで 6 Issue 実行が Opus 4.7 親下、4 時間 43 分連続実行でクリーンに完了した。プロダクション初観測の 2 点は (1) Tier 3 recovery sub-agent 起動が親介入なしで解決されたこと、(2) 同リポジトリ上で並行稼働する単一セッション `/auto` と merge conflict なしで共存したこと。約 1.27 Issue/時のスループットは M 偏重 Issue mix と整合する。
 
 未解決の構造的観察は、バッチ完了 Issue の普遍的終端状態 `phase/verify` である — AC 側の修正（#583、イベント駆動観測型）が解決しない wrapper 設計のギャップ。バッチモードが Issue 間で verify をオーケストレートすべきか、あるいは「バッチは verify で終端し、ユーザーが後続フォローアップごとに `/verify N` を実行する」と設計を明示すべきか、どちらかの判断が必要。
+
+---
+
+## 後続: 改善 Issue 起票 + 第 2 バッチ + 単独 Issue 実行
+
+主バッチおよびレポート作成後、同セッション内で 3 つの追加 `/auto` 実行が走り、追加のコードパスを exercise した。生データとレポート自身の予測の検証を兼ねてここに追記する。
+
+### レポートから起票した改善 Issue
+
+上記「浮上した改善候補」セクションの 3 候補をユーザーの依頼で起票:
+
+| # | Title（抜粋） | 元になった候補 |
+|---|---|---|
+| #615 | auto: --batch List モードで Issue 間 verify を親セッションがオーケストレート | 1. バッチ wrapper の verify オーケストレーション |
+| #616 | auto: Step 3a 再判定で実行中ルートを M/pr → patch に縮退 | 2. Step 3a 再判定での実行中ルート縮退 |
+| #617 | auto: Tier 3 recovery sub-agent 起動を orchestration-recoveries.md に記録 | 3. Tier 3 sub-agent 起動のログ記録 |
+
+### Wave 2: `/auto --batch 615 616 617`
+
+同じ Opus 4.7 親、同じ `--batch` List モード wrapper。3 件いずれも phase ラベルなしで開始し triage → spec → code → review → merge の全フェーズを実行。
+
+| Issue | Size/Route | 所要時間（triage + run-auto-sub） | PR | 結果 |
+|-------|-----------|------------------------------------|-----|------|
+| #615 | M / pr | 約 50 分（06:42→07:32 JST: triage 7分 + spec→code→review→merge 42分） | #619 | CLOSED / phase/verify（クリーン） |
+| #616 | M / pr | 約 57 分（07:40→08:37 JST: triage 10分 + spec→code→review→merge 47分） | #620 | CLOSED / **phase/review**（異常 — 下記参照） |
+| #617 | M / pr | 約 70 分（08:39→09:38 JST: triage 10分 + spec→code→review→merge 60分） | #622 | CLOSED / phase/verify（クリーン、spec 中に最大 1080s の silent window 観測） |
+
+実稼働時間: 約 3 時間（06:42→09:38 JST）。スループット: 約 1.0 Issue/時（Wave 1 の 1.27/時より低いのは、Wave 2 は Issue ごとに triage フェーズが追加されたため）。
+
+### 異常: #616 が merge 後 phase/review 滞留
+
+#616 の `run-auto-sub.sh` は exit 0、PR #620 は実際に `2026-06-13T23:36:01Z` に MERGED、issue は PR の `closes #616` で auto-close。しかし phase ラベルは `phase/review` のまま — merge 子 wrapper 内部で `merge → verify` のラベル遷移が抜けた。手動で `gh-label-transition.sh 616 verify` を実行して補正。`reconcile-phase-state.sh merge 616 --pr 620 --check-completion` は `matches_expected: true`（merge は成功）を返したため、既存の wrapper validation では検出できない構造。
+
+これは**未観測の wrapper 異常**である。同フローで #615 と #617 は正常に遷移したため、非決定的に発生する症状 — merge skill 内の `gh pr merge` と `gh-label-transition.sh` 呼び出しの間で `claude -p` が early-stop した可能性が最も高い。
+
+異常を **#624 — merge: PR merge 後の phase/review → phase/verify ラベル遷移漏れを検出・補正**（Size S, patch route）として起票。
+
+### Wave 3: `/auto 624`（単独 Issue、patch route）
+
+同じ Opus 4.7 親。単独 Issue auto、patch route。
+
+| Phase | 所要時間 | 結果 |
+|-------|----------|------|
+| triage (run-issue.sh) | 約 7 分（10:23→10:30 JST） | Size 判定 S（提案は M）。verify command を `section_contains`（shell script に適用不可）から `grep` x2 に修正。Auto-Resolved Ambiguity Points に記録。 |
+| spec (run-spec.sh) | 約 10 分（10:30→10:40 JST） | Option A（run-merge.sh の completion-check 拡張）を採用。 |
+| code --patch (run-code.sh) | 約 8 分（10:40→10:48 JST） | main 直 commit: `run-merge.sh` を `phase/review` 滞留検出と自動遷移に拡張。bats 17/17 PASS（新規ケース "label stuck: merge succeeded but phase/review label stuck, auto-transitions to verify" を含む）。実装 commit `6f6f29f`。 |
+| verify（親セッション Skill） | 約 30 分（retro 記録と改善 Issue 起票を含む） | Pre-merge 3/3 PASS。Post-merge AC4 は**代替検証で PASS**（下記参照）。Post-merge AC5 は deferred（observation 型）。 |
+
+合計: triage → code → verify で約 55 分。verify だけで run の半分を占めた。
+
+### #624 の verify が露呈した verify command 設計問題
+
+Post-merge AC4 は以下の形で書かれていた:
+
+```
+<!-- verify: github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success" -->
+```
+
+verify command は `""`（空）を返した — `--limit=1` は `main` の最新 run を取るが、それは並行 /auto セッションが push した Issue #600（commit `7a918fca`、status `in_progress`）であり、#624 自身の commit ではなかったため。#624 の実装 commit (`3dec8ac8`) と design commit (`175b3cfe`) は `headSha` でフィルタすれば `success` 結論だが、AC の verify command は commit フィルタを持たない。
+
+これは主バッチの「並行 /auto セッションの共存」セクションで言及した同じ並行セッション干渉ダイナミクスが、新しい場所（verify command セマンティクス）で表面化したもの。AC4 は代替検証（手動で commit フィルタ）で PASS と判定し、改善 Issue を起票した:
+
+**#626 — verify-patterns: github_check の gh run list テンプレートに --commit フィルタを標準化**
+
+### 後続のサマリー
+
+| 指標 | 値 |
+|------|-----|
+| Wave 2 処理 Issue（バッチ） | 3 件（#615, #616, #617） |
+| Wave 3 処理 Issue（単独） | 1 件（#624） |
+| 実稼働時間（Wave 2 + Wave 3） | 約 4 時間 15 分（06:42→11:00 JST、アイドルなし） |
+| watchdog kill | 0 回 |
+| 観測した wrapper 異常 | 1 回（#616 の merge→verify ラベル遷移漏れ） |
+| 親セッションによる手動リカバリ | 1 回（`gh-label-transition.sh 616 verify`） |
+| 新規起票した改善 Issue | 2 件（#624, #626） |
+| `/auto` 内で起動した verify フェーズ | 1 回（Wave 3 #624 のみ。Wave 2 はユーザ要望により保留） |
+
+### 後続が確認したこと
+
+1. **phase/verify 普遍的終端状態は実在する** — `/auto` 単独実行で verify が走った Wave 3 #624 ですら、自身の `event=auto-run` observation AC のために `phase/verify` で終端する。wrapper 側のギャップ（#615）と AC 側のギャップ（#583）は独立であり、両方の対応が必要。
+2. **wrapper 異常はレアではない**: 未観測の `phase/review` 滞留パスが次バッチで即出現した。Wave 1 の Tier 3 リカバリ（#554）と本ギャップを合わせると、wrapper 異常の表面積は既存 fallback カタログのカバー範囲より広い可能性が高い。
+3. **並行 /auto 安全性は新次元では維持、別次元では破綻**: merge conflict ゼロは継続（Wave 2 + 3 でも並行 main merge が続いた）。しかし verify command セマンティクスは並行 push 下で破綻 — 主バッチの「並行 /auto セッション共存」主張が想定していなかった新クラスの干渉。
+4. **triage の verify command 監査価値が再確認**: #624 の triage が `section_contains`（markdown 見出し用、shell script には適用不可）を `grep` x2 に修正。同パターンは 2026-06-13 ベースライン（14 Issue 中 3 件の triage 修正）でも観測されており、本セッション 4 Issue でも再現。triage skill の安定した特性として明示推進する価値あり。
+
+### Loose ends
+
+- **#624 自身は `phase/verify` で終端した** — post-merge AC5 が `verify-type: observation event=auto-run` のため。`run-merge.sh` の auto-recover 挙動は実際にラベル遷移漏れが発生したときだけ動くが、それ自体が非決定的。AC5 は将来 `/auto` 実行でリカバリパスが exercise されたときにクローズする。
+- **#626（verify command 修正）は未処理**: 標準 `--commit=$(git rev-parse HEAD)` 形を `modules/verify-classifier.md` と `skills/issue/spec-test-guidelines.md` に追加し、既存 patch route AC を移行する必要あり。次セッションに繰り越し。

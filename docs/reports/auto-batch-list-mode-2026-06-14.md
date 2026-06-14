@@ -150,3 +150,90 @@ The Tier 3 recovery on #554 produced an entry on `docs/reports/orchestration-rec
 The `--batch` List mode run of 6 issues completed cleanly under an Opus 4.7 parent over 4h 43m of continuous execution. The two notable production firsts are (1) a Tier 3 recovery sub-agent invocation that resolved without parent intervention, and (2) coexistence with a concurrent single-session `/auto` on the same repository without merge conflict. Throughput at ~1.27 issues/hr is consistent with the M-heavy issue mix.
 
 The unresolved structural observation is the universal terminal `phase/verify` state for batch-completed issues — a wrapper-design gap that the AC-side fix (#583, event-driven observation type) does not address. Either batch mode should orchestrate verify between issues, or the design should be acknowledged as "batch terminates at verify, user runs `/verify N` per follow-up."
+
+---
+
+## Follow-up: Improvement Issues Filed + Second Batch + Single-Issue Run
+
+After the primary batch and report-writing finished, the same session continued with three follow-on `/auto` runs that exercised additional code paths. Adding them here both as raw data and as a check on the report's own predictions.
+
+### Improvement Issues Filed from the Report
+
+Three improvement candidates from the "Improvement candidates surfaced" section above were filed at the user's request:
+
+| # | Title (truncated) | Source candidate |
+|---|---|---|
+| #615 | auto: --batch List モードで Issue 間 verify を親セッションがオーケストレート | 1. Batch wrapper verify orchestration |
+| #616 | auto: Step 3a 再判定で実行中ルートを M/pr → patch に縮退 | 2. In-flight route demotion on Step 3a re-judge |
+| #617 | auto: Tier 3 recovery sub-agent 起動を orchestration-recoveries.md に記録 | 3. Tier 3 sub-agent invocation logging |
+
+### Wave 2: `/auto --batch 615 616 617`
+
+Same Opus 4.7 parent, same `--batch` List mode wrapper. All 3 issues started with no phase labels and went through full triage → spec → code → review → merge.
+
+| Issue | Size/Route | Duration (triage + run-auto-sub) | PR | Result |
+|-------|-----------|----------------------------------|-----|--------|
+| #615 | M / pr | ~50 min (06:42→07:32 JST: 7m triage + 42m spec→code→review→merge) | #619 | CLOSED / phase/verify (clean) |
+| #616 | M / pr | ~57 min (07:40→08:37 JST: 10m triage + 47m spec→code→review→merge) | #620 | CLOSED / **phase/review** (anomaly — see below) |
+| #617 | M / pr | ~70 min (08:39→09:38 JST: 10m triage + 60m spec→code→review→merge) | #622 | CLOSED / phase/verify (clean, long silent windows during spec — 1080s) |
+
+Wall-clock: ~3h (06:42→09:38 JST). Throughput: ~1.0 issues/hr (slower than Wave 1's 1.27/hr because Wave 2 added a triage phase per issue).
+
+### Anomaly: #616 stuck at phase/review after merge
+
+`run-auto-sub.sh` for #616 exited 0; PR #620 was actually MERGED at 2026-06-13T23:36:01Z; issue auto-closed via PR's `closes #616`. But the phase label remained `phase/review` — the `merge → verify` label transition was missed inside the merge child wrapper. Manual `gh-label-transition.sh 616 verify` corrected it. `reconcile-phase-state.sh merge 616 --pr 620 --check-completion` returned `matches_expected: true` (merge succeeded), so the existing wrapper validation could not detect the gap.
+
+This is a **previously-unobserved wrapper anomaly**. Same flow on #615 and #617 transitioned correctly, so the issue is non-deterministic — likely a `claude -p` early-stop between `gh pr merge` and `gh-label-transition.sh` calls inside the merge skill.
+
+The anomaly was filed as **#624 — merge: PR merge 後の phase/review → phase/verify ラベル遷移漏れを検出・補正** (Size S, patch route).
+
+### Wave 3: `/auto 624` (single-issue, patch route)
+
+Same Opus 4.7 parent. Single-issue auto under patch route.
+
+| Phase | Duration | Result |
+|-------|----------|--------|
+| triage (run-issue.sh) | ~7 min (10:23→10:30 JST) | Size assigned S (proposal was M); AC verify commands corrected from `section_contains` (inapplicable to shell scripts) to `grep` x2. Auto-Resolved Ambiguity Points recorded. |
+| spec (run-spec.sh) | ~10 min (10:30→10:40 JST) | Option A (run-merge.sh completion-check extension) selected. |
+| code --patch (run-code.sh) | ~8 min (10:40→10:48 JST) | Direct commit to main: `run-merge.sh` extended to detect `phase/review` stuck and auto-transition. bats 17/17 PASS (new test case "label stuck: merge succeeded but phase/review label stuck, auto-transitions to verify"). Implementation commit `6f6f29f`. |
+| verify (parent-session Skill) | ~30 min (incl. retro write and improvement-Issue filing) | Pre-merge 3/3 PASS. Post-merge AC4 PASS via **alternative verification** (see below). Post-merge AC5 deferred (observation type). |
+
+Total: ~55 min triage → code → verify; verify alone took half the run.
+
+### What #624's verify exposed: a verify-command-design problem
+
+Post-merge AC4 was written as:
+```
+<!-- verify: github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success" -->
+```
+
+The verify command returned `""` (empty) — because `--limit=1` picked up the latest run on `main`, which was from a concurrent /auto session's push (issue #600, commit `7a918fca`, status `in_progress`), not from #624's own commit. The implementation commit (`3dec8ac8`) and design commit (`175b3cfe`) had `success` conclusions when filtered by `headSha`, but the AC's verify command did not filter by commit.
+
+This is the same concurrent-session interference dynamic noted in the primary batch's "Concurrent /auto Session Coexistence" section, surfacing in a new place — verify command semantics. AC4 was marked PASS via alternative verification (filtered by commit manually) and an improvement issue was filed:
+
+**#626 — verify-patterns: github_check の gh run list テンプレートに --commit フィルタを標準化**
+
+### Summary of follow-up
+
+| Metric | Value |
+|--------|-------|
+| Wave 2 issues processed (batch) | 3 (#615, #616, #617) |
+| Wave 3 issues processed (single) | 1 (#624) |
+| Wall-clock (Wave 2 + Wave 3) | ~4h 15m (06:42→11:00 JST, no idle) |
+| Watchdog kills | 0 |
+| Wrapper anomalies observed | 1 (#616 merge→verify label transition missed) |
+| Parent session manual recoveries | 1 (`gh-label-transition.sh 616 verify`) |
+| New improvement issues filed | 2 (#624, #626) |
+| Verify phase invocations under `/auto` | 1 (Wave 3 #624 only; Wave 2 deferred per user request) |
+
+### What the follow-up confirmed
+
+1. **The phase/verify universal terminal state is real** — even when verify is run after a single-issue `/auto` (Wave 3 #624), the issue still ends at `phase/verify` due to its own `event=auto-run` observation AC. The wrapper-side gap (#615) and the AC-side gap (#583) are independent and both need addressing.
+2. **Wrapper anomalies are not rare**: the previously-unobserved `phase/review` stuck path appeared on the very next batch. The Tier 3 recovery from Wave 1 (#554) and this new gap suggest the wrapper-anomaly surface is broader than the existing fallback catalog covers.
+3. **Concurrent /auto safety holds in new dimensions, breaks in others**: 0 merge conflicts still (concurrent merges to main continued through Wave 2 + 3). But verify-command semantics broke under concurrent push — a new class of interference that the "Concurrent /auto Session Coexistence" claim did not anticipate.
+4. **Triage's verify-command audit value re-confirmed**: #624's triage corrected an inapplicable `section_contains` (used for markdown headings, applied here to a shell script) to two `grep` calls. The same value pattern observed in the 2026-06-13 baseline report (3 triage repairs in 14 issues) recurred here in 4 issues. This is a stable property of the triage skill worth promoting.
+
+### Loose ends
+
+- **#624 itself ended at `phase/verify`** because its post-merge AC5 is `verify-type: observation event=auto-run`. The auto-recover behavior in `run-merge.sh` only triggers when a real merge label transition is missed — which by definition is non-deterministic. AC5 closes when a future `/auto` run exercises the recovery path.
+- **#626 (the verify-command fix) is unprocessed.** The standard `--commit=$(git rev-parse HEAD)` form needs editing in `modules/verify-classifier.md` and `skills/issue/spec-test-guidelines.md`, plus migrating existing patch-route ACs. Defer to next session.
