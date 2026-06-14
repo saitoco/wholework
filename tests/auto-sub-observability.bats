@@ -22,9 +22,14 @@ exit 0
 MOCK
     chmod +x "$MOCK_DIR/flock"
 
-    # Mock emit-event.sh (sourced by run-auto-sub.sh)
+    # Mock emit-event.sh (sourced by run-auto-sub.sh) — writes a minimal JSONL line
+    # so that event-format-check and append-no-clobber assertions can validate output.
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
-emit_event() { :; }
+emit_event() {
+    local event_name="$1"
+    mkdir -p "$(dirname "${AUTO_EVENTS_LOG}")"
+    printf '{"ts":"%s","issue":%s,"event":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${EMIT_ISSUE_NUMBER:-0}" "${event_name}" >> "${AUTO_EVENTS_LOG}"
+}
 MOCK
 
     # Mock phase-banner.sh (sourced by run-auto-sub.sh)
