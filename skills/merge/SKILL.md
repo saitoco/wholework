@@ -206,12 +206,21 @@ merge is an intermediate phase — write the Phase Handoff so verify can read it
    git merge origin/main --ff-only
    ```
 2. Glob `$SPEC_PATH/issue-$ISSUE_NUMBER-*.md` to locate the Spec (now on main):
+   - The target Spec file is the worktree-local copy under `.claude/worktrees/merge+pr-$NUMBER/` (the CWD established by EnterWorktree in Step 2). All Edit and commit operations target this worktree path — not the main repo working directory.
    - If not found: output `[phase-handoff] No Spec found — skipping handoff write.` and continue
 3. If Spec found: Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the `Write Procedure` section.
    Parameters: `SPEC_PATH`, `ISSUE_NUMBER`, `PHASE_NAME=merge`.
 4. Commit and push to main:
    ```bash
    git add $SPEC_PATH/issue-$ISSUE_NUMBER-*.md
+   ```
+   Check whether there are staged changes (same-content scenario guard — skips commit/push when Phase Handoff was already committed to main in a prior run or retry):
+   ```bash
+   git diff --cached --quiet
+   ```
+   - If exit code 0 (no staged changes): output `[phase-handoff] No changes to commit — Phase Handoff already on main. Skipping commit/push.` and proceed to Step 5
+   - If exit code non-zero (changes present): proceed with commit and push:
+   ```bash
    git commit -s -m "Add merge phase handoff for issue #$ISSUE_NUMBER
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
