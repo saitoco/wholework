@@ -95,3 +95,33 @@
 ### 受け入れ条件検証の困難さ
 
 全条件 PASS。verify command は適切で UNCERTAIN はなし。rubric 条件は diff から直接判断可能で品質良好。`command` 系 verify は CI 参照フォールバックが機能し、safe mode での検証が円滑だった。bats テスト件数（AC では「最小4ケース」、実装は5ケース）の乖離は code retrospective で説明済み。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 実行スコープ（手動実行まで / 自動トリガー議論は follow-up）が明確に区切られており、scope creep を防げた。
+- Output フォーマット 4 セクションを Issue body にコードブロック付きで明示し、code phase で rubric 条件が安定して PASS する基礎になった。
+
+#### design
+- raw stream は引き続き ephemeral、curated summary のみコミット対象、という設計判断が #600 と整合。並行 `/auto --batch` の atomicity 問題を rollup 層で吸収する方針が成立。
+- `--cleanup` を明示的 opt-in に留めた判断は妥当（誤って raw stream を削除する事故を防止）。
+
+#### code
+- 実装は Spec 通りで偏差なし。`\|` → `|` の verify command miscalibration を code phase 中に検出・修正済み（AC #3 の `--date|--input|--output-dir|--cleanup` 形式）。
+
+#### review
+- light review で 1 件の修正（cleanup の `|| true` による exit code 飲み込みパターン）。bash の `grep ... || true` を使う際は exit code 1（no-match）と 2（error）を区別する原則の見落としだった。
+
+#### merge
+- 並行 #631 マージとの干渉なし。CI 全 green、conflict なし。
+
+#### verify
+- Pre-merge 7/7 PASS、Post-merge AC #9（manual: follow-up Issue 起票）は本 verify セッションで #645 として起票し PASS、AC #8（opportunistic: 実 `/auto --batch` での動作確認）は autonomous policy により SKIP。
+- bats テスト 5/5 PASS、verify command も全て成立。verify session 内で完結した。
+
+### Improvement Proposals
+
+- **bash `|| true` の exit code 区別**: `scripts/auto-events-rollup.sh` の `--cleanup` で grep の exit code 1（no-match）と 2（error）を意図的に区別するパターン。`skills/code/skill-dev-validation.md` または bash helper guidelines に「`grep ... || true` を使う際は exit code 2 を明示的にハンドルする」原則を追記する候補。
+- **verify command の `|` エスケープガイダンス**: AC `<!-- verify: grep -- "--date|--input|..." -->` のような OR パターンを書く際に `\|` (basic regex) と `|` (extended regex / ripgrep) のどちらが期待されるか不明瞭だった。`modules/verify-executor.md` または `docs/verify-patterns.md` に「`grep` ベースの verify command では extended regex (`grep -E` / 素の `|`) を前提とする」旨を明文化する候補。
