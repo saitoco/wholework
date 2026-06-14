@@ -64,6 +64,55 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
+## 2026-06-14 09:54 UTC: Tier 3 retry against deterministic route mismatch (#507, retry failed)
+
+### Context
+- Issue #507, phase: code-patch (route was patch after Step 3a re-detect; wrapper still used code-pr for reconcile)
+- Source: recovery-sub-agent
+- Wrapper: run-code.sh (via run-auto-sub.sh), exit code: 1 (after retry)
+- Log tail: "Warning: claude exited 0 but code-pr phase did not complete (silent no-op). reconcile: {..., \"diagnosis\":\"no open PR found for worktree-code+issue-507 branch (stage2 recovery delegated to #316)\"}"
+
+### Diagnosis
+- Spec phase re-judged Size M → S (patch route per Step 3a)
+- `run-auto-sub.sh` ran `run-code.sh 507 --patch`, which correctly committed to main and auto-closed Issue via `closes #507`. Commits 69a99d7, 1329f61, 5a66708 landed on main; Issue moved to CLOSED + `phase/verify`
+- However, the wrapper's end-of-run reconcile call was hard-coded to `reconcile-phase-state.sh code-pr 507 --check-completion`, which looks for an open PR for `worktree-code+issue-507`. No PR exists in patch route → `matches_expected: false` → wrapper exits 1
+- Tier 3 sub-agent received the false-failure signal, produced `action=retry`, and re-invoked `run-code.sh`. The retry re-attempted patch-route commit (cleaning stale worktree first), succeeded structurally — but the reconcile call again checked `code-pr`, hit the same mismatch, and returned exit 1 again
+- Root cause: phase identifier passed to reconcile-phase-state is determined before route re-detection, not after. `action=retry` cannot resolve a deterministic logic mismatch by re-running the same wrapper with the same arguments
+
+### Recovery Applied
+- Tier 3 sub-agent retry: failed (wrapper exit 1 reproduced)
+- Parent-session manual recovery: observed real state via `gh issue view 507` (CLOSED + `phase/verify` + 3 implementation commits with `closes #507`). Concluded that code phase had actually completed. Ran `Skill(wholework:verify, args="507")` manually, which PASSed all 3 pre-merge ACs and SKIPPED 3 post-merge manual ACs (require saito/trading)
+
+### Outcome
+- partial — code phase actually succeeded; reconcile incorrectly reported failure; parent session manually advanced to verify
+
+### Improvement Candidate
+- 起票済み #637 (reconcile-phase-state: size 再判定後の patch 経路で code-pr phase 判定が残るための route mismatch を解消)
+
+## 2026-06-14 09:09 UTC: merge phase wrote Phase Handoff to parent main repo without committing (#508)
+
+### Context
+- Issue #508, phase: merge (PR #635 squash-merged successfully)
+- Source: parent-session manual recovery (not auto-logged by wrapper; appended retroactively via `/audit recoveries` backfill)
+- Wrapper: run-merge.sh (via run-auto-sub.sh), exit code: 0
+- Log tail: (merge wrapper completed cleanly per `run-auto-sub.sh` Completed banner at 2026-06-14T18:07:22 JST)
+
+### Diagnosis
+- PR #635 was squash-merged to main correctly. Implementation commits landed; Issue auto-closed via `closes #508`
+- However, the merge wrapper's Phase Handoff append (the `## Phase Handoff <!-- phase: merge -->` section added to `docs/spec/issue-508-post-merge-manual-verify-cli.md`) was written to the **parent session's main repo working tree**, not to the merge phase's own worktree. The change was uncommitted in the parent's index
+- Verified by `git log` showing the upstream `main` already had the same content (`Patch contents already upstream` on rebase) — so the merge wrapper DID push the Phase Handoff from its worktree at some earlier step. The leak was specifically into the parent's working-tree state
+- When the parent session subsequently ran `/verify 508`, Step 1's `check-verify-dirty.sh 508` detected the dirty spec file and exited 1, blocking verify until cleanup
+
+### Recovery Applied
+- Parent-session manual recovery: ran `git add docs/spec/issue-508-post-merge-manual-verify-cli.md && git commit -s && git push origin main`. Push was rejected (non-fast-forward) because remote was ahead. `git pull --rebase origin main` then dropped the local commit (`Patch contents already upstream`). Parent's working tree returned to clean state; `/verify 508` proceeded normally
+- No Tier 1/2/3 wrapper-level recovery was attempted (wrapper had already exited 0)
+
+### Outcome
+- partial — the on-disk change reached main correctly via the merge wrapper, but the parent's working tree was left dirty, blocking the next phase until manual cleanup
+
+### Improvement Candidate
+- 起票済み #636 (merge: phase が main repo 直接編集する Phase Handoff を worktree 経由でコミットするよう運用変更)
+
 ## 2026-06-13 14:30 UTC: silent-no-op recovered via wrapper-anomaly Tier 2 retry (#576, 2nd in session)
 
 ### Context
