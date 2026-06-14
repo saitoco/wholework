@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（54 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（55 ファイル）
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -170,6 +170,7 @@ wholework/
 - `scripts/get-issue-type.sh` — issue タイプラベル取得
 - `scripts/get-issue-priority.sh` — issue priority フィールド取得
 - `scripts/get-sub-issue-graph.sh` — サブ issue 依存グラフ構築
+- `scripts/get-auto-session-report.sh` — `.tmp/auto-events.jsonl` から session_id でフィルタして `/auto` セッション retrospective レポートのデータ層を生成（`/audit auto-session` 用）
 - `scripts/get-verify-iteration.sh` — Issue コメントから `<!-- verify-iteration: N -->` マーカーの最大値を読み取る
 - `scripts/hook-rename-on-auto.sh` — UserPromptSubmit hook: プロンプトが `/auto` パターンにマッチした場合にセッション名を自動リネーム
 - `scripts/log-permission.sh` — 権限イベントログ（JSON 出力）
