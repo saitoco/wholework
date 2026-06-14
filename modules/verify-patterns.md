@@ -391,6 +391,38 @@ Or classify as post-merge manual when live runtime execution is unavailable in C
 3. If CI cannot execute the command: classify as `verify-type: manual` (post-merge)
 4. Do NOT use pre-merge `rubric` for indirect-reflection ACs — the grader cannot observe the diff-absent file and will return UNCERTAIN
 
+### 13. Recommended pre-verify flow for cron workflows
+
+When a post-merge acceptance condition depends on a cron-scheduled workflow's output (logs, generated files), the condition will always FAIL immediately after merge because the cron job has not yet run. Running `/verify` before manually triggering the workflow produces false FAILs for all cron-dependent conditions.
+
+**Recommended pre-verify flow for cron workflows:**
+1. After merge, run `workflow_dispatch` (with `dry_run: false`) to produce the expected output
+2. Verify the run succeeded: `gh run list --workflow=<name>.yml --limit=1`
+3. Then run `/verify <issue-number>`
+
+**Background**: cron-dependent post-merge ACs fail immediately after merge because the scheduled job has not executed yet. Triggering `workflow_dispatch` simulates the first scheduled run and satisfies the pre-condition for all downstream verify commands. This pattern was confirmed in practice (see also Issue #490 for related guidance).
+
+**Add a corresponding manual condition in the Issue AC:**
+
+```markdown
+- [ ] Trigger workflow once via `workflow_dispatch` before the first cron run and verify it completes successfully <!-- verify-type: manual -->
+```
+
+**When to apply this pattern:**
+
+| Scenario | Apply? |
+|----------|--------|
+| Post-merge AC verifies cron workflow output (logs, generated files, event records) | Yes — trigger `workflow_dispatch` before `/verify` |
+| Post-merge AC verifies static file content or config changes | No — no workflow execution dependency |
+| Pre-merge AC for non-cron CI checks | No — use `github_check "gh pr checks"` or `github_check "gh run list"` |
+
+**Decision procedure:**
+
+1. Identify whether any post-merge AC condition depends on a cron workflow's execution output
+2. If yes: add a `<!-- verify-type: manual -->` AC to trigger `workflow_dispatch` before running `/verify`
+3. Order the manual AC before the automated cron-output ACs so the human step completes first
+4. In the `/verify` pre-run checklist, note that `workflow_dispatch` must be triggered before verify
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
