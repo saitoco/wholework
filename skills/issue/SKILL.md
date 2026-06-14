@@ -607,6 +607,24 @@ Good:
 
 Note: Size XS/S → patch route → `gh run list` form; Size M/L → PR route → `gh pr checks` form (details: `modules/verify-classifier.md`).
 
+**Do not embed implementation means in ACs:**
+
+Embedding implementation means — tool names, function names, MCP tool names, specific CLI commands, etc. — directly in ACs creates fragile conditions. When the implementation changes (e.g., an MCP tool is replaced by a CLI command, or a function is renamed), ACs fail even though the feature still works correctly.
+
+**Principle**: Write ACs in terms of **behavior and outcome** — what the system does or produces — not which implementation mechanism achieves it.
+
+Bad (implementation-specific):
+- [ ] `allowed-tools` contains `mcp__example__tool`
+- [ ] `example_function()` is called with the correct arguments
+
+Good (behavior/outcome-based):
+- [ ] <!-- verify: rubric "skills/example/SKILL.md の Step 3 が認証フローを正しく呼び出す手順を記載している" --> Step 3 describes how the authentication flow is invoked
+- [ ] <!-- verify: section_contains "skills/example/SKILL.md" "## Step 3" "authentication" --> Step 3 section contains authentication guidance
+
+**rubric for behavioral ACs:**
+
+When an AC describes a behavioral or semantic outcome rather than specific text, use `rubric` as the verify command. The LLM grader assesses whether the implementation satisfies the intent — independent of which specific tool, function, or CLI command was used. Pair with `section_contains` or `file_contains` as a mechanical supplementary check (see the rubric + supplementary guideline in Step 4 above). This `rubric`-first approach is especially important when the AC is about implementation intent (e.g., "correct behavior" or "proper handling") rather than a literal keyword.
+
 ---
 
 ## Completion Report

@@ -510,6 +510,7 @@ KNOWN_VERIFY_COMMAND_TYPES: Dict[str, Tuple[int, int]] = {
     'browser_screenshot': (2, 2),
     'mcp_call': (2, 2),
     'github_check': (2, 2),
+    'rubric': (1, 1),
 }
 
 
