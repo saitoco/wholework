@@ -39,3 +39,29 @@ Note: All three steps are already implemented in #520 (PR #525). The `/code` pha
 - スコープは `run-code.sh` のみ（タイトルに明記）。他スクリプト（`run-spec.sh` / `run-review.sh` / `run-merge.sh` / `run-issue.sh`）は #520 で別途対応済み
 - `matches_expected: false` 時の exit code は exit 1 に確定（`/auto` 3-tier recovery フローへ接続するために必要）
 - Exit 0 + empty reconcile output は false alarm を避けるため exit 0 のまま維持（AC4 の `grep "EXIT_CODE=1"` は `elif` ブランチの存在チェックであり、空出力ケースを排除するものではない）
+
+## Code Retrospective
+
+### Deviations from Design
+- None — implementation was already complete in #520 (PR #525) before this `/code` phase ran; the code phase served as a verification-only pass confirming all five ACs pass
+
+### Design Gaps/Ambiguities
+- None
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- No code changes made; existing implementation in `scripts/run-code.sh` (L187–L196) and `tests/run-code.bats` (L392–L428) already satisfies all pre-merge ACs
+- All 26 bats tests pass including the three reconcile scenario tests (exit 0 + matches_expected:false → exit 1; exit 0 + matches_expected:true → exit 0; exit 0 + empty output → exit 0)
+- CI (test.yml) latest run concluded `success`
+
+### Deferred Items
+- Post-merge operational monitoring: verify that silent no-op (exit 0 without implementation) is auto-detected in real `/auto` runs and flows into 3-tier recovery
+
+### Notes for Next Phase
+- Implementation is already merged on `main` via #520; this patch route commit only adds the Spec Code Retrospective and Phase Handoff
+- No known risks or residual issues; all ACs verified in full mode locally and via CI
