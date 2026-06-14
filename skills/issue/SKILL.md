@@ -177,6 +177,13 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md` and assign `<!-- verif
 
 If ambiguity points were found, process them as follows.
 
+**削除系 Issue の事前スキャン (Deletion-type issue pre-scan):**
+
+Before processing ambiguity points, check if the Issue body or purpose contains deletion-type keywords (「削除」「撤去」「remove」「delete」「clean up」). If detected:
+1. Extract the target keyword or pattern from the Issue content
+2. Run `grep -rl 'pattern' .` from the repository root to enumerate all files containing the pattern
+3. Add a `## Scope` section to the Issue body listing all enumerated files (create if absent, supplement with newly found files if already present)
+
 **Priority sort:**
 
 Sort ambiguity points from Step 3 in descending order of impact (scope of effect on acceptance criteria text, degree of propagation to implementation approach).
@@ -342,6 +349,13 @@ Propose "Pre-merge" / "Post-merge" section split for existing issues lacking sec
 ### Step 7: Clarification Questions
 
 Collect ambiguity points and missing information. Process as follows:
+
+**削除系 Issue の事前スキャン (Deletion-type issue pre-scan):**
+
+Before processing ambiguity points, check if the Issue body or purpose contains deletion-type keywords (「削除」「撤去」「remove」「delete」「clean up」). If detected:
+1. Extract the target keyword or pattern from the Issue content
+2. Run `grep -rl 'pattern' .` from the repository root to enumerate all files containing the pattern
+3. Add a `## Scope` section to the Issue body listing all enumerated files (create if absent, supplement with newly found files if already present)
 
 **Priority sort:** Sort ambiguity points from Step 5 in descending order of impact (scope of effect on acceptance criteria text, degree of propagation to implementation approach).
 
