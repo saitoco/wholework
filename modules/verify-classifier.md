@@ -32,13 +32,13 @@ The condition is **not** verified during a normal `/verify` run; instead, it is 
 
 **Valid `event-name` values (restricted by convention):**
 
-| Event name | When it fires |
-|------------|---------------|
-| `pr-review-full` | Next `/review --full` completion |
-| `pr-review-light` | Next `/review --light` completion |
-| `auto-run` | Next `/auto` completion (success or failure) |
-| `watchdog-kill` | When watchdog kill fires |
-| `fix-cycle` | When a verify FAIL → reopen → fix cycle activates (**definition only — emitter implementation is a follow-up**) |
+| Event name | When it fires | Emitter |
+|------------|---------------|---------|
+| `pr-review-full` | Next `/review --full` completion | `/review` skill (Step runs `opportunistic-search.sh --event pr-review-full`) |
+| `pr-review-light` | Next `/review --light` completion | `/review` skill (Step runs `opportunistic-search.sh --event pr-review-light`) |
+| `auto-run` | Next `/auto` completion (success or failure) | `/auto` skill (post-completion step runs `opportunistic-search.sh --event auto-run`) |
+| `watchdog-kill` | When watchdog kill fires | `scripts/claude-watchdog.sh` (kill handler runs `opportunistic-search.sh --event watchdog-kill`) |
+| `fix-cycle` | When a verify FAIL → reopen → fix cycle activates | Not yet implemented — emitter is a follow-up (#650 child Issue) |
 
 **Unknown event fallback**: if an unknown `event=` value is encountered, emit a warning to stderr:
 ```

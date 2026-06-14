@@ -18,7 +18,7 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # スキル定義（必須）
 │       └── *.md         # 補助的な phase/ガイドラインファイル（任意）
-├── modules/             # スキルから参照される共有モジュール（35 ファイル）
+├── modules/             # スキルから参照される共有モジュール（36 ファイル）
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
@@ -98,6 +98,7 @@ wholework/
 主要モジュール:
 - `modules/verify-patterns.md` — verify command パターン精度ガイドライン
 - `modules/verify-classifier.md` — マージ後条件の検証可能性分類
+- `modules/observation-trigger.md` — observation AC trigger 機構の設計（呼び出し元インターフェース・emitter 一覧・dispatch 契約）
 - `modules/verify-executor.md` — verify command の変換と実行
 - `modules/worktree-lifecycle.md` — 全スキル共有の worktree Entry/Exit ライフサイクル
 - `modules/test-runner.md` — 品質チェック実行と結果分析

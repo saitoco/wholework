@@ -25,7 +25,7 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill definition (required)
 │       └── *.md         # Auxiliary phase/guideline files (optional)
-├── modules/             # Shared modules referenced by skills (35 files)
+├── modules/             # Shared modules referenced by skills (36 files)
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
@@ -105,6 +105,7 @@ Each skill lives in `skills/<skill-name>/SKILL.md`. Many skills include auxiliar
 Key modules:
 - `modules/verify-patterns.md` — verify command pattern accuracy guidelines
 - `modules/verify-classifier.md` — post-merge condition verifiability classification
+- `modules/observation-trigger.md` — observation AC trigger mechanism design (caller interface, emitter lookup, and dispatch contract)
 - `modules/verify-executor.md` — verify command translation and execution
 - `modules/worktree-lifecycle.md` — shared worktree Entry/Exit lifecycle for all skills
 - `modules/test-runner.md` — quality check execution and result analysis
