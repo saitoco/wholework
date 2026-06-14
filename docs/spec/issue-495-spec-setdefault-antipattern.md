@@ -70,3 +70,30 @@ Background: In a priority-ordered dict construction Issue, Spec instructions sai
 - Both pre-merge ACs verified PASS locally (rubric + section_contains)
 - No test failures; bats 793 PASS, validate-skill-syntax PASS, forbidden-expressions PASS
 - Change is minimal (9 lines inserted into SKILL.md); verify phase should be straightforward
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC1 (rubric) と AC2 (section_contains "Step 10" "setdefault") の組み合わせが効果的。section_contains はセクション位置検証も担保するため、誤った場所への追加を防止。
+
+#### design
+- 既存 read-then-write guard との並び配置で論理的に整合。`dict.update` を別 AC ではなく setdefault 説明内で言及する判断も妥当。
+- Anti-pattern + Recommended 二項対比が指示パターンとして明瞭。
+
+#### code
+- rework なし。bats 793/793 PASS、validate-skill-syntax PASS、forbidden-expressions PASS。Post-spec Size demotion S→XS が機能し patch route で簡潔に処理。
+
+#### review
+- patch route のため非実行 (N/A)。
+
+#### merge
+- patch route のため非実行。worktree-merge-push.sh で main 直マージ成功 (commit 1bca529)。
+
+#### verify
+- Pre-merge 2件とも PASS。Post-merge opportunistic は `phase/verify` 維持で他 skill 実行時に検証。
+
+### Improvement Proposals
+- N/A
+
