@@ -357,6 +357,16 @@ For acceptance conditions where exact string matching is unreliable (semantic eq
 
 In particular, when the rubric's grader description contains a numeric literal, constant name, or threshold value (e.g., `BREAKEVEN_THRESHOLD_PCT = 10.0`), add a `file_contains` hint for the corresponding constant alongside the `rubric` to enable deterministic verification of the value (see `modules/verify-patterns.md` §9).
 
+**Data output value accuracy check:**
+
+When Spec descriptions include data output values — column names, enum values, code values (コード値) — verify the exact value against the actual implementation code before writing:
+
+1. Run `grep -rn '<value>' <impl-file>` to confirm the exact string the implementation outputs
+2. When Japanese labels and English code values coexist, write both explicitly — e.g., `{rs_new_high (新高値) / rs_leading (Leader)}`
+3. For `rubric` ACs that reference output values, cite the actual code value (not the display label) to prevent grader misinterpretation
+
+**Background**: if a Spec writes a Japanese label where the implementation outputs an English code value, a `rubric` grader may fail to infer the correct mapping and produce inconsistent PASS/FAIL results.
+
 **String-matching verify command existence check:**
 
 For string-matching verify commands (`grep`, `file_contains`, `file_not_contains`, `section_contains`), confirm the search pattern actually appears (or will appear) in the implementation target file before finalizing the Spec:
