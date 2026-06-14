@@ -576,8 +576,20 @@ Fix all MUST issues. Claude decides whether to fix SHOULD/CONSIDER issues.
 1. **Task management with TaskCreate/TaskUpdate**: create a task per issue to fix
 2. **Edit files using Edit tool**
 3. **Stage with git add**
-4. **Commit with `git commit -s -m "Address review feedback: {fix summary}"`**
-5. **Push with git push**
+4. **Record origin as PR inline comment**: If the review finding that prompted this fix was not already posted as a PR inline comment by `gh-pr-review.sh` in Step 11 (e.g., an AI-judgment fix, verbal direction, or a finding not captured in Step 11 output), post the original finding now and record the URL:
+   ```bash
+   PR_COMMENT_URL=$(gh pr comment "$NUMBER" --body "Review: {summary of the original finding}" --json url -q .url)
+   ```
+   If Step 11 already posted this finding as an inline comment via `gh-pr-review.sh`, retrieve that comment's URL and use it as `PR_COMMENT_URL` (skip re-posting to avoid duplicates).
+5. **Commit with `Refs:` link**:
+   ```bash
+   git commit -s -m "Address review feedback: {fix summary}
+
+Refs: $PR_COMMENT_URL
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+   ```
+6. **Push with git push**
 
 ### 12.3. Lightweight Re-check
 
@@ -843,3 +855,4 @@ For Python script changes, additionally verify:
 - Always wrap variables (`$NUMBER`, `$ISSUE_NUMBER`, etc.) in double quotes
 - Always use the Write tool for temp files. Shell redirects trigger confirmation prompts
 - MUST issues must always be fixed in Step 12. After fixing, proceed with `/merge` (do not re-run `/review`)
+- All review-based fixes — MUST/SHOULD/CONSIDER, AI-judgment, manual, or human-directed — must record the original review finding as a PR inline comment before committing. The fix commit must include `Refs: <PR inline comment URL>` in its message to ensure traceability from Code Retrospective. This rule applies both to fixes made inside Step 12 and to any additional fix commits added after `/review` completes.
