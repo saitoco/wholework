@@ -85,3 +85,30 @@
 - All 3 grep verify commands PASS: "Tier 1", "再発性", "Tier 3" all present in `modules/retro-proposals.md`
 - No doc sync changes needed; `modules/` is not a translation sync target
 - 819 bats tests PASS with no failures
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 3 つの AC は rubric (意味検証) + grep (機械検証) のペア構成。Tier 1/再発性/Tier 3 という 3 つのキーワードで分類ロジックの存在を網羅的に確認している。Tier 2 が独立 AC でないのは Tier 1/3 で挟む配置で間接的に証明される設計。
+
+#### design
+- step 5 後・step 6 前への Tier 分類挿入で既存ロジックを破壊しない設計。Tier 1 のみが既存 HAS_SKILL_PROPOSALS gate に進む構成で後方互換確保。
+- Conservative default (難判定時は Tier 1) で false negative リスク低減。Size M → S demotion 成功。
+
+#### code
+- 1 回のEditで実装完了、bats 819 件 PASS。Step 7 早期 gate の "step 8" → "step 9" 参照修正も同時実施で整合性保全。
+
+#### review
+- patch route のため非実行 (N/A)。
+
+#### merge
+- patch route のため非実行。worktree-merge-push.sh で main 直マージ成功。
+
+#### verify
+- Pre-merge 全 3 件 PASS。Post-merge manual は 2 件とも `phase/verify` 維持で実際の `/verify` 実行と downstream 観察待ち。
+
+### Improvement Proposals
+- N/A (本 Issue 自体が Improvement Proposal メタフレームワークの改善のため、メタな再帰提案は割愛)
+
