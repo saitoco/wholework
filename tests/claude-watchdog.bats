@@ -97,6 +97,71 @@ MOCK
     [[ "$output" == *"watchdog: still waiting"* ]]
 }
 
+@test "OUTPUT_FORMAT_JSON=1: process that exits normally completes without false kill" {
+    cat > "$MOCK_DIR/cmd.sh" <<'MOCK'
+#!/bin/bash
+sleep 1
+echo '{"result":"done"}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/cmd.sh"
+
+    run env OUTPUT_FORMAT_JSON=1 WATCHDOG_TIMEOUT=10 bash "$SCRIPT" bash "$MOCK_DIR/cmd.sh"
+    [ "$status" -eq 0 ]
+}
+
+@test "OUTPUT_FORMAT_JSON=1: process that hangs past WATCHDOG_TIMEOUT is killed" {
+    cat > "$MOCK_DIR/cmd.sh" <<'MOCK'
+#!/bin/bash
+sleep 60
+MOCK
+    chmod +x "$MOCK_DIR/cmd.sh"
+
+    run env OUTPUT_FORMAT_JSON=1 WATCHDOG_TIMEOUT=2 bash "$SCRIPT" bash "$MOCK_DIR/cmd.sh"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"killing process"* ]]
+}
+
+@test "watchdog_kill: event emitted to AUTO_EVENTS_LOG on kill" {
+    EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    emit_event_sh="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/emit-event.sh"
+
+    cat > "$MOCK_DIR/cmd.sh" <<'MOCK'
+#!/bin/bash
+sleep 60
+MOCK
+    chmod +x "$MOCK_DIR/cmd.sh"
+
+    run env AUTO_EVENTS_LOG="$EVENTS_LOG" \
+      EMIT_ISSUE_NUMBER="42" \
+      EMIT_PHASE_NAME="code" \
+      WATCHDOG_TIMEOUT=2 \
+      bash "$SCRIPT" bash "$MOCK_DIR/cmd.sh"
+    [ "$status" -ne 0 ]
+    [ -f "$EVENTS_LOG" ]
+    grep -q '"event":"watchdog_kill"' "$EVENTS_LOG"
+}
+
+@test "max_silent_window: event emitted to AUTO_EVENTS_LOG after process completes" {
+    EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+
+    cat > "$MOCK_DIR/cmd.sh" <<'MOCK'
+#!/bin/bash
+echo "hello"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/cmd.sh"
+
+    run env AUTO_EVENTS_LOG="$EVENTS_LOG" \
+      EMIT_ISSUE_NUMBER="42" \
+      EMIT_PHASE_NAME="code" \
+      WATCHDOG_TIMEOUT=10 \
+      bash "$SCRIPT" bash "$MOCK_DIR/cmd.sh"
+    [ "$status" -eq 0 ]
+    [ -f "$EVENTS_LOG" ]
+    grep -q '"event":"max_silent_window"' "$EVENTS_LOG"
+}
+
 @test "no retry: watchdog kills and does not retry" {
     COUNTER_FILE="$BATS_TEST_TMPDIR/invocation_count"
     echo "0" > "$COUNTER_FILE"

@@ -39,35 +39,10 @@ fi
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 LOG_PREFIX="[#${SUB_NUMBER}]"
 AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
+export AUTO_EVENTS_LOG
+export EMIT_ISSUE_NUMBER="$SUB_NUMBER"
 
-emit_event() {
-  local event_type="$1"; shift
-  local ts; ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  local json="{\"ts\":\"${ts}\",\"issue\":${SUB_NUMBER},\"event\":\"${event_type}\""
-  while [[ $# -gt 0 ]]; do
-    local kv="$1"; local k="${kv%%=*}"; local v="${kv#*=}"
-    json="${json},\"${k}\":\"${v}\""
-    shift
-  done
-  json="${json}}"
-  mkdir -p "$(dirname "${AUTO_EVENTS_LOG}")"
-  if command -v flock >/dev/null 2>&1; then
-    (flock -x 200; echo "${json}" >> "${AUTO_EVENTS_LOG}") 200>"${AUTO_EVENTS_LOG}.lock"
-  else
-    local lock_dir="${AUTO_EVENTS_LOG}.lockdir"
-    local tries=0
-    while ! mkdir "${lock_dir}" 2>/dev/null; do
-      tries=$((tries + 1))
-      if (( tries > 50 )); then
-        echo "${json}" >> "${AUTO_EVENTS_LOG}"
-        return 0
-      fi
-      sleep 0.1
-    done
-    echo "${json}" >> "${AUTO_EVENTS_LOG}"
-    rmdir "${lock_dir}" 2>/dev/null || true
-  fi
-}
+source "$SCRIPT_DIR/emit-event.sh"
 
 run_phase_with_recovery() {
   local phase issue runner_script exit_code log_file
@@ -76,6 +51,11 @@ run_phase_with_recovery() {
   mkdir -p .tmp
   log_file=".tmp/wrapper-out-${issue}-${phase}.log"
 
+  export EMIT_ISSUE_NUMBER="$issue"
+  export EMIT_PHASE_NAME="$phase"
+
+  local PHASE_START
+  PHASE_START=$(date +%s)
   emit_event "phase_start" "phase=${phase}"
 
   set +e
@@ -84,6 +64,56 @@ run_phase_with_recovery() {
   set -e
 
   emit_event "wrapper_exit" "phase=${phase}" "exit_code=${exit_code}"
+
+  # token_usage: parse from TOKEN_USAGE_FILE if it exists
+  local _token_usage_file=".tmp/token-usage-${issue}.json"
+  if [[ -f "$_token_usage_file" ]]; then
+    local _model _input _output _cache_read
+    _model=$(jq -r '.model // empty' "$_token_usage_file" 2>/dev/null || true)
+    _input=$(jq -r '.usage.input_tokens // empty' "$_token_usage_file" 2>/dev/null || true)
+    _output=$(jq -r '.usage.output_tokens // empty' "$_token_usage_file" 2>/dev/null || true)
+    _cache_read=$(jq -r '.usage.cache_read_input_tokens // empty' "$_token_usage_file" 2>/dev/null || true)
+    if [[ -n "$_input" ]]; then
+      emit_event "token_usage" "phase=${phase}" \
+        "model=${_model:-unknown}" \
+        "input_tokens=${_input}" \
+        "output_tokens=${_output:-0}" \
+        "cache_read_tokens=${_cache_read:-0}"
+    fi
+  fi
+
+  # concurrent_commit_detected: check for commits on origin/main since phase start
+  local _commits
+  _commits=$(git log origin/main --since="@${PHASE_START}" --format="%H %an" 2>/dev/null || true)
+  if [[ -n "$_commits" ]]; then
+    local _phase_end; _phase_end=$(date +%s)
+    local _since_sec=$(( _phase_end - PHASE_START ))
+    while IFS= read -r _commit_line; do
+      [[ -z "$_commit_line" ]] && continue
+      local _sha="${_commit_line%% *}"
+      local _author="${_commit_line#* }"
+      emit_event "concurrent_commit_detected" "phase=${phase}" \
+        "commit_sha=${_sha}" \
+        "author=${_author}" \
+        "since_phase_start_sec=${_since_sec}"
+    done <<< "$_commits"
+  fi
+
+  # test_result: parse bats output from log_file (code phase only)
+  if [[ "$phase" == "code" ]] && [[ -f "$log_file" ]]; then
+    local _bats_line
+    _bats_line=$(grep -E "[0-9]+ tests?, [0-9]+ failures?" "$log_file" 2>/dev/null | tail -1 || true)
+    if [[ -n "$_bats_line" ]]; then
+      local _passed _failed
+      _passed=$(echo "$_bats_line" | grep -oE "^[0-9]+" || echo 0)
+      _failed=$(echo "$_bats_line" | grep -oE "[0-9]+ failures?" | grep -oE "^[0-9]+" || echo 0)
+      emit_event "test_result" "phase=${phase}" \
+        "framework=bats" \
+        "passed=${_passed}" \
+        "failed=${_failed}" \
+        "pattern=unit"
+    fi
+  fi
 
   if [[ $exit_code -eq 0 ]]; then
     local anomaly_out

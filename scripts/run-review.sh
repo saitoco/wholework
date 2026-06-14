@@ -75,13 +75,29 @@ load_watchdog_timeout "$SCRIPT_DIR" "review"
 
 SECONDS=0
 set +e
-ANTHROPIC_MODEL=sonnet \
-  WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
-  env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
-    --model sonnet \
-    --effort high \
-    $PERMISSION_FLAG
-EXIT_CODE=$?
+if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+  TOKEN_USAGE_FILE=".tmp/token-usage-${PR_NUMBER}.json"
+  mkdir -p .tmp
+  ANTHROPIC_MODEL=sonnet \
+    WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
+    OUTPUT_FORMAT_JSON=1 \
+    env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
+      --model sonnet \
+      --effort high \
+      --output-format json \
+      $PERMISSION_FLAG \
+      > "$TOKEN_USAGE_FILE" 2>&1
+  EXIT_CODE=$?
+  jq -r '.result // empty' "$TOKEN_USAGE_FILE" 2>/dev/null || true
+else
+  ANTHROPIC_MODEL=sonnet \
+    WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
+    env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
+      --model sonnet \
+      --effort high \
+      $PERMISSION_FLAG
+  EXIT_CODE=$?
+fi
 set -e
 "$SCRIPT_DIR/handle-permission-mode-failure.sh" "$EXIT_CODE" "$SECONDS" "$PERMISSION_MODE"
 
