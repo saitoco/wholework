@@ -45,10 +45,12 @@
    - `_run_with_watchdog()` の先頭で `_max_unchanged_time=0` を初期化する
    - 既存の `unchanged_time` 更新コード（`unchanged_time=$((unchanged_time + _CHECK_INTERVAL))`）の直後に `(( unchanged_time > _max_unchanged_time )) && _max_unchanged_time=$unchanged_time` を追加する
    - `OUTPUT_FORMAT_JSON` が `1` の場合はファイルサイズ検査をスキップし、プロセス死活（`kill -0 "$cmd_pid"`）のみで待機するブランチを追加する（`unchanged_time` は経過秒としてカウントし続ける）
+   - **kill 条件の明示**: 新ブランチでも `unchanged_time >= WATCHDOG_TIMEOUT` を検出したら従来同様に `kill` する。違いは「ファイルサイズが増えなくても kill しない」だけで、total timeout による kill は維持する。これがないと OUTPUT_FORMAT_JSON モードで watchdog が永遠にハングする（2026-06-14 #630 復旧時の知見）。
    - 既存の `kill "$cmd_pid"` の直前（`_watchdog_killed=true` より前）に `_auto_emit_watchdog_kill()` を呼ぶ: `AUTO_EVENTS_LOG` が設定済みかつ `emit_event` 関数が利用可能な場合に `emit_event "watchdog_kill" "phase=${EMIT_PHASE_NAME:-unknown}" "pid=${cmd_pid}" "silent_window_sec=${unchanged_time}" "timeout_setting=${WATCHDOG_TIMEOUT}"` を実行する
    - `wait "$cmd_pid" 2>/dev/null` の直後に `_auto_emit_max_silent()` を呼ぶ: 同条件で `emit_event "max_silent_window" "phase=${EMIT_PHASE_NAME:-unknown}" "max_sec=${_max_unchanged_time}"` を実行する
    - `emit_event` を watchdog 内で利用するため、スクリプト先頭（`set -uo pipefail` 直後）に `[[ -n "${AUTO_EVENTS_LOG:-}" ]] && [[ -f "$(dirname "$0")/emit-event.sh" ]] && source "$(dirname "$0")/emit-event.sh" || true` を追加する
    - `tests/claude-watchdog.bats` に `OUTPUT_FORMAT_JSON=1` での正常終了テストと `AUTO_EVENTS_LOG` 設定時の `watchdog_kill` event ファイル記録テストを追加する
+   - **テスト hang 防止**: bats テストでは `WATCHDOG_TIMEOUT` を小さい値（例: 2-5 秒）に上書きしてから fixture プロセス（`sleep 1` 等）を実行する。本番の `1800s` で待つテストは禁止（2026-06-14 #630 で 1800s 真ハングを観測）。kill コードパスのテストは `WATCHDOG_TIMEOUT=2 ... claude-watchdog.sh sleep 10` 形式で 2 秒で kill されることを assert する。
 
 3. **`scripts/wait-ci-checks.sh` 修正**（→ AC: `ci_wait` event emission）
    - スクリプト先頭（PR_NUMBER 取得直後）に `_ci_wait_start=$(date +%s)` を追加する
