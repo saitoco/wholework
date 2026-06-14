@@ -316,6 +316,8 @@ Note: `retro/verify` label may not yet exist in the repository. When the label i
 
 #### Outcome Exclusion Filter
 
+Section 5 (Outcome) の全サブ項目集計から `retro/verify` ラベル付き Issue を除外するためのフィルター定義。
+
 Compute the following from `filtered_issues`:
 
 - `retro_verify_count`: number of Issues in `filtered_issues` that have the `retro/verify` label
