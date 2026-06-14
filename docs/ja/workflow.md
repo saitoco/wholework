@@ -121,6 +121,15 @@ git push origin release/v2.0
 
 `--base` が main 以外のブランチを指定する場合、`closes #N` は Issue を自動クローズしません（GitHub のデフォルトブランチマージ時のみ機能）。`release/v2.0` を main に最終マージする際に手動で Issue を close するか、`gh issue close` を手動で実行してください。
 
+**SKILL.md セルフ適用リスク**: `/auto` はセッション開始時に `skills/auto/SKILL.md`（およびその他の Skills/Modules）をロードし、そのスナップショットをセッション全体を通じて保持します。処理対象の PR が `skills/` や `modules/` 配下のファイルを追加・変更している場合、それらはセッション中にマージされますが、**マージ後に実行されるフェーズは依然としてマージ前のスナップショットを使用します**。これは Issue #485 / PR #498 で観測されました: セッションはマージ前に旧 `skills/auto/SKILL.md`（`run-verify.sh` を呼び出すバージョン）をロードし、`run-verify.sh` が削除された後のマージ後に verify フェーズが存在しないスクリプトを呼び出そうとしました。
+
+**推奨対処**: `skills/*.md` や `modules/*.md` を変更する PR を 1 つのセッションで `/auto` でセルフ適用することは避けてください。安全な代替手段として以下の 2 つがあります:
+
+1. **verify 前に停止**: `/auto` を `/merge` まで実行した後、**新しいセッション**を開始して `/verify`（または `/auto --resume N`）を実行することで、マージ後の verify フェーズが新しくマージされた SKILL.md を読み込みます。
+2. **手動ワークフロー**: 標準の手動フロー（`/code` → `/review` → `/merge`）で PR を処理し、マージ完了後に新しいセッションで `/verify` を実行します。
+
+すでに `/auto` が実行中で PR に SKILL.md や Module の変更が含まれていることに気付いた場合は、`/merge` まで実行して中断し、新しいセッションで `/verify` を手動で再実行してください。
+
 ## Supporting Skills
 
 メインの Issue → verify フロー外で動作するスキル群。個別 Issue 実行を駆動する代わりに、メタデータや基盤ドキュメント、コードベースの健全性を維持します。
