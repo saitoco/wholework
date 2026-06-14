@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (54 files)
+├── scripts/             # Utility scripts used by skills and agents (55 files)
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -41,7 +41,7 @@ wholework/
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
 ├── examples/            # Example files for Wholework features
 │   └── decomposition/   # Decomposition YAML samples for /issue --from-decomposition-file
-├── tests/               # Bats test files for scripts (71 files)
+├── tests/               # Bats test files for scripts (74 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -169,6 +169,7 @@ Key modules:
 - `scripts/gh-pr-review.sh` — post PR reviews
 
 **Project utilities:**
+- `scripts/auto-events-rollup.sh` — roll up `.tmp/auto-events.jsonl` into a curated daily report under `docs/reports/auto-events-rollup-YYYY-MM-DD.md`; accepts `--date`, `--input`, `--output-dir`, `--cleanup`
 - `scripts/collect-recovery-candidates.sh` — parse `docs/reports/orchestration-recoveries.md`; count symptom-short frequency; exclude filed entries; apply `--threshold K` filter; output `<symptom-short>\t<count>` candidates; accepts `--issues-json PATH` for duplicate detection
 - `scripts/get-config-value.sh` — extract a configuration value from `.wholework.yml`
 - `scripts/handle-permission-mode-failure.sh` — diagnose `permission-mode: auto` failures and print remediation hint to stderr (heuristic: exit!=0 AND elapsed<=30s)

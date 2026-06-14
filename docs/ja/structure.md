@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（54 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（55 ファイル）
 │   └── <script-name>.{sh,py}
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -34,7 +34,7 @@ wholework/
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用 decomposition YAML サンプル
-├── tests/               # スクリプトの Bats テストファイル（71 ファイル）
+├── tests/               # スクリプトの Bats テストファイル（74 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents
@@ -162,6 +162,7 @@ wholework/
 - `scripts/gh-pr-review.sh` — PR レビュー投稿
 
 **プロジェクトユーティリティ:**
+- `scripts/auto-events-rollup.sh` — `.tmp/auto-events.jsonl` を日付単位で集約し `docs/reports/auto-events-rollup-YYYY-MM-DD.md` として出力。`--date`、`--input`、`--output-dir`、`--cleanup` に対応
 - `scripts/collect-recovery-candidates.sh` — `docs/reports/orchestration-recoveries.md` を parse し symptom-short の頻度を集計。起票済みエントリを除外し `--threshold K` フィルタを適用。`<symptom-short>\t<count>` 形式で候補を出力。`--issues-json PATH` で重複チェック用 open issues JSON を受け取り
 - `scripts/get-config-value.sh` — `.wholework.yml` から設定値を抽出
 - `scripts/handle-permission-mode-failure.sh` — `permission-mode: auto` 失敗を診断し remediation hint を stderr に出力（heuristic: exit!=0 かつ elapsed<=30s）
