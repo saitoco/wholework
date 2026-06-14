@@ -118,6 +118,38 @@
 - **Issue body との不一致**: Issue body の verify command 第 1 項は `grep "token_usage|watchdog_kill|..."` と `|` を用いた OR パターンが指定されているが、`verify-executor` はパスを単一引数として解釈するため、`"scripts/"` ディレクトリ指定に変更し、event ごとに個別 verify command に分割した（Auto-Resolved Ambiguity Point 1 の実装反映）。Spec の verify command を Issue body の `<!-- verify: ... -->` と同期更新済み（Step 10 verify-type tag check の結果）。
 - `docs/structure.md` の scripts ファイル数は `grep -c "^- " docs/structure.md` ではなく実ファイル数（54）を使用する。verify command: `grep "(54 files)" "docs/structure.md"`。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- `wait-ci-checks.sh` の `date` 計測を `AUTO_EVENTS_LOG` 設定時のみに限定: Spec では常時計測の設計だったが、既存テスト 8・9 が `env PATH="$MOCK_DIR"` のみの環境で `date` を呼べず regression したため、`_emit_ci_wait=true` ガードを追加した。`AUTO_EVENTS_LOG` 未設定時は既存コードパスを完全に維持する設計に変更。
+- `emit_event()` の issue 番号参照方法: Spec では `SUB_NUMBER` を直接参照としていたが、共有ヘルパー化にあたり `EMIT_ISSUE_NUMBER` env var 経由に統一した。`run-auto-sub.sh` で `export EMIT_ISSUE_NUMBER="$SUB_NUMBER"` を先頭で設定し、`emit-event.sh` は `${EMIT_ISSUE_NUMBER:-0}` を参照する。
+
+### Design Gaps/Ambiguities
+
+- `OUTPUT_FORMAT_JSON=1` モードでの `max_silent_window` の意味: JSON モードではファイルサイズが最後まで変化しないため `unchanged_time` が `wait "$cmd_pid"` まで累積し続ける。経過秒総量となるが、retrospective では「最大無出力ウィンドウ ≒ 実行時間」として解釈するのが正しい。Spec では触れていなかった。
+- `test_result` の `passed` 抽出: `grep -oE "^[0-9]+"` は bats 出力の `"N tests, N failures"` 形式の先頭数字を抽出する。`"1 test, 0 failures"` の場合（単数形）もパターン `[0-9]+ tests?` でマッチする。
+
+### Rework
+
+- `tests/emit-event.bats` テスト 6（lockdir fallback）で `export PATH="$MOCK_DIR"` のみ設定したことで `bash`, `rm` コマンドが見つからず失敗。`PATH` から `MOCK_DIR` を除いた上で別ディレクトリを先頭に置く形に修正した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `emit_event()` を `scripts/emit-event.sh` に抽出して共有化。`run-auto-sub.sh`, `claude-watchdog.sh`, `wait-ci-checks.sh` が共通して source する設計を採用。
+- `OUTPUT_FORMAT_JSON=1` 環境変数を watchdog のプロセス死活モード切り替えシグナルとして使用。`--output-format json` との組み合わせで誤 kill を防ぐ。
+- `wait-ci-checks.sh` の ci_wait emission は `AUTO_EVENTS_LOG` 設定時のみ有効化（既存テストへの regression を避けるため）。
+
+### Deferred Items
+- `run-spec.sh` の token_usage は Spec 設計のスコープ外（直接呼び出し）のため未対応。後続の retrospective レポート生成で spec phase コストが取れない点は既知の制限。
+- `concurrent_commit_detected` の `git log origin/main` が patch route で main に直接コミットする際に自分のコミットも検出してしまう可能性。現状は "since phase start" なのでリスクは限定的。
+
+### Notes for Next Phase
+- bats テスト `tests/claude-watchdog.bats` の `watchdog_kill` / `max_silent_window` テストは `AUTO_EVENTS_LOG` を設定して実際のファイルに書き込み確認する設計。CI で `flock` が利用可能かを確認すること。
+- `emit-event.sh` が source される前提で `AUTO_EVENTS_LOG` が未設定の場合は `command -v emit_event` が false になるため、watchdog と wait-ci-checks は emit_event を呼ばない。この guard が正しく機能することを verify phase で確認する。
+
 ## Alternatives Considered
 
 (ISSUE_TYPE=Feature, SPEC_DEPTH=light のため省略)
