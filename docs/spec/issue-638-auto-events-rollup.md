@@ -29,7 +29,7 @@
 
 - <!-- verify: file_exists "scripts/auto-events-rollup.sh" --> `scripts/auto-events-rollup.sh` が新規作成されている
 - <!-- verify: command "bash -n scripts/auto-events-rollup.sh" --> 構文エラーなし
-- <!-- verify: grep -- "--date\|--input\|--output-dir\|--cleanup" "scripts/auto-events-rollup.sh" --> 4 オプション (`--date` / `--input` / `--output-dir` / `--cleanup`) すべて実装されている
+- <!-- verify: grep -- "--date|--input|--output-dir|--cleanup" "scripts/auto-events-rollup.sh" --> 4 オプション (`--date` / `--input` / `--output-dir` / `--cleanup`) すべて実装されている
 - <!-- verify: grep "auto-events-rollup" "tests/auto-events-rollup.bats" --> bats テストファイル `tests/auto-events-rollup.bats` が新規作成されている
 - <!-- verify: command "bats tests/auto-events-rollup.bats" --> bats テストが green（最小 4 ケース: empty input / single session rollup / multi-session aggregation / cleanup rotation）
 - <!-- verify: rubric "scripts/auto-events-rollup.sh produces a markdown report under docs/reports/auto-events-rollup-YYYY-MM-DD.md with frontmatter (type/description/generated_by/generated_at), Sessions table, Phase Distribution table, Recovery Tier Invocations table, and Anomalies section, parsing the JSONL input with jq" --> 出力フォーマット 4 セクション（Sessions / Phase Distribution / Recovery Tier / Anomalies）と frontmatter 4 フィールドが仕様通り
@@ -48,3 +48,50 @@
 - `date -u +%Y-%m-%d` は macOS (BSD date) / Linux 共通で動作する
 - Size 計算のためのフィールド (`size`) は現在の event schema に存在しない。Sessions 表の Size 列はイベントに含まれる場合のみ表示し、ない場合は `-` とする
 - `phase_complete` event が存在しない phase の Duration は `-` とする (watchdog kill 等の異常終了)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- bats テスト数が 4 ではなく 5 ケース: empty input の frontmatter テストを独立させた（AC5 の「最小 4 ケース」は満たしつつ frontmatter 検証を独立させる方が可読性が高い）
+- `write_sessions_section` / `write_phase_dist_section` などのヘルパー関数で section データと header を一緒に出力するパターンを採用。Spec は「sections separate write」を明示していなかったが実装上まとめる方が DRY
+
+### Design Gaps/Ambiguities
+
+- verify command #3 の `\|` は ripgrep 文脈では literal backslash-pipe であり alternation ではない（GNU grep BRE の `\|` 挙動と混同されていた）。実装前に検証し `|`（bare pipe）に修正してから進めた
+- `anomaly` event は現在 `run-auto-sub.sh` に emit_event 呼び出しがなく（出力のみ）、Anomalies セクションは常に `- (none)` になる。将来 emit_event("anomaly", ...) が追加されれば自動的に機能する設計で対応済み
+
+### Rework
+
+- N/A（設計通り初回で完成）
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- REVIEW_DEPTH=light（Size=M + --light フラグ）: 1エージェント統合レビューを適用
+- SHOULD issue（cleanup `|| true` の exit code 区別）を修正: exit code 1（no-match）と 2（error）を明示的に区別、エラー時は元ファイルを保護
+- CONSIDER issue（`--date` フォーマット検証なし）はスキップ: ローカルCLIのため現実的リスク低
+
+### Deferred Items
+- `anomaly` event emit は依然として `run-auto-sub.sh` 未実装のまま。Anomalies セクションは常に `- (none)` だが設計上許容
+- `--date` フォーマット検証なし: CONSIDER でスキップ、必要に応じて後続改善可
+
+### Notes for Next Phase
+- cleanup fix のコミット (`37c90ae`) が push 済み: /merge 時は最新 HEAD を対象にすること
+- 全 AC が PASS、全 CI が SUCCESS: マージ前提条件クリア
+- `anomaly` セクション常時 `- (none)` は設計上の制限（emit_event 未実装）: /merge では考慮不要
+
+## review retrospective
+
+### Spec vs. implementation 乖離パターン
+
+特になし。Spec との整合性は高く、codeフェーズで `\|`→`|` 修正も含めて予期された変更が正確に実装されていた。
+
+### 繰り返し Issue
+
+特になし。SHOULD 1件（cleanup の `|| true` によるエラー飲み込み）は grep の exit code 区別という一般的パターンの見落とし。bash スクリプトで `|| true` を使う際は exit code の意味（1=no-match vs 2=error）を明示的に区別する習慣が有用。
+
+### 受け入れ条件検証の困難さ
+
+全条件 PASS。verify command は適切で UNCERTAIN はなし。rubric 条件は diff から直接判断可能で品質良好。`command` 系 verify は CI 参照フォールバックが機能し、safe mode での検証が円滑だった。bats テスト件数（AC では「最小4ケース」、実装は5ケース）の乖離は code retrospective で説明済み。
