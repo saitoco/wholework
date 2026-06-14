@@ -55,19 +55,30 @@
 ### Rework
 - N/A
 
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+- Spec で指定した `install.sh` への追記位置（"Done..." の直後）は実装上も同位置だったが、`git config` ブロックを "Done" メッセージの後に置くと UX 上の問題（"Done" 表示後に設定が完了する）が生じることを review で発見。Spec 段階でスクリプト末尾の出力順序を明示しておくと code フェーズで順序ミスを防げた。
+
+### 繰り返し指摘パターン
+- 新規スクリプト追加時のテストケース完全性: bats 第3テストが exit code と output を両方アサートすべきところ output のみだった。テストケースを追加する際には「正常系: exit 0」「異常系: exit 1」「エラーメッセージ: output 内容」の3軸を全て assert するチェックリストを Spec に含めると改善できる。
+
+### AC 検証難易度（UNCERTAIN 件数）
+- 今回は全 Pre-merge AC が `file_exists` / `file_contains` / `github_check` で自動判定可能で UNCERTAIN なし。`github_check` の CI ジョブ名 "Run bats tests" が事前確定済みだったことが効いた。ジョブ名を Spec 段階で明記する方針は今後も継続すること。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `core.hooksPath` を `install.sh` に組み込む方針を採用（EnterWorktree hook ではなく）。理由: `.git/config` に記録されるため worktree 作成時に自動継承、clone 後 1 回の `./install.sh` で完結
-- `commit-msg` フックは bash 3.2+ 互換で `set -e` + `if ! grep -q` パターンを使用
-- `CONTRIBUTING.md` の "### Automatic hook enforcement" は既存 "### CI enforcement" の前に配置（フック設定の説明が先、CI 説明が後の流れが自然）
+- MUST 指摘なし。SHOULD（install.sh メッセージ順序）と CONSIDER（bats exit code アサーション）の 2 件を review フェーズ内で修正・コミット済み
+- `git config core.hooksPath` ブロックを "Done. Restart Claude Code..." より前に移動（UX 改善）
+- bats 第3テストに `[ "$status" -eq 1 ]` を追加してリグレッション耐性を強化
 
 ### Deferred Items
-- `docs/structure.md` の file count (55 files vs 実態 56) の乖離修正は今回のスコープ外
-- `install.sh` の `git config core.hooksPath` は既存ユーザー向けのマイグレーション手順（既 clone ユーザーは `git pull && ./install.sh` を実行する必要がある）の追記は今回スコープ外
+- `docs/structure.md` の file count (55 files vs 実態 56) の乖離修正は引き続きスコープ外
+- Post-merge AC（`git config --get core.hooksPath` が新 worktree でも有効か）は merge 後の手動確認が必要
 
 ### Notes for Next Phase
-- AC1/AC2/AC3 はローカルで PASS 確認済み。AC4 (`github_check "gh pr checks" "Run bats tests"`) は PR #657 の CI 完了後に verify フェーズで確認
-- bats 3 ケース全て PASS（signed PASS / unsigned FAIL / error output チェック）
-- Post-merge AC: `git config --get core.hooksPath` が新 worktree でも有効かを手動確認が必要
+- 全 Pre-merge AC PASS 確認済み（file_exists × 2、file_contains × 1、github_check × 1）
+- CI 全ジョブ SUCCESS（DCO、Run bats tests、Validate skill syntax、Forbidden Expressions check、macOS shell compatibility）
+- MUST 指摘なし → `/merge 657` で merge 可能
