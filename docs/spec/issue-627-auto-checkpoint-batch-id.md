@@ -71,19 +71,34 @@
 
 - N/A
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec定義と実装の整合性は良好。`_batch_file_path`、`list_active_batches`、BATCH_ID生成・伝播すべてSpec通りに実装されていた。
+- `_add_to_active_index` の戻り値チェック漏れを発見・修正。Specには記載のないエラー処理の詳細だったが、resume機能の信頼性に影響するSHOULD指摘として適切だった。
+
+### Recurring issues
+
+- なし（同種の問題の繰り返しは見られない）。
+- エラー処理の非対称パターン（既存ファイル更新分岐は`if ! jq ...`でチェックするが、新規作成分岐はチェックしない）が1件見られたが、CONSIDERレベルで留置。今後のshell scriptレビューでは非対称なエラーチェックパターンに注意する。
+
+### Acceptance criteria verification difficulty
+
+- 7件のpre-merge ACすべてがgrep/file_contains/rubric/commandで自動検証可能だった。UNCERTAINなし。
+- `command`型2件（bats/bash -n）はsafe modeでCI参照フォールバックを使用→SUCCESS確認。verify commandの品質は高い。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- BATCH_ID は `${PPID}-$(date +%s)` 形式を採用（bash 3.2+ 互換、実用的な一意性）
-- arg count 検出による旧 API 後方互換（スクリプトレベル）を採用し、既存 bats テスト（`auto-checkpoint.bats`）を無変更で維持
-- `"default"` BATCH_ID は active index に追加しない設計で単独運用ユーザーへの影響ゼロを保証
+- SHOULD指摘（`_add_to_active_index`戻り値チェック）のみ修正。CONSIDERは留置。MUSTイシューなし→COMMENTイベントでPR Review投稿
+- review-lightエージェントが未登録のため、SKILL.mdのreview-light定義に従いインライン実行
 
 ### Deferred Items
-- `--batch-id <id>` フラグによる Resume mode での明示的 BATCH_ID 指定は未実装（Issue 本文の提案だが Spec 範囲外）
-- Post-merge AC (observation) の確認は /verify フェーズで実施
+- Post-merge AC (observation: concurrent-batch, batch-resume) の確認は /verify フェーズで実施
+- `_add_to_active_index` else分岐のエラーチェック非対称（CONSIDER）は留置
 
 ### Notes for Next Phase
-- `tests/auto-checkpoint-batch.bats` 3 件 + 既存 `tests/auto-checkpoint.bats` 6 件 すべて green であることを verify 時に確認すること
-- pre-merge verify 7 件すべて PASS 済み（Issue body のチェックボックス更新済み）
-- `rubric` タイプの AC5（backward compat）は `/verify` 時に再確認が必要
+- MUSTイシューなし、全CIジョブSUCCESSのため `/merge 634` で進めてOK
+- `/verify` 時にPost-merge observation AC 2件（concurrent-batch / batch-resume）が残っていることを確認すること
