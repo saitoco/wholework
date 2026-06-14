@@ -56,3 +56,34 @@
 - **Resume mode の non-interactive 選択**: `list_active_batches` の出力が複数行の場合、最後の行 (最新) を BATCH_ID として使用する。
 - **verify-executor ripgrep**: `grep "BATCH_ID|batch_id"` は `|` が alternation として機能するため、実装コードに "BATCH_ID" が含まれれば PASS する。
 - **Pre-merge verify 数**: 7 項目 (light limit=5 を超過)。Issue body が 7 項目定義済みのため verbatim コピーとし、削減しない。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `tests/auto-checkpoint.bats`（既存）の更新は Spec の "Changed Files" に未記載だったが、`write_batch` / `update_batch` の API 変更（引数追加）後も既存テストが通るよう arg count 検出で旧 API を吸収した。既存テストの改変は不要だった。
+
+### Design Gaps/Ambiguities
+
+- 後方互換の実現方法について Spec は「BATCH_ID 未指定時は default」と定義するが、スクリプトレベルで 3-arg `write_batch` と 4-arg `write_batch` をどう区別するかが未定義だった。arg count 検出（`$# == 3` → old API、`$# >= 4` → new API）で解決し、既存テストを無変更で通過させた。
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- BATCH_ID は `${PPID}-$(date +%s)` 形式を採用（bash 3.2+ 互換、実用的な一意性）
+- arg count 検出による旧 API 後方互換（スクリプトレベル）を採用し、既存 bats テスト（`auto-checkpoint.bats`）を無変更で維持
+- `"default"` BATCH_ID は active index に追加しない設計で単独運用ユーザーへの影響ゼロを保証
+
+### Deferred Items
+- `--batch-id <id>` フラグによる Resume mode での明示的 BATCH_ID 指定は未実装（Issue 本文の提案だが Spec 範囲外）
+- Post-merge AC (observation) の確認は /verify フェーズで実施
+
+### Notes for Next Phase
+- `tests/auto-checkpoint-batch.bats` 3 件 + 既存 `tests/auto-checkpoint.bats` 6 件 すべて green であることを verify 時に確認すること
+- pre-merge verify 7 件すべて PASS 済み（Issue body のチェックボックス更新済み）
+- `rubric` タイプの AC5（backward compat）は `/verify` 時に再確認が必要
