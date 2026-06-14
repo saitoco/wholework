@@ -41,3 +41,33 @@
 - Auto-resolved: ドキュメント記載先 → `CONTRIBUTING.md`（既存 DCO セクションが存在し自然な格納場所; `docs/setup.md` は不在で新規作成が必要）
 - Auto-resolved: AC2 verify command → `file_contains "CONTRIBUTING.md" "core.hooksPath"`（wholework 仕様準拠、単一ファイル・単一パターン）
 - Auto-resolved: AC4 bats テスト実行検証 → `github_check "gh pr checks" "Run bats tests"`（Size M PR route; `.github/workflows/test.yml` の CI ジョブ名 "Run bats tests" を確認済み）
+
+## Code Retrospective
+
+### Deviations from Design
+- `install.sh` の追記箇所を Spec では `echo "Done..."` の直後と記載していたが、実際には既存の plugin update ブロックの後（最終行 `echo "Done. Restart Claude Code..."` の直後）に追記した。意味的に同一だが、install.sh の末尾構造を確認した上で適切な位置に配置した
+- `docs/structure.md` の file count (55 files) は既に実態 (56) と乖離していたため、カウント修正は今回のスコープ外として据え置き、`git-hooks/` サブディレクトリエントリの追加のみを行った
+
+### Design Gaps/Ambiguities
+- `scripts/git-hooks/commit-msg` の `set -e` と `grep -q` の組み合わせ: `grep -q` が見つからない場合（exit 1）に `set -e` が先に反応するため、明示的な `if ! grep -q ... then exit 1; fi` パターンで実装した。Spec の記述よりも堅牢な実装
+- `install.sh` は `git config` を `git -C "$SCRIPT_DIR"` 形式で呼び出す必要があった（`install.sh` 実行ディレクトリが repo root でない場合の安全策）
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `core.hooksPath` を `install.sh` に組み込む方針を採用（EnterWorktree hook ではなく）。理由: `.git/config` に記録されるため worktree 作成時に自動継承、clone 後 1 回の `./install.sh` で完結
+- `commit-msg` フックは bash 3.2+ 互換で `set -e` + `if ! grep -q` パターンを使用
+- `CONTRIBUTING.md` の "### Automatic hook enforcement" は既存 "### CI enforcement" の前に配置（フック設定の説明が先、CI 説明が後の流れが自然）
+
+### Deferred Items
+- `docs/structure.md` の file count (55 files vs 実態 56) の乖離修正は今回のスコープ外
+- `install.sh` の `git config core.hooksPath` は既存ユーザー向けのマイグレーション手順（既 clone ユーザーは `git pull && ./install.sh` を実行する必要がある）の追記は今回スコープ外
+
+### Notes for Next Phase
+- AC1/AC2/AC3 はローカルで PASS 確認済み。AC4 (`github_check "gh pr checks" "Run bats tests"`) は PR #657 の CI 完了後に verify フェーズで確認
+- bats 3 ケース全て PASS（signed PASS / unsigned FAIL / error output チェック）
+- Post-merge AC: `git config --get core.hooksPath` が新 worktree でも有効かを手動確認が必要
