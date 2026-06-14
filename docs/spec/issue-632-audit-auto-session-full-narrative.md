@@ -126,3 +126,33 @@ R2（`/audit auto-session <id>`）が生成する data 層レポートの narrat
 - PR #651 の CI が green であることを確認してからマージ
 - Post-merge manual AC: 次回 `/auto` 完走後に `/audit auto-session --full <id>` を実行し、narrative draft が実際に挿入されることを確認
 - `tests/audit-auto-session-full.bats` の 3 tests はスクリプト層のみをカバー。SKILL.md の Step 3（LLM 推論部分）は bats 対象外
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+- SKILL.md:1012 の stale コメント（`skeleton-only in this implementation / R3 will add`）が実装済みの `--full` mode と矛盾していた。MUST 修正。Spec の Changed Files 記載に「SKILL.md に `[LLM draft — human review required]` というマーカー文字列を記載する」と書かれているが、**古い注記の削除**については Spec に明示がなかった。実装者が過去の TODO コメントを削除し忘れるパターン — 「置換型変更（旧実装の痕跡残存）」に注意。
+
+### 繰り返しイシュー
+
+- 特記事項なし。MUST 1件、SHOULD 1件のみで繰り返しパターンは検出されず。
+
+### 受け入れ条件検証困難度
+
+- 全 8 項目 PASS。rubric AC が `/review` safe mode で実行されたが、サブエージェントが main ブランチの SKILL.md を読んで FAIL 判定する誤りが発生した（worktree 内の PR ブランチ版を読むべき）。`rubric` コマンドの grader はファイルパスを解決する際に absolute path を指定するか、calling skill が worktree の正しいパスを明示する必要がある。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST: SKILL.md:1012 の stale コメントを削除（実装済み機能と矛盾）
+- SHOULD: Step 3 sub-step 2 として `gh issue view <N>` を追加（Spec 整合）。後続ステップ番号を 4→5, 5→6, 6→7, 7→8 に繰り上げ
+- CONSIDER 2件（get-auto-session-report.sh:373, :405）はスキップ — heredoc 管理で現実的リスク低い
+
+### Deferred Items
+- Post-merge manual AC: 次回 `/auto` 完走後に `/audit auto-session --full` 品質確認
+- Improvement Issue 品質観察: 1-2 セッション後に observation AC で評価
+
+### Notes for Next Phase
+- `worktree-code+issue-632` ブランチに review 修正コミット追加済み。merge 時は PR #651 全体を確認
+- Post-merge AC 2件（manual / observation）は merge フェーズ後の verify サイクルで対応
