@@ -142,17 +142,18 @@ R2（`/audit auto-session <id>`）が生成する data 層レポートの narrat
 - 全 8 項目 PASS。rubric AC が `/review` safe mode で実行されたが、サブエージェントが main ブランチの SKILL.md を読んで FAIL 判定する誤りが発生した（worktree 内の PR ブランチ版を読むべき）。`rubric` コマンドの grader はファイルパスを解決する際に absolute path を指定するか、calling skill が worktree の正しいパスを明示する必要がある。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST: SKILL.md:1012 の stale コメントを削除（実装済み機能と矛盾）
-- SHOULD: Step 3 sub-step 2 として `gh issue view <N>` を追加（Spec 整合）。後続ステップ番号を 4→5, 5→6, 6→7, 7→8 に繰り上げ
-- CONSIDER 2件（get-auto-session-report.sh:373, :405）はスキップ — heredoc 管理で現実的リスク低い
+- PR #651 を squash merge（`--squash --delete-branch`）で main にマージ完了
+- conflict なし（mergeable=true, CI=success, review=approved）、conflict resolution ステップはスキップ
+- Phase Handoff write を main ブランチ上の Spec に直接コミット・プッシュ
 
 ### Deferred Items
-- Post-merge manual AC: 次回 `/auto` 完走後に `/audit auto-session --full` 品質確認
-- Improvement Issue 品質観察: 1-2 セッション後に observation AC で評価
+- Post-merge manual AC: 次回 `/auto` 完走後に `/audit auto-session --full <id>` を実行し narrative draft が挿入されることを確認（verify-type: manual）
+- Improvement Issue 品質観察: 1-2 セッション後に `/audit auto-session --full` 起点の起票品質を評価（verify-type: observation）
 
 ### Notes for Next Phase
-- `worktree-code+issue-632` ブランチに review 修正コミット追加済み。merge 時は PR #651 全体を確認
-- Post-merge AC 2件（manual / observation）は merge フェーズ後の verify サイクルで対応
+- verify フェーズは Post-merge AC 2件（manual / observation）をカバーすること
+- `skills/audit/auto-session-narrative-prompts.md` の few-shot examples（2レポート参照）の品質は実際の `--full` 実行後に評価可能
+- `tests/audit-auto-session-full.bats` 3件はスクリプト層のみカバー。SKILL.md Step 3（LLM 推論部分）は手動 verify が必要
