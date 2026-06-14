@@ -70,3 +70,31 @@
 - 既存の `gh-check-blocking.sh` は CLOSED/OPEN のみを判定し `phase/done` チェックは行わないため、SKILL.md にインラインで記述する。
 - `### List mode` のステップ番号変更: 旧 4 → 5（run-auto-sub.sh）、旧 5 → 6（Verify orchestration）。
 - `docs/ja/workflow.md` は `docs/translation-workflow.md` の sync 規約により更新対象。
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- Spec の警告メッセージ例では `$BLOCKER_PHASE` を「blocker の `phase/*` ラベルまたは OPEN 状態から取得」と示していたが、SKILL.md の実装記述では "first `phase/*` label of blocker, or `"OPEN"` if no `phase/*` label" と明確化した。Spec の記述をそのまま踏襲した。
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Blocked-by チェックを step 3（Size チェック）と step 4（run-auto-sub.sh）の間に挿入し、旧ステップ 4→5、5→6 に繰り下げ。Resume 連携のため `update_batch` を呼ばずに `remaining` 保持とした。
+- 警告メッセージに blocker 番号・フェーズ・resume 方法を全て含む形式を採用（Issue body の Spec 仕様に完全準拠）。
+- 既存の `gh-check-blocking.sh` は `phase/done` チェックを持たないため SKILL.md にインラインで記述。
+
+### Deferred Items
+- 実際の動作検証（post-merge manual AC）は verify フェーズで手動確認が必要。
+- `gh-check-blocking.sh` を `phase/done` 対応に更新する改善は後続 Issue 候補。
+
+### Notes for Next Phase
+- 全 pre-merge AC（section_contains 3件 + validate-skill-syntax 1件）はローカル検証 PASS 済み。CI (test.yml) は push 後に確認が必要。
+- tests/auto-batch.bats に 3件追加（合計 6件、全 PASS 確認済み）。
+- docs/workflow.md と docs/ja/workflow.md 両方更新済み。
