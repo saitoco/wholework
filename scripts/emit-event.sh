@@ -16,7 +16,8 @@ emit_event() {
   local ts; ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   local _log="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
   local _issue="${EMIT_ISSUE_NUMBER:-0}"
-  local json="{\"ts\":\"${ts}\",\"issue\":${_issue},\"event\":\"${event_type}\""
+  local _sid="${AUTO_SESSION_ID:-}"
+  local json="{\"ts\":\"${ts}\",\"issue\":${_issue},\"event\":\"${event_type}\",\"session_id\":\"${_sid}\""
   while [[ $# -gt 0 ]]; do
     local kv="$1"; local k="${kv%%=*}"; local v="${kv#*=}"
     json="${json},\"${k}\":\"${v}\""
