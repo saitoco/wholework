@@ -314,6 +314,17 @@ Classify each Issue based on its labels:
 
 Note: `retro/verify` label may not yet exist in the repository. When the label is absent or no Issue has it, the "retrospective" category will show 0 — this is expected behavior. Once the companion Issue adding `retro/verify` label assignment to `/verify` Step 13 is merged, retrospective-derived Issues will be separated automatically.
 
+#### Outcome Exclusion Filter
+
+Compute the following from `filtered_issues`:
+
+- `retro_verify_count`: number of Issues in `filtered_issues` that have the `retro/verify` label
+- `outcome_population`: `filtered_issues` minus Issues that have the `retro/verify` label
+
+`retro/verify` Issues represent wholework infrastructure improvement proposals surfaced by the `/verify` phase and closed as "not planned" after upstream migration — they are not implementation failures and must not affect First-try success rate, Completed rate, Rework, or Phase regression calculations.
+
+Note: Section 4 (Work Origin) uses the full `filtered_issues` as its population and is not affected by this filter. `retro/verify` Issues are already classified as the "retrospective" category in Section 4.
+
 #### Trend Analysis (30-day window × 3)
 
 Split the past 90 days into three 30-day windows (window 1: oldest, window 3: most recent). For each window, compute:
@@ -418,12 +429,20 @@ If the `retro/verify` label does not exist, display "retrospective" as 0 with a 
 
 #### Section 5: Outcome
 
-Display the following:
+Display the exclusion note first:
+
+```
+Outcome 集計対象: N 件 (うち retro/verify ラベル付き M 件を除外)
+```
+
+where N = count(`outcome_population`) and M = `retro_verify_count`. Always display this note even when M = 0.
+
+All sub-items below are computed using `outcome_population` (i.e., `filtered_issues` with `retro/verify`-labeled Issues excluded):
 
 - **By Size**: First-try success rate, Completed rate, and average Rework count for each Size
 - **Phase regression points**: which `phase/verify → phase/code` regressions occurred most frequently
 - **By Content segment**: First-try success rate and reopen rate vs. overall average for each segment
-- **Trend**: First-try success rate per 30-day window × 3
+- **Trend**: First-try success rate per 30-day window × 3 (using `outcome_population`)
 
 #### Section 6: Backlog Health
 
