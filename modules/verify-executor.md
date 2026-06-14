@@ -131,6 +131,23 @@ rubric "script.sh exits 0 on valid input: bats test uses run bash script.sh and 
 
 The implicit assertion pattern (`bash "$SCRIPT" ...` without `run`) relies on bats `set -e` behavior and can yield UNCERTAIN judgment from the grader. By naming `run bash "$SCRIPT" ...` + `[ "$status" -eq 0 ]` explicitly in the rubric text, the grader can detect bats tests that lack an explicit status assertion.
 
+**Slash (`/`) notation in rubric condition text:**
+When listing multiple sub-cases with `/` (slash), the intent is ambiguous — it may mean an OR condition (two independent triggers) or an example enumeration (sub-patterns under one condition). Always make the interpretation explicit so grader judgment is consistent.
+
+Use the `OR:` prefix to make independent triggers explicit:
+
+```
+rubric "threshold check passes: OR: X > Y and Z is future → confirmed, OR: X > Y and Z is past → confirmed"
+```
+
+Use a bullet list or parenthetical for example sub-cases under a single condition:
+
+```
+rubric "threshold check passes when X > Y (e.g., Z is future → confirmed; Z is past → confirmed)"
+```
+
+Avoid bare `/` between sub-cases. If `/` already appears in a rubric condition, revise it to one of the two forms above before the Issue moves to code phase.
+
 **File path resolution in rubric graders (worktree-safe reads):**
 When the rubric grader evaluates a file, it must read from the **current worktree** — not from the main branch. The calling skill must resolve file content to an **absolute path** in the worktree and either embed the content inline or confirm the grader's working directory is the worktree root before invocation.
 
