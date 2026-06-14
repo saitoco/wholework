@@ -166,6 +166,19 @@ Steps:
 
 **Skip** if no tool detection is included in the implementation steps.
 
+**Dependency version pre-check (when Changed Files include new external packages):**
+
+When the Issue's Changed Files or Implementation Steps include adding a new dependency from an external package registry (e.g., `requirements.txt`, `package.json`, `Cargo.toml`, `pyproject.toml`), verify the actual latest release version from the official registry before writing the Spec version specifier:
+
+1. For Python packages: check PyPI for the package's latest stable release
+2. For Node.js packages: check the npm registry for the latest version
+3. For other registries (crates.io, RubyGems, etc.): use the registry's release page
+4. Record the verified version string in the Changed Files entry or the Spec's "Notes" section
+
+**Background**: specifying an unverified version causes a discrepancy at the `/code` phase when the actual registry version differs, resulting in rework (example: Spec wrote `mplfinance>=0.12.10` but PyPI only had `0.12.9b5`).
+
+**Skip** if no new external dependency packages are being added.
+
 **Adapter pattern survey (regardless of SPEC_DEPTH; only when applicable):**
 
 If the Issue body's verify commands include command types not present in the `modules/verify-executor.md` built-in translation table, follow `docs/environment-adaptation.md` Extension Guide Step 0 before accepting the new command type:
