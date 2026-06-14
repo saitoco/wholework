@@ -443,6 +443,107 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER done
 
 ---
 
+## Decomposition File Mode
+
+If ARGUMENTS contains `--from-decomposition-file`, extract the file path and run this section only. Do not run New Issue Creation or Existing Issue Refinement.
+
+### Step 1: Read and Validate YAML
+
+Read the file at the specified path using the Read tool. Validate the schema:
+
+- `parent`: integer, required — an existing Issue number
+- `sub_issues`: list with at least one entry, required
+- Each entry requires:
+  - `id`: string, required — unique within YAML (used for `blocked_by` references); must contain only alphanumeric characters, hyphens, and underscores (no path separators or special characters)
+  - `title`: string, required — component prefix + verb-first format recommended (warn but proceed if not)
+  - `background`: optional string — TBD skeleton used if absent
+  - `purpose`: optional string — title summary used if absent
+  - `acceptance_criteria`: optional list with `condition` and `verify` keys
+  - `blocked_by`: optional list of `id` strings; all referenced `id` values must exist in `sub_issues`
+
+On validation failure (missing required fields, duplicate `id`, unknown `blocked_by` reference): output a descriptive error message and stop. Do not create any Issues.
+
+### Step 2: Detect Circular Dependencies
+
+Build a dependency graph from all `blocked_by` references across all entries. Run DFS (depth-first search) over the graph to detect cycles before creating any Issues. If a cycle is detected, output the cycle path (e.g., `a → b → c → a`) and stop. Do not create any Issues.
+
+DFS pseudo-code:
+```
+function dfs(node, visiting, visited, graph):
+  if node in visited: return
+  if node in visiting: report cycle and abort
+  mark node as visiting
+  for each dep in graph[node]:
+    dfs(dep, visiting, visited, graph)
+  mark node as visited
+  remove from visiting
+```
+
+### Step 3: Create Issues
+
+First pass — create all Issues and record their numbers:
+
+For each sub_issue entry:
+
+a. Generate skeleton body using the standard format:
+   ```markdown
+   ## 背景
+
+   {background value, or: (TBD — XL parent #{parent} の sub-issue として {id} を起票)}
+
+   ## 目的
+
+   {purpose value, or: title summary}
+
+   ## Acceptance Criteria
+
+   ### Pre-merge (auto-verified)
+
+   {acceptance_criteria entries as: - [ ] {condition} <!-- verify: {verify} -->
+   if absent: - [ ] TBD}
+
+   ### Post-merge
+
+   なし
+   ```
+
+b. Run `mkdir -p .tmp`
+
+c. Write the body to `.tmp/decomp-issue-{id}.md` using the Write tool
+
+d. Run: `gh issue create --title "{title}" --body-file .tmp/decomp-issue-{id}.md`
+
+e. Delete temp file: `rm -f .tmp/decomp-issue-{id}.md`
+
+f. Record the created Issue number for this `id`
+
+g. Set parent-child relationship via `add-sub-issue` GraphQL mutation:
+   ```bash
+   mapfile -t _parent_id_arr < <(${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --cache --query get-issue-id -F num={parent} --jq '.data.repository.issue.id')
+   PARENT_ID="${_parent_id_arr[0]}"
+   mapfile -t _child_id_arr < <(${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --cache --query get-issue-id -F num={created_issue_number} --jq '.data.repository.issue.id')
+   CHILD_ID="${_child_id_arr[0]}"
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query add-sub-issue -F parentId="$PARENT_ID" -F childId="$CHILD_ID"
+   ```
+
+Second pass — set `blocked_by` relationships (after all Issues are created; handles forward references):
+
+For each sub_issue entry that has a `blocked_by` list:
+- Look up the Issue number recorded for each referenced `id`
+- Set the dependency via `add-blocked-by` GraphQL mutation:
+  ```bash
+  ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query add-blocked-by -F issueId="{child_node_id}" -F blockingId="{blocking_node_id}"
+  ```
+
+### Step 4: Output Summary
+
+Output a text-format summary including:
+- Each created Issue number and title (e.g., `#1234 next-init: Next.js プロジェクト初期化 + routing 設定 + middleware 移植`)
+- Dependency graph in text format (list `blocked_by` edges, e.g., `#1235 next-theme ← blocked by #1234 next-init`)
+- Total count of Issues created
+
+---
+
 ## Standard Format
 
 ```markdown

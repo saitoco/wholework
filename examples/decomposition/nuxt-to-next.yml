@@ -1,0 +1,42 @@
+# Nuxt → Next.js Migration Decomposition
+# Usage: /issue --from-decomposition-file examples/decomposition/nuxt-to-next.yml
+#
+# Replace `parent: 1000` with the actual XL parent Issue number before use.
+
+parent: 1000
+sub_issues:
+  - id: foundation
+    title: "next-init: Next.js プロジェクト初期化 + routing 設定 + middleware 移植"
+    background: |
+      Nuxt → Next 移行の foundation phase。Next.js プロジェクトの初期化、
+      routing/build/auth/middleware の基盤を整備する。後続の page 移行が
+      この foundation に依存する。
+    purpose: |
+      Next.js プロジェクトをセットアップし、Nuxt の middleware/auth と
+      同等の機能を実装する。
+    acceptance_criteria:
+      - condition: Next.js プロジェクトが初期化されている
+        verify: file_exists "next.config.js"
+      - condition: middleware が移植されている
+        verify: grep "middleware" "next.config.js"
+    blocked_by: []
+
+  - id: theme
+    title: "next-theme: 共通レイアウト・スタイル移植"
+    blocked_by: [foundation]
+    background: |
+      foundation 完了後、共通レイアウト・スタイル・グローバル CSS を Next.js
+      コンポーネント形式で移植する。
+    purpose: |
+      ページ移行サブイシューが共通レイアウトに依存できるようにする。
+
+  - id: page-home
+    title: "next-page: トップページを Next.js へ移植"
+    blocked_by: [theme]
+    background: |
+      pages/index.vue の Next.js 移植。SSG / data fetching パターン適用。
+    purpose: |
+      ユーザー流入の起点ページを Next.js で動作させる。
+    acceptance_criteria:
+      - condition: トップページが Next.js でレンダリングされる
+        verify: file_exists "pages/index.tsx"

@@ -32,7 +32,9 @@ wholework/
 │   └── workflows/
 │       ├── test.yml             # CI: bats テスト、スキル構文検証、禁止表現チェック、macOS シェル互換性テスト
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
-├── tests/               # スクリプトの Bats テストファイル（66 ファイル）
+├── examples/            # Wholework 機能のサンプルファイル
+│   └── decomposition/   # /issue --from-decomposition-file 用 decomposition YAML サンプル
+├── tests/               # スクリプトの Bats テストファイル（67 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents
@@ -46,7 +48,7 @@ wholework/
 │   ├── routines-adoption.md # Routines 採用ロードマップと PoC 知見（project）
 │   ├── translation-workflow.md # docs/ja/ ミラー同期ルールと手順（project）
 │   ├── visual-reproduction.md  # UI 再現案件 methodology guide（project）
-│   ├── guide/           # ユーザー向けマニュアル（index、quick-start、workflow、customization、troubleshooting、adapter-guide、figma-best-practices、scripting）（project）
+│   ├── guide/           # ユーザー向けマニュアル（index、quick-start、workflow、customization、troubleshooting、adapter-guide、figma-best-practices、scripting、xl-decomposition）（project）
 │   ├── {lang}/          # /doc translate {lang} が生成する言語別翻訳（docs/{lang}/）
 │   ├── spec/            # Issue 仕様
 │   ├── reports/         # 最適化・監査レポート

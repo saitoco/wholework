@@ -83,3 +83,51 @@ XL 親 Issue の sub-issue を 50+ 件一括起票するためのヘルパーを
 - **`docs/guide/xl-decomposition.md` は `docs/guide/` 配下**: `check-translation-sync.sh` が `docs/guide/*.md` も対象にするため、`docs/ja/guide/xl-decomposition.md` 作成により MISSING_JA を解消する。
 - **Issue 本文の Auto-Resolved Ambiguity Points**: `/issue` フェーズで既に 3 件解決済み（コマンドオプション名、AC YAML 検証、verify-type タグ）。追加の曖昧ポイント解決は不要。
 - **WHOLEWORK_SCRIPT_DIR mock 不要**: 実装は `skills/issue/SKILL.md`（LLM ステップ）であり新規シェルスクリプトは追加しない。bats テストは構造テスト（SKILL.md 内容チェック）のみ。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- **`blocked_by` セカンドパスの明示化**: Spec の Step 3 には「(c) blocked_by 各参照について gh-graphql.sh --query add-blocked-by」と記述されていたが、前方参照（後続エントリが先行エントリを参照）に対応するため、SKILL.md では first pass（Issue 作成 + add-sub-issue）と second pass（blocked_by 設定）の 2 フェーズ構成を明示した。設計意図は同じだが SKILL.md では両フェーズを別ブロックとして分離した。
+
+### Design Gaps/Ambiguities
+
+- **`allowed-tools` の更新省略**: SKILL.md frontmatter の `allowed-tools` には既に `gh issue create:*` と `gh-graphql.sh:*` が含まれており、新規追加なし。新規ツール追加が不要だったため問題なし。
+- **DFS 実装詳細**: Spec では「DFS で循環検出」とのみ記述。SKILL.md にはアルゴリズムの疑似コードを追記して LLM 実行時の実装精度を向上させた。
+
+### Rework
+
+- なし（実装ステップ 1〜5 をSpec順通りに完了）
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- `id` フィールドのパス安全性バリデーションが Spec に未記述だった。Spec の schema validation rules に「no path separators」制約を追記することで次回の同種機能実装時に明示できる（今回は SKILL.md を修正済み）
+- `docs/structure.md` のテスト数カウントがブランチ作成後に main で更新されたため逆行した。ブランチ期間が長い場合に発生しやすいパターン。Spec Notes に「directory count は近似値として扱う」旨を追記する方向で検討余地あり
+
+### Recurring Issues
+
+- なし（同種の問題は今回のみ検出）
+
+### Acceptance Criteria Verification Difficulty
+
+- 11 件中 11 件 PASS（UNCERTAIN/FAIL なし）。verify コマンドが適切に設定されており検証は容易だった
+- AC 7（rubric）はセマンティック評価: SKILL.md の実装内容が rubric 条件の 5 要件を明示的にカバーしているため PASS の根拠が明確だった
+- `command` hints（bats・check-translation-sync.sh）は CI 参照フォールバックで PASS 判定可能だった
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- SHOULD 問題 2 件を修正してコミット: テスト数カウント逆行（65→67）と `id` パス文字制限の追加
+- MUSTなし → COMMENT イベントでレビュー投稿（REQUEST_CHANGES なし）
+- テスト数は main の 66 ではなく 67 に更新（このPRで xl-decomposition.bats 追加のため）
+
+### Deferred Items
+- Post-merge AC 2 件（実 XL Issue での動作確認・follow-up Issue 起票）: manual 確認待ち
+- `id` フィールドの character validation は SKILL.md ドキュメントのみ追記。実行時の LLM がこれを遵守するかは LLM 判断に依存
+
+### Notes for Next Phase
+- CI 全ジョブ SUCCESS、全 AC PASS のため merge 可能な状態
+- Post-merge AC は manual のため `/merge` 後に別途確認が必要
