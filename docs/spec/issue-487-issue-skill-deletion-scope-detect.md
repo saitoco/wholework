@@ -44,3 +44,32 @@
 - SKILL.md 本文に半角 `!` を使わないこと（forbidden expression）
 - `docs/*.md` 変更なし → `docs/ja/` 翻訳同期不要
 - `docs/structure.md` の Key Files テーブルは既存ファイルへの追記のみのため更新不要
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec のブロック見出しは「Deletion-type issue pre-scan (削除系 Issue の事前スキャン):」（英語先頭）だったが、実装では「削除系 Issue の事前スキャン (Deletion-type issue pre-scan):」（日本語先頭）を採用した。`grep "削除系"` の AC が先頭テキストに依存しないため機能上の差異はないが、SKILL.md の日本語優先慣例に合わせて変更した。
+
+### Design Gaps/Ambiguities
+
+- 特になし。Spec は挿入位置（`**Priority sort:**` の直前）を明確に指定しており、実装はそのまま適用できた。
+
+### Rework
+
+- 特になし。1回のEditで実装完了。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 静的ガイドライン（Markdown テキスト追加のみ）で実装。モジュール変更・スクリプト追加なし。
+- 見出し語順を日本語先頭に変更（Spec の英語先頭例からの意図的な逸脱）。
+- forbidden expression（半角 `!`）なし、validate-skill-syntax PASS 確認済み。
+
+### Deferred Items
+- 案1/2（自動 grep 実行）は Size=S スコープ外として未実装のまま。LLM が grep をスキップするリスクは Issue 本文に記録済み。
+
+### Notes for Next Phase
+- verify コマンド（rubric, grep）は /code 段階で全 PASS 済み。/verify では再確認のみ。
+- 変更ファイルは `skills/issue/SKILL.md` 1 ファイルのみ。
