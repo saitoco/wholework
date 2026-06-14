@@ -75,3 +75,20 @@ SHOULD constraints (best practices, manual check — examples):
 | read-then-write jq guard | When describing read-then-write operations (using an existing file as input for writes), explicitly state the jq failure guard (e.g., `|| die "..."`) in Implementation Steps | #345 |
 | macOS system-level debug fallback | When implementation steps include macOS system-level debugging procedures (e.g., `fs_usage`, Console.app privacy logs) requiring interactive execution, explicitly state that `--non-interactive` mode uses static analysis + hypothesis evaluation as an alternative | #378 |
 | Design Gaps → Implementation Steps backfill | When recording specific implementation knowledge (variable names, call forms, parameter passing methods) in spec retrospective sections (e.g., `## Design Gaps/Ambiguities`, `## Implementation Notes`), also write it directly in the corresponding `## Implementation Steps` body. `code` and `review` phases follow Implementation Steps sequentially — knowledge recorded only in retrospective sections is structurally prone to being overlooked | #579 |
+
+## LLM-assisted Skill Phase Test Strategy
+
+When designing a skill phase that includes LLM inference (e.g., a phase that generates content via `claude -p` rather than purely deterministic script logic), split the test strategy into two layers and make both explicit in the Spec:
+
+| Layer | What it covers | How to verify |
+|-------|---------------|---------------|
+| **Script layer (deterministic)** | CLI parsing, template rendering, file I/O, flag routing — all parts whose input/output is fully deterministic | bats / pytest unit tests; run pre-merge via `command` verify command |
+| **LLM layer (non-deterministic)** | Draft quality, inference accuracy, generated content structure — parts that depend on model output | Observation AC + manual review; write as post-merge `verify-type: observation event=...` AC and have a human evaluate draft quality on first run |
+
+**When to apply**: A skill phase is LLM-assisted when it invokes `claude -p` (or equivalent) to produce content, and bats tests cannot deterministically assert the output quality. The deterministic parts (flag parsing, file existence checks, output file creation) are still testable with bats.
+
+**Example — `/audit auto-session --full` (#632)**:
+
+The `--full` flag triggers a `claude -p` sub-agent call to generate an analysis report. Test strategy:
+- Script layer: bats covers flag parsing (`--full` vs default), output file path construction, and fallback behavior when events log is empty.
+- LLM layer: post-merge observation AC — "Run `/audit auto-session --full` on a session with events; confirm the report contains actionable proposals." Human reviewer evaluates draft quality on first production run.
