@@ -66,19 +66,32 @@
 - N/A（設計通り初回で完成）
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `\|` → `|` への verify command 修正を apply: Issue body と Spec の両方に反映し、齟齬なし
-- bash 3.2+ 互換を jq 一本で実現: `declare -A` や `mapfile` を一切使わず、jq の `group_by` / `map` / `sort_by` で集計ロジックをすべて処理
-- ヘルパー関数（`write_header`, `write_sessions_section` 等）を `{ ... } > FILE` ブロック内で呼ぶパターンを採用: 可読性と DRY を確保
+- REVIEW_DEPTH=light（Size=M + --light フラグ）: 1エージェント統合レビューを適用
+- SHOULD issue（cleanup `|| true` の exit code 区別）を修正: exit code 1（no-match）と 2（error）を明示的に区別、エラー時は元ファイルを保護
+- CONSIDER issue（`--date` フォーマット検証なし）はスキップ: ローカルCLIのため現実的リスク低
 
 ### Deferred Items
-- `anomaly` event emit は本 Issue スコープ外。`run-auto-sub.sh` への emit_event 追加は #630 関連で別途検討
-- 自動実行（cron / hook）は Issue body で明示的に別 Issue 扱いとなっている
-- Duration が midnight をまたぐ場合の `+86400` 補正を実装したが、実際のテストケースは未作成（エッジケース）
+- `anomaly` event emit は依然として `run-auto-sub.sh` 未実装のまま。Anomalies セクションは常に `- (none)` だが設計上許容
+- `--date` フォーマット検証なし: CONSIDER でスキップ、必要に応じて後続改善可
 
 ### Notes for Next Phase
-- verify command #3 を `\|` → `|` に修正済み（Issue body と Spec 両方）: /review 時に元の形と比較しないよう注意
-- bats テストは 5 ケース（frontmatter テストを独立させたため）。AC の「最小 4 ケース」を超過しているが設計意図通り
-- `anomaly` セクションは現実装では常に `- (none)` となる（emit_event 未実装のため）: /review で設計上の制限として認識すること
+- cleanup fix のコミット (`37c90ae`) が push 済み: /merge 時は最新 HEAD を対象にすること
+- 全 AC が PASS、全 CI が SUCCESS: マージ前提条件クリア
+- `anomaly` セクション常時 `- (none)` は設計上の制限（emit_event 未実装）: /merge では考慮不要
+
+## review retrospective
+
+### Spec vs. implementation 乖離パターン
+
+特になし。Spec との整合性は高く、codeフェーズで `\|`→`|` 修正も含めて予期された変更が正確に実装されていた。
+
+### 繰り返し Issue
+
+特になし。SHOULD 1件（cleanup の `|| true` によるエラー飲み込み）は grep の exit code 区別という一般的パターンの見落とし。bash スクリプトで `|| true` を使う際は exit code の意味（1=no-match vs 2=error）を明示的に区別する習慣が有用。
+
+### 受け入れ条件検証の困難さ
+
+全条件 PASS。verify command は適切で UNCERTAIN はなし。rubric 条件は diff から直接判断可能で品質良好。`command` 系 verify は CI 参照フォールバックが機能し、safe mode での検証が円滑だった。bats テスト件数（AC では「最小4ケース」、実装は5ケース）の乖離は code retrospective で説明済み。
