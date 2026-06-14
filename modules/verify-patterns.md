@@ -423,6 +423,41 @@ When a post-merge acceptance condition depends on a cron-scheduled workflow's ou
 3. Order the manual AC before the automated cron-output ACs so the human step completes first
 4. In the `/verify` pre-run checklist, note that `workflow_dispatch` must be triggered before verify
 
+### 14. Infra Shutdown Issues — Attach verify commands to URL Accessibility ACs
+
+When an Issue involves infrastructure shutdown (service deletion, deployment stop, etc.) and its acceptance criteria include URL accessibility confirmation, always attach a `<!-- verify: ... -->` verify command.
+
+**Background**: In downstream real-world usage, URL accessibility ACs for infra-shutdown Issues lacked verify commands. As a result, `/verify` could not cover them automatically and the check fell back to manual confirmation. URL accessibility checks are mechanically verifiable and should be automated.
+
+**Command selection guideline:**
+
+| Scenario | Preferred command | Example |
+|----------|-----------------|---------|
+| HTTP response is returned (4xx, 5xx, redirect, etc.) | `http_status "URL" "CODE"` | `http_status "https://example.com/api" "404"` |
+| Connection fails completely (service fully deleted) | `command "curl -sI URL 2>&1 \| grep ..."` | `command "curl -sI https://example.com 2>&1 \| grep 'Could not resolve'"` |
+
+**Priority rule: Use specialized commands when HTTP response is available.**
+
+If the service returns any HTTP response (even 4xx/5xx error codes), use `http_status` — it is more precise than `command "curl ..."` because it checks the status code directly without parsing curl output.
+
+Fall back to `command "curl -sI URL 2>&1 | grep ..."` only when the service is completely unreachable (DNS failure, connection refused with no HTTP response).
+
+**Recommended patterns:**
+
+```
+<!-- verify: http_status "https://example.com/api" "404" --> URL returns 404 after service stop
+<!-- verify: http_status "https://example.com" "503" --> URL returns 503 during maintenance
+<!-- verify: command "curl -sI https://deleted.example.com 2>&1 | grep -E 'Could not resolve|Connection refused'" --> Service is completely unreachable after deletion
+```
+
+**Decision procedure:**
+
+1. Identify whether the acceptance condition includes URL accessibility confirmation
+2. Determine the expected post-shutdown behavior:
+   - HTTP response returned (even 4xx/5xx) → use `http_status "URL" "CODE"`
+   - Complete connection failure (no HTTP response) → use `command "curl -sI URL 2>&1 | grep ..."` with an appropriate pattern
+3. If the expected status code is uncertain at spec time, use `rubric "URL returns an error response (4xx or 5xx) after service shutdown"` and add `http_status` once the expected code is known
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
