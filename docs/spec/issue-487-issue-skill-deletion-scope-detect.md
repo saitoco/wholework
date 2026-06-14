@@ -73,3 +73,29 @@
 ### Notes for Next Phase
 - verify コマンド（rubric, grep）は /code 段階で全 PASS 済み。/verify では再確認のみ。
 - 変更ファイルは `skills/issue/SKILL.md` 1 ファイルのみ。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC1 (rubric: Step 5 と Step 7 への組み込み) + AC2 (grep "削除系") の組み合わせが効果的。rubric は両 Step への適用範囲も意味検証で担保し、grep は最小限の存在検証として補完。
+
+#### design
+- Pre-investigation の `**Priority sort:**` 直前という挿入位置選定が論理的に整合。新規 Issue Step 5 と既存 Issue Step 7 の両方に同一ブロックを配置で対称性を確保。
+
+#### code
+- 1 回の Edit で実装完了、rework なし。見出し語順を Spec の英語先頭から日本語先頭に意図的逸脱したが、`grep "削除系"` AC への影響なし。
+
+#### review
+- patch route のため非実行 (N/A)。
+
+#### merge
+- patch route のため非実行。worktree-merge-push.sh で main 直マージ成功。
+
+#### verify
+- Pre-merge 全 2 件 PASS。Post-merge opportunistic は `phase/verify` 維持で削除系 Issue 起票時に検証。
+
+### Improvement Proposals
+- N/A
+
