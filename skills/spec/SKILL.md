@@ -332,6 +332,15 @@ If implementation steps include Mermaid diagram updates, check existing node ID 
 
 When Implementation Steps describe an operation that reads an existing file and writes back the modified result (read-then-write), explicitly state the jq failure guard (e.g., `|| die "..."`) in Implementation Steps.
 
+**Side-effect direction anti-patterns in implementation steps:**
+
+When writing implementation steps that involve priority-ordered data construction (e.g., building dicts with multiple priority sources), avoid methods where the side-effect direction is counterintuitive:
+
+- **Anti-pattern**: `setdefault` or `dict.update` in low-priority-first order — `setdefault` does not overwrite existing keys, so calling it from lowest priority upward locks in the lowest-priority value; `dict.update` in high-priority-first order overwrites previously set higher-priority values with lower-priority ones
+- **Recommended**: explicit algorithmic description — e.g., "iterate sources in high-priority-first order; for each key, set `dict[key] = value` only if the key is not yet present (`if key not in dict`)"
+
+When the overwrite direction of a method is non-obvious, spell out the algorithm explicitly rather than specifying the method by name.
+
 **SHOULD-level acceptance criteria consideration:**
 
 When defining acceptance criteria, explicitly consider:
