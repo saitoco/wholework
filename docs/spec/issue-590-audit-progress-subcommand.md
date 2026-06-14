@@ -126,15 +126,16 @@ Issue 提案の出力フォーマットに Failed カテゴリがあったが、
 - rubric AC のセマンティック判定は diff と SKILL.md の照合で問題なく実施できた
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- SHOULD 2 件を修正: description フィールド更新 + no-phase 出力テンプレート追加
-- MUST 問題なし。CI 全ジョブ SUCCESS
+- PR #621 を `--squash --delete-branch` でマージ（conflicts なし、CI SUCCESS、approved 状態）
+- Phase Handoff は review → merge で引き継ぎ。verify フェーズに渡す
 
 ### Deferred Items
-- post-merge 確認（実 XL Issue での進捗確認）は `/verify` フェーズで observation イベント待ち
+- post-merge AC（実 XL Issue での `/audit progress <parent>` 実行確認）は verify フェーズで対応
 
 ### Notes for Next Phase
-- 全 pre-merge AC: 8/8 PASS
-- PR #621 は COMMENTED 状態（SHOULD 修正 push 済み）。merge ready
+- 全 pre-merge AC: 8/8 PASS 確認済み
+- squash コミットは main に着地済み。verify では実 XL Issue 番号でコマンド実行して出力を目視確認すること
+- `get-sub-issue-progress.sh` は GraphQL mock ありのテスト環境でのみ検証済み。実環境でのレート制限・応答時間も確認対象
