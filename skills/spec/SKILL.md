@@ -420,6 +420,16 @@ When Changed Files includes shell scripts (`scripts/*.sh`, hook scripts, etc.), 
 
 Before writing "no change needed" for a file in the changed-files section, verify with grep or similar. Unverified "no change needed" judgments lead to implementation oversights (example: #749).
 
+**`run-*.sh` → Skill call migration: propagated flags list:**
+
+When a Changed File replaces a `run-*.sh` invocation with a `Skill(...)` call, explicitly list in the Changed Files entry all flags that the old `run-*.sh` accepted and must be propagated to the new Skill interface. Example notation:
+
+```
+`skills/auto/SKILL.md`: replace `run-verify.sh $NUMBER --base $BASE_BRANCH` with `Skill(verify, args="$NUMBER --base $BASE_BRANCH")` — propagated flags: `--base`
+```
+
+If any flags are not yet supported by the new Skill interface, note them as a follow-up item. This prevents propagated-flag omissions at the Spec stage (example: Issue #485 retro — `--base` flag dropped during `run-verify.sh` → Skill migration).
+
 **Simplicity rule (see $STEERING_DOCS_PATH/tech.md "Spec Simplicity Rules"):**
 
 Keep implementation step count and pre-merge verification item count within the SPEC_DEPTH limit (light: 5 each; full: 10 each). Group related steps if limits are exceeded.
