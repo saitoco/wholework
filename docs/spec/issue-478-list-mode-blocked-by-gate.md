@@ -98,3 +98,31 @@
 - 全 pre-merge AC（section_contains 3件 + validate-skill-syntax 1件）はローカル検証 PASS 済み。CI (test.yml) は push 後に確認が必要。
 - tests/auto-batch.bats に 3件追加（合計 6件、全 PASS 確認済み）。
 - docs/workflow.md と docs/ja/workflow.md 両方更新済み。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 4 つの自動 AC (section_contains 3件 + command syntax) で実装範囲を網羅。CI AC は patch route 用の `gh run list` 形式を正しく採用。
+- Post-merge 2 件の manual AC が観察的・依存的シナリオを的確にカバー。
+
+#### design
+- step 3 と step 4 の間への挿入位置選定が論理的に整合。`update_batch` を呼ばず `remaining` 保持で resume 連携を確保した設計が適切。
+- 既存 `gh-check-blocking.sh` を改修せず SKILL.md インライン記述で対応する判断も妥当（後続 Issue 候補として明記）。
+
+#### code
+- 6 件の bats テスト追加で機能網羅。docs/workflow.md と日本語版も同時更新で SSoT 維持。rework なし。
+
+#### review
+- patch route のため非実行 (N/A)。
+
+#### merge
+- patch route のため非実行。worktree-merge-push.sh で main 直マージ成功。
+
+#### verify
+- Pre-merge 4 件 PASS、CI 1 件 PENDING（実行中）。Post-merge manual 2 件は実シナリオでの観察待ち。CI 完了後再 verify が望ましい。
+
+### Improvement Proposals
+- N/A
+
