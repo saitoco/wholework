@@ -57,21 +57,21 @@
 - None
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light（Issue Size=M および --light フラグ）で review-light 軽量統合レビューを実施
-- 外部レビューツール（Copilot/Claude Code Review/CodeRabbit）は無効設定のため全て省略
-- 全4観点（Spec 逸脱・エッジケース・セキュリティ・ドキュメント整合性）で問題なし、MUST 課題ゼロ
+- PR #633 を squash merge（`--squash --delete-branch`）で main にマージ
+- CI 全 SUCCESS・MERGEABLE 確認後に即マージ（review phase からの引き継ぎ通り）
+- コンフリクトなし。rebase 不要
 
 ### Deferred Items
-- Post-merge AC（`observation event=auto-run`）: `/auto` で post-merge manual AC を含む Issue を実行した際の観察による確認。verify phase での対応事項
+- Post-merge AC（`observation event=auto-run`）: `/auto` で post-merge manual AC を含む Issue を実行した際に対応 Implementation Steps がすべて実装されていることを confirm。verify phase での確認対象
 - review 側強化（spec-deviation 検出で post-merge manual 項目の実装漏れを MUST 検出）は本 Issue スコープ外。別 Issue 対応
 
 ### Notes for Next Phase
-- 課題なし、CI 全 SUCCESS のため `/merge 633` で即座にマージ可
-- Post-merge AC（observation: event=auto-run）は merge 後の `/auto` 実行で確認
-- 変更はテキスト追加のみであり、マージ後のリグレッションリスクは低い
+- verify phase では Post-merge AC（observation: event=auto-run）を確認すること
+- 変更はテキスト追加のみ（`skills/code/SKILL.md` Step 8 ガードテキスト、`skills/spec/SKILL.md` Step recording rules ガイダンス bullet）
+- リグレッションリスクは低いが、code phase が guard text を正しく読み取るか実際の auto-run で確認が必要
 
 ## review retrospective
 
