@@ -78,3 +78,56 @@ fi
 - 既存テストの `get-issue-size.sh` モックは常に単一の値を返す設計のため、新テストでは呼び出し回数カウントファイルを使ったステートフルな mock を追加する
 - detect-wrapper-anomaly.sh は MOCK_DIR に存在しなくてもよい (`|| true` で無視)
 - auto-sub-observability.bats とのテスト分離: 新テストは run-auto-sub.bats に追加する (observability とは別 concern)
+
+## issue retrospective
+
+### トリアージ自動実行
+
+`triaged` ラベルが不在だったため、`/triage 629` を自動実行した。
+
+**結果:**
+- Type: Bug（バグ — 条件付き re-fetch が stale SIZE を引き起こす欠陥）
+- Priority: high（Issue 本文の `Priority=high` を検出）
+- Size: S（変更対象: `scripts/run-auto-sub.sh` 1〜2ファイル、root cause 明確でシンプルな修正）
+- Value: 3（Impact=2: 共有コンポーネント, Alignment=4: コアワークフロー精度に直結）
+
+### 曖昧ポイント
+
+検出なし。Issue #629 は背景・根本原因・修正提案・受入条件が明確に記載されている。
+
+### AC5 verify command の更新（自動解決）
+
+- 変更前: `command "bats tests/run-auto-sub.bats"`
+- 変更後: `github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success"`
+- 理由: Size=S はパッチ経路（PR なし）のため、`github_check "gh run list"` 形式を使用
+
+## spec retrospective
+
+### Minor observations
+
+- Nothing to note
+
+### Judgment rationale
+
+- Issue body の修正提案コードをそのまま実装ステップに採用。提案内容が具体的かつ #616 との対称性が明確なため、別実装の検討は不要と判断した。
+- AC2 verify command は `grep "route demotion|route upgrade|Post-spec"` (Issue body 原文) を verbatim コピー。実装ログ文字列として "Post-spec route demotion/upgrade" を使用すれば `Post-spec` にマッチする。
+
+### Uncertainty resolution
+
+- Nothing to note
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- SIZE 再取得を無条件化し、INITIAL_SIZE との比較で変更時のみ `emit_event "size_refresh"` を発行する設計を採用。条件分岐を最小化してコードを単純に保つ。
+- テストは既存の `tests/run-auto-sub.bats` に追加。新ファイルではなく既存ファイルへの拡張 (同一 concern)。
+- 呼び出し回数カウントファイルを使った mock で first-call / second-call で異なる Size 値を返す設計を採用。
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- 置換対象は `if [[ -z "$SIZE" ]]; then ... fi` ブロックのみ (spec フェーズ直後)。その後の SIZE 未設定エラーチェック `if [[ -z "$SIZE" ]]; then echo "Error..."` は削除しない。
+- `detect-wrapper-anomaly.sh` はテスト mock に含めなくてよい (`|| true` で安全に無視される)。
+- CI テスト (test.yml) が全 green であることを確認すること。
