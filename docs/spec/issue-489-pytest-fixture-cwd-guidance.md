@@ -40,3 +40,29 @@ When the Issue involves adding pytest tests that reference fixture files (detect
 - 適用条件はキーワードベース（"test"/"pytest"/"fixture" を Issue title/body に含む、またはAC に pytest fixture アクセスが記述されている場合）— 非テスト系 Issue には影響しない
 - 対象言語スコープ: Python pytest のみ
 - Step 10 の簡潔性ルール（light: 実装ステップ 5 以内、検証項目 5 以内）を遵守
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A: 実装は Spec の実装ステップ 1 に完全に準拠。挿入位置（WHOLEWORK_SCRIPT_DIR ブロック後、Mermaid ブロック前）も Spec 指定通り。
+
+### Design Gaps/Ambiguities
+- 挿入ブロック内の引用形式（`> Pytest fixture...`）が Spec のテキストに含まれていたため、フォーマットの解釈が不要だった。Spec に完全なブロック内容が記載されていたのは実装容易性に有効だった。
+
+### Rework
+- N/A: テスト（bats 816件）・構文検証・禁止表現チェックすべて一発 PASS。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec のステップ 1 をそのまま実装: WHOLEWORK_SCRIPT_DIR ブロックの直後に pytest fixture path check ブロックを挿入
+- ブロック内容は Spec に記載された完全テキストを使用（変更なし）
+
+### Deferred Items
+- Post-merge AC（テスト追加 Issue で `/spec` 実行→ Spec Notes に `Path(__file__).parent` が記載されることを確認）は opportunistic verify として `/verify` フェーズに委ねる
+
+### Notes for Next Phase
+- 変更は `skills/spec/SKILL.md` の 1 ファイルのみ、6 行追加のみ
+- 全 verify command PASS（file_contains / section_contains / rubric / command）
+- bats 816 件全 PASS、構文検証・禁止表現チェック PASS
