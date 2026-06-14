@@ -330,3 +330,98 @@ These were left to user review rather than auto-filed (the companion session's r
 ### Companion Conclusion
 
 The companion session validates the primary batch's three notable claims (Tier 3 production-ready; concurrent merge safety; PR-route stability) and adds three of its own. (1) Two independent Tier 3 recovery events on the same day. (2) Zero merge conflicts across ~26 merges to `main` (16 primary + 10 companion) over 10.5 hours. (3) The verify orchestration design under user-away policy collapses to "phase/verify universal terminal state" regardless of whether verify ran — supporting #615's premise that batch verify orchestration needs structural rethinking rather than a per-skill fix.
+
+---
+
+## Wave 4: `/auto --batch 514 509 508 507 506 504 503 502` (Backlog Sweep)
+
+A subsequent Opus 4.7 parent session ran `/auto --batch 514 509 508 507 506 504 503 502` in `--batch` List mode against a mix of 1 M Issue + 1 S Issue (both with `triaged` only, no `phase/*`) + 6 XS Issues (all `retro/verify` follow-ups from earlier waves) over ~4h 19m (15:54:28 → 20:13:34 JST on 2026-06-14). The parent session invoked `Skill(wholework:verify)` after each `run-auto-sub.sh` returned, applying the manual-AC policy from `auto_batch_manual_ac_policy.md` (run Claude-executable verifications, SKIP only what truly requires external state).
+
+### Wave 4 Summary
+
+| Metric | Value |
+|--------|-------|
+| Issues fully processed (triage → spec? → code → review? → merge? → verify) | 8 (#514, #509, #508, #507, #506, #504, #503, #502) |
+| Fully closed (phase/done) | 5 (#509, #506, #504, #503, #502) |
+| phase/verify remaining (observation / manual post-merge ACs) | 3 (#514, #508, #507) |
+| Wall-clock (continuous, idle excluded) | ~4h 19m (15:54:28 → 20:13:34 JST) |
+| Throughput (issues/hr incl. verify) | ~1.85 issues/hr |
+| Tier 3 recovery sub-agent invocations | 1 (#507 code phase, action=retry, **failed** — see below) |
+| Watchdog kills | 0 |
+| Parent session manual interventions | 2 (commit-and-push merge Phase Handoff for #508; manual `/verify` for #507 after wrapper exit 1) |
+| Verify FAIL → reopen fix cycles | 0 |
+| Merge conflicts from concurrent commits | 0 |
+| New improvement issues filed | 2 (#636, #637) |
+
+### Per-Issue Durations (Wave 4)
+
+Durations span `run-issue.sh` start (triage) through the parent-session `Skill(wholework:verify)` completion. Verify is **included** here.
+
+| Issue | Size/Route | Total | triage | run-auto-sub | verify | PR | Notes |
+|-------|-----------|-------|--------|--------------|--------|-----|-------|
+| #514 | M / pr (light) | ~47m (15:54→16:41 JST) | ~7m | ~39m | ~6m | #633 | Clean run; post-merge observation `event=auto-run` deferred (SKIPPED) |
+| #509 | XS / patch | ~17m (16:47→17:04 JST) | ~6m | ~11m | ~5m | (patch) | All PASS; phase/done |
+| #508 | M / pr (light) | ~67m (17:07→18:14 JST) | ~7m | ~53m | ~7m | #635 | merge-phase wrapper anomaly observed (see below); 3 manual post-merge ACs require real API gateway, SKIPPED |
+| #507 | S / patch | ~74m (18:12→19:26 JST) | ~7m | ~34m + retry | ~10m | (patch) | **Tier 3 recovery failure** (retry exit 1); manual `/verify` by parent (see below). 3 manual post-merge ACs require saito/trading. |
+| #506 | XS / patch | ~24m (18:58→19:22 JST, overlaps #507 verify) | ~5m | ~19m | ~5m | (patch) | All PASS; phase/done |
+| #504 | XS / patch | ~13m (19:25→19:38 JST) | ~5m | ~12m | ~4m | (patch) | All PASS; phase/done |
+| #503 | XS / patch | ~25m (19:44→20:09 JST) | ~7m | ~13m | ~4m | (patch) | All PASS; phase/done |
+| #502 | XS / patch | ~37m (20:07→20:13 JST) | ~6m | ~28m | ~5m | (patch) | All PASS; phase/done |
+
+### Wrapper Anomaly: Tier 3 Recovery Failure (#507)
+
+The **third observed production Tier 3 recovery sub-agent invocation** is also the **first observed failed recovery**. Sequence:
+
+1. #507 was Size S, patch route per Step 3a (post-spec route detection)
+2. `run-auto-sub.sh` invoked `run-code.sh 507` initially
+3. The initial run hit an anomaly (no PR detected by the run-code.sh end-of-run reconcile because patch route had no PR; the wrapper still ran `reconcile-phase-state.sh code-pr ...` instead of `code-patch`)
+4. Tier 3 sub-agent diagnosed and produced `action=retry`
+5. Retry executed `run-code.sh 507` from scratch; cleaned up stale worktree; successfully committed and pushed to `main`; `closes #507` auto-closed the Issue and `phase/code → phase/verify` transitioned
+6. **But** `reconcile-phase-state.sh code-pr 507 --check-completion` returned `matches_expected: false` again with `no open PR found for worktree-code+issue-507 branch` — because the route was patch, not pr
+7. `run-auto-sub.sh` exited 1 despite the actual completion being correct
+
+Root cause: the wrapper script's reconcile call was hard-coded to `code-pr` phase even though the actual route was patch (S size). This is the inverse of the in-flight route-demotion gap that #616 addresses — #616 covers M→XS route demotion, but #507's case was the size auto-detector returning S (patch) for a Spec that originally proposed M (pr), and the wrapper's reconcile call used the originally-determined phase identifier.
+
+The parent session detected the false-failure via `gh issue view 507` (state=CLOSED, label=phase/verify, commits 69a99d7/1329f61/5a66708 with `closes #507`) and ran `Skill(wholework:verify, args="507")` manually. All 3 pre-merge ACs PASSed; 3 post-merge manual ACs were SKIPPED (require saito/trading execution). Issue stays at phase/verify (CLOSED).
+
+This was filed as **#637 — reconcile-phase-state: size 再判定後の patch 経路で code-pr phase 判定が残るための route mismatch を解消** (Size TBD).
+
+### Wrapper Anomaly: merge phase Phase Handoff main-repo direct write (#508)
+
+`/verify 508` Step 1 (`check-verify-dirty.sh 508`) exited 1 with a dirty file: `docs/spec/issue-508-post-merge-manual-verify-cli.md`. The diff showed a `## Phase Handoff (<!-- phase: merge -->)` section added but not committed. The merge phase wrapper had written the Phase Handoff to the **parent main repo** (the session's primary working directory) instead of the merge phase's own worktree — and `git push` from the worktree pushed only the worktree's tree, leaving the parent's index dirty.
+
+Recovery: parent session ran `git add docs/spec/issue-508-*.md && git commit && git push origin main`. The commit was dropped during `git pull --rebase` because remote already had the same content (`Patch contents already upstream` — the merge phase had pushed the change from its worktree at some earlier step, just not from the parent's perspective).
+
+Net effect: the change was on `main` correctly; only the parent session's working tree state was out of sync. But every `/verify` running in the same parent context after that merge would hit dirty-file abort until the parent's index was reconciled.
+
+This was filed as **#636 — merge: phase が main repo 直接編集する Phase Handoff を worktree 経由でコミットするよう運用変更**.
+
+### Verify Phase Behavior Under Mixed Policy
+
+Unlike Wave 1 (verify deferred entirely) and the companion session (verify ran, SKIPPED all manual ACs uniformly), Wave 4 applied a **selective Claude-execution policy** to manual post-merge ACs:
+
+- **Pre-merge ACs**: all PASSed via `rubric` + `file_contains`/`grep`/`section_contains` combinations (8 issues × 2–4 pre-merge ACs each, all PASS)
+- **Post-merge observation ACs (e.g., `event=auto-run`)**: uniformly SKIPPED (waiting for event)
+- **Post-merge manual ACs requiring real external state** (#508 API gateway, #507 saito/trading): SKIPPED with verification guide
+- **Post-merge manual ACs requiring no external state**: would have been auto-executed (none in this batch — 5 of 8 issues had zero post-merge ACs)
+
+This is the first observed configuration where verify orchestrated **per-issue auto-judgment of manual ACs** rather than uniformly SKIPping. 5 of 8 issues fully closed (phase/done) as a result, breaking the "phase/verify universal terminal state" pattern observed in Wave 1 and the companion session.
+
+### Improvement Issues Filed from Wave 4
+
+| # | Title (truncated) | Source |
+|---|---|---|
+| #636 | merge: phase が main repo 直接編集する Phase Handoff を worktree 経由でコミットするよう運用変更 | #508 verify Step 1 dirty-check exit 1 |
+| #637 | reconcile-phase-state: size 再判定後の patch 経路で code-pr phase 判定が残るための route mismatch を解消 | #507 Tier 3 recovery retry failure |
+
+### Wave 4 Observations
+
+1. **Tier 3 retry can fail when the underlying wrapper bug is deterministic**. #507's wrapper unconditionally used `code-pr` phase for reconcile regardless of the actual route. Retrying the same wrapper call cannot resolve a route-determination bug — the recovery sub-agent's `action=retry` is suitable only for transient failures (e.g., #554's PR-creation race), not deterministic logic errors. Future Tier 3 plans for similar cases should prefer `action=recover` with steps that explicitly switch phase identifier, not `retry`.
+2. **`auto_batch_manual_ac_policy.md` heuristic improves throughput meaningfully**. 5 of 8 issues fully closed (phase/done) without leaving a follow-up `/verify N` task, vs. 0 of 6 in Wave 1 and 0 of 10 in the companion session. The trade-off is parent-session compute for the per-AC executability judgment, which is small relative to spec/code/review costs.
+3. **XS Issues created from earlier waves' retro proposals run reliably under patch route**. 5 of the 6 XS Issues processed (#506, #504, #503, #502; #509 not from retro) were `retro/verify` follow-ups from prior waves' Spec retrospectives. All five closed phase/done on the first verify pass. This is a positive signal for the retro-proposal pipeline as a long-tail improvement engine — the patch-route XS shape proved efficient at consuming these.
+4. **Throughput at 1.85 issues/hr is the highest measured for `/auto --batch`** in this dataset (vs. 1.27/hr in Wave 1, 1.0/hr in Wave 2, 0.96/hr in companion). The boost comes from the XS-dominated mix (6 of 8 XS, vs. all M in Wave 1).
+5. **Two new improvement issues, both architectural, both surfaced through real wrapper failures**. #636 and #637 are not synthetic — they were observed-and-recovered-from in this run. The wrapper-anomaly surface continues to expand (after Wave 2's #624 and the companion session's batch-state-file race), reinforcing the companion conclusion that the wrapper-anomaly catalog is broader than the existing fallback patterns cover.
+
+### Wave 4 Conclusion
+
+Wave 4 closed 5 of 8 issues fully (phase/done) over ~4h 19m at 1.85 issues/hr — the highest measured throughput for `/auto --batch` to date. Two new wrapper anomalies were filed (#636, #637) including the first **failed** Tier 3 recovery (action=retry against a deterministic logic bug). The retro-proposal pipeline's XS Issues closed reliably under patch route, validating it as a long-tail improvement consumption channel. The selective manual-AC auto-judgment policy (Claude-execute when possible, SKIP only when external state is required) breaks the "phase/verify universal terminal state" pattern observed in earlier waves and warrants codification as a default `/auto --batch` verify policy.
