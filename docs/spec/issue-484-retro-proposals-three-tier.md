@@ -32,7 +32,7 @@
    - **Tier 2 アクション**: 各提案に対してターミナルに出力 `"Memory proposal: {proposal title} — {proposal content}"` (memory ファイルの自動生成は行わない)
    - **Tier 3 アクション**: ターミナルに `"Skipping (Tier 3 — one-time memo): {proposal title}"` を出力し、Issue 化パイプラインから除外する
    - **Tier 1 アクション**: 提案を次ステップ（旧 step 6 → 新 step 7、HAS_SKILL_PROPOSALS gate）へ引き渡す
-2. 既存 step 6–10 を step 7–11 に繰り下げる（→ Tier 1 提案が既存のゲート以降を通る backward-compatible 実装）
+2. 既存 step 6–10 を step 7–11 に繰り下げる（→ Tier 1 提案が既存のゲート以降を通る backward-compatible 実装）; 繰り下げに伴いすべての内部ステップ参照（step 7.1, step 8.4, steps 9–11 等）を更新する; step 7 の early-gate 参照も "step 9" に修正（HAS_SKILL_PROPOSALS=false 時は Domain-classifier を skip して Duplicate check へ直行）
 
 ## Verification
 
@@ -56,3 +56,32 @@
 3. **Tier 判定の実装方式**: LLM 判定主体 + 機械的ヒューリスティック補助を明文化。理由: 既存 domain-classifier.md との一貫性 + AC2 が「判定基準の明文化」を要求。
 
 **Verify command 存在確認**: `grep "Tier 1"`, `grep "再発性"`, `grep "Tier 3"` の各パターンは実装後に `modules/retro-proposals.md` に導入されるため、現時点では存在しない。実装時に確実に含めること。
+
+## Code Retrospective
+
+### Deviations from Design
+- Step 7 early-gate reference "proceed directly to step 8" required correction to "step 9" — after renumbering, step 8 is Domain-classifier (skipped when HAS_SKILL_PROPOSALS=false) and step 9 is Duplicate check. The Spec implementation step 2 described "既存 step 6–10 を step 7–11 に繰り下げる" but did not explicitly note this internal reference update.
+
+### Design Gaps/Ambiguities
+- The Spec's implementation steps described the early-gate target as implicit; during renumbering, careful tracking of all internal step cross-references was required.
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Tier Classification inserted as step 6 with LLM rubric + mechanical heuristics; default is Tier 1 (conservative false-negative avoidance)
+- Tier 2: terminal output only, no memory file auto-generation (memory pollution risk mitigation)
+- Backward compatibility preserved — Tier 1 proposals flow through existing step 7 (HAS_SKILL_PROPOSALS gate) unchanged
+- Step 7 early-gate reference updated from "step 8" to "step 9" to correctly skip Domain-classifier
+
+### Deferred Items
+- Tier classification accuracy validation requires real `/verify` runs with multi-proposal Specs (post-merge manual observation)
+- downstream noise reduction measurement deferred to post-merge
+
+### Notes for Next Phase
+- All 3 grep verify commands PASS: "Tier 1", "再発性", "Tier 3" all present in `modules/retro-proposals.md`
+- No doc sync changes needed; `modules/` is not a translation sync target
+- 819 bats tests PASS with no failures
