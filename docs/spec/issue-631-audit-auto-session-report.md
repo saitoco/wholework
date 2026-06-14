@@ -1,0 +1,157 @@
+# Issue #631: audit: /audit auto-session <id> サブコマンド（auto セッション完走後 retrospective レポートの data 層自動生成）
+
+## Overview
+
+`/auto` 完走後に手動執筆していた retrospective レポート（`docs/reports/auto-session-*.md`）の **data 層を自動生成**する `/audit auto-session [session-id]` サブコマンドを追加する。`.tmp/auto-events.jsonl`（event log）を data source とし、per-issue 所要時間・recovery tier 集計・route mix・summary metrics を機械生成して markdown レポートに rendering する。narrative 層は skeleton（TBD）のみ提示し、人間 / 後続 R3（LLM 補助）に委ねる。
+
+実装の構成は既存 `/audit progress`（#590）の precedent に倣う:
+- **専用スクリプト** `scripts/get-auto-session-report.sh`（shell + jq）が event log を読み、data 層レポートを rendering する
+- **`skills/audit/SKILL.md`** に `auto-session` サブコマンドを文書化し、スクリプトを呼び出す
+- **bats テスト** `tests/audit-auto-session.bats` がスクリプトの 3 ケースを検証する
+
+session 境界を識別するため、event に `session_id` フィールドを付与する。`session_id` は親 `/auto` セッションが生成（`SESSION_ID = PID-timestamp`）し、`scripts/run-auto-sub.sh` の `emit_event` が各 event に出力する。
+
+## Changed Files
+
+- `scripts/run-auto-sub.sh`: `AUTO_SESSION_ID` 変数導入（env → `.tmp/auto-session-current` pointer fallback）、`emit_event` の JSON 出力に `session_id` フィールドを追加 — bash 3.2+ compatible
+- `skills/auto/SKILL.md`: Step 1（親セッション起動時）に `SESSION_ID` 生成・`.tmp/auto-session-${SESSION_ID}.json` メタデータ + `.tmp/auto-session-current` pointer 作成を追加。description に auto-session 連携を補足
+- `scripts/get-auto-session-report.sh`: 新規。event log → data 層 markdown レポート生成（shell + jq）— bash 3.2+ compatible
+- `skills/audit/SKILL.md`: `## auto-session Subcommand` セクション追加、Command Routing への dispatch 追加、usage 文字列更新、frontmatter description + allowed-tools に新スクリプト追加
+- `tests/audit-auto-session.bats`: 新規。3 ケース（単一セッション / 並列セッション分離 / 空セッション）
+- `docs/structure.md`: Scripts セクションに `get-auto-session-report.sh` を追加、scripts 件数コメント `(53 files)` → `(54 files)`
+- `docs/ja/structure.md`: 上記の ja ミラー同期
+- `docs/workflow.md`: `/audit` 段落に `/audit auto-session <id>` の説明を追加
+- `docs/ja/workflow.md`: 上記の ja ミラー同期
+- `tests/run-auto-sub.bats`, `tests/auto-sub-observability.bats`: 変更不要（grep 確認済み: assertion は `"event":` の存在のみをチェックし、`session_id` フィールド追加では破綻しない）。回帰確認のため bats 実行のみ
+
+## Implementation Steps
+
+1. `scripts/run-auto-sub.sh` に session_id 伝播を追加（→ acceptance criteria 3）— bash 3.2+ compatible
+   - 既存 `AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"`（41 行目付近）の直後に `AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat .tmp/auto-session-current 2>/dev/null || echo '')}"` を追加
+   - `emit_event()` の base JSON（`json="{\"ts\":...,\"issue\":...,\"event\":...}"`、46 行目付近）に `,\"session_id\":\"${AUTO_SESSION_ID}\"` を追加（`session_id` が空文字でも常に出力し、空セッションは空文字列として扱う）
+
+2. `skills/auto/SKILL.md` Step 1 に親セッション session_id 生成を追加（after 1、→ acceptance criteria 10）
+   - `SESSION_ID="$$-$(date +%s)"` 形式（PID-timestamp。issue 本文「session-id の決め方」最小設計に準拠。UUID は導入しない）
+   - `.tmp/auto-session-${SESSION_ID}.json` メタデータ作成（`session_start` timestamp / `parent_model`（判明時）/ route の記録。Write ツール経由）
+   - `.tmp/auto-session-current` pointer ファイルに `SESSION_ID` を記録（`run-auto-sub.sh` が別 Bash 呼び出しから参照する手段。env export は Bash 呼び出し間で永続しないため pointer file 方式を採用 — Notes 参照）
+   - 挿入位置: Step 1 の `--batch`/`--resume` 判定より前（全ルートで session metadata が確実に作られるよう冒頭）
+
+3. `scripts/get-auto-session-report.sh` を新規作成（→ acceptance criteria 7）— bash 3.2+ compatible
+   - 引数: `<session-id>` 必須（指定セッションのレポート生成）。`--output <path>`（既定 `docs/reports/auto-session-<id>-<date>.md`）。引数なし or `--since <spec>` → list mode（event log 内の distinct `session_id` を期間内で列挙、既定 24h）。`--no-github`（gh 取得をスキップ。bats hermetic 実行用）
+   - data source: `AUTO_EVENTS_LOG`（既定 `.tmp/auto-events.jsonl`）を `jq` で `select(.session_id == $sid)` filter
+   - 算出: session start/end（event ts の min/max）、wall-clock、route mix（`sub_start` の `size` から patch=XS/S・pr=M/L 集計）、per-issue durations（issue ごとに `phase_start`→`phase_complete` 差分、合計は最初の `phase_start`〜最後の `phase_complete`/`sub_complete`）、recovery events（`recovery` を tier 別集計）、issues processed（distinct issue 数）
+   - R1（#630）で追加される event 種（`watchdog_kill` / `silent_window` / `token_usage` / `concurrent_commit`）由来の Summary 行は **不在時 0 / N/A に graceful degrade**（jq の `// 0` / `// "N/A"`、Uncertainty 参照）
+   - GitHub state（label / PR state）は `--no-github` でない場合に best-effort 取得（取得失敗時は列を `—`）
+   - markdown レポート rendering（data 層 6 セクション + Narrative skeleton）を出力先に書き込み、パスを stdout 出力
+
+4. `skills/audit/SKILL.md` に `## auto-session Subcommand` セクションを追加（→ acceptance criteria 1, 2, 4, 5, 6）
+   - 挿入位置: `## progress Subcommand` セクションの直後（`## Integrated Execution` の直前）
+   - 記述必須項目（rubric AC を満たすため）:
+     - **session boundary identification**: `session_id` 概念の説明（`SESSION_ID = PID-timestamp`、親 `/auto` セッションが生成、`.tmp/auto-session-${SESSION_ID}.json` メタデータ）
+     - **data source**: `.tmp/auto-events.jsonl`（R1 で event 種が拡張される）を参照
+     - **output template structure**: Summary / Per-Issue Durations / Recovery Events / Verify Phase Residuals / Concurrent Sessions Detected / Improvement Candidates Surfaced + Narrative skeleton
+     - **boundary**: Narrative section は skeleton-only（R3 が LLM auto-fill で補完）
+   - `scripts/get-auto-session-report.sh` を呼び出す Step を記述（progress サブコマンドと同形式）
+
+5. `skills/audit/SKILL.md` の dispatch / メタ情報を更新（after 4、→ acceptance criteria 1）
+   - Command Routing に `If ARGUMENTS is 'auto-session' or starts with 'auto-session' (e.g., 'auto-session <session-id>', '--since', '--output'): execute the "auto-session Subcommand" section and exit.` を追加
+   - usage 文字列（27 行目付近）に `auto-session <session-id>` を追加
+   - frontmatter `description` に auto-session の一文を追加
+   - frontmatter `allowed-tools` の Bash パターンに `${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh:*` を追加
+
+6. `tests/audit-auto-session.bats` を新規作成（after 3、→ acceptance criteria 7）
+   - 命名規約: `@test "<outcome>: <description>"`（outcome = `success` / `error`。`tests/audit-progress.bats` に準拠）
+   - mock 戦略: `WHOLEWORK_SCRIPT_DIR`/`PATH` 経由でフィクスチャを用意。event log フィクスチャ（synthetic `.jsonl`）を `AUTO_EVENTS_LOG` に設定し、`--no-github` で gh 依存を排除（hermetic）
+   - 3 ケース:
+     - `success: 単一セッションの per-issue durations / summary が生成される`
+     - `success: 並列セッション分離 — 別 session_id の event が混在しても指定セッションのみ集計される`
+     - `success: 空セッション — 該当 session_id の event が無い / 不在ファイルでも graceful にレポートが生成される`（issue auto-resolve #4: 不在時エラー処理を本ケースでカバー）
+
+7. `docs/structure.md` を更新（→ acceptance criteria 9）
+   - Scripts > Project utilities に `scripts/get-auto-session-report.sh — generate the data layer of a /auto session retrospective report from .tmp/auto-events.jsonl (filtered by session_id)` を追加
+   - Directory Layout の scripts 件数コメント `(53 files)` → `(54 files)`（docs/reports/ は既存ディレクトリのため tree 更新は不要）
+   - `docs/ja/structure.md` を同期（件数 `(53 files)` → `(54 files)` + スクリプト行追加）
+
+8. `docs/workflow.md` の `/audit` 段落に `/audit auto-session <session-id>` の説明を 1 文追加（after 4）。`docs/ja/workflow.md` を同期
+
+9. 回帰確認（after 1）: `bats tests/run-auto-sub.bats tests/auto-sub-observability.bats` を実行し、`session_id` フィールド追加で既存 assertion が破綻しないことを確認（変更不要を実行で裏付け）
+
+## Alternatives Considered
+
+- **実装言語 Python vs shell + jq**: shell + jq を採用。既存 wholework スクリプト（`get-sub-issue-progress.sh` 等）との整合性。issue 本文 auto-resolve #5 で確定済み。
+- **スクリプトが JSON 出力 + SKILL.md が rendering（progress precedent）vs スクリプトが markdown を直接 rendering**: 後者を採用。出力が `docs/reports/` 配下の保存ファイルであること、issue 本文「データ生成ロジック」が「テンプレート rendering（shell + jq）」を明記していること、bats が rendering 済み出力を直接検証できることから、スクリプト側で markdown を生成する。
+- **R1（#630）完了を待つ vs 今実装し graceful degrade**: 後者を採用。`gh-check-blocking.sh` は exit 0（GitHub 上に正式な blocked-by 関係は未登録）で形式的ブロックなし。session_id 伝播は R1 の 6 metric event 種とは分離可能であり、R1 由来の Summary 行は不在時 0/N/A に degrade することで先行実装できる（Uncertainty 参照）。
+
+## Verification
+
+### Pre-merge
+
+- <!-- verify: grep "auto-session" "skills/audit/SKILL.md" --> `/audit auto-session` サブコマンドが SKILL.md に文書化されている
+- <!-- verify: grep "session_id|SESSION_ID" "skills/audit/SKILL.md" --> session-id 概念が説明されている
+- <!-- verify: grep "session_id|SESSION_ID" "scripts/run-auto-sub.sh" --> run-auto-sub.sh が session_id を伝播する
+- <!-- verify: rubric "skills/audit/SKILL.md auto-session subcommand specifies: session boundary identification, data source from .tmp/auto-events.jsonl (R1), output template structure (Summary / Per-Issue Durations / Recovery Events / Verify Residuals / Concurrent Sessions / Improvement Candidates + Narrative skeleton), and explicit boundary that narrative section is skeleton-only (R3 fills it)" --> 仕様が rubric 基準を満たす
+- <!-- verify: grep "auto-events.jsonl" "skills/audit/SKILL.md" --> SKILL.md が `.tmp/auto-events.jsonl` をデータソースとして参照している（rubric 補完）
+- <!-- verify: grep "Narrative" "skills/audit/SKILL.md" --> SKILL.md が Narrative section skeleton を記述している（rubric 補完）
+- <!-- verify: command "bats tests/audit-auto-session.bats" --> bats テストが green（最低 3 ケース: 単一セッション / 並列セッション分離 / 空セッション）
+- <!-- verify: command "scripts/check-translation-sync.sh" --> ja 同期
+- <!-- verify: grep "(54 files)" "docs/structure.md" --> 新スクリプト追加に伴い scripts 件数コメントが更新されている
+- <!-- verify: grep "AUTO_SESSION_ID" "skills/auto/SKILL.md" --> 親 `/auto` セッションが session_id を生成・伝播する
+
+### Post-merge
+
+- 次回 `/auto` 完走後に `/audit auto-session` で data 層 retrospective が生成されることを確認 <!-- verify-type: observation event=auto-run -->
+- 既存手動レポート（`auto-session-performance-2026-06-13.md` 等）と生成レポートを比較し、data 層が再現できることを確認 <!-- verify-type: manual -->
+
+## Tool Dependencies
+
+### Bash Command Patterns
+- `${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh:*`: auto-session レポート生成スクリプト呼び出し（audit/SKILL.md frontmatter allowed-tools に追加）
+
+### Built-in Tools
+- `Read` / `Write` / `Edit`: ファイル編集（既存 allowed-tools でカバー済み）
+- `Bash`: bats 実行・スクリプト実行（既存でカバー済み）
+
+### MCP Tools
+- none
+
+## Uncertainty
+
+- **R1（#630）が OPEN — 6 metric event 種が未実装**: issue body は data source を「R1 で追加される 6 event 種（token_usage / watchdog_kill / silent_window / concurrent_commit / ci_wait / test_result）に依存」とするが、`gh issue view 630` 確認で #630 は **OPEN**、`grep "session_id\|SESSION_ID" scripts/`/`grep auto-events.jsonl` 確認で session_id・6 metric event 種ともに現状の event log に存在しない。
+  - **Verification method**: `gh issue view 630 --json state`（OPEN 確認済み）、`grep -rn "watchdog_kill\|silent_window\|token_usage\|concurrent_commit" scripts/`（現状ヒットなし）
+  - **Impact scope**: Implementation Step 3。既存 event（`phase_start`/`phase_complete`/`recovery`/`sub_start`/`size_refresh`/`sub_complete`/`wrapper_exit`）から算出する Per-Issue Durations・Recovery Events・Route mix は実装可能。Summary の「Watchdog kills / Max silent window / Total token usage / Concurrent commits detected」行は R1 マージ前は **0 / N/A に degrade** する。`/code` 実装前に R1 のマージ状況を再確認し、マージ済みなら該当 metric を実値で集計する。
+- **batch / 単一親ルートは event を emit しない**: event を emit するのは `run-auto-sub.sh`（XL ルート + `--resume`）のみ。`--batch` list mode・単一 M/L 親パスは `run-*.sh` を直接呼び出し `emit_event` を通らない。
+  - **Verification method**: `grep -n "run-auto-sub\|emit_event" skills/auto/SKILL.md`（XL/resume のみ）
+  - **Impact scope**: auto-session レポートは当面 XL/run-auto-sub セッションを主対象とする。batch run の event 網羅は event coverage 拡張（R1 系の後続）に委ねる。本 Issue では既存 event ソースで生成可能な範囲を data 層とする（issue「スコープ削減」: 過去 event log への遡及生成は不要）。
+
+## Notes
+
+### Issue body vs 実装の conflict（auto-resolve）
+
+- **session_id フィールド追加の scope**: issue body「session-id の決め方」は `.tmp/auto-events.jsonl` の各 event への `session_id` フィールド追加を「（R1 で対応）」と注記するが、(1) AC `grep "session_id|SESSION_ID" "scripts/run-auto-sub.sh"` が本 Issue で run-auto-sub.sh への session_id 追加を要求し、(2) R1（#630）のタイトル/本文は 6 metric event 種の追加であって session_id フィールドではない。→ **本 Issue（#631）で session_id 伝播（run-auto-sub.sh の emit_event + 親 /auto の SESSION_ID 生成）を実装**する。R1 依存はレポートを充実させる 6 metric event 種に限定し、不在時は degrade する（Uncertainty 参照）。
+
+### 自動解決した設計判断
+
+- **Bash 呼び出し間の env 非永続性 → pointer file 方式**: `/auto` は SKILL.md（LLM 実行）であり、各 Bash ツール呼び出しは独立シェル（env 非永続）。親が `export AUTO_SESSION_ID` しても別 Bash 呼び出しで spawn される `run-auto-sub.sh` には伝わらない。→ 親が `.tmp/auto-session-current` pointer file に SESSION_ID を書き、`run-auto-sub.sh` が `AUTO_SESSION_ID`（env 優先 → pointer file fallback）で読む。
+- **bats の hermetic 化 → `--no-github` フラグ**: GitHub state 取得（`gh issue view`/`gh pr view`）を bats で実行するとネットワーク依存になるため、スクリプトに `--no-github` を設け event log のみで data 層を生成可能にする。3 テストケースは event log 集計を主検証対象とする。
+- **`/audit stats --use-event-log` は本 Issue scope 外**: issue body「/audit stats との関係」が言及する `--use-event-log` は将来拡張であり AC に含まれない。auto-session 自身の throughput は event log ベースで算出する。
+
+### grep verify command（bare pipe）
+
+- AC `grep "session_id|SESSION_ID"` は bare pipe を使用。`modules/verify-executor.md`（grep 行）確認: Grep ツールは ripgrep regex を用い、bare `|` は alternation。`session_id`（小文字）または `SESSION_ID`（`AUTO_SESSION_ID` 内）のいずれかがあれば PASS。run-auto-sub.sh は両方を含み、audit/SKILL.md は session_id 概念記述で含む。
+
+### bats テストデータ形式
+
+- event log フィクスチャは 1 行 1 JSON（`.jsonl`）。各行のフィールド: `ts`（ISO8601 UTC）/ `issue`（int）/ `event`（string）/ `session_id`（string）/ phase・size・tier・result 等の任意フィールド。`emit_event` の出力形式に一致させる。
+
+### ja ミラー同期
+
+- `check-translation-sync.sh` は `docs/*.md`（maxdepth 1）+ `docs/guide/*.md` を対象（spec/・stats/ 除外、常に exit 0 の informational）。本 Issue で変更する `docs/structure.md`・`docs/workflow.md` の ja ミラー（`docs/ja/structure.md`・`docs/ja/workflow.md`）を同期する。`docs/reports/` 配下の生成レポートは翻訳対象外（runtime 出力）。
+
+### skill-dev-checks（設計時チェック、SPEC_DEPTH=full）
+
+- **settings.json.template は変更不要**: 新スクリプト `get-auto-session-report.sh` は新規 skill ではなく既存 audit/SKILL.md への追加。`.claude/settings.json.template` は wildcard（`${WHOLEWORK_ROOT}/scripts/*.sh *`、plugin-cache `.../scripts/*.sh *`）で全スクリプトを許可済みのため、新スクリプトは自動的にカバーされる（個別登録不要）。audit/SKILL.md frontmatter allowed-tools への `get-auto-session-report.sh:*` 追加（Step 5）のみ必要。
+- **新規モジュール不要**: session_id ロジックは run-auto-sub.sh のみ、レポート生成は単一スクリプトのみで 2 skill 以上の再利用がないため modules/ への抽出は不要。
+- **validate-skill-syntax.py 制約（audit/SKILL.md 編集時）**: (1) frontmatter `description` は single-line（block scalar 不可）。(2) body に半角 `!` を含めない（全角「！」or 日本語表現）。(3) code fence は既存 audit/SKILL.md の慣例（progress 出力テンプレート等が ``` fence を使用し CI 通過済み）に倣う。新規 enumeration（list/table）を追加する場合は (examples)/(exhaustive) マーカーを付す。
+- **新スクリプトの base tool**: Bash/Read/Write/Edit は既存 allowed-tools 済み。validate-skill-syntax.py の KNOWN_TOOLS 変更は不要（追加するのは script path のみで base tool 名ではない）。
+</content>
+</invoke>
