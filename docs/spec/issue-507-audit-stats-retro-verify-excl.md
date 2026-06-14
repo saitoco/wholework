@@ -77,3 +77,46 @@ Step 2 Computation の Outcome 計算母集団が `filtered_issues` 全体であ
 - Pre-merge AC 3件はすべて PASS 確認済み（Issue チェックボックス更新済み）
 - 変更は `skills/audit/SKILL.md` の 2箇所のみ: `#### Outcome Exclusion Filter` 新設と `#### Section 5: Outcome` 更新
 - Post-merge AC はいずれも saito/trading での実行確認が必要な manual AC
+
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| spec | patch | SUCCESS | |
+| code | patch | SUCCESS (orchestration anomaly) | run-code.sh exit 1 で wrapper failure → reconcile が code-pr 期待で false mismatch、しかし実装は patch route として完了し main に push 済み（commit 69a99d7, 1329f61, 5a66708）|
+| verify | -    | PARTIAL | Pre-merge 3 件 PASS、Post-merge 3 件 manual SKIPPED |
+
+### Orchestration Anomalies
+- `run-code.sh` が exit 1 で終了したが、reconcile-phase-state は `code-pr` phase を期待して `no open PR found` を返した。実態は patch route（S サイズ）で直接 main commit + push 完了済み。route mismatch（reconcile が code-patch でなく code-pr をチェックした）が原因。
+- Tier 3 recovery (`spawn-recovery action=retry`) が一度発動し、stale worktree クリーンアップ後に再実行された。再実行は実際には成功（直接コミット）したが、reconcile は依然 code-pr 期待だったため exit 1 のまま返ってきた。
+- 親セッションで実状態を Tier 1 (Observe) として確認: Issue は CLOSED + `phase/verify`、commit 3 件あり、`closes #507` で自動クローズ済み → patch route として完了している。手動で `/verify` を起動した。
+
+### Improvement Proposals
+- `reconcile-phase-state.sh` の `code-pr` / `code-patch` phase 選択が wrapper 内で正しく行われていない可能性。size auto-detect で patch route と判定された後の reconcile call で phase を `code-patch` に切り替える必要がある（route 判定後に reconcile phase を更新する分岐の追加）。
+- Tier 3 recovery の `action=retry` が現状はオリジナル wrapper を同じ引数で再呼び出すが、wrapper 内部の reconcile mismatch (route 判定誤り) は再試行では解消しないため、別パターン（recovery 経由で reconcile phase を明示）として catalog 化が必要。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC1 の verify command を `section_contains "stats Subcommand" "retro/verify"` から `section_contains "Section 5" "retro/verify"` に修正したのは Refinement で実装変更を正確に検出するうえで有効だった（既存記述による偽陽性回避）。
+
+#### spec
+- pre-merge AC 3 件すべてに verify command が割り当てられており、すべて Section 抽出系（`section_contains`）または意味判定系（`rubric`）で実装変更を正確に検出する設計。Code Retrospective に AC2 FAIL → 日本語説明行追加で PASS の rework が記録されており、verify-design 結合の弱点（heading 抽出と「除外」キーワードの直接配置の必要性）が学びになっている。
+
+#### code
+- 1 件の rework（`#### Outcome Exclusion Filter` 先頭に日本語説明行追加で AC2 を充足）が発生。verify command の `section_contains` 仕様（最初にマッチする heading section が対象）を考慮した設計が必要だった。
+
+#### review
+- なし (patch route)。
+
+#### merge
+- patch route のため main 直 push。run-auto-sub.sh wrapper が exit 1 で帰ってきたが実態は完了。
+
+#### verify
+- Pre-merge 3 件全 PASS。Post-merge 3 件は saito/trading 実行が必要で Claude 不可、guide のみ → `phase/verify` 留め。
+
+### Improvement Proposals
+- Auto Retrospective の Improvement Proposals 参照（reconcile-phase-state の route mismatch、Tier 3 retry の効果範囲）。
