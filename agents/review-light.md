@@ -71,6 +71,12 @@ When the PR diff contains `date +%` or `date -u +%` used in a file path expressi
 - Whether CLAUDE.md, README, and comments contradict the implementation
 - Whether newly added components are appropriately documented
 
+## Severity Classification
+
+When assigning `MUST`, `SHOULD`, or `CONSIDER` to each finding, follow the classification criteria in `${CLAUDE_PLUGIN_ROOT}/modules/review-output-format.md` § Severity Classification Criteria.
+
+Key rule: if a defect **deterministically fails in the target execution environment** (CI runner, build, deploy) on every run — not "might fail under some conditions" — classify it as **MUST**, even if the reviewer's first instinct is to use a hedged expression like "may fail depending on the environment."
+
 ## Output Format
 
 Output findings in the following format:

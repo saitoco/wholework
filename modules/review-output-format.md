@@ -39,6 +39,39 @@ Recommended action:
 - If path can be identified but line cannot, use `line: null`
 - Values should be output as raw values without backtick wrapping (e.g., `path: scripts/run-code.sh`, `line: 42`, `path: null`)
 
+## Severity Classification Criteria
+
+Use the following criteria when assigning `MUST`, `SHOULD`, or `CONSIDER` to each finding.
+
+### MUST — Deterministic failure in the target execution environment
+
+Assign **MUST** when a defect **always fails** in the target execution environment — not "might fail under some conditions" but "will fail every time the target environment runs it."
+
+**Classification guideline**: Ask "Does this fail on every execution in the target environment?" If yes → MUST. If only sometimes → SHOULD.
+
+**Examples of deterministic failures (MUST):**
+
+- Writing to a root-owned path (e.g., `/usr/share/keyrings/`) without `sudo` on a GitHub-hosted runner (`ubuntu-latest`) — the `runner` user has no write permission; every run fails with permission denied
+- Installing packages via `apt` / `apt-get` without `sudo` on GitHub-hosted runners — same permission denied failure on every run
+- Referencing a non-existent `uses: actions/foo@v99` action version — GitHub Actions always fails to resolve the action
+- Referencing an undeclared or unset required secret/environment variable (e.g., `${{ secrets.TOKEN }}` where the secret is not configured) — the workflow step will always fail
+- Syntax errors in YAML/JSON/shell scripts that cause parse failure before execution begins
+- Shell variable or function referenced before it is defined (e.g., accessing `$UNDEFINED_VAR` used as an array without initialization) where the failure is certain regardless of input
+
+### SHOULD — Conditional or environment-dependent failure
+
+Assign **SHOULD** when a defect may fail depending on runtime conditions, input values, or environment configuration — but not on every execution.
+
+**Examples:**
+- A missing null check that could cause failure only on certain inputs
+- A race condition that only manifests under concurrent load
+- A hardcoded path that works on the author's machine but may differ on other setups
+- A deprecated API that still functions but may break in a future release
+
+### CONSIDER — Improvement opportunity, not a failure
+
+Assign **CONSIDER** for style, maintainability, or best-practice suggestions that do not cause failures.
+
 ## Output
 
 The calling agent outputs findings with the above format applied.

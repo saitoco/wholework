@@ -120,7 +120,7 @@ Key modules:
 - `modules/codebase-analysis.md` — codebase analysis for `/doc` deep mode
 - `modules/title-normalizer.md` — issue title normalization
 - `modules/ambiguity-detector.md` — ambiguity detection in issue descriptions
-- `modules/review-output-format.md` — review output formatting
+- `modules/review-output-format.md` — review output formatting and MUST/SHOULD/CONSIDER severity classification criteria
 - `modules/review-type-weighting.md` — review type weighting configuration
 - `modules/project-field-update.md` — GitHub Projects field update
 - `modules/browser-adapter.md` — browser-based verification adapter
