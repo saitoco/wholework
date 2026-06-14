@@ -57,18 +57,32 @@
 - None
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `skills/code/SKILL.md` Step 8 の「Implement the code...」の直後に guard paragraph を挿入（`**Implementation scope: all Spec steps are required**`）。箇条書きではなく段落形式を採用し、verify-type と実装要否の独立性を明示した
-- `skills/spec/SKILL.md` の `**Step recording rules:**` 内の `**Acceptance criteria mapping**` 直後に bullet を追加。守備範囲は full テンプレートの 1 箇所のみ（light テンプレートには記録ルールブロックなし）
-- 半角 `!` 禁止制約を遵守し、ダッシュ（`—`）+ "not whether" 形式で否定表現を実現
+- REVIEW_DEPTH=light（Issue Size=M および --light フラグ）で review-light 軽量統合レビューを実施
+- 外部レビューツール（Copilot/Claude Code Review/CodeRabbit）は無効設定のため全て省略
+- 全4観点（Spec 逸脱・エッジケース・セキュリティ・ドキュメント整合性）で問題なし、MUST 課題ゼロ
 
 ### Deferred Items
 - Post-merge AC（`observation event=auto-run`）: `/auto` で post-merge manual AC を含む Issue を実行した際の観察による確認。verify phase での対応事項
 - review 側強化（spec-deviation 検出で post-merge manual 項目の実装漏れを MUST 検出）は本 Issue スコープ外。別 Issue 対応
 
 ### Notes for Next Phase
-- 変更は 2 ファイルへのテキスト追加のみ。コード変更・ロジック変更・テスト変更はない
-- 両 pre-merge AC（rubric + file_contains）が PASS 確認済み
-- bats テスト 771 件 PASS、forbidden-expressions チェック PASS、validate-skill-syntax PASS
+- 課題なし、CI 全 SUCCESS のため `/merge 633` で即座にマージ可
+- Post-merge AC（observation: event=auto-run）は merge 後の `/auto` 実行で確認
+- 変更はテキスト追加のみであり、マージ後のリグレッションリスクは低い
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+特記なし。Spec の Implementation Steps 2 件と PR diff が 1:1 で対応しており、乖離は検出されなかった。テキスト追加のみの変更であり、乖離が生じにくい性質の PR だった。
+
+### 繰り返し課題
+
+特記なし。Spec のスコープ（2 ファイルへのテキスト追加）に対して PR が過不足なく対応しており、同種の課題は見当たらない。
+
+### 受け入れ条件検証の困難さ
+
+特記なし。全 pre-merge AC が `rubric` + `file_contains` の組み合わせで検証可能であり、UNCERTAIN 件数はゼロだった。Post-merge AC は `observation: event=auto-run` 型であり、verify phase での確認が必要だが、これは設計上の意図である。
