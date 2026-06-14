@@ -27,6 +27,26 @@ If ARGUMENTS contains `--help`, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.m
 
 Extract the Issue number from ARGUMENTS. Examples: `ARGUMENTS = "279"` → `NUMBER = 279`; `ARGUMENTS = "279 --patch"` → `NUMBER = 279, ROUTE_FLAG = --patch`
 
+**AUTO_SESSION_ID generation (run before all route detection):**
+
+Generate a session identifier and record it in a pointer file so sub-processes spawned by `run-auto-sub.sh` can read it:
+
+1. Generate `SESSION_ID` and create the pointer file:
+   ```bash
+   mkdir -p .tmp
+   SESSION_ID="$$-$(date +%s)"
+   printf '%s\n' "$SESSION_ID" > .tmp/auto-session-current
+   ```
+2. Write `.tmp/auto-session-${SESSION_ID}.json` using the Write tool with session metadata:
+   ```json
+   {"session_id": "<SESSION_ID>", "session_start": "<current UTC timestamp in ISO8601>"}
+   ```
+   Substitute the actual `SESSION_ID` value and current timestamp before writing.
+3. Set `AUTO_SESSION_ID="$SESSION_ID"` in the current Bash context (does not persist across separate Bash tool calls; sub-processes read from the pointer file instead):
+   ```bash
+   export AUTO_SESSION_ID="$SESSION_ID"
+   ```
+
 **`--resume` detection (single-Issue resume):**
 
 If ARGUMENTS contains `--resume` but NOT `--batch`: record `RESUME_MODE=true` and extract the numeric token following `--resume` as `NUMBER`. Output a log line: "Resume mode: restoring checkpoint for issue #$NUMBER". Proceed to Step 2 as normal (checkpoint restoration happens in Step 4 before the verify loop).

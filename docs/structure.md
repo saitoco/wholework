@@ -179,6 +179,7 @@ Key modules:
 - `scripts/get-issue-priority.sh` — get issue priority field
 - `scripts/get-sub-issue-graph.sh` — build sub-issue dependency graph
 - `scripts/get-sub-issue-progress.sh` — fetch all sub-issues (OPEN + CLOSED) under an XL parent issue with state, labels, timestamps, and blockedBy for `/audit progress`
+- `scripts/get-auto-session-report.sh` — generate the data layer of a /auto session retrospective report from `.tmp/auto-events.jsonl` (filtered by session_id) for `/audit auto-session`
 - `scripts/get-verify-iteration.sh` — read highest `<!-- verify-iteration: N -->` marker from Issue comments
 - `scripts/hook-rename-on-auto.sh` — UserPromptSubmit hook: auto-rename session title when prompt matches `/auto` pattern
 - `scripts/log-permission.sh` — log permission events (JSON output)
