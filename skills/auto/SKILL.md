@@ -380,8 +380,10 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
    | Source | When to append | Dependency |
    |--------|---------------|------------|
    | Source 1: `fallback-catalog` | A catalog entry in `orchestration-fallbacks.md` was applied during Tier 2 recovery | Available (#315 shipped) |
-   | Source 2: `recovery-sub-agent` | The `orchestration-recovery` sub-agent produced a successful recovery plan during Tier 3 recovery | #316 ship 後に有効 (skip this source until #316 ships) |
+   | Source 2: `recovery-sub-agent` | The `orchestration-recovery` sub-agent produced a successful recovery plan during Tier 3 recovery | Available (#617 shipped) |
    | Source 3: `wrapper-anomaly-detector` | `detect-wrapper-anomaly.sh` detected a known failure pattern during Tier 2 recovery | Available (#313 shipped) |
+
+   **Source 2 detection — single-Issue parent session only**: Check if `TIER3_RECOVERY_PHASE` is set (retained in Step 6 after Tier 3 succeeds). If set, use retained `TIER3_RECOVERY_*` variables to build the entry and prepend it. For batch/XL routes, `spawn-recovery-subagent.sh` writes directly to `orchestration-recoveries.md`, so Source 2 here covers only single-Issue parent sessions (M/L/patch).
 
    For each applicable source, prepend a new entry block to `docs/reports/orchestration-recoveries.md` (after the header comment line `<!-- Log entries appear below, newest first. -->`). Use the Write/Edit tool. Entry format:
 
@@ -617,6 +619,15 @@ Spawn the orchestration-recovery sub-agent via Task to diagnose the unknown fail
    - `action=skip`: treat the phase as complete and continue to the next phase
    - `action=recover`: execute `steps` sequentially; if all steps succeed, continue to the next phase; if any step fails, fall back to stop-and-report
    - `action=abort`: fall back to stop-and-report immediately
+
+5b. **Retain recovery state** (on successful recovery — action is not `abort`):
+   Retain the following as in-context variables for use in Step 4a Source 2:
+   - `TIER3_RECOVERY_PHASE=$PHASE`
+   - `TIER3_RECOVERY_ACTION=$action` (the action that succeeded)
+   - `TIER3_RECOVERY_RATIONALE`: `rationale` field from the recovery plan JSON
+   - `TIER3_RECOVERY_STEPS_COUNT`: number of steps in the plan (0 for retry/skip)
+   - `TIER3_RECOVERY_EXIT_CODE=$EXIT_CODE`
+   - `TIER3_RECOVERY_LOG_TAIL`: last line of `.tmp/wrapper-out-$NUMBER-$PHASE.log`
 
 6. Clean up: `rm -f .tmp/recovery-plan-$NUMBER-$PHASE.json .tmp/wrapper-out-$NUMBER-$PHASE.log`
 
