@@ -25,3 +25,18 @@ list_mode_section() {
     run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'non-interactive'"
     [ "$status" -eq 0 ]
 }
+
+@test "List mode section: blocked-by check present" {
+    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'blocked'"
+    [ "$status" -eq 0 ]
+}
+
+@test "List mode section: phase/done gate condition present" {
+    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'phase/done'"
+    [ "$status" -eq 0 ]
+}
+
+@test "List mode section: --batch --resume in blocked warning present" {
+    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q -- '--batch --resume'"
+    [ "$status" -eq 0 ]
+}

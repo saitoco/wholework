@@ -736,10 +736,24 @@ Process each Issue in `BATCH_LIST` in order:
 2. **If no `phase/*` labels**: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh $NUMBER` (issue triage → Size setting → `phase/ready` assignment)
    - On failure: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
 3. Re-check Size: call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`; if Size is XL: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
-4. Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh $NUMBER` (all phases spec→code→review→merge→verify, auto-starting from the current `phase/*` state)
-   - On success: proceed to step 5
+4. **Blocked-by check**: Extract blocker numbers from the Issue body:
+   ```
+   gh issue view $NUMBER --json body -q '.body' | grep -ioE "blocked by #[0-9]+" | grep -oE "[0-9]+"
+   ```
+   - If no blockers found: skip to step 5
+   - For each blocker `$BLOCKER`:
+     ```
+     gh issue view $BLOCKER --json state,labels -q '{state: .state, phases: [.labels[].name | select(startswith("phase/"))]}'
+     ```
+     - If `state` is `"CLOSED"` or `phases` contains `"phase/done"`: gate released — continue to next blocker
+     - Otherwise: extract `$BLOCKER_PHASE` (first `phase/*` label of blocker, or `"OPEN"` if no `phase/*` label); output warning and skip `$NUMBER` (do NOT call `update_batch` — keeps `$NUMBER` in `remaining` for `/auto --batch --resume`):
+       ```
+       Warning: #$NUMBER blocked by #$BLOCKER which is $BLOCKER_PHASE (manual post-merge pending). Skipping #$NUMBER. After completing #$BLOCKER manually, resume with /auto --batch --resume.
+       ```
+5. Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh $NUMBER` (all phases spec→code→review→merge→verify, auto-starting from the current `phase/*` state)
+   - On success: proceed to step 6
    - On failure: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
-5. **Verify orchestration** (after run-auto-sub.sh success):
+6. **Verify orchestration** (after run-auto-sub.sh success):
    - Re-fetch current labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
    - If `phase/verify` is present in labels:
      - If `--non-interactive` is NOT in ARGUMENTS: invoke `Skill(skill="wholework:verify", args="$NUMBER")` in the parent session
