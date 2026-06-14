@@ -178,3 +178,21 @@
 
 - 全 AC が `grep` / `file_contains` / `file_exists` / `rubric` で静的に検証可能だった。UNCERTAIN はなし。
 - ただし `emit_event` guard（`AUTO_EVENTS_LOG` 未設定時に emit_event を呼ばない）の動的な振る舞いは verify command で静的に確認できない。Post-merge 観察 AC として登録されているが、verify-executor による事前確認が困難な AC の典型例。
+
+## Phase Handoff
+<!-- phase: merge -->
+
+### Key Decisions
+- コンフリクトは `tests/run-auto-sub.bats` の単一ファイルのみ。HEADの既存テスト（`reconcile-phase-state.sh receives code-patch`）とブランチの新規テスト3件（token_usage, test_result, concurrent_commit_detected）を両方保持する conservative merge を採用。
+- `gh pr merge --squash --delete-branch` がworktree環境でのmainチェックアウト競合により失敗したため、GitHub APIで直接マージを実施。
+- rebase後の全25テスト（bats）がpassしたことを確認してからpush・マージを実行。
+
+### Deferred Items
+- `emit_event` guard の動的振る舞い（`AUTO_EVENTS_LOG` 未設定時の無操作）は post-merge 観察 AC として残存。
+- `docs/structure.md` のファイル数ドリフト（73→実数）は今回修正対象外。
+- `docs/reports/event-log-schema.md` の `issue` フィールド説明の不正確さ（review retroに記録済み）は follow-up Issue として検討。
+
+### Notes for Next Phase
+- verify phaseは post-merge 観察 AC（`/auto` 実行後に6種類のeventが `.tmp/auto-events.jsonl` に記録されること）の確認が主タスク。
+- `emit_event` のguard動作は静的verify commandで確認困難。実行ログの観察で確認すること。
+- 新規テスト3件（token_usage, test_result, concurrent_commit_detected）はskipになる可能性があるため、CI logでskip理由を確認すること。
