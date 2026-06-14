@@ -19,6 +19,10 @@ setup() {
     CLAUDE_CALL_LOG="$BATS_TEST_TMPDIR/claude_calls.log"
     export CLAUDE_CALL_LOG
 
+    # Record file for verifying gh-label-transition.sh calls
+    LABEL_TRANSITION_LOG="$BATS_TEST_TMPDIR/label_transition.log"
+    export LABEL_TRANSITION_LOG
+
     # Mock get-config-value.sh: return "bypass" by default
     cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
 #!/bin/bash
@@ -125,6 +129,14 @@ echo ""
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    # Mock gh-label-transition.sh: no-op, logs calls for verification
+    cat > "$MOCK_DIR/gh-label-transition.sh" <<'MOCK'
+#!/bin/bash
+echo "CALLED: $1 $2" >> "$LABEL_TRANSITION_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh-label-transition.sh"
 
     # Create SKILL.md fixture
     mkdir -p "$BATS_TEST_TMPDIR/skills/merge"
@@ -329,4 +341,31 @@ MOCK
     run bash "$SCRIPT" 88
     [ "$status" -eq 0 ]
     [[ "$output" != *"Warning:"*"not MERGED"* ]]
+}
+
+@test "label stuck: merge succeeded but phase/review label stuck, auto-transitions to verify" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* && "$*" == *"labels"* ]]; then
+  echo '["phase/review","triaged"]'
+  exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".state"* ]]; then
+    echo "MERGED"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Warning:"*"phase/review"*"Auto-transitioning"* ]]
+    grep -q "CALLED: 99 verify" "$LABEL_TRANSITION_LOG"
 }

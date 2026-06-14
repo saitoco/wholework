@@ -90,6 +90,13 @@ if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
       echo "Warning: claude exited 0 but merge phase did not complete (silent no-op). reconcile: $_reconcile_out" >&2
       EXIT_CODE=1
     fi
+    if [[ $EXIT_CODE -eq 0 ]]; then
+      _issue_labels=$(gh issue view "$_MERGE_ISSUE" --json labels -q '[.labels[].name]' 2>/dev/null || echo "")
+      if echo "$_issue_labels" | grep -q '"phase/review"' && ! echo "$_issue_labels" | grep -q '"phase/verify"'; then
+        echo "Warning: merge completed but phase label still at phase/review. Auto-transitioning to phase/verify." >&2
+        "$SCRIPT_DIR/gh-label-transition.sh" "$_MERGE_ISSUE" verify || true
+      fi
+    fi
   else
     echo "reconcile-phase-state: could not extract issue number from PR #${PR_NUMBER}, skipping reconcile" >&2
     # Fallback: check PR state directly when issue extraction fails
