@@ -116,18 +116,28 @@ fi
 
 - Nothing to note
 
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- None — Implementation Steps in Spec were precise and matched the issue body proposal exactly.
+
+### Rework
+- None — 21 bats tests passed on first run, including the 3 new size-change tests.
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
-- SIZE 再取得を無条件化し、INITIAL_SIZE との比較で変更時のみ `emit_event "size_refresh"` を発行する設計を採用。条件分岐を最小化してコードを単純に保つ。
-- テストは既存の `tests/run-auto-sub.bats` に追加。新ファイルではなく既存ファイルへの拡張 (同一 concern)。
-- 呼び出し回数カウントファイルを使った mock で first-call / second-call で異なる Size 値を返す設計を採用。
+- Replaced the 4-line conditional re-fetch block with the 6-line unconditional block as specified in Spec. The SIZE unset error check (`if [[ -z "$SIZE" ]]; then echo "Error..."`) immediately after was preserved as a fail-safe.
+- Call-count file pattern (`CALL_COUNT_FILE="$BATS_TEST_TMPDIR/.size-call-count"`) used for stateful mocking of first/second get-issue-size.sh calls in bats tests.
+- gh mock overridden in the 3 new tests to return labels without `phase/ready`, ensuring spec runs and the re-fetch path is exercised.
 
 ### Deferred Items
 - None
 
 ### Notes for Next Phase
-- 置換対象は `if [[ -z "$SIZE" ]]; then ... fi` ブロックのみ (spec フェーズ直後)。その後の SIZE 未設定エラーチェック `if [[ -z "$SIZE" ]]; then echo "Error..."` は削除しない。
-- `detect-wrapper-anomaly.sh` はテスト mock に含めなくてよい (`|| true` で安全に無視される)。
-- CI テスト (test.yml) が全 green であることを確認すること。
+- All 21 tests pass locally; verify CI (test.yml) is green before merging.
+- The fix is a minimal targeted change — only the conditional block replaced, no other logic changed.
