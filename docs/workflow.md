@@ -128,6 +128,15 @@ git push origin release/v2.0
 
 When `--base` specifies a branch other than main, `closes #N` does not auto-close Issues (GitHub only works when merging to the default branch). Close Issues manually at the final merge of `release/v2.0` into main, or run `gh issue close` manually.
 
+**SKILL.md self-apply risk**: `/auto` loads `skills/auto/SKILL.md` (and other Skills/Modules) at session start and keeps this snapshot throughout the run. When the PR being processed adds or modifies files under `skills/` or `modules/`, those files are merged mid-session; phases that run **after** the merge still use the pre-merge snapshot. This was observed in Issue #485 / PR #498: the session loaded the old `skills/auto/SKILL.md` (which called `run-verify.sh`) before merge; after merge — where `run-verify.sh` was deleted — the verify phase attempted to call the missing script.
+
+**Recommendation**: Avoid self-applying a PR that changes `skills/*.md` or `modules/*.md` via `/auto` in a single session. Two safe alternatives:
+
+1. **Stop before verify**: Run `/auto` up through `/merge`, then start a **fresh session** and run `/verify` (or `/auto --resume N`) so the post-merge verify phase reads the newly merged SKILL.md.
+2. **Manual workflow**: Process the PR via the standard manual flow (`/code` → `/review` → `/merge`) and run `/verify` in a new session after merge completes.
+
+If `/auto` is already running when you notice the PR includes SKILL.md or Module changes, let it run through `/merge`, then interrupt and re-invoke `/verify` manually in a fresh session.
+
 ## Supporting Skills
 
 Skills that operate outside the main Issue → verify flow. They maintain metadata, foundation documents, and codebase health rather than driving individual Issue execution.
