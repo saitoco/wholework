@@ -100,19 +100,41 @@ Issue 提案の出力フォーマットに Failed カテゴリがあったが、
 
 - `docs/structure.md` のテスト数カウントが実際と乖離していることをファイルカウントで確認。Spec Notes に記録して `/code` フェーズで対応させる
 
+## Code Retrospective
+
+### Deviations from Design
+- Spec の実装ステップは「1 → 2 → 3 (並行) → 4 → 5」を想定していたが、実際には 1・3・5 を並行コミット、2・4 を順次コミットした。機能的な差異はない
+
+### Design Gaps/Ambiguities
+- `jq` の `reduce`/`error` を使わない単純なパイプで構築できた (`get-sub-issue-progress.sh` は `get-sub-issue-graph.sh` より大幅にシンプル)
+- `audit-progress.bats` のテストケースを 4 件（Spec の想定 3 件より 1 件多い no-arg エラーケースを追加）にすることで、引数検証も網羅した
+
+### Rework
+- なし（設計どおりに 1 パスで実装完了）
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- 実装は Spec の全 6 要素（fetch/status/phase/time/activity/blocked）を忠実に実装。divergence なし
+- SKILL.md の `description:` フィールドが新サブコマンド追加時に更新されなかった（他の全サブコマンドは記載済み）。フロントマター更新を実装チェックリストに含めるべき構造的パターン
+
+### Recurring issues
+- SKILL.md の出力テンプレート（Step 4）と定義（Step 3）の整合性に軽微な gap（"no phase" カウントの出力先未定義）。LLM instructions では Step 3 と Step 4 を cross-check する観点が弱い傾向がある
+
+### Acceptance criteria verification difficulty
+- 全 8 AC に verify command が設定済みで UNCERTAIN なし。`command "bats..."` は CI reference fallback (SUCCESS) で PASS 確認
+- rubric AC のセマンティック判定は diff と SKILL.md の照合で問題なく実施できた
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `get-sub-issue-progress.sh` は新規スクリプトとして作成（`get-sub-issue-graph.sh` は `/auto` コアのため変更しない）
-- `gh-graphql.sh` に `get-sub-issues-all` named query を追加（OPEN+CLOSED、labels+timestamps 取得）
-- Status 優先順位: Done > Blocked > Stale > In progress > Pending
+- SHOULD 2 件を修正: description フィールド更新 + no-phase 出力テンプレート追加
+- MUST 問題なし。CI 全ジョブ SUCCESS
 
 ### Deferred Items
-- `run-auto-sub.sh` event log (#600) との統合は本 Issue スコープ外。#600 着地後に別 Issue で検討
-- `docs/structure.md` の tests カウントドリフト（63→64）の修正も本 Issue 内で兼ねて対応する
+- post-merge 確認（実 XL Issue での進捗確認）は `/verify` フェーズで observation イベント待ち
 
 ### Notes for Next Phase
-- `allowed-tools` に `get-sub-issue-progress.sh:*` の追加を忘れずに（SKILL.md frontmatter）
-- `audit-progress.bats` の mock 設定は `get-sub-issue-graph.bats` と同じパターン（WHOLEWORK_SCRIPT_DIR + MOCK_GRAPHQL_RESPONSE 環境変数）
-- `docs/structure.md` の scripts カウント: 51→52、tests カウント: 63→65（既存ドリフト修正込み）
+- 全 pre-merge AC: 8/8 PASS
+- PR #621 は COMMENTED 状態（SHOULD 修正 push 済み）。merge ready

@@ -1,7 +1,7 @@
 ---
 name: audit
-description: Detect documentation/implementation drift and auto-generate Issues (`/audit drift`), and detect structural fragility (`/audit fragility`). AI detects semantic drift between Steering Documents + Project Documents and codebase implementation, and auto-generates Issues for code-side fixes. Where `/doc sync` proposes documentation-side fixes, `/audit` is the complementary skill that creates Issues for code-side fixes. Running without arguments executes both drift and fragility perspectives in an integrated run. `/audit stats` aggregates Issue metadata across the project and generates a project health diagnostic report (throughput / composition / First-try success / Backlog Health, etc.), providing a third lens for project health alongside drift and fragility detection. `/audit stats --retention` adds phase/verify and Icebox dwell metrics (median/p95/30-day threshold violations, verify-type breakdown, Icebox dwell, trigger candidates) with escalation-based retire-proposal comment posting (30/60/90 days for verify, 90/180 days for Icebox). `/audit recoveries` reads the cross-Issue orchestration recovery log (`docs/reports/orchestration-recoveries.md`) and files Issues for recurring patterns that exceed a frequency threshold.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash(gh issue create:*, gh issue list:*, gh issue view:*, gh issue edit:*, gh label create:*, ls:*, mkdir:*, rm:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-priority.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-eager-load-capability.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/compute-escalation-level.sh:*)
+description: Detect documentation/implementation drift and auto-generate Issues (`/audit drift`), and detect structural fragility (`/audit fragility`). AI detects semantic drift between Steering Documents + Project Documents and codebase implementation, and auto-generates Issues for code-side fixes. Where `/doc sync` proposes documentation-side fixes, `/audit` is the complementary skill that creates Issues for code-side fixes. Running without arguments executes both drift and fragility perspectives in an integrated run. `/audit stats` aggregates Issue metadata across the project and generates a project health diagnostic report (throughput / composition / First-try success / Backlog Health, etc.), providing a third lens for project health alongside drift and fragility detection. `/audit stats --retention` adds phase/verify and Icebox dwell metrics (median/p95/30-day threshold violations, verify-type breakdown, Icebox dwell, trigger candidates) with escalation-based retire-proposal comment posting (30/60/90 days for verify, 90/180 days for Icebox). `/audit recoveries` reads the cross-Issue orchestration recovery log (`docs/reports/orchestration-recoveries.md`) and files Issues for recurring patterns that exceed a frequency threshold. `/audit progress <XL-parent-issue-number>` displays a sub-issue progress snapshot (status breakdown, phase distribution, time estimate, 24h activity) for the specified XL parent issue.
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(gh issue create:*, gh issue list:*, gh issue view:*, gh issue edit:*, gh label create:*, ls:*, mkdir:*, rm:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-priority.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-eager-load-capability.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/compute-escalation-level.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-progress.sh:*)
 ---
 
 # audit: Documentation × Implementation Drift Detection
@@ -20,9 +20,11 @@ If ARGUMENTS is `stats` or starts with `stats` (including options like `--since 
 
 If ARGUMENTS is `recoveries` or starts with `recoveries` (including options like `--dry-run`, `--limit N`, `--threshold K`): execute the "recoveries subcommand" section and exit.
 
+If ARGUMENTS is `progress` or starts with `progress` (e.g., `progress <issue-number>`): execute the "progress Subcommand" section and exit.
+
 If ARGUMENTS is empty (no arguments), `--dry-run`, or starts with `--limit`: execute the "Integrated Execution (drift + fragility)" section and exit.
 
-For any other ARGUMENTS: display "Usage: /audit [drift|fragility|stats|recoveries] [--dry-run] [--limit N] [--since DATE] [--no-save] [--retention] [--threshold K] (running `/audit` without arguments executes drift + fragility integrated run)" and exit.
+For any other ARGUMENTS: display "Usage: /audit [drift|fragility|stats|recoveries|progress <XL-parent>] [--dry-run] [--limit N] [--since DATE] [--no-save] [--retention] [--threshold K] (running `/audit` without arguments executes drift + fragility integrated run)" and exit.
 
 ---
 
@@ -844,6 +846,106 @@ git push origin HEAD 2>/dev/null || git push origin main
 Display the list of generated Issue numbers and titles.
 
 Then read `${CLAUDE_PLUGIN_ROOT}/modules/steering-hint.md` and follow the "Processing Steps" section.
+
+---
+
+## progress Subcommand
+
+Display a progress snapshot of sub-issues under a specified XL parent issue.
+
+### Argument Parsing
+
+Extract the parent issue number from ARGUMENTS (e.g., `progress 1000` → parent number `1000`). If no issue number is provided, display "Usage: /audit progress <XL-parent-issue-number>" and exit.
+
+### Step 1: Fetch Sub-issue Data
+
+Run:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-progress.sh" <parent-number>
+```
+
+The script outputs JSON with the following structure:
+
+```json
+{
+  "parent": { "number": 1000, "title": "..." },
+  "sub_issues": [
+    {
+      "number": 1001,
+      "title": "...",
+      "state": "OPEN",
+      "createdAt": "2026-06-01T00:00:00Z",
+      "closedAt": null,
+      "updatedAt": "2026-06-10T12:00:00Z",
+      "labels": [{ "name": "phase/code" }],
+      "blockedBy": [{ "number": 1005, "state": "OPEN" }]
+    }
+  ]
+}
+```
+
+If the script exits non-zero, display the error and exit.
+
+### Step 2: Classify Sub-issue Status
+
+For each sub-issue, classify status using the following priority order (first matching rule wins):
+
+| Priority | Status | Classification rule |
+|----------|--------|---------------------|
+| 1 | Done | `state == "CLOSED"` |
+| 2 | Blocked | `state == "OPEN"` AND any entry in `blockedBy` has `state == "OPEN"` |
+| 3 | Stale | `state == "OPEN"` AND labels contain `stale-verify` |
+| 4 | In progress | `state == "OPEN"` AND labels contain any of: `phase/code`, `phase/review`, `phase/verify`, `phase/spec` |
+| 5 | Pending | all other OPEN issues (including `phase/issue`, `phase/ready`, or no phase label) |
+
+### Step 3: Compute Metrics
+
+**Status counts:** Count sub-issues per status (Done / In progress / Blocked / Stale / Pending).
+
+**Phase distribution:** For In progress and Blocked sub-issues, count by phase label (`phase/issue`, `phase/spec`, `phase/ready`, `phase/code`, `phase/review`, `phase/verify`). An issue with no phase label counts under "no phase".
+
+**Time estimates:**
+- Median completion time: compute median of `(closedAt - createdAt)` in minutes for all Done sub-issues. If no Done sub-issues exist, display "N/A".
+- Remaining estimate: `pending_count / max(in_progress_count, 1) × median`. Display as a range (±20%): e.g., "12-18 hours wall-clock".
+
+**Recent 24h activity:** Filter sub-issues where `updatedAt` is within the last 24 hours. Report the count.
+
+**Blocked relationships:** For each Blocked sub-issue, list the OPEN `blockedBy` issue numbers.
+
+### Step 4: Display Output
+
+Output the snapshot in the following format:
+
+```
+XL parent #<parent-number>: <parent-title>
+Sub-issues: <total> total (created <earliest-createdAt date>)
+
+Status breakdown:
+  ✅ Done:           <N> (<pct>%)
+  🔄 In progress:    <N> (<pct>%) — #<num>, #<num>, ...
+  🟡 Blocked:        <N> (<pct>%) — #<num> (by #<blocker>), ...
+  🟠 Stale:          <N> (<pct>%) — #<num>, ...
+  ⬜ Pending:        <N> (<pct>%)
+
+Phase distribution (in-progress + blocked):
+  phase/issue:   <N>
+  phase/spec:    <N>
+  phase/ready:   <N>
+  phase/code:    <N>
+  phase/review:  <N>
+  phase/verify:  <N>
+  no phase:      <N>
+
+Time estimates (based on completed sub-issues):
+  Median time per sub-issue: <N> min
+  Est. remaining: <low>-<high> hours wall-clock (<in_progress_count> concurrent, <pending_count> sub-issues remaining)
+
+Recent activity (last 24h):
+  - <N> sub-issues updated
+```
+
+Omit rows with count 0 from Phase distribution. If no sub-issues exist under the parent, display "No sub-issues found for #<parent-number>." and exit.
 
 ---
 
