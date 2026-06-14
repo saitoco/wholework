@@ -64,6 +64,32 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
+## 2026-06-15 00:25 UTC: Silent no-op when prior Issue's merge already satisfied AC (#490)
+
+### Context
+- Issue #490, phase: code-patch
+- Source: recovery-sub-agent
+- Wrapper: run-code.sh (via run-auto-sub.sh), exit code: 1
+- Log tail: "Warning: claude exited 0 but code-patch phase did not complete (silent no-op). reconcile: {..., \"diagnosis\":\"no commit with closes #490 found on origin/main\"}"
+
+### Diagnosis
+- Issue #491 (predecessor in batch sequence) had just merged commit 70e45fd which added `modules/verify-patterns.md` §13 with `cron` + `workflow_dispatch` content
+- #490's three Pre-merge ACs (`grep cron`, `section_contains §13 cron`, `section_contains §13 workflow_dispatch`) were already satisfied by #491's commit
+- code phase Claude correctly identified ACs as already met and produced no commit
+- Auto-Resolved Ambiguity Points in Issue body already noted: "#491 が本 Issue の受け入れ条件を実質カバー"
+
+### Recovery Applied
+- Tier 1 (reconcile) flagged commits_found=false → mismatch
+- Tier 2 (wrapper-anomaly-detector) did not match a known pattern
+- Tier 3 (recovery-sub-agent) returned `action=abort` with rationale "Human review needed to determine why Claude declined to implement"
+- Manual recovery: parent session verified all 3 Pre-merge ACs pass via direct grep/section_contains; ran /verify Skill; posted comment with #491-coverage context; transitioned label to phase/verify
+
+### Outcome
+- partial (manual intervention required to convert silent no-op to verify-pass + record Spec retrospective)
+
+### Improvement Candidate
+- 未起票 — possible patterns: (a) Issue body Auto-Resolved Ambiguity Points propagation into code phase context; (b) reconciler awareness of "already-satisfied via predecessor commit" via grepping closes #N for related Issue numbers mentioned in body. Both have over-fit risk; leave manual handling for now.
+
 ## 2026-06-14 09:54 UTC: Tier 3 retry against deterministic route mismatch (#507, retry failed)
 
 ### Context
