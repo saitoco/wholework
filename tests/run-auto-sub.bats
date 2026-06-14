@@ -484,6 +484,36 @@ MOCK
     [[ "$output" == *"Post-spec route demotion/upgrade"* ]]
 }
 
+@test "Size S + run-code.sh exit1: reconcile-phase-state.sh receives code-patch as first arg" {
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "S"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    # run-code.sh exits 1 to trigger tier1 reconcile
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$RUN_CODE_LOG"
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    # reconcile-phase-state.sh logs first arg and returns matches_expected=true
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<MOCK
+#!/bin/bash
+echo "\$1" >> "$RECONCILE_LOG"
+echo '{"matches_expected":true}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "code-patch" "$RECONCILE_LOG"
+}
+
 @test "post-spec size unchanged XS->XS: Post-spec is not logged" {
     cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
 #!/bin/bash

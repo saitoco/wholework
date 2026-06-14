@@ -289,8 +289,20 @@ ACTION=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['action
 
 case "$ACTION" in
   retry)
-    echo "[spawn-recovery] action=retry: re-invoking run-${PHASE}.sh ${ISSUE}"
-    "$SCRIPT_DIR/run-${PHASE}.sh" "$ISSUE"
+    case "$PHASE" in
+      code-patch)
+        echo "[spawn-recovery] action=retry: re-invoking run-code.sh ${ISSUE} --patch"
+        "$SCRIPT_DIR/run-code.sh" "$ISSUE" --patch
+        ;;
+      code-pr)
+        echo "[spawn-recovery] action=retry: re-invoking run-code.sh ${ISSUE} --pr"
+        "$SCRIPT_DIR/run-code.sh" "$ISSUE" --pr
+        ;;
+      *)
+        echo "[spawn-recovery] action=retry: re-invoking run-${PHASE}.sh ${ISSUE}"
+        "$SCRIPT_DIR/run-${PHASE}.sh" "$ISSUE"
+        ;;
+    esac
     write_recovery_entry "retry" || true
     ;;
   skip)

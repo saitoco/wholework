@@ -174,15 +174,15 @@ echo "${LOG_PREFIX} Size: ${SIZE}"
 case "$SIZE" in
   XS)
     echo "${LOG_PREFIX} --- code phase (patch): issue #${SUB_NUMBER} ---"
-    run_phase_with_recovery "code" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --patch ${BASE_FLAG:-}
+    run_phase_with_recovery "code-patch" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --patch ${BASE_FLAG:-}
     ;;
   S)
     echo "${LOG_PREFIX} --- code phase (patch): issue #${SUB_NUMBER} ---"
-    run_phase_with_recovery "code" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --patch ${BASE_FLAG:-}
+    run_phase_with_recovery "code-patch" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --patch ${BASE_FLAG:-}
     ;;
   M)
     echo "${LOG_PREFIX} --- code phase (pr): issue #${SUB_NUMBER} ---"
-    run_phase_with_recovery "code" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --pr ${BASE_FLAG:-}
+    run_phase_with_recovery "code-pr" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --pr ${BASE_FLAG:-}
 
     PR_NUMBER=$(gh pr list --json number,headRefName 2>/dev/null | jq -r ".[] | select(.headRefName == \"worktree-code+issue-${SUB_NUMBER}\") | .number" | head -1 || true)
     if [[ -z "$PR_NUMBER" ]]; then
@@ -199,7 +199,7 @@ case "$SIZE" in
     ;;
   L)
     echo "${LOG_PREFIX} --- code phase (pr): issue #${SUB_NUMBER} ---"
-    run_phase_with_recovery "code" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --pr ${BASE_FLAG:-}
+    run_phase_with_recovery "code-pr" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --pr ${BASE_FLAG:-}
 
     PR_NUMBER=$(gh pr list --json number,headRefName 2>/dev/null | jq -r ".[] | select(.headRefName == \"worktree-code+issue-${SUB_NUMBER}\") | .number" | head -1 || true)
     if [[ -z "$PR_NUMBER" ]]; then
