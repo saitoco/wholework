@@ -284,6 +284,28 @@ Example:
 
 The `section_contains` check catches cases where content was added to the wrong section or omitted entirely — false positives that `rubric` alone may miss due to LLM variance.
 
+**Manually-input dependent placeholder fields:**
+
+When a rubric AC verifies a field that is automatically inserted but whose value depends on manual input (e.g., `stop_loss`, form placeholders, or fields left blank for human completion), the rubric description must explicitly state both behaviors:
+
+- The **field is inserted** (structural presence is automatic)
+- The **value is an empty placeholder** when manual input has not yet been provided
+
+Without this explicit description, the rubric grader may interpret "field is automatically filled" as requiring a non-empty value — causing false FAIL for implementations that correctly leave the field as a blank placeholder pending manual input.
+
+**Template:**
+
+```
+rubric "{field} フィールドとして挿入されるが手動入力未完時は空欄 placeholder"
+```
+
+**Correct vs ambiguous phrasing:**
+
+| AC phrasing | Risk | Explanation |
+|------------|------|-------------|
+| ❌ `rubric "{field} が自動入力される"` | FAIL risk | Implies a non-empty value; grader may FAIL a correct blank placeholder |
+| ✅ `rubric "{field} フィールドとして挿入されるが手動入力未完時は空欄 placeholder"` | Robust | Explicitly covers both field presence and blank-pending-input; grader PASS is unambiguous |
+
 ### 10. Opportunistic Post-Merge Conditions — Attach Verify Commands and Prefer auto Classification
 
 When writing post-merge conditions that are mechanically verifiable, attach a `<!-- verify: ... -->` verify command and classify them as `verify-type: auto` rather than `verify-type: opportunistic`.
