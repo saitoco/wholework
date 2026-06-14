@@ -1,4 +1,4 @@
-# Issue #463: code: Clarify Description to Prevent Skill Dispatch Confusion
+# Issue #463: code: Clarify Description to Prevent Skill Selection Confusion
 
 ## Overview
 
