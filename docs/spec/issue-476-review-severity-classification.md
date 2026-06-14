@@ -41,3 +41,29 @@
 ### Notes for Next Phase
 - 変更は docs/structure.md, modules/review-output-format.md, agents/review-bug.md, agents/review-light.md の 4 ファイル
 - post-merge AC は `verify-type: observation event=pr-review-light` — 次回 `/review --light` 完了時に観測評価される
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 2 rubric AC で意味検証を主軸とする設計。`MUST 基準` と `例示` の双方を別 AC として独立検証する構成が機能。
+
+#### design
+- modules + agents の双方に同一 "Key rule" を配置することで review-bug と review-light の両エージェントが同じ基準を共有する設計。SSoT 重複だが意図的（agent-specific text として）。
+
+#### code
+- 4 ファイル変更で完了、rework なし。docs/structure.md 同時更新でドキュメント整合性も保全。
+
+#### review
+- patch route のため非実行 (N/A)。
+
+#### merge
+- patch route のため非実行。worktree-merge-push.sh で main 直マージ成功。
+
+#### verify
+- Pre-merge 全 2 件 PASS。Post-merge observation は次回 `/review --light` 完了時に自動評価で `phase/verify` 維持。
+
+### Improvement Proposals
+- N/A
+
