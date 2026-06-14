@@ -67,3 +67,34 @@
 - `|| true` により label 遷移失敗が main の exit code に影響しない設計（silent recover の観測可能性は stderr warning で維持）
 - 既存 reconcile テスト（exit 0 + matches_expected:true/empty）への影響なし: デフォルト gh モックが `gh issue view` に空文字列を返すため `phase/review` 検出が false になる
 - Issue 本文の Auto-Resolved Ambiguity Points（`section_contains` → `grep` x2 変更、patch 経路 CI 検証 AC 追加）は既に Issue 本文に反映済み
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec Step 2 の `gh-label-transition.sh` mock は no-op（exit 0 のみ）として指定されていたが、`LABEL_TRANSITION_LOG` へのログ記録を追加した。Spec Step 3 の test assertion で `grep -q "CALLED: 99 verify"` を使うため、mock がログを記録しなければテストが成立しないため。
+
+### Design Gaps/Ambiguities
+
+- commit prefix: Issue type が Bug のため `fix:` が正しいが、type 取得（Step 11）より前の Step 8 で `feat:` を使ってコミットしてしまった。次回は type 取得後にコミット prefix を決定する手順を Step 8 より前に行うこと。
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Option A（run-merge.sh の reconcile check 後にラベル状態チェックを追加）をそのまま実装。既存 reconcile ロジックの if/elif 末尾に EXIT_CODE=0 条件ガード付きで挿入した。
+- `|| true` でラベル遷移失敗を exit code に波及させない設計を採用（Spec Notes に明記済み）。
+- テスト mock では `LABEL_TRANSITION_LOG` を導入し、`gh-label-transition.sh` の呼び出しを記録可能にした（Spec Step 2 の「exit 0 のみ」から拡張）。
+
+### Deferred Items
+- コミット prefix が `fix:` でなく `feat:` になった（Step 8 で type 取得前にコミット）。次回コードレビュー時に指摘されうる。
+- Post-merge CI 検証（`github_check "gh run list ..."`）は merge 後に自動実行される。
+
+### Notes for Next Phase
+- `/verify` フェーズでは post-merge AC（CI test.yml 全ジョブ成功）と observation AC（次回 /auto 実行での自動補正観察）を確認すること。
+- bats テスト 17/17 PASS、forbidden expressions チェック、skill syntax validation すべて通過済み。
+- PR なし（patch route）のため、CI は push 後の test.yml workflow で確認。
