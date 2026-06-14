@@ -66,21 +66,21 @@
 - N/A（設計通り初回で完成）
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light（Size=M + --light フラグ）: 1エージェント統合レビューを適用
-- SHOULD issue（cleanup `|| true` の exit code 区別）を修正: exit code 1（no-match）と 2（error）を明示的に区別、エラー時は元ファイルを保護
-- CONSIDER issue（`--date` フォーマット検証なし）はスキップ: ローカルCLIのため現実的リスク低
+- スクワッシュマージ実行: CI SUCCESS・approved・conflicts なしのクリーンな状態でマージ
+- cleanup fix（exit code 1/2 区別）は review フェーズで修正済み、最終コミット込みでマージ
+- BASE_BRANCH=main のため `closes #638` による Issue 自動クローズが適用される
 
 ### Deferred Items
-- `anomaly` event emit は依然として `run-auto-sub.sh` 未実装のまま。Anomalies セクションは常に `- (none)` だが設計上許容
-- `--date` フォーマット検証なし: CONSIDER でスキップ、必要に応じて後続改善可
+- `anomaly` event emit は `run-auto-sub.sh` 未実装のまま（設計上許容）。follow-up Issue 起票は post-merge 確認項目
+- `--date` フォーマット検証は CONSIDER でスキップ済み、必要に応じて後続改善対象
 
 ### Notes for Next Phase
-- cleanup fix のコミット (`37c90ae`) が push 済み: /merge 時は最新 HEAD を対象にすること
-- 全 AC が PASS、全 CI が SUCCESS: マージ前提条件クリア
-- `anomaly` セクション常時 `- (none)` は設計上の制限（emit_event 未実装）: /merge では考慮不要
+- verify フェーズ: pre-merge verify command は全 AC PASS 済み; post-merge 確認は `/auto --batch` 次回実行後に手動で `scripts/auto-events-rollup.sh --date $(date -u +%Y-%m-%d)` を実行し curated 出力を確認
+- `anomaly` セクションは常時 `- (none)`: 設計上の制限（emit_event 未実装）、verify では考慮不要
+- bats テスト 5 ケース（spec では最小 4 ケース）: code retrospective 記載通り、許容済み
 
 ## review retrospective
 
