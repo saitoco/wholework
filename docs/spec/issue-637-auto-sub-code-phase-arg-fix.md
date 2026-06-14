@@ -91,3 +91,32 @@
 ### Notes for Next Phase
 - `/verify` フェーズでは pre-merge 3 AC の grep チェックが全 PASS であることを確認すること
 - post-merge AC (`observation event=auto-run`) は次回 `/auto --batch` 実行時まで検証不可
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- ambiguity 3 件を auto-resolve した判断は妥当。修正対象を `run-auto-sub.sh` + `spawn-recovery-subagent.sh` に絞り、`run-code.sh` の既存正常コードを温存した。
+- AC のリファクタ（AC2分割・rubric + grep 補完追加）も verifiability 向上に寄与。タイトル drift 修正（`run-code:` → `run-auto-sub:`）が実装範囲と整合。
+
+#### spec
+- spec は code/spec retrospective を含み、AC3 で bats 回帰テスト追加を求める設計が機械検証を担保。
+- `spawn-recovery-subagent.sh` の `*` フォールバックを維持しつつ `code-patch`/`code-pr` 専用 case を追加する設計は、他フェーズ（review/merge）の retry 動作を破壊せず最小リスク。
+
+#### code
+- 設計と完全一致。`run-auto-sub.sh` 177/181/185/202 の4箇所と `spawn-recovery-subagent.sh` retry case を実装。
+- 回帰テスト #21「Size S + run-code.sh exit1: reconcile-phase-state.sh receives code-patch as first arg」を新規追加し、bats 22/22 PASS。
+
+#### review
+- patch route のためレビューフェーズなし。rubric + grep 双方の verify command が pre-merge AC を機械検証で carve out。
+
+#### merge
+- patch route 直 push。closes #637 で Issue 自動 CLOSE 成立。
+
+#### verify
+- pre-merge 3 AC は全 PASS（rubric/grep/bats いずれも green）。
+- post-merge AC4 は observation event=auto-run で、size 再判定経由 patch route Issue が発生していない本 run では PENDING。本 fix 自体は size 再判定なしの S 直 patch route で完走したため、本 AC が捕捉したい「size 再判定後の route mismatch」シナリオは観測されていない。
+
+### Improvement Proposals
+- `tests/spawn-recovery-subagent.bats` に `code-patch`/`code-pr` の retry case を直接カバーするテスト追加が望ましい（spec で SHOULD として deferred 済み）。本 verify の retro/verify 起票は不要と判断（spec の Deferred Items で既知化されているため）。
