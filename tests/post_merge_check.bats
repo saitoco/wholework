@@ -86,17 +86,19 @@ teardown() {
 - Verify API integration works correctly <!-- verify-type: manual -->
 SPEC
 
-    # Run from the temp dir so docs/spec is found
+    # Run from the temp dir so docs/spec is found; use file redirect for stdin
+    printf "s\n" > "$BATS_TEST_TMPDIR/input.txt"
     cd "$BATS_TEST_TMPDIR"
-    printf "s\n" | run bash "$SCRIPT" 501
+    run bash "$SCRIPT" 501 < "$BATS_TEST_TMPDIR/input.txt"
     [ "$status" -eq 0 ]
     [[ "$output" == *"Verify API integration works correctly"* ]]
     [[ "$output" == *"Source: Spec"* ]]
 }
 
 @test "fallback: no Spec file falls back to gh issue view body" {
+    printf "s\n" > "$BATS_TEST_TMPDIR/input.txt"
     cd "$BATS_TEST_TMPDIR"
-    printf "s\n" | run bash "$SCRIPT" 999
+    run bash "$SCRIPT" 999 < "$BATS_TEST_TMPDIR/input.txt"
     [ "$status" -eq 0 ]
     [[ "$output" == *"Source: Issue body"* ]]
     [[ "$output" == *"Manual verification step one"* ]]
@@ -109,8 +111,9 @@ SPEC
 - Check endpoint responds <!-- verify-type: manual -->
 SPEC
 
+    printf "p\n" > "$BATS_TEST_TMPDIR/input.txt"
     cd "$BATS_TEST_TMPDIR"
-    printf "p\n" | run bash "$SCRIPT" 501
+    run bash "$SCRIPT" 501 < "$BATS_TEST_TMPDIR/input.txt"
     [ "$status" -eq 0 ]
     [[ "$output" == *"phase/done"* ]]
     grep -q "501 done" "$LABEL_TRANSITION_LOG"
@@ -123,8 +126,9 @@ SPEC
 - Verify data is saved correctly <!-- verify-type: manual -->
 SPEC
 
+    printf "f\n" > "$BATS_TEST_TMPDIR/input.txt"
     cd "$BATS_TEST_TMPDIR"
-    printf "f\n" | run bash "$SCRIPT" 502
+    run bash "$SCRIPT" 502 < "$BATS_TEST_TMPDIR/input.txt"
     [ "$status" -eq 0 ]
     [[ "$output" == *"FAIL"* ]]
     grep -q "issue reopen 502" "$GH_CALL_LOG"
@@ -137,8 +141,9 @@ SPEC
 - Manual check required <!-- verify-type: manual -->
 SPEC
 
+    printf "s\n" > "$BATS_TEST_TMPDIR/input.txt"
     cd "$BATS_TEST_TMPDIR"
-    printf "s\n" | run bash "$SCRIPT" 503
+    run bash "$SCRIPT" 503 < "$BATS_TEST_TMPDIR/input.txt"
     [ "$status" -eq 0 ]
     [[ "$output" == *"No label change"* ]]
     [ ! -f "$LABEL_TRANSITION_LOG" ] || ! grep -q "503" "$LABEL_TRANSITION_LOG"
@@ -170,8 +175,9 @@ SPEC
 - Second issue AC <!-- verify-type: manual -->
 SPEC
 
+    printf "p\np\n" > "$BATS_TEST_TMPDIR/input.txt"
     cd "$BATS_TEST_TMPDIR"
-    printf "p\np\n" | run bash "$SCRIPT" 601 602
+    run bash "$SCRIPT" 601 602 < "$BATS_TEST_TMPDIR/input.txt"
     [ "$status" -eq 0 ]
     [[ "$output" == *"Issue #601"* ]]
     [[ "$output" == *"Issue #602"* ]]
