@@ -92,3 +92,67 @@ R2（`/audit auto-session <id>`）が生成する data 層レポートの narrat
 - **bats テストの対象**: LLM 推論（draft 生成）は bats テスト不可のため、`--narrative-draft` フラグの動作（挿入・マーカー付与）をスクリプトレイヤーでテストする。LLM 品質は Post-merge の観察 AC でカバー。
 - **完全自動起票禁止**: Improvement candidates の分類結果は draft に記載するのみ。`gh issue create` は呼ばない（human gate 維持）。
 - **python3 使用**: `--narrative-draft` 挿入ロジックには python3 を使用。既存 `scripts/validate-skill-syntax.py` で python3 使用済みのため依存関係の追加なし。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — 実装は Spec の設計通り。python3 の heredoc 埋め込み（`python3 - arg1 arg2 << 'PYTHON_EOF'`）を採用し、bash 3.2+ 互換性を維持しながら複数行 Python ロジックをスクリプト内に実装した。Spec では「python3 を使用」とのみ記載していたが、bash スクリプト内に直接埋め込む形式はアーキテクチャ判断として適切（外部 .py ファイルを別途追加する必要がない）。
+
+### Design Gaps/Ambiguities
+
+- `check-translation-sync.sh` は git commit タイムスタンプを比較するため、同じセッション内でも commit 前は OUTDATED になる。`docs/workflow.md` 変更後すぐに `docs/ja/workflow.md` を別コミットで追従する必要があることを確認した（Spec には記載なし）。
+- bats test の setup で `BATS_TEST_TMPDIR` を使用。fixture JSONL を毎テスト setup で生成し、`--no-github` フラグで hermetic 実行を保証した。test case 3（classification markers）で日本語マーカー文字列（「既存 #」「凍結推奨」）を grep するため、bats が multibyte grep を正しく処理することを確認した。
+
+### Rework
+
+- N/A — 1 回の実装で全テストが PASS。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `--narrative-draft` フラグをスクリプト層に追加し、LLM draft 挿入ロジックは python3 heredoc 埋め込みで実装（外部 .py ファイル不要、bash 3.2+ 互換）
+- `[LLM draft — human review required]` マーカーは blockquote prefix（`> `）として挿入。ユーザーが一目でLLM生成コンテンツを識別できる
+- Improvement candidates の分類（既存 #/ Issue 起票候補 / 凍結推奨）はSKILL.md記載のみで、自動起票は行わない（human gate 維持）
+- bats テストの対象はスクリプト層の `--narrative-draft` 動作のみ。LLM draft 品質は Post-merge の観察 AC でカバー
+
+### Deferred Items
+- LLM draft 生成の品質評価: Post-merge で 1-2 セッション観察して確認（manual AC）
+- Improvement candidates の起票精度: 実際の `/audit auto-session --full` 実行後に評価（observation AC）
+- `docs/ja/workflow.md` 翻訳の自動 sync: 現状は手動追従が必要、Translation workflow の改善は別 Issue
+
+### Notes for Next Phase
+- PR #651 の CI が green であることを確認してからマージ
+- Post-merge manual AC: 次回 `/auto` 完走後に `/audit auto-session --full <id>` を実行し、narrative draft が実際に挿入されることを確認
+- `tests/audit-auto-session-full.bats` の 3 tests はスクリプト層のみをカバー。SKILL.md の Step 3（LLM 推論部分）は bats 対象外
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+- SKILL.md:1012 の stale コメント（`skeleton-only in this implementation / R3 will add`）が実装済みの `--full` mode と矛盾していた。MUST 修正。Spec の Changed Files 記載に「SKILL.md に `[LLM draft — human review required]` というマーカー文字列を記載する」と書かれているが、**古い注記の削除**については Spec に明示がなかった。実装者が過去の TODO コメントを削除し忘れるパターン — 「置換型変更（旧実装の痕跡残存）」に注意。
+
+### 繰り返しイシュー
+
+- 特記事項なし。MUST 1件、SHOULD 1件のみで繰り返しパターンは検出されず。
+
+### 受け入れ条件検証困難度
+
+- 全 8 項目 PASS。rubric AC が `/review` safe mode で実行されたが、サブエージェントが main ブランチの SKILL.md を読んで FAIL 判定する誤りが発生した（worktree 内の PR ブランチ版を読むべき）。`rubric` コマンドの grader はファイルパスを解決する際に absolute path を指定するか、calling skill が worktree の正しいパスを明示する必要がある。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST: SKILL.md:1012 の stale コメントを削除（実装済み機能と矛盾）
+- SHOULD: Step 3 sub-step 2 として `gh issue view <N>` を追加（Spec 整合）。後続ステップ番号を 4→5, 5→6, 6→7, 7→8 に繰り上げ
+- CONSIDER 2件（get-auto-session-report.sh:373, :405）はスキップ — heredoc 管理で現実的リスク低い
+
+### Deferred Items
+- Post-merge manual AC: 次回 `/auto` 完走後に `/audit auto-session --full` 品質確認
+- Improvement Issue 品質観察: 1-2 セッション後に observation AC で評価
+
+### Notes for Next Phase
+- `worktree-code+issue-632` ブランチに review 修正コミット追加済み。merge 時は PR #651 全体を確認
+- Post-merge AC 2件（manual / observation）は merge フェーズ後の verify サイクルで対応
