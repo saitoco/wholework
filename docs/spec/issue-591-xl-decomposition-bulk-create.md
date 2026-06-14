@@ -131,3 +131,26 @@ XL 親 Issue の sub-issue を 50+ 件一括起票するためのヘルパーを
 ### Notes for Next Phase
 - Issue #591 は `closes #591` により main マージ時に自動クローズ済み
 - Post-merge AC（実 XL Issue での動作確認・follow-up Issue 起票）は manual verification が必要
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 13 件すべて grep / file_exists / file_contains / rubric / command の自動 verify command 付き、verify を完全自動化
+- follow-up Issue（#594 icebox: full auto-decomposition）の起票が spec phase で完了したため、post-merge AC2 が verify 時点で PASS 判定可能
+
+#### code
+- skills/issue/SKILL.md の Decomposition File Mode 追加 + 新規ファイル群（docs/guide/xl-decomposition.md, examples/decomposition/nuxt-to-next.yml, tests/xl-decomposition.bats）の作成が一発で完遂
+- bats 4 ケース（schema/circular/skeleton/GraphQL）で代表的な検証ロジックをカバー
+
+#### review/merge
+- review-light で問題なし、clean な squash merge
+
+#### verify
+- pre-merge AC 11 件全 PASS
+- post-merge AC 2 件: AC1 (manual, 実 XL Issue) は SKIP、AC2 (manual, follow-up Issue) は #594 確認により PASS
+
+### Improvement Proposals
+- N/A
+
