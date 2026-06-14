@@ -1,0 +1,66 @@
+# Issue #637: run-auto-sub code phase argument mismatch fix
+
+## Overview
+
+`run-auto-sub.sh` の `run_phase_with_recovery` 呼び出しで phase 引数が `"code"` のままになっており、`reconcile-phase-state.sh` が有効なフェーズ名 (`code-patch`/`code-pr`) として認識できずに exit 2 で失敗する。その結果、Tier 1 reconcile が常に失敗扱いとなり、本来不要な Tier 2/3 recovery が発動する。
+
+さらに `spawn-recovery-subagent.sh` の retry action では `"$SCRIPT_DIR/run-${PHASE}.sh" "$ISSUE"` のフォームを使用しているため、fix 後に PHASE が `code-patch`/`code-pr` になると存在しないスクリプトを呼び出し、かつ route フラグ (`--patch`/`--pr`) も失われる。
+
+## Reproduction Steps
+
+1. XL Issue の sub-issue として Size S の Issue を `/auto --batch` で実行する
+2. code phase が何らかの理由で失敗する (exit ≠ 0)
+3. `run_phase_with_recovery "code" ...` → `reconcile-phase-state.sh "code" ...` → unknown phase (exit 2) → Tier 1 判定不能
+4. Tier 3 retry action が `run-code.sh $ISSUE` を route フラグなしで再実行 → `code-pr` に fallback → patch route Issue で PR が存在せず再失敗
+
+## Root Cause
+
+`run-auto-sub.sh` の case 文で `run_phase_with_recovery` の第 1 引数 (phase) がすべて `"code"` のまま。`reconcile-phase-state.sh` の dispatcher は `code-patch`/`code-pr` のみ受け入れ、`code` は `*` ケースで exit 2 となる。
+
+`spawn-recovery-subagent.sh` は `"$SCRIPT_DIR/run-${PHASE}.sh"` で runner script を構築するため、`code-patch`/`code-pr` に対応するスクリプトが存在せず、かつ `run-code.sh` に渡すべき route フラグが消失する。
+
+## Changed Files
+
+- `scripts/run-auto-sub.sh`: XS/S case の `run_phase_with_recovery "code"` → `"code-patch"`、M/L case → `"code-pr"` に修正 — bash 3.2+ 互換
+- `scripts/spawn-recovery-subagent.sh`: retry case に `code-patch` → `run-code.sh --patch`、`code-pr` → `run-code.sh --pr` のマッピングを追加 — bash 3.2+ 互換
+- `tests/run-auto-sub.bats`: patch route (Size S) で `reconcile-phase-state.sh` に `code-patch` が渡されることを検証する回帰テストを追加
+
+## Implementation Steps
+
+1. `scripts/run-auto-sub.sh` XS case (line 177) と S case (line 181): `run_phase_with_recovery "code"` を `run_phase_with_recovery "code-patch"` に変更（→ AC1）
+
+2. `scripts/run-auto-sub.sh` M case (line 185) と L case (line 202): `run_phase_with_recovery "code"` を `run_phase_with_recovery "code-pr"` に変更（→ AC1）
+
+3. `scripts/spawn-recovery-subagent.sh` retry case (line 291-293): `"$SCRIPT_DIR/run-${PHASE}.sh" "$ISSUE"` を以下の case 分岐に置き換える（→ AC2）:
+
+   ```bash
+   case "$PHASE" in
+     code-patch) "$SCRIPT_DIR/run-code.sh" "$ISSUE" --patch ;;
+     code-pr)    "$SCRIPT_DIR/run-code.sh" "$ISSUE" --pr ;;
+     *)          "$SCRIPT_DIR/run-${PHASE}.sh" "$ISSUE" ;;
+   esac
+   ```
+
+4. `tests/run-auto-sub.bats` に回帰テストを追加: Size S かつ run-code.sh が exit 1 する場合に、`reconcile-phase-state.sh` が `code-patch` を第 1 引数で受け取ることを検証する（→ AC3）
+
+   テスト方針:
+   - `reconcile-phase-state.sh` を `$1` をログファイルに書き出す mock に差し替え、戻り値は `{"matches_expected":true}` として tier1 recovery に成功させる
+   - `run bash "$SCRIPT" 42` 実行後、log ファイルに `code-patch` が含まれることを確認
+
+## Verification
+
+### Pre-merge
+
+- <!-- verify: rubric "scripts/run-auto-sub.sh で XS/S (patch route) の case と M/L (pr route) の case でそれぞれ run_phase_with_recovery に code-patch と code-pr を渡すコードが追加されている" --> <!-- verify: grep "code-patch" "scripts/run-auto-sub.sh" --> `run-auto-sub.sh` に `code-patch` が存在し、XS/S case に渡されている
+- <!-- verify: grep "code-patch" "scripts/spawn-recovery-subagent.sh" --> `spawn-recovery-subagent.sh` retry action に `code-patch` 対応のマッピングが存在する
+- <!-- verify: grep "code-patch" "tests/run-auto-sub.bats" --> `tests/run-auto-sub.bats` に `code-patch` を検証する回帰テストが存在する
+
+### Post-merge
+
+- 次回以降の `/auto --batch` 実行で size 再判定経由の patch route Issue が reconcile route mismatch で exit 1 を起こさないことを確認
+
+## Notes
+
+- `run-code.sh` は lines 165-168 で既に `code-patch`/`code-pr` を正しく使用しており変更不要
+- `spawn-recovery-subagent.sh` retry case の `*` フォールバック (`run-${PHASE}.sh`) は `review`/`merge` 等の他フェーズで引き続き機能する
+- `tests/spawn-recovery-subagent.bats` の既存 retry テストは PHASE=`code` で実行しており、fix 後は `*` フォールバックで動作するため壊れない (テストの更新は follow-up SHOULD)
