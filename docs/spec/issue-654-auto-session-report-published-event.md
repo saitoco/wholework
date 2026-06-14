@@ -62,3 +62,35 @@
 - `session_id`: `AUTO_SESSION_ID="$SESSION_ID"` で標準フィールドを通じて渡す（追加 key=value で重複させない）
 - `issue`: 0（session 横断 event）
 - `report_path`: 出力先パスをペイロードに含め、observation trigger 側が参照できるようにする
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None
+
+### Design Gaps/Ambiguities
+
+- emit-event.sh の `session_id` フィールドは `AUTO_SESSION_ID` 環境変数経由で渡すため、`SESSION_ID` を事前にセットして呼び出す。Spec の記述通りで問題なかった。
+- `declare -f emit_event` ガードは、emit-event.sh が見つからない環境でもスクリプトが正常終了するために必須。本番では常に found となるが、テスト環境では `WHOLEWORK_SCRIPT_DIR` が mock dir に向くため source できないケースがある。
+
+### Rework
+
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- emit 呼び出しは `--narrative-draft` ブロック内の Python heredoc 終端 (`PYTHON_EOF`) 直後・`fi` 直前に配置した。これにより「`--narrative-draft` 完了時のみ emit」という設計を正確に実現。
+- `declare -f emit_event` ガードを採用し、emit-event.sh が見つからなくてもスクリプトが fallback する安全設計にした。
+- bats テストでは既存の `AUTO_EVENTS_LOG` fixture ファイルに append される形で event が書き込まれ、grep で検証した。
+
+### Deferred Items
+- `AUTO_EVENTS_LOG` への append は fixture events と混在するが、テストロジックとして問題ない（grep は事後追記行を検出可能）。
+- CI (bats 全件) の結果は PR #655 の CI で確認。
+
+### Notes for Next Phase
+- 3 件の `file_contains` verify commands はすべて PASS 確認済み。PR merge 後は `github_check "gh pr checks"` の CI PASS を `/verify` で確認すること。
+- `docs/reports/event-log-schema.md` は `docs/reports/` 除外対象のため translation sync 不要、doc-checker 対象外。
+- structure.md の test ファイル件数 (74 files) は既存の pre-existing 乖離であり、本 Issue のスコープ外。
