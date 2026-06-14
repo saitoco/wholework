@@ -139,3 +139,26 @@ Issue 提案の出力フォーマットに Failed カテゴリがあったが、
 - 全 pre-merge AC: 8/8 PASS 確認済み
 - squash コミットは main に着地済み。verify では実 XL Issue 番号でコマンド実行して出力を目視確認すること
 - `get-sub-issue-progress.sh` は GraphQL mock ありのテスト環境でのみ検証済み。実環境でのレート制限・応答時間も確認対象
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 8 件すべて grep / file_exists / file_contains / rubric / command の自動 verify command 付き、verify を完全自動化
+- 24h アクティビティ検出を `linked:#N` から GraphQL `updatedAt` に変更した issue refinement 判断が機能
+
+#### code
+- 新規 `scripts/get-sub-issue-progress.sh` 作成と SKILL.md / workflow.md / ja workflow.md の3箇所への記述追加が漏れなく完了
+- bats 3 テスト（empty/mixed/all-done）で代表的な状態をカバー
+
+#### review/merge
+- review-light で問題なし、clean な squash merge
+
+#### verify
+- pre-merge AC 8 件全 PASS
+- post-merge AC 1 件は observation event=auto-run → 実 XL Issue 発生時に観察
+
+### Improvement Proposals
+- N/A
+
