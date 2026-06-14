@@ -67,18 +67,18 @@
 - 今回は全 Pre-merge AC が `file_exists` / `file_contains` / `github_check` で自動判定可能で UNCERTAIN なし。`github_check` の CI ジョブ名 "Run bats tests" が事前確定済みだったことが効いた。ジョブ名を Spec 段階で明記する方針は今後も継続すること。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST 指摘なし。SHOULD（install.sh メッセージ順序）と CONSIDER（bats exit code アサーション）の 2 件を review フェーズ内で修正・コミット済み
-- `git config core.hooksPath` ブロックを "Done. Restart Claude Code..." より前に移動（UX 改善）
-- bats 第3テストに `[ "$status" -eq 1 ]` を追加してリグレッション耐性を強化
+- PR #657 をスカッシュマージ（`gh pr merge 657 --squash --delete-branch`）で main に統合
+- mergeable=true、CI 全 SUCCESS、review approved の状態で conflicts なし → Step 3 スキップ、直接 Step 4 へ
+- BASE_BRANCH=main のため `closes #649` によりマージと同時に Issue は自動クローズされる
 
 ### Deferred Items
 - `docs/structure.md` の file count (55 files vs 実態 56) の乖離修正は引き続きスコープ外
-- Post-merge AC（`git config --get core.hooksPath` が新 worktree でも有効か）は merge 後の手動確認が必要
+- Post-merge AC（`git config --get core.hooksPath` が新 worktree でも有効か）は `/verify` で確認すること
 
 ### Notes for Next Phase
-- 全 Pre-merge AC PASS 確認済み（file_exists × 2、file_contains × 1、github_check × 1）
-- CI 全ジョブ SUCCESS（DCO、Run bats tests、Validate skill syntax、Forbidden Expressions check、macOS shell compatibility）
-- MUST 指摘なし → `/merge 657` で merge 可能
+- Pre-merge AC は全て PASS 済み（review フェーズ確認済み）
+- verify で確認すべきポイント: `git config --get core.hooksPath` が新 worktree 環境で `scripts/git-hooks` を返すこと
+- Spec の Post-merge AC セクションに verify command が記載されていないため、verify フェーズで手動確認が必要
