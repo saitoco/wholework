@@ -499,6 +499,7 @@ When the Issue involves real external or MCP tool calls (examples: verify comman
 - **Step numbers**: integers only (Step 1, 2, 3...). No decimal numbers (Step 1.5, etc.). Renumber subsequent steps when inserting new ones.
 - **Dependencies**: note "(after N)" for sequential deps, "(parallel with N, M)" for parallel-safe steps
 - **Acceptance criteria mapping**: note "(→ acceptance criteria X)" for each step
+- **post-merge manual steps are required**: even when an AC's verify-type is `post-merge manual`, the corresponding implementation step is mandatory in the current PR. "post-merge manual" describes how the AC is verified (human observation after merge), not whether implementation can be deferred. Record the step explicitly so the code phase does not skip it.
 - **Insertion position**: specify by nearby code context (e.g., "immediately before `--dangerously-skip-permissions`") rather than line numbers. Line numbers shift as files change and become unreliable guides for implementation.
 
 1. Step 1 (→ acceptance criteria A)
