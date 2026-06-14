@@ -99,6 +99,8 @@
 
 SSoT 備考: run-*.sh のモデル値は CLI エイリアス（sonnet/opus）を使用する。run-*.sh、agents、skills でモデル/effort を変更する際はこの表を更新すること。
 
+- **watchdog タイムアウトのキャリブレーション**: `scripts/watchdog-defaults.sh` のフェーズ別タイムアウト定数は、支配的な親モデルの per-token レイテンシに対してキャリブレーションされている。デフォルト親モデルが変更された場合は再キャリブレーションが必要（例: Fable 5 → Sonnet 4.6 移行で `WATCHDOG_TIMEOUT_ISSUE_DEFAULT` を 600 → 1200 に引き上げ: #628）。
+
 ## Wholework ラベル管理
 
 `scripts/setup-labels.sh` は Wholework が管理するすべてのラベルの**唯一の真実（SSoT）**です。すべてのラベル名・色・説明はここで定義します。

@@ -3,11 +3,21 @@
 
 WATCHDOG_TIMEOUT_DEFAULT=2700
 
+# Phase-specific watchdog timeouts (in seconds).
+# Calibrated against typical silent windows observed under the dominant parent
+# orchestrator model. Lower-latency parent models (e.g. Fable 5) can use tighter
+# values; high-effort triage under Sonnet 4.6 / Opus 4.7 requires more headroom.
+#
+# Recalibration guidance:
+#   - If watchdog kills become frequent on a phase, raise that phase's *_DEFAULT
+#   - If true-stall detection becomes too slow, consider per-effort tuning (Icebox #596)
+#   - Empirical baseline: docs/reports/auto-session-performance-2026-06-13.md (Fable 5),
+#     docs/reports/auto-batch-list-mode-2026-06-14.md (Sonnet 4.6)
 WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800
 WATCHDOG_TIMEOUT_CODE_DEFAULT=1800
 WATCHDOG_TIMEOUT_REVIEW_DEFAULT=2000
 WATCHDOG_TIMEOUT_MERGE_DEFAULT=600
-WATCHDOG_TIMEOUT_ISSUE_DEFAULT=600
+WATCHDOG_TIMEOUT_ISSUE_DEFAULT=1200
 
 load_watchdog_timeout() {
   local script_dir="$1"

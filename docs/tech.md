@@ -101,6 +101,8 @@ Entries are grouped by workflow order (triage → issue → spec → code → re
 
 SSoT note: Model values in run-*.sh use CLI aliases (sonnet/opus); update this table when changing model/effort in run-*.sh, agents, or skills.
 
+- **Watchdog timeout calibration**: Phase-specific timeout constants in `scripts/watchdog-defaults.sh` are calibrated against the dominant parent orchestrator model's per-token latency. Recalibrate when the default parent model changes (e.g., Fable 5 → Sonnet 4.6 transition in #628 required raising `WATCHDOG_TIMEOUT_ISSUE_DEFAULT` from 600 to 1200).
+
 ## Wholework Label Management
 
 `scripts/setup-labels.sh` is the **single source of truth (SSoT)** for all labels managed by Wholework. All label names, colors, and descriptions are defined there.
