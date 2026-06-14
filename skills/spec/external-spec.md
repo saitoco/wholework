@@ -60,6 +60,14 @@ Include a **minimal complete example** in the Spec's Implementation Steps so imp
 | MCP tool implementation | MCP spec ToolResult schema |
 | GitHub API integration | GitHub REST/GraphQL API reference |
 
+## External API Integration Checklist
+
+Apply this checklist when the Issue involves calling an external API and processing its responses.
+
+1. **Actual response format samples** — Collect real response samples from the actual API (not only the official specification), especially for attributes where the actual format may diverge from the official spec (e.g., `dateTime` attributes: official `YYYY-MM-DD;HH:MM:SS` vs. actual `YYYYMMDD;HH:MM:SS`; numeric attributes: scale, separator, trailing zeros). Include at least one minimal XML or JSON actual response sample in the Spec's Implementation Steps.
+2. **Abnormal/error response code list** — Enumerate all known non-normal error codes the API may return (including throttle codes, in-progress codes, and any partner-guide-documented codes). For each code, document the handling policy: **retry** (call again with backoff) / **non-failure exit** (treat as success and stop) / **exception throw** (raise and propagate).
+3. **Test coverage for actual format patterns** — Datetime and numeric conversion utilities that parse actual API responses must have test cases covering all actual format patterns observed in real responses, not only patterns documented in the official specification.
+
 ## Output Format
 
 ```markdown
