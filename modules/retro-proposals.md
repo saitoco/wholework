@@ -29,9 +29,31 @@ Called by:
 
 5. **Deduplicate**: Integrate improvement proposals collected from multiple phases, removing only exact duplicates.
 
-6. **HAS_SKILL_PROPOSALS gate**:
+6. **Tier Classification**: Classify each deduplicated proposal into Tier 1, 2, or 3 using LLM judgment with mechanical heuristic assistance.
 
-   **Early gate — if `HAS_SKILL_PROPOSALS=false`**: skip classification. Treat all proposals as Code improvements and proceed directly to step 8 (duplicate check → freshness check → create Issues). No skill-infra classification, no skip-count log.
+   **Classification criteria (LLM rubric style)**:
+
+   | Tier | Judgment criteria | Action |
+   |------|------------------|--------|
+   | **Tier 1**: Structural issue | Requires changes to multiple skills/modules OR 再発性 (high recurrence) OR broad impact scope | Issue creation (proceeds to step 7 onwards) |
+   | **Tier 2**: Convention | Single lesson but recurring; memory entry is sufficient | Output memory proposal to terminal only (no file auto-generation) |
+   | **Tier 3**: One-time memo | One-time observation; low recurrence probability | Spec retrospective entry only (no Issue, no memory) |
+
+   **Mechanical heuristics (non-exclusive — assist LLM judgment)**:
+   - Contains "複数 skill", "複数 module", "再発性", "影響範囲" → lean toward Tier 1
+   - Contains "convention", "パターン", "lesson" → lean toward Tier 2
+   - Contains "今回のみ", "一回限り", "単発" → lean toward Tier 3
+
+   **Default**: When classification is difficult, assign Tier 1 (conservative setting to avoid false negatives).
+
+   **Tier actions**:
+   - **Tier 2**: For each proposal, output to terminal: `"Memory proposal: {proposal title} — {proposal content}"`. Exclude from Issue creation pipeline. Do not auto-generate memory files (manual review required to avoid memory pollution).
+   - **Tier 3**: Output to terminal: `"Skipping (Tier 3 — one-time memo): {proposal title}"`. Exclude from Issue creation pipeline. The proposal text stays in the spec retrospective only.
+   - **Tier 1**: Pass the proposal to step 7 (HAS_SKILL_PROPOSALS gate — existing logic unchanged).
+
+7. **HAS_SKILL_PROPOSALS gate**:
+
+   **Early gate — if `HAS_SKILL_PROPOSALS=false`**: skip classification. Treat all proposals as Code improvements and proceed directly to step 9 (duplicate check → freshness check → create Issues). No skill-infra classification, no skip-count log.
 
    **If `HAS_SKILL_PROPOSALS=true`**: classify each improvement proposal using the criteria from the Domain file for `/verify` (`.wholework/domains/verify/`). Load the Domain file by reading `${CLAUDE_PLUGIN_ROOT}/modules/domain-loader.md` and following the "Processing Steps" section with `SKILL_NAME=verify`. If no Domain file was loaded, treat all proposals as Code improvements.
 
@@ -41,13 +63,13 @@ Called by:
    - **Code improvement**: always create Issue
    - **Skill infrastructure improvement**: create Issue (reached only when `HAS_SKILL_PROPOSALS=true`)
 
-7. **Domain-classifier invocation** (Skill infrastructure improvement only, when `HAS_SKILL_PROPOSALS=true`):
+8. **Domain-classifier invocation** (Skill infrastructure improvement only, when `HAS_SKILL_PROPOSALS=true`):
 
    For each proposal classified as Skill infrastructure improvement, before creating the Issue, invoke `${CLAUDE_PLUGIN_ROOT}/modules/domain-classifier.md` to determine whether the target file path should be rewritten to a Domain file path:
 
-   1. **Build Domain files input list**: use Glob to collect `skills/*/*.md`, `modules/*.md`, and `.wholework/domains/*/*.md`. Read each file and retain only those whose frontmatter declares `applies_to_proposals`. Scope is not restricted to Domain files loaded in step 6 — classifier scope spans all skills. If no qualifying Domain files are found, skip the classifier and proceed to Issue creation with Core target unchanged (fallback).
+   1. **Build Domain files input list**: use Glob to collect `skills/*/*.md`, `modules/*.md`, and `.wholework/domains/*/*.md`. Read each file and retain only those whose frontmatter declares `applies_to_proposals`. Scope is not restricted to Domain files loaded in step 7 — classifier scope spans all skills. If no qualifying Domain files are found, skip the classifier and proceed to Issue creation with Core target unchanged (fallback).
 
-   2. **Run classifier**: Read `${CLAUDE_PLUGIN_ROOT}/modules/domain-classifier.md` and follow the "Processing Steps" section. Input: the proposal text + the Domain file contents collected in step 7.1. If the classifier fails (error), fall back to Core target Issue creation without modification.
+   2. **Run classifier**: Read `${CLAUDE_PLUGIN_ROOT}/modules/domain-classifier.md` and follow the "Processing Steps" section. Input: the proposal text + the Domain file contents collected in step 8.1. If the classifier fails (error), fall back to Core target Issue creation without modification.
 
    3. **Branch on `domain` field of the classifier output**:
       - **Specific domain** (e.g., `skill-dev`) with non-null `rewrite_target`: Rewrite the Issue body before `gh issue create`:
@@ -80,15 +102,15 @@ Called by:
          ```bash
          gh issue create --repo "$RETRO_PROPOSALS_UPSTREAM" --title "{normalized title}" --label "retro/verify" --body "{sanitized body}"
          ```
-         If creation fails, output error log to stderr and proceed to steps 8–10 for this proposal (downstream fallback — do not lose the proposal).
+         If creation fails, output error log to stderr and proceed to steps 9–11 for this proposal (downstream fallback — do not lose the proposal).
 
-      c. Skip downstream creation for this proposal only when upstream Issue creation succeeded — do not proceed to steps 8–10 for this proposal.
+      c. Skip downstream creation for this proposal only when upstream Issue creation succeeded — do not proceed to steps 9–11 for this proposal.
 
       d. Output to terminal: `"Routed to upstream {RETRO_PROPOSALS_UPSTREAM}#{issue_number}; skipping downstream creation"`
 
-      **If condition is not met** (`RETRO_PROPOSALS_UPSTREAM` is empty, or proposal is Code improvement): skip step 7.4 and proceed to step 8 for this proposal (downstream fallback path — backward-compatible behavior).
+      **If condition is not met** (`RETRO_PROPOSALS_UPSTREAM` is empty, or proposal is Code improvement): skip step 8.4 and proceed to step 9 for this proposal (downstream fallback path — backward-compatible behavior).
 
-8. **Duplicate check against existing Issues** (always run before creating Issues):
+9. **Duplicate check against existing Issues** (always run before creating Issues):
 
    ```bash
    gh issue list --state open --limit 200 --json number,title
@@ -96,7 +118,7 @@ Called by:
 
    Fetch the list of open Issues. Semantically compare each improvement proposal's title (after normalization) against existing Issue titles. If the same or substantially identical improvement proposal is already Issue-ized, skip creating a new Issue. Output skipped proposals to terminal (e.g., "Skipping Issue creation due to duplicate: {title} (existing: #{number})"). Criteria for duplicate: title or content is identical/similar, or an existing Issue's background/purpose targets substantially the same improvement.
 
-9. **Freshness check** (for non-duplicate proposals):
+10. **Freshness check** (for non-duplicate proposals):
 
    Extract 1–3 keywords from the improvement proposal content, then grep related files in the current main branch to check if the issue is already resolved (infer implementation target files from proposal content):
 
@@ -107,8 +129,8 @@ Called by:
    - **If judged as resolved**: skip Issue creation and output to terminal (e.g., "Skipping due to freshness check: {title} (may already be resolved in main)")
    - **If unresolved or cannot determine**: proceed to Issue creation
 
-10. **Create Issues**: For each non-duplicate, non-resolved proposal:
-    - **Skip downstream creation when upstream routed**: If the proposal was routed to upstream in Step 7.4 (condition was met and upstream Issue creation succeeded), skip `gh issue create` for this proposal and continue to the next proposal.
+11. **Create Issues**: For each non-duplicate, non-resolved proposal:
+    - **Skip downstream creation when upstream routed**: If the proposal was routed to upstream in Step 8.4 (condition was met and upstream Issue creation succeeded), skip `gh issue create` for this proposal and continue to the next proposal.
     - Normalize title following `title-normalizer.md` processing steps, then create Issues in standard format (background, purpose, acceptance conditions) with `gh issue create --label "retro/verify"` for each improvement proposal. Do not add the `triaged` label; the `triaged` label is assigned by the `/triage` skill after triage is actually executed.
     - **Add verify commands to acceptance conditions**: add verify commands like `<!-- verify: grep "{keyword}" "{target file}" -->` to the created Issue's acceptance conditions. Extract keywords from acceptance condition text and infer target files from proposal content (improves automation accuracy for `/auto --batch`). Create Issue without verify commands if they cannot be determined.
     - If Issue creation fails, output error log to stderr, skip, and continue (does not affect exit code).
