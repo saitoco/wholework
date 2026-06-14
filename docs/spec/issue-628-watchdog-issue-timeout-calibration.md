@@ -96,3 +96,24 @@
 - post-merge AC は observation 型（Sonnet 4.6 親での次回 auto-run での自然観察）のため、/verify での自動確認は不要
 - 全 pre-merge verify コマンドは /code 内で PASS 確認済み（チェックボックスも更新済み）
 - 変更は 3 ファイルのみ（`scripts/watchdog-defaults.sh`, `docs/tech.md`, `docs/ja/tech.md`）。レビュー/verify の対象範囲は小さい
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 6件 + observation 1件のシンプル構成。grep + command の自動 verify で完全自動化
+- 600s → 1200s への変更 + 親モデル依存性の文書化を 1 PR にまとめた設計
+
+#### code
+- patch route で main 直 commit、3 ファイル更新で最小スコープ
+- 翻訳同期も成立
+
+#### verify
+- pre-merge AC 6件全 PASS
+- post-merge AC 1件は observation event=auto-run → 次回 high-effort triage で観察
+
+### Improvement Proposals
+- N/A
+- 補足: 本 Issue 自体（#628）の triage が新 1200s default 適用前の 600s で kill された皮肉なケースを観測。新 default 適用後の次回 high-effort triage で実証される。
+
