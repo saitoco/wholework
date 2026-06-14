@@ -39,7 +39,7 @@ wholework/
 │   └── workflows/
 │       ├── test.yml             # CI: bats tests, skill syntax validation, forbidden expressions check, and macOS shell compatibility test
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
-├── tests/               # Bats test files for scripts (65 files)
+├── tests/               # Bats test files for scripts (66 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -192,7 +192,7 @@ Key modules:
 - `scripts/test-failure-classify.sh` — classify test failure output into recovery categories (snapshot/mock/fixture/logic/infra); exit 0 = repairable, exit 1 = not repairable
 - `scripts/validate-recovery-plan.sh` — validate recovery plan JSON from orchestration-recovery sub-agent (schema check + forbidden ops guard)
 - `scripts/apply-fallback.sh` — Tier 2 bash projection of `modules/orchestration-fallbacks.md`; detects known symptom anchors from wrapper logs and dispatches recovery handlers (initial full-impl: dco-signoff-missing-autofix)
-- `scripts/spawn-recovery-subagent.sh` — Tier 3 recovery orchestrator invoked by `run-auto-sub.sh`; spawns `agents/orchestration-recovery` via `claude -p`, validates the returned plan with `validate-recovery-plan.sh`, and enforces concurrency via `WHOLEWORK_MAX_RECOVERY_SUBAGENTS` mkdir-based slot locks
+- `scripts/spawn-recovery-subagent.sh` — Tier 3 recovery orchestrator invoked by `run-auto-sub.sh`; spawns `agents/orchestration-recovery` via `claude -p`, validates the returned plan with `validate-recovery-plan.sh`, enforces concurrency via `WHOLEWORK_MAX_RECOVERY_SUBAGENTS` mkdir-based slot locks, and records successful recoveries to `docs/reports/orchestration-recoveries.md` via `write_recovery_entry()`
 
 **Skill runners:**
 - `scripts/guard-prefix.sh` — shared GUARD_PREFIX definition sourced by all run-*.sh; includes anti-early-stop and boundary reminders for autonomous execution

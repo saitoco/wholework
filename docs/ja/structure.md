@@ -32,7 +32,7 @@ wholework/
 │   └── workflows/
 │       ├── test.yml             # CI: bats テスト、スキル構文検証、禁止表現チェック、macOS シェル互換性テスト
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
-├── tests/               # スクリプトの Bats テストファイル（65 ファイル）
+├── tests/               # スクリプトの Bats テストファイル（66 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents
@@ -184,7 +184,7 @@ wholework/
 - `scripts/test-failure-classify.sh` — テスト失敗出力を回復カテゴリに分類（snapshot/mock/fixture/logic/infra）。exit 0 = 修復可、exit 1 = 修復不可
 - `scripts/validate-recovery-plan.sh` — orchestration-recovery sub-agent が出力する recovery plan JSON を検証（schema チェック + forbidden ops ガード）
 - `scripts/apply-fallback.sh` — `modules/orchestration-fallbacks.md` の Tier 2 bash projection。wrapper ログから既知の symptom anchor を検出し recovery handler を dispatch する（初期 full-impl: dco-signoff-missing-autofix）
-- `scripts/spawn-recovery-subagent.sh` — `run-auto-sub.sh` が呼び出す Tier 3 recovery オーケストレーター。`claude -p` で `agents/orchestration-recovery` を spawn し、`validate-recovery-plan.sh` で plan を検証し、`WHOLEWORK_MAX_RECOVERY_SUBAGENTS` による mkdir-based スロットロックで並列性を制御する
+- `scripts/spawn-recovery-subagent.sh` — `run-auto-sub.sh` が呼び出す Tier 3 recovery オーケストレーター。`claude -p` で `agents/orchestration-recovery` を spawn し、`validate-recovery-plan.sh` で plan を検証し、`WHOLEWORK_MAX_RECOVERY_SUBAGENTS` による mkdir-based スロットロックで並列性を制御し、成功時に `write_recovery_entry()` で `docs/reports/orchestration-recoveries.md` にエントリを記録する
 
 **Skill runners:**
 - `scripts/guard-prefix.sh` — 全 run-*.sh がソースする共有 GUARD_PREFIX 定義。自律実行向けのアーリーストップ防止とバウンダリリマインダーを含む

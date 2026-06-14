@@ -198,6 +198,92 @@ if ! "$SCRIPT_DIR/validate-recovery-plan.sh" "$PLAN_FILE"; then
   exit 1
 fi
 
+# --- Recovery entry writer ---
+# Prepends a recovery event entry to docs/reports/orchestration-recoveries.md.
+# Gracefully skips if the report file does not exist.
+# Called after each successful action (retry/skip/recover); not called for abort.
+write_recovery_entry() {
+  local action="$1"
+  local report_file
+  report_file="$(dirname "$SCRIPT_DIR")/docs/reports/orchestration-recoveries.md"
+  if [[ ! -f "$report_file" ]]; then
+    echo "[spawn-recovery] orchestration-recoveries.md not found; skipping record" >&2
+    return 0
+  fi
+
+  local log_tail_line rationale steps_count steps_summary timestamp
+  log_tail_line=$(tail -1 "$LOG_FILE" 2>/dev/null || true)
+  rationale=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('rationale','(none)'))" "$PLAN_FILE" 2>/dev/null || echo "(none)")
+  steps_count=$(python3 -c "import json,sys; print(len(json.load(open(sys.argv[1])).get('steps',[])))" "$PLAN_FILE" 2>/dev/null || echo "0")
+  timestamp=$(date -u '+%Y-%m-%d %H:%M UTC')
+
+  if [[ "$steps_count" -eq 0 ]]; then
+    steps_summary="none"
+  else
+    steps_summary="${steps_count} step(s)"
+  fi
+
+  WRE_REPORT_FILE="$report_file" \
+  WRE_TIMESTAMP="$timestamp" \
+  WRE_PHASE="$PHASE" \
+  WRE_ISSUE="$ISSUE" \
+  WRE_EXIT_CODE="$EXIT_CODE_PARAM" \
+  WRE_LOG_TAIL="$log_tail_line" \
+  WRE_RATIONALE="$rationale" \
+  WRE_STEPS_SUMMARY="$steps_summary" \
+  WRE_ACTION="$action" \
+  python3 - <<'PYEOF' || return 0
+import os, sys
+
+report_file = os.environ['WRE_REPORT_FILE']
+timestamp = os.environ['WRE_TIMESTAMP']
+phase = os.environ['WRE_PHASE']
+issue = os.environ['WRE_ISSUE']
+exit_code = os.environ['WRE_EXIT_CODE']
+log_tail = os.environ['WRE_LOG_TAIL']
+rationale = os.environ['WRE_RATIONALE']
+steps_summary = os.environ['WRE_STEPS_SUMMARY']
+action = os.environ['WRE_ACTION']
+
+entry = (
+    f"## {timestamp}: {phase}-tier3-recovery\n\n"
+    f"### Context\n"
+    f"- Issue #{issue}, phase: {phase}\n"
+    f"- Source: recovery-sub-agent\n"
+    f"- Wrapper: run-{phase}.sh, exit code: {exit_code}\n"
+    f"- Log tail: \"{log_tail}\"\n\n"
+    f"### Diagnosis\n"
+    f"- {rationale}\n\n"
+    f"### Recovery Applied\n"
+    f"- action={action}\n"
+    f"- steps: {steps_summary}\n\n"
+    f"### Outcome\n"
+    f"- success\n\n"
+    f"### Improvement Candidate\n"
+    f"- 未起票\n\n"
+    "---\n\n"
+)
+
+with open(report_file, 'r', encoding='utf-8') as f:
+    content = f.read()
+
+marker = "<!-- Log entries appear below, newest first. -->"
+idx = content.find(marker)
+if idx == -1:
+    print(f"[spawn-recovery] WARNING: marker not found in {report_file}", file=sys.stderr)
+    sys.exit(0)
+
+insert_pos = idx + len(marker)
+remaining = content[insert_pos:].lstrip('\n')
+new_content = content[:insert_pos] + "\n\n" + entry + remaining
+
+with open(report_file, 'w', encoding='utf-8') as f:
+    f.write(new_content)
+
+print(f"[spawn-recovery] recovery entry written to {report_file}")
+PYEOF
+}
+
 # --- Action dispatch ---
 ACTION=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['action'])" "$PLAN_FILE")
 
@@ -205,9 +291,11 @@ case "$ACTION" in
   retry)
     echo "[spawn-recovery] action=retry: re-invoking run-${PHASE}.sh ${ISSUE}"
     "$SCRIPT_DIR/run-${PHASE}.sh" "$ISSUE"
+    write_recovery_entry "retry" || true
     ;;
   skip)
     echo "[spawn-recovery] action=skip: treating phase as complete"
+    write_recovery_entry "skip" || true
     exit 0
     ;;
   recover)
@@ -238,6 +326,7 @@ for i, step in enumerate(plan.get("steps", [])):
 
 print("[spawn-recovery] all recovery steps completed")
 PYEOF
+    write_recovery_entry "recover" || true
     ;;
   abort)
     echo "[spawn-recovery] action=abort: tier3 cannot recover this failure" >&2

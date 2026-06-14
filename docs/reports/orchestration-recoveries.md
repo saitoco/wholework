@@ -58,7 +58,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 |--------|-------------|------------|
 | `fallback-catalog` | Known pattern in `orchestration-fallbacks.md` was matched and applied | Available (#315 shipped) |
 | `wrapper-anomaly-detector` | `detect-wrapper-anomaly.sh` detected a known failure pattern | Available (#313 shipped) |
-| `recovery-sub-agent` | `orchestration-recovery` sub-agent diagnosed unknown failure | Dependent on #316 shipping |
+| `recovery-sub-agent` | `orchestration-recovery` sub-agent diagnosed unknown failure | Available (#617 shipped) |
 
 ---
 
