@@ -154,6 +154,16 @@ If no Spec exists, read the requirements from the Issue body and implement accor
 
 If the Spec has a "Notes" section, cross-reference each item against the implementation steps and recognize them as constraints/specifications to consider during implementation. Skip this step if there is no "Notes" section.
 
+**External auto-commit area interpretation:**
+
+When Spec Notes contains phrases such as the following, interpret as: **edit the files to implement the required changes; skip `git add` / `git commit` for those specific paths** (the external tool, e.g., Obsidian Git or IDE auto-commit, handles committing asynchronously):
+
+- "Do not include `<path>` in `git add`/`git commit` — external tool auto-commit area"
+- "Edit the file as required; skip `git add`/`git commit` for this path (external auto-commit)"
+- "External tool auto-commit area (e.g., Obsidian Git handles `vault/`)"
+
+These are commit-skip instructions, not skip-implementation instructions. The files must be edited to satisfy ACs.
+
 **Phase Handoff read (after loading Spec):**
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Read Procedure" section.
@@ -547,3 +557,4 @@ Parameters to pass to next-action-guide:
 - bats test `@test` names must be in English (ASCII). Multibyte characters (Japanese, etc.) cause test name parse failures and result in 0 tests executed. See: #226
 - **Brace expansion (`{1,2,3}`) is prohibited**. Use globs for deleting multiple files: `rm -f .tmp/issue-*.md` (brace expansion triggers Claude Code security warnings)
 - Files under `.claude/` are treated as **sensitive files** by Claude Code — Edit and Write tools are rejected for these paths. When implementation requires editing `.claude/` files (e.g., `settings.json.template`), use Bash (e.g., `python3 -c "..."` or `sed -i`) instead
+- **External auto-commit areas** (directories committed asynchronously by external tools such as Obsidian Git or IDE auto-commit): **edit the files** as required to satisfy ACs, but **skip `git add` / `git commit`** for those specific paths. The external tool handles committing. A Spec Notes instruction like "do not include in git commit procedure" is a commit-skip instruction only — not skip-implementation.
