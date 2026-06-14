@@ -65,3 +65,32 @@ When Spec descriptions include data output values — column names, enum values,
 - Both pre-merge ACs PASS: rubric and file_contains verified locally
 - Change is a single-file guideline addition — no structural or interface changes; review scope is narrow
 - Watch for any half-width `!` in the added block (none present; confirmed by validate-skill-syntax.py PASS)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC1 (rubric) と AC2 (file_contains "コード値") は補完的 — 機械検証可能な file_contains が rubric の semantic 判定を裏付ける構成は良好。
+- Auto-Resolved Ambiguity (AC1 が両ファイル対象) が issue refinement で解消済。Issue body と Spec で整合。
+
+#### design
+- Step 10 のガイドラインエリアへの追記位置選定が適切。`file_contains` 補足の直後、`String-matching verify command existence check` の直前という配置で論理的に整合。
+- 多言語併記例 `{rs_new_high (新高値) / rs_leading (Leader)}` が grader 解釈を補強する具体例として機能。
+
+#### code
+- 軽微な rework: コミット prefix `feat:` → `chore:` への amend のみ。functional impact なし。
+- validate-skill-syntax.py PASS、半角 `!` の混入なし — skill 構文ガード正常動作。
+
+#### review
+- patch route のため review phase 非実行 (N/A)。
+
+#### merge
+- patch route のため merge phase 非実行。worktree-merge-push.sh による main 直マージ成功 (commit 936a564)。
+
+#### verify
+- Pre-merge 2件とも PASS。Post-merge は opportunistic で他 skill 実行時に検証されるため `phase/verify` 維持。
+
+### Improvement Proposals
+- N/A
+
