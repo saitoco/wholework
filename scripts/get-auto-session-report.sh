@@ -22,6 +22,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
+[[ -f "$SCRIPT_DIR/emit-event.sh" ]] && source "$SCRIPT_DIR/emit-event.sh" || true
 AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
 
 SESSION_ID=""
@@ -414,6 +415,8 @@ with open(report_path, 'w') as f:
 
 print("Narrative draft inserted into report.")
 PYTHON_EOF
+  declare -f emit_event > /dev/null 2>&1 && \
+    AUTO_SESSION_ID="$SESSION_ID" emit_event "auto-session-report-published" "report_path=${OUTPUT_PATH}"
 fi
 
 echo "Report written to: $OUTPUT_PATH"
