@@ -195,6 +195,10 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/domain-loader.md` and follow the "Processing
 
 Implement the code following the "Implementation Steps" in the Spec.
 
+**Implementation scope: all Spec steps are required**
+
+Implement every step listed in the Spec's "Implementation Steps" regardless of the verify-type of its associated acceptance condition. A step whose AC is marked `<!-- verify-type: post-merge manual -->` must still be implemented in this PR — "post-merge manual" describes *how the AC is verified* (by human observation after merge), not whether the step can be skipped. Omitting a step because its AC is post-merge manual is an implementation error.
+
 - Use TaskCreate/TaskUpdate to manage tasks while working
 - Commit after each step completes
 
