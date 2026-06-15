@@ -45,3 +45,35 @@
 - merge フェーズ (WATCHDOG_TIMEOUT_MERGE_DEFAULT=600) の threshold = 600 - 600 = 0 → Summary breakdown から除外
 - Implementation Steps 数は 5 (SPEC_DEPTH=light 上限)、Pre-merge verification 数は 6 (Issue body AC をそのまま全コピー — sync rule 優先)
 - Issue body の Auto-Resolved Ambiguity Points に沿って設計した (merge 除外、watchdog-defaults.sh 参照、AC 分割)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None: 実装は Spec の 5 ステップに沿って忠実に実施した。
+
+### Design Gaps/Ambiguities
+
+- AC#3 の `grep "watchdog.limit\|WATCHDOG_THRESHOLD\|_MARGIN\|at_risk"` は BRE 形式 (`\|` を OR として使用) だが、verify-executor は ripgrep (ERE デフォルト) を使用する。実際のコードには `_MARGIN` と `at_risk` の両方が含まれているため verify は PASS するが、正確には ERE OR パターン (`|`) を使うべきだった。Issue の Auto-Resolved Ambiguity Points に記載されている AC 分割で対処済み。
+- per-issue の `_at_risk_silent` jq クエリは `--argjson` で 4 つの閾値変数を渡す構造になっており、ループ内で毎回実行される。Issue 数が多い場合は jq 起動コストが累積するが、現状の規模では問題ない。
+
+### Rework
+
+- None: 実装は一発で全テスト PASS。修正なし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `watchdog-defaults.sh` を `get-auto-session-report.sh` の先頭 (emit-event.sh source 直後) で source し、`SILENT_MARGIN=600` と phase 別閾値変数を定義した。merge フェーズは threshold=0 なので除外。
+- `PHASE_SILENT_BREAKDOWN` の jq クエリは `--argjson` で 4 変数 (t_spec/t_code/t_review/t_issue) を渡し、違反 phase をカウントして `<total> (code:<n>, spec:<n>)` 形式で出力する設計にした。
+- per-issue Notes は `_at_risk_silent` が空なら既存の `_max_silent > 600` フォールバックを維持する 2 段階フォールバック構造にした。
+
+### Deferred Items
+- merge フェーズの threshold floor (min 60s など) の設定は Issue body で却下され設計から除外。将来 merge watchdog の引き締めが必要になったら別 Issue で対応。
+- `_at_risk_silent` jq クエリのループ内起動コスト最適化は Issue 数が増えた段階で検討 (Icebox 候補)。
+
+### Notes for Next Phase
+- AC#3 の BRE `\|` パターンは `/verify` で ripgrep ERE として実行される点に注意。`_MARGIN` と `at_risk` のどちらかが実装に残っていれば PASS するはず。
+- bats テスト #5 (`phase silent window threshold violation appears in Summary and Notes`) がフィクスチャの spec phase (max_sec=1500, threshold=1200) で PASS していることを確認済み。
+- Post-merge AC は `verify-type: observation event=auto-run` — 次回 `/auto` 完走後に `/audit auto-session` で確認。
