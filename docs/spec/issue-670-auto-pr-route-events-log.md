@@ -54,3 +54,31 @@
 - `run-auto-sub.sh` の line 41–42 が手本パターン: `AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"` + `export AUTO_EVENTS_LOG`
 - 既存 bats テスト (run-code.bats / run-review.bats / run-merge.bats) は `AUTO_EVENTS_LOG` を unset にした状態でテストしており、追加後は常に default が設定される動作に変わる。ただし mock の `claude-watchdog.sh` / `claude` は `OUTPUT_FORMAT_JSON` / `AUTO_EVENTS_LOG` を無視するため既存テストは green のまま。
 - `AUTO_SESSION_ID` は parent `/auto` session が既に export しているため、各 `run-*.sh` への追加は不要 (run-auto-sub.sh と異なり SESSION_ID 設定は parent 側の責務)。
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Spec の実装手順（SCRIPT_DIR 定義行直後に 2 行追加）を3ファイルすべてで忠実に実施。
+
+### Design Gaps/Ambiguities
+- Spec の line 番号（run-code.sh:47、run-review.sh:16、run-merge.sh:14）は正確だった。ズレなし。
+- 既存 bats テストが `AUTO_EVENTS_LOG` を意識せずモック経由でテストしていたため、default-on 化後も全件 PASS（Spec Notes の記述通り）。
+
+### Rework
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 案 B を採用: 各 `run-*.sh` 冒頭（`SCRIPT_DIR` 定義直後）に `AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"` + `export` を追加。
+- `run-spec.sh` は event emit ガードを持たないため対象外（Spec 通り）。
+- 既存 bats テストへの影響なし（62/62 PASS）。
+
+### Deferred Items
+- Post-merge: 次回 `/auto` 単一 Issue (pr route) 完走後に `.tmp/auto-events.jsonl` で events が emit されることを実観測で確認（verify-type: observation）。
+
+### Notes for Next Phase
+- 変更は3ファイル×2行のみの最小修正。副作用リスクはほぼゼロ。
+- verify phase では pre-merge の grep 4条件すべて PASS 確認済み。
+- post-merge observation AC は次回 `/auto` pr route 完走まで保留。
