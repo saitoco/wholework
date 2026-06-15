@@ -163,7 +163,7 @@ if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
       --effort high \
       --output-format json \
       $PERMISSION_FLAG \
-      > "$TOKEN_USAGE_FILE" 2>&1
+      > "$TOKEN_USAGE_FILE"
   EXIT_CODE=$?
   jq -r '.result // empty' "$TOKEN_USAGE_FILE" 2>/dev/null || true
 else
