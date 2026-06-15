@@ -127,20 +127,21 @@ review phase の emit を確認済み。本 Issue では merge phase（`run-merg
 - `file_not_contains` と `rubric` および `command` の 5 条件すべて UNCERTAIN なし。`command "bats tests/wait-ci-checks.bats"` は CI 参照フォールバック（`Run bats tests` SUCCESS）で PASS 判定。verify command の設計は適切だった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- MUST 指摘なし → マージブロック不要。SHOULD（`token_usage` skip 未修正）と CONSIDER（watchdog stderr リスク）の 2 件を記録してスキップ
-- `token_usage` skip 未修正は SHOULD レベル：次 Issue で対処が望ましいが、`2>&1` 除去後に emission は正常動作するため今 PR でブロックしない判断
+- PR #664 を squash merge（`--squash --delete-branch`）で main にマージ。conflicts なし、CI 全 SUCCESS
+- `token_usage` skip 未修正（SHOULD）は既存の判断通りブロックせずマージ
+- BASE_BRANCH=main のため `closes #662` により Issue #662 は自動クローズされる
 
 ### Deferred Items
 
-- `tests/run-auto-sub.bats` L561-562 の `token_usage` skip を proper assertion に昇格（SHOULD）→ `/merge` 後または別 Issue で対処
-- post-merge AC（`token_usage` / `ci_wait` / `test_result` 3 種の observation）→ 次回 `/auto` 完走後に確認
+- `tests/run-auto-sub.bats` L561-562 の `token_usage` skip を proper assertion に昇格 → 別 Issue で対処
+- post-merge AC（`.tmp/auto-events.jsonl` で `token_usage` / `ci_wait` / `test_result` 3 種の記録確認）→ 次回 `/auto` 完走後に観察
 
 ### Notes for Next Phase
 
-- CI 全ジョブ SUCCESS、MUST 指摘なし → `/merge 664` 実行可能
-- `token_usage` テストの skip 残存は SHOULD 指摘済み（PR コメント参照）
-- post-merge AC がまだ未観察のため、次回 `/auto` 完走後に `.tmp/auto-events.jsonl` で 3 種を確認する
+- verify では pre-merge の verify command（`bats tests/wait-ci-checks.bats` 等）を再実行して回帰がないことを確認
+- post-merge AC は `.tmp/auto-events.jsonl` の観察が必要なため、verify では observable な成果物を対象に実施
+- `token_usage` テストの skip 残存は SHOULD レベル（ブロックしない）
