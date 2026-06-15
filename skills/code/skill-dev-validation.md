@@ -69,3 +69,49 @@ The following patterns have caused silent bugs where all structural verify comma
 ```
 
 Add one test per compute function. Name the test with the metric or function name so failures are immediately identifiable.
+
+## Bash `grep` Exit Code Handling
+
+When using `grep` in shell scripts, be aware of the three distinct exit codes:
+
+- **exit code 0**: one or more lines matched
+- **exit code 1**: no match found (not an error — grep ran successfully but found nothing)
+- **exit code 2**: file or regex error (grep could not run)
+
+### Principle
+
+> `grep ... || true` suppresses all non-zero exit codes, including exit code 2 (file/regex error). When the intent is only to treat "no match" as success, handle exit code 2 explicitly rather than absorbing all failures silently.
+
+**Bad**: exit code 2 is absorbed alongside exit code 1
+
+```bash
+grep -v "^${target_date}" "$INPUT" > tmpfile || true
+```
+
+**Good**: only exit codes 0 and 1 are accepted; exit code 2 triggers abort
+
+```bash
+grep -v "^${target_date}" "$INPUT" > tmpfile
+rc=$?
+case $rc in
+  0|1) ;;  # 0=match, 1=no-match (both acceptable)
+  *) echo "grep error: $rc" >&2; exit 1 ;;
+esac
+```
+
+### Example
+
+`scripts/auto-events-rollup.sh` cleanup section — origin of this principle (surfaced in PR #644 review of issue #638):
+
+```bash
+# Original (problematic): exit code 2 silently absorbed
+grep -v "^${target_date}" "$INPUT" > tmpfile || true
+
+# Fixed: explicit rc check so file-read errors are not swallowed
+grep -v "^${target_date}" "$INPUT" > tmpfile
+rc=$?
+case $rc in
+  0|1) ;;
+  *) echo "grep error: $rc" >&2; exit 1 ;;
+esac
+```
