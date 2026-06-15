@@ -84,17 +84,18 @@
 全9件の verify command が PASS。`github_check "gh pr checks" "Run bats tests"` は safe mode で CI 結果を参照でき、問題なく PASS を判定できた。`file_exists`・`grep` 系はすべて明確。UNCERTAIN 0件。ファイル内の特定行の更新を検証する verify command（`section_contains` 等）があれば Emitter Lookup Table の stale entry を事前検知できたかもしれない。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `modules/observation-trigger.md` の Emitter Lookup Table line 66 を修正（SHOULD 対応）: review フェーズで検出した stale entry（"/verify skill (future)"）を "implemented in #656" に更新して push した。
-- `--dry-run` 意味論の曖昧さ（CONSIDER）はスキップ: line 66 の更新で主要な混乱は解消され、追加注記は任意レベルと判断。
-- 受け入れ基準は全9件 PASS、CI も全 SUCCESS。MUST issues なし。
+- PR #671 を squash merge（`--delete-branch`）: mergeable=true、CI PASS、review approved を確認後、直接 Step 4 に進んだ。コンフリクト解消不要。
+- BASE_BRANCH=main のため `closes #656` が自動でIssueをクローズ済み。手動クローズ不要。
+- Phase Handoff（review phase）を読み込み: MUST issues なし、Emitter Lookup Table 修正コミット済みを確認。
 
 ### Deferred Items
-- AI judgment による observation AC チェックボックス自動更新（comment-posting から upgrade）は引き続き follow-up 候補。
-- `observation-trigger.sh` の `--dry-run` と `opportunistic-search.sh` の `--dry-run` の意味論差の明示的な文書化（CONSIDER）は今後任意で対応。
+- AI judgment による observation AC チェックボックス自動更新（comment-posting からの upgrade）は引き続き follow-up 候補。
+- `observation-trigger.sh` の `--dry-run` 意味論差の文書化は任意レベルで defer。
 
 ### Notes for Next Phase
-- MUST issues なし → `/merge 671` で merge 可能。
-- Emitter Lookup Table の修正コミット（9e178e7）が branch に push 済み。
+- verify コマンドは全9件 PASS 済み（Pre-merge検証）、Post-merge verifyセクションは「なし」。
+- `observation-trigger.sh` が全 emitter に配線済みを静的検証済み。
+- opportunistic-verify が有効なプロジェクトでの動作確認が verify フェーズで任意に実施可能。
