@@ -173,6 +173,24 @@ Reuse `MCP_TOOLS` already fetched via `detect-config-markers.md` in Step 2. If n
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md` and assign `<!-- verify-type: auto|opportunistic|manual -->` tags to each post-merge condition.
 
+**BRE metacharacter detection in verify commands:**
+
+After assigning verify-type tags, scan all `<!-- verify: grep "PATTERN" ... -->` commands in the Issue body. For each `grep` verify command, extract the PATTERN string (the first quoted argument after `grep`) and check whether it contains BRE metacharacters: `\|`, `\(`, `\)`, `\+`, `\?`.
+
+If any BRE metacharacter is detected:
+- Output a warning to terminal listing the affected verify command
+- Present the ERE rewrite candidate: replace `\|` → `|`, `\(` → `(`, `\)` → `)`, `\+` → `+`, `\?` → `?`
+- Note that `grep` verify commands in Wholework use ripgrep (ERE by default); BRE metacharacters like `\|` are interpreted as literal `|` in ERE and do not function as OR alternation
+- If the intended behavior is BRE alternation, suggest switching to ERE form or using `command "grep -G ..."` to force BRE mode
+
+Example warning format:
+```
+Warning: BRE metacharacter detected in verify command:
+  grep "PATTERN_WITH_\|" "path/to/file"
+Suggested ERE rewrite: grep "PATTERN_WITH_|" "path/to/file"
+Note: verify-executor uses ripgrep (ERE); \| in BRE means OR but is a literal | in ERE.
+```
+
 ### Step 5: Clarification Questions
 
 If ambiguity points were found, process them as follows.
