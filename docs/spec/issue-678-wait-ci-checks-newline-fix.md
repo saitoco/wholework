@@ -153,3 +153,20 @@
 - (CONSIDER) `\r` (carriage return) も sanitization 対象に追加 — review で指摘の通り Windows-style 改行や CI runner 出力に含まれうる。本 Issue スコープ外、別 Issue 候補。
 - (CONSIDER) `post_merge_check.bats` 7 件の flaky 原因を別 Issue で調査。本実装と無関係だが顕在化したため記録。
 
+## Verify Retrospective (post-merge observation confirmation, 2026-06-16)
+
+post-merge observation AC (`event=auto-run` 待ち) を、`/audit auto-session 58975-1781511640` 実行中に発見された 2 件の残存破損行をきっかけに前倒し検証した (ユーザー判断による fast-path)。
+
+### 確認内容
+- fix merge timestamp: 2026-06-15T16:14:40Z (commit f7b8304 = PR #680)
+- fix merge 以降に書き込まれた events: 16 件 (jq -s parse 16/16 成功)
+- 含まれる ci_wait event: 1 件 — `{"checks_failed":"0","checks_passed":"25"}` で改行混入なし、sanitization が本番稼働下で機能していることを実証
+- 残存破損 2 件 (line 486/487, 494/495) はいずれも fix merge 以前 (16:00:43Z, 16:13:00Z) の遺物。修正後の events に再発なし。
+
+### 設計判断
+- 本来の observation event=auto-run は次回 /auto セッション開始時に opportunistic-search.sh が自動評価する設計だが、本 issue は CI-sensitive な修正でかつ既に十分なエビデンス (sanitization の bats regression test 5 件 + 実稼働 events 16 件 clean) が揃ったため、event 待ちを skip して PASS を確定。
+- 通常の observation 滞留パターンとは異なり、fix merge から ~10 時間で実稼働での妥当性確認が完了した。observation type の dwell time 短縮事例として記録。
+
+### Improvement Proposals (この round)
+- N/A — 既存提案 (`\r` sanitization、post_merge_check.bats flaky) は依然有効、追加事項なし。
+
