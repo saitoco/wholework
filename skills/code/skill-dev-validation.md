@@ -115,3 +115,37 @@ case $rc in
   *) echo "grep error: $rc" >&2; exit 1 ;;
 esac
 ```
+
+## Mock の副作用整合性
+
+When a bats mock is declared as `:` (no-op) and test assertions depend on observable side effects — such as file writes, network calls, or state mutations — CI may produce unexpected failures even when local tests pass. This divergence occurs because the no-op mock does not reproduce the real function's 観測可能な副作用 (observable side effects) that the assertions require.
+
+### Principle
+
+> When a mock replaces a function whose observable side effects are asserted in the same test, the mock must reproduce those side effects. A no-op (`:`) mock is only safe when no assertion in the test depends on the side effect produced by the real function.
+
+**Check perspectives when writing bats tests for new helper scripts:**
+
+- If the test asserts **file writes** (e.g., appending JSON to a log file), does the mock write the same structure to the same path to reproduce the 観測可能な副作用?
+- If the test asserts **network calls** or **external state**, does the mock simulate the expected response or side effect?
+- If the test asserts **state mutations** (e.g., exit codes, environment variable changes), does the mock produce those mutations?
+- If a no-op mock is used, verify that **no assertion in the same test** depends on the observable side effect of the real function.
+
+### Example
+
+`emit-event.sh` / `AUTO_EVENTS_LOG` (Issue #630) — local PASS / CI FAIL:
+
+The bats test for `emit-event.sh` mocked `emit_event` as `:` (no-op), but test assertions verified that `AUTO_EVENTS_LOG` contained specific JSON entries. Because the no-op mock did not write to `AUTO_EVENTS_LOG`, the assertion failed in CI while passing locally (environment timing differences masked the failure locally).
+
+**Root cause**: mock declared as no-op (`:`) while assertions checked the file-write side effect.
+
+**Fix**: replace the no-op with a mock that writes a JSON stub to `AUTO_EVENTS_LOG`:
+
+```bash
+emit_event() {
+  echo '{"event":"stub"}' >> "$AUTO_EVENTS_LOG"
+}
+export -f emit_event
+```
+
+This reproduces the observable side effect required by the assertions while keeping mock output controlled and deterministic.
