@@ -62,18 +62,34 @@
 - None: 実装は一発で全テスト PASS。修正なし。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `watchdog-defaults.sh` を `get-auto-session-report.sh` の先頭 (emit-event.sh source 直後) で source し、`SILENT_MARGIN=600` と phase 別閾値変数を定義した。merge フェーズは threshold=0 なので除外。
-- `PHASE_SILENT_BREAKDOWN` の jq クエリは `--argjson` で 4 変数 (t_spec/t_code/t_review/t_issue) を渡し、違反 phase をカウントして `<total> (code:<n>, spec:<n>)` 形式で出力する設計にした。
-- per-issue Notes は `_at_risk_silent` が空なら既存の `_max_silent > 600` フォールバックを維持する 2 段階フォールバック構造にした。
+- `--light`モード（REVIEW_DEPTH=light）で実行。SHOULDイシュー（Spec Retrospectiveのドキュメント誤記）を修正、CONSIDERイシュー（テストカバレッジ）はスキップ。
+- AC#3のBRE `\|` ERE混在はSpec品質問題として記録し、verify commandをERE `|`に更新することを推奨（今後のIssueで対応）。
+- 全受け入れ基準PASS（rubric含む）、全CI SUCCESS、MUSTイシューなし。
 
 ### Deferred Items
-- merge フェーズの threshold floor (min 60s など) の設定は Issue body で却下され設計から除外。将来 merge watchdog の引き締めが必要になったら別 Issue で対応。
-- `_at_risk_silent` jq クエリのループ内起動コスト最適化は Issue 数が増えた段階で検討 (Icebox 候補)。
+- tests/audit-auto-session.batsのnegative caseテスト追加（CONSIDER level、今後のIterationで対応可）。
+- AC#3のverify command を ERE形式 (`|`) に更新する作業は別Issueで対応推奨。
 
 ### Notes for Next Phase
-- AC#3 の BRE `\|` パターンは `/verify` で ripgrep ERE として実行される点に注意。`_MARGIN` と `at_risk` は実装に含まれているが、ERE モードでは `\\|` パターンがリテラル `|` として解釈されるためFAILになる（spec quality issue）。verify command を ERE `|` に更新することを推奨。
-- bats テスト #5 (`phase silent window threshold violation appears in Summary and Notes`) がフィクスチャの spec phase (max_sec=1500, threshold=1200) で PASS していることを確認済み。
-- Post-merge AC は `verify-type: observation event=auto-run` — 次回 `/auto` 完走後に `/audit auto-session` で確認。
+- MUSTイシューなし → `/merge 674` で進められる。
+- Spec Retrospectiveの記述修正済み（commit f3d55e7: BRE/ERE記述の正確化）。
+- Post-merge ACは `verify-type: observation event=auto-run` で `/auto` 完走後に `/audit auto-session` で確認。
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+- なし: 実装はSpec の5ステップに忠実で乖離なし。
+
+### 繰り返しIssue（ワークフロー改善の余地）
+
+- AC#3のverify commandがBRE `\|` 形式で記述されていたが、verify-executorはripgrep (ERE)を使用するため、`\|`がリテラル`|`として解釈されFAILになる。これはERE/BRE書き分けの注意事項であり、同様のパターンが他のIssueのverify commandにも潜在している可能性がある。Issue作成時にverify commandをERE形式（`|`）で記述するよう周知が必要。
+
+### 受け入れ基準検証難易度
+
+- `rubric` verify commandは意味論的検証として機能しており、Summary表・phase breakdown・Notes アノテーションの3要素を一括確認できた（PASS）。
+- AC#3のverify command（`grep "watchdog.limit\|WATCHDOG_THRESHOLD\|_MARGIN\|at_risk"`）はBRE/EREの混在で検証精度が低い。Spec品質問題として記録済み。今後のIssue作成時は `|`（ERE bare alternation）を使用すること。
+- bats CIがSUCCESSであればAC#4（`command "bats ..."`）は確実にPASSできる。CI参照フォールバックが有効に機能した。
