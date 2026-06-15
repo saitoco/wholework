@@ -89,17 +89,36 @@
 
 - None. 実装は1パスで完了。
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- 構造的な乖離なし。Spec 案 A (`|| true` + `:-0` fallback) がそのまま実装されており、diff と Spec の対応は完全一致。
+- AC1〜4 の verify command は実装と正確に対応しており、FAIL や UNCERTAIN は発生しなかった。
+
+### Recurring Issues
+
+- 同種イシューの繰り返しはなし。CONSIDER 1 件（`\r` 未サニタイズ）は今回修正スコープ外の軽微なギャップ。
+- 今後 `emit-event.sh` に非数値 value を渡す呼び出し元が追加された場合に顕在化しうる。
+
+### Acceptance Criteria Verification Difficulty
+
+- 4 件の pre-merge AC すべてが自動検証成功（`grep` verify × 3 + CI 参照フォールバック × 1）。UNCERTAIN ゼロ。
+- AC2 は code phase で `grep -E "_failed=.*(\|\| true|awk)"` に強化済みで false-positive を回避できていた。verify command の精度は良好。
+- post-merge AC は observation 型（event=auto-run 待ち）で正常動作。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `|| true` + `${var:-0}` パターン採用: `|| echo 0` から置換。`true` は追加出力なし、`:-0` は空文字列 fallback として機能する。awk 案は不採用（Spec 推奨の単純実装を優先）
-- `emit-event.sh` sanitization 順序: backslash escape → double-quote escape の順（逆順にすると backslash を二重 escape する）
-- bats 回帰テストで `TEST_VAL` 環境変数経由で制御文字を注入（bash -c 内での直接埋め込みは引用符問題を引き起こすため）
+- MUST イシューなし。CONSIDER 1 件（`\r` 未サニタイズ）はスコープ外として skip。
+- review-light モード（Size=M Bug）が適切だった。全 CI SUCCESS、全 AC PASS。
+- CI 参照フォールバック（bats verify command → "Run bats tests" SUCCESS）が正常に機能した。
 
 ### Deferred Items
-- 次回 `/auto --batch` 完走後に `.tmp/auto-events.jsonl` を `jq -s . > /dev/null` でパースして error 0 件を確認（post-merge observation AC）
+- `\r` sanitization gap: 将来別呼び出し元が増えた場合の潜在リスク。必要に応じて Issue 起票。
+- post-merge observation AC: 次回 `/auto --batch` 完走後に `.tmp/auto-events.jsonl` を `jq -s . > /dev/null` でパース確認。
 
 ### Notes for Next Phase
-- 修正は内部ロジックのみ（インターフェース変更なし）。`/review` では `scripts/wait-ci-checks.sh` L34-35 の変更前後の挙動差に注目すること
-- 並列実行時に `post_merge_check.bats` テスト 7 が稀に失敗するが、単体実行では PASS する既存の flaky テスト。今回の変更とは無関係
+- ブロッキングイシューなし。`/merge 680` 即時実行可能。
+- flaky テスト（`post_merge_check.bats` テスト 7）は今回の変更と無関係。merge に影響しない。
