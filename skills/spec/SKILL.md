@@ -458,6 +458,24 @@ After creating `## Verification > Pre-merge`, compare Spec items against Issue b
 - Detect: Spec items not in Issue body (omission), or mismatched `<!-- verify: ... -->` hints
 - If mismatched, auto-update Issue body (use Spec's `## Verification > Pre-merge` as source of truth): `mkdir -p .tmp`, write to `.tmp/issue-body-$NUMBER.md`, update with `gh-issue-edit.sh`, delete temp file
 
+**BRE metacharacter detection in verify commands:**
+
+After the consistency check, scan all `<!-- verify: grep "PATTERN" ... -->` commands in the Spec's `## Verification > Pre-merge` section. For each `grep` verify command, extract the PATTERN string (the first quoted argument after `grep`) and check whether it contains BRE metacharacters: `\|`, `\(`, `\)`, `\+`, `\?`.
+
+If any BRE metacharacter is detected:
+- Output a warning to terminal listing the affected verify command
+- Present the ERE rewrite candidate: replace `\|` → `|`, `\(` → `(`, `\)` → `)`, `\+` → `+`, `\?` → `?`
+- Note that `grep` verify commands in Wholework use ripgrep (ERE by default); BRE metacharacters like `\|` are interpreted as literal `|` in ERE and do not function as OR alternation
+- If the intended behavior is BRE alternation, suggest switching to ERE form or using `command "grep -G ..."` to force BRE mode
+
+Example warning format:
+```
+Warning: BRE metacharacter detected in verify command:
+  grep "PATTERN_WITH_\|" "path/to/file"
+Suggested ERE rewrite: grep "PATTERN_WITH_|" "path/to/file"
+Note: verify-executor uses ripgrep (ERE); \| in BRE means OR but is a literal | in ERE.
+```
+
 **Patch route verify command check:**
 
 After `## Verification > Pre-merge` is finalized and the Issue body is updated, if Size is `XS` or `S` (patch route — no PR exists), scan `## Verification > Pre-merge` in the Spec for `github_check "gh pr checks"` entries.
