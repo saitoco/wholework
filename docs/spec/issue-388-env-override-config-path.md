@@ -91,3 +91,29 @@ Issue #386 で各 `tests/run-*.bats` の `setup()` に追加した CWD 隔離 bl
 - 変更は単一行の bash parameter expansion。実装はシンプルで regress リスクは低い
 - CI の `Test / Run bats tests` workflow で 3 新規テスト（#196-198）の PASS を確認済み（bats ローカル実行で全 317 tests PASS）
 - Post-merge の production paths 回帰確認は opportunistic verify として残存
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 4 件すべて自動検証可能 (`grep` × 2、`rubric` × 2)。UNCERTAIN ゼロ。
+- Post-merge AC は github_check + opportunistic、両方とも適切なタイプ選択。
+
+#### design
+- Spec 通り `${WHOLEWORK_CONFIG_PATH:-.wholework.yml}` の 1 行修正で完了。bash parameter expansion で unset/empty 両対応、`[ ! -f ]` チェックが /dev/null fallback も担当する設計の eleganceを発揮。
+
+#### code
+- 1 commit (patch route) で完了。`scripts/get-config-value.sh` 1 行 + `tests/get-config-value.bats` 3 新規テスト + `docs/tech.md` / `docs/ja/tech.md` の SSoT 行追加。translation-workflow も遵守。
+
+#### review/merge
+- patch route のため review/merge phase なし。`closes #388` で Issue 自動クローズ。
+
+#### verify
+- pre-merge 4/4 PASS (grep × 2、rubric × 2)。
+- post-merge auto AC (github_check) も PASS。
+- opportunistic AC は構造的保証 (AC4 rubric) で間接的にカバーされるため check 維持で十分。
+
+### Improvement Proposals
+- N/A (本 Issue の修正は最小スコープで完結)。
+
