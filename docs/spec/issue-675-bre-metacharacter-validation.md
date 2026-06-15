@@ -37,3 +37,34 @@
 - `skills/issue/SKILL.md` には現状 "ERE" という文字列が存在しない（grep 0 件）。実装で追加することで AC #2 を満たす。
 - `skills/spec/SKILL.md` の "ERE" 4件はすべて `ENTERED_WORKTREE` の部分文字列であり、ERE (Extended Regular Expressions) の略語としては存在しない。実装で追加することで AC #3 の rubric 要件を補完する。
 - 挿入テキストは「BRE metacharacter」「ERE」両方を含む必要がある（AC #1〜#3 の verify patterns を満たすため）
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None: Spec の実装ステップ通りに実装完了。挿入箇所・検出対象 metacharacter 5種・出力フォーマットすべて設計通り。
+
+### Design Gaps/Ambiguities
+
+- `skills/spec/SKILL.md` Notes に「"ERE" 4件はすべて ENTERED_WORKTREE の部分文字列」と記載されていたが、確認するとその通りであり、実装で追加した ERE 記述が AC #2 相当の要件を補完する形になった。Notes の予測が正確で、実装時に改めて確認の手間なく進められた。
+
+### Rework
+
+- None: 一発実装で bats 853 件全 PASS。skill syntax validation・forbidden expressions check も PASS。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `skills/issue/SKILL.md` Step 4 末尾（verify-type タグ割り当ての直後）に BRE 検出サブステップを追加した。Existing Issue フロー（Step 6）は "Follow Step 4" 参照なので Step 4 への追加で自動適用される。
+- `skills/spec/SKILL.md` は Step 10 の「Verification conditions consistency check」直後、「Patch route verify command check」直前に追加した。Spec 生成フローの verify command 確定後に検出する配置が最適。
+- 検出対象は5種類の BRE metacharacter (`\|`, `\(`, `\)`, `\+`, `\?`) に限定した（Spec 指示通り）。
+
+### Deferred Items
+- post-merge の実際の挙動確認（`/issue` または `/spec` 実行で警告が出るか）は `verify-type: opportunistic` で次回実行時に観測。
+- `/review` 時に rubric AC #4 の詳細判定が行われる。rubric grader には worktree 上の最新コンテンツを参照させること。
+
+### Notes for Next Phase
+- AC #1〜#3 は grep/file_contains で自動 PASS 確認済み（pre-merge チェックボックスも更新済み）。
+- PR #682 でブランチは `worktree-code+issue-675` → base `main`。
+- rubric AC #4 は `/review` の safe mode rubric grader が評価する。grader に `skills/issue/SKILL.md` と `skills/spec/SKILL.md` の内容を PR ブランチから読み込ませること（main branch との混同に注意）。
