@@ -54,7 +54,7 @@
 
 ### Design Gaps/Ambiguities
 
-- AC#3 の `grep "watchdog.limit\|WATCHDOG_THRESHOLD\|_MARGIN\|at_risk"` は BRE 形式 (`\|` を OR として使用) だが、verify-executor は ripgrep (ERE デフォルト) を使用する。実際のコードには `_MARGIN` と `at_risk` の両方が含まれているため verify は PASS するが、正確には ERE OR パターン (`|`) を使うべきだった。Issue の Auto-Resolved Ambiguity Points に記載されている AC 分割で対処済み。
+- AC#3 の `grep "watchdog.limit\|WATCHDOG_THRESHOLD\|_MARGIN\|at_risk"` は BRE 形式 (`\|` を OR として使用) だが、verify-executor は ripgrep (ERE デフォルト) を使用するため ERE モードでは `\\|` はリテラル `|` として解釈されFAILになる（実装は条件を満たすためSpec品質問題として分類）。正確には ERE OR パターン (`|`) を使うべきだった。Issue の Auto-Resolved Ambiguity Points に記載されている AC 分割で対処済み。
 - per-issue の `_at_risk_silent` jq クエリは `--argjson` で 4 つの閾値変数を渡す構造になっており、ループ内で毎回実行される。Issue 数が多い場合は jq 起動コストが累積するが、現状の規模では問題ない。
 
 ### Rework
@@ -74,6 +74,6 @@
 - `_at_risk_silent` jq クエリのループ内起動コスト最適化は Issue 数が増えた段階で検討 (Icebox 候補)。
 
 ### Notes for Next Phase
-- AC#3 の BRE `\|` パターンは `/verify` で ripgrep ERE として実行される点に注意。`_MARGIN` と `at_risk` のどちらかが実装に残っていれば PASS するはず。
+- AC#3 の BRE `\|` パターンは `/verify` で ripgrep ERE として実行される点に注意。`_MARGIN` と `at_risk` は実装に含まれているが、ERE モードでは `\\|` パターンがリテラル `|` として解釈されるためFAILになる（spec quality issue）。verify command を ERE `|` に更新することを推奨。
 - bats テスト #5 (`phase silent window threshold violation appears in Summary and Notes`) がフィクスチャの spec phase (max_sec=1500, threshold=1200) で PASS していることを確認済み。
 - Post-merge AC は `verify-type: observation event=auto-run` — 次回 `/auto` 完走後に `/audit auto-session` で確認。
