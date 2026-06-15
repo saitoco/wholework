@@ -101,3 +101,40 @@
 - Issue #663 は main マージで自動クローズ済み (closes #663)
 - SKILL.md の MUST 禁則根拠説明は review phase で修正済み —整合的な状態
 - verify phase では post-merge 観察 AC のみ残存 — 次回 /auto 実行時に自然に確認される
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- triage AC audit が AC1（常時 PASS）/ AC2 (BRE `\|` ERE 不整合) / AC3 (BRE + 過剰エスケープ) を検出し、user 側で 3 件すべて修正してから auto 開始。Issue refinement の前段 audit が verify command 品質を大きく改善した実例。
+
+#### spec
+- AC 4 件すべて自動検証可能 (`grep` × 2、`rubric` × 1、`command` × 1)。triage audit を経由したことで UNCERTAIN ゼロを達成。
+- Post-merge AC は observation event=auto-run で event-driven trigger に委譲する設計。
+
+#### design
+- 2 層対策（SKILL.md MUST 禁則 + reconcile-phase-state PR Review scan）が Spec 通り実装。fixup なし。
+- 興味深い observation: 本実装の review phase 自体が修正後の `gh pr comment` 経路で正しく動作し、reconcile-phase-state も `Review Response Summary found` を検出。**dogfooding 的に対策の機能を実証済み**。
+
+#### code
+- 1 PR (#665) で完了。fixup/amend なし。3 ファイル変更 (skills/review/SKILL.md / scripts/reconcile-phase-state.sh / tests/reconcile-phase-state.bats) で 75 insertions / 3 deletions。
+- 新規 bats テスト追加で test カバレッジ向上。
+
+#### review
+- light review。MUST 0 件、SHOULD 1 件 (`SKILL.md:728` 根拠説明を "fallback-only scan path" に更新) 修正、CONSIDER 1 件 skip。
+- review の根拠説明 self-consistency check (同一 PR 内で reconcile に PR Review scan を追加したのに MUST 禁則は「reconcile が PR Reviews をスキャンしない」と書いていた矛盾) が SHOULD で適切に検出・修正された。
+
+#### merge
+- squash merge `--delete-branch` で main 統合。CI 全 SUCCESS、conflict なし。
+- review formal approval なしの warn-only proceed — light review の通常パターン。
+
+#### verify
+- Pre-merge AC 4/4 PASS (rubric grader、bats 57/57)。
+- Post-merge observation AC は本 `/auto` 実行自体で構造的に実証済み（PR #665 の review summary が issue comment channel で投稿され reconcile が検出）。次回 `/auto` 実行で auto-checked される見込み。
+
+### Improvement Proposals
+- (HIGH) `/triage` の AC verify command audit パターンが verify command の質を大幅に改善した。本 Issue では 3/5 AC で defect を事前検出し、user が修正してから auto を開始することで verify 段階の UNCERTAIN/FAIL を完全に回避できた。triage audit を `/issue` workflow 段階で自動実行する flow を強化することで、defect 検出を 1 phase 前倒しできる可能性。
+- (CONSIDER) merge phase の root-cause で言及されたが「PR Review body が空文字」「`|| true` 失敗」のエッジケース bats テストが不足。本 Issue スコープ外、別 Issue 候補。
+- (CONSIDER) `_emit_result` ログメッセージ "found in PR #N comments" が PR Review scan 追加後も更新されていない。発見元 channel (issue comment / PR Review) を区別するメッセージに改善すると debug 容易性が向上。
+
