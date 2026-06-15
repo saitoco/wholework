@@ -64,6 +64,29 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
+## 2026-06-15 18:20 UTC: code-pr-tier3-recovery
+
+### Context
+- Issue #675, phase: code-pr
+- Source: recovery-sub-agent
+- Wrapper: run-code-pr.sh, exit code: 143
+- Log tail: "Finished at: 2026-06-16 03:05:26"
+
+### Diagnosis
+- Watchdog killed the process (exit 143) after 1800 seconds of silence before any implementation work was committed. The branch worktree-code+issue-675 exists but sits at the same commit as main — no code was written, no PR was created. This is a clean-slate transient hang (likely an API stall during initial /code startup), so a straight retry is safe and sufficient.
+
+### Recovery Applied
+- action=retry
+- steps: none
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+---
+
 ## 2026-06-15 09:58 UTC: code-patch-tier3-recovery
 
 ### Context
