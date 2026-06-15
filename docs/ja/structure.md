@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（55 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（57 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -35,7 +35,7 @@ wholework/
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用 decomposition YAML サンプル
-├── tests/               # スクリプトの Bats テストファイル（74 ファイル）
+├── tests/               # スクリプトの Bats テストファイル（78 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents
@@ -177,6 +177,7 @@ wholework/
 - `scripts/get-verify-iteration.sh` — Issue コメントから `<!-- verify-iteration: N -->` マーカーの最大値を読み取る
 - `scripts/hook-rename-on-auto.sh` — UserPromptSubmit hook: プロンプトが `/auto` パターンにマッチした場合にセッション名を自動リネーム
 - `scripts/log-permission.sh` — 権限イベントログ（JSON 出力）
+- `scripts/observation-trigger.sh` — イベント発火時に observation AC をディスパッチ: `opportunistic-search.sh --event` を呼び出し、マッチした各 Issue に `/verify` 再実行を促すコメントを投稿
 - `scripts/opportunistic-search.sh` — opportunistic スキル検索と observation イベントスキャン
 - `scripts/post_merge_check.sh` — 複数 Issue の post-merge 手動 AC（verify-type: manual）を 1 セッションでバンドル実行; AC ごとに P/F/S を対話入力; 全 PASS で phase/done 遷移、FAIL で reopen
 - `scripts/triage-backlog-filter.sh` — triage 向けバックログフィルタ

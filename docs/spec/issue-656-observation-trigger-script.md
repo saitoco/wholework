@@ -52,3 +52,49 @@
 - bats テストスコープ: `observation-trigger.sh` 単体テストのみ（auto-resolve #3）。emitter 配線は grep verify command による pre-merge 静的検証でカバー
 - `scripts/claude-watchdog.sh` の変数名（`_watchdog_event_results` 等）は削除される; 全体の行数が削減される
 - `docs/structure.md` の件数修正: scripts (55→57: 現在の実数 56 + 新規 1)、tests (74→78: 現在の実数 77 + 新規 1) — 既存ドリフト分も含めて修正
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec では `tests/` 件数を「74→78」と記載していたが、実際のドキュメントには「74 ファイル」と記載されており、実数は77（+1で78）。件数差分は既存ドリフトのため deviation なし — Spec の通り修正した。
+- `verify/SKILL.md` への `observation-trigger.sh --event fix-cycle` の追加場所: `gh issue reopen "$NUMBER"` の直後（Spec 通り）に配置し、`emit verify_reopen_cycle event` ブロックの前に挿入。
+
+### Design Gaps/Ambiguities
+
+- `--dry-run` フラグの動作: Spec には「`opportunistic-search.sh` 引数として渡す」とは記載されていなかったが、`--dry-run` 時は `opportunistic-search.sh` 呼び出し自体をスキップするシンプルな実装を選択。ghost API call を避けるという点で合理的。
+- `gh issue comment` の引数配置: `observation-trigger.sh` では「`/verify ${N}` を再実行してください」ではなく英語メッセージ（Spec の文面に従い "Run `/verify ${N}` to verify the condition and update the checkbox."）を使用。CLAUDE.md で「スクリプトのユーザー向けメッセージは英語」とは定められていないが、スクリプト内のコメント言語が英語という慣習に従った。
+
+### Rework
+
+- N/A（設計通り実装できた。テストは一発 PASS）
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+`modules/observation-trigger.md` の Emitter Lookup Table（line 66）が PR によって更新されていなかった。`Future Extension` セクションは「実装済み #656」に更新されていたが、テーブル行だけが「(future)」「not yet implemented」のままで残り、同一ファイル内で矛盾が生じた。Spec には「`modules/observation-trigger.md` の Future Extension 節を更新」と記載されていたが、テーブル行の更新は Spec に明示されていなかったため、実装者が見落としたと考えられる。Spec に変更ファイルの具体的な更新箇所（節名だけでなく行レベルで）を記載することで防げた。
+
+### Recurring Issues
+
+今回の review では SHOULD 1件、CONSIDER 1件のみ。MUST 0件。パターンの繰り返しは見られなかった。Nothing to note.
+
+### Acceptance Criteria Verification Difficulty
+
+全9件の verify command が PASS。`github_check "gh pr checks" "Run bats tests"` は safe mode で CI 結果を参照でき、問題なく PASS を判定できた。`file_exists`・`grep` 系はすべて明確。UNCERTAIN 0件。ファイル内の特定行の更新を検証する verify command（`section_contains` 等）があれば Emitter Lookup Table の stale entry を事前検知できたかもしれない。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `modules/observation-trigger.md` の Emitter Lookup Table line 66 を修正（SHOULD 対応）: review フェーズで検出した stale entry（"/verify skill (future)"）を "implemented in #656" に更新して push した。
+- `--dry-run` 意味論の曖昧さ（CONSIDER）はスキップ: line 66 の更新で主要な混乱は解消され、追加注記は任意レベルと判断。
+- 受け入れ基準は全9件 PASS、CI も全 SUCCESS。MUST issues なし。
+
+### Deferred Items
+- AI judgment による observation AC チェックボックス自動更新（comment-posting から upgrade）は引き続き follow-up 候補。
+- `observation-trigger.sh` の `--dry-run` と `opportunistic-search.sh` の `--dry-run` の意味論差の明示的な文書化（CONSIDER）は今後任意で対応。
+
+### Notes for Next Phase
+- MUST issues なし → `/merge 671` で merge 可能。
+- Emitter Lookup Table の修正コミット（9e178e7）が branch に push 済み。

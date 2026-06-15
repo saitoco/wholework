@@ -63,7 +63,7 @@ Each emitter is responsible for:
 | `/review` skill | Opportunistic Verification step (after Step completion) | `pr-review-full` or `pr-review-light` depending on `REVIEW_DEPTH` |
 | `/auto` skill | Post-completion event scan (after Completion Report) | `auto-run` |
 | `scripts/claude-watchdog.sh` | Watchdog kill handler (`_auto_emit_watchdog_kill`) | `watchdog-kill` |
-| `/verify` skill (future) | FAIL → reopen → fix-cycle detection | `fix-cycle` (not yet implemented — follow-up #650 child Issue) |
+| `/verify` skill | FAIL → reopen → fix-cycle detection | `fix-cycle` (implemented in #656) |
 
 ## Output Processing Contract
 
@@ -82,17 +82,18 @@ In shell contexts where `/verify` cannot be spawned (e.g., inside `claude-watchd
 - Post a comment to the Issue noting the event was observed
 - Recommend the user re-run `/verify <number>` to update the checkbox
 
-## Future Extension: `scripts/observation-trigger.sh`
+## `scripts/observation-trigger.sh` (実装済み #656)
 
-A dedicated dispatch script (`scripts/observation-trigger.sh`) can encapsulate the
+A dedicated dispatch script (`scripts/observation-trigger.sh`) encapsulates the
 processing contract above, making emitter integration a one-liner:
 
 ```bash
 "${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh" --event <event-name>
 ```
 
-This script would handle JSON parsing, state checks, and `/verify` dispatch.
-Implementation is tracked in the child Issue created under #650.
+The script calls `opportunistic-search.sh --event <name>`, and for each matched Issue
+posts a comment recommending the user re-run `/verify <N>` (comment-posting dispatch;
+no AI judgment in shell context). Implemented in #656.
 
 ## Notes
 

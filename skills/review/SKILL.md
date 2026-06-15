@@ -2,7 +2,7 @@
 name: review
 description: PR review (`/review 88`). Automatically runs acceptance criteria verification, multi-perspective code review, issue resolution, and summary posting. Use after `/code` creates a PR and before `/merge` (`--light`/`--full` to adjust depth).
 context: fork
-allowed-tools: Bash(gh pr view:*, gh pr diff:*, gh pr comment:*, gh issue view:*, gh issue edit:*, gh issue create:*, gh issue list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-external-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, wc:*, diff:*, git log:*, git diff:*, git show:*, git add:*, git commit:*, git push:*, git fetch:*, git checkout:*, git worktree:*, git branch:*, python3:*), Read, Write, Edit, Glob, Grep, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, Workflow
+allowed-tools: Bash(gh pr view:*, gh pr diff:*, gh pr comment:*, gh issue view:*, gh issue edit:*, gh issue create:*, gh issue list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-external-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, wc:*, diff:*, git log:*, git diff:*, git show:*, git add:*, git commit:*, git push:*, git fetch:*, git checkout:*, git worktree:*, git branch:*, python3:*), Read, Write, Edit, Glob, Grep, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, Workflow
 ---
 
 # PR Review
@@ -792,17 +792,10 @@ If `opportunistic-verify: true` is set in `.wholework.yml`, read `${CLAUDE_PLUGI
 
 **Event-based observation scan (runs regardless of `opportunistic-verify` setting):**
 
-After the opportunistic verification above (or in its place if `opportunistic-verify` is not set), scan for observation-type ACs that match this review's event:
+After the opportunistic verification above (or in its place if `opportunistic-verify` is not set), fire the observation trigger:
 
-- If `REVIEW_DEPTH=full`: run `${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh --event pr-review-full`
-- If `REVIEW_DEPTH=light`: run `${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh --event pr-review-light`
-
-If the returned JSON array is non-empty, for each matched Issue:
-1. Re-evaluate the matched observation AC using the verify-executor in full mode (AI judgment on whether today's review event satisfies the condition)
-2. If PASS: update the AC checkbox in the Issue body via `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh`
-3. If all ACs for the Issue are now checked: run `${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh <issue_number> done` and close the Issue with `gh issue close <issue_number>`
-
-If the array is empty, skip silently.
+- If `REVIEW_DEPTH=full`: run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event pr-review-full`
+- If `REVIEW_DEPTH=light`: run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event pr-review-light`
 
 ## Completion Report
 
