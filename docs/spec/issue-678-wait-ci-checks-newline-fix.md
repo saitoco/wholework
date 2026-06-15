@@ -74,3 +74,32 @@
 - 暫定対処: Python スクリプトで破損行を修復し再生成成功 (483 → 476 lines)
 - Auto-Resolved: AC2 verify command を `grep "_failed=.*$"` → `grep -E "_failed=.*(\|\| true|awk)"` に強化済み（旧パターンは修正前も `_failed=` が存在し常時 PASS になる false-positive のため）
 - 関連: #662 (ci_wait event 配線), #630 (event log 基盤), #654 (auto-session-report-published event)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. Spec の案 A (`|| true` + `:-0` fallback) をそのまま採用。案 B (awk) は不採用（Spec の推奨案 A の方がシンプルで bash 3.2+ 互換性も明確）。
+
+### Design Gaps/Ambiguities
+
+- `emit-event.sh` の `local` 変数宣言 (`local v_sanitized`) は bash 関数スコープ内での使用を前提にしており、sourceして使う使い方と整合していることを確認（emit_event() 内部で `local` を使う既存パターンに倣った）。
+
+### Rework
+
+- None. 実装は1パスで完了。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `|| true` + `${var:-0}` パターン採用: `|| echo 0` から置換。`true` は追加出力なし、`:-0` は空文字列 fallback として機能する。awk 案は不採用（Spec 推奨の単純実装を優先）
+- `emit-event.sh` sanitization 順序: backslash escape → double-quote escape の順（逆順にすると backslash を二重 escape する）
+- bats 回帰テストで `TEST_VAL` 環境変数経由で制御文字を注入（bash -c 内での直接埋め込みは引用符問題を引き起こすため）
+
+### Deferred Items
+- 次回 `/auto --batch` 完走後に `.tmp/auto-events.jsonl` を `jq -s . > /dev/null` でパースして error 0 件を確認（post-merge observation AC）
+
+### Notes for Next Phase
+- 修正は内部ロジックのみ（インターフェース変更なし）。`/review` では `scripts/wait-ci-checks.sh` L34-35 の変更前後の挙動差に注目すること
+- 並列実行時に `post_merge_check.bats` テスト 7 が稀に失敗するが、単体実行では PASS する既存の flaky テスト。今回の変更とは無関係
