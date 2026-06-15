@@ -153,3 +153,33 @@
 - verify フェーズでは post-merge observation AC (次回 /auto 完走後の動作確認) が主要残タスク
 - `WHOLEWORK_ISSUE_BODY_DIR` 環境変数は BATS テスト専用; 本番では `gh issue view` にフォールバック
 - label は `verify` に移行済み
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC 5 件すべて自動検証可能 (grep × 2、command × 1、rubric × 1、section_contains × 1)。triage 段階で `section_contains` を rubric 補助として追加した判断が verify で機能 (UNCERTAIN ゼロ)。
+
+#### spec
+- Size 当初 S → spec 段階で L に upgrade。phase/verify 残 Issue 別の API 呼び出し + verify-type マッピングロジック追加で実装範囲が当初予測より大きくなったため適切な判断。
+- pr route (full review) に移行で review 効果を最大化。
+
+#### code
+- 1 PR (#676) で完了。tests/audit-auto-session.bats でコンフリクトあり（並行 batch session の他 PR と衝突）。保守的マージで両側テストを取り込んで解決。
+
+#### review
+- full review 実施。具体的な指摘内容は PR コメント参照だが、CONSIDER level の議論で深掘り。
+
+#### merge
+- squash merge `--delete-branch` で main 統合。前述コンフリクトを解決済みで CI green、conflict なし。
+- 複数 event 重複除去 (event=auto-run,auto-run 問題) を Deferred Item として記録。
+
+#### verify
+- 5/5 PASS。bats 7 件全 PASS。
+- 本実装によりこのセッション (`22090-1781508629`) 以降の `/audit auto-session` で verify-type breakdown が表示される。
+
+### Improvement Proposals
+- (CONSIDER) `verify-type: observation event=auto-run,auto-run` のような重複 event 名のパース処理を別 Issue で追跡。本実装では deferred。merge phase handoff にも記載済み。
+- (HIGH) tests/audit-auto-session.bats のコンフリクト発生は #666 / #667 / #669 系列の並行 PR で頻発。session-report 拡張系 Issue は同時並行で進めると merge 順序で必ず衝突するため、batch 順序最適化（同領域 Issue を逐次配置 or 統合 spec）を検討すべき。
+
