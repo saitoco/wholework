@@ -204,6 +204,7 @@ _completion_code_patch() {
 
   local found=false
   local actual_json
+  local mismatch_diag
   if [[ -n "$reopen_ts" && "$reopen_ts" != "null" ]]; then
     if git log origin/main --after="$reopen_ts" --oneline --grep="closes #${ISSUE_NUMBER}" 2>/dev/null | grep -q .; then
       found=true
@@ -211,9 +212,9 @@ _completion_code_patch() {
     actual_json="{\"commits_found\":${found},\"reopen_ts\":\"$(_escape_json "$reopen_ts")\"}"
     if [[ "$found" == "true" ]]; then
       _emit_result "true" "fresh commit after reopen (${reopen_ts}) with closes #${ISSUE_NUMBER} found on origin/main" "$actual_json"
-    else
-      _handle_mismatch "no fresh commit after reopen (${reopen_ts}) with closes #${ISSUE_NUMBER} found on origin/main" "$actual_json"
+      return
     fi
+    mismatch_diag="no fresh commit after reopen (${reopen_ts}) with closes #${ISSUE_NUMBER} found on origin/main"
   else
     if git log origin/main --oneline --grep="closes #${ISSUE_NUMBER}" 2>/dev/null | grep -q .; then
       found=true
@@ -221,10 +222,22 @@ _completion_code_patch() {
     actual_json="{\"commits_found\":${found}}"
     if [[ "$found" == "true" ]]; then
       _emit_result "true" "commit with closes #${ISSUE_NUMBER} found on origin/main (fallback: reopen timestamp unavailable; fix-cycle false positive possible)" "$actual_json"
-    else
-      _handle_mismatch "no commit with closes #${ISSUE_NUMBER} found on origin/main" "$actual_json"
+      return
     fi
+    mismatch_diag="no commit with closes #${ISSUE_NUMBER} found on origin/main"
   fi
+
+  # Fallback: check phase labels or issue state for async external commit areas.
+  # See modules/orchestration-fallbacks.md#async-external-commit
+  local labels state
+  labels=$(gh issue view "$ISSUE_NUMBER" --json labels -q '.labels[].name' 2>/dev/null) || true
+  state=$(gh issue view "$ISSUE_NUMBER" --json state -q '.state' 2>/dev/null) || true
+  if echo "$labels" | grep -qE '^phase/(verify|done)$' || [[ "$state" == "CLOSED" ]]; then
+    _emit_result "true" "async external commit area: closes #${ISSUE_NUMBER} not in git log but phase label or state confirms completion" "$actual_json"
+    return
+  fi
+
+  _handle_mismatch "$mismatch_diag" "$actual_json"
 }
 
 _completion_code_pr() {

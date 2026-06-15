@@ -359,6 +359,34 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ---
 
+## async-external-commit
+
+### Symptom
+- `run-auto-sub.sh` Tier 1 (`reconcile-phase-state.sh code-patch <issue> --check-completion`) returns `"matches_expected":false` with diagnosis `no commit with closes #N found on origin/main`
+- The implementation artifact physically exists and the phase label has advanced to `phase/verify` or later
+- The only commit for this Issue was made by an external tool (e.g., Obsidian Git) in the format `vault backup: <timestamp>` — the commit message does not contain `closes #N`
+
+### Applicable Phases
+- code (patch route — `_completion_code_patch` in `scripts/reconcile-phase-state.sh`)
+
+### Fallback Steps
+- No manual intervention required. `_completion_code_patch` includes a built-in two-stage check:
+  1. Primary: `git log origin/main --grep="closes #${ISSUE_NUMBER}"` (existing check)
+  2. Fallback (when primary finds nothing): `gh issue view "$ISSUE_NUMBER" --json labels` and `--json state` to confirm `phase/verify`, `phase/done`, or `CLOSED` state
+- If the fallback confirms completion, `_completion_code_patch` returns `matches_expected:true` automatically, preventing Tier 3 sub-agent escalation
+
+### Escalation
+- If both the git log check and the phase label / state fallback fail to confirm completion, the reconciler returns `matches_expected:false` and Tier 2 / Tier 3 escalation proceeds normally
+- If the `gh` API call fails (network error, rate limit), `labels` and `state` are empty strings; the fallback condition evaluates to false and falls through to the existing mismatch path — no silent false-positive
+
+### Rationale
+- Introduced in Issue #461: patch Issues whose only artifact is an external-tool auto-commit (no `closes #N` in commit message) caused systematic false-negatives in `_completion_code_patch`, triggering unnecessary Tier 3 sub-agent spawning on every orchestrator re-run
+- Mirrors the two-stage pattern already used in `_completion_spec` (spec file presence + ready-or-later label), keeping the reconciler consistent
+- `phase/verify` is set by `/review` skill after merge confirmation, making it a reliable proxy for code-patch completion when the commit does not carry `closes #N`
+- See also: Issue #461 (introducing this fallback), Issue #460 (`git_committed` verify command), Issue #462 (`verify-patterns.md` recommended pattern)
+
+---
+
 ## Operational Notes
 
 This catalog is consumed by:

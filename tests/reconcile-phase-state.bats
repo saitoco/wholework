@@ -203,6 +203,14 @@ MOCK_EOF
 }
 
 @test "code-patch completion: no matching commit -> mismatch (strict exit 1)" {
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json labels"* ]]; then echo "triaged"; exit 0; fi
+if [[ "$*" == *"--json state"* ]]; then echo "OPEN"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+
     cat > "$MOCK_DIR/git" << 'MOCK_EOF'
 #!/bin/bash
 if [[ "$1" == "fetch" ]]; then exit 0; fi
@@ -853,6 +861,14 @@ exit 0
 MOCK_EOF
     chmod +x "$MOCK_DIR/gh-graphql.sh"
 
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json labels"* ]]; then echo "triaged"; exit 0; fi
+if [[ "$*" == *"--json state"* ]]; then echo "OPEN"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+
     cat > "$MOCK_DIR/git" << 'MOCK_EOF'
 #!/bin/bash
 if [[ "$1" == "fetch" ]]; then exit 0; fi
@@ -921,6 +937,37 @@ MOCK_EOF
     [ "$status" -eq 0 ]
     [[ "$output" == *'"matches_expected":true'* ]]
     [[ "$output" == *'fix-cycle false positive possible'* ]]
+}
+
+@test "code-patch completion: async external commit - no closes #N + phase/verify label -> matches_expected true" {
+    cat > "$MOCK_DIR/gh-graphql.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "null"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
+
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json labels"* ]]; then echo "phase/verify"; exit 0; fi
+if [[ "$*" == *"--json state"* ]]; then echo "OPEN"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "log" ]]; then echo ""; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-patch 55 --check-completion --strict
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"matches_expected":true'* ]]
+    [[ "$output" == *"async"* ]]
 }
 
 @test "spec completion: spec exists + no ready label -> mismatch includes hint_recent_commit and hint_pr_state" {
