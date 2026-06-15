@@ -213,6 +213,9 @@ MANUAL_INTERVENTIONS=$(echo "$EVENTS_JSON" | jq '[.[] | select(.event == "manual
 # verify FAIL reopen fix cycles
 VERIFY_REOPEN_CYCLES=$(echo "$EVENTS_JSON" | jq '[.[] | select(.event == "verify_reopen_cycle")] | length' 2>/dev/null || echo 0)
 
+# Backfilled phase_complete events
+BACKFILLED_COUNT=$(echo "$EVENTS_JSON" | jq '[.[] | select(.event == "phase_complete" and .backfilled == true)] | length' 2>/dev/null || echo 0)
+
 # Verify phase residuals: issues that have phase_start for verify but no phase_complete for verify
 VERIFY_RESIDUALS=$(echo "$EVENTS_JSON" | jq -r '
   . as $all |
@@ -230,7 +233,14 @@ PER_ISSUE_TABLE=""
 for _num in $ISSUE_NUMS_FOR_TABLE; do
   _issue_events=$(echo "$EVENTS_JSON" | jq --argjson n "$_num" '[.[] | select(.issue == $n)]' 2>/dev/null || echo "[]")
   _first_ts=$(echo "$_issue_events" | jq -r '[.[] | select(.event == "phase_start") | .ts] | sort | first // "?"' 2>/dev/null || echo "?")
-  _last_ts=$(echo "$_issue_events" | jq -r '[.[] | select(.event == "phase_complete" or .event == "sub_complete") | .ts] | sort | last // "?"' 2>/dev/null || echo "?")
+  _last_ts=$(echo "$_issue_events" | jq -r '
+    [.[] | select(.event == "phase_complete" or .event == "sub_complete")] |
+    sort_by(.ts) | last // null |
+    if . == null then "?"
+    elif .backfilled == true then .ts + " (backfilled)"
+    else .ts
+    end
+  ' 2>/dev/null || echo "?")
   _size=$(echo "$_issue_events" | jq -r '[.[] | select(.event == "sub_start") | .size] | first // "?"' 2>/dev/null || echo "?")
   case "$_size" in
     XS|S) _route="patch" ;;
@@ -382,6 +392,7 @@ cat > "$OUTPUT_PATH" << REPORT_EOF
 | Concurrent commits detected | ${CONCURRENT_COMMITS} |
 | Parent session manual interventions | ${MANUAL_INTERVENTIONS} |
 | verify FAIL → reopen fix cycles | ${VERIFY_REOPEN_CYCLES} |
+| Backfilled phase_complete events | ${BACKFILLED_COUNT} |
 | Merge conflicts | 0 |
 
 ## Per-Issue Durations

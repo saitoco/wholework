@@ -46,6 +46,26 @@ export EMIT_ISSUE_NUMBER="$SUB_NUMBER"
 
 source "$SCRIPT_DIR/emit-event.sh"
 
+_maybe_emit_phase_complete() {
+  local _exit_code=$?
+  [[ "$_exit_code" -ne 0 ]] && return 0
+  [[ -z "${AUTO_EVENTS_LOG:-}" ]] && return 0
+  [[ -z "${AUTO_SESSION_ID:-}" ]] && return 0
+  [[ -z "${EMIT_ISSUE_NUMBER:-}" ]] && return 0
+  [[ -z "${EMIT_PHASE_NAME:-}" ]] && return 0
+  local _last_event
+  _last_event=$(grep "\"session_id\":\"${AUTO_SESSION_ID}\"" "${AUTO_EVENTS_LOG}" 2>/dev/null \
+      | jq -rs --argjson n "${EMIT_ISSUE_NUMBER}" \
+        '[.[] | select(.issue == $n)] | last // empty | .event // ""' 2>/dev/null || true)
+  if [[ "${_last_event}" == "phase_start" ]]; then
+    local _ts; _ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    printf '%s\n' \
+      "{\"ts\":\"${_ts}\",\"issue\":${EMIT_ISSUE_NUMBER},\"event\":\"phase_complete\",\"session_id\":\"${AUTO_SESSION_ID}\",\"phase\":\"${EMIT_PHASE_NAME}\",\"backfilled\":true}" \
+      >> "${AUTO_EVENTS_LOG}" 2>/dev/null || true
+  fi
+}
+trap '_maybe_emit_phase_complete' EXIT
+
 run_phase_with_recovery() {
   local phase issue runner_script exit_code log_file
   phase="$1"; issue="$2"; runner_script="$3"; shift 3

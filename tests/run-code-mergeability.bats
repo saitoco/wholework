@@ -57,6 +57,10 @@ WATCHDOG_TIMEOUT_DEFAULT=1800
 load_watchdog_timeout() { WATCHDOG_TIMEOUT=1800; }
 MOCK
 
+    cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+emit_event() { return 0; }
+MOCK
+
     cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/guard-prefix.sh" "$MOCK_DIR/guard-prefix.sh"
 
     cat > "$MOCK_DIR/git" <<'MOCK'

@@ -129,3 +129,48 @@
 - **重複 `phase_complete` イベント**: 通常実行では `run-code.sh` EXIT trap (backfilled) と `run_phase_with_recovery()` (非 backfilled) の両方が emit されるが、session-report は `sort_by(.ts) | last` で最終タイムスタンプを使用するため実害なし。
 - **AUTO_SESSION_ID ガード**: standalone 実行 (run-code.sh を直接呼び出す場合) では `AUTO_SESSION_ID` が空のため、関数は即時 return 0 する。
 - **test mock 方針**: `auto-sub-observability.bats` の backfill テストでは `emit-event.sh` mock を差し替えて `phase_complete` を抑制し、`run-auto-sub.sh` の EXIT trap が `"backfilled":true` を直接 `printf` で書き込むことを確認する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の test mock は `phase_complete` のみ抑制する設計だったが、`run-auto-sub.sh` の EXIT trap テストでは `wrapper_exit` と `sub_complete` も抑制しないと `_last_event` が `phase_start` にならないことが判明。`phase_complete|sub_complete|wrapper_exit` を case 文で一括抑制する mock に変更した。理由: `run_phase_with_recovery()` では `wrapper_exit` が `phase_complete` より先に emit されるため、`phase_complete` だけ抑制しても `wrapper_exit` が最終 event になる。
+
+### Design Gaps/Ambiguities
+
+- `run-code.sh` / `run-review.sh` / `run-merge.sh` に `source emit-event.sh` を追加した結果、それぞれのテストファイル (`run-code.bats`, `run-review.bats`, `run-merge.bats`) の mock directory に `emit-event.sh` が存在しないためテストが失敗する問題が発生。Spec には記載なし。解決策: 各 setup() に no-op の `emit-event.sh` mock を追加。
+
+### Rework
+
+- `tests/run-code.bats`, `tests/run-review.bats`, `tests/run-merge.bats` の setup() に emit-event.sh mock 追加 — Spec に記載されていなかったが、source 行追加による後方互換性確保のため必要だった。
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Code phase の Code Retrospective に「run-code.bats / run-review.bats / run-merge.bats への emit-event.sh mock 追加」が記録されていたが、同じ WHOLEWORK_SCRIPT_DIR を使う `tests/run-code-mergeability.bats` が漏れていた。`source X.sh` 追加時は `find tests -name "*.bats"` で WHOLEWORK_SCRIPT_DIR を設定している全テストファイルを網羅確認することが有効。
+
+### Recurring Issues
+
+- `source "$SCRIPT_DIR/emit-event.sh"` のような新規 source 追加は、対象スクリプトをテストする全 bats ファイルの mock 追加を要する。本 PR で run-code.sh を対象とするテストファイルが run-code.bats の他に run-code-mergeability.bats があったため、後者が漏れ CI FAILURE が発生した。今後の類似変更では `grep -rn "WHOLEWORK_SCRIPT_DIR.*MOCK_DIR\|SCRIPT.*run-code.sh" tests/` による全件確認を推奨。
+
+### Acceptance Criteria Verification Difficulty
+
+- `command "bats tests/..."` 型の AC が 2 件あったが、CI 全体 FAILURE（他テストの失敗）により safe mode の CI 参照フォールバックが曖昧になった。CI ログの個別テスト結果（ok N / not ok N）を参照することで特定テストが PASS していることを確認できたが、作業コストが高い。verify command に対応する CI job が PASS しているか直接確認できる `github_check` 型の AC を併用すると UNCERTAIN を減らせる可能性がある。
+- UNCERTAIN は 0 件 / 9 件（全件確認できた）。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `tests/run-code-mergeability.bats` に emit-event.sh no-op mock を追加（MUST fix）— run-code.sh の source 追加に伴う漏れを修正
+- CI "Run bats tests" が FAILURE だったが、新規テスト (ok 22, ok 78) は PASS 済みであることをログで確認
+- 全 9 件のプレマージ AC が PASS（rubric も PASS）
+
+### Deferred Items
+- post-merge AC「次回 /auto 後の audit auto-session で ? end が 0 件」は観察待ち
+- backfilled event と通常 emit の重複問題（sort_by(.ts) | last で吸収）は将来のレポート品質モニタリング推奨
+
+### Notes for Next Phase
+- `/merge` 実行前に CI が green になることを確認（fix push 済み、CI 再実行を待つ）
+- post-merge AC はマージ後の `/auto` セッション完了後に opportunistic scan で評価される

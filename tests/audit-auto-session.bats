@@ -104,3 +104,15 @@ FIXTURE_EOF
     # Narrative section skeleton should still be present
     grep -q "Narrative Section" "$OUTPUT_PATH"
 }
+
+@test "success: backfilled phase_complete shows annotation and Backfilled count in Summary" {
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"abc-backfill","size":"S"}
+{"ts":"2026-06-14T10:00:01Z","issue":100,"event":"phase_start","session_id":"abc-backfill","phase":"code-patch"}
+{"ts":"2026-06-14T10:05:00Z","issue":100,"event":"phase_complete","session_id":"abc-backfill","phase":"code-patch","backfilled":true}
+FIXTURE_EOF
+    run bash "$SCRIPT" "abc-backfill" --output "$OUTPUT_PATH" --no-github
+    [ "$status" -eq 0 ]
+    grep -q "backfilled" "$OUTPUT_PATH"
+    grep -q "Backfilled phase_complete events" "$OUTPUT_PATH"
+}
