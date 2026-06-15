@@ -108,17 +108,18 @@
 - post-merge AC は observation 型（event=auto-run 待ち）で正常動作。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST イシューなし。CONSIDER 1 件（`\r` 未サニタイズ）はスコープ外として skip。
-- review-light モード（Size=M Bug）が適切だった。全 CI SUCCESS、全 AC PASS。
-- CI 参照フォールバック（bats verify command → "Run bats tests" SUCCESS）が正常に機能した。
+- PR #680 を `--squash --delete-branch` でマージ完了。BASE_BRANCH=main のため `closes #678` により Issue は自動クローズ。
+- コンフリクトなし（mergeable=true, CI=success, review=approved）のため conflict resolution はスキップ。
+- non-interactive モードで実行、AskUserQuestion なしで全ステップ完了。
 
 ### Deferred Items
-- `\r` sanitization gap: 将来別呼び出し元が増えた場合の潜在リスク。必要に応じて Issue 起票。
-- post-merge observation AC: 次回 `/auto --batch` 完走後に `.tmp/auto-events.jsonl` を `jq -s . > /dev/null` でパース確認。
+- post-merge observation AC: 次回 `/auto --batch` 完走後に `.tmp/auto-events.jsonl` を `jq -s . > /dev/null` でパースし error 0 件を確認。
+- `\r` sanitization gap（review フェーズから引き継ぎ）: 必要に応じて別 Issue 起票。
 
 ### Notes for Next Phase
-- ブロッキングイシューなし。`/merge 680` 即時実行可能。
-- flaky テスト（`post_merge_check.bats` テスト 7）は今回の変更と無関係。merge に影響しない。
+- verify フェーズでは pre-merge AC（grep verify × 3 + bats × 1）が全 PASS 済みのため、post-merge AC（jq parse 確認）のみ確認すれば十分。
+- flaky テスト（`post_merge_check.bats` テスト 7）は本 Issue と無関係、verify に影響しない。
+- マージコミットは squash 済み、feature ブランチ（`worktree-code+issue-678`）は削除済み。
