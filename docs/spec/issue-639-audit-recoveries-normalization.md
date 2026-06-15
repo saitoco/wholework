@@ -106,3 +106,31 @@ CURRENT_SYMPTOM と sym の両方を正規化することで、EXCLUDED_LIST と
 - `/verify 639` で post-merge AC（`verify-type: manual` マーク）の手動確認を実施すること
 - pre-merge AC はすべて review フェーズで PASS 済み — verify フェーズでの再実行は任意
 - `scripts/collect-recovery-candidates.sh` の sed 正規化が本番データに対して意図通り動作するかを `/audit recoveries` 実行で確認する
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 2 件すべて `rubric` + `grep` のデュアル verify command で自動検証可能。spec で auto-resolve した 3 つの曖昧点（grep ヒントの BRE 問題・`find|xargs` 偽陽性・無効 event 名）はいずれも `/issue` triage で適切に修正済み。
+- Size は post-spec で S→M に upgrade。Spec 段階で sed 正規化方針と過剰集約抑止が明示されており、design は不要な詳細化なし。
+
+#### code
+- 1 PR (#659) で完了。fixup/amend なし。
+- 変更は `scripts/collect-recovery-candidates.sh` の sed 正規化 + bats 回帰テスト + fixture 新規。実装が Spec 推奨案 (案 1) と完全一致。
+
+#### review
+- light review。MUST/SHOULD なし。
+
+#### merge
+- squash merge `--delete-branch` で main 統合。CI green、conflict なし。
+
+#### verify
+- Pre-merge AC 2 件は rubric grader（adversarial stance）で PASS。
+- Post-merge manual AC 1 件は次回 `/audit recoveries` 実行確認待ち。Issue は `phase/verify` を維持。
+- `/auto --batch` セッション中の uncommitted state（auto-session report + `get-auto-session-report.sh` の差分）が verify 開始時にブロック要因となり、stash + move out で回避した。
+
+### Improvement Proposals
+- (HIGH) `check-verify-dirty.sh` の whitelist または `verify-ignore-paths` に `docs/reports/auto-session-*.md`（auto session report の自動生成物）を追加し、batch session 中の verify がブロックされないようにする。
+- (MEDIUM) `/auto --batch` の途中で `scripts/get-auto-session-report.sh` 等が unstaged 状態で modify される根本原因を別 Issue で調査。batch run 中に発生したのは事実だが、どの run-auto-sub 経路で書き換えが起きたか不明。
+
