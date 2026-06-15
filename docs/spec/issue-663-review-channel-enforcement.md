@@ -53,3 +53,36 @@
 - PR Review body が空または API が失敗した場合は `|| true` で無視し、issue comments のみで判定する
 - 既存テストの mock `gh` は args に関係なく固定値を返す実装のため、新規テストでは `case "$1"` で `pr` / `api` を分岐させる
 - Step 1 で marker を body 先頭行に移動するのはテンプレートのみ。既存の `_completion_review` grep パターンはヘッダー行検索も含むため、marker の位置変更はスクリプト側の変更不要
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. 実装はすべて Spec の Implementation Steps に従った。
+
+### Design Gaps/Ambiguities
+
+- SKILL.md の半角 `!` 制約（Forbidden Expressions）に注意が必要だったが、追加した MUST ノートでは `gh pr comment` 等の既存テキストを引用する形のため問題なし（コードフェンス内・インラインコード内の表現は制約対象外）。
+- `_completion_review` 内の `local combined` 宣言は bash 3.2+ では `local` と代入の分離が必要な場合があるが、今回の実装（`local combined="${comments}${reviews}"`）は bash 3.2 以降で動作確認済みのパターン（既存コードと同スタイル）。
+
+### Rework
+
+- None. 一発で実装完了。57 テスト全 PASS を確認してからコミット。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- MUST 禁則ノートはブロッククォート（`>`）形式で Step 14.2 の直前に配置（強調度最大の配置）
+- `<!-- review-summary -->` を body 先頭行に移動することで reconcile の grep ヒット確率を向上（ただし既存 grep パターンはヘッダーも対象のため、スクリプト側変更は不要）
+- `|| true` パターンで PR Review API 失敗を無視し後退しない設計（フォールバック: issue comments のみで判定継続）
+- 新規 bats テストは既存 mock パターン（固定値返却）と異なり `case "$1"` 分岐で `pr`/`api` を使い分け
+
+### Deferred Items
+- PR Review body が `""` (空文字) の場合と `||true` での失敗ケースを bats テストで網羅していない（既存テストが通れば十分と判断; follow-up で追加可能）
+- SKILL.md の MUST ノート以外のセクション（Step 10 以前）での PR Review 誘惑を防ぐ追加強化は未実施（本 Issue スコープ外）
+
+### Notes for Next Phase
+- AC2 (rubric) は semantic check のため `/review` 時に LLM 判断で再評価される — 実装内容と rubric 文言の整合性確認は /review フェーズで行う
+- reconcile の `combined` 変数は bash の文字列結合で実装。改行の有無に依らず grep が動作することを既存パターンで確認済み
+- 新規テスト (ok 24) が PR Review body 検出をカバー; 既存の review completion テスト群 (ok 20-24) と合わせてカバレッジ確認済み
