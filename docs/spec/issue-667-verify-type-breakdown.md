@@ -92,7 +92,7 @@
 
 ### Pre-merge
 
-- <!-- verify: grep "observation\|opportunistic\|manual" "scripts/get-auto-session-report.sh" --> verify-type 分類ロジックが実装されている
+- <!-- verify: grep "observation|opportunistic|manual" "scripts/get-auto-session-report.sh" --> verify-type 分類ロジックが実装されている
 - <!-- verify: grep "Verify Phase Residuals" "scripts/get-auto-session-report.sh" --> セクション heading が維持されている
 - <!-- verify: command "bats tests/audit-auto-session.bats" --> bats テストが green (verify-type fixture を追加)
 - <!-- verify: rubric "Verify Phase Residuals section shows per-issue verify-type breakdown table (observation event=*, opportunistic, manual columns) and aggregate counts matching /audit stats Section 7 conventions" --> rubric 基準を満たす
