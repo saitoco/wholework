@@ -4,6 +4,7 @@
 
 SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/collect-recovery-candidates.sh"
 FIXTURE="$(cd "$(dirname "$BATS_TEST_FILENAME")" && pwd)/fixtures/orchestration-recoveries-sample.md"
+FIXTURE_TRAILING="$(cd "$(dirname "$BATS_TEST_FILENAME")" && pwd)/fixtures/orchestration-recoveries-trailing.md"
 ISSUES_JSON_NO_MATCH="$(cd "$(dirname "$BATS_TEST_FILENAME")" && pwd)/fixtures/open-issues-sample.json"
 ISSUES_JSON_WITH_GH_PR="$(cd "$(dirname "$BATS_TEST_FILENAME")" && pwd)/fixtures/open-issues-with-gh-pr.json"
 
@@ -53,4 +54,16 @@ ISSUES_JSON_WITH_GH_PR="$(cd "$(dirname "$BATS_TEST_FILENAME")" && pwd)/fixtures
   [ "$status" -eq 0 ]
   ! echo "$output" | grep -qF "gh-pr-list-head-glob"
   echo "$output" | grep -qF "code-pr-extraction-fail"
+}
+
+@test "normalize: trailing context stripped and aggregated to same bucket" {
+  # Fixture has 3 entries differing only in trailing context (none, (#576, 2nd in session), (#523, #526)).
+  # After normalization all 3 should map to the same bucket and count=3 >= threshold=3.
+  run bash "$SCRIPT" "$FIXTURE_TRAILING" --threshold 3
+  [ "$status" -eq 0 ]
+  line_count=$(echo "$output" | grep -c $'.\t[0-9]' || true)
+  [ "$line_count" -eq 1 ]
+  echo "$output" | grep -qF "silent-no-op recovered via wrapper-anomaly Tier 2 retry"$'\t'"3"
+  ! echo "$output" | grep -qF "(#576"
+  ! echo "$output" | grep -qF "(#523"
 }

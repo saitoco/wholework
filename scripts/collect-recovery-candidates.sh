@@ -86,6 +86,7 @@ while IFS= read -r line; do
   if echo "$line" | grep -qE '^## [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2} UTC: .+'; then
     # Extract symptom-short (everything after "UTC: ")
     CURRENT_SYMPTOM="${line#*UTC: }"
+    CURRENT_SYMPTOM="$(echo "$CURRENT_SYMPTOM" | sed 's/ ([^)]*) *$//')"
     IN_ENTRY=1
   elif [ $IN_ENTRY -eq 1 ]; then
     # Detect "Improvement Candidate" line with 起票済み
@@ -102,6 +103,7 @@ while IFS= read -r line; do
   # Record all seen symptom-shorts (including excluded ones; we filter later)
   if echo "$line" | grep -qE '^## [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2} UTC: .+'; then
     sym="${line#*UTC: }"
+    sym="$(echo "$sym" | sed 's/ ([^)]*) *$//')"
     SYMPTOM_LIST="${SYMPTOM_LIST}${sym}
 "
   fi

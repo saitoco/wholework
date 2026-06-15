@@ -62,3 +62,47 @@ symptom-short を抽出する際に末尾の `(...)` を sed で strip して正
 ### 変数代入の方向
 
 CURRENT_SYMPTOM と sym の両方を正規化することで、EXCLUDED_LIST と SYMPTOM_LIST の比較が `grep -qxF` の exact match で一致するよう保つ。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None。Spec のImplementation Steps に記載された2箇所の sed 挿入、fixture 作成、bats テスト追加をすべてそのまま実装した。
+
+### Design Gaps/Ambiguities
+
+- None。Spec Notes の sed パターン (`s/ ([^)]*) *$//`) とその動作説明が明確で、実装中に解釈の迷いは生じなかった。
+
+### Rework
+
+- None。初回実装で全 5 テスト PASS、forbidden expressions チェックも問題なし。
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- None. 実装は Spec の Implementation Steps を完全に踏襲。`CURRENT_SYMPTOM` と `sym` への sed 挿入箇所・パターン、fixture 内容（3エントリ）、bats アサーション（line_count=1, カウント=3, trailing context 非存在）すべてが Spec の記述と一致した。Spec 品質が高く、review フェーズで divergence を検出する余地がなかった。
+
+### Recurring Issues
+
+- None. 全4視点（Spec 整合・エッジケース・セキュリティ・ドキュメント整合性）で繰り返しパターンの issue なし。`elif` ブランチ内の `CURRENT_SYMPTOM` リセット（sed 未適用）は pre-existing コードで本 PR スコープ外。
+
+### Acceptance Criteria Verification Difficulty
+
+- None. AC1・AC2 ともに `rubric` + `grep` のデュアル verify command で PASS。UNCERTAINs なし。`rubric` グレーダーが adversarial stance で検証しても問題なし。Post-merge AC は `verify-type: manual` で適切にマーク済みであり、`/verify` 実行時に自動スキップされる。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- REVIEW_DEPTH=light (`--light` フラグ と Size M の両方が light に収束)
+- 全 pre-merge AC が PASS、MUST/SHOULD/CONSIDER issues ゼロ
+- sed パターン `s/ ([^)]*) *$//` が文書化されたユースケース（`(#576, 2nd in session)`, `(#523, #526)`）を正しく処理することを rubric グレーダーで確認
+
+### Deferred Items
+- Post-merge AC: 次回 `/audit recoveries` 実行で `silent-no-op` 系3件が閾値を満たすことを手動確認
+
+### Notes for Next Phase
+- MUST issues なし、merge は直接 `/merge 659` で実行可能
+- 全 CI チェック SUCCESS (DCO, bats×2, validate-skill-syntax×2, forbidden-expressions×2, macOS-compat×2)
+- code phase の Phase Handoff 記録通り、全テストスイート PASS 済み
