@@ -108,3 +108,33 @@
 - `--no-github` かつ `WHOLEWORK_ISSUE_BODY_DIR` 未設定の場合: body 空文字扱い → per-type カウントはすべて 0 (`—` ではなく 0 を表示。テーブル構造を維持する)
 - observation の event 別内訳は文字列連結で構築 (bash 3.2+ で associative array 不使用)
 - 既存の `VERIFY_REMAINING` (GitHub labels から算出) とは別のカウント。`VERIFY_RESIDUALS` はイベントログから算出
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の heredoc 出力で `printf '%s\n'` を使用。`printf '%s'` では末尾改行が欠けてテーブル行が次の行と結合するため改行付きに変更した。
+
+### Design Gaps/Ambiguities
+
+- Spec AC #1 の `grep "observation\|opportunistic\|manual"` は BRE 記法 (`\|`) を使用しており、ERE (ripgrep) では literal `|` として扱われ false FAIL になる。実装後に miscalibrated と判定し `observation|opportunistic|manual`（bare pipe）に修正した。
+
+### Rework
+
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `WHOLEWORK_ISSUE_BODY_DIR` を hermetic test 用の body source override として実装。`WHOLEWORK_SCRIPT_DIR` / `WHOLEWORK_CONFIG_PATH` と同パターンを採用した
+- `printf '%s\n'` を使ってテーブル行を heredoc 内で出力（`echo` 代わり）することで末尾改行を保証
+- bash 3.2+ 互換のため associative array を使わず文字列連結でイベント名を蓄積した
+
+### Deferred Items
+- runtime での full ドライランテスト（実際の phase/verify 残 Issue を含む auto-events.jsonl が必要なため post-merge observation AC とした）
+- 複数 event が同一 Issue に存在する場合の重複除去は現時点で未対応（`event=auto-run,auto-run` となる可能性あり）
+
+### Notes for Next Phase
+- AC #1 verify command は `observation|opportunistic|manual`（bare pipe ERE）に修正済み。Spec と Issue body 両方に反映済み
+- `section_contains "scripts/get-auto-session-report.sh" "## Verify Phase Residuals" "observation"` は shell file を対象にしているため、heading 検出が意図通り動作するか /verify 時に注意
