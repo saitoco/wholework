@@ -160,17 +160,17 @@
 - UNCERTAIN は 0 件 / 9 件（全件確認できた）。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `tests/run-code-mergeability.bats` に emit-event.sh no-op mock を追加（MUST fix）— run-code.sh の source 追加に伴う漏れを修正
-- CI "Run bats tests" が FAILURE だったが、新規テスト (ok 22, ok 78) は PASS 済みであることをログで確認
-- 全 9 件のプレマージ AC が PASS（rubric も PASS）
+- PR #672 をスカッシュマージ（`gh pr merge --squash --delete-branch`）で main にマージ完了
+- CI green・レビュー承認済みで `mergeable=true` のため、コンフリクト解消フェーズをスキップして直接マージ実行
+- BASE_BRANCH=main のため `closes #669` が自動で Issue をクローズ（手動クローズ不要）
 
 ### Deferred Items
-- post-merge AC「次回 /auto 後の audit auto-session で ? end が 0 件」は観察待ち
-- backfilled event と通常 emit の重複問題（sort_by(.ts) | last で吸収）は将来のレポート品質モニタリング推奨
+- post-merge AC「次回 `/auto` 完走後の `/audit auto-session` で `? end` が 0 件または `(backfilled)` 表記」は観察待ち
+- backfilled event と通常 emit の重複（`sort_by(.ts) | last` で吸収）は将来のモニタリング推奨
 
 ### Notes for Next Phase
-- `/merge` 実行前に CI が green になることを確認（fix push 済み、CI 再実行を待つ）
-- post-merge AC はマージ後の `/auto` セッション完了後に opportunistic scan で評価される
+- verify フェーズは post-merge AC のみ残存（observation event トリガー）
+- `scripts/run-*.sh` の EXIT trap 動作確認は次回 `/auto` セッション後の `/audit auto-session` レポートで行う
