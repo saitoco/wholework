@@ -725,7 +725,7 @@ The `<!-- review-summary -->` marker line must be included verbatim even when th
 
 ### 14.2. Post PR Comment
 
-> **MUST: Use `gh pr comment` to post the summary. Do NOT use `gh api repos/.../pulls/.../reviews` or `gh pr review` — posting to the PR Review channel causes a silent no-op because `reconcile-phase-state.sh` scans only issue comments, not PR Reviews.**
+> **MUST: Use `gh pr comment` to post the summary. Do NOT use `gh api repos/.../pulls/.../reviews` or `gh pr review` — the PR Review channel is a fallback-only scan path in `reconcile-phase-state.sh`; the primary detection relies on issue comments, and PR Review body scanning may fail silently if the API call fails.**
 
 ```bash
 mkdir -p .tmp
