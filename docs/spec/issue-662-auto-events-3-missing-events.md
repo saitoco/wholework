@@ -97,3 +97,36 @@ review phase の emit を確認済み。本 Issue では merge phase（`run-merg
 - `file_not_contains "scripts/run-code.sh" "2>&1"` 等は各ファイルに `2>&1` が 1 箇所のみ存在することを確認済み（除去後は 0 件）
 - ci_wait の既存テスト（`@test "ci_wait: event emitted to AUTO_EVENTS_LOG when AUTO_EVENTS_LOG is set"`、
   `EMIT_PHASE_NAME="review"` で動作確認済み）は変更不要
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `test_result` テストのモック修正方針として、Spec は「stdout に echo するよう変更」と記載していたが、加えて `skip` による条件付きスキップを proper assertion (`grep -q "test_result" "$BATS_TEST_TMPDIR/emit.log"`) に変更した。修正後は `code*` 条件が正しく機能し、テストが実際に PASS することを確認できたため、skip を外した方が正確な検証になる。
+
+### Design Gaps/Ambiguities
+
+- None
+
+### Rework
+
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+
+- `2>&1` 除去のみでの修正（`grep '^{' | tail -1` フィルタ方式は採用しなかった）: TOKEN_USAGE_FILE へのリダイレクト時点で watchdog stderr を混入させないのが根本解であり、シンプルで bash 3.2+ 互換
+- `test_result` 条件は `code*` prefix match を採用（`"code" || "code-patch" || "code-pr"` より簡潔で、将来的なフェーズ名追加にも対応）
+- `ci_wait` は既存の `run-auto-sub.sh` → `run-review.sh` / `run-merge.sh` 経路での `export AUTO_EVENTS_LOG` が正しく動作しており、Issue が観察されたのはテスト実行時にレビュー/マージフェーズなしの XS/S issue だったことが原因と判断。merge phase テストを追加して propagation path を明示化した
+
+### Deferred Items
+
+- post-merge AC（次回 `/auto` 完走後の `token_usage` / `ci_wait` / `test_result` 3 種観察）は observation event として defer
+
+### Notes for Next Phase
+
+- `/review` は `bats tests/run-auto-sub.bats` の `test_result` テスト（ok 23）が PASS していることを確認する
+- `file_not_contains` ACs はすべて PASS 済み（Issue チェックボックス更新済み）
+- PR #664 でのマージ後、`.tmp/auto-events.jsonl` に 3 種が記録されることを post-merge 観察で確認する
