@@ -64,3 +64,30 @@ Issue #386 で各 `tests/run-*.bats` の `setup()` に追加した CWD 隔離 bl
 - `WHOLEWORK_CONFIG_PATH=/dev/null` のとき `[ ! -f "$CONFIG_FILE" ]` が true (character device は `-f` 判定が false) → DEFAULT 値が返る。これは `.wholework.yml` 不在時と同じコードパスを通るため追加処理不要
 - `docs/ja/tech.md` の `## 環境変数` テーブルは `WHOLEWORK_SCRIPT_DIR` が現在欠落しているため (`WHOLEWORK_CI_TIMEOUT_SEC` の次が `WHOLEWORK_CONFIG_PATH` 行になる)。既存欠落は本 Issue のスコープ外
 - テスト内で `WHOLEWORK_CONFIG_PATH` を export した場合は teardown または test スコープ内で必ず `unset WHOLEWORK_CONFIG_PATH` する
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- bats の `run` コマンドに env var を渡す方法として Spec は `VAR=value bash "$SCRIPT"` 形式または `export + unset` を提示していたが、`run` 組み込み関数は prefix env var を引数コマンドに渡さないため `export + unset` 形式を採用した。各 test はサブシェルで実行されるため `unset` は次テストへの漏れ防止として明示的に記述した
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `${WHOLEWORK_CONFIG_PATH:-.wholework.yml}` の bash `:-` 演算子で unset・空文字どちらも fallback — 既存の `[ ! -f ]` チェックと組み合わせて `/dev/null` 時のデフォルト返却も追加実装不要
+- bats テストの env 伝達は `export + unset` 形式を採用（`run` 関数は prefix env を引き継がないため）
+- `docs/ja/tech.md` にも `WHOLEWORK_CONFIG_PATH` 行を追加して translation-workflow を遵守
+
+### Deferred Items
+- `WHOLEWORK_SCRIPT_DIR` の `docs/ja/tech.md` 欠落は本 Issue スコープ外（既知欠落として Notes に記録）
+
+### Notes for Next Phase
+- 変更は単一行の bash parameter expansion。実装はシンプルで regress リスクは低い
+- CI の `Test / Run bats tests` workflow で 3 新規テスト（#196-198）の PASS を確認済み（bats ローカル実行で全 317 tests PASS）
+- Post-merge の production paths 回帰確認は opportunistic verify として残存
