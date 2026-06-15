@@ -115,3 +115,12 @@
 - **verify_reopen_cycle emit は `/auto` コンテキスト限定**: `AUTO_EVENTS_LOG` と `AUTO_SESSION_ID` の両方が set されている場合のみ emit する。standalone `/verify` 実行時は emit をスキップ (`|| true` で無音失敗)。
 - **inline JSON write vs. source emit-event.sh**: verify SKILL.md では emit-event.sh を source する代わりに printf による直接 JSON 書き込みを採用。locking なし (best-effort) だが verify は issue ごとに serial 実行されるため競合リスクは低い。
 - **Auto-Resolved (Issue body より転記)**: event schema の追加形式 → コメントドキュメント採用; `verify_reopen_cycle` emit wiring AC → pre-merge AC として追加; `manual_intervention` 検出機構 → Spec フェーズで設計 (上記 Notes 参照)
+
+## Auto Retrospective
+
+### Orchestration Anomalies
+- **[review-completion-false-negative]** Review phase completion false-negative in phase `review` (exit code 1): `matches_expected:false` and `phase:review` detected in reconciler output, but no existing fallback header (## Review Response Summary / ## レビュー回答サマリ) was found in wrapper log. Root cause: the review skill posted the summary as a **PR Review (state=COMMENTED)**, so it did not appear in the issue comments read by `gh pr view --json comments`. The `<!-- review-summary -->` marker was also absent. Reference: #547.
+
+### Improvement Proposals
+- Standardize the review skill (`skills/review/SKILL.md`) summary posting channel from "PR Review submission" to "PR issue comment with `<!-- review-summary -->` marker"; or extend `reconcile-phase-state.sh _completion_review` to also scan PR Review bodies (`gh api repos/{owner}/{repo}/pulls/{N}/reviews`). The former is lower-cost and aligns with the existing marker SSoT.
+- Add an explicit `<!-- review-summary -->` marker-mandatory note to the review skill prompt to suppress LLM omission.
