@@ -92,17 +92,17 @@ CURRENT_SYMPTOM と sym の両方を正規化することで、EXCLUDED_LIST と
 - None. AC1・AC2 ともに `rubric` + `grep` のデュアル verify command で PASS。UNCERTAINs なし。`rubric` グレーダーが adversarial stance で検証しても問題なし。Post-merge AC は `verify-type: manual` で適切にマーク済みであり、`/verify` 実行時に自動スキップされる。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light (`--light` フラグ と Size M の両方が light に収束)
-- 全 pre-merge AC が PASS、MUST/SHOULD/CONSIDER issues ゼロ
-- sed パターン `s/ ([^)]*) *$//` が文書化されたユースケース（`(#576, 2nd in session)`, `(#523, #526)`）を正しく処理することを rubric グレーダーで確認
+- PR #659 をスカッシュマージ（`--squash --delete-branch`）で main にマージ
+- mergeable=true / CI=success / review=approved — コンフリクトなし、手動解決不要
+- Phase Handoff は review フェーズのものを merge フェーズ記録に置換
 
 ### Deferred Items
-- Post-merge AC: 次回 `/audit recoveries` 実行で `silent-no-op` 系3件が閾値を満たすことを手動確認
+- Post-merge AC: 次回 `/audit recoveries` 実行で `silent-no-op` 系3件が正規化後に同一バケット閾値を満たし候補表示に到達することを手動確認
 
 ### Notes for Next Phase
-- MUST issues なし、merge は直接 `/merge 659` で実行可能
-- 全 CI チェック SUCCESS (DCO, bats×2, validate-skill-syntax×2, forbidden-expressions×2, macOS-compat×2)
-- code phase の Phase Handoff 記録通り、全テストスイート PASS 済み
+- `/verify 639` で post-merge AC（`verify-type: manual` マーク）の手動確認を実施すること
+- pre-merge AC はすべて review フェーズで PASS 済み — verify フェーズでの再実行は任意
+- `scripts/collect-recovery-candidates.sh` の sed 正規化が本番データに対して意図通り動作するかを `/audit recoveries` 実行で確認する
