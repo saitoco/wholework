@@ -78,3 +78,33 @@
 
 ### Rework
 - None
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC #1/#3 は具体的な `grep` パターンで検証可能。AC #2 は rubric で「`skills/auto/SKILL.md` または `scripts/run-auto-sub.sh` のいずれか」の OR 条件で柔軟設計。実装は両方を更新する形に着地。
+- post-merge は `observation event=auto-run` で適切に分類（次回 batch run で Tier 3 発火時に自動検証想定）。
+
+#### design
+- 候補 A/B/C の中から候補 A（`run-auto-sub.sh` per-issue 単位 commit）を採用。最小変更で batch route 内で完結する設計。実装時に `skills/auto/SKILL.md` Source 2 セクションの記述更新も追加され、設計と実装に乖離なし。
+
+#### code
+- 一発実装で全テスト PASS、rework なし。`spawn-recovery-subagent.sh` 成功直後に `git diff --quiet` で dirty 検知 → `git add/commit/push` し、失敗時は WARNING のみ（非致命的）という設計。
+- Code Retrospective に「既存テストの BATS_TEST_TMPDIR では git リポジトリがないため、新コードが stderr に git エラーメッセージを出力する副作用」が記録されており、新規テストで `git` モックを追加して対処。
+
+#### review
+- patch route のためレビュー phase なし（XS/S route）。run-auto-sub.sh の変更は CI と既存テストで自己検証された。
+
+#### merge
+- patch route で直接 main commit (`fc54089 closes #677`)。コンフリクトなし。
+
+#### verify
+- 全 pre-merge AC（3/3）PASS。`grep` 検証は本実装で追加された具体的な文字列（`Record Tier 3 recovery event`、`orchestration-recoveries.md`）に matched。rubric は両 file の commit+push 責任の明示的定義を正しく検出。
+- post-merge AC #4（observation event=auto-run）は次回 `/auto --batch` 実行時の Tier 3 recovery 発火を待つ。`phase/verify` 維持。
+- 本 verify session の直前（#675 verify 開始時）に parent session が手動 commit した `8cb82e6` は #677 fix がマージされる前の session のため、対象外と判断。
+
+### Improvement Proposals
+
+- N/A — 本 Issue は #658 verify retrospective で発見された摩擦を直接解消するものであり、本 verify phase で追加の改善提案はなし。Code Retrospective の git モック追加は実装時に対処済。
