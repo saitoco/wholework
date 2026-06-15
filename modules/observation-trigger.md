@@ -63,7 +63,7 @@ Each emitter is responsible for:
 | `/review` skill | Opportunistic Verification step (after Step completion) | `pr-review-full` or `pr-review-light` depending on `REVIEW_DEPTH` |
 | `/auto` skill | Post-completion event scan (after Completion Report) | `auto-run` |
 | `scripts/claude-watchdog.sh` | Watchdog kill handler (`_auto_emit_watchdog_kill`) | `watchdog-kill` |
-| `/verify` skill (future) | FAIL → reopen → fix-cycle detection | `fix-cycle` (not yet implemented — follow-up #650 child Issue) |
+| `/verify` skill | FAIL → reopen → fix-cycle detection | `fix-cycle` (implemented in #656) |
 
 ## Output Processing Contract
 
