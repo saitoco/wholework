@@ -93,3 +93,29 @@
 - `/verify` 時に AC4 のチェックボックスが残っているが、CI PASS 後に自動更新可能
 - Post-merge AC は `verify-type: opportunistic` のため通常 verify では SKIPPED 扱いが正しい
 - `modules/orchestration-fallbacks.md` の `async-external-commit` エントリは `/verify` 時に AC5 `grep "async"` で検証済み
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 6 つの AC (4 grep + 1 rubric + 1 file_contains + 1 CI) で実装の網羅性を機械的・意味的に両面検証する設計が機能。
+
+#### design
+- 方針 C (phase SSoT フォールバック) の選択が `_completion_spec` 既存パターンと一貫で適切。設定追加なし・最小機構リスクを満たす。
+
+#### code
+- 実装は 4 ファイル (scripts/, tests/, modules/) にまたがり、すべて bats テストで検証可能。rework なし。
+
+#### review
+- patch route のため非実行 (N/A)。
+
+#### merge
+- patch route のため非実行。
+
+#### verify
+- 5 件 PASS、CI 1 件 PENDING。Post-merge opportunistic は外部 async-commit Issue 観測時に自動検証。
+
+### Improvement Proposals
+- N/A
+
