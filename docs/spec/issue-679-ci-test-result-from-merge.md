@@ -108,3 +108,31 @@
 - pre-merge verify 全 5/5 PASS 済み（review phase 確認済み）
 - post-merge AC のみ未評価（observation待ち）— verify phase で `verify-type: observation` を確認
 - Spec の verify command は全て有効で verify phase での実行はスムーズなはず
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC 5 件すべて自動検証可能 (grep ERE × 3、command bats × 1、rubric × 1)。triage 段階での BRE → ERE 修正 (AC1, AC2) が verify で機能。
+
+#### spec
+- `run-merge.sh` への merge phase 後 hook 追加で実装範囲が明確。case-B (source=local + source=ci 区別) を採用。
+
+#### code
+- 1 PR (#681) で完了。`gh run list --workflow=test.yml` → `gh run view --log` → bats summary parse のチェーン実装。新規 bats テスト追加で `source=ci` emit を検証。
+
+#### review
+- light review。MUST 0 件、CONSIDER 2 件 (null run_id guard、warning path regression test) は後続 Issue 候補として Deferred。
+
+#### merge
+- squash merge `--delete-branch` で main 統合。CI 全 SUCCESS、conflict なし。
+
+#### verify
+- 5/5 PASS (grep × 3、bats 18/18、rubric)。
+- post-merge AC は本 batch session の後続 #675 (Feature, M, pr route) で観察可能。`/audit auto-session 98785-1781536815` 実行で `source=ci` test_result event 確認。
+
+### Improvement Proposals
+- (CONSIDER) null `run_id` guard — `gh run list` が空配列を返した場合の handling を bats test で明示化。本 Issue は `|| true` で no-op になるが、明示的 guard 推奨。
+- (CONSIDER) warning path regression test — `gh run view --log` 失敗時の warning 出力を bats で検証。本 Issue は silent skip だが ops visibility 向上のため検討。
+
