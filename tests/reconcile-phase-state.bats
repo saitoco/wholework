@@ -373,6 +373,24 @@ MOCK_EOF
     [[ "$output" == *"requires --pr"* ]]
 }
 
+@test "review completion: marker only in PR Review body -> matches_expected true" {
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+case "$1" in
+    pr) echo "" ;;
+    api) echo "<!-- review-summary -->" ;;
+    *) echo "" ;;
+esac
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" review 42 --pr 10 --check-completion --strict
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"matches_expected":true'* ]]
+}
+
 # --- merge completion ---
 
 @test "merge completion: PR state MERGED -> matches_expected true" {

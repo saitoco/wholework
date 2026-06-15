@@ -691,8 +691,8 @@ Refer to `skills/review/external-review-phase.md`'s "Step 14: External Review Re
 
 Template:
 ```markdown
-## Review Response Summary
 <!-- review-summary -->
+## Review Response Summary
 
 ### Claude Review Response
 
@@ -715,7 +715,7 @@ Template:
 - Issue comment: posted
 ```
 
-The `<!-- review-summary -->` marker line must be included verbatim even when the heading is localized. `reconcile-phase-state.sh` detects review completion via this language-independent marker.
+The `<!-- review-summary -->` marker line must be included verbatim even when the heading is localized, and must be placed as the **first line of the comment body** (before the heading). `reconcile-phase-state.sh` detects review completion via this language-independent marker.
 
 **If no Claude response (Step 11 skipped)**: omit Claude section.
 
@@ -724,6 +724,8 @@ The `<!-- review-summary -->` marker line must be included verbatim even when th
 **If no acceptance criteria updates (Step 12 skipped)**: omit that section.
 
 ### 14.2. Post PR Comment
+
+> **MUST: Use `gh pr comment` to post the summary. Do NOT use `gh api repos/.../pulls/.../reviews` or `gh pr review` — posting to the PR Review channel causes a silent no-op because `reconcile-phase-state.sh` scans only issue comments, not PR Reviews.**
 
 ```bash
 mkdir -p .tmp
