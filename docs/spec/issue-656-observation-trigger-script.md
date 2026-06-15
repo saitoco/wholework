@@ -99,3 +99,28 @@
 - verify コマンドは全9件 PASS 済み（Pre-merge検証）、Post-merge verifyセクションは「なし」。
 - `observation-trigger.sh` が全 emitter に配線済みを静的検証済み。
 - opportunistic-verify が有効なプロジェクトでの動作確認が verify フェーズで任意に実施可能。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- `/issue` triage で Size=M を割り当て、3 件の曖昧点 (dispatch 方法 / 配線 vs 置き換え / bats スコープ) をすべて auto-resolve。それぞれが implementation-time に意思決定が必要な選択肢を pre-resolve し、後段の手戻りなし。
+
+#### spec
+- Spec で Size を M→L に再判定 (route は pr のまま、REVIEW_DEPTH のみ --light→--full)。5 step の atomic 実装計画 + Changed Files セクションが正確に実装をガイド。
+
+#### code
+- 単一 PR (#671) で全 5 step を first-pass 実装。8 件の bats テスト全 PASS、CI green。fixup/amend なし。`observation-trigger.sh` が `--event` 引数、comment-posting dispatch、`opportunistic-search.sh` 呼び出しの 3 役割を 1 file で過不足なく実装。
+
+#### review
+- review-full で 1 SHOULD 1 CONSIDER。SHOULD (Emitter Lookup Table 更新) は resolved として PR 内で対応、CONSIDER (--dry-run 注記) は skipped 判定。MUST なし。Lightweight re-check も validate-skill-syntax 0 errors で PASS。
+
+#### merge
+- squash merge 成功 (--delete-branch)。reviewDecision 空のまま precondition warn-only で通過し、CI PASS により問題なくマージ。`closes #656` で自動クローズ。
+
+#### verify
+- 9/9 pre-merge AC PASS。Post-merge AC なし。Phase Handoff (merge phase) に記録された情報がすべて再現可能。
+
+### Improvement Proposals
+- N/A — workflow が clean に完走し、特筆すべき構造的改善なし。本セッションは #670 (AUTO_EVENTS_LOG export) fix が実環境で機能することを実証した点でも価値あり (events 配線が pr route で正常動作)。
