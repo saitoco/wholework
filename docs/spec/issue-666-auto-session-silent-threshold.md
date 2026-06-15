@@ -38,6 +38,22 @@
 
 - 次回 `/auto` 完走後の `/audit auto-session` レポートで本メトリックが期待通り集計されることを確認
 
+## Phase Handoff
+<!-- phase: merge -->
+
+### Key Decisions
+- Conflict in `tests/audit-auto-session.bats` between the backfill test (from #672/#669) and the silent window threshold test (from #666) was resolved by including both tests
+- Used conservative merge strategy: both test cases are independent and non-overlapping, so including both is the correct resolution
+- `--force-with-lease` push succeeded after rebasing onto origin/main
+
+### Deferred Items
+- Post-merge verification of Phase silent windows metric in a real `/auto` run is deferred to operational observation (noted in Spec's Post-merge section)
+
+### Notes for Next Phase
+- verify should run `bats tests/audit-auto-session.bats` to confirm all tests pass (5 original + 1 new threshold test)
+- The `grep "Phase silent windows"` and `grep "within 600s of watchdog limit"` verify commands in the Spec are the key ACs to validate
+- `scripts/watchdog-defaults.sh` is now sourced by `get-auto-session-report.sh` — verify this doesn't break existing tests
+
 ## Notes
 
 - `max_silent_window` イベントには既に `phase` フィールドが含まれている (`scripts/claude-watchdog.sh` の `_auto_emit_max_silent` 関数で `phase=${EMIT_PHASE_NAME:-unknown}` として emit される)
