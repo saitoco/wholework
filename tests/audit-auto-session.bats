@@ -68,6 +68,25 @@ FIXTURE_EOF
     grep -q "Issues processed | 1" "$OUTPUT_PATH"
 }
 
+@test "success: manual_intervention and verify_reopen_cycle events appear in Summary table" {
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"abc-333","size":"M"}
+{"ts":"2026-06-14T10:01:00Z","issue":100,"event":"phase_start","session_id":"abc-333","phase":"code-pr"}
+{"ts":"2026-06-14T10:20:00Z","issue":100,"event":"phase_complete","session_id":"abc-333","phase":"code-pr"}
+{"ts":"2026-06-14T10:21:00Z","issue":100,"event":"manual_intervention","session_id":"abc-333","recovery_target":"code-pr","wrapper_exit_code":"1","intervention_type":"tier3_abort_manual_fix"}
+{"ts":"2026-06-14T10:30:00Z","issue":100,"event":"verify_reopen_cycle","session_id":"abc-333","iteration":"1","reopen_reason":"pre_merge_ac_fail"}
+{"ts":"2026-06-14T10:35:00Z","issue":100,"event":"sub_complete","session_id":"abc-333","exit_code":"0"}
+FIXTURE_EOF
+
+    run bash "$SCRIPT" "abc-333" --output "$OUTPUT_PATH" --no-github
+    [ "$status" -eq 0 ]
+    [ -f "$OUTPUT_PATH" ]
+    grep -q "Parent session manual interventions" "$OUTPUT_PATH"
+    grep -q "verify FAIL.*reopen fix cycles" "$OUTPUT_PATH"
+    grep -q "manual interventions | 1" "$OUTPUT_PATH"
+    grep -q "reopen fix cycles | 1" "$OUTPUT_PATH"
+}
+
 @test "success: empty session — no matching session_id produces graceful report" {
     # Log contains events for a different session only
     cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
