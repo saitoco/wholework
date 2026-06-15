@@ -145,3 +145,33 @@ review phase の emit を確認済み。本 Issue では merge phase（`run-merg
 - verify では pre-merge の verify command（`bats tests/wait-ci-checks.bats` 等）を再実行して回帰がないことを確認
 - post-merge AC は `.tmp/auto-events.jsonl` の観察が必要なため、verify では observable な成果物を対象に実施
 - `token_usage` テストの skip 残存は SHOULD レベル（ブロックしない）
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 5 件すべて自動検証可能 (`file_not_contains` × 3、`rubric` × 1、`command` × 1)。triage で AC2 が常時 PASS の grep だったのを `rubric` に置き換えた判断が verify で機能した（UNCERTAIN ゼロ）。
+- Post-merge AC は単体で `verify-type: observation event=auto-run`、event-driven trigger に委譲する設計。
+
+#### design
+- Spec の 3 修正方針（`2>&1` 除去 / `phase == code*` glob / bats merge phase テスト追加）が実装と完全一致。fixup なし。
+
+#### code
+- 1 PR (#664) で完了。fixup/amend なし。`token_usage` テストの skip 昇格は `test_result` のみで `token_usage` 同パターンは未処理（SHOULD: 同類 skip の同時昇格を逸脱）。
+
+#### review
+- light review。MUST 0 件、SHOULD 1 件 (`token_usage` skip 昇格)、CONSIDER 1 件 (watchdog→TOKEN_USAGE_FILE 流入のフォールバック検討)。SHOULD は別 Issue 化候補として deferred、CONSIDER は `|| true` フォールバックで実害限定的のため skip。
+- review の判断粒度は適切。
+
+#### merge
+- squash merge `--delete-branch` で main 統合。CI 全 SUCCESS、conflict なし。`closes #662` で Issue 自動クローズ。
+
+#### verify
+- Pre-merge AC 5 件すべて PASS (file_not_contains × 3、rubric grader、bats 13/13)。
+- Post-merge AC は observation event=auto-run に依存し、次回 `/auto` 完走時に自動再評価。Issue は `phase/verify` 維持で CLOSED 状態。
+
+### Improvement Proposals
+- (CONSIDER) `tests/run-auto-sub.bats` L561-562 の `token_usage` skip パターンを proper assertion に昇格。本 Issue の `test_result` 昇格と同パターン。SHOULD レベルで別 Issue 化候補。fix-and-forget 防止策として、review skill 自動 detection（同類 skip パターンの一括処理推奨）を検討。
+- (CONSIDER) watchdog プロセスの stderr が `--output-format json` ファイルに流入する root-cause（`scripts/claude-watchdog.sh` の出力先制御）を別 Issue で調査。`|| true` フォールバックで実害は限定的だが、構造的に redirect 先を分離する余地あり。
+
