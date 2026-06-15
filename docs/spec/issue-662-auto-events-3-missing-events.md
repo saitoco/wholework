@@ -112,21 +112,35 @@ review phase の emit を確認済み。本 Issue では merge phase（`run-merg
 
 - None
 
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+- 乖離なし。3 つのバグ修正（`2>&1` 除去、`test_result` 条件拡張、`ci_wait` merge phase テスト追加）はすべて Spec の実装ステップと一致していた。`test_result` テストのモック修正方針（skip を proper assertion に昇格）は Code Retrospective で説明済み。
+
+### 繰り返し指摘パターン
+
+- `test_result` テストで skip を proper assertion に昇格させたが、同ファイルの `token_usage` テストに同じ skip パターンが残っていた。fix-and-forget パターン：同類の skip を同一 PR でまとめて修正する規律が必要。
+
+### 受け入れ基準検証の難易度
+
+- `file_not_contains` と `rubric` および `command` の 5 条件すべて UNCERTAIN なし。`command "bats tests/wait-ci-checks.bats"` は CI 参照フォールバック（`Run bats tests` SUCCESS）で PASS 判定。verify command の設計は適切だった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- `2>&1` 除去のみでの修正（`grep '^{' | tail -1` フィルタ方式は採用しなかった）: TOKEN_USAGE_FILE へのリダイレクト時点で watchdog stderr を混入させないのが根本解であり、シンプルで bash 3.2+ 互換
-- `test_result` 条件は `code*` prefix match を採用（`"code" || "code-patch" || "code-pr"` より簡潔で、将来的なフェーズ名追加にも対応）
-- `ci_wait` は既存の `run-auto-sub.sh` → `run-review.sh` / `run-merge.sh` 経路での `export AUTO_EVENTS_LOG` が正しく動作しており、Issue が観察されたのはテスト実行時にレビュー/マージフェーズなしの XS/S issue だったことが原因と判断。merge phase テストを追加して propagation path を明示化した
+- MUST 指摘なし → マージブロック不要。SHOULD（`token_usage` skip 未修正）と CONSIDER（watchdog stderr リスク）の 2 件を記録してスキップ
+- `token_usage` skip 未修正は SHOULD レベル：次 Issue で対処が望ましいが、`2>&1` 除去後に emission は正常動作するため今 PR でブロックしない判断
 
 ### Deferred Items
 
-- post-merge AC（次回 `/auto` 完走後の `token_usage` / `ci_wait` / `test_result` 3 種観察）は observation event として defer
+- `tests/run-auto-sub.bats` L561-562 の `token_usage` skip を proper assertion に昇格（SHOULD）→ `/merge` 後または別 Issue で対処
+- post-merge AC（`token_usage` / `ci_wait` / `test_result` 3 種の observation）→ 次回 `/auto` 完走後に確認
 
 ### Notes for Next Phase
 
-- `/review` は `bats tests/run-auto-sub.bats` の `test_result` テスト（ok 23）が PASS していることを確認する
-- `file_not_contains` ACs はすべて PASS 済み（Issue チェックボックス更新済み）
-- PR #664 でのマージ後、`.tmp/auto-events.jsonl` に 3 種が記録されることを post-merge 観察で確認する
+- CI 全ジョブ SUCCESS、MUST 指摘なし → `/merge 664` 実行可能
+- `token_usage` テストの skip 残存は SHOULD 指摘済み（PR コメント参照）
+- post-merge AC がまだ未観察のため、次回 `/auto` 完走後に `.tmp/auto-events.jsonl` で 3 種を確認する
