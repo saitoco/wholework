@@ -168,6 +168,16 @@ run_phase_with_recovery() {
   # Tier 3: recovery sub-agent via claude -p (expensive, unknown anomaly only)
   if "$SCRIPT_DIR/spawn-recovery-subagent.sh" "$phase" "$issue" --log "$log_file" --exit-code "$exit_code"; then
     echo "${LOG_PREFIX} [recovery] tier3 sub-agent: recovered"
+    local _repo_root; _repo_root="$(dirname "$SCRIPT_DIR")"
+    if ! git -C "$_repo_root" diff --quiet "docs/reports/orchestration-recoveries.md" 2>/dev/null; then
+      if git -C "$_repo_root" add "docs/reports/orchestration-recoveries.md" \
+         && git -C "$_repo_root" commit -s -m "Record Tier 3 recovery event for issue #${issue} ${phase} phase" \
+         && git -C "$_repo_root" push origin HEAD; then
+        echo "${LOG_PREFIX} [recovery] recovery log committed and pushed"
+      else
+        echo "${LOG_PREFIX} WARNING: could not commit/push recovery log; /verify may detect dirty file" >&2
+      fi
+    fi
     emit_event "recovery" "phase=${phase}" "tier=3" "result=recovered"
     emit_event "phase_complete" "phase=${phase}"
     return 0

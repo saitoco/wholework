@@ -367,6 +367,45 @@ MOCK
     [ -f "$SPAWN_RECOVERY_LOG" ]
 }
 
+@test "run-auto-sub: tier3 recovery: commits orchestration-recoveries.md when dirty" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"diff"* && "$*" == *"orchestration-recoveries.md"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$RUN_CODE_LOG"
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    cat > "$MOCK_DIR/spawn-recovery-subagent.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$SPAWN_RECOVERY_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/spawn-recovery-subagent.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -qE "commit.*Record Tier 3 recovery event" "$GIT_LOG"
+}
+
 @test "run-auto-sub: all tiers fail: propagate original exit code" {
     cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
 #!/bin/bash

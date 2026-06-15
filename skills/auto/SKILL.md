@@ -403,7 +403,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
    | Source 2: `recovery-sub-agent` | The `orchestration-recovery` sub-agent produced a successful recovery plan during Tier 3 recovery | Available (#617 shipped) |
    | Source 3: `wrapper-anomaly-detector` | `detect-wrapper-anomaly.sh` detected a known failure pattern during Tier 2 recovery | Available (#313 shipped) |
 
-   **Source 2 detection — single-Issue parent session only**: Check if `TIER3_RECOVERY_PHASE` is set (retained in Step 6 after Tier 3 succeeds). If set, use retained `TIER3_RECOVERY_*` variables to build the entry and prepend it. For batch/XL routes, `spawn-recovery-subagent.sh` writes directly to `orchestration-recoveries.md`, so Source 2 here covers only single-Issue parent sessions (M/L/patch).
+   **Source 2 detection — single-Issue parent session only**: Check if `TIER3_RECOVERY_PHASE` is set (retained in Step 6 after Tier 3 succeeds). If set, use retained `TIER3_RECOVERY_*` variables to build the entry and prepend it. For batch/XL routes, `spawn-recovery-subagent.sh` writes directly to `orchestration-recoveries.md`, so Source 2 here covers only single-Issue parent sessions (M/L/patch). `run-auto-sub.sh` commits and pushes `docs/reports/orchestration-recoveries.md` immediately after Tier 3 success to prevent dirty-file conflicts at `/verify` invocation (see #677).
 
    For each applicable source, prepend a new entry block to `docs/reports/orchestration-recoveries.md` (after the header comment line `<!-- Log entries appear below, newest first. -->`). Use the Write/Edit tool. Entry format:
 
