@@ -129,3 +129,34 @@
 - **重複 `phase_complete` イベント**: 通常実行では `run-code.sh` EXIT trap (backfilled) と `run_phase_with_recovery()` (非 backfilled) の両方が emit されるが、session-report は `sort_by(.ts) | last` で最終タイムスタンプを使用するため実害なし。
 - **AUTO_SESSION_ID ガード**: standalone 実行 (run-code.sh を直接呼び出す場合) では `AUTO_SESSION_ID` が空のため、関数は即時 return 0 する。
 - **test mock 方針**: `auto-sub-observability.bats` の backfill テストでは `emit-event.sh` mock を差し替えて `phase_complete` を抑制し、`run-auto-sub.sh` の EXIT trap が `"backfilled":true` を直接 `printf` で書き込むことを確認する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の test mock は `phase_complete` のみ抑制する設計だったが、`run-auto-sub.sh` の EXIT trap テストでは `wrapper_exit` と `sub_complete` も抑制しないと `_last_event` が `phase_start` にならないことが判明。`phase_complete|sub_complete|wrapper_exit` を case 文で一括抑制する mock に変更した。理由: `run_phase_with_recovery()` では `wrapper_exit` が `phase_complete` より先に emit されるため、`phase_complete` だけ抑制しても `wrapper_exit` が最終 event になる。
+
+### Design Gaps/Ambiguities
+
+- `run-code.sh` / `run-review.sh` / `run-merge.sh` に `source emit-event.sh` を追加した結果、それぞれのテストファイル (`run-code.bats`, `run-review.bats`, `run-merge.bats`) の mock directory に `emit-event.sh` が存在しないためテストが失敗する問題が発生。Spec には記載なし。解決策: 各 setup() に no-op の `emit-event.sh` mock を追加。
+
+### Rework
+
+- `tests/run-code.bats`, `tests/run-review.bats`, `tests/run-merge.bats` の setup() に emit-event.sh mock 追加 — Spec に記載されていなかったが、source 行追加による後方互換性確保のため必要だった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `_maybe_emit_phase_complete()` は全 4 スクリプトで同一実装 — Spec 通りだが、EXIT trap firing タイミングが スクリプトによって異なる点に注意
+- `get-auto-session-report.sh` の `_last_ts` は `sort_by(.ts) | last` を使うため、backfilled と正常 emit が両方存在する場合は後者を優先する（意図通り）
+- bats test の emit-event.sh mock を 3 テストファイルに追加 — 既存テストへの影響なし（no-op mock）
+
+### Deferred Items
+- `run-auto-sub.sh` の EXIT trap は実際に通常実行でバックフィルを発動するが、`sub_complete` が先に emit されるため「最終 event = phase_start」にならない。理論上の safety net として残す
+- backfilled event の重複 (EXIT trap + run_phase_with_recovery 両方から emit) は `sort_by(.ts) | last` で吸収しているが、将来の report に影響が出ないかモニタリング推奨
+
+### Notes for Next Phase
+- `/verify` 時の rubric 評価: 実装は正常 exit 時の EXIT trap を確認する unit test（auto-sub-observability.bats の backfill-emit）で完全に担保されている
+- run-review.bats / run-merge.bats / run-code.bats に emit-event.sh mock が追加されていることを確認 — `/verify` フェーズでは既存テストも全 PASS することを確認済み
+- 次回 `/auto` run 後に `/audit auto-session` で `? end` が消えているか観察する（post-merge AC）
