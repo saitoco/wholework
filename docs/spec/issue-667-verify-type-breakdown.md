@@ -138,16 +138,18 @@
 - すべての AC が PASS または POST-MERGE で、UNCERTAIN なし。`command "bats ..."` は safe モードで CI 代替検証が成立 (CI ジョブ "Run bats tests" SUCCESS)。verify command の品質は良好。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST issues なし。Step 12 スキップ。Step 13 スキップ (ポリシー変更なし)。
-- 全 pre-merge AC PASS、全 CI ジョブ SUCCESS で merge 可能と判定。
+- コンフリクト解決: `tests/audit-auto-session.bats` の衝突は両側テストを両方取り込む保守的マージで解決 (phase-666 テストと verify-type テストを並置)
+- スクワッシュマージ完了 (PR #676 は既にマージ済み状態を確認)
+- 7/7 bats テスト全グリーン確認後にプッシュ・マージ
 
 ### Deferred Items
-- Post-merge observation AC: 次回 `/auto` 完走後に `## Verify Phase Residuals` セクションが期待通り集計されることを確認 (event=auto-run)
-- 複数 event 重複除去 (event=auto-run,auto-run 問題) は引き続き未解決 — Phase Handoff code から引継ぎ
+- Post-merge observation AC: 次回 `/auto` 完走後に `## Verify Phase Residuals` セクションが verify-type 内訳テーブル形式で出力されることを確認 (event=auto-run)
+- 複数 event 重複除去 (event=auto-run,auto-run 問題) は引き続き未解決 — 別 Issue にて追跡予定
 
 ### Notes for Next Phase
-- No MUST/SHOULD/CONSIDER issues found — merge は `/merge 676` で即時実行可能
-- Post-merge observation AC が残っているため `/verify 667` で最終確認が必要
+- verify フェーズでは post-merge observation AC (次回 /auto 完走後の動作確認) が主要残タスク
+- `WHOLEWORK_ISSUE_BODY_DIR` 環境変数は BATS テスト専用; 本番では `gh issue view` にフォールバック
+- label は `verify` に移行済み
