@@ -90,3 +90,29 @@ The new row is inserted after `file_not_exists "path"` and before `dir_exists "p
 - No forbidden expression violations detected.
 - BATS tests (827 tests) all pass — no test changes needed for this purely documentation-level change.
 - Post-merge ACs: none specified in this Issue.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 5 つの AC (3 grep + 2 section_contains/not_contains + 1 rubric) で意味検証 + 機械的検証両面網羅。
+
+#### design
+- `verify-executor.md` の翻訳テーブル拡張 + `verify-patterns.md` §15 の `(future)` タグ除去で対応する最小変更設計が適切。`always_allow` permission も `file_exists` と同等で一貫性あり。
+
+#### code
+- 文書変更のみ、bats 827 件 PASS、rework なし。
+
+#### review
+- patch route のため非実行 (N/A)。
+
+#### merge
+- patch route のため非実行。
+
+#### verify
+- Pre-merge 全 5 件 PASS。Post-merge なしのため `phase/done` に遷移しクローズ。
+
+### Improvement Proposals
+- N/A
+
