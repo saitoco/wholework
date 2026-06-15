@@ -109,3 +109,35 @@
 - `rubric` verify commandは意味論的検証として機能しており、Summary表・phase breakdown・Notes アノテーションの3要素を一括確認できた（PASS）。
 - AC#3のverify command（`grep "watchdog.limit\|WATCHDOG_THRESHOLD\|_MARGIN\|at_risk"`）はBRE/EREの混在で検証精度が低い。Spec品質問題として記録済み。今後のIssue作成時は `|`（ERE bare alternation）を使用すること。
 - bats CIがSUCCESSであればAC#4（`command "bats ..."`）は確実にPASSできる。CI参照フォールバックが有効に機能した。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Issue body の Auto-Resolved Ambiguity Points 機構が有効に機能した: merge threshold=0 問題と watchdog-defaults.sh 参照の曖昧さは Issue 段階で解消されており、spec/code phase で迷いがなかった。
+- 受入条件 6 件は spec 段階に転写されており、Issue 段階の受入条件設計が verify までブレなく追えた。
+
+#### spec
+- SPEC_DEPTH=light の 5 ステップ制約内で実装範囲を適切に切り分け済み。
+- AC #3 の BRE `\|` 表記が ERE 環境下では機能しない問題は spec 段階で検出できれば早期解消できた。spec の AC レビュー時に verify-executor の grep 正規表現方言 (ERE) を確認する step を加える余地。
+
+#### code
+- 5 ステップ完走、テスト一発 PASS、rework なし — 設計から実装への変換が滑らか。
+- Code Retrospective は AC #3 の BRE/ERE 問題を Spec 品質問題として正確に分類している。
+
+#### review
+- `--light` モードで SHOULD イシュー (Spec Retrospective ドキュメント誤記) を修正済み、MUST イシューゼロ。
+- AC#3 BRE/ERE 問題を review retrospective で「同様のパターンが他の Issue にも潜在している可能性」と汎化して指摘した点が継続改善につながる。
+
+#### merge
+- bats テストの conflict (#672/#669 backfill テスト vs #666 silent threshold テスト) を both-include 戦略で解決。両テストは独立しており衝突は表面上のみ。`--force-with-lease` push 成功。
+
+#### verify
+- pre-merge 全件 PASS、AC #3 は strict ERE 実行で no match だが意図ベース判定 (Step 3 AI 判定) で PASS。
+- AC #3 の verify command (`grep "watchdog.limit\|WATCHDOG_THRESHOLD\|_MARGIN\|at_risk"`) は ERE 環境では literal `|` として解釈され、strict 実行では空マッチ。実装には対応パターンが存在するため意図ベースで PASS とした。code/review の両 retrospective で既に明示記録された既知 Spec 品質課題。
+- post-merge AC #7 (`verify-type: observation event=auto-run`) は SKIP 扱い (event 発火時に opportunistic-search.sh が自動再評価)。
+
+### Improvement Proposals
+
+- Issue/spec phase で verify command を ERE 形式 (`|` bare alternation) で記述するよう注意喚起する仕組み。例: `/issue` skill の verify command 検証で BRE pattern (`\|`, `\(`, `\)`, `\+`, `\?`) を検出して警告を出す。すでに `modules/verify-executor.md` に ERE vs BRE quick reference は記載されているが、起票時の自動チェックがあると BRE 紛れ込みを防げる。
