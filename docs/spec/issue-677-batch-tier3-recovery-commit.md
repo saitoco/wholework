@@ -50,3 +50,31 @@
 - commit は非致命的（失敗時は警告を出して続行）とする。push の競合は `WHOLEWORK_MAX_RECOVERY_SUBAGENTS=1` によるシリアライズで実運用上 XL 並列でも発生しない。
 - `git commit -s` の DCO sign-off は実行環境の git user.name/email 設定に依存する（他フェーズと同一条件）。
 - 既存の happy-path BATS テスト（Tier 3 成功時）は `git diff` mock が exit 0（clean）を返すため、commit ブロックがスキップされ影響なし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Candidate A（`scripts/run-auto-sub.sh` 修正）を採択。Tier 3 成功直後に `git -C "$_repo_root" diff --quiet` で dirty 確認し、dirty の場合のみ commit + push を実行。
+- commit/push 失敗は非致命的（警告のみ）として続行する設計を維持。
+- `git -C "$_repo_root"` で worktree 外のメインリポジトリを対象にした（XL 並列実行時の worktree 内からの呼び出しを考慮）。
+
+### Deferred Items
+- Post-merge 観測 AC: 次回 `/auto --batch` 実行で Tier 3 recovery 発火時に verify dirty チェックが clean になることの確認（event=auto-run observation）。
+- XL 並列（`WHOLEWORK_MAX_RECOVERY_SUBAGENTS > 1`）での push 競合リスクは現在 `cap=1` のシリアライズで回避しているが、将来的なキャップ引き上げ時には排他制御の追加を検討。
+
+### Notes for Next Phase
+- `/verify` でのチェック: Pre-merge 3AC はすべて PASS（grep × 2 + rubric）、Issue body チェックボックス更新済み。
+- Post-merge AC は `verify-type: observation event=auto-run` のため通常の verify ではスキップされる。
+- 既存の Tier 3 テスト（happy-path）は影響なし（git mock なしで非致命的 fallback に入るが PASS を維持）。
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- 既存の Tier 3 テスト（`run-auto-sub: phase exit nonzero + tier1+tier2 fail + tier3 spawn succeeds: recover`）では `git` がモックされておらず、BATS_TEST_TMPDIR に git リポジトリがないため `git diff` が非 0 を返し commit ブロックが実行される。commit 失敗時は警告のみ（非致命的）なので既存テストの PASS は維持されるが、副作用として stderr に git エラーメッセージが出力される。新規テストで `git` モックを追加して動作を明確に分離した。
+
+### Rework
+- None
