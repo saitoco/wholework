@@ -58,3 +58,35 @@ The new row is inserted after `file_not_exists "path"` and before `dir_exists "p
 
 - Updating the "Pattern to use today" section and checkpoint text in `verify-patterns.md` §15 — tracked in Issue #462.
 - Updating `modules/orchestration-fallbacks.md` "See also" reference (informational text remains accurate as a historical reference).
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. Implementation followed the Spec exactly: inserted `git_committed` row after `file_not_exists` and before `dir_exists` in the translation table; updated `verify-patterns.md` §15 Priority 1 row from `(future)` to available.
+
+### Design Gaps/Ambiguities
+
+- None. The Spec's auto-resolved ambiguity points (permission level, safe mode behavior, PR_BRANCH handling) were clear and complete — no new ambiguities surfaced during implementation.
+
+### Rework
+
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `git_committed` inserted after `file_not_exists` row (before `dir_exists`) to keep file-existence checks grouped together — consistent with logical table ordering.
+- Permission set to `always_allow`: local read-only git operation, same guarantee as `file_exists` / `dir_exists`.
+- PR_BRANCH handling mirrors `file_exists`: `git show origin/<PR_BRANCH>:<path>` when set; `git ls-files --error-unmatch` in Bash when not set.
+
+### Deferred Items
+- `verify-patterns.md` §15 "Pattern to use today" section and checkpoint text update deferred to Issue #462 (explicitly out of scope in Spec).
+- `modules/orchestration-fallbacks.md` "See also" reference left as-is (informational, still accurate as historical reference).
+
+### Notes for Next Phase
+- All 5 pre-merge verify commands PASS locally.
+- No forbidden expression violations detected.
+- BATS tests (827 tests) all pass — no test changes needed for this purely documentation-level change.
+- Post-merge ACs: none specified in this Issue.
