@@ -113,3 +113,23 @@ teardown() {
     count=$(wc -l < "$AUTO_EVENTS_LOG")
     [ "$count" -ge 2 ]
 }
+
+@test "backfill-emit: exits 0 with phase_start only emits phase_complete with backfilled" {
+    # Override emit-event.sh to suppress completion events, leaving phase_start as last event
+    cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+emit_event() {
+    local event_name="$1"
+    case "$event_name" in
+        phase_complete|sub_complete|wrapper_exit) return 0 ;;
+    esac
+    mkdir -p "$(dirname "${AUTO_EVENTS_LOG}")"
+    printf '{"ts":"%s","issue":%s,"event":"%s","session_id":"%s","phase":"%s"}\n' \
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${EMIT_ISSUE_NUMBER:-0}" "${event_name}" \
+        "${AUTO_SESSION_ID:-}" "${EMIT_PHASE_NAME:-}" >> "${AUTO_EVENTS_LOG}"
+}
+MOCK
+    export AUTO_SESSION_ID="test-session-backfill"
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q '"backfilled":true' "$AUTO_EVENTS_LOG"
+}
