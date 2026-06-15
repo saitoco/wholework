@@ -53,18 +53,32 @@
 - None: 一発実装で bats 853 件全 PASS。skill syntax validation・forbidden expressions check も PASS。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `skills/issue/SKILL.md` Step 4 末尾（verify-type タグ割り当ての直後）に BRE 検出サブステップを追加した。Existing Issue フロー（Step 6）は "Follow Step 4" 参照なので Step 4 への追加で自動適用される。
-- `skills/spec/SKILL.md` は Step 10 の「Verification conditions consistency check」直後、「Patch route verify command check」直前に追加した。Spec 生成フローの verify command 確定後に検出する配置が最適。
-- 検出対象は5種類の BRE metacharacter (`\|`, `\(`, `\)`, `\+`, `\?`) に限定した（Spec 指示通り）。
+- AC #1〜#3 は grep/file_contains で PASS。rubric AC #4 は `/review` 内の AI 判定で PASS（PR ブランチからファイル内容を読み込んで評価）。
+- 外部レビューツール（Copilot/Claude Code Review/CodeRabbit）は未設定のため Step 7 をスキップした。
+- REVIEW_DEPTH=light（`--light` フラグ指定）で review-light 相当の全4アスペクトを実行。MUST/SHOULD 指摘なし。
 
 ### Deferred Items
-- post-merge の実際の挙動確認（`/issue` または `/spec` 実行で警告が出るか）は `verify-type: opportunistic` で次回実行時に観測。
-- `/review` 時に rubric AC #4 の詳細判定が行われる。rubric grader には worktree 上の最新コンテンツを参照させること。
+- post-merge の実際の挙動確認（`/issue` または `/spec` 実行で BRE 警告が出るか）は `verify-type: opportunistic` で次回実行時に観測。
+- CONSIDER: ERE リテラル `|` マッチ目的の verify command に対して誤検出警告が発生しうる（極めて稀）。
 
 ### Notes for Next Phase
-- AC #1〜#3 は grep/file_contains で自動 PASS 確認済み（pre-merge チェックボックスも更新済み）。
-- PR #682 でブランチは `worktree-code+issue-675` → base `main`。
-- rubric AC #4 は `/review` の safe mode rubric grader が評価する。grader に `skills/issue/SKILL.md` と `skills/spec/SKILL.md` の内容を PR ブランチから読み込ませること（main branch との混同に注意）。
+- MUST 指摘なし。全 CI 成功。`/merge 682` で main にマージ可能。
+- PR ブランチ: `worktree-code+issue-675` → base `main`。
+- post-merge verify: opportunistic（次回 `/issue` または `/spec` 実行時に観測）。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. 実装は Spec の挿入箇所・内容・フォーマットを厳密に踏襲しており、逸脱なし。
+
+### Recurring issues
+
+Nothing to note. MUST/SHOULD 指摘なし。全4アスペクトでクリーンな実装。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note. 4条件すべて auto-verified（PASS 3件、rubric PASS 1件）。UNCERTAIN なし。AC の verify command は適切に設計されており、`grep "BRE metacharacter"` が具体的で誤検出リスクが低い点も良好。
