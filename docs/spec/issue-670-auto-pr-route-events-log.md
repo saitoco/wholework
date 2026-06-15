@@ -82,3 +82,32 @@
 - 変更は3ファイル×2行のみの最小修正。副作用リスクはほぼゼロ。
 - verify phase では pre-merge の grep 4条件すべて PASS 確認済み。
 - post-merge observation AC は次回 `/auto` pr route 完走まで保留。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Issue #670 は #663 verify session 中の発見から user 主導で起票。triage で AC4 (run-spec.sh fallback) を dead code として削除し、対象を 3 ファイルに絞り込んだ判断が verify 段階で正解と確認された（grep 3 件すべて PASS）。
+
+#### spec
+- AC 4 件すべて自動検証可能 (`grep` × 3、`command` × 1)。UNCERTAIN ゼロ。
+- Post-merge AC は observation event=auto-run、次回 /auto pr route 完走で再評価。
+
+#### design
+- Spec 通り「SCRIPT_DIR 定義直後に 2 行追加」を 3 ファイルで忠実に実施。fixup なし、deviations なし、rework なし。
+
+#### code
+- 1 commit (patch route) で完了。3 ファイル × 2 行のみの最小修正。
+
+#### review/merge
+- patch route のため review/merge phase なし。`closes #670` で Issue 自動クローズ。
+
+#### verify
+- 4 件 PASS (3 grep + 1 bats 62/62)。
+- Post-merge AC は本 batch session の次回 /auto pr route 単一 Issue 実行で観察予定（batch では run-auto-sub.sh 経由のため emit 済、batch session 自体は AC の検証対象外）。
+
+### Improvement Proposals
+- (CONSIDER) `run-spec.sh` にも event emit 配線を追加する別 Issue を検討。現在 spec phase の duration/result events が記録されないため、`/audit auto-session` レポートで spec phase 単独の wall-clock が見えない。本 Issue スコープ外（dead code 化を避けるため意図的に除外）。
+- (CONSIDER) `--no-events` 等の opt-out フラグを追加して emit を抑止できる仕組みを設計。デフォルト on 化により emit を望まないテストやスクリプト直接呼び出しケースでの configurability が低下した。
+
