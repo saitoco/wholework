@@ -92,19 +92,19 @@
 - 全AC にvalidな verify command が設定されており、UNCERTAIN ゼロ。rubric AC3 は merge完了後の CI log fetch という外部依存ロジックの意味的検証として特に有効だった。`command "bats tests/run-merge.bats"` は safe mode のため CI fallback 経由でPASS（"Run bats tests" SUCCESS）。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST/SHOULDイシューなし → `COMMENT` event で PR Review投稿（`REQUEST_CHANGES` ではない）
-- CONSIDER 2件: null run_id guard、warning path テスト。いずれも skip 判断（稀なケース、実害なし）
-- Acceptance Criteria 全 5/5 PASS、CI 全 SUCCESS
+- `mergeable=true, reason=clean` — コンフリクトなし、直接スカッシュマージを実行
+- `gh pr merge 681 --squash --delete-branch` 成功（mergedAt: 2026-06-15T17:16:10Z）
+- `closes #679` かつ `BASE_BRANCH=main` のため Issue は自動クローズ済み
 
 ### Deferred Items
-- null run_id guard 追加（CONSIDER level、本Issue scope外）
+- post-merge AC (`verify-type: observation event=auto-run`): 次回 `/auto` pr route 完走後に `.tmp/auto-events.jsonl` で `source=ci` 付き `test_result` event の確認が必要
+- null run_id guard 追加（CONSIDER level、後続Issueで検討可）
 - warning path regression test 追加（CONSIDER level、後続Issueで検討可）
-- post-merge AC (`verify-type: observation event=auto-run`) は次回 `/auto` 完走後に自動評価
 
 ### Notes for Next Phase
-- MUST イシューなし → merge をブロックする理由なし。`/merge 681` を直接実行可
-- Spec の verify command 品質は高く、verify phase での再実行もスムーズなはず
-- post-merge AC のみ未評価（observation待ち）のため verify 完了後に observation log 確認を推奨
+- pre-merge verify 全 5/5 PASS 済み（review phase 確認済み）
+- post-merge AC のみ未評価（observation待ち）— verify phase で `verify-type: observation` を確認
+- Spec の verify command は全て有効で verify phase での実行はスムーズなはず
