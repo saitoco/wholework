@@ -67,3 +67,29 @@
 ### Notes for Next Phase
 - The only file changed is `skills/code/SKILL.md` (one line in frontmatter) plus the Spec title fix — review scope is very small
 - The rubric AC1 was PASS (verified by grader); AC2 (CI) is UNCERTAIN until CI runs after push
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC1 (rubric) と AC2 (CI) の組み合わせで意味検証 + 実機 CI 検証を両方カバー。
+
+#### design
+- but-not 表現 "Does not update CLAUDE.md, run session retrospectives, or manage memory." を frontmatter description 1 行追加で実現する最小変更設計が適切。
+
+#### code
+- 1 行変更のみで完了、rework なし。Size S → XS demotion 成功。
+
+#### review
+- patch route のため非実行 (N/A)。
+
+#### merge
+- patch route のため非実行。
+
+#### verify
+- AC1 PASS、AC2 CI PENDING (実行中)。`phase/verify` 維持で CI 完了後再 verify が必要。
+
+### Improvement Proposals
+- N/A
+
