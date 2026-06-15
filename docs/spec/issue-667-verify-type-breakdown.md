@@ -123,18 +123,31 @@
 
 - None
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec の heredoc 内で `printf '%s'` と記述したが実装は `printf '%s\n'` を採用。Code Retrospective に記録済み。今後 Spec 記述時は `printf` の末尾改行有無を明示すると divergence が防げる。
+
+### Recurring issues
+
+- Nothing to note. AC の verify command ERE/BRE 誤記 (BRE `\|` を ERE 文脈で使用) は Code Retrospective に記録済み。発生源は Spec 記述時のレギュラー表現フレーバー未確認。grep verify command は常に ERE として記述する慣習の徹底で再発防止可能。
+
+### Acceptance criteria verification difficulty
+
+- すべての AC が PASS または POST-MERGE で、UNCERTAIN なし。`command "bats ..."` は safe モードで CI 代替検証が成立 (CI ジョブ "Run bats tests" SUCCESS)。verify command の品質は良好。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `WHOLEWORK_ISSUE_BODY_DIR` を hermetic test 用の body source override として実装。`WHOLEWORK_SCRIPT_DIR` / `WHOLEWORK_CONFIG_PATH` と同パターンを採用した
-- `printf '%s\n'` を使ってテーブル行を heredoc 内で出力（`echo` 代わり）することで末尾改行を保証
-- bash 3.2+ 互換のため associative array を使わず文字列連結でイベント名を蓄積した
+- MUST issues なし。Step 12 スキップ。Step 13 スキップ (ポリシー変更なし)。
+- 全 pre-merge AC PASS、全 CI ジョブ SUCCESS で merge 可能と判定。
 
 ### Deferred Items
-- runtime での full ドライランテスト（実際の phase/verify 残 Issue を含む auto-events.jsonl が必要なため post-merge observation AC とした）
-- 複数 event が同一 Issue に存在する場合の重複除去は現時点で未対応（`event=auto-run,auto-run` となる可能性あり）
+- Post-merge observation AC: 次回 `/auto` 完走後に `## Verify Phase Residuals` セクションが期待通り集計されることを確認 (event=auto-run)
+- 複数 event 重複除去 (event=auto-run,auto-run 問題) は引き続き未解決 — Phase Handoff code から引継ぎ
 
 ### Notes for Next Phase
-- AC #1 verify command は `observation|opportunistic|manual`（bare pipe ERE）に修正済み。Spec と Issue body 両方に反映済み
-- `section_contains "scripts/get-auto-session-report.sh" "## Verify Phase Residuals" "observation"` は shell file を対象にしているため、heading 検出が意図通り動作するか /verify 時に注意
+- No MUST/SHOULD/CONSIDER issues found — merge は `/merge 676` で即時実行可能
+- Post-merge observation AC が残っているため `/verify 667` で最終確認が必要
