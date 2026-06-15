@@ -64,6 +64,29 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
+## 2026-06-15 09:58 UTC: code-patch-tier3-recovery
+
+### Context
+- Issue #658, phase: code-patch
+- Source: recovery-sub-agent
+- Wrapper: run-code-patch.sh, exit code: 1
+- Log tail: "Finished at: 2026-06-15 18:45:57"
+
+### Diagnosis
+- Claude exited 0 (no crash, no watchdog kill) but produced no commit on origin/main — a silent no-op. The 360-second silence followed by a 'test running' message suggests Claude was executing tests but failed to complete the commit step before exiting. This is a transient execution gap rather than a structural conflict; a single retry is low-risk and the appropriate first response.
+
+### Recovery Applied
+- action=retry
+- steps: none
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+---
+
 ## 2026-06-14 18:02 UTC: code-patch-tier3-recovery
 
 ### Context
