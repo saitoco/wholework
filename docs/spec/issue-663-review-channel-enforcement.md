@@ -69,20 +69,35 @@
 
 - None. 一発で実装完了。57 テスト全 PASS を確認してからコミット。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- None. 実装は Spec の Implementation Steps に完全準拠。PR diff と Spec の差分は Code Retrospective セクションの追加のみ。
+
+### Recurring issues
+
+- MUST 禁則ノートに「reconcile が PR Reviews をスキャンしない」という根拠説明を書いたが、同一 PR で PR Review scan を追加したため、merge 後に根拠説明が自己矛盾する問題が発生した（SHOULD）。今後 MUST 禁則ノートを書く際は、実装状態との整合性を同一 PR 内で確認する checklist が有効。
+
+### Acceptance criteria verification difficulty
+
+- AC1（grep）は regression guard として機能しており PASS は確実。
+- AC2（rubric）は semantic check で LLM による再評価が必要だったが、diff の内容が明確でスムーズに PASS 判定できた。verify command の質は高い。
+- AC3・AC4 は CI 参照で PASS。verify command として適切な粒度だった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- MUST 禁則ノートはブロッククォート（`>`）形式で Step 14.2 の直前に配置（強調度最大の配置）
-- `<!-- review-summary -->` を body 先頭行に移動することで reconcile の grep ヒット確率を向上（ただし既存 grep パターンはヘッダーも対象のため、スクリプト側変更は不要）
-- `|| true` パターンで PR Review API 失敗を無視し後退しない設計（フォールバック: issue comments のみで判定継続）
-- 新規 bats テストは既存 mock パターン（固定値返却）と異なり `case "$1"` 分岐で `pr`/`api` を使い分け
+- SHOULD 指摘 (SKILL.md:728 根拠説明不正確) を修正してコミット — 同一 PR 内の自己矛盾を解消するために修正価値があると判断
+- CONSIDER 指摘 (reconcile-phase-state.sh:280 改行区切りなし) はスキップ — 実害が極めて低く Spec Phase Handoff でも想定内と判断済み
+- AC2 rubric は semantic check で LLM 判断 — 実装との整合が取れており PASS
 
 ### Deferred Items
-- PR Review body が `""` (空文字) の場合と `||true` での失敗ケースを bats テストで網羅していない（既存テストが通れば十分と判断; follow-up で追加可能）
-- SKILL.md の MUST ノート以外のセクション（Step 10 以前）での PR Review 誘惑を防ぐ追加強化は未実施（本 Issue スコープ外）
+- PR Review body が空文字の場合と `|| true` 失敗ケースの bats テストカバレッジ不足（Spec Phase Handoff からの継続事項）
+- `_emit_result` のログメッセージ "found in PR #N comments" が PR Review scan 追加後も更新されていない（軽微なログ不正確さ）
 
 ### Notes for Next Phase
-- AC2 (rubric) は semantic check のため `/review` 時に LLM 判断で再評価される — 実装内容と rubric 文言の整合性確認は /review フェーズで行う
-- reconcile の `combined` 変数は bash の文字列結合で実装。改行の有無に依らず grep が動作することを既存パターンで確認済み
-- 新規テスト (ok 24) が PR Review body 検出をカバー; 既存の review completion テスト群 (ok 20-24) と合わせてカバレッジ確認済み
+- MUST 禁則の根拠説明を更新済みのため、merge 後の SKILL.md は整合的
+- 全 CI ジョブ SUCCESS、57 bats テスト PASS 確認済み
+- post-merge 観察 AC (silent no-op 再発なし) は次回 /auto 実行時に確認
