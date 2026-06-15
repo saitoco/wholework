@@ -174,3 +174,31 @@
 ### Notes for Next Phase
 - verify フェーズは post-merge AC のみ残存（observation event トリガー）
 - `scripts/run-*.sh` の EXIT trap 動作確認は次回 `/auto` セッション後の `/audit auto-session` レポートで行う
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC 9 件すべて自動検証可能 (grep × 5、bats command × 2、rubric × 1、file_contains × 1)。UNCERTAIN ゼロ。triage の AC 拡張（run-review.sh / run-merge.sh 追加、bats 分割、rubric 補助 file_contains 追加）が verify 段階で機能。
+
+#### spec
+- 4 scripts への trap 追加 + session-report 側の backfilled 区別ロジックすべて Spec 通り実装。fixup なし、rework なし。
+
+#### code
+- 1 PR (#672) で完了。code phase の run-code wrapper で silent-no-op anomaly が検出されたが、recovery 経由で commit が確認され実体は成功（PR 作成 + bats 全 9 件 PASS）。anomaly detector の false positive または初回 commit が遅延した可能性。
+
+#### review
+- light review。`git log --oneline | grep #672` で MUST/SHOULD/CONSIDER の状況は妥当な範囲（具体的内容は PR コメント参照）。
+
+#### merge
+- squash merge `--delete-branch` で main 統合。CI 全 SUCCESS、conflict なし。
+
+#### verify
+- 9/9 PASS。bats 9 件全 PASS、rubric grader も backfilled emit + session-report 区別の semantic check で PASS。
+- Post-merge observation AC は本 `/auto --batch 669 667` セッション (`22090-1781508629`) 自体が修正後 run-*.sh を実行する初セッションのため、batch 完了後の `/audit auto-session 22090-...` で `? end` が 0 になるか確認可能。
+
+### Improvement Proposals
+- (HIGH) `.tmp/auto-events.jsonl` 内に JSON parse error (control characters) が発生する事例を観察。本実装で `phase_complete (backfilled)` event を新規追加するが、emit 時の JSON エスケープが弱い場合は同じ問題を増幅する可能性。bats でエッジケース（multiline log / 改行コード混入）のテストカバレッジを追加する別 Issue を検討。
+- (CONSIDER) Code phase の silent-no-op anomaly detector false positive 発生（#669 で観察）。`run-code.sh` が exit 0 で commit が一時的に gh から見えないタイミング（pre-push hook 中など）で false positive となるケースを別 Issue で調査。
+
