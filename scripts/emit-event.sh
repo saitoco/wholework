@@ -31,7 +31,12 @@ emit_event() {
   local json="{\"ts\":\"${ts}\",\"issue\":${_issue},\"event\":\"${event_type}\",\"session_id\":\"${_sid}\""
   while [[ $# -gt 0 ]]; do
     local kv="$1"; local k="${kv%%=*}"; local v="${kv#*=}"
-    json="${json},\"${k}\":\"${v}\""
+    # sanitize value: strip newlines, replace tabs, escape backslash and double-quote
+    local v_sanitized="${v//$'\n'/}"
+    v_sanitized="${v_sanitized//$'\t'/ }"
+    v_sanitized="${v_sanitized//\\/\\\\}"
+    v_sanitized="${v_sanitized//\"/\\\"}"
+    json="${json},\"${k}\":\"${v_sanitized}\""
     shift
   done
   json="${json}}"
