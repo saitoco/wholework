@@ -373,3 +373,41 @@ MOCK
     [[ "$output" == *"Warning:"*"phase/review"*"Auto-transitioning"* ]]
     grep -q "CALLED: 99 verify" "$LABEL_TRANSITION_LOG"
 }
+
+@test "test_result: emit_event called with source=ci after merge" {
+    EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    # Override emit-event.sh mock to capture emit_event calls
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
+MOCK
+
+    # Override gh mock to handle run list and run view --log
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "run" && "$2" == "list" && "$*" == *"--workflow=test.yml"* ]]; then
+  echo "12345"
+  exit 0
+fi
+if [[ "$1" == "run" && "$2" == "view" && "$*" == *"--log"* ]]; then
+  echo "5 tests, 0 failures"
+  exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".state"* ]]; then
+    echo "MERGED"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    grep -q "source=ci" "$EMIT_LOG"
+}

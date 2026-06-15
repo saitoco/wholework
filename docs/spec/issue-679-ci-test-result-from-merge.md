@@ -61,3 +61,50 @@
 - `gh run view --log` は大量出力になる可能性があるが、`grep -E "[0-9]+ tests?, [0-9]+ failures?" | tail -1` でフィルタするため実害なし。
 - bats test でのセルフ参照除外は不要（grep パターンが tests/run-merge.bats 内のコメント/文字列と干渉しない）。
 - `grep -oE` は bash 3.2+ / macOS GNU grep 互換。`||echo 0` で値が取れない場合に 0 を代入するパターンは既存コード (run-auto-sub.sh L130-131) と一致。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `_passed` の parse パターンを Spec の `grep -oE "^[0-9]+"` から `grep -oE "[0-9]+ tests?" | grep -oE "^[0-9]+"` に変更。理由: `gh run view --log` のログ行にはタイムスタンプ prefix (例: `2026-01-01T12:00:00.000Z`) が付くため、`^[0-9]+` では年 (`2026`) を誤マッチする。`_failed` と同様の2ステップ pattern に統一した。
+
+### Design Gaps/Ambiguities
+
+- None
+
+### Rework
+
+- None
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- `_passed` の2ステップ grep 変更はCode Retrospectiveに記録済みで、構造的なSpec-PR乖離なし。全5 AC verify commandが正常動作し、PRレビューの整合性確認は高精度だった。
+
+### Recurring Issues
+
+- null `_run_id` による偽陽性 warning（CONSIDER）: `gh run list` が run 不在で `"null"` を返すケースへの非対応。稀なエッジケースで実害なし。
+- warning path の regression test 未追加（CONSIDER）: success path のみテストされており、warning path（`_bats_summary` 空）のテストが不足。Type=Feature 案件ではエラーパステスト補完を推奨。
+
+### Acceptance Criteria Verification Difficulty
+
+- 全AC にvalidな verify command が設定されており、UNCERTAIN ゼロ。rubric AC3 は merge完了後の CI log fetch という外部依存ロジックの意味的検証として特に有効だった。`command "bats tests/run-merge.bats"` は safe mode のため CI fallback 経由でPASS（"Run bats tests" SUCCESS）。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST/SHOULDイシューなし → `COMMENT` event で PR Review投稿（`REQUEST_CHANGES` ではない）
+- CONSIDER 2件: null run_id guard、warning path テスト。いずれも skip 判断（稀なケース、実害なし）
+- Acceptance Criteria 全 5/5 PASS、CI 全 SUCCESS
+
+### Deferred Items
+- null run_id guard 追加（CONSIDER level、本Issue scope外）
+- warning path regression test 追加（CONSIDER level、後続Issueで検討可）
+- post-merge AC (`verify-type: observation event=auto-run`) は次回 `/auto` 完走後に自動評価
+
+### Notes for Next Phase
+- MUST イシューなし → merge をブロックする理由なし。`/merge 681` を直接実行可
+- Spec の verify command 品質は高く、verify phase での再実行もスムーズなはず
+- post-merge AC のみ未評価（observation待ち）のため verify 完了後に observation log 確認を推奨
