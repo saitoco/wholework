@@ -120,23 +120,21 @@
 - None — tests passed on first attempt (4/4 PASS).
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light (--light flag; consistent with Size=M).
-- No external review tools configured — copilot/claude-code-review/coderabbit all false; Step 7 skipped.
-- One CONSIDER finding identified: `verify_reopen_cycle` emit fires for OPEN-state issues (no actual reopen), potentially inflating the counter. Posted as inline comment; not blocking.
-- AC6 rubric evaluated to PASS in review phase — no further deferral needed.
+- Conflict in `docs/spec/issue-660-audit-session-new-events.md` between `## Auto Retrospective` (HEAD/main) and `## review retrospective` (PR branch): resolved by including both sections sequentially — no content was dropped.
+- Squash merge executed via GitHub API (`PUT /pulls/661/merge`) because `gh pr merge --squash` fails from a worktree when `main` is already checked out in the main working tree.
+- Remote branch `worktree-code+issue-660` deleted after merge.
 
 ### Deferred Items
-- CONSIDER finding (emit placement for OPEN-state issues): deferred to follow-up issue or post-merge cleanup. Not blocking merge.
-- Post-merge AC (`verify-type: observation event=auto-run`) remains pending next `/auto` run.
+- Post-merge AC (`verify-type: observation event=auto-run`): confirm both metrics appear in the next `/audit auto-session` report after an `/auto` run.
+- CONSIDER finding (emit placement for OPEN-state issues — fires when issue was already OPEN): deferred to follow-up issue.
 
 ### Notes for Next Phase
-- All 7 pre-merge ACs are PASS (including AC6 rubric).
-- CI fully green: DCO, Run bats tests, Validate skill syntax, Forbidden Expressions check, macOS shell compatibility — all SUCCESS.
-- No MUST/SHOULD issues — proceed with `/merge 661`.
-- CONSIDER finding posted as PR line comment on `skills/verify/SKILL.md:447`.
+- All 7 pre-merge ACs were PASS; CI was green before merge.
+- Squash merge SHA: `b48d00e0e19efc45db7d8db5fa055b13554f499b`.
+- Post-merge observation AC is the only remaining verification item — trigger `/verify 660` after next `/auto` run.
 
 ## Notes
 
