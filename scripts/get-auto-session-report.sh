@@ -218,25 +218,62 @@ VERIFY_RESIDUALS=$(echo "$EVENTS_JSON" | jq -r '
   .[]
 ' 2>/dev/null || true)
 
-# Per-issue durations table
-PER_ISSUE_TABLE=$(echo "$EVENTS_JSON" | jq -r '
-  # Group events by issue
-  group_by(.issue) |
-  .[] |
-  . as $issue_events |
-  ($issue_events[0].issue) as $num |
-  if $num == null or $num == 0 then empty else
-    # session wall-clock: first phase_start to last phase_complete or sub_complete
-    ([($issue_events[] | select(.event == "phase_start") | .ts)] | sort | first) as $first_ts |
-    ([($issue_events[] | select(.event == "phase_complete" or .event == "sub_complete") | .ts)] | sort | last) as $last_ts |
-    # size from sub_start
-    ($issue_events[] | select(.event == "sub_start") | .size) as $size |
-    # route
-    (if $size == "XS" or $size == "S" then "patch" elif $size == "M" or $size == "L" then "pr" else "?" end) as $route |
-    # duration
-    "| #\($num) | \($size // "?")/\($route) | \($first_ts // "?") – \($last_ts // "?") | — | — |"
-  end
-' 2>/dev/null || echo "| (no events) | — | — | — | — |")
+# Per-issue durations table — Bash loop computes Phase breakdown, PR, Notes per issue
+ISSUE_NUMS_FOR_TABLE=$(echo "$EVENTS_JSON" | jq -r '[.[] | select(.issue != null and .issue > 0) | .issue] | unique | .[]' 2>/dev/null || true)
+PER_ISSUE_TABLE=""
+for _num in $ISSUE_NUMS_FOR_TABLE; do
+  _issue_events=$(echo "$EVENTS_JSON" | jq --argjson n "$_num" '[.[] | select(.issue == $n)]' 2>/dev/null || echo "[]")
+  _first_ts=$(echo "$_issue_events" | jq -r '[.[] | select(.event == "phase_start") | .ts] | sort | first // "?"' 2>/dev/null || echo "?")
+  _last_ts=$(echo "$_issue_events" | jq -r '[.[] | select(.event == "phase_complete" or .event == "sub_complete") | .ts] | sort | last // "?"' 2>/dev/null || echo "?")
+  _size=$(echo "$_issue_events" | jq -r '[.[] | select(.event == "sub_start") | .size] | first // "?"' 2>/dev/null || echo "?")
+  case "$_size" in
+    XS|S) _route="patch" ;;
+    M|L)  _route="pr" ;;
+    *)    _route="?" ;;
+  esac
+  # Phase breakdown: per-phase duration (latest phase_complete - earliest phase_start) joined by →
+  _phase_breakdown=$(echo "$_issue_events" | jq -r '
+    [.[] | select(.event == "phase_start" or .event == "phase_complete")] |
+    group_by(.phase) |
+    map(
+      (.[0].phase) as $p |
+      ([.[] | select(.event == "phase_start") | .ts] | sort | first) as $ps |
+      ([.[] | select(.event == "phase_complete") | .ts] | sort | last) as $pc |
+      if $ps == null or $pc == null then empty
+      else
+        ($pc | fromdateiso8601) as $end |
+        ($ps | fromdateiso8601) as $start |
+        (($end - $start) / 60 | floor) as $mins |
+        $p + " " + ($mins | tostring) + "m"
+      end
+    ) | if length == 0 then "—" else join(" → ") end
+  ' 2>/dev/null || echo "—")
+  [[ -z "$_phase_breakdown" ]] && _phase_breakdown="—"
+  # PR lookup via gh (skipped when --no-github)
+  _pr_col="—"
+  if [[ "$NO_GITHUB" == "false" ]]; then
+    _pr_num=$(gh pr list --search "closes #${_num}" --state all --json number --jq '.[0].number // empty' 2>/dev/null || true)
+    [[ -n "$_pr_num" ]] && _pr_col="#${_pr_num}"
+  fi
+  # Notes: heuristic from events
+  _notes_parts=()
+  _size_refresh=$(echo "$_issue_events" | jq -r '[.[] | select(.event == "size_refresh")] | first | if . == null then "" else "Size " + .from + "→" + .to end' 2>/dev/null || true)
+  [[ -n "$_size_refresh" ]] && _notes_parts+=("$_size_refresh")
+  _max_silent=$(echo "$_issue_events" | jq -r '[.[] | select(.event == "max_silent_window") | .max_sec | tonumber] | if length == 0 then 0 else max end' 2>/dev/null || echo 0)
+  [[ "$_max_silent" -gt 600 ]] && _notes_parts+=("Silent ${_max_silent}s")
+  _tier3=$(echo "$_issue_events" | jq -r '[.[] | select(.event == "recovery" and .tier == "3")] | length' 2>/dev/null || echo 0)
+  [[ "$_tier3" -gt 0 ]] && _notes_parts+=("Tier 3 recover")
+  _concurrent_for_issue=$(echo "$_issue_events" | jq -r '[.[] | select(.event == "concurrent_commit_detected")] | length' 2>/dev/null || echo 0)
+  [[ "$_concurrent_for_issue" -gt 0 ]] && _notes_parts+=("${_concurrent_for_issue} concurrent commits")
+  if [[ ${#_notes_parts[@]} -eq 0 ]]; then
+    _notes_col="—"
+  else
+    _notes_col=$(IFS='; '; echo "${_notes_parts[*]}")
+  fi
+  PER_ISSUE_TABLE+="| #${_num} | ${_size}/${_route} | ${_first_ts} – ${_last_ts} | ${_phase_breakdown} | ${_pr_col} | ${_notes_col} |
+"
+done
+[[ -z "$PER_ISSUE_TABLE" ]] && PER_ISSUE_TABLE="| (no events) | — | — | — | — | — |"
 
 # Recovery events section
 RECOVERY_EVENTS=$(echo "$EVENTS_JSON" | jq -r '
@@ -249,14 +286,28 @@ RECOVERY_EVENTS=$(echo "$EVENTS_JSON" | jq -r '
   end
 ' 2>/dev/null || echo "(no recovery events)")
 
-# Concurrent sessions section
+# Concurrent sessions section — resolve sha → issue via local git log when possible
 CONCURRENT_SECTION=""
 if [[ "$CONCURRENT_COMMITS" -gt 0 ]]; then
-  CONCURRENT_SECTION=$(echo "$EVENTS_JSON" | jq -r '
-    [.[] | select(.event == "concurrent_commit_detected")] |
-    .[] |
-    "- [" + .ts + "] phase=" + (.phase // "?") + " sha=" + (.commit_sha // "?")[0:8] + " author=" + (.author // "?")
-  ' 2>/dev/null || echo "(error parsing concurrent commits)")
+  _concurrent_lines=$(echo "$EVENTS_JSON" | jq -r '
+    [.[] | select(.event == "concurrent_commit_detected")] | .[] |
+    .ts + "\t" + (.phase // "?") + "\t" + (.commit_sha // "?") + "\t" + (.author // "?")
+  ' 2>/dev/null || true)
+  while IFS=$'\t' read -r _ts _phase _sha _author; do
+    [[ -z "$_ts" ]] && continue
+    _sha8="${_sha:0:8}"
+    _issue_hint=""
+    _commit_msg=$(git log -1 --format='%s%n%b' "$_sha" 2>/dev/null || true)
+    if [[ -n "$_commit_msg" ]]; then
+      _issue_hint=$(echo "$_commit_msg" | grep -ioE '(closes|fixes|resolves)?[[:space:]]*#[0-9]+' | grep -oE '#[0-9]+' | head -1)
+    fi
+    if [[ -n "$_issue_hint" ]]; then
+      CONCURRENT_SECTION+="- [${_ts}] phase=${_phase} sha=${_sha8} → ${_issue_hint} (author=${_author})"$'\n'
+    else
+      CONCURRENT_SECTION+="- [${_ts}] phase=${_phase} sha=${_sha8} author=${_author}"$'\n'
+    fi
+  done <<< "$_concurrent_lines"
+  [[ -z "$CONCURRENT_SECTION" ]] && CONCURRENT_SECTION="(error parsing concurrent commits)"
 else
   CONCURRENT_SECTION="(none detected)"
 fi
