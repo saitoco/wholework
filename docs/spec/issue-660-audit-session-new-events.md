@@ -108,6 +108,34 @@
 
 - 次回 `/auto` 完走後の `/audit auto-session` レポートで両メトリクスが 0 または実際の event 数を反映することを確認 <!-- verify-type: observation event=auto-run -->
 
+## Code Retrospective
+
+### Deviations from Design
+- None — implementation followed the Spec exactly. All 5 steps were executed in order.
+
+### Design Gaps/Ambiguities
+- The Spec specified `verify_reopen_cycle` arrow in the Summary table row as `verify FAIL → reopen fix cycles` using `→` (U+2192). The `cat <<REPORT_EOF` heredoc approach in `get-auto-session-report.sh` handles this character correctly on bash 3.2+.
+
+### Rework
+- None — tests passed on first attempt (4/4 PASS).
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Event schema added as bash comment documentation (not a validation function) — simplest approach consistent with the existing `emit-event.sh` style.
+- `verify_reopen_cycle` emit uses inline `printf` JSON write (not `source emit-event.sh`) in `skills/verify/SKILL.md` — avoids shell source dependency in Skill context; locking omitted since verify runs serially per issue.
+- Emit guard: both `AUTO_EVENTS_LOG` and `AUTO_SESSION_ID` must be set — prevents emit noise in standalone `/verify` runs.
+
+### Deferred Items
+- `manual_intervention` actual emit wiring (flag-file detection in wrapper scripts) is explicitly out of scope per Spec Notes — separate follow-up Issue.
+- AC6 rubric check (`Generated Summary table includes...`) deferred to `/verify` phase for full-mode verification.
+
+### Notes for Next Phase
+- All 6 pre-merge grep ACs already verified and checkboxes updated (except AC6 rubric, which requires post-merge observation context in `/verify`).
+- `bats tests/audit-auto-session.bats` passes 4/4. Full suite passes 829/829.
+- Post-merge AC is `verify-type: observation event=auto-run` — will fire after next `/auto` run; no action needed immediately.
+
 ## Notes
 
 - **Verification count note**: Pre-merge verification items (7) exceeds SPEC_DEPTH=light limit (5). All 7 are verbatim copies from Issue body acceptance criteria, so they are preserved as-is. Follows Issue #335 precedent.
