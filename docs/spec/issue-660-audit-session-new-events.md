@@ -166,3 +166,29 @@
 ### Acceptance Criteria Verification Difficulty
 
 - All 7 pre-merge ACs were verifiable: 5 grep (trivially verifiable), 1 rubric (PASS — Summary table rows confirmed in diff), 1 bats via CI reference fallback (CI job "Run bats tests" SUCCESS). No UNCERTAINs. Verify commands are well-calibrated for this Issue.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- `/issue` triage assigned Size=M, Type=Feature, Value=4 correctly. One AC was added during triage to plug the `verify_reopen_cycle` emit-wiring gap. Auto-resolved 3 ambiguity points cleanly without manual intervention.
+
+#### spec
+- Spec accurately decomposed the work into 5 atomic implementation steps. Each step referenced specific code locations and was directly executable. The Spec correctly deferred `manual_intervention` flag-file detection to a follow-up issue, scoping AC to schema docs + report aggregation only.
+
+#### code
+- Implementation followed the Spec exactly with no rework — 4/4 bats tests passed on first attempt. No fixup/amend pattern in commit history. Single squash-merged PR (#661).
+
+#### review
+- review-light agent ran all 4 perspectives. 1 CONSIDER finding posted as a line comment (`verify_reopen_cycle` emit placement scope). No MUST/SHOULD. Review summary was posted as a PR Review (state=COMMENTED) instead of an issue comment, which broke reconcile-phase-state detection — see `## Auto Retrospective` for the Tier 2 recovery and improvement proposals.
+
+#### merge
+- Spec's Phase Handoff notes record a Spec conflict resolved during merge (sequential inclusion of `## Auto Retrospective` and `## review retrospective`). Squash merge required GitHub API fallback (`PUT /pulls/661/merge`) because `gh pr merge --squash` fails when main is checked out in the main working tree from inside a worktree.
+
+#### verify
+- All 7 pre-merge ACs PASS. One post-merge observation AC remains (event=auto-run); will be evaluated by `/auto`'s event-based opportunistic search after completion.
+
+### Improvement Proposals
+- Review skill summary channel: standardize on "PR issue comment with `<!-- review-summary -->` marker" instead of PR Review submission. See `## Auto Retrospective` for details — proposal already filed there to avoid duplication.
+- `verify_reopen_cycle` emit guard refinement: scope emit to the CLOSED-state branch only (CONSIDER finding from review). Currently emits even on OPEN-state continuations where no actual reopen occurs. Low priority — fix in a follow-up issue when the event schema is next extended.
