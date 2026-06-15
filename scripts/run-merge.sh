@@ -12,6 +12,8 @@ if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
 fi
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
+AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
+export AUTO_EVENTS_LOG
 
 PERMISSION_MODE=$("$SCRIPT_DIR/get-config-value.sh" permission-mode auto 2>/dev/null || echo auto)
 if [[ "$PERMISSION_MODE" == "auto" ]]; then
