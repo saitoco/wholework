@@ -71,3 +71,45 @@
 - 全 pre-merge AC が PASS 済み（チェックボックス更新済み）
 - テスト全 PASS（bats 846 件）、SKILL.md 構文検証 OK、禁止表現チェック OK
 - verify フェーズでは rubric AC の意味的検証が残っている
+
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| issue | patch | SUCCESS | triage で Size=S 確定 |
+| spec | patch | SUCCESS | Spec 作成、design commit |
+| code | patch | SUCCESS (after Tier 3 recovery) | 初回 run-code.sh が exit 1 silent no-op、Tier 3 recovery sub-agent が action=retry で復旧 |
+| verify | -     | SUCCESS | 全件 PASS |
+
+### Orchestration Anomalies
+- code phase 初回実行: Claude exit 0 (no crash, no watchdog kill) だが origin/main に commit が出ない silent no-op が発生。360秒の silence の後 'test running' メッセージ → Claude が commit step を完了せず exit したと推定。Tier 3 recovery sub-agent が action=retry を選択し、再実行で正常に commit + push が完了。`docs/reports/orchestration-recoveries.md` にエントリ追加済み (commit bd8b4b2)。
+
+### Improvement Proposals
+- code phase で Claude が "test running" を最後の出力にして exit する silent no-op pattern は、Tier 3 recovery sub-agent が retry で復旧できる典型ケース。再発頻度が閾値を超えた場合は `/audit recoveries` が Issue 起票する流れ (現状の orchestration-recoveries.md ログから集計予定)。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- triage は Size=S と判定、Auto-Resolved Ambiguity Points (session_id filtering 不要) を Issue body に記録した。受入条件 4 件 (pre-merge 3 + post-merge 1) は適切に整理されている。
+
+#### spec
+- 2 step の最小実装で完結する設計。`allowed-tools` への追加位置と Step 5 末尾の挿入位置が具体的に指示されており、code phase での迷いゼロ。
+
+#### code
+- 初回実行は Claude が test running 後に silent no-op で exit (root cause 未確定)。Tier 3 recovery sub-agent の retry で 1 発復旧。Code Retrospective には Deviations/Gaps/Rework すべて None と記録され、実質的なコード変更は 2 箇所のみ。
+
+#### review
+- patch route のため review phase なし。
+
+#### merge
+- patch route のため merge phase なし (直接 main commit)。
+
+#### verify
+- pre-merge 3 件と post-merge 1 件 (manual) すべて PASS。post-merge AC は scripts/auto-events-rollup.sh を直接実行し動作確認、当日の rollup ファイル存在を確認することで Claude Execute 判定 PASS。
+- 副作用として `docs/reports/orchestration-recoveries.md` に Tier 3 recovery エントリが書かれていたため、/verify 開始時の dirty file チェックで exit 1 となり、parent session で別 commit (bd8b4b2) として記録 + push する必要があった。batch mode で spawn-recovery-subagent.sh が log を直接書く動作と /verify の dirty file ガードの噛み合わせを整理する余地。
+
+### Improvement Proposals
+- batch route での Tier 3 recovery 後、`docs/reports/orchestration-recoveries.md` への書き込みが pending 状態のまま次 phase (verify) に進み、verify の dirty file チェックで exit 1 になる。parent session 側で recovery log を commit してから verify に進むフローを `run-auto-sub.sh` または `/auto` Step 4a に明示する余地 (現状は parent session が手動 commit + push する暗黙運用)。
