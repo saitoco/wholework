@@ -207,6 +207,12 @@ fi
 # Concurrent commits detected
 CONCURRENT_COMMITS=$(echo "$EVENTS_JSON" | jq '[.[] | select(.event == "concurrent_commit_detected")] | length' 2>/dev/null || echo 0)
 
+# Parent session manual interventions
+MANUAL_INTERVENTIONS=$(echo "$EVENTS_JSON" | jq '[.[] | select(.event == "manual_intervention")] | length' 2>/dev/null || echo 0)
+
+# verify FAIL reopen fix cycles
+VERIFY_REOPEN_CYCLES=$(echo "$EVENTS_JSON" | jq '[.[] | select(.event == "verify_reopen_cycle")] | length' 2>/dev/null || echo 0)
+
 # Verify phase residuals: issues that have phase_start for verify but no phase_complete for verify
 VERIFY_RESIDUALS=$(echo "$EVENTS_JSON" | jq -r '
   . as $all |
@@ -374,6 +380,8 @@ cat > "$OUTPUT_PATH" << REPORT_EOF
 | Max silent window (any phase) | ${MAX_SILENT} |
 | Total token usage | ${TOKEN_USAGE} |
 | Concurrent commits detected | ${CONCURRENT_COMMITS} |
+| Parent session manual interventions | ${MANUAL_INTERVENTIONS} |
+| verify FAIL → reopen fix cycles | ${VERIFY_REOPEN_CYCLES} |
 | Merge conflicts | 0 |
 
 ## Per-Issue Durations

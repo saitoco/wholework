@@ -11,6 +11,17 @@
 # Optional env vars:
 #   EMIT_PHASE_NAME    - Phase name for the current execution context
 
+# Documented event schemas:
+#
+# manual_intervention: parent session manually recovered a child wrapper failure
+#   recovery_target=<phase>       e.g. code-patch, verify
+#   wrapper_exit_code=<code>      original wrapper exit code
+#   intervention_type=<type>      silent_no_op_manual_fix | tier3_abort_manual_fix | direct_commit
+#
+# verify_reopen_cycle: /verify FAIL -> issue reopen fix cycle entered
+#   iteration=<n>                 verify iteration counter (from get-verify-iteration.sh)
+#   reopen_reason=<reason>        pre_merge_ac_fail | post_merge_observation_fail | manual_judgment
+
 emit_event() {
   local event_type="$1"; shift
   local ts; ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
