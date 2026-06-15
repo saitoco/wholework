@@ -40,3 +40,30 @@
 - `claude-md-management:revise-claude-md` は外部 plugin のためスコープ外
 - #520 の headless 経路 guard text 対策（CLOSED）と本 Issue は補完関係にある
 - SKILL.md frontmatter の `description` フィールドは Claude Code のスキル選択ロジックが参照するメタデータ
+
+## Code Retrospective
+
+### Deviations from Design
+- Spec file title contained a deprecated term (旧称: Dispatch) that is now forbidden. The implementation step fixed this by renaming the title from "Prevent Skill Dispatch Confusion" to "Prevent Skill Selection Confusion". This fix was discovered during the forbidden expressions check and was not in the original implementation plan.
+
+### Design Gaps/Ambiguities
+- None
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Added "Does not update CLAUDE.md, run session retrospectives, or manage memory." to the `description` field in `skills/code/SKILL.md` frontmatter; this is the minimal but-not clause that disambiguates from `claude-md-management:revise-claude-md`
+- Fixed Spec file title to remove the deprecated term ("旧称: Dispatch" → "Selection"); this was discovered during the forbidden expressions check and is a required change to pass CI
+- Patch route was used (XS size) with direct commit to main
+
+### Deferred Items
+- `claude-md-management:revise-claude-md` description update is out of scope (external plugin)
+- CI verification (test.yml pass) will be confirmed after push to main
+
+### Notes for Next Phase
+- The only file changed is `skills/code/SKILL.md` (one line in frontmatter) plus the Spec title fix — review scope is very small
+- The rubric AC1 was PASS (verified by grader); AC2 (CI) is UNCERTAIN until CI runs after push
