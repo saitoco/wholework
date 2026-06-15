@@ -52,3 +52,35 @@
 - bats テストスコープ: `observation-trigger.sh` 単体テストのみ（auto-resolve #3）。emitter 配線は grep verify command による pre-merge 静的検証でカバー
 - `scripts/claude-watchdog.sh` の変数名（`_watchdog_event_results` 等）は削除される; 全体の行数が削減される
 - `docs/structure.md` の件数修正: scripts (55→57: 現在の実数 56 + 新規 1)、tests (74→78: 現在の実数 77 + 新規 1) — 既存ドリフト分も含めて修正
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec では `tests/` 件数を「74→78」と記載していたが、実際のドキュメントには「74 ファイル」と記載されており、実数は77（+1で78）。件数差分は既存ドリフトのため deviation なし — Spec の通り修正した。
+- `verify/SKILL.md` への `observation-trigger.sh --event fix-cycle` の追加場所: `gh issue reopen "$NUMBER"` の直後（Spec 通り）に配置し、`emit verify_reopen_cycle event` ブロックの前に挿入。
+
+### Design Gaps/Ambiguities
+
+- `--dry-run` フラグの動作: Spec には「`opportunistic-search.sh` 引数として渡す」とは記載されていなかったが、`--dry-run` 時は `opportunistic-search.sh` 呼び出し自体をスキップするシンプルな実装を選択。ghost API call を避けるという点で合理的。
+- `gh issue comment` の引数配置: `observation-trigger.sh` では「`/verify ${N}` を再実行してください」ではなく英語メッセージ（Spec の文面に従い "Run `/verify ${N}` to verify the condition and update the checkbox."）を使用。CLAUDE.md で「スクリプトのユーザー向けメッセージは英語」とは定められていないが、スクリプト内のコメント言語が英語という慣習に従った。
+
+### Rework
+
+- N/A（設計通り実装できた。テストは一発 PASS）
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `observation-trigger.sh` は comment-posting dispatch のみ（AI judgment なし）: Spec auto-resolve #1/#2 に従いシンプルな shell-only 実装を採用。`run-verify.sh` が存在しないためシェルからの `/verify` spawn は不可。
+- emitter 統合は one-liner 置き換え: `/review`・`/auto` のインライン処理（AI judgment + checkbox update）は削除し、`observation-trigger.sh` 呼び出し一行に統一。
+- `verify/SKILL.md` への `fix-cycle` 追加: `gh issue reopen` 直後に配線し、CLOSED→OPEN 遷移時のみ発火する形を維持（OPEN 時の reopen スキップ branch にはない）。
+
+### Deferred Items
+- AI judgment による observation AC チェックボックス自動更新は削除された（follow-up 候補）。comment-posting のみでユーザー手動 `/verify` 再実行が必要。
+- `gh issue comment` のメッセージ内容（英語）の最終化は review フェーズで確認。
+
+### Notes for Next Phase
+- bats テスト 8件は全 PASS、SKILL.md syntax validation も OK。CI (bats CI run) は PR #671 で確認。
+- `ISSUE_STATE` が `OPEN` の場合（`gh issue reopen` は実行されない）の `fix-cycle` 発火パスは verify/SKILL.md では配線されていないが、これは Spec の "CLOSED 時のみ reopen" 設計に準拠。必要なら別途検討。
