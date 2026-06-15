@@ -45,3 +45,51 @@
 - merge フェーズ (WATCHDOG_TIMEOUT_MERGE_DEFAULT=600) の threshold = 600 - 600 = 0 → Summary breakdown から除外
 - Implementation Steps 数は 5 (SPEC_DEPTH=light 上限)、Pre-merge verification 数は 6 (Issue body AC をそのまま全コピー — sync rule 優先)
 - Issue body の Auto-Resolved Ambiguity Points に沿って設計した (merge 除外、watchdog-defaults.sh 参照、AC 分割)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None: 実装は Spec の 5 ステップに沿って忠実に実施した。
+
+### Design Gaps/Ambiguities
+
+- AC#3 の `grep "watchdog.limit\|WATCHDOG_THRESHOLD\|_MARGIN\|at_risk"` は BRE 形式 (`\|` を OR として使用) だが、verify-executor は ripgrep (ERE デフォルト) を使用するため ERE モードでは `\\|` はリテラル `|` として解釈されFAILになる（実装は条件を満たすためSpec品質問題として分類）。正確には ERE OR パターン (`|`) を使うべきだった。Issue の Auto-Resolved Ambiguity Points に記載されている AC 分割で対処済み。
+- per-issue の `_at_risk_silent` jq クエリは `--argjson` で 4 つの閾値変数を渡す構造になっており、ループ内で毎回実行される。Issue 数が多い場合は jq 起動コストが累積するが、現状の規模では問題ない。
+
+### Rework
+
+- None: 実装は一発で全テスト PASS。修正なし。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `--light`モード（REVIEW_DEPTH=light）で実行。SHOULDイシュー（Spec Retrospectiveのドキュメント誤記）を修正、CONSIDERイシュー（テストカバレッジ）はスキップ。
+- AC#3のBRE `\|` ERE混在はSpec品質問題として記録し、verify commandをERE `|`に更新することを推奨（今後のIssueで対応）。
+- 全受け入れ基準PASS（rubric含む）、全CI SUCCESS、MUSTイシューなし。
+
+### Deferred Items
+- tests/audit-auto-session.batsのnegative caseテスト追加（CONSIDER level、今後のIterationで対応可）。
+- AC#3のverify command を ERE形式 (`|`) に更新する作業は別Issueで対応推奨。
+
+### Notes for Next Phase
+- MUSTイシューなし → `/merge 674` で進められる。
+- Spec Retrospectiveの記述修正済み（commit f3d55e7: BRE/ERE記述の正確化）。
+- Post-merge ACは `verify-type: observation event=auto-run` で `/auto` 完走後に `/audit auto-session` で確認。
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+- なし: 実装はSpec の5ステップに忠実で乖離なし。
+
+### 繰り返しIssue（ワークフロー改善の余地）
+
+- AC#3のverify commandがBRE `\|` 形式で記述されていたが、verify-executorはripgrep (ERE)を使用するため、`\|`がリテラル`|`として解釈されFAILになる。これはERE/BRE書き分けの注意事項であり、同様のパターンが他のIssueのverify commandにも潜在している可能性がある。Issue作成時にverify commandをERE形式（`|`）で記述するよう周知が必要。
+
+### 受け入れ基準検証難易度
+
+- `rubric` verify commandは意味論的検証として機能しており、Summary表・phase breakdown・Notes アノテーションの3要素を一括確認できた（PASS）。
+- AC#3のverify command（`grep "watchdog.limit\|WATCHDOG_THRESHOLD\|_MARGIN\|at_risk"`）はBRE/EREの混在で検証精度が低い。Spec品質問題として記録済み。今後のIssue作成時は `|`（ERE bare alternation）を使用すること。
+- bats CIがSUCCESSであればAC#4（`command "bats ..."`）は確実にPASSできる。CI参照フォールバックが有効に機能した。
