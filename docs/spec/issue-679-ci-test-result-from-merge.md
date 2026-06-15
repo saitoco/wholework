@@ -76,20 +76,35 @@
 
 - None
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- `_passed` の2ステップ grep 変更はCode Retrospectiveに記録済みで、構造的なSpec-PR乖離なし。全5 AC verify commandが正常動作し、PRレビューの整合性確認は高精度だった。
+
+### Recurring Issues
+
+- null `_run_id` による偽陽性 warning（CONSIDER）: `gh run list` が run 不在で `"null"` を返すケースへの非対応。稀なエッジケースで実害なし。
+- warning path の regression test 未追加（CONSIDER）: success path のみテストされており、warning path（`_bats_summary` 空）のテストが不足。Type=Feature 案件ではエラーパステスト補完を推奨。
+
+### Acceptance Criteria Verification Difficulty
+
+- 全AC にvalidな verify command が設定されており、UNCERTAIN ゼロ。rubric AC3 は merge完了後の CI log fetch という外部依存ロジックの意味的検証として特に有効だった。`command "bats tests/run-merge.bats"` は safe mode のため CI fallback 経由でPASS（"Run bats tests" SUCCESS）。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `_passed` parse に2ステップ grep を採用（CI log タイムスタンプ対策）
-- emit block は reconcile ブロック直後、`echo "---"` の前に配置（EXIT_CODE が確定した後）
-- bats mock で emit-event.sh を overwrite してファイル書き込み副作用を再現（no-op ではなく emit.log への追記）
+- MUST/SHOULDイシューなし → `COMMENT` event で PR Review投稿（`REQUEST_CHANGES` ではない）
+- CONSIDER 2件: null run_id guard、warning path テスト。いずれも skip 判断（稀なケース、実害なし）
+- Acceptance Criteria 全 5/5 PASS、CI 全 SUCCESS
 
 ### Deferred Items
-- `source=local` を run-auto-sub.sh の既存 emit に付与（本 Issue AC 範囲外）
-- CI workflow 名 `test.yml` のハードコード解消（設定化は別 Issue）
-- patch route での test_result CI 取得（scope 外）
+- null run_id guard 追加（CONSIDER level、本Issue scope外）
+- warning path regression test 追加（CONSIDER level、後続Issueで検討可）
+- post-merge AC (`verify-type: observation event=auto-run`) は次回 `/auto` 完走後に自動評価
 
 ### Notes for Next Phase
-- verify phase では rubric AC3 が重要な確認ポイント（semantic check）
-- bats テストは全 18 件 PASS 確認済み（既存回帰なし）
-- post-merge AC は `verify-type: observation event=auto-run` のため次回 `/auto` 完走後に自動評価
+- MUST イシューなし → merge をブロックする理由なし。`/merge 681` を直接実行可
+- Spec の verify command 品質は高く、verify phase での再実行もスムーズなはず
+- post-merge AC のみ未評価（observation待ち）のため verify 完了後に observation log 確認を推奨
