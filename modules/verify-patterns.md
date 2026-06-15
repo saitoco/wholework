@@ -468,7 +468,7 @@ When an Issue's artifact lives under a path managed by an external tool that com
 
 | Priority | Command | When to use |
 |----------|---------|-------------|
-| 1 (future) | `git_committed "<path>"` | Preferred once Issue #460 ships. Checks that the path appears in `git log` — resilient to async commit timing |
+| 1 | `git_committed "<path>"` | Recommended. PASS when path is tracked by git; resilient to async commit timing |
 | 2 (current) | `command "git ls-files --error-unmatch <path>"` | Available now. Exits non-zero if the path is not tracked by git; PASS means git knows about the file |
 | 3 (fallback) | `<!-- verify-type: manual -->` | Use when safe mode (`/review`) must not reach git — e.g., path is write-protected or git invocation is forbidden in the review environment |
 

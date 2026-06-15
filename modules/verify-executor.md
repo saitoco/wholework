@@ -58,6 +58,7 @@ The following information is passed from the caller:
 |---------------------|-----------|-----------|
 | `file_exists "path"` | If `PR_BRANCH` is set: run `git show origin/<PR_BRANCH>:<path>` — exit 0 → PASS, error (file absent in PR branch) → FAIL. If `PR_BRANCH` is not set: run `test -f "path"` in Bash (backward compatible). | `always_allow` |
 | `file_not_exists "path"` | If `PR_BRANCH` is set: run `git show origin/<PR_BRANCH>:<path>` — error (file deleted in PR branch) → PASS, exit 0 (file still exists) → FAIL. If `PR_BRANCH` is not set: run `test ! -f "path"` in Bash (backward compatible). | `always_allow` |
+| `git_committed "path"` | If `PR_BRANCH` is set: run `git show origin/<PR_BRANCH>:<path>` — exit 0 → PASS (file is tracked in PR branch), error → FAIL (file absent or untracked in PR branch). If `PR_BRANCH` is not set: run `git ls-files --error-unmatch -- "path"` in Bash — exit 0 → PASS (file is tracked by git), non-zero → FAIL (file absent or untracked). Local read-only git operation; no network access, no side effects. | `always_allow` |
 | `dir_exists "path"` | Run `test -d "path"` in Bash | `always_allow` |
 | `dir_not_exists "path"` | Run `test ! -d "path"` in Bash | `always_allow` |
 | `file_contains "path" "text"` | If `PR_BRANCH` is set: run `git show origin/<PR_BRANCH>:<path>` and search output for "text" — found → PASS, not found → FAIL, `git show` error (file deleted in PR branch) → FAIL. If `PR_BRANCH` is not set: search for "text" in "path" using Grep (backward compatible). | `always_allow` |
