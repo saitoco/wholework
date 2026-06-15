@@ -77,18 +77,32 @@ CURRENT_SYMPTOM と sym の両方を正規化することで、EXCLUDED_LIST と
 
 - None。初回実装で全 5 テスト PASS、forbidden expressions チェックも問題なし。
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- None. 実装は Spec の Implementation Steps を完全に踏襲。`CURRENT_SYMPTOM` と `sym` への sed 挿入箇所・パターン、fixture 内容（3エントリ）、bats アサーション（line_count=1, カウント=3, trailing context 非存在）すべてが Spec の記述と一致した。Spec 品質が高く、review フェーズで divergence を検出する余地がなかった。
+
+### Recurring Issues
+
+- None. 全4視点（Spec 整合・エッジケース・セキュリティ・ドキュメント整合性）で繰り返しパターンの issue なし。`elif` ブランチ内の `CURRENT_SYMPTOM` リセット（sed 未適用）は pre-existing コードで本 PR スコープ外。
+
+### Acceptance Criteria Verification Difficulty
+
+- None. AC1・AC2 ともに `rubric` + `grep` のデュアル verify command で PASS。UNCERTAINs なし。`rubric` グレーダーが adversarial stance で検証しても問題なし。Post-merge AC は `verify-type: manual` で適切にマーク済みであり、`/verify` 実行時に自動スキップされる。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- sed 末尾 strip を `CURRENT_SYMPTOM` と `sym` の両方に適用した（`EXCLUDED_LIST` と `SYMPTOM_LIST` の `grep -qxF` 一致を保つため）
-- strip 対象は末尾の `(...)` 1 つのみ（`$` アンカーで過剰集約を防止）
-- fixture は Specの設計通り 3 エントリ（bare, `(#576, 2nd in session)`, `(#523, #526)`）で正規化後カウント=3 を確認
+- REVIEW_DEPTH=light (`--light` フラグ と Size M の両方が light に収束)
+- 全 pre-merge AC が PASS、MUST/SHOULD/CONSIDER issues ゼロ
+- sed パターン `s/ ([^)]*) *$//` が文書化されたユースケース（`(#576, 2nd in session)`, `(#523, #526)`）を正しく処理することを rubric グレーダーで確認
 
 ### Deferred Items
-- Post-merge AC: 実際の `docs/reports/orchestration-recoveries.md` で `silent-no-op` 系3件が正しく集約されることを次回 `/audit recoveries` 実行時に手動確認
+- Post-merge AC: 次回 `/audit recoveries` 実行で `silent-no-op` 系3件が閾値を満たすことを手動確認
 
 ### Notes for Next Phase
-- 変更ファイルは `scripts/collect-recovery-candidates.sh`、`tests/audit-recoveries.bats`、`tests/fixtures/orchestration-recoveries-trailing.md` の 3 ファイル
-- 全テストスイート PASS 済み
-- `docs/structure.md` は変更不要（高レベル記述が正規化後も正確）
+- MUST issues なし、merge は直接 `/merge 659` で実行可能
+- 全 CI チェック SUCCESS (DCO, bats×2, validate-skill-syntax×2, forbidden-expressions×2, macOS-compat×2)
+- code phase の Phase Handoff 記録通り、全テストスイート PASS 済み
