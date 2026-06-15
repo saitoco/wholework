@@ -86,18 +86,18 @@
 - AC3・AC4 は CI 参照で PASS。verify command として適切な粒度だった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- SHOULD 指摘 (SKILL.md:728 根拠説明不正確) を修正してコミット — 同一 PR 内の自己矛盾を解消するために修正価値があると判断
-- CONSIDER 指摘 (reconcile-phase-state.sh:280 改行区切りなし) はスキップ — 実害が極めて低く Spec Phase Handoff でも想定内と判断済み
-- AC2 rubric は semantic check で LLM 判断 — 実装との整合が取れており PASS
+- PR #665 を squash merge で main にマージ — CI SUCCESS・全 57 bats テスト PASS・レビュー承認済みの状態でコンフリクトなし
+- Phase Handoff (merge) を Spec に追記して main に push — verify phase が参照できる状態に整備
 
 ### Deferred Items
-- PR Review body が空文字の場合と `|| true` 失敗ケースの bats テストカバレッジ不足（Spec Phase Handoff からの継続事項）
-- `_emit_result` のログメッセージ "found in PR #N comments" が PR Review scan 追加後も更新されていない（軽微なログ不正確さ）
+- post-merge 観察 AC: 次回 /auto 完走時に review phase の silent no-op (PR Review channel 誤用) が再発しないことを確認
+- PR Review body が空文字の場合と `|| true` 失敗ケースの bats テストカバレッジ不足（継続 deferred）
+- `_emit_result` ログメッセージ "found in PR #N comments" が PR Review scan 追加後も更新されていない（軽微）
 
 ### Notes for Next Phase
-- MUST 禁則の根拠説明を更新済みのため、merge 後の SKILL.md は整合的
-- 全 CI ジョブ SUCCESS、57 bats テスト PASS 確認済み
-- post-merge 観察 AC (silent no-op 再発なし) は次回 /auto 実行時に確認
+- Issue #663 は main マージで自動クローズ済み (closes #663)
+- SKILL.md の MUST 禁則根拠説明は review phase で修正済み —整合的な状態
+- verify phase では post-merge 観察 AC のみ残存 — 次回 /auto 実行時に自然に確認される
