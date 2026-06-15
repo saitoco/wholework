@@ -458,6 +458,46 @@ Fall back to `command "curl -sI URL 2>&1 | grep ..."` only when the service is c
    - Complete connection failure (no HTTP response) → use `command "curl -sI URL 2>&1 | grep ..."` with an appropriate pattern
 3. If the expected status code is uncertain at spec time, use `rubric "URL returns an error response (4xx or 5xx) after service shutdown"` and add `http_status` once the expected code is known
 
+### 15. Async External-Commit Area — Verify Command Patterns
+
+When an Issue's artifact lives under a path managed by an external tool that commits asynchronously (e.g., Obsidian Git, Logseq Sync, IDE auto-commit), `file_exists` is structurally weak: the file may be on disk but not yet committed, causing `file_exists` to return UNCERTAIN at `/verify` runtime.
+
+**Root cause**: `file_exists` checks only whether the file is present on disk. For external-tool-managed paths, the commit happens asynchronously and may not have landed by the time `/verify` runs — leading to UNCERTAIN results that resolve on re-run.
+
+**Recommended verify command priority (choose the highest available):**
+
+| Priority | Command | When to use |
+|----------|---------|-------------|
+| 1 (future) | `git_committed "<path>"` | Preferred once Issue #460 ships. Checks that the path appears in `git log` — resilient to async commit timing |
+| 2 (current) | `command "git ls-files --error-unmatch <path>"` | Available now. Exits non-zero if the path is not tracked by git; PASS means git knows about the file |
+| 3 (fallback) | `<!-- verify-type: manual -->` | Use when safe mode (`/review`) must not reach git — e.g., path is write-protected or git invocation is forbidden in the review environment |
+
+**Pattern to use today (`command` alternative):**
+
+```
+<!-- verify: command "git ls-files --error-unmatch vault/2024-11-15-standup.md" -->
+```
+
+`git ls-files --error-unmatch` exits 0 when the path is tracked, non-zero otherwise. Under full-mode verify (`/verify`), this is mechanically verified. Under safe-mode verify (`/review`), `command` hints become UNCERTAIN — apply priority 3 (`verify-type: manual`) as a fallback for safe mode.
+
+**Checkpoint for Spec/Issue authors:**
+
+Before writing verify commands for file-existence conditions, check:
+
+1. Is the artifact path under a directory managed by Obsidian, Logseq, an IDE auto-save, or any other tool that commits asynchronously?
+2. If yes: replace `file_exists "<path>"` with `command "git ls-files --error-unmatch <path>"` (or `git_committed` once Issue #460 is merged).
+3. If safe-mode (`/review`) compatibility is also required: add `<!-- verify-type: manual -->` as a supplementary fallback so reviewers know to check manually.
+
+**Example (before and after):**
+
+```
+❌ file_exists "vault/daily/2024-11-15.md"
+   → UNCERTAIN if Obsidian Git has not committed yet
+
+✅ command "git ls-files --error-unmatch vault/daily/2024-11-15.md"
+   → PASS when file is tracked by git; FAIL when absent or untracked
+```
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
