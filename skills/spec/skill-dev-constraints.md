@@ -75,6 +75,44 @@ SHOULD constraints (best practices, manual check — examples):
 | read-then-write jq guard | When describing read-then-write operations (using an existing file as input for writes), explicitly state the jq failure guard (e.g., `|| die "..."`) in Implementation Steps | #345 |
 | macOS system-level debug fallback | When implementation steps include macOS system-level debugging procedures (e.g., `fs_usage`, Console.app privacy logs) requiring interactive execution, explicitly state that `--non-interactive` mode uses static analysis + hypothesis evaluation as an alternative | #378 |
 | Design Gaps → Implementation Steps backfill | When recording specific implementation knowledge (variable names, call forms, parameter passing methods) in spec retrospective sections (e.g., `## Design Gaps/Ambiguities`, `## Implementation Notes`), also write it directly in the corresponding `## Implementation Steps` body. `code` and `review` phases follow Implementation Steps sequentially — knowledge recorded only in retrospective sections is structurally prone to being overlooked | #579 |
+| ブランチ分岐ロジックの挙動全列挙 | When defining a helper/watchdog/runner with `if`/`case` branch conditions in the Spec, enumerate all branches with 正常終了条件 / timeout 条件 / kill 条件 / error path / 各ブランチでの監視継続有無. Vague descriptions ("同様に処理", "適切にハンドル") are forbidden — specify concrete thresholds, timer values, and exit signals. See the section below for details | #642 |
+
+## ブランチ分岐ロジックの挙動全列挙
+
+When a Spec defines a helper script, watchdog, or runner that has `if`/`case` branches with different behaviors, enumerate all branches exhaustively. For each branch, specify:
+
+- **正常終了条件**: exact exit code, output format, and return value that indicates success
+- **timeout 条件**: timer source, threshold value in seconds, and action taken on timeout (signal, log message, exit code)
+- **kill 条件**: signal type (`SIGKILL`/`SIGTERM`/etc.), who sends it, and under what exact condition
+- **error path**: what is logged, what exit code is returned, and whether retry/restart occurs
+- **各ブランチでの監視継続有無**: whether the watchdog/monitoring loop continues after this branch executes
+
+### Anti-patterns
+
+The following vague expressions are **forbidden** in Spec branch definitions:
+
+| Forbidden expression | Reason | Required alternative |
+|----------------------|--------|----------------------|
+| 「同様に処理」 | Does not specify which conditions apply to this branch | List each condition individually per branch |
+| 「適切にハンドル」 | Leaves the handling undefined | Specify the exact signal, exit code, and log output |
+| 「必要に応じて」 | Makes the condition ambiguous | State the exact threshold or condition trigger |
+
+### Example — `claude-watchdog.sh` `OUTPUT_FORMAT_JSON` branch
+
+**Background (#630)**: `scripts/claude-watchdog.sh` has an `OUTPUT_FORMAT_JSON` branch added when extending auto event log metrics. The branch's kill 条件 was left as 「同様に処理」 in the Spec, resulting in a 1800s true hang and watchdog kill during the code phase.
+
+**Correct Spec form (after fix)**:
+
+```
+OUTPUT_FORMAT_JSON=1 branch of claude-watchdog.sh:
+- 正常終了条件: claude subprocess exits with code 0; JSON output is written to stdout
+- timeout 条件: WATCHDOG_TIMEOUT seconds (default 1800; overridable via WATCHDOG_TIMEOUT env var) elapsed since last stdout line; send SIGTERM to claude subprocess; exit 124
+- kill 条件: SIGTERM ignored for >10 seconds after timeout; send SIGKILL to claude subprocess; exit 137
+- error path: subprocess exits non-zero; pass exit code through; do not retry
+- 監視継続: No — watchdog exits after subprocess terminates in all branches
+```
+
+The fix also added a bats test that sets `WATCHDOG_TIMEOUT=2` to override the default, making the timeout path testable in CI without a 1800s wait.
 
 ## LLM-assisted Skill Phase Test Strategy
 
