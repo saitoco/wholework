@@ -74,3 +74,51 @@
 - 暫定対処: Python スクリプトで破損行を修復し再生成成功 (483 → 476 lines)
 - Auto-Resolved: AC2 verify command を `grep "_failed=.*$"` → `grep -E "_failed=.*(\|\| true|awk)"` に強化済み（旧パターンは修正前も `_failed=` が存在し常時 PASS になる false-positive のため）
 - 関連: #662 (ci_wait event 配線), #630 (event log 基盤), #654 (auto-session-report-published event)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. Spec の案 A (`|| true` + `:-0` fallback) をそのまま採用。案 B (awk) は不採用（Spec の推奨案 A の方がシンプルで bash 3.2+ 互換性も明確）。
+
+### Design Gaps/Ambiguities
+
+- `emit-event.sh` の `local` 変数宣言 (`local v_sanitized`) は bash 関数スコープ内での使用を前提にしており、sourceして使う使い方と整合していることを確認（emit_event() 内部で `local` を使う既存パターンに倣った）。
+
+### Rework
+
+- None. 実装は1パスで完了。
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- 構造的な乖離なし。Spec 案 A (`|| true` + `:-0` fallback) がそのまま実装されており、diff と Spec の対応は完全一致。
+- AC1〜4 の verify command は実装と正確に対応しており、FAIL や UNCERTAIN は発生しなかった。
+
+### Recurring Issues
+
+- 同種イシューの繰り返しはなし。CONSIDER 1 件（`\r` 未サニタイズ）は今回修正スコープ外の軽微なギャップ。
+- 今後 `emit-event.sh` に非数値 value を渡す呼び出し元が追加された場合に顕在化しうる。
+
+### Acceptance Criteria Verification Difficulty
+
+- 4 件の pre-merge AC すべてが自動検証成功（`grep` verify × 3 + CI 参照フォールバック × 1）。UNCERTAIN ゼロ。
+- AC2 は code phase で `grep -E "_failed=.*(\|\| true|awk)"` に強化済みで false-positive を回避できていた。verify command の精度は良好。
+- post-merge AC は observation 型（event=auto-run 待ち）で正常動作。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST イシューなし。CONSIDER 1 件（`\r` 未サニタイズ）はスコープ外として skip。
+- review-light モード（Size=M Bug）が適切だった。全 CI SUCCESS、全 AC PASS。
+- CI 参照フォールバック（bats verify command → "Run bats tests" SUCCESS）が正常に機能した。
+
+### Deferred Items
+- `\r` sanitization gap: 将来別呼び出し元が増えた場合の潜在リスク。必要に応じて Issue 起票。
+- post-merge observation AC: 次回 `/auto --batch` 完走後に `.tmp/auto-events.jsonl` を `jq -s . > /dev/null` でパース確認。
+
+### Notes for Next Phase
+- ブロッキングイシューなし。`/merge 680` 即時実行可能。
+- flaky テスト（`post_merge_check.bats` テスト 7）は今回の変更と無関係。merge に影響しない。

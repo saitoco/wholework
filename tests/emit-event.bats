@@ -78,3 +78,50 @@ teardown() {
     [[ "$line" == *'"event":"wrapper_exit"'* ]]
     [[ "$line" == *'"exit_code":"0"'* ]]
 }
+
+@test "emit_event sanitizes newline in value to produce parseable JSON (regression #678)" {
+    export TEST_VAL=$'0\n0'
+    bash -c "source \"$SCRIPT\" && emit_event \"ci_wait\" \"checks_failed=\${TEST_VAL}\""
+    run jq . "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    run jq -r '.checks_failed' "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    [[ "$output" == "00" ]]
+}
+
+@test "emit_event sanitizes tab in value" {
+    export TEST_VAL=$'value\ttab'
+    bash -c "source \"$SCRIPT\" && emit_event \"test_event\" \"key=\${TEST_VAL}\""
+    run jq . "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    run jq -r '.key' "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    [[ "$output" == "value tab" ]]
+}
+
+@test "emit_event sanitizes backslash in value" {
+    export TEST_VAL='value\backslash'
+    bash -c "source \"$SCRIPT\" && emit_event \"test_event\" \"key=\${TEST_VAL}\""
+    run jq . "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    run jq -r '.key' "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    [[ "$output" == 'value\backslash' ]]
+}
+
+@test "emit_event sanitizes double-quote in value" {
+    export TEST_VAL='value"quote'
+    bash -c "source \"$SCRIPT\" && emit_event \"test_event\" \"key=\${TEST_VAL}\""
+    run jq . "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    run jq -r '.key' "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    [[ "$output" == 'value"quote' ]]
+}
+
+@test "emit_event sanitizes combined control characters in value (regression #678)" {
+    export TEST_VAL=$'line1\nline2\ttab\\end"quote'
+    bash -c "source \"$SCRIPT\" && emit_event \"test_event\" \"key=\${TEST_VAL}\""
+    run jq . "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+}

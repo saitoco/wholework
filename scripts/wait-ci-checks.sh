@@ -31,8 +31,10 @@ if [[ "$_emit_ci_wait" == "true" ]]; then
   fi
   _ci_wait_end=$(date +%s)
   _wait_sec=$(( _ci_wait_end - _ci_wait_start ))
-  _passed=$(echo "${_ci_checks_output:-}" | grep -c -i "pass\|success" 2>/dev/null || echo 0)
-  _failed=$(echo "${_ci_checks_output:-}" | grep -c -i "fail\|error" 2>/dev/null || echo 0)
+  _passed=$(echo "${_ci_checks_output:-}" | grep -c -i "pass\|success" 2>/dev/null || true)
+  _passed=${_passed:-0}
+  _failed=$(echo "${_ci_checks_output:-}" | grep -c -i "fail\|error" 2>/dev/null || true)
+  _failed=${_failed:-0}
   emit_event "ci_wait" \
     "phase=${EMIT_PHASE_NAME:-review}" \
     "wait_sec=${_wait_sec}" \

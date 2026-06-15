@@ -189,3 +189,38 @@ MOCK
     grep -q "pr checks 88" "$GH_CALL_LOG"
     ! grep -q "\-\-required" "$GH_CALL_LOG"
 }
+
+@test "ci_wait: event JSON is parseable when gh output has no pass/success matches (regression #678)" {
+    EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events-nomatch.jsonl"
+    EMIT_DIR="$BATS_TEST_TMPDIR/emit-nomatch"
+    mkdir -p "$EMIT_DIR"
+    emit_event_src="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/emit-event.sh"
+    cp "$emit_event_src" "$EMIT_DIR/emit-event.sh"
+
+    # gh outputs text with no pass/success matches, causing grep -c to exit 1
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "checks" ]]; then
+    echo "pending: check1 waiting" >&2
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run env AUTO_EVENTS_LOG="$EVENTS_LOG" \
+      EMIT_ISSUE_NUMBER="88" \
+      EMIT_PHASE_NAME="review" \
+      WHOLEWORK_SCRIPT_DIR="$EMIT_DIR" \
+      PATH="$MOCK_DIR:$PATH" \
+      bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    [ -f "$EVENTS_LOG" ]
+    # Verify the JSONL line is parseable (no literal newlines embedded in values)
+    run jq . "$EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    # checks_passed must be a clean integer string, not "0\n0"
+    run jq -r '.checks_passed' "$EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ ^[0-9]+$ ]]
+}
