@@ -123,3 +123,33 @@
 - verify フェーズでは pre-merge AC（grep verify × 3 + bats × 1）が全 PASS 済みのため、post-merge AC（jq parse 確認）のみ確認すれば十分。
 - flaky テスト（`post_merge_check.bats` テスト 7）は本 Issue と無関係、verify に影響しない。
 - マージコミットは squash 済み、feature ブランチ（`worktree-code+issue-678`）は削除済み。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC 4 件すべて自動検証可能 (grep ERE × 3、command bats × 1)。triage 段階での AC2 修復提案（`grep "_failed=.*$"` → 修正版 pattern を狙う ERE）が verify で機能、常時 PASS 回避。
+
+#### spec
+- Spec で Size S→M に upgrade。`wait-ci-checks.sh` の 1 次修正 + `emit-event.sh` の 2 次防御 + bats edge case 5 件追加で M 相当と判断。CI-sensitive ルールにも合致。
+- 2 層防御 (sanitization at source + defensive at sink) の設計判断が verify で評価される構造に。
+
+#### code
+- 1 PR (#680) で完了。fixup なし。`emit-event.sh` の defensive sanitization は bash parameter expansion で newline/tab/backslash/double-quote の 4 種を escape する 4 行追加で実装。
+
+#### review
+- light review。MUST 0 件、SHOULD/CONSIDER 詳細は PR コメント参照。`\r` (carriage return) sanitization が不足する可能性あり (review で指摘) → 別 Issue 候補として Spec の Deferred Items に記録。
+
+#### merge
+- squash merge `--delete-branch` で main 統合。CI 全 SUCCESS、conflict なし。
+- 一時的に `post_merge_check.bats` テスト 7 件で flaky 観察 (本 Issue と無関係)。
+
+#### verify
+- 4/4 PASS (grep × 3、bats 25/25)。control character regression test 5 件全て PASS で本 bug の根本解決を確認。
+- 本 batch session 自体が修正版の wait-ci-checks.sh + emit-event.sh で動作する初セッション。次回 `/audit auto-session 98785-1781536815` 実行で JSON parse error 0 件確認可能。
+
+### Improvement Proposals
+- (CONSIDER) `\r` (carriage return) も sanitization 対象に追加 — review で指摘の通り Windows-style 改行や CI runner 出力に含まれうる。本 Issue スコープ外、別 Issue 候補。
+- (CONSIDER) `post_merge_check.bats` 7 件の flaky 原因を別 Issue で調査。本実装と無関係だが顕在化したため記録。
+
