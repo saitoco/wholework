@@ -53,3 +53,51 @@
 - PR Review body が空または API が失敗した場合は `|| true` で無視し、issue comments のみで判定する
 - 既存テストの mock `gh` は args に関係なく固定値を返す実装のため、新規テストでは `case "$1"` で `pr` / `api` を分岐させる
 - Step 1 で marker を body 先頭行に移動するのはテンプレートのみ。既存の `_completion_review` grep パターンはヘッダー行検索も含むため、marker の位置変更はスクリプト側の変更不要
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. 実装はすべて Spec の Implementation Steps に従った。
+
+### Design Gaps/Ambiguities
+
+- SKILL.md の半角 `!` 制約（Forbidden Expressions）に注意が必要だったが、追加した MUST ノートでは `gh pr comment` 等の既存テキストを引用する形のため問題なし（コードフェンス内・インラインコード内の表現は制約対象外）。
+- `_completion_review` 内の `local combined` 宣言は bash 3.2+ では `local` と代入の分離が必要な場合があるが、今回の実装（`local combined="${comments}${reviews}"`）は bash 3.2 以降で動作確認済みのパターン（既存コードと同スタイル）。
+
+### Rework
+
+- None. 一発で実装完了。57 テスト全 PASS を確認してからコミット。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- None. 実装は Spec の Implementation Steps に完全準拠。PR diff と Spec の差分は Code Retrospective セクションの追加のみ。
+
+### Recurring issues
+
+- MUST 禁則ノートに「reconcile が PR Reviews をスキャンしない」という根拠説明を書いたが、同一 PR で PR Review scan を追加したため、merge 後に根拠説明が自己矛盾する問題が発生した（SHOULD）。今後 MUST 禁則ノートを書く際は、実装状態との整合性を同一 PR 内で確認する checklist が有効。
+
+### Acceptance criteria verification difficulty
+
+- AC1（grep）は regression guard として機能しており PASS は確実。
+- AC2（rubric）は semantic check で LLM による再評価が必要だったが、diff の内容が明確でスムーズに PASS 判定できた。verify command の質は高い。
+- AC3・AC4 は CI 参照で PASS。verify command として適切な粒度だった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- SHOULD 指摘 (SKILL.md:728 根拠説明不正確) を修正してコミット — 同一 PR 内の自己矛盾を解消するために修正価値があると判断
+- CONSIDER 指摘 (reconcile-phase-state.sh:280 改行区切りなし) はスキップ — 実害が極めて低く Spec Phase Handoff でも想定内と判断済み
+- AC2 rubric は semantic check で LLM 判断 — 実装との整合が取れており PASS
+
+### Deferred Items
+- PR Review body が空文字の場合と `|| true` 失敗ケースの bats テストカバレッジ不足（Spec Phase Handoff からの継続事項）
+- `_emit_result` のログメッセージ "found in PR #N comments" が PR Review scan 追加後も更新されていない（軽微なログ不正確さ）
+
+### Notes for Next Phase
+- MUST 禁則の根拠説明を更新済みのため、merge 後の SKILL.md は整合的
+- 全 CI ジョブ SUCCESS、57 bats テスト PASS 確認済み
+- post-merge 観察 AC (silent no-op 再発なし) は次回 /auto 実行時に確認

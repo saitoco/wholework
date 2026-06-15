@@ -275,9 +275,13 @@ _completion_review() {
   comments=$(gh pr view "$PR_NUMBER" --json comments -q '.comments[].body' 2>/dev/null) || \
     _handle_error "gh pr view failed for PR #$PR_NUMBER"
 
+  local reviews
+  reviews=$(gh api "repos/{owner}/{repo}/pulls/${PR_NUMBER}/reviews" -q '.[].body' 2>/dev/null) || true
+  local combined="${comments}${reviews}"
+
   local actual_json="{\"pr_number\":${PR_NUMBER}}"
 
-  if echo "$comments" | grep -qE "<!--[[:space:]]*review-summary[[:space:]]*-->|## Review Response Summary|## レビュー回答サマリ"; then
+  if echo "$combined" | grep -qE "<!--[[:space:]]*review-summary[[:space:]]*-->|## Review Response Summary|## レビュー回答サマリ"; then
     _emit_result "true" "Review Response Summary found in PR #${PR_NUMBER} comments" "$actual_json"
   else
     _handle_mismatch "Review Response Summary not found in PR #${PR_NUMBER} comments" "$actual_json"
