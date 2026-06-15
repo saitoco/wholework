@@ -34,6 +34,7 @@ AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
 SESSION_ID=""
 OUTPUT_PATH=""
 NO_GITHUB=false
+ISSUE_BODY_DIR="${WHOLEWORK_ISSUE_BODY_DIR:-}"
 LIST_MODE=false
 SINCE_SPEC="24h"
 NARRATIVE_DRAFT_PATH=""
@@ -425,6 +426,93 @@ if [[ "$WALL_CLOCK" != "N/A" && "$ISSUES_PROCESSED" -gt 0 ]]; then
   fi
 fi
 
+# Verify-type breakdown for phase/verify residuals
+VERIFY_RESIDUALS_TABLE=""
+VERIFY_RESIDUALS_AGGREGATE=""
+VERIFY_RESIDUALS_TOTAL=0
+_total_obs=0
+_total_opp=0
+_total_manual=0
+_all_obs_events=""
+if [[ -n "$VERIFY_RESIDUALS" ]]; then
+  for _r in $VERIFY_RESIDUALS; do
+    VERIFY_RESIDUALS_TOTAL=$(( VERIFY_RESIDUALS_TOTAL + 1 ))
+    _body=""
+    _title=""
+    if [[ -n "$ISSUE_BODY_DIR" && -f "${ISSUE_BODY_DIR}/${_r}.md" ]]; then
+      _body=$(cat "${ISSUE_BODY_DIR}/${_r}.md")
+      _title="#${_r}"
+    elif [[ "$NO_GITHUB" == "false" ]]; then
+      _gh_json=$(gh issue view "$_r" --json body,title 2>/dev/null || echo '{}')
+      _body=$(echo "$_gh_json" | jq -r '.body // ""')
+      _title=$(echo "$_gh_json" | jq -r '.title // ""')
+    fi
+    _obs_count=0
+    _opp_count=0
+    _manual_count=0
+    _obs_events=""
+    _in_post_merge=false
+    while IFS= read -r _line; do
+      if echo "$_line" | grep -q "^### Post-merge"; then
+        _in_post_merge=true
+        continue
+      fi
+      if [[ "$_in_post_merge" == "true" ]] && echo "$_line" | grep -q "^### "; then
+        _in_post_merge=false
+        continue
+      fi
+      if [[ "$_in_post_merge" == "true" ]] && echo "$_line" | grep -qE "^- \[ \]"; then
+        if echo "$_line" | grep -qE "verify-type: observation event="; then
+          _evt=$(echo "$_line" | grep -oE "verify-type: observation event=[^ >]+" | sed 's/verify-type: observation event=//')
+          _obs_count=$(( _obs_count + 1 ))
+          if [[ -z "$_obs_events" ]]; then
+            _obs_events="$_evt"
+          else
+            _obs_events="${_obs_events},${_evt}"
+          fi
+        elif echo "$_line" | grep -qE "verify-type: opportunistic"; then
+          _opp_count=$(( _opp_count + 1 ))
+        else
+          _manual_count=$(( _manual_count + 1 ))
+        fi
+      fi
+    done <<< "$_body"
+    if [[ $_obs_count -eq 0 ]]; then
+      _obs_str="0"
+    else
+      _obs_str="${_obs_count} (event=${_obs_events})"
+    fi
+    _row="| #${_r} | ${_title:-#${_r}} | ${_obs_str} | ${_opp_count} | ${_manual_count} |"
+    if [[ -z "$VERIFY_RESIDUALS_TABLE" ]]; then
+      VERIFY_RESIDUALS_TABLE="$_row"
+    else
+      VERIFY_RESIDUALS_TABLE="${VERIFY_RESIDUALS_TABLE}
+${_row}"
+    fi
+    _total_obs=$(( _total_obs + _obs_count ))
+    _total_opp=$(( _total_opp + _opp_count ))
+    _total_manual=$(( _total_manual + _manual_count ))
+    if [[ -n "$_obs_events" ]]; then
+      if [[ -z "$_all_obs_events" ]]; then
+        _all_obs_events="$_obs_events"
+      else
+        _all_obs_events="${_all_obs_events},${_obs_events}"
+      fi
+    fi
+  done
+  if [[ -z "$VERIFY_RESIDUALS_TABLE" ]]; then
+    VERIFY_RESIDUALS_TABLE="| (none) | — | — | — | — |"
+  fi
+  if [[ $_total_obs -gt 0 && -n "$_all_obs_events" ]]; then
+    _obs_detail=" (event breakdown: ${_all_obs_events})"
+  else
+    _obs_detail=""
+  fi
+  VERIFY_RESIDUALS_AGGREGATE="- observation waiting: ${_total_obs}${_obs_detail}
+- opportunistic remaining: ${_total_opp}
+- manual waiting: ${_total_manual}"
+fi
+
 # Render the markdown report
 cat > "$OUTPUT_PATH" << REPORT_EOF
 # /auto Session Report — ${SESSION_ID}
@@ -465,13 +553,20 @@ ${RECOVERY_EVENTS}
 
 ## Verify Phase Residuals
 
-$(if [[ -z "$VERIFY_RESIDUALS" ]]; then
-  echo "(none)"
-else
-  for _r in $VERIFY_RESIDUALS; do
-    echo "- Issue #${_r}: phase/verify not completed"
-  done
-fi)
+$(
+  if [[ -z "$VERIFY_RESIDUALS" ]]; then
+    echo "(none)"
+  else
+    # verify-type breakdown: observation / opportunistic / manual
+    echo "Total: ${VERIFY_RESIDUALS_TOTAL} phase/verify remaining"
+    echo ""
+    echo "| Issue | Title | observation event=* | opportunistic | manual |"
+    echo "|---|---|---|---|---|"
+    printf '%s\n' "${VERIFY_RESIDUALS_TABLE}"
+    echo ""
+    printf '%s\n' "${VERIFY_RESIDUALS_AGGREGATE}"
+  fi
+)
 
 ## Concurrent Sessions Detected
 

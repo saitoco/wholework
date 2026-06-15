@@ -139,3 +139,44 @@ FIXTURE_EOF
     # Per-issue Notes must include at-risk annotation
     grep -q "within 600s of watchdog limit" "$OUTPUT_PATH"
 }
+
+@test "success: verify-type breakdown appears in Verify Phase Residuals section" {
+    # Issue 471: has verify phase_start but no phase_complete (residual)
+    # Issue 645: same
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-06-15T10:00:00Z","issue":471,"event":"sub_start","session_id":"abc-vtype","size":"M"}
+{"ts":"2026-06-15T10:01:00Z","issue":471,"event":"phase_start","session_id":"abc-vtype","phase":"verify"}
+{"ts":"2026-06-15T10:02:00Z","issue":645,"event":"sub_start","session_id":"abc-vtype","size":"M"}
+{"ts":"2026-06-15T10:03:00Z","issue":645,"event":"phase_start","session_id":"abc-vtype","phase":"verify"}
+FIXTURE_EOF
+
+    # Create issue body fixtures with verify-type markers in Post-merge section
+    mkdir -p "$BATS_TEST_TMPDIR/issue-bodies"
+    cat > "$BATS_TEST_TMPDIR/issue-bodies/471.md" << 'BODY_EOF'
+## Acceptance Criteria
+
+### Post-merge
+
+- [ ] Confirm next /auto run aggregates correctly <!-- verify-type: observation event=auto-run -->
+BODY_EOF
+
+    cat > "$BATS_TEST_TMPDIR/issue-bodies/645.md" << 'BODY_EOF'
+## Acceptance Criteria
+
+### Post-merge
+
+- [ ] Check opportunistic trigger fires <!-- verify-type: opportunistic -->
+- [ ] Manual review of output format <!-- verify-type: manual -->
+BODY_EOF
+
+    export WHOLEWORK_ISSUE_BODY_DIR="$BATS_TEST_TMPDIR/issue-bodies"
+    run bash "$SCRIPT" "abc-vtype" --output "$OUTPUT_PATH" --no-github
+    [ "$status" -eq 0 ]
+    [ -f "$OUTPUT_PATH" ]
+
+    grep -q "Verify Phase Residuals" "$OUTPUT_PATH"
+    grep -q "observation" "$OUTPUT_PATH"
+    grep -q "opportunistic" "$OUTPUT_PATH"
+    grep -q "#471" "$OUTPUT_PATH"
+    grep -q "auto-run" "$OUTPUT_PATH"
+}

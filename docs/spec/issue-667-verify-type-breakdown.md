@@ -92,7 +92,7 @@
 
 ### Pre-merge
 
-- <!-- verify: grep "observation\|opportunistic\|manual" "scripts/get-auto-session-report.sh" --> verify-type 分類ロジックが実装されている
+- <!-- verify: grep "observation|opportunistic|manual" "scripts/get-auto-session-report.sh" --> verify-type 分類ロジックが実装されている
 - <!-- verify: grep "Verify Phase Residuals" "scripts/get-auto-session-report.sh" --> セクション heading が維持されている
 - <!-- verify: command "bats tests/audit-auto-session.bats" --> bats テストが green (verify-type fixture を追加)
 - <!-- verify: rubric "Verify Phase Residuals section shows per-issue verify-type breakdown table (observation event=*, opportunistic, manual columns) and aggregate counts matching /audit stats Section 7 conventions" --> rubric 基準を満たす
@@ -108,3 +108,46 @@
 - `--no-github` かつ `WHOLEWORK_ISSUE_BODY_DIR` 未設定の場合: body 空文字扱い → per-type カウントはすべて 0 (`—` ではなく 0 を表示。テーブル構造を維持する)
 - observation の event 別内訳は文字列連結で構築 (bash 3.2+ で associative array 不使用)
 - 既存の `VERIFY_REMAINING` (GitHub labels から算出) とは別のカウント。`VERIFY_RESIDUALS` はイベントログから算出
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の heredoc 出力で `printf '%s\n'` を使用。`printf '%s'` では末尾改行が欠けてテーブル行が次の行と結合するため改行付きに変更した。
+
+### Design Gaps/Ambiguities
+
+- Spec AC #1 の `grep "observation\|opportunistic\|manual"` は BRE 記法 (`\|`) を使用しており、ERE (ripgrep) では literal `|` として扱われ false FAIL になる。実装後に miscalibrated と判定し `observation|opportunistic|manual`（bare pipe）に修正した。
+
+### Rework
+
+- None
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec の heredoc 内で `printf '%s'` と記述したが実装は `printf '%s\n'` を採用。Code Retrospective に記録済み。今後 Spec 記述時は `printf` の末尾改行有無を明示すると divergence が防げる。
+
+### Recurring issues
+
+- Nothing to note. AC の verify command ERE/BRE 誤記 (BRE `\|` を ERE 文脈で使用) は Code Retrospective に記録済み。発生源は Spec 記述時のレギュラー表現フレーバー未確認。grep verify command は常に ERE として記述する慣習の徹底で再発防止可能。
+
+### Acceptance criteria verification difficulty
+
+- すべての AC が PASS または POST-MERGE で、UNCERTAIN なし。`command "bats ..."` は safe モードで CI 代替検証が成立 (CI ジョブ "Run bats tests" SUCCESS)。verify command の品質は良好。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST issues なし。Step 12 スキップ。Step 13 スキップ (ポリシー変更なし)。
+- 全 pre-merge AC PASS、全 CI ジョブ SUCCESS で merge 可能と判定。
+
+### Deferred Items
+- Post-merge observation AC: 次回 `/auto` 完走後に `## Verify Phase Residuals` セクションが期待通り集計されることを確認 (event=auto-run)
+- 複数 event 重複除去 (event=auto-run,auto-run 問題) は引き続き未解決 — Phase Handoff code から引継ぎ
+
+### Notes for Next Phase
+- No MUST/SHOULD/CONSIDER issues found — merge は `/merge 676` で即時実行可能
+- Post-merge observation AC が残っているため `/verify 667` で最終確認が必要
