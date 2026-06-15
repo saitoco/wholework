@@ -53,21 +53,21 @@
 - None: 一発実装で bats 853 件全 PASS。skill syntax validation・forbidden expressions check も PASS。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- AC #1〜#3 は grep/file_contains で PASS。rubric AC #4 は `/review` 内の AI 判定で PASS（PR ブランチからファイル内容を読み込んで評価）。
-- 外部レビューツール（Copilot/Claude Code Review/CodeRabbit）は未設定のため Step 7 をスキップした。
-- REVIEW_DEPTH=light（`--light` フラグ指定）で review-light 相当の全4アスペクトを実行。MUST/SHOULD 指摘なし。
+- PR #682 は mergeable=true（CI success / review approved）でコンフリクトなし。スカッシュマージを即時実行。
+- base branch は `main` なので `closes #675` による Issue 自動クローズが有効。
+- 非インタラクティブモードで実行。AskUserQuestion なし、すべて自動解決。
 
 ### Deferred Items
-- post-merge の実際の挙動確認（`/issue` または `/spec` 実行で BRE 警告が出るか）は `verify-type: opportunistic` で次回実行時に観測。
-- CONSIDER: ERE リテラル `|` マッチ目的の verify command に対して誤検出警告が発生しうる（極めて稀）。
+- post-merge verify: opportunistic（次回 `/issue` または `/spec` 実行で BRE pattern 含む verify command が AC にあった際に警告が表示されるか観測）。
+- CONSIDER: ERE リテラル `|` マッチ目的の verify command に対して誤検出警告が発生しうる（極めて稀、許容範囲）。
 
 ### Notes for Next Phase
-- MUST 指摘なし。全 CI 成功。`/merge 682` で main にマージ可能。
-- PR ブランチ: `worktree-code+issue-675` → base `main`。
-- post-merge verify: opportunistic（次回 `/issue` または `/spec` 実行時に観測）。
+- `/verify 675` を実行して post-merge verify command を確認すること。
+- post-merge 条件は `verify-type: opportunistic` なので、verify skill 実行時に通常の verify command はなし（opportunistic フラグとして扱う）。
+- 全 pre-merge AC は PR マージ前に PASS 確認済み。
 
 ## review retrospective
 
