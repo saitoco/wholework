@@ -187,6 +187,7 @@ Issue 本文の "Scope" または "Acceptance Criteria" セクションに以下
 | 変数 | デフォルト | 説明 |
 |----------|---------|-------------|
 | `WHOLEWORK_CI_TIMEOUT_SEC` | `1200` | `wait-ci-checks.sh` の最大待機時間（秒）。タイムアウト挙動をテストするときは低い値（例: `60`）に設定する |
+| `WHOLEWORK_CONFIG_PATH` | *(未設定)* | `scripts/get-config-value.sh` が参照する設定ファイルパスを上書きする。設定されている場合、CWD 相対 `.wholework.yml` の代わりに指定したパスを読む。BATS テストでは `/dev/null` を設定してデフォルト値を強制できる。未設定または空の場合は `.wholework.yml`（CWD 相対）にフォールバックする |
 
 ## Gotchas
 

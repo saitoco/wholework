@@ -55,8 +55,9 @@ fi
 KEY="$1"
 DEFAULT="${2:-}"
 
-# Locate .wholework.yml relative to the current working directory
-CONFIG_FILE=".wholework.yml"
+# Locate .wholework.yml relative to the current working directory.
+# WHOLEWORK_CONFIG_PATH env override allows tests to redirect to a custom path.
+CONFIG_FILE="${WHOLEWORK_CONFIG_PATH:-.wholework.yml}"
 
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "$DEFAULT"

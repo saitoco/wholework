@@ -131,3 +131,31 @@ EOF
     [ "$status" -eq 0 ]
     [ "$output" = "https://example.com" ]
 }
+
+@test "WHOLEWORK_CONFIG_PATH: custom path is used when set" {
+    custom_config="$BATS_TEST_TMPDIR/custom-config.yml"
+    echo 'spec-path: custom/from-env' > "$custom_config"
+    export WHOLEWORK_CONFIG_PATH="$custom_config"
+    run bash "$SCRIPT" spec-path "docs/spec"
+    unset WHOLEWORK_CONFIG_PATH
+    [ "$status" -eq 0 ]
+    [ "$output" = "custom/from-env" ]
+}
+
+@test "WHOLEWORK_CONFIG_PATH: falls back to default when path is non-regular file" {
+    export WHOLEWORK_CONFIG_PATH="/dev/null"
+    run bash "$SCRIPT" spec-path "docs/spec"
+    unset WHOLEWORK_CONFIG_PATH
+    [ "$status" -eq 0 ]
+    [ "$output" = "docs/spec" ]
+}
+
+@test "WHOLEWORK_CONFIG_PATH: reads CWD .wholework.yml when unset" {
+    cat > .wholework.yml << 'EOF'
+spec-path: from-cwd-config
+EOF
+    unset WHOLEWORK_CONFIG_PATH
+    run bash "$SCRIPT" spec-path "docs/spec"
+    [ "$status" -eq 0 ]
+    [ "$output" = "from-cwd-config" ]
+}

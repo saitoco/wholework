@@ -200,6 +200,7 @@ In gradual migration, there is a period where deprecated terms remain in the sam
 |----------|---------|-------------|
 | `WHOLEWORK_CI_TIMEOUT_SEC` | `1200` | Maximum wait time in seconds for `wait-ci-checks.sh`. Set to a lower value (e.g., `60`) to test timeout behavior. |
 | `WHOLEWORK_SCRIPT_DIR` | *(auto-resolved)* | Override the `SCRIPT_DIR` used by `scripts/*.sh` when resolving sibling helpers. Used in BATS tests to redirect calls to a mock directory. In production, leave unset (auto-resolves to the script's own directory). |
+| `WHOLEWORK_CONFIG_PATH` | *(unset)* | Override the config file path used by `scripts/get-config-value.sh`. When set, the script reads the specified path instead of CWD-relative `.wholework.yml`. Set to `/dev/null` in BATS tests to force default values. When unset or empty, falls back to `.wholework.yml` (CWD-relative). |
 
 ## Gotchas
 
