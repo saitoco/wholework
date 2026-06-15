@@ -62,3 +62,33 @@ symptom-short を抽出する際に末尾の `(...)` を sed で strip して正
 ### 変数代入の方向
 
 CURRENT_SYMPTOM と sym の両方を正規化することで、EXCLUDED_LIST と SYMPTOM_LIST の比較が `grep -qxF` の exact match で一致するよう保つ。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None。Spec のImplementation Steps に記載された2箇所の sed 挿入、fixture 作成、bats テスト追加をすべてそのまま実装した。
+
+### Design Gaps/Ambiguities
+
+- None。Spec Notes の sed パターン (`s/ ([^)]*) *$//`) とその動作説明が明確で、実装中に解釈の迷いは生じなかった。
+
+### Rework
+
+- None。初回実装で全 5 テスト PASS、forbidden expressions チェックも問題なし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- sed 末尾 strip を `CURRENT_SYMPTOM` と `sym` の両方に適用した（`EXCLUDED_LIST` と `SYMPTOM_LIST` の `grep -qxF` 一致を保つため）
+- strip 対象は末尾の `(...)` 1 つのみ（`$` アンカーで過剰集約を防止）
+- fixture は Specの設計通り 3 エントリ（bare, `(#576, 2nd in session)`, `(#523, #526)`）で正規化後カウント=3 を確認
+
+### Deferred Items
+- Post-merge AC: 実際の `docs/reports/orchestration-recoveries.md` で `silent-no-op` 系3件が正しく集約されることを次回 `/audit recoveries` 実行時に手動確認
+
+### Notes for Next Phase
+- 変更ファイルは `scripts/collect-recovery-candidates.sh`、`tests/audit-recoveries.bats`、`tests/fixtures/orchestration-recoveries-trailing.md` の 3 ファイル
+- 全テストスイート PASS 済み
+- `docs/structure.md` は変更不要（高レベル記述が正規化後も正確）
