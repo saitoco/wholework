@@ -69,18 +69,32 @@
 
 - N/A（設計通り実装できた。テストは一発 PASS）
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+`modules/observation-trigger.md` の Emitter Lookup Table（line 66）が PR によって更新されていなかった。`Future Extension` セクションは「実装済み #656」に更新されていたが、テーブル行だけが「(future)」「not yet implemented」のままで残り、同一ファイル内で矛盾が生じた。Spec には「`modules/observation-trigger.md` の Future Extension 節を更新」と記載されていたが、テーブル行の更新は Spec に明示されていなかったため、実装者が見落としたと考えられる。Spec に変更ファイルの具体的な更新箇所（節名だけでなく行レベルで）を記載することで防げた。
+
+### Recurring Issues
+
+今回の review では SHOULD 1件、CONSIDER 1件のみ。MUST 0件。パターンの繰り返しは見られなかった。Nothing to note.
+
+### Acceptance Criteria Verification Difficulty
+
+全9件の verify command が PASS。`github_check "gh pr checks" "Run bats tests"` は safe mode で CI 結果を参照でき、問題なく PASS を判定できた。`file_exists`・`grep` 系はすべて明確。UNCERTAIN 0件。ファイル内の特定行の更新を検証する verify command（`section_contains` 等）があれば Emitter Lookup Table の stale entry を事前検知できたかもしれない。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `observation-trigger.sh` は comment-posting dispatch のみ（AI judgment なし）: Spec auto-resolve #1/#2 に従いシンプルな shell-only 実装を採用。`run-verify.sh` が存在しないためシェルからの `/verify` spawn は不可。
-- emitter 統合は one-liner 置き換え: `/review`・`/auto` のインライン処理（AI judgment + checkbox update）は削除し、`observation-trigger.sh` 呼び出し一行に統一。
-- `verify/SKILL.md` への `fix-cycle` 追加: `gh issue reopen` 直後に配線し、CLOSED→OPEN 遷移時のみ発火する形を維持（OPEN 時の reopen スキップ branch にはない）。
+- `modules/observation-trigger.md` の Emitter Lookup Table line 66 を修正（SHOULD 対応）: review フェーズで検出した stale entry（"/verify skill (future)"）を "implemented in #656" に更新して push した。
+- `--dry-run` 意味論の曖昧さ（CONSIDER）はスキップ: line 66 の更新で主要な混乱は解消され、追加注記は任意レベルと判断。
+- 受け入れ基準は全9件 PASS、CI も全 SUCCESS。MUST issues なし。
 
 ### Deferred Items
-- AI judgment による observation AC チェックボックス自動更新は削除された（follow-up 候補）。comment-posting のみでユーザー手動 `/verify` 再実行が必要。
-- `gh issue comment` のメッセージ内容（英語）の最終化は review フェーズで確認。
+- AI judgment による observation AC チェックボックス自動更新（comment-posting から upgrade）は引き続き follow-up 候補。
+- `observation-trigger.sh` の `--dry-run` と `opportunistic-search.sh` の `--dry-run` の意味論差の明示的な文書化（CONSIDER）は今後任意で対応。
 
 ### Notes for Next Phase
-- bats テスト 8件は全 PASS、SKILL.md syntax validation も OK。CI (bats CI run) は PR #671 で確認。
-- `ISSUE_STATE` が `OPEN` の場合（`gh issue reopen` は実行されない）の `fix-cycle` 発火パスは verify/SKILL.md では配線されていないが、これは Spec の "CLOSED 時のみ reopen" 設計に準拠。必要なら別途検討。
+- MUST issues なし → `/merge 671` で merge 可能。
+- Emitter Lookup Table の修正コミット（9e178e7）が branch に push 済み。
