@@ -23,6 +23,12 @@ set -euo pipefail
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 [[ -f "$SCRIPT_DIR/emit-event.sh" ]] && source "$SCRIPT_DIR/emit-event.sh" || true
+[[ -f "$SCRIPT_DIR/watchdog-defaults.sh" ]] && source "$SCRIPT_DIR/watchdog-defaults.sh" || true
+SILENT_MARGIN=600
+SILENT_THRESHOLD_SPEC=$(( ${WATCHDOG_TIMEOUT_SPEC_DEFAULT:-1800} - SILENT_MARGIN ))
+SILENT_THRESHOLD_CODE=$(( ${WATCHDOG_TIMEOUT_CODE_DEFAULT:-1800} - SILENT_MARGIN ))
+SILENT_THRESHOLD_REVIEW=$(( ${WATCHDOG_TIMEOUT_REVIEW_DEFAULT:-2000} - SILENT_MARGIN ))
+SILENT_THRESHOLD_ISSUE=$(( ${WATCHDOG_TIMEOUT_ISSUE_DEFAULT:-1200} - SILENT_MARGIN ))
 AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
 
 SESSION_ID=""
@@ -189,6 +195,31 @@ MAX_SILENT=$(echo "$EVENTS_JSON" | jq -r '
   if length == 0 then "N/A" else max | tostring + "s" end
 ' 2>/dev/null || echo "N/A")
 
+# Phase silent window breakdown (merge excluded: WATCHDOG_TIMEOUT_MERGE_DEFAULT - SILENT_MARGIN = 0)
+PHASE_SILENT_BREAKDOWN=$(echo "$EVENTS_JSON" | jq -r \
+  --argjson t_spec "$SILENT_THRESHOLD_SPEC" \
+  --argjson t_code "$SILENT_THRESHOLD_CODE" \
+  --argjson t_review "$SILENT_THRESHOLD_REVIEW" \
+  --argjson t_issue "$SILENT_THRESHOLD_ISSUE" \
+  '
+  [.[] |
+    select(.event == "max_silent_window" and .phase != null and .phase != "merge") |
+    (if .phase == "spec" then $t_spec
+     elif .phase == "code" then $t_code
+     elif .phase == "review" then $t_review
+     elif .phase == "issue" then $t_issue
+     else -1 end) as $at_risk_limit |
+    select($at_risk_limit > 0 and ((.max_sec | tonumber) > $at_risk_limit)) |
+    .phase
+  ] |
+  if length == 0 then "0"
+  else
+    (length) as $total |
+    (group_by(.) | map(.[0] + ":" + (length | tostring))) as $parts |
+    "\($total) (" + ($parts | join(", ")) + ")"
+  end
+' 2>/dev/null || echo "0")
+
 # Token usage totals (R1 metric; N/A if not present)
 TOKEN_INPUT=$(echo "$EVENTS_JSON" | jq '
   [.[] | select(.event == "token_usage") | .input_tokens | tonumber] |
@@ -276,7 +307,33 @@ for _num in $ISSUE_NUMS_FOR_TABLE; do
   _size_refresh=$(echo "$_issue_events" | jq -r '[.[] | select(.event == "size_refresh")] | first | if . == null then "" else "Size " + .from + "→" + .to end' 2>/dev/null || true)
   [[ -n "$_size_refresh" ]] && _notes_parts+=("$_size_refresh")
   _max_silent=$(echo "$_issue_events" | jq -r '[.[] | select(.event == "max_silent_window") | .max_sec | tonumber] | if length == 0 then 0 else max end' 2>/dev/null || echo 0)
-  [[ "$_max_silent" -gt 600 ]] && _notes_parts+=("Silent ${_max_silent}s")
+  _at_risk_silent=$(echo "$_issue_events" | jq -r \
+    --argjson t_spec "$SILENT_THRESHOLD_SPEC" \
+    --argjson t_code "$SILENT_THRESHOLD_CODE" \
+    --argjson t_review "$SILENT_THRESHOLD_REVIEW" \
+    --argjson t_issue "$SILENT_THRESHOLD_ISSUE" \
+    '
+    [.[] |
+      select(.event == "max_silent_window" and .phase != null and .phase != "merge") |
+      (if .phase == "spec" then $t_spec
+       elif .phase == "code" then $t_code
+       elif .phase == "review" then $t_review
+       elif .phase == "issue" then $t_issue
+       else -1 end) as $at_risk_limit |
+      select($at_risk_limit > 0 and ((.max_sec | tonumber) > $at_risk_limit)) |
+      {phase: .phase, max_sec: (.max_sec | tonumber)}
+    ] |
+    if length == 0 then ""
+    else
+      (max_by(.max_sec)) as $worst |
+      "Silent \($worst.max_sec)s phase=\($worst.phase) (within 600s of watchdog limit)"
+    end
+  ' 2>/dev/null || echo "")
+  if [[ -n "$_at_risk_silent" ]]; then
+    _notes_parts+=("$_at_risk_silent")
+  elif [[ "$_max_silent" -gt 600 ]]; then
+    _notes_parts+=("Silent ${_max_silent}s")
+  fi
   _tier3=$(echo "$_issue_events" | jq -r '[.[] | select(.event == "recovery" and .tier == "3")] | length' 2>/dev/null || echo 0)
   [[ "$_tier3" -gt 0 ]] && _notes_parts+=("Tier 3 recover")
   _concurrent_for_issue=$(echo "$_issue_events" | jq -r '[.[] | select(.event == "concurrent_commit_detected")] | length' 2>/dev/null || echo 0)
@@ -388,6 +445,7 @@ cat > "$OUTPUT_PATH" << REPORT_EOF
 | Tier 1/2/3 recoveries | ${RECOVERY_COUNTS} |
 | Watchdog kills | ${WATCHDOG_KILLS} |
 | Max silent window (any phase) | ${MAX_SILENT} |
+| Phase silent windows > threshold | ${PHASE_SILENT_BREAKDOWN} |
 | Total token usage | ${TOKEN_USAGE} |
 | Concurrent commits detected | ${CONCURRENT_COMMITS} |
 | Parent session manual interventions | ${MANUAL_INTERVENTIONS} |

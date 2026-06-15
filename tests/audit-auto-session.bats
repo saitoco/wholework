@@ -116,3 +116,26 @@ FIXTURE_EOF
     grep -q "backfilled" "$OUTPUT_PATH"
     grep -q "Backfilled phase_complete events" "$OUTPUT_PATH"
 }
+
+@test "success: phase silent window threshold violation appears in Summary and Notes" {
+    # spec phase: WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800, SILENT_MARGIN=600, threshold=1200
+    # max_sec=1500 > 1200 => violation
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-06-15T10:00:00Z","issue":500,"event":"sub_start","session_id":"abc-666","size":"M"}
+{"ts":"2026-06-15T10:00:01Z","issue":500,"event":"phase_start","session_id":"abc-666","phase":"spec"}
+{"ts":"2026-06-15T10:25:00Z","issue":500,"event":"max_silent_window","session_id":"abc-666","phase":"spec","max_sec":1500}
+{"ts":"2026-06-15T10:25:01Z","issue":500,"event":"phase_complete","session_id":"abc-666","phase":"spec"}
+{"ts":"2026-06-15T10:25:02Z","issue":500,"event":"sub_complete","session_id":"abc-666","exit_code":"0"}
+FIXTURE_EOF
+
+    run bash "$SCRIPT" "abc-666" --output "$OUTPUT_PATH" --no-github
+    [ "$status" -eq 0 ]
+    [ -f "$OUTPUT_PATH" ]
+
+    # Summary row must be present
+    grep -q "Phase silent windows" "$OUTPUT_PATH"
+    # Phase breakdown must show spec:1 (1 violation in spec phase)
+    grep -q "spec:1" "$OUTPUT_PATH"
+    # Per-issue Notes must include at-risk annotation
+    grep -q "within 600s of watchdog limit" "$OUTPUT_PATH"
+}
