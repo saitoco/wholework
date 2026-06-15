@@ -572,13 +572,11 @@ emit_event() {
 }
 MOCK
 
-    # Make run-code.sh write bats output to its log file
-    cat > "$MOCK_DIR/run-code.sh" <<MOCK
+    # run-code.sh echoes bats output to stdout; run-auto-sub.sh captures it
+    # into .tmp/wrapper-out-42-code-patch.log (XS route -> code-patch phase)
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
 #!/bin/bash
-# The log is captured by run-auto-sub.sh into .tmp/wrapper-out-42-code.log
-# We write directly there for the test
-mkdir -p .tmp
-echo "17 tests, 0 failures" > ".tmp/wrapper-out-42-code.log"
+echo "17 tests, 0 failures"
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/run-code.sh"
@@ -599,8 +597,7 @@ MOCK
 
     run bash "$SCRIPT" 42
     [ "$status" -eq 0 ]
-    grep -q "test_result" "$BATS_TEST_TMPDIR/emit.log" 2>/dev/null || \
-      skip "test_result event not logged (emit mock not capturing)"
+    grep -q "test_result" "$BATS_TEST_TMPDIR/emit.log"
 }
 
 @test "concurrent_commit_detected: emit_event called when git log returns commits" {
