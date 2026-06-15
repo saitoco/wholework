@@ -120,21 +120,23 @@
 - None — tests passed on first attempt (4/4 PASS).
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Event schema added as bash comment documentation (not a validation function) — simplest approach consistent with the existing `emit-event.sh` style.
-- `verify_reopen_cycle` emit uses inline `printf` JSON write (not `source emit-event.sh`) in `skills/verify/SKILL.md` — avoids shell source dependency in Skill context; locking omitted since verify runs serially per issue.
-- Emit guard: both `AUTO_EVENTS_LOG` and `AUTO_SESSION_ID` must be set — prevents emit noise in standalone `/verify` runs.
+- REVIEW_DEPTH=light (--light flag; consistent with Size=M).
+- No external review tools configured — copilot/claude-code-review/coderabbit all false; Step 7 skipped.
+- One CONSIDER finding identified: `verify_reopen_cycle` emit fires for OPEN-state issues (no actual reopen), potentially inflating the counter. Posted as inline comment; not blocking.
+- AC6 rubric evaluated to PASS in review phase — no further deferral needed.
 
 ### Deferred Items
-- `manual_intervention` actual emit wiring (flag-file detection in wrapper scripts) is explicitly out of scope per Spec Notes — separate follow-up Issue.
-- AC6 rubric check (`Generated Summary table includes...`) deferred to `/verify` phase for full-mode verification.
+- CONSIDER finding (emit placement for OPEN-state issues): deferred to follow-up issue or post-merge cleanup. Not blocking merge.
+- Post-merge AC (`verify-type: observation event=auto-run`) remains pending next `/auto` run.
 
 ### Notes for Next Phase
-- All 6 pre-merge grep ACs already verified and checkboxes updated (except AC6 rubric, which requires post-merge observation context in `/verify`).
-- `bats tests/audit-auto-session.bats` passes 4/4. Full suite passes 829/829.
-- Post-merge AC is `verify-type: observation event=auto-run` — will fire after next `/auto` run; no action needed immediately.
+- All 7 pre-merge ACs are PASS (including AC6 rubric).
+- CI fully green: DCO, Run bats tests, Validate skill syntax, Forbidden Expressions check, macOS shell compatibility — all SUCCESS.
+- No MUST/SHOULD issues — proceed with `/merge 661`.
+- CONSIDER finding posted as PR line comment on `skills/verify/SKILL.md:447`.
 
 ## Notes
 
@@ -152,3 +154,17 @@
 ### Improvement Proposals
 - Standardize the review skill (`skills/review/SKILL.md`) summary posting channel from "PR Review submission" to "PR issue comment with `<!-- review-summary -->` marker"; or extend `reconcile-phase-state.sh _completion_review` to also scan PR Review bodies (`gh api repos/{owner}/{repo}/pulls/{N}/reviews`). The former is lower-cost and aligns with the existing marker SSoT.
 - Add an explicit `<!-- review-summary -->` marker-mandatory note to the review skill prompt to suppress LLM omission.
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- None. All 5 Spec implementation steps were present and correctly transcribed. Spec accurately reflected the final implementation approach (inline printf, AUTO_EVENTS_LOG/AUTO_SESSION_ID guard, jq `|| echo 0` degradation).
+
+### Recurring Issues
+
+- One CONSIDER finding: `verify_reopen_cycle` emit is placed in the NEXT_ITERATION < MAX branch (outer level), not scoped to the CLOSED-state reopen sub-case. This means it fires even when the issue was already OPEN (no actual reopen), inflating the counter. The Spec and Issue AC did not specify this guard — an improvement opportunity for the emit placement design in follow-up issues that extend the event schema.
+
+### Acceptance Criteria Verification Difficulty
+
+- All 7 pre-merge ACs were verifiable: 5 grep (trivially verifiable), 1 rubric (PASS — Summary table rows confirmed in diff), 1 bats via CI reference fallback (CI job "Run bats tests" SUCCESS). No UNCERTAINs. Verify commands are well-calibrated for this Issue.
