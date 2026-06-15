@@ -42,3 +42,32 @@
 
 - AC2 は `rubric` と `file_contains` の 2 つの verify command を持つ。`best-effort` という文字列は Step 2 の挿入テキストに含まれるため、`file_contains` で確実に検証できる。`rubric` は意味的な best-effort 記述の確認を担う。
 - 挿入位置は Step 5 末尾の observation trigger 直後（`Run ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run` の後）。`### Step 6` の直前に追加することで Step 6 の Failure ハンドラとの境界が明確になる。
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- None
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `allowed-tools` に `auto-events-rollup.sh:*` を `observation-trigger.sh:*` の直後に挿入した（Spec 指定通り）
+- rollup 呼び出しは Step 5 末尾の observation scan 直後、`### Step 6` 直前に配置（Step 6 Failure ハンドラとの境界を明確化）
+- best-effort 記述は「If the command fails, output "Warning: auto-events-rollup failed. Session will continue." and proceed without blocking.」で表現
+
+### Deferred Items
+- session_id フィルタリングは不要と判断（Issue の自動解決済み曖昧ポイントに記載通り）
+- `--cleanup` は手動操作のまま（実装に含まない）
+- Post-merge AC（rollup ファイル生成確認）は manual verify のまま
+
+### Notes for Next Phase
+- 全 pre-merge AC が PASS 済み（チェックボックス更新済み）
+- テスト全 PASS（bats 846 件）、SKILL.md 構文検証 OK、禁止表現チェック OK
+- verify フェーズでは rubric AC の意味的検証が残っている
