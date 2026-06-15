@@ -65,3 +65,31 @@
 - 既存テストの `gh` モック追加が必要な理由: issue #55 と #42 が実際の repo で CLOSED + phase/verify ラベルを持つため、モックなしでは fallback が予期せず起動し既存テストが失敗する（`grep -qE '^phase/(verify|done)$'` が実際の gh 呼び出し結果にマッチする）
 - フォールバックの `gh issue view` 呼び出しは `|| true` で非致命的 — `gh` が失敗した場合（モックなし等）でも `labels=""` / `state=""` となりフォールバック条件を満たさないため、既存の mismatch パスへフォールスルーする
 - Pre-merge 検証項目が 6 件で light テンプレートの上限 5 件を超えるが、Issue body の AC をそのまま転記したため全件維持
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — 実装ステップは Spec 通りに完遂。`mismatch_diag` 変数・フォールバック追加・早期 `return` 挿入はすべて Spec の記述に沿った。
+
+### Design Gaps/Ambiguities
+- Spec の Implementation Step 2 に「`gh` モックを追加する 2 件」として issue #55 のみが列挙されていたが、実際にテスト実行したところ issue #42 を使う既存テスト（code-patch precondition テスト）は `gh` コマンド呼び出しを含まないため、追加モックは issue #55 使用の 2 件のみで十分だった。設計との差異なし（設計が正確）。
+
+### Rework
+- N/A — 全テストが一発 PASS（56 件）。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `_completion_code_patch` に `mismatch_diag` 変数を導入してフォールバック前に mismatch メッセージを保持、フォールバック後に `_handle_mismatch` をフォールスルー呼び出す設計を採用（`_completion_spec` の二段階パターンと整合）
+- フォールバックの `gh issue view` 呼び出しを `|| true` で非致命的にし、API 失敗時は自動的に mismatch パスへフォールスルーすることを確認
+- 既存テスト 2 件（issue #55 使用）に `gh` モックを追加して false-positive を防止; 新テスト 1 件（`phase/verify` ラベル + OPEN → `matches_expected:true`）を追加
+
+### Deferred Items
+- AC4（CI test.yml）は push 後の確認待ち
+- Issue #460（`git_committed` verify command）、#462（`verify-patterns.md` 推奨パターン追記）は別 Issue として追跡中
+
+### Notes for Next Phase
+- `/verify` 時に AC4 のチェックボックスが残っているが、CI PASS 後に自動更新可能
+- Post-merge AC は `verify-type: opportunistic` のため通常 verify では SKIPPED 扱いが正しい
+- `modules/orchestration-fallbacks.md` の `async-external-commit` エントリは `/verify` 時に AC5 `grep "async"` で検証済み
