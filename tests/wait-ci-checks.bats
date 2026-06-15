@@ -143,6 +143,25 @@ MOCK
     grep -q '"phase":"review"' "$EVENTS_LOG"
 }
 
+@test "ci_wait: event emitted with merge phase when EMIT_PHASE_NAME is merge" {
+    EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events-merge.jsonl"
+    EMIT_DIR="$BATS_TEST_TMPDIR/emit-script-dir-merge"
+    mkdir -p "$EMIT_DIR"
+    emit_event_src="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/emit-event.sh"
+    cp "$emit_event_src" "$EMIT_DIR/emit-event.sh"
+
+    run env AUTO_EVENTS_LOG="$EVENTS_LOG" \
+      EMIT_ISSUE_NUMBER="101" \
+      EMIT_PHASE_NAME="merge" \
+      WHOLEWORK_SCRIPT_DIR="$EMIT_DIR" \
+      PATH="$MOCK_DIR:$PATH" \
+      bash "$SCRIPT" 101
+    [ "$status" -eq 0 ]
+    [ -f "$EVENTS_LOG" ]
+    grep -q '"event":"ci_wait"' "$EVENTS_LOG"
+    grep -q '"phase":"merge"' "$EVENTS_LOG"
+}
+
 @test "ci_wait: no event emitted when AUTO_EVENTS_LOG is not set" {
     EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
 

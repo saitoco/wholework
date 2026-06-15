@@ -97,3 +97,50 @@ review phase の emit を確認済み。本 Issue では merge phase（`run-merg
 - `file_not_contains "scripts/run-code.sh" "2>&1"` 等は各ファイルに `2>&1` が 1 箇所のみ存在することを確認済み（除去後は 0 件）
 - ci_wait の既存テスト（`@test "ci_wait: event emitted to AUTO_EVENTS_LOG when AUTO_EVENTS_LOG is set"`、
   `EMIT_PHASE_NAME="review"` で動作確認済み）は変更不要
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `test_result` テストのモック修正方針として、Spec は「stdout に echo するよう変更」と記載していたが、加えて `skip` による条件付きスキップを proper assertion (`grep -q "test_result" "$BATS_TEST_TMPDIR/emit.log"`) に変更した。修正後は `code*` 条件が正しく機能し、テストが実際に PASS することを確認できたため、skip を外した方が正確な検証になる。
+
+### Design Gaps/Ambiguities
+
+- None
+
+### Rework
+
+- None
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+- 乖離なし。3 つのバグ修正（`2>&1` 除去、`test_result` 条件拡張、`ci_wait` merge phase テスト追加）はすべて Spec の実装ステップと一致していた。`test_result` テストのモック修正方針（skip を proper assertion に昇格）は Code Retrospective で説明済み。
+
+### 繰り返し指摘パターン
+
+- `test_result` テストで skip を proper assertion に昇格させたが、同ファイルの `token_usage` テストに同じ skip パターンが残っていた。fix-and-forget パターン：同類の skip を同一 PR でまとめて修正する規律が必要。
+
+### 受け入れ基準検証の難易度
+
+- `file_not_contains` と `rubric` および `command` の 5 条件すべて UNCERTAIN なし。`command "bats tests/wait-ci-checks.bats"` は CI 参照フォールバック（`Run bats tests` SUCCESS）で PASS 判定。verify command の設計は適切だった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+
+- MUST 指摘なし → マージブロック不要。SHOULD（`token_usage` skip 未修正）と CONSIDER（watchdog stderr リスク）の 2 件を記録してスキップ
+- `token_usage` skip 未修正は SHOULD レベル：次 Issue で対処が望ましいが、`2>&1` 除去後に emission は正常動作するため今 PR でブロックしない判断
+
+### Deferred Items
+
+- `tests/run-auto-sub.bats` L561-562 の `token_usage` skip を proper assertion に昇格（SHOULD）→ `/merge` 後または別 Issue で対処
+- post-merge AC（`token_usage` / `ci_wait` / `test_result` 3 種の observation）→ 次回 `/auto` 完走後に確認
+
+### Notes for Next Phase
+
+- CI 全ジョブ SUCCESS、MUST 指摘なし → `/merge 664` 実行可能
+- `token_usage` テストの skip 残存は SHOULD 指摘済み（PR コメント参照）
+- post-merge AC がまだ未観察のため、次回 `/auto` 完走後に `.tmp/auto-events.jsonl` で 3 種を確認する

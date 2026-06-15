@@ -101,8 +101,8 @@ run_phase_with_recovery() {
     done <<< "$_commits"
   fi
 
-  # test_result: parse bats output from log_file (code phase only)
-  if [[ "$phase" == "code" ]] && [[ -f "$log_file" ]]; then
+  # test_result: parse bats output from log_file (code-patch / code-pr / code phases)
+  if [[ "$phase" == code* ]] && [[ -f "$log_file" ]]; then
     local _bats_line
     _bats_line=$(grep -E "[0-9]+ tests?, [0-9]+ failures?" "$log_file" 2>/dev/null | tail -1 || true)
     if [[ -n "$_bats_line" ]]; then
