@@ -87,6 +87,16 @@ Run `/code N` to enter a fix cycle. During implementation, Wholework will detect
 
 For unattended runs via `/auto`, ensure the issue is triaged (has a `phase/*` or `triaged` label) before starting.
 
+## Skill Updates Not Reflected Mid-Session
+
+**Symptom**: After editing a `SKILL.md` file (or pulling new skill versions via `git pull`), invoking the skill in the same session still uses the old version. Newly added flags, subcommands, or steps are missing from the skill's behavior.
+
+**Cause**: Claude Code snapshots `SKILL.md` content into the LLM system prompt at session start (or `claude -p` subprocess launch). Disk-level changes made during a session are not reflected until a fresh session starts.
+
+**Fix**: Restart the Claude Code session (close and reopen, or for `claude -p` subprocesses, the next invocation reads the updated file). There is no in-session hot-reload command.
+
+For details and reload-trigger matrix, see `docs/reports/skill-loader-cache-behavior.md` (Issue #673 investigation).
+
 ## Further Help
 
 - Open an issue at [github.com/saitoco/wholework](https://github.com/saitoco/wholework/issues)
