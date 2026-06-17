@@ -106,3 +106,36 @@ Candidate C（polling ループ + `--kill-after` の両方）を採用し、`--w
 - **`gtimeout` の `--kill-after`**: GNU coreutils `timeout` を macOS 向けにリネームした `gtimeout` も `--kill-after` をサポートするが、バージョンに依存する可能性がある。リスクを最小化するため、`gtimeout` パスでは `--kill-after` なしの 30s タイムアウトを使用し、`timeout` パスのみ `--kill-after=10` を付与する。
 - **polling ループの最小間隔**: 各 poll は `gh pr checks --json` の単発実行（非 `--watch`）なので、通常は数秒で返る。per-poll タイムアウトは 30s（`--kill-after=10` で最大 40s）。
 - **Issue body の `--watch` 旧コードの削除確認**: `grep -n "\-\-watch" scripts/wait-ci-checks.sh` で 0 件であることを実装後に確認する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の polling ループ設計はほぼそのまま実装できた。`_emit_ci_wait` による if/else 分岐を廃止し、polling ループを共通パスとした後、イベント emission のみ条件分岐するシンプルな構造になった。
+
+### Design Gaps/Ambiguities
+
+- bats テストで `env PATH="$MOCK_DIR" /bin/bash "$SCRIPT"` を使う strict PATH テストが、新実装で `date +%s` を polling ループ外（共通パス）で使用するようになったため `date` を MOCK_DIR に追加する必要が生じた。Spec の setup() モック追加の記述には含まれていなかった（jq/sleep のみ言及）。
+- "continues even when timeout exits non-zero" テストは TIMEOUT_SEC=2 を使用。Spec では TIMEOUT_SEC=1 を示唆していたが、タイミング依存のフラキネスを避けるため 2 秒に設定した。実際には instant sleep モックにより ~1-2 秒で完了する。
+- "continues even when gh pr checks fails" テストは Spec の候補案「gh が `[]` を返す形に変更」を採用。`exit 1` しながら stdout に `[]` を出力する形で `_in_progress=0` → 即 break を実現した。
+
+### Rework
+
+- なし。初回実装でテスト 14/14 PASS。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `--watch` を完全廃止し、polling ループ（`--json name,state` + per-poll `--kill-after=10`）に統一。防御多重化（候補 C）を採用した。
+- `gtimeout` パスには `--kill-after` を付けない（バージョン依存リスクを避けるため）。
+- polling ループ終了条件: `IN_PROGRESS` チェック数が 0 になったら break（SUCCESS/SKIPPED/FAILURE は全て "完了" 扱い）。
+
+### Deferred Items
+- gtimeout パスの `--kill-after` 対応は将来的な改善候補として残る（現実装では 30s per-poll タイムアウトのみ）。
+- `event=auto-run` post-merge observation 検証は次回 `/auto` 実行時まで保留。
+
+### Notes for Next Phase
+- CI (`test.yml`) の bats テストが 14 テスト全て PASS することを確認済み。
+- `--watch` の削除を `grep -n "\-\-watch" scripts/wait-ci-checks.sh` で確認済み（0件）。
+- rubric AC（polling ループ + TIMEOUT_SEC 内終了ロジック）は実装内容から判断して PASS。
