@@ -54,16 +54,16 @@
 特筆事項なし。全7件 PASS、UNCERTAIN ゼロ。`rubric` 条件はPRブランチ上のSKILL.mdを直接参照して判定可能。`section_contains` / `github_check` は機械的に確認。verify commandの設計が変更内容に対して適切で検証フリクションが低かった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 全 AC PASS (7件)、MUST/SHOULD/CONSIDER 指摘ゼロのため Step 12 修正スキップを判断
-- `review-light` subagent type が未登録のため、同等ロジックを直接実行 (結果は同一)
-- Step 13 ポリシー変更なし (外部レビューも Claude レビュー修正もなし)
+- PR #689 はすでにマージ済み状態で到達（review フェーズ後に手動または別セッションでマージ済み）
+- `closes #436` を含む squash コミットにより Issue #436 が自動クローズされた
+- BASE_BRANCH=main のため Issue 自動クローズの遅延なし
 
 ### Deferred Items
-- Post-merge: サンプル XS Issue で `/issue` `/verify` を実機実行して retrospective skipped を確認 (AC #8)
+- Post-merge 実機検証: サンプル XS Issue で `/issue <N>` `/verify <N>` を実行し retrospective skipped が出力されることを確認 (AC #8)
 
 ### Notes for Next Phase
-- 全 CI ジョブ SUCCESS、MUST 指摘なし — merge 可能な状態
-- `closes #436` がコミットメッセージに含まれており、merge 時に Issue が自動クローズされる
+- verify フェーズでは Post-merge 実機検証 (AC #8) を優先的に実行すること
+- SKILL.md 変更のみのため回帰リスクは低い
