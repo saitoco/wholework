@@ -96,3 +96,30 @@
 - 変更内容は `.github/workflows/test.yml` の 1 箇所のみ (macos-shell ジョブのグロブ化)
 - verify フェーズでの確認事項: post-merge AC (opportunistic) のみ。pre-merge AC はすべて PASS 済み
 - 競合なし、リベース不要、テスト実行不要 (CI 済み)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC 4 件 pre-merge + 1 件 post-merge opportunistic でコンパクト。`file_contains` / `command` / `github_check` の verify command が適切に使い分けされている。
+
+#### spec
+- Implementation Steps が `.github/workflows/test.yml` の 1 箇所 (`macos-shell` job) のみと最小。Spec と実装の乖離なし。
+
+#### code
+- 一発実装で全 bats テスト PASS、CI 全 SUCCESS、rework なし。
+
+#### review
+- light review で MUST 0 件。CI 全 SUCCESS。
+
+#### merge
+- **本セッションが #685/#687/#690 全 3 pillar fix 適用後の最初の pr-route merge**。`source=ci` 付き `test_result` event が自動 emit された (passed=855, failed=1, run_id=27704310243)。
+- 連鎖 close target (#679 / #662 / #630) の post-merge AC observation が opportunistic-search で trigger される見込み (本 /auto 完了後の Step 5)。
+
+#### verify
+- Pre-merge 4/4 PASS、Post-merge 1 opportunistic 残留 → `phase/verify` 維持。
+
+### Improvement Proposals
+
+- N/A — 本 Issue 自身は scope 通り完了。`source=ci` test_result emit pipeline の機能確認も merge phase で副次的に達成。
