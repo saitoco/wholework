@@ -156,3 +156,43 @@ Candidate C（polling ループ + `--kill-after` の両方）を採用し、`--w
 - `/verify` はラベルが `verify` に遷移した後、Issue #685 の verify command を実行すること。
 - post-merge verify command: `次回 pr route /auto 完走時に merge phase が TIMEOUT_SEC 内に完了することを確認`（観察ベースのため手動確認）。
 - CI job "Run bats tests" は PR マージ前に SUCCESS 確認済み。コードに変更なし。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC #1 で grep pattern が ERE 正規表現として書かれており BRE/ERE 問題なし（#675 で導入された BRE 検出ロジックの恩恵）。
+- AC #3 は github_check で pr route 専用（patch route の場合は `gh run list` への切替が必要）。本 Issue は Size M 確定なので pr route 前提で問題なし。
+- Post-merge observation AC は本 /auto session 自身で観測可能な workflow を採用。
+
+#### spec
+- 候補 A/B/C のうち候補 C (両方適用 defense in depth) を採用。実装で polling loop + `--kill-after=10` 両方を追加し、観測した hang 事象を構造的に解消。
+- Spec の Implementation Steps が具体的（polling 間隔・終了条件・timeout の設定値）で実装乖離なし。
+
+#### code
+- 一発実装で全 bats テスト PASS、CI 全 SUCCESS、rework なし。
+- `tests/wait-ci-checks.bats` に regression test (62 行追加) を含めて TIMEOUT_SEC 内終了パターンを検証。
+
+#### review
+- light review で MUST 0 件。CI 全 SUCCESS。reviewDecision は空だが MUST なしのため merge OK 判断。
+
+#### merge
+- merge phase が **4 分 13 秒** で完了（前回 #683 の 3h15m hang と比較し劇的改善）。
+- ただし `run-merge.sh` の CI fetch logic で `gh run view ... --log: no bats summary found` warning が emit され、`source=ci` test_result event は **emit されず**（log parse 失敗）。
+- 結果: #679 / #662 / #630 の post-merge observation 連鎖は本 session でも trigger されない。
+
+#### verify
+- Pre-merge 3/3 PASS（AC #1/#2/#3）。Post-merge AC #4 (observation) も本 session の merge timing で PASS 判定。
+- 全 AC PASS → `phase/done` 遷移、Issue close。
+
+### Improvement Proposals
+
+1. **`run-merge.sh` の CI log bats summary parse 失敗解消（高優先）**
+   - 症状: `run-merge.sh` が `gh run view <run-id> --log` から bats summary 行を parse しようとするが "no bats summary found" warning で fail。`source=ci` test_result event が emit されない。
+   - 影響: #679 / #662 / #630 の post-merge observation 連鎖（`event=auto-run` + `source=ci` test_result 期待）が trigger されない。今回 #685 fix で wait-ci-checks hang は解消したが、上流の parse 失敗で別経路の連鎖が壊れたまま。
+   - 提案: bats summary の log 内位置/フォーマット調査 → matcher を実 log 出力に合わせて更新、または `gh run download` で artifact 直接取得に切り替え、または `gh api` で job log 取得を再試行。Issue 起票候補。
+
+2. **`reviewDecision` 空時の merge phase precondition warning 改善（低優先）**
+   - 症状: `reconcile-phase-state.sh merge --check-precondition` が PR の `reviewDecision: ""` を `not APPROVED` として警告するが、warn-only で続行。auto-approve 設定なしの project では常時発火する false positive。
+   - 提案: `.wholework.yml` に `merge-requires-approval: true/false` setting を追加し、false 時は warning skip。Issue 起票候補（low priority、運用への影響なし）。
