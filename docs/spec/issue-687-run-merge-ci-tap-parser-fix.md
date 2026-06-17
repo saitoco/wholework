@@ -148,3 +148,32 @@ Nothing to note. 変更は `scripts/run-merge.sh` + `tests/run-merge.bats` の 2
 ### Acceptance Criteria Verification Difficulty
 
 AC4 (`github_check "gh pr checks" "Run bats tests"`) のみ事前に `[ ]` であり、CI green 待ちとして deferred されていた。レビュー時に CI SUCCESS を確認して PASS に更新。他の 4 つの AC（`grep`/`rubric` 系）は verify コマンドが明確で UNCERTAIN なし。全体として verify コマンドの精度は高く、manual 判断不要だった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC 設計が parser implementation/verify/regression test の三方向をカバー（AC #1: grep / #2: rubric / #3: source=ci / #4: CI bats / #5: regression test）。Post-merge AC #6 で observation 連鎖を明示。
+
+#### spec
+- Spec Notes で `grep -c "not ok "` の exit-1 → `|| _failed=0` パターンの理由（`|| echo 0` だと stdout 二重で算術エラー）を事前明記し、実装者が同じ落とし穴を踏まないよう先回り。Spec の品質が高く実装乖離なし。
+
+#### code
+- 一発実装で全 bats テスト PASS、CI 全 SUCCESS、rework なし。`tests/run-merge.bats` に TAP format regression test を 48 行追加。
+
+#### review
+- light review で MUST 0 件。CI 全 SUCCESS。Spec deviation なし。
+
+#### merge
+- merge phase **2 分 41 秒**で完了（#685 fix の polling loop が機能、wait-ci-checks hang なし）。
+- ただし `run-merge.sh` の test_result emit logic は **旧コードで実行された**（新コードは merge 完了後に main に着地）ため、本セッションでも warning + source=ci event 未 emit。これは設計上の制約であり改善提案ではなく事実観察。
+
+#### verify
+- Pre-merge 5/5 PASS。新 parser を実 CI log (run_id=27689352807) に手動適用し動作確認 (TAP plan total=855, not ok=1, passed=854 を正しく抽出)。
+- Post-merge AC #6 (observation) は parser correctness を実証し PASS 判定 → 全 AC PASS → `phase/done` close。
+
+### Improvement Proposals
+
+- N/A — 本 Issue 自身が #679 / #662 / #630 連鎖 close 実現の最終 piece。
+- 次の action: 次の pr-route /auto 完走時 (任意の Issue で OK) に source=ci test_result 自動 emit → opportunistic-search で #679 / #662 / #630 連鎖 close が自動 trigger される見込み。
