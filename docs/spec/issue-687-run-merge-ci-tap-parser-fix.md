@@ -106,3 +106,31 @@ passed/failed を計算する parser に置換する (Issue 本文 候補 A)。
   `|| echo 0` パターンだと stdout が `"0\n0"` になり算術エラーになるため `|| _failed=0` を使用。
   (auto-resolved: non-interactive mode, model judgment)
 - **doc-checker**: `scripts/` および `tests/` のみの変更のため docs/structure.md 等への文書更新不要。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- TAP plan line parser (`grep -oE "1\.\.[0-9]+"`) を採用。`^` anchor なしで `gh run view --log` のタイムスタンプ付き行にもマッチする
+- `grep -c "not ok "` + `|| _failed=0` で count=0 時の exit 1 を安全にハンドル
+- 既存テスト (`test_result: emit_event called with source=ci`) の gh mock を TAP 形式に更新し、新規 regression test を追加
+
+### Deferred Items
+- AC4 (`github_check "gh pr checks" "Run bats tests"`) は CI が green になった後に `/verify` で確認
+- Post-merge AC（次回 `/auto` 完走時の `source=ci` event 確認）は observation 型で `/verify` がスキップする
+
+### Notes for Next Phase
+- PR #688 が作成済み。`phase/code` → `phase/review` → `phase/merge` の通常フロー
+- AC1/AC2/AC3/AC5 は pre-merge でチェック済み。AC4 のみ CI green 待ち
+- `scripts/run-merge.sh` と `tests/run-merge.bats` の 2 ファイルのみ変更。スコープは狭い
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Spec の実装ステップを忠実に実行した。Issue 本文提案の regex バグ (Spec Notes 参照) は Spec 段階で既に修正されており、コード実装時に改めて気づくことはなかった。
+
+### Design Gaps/Ambiguities
+- None. Spec Notes が `grep -c` + `|| _failed=0` パターンの理由を事前に説明しており、実装中に迷いは生じなかった。
+
+### Rework
+- None.
