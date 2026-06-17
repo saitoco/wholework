@@ -49,3 +49,36 @@
 - `bash scripts/check-translation-sync.sh` (実際の実行) から `bash -n` (構文チェックのみ) への切り替えにより、`check-translation-sync.sh` はこのジョブでは実行されなくなるが、macOS 互換性は引き続き構文チェックで担保される
 - `scripts/git-hooks/` 配下のスクリプトは `scripts/*.sh` グロブに含まれないため対象外
 - 変更後の run ブロックは bash 3.2+ (macOS システム bash) 互換: `for` ループ、glob 展開ともに 4.0+ 機能を使用しない
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- Spec の実装ステップは 1 ステップのみで変更箇所が明確であり、曖昧な点はなかった
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+
+- `bash -n` による全 `scripts/*.sh` シンタックスチェックを採用 (実行副作用なし、新規スクリプト自動補足)
+- for ループは bash 3.2+ 互換 (`for f in scripts/*.sh; do bash -n "$f"; done`)
+- `scripts/git-hooks/` は `scripts/*.sh` グロブ対象外のため変更不要と確認
+
+### Deferred Items
+
+- CI の `macos-shell` ジョブ GREEN 確認 (AC4) は PR #692 のCI完了後に `/verify` で確認
+
+### Notes for Next Phase
+
+- 変更は `.github/workflows/test.yml` の 1 箇所のみ、シンプルな実装
+- pre-merge AC 1-3 は PASS 済み、AC4 (github_check) のみ CI 待ち
+- Post-merge AC は opportunistic verify で自動追跡される
