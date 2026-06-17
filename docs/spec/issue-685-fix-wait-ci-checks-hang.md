@@ -123,19 +123,35 @@ Candidate C（polling ループ + `--kill-after` の両方）を採用し、`--w
 
 - なし。初回実装でテスト 14/14 PASS。
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Spec と PR diff の間に構造的な乖離なし。Issue body の verify command（`grep "gh pr checks.*--json|--kill-after"`）が実装と正確に対応しており、false positive/negative なく PASS と判定できた。
+- AC3 の Issue body チェックボックスが未チェックだったが、CI job "Run bats tests" が SUCCESS であることを `github_check` で確認し PASS と判定。
+
+### Recurring Issues
+
+- なし。review-light チェック（4 アスペクト）では CONSIDER 1件のみ（`--watch` 不在 assert の追加提案）。MUST/SHOULD なし。
+
+### Acceptance Criteria Verification Difficulty
+
+- UNCERTAIN: 0件。全 verify command が解決可能だった。
+- `rubric` コマンドの評価は実装内容から明確に PASS と判定できた（polling ループ + elapsed チェック + per-poll kill-after の三重保証が明示的）。
+- `github_check` の CI 状態取得は `gh pr checks --json name,state` で直接確認可能で問題なし。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `--watch` を完全廃止し、polling ループ（`--json name,state` + per-poll `--kill-after=10`）に統一。防御多重化（候補 C）を採用した。
-- `gtimeout` パスには `--kill-after` を付けない（バージョン依存リスクを避けるため）。
-- polling ループ終了条件: `IN_PROGRESS` チェック数が 0 になったら break（SUCCESS/SKIPPED/FAILURE は全て "完了" 扱い）。
+- AC 全件 PASS（grep + rubric + github_check）。MUST/SHOULD 問題なし → `/merge` 推奨。
+- CONSIDER 1件（`--watch` 不在 assert）はスキップ。既存テストで regression リスクは十分低い。
 
 ### Deferred Items
-- gtimeout パスの `--kill-after` 対応は将来的な改善候補として残る（現実装では 30s per-poll タイムアウトのみ）。
-- `event=auto-run` post-merge observation 検証は次回 `/auto` 実行時まで保留。
+- `event=auto-run` post-merge observation 検証は次回 `/auto` 実行時まで保留（Issue AC Post-merge に記載済み）。
+- `--watch` 不在 assert の追加は将来の改善提案として issues 集約予定（/verify レトロスペクティブ）。
 
 ### Notes for Next Phase
-- CI (`test.yml`) の bats テストが 14 テスト全て PASS することを確認済み。
-- `--watch` の削除を `grep -n "\-\-watch" scripts/wait-ci-checks.sh` で確認済み（0件）。
-- rubric AC（polling ループ + TIMEOUT_SEC 内終了ロジック）は実装内容から判断して PASS。
+- 全 CI ジョブ SUCCESS 確認済み。
+- レビューコメント投稿済み（COMMENT イベント）。MUST issue なし。
+- `/merge 686` 実行可能な状態。
