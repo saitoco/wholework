@@ -106,3 +106,45 @@ passed/failed を計算する parser に置換する (Issue 本文 候補 A)。
   `|| echo 0` パターンだと stdout が `"0\n0"` になり算術エラーになるため `|| _failed=0` を使用。
   (auto-resolved: non-interactive mode, model judgment)
 - **doc-checker**: `scripts/` および `tests/` のみの変更のため docs/structure.md 等への文書更新不要。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- 全 5 つの Pre-merge AC が PASS。AC4 (`github_check "gh pr checks" "Run bats tests"`) はレビュー時に CI SUCCESS を確認し `[x]` に更新
+- MUST/SHOULD 課題なし。CONSIDER 1 件（`grep -c "not ok "` の全ステップ出力スコープ）は修正不要と判断
+- REVIEW_DEPTH=light（`--light` フラグ明示指定）で 1 エージェントの統合レビューを実施
+
+### Deferred Items
+- Post-merge AC（次回 `/auto` 完走時の `source=ci` event 確認）は observation 型で `/verify` がスキップする
+- CONSIDER 課題（grep スコープ）は実用上影響軽微なため未修正
+
+### Notes for Next Phase
+- 全 AC PASS、CI 全ジョブ SUCCESS、MUST 課題なし → merge 準備完了
+- `scripts/run-merge.sh` と `tests/run-merge.bats` の 2 ファイルのみ変更。スコープは狭い
+- レビューコメント投稿済み（COMMENT イベント、REQUEST_CHANGES なし）
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Spec の実装ステップを忠実に実行した。Issue 本文提案の regex バグ (Spec Notes 参照) は Spec 段階で既に修正されており、コード実装時に改めて気づくことはなかった。
+
+### Design Gaps/Ambiguities
+- None. Spec Notes が `grep -c` + `|| _failed=0` パターンの理由を事前に説明しており、実装中に迷いは生じなかった。
+
+### Rework
+- None.
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Spec と実装の間に乖離なし。Spec Notes が `grep -c "not ok "` + `|| _failed=0` パターンの理由（`grep -c` は count=0 で exit 1 → `|| echo 0` だと stdout が二重になり算術エラー）を事前に記述しており、実装との齟齬が生じにくい構成だった。TAP 正規表現 (`grep -oE "1\.\.[0-9]+"`) も Issue 候補 A のバグを Spec 段階で修正済みで、コードレビューで再発見する必要がなかった。
+
+### Recurring Issues
+
+Nothing to note. 変更は `scripts/run-merge.sh` + `tests/run-merge.bats` の 2 ファイルに限定されており、単一パターンの parser 置換。繰り返し発生した問題はない。
+
+### Acceptance Criteria Verification Difficulty
+
+AC4 (`github_check "gh pr checks" "Run bats tests"`) のみ事前に `[ ]` であり、CI green 待ちとして deferred されていた。レビュー時に CI SUCCESS を確認して PASS に更新。他の 4 つの AC（`grep`/`rubric` 系）は verify コマンドが明確で UNCERTAIN なし。全体として verify コマンドの精度は高く、manual 判断不要だった。

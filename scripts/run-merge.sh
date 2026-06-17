@@ -153,13 +153,14 @@ fi
 if [[ $EXIT_CODE -eq 0 && -n "${AUTO_EVENTS_LOG:-}" ]]; then
   _run_id=$(gh run list --workflow=test.yml --branch=main --limit=1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)
   if [[ -n "$_run_id" ]]; then
-    _bats_summary=$(gh run view "$_run_id" --log 2>/dev/null | grep -E "[0-9]+ tests?, [0-9]+ failures?" | tail -1 || true)
-    if [[ -n "$_bats_summary" ]]; then
-      _passed=$(echo "$_bats_summary" | grep -oE "[0-9]+ tests?" | grep -oE "^[0-9]+" || echo 0)
-      _failed=$(echo "$_bats_summary" | grep -oE "[0-9]+ failures?" | grep -oE "^[0-9]+" || echo 0)
+    _log=$(gh run view "$_run_id" --log 2>/dev/null || true)
+    _total=$(echo "$_log" | grep -oE "1\.\.[0-9]+" | grep -oE "[0-9]+$" | head -1 || echo 0)
+    _failed=$(echo "$_log" | grep -c "not ok ") || _failed=0
+    if [[ "${_total:-0}" -gt 0 ]]; then
+      _passed=$((_total - _failed))
       emit_event "test_result" "phase=merge" "framework=bats" "source=ci" "passed=${_passed}" "failed=${_failed}" "run_id=${_run_id}"
     else
-      echo "Warning: run-merge.sh: gh run view ${_run_id} --log: no bats summary found" >&2
+      echo "Warning: run-merge.sh: gh run view ${_run_id} --log: TAP plan line (1..N) not found" >&2
     fi
   fi
 fi

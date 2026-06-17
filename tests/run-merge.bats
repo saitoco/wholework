@@ -389,7 +389,12 @@ if [[ "$1" == "run" && "$2" == "list" && "$*" == *"--workflow=test.yml"* ]]; the
   exit 0
 fi
 if [[ "$1" == "run" && "$2" == "view" && "$*" == *"--log"* ]]; then
-  echo "5 tests, 0 failures"
+  echo "1..5"
+  echo "ok 1 first test"
+  echo "ok 2 second test"
+  echo "ok 3 third test"
+  echo "ok 4 fourth test"
+  echo "ok 5 fifth test"
   exit 0
 fi
 if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
@@ -410,4 +415,45 @@ MOCK
     run bash "$SCRIPT" 88
     [ "$status" -eq 0 ]
     grep -q "source=ci" "$EMIT_LOG"
+}
+
+@test "test_result: TAP format with not ok lines counts failures correctly" {
+    EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
+MOCK
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "run" && "$2" == "list" && "$*" == *"--workflow=test.yml"* ]]; then
+  echo "99999"
+  exit 0
+fi
+if [[ "$1" == "run" && "$2" == "view" && "$*" == *"--log"* ]]; then
+  echo "1..3"
+  echo "ok 1 passing test"
+  echo "not ok 2 failing test"
+  echo "ok 3 another passing test"
+  exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".state"* ]]; then
+    echo "MERGED"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    grep -q "source=ci" "$EMIT_LOG"
+    grep -q "failed=1" "$EMIT_LOG"
+    grep -q "passed=2" "$EMIT_LOG"
 }
