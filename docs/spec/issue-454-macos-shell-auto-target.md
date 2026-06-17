@@ -64,21 +64,35 @@
 
 - N/A
 
+## review retrospective
+
+### Spec と実装の乖離パターン
+
+- 乖離なし。Spec の実装ステップと PR diff が完全に一致しており、特記すべきパターンなし
+
+### 繰り返し問題
+
+- なし。今回の変更は1ファイル1箇所の最小限の変更であり、同種の問題は発生しなかった
+
+### 受け入れ条件の検証難易度
+
+- 全条件が verify command 付き。AC4 (`github_check`) は CI 完了まで検証不可だったが、CI SUCCESS 確認後に PASS を確定できた
+- UNCERTAIN なし。グロブ非マッチ時の挙動 (CONSIDER) は検証可能だったが実用上影響なし
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- `bash -n` による全 `scripts/*.sh` シンタックスチェックを採用 (実行副作用なし、新規スクリプト自動補足)
-- for ループは bash 3.2+ 互換 (`for f in scripts/*.sh; do bash -n "$f"; done`)
-- `scripts/git-hooks/` は `scripts/*.sh` グロブ対象外のため変更不要と確認
+- MUST/SHOULD 問題なし。CONSIDER 1件 (グロブ非マッチ時のガード) をスキップ判断: Spec が「シンプルな変更優先」を明示しており、追加ガード追加は範囲外
+- 全受け入れ条件 (AC1-4) PASS を確認。AC4 は CI SUCCESS による代替検証で確定
 
 ### Deferred Items
 
-- CI の `macos-shell` ジョブ GREEN 確認 (AC4) は PR #692 のCI完了後に `/verify` で確認
+- Post-merge AC (scripts/ に新規 .sh 追加時の自動チェック確認) は opportunistic verify で追跡
 
 ### Notes for Next Phase
 
-- 変更は `.github/workflows/test.yml` の 1 箇所のみ、シンプルな実装
-- pre-merge AC 1-3 は PASS 済み、AC4 (github_check) のみ CI 待ち
-- Post-merge AC は opportunistic verify で自動追跡される
+- 変更は `.github/workflows/test.yml` の 1 箇所のみ。merge 作業はシンプル
+- 全 CI ジョブ SUCCESS (DCO, bats, validate-skill-syntax, forbidden-expressions, macos-shell-compatibility)
+- MUST 問題なし → `/merge 692` で直接マージ可能
