@@ -398,7 +398,9 @@ if [[ "$1" == "run" && "$2" == "view" && "$*" == *"--log"* ]]; then
   exit 0
 fi
 if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
-  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".headRefName"* ]]; then
+    echo "pr-feature-branch"
+  elif [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
     echo "test PR title"
   elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
     echo "https://github.com/test/repo/pull/88"
@@ -437,7 +439,9 @@ if [[ "$1" == "run" && "$2" == "view" && "$*" == *"--log"* ]]; then
   exit 0
 fi
 if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
-  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".headRefName"* ]]; then
+    echo "pr-feature-branch"
+  elif [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
     echo "test PR title"
   elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
     echo "https://github.com/test/repo/pull/88"
@@ -456,4 +460,47 @@ MOCK
     grep -q "source=ci" "$EMIT_LOG"
     grep -q "failed=1" "$EMIT_LOG"
     grep -q "passed=2" "$EMIT_LOG"
+}
+
+@test "test_result: SUCCESS run query uses PR branch with --status=success" {
+    RUN_LIST_LOG="$BATS_TEST_TMPDIR/run-list-args.log"
+
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { :; }
+MOCK
+
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+if [[ "\$1" == "run" && "\$2" == "list" && "\$*" == *"--workflow=test.yml"* ]]; then
+  echo "\$@" >> "${RUN_LIST_LOG}"
+  echo "77777"
+  exit 0
+fi
+if [[ "\$1" == "run" && "\$2" == "view" && "\$*" == *"--log"* ]]; then
+  echo "1..2"
+  echo "ok 1 first"
+  echo "ok 2 second"
+  exit 0
+fi
+if [[ "\$1" == "pr" && "\$2" == "view" && "\$*" == *"--json"* ]]; then
+  if [[ "\$*" == *"-q"* && "\$*" == *".headRefName"* ]]; then
+    echo "my-feature-branch"
+  elif [[ "\$*" == *"-q"* && "\$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "\$*" == *"-q"* && "\$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "\$*" == *"-q"* && "\$*" == *".state"* ]]; then
+    echo "MERGED"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    grep -q "\-\-status=success" "$RUN_LIST_LOG"
+    grep -q "my-feature-branch" "$RUN_LIST_LOG"
 }

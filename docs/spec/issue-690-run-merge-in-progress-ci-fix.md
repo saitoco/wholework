@@ -58,3 +58,48 @@
 - Candidate A を採用: `PR_NUMBER` は `run-merge.sh` の引数として既知なので `gh pr view "$PR_NUMBER"` でブランチ名を取得できる。Candidate B (`--status=success` で main を query) は semantic がずれる（他 PR の merge 結果を参照する可能性）
 - `_branch` が空の場合（PR 削除済み等）は graceful にスキップ（`_run_id=""` → emit 非実行）
 - 既存テストの `gh` mock は headRefName を処理しないため、実装変更後に既存 test_result テストが FAIL する。Step 2 で既存テストの mock 更新も必須
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec では `--jq '.headRefName'` を使用する例示があったが、既存コード (line 143) が `-q` 形式を使っているため `-q '.headRefName'` に統一した。両者は `gh` CLI 上では同義だが、テスト mock の条件マッチが `-q` を想定しており `--jq` では FAIL した。
+
+### Design Gaps/Ambiguities
+
+- Spec の headRefName 取得例示 (`--jq`) と既存コードの慣用 (`-q`) が不一致だった。Spec が `-q` と明示していれば第1コミットでのバグを防げた。
+
+### Rework
+
+- `scripts/run-merge.sh` を 2 回コミット: 初回に `--jq` で実装したが bats テストが FAIL したため `-q` に修正。1 回のコミットで済ませるためには Spec に慣用形を明示すべきだった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- REVIEW_DEPTH=light（Size M + `--light` フラグ）: 全4視点チェックで問題なし
+- MUST イシューなし → Step 12（コード修正）スキップ
+- 全 pre-merge AC（4件）が PASS: AC3（`github_check "gh pr checks" "Run bats tests"`）も CI SUCCESS 確認
+
+### Deferred Items
+- post-merge AC: 次回 `/auto` 完走時に `source=ci` 付き `test_result` event が emit されるか観測 (observation event=auto-run)
+- 関連 Issues #679 / #662 / #630 の observation chain が本 PR merge 後に trigger されるか確認
+
+### Notes for Next Phase
+- 全 CI SUCCESS、MUST イシューなし、ready to merge
+- `scripts/run-merge.sh` 変更: `--branch=main --limit=1` → PR branch の `--status=success` な最新 run を参照
+- validate-skill-syntax.py: PASS（0 error, 0 warning）
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+- Nothing to note. Spec と実装の整合性は良好。Code phase の retrospective に記録された `-q` vs `--jq` の差異は既に解消済みで、Spec の example に慣用形を明示すれば防げた軽微な事案。
+
+### 再発イシュー
+
+- Nothing to note. 同種のイシューは見当たらない。
+
+### 受け入れ基準検証難易度
+
+- Nothing to note. AC3 (`github_check "gh pr checks" "Run bats tests"`) は CI 完了待ちが必要だが、実行時点で既に SUCCESS だったため問題なし。全 4 pre-merge AC が PASS で UNCERTAIN なし。verify command の syntax は適切。
