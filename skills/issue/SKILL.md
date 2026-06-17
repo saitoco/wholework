@@ -297,7 +297,14 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query add-blocked-by -F issueId="$
 
 ### Step 10: Issue Retrospective
 
-Post a retrospective comment to the issue covering: judgment rationale for ambiguity resolution, key policy decisions from Q&A, and reasons for acceptance criteria changes. Always create the section (write "Nothing to note" if no content).
+**Skip condition**: Skip posting this retrospective comment if ALL of the following hold:
+- Zero ambiguity auto-resolutions were made
+- Zero acceptance criteria changes were made
+- No surprising policy decisions were made
+
+When skipping: output `retrospective skipped: no notable content` to terminal and proceed to the next step without posting a comment.
+
+When NOT skipping: post a retrospective comment covering: judgment rationale for ambiguity resolution, key policy decisions from Q&A, and reasons for acceptance criteria changes.
 
 The comment body must use `## Issue Retrospective` as the top-level heading (canonical key used by `/auto` Step 4b and `/verify`).
 
@@ -449,7 +456,14 @@ Run the standard sub-issue creation flow (New Issue Creation Step 9, procedures 
 
 ### Step 12: Issue Retrospective
 
-Post a retrospective comment to the issue covering: judgment rationale for ambiguity resolution, key policy decisions from Q&A, and reasons for acceptance criteria changes. Always create the section (write "Nothing to note" if no content).
+**Skip condition**: Skip posting this retrospective comment if ALL of the following hold:
+- Zero ambiguity auto-resolutions were made
+- Zero acceptance criteria changes were made
+- No surprising policy decisions were made
+
+When skipping: output `retrospective skipped: no notable content` to terminal and proceed to the next step without posting a comment.
+
+When NOT skipping: post a retrospective comment covering: judgment rationale for ambiguity resolution, key policy decisions from Q&A, and reasons for acceptance criteria changes.
 
 The comment body must use `## Issue Retrospective` as the top-level heading (canonical key used by `/auto` Step 4b and `/verify`).
 

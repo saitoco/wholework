@@ -530,7 +530,13 @@ As the final step of the workflow, verify conducts a retrospective of the entire
 2. Detect improvements across the 6 phases above:
    - Integrate content from each phase's retrospective
    - Cross-reference information sources in the retrospective dimensions table with collected retrospective information to detect improvement patterns across the entire workflow
-3. **Persist retrospective results to Spec**:
+3. **Skip condition check**: Before persisting, evaluate whether ALL of the following hold:
+   - All acceptance conditions resulted in PASS or SKIPPED (zero FAIL or UNCERTAIN among auto-verification targets)
+   - Zero improvement proposals were identified in step 2
+   - Spec does not exist OR all phases in the lifecycle review (step 2) had no observations worth recording
+
+   If ALL conditions hold: output `retrospective skipped: no notable content` to terminal and skip step 4. Proceed to Step 13.
+4. **Persist retrospective results to Spec**:
    - If Spec (`$SPEC_PATH/issue-$NUMBER-*.md`) does not exist: skip persistence and output to terminal only
    - If Spec exists, add `## Verify Retrospective` section at the end
    - Include improvement proposals if any, or "N/A" if none
