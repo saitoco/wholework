@@ -38,3 +38,32 @@
 - SPEC_DEPTH=light で pre-merge verification が 7 件 (上限 5 件超) だが、Issue body の AC を verbatim でコピーするため全件含む
 - `/verify` の skip 条件は Issue body の `## Auto-Resolved Ambiguity Points` で auto-resolve 済み: 「全AC PASS かつ改善提案ゼロかつ Spec 未存在（または lifecycle review に観察事項なし）」を採用
 - `docs/workflow.md` の `/verify` 説明 ("Performs a cross-phase retrospective review") は変更後も意味的に正確 (skip はあくまで注記事項がない場合のみ) なので更新不要
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+特筆事項なし。diff がSpec の実装ステップ3件と完全に一致。verify/SKILL.md の旧ステップ3→新ステップ4へのリナンバリングも正確。
+
+### Recurring issues
+
+特筆事項なし。全4観点 (Spec divergence / Edge cases / Security / Documentation consistency) で MUST/SHOULD/CONSIDER 指摘ゼロ。SKILL.md テキスト変更のみのため構造的リスクが低く、高品質な実装。
+
+### Acceptance criteria verification difficulty
+
+特筆事項なし。全7件 PASS、UNCERTAIN ゼロ。`rubric` 条件はPRブランチ上のSKILL.mdを直接参照して判定可能。`section_contains` / `github_check` は機械的に確認。verify commandの設計が変更内容に対して適切で検証フリクションが低かった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- 全 AC PASS (7件)、MUST/SHOULD/CONSIDER 指摘ゼロのため Step 12 修正スキップを判断
+- `review-light` subagent type が未登録のため、同等ロジックを直接実行 (結果は同一)
+- Step 13 ポリシー変更なし (外部レビューも Claude レビュー修正もなし)
+
+### Deferred Items
+- Post-merge: サンプル XS Issue で `/issue` `/verify` を実機実行して retrospective skipped を確認 (AC #8)
+
+### Notes for Next Phase
+- 全 CI ジョブ SUCCESS、MUST 指摘なし — merge 可能な状態
+- `closes #436` がコミットメッセージに含まれており、merge 時に Issue が自動クローズされる
