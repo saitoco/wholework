@@ -67,3 +67,58 @@
 ### Notes for Next Phase
 - verify フェーズでは Post-merge 実機検証 (AC #8) を優先的に実行すること
 - SKILL.md 変更のみのため回帰リスクは低い
+
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| issue | pr | SUCCESS | — |
+| spec | pr | SUCCESS | — |
+| code | pr | SUCCESS (manual recovery) | run-code.sh exit 1: 実装は完了して worktree に差分残るが commit/push/PR creation に失敗。parent session が手動 commit + push + `gh pr create` で復旧し PR #689 作成 |
+| review | pr | SUCCESS | — |
+| merge | pr | SUCCESS | 4 分強で完了、wait-ci-checks hang なし (#685 fix 効果) |
+| verify | pr | SUCCESS | 全 pre-merge AC PASS、opportunistic post-merge は次回観測 |
+
+### Orchestration Anomalies
+- **code phase exit 1 with implementation present**: `run-code.sh 436 --pr` が exit 1 で終了したが、worktree branch `worktree-code+issue-436` には skills/issue/SKILL.md + skills/verify/SKILL.md の修正が uncommitted のまま残っていた。原因は run-code.sh 内の commit/test/push のいずれかが silent fail した可能性。parent session が `git add` → `git commit -s` → `git push` → `gh pr create` を手動実行して PR #689 作成。
+- **`source=ci` test_result emit failure (継続)**: 新 TAP parser は正しいが、`run-merge.sh` が merge 直後に走る in-progress CI run を query し TAP plan line が log にまだ書かれていない状態で取得 → "TAP plan line (1..N) not found" warning。#679/#662/#630 連鎖 close は本セッションでも trigger されず。
+
+### Improvement Proposals
+
+1. **`run-merge.sh` の CI run query タイミング改善（高優先）**
+   - 症状: merge 直後の `gh run list --workflow=test.yml --branch=main --limit=1` が **in-progress run** を返し、log に TAP plan line がまだ書かれていない時点で `gh run view --log` を実行 → 空マッチ。
+   - 影響: 新 TAP parser (#687) があっても `source=ci` test_result event が emit されず、#679/#662/#630 の post-merge observation 連鎖が trigger されない。
+   - 提案: (A) PR の latest successful workflow run を query する（merge 前に既に green になっている）、(B) `gh run watch` で CI 完了を待つ、(C) `gh run list --status completed` で in-progress を除外。Issue 起票候補。
+
+2. **`run-code.sh` の silent exit-1 with implementation 残留対策（中優先）**
+   - 症状: run-code.sh が exit 1 で終了したが、worktree に実装差分が残ったまま commit/push が実行されず、PR も作成されなかった。原因が log に明示されない。
+   - 影響: parent session が手動で commit + PR 作成する recovery を毎回手動実施する必要がある。
+   - 提案: run-code.sh の各ステップ (commit/test/push/PR create) に明示的な失敗ハンドリング + log 出力を追加。または run-code.sh exit 1 時に worktree の uncommitted 状態を検出して reconcile-phase-state.sh に hint を追加。Issue 起票候補。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC が 7 件と多めだが、`section_contains` + `rubric` + `github_check` の組合せで各 skill の各 step 追加内容を mechanical に検証できる設計。Auto-Resolved Ambiguity Points で `/verify` の skip 条件を事前に固めており spec フェーズが滞らなかった。
+
+#### spec
+- Implementation Steps が 3 ステップに整理（issue Step 10、issue Step 12、verify Step 12）。spec と実装で乖離なし。
+
+#### code
+- 実装自体は正しい (skills/issue/SKILL.md + skills/verify/SKILL.md 両方に skip 条件 + terminal output format 追加) だが、wrapper exit 1 のため manual recovery 必要。orchestration anomaly。
+
+#### review
+- light review で MUST 0 件。light review 自体は review phase 起動後に commit 済の PR を対象としていたため anomaly の影響なし。CI 全 SUCCESS。
+
+#### merge
+- merge phase は新 wait-ci-checks.sh polling loop で正常動作（hang なし、~4 分で完了）。ただし source=ci test_result emit は in-progress CI を query した結果 fail。
+
+#### verify
+- Pre-merge 7/7 PASS、Post-merge は opportunistic 1 件残留 → `phase/verify` 維持。
+- Skip 条件のロジック自体は新版で実装済だが、本 verify session の SKILL.md スナップショットは旧版（session 開始時点）のため、本 verify では従来通り retrospective を記録（self-applied skip 不可、#673 snapshot 制約）。
+
+### Improvement Proposals
+
+- 上記 Auto Retrospective 既出 2 件（run-merge.sh CI run timing / run-code.sh silent exit-1）を引き継ぐ。重複 listing は省略。
