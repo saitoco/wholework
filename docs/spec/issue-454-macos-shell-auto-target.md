@@ -80,19 +80,19 @@
 - UNCERTAIN なし。グロブ非マッチ時の挙動 (CONSIDER) は検証可能だったが実用上影響なし
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- MUST/SHOULD 問題なし。CONSIDER 1件 (グロブ非マッチ時のガード) をスキップ判断: Spec が「シンプルな変更優先」を明示しており、追加ガード追加は範囲外
-- 全受け入れ条件 (AC1-4) PASS を確認。AC4 は CI SUCCESS による代替検証で確定
+- mergeable=true, CI 全ジョブ SUCCESS, review approved の状態でスカッシュマージを実行
+- `gh pr merge 692 --squash --delete-branch` で正常完了。Issue #454 は `closes #454` により自動クローズ
 
 ### Deferred Items
 
-- Post-merge AC (scripts/ に新規 .sh 追加時の自動チェック確認) は opportunistic verify で追跡
+- Post-merge AC (scripts/ に新規 .sh 追加した PR で macOS 互換性チェックが自動的に走ることの確認) は opportunistic verify で追跡
 
 ### Notes for Next Phase
 
-- 変更は `.github/workflows/test.yml` の 1 箇所のみ。merge 作業はシンプル
-- 全 CI ジョブ SUCCESS (DCO, bats, validate-skill-syntax, forbidden-expressions, macos-shell-compatibility)
-- MUST 問題なし → `/merge 692` で直接マージ可能
+- 変更内容は `.github/workflows/test.yml` の 1 箇所のみ (macos-shell ジョブのグロブ化)
+- verify フェーズでの確認事項: post-merge AC (opportunistic) のみ。pre-merge AC はすべて PASS 済み
+- 競合なし、リベース不要、テスト実行不要 (CI 済み)
