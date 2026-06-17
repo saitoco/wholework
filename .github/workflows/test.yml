@@ -67,4 +67,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run shell scripts on macOS
-        run: bash scripts/check-translation-sync.sh
+        run: |
+          for f in scripts/*.sh; do
+            bash -n "$f"
+          done
