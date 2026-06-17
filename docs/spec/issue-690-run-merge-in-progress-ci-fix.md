@@ -58,3 +58,35 @@
 - Candidate A を採用: `PR_NUMBER` は `run-merge.sh` の引数として既知なので `gh pr view "$PR_NUMBER"` でブランチ名を取得できる。Candidate B (`--status=success` で main を query) は semantic がずれる（他 PR の merge 結果を参照する可能性）
 - `_branch` が空の場合（PR 削除済み等）は graceful にスキップ（`_run_id=""` → emit 非実行）
 - 既存テストの `gh` mock は headRefName を処理しないため、実装変更後に既存 test_result テストが FAIL する。Step 2 で既存テストの mock 更新も必須
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec では `--jq '.headRefName'` を使用する例示があったが、既存コード (line 143) が `-q` 形式を使っているため `-q '.headRefName'` に統一した。両者は `gh` CLI 上では同義だが、テスト mock の条件マッチが `-q` を想定しており `--jq` では FAIL した。
+
+### Design Gaps/Ambiguities
+
+- Spec の headRefName 取得例示 (`--jq`) と既存コードの慣用 (`-q`) が不一致だった。Spec が `-q` と明示していれば第1コミットでのバグを防げた。
+
+### Rework
+
+- `scripts/run-merge.sh` を 2 回コミット: 初回に `--jq` で実装したが bats テストが FAIL したため `-q` に修正。1 回のコミットで済ませるためには Spec に慣用形を明示すべきだった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Candidate A (PR branch から headRefName 取得 + `--status=success` filter) を採用。既存 `PR_NUMBER` 変数を再利用できるため追加引数不要
+- `-q` フラグを使用（`--jq` でなく）: 既存コード (line 143) の慣用に合わせ、テスト mock の互換を維持
+- `_branch` が空の場合は graceful skip (`_run_id=""` → emit 非実行): PR 削除済み等の edge case をエラーなく処理
+
+### Deferred Items
+- post-merge AC: 次回 `/auto` 完走時に `source=ci` 付き `test_result` event が emit されるか観測 (observation event=auto-run)
+- 関連 Issues #679 / #662 / #630 の observation chain が本 PR merge 後に trigger されるか確認
+
+### Notes for Next Phase
+- PR #691 branch: `worktree-code+issue-690`
+- AC3 (`github_check "gh pr checks" "Run bats tests"`) は CI 完了後に PASS/FAIL が確定する
+- Spec の実装ステップと実際の実装は一致（`-q` vs `--jq` の細部のみ相違し retrospective に記録済み）
+- テスト: 全 20 件 PASS 確認済み
