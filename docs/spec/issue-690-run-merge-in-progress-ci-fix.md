@@ -74,21 +74,21 @@
 - `scripts/run-merge.sh` を 2 回コミット: 初回に `--jq` で実装したが bats テストが FAIL したため `-q` に修正。1 回のコミットで済ませるためには Spec に慣用形を明示すべきだった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light（Size M + `--light` フラグ）: 全4視点チェックで問題なし
-- MUST イシューなし → Step 12（コード修正）スキップ
-- 全 pre-merge AC（4件）が PASS: AC3（`github_check "gh pr checks" "Run bats tests"`）も CI SUCCESS 確認
+- PR #691 をスカッシュマージ: CI SUCCESS・レビュー承認済み・コンフリクトなし
+- base branch が main のため `closes #690` により Issue は自動クローズ
+- Phase Handoff は review phase のものを merge phase で置き換え（1フェーズ保持ルール）
 
 ### Deferred Items
-- post-merge AC: 次回 `/auto` 完走時に `source=ci` 付き `test_result` event が emit されるか観測 (observation event=auto-run)
+- post-merge AC: 次回 `/auto` 完走時に `.tmp/auto-events.jsonl` で `source=ci` 付き `test_result` event が emit されるか確認
 - 関連 Issues #679 / #662 / #630 の observation chain が本 PR merge 後に trigger されるか確認
 
 ### Notes for Next Phase
-- 全 CI SUCCESS、MUST イシューなし、ready to merge
-- `scripts/run-merge.sh` 変更: `--branch=main --limit=1` → PR branch の `--status=success` な最新 run を参照
-- validate-skill-syntax.py: PASS（0 error, 0 warning）
+- `scripts/run-merge.sh` 変更: `--branch=main --limit=1` → PR branch の `--status=success` な最新 run を参照（確実な CI log parse）
+- verify フェーズでの確認ポイント: post-merge AC（`source=ci` event emit）は次回 `/auto` 実行まで検証不可
+- 既存 bats テスト mock の更新と regression test 追加も含む
 
 ## review retrospective
 
