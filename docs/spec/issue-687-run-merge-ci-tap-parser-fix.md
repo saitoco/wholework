@@ -108,21 +108,21 @@ passed/failed を計算する parser に置換する (Issue 本文 候補 A)。
 - **doc-checker**: `scripts/` および `tests/` のみの変更のため docs/structure.md 等への文書更新不要。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 全 5 つの Pre-merge AC が PASS。AC4 (`github_check "gh pr checks" "Run bats tests"`) はレビュー時に CI SUCCESS を確認し `[x]` に更新
-- MUST/SHOULD 課題なし。CONSIDER 1 件（`grep -c "not ok "` の全ステップ出力スコープ）は修正不要と判断
-- REVIEW_DEPTH=light（`--light` フラグ明示指定）で 1 エージェントの統合レビューを実施
+- PR #688 を squash merge で main にマージ（no conflicts、CI green、review approved）
+- BASE_BRANCH=main のため `closes #687` による Issue 自動クローズが機能する
+- non-interactive モードで実行、ambiguity なし
 
 ### Deferred Items
-- Post-merge AC（次回 `/auto` 完走時の `source=ci` event 確認）は observation 型で `/verify` がスキップする
-- CONSIDER 課題（grep スコープ）は実用上影響軽微なため未修正
+- Post-merge AC（次回 `/auto` 完走時の `source=ci` event 確認）は observation 型で verify がスキップする
+- ブランチ削除済み（`--delete-branch` オプション使用）
 
 ### Notes for Next Phase
-- 全 AC PASS、CI 全ジョブ SUCCESS、MUST 課題なし → merge 準備完了
-- `scripts/run-merge.sh` と `tests/run-merge.bats` の 2 ファイルのみ変更。スコープは狭い
-- レビューコメント投稿済み（COMMENT イベント、REQUEST_CHANGES なし）
+- Issue #687 は merge 完了後に自動クローズ済み（`closes #687` + BASE_BRANCH=main）
+- verify で確認すべき Pre-merge AC は全て PASS 済み（review phase で確認完了）
+- Post-merge AC（`source=ci` event の emit 確認）は observation 型のため verify では skip される
 
 ## Code Retrospective
 
