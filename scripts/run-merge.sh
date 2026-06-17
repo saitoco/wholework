@@ -151,7 +151,7 @@ fi
 
 # CI test_result emit (pr route, EXIT_CODE=0 + AUTO_EVENTS_LOG set)
 if [[ $EXIT_CODE -eq 0 && -n "${AUTO_EVENTS_LOG:-}" ]]; then
-  _branch=$(gh pr view "$PR_NUMBER" --json headRefName --jq '.headRefName' 2>/dev/null || true)
+  _branch=$(gh pr view "$PR_NUMBER" --json headRefName -q '.headRefName' 2>/dev/null || true)
   _run_id=""
   if [[ -n "$_branch" ]]; then
     _run_id=$(gh run list --workflow=test.yml --branch="$_branch" --status=success --limit=1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)
