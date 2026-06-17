@@ -151,7 +151,11 @@ fi
 
 # CI test_result emit (pr route, EXIT_CODE=0 + AUTO_EVENTS_LOG set)
 if [[ $EXIT_CODE -eq 0 && -n "${AUTO_EVENTS_LOG:-}" ]]; then
-  _run_id=$(gh run list --workflow=test.yml --branch=main --limit=1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)
+  _branch=$(gh pr view "$PR_NUMBER" --json headRefName --jq '.headRefName' 2>/dev/null || true)
+  _run_id=""
+  if [[ -n "$_branch" ]]; then
+    _run_id=$(gh run list --workflow=test.yml --branch="$_branch" --status=success --limit=1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)
+  fi
   if [[ -n "$_run_id" ]]; then
     _log=$(gh run view "$_run_id" --log 2>/dev/null || true)
     _total=$(echo "$_log" | grep -oE "1\.\.[0-9]+" | grep -oE "[0-9]+$" | head -1 || echo 0)
