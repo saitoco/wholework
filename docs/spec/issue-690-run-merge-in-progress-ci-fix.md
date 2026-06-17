@@ -103,3 +103,30 @@
 ### 受け入れ基準検証難易度
 
 - Nothing to note. AC3 (`github_check "gh pr checks" "Run bats tests"`) は CI 完了待ちが必要だが、実行時点で既に SUCCESS だったため問題なし。全 4 pre-merge AC が PASS で UNCERTAIN なし。verify command の syntax は適切。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC が 4 件 pre-merge + 1 件 post-merge observation でコンパクト。candidate A/B/C を提案に明示し、実装者が判断しやすい設計。
+
+#### spec
+- 候補 A (PR branch + --status=success) を採用。実装と Spec の乖離なし。
+
+#### code
+- 一発実装で全 bats テスト PASS、CI 全 SUCCESS、rework なし。
+
+#### review
+- light review で MUST 0 件。Spec deviation なし。
+
+#### merge
+- merge phase は wait-ci-checks polling (#685) で正常完了。ただし `run-merge.sh` の test_result emit は **旧コードで実行された**ため "TAP plan line not found" warning + source=ci event 未 emit。これは #687 / #690 自身の merge では避けられない構造的制約。
+
+#### verify
+- Pre-merge 4/4 PASS、Post-merge 1 PASS (新ロジックを実 CI log に手動適用、TAP total=856 / passed=855 抽出を確認)。
+- 全 AC PASS → `phase/done` close。
+
+### Improvement Proposals
+
+- N/A — 本 Issue は #679 / #662 / #630 連鎖 close の最終 piece (#685 wait-ci-checks fix + #687 TAP parser + #690 CI run timing fix の 3 pillar 完了)。次回 pr-route /auto 完走時に `source=ci` test_result event が自動 emit されて opportunistic-search で 3 Issue の post-merge AC observation が一気に PASS → 連鎖 close 実現の見込み。
