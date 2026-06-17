@@ -141,17 +141,18 @@ Candidate C（polling ループ + `--kill-after` の両方）を採用し、`--w
 - `github_check` の CI 状態取得は `gh pr checks --json name,state` で直接確認可能で問題なし。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- AC 全件 PASS（grep + rubric + github_check）。MUST/SHOULD 問題なし → `/merge` 推奨。
-- CONSIDER 1件（`--watch` 不在 assert）はスキップ。既存テストで regression リスクは十分低い。
+- mergeable=true, reason=clean, CI SUCCESS, review approved の状態でスカッシュマージを実行（conflicts なし）。
+- PR #686 を squash merge し、ブランチ `worktree-code+issue-685` を削除。Issue #685 は `closes #685` により自動クローズ。
+- Phase Handoff を main に push 済み（worktree で ff-only merge 後にコミット）。
 
 ### Deferred Items
-- `event=auto-run` post-merge observation 検証は次回 `/auto` 実行時まで保留（Issue AC Post-merge に記載済み）。
+- post-merge observation: 次回 pr route `/auto` 完走時に merge phase が TIMEOUT_SEC 内に完了することを確認（Issue AC Post-merge に記載）。
 - `--watch` 不在 assert の追加は将来の改善提案として issues 集約予定（/verify レトロスペクティブ）。
 
 ### Notes for Next Phase
-- 全 CI ジョブ SUCCESS 確認済み。
-- レビューコメント投稿済み（COMMENT イベント）。MUST issue なし。
-- `/merge 686` 実行可能な状態。
+- `/verify` はラベルが `verify` に遷移した後、Issue #685 の verify command を実行すること。
+- post-merge verify command: `次回 pr route /auto 完走時に merge phase が TIMEOUT_SEC 内に完了することを確認`（観察ベースのため手動確認）。
+- CI job "Run bats tests" は PR マージ前に SUCCESS 確認済み。コードに変更なし。
