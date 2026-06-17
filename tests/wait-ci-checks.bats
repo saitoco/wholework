@@ -13,26 +13,54 @@ setup() {
     TIMEOUT_CALL_LOG="$BATS_TEST_TMPDIR/timeout_calls.log"
     export TIMEOUT_CALL_LOG
 
-    # Default: timeout passes through to gh (skip duration arg, exec the rest)
+    # Default: timeout handles --kill-after=N prefix, passes through to gh
     cat > "$MOCK_DIR/timeout" <<'MOCK'
 #!/bin/bash
+if [[ "$1" == --kill-after* ]]; then shift; fi
 shift  # Remove the timeout duration argument
 echo "timeout called: $@" >> "$TIMEOUT_CALL_LOG"
 exec "$@"
 MOCK
     chmod +x "$MOCK_DIR/timeout"
 
-    # Default: gh pr checks exits 0
+    # Default: gh pr checks returns SUCCESS JSON
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
 if [[ "$1" == "pr" && "$2" == "checks" ]]; then
-    echo "All checks passed" >&2
+    echo '[{"name":"Run bats tests","state":"SUCCESS"}]'
     exit 0
 fi
 echo ""
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/gh"
+
+    # sleep mock: no-op to keep tests fast
+    cat > "$MOCK_DIR/sleep" <<'MOCK'
+#!/bin/bash
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/sleep"
+
+    # jq wrapper: delegate to real jq (needed for restricted-PATH tests)
+    real_jq="$(type -P jq 2>/dev/null || echo "")"
+    if [[ -n "$real_jq" ]]; then
+        cat > "$MOCK_DIR/jq" <<MOCK
+#!/bin/bash
+exec "$real_jq" "\$@"
+MOCK
+        chmod +x "$MOCK_DIR/jq"
+    fi
+
+    # date wrapper: delegate to real date (needed for restricted-PATH tests)
+    real_date="$(type -P date 2>/dev/null || echo "")"
+    if [[ -n "$real_date" ]]; then
+        cat > "$MOCK_DIR/date" <<MOCK
+#!/bin/bash
+exec "$real_date" "\$@"
+MOCK
+        chmod +x "$MOCK_DIR/date"
+    fi
 }
 
 teardown() {
@@ -56,6 +84,7 @@ teardown() {
     run bash "$SCRIPT" 99
     [ "$status" -eq 0 ]
     grep -q "pr checks 99" "$TIMEOUT_CALL_LOG"
+    grep -q "\-\-json" "$TIMEOUT_CALL_LOG"
 }
 
 @test "success: uses WHOLEWORK_CI_TIMEOUT_SEC when set" {
@@ -73,22 +102,38 @@ teardown() {
 }
 
 @test "success: continues even when timeout exits non-zero (timeout occurred)" {
-    # Override timeout to exit 124 (the exit code timeout uses on timeout)
+    # Per-poll timeout exits 124; outer TIMEOUT_SEC elapses and loop breaks
     cat > "$MOCK_DIR/timeout" <<'MOCK'
 #!/bin/bash
 exit 124
 MOCK
     chmod +x "$MOCK_DIR/timeout"
 
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "checks" ]]; then
+    echo '[{"name":"Run bats tests","state":"IN_PROGRESS"}]'
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    export WHOLEWORK_CI_TIMEOUT_SEC=2
     run bash "$SCRIPT" 88
     [ "$status" -eq 0 ]
     [[ "$output" == *"CI check wait complete for PR #88"* ]]
 }
 
 @test "success: continues even when gh pr checks fails" {
+    # gh exits 1 but prints [] so _in_progress=0 and loop breaks immediately
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
-exit 1
+if [[ "$1" == "pr" && "$2" == "checks" ]]; then
+    echo '[]'
+    exit 1
+fi
+exit 0
 MOCK
     chmod +x "$MOCK_DIR/gh"
 
@@ -178,6 +223,7 @@ MOCK
 #!/bin/bash
 echo "gh $@" >> "$GH_CALL_LOG"
 if [[ "$1" == "pr" && "$2" == "checks" ]]; then
+    echo '[{"name":"Run bats tests","state":"SUCCESS"}]'
     exit 0
 fi
 exit 0
@@ -197,12 +243,12 @@ MOCK
     emit_event_src="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/emit-event.sh"
     cp "$emit_event_src" "$EMIT_DIR/emit-event.sh"
 
-    # gh outputs text with no pass/success matches, causing grep -c to exit 1
+    # gh outputs FAILURE JSON: _in_progress=0 so loop breaks; checks_passed=0
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
 if [[ "$1" == "pr" && "$2" == "checks" ]]; then
-    echo "pending: check1 waiting" >&2
-    exit 1
+    echo '[{"name":"c1","state":"FAILURE"}]'
+    exit 0
 fi
 exit 0
 MOCK

@@ -20,34 +20,46 @@ if [[ -n "${AUTO_EVENTS_LOG:-}" ]] && [[ -f "$SCRIPT_DIR/emit-event.sh" ]]; then
 fi
 
 echo "Waiting for CI checks on PR #${PR_NUMBER} (timeout: ${TIMEOUT_SEC}s)..." >&2
-if [[ "$_emit_ci_wait" == "true" ]]; then
-  _ci_checks_output=""
-  if command -v timeout >/dev/null 2>&1; then
-      _ci_checks_output=$(timeout "$TIMEOUT_SEC" gh pr checks "$PR_NUMBER" --watch --interval 60 2>&1 || true)
-  elif command -v gtimeout >/dev/null 2>&1; then
-      _ci_checks_output=$(gtimeout "$TIMEOUT_SEC" gh pr checks "$PR_NUMBER" --watch --interval 60 2>&1 || true)
-  else
-      _ci_checks_output=$(gh pr checks "$PR_NUMBER" --watch --interval 60 2>&1 || true)
+
+_ci_checks_output=""
+_poll_start=$(date +%s)
+while true; do
+  _elapsed=$(( $(date +%s) - _poll_start ))
+  if [[ "$_elapsed" -ge "$TIMEOUT_SEC" ]]; then
+    echo "CI check wait timed out after ${TIMEOUT_SEC}s for PR #${PR_NUMBER}" >&2
+    break
   fi
+  _poll_result=""
+  if command -v timeout >/dev/null 2>&1; then
+    _poll_result=$(timeout --kill-after=10 30 gh pr checks "$PR_NUMBER" --json name,state 2>/dev/null) || true
+  elif command -v gtimeout >/dev/null 2>&1; then
+    _poll_result=$(gtimeout 30 gh pr checks "$PR_NUMBER" --json name,state 2>/dev/null) || true
+  else
+    _poll_result=$(gh pr checks "$PR_NUMBER" --json name,state 2>/dev/null) || true
+  fi
+  if [[ -n "$_poll_result" ]]; then
+    _ci_checks_output="$_poll_result"
+    _in_progress=$(echo "$_poll_result" | jq '[.[] | select(.state == "IN_PROGRESS")] | length' 2>/dev/null || echo "1")
+    if [[ "$_in_progress" -eq 0 ]]; then
+      break
+    fi
+    echo "CI checks in progress: ${_in_progress} check(s) still running..." >&2
+  fi
+  sleep 60
+done
+
+if [[ "$_emit_ci_wait" == "true" ]]; then
   _ci_wait_end=$(date +%s)
   _wait_sec=$(( _ci_wait_end - _ci_wait_start ))
-  _passed=$(echo "${_ci_checks_output:-}" | grep -c -i "pass\|success" 2>/dev/null || true)
+  _passed=$(echo "${_ci_checks_output:-}" | jq '[.[] | select(.state == "SUCCESS")] | length' 2>/dev/null || echo "0")
   _passed=${_passed:-0}
-  _failed=$(echo "${_ci_checks_output:-}" | grep -c -i "fail\|error" 2>/dev/null || true)
+  _failed=$(echo "${_ci_checks_output:-}" | jq '[.[] | select(.state == "FAILURE")] | length' 2>/dev/null || echo "0")
   _failed=${_failed:-0}
   emit_event "ci_wait" \
     "phase=${EMIT_PHASE_NAME:-review}" \
     "wait_sec=${_wait_sec}" \
     "checks_passed=${_passed}" \
     "checks_failed=${_failed}"
-else
-  if command -v timeout >/dev/null 2>&1; then
-      timeout "$TIMEOUT_SEC" gh pr checks "$PR_NUMBER" --watch --interval 60 || true
-  elif command -v gtimeout >/dev/null 2>&1; then
-      gtimeout "$TIMEOUT_SEC" gh pr checks "$PR_NUMBER" --watch --interval 60 || true
-  else
-      gh pr checks "$PR_NUMBER" --watch --interval 60 || true
-  fi
 fi
 
 echo "CI check wait complete for PR #${PR_NUMBER}" >&2
