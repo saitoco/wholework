@@ -74,19 +74,32 @@
 - `scripts/run-merge.sh` を 2 回コミット: 初回に `--jq` で実装したが bats テストが FAIL したため `-q` に修正。1 回のコミットで済ませるためには Spec に慣用形を明示すべきだった。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Candidate A (PR branch から headRefName 取得 + `--status=success` filter) を採用。既存 `PR_NUMBER` 変数を再利用できるため追加引数不要
-- `-q` フラグを使用（`--jq` でなく）: 既存コード (line 143) の慣用に合わせ、テスト mock の互換を維持
-- `_branch` が空の場合は graceful skip (`_run_id=""` → emit 非実行): PR 削除済み等の edge case をエラーなく処理
+- REVIEW_DEPTH=light（Size M + `--light` フラグ）: 全4視点チェックで問題なし
+- MUST イシューなし → Step 12（コード修正）スキップ
+- 全 pre-merge AC（4件）が PASS: AC3（`github_check "gh pr checks" "Run bats tests"`）も CI SUCCESS 確認
 
 ### Deferred Items
 - post-merge AC: 次回 `/auto` 完走時に `source=ci` 付き `test_result` event が emit されるか観測 (observation event=auto-run)
 - 関連 Issues #679 / #662 / #630 の observation chain が本 PR merge 後に trigger されるか確認
 
 ### Notes for Next Phase
-- PR #691 branch: `worktree-code+issue-690`
-- AC3 (`github_check "gh pr checks" "Run bats tests"`) は CI 完了後に PASS/FAIL が確定する
-- Spec の実装ステップと実際の実装は一致（`-q` vs `--jq` の細部のみ相違し retrospective に記録済み）
-- テスト: 全 20 件 PASS 確認済み
+- 全 CI SUCCESS、MUST イシューなし、ready to merge
+- `scripts/run-merge.sh` 変更: `--branch=main --limit=1` → PR branch の `--status=success` な最新 run を参照
+- validate-skill-syntax.py: PASS（0 error, 0 warning）
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+- Nothing to note. Spec と実装の整合性は良好。Code phase の retrospective に記録された `-q` vs `--jq` の差異は既に解消済みで、Spec の example に慣用形を明示すれば防げた軽微な事案。
+
+### 再発イシュー
+
+- Nothing to note. 同種のイシューは見当たらない。
+
+### 受け入れ基準検証難易度
+
+- Nothing to note. AC3 (`github_check "gh pr checks" "Run bats tests"`) は CI 完了待ちが必要だが、実行時点で既に SUCCESS だったため問題なし。全 4 pre-merge AC が PASS で UNCERTAIN なし。verify command の syntax は適切。
