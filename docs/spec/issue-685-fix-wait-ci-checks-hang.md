@@ -106,3 +106,52 @@ Candidate C（polling ループ + `--kill-after` の両方）を採用し、`--w
 - **`gtimeout` の `--kill-after`**: GNU coreutils `timeout` を macOS 向けにリネームした `gtimeout` も `--kill-after` をサポートするが、バージョンに依存する可能性がある。リスクを最小化するため、`gtimeout` パスでは `--kill-after` なしの 30s タイムアウトを使用し、`timeout` パスのみ `--kill-after=10` を付与する。
 - **polling ループの最小間隔**: 各 poll は `gh pr checks --json` の単発実行（非 `--watch`）なので、通常は数秒で返る。per-poll タイムアウトは 30s（`--kill-after=10` で最大 40s）。
 - **Issue body の `--watch` 旧コードの削除確認**: `grep -n "\-\-watch" scripts/wait-ci-checks.sh` で 0 件であることを実装後に確認する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の polling ループ設計はほぼそのまま実装できた。`_emit_ci_wait` による if/else 分岐を廃止し、polling ループを共通パスとした後、イベント emission のみ条件分岐するシンプルな構造になった。
+
+### Design Gaps/Ambiguities
+
+- bats テストで `env PATH="$MOCK_DIR" /bin/bash "$SCRIPT"` を使う strict PATH テストが、新実装で `date +%s` を polling ループ外（共通パス）で使用するようになったため `date` を MOCK_DIR に追加する必要が生じた。Spec の setup() モック追加の記述には含まれていなかった（jq/sleep のみ言及）。
+- "continues even when timeout exits non-zero" テストは TIMEOUT_SEC=2 を使用。Spec では TIMEOUT_SEC=1 を示唆していたが、タイミング依存のフラキネスを避けるため 2 秒に設定した。実際には instant sleep モックにより ~1-2 秒で完了する。
+- "continues even when gh pr checks fails" テストは Spec の候補案「gh が `[]` を返す形に変更」を採用。`exit 1` しながら stdout に `[]` を出力する形で `_in_progress=0` → 即 break を実現した。
+
+### Rework
+
+- なし。初回実装でテスト 14/14 PASS。
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Spec と PR diff の間に構造的な乖離なし。Issue body の verify command（`grep "gh pr checks.*--json|--kill-after"`）が実装と正確に対応しており、false positive/negative なく PASS と判定できた。
+- AC3 の Issue body チェックボックスが未チェックだったが、CI job "Run bats tests" が SUCCESS であることを `github_check` で確認し PASS と判定。
+
+### Recurring Issues
+
+- なし。review-light チェック（4 アスペクト）では CONSIDER 1件のみ（`--watch` 不在 assert の追加提案）。MUST/SHOULD なし。
+
+### Acceptance Criteria Verification Difficulty
+
+- UNCERTAIN: 0件。全 verify command が解決可能だった。
+- `rubric` コマンドの評価は実装内容から明確に PASS と判定できた（polling ループ + elapsed チェック + per-poll kill-after の三重保証が明示的）。
+- `github_check` の CI 状態取得は `gh pr checks --json name,state` で直接確認可能で問題なし。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- AC 全件 PASS（grep + rubric + github_check）。MUST/SHOULD 問題なし → `/merge` 推奨。
+- CONSIDER 1件（`--watch` 不在 assert）はスキップ。既存テストで regression リスクは十分低い。
+
+### Deferred Items
+- `event=auto-run` post-merge observation 検証は次回 `/auto` 実行時まで保留（Issue AC Post-merge に記載済み）。
+- `--watch` 不在 assert の追加は将来の改善提案として issues 集約予定（/verify レトロスペクティブ）。
+
+### Notes for Next Phase
+- 全 CI ジョブ SUCCESS 確認済み。
+- レビューコメント投稿済み（COMMENT イベント）。MUST issue なし。
+- `/merge 686` 実行可能な状態。
