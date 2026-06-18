@@ -153,19 +153,32 @@
 
 - None
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- `phase_complete` に `_EMIT_PHASE_OWNED` センチネルガードが必要だった点が Spec に明記されていなかった。Spec は phase_start のガード (`EMIT_PHASE_NAME` 未設定チェック) を説明しているが、phase_complete が同じガードを必要とするという対称性の記述が欠如していた。実装時に非対称な状態で実装されたためレビューで発見された。
+
+### Recurring Issues
+
+- 二重 emit ガードのパターン (フラグ/センチネルで emit を制御) が 3 スクリプト共通で必要だったが、Spec ではスクリプトごとに独立した説明になっており横断的な一貫性要件が明示されていなかった。今後同類のパターンは Spec に "全スクリプト共通で対称的に適用する" 旨を明記すると実装漏れが防げる。
+
+### Acceptance Criteria Verification Difficulty
+
+- AC 15 件すべて PASS、UNCERTAIN なし。bats テストは CI 参照 (Run bats tests SUCCESS) で代替検証した。`command` verify コマンドは safe mode で UNCERTAIN になるが CI 参照フォールバックが有効に機能した。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- EMIT ガードブロックは `trap '_maybe_emit_phase_complete' EXIT` の直後に配置した — trap 設定後すぐに phase_start を emit することで、crash/abort 時も backfill が機能する順序を維持
-- `phase_complete` の明示 emit は `echo "---"` の直前 (最終フッタ前) に追加 — EXIT_CODE が確定した後かつ出力が終わる前の自然な配置
-- `run-merge.sh` の phase_complete は CI test_result emit ブロックの直後に追加 — test_result → phase_complete の順序で emit されることで rollup の時系列が正しくなる
+- `phase_complete` の二重 emit 問題を `_EMIT_PHASE_OWNED` センチネル変数で解決。`run-auto-sub.sh` 経由時は `EMIT_PHASE_NAME` が pre-export されているため `_EMIT_PHASE_OWNED` が空のまま → `phase_complete` は emit されず二重 emit を防ぐ
+- bats テストの "no double emit" に `! grep -q "phase_complete"` アサーションを追加し、`phase_complete` の二重 emit 回帰を検出できるようにした
+- validate-skill-syntax.py: PASS (0 errors)
 
 ### Deferred Items
-- `token_usage` event の run-*.sh への追加は別 Issue (#662) に委ねる
-- `code` (フラグなし) の phase 名は run-auto-sub.sh に対応するケースがないが、直接呼び出しケースのみ発生するため post-merge observation で確認する
+- `token_usage` event の run-*.sh への追加は別 Issue (#662) — このレビューでは対象外
+- post-merge observation: 単一 Issue /auto 完走後の rollup Sessions テーブル確認
 
 ### Notes for Next Phase
-- bats テストで EMIT_PHASE_NAME の pre-set による二重 emit ガードを検証済み — review フェーズはこのテストの PASS を確認すればよい
-- section_contains "scripts/run-code.sh" "_maybe_emit_phase_complete" "EMIT_PHASE_NAME" で backfill 関数の EMIT_PHASE_NAME ガード保持を確認済み
-- PR #697 として作成済み、CI が通ることを確認してから merge へ進む
+- SHOULD 問題をすべて修正済み。MUST 問題なし。CI 再実行待ち
+- merge は CI 完了確認後に `/merge 697` で実施
