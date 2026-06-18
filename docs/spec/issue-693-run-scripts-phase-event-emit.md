@@ -183,3 +183,27 @@
 - verify フェーズでは post-merge verification (観察確認) が主タスク
 - Pre-merge verify コマンドは PR マージ済みのため全 PASS 済み
 - `/auto` 単一 Issue 実行後に `auto-events-rollup.sh` で Sessions テーブルを確認すること
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 単一 emit と二重 emit ガードの対称性 (phase_start 側のガードと phase_complete 側のガード) を明示する記述が薄かった。review 段階で symmetry gap が露見し補正されたが、Spec 段階で「3 スクリプト横断で対称的に適用する」と明示しておくと初版実装で漏れを防げる
+
+#### code
+- design からの逸脱なし。実装は 4 ステップ計画通りに完了
+- bash 3.2+ 互換 (export 構文、`[[ -z ... ]]` ガード) を維持
+
+#### review
+- review 段階で phase_complete のセンチネルガード `_EMIT_PHASE_OWNED` が必要だと検出され、Spec の symmetry 記述の弱さを補正。/review の semantic 検出機能が機能した好例
+
+#### merge
+- squash merge / CI PASS / closes #693 で Issue 自動クローズ済み
+
+#### verify
+- Pre-merge AC 15 件すべて grep / rubric / command で PASS。command 系は CI fallback でなく `bats` 直接実行で 74 tests green を確認
+- Post-merge AC #16 (observation event=auto-run) は SKIPPED として記録。`/auto` 完走後の `observation-trigger.sh --event auto-run` 起動時に rollup Sessions テーブルが空でないことが自動評価される
+
+### Improvement Proposals
+- N/A (review retrospective に記録済みの spec symmetry gap は本 Issue 内で補正済み。横展開可能な一般化改善は未確定のため起票なし)
