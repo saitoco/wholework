@@ -137,3 +137,35 @@
 - ガード条件 `[[ -z "${EMIT_PHASE_NAME:-}" ]]` の根拠: `run-auto-sub.sh` は `export EMIT_PHASE_NAME="$phase"` 後にランナースクリプトを呼び出すため、この値が子プロセスに引き継がれる
 - `run-merge.sh` の phase_complete 明示 emit 必要性: test_result emit 後に exit するため、backfill trap が `_last_event == "phase_start"` をチェックする時点で last_event は `test_result` になり backfill 条件が不成立
 - Spec 簡易性ルール (light: 各 5 以内) について: 実装ステップは 4 ステップで規定内。Pre-merge 検証項目は Issue body の AC 定義に従い 15 項目となる (Issue body AC からの verbatim sync 優先)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None
+
+### Design Gaps/Ambiguities
+
+- `AUTO_SESSION_ID` 初期化の配置: Spec では `export AUTO_EVENTS_LOG` の直後に追加と明記されていたが、実際は `source emit-event.sh` の前 (同じ直後の位置) に挿入した — 同じ行ブロックなので実質同じ配置
+- `run-code.sh` の `else` ブランチ (フラグなしの場合 `EMIT_PHASE_NAME="code"`) は run-auto-sub.sh の命名規約に直接対応する phase 名がないが、直接呼び出しケースのフォールバックとして問題なし
+
+### Rework
+
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- EMIT ガードブロックは `trap '_maybe_emit_phase_complete' EXIT` の直後に配置した — trap 設定後すぐに phase_start を emit することで、crash/abort 時も backfill が機能する順序を維持
+- `phase_complete` の明示 emit は `echo "---"` の直前 (最終フッタ前) に追加 — EXIT_CODE が確定した後かつ出力が終わる前の自然な配置
+- `run-merge.sh` の phase_complete は CI test_result emit ブロックの直後に追加 — test_result → phase_complete の順序で emit されることで rollup の時系列が正しくなる
+
+### Deferred Items
+- `token_usage` event の run-*.sh への追加は別 Issue (#662) に委ねる
+- `code` (フラグなし) の phase 名は run-auto-sub.sh に対応するケースがないが、直接呼び出しケースのみ発生するため post-merge observation で確認する
+
+### Notes for Next Phase
+- bats テストで EMIT_PHASE_NAME の pre-set による二重 emit ガードを検証済み — review フェーズはこのテストの PASS を確認すればよい
+- section_contains "scripts/run-code.sh" "_maybe_emit_phase_complete" "EMIT_PHASE_NAME" で backfill 関数の EMIT_PHASE_NAME ガード保持を確認済み
+- PR #697 として作成済み、CI が通ることを確認してから merge へ進む
