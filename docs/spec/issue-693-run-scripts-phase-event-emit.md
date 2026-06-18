@@ -137,3 +137,48 @@
 - ガード条件 `[[ -z "${EMIT_PHASE_NAME:-}" ]]` の根拠: `run-auto-sub.sh` は `export EMIT_PHASE_NAME="$phase"` 後にランナースクリプトを呼び出すため、この値が子プロセスに引き継がれる
 - `run-merge.sh` の phase_complete 明示 emit 必要性: test_result emit 後に exit するため、backfill trap が `_last_event == "phase_start"` をチェックする時点で last_event は `test_result` になり backfill 条件が不成立
 - Spec 簡易性ルール (light: 各 5 以内) について: 実装ステップは 4 ステップで規定内。Pre-merge 検証項目は Issue body の AC 定義に従い 15 項目となる (Issue body AC からの verbatim sync 優先)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None
+
+### Design Gaps/Ambiguities
+
+- `AUTO_SESSION_ID` 初期化の配置: Spec では `export AUTO_EVENTS_LOG` の直後に追加と明記されていたが、実際は `source emit-event.sh` の前 (同じ直後の位置) に挿入した — 同じ行ブロックなので実質同じ配置
+- `run-code.sh` の `else` ブランチ (フラグなしの場合 `EMIT_PHASE_NAME="code"`) は run-auto-sub.sh の命名規約に直接対応する phase 名がないが、直接呼び出しケースのフォールバックとして問題なし
+
+### Rework
+
+- None
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- `phase_complete` に `_EMIT_PHASE_OWNED` センチネルガードが必要だった点が Spec に明記されていなかった。Spec は phase_start のガード (`EMIT_PHASE_NAME` 未設定チェック) を説明しているが、phase_complete が同じガードを必要とするという対称性の記述が欠如していた。実装時に非対称な状態で実装されたためレビューで発見された。
+
+### Recurring Issues
+
+- 二重 emit ガードのパターン (フラグ/センチネルで emit を制御) が 3 スクリプト共通で必要だったが、Spec ではスクリプトごとに独立した説明になっており横断的な一貫性要件が明示されていなかった。今後同類のパターンは Spec に "全スクリプト共通で対称的に適用する" 旨を明記すると実装漏れが防げる。
+
+### Acceptance Criteria Verification Difficulty
+
+- AC 15 件すべて PASS、UNCERTAIN なし。bats テストは CI 参照 (Run bats tests SUCCESS) で代替検証した。`command` verify コマンドは safe mode で UNCERTAIN になるが CI 参照フォールバックが有効に機能した。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `phase_complete` の二重 emit 問題を `_EMIT_PHASE_OWNED` センチネル変数で解決。`run-auto-sub.sh` 経由時は `EMIT_PHASE_NAME` が pre-export されているため `_EMIT_PHASE_OWNED` が空のまま → `phase_complete` は emit されず二重 emit を防ぐ
+- bats テストの "no double emit" に `! grep -q "phase_complete"` アサーションを追加し、`phase_complete` の二重 emit 回帰を検出できるようにした
+- validate-skill-syntax.py: PASS (0 errors)
+
+### Deferred Items
+- `token_usage` event の run-*.sh への追加は別 Issue (#662) — このレビューでは対象外
+- post-merge observation: 単一 Issue /auto 完走後の rollup Sessions テーブル確認
+
+### Notes for Next Phase
+- SHOULD 問題をすべて修正済み。MUST 問題なし。CI 再実行待ち
+- merge は CI 完了確認後に `/merge 697` で実施

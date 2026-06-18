@@ -14,6 +14,8 @@ fi
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
 export AUTO_EVENTS_LOG
+AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat .tmp/auto-session-current 2>/dev/null || echo '')}"
+export AUTO_SESSION_ID
 source "$SCRIPT_DIR/emit-event.sh"
 
 _maybe_emit_phase_complete() {
@@ -35,6 +37,14 @@ _maybe_emit_phase_complete() {
   fi
 }
 trap '_maybe_emit_phase_complete' EXIT
+
+_EMIT_PHASE_OWNED=""
+if [[ -z "${EMIT_PHASE_NAME:-}" ]]; then
+  _EMIT_PHASE_OWNED=1
+  export EMIT_ISSUE_NUMBER="$PR_NUMBER"
+  export EMIT_PHASE_NAME="merge"
+  emit_event "phase_start" "phase=${EMIT_PHASE_NAME}"
+fi
 
 PERMISSION_MODE=$("$SCRIPT_DIR/get-config-value.sh" permission-mode auto 2>/dev/null || echo auto)
 if [[ "$PERMISSION_MODE" == "auto" ]]; then
@@ -167,6 +177,10 @@ if [[ $EXIT_CODE -eq 0 && -n "${AUTO_EVENTS_LOG:-}" ]]; then
       echo "Warning: run-merge.sh: gh run view ${_run_id} --log: TAP plan line (1..N) not found" >&2
     fi
   fi
+fi
+
+if [[ $EXIT_CODE -eq 0 && -n "${_EMIT_PHASE_OWNED:-}" ]]; then
+  emit_event "phase_complete" "phase=${EMIT_PHASE_NAME}"
 fi
 
 echo "---"
