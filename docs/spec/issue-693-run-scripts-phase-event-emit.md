@@ -168,17 +168,18 @@
 - AC 15 件すべて PASS、UNCERTAIN なし。bats テストは CI 参照 (Run bats tests SUCCESS) で代替検証した。`command` verify コマンドは safe mode で UNCERTAIN になるが CI 参照フォールバックが有効に機能した。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `phase_complete` の二重 emit 問題を `_EMIT_PHASE_OWNED` センチネル変数で解決。`run-auto-sub.sh` 経由時は `EMIT_PHASE_NAME` が pre-export されているため `_EMIT_PHASE_OWNED` が空のまま → `phase_complete` は emit されず二重 emit を防ぐ
-- bats テストの "no double emit" に `! grep -q "phase_complete"` アサーションを追加し、`phase_complete` の二重 emit 回帰を検出できるようにした
-- validate-skill-syntax.py: PASS (0 errors)
+- PR #697 を squash merge で main にマージ。CI PASS、review approved の状態で実施
+- BASE_BRANCH = main のため `closes #693` が自動で Issue をクローズする
+- Phase Handoff を Spec に記録し main に push
 
 ### Deferred Items
-- `token_usage` event の run-*.sh への追加は別 Issue (#662) — このレビューでは対象外
-- post-merge observation: 単一 Issue /auto 完走後の rollup Sessions テーブル確認
+- post-merge observation: 単一 Issue /auto 完走後の rollup Sessions テーブルが空でないことを確認 (Post-merge verification)
+- `token_usage` event の run-*.sh への追加は別 Issue (#662)
 
 ### Notes for Next Phase
-- SHOULD 問題をすべて修正済み。MUST 問題なし。CI 再実行待ち
-- merge は CI 完了確認後に `/merge 697` で実施
+- verify フェーズでは post-merge verification (観察確認) が主タスク
+- Pre-merge verify コマンドは PR マージ済みのため全 PASS 済み
+- `/auto` 単一 Issue 実行後に `auto-events-rollup.sh` で Sessions テーブルを確認すること
