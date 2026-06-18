@@ -38,7 +38,9 @@ _maybe_emit_phase_complete() {
 }
 trap '_maybe_emit_phase_complete' EXIT
 
+_EMIT_PHASE_OWNED=""
 if [[ -z "${EMIT_PHASE_NAME:-}" ]]; then
+  _EMIT_PHASE_OWNED=1
   export EMIT_ISSUE_NUMBER="$PR_NUMBER"
   export EMIT_PHASE_NAME="merge"
   emit_event "phase_start" "phase=${EMIT_PHASE_NAME}"
@@ -177,7 +179,7 @@ if [[ $EXIT_CODE -eq 0 && -n "${AUTO_EVENTS_LOG:-}" ]]; then
   fi
 fi
 
-if [[ $EXIT_CODE -eq 0 ]]; then
+if [[ $EXIT_CODE -eq 0 && -n "${_EMIT_PHASE_OWNED:-}" ]]; then
   emit_event "phase_complete" "phase=${EMIT_PHASE_NAME}"
 fi
 

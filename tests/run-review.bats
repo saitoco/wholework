@@ -354,6 +354,7 @@ MOCK
     unset EMIT_PHASE_NAME
     [ "$status" -eq 0 ]
     ! grep -q "phase_start" "$EMIT_LOG"
+    ! grep -q "phase_complete" "$EMIT_LOG"
 }
 
 @test "emit: phase_complete emitted on success" {
