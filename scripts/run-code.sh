@@ -47,6 +47,8 @@ fi
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
 export AUTO_EVENTS_LOG
+AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat .tmp/auto-session-current 2>/dev/null || echo '')}"
+export AUTO_SESSION_ID
 source "$SCRIPT_DIR/emit-event.sh"
 
 _maybe_emit_phase_complete() {
@@ -68,6 +70,18 @@ _maybe_emit_phase_complete() {
   fi
 }
 trap '_maybe_emit_phase_complete' EXIT
+
+if [[ -z "${EMIT_PHASE_NAME:-}" ]]; then
+  export EMIT_ISSUE_NUMBER="$ISSUE_NUMBER"
+  if [[ "$ROUTE_FLAG" == "--pr" ]]; then
+    export EMIT_PHASE_NAME="code-pr"
+  elif [[ "$ROUTE_FLAG" == "--patch" ]]; then
+    export EMIT_PHASE_NAME="code-patch"
+  else
+    export EMIT_PHASE_NAME="code"
+  fi
+  emit_event "phase_start" "phase=${EMIT_PHASE_NAME}"
+fi
 
 PERMISSION_MODE=$("$SCRIPT_DIR/get-config-value.sh" permission-mode auto 2>/dev/null || echo auto)
 if [[ "$PERMISSION_MODE" == "auto" ]]; then
@@ -232,6 +246,10 @@ if [[ "$ROUTE_FLAG" == "--pr" && $EXIT_CODE -eq 0 ]]; then
       echo "Recommended: resolve conflicts before /merge. See modules/orchestration-fallbacks.md#code-base-conflict for the recovery procedure." >&2
     fi
   fi
+fi
+
+if [[ $EXIT_CODE -eq 0 ]]; then
+  emit_event "phase_complete" "phase=${EMIT_PHASE_NAME}"
 fi
 
 echo "---"

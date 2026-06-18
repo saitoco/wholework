@@ -427,3 +427,36 @@ MOCK
     [ "$status" -eq 0 ]
     [[ "$output" != *"Warning:"* ]]
 }
+
+@test "emit: phase_start emitted when EMIT_PHASE_NAME is not set" {
+    EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
+MOCK
+    run bash "$SCRIPT" 123 --pr
+    [ "$status" -eq 0 ]
+    grep -q "phase_start" "$EMIT_LOG"
+    grep -q "phase=code-pr" "$EMIT_LOG"
+}
+
+@test "emit: phase_start not emitted when EMIT_PHASE_NAME is pre-set (no double emit)" {
+    EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
+MOCK
+    export EMIT_PHASE_NAME="code-pr"
+    run bash "$SCRIPT" 123 --pr
+    unset EMIT_PHASE_NAME
+    [ "$status" -eq 0 ]
+    ! grep -q "phase_start" "$EMIT_LOG"
+}
+
+@test "emit: phase_complete emitted on success" {
+    EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
+MOCK
+    run bash "$SCRIPT" 123 --pr
+    [ "$status" -eq 0 ]
+    grep -q "phase_complete" "$EMIT_LOG"
+}
