@@ -83,19 +83,35 @@
 
 - None
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Phases / Recoveries 集計列が `$own` (session スコープ) ではなく `$ev[]` (issue 全体) で実装されていた。Spec が "現行を踏襲" と明示したため実装は Spec どおりだが、session_id 別行が生成される新構造では同一 issue が複数セッションで実行された際にクロス汚染が発生する。Spec 記述が "現行を踏襲" という短縮形で将来の含意を隠蔽した典型。次回類似改修では "session スコープ vs. issue スコープ" を明示的に書くこと。
+
+### Recurring Issues
+
+- Nothing to note
+
+### Acceptance Criteria Verification Difficulty
+
+- `command "bats tests/auto-events-rollup.bats"` は safe mode では UNCERTAIN 扱いだが、CI reference fallback (Run bats tests SUCCESS) で PASS に解決できた。verify command 品質に問題なし。
+- `rubric` 基準は AI 判断で PASS。3 スクリプトの symmetry (phase_start emit ガード + phase_complete on success) を rubric が適切に捉えていた。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Sessions jq クエリを `sub_start` 起点から `{issue, session_id}` 全列挙に変更し fallback 追加 (Spec どおり)
-- `session_id` が欠落した legacy event を `.session_id // ""` で正規化してから `unique` に渡す設計を採用
-- `$own` 変数で同一 `(issue, session_id)` のイベント列を絞り、`sub_start`/`phase_start` の優先順位を `//` 演算子で表現
+- MUST 指摘なし → COMMENT 投稿 (REQUEST_CHANGES 不要)
+- SHOULD #1 (Phases/Recoveries クロス汚染): Spec "現行を踏襲" に従い修正スキップ。次 Issue 候補として記録
+- SHOULD #2 (混在ケーステスト不足): SHOULD #1 の修正前提のためスキップ
 
 ### Deferred Items
-- post-merge observation: 単一 Issue /auto 完走後の rollup Sessions テーブルに行が出力されることを確認 (Post-merge verification)
-- `token_usage` event の run-*.sh への追加は別 Issue (#662)
+- Phases/Recoveries 列を `$own` スコープに変更する改善 (SHOULD 級、別 Issue で検討)
+- 同一 issue 複数セッション混在ケースのテスト追加 (上記に連動)
+- post-merge observation: 単一 Issue /auto 完走後の rollup Sessions テーブルに行が出力されることを確認
 
 ### Notes for Next Phase
-- テストは 7 件全て PASS (新規 2 件含む)
-- PR #698 を review → merge フローで進める
-- `bats tests/auto-events-rollup.bats` が 7 件 green であることを CI で確認
+- MUST 指摘なし。`/merge 698` で進行可
+- CI 全ジョブ SUCCESS 確認済み
+- Acceptance Criteria 20 件 PASS、Post-merge 2 件は観察待ち
