@@ -99,19 +99,18 @@
 - `rubric` 基準は AI 判断で PASS。3 スクリプトの symmetry (phase_start emit ガード + phase_complete on success) を rubric が適切に捉えていた。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST 指摘なし → COMMENT 投稿 (REQUEST_CHANGES 不要)
-- SHOULD #1 (Phases/Recoveries クロス汚染): Spec "現行を踏襲" に従い修正スキップ。次 Issue 候補として記録
-- SHOULD #2 (混在ケーステスト不足): SHOULD #1 の修正前提のためスキップ
+- PR #698 を squash merge で main にマージ。CI PASS、review approved の状態で実施
+- BASE_BRANCH = main のため `closes #693` が自動で Issue をクローズする
+- Phase Handoff を Spec に記録し main に push
 
 ### Deferred Items
+- post-merge observation: 単一 Issue /auto 完走後の rollup Sessions テーブルに行が出力されることを確認 (Post-merge verification)
 - Phases/Recoveries 列を `$own` スコープに変更する改善 (SHOULD 級、別 Issue で検討)
-- 同一 issue 複数セッション混在ケースのテスト追加 (上記に連動)
-- post-merge observation: 単一 Issue /auto 完走後の rollup Sessions テーブルに行が出力されることを確認
 
 ### Notes for Next Phase
-- MUST 指摘なし。`/merge 698` で進行可
-- CI 全ジョブ SUCCESS 確認済み
-- Acceptance Criteria 20 件 PASS、Post-merge 2 件は観察待ち
+- verify フェーズでは post-merge verification (観察確認) が主タスク
+- Pre-merge verify コマンドは PR マージ済みのため全 PASS 済み (CI 7 tests green)
+- `/auto` 単一 Issue 実行後に `auto-events-rollup.sh` で Sessions テーブルを確認すること
