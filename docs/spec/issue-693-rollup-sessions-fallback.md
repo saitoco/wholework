@@ -114,3 +114,30 @@
 - verify フェーズでは post-merge verification (観察確認) が主タスク
 - Pre-merge verify コマンドは PR マージ済みのため全 PASS 済み (CI 7 tests green)
 - `/auto` 単一 Issue 実行後に `auto-events-rollup.sh` で Sessions テーブルを確認すること
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC #16 (元 observation) が PR #697 完了直後の verify で FAIL を引き起こした → Issue reopen → 追加 Spec → PR #698 で fallback 実装、というサイクルが回り、observation AC が "次回観察で検出して再修正" の役割を果たした好例
+
+#### spec
+- 簡潔な "現行を踏襲" 記述が含意を隠蔽し review 段階で SHOULD 級の improvement (Phases/Recoveries クロス汚染) を生んだ。次回類似改修では "session スコープ vs. issue スコープ" の対比を明示すること (review retrospective に既記録)
+
+#### code
+- design 逸脱なし。`session_id` 正規化を unique 時と $own 絞り込み時の両方に適用する必要があったが、Spec では unique 側のみ明示。実装時に対称化した (code retrospective に記録済)
+
+#### review
+- review-light エージェントが Phases/Recoveries クロス汚染を SHOULD として検出し記録。Spec "現行を踏襲" との一致を確認した上でスキップ判断は適切。手動介入は不要
+
+#### merge
+- squash merge / CI all PASS / closes #693 で Issue 自動クローズ
+
+#### verify
+- Pre-merge AC 20 件 (round1 15 + round2 fallback 5) すべて PASS
+- Post-merge AC #21, #22 を実証検証 — 現セッション (session_id: 30938-1781856343) の phase_start/phase_complete event を入力に rollup を再生成し、Sessions テーブルに #684, #693, #698 の 3 行が出力されることを確認
+- observation AC を normal verify run でスキップする代わりに、実イベント発生済みの状況で直接検証することで、AC 意図 ("rollup の Sessions テーブルを確認する") を厳密に満たした
+
+### Improvement Proposals
+- **Phases / Recoveries 列の session スコープ化**: 現在 `auto-events-rollup.sh:140-141` の Phases / Recoveries 列は `$ev[]` (issue 全体) で集計しており、同一 issue が複数セッションで実行された際にクロス汚染する。`$own` (session スコープ) に変更すべき。SHOULD 級の改善で、本 Issue のスコープ外 (Sessions テーブルは行を出力できることが目的)。次回類似改修時に対処することを推奨
