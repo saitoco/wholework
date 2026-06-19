@@ -111,21 +111,26 @@ In Loop Engineering terms, Wholework is a **harness, plus a sequential orchestra
 
 Wholework's positioning memo is explicit that fleet-class 100+ concurrent execution is out of scope (Anchor: mid-scale modernization, 5–10 concurrent, $10K/10 days/50–100 PRs). The proposals below are filtered through that lens — they extend Wholework *toward* a fuller loop without breaking the subscription-auth / GitHub-native moat.
 
-### 4.1 High fit — natural extensions of the existing surface
+Two design principles narrow the proposal space further:
 
-These reuse blocks already in place and close visible gaps the team has acknowledged.
+- **Local-first execution.** Loop-fire happens inside a Claude Code session on the user's machine (subscription-auth preserved). Remote execution via Claude Code Action / GitHub Actions `schedule:` is technically possible (the action accepts a `claude_code_oauth_token` secret) but is deferred until the per-skill *execution-surface* question is solved separately. Each Skill differs in how cleanly it crosses local↔CI — `${CLAUDE_PLUGIN_ROOT}` resolution, `.tmp/` ephemerality, `run-*.sh` `claude -p` subprocesses, git worktree lifetime, MCP server availability — and `/auto` in particular carries most of that risk. CI execution is a later track, not part of E1–E4.
+- **Tail extension over new primitives.** Wholework's existing design pattern (Phase Handoff written at each phase's *exit*, read at the next's *entry*) generalizes: the loop is built by *folding the existing workflow's terminus back to its entry under a budget*, not by inserting a new top-level orchestrator. This keeps the existing human-gate placement (PR review, AC confirmation, retro-proposal approval) intact and reuses Spec/retrospective/event-log infrastructure unchanged. E1–E4 below are therefore reframed as *tail extensions of existing skills*, not new skills.
 
-**E1. `/audit triage` cron — daily-triage primitive**
-Add a `schedule:` workflow that runs `/audit drift` + `/audit fragility` nightly and files Issues with `audit/*` labels. Triage skill is then run on the new Issues. `/auto --batch` picks them up next morning. This is the Daily Triage pattern from Osmani's example loop, expressed in Wholework's existing primitives — no new skill required, only a workflow file. Risk: token budget. Mitigation: `--limit N` already exists on `/triage`.
+### 4.1 High fit — tail extensions of existing skills
 
-**E2. `/audit recoveries` auto-fire on threshold cross**
-`/audit recoveries` exists today but is user-invoked. The orchestration recoveries log accumulates passively; a frequency threshold (currently 3) auto-files Issues when crossed. Wire this to a cron so the recurrence-to-Issue conversion happens without human invocation. This converts the "loop's verifier feedback loop" from a manual ritual into a real loop.
+These extend the existing workflow's tail under an opt-in budget. No new top-level skills. No new schedulers. Everything fires inside the running Claude Code session.
 
-**E3. `/goal N` — verifier-driven re-fire of `/code`**
-`/verify` FAIL today reopens the Issue and *returns to the user* for the next action choice (`/code --patch` vs `/code --pr` vs `/spec`). A `/goal N` skill that re-fires `/code` (using the same Spec) until acceptance criteria pass or a retry budget exhausts is a direct analogue of Claude Code's `/goal`. Maker/checker split is already structural (separate `claude -p` processes); the change is wiring the *loop* not the agents. Cap with `max_iterations` and `token_daily_budget` per the Zenn article's stop-condition discipline.
+**E3. `/verify` tail — `auto-retry-on-fail` (the smallest first step)**
+Today's `/verify` FAIL path: `gh issue reopen` + remove all `phase/*` → return control to the user, who manually picks `/code --patch` vs `/code --pr` vs `/spec`. Extension: when `.wholework.yml: auto-retry-on-fail` is set (opt-in) and the retry budget is not exhausted, the tail folds back automatically — re-fire `/code` with the same Spec and the captured verify-failure context, then re-run `/verify`. Stop when AC PASS, when `max_iterations` is reached, or when `budget_tokens` is exhausted. The maker/checker split is already structural (`/code` and `/verify` run in separate `claude -p` processes), so the change is *loop wiring*, not agent design. New surface: an `.wholework.yml` flag, a few SKILL.md steps in `/verify`, a retry counter in the Spec retrospective, a `verify_retry_fire` event in `auto-events.jsonl`. This is the closest Wholework analogue of Claude Code's `/goal` and is the recommended first step because it materializes the "tail extension" pattern with the smallest change set.
 
-**E4. Phase-State heartbeat reporter**
-`scripts/reconcile-phase-state.sh` already emits a v1 JSON snapshot of any Issue's phase. A scheduled job that runs it across all `phase/*` Issues and posts a single rollup comment / Slack message / Markdown file (`docs/reports/loop-state-YYYY-MM-DD.md`) gives the loop a "look before stepping" surface. This is the `STATE.md` of the Zenn article, but derived from live GitHub state rather than maintained by hand.
+**E2. `/verify` retrospective tail — `/audit recoveries` auto-fire on threshold cross**
+`/audit recoveries` exists today but is user-invoked. Extension: at the tail of `/verify`'s retrospective-proposal writeout, evaluate whether any orchestration-recovery symptom has crossed the frequency threshold (currently 3) and auto-file the improvement Issue inline. Same skill, same retrospective hook, no new entry point. Converts "verifier feedback loop" from a manual ritual into a real loop by piggybacking on a step that already runs every verify.
+
+**E1. `/auto --batch` tail — next-cycle seed emission**
+Today, `/auto --batch N1 N2 ...` finishes a batch and stops. Extension: at the batch's tail, optionally run a lightweight scan (`/audit drift --since=<batch start>` + `/audit fragility --since=<batch start>` + filter for `audit/*` Issues newly created since batch start) and emit a `next-cycle.json` listing the next batch's candidate Issue numbers. The user (or a follow-up `/auto --batch --resume`) picks it up next session. This is the Daily Triage pattern from Osmani's loop — but expressed as "each batch leaves the seed for the next" rather than "a cron decides what to do." No `schedule:` block, no Actions, no API-key concern.
+
+**E4. Phase-transition tail — heartbeat as side-effect, not a separate reporter**
+Each `/auto` phase transition already emits an event to `auto-events.jsonl` and updates `phase/*` labels. Extension: at each transition's tail, append one line to `docs/reports/loop-state-YYYY-MM-DD.md` summarizing the repo-wide phase snapshot derived from `scripts/reconcile-phase-state.sh`. No separate scheduled reporter — the heartbeat is a side-effect of the workflow advancing. Reading the file gives the "look before stepping" surface (Zenn article's `STATE.md`); writing it costs essentially nothing per transition.
 
 ### 4.2 Medium fit — touch the connectors block
 
@@ -142,20 +147,21 @@ The Zenn article makes the point that plugin = distribution form, skill = author
 These touch governance, which is Wholework's core differentiator.
 
 **E7. `.wholework.yml: autonomy:` field — L1/L2/L3 tiers**
-The Zenn article's L1 Report / L2 Assisted / L3 Unattended frame is already implicit in Wholework's routes: `/review --review-only` is roughly L1, `/auto` patch route is L2, `/auto --batch` is L3. Naming the tiers explicitly (and gating loop-fire skills like E1/E3 behind tier ≥ L2) would let teams adopt scheduling incrementally without surprises. Pairs naturally with E4's heartbeat reporter.
+The Zenn article's L1 Report / L2 Assisted / L3 Unattended frame is already implicit in Wholework's routes: `/review --review-only` is roughly L1, `/auto` patch route is L2, `/auto --batch` is L3. Naming the tiers explicitly (and gating tail-extension behavior like E3's `auto-retry-on-fail` behind tier ≥ L2) would let teams adopt loop semantics incrementally without surprises. Pairs naturally with E4's transition-tail heartbeat.
 
 **E8. Multi-loop collision detection (`acting_on:` keys)**
 The Zenn article's `grep "acting_on:" state-*.md | sort | uniq -d` collision check has no Wholework counterpart. Today, two concurrent `/auto N` invocations on the same Issue would race on the worktree lock and on phase labels. A presence file under `.tmp/auto-lock-<issue>-<sid>` written at Step 1 of `/auto` and checked at every checkpoint resume would close the gap. Only meaningful once E1/E3 generate scheduled fire.
 
 **E9. Token budget gates (`token_daily_budget`)**
-`claude-watchdog.sh` enforces a *time* budget per invocation. A *token* budget across a calendar day would protect users from runaway loops once cron-fire (E1, E2, E3) is on. Wire as a hook fired before every `run-*.sh` invocation; on exceed, log to `auto-events.jsonl` and exit with a defined code so `/audit recoveries` picks it up.
+`claude-watchdog.sh` enforces a *time* budget per invocation. A *token* budget across a calendar day would protect users from runaway tail-extension loops once E3 lands and `auto-retry-on-fail` starts firing automatically. Wire as a hook fired before every `run-*.sh` invocation; on exceed, log to `auto-events.jsonl` and exit with a defined code so `/audit recoveries` picks it up.
 
 ### 4.4 Out of scope (consistent with `wholework-positioning-memo-2026-06-13.md`)
 
 Listing these explicitly to preempt scope creep:
 
 - **Fleet-class 100+ concurrent execution** — Managed Agents territory; would break the subscription-auth moat.
-- **Loop-as-product orchestrator separate from Wholework** (e.g., a `wholework loop` daemon) — Wholework's surface should remain *Skills + GitHub*. Cron belongs to GitHub Actions or the user's host.
+- **Loop-as-product orchestrator separate from Wholework** (e.g., a `wholework loop` daemon, a new `/goal`/`/loop` top-level skill) — Wholework's surface should remain *Skills + GitHub*, and loops are built by extending existing skills' tails, not by inserting a new orchestrator.
+- **CI-driven scheduled execution (Claude Code Action / GitHub Actions `schedule:`) for E1–E4** — deferred, not rejected. The blocker is a separate per-skill "execution surface" question (which Skills run cleanly in a runner vs. require a local session) that should be answered before scheduling lands. Local-first is the explicit starting point.
 - **Interactive single-task UI inside the loop** — interactive sessions are Cursor/Claude Code's job; the loop's role is unattended dispatch.
 
 ## 5. The harder question Osmani raises — does this change the way Wholework should be sold?
@@ -170,20 +176,20 @@ Re-reading `docs/product.md` after Osmani:
 
 A useful framing for the product narrative going forward: **Wholework is not "build me a loop." It is "build the harness that makes someone else's loop trustworthy."** The 5 blocks ship in Claude Code; the verification rigor, the GitHub-visible audit trail, and the spec-as-memory practice are what Wholework adds on top.
 
-That framing should survive the introduction of E1–E4: the cron is just a fire control on top of the existing harness, not a replacement for human gate placement.
+That framing should survive the introduction of E1–E4: tail extensions are fire control on top of the existing harness, not a replacement for human gate placement.
 
 ## 6. Recommended next actions
 
-In priority order, sized against the current backlog (#583–#591 already filed):
+In priority order, sized against the current backlog (#583–#591 already filed). Each step is a *tail extension of an existing skill* — no new top-level skills, no new schedulers, all local-first.
 
-1. **Spike: E4 Phase-State heartbeat reporter** — one script, one workflow file, no new skill. Validates the "look before stepping" pattern in production before any cron-fire skill is built. Output: `docs/reports/loop-state-*.md` daily.
-2. **Spike: E2 `/audit recoveries` auto-fire** — repurposes an existing skill; lowest implementation cost; turns existing infrastructure into a real verifier feedback loop.
-3. **Design: E7 `.wholework.yml: autonomy:` field** — name the tiers before scheduling lands, so E1/E3 have a gate to live behind.
-4. **Design: E3 `/goal N`** — sequencing matters; build only after E2 has proven the feedback-loop substrate.
-5. **Spike: E1 `/audit triage` cron** — closest to the Zenn article's Daily Triage; ideally lands after E2/E7 so the new cron has a proven feedback channel.
-6. **Defer**: E5–E6 (Slack/Linear, MCP-bundled plugin), E8 (multi-loop collision), E9 (token budget) — open as Icebox per the positioning memo's convention; re-evaluate after E1–E4 land.
+1. **Spike: E3 `/verify` tail `auto-retry-on-fail`** — the smallest first step. Adds an opt-in `.wholework.yml` flag, a few SKILL.md steps to `/verify`, a retry counter in the Spec retrospective, and one new event type. Proves the tail-extension pattern in the place where the loop is most clearly half-closed today (FAIL → human). Cap with `max_iterations` and `budget_tokens`.
+2. **Spike: E2 `/verify` retrospective tail auto-fire** — piggyback on the same retrospective hook E3 modifies. Threshold-cross detection moves from `/audit recoveries` user-invocation to a side-effect of every verify run.
+3. **Design: E7 `.wholework.yml: autonomy:` field** — name the tiers before tail-extension behavior compounds, so E3's `auto-retry-on-fail` and later additions have a gate to live behind.
+4. **Spike: E4 phase-transition tail heartbeat** — append one line per transition to `docs/reports/loop-state-*.md` derived from `reconcile-phase-state.sh`. No separate reporter; the heartbeat is the workflow's side-effect.
+5. **Spike: E1 `/auto --batch` next-cycle seed** — closest to the Zenn article's Daily Triage, but realized as "each batch leaves the seed for the next" rather than a cron. Lands last in this group so the seed has somewhere to flow.
+6. **Defer**: E5–E6 (Slack/Linear, MCP-bundled plugin), E8 (multi-loop collision), E9 (token budget), plus the broader CI-execution track (Claude Code Action + per-skill execution-surface declaration) — open as Icebox per the positioning memo's convention; re-evaluate after E1–E4 land.
 
-The cumulative effect of E1–E4 + E7 is the smallest set of additions that lets Wholework run a **complete** Osmani loop end-to-end while staying inside its positioning. Everything else is optional and should be triggered by evidence, not aspiration.
+The cumulative effect of E3 → E2 → E7 → E4 → E1 is the smallest set of additions that lets Wholework run a **complete** Osmani loop end-to-end while staying inside its positioning: the workflow becomes self-feeding by extension, not by replacement. Everything else is optional and should be triggered by evidence, not aspiration.
 
 ---
 

@@ -111,21 +111,26 @@ Loop Engineering 用語では Wholework は **harness + sub-agent verifier + dur
 
 ポジショニングメモは fleet-class 100+ concurrent 実行を明示的に out-of-scope にしている (anchor: mid-scale modernization、5–10 concurrent、$10K/10 日/50–100 PR)。以下の提案はこのレンズを通している — subscription-auth / GitHub-native の moat を壊さずに、より完全なループ *の方向に* Wholework を伸ばす。
 
-### 4.1 適合度 高 — 既存サーフェスの自然な拡張
+提案空間をさらに 2 つの設計原則で絞り込む:
 
-既に置かれているブロックを再利用し、チームが認識している可視ギャップを塞ぐ提案。
+- **Local-first 実行**。ループ発火はユーザマシン上の Claude Code セッション内で起こる (subscription-auth を維持)。Claude Code Action / GitHub Actions `schedule:` 経由のリモート実行は技術的には可能 (action は `claude_code_oauth_token` Secret を受け付ける) だが、**スキル毎の「実行サーフェス」問題** を別レーンで解いてから乗せる。Skill ごとに local↔CI の越境特性が大きく違う — `${CLAUDE_PLUGIN_ROOT}` の解決、`.tmp/` の永続性、`run-*.sh` の `claude -p` 子プロセス、git worktree のランナー寿命、MCP サーバの事前インストール — 特に `/auto` はそのリスクをほぼ全部抱える。CI 実行は後段トラックであり、E1–E4 の範囲外。
+- **Tail 拡張 > 新プリミティブ**。Wholework の既存設計パターン (Phase Handoff が各フェーズの *出口* で書かれ、次の *入口* で読まれる) は一般化できる: ループは *既存ワークフローの終端を予算下で入口に折り返す* ことで作る。新しいトップレベルオーケストレータを差し込まない。これにより既存の human gate 配置 (PR review、AC 確認、retro proposal 承認) がそのまま生き、Spec / retrospective / event-log の基盤を無改造で再利用できる。以下の E1–E4 は *既存スキルの tail 拡張* として再構成され、新スキルではない。
 
-**E1. `/audit triage` cron — daily-triage プリミティブ**
-`schedule:` workflow を追加して `/audit drift` + `/audit fragility` を毎晩実行し、`audit/*` ラベル付きで Issue を起票する。Triage スキルが新規 Issue に対して走り、翌朝 `/auto --batch` がそれを拾う。これは Osmani の例示ループの Daily Triage を Wholework の既存プリミティブで表現したもの — 新スキル不要、workflow ファイル 1 つで足りる。リスク: トークン予算。緩和策: `/triage` には既に `--limit N` がある。
+### 4.1 適合度 高 — 既存スキルの tail 拡張
 
-**E2. `/audit recoveries` の閾値超え auto-fire**
-`/audit recoveries` は既存だが手動起動。orchestration recoveries ログは受動的に蓄積する。頻度閾値 (現在 3) を超えると Issue を auto-file するロジックを cron に配線すれば、再発 → Issue 変換が人間起動なしに起こる。「ループの検証者フィードバックループ」を儀式から実ループに変える。
+既存ワークフローの終端を opt-in 予算下で折り返す。新トップレベルスキル無し。新スケジューラ無し。すべて起動中の Claude Code セッション内で発火する。
 
-**E3. `/goal N` — 検証者駆動の `/code` 再発火**
-現在の `/verify` FAIL は Issue を reopen して *ユーザに戻し*、次のアクション選択を委ねる ( `/code --patch` vs `/code --pr` vs `/spec` )。同じ Spec を使って `/code` を再発火し、受入条件が全 PASS するかリトライ予算が尽きるまで続ける `/goal N` スキルは、Claude Code の `/goal` の直接的なアナログだ。maker/checker 分離は既に構造的 (別の `claude -p` プロセス)。変えるのは *ループ* の配線でエージェントではない。Zenn 記事の停止条件規律に従い `max_iterations` と `token_daily_budget` でキャップする。
+**E3. `/verify` tail — `auto-retry-on-fail` (最小の最初の一歩)**
+現在の `/verify` FAIL 経路: `gh issue reopen` + `phase/*` 全削除 → ユーザに戻り、`/code --patch` / `/code --pr` / `/spec` を手動選択。拡張: `.wholework.yml: auto-retry-on-fail` が設定 (opt-in) かつリトライ予算未消費なら、tail が自動で折り返す — 同じ Spec と verify 失敗コンテキストを渡して `/code` を再発火し、`/verify` を再実行。AC PASS、`max_iterations` 到達、`budget_tokens` 枯渇のいずれかで停止。maker/checker 分離は既に構造的 ( `/code` と `/verify` が別 `claude -p` プロセス) なので、変えるのは *ループ配線* であってエージェント設計ではない。新規サーフェス: `.wholework.yml` フラグ 1 つ、`/verify` SKILL.md の数ステップ、Spec retrospective のリトライカウンタ、`auto-events.jsonl` の `verify_retry_fire` イベント。これは Claude Code の `/goal` に最も近い Wholework アナログであり、最小の変更で「tail 拡張」パターンを実体化するので最初の一歩として推奨。
 
-**E4. Phase-State heartbeat レポータ**
-`scripts/reconcile-phase-state.sh` は既に任意 Issue のフェーズの v1 JSON スナップショットを返す。全 `phase/*` Issue に対して定期実行し、ロールアップコメント / Slack メッセージ / Markdown ファイル ( `docs/reports/loop-state-YYYY-MM-DD.md` ) を 1 本出すジョブを足せば、ループに「踏む前に見る」面ができる。Zenn 記事の `STATE.md` だが、手作業ではなく live GitHub 状態から派生する。
+**E2. `/verify` retrospective tail — `/audit recoveries` の閾値超え auto-fire**
+`/audit recoveries` は既存だが手動起動。拡張: `/verify` の retrospective-proposal 書き出しの tail で、orchestration recovery symptom が頻度閾値 (現在 3) を超えていれば improvement Issue を inline で auto-file する。同じスキル、同じ retrospective フック、新エントリポイント無し。毎回の verify で走るステップに乗せることで、「検証者フィードバックループ」を儀式から実ループに変える。
+
+**E1. `/auto --batch` tail — 次サイクル種の emit**
+今、`/auto --batch N1 N2 ...` はバッチ完了で止まる。拡張: バッチの tail で、軽量スキャン ( `/audit drift --since=<batch start>` + `/audit fragility --since=<batch start>` + バッチ開始以降に作られた `audit/*` Issue のフィルタ) を任意で走らせ、次バッチの候補 Issue 番号を列挙した `next-cycle.json` を吐く。次セッションでユーザ (または `/auto --batch --resume`) が拾う。これは Osmani の Daily Triage パターンだが — 「cron が次を決める」ではなく「各バッチが次の種を残す」として表現する。`schedule:` ブロック無し、Actions 無し、API キー懸念無し。
+
+**E4. フェーズ遷移 tail — 別レポータではなく副作用としての heartbeat**
+各 `/auto` フェーズ遷移は既に `auto-events.jsonl` にイベントを emit し、`phase/*` ラベルを更新する。拡張: 各遷移の tail で、`scripts/reconcile-phase-state.sh` から派生させた repo 全体のフェーズスナップショットを 1 行 `docs/reports/loop-state-YYYY-MM-DD.md` に追記する。専用スケジュールレポータ無し — heartbeat はワークフローが進む副作用。読めば「踏む前に見る」面ができる (Zenn 記事の `STATE.md` )。1 遷移あたりのコストはほぼゼロ。
 
 ### 4.2 適合度 中 — Connectors ブロックを触る
 
@@ -142,20 +147,21 @@ Zenn 記事は plugin = 配布形態、skill = 執筆形態と整理する。Who
 ガバナンスに触る — つまり Wholework のコア差別化要素。
 
 **E7. `.wholework.yml: autonomy:` field — L1/L2/L3 tier**
-Zenn 記事の L1 Report / L2 Assisted / L3 Unattended の枠は Wholework の経路に既に暗黙に存在する — `/review --review-only` は概ね L1、`/auto` patch route は L2、`/auto --batch` は L3。tier を明示的に命名し、ループ発火スキル (E1/E3) を tier ≥ L2 でゲートすれば、チームはスケジュール導入を驚き無く段階的に行える。E4 の heartbeat reporter と自然にペアになる。
+Zenn 記事の L1 Report / L2 Assisted / L3 Unattended の枠は Wholework の経路に既に暗黙に存在する — `/review --review-only` は概ね L1、`/auto` patch route は L2、`/auto --batch` は L3。tier を明示的に命名し、tail 拡張の振る舞い (E3 の `auto-retry-on-fail` 等) を tier ≥ L2 でゲートすれば、チームはループ semantics を驚き無く段階的に導入できる。E4 の遷移 tail heartbeat と自然にペアになる。
 
 **E8. Multi-loop 衝突検出 ( `acting_on:` キー)**
 Zenn 記事の `grep "acting_on:" state-*.md | sort | uniq -d` 衝突チェックに対応するものが Wholework に無い。今は同じ Issue に対する 2 つの並列 `/auto N` が worktree ロックと phase ラベルでレースする。`/auto` Step 1 で `.tmp/auto-lock-<issue>-<sid>` の presence ファイルを書き、毎チェックポイント resume で確認すればギャップは塞がる。E1/E3 がスケジュール発火を生むようになってから意味を持つ。
 
 **E9. トークン予算ゲート ( `token_daily_budget` )**
-`claude-watchdog.sh` は invocation 毎の *時間* 予算を強制する。カレンダー日単位の *トークン* 予算は、cron-fire (E1, E2, E3) が入った後の暴走ループからユーザを守る。全 `run-*.sh` invocation の前に発火する hook として配線し、超過時には `auto-events.jsonl` にログして定義済みコードで終了し、`/audit recoveries` が拾えるようにする。
+`claude-watchdog.sh` は invocation 毎の *時間* 予算を強制する。カレンダー日単位の *トークン* 予算は、E3 着地後に `auto-retry-on-fail` が自動発火し始めたときの暴走 tail 拡張ループからユーザを守る。全 `run-*.sh` invocation の前に発火する hook として配線し、超過時には `auto-events.jsonl` にログして定義済みコードで終了し、`/audit recoveries` が拾えるようにする。
 
 ### 4.4 Out of scope ( `wholework-positioning-memo-2026-06-13.md` と整合)
 
 スコープクリープを先回りで予防するため明示する:
 
 - **Fleet-class 100+ concurrent 実行** — Managed Agents 領域。subscription-auth moat を壊す。
-- **Wholework と別の loop-as-product オーケストレータ** ( `wholework loop` デーモン等) — Wholework のサーフェスは *Skills + GitHub* のままで良い。cron は GitHub Actions かユーザホストの責務。
+- **Wholework と別の loop-as-product オーケストレータ** ( `wholework loop` デーモン、新トップレベル `/goal` / `/loop` スキル等) — Wholework のサーフェスは *Skills + GitHub* のままで良く、ループは既存スキルの tail 拡張で組み立てる。新オーケストレータを差し込まない。
+- **E1–E4 の CI 駆動スケジュール実行 (Claude Code Action / GitHub Actions `schedule:` )** — 拒否ではなく先送り。ブロッカーは「スキル毎の実行サーフェス」問題 (どのスキルがランナーで素直に動き、どれがローカルセッション前提か) であり、スケジュール導入の前に別途解く必要がある。出発点は明示的に local-first。
 - **ループ内インタラクティブ単一タスク UI** — インタラクティブセッションは Cursor / Claude Code の仕事。ループの役割は無人ディスパッチ。
 
 ## 5. Osmani が突きつけるより難しい問い — Wholework の打ち出し方は変わるのか
@@ -170,20 +176,20 @@ Osmani を読んだ後で `docs/product.md` を読み直すと:
 
 product narrative の良い再フレーミング: **Wholework は「ループを作る」ではない。「他人のループを信頼できるものにする harness を作る」だ**。5 つのブロックは Claude Code に同梱される。verification の厳密さ、GitHub-visible な audit trail、spec-as-memory のプラクティスは、Wholework がその上に乗せるものだ。
 
-このフレーミングは E1–E4 の導入を生き残るはずだ — cron は既存 harness の上の発火制御であって、human gate 配置の代替ではない。
+このフレーミングは E1–E4 の導入を生き残るはずだ — tail 拡張は既存 harness の上の発火制御であって、human gate 配置の代替ではない。
 
 ## 6. 推奨 next actions
 
-優先順位順、現状のバックログ (#583–#591 が既に起票済み) との突き合わせ:
+優先順位順、現状のバックログ (#583–#591 が既に起票済み) との突き合わせ。各ステップは *既存スキルの tail 拡張* — 新トップレベルスキル無し、新スケジューラ無し、すべて local-first。
 
-1. **Spike: E4 Phase-State heartbeat レポータ** — script 1 本、workflow ファイル 1 本、新スキル無し。cron 発火スキルを作る前に「踏む前に見る」パターンを本番で検証する。Output: `docs/reports/loop-state-*.md` 日次。
-2. **Spike: E2 `/audit recoveries` auto-fire** — 既存スキルの再利用。実装コスト最小。既存インフラを実フィードバックループに変える。
-3. **Design: E7 `.wholework.yml: autonomy:` field** — スケジュール導入の前に tier を命名し、E1/E3 が裏で居住できるゲートを作る。
-4. **Design: E3 `/goal N`** — 順序が重要。E2 がフィードバックループ基盤を実証してから着手する。
-5. **Spike: E1 `/audit triage` cron** — Zenn 記事の Daily Triage に最も近い。理想的には E2 / E7 着地後に乗せ、新 cron が実証されたフィードバックチャンネルを持つようにする。
-6. **Defer**: E5 / E6 (Slack/Linear、MCP 同梱プラグイン)、E8 (multi-loop 衝突)、E9 (トークン予算) — ポジショニングメモの慣習に従い Icebox で起票。E1–E4 着地後に再評価。
+1. **Spike: E3 `/verify` tail `auto-retry-on-fail`** — 最小の最初の一歩。opt-in `.wholework.yml` フラグ 1 つ、`/verify` SKILL.md の数ステップ、Spec retrospective のリトライカウンタ、新イベント型 1 つ。今のループが最も明確に半周で止まっている場所 (FAIL → 人間) で tail 拡張パターンを実体化する。`max_iterations` と `budget_tokens` でキャップ。
+2. **Spike: E2 `/verify` retrospective tail auto-fire** — E3 が触る同じ retrospective フックに相乗りする。閾値超え検出が `/audit recoveries` の手動起動から毎 verify 実行の副作用に移る。
+3. **Design: E7 `.wholework.yml: autonomy:` field** — tail 拡張の振る舞いが積み上がる前に tier を命名し、E3 の `auto-retry-on-fail` 以降の追加が裏で居住できるゲートを作る。
+4. **Spike: E4 フェーズ遷移 tail heartbeat** — `reconcile-phase-state.sh` 由来の 1 行を遷移毎に `docs/reports/loop-state-*.md` に追記する。専用レポータ無し — heartbeat はワークフローの副作用。
+5. **Spike: E1 `/auto --batch` 次サイクル種** — Zenn 記事の Daily Triage に最も近いが、cron ではなく「各バッチが次の種を残す」として実体化する。種の流し先ができた後に乗せるのでこのグループ最後。
+6. **Defer**: E5 / E6 (Slack/Linear、MCP 同梱プラグイン)、E8 (multi-loop 衝突)、E9 (トークン予算)、CI 実行トラック全体 (Claude Code Action + スキル毎の実行サーフェス宣言) — ポジショニングメモの慣習に従い Icebox で起票。E1–E4 着地後に再評価。
 
-E1–E4 + E7 の累積効果は、Wholework がポジショニング内に留まったまま **完全な** Osmani ループを end-to-end で走らせる、最小の追加セットだ。それ以外は任意であり、願望ではなく根拠で発火させるべきだ。
+E3 → E2 → E7 → E4 → E1 の累積効果は、Wholework がポジショニング内に留まったまま **完全な** Osmani ループを end-to-end で走らせる、最小の追加セットだ — ワークフロー自身が *置換* ではなく *拡張* で自分に餌を与えるようになる。それ以外は任意であり、願望ではなく根拠で発火させるべきだ。
 
 ---
 
