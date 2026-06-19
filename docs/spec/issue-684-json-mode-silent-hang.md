@@ -75,3 +75,22 @@
 - `json-mode-silent-hang` elif ブランチは `watchdog-kill` の直前に配置する。json mode silent hang は exit 143 AND "still waiting (json mode)" ログメッセージの AND 条件で、`watchdog-kill` (ログメッセージのみ) より具体的。first-match-wins ルールにより正しく優先される
 - `watchdog: still waiting (json mode)` メッセージは `scripts/claude-watchdog.sh` の行 71 で stderr に出力される。run-*.sh のラッパーログはこれを捕捉している
 - bats テストの LOG_FILE fixture に `still waiting (json mode)` 文字列を含むが、`check-forbidden-expressions.sh` の CI スキャン対象外のため自己参照問題は発生しない
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC1-5 を patch route 用に明確化、ANOMALY_DESC / IMPROVEMENT_HINT のテキスト規約は未指定で実装時に判断 (code retro で記録済)
+
+#### code
+- design からの逸脱なし、bats 32/32 PASS、main 直 commit で完了
+- elif 配置 (`watchdog-kill` の直前) と first-match-wins の判断は適切
+
+#### verify
+- Pre-merge AC1-4 grep/file_contains/section_contains は PASS
+- AC5 (CI github_check, patch route の `gh run list` 形式) も CI conclusion=success で PASS。/issue 段階で `gh pr checks` から `gh run list` 形式へ修正された変更が機能
+- AC6 (post-merge manual) は Claude 直接実行で PASS。`.tmp/sample-silent-hang.log` (exit 143 + `watchdog: still waiting (json mode)` 行) で `detect-wrapper-anomaly.sh` を実行し、`[json-mode-silent-hang]` パターン名と `modules/orchestration-fallbacks.md#json-mode-silent-hang` 参照を含む markdown が確認できた
+
+### Improvement Proposals
+- N/A (実装は計画通り、verify も全 PASS。横展開可能な一般化改善は未確定)
