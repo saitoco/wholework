@@ -68,3 +68,34 @@
 - Phases 列の現行ロジック (`select(.event == "phase_complete" and .issue == $iss) | .phase | join("→")`) は単一 Issue 経路でも phase_complete が emit されるため変更不要
 - Recoveries 列の `recovery` event 集計は単一 Issue 経路では発生しないため `—` 表示 (現行通り)
 - bash 3.2+ 互換: jq 内の変更のみで、シェル組み込みは現行のまま使用
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None
+
+### Design Gaps/Ambiguities
+
+- Spec の jq クエリ疑似コードでは `$own` を `($ev | map(select(.issue == $iss and ...)))` で絞るが、`session_id` の正規化 (`.session_id // ""`) を `unique` 前と `$own` 絞り込み時の両方に適用する必要があった。Spec では明示されていなかったが実装時に統一した
+
+### Rework
+
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Sessions jq クエリを `sub_start` 起点から `{issue, session_id}` 全列挙に変更し fallback 追加 (Spec どおり)
+- `session_id` が欠落した legacy event を `.session_id // ""` で正規化してから `unique` に渡す設計を採用
+- `$own` 変数で同一 `(issue, session_id)` のイベント列を絞り、`sub_start`/`phase_start` の優先順位を `//` 演算子で表現
+
+### Deferred Items
+- post-merge observation: 単一 Issue /auto 完走後の rollup Sessions テーブルに行が出力されることを確認 (Post-merge verification)
+- `token_usage` event の run-*.sh への追加は別 Issue (#662)
+
+### Notes for Next Phase
+- テストは 7 件全て PASS (新規 2 件含む)
+- PR #698 を review → merge フローで進める
+- `bats tests/auto-events-rollup.bats` が 7 件 green であることを CI で確認
