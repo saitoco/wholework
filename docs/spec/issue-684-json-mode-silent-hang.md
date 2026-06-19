@@ -42,6 +42,34 @@
 
 - サンプル log で `detect-wrapper-anomaly.sh --log <path>/sample-silent-hang.log --exit-code 143 --issue 1 --phase code` を実行すると `json-mode-silent-hang` パターンへの参照を含む markdown が出力される <!-- verify-type: manual -->
 
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- The Spec did not specify what text to use for ANOMALY_DESC and IMPROVEMENT_HINT. Used parallel structure with existing patterns (phase + exit_code in desc, fallback catalog reference in hint).
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Placed `json-mode-silent-hang` elif before `watchdog-kill` in detector: AND condition (exit 143 + "still waiting (json mode)") is more specific than `watchdog-kill` (any watchdog timeout); first-match-wins ensures correct priority
+- Added catalog entry to `orchestration-fallbacks.md` before `## Operational Notes`, following existing schema with Symptom/Applicable Phases/Fallback Steps/Escalation/Rationale
+- Added 3 bats test cases covering positive detection, wrong-exit-code negative, and wrong-log-message negative
+
+### Deferred Items
+- Post-merge manual verification (run sample log through detect-wrapper-anomaly.sh with real exit 143 to confirm `json-mode-silent-hang` output)
+- Runtime integration of Tier 2 automatic retry (Fallback Steps are documented but not yet wired into run-auto-sub.sh)
+
+### Notes for Next Phase
+- All 32 bats tests pass; 3 new tests cover the new pattern (test IDs 27-29)
+- AC1-AC4 pre-merge verify commands all PASS; AC5 (CI github_check) depends on push to main
+- No forbidden expressions violations; no doc sync required
+
 ## Notes
 
 - `json-mode-silent-hang` elif ブランチは `watchdog-kill` の直前に配置する。json mode silent hang は exit 143 AND "still waiting (json mode)" ログメッセージの AND 条件で、`watchdog-kill` (ログメッセージのみ) より具体的。first-match-wins ルールにより正しく優先される
