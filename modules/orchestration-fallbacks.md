@@ -387,6 +387,35 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ---
 
+## json-mode-silent-hang
+
+### Symptom
+- `run-*.sh` exits with code 143 (watchdog SIGTERM)
+- Wrapper log contains: `watchdog: still waiting (json mode), silent for <N>s`
+- No output from the `claude -p` process after launching in json mode
+- Typical cause: transient API delay or session init stall
+
+### Applicable Phases
+- Any phase running via `run-*.sh` (spec, code, review, merge, verify)
+
+### Fallback Steps
+1. Retry the failed phase once via the corresponding `run-*.sh <issue_number>` script
+2. Monitor the retry's output for signs of normal progress within the first 60 seconds
+3. If the retry succeeds, continue the normal workflow
+
+### Escalation
+- If the retry also exits 143 with the same `still waiting (json mode)` pattern, escalate to Tier 3 (recovery sub-agent)
+- Maximum 1 automatic retry attempt per occurrence; no further looping
+- If the retry fails with a different error, escalate to Tier 3 for diagnosis
+
+### Rationale
+- First observed in a downstream project: `run-code.sh` launched `claude -p` in json mode but received no output for 1800s (watchdog timeout), then was terminated with SIGTERM (exit 143); Tier 3 orchestration-recovery diagnosed as "transient API delay or session init stall" and issued action=retry, which succeeded
+- `scripts/claude-watchdog.sh` line 71 emits `watchdog: still waiting (json mode)` to stderr when no output is received in json mode; `run-*.sh` wrapper logs capture this
+- The AND condition (exit 143 AND `still waiting (json mode)` in log) uniquely identifies this pattern vs. the more generic `watchdog-kill` (which fires on any watchdog timeout); `json-mode-silent-hang` is placed before `watchdog-kill` in the detector to win first-match-wins priority
+- Cataloged in Issue #684 based on Tier 3 recovery success; retry once is the correct first response for transient stalls
+
+---
+
 ## Operational Notes
 
 This catalog is consumed by:

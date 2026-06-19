@@ -253,6 +253,29 @@ MOCK
     [[ "$output" == *"### Orchestration Anomalies"* ]]
 }
 
+@test "json mode silent hang: detects exit 143 with still waiting (json mode) in log" {
+    echo "watchdog: still waiting (json mode), silent for 1800s (pid=99)" > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 143 --issue 684 --phase code
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"json-mode-silent-hang"* ]]
+    [[ "$output" == *"### Orchestration Anomalies"* ]]
+    [[ "$output" == *"### Improvement Proposals"* ]]
+}
+
+@test "json mode silent hang: no detection when exit code is not 143" {
+    echo "watchdog: still waiting (json mode), silent for 1800s (pid=99)" > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 684 --phase code
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"json-mode-silent-hang"* ]]
+}
+
+@test "json mode silent hang: no detection when log does not contain json mode message" {
+    echo "watchdog: still waiting, silent for 1800s (pid=99)" > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 143 --issue 684 --phase code
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"json-mode-silent-hang"* ]]
+}
+
 @test "review-completion-false-negative: detects matches_expected false with phase review" {
     printf '"matches_expected":false\n"phase":"review"\n' > "$LOG_FILE"
     run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 547 --phase review

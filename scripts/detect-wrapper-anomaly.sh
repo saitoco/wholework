@@ -70,6 +70,10 @@ elif grep -q '"matches_expected":false' "$LOG_FILE" && grep -q '"phase":"code-pr
   PATTERN_NAME="code-completed-no-pr"
   ANOMALY_DESC="Watchdog killed the process in phase \`$PHASE\` (exit code $EXIT_CODE) after code-pr completed its commits but before PR creation: \`matches_expected:false\` and \`phase:code-pr\` detected in reconcile-phase-state output. The run-code.sh phase exited without creating a PR. Reference: #415."
   IMPROVEMENT_HINT="Follow the recovery procedure at \`modules/orchestration-fallbacks.md#code-completed-no-pr\`: checkout the worktree branch, rebase onto latest main, push the branch, and create the PR with \`gh pr create\`, then continue with \`/review\`."
+elif [[ "$EXIT_CODE" == "143" ]] && grep -q "still waiting (json mode)" "$LOG_FILE"; then
+  PATTERN_NAME="json-mode-silent-hang"
+  ANOMALY_DESC="json mode silent hang in phase \`$PHASE\` (exit code $EXIT_CODE): \`watchdog: still waiting (json mode)\` detected in wrapper output. The forked session did not produce any output after launching in json mode, and the watchdog terminated it with SIGTERM."
+  IMPROVEMENT_HINT="Follow the recovery procedure at \`modules/orchestration-fallbacks.md#json-mode-silent-hang\`: retry the phase once via the corresponding run-*.sh script. Rationale: transient API delay or session init stall."
 elif grep -q "watchdog: kill and state not reached" "$LOG_FILE"; then
   PATTERN_NAME="watchdog-kill"
   ANOMALY_DESC="Watchdog killed the process in phase \`$PHASE\` (exit code $EXIT_CODE): \`watchdog: kill and state not reached\` detected. The phase did not complete within the timeout."
