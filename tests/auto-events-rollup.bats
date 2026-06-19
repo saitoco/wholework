@@ -96,6 +96,47 @@ EOF
     grep -q "| 1 |" "docs/reports/auto-events-rollup-2026-06-14.md"
 }
 
+# (e) phase_start/phase_complete only (no sub_*) produces session row
+@test "auto-events-rollup: phase_start/phase_complete only (no sub_*) produces session row" {
+    cat > .tmp/events.jsonl << 'EOF'
+{"ts":"2026-06-14T08:00:00Z","issue":684,"event":"phase_start","phase":"code-patch"}
+{"ts":"2026-06-14T08:30:00Z","issue":684,"event":"phase_complete","phase":"code-patch"}
+EOF
+
+    run bash "$SCRIPT" --date 2026-06-14 --input .tmp/events.jsonl --output-dir docs/reports
+    [ "$status" -eq 0 ]
+    [ -f "docs/reports/auto-events-rollup-2026-06-14.md" ]
+
+    # Sessions table should have a row for #684
+    grep -q "^| #684" "docs/reports/auto-events-rollup-2026-06-14.md"
+
+    # Size should be "-" (no sub_start)
+    grep "^| #684" "docs/reports/auto-events-rollup-2026-06-14.md" | grep -q "| - |"
+
+    # Outcome should be success (phase_complete present)
+    grep "^| #684" "docs/reports/auto-events-rollup-2026-06-14.md" | grep -q "success"
+
+    # Phase column should show code-patch
+    grep "^| #684" "docs/reports/auto-events-rollup-2026-06-14.md" | grep -q "code-patch"
+}
+
+# (f) phase_start without phase_complete produces incomplete outcome
+@test "auto-events-rollup: phase_start without phase_complete produces incomplete outcome" {
+    cat > .tmp/events.jsonl << 'EOF'
+{"ts":"2026-06-14T09:00:00Z","issue":685,"event":"phase_start","phase":"code-pr"}
+EOF
+
+    run bash "$SCRIPT" --date 2026-06-14 --input .tmp/events.jsonl --output-dir docs/reports
+    [ "$status" -eq 0 ]
+    [ -f "docs/reports/auto-events-rollup-2026-06-14.md" ]
+
+    # Sessions table should have a row for #685
+    grep -q "^| #685" "docs/reports/auto-events-rollup-2026-06-14.md"
+
+    # Outcome should be incomplete (no phase_complete)
+    grep "^| #685" "docs/reports/auto-events-rollup-2026-06-14.md" | grep -q "incomplete"
+}
+
 # (d) Cleanup rotation: target date entries removed, other dates preserved
 @test "auto-events-rollup: cleanup removes target date entries and preserves others" {
     cat > .tmp/events.jsonl << 'EOF'

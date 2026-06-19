@@ -68,3 +68,50 @@
 - Phases 列の現行ロジック (`select(.event == "phase_complete" and .issue == $iss) | .phase | join("→")`) は単一 Issue 経路でも phase_complete が emit されるため変更不要
 - Recoveries 列の `recovery` event 集計は単一 Issue 経路では発生しないため `—` 表示 (現行通り)
 - bash 3.2+ 互換: jq 内の変更のみで、シェル組み込みは現行のまま使用
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None
+
+### Design Gaps/Ambiguities
+
+- Spec の jq クエリ疑似コードでは `$own` を `($ev | map(select(.issue == $iss and ...)))` で絞るが、`session_id` の正規化 (`.session_id // ""`) を `unique` 前と `$own` 絞り込み時の両方に適用する必要があった。Spec では明示されていなかったが実装時に統一した
+
+### Rework
+
+- None
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Phases / Recoveries 集計列が `$own` (session スコープ) ではなく `$ev[]` (issue 全体) で実装されていた。Spec が "現行を踏襲" と明示したため実装は Spec どおりだが、session_id 別行が生成される新構造では同一 issue が複数セッションで実行された際にクロス汚染が発生する。Spec 記述が "現行を踏襲" という短縮形で将来の含意を隠蔽した典型。次回類似改修では "session スコープ vs. issue スコープ" を明示的に書くこと。
+
+### Recurring Issues
+
+- Nothing to note
+
+### Acceptance Criteria Verification Difficulty
+
+- `command "bats tests/auto-events-rollup.bats"` は safe mode では UNCERTAIN 扱いだが、CI reference fallback (Run bats tests SUCCESS) で PASS に解決できた。verify command 品質に問題なし。
+- `rubric` 基準は AI 判断で PASS。3 スクリプトの symmetry (phase_start emit ガード + phase_complete on success) を rubric が適切に捉えていた。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST 指摘なし → COMMENT 投稿 (REQUEST_CHANGES 不要)
+- SHOULD #1 (Phases/Recoveries クロス汚染): Spec "現行を踏襲" に従い修正スキップ。次 Issue 候補として記録
+- SHOULD #2 (混在ケーステスト不足): SHOULD #1 の修正前提のためスキップ
+
+### Deferred Items
+- Phases/Recoveries 列を `$own` スコープに変更する改善 (SHOULD 級、別 Issue で検討)
+- 同一 issue 複数セッション混在ケースのテスト追加 (上記に連動)
+- post-merge observation: 単一 Issue /auto 完走後の rollup Sessions テーブルに行が出力されることを確認
+
+### Notes for Next Phase
+- MUST 指摘なし。`/merge 698` で進行可
+- CI 全ジョブ SUCCESS 確認済み
+- Acceptance Criteria 20 件 PASS、Post-merge 2 件は観察待ち

@@ -119,31 +119,41 @@ fi
 # Build Sessions table rows
 SESSIONS_ROWS=$(printf '%s\n' "$FILTERED" | jq -rs '
   . as $ev |
-  [$ev[] | select(.event == "sub_start")] | sort_by(.ts) |
+  [$ev[] | {issue, session_id: (.session_id // "")}] | unique | sort_by(.issue) |
   map(
     .issue as $iss |
-    (.size // "-") as $sz |
-    .ts as $start_ts |
-    ($start_ts | split("T")[1] | rtrimstr("Z")) as $start_time |
-    ($ev | map(select(.event == "sub_complete" and .issue == $iss)) | last) as $comp |
-    (if $comp then $comp.ts | split("T")[1] | rtrimstr("Z") else "-" end) as $end_time |
-    (if $comp then
-      (($comp.ts | split("T")[1] | rtrimstr("Z") | split(":") |
-          (.[0]|tonumber)*3600 + (.[1]|tonumber)*60 + (.[2]|tonumber)) -
-       ($start_ts | split("T")[1] | rtrimstr("Z") | split(":") |
-          (.[0]|tonumber)*3600 + (.[1]|tonumber)*60 + (.[2]|tonumber))) as $sec |
-      if $sec < 0 then "\(($sec + 86400) / 60 | floor)m"
-      else if $sec >= 60 then "\($sec / 60 | floor)m"
-      else "\($sec)s"
-      end end
-    else "-" end) as $dur |
-    ([$ev[] | select(.event == "phase_complete" and .issue == $iss) | .phase] | join("→")) as $phases |
-    ([$ev[] | select(.event == "recovery" and .issue == $iss)] | length) as $rec_count |
-    (if $rec_count == 0 then "—" else ($rec_count | tostring) end) as $recs |
-    (if $comp then
-      if (($comp.exit_code // "0") == "0") then "success" else "failure" end
-    else "incomplete" end) as $outcome |
-    "| #\($iss) | \($sz) | \($start_time) | \($end_time) | \($dur) | \($phases) | \($recs) | \($outcome) |"
+    .session_id as $sid |
+    ($ev | map(select(.issue == $iss and (.session_id // "") == $sid))) as $own |
+    ($own | map(select(.event == "sub_start")) | first) as $sub_start |
+    ($own | map(select(.event == "phase_start")) | first) as $first_phase_start |
+    ($sub_start // $first_phase_start) as $start |
+    if $start == null then empty else
+      ($sub_start.size // "-") as $sz |
+      $start.ts as $start_ts |
+      ($start_ts | split("T")[1] | rtrimstr("Z")) as $start_time |
+      ($own | map(select(.event == "sub_complete")) | last) as $sub_complete |
+      ($own | map(select(.event == "phase_complete")) | last) as $last_phase_complete |
+      ($sub_complete // $last_phase_complete) as $end |
+      (if $end then $end.ts | split("T")[1] | rtrimstr("Z") else "-" end) as $end_time |
+      (if $end then
+        (($end.ts | split("T")[1] | rtrimstr("Z") | split(":") |
+            (.[0]|tonumber)*3600 + (.[1]|tonumber)*60 + (.[2]|tonumber)) -
+         ($start_ts | split("T")[1] | rtrimstr("Z") | split(":") |
+            (.[0]|tonumber)*3600 + (.[1]|tonumber)*60 + (.[2]|tonumber))) as $sec |
+        if $sec < 0 then "\(($sec + 86400) / 60 | floor)m"
+        else if $sec >= 60 then "\($sec / 60 | floor)m"
+        else "\($sec)s"
+        end end
+      else "-" end) as $dur |
+      ([$ev[] | select(.event == "phase_complete" and .issue == $iss) | .phase] | join("→")) as $phases |
+      ([$ev[] | select(.event == "recovery" and .issue == $iss)] | length) as $rec_count |
+      (if $rec_count == 0 then "—" else ($rec_count | tostring) end) as $recs |
+      (if $sub_complete then
+        if (($sub_complete.exit_code // "0") == "0") then "success" else "failure" end
+      elif $last_phase_complete then "success"
+      else "incomplete" end) as $outcome |
+      "| #\($iss) | \($sz) | \($start_time) | \($end_time) | \($dur) | \($phases) | \($recs) | \($outcome) |"
+    end
   ) | join("\n")
 ' 2>/dev/null || true)
 
