@@ -32,7 +32,7 @@
 # verify_retry_fire: tail extension fired /code to retry after FAIL
 #   iteration=<n>                 verify retry iteration counter (1-based within auto-retry)
 #   trigger_reason=<reason>       ac_fail | verify_timeout | verify_uncertain
-#   budget_remaining_tokens=<n>   estimated remaining token budget (approximated)
+#   budget_remaining_tokens=<n|unknown>   estimated remaining token budget; "unknown" when token tracking is not yet implemented
 
 emit_event() {
   local event_type="$1"; shift

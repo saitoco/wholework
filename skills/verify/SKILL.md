@@ -489,7 +489,10 @@ NEXT_ITERATION=$((CURRENT_ITERATION + 1))
         d. After `run-code.sh` completes, restart verification from Step 5 (the LLM re-executes
            Steps 5–11 in the same session context).
 
-      If `AUTONOMY_TIER` is `L1` OR `AUTO_RETRY_ENABLED` is not `true`:
+      Else if `AUTONOMY_TIER` is `L2` or `L3` AND `AUTO_RETRY_ENABLED=true` AND `NEXT_ITERATION` >= `AUTO_RETRY_MAX_ITERATIONS`:
+        Print: "auto-retry 上限 (${NEXT_ITERATION}/${AUTO_RETRY_MAX_ITERATIONS}) に達しました。手動で次アクションを選択してください。"
+
+      Else (`AUTONOMY_TIER` is `L1` OR `AUTO_RETRY_ENABLED` is not `true`):
         Print advisory (path A):
         "次の手として `/goal` または `/code --patch $NUMBER` で再発火可能です。"
 
