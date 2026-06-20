@@ -53,9 +53,9 @@ author's association level — `author.association` in this document refers to t
 | `NONE` | external | Inject with "external input" marker |
 | actor `login` ends with `[bot]` | bot | Skip (see exception below) |
 
-Bot exception: skip bot comments by default, but consume them when they contain
-`<!-- wholework-event: -->` markers or known Wholework retrospective/recovery headings
-(i.e., comments that Wholework itself wrote and that carry structured data).
+Bot exception: skip bot comments by default, but consume them when their body
+contains `<!-- wholework-event:` (i.e., any comment whose body includes a marker
+beginning with that prefix — comments that Wholework itself wrote and that carry structured data).
 
 Detection: use `authorAssociation` for the trust tier check; use `author.login` suffix `[bot]`
 for the bot check. The `gh issue view --json comments` response returns `author` with `login`
@@ -81,8 +81,8 @@ FAIL detected on AC 2: the expected string was not found in the output.
 This marker namespace (`wholework-event:`) is consistent with existing HTML comment markers
 in the codebase (`<!-- verify-type: ... -->`, `<!-- verify: ... -->`).
 
-When consuming comments (see Processing Steps), a comment containing `<!-- wholework-event: -->`
-from a bot actor is treated as a Wholework-authored structured comment and consumed (bot exception above).
+When consuming comments (see Processing Steps), a comment containing `<!-- wholework-event:`
+in its body from a bot actor is treated as a Wholework-authored structured comment and consumed (bot exception above).
 
 ## Processing Steps
 
