@@ -51,6 +51,35 @@
 
 - 次回 validate-recovery-plan.sh を変更する Issue で各 safety check の regression が test で検出されることを観察 <!-- verify-type: manual -->
 
+## Consumed Comments
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- `validate-recovery-plan.sh` passes the JSON string to Python via `sys.argv[1]` (not stdin). Using `<<< '...'` to stdin still works because the script reads from `cat` which reads stdin when no file argument is given — this matches the test design note "Use stdin input via `run bash \"$SCRIPT\" <<< '...'`" correctly.
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Used stdin herestring pattern (`<<< '...'`) for all 6 @test cases — no temp files needed, clean and bash 3.2+ compatible as specified in Spec notes
+- Test covers all 5 Spec-required safety checks plus invalid JSON as a 6th edge case
+
+### Deferred Items
+- CI green confirmation (AC 8) deferred to post-push — `github_check` left unchecked and will be verified once the commit is merged to main and CI completes
+
+### Notes for Next Phase
+- All 7 local verify commands PASS; CI check (AC 8) will auto-verify after push completes
+- No forbidden expressions or stale test assertions introduced
+
 ## Notes
 
 - **Auto-resolved ambiguity (Issue Retrospective, 2026-06-20)**:
