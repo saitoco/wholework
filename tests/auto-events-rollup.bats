@@ -137,6 +137,32 @@ EOF
     grep "^| #685" "docs/reports/auto-events-rollup-2026-06-14.md" | grep -q "incomplete"
 }
 
+# (g) session scope: Phases/Recoveries columns are isolated per session_id
+@test "auto-events-rollup: session scope prevents Phases cross-contamination between sessions" {
+    cat > .tmp/events.jsonl << 'EOF'
+{"ts":"2026-06-14T08:00:00Z","issue":699,"session_id":"session_a","event":"phase_start","phase":"spec"}
+{"ts":"2026-06-14T08:10:00Z","issue":699,"session_id":"session_a","event":"phase_complete","phase":"spec"}
+{"ts":"2026-06-14T09:00:00Z","issue":699,"session_id":"session_b","event":"phase_start","phase":"code"}
+{"ts":"2026-06-14T09:30:00Z","issue":699,"session_id":"session_b","event":"phase_complete","phase":"code"}
+EOF
+
+    run bash "$SCRIPT" --date 2026-06-14 --input .tmp/events.jsonl --output-dir docs/reports
+    [ "$status" -eq 0 ]
+    [ -f "docs/reports/auto-events-rollup-2026-06-14.md" ]
+
+    # Two rows should exist for issue #699 (one per session)
+    rows=$(grep "^| #699" "docs/reports/auto-events-rollup-2026-06-14.md" | wc -l | tr -d ' ')
+    [ "$rows" -eq 2 ]
+
+    # Neither row should contain the cross-contaminated "spec→code" value
+    run grep "^| #699" "docs/reports/auto-events-rollup-2026-06-14.md"
+    [[ "$output" != *"spec→code"* ]]
+
+    # One row should show "spec" only and the other "code" only
+    grep "^| #699" "docs/reports/auto-events-rollup-2026-06-14.md" | grep -q "| spec |"
+    grep "^| #699" "docs/reports/auto-events-rollup-2026-06-14.md" | grep -q "| code |"
+}
+
 # (d) Cleanup rotation: target date entries removed, other dates preserved
 @test "auto-events-rollup: cleanup removes target date entries and preserves others" {
     cat > .tmp/events.jsonl << 'EOF'

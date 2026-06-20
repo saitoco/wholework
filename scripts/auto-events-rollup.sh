@@ -145,8 +145,8 @@ SESSIONS_ROWS=$(printf '%s\n' "$FILTERED" | jq -rs '
         else "\($sec)s"
         end end
       else "-" end) as $dur |
-      ([$ev[] | select(.event == "phase_complete" and .issue == $iss) | .phase] | join("→")) as $phases |
-      ([$ev[] | select(.event == "recovery" and .issue == $iss)] | length) as $rec_count |
+      ($own | map(select(.event == "phase_complete")) | map(.phase) | join("→")) as $phases |
+      ($own | map(select(.event == "recovery")) | length) as $rec_count |
       (if $rec_count == 0 then "—" else ($rec_count | tostring) end) as $recs |
       (if $sub_complete then
         if (($sub_complete.exit_code // "0") == "0") then "success" else "failure" end
