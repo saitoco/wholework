@@ -35,6 +35,33 @@
 
 - 次回 collect-recovery-candidates.sh を変更する Issue で動作 regression が test で検出されることを観察<!-- verify-type: manual -->
 
+## Code Retrospective
+
+### Deviations from Design
+- None: Implementation followed Spec steps exactly (4 @test in inline fixture style, docs count update).
+
+### Design Gaps/Ambiguities
+- `→` in Spec @test name examples is a multibyte Unicode character; used ASCII `->` instead per tech.md bats naming rule (ASCII only). This is consistent with existing tests like `audit-recoveries.bats`.
+
+### Rework
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Used ASCII `->` instead of `→` in @test names per tech.md bats naming rule (multibyte chars cause 0 tests executed).
+- Inline fixture style (`BATS_TEST_TMPDIR`) — no external fixture file dependencies, same pattern as `tests/get-auto-session-report.bats`.
+- Threshold exclusion test uses count=3 threshold=1 to confirm filed mark overrides even a passing count.
+
+### Deferred Items
+- Pre-existing `run-code.bats` failures (tests 621, 623) for emit behavior are unrelated to this change; left for the responsible issue.
+
+### Notes for Next Phase
+- AC1-3 all PASS (verified locally). AC4 (`github_check`) pending CI after push to main.
+- No implementation deviation; Spec steps match implementation exactly.
+- `tests/audit-recoveries.bats` (integration coverage) remains untouched per AP2 decision.
+
 ## Consumed Comments
 
 - saito (MEMBER, first-class) — issue retrospective: AP1/AP2/AP3 の auto-resolve 結果を記録。`file_contains "@test"` は存在確認として適切、`audit-recoveries.bats` は integration coverage として残し新規 direct unit test を作成する方針を確認 — https://github.com/saitoco/wholework/issues/735#issuecomment-4759879388
