@@ -557,6 +557,73 @@ Run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run`
 
 Run `${CLAUDE_PLUGIN_ROOT}/scripts/auto-events-rollup.sh`. If the command fails, output "Warning: auto-events-rollup failed. Session will continue." and proceed without blocking.
 
+**L3 auto-retrospective (batch/XL routes only, runs after Daily rollup regardless of success/failure):**
+
+1. **Route guard**: If `ROUTE` is neither `batch` nor `sub_issue` (XL route), output "L3 retrospective skipped: no notable orchestration content" and skip the remaining L3 steps.
+
+2. **Notable judgment** (using events from `.tmp/auto-events.jsonl` and in-context variables):
+   - Extract events for this session:
+     ```bash
+     jq -c 'select(.session_id == "'"$AUTO_SESSION_ID"'")' .tmp/auto-events.jsonl 2>/dev/null
+     ```
+   - **batch route** (`ROUTE="batch"`) — notable if ANY of:
+     - Tier 2/3 recovery fired (`TIER3_RECOVERY_PHASE` is set, OR recovery event detected in events)
+     - Verify FAIL (any Issue label `phase/verify` with unchecked `- [ ]` at batch end)
+     - Commit count for this session >= 3 (`commit` events in filtered events; if the events log does not emit `commit` events, use `git log --oneline --since="$session_start"` line count as a fallback)
+     - Watchdog kill detected (`watchdog_timeout` event in filtered events)
+   - **XL route** (`ROUTE="sub_issue"`) — notable if ANY of:
+     - Parallel race detected (conflicting commit event or explicit race event in filtered events)
+     - Cross-cutting AC mismatch (any `FAIL` from Step 4's cross-cutting pre-verification)
+     - At least 1 sub-issue failure in the execution summary
+   - If NOT notable: output "L3 retrospective skipped: no notable orchestration content" and skip the remaining L3 steps.
+
+3. **Create session files** (`docs/sessions/{AUTO_SESSION_ID}-{DATE}/`):
+   ```bash
+   DATE=$(date -u +%Y-%m-%d)
+   SESSION_DIR="docs/sessions/${AUTO_SESSION_ID}-${DATE}"
+   mkdir -p "$SESSION_DIR"
+   ```
+   - Write `$SESSION_DIR/session.md` using the Write tool — format:
+     ```markdown
+     # L3 Session Retrospective: {AUTO_SESSION_ID}
+
+     ## What worked
+     (successful phases, recovery patterns used)
+
+     ## Limits and gaps
+     (cross-cutting conflicts, concurrent commit issues, AC mismatches, tier gaps)
+
+     ## Improvement candidates
+     (proposals for structural improvements)
+
+     ## Auto Retrospective
+     ### Improvement Proposals
+     (retro-proposals-compatible section; same content as Improvement candidates above)
+     ```
+   - Extract session events:
+     ```bash
+     jq -c 'select(.session_id == "'"$AUTO_SESSION_ID"'")' .tmp/auto-events.jsonl > "$SESSION_DIR/events.jsonl" 2>/dev/null || true
+     ```
+
+4. **Call `modules/retro-proposals.md`** — improvement Issue creation:
+   - Create a bridge file for retro-proposals.md interface compatibility:
+     - XL route (`ROUTE="sub_issue"`): `BRIDGE_NUMBER=$NUMBER`; write bridge file at `$SESSION_DIR/issue-${BRIDGE_NUMBER}-l3session.md` containing the `## Auto Retrospective > ### Improvement Proposals` section from `session.md`
+     - batch route (`ROUTE="batch"`): `BRIDGE_NUMBER="batch-${AUTO_SESSION_ID}"`; write bridge file at `$SESSION_DIR/issue-${BRIDGE_NUMBER}-l3session.md`
+   - Read `${CLAUDE_PLUGIN_ROOT}/modules/retro-proposals.md` and follow "Processing Steps" with `SPEC_PATH=$SESSION_DIR`, `NUMBER=$BRIDGE_NUMBER`, `HAS_SKILL_PROPOSALS` (already retained from `.wholework.yml` detection).
+   - Collect filed Issue numbers from retro-proposals output.
+   <!-- TODO (#710): When blocked-by workflow lands, pass BLOCKED_BY_CANDIDATES to retro-proposals.md to enable formal relationship setting via set-blocked-by.sh. -->
+
+5. **Backlink**: If any Issues were filed, append a `## Filed Issues` section to `$SESSION_DIR/session.md` listing each filed Issue number as `- #N`.
+
+6. **Commit and push**:
+   ```bash
+   git add "$SESSION_DIR"
+   git commit -s -m "Add L3 session retrospective for session ${AUTO_SESSION_ID}
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+   git push origin main
+   ```
+
 ### Step 6: On Failure: 3-Tier Recovery
 
 If any phase exits with a non-zero exit code, apply the following 3-tier recovery hierarchy before stopping.
@@ -787,6 +854,18 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 - `SKILL_NAME=auto`
 - `RESULT=success`
 - (omit `ISSUE_NUMBER` — batch run with multiple issues, guide will be omitted per module logic)
+
+**Event-based observation scan (batch, best-effort):**
+
+Run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run`
+
+**Daily rollup (batch, best-effort):**
+
+Run `${CLAUDE_PLUGIN_ROOT}/scripts/auto-events-rollup.sh`. If the command fails, output "Warning: auto-events-rollup failed. Session will continue." and proceed without blocking.
+
+**L3 auto-retrospective (batch route):**
+
+Set `ROUTE="batch"`, then follow the **L3 auto-retrospective** steps in Step 5 (route guard, notable judgment, session file creation, retro-proposals call, backlink, commit and push).
 
 ## Notes
 

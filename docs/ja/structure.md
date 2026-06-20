@@ -53,7 +53,11 @@ wholework/
 │   ├── {lang}/          # /doc translate {lang} が生成する言語別翻訳（docs/{lang}/）
 │   ├── spec/            # Issue 仕様
 │   ├── reports/         # 最適化・監査レポート
-│   └── stats/           # プロジェクト健全性診断レポート（/audit stats が生成、YYYY-MM-DD.md）
+│   ├── stats/           # プロジェクト健全性診断レポート（/audit stats が生成、YYYY-MM-DD.md）
+│   └── sessions/        # L3 セッションレトロスペクティブ（/auto Step 5 L3 トリガーが生成、notable な batch/XL のみ）
+│         {SID}-{DATE}/
+│           session.md   # L3 ナラティブ（What worked / Limits and gaps / Improvement candidates）
+│           events.jsonl # .tmp/auto-events.jsonl から抽出したセッションスコープイベント
 ├── .wholework/          # プロジェクトローカルな Wholework 設定（ユーザー管理、wholework リポジトリでは追跡しない）
 │   ├── adapters/        # 検証 adapter のオーバーライド
 │   ├── verify-commands/ # プロジェクトローカルのカスタム verify command ハンドラ
