@@ -104,19 +104,21 @@ Nothing to note. No patterns of repeated issues across perspectives detected in 
 The `github_check "gh pr checks" "Run bats tests"` AC returned FAIL due to a pre-existing failure in `tests/setup-labels.bats` (unrelated to this PR). The new tests added by the PR (`ok 25`, `ok 26`) both passed. Future Issues should consider adding a note in ACs that `setup-labels.bats` CI failure is a known pre-existing issue to avoid review confusion.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- `Run bats tests` CI FAILURE is a pre-existing issue in `tests/setup-labels.bats` unrelated to this PR; PR's new tests (`ok 25`, `ok 26`) pass. Not a blocker for merge.
-- No MUST/SHOULD issues found in lightweight review (all 4 perspectives); COMMENT event posted.
+- PR #740 squash-merged to main despite CI failing status (pre-existing `tests/setup-labels.bats` failure, not caused by this PR's changes).
+- Non-interactive mode auto-resolve: proceeded with merge given ci_failing is a known pre-existing issue documented in review phase handoff.
+- BASE_BRANCH is `main`, so `closes #695` auto-closed the Issue on merge.
 
 ### Deferred Items
 
-- `--range START..END` bats test remains deferred to post-merge manual test (carried from code phase).
+- `--range START..END` bats test deferred to post-merge manual verification (carried from code and review phases).
 - Japanese sibling generation for period reports remains unimplemented (carried from code phase).
 
 ### Notes for Next Phase
 
-- PR #740 is clean; proceed with `/merge 740`.
-- Post-merge AC: run `/audit auto-session --since 7d` to confirm `docs/sessions/_period/since-{TODAY}-7d.md` is generated correctly.
+- Post-merge AC: run `/audit auto-session --since 7d` and confirm `docs/sessions/_period/since-{TODAY}-7d.md` is generated with 4 sections (Sessions covered / Cross-session patterns / Improvement candidates / Trend).
+- Verify `--day YYYY-MM-DD` and `--range START..END` options also work as expected.
+- Issue #695 should be auto-closed; verify closure after merge.
