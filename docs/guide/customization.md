@@ -87,6 +87,7 @@ verify-max-iterations: 3
 #   enabled: true
 #   max_iterations: 3
 #   budget_tokens: 500000
+#   route_override: auto
 
 # Auto-file improvement Issues when orchestration-recoveries.md symptom count exceeds threshold
 # (opt-in; requires autonomy: L2 or L3)
@@ -139,6 +140,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `auto-retry-on-fail.enabled` | boolean | `false` | Enable automatic `/code` re-fire + `/verify` retry on FAIL (requires `autonomy: L2` or `L3`). When `false` (or autonomy is `L1`), only advisory guidance is printed. |
 | `auto-retry-on-fail.max_iterations` | integer | `3` | Maximum number of auto-retry iterations before stopping and returning to the user. Values ≤0 or non-numeric fall back to `3`. |
 | `auto-retry-on-fail.budget_tokens` | integer | `500000` | Approximate token budget for auto-retry iterations. Initial implementation uses iteration count only; budget tracking is a future improvement. Values ≤0 or non-numeric fall back to `500000`. |
+| `auto-retry-on-fail.route_override` | string | `"auto"` | Route for auto-retry. `auto`: Size-based (XS/S → `--patch`; M/L → `--pr`; XL → skip/manual); `patch`: always `--patch`; `pr`: always `--pr`. |
 | `recoveries-auto-fire.enabled` | boolean | `false` | Auto-file improvement Issues when orchestration-recoveries.md symptom count exceeds threshold (requires `autonomy: L2` or `L3`). When `false` or autonomy is `L1`, prints a recommendation instead. |
 | `recoveries-auto-fire.threshold` | integer | `3` | Symptom occurrence count threshold for auto-filing. Values ≤0 or non-numeric fall back to `3`. |
 | `next-cycle-seed.enabled` | boolean | `false` | Enable next-cycle candidate seeding after batch completion. Emits `.tmp/next-cycle.json` with `audit/*` Issues created during the batch session (requires `autonomy: L2` or `L3`). When `false` or autonomy is `L1`, prints a recommendation instead. |

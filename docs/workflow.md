@@ -229,7 +229,7 @@ User selects:
 /verify N  (re-verify after fix)
 ```
 
-**Opt-in auto-retry (autonomy: L2 or L3 + auto-retry-on-fail.enabled: true):** `/verify` automatically re-fires `/code --patch N` and re-runs verification, up to `auto-retry-on-fail.max_iterations` times. On budget exhaustion or iteration limit, returns to the user. See [docs/guide/customization.md](guide/customization.md) for configuration.
+**Opt-in auto-retry (autonomy: L2 or L3 + auto-retry-on-fail.enabled: true):** `/verify` automatically re-fires `/code` (route determined by `auto-retry-on-fail.route_override` + Issue Size — XS/S → `--patch`, M/L → `--pr`, XL → skip/manual; default `auto`) and re-runs verification, up to `auto-retry-on-fail.max_iterations` times. On budget exhaustion or iteration limit, returns to the user. See [docs/guide/customization.md](guide/customization.md) for configuration.
 
 The original `size/*` label is preserved throughout (not modified). `get-issue-size.sh`'s two-layer lookup (Project field → `size/*` label) retains the original Size across reopen/close cycles, so `/audit stats` Size-based analysis remains accurate.
 

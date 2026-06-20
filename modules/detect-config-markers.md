@@ -61,6 +61,7 @@ From the loaded content, search for each YAML key in the marker definition table
 | `auto-retry-on-fail.enabled` | `AUTO_RETRY_ENABLED` | `true` | `false` |
 | `auto-retry-on-fail.max_iterations` | `AUTO_RETRY_MAX_ITERATIONS` | Integer string (extract as-is; use `3` if ≤0 or non-numeric) | `3` |
 | `auto-retry-on-fail.budget_tokens` | `AUTO_RETRY_BUDGET_TOKENS` | Integer string (extract as-is; use `500000` if ≤0 or non-numeric) | `500000` |
+| `auto-retry-on-fail.route_override` | `AUTO_RETRY_ROUTE_OVERRIDE` | String (extract as-is; valid: `"auto"`/`"patch"`/`"pr"`; invalid or unset → `"auto"`) | `"auto"` |
 | `recoveries-auto-fire.enabled` | `RECOVERIES_AUTO_FIRE_ENABLED` | `true` | `false` |
 | `recoveries-auto-fire.threshold` | `RECOVERIES_AUTO_FIRE_THRESHOLD` | Integer string (extract as-is; use `3` if ≤0 or non-numeric) | `3` |
 | `next-cycle-seed.enabled` | `NEXT_CYCLE_SEED_ENABLED` | `true` | `false` |
@@ -84,7 +85,7 @@ Example: `capabilities.invoice-api: true` → `HAS_INVOICE_API_CAPABILITY=true`
 - `retro-proposals-upstream` is treated as a string (`owner/repo` format) with quotes removed (same handling as `production-url`)
 - `verify-ignore-paths` is written in block list format (`- pattern`), parsed the same way as `capabilities.mcp`. Each entry is a glob pattern. Supported: `dir/**` prefix match and simple bash globs (`*`, `?`, `[...]`); intermediate `**` (e.g. `a/**/b`) and negation (`!`) are not supported. If undefined or an empty list, `VERIFY_IGNORE_PATHS=""`
 - `autonomy` is one of `L1`, `L2`, or `L3` (case-sensitive). Unset or invalid values (e.g., `autonomy: L9`) fall back to `L1` (safest). See `modules/autonomy-tier.md` for the tier semantics and permission matrix
-- `auto-retry-on-fail.*` nested keys are interpreted under the `auto-retry-on-fail:` YAML section: `enabled: true/false`, `max_iterations: <integer>`, `budget_tokens: <integer>`. Both block format (`auto-retry-on-fail:\n  enabled: true`) and flat key format (`auto-retry-on-fail.enabled: true`) are supported. `max_iterations` and `budget_tokens` are treated as integers; use defaults if ≤0 or non-numeric.
+- `auto-retry-on-fail.*` nested keys are interpreted under the `auto-retry-on-fail:` YAML section: `enabled: true/false`, `max_iterations: <integer>`, `budget_tokens: <integer>`, `route_override: <string>`. Both block format (`auto-retry-on-fail:\n  enabled: true`) and flat key format (`auto-retry-on-fail.enabled: true`) are supported. `max_iterations` and `budget_tokens` are treated as integers; use defaults if ≤0 or non-numeric. `route_override` is a string key; valid values are `auto`, `patch`, `pr`; invalid or unset values fall back to `"auto"`.
 - `recoveries-auto-fire.*` nested keys are interpreted under the `recoveries-auto-fire:` YAML section: `enabled: true/false`, `threshold: <integer>`. Both block format (`recoveries-auto-fire:\n  enabled: true`) and flat key format (`recoveries-auto-fire.enabled: true`) are supported. `threshold` is treated as an integer; use default `3` if ≤0 or non-numeric.
 - `next-cycle-seed.*` nested keys are interpreted under the `next-cycle-seed:` YAML section: `enabled: true/false`. Both block format (`next-cycle-seed:\n  enabled: true`) and flat key format (`next-cycle-seed.enabled: true`) are supported. Default `false` if ≤0 or unset.
 - If key does not exist, use default value
@@ -128,6 +129,7 @@ AUTONOMY_TIER: tier string from autonomy (default: "L1"; falls back to "L1" if u
 AUTO_RETRY_ENABLED: true if auto-retry-on-fail.enabled: true is set (default: false)
 AUTO_RETRY_MAX_ITERATIONS: integer from auto-retry-on-fail.max_iterations (default: "3"; falls back to "3" if ≤0 or non-numeric)
 AUTO_RETRY_BUDGET_TOKENS: integer from auto-retry-on-fail.budget_tokens (default: "500000"; falls back to "500000" if ≤0 or non-numeric)
+AUTO_RETRY_ROUTE_OVERRIDE: string from auto-retry-on-fail.route_override (default: "auto"; falls back to "auto" if invalid or unset)
 RECOVERIES_AUTO_FIRE_ENABLED: true if recoveries-auto-fire.enabled: true is set (default: false)
 RECOVERIES_AUTO_FIRE_THRESHOLD: integer from recoveries-auto-fire.threshold (default: "3"; falls back to "3" if ≤0 or non-numeric)
 NEXT_CYCLE_SEED_ENABLED: true if next-cycle-seed.enabled: true is set (default: false)
