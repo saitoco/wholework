@@ -77,6 +77,16 @@ Reference the `## Forbidden Expressions` section in `$STEERING_DOCS_PATH/tech.md
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-checker.md` and follow the "Processing Steps" section to check documentation consistency.
 
+### 3. Prose-Literal Consistency Check
+
+For each file changed in the PR that is a `modules/*.md` or `skills/*/SKILL.md` file:
+
+1. **Identify format examples in code fences**: Find format examples shown inside fenced code blocks (` ```yaml `, ` ```html `, ` ```bash `, ` ```json `, etc.) that represent canonical marker formats, command patterns, or schema fragments.
+2. **Identify detection/matching literals**: Find literal strings used elsewhere in the **same file** for detection, string matching, condition checking, or parsing (e.g., `startsWith("...")`, `contains("...")`, literal pattern strings in conditions, inline code examples used for matching).
+3. **Cross-reference for consistency**: Compare each code-fence format example against detection literals that reference the same format. If the code-fence example and the detection literal diverge (e.g., required attributes present in the example are absent in the detection literal, or format fields differ), flag as MUST.
+
+**If no prose-literal pairs exist in the changed files**: Skip this perspective and report no issues.
+
 ## Output Format
 
 Output findings in the following format:
@@ -109,6 +119,17 @@ Recommended fix:
 ### Perspective 2: Documentation Consistency
 
 **[Documentation Consistency] filename:line-number vicinity**
+- path: file path (relative to repository root; null if not identifiable)
+- line: line number (corresponding line in diff; null if not identifiable)
+- confidence: high / medium / low
+Issue description. Severity: MUST / SHOULD / CONSIDER
+
+Recommended fix:
+(specific fix suggestion)
+
+### Perspective 3: Prose-Literal Consistency
+
+**[Prose-Literal Inconsistency] filename:line-number vicinity**
 - path: file path (relative to repository root; null if not identifiable)
 - line: line number (corresponding line in diff; null if not identifiable)
 - confidence: high / medium / low
