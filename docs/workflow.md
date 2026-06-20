@@ -212,7 +212,9 @@ Adding `closes #N` to PR body auto-closes the Issue on merge (GitHub standard fe
 
 ### Verify Fail Flow
 
-When `/verify` detects a FAIL among auto-verification targets, it reopens the Issue and removes all `phase/*` labels. The user then selects the next action manually:
+When `/verify` detects a FAIL among auto-verification targets, it reopens the Issue and removes all `phase/*` labels.
+
+**Default (autonomy: L1 or auto-retry-on-fail not configured):** The user selects the next action manually:
 
 ```
 /verify FAIL → gh issue reopen + remove all phase/*
@@ -224,6 +226,8 @@ User selects:
   ↓
 /verify N  (re-verify after fix)
 ```
+
+**Opt-in auto-retry (autonomy: L2 or L3 + auto-retry-on-fail.enabled: true):** `/verify` automatically re-fires `/code --patch N` and re-runs verification, up to `auto-retry-on-fail.max_iterations` times. On budget exhaustion or iteration limit, returns to the user. See [docs/guide/customization.md](guide/customization.md) for configuration.
 
 The original `size/*` label is preserved throughout (not modified). `get-issue-size.sh`'s two-layer lookup (Project field → `size/*` label) retains the original Size across reopen/close cycles, so `/audit stats` Size-based analysis remains accurate.
 

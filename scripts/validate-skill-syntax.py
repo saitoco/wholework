@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 
 # Known frontmatter fields
-KNOWN_FIELDS = {'name', 'description', 'allowed-tools', 'argument-hint', 'context', 'agent', 'model'}
+KNOWN_FIELDS = {'name', 'description', 'allowed-tools', 'argument-hint', 'context', 'agent', 'model', 'loop-paths-used'}
 
 # Known Claude Code tool names (for validating allowed-tools base tool names)
 KNOWN_TOOLS = {
