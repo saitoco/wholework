@@ -112,3 +112,54 @@ No new comments since last phase.
 - Pre-merge AC 3件はすべて `file_contains`/`grep` で PASS が確認でき、検証コマンドの精度は十分だった。
 - Post-merge AC は `verify-type: observation` (実際のバッチ完走が必要) であり、自動検証不可。これは観察型 AC の適切な使い分けとして問題なし。
 - Nothing to note 以外: UNCERTAIN が 0件であり、verify command の品質は高い。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Issue body は L2→L1 経路 (#704 マトリクス) の E (seed file emission) と A (advisory) の位置付けを明記しており、`loop-paths-used: [A, E]` frontmatter declaration の根拠が明確。AC 設計も file_contains/grep の機械検証可能形式で UNCERTAIN=0。
+
+#### spec
+- Size=M を維持、route は pr で安定。anomaly なし。
+- `validate-skill-syntax.py` が `loop-paths-fallback` を unknown field として warning を出すことは spec 段階で予見されておらず、code phase で発見された。これは E7 autonomy tier (#704) 系の frontmatter フィールドが順次追加される過程で起きる過渡的問題。
+
+#### code
+- `emit-event.sh` を `allowed-tools` に追加する必要を validate-skill-syntax.py 実行後に発見 → rework 1 回。同パターンは #705 でも発生した (#705 Verify Retrospective の Improvement Proposal #3 で言及)。Spec で source 元への影響を予見する規約として確立すべき。
+- `validate-skill-syntax.py` が `loop-paths-used` / `loop-paths-fallback` を unknown field として warning を出す → schema 未対応。warning 止まりで CI pass するが、E7 完成度の問題。
+
+#### review
+- review-light で MUST 0件、CONSIDER 2件 (変数命名、暗黙変数定義)。LLM-executed skill の bash スニペット変数名と説明文変数名の不一致パターンは共通テーマ。将来の skill 執筆時の意識すべき共通パターンと指摘。
+
+#### merge
+- conflict resolution なし、CI 全 SUCCESS、anomaly 報告なし。スムーズな merge。
+- (#702 で発生した Forbidden Expressions pre-existing FAILURE は本 Issue 着地時点では発生していない。`docs/spec/issue-710-blocked-by-workflow.md` の問題は #719 で対処予定)
+
+#### verify
+- Pre-merge 3 件すべて idempotent 再検証で PASS。Post-merge 1 件 (observation event=batch-completion) は本セッションでは条件不成立 → PENDING で deferred。判断は SSoT に忠実。
+- 本 Issue 着地で **L2→L1 経路 E (seed file emission) の最初の production 実装が完成**。Loop Engineering framework の closure に向けた重要なマイルストーン。
+
+### Improvement Proposals
+
+**1. `validate-skill-syntax.py` への loop-paths-* フィールド対応 (Tier 2 / 規約)**
+
+E7 autonomy tier (#704) で導入された `loop-paths-used` / `loop-paths-fallback` フィールドが skill frontmatter schema に未登録のため、validate-skill-syntax.py が unknown field warning を出す。warning 止まりで CI は pass するが:
+- 今後 E7 関連 frontmatter フィールドが順次追加される予定
+- warning の累積は real warning を見落とすリスクを上げる
+- E7 完成度を示すためにも schema 側の対応が必要
+
+提案: `validate-skill-syntax.py` の skill frontmatter schema に `loop-paths-used: [array of A|B|C|E]` と `loop-paths-fallback: [array of A|B|C|E]` を追加。Tier 2 (規約として周辺整備)。
+
+**2. SKILL.md の bash スニペット変数名と説明文変数名の統一規約 (Tier 2 / 規約 — #719 と統合可)**
+
+LLM-executed skill の SKILL.md では bash スニペットで使う変数 (`$SESSION_START`) と説明文で参照する変数 (`session_start`) が大文字小文字で不一致になりがち。今回 review CONSIDER で指摘。
+
+提案: SKILL.md 執筆規約として「bash スニペット内変数は大文字、説明文での参照も同名を使用」を明示。`docs/structure.md` または skill 開発ガイドに記載。Tier 2 (規約として周辺整備、複数 PR で再発の可能性)。
+
+**3. emit-event.sh allowed-tools cross-file validation (Tier 1 → 既存 #705 提案と統合)**
+
+#705 で発生した「emit-event.sh を source する skill の allowed-tools に `emit-event.sh:*` を追加する必要を validate-skill-syntax.py 実行後に発見」パターンが #703 でも再発。これは spec 段階で予見できれば rework 1 回分節約できる。
+
+提案: Spec template に「source する scripts/*.sh の allowed-tools 追加チェック」をチェックリスト化。または `validate-skill-syntax.py` で実装の足りなさを check する before-commit hook。
+
+ただし本提案は #705 の Verify Retrospective Improvement Proposal #3 と同種なので、別 Issue 化せず該当議論に統合 (Tier 3 として skip)。
