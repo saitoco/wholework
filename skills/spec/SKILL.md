@@ -498,6 +498,17 @@ After `## Verification > Pre-merge` is finalized and the Issue body is updated, 
 
 When Changed Files includes shell scripts (`scripts/*.sh`, hook scripts, etc.), add a bash compat note to each entry. Example: `scripts/foo.sh`: add bar function — bash 3.2+ compatible. This prevents issues like using `mapfile` (bash 4+) that fails on macOS system bash (bash 3.2).
 
+#### allowed-tools impact chain check
+
+When Changed Files includes new `scripts/*.sh` files (especially `run-*.sh` patterns — scripts called directly by Skills during execution), perform an allowed-tools impact chain check:
+
+1. Extract new `scripts/*.sh` filenames from the Spec's "Changed Files" section
+2. For each new script, grep `skills/*/SKILL.md` frontmatter `allowed-tools` for the literal entry `${CLAUDE_PLUGIN_ROOT}/scripts/<script-name>:*`
+3. If a SKILL.md calls the new script but lacks the explicit entry, record the gap in the Spec's Notes section: "`skills/<skill>/SKILL.md` の `allowed-tools` に `${CLAUDE_PLUGIN_ROOT}/scripts/<new-script>:*` の追加が必要"
+4. Wildcard claims (`*.sh`) are not acceptable — use literal match against the actual `allowed-tools` value; a wildcard covering `scripts/*.sh` is not present in any existing SKILL.md allowed-tools pattern
+
+**Skip** if no new `scripts/*.sh` files are being added.
+
 **"No change needed" pre-verification rule:**
 
 Before writing "no change needed" for a file in the changed-files section, verify with grep or similar. Unverified "no change needed" judgments lead to implementation oversights (example: #749).
