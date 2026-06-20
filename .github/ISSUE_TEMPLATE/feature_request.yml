@@ -62,3 +62,18 @@ body:
       description: Any other information, mockups, or references that support this request.
     validations:
       required: false
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria (conditions that define feature completion)
+      description: |
+        List the conditions that confirm the feature is complete. Add a verify command in an HTML comment to enable `/verify` auto-verification.
+        Verify command types: file_exists, file_contains, grep, section_contains, command, etc. (see modules/verify-patterns.md for full reference)
+      value: |
+        - [ ] {primary behavior 1} <!-- verify: command "{verification method}" -->
+        - [ ] {primary behavior 2} <!-- verify: section_contains "{file}" "{section}" -->
+        - [ ] Related documentation updated <!-- verify: file_contains "docs/{path}.md" "{keyword}" -->
+        - [ ] Tests added <!-- verify: file_exists "tests/{path}.bats" -->
+    validations:
+      required: false

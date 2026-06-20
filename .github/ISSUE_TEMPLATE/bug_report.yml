@@ -79,3 +79,18 @@ body:
       description: Logs, screenshots, or any other information that might help.
     validations:
       required: false
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria (conditions that must hold after the fix)
+      description: |
+        List the conditions that confirm the fix is complete. Add a verify command in an HTML comment to enable `/verify` auto-verification.
+        Verify command types: file_exists, file_contains, grep, section_contains, command, etc. (see modules/verify-patterns.md for full reference)
+        Example: `<!-- verify: command "{repro-command}" -->`
+      value: |
+        - [ ] Bug no longer reproduces <!-- verify: command "{repro-command}" -->
+        - [ ] A test covering the fix has been added <!-- verify: file_contains "tests/{path}.bats" "{test name}" -->
+        - [ ] {additional item}
+    validations:
+      required: false
