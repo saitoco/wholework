@@ -273,3 +273,4 @@ When the GitHub repository setting "Auto-close issues with merged linked pull re
 - [docs/tech.md](tech.md) — Tech stack, architecture decisions, coding conventions
 - [docs/structure.md](structure.md) — Directory structure, Key Files, agents/modules catalog
 - [docs/guide/workflow.md](guide/workflow.md) — User-facing workflow guide
+- [modules/l0-surfaces.md](../modules/l0-surfaces.md) — L0 (GitHub) surface SSoT and comment consumption policy

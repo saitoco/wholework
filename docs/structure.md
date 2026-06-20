@@ -25,7 +25,7 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill definition (required)
 │       └── *.md         # Auxiliary phase/guideline files (optional)
-├── modules/             # Shared modules referenced by skills (36 files)
+├── modules/             # Shared modules referenced by skills (37 files)
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
@@ -125,6 +125,7 @@ Key modules:
 - `modules/skill-dev-checks.md` — cross-skill consistency validation
 - `modules/codebase-analysis.md` — codebase analysis for `/doc` deep mode
 - `modules/title-normalizer.md` — issue title normalization
+- `modules/l0-surfaces.md` — L0 (GitHub) surface SSoT and comment-as-first-class-input policy
 - `modules/ambiguity-detector.md` — ambiguity detection in issue descriptions
 - `modules/review-output-format.md` — review output formatting and MUST/SHOULD/CONSIDER severity classification criteria
 - `modules/review-type-weighting.md` — review type weighting configuration
