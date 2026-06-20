@@ -212,7 +212,7 @@ FIXTURE_EOF
     ! grep -q "other-ccc" "$PERIOD_OUTPUT"
 
     # _period path marker in output
-    grep -q "_period" "$output"
+    [[ "$output" == *"_period"* ]]
 }
 
 @test "success: --since-days generates _period since report" {
@@ -236,5 +236,5 @@ FIXTURE_EOF
     grep -q "Period Report" "${PERIOD_DIR}/since-test-7d.md"
     grep -q "Sessions covered" "${PERIOD_DIR}/since-test-7d.md"
     grep -q "Trend" "${PERIOD_DIR}/since-test-7d.md"
-    grep -q "_period" "$output"
+    [[ "$output" == *"_period"* ]]
 }
