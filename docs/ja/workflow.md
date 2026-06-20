@@ -260,7 +260,7 @@ GitHub リポジトリ設定「Auto-close issues with merged linked pull request
 
 ## Blocked-by relationships
 
-GitHub native の blocked-by relationship (`addBlockedBy` mutation で設定) が Issue 依存関係状態の **SSoT** です。`Blocked by #N` という body テキストは人間向け補足に過ぎません。skill はGitHub relationship を正式なシグナルとして扱います。
+GitHub native の blocked-by relationship (`addBlockedBy` mutation で設定) が Issue 依存関係状態の **SSoT** です。`Blocked by #N` という body テキストは人間向け補足に過ぎません。skill は GitHub relationship を正式なシグナルとして扱います。
 
 ### 自動設定経路
 

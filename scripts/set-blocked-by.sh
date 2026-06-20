@@ -6,7 +6,7 @@
 #   scripts/set-blocked-by.sh <issue-number> <blocking-issue-number>
 #
 # Exit codes:
-#   0 -- relationship set successfully (or already set)
+#   0 -- relationship set successfully
 #   1 -- error (bad arguments, API error, etc.)
 
 set -euo pipefail
