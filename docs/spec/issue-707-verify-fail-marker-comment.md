@@ -156,3 +156,35 @@ Issue 提案の `phase-at-fail=verify` は l0-surfaces.md SSoT の `phase=verify
 - AC3 (`modules/l0-surfaces.md` の verify-fail marker) は既存コンテンツで充足済み、l0-surfaces.md への変更なし
 - pre-merge AC 3 件すべて PASS 確認済み (checkbox 更新済み)
 - bats テスト全件 PASS、validate-skill-syntax.py PASS、forbidden expressions チェック PASS
+
+## Review Retrospective
+
+### Spec vs Implementation Divergence Patterns
+
+- 構造的な divergence なし。Spec の全実装ステップが diff に反映されている。
+- 既知の偏差 (FAIL_COUNT 未定義、comment_id 省略) は Code Retrospective で事前文書化済みのため、review 時点で追加の divergence 発見はなかった。Code phase での自己レビューが review phase の divergence 発見コストを低減している。
+
+### Recurring Issues
+
+- 対称的な実装ブロック (block 1 / block 2) で "Next action" テキストの言語が非一致 (block 1: 日本語、block 2: 英語)。SKILL.md への対称追加では両ブロックのテキスト内容も対称チェックが必要というパターン。CONSIDER レベルのため今回は修正せず記録のみ。
+
+### Acceptance Criteria Verification Difficulty
+
+- Pre-merge AC 3 件すべて `file_contains`/`grep` 系コマンドで auto-verify 可能。UNCERTAIN ゼロ。
+- Code phase で checkbox が 1 件先行更新 ([x]) されており、verify-executor が正確なステータスを反映できた。
+- CI bats テスト失敗 (setup-labels.bats) は main ブランチでも同一失敗があり、pre-existing failure として確認済み。verify コマンドによる AC 確認とは独立して評価できた。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST/SHOULD 問題なし。CI bats 失敗は pre-existing failure (main ブランチ同一)、本 PR 固有でないと確認。
+- CONSIDER 2 件 (FAIL_COUNT 未定義、"Next action" 言語非一致) は修正不要と判断し PR コメントに記録。
+
+### Deferred Items
+- "Next action" テキストの言語統一 (block 2 を日本語化) は必要なら別途対応。優先度低。
+- setup-labels.bats の pre-existing CI 失敗は別 Issue で対処予定。
+
+### Notes for Next Phase
+- AC 全件 PASS、MUST/SHOULD 問題なし。`/merge 726` 実行可能。
+- post-merge AC は manual (FAIL 意図確認観察) と opportunistic (consume 確認) のため、merge 後に観察。
