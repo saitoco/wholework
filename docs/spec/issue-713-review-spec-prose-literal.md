@@ -69,3 +69,33 @@
 3. **AC1 文字列ケース**: `"Prose-Literal"` (大文字 L) を使用。既存 Perspective 見出し (title case) パターンに合わせる。
 
 **新設 Perspective の位置**: `### 2. Documentation Consistency Check` の直後、`## Output Format` の直前に追加する。Output Format セクションでは既存の `### Perspective 2: Documentation Consistency` ブロックの後、`### No Issues Found` の前に追加する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Implemented Spec steps in order: added `### 3. Prose-Literal Consistency Check` in Processing Steps, then `### Perspective 3: Prose-Literal Consistency` in Output Format section
+- Rubric text is in English per CLAUDE.md convention; all three ACs verified PASS locally before commit
+- Patch route chosen per --patch flag (Size S)
+
+### Deferred Items
+- Post-merge observation: next L-size PR that changes `modules/*.md` or `skills/*/SKILL.md` should be observed to confirm new perspective fires on prose-literal mismatches
+
+### Notes for Next Phase
+- All 3 pre-merge ACs verified PASS (file_contains, grep, section_contains) — Issue checkboxes updated
+- No test changes needed; bats suite passed 889 tests, 0 failures
+- Forbidden expressions check PASS; skill syntax validation PASS (existing warning about loop-paths-fallback unrelated to this change)
