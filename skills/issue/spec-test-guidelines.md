@@ -250,3 +250,32 @@ Include the phrase "試算可" in the AC text to signal that code-phase scope na
 ```
 
 A grep for output-related keywords will pass whether the implementation ran anything or only wrote analysis text. Always pair keyword checks with `file_exists` for measurement artifacts when 実測 is required.
+
+## base/head 比較 bats テスト
+
+When testing `git diff`-based comparison logic with bats, the PRE_EXISTING (both FAIL) and CLEAN (both PASS) scenarios may produce identical content on the base and head branches. Because `git commit` does not allow 空コミット (empty commits), these scenarios cause `git commit` to fail with "nothing to commit, working tree clean".
+
+To prevent this, add a branch-specific marker file (e.g., `skills/marker-${branch}.md`) to each branch fixture so that every `git commit` has at least one changed file:
+
+```bash
+_setup_feature_branch() {
+  local branch="$1"
+  git checkout -b "$branch"
+  echo "" > "skills/marker-${branch}.md"
+  git add "skills/marker-${branch}.md"
+  git commit -m "Add marker for $branch"
+}
+```
+
+### When the marker file pattern is needed
+
+| Scenario | base content | head content | 空コミット risk |
+|----------|-------------|-------------|-----------------|
+| PRE_EXISTING (both FAIL) | has FORBIDDEN string | has FORBIDDEN string | Yes — identical content |
+| CLEAN (both PASS) | no FORBIDDEN string | no FORBIDDEN string | Yes — identical content |
+| NEW_FAILURE | no FORBIDDEN string | has FORBIDDEN string | No — content differs |
+| FIXED | has FORBIDDEN string | no FORBIDDEN string | No — content differs |
+
+### Applicability
+
+Apply this pattern when designing test fixtures for git diff-based comparison scripts (`pre-merge-check.sh` and future diff-based scripts). For NEW_FAILURE and FIXED scenarios the base and head branches differ by definition, so no marker file is required. Adding one is harmless for consistency, but it is only mandatory for PRE_EXISTING and CLEAN scenarios.
