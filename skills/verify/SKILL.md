@@ -112,6 +112,10 @@ Parse acceptance condition checkboxes:
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/domain-loader.md` and follow the "Processing Steps" section with `SKILL_NAME=verify`. Domain file content provides Skill infrastructure improvement classification criteria for Step 13.
 
+**Consume comments since the last phase (L0 input):**
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/l0-surfaces.md` and follow the "Comment Consumption Procedure" section with parameters: `ISSUE_NUMBER=$NUMBER`, `COMMENT_SCOPE=issue`, `PHASE_NAME=verify`. The cutoff resolves to the most recent `phase/verify` label assignment. Record results in the Spec's `## Consumed Comments` section.
+
 **Phase Handoff read** (verify is the last execution phase — read only, no write):
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Read Procedure" section.
