@@ -121,12 +121,12 @@ Nothing to note. Spec の受け入れ条件 (file_contains / grep ベース) は
 全 pre-merge AC が `file_contains` / `grep` ベースで CI 自動確認可能。UNCERTAIN なし。verify command の品質は高い。post-merge AC が observation event=verify-completion のため手動観察が必要。これは機能の性質上やむを得ない。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- SHOULD issue (テスト名・コメントの off-by-one) を修正してコミット・プッシュした
-- Forbidden Expressions check の FAILURE は `docs/spec/issue-710-blocked-by-workflow.md` による既存問題 (本 PR 変更外) と判断し、pre-existing issue として扱った
-- REVIEW_DEPTH=light で実施。外部レビューツール未設定のため Step 7 はスキップ
+- CI が `ci_failing` 状態だったが、`--non-interactive` モードの auto-resolve ポリシーに従いマージを続行した (Forbidden Expressions check の既存 FAILURE は pre-existing issue)
+- `gh pr merge --squash --delete-branch` で PR #718 を main にスカッシュマージ完了
+- `BASE_BRANCH=main` のため `closes #702` により Issue #702 は自動クローズされる
 
 ### Deferred Items
 - `tests/setup-labels.bats` の再発防止策 (Spec テスト更新ステップへの明示) は今後の課題
@@ -134,6 +134,5 @@ Nothing to note. Spec の受け入れ条件 (file_contains / grep ベース) は
 - Forbidden Expressions check の FAILURE (`docs/spec/issue-710-blocked-by-workflow.md`) は別 Issue で対処が必要
 
 ### Notes for Next Phase
-- MUST issue なし、SHOULD 1件修正済み → `/merge 718` 実行可能
-- post-merge AC は observation event=verify-completion なので `/verify` 後に手動観察が必要
-- CI は Forbidden Expressions check FAILURE を除き全 SUCCESS
+- post-merge AC は observation event=verify-completion なので `/verify` 後に `.wholework.yml: recoveries-auto-fire.enabled: true` の状態で手動観察が必要
+- `retro/recoveries` ラベルが追加されたため `scripts/setup-labels.sh` を再実行してラベルを GitHub に反映させることを推奨
