@@ -193,4 +193,77 @@ The cumulative effect of E3 → E2 → E7 → E4 → E1 is the smallest set of a
 
 ---
 
+## Addendum — 2026-06-20 discussion log
+
+This addendum captures three refinements that emerged from a follow-up conversation after the initial memo, before they age out of context. They do not invalidate the body of the report; they sit on top of it.
+
+### A1. The four-layer stratification (L0 was missing from §4)
+
+The original §4 framed extensions as L1/L2/L3 (Claude Code primitive / Wholework skill internal / OS or `CronCreate`). Discussion exposed that this stack rests on a **fourth, foundational layer**:
+
+| Layer | Where loop state lives | Driven by | Durability |
+|-------|------------------------|-----------|------------|
+| **L0: GitHub state** | Issues / Labels / PRs / `blockedBy` graph / `closes #N` | event-driven (PR merge, label transition, comment, close) | ◎ Public, multi-actor, queryable |
+| **L1: Claude Code primitive** | Session memory | `/loop` / `/goal` / `ScheduleWakeup` | × Volatile |
+| **L2: Wholework skill internals** | Spec / retrospective / `auto-events.jsonl` | Tail extension (#700/702/703) | ○ File-persistent |
+| **L3: OS / `CronCreate`** | crontab / cron registry | OS scheduler | ◎ Environment-dependent |
+
+Wholework's **XL Issue feature is already an L0 loop**: the parent Issue holds the goal, sub-issues + `blockedBy` form the DAG, `phase/*` labels are the state machine, and the aggregation rules in `docs/workflow.md § XL Parent Issue Phase Management` define the termination condition. The original report treated this as "memory" (§2.4), but it is more precisely *the substrate against which all higher layers reconcile*. L1/L2/L3 only matter to the extent they write back to L0.
+
+This reframes the Wholework differentiator: other Skills frameworks hold loop state in volatile in-session memory or skill-local JSON. Wholework writes L0 — public, durable, multi-actor — and the **governance question is "how far up the tier may a skill be permitted to mutate L0?"**.
+
+### A2. L2 → L1 routing as the operational shape of autonomy tier (E7 / #704)
+
+E7 in §4.3 named the tiers but left their meaning informal. Discussion converged on a concrete operational definition: **autonomy tier is the permission list for L2 → L1 paths**. Five paths were enumerated; four are kept, one rejected:
+
+| ID | Path | Mechanics | Example |
+|----|------|-----------|---------|
+| **A** | Advisory | Skill prints a recommendation; user fires | `Recommend: /loop 1d /audit drift` |
+| **B** | `CronCreate` | Skill registers a durable schedule via the Claude Code primitive | `/auto 670` schedules daily `/audit progress 670` |
+| **C** | `ScheduleWakeup` | Skill running inside `/loop` controls the next wake-up | `/verify` UNCERTAIN (CI not done) → re-verify in N min |
+| **D** | Detached subprocess | Spawn detached `claude -p` | **Rejected** — dies with parent, unreliable |
+| **E** | Seed file emission | Skill writes `.tmp/next-cycle.json`; another L1 picks it up | #703 (`/auto --batch` next-cycle seed) |
+
+Tier × path permission matrix:
+
+| Tier | A | B | C | E | L0 write | Default audience |
+|------|---|---|---|---|----------|------------------|
+| **L1 Report** | ○ | × | × | × | × (advisory only) | Audit-only, human fires |
+| **L2 Assisted** | ○ | × | ○ (in-loop) | ○ | ○ (label transitions, issue close, comments — current `/auto` behavior) | mid-scale modernization (anchor case) |
+| **L3 Unattended** | ○ | ○ | ○ | ○ | ○ + recurring template / cross-issue creation | Fully unattended |
+
+The L0 column connects A1 and A2: tier governs not only which Claude Code primitives a skill may invoke, but also how broadly the skill is permitted to mutate L0. **Autonomy is one declaration, two consequences.** Filed as #704.
+
+### A3. Status of filed extensions (#700–#704)
+
+Issues filed during this discussion, ordered by recommended implementation:
+
+| # | Issue | Tail target | L2→L1 paths | Blocked by |
+|---|-------|-------------|-------------|------------|
+| [#704](https://github.com/saitoco/wholework/issues/704) | E7 autonomy tier (L0 + paths matrix) | (none — config layer) | defines matrix | — |
+| [#700](https://github.com/saitoco/wholework/issues/700) | E3 `/verify` tail `auto-retry-on-fail` | `/verify` | A only (retry is L2-internal) | #704 |
+| [#701](https://github.com/saitoco/wholework/issues/701) | E4 phase-transition heartbeat | `/auto` | — (file write, tier-neutral) | — |
+| [#702](https://github.com/saitoco/wholework/issues/702) | E2 recoveries auto-fire | `/verify` retrospective | A only | #704, #700 |
+| [#703](https://github.com/saitoco/wholework/issues/703) | E1 `/auto --batch` next-cycle seed | `/auto` | A, E (first E implementation) | #704, #701 |
+
+### A4. Application patterns surfaced but not yet filed
+
+These came up as natural extensions of the L0 framing but were left unfiled (the user opted to keep the present batch tight). Each is a plausible future Issue:
+
+- **Recurring Issue templates** — one OPEN Issue *is* the unit of periodic work. `/audit recurring create --schedule weekly --label audit/drift "Weekly drift sweep"` files an Issue with a verify command that, on close, files next week's. The Issue itself becomes the cron tick: it is visible on the project board, can be stopped by closing it, and survives session restarts without OS cron. The strongest single new feature candidate from this discussion.
+- **observation-AC as L0 heartbeat** — already partly in-flight under #583 (observation verify-type). Reframing: an Issue at `phase/verify` with a time-windowed observation AC is a loop where the user (or `/audit stats --retention`) provides the tick. Combined with L3 `CronCreate`, this becomes "weekly auto re-verify of all `phase/verify` Issues" — an L0+L3 hybrid.
+- **Issue-as-Goal** — already implicit in current Wholework behavior; the L0 framing makes it explicit. A parent Issue with `<!-- verify: ... -->` ACs is `/goal` realized as durable, public state, evaluated by `/verify`'s structured verify-command engine rather than a generic model.
+- **PR comment / review event as loop tick** — `/review --review-only` currently stops at finding presentation. Opt-in `.wholework.yml: review-event-driven: true` would let a new reviewer comment re-fire `/code` and `/review` until the comment count or budget exhausts. Symmetric with E5 (notify-adapter).
+- **Cross-repo Issue chain** — `closes <other-org>/<other-repo>#N` already works at the GitHub layer. L0 substrate extends naturally across repos; Wholework would need cross-repo session/auth handling. Out of current positioning (single-team anchor) but a plausible expansion path.
+
+### A5. Local CI / Claude Code Action revisited
+
+Briefly re-examined under L0/L1 lens: Claude Code Action with `claude_code_oauth_token` does preserve subscription auth, but the **per-skill execution surface** (`${CLAUDE_PLUGIN_ROOT}` resolution, `.tmp/` ephemerality, `run-*.sh` `claude -p` subprocesses, git worktree lifetime, MCP servers) is the actual blocker, not auth. A future Skill frontmatter `execution: [local, ci]` declaration would let the user know up-front which skills survive the local↔CI boundary. Filing deferred — surfaces only if multiple users hit the same wall.
+
+### A6. What stays unchanged from the body of the report
+
+The §4 priorities (tail extension over new primitives; local-first; E1–E4 + E7 as the minimum self-feeding loop) survive intact. A1–A2 sharpen the *why* (L0 as substrate; autonomy as L0 + path permissions) without changing the *what* (tail extensions of existing skills). A4 widens the future-work list but does not perturb the immediate implementation queue.
+
+---
+
 *This memo is analytical; it does not override `docs/product.md` on items where the latter is SSoT. Confirmed extensions graduate from this memo to Issues and (eventually) Steering Documents.*

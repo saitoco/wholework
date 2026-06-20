@@ -193,4 +193,77 @@ E3 → E2 → E7 → E4 → E1 の累積効果は、Wholework がポジショニ
 
 ---
 
+## Addendum — 2026-06-20 議論ログ
+
+初稿後の追議論で出た 3 つの洗練を、context から消える前に記録する。本体を無効化するものではなく、本体の上に乗る追記。
+
+### A1. 4 層への再整理 (§4 から L0 が抜けていた)
+
+§4 は L1/L2/L3 (Claude Code primitive / Wholework skill 内部 / OS or `CronCreate`) で拡張を整理した。議論で、この 3 層がさらに **下にある第 4 の基層** の上に立っていることが明らかになった:
+
+| Layer | ループ状態の所在 | 駆動 | 永続性 |
+|-------|----------------|------|--------|
+| **L0: GitHub state** | Issues / Labels / PRs / `blockedBy` グラフ / `closes #N` | event-driven (PR merge、label 遷移、comment、close) | ◎ 公開・複数アクター・横断クエリ可能 |
+| **L1: Claude Code primitive** | session memory | `/loop` / `/goal` / `ScheduleWakeup` | × volatile |
+| **L2: Wholework skill 内部** | Spec / retro / `auto-events.jsonl` | tail extension (#700/702/703) | ○ ファイル永続 |
+| **L3: OS / `CronCreate`** | crontab / cron registry | OS スケジューラ | ◎ 環境依存 |
+
+Wholework の **XL Issue 機能は既に L0 ループそのもの**: 親 Issue がゴール、sub-issue + `blockedBy` が DAG、`phase/*` が状態機械、`docs/workflow.md § XL Parent Issue Phase Management` の集約ルールが停止条件。本体 §2.4 では「memory」として扱っていたが、より正確には *L1/L2/L3 すべてが reconcile する対象の substrate*。L1/L2/L3 が意味を持つのは L0 に書き戻すからこそ。
+
+これは Wholework の差別化軸を再フレーミングする: 他のスキルフレームワークはループ状態を揮発な in-session memory か skill ローカル JSON に持つ。Wholework は L0 (公開・durable・複数アクター) を書く。**ガバナンスの問いは「スキルはどこまで L0 を変更してよいか、その tier は何か」**。
+
+### A2. L2→L1 経路 = autonomy tier の作動メカニズム (E7 / #704)
+
+§4.3 の E7 は tier を命名したが意味は曖昧だった。議論で具体的な作動定義に収束した: **autonomy tier は L2→L1 経路の許可リスト**。5 経路を列挙、4 採用 / 1 却下:
+
+| ID | 経路 | メカニクス | 例 |
+|----|------|----------|-----|
+| **A** | Advisory | skill が推奨を print し、ユーザが踏む | `Recommend: /loop 1d /audit drift` |
+| **B** | `CronCreate` | skill が Claude Code primitive で永続スケジュールを登録 | `/auto 670` が日次 `/audit progress 670` を予約 |
+| **C** | `ScheduleWakeup` | `/loop` 内で動くスキルが次回 wake-up を動的制御 | `/verify` UNCERTAIN (CI 未完了) → N 分後に再 verify |
+| **D** | Detached subprocess | detached `claude -p` を起動 | **却下** — 親終了で死ぬため信頼性低 |
+| **E** | Seed file emission | skill が `.tmp/next-cycle.json` を書き、別 L1 が拾う | #703 (`/auto --batch` next-cycle seed) |
+
+Tier × 経路 許可マトリクス:
+
+| Tier | A | B | C | E | L0 write | デフォルト用途 |
+|------|---|---|---|---|----------|---------------|
+| **L1 Report** | ○ | × | × | × | × (advisory のみ) | 監査・人間が踏む |
+| **L2 Assisted** | ○ | × | ○ (in-loop) | ○ | ○ (label 遷移、issue close、comment — 現在の `/auto` 挙動) | mid-scale modernization (anchor case) |
+| **L3 Unattended** | ○ | ○ | ○ | ○ | ○ + recurring template / cross-issue 起票 | 完全無人 |
+
+L0 列が A1 と A2 を接続する: tier はスキルが呼んでよい Claude Code primitive だけでなく、**どこまで L0 を変更してよいか** も決める。**autonomy は 1 つの宣言、2 つの帰結**。#704 として起票済み。
+
+### A3. 起票済み拡張のステータス (#700–#704)
+
+実装順:
+
+| # | Issue | tail target | L2→L1 経路 | Blocked by |
+|---|-------|-------------|------------|-----------|
+| [#704](https://github.com/saitoco/wholework/issues/704) | E7 autonomy tier (L0 + 経路マトリクス) | (config layer) | マトリクス定義 | — |
+| [#700](https://github.com/saitoco/wholework/issues/700) | E3 `/verify` tail `auto-retry-on-fail` | `/verify` | A のみ (retry は L2 内部) | #704 |
+| [#701](https://github.com/saitoco/wholework/issues/701) | E4 phase-transition heartbeat | `/auto` | — (ファイル書き込み、tier 中立) | — |
+| [#702](https://github.com/saitoco/wholework/issues/702) | E2 recoveries auto-fire | `/verify` retrospective | A のみ | #704, #700 |
+| [#703](https://github.com/saitoco/wholework/issues/703) | E1 `/auto --batch` next-cycle seed | `/auto` | A, E (経路 E の最初の実装) | #704, #701 |
+
+### A4. 浮上したが未起票の応用パターン
+
+L0 フレーミングから自然に派生したが、今回はバッチを締まったまま保つために起票見送り。将来 Issue 候補:
+
+- **Recurring Issue templates** — OPEN な Issue 1 つが定期作業の単位。`/audit recurring create --schedule weekly --label audit/drift "Weekly drift sweep"` が、close 時に次週分を自動起票する verify command 付き Issue を作る。Issue 自身が cron tick になり、project ボードで可視、close で停止、セッション再起動を超えて生存、OS cron 不要。本議論で出た **最も独立性の高い新機能候補**。
+- **observation-AC を L0 heartbeat として再フレーミング** — #583 で部分的に進行中 (observation verify-type)。`phase/verify` の Issue + 時間窓 observation AC は、ユーザ (または `/audit stats --retention`) が tick を与えるループ。L3 `CronCreate` と組み合わせれば「全 `phase/verify` Issue の週次自動再 verify」(L0+L3 ハイブリッド) になる。
+- **Issue-as-Goal** — 現在の Wholework 挙動に既に暗黙。L0 フレーミングで明示化する。`<!-- verify: ... -->` AC 付き親 Issue は、durable で公開な状態として実体化された `/goal` であり、generic model ではなく `/verify` の構造化された verify-command エンジンが判定する。
+- **PR comment / review event を loop tick に** — `/review --review-only` は finding 提示で停止する。opt-in `.wholework.yml: review-event-driven: true` を入れれば、reviewer comment 追加が `/code` と `/review` を comment 数または予算が尽きるまで再発火する。E5 (notify-adapter) と発火パターンが対称。
+- **Cross-repo Issue chain** — `closes <other-org>/<other-repo>#N` は GitHub 側で既に動く。L0 substrate は repo 横断に自然に伸びる。Wholework 側で cross-repo session/auth 処理が必要。現ポジショニング (single-team anchor) の外だが、自然な拡大経路。
+
+### A5. CI / Claude Code Action を L0/L1 レンズで再検討
+
+短く: Claude Code Action に `claude_code_oauth_token` を渡せば subscription auth は維持できる。だが本当の壁は **スキル毎の実行サーフェス** ( `${CLAUDE_PLUGIN_ROOT}` 解決、`.tmp/` 揮発性、`run-*.sh` の `claude -p` 子プロセス、git worktree のランナー寿命、MCP サーバ事前インストール)。将来的に skill frontmatter に `execution: [local, ci]` を持たせれば、ユーザは初日に「どのスキルが local↔CI の境界を生き残るか」が分かる。起票は保留 — 複数ユーザが同じ壁にぶつかった時に判断。
+
+### A6. 本体から不変なもの
+
+§4 の優先順位 (新プリミティブより tail 拡張、local-first、E1–E4 + E7 が最小の自己給餌ループ) は無事生き残る。A1–A2 は **なぜ** を鋭くする (L0 = substrate、autonomy = L0 + 経路許可) が、**何を** (既存スキルの tail 拡張) は変えない。A4 は将来仕事リストを広げるが、直近の実装キューには影響しない。
+
+---
+
 *本メモは分析であり、`docs/product.md` が SSoT である項目を上書きしない。確定した拡張は本メモから Issue へ、最終的に Steering Document へ昇格する。*
