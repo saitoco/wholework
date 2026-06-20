@@ -633,6 +633,8 @@ Only if `.wholework.yml` in the project has `opportunistic-verify: true`, Read `
 
 ### Step 15: Recovery Candidates Tail Check
 
+This step implements the `recoveries-auto-fire` feature. Controlled by `.wholework.yml: recoveries-auto-fire.enabled` and `recoveries-auto-fire.threshold` (read via detect-config-markers in Step 4 as `RECOVERIES_AUTO_FIRE_ENABLED` and `RECOVERIES_AUTO_FIRE_THRESHOLD`).
+
 Guard: if `docs/reports/orchestration-recoveries.md` does not exist, skip this step entirely.
 
 1. Write open-issues JSON to `.tmp/open-issues-$NUMBER.json` for dedup:
