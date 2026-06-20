@@ -104,3 +104,35 @@ Issue 起票・リファイン時に blocked-by relationships を GitHub native 
 
 ### Uncertainty resolution
 - Nothing to note (SPEC_DEPTH=light のため Step 8 は skip)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `retro-proposals.md` の blocked-by 設定方法: Spec では `gh-check-blocking.sh` 方式を示唆していたが、実装では `set-blocked-by.sh` を直接呼び出す方式に変更した。`gh-check-blocking.sh` は Issue body を自分でフェッチするが、retro-proposals.md のコンテキストでは既に body が手元にあるため直接 `set-blocked-by.sh $NEW_ISSUE_NUMBER $N` を呼ぶほうが整合性が高い。AC5 の verify コマンド `file_contains "modules/retro-proposals.md" "set-blocked-by"` は両者で PASS するため影響なし。
+
+### Design Gaps/Ambiguities
+
+- `skills/issue/SKILL.md` の Step 7 heading "Apply Labels" の直後に blocked-by 呼び出しを追記したが、Spec では「Apply Labels の末尾に追記する」と指定されていた。実際には Labels 呼び出しの直後の新しいパラグラフとして追記した。意味は同一。
+- `modules/retro-proposals.md` は `CLAUDE_PLUGIN_ROOT` を使う形式で記述したが、このモジュールの他の箇所も同じパターンを使用しているため一貫性がある。
+
+### Rework
+
+- N/A (1回の実装で全 AC PASS)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `set-blocked-by.sh` は薄い wrapper として実装し、引数バリデーション + node ID 解決 + `add-blocked-by` mutation 呼び出しに限定した。既存の `gh-check-blocking.sh` は独立したユースケース (body テキスト解析) のため変更せず
+- `skills/triage/SKILL.md` の tier-aware 分岐は Step 9 と Step 2b の両方に追記した。それぞれ異なる実行コンテキスト (single issue vs bulk) を持つため
+- `remove-blocked-by` query を `gh-graphql.sh` に追加したが、現時点での呼び出し元は実装していない (AC1 は追加のみを要求)
+
+### Deferred Items
+- `remove-blocked-by` mutation の呼び出し側実装 (どのフローで使うかは未定義)
+- Post-merge manual verification: `/issue` 起票テスト、`/triage N` backfill テスト
+
+### Notes for Next Phase
+- 全7 pre-merge AC が PASS し、チェックボックスを更新済み
+- `validate-skill-syntax.py` と `check-forbidden-expressions.sh` がいずれもクリーン
+- bats テスト 38 件すべて PASS (gh-graphql, set-blocked-by, gh-check-blocking)
