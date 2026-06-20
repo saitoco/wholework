@@ -120,19 +120,35 @@ Issue 起票・リファイン時に blocked-by relationships を GitHub native 
 
 - N/A (1回の実装で全 AC PASS)
 
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+- `docs/ja/structure.md` の同期漏れが SHOULD 指摘として検出された。`docs/structure.md` のスクリプト件数・エントリ更新は PR に含まれていたが、翻訳版の `docs/ja/structure.md` は更新されていなかった。`translation-workflow.md` に従うべきだが実装時に見落とされた。tests/ 件数 (78→79) も `docs/structure.md` と `docs/ja/structure.md` の双方で未更新だった。
+- `set-blocked-by.sh` の exit code コメントが実装動作と不一致 (SHOULD): `(or already set)` はべき等性を示唆するが未実装。コメントと実装の一致は実装時に意識すべき点。
+
+### 繰り返しの問題
+
+- 翻訳版ドキュメント (`docs/ja/`) の同期漏れは過去の PR でも発生している。`docs/translation-workflow.md` を参照する習慣を code フェーズに組み込むべき。
+
+### 受け入れ基準の検証難度
+
+- 全 7 AC が `grep`/`file_exists`/`file_contains`/`section_contains` コマンドで機械的に PASS 判定できた。UNCERTAIN 件数: 0。verify コマンドは適切に設計されており、auto-verification の精度が高い。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `set-blocked-by.sh` は薄い wrapper として実装し、引数バリデーション + node ID 解決 + `add-blocked-by` mutation 呼び出しに限定した。既存の `gh-check-blocking.sh` は独立したユースケース (body テキスト解析) のため変更せず
-- `skills/triage/SKILL.md` の tier-aware 分岐は Step 9 と Step 2b の両方に追記した。それぞれ異なる実行コンテキスト (single issue vs bulk) を持つため
-- `remove-blocked-by` query を `gh-graphql.sh` に追加したが、現時点での呼び出し元は実装していない (AC1 は追加のみを要求)
+- SHOULD 指摘 2 件 (exit code コメント、docs/ja 同期漏れ) を修正しコミット済み
+- CONSIDER 指摘 2 件 (tests/ 件数、ja/workflow.md スペース) も合わせて修正
+- review-bug 指摘は全て false positive (検証サブエージェントで REJECT 確認)
+- MUST 指摘なし → COMMENT event でレビュー投稿
 
 ### Deferred Items
-- `remove-blocked-by` mutation の呼び出し側実装 (どのフローで使うかは未定義)
+- `remove-blocked-by` mutation の呼び出し側実装 (未定義のまま、code フェーズ引き継ぎ)
 - Post-merge manual verification: `/issue` 起票テスト、`/triage N` backfill テスト
 
 ### Notes for Next Phase
-- 全7 pre-merge AC が PASS し、チェックボックスを更新済み
-- `validate-skill-syntax.py` と `check-forbidden-expressions.sh` がいずれもクリーン
-- bats テスト 38 件すべて PASS (gh-graphql, set-blocked-by, gh-check-blocking)
+- 全 7 pre-merge AC が PASS
+- 修正後 validate-skill-syntax.py PASS (0 errors)
+- merge フェーズで特別な注意事項なし; `set-blocked-by.sh` はべき等でないが主要呼び出し経路 (triage Step 9) は事前チェック付き
