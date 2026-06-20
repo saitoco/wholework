@@ -170,7 +170,9 @@ bash scripts/check-translation-sync.sh
 | `phase/spec` | 仕様策定フェーズ | `/spec`（開始時） | `/spec`（spec push 後） |
 | `phase/ready` | 設計完了、実装待ち | `/spec`（設計 push 後） | `/code` |
 | `phase/code` | 実装フェーズ | `/code` | `/review` |
+| `phase/merge` | マージ進行中 | `/merge`（開始時、進捗追跡用） | `/merge`（`phase/verify` 遷移時） |
 | `phase/review` | レビューフェーズ | `/review` | `/merge` |
+| `phase/skill` | スキル開発 / 移行トラッキング | 開発者（スキル動作変更 Issue 起票時） | —（追跡ラベル、残存） |
 | `phase/verify` | 受入テストフェーズ | `/merge` | `/verify` |
 | `phase/done` | 完了 | `/verify`（全 auto-verify PASS + 全 post-merge 条件 checked 時） | — |
 | （ラベルなし） | バックログ / 未着手 | — | `/verify`（FAIL 時） |
@@ -251,12 +253,15 @@ GitHub リポジトリ設定「Auto-close issues with merged linked pull request
 | `type/feature` | Type: feature | `/triage` |
 | `type/task` | Type: task | `/triage` |
 
+**`triaged` の bare namespace 例外**: `triaged` は `namespace/name` 規約に従わない唯一のラベルです。`/triage` スキル名と直接対応し、ユーザーに定着した命名のため bare namespace 例外として恒久維持します。新規の bare namespace ラベル追加は禁止です。詳細は [`modules/label-conventions.md`](../../modules/label-conventions.md) を参照してください。
+
 ### Audit 関連ラベル
 
 | ラベル | 意味 | 付与者 |
 |-------|---------|-------------|
 | `audit/drift` | `/audit drift` で検出したドリフトの修正 Issue | `/audit` |
 | `audit/fragility` | `/audit fragility` で検出した構造的脆弱性の改善 Issue | `/audit` |
+| `audit/auto` | `/audit auto-session` のナラティブ分析で浮上した改善候補 Issue | `/audit auto-session` |
 
 ### Projects 連携
 

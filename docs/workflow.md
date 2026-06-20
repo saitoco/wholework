@@ -177,7 +177,9 @@ Setup: Wholework automatically creates the labels it needs on first run. Manual 
 | `phase/spec` | Specification phase | `/spec` (on start) | `/spec` (after spec push) |
 | `phase/ready` | Design complete, awaiting implementation | `/spec` (after design push) | `/code` |
 | `phase/code` | Implementation phase | `/code` | `/review` |
+| `phase/merge` | Merge in progress | `/merge` (at start, for in-progress tracking) | `/merge` (on transition to `phase/verify`) |
 | `phase/review` | Review phase | `/review` | `/merge` |
+| `phase/skill` | Skill development / migration tracking | Developer (when creating skill-behavior Issues) | — (tracking label, remains) |
 | `phase/verify` | Acceptance test phase | `/merge` | `/verify` |
 | `phase/done` | Complete | `/verify` (on all auto-verify PASS + all post-merge conditions checked) | — |
 | (no label) | Backlog / not started | — | `/verify` (on FAIL) |
@@ -258,12 +260,15 @@ When the GitHub repository setting "Auto-close issues with merged linked pull re
 | `type/feature` | Type: feature | `/triage` |
 | `type/task` | Type: task | `/triage` |
 
+**`triaged` bare namespace exception**: `triaged` does not follow the `namespace/name` convention. It is the sole bare-namespace exception in Wholework — retained because the name directly corresponds to the `/triage` skill and has established user recognition. Adding new bare-namespace labels is prohibited. See [`modules/label-conventions.md`](../modules/label-conventions.md) for the full namespace rules.
+
 ### Audit-Related Labels
 
 | Label | Meaning | Assigned by |
 |-------|---------|-------------|
 | `audit/drift` | Fix Issue for drift detected by `/audit drift` | `/audit` |
 | `audit/fragility` | Improvement Issue for structural fragility detected by `/audit fragility` | `/audit` |
+| `audit/auto` | Improvement candidate Issue surfaced by `/audit auto-session` narrative analysis | `/audit auto-session` |
 
 ### Projects Integration
 

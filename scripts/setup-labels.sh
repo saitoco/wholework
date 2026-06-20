@@ -10,7 +10,7 @@
 #   --no-fallback   Skip environment detection; only create always-group labels
 #
 # Label groups:
-#   Always-group (14 labels): phase/*, triaged, retro/verify, retro/code, retro/recoveries, audit/drift, audit/fragility, stale-verify
+#   Always-group (17 labels): phase/*, triaged, retro/verify, retro/code, retro/recoveries, audit/drift, audit/fragility, audit/auto, stale-verify
 #   Fallback-group (17 labels): type/*, priority/*, size/*, value/*
 #     Created when corresponding GitHub feature (Issue Types / Projects field) is unavailable.
 #     Use --no-fallback to skip environment detection and omit this group entirely.
@@ -40,13 +40,15 @@ done
 
 # Always-group labels: created unconditionally on every run
 # Format: "name|color(without #)|description"
-# Count: 14 labels
+# Count: 17 labels
 ALWAYS_LABELS=(
     "phase/issue|1B4F8A|Issue phase"
     "phase/spec|1B4F8A|Spec phase"
     "phase/ready|1B4F8A|Spec complete, ready to implement"
     "phase/code|1B4F8A|Implementation phase"
+    "phase/merge|1B4F8A|Merge in progress"
     "phase/review|1B4F8A|Review phase"
+    "phase/skill|1B4F8A|Skill development/migration tracking"
     "phase/verify|1B4F8A|Acceptance test phase"
     "phase/done|1B4F8A|Complete"
     "triaged|0E8A16|Triaged"
@@ -55,6 +57,7 @@ ALWAYS_LABELS=(
     "retro/recoveries|5319E7|Recovery candidate auto-filed"
     "audit/drift|D93F0B|Audit: documentation drift detected"
     "audit/fragility|E4E669|Audit: structural fragility detected"
+    "audit/auto|D93F0B|Audit: auto-session improvement candidate"
     "stale-verify|EDEDED|Stale verification — phase/verify not observed in 60+ days"
 )
 

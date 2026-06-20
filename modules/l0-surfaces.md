@@ -36,7 +36,7 @@ The table below is **exhaustive** for Wholework's current scope. Add a row here 
 | `closes #N` magic | parse | `gh-extract-issue-from-pr.sh` | derived | yes |
 | Issue blocked-by relationships | add, remove | `set-blocked-by.sh`, `gh-check-blocking.sh`, `gh-graphql.sh` (`add-blocked-by`, `remove-blocked-by`) | mutable | yes |
 
-Note: bare-namespace label exceptions (e.g., `triaged`) are documented in a separate Issue (#R2).
+Note: label namespace rules and bare-namespace exceptions (e.g., `triaged`) are defined in [`modules/label-conventions.md`](label-conventions.md).
 
 ## Trust Boundary
 
