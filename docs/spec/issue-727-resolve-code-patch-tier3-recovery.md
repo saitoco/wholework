@@ -97,17 +97,17 @@
 - `verify command` の品質は高く、UNCERTAIN なし。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `Run bats tests` CI 失敗を CI インフラ起因と判定した。根拠: main ブランチ (sha 4200c9b9, run 27880896413) でも同一ジョブが FAILURE。ローカル全 9 件 PASS。
-- MUST 問題なし。COMMENT イベントで PR review を投稿した (REQUEST_CHANGES 不要)。
-- Step 12 (issue resolution) と Step 13 (AC consistency check) はスキップ (変更なし、policy change なし)。
+- CI `Run bats tests` 失敗 (reason=ci_failing) にもかかわらず merge を実行した。根拠: review フェーズが systemic CI 障害と判定済み (main ブランチでも同一ジョブ FAILURE)。non-interactive auto-resolve ポリシーに従い Auto-Resolve Log を Issue #727 コメントに記録した上で続行。
+- `gh pr merge --squash --delete-branch` でスカッシュマージ完了。ブランチ `worktree-code+issue-727` は削除済み。
 
 ### Deferred Items
-- `Run bats tests` の systemic CI 障害は別途調査が必要。本 PR のブロッカーではないが、CI が安定していない状態は問題。
-- watchdog kill (原因グループ 2) の Tier 2 ハンドラは別 Issue で検討予定 (code フェーズから引継ぎ)。
+- `Run bats tests` の systemic CI 障害は未解決。別途調査が必要。
+- watchdog kill (原因グループ 2) の Tier 2 ハンドラ追加は別 Issue で検討予定。
 
 ### Notes for Next Phase
-- すべての受け入れ条件が PASS。MUST 問題なし。`/merge 741` で merge 可能な状態。
-- CI `Run bats tests` 失敗は systemic 障害。merge 前に CI が復帰するか確認すること。
+- Issue #727 は `closes #727` により main マージで自動クローズ予定。
+- verify の Post-merge 観点: 2026-06-21 以降に `code-patch-tier3-recovery` かつ `Improvement Candidate: 未起票` のエントリが `docs/reports/orchestration-recoveries.md` に現れないこと (opportunistic)。
+- すべての AC (AC1–AC4) は pre-merge で PASS 済みのため、verify は post-merge 観点のみ確認すれば足りる。
