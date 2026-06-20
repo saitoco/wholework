@@ -214,7 +214,7 @@ Adding `closes #N` to PR body auto-closes the Issue on merge (GitHub standard fe
 
 ### Verify Fail Flow
 
-When `/verify` detects a FAIL among auto-verification targets, it reopens the Issue and removes all `phase/*` labels.
+When `/verify` detects a FAIL among auto-verification targets, it appends a machine-readable FAIL marker comment (see `modules/l0-surfaces.md` for the `wholework-event: type=verify-fail` format), reopens the Issue, and removes all `phase/*` labels.
 
 **Default (autonomy: L1 or auto-retry-on-fail not configured):** The user selects the next action manually:
 

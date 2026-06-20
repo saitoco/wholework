@@ -462,6 +462,33 @@ NEXT_ITERATION=$((CURRENT_ITERATION + 1))
       ```bash
       ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER"
       ```
+    - Post a machine-readable FAIL marker comment:
+      Write the following to `.tmp/verify-fail-comment-$NUMBER.md` with Write tool:
+      ```
+      <!-- wholework-event: type=verify-fail phase=verify issue=$NUMBER iteration=$NEXT_ITERATION -->
+      ## /verify FAIL — {TIMESTAMP}
+
+      **Failed acceptance conditions:**
+      {for each FAIL condition from auto-verification targets:}
+      - [ ] {condition text}
+        - Reason: {failure reason from verify execution}
+
+      **Next action**: `phase/*` ラベル削除済み、Issue reopen 済み (CLOSED の場合)。次走時 (`/code --patch $NUMBER` 等) はこの comment を一級入力として読み込んでください。
+      ```
+      Then post:
+      ```bash
+      ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh "$NUMBER" ".tmp/verify-fail-comment-$NUMBER.md"
+      rm -f .tmp/verify-fail-comment-$NUMBER.md
+      ```
+    - Emit `verify_fail_marker_posted` event (only when `AUTO_EVENTS_LOG` is set):
+      ```bash
+      if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+        source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
+        EMIT_ISSUE_NUMBER=$NUMBER emit_event "verify_fail_marker_posted" \
+          "iteration=${NEXT_ITERATION}" \
+          "failed_ac_count=${FAIL_COUNT}"
+      fi
+      ```
     - Output guidance for the user:
       ```
       Issue #N を再オープンしました。以下のいずれかで修正してください:
@@ -501,6 +528,33 @@ NEXT_ITERATION=$((CURRENT_ITERATION + 1))
       ```
       <!-- verify-iteration: ${NEXT_ITERATION} -->
       max iterations reached (${NEXT_ITERATION}/${VERIFY_MAX_ITERATIONS}). Stopping verify-reopen loop. Issue stays in phase/verify for human judgment.
+      ```
+    - Post a machine-readable FAIL marker comment:
+      Write the following to `.tmp/verify-fail-comment-$NUMBER.md` with Write tool:
+      ```
+      <!-- wholework-event: type=verify-fail phase=verify issue=$NUMBER iteration=$NEXT_ITERATION -->
+      ## /verify FAIL — {TIMESTAMP}
+
+      **Failed acceptance conditions:**
+      {for each FAIL condition from auto-verification targets:}
+      - [ ] {condition text}
+        - Reason: {failure reason from verify execution}
+
+      **Next action**: Max iterations reached. Issue stays in `phase/verify` for human judgment.
+      ```
+      Then post:
+      ```bash
+      ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh "$NUMBER" ".tmp/verify-fail-comment-$NUMBER.md"
+      rm -f .tmp/verify-fail-comment-$NUMBER.md
+      ```
+    - Emit `verify_fail_marker_posted` event (only when `AUTO_EVENTS_LOG` is set):
+      ```bash
+      if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+        source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
+        EMIT_ISSUE_NUMBER=$NUMBER emit_event "verify_fail_marker_posted" \
+          "iteration=${NEXT_ITERATION}" \
+          "failed_ac_count=${FAIL_COUNT}"
+      fi
       ```
     - Assign `phase/verify` label (Issue state unchanged):
       ```bash

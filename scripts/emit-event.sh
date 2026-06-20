@@ -43,6 +43,10 @@
 #   candidate_count=<n>           total number of candidate issues emitted
 #   source_breakdown=<flat>       flat format: "audit/drift:N1,audit/fragility:N2"
 #   batch_session_id=<sid>        AUTO_SESSION_ID of the batch that produced the candidates
+#
+# verify_fail_marker_posted: /verify FAIL 時に machine-readable marker comment を Issue に append した
+#   iteration=<n>                 verify iteration counter (NEXT_ITERATION)
+#   failed_ac_count=<n>           number of FAIL conditions in auto-verification targets
 
 emit_event() {
   local event_type="$1"; shift
