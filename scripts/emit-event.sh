@@ -38,6 +38,11 @@
 #   symptom=<symptom-short>       symptom identifier from orchestration-recoveries.md
 #   count=<n>                     occurrence count that exceeded threshold
 #   issue_number=<NNN>            GitHub Issue number created (0 if L1 advisory only)
+#
+# next_cycle_seeded: batch completion tail emitted next-cycle candidate issues
+#   candidate_count=<n>           total number of candidate issues emitted
+#   source_breakdown=<flat>       flat format: "audit/drift:N1,audit/fragility:N2"
+#   batch_session_id=<sid>        AUTO_SESSION_ID of the batch that produced the candidates
 
 emit_event() {
   local event_type="$1"; shift

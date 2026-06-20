@@ -65,3 +65,49 @@ No new comments since last phase.
 - **gh issue list の OR フィルタ**: `--label` は AND 結合なので `audit/drift` と `audit/fragility` を別クエリで取得し結合する
 - **loop-state-{DATE}.md の append 形式**: 既存の heartbeat 行 (`| ts | #N | from→to | snapshot |`) と同じテーブルに特殊行として追記。`issue` カラムは `batch`、`transition` カラムは `next-cycle-seed`、`snapshot` カラムは `candidates:N`
 - **auto-resolve**: 曖昧ポイントなし (SPEC_DEPTH=light、自動解決不要)
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST/SHOULD 指摘なし。CONSIDER 2件 (変数名不一致、暗黙変数定義) は Spec retrospective に記録のみ、修正は行わない。
+- Forbidden Expressions CI 失敗は `docs/spec/issue-710-blocked-by-workflow.md` の pre-existing 違反であることを確認し、本 PR 起因ではないと判断。
+- `REVIEW_DEPTH=light` で全 4 観点を軽量カバー。外部レビューツール設定なしのため Step 7 はスキップ。
+
+### Deferred Items
+- CONSIDER 指摘 2件 (session_start/SESSION_START 不一致、暗黙変数定義) は改善提案として本 retrospective に記録。別 Issue での対応推奨。
+- Forbidden Expressions CI 違反 (`docs/spec/issue-710-blocked-by-workflow.md`) は本 PR 範囲外のため別途対応が必要。
+
+### Notes for Next Phase
+- MUST/SHOULD 指摘なし。`/merge 720` で即時マージ可能。
+- post-merge AC (observation 型) は `next-cycle-seed.enabled: true` の実運用環境での観察が必要。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `emit-event.sh` を `skills/auto/SKILL.md` の `allowed-tools` に追加した。Spec の実装ステップには明示されていなかったが、`validate-skill-syntax.py` が body 参照スクリプトと allowed-tools の不一致を検出したため追加が必要だった。
+
+### Design Gaps/Ambiguities
+
+- `validate-skill-syntax.py` が `loop-paths-fallback` フィールドを unknown field として warning を出す。これは新規フィールドであり、バリデーターのスキーマが未更新なため。エラーではなく warning 止まりなので CI はパスするが、将来 `loop-paths-fallback` をスキーマに追加する改善余地がある。
+
+### Rework
+
+- `emit-event.sh` の allowed-tools 追加を最初のコミット後に発見し、別コミットで修正した。実装→バリデーション実行→不一致発見→修正のフローで 1 コミット余分になった。
+
+## review retrospective
+
+### 観点 1: Spec vs 実装の乖離パターン
+
+- Spec と PR diff の一致度は高く、構造的乖離なし。SKILL.md の LLM-executed skill という性質上、bash スニペット内の変数名 (`$SESSION_START`) とステップ説明文の変数名 (`session_start`) の不一致が生じた。LLM-executed skill では変数名の大文字小文字を Spec レベルで統一しておく価値がある改善余地。
+
+### 観点 2: 繰り返し指摘
+
+- 今回は同種指摘の繰り返しなし。CONSIDER 2件は異なる種別 (変数命名、暗黙変数定義)。LLM-executed skill の文書記述で暗黙の変数定義を残しがちなパターンは過去 PR でも見られており、将来の skill 執筆時に意識すべき共通パターン。
+
+### 観点 3: 承認条件検証の難度
+
+- Pre-merge AC 3件はすべて `file_contains`/`grep` で PASS が確認でき、検証コマンドの精度は十分だった。
+- Post-merge AC は `verify-type: observation` (実際のバッチ完走が必要) であり、自動検証不可。これは観察型 AC の適切な使い分けとして問題なし。
+- Nothing to note 以外: UNCERTAIN が 0件であり、verify command の品質は高い。

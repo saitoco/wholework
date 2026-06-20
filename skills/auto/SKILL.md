@@ -1,7 +1,9 @@
 ---
 name: auto
 description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues; `--batch N1 N2 ...` processes the explicitly listed Issues in order (assigns a BATCH_ID for parallel-safe checkpointing). `--resume N` resumes a single Issue (restores verify counter from checkpoint); `--batch --resume` resumes an interrupted batch using `list_active_batches` to identify the target session.
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-events-rollup.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
+loop-paths-used: [A, E]
+loop-paths-fallback: [A]
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-events-rollup.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Autonomous Execution
@@ -893,6 +895,38 @@ Run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run`
 **Daily rollup (batch, best-effort):**
 
 Run `${CLAUDE_PLUGIN_ROOT}/scripts/auto-events-rollup.sh`. If the command fails, output "Warning: auto-events-rollup failed. Session will continue." and proceed without blocking.
+
+**Next-cycle seed (batch, best-effort):**
+
+1. Load `AUTONOMY_TIER` and `NEXT_CYCLE_SEED_ENABLED` from `.wholework.yml` via `modules/detect-config-markers.md`.
+2. Tier check: if `AUTONOMY_TIER=L1` or `NEXT_CYCLE_SEED_ENABLED=false`, use path A only — print `Recommend: run /audit drift to identify next-cycle candidates` and skip to the next block.
+3. Otherwise (path E), read `session_start` from `.tmp/auto-session-${AUTO_SESSION_ID}.json` using `jq -r .session_start`. If the file is absent or jq fails, print "Warning: session start time unavailable, skipping next-cycle seed." and skip to the next block.
+4. Fetch `audit/drift` candidates:
+   ```bash
+   gh issue list --label "audit/drift" --state open --json number,createdAt \
+     --jq "[.[] | select(.createdAt > \"$SESSION_START\") | {issue: .number, source: \"audit/drift\"}]"
+   ```
+   Fetch `audit/fragility` candidates the same way (separate query; `--label` is AND-only). Merge the two arrays, deduplicating by issue number.
+5. For each candidate, run `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER` (best-effort); add `size_hint` field if the output is non-empty.
+6. Write `.tmp/next-cycle.json` using the Write tool with the following structure:
+   ```json
+   {
+     "schema_version": "v1",
+     "seeded_at": "<current UTC ISO8601>",
+     "seeded_by_session": "<AUTO_SESSION_ID>",
+     "candidates": [
+       {"issue": 712, "source": "audit/drift", "size_hint": "S"},
+       {"issue": 715, "source": "audit/fragility", "size_hint": "M"}
+     ]
+   }
+   ```
+7. Append a row to `docs/reports/loop-state-{DATE}.md` (best-effort; create file with frontmatter and table header using Write tool if not present):
+   ```
+   | HH:MM:SS | batch | next-cycle-seed | candidates:N |
+   ```
+8. Emit `next_cycle_seeded` event via `source ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh && emit_event "next_cycle_seeded" "candidate_count=$CANDIDATE_COUNT" "source_breakdown=audit/drift:$DRIFT_N,audit/fragility:$FRAGILITY_N" "batch_session_id=$AUTO_SESSION_ID"` (best-effort; wrap in subshell to prevent failure propagation).
+
+If any step in path E fails, print "Warning: next-cycle seed step N failed. Skipping." and continue (best-effort — never block the parent report).
 
 **L3 auto-retrospective (batch route):**
 
