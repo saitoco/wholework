@@ -90,3 +90,26 @@
 ### Notes for Next Phase
 - 変更は 2 行のみ (`scripts/auto-events-rollup.sh:148-149`) のシンプルな差し替えで、回帰リスクは低い。
 - AC7 (CI github_check) はプッシュ後に確認が必要。bats テストはローカルで全件 green 確認済み。
+
+## Issue Retrospective
+
+### Acceptance Criteria の変更
+
+今回の refinement で以下の verify command を追加しました。
+
+**追加 1 — 旧パターン削除確認 (file_not_contains × 2)**
+
+`verify-patterns.md §8` の policy change Issues 原則に基づき、旧 `$ev[]` スコープのパターンが削除されたことを確認する `file_not_contains` を追加しました。
+
+- `file_not_contains "scripts/auto-events-rollup.sh" ".event == \"phase_complete\" and .issue == $iss"` — Phases 行の旧パターン削除確認
+- `file_not_contains "scripts/auto-events-rollup.sh" ".event == \"recovery\" and .issue == $iss"` — Recoveries 行の旧パターン削除確認
+
+なお、`.issue == $iss` を含む文字列は Sessions ジャンルの line 148/149 にのみ存在し、Phase Distribution セクション (line 163) には存在しないことを確認済み (false positive なし)。
+
+**追加 2 — CI 確認 (github_check)**
+
+Size S は patch route のため `gh pr checks` 形式は使用不可。`verify-classifier.md` の patch route 規定に従い `gh run list --workflow=test.yml` 形式の `github_check` を追加しました。
+
+### 曖昧点
+
+要件自体の曖昧点はなし。`verify-type: observation event=auto-run` は `verify-classifier.md` の定義済み valid 値であることを確認。
