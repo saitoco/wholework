@@ -447,6 +447,31 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ---
 
+## code-patch-silent-no-op
+
+### Symptom
+- `run-code.sh` exits 1; wrapper log contains `"silent no-op"` warning
+- `reconcile-phase-state.sh code-patch <issue> --check-completion` confirms `commits_found:false`
+- Claude exited 0 (no crash, no watchdog kill) but produced no commit on origin/main
+
+### Applicable Phases
+- code (patch route)
+
+### Fallback Steps
+1. Retry `run-code.sh <issue> --patch` once
+2. If the second run also exits 1 (still no commit detected by reconcile) → escalate to Tier 3
+
+### Escalation
+- If the retry itself exits non-zero and reconcile still reports `commits_found:false`, escalate to Tier 3 (recovery sub-agent)
+- Do not retry more than once automatically; a second silent no-op may indicate a structural issue requiring human investigation
+
+### Rationale
+- First observed in Issues #658 and #489; cataloged in Issue #727
+- When `reconcile-phase-state.sh` confirms `commits_found:false`, the working tree is known-clean and a single retry is always safe on the patch route (no partial commit can exist)
+- Handling this in Tier 2 avoids the overhead of spawning a Tier 3 `claude -p` recovery sub-agent for a pattern that is trivially safe to retry
+
+---
+
 ## Operational Notes
 
 This catalog is consumed by:
