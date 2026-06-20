@@ -180,6 +180,29 @@ non-interactive モードで以下 3 点を自動解決し、Acceptance Criteria
 - 9 件すべて PASS、UNCERTAIN 0 件。verify command の粒度が適切 (file_exists × 2、grep × 1、file_contains × 5、rubric × 1) で自動検証しやすかった。
 - rubric AC (AC8: 「tier 選択基準と経路許可範囲の説明」) は実装が明示的な Use-when 節と Allowed paths 節を持っていたため grader 判定が容易。Spec の "/review doc consistency 注記" が guide の記述粒度を事前誘導した効果があったと考えられる。
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC8 rubric の補助として `file_contains "L2 Assisted"` を追加した設計が verify 段階で機能した (rubric が UNCERTAIN にならないように下支え)。今後の guide 系 AC では rubric + fixed-string 補助のペアを標準パターンにすると安定する。
+
+#### code
+- 実装は Spec 通り、rework なし。`docs/guide/autonomy.md` の ja ミラー未生成 (broken link) は Spec 方針通りで `/doc translate ja` で解消予定。
+
+#### review
+- review-bug エージェントの SHOULD 所見 2 件はいずれも sub-agent で REJECT。「直後の参照先がある場合は明示不要」の判定パターンは review-bug の精度向上ヒントとして残す。
+
+#### merge
+- CI green、conflicts なし、squash-merge 通常完了。
+
+#### verify
+- pre-merge 9 件すべて PASS。post-merge AC10 は `verify-type: manual` で #700 着地後の観察待ち。SKIPPED として guide のみ出力。
+
+### Improvement Proposals
+
+- N/A — Spec/Code/Review の各 retrospective ですでに follow-up が明示されており、本 verify 固有の追加提案はない。
+
 ## Phase Handoff
 <!-- phase: merge -->
 
