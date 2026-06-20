@@ -2,5 +2,14 @@ opportunistic-verify: true
 skill-proposals: true
 permission-mode: auto
 session-auto-rename: true
+autonomy: L3
 next-cycle-seed:
   enabled: true
+verify-max-iterations: 3
+auto-retry-on-fail:
+  enabled: true
+  threshold: 3
+recoveries-auto-fire:
+  enabled: true
+capabilities:
+  workflow: true
