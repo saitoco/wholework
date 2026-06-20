@@ -197,3 +197,34 @@ merge phase で Forbidden Expressions check が pre-existing FAILURE のため `
 **3. `tests/setup-labels.bats` off-by-one パターンの再発防止 (Tier 3 / 既存対処済)**
 
 review で指摘・修正済み。今後ラベル追加時に「テスト名のラベル数 = 現実の ALWAYS_LABELS 数」を一致させる規約を Spec template に明示すれば再発防止になる。Tier 3 (一回限りの修正、規約化は Tier 2 の #2 と統合可能)。
+
+## Verify Retrospective (iteration 2 — after auto-retry fix)
+
+### Phase-by-Phase Review
+
+#### spec
+- 当初 Spec は post-merge AC の品質要件 (auto-file される Issue の中身) を観測ベースで定義したが、内容スコープの明示的な criteria を欠いていた。Spec 段階で「auto-file された Issue が source 引用・cause クラスタ・verify command を含む」といった構造的 criteria を文書化していれば iteration 1 の FAIL は防げた可能性。
+
+#### code (iteration 2)
+- `/verify` Step 11 の auto-retry path で `run-code.sh 702 --patch` が発火 (`AUTONOMY_TIER=L3`, `AUTO_RETRY_ENABLED=true`)。watchdog silent timer が 660s 経過後に commit 完了し正常 exit 0。Size=M でも --patch ハードコードで完走。
+- 改修内容: `skills/verify/SKILL.md` Step 15 に source entry table、cause clustering (silent no-op / watchdog kill 分類)、rubric verify command、`retro/recoveries` 不在時 warning を追加 (commit `4eae5c9`、57 lines diff)。
+- /code 単独で 4 項目改修を完走したが、Size=M スコープに対し --patch direct-to-main は review なしで実装。pr ルートと比べリスク非対称。SKILL.md auto-retry の --patch ハードコード設計の妥当性は今後の運用観察案件。
+
+#### verify (iteration 2)
+- Pre-merge AC1-5: idempotent 再検証で全 PASS。
+- Post-merge AC6: iteration 1 で品質要件未達 FAIL → iteration 2 で /code --patch 改修後 PASS。observation event=verify-completion の実観察は Step 15 出力で確認。
+
+### Retry Count
+
+Retry Count: 2/3
+
+### Improvement Proposals
+
+**1. Spec での post-merge observation AC の品質 criteria 明示 (Tier 1 候補)**
+
+post-merge AC が `<!-- verify-type: observation event=* -->` の場合、観測対象の「中身の品質要件」(本 Issue では Issue body のスコープ、引用元、verify command 等) を Spec で明示するガイドラインが不在だった。observation の対象が「機構が動く」だけなのか「機構の出力が実用的」までを含むのかの定義が暗黙で、verify 段階で FAIL 判定が分かれる。Spec template に「observation AC は (a) 観測対象イベント、(b) 期待される出力構造 criteria、を必ず分離記述」のガイドラインを追加すべき。Tier 1 (複数 skill にまたがる convention 改修、再発性高)。
+
+**2. auto-retry の --patch ハードコード設計の見直し (Tier 1 候補)**
+
+Step 11(b) auto-retry は `run-code.sh $NUMBER --patch` を Size 問わず発火する。Size=M/L の Issue で 4 項目級改修が必要な場合、main 直コミット (review skip) はリスクが大きい。`auto-retry-on-fail` config に `route_override` オプションを追加し `--patch` / `--pr` を選択可能にする (デフォルトは Size に応じた自動選択) ことで安全性を担保できる。Tier 1 (skill SKILL.md の根本設計、再発性あり)。
+
