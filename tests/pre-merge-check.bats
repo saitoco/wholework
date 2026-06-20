@@ -62,13 +62,16 @@ teardown() {
 }
 
 # Helper: create a feature branch with optional FORBIDDEN content in skills/x.md
+# Always adds a unique marker file to ensure the commit is non-empty even when
+# skills/x.md content is identical to main.
 _setup_feature_branch() {
     local branch="$1"
     local content="${2:-clean content}"
 
     git checkout -b "$branch" main >/dev/null 2>&1
     echo "$content" > skills/x.md
-    git add skills/x.md
+    echo "branch: $branch" > "skills/marker-${branch}.md"
+    git add skills/x.md "skills/marker-${branch}.md"
     git commit -m "feature commit" >/dev/null 2>&1
     git push origin "$branch" >/dev/null 2>&1
     git checkout main >/dev/null 2>&1
