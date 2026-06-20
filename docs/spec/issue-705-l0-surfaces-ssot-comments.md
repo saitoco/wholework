@@ -193,20 +193,33 @@ Output: inject 済み context + `## Consumed Comments` 記録 + (条件付き) `
 - `authorAssociation` の実値を確認: リポジトリオーナー saito の comment が `MEMBER` を返す (issue #699 で確認) → Trust Boundary は OWNER / MEMBER / COLLABORATOR を first-class とした。
 - run-spec.sh が `AUTO_EVENTS_LOG` を export していないことを確認 → Implementation Step 8 で補完。worktree CWD と相対パス `.tmp/auto-events.jsonl` の解決差異は /code で要確認として Uncertainty に残置。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- `modules/l0-surfaces.md` の bot exception 検出文字列が empty form `<!-- wholework-event: -->` で定義されており、実際のマーカーフォーマット (attributes 必須) と一致しない論理エラーが発見された。これは Spec/Code のフェーズでは気付きにくい「プロトコル整合性ギャップ」の典型例。ドキュメントとして定義した形式と、条件文で照合するリテラル文字列を別々に書くと齟齬が生じやすい。
+- jq の `| last` がゼロ件時に `null` を文字列として出力する点も、LLM が実行する手順書として記述した prose の論理エラー。prose ドキュメント内の shell コマンド例でも fallback 分岐との整合性確認が必要。
+
+### Recurring issues
+- 今回の 2 件の bug 指摘は互いに独立しており、同種の繰り返しパターンとは言えない。一方、「prose 定義と照合文字列の不整合」と「jq の edge case」は、今後 comment consumption procedure を実装する際にも同様のリスクがある。verify command でカバーしにくい領域 (prose 内コード例の論理的正確性) として認識する。
+
+### Acceptance criteria verification difficulty
+- 全 10 件が file_exists / file_contains / grep / section_contains で verify 可能な形式になっており、UNCERTAIN は 0 件。verify command の設計品質が高く、機械検証の困難さは特になかった。
+- post-merge AC 2 件 (manual + observation) は /verify フェーズで対応予定。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `emit-event.sh` を spec/code/verify の allowed-tools に追加 (cross-file validation で検出)。l0-surfaces.md の Comment Consumption Procedure step 6 が `source emit-event.sh` を含むため必須。
-- validate-skill-syntax.py の cross-file validation を活用し、モジュール参照の allowed-tools 漏れを PR 前に検知できた。
-- `modules/l0-surfaces.md` の 4-section structure (Purpose/Input/Processing Steps/Output) と既存モジュールのパターンを踏襲し、一貫性を維持。
+- bot exception の検出文字列を `<!-- wholework-event: -->` (empty form) から `<!-- wholework-event:` (prefix) に修正。これは実際のマーカーフォーマットとの整合性から MUST 判定 (review-bug security scan が検出、verification sub-agent で PASS)。
+- jq `| last` を `| last // empty` に修正。fallback 条件との整合性上 CONSIDER だが、明確な logic error として修正適用。
+- review-spec の CONSIDER 2 件 (Spec パス誤り + emit-event.sh 未記載) はコード変更不要として skip。
 
 ### Deferred Items
-- `/code` resume 時の PR comment 取り込み (`COMMENT_SCOPE=issue+pr`) と `gh pr view:*` 追加は必要時 follow-up。
-- post-merge AC (manual + observation) は /verify フェーズで観察。
-- `triaged` 等 bare-namespace ラベル例外の詳細は #R2 (別 Issue)。
+- post-merge AC (manual + observation event) は /verify フェーズで観察。
+- CONTRIBUTOR/NONE コメントの注入時の長さ上限 / sanitization は設計として意図的に未定義 (CONSIDER、spec doc 指摘として記録)。
+- Spec の ja mirror パス誤り (`../modules/` → `../../modules/`) は Spec 品質メモ; 将来の Spec 改定時に修正可。
 
-### Notes for Next Phase (/review)
-- 全 10 pre-merge AC を実装し、Issue body のチェックボックスを [x] に更新済み。
-- cross-file validation で `emit-event.sh` が allowed-tools に必要だと検出 → fix コミットを追加した経緯を念頭に、allowed-tools レビュー時に emit-event.sh の位置を確認すること。
-- `docs/ja/` mirror sync 済み。`docs/translation-workflow.md` の手順に従い workflow.md, structure.md の両 ja mirror を更新。
+### Notes for Next Phase (/merge)
+- bot exception 修正 + jq 修正 の 2 コミットを push 済み。CI 再実行を確認してから merge すること。
+- 全 10 pre-merge AC PASS, CI 全ジョブ SUCCESS を確認済み。
+- MUST issue は resolve 済み。`/merge 712` で進めて可。
