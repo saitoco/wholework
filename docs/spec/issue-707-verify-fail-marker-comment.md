@@ -188,3 +188,27 @@ Issue 提案の `phase-at-fail=verify` は l0-surfaces.md SSoT の `phase=verify
 ### Notes for Next Phase
 - post-merge AC 2 件: A1 (manual: `/verify N` FAIL で marker comment が Issue に append されることを観察)、A2 (opportunistic: 次走 `/code --patch N` で consume 記録確認)。
 - closes #707 により Issue は自動クローズ済み (BASE_BRANCH=main)。verify は Issue の状態確認から開始すること。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec 中の Step 番号参照 (Step 9(b)) が実装時点の SKILL.md 構造 (Step 11(b)) と不一致だった。Spec 作成時の参照タイミングと実装時のステップ番号ずれを示すパターン。
+
+#### code
+- 対称的な実装ブロック (block 1/block 2) で出力テキスト言語が不一致 (block 1: 日本語、block 2: 英語)。Review で CONSIDER レベルとして記録のみ。
+- FAIL_COUNT 変数が SKILL.md 内で明示定義されていない状態で参照されているが、LLM 実行コンテキストでの解釈に依存する設計。
+
+#### review
+- Spec vs 実装の divergence ゼロ。Code phase での自己レビューが review コストを低減。
+
+#### merge
+- setup-labels.bats の pre-existing CI failure 状態で auto-resolve squash merge を実行。pre-existing と確認済み。
+
+#### verify
+- pre-merge AC 3 件すべて `file_contains`/`grep` 系で auto-verify 可能、UNCERTAIN ゼロ。
+- post-merge AC 2 件 (manual + opportunistic) は将来観測待ち。
+
+### Improvement Proposals
+- N/A
