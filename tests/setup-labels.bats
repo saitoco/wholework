@@ -96,9 +96,9 @@ label_created() {
 }
 
 # --- Environment: all features unavailable ---
-# All 11 always + 17 fallback = 28 labels
+# All 14 always + 17 fallback = 31 labels
 
-@test "env=none: all 30 labels created when no features available" {
+@test "env=none: all 31 labels created when no features available" {
     cat > "$MOCK_DIR/gh-graphql.sh" <<'MOCK'
 #!/bin/bash
 echo "0"
