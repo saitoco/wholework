@@ -108,6 +108,30 @@ setup() {
     [ "$status" -eq 0 ]
 }
 
+@test "outdated: Translation sync gap warning output for OUTDATED file" {
+    echo "ja content" > docs/ja/en.md
+    git add docs/ja/en.md
+    GIT_COMMITTER_DATE="2024-01-01T10:00:00" GIT_AUTHOR_DATE="2024-01-01T10:00:00" \
+        git commit -q -m "add ja"
+    echo "en content" > docs/en.md
+    git add docs/en.md
+    GIT_COMMITTER_DATE="2024-01-02T10:00:00" GIT_AUTHOR_DATE="2024-01-02T10:00:00" \
+        git commit -q -m "add en"
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Translation sync gap"* ]]
+}
+
+@test "missing_ja: Translation sync gap warning output for MISSING_JA file" {
+    echo "en content" > docs/en.md
+    git add docs/en.md
+    GIT_COMMITTER_DATE="2024-01-01T10:00:00" GIT_AUTHOR_DATE="2024-01-01T10:00:00" \
+        git commit -q -m "add en"
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Translation sync gap"* ]]
+}
+
 @test "excludes: docs/spec directory is not included in source files" {
     mkdir -p docs/spec
     echo "spec content" > docs/spec/spec.md

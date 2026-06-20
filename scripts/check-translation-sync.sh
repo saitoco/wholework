@@ -63,6 +63,11 @@ for en_file in "${SOURCE_FILES[@]+"${SOURCE_FILES[@]}"}"; do
   fi
 
   printf "%-${COL_FILE}s  %-${COL_STATUS}s  %s\n" "$en_file" "$status" "$details"
+  if [ "$status" = "OUTDATED" ]; then
+    echo "Translation sync gap: $en_file was updated but $ja_file was not"
+  elif [ "$status" = "MISSING_JA" ]; then
+    echo "Translation sync gap: $ja_file does not exist"
+  fi
 done
 
 printf '%s\n' "$(printf '─%.0s' $(seq 1 80))"
