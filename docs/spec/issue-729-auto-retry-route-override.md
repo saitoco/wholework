@@ -83,3 +83,34 @@
 ## Consumed Comments
 
 - saito (MEMBER / first-class): Issue Retrospective — AP1～AP4 自動解決 (BRE バグ修正、rubric + section_contains 補強、Pre/Post-merge 分割、ハードコード削除 AC 追加)。Issue body の AC はすでに更新済み。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Nothing to note. 全 7 AC が PASS。Spec 設計通りの実装で divergence なし。
+
+### Recurring issues
+
+- Nothing to note. CI failure (setup-labels.bats) は pre-existing で今回の PR と無関係。繰り返しパターンなし。
+
+### Acceptance criteria verification difficulty
+
+- Nothing to note. 全 AC が grep/section_contains/section_not_contains/rubric で自動検証可能。UNCERTAIN 0 件。verify command の設計品質は高かった。AC4 の `section_not_contains` で旧ハードコード削除を確認するパターンは policy change Issue に有効。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- 全 7 AC PASS、MUST/SHOULD 課題なし → COMMENT イベントで PR レビュー投稿 (REQUEST_CHANGES なし)
+- CI "Run bats tests" FAILURE は main ブランチでも同一テスト (setup-labels.bats #715/#720/#727/#729/#732/#734) が失敗する pre-existing regression → この PR の変更とは無関係と判定
+- CONSIDER 課題 (get-issue-size.sh 失敗時の --patch フォールバック) はスキップ — 現状挙動からの退行なし、Spec で未定義
+
+### Deferred Items
+- setup-labels.bats label 数テストの pre-existing failure は別 Issue での対応が必要 (今回スコープ外)
+- CONSIDER: get-issue-size.sh が失敗した場合に M/L Issue が `--patch` フォールバックを使う — 改善候補として将来の Issue で対処検討
+
+### Notes for Next Phase
+- CI "Run bats tests" は pre-existing failure のためマージをブロックしない (main でも失敗中)
+- MUST/SHOULD 修正なし → 安全にマージ可能
+- Merge 後は /verify で post-merge AC が存在しないことを確認 (Issue spec: "Post-merge: なし")
