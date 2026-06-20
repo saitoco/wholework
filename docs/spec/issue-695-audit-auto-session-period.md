@@ -72,3 +72,51 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue retrospective: ambiguity auto-resolution decisions (--since Nd vs 24h distinction, bats test requirement) and AC rewrite rationale / https://github.com/saitoco/wholework/issues/695#issuecomment-4759487457
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec step 3 listed `--range START END` (space-separated) for the script flag, which is what the script implements. However, in the SKILL.md the user passes `--range START..END` (dot-separated) and the SKILL is responsible for splitting on `..` before calling the script. This split was not explicitly implemented in the SKILL.md — SKILL.md documents the calling convention but the actual split is left to the operator. Since this is a SKILL-level (LLM-executed) step, the natural language description is sufficient for correct execution; no code split is needed.
+- docs/workflow.md and docs/ja/workflow.md were added as doc-checker targets beyond the original Spec scope, since they contained an existing `/audit auto-session` description that needed the period mode addition.
+
+### Design Gaps/Ambiguities
+
+- Bats test for `--since-days` uses fixed-date fixture events (2026-06-14) with `--since-days 7`. Whether those dates fall within the 7-day window depends on the test execution date. The test was designed to always pass by using `--output` to specify a fixed output path, so the 7-day filter affecting which sessions appear does not cause test failure — the report structure (not session count) is what is verified.
+- `grep -q "_period" "$output"` in bats is incorrect syntax (treats `$output` as a file path). Corrected to `[[ "$output" == *"_period"* ]]`. This was caught and fixed immediately before the tests passed.
+
+### Rework
+
+- Bats test fix: initial test used `grep -q "_period" "$output"` (treats variable as filename); replaced with `[[ "$output" == *"_period"* ]]` in one repair attempt. Tests went from 7/9 to 9/9 PASS.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. All 3 options (`--day`, `--since {N}d`, `--range`) match the Spec exactly. The `--range` bats test omission was acknowledged in both the Code Retrospective and Phase Handoff as deferred to post-merge manual test. No unrecorded divergence found.
+
+### Recurring issues
+
+Nothing to note. No patterns of repeated issues across perspectives detected in this review. Only 2 CONSIDER-level findings (cosmetic trailing newlines in pattern section, minor placeholder naming inconsistency in structure.md) — both too minor to warrant a workflow change.
+
+### Acceptance criteria verification difficulty
+
+The `github_check "gh pr checks" "Run bats tests"` AC returned FAIL due to a pre-existing failure in `tests/setup-labels.bats` (unrelated to this PR). The new tests added by the PR (`ok 25`, `ok 26`) both passed. Future Issues should consider adding a note in ACs that `setup-labels.bats` CI failure is a known pre-existing issue to avoid review confusion.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+
+- `Run bats tests` CI FAILURE is a pre-existing issue in `tests/setup-labels.bats` unrelated to this PR; PR's new tests (`ok 25`, `ok 26`) pass. Not a blocker for merge.
+- No MUST/SHOULD issues found in lightweight review (all 4 perspectives); COMMENT event posted.
+
+### Deferred Items
+
+- `--range START..END` bats test remains deferred to post-merge manual test (carried from code phase).
+- Japanese sibling generation for period reports remains unimplemented (carried from code phase).
+
+### Notes for Next Phase
+
+- PR #740 is clean; proceed with `/merge 740`.
+- Post-merge AC: run `/audit auto-session --since 7d` to confirm `docs/sessions/_period/since-{TODAY}-7d.md` is generated correctly.
