@@ -223,3 +223,50 @@ Output: inject 済み context + `## Consumed Comments` 記録 + (条件付き) `
 - 全 pre-merge AC (1〜10) は review フェーズで PASS 確認済み; /verify では post-merge AC 2 件 (manual + observation) に集中。
 - `modules/l0-surfaces.md` が main に存在し、bot exception prefix 修正・jq `// empty` 修正が含まれた状態で merge 済み。
 - verify command で `docs/spec/issue-705-l0-surfaces-ssot-comments.md` の verify command セクションを参照してテストを実行すること。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Auto-Resolve Log で 2 件の ambiguity を解決 (verify-type observation→manual、AC #9 file_contains→section_contains)。両者とも実装意図と SSoT に基づいた合理的選択。決定の質は高い。
+
+#### spec
+- codebase 調査で Issue body の 2 件の事実齟齬を検出 (`authorAssociation` 実フィールド名、`labels.created_at` 不在 → timeline API)。spec が "issue は SSoT" の規約を守りつつ実態に合わせる形で吸収した。Issue body を直接書き換えずに spec/Auto-Resolve Log で記録という処理は適切。
+- `(37 files)` カウント verify を 10 件目として追加し structure.md maintenance rule との整合を確保。
+
+#### code
+- `validate-skill-syntax.py` 実行で `emit-event.sh` cross-file validation の必要性が判明、2 段階 commit にリワーク。spec 段階で `emit-event.sh` source 元への影響を予見できなかった。
+
+#### review
+- 2 件の MUST issue を発見・解決:
+  1. `modules/l0-surfaces.md` の bot exception 検出文字列 `<!-- wholework-event: -->` が、ドキュメント本文で定義されたマーカー仕様 (attributes 必須) と齟齬。**prose 定義と検出 literal の不整合** という典型パターン。
+  2. jq `| last` のゼロ件時 `null` 出力 — prose 内の shell 例の論理エラー。
+- いずれも pre-merge verify command では捕捉困難 (file_contains の対象外)。adversarial review が機能した実例。
+
+#### merge
+- squash + delete-branch、`closes #705` で auto-close。CI 全 SUCCESS、conflict resolution スキップ。問題なし。
+
+#### verify
+- Pre-merge 10件は idempotent 再検証で全 PASS。Post-merge 2件 (manual + observation) は本セッションで実機観察できないため deferred (phase/verify 維持)。
+- verify command 設計品質が高く UNCERTAIN 0件。
+
+### Improvement Proposals
+
+**1. Prose 定義 vs 検出 literal の整合性チェック (Tier 1 候補)**
+
+review で発見された bot exception marker の bug は、Markdown 本文で「マーカー仕様」を定義しながら検出条件文ではそれと異なる literal を書いていたために生じた典型パターン。pre-merge verify command (file_contains, grep) はこの種の論理整合性を捉えられない。
+
+提案: `/triage` AC audit または `/review` の review-spec エージェントに「prose で定義された例 (e.g., code fence 内の YAML/HTML) と、それを検出する条件文 literal の一致をチェックする」パターンを追加。少なくとも `modules/*.md` 内で同じ文字列を 2 箇所以上書く構造 (定義 + 検出) を持つ場合は両者を突き合わせる rubric を導入。
+
+影響範囲: `modules/l0-surfaces.md` 以外にも、`modules/verify-patterns.md`、`modules/orchestration-fallbacks.md` 等で同種パターンが将来発生する可能性。再発性: 中-高。
+
+**2. `AUTO_EVENTS_LOG` export の一貫性 (Tier 2 / 規約)**
+
+run-spec.sh で `AUTO_EVENTS_LOG` export が欠けていた。他の run-*.sh wrapper (run-code.sh、run-review.sh、run-merge.sh) も同様の状態か未検証。
+
+提案: 全 run-*.sh wrapper 起動時に `AUTO_EVENTS_LOG` を `.tmp/auto-events.jsonl` で export する規約を `scripts/run-*.sh` の共通テンプレートに昇格 (もしくは `scripts/emit-event.sh` の preamble で auto-detect)。
+
+**3. emit-event.sh cross-file validation の spec 反映 (Tier 3 / 一回限り)**
+
+spec 段階で `validate-skill-syntax.py` の cross-file validation 要件 (emit-event.sh source 元への allowed-tools 追加) を予見できなかった点は今後の spec 作成時に意識する。Tier 3 (Spec retro 記録のみ、Issue 起票不要)。
