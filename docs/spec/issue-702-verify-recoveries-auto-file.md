@@ -89,7 +89,8 @@
 
 ## Consumed Comments
 
-No new comments since last phase.
+- saito / MEMBER / first-class / FAIL (iteration 1/3): `code-patch-tier3-recovery` で auto-file した #725 の内容が Issue として成立せず FAIL。クラスタリング・source 引用・verify command なし / https://github.com/saitoco/wholework/issues/702#issuecomment-4759155143
+- saito / MEMBER / first-class / FAIL (iteration 2/3): 実装変更なしで再 verify → FAIL 継続。auto-file ロジックの改善が必要 / https://github.com/saitoco/wholework/issues/702#issuecomment-4759163397
 
 ## Code Retrospective
 
@@ -106,6 +107,21 @@ No new comments since last phase.
 
 - 初回コミット後に SKILL.md の AC1 verify command が FAIL することを確認し、Step 15 の説明文に `recoveries-auto-fire` 文字列を追加するための追加コミットが必要になった。
 
+## Code Retrospective (Fix Cycle — verify iteration 2/3)
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- post-merge AC の意図が「形式上の auto-file」ではなく「実用的な improvement Issue」であることが Spec に明記されていなかった。AC 記述 `improvement Issue が auto-file される` の「実用的」という質的要件は暗黙だった。
+- Step 15 の `--body` テンプレートが symptom-short と count のみを含む最小限の形式だったため、3 件の entries が 2 種類の underlying cause (silent no-op / watchdog kill) を持つことを無視した 1 Issue 生成になった。
+
+### Rework
+
+- verify FAIL コメント (iteration 1, 2) を受けて Step 15 の Issue body テンプレートを大幅改修: source entry table・cause clustering・rubric verify command を追加し、ラベル不在時の silent fallback を warning に変更。
+
 ## review retrospective
 
 ### Spec vs. implementation divergence patterns
@@ -121,21 +137,21 @@ Nothing to note. Spec の受け入れ条件 (file_contains / grep ベース) は
 全 pre-merge AC が `file_contains` / `grep` ベースで CI 自動確認可能。UNCERTAIN なし。verify command の品質は高い。post-merge AC が observation event=verify-completion のため手動観察が必要。これは機能の性質上やむを得ない。
 
 ## Phase Handoff
-<!-- phase: merge -->
+<!-- phase: code -->
 
 ### Key Decisions
-- CI が `ci_failing` 状態だったが、`--non-interactive` モードの auto-resolve ポリシーに従いマージを続行した (Forbidden Expressions check の既存 FAILURE は pre-existing issue)
-- `gh pr merge --squash --delete-branch` で PR #718 を main にスカッシュマージ完了
-- `BASE_BRANCH=main` のため `closes #702` により Issue #702 は自動クローズされる
+- verify FAIL (iteration 1 & 2) のコメントを受けて Step 15 の Issue body テンプレートを改修: source entry table・cause clustering (exit code/diagnosis ベース)・rubric verify command を追加
+- ラベル不在時の silent fallback を廃止し warning + no-fallback に変更
+- `--patch` ルートで直接 main にコミット (BASE_BRANCH=main, `closes #702` 付き)
 
 ### Deferred Items
-- `tests/setup-labels.bats` の再発防止策 (Spec テスト更新ステップへの明示) は今後の課題
-- `recoveries_threshold_fire` event の `issue_number=0` (L1 advisory path) の意味の明確化は引き続き deferred
-- Forbidden Expressions check の FAILURE (`docs/spec/issue-710-blocked-by-workflow.md`) は別 Issue で対処が必要
+- `tests/setup-labels.bats` のカウントアサーション不一致 (pre-existing from #706) は未修正のまま — 本 Issue 範囲外
+- Step 15 の body template で symptom-short に対応するエントリを自動抽出・クラスタリングする実際の動作は次回 verify で観察が必要
 
 ### Notes for Next Phase
-- post-merge AC は observation event=verify-completion なので `/verify` 後に `.wholework.yml: recoveries-auto-fire.enabled: true` の状態で手動観察が必要
-- `retro/recoveries` ラベルが追加されたため `scripts/setup-labels.sh` を再実行してラベルを GitHub に反映させることを推奨
+- post-merge AC6 は observation event=verify-completion: `.wholework.yml: recoveries-auto-fire.enabled: true` + 同 symptom 3 件蓄積の状態で `/verify` を完走させると Step 15 が走る
+- 新テンプレートで生成される Issue body が「実用的な improvement Issue」の質的要件を満たすかは次の観察で確認
+- pre-merge AC5 件は変更前後ともに PASS (file_contains/grep ベース)
 
 ## Verify Retrospective
 
