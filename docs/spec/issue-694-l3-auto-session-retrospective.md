@@ -153,7 +153,7 @@ Step 5 の L3 guard は Step 2/3 で確定した `ROUTE` 変数を参照。batch
 ### Deviations from Design
 
 - Spec では route guard を `ROUTE == "XL"` と記述していたが、SKILL.md の既存 Step 3a route table では XL は `sub_issue` を使用するため、guard 条件を `ROUTE == "sub_issue"` に変更した。"XL" は Spec の意図する名称で `sub_issue` が実際の変数値であり整合性を優先した。
-- Spec では forbidden expression "Issue Spec" の修正スコープは記載されていなかったが、既存 Spec Notes に含まれていたため /code フェーズ内で修正した。
+- Spec では deprecated term の修正スコープは記載されていなかったが、既存 Spec Notes に含まれていたため /code フェーズ内で修正した。
 
 ### Design Gaps/Ambiguities
 
@@ -162,7 +162,7 @@ Step 5 の L3 guard は Step 2/3 で確定した `ROUTE` 変数を参照。batch
 
 ### Rework
 
-- Spec ファイルの forbidden expression ("Issue Spec") 修正後に `git status` で未コミット変更として残り、PR 作成後に追加コミットを要した。spec フェーズが作成した内容の CI scan 対象への該当をコード実装前に確認すべきだった。
+- Spec ファイルの deprecated term 修正後に `git status` で未コミット変更として残り、PR 作成後に追加コミットを要した。spec フェーズが作成した内容の CI scan 対象への該当をコード実装前に確認すべきだった。
 
 ## Phase Handoff
 <!-- phase: code -->
