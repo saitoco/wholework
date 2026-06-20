@@ -1,0 +1,64 @@
+# Issue #699: auto-events-rollup: Phases/Recoveries session scope fix
+
+## Overview
+
+`scripts/auto-events-rollup.sh` の Sessions テーブル生成 jq で、Phases 列と Recoveries 列の集計に `$ev[]` (events 全体) スコープを使用しているため、同一 Issue を複数セッションで実行した場合に両セッションの行で同じ値が表示されるクロス汚染が発生している。`$own` (セッション単位にフィルタ済みの配列、line 126 で定義済み) に差し替えることで修正する。
+
+## Reproduction Steps
+
+1. 同一 Issue #N に対して `/auto` を 2 回完走させる
+2. `auto-events-rollup.sh --date YYYY-MM-DD` を実行
+3. Sessions テーブルに #N の行が 2 行出力され、Phases 列が両行とも全セッション結合値を表示する
+
+## Root Cause
+
+`scripts/auto-events-rollup.sh:148-149` のjq コードが `$own` ではなく `$ev[]` スコープを参照している:
+
+```jq
+# 旧コード (lines 148-149)
+([$ev[] | select(.event == "phase_complete" and .issue == $iss) | .phase] | join("→")) as $phases |
+([$ev[] | select(.event == "recovery" and .issue == $iss)] | length) as $rec_count |
+```
+
+`$own` は line 126 で `($ev | map(select(.issue == $iss and (.session_id // "") == $sid)))` として定義済みだが、Phases/Recoveries 集計には適用されていない。同スコープ内の他の集計 (sub_start, phase_start, sub_complete, last_phase_complete) はすでに `$own` ベースのため、lines 148-149 のみが取り残されている。
+
+## Changed Files
+
+- `scripts/auto-events-rollup.sh`: lines 148-149 の Phases/Recoveries 集計を `$ev[]` から `$own` スコープに変更 — bash 3.2+ compatible
+- `tests/auto-events-rollup.bats`: 同一 Issue 複数セッションでの Phases/Recoveries session scope 独立テスト追加
+
+## Implementation Steps
+
+1. `scripts/auto-events-rollup.sh` の lines 148-149 を変更する (→ AC1, AC2, AC3, AC4):
+   - FROM: `([$ev[] | select(.event == "phase_complete" and .issue == $iss) | .phase] | join("→")) as $phases |`
+   - TO: `($own | map(select(.event == "phase_complete")) | map(.phase) | join("→")) as $phases |`
+   - FROM: `([$ev[] | select(.event == "recovery" and .issue == $iss)] | length) as $rec_count |`
+   - TO: `($own | map(select(.event == "recovery")) | length) as $rec_count |`
+
+2. `tests/auto-events-rollup.bats` に session scope クロス汚染防止テストを追加する (→ AC5, AC6):
+   - 同一 issue に 2 つの session_id ("session_a", "session_b") でイベントを用意
+   - session_a では phase "spec" のみ完走、session_b では phase "code" のみ完走
+   - rollup 後、#issue の 2 行で各々の Phases 列が "spec" / "code" のみを表示し、"spec→code" のような結合値にならないことを検証
+   - テスト名に "session scope" を含める (AC5 の file_contains パターン要件)
+
+## Verification
+
+### Pre-merge
+
+- <!-- verify: file_contains "scripts/auto-events-rollup.sh" "$own | map(select(.event == \"phase_complete\"))" --> `scripts/auto-events-rollup.sh` の Phases 集計が `$own` スコープに変更されている
+- <!-- verify: file_contains "scripts/auto-events-rollup.sh" "$own | map(select(.event == \"recovery\"))" --> `scripts/auto-events-rollup.sh` の Recoveries 集計が `$own` スコープに変更されている
+- <!-- verify: file_not_contains "scripts/auto-events-rollup.sh" ".event == \"phase_complete\" and .issue == $iss" --> 旧 `$ev[]` スコープの Phases 行が削除されている
+- <!-- verify: file_not_contains "scripts/auto-events-rollup.sh" ".event == \"recovery\" and .issue == $iss" --> 旧 `$ev[]` スコープの Recoveries 行が削除されている
+- <!-- verify: file_contains "tests/auto-events-rollup.bats" "session scope" --> `tests/auto-events-rollup.bats` に session スコープのクロス汚染防止テスト追加
+- <!-- verify: command "bats tests/auto-events-rollup.bats" --> 既存および新規 bats テストすべて green
+- <!-- verify: github_check "gh run list --workflow=test.yml --commit=$(git rev-parse HEAD) --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> CI (test.yml) の bats テスト全件 green
+
+### Post-merge
+
+- 次回同一 Issue を複数セッションで `/auto` 実行した際、rollup の Sessions テーブル各行で Phases / Recoveries が当該セッション分のみを表示することを確認 <!-- verify-type: observation event=auto-run -->
+
+## Notes
+
+- AC1/AC2 の `file_contains` パターン (`$own | map(select(.event == "phase_complete"))`) はすでに line 135 に存在するため、修正前でも PASS する。クロス汚染除去の核心検証は AC3/AC4 の `file_not_contains` チェック。
+- `$own` は sessions jq ブロック内 line 126 でスコープ定義済みのため、差し替えのみで追加変数定義は不要。
+- bats テストでは `session_id` フィールドを JSONL に含めることで異なるセッションを区別する。既存テストは `session_id` を省略しているが (`""` として扱われる)、新規テストでは明示的に `"session_a"` / `"session_b"` を使用する。
