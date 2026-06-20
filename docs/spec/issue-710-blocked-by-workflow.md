@@ -175,5 +175,5 @@ Issue 起票・リファイン時に blocked-by relationships を GitHub native 
 
 ### Improvement Proposals
 
-- **docs/ja/ 翻訳版 sync の自動チェック**: `docs/structure.md` と `docs/ja/structure.md` の同期漏れが過去 PR でも繰り返し発生していると review retrospective に記録されている。`/code` または `/review` フェーズで `docs/structure.md` 変更検出時に `docs/ja/structure.md` の同期状態を自動確認するチェック (例: `scripts/check-translation-sync.sh` または `modules/translation-workflow.md` の verify hint 化) を追加する価値がある。複数 skill (`/code`, `/review`) と複数 PR にまたがる再発性パターンのため Tier 1 候補。
+- **docs/ja/ 翻訳版 sync の自動チェック**: `docs/structure.md` と `docs/ja/structure.md` の同期漏れが過去 PR でも繰り返し発生していると review retrospective に記録されている。`/code` または `/review` フェーズで `docs/structure.md` 変更検出時に `docs/ja/structure.md` の同期状態を自動確認するチェック (例: `scripts/check-translation-sync.sh` または `modules/translation-workflow.md` の verify command 化) を追加する価値がある。複数 skill (`/code`, `/review`) と複数 PR にまたがる再発性パターンのため Tier 1 候補。
 
