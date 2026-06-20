@@ -96,3 +96,27 @@ sed -i 's/OLD_VALUE/NEW_VALUE/g' .claude/settings.json.template
 ```
 
 This constraint applies to all files under `.claude/`, including `settings.json.template`, `settings.json`, and hook scripts under `.claude/hooks/`.
+
+## Callers (auto-maintained)
+
+All callers that read this module. Update this table when a new Skill starts reading `modules/worktree-lifecycle.md`.
+
+### Direct Callers (SKILL.md)
+
+| Skill | Path | Runner script |
+|-------|------|---------------|
+| spec | `skills/spec/SKILL.md` | `scripts/run-spec.sh` |
+| code | `skills/code/SKILL.md` | `scripts/run-code.sh` |
+| review | `skills/review/SKILL.md` | `scripts/run-review.sh` |
+| merge | `skills/merge/SKILL.md` | `scripts/run-merge.sh` |
+| verify | `skills/verify/SKILL.md` | (in-session only — no run-verify.sh) |
+
+### Orchestrator
+
+| Script | Role |
+|--------|------|
+| `scripts/run-auto-sub.sh` | Calls run-spec.sh / run-code.sh / run-review.sh / run-merge.sh in sequence for sub-issue execution |
+
+### Update Protocol
+
+When a new Skill reads this module, add a row to the Direct Callers table above (and its runner script if one exists). This keeps the caller list as SSoT for impact-range visibility when modifying entry/exit logic, lock ordering, or rebase fallback behavior.
