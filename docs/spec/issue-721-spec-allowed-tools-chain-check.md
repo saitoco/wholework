@@ -58,3 +58,32 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective: verify-type: manual への変更と Step 10 サブ節配置の auto-resolve 記録 / https://github.com/saitoco/wholework/issues/721#issuecomment-4759114220
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None
+
+### Design Gaps/Ambiguities
+
+- None; Spec Notes on insertion point (after Shell script bash compat note block) and section content were precise and unambiguous.
+
+### Rework
+
+- None; implementation matched Spec step 1 exactly. AC1/AC2/AC3 all passed on first attempt.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Inserted `#### allowed-tools impact chain check` subsection immediately after the `**Shell script bash compat note:**` block in `skills/spec/SKILL.md` Step 10, as specified in Spec implementation step 1.
+- Patch route chosen (Size=XS, --patch flag); direct commit to main via worktree-merge-push.
+
+### Deferred Items
+- AC4 (CI test.yml green) is verified post-push by CI run; result visible at https://github.com/saitoco/wholework/actions.
+- Post-merge manual verification: next new `run-*.sh` Spec run should exercise the new check.
+
+### Notes for Next Phase
+- Only `skills/spec/SKILL.md` was changed; no doc sync or README update required.
+- All three auto-verifiable ACs (AC1-AC3) passed before commit; AC4 pending CI completion after push.
