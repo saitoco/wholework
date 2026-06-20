@@ -106,19 +106,34 @@ No new comments since last phase.
 
 - 初回コミット後に SKILL.md の AC1 verify command が FAIL することを確認し、Step 15 の説明文に `recoveries-auto-fire` 文字列を追加するための追加コミットが必要になった。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. Spec の受け入れ条件 (file_contains / grep ベース) はすべて PASS。コード実装と Spec の整合性は良好。
+
+### Recurring issues
+
+`tests/setup-labels.bats` のテスト名とアサーション値の off-by-one パターンが本 PR 以前から継続していた。今回 SHOULD として指摘し修正済み。ラベル追加の際に「テスト名 = ラベル数 - 1」になるパターンが繰り返しており、Spec のテスト更新ステップに「テスト名とアサーション値を必ず一致させる」旨を明示すると再発防止になる。
+
+### Acceptance criteria verification difficulty
+
+全 pre-merge AC が `file_contains` / `grep` ベースで CI 自動確認可能。UNCERTAIN なし。verify command の品質は高い。post-merge AC が observation event=verify-completion のため手動観察が必要。これは機能の性質上やむを得ない。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `recoveries-auto-fire` config キーは `auto-retry-on-fail.*` と同じ nested-key パターンで detect-config-markers.md に追加した
-- `retro/recoveries` ラベルのカラーは既存の `retro/*` ラベル (5319E7) と統一
-- Step 15 は旧 Step 15 (Collect Improvement Proposals) の直前に挿入し、旧 Step 15 は Step 16 にリナンバーした
+- SHOULD issue (テスト名・コメントの off-by-one) を修正してコミット・プッシュした
+- Forbidden Expressions check の FAILURE は `docs/spec/issue-710-blocked-by-workflow.md` による既存問題 (本 PR 変更外) と判断し、pre-existing issue として扱った
+- REVIEW_DEPTH=light で実施。外部レビューツール未設定のため Step 7 はスキップ
 
 ### Deferred Items
-- `docs/tech.md` のラベルグループカウントが 12 (古い) → 14 に更新した。この差異は `stale-verify` ラベルが追加された際の更新漏れ (別 Issue で起票してもよい)
-- `recoveries_threshold_fire` event の `issue_number=0` (L1 advisory path) の意味の明確化は今後の課題
+- `tests/setup-labels.bats` の再発防止策 (Spec テスト更新ステップへの明示) は今後の課題
+- `recoveries_threshold_fire` event の `issue_number=0` (L1 advisory path) の意味の明確化は引き続き deferred
+- Forbidden Expressions check の FAILURE (`docs/spec/issue-710-blocked-by-workflow.md`) は別 Issue で対処が必要
 
 ### Notes for Next Phase
-- verify コマンドは全て pre-merge で `file_contains`/`grep` ベースなので CI で自動確認可能
-- post-merge AC は observation event=verify-completion なので手動観察が必要
-- `docs/tech.md` の Always ラベルカウントが 12→14 に変わったことで、tech.md の記述と setup-labels.sh の実態が一致するようになった
+- MUST issue なし、SHOULD 1件修正済み → `/merge 718` 実行可能
+- post-merge AC は observation event=verify-completion なので `/verify` 後に手動観察が必要
+- CI は Forbidden Expressions check FAILURE を除き全 SUCCESS
