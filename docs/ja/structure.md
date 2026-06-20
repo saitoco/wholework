@@ -58,6 +58,10 @@ wholework/
 │         {SID}-{DATE}/
 │           session.md   # L3 ナラティブ（What worked / Limits and gaps / Improvement candidates）
 │           events.jsonl # .tmp/auto-events.jsonl から抽出したセッションスコープイベント
+│         _period/       # 期間集約レポート（/audit auto-session --day/--since/--range が生成）
+│           {DATE}.md              # --day YYYY-MM-DD 出力
+│           since-{DATE}-{N}d.md  # --since Nd 出力
+│           range-{START}-{END}.md # --range START..END 出力
 ├── .wholework/          # プロジェクトローカルな Wholework 設定（ユーザー管理、wholework リポジトリでは追跡しない）
 │   ├── adapters/        # 検証 adapter のオーバーライド
 │   ├── verify-commands/ # プロジェクトローカルのカスタム verify command ハンドラ

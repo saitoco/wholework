@@ -5,6 +5,9 @@
 # Usage:
 #   get-auto-session-report.sh <session-id> [--output <path>] [--no-github] [--narrative-draft <path>]
 #   get-auto-session-report.sh [--since <spec>]   # list mode: show distinct session_ids
+#   get-auto-session-report.sh --day YYYY-MM-DD [--no-github]    # period: single day
+#   get-auto-session-report.sh --since-days N [--no-github]      # period: past N days
+#   get-auto-session-report.sh --range START END [--no-github]   # period: date range
 #
 # Options:
 #   <session-id>              Report for the specified session
@@ -13,6 +16,9 @@
 #   --narrative-draft <path>  Pre-generated narrative draft file; replaces TBD placeholders with
 #                             draft content prefixed by [LLM draft — human review required] marker
 #   --since <spec>            List mode: filter sessions by time (e.g. 24h, 2026-06-14)
+#   --day YYYY-MM-DD          Period aggregate mode: sessions from the specified date
+#   --since-days N            Period aggregate mode: sessions from the past N days
+#   --range START END         Period aggregate mode: sessions in the inclusive date range
 #
 # Environment:
 #   AUTO_EVENTS_LOG  Path to event log (default: .tmp/auto-events.jsonl)
@@ -38,6 +44,10 @@ ISSUE_BODY_DIR="${WHOLEWORK_ISSUE_BODY_DIR:-}"
 LIST_MODE=false
 SINCE_SPEC="24h"
 NARRATIVE_DRAFT_PATH=""
+PERIOD_DAY=""
+PERIOD_SINCE_DAYS=""
+PERIOD_RANGE_START=""
+PERIOD_RANGE_END=""
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -55,7 +65,6 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --since)
-      LIST_MODE=true
       if [[ $# -gt 1 && "${2:-}" != -* ]]; then
         SINCE_SPEC="$2"
         shift 2
@@ -63,6 +72,20 @@ while [[ $# -gt 0 ]]; do
         SINCE_SPEC="24h"
         shift
       fi
+      LIST_MODE=true
+      ;;
+    --day)
+      PERIOD_DAY="${2:?--day requires YYYY-MM-DD}"
+      shift 2
+      ;;
+    --since-days)
+      PERIOD_SINCE_DAYS="${2:?--since-days requires N}"
+      shift 2
+      ;;
+    --range)
+      PERIOD_RANGE_START="${2:?--range requires START}"
+      PERIOD_RANGE_END="${3:?--range requires END}"
+      shift 3
       ;;
     -*)
       echo "Error: Unknown option: $1" >&2
@@ -75,6 +98,187 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+# Period aggregate mode: when --day, --since-days, or --range is set
+PERIOD_MODE=false
+if [[ -n "$PERIOD_DAY" || -n "$PERIOD_SINCE_DAYS" || -n "$PERIOD_RANGE_START" ]]; then
+  PERIOD_MODE=true
+fi
+
+if [[ "$PERIOD_MODE" == "true" ]]; then
+  if [[ ! -f "$AUTO_EVENTS_LOG" ]]; then
+    echo "No event log found at: $AUTO_EVENTS_LOG"
+    echo "Run /auto to generate events."
+    exit 0
+  fi
+
+  TODAY=$(date +%Y-%m-%d)
+
+  # Determine date range and output path
+  if [[ -n "$PERIOD_DAY" ]]; then
+    RANGE_START="${PERIOD_DAY}T00:00:00Z"
+    RANGE_END="${PERIOD_DAY}T23:59:59Z"
+    DATE_RANGE="$PERIOD_DAY"
+    PERIOD_OUTPUT="${OUTPUT_PATH:-docs/sessions/_period/${PERIOD_DAY}.md}"
+  elif [[ -n "$PERIOD_SINCE_DAYS" ]]; then
+    # Compute start date N days ago (bash 3.2+ portable)
+    if START_DATE=$(date -j -v-"${PERIOD_SINCE_DAYS}d" "+%Y-%m-%d" 2>/dev/null) || \
+       START_DATE=$(date -u -d "${PERIOD_SINCE_DAYS} days ago" "+%Y-%m-%d" 2>/dev/null); then
+      true
+    else
+      echo "Error: Cannot compute date for --since-days ${PERIOD_SINCE_DAYS}" >&2
+      exit 1
+    fi
+    RANGE_START="${START_DATE}T00:00:00Z"
+    RANGE_END="${TODAY}T23:59:59Z"
+    DATE_RANGE="${START_DATE}..${TODAY}"
+    PERIOD_OUTPUT="${OUTPUT_PATH:-docs/sessions/_period/since-${TODAY}-${PERIOD_SINCE_DAYS}d.md}"
+  else
+    RANGE_START="${PERIOD_RANGE_START}T00:00:00Z"
+    RANGE_END="${PERIOD_RANGE_END}T23:59:59Z"
+    DATE_RANGE="${PERIOD_RANGE_START}..${PERIOD_RANGE_END}"
+    PERIOD_OUTPUT="${OUTPUT_PATH:-docs/sessions/_period/range-${PERIOD_RANGE_START}-${PERIOD_RANGE_END}.md}"
+  fi
+
+  mkdir -p "$(dirname "$PERIOD_OUTPUT")"
+
+  # Collect all events in the date range
+  PERIOD_EVENTS=$(jq -s \
+    --arg start "$RANGE_START" \
+    --arg end "$RANGE_END" \
+    '[.[] | select(.ts >= $start and .ts <= $end)]' \
+    "$AUTO_EVENTS_LOG" 2>/dev/null || echo "[]")
+
+  # Distinct session_ids in period
+  SESSION_IDS=$(echo "$PERIOD_EVENTS" | jq -r \
+    '[.[] | select(.session_id != null and .session_id != "") | .session_id] | unique | .[]' \
+    2>/dev/null || true)
+
+  SESSION_COUNT=$(echo "$PERIOD_EVENTS" | jq \
+    '[.[] | select(.session_id != null and .session_id != "") | .session_id] | unique | length' \
+    2>/dev/null || echo 0)
+
+  # Build sessions covered table
+  SESSIONS_TABLE=""
+  TOTAL_ISSUES=0
+  TOTAL_T1=0
+  TOTAL_T2=0
+  TOTAL_T3=0
+  TOTAL_KILLS=0
+  TOTAL_REOPEN=0
+  for _sid in $SESSION_IDS; do
+    _sid_events=$(echo "$PERIOD_EVENTS" | jq --arg sid "$_sid" '[.[] | select(.session_id == $sid)]' 2>/dev/null || echo "[]")
+    _first_ts=$(echo "$_sid_events" | jq -r '[.[].ts] | sort | first // "?"' 2>/dev/null || echo "?")
+    _date="${_first_ts:0:10}"
+    _issues=$(echo "$_sid_events" | jq '[.[] | select(.issue != null and .issue > 0) | .issue] | unique | length' 2>/dev/null || echo 0)
+    _route=$(echo "$_sid_events" | jq -r '
+      [.[] | select(.event == "sub_start")] |
+      {patch: ([.[] | select(.size == "XS" or .size == "S")] | length),
+       pr:    ([.[] | select(.size == "M" or .size == "L")] | length)} |
+      if .patch > 0 and .pr > 0 then "mixed"
+      elif .patch > 0 then "patch"
+      elif .pr > 0 then "pr"
+      else "?" end
+    ' 2>/dev/null || echo "?")
+    _t1=$(echo "$_sid_events" | jq '[.[] | select(.event == "recovery" and .tier == "1")] | length' 2>/dev/null || echo 0)
+    _t2=$(echo "$_sid_events" | jq '[.[] | select(.event == "recovery" and .tier == "2")] | length' 2>/dev/null || echo 0)
+    _t3=$(echo "$_sid_events" | jq '[.[] | select(.event == "recovery" and .tier == "3")] | length' 2>/dev/null || echo 0)
+    _kills=$(echo "$_sid_events" | jq '[.[] | select(.event == "watchdog_kill")] | length' 2>/dev/null || echo 0)
+    _reopen=$(echo "$_sid_events" | jq '[.[] | select(.event == "verify_reopen_cycle")] | length' 2>/dev/null || echo 0)
+    _outcome="ok"
+    [[ "$_t3" -gt 0 || "$_kills" -gt 0 ]] && _outcome="warn"
+    _row="| ${_sid} | ${_date} | ${_route} | ${_issues} | T1:${_t1}/T2:${_t2}/T3:${_t3} kills:${_kills} reopen:${_reopen} | ${_outcome} |"
+    if [[ -z "$SESSIONS_TABLE" ]]; then
+      SESSIONS_TABLE="$_row"
+    else
+      SESSIONS_TABLE="${SESSIONS_TABLE}
+${_row}"
+    fi
+    TOTAL_ISSUES=$(( TOTAL_ISSUES + _issues ))
+    TOTAL_T1=$(( TOTAL_T1 + _t1 ))
+    TOTAL_T2=$(( TOTAL_T2 + _t2 ))
+    TOTAL_T3=$(( TOTAL_T3 + _t3 ))
+    TOTAL_KILLS=$(( TOTAL_KILLS + _kills ))
+    TOTAL_REOPEN=$(( TOTAL_REOPEN + _reopen ))
+  done
+  [[ -z "$SESSIONS_TABLE" ]] && SESSIONS_TABLE="| (no sessions) | — | — | — | — | — |"
+
+  # Cross-session patterns
+  RECURRING_T3=""
+  if [[ "$TOTAL_T3" -gt 1 ]]; then
+    RECURRING_T3="- Tier 3 recoveries across multiple sessions (total: ${TOTAL_T3}) — investigate recurring root cause"
+  fi
+  RECURRING_KILLS=""
+  if [[ "$TOTAL_KILLS" -gt 1 ]]; then
+    RECURRING_KILLS="- Watchdog kills across multiple sessions (total: ${TOTAL_KILLS}) — check for systematic timeouts"
+  fi
+  CONCURRENT_HOTSPOTS=$(echo "$PERIOD_EVENTS" | jq -r '
+    [.[] | select(.event == "concurrent_commit_detected") | .phase] |
+    group_by(.) | map({phase: .[0], count: length}) | sort_by(-.count) |
+    if length == 0 then ""
+    else .[] | "- Concurrent commit hotspot: phase=\(.phase) count=\(.count)"
+    end
+  ' 2>/dev/null || true)
+  PATTERNS_SECTION=""
+  [[ -n "$RECURRING_T3" ]] && PATTERNS_SECTION="${PATTERNS_SECTION}${RECURRING_T3}
+"
+  [[ -n "$RECURRING_KILLS" ]] && PATTERNS_SECTION="${PATTERNS_SECTION}${RECURRING_KILLS}
+"
+  [[ -n "$CONCURRENT_HOTSPOTS" ]] && PATTERNS_SECTION="${PATTERNS_SECTION}${CONCURRENT_HOTSPOTS}
+"
+  [[ -z "$PATTERNS_SECTION" ]] && PATTERNS_SECTION="- (no recurring patterns detected in this period)"
+
+  # Improvement candidates (from Tier 3 recoveries across sessions)
+  IMPROVEMENT_SECTION=""
+  if [[ "$TOTAL_T3" -gt 0 ]]; then
+    IMPROVEMENT_SECTION=$(echo "$PERIOD_EVENTS" | jq -r '
+      [.[] | select(.event == "recovery" and .tier == "3")] |
+      group_by(.phase) |
+      map("- (new candidate) Tier 3 recovery in phase=\(.[0].phase) — observed in \(length) session(s)") |
+      .[]
+    ' 2>/dev/null || echo "- (Tier 3 recoveries detected — see Sessions covered table)")
+  fi
+  [[ -z "$IMPROVEMENT_SECTION" ]] && IMPROVEMENT_SECTION="- (none — no Tier 3 recoveries in this period)"
+
+  # Trend section
+  TREND_T1_RATE=$(echo "$SESSION_COUNT $TOTAL_T1" | awk '{if ($1 > 0) printf "%.1f/session", $2/$1; else print "N/A"}')
+  TREND_T2_RATE=$(echo "$SESSION_COUNT $TOTAL_T2" | awk '{if ($1 > 0) printf "%.1f/session", $2/$1; else print "N/A"}')
+  TREND_T3_RATE=$(echo "$SESSION_COUNT $TOTAL_T3" | awk '{if ($1 > 0) printf "%.1f/session", $2/$1; else print "N/A"}')
+  TREND_KILL_RATE=$(echo "$SESSION_COUNT $TOTAL_KILLS" | awk '{if ($1 > 0) printf "%.1f/session", $2/$1; else print "N/A"}')
+  TREND_REOPEN_RATE=$(echo "$SESSION_COUNT $TOTAL_REOPEN" | awk '{if ($1 > 0) printf "%.1f/session", $2/$1; else print "N/A"}')
+
+  cat > "$PERIOD_OUTPUT" << PERIOD_EOF
+# /auto Period Report — ${DATE_RANGE}
+
+**Period**: ${DATE_RANGE}
+**Sessions in period**: ${SESSION_COUNT}
+**Total issues processed**: ${TOTAL_ISSUES}
+
+## Sessions covered
+
+| SID | Date | Route | Issues | Recovery T1/T2/T3 kills reopen | Outcome |
+|---|---|---|---|---|---|
+${SESSIONS_TABLE}
+
+## Cross-session patterns
+
+${PATTERNS_SECTION}
+## Improvement candidates
+
+${IMPROVEMENT_SECTION}
+
+## Trend
+
+- Tier 1 recovery rate: ${TREND_T1_RATE}
+- Tier 2 recovery rate: ${TREND_T2_RATE}
+- Tier 3 recovery rate: ${TREND_T3_RATE}
+- Watchdog kill frequency: ${TREND_KILL_RATE}
+- Verify FAIL reopen cycles: ${TREND_REOPEN_RATE}
+PERIOD_EOF
+
+  echo "Period report written to: $PERIOD_OUTPUT"
+  exit 0
+fi
 
 # List mode: show distinct session_ids from event log
 if [[ "$LIST_MODE" == "true" ]] || [[ -z "$SESSION_ID" ]]; then

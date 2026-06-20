@@ -180,3 +180,61 @@ BODY_EOF
     grep -q "#471" "$OUTPUT_PATH"
     grep -q "auto-run" "$OUTPUT_PATH"
 }
+
+@test "success: --day generates _period report" {
+    # Write synthetic events covering 2026-06-14 with two sessions
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"day-aaa","size":"S"}
+{"ts":"2026-06-14T10:05:00Z","issue":100,"event":"sub_complete","session_id":"day-aaa","exit_code":"0"}
+{"ts":"2026-06-14T11:00:00Z","issue":200,"event":"sub_start","session_id":"day-bbb","size":"M"}
+{"ts":"2026-06-14T11:30:00Z","issue":200,"event":"sub_complete","session_id":"day-bbb","exit_code":"0"}
+{"ts":"2026-06-15T08:00:00Z","issue":300,"event":"sub_start","session_id":"other-ccc","size":"S"}
+FIXTURE_EOF
+
+    PERIOD_OUTPUT="$BATS_TEST_TMPDIR/_period/2026-06-14.md"
+    mkdir -p "$BATS_TEST_TMPDIR/_period"
+
+    run bash "$SCRIPT" --day 2026-06-14 --output "$PERIOD_OUTPUT" --no-github
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Period report written to"* ]]
+    [ -f "$PERIOD_OUTPUT" ]
+
+    # Period report structure
+    grep -q "Period Report.*2026-06-14" "$PERIOD_OUTPUT"
+    grep -q "Sessions covered" "$PERIOD_OUTPUT"
+    grep -q "Cross-session patterns" "$PERIOD_OUTPUT"
+    grep -q "Improvement candidates" "$PERIOD_OUTPUT"
+    grep -q "Trend" "$PERIOD_OUTPUT"
+
+    # Sessions from 2026-06-14 should appear; 2026-06-15 event should NOT
+    grep -q "day-aaa" "$PERIOD_OUTPUT"
+    grep -q "day-bbb" "$PERIOD_OUTPUT"
+    ! grep -q "other-ccc" "$PERIOD_OUTPUT"
+
+    # _period path marker in output
+    grep -q "_period" "$output"
+}
+
+@test "success: --since-days generates _period since report" {
+    # Write synthetic events for today and 3 days ago (relative dates replaced with fixed dates)
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-06-14T10:00:00Z","issue":500,"event":"sub_start","session_id":"recent-aaa","size":"M"}
+{"ts":"2026-06-14T10:30:00Z","issue":500,"event":"sub_complete","session_id":"recent-aaa","exit_code":"0"}
+{"ts":"2026-06-14T11:00:00Z","issue":501,"event":"sub_start","session_id":"recent-bbb","size":"S"}
+{"ts":"2026-06-14T11:10:00Z","issue":501,"event":"sub_complete","session_id":"recent-bbb","exit_code":"0"}
+FIXTURE_EOF
+
+    PERIOD_DIR="$BATS_TEST_TMPDIR/_period"
+    mkdir -p "$PERIOD_DIR"
+
+    run bash "$SCRIPT" --since-days 7 --output "${PERIOD_DIR}/since-test-7d.md" --no-github
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Period report written to"* ]]
+    [ -f "${PERIOD_DIR}/since-test-7d.md" ]
+
+    # Period report structure
+    grep -q "Period Report" "${PERIOD_DIR}/since-test-7d.md"
+    grep -q "Sessions covered" "${PERIOD_DIR}/since-test-7d.md"
+    grep -q "Trend" "${PERIOD_DIR}/since-test-7d.md"
+    grep -q "_period" "$output"
+}
