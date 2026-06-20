@@ -1,0 +1,126 @@
+# Issue #707: verify: FAIL 時に機械可読 marker 付き comment を append し、次フェーズ skill が consume
+
+## Overview
+
+`/verify` FAIL 検出時に機械可読 marker (`<!-- wholework-event: type=verify-fail ... -->`) 付きの comment を Issue へ append する。ユーザーと Claude が同じ場所 (comment) を参照することで FAIL コンテキストを取得できるようにする。
+
+AC body の checkbox は引き続き mutable SSoT、comment は append-only な history として機能する (R1 #705 の append-only / mutable 分離原則に従う)。
+
+Marker 形式は `modules/l0-surfaces.md` の SSoT フォーマット (`<!-- wholework-event: type=<type> phase=<phase> issue=<N> -->`) に準拠し、`iteration` を追加属性として付与する。
+
+## Changed Files
+
+- `skills/verify/SKILL.md`: Step 9 (b) の FAIL フローに FAIL marker comment 投稿ステップと `verify_fail_marker_posted` イベント emit ステップを追加 — bash 3.2+ 互換
+- `scripts/emit-event.sh`: `verify_fail_marker_posted` イベント型のスキーマドキュメントを追加 — bash 3.2+ 互換
+- `docs/workflow.md`: Verify Fail Flow セクションに FAIL marker comment 投稿の記述を追加
+- `docs/ja/workflow.md`: `docs/workflow.md` 変更の翻訳同期 (Japanese mirror)
+
+## Implementation Steps
+
+**Step 1**: `skills/verify/SKILL.md` Step 9 (b) の FAIL フロー両ブロックに FAIL marker comment ステップを追加 (→ AC1)
+
+_`NEXT_ITERATION < VERIFY_MAX_ITERATIONS` ブロック_: 「Remove all `phase/*` labels」(`gh-label-transition.sh "$NUMBER"`) の直後、「Output guidance for the user」の直前に以下ステップを挿入:
+
+```
+    - Post a machine-readable FAIL marker comment:
+      Write the following to `.tmp/verify-fail-comment-$NUMBER.md` with Write tool:
+      ```
+      <!-- wholework-event: type=verify-fail phase=verify issue=$NUMBER iteration=$NEXT_ITERATION -->
+      ## /verify FAIL — {TIMESTAMP}
+
+      **Failed acceptance conditions:**
+      {for each FAIL condition from auto-verification targets:}
+      - [ ] {condition text}
+        - Reason: {failure reason from verify execution}
+
+      **Next action**: `phase/*` ラベル削除済み、Issue reopen 済み (CLOSED の場合)。次走時 (`/code --patch $NUMBER` 等) はこの comment を一級入力として読み込んでください。
+      ```
+      Then post:
+      ```bash
+      ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh "$NUMBER" ".tmp/verify-fail-comment-$NUMBER.md"
+      rm -f .tmp/verify-fail-comment-$NUMBER.md
+      ```
+    - Emit `verify_fail_marker_posted` event (only when `AUTO_EVENTS_LOG` is set):
+      ```bash
+      if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+        source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
+        EMIT_ISSUE_NUMBER=$NUMBER emit_event "verify_fail_marker_posted" \
+          "iteration=${NEXT_ITERATION}" \
+          "failed_ac_count=${FAIL_COUNT}"
+      fi
+      ```
+      (`comment_id` は `gh-issue-comment.sh` がコメント ID を返さないため省略)
+```
+
+_`NEXT_ITERATION >= VERIFY_MAX_ITERATIONS` ブロック_: 「Post a comment with the max-iterations notice」の直後、「Assign `phase/verify` label」の直前に同様の FAIL marker comment 投稿ステップと `verify_fail_marker_posted` イベント emit ステップを追加。Next action テキストは「Max iterations reached. Issue stays in `phase/verify` for human judgment.」に変更する。
+
+**Step 2**: `scripts/emit-event.sh` に `verify_fail_marker_posted` イベント型スキーマを追加 (→ AC2)
+
+既存のイベントスキーマドキュメントコメントブロック (末尾) に以下を追加:
+
+```bash
+# verify_fail_marker_posted: /verify FAIL 時に machine-readable marker comment を Issue に append した
+#   iteration=<n>                 verify iteration counter (NEXT_ITERATION)
+#   failed_ac_count=<n>           number of FAIL conditions in auto-verification targets
+```
+
+**Step 3**: `docs/workflow.md` の Verify Fail Flow セクションを更新 (→ doc sync)
+
+`### Verify Fail Flow` セクションの冒頭説明文:
+
+変更前:
+```
+When `/verify` detects a FAIL among auto-verification targets, it reopens the Issue and removes all `phase/*` labels.
+```
+
+変更後:
+```
+When `/verify` detects a FAIL among auto-verification targets, it appends a machine-readable FAIL marker comment (see `modules/l0-surfaces.md` for the `wholework-event: type=verify-fail` format), reopens the Issue, and removes all `phase/*` labels.
+```
+
+フローダイアグラム内の `"FAIL"` 分岐ラベルテキストは変更不要 (ダイアグラムレベルは高水準のため)。
+
+**Step 4**: `docs/ja/workflow.md` の対応セクションを日本語で同期更新 (→ translation sync)
+
+`### Verify Fail フロー` セクションの冒頭説明文を日本語で対応更新:
+
+変更前:
+```
+`/verify` が自動検証対象の中で FAIL を検出すると、Issue を reopen し全 `phase/*` ラベルを除去します。
+```
+
+変更後:
+```
+`/verify` が自動検証対象の中で FAIL を検出すると、機械可読 FAIL marker comment を Issue に append し (`modules/l0-surfaces.md` の `wholework-event: type=verify-fail` フォーマット参照)、Issue を reopen し全 `phase/*` ラベルを除去します。
+```
+
+## Verification
+
+### Pre-merge
+
+- <!-- verify: file_contains "skills/verify/SKILL.md" "wholework-event: type=verify-fail" --> `/verify` SKILL.md に FAIL marker comment 投稿ステップが追記されている
+- <!-- verify: file_contains "scripts/emit-event.sh" "verify_fail_marker_posted" --> `verify_fail_marker_posted` イベント型が追加されている
+- <!-- verify: grep "wholework-event: type=verify-fail" "modules/l0-surfaces.md" --> `modules/l0-surfaces.md` に verify-fail marker type が記載されている
+
+### Post-merge
+
+- `/verify N` を意図的に FAIL させ、Issue に機械可読 marker 付き comment が append され、`gh issue view --json comments` で当該 marker が grep できることを観察 <!-- verify-type: manual -->
+- 次走 `/code --patch N` (または auto-retry) で本 comment が consume されたことが Spec retrospective に記録されることを観察 <!-- verify-type: opportunistic -->
+
+## Consumed Comments
+
+- saito (MEMBER / first-class) — 2026-06-20T16:12:15Z: Post-merge AC の verify-type タグ修正 (A1: manual, A2: opportunistic) + #705 ブロッカー解消確認 (https://github.com/saitoco/wholework/issues/707#issuecomment-4758940147)
+
+## Notes
+
+**[Auto-resolve A1] AC3 既存コンテンツで充足**:
+`modules/l0-surfaces.md` には #705 (R1) で既に `<!-- wholework-event: type=verify-fail phase=verify issue=42 -->` がExample として記載されており、AC3 の `grep "wholework-event: type=verify-fail" "modules/l0-surfaces.md"` は現状でも PASS する。l0-surfaces.md への変更は不要。
+
+**[Auto-resolve A2] comment_id を省略**:
+`scripts/gh-issue-comment.sh` は Comment ID を返さないため、`verify_fail_marker_posted` イベントの `comment_id` フィールドを省略する。`iteration` と `failed_ac_count` で代替識別が可能。
+
+**[Auto-resolve A3] marker 属性フォーマット**:
+Issue 提案の `phase-at-fail=verify` は l0-surfaces.md SSoT の `phase=verify` と異なる。SSoT フォーマット (`phase=verify`) を採用し、Issue 固有の `phase-at-fail` ではなく標準属性を使用する。`iteration` は追加属性として付与する。
+
+**次フェーズ skill での consume (実装外)**:
+`/code` 再走時・`/spec` 再走時での `type=verify-fail` comment consume は Issue #707 の対象外。l0-surfaces.md の Comment Consumption Procedure は既に bot 例外 (`<!-- wholework-event:` marker 付き comment を consume する) を定義しており、スキル側の consume 実装は別 Issue で追加する。
