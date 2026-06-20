@@ -75,3 +75,20 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective (Auto-Resolve Log): AC #2 の verify command を `file_contains` → `grep "@test"` に変更した旨、および `tests/audit-progress.bats` の取り扱いを scope 外とした旨を記録 / https://github.com/saitoco/wholework/issues/737#issuecomment-4759737715
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC が auto-verify 可能な形式で完全に整備されており、UNCERTAIN ゼロ。
+
+#### code
+- 4 件の test (parent not found / 0 sub-issues / blockedBy resolved / state classification) を新規作成し全 PASS。
+
+#### verify
+- pre-merge AC4 (CI green) は setup-labels.bats の pre-existing failure により workflow conclusion=failure。本 Issue の対象 bats は green のため代替検証 PASS。
+- post-merge AC5 (opportunistic) は verify 実行時に直接観測 (4 件、全シナリオカバー) で確認 → checkbox 自動更新。
+
+### Improvement Proposals
+- N/A
