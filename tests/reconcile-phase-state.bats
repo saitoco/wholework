@@ -817,6 +817,7 @@ MOCK_EOF
 
     export MOCK_SPEC_PATH="$BATS_TEST_TMPDIR/no-spec"
     mkdir -p "$BATS_TEST_TMPDIR/no-spec"
+    touch "$BATS_TEST_TMPDIR/no-spec/issue-42-spec.md"
 
     run bash "$SCRIPT" code-patch 42 --check-precondition --strict
     precondition_status=$status
@@ -986,6 +987,80 @@ MOCK_EOF
     [ "$status" -eq 0 ]
     [[ "$output" == *'"matches_expected":true'* ]]
     [[ "$output" == *"async"* ]]
+}
+
+@test "code-patch precondition: Spec missing and Size != XS -> mismatch" {
+    export MOCK_SPEC_PATH="$BATS_TEST_TMPDIR/empty-spec-patch"
+    mkdir -p "$BATS_TEST_TMPDIR/empty-spec-patch"
+
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+echo "phase/ready"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    cat > "$MOCK_DIR/get-issue-size.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "M"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    run bash "$SCRIPT" code-patch 42 --check-precondition --strict
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
+    [[ "$output" == *"Spec missing"* ]]
+}
+
+@test "code-patch precondition: Spec missing but Size XS -> matches_expected true" {
+    export MOCK_SPEC_PATH="$BATS_TEST_TMPDIR/empty-spec-xs"
+    mkdir -p "$BATS_TEST_TMPDIR/empty-spec-xs"
+
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+echo "phase/ready"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    cat > "$MOCK_DIR/get-issue-size.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    run bash "$SCRIPT" code-patch 42 --check-precondition --strict
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"matches_expected":true'* ]]
+}
+
+@test "code-pr precondition: Spec missing and Size != XS -> mismatch" {
+    export MOCK_SPEC_PATH="$BATS_TEST_TMPDIR/empty-spec-pr"
+    mkdir -p "$BATS_TEST_TMPDIR/empty-spec-pr"
+
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+echo "phase/ready"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    cat > "$MOCK_DIR/get-issue-size.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "S"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    run bash "$SCRIPT" code-pr 42 --check-precondition --strict
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
+    [[ "$output" == *"Spec missing"* ]]
 }
 
 @test "spec completion: spec exists + no ready label -> mismatch includes hint_recent_commit and hint_pr_state" {
