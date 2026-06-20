@@ -134,6 +134,13 @@ exit 0
 MOCK
     chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
 
+    # Mock pre-merge-check.sh: default exits 0 (CLEAN) so existing tests pass
+    cat > "$MOCK_DIR/pre-merge-check.sh" <<'MOCK'
+#!/bin/bash
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/pre-merge-check.sh"
+
     # Mock gh-label-transition.sh: no-op, logs calls for verification
     cat > "$MOCK_DIR/gh-label-transition.sh" <<'MOCK'
 #!/bin/bash
@@ -537,4 +544,17 @@ MOCK
     run bash "$SCRIPT" 88
     [ "$status" -eq 0 ]
     grep -q "phase_complete" "$EMIT_LOG"
+}
+
+@test "baseline-gate: pre-merge-check.sh exit 2 aborts merge with exit 1" {
+    cat > "$MOCK_DIR/pre-merge-check.sh" <<'MOCK'
+#!/bin/bash
+echo "NEW_FAILURE: forbidden-expressions check passes on main but fails on feature"
+exit 2
+MOCK
+    chmod +x "$MOCK_DIR/pre-merge-check.sh"
+
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"new FAILURE"* || "$output" == *"NEW_FAILURE"* || "$output" == *"Error: pre-merge-check"* ]]
 }
