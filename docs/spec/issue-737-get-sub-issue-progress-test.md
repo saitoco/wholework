@@ -46,6 +46,32 @@
   - AC #2 の verify command: `grep "@test"` を使用 (count-based な件数確認は post-merge opportunistic に移動)。
   - `tests/audit-progress.bats` の取り扱い: 追加のみ (削除・rename なし) の最小リスク方針。
 
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- None
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Followed the same `WHOLEWORK_SCRIPT_DIR` + `MOCK_DIR/gh-graphql.sh` mock pattern used by `tests/audit-progress.bats` for consistency
+- Used `python3 -c "import json,sys; ..."` for JSON field extraction in assertions, consistent with existing test patterns
+- Did not delete or modify `tests/audit-progress.bats` — additive-only approach as per Spec Notes
+
+### Deferred Items
+- `tests/audit-progress.bats` handling (migrate/delete) deferred to a separate Issue as per Spec
+
+### Notes for Next Phase
+- All 4 bats tests pass locally and the full test suite (900 tests) passes with exit code 0
+- AC #4 (CI check) requires a CI run on the pushed commit — verify after merge
+
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective (Auto-Resolve Log): AC #2 の verify command を `file_contains` → `grep "@test"` に変更した旨、および `tests/audit-progress.bats` の取り扱いを scope 外とした旨を記録 / https://github.com/saitoco/wholework/issues/737#issuecomment-4759737715
