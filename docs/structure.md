@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (58 files)
+├── scripts/             # Utility scripts used by skills and agents (59 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -42,7 +42,7 @@ wholework/
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
 ├── examples/            # Example files for Wholework features
 │   └── decomposition/   # Decomposition YAML samples for /issue --from-decomposition-file
-├── tests/               # Bats test files for scripts (79 files)
+├── tests/               # Bats test files for scripts (80 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -203,6 +203,7 @@ Key modules:
 - `scripts/claude-watchdog.sh` — watchdog wrapper for `claude -p` invocations (hang detection + 1 retry)
 - `scripts/reconcile-phase-state.sh` — general-purpose state reconciler for precondition and completion checks across all phases; outputs JSON v1 per `modules/phase-state.md` SSoT (supersedes watchdog-reconcile.sh)
 - `scripts/wait-ci-checks.sh` — wait for all CI checks to complete on a PR before running claude
+- `scripts/pre-merge-check.sh` — baseline diff classifier: runs a specified check on both base and head branches in ephemeral worktrees; classifies result as NEW_FAILURE (exit 2) / PRE_EXISTING / FIXED / CLEAN (exit 0) / env error (exit 1)
 - `scripts/worktree-merge-push.sh` — acquire short-lived patch lock and merge worktree branch + push to main (with rebase retry)
 - `scripts/detect-wrapper-anomaly.sh` — detect known failure patterns in shell wrapper output and generate Auto Retrospective markdown fragments
 - `scripts/test-failure-classify.sh` — classify test failure output into recovery categories (snapshot/mock/fixture/logic/infra); exit 0 = repairable, exit 1 = not repairable

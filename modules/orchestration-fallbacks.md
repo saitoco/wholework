@@ -416,6 +416,37 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ---
 
+## baseline-failure
+
+### Symptom
+- `run-merge.sh` exits non-zero before launching `claude -p`, with message: `Error: pre-merge-check.sh detected a new FAILURE (not pre-existing on base branch)`
+- `pre-merge-check.sh` exits 2 (NEW_FAILURE): the check passes on the base branch but fails on the PR head branch
+- Typical cause: a commit on the PR head branch introduced a new forbidden expression or other check violation
+
+### Applicable Phases
+- merge (run-merge.sh baseline pre-merge gate — before claude invocation)
+
+### Fallback Steps
+1. Identify the failing check: run `scripts/pre-merge-check.sh <pr-number>` manually and read the NEW_FAILURE output line
+2. Switch to the PR branch: `git checkout <head-ref>`
+3. Run the failing check locally: `bash scripts/check-forbidden-expressions.sh` (or the relevant check script)
+4. Fix the violation in the implementation files (e.g., replace the forbidden expression with the approved alternative)
+5. Commit the fix with DCO sign-off: `git commit -s -m "fix: resolve forbidden expression in <file>"`
+6. Push the fix to the PR branch: `git push origin <head-ref>`
+7. Re-run `/merge <pr-number>` to retry the merge phase
+
+### Escalation
+- If the failure is a pre-existing violation that was incorrectly classified as NEW_FAILURE (unexpected): inspect both branches manually with `bash scripts/check-forbidden-expressions.sh` and compare; if this is a misclassification, report as a bug in `pre-merge-check.sh`
+- If `pre-merge-check.sh` exits 1 (env error: ref resolution, fetch, or worktree failure), `run-merge.sh` proceeds fail-open — the merge is not blocked; investigate the env error separately
+
+### Rationale
+- Introduced in #719: `/auto` merge phase encountered a pre-existing Forbidden Expressions FAILURE on main (`docs/spec/issue-710-blocked-by-workflow.md`) and `--non-interactive` auto-resolve policy silently continued; without baseline diff, there was no machine-readable distinction between pre-existing and new failures
+- `pre-merge-check.sh` runs both base and head branches in ephemeral worktrees and classifies the result (NEW_FAILURE / PRE_EXISTING / FIXED / CLEAN); only exit 2 (NEW_FAILURE) blocks the merge
+- env error (exit 1) is fail-open because blocking all merges due to check infrastructure failure is a worse outcome than proceeding with the existing GitHub merge-state gates and human review
+- See also: #702 (triggering incident — Forbidden Expressions pre-existing FAILURE auto-resolved in merge), #704 (autonomy tier matrix)
+
+---
+
 ## Operational Notes
 
 This catalog is consumed by:

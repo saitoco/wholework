@@ -177,21 +177,57 @@ merge フェーズが遭遇する pre-merge check の FAILURE を **pre-existing
 - merge フェーズが Forbidden Expressions FAILURE を「どこで」遭遇するか当初不明だったが、調査の結果 merge SKILL.md は check を直接実行せず、`gh-pr-merge-status.sh` の `ci_failing` (CI ジョブ結果) 経由であることを確認。baseline diff を local 再実行にすることで CI 非依存・deterministic に解決した。
 - pre-existing FAILURE が現在 main に実在する (`docs/spec/issue-710-blocked-by-workflow.md`) ことを確認。本 PR 自体が PRE_EXISTING 分類のセルフ検証 (dogfood) になる。同時に、CI 全体 conclusion を pre-merge AC に使えないこと (forbidden-expressions ジョブが落ち run conclusion=failure になるため) も判明し、ファイルベースの deterministic AC のみを採用した。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- `pre-merge-check.sh` の `run_check_on_ref` 関数で `worktree add` の出力を `>/dev/null 2>&1` に変更した (Spec は `2>/dev/null` のみ)。worktree 作成は verbose なため標準出力も抑制した方がクリーン。
+- `_check_exit` の初期化を `local _check_exit=0` としたかったが、bash 3.2 互換のため `_check_exit=0` で代入し `( cd "$wt" && bash "$CHECK_REL" ) ...; _check_exit=$?` パターンにした。サブシェルで捕捉。
+- `tests/pre-merge-check.bats` の `_setup_feature_branch` でブランチ固有の marker file (`skills/marker-${branch}.md`) を追加する設計変更が必要だった。Spec のシナリオ記述はコンテンツ差が前提だったが、base と head が同一コンテンツのテストケース (PRE_EXISTING, CLEAN) では `git commit` が空コミットで失敗するため。
+
+### Design Gaps/Ambiguities
+
+- Spec の `tests/pre-merge-check.bats` シナリオ説明は「skills/x.md に FORBIDDEN 文字列の有無で分類を作る」としていたが、PRE_EXISTING (base=FAIL / head=FAIL) と CLEAN (base=PASS / head=PASS) のシナリオで base と head が同一コンテンツになるため、git commit が空コミットエラーとなることがシナリオ設計上の見落としだった。marker ファイル追加で解消。
+- Spec Notes に「本 Spec を含む docs/spec/* は forbidden-expressions の SCAN_DIRS に含まれる」との注記があり、retrospective で deprecated term を直接引用しないよう注意が必要だった。実際に遵守した。
+
+### Rework
+
+- `tests/pre-merge-check.bats` の `_setup_feature_branch` 関数を初版実装後に修正した (marker file 追加)。実行時に PRE_EXISTING と CLEAN テストが失敗し、空コミット問題と判明したため 1 回目テスト実行後に即時修正。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
-- baseline gate は `run-merge.sh` の wrapper 側 (claude 起動前) に設置。`pre-merge-check.sh` の exit 2 (NEW_FAILURE) のみ merge を abort、それ以外 (CLEAN/FIXED/PRE_EXISTING/env error) は続行 (env error は fail-open)。
-- 対象 check は Forbidden Expressions のみ。`pre-merge-check.sh` 内の dispatch table で modular に拡張可能。案 B (SSoT 管理) は deferred。
-- 各 ref 自身の `scripts/check-forbidden-expressions.sh` を ephemeral worktree (`git worktree add --detach origin/<ref>`) で実行して比較する (案 A literal)。
+- MUST/SHOULD 問題はゼロ。CONSIDER 3 件 (SCRIPT_DIR 未使用、env error テスト Spec 外、fail-open テスト不足) はすべてスキップ判断。
+- review-bug の SHOULD 2 件 (EXIT trap 不在、ref バリデーション) は検証で false positive として排除。自動マージ文脈の shell utility script に対する過剰なセキュリティルール適用だった。
+- CI の Forbidden Expressions FAILURE は pre-existing と確認済み (Phase Handoff から引継ぎ)。review 結果は COMMENT (REQUEST_CHANGES なし)。
 
 ### Deferred Items
 - 全 check 自動化 (dispatch table 拡張) は将来の改善。
 - 案 B (`docs/baseline-failures.md` SSoT 化) は必要になったら別 Issue。
 - `docs/spec/issue-710-blocked-by-workflow.md` の Forbidden Expressions pre-existing FAILURE 解消は独立の別 Issue (Post-merge AC2 の前提)。
+- CONSIDER 3 件は merge 後に任意で対応 (blocking なし)。
 
 ### Notes for Next Phase
-- `tests/run-merge.bats` は実 `run-merge.sh` を `WHOLEWORK_SCRIPT_DIR=$MOCK_DIR` で動かすため、`setup()` に `pre-merge-check.sh` の mock (default exit 0) 追加が必須。未追加だと新規呼び出しが `set -e` で既存テストを全滅させる。
-- 本 Spec を含む `docs/spec/*` は forbidden-expressions の SCAN_DIRS に含まれる。新規ファイルに deprecated term を直接引用すると NEW_FAILURE を生むため、`旧称:` prefix か説明的表現を使う。
-- `pre-merge-check.sh` は bash 3.2 / macOS 互換で実装する (mapfile・連想配列不使用、`mktemp -d` 使用、worktree 後始末は `|| true`)。
-- CI 全体 conclusion (`gh run list --workflow=test.yml`) は pre-existing forbidden-expressions failure のため pre-merge AC に使わない。
+- MUST/SHOULD 問題なし → `/merge 723` で即座にマージ可能。
+- CI の Forbidden Expressions FAILURE は pre-existing (`docs/spec/issue-710-blocked-by-workflow.md`)。`run-merge.sh` の新 baseline gate が PRE_EXISTING と分類して通過することが dogfood 検証になる。
+- `run-merge.bats` の emit 系テスト (tests 21, 23) は pre-existing failures — スコープ外、merge 判断に影響しない。
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Spec の Implementation Step 5 は `tests/pre-merge-check.bats` のシナリオを 6 種列挙したが、実装では `env error: headRefName empty` と `env error: baseRefName empty` の 2 シナリオを追加した。これは Spec 記述の粒度不足ではなく env error ハンドリングの具体的なテストケース設計の結果であり、設計意図には合致している。Spec のシナリオ列挙は「最低限」の記述であることが多く、実装時に網羅的テストが追加されることは正常なパターン。
+
+また、`SCRIPT_DIR` 変数が `WHOLEWORK_SCRIPT_DIR` 環境変数への依存を宣言しているが、実装内で未使用であることを確認した。Spec は `WHOLEWORK_SCRIPT_DIR` を参照しているが、`CHECK_REL` が worktree 相対パスを使うため `SCRIPT_DIR` が不要になった実装上の乖離。将来 dispatch table が sibling scripts を直接呼ぶ場合に使用されることが期待される設計の先取り可能性がある。CONSIDER レベルで記録。
+
+### Recurring Issues
+
+- `fail-open` シナリオ (env error → continue) のテストが Spec に記述されているが、対応するテストが追加されなかった (fail-open path は間接的に既存テストがカバー)。behavior spec と test coverage の対応が明示されていないパターンは、テスト追加の際に繰り返し発生する可能性がある。
+- review-bug の SHOULD 検出 (EXIT trap 不在、ref バリデーション不足) は両方とも検証で false positive として排除された。自動マージ文脈の shell utility script に対する汎用セキュリティルールの適用は過検出しやすい。
+
+### Acceptance Criteria Verification Difficulty
+
+- 7 件すべての AC が `file_exists` / `grep` / `file_contains` による deterministic チェックで PASS。UNCERTAIN が 0 件というのは AC 設計が適切だった証左。
+- CI の Forbidden Expressions check FAILURE は pre-existing と明示されており、review フェーズでの誤判断リスクがなかった (Phase Handoff が有効に機能)。
+- verify command の構文エラーや false negative は発生せず、AC の品質は高かった。

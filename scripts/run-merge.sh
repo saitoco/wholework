@@ -68,6 +68,16 @@ echo "---"
 # Wait for CI checks to complete before running claude
 "$SCRIPT_DIR/wait-ci-checks.sh" "$PR_NUMBER"
 
+# See modules/orchestration-fallbacks.md#baseline-failure
+# Baseline pre-merge gate: distinguish pre-existing vs new FAILURE before merge
+set +e; "$SCRIPT_DIR/pre-merge-check.sh" "$PR_NUMBER"; PRE_MERGE_CHECK_EXIT=$?; set -e
+if [[ "$PRE_MERGE_CHECK_EXIT" -eq 2 ]]; then
+  echo "Error: pre-merge-check.sh detected a new FAILURE (not pre-existing on base branch). Fix the issue and retry merge." >&2
+  exit 1
+elif [[ "$PRE_MERGE_CHECK_EXIT" -ne 0 ]]; then
+  echo "Warning: pre-merge-check.sh could not complete (exit ${PRE_MERGE_CHECK_EXIT}); proceeding (fail-open)." >&2
+fi
+
 # Pass SKILL.md body directly as prompt (same pattern as run-review.sh)
 # /merge has no context: fork, but uses the same approach for consistency
 # See: #284 (context: fork permission non-propagation issue)
