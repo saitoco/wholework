@@ -62,3 +62,31 @@
 - AC1/AC2 の `file_contains` パターン (`$own | map(select(.event == "phase_complete"))`) はすでに line 135 に存在するため、修正前でも PASS する。クロス汚染除去の核心検証は AC3/AC4 の `file_not_contains` チェック。
 - `$own` は sessions jq ブロック内 line 126 でスコープ定義済みのため、差し替えのみで追加変数定義は不要。
 - bats テストでは `session_id` フィールドを JSONL に含めることで異なるセッションを区別する。既存テストは `session_id` を省略しているが (`""` として扱われる)、新規テストでは明示的に `"session_a"` / `"session_b"` を使用する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A
+
+### Design Gaps/Ambiguities
+
+- AC1/AC2 の `file_contains` 検証で `$own` が shell 変数展開されることで false FAIL が起きるリスクがあった。Spec Notes に既に言及あり (`$ev[]` ベースでも line 135 のパターンが PASS するという注意書き)。実際に verify-executor は固定文字列マッチを行うため問題なし。
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `$ev[]` スコープの Phases/Recoveries 集計 2 行を `$own` ベースに差し替えた。`$own` は line 126 で定義済みのため追加変数定義は不要。
+- bats テストで `session_id: "session_a"/"session_b"` を持つイベントを用い、クロス汚染が解消されていることを session 単位で検証した。
+
+### Deferred Items
+- post-merge 確認 (observation AC): 次回同一 Issue を複数セッションで `/auto` 実行した際に実際の rollup 出力を確認する。
+
+### Notes for Next Phase
+- 変更は 2 行のみ (`scripts/auto-events-rollup.sh:148-149`) のシンプルな差し替えで、回帰リスクは低い。
+- AC7 (CI github_check) はプッシュ後に確認が必要。bats テストはローカルで全件 green 確認済み。
