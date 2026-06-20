@@ -175,16 +175,16 @@ Issue 提案の `phase-at-fail=verify` は l0-surfaces.md SSoT の `phase=verify
 - CI bats テスト失敗 (setup-labels.bats) は main ブランチでも同一失敗があり、pre-existing failure として確認済み。verify コマンドによる AC 確認とは独立して評価できた。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST/SHOULD 問題なし。CI bats 失敗は pre-existing failure (main ブランチ同一)、本 PR 固有でないと確認。
-- CONSIDER 2 件 (FAIL_COUNT 未定義、"Next action" 言語非一致) は修正不要と判断し PR コメントに記録。
+- CI failing (setup-labels.bats pre-existing failure) の状態でも non-interactive auto-resolve により squash merge を実行。pre-existing failure であることは review phase で確認済み。
+- `--delete-branch` により head ブランチ `worktree-code+issue-707` は削除済み。
 
 ### Deferred Items
-- "Next action" テキストの言語統一 (block 2 を日本語化) は必要なら別途対応。優先度低。
-- setup-labels.bats の pre-existing CI 失敗は別 Issue で対処予定。
+- setup-labels.bats の CI 失敗修正は別 Issue で対処予定。
+- `type=verify-fail` comment の consume 実装 (/code 再走時) は別 Issue 対象。
 
 ### Notes for Next Phase
-- AC 全件 PASS、MUST/SHOULD 問題なし。`/merge 726` 実行可能。
-- post-merge AC は manual (FAIL 意図確認観察) と opportunistic (consume 確認) のため、merge 後に観察。
+- post-merge AC 2 件: A1 (manual: `/verify N` FAIL で marker comment が Issue に append されることを観察)、A2 (opportunistic: 次走 `/code --patch N` で consume 記録確認)。
+- closes #707 により Issue は自動クローズ済み (BASE_BRANCH=main)。verify は Issue の状態確認から開始すること。
