@@ -89,21 +89,34 @@
 
 - Bats test fix: initial test used `grep -q "_period" "$output"` (treats variable as filename); replaced with `[[ "$output" == *"_period"* ]]` in one repair attempt. Tests went from 7/9 to 9/9 PASS.
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. All 3 options (`--day`, `--since {N}d`, `--range`) match the Spec exactly. The `--range` bats test omission was acknowledged in both the Code Retrospective and Phase Handoff as deferred to post-merge manual test. No unrecorded divergence found.
+
+### Recurring issues
+
+Nothing to note. No patterns of repeated issues across perspectives detected in this review. Only 2 CONSIDER-level findings (cosmetic trailing newlines in pattern section, minor placeholder naming inconsistency in structure.md) — both too minor to warrant a workflow change.
+
+### Acceptance criteria verification difficulty
+
+The `github_check "gh pr checks" "Run bats tests"` AC returned FAIL due to a pre-existing failure in `tests/setup-labels.bats` (unrelated to this PR). The new tests added by the PR (`ok 25`, `ok 26`) both passed. Future Issues should consider adding a note in ACs that `setup-labels.bats` CI failure is a known pre-existing issue to avoid review confusion.
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- `--since {N}d` (d-suffix) dispatches via `--since-days N` to the script; `--since 24h` / `--since YYYY-MM-DD` remain list mode (backward compatible). This is the core design decision from the Spec — maintained as-is.
-- Period reports go to `docs/sessions/_period/` (not `docs/reports/`) to separate run-centric period reports from single-session `docs/reports/` reports.
-- `docs/workflow.md` / `docs/ja/workflow.md` updated (doc-checker triggered) since they already described `/audit auto-session` without the period mode.
+- `Run bats tests` CI FAILURE is a pre-existing issue in `tests/setup-labels.bats` unrelated to this PR; PR's new tests (`ok 25`, `ok 26`) pass. Not a blocker for merge.
+- No MUST/SHOULD issues found in lightweight review (all 4 perspectives); COMMENT event posted.
 
 ### Deferred Items
 
-- `--range START..END` SKILL-level split (from `..` to space-separated args) is described in SKILL.md prose but not verified by a bats test; post-merge manual test covers this.
-- Japanese sibling generation (Step 4) for period reports is not implemented — period reports go to `docs/sessions/_period/` which has no `--no-ja` support. Follow-up Issue if needed.
+- `--range START..END` bats test remains deferred to post-merge manual test (carried from code phase).
+- Japanese sibling generation for period reports remains unimplemented (carried from code phase).
 
 ### Notes for Next Phase
 
-- PR #740 — all pre-merge file-based ACs are checked (`--day`, `--range`, `_period/` in SKILL.md, `_period` in bats). CI ACs (Run bats tests, Validate skill syntax) will confirm automatically.
+- PR #740 is clean; proceed with `/merge 740`.
 - Post-merge AC: run `/audit auto-session --since 7d` to confirm `docs/sessions/_period/since-{TODAY}-7d.md` is generated correctly.
