@@ -147,3 +147,37 @@ Step 5 の L3 guard は Step 2/3 で確定した `ROUTE` 変数を参照。batch
 
 - #704 (autonomy tier): 実装時は route guard のみ (`batch || XL`) で L3 を trigger。autonomy 判定は混ぜない。#704 着地後に 1 行 guard を追加するだけで済む形にしておく。
 - #710 (blocked-by workflow): SKILL.md の retro-proposals 呼び出し箇所に `<!-- TODO (#710) -->` コメントを残す。正式 relationship 設定への切り替えは #710 で行う。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec では route guard を `ROUTE == "XL"` と記述していたが、SKILL.md の既存 Step 3a route table では XL は `sub_issue` を使用するため、guard 条件を `ROUTE == "sub_issue"` に変更した。"XL" は Spec の意図する名称で `sub_issue` が実際の変数値であり整合性を優先した。
+- Spec では forbidden expression "Issue Spec" の修正スコープは記載されていなかったが、既存 Spec Notes に含まれていたため /code フェーズ内で修正した。
+
+### Design Gaps/Ambiguities
+
+- Spec の "Route Detection for ROUTE Variable" Notes では `ROUTE="batch"` を Batch Completion Report で設定する必要があると述べているが、L3 block の配置場所として Step 5 のみ指示されていた。batch mode は Steps 2-6 をスキップするため Batch Completion Report に L3 block を複製追加 (Event scan + Daily rollup + ROUTE="batch" + L3 参照) した。Spec の実装意図と一致している。
+- Spec の Implementation Step 1 コードサンプルに `git push origin main` が含まれていたが、セッション内の commit/push pattern は retrospective commit 時に SKILL.md 外で行われるため、push はコードフェンス内のサンプルとして残しコメントなし。
+
+### Rework
+
+- Spec ファイルの forbidden expression ("Issue Spec") 修正後に `git status` で未コミット変更として残り、PR 作成後に追加コミットを要した。spec フェーズが作成した内容の CI scan 対象への該当をコード実装前に確認すべきだった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- XL route の guard 条件を Spec の "XL" から実際の SKILL.md 変数値 `sub_issue` に変更。SKILL.md Step 3a route table との整合性を優先。
+- Batch Completion Report に L3 block を複製追加 (Event scan + Daily rollup + ROUTE="batch" + L3 参照形式)。Spec が "Step 5 に配置" と述べているが batch は Steps 2-6 をスキップするため必要な対処。
+- forbidden expression fix をコード実装後に発見し追加コミットで対応。PR #711 に 2 コミット含まれる。
+
+### Deferred Items
+- Commit count detection の実装方法: Spec Notes で "events log schema を確認して適切な検出方法を選択" と指示されていたが、`commit` イベントが存在しない場合の fallback (`git log --oneline --since=...`) として SKILL.md に記載済み。runtime での確認は /verify フェーズ後の手動観察に委ねる。
+- `BLOCKED_BY_CANDIDATES` シグネチャ: `<!-- TODO (#710) -->` コメントを SKILL.md に残した。#710 着地まで deferred。
+- #704 (autonomy tier) guard: route guard のみで実装済み。#704 着地後の 1 行追加で完結する設計。
+
+### Notes for Next Phase
+- PR #711 の CI (bats tests) が green になることを確認してから /verify を実行すること。
+- SKILL.md の L3 block は Step 5 と Batch Completion Report の 2 箇所に配置されている。review 時に重複感を指摘される可能性があるが、batch mode が Step 5 に到達しないための必要な設計であることを確認。
+- rubric AC (AC3) はセマンティック判定なので /verify での再評価が重要。実装内容は rubric text の 5 基準すべてを満たしている。
