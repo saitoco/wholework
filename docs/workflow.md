@@ -274,3 +274,4 @@ When the GitHub repository setting "Auto-close issues with merged linked pull re
 - [docs/structure.md](structure.md) — Directory structure, Key Files, agents/modules catalog
 - [docs/guide/workflow.md](guide/workflow.md) — User-facing workflow guide
 - [modules/l0-surfaces.md](../modules/l0-surfaces.md) — L0 (GitHub) surface SSoT and comment consumption policy
+- [modules/autonomy-tier.md](../modules/autonomy-tier.md) — autonomy tier (L2→L1 path permission) SSoT

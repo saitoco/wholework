@@ -267,3 +267,4 @@ GitHub リポジトリ設定「Auto-close issues with merged linked pull request
 - [docs/ja/structure.md](structure.md) — ディレクトリ構成、主要ファイル、agents/modules カタログ
 - [docs/ja/guide/workflow.md](guide/workflow.md) — ユーザー向けワークフローガイド
 - [modules/l0-surfaces.md](../../modules/l0-surfaces.md) — L0 (GitHub) surface の SSoT と comment 消費ポリシー
+- [modules/autonomy-tier.md](../../modules/autonomy-tier.md) — autonomy tier（L2→L1 経路許可）SSoT

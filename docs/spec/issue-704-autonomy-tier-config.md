@@ -148,23 +148,52 @@ non-interactive モードで以下 3 点を自動解決し、Acceptance Criteria
 - 参照する Claude Code primitive (`CronCreate` / `ScheduleWakeup` / `CronList` / `/loop` / `/goal`) の実在性は本セッションの deferred tool / skill 一覧で確認。module は descriptive SSoT のため runtime 呼び出しはなく、名称整合で十分と判断
 - enforcement の実配線 (skill frontmatter 宣言 + loader 照合) は #700-703 へ委譲という設計前提を明確化。本 Issue でマトリクスを先に確定させることで、後続 tail 拡張が tier ゲートを最初から参照できる
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A (実装ステップは Spec の順序・内容通りに完了)
+
+### Design Gaps/Ambiguities
+
+- `docs/guide/autonomy.md` の frontmatter は `type: project` のみ設定。英語版への日本語リンク (`[日本語](../ja/guide/autonomy.md)`) は guide 配下 ja ミラーが未生成のため broken link になるが、これは Spec の "translation sync は top-level docs のみ" 方針に従ったもの。`/doc translate ja` で bulk sync 時に解消される
+- `modules/autonomy-tier.md` の `## Processing Steps (loader behavior)` セクションは実際のローダー実装の仕様を記述しているが、実行はしない (thin enforcement 設計)。実配線は #700-703 に委譲
+
+### Rework
+
+- N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 逸脱なし。実装ステップ 8 件がすべて Spec 通りに完了しており、変更ファイル 12 件 (spec retro 追記分含む) も Spec の Changed Files と整合している。
+- 軽微な不一致: Code Retrospective の Phase Handoff で「全テーブルに `(exhaustive)` マーカー付き」と記述したが、実際の `## Tier × L0 Write Matrix` 見出しには `(exhaustive)` が付いていない。Spec 実装ステップには明示の指定がないため Spec 逸脱ではなく、Code Retro 側の過剰記述。`(exhaustive)` を付けるかどうかは merge 後の follow-up で判断可。
+
+### Recurring issues
+
+- なし。review-bug エージェントが 2 件 SHOULD 所見を出したが、検証 sub-agent が両方 REJECT (false positive) と判定。「文書内で直後/近傍に参照先がある場合は明示不要」という判断パターンは今後の review-bug エージェントへの期待値として共有可能。
+- broken `[日本語]` リンクは Code Retro で先行 acknowledge 済み。review 時の指摘は想定通りで workflow 上の摩擦はなかった。
+
+### Acceptance criteria verification difficulty
+
+- 9 件すべて PASS、UNCERTAIN 0 件。verify command の粒度が適切 (file_exists × 2、grep × 1、file_contains × 5、rubric × 1) で自動検証しやすかった。
+- rubric AC (AC8: 「tier 選択基準と経路許可範囲の説明」) は実装が明示的な Use-when 節と Allowed paths 節を持っていたため grader 判定が容易。Spec の "/review doc consistency 注記" が guide の記述粒度を事前誘導した効果があったと考えられる。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
-- config marker の export 変数は `AUTONOMY_TIER` (string `L1`/`L2`/`L3`、default `L1`)。Issue body の `HAS_AUTONOMY_TIER` ではなく marker テーブル慣習 (値 key は plain 名) に合わせる
-- `modules/autonomy-tier.md` は 4 セクション標準構造。Tier × L0 write の per-surface 判定は `modules/l0-surfaces.md` を参照 (重複定義しない)
-- 経路 D は非対応をカタログに明記、マトリクスの許可列は A/B/C/E のみ
-- 本 Issue は thin enforcement: SKILL.md / agents は編集せず、実ゲーティングは #700-703 に委譲
+- 全 9 件の Pre-merge AC が PASS (file_exists / grep / file_contains / rubric)。CI 全ジョブ SUCCESS。MUST/SHOULD 所見なし → COMMENT event でレビュー投稿済
+- review-bug 所見 2 件 (SHOULD) は検証 sub-agent が false positive と判定してフィルター済。残存 CONSIDER 2 件は既知 defer (broken `[日本語]` link / `(exhaustive)` マーカー) で merge 非ブロッカー
+- MUST/SHOULD 所見がないため Step 12 (issue resolution) はスキップ、Step 13 (AC consistency check) もスキップ
 
 ### Deferred Items
+- broken `[日本語](../ja/guide/autonomy.md)` リンク → merge 後に `/doc translate ja` で解消
+- `modules/autonomy-tier.md` `## Tier × L0 Write Matrix` への `(exhaustive)` マーカー追加 → 任意 follow-up
 - skill frontmatter `loop-paths-used` / `loop-paths-fallback` 宣言と loader 照合ロジックの実配線 → #700 / #702 / #703
 - `product.md § Terms` への "autonomy tier" 登録 → enforcement 着地時の follow-up
-- `SECURITY.md` への autonomy tier cross-reference → 実 side-effect 変更が入る #700-703 時
-- guide 配下 ja ミラー (`docs/ja/guide/customization.md` / `index.md` / 新規 `autonomy.md`) → `/doc translate ja` の bulk 同期
+- `SECURITY.md` への autonomy tier cross-reference → #700-703 着地時
 
 ### Notes for Next Phase
-- 新規テーブル/リストには `(exhaustive)` マーカーを付す (skill-dev-checks)。L0 layer / 経路カタログ / Tier マトリクスはいずれも exhaustive
-- pre-merge 9 AC は Issue body と verbatim 一致済。AC8 (`rubric`) は AC9 (`file_contains "L2 Assisted"`) を補助とする組み合わせ。ガイドには必ず `L2 Assisted` の文字列を含めること
-- structure.md は `(37 files)` → `(38 files)`、Key modules 箇条書き、`guide/` 説明リストの 3 箇所を更新。漏れると `/review` doc consistency で指摘される
-- translation sync は top-level docs (structure/tech/workflow) のミラーのみ本 PR 対象 (translation-workflow.md の top-level 限定 obligation)
+- `/merge 714` で merge 可。post-merge AC は manual: `.wholework.yml: autonomy: L2` 状態で #700 着地後の `/verify` が許可された経路のみ実行することを観察

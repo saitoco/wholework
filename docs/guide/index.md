@@ -29,6 +29,7 @@ No prior Wholework experience required.
 | [Adapter Authoring Guide](adapter-guide.md) | Write project-specific adapters for MCP servers, CLI tools, and external services |
 | [Figma Best Practices](figma-best-practices.md) | Design Figma files for optimal AI code generation accuracy |
 | [Scripting Guide](scripting.md) | Shell scripting conventions: jq `// empty` guard, error handling |
+| [Autonomy](autonomy.md) | Choose an autonomy tier (L1/L2/L3) governing how far skills may fire follow-on loops and write GitHub state |
 
 ## Terminology
 
