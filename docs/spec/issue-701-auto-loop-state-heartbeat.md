@@ -130,3 +130,25 @@ No new comments since last phase.
 - All 3 pre-merge ACs pass: `grep "loop-state"`, `grep "Loop State"`, `grep "reconcile-phase-state.sh"` all PASS.
 - Post-merge AC requires running `/auto N` and observing the `docs/reports/loop-state-{DATE}.md` file. This is tagged `verify-type: observation event=auto-run`.
 - The pre-existing forbidden-expressions violation in `docs/spec/issue-710-blocked-by-workflow.md` (旧称: verify hint) is unrelated to this change — no action needed from `/verify`.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec の AC 設計は `grep` 主体で minimal、verify 段階で UNCERTAIN/FAIL ゼロを達成。AC1/AC2 の Auto-Resolved Ambiguity Points で `file_contains` → `grep` の変更判断、テンプレートファイル不作成方針が verify 精度に直結した。
+
+#### code
+- 3 ステップ実装、deviations なし、rework なし。code retrospective の `forward reference` 観察 (Loop State Heartbeat section への "see" 参照) は grep ベース verify の限界として記録済み。
+
+#### merge
+- patch route のため PR なし、直 main コミット。conflicts なし。
+
+#### verify
+- pre-merge 3 件すべて PASS (各 grep が複数マッチ)。post-merge AC4 (observation event=auto-run) は本 /auto 終了時に event 発火予定で SKIPPED として記録。
+- 注: `/verify` 開始時に check-verify-dirty.sh が exit=1 を返した (前 batch の auto-events-rollup-2026-06-20.md が untracked のまま)。verify 前に commit して回避。auto-events-rollup.sh が生成ファイルを自動 commit しない既存挙動が verify 起動を妨げる潜在パターン。
+
+### Improvement Proposals
+
+- **auto-events-rollup.sh の生成物コミット自動化**: `auto-events-rollup.sh` が `docs/reports/auto-events-rollup-{DATE}.md` を生成するが commit/push しないため、次回 `/verify` 起動時に check-verify-dirty.sh が exit=1 でブロックされる。複数の skill (`auto`, `verify`) と複数 PR にまたがる潜在的再発性。auto-events-rollup.sh または呼び出し側 (auto/SKILL.md Step 5) で自動コミットするか、`docs/reports/auto-events-rollup-*.md` を verify dirty チェックの除外パターンに加えるかを検討する価値あり。Tier 2 候補 (パターン認識ベースの workflow lesson)。
+
