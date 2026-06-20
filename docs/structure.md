@@ -208,7 +208,7 @@ Key modules:
 - `scripts/detect-wrapper-anomaly.sh` — detect known failure patterns in shell wrapper output and generate Auto Retrospective markdown fragments
 - `scripts/test-failure-classify.sh` — classify test failure output into recovery categories (snapshot/mock/fixture/logic/infra); exit 0 = repairable, exit 1 = not repairable
 - `scripts/validate-recovery-plan.sh` — validate recovery plan JSON from orchestration-recovery sub-agent (schema check + forbidden ops guard)
-- `scripts/apply-fallback.sh` — Tier 2 bash projection of `modules/orchestration-fallbacks.md`; detects known symptom anchors from wrapper logs and dispatches recovery handlers (initial full-impl: dco-signoff-missing-autofix)
+- `scripts/apply-fallback.sh` — Tier 2 bash projection of `modules/orchestration-fallbacks.md`; detects known symptom anchors from wrapper logs and dispatches recovery handlers (handlers: dco-signoff-missing-autofix, code-patch-silent-no-op)
 - `scripts/spawn-recovery-subagent.sh` — Tier 3 recovery orchestrator invoked by `run-auto-sub.sh`; spawns `agents/orchestration-recovery` via `claude -p`, validates the returned plan with `validate-recovery-plan.sh`, enforces concurrency via `WHOLEWORK_MAX_RECOVERY_SUBAGENTS` mkdir-based slot locks, and records successful recoveries to `docs/reports/orchestration-recoveries.md` via `write_recovery_entry()`
 
 **Skill runners:**
