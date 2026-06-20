@@ -141,6 +141,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `auto-retry-on-fail.budget_tokens` | integer | `500000` | Approximate token budget for auto-retry iterations. Initial implementation uses iteration count only; budget tracking is a future improvement. Values ≤0 or non-numeric fall back to `500000`. |
 | `recoveries-auto-fire.enabled` | boolean | `false` | Auto-file improvement Issues when orchestration-recoveries.md symptom count exceeds threshold (requires `autonomy: L2` or `L3`). When `false` or autonomy is `L1`, prints a recommendation instead. |
 | `recoveries-auto-fire.threshold` | integer | `3` | Symptom occurrence count threshold for auto-filing. Values ≤0 or non-numeric fall back to `3`. |
+| `next-cycle-seed.enabled` | boolean | `false` | Enable next-cycle candidate seeding after batch completion. Emits `.tmp/next-cycle.json` with `audit/*` Issues created during the batch session (requires `autonomy: L2` or `L3`). When `false` or autonomy is `L1`, prints a recommendation instead. |
 
 For the full reference including implementation details and YAML parsing rules, see [`modules/detect-config-markers.md`](../../modules/detect-config-markers.md).
 
