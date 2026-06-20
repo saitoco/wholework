@@ -82,19 +82,32 @@
 ### Rework
 - None
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec と実装の構造的乖離なし。Spec の実装ステップ 1–4 がすべて PR diff に存在した。
+- `docs/structure.md` / `docs/ja/structure.md` の更新は Spec の Changed Files 外だが、code 回顧録に記載済みで妥当な追加。
+
+### Recurring issues
+- 特になし。4 観点すべてで問題未検出。CI `Run bats tests` 失敗は systemic (main ブランチも同一障害) であり、本 PR の変更と無関係。
+
+### Acceptance criteria verification difficulty
+- AC3 (`grep "起票済み #727"`) と AC4 (`file_contains`) は自動検証で PASS 判定容易。
+- AC1/AC2 (`rubric`) は Spec ファイルとメインブランチの差分から判定可能。`rubric` が worktree-safe にファイル内容を参照できたため問題なし。
+- `verify command` の品質は高く、UNCERTAIN なし。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `detect_symptom_anchor()` でのパターンマッチは `grep -q "silent no-op"` を使用した。Spec Notes の指示通り、`run-code.sh` が出力する `"silent no-op"` は安定した識別子であり、regex なしで十分。
-- watchdog kill (原因グループ 2) の Tier 2 ハンドラは Spec の方針通りスコープ外とし、文書化のみで AC2 を充足した。
-- `apply_code_patch_silent_no_op_retry()` では `"$SCRIPT_DIR/run-code.sh" "$ISSUE" --patch` を呼び出す。`SCRIPT_DIR` は `WHOLEWORK_SCRIPT_DIR` 環境変数で上書き可能なため BATS テストで hermetic な実行が確保できる。
+- `Run bats tests` CI 失敗を CI インフラ起因と判定した。根拠: main ブランチ (sha 4200c9b9, run 27880896413) でも同一ジョブが FAILURE。ローカル全 9 件 PASS。
+- MUST 問題なし。COMMENT イベントで PR review を投稿した (REQUEST_CHANGES 不要)。
+- Step 12 (issue resolution) と Step 13 (AC consistency check) はスキップ (変更なし、policy change なし)。
 
 ### Deferred Items
-- watchdog kill (原因グループ 2) の Tier 2 ハンドラ (`code-patch-watchdog-kill-retry`) は follow-up Issue で検討予定。
-- `write_recovery_entry()` が常に `- 未起票` を書き込む仕様の改修は本 Issue のスコープ外。
+- `Run bats tests` の systemic CI 障害は別途調査が必要。本 PR のブロッカーではないが、CI が安定していない状態は問題。
+- watchdog kill (原因グループ 2) の Tier 2 ハンドラは別 Issue で検討予定 (code フェーズから引継ぎ)。
 
 ### Notes for Next Phase
-- bats tests 全 9 件 PASS、forbidden expressions チェック PASS、validate-skill-syntax.py エラーなし (既存警告 1 件のみ)。
-- PR #741 が作成済み。CI が通過した後 `/merge 741` を実行できる状態。
-- AC1/AC2 は `rubric` 検証。`rubric` は PR ブランチのファイル内容を参照するため、review フェーズで正確に評価される。
+- すべての受け入れ条件が PASS。MUST 問題なし。`/merge 741` で merge 可能な状態。
+- CI `Run bats tests` 失敗は systemic 障害。merge 前に CI が復帰するか確認すること。
