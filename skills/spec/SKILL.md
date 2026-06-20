@@ -423,6 +423,18 @@ If post-merge conditions in the Issue body have `<!-- verify-type: ... -->` tags
 - `auto`-tagged conditions without verify commands — consider adding them
 - `opportunistic`-tagged conditions align with `verify-classifier.md`'s `opportunistic` definition
 - `manual`-tagged conditions — for each, consult `${CLAUDE_PLUGIN_ROOT}/modules/verify-patterns.md §11` quick reference and check if it can be replaced with `file_exists` / `file_contains` / `http_status` / `rubric`. If replaceable, update the verify command in both the Spec and Issue body AC.
+- `observation`-tagged conditions — when writing an observation event AC, explicitly separate (a) the observed event and (b) expected output structure criteria. Choose one of:
+  - **Option A (2-part structure)**: add indented sub-bullets after the AC line:
+    ```
+    - [ ] {observed event}<!-- verify-type: observation event={event-name} -->
+      - Expected output structure:
+        - {criteria 1}
+        - {criteria 2}
+    ```
+  - **Option B (rubric verify command)**: attach a rubric verify command to the same AC line:
+    ```
+    - [ ] {observed event}<!-- verify-type: observation event={event-name} --> <!-- verify: rubric "{output quality criteria}" -->
+    ```
 
 **Text removal verify command preference:**
 
