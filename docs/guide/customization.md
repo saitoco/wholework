@@ -80,6 +80,14 @@ permission-mode: auto
 # Stops the verify-reopen cycle after N failures; Issue stays in phase/verify for human judgment
 verify-max-iterations: 3
 
+# Auto-retry on verify FAIL (opt-in; requires autonomy: L2 or L3)
+# When enabled, /verify automatically re-fires /code and retries after a FAIL,
+# up to max_iterations times or until budget_tokens is estimated exhausted.
+# auto-retry-on-fail:
+#   enabled: true
+#   max_iterations: 3
+#   budget_tokens: 500000
+
 # Optional capabilities
 capabilities:
   browser: true             # Enable Playwright-based verify commands
@@ -122,6 +130,9 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `retro-proposals-upstream` | string | `""` | Upstream repository (`owner/repo`) for routing Skill infrastructure improvement proposals from `/verify` retrospectives. When set, such proposals are sanitized (regex strips absolute paths and downstream issue numbers; LLM removes business-context terms) and filed to this repository; downstream filing is skipped. Unset means downstream filing as before (backward-compatible). |
 | `verify-ignore-paths` | list | `[]` | Glob patterns (block list) of paths to exclude from dirty-file detection in `/verify`. Supported: `dir/**` prefix match (any file inside a directory), simple bash globs (`*`, `?`, `[...]`) for full-path match. Not supported: intermediate `**` (e.g. `a/**/b`) or negation patterns (`!`). Files matching any pattern are silently ignored and reported on stderr. Unset means no exclusions. |
 | `autonomy` | string | `L1` | Autonomy tier governing which L2→L1 loop-firing paths skills may use. `L1` Report (advisory only) / `L2` Assisted (in-loop + seed) / `L3` Unattended (full, including CronCreate). See [docs/guide/autonomy.md](autonomy.md). |
+| `auto-retry-on-fail.enabled` | boolean | `false` | Enable automatic `/code` re-fire + `/verify` retry on FAIL (requires `autonomy: L2` or `L3`). When `false` (or autonomy is `L1`), only advisory guidance is printed. |
+| `auto-retry-on-fail.max_iterations` | integer | `3` | Maximum number of auto-retry iterations before stopping and returning to the user. Values ≤0 or non-numeric fall back to `3`. |
+| `auto-retry-on-fail.budget_tokens` | integer | `500000` | Approximate token budget for auto-retry iterations. Initial implementation uses iteration count only; budget tracking is a future improvement. Values ≤0 or non-numeric fall back to `500000`. |
 
 For the full reference including implementation details and YAML parsing rules, see [`modules/detect-config-markers.md`](../../modules/detect-config-markers.md).
 
