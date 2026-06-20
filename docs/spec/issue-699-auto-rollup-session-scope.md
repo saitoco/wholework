@@ -91,6 +91,29 @@
 - 変更は 2 行のみ (`scripts/auto-events-rollup.sh:148-149`) のシンプルな差し替えで、回帰リスクは低い。
 - AC7 (CI github_check) はプッシュ後に確認が必要。bats テストはローカルで全件 green 確認済み。
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC に `file_not_contains` を 2 件追加して旧 `$ev[]` パターン削除を verify-patterns.md §8 policy change Issues 原則どおりに網羅していた。バグ修正系の Issue では「旧パターン削除」と「新パターン追加」の対称性を確保する規約が機能した好例
+
+#### spec
+- Spec 提案で `$own` を line 126 から引用したことで、追加変数定義不要なまま 2 行差し替えに収まった
+- Size を S → XS に降格 (バグ修正としては最小単位)
+
+#### code
+- design 逸脱なし、bats 新規 test 7 ("session scope") で synthetic 2-session データを使い汚染防止を直接検証
+- AC1/AC2 の `$own` shell-expansion リスクは Spec Notes で予防済み、verify-executor が固定文字列マッチで処理するため実害なし
+
+#### verify
+- Pre-merge AC 7 件すべて PASS。`file_contains`/`file_not_contains` の対称的な「旧削除 + 新追加」確認が正常に機能
+- AC7 (CI github_check) は HEAD commit に対する CI 完了を 2 分弱待機して PASS 判定。patch route での `gh run list` 形式が想定通り機能
+- Post-merge observation AC は SKIPPED (event=auto-run 待ち) — 同等内容を bats test 7 で synthetic data 検証済みのため実装の正当性は確認済み
+
+### Improvement Proposals
+- N/A (バグ修正は計画通り完了、横展開可能な一般化改善は未確定)
+
 ## Issue Retrospective
 
 ### Acceptance Criteria の変更
