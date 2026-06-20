@@ -116,3 +116,30 @@ MOCK
     run bash "$SCRIPT"
     [ "$status" -ne 0 ]
 }
+
+@test "code-patch-silent-no-op pattern triggers run-code.sh retry" {
+    LOG_FILE="$BATS_TEST_TMPDIR/test.log"
+    echo "Warning: claude exited 0 but code-patch phase did not complete (silent no-op)." > "$LOG_FILE"
+
+    RUN_CODE_LOG="$BATS_TEST_TMPDIR/run-code.log"
+    cat > "$MOCK_DIR/run-code.sh" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$RUN_CODE_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    run bash "$SCRIPT" code-patch 42 --log "$LOG_FILE"
+    [ "$status" -eq 0 ]
+
+    grep -q "42" "$RUN_CODE_LOG"
+    grep -q -- "--patch" "$RUN_CODE_LOG"
+}
+
+@test "code-patch-silent-no-op pattern does not fire for non-code-patch phase" {
+    LOG_FILE="$BATS_TEST_TMPDIR/test.log"
+    echo "Warning: claude exited 0 but code-patch phase did not complete (silent no-op)." > "$LOG_FILE"
+
+    run bash "$SCRIPT" verify 42 --log "$LOG_FILE"
+    [ "$status" -eq 1 ]
+}

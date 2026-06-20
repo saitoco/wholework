@@ -70,3 +70,44 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class) — Issue Retrospective + Autonomous Auto-Resolve Log: AC 分割、verify command 設計の決定記録。spec フェーズへの引継ぎ情報として利用。
+
+## Code Retrospective
+
+### Deviations from Design
+- `docs/structure.md` と `docs/ja/structure.md` の `apply-fallback.sh` 記述更新を追加実装した。Spec の Changed Files には含まれていなかったが、doc-checker が "(initial full-impl: dco-signoff-missing-autofix)" 記述を stale と検出したため更新した。
+
+### Design Gaps/Ambiguities
+- None
+
+### Rework
+- None
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec と実装の構造的乖離なし。Spec の実装ステップ 1–4 がすべて PR diff に存在した。
+- `docs/structure.md` / `docs/ja/structure.md` の更新は Spec の Changed Files 外だが、code 回顧録に記載済みで妥当な追加。
+
+### Recurring issues
+- 特になし。4 観点すべてで問題未検出。CI `Run bats tests` 失敗は systemic (main ブランチも同一障害) であり、本 PR の変更と無関係。
+
+### Acceptance criteria verification difficulty
+- AC3 (`grep "起票済み #727"`) と AC4 (`file_contains`) は自動検証で PASS 判定容易。
+- AC1/AC2 (`rubric`) は Spec ファイルとメインブランチの差分から判定可能。`rubric` が worktree-safe にファイル内容を参照できたため問題なし。
+- `verify command` の品質は高く、UNCERTAIN なし。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `Run bats tests` CI 失敗を CI インフラ起因と判定した。根拠: main ブランチ (sha 4200c9b9, run 27880896413) でも同一ジョブが FAILURE。ローカル全 9 件 PASS。
+- MUST 問題なし。COMMENT イベントで PR review を投稿した (REQUEST_CHANGES 不要)。
+- Step 12 (issue resolution) と Step 13 (AC consistency check) はスキップ (変更なし、policy change なし)。
+
+### Deferred Items
+- `Run bats tests` の systemic CI 障害は別途調査が必要。本 PR のブロッカーではないが、CI が安定していない状態は問題。
+- watchdog kill (原因グループ 2) の Tier 2 ハンドラは別 Issue で検討予定 (code フェーズから引継ぎ)。
+
+### Notes for Next Phase
+- すべての受け入れ条件が PASS。MUST 問題なし。`/merge 741` で merge 可能な状態。
+- CI `Run bats tests` 失敗は systemic 障害。merge 前に CI が復帰するか確認すること。

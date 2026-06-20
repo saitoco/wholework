@@ -52,6 +52,11 @@ detect_symptom_anchor() {
     echo "dco-signoff-missing-autofix"
     return 0
   fi
+  # See modules/orchestration-fallbacks.md#code-patch-silent-no-op
+  if [[ "$PHASE" == "code-patch" ]] && grep -q "silent no-op" "$log" 2>/dev/null; then
+    echo "code-patch-silent-no-op"
+    return 0
+  fi
   # See modules/orchestration-fallbacks.md#gh-pr-list-head-glob (not yet implemented)
   # See modules/orchestration-fallbacks.md#ff-only-merge-fallback (not yet implemented)
   # See modules/orchestration-fallbacks.md#conflict-marker-residual (not yet implemented)
@@ -76,11 +81,23 @@ apply_dco_signoff_autofix() {
   echo "[apply-fallback] dco-signoff-missing-autofix: done"
 }
 
+# Handler: code-patch-silent-no-op
+# Retries run-code.sh --patch once when a silent no-op is detected on the patch route.
+# Safe because reconcile confirms commits_found:false (clean state, no partial commit).
+apply_code_patch_silent_no_op_retry() {
+  echo "[apply-fallback] code-patch-silent-no-op: retrying run-code.sh --patch for issue $ISSUE"
+  "$SCRIPT_DIR/run-code.sh" "$ISSUE" --patch
+  echo "[apply-fallback] code-patch-silent-no-op: done"
+}
+
 symptom_anchor=$(detect_symptom_anchor "$LOG_FILE")
 
 case "$symptom_anchor" in
   dco-signoff-missing-autofix)
     apply_dco_signoff_autofix
+    ;;
+  code-patch-silent-no-op)
+    apply_code_patch_silent_no_op_retry
     ;;
   *)
     exit 1
