@@ -90,3 +90,50 @@
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の Step 4 で「`collect-recovery-candidates.sh:*` を `allowed-tools` の `run-code.sh:*` の後に挿入」と指定されていたが、実際には末尾に追加した。Spec の指定は挿入位置の詳細だが、機能的に同等なため逸脱とはしない。
+- `docs/tech.md` のラベルグループカウントが既に古かった (12、`stale-verify` が含まれておらず実際は 13)。今回の追加で 14 になるため、Spec 変更範囲外の `docs/tech.md` と `docs/ja/tech.md` も同時に修正した。
+
+### Design Gaps/Ambiguities
+
+- AC1 の verify コマンド `file_contains "skills/verify/SKILL.md" "recoveries-auto-fire"` は、Spec の実装ステップ通りに実装した場合、変数名 `RECOVERIES_AUTO_FIRE_ENABLED`/`RECOVERIES_AUTO_FIRE_THRESHOLD` のみが登場し config キー名 `recoveries-auto-fire` が SKILL.md に現れないため AC が FAIL になる。Step 15 の説明文に config キー名を明示的に追記することで対応した。
+
+### Rework
+
+- 初回コミット後に SKILL.md の AC1 verify command が FAIL することを確認し、Step 15 の説明文に `recoveries-auto-fire` 文字列を追加するための追加コミットが必要になった。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. Spec の受け入れ条件 (file_contains / grep ベース) はすべて PASS。コード実装と Spec の整合性は良好。
+
+### Recurring issues
+
+`tests/setup-labels.bats` のテスト名とアサーション値の off-by-one パターンが本 PR 以前から継続していた。今回 SHOULD として指摘し修正済み。ラベル追加の際に「テスト名 = ラベル数 - 1」になるパターンが繰り返しており、Spec のテスト更新ステップに「テスト名とアサーション値を必ず一致させる」旨を明示すると再発防止になる。
+
+### Acceptance criteria verification difficulty
+
+全 pre-merge AC が `file_contains` / `grep` ベースで CI 自動確認可能。UNCERTAIN なし。verify command の品質は高い。post-merge AC が observation event=verify-completion のため手動観察が必要。これは機能の性質上やむを得ない。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- SHOULD issue (テスト名・コメントの off-by-one) を修正してコミット・プッシュした
+- Forbidden Expressions check の FAILURE は `docs/spec/issue-710-blocked-by-workflow.md` による既存問題 (本 PR 変更外) と判断し、pre-existing issue として扱った
+- REVIEW_DEPTH=light で実施。外部レビューツール未設定のため Step 7 はスキップ
+
+### Deferred Items
+- `tests/setup-labels.bats` の再発防止策 (Spec テスト更新ステップへの明示) は今後の課題
+- `recoveries_threshold_fire` event の `issue_number=0` (L1 advisory path) の意味の明確化は引き続き deferred
+- Forbidden Expressions check の FAILURE (`docs/spec/issue-710-blocked-by-workflow.md`) は別 Issue で対処が必要
+
+### Notes for Next Phase
+- MUST issue なし、SHOULD 1件修正済み → `/merge 718` 実行可能
+- post-merge AC は observation event=verify-completion なので `/verify` 後に手動観察が必要
+- CI は Forbidden Expressions check FAILURE を除き全 SUCCESS
