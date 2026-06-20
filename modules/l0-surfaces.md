@@ -95,7 +95,7 @@ Input: `ISSUE_NUMBER`, `COMMENT_SCOPE`, `PHASE_NAME`.
 Primary: fetch the timestamp of the most recent `phase/*` label assignment from the Issue timeline:
 ```
 gh api "repos/{owner}/{repo}/issues/$ISSUE_NUMBER/timeline" --paginate \
-  --jq '[.[] | select(.event=="labeled" and (.label.name|startswith("phase/"))) | .created_at] | last'
+  --jq '[.[] | select(.event=="labeled" and (.label.name|startswith("phase/"))) | .created_at] | last // empty'
 ```
 (`{owner}` and `{repo}` are expanded automatically by `gh`.)
 
