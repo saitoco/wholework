@@ -48,3 +48,30 @@
 - `tests/get-auto-session-report.bats` is covered by CI `test.yml` alongside all other `.bats` files
 - The `--since` list mode test uses a date-based cutoff (`--since 2020-01-01`) to ensure all fixture events are included regardless of test run time
 - `WHOLEWORK_ISSUE_BODY_DIR` env var is available for fixture-based testing of verify-type breakdown if needed in future tests, but is not required for the 4 core @test cases in this Issue
+
+## Code Retrospective
+
+### Deviations from Design
+- None — all 4 @test cases implemented exactly as specified in the Spec.
+
+### Design Gaps/Ambiguities
+- The Spec says "not session-B data" for the session_id filter test, but did not specify the exact negative assertion pattern. Used `! grep -q "| #200 |"` targeting the per-issue table row format `| #N |` to avoid false matches from issue numbers appearing in timestamps or other fields.
+
+### Rework
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Used `echo "$output" | grep -q "..."` pattern for list-mode output checks (consistent with bats idiom for checking stdout captured in `$output`).
+- The `--since 2020-01-01` cutoff in the list-mode test is date-based (not hour-based) to avoid time-of-day sensitivity.
+- Negative assertion `! grep -q "| #200 |"` scopes the check to the per-issue table row format, reducing false-positive risk.
+
+### Deferred Items
+- AC4 (CI green check via `github_check "gh run list ..."`) can only be verified after the commit is pushed; it will be checked by `/verify`.
+- Background edge case `--narrative-draft` with invalid/missing file path was not added as a separate `@test` (per AP2 auto-resolve).
+
+### Notes for Next Phase
+- All 4 bats tests are green locally; CI (`test.yml`) will run them as part of the full bats suite.
+- The `github_check` AC uses `--commit=$(git rev-parse HEAD)` which resolves at verify time — verify should confirm the correct commit SHA is used.
