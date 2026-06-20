@@ -112,3 +112,26 @@ Issue body AC5 の verify command が `"tests/test-reconcile-phase-state.bats"` 
 ### SPEC_DEPTH=light での Verification 件数
 
 Issue body が 6 件の pre-merge AC を持つため Spec light 上限 (5 件) を 1 件超過するが、全 AC を漏れなく反映する。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue AC5 が存在しないファイル名 (`tests/test-reconcile-phase-state.bats`) を参照していたが、`/spec` 段階で auto-resolve により正しい `tests/reconcile-phase-state.bats` に修正。事前に検出できた点は良好。
+
+#### code
+- `skills/code/SKILL.md` で半角 `is not` 表現 (元 `!=`) を後追い修正したため、コミット 2 件に分割発生。validate-skill-syntax の forbidden expressions チェックを実装時に意識する必要あり。
+
+#### review
+- `actual.size` JSON Schema ドキュメントが "Present when Spec is missing and Size check is performed" と曖昧表現。実装では XS 成功パスで `size` フィールドが含まれない。次回 Spec 記述で実装挙動を正確に反映推奨。
+- Phase Table の Implementation Status 列に括弧で Precondition を繰り返す冗長記述あり。Spec のフォーマット指定で防止可能。
+
+#### merge
+- CI failing (setup-labels.bats) は main ブランチで pre-existing failure。auto-resolve で squash merge を完遂。
+
+#### verify
+- pre-merge AC 6 件すべて PASS。`bats tests/reconcile-phase-state.bats` は CI 全体 FAILURE 中でも対象テストのみ PASS で正確に判定可能だった。verify command を特定ファイルに限定する設計が有効。
+
+### Improvement Proposals
+- N/A (Code/Review Retrospective に記録済みの CONSIDER 指摘は単発観察 (Tier 3) のため Spec 内に留める)
