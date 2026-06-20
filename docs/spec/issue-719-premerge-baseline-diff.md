@@ -149,3 +149,49 @@ merge フェーズが遭遇する pre-merge check の FAILURE を **pre-existing
 - **bats テスト入力フォーマット** (`tests/pre-merge-check.bats`): stub check は CWD (一時 worktree) 配下の `skills/` を `grep -rq 'FORBIDDEN'` で走査し、ヒットで exit 1。fixture は各 ref のツリーに `skills/x.md` を配置し、`FORBIDDEN` 文字列の有無で 4 分類を作る。`gh` mock は `pr view --json headRefName -q .headRefName` / `... baseRefName ...` に branch 名を返す。bare remote を `origin` として用意し `git fetch origin` / `origin/<ref>` worktree を機能させる。
 - **派生 Issue**: 案 B (`docs/baseline-failures.md` SSoT 化) が必要になったら別 Issue。`docs/spec/issue-710-blocked-by-workflow.md` の Forbidden Expressions 解消も本 Issue とは独立の別 Issue。
 - **L2→L1 経路**: 本改修は L2 内部の判定ロジック改修 (run-merge.sh が baseline diff を実行)。#704 マトリクスの A〜E 経路には該当せず、tier gate も不要。
+
+## issue retrospective
+
+### Auto-Resolve Log
+
+- **対象 check の初期スコープ → Forbidden Expressions check を initial target に設定**
+  - 判断理由: 背景インシデント (#702) は Forbidden Expressions check の pre-existing FAILURE が起点。最初の実装は triggering incident に直結する check を対象とするのが least-risk。提案の「案 A」は「全 check 自動」を目標としているが、initial scope を絞ることで実装リスクを低減しつつ、modular 設計により将来の全 check 化に対応できる。
+  - AC テキストへの影響: なし (既存の AC は "baseline diff ロジックが含まれている" という design-agnostic な表現)
+
+### AC 変更
+
+- **Post-merge AC1 の `verify-type` 修正**: 非標準値 → `manual`
+  - 理由: 旧称: observation 系の event 指定は標準 verify-type (auto/opportunistic/manual) に含まれない非標準値。人間が観察して確認する条件であるため `manual` が正確。
+
+## spec retrospective
+
+### Minor observations
+- Issue の AC C (`file_contains "scripts/run-merge.sh" "baseline"`) は run-merge.sh がポリシーロジックを保持する前提で書かれていたが、実際の run-merge.sh は merge SKILL.md へ委譲する薄い wrapper だった。gate を run-merge.sh の claude 起動前 bash gate として設置することで AC を満たしつつ、Issue の「run-merge.sh の policy」という文言にも合致させた。AC 文言だけからは SKILL.md 変更とも読めたため、wrapper が正しい locus であることを調査で確定した。
+
+### Judgment rationale
+- gate を wrapper (claude 起動前) に置いた: 新規 FAILURE 時に merge skill のトークン消費を回避でき、baseline diff の git/worktree 操作を deterministic な bash で完結できるため。
+- env error 時は fail-open (警告 + 続行): check インフラの障害で全 merge をブロックするより、既存の GitHub merge-state gate + 人手判断に委ねる方が least-risk。
+- 両 ref とも各 ref 自身の check スクリプトを実行: 案 A の literal 解釈で最小実装。unified check def は将来拡張時に検討。
+
+### Uncertainty resolution
+- merge フェーズが Forbidden Expressions FAILURE を「どこで」遭遇するか当初不明だったが、調査の結果 merge SKILL.md は check を直接実行せず、`gh-pr-merge-status.sh` の `ci_failing` (CI ジョブ結果) 経由であることを確認。baseline diff を local 再実行にすることで CI 非依存・deterministic に解決した。
+- pre-existing FAILURE が現在 main に実在する (`docs/spec/issue-710-blocked-by-workflow.md`) ことを確認。本 PR 自体が PRE_EXISTING 分類のセルフ検証 (dogfood) になる。同時に、CI 全体 conclusion を pre-merge AC に使えないこと (forbidden-expressions ジョブが落ち run conclusion=failure になるため) も判明し、ファイルベースの deterministic AC のみを採用した。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- baseline gate は `run-merge.sh` の wrapper 側 (claude 起動前) に設置。`pre-merge-check.sh` の exit 2 (NEW_FAILURE) のみ merge を abort、それ以外 (CLEAN/FIXED/PRE_EXISTING/env error) は続行 (env error は fail-open)。
+- 対象 check は Forbidden Expressions のみ。`pre-merge-check.sh` 内の dispatch table で modular に拡張可能。案 B (SSoT 管理) は deferred。
+- 各 ref 自身の `scripts/check-forbidden-expressions.sh` を ephemeral worktree (`git worktree add --detach origin/<ref>`) で実行して比較する (案 A literal)。
+
+### Deferred Items
+- 全 check 自動化 (dispatch table 拡張) は将来の改善。
+- 案 B (`docs/baseline-failures.md` SSoT 化) は必要になったら別 Issue。
+- `docs/spec/issue-710-blocked-by-workflow.md` の Forbidden Expressions pre-existing FAILURE 解消は独立の別 Issue (Post-merge AC2 の前提)。
+
+### Notes for Next Phase
+- `tests/run-merge.bats` は実 `run-merge.sh` を `WHOLEWORK_SCRIPT_DIR=$MOCK_DIR` で動かすため、`setup()` に `pre-merge-check.sh` の mock (default exit 0) 追加が必須。未追加だと新規呼び出しが `set -e` で既存テストを全滅させる。
+- 本 Spec を含む `docs/spec/*` は forbidden-expressions の SCAN_DIRS に含まれる。新規ファイルに deprecated term を直接引用すると NEW_FAILURE を生むため、`旧称:` prefix か説明的表現を使う。
+- `pre-merge-check.sh` は bash 3.2 / macOS 互換で実装する (mapfile・連想配列不使用、`mktemp -d` 使用、worktree 後始末は `|| true`)。
+- CI 全体 conclusion (`gh run list --workflow=test.yml`) は pre-existing forbidden-expressions failure のため pre-merge AC に使わない。
