@@ -248,7 +248,7 @@ Each phase follows the Observe → Diagnose → Act pattern (same as pr route; s
 
 1. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-patch $NUMBER --check-precondition --warn-only`
 2. code phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER --patch [--base {branch}]` via Bash (timeout: 600000)
-3. Unconditional completion check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-patch $NUMBER --check-completion` — runs unconditionally regardless of exit code; if `matches_expected: false` (including exit 0), go to Step 6; if code exited non-zero but `matches_expected: true`, override to success
+3. Unconditional completion check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-patch $NUMBER --check-completion` — runs unconditionally regardless of exit code; if `matches_expected: false` (including exit 0), go to Step 6; if code exited non-zero but `matches_expected: true`, override to success; on success append loop-state heartbeat (`from=spec, to=code`; see `## Loop State Heartbeat`)
 4. **XS only**: transcribe issue retrospective to Spec (see Step 4b)
 5. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh verify $NUMBER --check-precondition --warn-only`
 6. Increment counter: `VERIFY_ITERATION_COUNT=$((VERIFY_ITERATION_COUNT + 1))`
@@ -256,7 +256,7 @@ Each phase follows the Observe → Diagnose → Act pattern (same as pr route; s
 8. verify phase: invoke `Skill(skill="wholework:verify", args="$NUMBER")` in the parent session (enables AskUserQuestion for manual AC confirmation)
 9. Based on verify result, proceed to Step 5 or Step 6
    - If verify output contains `MAX_ITERATIONS_REACHED`: max iterations has been reached; delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`); stop chained execution and proceed to Step 5 (human judgment required — do not re-run verify automatically)
-   - On verify success: delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`) and proceed to Step 5
+   - On verify success: delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`), append loop-state heartbeat (`from=code, to=verify`; see `## Loop State Heartbeat`), and proceed to Step 5
 
 **pr route (4 phases):**
 
@@ -278,14 +278,14 @@ Full phase sequence:
 
 1. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-pr $NUMBER --check-precondition --warn-only`
 2. Output `[1/4] code`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER --pr [--base {branch}]` via Bash (timeout: 600000)
-3. Unconditional completion check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-pr $NUMBER --check-completion` — runs unconditionally regardless of exit code; if `matches_expected: false` (including exit 0), go to Step 6; if `matches_expected: true`, output `[1/4] code → done (PR #N)` and continue
+3. Unconditional completion check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-pr $NUMBER --check-completion` — runs unconditionally regardless of exit code; if `matches_expected: false` (including exit 0), go to Step 6; if `matches_expected: true`, output `[1/4] code → done (PR #N)`, append loop-state heartbeat (`from=spec, to=code`; see `## Loop State Heartbeat`), and continue
 4. Extract PR number via exact-match filter (matches SSoT branch name worktree-code+issue-N established by #310): `gh pr list --json number,headRefName | jq -r ".[] | select(.headRefName == \"worktree-code+issue-$NUMBER\") | .number" | head -1`
 5. If PR number cannot be fetched: report error and go to Step 6
 6. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh review $NUMBER --pr $PR_NUMBER --check-precondition --warn-only`
-7. Output `[2/4] review`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh $PR_NUMBER $REVIEW_DEPTH` via Bash (timeout: 600000) (REVIEW_DEPTH set in Step 2, refreshed by Step 3a if applicable); on success output `[2/4] review → done`
+7. Output `[2/4] review`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh $PR_NUMBER $REVIEW_DEPTH` via Bash (timeout: 600000) (REVIEW_DEPTH set in Step 2, refreshed by Step 3a if applicable); on success output `[2/4] review → done`, then append loop-state heartbeat (`from=code, to=review`; see `## Loop State Heartbeat`)
 8. If review fails: completion check `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh review $NUMBER --pr $PR_NUMBER --check-completion` — if `matches_expected: true`, override to success; otherwise go to Step 6
 9. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh merge $NUMBER --pr $PR_NUMBER --check-precondition --warn-only`
-10. Output `[3/4] merge`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh $PR_NUMBER` via Bash (timeout: 600000); on success output `[3/4] merge → done`
+10. Output `[3/4] merge`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh $PR_NUMBER` via Bash (timeout: 600000); on success output `[3/4] merge → done`, then append loop-state heartbeat (`from=review, to=merge`; see `## Loop State Heartbeat`)
 11. If merge fails: completion check `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh merge $NUMBER --pr $PR_NUMBER --check-completion` — if `matches_expected: true`, override to success; otherwise go to Step 6
 12. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh verify $NUMBER --check-precondition --warn-only`
 13. Increment counter: `VERIFY_ITERATION_COUNT=$((VERIFY_ITERATION_COUNT + 1))`
@@ -293,7 +293,7 @@ Full phase sequence:
 15. Output `[4/4] verify`, then invoke `Skill(skill="wholework:verify", args="$NUMBER")` in the parent session (enables AskUserQuestion for manual AC confirmation); on success output `[4/4] verify → done`
 16. Based on verify result, proceed to Step 5 or Step 6
     - If verify output contains `MAX_ITERATIONS_REACHED`: max iterations has been reached; delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`); stop chained execution and proceed to Step 5 (human judgment required — do not re-run verify automatically)
-    - On verify success: delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`) and proceed to Step 5
+    - On verify success: delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`), append loop-state heartbeat (`from=merge, to=verify`; see `## Loop State Heartbeat`), and proceed to Step 5
 
 ### Step 4b: Issue Retrospective Transcription (XS patch route only)
 
@@ -556,6 +556,38 @@ Run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run`
 **Daily rollup (best-effort, runs after observation scan regardless of success/failure):**
 
 Run `${CLAUDE_PLUGIN_ROOT}/scripts/auto-events-rollup.sh`. If the command fails, output "Warning: auto-events-rollup failed. Session will continue." and proceed without blocking.
+
+## Loop State Heartbeat
+
+After each phase completion, append a line to `docs/reports/loop-state-{DATE}.md` (UTC date). This provides a human-readable, append-only point-in-time snapshot of repo phase state.
+
+### Loop State File Format
+
+File: `docs/reports/loop-state-{DATE}.md`
+
+```markdown
+---
+type: report
+description: Phase-transition heartbeat for /auto loops. Append-only.
+generated_by: skills/auto/SKILL.md (tail extension)
+---
+
+# Loop State — {DATE}
+
+| ts (UTC) | issue | transition | repo phase/* snapshot |
+|----------|-------|------------|----------------------|
+| HH:MM:SS | #N | from→to | issue:N spec:N code:N review:N verify:N |
+```
+
+### Heartbeat Append Procedure
+
+After confirming phase completion (`reconcile-phase-state.sh` returns `matches_expected: true`), run the following (best-effort: failures must not block the main flow):
+
+1. Get timestamp: `date -u +%H:%M:%S`
+2. Get UTC date: `date -u +%Y-%m-%d`
+3. Get phase snapshot — count open issues per phase label via `gh issue list --label "phase/*" --json labels` — aggregate counts only (e.g., `issue:3 spec:1 code:0 review:2 verify:1`)
+4. If `docs/reports/loop-state-{DATE}.md` does not exist: create it with the frontmatter and table header using Write tool
+5. Append a row to the table
 
 **L3 auto-retrospective (batch/XL routes only, runs after Daily rollup regardless of success/failure):**
 
