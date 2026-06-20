@@ -90,3 +90,35 @@
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の Step 4 で「`collect-recovery-candidates.sh:*` を `allowed-tools` の `run-code.sh:*` の後に挿入」と指定されていたが、実際には末尾に追加した。Spec の指定は挿入位置の詳細だが、機能的に同等なため逸脱とはしない。
+- `docs/tech.md` のラベルグループカウントが既に古かった (12、`stale-verify` が含まれておらず実際は 13)。今回の追加で 14 になるため、Spec 変更範囲外の `docs/tech.md` と `docs/ja/tech.md` も同時に修正した。
+
+### Design Gaps/Ambiguities
+
+- AC1 の verify コマンド `file_contains "skills/verify/SKILL.md" "recoveries-auto-fire"` は、Spec の実装ステップ通りに実装した場合、変数名 `RECOVERIES_AUTO_FIRE_ENABLED`/`RECOVERIES_AUTO_FIRE_THRESHOLD` のみが登場し config キー名 `recoveries-auto-fire` が SKILL.md に現れないため AC が FAIL になる。Step 15 の説明文に config キー名を明示的に追記することで対応した。
+
+### Rework
+
+- 初回コミット後に SKILL.md の AC1 verify command が FAIL することを確認し、Step 15 の説明文に `recoveries-auto-fire` 文字列を追加するための追加コミットが必要になった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `recoveries-auto-fire` config キーは `auto-retry-on-fail.*` と同じ nested-key パターンで detect-config-markers.md に追加した
+- `retro/recoveries` ラベルのカラーは既存の `retro/*` ラベル (5319E7) と統一
+- Step 15 は旧 Step 15 (Collect Improvement Proposals) の直前に挿入し、旧 Step 15 は Step 16 にリナンバーした
+
+### Deferred Items
+- `docs/tech.md` のラベルグループカウントが 12 (古い) → 14 に更新した。この差異は `stale-verify` ラベルが追加された際の更新漏れ (別 Issue で起票してもよい)
+- `recoveries_threshold_fire` event の `issue_number=0` (L1 advisory path) の意味の明確化は今後の課題
+
+### Notes for Next Phase
+- verify コマンドは全て pre-merge で `file_contains`/`grep` ベースなので CI で自動確認可能
+- post-merge AC は observation event=verify-completion なので手動観察が必要
+- `docs/tech.md` の Always ラベルカウントが 12→14 に変わったことで、tech.md の記述と setup-labels.sh の実態が一致するようになった
