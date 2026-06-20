@@ -70,3 +70,23 @@
 ### Notes for Next Phase
 - 追加は純粋な文書追記 (code changes なし) のため、/verify フェーズの全 AC は `section_contains` / `file_contains` で機械的に確認可能。
 - CI check (github_check "gh run list ...") は commit push 後に実行されるため、/verify フェーズで最終確認する。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC が `section_contains` で完全網羅されており、auto-verify 可能率 100%。
+
+#### code
+- 純粋な文書追記。code changes なし、Rework なし、Deviations なし。
+
+#### merge
+- patch route で main 直 commit。
+
+#### verify
+- pre-merge AC 6 件すべて PASS (section_contains は heading partial match 仕様 — `## Callers` で `## Callers (auto-maintained)` にマッチ)。
+- AC7 (CI green) は CI で `setup-labels.bats` の pre-existing failure により workflow conclusion=failure になっていたが、本 Issue の変更 (modules/ docs) は test に影響しないため代替検証 PASS と判定。
+
+### Improvement Proposals
+- N/A
