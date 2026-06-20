@@ -207,7 +207,7 @@ PR 本文に `closes #N` を追加すると、マージ時に Issue が自動ク
 
 ### Verify Fail フロー
 
-`/verify` が自動検証対象の中で FAIL を検出すると、Issue を reopen し全 `phase/*` ラベルを除去します。
+`/verify` が自動検証対象の中で FAIL を検出すると、機械可読 FAIL marker comment を Issue に append し (`modules/l0-surfaces.md` の `wholework-event: type=verify-fail` フォーマット参照)、Issue を reopen し全 `phase/*` ラベルを除去します。
 
 **デフォルト（autonomy: L1 または auto-retry-on-fail 未設定）:** ユーザーが次アクションを手動で選択します:
 

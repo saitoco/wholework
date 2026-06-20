@@ -124,3 +124,67 @@ Issue 提案の `phase-at-fail=verify` は l0-surfaces.md SSoT の `phase=verify
 
 **次フェーズ skill での consume (実装外)**:
 `/code` 再走時・`/spec` 再走時での `type=verify-fail` comment consume は Issue #707 の対象外。l0-surfaces.md の Comment Consumption Procedure は既に bot 例外 (`<!-- wholework-event:` marker 付き comment を consume する) を定義しており、スキル側の consume 実装は別 Issue で追加する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Step 11(b) の参照は Spec 中では "Step 9 (b)" と記載されていたが、SKILL.md の実際のステップ番号は "Step 11 (b)" であったため、SKILL.md の実際の構造に合わせて実装した (Spec の参照番号の誤りを実装で解消)
+
+### Design Gaps/Ambiguities
+
+- Spec では `FAIL_COUNT` 変数を参照しているが、この変数は SKILL.md の既存フローで定義されていない。`verify_fail_marker_posted` emit 時の `failed_ac_count` パラメータとして参照している。実装ではそのまま記述し、実行時に LLM が FAIL 条件数を適切に解釈することを前提とする (シェルスクリプトではなく SKILL.md の LLM 実行指示)
+- TIMESTAMP の具体的な取得方法 (`date -u +%Y-%m-%dT%H:%M:%SZ` 等) は Spec に明記されていないが、SKILL.md 内では LLM が実行時に解釈するため明記不要と判断
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- SKILL.md への追加は 2 箇所 (NEXT_ITERATION < VERIFY_MAX_ITERATIONS ブロックと >= VERIFY_MAX_ITERATIONS ブロック) に対称的に実装した
+- `FAIL_COUNT` 変数は SKILL.md 内の LLM 実行コンテキストで解釈されるため、シェル変数定義なしで参照
+- docs/ja/workflow.md は Step 4 として同一コミットで同期更新済み
+
+### Deferred Items
+- `type=verify-fail` comment の次フェーズ consume (/code 再走時・/spec 再走時) は別 Issue 対象
+- `FAIL_COUNT` (変数名) が将来 SKILL.md に明示定義される場合は当該箇所の更新が必要
+
+### Notes for Next Phase
+- AC3 (`modules/l0-surfaces.md` の verify-fail marker) は既存コンテンツで充足済み、l0-surfaces.md への変更なし
+- pre-merge AC 3 件すべて PASS 確認済み (checkbox 更新済み)
+- bats テスト全件 PASS、validate-skill-syntax.py PASS、forbidden expressions チェック PASS
+
+## Review Retrospective
+
+### Spec vs Implementation Divergence Patterns
+
+- 構造的な divergence なし。Spec の全実装ステップが diff に反映されている。
+- 既知の偏差 (FAIL_COUNT 未定義、comment_id 省略) は Code Retrospective で事前文書化済みのため、review 時点で追加の divergence 発見はなかった。Code phase での自己レビューが review phase の divergence 発見コストを低減している。
+
+### Recurring Issues
+
+- 対称的な実装ブロック (block 1 / block 2) で "Next action" テキストの言語が非一致 (block 1: 日本語、block 2: 英語)。SKILL.md への対称追加では両ブロックのテキスト内容も対称チェックが必要というパターン。CONSIDER レベルのため今回は修正せず記録のみ。
+
+### Acceptance Criteria Verification Difficulty
+
+- Pre-merge AC 3 件すべて `file_contains`/`grep` 系コマンドで auto-verify 可能。UNCERTAIN ゼロ。
+- Code phase で checkbox が 1 件先行更新 ([x]) されており、verify-executor が正確なステータスを反映できた。
+- CI bats テスト失敗 (setup-labels.bats) は main ブランチでも同一失敗があり、pre-existing failure として確認済み。verify コマンドによる AC 確認とは独立して評価できた。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST/SHOULD 問題なし。CI bats 失敗は pre-existing failure (main ブランチ同一)、本 PR 固有でないと確認。
+- CONSIDER 2 件 (FAIL_COUNT 未定義、"Next action" 言語非一致) は修正不要と判断し PR コメントに記録。
+
+### Deferred Items
+- "Next action" テキストの言語統一 (block 2 を日本語化) は必要なら別途対応。優先度低。
+- setup-labels.bats の pre-existing CI 失敗は別 Issue で対処予定。
+
+### Notes for Next Phase
+- AC 全件 PASS、MUST/SHOULD 問題なし。`/merge 726` 実行可能。
+- post-merge AC は manual (FAIL 意図確認観察) と opportunistic (consume 確認) のため、merge 後に観察。
