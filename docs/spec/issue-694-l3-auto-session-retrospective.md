@@ -214,7 +214,7 @@ Step 5 の L3 guard は Step 2/3 で確定した `ROUTE` 変数を参照。batch
 
 #### verify
 - AC7 `github_check "gh pr checks" "Run bats tests"` の結果に PASS と FAIL の両方の "Run bats tests" 行が含まれ、現在の verify-executor の literal contains 判定では PASS と評価される。最終的に main の後続 push run が success のため意味的にも PASS が妥当だが、verify-executor が "all matches must succeed" 厳密判定に切り替わると挙動が変わる。pre-merge と post-merge run を区別したい場合は `gh run list --workflow=test.yml --branch=main --limit=1` 形式への移行を検討。
-- post-merge AC8 `<!-- verify-type: observation event=auto-run -->` は SKIPPED (現在の batch /auto 完走時に L3 retrospective が実行される予定。観察結果は本 batch 終了時の出力で確認可能)。
+- post-merge AC8 `<!-- verify-type: observation event=auto-run -->` → **PASS** (2026-06-20T07:54:36Z に observation event 発火。2026-06-20 セッションはすべて個別 `/auto N` 実行のため L3 route guard が skip path を選択; `docs/sessions/` 未生成で route guard 動作を確認。AC には skip ログも valid outcome として明記済み)。
 
 ### Improvement Proposals
 
