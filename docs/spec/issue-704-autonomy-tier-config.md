@@ -181,19 +181,19 @@ non-interactive モードで以下 3 点を自動解決し、Acceptance Criteria
 - rubric AC (AC8: 「tier 選択基準と経路許可範囲の説明」) は実装が明示的な Use-when 節と Allowed paths 節を持っていたため grader 判定が容易。Spec の "/review doc consistency 注記" が guide の記述粒度を事前誘導した効果があったと考えられる。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 全 9 件の Pre-merge AC が PASS (file_exists / grep / file_contains / rubric)。CI 全ジョブ SUCCESS。MUST/SHOULD 所見なし → COMMENT event でレビュー投稿済
-- review-bug 所見 2 件 (SHOULD) は検証 sub-agent が false positive と判定してフィルター済。残存 CONSIDER 2 件は既知 defer (broken `[日本語]` link / `(exhaustive)` マーカー) で merge 非ブロッカー
-- MUST/SHOULD 所見がないため Step 12 (issue resolution) はスキップ、Step 13 (AC consistency check) もスキップ
+- PR #714 を squash merge (mergeable=true, CI success, approved)。`closes #704` により Issue #704 は自動クローズ
+- BASE_BRANCH=main のため closes #N による自動クローズが機能し、手動 close 不要と判断
+- Phase Handoff write を squash commit 後の origin/main に ff-only merge した worktree で実行
 
 ### Deferred Items
-- broken `[日本語](../ja/guide/autonomy.md)` リンク → merge 後に `/doc translate ja` で解消
+- broken `[日本語](../ja/guide/autonomy.md)` リンク → `/doc translate ja` で bulk sync 時に解消
 - `modules/autonomy-tier.md` `## Tier × L0 Write Matrix` への `(exhaustive)` マーカー追加 → 任意 follow-up
 - skill frontmatter `loop-paths-used` / `loop-paths-fallback` 宣言と loader 照合ロジックの実配線 → #700 / #702 / #703
 - `product.md § Terms` への "autonomy tier" 登録 → enforcement 着地時の follow-up
-- `SECURITY.md` への autonomy tier cross-reference → #700-703 着地時
 
 ### Notes for Next Phase
-- `/merge 714` で merge 可。post-merge AC は manual: `.wholework.yml: autonomy: L2` 状態で #700 着地後の `/verify` が許可された経路のみ実行することを観察
+- post-merge AC (verify) は manual: `.wholework.yml: autonomy: L2` 設定下で #700 着地後の `/verify` が許可された経路のみ実行することを観察する
+- label は `verify` に遷移済み。`/verify` 実行前に #700-703 の着地状況を確認すること
