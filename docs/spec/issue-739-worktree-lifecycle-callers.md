@@ -44,3 +44,29 @@
 
 - saito (MEMBER, first-class): Issue Retrospective — Auto-Resolve 1: run-review.sh / run-merge.sh caller verify command を AC に追加済み。AC は 5 件の section_contains (run-spec.sh, run-code.sh, run-auto-sub.sh, run-review.sh, run-merge.sh) で網羅されていることを確認。
   URL: https://github.com/saitoco/wholework/issues/739#issuecomment-4759637403
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- Spec Notes に `run-verify.sh は存在しない` と明記されていたため verify skill の runner 欄に "(in-session only — no run-verify.sh)" を明示した。これにより表が 5 行 (spec/code/review/merge/verify) で完結し、背景情報なしでも理解できる。
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `## Callers (auto-maintained)` セクションをファイル末尾 (`## Notes` の末尾ブロック後) に追加した。table 形式 (Skill / Path / Runner script) で一覧化し、Orchestrator を別テーブルとして分離。これにより Direct Callers と実行ルートの関係が一目で把握できる。
+- verify SKILL は in-session 実行のみのため runner 欄に "(in-session only — no run-verify.sh)" と注記し、run-verify.sh が存在しない理由を明示した。
+- Update Protocol を平文で記述し、「新たな Skill 追加時にこのテーブルに追記する」という運用手順を SSoT 化した。
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- 追加は純粋な文書追記 (code changes なし) のため、/verify フェーズの全 AC は `section_contains` / `file_contains` で機械的に確認可能。
+- CI check (github_check "gh run list ...") は commit push 後に実行されるため、/verify フェーズで最終確認する。
