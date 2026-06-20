@@ -67,21 +67,20 @@ No new comments since last phase.
 - **auto-resolve**: 曖昧ポイントなし (SPEC_DEPTH=light、自動解決不要)
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `emit-event.sh` を allowed-tools に追加。`validate-skill-syntax.py` が body 参照スクリプトと allowed-tools の不一致を検出するため必須だった。
-- `loop-paths-fallback: [A]` フィールドは `validate-skill-syntax.py` に "unknown field" warning が出るが、エラーではないため CI はパスする。future でスキーマを更新する余地あり。
-- `docs/ja/guide/customization.md` も同時更新した (translation-workflow.md の sync 義務)。
+- MUST/SHOULD 指摘なし。CONSIDER 2件 (変数名不一致、暗黙変数定義) は Spec retrospective に記録のみ、修正は行わない。
+- Forbidden Expressions CI 失敗は `docs/spec/issue-710-blocked-by-workflow.md` の pre-existing 違反であることを確認し、本 PR 起因ではないと判断。
+- `REVIEW_DEPTH=light` で全 4 観点を軽量カバー。外部レビューツール設定なしのため Step 7 はスキップ。
 
 ### Deferred Items
-- `validate-skill-syntax.py` に `loop-paths-fallback` フィールドをスキーマとして追加する改善は本 Issue 範囲外。
-- `/auto --batch --resume` で `.tmp/next-cycle.json` を消費するインタラクティブ提示は本 Issue 範囲外 (Notes に明記)。
+- CONSIDER 指摘 2件 (session_start/SESSION_START 不一致、暗黙変数定義) は改善提案として本 retrospective に記録。別 Issue での対応推奨。
+- Forbidden Expressions CI 違反 (`docs/spec/issue-710-blocked-by-workflow.md`) は本 PR 範囲外のため別途対応が必要。
 
 ### Notes for Next Phase
-- pre-merge AC 3件全て PASS 済み (checkboxes 更新済み)。
-- post-merge AC は `next-cycle-seed.enabled: true` の状態で実際の batch 完走を要する observation 型 (verify-type: observation)。
-- CI で `forbidden-expressions` が `docs/spec/issue-710-blocked-by-workflow.md` で既存違反を検出するが、本 PR の変更とは無関係の pre-existing 問題。
+- MUST/SHOULD 指摘なし。`/merge 720` で即時マージ可能。
+- post-merge AC (observation 型) は `next-cycle-seed.enabled: true` の実運用環境での観察が必要。
 
 ## Code Retrospective
 
@@ -96,3 +95,19 @@ No new comments since last phase.
 ### Rework
 
 - `emit-event.sh` の allowed-tools 追加を最初のコミット後に発見し、別コミットで修正した。実装→バリデーション実行→不一致発見→修正のフローで 1 コミット余分になった。
+
+## review retrospective
+
+### 観点 1: Spec vs 実装の乖離パターン
+
+- Spec と PR diff の一致度は高く、構造的乖離なし。SKILL.md の LLM-executed skill という性質上、bash スニペット内の変数名 (`$SESSION_START`) とステップ説明文の変数名 (`session_start`) の不一致が生じた。LLM-executed skill では変数名の大文字小文字を Spec レベルで統一しておく価値がある改善余地。
+
+### 観点 2: 繰り返し指摘
+
+- 今回は同種指摘の繰り返しなし。CONSIDER 2件は異なる種別 (変数命名、暗黙変数定義)。LLM-executed skill の文書記述で暗黙の変数定義を残しがちなパターンは過去 PR でも見られており、将来の skill 執筆時に意識すべき共通パターン。
+
+### 観点 3: 承認条件検証の難度
+
+- Pre-merge AC 3件はすべて `file_contains`/`grep` で PASS が確認でき、検証コマンドの精度は十分だった。
+- Post-merge AC は `verify-type: observation` (実際のバッチ完走が必要) であり、自動検証不可。これは観察型 AC の適切な使い分けとして問題なし。
+- Nothing to note 以外: UNCERTAIN が 0件であり、verify command の品質は高い。
