@@ -72,25 +72,25 @@
 - 承認基準 6 件全て PASS。`command "bats tests/reconcile-phase-state.bats"` は CI FAILURE だったが、失敗が `setup-labels.bats` (pre-existing) であることを CI ログで確認し PASS 判定できた。Safe mode では CI ログ解析が重要で、`reconcile-phase-state.bats` 新規テストの PASS ライン (ok 534-536) を明示確認できたのは有効。Spec の verify command を `bats tests/reconcile-phase-state.bats` に限定したことで CI ジョブ全体の FAILURE に惑わされなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- MUST/SHOULD 指摘なし: 全承認基準 PASS、CI の bats 失敗は `setup-labels.bats` pre-existing 問題 (main ブランチも同様)。
-- CONSIDER 2 件のみ: `actual.size` ドキュメント記述の曖昧さ、Phase Table 冗長記述。どちらも機能的影響なし、merge ブロックなし。
-- review-light (1 agent, light mode) を実行。SKIP_REVIEW_BUG=false だが REVIEW_DEPTH=light のため lightweight integrated review のみ。
+- CI failing (reason=ci_failing) を検出したが、main ブランチでも同一テスト群 (setup-labels.bats) が pre-existing failure であることを確認し、auto-resolve でマージを続行した。
+- `gh pr merge 730 --squash --delete-branch` によるスクワッシュマージが成功 (mergedAt: 2026-06-20T17:49:23Z)。
+- BASE_BRANCH=main のため `closes #708` により Issue は自動クローズされる予定。
 
 ### Deferred Items
 
-- `actual.size` JSON Schema の記述改善 (CONSIDER): merge 後の Improvement Proposal または次サイクルで対応。
+- `actual.size` JSON Schema の記述改善 (CONSIDER): merge フェーズでは対応せず、次サイクルまたは Improvement Proposal で対応。
 - Phase Table Implementation Status 列の整理 (CONSIDER): 同上。
-- `tests/setup-labels.bats` の pre-existing failures: 本 PR とは無関係、別 Issue で対応が必要。
+- `tests/setup-labels.bats` の pre-existing failures: 本 PR とは無関係、別 Issue での対応が必要。
 
 ### Notes for Next Phase
 
-- PR #730 は APPROVED 状態で merge 可能。`/merge 730` を実行。
-- Post-merge AC (観察的 verify) が 2 件存在: `phase/ready` のみの M Issue での `matches_expected: false` 確認、XS Issue での `matches_expected: true` 確認。`/verify` フェーズで実施。
-- `setup-labels.bats` 失敗は main ブランチも同様なので merge ブロック理由にならない。
+- Post-merge AC (観察的 verify) が 2 件存在: `phase/ready` のみの M Issue に対して `reconcile-phase-state.sh --check-precondition code-pr N` が `matches_expected: false` を返すことの確認、XS Issue での `matches_expected: true` 確認。
+- verify コマンドは Spec の Verification セクション (Post-merge) を参照。コマンド実行には `gh issue list` 等で実際の Issue を用意するか、mock 環境での確認でも可。
+- setup-labels.bats の pre-existing failures は verify スコープ外。
 
 ## Notes
 
