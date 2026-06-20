@@ -37,6 +37,8 @@ Key per-step behavior in non-interactive mode:
 - **Step 3 — test failures after conflict resolution**: auto-resolve by outputting test failure details and exiting with non-zero (test failures are not safe to ignore)
 - **Step 3 — push rejected**: auto-resolve by exiting with non-zero (remote branch updates require human intervention)
 
+**Pre-screening by `run-merge.sh`**: Forbidden Expressions (and future baseline-gated checks) are pre-screened by `run-merge.sh` via `pre-merge-check.sh` before this skill is invoked. A new (non-pre-existing) FAILURE aborts the merge before Step 1 is reached; a pre-existing FAILURE on the base branch is passed through so the merge can proceed.
+
 ## Steps
 
 **Execute immediately without confirmation. Do not use compound commands (`&&`, `|`).**
