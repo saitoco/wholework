@@ -136,3 +136,48 @@ Nothing to note. Spec の受け入れ条件 (file_contains / grep ベース) は
 ### Notes for Next Phase
 - post-merge AC は observation event=verify-completion なので `/verify` 後に `.wholework.yml: recoveries-auto-fire.enabled: true` の状態で手動観察が必要
 - `retro/recoveries` ラベルが追加されたため `scripts/setup-labels.sh` を再実行してラベルを GitHub に反映させることを推奨
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Issue body は L2→L1 経路位置付け (#704 マトリクス) を明記しており、autonomy tier との接続が明確。AC 設計も file_contains/grep の機械検証可能形式で UNCERTAIN=0。
+
+#### spec
+- spec phase で Size を S → M にアップグレードした (`Post-spec route demotion/upgrade: S → M`)。spec 段階で必要なファイル数 (5 ファイル: SKILL.md / emit-event.sh / detect-config-markers.md / setup-labels.sh / customization.md 英日) を見積もり直し、S 想定を超えた判断は妥当。
+- Spec で `recoveries-auto-fire` config キー名と内部変数名 `RECOVERIES_AUTO_FIRE_*` の対応関係を明記していなかったため、AC1 verify command (config キー名 grep) が初回実装で FAIL する原因になった。Spec の設計-検証 alignment の改善余地。
+
+#### code
+- silent no-op anomaly が code-pr で発生 → Tier 2 recovery (run-code 再実行) で復旧 → PR #718 作成成功。auto-retry が機能した。
+- AC1 が初回 FAIL したため Step 15 の説明文に `recoveries-auto-fire` 文字列を追加する rework 1 回発生。
+
+#### review
+- review-light で適切に MUST/SHOULD を切り分け、`tests/setup-labels.bats` の off-by-one パターンを SHOULD として指摘 → 修正済み。adversarial review が継続的に効いている。
+
+#### merge
+- **Forbidden Expressions check が pre-existing FAILURE (`docs/spec/issue-710-blocked-by-workflow.md`)**。`--non-interactive` モードの auto-resolve policy に従いマージ続行。これは本 Issue 範囲外だが、別 Issue として捕捉が必要な orchestration anomaly。
+- CI が `ci_failing` でも merge 続行する `--non-interactive` policy の妥当性: ここでは pre-existing FAILURE だったので結果的に正しいが、real FAILURE と pre-existing FAILURE を区別できない判定ロジックは将来の risk。
+
+#### verify
+- Pre-merge 5 件すべて idempotent 再検証で PASS。Post-merge 1 件 (observation event=verify-completion) は本セッションでは条件不成立 (recoveries-auto-fire.enabled 未設定 + symptom 3 回蓄積条件未充足) → PENDING で deferred。判断は SSoT (Issue body と Spec) に忠実。
+
+### Improvement Proposals
+
+**1. Spec の config キー名と内部変数名の対応関係明示 (Tier 2 / 規約)**
+
+config フラグ追加時に Spec で `recoveries-auto-fire` (YAML key) ↔ `RECOVERIES_AUTO_FIRE_ENABLED` (env var) のような対応関係を明示する規約を確立する。今回は AC1 が config キー名を grep する設計だったが、Spec 実装ステップでは内部変数名のみ言及していたため initial code が AC1 を FAIL させた。Tier 2 (Spec template の規約として記録、memory entry 候補)。
+
+**2. Forbidden Expressions check の pre-existing FAILURE 区別 (Tier 1 候補)**
+
+merge phase で Forbidden Expressions check が pre-existing FAILURE のため `--non-interactive` auto-resolve でマージ続行した。pre-existing と real FAILURE を機械的に区別できる仕組みが無いと:
+- 真に MUST 修正すべき FAILURE を見逃すリスク
+- 別 Issue 起票の責務がオペレータに残る
+
+提案: `pre-merge-check.sh` 等で「main ブランチで同 check が FAIL するか」を比較し、pre-existing は warning、新規発生は abort とする policy。あるいは特定 check (Forbidden Expressions 等) に対して「baseline FAILURE 一覧」を管理する。再発性が高く orchestration の boundary に影響するため Tier 1。
+
+別 Issue で `docs/spec/issue-710-blocked-by-workflow.md` の Forbidden Expressions 問題を解消することも別途必要。
+
+**3. `tests/setup-labels.bats` off-by-one パターンの再発防止 (Tier 3 / 既存対処済)**
+
+review で指摘・修正済み。今後ラベル追加時に「テスト名のラベル数 = 現実の ALWAYS_LABELS 数」を一致させる規約を Spec template に明示すれば再発防止になる。Tier 3 (一回限りの修正、規約化は Tier 2 の #2 と統合可能)。
