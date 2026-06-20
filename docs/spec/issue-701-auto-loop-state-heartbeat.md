@@ -95,3 +95,38 @@
 - **Best-effort**: heartbeat append の失敗はメイン実行フローをブロックしてはならない。
 - **snapshot 取得**: `gh issue list --label "phase/*" --json labels` で open issues の phase別集計値のみ取得。reconcile-phase-state.sh は phase 完了確認のトリガーとして使用 (再呼び出し不要)。
 - **docs/reports/**: 既存ディレクトリ。`loop-state-*.md` は新規ファイルタイプだが、ディレクトリ新設ではないため structure.md 更新不要 (単一ファイル出力につき除外ルール適用)。
+
+## Consumed Comments
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. Implementation followed all 3 steps in the Spec exactly: `## Loop State Heartbeat` section added after Daily rollup, heartbeat steps added to all PR route phase completions (steps 3, 7, 10, 16) and patch route phase completions (steps 3, 9).
+
+### Design Gaps/Ambiguities
+
+- The inline heartbeat references in the phase steps use "see `## Loop State Heartbeat`" which points to the new section. This is a forward reference within the same file — readable but not automatically validatable by grep-based verify commands. Acceptable given the best-effort nature of the feature.
+
+### Rework
+
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Added `## Loop State Heartbeat` as a top-level `##` section in SKILL.md, placed between Daily rollup and L3 auto-retrospective in Step 5. This makes it a standalone reference section rather than embedding it inline within a step.
+- Heartbeat references in individual phase steps use a compact inline notation (`append loop-state heartbeat; see ## Loop State Heartbeat`) to avoid repeating the full procedure at every call site.
+- All 6 phase completions (4 PR route + 2 patch route) are covered with distinct `from→to` transition labels.
+
+### Deferred Items
+- Actual runtime behavior (file creation, row append, snapshot aggregation) is verified post-merge via observation event `auto-run`. The verify commands only confirm SKILL.md text presence.
+- The `gh issue list` snapshot aggregation jq logic is left as a prose description in the Heartbeat Append Procedure — a future Issue could implement a helper script if needed.
+
+### Notes for Next Phase
+- All 3 pre-merge ACs pass: `grep "loop-state"`, `grep "Loop State"`, `grep "reconcile-phase-state.sh"` all PASS.
+- Post-merge AC requires running `/auto N` and observing the `docs/reports/loop-state-{DATE}.md` file. This is tagged `verify-type: observation event=auto-run`.
+- The pre-existing forbidden-expressions violation in `docs/spec/issue-710-blocked-by-workflow.md` (旧称: verify hint) is unrelated to this change — no action needed from `/verify`.
