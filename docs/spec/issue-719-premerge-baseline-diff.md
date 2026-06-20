@@ -177,13 +177,30 @@ merge フェーズが遭遇する pre-merge check の FAILURE を **pre-existing
 - merge フェーズが Forbidden Expressions FAILURE を「どこで」遭遇するか当初不明だったが、調査の結果 merge SKILL.md は check を直接実行せず、`gh-pr-merge-status.sh` の `ci_failing` (CI ジョブ結果) 経由であることを確認。baseline diff を local 再実行にすることで CI 非依存・deterministic に解決した。
 - pre-existing FAILURE が現在 main に実在する (`docs/spec/issue-710-blocked-by-workflow.md`) ことを確認。本 PR 自体が PRE_EXISTING 分類のセルフ検証 (dogfood) になる。同時に、CI 全体 conclusion を pre-merge AC に使えないこと (forbidden-expressions ジョブが落ち run conclusion=failure になるため) も判明し、ファイルベースの deterministic AC のみを採用した。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- `pre-merge-check.sh` の `run_check_on_ref` 関数で `worktree add` の出力を `>/dev/null 2>&1` に変更した (Spec は `2>/dev/null` のみ)。worktree 作成は verbose なため標準出力も抑制した方がクリーン。
+- `_check_exit` の初期化を `local _check_exit=0` としたかったが、bash 3.2 互換のため `_check_exit=0` で代入し `( cd "$wt" && bash "$CHECK_REL" ) ...; _check_exit=$?` パターンにした。サブシェルで捕捉。
+- `tests/pre-merge-check.bats` の `_setup_feature_branch` でブランチ固有の marker file (`skills/marker-${branch}.md`) を追加する設計変更が必要だった。Spec のシナリオ記述はコンテンツ差が前提だったが、base と head が同一コンテンツのテストケース (PRE_EXISTING, CLEAN) では `git commit` が空コミットで失敗するため。
+
+### Design Gaps/Ambiguities
+
+- Spec の `tests/pre-merge-check.bats` シナリオ説明は「skills/x.md に FORBIDDEN 文字列の有無で分類を作る」としていたが、PRE_EXISTING (base=FAIL / head=FAIL) と CLEAN (base=PASS / head=PASS) のシナリオで base と head が同一コンテンツになるため、git commit が空コミットエラーとなることがシナリオ設計上の見落としだった。marker ファイル追加で解消。
+- Spec Notes に「本 Spec を含む docs/spec/* は forbidden-expressions の SCAN_DIRS に含まれる」との注記があり、retrospective で deprecated term を直接引用しないよう注意が必要だった。実際に遵守した。
+
+### Rework
+
+- `tests/pre-merge-check.bats` の `_setup_feature_branch` 関数を初版実装後に修正した (marker file 追加)。実行時に PRE_EXISTING と CLEAN テストが失敗し、空コミット問題と判明したため 1 回目テスト実行後に即時修正。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
-- baseline gate は `run-merge.sh` の wrapper 側 (claude 起動前) に設置。`pre-merge-check.sh` の exit 2 (NEW_FAILURE) のみ merge を abort、それ以外 (CLEAN/FIXED/PRE_EXISTING/env error) は続行 (env error は fail-open)。
-- 対象 check は Forbidden Expressions のみ。`pre-merge-check.sh` 内の dispatch table で modular に拡張可能。案 B (SSoT 管理) は deferred。
-- 各 ref 自身の `scripts/check-forbidden-expressions.sh` を ephemeral worktree (`git worktree add --detach origin/<ref>`) で実行して比較する (案 A literal)。
+- `pre-merge-check.sh` は bash 3.2 / macOS 互換で実装した (mapfile・連想配列不使用、`mktemp -d`、worktree 後始末 `|| true`)。Spec 指示通り。
+- `tests/pre-merge-check.bats` で `_setup_feature_branch` に marker file を追加した (空コミット防止)。設計変更は最小でシナリオ論理に影響なし。
+- `run-merge.bats` の既存テスト (emit 系 tests 21, 23) は pre-existing 失敗。本 PR の変更とは無関係 (確認済み)。
 
 ### Deferred Items
 - 全 check 自動化 (dispatch table 拡張) は将来の改善。
@@ -191,7 +208,6 @@ merge フェーズが遭遇する pre-merge check の FAILURE を **pre-existing
 - `docs/spec/issue-710-blocked-by-workflow.md` の Forbidden Expressions pre-existing FAILURE 解消は独立の別 Issue (Post-merge AC2 の前提)。
 
 ### Notes for Next Phase
-- `tests/run-merge.bats` は実 `run-merge.sh` を `WHOLEWORK_SCRIPT_DIR=$MOCK_DIR` で動かすため、`setup()` に `pre-merge-check.sh` の mock (default exit 0) 追加が必須。未追加だと新規呼び出しが `set -e` で既存テストを全滅させる。
-- 本 Spec を含む `docs/spec/*` は forbidden-expressions の SCAN_DIRS に含まれる。新規ファイルに deprecated term を直接引用すると NEW_FAILURE を生むため、`旧称:` prefix か説明的表現を使う。
-- `pre-merge-check.sh` は bash 3.2 / macOS 互換で実装する (mapfile・連想配列不使用、`mktemp -d` 使用、worktree 後始末は `|| true`)。
-- CI 全体 conclusion (`gh run list --workflow=test.yml`) は pre-existing forbidden-expressions failure のため pre-merge AC に使わない。
+- CI の Forbidden Expressions check は pre-existing FAILURE (main 側の問題) のため、本 PR では CI 全体の green を期待しない。`run-merge.sh` の baseline gate が PRE_EXISTING と分類して通過することが dogfood 検証。
+- `run-merge.bats` の emit 系テスト (tests 21, 23) は pre-existing failures — /verify フェーズで先に確認する必要なし (本 Issue スコープ外)。
+- pre-merge AC 7 項目すべて PASS 確認済み、Issue チェックボックス更新済み。PR #723 作成済み。
