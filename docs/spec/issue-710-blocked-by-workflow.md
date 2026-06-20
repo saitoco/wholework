@@ -136,19 +136,19 @@ Issue 起票・リファイン時に blocked-by relationships を GitHub native 
 - 全 7 AC が `grep`/`file_exists`/`file_contains`/`section_contains` コマンドで機械的に PASS 判定できた。UNCERTAIN 件数: 0。verify コマンドは適切に設計されており、auto-verification の精度が高い。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- SHOULD 指摘 2 件 (exit code コメント、docs/ja 同期漏れ) を修正しコミット済み
-- CONSIDER 指摘 2 件 (tests/ 件数、ja/workflow.md スペース) も合わせて修正
-- review-bug 指摘は全て false positive (検証サブエージェントで REJECT 確認)
-- MUST 指摘なし → COMMENT event でレビュー投稿
+- PR #715 をスカッシュマージ (conflicts なし、CI success、review approved)
+- BASE_BRANCH=main のため `closes #710` により Issue は自動クローズ済み
+- review フェーズの SHOULD/CONSIDER 修正が全てマージコミットに含まれた状態でマージ完了
 
 ### Deferred Items
-- `remove-blocked-by` mutation の呼び出し側実装 (未定義のまま、code フェーズ引き継ぎ)
-- Post-merge manual verification: `/issue` 起票テスト、`/triage N` backfill テスト
+- Post-merge manual verification: `/issue` 起票テスト (body に `Blocked by #N` を含む Issue を起票し GraphQL で確認)
+- Post-merge manual verification: `/triage N` backfill テスト (body-only `Blocked by #N` の既存 Issue に対して実行)
+- `remove-blocked-by` mutation の呼び出し側実装は別 Issue で対応予定
 
 ### Notes for Next Phase
-- 全 7 pre-merge AC が PASS
-- 修正後 validate-skill-syntax.py PASS (0 errors)
-- merge フェーズで特別な注意事項なし; `set-blocked-by.sh` はべき等でないが主要呼び出し経路 (triage Step 9) は事前チェック付き
+- 全 7 pre-merge AC が PASS 済み (`grep`/`file_exists`/`file_contains`/`section_contains` で機械的に確認可能)
+- `set-blocked-by.sh` はべき等でないが、triage Step 9 は事前 `get-blocked-by` チェック付きで重複設定を回避
+- verify フェーズは post-merge manual テストの 2 項目を除き自動検証可能
