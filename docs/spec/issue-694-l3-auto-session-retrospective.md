@@ -164,20 +164,34 @@ Step 5 の L3 guard は Step 2/3 で確定した `ROUTE` 変数を参照。batch
 
 - Spec ファイルの deprecated term 修正後に `git status` で未コミット変更として残り、PR 作成後に追加コミットを要した。spec フェーズが作成した内容の CI scan 対象への該当をコード実装前に確認すべきだった。
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Code Retrospective セクションに forbidden expression (旧称) が引用テキストとして残存し、CI Forbidden Expressions check が FAILURE になった。Retrospective で deprecated term を name で引用する場合は `旧称:` 記法や言い換えを使うことを Spec の作成規約に明記する価値がある。
+
+### Recurring Issues
+
+- 同一 PR 内で /code フェーズが「deprecated term 修正をコード後に発見し追加コミット」、/review フェーズが「Code Retrospective 内の deprecated term 引用で CI FAILURE」と、同じカテゴリの問題が 2 回発生した。Retrospective Guard (skill-dev-recheck.md) を /code フェーズにも適用するか、Spec 生成時に forbidden expression scan を実行すると根本対処になる。
+
+### Acceptance Criteria Verification Difficulty
+
+- rubric AC (AC3) はセマンティック判定のため /review の safe mode でも通過できたが、implementation が XL route の variable name を `sub_issue` (Spec では "XL") に変えていることを rubric grader が検出できない可能性がある。rubric text に「ROUTE 変数値 `sub_issue` が XL route の guard として使われている」と具体的変数名を含めると精度が上がる。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- XL route の guard 条件を Spec の "XL" から実際の SKILL.md 変数値 `sub_issue` に変更。SKILL.md Step 3a route table との整合性を優先。
-- Batch Completion Report に L3 block を複製追加 (Event scan + Daily rollup + ROUTE="batch" + L3 参照形式)。Spec が "Step 5 に配置" と述べているが batch は Steps 2-6 をスキップするため必要な対処。
-- forbidden expression fix をコード実装後に発見し追加コミットで対応。PR #711 に 2 コミット含まれる。
+- review フェーズは `--light` モード実行のため 1-agent lightweight integrated review を実施。MUST 2 件 (forbidden expression in Code Retrospective) を検出し修正した。
+- forbidden expression は Spec の Code Retrospective セクションで deprecated term を直接引用したことで発生。`deprecated term` への言い換えで解決。
+- AC 検証: 7/7 PASS (うち post-merge observation はスキップ)。CI は Forbidden Expressions check のみ FAILURE (修正コミット済み)。
 
 ### Deferred Items
-- Commit count detection の実装方法: Spec Notes で "events log schema を確認して適切な検出方法を選択" と指示されていたが、`commit` イベントが存在しない場合の fallback (`git log --oneline --since=...`) として SKILL.md に記載済み。runtime での確認は /verify フェーズ後の手動観察に委ねる。
-- `BLOCKED_BY_CANDIDATES` シグネチャ: `<!-- TODO (#710) -->` コメントを SKILL.md に残した。#710 着地まで deferred。
-- #704 (autonomy tier) guard: route guard のみで実装済み。#704 着地後の 1 行追加で完結する設計。
+- Commit count detection の runtime 確認: events log に `commit` イベント型が実際に emit されるかは /verify フェーズ後の手動観察に委ねる。
+- `BLOCKED_BY_CANDIDATES` シグネチャ: #710 着地まで deferred。
+- #704 (autonomy tier) guard: #704 着地後の 1 行追加で完結する設計で deferred。
 
 ### Notes for Next Phase
-- PR #711 の CI (bats tests) が green になることを確認してから /verify を実行すること。
-- SKILL.md の L3 block は Step 5 と Batch Completion Report の 2 箇所に配置されている。review 時に重複感を指摘される可能性があるが、batch mode が Step 5 に到達しないための必要な設計であることを確認。
-- rubric AC (AC3) はセマンティック判定なので /verify での再評価が重要。実装内容は rubric text の 5 基準すべてを満たしている。
+- CI Forbidden Expressions check は修正コミット (2c1c668) で解消予定。/merge 前に CI が green になることを確認すること。
+- rubric AC (AC3) はセマンティック判定: implementation が ROUTE variable を `sub_issue` (Spec では "XL") と名付けていることを /verify で再確認すること。
+- L3 block の 2 箇所配置 (Step 5 + Batch Completion Report) は batch が Steps 2-6 をスキップするため必要な設計。/verify での動作確認が重要。
