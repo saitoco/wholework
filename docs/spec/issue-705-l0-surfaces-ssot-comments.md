@@ -148,3 +148,58 @@ Output: inject 済み context + `## Consumed Comments` 記録 + (条件付き) `
 - post-merge AC #10 (manual): 試験 Issue への手動 comment 追加という前提作業が必要なため、自動化不可。`<!-- verify-type: manual -->` を維持 (Issue 側の Auto-Resolved Ambiguity で `observation event=skill-run` → `manual` に解決済。`skill-run` は有効 event-name 一覧に不在)。
 - post-merge AC #11 (observation): `auto-run` は有効 event-name (pr-review-full / pr-review-light / auto-run / watchdog-kill / fix-cycle) に含まれるため `observation event=auto-run` を維持。
 - ja mirror (`docs/ja/*`) は本 Issue の pre-merge AC (英語ファイル対象) とは別に同期する。verify command は英語ファイルにのみ付与し、ja 側は実装ステップで日本語フォーマットを維持する (verify command の format 影響を避ける)。
+
+## issue retrospective
+
+### 自動解決ログ (非対話モード)
+
+**P1: `observation event=skill-run` → `manual` に変更**
+
+- **判断**: `verify-classifier.md` の有効 event-name 一覧 (`pr-review-full` / `pr-review-light` / `auto-run` / `watchdog-kill` / `fix-cycle`) に `skill-run` は存在しない。未知イベントのフォールバックは `opportunistic` だが、当該 AC は「試験 Issue に user comment を追加する」という手動前提作業を必要とするため、`manual` が最適と判断
+- **変更**: Post-merge AC #1: `<!-- verify-type: observation event=skill-run -->` → `<!-- verify-type: manual -->`
+- **代替候補**: `opportunistic` (verify-classifier.md 未知イベントのフォールバック)
+- **採用理由**: 手動セットアップ (試験 Issue への comment 追加) が必要な観察条件は `manual` が SSoT に従った分類
+
+**P2: AC #9 の verify command を `section_contains` に変更**
+
+- **判断**: `file_contains "docs/workflow.md" "L0 surfaces"` では、L0 surfaces という文字列がファイル内のどこにでも存在すれば PASS になる。実装意図は `## Related Documents` セクションへのリンク追加であるため、`section_contains "docs/workflow.md" "## Related Documents" "l0-surfaces.md"` に変更することで検証精度を向上
+- **変更**: `file_contains "docs/workflow.md" "L0 surfaces"` → `section_contains "docs/workflow.md" "## Related Documents" "l0-surfaces.md"`
+- **代替候補**: 元の `file_contains` を保持 (ドキュメント内のどこかに文字列があればよい)
+- **採用理由**: 実装意図 (Related Documents セクションへのリンク) との整合性を高め、誤 PASS のリスクを低減
+
+## spec retrospective
+
+### Minor observations
+- Issue body の前提記述に 2 件の実態齟齬があった: (1) `gh issue view --json comments` の実フィールドは `authorAssociation` (`author` 配下の `author.association` ではない)、(2) `labels.created_at` は存在せず phase ラベル付与時刻は timeline 由来。いずれも /spec の codebase 調査で検出し Notes に吸収。AC3 の文字列 `author.association` は維持しつつ実装は実フィールド名を使う形で両立させた。
+
+### Judgment rationale
+- comment 取り込みステップを「新規番号付き Step」ではなく「既存の早期 Step 内サブセクション」として追加する判断。理由: 3 つの SKILL.md で後続 Step 全番号の繰り上げ churn を避け、Issue body の "Step 1〜2 付近" 指針にも合致するため。
+- structure.md の `(37 files)` カウント AC を 10 件目として追加し Issue body にも同期した。理由: structure.md maintenance rule がモジュール追加時のカウント verify を要求しているため (/audit drift の検出対象)。
+- `comments_consumed` の emit を emit-event.sh の source 方式に統一 (verify SKILL.md の inline JSON 方式は採らない)。理由: spec/code は `date:*`/`printf:*` を allowed-tools に持たず、source 方式なら追加ツール不要で locking も再利用できるため。
+
+### Uncertainty resolution
+- `gh api repos/{owner}/{repo}/issues/N/timeline` が `phase/*` の `labeled` イベントを `created_at` 付きで返すことを issue #705 の実データで確認 → cutoff 取得の primary 経路として確定。
+- `authorAssociation` の実値を確認: リポジトリオーナー saito の comment が `MEMBER` を返す (issue #699 で確認) → Trust Boundary は OWNER / MEMBER / COLLABORATOR を first-class とした。
+- run-spec.sh が `AUTO_EVENTS_LOG` を export していないことを確認 → Implementation Step 8 で補完。worktree CWD と相対パス `.tmp/auto-events.jsonl` の解決差異は /code で要確認として Uncertainty に残置。
+
+## Phase Handoff
+
+### Key Decisions
+- l0-surfaces.md に SSoT 表 + Trust Boundary + machine-readable marker + Comment Consumption Procedure を集約し、3 つの SKILL.md は "Read and follow the Comment Consumption Procedure" の追加のみとする (重複排除)。
+- cutoff は timeline API (`gh api .../timeline` の最新 `phase/*` `labeled`) を primary、`.tmp/auto-events.jsonl` の `phase_start` → 全件 best-effort を fallback とする。`labels.created_at` は不在のため使わない。
+- 信頼境界は `authorAssociation` で判定: OWNER/MEMBER/COLLABORATOR=first-class、CONTRIBUTOR/NONE=external マーク、`[bot]` actor=skip。AC3 の文字列 `author.association` はモジュール本文に併記して満たす。
+- `comments_consumed` emit は emit-event.sh の source 方式、`AUTO_EVENTS_LOG` セット時のみの best-effort。
+- spec/code の allowed-tools に `gh api:*` を追加 (verify は既存)。structure.md の modules カウントを `(37 files)` に更新。
+
+### Deferred Items
+- `/code` resume 時の PR comment 取り込み (`COMMENT_SCOPE=issue+pr`) と `gh pr view:*` 追加は必要時 follow-up。
+- `/audit recoveries` の consumable comment scrape 連携・cross-Issue audit は将来拡張 (本 Issue 範囲外)。
+- `triaged` 等 bare-namespace ラベル例外の詳細は #R2 (別 Issue)。
+- post-merge AC #11 (`observation event=auto-run`) は soft な観察条件であり merge gate ではない。
+
+### Notes for Next Phase (/code)
+- AC3: モジュール本文に文字列 `author.association` を必ず含める (file_contains 対象)。実装で参照する実フィールド名は `authorAssociation`。
+- AC4: marker 形式は `<!-- wholework-event: type=... phase=... issue=N -->` (`wholework-event:` を含める)。
+- AC6/7/8: 3 つの SKILL.md 本文に `modules/l0-surfaces.md` 文字列が出現すること。Read 指示はステップ/サブセクション見出し直後の第1段落に置く (skill-dev-checks の配置ルール)。
+- SKILL.md 本文では半角 `!` とトリプルバックティックを使わない (validate-skill-syntax.py)。`gh api:*` は Bash サブパターンのため KNOWN_TOOLS / validate-skill-syntax.py 更新は不要。
+- Step 8 の run-spec.sh export 追加後、/auto 配下で `.tmp/auto-events.jsonl` に `comments_consumed` が書かれるか (worktree 相対パス解決) を実機確認する。
