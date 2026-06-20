@@ -195,3 +195,28 @@ Step 5 の L3 guard は Step 2/3 で確定した `ROUTE` 変数を参照。batch
 - CI が failing 状態でマージされたため、/verify フェーズで CI 最終状態を確認すること。
 - rubric AC (AC3): implementation が ROUTE 変数を `sub_issue` (Spec では "XL") と名付けていることを /verify で再確認すること。
 - L3 block の 2 箇所配置 (Step 5 + Batch Completion Report) は batch が Steps 2-6 をスキップするため必要な設計。/verify での動作確認が重要。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec の guard 条件で ROUTE 変数の論理名 (`"XL"`) と実装値 (`sub_issue`) が乖離していたが、code 側で正しく解決された。Spec で variable name を扱う際は actual value を必ず使うことを Spec 作成ガイドに明記すると、code phase の修正コストを下げられる。
+
+#### code
+- Spec ファイル内の deprecated term 残存を /code 実装後に発見し追加コミット (#694 commit chain) を要した。Code Retrospective の rework として既に記録済み。`/code` フェーズで spec ファイル含む forbidden-expressions 事前スキャンを追加すると根本対処になる。
+
+#### review
+- Code Retrospective セクションに deprecated term が引用テキストとして残存し、CI Forbidden Expressions check が FAILURE になった (Review Retrospective 記録済み)。Retrospective 内で deprecated term を name で引用する際の `旧称:` 記法ガイドラインを `/spec` または `/code` retrospective テンプレートに追加検討。
+
+#### merge
+- CI `ci_failing` 状態で non-interactive auto-resolve でマージ実行 (Phase Handoff 記録済み)。Failing job は intermittent な `tests/reconcile-phase-state.bats` Japanese-header test で、ローカルでは再現せず main の後続コミットでは success。#485 系の flaky test 兆候と整合する。
+
+#### verify
+- AC7 `github_check "gh pr checks" "Run bats tests"` の結果に PASS と FAIL の両方の "Run bats tests" 行が含まれ、現在の verify-executor の literal contains 判定では PASS と評価される。最終的に main の後続 push run が success のため意味的にも PASS が妥当だが、verify-executor が "all matches must succeed" 厳密判定に切り替わると挙動が変わる。pre-merge と post-merge run を区別したい場合は `gh run list --workflow=test.yml --branch=main --limit=1` 形式への移行を検討。
+- post-merge AC8 `<!-- verify-type: observation event=auto-run -->` は SKIPPED (現在の batch /auto 完走時に L3 retrospective が実行される予定。観察結果は本 batch 終了時の出力で確認可能)。
+
+### Improvement Proposals
+
+- N/A — 上記の観察はすべて既存の retrospective セクションで言及されており、独立した改善 Issue 起票よりも次回の `/spec`/`/code` フェーズで自然に拾える性質のもの。明示的な改善起票は本 verify では行わない。
+
