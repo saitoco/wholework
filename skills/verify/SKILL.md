@@ -706,24 +706,49 @@ Guard: if `docs/reports/orchestration-recoveries.md` does not exist, skip this s
    - If `AUTONOMY_TIER=L1` OR `RECOVERIES_AUTO_FIRE_ENABLED=false`:
      Print: `Recommend: gh issue create --label "retro/recoveries" --title "recoveries: {symptom-short}" (count: {count})`
    - If `AUTONOMY_TIER=L2` or `L3` AND `RECOVERIES_AUTO_FIRE_ENABLED=true`:
-     Run `gh issue create --label "retro/recoveries" --title "recoveries: {symptom-short}" --body "..."` with the following body format:
-     ```
-     ## Background
-     Symptom `{symptom-short}` has been recorded {count} times in `docs/reports/orchestration-recoveries.md`,
-     exceeding the configured threshold of `$RECOVERIES_AUTO_FIRE_THRESHOLD`.
+     a. **Extract source entries**: Read `docs/reports/orchestration-recoveries.md` and collect all entries whose header matches `## YYYY-MM-DD HH:MM UTC: {symptom-short}`. For each entry, extract: date (from header), Issue number (from `Context` field), exit code (from `Context: Wrapper: ... exit code:` field), one-line diagnosis summary (first sentence of `Diagnosis` field), and log tail (from `Context: Log tail:` field).
+     b. **Cluster by cause**: Examine the diagnosis text and exit codes to group entries by their primary cause pattern. Common patterns include: "silent no-op (exit 0, no commit)", "watchdog kill (exit 143 / SIGTERM, timeout)", "test FAIL (exit 1, test error)". Name each cause group descriptively. If only one cause pattern exists, use a single group.
+     c. **Check label existence**: Run `gh label list --json name --jq '.[].name'` and check if `retro/recoveries` is present. If absent, output: `Warning: label "retro/recoveries" not found. Run scripts/setup-labels.sh to create labels before auto-filing.` Do NOT fall back to another label — use only `retro/recoveries`.
+     d. **Build Issue body** using source table and cause groups:
+        ```
+        ## Background
 
-     ## Purpose
-     Investigate and resolve the recurring recovery pattern to improve orchestration reliability.
+        Symptom `{symptom-short}` has been recorded {count} times in `docs/reports/orchestration-recoveries.md`,
+        exceeding the configured threshold of `$RECOVERIES_AUTO_FIRE_THRESHOLD`.
 
-     ## Acceptance Criteria
-     - [ ] Root cause of `{symptom-short}` identified
-     - [ ] Fix or mitigation implemented and verified
-     ```
-     Then emit the event:
-     ```bash
-     source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
-     EMIT_ISSUE_NUMBER=$NUMBER emit_event "recoveries_threshold_fire" "symptom={symptom-short}" "count={count}" "issue_number={new_issue_number}"
-     ```
+        ### Source Entries
+
+        | Date | Issue | Exit | Diagnosis summary |
+        |------|-------|------|-------------------|
+        | {date} | #{N} | {exit_code} | {one-line diagnosis} |
+        (one row per matching entry)
+
+        ### Grouped by Cause
+
+        **{Cause A label}** ({n} occurrence(s): Issues #{N}, #{M})
+        - {brief description of this cause pattern and what distinguishes it}
+
+        **{Cause B label}** ({n} occurrence(s): Issue #{K})
+        - {brief description}
+
+        (omit cause grouping section if all entries share the same cause)
+
+        ## Purpose
+
+        Identify and resolve the recurring causes behind `{symptom-short}` to prevent future recurrence.
+        Each distinct cause group may require a separate fix.
+
+        ## Acceptance Criteria
+
+        - [ ] Root cause(s) identified per cause group above <!-- verify: rubric "each cause group listed in this Issue has an identified root cause or documented mitigation plan" -->
+        - [ ] Fix or mitigation implemented and verified; no new `{symptom-short}` entries in `docs/reports/orchestration-recoveries.md` after the fix <!-- verify: rubric "orchestration-recoveries.md contains no '未起票' Improvement Candidate entries for {symptom-short} newer than this Issue's creation date" -->
+        ```
+     e. Run `gh issue create --label "retro/recoveries" --title "recoveries: {symptom-short}" --body "{body}"` and capture the new issue number from the output URL.
+     f. Emit the event:
+        ```bash
+        source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
+        EMIT_ISSUE_NUMBER=$NUMBER emit_event "recoveries_threshold_fire" "symptom={symptom-short}" "count={count}" "issue_number={new_issue_number}"
+        ```
 
 4. Cleanup:
    ```bash
