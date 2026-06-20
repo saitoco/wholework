@@ -152,3 +152,28 @@ Issue 起票・リファイン時に blocked-by relationships を GitHub native 
 - 全 7 pre-merge AC が PASS 済み (`grep`/`file_exists`/`file_contains`/`section_contains` で機械的に確認可能)
 - `set-blocked-by.sh` はべき等でないが、triage Step 9 は事前 `get-blocked-by` チェック付きで重複設定を回避
 - verify フェーズは post-merge manual テストの 2 項目を除き自動検証可能
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 設計は 7 件すべて機械的検証コマンド (`grep`/`file_exists`/`file_contains`/`section_contains`) で構成され、verify 段階で UNCERTAIN がゼロ。Auto-Resolved Ambiguity Points で常時 PASS する `grep "add-blocked-by"` を `remove-blocked-by` に変更した判断が verify 精度に直結した。
+
+#### code
+- Spec とのわずかな逸脱 (retro-proposals.md で `set-blocked-by.sh` 直接呼び出し)は AC verify に影響なし。実装の整合性は code retrospective に既に明記されている。
+
+#### review
+- 翻訳版 `docs/ja/structure.md` の同期漏れが review で検出 (SHOULD)。review retrospective に「過去 PR でも繰り返し発生」と記録されており、recurring pattern として可視化されている。
+- `set-blocked-by.sh` の `(or already set)` コメントと未実装べき等性の不一致も SHOULD で検出。merge コミットに修正が含まれた。
+
+#### merge
+- conflicts なし、CI green、squash-merge 通常完了。
+
+#### verify
+- pre-merge 7 件すべて PASS。post-merge AC8/AC9 は `verify-type: manual` で test issue 起票を伴うため SKIPPED とし、Verification Guide を出力。
+
+### Improvement Proposals
+
+- **docs/ja/ 翻訳版 sync の自動チェック**: `docs/structure.md` と `docs/ja/structure.md` の同期漏れが過去 PR でも繰り返し発生していると review retrospective に記録されている。`/code` または `/review` フェーズで `docs/structure.md` 変更検出時に `docs/ja/structure.md` の同期状態を自動確認するチェック (例: `scripts/check-translation-sync.sh` または `modules/translation-workflow.md` の verify hint 化) を追加する価値がある。複数 skill (`/code`, `/review`) と複数 PR にまたがる再発性パターンのため Tier 1 候補。
+
