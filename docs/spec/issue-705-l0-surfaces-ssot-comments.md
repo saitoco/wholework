@@ -207,19 +207,19 @@ Output: inject 済み context + `## Consumed Comments` 記録 + (条件付き) `
 - post-merge AC 2 件 (manual + observation) は /verify フェーズで対応予定。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- bot exception の検出文字列を `<!-- wholework-event: -->` (empty form) から `<!-- wholework-event:` (prefix) に修正。これは実際のマーカーフォーマットとの整合性から MUST 判定 (review-bug security scan が検出、verification sub-agent で PASS)。
-- jq `| last` を `| last // empty` に修正。fallback 条件との整合性上 CONSIDER だが、明確な logic error として修正適用。
-- review-spec の CONSIDER 2 件 (Spec パス誤り + emit-event.sh 未記載) はコード変更不要として skip。
+- PR #712 を squash merge (`--squash --delete-branch`) で main に統合。CI 全ジョブ SUCCESS・全 pre-merge AC PASS を review フェーズで確認済み。
+- mergeable=true (reason=clean, review_status=approved) を `gh-pr-merge-status.sh` で確認し、conflict resolution フェーズ (Step 3) をスキップして直接 merge を実行。
+- BASE_BRANCH=main のため `closes #705` 記述により Issue が auto-close される。
 
 ### Deferred Items
-- post-merge AC (manual + observation event) は /verify フェーズで観察。
-- CONTRIBUTOR/NONE コメントの注入時の長さ上限 / sanitization は設計として意図的に未定義 (CONSIDER、spec doc 指摘として記録)。
-- Spec の ja mirror パス誤り (`../modules/` → `../../modules/`) は Spec 品質メモ; 将来の Spec 改定時に修正可。
+- post-merge AC #11 (observation: `comments_consumed` イベントが `auto-events.jsonl` に記録されること) は /verify フェーズで実機観察が必要。
+- post-merge AC #12 (manual: 試験 Issue に user comment 追加後 `/spec N` を実行し Spec の "Consumed Comments" セクションに記録されることを確認) は /verify フェーズでの手動確認が必要。
+- run-spec.sh の `AUTO_EVENTS_LOG` export と worktree CWD 相対パス解決の実動作は /verify の実機確認で最終判断。
 
-### Notes for Next Phase (/merge)
-- bot exception 修正 + jq 修正 の 2 コミットを push 済み。CI 再実行を確認してから merge すること。
-- 全 10 pre-merge AC PASS, CI 全ジョブ SUCCESS を確認済み。
-- MUST issue は resolve 済み。`/merge 712` で進めて可。
+### Notes for Next Phase (/verify)
+- 全 pre-merge AC (1〜10) は review フェーズで PASS 確認済み; /verify では post-merge AC 2 件 (manual + observation) に集中。
+- `modules/l0-surfaces.md` が main に存在し、bot exception prefix 修正・jq `// empty` 修正が含まれた状態で merge 済み。
+- verify command で `docs/spec/issue-705-l0-surfaces-ssot-comments.md` の verify command セクションを参照してテストを実行すること。
