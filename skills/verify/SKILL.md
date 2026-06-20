@@ -469,9 +469,9 @@ NEXT_ITERATION=$((CURRENT_ITERATION + 1))
       - `/code --pr N` — 新規ブランチ + PR で修正（Size L の大きな修正）
       - `/spec N` — Spec から見直し（根本的な設計変更が必要な場合）
       ```
-    - **Tier-gated auto-retry check:**
+    - **Tier-gated auto-retry check** (`auto-retry-on-fail` config key):
 
-      If `AUTONOMY_TIER` is `L2` or `L3` AND `AUTO_RETRY_ENABLED=true` AND `NEXT_ITERATION` < `AUTO_RETRY_MAX_ITERATIONS`:
+      If `AUTONOMY_TIER` is `L2` or `L3` AND `AUTO_RETRY_ENABLED=true` (i.e., `auto-retry-on-fail.enabled: true` in `.wholework.yml`) AND `NEXT_ITERATION` < `AUTO_RETRY_MAX_ITERATIONS`:
         a. Emit `verify_retry_fire` event (only when `AUTO_EVENTS_LOG` is set):
            ```bash
            source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
