@@ -167,6 +167,17 @@ Output: inject 済み context + `## Consumed Comments` 記録 + (条件付き) `
 - **代替候補**: 元の `file_contains` を保持 (ドキュメント内のどこかに文字列があればよい)
 - **採用理由**: 実装意図 (Related Documents セクションへのリンク) との整合性を高め、誤 PASS のリスクを低減
 
+## Code Retrospective
+
+### Deviations from Design
+- Spec の実装ステップには `emit-event.sh:*` を allowed-tools に追加する記述がなかったが、`scripts/validate-skill-syntax.py` の cross-file validation で spec/code/verify の 3 SKILL.md に `emit-event.sh` を allowed-tools 追加することが必要と判明。追加コミットを作成した。
+
+### Design Gaps/Ambiguities
+- Spec Notes に「`gh api:*` は Bash サブパターンのため validate-skill-syntax.py 更新は不要」と明記されていたが、`emit-event.sh` の cross-file validation については言及がなかった。モジュールが `source` するスクリプトも cross-file validation の対象になることは、実装時に validate-skill-syntax.py を実行して初めて確認できた。
+
+### Rework
+- SKILL.md の allowed-tools 追加を 2 段階 (gh api:* → emit-event.sh:*) に分けて commit した。emit-event.sh の必要性が validate-skill-syntax.py 実行後に判明したため。
+
 ## spec retrospective
 
 ### Minor observations
@@ -183,23 +194,19 @@ Output: inject 済み context + `## Consumed Comments` 記録 + (条件付き) `
 - run-spec.sh が `AUTO_EVENTS_LOG` を export していないことを確認 → Implementation Step 8 で補完。worktree CWD と相対パス `.tmp/auto-events.jsonl` の解決差異は /code で要確認として Uncertainty に残置。
 
 ## Phase Handoff
+<!-- phase: code -->
 
 ### Key Decisions
-- l0-surfaces.md に SSoT 表 + Trust Boundary + machine-readable marker + Comment Consumption Procedure を集約し、3 つの SKILL.md は "Read and follow the Comment Consumption Procedure" の追加のみとする (重複排除)。
-- cutoff は timeline API (`gh api .../timeline` の最新 `phase/*` `labeled`) を primary、`.tmp/auto-events.jsonl` の `phase_start` → 全件 best-effort を fallback とする。`labels.created_at` は不在のため使わない。
-- 信頼境界は `authorAssociation` で判定: OWNER/MEMBER/COLLABORATOR=first-class、CONTRIBUTOR/NONE=external マーク、`[bot]` actor=skip。AC3 の文字列 `author.association` はモジュール本文に併記して満たす。
-- `comments_consumed` emit は emit-event.sh の source 方式、`AUTO_EVENTS_LOG` セット時のみの best-effort。
-- spec/code の allowed-tools に `gh api:*` を追加 (verify は既存)。structure.md の modules カウントを `(37 files)` に更新。
+- `emit-event.sh` を spec/code/verify の allowed-tools に追加 (cross-file validation で検出)。l0-surfaces.md の Comment Consumption Procedure step 6 が `source emit-event.sh` を含むため必須。
+- validate-skill-syntax.py の cross-file validation を活用し、モジュール参照の allowed-tools 漏れを PR 前に検知できた。
+- `modules/l0-surfaces.md` の 4-section structure (Purpose/Input/Processing Steps/Output) と既存モジュールのパターンを踏襲し、一貫性を維持。
 
 ### Deferred Items
 - `/code` resume 時の PR comment 取り込み (`COMMENT_SCOPE=issue+pr`) と `gh pr view:*` 追加は必要時 follow-up。
-- `/audit recoveries` の consumable comment scrape 連携・cross-Issue audit は将来拡張 (本 Issue 範囲外)。
+- post-merge AC (manual + observation) は /verify フェーズで観察。
 - `triaged` 等 bare-namespace ラベル例外の詳細は #R2 (別 Issue)。
-- post-merge AC #11 (`observation event=auto-run`) は soft な観察条件であり merge gate ではない。
 
-### Notes for Next Phase (/code)
-- AC3: モジュール本文に文字列 `author.association` を必ず含める (file_contains 対象)。実装で参照する実フィールド名は `authorAssociation`。
-- AC4: marker 形式は `<!-- wholework-event: type=... phase=... issue=N -->` (`wholework-event:` を含める)。
-- AC6/7/8: 3 つの SKILL.md 本文に `modules/l0-surfaces.md` 文字列が出現すること。Read 指示はステップ/サブセクション見出し直後の第1段落に置く (skill-dev-checks の配置ルール)。
-- SKILL.md 本文では半角 `!` とトリプルバックティックを使わない (validate-skill-syntax.py)。`gh api:*` は Bash サブパターンのため KNOWN_TOOLS / validate-skill-syntax.py 更新は不要。
-- Step 8 の run-spec.sh export 追加後、/auto 配下で `.tmp/auto-events.jsonl` に `comments_consumed` が書かれるか (worktree 相対パス解決) を実機確認する。
+### Notes for Next Phase (/review)
+- 全 10 pre-merge AC を実装し、Issue body のチェックボックスを [x] に更新済み。
+- cross-file validation で `emit-event.sh` が allowed-tools に必要だと検出 → fix コミットを追加した経緯を念頭に、allowed-tools レビュー時に emit-event.sh の位置を確認すること。
+- `docs/ja/` mirror sync 済み。`docs/translation-workflow.md` の手順に従い workflow.md, structure.md の両 ja mirror を更新。
