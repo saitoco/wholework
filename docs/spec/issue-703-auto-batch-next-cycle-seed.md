@@ -65,3 +65,34 @@ No new comments since last phase.
 - **gh issue list の OR フィルタ**: `--label` は AND 結合なので `audit/drift` と `audit/fragility` を別クエリで取得し結合する
 - **loop-state-{DATE}.md の append 形式**: 既存の heartbeat 行 (`| ts | #N | from→to | snapshot |`) と同じテーブルに特殊行として追記。`issue` カラムは `batch`、`transition` カラムは `next-cycle-seed`、`snapshot` カラムは `candidates:N`
 - **auto-resolve**: 曖昧ポイントなし (SPEC_DEPTH=light、自動解決不要)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `emit-event.sh` を allowed-tools に追加。`validate-skill-syntax.py` が body 参照スクリプトと allowed-tools の不一致を検出するため必須だった。
+- `loop-paths-fallback: [A]` フィールドは `validate-skill-syntax.py` に "unknown field" warning が出るが、エラーではないため CI はパスする。future でスキーマを更新する余地あり。
+- `docs/ja/guide/customization.md` も同時更新した (translation-workflow.md の sync 義務)。
+
+### Deferred Items
+- `validate-skill-syntax.py` に `loop-paths-fallback` フィールドをスキーマとして追加する改善は本 Issue 範囲外。
+- `/auto --batch --resume` で `.tmp/next-cycle.json` を消費するインタラクティブ提示は本 Issue 範囲外 (Notes に明記)。
+
+### Notes for Next Phase
+- pre-merge AC 3件全て PASS 済み (checkboxes 更新済み)。
+- post-merge AC は `next-cycle-seed.enabled: true` の状態で実際の batch 完走を要する observation 型 (verify-type: observation)。
+- CI で `forbidden-expressions` が `docs/spec/issue-710-blocked-by-workflow.md` で既存違反を検出するが、本 PR の変更とは無関係の pre-existing 問題。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `emit-event.sh` を `skills/auto/SKILL.md` の `allowed-tools` に追加した。Spec の実装ステップには明示されていなかったが、`validate-skill-syntax.py` が body 参照スクリプトと allowed-tools の不一致を検出したため追加が必要だった。
+
+### Design Gaps/Ambiguities
+
+- `validate-skill-syntax.py` が `loop-paths-fallback` フィールドを unknown field として warning を出す。これは新規フィールドであり、バリデーターのスキーマが未更新なため。エラーではなく warning 止まりなので CI はパスするが、将来 `loop-paths-fallback` をスキーマに追加する改善余地がある。
+
+### Rework
+
+- `emit-event.sh` の allowed-tools 追加を最初のコミット後に発見し、別コミットで修正した。実装→バリデーション実行→不一致発見→修正のフローで 1 コミット余分になった。
