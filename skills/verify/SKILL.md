@@ -3,7 +3,7 @@ name: verify
 description: Acceptance test. Automatically verifies post-merge acceptance conditions and updates Issue checkboxes (`/verify 123`). Use after `/merge`. Reopens Issue on FAIL to return to the fix cycle.
 model: sonnet
 loop-paths-used: [A]
-allowed-tools: Bash(git checkout:*, git pull:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*, date:*, printf:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
+allowed-tools: Bash(git checkout:*, git pull:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*, date:*, printf:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
 ---
 
 # Acceptance Test
@@ -109,7 +109,7 @@ gh issue view "$NUMBER" --json body
 
 Parse acceptance condition checkboxes:
 
-**Resolving configuration values**: Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to fetch configuration values from `.wholework.yml`. Retain `SPEC_PATH`, `STEERING_DOCS_PATH`, `PRODUCTION_URL`, `VERIFY_MAX_ITERATIONS`, `AUTONOMY_TIER`, `AUTO_RETRY_ENABLED`, `AUTO_RETRY_MAX_ITERATIONS`, `AUTO_RETRY_BUDGET_TOKENS`, `RECOVERIES_AUTO_FIRE_ENABLED`, and `RECOVERIES_AUTO_FIRE_THRESHOLD` for use in subsequent steps.
+**Resolving configuration values**: Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to fetch configuration values from `.wholework.yml`. Retain `SPEC_PATH`, `STEERING_DOCS_PATH`, `PRODUCTION_URL`, `VERIFY_MAX_ITERATIONS`, `AUTONOMY_TIER`, `AUTO_RETRY_ENABLED`, `AUTO_RETRY_MAX_ITERATIONS`, `AUTO_RETRY_BUDGET_TOKENS`, `RECOVERIES_AUTO_FIRE_ENABLED`, `RECOVERIES_AUTO_FIRE_THRESHOLD`, and `AUTO_RETRY_ROUTE_OVERRIDE` for use in subsequent steps.
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/domain-loader.md` and follow the "Processing Steps" section with `SKILL_NAME=verify`. Domain file content provides Skill infrastructure improvement classification criteria for Step 13.
 
@@ -509,12 +509,27 @@ NEXT_ITERATION=$((CURRENT_ITERATION + 1))
            ```
         b. Append `Retry Count: ${NEXT_ITERATION}/${AUTO_RETRY_MAX_ITERATIONS}` to the Spec's
            `## Verify Retrospective` section (handled in Step 12).
-        c. Re-invoke code phase:
+        c. Re-invoke code phase with Size-aware route selection:
            ```bash
-           bash "${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh" $NUMBER --patch
+           ISSUE_SIZE=$(bash "${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh" "$NUMBER" 2>/dev/null)
+           case "$AUTO_RETRY_ROUTE_OVERRIDE" in
+             pr)     RETRY_ARGS="--pr" ;;
+             patch)  RETRY_ARGS="--patch" ;;
+             auto|*)
+               case "$ISSUE_SIZE" in
+                 XS|S) RETRY_ARGS="--patch" ;;
+                 M|L)  RETRY_ARGS="--pr" ;;
+                 XL)   RETRY_ARGS="" ;;
+                 *)    RETRY_ARGS="--patch" ;;
+               esac ;;
+           esac
+           if [[ -n "$RETRY_ARGS" ]]; then
+             bash "${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh" $NUMBER $RETRY_ARGS
+           else
+             echo "auto-retry スキップ: XL Size は手動介入が必要です。"
+           fi
            ```
-        d. After `run-code.sh` completes, restart verification from Step 5 (the LLM re-executes
-           Steps 5–11 in the same session context).
+        d. After `run-code.sh` completes (or is skipped for XL), if RETRY_ARGS was non-empty, restart verification from Step 5 (the LLM re-executes Steps 5–11 in the same session context). If RETRY_ARGS was empty (XL skip), do not restart.
 
       Else if `AUTONOMY_TIER` is `L2` or `L3` AND `AUTO_RETRY_ENABLED=true` AND `NEXT_ITERATION` >= `AUTO_RETRY_MAX_ITERATIONS`:
         Print: "auto-retry 上限 (${NEXT_ITERATION}/${AUTO_RETRY_MAX_ITERATIONS}) に達しました。手動で次アクションを選択してください。"
