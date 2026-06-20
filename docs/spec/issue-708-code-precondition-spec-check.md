@@ -41,6 +41,42 @@
 - 試験的に `phase/ready` のみ付与・Spec 無しの M Issue に対して `reconcile-phase-state.sh --check-precondition code-pr N` を実行すると `matches_expected: false` を返すことを観察
 - 試験的に XS Issue (Spec 無し) に対して同コマンドを実行すると `matches_expected: true` を返すことを観察
 
+## Code Retrospective
+
+### Deviations from Design
+
+- `skills/code/SKILL.md` の `!=` を `is not` に変更: 実装直後に `validate-skill-syntax.py` が body 内の半角 `!` を forbidden expression として検出。Spec には修正方針の記載がなかったため、禁止文字のルール (docs/tech.md § Forbidden Expressions) に従い `!=` → `is not` に自動修正した。
+- SKILL.md 変更を 2 コミットに分割: 初回コミット後にバリデーション違反を発見したため、修正コミットを追加した。Spec は 1 コミットを想定していたが、この分割は許容範囲内の deviation。
+
+### Design Gaps/Ambiguities
+
+- `_precondition_code_common()` 内の既存変数 `spec_file` を `SPEC_EXISTS` にリネームした。Spec では「変数名は `SPEC_EXISTS` を使う」と明示されていたが、既存の `_completion_spec()` 等で `spec_file` が使用されている点との一貫性についての指定がなかった。今回は `_precondition_code_common()` のスコープ内のみでリネームし、他関数には影響しない実装を選択した。
+
+### Rework
+
+- `skills/code/SKILL.md` の `!=` 修正により、2 つのコミットが生じた。commit メッセージで理由を明記し、追加プッシュで対処した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+
+- `SPEC_EXISTS` 変数名の採用: AC1 の verify command (`grep "SPEC_EXISTS"`) に合わせ、`spec_file` ではなく `SPEC_EXISTS` をリネームして使用。
+- `SIZE` の lazy fetch: SPEC_EXISTS が空の場合のみ `get-issue-size.sh` を呼ぶ設計を採用し、API コールを最小化。
+- 既存テスト `"same phase: precondition passes but completion not yet reached"` は `issue-42-spec.md` を touch する修正で対応。Spec の指示どおり。
+- `!=` → `is not` リネーム: `validate-skill-syntax.py` の forbidden expression ルール対応。
+
+### Deferred Items
+
+- post-merge 手動 AC (観察的 verify) は `/verify` フェーズで実施。
+- `docs/ja/` 翻訳ファイルへの同期は今回対象外 (`modules/phase-state.md` は `docs/` 以下ではないため翻訳ワークフロー非対象)。
+
+### Notes for Next Phase
+
+- PR #730 に 2 コミット。1 つ目は実装、2 つ目は `!` 修正。レビュー時は両コミットをまとめて確認。
+- bats テスト: 57/60/59 の新規テストが Spec missing シナリオをカバー。既存テスト 51 番は Spec ファイル生成で修正済み。
+- `skills/code/SKILL.md` の `allowed-tools` に `reconcile-phase-state.sh:*` を追加済み。
+
 ## Notes
 
 ### Auto-Resolve: AC5 ファイル名修正 (non-interactive mode)
