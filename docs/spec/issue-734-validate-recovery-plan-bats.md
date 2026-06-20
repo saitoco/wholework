@@ -87,3 +87,13 @@ No new comments since last phase.
   2. "forbidden op" テストのスコープは `op` フィールドの forbidden ops リスト (`force_push`, `reset_hard`, `close_issue`, `merge_pr`, `direct_push_main`) のみ。`run_command` ステップの forbidden cmd patterns テストは追加カバレッジとして実装者の裁量に委ねる
 - `validate-recovery-plan.sh` は sibling script を呼び出さないため、`WHOLEWORK_SCRIPT_DIR` mock 不要
 - `docs/structure.md` の tests/ カウント更新は Key Files 維持規則に基づく (83→84)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### verify
+- pre-merge AC1-7 PASS。AC8 (CI green) は CI job in_progress のため PENDING。CI 完了後に `/verify 734` 再実行で確認可能。
+
+### Improvement Proposals
+- N/A
