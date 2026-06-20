@@ -67,20 +67,21 @@ No new comments since last phase.
 - **auto-resolve**: 曖昧ポイントなし (SPEC_DEPTH=light、自動解決不要)
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST/SHOULD 指摘なし。CONSIDER 2件 (変数名不一致、暗黙変数定義) は Spec retrospective に記録のみ、修正は行わない。
-- Forbidden Expressions CI 失敗は `docs/spec/issue-710-blocked-by-workflow.md` の pre-existing 違反であることを確認し、本 PR 起因ではないと判断。
-- `REVIEW_DEPTH=light` で全 4 観点を軽量カバー。外部レビューツール設定なしのため Step 7 はスキップ。
+- CI failing (reason: ci_failing) だったが、non-interactive モードの auto-resolve ポリシーに従いマージを続行。CI 失敗は Forbidden Expressions の pre-existing 違反 (#710) と判断済みで、本 PR 起因ではない。
+- `gh pr merge 720 --squash --delete-branch` で squash merge 成功 (2026-06-20T12:57:24Z)。
+- コンフリクトなし。rebase ステップをスキップし直接 Step 4 へ進んだ。
 
 ### Deferred Items
-- CONSIDER 指摘 2件 (session_start/SESSION_START 不一致、暗黙変数定義) は改善提案として本 retrospective に記録。別 Issue での対応推奨。
-- Forbidden Expressions CI 違反 (`docs/spec/issue-710-blocked-by-workflow.md`) は本 PR 範囲外のため別途対応が必要。
+- Forbidden Expressions CI 違反 (`docs/spec/issue-710-blocked-by-workflow.md`) は本 PR 範囲外。別途対応が必要。
+- post-merge AC (observation 型): `next-cycle-seed.enabled: true` での `/auto --batch` 完走後に `.tmp/next-cycle.json` 生成と `loop-state-*.md` 追記を観察する必要がある。
 
 ### Notes for Next Phase
-- MUST/SHOULD 指摘なし。`/merge 720` で即時マージ可能。
-- post-merge AC (observation 型) は `next-cycle-seed.enabled: true` の実運用環境での観察が必要。
+- verify コマンドは Pre-merge AC 3件 (file_contains/grep) のみ自動検証可能。Post-merge AC は observation 型のため手動確認が必要。
+- Issue #703 は `closes #703` により自動クローズ済み (BASE_BRANCH=main)。
+- `NEXT_CYCLE_SEED_ENABLED` の動作確認には `.wholework.yml` に `next-cycle-seed.enabled: true` と `autonomy: L2` 以上の設定が必要。
 
 ## Code Retrospective
 
