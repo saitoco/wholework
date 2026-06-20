@@ -75,3 +75,13 @@
 ### Notes for Next Phase
 - All 4 bats tests are green locally; CI (`test.yml`) will run them as part of the full bats suite.
 - The `github_check` AC uses `--commit=$(git rev-parse HEAD)` which resolves at verify time — verify should confirm the correct commit SHA is used.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### verify
+- pre-merge AC1-3 PASS。AC4 (CI) は setup-labels.bats の pre-existing failure。本 Issue の対象 bats は green、代替検証 PASS。
+
+### Improvement Proposals
+- N/A
