@@ -70,3 +70,31 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class) — Issue Retrospective + Autonomous Auto-Resolve Log: AC 分割、verify command 設計の決定記録。spec フェーズへの引継ぎ情報として利用。
+
+## Code Retrospective
+
+### Deviations from Design
+- `docs/structure.md` と `docs/ja/structure.md` の `apply-fallback.sh` 記述更新を追加実装した。Spec の Changed Files には含まれていなかったが、doc-checker が "(initial full-impl: dco-signoff-missing-autofix)" 記述を stale と検出したため更新した。
+
+### Design Gaps/Ambiguities
+- None
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `detect_symptom_anchor()` でのパターンマッチは `grep -q "silent no-op"` を使用した。Spec Notes の指示通り、`run-code.sh` が出力する `"silent no-op"` は安定した識別子であり、regex なしで十分。
+- watchdog kill (原因グループ 2) の Tier 2 ハンドラは Spec の方針通りスコープ外とし、文書化のみで AC2 を充足した。
+- `apply_code_patch_silent_no_op_retry()` では `"$SCRIPT_DIR/run-code.sh" "$ISSUE" --patch` を呼び出す。`SCRIPT_DIR` は `WHOLEWORK_SCRIPT_DIR` 環境変数で上書き可能なため BATS テストで hermetic な実行が確保できる。
+
+### Deferred Items
+- watchdog kill (原因グループ 2) の Tier 2 ハンドラ (`code-patch-watchdog-kill-retry`) は follow-up Issue で検討予定。
+- `write_recovery_entry()` が常に `- 未起票` を書き込む仕様の改修は本 Issue のスコープ外。
+
+### Notes for Next Phase
+- bats tests 全 9 件 PASS、forbidden expressions チェック PASS、validate-skill-syntax.py エラーなし (既存警告 1 件のみ)。
+- PR #741 が作成済み。CI が通過した後 `/merge 741` を実行できる状態。
+- AC1/AC2 は `rubric` 検証。`rubric` は PR ブランチのファイル内容を参照するため、review フェーズで正確に評価される。
