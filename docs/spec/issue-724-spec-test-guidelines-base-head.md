@@ -44,3 +44,30 @@
 - `skills/` 以下のファイルは `docs/ja/` 翻訳対象外のため translation sync 不要
 - テストファイル (`tests/pre-merge-check.bats`) は変更なし — 実装済みのパターンをガイドラインとして文書化するのみ
 - Issue Retrospective で指摘の post-merge verify-type は Issue body 上で既に `manual` に更新済み
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation followed the Spec exactly: appended `## base/head 比較 bats テスト` section at the end of `skills/issue/spec-test-guidelines.md` as specified.
+
+### Design Gaps/Ambiguities
+- The section heading level: the issue body proposed `### base/head 比較 bats テスト` (level 3), but the Spec specified `## base/head 比較 bats テスト` (level 2), which matches the existing section heading style in the file. Used level 2 as specified in the Spec.
+
+### Rework
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Used level-2 heading `## base/head 比較 bats テスト` (matching existing section style), not level-3 as suggested in the issue body.
+- Added a scenario table (`PRE_EXISTING / CLEAN / NEW_FAILURE / FIXED`) to make the applicability explicit.
+- Content written in English body text with Japanese technical terms (`空コミット`, `marker-`) to match the existing file style.
+
+### Deferred Items
+- AC4 (github_check CI green) will be verified after push and CI completion.
+
+### Notes for Next Phase
+- All 3 file_contains ACs are already checked (`- [x]`) in the Issue body; only the `github_check` CI AC remains.
+- No new scripts, modules, or structure changes — documentation-only change, so `/verify` should be straightforward.
+- `validate-skill-syntax.py` does not scan domain files — no syntax validation concern for `spec-test-guidelines.md`.
