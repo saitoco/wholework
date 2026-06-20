@@ -72,3 +72,38 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue retrospective: ambiguity auto-resolution decisions (--since Nd vs 24h distinction, bats test requirement) and AC rewrite rationale / https://github.com/saitoco/wholework/issues/695#issuecomment-4759487457
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec step 3 listed `--range START END` (space-separated) for the script flag, which is what the script implements. However, in the SKILL.md the user passes `--range START..END` (dot-separated) and the SKILL is responsible for splitting on `..` before calling the script. This split was not explicitly implemented in the SKILL.md — SKILL.md documents the calling convention but the actual split is left to the operator. Since this is a SKILL-level (LLM-executed) step, the natural language description is sufficient for correct execution; no code split is needed.
+- docs/workflow.md and docs/ja/workflow.md were added as doc-checker targets beyond the original Spec scope, since they contained an existing `/audit auto-session` description that needed the period mode addition.
+
+### Design Gaps/Ambiguities
+
+- Bats test for `--since-days` uses fixed-date fixture events (2026-06-14) with `--since-days 7`. Whether those dates fall within the 7-day window depends on the test execution date. The test was designed to always pass by using `--output` to specify a fixed output path, so the 7-day filter affecting which sessions appear does not cause test failure — the report structure (not session count) is what is verified.
+- `grep -q "_period" "$output"` in bats is incorrect syntax (treats `$output` as a file path). Corrected to `[[ "$output" == *"_period"* ]]`. This was caught and fixed immediately before the tests passed.
+
+### Rework
+
+- Bats test fix: initial test used `grep -q "_period" "$output"` (treats variable as filename); replaced with `[[ "$output" == *"_period"* ]]` in one repair attempt. Tests went from 7/9 to 9/9 PASS.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+
+- `--since {N}d` (d-suffix) dispatches via `--since-days N` to the script; `--since 24h` / `--since YYYY-MM-DD` remain list mode (backward compatible). This is the core design decision from the Spec — maintained as-is.
+- Period reports go to `docs/sessions/_period/` (not `docs/reports/`) to separate run-centric period reports from single-session `docs/reports/` reports.
+- `docs/workflow.md` / `docs/ja/workflow.md` updated (doc-checker triggered) since they already described `/audit auto-session` without the period mode.
+
+### Deferred Items
+
+- `--range START..END` SKILL-level split (from `..` to space-separated args) is described in SKILL.md prose but not verified by a bats test; post-merge manual test covers this.
+- Japanese sibling generation (Step 4) for period reports is not implemented — period reports go to `docs/sessions/_period/` which has no `--no-ja` support. Follow-up Issue if needed.
+
+### Notes for Next Phase
+
+- PR #740 — all pre-merge file-based ACs are checked (`--day`, `--range`, `_period/` in SKILL.md, `_period` in bats). CI ACs (Run bats tests, Validate skill syntax) will confirm automatically.
+- Post-merge AC: run `/audit auto-session --since 7d` to confirm `docs/sessions/_period/since-{TODAY}-7d.md` is generated correctly.
