@@ -282,7 +282,11 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-checker.md` and follow the "Impact asses
 
 If sync is required, update the target documents (`README.md`, `docs/workflow.md`, etc.) before committing.
 
-**`docs/ja/` sync check:** If `docs/translation-workflow.md` exists, read it and follow the sync procedure.
+**`docs/ja/` sync check (gap detection + sync):** If `docs/translation-workflow.md` exists:
+1. Identify all `docs/*.md` and `docs/guide/*.md` files changed in this session (excluding `docs/ja/`, `docs/spec/`, `docs/stats/`, `docs/reports/`)
+2. For each changed file, check whether the corresponding `docs/ja/` counterpart was also updated in this session
+3. For any counterpart that was NOT updated: output "Translation sync gap: [en_file] was updated but docs/ja/[en_file_basename] was not" and then follow `docs/translation-workflow.md` sync procedure to update the missing counterpart
+4. After sync, optionally run `bash scripts/check-translation-sync.sh` to confirm IN_SYNC status (runs against committed state — only accurate after commit)
 
 ### Step 10: Verify Command Consistency
 
