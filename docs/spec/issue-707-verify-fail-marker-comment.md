@@ -124,3 +124,35 @@ Issue 提案の `phase-at-fail=verify` は l0-surfaces.md SSoT の `phase=verify
 
 **次フェーズ skill での consume (実装外)**:
 `/code` 再走時・`/spec` 再走時での `type=verify-fail` comment consume は Issue #707 の対象外。l0-surfaces.md の Comment Consumption Procedure は既に bot 例外 (`<!-- wholework-event:` marker 付き comment を consume する) を定義しており、スキル側の consume 実装は別 Issue で追加する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Step 11(b) の参照は Spec 中では "Step 9 (b)" と記載されていたが、SKILL.md の実際のステップ番号は "Step 11 (b)" であったため、SKILL.md の実際の構造に合わせて実装した (Spec の参照番号の誤りを実装で解消)
+
+### Design Gaps/Ambiguities
+
+- Spec では `FAIL_COUNT` 変数を参照しているが、この変数は SKILL.md の既存フローで定義されていない。`verify_fail_marker_posted` emit 時の `failed_ac_count` パラメータとして参照している。実装ではそのまま記述し、実行時に LLM が FAIL 条件数を適切に解釈することを前提とする (シェルスクリプトではなく SKILL.md の LLM 実行指示)
+- TIMESTAMP の具体的な取得方法 (`date -u +%Y-%m-%dT%H:%M:%SZ` 等) は Spec に明記されていないが、SKILL.md 内では LLM が実行時に解釈するため明記不要と判断
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- SKILL.md への追加は 2 箇所 (NEXT_ITERATION < VERIFY_MAX_ITERATIONS ブロックと >= VERIFY_MAX_ITERATIONS ブロック) に対称的に実装した
+- `FAIL_COUNT` 変数は SKILL.md 内の LLM 実行コンテキストで解釈されるため、シェル変数定義なしで参照
+- docs/ja/workflow.md は Step 4 として同一コミットで同期更新済み
+
+### Deferred Items
+- `type=verify-fail` comment の次フェーズ consume (/code 再走時・/spec 再走時) は別 Issue 対象
+- `FAIL_COUNT` (変数名) が将来 SKILL.md に明示定義される場合は当該箇所の更新が必要
+
+### Notes for Next Phase
+- AC3 (`modules/l0-surfaces.md` の verify-fail marker) は既存コンテンツで充足済み、l0-surfaces.md への変更なし
+- pre-merge AC 3 件すべて PASS 確認済み (checkbox 更新済み)
+- bats テスト全件 PASS、validate-skill-syntax.py PASS、forbidden expressions チェック PASS
