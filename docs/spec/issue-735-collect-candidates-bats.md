@@ -73,3 +73,13 @@
 - AP3 (github_check の `$(git rev-parse HEAD)` 展開): Issue #736 spec で同パターンが採用・確認済み。patch route (Size S) の `gh run list` フォームとして正しい。
 - `collect-recovery-candidates.sh` はシブリングスクリプトを呼ばないため `WHOLEWORK_SCRIPT_DIR` モック不要 (ただし `SCRIPT_DIR` 変数は宣言されているので環境変数上書きには対応済み)。
 - テストは `BATS_TEST_TMPDIR` を使ったインライン fixture 方式 (外部 fixture ファイルへの依存なし)。これは `tests/get-auto-session-report.bats` と同じパターン。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### verify
+- pre-merge AC1-3 PASS。AC4 (CI green) は CI job in_progress のため PENDING。CI 完了後に `/verify 735` 再実行で確認可能。
+
+### Improvement Proposals
+- N/A
