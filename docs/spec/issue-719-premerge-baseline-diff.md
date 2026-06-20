@@ -195,23 +195,23 @@ merge フェーズが遭遇する pre-merge check の FAILURE を **pre-existing
 - `tests/pre-merge-check.bats` の `_setup_feature_branch` 関数を初版実装後に修正した (marker file 追加)。実行時に PRE_EXISTING と CLEAN テストが失敗し、空コミット問題と判明したため 1 回目テスト実行後に即時修正。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST/SHOULD 問題はゼロ。CONSIDER 3 件 (SCRIPT_DIR 未使用、env error テスト Spec 外、fail-open テスト不足) はすべてスキップ判断。
-- review-bug の SHOULD 2 件 (EXIT trap 不在、ref バリデーション) は検証で false positive として排除。自動マージ文脈の shell utility script に対する過剰なセキュリティルール適用だった。
-- CI の Forbidden Expressions FAILURE は pre-existing と確認済み (Phase Handoff から引継ぎ)。review 結果は COMMENT (REQUEST_CHANGES なし)。
+- CI failing (reason=ci_failing) は pre-existing Forbidden Expressions failure によるものと確認済み (review Phase Handoff から引継ぎ)。non-interactive モードで auto-resolve し、マージを続行した。
+- `gh pr merge 723 --squash --delete-branch` が正常完了。closes #719 かつ BASE_BRANCH=main のため Issue は自動クローズされる。
+- Phase Handoff write は worktree-local の Spec ファイルに対して実行し、main に push した。
 
 ### Deferred Items
 - 全 check 自動化 (dispatch table 拡張) は将来の改善。
 - 案 B (`docs/baseline-failures.md` SSoT 化) は必要になったら別 Issue。
 - `docs/spec/issue-710-blocked-by-workflow.md` の Forbidden Expressions pre-existing FAILURE 解消は独立の別 Issue (Post-merge AC2 の前提)。
-- CONSIDER 3 件は merge 後に任意で対応 (blocking なし)。
+- CONSIDER 3 件は任意で対応 (blocking なし)。
 
 ### Notes for Next Phase
-- MUST/SHOULD 問題なし → `/merge 723` で即座にマージ可能。
-- CI の Forbidden Expressions FAILURE は pre-existing (`docs/spec/issue-710-blocked-by-workflow.md`)。`run-merge.sh` の新 baseline gate が PRE_EXISTING と分類して通過することが dogfood 検証になる。
-- `run-merge.bats` の emit 系テスト (tests 21, 23) は pre-existing failures — スコープ外、merge 判断に影響しない。
+- Issue #719 は main マージ済み。`pre-merge-check.sh` の dogfood 検証 (Post-merge AC1: 別 PR で意図的 FAIL → abort 確認) を手動で行うこと。
+- Post-merge AC2 (issue-710 の pre-existing FAILURE 解消後の CLEAN 動作確認) は issue-710 完了後に実施。
+- `run-merge.bats` の emit 系テスト (tests 21, 23) は pre-existing failures — スコープ外。
 
 ## review retrospective
 
