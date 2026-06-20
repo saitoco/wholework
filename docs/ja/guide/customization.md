@@ -78,6 +78,12 @@ verify-max-iterations: 3
 #   max_iterations: 3
 #   budget_tokens: 500000
 
+# orchestration-recoveries.md の symptom 数が閾値を超えた際に改善 Issue を自動起票
+# （opt-in; autonomy: L2 または L3 が必要）
+# recoveries-auto-fire:
+#   enabled: true
+#   threshold: 3
+
 # オプション capability
 capabilities:
   browser: true             # Playwright ベースの verify command を有効化
@@ -120,6 +126,8 @@ capabilities:
 | `auto-retry-on-fail.enabled` | boolean | `false` | verify FAIL 時の自動 `/code` 再発火 + `/verify` リトライを有効化する（`autonomy: L2` または `L3` が必要）。`false` または autonomy が `L1` の場合はアドバイザリーガイダンスのみ出力。 |
 | `auto-retry-on-fail.max_iterations` | integer | `3` | 自動リトライの最大試行回数。上限到達後はユーザーに制御を戻す。0 以下または非数値の場合は `3` にフォールバック。 |
 | `auto-retry-on-fail.budget_tokens` | integer | `500000` | 自動リトライのトークン予算概算。初期実装は試行回数カウントのみ; トークン追跡は将来の改善項目。0 以下または非数値の場合は `500000` にフォールバック。 |
+| `recoveries-auto-fire.enabled` | boolean | `false` | `orchestration-recoveries.md` の symptom 数が閾値を超えた際に改善 Issue を自動起票する（`autonomy: L2` または `L3` が必要）。`false` または autonomy が `L1` の場合は推奨メッセージを出力するのみ。 |
+| `recoveries-auto-fire.threshold` | integer | `3` | 自動起票のトリガーとなる symptom 発生回数の閾値。0 以下または非数値の場合は `3` にフォールバック。 |
 | `retro-proposals-upstream` | string | `""` | Upstream リポジトリ (`owner/repo`) — `/verify` レトロスペクティブから得られた Skill infrastructure improvement 提案の起票先。設定すると、対象提案はサニタイズ（regex で絶対パスと下流固有 Issue 番号を除去、LLM でビジネス文脈用語を除去）されて upstream リポジトリへ起票される。下流リポジトリへの起票はスキップされる。未設定時は従来どおり下流リポジトリへ起票（後方互換）。 |
 | `verify-ignore-paths` | list | `[]` | `/verify` のダーティファイル検出から除外するパスの glob パターン（block list）。サポート: `dir/**` プレフィックスマッチ（ディレクトリ配下の任意ファイル）、単純 bash glob（`*`、`?`、`[...]`）によるフルパス完全一致。非対応: 中間 `**`（例: `a/**/b`）や否定パターン（`!`）。いずれかのパターンにマッチするファイルは除外され stderr に警告出力される。未設定時は除外なし。 |
 

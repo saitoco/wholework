@@ -3,7 +3,7 @@ name: verify
 description: Acceptance test. Automatically verifies post-merge acceptance conditions and updates Issue checkboxes (`/verify 123`). Use after `/merge`. Reopens Issue on FAIL to return to the fix cycle.
 model: sonnet
 loop-paths-used: [A]
-allowed-tools: Bash(git checkout:*, git pull:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*, date:*, printf:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
+allowed-tools: Bash(git checkout:*, git pull:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*, date:*, printf:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
 ---
 
 # Acceptance Test
@@ -109,7 +109,7 @@ gh issue view "$NUMBER" --json body
 
 Parse acceptance condition checkboxes:
 
-**Resolving configuration values**: Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to fetch configuration values from `.wholework.yml`. Retain `SPEC_PATH`, `STEERING_DOCS_PATH`, `PRODUCTION_URL`, `VERIFY_MAX_ITERATIONS`, `AUTONOMY_TIER`, `AUTO_RETRY_ENABLED`, `AUTO_RETRY_MAX_ITERATIONS`, and `AUTO_RETRY_BUDGET_TOKENS` for use in subsequent steps.
+**Resolving configuration values**: Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to fetch configuration values from `.wholework.yml`. Retain `SPEC_PATH`, `STEERING_DOCS_PATH`, `PRODUCTION_URL`, `VERIFY_MAX_ITERATIONS`, `AUTONOMY_TIER`, `AUTO_RETRY_ENABLED`, `AUTO_RETRY_MAX_ITERATIONS`, `AUTO_RETRY_BUDGET_TOKENS`, `RECOVERIES_AUTO_FIRE_ENABLED`, and `RECOVERIES_AUTO_FIRE_THRESHOLD` for use in subsequent steps.
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/domain-loader.md` and follow the "Processing Steps" section with `SKILL_NAME=verify`. Domain file content provides Skill infrastructure improvement classification criteria for Step 13.
 
@@ -631,7 +631,50 @@ Behavior differs based on `ENTERED_WORKTREE`:
 
 Only if `.wholework.yml` in the project has `opportunistic-verify: true`, Read `${CLAUDE_PLUGIN_ROOT}/modules/opportunistic-verify.md` and follow the "Processing Steps" section to run opportunistic verification. The skill name is `/verify`. Skip this step if not configured.
 
-### Step 15: Collect Improvement Proposals and Create Issues
+### Step 15: Recovery Candidates Tail Check
+
+Guard: if `docs/reports/orchestration-recoveries.md` does not exist, skip this step entirely.
+
+1. Write open-issues JSON to `.tmp/open-issues-$NUMBER.json` for dedup:
+   ```bash
+   gh issue list --state open --limit 200 --json number,title
+   ```
+   Write the output to `.tmp/open-issues-$NUMBER.json` using the Write tool.
+
+2. Run:
+   ```bash
+   bash ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh docs/reports/orchestration-recoveries.md --threshold "$RECOVERIES_AUTO_FIRE_THRESHOLD" --issues-json .tmp/open-issues-$NUMBER.json
+   ```
+
+3. If the output is empty: skip the rest of this step. For each `symptom-short<TAB>count` line in the output:
+   - If `AUTONOMY_TIER=L1` OR `RECOVERIES_AUTO_FIRE_ENABLED=false`:
+     Print: `Recommend: gh issue create --label "retro/recoveries" --title "recoveries: {symptom-short}" (count: {count})`
+   - If `AUTONOMY_TIER=L2` or `L3` AND `RECOVERIES_AUTO_FIRE_ENABLED=true`:
+     Run `gh issue create --label "retro/recoveries" --title "recoveries: {symptom-short}" --body "..."` with the following body format:
+     ```
+     ## Background
+     Symptom `{symptom-short}` has been recorded {count} times in `docs/reports/orchestration-recoveries.md`,
+     exceeding the configured threshold of `$RECOVERIES_AUTO_FIRE_THRESHOLD`.
+
+     ## Purpose
+     Investigate and resolve the recurring recovery pattern to improve orchestration reliability.
+
+     ## Acceptance Criteria
+     - [ ] Root cause of `{symptom-short}` identified
+     - [ ] Fix or mitigation implemented and verified
+     ```
+     Then emit the event:
+     ```bash
+     source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
+     EMIT_ISSUE_NUMBER=$NUMBER emit_event "recoveries_threshold_fire" "symptom={symptom-short}" "count={count}" "issue_number={new_issue_number}"
+     ```
+
+4. Cleanup:
+   ```bash
+   rm -f .tmp/open-issues-$NUMBER.json
+   ```
+
+### Step 16: Collect Improvement Proposals and Create Issues
 
 Reuse `HAS_SKILL_PROPOSALS` already fetched via `detect-config-markers.md` in Step 4 (if `opportunistic-verify.md` in Step 14 fetched it again, reuse that result).
 

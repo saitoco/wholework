@@ -33,6 +33,11 @@
 #   iteration=<n>                 verify retry iteration counter (1-based within auto-retry)
 #   trigger_reason=<reason>       ac_fail | verify_timeout | verify_uncertain
 #   budget_remaining_tokens=<n|unknown>   estimated remaining token budget; "unknown" when token tracking is not yet implemented
+#
+# recoveries_threshold_fire: verify tail detected threshold-exceeding symptom and auto-filed Issue
+#   symptom=<symptom-short>       symptom identifier from orchestration-recoveries.md
+#   count=<n>                     occurrence count that exceeded threshold
+#   issue_number=<NNN>            GitHub Issue number created (0 if L1 advisory only)
 
 emit_event() {
   local event_type="$1"; shift
