@@ -2,3 +2,5 @@ opportunistic-verify: true
 skill-proposals: true
 permission-mode: auto
 session-auto-rename: true
+next-cycle-seed:
+  enabled: true
