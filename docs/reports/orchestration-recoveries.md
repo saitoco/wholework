@@ -106,7 +106,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #727
 
 ---
 
@@ -129,7 +129,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #727
 
 ---
 
@@ -152,7 +152,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #727
 
 ---
 
