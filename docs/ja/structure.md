@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（57 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（58 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -35,7 +35,7 @@ wholework/
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用 decomposition YAML サンプル
-├── tests/               # スクリプトの Bats テストファイル（78 ファイル）
+├── tests/               # スクリプトの Bats テストファイル（79 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents
@@ -165,6 +165,7 @@ wholework/
 - `scripts/gh-issue-edit.sh` — issue 本文編集（チェックボックス更新）
 - `scripts/gh-label-transition.sh` — フェーズラベル遷移
 - `scripts/gh-check-blocking.sh` — ブロッキング issue 依存関係チェック
+- `scripts/set-blocked-by.sh` — issue 番号で GitHub blocked-by relationship を設定する薄い wrapper (`add-blocked-by` mutation のラッパー)
 - `scripts/gh-extract-issue-from-pr.sh` — PR からリンク先 issue を抽出
 - `scripts/gh-pr-merge-status.sh` — PR のマージステータス確認
 - `scripts/gh-pr-review.sh` — PR レビュー投稿

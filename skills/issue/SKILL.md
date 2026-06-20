@@ -1,7 +1,7 @@
 ---
 name: issue
 description: Issue creation and refinement (`/issue "title"` or `/issue 123`). Creates new issues or refines/reformats existing ones. Use when creating issues, defining requirements, or standardizing issue content.
-allowed-tools: Bash(gh issue create:*, gh issue view:*, gh issue edit:*, gh issue close:*, gh issue list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*), Glob, Grep, Write, Read, WebFetch, ToolSearch, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
+allowed-tools: Bash(gh issue create:*, gh issue view:*, gh issue edit:*, gh issue close:*, gh issue list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*), Glob, Grep, Write, Read, WebFetch, ToolSearch, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Issue Creation and Refinement
@@ -241,6 +241,14 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/title-normalizer.md` and normalize the title
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER issue
 ```
+
+After applying labels, set blocked-by relationships from `Blocked by #N` patterns in the issue body:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh $NUMBER
+```
+
+(Exit code 2 means open blockers were detected and relationships were set — this is normal.)
 
 ### Step 8: Triage Auto-chain (if `triaged` label is absent)
 

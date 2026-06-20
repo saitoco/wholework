@@ -55,6 +55,9 @@ get_named_query() {
         add-blocked-by)
             printf '%s' 'mutation($issueId:ID!,$blockingId:ID!){addBlockedBy(input:{issueId:$issueId,blockingIssueId:$blockingId}){issue{number}}}'
             ;;
+        remove-blocked-by)
+            printf '%s' 'mutation($issueId:ID!,$blockingId:ID!){removeBlockedBy(input:{issueId:$issueId,blockingIssueId:$blockingId}){issue{number}}}'
+            ;;
         get-sub-issues)
             printf '%s' 'query($owner:String!,$repo:String!,$num:Int!){repository(owner:$owner,name:$repo){issue(number:$num){subIssues(first:50){nodes{number title state blockedBy(first:20){nodes{number state}}}}}}}'
             ;;

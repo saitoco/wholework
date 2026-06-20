@@ -2,7 +2,7 @@
 model: sonnet
 name: triage
 description: Issue triage. Automates title normalization, Type/Priority/Size/Value assignment (`/triage 123` for single issue + lightweight analysis, `/triage` for bulk execution, `/triage --backlog` for bulk processing + 4-perspective deep analysis).
-allowed-tools: Bash(gh:*, cat:*, echo:*, grep:*, jq:*, test:*, bash:*, printf:*, wc:*, head:*, tail:*, sed:*, awk:*, mkdir:*, rm:*, sleep:*, ${CLAUDE_PLUGIN_ROOT}/scripts/triage-backlog-filter.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*), Read, Write, Glob, Grep
+allowed-tools: Bash(gh:*, cat:*, echo:*, grep:*, jq:*, test:*, bash:*, printf:*, wc:*, head:*, tail:*, sed:*, awk:*, mkdir:*, rm:*, sleep:*, ${CLAUDE_PLUGIN_ROOT}/scripts/triage-backlog-filter.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*), Read, Write, Glob, Grep
 ---
 
 # Issue Triage
@@ -230,6 +230,15 @@ Extract `Blocked by #N` patterns from the issue body and check the status of blo
 1. If no `Blocked by #N` text, skip
 2. If found, use already-retrieved data from Step 2 if the blocked-by issue is included. Otherwise, check status with `gh issue view N --json state,title`
 3. If the blocked-by issue is CLOSED: report as "resolved dependency (#N is CLOSED)"
+4. If the blocked-by issue is OPEN: check whether the GitHub blocked-by relationship is already set:
+   ```bash
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query get-blocked-by -F num=$NUMBER --jq '.data.repository.issue.blockedBy.nodes[].number'
+   ```
+   If N is not in the returned list, the relationship is missing. Apply tier-aware action:
+   - **L1** (default): print `Recommend: set blocked-by relationship: scripts/set-blocked-by.sh $NUMBER $N`
+   - **L2 / L3**: call `${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh $NUMBER $N` to set the relationship
+
+Read `.wholework.yml` to determine the autonomy tier (`autonomy:` key, default `L1`).
 
 ### Step 10: Triage Marker
 
@@ -584,8 +593,9 @@ Execute only when the `dependency` perspective is specified. Check dependency he
 4. **Orphan dependency detection**: Run `gh issue view N --json state` for blocked-by targets not collected in Step 1; those that return errors (don't exist) are orphan dependencies
 
 **Notes (exhaustive):**
-- No auto-correction. Only output report and manual action guidance
 - Display "no dependency anomalies" if none detected
+- For missing blocked-by relationships (body text present but GitHub native relationship not set): apply tier-aware action — read `.wholework.yml` to determine the autonomy tier (`autonomy:` key, default `L1`). **L1**: advisory print only (`Recommend: set blocked-by relationship: scripts/set-blocked-by.sh $ISSUE $BLOCKER`). **L2 / L3**: call `${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh $ISSUE $BLOCKER` to backfill the relationship.
+- For all other anomaly types (circular, resolved, orphan): output report and manual action guidance only (no auto-correction).
 
 After analysis, output the report in the Step 3 dependency format.
 

@@ -258,6 +258,36 @@ GitHub リポジトリ設定「Auto-close issues with merged linked pull request
 
 `.github/workflows/kanban-automation.yml` が `phase/*` ラベルによる Kanban カラムの自動移動を実装します。`phase/issue`、`phase/spec` → Plan、`phase/ready` → Ready、`phase/code` → Implementation。Review/Verification/Done は Projects の組み込み automation を使います。
 
+## Blocked-by relationships
+
+GitHub native の blocked-by relationship (`addBlockedBy` mutation で設定) が Issue 依存関係状態の **SSoT** です。`Blocked by #N` という body テキストは人間向け補足に過ぎません。skill は GitHub relationship を正式なシグナルとして扱います。
+
+### 自動設定経路
+
+| 起票経路 | 仕組み |
+|----------|--------|
+| `/issue "title"` (新規起票) | Step 7 でラベル付与後に `gh-check-blocking.sh $NUMBER` を呼び出し |
+| `/issue N` (既存リファイン) | Step 10 で `gh-check-blocking.sh $NUMBER` を呼び出し |
+| `/triage N` (単一 Issue) | Step 9 で未設定の relationship を検出し、tier-aware アクションを実行 |
+| `/triage --backlog dependency` | Step 2b で未設定の relationship を検出し、tier-aware アクションを実行 |
+| `retro-proposals.md` (改善提案起票) | Step 11 で `gh issue create` 後に `set-blocked-by.sh` を呼び出し |
+
+### Tier-aware アクション (autonomy ゲーティング)
+
+`.wholework.yml` の `autonomy:` フィールド (デフォルト `L1`) が L0 自動書き込みを制御します。
+
+| Tier | 振る舞い |
+|------|----------|
+| L1 (デフォルト) | advisory print のみ: `Recommend: set blocked-by relationship: scripts/set-blocked-by.sh $N $BLOCKER` |
+| L2 / L3 | `scripts/set-blocked-by.sh $N $BLOCKER` を自動呼び出し |
+
+### スクリプト
+
+- `scripts/gh-check-blocking.sh` — issue body の `Blocked by #N` パターンを検出して `addBlockedBy` mutation を呼び出す
+- `scripts/set-blocked-by.sh <issue> <blocker>` — 薄い wrapper: `get-issue-id` で node ID 解決後に `add-blocked-by` を呼び出す
+- `scripts/gh-graphql.sh --query add-blocked-by` — `addBlockedBy` mutation
+- `scripts/gh-graphql.sh --query remove-blocked-by` — `removeBlockedBy` mutation
+
 ## 関連ドキュメント
 
 - [CLAUDE.md](../../CLAUDE.md) — グローバルガイドライン

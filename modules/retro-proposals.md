@@ -133,6 +133,7 @@ Called by:
     - **Skip downstream creation when upstream routed**: If the proposal was routed to upstream in Step 8.4 (condition was met and upstream Issue creation succeeded), skip `gh issue create` for this proposal and continue to the next proposal.
     - Normalize title following `title-normalizer.md` processing steps, then create Issues in standard format (background, purpose, acceptance conditions) with `gh issue create --label "retro/verify"` for each improvement proposal. Do not add the `triaged` label; the `triaged` label is assigned by the `/triage` skill after triage is actually executed.
     - **Add verify commands to acceptance conditions**: add verify commands like `<!-- verify: grep "{keyword}" "{target file}" -->` to the created Issue's acceptance conditions. Extract keywords from acceptance condition text and infer target files from proposal content (improves automation accuracy for `/auto --batch`). Create Issue without verify commands if they cannot be determined.
+    - **Set blocked-by relationships**: after successful `gh issue create`, if the created issue body contains `Blocked by #N` patterns, call `${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh $NEW_ISSUE_NUMBER $N` for each N to set the GitHub native blocked-by relationship. If `set-blocked-by.sh` fails, output a warning but continue.
     - If Issue creation fails, output error log to stderr, skip, and continue (does not affect exit code).
     - Output created Issue number to terminal.
 
