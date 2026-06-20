@@ -265,6 +265,36 @@ When the GitHub repository setting "Auto-close issues with merged linked pull re
 
 `.github/workflows/kanban-automation.yml` implements auto Kanban column movement by `phase/*` labels. `phase/issue`, `phase/spec` → Plan, `phase/ready` → Ready, `phase/code` → Implementation. Review/Verification/Done use Projects built-in automations.
 
+## Blocked-by relationships
+
+GitHub native blocked-by relationships (set via `addBlockedBy` mutation) are the **SSoT** for Issue dependency state. Body text such as `Blocked by #N` is a human-readable supplement only — skills treat the GitHub relationship as the authoritative signal.
+
+### Automatic relationship setting
+
+| Entry path | Mechanism |
+|------------|-----------|
+| `/issue "title"` (new issue creation) | Step 7 calls `gh-check-blocking.sh $NUMBER` after label assignment |
+| `/issue N` (existing issue refinement) | Step 10 calls `gh-check-blocking.sh $NUMBER` |
+| `/triage N` (single issue) | Step 9 detects missing relationships and applies tier-aware action |
+| `/triage --backlog dependency` | Step 2b detects missing relationships and applies tier-aware action |
+| `retro-proposals.md` (improvement proposal creation) | Step 11 calls `set-blocked-by.sh` after `gh issue create` |
+
+### Tier-aware action (autonomy gating)
+
+The `autonomy:` field in `.wholework.yml` (default `L1`) governs automatic L0 writes:
+
+| Tier | Behavior |
+|------|----------|
+| L1 (default) | Print advisory: `Recommend: set blocked-by relationship: scripts/set-blocked-by.sh $N $BLOCKER` |
+| L2 / L3 | Call `scripts/set-blocked-by.sh $N $BLOCKER` automatically |
+
+### Scripts
+
+- `scripts/gh-check-blocking.sh` — detects `Blocked by #N` patterns in issue body and calls `addBlockedBy` mutation
+- `scripts/set-blocked-by.sh <issue> <blocker>` — thin wrapper: resolves node IDs via `get-issue-id` and calls `add-blocked-by`
+- `scripts/gh-graphql.sh --query add-blocked-by` — `addBlockedBy` mutation
+- `scripts/gh-graphql.sh --query remove-blocked-by` — `removeBlockedBy` mutation
+
 ## Related Documents
 
 - [CLAUDE.md](../CLAUDE.md) — Global guidelines

@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (57 files)
+├── scripts/             # Utility scripts used by skills and agents (58 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -172,6 +172,7 @@ Key modules:
 - `scripts/gh-issue-edit.sh` — edit issue body (checkbox updates)
 - `scripts/gh-label-transition.sh` — phase label transitions
 - `scripts/gh-check-blocking.sh` — check blocking issue dependencies
+- `scripts/set-blocked-by.sh` — set GitHub blocked-by relationship by issue number (wrapper for `add-blocked-by` mutation)
 - `scripts/gh-extract-issue-from-pr.sh` — extract linked issue from PR
 - `scripts/gh-pr-merge-status.sh` — check PR merge status
 - `scripts/gh-pr-review.sh` — post PR reviews
