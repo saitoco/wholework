@@ -222,7 +222,7 @@ PR 本文に `closes #N` を追加すると、マージ時に Issue が自動ク
 /verify N  （修正後に再検証）
 ```
 
-**opt-in 自動リトライ（autonomy: L2/L3 かつ auto-retry-on-fail.enabled: true）:** `/verify` が自動的に `/code --patch N` を再発火し再検証を行う。`auto-retry-on-fail.max_iterations` 回またはバジェット枯渇まで繰り返し、完了後にユーザーへ戻る。設定方法は [docs/ja/guide/customization.md](guide/customization.md) を参照。
+**opt-in 自動リトライ（autonomy: L2/L3 かつ auto-retry-on-fail.enabled: true）:** `/verify` が自動的に `/code` を再発火 (ルートは `auto-retry-on-fail.route_override` + Issue Size で決定 — XS/S → `--patch`、M/L → `--pr`、XL → スキップ/手動; デフォルト `auto`) し再検証を行う。`auto-retry-on-fail.max_iterations` 回またはバジェット枯渇まで繰り返し、完了後にユーザーへ戻る。設定方法は [docs/ja/guide/customization.md](guide/customization.md) を参照。
 
 元の `size/*` ラベルは全期間を通して保持されます（変更されません）。`get-issue-size.sh` の 2 層ルックアップ（Project フィールド → `size/*` ラベル）により、reopen/close サイクルを跨いで元の Size が保たれるため、`/audit stats` の Size ベース分析は正確なままです。
 
