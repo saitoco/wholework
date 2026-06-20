@@ -69,6 +69,10 @@ verify-ignore-paths:
 # "bypass" uses --dangerously-skip-permissions (legacy / opt-out)
 permission-mode: auto
 
+# Autonomy tier: how far skills may write GitHub state and fire follow-on loops (default: L1)
+# L1 = advisory only (safest), L2 = assisted (main workflow + seed), L3 = unattended (CronCreate allowed)
+# autonomy: L2
+
 # XL sub-issue parallel execution concurrency cap (default: 5)
 # auto-max-concurrent: 5
 
@@ -117,6 +121,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `auto-max-concurrent` | integer | `5` | Maximum concurrent sub-issue executions in XL parallel route. Applies to each level of the dependency graph. Values ≤0 or non-numeric fall back to `5`. |
 | `retro-proposals-upstream` | string | `""` | Upstream repository (`owner/repo`) for routing Skill infrastructure improvement proposals from `/verify` retrospectives. When set, such proposals are sanitized (regex strips absolute paths and downstream issue numbers; LLM removes business-context terms) and filed to this repository; downstream filing is skipped. Unset means downstream filing as before (backward-compatible). |
 | `verify-ignore-paths` | list | `[]` | Glob patterns (block list) of paths to exclude from dirty-file detection in `/verify`. Supported: `dir/**` prefix match (any file inside a directory), simple bash globs (`*`, `?`, `[...]`) for full-path match. Not supported: intermediate `**` (e.g. `a/**/b`) or negation patterns (`!`). Files matching any pattern are silently ignored and reported on stderr. Unset means no exclusions. |
+| `autonomy` | string | `L1` | Autonomy tier governing which L2→L1 loop-firing paths skills may use. `L1` Report (advisory only) / `L2` Assisted (in-loop + seed) / `L3` Unattended (full, including CronCreate). See [docs/guide/autonomy.md](autonomy.md). |
 
 For the full reference including implementation details and YAML parsing rules, see [`modules/detect-config-markers.md`](../../modules/detect-config-markers.md).
 

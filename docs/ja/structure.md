@@ -18,7 +18,7 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # スキル定義（必須）
 │       └── *.md         # 補助的な phase/ガイドラインファイル（任意）
-├── modules/             # スキルから参照される共有モジュール（37 ファイル）
+├── modules/             # スキルから参照される共有モジュール（38 ファイル）
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
@@ -49,7 +49,7 @@ wholework/
 │   ├── routines-adoption.md # Routines 採用ロードマップと PoC 知見（project）
 │   ├── translation-workflow.md # docs/ja/ ミラー同期ルールと手順（project）
 │   ├── visual-reproduction.md  # UI 再現案件 methodology guide（project）
-│   ├── guide/           # ユーザー向けマニュアル（index、quick-start、workflow、customization、troubleshooting、adapter-guide、figma-best-practices、scripting、xl-decomposition）（project）
+│   ├── guide/           # ユーザー向けマニュアル（index、quick-start、workflow、customization、troubleshooting、adapter-guide、figma-best-practices、scripting、xl-decomposition、autonomy）（project）
 │   ├── {lang}/          # /doc translate {lang} が生成する言語別翻訳（docs/{lang}/）
 │   ├── spec/            # Issue 仕様
 │   ├── reports/         # 最適化・監査レポート
@@ -138,6 +138,7 @@ wholework/
 - `modules/filesystem-scope.md` — スキル/スクリプトのファイルシステムアクセススコープ制約と推奨パターン
 - `modules/phase-state.md` — phase の precondition/success signature と `reconcile-phase-state.sh` JSON v1 schema（SSoT）
 - `modules/skill-dev-doc-impact.md` — skill 開発プロジェクト向けの `/spec` および `/code` 用 Change Types（`doc-checker.md` 経由）
+- `modules/autonomy-tier.md` — autonomy tier（L2→L1 経路許可）SSoT: tier × 経路マトリクス、Tier × L0 書き込みマトリクス、skill frontmatter 宣言ルール
 
 ### Agents
 

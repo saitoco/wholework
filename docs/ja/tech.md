@@ -61,6 +61,8 @@
     | 深度ルーティング | スキル呼び出しモード（`--full` / `--light`） | `spec/codebase-search.md`（`--full` で読み込み、`--light` ではスキップ） |
     | Capability フラグ | `.wholework.yml` の `capabilities.{name}: true` | `verify/browser-verify-phase.md`（`HAS_BROWSER_CAPABILITY=true` で読み込み） |
 
+- **Autonomy tier（L0 書き込みガバナンス）**: Wholework は 4 層で動作する — L0（GitHub state: Issues, Labels, PRs, blockedBy, `closes #N`）、L1（Claude Code primitive: `/loop`, `/goal`, `ScheduleWakeup`, `CronCreate`）、L2（Wholework skill 内部: Spec, retro, `auto-events.jsonl`）、L3（OS スケジューラ）。`.wholework.yml` の `autonomy:` field は、skill が L0 をどこまで書き込め、L2→L1 経路（A Advisory / B CronCreate / C ScheduleWakeup / E Seed file emission）をどこまで使用できるかを宣言する。tier × 経路マトリクスと Tier × L0 書き込みマトリクスの SSoT は [`modules/autonomy-tier.md`](../modules/autonomy-tier.md)、surface 別の L0 書き込み分類は [`modules/l0-surfaces.md`](../modules/l0-surfaces.md)。このレイヤーは `permission-mode`（Claude Code subprocess 権限を管理）とは直交する。skill レベルのゲーティング（skill frontmatter `loop-paths-used` / `loop-paths-fallback` 宣言とローダーチェック）の実配線は #700 / #702 / #703 に委譲
+
 - **配布物ファースト改善原則**: レトロスペクティブで特定された改善は、配布物（Skills、Agents、Modules、Scripts）に反映すること。CLAUDE.md、Steering Documents、Project Documents はユーザーリポジトリ固有の成果物であり、Wholework plugin の一部として配布されない — これらのドキュメントだけに加えた改善は他の Wholework ユーザーに届かない。レトロスペクティブで改善が特定された場合、実装対象は配布レイヤーとすべきであり、配布対象外の成果物だけを更新することは不十分である
 - **Effort 最適化戦略（3 軸）**: `claude -p` 呼び出しで実行コストと品質を制御する 3 軸。軸ごとの CLI サポート状況と Wholework の採用方針:
   - **軸 1 — モデル選択**（`--model`）: 実装済み。Sonnet をデフォルトとし、L サイズの spec では `run-spec.sh --opus` で Opus に切替。レビュー・確認済み
