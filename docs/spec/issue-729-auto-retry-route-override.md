@@ -99,18 +99,18 @@
 - Nothing to note. 全 AC が grep/section_contains/section_not_contains/rubric で自動検証可能。UNCERTAIN 0 件。verify command の設計品質は高かった。AC4 の `section_not_contains` で旧ハードコード削除を確認するパターンは policy change Issue に有効。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 全 7 AC PASS、MUST/SHOULD 課題なし → COMMENT イベントで PR レビュー投稿 (REQUEST_CHANGES なし)
-- CI "Run bats tests" FAILURE は main ブランチでも同一テスト (setup-labels.bats #715/#720/#727/#729/#732/#734) が失敗する pre-existing regression → この PR の変更とは無関係と判定
-- CONSIDER 課題 (get-issue-size.sh 失敗時の --patch フォールバック) はスキップ — 現状挙動からの退行なし、Spec で未定義
+- PR #742 はスカッシュマージ済み (2026-06-20T21:02:13Z) — gh pr merge のローカルブランチ削除エラーは既存 worktree (code+issue-729) の影響で無害
+- mergeable=false reason=unknown を non-interactive auto-resolve で通過 — CI pre-existing failure が原因と推定
+- BASE_BRANCH=main → closes #729 により Issue は自動クローズ済み
 
 ### Deferred Items
-- setup-labels.bats label 数テストの pre-existing failure は別 Issue での対応が必要 (今回スコープ外)
-- CONSIDER: get-issue-size.sh が失敗した場合に M/L Issue が `--patch` フォールバックを使う — 改善候補として将来の Issue で対処検討
+- setup-labels.bats の pre-existing failure (#715/#720/#727/#729/#732/#734) は別途対応が必要
+- get-issue-size.sh 失敗時の --patch フォールバック改善は将来の Issue で検討
 
 ### Notes for Next Phase
-- CI "Run bats tests" は pre-existing failure のためマージをブロックしない (main でも失敗中)
-- MUST/SHOULD 修正なし → 安全にマージ可能
-- Merge 後は /verify で post-merge AC が存在しないことを確認 (Issue spec: "Post-merge: なし")
+- Post-merge AC は "なし" (Spec 参照) → /verify では post-merge 検証項目なし
+- Issue #729 は main マージにより自動クローズ済みのため手動クローズ不要
+- CI bats failure は pre-existing であり verify のブロック要因にならない
