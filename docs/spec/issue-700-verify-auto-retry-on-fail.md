@@ -116,22 +116,21 @@ No new comments since last phase.
 - `skills/verify/SKILL.md` を 3 回に分けてコミット: 初回実装 → `allowed-tools` 追加 + `loop-paths-used` バリデータ修正 → AC1 literal string 追加。いずれも validate-skill-syntax.py の検出結果に基づく修正。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- SHOULD 課題 (auto-retry budget 枯渇時の明示メッセージ欠落) を修正: else-if 分岐追加で L2/L3+enabled+NEXT_ITERATION >= MAX の場合に専用メッセージを出力する。
-- CONSIDER 課題 (emit-event.sh schema コメント不整合) を修正: `<n|unknown>` に更新し "unknown" が初期実装での有効値であることを明示。
-- Forbidden Expressions check の CI FAILURE は main ブランチの既存問題 (issue-710 spec) であり、この PR の変更は無関係。
+- CI FAILURE (ci_failing) は pre-existing の issue-710 spec の Forbidden Expressions 違反であり、PR #717 の変更とは無関係であることを確認。non-interactive モードの auto-resolve ポリシーに従いマージを続行した。
+- squash merge + delete-branch で main に統合。`closes #700` が PR body に含まれているため Issue は自動クローズ済み。
 
 ### Deferred Items
-- `budget_tokens` の実際のトークン消費量ベース判定は将来拡張 (Spec Notes + code phase handoff より引継ぎ)。
-- `--pr` ルートでの auto-retry サポートは将来拡張 (code phase handoff より引継ぎ)。
+- `budget_tokens` の実際のトークン消費量ベース判定は将来拡張 (引継ぎ)。
+- `--pr` ルートでの auto-retry サポートは将来拡張 (引継ぎ)。
 - docs/spec/issue-710 の forbidden expressions 違反修正は別 Issue で対処が必要。
 
 ### Notes for Next Phase
-- MUST 課題なし。SHOULD/CONSIDER は解決済み。
-- validate-skill-syntax PASS (0 errors, 0 warnings)。
-- Forbidden Expressions check CI FAILURE は pre-existing で merge 判断はユーザーが行う。
+- Post-merge verify-type は `manual` (`.wholework.yml` に `auto-retry-on-fail.enabled: true` を設定した状態で `/verify` を意図的に FAIL させて動作を観察する必要がある)。
+- MUST AC なし。全 5 件の pre-merge AC は PASS 済み。
+- verify フェーズでは `skills/verify/SKILL.md` の auto-retry ブロック、`detect-config-markers.md` のキー登録、`emit-event.sh` のイベントスキーマを重点確認してください。
 
 ## Notes
 
