@@ -41,6 +41,57 @@
 - 試験的に `phase/ready` のみ付与・Spec 無しの M Issue に対して `reconcile-phase-state.sh --check-precondition code-pr N` を実行すると `matches_expected: false` を返すことを観察
 - 試験的に XS Issue (Spec 無し) に対して同コマンドを実行すると `matches_expected: true` を返すことを観察
 
+## Code Retrospective
+
+### Deviations from Design
+
+- `skills/code/SKILL.md` の `!=` を `is not` に変更: 実装直後に `validate-skill-syntax.py` が body 内の半角 `!` を forbidden expression として検出。Spec には修正方針の記載がなかったため、禁止文字のルール (docs/tech.md § Forbidden Expressions) に従い `!=` → `is not` に自動修正した。
+- SKILL.md 変更を 2 コミットに分割: 初回コミット後にバリデーション違反を発見したため、修正コミットを追加した。Spec は 1 コミットを想定していたが、この分割は許容範囲内の deviation。
+
+### Design Gaps/Ambiguities
+
+- `_precondition_code_common()` 内の既存変数 `spec_file` を `SPEC_EXISTS` にリネームした。Spec では「変数名は `SPEC_EXISTS` を使う」と明示されていたが、既存の `_completion_spec()` 等で `spec_file` が使用されている点との一貫性についての指定がなかった。今回は `_precondition_code_common()` のスコープ内のみでリネームし、他関数には影響しない実装を選択した。
+
+### Rework
+
+- `skills/code/SKILL.md` の `!=` 修正により、2 つのコミットが生じた。commit メッセージで理由を明記し、追加プッシュで対処した。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- `actual.size` の JSON Schema ドキュメントが "Present when Spec is missing and Size check is performed" と記述しているが、実装では XS 成功パスで `size` フィールドが `actual_json` に含まれない (ミスマッチパスのみ)。表現が曖昧で CONSIDER 指摘を生じた。次回以降は "Present when ... mismatch occurs" など実装挙動を正確に反映した記述を推奨。
+- Phase Table の Implementation Status 列に括弧で Precondition を繰り返す冗長記述が発生。Spec でドキュメント更新内容を具体的に指定する (もしくは既存フォーマットを明示する) と、コードフェーズでの記述ぶれを防げる。
+
+### Recurring issues
+
+- Nothing to note. 今回は異なる種類の CONSIDER 指摘が 2 件のみで、繰り返しパターンなし。
+
+### Acceptance criteria verification difficulty
+
+- 承認基準 6 件全て PASS。`command "bats tests/reconcile-phase-state.bats"` は CI FAILURE だったが、失敗が `setup-labels.bats` (pre-existing) であることを CI ログで確認し PASS 判定できた。Safe mode では CI ログ解析が重要で、`reconcile-phase-state.bats` 新規テストの PASS ライン (ok 534-536) を明示確認できたのは有効。Spec の verify command を `bats tests/reconcile-phase-state.bats` に限定したことで CI ジョブ全体の FAILURE に惑わされなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+
+- MUST/SHOULD 指摘なし: 全承認基準 PASS、CI の bats 失敗は `setup-labels.bats` pre-existing 問題 (main ブランチも同様)。
+- CONSIDER 2 件のみ: `actual.size` ドキュメント記述の曖昧さ、Phase Table 冗長記述。どちらも機能的影響なし、merge ブロックなし。
+- review-light (1 agent, light mode) を実行。SKIP_REVIEW_BUG=false だが REVIEW_DEPTH=light のため lightweight integrated review のみ。
+
+### Deferred Items
+
+- `actual.size` JSON Schema の記述改善 (CONSIDER): merge 後の Improvement Proposal または次サイクルで対応。
+- Phase Table Implementation Status 列の整理 (CONSIDER): 同上。
+- `tests/setup-labels.bats` の pre-existing failures: 本 PR とは無関係、別 Issue で対応が必要。
+
+### Notes for Next Phase
+
+- PR #730 は APPROVED 状態で merge 可能。`/merge 730` を実行。
+- Post-merge AC (観察的 verify) が 2 件存在: `phase/ready` のみの M Issue での `matches_expected: false` 確認、XS Issue での `matches_expected: true` 確認。`/verify` フェーズで実施。
+- `setup-labels.bats` 失敗は main ブランチも同様なので merge ブロック理由にならない。
+
 ## Notes
 
 ### Auto-Resolve: AC5 ファイル名修正 (non-interactive mode)

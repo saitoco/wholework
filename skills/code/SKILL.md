@@ -2,7 +2,7 @@
 name: code
 description: Local implementation (`/code 123`). Size auto-detection routes XS/S→patch (direct commit to main), M/L→branch+PR. Override with `--patch`/`--pr`. Does not update CLAUDE.md, run session retrospectives, or manage memory.
 context: fork
-allowed-tools: Bash(gh issue view:*, gh issue edit:*, gh issue list:*, gh issue create:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, git checkout:*, git pull:*, git add:*, git status:*, git diff:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh pr create:*, gh pr comment:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/test-failure-classify.sh:*, python3:*, bats:*), Glob, Grep, Read, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, ToolSearch
+allowed-tools: Bash(gh issue view:*, gh issue edit:*, gh issue list:*, gh issue create:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, git checkout:*, git pull:*, git add:*, git status:*, git diff:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh pr create:*, gh pr comment:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/test-failure-classify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, python3:*, bats:*), Glob, Grep, Read, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, ToolSearch
 ---
 
 # Local Implementation
@@ -129,6 +129,18 @@ For sizes other than XS: run `gh issue view $NUMBER --json labels -q '.labels[].
   - Confirm via AskUserQuestion (non-interactive mode: auto-resolve — proceed without Spec; read requirements from Issue body directly and continue; record the decision in the Spec's `## Autonomous Auto-Resolve Log` subsection)
     - "Continue": proceed with execution
     - "Abort": stop processing and guide "run `/spec $NUMBER`", then exit
+
+**Spec precondition check (run after `phase/ready` passes, skip if Size is XS):**
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh --check-precondition code-patch $NUMBER
+# pr route: replace code-patch with code-pr
+```
+
+Parse the JSON output. If `matches_expected` is `false` (Spec missing and Size is not XS):
+- Output: "Spec が見つかりません。`/spec $NUMBER` を実行してください"
+- **In non-interactive mode**: warn and continue (consistent with `--warn-only` default; Step 5 handles missing Spec by reading Issue body)
+- **In interactive mode**: abort recommended — guide user to run `/spec $NUMBER` first
 
 ### Step 4: Create Branch & Label Transition
 

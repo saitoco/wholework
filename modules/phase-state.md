@@ -35,8 +35,8 @@ For precondition checks, `reconcile-phase-state.sh` verifies whether the require
 |-------|-------------|-------------------------------|----------------------|
 | issue | Issue exists and state != CLOSED | `triaged` label on issue | Implemented |
 | spec | `phase/issue` or `phase/spec` label on issue | `$SPEC_PATH/issue-N-*.md` exists AND `phase/(ready\|code\|review\|merge\|verify\|done)` label | Implemented |
-| code-patch | `phase/ready` label on issue, Spec exists | `git log origin/main --after=<reopen_ts> --grep="closes #N"` returns ≥1 fresh commit (reopen timestamp obtained via `get-last-reopen`); falls back to `git log origin/main --grep="closes #N"` when reopen timestamp unavailable | Precondition: `phase/ready` — Implemented; Spec exists — future scope. Completion: Implemented |
-| code-pr | `phase/ready` label on issue, Spec exists | Open PR on `worktree-code+issue-N` branch (#310 SSoT) | Precondition: `phase/ready` — Implemented; Spec exists — future scope. Completion: Implemented |
+| code-patch | `phase/ready` label on issue, Spec exists OR Size=XS | `git log origin/main --after=<reopen_ts> --grep="closes #N"` returns ≥1 fresh commit (reopen timestamp obtained via `get-last-reopen`); falls back to `git log origin/main --grep="closes #N"` when reopen timestamp unavailable | Precondition: `phase/ready` — Implemented; Spec exists OR Size=XS — Implemented (Spec exists OR Size=XS). Completion: Implemented |
+| code-pr | `phase/ready` label on issue, Spec exists OR Size=XS | Open PR on `worktree-code+issue-N` branch (#310 SSoT) | Precondition: `phase/ready` — Implemented; Spec exists OR Size=XS — Implemented (Spec exists OR Size=XS). Completion: Implemented |
 | review | PR is OPEN | PR has a comment containing `<!-- review-summary -->` marker (primary); or `## Review Response Summary` / `## レビュー回答サマリ` (fallback for marker-absent posts) | Implemented |
 | merge | PR is OPEN and reviewDecision is APPROVED | `gh pr view --json state == MERGED` | Implemented |
 | verify | Issue has `phase/verify` label or is CLOSED | Issue is CLOSED or has `phase/done` label | Implemented |
@@ -78,6 +78,7 @@ For precondition checks, `reconcile-phase-state.sh` verifies whether the require
 | `actual.commits_found` | boolean | When git log is checked | `true` if matching commit found on origin/main |
 | `actual.spec_file` | string\|null | When spec is checked | Path to spec file, or `null` if not found |
 | `actual.issue_state` | string | When issue state is checked | `"OPEN"` or `"CLOSED"` |
+| `actual.size` | string | When spec precondition is checked with Size check | Issue size value (e.g., `"M"`, `"XS"`, `""`) returned by `get-issue-size.sh`. Present when Spec is missing and Size check is performed. |
 | `actual.hint_recent_commit` | string\|null | When phase label mismatch detected | Most recent git commit referencing the issue, or `null`. Added for phase label recovery. |
 | `actual.hint_pr_state` | string\|null | When phase label mismatch detected | PR state (`"OPEN"`, `"MERGED"`, `"CLOSED"`) if found, otherwise `null`. Added for phase label recovery. |
 | `diagnosis` | string | Always | One-line human-readable description |

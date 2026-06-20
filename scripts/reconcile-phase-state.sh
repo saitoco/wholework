@@ -373,18 +373,28 @@ _precondition_code_common() {
   local spec_path
   spec_path=$("$SCRIPT_DIR/get-config-value.sh" spec-path "docs/spec" 2>/dev/null) || spec_path="docs/spec"
 
-  local spec_file
-  spec_file=$(ls "${spec_path}/issue-${ISSUE_NUMBER}-"*.md 2>/dev/null | head -1)
+  local SPEC_EXISTS
+  SPEC_EXISTS=$(ls "${spec_path}/issue-${ISSUE_NUMBER}-"*.md 2>/dev/null | head -1)
 
   local labels_json
   labels_json=$(_labels_to_json_array "$labels")
   local spec_val="null"
-  [[ -n "$spec_file" ]] && spec_val="\"$(_escape_json "$spec_file")\""
+  [[ -n "$SPEC_EXISTS" ]] && spec_val="\"$(_escape_json "$SPEC_EXISTS")\""
   local actual_json="{\"labels\":${labels_json},\"spec_file\":${spec_val}}"
 
   if ! echo "$labels" | grep -q "^phase/ready$"; then
     _handle_mismatch "issue #${ISSUE_NUMBER} does not have phase/ready label (code phase precondition not met)" "$actual_json"
     return
+  fi
+
+  if [[ -z "$SPEC_EXISTS" ]]; then
+    local SIZE
+    SIZE=$("$SCRIPT_DIR/get-issue-size.sh" "$ISSUE_NUMBER" 2>/dev/null || true)
+    if [[ "$SIZE" != "XS" ]]; then
+      actual_json="{\"labels\":${labels_json},\"spec_file\":${spec_val},\"size\":\"$(_escape_json "$SIZE")\"}"
+      _handle_mismatch "Spec missing and Size != XS" "$actual_json"
+      return
+    fi
   fi
 
   _emit_result "true" "issue #${ISSUE_NUMBER} has phase/ready label (code phase precondition met)" "$actual_json"
