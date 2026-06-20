@@ -53,3 +53,30 @@
 - 両アプローチ (Option A: 2部構成 / Option B: rubric) を guideline として並記 (Auto-resolve: 提案に「または」と並記されており、least-risk 解法として両方を guideline 化)
 - `verify-type tag check` セクションへの挿入位置: `manual`-tagged 条件 bullet の直後
 - `section_contains "skills/spec/SKILL.md" "### Step 10" "observation event"` が通過するよう、追加テキストに `observation event` という文字列を含めること
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Inserted the `observation`-tagged conditions bullet directly after `manual`-tagged conditions in the existing `**verify-type tag check:**` block (line 425), as specified in the Spec
+- Both Option A (2-part structure) and Option B (rubric verify command) were documented as peer guidelines — no preference expressed, letting implementers choose by situation
+- Kept the text `observation event` as a fixed string in the bullet to satisfy the `section_contains` verify command
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- The only changed file is `skills/spec/SKILL.md` — the diff is purely additive (12 lines inserted)
+- All pre-merge verify commands PASS: grep, section_contains, and rubric
+- No bats test changes needed (pure Markdown content addition)
