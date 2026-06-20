@@ -137,7 +137,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh --check-precondition code
 # pr route: replace code-patch with code-pr
 ```
 
-Parse the JSON output. If `matches_expected` is `false` (Spec missing and Size != XS):
+Parse the JSON output. If `matches_expected` is `false` (Spec missing and Size is not XS):
 - Output: "Spec が見つかりません。`/spec $NUMBER` を実行してください"
 - **In non-interactive mode**: warn and continue (consistent with `--warn-only` default; Step 5 handles missing Spec by reading Issue body)
 - **In interactive mode**: abort recommended — guide user to run `/spec $NUMBER` first
