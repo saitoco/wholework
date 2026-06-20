@@ -116,21 +116,22 @@ No new comments since last phase.
 - `skills/verify/SKILL.md` を 3 回に分けてコミット: 初回実装 → `allowed-tools` 追加 + `loop-paths-used` バリデータ修正 → AC1 literal string 追加。いずれも validate-skill-syntax.py の検出結果に基づく修正。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `auto-retry-on-fail` は `.wholework.yml` の `auto-retry-on-fail:` セクション下のネストキーとして実装。`detect-config-markers.md` にパースルールを追記した。
-- `run-code.sh` を `skills/verify/SKILL.md` の `allowed-tools` に追加した (Spec Note の誤りを修正)。
-- `loop-paths-used: [A]` frontmatter とそのバリデータサポートを同時に実装した。
+- SHOULD 課題 (auto-retry budget 枯渇時の明示メッセージ欠落) を修正: else-if 分岐追加で L2/L3+enabled+NEXT_ITERATION >= MAX の場合に専用メッセージを出力する。
+- CONSIDER 課題 (emit-event.sh schema コメント不整合) を修正: `<n|unknown>` に更新し "unknown" が初期実装での有効値であることを明示。
+- Forbidden Expressions check の CI FAILURE は main ブランチの既存問題 (issue-710 spec) であり、この PR の変更は無関係。
 
 ### Deferred Items
-- `budget_tokens` の実際のトークン消費量ベース判定は将来拡張 (Spec Notes に記録済み)。
-- `--pr` ルートでの auto-retry サポートは将来拡張 (現在 `--patch` 固定)。
+- `budget_tokens` の実際のトークン消費量ベース判定は将来拡張 (Spec Notes + code phase handoff より引継ぎ)。
+- `--pr` ルートでの auto-retry サポートは将来拡張 (code phase handoff より引継ぎ)。
+- docs/spec/issue-710 の forbidden expressions 違反修正は別 Issue で対処が必要。
 
 ### Notes for Next Phase
-- `docs/workflow.md` の Verify Fail フロー記述を更新済み (review で確認推奨)。
-- `validate-skill-syntax.py` KNOWN_FIELDS への `loop-paths-used` 追加は意図的な変更。
-- All 5 pre-merge ACs pass (verified locally).
+- MUST 課題なし。SHOULD/CONSIDER は解決済み。
+- validate-skill-syntax PASS (0 errors, 0 warnings)。
+- Forbidden Expressions check CI FAILURE は pre-existing で merge 判断はユーザーが行う。
 
 ## Notes
 
@@ -144,3 +145,17 @@ No new comments since last phase.
 - **`docs/guide/customization.md` SHOULD**: `auto-retry-on-fail` キーを configuration key リファレンステーブルとサンプル YAML に追加する (verify-max-iterations と同様の形式)。この変更は MUST AC には含まれていないが、ユーザ向けドキュメントの一貫性のために推奨する。
 - **`docs/tech.md` SHOULD**: Architecture Decisions の「Enforcement of skill-level gating... is delegated to #700 / #702 / #703」の記述を #700 実装後に更新する。`docs/ja/tech.md` の日本語ミラーも同期が必要 (translation-workflow.md 準拠)。
 - **`verify` allowed-tools 変更不要**: `run-code.sh` は既存の Bash allowed-tools パターン `${CLAUDE_PLUGIN_ROOT}/scripts/*.sh` でカバーされている。`validate-skill-syntax.py` KNOWN_TOOLS の更新も不要 (新ツール追加なし)。
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+2-分岐の条件文 (auto-retry fire / advisory print) が補集合でなく、「L2/L3+enabled+budget 枯渇」のケースを取りこぼしていた。SKILL.md レビューでは else-if の網羅性を確認する観点が有効。
+
+### Recurring Issues
+
+- Nothing to note. 今回の SHOULD 課題は独立した固有問題であり、繰り返しパターンは検出されなかった。
+
+### Acceptance Criteria Verification Difficulty
+
+- Nothing to note. 全 5 件の pre-merge AC が verify command により自動判定 PASS。verify command の精度は高く UNCERTAIN ゼロ。
