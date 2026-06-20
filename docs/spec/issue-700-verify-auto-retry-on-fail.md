@@ -158,3 +158,29 @@ No new comments since last phase.
 ### Acceptance Criteria Verification Difficulty
 
 - Nothing to note. 全 5 件の pre-merge AC が verify command により自動判定 PASS。verify command の精度は高く UNCERTAIN ゼロ。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- A1 (verify-type 非標準値修正) / A2-A3 (実装 AC 補完) の自動解決ログが Code Retrospective まで正しく引き継がれた。Issue Retrospective → Spec → Code → Verify の継承パスが機能した好例
+
+#### spec
+- `allowed-tools 変更不要` Notes が誤判定だった (`*.sh` ワイルドカードは実在しなかった)。`docs/workflow.md` の Verify Fail フロー更新も Changed Files 漏れだった。SHOULD 級だが Spec の網羅性に小さい欠落
+
+#### code
+- 3 回の rework は validate-skill-syntax.py の検出 → 修正サイクルで自然な流れ。design 逸脱に分類した allowed-tools と loop-paths-used の bump は Spec 段階で気づけば 1 commit にできた
+
+#### review
+- `else-if 網羅性` の指摘で「L2/L3+enabled+budget 枯渇」case の二分岐取りこぼしを検出。auto-retry のような branching skill 追加では tier × enabled × budget の cross product を review 観点で持つべき
+
+#### merge
+- 既知の forbidden-expressions CI FAIL (issue-710 spec 由来、本 PR 無関係) を non-interactive auto-resolve でスルー。MUST 課題でないため判断適切
+
+#### verify
+- Pre-merge AC 5 件すべて PASS。`auto-retry-on-fail` キー / `verify_retry_fire` event / `loop-paths-used` frontmatter / `Retry Count` カウンタが SKILL.md に全網羅されていることを確認
+- Post-merge AC #6 (manual) は重いマルチサイクル動作のため user-requested SKIP。Issue は CLOSED のまま phase/verify に置き、別途実動作確認を実施する
+
+### Improvement Proposals
+- **Spec の `allowed-tools` 影響範囲チェック自動化**: 新スクリプト追加時に `validate-skill-syntax.py` 相当の検証を Spec 段階で実行すれば、code phase の rework 1 commit を削減できる。具体的には Spec の "Changed Files" に新規 `run-*.sh` が含まれる場合、対応する SKILL.md の `allowed-tools` に明示的エントリがあるかを Spec creation 段階で grep 確認するチェックリスト項目を skills/spec/SKILL.md Step 10 に追加する
