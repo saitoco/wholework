@@ -167,6 +167,17 @@ Output: inject 済み context + `## Consumed Comments` 記録 + (条件付き) `
 - **代替候補**: 元の `file_contains` を保持 (ドキュメント内のどこかに文字列があればよい)
 - **採用理由**: 実装意図 (Related Documents セクションへのリンク) との整合性を高め、誤 PASS のリスクを低減
 
+## Code Retrospective
+
+### Deviations from Design
+- Spec の実装ステップには `emit-event.sh:*` を allowed-tools に追加する記述がなかったが、`scripts/validate-skill-syntax.py` の cross-file validation で spec/code/verify の 3 SKILL.md に `emit-event.sh` を allowed-tools 追加することが必要と判明。追加コミットを作成した。
+
+### Design Gaps/Ambiguities
+- Spec Notes に「`gh api:*` は Bash サブパターンのため validate-skill-syntax.py 更新は不要」と明記されていたが、`emit-event.sh` の cross-file validation については言及がなかった。モジュールが `source` するスクリプトも cross-file validation の対象になることは、実装時に validate-skill-syntax.py を実行して初めて確認できた。
+
+### Rework
+- SKILL.md の allowed-tools 追加を 2 段階 (gh api:* → emit-event.sh:*) に分けて commit した。emit-event.sh の必要性が validate-skill-syntax.py 実行後に判明したため。
+
 ## spec retrospective
 
 ### Minor observations
@@ -182,24 +193,33 @@ Output: inject 済み context + `## Consumed Comments` 記録 + (条件付き) `
 - `authorAssociation` の実値を確認: リポジトリオーナー saito の comment が `MEMBER` を返す (issue #699 で確認) → Trust Boundary は OWNER / MEMBER / COLLABORATOR を first-class とした。
 - run-spec.sh が `AUTO_EVENTS_LOG` を export していないことを確認 → Implementation Step 8 で補完。worktree CWD と相対パス `.tmp/auto-events.jsonl` の解決差異は /code で要確認として Uncertainty に残置。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- `modules/l0-surfaces.md` の bot exception 検出文字列が empty form `<!-- wholework-event: -->` で定義されており、実際のマーカーフォーマット (attributes 必須) と一致しない論理エラーが発見された。これは Spec/Code のフェーズでは気付きにくい「プロトコル整合性ギャップ」の典型例。ドキュメントとして定義した形式と、条件文で照合するリテラル文字列を別々に書くと齟齬が生じやすい。
+- jq の `| last` がゼロ件時に `null` を文字列として出力する点も、LLM が実行する手順書として記述した prose の論理エラー。prose ドキュメント内の shell コマンド例でも fallback 分岐との整合性確認が必要。
+
+### Recurring issues
+- 今回の 2 件の bug 指摘は互いに独立しており、同種の繰り返しパターンとは言えない。一方、「prose 定義と照合文字列の不整合」と「jq の edge case」は、今後 comment consumption procedure を実装する際にも同様のリスクがある。verify command でカバーしにくい領域 (prose 内コード例の論理的正確性) として認識する。
+
+### Acceptance criteria verification difficulty
+- 全 10 件が file_exists / file_contains / grep / section_contains で verify 可能な形式になっており、UNCERTAIN は 0 件。verify command の設計品質が高く、機械検証の困難さは特になかった。
+- post-merge AC 2 件 (manual + observation) は /verify フェーズで対応予定。
+
 ## Phase Handoff
+<!-- phase: review -->
 
 ### Key Decisions
-- l0-surfaces.md に SSoT 表 + Trust Boundary + machine-readable marker + Comment Consumption Procedure を集約し、3 つの SKILL.md は "Read and follow the Comment Consumption Procedure" の追加のみとする (重複排除)。
-- cutoff は timeline API (`gh api .../timeline` の最新 `phase/*` `labeled`) を primary、`.tmp/auto-events.jsonl` の `phase_start` → 全件 best-effort を fallback とする。`labels.created_at` は不在のため使わない。
-- 信頼境界は `authorAssociation` で判定: OWNER/MEMBER/COLLABORATOR=first-class、CONTRIBUTOR/NONE=external マーク、`[bot]` actor=skip。AC3 の文字列 `author.association` はモジュール本文に併記して満たす。
-- `comments_consumed` emit は emit-event.sh の source 方式、`AUTO_EVENTS_LOG` セット時のみの best-effort。
-- spec/code の allowed-tools に `gh api:*` を追加 (verify は既存)。structure.md の modules カウントを `(37 files)` に更新。
+- bot exception の検出文字列を `<!-- wholework-event: -->` (empty form) から `<!-- wholework-event:` (prefix) に修正。これは実際のマーカーフォーマットとの整合性から MUST 判定 (review-bug security scan が検出、verification sub-agent で PASS)。
+- jq `| last` を `| last // empty` に修正。fallback 条件との整合性上 CONSIDER だが、明確な logic error として修正適用。
+- review-spec の CONSIDER 2 件 (Spec パス誤り + emit-event.sh 未記載) はコード変更不要として skip。
 
 ### Deferred Items
-- `/code` resume 時の PR comment 取り込み (`COMMENT_SCOPE=issue+pr`) と `gh pr view:*` 追加は必要時 follow-up。
-- `/audit recoveries` の consumable comment scrape 連携・cross-Issue audit は将来拡張 (本 Issue 範囲外)。
-- `triaged` 等 bare-namespace ラベル例外の詳細は #R2 (別 Issue)。
-- post-merge AC #11 (`observation event=auto-run`) は soft な観察条件であり merge gate ではない。
+- post-merge AC (manual + observation event) は /verify フェーズで観察。
+- CONTRIBUTOR/NONE コメントの注入時の長さ上限 / sanitization は設計として意図的に未定義 (CONSIDER、spec doc 指摘として記録)。
+- Spec の ja mirror パス誤り (`../modules/` → `../../modules/`) は Spec 品質メモ; 将来の Spec 改定時に修正可。
 
-### Notes for Next Phase (/code)
-- AC3: モジュール本文に文字列 `author.association` を必ず含める (file_contains 対象)。実装で参照する実フィールド名は `authorAssociation`。
-- AC4: marker 形式は `<!-- wholework-event: type=... phase=... issue=N -->` (`wholework-event:` を含める)。
-- AC6/7/8: 3 つの SKILL.md 本文に `modules/l0-surfaces.md` 文字列が出現すること。Read 指示はステップ/サブセクション見出し直後の第1段落に置く (skill-dev-checks の配置ルール)。
-- SKILL.md 本文では半角 `!` とトリプルバックティックを使わない (validate-skill-syntax.py)。`gh api:*` は Bash サブパターンのため KNOWN_TOOLS / validate-skill-syntax.py 更新は不要。
-- Step 8 の run-spec.sh export 追加後、/auto 配下で `.tmp/auto-events.jsonl` に `comments_consumed` が書かれるか (worktree 相対パス解決) を実機確認する。
+### Notes for Next Phase (/merge)
+- bot exception 修正 + jq 修正 の 2 コミットを push 済み。CI 再実行を確認してから merge すること。
+- 全 10 pre-merge AC PASS, CI 全ジョブ SUCCESS を確認済み。
+- MUST issue は resolve 済み。`/merge 712` で進めて可。

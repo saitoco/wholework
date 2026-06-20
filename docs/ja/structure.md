@@ -18,7 +18,7 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # スキル定義（必須）
 │       └── *.md         # 補助的な phase/ガイドラインファイル（任意）
-├── modules/             # スキルから参照される共有モジュール（36 ファイル）
+├── modules/             # スキルから参照される共有モジュール（37 ファイル）
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
@@ -134,6 +134,7 @@ wholework/
 - `modules/orchestration-fallbacks.md` — orchestration レベルの fallback パターン参照カタログ（#319 tier 2・#316 recovery sub-agent・#318 learning loop から参照）
 - `modules/domain-classifier.md` — 改善提案の Domain 分類（composable、LLM-in-context）
 - `modules/retro-proposals.md` — Improvement Proposal 収集と Issue 作成（/verify Step 13 と /auto Step 4a の共有モジュール）
+- `modules/l0-surfaces.md` — L0 (GitHub) surface の SSoT と comment を一級入力として扱うポリシー
 - `modules/filesystem-scope.md` — スキル/スクリプトのファイルシステムアクセススコープ制約と推奨パターン
 - `modules/phase-state.md` — phase の precondition/success signature と `reconcile-phase-state.sh` JSON v1 schema（SSoT）
 - `modules/skill-dev-doc-impact.md` — skill 開発プロジェクト向けの `/spec` および `/code` 用 Change Types（`doc-checker.md` 経由）

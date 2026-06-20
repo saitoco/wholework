@@ -21,6 +21,13 @@
 # verify_reopen_cycle: /verify FAIL -> issue reopen fix cycle entered
 #   iteration=<n>                 verify iteration counter (from get-verify-iteration.sh)
 #   reopen_reason=<reason>        pre_merge_ac_fail | post_merge_observation_fail | manual_judgment
+#
+# comments_consumed: skill consumed comments added since the previous phase
+#   phase=<phase-name>            e.g. spec, code, verify
+#   count=<n>                     total number of comments consumed
+#   authors=<comma-separated>     comma-separated list of author logins
+#   trust_breakdown=<flat>        KEY:n format — OWNER:n,MEMBER:n,COLLABORATOR:n,CONTRIBUTOR:n,NONE:n
+#                                 (flat format avoids JSON quoting issues with emit_event() sanitization)
 
 emit_event() {
   local event_type="$1"; shift
