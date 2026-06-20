@@ -58,6 +58,9 @@ From the loaded content, search for each YAML key in the marker definition table
 | `retro-proposals-upstream` | `RETRO_PROPOSALS_UPSTREAM` | String value (extract value as-is; upstream repository in `owner/repo` format) | `""` |
 | `verify-ignore-paths` | `VERIFY_IGNORE_PATHS` | Newline-separated glob pattern list | `""` |
 | `autonomy` | `AUTONOMY_TIER` | Tier string extracted as-is (`L1`/`L2`/`L3`) | `L1` |
+| `auto-retry-on-fail.enabled` | `AUTO_RETRY_ENABLED` | `true` | `false` |
+| `auto-retry-on-fail.max_iterations` | `AUTO_RETRY_MAX_ITERATIONS` | Integer string (extract as-is; use `3` if ≤0 or non-numeric) | `3` |
+| `auto-retry-on-fail.budget_tokens` | `AUTO_RETRY_BUDGET_TOKENS` | Integer string (extract as-is; use `500000` if ≤0 or non-numeric) | `500000` |
 
 **Dynamic Capability Mapping:**
 
@@ -78,6 +81,7 @@ Example: `capabilities.invoice-api: true` → `HAS_INVOICE_API_CAPABILITY=true`
 - `retro-proposals-upstream` is treated as a string (`owner/repo` format) with quotes removed (same handling as `production-url`)
 - `verify-ignore-paths` is written in block list format (`- pattern`), parsed the same way as `capabilities.mcp`. Each entry is a glob pattern. Supported: `dir/**` prefix match and simple bash globs (`*`, `?`, `[...]`); intermediate `**` (e.g. `a/**/b`) and negation (`!`) are not supported. If undefined or an empty list, `VERIFY_IGNORE_PATHS=""`
 - `autonomy` is one of `L1`, `L2`, or `L3` (case-sensitive). Unset or invalid values (e.g., `autonomy: L9`) fall back to `L1` (safest). See `modules/autonomy-tier.md` for the tier semantics and permission matrix
+- `auto-retry-on-fail.*` nested keys are interpreted under the `auto-retry-on-fail:` YAML section: `enabled: true/false`, `max_iterations: <integer>`, `budget_tokens: <integer>`. Both block format (`auto-retry-on-fail:\n  enabled: true`) and flat key format (`auto-retry-on-fail.enabled: true`) are supported. `max_iterations` and `budget_tokens` are treated as integers; use defaults if ≤0 or non-numeric.
 - If key does not exist, use default value
 - Comment lines (lines starting with `#`) are ignored
 - Nested values under `capabilities:` section are interpreted as `capabilities.{key}`. Both inline hash format (`capabilities: { browser: true }`) and block format (`capabilities:\n  browser: true`) are supported. If `capabilities:` section is undefined, all capability variables are `false`
@@ -116,4 +120,7 @@ PATCH_LOCK_TIMEOUT_SECONDS: integer from patch-lock-timeout (default: "300"; fal
 RETRO_PROPOSALS_UPSTREAM: upstream repository (owner/repo) from retro-proposals-upstream (default: "")
 VERIFY_IGNORE_PATHS: newline-separated glob pattern list from verify-ignore-paths (default: "")
 AUTONOMY_TIER: tier string from autonomy (default: "L1"; falls back to "L1" if unset or invalid)
+AUTO_RETRY_ENABLED: true if auto-retry-on-fail.enabled: true is set (default: false)
+AUTO_RETRY_MAX_ITERATIONS: integer from auto-retry-on-fail.max_iterations (default: "3"; falls back to "3" if ≤0 or non-numeric)
+AUTO_RETRY_BUDGET_TOKENS: integer from auto-retry-on-fail.budget_tokens (default: "500000"; falls back to "500000" if ≤0 or non-numeric)
 ```

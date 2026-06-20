@@ -2,6 +2,7 @@
 name: verify
 description: Acceptance test. Automatically verifies post-merge acceptance conditions and updates Issue checkboxes (`/verify 123`). Use after `/merge`. Reopens Issue on FAIL to return to the fix cycle.
 model: sonnet
+loop-paths-used: [A]
 allowed-tools: Bash(git checkout:*, git pull:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*, date:*, printf:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
 ---
 
@@ -108,7 +109,7 @@ gh issue view "$NUMBER" --json body
 
 Parse acceptance condition checkboxes:
 
-**Resolving configuration values**: Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to fetch configuration values from `.wholework.yml`. Retain `SPEC_PATH`, `STEERING_DOCS_PATH`, `PRODUCTION_URL`, and `VERIFY_MAX_ITERATIONS` for use in subsequent steps.
+**Resolving configuration values**: Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to fetch configuration values from `.wholework.yml`. Retain `SPEC_PATH`, `STEERING_DOCS_PATH`, `PRODUCTION_URL`, `VERIFY_MAX_ITERATIONS`, `AUTONOMY_TIER`, `AUTO_RETRY_ENABLED`, `AUTO_RETRY_MAX_ITERATIONS`, and `AUTO_RETRY_BUDGET_TOKENS` for use in subsequent steps.
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/domain-loader.md` and follow the "Processing Steps" section with `SKILL_NAME=verify`. Domain file content provides Skill infrastructure improvement classification criteria for Step 13.
 
@@ -468,6 +469,30 @@ NEXT_ITERATION=$((CURRENT_ITERATION + 1))
       - `/code --pr N` — 新規ブランチ + PR で修正（Size L の大きな修正）
       - `/spec N` — Spec から見直し（根本的な設計変更が必要な場合）
       ```
+    - **Tier-gated auto-retry check:**
+
+      If `AUTONOMY_TIER` is `L2` or `L3` AND `AUTO_RETRY_ENABLED=true` AND `NEXT_ITERATION` < `AUTO_RETRY_MAX_ITERATIONS`:
+        a. Emit `verify_retry_fire` event (only when `AUTO_EVENTS_LOG` is set):
+           ```bash
+           source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
+           EMIT_ISSUE_NUMBER=$NUMBER emit_event "verify_retry_fire" \
+             "iteration=${NEXT_ITERATION}" \
+             "trigger_reason=ac_fail" \
+             "budget_remaining_tokens=unknown"
+           ```
+        b. Append `Retry Count: ${NEXT_ITERATION}/${AUTO_RETRY_MAX_ITERATIONS}` to the Spec's
+           `## Verify Retrospective` section (handled in Step 12).
+        c. Re-invoke code phase:
+           ```bash
+           bash "${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh" $NUMBER --patch
+           ```
+        d. After `run-code.sh` completes, restart verification from Step 5 (the LLM re-executes
+           Steps 5–11 in the same session context).
+
+      If `AUTONOMY_TIER` is `L1` OR `AUTO_RETRY_ENABLED` is not `true`:
+        Print advisory (path A):
+        "次の手として `/goal` または `/code --patch $NUMBER` で再発火可能です。"
+
 - If `NEXT_ITERATION >= VERIFY_MAX_ITERATIONS` (limit reached):
     - Post a comment with the max-iterations notice:
       ```
@@ -568,9 +593,17 @@ As the final step of the workflow, verify conducts a retrospective of the entire
      #### verify
      - (observations on FAIL root causes, verify command inconsistencies, etc.)
 
+     ### Retry Count
+
+     Retry Count: N/AUTO_RETRY_MAX_ITERATIONS
+
+     (Include only when auto-retry ran: N ≥ 1. Omit this section when N=0.)
+
      ### Improvement Proposals
      - (list improvement proposals here, or "N/A" if none)
      ```
+
+   **Retry Count append logic**: When writing the `## Verify Retrospective` section to the Spec, include the `### Retry Count` subsection only when `NEXT_ITERATION` ≥ 1 (auto-retry ran at least once). Substitute the actual values for N and `AUTO_RETRY_MAX_ITERATIONS`. Omit the subsection entirely when N=0 (first-attempt PASS).
    - Append section at end of Spec with Edit tool
    - Commit (push is done in Step 11 Worktree Exit):
      ```bash
