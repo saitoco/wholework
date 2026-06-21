@@ -50,12 +50,12 @@ label_created() {
 }
 
 # --- Environment: Projects + Issue Types both available ---
-# Only always-group labels (11) should be created
+# Only always-group labels (17) should be created
 
 @test "env=full: only always-group labels created when all features available" {
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
-    [ "$(count_label_creates)" -eq 14 ]
+    [ "$(count_label_creates)" -eq 17 ]
 }
 
 @test "env=full: phase/* labels all present" {
@@ -96,9 +96,9 @@ label_created() {
 }
 
 # --- Environment: all features unavailable ---
-# All 14 always + 17 fallback = 31 labels
+# All 17 always + 17 fallback = 34 labels
 
-@test "env=none: all 31 labels created when no features available" {
+@test "env=none: all 34 labels created when no features available" {
     cat > "$MOCK_DIR/gh-graphql.sh" <<'MOCK'
 #!/bin/bash
 echo "0"
@@ -107,7 +107,7 @@ MOCK
 
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
-    [ "$(count_label_creates)" -eq 31 ]
+    [ "$(count_label_creates)" -eq 34 ]
 }
 
 @test "env=none: fallback type/* labels created when Issue Types unavailable" {
@@ -231,9 +231,9 @@ MOCK
 
     run bash "$SCRIPT" --force
     [ "$status" -eq 0 ]
-    # All 14 always-group labels must be created with --force
-    [ "$(count_label_creates)" -eq 14 ]
-    [ "$(grep -c -- '--force' "$GH_CALL_LOG")" -eq 14 ]
+    # All 17 always-group labels must be created with --force
+    [ "$(count_label_creates)" -eq 17 ]
+    [ "$(grep -c -- '--force' "$GH_CALL_LOG")" -eq 17 ]
 }
 
 @test "--force: --force flag is NOT used without the option" {
@@ -254,7 +254,7 @@ MOCK
 
     run bash "$SCRIPT" --no-fallback
     [ "$status" -eq 0 ]
-    [ "$(count_label_creates)" -eq 14 ]
+    [ "$(count_label_creates)" -eq 17 ]
     run grep "label create type/" "$GH_CALL_LOG"
     [ "$status" -ne 0 ]
 }
@@ -294,10 +294,10 @@ MOCK
 
 # --- Correct colors ---
 
-@test "colors: all 7 phase/* labels use 1B4F8A" {
+@test "colors: all 9 phase/* labels use 1B4F8A" {
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
-    [ "$(grep -- '--color 1B4F8A' "$GH_CALL_LOG" | grep 'phase/' | wc -l | tr -d ' ')" -eq 7 ]
+    [ "$(grep -- '--color 1B4F8A' "$GH_CALL_LOG" | grep 'phase/' | wc -l | tr -d ' ')" -eq 9 ]
 }
 
 @test "colors: triaged uses 0E8A16" {
@@ -313,5 +313,5 @@ MOCK
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
     [[ "$output" == *"Label setup complete"* ]]
-    [[ "$output" == *"14"* ]]
+    [[ "$output" == *"17"* ]]
 }
