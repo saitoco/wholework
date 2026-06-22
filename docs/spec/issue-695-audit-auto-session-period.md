@@ -122,3 +122,26 @@ The `github_check "gh pr checks" "Run bats tests"` AC returned FAIL due to a pre
 - Post-merge AC: run `/audit auto-session --since 7d` and confirm `docs/sessions/_period/since-{TODAY}-7d.md` is generated with 4 sections (Sessions covered / Cross-session patterns / Improvement candidates / Trend).
 - Verify `--day YYYY-MM-DD` and `--range START..END` options also work as expected.
 - Issue #695 should be auto-closed; verify closure after merge.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### code
+- Spec で指定された `--range START..END` の bats テストは code phase で post-merge manual verification に deferred された (Phase Handoff 記録)。完全な test coverage を spec 段階で要求するか、deferred 許容するかは Spec template のルールにすべき。
+
+#### merge
+- CI `tests/setup-labels.bats` の pre-existing failure (#702 retrospective でも同じ問題を観察済み) で auto-resolve マージ。`--non-interactive` モードでは "real FAILURE vs pre-existing FAILURE" を区別する仕組みがないため、構造的リスクが継続中。
+
+#### verify
+- AC6 (CI bats green) は scope-外の pre-existing failure (setup-labels.bats) でユーザー判断で PASS。AC 文 "全 bats テストが CI で green" を厳密適用すると FAIL になり auto-retry が発火するが、setup-labels.bats は #695 と無関係。**この判定パターンは #702 でも同じ FAIL→修正サイクルで遭遇しており再発性が高い**。
+
+### Improvement Proposals
+
+**1. `tests/setup-labels.bats` の pre-existing CI failure を別 Issue で根本対処 (Tier 1 候補)**
+
+`#695` および `#702` の verify で同じ `tests/setup-labels.bats` test 13/15/18/20/701/706/713 failure が CI を red にしている。これらは scope-外として ad-hoc 対応されているが、毎回 verify 判定をブレさせる構造的問題。`audit/fragility` ラベル相当の改善 Issue として起票し、setup-labels の root cause (label color/description mismatch?, count off-by-one?) を fix する必要がある。Tier 1 (再発性高、複数 Issue にまたがる)。
+
+**2. AC で `github_check "gh pr checks" "Run bats tests"` を使う場合の scope 設計 (Tier 1 候補)**
+
+`gh pr checks` は PR 全体の CI 結果を見るため、当該 PR と無関係な test failure も拾ってしまう。`gh run list --workflow=<specific>.yml --branch=worktree-code+issue-N` のように当該 PR の workflow に限定する form の方が precise。`/spec` template ガイドラインに「全体 CI を見る AC は scope creep の risk あり、specific workflow に絞ること」を追記すべき。Tier 1。
