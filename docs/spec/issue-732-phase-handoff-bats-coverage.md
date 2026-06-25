@@ -78,3 +78,14 @@
 - All 7 locally-verifiable AC items confirmed PASS before commit.
 - Patch route: merged directly to main via worktree-merge-push.sh; no PR needed.
 - `bats tests/phase-handoff.bats` all 6 green locally.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### verify
+- pre-merge AC1-5, AC7-8 PASS。AC6 (CI green) は CI job in_progress のため PENDING。CI 完了後に `/verify 732` 再実行で確認可能。
+- 新規 bats テストは write/read/rotation シナリオを網羅、local 全 PASS。
+
+### Improvement Proposals
+- N/A
