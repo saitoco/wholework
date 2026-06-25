@@ -80,3 +80,14 @@ No new comments since last phase.
 ### Notes for Next Phase
 - verify phase で AC7 の CI check が green になっていることを確認すること
 - 全 pre-merge AC のチェックボックスは AC7 (CI) を除いて確認済み
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### verify
+- pre-merge AC1-6, AC8-9 PASS。AC7 (CI green) は CI job in_progress のため PENDING。CI 完了後に `/verify 731` 再実行で確認可能。
+- 新規 bats テストは local で全 PASS、対象 module の structure ドキュメント (docs/structure.md, docs/ja/structure.md) も同期更新済み。
+
+### Improvement Proposals
+- N/A
