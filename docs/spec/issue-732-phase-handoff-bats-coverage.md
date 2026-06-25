@@ -48,3 +48,33 @@
 - **Auto-Resolve Log** (Issue コメントより転記):
   1. AC2 verify command → 3 シナリオ別 grep に分割: `grep "@test.*write"` / `grep "@test.*read"` / `grep "@test.*rotat"`
   2. AC6 `--commit=` 引数削除 → `--limit=1` 標準形に変更 (merge commit 誤指定リスク回避)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Spec implementation steps followed exactly. `tests/test-runner.bats` pattern applied without modification.
+
+### Design Gaps/Ambiguities
+
+- Spec Notes listed "AC pattern uncertainty" for @test name matching against `grep "@test.*write"` etc. — resolved cleanly by embedding "write", "read", "rotation" in @test names as specified.
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Followed shallow documentation test pattern from `tests/test-runner.bats` exactly: `PROJECT_ROOT` + module path setup, `grep -q` assertions on section headings and contract keywords.
+- @test names designed to match AC verify commands (`grep "@test.*write"` / `grep "@test.*read"` / `grep "@test.*rotat"`).
+- 6 @test cases cover: Purpose, Write Procedure, Read Procedure, rotation, `<!-- phase:` marker, Phase Position Asymmetry table.
+
+### Deferred Items
+- CI green verification (AC6: `github_check "gh run list --workflow=test.yml"`) deferred to post-push CI run.
+
+### Notes for Next Phase
+- All 7 locally-verifiable AC items confirmed PASS before commit.
+- Patch route: merged directly to main via worktree-merge-push.sh; no PR needed.
+- `bats tests/phase-handoff.bats` all 6 green locally.
