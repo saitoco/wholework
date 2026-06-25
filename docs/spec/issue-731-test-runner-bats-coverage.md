@@ -49,3 +49,34 @@
   1. AC "minimum 3 tests" → 3 カテゴリ別 grep チェックに展開 (count aggregation 回避)
   2. "basic invocation / fixture pass / failure path" → markdown module 向け文書構造テストとして解釈
   3. Post-merge checkbox → `- [ ]` 形式に修正済み
+
+## Consumed Comments
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- None: Spec の実装ステップ通りに実装した。`tests/adapter-resolver.bats` パターンを踏襲し 6 @test で構成。
+
+### Design Gaps/Ambiguities
+- AC3-5 の verify コマンド (`grep "## Processing Steps" "tests/test-runner.bats"` 等) は test ファイル内にそれらの文字列を含む grep 行が存在することを検証するため、test file の内容が verify コマンドの前提条件になっている。Spec Notes に明記されており問題なし。
+
+### Rework
+- None: 1 回のコミットで実装完了。テストは全件 PASS。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `tests/adapter-resolver.bats` の shallow documentation test パターンを採用: LLM 実行 module の動作 mock は困難なため、文書構造・契約用語の存在確認で担保する方針を踏襲した
+- @test 名は全て ASCII で記述 (bats multibyte @test 名パースバグ回避、#226 対応)
+- 6 @test: Purpose / Input / Processing Steps / Output Format セクション存在確認 + PASS / FAIL 用語確認
+
+### Deferred Items
+- CI check (AC7: github_check "gh run list") は push 後に /verify で確認
+- Post-merge AC: 次回 test-runner.md 変更時の regression 観察は手動確認
+
+### Notes for Next Phase
+- verify phase で AC7 の CI check が green になっていることを確認すること
+- 全 pre-merge AC のチェックボックスは AC7 (CI) を除いて確認済み
