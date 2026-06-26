@@ -25,7 +25,7 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill definition (required)
 │       └── *.md         # Auxiliary phase/guideline files (optional)
-├── modules/             # Shared modules referenced by skills (38 files)
+├── modules/             # Shared modules referenced by skills (40 files)
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
@@ -125,6 +125,7 @@ Key modules:
 - `modules/doc-checker.md` — documentation consistency checker
 - `modules/doc-commit-push.md` — commit/push guide for /doc subcommand outputs
 - `modules/domain-loader.md` — bundled and project-local Domain file discovery and conditional loading
+- `modules/execution-context.md` — execution context (fork vs main) determination criteria and per-context constraints (verify command safe/full mode policy)
 - `modules/skill-help.md` — shared `--help` output formatter for skills
 - `modules/skill-dev-checks.md` — cross-skill consistency validation
 - `modules/codebase-analysis.md` — codebase analysis for `/doc` deep mode

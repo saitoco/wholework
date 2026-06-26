@@ -18,7 +18,7 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # スキル定義（必須）
 │       └── *.md         # 補助的な phase/ガイドラインファイル（任意）
-├── modules/             # スキルから参照される共有モジュール（38 ファイル）
+├── modules/             # スキルから参照される共有モジュール（40 ファイル）
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
@@ -118,6 +118,7 @@ wholework/
 - `modules/doc-checker.md` — ドキュメント一貫性チェッカー
 - `modules/doc-commit-push.md` — /doc サブコマンド出力の commit/push ガイド
 - `modules/domain-loader.md` — バンドルおよびプロジェクトローカル Domain ファイルの発見と条件付きロード
+- `modules/execution-context.md` — 実行コンテキスト (fork vs main) の判定基準と各コンテキストでの制約 (verify command の safe/full mode ポリシー)
 - `modules/skill-help.md` — スキル共通の `--help` 出力フォーマッタ
 - `modules/skill-dev-checks.md` — スキル横断の一貫性検証
 - `modules/codebase-analysis.md` — `/doc` deep モード用のコードベース分析

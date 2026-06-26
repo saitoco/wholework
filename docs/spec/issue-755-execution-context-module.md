@@ -60,3 +60,49 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective コメント (2026-06-26T02:59:33Z): Auto-Resolve Log (3 点) と AC 変更サマリーを含む。判断根拠を Spec の Notes セクションと Implementation Steps に反映済み。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A (Spec の実装ステップをそのまま実行)
+
+### Design Gaps/Ambiguities
+
+- `docs/structure.md` のモジュールカウント表記は "(38 files)" だったが実態は 39 ファイル (既存の 1 乖離)。Spec の Notes に事前記載あり。本 PR で execution-context.md を追加した後の正しい値 40 を直接設定した。
+- `execution-context.md` の Callers セクションに初期値として "none (SSoT reference)" と記録したが、skills が `--non-interactive` 検出パターンを用いて暗黙的に参照する構造であるため、この表現は正確。明示的に Read するスキルが増えた場合は更新が必要。
+
+### Rework
+
+- N/A
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- `modules/execution-context.md` が「SSoT」を謳うにもかかわらず、safe mode で実行可能なコマンドの列挙が `verify-executor.md` と乖離していた。新規 SSoT モジュール作成時は、参照先 (verify-executor.md) と対象箇所 (Context Constraints テーブル) の双方向整合を確認する必要がある。
+- "How to Reference" セクションの例示コード (code skill の参照パターン) が不正確だった。参照元に存在しない `(Step 0)` への言及が混入。例示は実装から逆引きするのではなく、Callers セクションと同期して記述するか、抽象的なパターンのみ示すべき。
+
+### Recurring Issues
+
+- 2件の SHOULD 問題はいずれも「SSoT を謳うモジュールの記述と実際の実装との乖離」という同一パターン。新規 SSoT module を作成する際は、参照元ドキュメントとのクロスチェック (実際のコマンドリスト、参照例の正確性) を実装チェックリストに加えることを検討する。
+
+### Acceptance Criteria Verification Difficulty
+
+- 5 件すべて PASS (UNCERTAIN ゼロ)。`file_exists`, `file_contains`, `grep` は機械的検証が可能で、rubric も明確な判定基準だったため UNCERTAIN なし。AC 設計として良好。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- SHOULD 2件を修正: (1) safe mode コマンド列挙を `always_allow` コマンド + restrictions 付き実行コマンドの説明に拡張し、`verify-executor.md` への参照を追加。(2) "How to Reference" の "(Step 0)" 言及を削除。
+- MUST 問題なし → `COMMENT` event でレビュー投稿 (REQUEST_CHANGES なし)。全 AC PASS、CI 全 SUCCESS。
+
+### Deferred Items
+- safe mode の完全なコマンドリストは `verify-executor.md` を正規参照 (execution-context.md に全列挙は不要 — 今回の修正でこのアプローチを採用)
+- 既存スキルへの `Read execution-context.md` 追加は本 Issue のスコープ外
+
+### Notes for Next Phase
+- 全 CI SUCCESS、MUST 問題なし → merge 可能
+- 85b46cf: SHOULD 2件修正 (safe mode 説明精度向上 + Step 0 参照除去) を push 済み
+- validate-skill-syntax PASS (0 errors)
