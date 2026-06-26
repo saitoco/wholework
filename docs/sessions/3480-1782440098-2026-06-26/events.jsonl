@@ -1,0 +1,63 @@
+{"ts":"2026-06-26T02:25:45Z","issue":745,"event":"sub_start","session_id":"3480-1782440098","size":"S"}
+{"ts":"2026-06-26T02:35:47Z","issue":745,"event":"max_silent_window","session_id":"3480-1782440098","phase":"unknown","max_sec":"590"}
+{"ts":"2026-06-26T02:35:50Z","issue":745,"event":"size_refresh","session_id":"3480-1782440098","from":"S","to":"XS"}
+{"ts":"2026-06-26T02:35:50Z","issue":745,"event":"phase_start","session_id":"3480-1782440098","phase":"code-patch"}
+{"ts":"2026-06-26T02:49:52Z","issue":745,"event":"max_silent_window","session_id":"3480-1782440098","phase":"code-patch","max_sec":"840"}
+{"ts":"2026-06-26T02:49:54Z","issue":745,"event":"wrapper_exit","session_id":"3480-1782440098","phase":"code-patch","exit_code":"0"}
+{"ts":"2026-06-26T02:49:54Z","issue":745,"event":"token_usage","session_id":"3480-1782440098","phase":"code-patch","model":"unknown","input_tokens":"86","output_tokens":"18365","cache_read_tokens":"6449489"}
+{"ts":"2026-06-26T02:49:54Z","issue":745,"event":"concurrent_commit_detected","session_id":"3480-1782440098","phase":"code-patch","commit_sha":"daff7d93e1bc20407b3823090a42b04dc1bf4149","author":"Toshihiro Saito","since_phase_start_sec":"844"}
+{"ts":"2026-06-26T02:49:54Z","issue":745,"event":"concurrent_commit_detected","session_id":"3480-1782440098","phase":"code-patch","commit_sha":"21dfa4029f5f3654a2d3957bbe6d32e31f1451b7","author":"Toshihiro Saito","since_phase_start_sec":"844"}
+{"ts":"2026-06-26T02:49:54Z","issue":745,"event":"phase_complete","session_id":"3480-1782440098","phase":"code-patch"}
+{"ts":"2026-06-26T02:49:54Z","issue":745,"event":"sub_complete","session_id":"3480-1782440098","exit_code":"0"}
+{"ts":"2026-06-26T03:00:52Z","issue":755,"event":"sub_start","session_id":"3480-1782440098","size":"M"}
+{"ts":"2026-06-26T03:09:25Z","issue":755,"event":"max_silent_window","session_id":"3480-1782440098","phase":"unknown","max_sec":"500"}
+{"ts":"2026-06-26T03:09:28Z","issue":755,"event":"phase_start","session_id":"3480-1782440098","phase":"code-pr"}
+{"ts":"2026-06-26T03:25:10Z","issue":755,"event":"max_silent_window","session_id":"3480-1782440098","phase":"code-pr","max_sec":"940"}
+{"ts":"2026-06-26T03:25:13Z","issue":755,"event":"wrapper_exit","session_id":"3480-1782440098","phase":"code-pr","exit_code":"0"}
+{"ts":"2026-06-26T03:25:13Z","issue":755,"event":"token_usage","session_id":"3480-1782440098","phase":"code-pr","model":"unknown","input_tokens":"88","output_tokens":"18236","cache_read_tokens":"7063676"}
+{"ts":"2026-06-26T03:25:13Z","issue":755,"event":"phase_complete","session_id":"3480-1782440098","phase":"code-pr"}
+{"ts":"2026-06-26T03:25:14Z","issue":757,"event":"phase_start","session_id":"3480-1782440098","phase":"review"}
+{"ts":"2026-06-26T03:27:18Z","issue":757,"event":"ci_wait","session_id":"3480-1782440098","phase":"review","wait_sec":"123","checks_passed":"9","checks_failed":"0"}
+{"ts":"2026-06-26T03:40:19Z","issue":757,"event":"max_silent_window","session_id":"3480-1782440098","phase":"review","max_sec":"780"}
+{"ts":"2026-06-26T03:40:21Z","issue":757,"event":"wrapper_exit","session_id":"3480-1782440098","phase":"review","exit_code":"0"}
+{"ts":"2026-06-26T03:40:22Z","issue":757,"event":"token_usage","session_id":"3480-1782440098","phase":"review","model":"unknown","input_tokens":"101","output_tokens":"23301","cache_read_tokens":"7530092"}
+{"ts":"2026-06-26T03:40:22Z","issue":757,"event":"phase_complete","session_id":"3480-1782440098","phase":"review"}
+{"ts":"2026-06-26T03:40:22Z","issue":757,"event":"phase_start","session_id":"3480-1782440098","phase":"merge"}
+{"ts":"2026-06-26T03:41:25Z","issue":757,"event":"ci_wait","session_id":"3480-1782440098","phase":"merge","wait_sec":"62","checks_passed":"9","checks_failed":"0"}
+{"ts":"2026-06-26T03:43:38Z","issue":757,"event":"max_silent_window","session_id":"3480-1782440098","phase":"merge","max_sec":"130"}
+{"ts":"2026-06-26T03:43:45Z","issue":757,"event":"test_result","session_id":"3480-1782440098","phase":"merge","framework":"bats","source":"ci","passed":"925","failed":"1","run_id":"28215561514"}
+{"ts":"2026-06-26T03:43:45Z","issue":757,"event":"wrapper_exit","session_id":"3480-1782440098","phase":"merge","exit_code":"0"}
+{"ts":"2026-06-26T03:43:45Z","issue":757,"event":"token_usage","session_id":"3480-1782440098","phase":"merge","model":"unknown","input_tokens":"39","output_tokens":"4096","cache_read_tokens":"1660141"}
+{"ts":"2026-06-26T03:43:45Z","issue":757,"event":"concurrent_commit_detected","session_id":"3480-1782440098","phase":"merge","commit_sha":"ac54295e1e8ab990d9b44541e61accf0caa2a7f4","author":"Toshihiro Saito","since_phase_start_sec":"203"}
+{"ts":"2026-06-26T03:43:45Z","issue":757,"event":"concurrent_commit_detected","session_id":"3480-1782440098","phase":"merge","commit_sha":"e8821321559271898de291d2545510df160900a4","author":"Toshihiro Saito","since_phase_start_sec":"203"}
+{"ts":"2026-06-26T03:43:45Z","issue":757,"event":"phase_complete","session_id":"3480-1782440098","phase":"merge"}
+{"ts":"2026-06-26T03:43:45Z","issue":757,"event":"sub_complete","session_id":"3480-1782440098","exit_code":"0"}
+{"ts":"2026-06-26T03:55:27Z","issue":754,"event":"sub_start","session_id":"3480-1782440098","size":"M"}
+{"ts":"2026-06-26T04:13:10Z","issue":754,"event":"max_silent_window","session_id":"3480-1782440098","phase":"unknown","max_sec":"1050"}
+{"ts":"2026-06-26T04:13:12Z","issue":754,"event":"size_refresh","session_id":"3480-1782440098","from":"M","to":"XS"}
+{"ts":"2026-06-26T04:13:12Z","issue":754,"event":"phase_start","session_id":"3480-1782440098","phase":"code-patch"}
+{"ts":"2026-06-26T04:25:34Z","issue":754,"event":"max_silent_window","session_id":"3480-1782440098","phase":"code-patch","max_sec":"740"}
+{"ts":"2026-06-26T04:25:36Z","issue":754,"event":"wrapper_exit","session_id":"3480-1782440098","phase":"code-patch","exit_code":"0"}
+{"ts":"2026-06-26T04:25:36Z","issue":754,"event":"token_usage","session_id":"3480-1782440098","phase":"code-patch","model":"unknown","input_tokens":"79","output_tokens":"16415","cache_read_tokens":"5368881"}
+{"ts":"2026-06-26T04:25:37Z","issue":754,"event":"concurrent_commit_detected","session_id":"3480-1782440098","phase":"code-patch","commit_sha":"bc0e36932bb82cf953a86c35f7d31eb8c98a18fa","author":"Toshihiro Saito","since_phase_start_sec":"745"}
+{"ts":"2026-06-26T04:25:37Z","issue":754,"event":"concurrent_commit_detected","session_id":"3480-1782440098","phase":"code-patch","commit_sha":"189b6714e6de66ab75e82fc844adfe55bee96511","author":"Toshihiro Saito","since_phase_start_sec":"745"}
+{"ts":"2026-06-26T04:25:37Z","issue":754,"event":"phase_complete","session_id":"3480-1782440098","phase":"code-patch"}
+{"ts":"2026-06-26T04:25:37Z","issue":754,"event":"sub_complete","session_id":"3480-1782440098","exit_code":"0"}
+{"ts":"2026-06-26T04:34:43Z","issue":753,"event":"sub_start","session_id":"3480-1782440098","size":"XS"}
+{"ts":"2026-06-26T04:34:44Z","issue":753,"event":"phase_start","session_id":"3480-1782440098","phase":"code-patch"}
+{"ts":"2026-06-26T04:53:54Z","issue":753,"event":"max_silent_window","session_id":"3480-1782440098","phase":"code-patch","max_sec":"1150"}
+{"ts":"2026-06-26T04:53:57Z","issue":753,"event":"wrapper_exit","session_id":"3480-1782440098","phase":"code-patch","exit_code":"0"}
+{"ts":"2026-06-26T04:53:57Z","issue":753,"event":"token_usage","session_id":"3480-1782440098","phase":"code-patch","model":"unknown","input_tokens":"99","output_tokens":"22475","cache_read_tokens":"7677236"}
+{"ts":"2026-06-26T04:53:57Z","issue":753,"event":"concurrent_commit_detected","session_id":"3480-1782440098","phase":"code-patch","commit_sha":"b8e479c41564c242ad55b7260187d3703275b0b4","author":"Toshihiro Saito","since_phase_start_sec":"1153"}
+{"ts":"2026-06-26T04:53:57Z","issue":753,"event":"phase_complete","session_id":"3480-1782440098","phase":"code-patch"}
+{"ts":"2026-06-26T04:53:57Z","issue":753,"event":"sub_complete","session_id":"3480-1782440098","exit_code":"0"}
+{"ts":"2026-06-26T05:02:14Z","issue":752,"event":"sub_start","session_id":"3480-1782440098","size":"S"}
+{"ts":"2026-06-26T05:08:46Z","issue":752,"event":"max_silent_window","session_id":"3480-1782440098","phase":"unknown","max_sec":"380"}
+{"ts":"2026-06-26T05:08:48Z","issue":752,"event":"phase_start","session_id":"3480-1782440098","phase":"code-patch"}
+{"ts":"2026-06-26T05:15:52Z","issue":752,"event":"max_silent_window","session_id":"3480-1782440098","phase":"code-patch","max_sec":"420"}
+{"ts":"2026-06-26T05:15:55Z","issue":752,"event":"wrapper_exit","session_id":"3480-1782440098","phase":"code-patch","exit_code":"1"}
+{"ts":"2026-06-26T05:15:55Z","issue":752,"event":"token_usage","session_id":"3480-1782440098","phase":"code-patch","model":"unknown","input_tokens":"6451","output_tokens":"7908","cache_read_tokens":"3343658"}
+{"ts":"2026-06-26T05:30:19Z","issue":752,"event":"max_silent_window","session_id":"3480-1782440098","phase":"code-patch","max_sec":"860"}
+{"ts":"2026-06-26T05:30:21Z","issue":752,"event":"recovery","session_id":"3480-1782440098","phase":"code-patch","tier":"2","result":"recovered"}
+{"ts":"2026-06-26T05:30:21Z","issue":752,"event":"phase_complete","session_id":"3480-1782440098","phase":"code-patch"}
+{"ts":"2026-06-26T05:30:21Z","issue":752,"event":"sub_complete","session_id":"3480-1782440098","exit_code":"0"}
