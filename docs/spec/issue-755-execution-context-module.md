@@ -107,3 +107,33 @@
 - マージ済み。verify フェーズは post-merge AC のみ (手動観察)。
 - `modules/execution-context.md` は main ブランチに含まれる。verify command は file_exists / file_contains / grep の 3 種。
 - None (特記なし)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 設計が良好 (file_exists / file_contains / grep / rubric を組み合わせ機械的検証可能、UNCERTAIN ゼロ)。
+- Auto-Resolved Ambiguity Points (3 点) を Issue 段階で解決し、Spec に Notes として継承した運用が機能。
+
+#### code
+- `docs/structure.md` の "(38 files)" 既存乖離を本 PR 内で同時修正 (38 → 40)。Spec の Notes に事前記載されていたため、code phase で意識的に対応できた。
+
+#### review
+- 2 件の SHOULD: (a) Context Constraints テーブルの safe-mode コマンド列挙が `verify-executor.md` と乖離、(b) "How to Reference" 例示に存在しない `(Step 0)` 言及が混入。いずれも修正済 (review phase で graft)。
+- 共通パターン: 「SSoT を謳うモジュールの記述と実装との乖離」。新規 SSoT モジュール作成時のクロスチェックが弱い。
+
+#### merge
+- スカッシュマージ正常、コンフリクトなし、CI SUCCESS。観察事項なし。
+
+#### verify
+- pre-merge 5 件すべて自動 PASS、UNCERTAIN ゼロ。AC 設計の効果を確認。
+- post-merge は manual observation 1 件のみ (将来 skill 作成時の参照標準化を観察)。
+
+### Improvement Proposals
+
+- **新規 SSoT モジュール作成時のクロスチェック checklist**: `/code` または `/spec` の SKILL.md に、新規 SSoT モジュール (`modules/<name>.md` で "SSoT" / "authoritative reference" を謳うもの) を作成する場合の implementation checklist を追加する。最低限以下の項目を含める:
+  1. 参照元ドキュメント (e.g., `verify-executor.md` の command list) と SSoT モジュール内の関連テーブル/列挙の整合性確認
+  2. "How to Reference" 等の例示コードは Callers セクションと同期、または抽象パターンのみ示す (実装からの逆引きで誤情報を混入しない)
+  - 動機: #755 review で発覚した 2 件の SHOULD は同一パターン「SSoT モジュールの記述と実装との乖離」。SSoT モジュールは下流の参照基準として機能するため、初版の正確性が後続スキル開発の品質を左右する。
+  - 対象 skill: `/code` (実装段階での checklist)、または `/spec` (設計段階でのクロスリファレンス計画)。
