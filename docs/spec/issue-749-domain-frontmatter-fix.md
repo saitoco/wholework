@@ -111,3 +111,54 @@
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の実装ステップ 3 では「`skills/doc/skill-dev-sync.md` 行の後に 5 行追加」と記載されていたが、Spec のテーブルカラム名が英語版と日本語版で異なるため、日本語版では列見出しを適宜合わせて追加した (機能的影響なし)
+
+### Design Gaps/Ambiguities
+
+- Spec Notes に記載の通り、`audit` と `doc` SKILL.md は `domain-loader.md` を呼ばずに直接 Read で Domain ファイルを参照しているため、今回の frontmatter 追加は `/audit drift` の誤検知防止が主効果であり、実行時動作には即座の変化はない
+- `skills/triage/skill-dev-verify-audit.md` の `load_when:` が `_(none)_` (無条件) になっているが、`domain-loader.md` が `skills/triage/` を Glob するのは triage SKILL.md が `domain-loader` を呼んだ場合のみ。現在 triage SKILL.md は `domain-loader.md` を読んでいないため、実質的には unused。ただし Spec Notes でスコープ外と確認済み
+
+### Rework
+
+- N/A
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- 構造的な乖離なし。Spec の 7 ファイル対応のうち 3 ファイルが事前修正済みという非対称は Spec に記録済みで整合している。
+- verify command が 7 ファイル全ての `file_contains` を網羅しており、事前修正済みファイルも含め全て PASS で自動検証できた。
+
+### Recurring Issues
+
+- Nothing to note。frontmatter 追加という単純変更のため、再発パターンは検出されなかった。
+- 将来的に観察ポイント: `docs/environment-adaptation.md` の表に「SKILL が domain-loader を呼んでいない」ファイルを追加する場合は、"aspirational entry" (未来の状態) であることを明記する注記を加える習慣があると読者の混乱を防げる。
+
+### Acceptance Criteria Verification Difficulty
+
+- `file_contains` 7 件 + `rubric` 1 件: 全て PASS で UNCERTAIN なし。verify command 設計が適切だった。
+- rubric 条件「全 7 ファイルの frontmatter が syntactically valid」は AI 判定だが、frontmatter を目視確認できる小規模変更のため信頼性高し。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+
+- MUST/SHOULD issues なし、CONSIDER 1 件 (triage 表記が aspirational) → merge ブロッキング要因なし
+- CONSIDER issue は Code Retrospective で「スコープ外と確認済み」のため修正せずスキップ
+
+### Deferred Items
+
+- triage SKILL.md が `domain-loader.md` を呼んでいない点は post-merge で別途 Issue 化を検討 (現時点では `environment-adaptation.md` の表記が aspirational な状態)
+- Post-merge: 次回 `/skill` 実行時に対応する domain file が意図通りロードされることを観察
+
+### Notes for Next Phase
+
+- CI 全ジョブ SUCCESS (DCO / bats / validate-skill-syntax / forbidden-expressions / macOS-compat)
+- AC 事前条件: 全 8 件 PASS (POST-MERGE 1 件あり)
+- merge ブロッキング要因なし、`/merge 756` で進められる

@@ -1,3 +1,8 @@
+---
+type: domain
+skill: doc
+---
+
 # Structure
 
 ## Directory Layout（Required）
