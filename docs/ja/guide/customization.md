@@ -119,7 +119,7 @@ capabilities:
 | `watchdog-timeout-review-seconds` | integer | `""` (フォールバック: `2000`) | `/review` フェーズ用 watchdog タイムアウト上書き。優先順位: このキー > `watchdog-timeout-seconds` > `2000`。 |
 | `watchdog-timeout-merge-seconds` | integer | `""` (フォールバック: `600`) | `/merge` フェーズ用 watchdog タイムアウト上書き。優先順位: このキー > `watchdog-timeout-seconds` > `600`。 |
 | `watchdog-timeout-issue-seconds` | integer | `""` (フォールバック: `600`) | `/issue` フェーズ用 watchdog タイムアウト上書き。優先順位: このキー > `watchdog-timeout-seconds` > `600`。 |
-| `patch-lock-timeout` | integer | `300` | `git merge --ff-only` + `git push origin main` の lock 取得タイムアウト秒数。lock 保持は数秒のためデフォルトは余裕値。push 取得が常時失敗する場合のみ増やす。0 以下または非数値の場合は `300` にフォールバック。 |
+| `patch-lock-timeout` | integer | `300` | `git merge --ff-only` + `git push origin main` の lock 取得タイムアウト秒数。lock 保持は数秒のためデフォルトは余裕値。push 取得が常時失敗する場合のみ増やす。0 以下または非数値の場合は `300` にフォールバック。ファイルを編集せずに per-run で上書きする (緊急用) には `WHOLEWORK_PATCH_LOCK_TIMEOUT` env var を設定する。優先順位: env var > このキー > `300`。 |
 | `permission-mode` | string | `"auto"` | `/auto` サブプロセスの permission mode。`auto` は `--permission-mode auto` を allow rules テンプレートと共に有効化（`docs/guide/auto-mode-template.json` 参照）; `bypass` は `--dangerously-skip-permissions` を使用（レガシー / オプトアウト）。 |
 | `verify-max-iterations` | integer | `3` | verify-reopen ループの最大試行回数。N 回 FAIL した時点で停止し、Issue を `phase/verify` に留めて人間の判断を促す。0 以下、20 超、または非数値の場合は `3` にフォールバック。 |
 | `auto-max-concurrent` | integer | `5` | XL 並列ルートで同時実行できる sub-issue の最大数。依存グラフの各レベルに適用。0 以下または非数値の場合は `5` にフォールバック。 |
