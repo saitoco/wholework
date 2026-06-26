@@ -49,13 +49,24 @@ label_created() {
     grep -q "label create $1" "$GH_CALL_LOG" 2>/dev/null
 }
 
+# Count ALWAYS_LABELS entries from the script source (auto-adapts when labels are added)
+count_always_labels() {
+    awk '/^ALWAYS_LABELS=\($/{f=1;next} /^\)/{f=0} f && /^ +"/' "$SCRIPT" | wc -l | tr -d ' '
+}
+count_fallback_labels() {
+    awk '/^FALLBACK_LABELS=\($/{f=1;next} /^\)/{f=0} f && /^ +"/' "$SCRIPT" | wc -l | tr -d ' '
+}
+count_phase_labels() {
+    awk '/^ALWAYS_LABELS=\($/{f=1;next} /^\)/{f=0} f && /^ +"phase\//' "$SCRIPT" | wc -l | tr -d ' '
+}
+
 # --- Environment: Projects + Issue Types both available ---
 # Only always-group labels (17) should be created
 
 @test "env=full: only always-group labels created when all features available" {
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
-    [ "$(count_label_creates)" -eq 17 ]
+    [ "$(count_label_creates)" -eq "$(count_always_labels)" ]
 }
 
 @test "env=full: phase/* labels all present" {
@@ -96,9 +107,9 @@ label_created() {
 }
 
 # --- Environment: all features unavailable ---
-# All 17 always + 17 fallback = 34 labels
+# All always-group + fallback-group labels
 
-@test "env=none: all 34 labels created when no features available" {
+@test "env=none: all always+fallback labels created when no features available" {
     cat > "$MOCK_DIR/gh-graphql.sh" <<'MOCK'
 #!/bin/bash
 echo "0"
@@ -107,7 +118,7 @@ MOCK
 
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
-    [ "$(count_label_creates)" -eq 34 ]
+    [ "$(count_label_creates)" -eq "$(( $(count_always_labels) + $(count_fallback_labels) ))" ]
 }
 
 @test "env=none: fallback type/* labels created when Issue Types unavailable" {
@@ -231,9 +242,9 @@ MOCK
 
     run bash "$SCRIPT" --force
     [ "$status" -eq 0 ]
-    # All 17 always-group labels must be created with --force
-    [ "$(count_label_creates)" -eq 17 ]
-    [ "$(grep -c -- '--force' "$GH_CALL_LOG")" -eq 17 ]
+    # All always-group labels must be created with --force
+    [ "$(count_label_creates)" -eq "$(count_always_labels)" ]
+    [ "$(grep -c -- '--force' "$GH_CALL_LOG")" -eq "$(count_always_labels)" ]
 }
 
 @test "--force: --force flag is NOT used without the option" {
@@ -254,7 +265,7 @@ MOCK
 
     run bash "$SCRIPT" --no-fallback
     [ "$status" -eq 0 ]
-    [ "$(count_label_creates)" -eq 17 ]
+    [ "$(count_label_creates)" -eq "$(count_always_labels)" ]
     run grep "label create type/" "$GH_CALL_LOG"
     [ "$status" -ne 0 ]
 }
@@ -294,10 +305,10 @@ MOCK
 
 # --- Correct colors ---
 
-@test "colors: all 9 phase/* labels use 1B4F8A" {
+@test "colors: all phase/* labels use 1B4F8A" {
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
-    [ "$(grep -- '--color 1B4F8A' "$GH_CALL_LOG" | grep 'phase/' | wc -l | tr -d ' ')" -eq 9 ]
+    [ "$(grep -- '--color 1B4F8A' "$GH_CALL_LOG" | grep 'phase/' | wc -l | tr -d ' ')" -eq "$(count_phase_labels)" ]
 }
 
 @test "colors: triaged uses 0E8A16" {
@@ -313,5 +324,5 @@ MOCK
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
     [[ "$output" == *"Label setup complete"* ]]
-    [[ "$output" == *"17"* ]]
+    [[ "$output" == *"($(count_always_labels) labels processed)"* ]]
 }
