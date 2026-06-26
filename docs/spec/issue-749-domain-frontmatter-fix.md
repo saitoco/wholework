@@ -145,20 +145,21 @@ No new comments since last phase.
 - rubric 条件「全 7 ファイルの frontmatter が syntactically valid」は AI 判定だが、frontmatter を目視確認できる小規模変更のため信頼性高し。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- MUST/SHOULD issues なし、CONSIDER 1 件 (triage 表記が aspirational) → merge ブロッキング要因なし
-- CONSIDER issue は Code Retrospective で「スコープ外と確認済み」のため修正せずスキップ
+- PR #756 を squash merge で main にマージ (mergeable=true、CI 全 SUCCESS、review approved)
+- `--delete-branch` で PR ブランチ `worktree-code+issue-749` を削除
+- Phase Handoff (review) に記載の merge ブロッキング要因なし → 直接 Step 4 へ進行
 
 ### Deferred Items
 
-- triage SKILL.md が `domain-loader.md` を呼んでいない点は post-merge で別途 Issue 化を検討 (現時点では `environment-adaptation.md` の表記が aspirational な状態)
-- Post-merge: 次回 `/skill` 実行時に対応する domain file が意図通りロードされることを観察
+- triage SKILL.md が `domain-loader.md` を呼んでいない点は post-merge で別途 Issue 化を検討 (Ref: review handoff)
+- Post-merge: 次回 `/skill` 実行時に 4 ファイルの domain frontmatter が意図通り機能することを観察
 
 ### Notes for Next Phase
 
-- CI 全ジョブ SUCCESS (DCO / bats / validate-skill-syntax / forbidden-expressions / macOS-compat)
-- AC 事前条件: 全 8 件 PASS (POST-MERGE 1 件あり)
-- merge ブロッキング要因なし、`/merge 756` で進められる
+- verify ターゲット: issue-749 の post-merge AC 確認 (次回 /skill 実行時の domain file ロード動作観察)
+- frontmatter 変更は実行時動作を即座に変えないため、verify の主眼は drift 誤検知解消の確認
+- `docs/environment-adaptation.md` の表 5 行追加が正確に反映されていることを確認
