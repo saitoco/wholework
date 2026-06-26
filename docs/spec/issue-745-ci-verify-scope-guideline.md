@@ -58,3 +58,33 @@ Warning: acceptance criteria count does not match verification item count.
   Issue body pre-merge criteria: 2 items
   Spec pre-merge verification: 3 items
 The third item is a supplementary `section_contains` check added per §9 of verify-patterns.md. Issue body will be updated.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. Implementation followed the Spec exactly: added "CI verify command scope design (PR route)" subsection to §7 immediately after the "Note on `gh run list` vs `gh pr checks`" paragraph.
+
+### Design Gaps/Ambiguities
+
+- The Spec's count alignment notes flagged the Issue body as having 2 items vs. 3 in the Spec. At execution time, the Issue body already had 3 items (updated during the /spec phase). No corrective action was needed.
+
+### Rework
+
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Added the new subsection under §7 (not as a new §7a or separate section) to keep it co-located with the existing `gh pr checks` vs `gh run list` note — reviewers reading §7 see the full picture in one pass.
+- Included "pre-existing" keyword in three places (risk description, usage criteria table, fallback guidance) to satisfy AC3 `section_contains` and reinforce the concept.
+- Used a usage criteria table (three rows) to make the pattern differentiation scannable.
+
+### Deferred Items
+- None. This is a documentation-only change; no code logic was modified.
+
+### Notes for Next Phase
+- All 3 pre-merge ACs are expected to PASS: `rubric` AC1 and AC2 (semantic coverage confirmed), `section_contains` AC3 (keyword "pre-existing" present in §7, confirmed by grep).
+- The Issue body checkboxes have been updated to [x] by /code.
+- Post-merge AC is "CI passes" — verify that the CI run after merge is clean.
