@@ -57,3 +57,30 @@ The 4 missing variables are:
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation followed the Spec exactly: 4 rows added to `docs/tech.md` Environment Variables table after `WHOLEWORK_ISSUE_BODY_DIR`, and corresponding 4 rows added to `docs/ja/tech.md`.
+
+### Design Gaps/Ambiguities
+- The Spec Notes correctly called out that `WHOLEWORK_YML` in `hook-rename-on-auto.sh:9` uses direct assignment (`WHOLEWORK_YML=...`) rather than `${WHOLEWORK_YML:-...}`, making it a script-internal variable rather than a true operator-override pattern. The description reflects this distinction accurately.
+
+### Rework
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Added all 4 env vars after the last existing row (`WHOLEWORK_ISSUE_BODY_DIR`) in both `docs/tech.md` and `docs/ja/tech.md` to maintain consistent ordering.
+- Described `WHOLEWORK_YML` as a script-internal variable (not operator-override) per Spec Notes, since `hook-rename-on-auto.sh` uses direct assignment rather than the `${VAR:-default}` pattern.
+- `WHOLEWORK_PATCH_LOCK_TIMEOUT` priority chain (`env var > .wholework.yml > 300`) documented explicitly to match script behavior.
+
+### Deferred Items
+- None. All Spec steps completed.
+
+### Notes for Next Phase
+- All 5 pre-merge ACs verified PASS; Issue checkboxes updated to `[x]`.
+- `docs/ja/tech.md` was updated (translation sync) — post-merge manual check can confirm visual correctness of the Japanese rows.
+- No follow-up issues created (no out-of-scope remediations identified).
