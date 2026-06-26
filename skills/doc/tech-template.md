@@ -1,3 +1,8 @@
+---
+type: domain
+skill: doc
+---
+
 # Tech
 
 ## Language and Runtime（Required）

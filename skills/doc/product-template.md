@@ -1,3 +1,8 @@
+---
+type: domain
+skill: doc
+---
+
 # Product
 
 ## Vision（Required）

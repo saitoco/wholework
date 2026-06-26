@@ -1,3 +1,10 @@
+---
+type: domain
+skill: audit
+load_when:
+  arg_starts_with: auto-session
+---
+
 # auto-session Narrative Prompts
 
 Prompt templates for LLM-assisted narrative draft generation in `/audit auto-session --full`.
