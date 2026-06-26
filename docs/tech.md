@@ -204,6 +204,10 @@ In gradual migration, there is a period where deprecated terms remain in the sam
 | `WHOLEWORK_SCRIPT_DIR` | *(auto-resolved)* | Override the `SCRIPT_DIR` used by `scripts/*.sh` when resolving sibling helpers. Used in BATS tests to redirect calls to a mock directory. In production, leave unset (auto-resolves to the script's own directory). |
 | `WHOLEWORK_CONFIG_PATH` | *(unset)* | Override the config file path used by `scripts/get-config-value.sh`. When set, the script reads the specified path instead of CWD-relative `.wholework.yml`. Set to `/dev/null` in BATS tests to force default values. When unset or empty, falls back to `.wholework.yml` (CWD-relative). |
 | `WHOLEWORK_ISSUE_BODY_DIR` | *(unset)* | Override the issue body source used by `scripts/get-auto-session-report.sh` when fetching verify-type breakdown. When set, reads `${WHOLEWORK_ISSUE_BODY_DIR}/<issue_number>.md` instead of calling `gh issue view`. Used in BATS tests for hermetic execution. When unset or empty, falls back to `gh issue view` (or skips when `--no-github`). |
+| `WHOLEWORK_MAX_RECOVERY_SUBAGENTS` | `1` | Maximum number of concurrent Tier 3 recovery sub-agents spawned by `scripts/spawn-recovery-subagent.sh`. Defaults to 1 (serial recovery) to bound cost during XL parallel runs. |
+| `WHOLEWORK_PATCH_LOCK_TIMEOUT` | `300` | Timeout seconds for the patch lock in `scripts/worktree-merge-push.sh`. Priority: env var > `patch-lock-timeout` in `.wholework.yml` > 300. |
+| `WHOLEWORK_PATCH_LOCK_LOG_INTERVAL` | `30` | Log output interval seconds while waiting for the patch lock in `scripts/worktree-merge-push.sh`. |
+| `WHOLEWORK_YML` | `${CLAUDE_PROJECT_DIR:-}/.wholework.yml` | Path to `.wholework.yml` resolved by `scripts/hook-rename-on-auto.sh`. Derived from `CLAUDE_PROJECT_DIR`; not an operator-override pattern (the script assigns directly rather than using `${WHOLEWORK_YML:-...}`). |
 
 ## Gotchas
 

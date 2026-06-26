@@ -191,6 +191,10 @@ Issue 本文の "Scope" または "Acceptance Criteria" セクションに以下
 | `WHOLEWORK_CI_TIMEOUT_SEC` | `1200` | `wait-ci-checks.sh` の最大待機時間（秒）。タイムアウト挙動をテストするときは低い値（例: `60`）に設定する |
 | `WHOLEWORK_CONFIG_PATH` | *(未設定)* | `scripts/get-config-value.sh` が参照する設定ファイルパスを上書きする。設定されている場合、CWD 相対 `.wholework.yml` の代わりに指定したパスを読む。BATS テストでは `/dev/null` を設定してデフォルト値を強制できる。未設定または空の場合は `.wholework.yml`（CWD 相対）にフォールバックする |
 | `WHOLEWORK_ISSUE_BODY_DIR` | *(未設定)* | `scripts/get-auto-session-report.sh` が verify-type 内訳を取得する際の Issue body ソースを上書きする。設定されている場合は `gh issue view` を呼び出す代わりに `${WHOLEWORK_ISSUE_BODY_DIR}/<issue_number>.md` を読む。BATS テストのハーメティック実行用。未設定または空の場合は `gh issue view` にフォールバックする（`--no-github` 時はスキップ）。 |
+| `WHOLEWORK_MAX_RECOVERY_SUBAGENTS` | `1` | `scripts/spawn-recovery-subagent.sh` が生成する Tier 3 recovery sub-agent の最大並列数。XL 並列実行時のコスト上限のためデフォルト 1 (逐次回復)。 |
+| `WHOLEWORK_PATCH_LOCK_TIMEOUT` | `300` | `scripts/worktree-merge-push.sh` の patch lock タイムアウト秒数。優先順位: env var > `.wholework.yml` `patch-lock-timeout` > 300。 |
+| `WHOLEWORK_PATCH_LOCK_LOG_INTERVAL` | `30` | `scripts/worktree-merge-push.sh` で patch lock 待機中のログ出力間隔秒数。 |
+| `WHOLEWORK_YML` | `${CLAUDE_PROJECT_DIR:-}/.wholework.yml` | `scripts/hook-rename-on-auto.sh` が参照する `.wholework.yml` のパス。`CLAUDE_PROJECT_DIR` から導出され、オペレーター override パターン (`${WHOLEWORK_YML:-...}`) ではない (スクリプトが直接代入)。 |
 
 ## Gotchas
 
