@@ -43,3 +43,32 @@
 ## Consumed Comments
 
 - `saito` / MEMBER / first-class / Issue Retrospective (Auto-Resolve Log: BRE メタキャラ修正、AC4 実装前 PASS 問題、Background スコープ注記追加) / https://github.com/saitoco/wholework/issues/752#issuecomment-4806503789
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Spec の実装ステップに従い、2 ファイルの指定箇所を正確に編集した。逸脱なし。
+
+### Design Gaps/Ambiguities
+
+- Spec の変更前テキストは `` `--full` for LLM-assisted draft of all 4 sections `` だったが、実際の workflow.md テキストはセミコロンの前後の文脈が Spec とわずかに異なっていた。Spec の文脈を参考にしつつ実際のファイルを直接参照して編集した（問題なし）。
+
+### Rework
+
+- N/A — 1 回の編集で全 AC が PASS したため、リワークなし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- patch route で直接 main へコミット (`chore:` prefix、Type=Task から導出)
+- 2 ファイルのみの純ドキュメント変更のため、テスト・stale check・forbidden expressions はすべて PASS
+- AC の rubric (AC3) は実装後の workflow.md が SKILL.md のオプション網羅を満たしていることを確認
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- post-merge AC なし — verify フェーズは pre-merge 5 AC が全て PASS していることを確認するだけでよい
+- changelog 等の追加更新は不要 (documentation only 変更)
