@@ -92,17 +92,18 @@
 - 5 件すべて PASS (UNCERTAIN ゼロ)。`file_exists`, `file_contains`, `grep` は機械的検証が可能で、rubric も明確な判定基準だったため UNCERTAIN なし。AC 設計として良好。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- SHOULD 2件を修正: (1) safe mode コマンド列挙を `always_allow` コマンド + restrictions 付き実行コマンドの説明に拡張し、`verify-executor.md` への参照を追加。(2) "How to Reference" の "(Step 0)" 言及を削除。
-- MUST 問題なし → `COMMENT` event でレビュー投稿 (REQUEST_CHANGES なし)。全 AC PASS、CI 全 SUCCESS。
+- PR #757 をスカッシュマージ (`mergeable=true`, CI SUCCESS, approved)。コンフリクトなし。
+- `closes #755` を含む PR が `main` にマージされたため、Issue #755 は自動クローズ。
+- Phase Handoff を `merge` フェーズとして更新 (review フェーズの handoff を rotation で置換)。
 
 ### Deferred Items
-- safe mode の完全なコマンドリストは `verify-executor.md` を正規参照 (execution-context.md に全列挙は不要 — 今回の修正でこのアプローチを採用)
-- 既存スキルへの `Read execution-context.md` 追加は本 Issue のスコープ外
+- 既存スキルへの `Read execution-context.md` 追加は本 Issue のスコープ外 (review フェーズから引継ぎ)
+- 次回新 skill 作成時に execution-context.md を参照して context check が標準化されることを観察 (post-merge 観察事項)
 
 ### Notes for Next Phase
-- 全 CI SUCCESS、MUST 問題なし → merge 可能
-- 85b46cf: SHOULD 2件修正 (safe mode 説明精度向上 + Step 0 参照除去) を push 済み
-- validate-skill-syntax PASS (0 errors)
+- マージ済み。verify フェーズは post-merge AC のみ (手動観察)。
+- `modules/execution-context.md` は main ブランチに含まれる。verify command は file_exists / file_contains / grep の 3 種。
+- None (特記なし)
