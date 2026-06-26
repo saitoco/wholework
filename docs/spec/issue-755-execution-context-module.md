@@ -60,3 +60,35 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective コメント (2026-06-26T02:59:33Z): Auto-Resolve Log (3 点) と AC 変更サマリーを含む。判断根拠を Spec の Notes セクションと Implementation Steps に反映済み。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A (Spec の実装ステップをそのまま実行)
+
+### Design Gaps/Ambiguities
+
+- `docs/structure.md` のモジュールカウント表記は "(38 files)" だったが実態は 39 ファイル (既存の 1 乖離)。Spec の Notes に事前記載あり。本 PR で execution-context.md を追加した後の正しい値 40 を直接設定した。
+- `execution-context.md` の Callers セクションに初期値として "none (SSoT reference)" と記録したが、skills が `--non-interactive` 検出パターンを用いて暗黙的に参照する構造であるため、この表現は正確。明示的に Read するスキルが増えた場合は更新が必要。
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 新規ファイル `modules/execution-context.md` を作成し、fork/main context の判定基準 (`--non-interactive` フラグ) と各 context の制約 (AskUserQuestion 可否・verify mode) を SSoT として文書化した
+- `docs/tech.md` クロスリファレンスは fork context テーブルの closing 行直後に 1 行追加する方式を採用 (Spec Notes 通り)
+- docs/structure.md のカウントは 38 → 40 に直接更新 (既存乖離 +1、本 PR 追加 +1 を同時修正)
+
+### Deferred Items
+- `execution-context.md` を明示的に Read するスキルが今後現れた場合は Callers セクションを更新する必要がある (現時点では "none (SSoT reference)")
+- 既存スキルへの `Read execution-context.md` 追加は本 Issue のスコープ外 (将来の onboarding 改善 Issue に委ねる)
+
+### Notes for Next Phase
+- 全 5 つの pre-merge AC が verify-executor full mode で PASS 確認済み (file_exists, rubric, file_contains x2, grep)
+- テスト 926/926 PASS、forbidden-expressions チェック PASS
+- 変更対象は docs/ と modules/ のみ (scripts/・skills/ 変更なし)。/review での確認ポイントは docs/tech.md クロスリファレンスの位置と execution-context.md の内容品質が主
