@@ -46,7 +46,7 @@ Inspect `ARGUMENTS` at skill start:
 | Constraint | Rule |
 |------------|------|
 | `AskUserQuestion` | **Not available** — the process has no interactive TTY. Calling it would hang indefinitely. Use auto-resolve instead (see `modules/ambiguity-detector.md`). |
-| verify-executor mode | **safe mode** — `command` and `build_success` verify commands are skipped (UNCERTAIN). Only `file_exists`, `file_contains`, `section_contains`, `grep`, `rubric` are executed. |
+| verify-executor mode | **safe mode** — `command` and `build_success` verify commands are skipped (UNCERTAIN). Read-only commands (`file_exists`, `file_contains`, `section_contains`, `grep`, `rubric`, etc.) execute normally; some commands (`http_status`, `github_check`, etc.) run with restrictions. See `modules/verify-executor.md` for the complete per-command safe mode behavior. |
 | Error handling | Apply auto-resolve + log policy for ambiguities. Abort only for hard-error conditions (missing Size label, XL without sub-issues, test FAIL after 1 repair on patch route). |
 
 ### Main Context (no `--non-interactive`)
@@ -67,7 +67,7 @@ context from ARGUMENTS. If `--non-interactive` is present, apply fork context co
 (no AskUserQuestion, safe mode for verify-executor). Otherwise apply main context behavior.
 ```
 
-The `code` skill uses this pattern in its Mode Detection section (Step 0) and Error Handling
+The `code` skill uses this pattern in its Mode Detection section and Error Handling
 section. The `verify` skill always runs in main context and does not need to check.
 
 ## Callers
