@@ -187,6 +187,32 @@ Combine `file_contains` (config content existence) with `github_check "gh run li
 
 For patch route Issues (no PR), `gh pr checks` is not available. Always use `gh run list` for CI result verification. See `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md` for details.
 
+**CI verify command scope design (PR route):**
+
+`github_check "gh pr checks"` checks all CI status on the PR — including test results from jobs unrelated to the PR's changes. If pre-existing failing tests on `main` are present, they appear in `gh pr checks` output, causing false FAILs that require human judgment to determine whether the failure is within scope (observed in #695 and #702).
+
+Preferred pattern 1 — specific workflow (scope limited to a single workflow file):
+
+```
+<!-- verify: github_check "gh run list --workflow=<specific>.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success" -->
+```
+
+Preferred pattern 2 — direct test execution (scope limited to a single test file):
+
+```
+<!-- verify: command "bats tests/<specific>.bats" -->
+```
+
+**Usage criteria:**
+
+| Verify command | Scope | When to use |
+|----------------|-------|-------------|
+| `gh pr checks` | Entire PR — all CI jobs | When all CI jobs must pass together (e.g., release gate); accept out-of-scope failure risk |
+| `gh run list --workflow=<specific>.yml` | Single workflow file | When only a specific workflow's success matters; avoids pre-existing failures in unrelated jobs |
+| `command "bats tests/<specific>.bats"` | Single test file | When testing a specific bats file directly; fully decoupled from CI state |
+
+**Fallback guidance:** When `gh pr checks` must be used (e.g., whole-CI gate), write "all CI green" explicitly in the AC text to clarify that the condition covers the full CI. This signals that handling of out-of-scope failures (e.g., pre-existing failures on `main`) is delegated to the verify phase reviewer.
+
 ### 8. Policy change Issues — Verify Old Policy Deletion with file_not_contains
 
 When an Issue involves replacing an existing policy with a new one (e.g., changing error handling strategy, changing fallback behavior), verify commands must confirm not only that the new policy text is present but also that the old policy text has been removed.
