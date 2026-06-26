@@ -106,7 +106,7 @@
 ### Pre-merge
 
 - <!-- verify: command "bats tests/setup-labels.bats" --> `tests/setup-labels.bats` 全 test green
-- <!-- verify: github_check "gh pr checks" "Run bats tests" --> CI で全 bats テストが green
+- <!-- verify: github_check "gh run list --workflow=test.yml --branch=main --limit=1" "success" --> CI で全 bats テストが green
 - <!-- verify: rubric "tests/setup-labels.bats の更新 commit と scripts/setup-labels.sh (or 関連 module) の更新 commit が同一 PR に含まれる" --> root cause fix が含まれている
 
 ### Post-merge
@@ -123,3 +123,29 @@
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- None. All implementation steps followed the Spec exactly.
+
+### Design Gaps/Ambiguities
+- The `github_check "gh pr checks"` AC was auto-fixed to `gh run list --workflow=test.yml` per patch route rule, but `gh run list` output does not include job names like "Run bats tests" — causing a miscalibrated hint. Fixed to `github_check "gh run list --workflow=test.yml --branch=main --limit=1" "success"` which matches the "success" conclusion visible in actual output.
+
+### Rework
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Used `awk` to parse `scripts/setup-labels.sh` source at test runtime rather than hardcoding counts — this auto-adapts whenever ALWAYS_LABELS or FALLBACK_LABELS entries change.
+- Patch route (XS, `--patch`): direct commit to main; no PR created.
+- AC2 verify command recalibrated from `gh pr checks` → `gh run list --workflow=test.yml --branch=main --limit=1` with expected value "success".
+
+### Deferred Items
+- None. The structural fix is complete and tests pass locally.
+
+### Notes for Next Phase
+- verify phase should check CI passes after push to main (AC2: `gh run list --workflow=test.yml --branch=main --limit=1` expected "success").
+- AC3 rubric ("root cause fix が含まれている") is satisfied by tests-only change per Spec Notes — no scripts/setup-labels.sh change needed.
