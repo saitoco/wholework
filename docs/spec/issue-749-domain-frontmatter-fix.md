@@ -111,3 +111,38 @@
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の実装ステップ 3 では「`skills/doc/skill-dev-sync.md` 行の後に 5 行追加」と記載されていたが、Spec のテーブルカラム名が英語版と日本語版で異なるため、日本語版では列見出しを適宜合わせて追加した (機能的影響なし)
+
+### Design Gaps/Ambiguities
+
+- Spec Notes に記載の通り、`audit` と `doc` SKILL.md は `domain-loader.md` を呼ばずに直接 Read で Domain ファイルを参照しているため、今回の frontmatter 追加は `/audit drift` の誤検知防止が主効果であり、実行時動作には即座の変化はない
+- `skills/triage/skill-dev-verify-audit.md` の `load_when:` が `_(none)_` (無条件) になっているが、`domain-loader.md` が `skills/triage/` を Glob するのは triage SKILL.md が `domain-loader` を呼んだ場合のみ。現在 triage SKILL.md は `domain-loader.md` を読んでいないため、実質的には unused。ただし Spec Notes でスコープ外と確認済み
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+
+- 4 ファイルのみ frontmatter を追加 (3 ファイルは既に修正済みと Spec で確認)
+- doc templates は `load_when` なし (複数サブコマンドで使われるため無条件ロードが正しい設計)
+- `auto-session-narrative-prompts.md` は `arg_starts_with: auto-session` で条件付きロード
+
+### Deferred Items
+
+- 将来 `/audit` と `/doc` SKILL.md が `domain-loader.md` を呼ぶよう移行した場合に、今回追加した frontmatter が実際の動作に反映される (フォローアップ不要、現時点では drift 防止のみ)
+
+### Notes for Next Phase
+
+- verify command は全 8 件 PASS (7x file_contains + 1x rubric)
+- bats tests: 926 tests all OK, exit code 0
+- forbidden expressions check: クリーン
+- doc translation sync: `docs/ja/environment-adaptation.md` を同時更新済み
