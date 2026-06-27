@@ -73,3 +73,35 @@
 - `gh-graphql.sh` の error メッセージは QUERY_NAME が空の場合もあるため "gh api graphql failed" というシンプルな形にする (QUERY_NAME を含めると空文字が混入する可能性)
 - `gh-label-transition.sh` line 68 は `ENTERED_WORKTREE` の "already set" パスの `gh issue edit` 呼び出し — 3 箇所すべて同じパターンで統一
 - `gh-check-blocking.sh` は audit report で「唯一 error handling があった」と記録されているが、現在は 3 個 (`gh-issue-edit.sh`, `gh-issue-comment.sh`, `gh-extract-issue-from-pr.sh`) も既に完全対応済み (Issue 記述時点から実装が進んだ)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `gh-label-transition.sh` は 3 箇所の `gh issue edit` すべてに `if ! ...; then echo "Error..." >&2; exit 1; fi` パターンを採用し統一。
+- `gh-pr-review.sh` の heredoc パイプラインを変数キャプチャ方式にリファクタした後に `gh api` 呼び出しに error handling を追加。既存テストへの影響は最小限。
+- `gh-graphql.sh` の error メッセージは `QUERY_NAME` が空のケースを考慮して "gh api graphql failed" というシンプルな形にした。
+
+### Deferred Items
+- CI (github_check) の AC は PR 後に自動確認予定。
+- Spec の行番号指定は参照用であり正確ではないが、実装上の問題はなかった (実ファイルを読んで適用)。
+
+### Notes for Next Phase
+- 全 8 個の gh-*.sh に error handling が追加されており、rubric AC (7 個以上) は余裕を持って満たしている。
+- bats テスト 4 ファイルに "error: API failure" テストケースを追加済み。全 941 テスト PASS 確認済み。
+- PR #767 が CI 完了後 merge 可能になる。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- 設計では `gh-pr-review.sh` の `--with-line-comments` path が lines 91-93 に位置すると記載されているが、実際の行番号は正確ではなかった。Spec の行番号はあくまで参照用であり、実際のファイル内容を読んで適用した。
+- `gh-graphql.sh` の no-cache path (`gh api graphql "${GH_ARGS[@]}"`) は設計では単純な `|| { echo "Error..." >&2; exit 1; }` パターンで追加できるとされていたが、pipe 内の最終コマンドにあたるため set -e だけでは検出されないケースへの対処として明示的 error handling を追加した。これは設計意図と合致している。
+
+### Design Gaps/Ambiguities
+
+- Spec には `gh-label-transition.sh` の "already set" パス (line 68) が独立した branch であることが記載されているが、else ブランチの 2 箇所 (lines 90, 92) との区別が当初不明確だった。実装時にファイルを読んで 3 パターンに分けた。
+
+### Rework
+
+- None
