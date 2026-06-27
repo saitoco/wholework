@@ -211,6 +211,17 @@ In gradual migration, there is a period where deprecated terms remain in the sam
 | `WHOLEWORK_PATCH_LOCK_LOG_INTERVAL` | `30` | Log output interval seconds while waiting for the patch lock in `scripts/worktree-merge-push.sh`. |
 | `WHOLEWORK_YML` | `${CLAUDE_PROJECT_DIR:-}/.wholework.yml` | Path to `.wholework.yml` resolved by `scripts/hook-rename-on-auto.sh`. Derived from `CLAUDE_PROJECT_DIR`; not an operator-override pattern (the script assigns directly rather than using `${WHOLEWORK_YML:-...}`). |
 
+### Capability Flags
+
+The following variables are set by `detect-config-markers.md` from `.wholework.yml` `capabilities.*` keys. Built-in capabilities use the fixed mappings below; any user-defined `capabilities.{name}: true` key is dynamically mapped to `HAS_{UPPERCASE_NAME}_CAPABILITY`.
+
+| Variable | Set when | Description |
+|----------|---------|-------------|
+| `HAS_BROWSER_CAPABILITY` | `capabilities.browser: true` | `true` when browser automation capability is enabled. Used to conditionally load browser-based verify patterns (e.g., `verify/browser-verify-phase.md`). |
+| `HAS_VISUAL_DIFF_CAPABILITY` | `capabilities.visual-diff: true` | `true` when visual diffing capability is enabled. Used to conditionally load visual diff modules (e.g., `modules/visual-diff-adapter.md`). |
+| `HAS_WORKFLOW_CAPABILITY` | `capabilities.workflow: true` | `true` when the Workflow tool is available. Used to conditionally enable parallel multi-agent review in `/review`. |
+| `MCP_TOOLS` | `capabilities.mcp` list | Comma-separated list of MCP tool names enabled for the project (e.g., `"mf_list_quotes,mf_list_invoices"`). Note: `capabilities.mcp` maps to `MCP_TOOLS` directly — it is excluded from the dynamic `HAS_*_CAPABILITY` mapping, so `HAS_MCP_CAPABILITY` is never set. |
+
 ## Gotchas
 
 ### `.claude/settings.json` is not hot-reloaded

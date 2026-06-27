@@ -198,6 +198,17 @@ Issue 本文の "Scope" または "Acceptance Criteria" セクションに以下
 | `WHOLEWORK_PATCH_LOCK_LOG_INTERVAL` | `30` | `scripts/worktree-merge-push.sh` で patch lock 待機中のログ出力間隔秒数。 |
 | `WHOLEWORK_YML` | `${CLAUDE_PROJECT_DIR:-}/.wholework.yml` | `scripts/hook-rename-on-auto.sh` が参照する `.wholework.yml` のパス。`CLAUDE_PROJECT_DIR` から導出され、オペレーター override パターン (`${WHOLEWORK_YML:-...}`) ではない (スクリプトが直接代入)。 |
 
+### Capability フラグ
+
+以下の変数は、`detect-config-markers.md` が `.wholework.yml` の `capabilities.*` キーから設定する。組み込み capability は下記の固定マッピングを使用する。ユーザー定義の `capabilities.{name}: true` キーは動的に `HAS_{UPPERCASE_NAME}_CAPABILITY` へマッピングされる。
+
+| 変数 | 設定条件 | 説明 |
+|----------|---------|-------------|
+| `HAS_BROWSER_CAPABILITY` | `capabilities.browser: true` | ブラウザ自動化 capability が有効なとき `true`。ブラウザ向け verify パターン（`verify/browser-verify-phase.md` など）を条件付きで読み込むために使用する |
+| `HAS_VISUAL_DIFF_CAPABILITY` | `capabilities.visual-diff: true` | ビジュアル差分 capability が有効なとき `true`。ビジュアル diff モジュール（`modules/visual-diff-adapter.md` など）を条件付きで読み込むために使用する |
+| `HAS_WORKFLOW_CAPABILITY` | `capabilities.workflow: true` | Workflow ツールが利用可能なとき `true`。`/review` での並列マルチエージェントレビューを条件付きで有効化するために使用する |
+| `MCP_TOOLS` | `capabilities.mcp` リスト | プロジェクトで有効化された MCP ツール名のカンマ区切りリスト（例: `"mf_list_quotes,mf_list_invoices"`）。注意: `capabilities.mcp` は直接 `MCP_TOOLS` にマッピングされる。動的な `HAS_*_CAPABILITY` マッピングの対象外のため、`HAS_MCP_CAPABILITY` は設定されない |
+
 ## Gotchas
 
 ### `.claude/settings.json` はホットリロードされない
