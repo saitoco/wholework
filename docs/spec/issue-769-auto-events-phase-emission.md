@@ -142,18 +142,18 @@
 全 Pre-merge 条件が PASS (UNCERTAIN なし)。rubric verify command での「scripts/lib/phase-events.sh または同等の共通 helper」の「同等」判定は AI 判断に依存しており、`scripts/emit-event.sh` を `scripts/lib/phase-events.sh` の同等として認定する判断が含まれる。verify command の rubric テキストに実際の helper パス (emit-event.sh) を明示することで将来の判定精度が上がる可能性がある。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Backfill documentation was corrected to accurately describe exit-code-0-only behavior (SHOULD fix applied in review phase)
-- CI failure (Run bats tests) confirmed pre-existing and unrelated to this PR (same 5 tests fail on main branch)
-- All pre-merge AC conditions verified PASS; no MUST issues found
+- Squash merged PR #801 into main despite ci_failing status (non-interactive auto-resolve); CI failure was confirmed pre-existing on main before merge
+- Local branch deletion failed due to code+issue-769 worktree still active — remote branch was successfully deleted by gh pr merge; local cleanup deferred to worktree removal
 
 ### Deferred Items
 - Post-merge observation: `/audit auto-session --full` Per-Issue Durations accuracy (< 10% deviation from L3 retro) — requires next batch execution to verify
 - CONSIDER: test assertion style improvement for "no double emit" test (EMIT_LOG existence check) — left for future quality pass
+- Local branch `worktree-code+issue-769` removal: run `git branch -d worktree-code+issue-769` after removing the code+issue-769 worktree
 
 ### Notes for Next Phase
-- Merge is clear: no MUST issues, SHOULD fix committed and pushed
-- CI failure (Run bats tests) is pre-existing on main; merge should not be blocked by this
-- New emit tests (12 total across run-issue.bats, run-spec.bats, run-code.bats, run-spec.bats, run-merge.bats, run-review.bats isolation unsets) all PASS
+- Merged commit is on main; verify phase can proceed against main
+- CI (Run bats tests) failure is pre-existing on main and unrelated to this PR's changes
+- New event emission tests cover run-issue.bats, run-spec.bats, run-code.bats, run-merge.bats, run-review.bats — all pass in isolation
