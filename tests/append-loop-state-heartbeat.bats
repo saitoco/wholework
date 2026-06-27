@@ -29,7 +29,7 @@ MOCK
     chmod +x "$MOCK_DIR/gh"
 }
 
-# The script must place loop-state files in <script_dir>/../docs/reports.
+# The script must place loop-state files in <script_dir>/../docs/sessions/_daily.
 # Stage a wrapper script that points at our temp repo root.
 _make_wrapper() {
     local fake_root="$1"
@@ -66,7 +66,7 @@ _make_wrapper() {
     run "$wrapper" --issue 701 --from spec --to code
     [ "$status" -eq 0 ]
     today=$(date -u +%Y-%m-%d)
-    file="$fake_root/docs/reports/loop-state-$today.md"
+    file="$fake_root/docs/sessions/_daily/loop-state-$today.md"
     [ -f "$file" ]
     # Header must match #703 schema for coexistence.
     grep -q '| Time (UTC) | Phase | Event | Detail |' "$file"
@@ -79,7 +79,7 @@ _make_wrapper() {
     run "$wrapper" --issue 701 --from spec --to code
     [ "$status" -eq 0 ]
     today=$(date -u +%Y-%m-%d)
-    file="$fake_root/docs/reports/loop-state-$today.md"
+    file="$fake_root/docs/sessions/_daily/loop-state-$today.md"
     grep -q '| code | phase-transition |' "$file"
     grep -q '#701 spec→code' "$file"
     # Snapshot aggregation from the mocked gh.
@@ -92,7 +92,7 @@ _make_wrapper() {
     "$wrapper" --issue 701 --from spec --to code
     "$wrapper" --issue 702 --from code --to review
     today=$(date -u +%Y-%m-%d)
-    file="$fake_root/docs/reports/loop-state-$today.md"
+    file="$fake_root/docs/sessions/_daily/loop-state-$today.md"
     # Header must appear exactly once.
     header_count=$(grep -c '| Time (UTC) | Phase | Event | Detail |' "$file")
     [ "$header_count" -eq 1 ]
@@ -112,7 +112,7 @@ MOCK
     run "$wrapper" --issue 701 --from spec --to code
     [ "$status" -eq 0 ]
     today=$(date -u +%Y-%m-%d)
-    file="$fake_root/docs/reports/loop-state-$today.md"
+    file="$fake_root/docs/sessions/_daily/loop-state-$today.md"
     [ -f "$file" ]
     grep -q 'snapshot:\[snapshot-unavailable\]' "$file"
 }
@@ -123,6 +123,6 @@ MOCK
     run "$wrapper" --issue 701 --from spec --to code --phase-label code-patch
     [ "$status" -eq 0 ]
     today=$(date -u +%Y-%m-%d)
-    file="$fake_root/docs/reports/loop-state-$today.md"
+    file="$fake_root/docs/sessions/_daily/loop-state-$today.md"
     grep -q '| code-patch | phase-transition |' "$file"
 }
