@@ -111,7 +111,7 @@ Each skill lives in `skills/<skill-name>/SKILL.md`. Many skills include auxiliar
 | verify | `skills/verify/SKILL.md` | Post-merge acceptance testing |
 | auto | `skills/auto/SKILL.md` | Orchestrator chaining spec→code→review→merge→verify |
 | triage | `skills/triage/SKILL.md` | Title normalization and Type/Size/Priority/Value assignment |
-| audit | `skills/audit/SKILL.md` | Drift, fragility, and recovery pattern detection; auto-generate Issues |
+| audit | `skills/audit/SKILL.md` | Drift and fragility detection; auto-generate Issues |
 | doc | `skills/doc/SKILL.md` | Steering/project document management and normalization |
 
 ### Modules

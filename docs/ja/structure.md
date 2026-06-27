@@ -104,7 +104,7 @@ wholework/
 | verify | `skills/verify/SKILL.md` | マージ後の受入テスト |
 | auto | `skills/auto/SKILL.md` | spec→code→review→merge→verify を連鎖実行する Orchestrator |
 | triage | `skills/triage/SKILL.md` | タイトル正規化と Type/Size/Priority/Value 設定 |
-| audit | `skills/audit/SKILL.md` | Drift・脆弱性・recovery パターン検出と Issue 自動生成 |
+| audit | `skills/audit/SKILL.md` | Drift・脆弱性検出と Issue 自動生成 |
 | doc | `skills/doc/SKILL.md` | Steering/Project ドキュメントの管理と正規化 |
 
 ### Modules
