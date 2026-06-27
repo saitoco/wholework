@@ -107,3 +107,35 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective: auto-resolved ambiguity points, verify command improvements / https://github.com/saitoco/wholework/issues/776#issuecomment-4820239570
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+`scripts/get-auto-session-report.sh` の Narrative Section 見出し (`## Narrative Section (manual / --full LLM-assist)`) が `--full` フラグ削除に際して更新されず、`skills/audit/SKILL.md` の記述 (`Narrative Section (skeleton)`) と不一致が生じた。また `skills/audit/SKILL.md` の `--no-ja` ドキュメントがステップ番号を旧称で参照したまま (`Step 4` → 実態は `Step 3`)。削除された機能に関連するリテラル文字列・ステップ参照を Spec の「Changed Files」に含めることで漏れを防げる。
+
+### Recurring issues
+
+`allowed-tools` frontmatter の更新漏れ (今回: `get-auto-session-report.sh`)。新規スクリプト呼び出しを SKILL.md 本文に追加する際、対応する `allowed-tools` 更新を validate-skill-syntax で確認するフローが機能しているが、PR 作成前に `python3 scripts/validate-skill-syntax.py skills/` をローカル実行するチェックがあれば CI 到達前に検出できた。
+
+### Acceptance criteria verification difficulty
+
+Pre-merge 条件 10 件すべて verify command が設定されており `rubric` / `file_not_contains` / `file_not_exists` / `section_contains` / `grep` の組み合わせで確実に検証できた。UNCERTAIN なし。`docs/reports/event-log-schema.md` の `auto-session-report-published` イベント更新は Spec の Changed Files に含まれておらず verify command も無かったため、SHOULD として review 段階で検出 (Spec 改善候補: 削除された機能に紐づくスキーマ更新は Changed Files に明示する)。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- CI validate-skill-syntax FAILURE を修正: `get-auto-session-report.sh` を `allowed-tools` に追加
+- Narrative Section 見出しを `(skeleton)` に統一 (SKILL.md との整合)
+- `--no-ja` ドキュメントのステップ参照を `Step 3` に修正
+- `auto-session-report-published` event を Deprecated にマーク
+
+### Deferred Items
+- `append-loop-state-heartbeat.bats` tests 11-15 の失敗は pre-existing (main ブランチ側の問題)、本 PR とは無関係
+- CONSIDER 事項: session.md "See also" link が data-layer.md 生成失敗時に dangling になる可能性 (best-effort 設計で許容)
+
+### Notes for Next Phase
+- MUST 問題は全て解決済み、SHOULD も修正済み
+- CI の bats 失敗は pre-existing で本 PR の承認を妨げない
+- `/merge 805` 実行可能
