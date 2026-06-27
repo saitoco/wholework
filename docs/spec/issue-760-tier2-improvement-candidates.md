@@ -66,17 +66,17 @@
 - verify command のシンプルな設計 (rubric + file_contains の組み合わせ) により、完全自動判定ができた。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Forbidden Expressions check CI failure は本 PR 変更に起因しない既存 main 問題 (`docs/reports/auto-session-3480-1782440098-2026-06-27-ja.md` が commit `7071bb2` 由来) と判断し、マージブロッカーとして扱わない
-- SHOULD 問題 (threshold reached テスト欠落) を修正としてコミット済み (commit `1831b47`)
+- CI 失敗 (Forbidden Expressions check) は既存 main 問題と review フェーズで判断済み。非インタラクティブモードの auto-resolve ポリシーに従い、マージを続行した
+- `gh pr merge --squash --delete-branch` はマージ成功。ローカルブランチ削除エラー (別 worktree が使用中) は無視可能、リモートブランチは削除済み
 
 ### Deferred Items
-- awk regex `in_section && /threshold:/` の精度向上 (CONSIDER、現 `.wholework.yml` では問題なし) — 起票不要、将来のリファクタ機会に対応
-- Forbidden Expressions check が `docs/reports/` の日本語テキストに反応する既存 main 問題 — 別 Issue で対応予定 (#760 スコープ外)
+- Post-merge AC: 次回 batch session で Tier 2 リカバリが発生した際、`/audit auto-session <id>` レポートの Improvement Candidates Surfaced に symptom が表示されることを手動観察
+- awk regex `in_section && /threshold:/` 精度向上 (CONSIDER) — 別 Issue での対応
 
 ### Notes for Next Phase
-- 全 CI チェック SUCCESS (Forbidden Expressions 除く)、bats テスト 6/6 PASS
-- PR をマージ可能な状態。`/merge 763` で進める
-- Post-merge AC (次回 batch session での観察) は merge 後に手動確認
+- PR #763 は main にマージ済み (2026-06-27T00:21:52Z)
+- Issue #760 は `closes #760` により自動クローズされる (BASE_BRANCH=main)
+- verify フェーズでは pre-merge AC 2 件 (file_contains ベース) を検証可能。post-merge AC は次回 batch session 後に手動確認
