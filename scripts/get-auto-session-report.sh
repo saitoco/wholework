@@ -105,6 +105,22 @@ if [[ -n "$PERIOD_DAY" || -n "$PERIOD_SINCE_DAYS" || -n "$PERIOD_RANGE_START" ]]
   PERIOD_MODE=true
 fi
 
+# Read recoveries-auto-fire.threshold from .wholework.yml (awk for nested YAML; get-config-value.sh lacks nested key support)
+_config_path="${WHOLEWORK_CONFIG_PATH:-.wholework.yml}"
+RECOVERIES_THRESHOLD=3
+if [[ -f "$_config_path" ]]; then
+  _raw=$(awk '
+    /^recoveries-auto-fire:/ { in_section=1; next }
+    /^[^ ]/ { in_section=0 }
+    /^recoveries-auto-fire\.threshold:/ { gsub(/.*threshold:[[:space:]]*/, ""); print; exit }
+    in_section && /threshold:/ { gsub(/.*threshold:[[:space:]]*/, ""); print; exit }
+  ' "$_config_path" 2>/dev/null || true)
+  if [[ "$_raw" =~ ^[0-9]+$ ]] && [[ "$_raw" -gt 0 ]]; then
+    RECOVERIES_THRESHOLD="$_raw"
+  fi
+fi
+RECOVERIES_APPROACH=$(( RECOVERIES_THRESHOLD - 1 ))
+
 if [[ "$PERIOD_MODE" == "true" ]]; then
   if [[ ! -f "$AUTO_EVENTS_LOG" ]]; then
     echo "No event log found at: $AUTO_EVENTS_LOG"
@@ -590,14 +606,34 @@ else
   CONCURRENT_SECTION="(none detected)"
 fi
 
-# Improvement candidates from anomaly events
-IMPROVEMENT_CANDIDATES=$(echo "$EVENTS_JSON" | jq -r '
+# Improvement candidates from anomaly events (Tier 2 approaching threshold + Tier 3)
+TIER3_CANDIDATES=$(echo "$EVENTS_JSON" | jq -r '
   [.[] | select(.event == "recovery" and .tier == "3")] |
-  if length == 0 then "(none — no Tier 3 recoveries)"
-  else
-    "- Tier 3 recovery occurred in " + (.[] | "phase=" + (.phase // "?")) + " — investigate root cause"
+  if length == 0 then ""
+  else .[] |
+    "- Tier 3 recovery occurred in phase=" + (.phase // "?") + " — investigate root cause"
   end
-' 2>/dev/null || echo "(none)")
+' 2>/dev/null || true)
+
+TIER2_CANDIDATES=$(echo "$EVENTS_JSON" | jq -r --argjson approach "$RECOVERIES_APPROACH" --argjson threshold "$RECOVERIES_THRESHOLD" '
+  [.[] | select(.event == "recovery" and .tier == "2" and .phase != null)] |
+  group_by(.phase) |
+  map({phase: .[0].phase, count: length}) |
+  .[] | select(.count >= $approach) |
+  if .count >= $threshold
+  then "- Tier 2 recovery in phase=" + .phase + " (count=" + (.count | tostring) + ", threshold reached) — review recoveries-auto-fire.threshold"
+  else "- Tier 2 recovery in phase=" + .phase + " (count=" + (.count | tostring) + ", approaching threshold) — review recoveries-auto-fire.threshold"
+  end
+' 2>/dev/null || true)
+
+if [[ -z "$TIER2_CANDIDATES" && -z "$TIER3_CANDIDATES" ]]; then
+  IMPROVEMENT_CANDIDATES="(none — no Tier 3 recoveries or Tier 2 approaching recoveries-auto-fire threshold)"
+else
+  IMPROVEMENT_CANDIDATES=""
+  [[ -n "$TIER2_CANDIDATES" ]] && IMPROVEMENT_CANDIDATES+="${TIER2_CANDIDATES}"$'\n'
+  [[ -n "$TIER3_CANDIDATES" ]] && IMPROVEMENT_CANDIDATES+="${TIER3_CANDIDATES}"$'\n'
+  IMPROVEMENT_CANDIDATES="${IMPROVEMENT_CANDIDATES%$'\n'}"
+fi
 
 # GitHub state lookups (best-effort, skipped with --no-github)
 FULLY_CLOSED=0
