@@ -695,7 +695,23 @@ The script aggregates `gh issue list` open-issue counts by `phase/*` label (omit
 
 1. **Route guard**: If `ROUTE` is neither `batch` nor `sub_issue` (XL route), output "L3 retrospective skipped: no notable orchestration content" and skip the remaining L3 steps.
 
-2. **Notable judgment** (using events from `.tmp/auto-events.jsonl` and in-context variables):
+2. **Create session dir and generate data layer** (always for batch/XL routes, before notable judgment):
+   ```bash
+   DATE=$(date -u +%Y-%m-%d)
+   SESSION_DIR="docs/sessions/${AUTO_SESSION_ID}-${DATE}"
+   mkdir -p "$SESSION_DIR"
+   ```
+   - Extract session events:
+     ```bash
+     jq -c 'select(.session_id == "'"$AUTO_SESSION_ID"'")' .tmp/auto-events.jsonl > "$SESSION_DIR/events.jsonl" 2>/dev/null || true
+     ```
+   - Generate data layer report (best-effort; log warning on failure and continue):
+     ```bash
+     "${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh" "$AUTO_SESSION_ID" --output "$SESSION_DIR/data-layer.md" 2>/dev/null \
+       || echo "Warning: data-layer.md generation failed — continuing without data layer report"
+     ```
+
+3. **Notable judgment** (using events from `.tmp/auto-events.jsonl` and in-context variables):
    - Extract events for this session:
      ```bash
      jq -c 'select(.session_id == "'"$AUTO_SESSION_ID"'")' .tmp/auto-events.jsonl 2>/dev/null
@@ -709,56 +725,50 @@ The script aggregates `gh issue list` open-issue counts by `phase/*` label (omit
      - Parallel race detected (conflicting commit event or explicit race event in filtered events)
      - Cross-cutting AC mismatch (any `FAIL` from Step 4's cross-cutting pre-verification)
      - At least 1 sub-issue failure in the execution summary
-   - If NOT notable: output "L3 retrospective skipped: no notable orchestration content" and skip the remaining L3 steps.
-
-3. **Create session files** (`docs/sessions/{AUTO_SESSION_ID}-{DATE}/`):
-   ```bash
-   DATE=$(date -u +%Y-%m-%d)
-   SESSION_DIR="docs/sessions/${AUTO_SESSION_ID}-${DATE}"
-   mkdir -p "$SESSION_DIR"
-   ```
-   - Write `$SESSION_DIR/session.md` using the Write tool — format:
-     ```markdown
-     # L3 Session Retrospective: {AUTO_SESSION_ID}
-
-     ## What worked
-     (successful phases, recovery patterns used)
-
-     ## Limits and gaps
-     (cross-cutting conflicts, concurrent commit issues, AC mismatches, tier gaps)
-
-     ## Improvement candidates
-     (proposals for structural improvements)
-
-     ## Auto Retrospective
-     ### Improvement Proposals
-     (retro-proposals-compatible section; same content as Improvement candidates above)
-     ```
-   - Extract session events:
+   - If NOT notable: commit `data-layer.md` and `events.jsonl` for this session and stop:
      ```bash
-     jq -c 'select(.session_id == "'"$AUTO_SESSION_ID"'")' .tmp/auto-events.jsonl > "$SESSION_DIR/events.jsonl" 2>/dev/null || true
+     git add "$SESSION_DIR"
+     git commit -s -m "Add L3 session data for session ${AUTO_SESSION_ID}
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+     git push origin main
      ```
+     Output "L3 data layer committed (not notable — session.md skipped)." and skip the remaining L3 steps.
 
-3a. **Cross-link to data layer report**: if `docs/sessions/${AUTO_SESSION_ID}-*/data-layer.md` exists, append the following to `$SESSION_DIR/session.md` using the Edit tool (or Write tool if Edit is not applicable):
-    ```
-    ---
+4. **Write `$SESSION_DIR/session.md`** using the Write tool — format:
+   ```markdown
+   # L3 Session Retrospective: {AUTO_SESSION_ID}
 
-    ## See also
+   ## What worked
+   (successful phases, recovery patterns used)
 
-    - [Data layer report](docs/sessions/{AUTO_SESSION_ID}-{DATE}/data-layer.md)
-    ```
-    Use a glob to find the actual report file (the date suffix may differ from `$DATE`). If no matching file exists, skip this step.
+   ## Limits and gaps
+   (cross-cutting conflicts, concurrent commit issues, AC mismatches, tier gaps)
 
-4. **Call `modules/retro-proposals.md`** — improvement Issue creation:
+   ## Improvement candidates
+   (proposals for structural improvements)
+
+   ## Auto Retrospective
+   ### Improvement Proposals
+   (retro-proposals-compatible section; same content as Improvement candidates above)
+
+   ---
+
+   ## See also
+
+   - [Data layer report](docs/sessions/{AUTO_SESSION_ID}-{DATE}/data-layer.md)
+   ```
+
+5. **Call `modules/retro-proposals.md`** — improvement Issue creation:
    - Create a bridge file for retro-proposals.md interface compatibility:
      - XL route (`ROUTE="sub_issue"`): `BRIDGE_NUMBER=$NUMBER`; write bridge file at `$SESSION_DIR/issue-${BRIDGE_NUMBER}-l3session.md` containing the `## Auto Retrospective > ### Improvement Proposals` section from `session.md`
      - batch route (`ROUTE="batch"`): `BRIDGE_NUMBER="batch-${AUTO_SESSION_ID}"`; write bridge file at `$SESSION_DIR/issue-${BRIDGE_NUMBER}-l3session.md`
    - Read `${CLAUDE_PLUGIN_ROOT}/modules/retro-proposals.md` and follow "Processing Steps" with `SPEC_PATH=$SESSION_DIR`, `NUMBER=$BRIDGE_NUMBER`, `HAS_SKILL_PROPOSALS` (already retained from `.wholework.yml` detection).
    - Collect filed Issue numbers from retro-proposals output.
 
-5. **Backlink**: If any Issues were filed, append a `## Filed Issues` section to `$SESSION_DIR/session.md` listing each filed Issue number as `- #N`.
+6. **Backlink**: If any Issues were filed, append a `## Filed Issues` section to `$SESSION_DIR/session.md` listing each filed Issue number as `- #N`.
 
-6. **Commit and push**:
+7. **Commit and push**:
    ```bash
    git add "$SESSION_DIR"
    git commit -s -m "Add L3 session retrospective for session ${AUTO_SESSION_ID}
