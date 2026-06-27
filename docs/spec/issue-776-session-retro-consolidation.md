@@ -138,3 +138,52 @@ Pre-merge 条件 10 件すべて verify command が設定されており `rubric
 - PR #805 は squash merge 完了 (mergedAt: 2026-06-27T19:30:47Z)
 - Issue #776 は main ブランチへのマージにより自動クローズ予定 (`closes #776` が PR body に含まれる)
 - verify フェーズは data-layer.md 生成を含む /auto Step 5 L3 retrospective の動作確認が主眼
+
+## Auto Retrospective
+
+### Execution Summary
+
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| spec  | pr (Size M → L upgraded) | SUCCESS | run-spec.sh exit 0, Spec 完成 |
+| code  | pr | SUCCESS (manual recovery) | run-auto-sub.sh was killed mid-execution during code phase. Worktree had 5 commits prepared but branch was not pushed and PR was not created. Parent-session manual recovery: `git push -u origin worktree-code+issue-776` + `gh pr create` (PR #805) |
+| review | pr (--full Size L) | SUCCESS | manual invocation of run-review.sh after recovery. 10/10 PASS |
+| merge | pr | SUCCESS | manual invocation of run-merge.sh after review. squash merge complete |
+| verify | - | SUCCESS | this Skill invocation, all ACs PASS |
+
+### Orchestration Anomalies
+
+- **run-auto-sub.sh killed mid-execution during code phase**: 外部要因 (user 操作 / system kill) で background task が中断。worktree.commit が完了していたが push と PR 作成が未実行の状態で停止。parent session が状態を観察し manual recovery を実施 (push branch, create PR, transition labels, run review wrapper, run merge wrapper)。recovery 内容は本 Auto Retrospective に記録。
+
+### Improvement Proposals
+
+1. **run-auto-sub.sh 中断 detection の強化**: 現在 `auto-checkpoint.sh` は verify counter のみ persist し、code phase の途中状態 (worktree commits done but no push) を SSoT として記録しない。run-auto-sub.sh が code phase 内部で `git push` 成功時点で checkpoint を更新する mechanism があれば、parent-session が "push 直前で kill された" を自動検出して `--resume` で再開可能。Tier 1 — 構造的問題 (本 batch session 内で run-auto-sub.sh が複数回 kill された)。
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Issue Background が "narrative 重複 (session.md vs data-layer.md --full)" の構造的問題を明確に分析し、Design section で Before/After を visual table で対比、設計判断の追跡可能性が高い。Auto-Resolved Ambiguity Points セクションで --non-interactive の解決履歴を保存 (削除 vs 使用停止明記、AC2 false-pass リスク、AC4 スコープ判定の 3 件)。
+
+#### spec
+- Single-Issue route の扱い (data-layer fallback path 維持) が Design で明示され、後の review/verify が "fallback 残置" を確実に検証できる構造。`Changed Files` 12 件のうち `docs/reports/event-log-schema.md` 更新が漏れ、review で SHOULD 指摘として detected (再発: Changed Files リスト網羅性問題 - 本 batch session 4 度目)。
+
+#### code
+- 5 commits を worktree で完了したが **run-auto-sub.sh が外部 kill で中断** → push 未実行・PR 未作成のままで停止。parent session が manual recovery (push + PR create + label transition + run-review.sh + run-merge.sh) で完走させた。本 Issue の Spec には Auto Retrospective 自動追記がないため、本 verify で Auto Retrospective 補完を実施。
+
+#### review
+- 10/10 ACs PASS (Size L → --full review)。Spec vs implementation divergence パターンとして "リテラル文字列 (Narrative Section heading) / ステップ参照 (--no-ja の Step 番号)" の更新漏れを検出。`allowed-tools` frontmatter の更新漏れも recurring issue として記録。
+
+#### merge
+- pre-existing CI failure (append-loop-state-heartbeat.bats #787 で起票済み) を non-interactive auto-resolve で continue。merge 自体は成功、`worktree-code+issue-776` ローカルブランチ削除エラーは worktree 使用中のため deferred。
+
+#### verify
+- 全 10 pre-merge AC + 3 post-merge manual AC が PASS (post-merge も全て source code から in-session 判定可能だった)。
+- **Auto Retrospective が Spec に未追記**だった点を verify retrospective で補完記録 (本 batch session 4 度目の同種事例 — #770, #769, #775 に続く)。
+- code phase の途中 kill → parent session manual recovery のパターンが本 batch session 内で初観察 (Tier 3 sub-agent 経由の "watchdog kill recovery" とは異なる経路 — 親 session 自身が manual recovery 実施)。
+
+### Improvement Proposals
+
+1. **run-auto-sub.sh の code phase 進捗 SSoT 化**: 現状 `auto-checkpoint.sh` は verify counter のみ持つが、code phase 内部の "commit done / push done / PR created" の各 milestone を SSoT として持つ仕組みがあれば、外部 kill 時に `--resume` で適切な milestone から再開可能。本 batch session で run-auto-sub.sh が複数回 kill されたが各 case で manual recovery が必要だった。**Tier 1 priority** (構造的問題)。Spec の `## Auto Retrospective > ### Improvement Proposals 1` でも記述。
+2. **Auto Retrospective の自動追記 (#800 と同根)**: 本 Issue でも Tier 3 ではなく manual recovery だが、recovery 観察を Spec の Auto Retrospective に自動追記する仕組みが Tier 3 だけでなく manual recovery にも必要。#800 (Tier 3 → Spec write 自動化) の scope を manual recovery に拡張する candidate。
+3. **Changed Files 網羅性問題 (#804 と同根)**: `docs/reports/event-log-schema.md` の更新漏れ、`scripts/get-auto-session-report.sh` の Narrative Section heading 更新漏れ、`skills/audit/SKILL.md` の --no-ja Step 番号参照漏れ — いずれも `--full` / `--narrative-draft` 削除に関連するが Spec Changed Files に未列挙。**本 batch session 4 度目**の同種パターン。#804 (grep-based 自動 discovery) の Priority 強化材料。
