@@ -143,3 +143,32 @@ MOCK
     run bash "$SCRIPT" verify 42 --log "$LOG_FILE"
     [ "$status" -eq 1 ]
 }
+
+@test "apply-fallback: dco-signoff-missing-autofix: stdout contains Orchestration Anomalies metadata" {
+    LOG_FILE="$BATS_TEST_TMPDIR/test.log"
+    echo "ERROR: missing sign-off" > "$LOG_FILE"
+
+    run bash "$SCRIPT" code 42 --log "$LOG_FILE"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Orchestration Anomalies"* ]]
+    [[ "$output" == *"dco-signoff-missing-autofix"* ]]
+    [[ "$output" == *"result=recovered"* ]]
+}
+
+@test "apply-fallback: code-patch-silent-no-op: stdout contains Orchestration Anomalies metadata" {
+    LOG_FILE="$BATS_TEST_TMPDIR/test.log"
+    echo "Warning: claude exited 0 but code-patch phase did not complete (silent no-op)." > "$LOG_FILE"
+
+    RUN_CODE_LOG="$BATS_TEST_TMPDIR/run-code.log"
+    cat > "$MOCK_DIR/run-code.sh" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$RUN_CODE_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    run bash "$SCRIPT" code-patch 42 --log "$LOG_FILE"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Orchestration Anomalies"* ]]
+    [[ "$output" == *"code-patch-silent-no-op"* ]]
+}
