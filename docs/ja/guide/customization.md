@@ -152,7 +152,12 @@ Wholework は acceptance criteria を 3 層に分類します。
 
 **`PREVIEW_URL` の解決:**
 
-`PREVIEW_URL` 環境変数は `/review` 呼び出し前に export する必要があります。Wholework 側での自動解決は行いません — CI パイプラインまたはプロジェクト側スクリプトの責務です。
+`PREVIEW_URL` 環境変数は `/review` 呼び出し前に export する必要があります。Wholework 側での自動解決は行いません — CI パイプラインまたはプロジェクト側スクリプトの責務です。例:
+
+```bash
+# CI (GitHub Actions 等) — /review 実行前に設定
+export PREVIEW_URL="https://my-pr-123.example-preview.com"
+```
 
 **動作まとめ:**
 
