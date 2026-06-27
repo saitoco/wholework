@@ -537,6 +537,31 @@ Before writing verify commands for file-existence conditions, check:
    → PASS when file is tracked by git; FAIL when absent or untracked
 ```
 
+### 16. Migration / Rename / Path-change Issues — Apply file_not_contains to Both SKILL.md and Script Layers
+
+When an Issue involves migration, renaming, or path changes, SKILL.md (markdown skill definition) and bash scripts (implementation side) often both contain the same path references. A `file_not_contains` verify command applied only to SKILL.md will PASS even if the old path remains in the implementation script — creating a blind spot that only surfaces during `/review`.
+
+**Background (real example)**: Issue #772 AC8 `file_not_contains "skills/auto/SKILL.md" "docs/reports/loop-state-"` passed, but the same old path remained in `scripts/append-loop-state-heartbeat.sh` (the implementation counterpart). This was not detected until the review phase (commit d0a9288).
+
+**Root cause**: CI cannot detect old path residuals in scripts (outside test coverage). Explicit `file_not_contains` ACs are the only automated detection mechanism.
+
+**Recommended pattern — apply file_not_contains to both layers symmetrically:**
+
+```
+<!-- verify: file_not_contains "skills/auto/SKILL.md" "docs/reports/old-path-" -->
+<!-- verify: file_not_contains "scripts/append-loop-state-heartbeat.sh" "docs/reports/old-path-" -->
+```
+
+Both the SKILL.md side and the implementation script side must be covered.
+
+**Detection procedure when designing Spec ACs for migration Issues:**
+
+1. Run `grep -rn 'old-path' .` (substitute the actual old path string) to enumerate all files that reference the old path
+2. For each matching file, check whether it is under `skills/` (SKILL.md), `scripts/` (bash script), or `modules/` (shared module)
+3. Add a `file_not_contains` verify command for each layer found — do not apply only to SKILL.md
+
+**Note**: Script-side old path residuals are not covered by CI or unit tests. Only explicit `file_not_contains` ACs catch them automatically before merge.
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
