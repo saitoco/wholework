@@ -123,19 +123,18 @@
 Pre-merge 条件 10 件すべて verify command が設定されており `rubric` / `file_not_contains` / `file_not_exists` / `section_contains` / `grep` の組み合わせで確実に検証できた。UNCERTAIN なし。`docs/reports/event-log-schema.md` の `auto-session-report-published` イベント更新は Spec の Changed Files に含まれておらず verify command も無かったため、SHOULD として review 段階で検出 (Spec 改善候補: 削除された機能に紐づくスキーマ更新は Changed Files に明示する)。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- CI validate-skill-syntax FAILURE を修正: `get-auto-session-report.sh` を `allowed-tools` に追加
-- Narrative Section 見出しを `(skeleton)` に統一 (SKILL.md との整合)
-- `--no-ja` ドキュメントのステップ参照を `Step 3` に修正
-- `auto-session-report-published` event を Deprecated にマーク
+- CI failing (ci_failing) 状態での merge を auto-resolve で続行。review フェーズ Phase Handoff で「bats 失敗は pre-existing」と確認済みのため安全と判断
+- `gh pr merge --squash --delete-branch` のブランチ削除エラーは worktree 使用中のため無視 (マージ自体は成功)
+- non-interactive モードで全ステップを auto-resolve で通過
 
 ### Deferred Items
-- `append-loop-state-heartbeat.bats` tests 11-15 の失敗は pre-existing (main ブランチ側の問題)、本 PR とは無関係
-- CONSIDER 事項: session.md "See also" link が data-layer.md 生成失敗時に dangling になる可能性 (best-effort 設計で許容)
+- `worktree-code+issue-776` ブランチの手動削除が必要 (使用中 worktree のため `--delete-branch` が失敗)
+- `append-loop-state-heartbeat.bats` tests 11-15 の pre-existing 失敗は継続して未解決
 
 ### Notes for Next Phase
-- MUST 問題は全て解決済み、SHOULD も修正済み
-- CI の bats 失敗は pre-existing で本 PR の承認を妨げない
-- `/merge 805` 実行可能
+- PR #805 は squash merge 完了 (mergedAt: 2026-06-27T19:30:47Z)
+- Issue #776 は main ブランチへのマージにより自動クローズ予定 (`closes #776` が PR body に含まれる)
+- verify フェーズは data-layer.md 生成を含む /auto Step 5 L3 retrospective の動作確認が主眼
