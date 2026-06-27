@@ -114,3 +114,20 @@ No new comments since last phase.
 - **`docs/ja/guide/customization.md` sync**: `docs/guide/customization.md` は `docs/guide/` 配下のため translation-workflow.md の "top-level `docs/*.md`" 規定の厳密な対象外だが、`docs/ja/guide/` に対応する mirror ファイルが存在するため Changed Files に含める。
 - **`autonomy:` との直交性**: `always-pr` / `auto-stop-at` は `autonomy:` tier (L1/L2/L3) と直交する軸。customization.md の関連セクションに明記する。
 - **ERE grep verify command 確認**: Issue 本文の `grep "stop-at|stop_at" "skills/auto/SKILL.md"` は ripgrep (ERE) で `|` が alternation として機能する正しい ERE 形式。BRE 問題なし。
+
+## Code Retrospective
+
+**PR**: #792 — `worktree-code+issue-783`
+
+**実装サマリ**: 5 ステップ・7 コミットで完走。detect-config-markers → skills/code → skills/auto → docs (EN/JA) → tests の順序は依存グラフに沿っており、前のめりに手戻りが発生しなかった。
+
+**良かった点**:
+- detect-config-markers.md を最初に更新することで、後続の skills 実装のリファレンスが確定した。変数名 `ALWAYS_PR` / `AUTO_STOP_AT` / `EFFECTIVE_STOP_AT` の一貫性を保てた
+- `tests/code.bats` の新規作成により、always-pr ロジックの regression 防止が追加された
+- `docs/ja/workflow.md` の Edit は old_string がコンテキスト圧縮後に再読み込みが必要だったが、Read → Edit の 2 ステップで解決できた
+
+**気づき**:
+- `docs/ja/workflow.md` の更新が Translation sync gap として最後に残った。今後は EN/JA 両ファイルの同一コミット (translations-sync workflow) が推奨
+- `docs/ja/guide/customization.md` は `docs/guide/` 配下のため translation-workflow.md の厳密な対象外だが、mirror ファイルが存在するため Changed Files に含める判断が正しかった
+
+**Pre-merge ACs**: 全 10 件 PASS (grep 3 件 + bats 18 テスト + rubric 5 件)
