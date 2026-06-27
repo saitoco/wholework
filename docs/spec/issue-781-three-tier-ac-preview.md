@@ -145,3 +145,37 @@ No new comments since last phase.
 - **Triple backtick / half-width `!` 禁止**: `skills/*/SKILL.md` 本文 (コードフェンス・inline code・HTML コメント外) に half-width `!` と triple backtick を新規追加しない (validate-skill-syntax.py)。ガイダンス追記は inline code とプレーン文で表現する。
 - **Tool Dependencies**: 実装で使うツール (Read/Edit/Write/`command`+bats) は全て既存 allowed-tools に含まれ、新規 KNOWN_TOOLS 追加は不要。
 - **`docs/workflow.md` は変更不要**: grep 確認の結果、workflow.md は pre-merge/post-merge を phase 説明・label 遷移レベルでしか言及しておらず、AC tier 分類の詳細は記述していない。三層化は phase 遷移/routing を変えないため同期不要。
+
+## spec retrospective
+
+### Minor observations
+- Issue body AC8 が未作成のテストファイル (`tests/issue.bats`) を「既存テスト前提」で参照していた。`/issue` 段でテスト系 AC を書く前に対象ファイルの存在確認を 1 度入れると、spec 段での conflict 検出を前倒しできる。
+- 既存 `{{base_url}}` プレースホルダ機構が 2 系統 (`/review` Step 8.0 = GitHub Deployments API、`/verify` = `PRODUCTION_URL`) あり、本 Issue で 3 系統目 (`PREVIEW_URL` env-var 軽量パス) が加わる。将来の preview URL adapter 化 (follow-up) で統合する余地を残した (adapter chain lazy pattern に乗せる前提)。
+
+### Judgment rationale
+- `.wholework.yml` キーは案B (capability flag `capabilities.pr-preview`) + env 変数名 `PREVIEW_URL` 標準化を採用。env 変数名を設定値化する案A は `--when` 自動付与と verify-executor の評価を複雑化するため不採用。
+- AC tier 表現は新セクションでなく per-AC `<!-- ac-tier: preview -->` タグ (案2)。既存 `verify-type` per-AC タグ慣習と整合し、`/review`/`/verify` のセクション解析・チェックボックス index・count 整合への破壊的変更を回避できる、という判断が決め手。
+
+### Uncertainty resolution
+- 分類ロジックは `/issue` Step 4 の LLM 実行ガイダンスのため、bats では決定論的な「ガイダンス文言の存在」(content 層) しか検証できない。実分類精度 (LLM 層) は post-merge observation AC でカバーする二層テスト戦略を採用 (skill-dev-constraints.md「LLM-assisted Skill Phase Test Strategy」準拠) → 解消。
+- `--when="test -n \"$PREVIEW_URL\""` env-var ガードと既存 Deployments API パスの相互作用は、`/review` Step 8.0 に env-var 直接利用パスを明記することで整合 (env 変数未設定時のみ Deployments API へフォールバック) → 解消。
+
+## Phase Handoff
+
+### Key Decisions
+- `capabilities.pr-preview: true` を単一宣言シグナルとし、preview URL の env 変数名は `PREVIEW_URL` に標準化 (案B)。
+- AC tier は per-AC `<!-- ac-tier: preview -->` タグで表現し、既存 `### Pre-merge (auto-verified)` / `### Post-merge` のセクション構造は不変 (案2)。
+- 既定で `/verify` は `ac-tier: preview` AC を skip (二重検証防止)。本番再検証は post-merge セクションへの複製で opt-in。
+- URL/UX 系 verify command 集合を exhaustive 列挙し、`ac-tier: preview` タグの SSoT は `/issue` Step 4 とする (`/review`/`/verify` は参照のみ)。
+
+### Deferred Items
+- Vercel / Netlify / Cloudflare Pages 用の preview URL 自動解決 adapter は follow-up Issue (Issue body「将来検討事項」)。
+- preview-tier AC が PREVIEW_URL 未解決のまま残った場合の UX は最小実装 (SKIPPED 記録のみ。phase/verify 残置で人手判断)。
+- `verify-classifier.md` への tier 概念統合は本 Issue スコープ外 (post-merge verify-type 専用モジュールのため)。
+
+### Notes for Next Phase
+- `skills/issue/SKILL.md` / `skills/review/SKILL.md` / `skills/verify/SKILL.md` 編集時、本文 (コードフェンス・inline code・HTML コメント外) に half-width `!` と triple backtick を新規追加しない (validate-skill-syntax.py MUST)。
+- `tests/issue.bats` は新規作成。参照は **リポジトリルート相対 path**、bats 3.2+ 互換構文のみ。CI は `tests/*.bats` を実行するため自動収集される。
+- `/issue` Step 4 に追加する URL/UX command 集合には `(exhaustive)` マーカーを付ける。
+- `docs/structure.md` の `tests/` ファイル数コメントは現状 87 表記だが実数は 88 (既存ドリフト)。`tests/issue.bats` 追加後の実数 89 に同期する。
+- ja ミラー同期: `docs/ja/structure.md` / `docs/ja/tech.md` は top-level docs で必須、`docs/ja/guide/customization.md` は consistency 目的。
