@@ -125,3 +125,35 @@ CONSIDER のみ 3 件検出された:
 - rubric + grep + command (CI reference) で3件の pre-merge 条件を PASS 判定できた。
 - `github_check "gh run list ..."` は safe モードの allowlist 外のため UNCERTAIN だったが、`gh pr checks` での CI 状態確認で実質的に PASS 相当を確認。
 - `gh run list` を `gh pr checks` で代替できるよう verify command を更新すると UNCERTAIN を PASS に変換できる (Spec 品質改善候補)。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Auto-Resolved Ambiguity Points セクションが 3 点の曖昧解消を体系的に整理 (存在しないファイル名修正、CI verify command 形式選択、rubric mechanical safety net 補完)。`/issue` フェーズが Spec への準備として機能。
+
+#### spec
+- Implementation Steps が 4 ファイルの error handling 追加と 4 ファイルの bats テスト追加を漏れなく列挙し、Phase Handoff (`<!-- phase: merge -->`) で次フェーズへ正確に橋渡し。
+- 行番号参照 (`line 68, 90, 92` 等) が code 実装時に実ファイルとずれていた (Spec の参照番号は Spec 作成時点の snapshot; 後続 commit で番号がずれた)。Spec の Code Retrospective でこれが記録されている。
+
+#### code
+- Code Retrospective に「`gh-graphql.sh` no-cache path は pipe 内の最終コマンドではなく else ブロックの最終コマンド」という不正確な記述があったが、review retrospective で訂正されている。実装そのものは正しい。
+- Rework なし。
+
+#### review
+- 3 件の CONSIDER (test path coverage、Retrospective 記述精度、verify command 形式) が建設的な観察として記録された。
+- 同一パターンの複数 if-else ブランチで代表パスのみテストする pattern が 2 件検出 — Spec の test guideline 改善余地として記録。
+
+#### merge
+- `ci_failing` (`Forbidden Expressions check` の pre-existing false positive) を non-interactive auto-resolve で通過。本 Issue の変更とは無関係な #765 で追跡中の課題。
+
+#### verify
+- AC4 (`github_check "gh run list ..." "success"`) が #733 と同様 workflow 全体 conclusion の failure (`Forbidden Expressions check` 失敗) で literal FAIL になったが、`Run bats tests` job 単独は success。intent (CI bats green) を満たすため代替検証で PASS。
+- `github_check` の workflow-level vs job-level の divergence が #733 / #738 で連続発生。Tier 2 (lesson) から Tier 1 (recurring pattern) に格上げ要検討。
+
+### Improvement Proposals
+
+- **PROPOSAL** (skill-infra, recurring): `github_check` verify command で workflow 全体ではなく特定 job の conclusion を見られる sub-form を導入。#733 / #738 で連続発生した「workflow 全体は別 job の失敗で FAIL だが bats job は success」というパターンに対する構造的解決。例: `github_check_job "Run bats tests" "success"` のような job 名直接指定の sub-form を verify-executor.md に追加。
+- **PROPOSAL** (skill-infra): Spec の test guideline に「同一パターンの if-else 複数ブランチに対するテスト方針 (全パスカバー vs 代表パスのみカバー) の判断基準」を明記。review phase の CONSIDER 指摘 (本 Issue で 2 件) を減らす予防策。
+- **OBSERVATION** (one-time): `Forbidden Expressions check` の pre-existing false positive (Issue #765) が複数の Issue (#733, #738) で CI を blocking している。#765 解決の優先度を再評価する価値あり。
