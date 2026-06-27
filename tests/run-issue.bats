@@ -1,8 +1,8 @@
 #!/usr/bin/env bats
 
 # Tests for run-issue.sh
-# Mocks: claude, claude-watchdog.sh, phase-banner.sh, gh, reconcile-phase-state.sh
-#        (via MOCK_DIR + WHOLEWORK_SCRIPT_DIR)
+# Mocks: claude, claude-watchdog.sh, phase-banner.sh, gh, reconcile-phase-state.sh,
+#        emit-event.sh (via MOCK_DIR + WHOLEWORK_SCRIPT_DIR)
 
 SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/run-issue.sh"
 
@@ -80,6 +80,11 @@ MOCK
     cat > "$MOCK_DIR/watchdog-defaults.sh" <<'MOCK'
 WATCHDOG_TIMEOUT_DEFAULT=1800
 load_watchdog_timeout() { WATCHDOG_TIMEOUT=1800; }
+MOCK
+
+    # Mock emit-event.sh: no-op by default (tests that need capture override this)
+    cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+emit_event() { return 0; }
 MOCK
 
     # Real guard-prefix.sh (sourced via WHOLEWORK_SCRIPT_DIR)
@@ -269,4 +274,38 @@ MOCK
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
     [[ "$output" != *"Warning:"* ]]
+}
+
+@test "emit: phase_start emitted when EMIT_PHASE_NAME is not set" {
+    EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
+MOCK
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    grep -q "phase_start" "$EMIT_LOG"
+    grep -q "phase=issue" "$EMIT_LOG"
+}
+
+@test "emit: phase_start not emitted when EMIT_PHASE_NAME is pre-set (no double emit)" {
+    EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
+MOCK
+    export EMIT_PHASE_NAME="issue"
+    run bash "$SCRIPT" 123
+    unset EMIT_PHASE_NAME
+    [ "$status" -eq 0 ]
+    ! grep -q "phase_start" "$EMIT_LOG"
+    ! grep -q "phase_complete" "$EMIT_LOG"
+}
+
+@test "emit: phase_complete emitted on success" {
+    EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
+MOCK
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    grep -q "phase_complete" "$EMIT_LOG"
 }
