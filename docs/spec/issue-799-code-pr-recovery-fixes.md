@@ -112,3 +112,51 @@ AC1 (rubric) は各 cause group の緩和策実装を確認する形式で、PR 
 ### Notes for Next Phase
 - verify フェーズで main ブランチのスカッシュコミットを対象に verify command を実行すること
 - `docs/reports/orchestration-recoveries.md`、`scripts/apply-fallback.sh`、`scripts/watchdog-defaults.sh`、`tests/apply-fallback.bats`、`tests/watchdog-defaults.bats` が変更対象ファイル
+
+## Auto Retrospective
+
+### Execution Summary
+
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| issue | -     | SUCCESS (after 1 retry) | run-issue.sh killed once early. Retry success |
+| spec  | pr (Size M) | SUCCESS | Spec 完成 |
+| code  | pr | SUCCESS (manual recovery) | run-auto-sub.sh killed after 4 commits on worktree. Parent-session manual recovery: `git push -u` + `gh pr create` (PR #808) |
+| review | pr (--light) | SUCCESS | 10/10 PASS, 1 SHOULD skipped (intentional scope limit) |
+| merge | pr | SUCCESS | squash merge complete |
+| verify | - | SUCCESS | this Skill invocation, all ACs PASS |
+
+### Orchestration Anomalies
+
+- **run-issue.sh killed early (first attempt, 60-120s silent)**: 本 batch session で 3 度目の同種事例 (#778, #779, #799). retry で成功。
+- **run-auto-sub.sh killed during code phase (post-commit pre-push)**: 本 batch session で 4 度目の同種事例 (#776, #779, #780, #799). parent session が `git push -u` + `gh pr create` で recovery。本 Issue の fix (WATCHDOG_TIMEOUT_CODE_DEFAULT 1800→3600) は今後の発生頻度を削減する目的だが、batch session 内で既に observed なため本 retro に記録。
+
+### Improvement Proposals
+
+1. **本 Issue の fix の効果検証**: 本 batch 内で fix 後の run-auto-sub.sh kill が発生したか否かを次回 batch session で確認。発生したら mitigation の追加検討 (heartbeat-based reset 等)。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Issue body は本 batch session 内で auto-generated (`/verify` Step 15 recoveries-auto-fire)。Source Entries が 3 件で初期作成されたが、`/issue` 段階で `orchestration-recoveries.md` に 5 件存在することを検出して table を 5 件に拡充。Auto-Resolved Ambiguity Points で table stale, AC2 rubric timing, Pre-merge/Post-merge 分割の 3 件を解決。
+
+#### spec
+- 2 cause groups (active-implementation / clean-slate) に対する 2 fixes (watchdog 引上げ / Tier 2 handler) の分離設計。Tier 2 を Tier 3 経路の代替として導入する設計が orchestration-fallbacks.md の既存 fallback catalog 設計と整合。
+
+#### code
+- 4 commits で実装完了。run-auto-sub.sh kill → manual recovery で push/PR 作成。
+
+#### review
+- 10/10 PASS、1 SHOULD skipped (`modules/orchestration-fallbacks.md` の `Applicable Phases` 記載が実装と不一致 — intentional scope limit、別 Issue 対応予定)。
+
+#### merge
+- squash merge 完了。
+
+#### verify
+- 全 2 pre-merge AC + 1 post-merge AC PASS。本 Issue は **本 batch session 内 retro chain の中核** (orchestration recovery 自動化機能の self-improvement)。
+
+### Improvement Proposals
+
+1. **Review SHOULD skip の follow-up**: `modules/orchestration-fallbacks.md` の `Applicable Phases` 記載と `apply-fallback.sh` 実装の不一致が review で検出された (intentional scope limit で skip)。別 Issue で対応する旨が record されているが、起票候補として記録。優先度 low (functional 問題なし)。
