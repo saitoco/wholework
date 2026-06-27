@@ -14,7 +14,7 @@
 #   --output <path>           Output path (default: docs/sessions/<id>-<date>/data-layer.md)
 #   --no-github               Skip gh issue/pr calls (for hermetic bats tests)
 #   --narrative-draft <path>  Pre-generated narrative draft file; replaces TBD placeholders with
-#                             draft content prefixed by [LLM draft — human review required] marker
+#                             draft content inserted directly in place of TBD placeholders
 #   --since <spec>            List mode: filter sessions by time (e.g. 24h, 2026-06-14)
 #   --day YYYY-MM-DD          Period aggregate mode: sessions from the specified date
 #   --since-days N            Period aggregate mode: sessions from the past N days
@@ -870,16 +870,13 @@ for i in range(1, len(parts), 2):
     content = parts[i + 1].strip() if i + 1 < len(parts) else ''
     sections[name] = content
 
-MARKER = '[LLM draft — human review required]'
-
 def replace_tbd(report_text, section_name, draft_content):
     """Replace 'TBD — fill in after reviewing the session' under section_name with draft."""
     pattern = re.compile(
         r'(### ' + re.escape(section_name) + r'\n)TBD — fill in after reviewing the session',
         re.MULTILINE
     )
-    replacement = r'\1> ' + MARKER + '\n\n' + draft_content
-    return pattern.sub(replacement, report_text)
+    return pattern.sub(lambda m: m.group(1) + draft_content, report_text)
 
 for section_name, content in sections.items():
     if content:

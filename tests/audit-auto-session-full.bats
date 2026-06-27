@@ -57,7 +57,7 @@ DRAFT_EOF
     grep -q "primary gap is the universal phase/verify terminal state" "$OUTPUT_PATH"
 }
 
-@test "full mode: [LLM draft marker is attached to narrative sections" {
+@test "full mode: narrative sections are inserted without LLM draft marker" {
     # Generate report first, then apply narrative draft
     run bash "$SCRIPT" "abc-999" --output "$OUTPUT_PATH" --no-github
     [ "$status" -eq 0 ]
@@ -80,8 +80,10 @@ DRAFT_EOF
     run bash "$SCRIPT" "abc-999" --narrative-draft "$BATS_TEST_TMPDIR/draft-fixture.md" --output "$OUTPUT_PATH" --no-github
     [ "$status" -eq 0 ]
 
-    # LLM draft marker must appear in the report
-    grep -q "\[LLM draft" "$OUTPUT_PATH"
+    # Draft content must appear in the report
+    grep -q "The watchdog held throughout the session" "$OUTPUT_PATH"
+    # LLM draft marker must NOT appear in the report
+    ! grep -q "\[LLM draft" "$OUTPUT_PATH"
 }
 
 @test "full mode: auto-session-report-published event is emitted after --narrative-draft" {
