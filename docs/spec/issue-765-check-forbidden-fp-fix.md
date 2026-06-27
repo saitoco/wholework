@@ -105,3 +105,31 @@
 - `/verify` では pre-merge AC 3 件すべて PASS 済み (`bash scripts/check-forbidden-expressions.sh` exit 0 / bats 19 tests OK / rubric 確認済み)
 - post-merge AC: 次回 PR で hyphen-preceded `Issue Spec` が含まれた際に CI PASS することを確認する
 - 実装はシンプル (スクリプト修正 + テスト追加 + Spec cleanup の 3 ファイルのみ) で副作用リスクは低い
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- `/issue 765` refinement 段階で当初診断 (「単語境界がない」) が誤りであることを確認し、実際の false positive を 3 パターン (per-Issue Spec / docs/sessions/ / docs/reports/) に特定したのが大きい。Background を正しく差し替えたうえで Implementation Steps に進めた。
+
+#### spec
+- Root Cause セクションを設けて 3 パターンを明示し、Implementation Steps を結果ベース (exit 0 + テスト追加) に固定したのは設計判断として妥当。
+- 「Spec 本文が deprecated term を引用する場合の取り扱い」を考慮しなかった点が gap。本来 Spec 段階で予見すべきだったが、code phase で追加対応が発生した。
+
+#### code
+- 想定外の作業: Spec ファイル自体が deprecated term を引用して新たな false positive を生み、これを backtick 化 + `旧称:` コメントで対処。AC2 (`bash scripts/check-forbidden-expressions.sh` exit 0) を満たすために必須だった。
+- 1 発で全テスト PASS。`extra_grep_v` (第 4 引数) パターンの導入で他 term への拡張余地も確保。
+
+#### review/merge
+- patch route のため review/merge は実行されず (XS/S patch では main 直コミット)。
+
+#### verify
+- 3 件すべて PASS、UNCERTAIN ゼロ。AC2 の `command` verify command が full mode で実行され、修正の最終確認として機能した。
+
+### Improvement Proposals
+
+- **tech.md / Spec ガイダンス拡張**: 「Spec 本文 (Implementation Steps、Reproduction Steps 等) で deprecated term を引用する場合は必ずバッククォートで囲む、または `extra_grep_v` 対応の形式 (`旧称:` 付き) を使う」というルールを `tech.md` の Forbidden Expressions セクション、または `skills/spec/SKILL.md` のガイダンスに追加する。
+  - 動機: 本 Issue で Spec ファイル自身が CI false positive を新たに生み、code phase で予定外の追加作業 (4 箇所修正) が発生した。同パターンは今後も deprecated term を扱う Issue で再発しうる。
+  - Tier 2 (convention): Skill 自体の動作変更ではなく運用ルールの明文化。新規 Issue 起票せず memory として記録するのが妥当。
+- **Spec retrospective 自動チェック (将来構想)**: Spec 作成時に `check-forbidden-expressions.sh` を `--include-spec` モードで実行できるようにし、deprecated term 引用の警告を Spec 段階で出す。Tier 3 (one-time memo) — 現時点では起票しない、convention 普及後に再評価。
