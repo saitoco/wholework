@@ -64,6 +64,29 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
+## 2026-06-27 18:15 UTC: code-pr-tier3-recovery
+
+### Context
+- Issue #775, phase: code-pr
+- Source: recovery-sub-agent
+- Wrapper: run-code-pr.sh, exit code: 143
+- Log tail: "Finished at: 2026-06-28 03:06:16"
+
+### Diagnosis
+- Watchdog killed the process (SIGTERM, exit 143) after 1800s of silence in JSON mode with no persistent artifacts — the reconcile snapshot confirms no open PR and no commits for branch worktree-code+issue-775. Since the phase left no partial state requiring manual cleanup, a clean retry is the appropriate and safest recovery action.
+
+### Recovery Applied
+- action=retry
+- steps: none
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+---
+
 ## 2026-06-27 16:54 UTC: code-pr-tier3-recovery
 
 ### Context
