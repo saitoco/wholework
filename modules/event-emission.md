@@ -126,15 +126,16 @@ stays empty and `phase_start` / `phase_complete` are not emitted — preventing 
 
 `_maybe_emit_phase_complete()` is registered as an EXIT trap in each wrapper. On exit, it checks
 whether the last event for the current issue (in the session) was `phase_start`. If so, it writes
-a `phase_complete` entry with `"backfilled": true`. This ensures SIGTERM / watchdog timeout exits
-are still reflected in the event log.
+a `phase_complete` entry with `"backfilled": true`. This covers cases where `phase_start` was
+emitted but `phase_complete` was not, on clean (exit code 0) exits only.
 
 Guard conditions (all must be set and non-empty for backfill to fire):
 - `AUTO_SESSION_ID`
 - `EMIT_ISSUE_NUMBER`
 - `EMIT_PHASE_NAME`
 - `AUTO_EVENTS_LOG`
-- Exit code must be 0 (backfill only on clean exit; non-zero exits are error states)
+- Exit code must be 0 (backfill only on clean exit; non-zero exits — including SIGTERM (143) —
+  are not backfilled; they are tracked via `wrapper_exit` events emitted by `run-auto-sub.sh`)
 
 ## How to Reference
 
