@@ -92,13 +92,13 @@
 - 全 9 件が `file_not_contains` / `file_exists` / `rubric` コマンドで明確に検証可能であり UNCERTAIN なし。削除系 Issue として verify command の設計が適切だった。`--issues-json` テストカバレッジ欠落は verify command では検知できない種類の問題 (削除で生じる coverage gap)。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- CI FAILURE (`tests/append-loop-state-heartbeat.bats` テスト 11-15) は本 PR の変更と無関係で main ブランチにも存在する既存問題のため、マージブロック理由としない判断
-- SHOULD 問題 2 件 (orchestration-recoveries.md の stale 参照、--issues-json テスト欠落) は scope 外として skip — 別途フォローアップ推奨
-- MUST 問題なしのため REQUEST_CHANGES ではなく COMMENT で投稿
+- `mergeable=false, reason=ci_failing` を non-interactive auto-resolve で通過。CI 失敗は `tests/append-loop-state-heartbeat.bats` の既存問題 (review フェーズで確認済み、本 PR 無関係) のため安全にマージ
+- `gh pr merge --squash --delete-branch` で squash merge 完了 (2026-06-27T18:32:05Z)
+- BASE_BRANCH=main のため `closes #775` が auto-close を実行
 
 ### Deferred Items
 
@@ -108,5 +108,5 @@
 
 ### Notes for Next Phase
 
-- MUST 問題なし。`/merge 803` で直接マージ可能
-- post-merge の 2 条件 (`/audit recoveries` で unknown subcommand 確認、`/verify` Step 15 の動作確認) は `/verify` フェーズで実施
+- post-merge 観察 2 件が verify の主タスク: (1) `/audit recoveries` 入力で unknown subcommand 相当のメッセージが返ること、(2) `/verify` Step 15 の recoveries-auto-fire が正常動作すること
+- Spec の "Verification (post-merge)" セクションに verify command が記載されているが、これらは観察ベース (rubric) のため verify フェーズで確認する
