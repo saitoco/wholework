@@ -117,18 +117,18 @@
 - Nothing to note. 全 4 AC が PASS、UNCERTAIN ゼロ。rubric AC (AC1, AC4) は実装コードの読み取りで判定できた。grep AC (AC2, AC3) は直接的に確認できた。verify commands は適切に設計されていた。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- review-light エージェントが利用不可だったため、インラインで 4 視点レビューを実施した。結果は同等。
-- CI `Forbidden Expressions check` FAILURE は pre-existing issue と判定し、PR のマージブロックにしなかった (PR #766 変更ファイルに violations なし)。
-- MUST issues ゼロのため Step 12 (issue resolution) はスキップした。
+- CI `Forbidden Expressions check` FAILURE は pre-existing issue (review phase の調査で確認済み) のため、non-interactive auto-resolve でマージを続行した。PR #766 の変更ファイルに violations なし。
+- `gh pr merge --squash --delete-branch` で main へのスカッシュマージ成功 (commit 6cb3c4a)。
+- 本 Issue は `closes #762` 記述と BASE_BRANCH=main により Issue が自動クローズされる。
 
 ### Deferred Items
 - 逆方向 cross-link (session.md → データ層レポート) の実際の動作確認は Post-merge 検証 (次回 batch/XL session) で行う。
-- Forbidden Expressions check の単語境界バグ (単語境界なしパターンが `sub-issue Spec` 等の正当な記述を誤検知) は別 Issue での修正が必要。
+- Forbidden Expressions check の単語境界バグは別 Issue での修正が必要 (review phase 引き継ぎ)。
 
 ### Notes for Next Phase
-- 全 AC PASS、CI 主要ジョブ PASS (Forbidden Expressions check のみ pre-existing FAILURE)。
-- MUST issues なし。`/merge 766` で続行可。
-- /verify では rubric AC が 2 個あるため、実装内容を git diff で grader に渡して判定させること (code phase のメモを引き継ぎ)。
+- `/verify 762` では rubric AC が 2 個あるため、実装内容を git diff または Spec の Implementation Steps と対照させて判定すること。
+- `grep "See also"` および `grep "session\.md"` の AC は scripts/get-auto-session-report.sh を直接読むことで確認可能。
+- Post-merge 検証 (次回 batch/XL session での実動作確認) は verify スコープ外のため、verify では Pre-merge AC のみ評価すること。
