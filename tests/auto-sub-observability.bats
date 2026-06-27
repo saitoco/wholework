@@ -136,6 +136,43 @@ MOCK
     grep -q '"backfilled":true' "$AUTO_EVENTS_LOG"
 }
 
+@test "backfill-emit: SIGTERM (exit 143) with phase_start emits phase_complete with backfilled" {
+    export AUTO_SESSION_ID="test-session-sigterm"
+    export EMIT_ISSUE_NUMBER="42"
+    export EMIT_PHASE_NAME="code-pr"
+    mkdir -p "$(dirname "$AUTO_EVENTS_LOG")"
+    printf '{"ts":"2026-01-01T00:00:00Z","issue":42,"event":"phase_start","session_id":"test-session-sigterm","phase":"code-pr"}\n' \
+        >> "$AUTO_EVENTS_LOG"
+
+    cat > "$BATS_TEST_TMPDIR/sigterm-helper.sh" <<HELPER
+#!/usr/bin/env bash
+source "$MOCK_DIR/emit-event.sh"
+_maybe_emit_phase_complete() {
+  local _exit_code=\$?
+  [[ "\$_exit_code" -ne 0 && "\$_exit_code" -ne 143 ]] && return 0
+  [[ -z "\${AUTO_EVENTS_LOG:-}" ]] && return 0
+  [[ -z "\${AUTO_SESSION_ID:-}" ]] && return 0
+  [[ -z "\${EMIT_ISSUE_NUMBER:-}" ]] && return 0
+  [[ -z "\${EMIT_PHASE_NAME:-}" ]] && return 0
+  local _last_event
+  _last_event=\$(grep "\\"session_id\\":\\"\${AUTO_SESSION_ID}\\"" "\${AUTO_EVENTS_LOG}" 2>/dev/null \
+      | jq -rs --argjson n "\${EMIT_ISSUE_NUMBER}" \
+        '[.[] | select(.issue == \$n)] | last // empty | .event // ""' 2>/dev/null || true)
+  if [[ "\${_last_event}" == "phase_start" ]]; then
+    local _ts; _ts=\$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    printf '%s\n' \
+      "{\\"ts\\":\\"\${_ts}\\",\\"issue\\":\${EMIT_ISSUE_NUMBER},\\"event\\":\\"phase_complete\\",\\"session_id\\":\\"\${AUTO_SESSION_ID}\\",\\"phase\\":\\"\${EMIT_PHASE_NAME}\\",\\"backfilled\\":true}" \
+      >> "\${AUTO_EVENTS_LOG}" 2>/dev/null || true
+  fi
+}
+trap '_maybe_emit_phase_complete' EXIT
+exit 143
+HELPER
+    run bash "$BATS_TEST_TMPDIR/sigterm-helper.sh"
+    [ "$status" -eq 143 ]
+    grep -q '"backfilled":true' "$AUTO_EVENTS_LOG"
+}
+
 @test "session-isolation: PGID-specific pointer file is read when AUTO_SESSION_ID is unset" {
     # Obtain the PGID of the current shell (same as run-auto-sub.sh will see)
     local pgid
