@@ -98,7 +98,7 @@ Set `REVIEW_DEPTH` from flags or Size (used unchanged in Step 4 unless Step 3a r
 | Auto-detect or `--pr` without `--review=...`: Size L | `--full` |
 | Auto-detect or `--pr` without `--review=...`: other/unset | `--light` (safe fallback) |
 
-### Step 2.5: Fix-cycle Detection
+### Step 2a: Fix-cycle Detection
 
 Before checking the phase label in Step 3, detect whether the Issue is in a **fix-cycle state** — a condition where `/verify` has already run and flagged a FAIL, phase labels were cleared by `/verify`, and a Spec already exists. In this state, re-running issue/spec phases is unnecessary and risks overwriting the existing Spec.
 

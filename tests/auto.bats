@@ -20,28 +20,28 @@ step3a_section() {
     [[ "$output" == *"Post-spec route demotion"* ]]
 }
 
-# Extract Step 2.5 section: from "### Step 2.5:" to the next "### " heading
-step2_5_section() {
-    awk '/^### Step 2\.5:/{found=1} found && /^### / && !/^### Step 2\.5:/{exit} found{print}' "$1"
+# Extract Step 2a section: from "### Step 2a:" to the next "### " heading
+step2a_section() {
+    awk '/^### Step 2a:/{found=1} found && /^### / && !/^### Step 2a:/{exit} found{print}' "$1"
 }
 
-@test "Step 2.5 fix-cycle section exists in SKILL.md" {
-    run step2_5_section "$SKILL_FILE"
+@test "Step 2a fix-cycle section exists in SKILL.md" {
+    run step2a_section "$SKILL_FILE"
     [ -n "$output" ]
 }
 
-@test "Step 2.5 section contains fix-cycle keyword" {
-    run step2_5_section "$SKILL_FILE"
+@test "Step 2a section contains fix-cycle keyword" {
+    run step2a_section "$SKILL_FILE"
     [[ "$output" == *"fix-cycle"* ]]
 }
 
-@test "Step 2.5 section describes skipping issue and spec phases" {
-    run step2_5_section "$SKILL_FILE"
+@test "Step 2a section describes skipping issue and spec phases" {
+    run step2a_section "$SKILL_FILE"
     [[ "$output" == *"run-issue.sh"* ]] || [[ "$output" == *"issue/spec"* ]]
     [[ "$output" == *"run-code.sh"* ]]
 }
 
-@test "Step 2.5 section references verify-fail marker" {
-    run step2_5_section "$SKILL_FILE"
+@test "Step 2a section references verify-fail marker" {
+    run step2a_section "$SKILL_FILE"
     [[ "$output" == *"verify-fail"* ]]
 }

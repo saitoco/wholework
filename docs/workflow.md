@@ -104,7 +104,7 @@ Orchestrator that chains Core Phases sequentially, running each as an independen
 - **pr M/L**: spec (if needed) → code → review (M → `--light`, L → `--full`) → merge → verify
 - **XL**: reads the sub-issue dependency graph (`blockedBy`) and runs independent sub-issues in parallel (worktree isolation), sequencing dependents after their blockers complete. `/auto` auto-executes spec for each sub-issue.
 
-If `phase/ready` is absent, `/auto` auto-runs `/spec` first. If no `phase/*` label is set, it starts from issue triage/refinement. Details: [`skills/auto/SKILL.md`](../skills/auto/SKILL.md)
+If `phase/ready` is absent, `/auto` auto-runs `/spec` first. If no `phase/*` label is set, it starts from issue triage/refinement. **Fix-cycle exception**: when all of (a) a `wholework-event: type=verify-fail` marker comment exists, (b) no `phase/*` labels are present, and (c) a Spec file exists, `/auto` detects the fix-cycle state and skips issue/spec phases, running code directly (Step 2a). Details: [`skills/auto/SKILL.md`](../skills/auto/SKILL.md)
 
 **`--batch N`**: Bulk-processes N XS/S Issues from the backlog in newest-first order. **`--batch N1 N2 ...`**: Processes the explicitly listed Issues in the specified order (all Sizes except XL accepted). Before running each Issue, the parent session checks for `blocked-by` relationships in the Issue body: if a blocker is not yet CLOSED or `phase/done`, the Issue is skipped and kept in `remaining` for retry via `/auto --batch --resume`. After `run-auto-sub.sh` succeeds for each Issue, the parent session re-fetches labels: if `phase/verify` is present, it invokes `/verify` in the parent session so verifiable Issues can reach `phase/done` within the same batch run. When `/auto` is invoked non-interactively (e.g., via `--non-interactive`), the verify step is skipped and the Issue remains at `phase/verify` for later manual review.
 
@@ -222,6 +222,7 @@ When `/verify` detects a FAIL among auto-verification targets, it appends a mach
 /verify FAIL → gh issue reopen + remove all phase/*
   ↓
 User selects:
+  - /auto N          — fix-cycle fast-path: skips issue/spec phases automatically (recommended)
   - /code --patch N  — fix with direct commit to main (small fix, Size unchanged)
   - /code --pr N     — fix with new branch + PR (larger fix, Size L)
   - /spec N          — revisit design (when root cause requires redesign)
