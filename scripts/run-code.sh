@@ -190,6 +190,8 @@ fi
 # See: https://github.com/anthropics/claude-code/issues/22362
 load_watchdog_timeout "$SCRIPT_DIR" "code"
 
+_emit_comments_consumed "$ISSUE_NUMBER" "code" || true
+
 SECONDS=0
 set +e
 if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
@@ -249,6 +251,10 @@ if [[ "$ROUTE_FLAG" == "--pr" && $EXIT_CODE -eq 0 ]]; then
       echo "Recommended: resolve conflicts before /merge. See modules/orchestration-fallbacks.md#code-base-conflict for the recovery procedure." >&2
     fi
   fi
+fi
+
+if [[ $EXIT_CODE -eq 0 ]]; then
+  "$SCRIPT_DIR/append-loop-state-heartbeat.sh" --issue "$ISSUE_NUMBER" --from spec --to code >/dev/null 2>&1 || true
 fi
 
 if [[ $EXIT_CODE -eq 0 && -n "${_EMIT_PHASE_OWNED:-}" ]]; then

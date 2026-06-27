@@ -89,47 +89,8 @@ _loop_state_to_phase() {
   esac
 }
 
-# Bash-side comments_consumed event emitter. Issue #705 — replaces the LLM
-# Step 6 in l0-surfaces.md Comment Consumption Procedure, which was not firing
-# reliably in batch mode because the LLM skips the emit step.
-# Called before each phase runner script so the event is captured even when
-# the LLM omits the bash emit.
-_emit_comments_consumed() {
-  local issue="$1"
-  local phase="$2"
-  [[ -z "${AUTO_EVENTS_LOG:-}" ]] && return 0
-  [[ -z "${AUTO_SESSION_ID:-}" ]] && return 0
-
-  # Fetch cutoff: timestamp of the last phase/* label assignment
-  local cutoff=""
-  cutoff=$(gh api "repos/{owner}/{repo}/issues/${issue}/timeline" --paginate \
-    --jq '[.[] | select(.event=="labeled" and (.label.name|startswith("phase/"))) | .created_at] | last // empty' \
-    2>/dev/null || true)
-
-  # Fetch all comments as JSON array, then filter since cutoff
-  local comments_json="[]"
-  comments_json=$(gh issue view "$issue" --json comments --jq '.comments' 2>/dev/null || echo "[]")
-  if [[ -n "$cutoff" ]]; then
-    comments_json=$(echo "$comments_json" \
-      | jq --arg c "$cutoff" '[.[] | select(.createdAt > $c)]' 2>/dev/null || echo "[]")
-  fi
-
-  local count=0 owner_n=0 member_n=0 collab_n=0 contrib_n=0 none_n=0 authors=""
-  count=$(echo "$comments_json" | jq 'length' 2>/dev/null || echo 0)
-  owner_n=$(echo "$comments_json" | jq '[.[] | select(.authorAssociation=="OWNER")] | length' 2>/dev/null || echo 0)
-  member_n=$(echo "$comments_json" | jq '[.[] | select(.authorAssociation=="MEMBER")] | length' 2>/dev/null || echo 0)
-  collab_n=$(echo "$comments_json" | jq '[.[] | select(.authorAssociation=="COLLABORATOR")] | length' 2>/dev/null || echo 0)
-  contrib_n=$(echo "$comments_json" | jq '[.[] | select(.authorAssociation=="CONTRIBUTOR")] | length' 2>/dev/null || echo 0)
-  none_n=$(echo "$comments_json" | jq '[.[] | select(.authorAssociation=="NONE")] | length' 2>/dev/null || echo 0)
-  authors=$(echo "$comments_json" | jq -r '[.[] | .author.login] | unique | join(",")' 2>/dev/null || true)
-
-  EMIT_ISSUE_NUMBER="$issue" emit_event "comments_consumed" \
-    "phase=${phase}" \
-    "count=${count}" \
-    "authors=${authors:-}" \
-    "trust_breakdown=OWNER:${owner_n},MEMBER:${member_n},COLLABORATOR:${collab_n},CONTRIBUTOR:${contrib_n},NONE:${none_n}" \
-    2>/dev/null || true
-}
+# _emit_comments_consumed() is now defined in emit-event.sh (Issue #791).
+# Sourced via: source "$SCRIPT_DIR/emit-event.sh" above.
 
 # Best-effort heartbeat append. Never blocks the caller. Issue #701 — replaces
 # the LLM-driven inline procedure in skills/auto/SKILL.md that was not firing

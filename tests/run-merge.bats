@@ -90,6 +90,7 @@ MOCK
 
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
 emit_event() { return 0; }
+_emit_comments_consumed() { :; }
 MOCK
 
     # Real guard-prefix.sh (sourced via WHOLEWORK_SCRIPT_DIR)
@@ -543,10 +544,29 @@ MOCK
     EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
 emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
+_emit_comments_consumed() { :; }
 MOCK
     run bash "$SCRIPT" 88
     [ "$status" -eq 0 ]
     grep -q "phase_complete" "$EMIT_LOG"
+}
+
+@test "side-effect: append-loop-state-heartbeat.sh called on merge phase success" {
+    HEARTBEAT_LOG="$BATS_TEST_TMPDIR/heartbeat.log"
+    export HEARTBEAT_LOG
+
+    cat > "$MOCK_DIR/append-loop-state-heartbeat.sh" <<MOCK
+#!/bin/bash
+echo "heartbeat_called \$@" >> "${HEARTBEAT_LOG}"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/append-loop-state-heartbeat.sh"
+
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    grep -q "heartbeat_called" "$HEARTBEAT_LOG"
+    grep -q -- "--from review" "$HEARTBEAT_LOG"
+    grep -q -- "--to merge" "$HEARTBEAT_LOG"
 }
 
 @test "baseline-gate: pre-merge-check.sh exit 2 aborts merge with exit 1" {

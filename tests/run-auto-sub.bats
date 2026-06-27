@@ -33,6 +33,7 @@ MOCK
     # Mock emit-event.sh (sourced by run-auto-sub.sh via emit-event.sh)
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
 emit_event() { :; }
+_emit_comments_consumed() { :; }
 MOCK
 
     # Mock phase-banner.sh (sourced by run-auto-sub.sh)
@@ -567,6 +568,7 @@ MOCK
 emit_event() {
   echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
 }
+_emit_comments_consumed() { :; }
 MOCK
 
     # Make run-code.sh write a token usage JSON file
@@ -609,6 +611,7 @@ MOCK
 emit_event() {
   echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
 }
+_emit_comments_consumed() { :; }
 MOCK
 
     # run-code.sh echoes bats output to stdout; run-auto-sub.sh captures it
@@ -647,6 +650,7 @@ MOCK
 emit_event() {
   echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
 }
+_emit_comments_consumed() { :; }
 MOCK
 
     cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'

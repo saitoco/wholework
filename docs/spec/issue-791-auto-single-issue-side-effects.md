@@ -98,3 +98,67 @@
 - **heartbeat issue 番号**: `run-review.sh`/`run-merge.sh` は PR 番号しか持たないため `--issue $PR_NUMBER` で heartbeat を記録する。これは batch mode (run-auto-sub.sh) の既存挙動と一致する
 - **`docs/structure.md` の emit-event.sh 説明**: `_emit_comments_consumed()` 追加後は "providing `emit_event()` for structured JSONL event emission" の説明が不完全になるが、doc-checker の impact criteria では script 機能説明変更は SHOULD レベル (軽微) のため本 PR では更新を見送る
 - **verify command AC3 更新**: Issue body AC3 の `bats tests/run-auto-sub.bats tests/auto.bats` を新規テストファイル含む形 `bats tests/run-auto-sub.bats tests/auto.bats tests/run-code.bats tests/run-review.bats tests/run-merge.bats` に更新する
+
+## Code Retrospective
+
+**実施日**: 2026-06-28
+**PR**: #809
+**結果**: 実装完了・テスト全通過 (119/119)
+
+### 正常に機能したもの
+
+- `_emit_comments_consumed` の emit-event.sh 抽出は最小変更で DRY を実現。既存 `source "$SCRIPT_DIR/emit-event.sh"` 行があるすべての `run-*.sh` が自動的に取得できる設計で、テスト mock の追加 (`_emit_comments_consumed() { :; }`) パターンも明快だった
+- call-order 検証 (コメント消費イベントが claude 呼び出し前に発火) を bats で記録ファイル比較によって実装。LLM 遵守度に依存しない bash 保証の検証として有効
+- `run_phase_with_recovery()` からの抽出で既存 batch テストへの影響がない (mock 追加のみで挙動変わらず)
+
+### 改善余地
+
+- `run-review.sh`/`run-merge.sh` は issue 番号ではなく PR 番号を `--issue` に渡す。batch mode での既存挙動に合わせたが、heartbeat の意味的一貫性のためには将来的に PR→issue 番号変換が望ましいかもしれない
+- `_emit_comments_consumed` は `run-code.sh` のみで呼ばれる (code phase でコメントを消費するため)。関数は emit-event.sh に置いたが、review/merge では呼ばれない点は comment しておくと次の人が迷わない
+
+### フェーズ引継ぎ
+
+- 実装変更ファイル: `scripts/emit-event.sh`, `scripts/run-auto-sub.sh`, `scripts/run-code.sh`, `scripts/run-review.sh`, `scripts/run-merge.sh`
+- テスト変更ファイル: `tests/run-auto-sub.bats`, `tests/auto-sub-observability.bats`, `tests/run-code.bats`, `tests/run-review.bats`, `tests/run-merge.bats`
+- PR #809 (branch: `worktree-code+issue-791`) → review フェーズへ
+
+## review retrospective
+
+**実施日**: 2026-06-28
+**PR**: #809
+**モード**: light (--light)
+
+### Spec vs. 実装差異パターン
+
+- 実装は Spec の設計計画と高い一致度。候補 A 採用・DRY 化・テスト追加の 3 点すべてが仕様通り実装されていた
+- DCO 失敗 (Signed-off-by 欠如) が唯一の MUST 指摘。Spec に記載なし。review フェーズで `git rebase --signoff` + force-push により解決
+
+### 繰り返しパターン (同種指摘)
+
+- DCO/sign-off 欠如は本 PR の 2 コミット両方に発生。code フェーズのコミット時に `-s` フラグが漏れると DCO CI が常に失敗するパターン。`run-*.sh` を通じた自動コミット (Claude Agent) では `-s` が付与されないケースがある
+
+### 受け入れ条件検証難易度
+
+- `rubric` 3 件はすべて PASS 判定が明快。Spec の "Alternatives Considered" テーブルが ac2 rubric の正確な判定を可能にした (Spec にトレードオフが構造化されている利点)
+- `command "bats ..."` は CI reference fallback で PASS 確認。安定していた
+- UNCERTAIN は 0 件。verify command の設計が適切だった
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+
+- DCO 失敗を review フェーズで修正 (git rebase --signoff + force-push)。merge フェーズでは DCO は既に通過済みになっている想定
+- SHOULD 指摘 (docs/structure.md) は Spec に defer 理由が記録されているためスキップ。merge フェーズでのアクション不要
+- 全 AC (Pre-merge 4 件) PASS、チェックボックス更新済み
+
+### Deferred Items
+
+- docs/structure.md の emit-event.sh 説明更新は SHOULD レベルとして defer (Spec 記録済み)。merge 後の follow-up Issue として残す候補
+- post-merge observation AC (auto-events.jsonl / loop-state heartbeat) は merge 後に観察が必要
+
+### Notes for Next Phase
+
+- CI は DCO 含め全ジョブ SUCCESS になる見込み (force-push 後に再実行される)
+- MUST 指摘はすべて解決済み。merge の前提条件を満たしている
+- `docs/structure.md` の SHOULD 更新は merge フェーズでは不要 (スキップ可)
