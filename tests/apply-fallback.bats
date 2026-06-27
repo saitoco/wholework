@@ -172,3 +172,49 @@ MOCK
     [[ "$output" == *"Orchestration Anomalies"* ]]
     [[ "$output" == *"code-patch-silent-no-op"* ]]
 }
+
+@test "json-mode-silent-hang pattern triggers run-code.sh --pr retry for code-pr phase" {
+    LOG_FILE="$BATS_TEST_TMPDIR/test.log"
+    echo "still waiting (json mode)" > "$LOG_FILE"
+
+    RUN_CODE_LOG="$BATS_TEST_TMPDIR/run-code.log"
+    cat > "$MOCK_DIR/run-code.sh" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$RUN_CODE_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    run bash "$SCRIPT" code-pr 42 --log "$LOG_FILE"
+    [ "$status" -eq 0 ]
+
+    grep -q "42" "$RUN_CODE_LOG"
+    grep -q -- "--pr" "$RUN_CODE_LOG"
+}
+
+@test "json-mode-silent-hang pattern does not fire for non-code-pr phase" {
+    LOG_FILE="$BATS_TEST_TMPDIR/test.log"
+    echo "still waiting (json mode)" > "$LOG_FILE"
+
+    run bash "$SCRIPT" verify 42 --log "$LOG_FILE"
+    [ "$status" -eq 1 ]
+}
+
+@test "apply-fallback: json-mode-silent-hang: stdout contains Orchestration Anomalies metadata" {
+    LOG_FILE="$BATS_TEST_TMPDIR/test.log"
+    echo "still waiting (json mode)" > "$LOG_FILE"
+
+    RUN_CODE_LOG="$BATS_TEST_TMPDIR/run-code.log"
+    cat > "$MOCK_DIR/run-code.sh" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$RUN_CODE_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    run bash "$SCRIPT" code-pr 42 --log "$LOG_FILE"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Orchestration Anomalies"* ]]
+    [[ "$output" == *"json-mode-silent-hang"* ]]
+    [[ "$output" == *"result=recovered"* ]]
+}
