@@ -143,3 +143,57 @@ post-merge 2 件はいずれも `<!-- verify-type: manual -->`。「次回 `/aud
 - Tool Dependencies: なし (実装は `/code` の Edit / Bash `git mv` / `mkdir -p` のみ。frontmatter `allowed-tools` 追加なし、KNOWN_TOOLS 変更なし)
 - `validate-skill-syntax.py` 制約: `skills/auto/SKILL.md` / `skills/audit/SKILL.md` の編集は既存構造内の path 文字列置換のみ。frontmatter 不変、半角 `!` 導入なし、triple-backtick 導入なし — 制約違反リスク無し
 - Migration Step-Number Reference Check: N/A (本件はリポジトリ内のファイル配置移行であり、他リポジトリからの workflow doc 移行ではない)
+
+## issue retrospective
+
+### 曖昧ポイント自動解決 (non-interactive モード)
+
+| # | ポイント | 解決内容と根拠 |
+|---|---------|-------------|
+| A1 | `skills/auto/SKILL.md` の data-layer クロスリンク (line 644-650) がスコープに含まれるか | **含める**。SKILL.md のクロスリンクは `docs/reports/auto-session-${AUTO_SESSION_ID}-*.md` を参照しており、マイグレーション後は新パスを指す必要がある。AC3 (SKILL.md path 更新) の当然の一部として扱うのが最リスクの低い判断。 |
+| A2 | 既存 auto-session ファイルのマイグレーションで session dir が存在しない / 日付不一致のケース | `auto-session-58975-1781511640-2026-06-16.md` は対応する session dir が存在しない、`auto-session-3480-1782440098-2026-06-27.md` は日付不一致 (`2026-06-26`)。**ファイル名の `{sid-timestamp-date}` 部分を使って `mkdir -p` で新規作成してからマイグレーション**することが最リスクの低い解決 (既存 sessions dir との整合は副次的)。 |
+| A3 | AC6 (旧) の `grep "data-layer"` が既存コメント行でマッチする誤検知リスク | `scripts/get-auto-session-report.sh` 冒頭の description コメントに "data-layer" が既に存在するため、旧 AC6 は変更なしで PASS してしまう。**`grep "docs/sessions.*data-layer"` に修正**して新パス文字列を明示的に検証する。 |
+| A4 | `docs/structure.md` / `docs/ja/structure.md` の script 説明更新スコープ | `docs/structure.md` line 186 に `docs/reports/auto-events-rollup-YYYY-MM-DD.md` への言及がある。スクリプトの出力先変更に合わせて更新するのが自然。**含める**。`docs/ja/structure.md` は翻訳文書のため verify command なし (再生成は `/doc translate docs/structure.md ja` で対応)。 |
+| A5 | Spec ファイルや curated reports 内の旧パス参照 | docs/spec/ 多数と docs/reports/ 内の curated reports に歴史的参照が残る。Spec は disposable historical record であり、curated reports は移動しない対象。**スコープ外**として明記。 |
+
+### Acceptance Criteria の主な変更
+
+1. **AC6 修正**: `grep "data-layer"` → `grep "docs/sessions.*data-layer"` (誤検知リスク排除)
+2. **AC1 補強**: `file_not_contains` で旧パス削除を検証する verify command を追加
+3. **AC3 拡張**: rubric に data-layer クロスリンク更新を明記。`grep "docs/sessions/_daily"` と `file_not_contains "docs/reports/loop-state-"` を補足追加
+4. **AC4 補強**: `file_not_contains "docs/reports/auto-session-"` を追加し旧パス削除を機械的に検証
+5. **AC7 補強**: `dir_exists "docs/sessions/_daily"` を追加
+6. **新規 AC**: `docs/structure.md` の auto-events-rollup.sh 説明更新を verify command 付きで追加
+7. **マイグレーション補足セクション追加**: session dir 不存在ケースの対処方針を明記
+
+## spec retrospective
+
+### Minor observations
+- Issue Background に事実誤認: 「`loop-state-*.md` は `scripts/auto-events-rollup.sh` または `/auto` の Loop State Heartbeat で生成」とあるが、`auto-events-rollup.sh` は loop-state を生成せず `/auto` SKILL.md のみが生成する (codebase grep で検出)。migration の正しさには影響しないが、`/issue` 起票時の Background 記述精度の改善余地。
+
+### Judgment rationale
+- マイグレーション dir 名はファイル名由来の統一規則 (`auto-session-` プレフィックス + `[-ja].md` サフィックス除去) で導出。A2 に従い、日付不一致 (`3480-...`: filename 06-27 / existing L3 dir 06-26) や対応 dir 不在 (`58975-...`) でもファイル名を SSoT として新規 dir を作成。既存 L3 session dir との物理的 co-location は副次的とした (data-layer と session.md が別 dir になるケースを許容)。
+- pre-merge verify 13 件は full テンプレートの soft limit (10) を超えるが、Issue AC との 1:1 verbatim 整合 (count alignment + verify command sync rule) を優先し統合せず維持。
+- `get-auto-session-report.sh` 末尾の L3 cross-link ロジックは output path 変更後に data-layer.md と session.md が co-locate するが、本 Issue は output path のみ要求のためスコープ外として変更しない判断。
+
+### Uncertainty resolution
+- loop-state 生成元の不確実性は codebase grep (`scripts/auto-events-rollup.sh` 内に loop-state 言及なし) で解消。生成元は `/auto` SKILL.md (Loop State Heartbeat + next-cycle-seed) に限定と確定。
+- default path 変更がテストを破壊しないことを bats 確認 (`auto-events-rollup.bats` / `get-auto-session-report.bats` は全テストが `--output-dir` / `--output` を明示指定) で解消。新規テスト追加不要と判断。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- 全 16 ファイルを `git mv` で移行 (全ファイル git-tracked 確認済み)。data-layer は `docs/sessions/{sid-ts-date}/data-layer[-ja].md`、rollup/loop-state は `docs/sessions/_daily/` へ。
+- script の default path 変更が新 dir を自動生成する仕組み (既存 `mkdir -p "$(dirname ...)"` / `mkdir -p "$OUTPUT_DIR"` を活用) を採用、追加の dir 作成ロジックは不要。
+- `/auto` は `auto-events-rollup.sh` を引数なしで呼ぶため (SKILL.md line 562/909)、`OUTPUT_DIR` default 変更だけで新 path に自動ルーティング。
+
+### Deferred Items
+- post-merge 観察 2 件 (次回 `/audit auto-session` / daily rollup での新 path 生成) は runtime 挙動のため `manual` verify-type。
+- `docs/ja/structure.md` の翻訳同期は手動更新 (verify command なし、translation mirror)。
+
+### Notes for Next Phase
+- `git mv` 前に各 data-layer の移動先 session dir を `mkdir -p` すること。`3480-1782440098-2026-06-27` と `58975-1781511640-2026-06-16` は新規 dir。
+- `file_not_contains` 3 件 (get-auto-session-report.sh / auto SKILL.md loop-state / audit SKILL.md auto-session) は旧 path の完全除去を要求。usage コメント・例示行も漏れなく更新すること。
+- `scripts/watchdog-defaults.sh:14` の `auto-session-performance-...` 参照は curated file で据え置き、`file_not_contains "...auto-session-"` の対象外 (別ファイル)。
+- shell 編集は bash 3.2+ 互換 (`mapfile` 等 bash4 機能を使わない)。
