@@ -100,19 +100,35 @@
 
 - None. 1 パスで実装完了。全 8 テスト一発 PASS。
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- None. 実装は Spec の Implementation Steps と完全に一致した。
+- SKILL.md step 3a の "Edit tool (or Write tool)" と Spec の "Write ツール" の違いは機能的に同等で、Edit 優先は改善であり divergence ではない。
+
+### Recurring Issues
+
+- Nothing to note. 単一パスでレビュー完了、MUST/SHOULD findings なし。
+- CI `Forbidden Expressions check` FAILURE は PR #766 の変更と無関係の pre-existing issue (check-forbidden-expressions.sh の単語境界バグに起因)。同スクリプトのバグ修正は別 Issue で追跡すること。
+
+### Acceptance Criteria Verification Difficulty
+
+- Nothing to note. 全 4 AC が PASS、UNCERTAIN ゼロ。rubric AC (AC1, AC4) は実装コードの読み取りで判定できた。grep AC (AC2, AC3) は直接的に確認できた。verify commands は適切に設計されていた。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `REPORT_EOF` 直後に cross-link ブロックを追加した。PERIOD_MODE 分岐は不要 (line 124 の早期 exit が既に分離している)。
-- `printf '\n---\n\n## See also\n\n- [L3 Session Retrospective](%s)\n'` で `>>` append にした。heredoc より printf の方が安全 (シェル変数展開が限定的)。
-- `skills/auto/SKILL.md` の追記は step 3a 形式で、既存の step 3 (Create session files) と step 4 (retro-proposals) の間に挿入した。
+- review-light エージェントが利用不可だったため、インラインで 4 視点レビューを実施した。結果は同等。
+- CI `Forbidden Expressions check` FAILURE は pre-existing issue と判定し、PR のマージブロックにしなかった (PR #766 変更ファイルに violations なし)。
+- MUST issues ゼロのため Step 12 (issue resolution) はスキップした。
 
 ### Deferred Items
-- 逆方向 cross-link (session.md → データ層レポート) は step 3a で手順を追加したが、実際の `/auto` 実行時に `docs/reports/auto-session-*.md` が未生成の場合は skip となる。これは意図的な設計 (`/audit auto-session` は事後生成のため)。
-- bats テストの `cross-link: See also footer appended` はサブシェル実行で CWD を BATS_TEST_TMPDIR に切り替える形だが、SESSION_DIR の glob マッチに `docs/sessions/session-xlink-2026-06-14/` を使用している。日付依存のテストではないが、固定日付であることに留意。
+- 逆方向 cross-link (session.md → データ層レポート) の実際の動作確認は Post-merge 検証 (次回 batch/XL session) で行う。
+- Forbidden Expressions check の単語境界バグ (単語境界なしパターンが `sub-issue Spec` 等の正当な記述を誤検知) は別 Issue での修正が必要。
 
 ### Notes for Next Phase
-- 変更ファイル: `scripts/get-auto-session-report.sh` (cross-link 追加)、`skills/auto/SKILL.md` (step 3a 追加)、`tests/get-auto-session-report.bats` (2 テスト追加)。
-- /verify では rubric AC が 2 個あるため、実装内容を git diff で grader に渡して判定させること。
-- 全テスト PASS (8/8)、forbidden expressions 違反なし (変更ファイル限定)。
+- 全 AC PASS、CI 主要ジョブ PASS (Forbidden Expressions check のみ pre-existing FAILURE)。
+- MUST issues なし。`/merge 766` で続行可。
+- /verify では rubric AC が 2 個あるため、実装内容を git diff で grader に渡して判定させること (code phase のメモを引き継ぎ)。
