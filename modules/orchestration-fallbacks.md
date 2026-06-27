@@ -484,3 +484,14 @@ When a new fallback pattern is discovered:
 1. Add an entry following the schema above (Symptom / Applicable Phases / Fallback Steps / Escalation / Rationale)
 2. Add a pointer comment in the affected script(s): `# See modules/orchestration-fallbacks.md#<anchor>`
 3. Reference the discovering Issue or retrospective in the Rationale section
+
+### Tier 2 bash path: Spec Auto Retrospective write
+
+When `run-auto-sub.sh` runs the Tier 2 path (`apply-fallback.sh` succeeds), the recovery record is written not only to `docs/reports/orchestration-recoveries.md` (via Step 4a Source 1 in the parent `/auto` session) but also to the affected sub-issue's Spec file (`docs/spec/issue-N-*.md`) `## Auto Retrospective` section immediately at recovery time (bash path, not LLM path).
+
+Mechanism:
+- `apply-fallback.sh` outputs structured metadata (symptom-short / phase / fallback action / result) to stdout on success; internal echo statements go to stderr
+- `run-auto-sub.sh` captures this stdout into a temp file (`_fallback_meta_file`) and calls `_write_tier2_recovery_to_spec()` when the file is non-empty
+- `_write_tier2_recovery_to_spec()` appends the metadata to the Spec's `## Auto Retrospective` section and commits/pushes immediately
+
+This write happens during the sub-issue execution phase, before the parent `/auto` Step 4a runs. When Step 4a Source 1 (`fallback-catalog`) runs later, the sub-issue Spec Auto Retrospective is already up to date. The parent session's Step 4a writes `orchestration-recoveries.md` as the session-level SSoT; the Spec write here serves the per-Issue paper trail.

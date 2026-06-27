@@ -75,19 +75,19 @@ apply_dco_signoff_autofix() {
     return 1
   fi
 
-  echo "[apply-fallback] dco-signoff-missing-autofix: amending commit to add Signed-off-by"
-  git commit --amend -s --no-edit
-  git push --force-with-lease
-  echo "[apply-fallback] dco-signoff-missing-autofix: done"
+  echo "[apply-fallback] dco-signoff-missing-autofix: amending commit to add Signed-off-by" >&2
+  git commit --amend -s --no-edit >&2
+  git push --force-with-lease >&2
+  echo "[apply-fallback] dco-signoff-missing-autofix: done" >&2
 }
 
 # Handler: code-patch-silent-no-op
 # Retries run-code.sh --patch once when a silent no-op is detected on the patch route.
 # Safe because reconcile confirms commits_found:false (clean state, no partial commit).
 apply_code_patch_silent_no_op_retry() {
-  echo "[apply-fallback] code-patch-silent-no-op: retrying run-code.sh --patch for issue $ISSUE"
-  "$SCRIPT_DIR/run-code.sh" "$ISSUE" --patch
-  echo "[apply-fallback] code-patch-silent-no-op: done"
+  echo "[apply-fallback] code-patch-silent-no-op: retrying run-code.sh --patch for issue $ISSUE" >&2
+  "$SCRIPT_DIR/run-code.sh" "$ISSUE" --patch >> "$LOG_FILE" 2>&1
+  echo "[apply-fallback] code-patch-silent-no-op: done" >&2
 }
 
 symptom_anchor=$(detect_symptom_anchor "$LOG_FILE")
@@ -95,9 +95,21 @@ symptom_anchor=$(detect_symptom_anchor "$LOG_FILE")
 case "$symptom_anchor" in
   dco-signoff-missing-autofix)
     apply_dco_signoff_autofix
+    printf '%s\n' \
+      "### Orchestration Anomalies" \
+      "- **[dco-signoff-missing-autofix]** Tier 2 fallback applied: phase=\`$PHASE\`, action=git-commit-amend-dco+force-push, result=recovered." \
+      "" \
+      "### Improvement Proposals" \
+      "- N/A (resolved by Tier 2 fallback catalog)"
     ;;
   code-patch-silent-no-op)
     apply_code_patch_silent_no_op_retry
+    printf '%s\n' \
+      "### Orchestration Anomalies" \
+      "- **[code-patch-silent-no-op]** Tier 2 fallback applied: phase=\`$PHASE\`, action=run-code.sh-patch-retry, result=recovered." \
+      "" \
+      "### Improvement Proposals" \
+      "- N/A (resolved by Tier 2 fallback catalog)"
     ;;
   *)
     exit 1

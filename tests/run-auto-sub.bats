@@ -673,6 +673,58 @@ MOCK
       skip "concurrent_commit_detected event not logged (emit mock not capturing)"
 }
 
+@test "run-auto-sub: tier2 recovery: writes Auto Retrospective to spec file" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+    echo "# Issue #42: test spec" > "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"diff"* && "$*" == *"issue-42"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/apply-fallback.sh" <<'MOCK'
+#!/bin/bash
+printf '%s\n' \
+  "### Orchestration Anomalies" \
+  "- **[code-patch-silent-no-op]** Tier 2 fallback applied: result=recovered."
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/apply-fallback.sh"
+
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+#!/bin/bash
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "Auto Retrospective" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    grep -q "code-patch-silent-no-op" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    grep -qE "commit.*Tier 2 recovery" "$GIT_LOG"
+}
+
 @test "post-spec size unchanged XS->XS: Post-spec is not logged" {
     cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
 #!/bin/bash

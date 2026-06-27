@@ -405,6 +405,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
    | Source 2: `recovery-sub-agent` | The `orchestration-recovery` sub-agent produced a successful recovery plan during Tier 3 recovery | Available (#617 shipped) |
    | Source 3: `wrapper-anomaly-detector` | `detect-wrapper-anomaly.sh` detected a known failure pattern during Tier 2 recovery | Available (#313 shipped) |
 
+   **Source 1 note — XL route only**: For XL routes, `run-auto-sub.sh` Tier 2 bash path writes the sub-issue's Spec Auto Retrospective directly at recovery time (when `apply-fallback.sh` succeeds). When Step 4a processes XL sub-issue results, the sub-issue Spec Auto Retrospective entries from Tier 2 recovery are already present — Step 4a does not need to add them again. `orchestration-recoveries.md` should still be updated as the session-level SSoT.
+
    **Source 2 detection — single-Issue parent session only**: Check if `TIER3_RECOVERY_PHASE` is set (retained in Step 6 after Tier 3 succeeds). If set, use retained `TIER3_RECOVERY_*` variables to build the entry and prepend it. For batch/XL routes, `spawn-recovery-subagent.sh` writes directly to `orchestration-recoveries.md`, so Source 2 here covers only single-Issue parent sessions (M/L/patch). `run-auto-sub.sh` commits and pushes `docs/reports/orchestration-recoveries.md` immediately after Tier 3 success to prevent dirty-file conflicts at `/verify` invocation (see #677).
 
    For each applicable source, prepend a new entry block to `docs/reports/orchestration-recoveries.md` (after the header comment line `<!-- Log entries appear below, newest first. -->`). Use the Write/Edit tool. Entry format:

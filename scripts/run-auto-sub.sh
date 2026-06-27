@@ -66,6 +66,44 @@ _maybe_emit_phase_complete() {
 }
 trap '_maybe_emit_phase_complete' EXIT
 
+_write_tier2_recovery_to_spec() {
+  local issue="$1"
+  local meta_file="$2"
+  local _repo_root
+  _repo_root="$(dirname "$SCRIPT_DIR")"
+  local spec_dir="$_repo_root/docs/spec"
+  local spec_file
+  spec_file=$(ls "$spec_dir/issue-${issue}-"*.md 2>/dev/null | head -1 || true)
+
+  if [[ -z "$spec_file" ]]; then
+    local title
+    title=$(gh issue view "$issue" --json title -q '.title' 2>/dev/null || echo "Issue #${issue}")
+    mkdir -p "$spec_dir"
+    spec_file="$spec_dir/issue-${issue}-recovery.md"
+    printf '%s\n' "# Issue #${issue}: ${title}" > "$spec_file"
+  fi
+
+  if ! grep -q "^## Auto Retrospective" "$spec_file" 2>/dev/null; then
+    printf '\n%s\n' "## Auto Retrospective" >> "$spec_file"
+  fi
+
+  cat "$meta_file" >> "$spec_file"
+
+  local spec_rel_path="${spec_file#$_repo_root/}"
+
+  if ! git -C "$_repo_root" diff --quiet "$spec_rel_path" 2>/dev/null; then
+    if git -C "$_repo_root" add "$spec_rel_path" \
+       && git -C "$_repo_root" commit -s -m "Record Tier 2 recovery in auto retrospective for issue #${issue}
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>" \
+       && git -C "$_repo_root" push origin HEAD; then
+      echo "${LOG_PREFIX} [recovery] spec auto retrospective updated for issue #${issue}"
+    else
+      echo "${LOG_PREFIX} WARNING: could not commit/push Tier 2 recovery to spec; continuing" >&2
+    fi
+  fi
+}
+
 run_phase_with_recovery() {
   local phase issue runner_script exit_code log_file
   phase="$1"; issue="$2"; runner_script="$3"; shift 3
@@ -158,12 +196,22 @@ run_phase_with_recovery() {
   fi
 
   # Tier 2: fallback catalog (bash, cheap) — known pattern recovery
-  if "$SCRIPT_DIR/apply-fallback.sh" "$phase" "$issue" --log "$log_file" 2>/dev/null; then
+  # See modules/orchestration-fallbacks.md#code-patch-silent-no-op
+  local _fallback_meta_file=".tmp/fallback-meta-${issue}-${phase}.md"
+  local _fallback_exit=0
+  mkdir -p .tmp
+  "$SCRIPT_DIR/apply-fallback.sh" "$phase" "$issue" --log "$log_file" > "$_fallback_meta_file" 2>/dev/null || _fallback_exit=$?
+  if [[ $_fallback_exit -eq 0 ]]; then
     echo "${LOG_PREFIX} [recovery] tier2 fallback catalog: recovered"
+    if [[ -s "$_fallback_meta_file" ]]; then
+      _write_tier2_recovery_to_spec "$issue" "$_fallback_meta_file"
+    fi
+    rm -f "$_fallback_meta_file"
     emit_event "recovery" "phase=${phase}" "tier=2" "result=recovered"
     emit_event "phase_complete" "phase=${phase}"
     return 0
   fi
+  rm -f "$_fallback_meta_file"
 
   # Tier 3: recovery sub-agent via claude -p (expensive, unknown anomaly only)
   if "$SCRIPT_DIR/spawn-recovery-subagent.sh" "$phase" "$issue" --log "$log_file" --exit-code "$exit_code"; then
