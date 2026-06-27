@@ -286,3 +286,50 @@ spec 段階で `validate-skill-syntax.py` の cross-file validation 要件 (emit
 ### Acceptance criteria verification difficulty
 
 - AC10 (`file_contains "docs/structure.md" "(37 files)"`) が iteration 1 マージ後の後続開発で stale になっていた。iteration 2 のレビューでは PR 変更非対象ファイルの AC が FAIL となり、regression との区別に調査コストが発生。iteration 単位での PR レビュー時には、前 iteration の AC が stale になっていないかを最初に確認するか、iteration 2 用の新 AC セットを明示的に定義すべき。
+
+## Verify Retrospective (iteration 2 — 2026-06-28)
+
+### Phase-by-Phase Review
+
+#### code (iteration 2)
+- `/code --pr 705` が watchdog kill (exit 143、silent for 1800s) で終了したが、worktree には 2 ファイル分の変更が staged 状態で残存。Tier 2 anomaly detector が `code-completed-no-pr` パターンを検出 (実態は -no-commit-no-pr に近いが、catalog 上は近接パターン)。parent session が manual commit + rebase + push + PR 作成して recovery。
+- Spec divergence: 元 Spec は LLM 駆動 10-file 変更 (各 SKILL.md に Step 6 emit を追加)。iteration 2 は bash 駆動 2-file 変更 (#701 と同じパターン)。Spec を update せず実装が divergence した。
+
+#### review (iteration 2)
+- MUST 1 + SHOULD 1 を auto-resolve。`_emit_comments_consumed()` 配置順序の正しさは review 段階で確認された。
+
+#### verify (iteration 2 — this session)
+- AC9 (workflow.md Related Documents) の awk extraction が壊れて当初 FAIL と誤判定。`awk '/^## Related Documents/,/^## /'` は `## ` で始まる next section を見つけた瞬間に範囲終了する仕様で、本文行を読まない罠。正確には `awk 'BEGIN{p=0} /^## Related Documents/{p=1; next} p && /^## /{exit} p'` パターンが必要。verify-executor の section_contains 実装も同様の罠を避ける必要あり。
+- AC10 (`(37 files)`) は実態 `(40 files)` (#705 マージ後に #755, #761 等で modules/ が増加)。literal verify command の drift。PASS-by-intent として処理。
+- post-merge 観察 (`auto-events.jsonl` に `comments_consumed` イベント): bash 実装は run-auto-sub.sh の `run_phase_with_recovery` 内に配置済みだが、**本 session の単一 Issue /auto (parent session 経由) では run-auto-sub.sh を通らない** ため発火しない。同じ構造的 gap が #701 でも観測された (parent /auto session の heartbeat append 漏れ)。
+
+### Improvement Proposals (iteration 2 verify-driven)
+
+**1. bash 駆動 emit を単一 Issue parent /auto path にも対応 (Tier 1)**
+
+#705 と #701 の両方で同じ構造的 gap が出ている: bash 駆動の side effect (heartbeat append、comments_consumed emit) は `run-auto-sub.sh` の `run_phase_with_recovery()` でしか発火しない。**parent /auto session が run-code.sh / run-review.sh / run-merge.sh を直接呼ぶ場合 (単一 Issue M/L pr route の標準 path) は発火しない**。
+
+対処候補:
+- (A) 各 `run-*.sh` wrapper 内に同等の bash emit を埋め込む (DRY 違反だが小変更)
+- (B) parent /auto session も `run-auto-sub.sh` 経由で実行する (path 統一、batch/単一の挙動が一致する利点あり)
+- (C) `parent /auto` Step 4 で各 `run-*.sh` の前後に bash helper を直接呼ぶ steps を追加する (現状の prose を bash 呼び出しに置換、SKILL.md 修正)
+
+(B) が一番きれいだが、parent session の checkpoint 管理など影響範囲が大きい。(C) が現状の最小変更で、すでに #701 iteration 2 で部分的に行っている。再発性が高い (同じ pattern が他の event 追加で再発する) ので、(A) or (B) 構造変更を検討する価値あり。Tier 1 として別 Issue 起票候補。
+
+**2. AC literal の drift 検知 (Tier 2)**
+
+#705 AC10 の `(37 files)` が他 PR マージで stale になり、PASS-by-intent 判定で対処。同じパターンが今後も発生しうる (e.g., file count, line numbers が hardcode された verify command)。
+
+提案: `/verify` の verify-executor に「PR 変更非対象ファイル の AC literal が変更された場合に WARN を出す」機能を追加。AC text と implementation 真値の乖離を自動検知。Tier 2 (convention) 扱い、issue 起票せず memory note。
+
+**3. watchdog kill 時の partial commit recovery (既存 #523/#526 と同類)**
+
+`/code --pr 705` が 30 min silent 後 watchdog kill されたが、worktree に staged 変更が残った。Tier 2 catalog の `code-completed-no-pr` パターンは「commit + push 済み、PR 未作成」を想定しており、本ケースの「staged だが未 commit」とは微妙に異なる。manual recovery で対処可能だったが、自動化の余地あり。
+
+既存関連: #523/#526 false-positive silent-no-op on patch route。本ケースは pr route の似た gap として捕捉可能か検討。
+
+### Spec ↔ implementation divergence (iteration 2 specific)
+
+iteration 2 は元 Spec の LLM 駆動 10-file 変更ではなく bash 駆動 2-file 変更を採用した。これは設計判断として #701 と同じ pattern (LLM 駆動 best-effort step は実運用で skip される) を踏襲しており妥当だが、Spec を update しないまま実装したため Spec ↔ implementation の divergence が発生。
+
+提案: iteration 2 のような route-divergence が発生する場合、Spec に "## Iteration 2 Re-design" section を append して新方針を記録する規約を `/code` SKILL.md に追加する。本件では code phase が divergence の判断をしたが、その記録が Spec ではなく PR body のみに残った。Tier 2 (convention) として記録。
