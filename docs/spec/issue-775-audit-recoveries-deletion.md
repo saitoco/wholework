@@ -77,20 +77,36 @@
 
 - N/A
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- `docs/reports/orchestration-recoveries.md` (scope 外ファイル) に `/audit recoveries` への stale 参照が行 15 と行 283 に残存。Spec の "Changed Files" リストにこのファイルが含まれておらず、review で初めて発見。削除系変更時は recovery log など間接的に参照する Markdown ファイルも scope に含めるか明示的に除外を記録すると良い。
+
+### Recurring Issues
+
+- 特になし。
+
+### Acceptance Criteria Verification Difficulty
+
+- 全 9 件が `file_not_contains` / `file_exists` / `rubric` コマンドで明確に検証可能であり UNCERTAIN なし。削除系 Issue として verify command の設計が適切だった。`--issues-json` テストカバレッジ欠落は verify command では検知できない種類の問題 (削除で生じる coverage gap)。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- `tests/audit-recoveries.bats` を削除、`tests/collect-recovery-candidates.bats` は既存のものを維持 (rename ではなく削除)
-- `docs/structure.md` / `docs/ja/structure.md` の SHOULD 対応を実施 (AC なし、自判断で実施)
-- `## recoveries Subcommand` セクション全体の削除に Python regex を使用 (Edit ツールより確実)
+- CI FAILURE (`tests/append-loop-state-heartbeat.bats` テスト 11-15) は本 PR の変更と無関係で main ブランチにも存在する既存問題のため、マージブロック理由としない判断
+- SHOULD 問題 2 件 (orchestration-recoveries.md の stale 参照、--issues-json テスト欠落) は scope 外として skip — 別途フォローアップ推奨
+- MUST 問題なしのため REQUEST_CHANGES ではなく COMMENT で投稿
 
 ### Deferred Items
 
-- post-merge 検証 2 件 (`/audit recoveries` でのメッセージ確認 + `/verify` Step 15 動作確認) は manual verify のため `/verify` フェーズで実施
+- `docs/reports/orchestration-recoveries.md` の stale 参照修正 (行 15, 283) — 別 Issue 推奨
+- `tests/collect-recovery-candidates.bats` への `--issues-json` テスト追加 — 別 Issue 推奨
+- CI FAILURE (`tests/append-loop-state-heartbeat.bats`) の根本原因調査 — 既存問題、本 PR 無関係
 
 ### Notes for Next Phase
 
-- PR #803 がマージ後、`/verify` フェーズで post-merge の 2 条件を観察確認すること
-- `docs/structure.md` / `docs/ja/structure.md` の変更は AC に含まれないが PR に含まれており、レビュー時に確認される見込み
+- MUST 問題なし。`/merge 803` で直接マージ可能
+- post-merge の 2 条件 (`/audit recoveries` で unknown subcommand 確認、`/verify` Step 15 の動作確認) は `/verify` フェーズで実施
