@@ -116,6 +116,18 @@ If CUTOFF is empty, omit the `select` filter (fetch all comments).
 
 ISO 8601 UTC strings are lexicographically comparable, so `date` conversion is not needed.
 
+**verify-fail marker exception (defense in depth):** After fetching cutoff-filtered comments,
+additionally scan all comments regardless of cutoff for any comment whose body contains
+`<!-- wholework-event: type=verify-fail`. Include any such comments in the consume set even
+if their `createdAt` is before or equal to `CUTOFF`. This ensures that `/verify` FAIL marker
+comments posted before the current phase's cutoff are never silently dropped. Deduplicate
+by comment URL so that comments already included by the cutoff filter are not injected twice.
+
+```
+gh issue view "$ISSUE_NUMBER" --json comments \
+  --jq '.comments[] | select(.body | contains("<!-- wholework-event: type=verify-fail"))'
+```
+
 If `COMMENT_SCOPE=issue+pr`: also fetch PR comments with `gh pr view <PR_NUMBER> --json comments`
 for the PR associated with this Issue.
 

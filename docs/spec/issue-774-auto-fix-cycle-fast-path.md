@@ -17,9 +17,9 @@
 
 1. `modules/l0-surfaces.md` Step 2 (Fetch comments) を更新: cutoff フィルタ済みコメント取得の後、cutoff より前のコメントも `<!-- wholework-event: type=verify-fail` を含む場合は consume 対象に追加するロジックを記述する (→ AC3, AC4)
 
-2. `skills/auto/SKILL.md` Step 2 と Step 3 の間に `### Step 2.5: Fix-cycle Detection` を挿入: (1) `gh issue view $NUMBER --json comments` で `<!-- wholework-event: type=verify-fail` を含む最新コメントを検索、(2) `gh issue view $NUMBER --json labels` で `phase/*` ラベルが存在しないことを確認、(3) `Glob("$SPEC_PATH/issue-$NUMBER-*.md")` で Spec ファイルの存在を確認 — 3 条件すべて true の場合を fix-cycle state と判定し、Size-aware で run-code.sh を直接起動 (`XS/S → --patch`, `M/L → --pr`, `XL → 手動介入`) して Step 4 の verify ループに進む; 条件未満は Step 3 へ通常フロー (→ AC1, AC2)
+2. `skills/auto/SKILL.md` Step 2 と Step 3 の間に `### Step 2a: Fix-cycle Detection` を挿入: (1) `gh issue view $NUMBER --json comments` で `<!-- wholework-event: type=verify-fail` を含む最新コメントを検索、(2) `gh issue view $NUMBER --json labels` で `phase/*` ラベルが存在しないことを確認、(3) `Glob("$SPEC_PATH/issue-$NUMBER-*.md")` で Spec ファイルの存在を確認 — 3 条件すべて true の場合を fix-cycle state と判定し、Size-aware で run-code.sh を直接起動 (`XS/S → --patch`, `M/L → --pr`, `XL → 手動介入`) して Step 4 の verify ループに進む; 条件未満は Step 3 へ通常フロー (→ AC1, AC2)
 
-3. `tests/auto.bats` に fix-cycle 検出ステップの @test を追加: Step 2.5 セクションが SKILL.md に存在すること、"fix-cycle" キーワードが含まれることを検証 (→ AC5, AC6)
+3. `tests/auto.bats` に fix-cycle 検出ステップの @test を追加: Step 2a セクションが SKILL.md に存在すること、"fix-cycle" キーワードが含まれることを検証 (→ AC5, AC6)
 
 ## Verification
 
@@ -49,3 +49,48 @@
 
 - saito (MEMBER / first-class): Issue Retrospective — BRE metacharacter fix in AC2, additional verify ACs (AC4, AC5), auto-resolved ambiguity points confirmation
   URL: https://github.com/saitoco/wholework/issues/774#issuecomment-4817665323
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec says "Step 2.5" but `validate-skill-syntax.py` forbids decimal step format (N.M). Renamed to "Step 2a: Fix-cycle Detection" (first available letter suffix). The bats tests were updated to match the renamed step heading. The AC verify commands check for the "fix-cycle" keyword (not the step number), so all ACs still pass.
+
+### Design Gaps/Ambiguities
+
+- The Spec Notes mentioned "COMMENT_SCOPE は issue+pr の変更は run-code.sh への追加フラグは不要" but did not address that the Step 2.5 → Step 2a rename would affect bats awk patterns. Bats patterns updated accordingly with no functional impact.
+
+### Rework
+
+- N/A (no rework required beyond the Step 2.5 → Step 2a rename forced by the validator)
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- REVIEW_DEPTH=light (--light flag); no MUST/SHOULD/CONSIDER issues found across all 4 perspectives
+- CI failure (Run bats tests) confirmed as pre-existing on main branch (tests 11–15 in append-loop-state-heartbeat.bats); not introduced by this PR
+- External review tools (copilot-review, claude-code-review, coderabbit-review) not configured → Step 7 skipped
+
+### Deferred Items
+- Post-merge observation ACs (run-issue.sh/run-spec.sh skip, verify-fail marker in Consumed Comments) remain unverifiable until a real verify FAIL cycle occurs
+
+### Notes for Next Phase
+- No MUST issues → proceed directly to `/merge 782`
+- CI baseline: only the pre-existing tests 11–15 fail; PR-added tests 104–107 pass
+- All 6 pre-merge ACs: PASS
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Step 2.5 → Step 2a rename is a validator-forced deviation, documented in Code Retrospective. The Spec Overview still says "Step 2.5" (historical artifact), but verify commands reference the "fix-cycle" keyword rather than the step number, so all ACs are resilient to renaming. No structural divergence.
+- The PR also adds docs/workflow.md and docs/ja/workflow.md updates (not in Spec Changed Files), consistent with translation-workflow.md requirements. No gap.
+
+### Recurring Issues
+
+- Nothing to note.
+
+### Acceptance Criteria Verification Difficulty
+
+- AC6 (command "bats tests/auto.bats") was UNCERTAIN in safe mode; resolved to PASS via CI log inspection. The pre-existing failures (tests 11–15) required CI log analysis to distinguish from PR-introduced failures — this investigation was straightforward once the main branch CI state was checked. Consider documenting the baseline failure state in CLAUDE.md or a pinned issue for faster triage.

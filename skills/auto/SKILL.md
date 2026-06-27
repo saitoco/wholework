@@ -98,6 +98,45 @@ Set `REVIEW_DEPTH` from flags or Size (used unchanged in Step 4 unless Step 3a r
 | Auto-detect or `--pr` without `--review=...`: Size L | `--full` |
 | Auto-detect or `--pr` without `--review=...`: other/unset | `--light` (safe fallback) |
 
+### Step 2a: Fix-cycle Detection
+
+Before checking the phase label in Step 3, detect whether the Issue is in a **fix-cycle state** — a condition where `/verify` has already run and flagged a FAIL, phase labels were cleared by `/verify`, and a Spec already exists. In this state, re-running issue/spec phases is unnecessary and risks overwriting the existing Spec.
+
+**Detection criteria (all three must hold):**
+
+1. **verify-fail marker exists**: At least one Issue comment contains `<!-- wholework-event: type=verify-fail` in its body.
+   ```bash
+   gh issue view "$NUMBER" --json comments \
+     --jq '[.comments[] | select(.body | contains("<!-- wholework-event: type=verify-fail"))] | length > 0'
+   ```
+   Use the most recent such comment (`createdAt` descending) as the FAIL event reference.
+
+2. **No `phase/*` labels present**: The Issue has no label whose name starts with `phase/`.
+   ```bash
+   gh issue view "$NUMBER" --json labels \
+     --jq '[.labels[].name | select(startswith("phase/"))] | length == 0'
+   ```
+
+3. **Spec file exists**: At least one Spec file matches `$SPEC_PATH/issue-$NUMBER-*.md`.
+   Use `Glob("$SPEC_PATH/issue-$NUMBER-*.md")` or `ls $SPEC_PATH/issue-$NUMBER-*.md 2>/dev/null`.
+
+**If all three criteria are met (fix-cycle state detected):**
+
+Output: "Fix-cycle detected for issue #$NUMBER — skipping issue/spec phases, running code directly."
+
+Skip Step 3 and Step 3a entirely. Select the code phase run based on ROUTE (determined in Step 2 from flags or Size):
+
+| ROUTE / condition | Action |
+|---|---|
+| `patch` (Size XS/S or `--patch` flag) | Proceed to Step 4 patch route |
+| `pr` (Size M/L or `--pr` flag) | Proceed to Step 4 pr route |
+| Size `XL` | Output: "Fix-cycle fast-path is not supported for XL Issues. Run `/code $NUMBER` or split sub-issues manually." and go to Step 6 (error report) |
+| Size unset, no explicit flag | Use `pr` route as safe fallback; proceed to Step 4 pr route |
+
+Step 4 handles code → (review → merge →) verify in the normal way for the chosen route. No additional `COMMENT_SCOPE` flag is needed for `run-code.sh` — the verify-fail marker exception in `modules/l0-surfaces.md` Step 2 ensures the FAIL marker comment is consumed by the code phase regardless of cutoff.
+
+**If any criterion is not met**: proceed normally to Step 3.
+
 ### Step 3: `phase/ready` Label Check
 
 Fetch labels with `gh issue view $NUMBER --json labels -q '.labels[].name'` and branch based on label state:
