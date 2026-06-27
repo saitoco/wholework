@@ -169,3 +169,37 @@ No new comments since last phase.
 - verify コマンドは Spec の Pre-merge AC 10 件を検証する
 - `bats tests/auto.bats` (13/13 PASS) / `bats tests/code.bats` (5/5 PASS) は CI でも確認済み (bats 失敗は別ファイル起因)
 - post-merge 観察 AC は実プロジェクトでの integration test が必要 — verify では rubric として扱うか skip するかを判断すること
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec で `auto-stop-at` enum を `spec|code|review|merge|verify` と定義したが、code phase で `spec` 値の stop-at check を実装漏れした。Spec の enum 定義を全て網羅した実装になっているかの check は review に持ち越された。
+
+#### code
+- 5 ステップ・7 コミットで完走、手戻りなし。`detect-config-markers.md → skills/code → skills/auto → docs → tests` の順序は依存グラフに沿っており適切。
+- 2 コミットで `Signed-off-by` を欠落させ CI DCO 失敗。手動で `-s` を付ける運用は再発しやすい。
+- `docs/ja/workflow.md` 更新を Translation sync gap として最後に残した。EN/JA 同一コミット (translations-sync) が recurring pattern として推奨。
+
+#### review
+- 実装漏れ 2 件を review で検出: (1) `auto-stop-at: spec` の stop-at check が未実装、(2) pr route の code stop-at check で `$PR_NUMBER` が未取得状態でジャンプ。両方とも修正済み。
+- enum 全値の実装網羅 / 実行順序依存変数の参照タイミングの 2 つは review phase で系統的にチェックする pattern が必要。
+- `docs/guide/customization.md` の説明と skills 実装の不一致 ("silently ignored" vs 警告出力) も review で検出。docs/code consistency を verify する AC pattern が事前にあれば前倒し可能。
+
+#### merge
+- CI failing (`append-loop-state-heartbeat.bats` の既存問題) 状態だったが本 PR 無関係であることを review handoff で確認済み、非インタラクティブ auto-resolve で merge 続行。
+- `gh pr merge --squash --delete-branch` でクリーンに完了、`closes #783` 自動クローズ機能。
+
+#### verify
+- Pre-merge AC 10 件全 PASS (grep 3 + bats 18 tests + rubric 5)。安定した verify。
+- Post-merge 3 件は opportunistic + manual で実プロジェクトでの観察待ち。
+- `docs/sessions/_daily/loop-state-2026-06-27.md` の heartbeat append が code/review/merge 時にローカル commit されず main pull --rebase 時に dirty 検出される運用 friction が #781 と #783 の両方で発生。
+
+### Improvement Proposals
+
+- **Review phase の enum coverage check pattern**: Spec で enum を定義している機能 (今回は `auto-stop-at`) について、review 段階で「定義された全 enum 値が実装されているか」を系統的にチェックする pattern (rubric テンプレート or review SKILL.md ガイダンス) を導入する。今回 `spec` 値の実装漏れを review で検出した経験を pattern 化する。
+- **`/code` skill が全 commit に `-s` を自動付与**: 2 コミットで Signed-off-by 欠落 → CI DCO 失敗が発生した。`/code` skill が `git commit` を生成する全箇所で `-s` を enforce するか、code SKILL.md に明示的なルールを追加する。Spec で「全 commit に `-s`」を都度書く運用は再発リスクが高い。
+- **docs/code consistency verify AC pattern**: `docs/guide/customization.md` の説明文と skills 実装が不一致 (今回 "silently ignored" vs 警告出力) というパターンが発生。Issue 起票時に `file_contains` などで docs ↔ code 実装の主要な claims を mechanical に照合する AC pattern を guideline 化する。
+- **`/auto` Step 3a route demotion 後の ALWAYS_PR 再チェック** (handoff defer): pr → patch route demotion 時に `ALWAYS_PR=true` であれば demotion を抑止する追加チェックが必要。#783 で handoff から繰り越し。
+- **Loop-state heartbeat の commit/push gap**: `/code`, `/review`, `/merge` phase で `append-loop-state-heartbeat.sh` がローカル append のみで commit/push しないため、次の `/verify` 実行時に dirty 検出が発生 (#781 と #783 で再発)。heartbeat append 後に常に commit + push する (best-effort) か、`/verify` の dirty check で heartbeat-only diff を許容する。
