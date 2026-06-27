@@ -31,13 +31,16 @@ Extract the Issue number from ARGUMENTS. Examples: `ARGUMENTS = "279"` → `NUMB
 
 **AUTO_SESSION_ID generation (run before all route detection):**
 
-Generate a session identifier and record it in a pointer file so sub-processes spawned by `run-auto-sub.sh` can read it:
+Generate a session identifier and record it in a PGID-specific pointer file so sub-processes spawned by `run-auto-sub.sh` can read it:
 
-1. Generate `SESSION_ID` and create the pointer file:
+**Session boundary isolation design**: Each `/auto` session uses its process group ID (PGID) as part of the pointer file name (`.tmp/auto-session-${PGID}`). This prevents parallel `/auto` sessions from overwriting each other's pointer file — each session's sub-processes (run-auto-sub.sh, run-code.sh, run-review.sh, run-merge.sh) share the same PGID as their parent, so they naturally read the correct session_id without cross-session contamination.
+
+1. Generate `SESSION_ID` and create the PGID-specific pointer file:
    ```bash
    mkdir -p .tmp
    SESSION_ID="$$-$(date +%s)"
-   printf '%s\n' "$SESSION_ID" > .tmp/auto-session-current
+   PGID=$(ps -o pgid= -p $$ | tr -d ' ')
+   printf '%s\n' "$SESSION_ID" > ".tmp/auto-session-${PGID}"
    ```
 2. Write `.tmp/auto-session-${SESSION_ID}.json` using the Write tool with session metadata:
    ```json

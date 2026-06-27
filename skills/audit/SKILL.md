@@ -988,7 +988,7 @@ This subcommand covers the post-session time scale of the `/audit` 3-axis model:
 
 `/auto` generates a `SESSION_ID` at startup using the format `PID-timestamp` (e.g., `12345-1718336400`). This identifier is recorded in:
 
-- `.tmp/auto-session-current` — pointer file read by `run-auto-sub.sh` to populate `session_id` in each emitted event
+- `.tmp/auto-session-${PGID}` — PGID-specific pointer file written by `/auto` and read by `run-auto-sub.sh`, `run-code.sh`, `run-review.sh`, `run-merge.sh` to populate `session_id` in each emitted event. Using the process group ID isolates parallel `/auto` sessions from overwriting each other's pointer
 - `.tmp/auto-session-${SESSION_ID}.json` — metadata file recording session start time
 
 Each event in `.tmp/auto-events.jsonl` includes a `session_id` field set to this value. The `auto-session` subcommand filters events by `session_id` to isolate exactly one session's activity, even when multiple sessions' events are mixed in the same log file.

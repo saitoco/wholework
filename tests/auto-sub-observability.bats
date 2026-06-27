@@ -133,3 +133,30 @@ MOCK
     [ "$status" -eq 0 ]
     grep -q '"backfilled":true' "$AUTO_EVENTS_LOG"
 }
+
+@test "session-isolation: PGID-specific pointer file is read when AUTO_SESSION_ID is unset" {
+    # Obtain the PGID of the current shell (same as run-auto-sub.sh will see)
+    local pgid
+    pgid=$(ps -o pgid= -p $$ | tr -d ' ')
+
+    # Write a test session_id into the PGID-specific pointer file
+    mkdir -p "$BATS_TEST_TMPDIR/.tmp"
+    printf 'test-session-pgid\n' > "$BATS_TEST_TMPDIR/.tmp/auto-session-${pgid}"
+
+    # Override emit-event.sh to capture the session_id value
+    cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+emit_event() {
+    local event_name="$1"
+    mkdir -p "$(dirname "${AUTO_EVENTS_LOG}")"
+    printf '{"ts":"%s","issue":%s,"event":"%s","session_id":"%s"}\n' \
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${EMIT_ISSUE_NUMBER:-0}" "${event_name}" \
+        "${AUTO_SESSION_ID:-}" >> "${AUTO_EVENTS_LOG}"
+}
+MOCK
+
+    # Unset AUTO_SESSION_ID so run-auto-sub.sh reads from the pointer file
+    unset AUTO_SESSION_ID
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q '"session_id":"test-session-pgid"' "$AUTO_EVENTS_LOG"
+}

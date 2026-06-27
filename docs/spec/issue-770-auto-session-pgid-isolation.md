@@ -57,3 +57,36 @@ Fix: ポインタファイル名に PGID を含めることで、同一 Claude C
 - `run-auto-sub.sh` は子プロセスとして run-code.sh, run-review.sh, run-merge.sh を呼び出す。`run-auto-sub.sh` が `AUTO_SESSION_ID` を `export` するため、XL サブ Issue 経路では子プロセスが PGID ファイルを読む機会はないが、M/L Issue の直接 Bash tool 呼び出し経路 (スキル SKILL.md から直接) では run-code.sh 等がポインタファイルを読む必要があるため、すべての run-*.sh を修正する。
 - PGID 取得コマンド `ps -o pgid= -p $$ | tr -d ' '` は macOS (bash 3.2) および Linux の両方で動作する。
 - Consumed Comments: saito (MEMBER) 2026-06-27T14:56:52Z — AC2 の verify command を BRE metacharacter (`\|`) を含む `grep` から `file_not_contains "scripts/run-auto-sub.sh" "auto-session-current"` に変更する自動解決ログ。この変更は Issue body の AC2 に既に反映済み。
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+- `skills/audit/SKILL.md` の「Session Boundary Identification」セクションが PR の変更ファイルに含まれておらず、古い `.tmp/auto-session-current` 参照が残留した。PR の変更ファイルが変更元 (Session ID 生成ロジック) に特化していたため、参照先ドキュメント (`audit/SKILL.md`) が Spec の "Changed Files" リストから漏れた典型パターン。対策: Issue #770 のような shared state 置換 Issue では、参照元だけでなく参照先ドキュメントも Spec の "Changed Files" に明示すること。
+
+### 繰り返し所見
+
+- 特になし。`skills/audit/SKILL.md` への参照漏れは今回固有の事例で、パターンとしての繰り返しではない。
+
+### 受け入れ基準検証の難しさ
+
+- `rubric` 条件 2 件はいずれも PASS で、verify command の精度に問題なし。AC2 の `file_not_contains` は明確で検証容易。UNCERTAIN なし。
+- Post-merge 条件 (2 つの `/auto --batch` 同時起動での観察) は手動検証が必要で自動化が難しいが、現状の verify command 種別 (`manual`) が適切に設定されている。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- SHOULD 所見 (`skills/audit/SKILL.md:991` の古い参照) をレビュー内で即時修正し、PR ブランチにコミット (`a21bc78`)
+- CONSIDER 所見 (負の isolation テスト, `.tmp` ファイル蓄積) はスキップ — マージブロッカーではない
+- CI 失敗 (tests 11-15) は main ブランチでも同様に失敗する既存不具合と確認。本 PR のブロッカーではない
+
+### Deferred Items
+- `tests/auto-sub-observability.bats` に wrong-PGID decoy テストの追加 (CONSIDER)
+- `.tmp/auto-session-${PGID}` ファイルの session 終了時クリーンアップ (CONSIDER)
+- `append-loop-state-heartbeat.bats` tests 11-15 の既存不具合修正 (別 Issue で対応)
+
+### Notes for Next Phase
+- MUST 所見なし。受け入れ基準 3/3 PASS。マージ可能な状態
+- CI 失敗は既存不具合 (main でも同様)。マージには影響しない
+- Post-merge: 2 つの `/auto --batch` を同時起動し、各 session の `/audit auto-session --full` report にクロスセッション混入がないことを手動確認すること
