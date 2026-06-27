@@ -48,3 +48,31 @@
 ## Consumed Comments
 
 - saito (MEMBER / first-class / 2026-06-27T10:50:20Z): Issue Retrospective — Sub-form syntax 選択 (lateral extension を推奨)、AC2 の BRE metachar 修正 (`\|` → `|` in ERE)、rubric ACs に補助 file_contains/section_contains を追加、AC3 cross-reference 先を `verify-patterns.md §7` に特定
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None — Implementation Steps 1〜3 を Spec 通り実装。verify-executor.md の新セクション位置 (rubric 行の後・grep ERE BRE セクション前) も Spec 通り。
+
+### Design Gaps/Ambiguities
+
+- verify-patterns.md の Usage criteria table への行追加と、その後の説明段落の順序は Spec では「Usage criteria table 後に追加」とのみ指定されていたが、行追加 (table 内) と説明段落 (table 外) の両方を含む形で実装した。意図通りと判断。
+
+### Rework
+
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `github_check` の lateral extension として `gh run view` を safe mode allowlist に追加し、job-level sub-form を実装。`github_check_job` 新コマンドの追加は侵襲性が高いため採用しなかった。
+- verify-patterns.md §7 の Usage criteria table に新行を追加し、続けて "Job-level conclusion sub-form" の説明段落も追加した (Spec の指示通り)。
+
+### Deferred Items
+- None — 実装スコープは Spec 通りに完了。
+
+### Notes for Next Phase
+- 全 pre-merge AC (file_contains/grep/section_contains) を code phase で確認済み PASS。rubric ACs は /verify で再評価される。
+- `gh run view` は safe mode allowlist 追加済みのため、/verify での確認はシンプルな grep/section_contains チェックで完了できる見込み。
