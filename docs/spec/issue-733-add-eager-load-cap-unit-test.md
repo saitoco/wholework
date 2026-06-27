@@ -56,3 +56,28 @@
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / auto-resolved ambiguity points (AC2 count mismatch, empty Glob missing, fix scope) を整理した Issue Retrospective / https://github.com/saitoco/wholework/issues/733#issuecomment-4814293379
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- 既存 integration test (`tests/audit-eager-load-capability.bats`) が `setup()` で `mktemp -d` を手動管理しているが、Spec は bats builtin の `BATS_TEST_TMPDIR` を使用するよう明示していた。新規ファイルは `BATS_TEST_TMPDIR` を採用し (bats 1.13.0 で利用可能確認)、`teardown()` での手動削除も不要になった。
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `BATS_TEST_TMPDIR` を使用し teardown 不要のシンプルなテスト構造を採用 (bats 1.13.0 確認済み)
+- 4 @test: empty Glob / verify-executor.md detection / domain file suppression / multi-capability detection — Spec の実装ステップを忠実に実装
+
+### Deferred Items
+- AC4 (`github_check CI`) は main へのマージ後 CI 実行で確認 (patch route のため push 後に自動実行)
+
+### Notes for Next Phase
+- `/verify` は AC1–AC3 が既にチェック済み (Issue body に反映)。AC4 のみ CI 完了後に確認が必要
+- 変更ファイル: `tests/check-eager-load-capability.bats` (新規)、`docs/structure.md`、`docs/ja/structure.md` (カウント 86→87 更新)
