@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (59 files)
+├── scripts/             # Utility scripts used by skills and agents (58 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/

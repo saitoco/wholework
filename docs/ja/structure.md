@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（59 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（58 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
