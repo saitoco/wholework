@@ -144,21 +144,21 @@
 - UNCERTAIN は 0 件。verify command の設計が適切だった
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- DCO 失敗を review フェーズで修正 (git rebase --signoff + force-push)。merge フェーズでは DCO は既に通過済みになっている想定
-- SHOULD 指摘 (docs/structure.md) は Spec に defer 理由が記録されているためスキップ。merge フェーズでのアクション不要
-- 全 AC (Pre-merge 4 件) PASS、チェックボックス更新済み
+- PR #809 をスクワッシュマージ (main へ) — 119/119 テスト green、CI SUCCESS、DCO 通過済みの状態で実行
+- ローカルブランチ `worktree-code+issue-791` は別 worktree 使用中のため `gh pr merge --delete-branch` で削除失敗したが、リモートブランチは削除済み。merge 本体への影響なし
+- label を `verify` へ遷移 — post-merge verify が次フェーズ
 
 ### Deferred Items
 
-- docs/structure.md の emit-event.sh 説明更新は SHOULD レベルとして defer (Spec 記録済み)。merge 後の follow-up Issue として残す候補
-- post-merge observation AC (auto-events.jsonl / loop-state heartbeat) は merge 後に観察が必要
+- docs/structure.md の emit-event.sh 説明更新 (SHOULD レベル) は本 PR では見送り。Spec に理由記録済み
+- post-merge observation AC: 次回 single Issue `/auto N` (M/L pr route) 実行時に `auto-events.jsonl` と `loop-state-{date}.md` を確認
 
 ### Notes for Next Phase
 
-- CI は DCO 含め全ジョブ SUCCESS になる見込み (force-push 後に再実行される)
-- MUST 指摘はすべて解決済み。merge の前提条件を満たしている
-- `docs/structure.md` の SHOULD 更新は merge フェーズでは不要 (スキップ可)
+- post-merge verify: pre-merge verify 4 件は PASS 済み。verify は post-merge observation AC (実際の実行での heartbeat/events 確認) を中心に実施
+- `worktree-code+issue-791` ローカルブランチが `.claude/worktrees/code+issue-791` で残存。cleanup は merge 後に別途 `git worktree remove` で可
+- 実装 AC の verify command は `bats tests/run-auto-sub.bats tests/auto.bats tests/run-code.bats tests/run-review.bats tests/run-merge.bats`
