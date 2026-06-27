@@ -84,3 +84,51 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class): Issue Retrospective — AC2 verify コマンドを `grep "docs/sessions/"` → `grep "session\.md"` に修正 (false positive 回避)、AC1 に supplementary `grep "See also"` を追加。これらは Issue 本文の Auto-Resolved Ambiguity Points に反映済み。(2026-06-27)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. 実装は Spec の Implementation Steps と完全に一致した。
+
+### Design Gaps/Ambiguities
+
+- PERIOD_MODE での cross-link 不要の理由が Spec Notes に記載されていたため、コード上で `PERIOD_MODE` チェックを追加する必要がなかった (line 124 での早期 exit により report mode block は single session のみ実行される)。判断確認が不要で実装がシンプルになった。
+- bats テストの `cross-link: See also footer appended` は `cd "$BATS_TEST_TMPDIR"` でサブシェル実行が必要だった。スクリプトが CWD 相対パスで `docs/sessions/` を glob するため、テスト tmpdir を CWD にして session dir を作成した。
+
+### Rework
+
+- None. 1 パスで実装完了。全 8 テスト一発 PASS。
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- None. 実装は Spec の Implementation Steps と完全に一致した。
+- SKILL.md step 3a の "Edit tool (or Write tool)" と Spec の "Write ツール" の違いは機能的に同等で、Edit 優先は改善であり divergence ではない。
+
+### Recurring Issues
+
+- Nothing to note. 単一パスでレビュー完了、MUST/SHOULD findings なし。
+- CI `Forbidden Expressions check` FAILURE は PR #766 の変更と無関係の pre-existing issue (check-forbidden-expressions.sh の単語境界バグに起因)。同スクリプトのバグ修正は別 Issue で追跡すること。
+
+### Acceptance Criteria Verification Difficulty
+
+- Nothing to note. 全 4 AC が PASS、UNCERTAIN ゼロ。rubric AC (AC1, AC4) は実装コードの読み取りで判定できた。grep AC (AC2, AC3) は直接的に確認できた。verify commands は適切に設計されていた。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- review-light エージェントが利用不可だったため、インラインで 4 視点レビューを実施した。結果は同等。
+- CI `Forbidden Expressions check` FAILURE は pre-existing issue と判定し、PR のマージブロックにしなかった (PR #766 変更ファイルに violations なし)。
+- MUST issues ゼロのため Step 12 (issue resolution) はスキップした。
+
+### Deferred Items
+- 逆方向 cross-link (session.md → データ層レポート) の実際の動作確認は Post-merge 検証 (次回 batch/XL session) で行う。
+- Forbidden Expressions check の単語境界バグ (単語境界なしパターンが `sub-issue Spec` 等の正当な記述を誤検知) は別 Issue での修正が必要。
+
+### Notes for Next Phase
+- 全 AC PASS、CI 主要ジョブ PASS (Forbidden Expressions check のみ pre-existing FAILURE)。
+- MUST issues なし。`/merge 766` で続行可。
+- /verify では rubric AC が 2 個あるため、実装内容を git diff で grader に渡して判定させること (code phase のメモを引き継ぎ)。
