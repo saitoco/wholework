@@ -176,23 +176,34 @@ No new comments since last phase.
 ### Rework
 - None.
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- No structural divergences between Spec and PR diff. All 9 implementation steps were completed exactly as designed.
+- The Phase Handoff (code phase) accurately predicted that all 8 AC checks would PASS without fixup — confirmed during review.
+
+### Recurring issues
+- `tests/issue.bats` was created without the `PROJECT_ROOT` anchoring pattern used by all other 87 bats tests in the repository. This is a recurring gap: new test files don't inherit the project's established portability convention automatically. The issue was SHOULD-severity and fixed in this review. Consider adding a note to the test-writing guidance or a bats fixture template that includes the `setup()` pattern.
+- The JA mirror (`docs/ja/guide/customization.md`) omitted a bash code block present in the EN version. Translation drift in code examples is a recurring risk when adding code fences to documentation. Mitigation: the `docs/translation-workflow.md` sync procedure should explicitly check code blocks, not just text content.
+
+### Acceptance criteria verification difficulty
+- All 8 pre-merge ACs verified PASS without ambiguity. The mix of `rubric`, `grep`, and `command` verify commands provided good coverage at different verification depths.
+- The `command "bats tests/issue.bats"` AC was resolved via CI reference fallback (ok 441–444 in the CI log). The overall CI FAILURE in `Run bats tests` is caused by a pre-existing `append-loop-state-heartbeat.bats` issue unrelated to this PR. The AC verification correctly distinguished the specific test file result from the overall job status.
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- All 9 implementation steps completed in a single commit. No deviations from Spec design.
-- `HAS_PR_PREVIEW_CAPABILITY` retain line added to both New Issue Creation Step 2 and Existing Issue Refinement Step 4 (both sections read detect-config-markers and both flow to classification logic).
-- pre-merge-preview guidance placed immediately after the classification decision sentence in Step 4, before the classification table — ensures the classifier reads the tier guidance before applying existing examples.
-- `/review` Step 8.0 fast-path added as a preamble before the numbered Deployments API steps (not inserted inline) — no risk of breaking existing step numbering references.
-- `/verify` Step 5 skip rule added as a note block directly under the Scope sentence — reads naturally as a scope extension.
+- All 8 pre-merge ACs PASS. Two SHOULD fixes applied (PROJECT_ROOT anchoring in bats, JA bash code block). Three CONSIDER issues skipped.
+- The Workflow path (capabilities.workflow: true) attempted but fell back to static fan-out because custom agentTypes (review-spec, review-bug) are not available as registered agent types in the worktree environment. Findings were collected via direct Agent tool calls instead.
+- No policy changes or acceptance criteria updates needed.
 
 ### Deferred Items
-- Vercel / Netlify / Cloudflare Pages preview URL auto-resolver adapter — follow-up Issue (scoped out in Spec).
-- `verify-classifier.md` tier concept integration — out of scope (post-merge verify-type module).
-- UX for PREVIEW_URL-unresolved preview ACs remains minimal (SKIPPED only).
+- CONSIDER: skills/review/SKILL.md Step 8.0 fast-path description scope ambiguity — the sentence "ac-tier: preview ACs ... are executed via this path" could mislead about ACs without {{base_url}}. Low risk, deferred to a future doc cleanup pass.
+- CONSIDER: skills/verify/SKILL.md "### Pre-merge" vs "### Pre-merge (auto-verified)" section name mismatch in skip rule prose. Low functional risk.
+- Vercel/Netlify/CF Pages preview URL auto-resolver adapter — already deferred from code phase.
 
 ### Notes for Next Phase
-- `/review` should verify all 8 AC rubric and grep commands against the implementation; all should PASS without any fixup.
-- `bats tests/issue.bats` runs 4 content-assertion tests that confirm keyword presence — these are the mechanical safety net for the spec; confirm all 4 remain green in CI.
-- The `--when="test -n \"$PREVIEW_URL\""` guard in `skills/issue/SKILL.md` uses escaped double-quotes inside the SKILL.md prose — verify-executor parses this correctly (existing pattern from the pre-existing --when table row "Preview URL required").
-- Post-merge opportunistic ACs (review-run / verify-run) require a real project with `capabilities.pr-preview: true` and CI that exports `PREVIEW_URL`; no synthetic test exists.
+- Two SHOULD fixes committed (PROJECT_ROOT in bats, JA code block). CI re-run expected to show same status (pre-existing append-loop-state-heartbeat.bats failures remain).
+- merge phase: no MUST issues to block merge. CI FAILURE is pre-existing on main too — merge can proceed if that's the project's accepted state.
+- Post-merge opportunistic ACs require a real project with `capabilities.pr-preview: true` and CI that exports `PREVIEW_URL`.
