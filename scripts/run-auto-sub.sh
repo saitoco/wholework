@@ -144,6 +144,53 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>" \
   fi
 }
 
+_write_tier3_recovery_to_spec() {
+  local issue="$1"
+  local phase="$2"
+  local exit_code="$3"
+  local _repo_root
+  _repo_root="$(dirname "$SCRIPT_DIR")"
+  local spec_dir="$_repo_root/docs/spec"
+  local spec_file
+  spec_file=$(ls "$spec_dir/issue-${issue}-"*.md 2>/dev/null | head -1 || true)
+
+  if [[ -z "$spec_file" ]]; then
+    local title
+    title=$(gh issue view "$issue" --json title -q '.title' 2>/dev/null || echo "Issue #${issue}")
+    mkdir -p "$spec_dir"
+    spec_file="$spec_dir/issue-${issue}-recovery.md"
+    printf '%s\n' "# Issue #${issue}: ${title}" > "$spec_file"
+  fi
+
+  if ! grep -q "^## Auto Retrospective" "$spec_file" 2>/dev/null; then
+    printf '\n%s\n' "## Auto Retrospective" >> "$spec_file"
+  fi
+
+  local _date
+  _date=$(date -u '+%Y-%m-%d %H:%M UTC')
+  printf '\n%s\n' "### Tier 3 recovery (${phase})" >> "$spec_file"
+  printf '%s\n' "- **Date**: ${_date}" >> "$spec_file"
+  printf '%s\n' "- **Issue**: #${issue}, phase: ${phase}" >> "$spec_file"
+  printf '%s\n' "- **Source**: spawn-recovery-subagent.sh" >> "$spec_file"
+  printf '%s\n' "- **Wrapper exit code**: ${exit_code}" >> "$spec_file"
+  printf '%s\n' "- **Outcome**: success" >> "$spec_file"
+  printf '%s\n' "- **Recovery details**: see docs/reports/orchestration-recoveries.md" >> "$spec_file"
+
+  local spec_rel_path="${spec_file#$_repo_root/}"
+
+  if ! git -C "$_repo_root" diff --quiet "$spec_rel_path" 2>/dev/null; then
+    if git -C "$_repo_root" add "$spec_rel_path" \
+       && git -C "$_repo_root" commit -s -m "Record Tier 3 recovery in auto retrospective for issue #${issue}
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>" \
+       && git -C "$_repo_root" push origin HEAD; then
+      echo "${LOG_PREFIX} [recovery] spec auto retrospective updated for issue #${issue} (tier3)"
+    else
+      echo "${LOG_PREFIX} WARNING: could not commit/push Tier 3 recovery to spec; continuing" >&2
+    fi
+  fi
+}
+
 run_phase_with_recovery() {
   local phase issue runner_script exit_code log_file
   phase="$1"; issue="$2"; runner_script="$3"; shift 3
@@ -276,6 +323,7 @@ run_phase_with_recovery() {
         echo "${LOG_PREFIX} WARNING: could not commit/push recovery log; /verify may detect dirty file" >&2
       fi
     fi
+    _write_tier3_recovery_to_spec "$issue" "$phase" "$exit_code"
     emit_event "recovery" "phase=${phase}" "tier=3" "result=recovered"
     emit_event "phase_complete" "phase=${phase}"
     _append_loop_state_heartbeat "$phase" "$issue"
