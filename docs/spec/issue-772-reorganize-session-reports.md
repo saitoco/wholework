@@ -223,3 +223,31 @@ post-merge 2 件はいずれも `<!-- verify-type: manual -->`。「次回 `/aud
 - 全 16 ファイルの `git mv` マイグレーション済み (data-layer 8 + rollup 7 + loop-state 1)。
 - `scripts/append-loop-state-heartbeat.sh` の path 更新は review フェーズで修正済み (commit d0a9288)。
 - `docs/reports/` 直下の curated ファイルは移動対象外。verify では post-merge 観察 2 件のみ `manual` 確認が必要。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Background に `loop-state-*.md` の生成元として `auto-events-rollup.sh` を誤記載していた点 (spec retrospective で codebase grep により検出)。`/issue` 段階での事実検証ステップが薄い。
+
+#### spec
+- Acceptance Criteria の verify command 設計で `file_not_contains` を SKILL.md にのみ適用し、同一機能を実装する `scripts/append-loop-state-heartbeat.sh` をカバーしていなかった点。migration を伴う Issue では SKILL.md と bash スクリプト両方への対称的な `file_not_contains` 追加が再発防止に有効。
+
+#### code
+- 初回実装で `scripts/append-loop-state-heartbeat.sh` の旧 path 残存を見落とした。Changed Files リスト網羅性のチェックプロセスで防止可能 (review が検出して fix)。
+
+#### review
+- spec/AC 死角 (SKILL.md only verify command) を補完して bash スクリプト側を検出。effective。
+
+#### merge
+- `mergeable=false, reason=ci_failing` を auto-resolve ポリシーでマージ。CI 状態を verify フェーズで観察すべきとの phase handoff があったが、verify では AC 観点のみ確認し CI 状態は本 retrospective で別途確認 (PR #777 は state=MERGED 完了済み、ブロックなし)。
+
+#### verify
+- 全 13 pre-merge + 2 post-merge AC が PASS。post-merge `manual` 条件は default path expression + 既存マイグレーション結果を根拠に PASS 判定可能だった (`/audit` `daily rollup` の future 観察を待たずに in-session 検証で完結)。
+
+### Improvement Proposals
+
+1. **Migration Issue における verify command 対称性**: SKILL.md (markdown 記述) と同名機能の bash スクリプト (実装側) が二層存在する場合、`file_not_contains` を両方に対称的に追加する Spec template の整備。`/spec` の Acceptance Criteria 設計時に「対象機能を実装するファイル全列挙」のチェックリスト化が候補。
+2. **`/issue` での Background 事実検証**: コードに関する factual claims (「X は Y で生成される」など) を Background に含む場合、`/issue` 段階で simple codebase grep verification を実施するガード追加が候補 (今回は spec 段階で検出されたが Background 修正コストは下流ほど高い)。
+3. **post-merge `manual` AC の Claude executable 判定強化**: 本 Issue の 2 manual AC は実質的に in-session で PASS 判定可能だった (default path expression 直接検証)。「次回観察」と書かれていても script の default 挙動が source code から決まる場合は Claude Execute が成立する。`/verify` Step 8b の executability rubric に「default 挙動が source code から決まる observation」を executable 例として追加する候補。
