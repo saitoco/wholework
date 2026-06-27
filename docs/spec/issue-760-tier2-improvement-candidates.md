@@ -49,3 +49,34 @@
 ### Consumed Comments
 
 - saito (MEMBER / first-class): Issue Retrospective コメント (2026-06-26T23:16:04Z) — AC2 削除 (always-PASS 修正)、AC1 に `file_contains "recoveries-auto-fire"` 補足追加、AC3 に `file_contains "Tier 2"` 補足追加、rubric+file_contains パターン統一。コメント内容を反映して AC 構造を設計。
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+特記事項なし。Spec の実装ステップが PR diff と高い一致度で対応。`file_contains` による verify command も実装と正確に一致しており、PASS 判定が容易だった。
+
+### 繰り返し問題
+
+- Tier 2 bats テストが "approaching threshold" ケースのみでバウンダリ対称 (threshold reached) が欠落するパターンは、新機能追加テストで起こりやすい。AC に threshold/approaching 両方の test case を明記すると /review での検出が不要になる。
+
+### 受け入れ基準検証の難易度 (UNCERTAIN 分析)
+
+- Pre-merge 条件 2 つは `file_contains` で確実に検証可能。UNCERTAIN は 0 件。
+- verify command のシンプルな設計 (rubric + file_contains の組み合わせ) により、完全自動判定ができた。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Forbidden Expressions check CI failure は本 PR 変更に起因しない既存 main 問題 (`docs/reports/auto-session-3480-1782440098-2026-06-27-ja.md` が commit `7071bb2` 由来) と判断し、マージブロッカーとして扱わない
+- SHOULD 問題 (threshold reached テスト欠落) を修正としてコミット済み (commit `1831b47`)
+
+### Deferred Items
+- awk regex `in_section && /threshold:/` の精度向上 (CONSIDER、現 `.wholework.yml` では問題なし) — 起票不要、将来のリファクタ機会に対応
+- Forbidden Expressions check が `docs/reports/` の日本語テキストに反応する既存 main 問題 — 別 Issue で対応予定 (#760 スコープ外)
+
+### Notes for Next Phase
+- 全 CI チェック SUCCESS (Forbidden Expressions 除く)、bats テスト 6/6 PASS
+- PR をマージ可能な状態。`/merge 763` で進める
+- Post-merge AC (次回 batch session での観察) は merge 後に手動確認
