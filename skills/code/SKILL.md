@@ -232,6 +232,13 @@ Implement every step listed in the Spec's "Implementation Steps" regardless of t
 
 If `scripts/validate-skill-syntax.py` exists, Read `${CLAUDE_PLUGIN_ROOT}/skills/code/stale-test-check.md` and follow the "Processing Steps" section.
 
+#### SSoT Module Cross-Check
+
+If the implementation creates or modifies a file under `modules/` that declares itself as an SSoT module (contains "SSoT" or "authoritative reference" in its header or `ssot_for` frontmatter field), run the following cross-check before committing:
+
+- **Reference consistency**: For each table or enumeration in the SSoT module that mirrors an implementation detail from another file (e.g., a command list in `verify-executor.md`, a label set in `setup-labels.sh`, a step sequence in a skill), open the referenced source and confirm the SSoT module's entries match the current implementation exactly. Mismatches must be resolved before committing — either fix the SSoT module content or update the implementation.
+- **"How to Reference" accuracy**: If the SSoT module contains a "How to Reference" section or a "Callers" table with example code, verify that every concrete reference in the examples (step name, tool name, variable name, file path) exists in the actual caller file at the time of commit. If a concrete reference cannot be verified, replace it with an abstract pattern (e.g., a generic placeholder rather than a specific step number or method name) to prevent stale examples from misleading future readers.
+
 #### Follow-up Issue Creation
 
 If scope-out remediations are identified during implementation, create a follow-up Issue using the `retro/code` label:
