@@ -101,3 +101,29 @@ setup() {
   run bash "$SCRIPT"
   [ "$status" -eq 1 ]
 }
+
+@test "false positive: Issue Spec in docs/sessions is not flagged" {
+  mkdir -p "$BATS_TEST_TMPDIR/docs/sessions/some-session"
+  echo "Issue Spec was the old name" > docs/sessions/some-session/session.md
+  run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+}
+
+@test "false positive: per-Issue Spec in docs/reports is not flagged" {
+  mkdir -p "$BATS_TEST_TMPDIR/docs/reports"
+  echo "per-Issue Spec tracking was used" > docs/reports/report.md
+  run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+}
+
+@test "false positive: hyphen-preceded Issue Spec in skills is not flagged" {
+  echo "per-Issue Spec tracking is no longer used" > skills/note.md
+  run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+}
+
+@test "false positive: backtick-quoted Issue Spec in docs/spec is not flagged" {
+  echo "The deprecated term \`Issue Spec\` is no longer used" > docs/spec/note.md
+  run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+}

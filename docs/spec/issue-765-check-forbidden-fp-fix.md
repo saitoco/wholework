@@ -13,7 +13,7 @@
 1. `bash scripts/check-forbidden-expressions.sh` を実行
 2. Exit code 1 が返る (false positive 3 件)
    - `docs/spec/issue-761-*.md`: バッククォートで囲まれた `` `Issue Spec` `` (Pattern 3)
-   - `docs/sessions/*/session.md`: auto-generated log が "Issue Spec" をメタ参照 (Pattern 2)
+   - `docs/sessions/*/session.md`: auto-generated log が `Issue Spec` をメタ参照 (Pattern 2)
    - `docs/reports/auto-session-*.md`: `per-Issue Spec` 複合語 (Pattern 1 + Pattern 2)
 
 ## Root Cause
@@ -43,9 +43,9 @@
 
 2. **`Issue Spec` ケースに追加除外を渡す** (→ AC1, AC2)
 
-   `case "$TERM"` の `"Issue Spec"` ブロックを変更:
+   `case "$TERM"` の `Issue Spec` ブロックを変更:
    ```
-   check_term "$TERM" "-rE" '\bIssue Spec\b' '[-`]Issue Spec'
+   check_term "$TERM" "-rE" '\bIssue Spec\b' '[-`]Issue Spec'  # 旧称: deprecated term pattern
    ```
    - `[-` `` ` `` `]Issue Spec` (BRE character class) がハイフン先行 (`per-Issue Spec`) とバッククォート先行 (`` `Issue Spec`` ) を除外
 
@@ -71,7 +71,7 @@
 
 ## Notes
 
-- `[-` `` ` `` `]Issue Spec` は BRE character class。クラス先頭の `-` はリテラル (範囲指定なし) 。macOS BSD grep / GNU grep 両対応
+- `[-` `` ` `` `]Issue Spec` は BRE character class (旧称: deprecated term exclusion pattern)。クラス先頭の `-` はリテラル (範囲指定なし) 。macOS BSD grep / GNU grep 両対応
 - `extra_grep_v` が空の場合 (`[ -n "$extra_grep_v" ]` 判定) は追加 grep -v をスキップし、既存の全 term の動作に影響なし
 - `docs/sessions/` と `docs/reports/` 除外は全 DEPRECATED_TERMS に適用される (これらは常に auto-generated のためスキャン不要)
 - bats テストの `docs/sessions/` や `docs/reports/` は `setup()` では作られないため、各テスト内で `mkdir -p` が必要

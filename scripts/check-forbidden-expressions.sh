@@ -21,6 +21,7 @@ check_term() {
   local term="$1"
   local grep_flags="$2"
   local pattern="$3"
+  local extra_grep_v="${4:-}"
 
   local result
   # shellcheck disable=SC2086
@@ -29,7 +30,13 @@ check_term() {
     | grep -v '旧称' \
     | grep -v 'tests/check-forbidden-expressions.bats' \
     | grep -iv "| $term |" \
+    | grep -v '^docs/sessions/' \
+    | grep -v '^docs/reports/' \
     || true)
+
+  if [ -n "$extra_grep_v" ] && [ -n "$result" ]; then
+    result=$(printf '%s\n' "$result" | grep -v -- "$extra_grep_v" || true)
+  fi
 
   if [ -n "$result" ]; then
     echo "Forbidden expression '$term' detected:"
@@ -51,7 +58,8 @@ for TERM in "${DEPRECATED_TERMS[@]}"; do
       ;;
     "Issue Spec")
       # Word boundary + case-sensitive: avoids "Issue Specification" and lowercase "issue spec" in shell arrays
-      check_term "$TERM" "-rE" '\bIssue Spec\b' || VIOLATIONS=1
+      # extra_grep_v excludes hyphen-preceded (per-Issue Spec) and backtick-quoted (`Issue Spec`) false positives
+      check_term "$TERM" "-rE" '\bIssue Spec\b' '[-`]Issue Spec' || VIOLATIONS=1
       ;;
     *)
       check_term "$TERM" "-ri" "$TERM" || VIOLATIONS=1
