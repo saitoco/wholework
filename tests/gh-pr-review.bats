@@ -188,3 +188,25 @@ for c in comments:
     [ "$status" -eq 1 ]
     [[ "$output" == *"invalid line comments JSON"* ]]
 }
+
+@test "error: gh api POST failure exits with code 1 and Error message" {
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+echo "ARGS: \$@" >> "$GH_CALL_LOG"
+if [ "\$1" = "repo" ] && [ "\$2" = "view" ]; then
+    echo "owner/repo"
+    exit 0
+fi
+if [ "\$1" = "api" ]; then
+    echo "error: rate limit exceeded" >&2
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    echo "review body text" > "$BATS_TEST_TMPDIR/review.md"
+    run bash "$SCRIPT" 159 "$BATS_TEST_TMPDIR/review.md"
+    [ "$status" -eq 1 ]
+    [[ "$output" =~ "Error" ]]
+}

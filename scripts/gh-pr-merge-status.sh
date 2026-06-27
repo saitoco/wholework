@@ -42,7 +42,7 @@ if ! [[ "$PR" =~ ^[0-9]+$ ]]; then
 fi
 
 # Fetch PR mergeable and mergeStateStatus
-JSON=$(gh pr view "$PR" --json mergeable,mergeStateStatus)
+JSON=$(gh pr view "$PR" --json mergeable,mergeStateStatus) || { echo "Error: failed to fetch PR #$PR" >&2; exit 1; }
 
 MERGEABLE=$(echo "$JSON" | jq -r '.mergeable')
 STATE=$(echo "$JSON" | jq -r '.mergeStateStatus')

@@ -85,3 +85,11 @@ make_gh_mock() {
     [[ "$output" == *'"reason": "ci_failing"'* ]]
     [[ "$output" == *'"ci_status": "failing"'* ]]
 }
+
+@test "error: gh pr view failure exits with code 1 and Error message" {
+    printf '#!/bin/bash\nexit 1\n' > "$MOCK_DIR/gh"
+    chmod +x "$MOCK_DIR/gh"
+    run bash "$SCRIPT" "123"
+    [ "$status" -eq 1 ]
+    [[ "$output" =~ "Error" ]]
+}

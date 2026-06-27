@@ -271,7 +271,7 @@ if [ "$CACHE_ENABLED" = true ]; then
 
     # Cache miss: execute API call without --jq to get raw response
     GH_ARGS=("-f" "query=$QUERY" "${F_ARGS[@]}")
-    RAW_RESPONSE=$(gh api graphql "${GH_ARGS[@]}")
+    RAW_RESPONSE=$(gh api graphql "${GH_ARGS[@]}") || { echo "Error: gh api graphql failed" >&2; exit 1; }
     echo "$RAW_RESPONSE" > "$CACHE_FILE"
 
     # Apply --jq filter if specified
@@ -288,5 +288,5 @@ else
         GH_ARGS+=("--jq" "$JQ_EXPR")
     fi
 
-    gh api graphql "${GH_ARGS[@]}"
+    gh api graphql "${GH_ARGS[@]}" || { echo "Error: gh api graphql failed" >&2; exit 1; }
 fi
