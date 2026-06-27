@@ -65,18 +65,32 @@
 - N/A (no rework required beyond the Step 2.5 → Step 2a rename forced by the validator)
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Step 2.5 renamed to Step 2a to comply with validate-skill-syntax.py (decimal step numbers forbidden); all ACs still pass since they check keyword not step number
-- fix-cycle detection criteria: verify-fail marker + no phase/* labels + Spec exists — when all three hold, skip Step 3/3a and proceed directly to Step 4
-- COMMENT_SCOPE for run-code.sh unchanged (l0-surfaces.md exception handles verify-fail marker regardless of cutoff)
+- REVIEW_DEPTH=light (--light flag); no MUST/SHOULD/CONSIDER issues found across all 4 perspectives
+- CI failure (Run bats tests) confirmed as pre-existing on main branch (tests 11–15 in append-loop-state-heartbeat.bats); not introduced by this PR
+- External review tools (copilot-review, claude-code-review, coderabbit-review) not configured → Step 7 skipped
 
 ### Deferred Items
-- `/auto --fix-cycle` explicit flag is out of scope (per Issue); automatic detection via Step 2a covers the main use case
-- Post-merge observation ACs require a real verify FAIL cycle to confirm behavior
+- Post-merge observation ACs (run-issue.sh/run-spec.sh skip, verify-fail marker in Consumed Comments) remain unverifiable until a real verify FAIL cycle occurs
 
 ### Notes for Next Phase
-- The renamed step is "Step 2a" (not "Step 2.5") — verify commands in bats reference this name
-- docs/workflow.md and docs/ja/workflow.md were updated to describe the fix-cycle fast-path
-- All 6 bats tests in auto.bats pass; full suite (958 tests) exits 0
+- No MUST issues → proceed directly to `/merge 782`
+- CI baseline: only the pre-existing tests 11–15 fail; PR-added tests 104–107 pass
+- All 6 pre-merge ACs: PASS
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Step 2.5 → Step 2a rename is a validator-forced deviation, documented in Code Retrospective. The Spec Overview still says "Step 2.5" (historical artifact), but verify commands reference the "fix-cycle" keyword rather than the step number, so all ACs are resilient to renaming. No structural divergence.
+- The PR also adds docs/workflow.md and docs/ja/workflow.md updates (not in Spec Changed Files), consistent with translation-workflow.md requirements. No gap.
+
+### Recurring Issues
+
+- Nothing to note.
+
+### Acceptance Criteria Verification Difficulty
+
+- AC6 (command "bats tests/auto.bats") was UNCERTAIN in safe mode; resolved to PASS via CI log inspection. The pre-existing failures (tests 11–15) required CI log analysis to distinguish from PR-introduced failures — this investigation was straightforward once the main branch CI state was checked. Consider documenting the baseline failure state in CLAUDE.md or a pinned issue for faster triage.
