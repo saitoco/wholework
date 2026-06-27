@@ -90,3 +90,33 @@ Fix: ポインタファイル名に PGID を含めることで、同一 Claude C
 - Post-merge verify: 2 つの `/auto --batch` を同時起動し、各 session の `/audit auto-session --full` report にクロスセッション混入がないことを手動確認すること
 - issue #770 は `closes #770` により main へのマージで自動クローズ済み
 - verify コマンド (file_not_contains, rubric ×2) はいずれも review フェーズで PASS 確認済み
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Background が 2 つの session report (#22753, #98315) の Limits and gaps 両者から具体的に引用、根本原因 (shared mutable pointer) と修正候補 3 案を提示しており、spec 設計の幅を狭めずに方向性を絞れていた。
+
+#### spec
+- 修正対象として全 run-*.sh を網羅対象に含めた判断: M/L Issue の直接 Bash tool 呼び出し経路でも sub-script が pointer file を読む点を捕捉。1 ファイル修正に閉じずに source code 全体の影響範囲を解析した spec 品質。
+- AC2 の verify command BRE metacharacter fix を Consumed Comments で記録 (saito MEMBER comment) — issue retrospective から spec への流入経路が正常に機能した事例。
+
+#### code
+- Watchdog timeout (1800s) で /code session が JSON モード silent run のまま kill された (exit 143)。Tier 3 recovery sub-agent が起動し、worktree の uncommitted work を commit/push/PR create することで recover に成功。**Auto Retrospective 未記載** (recovery が Spec 側に反映される機構が #770 では trigger されなかった)。
+
+#### review
+- `skills/audit/SKILL.md` の Session Boundary Identification セクションが PR 変更ファイルに含まれず古い `.tmp/auto-session-current` 参照が残留 → review で指摘・修正。**Spec の "Changed Files" リスト網羅性問題の再発** (#771 の test path 同期問題と同根)。
+
+#### merge
+- pre-existing CI failure (bats tests, 同じ append-loop-state-heartbeat.bats) を non-interactive auto-resolve で continue。本 batch session で #787 として既起票済み、follow-up 予定。
+
+#### verify
+- pre-merge AC 3 件 PASS、post-merge AC は parallel session 起動が本 verify session 内で不可能のため SKIP (Issue は phase/verify に留まり次回実 batch 並行運用で観察)。
+- **Tier 3 recovery が Spec の `## Auto Retrospective` に未記載**だった点を verify retrospective で補完記録。Tier 3 sub-agent の Outcome は success (Recovery Applied: action=recover, steps: 3)、root cause は 1800s watchdog timeout in JSON mode silent run。
+
+### Improvement Proposals
+
+1. **Tier 3 recovery 後の Auto Retrospective 自動追記**: 現状、run-auto-sub.sh の Tier 2 (`apply-fallback.sh` 成功時) は `_write_tier2_recovery_to_spec()` で sub-issue Spec に Auto Retrospective を自動追記するが、**Tier 3 (recovery sub-agent) 成功時は同等の Spec write が走らない**。`spawn-recovery-subagent.sh` が orchestration-recoveries.md にのみ write、Spec 側は更新せず。`/verify` Step 12 の "Tier 2/3 automatic recovery handling" が Spec の Auto Retrospective を SSoT とする想定だが、Tier 3 は SSoT への流入経路がない。Tier 3 でも sub-issue Spec の Auto Retrospective に追記する仕組みの実装が candidate。
+2. **Changed Files リスト網羅性問題の再発 (#771 と同根)**: `skills/audit/SKILL.md` の参照が "Changed Files" から漏れた点は #771 の test 同期漏れと同種パターン。"参照元 (実装ロジック) を変更したら参照先 (SKILL.md / 関連 docs / test) も同期する" を機械的にチェックする仕組み — 例えば file_not_contains AC を symbolic naming (variable name / file path) で自動拡散する Spec template ガイダンス — の検討候補。本 batch session で #778 (verify command 対称性) として既起票の論点を更に拡張する位置づけ。
+3. **JSON モード watchdog timeout の検出強化**: #770 code-pr は 1800s silent run の間 Claude Code が実作業中だったが watchdog が kill。同様パターンが今後も発生する可能性。JSON mode silent run の watchdog 延長 (e.g., 1800s → 3600s) や進捗 heartbeat (1 commit / N min 等) の検出による reset 機構が candidate。本 batch session で複数 Tier 3 recovery が観察される場合 `/audit recoveries` の自動 fire (`recoveries-auto-fire`) が trigger される想定だが、watchdog kill 特化の予防策として別軸で考慮。
