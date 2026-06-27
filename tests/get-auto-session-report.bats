@@ -75,6 +75,35 @@ FIXTURE_EOF
     grep -q "approaching threshold" "$OUTPUT_PATH"
 }
 
+@test "Tier 2 candidate surfacing: threshold reached when count equals threshold" {
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"session-t3","size":"S"}
+{"ts":"2026-06-14T10:01:00Z","issue":100,"event":"phase_start","session_id":"session-t3","phase":"code-patch"}
+{"ts":"2026-06-14T10:05:00Z","issue":100,"event":"recovery","session_id":"session-t3","phase":"code-patch","tier":"2","result":"recovered"}
+{"ts":"2026-06-14T10:06:00Z","issue":100,"event":"phase_complete","session_id":"session-t3","phase":"code-patch"}
+{"ts":"2026-06-14T10:07:00Z","issue":100,"event":"sub_complete","session_id":"session-t3","exit_code":"0"}
+{"ts":"2026-06-14T10:10:00Z","issue":101,"event":"sub_start","session_id":"session-t3","size":"S"}
+{"ts":"2026-06-14T10:11:00Z","issue":101,"event":"phase_start","session_id":"session-t3","phase":"code-patch"}
+{"ts":"2026-06-14T10:15:00Z","issue":101,"event":"recovery","session_id":"session-t3","phase":"code-patch","tier":"2","result":"recovered"}
+{"ts":"2026-06-14T10:16:00Z","issue":101,"event":"phase_complete","session_id":"session-t3","phase":"code-patch"}
+{"ts":"2026-06-14T10:17:00Z","issue":101,"event":"sub_complete","session_id":"session-t3","exit_code":"0"}
+{"ts":"2026-06-14T10:20:00Z","issue":102,"event":"sub_start","session_id":"session-t3","size":"S"}
+{"ts":"2026-06-14T10:21:00Z","issue":102,"event":"phase_start","session_id":"session-t3","phase":"code-patch"}
+{"ts":"2026-06-14T10:25:00Z","issue":102,"event":"recovery","session_id":"session-t3","phase":"code-patch","tier":"2","result":"recovered"}
+{"ts":"2026-06-14T10:26:00Z","issue":102,"event":"phase_complete","session_id":"session-t3","phase":"code-patch"}
+{"ts":"2026-06-14T10:27:00Z","issue":102,"event":"sub_complete","session_id":"session-t3","exit_code":"0"}
+FIXTURE_EOF
+
+    # WHOLEWORK_CONFIG_PATH=/dev/null forces default threshold=3 -> RECOVERIES_APPROACH=2
+    # 3 Tier 2 events in phase=code-patch -> count=3 >= threshold=3 -> should appear as "threshold reached"
+    export WHOLEWORK_CONFIG_PATH=/dev/null
+    run bash "$SCRIPT" "session-t3" --output "$OUTPUT_PATH" --no-github
+    [ "$status" -eq 0 ]
+    [ -f "$OUTPUT_PATH" ]
+    grep -q "Tier 2 recovery" "$OUTPUT_PATH"
+    grep -q "threshold reached" "$OUTPUT_PATH"
+}
+
 @test "--narrative-draft: draft content inserted into report" {
     cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
 {"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"session-draft","size":"S"}
