@@ -149,23 +149,22 @@ consumed comment:
 
 If no comments were consumed: write "No new comments since last phase."
 
-**Step 6 — Emit event (best-effort, only when `AUTO_EVENTS_LOG` is set):**
+**Step 6 — Emit event (handled by bash wrapper in auto mode; LLM skip):**
 
-```bash
-source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
-EMIT_ISSUE_NUMBER=$ISSUE_NUMBER emit_event "comments_consumed" \
-  "phase=$PHASE_NAME" \
-  "count=$N" \
-  "authors=$AUTHORS" \
-  "trust_breakdown=OWNER:$OWNER_N,MEMBER:$MEMBER_N,COLLABORATOR:$COLLAB_N,CONTRIBUTOR:$CONTRIB_N,NONE:$NONE_N"
-```
+In `/auto` mode (invoked via `scripts/run-auto-sub.sh`), the bash wrapper calls
+`_emit_comments_consumed()` before the `phase_start` emit for each code phase runner.
+Placing it before `phase_start` ensures the backfill detection in
+`_maybe_emit_phase_complete()` still sees `phase_start` as the last event when
+`phase_complete` is absent. **LLM action: skip this step** to avoid duplicate events.
 
-Skip this step entirely when `AUTO_EVENTS_LOG` is not set (normal in-session execution).
+In non-auto interactive mode (`AUTO_EVENTS_LOG` not set): skip this step.
+
 The `trust_breakdown` uses `KEY:n` flat format (not JSON) to avoid quoting issues with
-`emit_event()`'s value sanitization.
+`emit_event()`'s value sanitization. See `scripts/run-auto-sub.sh _emit_comments_consumed()`
+for the bash implementation.
 
 ## Output
 
 - Comments injected as context for the calling skill's current phase
 - `## Consumed Comments` section recorded in the Spec or retrospective
-- `comments_consumed` event emitted to `AUTO_EVENTS_LOG` when available (best-effort)
+- `comments_consumed` event emitted to `AUTO_EVENTS_LOG` by bash wrapper (best-effort)

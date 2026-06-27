@@ -207,22 +207,21 @@ Output: inject 済み context + `## Consumed Comments` 記録 + (条件付き) `
 - post-merge AC 2 件 (manual + observation) は /verify フェーズで対応予定。
 
 ## Phase Handoff
-<!-- phase: merge -->
+<!-- phase: review -->
 
 ### Key Decisions
-- PR #712 を squash merge (`--squash --delete-branch`) で main に統合。CI 全ジョブ SUCCESS・全 pre-merge AC PASS を review フェーズで確認済み。
-- mergeable=true (reason=clean, review_status=approved) を `gh-pr-merge-status.sh` で確認し、conflict resolution フェーズ (Step 3) をスキップして直接 merge を実行。
-- BASE_BRANCH=main のため `closes #705` 記述により Issue が auto-close される。
+- iteration 2 (PR #786) の MUST issue を検出・修正: `_emit_comments_consumed()` を `phase_start` emit の前に移動し、backfill 検出を修復。
+- `modules/l0-surfaces.md` Step 6 のドキュメントを実装に合わせて更新 (「before `phase_start` emit」を明示)。
+- AC10 (`(37 files)`) は stale AC と判断 (PR #786 は structure.md を変更しない)。次 phase (merge) ではこの FAIL を無視して良い。
 
 ### Deferred Items
-- post-merge AC #11 (observation: `comments_consumed` イベントが `auto-events.jsonl` に記録されること) は /verify フェーズで実機観察が必要。
-- post-merge AC #12 (manual: 試験 Issue に user comment 追加後 `/spec N` を実行し Spec の "Consumed Comments" セクションに記録されることを確認) は /verify フェーズでの手動確認が必要。
-- run-spec.sh の `AUTO_EVENTS_LOG` export と worktree CWD 相対パス解決の実動作は /verify の実機確認で最終判断。
+- bats tests 11-15 (`append-loop-state-heartbeat.bats`) は pre-existing failures on main、本 PR と無関係。merge 後も継続して別途対処が必要。
+- post-merge AC #11/#12 は /verify フェーズで引き続き対応が必要。
 
-### Notes for Next Phase (/verify)
-- 全 pre-merge AC (1〜10) は review フェーズで PASS 確認済み; /verify では post-merge AC 2 件 (manual + observation) に集中。
-- `modules/l0-surfaces.md` が main に存在し、bot exception prefix 修正・jq `// empty` 修正が含まれた状態で merge 済み。
-- verify command で `docs/spec/issue-705-l0-surfaces-ssot-comments.md` の verify command セクションを参照してテストを実行すること。
+### Notes for Next Phase (/merge)
+- PR #786 の CI: test #98 regression は修正済み (commit 55b0986)。push 後の CI 結果が SUCCESS になることを confirm してから merge を実行すること。
+- tests 11-15 の pre-existing failures は merge ブロッカーではない (main でも失敗している)。
+- AC10 stale FAIL は regression ではないため merge ブロッカーではない。
 
 ## Verify Retrospective
 
@@ -270,3 +269,18 @@ run-spec.sh で `AUTO_EVENTS_LOG` export が欠けていた。他の run-*.sh wr
 **3. emit-event.sh cross-file validation の spec 反映 (Tier 3 / 一回限り)**
 
 spec 段階で `validate-skill-syntax.py` の cross-file validation 要件 (emit-event.sh source 元への allowed-tools 追加) を予見できなかった点は今後の spec 作成時に意識する。Tier 3 (Spec retro 記録のみ、Issue 起票不要)。
+
+## review retrospective (iteration 2)
+
+### Spec vs. implementation divergence patterns
+
+- `_emit_comments_consumed()` が `emit_event "phase_start"` の*後*に置かれた構造エラー。`_maybe_emit_phase_complete()` の backfill 検出条件 (`_last_event == "phase_start"`) を暗黙的に前提とするコードが既存しており、新たに追加した emit 呼び出しがその前提を破壊した。設計書 (l0-surfaces.md Step 6) には「before each phase runner script」と書かれていたが、実装は `phase_start` の後に配置されており spec と実装の齟齬が生じていた。
+- 同パターン教訓: イベントロギングの順序は明示的な順序制約として spec に記述する必要がある。「phase runner の前」という記述では `phase_start` emit の前後どちらなのかが曖昧。
+
+### Recurring issues
+
+- test #98 (backfill) は bats テストが既存の挙動 (`phase_start` が最後のイベント) を前提に書かれており、新規 emit 追加で自動的に失敗した。新しいイベント emit を追加する際は、テストで前提とされているイベント順序への影響を必ず確認すること。これは iteration 1 でも類似の順序問題 (jq `| last` の null 出力) が発生した再発例。
+
+### Acceptance criteria verification difficulty
+
+- AC10 (`file_contains "docs/structure.md" "(37 files)"`) が iteration 1 マージ後の後続開発で stale になっていた。iteration 2 のレビューでは PR 変更非対象ファイルの AC が FAIL となり、regression との区別に調査コストが発生。iteration 単位での PR レビュー時には、前 iteration の AC が stale になっていないかを最初に確認するか、iteration 2 用の新 AC セットを明示的に定義すべき。
