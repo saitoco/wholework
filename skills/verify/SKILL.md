@@ -295,7 +295,7 @@ For each unchecked post-merge condition marked `<!-- verify-type: manual -->` (o
 
 Evaluate whether Claude can directly execute the verification based on the condition text:
 
-- **Executable examples**: `curl` URL reachability check, `gh` command result judgment, file/directory existence check (`test -f`, `test -d`), `git log`/`git status` result inspection, process listing (`ps`, `pgrep`)
+- **Executable examples**: `curl` URL reachability check, `gh` command result judgment, file/directory existence check (`test -f`, `test -d`), `git log`/`git status` result inspection, process listing (`ps`, `pgrep`), observation whose default behavior is statically determined from source code (e.g., `grep` for hardcoded default path, constant, or variable assignment — confirms expected behavior without waiting for future execution)
 - **Non-executable examples**: browser visual inspection, user action observation in production environment, UI/UX evaluation, external service dashboard confirmation
 
 **2a. If executable: present per-condition AskUserQuestion**
