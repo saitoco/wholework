@@ -80,3 +80,49 @@ Issue の `## Background` セクションに「X は Y で生成される」「X
 - **Post-merge AC verify-type**: "次回 `/issue` 実行で試行される" は `verify-classifier.md` の `opportunistic` 判定基準 ("verify X when `/skill-name` is run") に合致するため `opportunistic` を採用 (旧 `manual` から変更)。(Issue Retrospective comment より auto-resolved)
 - **実装スコープ**: Existing Issue Refinement フローのみに追加。New Issue Creation フロー (ユーザーがリアルタイムで Background を入力) への追加は本 Issue のスコープ外。
 - **`grep "factual"` verify command**: 現在 `skills/issue/SKILL.md` に "factual" は含まれていない (grep 確認済)。Implementation Step 1 で追加されるテキストが "factual claims" を含むため、実装後に PASS になる。
+
+## Auto Retrospective
+
+### Execution Summary
+
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| issue | -     | SUCCESS (after 1 retry) | run-issue.sh killed once early (phase/issue label was added but completion text missing). Re-ran successfully → Size S |
+| spec  | patch (Size S) | SUCCESS | run-spec.sh exit 0, Spec 完成 |
+| code  | patch | SUCCESS (manual recovery) | run-auto-sub.sh killed mid-execution after code phase commit done. Worktree had 1 commit (`d05dab2`) on `worktree-code+issue-779` branch but worktree-merge-push.sh did not execute. Parent-session manual recovery: `worktree-merge-push.sh --from worktree-code+issue-779 --base main` → main fast-forwarded, branch deleted, Issue auto-closed via `closes #779` |
+| verify | - | SUCCESS | this Skill invocation, all pre-merge PASS, post-merge opportunistic |
+
+### Orchestration Anomalies
+
+- **run-issue.sh killed early (first attempt)**: 60-120s silent run then external kill. Re-ran on second attempt and completed normally. Cause unclear (possibly system resource pressure during batch).
+- **run-auto-sub.sh killed during code phase (after commit)**: worktree contained the implementation commit but the worktree-merge-push step was killed before main fast-forward + worktree cleanup. parent session recovered via direct worktree-merge-push.sh call.
+
+### Improvement Proposals
+
+1. **Issue triage retry mechanism**: `run-issue.sh` の early kill (60s 程度の silent run で kill) は本 batch session で 2 度発生 (#778, #779)。1 度目 kill 後に retry で成功するため、`run-issue.sh` 内部に SIGTERM-handling retry-once mechanism を組み込む候補 (Tier 1 — 本 batch で再現確認)。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Background が #772 verify retrospective の引用、誤記載実例 (loop-state 生成元) を提示し、Spec 段階でのスコープ判断 (blocking vs advisory、対象 SKILL.md vs module) を明確化していた。Auto-Resolved Ambiguity Points で 4 件の自動解決を記録。
+
+#### spec
+- 実装ターゲットを `skills/issue/SKILL.md` に確定、`### Step 5: Background Factual Claim Verification (advisory)` の挿入位置と既存 Step 6-13 の繰り上げを明確化。Notes セクションで auto-resolved 履歴を保存。
+
+#### code
+- 実装 1 commit (d05dab2) で完了。Code Retrospective は run-auto-sub.sh kill により記録されず。
+- **Tier 1 retro fully covered**: 本 Issue は #804 (Changed Files grep-based discovery) で先行 Issue 化済みの問題群と異なり、`/issue` 段階での factual claim 検出という補完的レイヤーの実装。
+
+#### review/merge
+- patch route につき独立 review/merge phase なし。worktree-merge-push.sh による main fast-forward (manual recovery 経路) で完結。
+
+#### verify
+- 全 3 pre-merge AC PASS、post-merge は `opportunistic` 経路で次回 `/issue` 実行時に自動確認予定。
+- **run-auto-sub.sh kill → parent session manual recovery** が #776 に続く 2 度目の同種事例 (本 batch session 内)。
+
+### Improvement Proposals
+
+1. **#778 (verify command 対称性) と #779 の補完関係**: 本 Issue は `/issue` 段階で factual claim を検出、#778 は `/spec` 段階で symmetric AC を設計、#804 は `/spec` 段階で Changed Files 候補を grep。3 つで "誤記載の流入を全 phase で構造的にガード" するレイヤーになる。本 batch session で 3 つとも同時着地した結果、`/issue → /spec` の品質 SSoT が構造化された。
+2. **run-issue.sh と run-auto-sub.sh の retry-on-kill mechanism**: 本 batch session で複数回観察された kill → retry pattern を wrapper レベルで自動化する候補 (#806 の milestone checkpoint と相補的、または統合実装)。
