@@ -64,6 +64,29 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
+## 2026-06-27 15:39 UTC: code-pr-tier3-recovery
+
+### Context
+- Issue #770, phase: code-pr
+- Source: recovery-sub-agent
+- Wrapper: run-code-pr.sh, exit code: 143
+- Log tail: "Finished at: 2026-06-28 00:38:19"
+
+### Diagnosis
+- Watchdog killed the /code session after 1800s of silence (exit 143) before PR creation. Reconcile confirms no open PR exists for the worktree-code+issue-770 branch. The 30-minute silent run in JSON mode indicates Claude Code was actively working but was killed before committing, pushing, or creating the PR. Recovery commits any uncommitted implementation work in the worktree, pushes the feature branch, and creates the PR.
+
+### Recovery Applied
+- action=recover
+- steps: 3 step(s)
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+---
+
 ## 2026-06-20 20:45 UTC: code-pr-tier3-recovery
 
 ### Context
