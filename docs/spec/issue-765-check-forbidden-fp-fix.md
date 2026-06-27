@@ -76,3 +76,32 @@
 - `docs/sessions/` と `docs/reports/` 除外は全 DEPRECATED_TERMS に適用される (これらは常に auto-generated のためスキャン不要)
 - bats テストの `docs/sessions/` や `docs/reports/` は `setup()` では作られないため、各テスト内で `mkdir -p` が必要
 - `tests/check-forbidden-expressions.bats` は `grep -v 'tests/check-forbidden-expressions.bats'` で除外済みのため、テストコード内の `per-Issue Spec` / `` `Issue Spec` `` 文字列リテラルは自己参照を起こさない
+
+## Code Retrospective
+
+### Deviations from Design
+- Spec で示されていなかった問題: Spec ファイル自体 (`docs/spec/issue-765-*.md`) が deprecated term を直接引用していることで CI false positive が追加発生した。Spec の関連行を backtick 化 (extra_grep_v で除外可能な形式) または `旧称:` 追加で対処した。Implementation Steps には記載がなかった作業だが、AC の `bash scripts/check-forbidden-expressions.sh` exit 0 を満たすために必須だった。
+
+### Design Gaps/Ambiguities
+- Spec 自身が deprecated term を引用する場合の対処が Spec 設計時に考慮されていなかった。tech.md の "Spec Retrospective: quoting deprecated terms" ガイダンスは retrospective セクションのみを対象としており、Spec 本文の技術的引用については明示的なルールがなかった。
+- `extra_grep_v` のフィルタ対象は grep 出力行全体 (`filepath:content`) であるため、行内のどこかに `-Issue Spec` or `` `Issue Spec`` が含まれれば除外される。Spec Notes のある行が `per-Issue Spec` を含むため extra_grep_v で除外されることを確認した (ライン 50 の例)。
+
+### Rework
+- Spec ファイル内の 4 箇所を修正: `"Issue Spec"` → `` `Issue Spec` `` への変換 2 件、コードブロック行への `# 旧称` コメント追加 1 件、Notes 行への `(旧称: deprecated term exclusion pattern)` 追記 1 件。実装ステップ自体の変更はなく Spec 本文の cleanup のみ。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Pattern 2 (docs/sessions/ / docs/reports/): `check_term` grep パイプラインに固定除外 `grep -v '^docs/sessions/'` / `grep -v '^docs/reports/'` を追加した (全 term に適用)
+- Pattern 1 + 3 (hyphen/backtick 先行): `extra_grep_v` 引数 (第 4 引数) を `check_term` に追加し `Issue Spec` ケースのみ `'[-\`]Issue Spec'` を渡す設計を採用した
+- Spec ファイルの自己参照問題: backtick 変換 + `旧称` コメント追加で対処した
+
+### Deferred Items
+- Pattern 1 (hyphen-preceded) + Pattern 3 (backtick-quoted) の除外は `extra_grep_v` で実装済み。他の deprecated term への `extra_grep_v` 適用は現時点で不要 (false positive は `Issue Spec` のみ確認済み)
+- Post-merge で `per-Issue Spec` 等が含む commit が CI PASS することの確認は手動 AC (verify-type: manual) として残す
+
+### Notes for Next Phase
+- `/verify` では pre-merge AC 3 件すべて PASS 済み (`bash scripts/check-forbidden-expressions.sh` exit 0 / bats 19 tests OK / rubric 確認済み)
+- post-merge AC: 次回 PR で hyphen-preceded `Issue Spec` が含まれた際に CI PASS することを確認する
+- 実装はシンプル (スクリプト修正 + テスト追加 + Spec cleanup の 3 ファイルのみ) で副作用リスクは低い
