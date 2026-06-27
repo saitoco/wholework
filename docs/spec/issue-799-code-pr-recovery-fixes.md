@@ -98,16 +98,17 @@ Nothing to note.
 AC1 (rubric) は各 cause group の緩和策実装を確認する形式で、PR diff から直接 PASS/FAIL を判断できた。AC2 (file_contains) は `git show HEAD:docs/reports/orchestration-recoveries.md` で確認が必要だった (worktree の working directory が PR ブランチではなく main branch を参照していたため)。今後、`file_contains` verify command を PR ブランチのコンテキストで実行する場合は `git show HEAD:file` パターンが信頼性が高い。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light (--light フラグ指定、Issue Size=M)
-- MUST issues なし → 修正コミットなし、merge ready
-- 外部レビューツール (Copilot/Claude Code Review/CodeRabbit) 未設定のため Step 7 スキップ
+- PR #808 をスカッシュマージ (closes #799)、BASE_BRANCH=main のため Issue は自動クローズ
+- ローカルブランチ削除エラー (別 worktree が `worktree-code+issue-799` を使用中) は無視 — リモートブランチ・PR は正常マージ済み
+- 競合なし (mergeable=CLEAN、CI 全 SUCCESS) のため conflict resolution フローはスキップ
 
 ### Deferred Items
-- `modules/orchestration-fallbacks.md` の `Applicable Phases` セクションに実装済みフェーズ (`code-pr`) と未実装フェーズを明記する更新が SHOULD レベルで未実施 (別 Issue または merge 後の改善として検討)
+- `modules/orchestration-fallbacks.md` の `Applicable Phases` セクション更新 (review フェーズ引継ぎ、SHOULD レベル未実施)
+- `worktree-code+issue-799` ローカルブランチの手動削除 (別 worktree 使用中のため自動削除不可)
 
 ### Notes for Next Phase
-- CI 全 SUCCESS 確認済み、受入条件 PASS × 2、MUST issues なし → `/merge 808` 直行可能
-- review retrospective を Spec に追記済み、phase handoff を書き込み済み
+- verify フェーズで main ブランチのスカッシュコミットを対象に verify command を実行すること
+- `docs/reports/orchestration-recoveries.md`、`scripts/apply-fallback.sh`、`scripts/watchdog-defaults.sh`、`tests/apply-fallback.bats`、`tests/watchdog-defaults.bats` が変更対象ファイル
