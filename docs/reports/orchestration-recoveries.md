@@ -64,6 +64,29 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
+## 2026-06-27 16:54 UTC: code-pr-tier3-recovery
+
+### Context
+- Issue #769, phase: code-pr
+- Source: recovery-sub-agent
+- Wrapper: run-code-pr.sh, exit code: 143
+- Log tail: "Finished at: 2026-06-28 01:52:57"
+
+### Diagnosis
+- Watchdog killed run-code.sh after 1800s of silence. The implementation is complete (5 commits in the worktree branch worktree-code+issue-769) but uncommitted test additions remain in 5 .bats files (15 lines), the branch has not been pushed, and no PR was created. Recovering by committing the remaining test changes, pushing the feature branch, creating the PR, and advancing the phase label to review.
+
+### Recovery Applied
+- action=recover
+- steps: 4 step(s)
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+---
+
 ## 2026-06-27 15:39 UTC: code-pr-tier3-recovery
 
 ### Context
