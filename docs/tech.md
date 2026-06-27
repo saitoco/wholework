@@ -220,6 +220,7 @@ The following variables are set by `detect-config-markers.md` from `.wholework.y
 | `HAS_BROWSER_CAPABILITY` | `capabilities.browser: true` | `true` when browser automation capability is enabled. Used to conditionally load browser-based verify patterns (e.g., `verify/browser-verify-phase.md`). |
 | `HAS_VISUAL_DIFF_CAPABILITY` | `capabilities.visual-diff: true` | `true` when visual diffing capability is enabled. Used to conditionally load visual diff modules (e.g., `modules/visual-diff-adapter.md`). |
 | `HAS_WORKFLOW_CAPABILITY` | `capabilities.workflow: true` | `true` when the Workflow tool is available. Used to conditionally enable parallel multi-agent review in `/review`. |
+| `HAS_PR_PREVIEW_CAPABILITY` | `capabilities.pr-preview: true` | `true` when the project's PRs produce a preview URL. Gates pre-merge-preview AC classification in `/issue` Step 4: URL/UX-based ACs are placed in the pre-merge section with `ac-tier: preview` tag and `--when="test -n \"$PREVIEW_URL\""` guard, executed at `/review` time, and skipped in `/verify` post-merge. |
 | `MCP_TOOLS` | `capabilities.mcp` list | Comma-separated list of MCP tool names enabled for the project (e.g., `"mf_list_quotes,mf_list_invoices"`). Note: `capabilities.mcp` maps to `MCP_TOOLS` directly — it is excluded from the dynamic `HAS_*_CAPABILITY` mapping, so `HAS_MCP_CAPABILITY` is never set. |
 
 ## Gotchas

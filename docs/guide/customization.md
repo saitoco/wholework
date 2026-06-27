@@ -99,6 +99,7 @@ verify-max-iterations: 3
 capabilities:
   browser: true             # Enable Playwright-based verify commands
   workflow: true            # Enable Workflow-based multi-agent execution in /review --full
+  pr-preview: true          # Declare that PRs produce a preview URL (enables pre-merge-preview AC tier)
 ```
 
 All keys are optional. If `.wholework.yml` does not exist, all settings use their defaults.
@@ -122,6 +123,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `steering-docs-path` | string | `docs` | Where steering documents live |
 | `capabilities.browser` | boolean | `false` | Enable Playwright-based verify commands |
 | `capabilities.workflow` | boolean | `false` | Enable Workflow-based multi-agent execution in `/review --full` (opt-in; falls back to static Task fan-out when unset) |
+| `capabilities.pr-preview` | boolean | `false` | Declare PR preview availability; URL/UX ACs are classified as pre-merge-preview and executed at `/review` when the `PREVIEW_URL` env variable is set. Skipped in `/verify` post-merge to prevent double verification. |
 | `capabilities.mcp` | list | `[]` | MCP tool names available to skills |
 | `capabilities.{name}` | boolean | `false` | Dynamic capability mapping (e.g., `capabilities.invoice-api: true`) |
 | `watchdog-timeout-seconds` | integer | `2700` | Watchdog timeout in seconds before killing a silent `claude -p` process. Claude's extended thinking time on Size L+ tasks (especially Opus with high effort) can produce silent periods exceeding 2700 seconds; set to `3600` for meta-development or Size L+ work. Values ≤0 fall back to the default. |
@@ -146,6 +148,35 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `next-cycle-seed.enabled` | boolean | `false` | Enable next-cycle candidate seeding after batch completion. Emits `.tmp/next-cycle.json` with `audit/*` Issues created during the batch session (requires `autonomy: L2` or `L3`). When `false` or autonomy is `L1`, prints a recommendation instead. |
 
 For the full reference including implementation details and YAML parsing rules, see [`modules/detect-config-markers.md`](../../modules/detect-config-markers.md).
+
+### AC verification tiers
+
+Wholework classifies acceptance criteria into three verification tiers:
+
+| Tier | When executed | Typical ACs |
+|------|--------------|-------------|
+| **pre-merge-local** | `/review` safe mode (always) | File existence, text containment, code quality, test results |
+| **pre-merge-preview** | `/review` when `PREVIEW_URL` is set | `http_status`, `html_check`, `api_check`, `http_header`, `http_redirect`, `browser_check`, `browser_screenshot`, `lighthouse_check` |
+| **post-merge-production** | `/verify` full mode | Production deployment confirmation, production-only behavior |
+
+**Enabling pre-merge-preview:**
+
+Set `capabilities.pr-preview: true` in `.wholework.yml`. When `/issue` creates or refines an Issue with URL/UX-based verify commands, those ACs are placed in the `### Pre-merge (auto-verified)` section with a `<!-- ac-tier: preview -->` tag and a `--when="test -n \"$PREVIEW_URL\""` guard.
+
+**Resolving `PREVIEW_URL`:**
+
+The `PREVIEW_URL` environment variable must be exported before invoking `/review`. Wholework does not resolve it automatically — this is the responsibility of your CI pipeline or a project-side script. For example:
+
+```bash
+# In CI (e.g., GitHub Actions) — set before running /review
+export PREVIEW_URL="https://my-pr-123.example-preview.com"
+```
+
+**Behavior summary:**
+
+- `PREVIEW_URL` set at `/review` time: preview-tier ACs are executed against the preview URL.
+- `PREVIEW_URL` not set: preview-tier ACs are SKIPPED (the `--when` guard fires) and remain unchecked for human follow-up.
+- At `/verify` (post-merge): all `ac-tier: preview` ACs are skipped to prevent double verification. To also verify against production, duplicate the AC in the `### Post-merge` section without the tag.
 
 ## `.wholework/domains/`
 

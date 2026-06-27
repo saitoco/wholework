@@ -160,22 +160,50 @@ No new comments since last phase.
 - 分類ロジックは `/issue` Step 4 の LLM 実行ガイダンスのため、bats では決定論的な「ガイダンス文言の存在」(content 層) しか検証できない。実分類精度 (LLM 層) は post-merge observation AC でカバーする二層テスト戦略を採用 (skill-dev-constraints.md「LLM-assisted Skill Phase Test Strategy」準拠) → 解消。
 - `--when="test -n \"$PREVIEW_URL\""` env-var ガードと既存 Deployments API パスの相互作用は、`/review` Step 8.0 に env-var 直接利用パスを明記することで整合 (env 変数未設定時のみ Deployments API へフォールバック) → 解消。
 
+## Consumed Comments
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- No deviations. All implementation steps followed the Spec exactly.
+
+### Design Gaps/Ambiguities
+- Spec Step 2 said to add `HAS_PR_PREVIEW_CAPABILITY` to "Step 2 の retain 文" without specifying which Step 2 (New Issue Creation vs. Existing Issue Refinement). Applied to both, which is correct since both sections read detect-config-markers and both reference Step 4/6 classification logic.
+- `docs/structure.md` had "87 files" in the tests/ comment but actual count was 88 (pre-existing drift noted in Spec). Updated to 89 (88 existing + 1 new `tests/issue.bats`).
+
+### Rework
+- None.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- No structural divergences between Spec and PR diff. All 9 implementation steps were completed exactly as designed.
+- The Phase Handoff (code phase) accurately predicted that all 8 AC checks would PASS without fixup — confirmed during review.
+
+### Recurring issues
+- `tests/issue.bats` was created without the `PROJECT_ROOT` anchoring pattern used by all other 87 bats tests in the repository. This is a recurring gap: new test files don't inherit the project's established portability convention automatically. The issue was SHOULD-severity and fixed in this review. Consider adding a note to the test-writing guidance or a bats fixture template that includes the `setup()` pattern.
+- The JA mirror (`docs/ja/guide/customization.md`) omitted a bash code block present in the EN version. Translation drift in code examples is a recurring risk when adding code fences to documentation. Mitigation: the `docs/translation-workflow.md` sync procedure should explicitly check code blocks, not just text content.
+
+### Acceptance criteria verification difficulty
+- All 8 pre-merge ACs verified PASS without ambiguity. The mix of `rubric`, `grep`, and `command` verify commands provided good coverage at different verification depths.
+- The `command "bats tests/issue.bats"` AC was resolved via CI reference fallback (ok 441–444 in the CI log). The overall CI FAILURE in `Run bats tests` is caused by a pre-existing `append-loop-state-heartbeat.bats` issue unrelated to this PR. The AC verification correctly distinguished the specific test file result from the overall job status.
+
 ## Phase Handoff
+<!-- phase: review -->
 
 ### Key Decisions
-- `capabilities.pr-preview: true` を単一宣言シグナルとし、preview URL の env 変数名は `PREVIEW_URL` に標準化 (案B)。
-- AC tier は per-AC `<!-- ac-tier: preview -->` タグで表現し、既存 `### Pre-merge (auto-verified)` / `### Post-merge` のセクション構造は不変 (案2)。
-- 既定で `/verify` は `ac-tier: preview` AC を skip (二重検証防止)。本番再検証は post-merge セクションへの複製で opt-in。
-- URL/UX 系 verify command 集合を exhaustive 列挙し、`ac-tier: preview` タグの SSoT は `/issue` Step 4 とする (`/review`/`/verify` は参照のみ)。
+- All 8 pre-merge ACs PASS. Two SHOULD fixes applied (PROJECT_ROOT anchoring in bats, JA bash code block). Three CONSIDER issues skipped.
+- The Workflow path (capabilities.workflow: true) attempted but fell back to static fan-out because custom agentTypes (review-spec, review-bug) are not available as registered agent types in the worktree environment. Findings were collected via direct Agent tool calls instead.
+- No policy changes or acceptance criteria updates needed.
 
 ### Deferred Items
-- Vercel / Netlify / Cloudflare Pages 用の preview URL 自動解決 adapter は follow-up Issue (Issue body「将来検討事項」)。
-- preview-tier AC が PREVIEW_URL 未解決のまま残った場合の UX は最小実装 (SKIPPED 記録のみ。phase/verify 残置で人手判断)。
-- `verify-classifier.md` への tier 概念統合は本 Issue スコープ外 (post-merge verify-type 専用モジュールのため)。
+- CONSIDER: skills/review/SKILL.md Step 8.0 fast-path description scope ambiguity — the sentence "ac-tier: preview ACs ... are executed via this path" could mislead about ACs without {{base_url}}. Low risk, deferred to a future doc cleanup pass.
+- CONSIDER: skills/verify/SKILL.md "### Pre-merge" vs "### Pre-merge (auto-verified)" section name mismatch in skip rule prose. Low functional risk.
+- Vercel/Netlify/CF Pages preview URL auto-resolver adapter — already deferred from code phase.
 
 ### Notes for Next Phase
-- `skills/issue/SKILL.md` / `skills/review/SKILL.md` / `skills/verify/SKILL.md` 編集時、本文 (コードフェンス・inline code・HTML コメント外) に half-width `!` と triple backtick を新規追加しない (validate-skill-syntax.py MUST)。
-- `tests/issue.bats` は新規作成。参照は **リポジトリルート相対 path**、bats 3.2+ 互換構文のみ。CI は `tests/*.bats` を実行するため自動収集される。
-- `/issue` Step 4 に追加する URL/UX command 集合には `(exhaustive)` マーカーを付ける。
-- `docs/structure.md` の `tests/` ファイル数コメントは現状 87 表記だが実数は 88 (既存ドリフト)。`tests/issue.bats` 追加後の実数 89 に同期する。
-- ja ミラー同期: `docs/ja/structure.md` / `docs/ja/tech.md` は top-level docs で必須、`docs/ja/guide/customization.md` は consistency 目的。
+- Two SHOULD fixes committed (PROJECT_ROOT in bats, JA code block). CI re-run expected to show same status (pre-existing append-loop-state-heartbeat.bats failures remain).
+- merge phase: no MUST issues to block merge. CI FAILURE is pre-existing on main too — merge can proceed if that's the project's accepted state.
+- Post-merge opportunistic ACs require a real project with `capabilities.pr-preview: true` and CI that exports `PREVIEW_URL`.

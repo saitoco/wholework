@@ -207,6 +207,7 @@ Issue 本文の "Scope" または "Acceptance Criteria" セクションに以下
 | `HAS_BROWSER_CAPABILITY` | `capabilities.browser: true` | ブラウザ自動化 capability が有効なとき `true`。ブラウザ向け verify パターン（`verify/browser-verify-phase.md` など）を条件付きで読み込むために使用する |
 | `HAS_VISUAL_DIFF_CAPABILITY` | `capabilities.visual-diff: true` | ビジュアル差分 capability が有効なとき `true`。ビジュアル diff モジュール（`modules/visual-diff-adapter.md` など）を条件付きで読み込むために使用する |
 | `HAS_WORKFLOW_CAPABILITY` | `capabilities.workflow: true` | Workflow ツールが利用可能なとき `true`。`/review` での並列マルチエージェントレビューを条件付きで有効化するために使用する |
+| `HAS_PR_PREVIEW_CAPABILITY` | `capabilities.pr-preview: true` | プロジェクトの PR が preview URL を生成するとき `true`。`/issue` Step 4 の pre-merge-preview AC 分類のゲートとして機能する。URL/UX 系 AC に `ac-tier: preview` タグと `--when="test -n \"$PREVIEW_URL\""` ガードを付与し、`/review` 時に実行、`/verify` post-merge では二重検証防止のため skip する |
 | `MCP_TOOLS` | `capabilities.mcp` リスト | プロジェクトで有効化された MCP ツール名のカンマ区切りリスト（例: `"mf_list_quotes,mf_list_invoices"`）。注意: `capabilities.mcp` は直接 `MCP_TOOLS` にマッピングされる。動的な `HAS_*_CAPABILITY` マッピングの対象外のため、`HAS_MCP_CAPABILITY` は設定されない |
 
 ## Gotchas

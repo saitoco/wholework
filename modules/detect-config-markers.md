@@ -44,6 +44,7 @@ From the loaded content, search for each YAML key in the marker definition table
 | `capabilities.browser` | `HAS_BROWSER_CAPABILITY` | `true` | `false` |
 | `capabilities.visual-diff` | `HAS_VISUAL_DIFF_CAPABILITY` | `true` | `false` |
 | `capabilities.workflow` | `HAS_WORKFLOW_CAPABILITY` | `true` | `false` |
+| `capabilities.pr-preview` | `HAS_PR_PREVIEW_CAPABILITY` | `true` | `false` |
 | `capabilities.mcp` | `MCP_TOOLS` | Comma-separated tool name list | `""` |
 | `watchdog-timeout-seconds` | `WATCHDOG_TIMEOUT_SECONDS` | Integer string (extract as-is; use `1800` if ≤0 or non-numeric) | `1800` (see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT`) |
 | `watchdog-timeout-spec-seconds` | `WATCHDOG_TIMEOUT_SPEC_SECONDS` | Integer string (extract as-is; use phase-specific default if ≤0 or non-numeric) | `""` (unset; falls through to global key or phase default `1800`) |
@@ -65,6 +66,8 @@ From the loaded content, search for each YAML key in the marker definition table
 | `recoveries-auto-fire.enabled` | `RECOVERIES_AUTO_FIRE_ENABLED` | `true` | `false` |
 | `recoveries-auto-fire.threshold` | `RECOVERIES_AUTO_FIRE_THRESHOLD` | Integer string (extract as-is; use `3` if ≤0 or non-numeric) | `3` |
 | `next-cycle-seed.enabled` | `NEXT_CYCLE_SEED_ENABLED` | `true` | `false` |
+
+Note: `capabilities.pr-preview` is listed as an explicit row (rather than relying on Dynamic Capability Mapping alone) because it has dedicated classification logic in `/issue` Step 4 (pre-merge-preview AC tier).
 
 **Dynamic Capability Mapping:**
 
@@ -112,6 +115,7 @@ STEERING_DOCS_PATH: path string extracted from steering-docs-path (default: "doc
 HAS_BROWSER_CAPABILITY: true if capabilities.browser: true is set (default: false)
 HAS_VISUAL_DIFF_CAPABILITY: true if capabilities.visual-diff: true is set (default: false)
 HAS_WORKFLOW_CAPABILITY: true if capabilities.workflow: true is set (default: false)
+HAS_PR_PREVIEW_CAPABILITY: true if capabilities.pr-preview: true is set (default: false)
 MCP_TOOLS: tool name list from capabilities.mcp (comma-separated, default: "")
 WATCHDOG_TIMEOUT_SECONDS: integer from watchdog-timeout-seconds (default: "1800" (see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT`); falls back to "1800" if ≤0 or non-numeric)
 WATCHDOG_TIMEOUT_SPEC_SECONDS: integer from watchdog-timeout-spec-seconds (default: "" — unset; resolution handled by load_watchdog_timeout())
