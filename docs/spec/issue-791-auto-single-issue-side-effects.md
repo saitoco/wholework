@@ -98,3 +98,26 @@
 - **heartbeat issue 番号**: `run-review.sh`/`run-merge.sh` は PR 番号しか持たないため `--issue $PR_NUMBER` で heartbeat を記録する。これは batch mode (run-auto-sub.sh) の既存挙動と一致する
 - **`docs/structure.md` の emit-event.sh 説明**: `_emit_comments_consumed()` 追加後は "providing `emit_event()` for structured JSONL event emission" の説明が不完全になるが、doc-checker の impact criteria では script 機能説明変更は SHOULD レベル (軽微) のため本 PR では更新を見送る
 - **verify command AC3 更新**: Issue body AC3 の `bats tests/run-auto-sub.bats tests/auto.bats` を新規テストファイル含む形 `bats tests/run-auto-sub.bats tests/auto.bats tests/run-code.bats tests/run-review.bats tests/run-merge.bats` に更新する
+
+## Code Retrospective
+
+**実施日**: 2026-06-28
+**PR**: #809
+**結果**: 実装完了・テスト全通過 (119/119)
+
+### 正常に機能したもの
+
+- `_emit_comments_consumed` の emit-event.sh 抽出は最小変更で DRY を実現。既存 `source "$SCRIPT_DIR/emit-event.sh"` 行があるすべての `run-*.sh` が自動的に取得できる設計で、テスト mock の追加 (`_emit_comments_consumed() { :; }`) パターンも明快だった
+- call-order 検証 (コメント消費イベントが claude 呼び出し前に発火) を bats で記録ファイル比較によって実装。LLM 遵守度に依存しない bash 保証の検証として有効
+- `run_phase_with_recovery()` からの抽出で既存 batch テストへの影響がない (mock 追加のみで挙動変わらず)
+
+### 改善余地
+
+- `run-review.sh`/`run-merge.sh` は issue 番号ではなく PR 番号を `--issue` に渡す。batch mode での既存挙動に合わせたが、heartbeat の意味的一貫性のためには将来的に PR→issue 番号変換が望ましいかもしれない
+- `_emit_comments_consumed` は `run-code.sh` のみで呼ばれる (code phase でコメントを消費するため)。関数は emit-event.sh に置いたが、review/merge では呼ばれない点は comment しておくと次の人が迷わない
+
+### フェーズ引継ぎ
+
+- 実装変更ファイル: `scripts/emit-event.sh`, `scripts/run-auto-sub.sh`, `scripts/run-code.sh`, `scripts/run-review.sh`, `scripts/run-merge.sh`
+- テスト変更ファイル: `tests/run-auto-sub.bats`, `tests/auto-sub-observability.bats`, `tests/run-code.bats`, `tests/run-review.bats`, `tests/run-merge.bats`
+- PR #809 (branch: `worktree-code+issue-791`) → review フェーズへ
