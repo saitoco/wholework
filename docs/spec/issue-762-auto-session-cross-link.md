@@ -84,3 +84,35 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class): Issue Retrospective — AC2 verify コマンドを `grep "docs/sessions/"` → `grep "session\.md"` に修正 (false positive 回避)、AC1 に supplementary `grep "See also"` を追加。これらは Issue 本文の Auto-Resolved Ambiguity Points に反映済み。(2026-06-27)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. 実装は Spec の Implementation Steps と完全に一致した。
+
+### Design Gaps/Ambiguities
+
+- PERIOD_MODE での cross-link 不要の理由が Spec Notes に記載されていたため、コード上で `PERIOD_MODE` チェックを追加する必要がなかった (line 124 での早期 exit により report mode block は single session のみ実行される)。判断確認が不要で実装がシンプルになった。
+- bats テストの `cross-link: See also footer appended` は `cd "$BATS_TEST_TMPDIR"` でサブシェル実行が必要だった。スクリプトが CWD 相対パスで `docs/sessions/` を glob するため、テスト tmpdir を CWD にして session dir を作成した。
+
+### Rework
+
+- None. 1 パスで実装完了。全 8 テスト一発 PASS。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `REPORT_EOF` 直後に cross-link ブロックを追加した。PERIOD_MODE 分岐は不要 (line 124 の早期 exit が既に分離している)。
+- `printf '\n---\n\n## See also\n\n- [L3 Session Retrospective](%s)\n'` で `>>` append にした。heredoc より printf の方が安全 (シェル変数展開が限定的)。
+- `skills/auto/SKILL.md` の追記は step 3a 形式で、既存の step 3 (Create session files) と step 4 (retro-proposals) の間に挿入した。
+
+### Deferred Items
+- 逆方向 cross-link (session.md → データ層レポート) は step 3a で手順を追加したが、実際の `/auto` 実行時に `docs/reports/auto-session-*.md` が未生成の場合は skip となる。これは意図的な設計 (`/audit auto-session` は事後生成のため)。
+- bats テストの `cross-link: See also footer appended` はサブシェル実行で CWD を BATS_TEST_TMPDIR に切り替える形だが、SESSION_DIR の glob マッチに `docs/sessions/session-xlink-2026-06-14/` を使用している。日付依存のテストではないが、固定日付であることに留意。
+
+### Notes for Next Phase
+- 変更ファイル: `scripts/get-auto-session-report.sh` (cross-link 追加)、`skills/auto/SKILL.md` (step 3a 追加)、`tests/get-auto-session-report.bats` (2 テスト追加)。
+- /verify では rubric AC が 2 個あるため、実装内容を git diff で grader に渡して判定させること。
+- 全テスト PASS (8/8)、forbidden expressions 違反なし (変更ファイル限定)。
