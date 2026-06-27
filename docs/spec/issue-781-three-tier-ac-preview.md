@@ -207,3 +207,39 @@ No new comments since last phase.
 - Post-merge verify ACs: `ac-tier: preview` ACs should be SKIPPED by /verify (the key behavior added in this Issue). Verify this skip behavior if running /verify.
 - Two post-merge observation ACs require a real project with `capabilities.pr-preview: true` and CI that exports `PREVIEW_URL` — these are human-observed, not automated.
 - Pre-existing CI failure (`append-loop-state-heartbeat.bats`) remains on main; unrelated to this Issue.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue body AC8 referenced `tests/issue.bats` as if existing, but the file did not exist; conflict detected during spec and resolved by creating the file. Verifying referenced test files at `/issue` time would shift this detection earlier.
+- Three coexisting `{{base_url}}` resolution paths now exist: `/review` Deployments API, `/verify` PRODUCTION_URL, and the new `PREVIEW_URL` env-var fast path. Adapter chain consolidation deferred to a future Issue (already a documented follow-up).
+
+#### design (spec retrospective judgment rationale)
+- `.wholework.yml` key shape: case B chosen (`capabilities.pr-preview: true` + env var name `PREVIEW_URL` standardized) over case A (per-project env var name configuration), because case A would complicate `--when` auto-injection and verify-executor evaluation.
+- AC tier representation: case 2 chosen (per-AC `<!-- ac-tier: preview -->` tag within existing section) over case 1 (new section), to avoid breaking existing section parsing, checkbox indexing, and count consistency in `/review`/`/verify`.
+
+#### code
+- No deviations from Spec. All 9 implementation steps completed exactly as designed.
+- `docs/structure.md` pre-existing file-count drift was corrected (87 → 89 with new test file).
+
+#### review
+- New `tests/issue.bats` was initially created without the `PROJECT_ROOT` anchoring pattern used by the other 87+ bats tests. SHOULD-severity issue fixed in this review. Recurring gap: new test files do not inherit the project's portability convention automatically.
+- JA mirror (`docs/ja/guide/customization.md`) omitted a bash code block present in EN. Translation drift in code examples is a recurring risk when adding code fences to documentation.
+
+#### merge
+- Squash merge proceeded successfully despite GitHub API transient `mergeable=false, reason=unknown`. No real blocker.
+- `closes #781` auto-closed Issue cleanly.
+
+#### verify
+- All 8 pre-merge ACs PASS on first attempt (no auto-retry). Mix of `rubric`/`grep`/`command` verify commands provided good coverage at different verification depths.
+- 2 post-merge ACs are `verify-type: opportunistic` (event=review-run / event=verify-run). They wait for real-project events to fire.
+- Pre-existing CI failure (`append-loop-state-heartbeat.bats`) was correctly distinguished from this Issue's `tests/issue.bats` AC verification.
+
+### Improvement Proposals
+
+- `/issue` Skill should verify that referenced test files exist before writing test-related ACs (or warn when a test file path is mentioned but absent). Avoids the spec-time conflict detection observed in this Issue.
+- Bats test creation should follow the `PROJECT_ROOT` anchoring pattern consistently. Either a fixture template (`tests/_template.bats`) or explicit guidance in skill-dev docs (e.g., `skills/code/spec-test-guidelines.md`) would prevent the recurring gap surfaced in review.
+- `/doc translate` and `docs/translation-workflow.md` sync procedure should explicitly check that code blocks in source/target are equivalent (block count + content), not just prose. Translation drift in code examples is a recurring risk.
+- Adapter chain consolidation for the three coexisting `{{base_url}}` resolution paths (Deployments API / PRODUCTION_URL / PREVIEW_URL env var) — already documented as future Issue, ready for follow-up when a preview-URL adapter is built.
