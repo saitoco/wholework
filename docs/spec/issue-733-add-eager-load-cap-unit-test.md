@@ -81,3 +81,28 @@
 ### Notes for Next Phase
 - `/verify` は AC1–AC3 が既にチェック済み (Issue body に反映)。AC4 のみ CI 完了後に確認が必要
 - 変更ファイル: `tests/check-eager-load-capability.bats` (新規)、`docs/structure.md`、`docs/ja/structure.md` (カウント 86→87 更新)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Auto-Resolved Ambiguity Points が AC2 count constraint mismatch / empty Glob 漏れ / fix scope を事前に整理。`/issue` retrospective が次フェーズに正確に橋渡しされた。
+
+#### spec
+- Spec の implementation steps が 4 @test を漏れなく列挙し、code phase で忠実に実装された。Bats 1.13.0 の `BATS_TEST_TMPDIR` 採用方針も明示。
+
+#### code
+- Design Gap として「既存 integration test の `mktemp -d` パターンと新規ファイルの `BATS_TEST_TMPDIR` パターンの不統一」が記録されたが、新規ファイルでよりシンプルな方を採用するのは合理的な判断。Rework なし。
+
+#### review
+- patch route のため review phase スキップ (Size S)
+
+#### merge
+- patch route のため merge phase スキップ (main 直接コミット `b67c906`)
+
+#### verify
+- AC4 (`github_check CI`) の verify command 形式が workflow 全体の conclusion を見るため、本 Issue と無関係な job (`Forbidden Expressions check`) の失敗で FAIL になった。actual の bats job 自体は success。intent (CI bats 全件 green) は満たされているため代替検証で PASS と判定。
+
+### Improvement Proposals
+- **PROPOSAL** (skill-infra): `github_check` verify command で workflow 全体ではなく特定 job の conclusion を見られる sub-form を検討。例: `github_check_job "gh run view ID --json jobs --jq '.jobs[] | select(.name==\"Run bats tests\").conclusion'" "success"`。現在は workflow 全体の lint 失敗で意図しない FAIL が発生し、verify 出力の信頼性を損なう。
