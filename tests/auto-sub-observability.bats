@@ -30,6 +30,7 @@ emit_event() {
     mkdir -p "$(dirname "${AUTO_EVENTS_LOG}")"
     printf '{"ts":"%s","issue":%s,"event":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${EMIT_ISSUE_NUMBER:-0}" "${event_name}" >> "${AUTO_EVENTS_LOG}"
 }
+_emit_comments_consumed() { :; }
 MOCK
 
     # Mock phase-banner.sh (sourced by run-auto-sub.sh)
@@ -127,6 +128,7 @@ emit_event() {
         "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${EMIT_ISSUE_NUMBER:-0}" "${event_name}" \
         "${AUTO_SESSION_ID:-}" "${EMIT_PHASE_NAME:-}" >> "${AUTO_EVENTS_LOG}"
 }
+_emit_comments_consumed() { :; }
 MOCK
     export AUTO_SESSION_ID="test-session-backfill"
     run bash "$SCRIPT" 42
@@ -152,6 +154,7 @@ emit_event() {
         "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${EMIT_ISSUE_NUMBER:-0}" "${event_name}" \
         "${AUTO_SESSION_ID:-}" >> "${AUTO_EVENTS_LOG}"
 }
+_emit_comments_consumed() { :; }
 MOCK
 
     # Unset AUTO_SESSION_ID so run-auto-sub.sh reads from the pointer file

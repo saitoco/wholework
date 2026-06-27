@@ -86,6 +86,7 @@ MOCK
 
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
 emit_event() { return 0; }
+_emit_comments_consumed() { :; }
 MOCK
 
     # Real guard-prefix.sh (sourced via WHOLEWORK_SCRIPT_DIR)
@@ -459,8 +460,52 @@ MOCK
     EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
 emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
+_emit_comments_consumed() { :; }
 MOCK
     run bash "$SCRIPT" 123 --pr
     [ "$status" -eq 0 ]
     grep -q "phase_complete" "$EMIT_LOG"
+}
+
+@test "side-effect: _emit_comments_consumed called before claude invocation" {
+    CALL_ORDER_LOG="$BATS_TEST_TMPDIR/call-order.log"
+    export CALL_ORDER_LOG
+
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { :; }
+_emit_comments_consumed() { echo "comments_consumed_called" >> "${CALL_ORDER_LOG}"; }
+MOCK
+
+    cat > "$MOCK_DIR/claude" <<MOCK
+#!/bin/bash
+echo "claude_called" >> "${CALL_ORDER_LOG}"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/claude"
+
+    run bash "$SCRIPT" 123 --pr
+    [ "$status" -eq 0 ]
+    grep -q "comments_consumed_called" "$CALL_ORDER_LOG"
+    local cc_line claude_line
+    cc_line=$(grep -n "comments_consumed_called" "$CALL_ORDER_LOG" | head -1 | cut -d: -f1)
+    claude_line=$(grep -n "claude_called" "$CALL_ORDER_LOG" | head -1 | cut -d: -f1)
+    [ "${cc_line:-0}" -lt "${claude_line:-999}" ]
+}
+
+@test "side-effect: append-loop-state-heartbeat.sh called on code phase success" {
+    HEARTBEAT_LOG="$BATS_TEST_TMPDIR/heartbeat.log"
+    export HEARTBEAT_LOG
+
+    cat > "$MOCK_DIR/append-loop-state-heartbeat.sh" <<MOCK
+#!/bin/bash
+echo "heartbeat_called \$@" >> "${HEARTBEAT_LOG}"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/append-loop-state-heartbeat.sh"
+
+    run bash "$SCRIPT" 123 --pr
+    [ "$status" -eq 0 ]
+    grep -q "heartbeat_called" "$HEARTBEAT_LOG"
+    grep -q -- "--from spec" "$HEARTBEAT_LOG"
+    grep -q -- "--to code" "$HEARTBEAT_LOG"
 }
