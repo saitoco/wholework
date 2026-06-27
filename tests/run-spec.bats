@@ -105,6 +105,9 @@ WATCHDOG_TIMEOUT_DEFAULT=1800
 load_watchdog_timeout() { WATCHDOG_TIMEOUT=1800; }
 MOCK
 
+    # Isolate from parent process env (e.g. running inside /code or /auto session)
+    unset EMIT_PHASE_NAME EMIT_ISSUE_NUMBER AUTO_SESSION_ID
+
     # Mock emit-event.sh: no-op by default (tests that need capture override this)
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
 emit_event() { return 0; }
