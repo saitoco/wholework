@@ -869,7 +869,7 @@ Parse from ARGUMENTS (after the `auto-session` prefix):
   - **Period aggregate mode** (`{N}d` format, e.g., `7d`, `30d`): aggregate all sessions from the past N days into a cross-session narrative report saved to `docs/sessions/_period/since-{TODAY}-{N}d.md`. In this mode, omit `<session-id>` and pass `--since-days N` to the script.
 - `--day YYYY-MM-DD`: period aggregate mode — aggregate all sessions from the specified date into `docs/sessions/_period/{DATE}.md`
 - `--range YYYY-MM-DD..YYYY-MM-DD`: period aggregate mode — aggregate all sessions in the inclusive date range into `docs/sessions/_period/range-{START}-{END}.md`
-- `--no-ja`: skip Japanese sibling generation (Step 4). Default behavior generates a Japanese-translated sibling file at `{report-path-without-ext}-ja.md` alongside the English report.
+- `--no-ja`: skip Japanese sibling generation (Step 3). Default behavior generates a Japanese-translated sibling file at `{report-path-without-ext}-ja.md` alongside the English report.
 
 **Period mode option summary:**
 

@@ -811,7 +811,7 @@ ${IMPROVEMENT_CANDIDATES}
 
 ---
 
-## Narrative Section (manual / --full LLM-assist)
+## Narrative Section (skeleton)
 
 ### What worked
 TBD — fill in after reviewing the session
