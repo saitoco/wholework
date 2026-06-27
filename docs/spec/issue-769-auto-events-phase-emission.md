@@ -157,3 +157,33 @@
 - Merged commit is on main; verify phase can proceed against main
 - CI (Run bats tests) failure is pre-existing on main and unrelated to this PR's changes
 - New event emission tests cover run-issue.bats, run-spec.bats, run-code.bats, run-merge.bats, run-review.bats — all pass in isolation
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Background が 2 session report の Limits and gaps #1 を引用、issue body の AC 設計が 6 件と充実 (5 grep + 1 rubric + 1 補強 rubric)。
+
+#### spec
+- 提案アプローチに沿って `scripts/lib/phase-events.sh` を `scripts/emit-event.sh` の同等として認定する spec 判断。`modules/event-emission.md` を新規 SSoT として追加し、契約を明文化する設計。
+
+#### code
+- `_maybe_emit_phase_complete()` + `trap EXIT` pattern を全 run-*.sh に対称導入。Watchdog kill (exit 143) でも backfill が trigger される設計を意図していたが…
+
+#### review
+- `modules/event-emission.md` の Backfill セクションと guard 条件の矛盾を検出: "SIGTERM / watchdog timeout exits を反映する" 説明と "Exit code must be 0" guard が同居していた。SIGTERM は exit 143 を返すため backfill 不発火。**新規 SSoT ドキュメントのコード一貫性 review 死角**。
+
+#### merge
+- pre-existing CI failure (append-loop-state-heartbeat.bats) を non-interactive auto-resolve で continue。#787 で起票済み follow-up。
+
+#### verify
+- pre-merge AC 6 件 PASS、post-merge AC は SKIP (本 batch 完了後の `/audit auto-session --full` で観測予定、batch 進行中の本 verify session 内では計測不可)。
+- **Tier 3 recovery が Auto Retrospective に未記載** (#770 と同一パターン)。本 batch session 2 件目の同種事例 — #800 (Tier 2 と対称な Tier 3 Spec write) の必要性を強化する観察。
+- review retrospective が指摘した "Backfill 説明と guard 条件の矛盾" は本 verify session 内では未修正 (PR diff は merged 済み、follow-up が必要)。
+
+### Improvement Proposals
+
+1. **modules/event-emission.md の Backfill 説明と guard 条件の矛盾修正**: `_maybe_emit_phase_complete()` の guard 条件 `[[ "${_last_event}" == "phase_start" ]]` は exit code 0 のみで trigger される暗黙の path にあり、SIGTERM/watchdog kill (exit 143) では trap EXIT 内で同じ judgment が走るが、event log への append 自体は OK でも doc 説明と矛盾。doc の "watchdog timeout を反映" 文言の正確性確認 (または guard 条件側を SIGTERM 対応に拡張) が candidate。**Tier 1 — Skill infrastructure improvement** (新規 SSoT との一貫性問題)。
+2. **新規 SSoT ドキュメント review check item の追加**: `modules/event-emission.md` のように新規 SSoT 文書を追加する PR では、ドキュメント記述とコード guard 条件の一貫性を機械的にチェックする review check item の追加が candidate。本 batch session で #778 (verify command 対称性) と同根の "実装 vs 説明の同期" 論点として補強。
+3. **Tier 3 recovery の Spec 反映 (#800 と重複)**: #770 と同パターン、#800 (auto: Tier 3 recovery 後の Spec 自動追記) で既起票済み。新規起票不要だが、本 batch session で 2 件目の同種観察として #800 の Priority/Value が上がる材料。
