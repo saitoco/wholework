@@ -125,3 +125,32 @@ No new comments since last phase.
 
 - post-merge AC は manual observation のみ: 次回 async external commit recognition による phase/verify 遷移発生時に silent-no-op anomaly entry が log に記録されないことを観察する
 - verify command は全 pre-merge AC PASS 済み (review フェーズ確認) — verify フェーズは post-merge observation のみ残存
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Issue Background が #746 観測事例を具体的に引用 (session-id + report § 番号) しており、根本原因 (reconciler signal 未参照) と修正方針 (reconcile-first authority 徹底) が初期から明確だった。
+
+#### spec
+- AND 条件削除の判断根拠 (`matches_expected:true` が phase label fallback を含む上位判断) が retrospective に明記され、後の review/verify でも参照可能な SSoT を成立させた。
+
+#### code
+- Spec 通り 3 ファイル変更で完了、rework なし。
+
+#### review
+- pre-existing CI failure (`tests/append-loop-state-heartbeat.bats`) を本 PR 無関係と特定して continue 判断。merge phase まで継承され phase handoff で `/verify` に集約予定として deferred。
+
+#### merge
+- CI failing を non-interactive auto-resolve で継続 — 改善 Issue 起票が前提の運用パターン。pre-existing failure の扱いについて運用合意がある。
+
+#### verify
+- 全 5 pre-merge AC + 1 post-merge manual AC PASS。
+- **新規発見: #772 path migration 起因の regression**: `tests/append-loop-state-heartbeat.bats` (test 6-9) が `docs/reports/loop-state-...` の旧 path を参照したまま残されており、#772 で `docs/sessions/_daily/loop-state-...` に移行された script との不整合で全 4 テストが失敗。merge 時点では本 PR と無関係と判定して proceed したが、根本原因は #772 のスコープ漏れ (`scripts/append-loop-state-heartbeat.sh` の path は更新したが、対応する test の path は未更新)。
+- post-merge manual AC は source code + bats test 25,26 (async external commit suppress assertion) で in-session 判定可能。
+
+### Improvement Proposals
+
+1. **#772 follow-up: tests/append-loop-state-heartbeat.bats の path 同期** — #772 で migration 対象ファイルとして `scripts/append-loop-state-heartbeat.sh` の path を更新したが、対応する bats test (`tests/append-loop-state-heartbeat.bats` line 69, 82, 95, 115, 126) は旧 path `docs/reports/loop-state-...` を参照したままで test 6-9 が失敗状態。修正は test ファイルの path replace のみ (`s|docs/reports/loop-state-|docs/sessions/_daily/loop-state-|g`)。**直接 Issue 化対象** (regression fix なので follow-up としてではなく独立 fix Issue)。
+2. **migration Issue における関連 tests の網羅性チェック**: #772 の Spec で `Changed Files` リストに対応する test ファイルが含まれていなかった。SKILL.md / script / test の三層を同期して洗い出す Spec template ガイダンスの追加候補 (本 batch session で #778 として既起票の "verify command 対称性" と同根の論点 — symbolic naming で対象範囲を機械的に検出する仕組みの整備)。
