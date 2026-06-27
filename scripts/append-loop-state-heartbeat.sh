@@ -1,6 +1,6 @@
 #!/bin/bash
 # append-loop-state-heartbeat.sh - Append a phase-transition heartbeat row to
-# `docs/reports/loop-state-{DATE}.md` (UTC date).
+# `docs/sessions/_daily/loop-state-{DATE}.md` (UTC date).
 #
 # Best-effort: failures must not block the caller. The script always exits 0
 # unless argument parsing itself fails — so callers can invoke it from
@@ -81,8 +81,8 @@ if [[ -z "$SCRIPT_DIR" ]]; then
   exit 0
 fi
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
-REPORTS_DIR="$REPO_ROOT/docs/reports"
-FILE="$REPORTS_DIR/loop-state-$DATE.md"
+SESSIONS_DAILY_DIR="$REPO_ROOT/docs/sessions/_daily"
+FILE="$SESSIONS_DAILY_DIR/loop-state-$DATE.md"
 
 # Aggregate open phase/* label counts via a single gh call. Omits phase/ready
 # (transient before code) and phase/done (terminal). Falls back gracefully
@@ -105,7 +105,7 @@ fi
 
 # Create file with unified header if it does not yet exist.
 if [[ ! -f "$FILE" ]]; then
-  mkdir -p "$REPORTS_DIR" 2>/dev/null || true
+  mkdir -p "$SESSIONS_DAILY_DIR" 2>/dev/null || true
   {
     printf '%s\n' '---'
     printf '%s\n' 'type: report'
