@@ -57,6 +57,11 @@ detect_symptom_anchor() {
     echo "code-patch-silent-no-op"
     return 0
   fi
+  # See modules/orchestration-fallbacks.md#json-mode-silent-hang
+  if [[ "$PHASE" == "code-pr" ]] && grep -q "still waiting (json mode)" "$log" 2>/dev/null; then
+    echo "json-mode-silent-hang"
+    return 0
+  fi
   # See modules/orchestration-fallbacks.md#gh-pr-list-head-glob (not yet implemented)
   # See modules/orchestration-fallbacks.md#ff-only-merge-fallback (not yet implemented)
   # See modules/orchestration-fallbacks.md#conflict-marker-residual (not yet implemented)
@@ -90,6 +95,15 @@ apply_code_patch_silent_no_op_retry() {
   echo "[apply-fallback] code-patch-silent-no-op: done" >&2
 }
 
+# Handler: json-mode-silent-hang
+# Retries run-code.sh --pr once when a json-mode silent hang is detected on the pr route.
+# Restricted to code-pr phase to limit blast radius; other phases handled separately.
+apply_json_mode_silent_hang_retry() {
+  echo "[apply-fallback] json-mode-silent-hang: retrying run-code.sh --pr for issue $ISSUE" >&2
+  "$SCRIPT_DIR/run-code.sh" "$ISSUE" --pr >> "$LOG_FILE" 2>&1
+  echo "[apply-fallback] json-mode-silent-hang: done" >&2
+}
+
 symptom_anchor=$(detect_symptom_anchor "$LOG_FILE")
 
 case "$symptom_anchor" in
@@ -107,6 +121,15 @@ case "$symptom_anchor" in
     printf '%s\n' \
       "### Orchestration Anomalies" \
       "- **[code-patch-silent-no-op]** Tier 2 fallback applied: phase=\`$PHASE\`, action=run-code.sh-patch-retry, result=recovered." \
+      "" \
+      "### Improvement Proposals" \
+      "- N/A (resolved by Tier 2 fallback catalog)"
+    ;;
+  json-mode-silent-hang)
+    apply_json_mode_silent_hang_retry
+    printf '%s\n' \
+      "### Orchestration Anomalies" \
+      "- **[json-mode-silent-hang]** Tier 2 fallback applied: phase=\`$PHASE\`, action=run-code.sh-pr-retry, result=recovered." \
       "" \
       "### Improvement Proposals" \
       "- N/A (resolved by Tier 2 fallback catalog)"
