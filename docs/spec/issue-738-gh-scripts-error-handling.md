@@ -75,20 +75,21 @@
 - `gh-check-blocking.sh` は audit report で「唯一 error handling があった」と記録されているが、現在は 3 個 (`gh-issue-edit.sh`, `gh-issue-comment.sh`, `gh-extract-issue-from-pr.sh`) も既に完全対応済み (Issue 記述時点から実装が進んだ)
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST/SHOULD 問題なし。CONSIDER 3 件 (bats テストカバレッジ 2 件 + Spec Code Retrospective 記述精度 1 件) はスキップ判断。
-- Forbidden Expressions check FAILURE は Issue #765 の pre-existing false positive と確認。PR #767 の変更とは無関係。
-- `github_check "gh run list ..."` が safe モード allowlist 外のため AC4 は UNCERTAIN だが、`gh pr checks` での "Run bats tests" SUCCESS で実質 PASS 相当を確認。
+- CI failing (`ci_failing`) を non-interactive auto-resolve として処理し、マージを続行。Issue #765 の pre-existing false positive が CI failure の主因と review phase で確認済み。
+- `--squash --delete-branch` でスカッシュマージ完了。BASE_BRANCH = main のため `closes #738` により Issue は自動クローズ。
+- Phase Handoff を main にコミット (worktree branch で ff-only merge 後にコミット + push)。
 
 ### Deferred Items
-- AC4 の verify command を `gh pr checks` ベースに更新すると UNCERTAIN → PASS に改善できる (Spec 品質改善候補として review retrospective に記録)。
-- Forbidden Expressions check false positive は Issue #765 で追跡中。merge phase で auto-resolve 対象。
+- Forbidden Expressions check false positive は Issue #765 で引き続き追跡中。merge phase では自動解決として通過させた。
+- AC4 の `github_check "gh run list ..."` を `gh pr checks` ベースの verify command に更新する改善は後続 Issue または次回 Spec 改訂で対応。
 
 ### Notes for Next Phase
-- MUST/SHOULD 問題なし → `/merge 767` で安全に進められる。
-- Forbidden Expressions check FAILURE は Issue #765 の既知バグ (pre-existing)。merge phase での判断対象となる。
+- verify phase: PR #767 のスカッシュコミットが main に着地済み。`scripts/gh-*.sh` 4 個の error handling 追加が対象。
+- Post-merge verify: `bash -n scripts/gh-*.sh` の syntax check と bats テスト (`tests/gh-*.bats`) を実行して回帰がないことを確認。
+- 本番観察 (手動): 次回 GitHub API rate limit / permission error が発生した際に stderr で発見可能になっているか確認。
 
 ## Code Retrospective
 
