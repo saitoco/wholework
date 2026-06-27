@@ -9,72 +9,54 @@
 ## Consumed Comments
 
 - saitoco / MEMBER / first-class / Auto-Resolve Log (AC2 format definition → SKILL.md inline; AC1 file_contains → grep) / https://github.com/saitoco/wholework/issues/701#issuecomment-4757366919
+- saitoco / MEMBER / first-class / /verify FAIL 2026-06-27: heartbeat never appeared in `docs/reports/loop-state-{2026-06-26,2026-06-27}.md`. The LLM-driven inline procedure in skills/auto/SKILL.md was not firing in batch mode (`run-auto-sub.sh`) or in parent single-Issue auto runs. Re-implementation moves the procedure into bash. / https://github.com/saitoco/wholework/issues/701#issuecomment-4793020100
 
 ## Changed Files
 
-- `skills/auto/SKILL.md`: Add "Loop State Heartbeat" section defining the `loop-state-*.md` format (containing "Loop State" header) and heartbeat append procedure; add heartbeat step after each phase completion — bash 3.2+ compatible
+- `scripts/append-loop-state-heartbeat.sh` (new): bash 3.2+ best-effort helper that aggregates open `phase/*` label counts via a single `gh issue list` call and appends a row to `docs/reports/loop-state-{DATE}.md`. Failures (gh/jq unavailable, fs errors) are swallowed silently so the caller is never blocked.
+- `scripts/run-auto-sub.sh`: call the helper from `run_phase_with_recovery` after every successful phase completion (normal path + Tier 1/2/3 recoveries) for `code-patch`, `code-pr`, `review`, and `merge`. Phase-name → from/to mapping lives in two small `case` helpers.
+- `skills/auto/SKILL.md`: replace the five inline LLM-driven "append loop-state heartbeat" steps with explicit `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh` invocations; rewrite the `## Loop State Heartbeat` section to document the bash helper as the single execution path; align the file-format example with the existing #703 schema (`Time (UTC) | Phase | Event | Detail`) so phase-transition heartbeats and next-cycle-seed rows coexist in one append-only daily log; add the new script to `allowed-tools`.
+- `tests/append-loop-state-heartbeat.bats` (new): 9 unit tests covering argument validation, file creation with shared schema, row append, gh failure tolerance, and the `--phase-label` override.
 
 ## Implementation Steps
 
-1. **Add `## Loop State Heartbeat` section to SKILL.md** (→ AC2)
+> **Implementation Iteration 2 (2026-06-27)**. The first iteration (commit `c13eccb`) defined the heartbeat as an LLM-driven inline procedure in `skills/auto/SKILL.md`. `/verify` confirmed in two subsequent batches that no `loop-state-{DATE}.md` rows were ever written by `run-auto-sub.sh` (batch mode) or the parent single-Issue path — the LLM steps simply weren't being followed reliably. This iteration migrates the procedure to bash so the heartbeat fires deterministically from the same code path as `phase_complete` event emission.
 
-   Place the section after the "Daily rollup" step in Step 5. Content:
+1. **Add `scripts/append-loop-state-heartbeat.sh` (the bash helper)** (→ AC1, AC2, AC3)
 
+   Best-effort: never blocks the caller. CLI:
    ```
-   ## Loop State Heartbeat
-
-   After each phase completion, append a line to `docs/reports/loop-state-{DATE}.md` (UTC date).
-
-   ### Loop State File Format
-
-   File: `docs/reports/loop-state-{DATE}.md`
-
-   ---
-   type: report
-   description: Phase-transition heartbeat for /auto loops. Append-only.
-   generated_by: skills/auto/SKILL.md (tail extension)
-   ---
-
-   # Loop State — {DATE}
-
-   | ts (UTC) | issue | transition | repo phase/* snapshot |
-   |----------|-------|------------|----------------------|
-   | HH:MM:SS | #N | from→to | issue:N spec:N code:N review:N verify:N |
-
-   ### Heartbeat Append Procedure
-
-   After confirming `matches_expected: true` from `reconcile-phase-state.sh --check-completion`
-   for the completed phase:
-
-   1. Get timestamp: `date -u +%H:%M:%S`
-   2. Get UTC date: `date -u +%Y-%m-%d`
-   3. Get phase snapshot: count open issues per phase label via
-      `gh issue list --label "phase/*" --json labels` — aggregate counts only
-      (e.g., `issue:3 spec:1 code:0 review:2 verify:1`)
-   4. If `docs/reports/loop-state-{DATE}.md` does not exist: create it with
-      the frontmatter and table header using Write tool
-   5. Append a row to the table (best-effort: failures must not block the main flow)
+   append-loop-state-heartbeat.sh --issue N --from <phase> --to <phase> [--phase-label <label>]
    ```
+   Behavior:
+   - Resolves repo root as `dirname(dirname($0))`
+   - Aggregates open `phase/*` label counts via `gh issue list --state open --json labels --limit 1000 | jq ...` (single gh call). Omits `phase/ready` and `phase/done`.
+   - On gh/jq failure, falls back to `snapshot-unavailable` and still appends a row.
+   - Creates `docs/reports/loop-state-{DATE}.md` with the schema shared with #703 (`Time (UTC) | Phase | Event | Detail`) when absent.
+   - Appends row: `| HH:MM:SS | <to> | phase-transition | #N from→to snapshot:[issue:N spec:N code:N review:N verify:N] |`.
 
-2. **Add heartbeat step after each PR route phase completion** (→ AC1, AC2)
+2. **Wire helper into `run-auto-sub.sh`** (→ AC1)
 
-   The PR route has 4 phase completions. After each `[N/M] phase → done` output:
-   - After `[1/4] code → done` (step 3): append `from=spec, to=code`
-   - After `[2/4] review → done` (step 7): append `from=code, to=review`
-   - After `[3/4] merge → done` (step 10): append `from=review, to=merge`
-   - After `[4/4] verify → done` (step 15-16 on success): append `from=merge, to=verify`
+   `run_phase_with_recovery` is the single chokepoint where all phase completions emit `phase_complete`. Add two `case` helpers (`_loop_state_from_phase`, `_loop_state_to_phase`) and a wrapper `_append_loop_state_heartbeat <phase> <issue>` that invokes the helper with stderr/stdout discarded and `|| true`. Call the wrapper after every `emit_event "phase_complete"` invocation (4 sites: normal success, Tier 1 reconciler recovery, Tier 2 fallback recovery, Tier 3 sub-agent recovery). Phase-name → from/to mapping:
 
-   Insertion position: immediately after the `[N/M] phase → done` output line,
-   before the next precondition check or counter increment.
+   | phase (internal) | from   | to     |
+   |------------------|--------|--------|
+   | `code-patch`     | spec   | code   |
+   | `code-pr`        | spec   | code   |
+   | `review`         | code   | review |
+   | `merge`          | review | merge  |
 
-3. **Add heartbeat step after each patch route phase completion** (→ AC1, AC2)
+   Phases outside the map (none today) produce no heartbeat.
 
-   The patch route has 2 phase completions:
-   - After code-patch completion (step 3): append `from=spec, to=code`
-   - After verify completion (step 9): append `from=code, to=verify`
+3. **Update `skills/auto/SKILL.md`** (→ AC1, AC2, AC3)
 
-   Insertion position: immediately after the reconcile completion check confirms
-   `matches_expected: true`.
+   - Replace the five "append loop-state heartbeat (from=X, to=Y; see `## Loop State Heartbeat`)" phrases in the per-phase steps with explicit `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh --issue $NUMBER --from X --to Y` invocations. This covers patch (step 3, step 16 verify) and pr (steps 3, 7, 10, 16 verify) routes.
+   - Rewrite the `## Loop State Heartbeat` section so the file format example aligns with the existing #703 schema (`Time (UTC) | Phase | Event | Detail`), and describe the bash helper as the single execution path (parent session + run-auto-sub.sh both call it).
+   - Add `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh:*` to `allowed-tools`.
+
+4. **Add `tests/append-loop-state-heartbeat.bats`** (regression guard)
+
+   9 hermetic tests: arg validation (3), unknown option rejection (1), file creation with shared schema (1), row content with from→to and snapshot (1), repeated append with single header (1), gh failure tolerance (1), `--phase-label` override (1). gh is mocked via PATH.
 
 ## Verification
 
@@ -118,18 +100,20 @@ No new comments since last phase.
 <!-- phase: code -->
 
 ### Key Decisions
-- Added `## Loop State Heartbeat` as a top-level `##` section in SKILL.md, placed between Daily rollup and L3 auto-retrospective in Step 5. This makes it a standalone reference section rather than embedding it inline within a step.
-- Heartbeat references in individual phase steps use a compact inline notation (`append loop-state heartbeat; see ## Loop State Heartbeat`) to avoid repeating the full procedure at every call site.
-- All 6 phase completions (4 PR route + 2 patch route) are covered with distinct `from→to` transition labels.
+- Migrated heartbeat from LLM-driven prose (commit `c13eccb`) to `scripts/append-loop-state-heartbeat.sh` (bash). The /verify FAIL comment on this Issue (2026-06-27) confirmed the prose approach was being skipped both in batch mode (`run-auto-sub.sh`, no LLM in path) and in parent single-Issue auto. Bash invocation is mechanically guaranteed at every `phase_complete` site.
+- Single chokepoint in `run-auto-sub.sh::run_phase_with_recovery` — heartbeat call follows every `emit_event "phase_complete"`, covering normal success plus Tier 1/2/3 recoveries. No fragmentation across the case-statement size routes.
+- Unified file schema with #703 (`Time (UTC) | Phase | Event | Detail`). The original Spec had defined a separate 4-column schema, but #703 (merged after `c13eccb`) had already started writing to the same file with its own schema. Adopting #703's columns lets both writers coexist append-only without a per-row format negotiation.
+- `gh` snapshot aggregation packed into a single `gh issue list ... | jq` invocation in the helper (not per-phase queries). Bash 3.2+ compatible — no associative arrays.
 
 ### Deferred Items
-- Actual runtime behavior (file creation, row append, snapshot aggregation) is verified post-merge via observation event `auto-run`. The verify commands only confirm SKILL.md text presence.
-- The `gh issue list` snapshot aggregation jq logic is left as a prose description in the Heartbeat Append Procedure — a future Issue could implement a helper script if needed.
+- Forbidden-expressions stale entry in `docs/spec/issue-710-blocked-by-workflow.md` (旧称: verify hint) — unrelated to this change; already pre-existing.
+- The aggregated snapshot omits `phase/ready` and `phase/done` by design (one transient, one terminal). If a future use case needs them, expose them via a `--include-phases` flag rather than changing the default.
+- AC4 post-merge observation (`/auto` run produces `loop-state-{今日の UTC 日付}.md`) is now mechanically reliable in batch mode but still depends on `/auto` actually running today. `/verify` should run after the next `/auto` to flip the checkbox.
 
 ### Notes for Next Phase
-- All 3 pre-merge ACs pass: `grep "loop-state"`, `grep "Loop State"`, `grep "reconcile-phase-state.sh"` all PASS.
-- Post-merge AC requires running `/auto N` and observing the `docs/reports/loop-state-{DATE}.md` file. This is tagged `verify-type: observation event=auto-run`.
-- The pre-existing forbidden-expressions violation in `docs/spec/issue-710-blocked-by-workflow.md` (旧称: verify hint) is unrelated to this change — no action needed from `/verify`.
+- All 3 pre-merge ACs pass: `grep "loop-state"` (12), `grep "Loop State"` (9), `grep "reconcile-phase-state.sh"` (19) — script-driven implementation does not change the SKILL.md surface area being grep'd.
+- New unit test file `tests/append-loop-state-heartbeat.bats` (9 tests) covers the helper hermetically via gh mocking. No new tests added to `tests/run-auto-sub.bats` — the heartbeat call uses `|| true` so existing `run-auto-sub.bats` mocks don't need a stub for the helper, and all 27 existing tests pass unchanged.
+- For `/verify`: the previous code retrospective and verify retrospective sections are retained verbatim above; the new iteration-2 retrospective is appended as a separate `## Code Retrospective (iteration 2 — ...)` section so the audit trail is preserved.
 
 ## Verify Retrospective
 
@@ -152,3 +136,22 @@ No new comments since last phase.
 
 - **auto-events-rollup.sh の生成物コミット自動化**: `auto-events-rollup.sh` が `docs/reports/auto-events-rollup-{DATE}.md` を生成するが commit/push しないため、次回 `/verify` 起動時に check-verify-dirty.sh が exit=1 でブロックされる。複数の skill (`auto`, `verify`) と複数 PR にまたがる潜在的再発性。auto-events-rollup.sh または呼び出し側 (auto/SKILL.md Step 5) で自動コミットするか、`docs/reports/auto-events-rollup-*.md` を verify dirty チェックの除外パターンに加えるかを検討する価値あり。Tier 2 候補 (パターン認識ベースの workflow lesson)。
 
+## Code Retrospective (iteration 2 — bash-driven heartbeat, 2026-06-27)
+
+### Deviations from Design (original Spec)
+- 完全な再設計。元 Spec はフォーマット定義を `## Loop State Heartbeat` (SKILL.md インライン) に置き、各フェーズ完了直後の append 手順を LLM 駆動の prose ステップとして実装することを想定していた。本 iteration ではこのアプローチが /verify FAIL を生んだため、procedure を `scripts/append-loop-state-heartbeat.sh` に bash 実装として移し、`skills/auto/SKILL.md` の各 site から script を直接呼び出す形に切り替えた。Implementation Steps セクションは新方針に合わせて全面書き換え済み。
+- 元 Spec が `loop-state-{DATE}.md` 用に独自の列 (`ts (UTC) | issue | transition | repo phase/* snapshot`) を定義していたが、後に merge された #703 (next-cycle-seed) が同じファイルへ別スキーマ (`Time (UTC) | Phase | Event | Detail`) で書き始めていた。本 iteration は #703 のスキーマに統一し、phase-transition と next-cycle-seed の両イベントが同じ append-only daily log に共存できるようにした。SKILL.md の `## Loop State Heartbeat` セクションのフォーマット例も統一スキーマに書き換え。
+
+### Design Gaps/Ambiguities (revealed in this iteration)
+- **LLM 駆動の "best-effort" 手続きはオーケストレーション境界を跨ぐと信頼できない**。元 Spec のステップは parent /auto session の LLM が忠実に follow することを暗黙の前提としていたが、batch mode は `run-auto-sub.sh` (bash) で実行され LLM ステップが介在しない。さらに parent session 単体実行でも、コンテキスト量が多いと LLM がインライン best-effort ステップを暗黙にスキップするケースが本件 /verify で 5 回連続 (#765 含む) 観測された。**機械的に必須な副作用は bash に落とす** という設計則として記録する価値あり。
+- **同一ファイルへの複数 writer の schema 調整は Spec フェーズで検出されなかった**。#701 と #703 が独立に loop-state-*.md にアクセスする計画を持っていたが、起票・spec 段階でも互いの schema が照合されなかった。今回の iteration で統一したが、ファイルレベルの SSoT を Spec フェーズで明示すべき (例: "writes to docs/reports/loop-state-*.md (shared with #703)" のような cross-reference)。
+
+### Rework
+- 元実装 (commit `c13eccb`) の SKILL.md 内インラインヒートビート手順は完全に置き換え。コード自体に削除は不要だが、prose 命令を bash script 呼び出しに置換し、`## Loop State Heartbeat` セクションを書き直した。
+
+### Verification (this iteration)
+- 単体テスト: `tests/append-loop-state-heartbeat.bats` 全 9 件 PASS。
+- 回帰: `tests/run-auto-sub.bats` 全 27 件 PASS、`tests/auto-sub-observability.bats` 全 4 件 PASS、`tests/auto-recovery.bats` 全 5 件 PASS。
+- 静的検査: `scripts/validate-skill-syntax.py skills/auto/SKILL.md` で error 0 (新スクリプトを allowed-tools に追加済み)、`scripts/check-forbidden-expressions.sh` exit 0。
+- Pre-merge AC: `grep loop-state skills/auto/SKILL.md` → 12 件、`grep "Loop State" skills/auto/SKILL.md` → 9 件、`grep reconcile-phase-state.sh skills/auto/SKILL.md` → 19 件 — 全 PASS。
+- Post-merge AC (observation event=auto-run): 次の `/auto N` 完走時に `docs/reports/loop-state-{今日の UTC 日付}.md` が生成されるかを観察。bash 駆動になったため、parent /auto session が当該ステップを LLM 的に skip しても run-auto-sub.sh 経由の batch mode では確実に発火する。
