@@ -191,18 +191,34 @@ post-merge 2 件はいずれも `<!-- verify-type: manual -->`。「次回 `/aud
 ### Rework
 - None. All changes applied cleanly on the first attempt.
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- `scripts/append-loop-state-heartbeat.sh` が Spec の "Changed Files" リストに含まれておらず、実装フェーズで見落とされた。SKILL.md の `file_not_contains "docs/reports/loop-state-"` verify command は SKILL.md を対象とするため、bash スクリプト側の残存パスを検出できなかった。migration を伴う Issue では "SKILL.md 記述更新" と "bash スクリプト実装更新" を区別した verify command 設計が有効。
+- 今後: SKILL.md と bash スクリプトが同一機能の 2 層実装になる場合、`file_not_contains "scripts/<script>.sh" "<old-pattern>"` を AC に追加するパターンが再発防止に有効。
+
+### Recurring issues
+
+- 特になし。今回の見落とし (bash スクリプトの hardcoded パス) は構造的問題ではなく、Changed Files リストの網羅性確認プロセスで防止可能。
+
+### Acceptance criteria verification difficulty
+
+- `rubric` 条件 5 件はすべて PASS 判定が容易だった (diff から実装確認が直接可能)。
+- `file_not_contains "skills/auto/SKILL.md" "docs/reports/loop-state-"` は PASS したが、bash スクリプト側をカバーしていない点が死角。verify command の対象ファイル選択に改善余地あり。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 全 16 ファイルを `git mv` で移行完了。data-layer 8 ファイル、rollup 7 ファイル、loop-state 1 ファイル。
-- script の default path 変更のみで既存の `mkdir -p` が新 dir を自動生成するため、追加ロジックは不要。
-- `docs/ja/structure.md` の Directory Layout tree も英語版に合わせて `_daily/` / `data-layer` エントリを追加更新 (Spec 記述より広いスコープだが verify command なしのため AC に影響なし)。
+- `scripts/append-loop-state-heartbeat.sh` の `REPORTS_DIR`/`FILE` 変数を `SESSIONS_DAILY_DIR`/`docs/sessions/_daily/loop-state-$DATE.md` に変更 (MUST fix, commit d0a9288)。
+- Spec の Changed Files リストに本スクリプトが含まれていなかったが、migration の完全性のために修正を判断した。
+- validate-skill-syntax.py: PASS (0 error)。
 
 ### Deferred Items
 - post-merge 観察 2 件 (次回 `/audit auto-session` / daily rollup での新 path 生成確認) は runtime 挙動のため `manual` verify-type として据え置き。
 
 ### Notes for Next Phase
-- 全 13 件の pre-merge verify command が PASS。Issue body のチェックボックスも更新済み。
-- post-merge の 2 件 (manual) は次回 `/audit auto-session` / `auto-events-rollup.sh` 実行時に観察すること。
-- `docs/reports/` 直下の curated ファイル (`auto-session-performance-2026-06-13.md` 等) は移動対象外、`watchdog-defaults.sh:14` の参照も変更不要。
+- MUST issue 1 件修正済み (append-loop-state-heartbeat.sh パス更新)。
+- 全 13 件の pre-merge verify command が PASS (Step 8 確認済み)。
+- `docs/reports/` 直下の curated ファイル (`auto-session-performance-2026-06-13.md` 等) は移動対象外。
