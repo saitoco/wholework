@@ -75,21 +75,20 @@
 - `gh-check-blocking.sh` は audit report で「唯一 error handling があった」と記録されているが、現在は 3 個 (`gh-issue-edit.sh`, `gh-issue-comment.sh`, `gh-extract-issue-from-pr.sh`) も既に完全対応済み (Issue 記述時点から実装が進んだ)
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `gh-label-transition.sh` は 3 箇所の `gh issue edit` すべてに `if ! ...; then echo "Error..." >&2; exit 1; fi` パターンを採用し統一。
-- `gh-pr-review.sh` の heredoc パイプラインを変数キャプチャ方式にリファクタした後に `gh api` 呼び出しに error handling を追加。既存テストへの影響は最小限。
-- `gh-graphql.sh` の error メッセージは `QUERY_NAME` が空のケースを考慮して "gh api graphql failed" というシンプルな形にした。
+- MUST/SHOULD 問題なし。CONSIDER 3 件 (bats テストカバレッジ 2 件 + Spec Code Retrospective 記述精度 1 件) はスキップ判断。
+- Forbidden Expressions check FAILURE は Issue #765 の pre-existing false positive と確認。PR #767 の変更とは無関係。
+- `github_check "gh run list ..."` が safe モード allowlist 外のため AC4 は UNCERTAIN だが、`gh pr checks` での "Run bats tests" SUCCESS で実質 PASS 相当を確認。
 
 ### Deferred Items
-- CI (github_check) の AC は PR 後に自動確認予定。
-- Spec の行番号指定は参照用であり正確ではないが、実装上の問題はなかった (実ファイルを読んで適用)。
+- AC4 の verify command を `gh pr checks` ベースに更新すると UNCERTAIN → PASS に改善できる (Spec 品質改善候補として review retrospective に記録)。
+- Forbidden Expressions check false positive は Issue #765 で追跡中。merge phase で auto-resolve 対象。
 
 ### Notes for Next Phase
-- 全 8 個の gh-*.sh に error handling が追加されており、rubric AC (7 個以上) は余裕を持って満たしている。
-- bats テスト 4 ファイルに "error: API failure" テストケースを追加済み。全 941 テスト PASS 確認済み。
-- PR #767 が CI 完了後 merge 可能になる。
+- MUST/SHOULD 問題なし → `/merge 767` で安全に進められる。
+- Forbidden Expressions check FAILURE は Issue #765 の既知バグ (pre-existing)。merge phase での判断対象となる。
 
 ## Code Retrospective
 
@@ -105,3 +104,23 @@
 ### Rework
 
 - None
+
+## review retrospective
+
+### Spec vs 実装の乖離パターン
+
+Code Retrospective に `gh-graphql.sh` の no-cache path が "pipe 内の最終コマンド" と記述されているが、実際は `else` ブロックの最終コマンドであり shell pipeline 内ではない。`set -euo pipefail` があれば単独でもエラー検出される。実装の正しさは問題ないが、Retrospective の説明が若干不正確。Spec 記述時に実装の詳細 (pipe vs 非 pipe) を明記すると今後の誤解を防げる。
+
+### 繰り返し問題のパターン
+
+CONSIDER のみ 3 件検出された:
+1. bats テストのエラーパスカバレッジが複数コードパスの一部のみをカバー (gh-graphql.bats, gh-label-transition.bats)
+2. Spec Code Retrospective の記述精度
+
+同一パターンの複数コードパスのうち一部のみテストするパターンが 2 件あった。複数コードパスがある場合 (特に `if-else` の各ブランチ)、少なくとも 1 パスがエラー経路をカバーしていれば実用上十分だが、「全パスカバー vs 代表パスのみカバー」の判断基準を Spec に明記するとコードレビューでの CONSIDER 指摘を減らせる。
+
+### 受け入れ条件の検証難易度
+
+- rubric + grep + command (CI reference) で3件の pre-merge 条件を PASS 判定できた。
+- `github_check "gh run list ..."` は safe モードの allowlist 外のため UNCERTAIN だったが、`gh pr checks` での CI 状態確認で実質的に PASS 相当を確認。
+- `gh run list` を `gh pr checks` で代替できるよう verify command を更新すると UNCERTAIN を PASS に変換できる (Spec 品質改善候補)。
