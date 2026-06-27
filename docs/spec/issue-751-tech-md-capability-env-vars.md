@@ -43,3 +43,33 @@ Add the capability env var naming convention (`capabilities.{name}` → `HAS_{UP
 - `MCP_TOOLS` は dynamic mapping の除外対象 (`capabilities.mcp` → `MCP_TOOLS` の固定マッピング)。`HAS_MCP_CAPABILITY` は設定されない — auto-resolved from Issue Retrospective comment.
 - `HAS_INVOICE_API_CAPABILITY` はユーザー定義 capability の naming convention 例示 (`environment-adaptation.md:40`) であり、組み込み capability ではないため一覧に含めない。
 - docs/ja/ の Japanese verify pattern 注意: `section_contains` の Japanese section heading (`## 環境変数`) は英語パターンと異なるため、verify コマンドは英語ソース (`docs/tech.md`) のみを対象にする。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Commit prefix: Spec did not pre-state the Issue type, so `feat:` was used initially. After fetching Issue type (`Task`) in Step 11, the commit was amended to `chore:` per the Type → prefix table. No implementation change; commit message alignment only.
+
+### Design Gaps/Ambiguities
+
+- None. The Spec was precise and the implementation matched expectations exactly. The `MCP_TOOLS` exception (excluded from `HAS_*_CAPABILITY` dynamic mapping) was pre-resolved in the Spec Notes and required no additional judgment during coding.
+
+### Rework
+
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Added `### Capability Flags` subsection to `## Environment Variables` in `docs/tech.md` with explanation of dynamic mapping convention and a four-row table for the built-in capability env vars
+- `docs/ja/tech.md` synced with equivalent Japanese content in the same commit
+- `MCP_TOOLS` documented with an explicit note that `HAS_MCP_CAPABILITY` is never set (excluded from dynamic mapping)
+
+### Deferred Items
+- None. This was a pure documentation change with no follow-up needed.
+
+### Notes for Next Phase
+- All 6 pre-merge ACs are auto-verified and checked; no post-merge ACs exist
+- bats test suite (945 tests) passed cleanly — no test changes needed for a documentation-only change
+- `check-forbidden-expressions.sh` passed: no forbidden expressions introduced
