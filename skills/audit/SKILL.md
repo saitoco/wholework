@@ -1006,7 +1006,7 @@ The generated report (`docs/reports/auto-session-{session-id}-{date}.md`) contai
 3. **Recovery Events** — chronological list of Tier 1/2/3 recovery events (phase, tier, result, affected issue)
 4. **Verify Phase Residuals** — issues that entered verify but did not complete it in this session
 5. **Concurrent Sessions Detected** — events where another session committed to main during a phase
-6. **Improvement Candidates Surfaced** — anomaly-derived improvement candidates (Tier 3 recoveries, unknown patterns)
+6. **Improvement Candidates Surfaced** — anomaly-derived improvement candidates (Tier 3 recoveries, Tier 2 recoveries approaching or reaching recoveries-auto-fire.threshold, unknown patterns)
 7. **Narrative Section (skeleton)** — TBD placeholders for "What worked", "Limits and gaps", "Improvement candidates surfaced", "Conclusion" (manual fill, or `--full` for LLM-assisted draft)
 
 ### Argument Parsing
