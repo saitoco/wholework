@@ -22,3 +22,4 @@ date: 2026-06-27
 | 14:47:53 | review | phase-transition | #705 code→review snapshot:[issue:5 spec:0 code:0 review:2 verify:2] |
 | 14:50:18 | merge | phase-transition | #785 review→merge snapshot:[issue:5 spec:0 code:0 review:1 verify:2] |
 | 14:53:13 | merge | phase-transition | #705 review→merge snapshot:[issue:6 spec:0 code:0 review:0 verify:2] |
+| 15:11:25 | verify | phase-transition | #705 merge→verify snapshot:[issue:4 spec:1 code:0 review:0 verify:2] |
