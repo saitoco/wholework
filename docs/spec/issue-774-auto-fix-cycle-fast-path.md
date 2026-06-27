@@ -17,9 +17,9 @@
 
 1. `modules/l0-surfaces.md` Step 2 (Fetch comments) を更新: cutoff フィルタ済みコメント取得の後、cutoff より前のコメントも `<!-- wholework-event: type=verify-fail` を含む場合は consume 対象に追加するロジックを記述する (→ AC3, AC4)
 
-2. `skills/auto/SKILL.md` Step 2 と Step 3 の間に `### Step 2.5: Fix-cycle Detection` を挿入: (1) `gh issue view $NUMBER --json comments` で `<!-- wholework-event: type=verify-fail` を含む最新コメントを検索、(2) `gh issue view $NUMBER --json labels` で `phase/*` ラベルが存在しないことを確認、(3) `Glob("$SPEC_PATH/issue-$NUMBER-*.md")` で Spec ファイルの存在を確認 — 3 条件すべて true の場合を fix-cycle state と判定し、Size-aware で run-code.sh を直接起動 (`XS/S → --patch`, `M/L → --pr`, `XL → 手動介入`) して Step 4 の verify ループに進む; 条件未満は Step 3 へ通常フロー (→ AC1, AC2)
+2. `skills/auto/SKILL.md` Step 2 と Step 3 の間に `### Step 2a: Fix-cycle Detection` を挿入: (1) `gh issue view $NUMBER --json comments` で `<!-- wholework-event: type=verify-fail` を含む最新コメントを検索、(2) `gh issue view $NUMBER --json labels` で `phase/*` ラベルが存在しないことを確認、(3) `Glob("$SPEC_PATH/issue-$NUMBER-*.md")` で Spec ファイルの存在を確認 — 3 条件すべて true の場合を fix-cycle state と判定し、Size-aware で run-code.sh を直接起動 (`XS/S → --patch`, `M/L → --pr`, `XL → 手動介入`) して Step 4 の verify ループに進む; 条件未満は Step 3 へ通常フロー (→ AC1, AC2)
 
-3. `tests/auto.bats` に fix-cycle 検出ステップの @test を追加: Step 2.5 セクションが SKILL.md に存在すること、"fix-cycle" キーワードが含まれることを検証 (→ AC5, AC6)
+3. `tests/auto.bats` に fix-cycle 検出ステップの @test を追加: Step 2a セクションが SKILL.md に存在すること、"fix-cycle" キーワードが含まれることを検証 (→ AC5, AC6)
 
 ## Verification
 
@@ -49,3 +49,34 @@
 
 - saito (MEMBER / first-class): Issue Retrospective — BRE metacharacter fix in AC2, additional verify ACs (AC4, AC5), auto-resolved ambiguity points confirmation
   URL: https://github.com/saitoco/wholework/issues/774#issuecomment-4817665323
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec says "Step 2.5" but `validate-skill-syntax.py` forbids decimal step format (N.M). Renamed to "Step 2a: Fix-cycle Detection" (first available letter suffix). The bats tests were updated to match the renamed step heading. The AC verify commands check for the "fix-cycle" keyword (not the step number), so all ACs still pass.
+
+### Design Gaps/Ambiguities
+
+- The Spec Notes mentioned "COMMENT_SCOPE は issue+pr の変更は run-code.sh への追加フラグは不要" but did not address that the Step 2.5 → Step 2a rename would affect bats awk patterns. Bats patterns updated accordingly with no functional impact.
+
+### Rework
+
+- N/A (no rework required beyond the Step 2.5 → Step 2a rename forced by the validator)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Step 2.5 renamed to Step 2a to comply with validate-skill-syntax.py (decimal step numbers forbidden); all ACs still pass since they check keyword not step number
+- fix-cycle detection criteria: verify-fail marker + no phase/* labels + Spec exists — when all three hold, skip Step 3/3a and proceed directly to Step 4
+- COMMENT_SCOPE for run-code.sh unchanged (l0-surfaces.md exception handles verify-fail marker regardless of cutoff)
+
+### Deferred Items
+- `/auto --fix-cycle` explicit flag is out of scope (per Issue); automatic detection via Step 2a covers the main use case
+- Post-merge observation ACs require a real verify FAIL cycle to confirm behavior
+
+### Notes for Next Phase
+- The renamed step is "Step 2a" (not "Step 2.5") — verify commands in bats reference this name
+- docs/workflow.md and docs/ja/workflow.md were updated to describe the fix-cycle fast-path
+- All 6 bats tests in auto.bats pass; full suite (958 tests) exits 0
