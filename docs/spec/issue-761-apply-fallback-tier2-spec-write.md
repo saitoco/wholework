@@ -173,17 +173,18 @@
 - テスト側: `dco-signoff-missing-autofix` テストが `phase=` フィールドを検証していない (CONSIDER)。unit test completeness として改善余地あり。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- CI の Forbidden Expressions check FAILURE は false positive と判断 (PR diff に実際の禁止表現なし、`sub-issue Spec` が `Issue Spec` パターンにマッチしただけ)
-- SKILL.md Source 1 note の "XL route only" 表現は SHOULD として指摘したが、Code Retrospective で著者認識済みのため自動修正せず
-- MUST 問題なし → COMMENT イベントでレビュー投稿、CI failure は偽陽性
+- CI `ci_failing` (Forbidden Expressions false positive) を non-interactive auto-resolve で通過。偽陽性と review phase が既に判定済みのため安全
+- `gh pr merge --squash --delete-branch` でマージ成功 (2026-06-27T01:38:05Z)
+- ローカルブランチ削除エラー (既存 worktree `code+issue-761` が使用中) は merge 成功に影響しない軽微なエラーとして無視
 
 ### Deferred Items
-- `check-forbidden-expressions.sh` の単語境界バグ → 別 Issue で対応 (本 PR のスコープ外)
+- `check-forbidden-expressions.sh` の単語境界バグ → review phase から引き継ぎ、別 Issue で対応
 - `tests/apply-fallback.bats` での `phase=` フィールド検証追加 → CONSIDER、任意対応
 
 ### Notes for Next Phase
-- MUST 問題なし、SHOULD 1件 (SKILL.md 表現) は著者の判断でスキップ → `/merge 764` で進行可能
-- CI Forbidden Expressions check は偽陽性のため merge ブロックにすべきでない
+- verify コマンドはすべて pre-merge で PASS 済み
+- Post-merge verify: 次回 Tier 2 fallback 発生時に Spec `## Auto Retrospective` への自動書き込みを観察
+- label は `verify` に遷移済み
