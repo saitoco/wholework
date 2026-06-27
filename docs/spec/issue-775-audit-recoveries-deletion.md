@@ -61,3 +61,36 @@
 
 - saito (MEMBER, first-class) — 2026-06-27T17:23:12Z: Issue Retrospective コメント (自動解決済み曖昧ポイント 3 件 + 削除系スキャン結果) — https://github.com/saitoco/wholework/issues/775#issuecomment-4819684023
   - 自動解決内容は Issue 本文の `## Auto-Resolved Ambiguity Points` セクションに反映済み
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の "Changed Files" に `docs/structure.md` と `docs/ja/structure.md` は SHOULD (AC 外) として記載されていたが、実装では両ファイルも更新した。audit 行の説明文 (`Drift, fragility, and recovery pattern detection...`) が削除後の機能と不一致になるため SHOULD を実施するのが自然と判断。Spec の "Implementation Steps" は SHOULD の記載がなかったため実際の実装と差異あり。
+- `## recoveries Subcommand` セクションの削除は Python の正規表現 (`re.sub`) で行った。Edit ツールの old_string が非常に長いため一括置換が困難であり、Bash + Python で処理する方が確実だったため。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+
+- `tests/audit-recoveries.bats` を削除、`tests/collect-recovery-candidates.bats` は既存のものを維持 (rename ではなく削除)
+- `docs/structure.md` / `docs/ja/structure.md` の SHOULD 対応を実施 (AC なし、自判断で実施)
+- `## recoveries Subcommand` セクション全体の削除に Python regex を使用 (Edit ツールより確実)
+
+### Deferred Items
+
+- post-merge 検証 2 件 (`/audit recoveries` でのメッセージ確認 + `/verify` Step 15 動作確認) は manual verify のため `/verify` フェーズで実施
+
+### Notes for Next Phase
+
+- PR #803 がマージ後、`/verify` フェーズで post-merge の 2 条件を観察確認すること
+- `docs/structure.md` / `docs/ja/structure.md` の変更は AC に含まれないが PR に含まれており、レビュー時に確認される見込み
