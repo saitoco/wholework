@@ -502,3 +502,14 @@ Mechanism:
 - `_write_tier2_recovery_to_spec()` appends the metadata to the Spec's `## Auto Retrospective` section and commits/pushes immediately
 
 This write happens during the sub-issue execution phase, before the parent `/auto` Step 4a runs. When Step 4a Source 1 (`fallback-catalog`) runs later, the sub-issue Spec Auto Retrospective is already up to date. The parent session's Step 4a writes `orchestration-recoveries.md` as the session-level SSoT; the Spec write here serves the per-Issue paper trail.
+
+### Tier 3 bash path: Spec Auto Retrospective write
+
+When `run-auto-sub.sh` runs the Tier 3 path (`spawn-recovery-subagent.sh` succeeds), the recovery record is written not only to `docs/reports/orchestration-recoveries.md` (committed by the bash block immediately after sub-agent success) but also to the affected sub-issue's Spec file (`docs/spec/issue-N-*.md`) `## Auto Retrospective` section — symmetrically with Tier 2.
+
+Mechanism:
+- `spawn-recovery-subagent.sh` writes recovery details to `orchestration-recoveries.md`; the bash block in `run_phase_with_recovery()` commits and pushes that file immediately
+- `_write_tier3_recovery_to_spec()` is then called with `"$issue" "$phase" "$exit_code"` to build a minimal entry from those variables and append it to the Spec's `## Auto Retrospective` section, committing and pushing in turn
+- The entry includes date, issue/phase, source (`spawn-recovery-subagent.sh`), wrapper exit code, outcome, and a pointer to `orchestration-recoveries.md` for full details
+
+This write establishes the same per-Issue paper trail as Tier 2 (`_write_tier2_recovery_to_spec()`), enabling `/verify` Step 12's skip-judgment logic to treat Tier 3 recovery as "already recorded" without requiring manual supplementation in the verify retrospective.
