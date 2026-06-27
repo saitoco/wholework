@@ -131,3 +131,41 @@ No new comments since last phase.
 - `docs/ja/guide/customization.md` は `docs/guide/` 配下のため translation-workflow.md の厳密な対象外だが、mirror ファイルが存在するため Changed Files に含める判断が正しかった
 
 **Pre-merge ACs**: 全 10 件 PASS (grep 3 件 + bats 18 テスト + rubric 5 件)
+
+## review retrospective
+
+### Spec 対応と実装の乖離パターン
+
+- `auto-stop-at: spec` の stop-at check が Step 3 (spec 完了後) に未実装だった。spec フェーズへの stop-at サポートが Spec に明記されているにもかかわらず、code/review/merge の各フェーズにしか check が追加されていなかった。Spec の enum 定義 (`spec|code|review|merge|verify`) に含まれる全 enum 値に対して実装されているかを、review 段階で系統的にチェックする習慣が必要。
+- pr route の code stop-at check で `$PR_NUMBER` が未取得状態でジャンプする問題。変数が利用可能になるタイミングと stop-at チェックの位置関係の確認漏れ。実行順序に依存する変数を参照するコードは、変数の取得タイミングを意識してチェックを配置する。
+- Nothing to note (上記以外のパターン逸脱なし)
+
+### 繰り返し課題 (ワークフロー改善の余地)
+
+- docs/guide/customization.md の説明文が skills/*.md の実装と一致しなかった ("silently ignored" vs 警告出力)。Documentation と実装の一致を verify する AC (file_contains など) が追加されていれば事前に検出できた可能性がある。
+- CI DCO 失敗: 2 コミットに Signed-off-by が欠落。Spec 段階で「code フェーズの全コミットに `-s` フラグを使う」を明示するか、code skill が commit を生成する際に常に `-s` を使うことを enforce する仕組みが有効。
+- Nothing to note (その他)
+
+### 受け入れ条件の検証困難度
+
+- `command` 型 AC (`bats tests/auto.bats`, `bats tests/code.bats`) は safe mode では UNCERTAIN となるが、CI 参照 fallback と local 実行の組み合わせで PASS を確認できた。ただし CI の "Run bats tests" が既存の `append-loop-state-heartbeat.bats` 失敗によって FAILURE 判定されている点は、CI 側の job split (テストファイル別 job 化) や matrix strategy で対応することで、AC ごとの CI 参照精度が向上する。
+- `rubric` 型 AC 5 件は review エージェントによる semantic 判定で全て PASS。verify command の質は良好。
+- Nothing to note (その他)
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `auto-stop-at: spec` の stop-at check を Step 3 (spec 成功後) に追加。両パス (issue-phase と no-phase-label) に適用
+- pr route の code stop-at check を PR 番号抽出後に移動し、next-action に `$PR_NUMBER` を含められるよう修正
+- docs の "silently ignored" → "ignored (a warning is printed)" に修正 (実装との整合)
+- DCO 失敗 (コミット 623bea9, a8d6e95) は PR author によるリベース対応が必要。レビューサマリに記載済み
+
+### Deferred Items
+- Step 3a route demotion 後の ALWAYS_PR 再チェック (SHOULD) — 設計変更を伴うため observe 判断で defer
+- `--stop-at=verify` no-op テストの追加 (CONSIDER) — verify フェーズで改善提案として検討
+
+### Notes for Next Phase
+- CI DCO 失敗の残課題: merge 前に PR author が `git rebase --signoff origin/main..HEAD` で Signed-off-by を追加する必要あり
+- bats CI の "Run bats tests" 失敗は `append-loop-state-heartbeat.bats` の既存問題で本 PR 無関係。merge はブロックされない判断でよい
+- MUST 課題は全て解消済み。merge 可能状態
