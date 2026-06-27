@@ -121,3 +121,44 @@
 - 実装変更ファイル: `scripts/emit-event.sh`, `scripts/run-auto-sub.sh`, `scripts/run-code.sh`, `scripts/run-review.sh`, `scripts/run-merge.sh`
 - テスト変更ファイル: `tests/run-auto-sub.bats`, `tests/auto-sub-observability.bats`, `tests/run-code.bats`, `tests/run-review.bats`, `tests/run-merge.bats`
 - PR #809 (branch: `worktree-code+issue-791`) → review フェーズへ
+
+## review retrospective
+
+**実施日**: 2026-06-28
+**PR**: #809
+**モード**: light (--light)
+
+### Spec vs. 実装差異パターン
+
+- 実装は Spec の設計計画と高い一致度。候補 A 採用・DRY 化・テスト追加の 3 点すべてが仕様通り実装されていた
+- DCO 失敗 (Signed-off-by 欠如) が唯一の MUST 指摘。Spec に記載なし。review フェーズで `git rebase --signoff` + force-push により解決
+
+### 繰り返しパターン (同種指摘)
+
+- DCO/sign-off 欠如は本 PR の 2 コミット両方に発生。code フェーズのコミット時に `-s` フラグが漏れると DCO CI が常に失敗するパターン。`run-*.sh` を通じた自動コミット (Claude Agent) では `-s` が付与されないケースがある
+
+### 受け入れ条件検証難易度
+
+- `rubric` 3 件はすべて PASS 判定が明快。Spec の "Alternatives Considered" テーブルが ac2 rubric の正確な判定を可能にした (Spec にトレードオフが構造化されている利点)
+- `command "bats ..."` は CI reference fallback で PASS 確認。安定していた
+- UNCERTAIN は 0 件。verify command の設計が適切だった
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+
+- DCO 失敗を review フェーズで修正 (git rebase --signoff + force-push)。merge フェーズでは DCO は既に通過済みになっている想定
+- SHOULD 指摘 (docs/structure.md) は Spec に defer 理由が記録されているためスキップ。merge フェーズでのアクション不要
+- 全 AC (Pre-merge 4 件) PASS、チェックボックス更新済み
+
+### Deferred Items
+
+- docs/structure.md の emit-event.sh 説明更新は SHOULD レベルとして defer (Spec 記録済み)。merge 後の follow-up Issue として残す候補
+- post-merge observation AC (auto-events.jsonl / loop-state heartbeat) は merge 後に観察が必要
+
+### Notes for Next Phase
+
+- CI は DCO 含め全ジョブ SUCCESS になる見込み (force-push 後に再実行される)
+- MUST 指摘はすべて解決済み。merge の前提条件を満たしている
+- `docs/structure.md` の SHOULD 更新は merge フェーズでは不要 (スキップ可)
