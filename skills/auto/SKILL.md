@@ -162,7 +162,9 @@ Fetch labels with `gh issue view $NUMBER --json labels -q '.labels[].name'` and 
   - **Size is XS**: Spec not needed — skip spec and proceed to Step 4
   - Size is `L`: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh $NUMBER --opus` (run spec with Opus model)
   - Size is neither XS nor L: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh $NUMBER`
-  - On spec success, proceed to Step 4
+  - On spec success:
+    - **stop-at check**: if `EFFECTIVE_STOP_AT == "spec"`: output "Stopped at phase: spec (auto-stop-at=spec)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="spec"`
+    - Otherwise, proceed to Step 4
   - On spec failure, go to Step 6 (error report)
 - **No `phase/*` labels** (issue triage not done):
   - Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh $NUMBER` (issue triage → Size setting/requirement shaping)
@@ -173,7 +175,9 @@ Fetch labels with `gh issue view $NUMBER --json labels -q '.labels[].name'` and 
     - **Size is XS**: skip spec, proceed to Step 4
     - Size is `L`: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh $NUMBER --opus`
     - Size is neither XS nor L: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh $NUMBER`
-    - On spec success, proceed to Step 4
+    - On spec success:
+      - **stop-at check**: if `EFFECTIVE_STOP_AT == "spec"`: output "Stopped at phase: spec (auto-stop-at=spec)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="spec"`
+      - Otherwise, proceed to Step 4
     - On spec failure, go to Step 6 (error report)
   - If expected `phase/*` label state is not reached after re-fetch, go to Step 6 (error report)
   - On issue failure, go to Step 6 (error report)
@@ -337,9 +341,9 @@ Full phase sequence:
 1. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-pr $NUMBER --check-precondition --warn-only`
 2. Output `[1/4] code`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER --pr [--base {branch}]` via Bash (timeout: 600000)
 3. Unconditional completion check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-pr $NUMBER --check-completion` — runs unconditionally regardless of exit code; if `matches_expected: false` (including exit 0), go to Step 6; if `matches_expected: true`, output `[1/4] code → done (PR #N)`, run `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh --issue $NUMBER --from spec --to code` (best-effort loop-state heartbeat; see `## Loop State Heartbeat`), and continue
-   - **stop-at check**: if `EFFECTIVE_STOP_AT == "code"`: output "Stopped at phase: code (auto-stop-at=code)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="code"`
 4. Extract PR number via exact-match filter (matches SSoT branch name worktree-code+issue-N established by #310): `gh pr list --json number,headRefName | jq -r ".[] | select(.headRefName == \"worktree-code+issue-$NUMBER\") | .number" | head -1`
 5. If PR number cannot be fetched: report error and go to Step 6
+   - **stop-at check**: if `EFFECTIVE_STOP_AT == "code"`: output "Stopped at phase: code (auto-stop-at=code)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="code"` (at this point `$PR_NUMBER` is known)
 6. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh review $NUMBER --pr $PR_NUMBER --check-precondition --warn-only`
 7. Output `[2/4] review`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh $PR_NUMBER $REVIEW_DEPTH` via Bash (timeout: 600000) (REVIEW_DEPTH set in Step 2, refreshed by Step 3a if applicable); on success output `[2/4] review → done`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh --issue $NUMBER --from code --to review` (best-effort loop-state heartbeat; see `## Loop State Heartbeat`)
    - **stop-at check**: if `EFFECTIVE_STOP_AT == "review"`: output "Stopped at phase: review (auto-stop-at=review)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="review"`
