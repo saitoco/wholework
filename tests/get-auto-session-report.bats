@@ -121,3 +121,32 @@ DRAFT_EOF
     [ -f "$OUTPUT_PATH" ]
     grep -q "Parallel execution completed without conflict" "$OUTPUT_PATH"
 }
+
+@test "cross-link: See also footer appended when L3 session.md exists" {
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"session-xlink","size":"S"}
+{"ts":"2026-06-14T10:05:00Z","issue":100,"event":"sub_complete","session_id":"session-xlink","exit_code":"0"}
+FIXTURE_EOF
+
+    SESSION_DIR="$BATS_TEST_TMPDIR/docs/sessions/session-xlink-2026-06-14"
+    mkdir -p "$SESSION_DIR"
+    echo "# L3 Session Retrospective: session-xlink" > "$SESSION_DIR/session.md"
+
+    (cd "$BATS_TEST_TMPDIR" && mkdir -p docs/reports && \
+        bash "$SCRIPT" "session-xlink" --output "$OUTPUT_PATH" --no-github)
+    [ -f "$OUTPUT_PATH" ]
+    grep -q "## See also" "$OUTPUT_PATH"
+    grep -q "session.md" "$OUTPUT_PATH"
+}
+
+@test "cross-link: no footer when L3 session.md absent" {
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"session-noxlink","size":"S"}
+{"ts":"2026-06-14T10:05:00Z","issue":100,"event":"sub_complete","session_id":"session-noxlink","exit_code":"0"}
+FIXTURE_EOF
+
+    run bash "$SCRIPT" "session-noxlink" --output "$OUTPUT_PATH" --no-github
+    [ "$status" -eq 0 ]
+    [ -f "$OUTPUT_PATH" ]
+    ! grep -q "## See also" "$OUTPUT_PATH"
+}

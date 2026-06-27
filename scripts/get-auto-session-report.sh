@@ -833,6 +833,18 @@ TBD — fill in after reviewing the session
 TBD — fill in after reviewing the session
 REPORT_EOF
 
+# Cross-link to L3 session retrospective if it exists
+_l3_session_found=""
+for _l3_dir in "docs/sessions/${SESSION_ID}-"*/; do
+  if [[ -f "${_l3_dir}session.md" ]]; then
+    _l3_session_found="${_l3_dir}session.md"
+    break
+  fi
+done
+if [[ -n "$_l3_session_found" ]]; then
+  printf '\n---\n\n## See also\n\n- [L3 Session Retrospective](%s)\n' "$_l3_session_found" >> "$OUTPUT_PATH"
+fi
+
 # Apply narrative draft if --narrative-draft was specified
 if [[ -n "$NARRATIVE_DRAFT_PATH" && -f "$NARRATIVE_DRAFT_PATH" ]]; then
   python3 - "$OUTPUT_PATH" "$NARRATIVE_DRAFT_PATH" << 'PYTHON_EOF'

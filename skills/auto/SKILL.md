@@ -641,6 +641,16 @@ After confirming phase completion (`reconcile-phase-state.sh` returns `matches_e
      jq -c 'select(.session_id == "'"$AUTO_SESSION_ID"'")' .tmp/auto-events.jsonl > "$SESSION_DIR/events.jsonl" 2>/dev/null || true
      ```
 
+3a. **Cross-link to data layer report**: if `docs/reports/auto-session-${AUTO_SESSION_ID}-*.md` exists, append the following to `$SESSION_DIR/session.md` using the Edit tool (or Write tool if Edit is not applicable):
+    ```
+    ---
+
+    ## See also
+
+    - [Data layer report](docs/reports/auto-session-{AUTO_SESSION_ID}-{DATE}.md)
+    ```
+    Use a glob to find the actual report file (the date suffix may differ from `$DATE`). If no matching file exists, skip this step.
+
 4. **Call `modules/retro-proposals.md`** — improvement Issue creation:
    - Create a bridge file for retro-proposals.md interface compatibility:
      - XL route (`ROUTE="sub_issue"`): `BRIDGE_NUMBER=$NUMBER`; write bridge file at `$SESSION_DIR/issue-${BRIDGE_NUMBER}-l3session.md` containing the `## Auto Retrospective > ### Improvement Proposals` section from `session.md`
