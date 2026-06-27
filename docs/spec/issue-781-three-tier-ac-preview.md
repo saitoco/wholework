@@ -160,22 +160,39 @@ No new comments since last phase.
 - 分類ロジックは `/issue` Step 4 の LLM 実行ガイダンスのため、bats では決定論的な「ガイダンス文言の存在」(content 層) しか検証できない。実分類精度 (LLM 層) は post-merge observation AC でカバーする二層テスト戦略を採用 (skill-dev-constraints.md「LLM-assisted Skill Phase Test Strategy」準拠) → 解消。
 - `--when="test -n \"$PREVIEW_URL\""` env-var ガードと既存 Deployments API パスの相互作用は、`/review` Step 8.0 に env-var 直接利用パスを明記することで整合 (env 変数未設定時のみ Deployments API へフォールバック) → 解消。
 
+## Consumed Comments
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- No deviations. All implementation steps followed the Spec exactly.
+
+### Design Gaps/Ambiguities
+- Spec Step 2 said to add `HAS_PR_PREVIEW_CAPABILITY` to "Step 2 の retain 文" without specifying which Step 2 (New Issue Creation vs. Existing Issue Refinement). Applied to both, which is correct since both sections read detect-config-markers and both reference Step 4/6 classification logic.
+- `docs/structure.md` had "87 files" in the tests/ comment but actual count was 88 (pre-existing drift noted in Spec). Updated to 89 (88 existing + 1 new `tests/issue.bats`).
+
+### Rework
+- None.
+
 ## Phase Handoff
+<!-- phase: code -->
 
 ### Key Decisions
-- `capabilities.pr-preview: true` を単一宣言シグナルとし、preview URL の env 変数名は `PREVIEW_URL` に標準化 (案B)。
-- AC tier は per-AC `<!-- ac-tier: preview -->` タグで表現し、既存 `### Pre-merge (auto-verified)` / `### Post-merge` のセクション構造は不変 (案2)。
-- 既定で `/verify` は `ac-tier: preview` AC を skip (二重検証防止)。本番再検証は post-merge セクションへの複製で opt-in。
-- URL/UX 系 verify command 集合を exhaustive 列挙し、`ac-tier: preview` タグの SSoT は `/issue` Step 4 とする (`/review`/`/verify` は参照のみ)。
+- All 9 implementation steps completed in a single commit. No deviations from Spec design.
+- `HAS_PR_PREVIEW_CAPABILITY` retain line added to both New Issue Creation Step 2 and Existing Issue Refinement Step 4 (both sections read detect-config-markers and both flow to classification logic).
+- pre-merge-preview guidance placed immediately after the classification decision sentence in Step 4, before the classification table — ensures the classifier reads the tier guidance before applying existing examples.
+- `/review` Step 8.0 fast-path added as a preamble before the numbered Deployments API steps (not inserted inline) — no risk of breaking existing step numbering references.
+- `/verify` Step 5 skip rule added as a note block directly under the Scope sentence — reads naturally as a scope extension.
 
 ### Deferred Items
-- Vercel / Netlify / Cloudflare Pages 用の preview URL 自動解決 adapter は follow-up Issue (Issue body「将来検討事項」)。
-- preview-tier AC が PREVIEW_URL 未解決のまま残った場合の UX は最小実装 (SKIPPED 記録のみ。phase/verify 残置で人手判断)。
-- `verify-classifier.md` への tier 概念統合は本 Issue スコープ外 (post-merge verify-type 専用モジュールのため)。
+- Vercel / Netlify / Cloudflare Pages preview URL auto-resolver adapter — follow-up Issue (scoped out in Spec).
+- `verify-classifier.md` tier concept integration — out of scope (post-merge verify-type module).
+- UX for PREVIEW_URL-unresolved preview ACs remains minimal (SKIPPED only).
 
 ### Notes for Next Phase
-- `skills/issue/SKILL.md` / `skills/review/SKILL.md` / `skills/verify/SKILL.md` 編集時、本文 (コードフェンス・inline code・HTML コメント外) に half-width `!` と triple backtick を新規追加しない (validate-skill-syntax.py MUST)。
-- `tests/issue.bats` は新規作成。参照は **リポジトリルート相対 path**、bats 3.2+ 互換構文のみ。CI は `tests/*.bats` を実行するため自動収集される。
-- `/issue` Step 4 に追加する URL/UX command 集合には `(exhaustive)` マーカーを付ける。
-- `docs/structure.md` の `tests/` ファイル数コメントは現状 87 表記だが実数は 88 (既存ドリフト)。`tests/issue.bats` 追加後の実数 89 に同期する。
-- ja ミラー同期: `docs/ja/structure.md` / `docs/ja/tech.md` は top-level docs で必須、`docs/ja/guide/customization.md` は consistency 目的。
+- `/review` should verify all 8 AC rubric and grep commands against the implementation; all should PASS without any fixup.
+- `bats tests/issue.bats` runs 4 content-assertion tests that confirm keyword presence — these are the mechanical safety net for the spec; confirm all 4 remain green in CI.
+- The `--when="test -n \"$PREVIEW_URL\""` guard in `skills/issue/SKILL.md` uses escaped double-quotes inside the SKILL.md prose — verify-executor parses this correctly (existing pattern from the pre-existing --when table row "Preview URL required").
+- Post-merge opportunistic ACs (review-run / verify-run) require a real project with `capabilities.pr-preview: true` and CI that exports `PREVIEW_URL`; no synthetic test exists.
