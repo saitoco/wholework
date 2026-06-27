@@ -109,20 +109,19 @@ No new comments since last phase.
 - すべて PASS。`command "bats tests/detect-wrapper-anomaly.bats"` は safe mode で CI reference fallback を使用: CI "Run bats tests" ジョブは FAILURE だが、失敗は `tests/append-loop-state-heartbeat.bats` (tests 11-15) の pre-existing 問題で detect-wrapper-anomaly.bats とは無関係。`ok 192 silent no-op: suppressed when reconcile confirms matches_expected true (async external commit)` が CI ログで PASS を確認できた。pre-existing CI 失敗への改善提案は /verify での集約対象とする。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- 全 AC PASS (5/5): rubric ×2、grep、command (CI fallback)、section_contains
-- CI "Run bats tests" FAILURE は pre-existing の `tests/append-loop-state-heartbeat.bats` 失敗 (main ブランチでも同様)。本 PR に起因しない
-- detect-wrapper-anomaly.bats 33/33 PASS (CI ok 191, ok 192 で確認)
-- コードレビュー 4 視点: 問題なし (Spec deviation, Edge cases, Security, Documentation)
+- CI failing (ci_failing) を non-interactive auto-resolve で継続。失敗は pre-existing の `tests/append-loop-state-heartbeat.bats` に起因 (review フェーズ確認済み)、本 PR に無関係
+- squash merge + delete-branch 完了 (2026-06-27T14:43:16Z)
+- BASE_BRANCH=main のため `closes #771` が自動 close される
 
 ### Deferred Items
 
-- `tests/append-loop-state-heartbeat.bats` の pre-existing CI 失敗を /verify で改善提案として集約予定
+- `tests/append-loop-state-heartbeat.bats` の pre-existing CI 失敗を /verify フェーズで改善提案として集約予定
 
 ### Notes for Next Phase
 
-- MUST issue なし → `/merge 784` で merge 可能
-- post-merge AC は manual observation のみ (次回 async external commit 遷移時に anomaly entry が出ないことを確認)
+- post-merge AC は manual observation のみ: 次回 async external commit recognition による phase/verify 遷移発生時に silent-no-op anomaly entry が log に記録されないことを観察する
+- verify command は全 pre-merge AC PASS 済み (review フェーズ確認) — verify フェーズは post-merge observation のみ残存
