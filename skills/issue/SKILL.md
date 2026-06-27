@@ -33,7 +33,7 @@ Use AskUserQuestion to collect:
 
 ### Step 2: Reference Steering Documents (if present)
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH` and `STEERING_DOCS_PATH` for use in subsequent steps.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH`, `STEERING_DOCS_PATH`, and `HAS_PR_PREVIEW_CAPABILITY` for use in subsequent steps.
 
 Check whether the following steering documents exist using Glob, then read only those that exist:
 
@@ -64,6 +64,20 @@ If expressible via existing `adapter-resolver` patterns, prefer that approach ov
 Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-patterns.md` and follow the "Processing Steps" section guidelines to design verify command patterns.
 
 After ambiguity detection, classify each acceptance criterion as "pre-merge" or "post-merge" and assign verify commands.
+
+**pre-merge-preview tier (URL/UX AC classification):**
+
+When `HAS_PR_PREVIEW_CAPABILITY` is `true` (i.e., `.wholework.yml` has `capabilities.pr-preview: true`), classify URL/UX-based verify commands into the **pre-merge-preview** tier instead of post-merge.
+
+URL/UX verify command set (exhaustive): `http_status`, `html_check`, `api_check`, `http_header`, `http_redirect`, `browser_check`, `browser_screenshot`, `lighthouse_check`.
+
+For each AC whose verify command belongs to the above set and `HAS_PR_PREVIEW_CAPABILITY=true`:
+- Place the AC in the `### Pre-merge (auto-verified)` section (not in Post-merge)
+- Append `<!-- ac-tier: preview -->` to the AC line (after the checkbox text, before any `<!-- verify-type: ... -->` tag)
+- Auto-append `--when="test -n \"$PREVIEW_URL\""` to the verify command so the check is SKIPPED when the `PREVIEW_URL` env variable is not set (see `--when` modifier table entry "Preview URL required")
+- `/review` will execute these ACs against the preview URL when `PREVIEW_URL` is exported; `/verify` will skip them post-merge to prevent double verification
+
+When `HAS_PR_PREVIEW_CAPABILITY` is `false` or unset: classify URL/UX-based ACs as post-merge as before (existing behavior unchanged).
 
 **Classification guidance (examples):**
 
@@ -356,7 +370,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER issue
 
 ### Step 4: Reference Steering Documents (if present)
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH` and `STEERING_DOCS_PATH` for use in subsequent steps.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH`, `STEERING_DOCS_PATH`, and `HAS_PR_PREVIEW_CAPABILITY` for use in subsequent steps.
 
 Check whether the following steering documents exist using Glob, then read only those that exist:
 

@@ -212,6 +212,10 @@ After detection, follow `external-review-phase.md`'s Step 7 procedure for extern
 
 If any verify command contains `{{base_url}}`, resolve the Preview URL before passing to verify-executor:
 
+**Fast path — `PREVIEW_URL` env variable already set:**
+
+If the `PREVIEW_URL` environment variable is already exported (set by CI or a project-side script before invoking `/review`), use its value directly as the preview base URL and skip the GitHub Deployments API lookup (steps 1–4 below). Replace `{{base_url}}` with `$PREVIEW_URL` and proceed to step 5. `ac-tier: preview` ACs guarded with `--when="test -n \"$PREVIEW_URL\""` are executed via this path. If `PREVIEW_URL` is not set, fall through to the Deployments API path below.
+
 1. Get the PR branch name:
    ```bash
    gh pr view "$NUMBER" --json headRefName -q '.headRefName'

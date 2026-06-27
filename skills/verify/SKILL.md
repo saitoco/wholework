@@ -138,6 +138,12 @@ This is an early Spec read specifically for Phase Handoff context; SPEC_PATH is 
 
 **Scope**: This step processes **pre-merge conditions only**. Post-merge conditions (hint-based and manual) are processed in Steps 7–8, after pre-merge results are locked into the Issue. If the Issue has no section divisions, treat all conditions as pre-merge and process them here.
 
+**pre-merge-preview AC skip rule (double-verification prevention):**
+
+Within the `### Pre-merge` section, any AC line that carries a `<!-- ac-tier: preview -->` tag is classified as a preview-tier AC. These ACs were verified at `/review` time against the preview URL and must be skipped here to prevent double verification. Record each skipped AC as SKIPPED in the results table with the note "preview-tier AC; verified at /review against preview URL".
+
+If the same URL/UX verification is also needed against the production URL, duplicate the AC in the `### Post-merge` section without the `<!-- ac-tier: preview -->` tag; `/verify` will then execute it against `PRODUCTION_URL` (resolved via `{{base_url}}` and the `production-url` key in `.wholework.yml`).
+
 **Patch route detection (run before verification):**
 
 If PR_NUMBER (from Step 2) is empty and any acceptance condition contains `github_check "gh pr checks"`, treat those conditions as UNCERTAIN with the following guidance:

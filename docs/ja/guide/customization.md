@@ -88,6 +88,7 @@ verify-max-iterations: 3
 capabilities:
   browser: true             # Playwright ベースの verify command を有効化
   workflow: true            # /review --full で Workflow ベースのマルチエージェント実行を有効化
+  pr-preview: true          # PR が preview URL を生成することを宣言（pre-merge-preview AC 層を有効化）
 ```
 
 すべてのキーはオプションです。`.wholework.yml` が存在しない場合、すべての設定はデフォルトで動作します。
@@ -111,6 +112,7 @@ capabilities:
 | `steering-docs-path` | string | `docs` | steering document の配置先 |
 | `capabilities.browser` | boolean | `false` | Playwright ベースの verify command を有効化する |
 | `capabilities.workflow` | boolean | `false` | `/review --full` で Workflow ベースのマルチエージェント実行を有効化する（opt-in; 未設定時は static Task fan-out にフォールバック） |
+| `capabilities.pr-preview` | boolean | `false` | PR preview URL の存在を宣言する。URL/UX 系 AC を pre-merge-preview に分類し、`PREVIEW_URL` 環境変数が設定されている場合に `/review` 時に実行する。`/verify` post-merge では二重検証防止のため skip する。 |
 | `capabilities.mcp` | list | `[]` | スキルから利用できる MCP ツール名 |
 | `capabilities.{name}` | boolean | `false` | 動的 capability マッピング（例: `capabilities.invoice-api: true`） |
 | `watchdog-timeout-seconds` | integer | `2700` | watchdog が silent な `claude -p` プロセスを kill するまでのタイムアウト秒数。Size L+ タスク（特に Opus / xhigh effort）では claude の長い思考時間により 2700 秒を超える silent 期間が発生しうる。メタ開発や Size L+ 作業では `3600` を推奨。0 以下の値はデフォルトにフォールバック。 |
@@ -133,6 +135,30 @@ capabilities:
 | `verify-ignore-paths` | list | `[]` | `/verify` のダーティファイル検出から除外するパスの glob パターン（block list）。サポート: `dir/**` プレフィックスマッチ（ディレクトリ配下の任意ファイル）、単純 bash glob（`*`、`?`、`[...]`）によるフルパス完全一致。非対応: 中間 `**`（例: `a/**/b`）や否定パターン（`!`）。いずれかのパターンにマッチするファイルは除外され stderr に警告出力される。未設定時は除外なし。 |
 
 実装の詳細や YAML パースルールを含む完全なリファレンスは [`modules/detect-config-markers.md`](../../../modules/detect-config-markers.md) を参照してください。
+
+### AC 検証層
+
+Wholework は acceptance criteria を 3 層に分類します。
+
+| 層 | 実行タイミング | 対象 AC 例 |
+|---|---|---|
+| **pre-merge-local** | `/review` safe mode（常時） | ファイル存在・テキスト一致・コード品質・テスト結果 |
+| **pre-merge-preview** | `PREVIEW_URL` が設定された `/review` 時 | `http_status`、`html_check`、`api_check`、`http_header`、`http_redirect`、`browser_check`、`browser_screenshot`、`lighthouse_check` |
+| **post-merge-production** | `/verify` full mode | 本番デプロイ確認・本番固有の動作 |
+
+**pre-merge-preview の有効化:**
+
+`.wholework.yml` に `capabilities.pr-preview: true` を設定します。`/issue` が URL/UX 系 verify command を持つ AC を作成・更新する際、それらの AC は `### Pre-merge (auto-verified)` セクションに `<!-- ac-tier: preview -->` タグと `--when="test -n \"$PREVIEW_URL\""` ガードを付与して配置されます。
+
+**`PREVIEW_URL` の解決:**
+
+`PREVIEW_URL` 環境変数は `/review` 呼び出し前に export する必要があります。Wholework 側での自動解決は行いません — CI パイプラインまたはプロジェクト側スクリプトの責務です。
+
+**動作まとめ:**
+
+- `/review` 時に `PREVIEW_URL` が設定されている: preview 層 AC を preview URL に対して実行する。
+- `/review` 時に `PREVIEW_URL` が未設定: `--when` ガードが発動し preview 層 AC は SKIPPED になる（人間がフォローアップ）。
+- `/verify` (post-merge) 時: `ac-tier: preview` 付き AC はすべて skip される（二重検証防止）。本番でも同 AC を検証したい場合は、`### Post-merge` セクションへタグなしで複製する。
 
 ## `.wholework/domains/`
 
