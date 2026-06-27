@@ -89,6 +89,11 @@ capabilities:
   browser: true             # Playwright ベースの verify command を有効化
   workflow: true            # /review --full で Workflow ベースのマルチエージェント実行を有効化
   pr-preview: true          # PR が preview URL を生成することを宣言（pre-merge-preview AC 層を有効化）
+
+# website 系プロジェクト設定: PR route 強制 + 自動 merge 前に停止
+# (autonomy: tier と直交 — パイプライン到達点を制御し、意思決定自律度には影響しない)
+# always-pr: true           # Size に関わらず PR route を強制（XS/S も branch + PR 経由）
+# auto-stop-at: review      # review phase 完了後に /auto を停止、手動で /merge を実行
 ```
 
 すべてのキーはオプションです。`.wholework.yml` が存在しない場合、すべての設定はデフォルトで動作します。
@@ -133,8 +138,24 @@ capabilities:
 | `next-cycle-seed.enabled` | boolean | `false` | バッチ完了後に次サイクル候補 Issue を emit する（`autonomy: L2` または `L3` が必要）。バッチセッション中に作成された `audit/*` Issue を `.tmp/next-cycle.json` に書き出す。`false` または autonomy が `L1` の場合は推奨メッセージを出力するのみ。 |
 | `retro-proposals-upstream` | string | `""` | Upstream リポジトリ (`owner/repo`) — `/verify` レトロスペクティブから得られた Skill infrastructure improvement 提案の起票先。設定すると、対象提案はサニタイズ（regex で絶対パスと下流固有 Issue 番号を除去、LLM でビジネス文脈用語を除去）されて upstream リポジトリへ起票される。下流リポジトリへの起票はスキップされる。未設定時は従来どおり下流リポジトリへ起票（後方互換）。 |
 | `verify-ignore-paths` | list | `[]` | `/verify` のダーティファイル検出から除外するパスの glob パターン（block list）。サポート: `dir/**` プレフィックスマッチ（ディレクトリ配下の任意ファイル）、単純 bash glob（`*`、`?`、`[...]`）によるフルパス完全一致。非対応: 中間 `**`（例: `a/**/b`）や否定パターン（`!`）。いずれかのパターンにマッチするファイルは除外され stderr に警告出力される。未設定時は除外なし。 |
+| `always-pr` | boolean | `false` | Size に関わらず PR route (branch + PR) を強制する。通常 main に直接 commit する XS/S Issues も PR 経由になる。`--patch` と同時指定した場合は `--patch` を無視して PR route を使用する。`autonomy:` tier と直交（パイプラインのルートを制御し、意思決定自律度には影響しない）。 |
+| `auto-stop-at` | string | `"verify"` | `/auto` が停止するフェーズを宣言する。有効値: `spec`、`code`、`review`、`merge`、`verify`。デフォルト `verify` はフルパイプライン実行（現状の動作）。merge = 公開になる website 系プロジェクトでは `review` を推奨（人間が gate した後 `/merge` を手動実行）。per-invocation override: `--stop-at=<phase>`。`autonomy:` tier と直交。 |
 
 実装の詳細や YAML パースルールを含む完全なリファレンスは [`modules/detect-config-markers.md`](../../../modules/detect-config-markers.md) を参照してください。
+
+### Website 系プロジェクト推奨設定
+
+main ブランチが本番ブランチ (merge = 公開) のプロジェクトでは、`always-pr` と `auto-stop-at` を組み合わせて `/auto` を安全に使用できます。
+
+```yaml
+# website 系プロジェクト推奨設定
+always-pr: true       # Size に関わらず全変更を PR 経由にする
+auto-stop-at: review  # AI review 後に停止、人間が PR を確認してから /merge を手動実行
+```
+
+この組み合わせにより、`/auto` の orchestration 恩恵 (issue/spec/code/review の連続実行) を受けつつ、merge = 公開ステップは人間が gate できます。`/auto` が `review` で停止した後、preview URL の確認と AI review コメントの確認を行い、`/merge <issue-number>` を実行して公開します。
+
+注: `always-pr` と `auto-stop-at` は `autonomy:` tier と直交する軸です。`autonomy:` tier は GitHub state 書き込みとループ発火パスの許可範囲を制御し、`always-pr` は PR ルートを制御し、`auto-stop-at` はパイプライン到達点を制御します。
 
 ### AC 検証層
 

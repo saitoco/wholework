@@ -100,6 +100,11 @@ capabilities:
   browser: true             # Enable Playwright-based verify commands
   workflow: true            # Enable Workflow-based multi-agent execution in /review --full
   pr-preview: true          # Declare that PRs produce a preview URL (enables pre-merge-preview AC tier)
+
+# Website project settings: force PR route and stop before auto-merge
+# (orthogonal to autonomy: tier — controls pipeline reach, not decision autonomy)
+# always-pr: true           # Force pr route regardless of Size (XS/S also get branch + PR)
+# auto-stop-at: review      # Stop /auto after review phase; run /merge manually
 ```
 
 All keys are optional. If `.wholework.yml` does not exist, all settings use their defaults.
@@ -146,8 +151,24 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `recoveries-auto-fire.enabled` | boolean | `false` | Auto-file improvement Issues when orchestration-recoveries.md symptom count exceeds threshold (requires `autonomy: L2` or `L3`). When `false` or autonomy is `L1`, prints a recommendation instead. |
 | `recoveries-auto-fire.threshold` | integer | `3` | Symptom occurrence count threshold for auto-filing. Values ≤0 or non-numeric fall back to `3`. |
 | `next-cycle-seed.enabled` | boolean | `false` | Enable next-cycle candidate seeding after batch completion. Emits `.tmp/next-cycle.json` with `audit/*` Issues created during the batch session (requires `autonomy: L2` or `L3`). When `false` or autonomy is `L1`, prints a recommendation instead. |
+| `always-pr` | boolean | `false` | Force pr route (branch + PR) regardless of Size. XS/S Issues that would normally commit directly to main are routed through a PR instead. When `--patch` is also specified, `--patch` is silently ignored and pr route is used. Orthogonal to `autonomy:` tier (controls pipeline route, not decision autonomy). |
+| `auto-stop-at` | string | `"verify"` | Declare the phase after which `/auto` should stop. Valid values: `spec`, `code`, `review`, `merge`, `verify`. Default `verify` runs the full pipeline. Use `review` for website projects where merge = publish and human gate before deploy is required. Per-invocation override: `--stop-at=<phase>`. Orthogonal to `autonomy:` tier. |
 
 For the full reference including implementation details and YAML parsing rules, see [`modules/detect-config-markers.md`](../../modules/detect-config-markers.md).
+
+### Website project recommended settings
+
+For projects where the main branch is the production branch (merge = publish), use `always-pr` and `auto-stop-at` together to run `/auto` safely:
+
+```yaml
+# Website project recommended settings
+always-pr: true       # All changes go through PR regardless of Size
+auto-stop-at: review  # Stop after AI review; human reviews PR then runs /merge manually
+```
+
+This combination enables the full `/auto` orchestration (issue → spec → code → review) while keeping the merge = publish step under human control. After `/auto` stops at `review`, the user checks the preview URL, reviews the AI review comments, then runs `/merge <issue-number>` to publish.
+
+Note: `always-pr` and `auto-stop-at` are orthogonal to the `autonomy:` tier. The `autonomy:` tier controls which GitHub state writes and loop-firing paths are permitted; `always-pr` controls the PR route; `auto-stop-at` controls the pipeline reach.
 
 ### AC verification tiers
 
