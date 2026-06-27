@@ -47,7 +47,8 @@ fi
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
 export AUTO_EVENTS_LOG
-AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat .tmp/auto-session-current 2>/dev/null || echo '')}"
+PGID=$(ps -o pgid= -p $$ | tr -d ' ')
+AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || echo '')}"
 export AUTO_SESSION_ID
 source "$SCRIPT_DIR/emit-event.sh"
 
