@@ -239,6 +239,20 @@ MOCK
     [ -z "$output" ]
 }
 
+@test "silent no-op: suppressed when reconcile confirms matches_expected true (async external commit)" {
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/git" <<'MOCK'
+#!/bin/bash
+# mock git: returns empty output for all subcommands
+exit 0
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/git"
+    printf 'reconcile-phase-state result: {"phase":"code-patch","matches_expected":true,"actual":{"commits_found":false}}\ncommit and push complete.\n' > "$LOG_FILE"
+    run env PATH="$BATS_TEST_TMPDIR/bin:$PATH" bash "$SCRIPT" --log "$LOG_FILE" --exit-code 0 --issue 746 --phase code
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
 @test "silent no-op: code-patch triggers detection when commit absent on both local and origin/main" {
     mkdir -p "$BATS_TEST_TMPDIR/bin"
     cat > "$BATS_TEST_TMPDIR/bin/git" <<'MOCK'

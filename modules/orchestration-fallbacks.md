@@ -465,10 +465,17 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 - If the retry itself exits non-zero and reconcile still reports `commits_found:false`, escalate to Tier 3 (recovery sub-agent)
 - Do not retry more than once automatically; a second silent no-op may indicate a structural issue requiring human investigation
 
+### Exception Condition
+
+When `reconcile-phase-state.sh --check-completion` returns `"matches_expected":true`, `detect-wrapper-anomaly.sh` skips the silent-no-op entry entirely, regardless of `commits_found`. This covers the async external commit recognition pattern: a skill detects that the target Issue was already implemented in a prior PR and transitions directly to `phase/verify` without creating a new commit. The reconciler's phase-label and state checks confirm completion (`matches_expected:true`), so no anomaly entry is warranted.
+
+See also: `#async-external-commit` (reconcile-first authority — `matches_expected:true` takes precedence over `commits_found` in anomaly detection).
+
 ### Rationale
 - First observed in Issues #658 and #489; cataloged in Issue #727
 - When `reconcile-phase-state.sh` confirms `commits_found:false`, the working tree is known-clean and a single retry is always safe on the patch route (no partial commit can exist)
 - Handling this in Tier 2 avoids the overhead of spawning a Tier 3 `claude -p` recovery sub-agent for a pattern that is trivially safe to retry
+- Exception Condition added in Issue #771: the AND condition on `commits_found:true` was too strict, causing false positives when the reconciler confirmed completion via phase-label state rather than git commit presence
 
 ---
 
