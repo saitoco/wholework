@@ -251,6 +251,36 @@ MOCK
     grep -q -- "--add-label phase/code" "$GH_CALL_LOG"
 }
 
+@test "error: gh issue edit failure exits with code 1 and Error message" {
+    # gh mock: label list succeeds, issue view returns nothing, issue edit fails
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GH_CALL_LOG"
+if [ "\$1" = "label" ] && [ "\$2" = "list" ]; then
+    echo "phase/issue"
+    echo "phase/spec"
+    echo "phase/ready"
+    echo "phase/code"
+    echo "phase/review"
+    echo "phase/verify"
+    echo "phase/done"
+    exit 0
+fi
+if [ "\$1" = "issue" ] && [ "\$2" = "view" ]; then
+    exit 0
+fi
+if [ "\$1" = "issue" ] && [ "\$2" = "edit" ]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 123 code
+    [ "$status" -eq 1 ]
+    [[ "$output" =~ "Error" ]]
+}
+
 @test "bootstrap: gh-label-transition.sh continues with warning when setup-labels.sh fails" {
     # gh mock: label list returns empty (triggers bootstrap), label create fails
     cat > "$MOCK_DIR/gh" <<MOCK

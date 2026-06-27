@@ -88,8 +88,7 @@ PYEOF
     fi
 
     # Build payload: exclude severity field, filter invalid entries, then POST
-    python3 - "$REVIEW_BODY_FILE" "$LINE_COMMENTS_FILE" "$EVENT" <<'PYEOF' | \
-        gh api "repos/$REPO/pulls/$PR_NUMBER/reviews" --method POST --input -
+    REVIEW_PAYLOAD=$(python3 - "$REVIEW_BODY_FILE" "$LINE_COMMENTS_FILE" "$EVENT" <<'PYEOF'
 import sys, json
 review_body_file = sys.argv[1]
 line_comments_file = sys.argv[2]
@@ -116,10 +115,14 @@ if clean_comments:
     payload['comments'] = clean_comments
 print(json.dumps(payload))
 PYEOF
+    )
+    echo "$REVIEW_PAYLOAD" | gh api "repos/$REPO/pulls/$PR_NUMBER/reviews" --method POST --input - || {
+        echo "Error: failed to post review for PR #$PR_NUMBER" >&2
+        exit 1
+    }
 else
     # No line comments: post review body only
-    python3 - "$REVIEW_BODY_FILE" "$EVENT" <<'PYEOF' | \
-        gh api "repos/$REPO/pulls/$PR_NUMBER/reviews" --method POST --input -
+    REVIEW_PAYLOAD=$(python3 - "$REVIEW_BODY_FILE" "$EVENT" <<'PYEOF'
 import sys, json
 with open(sys.argv[1]) as f:
     body = f.read()
@@ -127,4 +130,9 @@ event = sys.argv[2]
 payload = {'body': body, 'event': event}
 print(json.dumps(payload))
 PYEOF
+    )
+    echo "$REVIEW_PAYLOAD" | gh api "repos/$REPO/pulls/$PR_NUMBER/reviews" --method POST --input - || {
+        echo "Error: failed to post review for PR #$PR_NUMBER" >&2
+        exit 1
+    }
 fi

@@ -73,3 +73,54 @@
 - `gh-graphql.sh` の error メッセージは QUERY_NAME が空の場合もあるため "gh api graphql failed" というシンプルな形にする (QUERY_NAME を含めると空文字が混入する可能性)
 - `gh-label-transition.sh` line 68 は `ENTERED_WORKTREE` の "already set" パスの `gh issue edit` 呼び出し — 3 箇所すべて同じパターンで統一
 - `gh-check-blocking.sh` は audit report で「唯一 error handling があった」と記録されているが、現在は 3 個 (`gh-issue-edit.sh`, `gh-issue-comment.sh`, `gh-extract-issue-from-pr.sh`) も既に完全対応済み (Issue 記述時点から実装が進んだ)
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST/SHOULD 問題なし。CONSIDER 3 件 (bats テストカバレッジ 2 件 + Spec Code Retrospective 記述精度 1 件) はスキップ判断。
+- Forbidden Expressions check FAILURE は Issue #765 の pre-existing false positive と確認。PR #767 の変更とは無関係。
+- `github_check "gh run list ..."` が safe モード allowlist 外のため AC4 は UNCERTAIN だが、`gh pr checks` での "Run bats tests" SUCCESS で実質 PASS 相当を確認。
+
+### Deferred Items
+- AC4 の verify command を `gh pr checks` ベースに更新すると UNCERTAIN → PASS に改善できる (Spec 品質改善候補として review retrospective に記録)。
+- Forbidden Expressions check false positive は Issue #765 で追跡中。merge phase で auto-resolve 対象。
+
+### Notes for Next Phase
+- MUST/SHOULD 問題なし → `/merge 767` で安全に進められる。
+- Forbidden Expressions check FAILURE は Issue #765 の既知バグ (pre-existing)。merge phase での判断対象となる。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- 設計では `gh-pr-review.sh` の `--with-line-comments` path が lines 91-93 に位置すると記載されているが、実際の行番号は正確ではなかった。Spec の行番号はあくまで参照用であり、実際のファイル内容を読んで適用した。
+- `gh-graphql.sh` の no-cache path (`gh api graphql "${GH_ARGS[@]}"`) は設計では単純な `|| { echo "Error..." >&2; exit 1; }` パターンで追加できるとされていたが、pipe 内の最終コマンドにあたるため set -e だけでは検出されないケースへの対処として明示的 error handling を追加した。これは設計意図と合致している。
+
+### Design Gaps/Ambiguities
+
+- Spec には `gh-label-transition.sh` の "already set" パス (line 68) が独立した branch であることが記載されているが、else ブランチの 2 箇所 (lines 90, 92) との区別が当初不明確だった。実装時にファイルを読んで 3 パターンに分けた。
+
+### Rework
+
+- None
+
+## review retrospective
+
+### Spec vs 実装の乖離パターン
+
+Code Retrospective に `gh-graphql.sh` の no-cache path が "pipe 内の最終コマンド" と記述されているが、実際は `else` ブロックの最終コマンドであり shell pipeline 内ではない。`set -euo pipefail` があれば単独でもエラー検出される。実装の正しさは問題ないが、Retrospective の説明が若干不正確。Spec 記述時に実装の詳細 (pipe vs 非 pipe) を明記すると今後の誤解を防げる。
+
+### 繰り返し問題のパターン
+
+CONSIDER のみ 3 件検出された:
+1. bats テストのエラーパスカバレッジが複数コードパスの一部のみをカバー (gh-graphql.bats, gh-label-transition.bats)
+2. Spec Code Retrospective の記述精度
+
+同一パターンの複数コードパスのうち一部のみテストするパターンが 2 件あった。複数コードパスがある場合 (特に `if-else` の各ブランチ)、少なくとも 1 パスがエラー経路をカバーしていれば実用上十分だが、「全パスカバー vs 代表パスのみカバー」の判断基準を Spec に明記するとコードレビューでの CONSIDER 指摘を減らせる。
+
+### 受け入れ条件の検証難易度
+
+- rubric + grep + command (CI reference) で3件の pre-merge 条件を PASS 判定できた。
+- `github_check "gh run list ..."` は safe モードの allowlist 外のため UNCERTAIN だったが、`gh pr checks` での CI 状態確認で実質的に PASS 相当を確認。
+- `gh run list` を `gh pr checks` で代替できるよう verify command を更新すると UNCERTAIN を PASS に変換できる (Spec 品質改善候補)。

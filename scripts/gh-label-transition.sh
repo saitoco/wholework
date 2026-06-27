@@ -65,7 +65,10 @@ if [ -n "$TARGET_PHASE" ] && echo "$CURRENT_LABELS" | grep -qx "$TARGET_LABEL"; 
             REMOVE_ARGS+=(--remove-label "$label")
         fi
     done
-    gh issue edit "$ISSUE_NUMBER" "${REMOVE_ARGS[@]}"
+    if ! gh issue edit "$ISSUE_NUMBER" "${REMOVE_ARGS[@]}"; then
+        echo "Error: failed to update labels for issue #$ISSUE_NUMBER" >&2
+        exit 1
+    fi
 else
     # Build --remove-label flags for all phase/* labels except the target label
     REMOVE_ARGS=()
@@ -87,8 +90,14 @@ else
 
     # Add target phase label if specified
     if [ -n "$TARGET_PHASE" ]; then
-        gh issue edit "$ISSUE_NUMBER" "${REMOVE_ARGS[@]}" --add-label "phase/$TARGET_PHASE"
+        if ! gh issue edit "$ISSUE_NUMBER" "${REMOVE_ARGS[@]}" --add-label "phase/$TARGET_PHASE"; then
+            echo "Error: failed to update labels for issue #$ISSUE_NUMBER" >&2
+            exit 1
+        fi
     else
-        gh issue edit "$ISSUE_NUMBER" "${REMOVE_ARGS[@]}"
+        if ! gh issue edit "$ISSUE_NUMBER" "${REMOVE_ARGS[@]}"; then
+            echo "Error: failed to update labels for issue #$ISSUE_NUMBER" >&2
+            exit 1
+        fi
     fi
 fi

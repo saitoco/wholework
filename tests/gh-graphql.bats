@@ -278,6 +278,27 @@ cache_teardown() {
     cache_teardown
 }
 
+@test "error: gh api graphql failure exits with code 1 and Error message" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GH_CALL_LOG"
+if [[ "$1" == "repo" && "$2" == "view" ]]; then
+    printf "testowner\ttestrepo\n"
+    exit 0
+fi
+if [[ "$1" == "api" && "$2" == "graphql" ]]; then
+    echo "error: rate limit exceeded" >&2
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 'query{viewer{login}}'
+    [ "$status" -eq 1 ]
+    [[ "$output" =~ "Error" ]]
+}
+
 @test "cache: --jq filter applied on cache hit" {
     cache_setup
     # First run without --jq to populate cache
