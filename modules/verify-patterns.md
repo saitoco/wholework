@@ -209,7 +209,20 @@ Preferred pattern 2 — direct test execution (scope limited to a single test fi
 |----------------|-------|-------------|
 | `gh pr checks` | Entire PR — all CI jobs | When all CI jobs must pass together (e.g., release gate); accept out-of-scope failure risk |
 | `gh run list --workflow=<specific>.yml` | Single workflow file | When only a specific workflow's success matters; avoids pre-existing failures in unrelated jobs |
+| `gh run view ... --json jobs --jq '.jobs[] \| select(.name=="<job>").conclusion'` | Single named job within a workflow | When unrelated jobs in the same workflow have pre-existing failures; scoped to one job, no false positives from other jobs |
 | `command "bats tests/<specific>.bats"` | Single test file | When testing a specific bats file directly; fully decoupled from CI state |
+
+**Job-level conclusion sub-form (github_check variant):**
+
+When a multi-job workflow contains pre-existing failures in unrelated jobs (e.g., a `Forbidden Expressions check` job that fails on `main`), the workflow-level `gh run list` form returns a non-`success` conclusion and causes false FAILs even when the target job itself passed.
+
+Use the job-level form to reference only the specific job that the AC is designed to verify:
+
+```
+<!-- verify: github_check "gh run view $(gh run list --workflow=ci.yml --limit=1 --json databaseId --jq '.[0].databaseId') --json jobs --jq '.jobs[] | select(.name==\"Run bats tests\").conclusion'" "success" -->
+```
+
+This form uses `gh run view` with `--json jobs` to extract the conclusion of a single named job. Because `gh run view` is in the `github_check` safe mode allowlist, this command executes in both safe and full modes. Unrelated job failures do not affect the result.
 
 **Fallback guidance:** When `gh pr checks` must be used (e.g., whole-CI gate), write "all CI green" explicitly in the AC text to clarify that the condition covers the full CI. This signals that handling of out-of-scope failures (e.g., pre-existing failures on `main`) is delegated to the verify phase reviewer.
 
