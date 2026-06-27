@@ -7,7 +7,7 @@ set -euo pipefail
 # Defaults
 TARGET_DATE=$(date -u +%Y-%m-%d)
 INPUT_FILE=".tmp/auto-events.jsonl"
-OUTPUT_DIR="docs/reports"
+OUTPUT_DIR="docs/sessions/_daily"
 CLEANUP=false
 
 # Option parsing

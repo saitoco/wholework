@@ -11,7 +11,7 @@
 #
 # Options:
 #   <session-id>              Report for the specified session
-#   --output <path>           Output path (default: docs/reports/auto-session-<id>-<date>.md)
+#   --output <path>           Output path (default: docs/sessions/<id>-<date>/data-layer.md)
 #   --no-github               Skip gh issue/pr calls (for hermetic bats tests)
 #   --narrative-draft <path>  Pre-generated narrative draft file; replaces TBD placeholders with
 #                             draft content prefixed by [LLM draft — human review required] marker
@@ -343,7 +343,7 @@ echo "Generating report for session: $SESSION_ID"
 TODAY=$(date +%Y-%m-%d)
 
 if [[ -z "$OUTPUT_PATH" ]]; then
-  OUTPUT_PATH="docs/reports/auto-session-${SESSION_ID}-${TODAY}.md"
+  OUTPUT_PATH="docs/sessions/${SESSION_ID}-${TODAY}/data-layer.md"
 fi
 
 mkdir -p "$(dirname "$OUTPUT_PATH")"

@@ -180,20 +180,45 @@ post-merge 2 件はいずれも `<!-- verify-type: manual -->`。「次回 `/aud
 - loop-state 生成元の不確実性は codebase grep (`scripts/auto-events-rollup.sh` 内に loop-state 言及なし) で解消。生成元は `/auto` SKILL.md (Loop State Heartbeat + next-cycle-seed) に限定と確定。
 - default path 変更がテストを破壊しないことを bats 確認 (`auto-events-rollup.bats` / `get-auto-session-report.bats` は全テストが `--output-dir` / `--output` を明示指定) で解消。新規テスト追加不要と判断。
 
+## Code Retrospective
+
+### Deviations from Design
+- None. All 9 implementation steps completed as specified.
+
+### Design Gaps/Ambiguities
+- `docs/ja/structure.md` の Directory Layout tree も英語版に合わせて更新した (Spec では script 説明行のみ言及していたが、sessions ブロックのツリー構造も同期が必要なため追加実施)。verify command がないため AC には影響なし。
+
+### Rework
+- None. All changes applied cleanly on the first attempt.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- `scripts/append-loop-state-heartbeat.sh` が Spec の "Changed Files" リストに含まれておらず、実装フェーズで見落とされた。SKILL.md の `file_not_contains "docs/reports/loop-state-"` verify command は SKILL.md を対象とするため、bash スクリプト側の残存パスを検出できなかった。migration を伴う Issue では "SKILL.md 記述更新" と "bash スクリプト実装更新" を区別した verify command 設計が有効。
+- 今後: SKILL.md と bash スクリプトが同一機能の 2 層実装になる場合、`file_not_contains "scripts/<script>.sh" "<old-pattern>"` を AC に追加するパターンが再発防止に有効。
+
+### Recurring issues
+
+- 特になし。今回の見落とし (bash スクリプトの hardcoded パス) は構造的問題ではなく、Changed Files リストの網羅性確認プロセスで防止可能。
+
+### Acceptance criteria verification difficulty
+
+- `rubric` 条件 5 件はすべて PASS 判定が容易だった (diff から実装確認が直接可能)。
+- `file_not_contains "skills/auto/SKILL.md" "docs/reports/loop-state-"` は PASS したが、bash スクリプト側をカバーしていない点が死角。verify command の対象ファイル選択に改善余地あり。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 全 16 ファイルを `git mv` で移行 (全ファイル git-tracked 確認済み)。data-layer は `docs/sessions/{sid-ts-date}/data-layer[-ja].md`、rollup/loop-state は `docs/sessions/_daily/` へ。
-- script の default path 変更が新 dir を自動生成する仕組み (既存 `mkdir -p "$(dirname ...)"` / `mkdir -p "$OUTPUT_DIR"` を活用) を採用、追加の dir 作成ロジックは不要。
-- `/auto` は `auto-events-rollup.sh` を引数なしで呼ぶため (SKILL.md line 562/909)、`OUTPUT_DIR` default 変更だけで新 path に自動ルーティング。
+- `scripts/append-loop-state-heartbeat.sh` の `REPORTS_DIR`/`FILE` 変数を `SESSIONS_DAILY_DIR`/`docs/sessions/_daily/loop-state-$DATE.md` に変更 (MUST fix, commit d0a9288)。
+- Spec の Changed Files リストに本スクリプトが含まれていなかったが、migration の完全性のために修正を判断した。
+- validate-skill-syntax.py: PASS (0 error)。
 
 ### Deferred Items
-- post-merge 観察 2 件 (次回 `/audit auto-session` / daily rollup での新 path 生成) は runtime 挙動のため `manual` verify-type。
-- `docs/ja/structure.md` の翻訳同期は手動更新 (verify command なし、translation mirror)。
+- post-merge 観察 2 件 (次回 `/audit auto-session` / daily rollup での新 path 生成確認) は runtime 挙動のため `manual` verify-type として据え置き。
 
 ### Notes for Next Phase
-- `git mv` 前に各 data-layer の移動先 session dir を `mkdir -p` すること。`3480-1782440098-2026-06-27` と `58975-1781511640-2026-06-16` は新規 dir。
-- `file_not_contains` 3 件 (get-auto-session-report.sh / auto SKILL.md loop-state / audit SKILL.md auto-session) は旧 path の完全除去を要求。usage コメント・例示行も漏れなく更新すること。
-- `scripts/watchdog-defaults.sh:14` の `auto-session-performance-...` 参照は curated file で据え置き、`file_not_contains "...auto-session-"` の対象外 (別ファイル)。
-- shell 編集は bash 3.2+ 互換 (`mapfile` 等 bash4 機能を使わない)。
+- MUST issue 1 件修正済み (append-loop-state-heartbeat.sh パス更新)。
+- 全 13 件の pre-merge verify command が PASS (Step 8 確認済み)。
+- `docs/reports/` 直下の curated ファイル (`auto-session-performance-2026-06-13.md` 等) は移動対象外。

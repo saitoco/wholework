@@ -563,7 +563,7 @@ Run `${CLAUDE_PLUGIN_ROOT}/scripts/auto-events-rollup.sh`. If the command fails,
 
 ## Loop State Heartbeat
 
-After each phase completion, append a line to `docs/reports/loop-state-{DATE}.md` (UTC date). This provides a human-readable, append-only point-in-time snapshot of repo phase state, complementing the machine-readable `auto-events.jsonl`.
+After each phase completion, append a line to `docs/sessions/_daily/loop-state-{DATE}.md` (UTC date). This provides a human-readable, append-only point-in-time snapshot of repo phase state, complementing the machine-readable `auto-events.jsonl`.
 
 The heartbeat is emitted by `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh` — a best-effort bash helper that never blocks its caller. Both call sites use it:
 
@@ -572,7 +572,7 @@ The heartbeat is emitted by `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-hea
 
 ### Loop State File Format
 
-File: `docs/reports/loop-state-{DATE}.md`. The schema is shared with the `next-cycle-seed` writer (#703) so phase-transition heartbeats and seed events coexist append-only in the same daily log:
+File: `docs/sessions/_daily/loop-state-{DATE}.md`. The schema is shared with the `next-cycle-seed` writer (#703) so phase-transition heartbeats and seed events coexist append-only in the same daily log:
 
 ```markdown
 ---
@@ -647,13 +647,13 @@ The script aggregates `gh issue list` open-issue counts by `phase/*` label (omit
      jq -c 'select(.session_id == "'"$AUTO_SESSION_ID"'")' .tmp/auto-events.jsonl > "$SESSION_DIR/events.jsonl" 2>/dev/null || true
      ```
 
-3a. **Cross-link to data layer report**: if `docs/reports/auto-session-${AUTO_SESSION_ID}-*.md` exists, append the following to `$SESSION_DIR/session.md` using the Edit tool (or Write tool if Edit is not applicable):
+3a. **Cross-link to data layer report**: if `docs/sessions/${AUTO_SESSION_ID}-*/data-layer.md` exists, append the following to `$SESSION_DIR/session.md` using the Edit tool (or Write tool if Edit is not applicable):
     ```
     ---
 
     ## See also
 
-    - [Data layer report](docs/reports/auto-session-{AUTO_SESSION_ID}-{DATE}.md)
+    - [Data layer report](docs/sessions/{AUTO_SESSION_ID}-{DATE}/data-layer.md)
     ```
     Use a glob to find the actual report file (the date suffix may differ from `$DATE`). If no matching file exists, skip this step.
 
@@ -938,7 +938,7 @@ Run `${CLAUDE_PLUGIN_ROOT}/scripts/auto-events-rollup.sh`. If the command fails,
      ]
    }
    ```
-7. Append a row to `docs/reports/loop-state-{DATE}.md` (best-effort; create file with frontmatter and table header using Write tool if not present):
+7. Append a row to `docs/sessions/_daily/loop-state-{DATE}.md` (best-effort; create file with frontmatter and table header using Write tool if not present):
    ```
    | HH:MM:SS | batch | next-cycle-seed | candidates:N |
    ```

@@ -999,7 +999,7 @@ Each event in `.tmp/auto-events.jsonl` includes a `session_id` field set to this
 
 ### Output Template Structure
 
-The generated report (`docs/reports/auto-session-{session-id}-{date}.md`) contains the following sections:
+The generated report (`docs/sessions/{session-id}-{date}/data-layer.md`) contains the following sections:
 
 1. **Summary** — aggregate metrics table (issues processed, route mix, throughput, recovery counts, watchdog kills, token usage, concurrent commits)
 2. **Per-Issue Durations** — per-issue phase breakdown table (issue number, size/route, timestamps, PR link, notes)
@@ -1015,7 +1015,7 @@ Parse from ARGUMENTS (after the `auto-session` prefix):
 
 - `<session-id>` (positional): generate report for this session; required unless `--since` is given or period mode flags are used; may appear before or after `--full`
 - `--full`: enable full mode — after generating the data-layer report, generate LLM narrative drafts for all 4 sections (What worked / Limits and gaps / Improvement candidates surfaced / Conclusion) and insert them into the report with `[LLM draft — human review required]` markers
-- `--output <path>`: override output file path (default: `docs/reports/auto-session-<id>-<date>.md`; period mode default: see period output paths below)
+- `--output <path>`: override output file path (default: `docs/sessions/<id>-<date>/data-layer.md`; period mode default: see period output paths below)
 - `--since <spec>`: two behaviors depending on the format of `<spec>`:
   - **List mode** (`24h`, `YYYY-MM-DD` format): show distinct session_ids from the log filtered to the specified time window. Omit `<session-id>` in this mode.
   - **Period aggregate mode** (`{N}d` format, e.g., `7d`, `30d`): aggregate all sessions from the past N days into a cross-session narrative report saved to `docs/sessions/_period/since-{TODAY}-{N}d.md`. In this mode, omit `<session-id>` and pass `--since-days N` to the script.
@@ -1145,7 +1145,7 @@ Run only when `--full` is present in ARGUMENTS.
 
 This step runs by default after Steps 1–3 complete (regardless of whether `--full` was specified). Skip entirely when `--no-ja` is present in ARGUMENTS.
 
-1. Determine sibling path: replace the trailing `.md` of the report path with `-ja.md` (e.g., `docs/reports/auto-session-<id>-<date>.md` → `docs/reports/auto-session-<id>-<date>-ja.md`)
+1. Determine sibling path: replace the trailing `.md` of the report path with `-ja.md` (e.g., `docs/sessions/<id>-<date>/data-layer.md` → `docs/sessions/<id>-<date>/data-layer-ja.md`)
 2. Read the final report (post Step 3 if `--full` was set, otherwise post Step 2)
 3. Translate the entire content to Japanese with the following rules:
    - Translate prose, headings, table column headers, and inline narrative
