@@ -104,24 +104,6 @@ FIXTURE_EOF
     grep -q "threshold reached" "$OUTPUT_PATH"
 }
 
-@test "--narrative-draft: draft content inserted into report" {
-    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
-{"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"session-draft","size":"S"}
-{"ts":"2026-06-14T10:05:00Z","issue":100,"event":"sub_complete","session_id":"session-draft","exit_code":"0"}
-FIXTURE_EOF
-
-    DRAFT_PATH="$BATS_TEST_TMPDIR/narrative-draft.md"
-    cat > "$DRAFT_PATH" << 'DRAFT_EOF'
-### What worked
-Parallel execution completed without conflict.
-DRAFT_EOF
-
-    run bash "$SCRIPT" "session-draft" --output "$OUTPUT_PATH" --no-github --narrative-draft "$DRAFT_PATH"
-    [ "$status" -eq 0 ]
-    [ -f "$OUTPUT_PATH" ]
-    grep -q "Parallel execution completed without conflict" "$OUTPUT_PATH"
-}
-
 @test "cross-link: See also footer appended when L3 session.md exists" {
     cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
 {"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"session-xlink","size":"S"}

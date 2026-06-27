@@ -209,7 +209,7 @@ Emitted by `run-auto-sub.sh` during the `code` phase when bats test output is de
 
 ### 7. `auto-session-report-published`
 
-Emitted by `scripts/get-auto-session-report.sh` immediately after the `--narrative-draft` processing completes successfully.
+**Deprecated** — this event was tied to the `--narrative-draft` flag, which was removed in #776. No code path currently emits this event.
 
 ```json
 {
@@ -229,6 +229,6 @@ Emitted by `scripts/get-auto-session-report.sh` immediately after the `--narrati
 | `session_id` | Yes | Session ID the report was generated for |
 | `report_path` | Yes | Path to the generated report file |
 
-**Emission point**: `scripts/get-auto-session-report.sh`, after the Python narrative-draft insertion block completes, when `--narrative-draft` is specified and the draft file exists.
+**Emission point**: Previously `scripts/get-auto-session-report.sh` after `--narrative-draft` processing. The `--narrative-draft` feature was removed in #776; this event is no longer emitted.
 
-**Scope**: Only emitted when `--narrative-draft` flag is used. Standard report generation (without `--narrative-draft`) does not emit this event.
+**Scope**: Deprecated — was only emitted when `--narrative-draft` flag was used.

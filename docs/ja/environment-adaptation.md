@@ -144,7 +144,6 @@ applies_to_proposals:               # 省略可; 改善提案 Issue をこの Do
 | `skills/review/workflow-guidance.md` | `/review` | `HAS_WORKFLOW_CAPABILITY=true` | `capability: workflow` | Workflow 実行ガイダンス |
 | `skills/doc/translate-phase.md` | `/doc` | `translate` サブコマンド | `arg_starts_with: translate` | 翻訳生成 |
 | `skills/doc/skill-dev-sync.md` | `/doc` | `validate-skill-syntax.py` または `skills/` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py, skills/]` | スキル開発同期 |
-| `skills/audit/auto-session-narrative-prompts.md` | `/audit` | `auto-session` サブコマンド | `arg_starts_with: auto-session` | auto-session ナラティブプロンプトテンプレート |
 | `skills/doc/product-template.md` | `/doc` | init/product サブコマンド | _（なし — 複数サブコマンド）_ | product.md テンプレート |
 | `skills/doc/structure-template.md` | `/doc` | init/structure サブコマンド | _（なし — 複数サブコマンド）_ | structure.md テンプレート |
 | `skills/doc/tech-template.md` | `/doc` | init/tech サブコマンド | _（なし — 複数サブコマンド）_ | tech.md テンプレート |

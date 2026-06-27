@@ -154,7 +154,6 @@ When multiple `load_when` keys are specified, all conditions are evaluated with 
 | `skills/review/workflow-guidance.md` | `/review` | `HAS_WORKFLOW_CAPABILITY=true` | `capability: workflow` | Workflow execution guidance |
 | `skills/doc/translate-phase.md` | `/doc` | `translate` subcommand | `arg_starts_with: translate` | Translation generation |
 | `skills/doc/skill-dev-sync.md` | `/doc` | `validate-skill-syntax.py` or `skills/` exists | `file_exists_any: [scripts/validate-skill-syntax.py, skills/]` | Skill development sync |
-| `skills/audit/auto-session-narrative-prompts.md` | `/audit` | `auto-session` subcommand | `arg_starts_with: auto-session` | Auto-session narrative prompt templates |
 | `skills/doc/product-template.md` | `/doc` | init/product subcommands | _(none — multiple subcommands)_ | product.md template |
 | `skills/doc/structure-template.md` | `/doc` | init/structure subcommands | _(none — multiple subcommands)_ | structure.md template |
 | `skills/doc/tech-template.md` | `/doc` | init/tech subcommands | _(none — multiple subcommands)_ | tech.md template |
