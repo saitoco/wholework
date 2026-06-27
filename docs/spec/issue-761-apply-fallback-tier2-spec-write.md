@@ -142,3 +142,17 @@
 - `_write_tier2_recovery_to_spec()` の `git -C "$_repo_root" push origin HEAD` は Tier 3 の commit/push と同じパターンを踏襲 (ロックなし直接プッシュ)。同一 Issue で複数 Tier 2 リカバリが同時に発生するケースは稀であり、Spec ファイルは Issue 毎に別ファイルのため並行 sub-issues 間の競合は発生しない
 
 - `WHOLEWORK_SCRIPT_DIR=$MOCK_DIR` 環境での `_repo_root="$(dirname "$SCRIPT_DIR")"` = `$BATS_TEST_TMPDIR` となる。テストでは `$BATS_TEST_TMPDIR/docs/spec/issue-42-*.md` に Spec ファイルを事前作成してから実行する
+
+## Code Retrospective
+
+### Deviations from Spec
+
+なし。Spec のすべての実装ステップを計画通りに実行した。
+
+### Gaps / Surprises
+
+- `SKILL.md` § Step 4a の Source 1 note に「XL route only」と記載したが、`_write_tier2_recovery_to_spec()` は実際には XS/S/M/L の全 route で呼ばれる。XL route は `run-auto-sub.sh` で `exit 1` により明示的に除外されており、`run_phase_with_recovery` は呼ばれない。SKILL.md の注記文脈は「XL サブ Issue を /auto 親が処理する際の Step 4a で重複書き込みを防ぐ」趣旨であり内容的には正しいが、表現が誤解を招く可能性がある。致命的ではないため本 PR では変更しない。
+
+### Rework
+
+なし。一発でテスト PASS。
