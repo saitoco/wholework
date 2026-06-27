@@ -180,20 +180,29 @@ post-merge 2 件はいずれも `<!-- verify-type: manual -->`。「次回 `/aud
 - loop-state 生成元の不確実性は codebase grep (`scripts/auto-events-rollup.sh` 内に loop-state 言及なし) で解消。生成元は `/auto` SKILL.md (Loop State Heartbeat + next-cycle-seed) に限定と確定。
 - default path 変更がテストを破壊しないことを bats 確認 (`auto-events-rollup.bats` / `get-auto-session-report.bats` は全テストが `--output-dir` / `--output` を明示指定) で解消。新規テスト追加不要と判断。
 
+## Code Retrospective
+
+### Deviations from Design
+- None. All 9 implementation steps completed as specified.
+
+### Design Gaps/Ambiguities
+- `docs/ja/structure.md` の Directory Layout tree も英語版に合わせて更新した (Spec では script 説明行のみ言及していたが、sessions ブロックのツリー構造も同期が必要なため追加実施)。verify command がないため AC には影響なし。
+
+### Rework
+- None. All changes applied cleanly on the first attempt.
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
-- 全 16 ファイルを `git mv` で移行 (全ファイル git-tracked 確認済み)。data-layer は `docs/sessions/{sid-ts-date}/data-layer[-ja].md`、rollup/loop-state は `docs/sessions/_daily/` へ。
-- script の default path 変更が新 dir を自動生成する仕組み (既存 `mkdir -p "$(dirname ...)"` / `mkdir -p "$OUTPUT_DIR"` を活用) を採用、追加の dir 作成ロジックは不要。
-- `/auto` は `auto-events-rollup.sh` を引数なしで呼ぶため (SKILL.md line 562/909)、`OUTPUT_DIR` default 変更だけで新 path に自動ルーティング。
+- 全 16 ファイルを `git mv` で移行完了。data-layer 8 ファイル、rollup 7 ファイル、loop-state 1 ファイル。
+- script の default path 変更のみで既存の `mkdir -p` が新 dir を自動生成するため、追加ロジックは不要。
+- `docs/ja/structure.md` の Directory Layout tree も英語版に合わせて `_daily/` / `data-layer` エントリを追加更新 (Spec 記述より広いスコープだが verify command なしのため AC に影響なし)。
 
 ### Deferred Items
-- post-merge 観察 2 件 (次回 `/audit auto-session` / daily rollup での新 path 生成) は runtime 挙動のため `manual` verify-type。
-- `docs/ja/structure.md` の翻訳同期は手動更新 (verify command なし、translation mirror)。
+- post-merge 観察 2 件 (次回 `/audit auto-session` / daily rollup での新 path 生成確認) は runtime 挙動のため `manual` verify-type として据え置き。
 
 ### Notes for Next Phase
-- `git mv` 前に各 data-layer の移動先 session dir を `mkdir -p` すること。`3480-1782440098-2026-06-27` と `58975-1781511640-2026-06-16` は新規 dir。
-- `file_not_contains` 3 件 (get-auto-session-report.sh / auto SKILL.md loop-state / audit SKILL.md auto-session) は旧 path の完全除去を要求。usage コメント・例示行も漏れなく更新すること。
-- `scripts/watchdog-defaults.sh:14` の `auto-session-performance-...` 参照は curated file で据え置き、`file_not_contains "...auto-session-"` の対象外 (別ファイル)。
-- shell 編集は bash 3.2+ 互換 (`mapfile` 等 bash4 機能を使わない)。
+- 全 13 件の pre-merge verify command が PASS。Issue body のチェックボックスも更新済み。
+- post-merge の 2 件 (manual) は次回 `/audit auto-session` / `auto-events-rollup.sh` 実行時に観察すること。
+- `docs/reports/` 直下の curated ファイル (`auto-session-performance-2026-06-13.md` 等) は移動対象外、`watchdog-defaults.sh:14` の参照も変更不要。
