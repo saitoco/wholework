@@ -80,3 +80,28 @@
 - PR #763 は main にマージ済み (2026-06-27T00:21:52Z)
 - Issue #760 は `closes #760` により自動クローズされる (BASE_BRANCH=main)
 - verify フェーズでは pre-merge AC 2 件 (file_contains ベース) を検証可能。post-merge AC は次回 batch session 後に手動確認
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Auto-Resolved Ambiguity (「接近」= count ≥ threshold-1) が明確に定義され、code phase で揺らぎなく実装できた。良いパターン。
+
+#### code
+- 実装ステップ通りに進行。`get-config-value.sh` がネスト YAML 非対応のため awk 直接パースを採用した判断は妥当。
+
+#### review
+- 2 件の SHOULD: (a) Tier 2 bats テストが "approaching threshold" のみで "threshold reached" の boundary が欠落、(b) Forbidden Expressions check の CI fail を main 問題と判断してマージ続行。(a) は review で graft 済。
+- 観察: 新機能の bats テストで boundary 双方を網羅するパターンが弱い。AC に明記すれば防げる (review retrospective でも指摘されている)。
+
+#### merge
+- CI 失敗を非対話モードの auto-resolve ポリシーで判断してマージ続行。判断は正しいが、main の Forbidden Expressions check が pre-existing fail している点は別途確認すべき (関連調査値の可能性)。
+
+#### verify
+- 2 件 PASS、UNCERTAIN ゼロ。`file_contains` ベースの supplementary AC が機械的検証を容易にした。
+
+### Improvement Proposals
+
+- **boundary-aware test の AC 明記パターン**: 閾値や境界条件を扱う新機能 Issue では、AC に「boundary 双方 (例: threshold-1 と threshold) を bats でテスト」と明記することを推奨する。これにより /review での graft 介入が減り、Spec 段階で測定可能性が高まる。Tier 2 (convention)。
+- **awk regex `in_section && /threshold:/` 精度向上**: Phase Handoff Deferred Items に記録された 1 行 awk マッチが、想定しないネスト構造 (例: `recoveries-auto-fire: { threshold: ... }` のインラインハッシュ) で false match する可能性。本 Issue のスコープ外だが、将来 .wholework.yml のフォーマットが拡張された際に再評価。Tier 3 (one-time memo)。
