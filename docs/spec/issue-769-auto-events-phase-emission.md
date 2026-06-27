@@ -126,3 +126,34 @@
 - `EMIT_PHASE_NAME` が事前設定されている場合 (`run-auto-sub.sh` から呼ばれる場合) は `_EMIT_PHASE_OWNED=""` のまま → `phase_start` / `phase_complete` を emit しない (二重 emit 防止)。
 - Auto-resolved (Non-interactive mode): 共通 helper は新規 `scripts/lib/phase-events.sh` ではなく既存 `scripts/emit-event.sh` を直接 source するアプローチを採用。Issue Retrospective で確認済みの判断。
 - `modules/event-emission.md` 追加で `docs/structure.md` の module count が 40 → 41 になる。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+`modules/event-emission.md` (PR で新規追加) の Backfill セクションで「SIGTERM / watchdog timeout exits を反映する」という記述と、guard 条件「Exit code must be 0」が矛盾していた。SIGTERM は exit code 143 (非ゼロ) を返すため実際には backfill が発火しない。新設ドキュメントへのレビューが必要なことを示す事例。今後 SSoT ドキュメントを新規作成する際は、コードの guard 条件と説明文の一貫性をレビューチェックリストに含めることを推奨。
+
+### Recurring issues
+
+特記なし。emit 系テストは全 PASS で、既知の pre-existing failure (append-loop-state-heartbeat.bats tests 11-15) は本 PR と無関係であることを確認。
+
+### Acceptance criteria verification difficulty
+
+全 Pre-merge 条件が PASS (UNCERTAIN なし)。rubric verify command での「scripts/lib/phase-events.sh または同等の共通 helper」の「同等」判定は AI 判断に依存しており、`scripts/emit-event.sh` を `scripts/lib/phase-events.sh` の同等として認定する判断が含まれる。verify command の rubric テキストに実際の helper パス (emit-event.sh) を明示することで将来の判定精度が上がる可能性がある。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Backfill documentation was corrected to accurately describe exit-code-0-only behavior (SHOULD fix applied in review phase)
+- CI failure (Run bats tests) confirmed pre-existing and unrelated to this PR (same 5 tests fail on main branch)
+- All pre-merge AC conditions verified PASS; no MUST issues found
+
+### Deferred Items
+- Post-merge observation: `/audit auto-session --full` Per-Issue Durations accuracy (< 10% deviation from L3 retro) — requires next batch execution to verify
+- CONSIDER: test assertion style improvement for "no double emit" test (EMIT_LOG existence check) — left for future quality pass
+
+### Notes for Next Phase
+- Merge is clear: no MUST issues, SHOULD fix committed and pushed
+- CI failure (Run bats tests) is pre-existing on main; merge should not be blocked by this
+- New emit tests (12 total across run-issue.bats, run-spec.bats, run-code.bats, run-spec.bats, run-merge.bats, run-review.bats isolation unsets) all PASS
