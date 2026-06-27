@@ -74,12 +74,12 @@ Fix: ポインタファイル名に PGID を含めることで、同一 Claude C
 - Post-merge 条件 (2 つの `/auto --batch` 同時起動での観察) は手動検証が必要で自動化が難しいが、現状の verify command 種別 (`manual`) が適切に設定されている。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- SHOULD 所見 (`skills/audit/SKILL.md:991` の古い参照) をレビュー内で即時修正し、PR ブランチにコミット (`a21bc78`)
-- CONSIDER 所見 (負の isolation テスト, `.tmp` ファイル蓄積) はスキップ — マージブロッカーではない
-- CI 失敗 (tests 11-15) は main ブランチでも同様に失敗する既存不具合と確認。本 PR のブロッカーではない
+- CI 失敗 (bats tests) は main ブランチで pre-existing の既存不具合と確認済み。non-interactive auto-resolve でマージ続行
+- PR #793 は `worktree-code+issue-770` ブランチのスカッシュマージで main に着地
+- ローカルブランチ削除エラー (code+issue-770 worktree による競合) は無視 — リモートブランチは正常削除済み
 
 ### Deferred Items
 - `tests/auto-sub-observability.bats` に wrong-PGID decoy テストの追加 (CONSIDER)
@@ -87,6 +87,6 @@ Fix: ポインタファイル名に PGID を含めることで、同一 Claude C
 - `append-loop-state-heartbeat.bats` tests 11-15 の既存不具合修正 (別 Issue で対応)
 
 ### Notes for Next Phase
-- MUST 所見なし。受け入れ基準 3/3 PASS。マージ可能な状態
-- CI 失敗は既存不具合 (main でも同様)。マージには影響しない
-- Post-merge: 2 つの `/auto --batch` を同時起動し、各 session の `/audit auto-session --full` report にクロスセッション混入がないことを手動確認すること
+- Post-merge verify: 2 つの `/auto --batch` を同時起動し、各 session の `/audit auto-session --full` report にクロスセッション混入がないことを手動確認すること
+- issue #770 は `closes #770` により main へのマージで自動クローズ済み
+- verify コマンド (file_not_contains, rubric ×2) はいずれも review フェーズで PASS 確認済み
