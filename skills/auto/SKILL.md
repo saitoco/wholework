@@ -68,6 +68,16 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banne
 
 ### Step 2: Route Detection and Base Branch
 
+**Load project config and stop-at settings (run before flag detection):**
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `AUTO_STOP_AT` and `ALWAYS_PR` for use in route detection and phase execution below.
+
+Parse the `--stop-at=<phase>` flag from ARGUMENTS (per-invocation override):
+- If `--stop-at=<phase>` is present, extract the phase value (valid values: `spec`, `code`, `review`, `merge`, `verify`)
+- `EFFECTIVE_STOP_AT` priority: `--stop-at` flag > `AUTO_STOP_AT` config > default `"verify"`
+- If the extracted phase is not one of the valid values, ignore the flag and use the next priority value
+- Record `EFFECTIVE_STOP_AT` for use in Step 4 stop-at checks
+
 Detect `--patch`/`--pr`, `--review=full`/`--review=light`, and `--base {branch}` flags from ARGUMENTS.
 
 If `--base {branch}` is present, record as `BASE_BRANCH`. If `--base` is not specified, default to `BASE_BRANCH=main`.
@@ -80,6 +90,12 @@ If `--base {branch}` is present, record as `BASE_BRANCH`. If `--base` is not spe
 | `--pr --review=light` | pr | `code → review(--light) → merge → verify` |
 | `--base {branch}` | (no route change) | Specify base branch; propagates to all phases |
 | none | auto-detect | Determine route from Size label |
+
+**ALWAYS_PR promotion (apply after flag detection and before Size auto-detection):**
+
+If `ALWAYS_PR=true`:
+- If ROUTE was set to `patch` (via `--patch` flag or Size XS/S auto-detect): output "Warning: always-pr: true is set in .wholework.yml. Promoting to pr route." and set ROUTE to `pr`
+- If ROUTE was set to `pr` (via `--pr` flag): no change
 
 If no flags, fetch Size to auto-detect route:
 
@@ -146,7 +162,9 @@ Fetch labels with `gh issue view $NUMBER --json labels -q '.labels[].name'` and 
   - **Size is XS**: Spec not needed — skip spec and proceed to Step 4
   - Size is `L`: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh $NUMBER --opus` (run spec with Opus model)
   - Size is neither XS nor L: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh $NUMBER`
-  - On spec success, proceed to Step 4
+  - On spec success:
+    - **stop-at check**: if `EFFECTIVE_STOP_AT == "spec"`: output "Stopped at phase: spec (auto-stop-at=spec)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="spec"`
+    - Otherwise, proceed to Step 4
   - On spec failure, go to Step 6 (error report)
 - **No `phase/*` labels** (issue triage not done):
   - Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh $NUMBER` (issue triage → Size setting/requirement shaping)
@@ -157,7 +175,9 @@ Fetch labels with `gh issue view $NUMBER --json labels -q '.labels[].name'` and 
     - **Size is XS**: skip spec, proceed to Step 4
     - Size is `L`: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh $NUMBER --opus`
     - Size is neither XS nor L: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh $NUMBER`
-    - On spec success, proceed to Step 4
+    - On spec success:
+      - **stop-at check**: if `EFFECTIVE_STOP_AT == "spec"`: output "Stopped at phase: spec (auto-stop-at=spec)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="spec"`
+      - Otherwise, proceed to Step 4
     - On spec failure, go to Step 6 (error report)
   - If expected `phase/*` label state is not reached after re-fetch, go to Step 6 (error report)
   - On issue failure, go to Step 6 (error report)
@@ -290,6 +310,7 @@ Each phase follows the Observe → Diagnose → Act pattern (same as pr route; s
 1. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-patch $NUMBER --check-precondition --warn-only`
 2. code phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER --patch [--base {branch}]` via Bash (timeout: 600000)
 3. Unconditional completion check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-patch $NUMBER --check-completion` — runs unconditionally regardless of exit code; if `matches_expected: false` (including exit 0), go to Step 6; if code exited non-zero but `matches_expected: true`, override to success; on success run `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh --issue $NUMBER --from spec --to code` (best-effort loop-state heartbeat; see `## Loop State Heartbeat`)
+   - **stop-at check**: if `EFFECTIVE_STOP_AT == "code"`: output "Stopped at phase: code (auto-stop-at=code)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="code"`
 4. **XS only**: transcribe issue retrospective to Spec (see Step 4b)
 5. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh verify $NUMBER --check-precondition --warn-only`
 6. Increment counter: `VERIFY_ITERATION_COUNT=$((VERIFY_ITERATION_COUNT + 1))`
@@ -322,11 +343,14 @@ Full phase sequence:
 3. Unconditional completion check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-pr $NUMBER --check-completion` — runs unconditionally regardless of exit code; if `matches_expected: false` (including exit 0), go to Step 6; if `matches_expected: true`, output `[1/4] code → done (PR #N)`, run `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh --issue $NUMBER --from spec --to code` (best-effort loop-state heartbeat; see `## Loop State Heartbeat`), and continue
 4. Extract PR number via exact-match filter (matches SSoT branch name worktree-code+issue-N established by #310): `gh pr list --json number,headRefName | jq -r ".[] | select(.headRefName == \"worktree-code+issue-$NUMBER\") | .number" | head -1`
 5. If PR number cannot be fetched: report error and go to Step 6
+   - **stop-at check**: if `EFFECTIVE_STOP_AT == "code"`: output "Stopped at phase: code (auto-stop-at=code)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="code"` (at this point `$PR_NUMBER` is known)
 6. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh review $NUMBER --pr $PR_NUMBER --check-precondition --warn-only`
 7. Output `[2/4] review`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh $PR_NUMBER $REVIEW_DEPTH` via Bash (timeout: 600000) (REVIEW_DEPTH set in Step 2, refreshed by Step 3a if applicable); on success output `[2/4] review → done`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh --issue $NUMBER --from code --to review` (best-effort loop-state heartbeat; see `## Loop State Heartbeat`)
+   - **stop-at check**: if `EFFECTIVE_STOP_AT == "review"`: output "Stopped at phase: review (auto-stop-at=review)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="review"`
 8. If review fails: completion check `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh review $NUMBER --pr $PR_NUMBER --check-completion` — if `matches_expected: true`, override to success; otherwise go to Step 6
 9. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh merge $NUMBER --pr $PR_NUMBER --check-precondition --warn-only`
 10. Output `[3/4] merge`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh $PR_NUMBER` via Bash (timeout: 600000); on success output `[3/4] merge → done`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh --issue $NUMBER --from review --to merge` (best-effort loop-state heartbeat; see `## Loop State Heartbeat`)
+    - **stop-at check**: if `EFFECTIVE_STOP_AT == "merge"`: output "Stopped at phase: merge (auto-stop-at=merge)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="merge"`
 11. If merge fails: completion check `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh merge $NUMBER --pr $PR_NUMBER --check-completion` — if `matches_expected: true`, override to success; otherwise go to Step 6
 12. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh verify $NUMBER --check-precondition --warn-only`
 13. Increment counter: `VERIFY_ITERATION_COUNT=$((VERIFY_ITERATION_COUNT + 1))`
@@ -538,6 +562,32 @@ Determine the close flow for the parent Issue based on all sub-issue execution r
    Leave the parent Issue open. The user runs `/verify $NUMBER` for final confirmation before closing.
 
 ### Step 5: Completion Report
+
+**Stop-at stopped banner (emit before the normal completion report when `STOPPED_AT` is set):**
+
+If `STOPPED_AT` is set (pipeline stopped early due to `auto-stop-at` or `--stop-at=<phase>`):
+
+1. Output the stopped-at banner:
+   ```
+   /auto #N stopped at STOPPED_AT
+   TITLE
+   URL
+   ```
+2. Output a result table showing phases executed vs. not executed.
+3. Output the next-action message based on the stopped phase:
+
+   | `STOPPED_AT` | next-action message |
+   |---|---|
+   | `spec` | "Next: run `/code $NUMBER` to proceed with implementation." |
+   | `code` | "Next: run `/review $PR_NUMBER` to proceed with code review." |
+   | `review` | "Next: review PR #$PR_NUMBER and run `/merge $NUMBER` when ready." |
+   | `merge` | "Next: run `/verify $NUMBER` to proceed with post-merge verification." |
+
+4. Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with `SKILL_NAME=auto`, `ISSUE_NUMBER=$NUMBER`, `RESULT=success`.
+5. Run the event-based observation scan and daily rollup (same as normal completion).
+6. Return (do not execute normal completion flow below).
+
+---
 
 If all phases succeeded:
 

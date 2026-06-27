@@ -49,7 +49,7 @@ Investigates the codebase from Issue requirements and creates a Spec (`docs/spec
 
 ### 3. `/code` — Implementation
 
-Implements the design from the Spec. Size-based routing: XS/S → **patch** (direct commit to main, no PR); M/L → **pr** (branch + PR). XS skips the spec-existence check. Explicit `--patch`/`--pr` flags override auto-detection.
+Implements the design from the Spec. Size-based routing: XS/S → **patch** (direct commit to main, no PR); M/L → **pr** (branch + PR). XS skips the spec-existence check. Explicit `--patch`/`--pr` flags override auto-detection. Set `always-pr: true` in `.wholework.yml` to force PR route regardless of Size (useful for website projects where direct push to main equals publish).
 
 Three implementation paths:
 - **Claude Code**: `/code 123` for local implementation
@@ -98,7 +98,9 @@ Automatically verifies post-merge acceptance conditions. All conditions PASS com
 
 ### `/auto` — Full Workflow Automation
 
-Orchestrator that chains Core Phases sequentially, running each as an independent `claude -p` process for context isolation. By default uses `--permission-mode auto`; set `permission-mode: bypass` in `.wholework.yml` to use `--dangerously-skip-permissions` instead (see [SECURITY.md](../SECURITY.md)). `/auto 123 [--patch|--pr] [--review=full|--review=light]` drives the end-to-end workflow with Size-based routing:
+Orchestrator that chains Core Phases sequentially, running each as an independent `claude -p` process for context isolation. By default uses `--permission-mode auto`; set `permission-mode: bypass` in `.wholework.yml` to use `--dangerously-skip-permissions` instead (see [SECURITY.md](../SECURITY.md)). `/auto 123 [--patch|--pr] [--review=full|--review=light] [--stop-at=<phase>]` drives the end-to-end workflow with Size-based routing:
+
+**Pipeline control via `.wholework.yml`**: `always-pr: true` forces PR route for all Issues regardless of Size. `auto-stop-at: <phase>` stops the pipeline after the specified phase (`spec`, `code`, `review`, `merge`, or `verify`; default `verify`). Use `auto-stop-at: review` for website projects to prevent auto-merge. Per-invocation override: `--stop-at=<phase>`. Both keys are orthogonal to `autonomy:` tier. See [docs/guide/customization.md](guide/customization.md#website-project-recommended-settings).
 
 - **patch XS/S**: spec (if needed) → code → verify
 - **pr M/L**: spec (if needed) → code → review (M → `--light`, L → `--full`) → merge → verify

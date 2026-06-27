@@ -59,6 +59,10 @@ Determine the route based on Size (Project field preferred → label fallback) a
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="issue", ENTITY_NUMBER=$NUMBER, SKILL_NAME="code".
 
+**Load project config (run before Size fetch):**
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `ALWAYS_PR` for use in route detection below.
+
 First, fetch Size (run before route detection):
 
 ```bash
@@ -71,11 +75,13 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh "$NUMBER" 2>/dev/null
 
 If ARGUMENTS contains `--base {branch}`, use that value as `BASE_BRANCH`. If `--base` is not specified, default to `BASE_BRANCH=main` (backward compatibility).
 
-**Flag precedence (explicit flag > Size auto-detection)**:
-- ARGUMENTS contains `--patch` → **patch route** (direct commit to BASE_BRANCH, no PR). Even if Size is `XL`, `--patch` takes precedence — skip the XL check and run as patch route
+**Flag precedence (explicit flag > ALWAYS_PR > Size auto-detection)**:
 - ARGUMENTS contains `--pr` → **pr route** (branch + PR flow)
+- `ALWAYS_PR=true` AND ARGUMENTS contains `--patch` → output "Warning: always-pr: true is set in .wholework.yml. The --patch flag is ignored; pr route is forced." then select **pr route**
+- `ALWAYS_PR=true` (no `--patch` or `--pr` flag) → select **pr route** regardless of Size (skip Size auto-detection)
+- ARGUMENTS contains `--patch` (and `ALWAYS_PR=false`) → **patch route** (direct commit to BASE_BRANCH, no PR). Even if Size is `XL`, `--patch` takes precedence — skip the XL check and run as patch route
 
-**Size auto-detection** (when no flags are present):
+**Size auto-detection** (when no explicit flags are present and `ALWAYS_PR=false`):
 
 Follow the Size→workflow mapping table in `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md`:
 - `XS` or `S` → **patch route**

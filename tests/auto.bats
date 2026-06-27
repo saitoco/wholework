@@ -45,3 +45,50 @@ step2a_section() {
     run step2a_section "$SKILL_FILE"
     [[ "$output" == *"verify-fail"* ]]
 }
+
+# Tests for auto-stop-at / --stop-at support (Issue #783)
+
+@test "SKILL.md contains stop-at keyword" {
+    grep -qE "stop-at|stop_at" "$SKILL_FILE"
+}
+
+@test "SKILL.md contains auto-stop-at keyword" {
+    grep -q "auto-stop-at" "$SKILL_FILE"
+}
+
+@test "SKILL.md contains EFFECTIVE_STOP_AT variable" {
+    grep -q "EFFECTIVE_STOP_AT" "$SKILL_FILE"
+}
+
+# Extract Step 2 section: from "### Step 2:" to the next "### " heading
+step2_section() {
+    awk '/^### Step 2:/{found=1} found && /^### / && !/^### Step 2:/{exit} found{print}' "$1"
+}
+
+@test "Step 2 section describes stop-at flag parsing" {
+    run step2_section "$SKILL_FILE"
+    [[ "$output" == *"stop-at"* ]]
+}
+
+@test "Step 2 section lists valid stop-at enum values spec, code, review, merge" {
+    run step2_section "$SKILL_FILE"
+    [[ "$output" == *"spec"* ]]
+    [[ "$output" == *"code"* ]]
+    [[ "$output" == *"review"* ]]
+    [[ "$output" == *"merge"* ]]
+}
+
+# Extract Step 5 section: from "### Step 5:" to the next "### " heading
+step5_section() {
+    awk '/^### Step 5:/{found=1} found && /^### / && !/^### Step 5:/{exit} found{print}' "$1"
+}
+
+@test "Step 5 section contains next-action guidance for stop-at" {
+    run step5_section "$SKILL_FILE"
+    [[ "$output" == *"/merge"* ]] || [[ "$output" == *"Next"* ]]
+}
+
+@test "Step 5 section contains STOPPED_AT variable reference" {
+    run step5_section "$SKILL_FILE"
+    [[ "$output" == *"STOPPED_AT"* ]]
+}
