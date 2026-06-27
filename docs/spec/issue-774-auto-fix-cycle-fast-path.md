@@ -65,20 +65,19 @@
 - N/A (no rework required beyond the Step 2.5 → Step 2a rename forced by the validator)
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light (--light flag); no MUST/SHOULD/CONSIDER issues found across all 4 perspectives
-- CI failure (Run bats tests) confirmed as pre-existing on main branch (tests 11–15 in append-loop-state-heartbeat.bats); not introduced by this PR
-- External review tools (copilot-review, claude-code-review, coderabbit-review) not configured → Step 7 skipped
+- CI failing (reason=ci_failing) auto-resolved in non-interactive mode; CI failures are pre-existing on main (tests 11–15 in append-loop-state-heartbeat.bats), confirmed by review phase
+- Squash merge executed with `--delete-branch`; `closes #774` in PR body triggers auto-close of Issue #774 on main merge
 
 ### Deferred Items
-- Post-merge observation ACs (run-issue.sh/run-spec.sh skip, verify-fail marker in Consumed Comments) remain unverifiable until a real verify FAIL cycle occurs
+- Post-merge observation ACs (run-issue.sh/run-spec.sh skip in a real verify FAIL → reopen cycle) remain unverifiable until a live cycle occurs
 
 ### Notes for Next Phase
-- No MUST issues → proceed directly to `/merge 782`
-- CI baseline: only the pre-existing tests 11–15 fail; PR-added tests 104–107 pass
-- All 6 pre-merge ACs: PASS
+- Label transition to `verify` has been applied
+- Pre-merge ACs all PASS; post-merge ACs require a real fix-cycle run to observe behavior
+- No conflicts were present; rebase step was skipped
 
 ## Review Retrospective
 
