@@ -110,3 +110,33 @@
 
 - post-merge 観察 2 件が verify の主タスク: (1) `/audit recoveries` 入力で unknown subcommand 相当のメッセージが返ること、(2) `/verify` Step 15 の recoveries-auto-fire が正常動作すること
 - Spec の "Verification (post-merge)" セクションに verify command が記載されているが、これらは観察ベース (rubric) のため verify フェーズで確認する
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Background が `/audit recoveries` の routine 価値消滅と `/verify` Step 15 の自動化機能を明確に対比、削除判断の根拠が明確。9 件 AC + 削除系として網羅的な verify command (file_not_contains / file_not_exists / file_exists の組合せ) が設計されていた。
+
+#### spec
+- "Changed Files" に `docs/structure.md` 系 (audit 行説明文の同期更新)、`docs/reports/orchestration-recoveries.md` の stale 参照、`tests/collect-recovery-candidates.bats` の `--issues-json` カバレッジが含まれていなかった。**Changed Files リスト網羅性問題の再再発** (#771 test path, #770 audit SKILL.md path に続く 3 件目の同種事例 = batch session 内で 3 度繰り返し)。
+
+#### code
+- Python regex (`re.sub`) を使った長文セクション削除を採用 (Edit ツールの old_string 長制限回避)。今回固有の手法だが、削除系 Issue では再発する操作。
+
+#### review
+- `docs/reports/orchestration-recoveries.md` の stale 参照 (行 15, 283) を検出。Spec の Changed Files に未記載だったが review で発見、deferred Item として記録 (本 PR では未修正)。
+
+#### merge
+- pre-existing CI failure (#787 で起票済み) を non-interactive auto-resolve で continue。
+
+#### verify
+- 全 9 pre-merge AC + 2 post-merge manual AC が PASS。post-merge AC は in-session で直接判定可能だった: AC1 は audit SKILL.md routing table を確認 (drift/fragility/stats/progress/auto-session のみ)、AC2 は本 verify session 自体が Step 15 を実行しており PASS が実証されている。
+- **Tier 3 recovery が本 Issue でも発生したが Auto Retrospective に未記載** (#770, #769 に続く 3 件目の同種パターン、本 batch session 内で 3 度繰り返し)。
+- pre-existing #800 で起票済みの Tier 3 → Spec write 自動化の Priority/Value 強化材料。
+
+### Improvement Proposals
+
+1. **Changed Files リスト網羅性問題の構造化対策 (本 batch session 3 度目)**: #771 (test path)、#770 (audit SKILL.md path)、#775 (docs/structure.md, orchestration-recoveries.md stale refs, test coverage) と同種パターンが 3 度繰り返し発生。`/spec` Acceptance Criteria 設計時に "削除/migration 対象 symbol/string で codebase 全文 grep → 影響先を Changed Files に自動候補追加" の機械的補助を `/spec` SKILL.md に組み込む候補。本 batch session で #778 (verify command 対称性) と同根論点だが、3 度繰り返しの観察により Priority 上げる材料。**Tier 1 priority** (反復観察済み構造的問題)。
+2. **削除系 Issue の test coverage 維持**: 本 Issue で `--issues-json` テストカバレッジが Spec Changed Files に含まれず削除系の test gap として記録された。削除系 Issue では "削除した機能の test coverage が retained script の coverage 維持を実現しているか" の review check item が candidate。Tier 2 (convention) — terminal 出力 only。
+3. **Tier 3 recovery の Auto Retrospective 自動追記**: 本 batch session 3 度目の Tier 3 観察。#800 で起票済みの設計の必要性を強化、新規起票不要。
