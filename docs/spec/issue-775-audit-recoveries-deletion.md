@@ -61,3 +61,52 @@
 
 - saito (MEMBER, first-class) — 2026-06-27T17:23:12Z: Issue Retrospective コメント (自動解決済み曖昧ポイント 3 件 + 削除系スキャン結果) — https://github.com/saitoco/wholework/issues/775#issuecomment-4819684023
   - 自動解決内容は Issue 本文の `## Auto-Resolved Ambiguity Points` セクションに反映済み
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の "Changed Files" に `docs/structure.md` と `docs/ja/structure.md` は SHOULD (AC 外) として記載されていたが、実装では両ファイルも更新した。audit 行の説明文 (`Drift, fragility, and recovery pattern detection...`) が削除後の機能と不一致になるため SHOULD を実施するのが自然と判断。Spec の "Implementation Steps" は SHOULD の記載がなかったため実際の実装と差異あり。
+- `## recoveries Subcommand` セクションの削除は Python の正規表現 (`re.sub`) で行った。Edit ツールの old_string が非常に長いため一括置換が困難であり、Bash + Python で処理する方が確実だったため。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- `docs/reports/orchestration-recoveries.md` (scope 外ファイル) に `/audit recoveries` への stale 参照が行 15 と行 283 に残存。Spec の "Changed Files" リストにこのファイルが含まれておらず、review で初めて発見。削除系変更時は recovery log など間接的に参照する Markdown ファイルも scope に含めるか明示的に除外を記録すると良い。
+
+### Recurring Issues
+
+- 特になし。
+
+### Acceptance Criteria Verification Difficulty
+
+- 全 9 件が `file_not_contains` / `file_exists` / `rubric` コマンドで明確に検証可能であり UNCERTAIN なし。削除系 Issue として verify command の設計が適切だった。`--issues-json` テストカバレッジ欠落は verify command では検知できない種類の問題 (削除で生じる coverage gap)。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+
+- CI FAILURE (`tests/append-loop-state-heartbeat.bats` テスト 11-15) は本 PR の変更と無関係で main ブランチにも存在する既存問題のため、マージブロック理由としない判断
+- SHOULD 問題 2 件 (orchestration-recoveries.md の stale 参照、--issues-json テスト欠落) は scope 外として skip — 別途フォローアップ推奨
+- MUST 問題なしのため REQUEST_CHANGES ではなく COMMENT で投稿
+
+### Deferred Items
+
+- `docs/reports/orchestration-recoveries.md` の stale 参照修正 (行 15, 283) — 別 Issue 推奨
+- `tests/collect-recovery-candidates.bats` への `--issues-json` テスト追加 — 別 Issue 推奨
+- CI FAILURE (`tests/append-loop-state-heartbeat.bats`) の根本原因調査 — 既存問題、本 PR 無関係
+
+### Notes for Next Phase
+
+- MUST 問題なし。`/merge 803` で直接マージ可能
+- post-merge の 2 条件 (`/audit recoveries` で unknown subcommand 確認、`/verify` Step 15 の動作確認) は `/verify` フェーズで実施
