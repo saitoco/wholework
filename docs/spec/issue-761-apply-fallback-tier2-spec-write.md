@@ -188,3 +188,31 @@
 - verify コマンドはすべて pre-merge で PASS 済み
 - Post-merge verify: 次回 Tier 2 fallback 発生時に Spec `## Auto Retrospective` への自動書き込みを観察
 - label は `verify` に遷移済み
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Auto-Resolved Ambiguity (3 件: 書き込み実装場所 / ドキュメント更新範囲 / エントリフォーマット) が明確に定義され、code phase で迷いなく実装できた。良いパターン。
+- AC1 rubric の「apply-fallback が … 書き込む」を「apply-fallback 実行をトリガーとする書き込み」と解釈し、実装は run-auto-sub.sh 内の `_write_tier2_recovery_to_spec()` で行う設計に着地。AC1 と AC2 (`grep run-auto-sub.sh`) の整合性が取れた。
+
+#### code
+- 1 発で全テスト PASS、リワークなし。
+- SKILL.md Source 1 note の "XL route only" 表現が `_write_tier2_recovery_to_spec()` の実際の呼び出し範囲 (XS/S/M/L) と齟齬。Code Retrospective に「致命的でないため放置」と記録、意図的判断。次回 SKILL.md 更新時に調整する余地あり (Tier 3 — one-time memo)。
+
+#### review
+- 唯一の指摘は `check-forbidden-expressions.sh` の単語境界バグによる CI false positive。pre-existing でこの PR の責ではないと判断。
+- テスト側: `tests/apply-fallback.bats` で `phase=` フィールドの検証が欠落。CONSIDER 扱い、本 PR では対応せず (Tier 3)。
+
+#### merge
+- CI `ci_failing` (Forbidden Expressions false positive) を non-interactive auto-resolve で通過。判断は正しいが、CI 偽陽性が継続して発生する状況 (本 batch では #760, #761 で連続発生) は構造的問題として浮上。
+
+#### verify
+- 3 件すべて PASS、UNCERTAIN ゼロ。pre-merge AC 設計が良好。
+
+### Improvement Proposals
+
+- **check-forbidden-expressions.sh の単語境界バグ修正**: `Issue Spec` パターンに単語境界がなく、`sub-issue Spec` 等の正当な記述を false positive として検出する。本 batch (#760, #761) で連続して CI false FAILURE が発生し、merge phase での auto-resolve に依存して通過。同じ pre-existing failure が今後も発生し続けるため、根本対処が必要。Tier 1 (structural、複数 PR に影響、再発性高い)。修正ターゲット: `scripts/check-forbidden-expressions.sh` のパターン定義に `\b` 単語境界追加。
+- **tests/apply-fallback.bats での `phase=` フィールド検証追加**: 既存 `dco-signoff-missing-autofix` テストが meta_file の `phase=` フィールドを assert していない。test completeness の improvement。Tier 3 (one-time memo)。
+- **SKILL.md Source 1 note の表現修正**: "XL route only" → "XL route Spec write timing" 相当に書き換え、`_write_tier2_recovery_to_spec()` の実呼び出し範囲 (XS/S/M/L) との齟齬を解消。Tier 3 (one-time memo)。
