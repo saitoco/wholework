@@ -192,16 +192,16 @@ run_phase_with_recovery() {
   export EMIT_ISSUE_NUMBER="$issue"
   export EMIT_PHASE_NAME="$phase"
 
-  local PHASE_START
-  PHASE_START=$(date +%s)
-  emit_event "phase_start" "phase=${phase}"
-
   # Bash-side comments_consumed emit for code phases (issue-level comment consumption).
-  # run-auto-sub.sh handles this so the event is captured even when LLM skips
-  # Step 6 of l0-surfaces.md Comment Consumption Procedure. (Issue #705)
+  # Emitted before phase_start so _maybe_emit_phase_complete backfill detection
+  # still sees phase_start as the last event when phase_complete is absent. (Issue #705)
   if [[ "$phase" == code* ]]; then
     _emit_comments_consumed "$issue" "code" || true
   fi
+
+  local PHASE_START
+  PHASE_START=$(date +%s)
+  emit_event "phase_start" "phase=${phase}"
 
   set +e
   "$runner_script" "$issue" "$@" > "$log_file" 2>&1

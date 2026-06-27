@@ -152,9 +152,10 @@ If no comments were consumed: write "No new comments since last phase."
 **Step 6 — Emit event (handled by bash wrapper in auto mode; LLM skip):**
 
 In `/auto` mode (invoked via `scripts/run-auto-sub.sh`), the bash wrapper calls
-`_emit_comments_consumed()` before each phase runner script. This ensures the
-`comments_consumed` event is captured even when the LLM omits this step.
-**LLM action: skip this step** to avoid duplicate events.
+`_emit_comments_consumed()` before the `phase_start` emit for each code phase runner.
+Placing it before `phase_start` ensures the backfill detection in
+`_maybe_emit_phase_complete()` still sees `phase_start` as the last event when
+`phase_complete` is absent. **LLM action: skip this step** to avoid duplicate events.
 
 In non-auto interactive mode (`AUTO_EVENTS_LOG` not set): skip this step.
 
