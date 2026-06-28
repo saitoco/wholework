@@ -66,3 +66,29 @@
 ## Consumed Comments
 
 - `saito` (MEMBER / first-class): Issue Retrospective コメント — verify-type 修正、AC1 rubric 内ファイルパス修正、pre-merge AC の rubric 補助チェック判断の3点を自動解決済みとして記録
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- `phase/ready` ラベルが付与されていない状態で code phase が開始された (labels: `triaged`, `phase/code`, `retro/verify`)。Non-interactive auto-resolve により Issue 本文と Spec から直接実装を進めた。
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `skills/doc/translate-phase.md` の Step 3 Write 呼び出し直後に Code Block Fidelity Check サブステップを追加した。Spec では Step 3 の翻訳ループ内での挿入を指定しており、コードフェンス数比較 → 警告出力 → 不一致時に source から欠落コードブロックを再挿入する 4 ステップ形式を採用した。
+- `docs/translation-workflow.md` Sync Procedure に Step 5 として code block fidelity check を追記した。既存の Step 4 と同一レベルの具体手順で記述し、視認性を保つ形式を選択した。
+- `docs/ja/translation-workflow.md` には Step 5 の日本語訳を追加した。英語版 Step 5 と同等の内容・構造を維持した。
+
+### Deferred Items
+- `/doc translate` 実行時の実際の code block fidelity check 発火は `verify-type: opportunistic` として post-merge 観察に委ねた (#790 AC Post-merge)。
+
+### Notes for Next Phase
+- 実装は 3 ファイルへの追加のみ。既存ロジックへの変更はなし。verify phase では rubric AC2 つが PASS であることを確認する。
+- `docs/translation-workflow.md` と `docs/ja/translation-workflow.md` の Step 5 が対称的に追加されている点を確認する。
