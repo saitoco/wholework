@@ -188,7 +188,7 @@ Named queries to use (`--query <n>` format): `get-projects-with-fields`, `get-is
 1. Fetch project fields with `--query get-projects-with-fields --cache`
    - If `projectsV2.nodes` is empty → label fallback for Size, Value, and Priority (if detected); skip remaining steps
 2. Identify Size field, Value field, and Priority field in the project
-   - If Value field does not exist: prompt "Please manually create a `Value` field (Single Select type, options: 1–5) in Projects, then re-run" and skip Value; use individual `--query update-field-value` for Size only (→ skip to step 4)
+   - If Value field does not exist: prompt "Please manually create a `Value` field (Single Select type, options: 1–5) in Projects, then re-run" and skip Value; proceed to step 3 to obtain ITEM_ID, then in step 4 use `--query update-field-value` for Size only instead of the batch mutation
 3. Get Issue node ID and add to project:
    ```bash
    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --cache --query get-issue-id -F num=$NUMBER --jq '.data.repository.issue.id'
