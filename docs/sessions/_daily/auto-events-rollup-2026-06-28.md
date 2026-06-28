@@ -2,7 +2,7 @@
 type: report
 description: Daily rollup of /auto session events from .tmp/auto-events.jsonl
 generated_by: scripts/auto-events-rollup.sh
-generated_at: 2026-06-28T08:55:37Z
+generated_at: 2026-06-28T18:15:28Z
 ---
 
 # /auto Event Rollup — 2026-06-28
@@ -56,17 +56,32 @@ generated_at: 2026-06-28T08:55:37Z
 | #816 | - | 03:21:13 | 03:44:06 | 22m | review→merge | — | success |
 | #817 | - | 04:22:15 | 04:38:27 | 16m | review→merge | — | success |
 | #818 | - | 05:38:03 | 05:58:47 | 20m | review→merge | — | success |
+| #819 | - | 13:30:49 | 13:36:42 | 5m | issue | — | success |
+| #819 | M | 13:36:54 | 13:56:38 | 19m | spec→code-pr | — | success |
+| #820 | - | 14:22:00 | 14:31:23 | 9m | issue | — | success |
+| #820 | M | 14:31:40 | 14:51:24 | 19m | spec→code-pr | — | success |
+| #822 | - | 15:09:23 | 15:16:56 | 7m | issue | — | success |
+| #822 | M | 15:17:13 | 15:58:59 | 41m | spec→code-pr | — | success |
+| #823 | - | 16:27:10 | 16:35:43 | 8m | issue | — | success |
+| #823 | M | 16:35:55 | 17:08:52 | 32m | spec→code-pr | — | success |
+| #824 | - | 17:27:26 | 17:35:49 | 8m | issue | — | success |
+| #824 | M | 17:36:01 | 17:57:05 | 21m | spec→code-pr | — | success |
+| #825 | - | 13:56:39 | 14:14:42 | 18m | review→merge | — | success |
+| #828 | - | 14:51:25 | 15:05:47 | 14m | review→merge | — | success |
+| #830 | - | 15:59:00 | 16:23:22 | 24m | review→merge | — | success |
+| #833 | - | 17:08:53 | 17:24:04 | 15m | review→merge | — | success |
+| #835 | - | 17:57:06 | 18:11:27 | 14m | review→merge | — | success |
 
 ## Phase Distribution
 
 | Phase | Count | Median Duration | p95 |
 |-------|-------|-----------------|-----|
 | code-patch | 17 | 14m | 30m |
-| code-pr | 5 | 19m | 26m |
-| issue | 24 | 7m | 10m |
-| merge | 6 | 4m | 5m |
-| review | 7 | 15m | 26m |
-| spec | 19 | 9m | 20m |
+| code-pr | 10 | 19m | 26m |
+| issue | 29 | 7m | 10m |
+| merge | 11 | 4m | 5m |
+| review | 12 | 14m | 26m |
+| spec | 24 | 9m | 18m |
 
 ## Recovery Tier Invocations
 
