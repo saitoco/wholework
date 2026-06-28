@@ -103,38 +103,60 @@ if command -v gh >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
 fi
 [[ -z "$SNAPSHOT" ]] && SNAPSHOT="snapshot-unavailable"
 
-# Create file with unified header if it does not yet exist.
-if [[ ! -f "$FILE" ]]; then
-  mkdir -p "$SESSIONS_DAILY_DIR" 2>/dev/null || true
-  {
-    printf '%s\n' '---'
-    printf '%s\n' 'type: report'
-    printf '%s\n' "description: Loop state log for $DATE (phase-transition heartbeats and next-cycle seeds)"
-    printf '%s\n' "date: $DATE"
-    printf '%s\n' '---'
-    printf '\n'
-    printf '%s\n' "# Loop State — $DATE"
-    printf '\n'
-    printf '%s\n' '| Time (UTC) | Phase | Event | Detail |'
-    printf '%s\n' '|------------|-------|-------|--------|'
-  } >> "$FILE" 2>/dev/null || {
-    echo "append-loop-state-heartbeat.sh: WARNING — skip (cannot create $FILE)" >&2
-    exit 0
-  }
-fi
-
-# Append row (best-effort). Detail packs issue, transition, and aggregated snapshot.
+# Detail packs issue, transition, and aggregated snapshot.
 DETAIL="#${ISSUE} ${FROM}→${TO} snapshot:[${SNAPSHOT}]"
 
-# Dedup: skip if last row already contains this transition (best-effort).
-if [[ -f "$FILE" ]]; then
-  LAST_ROW=$(tail -1 "$FILE" 2>/dev/null || true)
-  if [[ -n "$LAST_ROW" && "$LAST_ROW" == *"$DETAIL"* ]]; then
-    exit 0
+# _do_append: file-creation + dedup + append as one atomic unit.
+# Called inside a flock or mkdir-lock critical section.
+# Uses return 0 (not exit) for flow control inside the function.
+_do_append() {
+  if [[ ! -f "$FILE" ]]; then
+    mkdir -p "$SESSIONS_DAILY_DIR" 2>/dev/null || true
+    {
+      printf '%s\n' '---'
+      printf '%s\n' 'type: report'
+      printf '%s\n' "description: Loop state log for $DATE (phase-transition heartbeats and next-cycle seeds)"
+      printf '%s\n' "date: $DATE"
+      printf '%s\n' '---'
+      printf '\n'
+      printf '%s\n' "# Loop State — $DATE"
+      printf '\n'
+      printf '%s\n' '| Time (UTC) | Phase | Event | Detail |'
+      printf '%s\n' '|------------|-------|-------|--------|'
+    } >> "$FILE" 2>/dev/null || {
+      echo "append-loop-state-heartbeat.sh: WARNING — skip (cannot create $FILE)" >&2
+      return 0
+    }
   fi
-fi
+  local last_row
+  last_row=$(tail -1 "$FILE" 2>/dev/null || true)
+  if [[ -n "$last_row" && "$last_row" == *"$DETAIL"* ]]; then
+    return 0
+  fi
+  printf '| %s | %s | %s | %s |\n' "$TS" "$PHASE_LABEL" "phase-transition" "$DETAIL" >> "$FILE" 2>/dev/null || true
+}
 
-printf '| %s | %s | %s | %s |\n' "$TS" "$PHASE_LABEL" "phase-transition" "$DETAIL" >> "$FILE" 2>/dev/null || true
+# Acquire a file lock before running _do_append so that parallel batch workers
+# cannot interleave file-creation, dedup, and append — preventing duplicate rows.
+# flock -n (non-blocking): if the lock is held, skip gracefully (best-effort).
+LOCK_FILE="${FILE}.lock"
+if command -v flock >/dev/null 2>&1; then
+  (flock -n 9 || exit 0; _do_append) 9>"$LOCK_FILE" 2>/dev/null || true
+else
+  # mkdir-lock fallback (bash 3.2+ compatible, no flock required)
+  LOCK_DIR="${FILE}.lockdir"
+  tries=0
+  while ! mkdir "$LOCK_DIR" 2>/dev/null; do
+    tries=$((tries + 1))
+    if (( tries > 50 )); then
+      _do_append
+      tries=-1
+      break
+    fi
+    sleep 0.1
+  done
+  [[ "$tries" != -1 ]] && { _do_append; rmdir "$LOCK_DIR" 2>/dev/null || true; }
+fi
 
 # Best-effort auto-commit: commit the heartbeat file immediately so verify workers see a clean state.
 # Failure is non-fatal — the verify-side exempt in check-verify-dirty.sh (#824) acts as fallback.
