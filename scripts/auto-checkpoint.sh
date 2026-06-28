@@ -5,6 +5,9 @@
 #   auto-checkpoint.sh read_single <NUMBER>
 #   auto-checkpoint.sh write_single <NUMBER> <COUNT>
 #   auto-checkpoint.sh delete_single <NUMBER>
+#   auto-checkpoint.sh read_milestone <NUMBER>
+#   auto-checkpoint.sh write_milestone <NUMBER> <MILESTONE>
+#   auto-checkpoint.sh resume_action <MILESTONE>
 #   auto-checkpoint.sh read_batch [<BATCH_ID>]
 #   auto-checkpoint.sh write_batch [<BATCH_ID>] <REMAINING> <COMPLETED> <FAILED>
 #   auto-checkpoint.sh update_batch [<BATCH_ID>] <NUMBER> complete|fail
@@ -14,7 +17,17 @@
 # Subcommand descriptions:
 #   read_single  NUMBER            Print verify_iteration_count (stale/absent -> 0)
 #   write_single NUMBER COUNT      Write .tmp/auto-state-NUMBER.json atomically
+#                                  (preserves code_phase_milestone via merge)
 #   delete_single NUMBER           Delete .tmp/auto-state-NUMBER.json (absent is noop)
+#   read_milestone NUMBER          Print code_phase_milestone (stale/absent -> "initial")
+#   write_milestone NUMBER MS      Write code_phase_milestone atomically; validates MS
+#                                  against 6-value enum; exit 1 on invalid value
+#                                  (preserves verify_iteration_count via merge)
+#   resume_action MILESTONE        Print resume action for a given milestone (pure mapping):
+#                                  initial/pre-commit -> run-code
+#                                  post-commit        -> push-and-pr
+#                                  post-push/pre-PR-create -> create-pr
+#                                  post-PR-create     -> skip-to-review
 #   read_batch [BATCH_ID]          Print remaining list (space-separated; absent/empty -> "")
 #   write_batch [BATCH_ID] REM COM FAIL  Write per-BATCH_ID state file atomically;
 #                                        adds BATCH_ID to active index (skips "default")
@@ -28,9 +41,13 @@
 #
 # Design: reconciler-first / checkpoint-as-hint
 #   - Phase authority: GitHub labels + reconcile-phase-state.sh
-#   - Checkpoint carries only: verify_iteration_count (single) or remaining list (batch)
-#   - Stale detection: issue_number mismatch -> discard (return 0)
+#   - Checkpoint carries: verify_iteration_count + code_phase_milestone (single) or
+#     remaining list (batch)
+#   - code_phase_milestone: hint for run-auto-sub.sh resume preamble; fine milestone
+#     is reconciled from observable git/GitHub state at resume time
+#   - Stale detection: issue_number mismatch -> discard (return defaults)
 #   - Atomic write: write to *.json.tmp then mv to target
+#   - Merge semantics: write_single and write_milestone preserve each other's field
 
 set -uo pipefail
 
@@ -43,6 +60,56 @@ _ensure_tmp() {
 
 _now() {
   date -u +"%Y-%m-%dT%H:%M:%SZ"
+}
+
+# _merge_single_field NUMBER FIELD VALUE
+# Read-then-write helper: reads existing state file (if valid), updates one field,
+# writes back atomically. Both verify_iteration_count and code_phase_milestone are
+# preserved across independent writes (merge semantics).
+# Stale or absent files are initialized to defaults before applying the field update.
+_merge_single_field() {
+  local number="$1"
+  local field="$2"
+  local value="$3"
+  _ensure_tmp
+  local path="${TMP_DIR}/auto-state-${number}.json"
+  local tmp_path="${path}.tmp"
+  local ts
+  ts=$(_now)
+
+  local existing_count="0"
+  local existing_milestone="initial"
+
+  if [[ -f "$path" ]]; then
+    local stored_number
+    stored_number=$(jq -r '.issue_number // empty' "$path" 2>/dev/null || true)
+    if [[ "$stored_number" == "$number" ]]; then
+      local _c _m
+      _c=$(jq -r '.verify_iteration_count // 0' "$path" 2>/dev/null || true)
+      _m=$(jq -r '.code_phase_milestone // "initial"' "$path" 2>/dev/null || true)
+      [[ -n "$_c" ]] && existing_count="$_c"
+      [[ -n "$_m" ]] && existing_milestone="$_m"
+    fi
+  fi
+
+  case "$field" in
+    verify_iteration_count) existing_count="$value" ;;
+    code_phase_milestone)   existing_milestone="$value" ;;
+  esac
+
+  if ! jq -n \
+    --arg sv "v1" \
+    --argjson n "$number" \
+    --argjson c "$existing_count" \
+    --arg m "$existing_milestone" \
+    --arg ts "$ts" \
+    '{schema_version: $sv, issue_number: $n, verify_iteration_count: $c, code_phase_milestone: $m, last_update: $ts}' \
+    > "$tmp_path" 2>/dev/null; then
+    rm -f "$tmp_path"
+    echo "auto-checkpoint: merge failed for issue $number field $field" >&2
+    return 1
+  fi
+  mv "$tmp_path" "$path"
 }
 
 # Return the file path for a given BATCH_ID.
@@ -154,25 +221,13 @@ cmd_read_single() {
 
 # -----------------------------------------------------------------------
 # write_single NUMBER COUNT
-# Writes .tmp/auto-state-NUMBER.json atomically.
+# Writes verify_iteration_count to .tmp/auto-state-NUMBER.json atomically.
+# Uses merge helper to preserve code_phase_milestone.
 # -----------------------------------------------------------------------
 cmd_write_single() {
   local number="$1"
   local count="$2"
-  _ensure_tmp
-  local path="${TMP_DIR}/auto-state-${number}.json"
-  local tmp_path="${path}.tmp"
-  local ts
-  ts=$(_now)
-
-  jq -n \
-    --arg sv "v1" \
-    --argjson n "$number" \
-    --argjson c "$count" \
-    --arg ts "$ts" \
-    '{schema_version: $sv, issue_number: $n, verify_iteration_count: $c, last_update: $ts}' \
-    > "$tmp_path"
-  mv "$tmp_path" "$path"
+  _merge_single_field "$number" "verify_iteration_count" "$count"
 }
 
 # -----------------------------------------------------------------------
@@ -183,6 +238,85 @@ cmd_delete_single() {
   local number="$1"
   local path="${TMP_DIR}/auto-state-${number}.json"
   rm -f "$path"
+}
+
+# -----------------------------------------------------------------------
+# read_milestone NUMBER
+# Prints code_phase_milestone from .tmp/auto-state-NUMBER.json.
+# Returns "initial" on stale or absent file.
+# -----------------------------------------------------------------------
+cmd_read_milestone() {
+  local number="$1"
+  local path="${TMP_DIR}/auto-state-${number}.json"
+
+  if [[ ! -f "$path" ]]; then
+    echo "initial"
+    return 0
+  fi
+
+  local stored_number
+  stored_number=$(jq -r '.issue_number // empty' "$path" 2>/dev/null || true)
+  if [[ "$stored_number" != "$number" ]]; then
+    echo "initial"
+    return 0
+  fi
+
+  local milestone
+  milestone=$(jq -r '.code_phase_milestone // "initial"' "$path" 2>/dev/null || echo "initial")
+  echo "$milestone"
+}
+
+# -----------------------------------------------------------------------
+# write_milestone NUMBER MILESTONE
+# Writes code_phase_milestone to .tmp/auto-state-NUMBER.json atomically.
+# Uses merge helper to preserve verify_iteration_count.
+# Valid MILESTONE values: initial pre-commit post-commit post-push pre-PR-create post-PR-create
+# Exits 1 on invalid MILESTONE value.
+# -----------------------------------------------------------------------
+_VALID_MILESTONES="initial pre-commit post-commit post-push pre-PR-create post-PR-create"
+
+cmd_write_milestone() {
+  local number="$1"
+  local milestone="$2"
+
+  local valid=false
+  local ms
+  for ms in $_VALID_MILESTONES; do
+    if [[ "$ms" == "$milestone" ]]; then
+      valid=true
+      break
+    fi
+  done
+
+  if [[ "$valid" == "false" ]]; then
+    echo "Usage: auto-checkpoint.sh write_milestone <NUMBER> <MILESTONE>" >&2
+    echo "Valid milestones: $_VALID_MILESTONES" >&2
+    exit 1
+  fi
+
+  _merge_single_field "$number" "code_phase_milestone" "$milestone"
+}
+
+# -----------------------------------------------------------------------
+# resume_action MILESTONE
+# Pure mapping: prints the resume action for a given milestone.
+#   initial / pre-commit  -> run-code
+#   post-commit           -> push-and-pr
+#   post-push / pre-PR-create -> create-pr
+#   post-PR-create        -> skip-to-review
+# Unknown milestone defaults to run-code (safe fallback).
+# -----------------------------------------------------------------------
+cmd_resume_action() {
+  local milestone="$1"
+  case "$milestone" in
+    initial)         echo "run-code" ;;
+    pre-commit)      echo "run-code" ;;
+    post-commit)     echo "push-and-pr" ;;
+    post-push)       echo "create-pr" ;;
+    pre-PR-create)   echo "create-pr" ;;
+    post-PR-create)  echo "skip-to-review" ;;
+    *)               echo "run-code" ;;
+  esac
 }
 
 # -----------------------------------------------------------------------
@@ -332,6 +466,18 @@ case "$SUBCMD" in
   delete_single)
     [[ $# -lt 1 ]] && { echo "Usage: auto-checkpoint.sh delete_single <NUMBER>" >&2; exit 1; }
     cmd_delete_single "$1"
+    ;;
+  read_milestone)
+    [[ $# -lt 1 ]] && { echo "Usage: auto-checkpoint.sh read_milestone <NUMBER>" >&2; exit 1; }
+    cmd_read_milestone "$1"
+    ;;
+  write_milestone)
+    [[ $# -lt 2 ]] && { echo "Usage: auto-checkpoint.sh write_milestone <NUMBER> <MILESTONE>" >&2; exit 1; }
+    cmd_write_milestone "$1" "$2"
+    ;;
+  resume_action)
+    [[ $# -lt 1 ]] && { echo "Usage: auto-checkpoint.sh resume_action <MILESTONE>" >&2; exit 1; }
+    cmd_resume_action "$1"
     ;;
   read_batch)
     cmd_read_batch "${1:-}"

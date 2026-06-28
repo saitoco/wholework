@@ -101,6 +101,20 @@ exit 1
 MOCK
     chmod +x "$MOCK_DIR/spawn-recovery-subagent.sh"
 
+    # Mock auto-checkpoint.sh: no-op milestone operations so existing tests are unaffected
+    cat > "$MOCK_DIR/auto-checkpoint.sh" <<'MOCK'
+#!/bin/bash
+case "$1" in
+    read_milestone) echo "initial" ;;
+    resume_action)  echo "run-code" ;;
+    write_milestone) exit 0 ;;
+    write_single)   exit 0 ;;
+    read_single)    echo "0" ;;
+    *) exit 0 ;;
+esac
+MOCK
+    chmod +x "$MOCK_DIR/auto-checkpoint.sh"
+
     # Mock gh: default phase/ready label present, pr list returns PR 99
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
@@ -812,4 +826,37 @@ MOCK
     run bash "$SCRIPT" 42
     [ "$status" -eq 0 ]
     [[ "$output" != *"Post-spec route demotion/upgrade"* ]]
+}
+
+@test "resume preamble: no residual worktree or branch - run-code.sh is called normally (Size M)" {
+    # No worktree dir, no branch: gate does not fire, code phase runs normally
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "42 --pr" "$RUN_CODE_LOG"
+    [[ "$output" != *"[resume]"* ]]
+}
+
+@test "resume preamble: residual worktree dir present and action=skip-to-review: code phase is skipped (Size M)" {
+    # Create worktree dir to trigger the resume preamble gate
+    mkdir -p "$BATS_TEST_TMPDIR/.claude/worktrees/code+issue-42"
+
+    # Override auto-checkpoint.sh to return skip-to-review for resume_action
+    cat > "$MOCK_DIR/auto-checkpoint.sh" <<'MOCK'
+#!/bin/bash
+case "$1" in
+    read_milestone) echo "post-PR-create" ;;
+    resume_action)  echo "skip-to-review" ;;
+    *) exit 0 ;;
+esac
+MOCK
+    chmod +x "$MOCK_DIR/auto-checkpoint.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    # run-code.sh should NOT be called (code phase skipped)
+    [ ! -f "$RUN_CODE_LOG" ]
+    # review and merge should still be called
+    [ -f "$RUN_REVIEW_LOG" ]
+    [ -f "$RUN_MERGE_LOG" ]
+    [[ "$output" == *"[resume]"* ]]
 }
