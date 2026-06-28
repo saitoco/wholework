@@ -65,7 +65,7 @@ No new comments since last phase.
 
 ### Deviations from Design
 
-- None. Implementation followed the Spec exactly. Step 1 (SKILL.md edit) and Step 2 (verify-patterns.md §17 addition) both matched the specified text.
+- Section number changed from §17 to §18 during rebase: Issue #796 landed on main before this merge and also added §17 to `verify-patterns.md`. Renumbered the section to §18 during rebase conflict resolution. The section content is unchanged.
 
 ### Design Gaps/Ambiguities
 
@@ -80,7 +80,7 @@ No new comments since last phase.
 
 ### Key Decisions
 - Changed only one bullet in the consistency check step (line 497), not the surrounding context — the surrounding detection logic was correct and only the action ("update Issue body" → "update Spec") needed reversing.
-- Added §17 to `modules/verify-patterns.md` verbatim from the Spec to keep language precise.
+- Added as §18 to `modules/verify-patterns.md` (renumbered from §17 due to #796 conflict) verbatim from the Spec to keep language precise.
 
 ### Deferred Items
 - None. Scope was narrow (1 SKILL.md bullet + 1 module section); completed in full.
