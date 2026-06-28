@@ -62,6 +62,7 @@ emit_event() { return 0; }
 MOCK
 
     cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/guard-prefix.sh" "$MOCK_DIR/guard-prefix.sh"
+    cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/retry-on-kill.sh" "$MOCK_DIR/retry-on-kill.sh"
 
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
