@@ -96,19 +96,36 @@ No new comments since last phase.
 
 - N/A
 
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- The Spec's "Changed Files" list said "all 4 `run-*.sh`" but actually 6 scripts (`run-issue.sh`, `run-spec.sh`, `run-code.sh`, `run-auto-sub.sh`, `run-review.sh`, `run-merge.sh`) have `_maybe_emit_phase_complete()`. The code phase only updated 4; `run-review.sh` and `run-merge.sh` were missed. This was caught by the review phase and fixed (guard updated in both scripts). Root cause: the Spec Background and Changed Files sections counted wrappers inconsistently — the Wrapper Coverage Table in `event-emission.md` lists 6 wrappers, but the Spec text said "all 4."
+- Improvement: When listing affected files in a Spec, cross-check with the implementation source (e.g., `grep -l "_maybe_emit_phase_complete"`) rather than relying on a mental count. A `find`/`grep` step in the Spec's Changed Files enumeration would catch this earlier.
+
+### Recurring Issues
+
+- Nothing to note.
+
+### Acceptance Criteria Verification Difficulty
+
+- All 3 pre-merge conditions were verifiable at review time: 2 rubric checks (PASS) and 1 github_check (CI job conclusion). No UNCERTAIN results.
+- The `rubric` verify commands were effective for this PR — the semantic check confirmed doc-vs-code alignment without ambiguity.
+- The test for SIGTERM (exit 143) backfill uses an inline helper script that duplicates the guard logic rather than exercising the actual run scripts. This is an acknowledged tradeoff (avoids timing-sensitive SIGTERM in bats); the gap (no negative test for exit 1 → no backfill) was noted as CONSIDER.
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Chose Option 2 (code extension): extended all 4 `run-*.sh` guards to allow exit 143 (SIGTERM) through to backfill logic, rather than Option 1 (doc fix only). Rationale: SIGTERM backfill improves post-merge AC observability in Tier 3 recovery.
-- bats test uses an inline helper script written to `$BATS_TEST_TMPDIR` (not running full `run-auto-sub.sh`) because SIGTERM on a complex script is timing-sensitive and flaky in bats context.
-- The Spec also had a deprecated term (旧称: verify hints) remaining in the Notes section, fixed to "verify commands" in a separate commit.
+- All pre-merge ACs verified PASS (rubric × 2, github_check CI × 1); all CI jobs SUCCESS.
+- SHOULD finding: `run-review.sh` and `run-merge.sh` had stale guard; fixed in this review phase by extending the guard to match the other 4 wrappers.
+- No MUST issues; review posted as COMMENT event (not REQUEST_CHANGES).
 
 ### Deferred Items
-- AC2 github_check ("Run bats tests" CI job) is UNCERTAIN at code time (CI not yet run). Will resolve after CI runs on PR #812.
-- Post-merge AC (observation event=watchdog-kill) deferred to natural occurrence of next Tier 3 recovery.
+- Post-merge AC (observation event=watchdog-kill) deferred to natural occurrence of next Tier 3 recovery — no action needed in merge phase.
+- CONSIDER finding (negative test for exit 1) not fixed — low priority.
 
 ### Notes for Next Phase
-- PR #812 created. Wait for CI to confirm bats tests pass before merging.
-- All 982 bats tests pass locally. The guard change is minimal (one `&& "$_exit_code" -ne 143` addition per script).
-- The `modules/event-emission.md` SSoT now correctly documents exit 0 or 143 backfill behavior — the `/review` phase should verify the rubric ACs confirm this alignment.
+- PR #812 is ready to merge. All ACs PASS, CI SUCCESS, SHOULD fix applied.
+- New commits on `worktree-code+issue-802`: guard update for `run-review.sh` and `run-merge.sh`.
+- Run `/merge 812` to proceed.
