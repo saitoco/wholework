@@ -97,17 +97,18 @@ Nothing to note. 4 観点レビューで MUST/SHOULD/CONSIDER いずれの課題
 Nothing to note. AC1 (rubric) はスクリプト本体の読み取りで確認。AC2 (bats) は CI reference fallback (CI job "Run bats tests" SUCCESS) で PASS 判定。UNCERTAIN 0 件。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST 課題 0 件のため コード修正不要。PR はそのままマージ可能。
-- 軽量統合レビュー (light モード) で 4 観点を確認し、実装・テスト・ドキュメントすべてに問題なし。
-- CI 全ジョブ SUCCESS (DCO, bats, validate-skill-syntax, forbidden-expressions, macOS-compat)。
+- `mergeable=true`, CI SUCCESS, approved のため競合解決不要でスカッシュマージを直接実行。
+- `closes #820` が PR body に含まれ、base branch が `main` のため Issue は自動クローズされる。
+- Phase Handoff を Spec に記録し、verify フェーズへ引き継ぐ。
 
 ### Deferred Items
-- post-merge AC (observation event=auto-run) は `/verify` 自動検証対象外。次回 `/auto --batch` 後に手動観察で確認。
-- flock による並列 race condition 対策は別 Issue で対応 (既知の Deferred Item)。
+- post-merge AC (observation event=auto-run): 次回 `/auto --batch` 実行後に `loop-state-*.md` の重複行を手動観察。
+- flock による並列 race condition 対策は別 Issue で対応 (Spec Notes に記載済み)。
 
 ### Notes for Next Phase
-- PR #828 は `/merge` 可能な状態。`/merge 828` を実行してよい。
-- Phase Handoff write: review フェーズ完了。
+- verify フェーズでは pre-merge AC (rubric + bats) の事後確認が主タスク。
+- post-merge AC は observation 型のため verify コマンドでは自動検証不可 — 手動観察で判断。
+- マージコミットは main に反映済み。worktree-code+issue-820 ブランチは削除済み。
