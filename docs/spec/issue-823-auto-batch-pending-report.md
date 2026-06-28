@@ -68,51 +68,31 @@
 
 **bats awk セクション抽出**: `### Batch Completion Report` セクションは `## Notes` (次の `##` 見出し) で終端する。awk パターン: `/^### Batch Completion Report/{found=1} /^## / && !/Batch Completion Report/{found=0} found{print}`
 
-## Phase Handoff
-<!-- phase: spec -->
 
-### Key Decisions
-- `### Batch Completion Report` セクションのみを対象とした (XL route の Step 5 は verify コマンドのスコープ外)
-- 集約ロジックを `best-effort` とした (失敗しても batch フローをブロックしない)
-- `tests/auto-completion-report.bats` は SKILL.md セクションの structural assertion に留めた (LLM 実行ロジックの functional mock は不要)
-- verify-type カウントは issue body の `- [ ]` 行を `<!-- verify-type: TYPE -->` タグで分類する実装を指示した
+## review retrospective
 
-### Deferred Items
-- XL route (`### Step 5: Completion Report`) への同様の pending confirmation 集約は本 Issue スコープ外 (follow-up で検討)
-- None
+### Spec vs. Implementation Divergence Patterns
 
-### Notes for Next Phase
-- Batch Completion Report セクションへの追記位置: "report results (success/skip/failure)" 行の直後に挿入
-- `tests/auto-completion-report.bats` の awk パターンは `## Notes` (level-2) で終端する点に注意 (level-3 `###` ではない)
-- SKILL.md への変更は既存の List mode section のラベルチェックとは独立した別ブロック
+実装は Spec の手順に完全に従っており、乖離なし。`BATCH_LIST` の参照箇所が Spec と一致し、best-effort 実装も正しく反映されている。
 
-## Consumed Comments
-No new comments since last phase.
+### Recurring Issues
 
-## Code Retrospective
+CONSIDER 件 1 件のみ: `batch_completion_section()` ヘルパー関数が bats ファイルで定義されたが各テストでインラインの awk が使われており未使用。これは structural assertion パターン採用時に起きがちな実装ドリフトで、ヘルパー関数の使用方針をより明示的に Spec に記述することで防ぐことができる。
 
-### Deviations from Design
-- None. Implementation followed Spec exactly: inserted the "Pending manual confirmation (best-effort):" block immediately after the "report results" line in `### Batch Completion Report`, and created `tests/auto-completion-report.bats` with 4 structural assertions.
+### Acceptance Criteria Verification Difficulty
 
-### Design Gaps/Ambiguities
-- The awk section-extraction pattern `/^## / && !/Batch Completion Report/{found=0}` uses half-width `!`. This appears inside a shell bats file (not in SKILL.md body), so the Forbidden Expressions restriction does not apply — confirmed by `check-forbidden-expressions.sh` returning no violations.
-- The Spec notes correctly identified that the section terminates at level-2 `## Notes` (not the next `###`). The awk pattern correctly handles this.
-
-### Rework
-- None. All 4 bats tests passed on first run, and no repair cycles were needed.
+全 3 件の Pre-merge AC が section_contains + rubric の組み合わせで自動 PASS。verify command の設計が適切で UNCERTAIN は発生しなかった。bats test は CI フォールバックで PASS。特段の課題なし。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Inserted pending confirmation block as a `best-effort` (non-blocking) step between "report results" and the `next-action-guide.md` call in `### Batch Completion Report`
-- Used plain prose description (not bash code) in SKILL.md body to describe the gh issue view label lookup and verify-type counting — consistent with SKILL.md's LLM-instruction style
-- `tests/auto-completion-report.bats` uses the same structural assertion pattern as `auto-batch.bats` (section extraction via awk, then grep for keywords)
+- MUST 件ゼロ、CONSIDER 1 件のみ (bats 未使用ヘルパー関数) → コード修正不要で `/merge` へ進める
+- Lightweight integrated review (4 perspectives) を直接実行 (review-light subagent が registry 未登録のためインライン実行)
 
 ### Deferred Items
-- XL route (`### Step 5: Completion Report`) pending confirmation aggregation is explicitly out of scope per Spec Notes — deferred to a follow-up Issue
+- CONSIDER 件 (batch_completion_section 未使用ヘルパー) は merge 後のリファクタリングで対応可能
 
 ### Notes for Next Phase
-- PR #833 is on branch `worktree-code+issue-823`; all 3 pre-merge ACs are checked
-- Post-merge AC is `verify-type: observation event=auto-run` — will auto-trigger on next `/auto --batch` run
-- No documentation changes were required (Batch Completion Report output format is internal to the skill, not referenced in README/workflow.md)
+- 全 Pre-merge AC PASS、全 CI SUCCESS、MUST=0 → merge の障害なし
+- Post-merge AC は verify-type: observation event=auto-run (次回 /auto --batch 完了で自動確認)
