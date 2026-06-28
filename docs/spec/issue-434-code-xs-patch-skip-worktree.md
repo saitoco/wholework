@@ -49,7 +49,7 @@ XS は実質「main への 1 ファイル程度の追加 commit」なので、wo
 ### Pre-merge
 
 - <!-- verify: rubric "skills/code/SKILL.md に XS patch route での worktree 作成をスキップする条件分岐が追加されており、適用条件 (非並列実行・直接起動) が読み取れる" --> `skills/code/SKILL.md` に XS patch route での worktree skip 分岐が明記されている
-- <!-- verify: grep "worktree.*skip|skip.*worktree" "skills/code/SKILL.md" --> worktree skip を示すキーワード組み合わせが SKILL.md に含まれている
+- <!-- verify: grep "[Ww]orktree.*[Ss]kip|[Ss]kip.*[Ww]orktree" "skills/code/SKILL.md" --> worktree skip を示すキーワード組み合わせが SKILL.md に含まれている
 - <!-- verify: rubric "skills/code/SKILL.md には patch route かつ非並列実行コンテキストでのみ worktree を skip する条件が明記されており、--auto / 並列実行コンテキストでは worktree を作成する旨が読み取れる" --> 並列実行 (`/auto` 経由など) では従来どおり worktree を使う条件分岐が読み取れる
 - <!-- verify: command "bats tests/worktree-merge-push.bats tests/run-code.bats" --> 既存の worktree-merge-push / run-code テストが通る
 
@@ -63,3 +63,31 @@ XS は実質「main への 1 ファイル程度の追加 commit」なので、wo
 - **worktree-lifecycle.md の変更不要**: ENTERED_WORKTREE=false の場合は既存の "Exit: merge-to-main" が `worktree-merge-push.sh` を `--from` なしで実行（lock+push only）するため、Step 13 Worktree Exit の変更は不要。
 - **`--non-interactive` が唯一の判断軸**: `/code 123 --auto` は Step 0 で run-code.sh に委譲して終了するため Step 2 に到達しない。run-code.sh 経由の自律実行のみが `--non-interactive` を付与するため、このフラグの有無が「対話的起動か否か」の唯一の判断軸となる。
 - **CWD 変化なし**: worktree をスキップした場合、CWD は main repo のまま。Edit/Write ツールは自然に main repo 相対パスを使用するため、ファイル編集の CWD 混乱は発生しない。
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation followed the Spec text exactly ("Worktree skip for XS patch route" heading and all three condition bullets).
+
+### Design Gaps/Ambiguities
+- AC2 grep pattern was miscalibrated: the Spec prescribed heading "Worktree skip" (capital W), but the original grep pattern `worktree.*skip|skip.*worktree` required lowercase "worktree". Corrected to `[Ww]orktree.*[Ss]kip|[Ss]kip.*[Ww]orktree` (bracket notation) in both Issue body and Spec.
+
+### Rework
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- XS-only scope (not S): conservative per Spec notes; S route follow-up is explicitly deferred.
+- `--non-interactive` as the sole discriminator between parallel/auto execution and direct-launch.
+- No changes to `modules/worktree-lifecycle.md`: `ENTERED_WORKTREE=false` path already handles merge-push without `--from`.
+
+### Deferred Items
+- S patch route optimization: explicitly out of scope per AC and Spec Notes; follow-up Issue to be created if adopted.
+- Post-merge observational AC (verify-type: opportunistic): requires manual real-device verification after merge.
+
+### Notes for Next Phase
+- AC2 grep verify command was miscalibrated (capital-W "Worktree" vs lowercase pattern); corrected in Issue body and Spec — `/verify` should use the updated `[Ww]orktree.*[Ss]kip` form.
+- All 4 pre-merge ACs are checked in the Issue body.
+- 51/51 bats tests pass; no test changes needed.
