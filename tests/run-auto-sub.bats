@@ -795,6 +795,29 @@ MOCK
     grep -qE "commit.*Tier 3 recovery" "$GIT_LOG"
 }
 
+@test "run-auto-sub: manual recovery: writes Auto Retrospective to spec file" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+    echo "# Issue #42: test spec" > "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"diff"* && "$*" == *"issue-42"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only
+    [ "$status" -eq 0 ]
+    grep -q "Auto Retrospective" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    grep -q "Manual recovery" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    grep -qE "commit.*manual recovery" "$GIT_LOG"
+}
+
 @test "post-spec size unchanged XS->XS: Post-spec is not logged" {
     cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
 #!/bin/bash
