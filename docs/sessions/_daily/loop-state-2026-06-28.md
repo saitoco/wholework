@@ -30,3 +30,8 @@ date: 2026-06-28
 | 02:01:34 | code | phase-transition | #806 spec→code snapshot:[issue:4 spec:0 code:1 review:2 verify:2] |
 | 02:11:24 | code | phase-transition | #794 spec→code snapshot:[issue:4 spec:0 code:0 review:2 verify:2] |
 | 02:11:25 | code | phase-transition | #794 spec→code snapshot:[issue:4 spec:0 code:0 review:2 verify:2] |
+| 02:15:53 | review | phase-transition | #815 code→review snapshot:[issue:5 spec:0 code:0 review:2 verify:2] |
+| 02:15:53 | review | phase-transition | #815 code→review snapshot:[issue:5 spec:0 code:0 review:2 verify:2] |
+| 02:16:57 | review | phase-transition | #814 code→review snapshot:[issue:5 spec:0 code:0 review:2 verify:2] |
+| 02:20:27 | merge | phase-transition | #815 review→merge snapshot:[issue:5 spec:0 code:0 review:0 verify:2] |
+| 02:20:28 | merge | phase-transition | #815 review→merge snapshot:[issue:5 spec:0 code:0 review:0 verify:2] |
