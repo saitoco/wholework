@@ -129,3 +129,24 @@ No new comments since last phase.
 - Verify can confirm the three pre-merge rubric/CI ACs by re-running them against the merged main state.
 - The bats test `backfill-emit: SIGTERM (exit 143) ...` is the primary assertion to check; it should pass on main.
 - Post-merge AC is observational only (Tier 3 recovery event); verify phase does not need to block on it.
+
+## Auto Retrospective
+
+### Execution Summary
+
+| Phase | Result | Notes |
+|-------|--------|-------|
+| issue | SUCCESS | Size M |
+| spec  | SUCCESS (after 1 retry) | run-spec.sh killed during first attempt at 120s silent. retry success |
+| code  | SUCCESS | PR #812 created normally |
+| review | SUCCESS (with feedback) | review identified run-review.sh / run-merge.sh も同 guard 修正必要を発見 → 修正 commit 追加 |
+| merge | SUCCESS | squash merge complete |
+| verify | SUCCESS | this Skill, all pre-merge PASS |
+
+### Orchestration Anomalies
+
+- **run-spec.sh killed during first attempt**: 本 batch session で 5 度目の同種事例 (#778, #779, #799, #802, ...). 全て retry で成功。
+
+### Improvement Proposals
+
+- **Review feedback follow-up worked**: review が "run-review.sh / run-merge.sh の guard も更新必要" を指摘し、code phase で対応した。Review feedback の incremental fix loop が機能した実例。Review Retrospective でも記録済み。
