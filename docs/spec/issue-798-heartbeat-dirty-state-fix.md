@@ -68,3 +68,33 @@
 
 - saito (MEMBER / first-class) — 2026-06-28T03:56:24Z: Issue Retrospective 記録: AC2 分割 (append-loop-state-heartbeat.bats と verify-dirty-detection.bats を明示) および Post-merge AC の verify-type を `observation event=auto-run` に修正
   URL: https://github.com/saitoco/wholework/issues/798#issuecomment-4824704355
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. 実装ステップは Spec の通りに実行した。`verify-ignore-paths` ロードブロックの直後に built-in 免除パターンを追加し、テストケースも Spec 通りの 2 件を追加した。
+
+### Design Gaps/Ambiguities
+
+- 警告メッセージが built-in パターン経由でも "excluded by verify-ignore-paths" と表示されることは Spec Notes に明記されていたため問題なし。`_is_ignored()` 関数が `ignore_patterns` 配列を共通で使うため、built-in パターンと user-config パターンで同一メッセージが出力される設計は既存の期待に合致していた。
+
+### Rework
+
+- None. 1 回目のコミットで実装が完了し、全 12 テスト PASS。リワークは発生しなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 案 B (verify 側 dirty check 特例) を採用。Case A は commit 履歴肥大・push race リスクがあり採用しない。
+- `ignore_patterns` 配列への追加方式を選択。`_is_ignored()` 関数のシグネチャを変えず、既存 user-config パターンと同一の判定ロジックを共有する。
+- 警告メッセージは変更しない ("excluded by verify-ignore-paths" のまま)。既存テスト行 95・121 のアサートが同文字列を期待しており、変更コストを避ける。
+
+### Deferred Items
+- Post-merge: 次回 `/auto --batch` 実行時に heartbeat dirty state が verify を block しないことを観察 (verify-type: observation event=auto-run)。
+
+### Notes for Next Phase
+- `/review` では `scripts/check-verify-dirty.sh` の変更点 (built-in 免除パターン追加) と `tests/verify-dirty-detection.bats` の新規テストケース 2 件を重点的に確認すること。
+- 案 A を採用しなかった理由が Script コメントおよび Spec Notes に記録されている。
+- Post-merge AC は `observation event=auto-run` なので verify フェーズでは SKIPPED 扱い。
