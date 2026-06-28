@@ -51,3 +51,34 @@ polling backoff (初回 30s 待機 → 再確認 → 2 回目 60s 待機 → 再
 - **exit 2 の意味**: polling timeout abort を示す。`exit 1` は gh fetch error 専用として残す
 - **sleep mock**: bats テストで `sleep` を no-op mock にしないと各テストが 90 秒かかるため、setup() に追加することで全テストに適用
 - **stateful gh mock**: counter file を `$BATS_TEST_TMPDIR` に置くことで各テスト run ごとにリセットされる (bats の tmpdir はテストごとに独立)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Spec の Implementation Steps どおりに実装した。polling backoff ブロックの挿入位置、RETRY_DELAYS の値、exit 2 の使用、stateful mock の counter file パスいずれも Spec 記載と一致。
+
+### Design Gaps/Ambiguities
+
+- `make_gh_mock_stateful` のヒアドキュメント内で `$counter_file` を展開する際、`<<MOCK` (unquoted) を使うことで変数が実際のパスに展開される。`<<'MOCK'` にすると展開されず mock が壊れる点は Spec 未記載だった (実装中に把握)。
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- polling backoff を `gh-pr-merge-status.sh` 内部に閉じ込める設計を採用。merge/SKILL.md の routing ロジックを変更しないため regression リスクが低い。
+- exit 2 を polling timeout 専用とし、exit 1 を gh fetch error 専用に分離。両者を区別することで呼び出し元の error handling が精緻になる。
+- `RETRY_DELAYS=(30 60)` の 2 ステップのみ (合計待機 90s 上限)。GitHub metadata sync は通常 30〜60s 以内に解決するため、過度な待機を避けつつリスクを低減できる判断。
+
+### Deferred Items
+- polling 成功/abort をログ以外の手段 (exit code 以外の structured output 等) で呼び出し元に通知する仕組みは本 Issue スコープ外。merge/SKILL.md での error handling 改善は別途検討。
+- `RETRY_DELAYS` の値を `.wholework.yml` で設定可能にする拡張は現時点で不要だが、将来の要望に備えて Spec Notes に記録済み。
+
+### Notes for Next Phase
+- CI で `bats tests/` が全 11 件 PASS することを確認する (polling test も含む)。
+- `exit 2` が `merge/SKILL.md` または `run-merge.sh` 側で適切にハンドリングされているか確認推奨 (本 PR では変更なし)。
+- Post-merge AC は `verify-type: observation event=auto-run` のため次回 merge phase での実観察が必要。
