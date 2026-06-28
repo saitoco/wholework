@@ -628,6 +628,78 @@ When verify commands in the Spec's `## Verification > Pre-merge` section diverge
 
 This SSoT principle is implemented in `/spec` SKILL.md's "Verification conditions vs. Issue body acceptance criteria consistency check" step.
 
+### 19. Build Artifact Verification — Pre-Build Required for .gitignore-Excluded Paths
+
+When an Issue's acceptance criteria include `file_exists` or `file_contains` verify commands that reference paths excluded by `.gitignore` (e.g., `dist/`, `build/`, `out/`, `.next/`, `lib/`), the generated files do not exist in a freshly created worktree. Running `/verify` against a fresh worktree without first running the build command results in `file_exists` returning FAIL or UNCERTAIN for all such paths.
+
+**Root cause**: Generated artifact directories are excluded from git tracking. A new worktree starts from the last committed state, which contains no build output.
+
+**Pre-merge behavior**:
+
+- `file_exists "dist/..."` and `file_contains "dist/..." "..."` verify commands on build artifact paths are effectively unrunnable before merge, because the build step is not part of the `/verify` worktree setup.
+- Classify these conditions as `<!-- verify-type: post-merge manual -->` at spec time, and note that a build command must be run before `/verify`.
+
+**Post-merge behavior** (recommended pattern):
+
+After merge, run the build command inside the verify worktree before invoking `/verify`:
+
+```bash
+# Example: Node.js project
+npm run build
+
+# Example: TypeScript project
+npx tsc
+
+# Example: Python package
+python3 -m build
+```
+
+Then run `/verify <issue-number>` normally. The generated files will be present and `file_exists`/`file_contains` commands will resolve correctly.
+
+**Typical .gitignore-excluded build artifact paths:**
+
+| Path | Build tool |
+|------|-----------|
+| `dist/*` | webpack, Rollup, Vite, TypeScript |
+| `build/*` | Create React App, Gradle, Maven |
+| `out/*` | Next.js static export, Go |
+| `.next/*` | Next.js server-side build |
+| `lib/*` | TypeScript library output |
+| `__pycache__/*` | Python bytecode |
+| `target/*` | Rust, Maven |
+
+**Spec guidance** (for `/spec` when an Issue targets build artifact verification):
+
+When any AC in the Issue references a build artifact path, add a `## Verify Prerequisites` section to the Spec to make the build dependency explicit:
+
+```markdown
+## Verify Prerequisites
+
+Before running `/verify`, execute the following build command inside the verify worktree:
+
+\`\`\`bash
+<build-command>
+\`\`\`
+
+Without this step, `file_exists` / `file_contains` verify commands targeting `dist/`, `build/`, `out/`, etc. will FAIL because `.gitignore` excludes these paths from the initial worktree state.
+```
+
+**AC design guidance** (for `/issue` and `/spec` when writing verify commands):
+
+1. Detect whether a `file_exists` or `file_contains` verify command argument matches a common `.gitignore` pattern (`dist/`, `build/`, `out/`, `.next/`, `lib/`, `target/`, `__pycache__/`)
+2. If yes: classify the AC as `<!-- verify-type: post-merge manual -->` and add the Verify Prerequisites note
+3. If the build artifact path is non-standard, check `.gitignore` at spec time to confirm whether the path is excluded
+
+**Example AC (before and after):**
+
+```markdown
+# Before — missing build prerequisite note; will FAIL in fresh worktree
+- [ ] <!-- verify: file_exists "dist/index.js" --> dist/index.js exists after build
+
+# After — build prerequisite declared; verify command is post-merge
+- [ ] `dist/index.js` exists after running `npm run build` <!-- verify-type: post-merge manual -->
+```
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
