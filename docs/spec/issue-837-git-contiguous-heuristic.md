@@ -92,18 +92,17 @@ No new comments since last phase.
 - AC1 の rubric は adversarial grader なしに AI judgment で PASS 判定した。対象ファイルが diff に明示的に含まれており、verify command 検証が容易だった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST 問題なし (全 SHOULD/CONSIDER を修正)。event = COMMENT で投稿。
-- SHOULD 3 件を修正: Decision Procedure 汎化、ssh placeholder 例の差し替え、commit -s vs commit -m の使い分け明示。
-- CONSIDER 1 件 (bats test anchor の specificity 向上) も合わせて修正。
+- PR #840 を squash merge (--delete-branch) で取り込んだ。コンフリクトなし、CI 全 SUCCESS 確認済み。
+- `mergeable=false, reason=unknown` (GitHub API の一時的な状態) を non-interactive auto-resolve で通過 — merge コマンド自体は正常完了。
 
 ### Deferred Items
-- Post-merge observation AC は verify phase が担当 (`verify-type: observation event=auto-run`)。
-- Step 13 ポリシー変更なし — AC の更新不要。
+- Post-merge observation AC (`verify-type: observation event=auto-run`) は verify phase が担当。
+- 次回 `/auto` または `/issue` 実行時に git invocation を含む verify command が contiguous sub-string で生成されるか観察すること。
 
 ### Notes for Next Phase
-- 修正コミット `047d29a` を含む PR #840 が merge 可能な状態。
-- post-merge AC は verify phase で SKIPPED/post-merge manual として扱うこと。
-- CI は全ジョブ SUCCESS 確認済み。
+- Pre-merge AC (AC1 rubric, AC2 bats test) は review phase で PASS 確認済み。
+- verify phase では post-merge AC のみ残存 — `verify-type: observation` のため SKIPPED/post-merge manual 扱いが適切。
+- `modules/verify-patterns.md §23` および `tests/verify-heuristics.bats` が main に取り込まれた状態で verify を実施すること。
