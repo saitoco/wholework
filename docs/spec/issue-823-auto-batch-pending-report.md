@@ -84,15 +84,17 @@ CONSIDER 件 1 件のみ: `batch_completion_section()` ヘルパー関数が bat
 全 3 件の Pre-merge AC が section_contains + rubric の組み合わせで自動 PASS。verify command の設計が適切で UNCERTAIN は発生しなかった。bats test は CI フォールバックで PASS。特段の課題なし。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST 件ゼロ、CONSIDER 1 件のみ (bats 未使用ヘルパー関数) → コード修正不要で `/merge` へ進める
-- Lightweight integrated review (4 perspectives) を直接実行 (review-light subagent が registry 未登録のためインライン実行)
+- mergeable=true、CI=success、review=approved → 障害なしでスカッシュマージ実行
+- PR #833 を `--squash --delete-branch` でマージ (ブランチ自動削除)
+- Post-merge AC は verify-type: observation のみ → /verify は observe 待ちで自動処理される
 
 ### Deferred Items
-- CONSIDER 件 (batch_completion_section 未使用ヘルパー) は merge 後のリファクタリングで対応可能
+- CONSIDER 件 (batch_completion_section 未使用ヘルパー関数) は後続リファクタリング Issue で対応可能
 
 ### Notes for Next Phase
-- 全 Pre-merge AC PASS、全 CI SUCCESS、MUST=0 → merge の障害なし
-- Post-merge AC は verify-type: observation event=auto-run (次回 /auto --batch 完了で自動確認)
+- Post-merge AC (次回 /auto --batch 完了時の観察) が唯一の残存確認事項
+- verify-type: observation event=auto-run → 次回 /auto --batch 完了で自動チェックされる
+- 手動確認不要; /verify #823 を次回 /auto --batch 完了後に実行すれば全 AC クローズ可能
