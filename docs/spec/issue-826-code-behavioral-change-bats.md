@@ -76,16 +76,16 @@
 - 条件 1件、rubric 型 → PASS、UNCERTAIN なし。rubric 評価はシンプルで、Spec との一致確認のみで判断できた。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light (--light フラグ + Size M); review-light エージェントで 4観点全チェック実施
-- MUST 件数 0、CI 全ジョブ SUCCESS、AC PASS → merge 可能状態
+- PR #842 を squash merge (--delete-branch) で main にマージ
+- mergeable=MERGEABLE, mergeStateStatus=CLEAN — コンフリクトなし、テスト実行不要
 
 ### Deferred Items
-- `tests/` ディレクトリ存在チェック (SHOULD) → 作者判断でスキップ可; 必要なら follow-up Issue で対応
-- post-merge AC は observation 型 (verify-type: observation event=auto-run)
+- post-merge AC は observation 型 (verify-type: observation event=auto-run): 次回 code phase 実行時に bats tests/ フルスイートが実行されることを観察
+- `tests/` ディレクトリ存在チェック (SHOULD) → 必要なら follow-up Issue で対応
 
 ### Notes for Next Phase
-- merge ブロッカーなし; `/merge 842` で進める
-- Phase Handoff (review) 更新済み
+- Issue #826 は `closes #826` を含む PR #842 が main にマージされたため GitHub 自動クローズ済み
+- label を verify へ遷移済み; verify phase は observation AC のみで完了条件はイベント待ち
