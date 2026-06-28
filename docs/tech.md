@@ -209,6 +209,7 @@ In gradual migration, there is a period where deprecated terms remain in the sam
 | `WHOLEWORK_MAX_RECOVERY_SUBAGENTS` | `1` | Maximum number of concurrent Tier 3 recovery sub-agents spawned by `scripts/spawn-recovery-subagent.sh`. Defaults to 1 (serial recovery) to bound cost during XL parallel runs. |
 | `WHOLEWORK_PATCH_LOCK_TIMEOUT` | `300` | Timeout seconds for the patch lock in `scripts/worktree-merge-push.sh`. Priority: env var > `patch-lock-timeout` in `.wholework.yml` > 300. |
 | `WHOLEWORK_PATCH_LOCK_LOG_INTERVAL` | `30` | Log output interval seconds while waiting for the patch lock in `scripts/worktree-merge-push.sh`. |
+| `WHOLEWORK_RETRY_ON_KILL_MAX_SEC` | `300` | Early-kill window in seconds for `scripts/retry-on-kill.sh`. If a run-*.sh wrapper exits 137 or 143 within this window, it retries once automatically. Set to `0` in tests to force the late-kill (no-retry) branch. Must stay strictly less than the minimum `WATCHDOG_TIMEOUT` (600s for merge phase) so watchdog hang-kills are never auto-retried. |
 | `WHOLEWORK_YML` | `${CLAUDE_PROJECT_DIR:-}/.wholework.yml` | Path to `.wholework.yml` resolved by `scripts/hook-rename-on-auto.sh`. Derived from `CLAUDE_PROJECT_DIR`; not an operator-override pattern (the script assigns directly rather than using `${WHOLEWORK_YML:-...}`). |
 
 ### Capability Flags

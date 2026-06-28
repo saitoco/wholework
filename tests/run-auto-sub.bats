@@ -101,6 +101,9 @@ exit 1
 MOCK
     chmod +x "$MOCK_DIR/spawn-recovery-subagent.sh"
 
+    # Real retry-on-kill.sh (sourced via WHOLEWORK_SCRIPT_DIR; must be present or source fails)
+    cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/retry-on-kill.sh" "$MOCK_DIR/retry-on-kill.sh"
+
     # Mock auto-checkpoint.sh: no-op milestone operations so existing tests are unaffected
     cat > "$MOCK_DIR/auto-checkpoint.sh" <<'MOCK'
 #!/bin/bash
@@ -859,4 +862,31 @@ MOCK
     [ -f "$RUN_REVIEW_LOG" ]
     [ -f "$RUN_MERGE_LOG" ]
     [[ "$output" == *"[resume]"* ]]
+}
+
+@test "retry-on-kill: child runner killed once then succeeds, run-auto-sub exits 0" {
+    COUNTER_FILE="$BATS_TEST_TMPDIR/call_counter"
+    echo "0" > "$COUNTER_FILE"
+    export COUNTER_FILE
+    # XS route: only code-patch phase, shortest path
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+    # Counter mock: 1st call exits 143 (SIGTERM), 2nd call exits 0
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+#!/bin/bash
+N=$(cat "$COUNTER_FILE" 2>/dev/null || echo 0)
+N=$((N + 1))
+echo "$N" > "$COUNTER_FILE"
+if [[ $N -eq 1 ]]; then exit 143; fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+    # orchestration-recoveries.md is absent in test env: _write_wrapper_retry_recovery skips
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [ "$(cat "$COUNTER_FILE")" -eq 2 ]
 }

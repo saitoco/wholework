@@ -90,8 +90,9 @@ MOCK
 emit_event() { return 0; }
 MOCK
 
-    # Real guard-prefix.sh (sourced via WHOLEWORK_SCRIPT_DIR)
+    # Real guard-prefix.sh and retry-on-kill.sh (sourced via WHOLEWORK_SCRIPT_DIR)
     cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/guard-prefix.sh" "$MOCK_DIR/guard-prefix.sh"
+    cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/retry-on-kill.sh" "$MOCK_DIR/retry-on-kill.sh"
 
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
@@ -311,4 +312,58 @@ MOCK
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
     grep -q "phase_complete" "$EMIT_LOG"
+}
+
+@test "retry-on-kill: retry-success - killed once then succeeds, wrapper exits 0" {
+    COUNTER_FILE="$BATS_TEST_TMPDIR/call_counter"
+    echo "0" > "$COUNTER_FILE"
+    export COUNTER_FILE
+    cat > "$MOCK_DIR/claude" <<'MOCK'
+#!/bin/bash
+N=$(cat "$COUNTER_FILE" 2>/dev/null || echo 0)
+N=$((N + 1))
+echo "$N" > "$COUNTER_FILE"
+if [[ $N -eq 1 ]]; then exit 143; fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/claude"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [ "$(cat "$COUNTER_FILE")" -eq 2 ]
+}
+
+@test "retry-on-kill: escalation - killed twice, wrapper exits 143" {
+    COUNTER_FILE="$BATS_TEST_TMPDIR/call_counter"
+    echo "0" > "$COUNTER_FILE"
+    export COUNTER_FILE
+    cat > "$MOCK_DIR/claude" <<'MOCK'
+#!/bin/bash
+N=$(cat "$COUNTER_FILE" 2>/dev/null || echo 0)
+N=$((N + 1))
+echo "$N" > "$COUNTER_FILE"
+exit 143
+MOCK
+    chmod +x "$MOCK_DIR/claude"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 143 ]
+    [ "$(cat "$COUNTER_FILE")" -eq 2 ]
+}
+
+@test "retry-on-kill: over-threshold no-retry - immediate kill but WHOLEWORK_RETRY_ON_KILL_MAX_SEC=0" {
+    COUNTER_FILE="$BATS_TEST_TMPDIR/call_counter"
+    echo "0" > "$COUNTER_FILE"
+    export COUNTER_FILE
+    export WHOLEWORK_RETRY_ON_KILL_MAX_SEC=0
+    cat > "$MOCK_DIR/claude" <<'MOCK'
+#!/bin/bash
+N=$(cat "$COUNTER_FILE" 2>/dev/null || echo 0)
+N=$((N + 1))
+echo "$N" > "$COUNTER_FILE"
+exit 143
+MOCK
+    chmod +x "$MOCK_DIR/claude"
+    run bash "$SCRIPT" 123
+    unset WHOLEWORK_RETRY_ON_KILL_MAX_SEC
+    [ "$status" -eq 143 ]
+    [ "$(cat "$COUNTER_FILE")" -eq 1 ]
 }
