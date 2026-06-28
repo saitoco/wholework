@@ -246,18 +246,34 @@ Note: 既存 Tier 2 anomaly detector がパターンを追記済みの場合は 
 ### Rework
 - N/A
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec の 5 実装ファイルはすべて PR diff に反映されており、構造的な乖離なし
+- `_write_manual_recovery_to_spec()` の配置 (set -euo pipefail 直後) も Spec 記述と一致
+
+### Recurring issues
+- `git diff --quiet` が untracked ファイルを検出できない問題が `scripts/run-auto-sub.sh` の `_write_manual_recovery_to_spec()` (line 46) に存在。既存の `_write_tier2_recovery_to_spec()` (line 196)、`_write_tier3_recovery_to_spec()` (line 243) にも同じパターンが繰り返されており、共通ヘルパー関数化または `git status --porcelain` への統一修正が効果的。後続 Issue として起票を推奨
+- `_write_manual_recovery_to_spec()` に `$issue` の数値バリデーションがなく、フォールバックパスでパストラバーサルが可能 (SHOULD)。既存 Tier 2/3 も同様であり、横断的な修正 Issue の余地あり
+
+### Acceptance criteria verification difficulty
+- rubric + grep の組み合わせで AC 検証が機械的に実施でき、UNCERTAIN なし
+- bats test の verify command (grep "manual.*recovery") が実装を直接確認できており verify command の品質は良好
+- POST-MERGE 観察条件 1 件は verify phase が担当
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `_write_manual_recovery_to_spec()` を `set -euo pipefail` 直後 (line 8 の前) に配置することで、`--write-manual-recovery` dispatch が `SUB_NUMBER` 代入前に実行されるようにした — これにより `bash run-auto-sub.sh --write-manual-recovery 42 code push-only` が正常動作する
-- `skills/auto/SKILL.md` Step 6 の更新は Step 4a 参照を削除し `--write-manual-recovery` 呼び出し一本に統一した
-- `skills/verify/SKILL.md` Step 12 の "Tier 2/3" → "Tier 2/3/Manual" 拡張で `### Manual recovery` エントリも "already recorded" として扱われる
+- MUST 問題は検出されず。SHOULD 4 件、CONSIDER 1 件をラインコメントとして記録
+- `git diff --quiet` vs untracked files バグ (SHOULD) は Tier 2/3 にも共通する既知パターンであるため、本 PR のブロッカーとはしない判断
+- セキュリティ所見 (path traversal via `$issue`) は内部ツール文脈 + `-recovery.md` 固定サフィックスの制約から SHOULD 止まりとした
 
 ### Deferred Items
-- `orchestration-recoveries.md` への同時書き込み (Tier 2/3 は書き込む) は今回スコープ外。manual recovery の session-level SSoT は引き続き手動で `orchestration-recoveries.md` に書くか省略する
-- `allowed-tools` への追加は不要 (既存 `run-auto-sub.sh:*` でカバー)
+- `git diff --quiet` → `git status --porcelain` の横断修正は別 Issue で対応推奨
+- `$issue` / `$phase` / `$recovery_type` の入力バリデーション追加も別 Issue 候補
+- "Manual automatic recovery" の表現矛盾は次回 cleanup で修正
 
 ### Notes for Next Phase
-- PR #830 の CI が通過すること、特に bats テスト全 32 件が PASS していることを確認
-- `--write-manual-recovery` の引数順は `ISSUE PHASE RECOVERY_TYPE` (全て位置引数) — PR body の verify サンプルを含めて review 担当が確認すると良い
+- CI 全 SUCCESS、MUST 未検出につき `/merge 830` で直接 merge 可能
+- merge 後は next-cycle-seed または verify セッションで上記 SHOULD 問題の起票を検討
