@@ -49,3 +49,33 @@
   - 曖昧点2: post-merge AC タグ → `<!-- verify-type: opportunistic event=issue-run -->` → `<!-- verify-type: opportunistic -->` に修正 (event= は observation type 専用構文; opportunistic には不要)
 - `docs/ja/` sync 不要: 変更対象は `modules/verify-patterns.md` であり `docs/*.md` ではない
 - `docs/structure.md` の verify-patterns.md 説明 "verify command pattern accuracy guidelines" は追加後も引き続き正確 (no update needed)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. Implementation followed the Spec exactly: §17 was inserted between §16's last line and `## Output` as specified, with heading format `### 17. Docs/Code Consistency — Verify Key Behavior Keywords in Both Layers`.
+
+### Design Gaps/Ambiguities
+
+- The Spec described "exact keyword が一致する場合" and "意味的整合のみ必要な場合" as two distinct patterns. During implementation, a third case was recognized: when no behavior keywords exist in docs (structural-only change). Added "Decision procedure" step 4 to make this explicit ("If no behavior keywords are present in docs: skip this pattern").
+
+### Rework
+
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Added §17 to `modules/verify-patterns.md` (51 lines) between §16 and `## Output` — confirmed correct position via grep before edit
+- Used paired `grep` pattern for exact keyword match and `rubric` for semantic consistency, matching Spec design exactly
+- "consistency" keyword appears 5 times in the file; AC2 file_contains check confirmed PASS locally
+
+### Deferred Items
+- Post-merge opportunistic AC (next docs+skills change Issue) is unverifiable until the next such Issue is processed — inherently deferred
+
+### Notes for Next Phase
+- All 3 pre-merge ACs verified locally: rubric ×2 (PASS by inspection), file_contains ×1 (PASS by grep count=5)
+- No rework or deviations; implementation is a clean 51-line addition
+- forbidden-expressions check: PASS; validate-skill-syntax.py: 0 errors (1 pre-existing warning unrelated to this Issue)
