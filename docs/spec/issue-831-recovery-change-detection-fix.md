@@ -68,19 +68,32 @@
 
 - 既存 tier2/tier3/manual recovery テストの git mock を最初の commit では更新しなかったため、全テスト実行 (bats tests/) で tests 26-28 が FAIL した。2 回目の edit で修正した。新テスト追加時は既存テストへの影響を同時に確認すべきだった。
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Nothing to note. 実装は Spec の設計通りで乖離なし。`_spec_has_changes()` の引数名・配置位置・`grep -q .` 判定方式いずれも Spec Notes と一致。
+
+### Recurring Issues
+
+- Nothing to note. review-light の 4観点すべてで問題なし。Bug type の特徴である regression tests も AC に含まれており、3件が適切に追加されている。
+
+### Acceptance Criteria Verification Difficulty
+
+- AC2 の verify command (`github_check "gh pr checks" "Run bats tests"`) は CI 完了後でないと判定できない構造。AC2 のチェックボックスが `[ ]` のまま PR が提出されたが、CI SUCCESS を確認後に `[x]` に更新した。この遅延検証は `github_check` verify の想定動作であり問題ない。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `_spec_has_changes()` を `set -euo pipefail` 直後に配置し、`_write_manual_recovery_to_spec()` の直前に置いた。スコープ的に最も近い位置であり、script の早期定義として読みやすい。
-- `git status --porcelain "$spec_rel_path"` の出力を `grep -q .` で non-empty 判定する方式を選択。`wc -l` や変数展開より簡潔で bash 3.2+ 互換。
-- 既存テストの git mock を `status --porcelain` 対応に更新した。これにより `git diff --quiet` の旧モックが残らず、テストが新ロジックのみを検証することが確認できる。
+- REVIEW_DEPTH=light (--light 指定かつ Size M)。review-light の 4観点で問題なし。MUST 問題なし → COMMENT イベントで投稿。
+- AC2 のチェックボックスを `[x]` に更新 (`gh-issue-edit.sh` 経由)。CI SUCCESS を確認済み。
 
 ### Deferred Items
-- `orchestration-recoveries.md` の `git diff --quiet` (lines 298, 486) はスコープ外のまま。これらは常に tracked ファイルへの書き込みなので問題なし。
-- AC2 の `github_check "gh pr checks" "Run bats tests"` は CI 実行後に確認。ローカル bats 全 1031 件 PASS 済み。
+- Post-merge AC: 「次回 recovery 発生時に初回 Spec 作成 (untracked) ケースで commit が漏れないことを観察」は `/verify` のポストマージ観察に委ねる。
+- Spec Notes に記載された `orchestration-recoveries.md` の `git diff --quiet` (スコープ外) は将来の関連 Issue で対応。
 
 ### Notes for Next Phase
-- PR #838 で CI が通ることを `/verify` 前に確認すること。`Run bats tests` ジョブが最重要。
-- `_spec_has_changes()` は bash script の先頭部 (line 9-15) に定義済み。`/review` はこの位置を確認してコメント位置の適切性を評価してよい。
-- Spec Notes の verify command と実装の結合度についてはレビューコメント不要 (設計上の意図的な依存)。
+- MUST 問題なし、CI SUCCESS → `/merge 838` で即マージ可能。
+- Post-merge AC は `verify-type: observation event=auto-run` のため `/verify` の観察スコープ。
+- review-light エージェントが利用不可のためインライン実行した。次サイクルでエージェント登録を検討してもよい (Improvement Proposal 候補)。
