@@ -73,6 +73,9 @@ get_named_query() {
         get-last-reopen)
             printf '%s' 'query($owner:String!,$repo:String!,$num:Int!){repository(owner:$owner,name:$repo){issue(number:$num){timelineItems(itemTypes:[REOPENED_EVENT],last:1){nodes{... on ReopenedEvent{createdAt}}}}}}'
             ;;
+        update-issue-fields-batch)
+            printf '%s' 'mutation($projectId:ID!,$itemId:ID!,$sizeFid:ID!,$sizeOid:String!,$valueFid:ID!,$valueOid:String!){sz:updateProjectV2ItemFieldValue(input:{projectId:$projectId,itemId:$itemId,fieldId:$sizeFid,value:{singleSelectOptionId:$sizeOid}}){projectV2Item{id}}vl:updateProjectV2ItemFieldValue(input:{projectId:$projectId,itemId:$itemId,fieldId:$valueFid,value:{singleSelectOptionId:$valueOid}}){projectV2Item{id}}}'
+            ;;
         *)
             echo "Error: unknown query name: $name" >&2
             return 1

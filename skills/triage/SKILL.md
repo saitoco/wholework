@@ -117,15 +117,9 @@ Determine Bug / Feature / Task from the issue body.
 - **Feature**: Keywords like new addition, new feature, implementation, enhancement
 - **Task**: Keywords like refactoring, configuration change, documentation update, maintenance
 
-### Step 5: Priority Assignment (Projects field)
+### Step 5: Priority Detection
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/project-field-update.md` and execute Steps 1→2→3→4 from the "Priority / Size Field Update" section to set Priority. Complete on GraphQL success; only execute Step 5 label fallback on failure.
-
-Named queries to use (`--query <n>` format): `get-projects-with-fields`, `get-issue-id`, `add-project-item`, `update-field-value`
-
-**Skip when Projects is not configured**: If the repository has no GitHub Projects, `projectsV2.nodes` returns an empty array in Step 1 of `project-field-update.md`, automatically proceeding to Step 5 (label fallback). No additional branching needed.
-
-Detect priority information from the title or body and reflect it in the project's Priority field. Skip without warning if neither title nor body contains priority information.
+Detect priority information from the title or body. Skip without warning if neither title nor body contains priority information. Store the detected value as `DETECTED_PRIORITY` (null if not detected). The actual GraphQL update is performed in Step 8.
 
 **Detection targets:**
 1. Prefixes like `[Priority:High]` in the title (information before Step 2 removal)
@@ -142,19 +136,11 @@ Detect priority information from the title or body and reflect it in the project
 | `medium` | `medium priority`, `medium` |
 | `low` | `low priority`, `low`, `nice-to-have` |
 
-### Step 6: Size Assignment (Projects field)
+### Step 6: Size Determination
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` and follow the "Processing Steps" section's Size determination flow (2-axis + CI dependency check) to determine Size.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` and follow the "Processing Steps" section's Size determination flow (2-axis + CI dependency check) to determine Size. Store the determined value as `DETERMINED_SIZE`. The actual GraphQL update is performed in Step 8.
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/project-field-update.md` and execute Steps 1→2→3→4 from the "Priority / Size Field Update" section to set Size. Complete on GraphQL success; only execute Step 5 label fallback on failure.
-
-Named queries to use (`--query <n>` format): `get-projects-with-fields`, `get-issue-id`, `add-project-item`, `update-field-value`
-
-**Skip when Projects is not configured**: If the repository has no GitHub Projects, `projectsV2.nodes` returns an empty array in Step 1 of `project-field-update.md`, automatically proceeding to Step 5 (label fallback). No additional branching needed.
-
-Estimate the scope of change from the issue body's acceptance conditions and technical notes, and set the project's Size field. Determine in 5 levels: XS/S/M/L/XL.
-
-**Verify-after-write**: After Steps 1→4 succeed, read `${CLAUDE_PLUGIN_ROOT}/modules/project-field-update.md` and follow the "Verify-after-write" procedure from the "Updating Priority / Size Fields" section.
+Estimate the scope of change from the issue body's acceptance conditions and technical notes. Determine in 5 levels: XS/S/M/L/XL.
 
 ### Step 7: AC Verify Command Integrity Audit
 
@@ -162,21 +148,13 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/triage/skill-dev-verify-audit.md` for the ver
 
 Skip this step if the issue body contains no `<!-- verify: ... -->` patterns.
 
-### Step 8: Value Assignment (Projects field)
+### Step 8: Combined Project Field Batch Update
 
-Since the Value field is a SingleSelect type, update it using the same Steps 1→2→3→4 from `project-field-update.md`'s "Priority / Size Field Update" section (always calculate and update regardless of existing Value):
+Consolidates Size, Value, and Priority GraphQL updates into a single round-trip. Uses `update-issue-fields-batch` to update Size + Value in one mutation, with Priority updated separately only when detected.
 
-1. Fetch project fields with `--query get-projects-with-fields` and look for a `SingleSelect` type `Value` field
-2. If the field does not exist: prompt "Please manually create a `Value` field (Single Select type, options: 1–5) in Projects, then re-run" and skip
-3. If the issue is not yet in the project, add it with `--query add-project-item`
-4. Set Value with `--query update-field-value` (pass the optionId corresponding to the score value via `-F optionId=<option-id>`)
-5. If GraphQL fails: label fallback (assign `value/N` label)
-
-Named queries to use (`--query <n>` format): `get-projects-with-fields`, `get-issue-id`, `add-project-item`, `update-field-value`
+**Value Score Calculation (before GraphQL update):**
 
 **Fallback level determination (read Steering Documents):**
-
-Determine the fallback level using this flow:
 
 ```
 1. Does $STEERING_DOCS_PATH/product.md exist with type: steering?
@@ -186,8 +164,6 @@ Determine the fallback level using this flow:
    → Yes: Level 2 (medium precision) — Read README.md / CLAUDE.md to extract policy
    → No: Level 3 (minimal)
 ```
-
-**Value scoring (same logic as backlog analysis):**
 
 Reuse the full open issues data already retrieved in Step 2 to calculate Impact (no additional API calls). Calculate Alignment based on fallback level.
 
@@ -205,7 +181,36 @@ Reuse the full open issues data already retrieved in Step 2 to calculate Impact 
 | 2 | 1–3 | 1–2 | 1–2 |
 | 1 | 0 or below | 0 or below | 0 or below |
 
-**Skip when Projects is not configured**: Same as Step 5/6.
+**Combined GraphQL Update:**
+
+Named queries to use (`--query <n>` format): `get-projects-with-fields`, `get-issue-id`, `add-project-item`, `update-issue-fields-batch`, `update-field-value` (Priority only)
+
+1. Fetch project fields with `--query get-projects-with-fields --cache`
+   - If `projectsV2.nodes` is empty → label fallback for Size, Value, and Priority (if detected); skip remaining steps
+2. Identify Size field, Value field, and Priority field in the project
+   - If Value field does not exist: prompt "Please manually create a `Value` field (Single Select type, options: 1–5) in Projects, then re-run" and skip Value; proceed to step 3 to obtain ITEM_ID, then in step 4 use `--query update-field-value` for Size only instead of the batch mutation
+3. Get Issue node ID and add to project:
+   ```bash
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --cache --query get-issue-id -F num=$NUMBER --jq '.data.repository.issue.id'
+   ```
+   ```bash
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query add-project-item -F projectId="$PROJECT_ID" -F contentId="$ISSUE_ID"
+   ```
+4. Update Size + Value in one call:
+   ```bash
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query update-issue-fields-batch -F projectId="$PROJECT_ID" -F itemId="$ITEM_ID" -F sizeFid="$SIZE_FID" -F sizeOid="$SIZE_OPT" -F valueFid="$VALUE_FID" -F valueOid="$VALUE_OPT"
+   ```
+   - Check `.data.sz.projectV2Item.id` and `.data.vl.projectV2Item.id` for success
+   - If mutation fails → label fallback for both Size (`size/$DETERMINED_SIZE`) and Value (`value/N`)
+5. Priority update (only if `DETECTED_PRIORITY` is not null):
+   ```bash
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query update-field-value -F projectId="$PROJECT_ID" -F itemId="$ITEM_ID" -F fieldId="$PRIORITY_FID" -F optionId="$PRIORITY_OPT"
+   ```
+   - If mutation fails → label fallback for Priority (`priority/$DETECTED_PRIORITY`)
+
+**Verify-after-write (Size field):** After the batch mutation in step 4 confirms success (`.data.sz.projectV2Item.id` returned), read `${CLAUDE_PLUGIN_ROOT}/modules/project-field-update.md` and follow the "Verify-after-write" procedure from the "Updating Priority / Size Fields" section.
+
+**Skip when Projects is not configured**: If `projectsV2.nodes` is empty, label fallback for Size (`size/$DETERMINED_SIZE`), Value (`value/N`), and Priority (if `DETECTED_PRIORITY` is not null: `priority/$DETECTED_PRIORITY`).
 
 ### Step 9: Lightweight Analysis
 
@@ -385,17 +390,16 @@ Loop through the Step 2 JSON results and execute the following API calls for eac
 for each issue in Step 2 results:
   1. Update title: gh issue edit $NUMBER --title "$NEW_TITLE"
   2. Set Type: execute Steps 1→2 from project-field-update.md "Type Field Update" (complete on GraphQL success, only Step 3 label fallback on failure). Queries: `get-issue-types`, `get-issue-id`, `update-issue-type`
-  3. Set Priority: only if priority is not null, execute Steps 1→2→3→4 from project-field-update.md "Priority / Size Field Update" (complete on GraphQL success, only Step 5 label fallback on failure. null = skip without warning). Queries: `get-projects-with-fields`, `get-issue-id`, `add-project-item`, `update-field-value`
-  4. Set Size: execute Steps 1→2→3→4 from project-field-update.md "Priority / Size Field Update" (complete on GraphQL success, only Step 5 label fallback on failure). Queries: `get-projects-with-fields`, `get-issue-id`, `add-project-item`, `update-field-value`
-  5. Set Value: skip if Value is already set (Projects V2 Value field is non-empty, or `value/*` label is assigned). Only set if unset using `update-field-value` query (`-F optionId=<optionId for score value>`). Skip if field doesn't exist, label fallback (`value/N`) on GraphQL failure. Queries: `get-projects-with-fields`, `get-issue-id`, `add-project-item`, `update-field-value`
-  6. Add triaged label: gh issue edit $NUMBER --add-label "triaged"
-  7. Duplicate comment: if duplicate_candidates is non-empty, report via issue comment (**do not auto-close**)
+  3. Set Size + Value (batch): use `--query add-project-item` to add the issue to the project, then use `--query update-issue-fields-batch` to update Size and Value in one call. Use the project/field/option IDs fetched at the start of Step 3. Label fallback (`size/N` and `value/N`) on GraphQL failure. Skip Value if Value field does not exist. Queries: `add-project-item`, `update-issue-fields-batch`
+  4. Set Priority: only if priority is not null, use `--query update-field-value` for Priority (field/option IDs from the start-of-Step-3 fetch). Skip without warning if null. Label fallback (`priority/N`) on GraphQL failure. Queries: `update-field-value`
+  5. Add triaged label: gh issue edit $NUMBER --add-label "triaged"
+  6. Duplicate comment: if duplicate_candidates is non-empty, report via issue comment (**do not auto-close**)
      - Comment format example: `⚠️ Possible duplicate: similar to #123 "test-runner: Add Vitest detection"`
      - Run mkdir -p .tmp to create the directory in advance
      - Write comment body to `.tmp/triage-duplicate-comment-$NUMBER.md` using the Write tool
      - Post: `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $NUMBER .tmp/triage-duplicate-comment-$NUMBER.md`
      - Delete: `rm -f .tmp/triage-duplicate-comment-$NUMBER.md`
-  8. AC verify command audit: if the issue body contains `<!-- verify: ... -->` patterns,
+  7. AC verify command audit: if the issue body contains `<!-- verify: ... -->` patterns,
      read ${CLAUDE_PLUGIN_ROOT}/skills/triage/skill-dev-verify-audit.md and follow the
      "Processing Steps" section. Post audit comment if issues are found (non-destructive).
 ```

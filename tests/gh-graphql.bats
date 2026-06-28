@@ -125,6 +125,15 @@ teardown() {
     [[ "$api_call" == *"timelineItems"* ]]
 }
 
+@test "success: --query update-issue-fields-batch resolves named query" {
+    run bash "$SCRIPT" --query update-issue-fields-batch \
+        -F projectId="PVT_abc" -F itemId="PVTI_xyz" \
+        -F sizeFid="FID_size" -F sizeOid="OPT_M" \
+        -F valueFid="FID_value" -F valueOid="OPT_4"
+    [ "$status" -eq 0 ]
+    grep -q "api graphql" "$GH_CALL_LOG"
+}
+
 @test "error: --query with unknown name" {
     run bash "$SCRIPT" --query unknown-query-name
     [ "$status" -eq 1 ]
