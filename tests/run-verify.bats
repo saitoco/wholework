@@ -76,17 +76,16 @@ teardown() {
     grep -q "No new comments since last phase." "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
 }
 
-@test "spec absent: creates skeleton file with ## Consumed Comments section" {
-    # No spec file exists — script should create skeleton
+@test "spec absent: skips stub creation and exits 0" {
+    # No spec file exists — script should exit 0 without creating a stub
     mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
 
     run bash "$SCRIPT" 99 verify
     [ "$status" -eq 0 ]
 
-    # A spec file for issue 99 should have been created
-    CREATED=$(ls "$BATS_TEST_TMPDIR/docs/spec/issue-99-"*.md 2>/dev/null | head -1 || true)
-    [ -n "$CREATED" ]
-    grep -q "^## Consumed Comments" "$CREATED"
+    # No stub file should be created
+    stub_count=$(ls "$BATS_TEST_TMPDIR/docs/spec/issue-99-"*.md 2>/dev/null | wc -l | tr -d ' ')
+    [ "$stub_count" -eq 0 ]
 }
 
 @test "section exists: skip and exit 0 without adding another section" {

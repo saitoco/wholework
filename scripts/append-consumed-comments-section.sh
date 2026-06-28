@@ -29,14 +29,8 @@ SPEC_DIR_ABS="$_repo_root/$SPEC_DIR"
 SPEC_FILE=$(ls "$SPEC_DIR_ABS/issue-${ISSUE_NUMBER}-"*.md 2>/dev/null | head -1 || true)
 
 if [[ -z "$SPEC_FILE" ]]; then
-  TITLE=$(gh issue view "$ISSUE_NUMBER" --json title -q '.title' 2>/dev/null \
-    || echo "Issue #${ISSUE_NUMBER}")
-  mkdir -p "$SPEC_DIR_ABS" 2>/dev/null || true
-  SPEC_FILE="$SPEC_DIR_ABS/issue-${ISSUE_NUMBER}-${PHASE_NAME}.md"
-  printf '%s\n' "# Issue #${ISSUE_NUMBER}: ${TITLE}" > "$SPEC_FILE" 2>/dev/null || {
-    echo "append-consumed-comments-section.sh: WARNING — skip (cannot create spec file)" >&2
-    exit 0
-  }
+  echo "append-consumed-comments-section.sh: no spec file for issue #${ISSUE_NUMBER}, skipping" >&2
+  exit 0
 fi
 
 # Check if section already exists; skip if present (deduplicate guard)
