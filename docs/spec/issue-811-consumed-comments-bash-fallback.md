@@ -88,19 +88,20 @@
 - **`docs/ja/structure.md` 更新**: Japanese format の verify command に `## Consumed Comments` パターンは含まれないため format 影響なし
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- SHOULD issue 1 件 (`$NUMBER` 引用符不在 in skills/verify/SKILL.md) を修正してプッシュ済み
-- MUST issues なし → REQUEST_CHANGES ではなく COMMENT イベントでレビュー投稿
-- Candidate B 実装の全 3 フェーズ (spec/code/verify) 網羅を確認、受け入れ条件 3 件すべて PASS
+- PR #813 のスクワッシュマージを実行 (コンフリクトは Spec ファイルの review/code 両 retrospective 重複のみで、両方を保持する形で解決)
+- `gh pr merge --squash --delete-branch` 実行時に「main is already used by worktree」エラーが発生したが、PR は既にマージ済みであることを確認 (worktree 上での操作制限による警告)
+- Issue #811 は `closes #811` により main マージ時に自動クローズ
 
 ### Deferred Items
 - Post-merge observation AC (次回 /auto または /spec N 実行時の Spec ファイルへの Consumed Comments セクション追記確認) は merge 後の観察タスク
 - `docs/structure.md` スクリプトカウント drift 修正は別 Issue で対応予定
 
 ### Notes for Next Phase
-- 修正コミット (912423e) がプッシュ済み、CI が通過すれば `/merge 813` で完了
+- verify フェーズ: Pre-merge AC 3 件は review フェーズで確認済み (bats 68テスト green)
+- Post-merge observation AC のみが残り、次回 /auto 実行時に自然観察可能
 - `validate-skill-syntax.py` の既存警告 (`loop-paths-fallback` 未知フィールド) は本 PR と無関係なので無視してよい
 
 ## review retrospective
