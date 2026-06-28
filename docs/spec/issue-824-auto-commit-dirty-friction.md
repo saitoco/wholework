@@ -78,24 +78,24 @@
 - One additional commit (`Fix miscalibrated verify command in spec for issue #824`) was needed to fix the Spec verify command before PR creation, because the initial implementation commit did not update the Spec verify command to match the corrected form.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- All 10 AC verify commands PASS in safe mode. `command` hints (bats test runs) were resolved via CI "Run bats tests" SUCCESS fallback.
-- No MUST/SHOULD issues found. One CONSIDER (false warning on "nothing to commit" in auto-events-rollup.sh) was logged as a line comment but not fixed.
-- Post-merge observation (AC post-merge) remains deferred: requires manual check in the next `/auto --batch` run.
+- PR #835 squash-merged to main (base branch = main, Issue auto-close via `closes #824` will trigger).
+- No conflict resolution was needed — PR was mergeable=true/clean at time of merge.
+- Phase Handoff written to Spec and pushed to main for verify to consume.
 
 ### Deferred Items
 
-- Post-merge observation: verify that `loop-state-*.md` / `auto-events-rollup-*.md` dirty file friction is eliminated in the next `/auto --batch` run (manual observation required).
+- Post-merge observation: verify that `loop-state-*.md` / `auto-events-rollup-*.md` dirty file friction is eliminated in the next `/auto --batch` run (manual observation required — not automatable).
 - Optional fix for false warning when `git commit` runs on an unchanged `$OUTPUT_FILE` (CONSIDER — non-fatal, cosmetic).
 
 ### Notes for Next Phase
 
-- No code changes made during review. The PR is ready to merge.
-- The `[skip ci]` suffix prevents heartbeat/rollup commits from triggering CI — confirm this behavior post-merge.
-- Dual defense pattern (auto-commit primary + verify-side exempt fallback) is the intended design; do not remove either layer.
+- The `[skip ci]` suffix on heartbeat/rollup auto-commits prevents CI from being triggered — confirm this behavior is working post-merge.
+- Dual defense pattern (auto-commit primary + verify-side exempt fallback) is the intended design; verify should not remove either layer.
+- Post-merge AC: observe next `/auto --batch` run for absence of dirty file friction from `loop-state-*.md` and `auto-events-rollup-*.md`.
 
 ## Notes
 
