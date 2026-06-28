@@ -60,3 +60,33 @@ git grep -l "<old-symbol>"
 - Implementation target: `skills/spec/SKILL.md` only (auto-resolved from Issue Retrospective: modules/ approach is over-engineering for Size S scope)
 - The new section complements the existing "Feature deletion impact chain check" (deletion only, cleanup ACs) and "Rename-type Issue grep check" (rename keyword trigger); the new section provides the broader 3-phase discovery framework covering all three types (deletion, migration, rename)
 - `\b` in AC2 verify pattern is a ripgrep word boundary (valid ERE); no BRE metacharacters present
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. Implementation matched the Spec insertion point exactly: the new guidance block was inserted immediately before `**bats test Spec input format:**` (after the `*Example: Issue #485 retro...` line), as specified.
+
+### Design Gaps/Ambiguities
+
+- None. The Spec's inline code block for the guidance content (with escaped backticks `\`\`\``) translated cleanly to actual code fences in the SKILL.md content; no ambiguity in rendering.
+
+### Rework
+
+- None. All 3 pre-merge AC verify commands (grep "files-with-matches", grep for rg/git grep command examples, issue references #771/#770/#775) PASS on first implementation.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Inserted guidance block immediately before `**bats test Spec input format:**` in `skills/spec/SKILL.md` (lines 319+), following Spec direction verbatim.
+- No new modules or scripts added; single-file change kept scope within Size S bounds.
+- Phase 1/2/3 structure preserved as specified; Skip condition and background bullet-points included.
+
+### Deferred Items
+- Post-merge observation: confirm that next migration/rename/delete Issue's `/spec` session reflects grep-discovered candidates in Changed Files list (manual verification).
+
+### Notes for Next Phase
+- All 3 pre-merge ACs verified PASS; checkboxes updated in Issue body.
+- `rubric` ACs (AC1, AC3) were verified mechanically via grep checks; rubric grader confirmation at `/verify` phase.
+- No rework or test failures encountered; clean implementation.
