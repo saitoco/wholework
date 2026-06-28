@@ -106,6 +106,14 @@ Before writing the translated content, generate a language navigation banner and
 
 Write the translated content (with banner) to the output path using the Write tool.
 
+**Code Block Fidelity Check (apply after writing each file):**
+After writing the translated output, verify code block count:
+1. Count ` ``` ` code fence markers in the source file
+2. Count ` ``` ` code fence markers in the just-written translated output
+3. If counts differ, output a warning:
+   "Warning: Code block count mismatch in {output_path}: source has {N} code fence markers, translation has {M}. Review the translation and ensure all code blocks are preserved."
+4. On mismatch, re-read the source to locate missing code blocks and insert them into the translated output at the appropriate positions before proceeding to the next file.
+
 ### Step 4: Add Language Navigation Banners to Source Documents
 
 For each source document in the translation target list, update the source (English) file to include the language navigation banner:

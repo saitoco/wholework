@@ -27,6 +27,7 @@ The following paths are **excluded** from the sync obligation:
 2. For each identified file, locate the corresponding `docs/ja/<filename>.md` mirror.
 3. If the mirror does not exist, create it.
 4. Update the mirror to reflect the English changes, writing in Japanese. Preserve structure, headings, and formatting consistent with the English original.
+5. Verify code block fidelity: count ` ``` ` (code fence markers) in the English source and the synced mirror. If the counts differ, locate the missing code blocks in the source and insert them into the mirror at the correct positions.
 
 ## Skills That Consult This Document
 
