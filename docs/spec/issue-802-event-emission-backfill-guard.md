@@ -76,8 +76,56 @@ The `### phase_complete (backfilled)` description was written to reflect intende
 - **Exit 143 = SIGTERM**: `_exit_code=143` corresponds to SIGTERM (128+15). Only SIGTERM is special-cased; other non-zero exits (e.g., 1 from claude failure, 127 from command-not-found) continue to skip backfill — they are tracked by `wrapper_exit` events instead.
 - **Test approach**: The bats test uses an inline helper script written to `$BATS_TEST_TMPDIR` rather than running the full `run-auto-sub.sh`, because triggering actual SIGTERM on a complex script in a bats test is timing-sensitive and flaky. The helper script directly exercises the updated `_maybe_emit_phase_complete()` logic.
 - **No `docs/structure.md` update needed**: `modules/event-emission.md` is already listed in Key Files; its description ("event emission contract SSoT") remains accurate.
-- **Count alignment warning**: Issue body has 2 pre-merge AC checkboxes; Spec has 3 verification lines (AC 2 carries 2 verify commands). This mismatch is expected — one AC item has two verify hints.
+- **Count alignment warning**: Issue body has 2 pre-merge AC checkboxes; Spec has 3 verification lines (AC 2 carries 2 verify commands). This mismatch is expected — one AC item has two verify commands.
 
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A (implementation followed the Spec exactly)
+
+### Design Gaps/Ambiguities
+
+- The Spec's bats test description used HEREDOC with escaped variables (`\$?`, `\$_exit_code`), but in the actual bats file, the HEREDOC delimiter needed `HELPER` (unquoted) to allow variable expansion for `$MOCK_DIR` and `$AUTO_EVENTS_LOG` references, while inner function variables required `\$` escaping — minor shell quoting subtlety not captured in the Spec description.
+
+### Rework
+
+- N/A
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- The Spec's "Changed Files" list said "all 4 `run-*.sh`" but actually 6 scripts (`run-issue.sh`, `run-spec.sh`, `run-code.sh`, `run-auto-sub.sh`, `run-review.sh`, `run-merge.sh`) have `_maybe_emit_phase_complete()`. The code phase only updated 4; `run-review.sh` and `run-merge.sh` were missed. This was caught by the review phase and fixed (guard updated in both scripts). Root cause: the Spec Background and Changed Files sections counted wrappers inconsistently — the Wrapper Coverage Table in `event-emission.md` lists 6 wrappers, but the Spec text said "all 4."
+- Improvement: When listing affected files in a Spec, cross-check with the implementation source (e.g., `grep -l "_maybe_emit_phase_complete"`) rather than relying on a mental count. A `find`/`grep` step in the Spec's Changed Files enumeration would catch this earlier.
+
+### Recurring Issues
+
+- Nothing to note.
+
+### Acceptance Criteria Verification Difficulty
+
+- All 3 pre-merge conditions were verifiable at review time: 2 rubric checks (PASS) and 1 github_check (CI job conclusion). No UNCERTAIN results.
+- The `rubric` verify commands were effective for this PR — the semantic check confirmed doc-vs-code alignment without ambiguity.
+- The test for SIGTERM (exit 143) backfill uses an inline helper script that duplicates the guard logic rather than exercising the actual run scripts. This is an acknowledged tradeoff (avoids timing-sensitive SIGTERM in bats); the gap (no negative test for exit 1 → no backfill) was noted as CONSIDER.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- All pre-merge ACs verified PASS (rubric × 2, github_check CI × 1); all CI jobs SUCCESS.
+- SHOULD finding: `run-review.sh` and `run-merge.sh` had stale guard; fixed in this review phase by extending the guard to match the other 4 wrappers.
+- No MUST issues; review posted as COMMENT event (not REQUEST_CHANGES).
+
+### Deferred Items
+- Post-merge AC (observation event=watchdog-kill) deferred to natural occurrence of next Tier 3 recovery — no action needed in merge phase.
+- CONSIDER finding (negative test for exit 1) not fixed — low priority.
+
+### Notes for Next Phase
+- PR #812 is ready to merge. All ACs PASS, CI SUCCESS, SHOULD fix applied.
+- New commits on `worktree-code+issue-802`: guard update for `run-review.sh` and `run-merge.sh`.
+- Run `/merge 812` to proceed.

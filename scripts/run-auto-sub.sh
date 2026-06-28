@@ -49,7 +49,7 @@ source "$SCRIPT_DIR/emit-event.sh"
 
 _maybe_emit_phase_complete() {
   local _exit_code=$?
-  [[ "$_exit_code" -ne 0 ]] && return 0
+  [[ "$_exit_code" -ne 0 && "$_exit_code" -ne 143 ]] && return 0
   [[ -z "${AUTO_EVENTS_LOG:-}" ]] && return 0
   [[ -z "${AUTO_SESSION_ID:-}" ]] && return 0
   [[ -z "${EMIT_ISSUE_NUMBER:-}" ]] && return 0

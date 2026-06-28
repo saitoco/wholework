@@ -44,7 +44,7 @@ Emitted after a phase completes successfully (`EXIT_CODE=0` and `_EMIT_PHASE_OWN
 ### phase_complete (backfilled)
 
 When the EXIT trap fires and the last event for the issue is `phase_start`, a backfill entry
-is written with `"backfilled": true`. This covers abnormal exits (SIGTERM / watchdog timeout).
+is written with `"backfilled": true`. This covers exit code 0 (clean exit) and exit code 143 (SIGTERM / watchdog timeout).
 
 ```json
 {
@@ -127,15 +127,14 @@ stays empty and `phase_start` / `phase_complete` are not emitted — preventing 
 `_maybe_emit_phase_complete()` is registered as an EXIT trap in each wrapper. On exit, it checks
 whether the last event for the current issue (in the session) was `phase_start`. If so, it writes
 a `phase_complete` entry with `"backfilled": true`. This covers cases where `phase_start` was
-emitted but `phase_complete` was not, on clean (exit code 0) exits only.
+emitted but `phase_complete` was not, on exit code 0 (clean exit) or exit code 143 (SIGTERM / watchdog timeout).
 
 Guard conditions (all must be set and non-empty for backfill to fire):
 - `AUTO_SESSION_ID`
 - `EMIT_ISSUE_NUMBER`
 - `EMIT_PHASE_NAME`
 - `AUTO_EVENTS_LOG`
-- Exit code must be 0 (backfill only on clean exit; non-zero exits — including SIGTERM (143) —
-  are not backfilled; they are tracked via `wrapper_exit` events emitted by `run-auto-sub.sh`)
+- Exit code must be 0 or 143 (SIGTERM): other non-zero exits are not backfilled (non-SIGTERM failures tracked by `wrapper_exit` events from `run-auto-sub.sh`)
 
 ## How to Reference
 
