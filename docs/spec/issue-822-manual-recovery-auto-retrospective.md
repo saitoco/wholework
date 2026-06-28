@@ -278,3 +278,31 @@ Note: 既存 Tier 2 anomaly detector がパターンを追記済みの場合は 
 - verify フェーズでは POST-MERGE 観察条件の確認と、review フェーズ指摘の SHOULD 問題の起票検討を行うこと
 - `_write_manual_recovery_to_spec()` は `scripts/run-auto-sub.sh` に実装済み; verify command は `grep "manual.*recovery"` で確認可能
 - `skills/verify/SKILL.md` Step 12 の skip 判定更新 (`### Manual recovery` エントリも "already recorded" として扱う) も main にマージ済み
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 3 件の曖昧ポイント (実装場所・文書化場所・bats test 配置) を非対話モードで自動解決。`_write_tier2`/`_write_tier3` との対称性原則という明確な根拠で判断できた。
+
+#### spec
+- 5 ファイル変更 (scripts/run-auto-sub.sh, modules/orchestration-fallbacks.md, tests/run-auto-sub.bats, skills/auto/SKILL.md, skills/verify/SKILL.md) の整合性確認に手数を要したが、Spec が各ファイルの編集箇所を明示しているため迷いなく実装できた。
+- Size M → L へのアップグレード (post-spec route demotion/upgrade) が code phase 開始前に発火し review-full route が選択された。Spec 量と影響範囲から妥当な判定。
+
+#### code
+- 関数配置 (set -euo pipefail 直後) は Spec 記述通り。dispatch を SUB_NUMBER 代入前に置く必要があるため自然な選択。
+
+#### review
+- Review が 2 件の SHOULD 問題を検出 (git diff --quiet untracked / 入力バリデーション)、いずれも本 Issue scope 外として deferred 扱い。
+
+#### merge
+- PR #830 conflict なし、CI 緑、approved 状態で squash merge。
+
+#### verify
+- AC1 (rubric)、AC2 (grep)、AC3 (bats) いずれも PASS。verify command の品質が高く UNCERTAIN なし。
+
+### Improvement Proposals
+
+- `git diff --quiet` で untracked ファイルが検出されないため、`_write_tier2_recovery_to_spec()` (line 196) / `_write_tier3_recovery_to_spec()` (line 243) / `_write_manual_recovery_to_spec()` (line 46) いずれも初回 Spec 作成時の commit が漏れる可能性がある。`git status --porcelain` ベースに統一する横断修正 Issue を起票推奨。
+- `_write_manual_recovery_to_spec()` を含む 3 関数で `$issue` / `$phase` / `$recovery_type` の数値・形式バリデーションがなく、`spec_dir/issue-${issue}-*.md` glob でパストラバーサルが理論上可能 (SHOULD)。横断的な入力バリデーション補強 Issue を起票推奨。
