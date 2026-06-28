@@ -114,18 +114,18 @@ No new comments since last phase.
 - The test for SIGTERM (exit 143) backfill uses an inline helper script that duplicates the guard logic rather than exercising the actual run scripts. This is an acknowledged tradeoff (avoids timing-sensitive SIGTERM in bats); the gap (no negative test for exit 1 → no backfill) was noted as CONSIDER.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- All pre-merge ACs verified PASS (rubric × 2, github_check CI × 1); all CI jobs SUCCESS.
-- SHOULD finding: `run-review.sh` and `run-merge.sh` had stale guard; fixed in this review phase by extending the guard to match the other 4 wrappers.
-- No MUST issues; review posted as COMMENT event (not REQUEST_CHANGES).
+- PR #812 squash-merged to main (2026-06-28). Base branch was `main` so `closes #802` auto-closed the Issue.
+- No conflicts detected; CI was green and review approved before merge.
+- All 6 `run-*.sh` wrappers confirmed updated (guard extended to include exit 143); the review phase applied the fix for `run-review.sh` and `run-merge.sh` that the code phase missed.
 
 ### Deferred Items
-- Post-merge AC (observation event=watchdog-kill) deferred to natural occurrence of next Tier 3 recovery — no action needed in merge phase.
-- CONSIDER finding (negative test for exit 1) not fixed — low priority.
+- Post-merge AC (observing SIGTERM-triggered `phase_complete (backfilled)` in a real Tier 3 recovery run) is deferred to natural occurrence — no action needed in verify phase.
+- CONSIDER finding (negative test for exit 1 → no backfill) not fixed — low priority, left for a follow-up Issue if needed.
 
 ### Notes for Next Phase
-- PR #812 is ready to merge. All ACs PASS, CI SUCCESS, SHOULD fix applied.
-- New commits on `worktree-code+issue-802`: guard update for `run-review.sh` and `run-merge.sh`.
-- Run `/merge 812` to proceed.
+- Verify can confirm the three pre-merge rubric/CI ACs by re-running them against the merged main state.
+- The bats test `backfill-emit: SIGTERM (exit 143) ...` is the primary assertion to check; it should pass on main.
+- Post-merge AC is observational only (Tier 3 recovery event); verify phase does not need to block on it.
