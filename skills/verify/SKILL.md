@@ -650,11 +650,11 @@ As the final step of the workflow, verify conducts a retrospective of the entire
    - Zero improvement proposals were identified in step 2
    - Spec does not exist OR all phases in the lifecycle review (step 2) had no observations worth recording
 
-   **Tier 2/3 automatic recovery handling**: When evaluating the third condition, apply the following rule for orchestration recovery observations:
-   - If the Spec's `## Auto Retrospective` section already records the Tier 2 or Tier 3 recovery that occurred for this Issue, those recovery observations are considered "already recorded" — they do not count as notable content for the verify retrospective. Treat them as non-notable when evaluating the third condition above.
-   - If a Tier 2 or Tier 3 recovery occurred but is NOT recorded in `## Auto Retrospective` (e.g., the auto route was not used, or the recovery predates Auto Retrospective), it qualifies as notable content. Do not skip; record it in the verify retrospective.
+   **Tier 2/3/Manual automatic recovery handling**: When evaluating the third condition, apply the following rule for orchestration recovery observations:
+   - If the Spec's `## Auto Retrospective` section already records the Tier 2, Tier 3, or Manual recovery that occurred for this Issue, those recovery observations are considered "already recorded" — they do not count as notable content for the verify retrospective. Treat them as non-notable when evaluating the third condition above. `_write_manual_recovery_to_spec()` writes `### Manual recovery (phase)` entries that qualify as "already recorded" under this rule.
+   - If a Tier 2, Tier 3, or Manual recovery occurred but is NOT recorded in `## Auto Retrospective` (e.g., the auto route was not used, the recovery predates Auto Retrospective, or `--write-manual-recovery` was not called), it qualifies as notable content. Do not skip; record it in the verify retrospective.
 
-   This rule makes the skip determination mechanical: check whether `## Auto Retrospective` exists and contains "Tier 2" or "Tier 3" recovery records. If yes, those records are already the SSoT — no duplication in the verify retrospective.
+   This rule makes the skip determination mechanical: check whether `## Auto Retrospective` exists and contains "Tier 2", "Tier 3", or "Manual recovery" records. If yes, those records are already the SSoT — no duplication in the verify retrospective.
 
    If ALL conditions hold: output `retrospective skipped: no notable content` to terminal and skip step 4. Proceed to Step 13.
 4. **Persist retrospective results to Spec**:
