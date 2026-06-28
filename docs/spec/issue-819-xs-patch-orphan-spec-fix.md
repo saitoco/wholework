@@ -100,16 +100,17 @@
 - AC3 `command "bats tests/run-code.bats tests/append-consumed-comments-section.bats"` was narrowly scoped to only the new/modified test files, which masked the broken existing test in `tests/run-verify.bats`. Broader verify commands (e.g., `command "bats tests/"`) would have caught this at AC verification time rather than at CI check time.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Updated `tests/run-verify.bats:88` test name from "spec absent: creates skeleton file with ## Consumed Comments section" to "spec absent: skips stub creation and exits 0", asserting the new behavior (exit 0, no file created).
-- No other changes needed; the implementation in `scripts/append-consumed-comments-section.sh` was correct.
+- PR #825 squash-merged into main without conflicts (mergeable=true, CI passing, review approved).
+- BASE_BRANCH=main, so Issue #819 will be auto-closed via the `closes #819` reference in the PR body.
+- No conflict resolution was required; proceeded directly from Step 1 to Step 4.
 
 ### Deferred Items
-- Option A (correct kebab-case naming when a stub is intentionally needed) remains unimplemented per the code phase decision.
-- AC3 verify command scope is narrow (`tests/run-code.bats tests/append-consumed-comments-section.bats` only); widening to `bats tests/` would improve regression coverage.
+- Post-merge AC (observing that `docs/spec/issue-N-code.md` orphan stubs no longer appear on the next XS `/auto N` run) is pending.
+- AC3 verify command scope remains narrow (`tests/run-code.bats tests/append-consumed-comments-section.bats`); widening to `bats tests/` for regression coverage is an improvement candidate for a follow-up Issue.
 
 ### Notes for Next Phase
-- CI should now pass after the `tests/run-verify.bats` fix was pushed.
-- Post-merge AC (orphan stub observation) is still pending; verify via `/auto N` on an XS issue.
+- verify phase should confirm the three pre-merge ACs (orphan stub suppressed, `tests/append-consumed-comments-section.bats` exists, bats suite passes).
+- The post-merge AC requires an actual XS `/auto N` run to observe absence of orphan stubs — cannot be verified statically.
