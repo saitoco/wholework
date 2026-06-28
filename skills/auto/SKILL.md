@@ -890,7 +890,7 @@ Do not invoke subsequent phases.
 - merge phase failure: invalid PR state (not approved, CI failure), conflict resolution failure
 - verify phase failure: acceptance condition FAIL, Issue reopened
 
-**Manual recovery hand-off**: If the parent session manually recovers and continues to subsequent phases instead of stopping here, complete the remaining phases via manual recovery first, then follow Step 4a (after all phases are done) to append anomaly details and improvement proposals to the Spec's `## Auto Retrospective > ### Orchestration Anomalies` and `### Improvement Proposals` sections, then proceed to Step 5. Note: if the Tier 2 anomaly detector already appended a known pattern, skip the `### Orchestration Anomalies` / `### Improvement Proposals` append in Step 4a to avoid duplicate entries.
+**Manual recovery hand-off**: If the parent session manually recovers and continues to subsequent phases instead of stopping here, complete the remaining phases via manual recovery first, then call `bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE RECOVERY_TYPE` to automatically write the recovery record to the sub-issue Spec's `## Auto Retrospective` section (where RECOVERY_TYPE describes the action taken, e.g., `push-only`, `pr-create`, `review-rerun`). Skip this call if the Tier 2 anomaly detector already appended a recovery entry for this event to avoid duplicate entries. Then proceed to Step 5.
 
 Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
 - `SKILL_NAME=auto`
