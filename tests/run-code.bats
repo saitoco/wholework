@@ -560,3 +560,64 @@ MOCK
     [ "$status" -eq 0 ]
     [ ! -f "$FALLBACK_LOG" ]
 }
+
+@test "AUTO_SESSION_ID resolves from .tmp/auto-session-current when PGID file absent (parent /auto path)" {
+    # Issue #791 iteration B: parent /auto SKILL.md writes to .tmp/auto-session-current
+    # (固定名), batch path writes to .tmp/auto-session-${PGID}. The resolve chain must
+    # try PGID first then fall back to current so both paths produce a non-empty
+    # AUTO_SESSION_ID — without this fallback, parent /auto path silently emits
+    # events with session_id="" (observed in /auto 811 run on 2026-06-28).
+    #
+    # We assert the resolve logic by replaying the same shell snippet used in
+    # scripts/run-code.sh L50-51 (and identical in run-spec/review/merge/issue.sh).
+    mkdir -p .tmp
+    echo "test-sid-12345-1782604910" > .tmp/auto-session-current
+    # Intentionally do NOT create .tmp/auto-session-${PGID}
+
+    unset AUTO_SESSION_ID
+    PGID=$(ps -o pgid= -p $$ | tr -d ' ')
+    AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || cat ".tmp/auto-session-current" 2>/dev/null || echo '')}"
+
+    [ "$AUTO_SESSION_ID" = "test-sid-12345-1782604910" ]
+}
+
+@test "AUTO_SESSION_ID PGID file takes priority over .tmp/auto-session-current (batch path preserved)" {
+    # Backward compatibility: when both files exist, PGID-based file wins because
+    # run-auto-sub.sh writes to it per batch session. The fallback only kicks in
+    # when PGID file is absent.
+    mkdir -p .tmp
+    echo "fallback-sid-FROM-CURRENT" > .tmp/auto-session-current
+    PGID=$(ps -o pgid= -p $$ | tr -d ' ')
+    echo "primary-sid-FROM-PGID" > ".tmp/auto-session-${PGID}"
+
+    unset AUTO_SESSION_ID
+    AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || cat ".tmp/auto-session-current" 2>/dev/null || echo '')}"
+
+    [ "$AUTO_SESSION_ID" = "primary-sid-FROM-PGID" ]
+}
+
+@test "AUTO_SESSION_ID returns empty when neither file exists (graceful no-op)" {
+    # When no session file exists, the resolve chain must return empty string
+    # so the guard in emit_event-style functions can detect and skip emit.
+    mkdir -p .tmp
+
+    unset AUTO_SESSION_ID
+    PGID=$(ps -o pgid= -p $$ | tr -d ' ')
+    AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || cat ".tmp/auto-session-current" 2>/dev/null || echo '')}"
+
+    [ -z "$AUTO_SESSION_ID" ]
+}
+
+@test "AUTO_SESSION_ID env var takes priority over both files (caller override)" {
+    # When AUTO_SESSION_ID is already set in environment, file resolution must
+    # not override it. This preserves the caller-controlled override path.
+    mkdir -p .tmp
+    echo "FROM-CURRENT" > .tmp/auto-session-current
+    PGID=$(ps -o pgid= -p $$ | tr -d ' ')
+    echo "FROM-PGID" > ".tmp/auto-session-${PGID}"
+
+    export AUTO_SESSION_ID="ENV-OVERRIDE"
+    AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || cat ".tmp/auto-session-current" 2>/dev/null || echo '')}"
+
+    [ "$AUTO_SESSION_ID" = "ENV-OVERRIDE" ]
+}
