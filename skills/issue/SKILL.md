@@ -102,6 +102,16 @@ Do not create verify command items for translation output files. These are auto-
 
 Assign hints on a best-effort basis. Inaccuracies are handled by `/verify`'s AI fallback.
 
+**Test file existence check (for verify commands referencing test files):**
+
+When generating an AC whose verify command references a test file path (e.g., `tests/*.bats`, `tests/*.py`), confirm whether the referenced file exists before writing the verify command:
+
+1. Run `ls tests/<filename>` or use Glob to check file presence
+2. **File exists**: proceed with the verify command as normal
+3. **File does not exist**: the file is a new creation target in this Issue — note this explicitly in the AC or alongside it (e.g., "test file `tests/<filename>.bats` will be created as part of implementation"). Avoid referencing a non-existent file in verify commands that presuppose its existence (e.g., `file_contains`, `section_contains`); prefer `command "bats tests/<filename>.bats"` which validates execution rather than static content.
+
+This check shifts conflict detection from the `/spec` phase (codebase investigation) to the `/issue` phase, reducing rework.
+
 **Table cell value vs. compound key string mismatch:**
 
 When using `file_contains` or `section_contains` with a compound string like `"key: value"`, be aware that markdown table cells often contain only the cell value (e.g., `steering`) and not the full compound string (e.g., `type: steering`). If the target file uses a markdown table to represent structured data, the compound key string will not match the table cell content. In such cases, search for the standalone value (`"steering"`) or add prose text that contains the compound string to make verification reliable.
