@@ -50,3 +50,35 @@ This check shifts conflict detection from the `/spec` phase (codebase investigat
 - Step 7 の参照テキスト (line 417 付近) に新規サブセクション名の追記は不要 — "full procedure" 参照が包含する
 - `tests/*.bats` は例示であり、`tests/*.py` など他の test file 形式にも適用されることを本文に含める
 - `section_contains "skills/issue/SKILL.md" "### Step 4: Classify" "tests/"` は section_contains の heading partial match ルールにより "### Step 4: Classify Acceptance Criteria and Assign Verify Commands" に一致する
+
+## Consumed Comments (code phase)
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- None
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Single subsection inserted immediately after "Translation document exclusion" in Step 4 — the Spec-specified position. No other locations required because Step 7 inherits via "Follow the full procedure defined in Step 4".
+- Used `ls tests/<filename>` as the existence check command in the guidance (Glob also mentioned); both are valid for the LLM executing this step.
+- Text was kept concise with 3-point numbered list and a one-sentence rationale for the shift.
+
+### Deferred Items
+- Post-merge opportunistic AC (observe warning when a non-existent test file is referenced) — deferred to real-usage observation, not automatable at this time.
+
+### Notes for Next Phase
+- All 3 pre-merge ACs pass (rubric, section_contains, grep).
+- Implementation is Markdown-only (no shell script changes); bats test suite 981/981 PASS confirms no regressions.
+- validate-skill-syntax.py: 0 errors, 1 pre-existing warning in auto/SKILL.md (unrelated).
+- check-forbidden-expressions.sh: 0 issues in skills/issue/SKILL.md; 1 pre-existing issue in docs/spec/issue-802 (unrelated).
