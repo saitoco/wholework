@@ -121,5 +121,30 @@
 
 全 10 件の verify command を safe mode で処理済み。`command` ベース 4 件 (bats テスト実行) は CI "Run bats tests" SUCCESS を代替検証として利用し PASS と判定した。rubric check は AI 判断でシームレスに実行できた。verify command の calibration は既に code phase で修正済みであり、今回の review では全 UNCERTAIN ゼロで完了した。
 
-### Phase Handoff (review phase)
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 3 件の ambiguity (AC2 アプローチ、AC4 verify command、AC3 bats scope) を自動解決。特に AC4 の `|| true` で常に PASS になる検証不能 command を `grep + bats command` に置換した判断は適切。
+
+#### spec
+- 3 アプローチ (A: gitignore / B: auto-commit / C: verify-side exemption) を併記し、デュアル対策 (B + C) を採択。`auto-events-rollup.sh` の `set -e` の違いに気付き fallback を `||` で書く設計判断が code phase の安定性に寄与。
+
+#### code
+- AC1 verify command の miscalibration (`file_contains "git commit"` → `"commit -s"`) が初回コミット後に発覚し、後続 commit で修正。`git -C "$REPO_ROOT"` 形式は `file_contains "git commit"` にマッチしない落とし穴。
+
+#### review
+- MUST/SHOULD ゼロ。CONSIDER 1 件 (`auto-events-rollup.sh` で nothing to commit 時の false warning) を deferred 扱いに記録。
+
+#### merge
+- PR #835 conflict なし、CI 緑、approved 状態で squash merge。`[skip ci]` 付与で heartbeat 起因の CI トリガーを防止。
+
+#### verify
+- 4 件 pre-merge AC が全 PASS。bats 11/11 + 9/9 + 14/14。verify-dirty-detection.bats の test 13/14 で auto-events-rollup の exempt 動作も確認。
+
+### Improvement Proposals
+
+- `auto-events-rollup.sh` で commit 対象に変更がない場合 (`nothing to commit`) に warning が出る現状を `git diff --quiet` 等で事前判定して silent skip させる小修正を後続 Issue で対応。cosmetic だが log の S/N 比を改善する。
+- `git -C "$REPO_ROOT" commit` 等の git invocation 形式が `file_contains "git commit"` verify command にマッチしない問題が code phase で 1 commit 分の修正コストを発生させた。`verify-classifier.md` または `/issue` skill の verify command 生成ロジックに「git invocation は contiguous でないことが多いため `commit -s` 等の sub-string を選ぶ」ガイドラインを追加する Issue を起票推奨。本セッションでも同種 calibration が #823, #824 で連続発生しているため再発性あり。
 
