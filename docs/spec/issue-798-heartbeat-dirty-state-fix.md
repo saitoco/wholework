@@ -84,17 +84,31 @@
 - None. 1 回目のコミットで実装が完了し、全 12 テスト PASS。リワークは発生しなかった。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 案 B (verify 側 dirty check 特例) を採用。Case A は commit 履歴肥大・push race リスクがあり採用しない。
-- `ignore_patterns` 配列への追加方式を選択。`_is_ignored()` 関数のシグネチャを変えず、既存 user-config パターンと同一の判定ロジックを共有する。
-- 警告メッセージは変更しない ("excluded by verify-ignore-paths" のまま)。既存テスト行 95・121 のアサートが同文字列を期待しており、変更コストを避ける。
+- 全 4 観点のライトレビューで MUST / SHOULD / CONSIDER 問題なし。外部レビューツール (Copilot/CodeRabbit) は未設定のため Step 7 スキップ。
+- Forbidden Expressions check の FAILURE は `docs/spec/issue-432-out-of-tree-file-verify-guide.md` の既存問題で、このPRの変更とは無関係と確認。
+- 警告メッセージが "excluded by verify-ignore-paths" を built-in パターンにも使用する設計は、Spec で明示的に決定されたもので問題なし。
 
 ### Deferred Items
 - Post-merge: 次回 `/auto --batch` 実行時に heartbeat dirty state が verify を block しないことを観察 (verify-type: observation event=auto-run)。
 
 ### Notes for Next Phase
-- `/review` では `scripts/check-verify-dirty.sh` の変更点 (built-in 免除パターン追加) と `tests/verify-dirty-detection.bats` の新規テストケース 2 件を重点的に確認すること。
-- 案 A を採用しなかった理由が Script コメントおよび Spec Notes に記録されている。
+- `/merge` では CI SUCCESS (Run bats tests × 2、Validate skill syntax × 2) を確認のうえマージ可能。
+- Forbidden Expressions check の FAILURE は既存問題のため merge ブロック要因ではない。
 - Post-merge AC は `observation event=auto-run` なので verify フェーズでは SKIPPED 扱い。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- None. Spec と実装の間に乖離なし。`ignore_patterns+=` の挿入位置、テストケースの assertionパターン、警告メッセージの維持、いずれも Spec の設計通りに実装されていた。
+
+### Recurring issues
+
+- None. 同種の問題は検出されなかった。4 観点すべてでクリーン。
+
+### Acceptance criteria verification difficulty
+
+- 全 AC が PASS (Post-merge は SKIPPED)。verify command (`bats` command) は CI "Run bats tests" SUCCESS を代替検証として使用 (safe mode)。rubric AC も diff から直接確認可能で UNCERTAIN なし。verify command の品質は良好。
