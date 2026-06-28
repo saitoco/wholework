@@ -316,6 +316,28 @@ When the Issue involves deleting a feature (script, function, variable, etc.), i
 
 *Example: Issue #485 retro — `detect-wrapper-anomaly.sh` retained a dead `VERIFY_FAILED` detection pattern after `run-verify.sh` was deleted because the impact chain was not listed in the Spec's Changed Files.*
 
+**Symbol impact discovery (deletion/migration/rename):**
+
+When the Issue involves deleting, migrating, or renaming a target symbol (path string, variable name, file name, function name, etc.), run a codebase-wide full-text search to discover all files that reference the symbol and add them as Changed Files candidates:
+
+**Phase 1 — Extract target symbol:** Identify the old symbol from the Issue body (e.g., old path `docs/reports/loop-state-` before migration to `docs/sessions/_daily/loop-state-`, old variable name, old file name).
+
+**Phase 2 — Full-text grep:**
+```bash
+rg "<old-symbol>" --files-with-matches
+# or
+git grep -l "<old-symbol>"
+```
+
+**Phase 3 — Candidate list:** For each file in the grep output, evaluate whether it needs a change (reference update, cleanup, or test update) and add it to the Changed Files list. The spec writer makes the final inclusion/exclusion decision — exclude only files that reference the symbol in non-load-bearing contexts (e.g., historical records, retrospective examples, comparison tables).
+
+**Skip** if the Issue does not involve deletion, migration, or renaming of a named symbol.
+
+*Background: Three consecutive Changed Files omissions in a single `/auto --batch` session exposed this as a structural gap:*
+- *#771: `tests/append-loop-state-heartbeat.bats` path reference not updated after loop-state path migration (caught in verify retrospective)*
+- *#770: `skills/audit/SKILL.md` session boundary section reference missed after session boundary section rename (caught in review)*
+- *#775: `docs/structure.md`, `docs/reports/orchestration-recoveries.md`, `tests/collect-recovery-candidates.bats` not updated after audit recoveries feature deletion (caught in review/verify)*
+
 **bats test Spec input format:**
 
 For Specs involving new/modified bats tests, explicitly specify the input data format (markdown condition line format, JSON structure, command output format) that the test target script expects. Include test data format details in the Spec's Notes section.
