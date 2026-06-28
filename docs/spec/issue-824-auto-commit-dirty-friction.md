@@ -78,24 +78,24 @@
 - One additional commit (`Fix miscalibrated verify command in spec for issue #824`) was needed to fix the Spec verify command before PR creation, because the initial implementation commit did not update the Spec verify command to match the corrected form.
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- `git -C "$REPO_ROOT" commit` (not bare `git commit`) is used in `append-loop-state-heartbeat.sh` because it may be called from any working directory. Verify commands checking for "git commit" as a literal substring will FAIL against this file — check for "commit -s" instead.
-- Dual defense pattern: auto-commit (primary) + verify-side exempt in `check-verify-dirty.sh` (fallback). The fallback ensures clean state even when auto-commit fails due to concurrent pushes or network issues.
-- AC1 verify command was corrected from `file_contains "scripts/append-loop-state-heartbeat.sh" "git commit"` to `file_contains "scripts/append-loop-state-heartbeat.sh" "commit -s"` during Step 10.
+- All 10 AC verify commands PASS in safe mode. `command` hints (bats test runs) were resolved via CI "Run bats tests" SUCCESS fallback.
+- No MUST/SHOULD issues found. One CONSIDER (false warning on "nothing to commit" in auto-events-rollup.sh) was logged as a line comment but not fixed.
+- Post-merge observation (AC post-merge) remains deferred: requires manual check in the next `/auto --batch` run.
 
 ### Deferred Items
 
-- Auto-commit in early-exit paths of `auto-events-rollup.sh` (no input data / no events for date) is not implemented — those paths are edge cases and not a friction source.
-- Post-merge observation (AC post-merge) requires manual verification in the next `/auto --batch` run.
+- Post-merge observation: verify that `loop-state-*.md` / `auto-events-rollup-*.md` dirty file friction is eliminated in the next `/auto --batch` run (manual observation required).
+- Optional fix for false warning when `git commit` runs on an unchanged `$OUTPUT_FILE` (CONSIDER — non-fatal, cosmetic).
 
 ### Notes for Next Phase
 
-- All 34 bats tests (11 + 9 + 14) pass. CI should confirm the same.
-- The `[skip ci]` suffix in commit messages prevents heartbeat/rollup commits from triggering CI runs — verify that CI is not triggering on those commits after merge.
-- The `||` fallback in `auto-events-rollup.sh` is essential because `set -euo pipefail` is active; remove it and the script would abort on git failure.
+- No code changes made during review. The PR is ready to merge.
+- The `[skip ci]` suffix prevents heartbeat/rollup commits from triggering CI — confirm this behavior post-merge.
+- Dual defense pattern (auto-commit primary + verify-side exempt fallback) is the intended design; do not remove either layer.
 
 ## Notes
 
@@ -106,3 +106,20 @@
 - `tests/auto-events-rollup.bats` は現在 git mock なし。git mock を `setup()` に追加するか、テスト内でローカルに追加する (既存テストへの影響を最小限に抑えるため、テスト内ローカル追加を推奨)
 - auto-commit 失敗は非致命的 (warning + exit 0) — 次回の heartbeat / rollup 実行時に再試行される
 - Issue Retrospective から消費: AC2 はデュアル対策 (auto-commit + verify-side exemption) を採用。AC4 は `bats tests/verify-dirty-detection.bats` テストで検証する形式に変更済み (元の `|| true` command は検証不能なため)
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+特記すべき乖離なし。Phase Handoff に記録された通り、AC1 verify command の `file_contains "git commit"` → `"commit -s"` 修正が code phase で既に対応済みで、Spec と Issue body 両方に反映されていた。`git -C "$REPO_ROOT"` 形式と `git commit` の関係はコードレビュー時に引き続き注意が必要な落とし穴パターン。
+
+### 再発 Issue
+
+特記なし。MUST/SHOULD Issue はゼロ。`auto-events-rollup.sh` で「nothing to commit」時に false warning が発生する可能性 (CONSIDER) は記録したが、実用上の影響は軽微。
+
+### 受入条件の検証難易度
+
+全 10 件の verify command を safe mode で処理済み。`command` ベース 4 件 (bats テスト実行) は CI "Run bats tests" SUCCESS を代替検証として利用し PASS と判定した。rubric check は AI 判断でシームレスに実行できた。verify command の calibration は既に code phase で修正済みであり、今回の review では全 UNCERTAIN ゼロで完了した。
+
+### Phase Handoff (review phase)
+
