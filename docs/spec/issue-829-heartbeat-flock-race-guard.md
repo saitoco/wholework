@@ -113,3 +113,32 @@ flock 実装パターンは既存の `scripts/emit-event.sh` の `command -v flo
 - **クリティカルセクション範囲の拡大**: 従来は dedup+append のみ。file-creation (mkdir -p + header write) もアトミックに含めることで、並列起動時のヘッダー重複を防ぐ
 - **test assertion**: `[ "$count" -le 1 ]` — macOS システム bash (3.2) には flock がないため mkdir fallback 動作。並列 2プロセスが同時に mkdir に成功するエッジケースは極めてレアだが、CI 環境での flakiness を避けるため strict `[ -eq 1 ]` でなく `[ -le 1 ]` とする。flock 有環境では必ず 1 行
 - **auto-resolve (macOS flock 可用性)**: rubric が "flock または file-based mutual exclusion" と許容しており、Issue Retrospective に記録済み (自動解決)。実装は flock + mkdir fallback の両方を含むため、どちらの環境でも rubric が pass する
+
+## Code Retrospective
+
+### 実装サマリ
+
+`scripts/append-loop-state-heartbeat.sh` に flock ベースの排他制御を追加し、並列 batch worker による duplicate row race condition を構造的に防御した。
+
+主な変更点:
+1. `_do_append` 関数を定義し、file-creation・dedup・append を 1 つのアトミックな単位に集約
+2. `command -v flock` ディスパッチで flock (Linux/macOS with Homebrew) と mkdir-lock fallback (bash 3.2+) を切り替え
+3. `flock -n` (non-blocking) を採用し、ロック取得失敗時はスキップして best-effort 設計を維持
+4. `mkdir -p "$SESSIONS_DAILY_DIR"` をロック試行前に追加し、親ディレクトリ不在による lock ファイル/ディレクトリ作成失敗を解消
+
+### 発生した問題と修正
+
+**Test 21 FAIL: `[ "$header_count" -eq 1 ]`**
+
+- 原因: `$SESSIONS_DAILY_DIR` が存在しない場合、`flock` の `9>"$LOCK_FILE"` も `mkdir "$LOCK_DIR"` も親ディレクトリ不在で失敗 → 両並列プロセスが lock を取得できずタイムアウト後に無ロックで `_do_append` を呼び出し → ヘッダー重複
+- 修正: ロックディスパッチブロック前に `mkdir -p "$SESSIONS_DAILY_DIR" 2>/dev/null || true` を追加
+- 教訓: flock と mkdir-lock はどちらも親ディレクトリの存在を前提とする。`_do_append` 内部の `mkdir -p` は「ファイルが存在しない場合のみ」実行されるため、lock 取得前には別途 `mkdir -p` が必要
+
+### 設計判断
+
+- `flock -n` vs `flock -x`: heartbeat は best-effort なため non-blocking を選択。ロック競合時にスキップしても次回 phase transition で再 emit されるため、データ損失リスクは許容範囲内
+- `_do_append` 関数化: クリティカルセクションのスコープを明確にし、flock ブランチと mkdir-lock ブランチの両方から同一関数を呼び出す設計により、実装の重複を排除
+
+### Phase Handoff
+
+PR #844 (branch: `worktree-code+issue-829`) をマージ後、post-merge AC として次回 `/auto --batch` での重複行不発生を観察する。
