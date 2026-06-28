@@ -84,20 +84,20 @@
 - None. 1 回目のコミットで実装が完了し、全 12 テスト PASS。リワークは発生しなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 全 4 観点のライトレビューで MUST / SHOULD / CONSIDER 問題なし。外部レビューツール (Copilot/CodeRabbit) は未設定のため Step 7 スキップ。
-- Forbidden Expressions check の FAILURE は `docs/spec/issue-432-out-of-tree-file-verify-guide.md` の既存問題で、このPRの変更とは無関係と確認。
-- 警告メッセージが "excluded by verify-ignore-paths" を built-in パターンにも使用する設計は、Spec で明示的に決定されたもので問題なし。
+- PR #817 を squash merge で main へ統合。CI 全パス (Run bats tests × 2、Validate skill syntax × 2、DCO、Forbidden Expressions、macOS shell compatibility)。
+- mergeStateStatus=CLEAN、コンフリクトなし。Step 3 (Resolve Conflicts) はスキップ。
+- Forbidden Expressions check の FAILURE は `docs/spec/issue-432-out-of-tree-file-verify-guide.md` の既存問題で、このPRの変更と無関係であることを確認済み。
 
 ### Deferred Items
-- Post-merge: 次回 `/auto --batch` 実行時に heartbeat dirty state が verify を block しないことを観察 (verify-type: observation event=auto-run)。
+- Post-merge AC: 次回 `/auto --batch` 実行時に heartbeat dirty state が verify を block しないことを観察 (verify-type: observation event=auto-run)。verify フェーズでは SKIPPED 扱い。
 
 ### Notes for Next Phase
-- `/merge` では CI SUCCESS (Run bats tests × 2、Validate skill syntax × 2) を確認のうえマージ可能。
-- Forbidden Expressions check の FAILURE は既存問題のため merge ブロック要因ではない。
-- Post-merge AC は `observation event=auto-run` なので verify フェーズでは SKIPPED 扱い。
+- Post-merge AC は `observation event=auto-run` のため verify では SKIPPED 扱い。
+- Pre-merge AC は全 PASS 済み (`bats tests/append-loop-state-heartbeat.bats` 9 tests、`bats tests/verify-dirty-detection.bats` 12 tests)。
+- verify フェーズで新規確認が必要な観察 AC はなし。main への統合完了。
 
 ## review retrospective
 
