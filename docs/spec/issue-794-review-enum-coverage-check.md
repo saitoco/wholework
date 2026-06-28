@@ -47,3 +47,29 @@ Spec が enum (離散値の名前付きセット、例: `auto-stop-at: spec|code
 - 「残存リスク」(実装者がモジュール新規作成した場合に AC2 FAIL) は、SKILL.md への追加を必須とすることで回避済み
 - review-light.md の Perspective 1 にも自然に反映されるが、SKILL.md の Review Aspects セクションのガイダンスで十分
 - docs 翻訳 sync 不要: 変更ファイルは `agents/` と `skills/` であり `docs/*.md` ではない
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- None
+
+### Rework
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `skills/review/SKILL.md` の `## Review Aspects` 末尾に "**Enum exhaustiveness check**" パラグラフを追加した (AC2 grep 一致を保証するため "exhaustive" を含む見出しを採用)
+- `agents/review-spec.md` Perspective 1 に Step 2.5 を挿入した (Step 2 と Step 3 の間)
+- 両ファイルとも既存の構造に自然に統合でき、新規モジュール作成は不要だった
+
+### Deferred Items
+- review-light.md は今回変更しなかった (SKILL.md の Review Aspects でカバー範囲として十分との Spec 判断)
+- Post-merge AC (enum coverage check の発火観察) は次回 `/review --full` 実行時に観察する
+
+### Notes for Next Phase
+- None (patch route — review フェーズなし)
