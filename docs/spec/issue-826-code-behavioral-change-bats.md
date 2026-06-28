@@ -89,3 +89,20 @@
 ### Notes for Next Phase
 - Issue #826 は `closes #826` を含む PR #842 が main にマージされたため GitHub 自動クローズ済み
 - label を verify へ遷移済み; verify phase は observation AC のみで完了条件はイベント待ち
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue / spec / code
+- Deviations / Rework なし。Spec の挿入位置・構造を完全再現。
+
+#### review
+- SHOULD: `tests/` ディレクトリが存在しない場合の `grep -rl` エラーハンドリングが未定義 (skills/code/SKILL.md:294)。フルスイート方向フォールバックされるため実害小だが堅牢性向上余地あり。
+
+#### merge / verify
+- 問題なし。rubric AC が PASS。
+
+### Improvement Proposals
+
+- `skills/code/SKILL.md:294` の `grep -rl` で `tests/` ディレクトリが存在しないケースのエラーハンドリングを明示する Issue を後続起票推奨。LLM ガイドラインとして `[ -d tests ]` チェックを先置きする等の defensive coding を追加。
