@@ -2,7 +2,7 @@
 type: report
 description: Daily rollup of /auto session events from .tmp/auto-events.jsonl
 generated_by: scripts/auto-events-rollup.sh
-generated_at: 2026-06-28T04:39:46Z
+generated_at: 2026-06-28T08:55:37Z
 ---
 
 # /auto Event Rollup — 2026-06-28
@@ -17,8 +17,22 @@ generated_at: 2026-06-28T04:39:46Z
 | #431 | - | 03:32:09 | 03:39:12 | 7m | issue | — | success |
 | #432 | S | 04:03:42 | 04:28:04 | 24m | code-patch | — | success |
 | #432 | - | 03:54:40 | 04:12:37 | 17m | issue→spec | — | success |
-| #434 | M | 04:37:24 | - | - |  | — | incomplete |
-| #434 | - | 04:29:09 | 04:37:13 | 8m | issue | — | success |
+| #434 | M | 04:37:24 | 05:00:35 | 23m | code-patch | — | success |
+| #434 | - | 04:29:09 | 04:48:48 | 19m | issue→spec | — | success |
+| #435 | M | 05:14:41 | 05:38:03 | 23m | code-pr | — | success |
+| #435 | - | 05:06:18 | 05:26:05 | 19m | issue→spec | — | success |
+| #442 | M | 06:08:14 | 06:47:36 | 39m | code-patch | — | success |
+| #442 | - | 06:00:50 | 06:17:18 | 16m | issue→spec | — | success |
+| #443 | M | 06:55:16 | 07:18:28 | 23m | code-patch | — | success |
+| #443 | - | 06:48:38 | 07:03:50 | 15m | issue→spec | — | success |
+| #449 | XS | 07:25:17 | 07:42:55 | 17m | code-patch | — | success |
+| #449 | - | 07:19:24 | 07:25:07 | 5m | issue | — | success |
+| #453 | XS | 07:49:51 | 08:04:27 | 14m | code-patch | — | success |
+| #453 | - | 07:44:04 | 07:49:39 | 5m | issue | — | success |
+| #456 | XS | 08:11:43 | 08:24:07 | 12m | code-patch | — | success |
+| #456 | - | 08:05:30 | 08:11:33 | 6m | issue | — | success |
+| #457 | S | 08:32:10 | 08:54:11 | 22m | code-patch | — | success |
+| #457 | - | 08:25:05 | 08:40:14 | 15m | issue→spec | — | success |
 | #788 | S | 00:11:57 | 00:21:20 | 9m | issue→spec | — | success |
 | #789 | S | 00:48:13 | 01:01:39 | 13m | issue→code-patch | — | success |
 | #790 | S | 01:09:53 | 01:43:11 | 33m | issue→spec→code-patch | 1 | success |
@@ -41,17 +55,18 @@ generated_at: 2026-06-28T04:39:46Z
 | #815 | - | 02:01:35 | 02:20:28 | 18m | review→merge | — | success |
 | #816 | - | 03:21:13 | 03:44:06 | 22m | review→merge | — | success |
 | #817 | - | 04:22:15 | 04:38:27 | 16m | review→merge | — | success |
+| #818 | - | 05:38:03 | 05:58:47 | 20m | review→merge | — | success |
 
 ## Phase Distribution
 
 | Phase | Count | Median Duration | p95 |
 |-------|-------|-----------------|-----|
-| code-patch | 10 | 14m | 25m |
-| code-pr | 4 | 22m | 26m |
-| issue | 17 | 8m | 12m |
-| merge | 5 | 4m | 5m |
-| review | 6 | 16m | 26m |
-| spec | 14 | 9m | 20m |
+| code-patch | 17 | 14m | 30m |
+| code-pr | 5 | 19m | 26m |
+| issue | 24 | 7m | 10m |
+| merge | 6 | 4m | 5m |
+| review | 7 | 15m | 26m |
+| spec | 19 | 9m | 20m |
 
 ## Recovery Tier Invocations
 
