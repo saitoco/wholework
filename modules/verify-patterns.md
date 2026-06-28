@@ -820,7 +820,7 @@ file_contains "scripts/foo.sh" "commit -s"
 file_contains "scripts/foo.sh" "commit -m"
 ```
 
-Both `commit -s` and `commit -m` are contiguous sub-strings regardless of what precedes `commit` on the line.
+Both `commit -s` and `commit -m` are contiguous sub-strings regardless of what precedes `commit` on the line. Use `commit -s` for projects that require signed-off commits (DCO); use `commit -m` otherwise — always choose the anchor that matches what the implementation actually contains.
 
 **Real example:** `scripts/append-loop-state-heartbeat.sh` contains `git -C "$REPO_ROOT" commit -s -m "chore: ..."` — the contiguous anchor is `commit -s`, not `git commit`.
 
@@ -832,11 +832,11 @@ This pattern applies whenever option flags are inserted between a command name a
 |---------------------------|-------------------|
 | `git -C "$REPO_ROOT" commit` | `commit -s` / `commit -m` |
 | `git -C "$REPO_ROOT" push` | `push origin` |
-| `ssh -i key host command` | `host command` (the host+command part) |
+| `ssh -i key myserver "deploy.sh"` | `"deploy.sh"` (the literal command string) |
 
 **Decision procedure:**
 
-1. Before writing `file_contains "path" "git commit"`, check whether the implementation may use `git -C` or other inserted flags
+1. Before writing `file_contains "path" "<command> <subcommand>"` (e.g., `"git commit"`, `"git push"`), check whether the implementation may insert flags between the command name and sub-command (e.g., `git -C`, `ssh -i key host`)
 2. If yes (or uncertain): use `commit -s`, `commit -m`, or another contiguous sub-string anchor instead
 3. Verify the chosen anchor appears literally in the implementation file (cross-reference procedure from §3)
 

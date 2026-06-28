@@ -4,7 +4,7 @@ PROJECT_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 VERIFY_PATTERNS="$PROJECT_ROOT/modules/verify-patterns.md"
 
 @test "verify-heuristics: non-contiguous heuristic section exists in verify-patterns.md" {
-    grep -q "non-contiguous" "$VERIFY_PATTERNS"
+    grep -q "Non-Contiguous Git Invocation" "$VERIFY_PATTERNS"
 }
 
 @test "verify-heuristics: contiguous sub-string guidance is documented" {
