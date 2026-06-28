@@ -621,3 +621,49 @@ MOCK
 
     [ "$AUTO_SESSION_ID" = "ENV-OVERRIDE" ]
 }
+
+@test "signoff check: warning emitted when new commit missing Signed-off-by after code phase" {
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "rev-parse" && "$2" == "HEAD" ]]; then
+  echo "aaaa0000"
+  exit 0
+fi
+if [[ "$1" == "log" && "$2" == "aaaa0000..HEAD" ]]; then
+  echo "bbbb1111"
+  exit 0
+fi
+if [[ "$1" == "log" && "$2" == "-1" ]]; then
+  echo "chore: add feature"
+  exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Warning:"*"Signed-off-by"* ]]
+}
+
+@test "signoff check: no warning when all new commits have Signed-off-by" {
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "rev-parse" && "$2" == "HEAD" ]]; then
+  echo "aaaa0000"
+  exit 0
+fi
+if [[ "$1" == "log" && "$2" == "aaaa0000..HEAD" ]]; then
+  echo "bbbb1111"
+  exit 0
+fi
+if [[ "$1" == "log" && "$2" == "-1" ]]; then
+  printf "chore: add feature\n\nSigned-off-by: User <user@example.com>\n"
+  exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"Warning:"*"Signed-off-by"* ]]
+}

@@ -205,6 +205,7 @@ load_watchdog_timeout "$SCRIPT_DIR" "code"
 
 _emit_comments_consumed "$ISSUE_NUMBER" "code" || true
 
+_PRE_HEAD=$(git rev-parse HEAD 2>/dev/null || true)
 SECONDS=0
 set +e
 if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
@@ -268,6 +269,22 @@ fi
 
 if [[ $EXIT_CODE -eq 0 ]]; then
   "$SCRIPT_DIR/append-loop-state-heartbeat.sh" --issue "$ISSUE_NUMBER" --from spec --to code >/dev/null 2>&1 || true
+fi
+
+# bash-level post-execution Signed-off-by detection (safety net for DCO compliance)
+if [[ $EXIT_CODE -eq 0 && -n "${_PRE_HEAD:-}" ]]; then
+  _new_commits=$(git log "${_PRE_HEAD}..HEAD" --format='%H' 2>/dev/null || true)
+  if [[ -n "$_new_commits" ]]; then
+    _missing_sob=""
+    while IFS= read -r _h; do
+      if ! git log -1 --format='%B' "$_h" 2>/dev/null | grep -q "^Signed-off-by:"; then
+        _missing_sob="${_missing_sob}${_missing_sob:+ }${_h}"
+      fi
+    done <<< "$_new_commits"
+    if [[ -n "$_missing_sob" ]]; then
+      echo "Warning: Signed-off-by missing in commits — DCO check may fail: ${_missing_sob}" >&2
+    fi
+  fi
 fi
 
 if [[ $EXIT_CODE -eq 0 && -n "${_EMIT_PHASE_OWNED:-}" ]]; then

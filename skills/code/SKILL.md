@@ -232,6 +232,7 @@ Implement the code following the "Implementation Steps" in the Spec.
 Implement every step listed in the Spec's "Implementation Steps" regardless of the verify-type of its associated acceptance condition. A step whose AC is marked `<!-- verify-type: post-merge manual -->` must still be implemented in this PR — "post-merge manual" describes *how the AC is verified* (by human observation after merge), not whether the step can be skipped. Omitting a step because its AC is post-merge manual is an implementation error.
 
 - Use TaskCreate/TaskUpdate to manage tasks while working
+- **DCO: always use `git commit -s` (--signoff)** — applies to all commits throughout this skill: Step 8 intermediate commits, Step 11 final commit, and Step 12 retrospective commit
 - Commit after each step completes
 
 #### Stale Test Assertion Check
