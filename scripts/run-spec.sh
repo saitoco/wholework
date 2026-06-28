@@ -126,6 +126,14 @@ ${SKILL_BODY}
 
 ARGUMENTS: ${ISSUE_NUMBER} --non-interactive"
 
+# Pre-count: capture ## Consumed Comments section count before claude runs.
+# Used by post-processor fallback to detect when LLM silently skipped writeback.
+_SPEC_DIR=$(WHOLEWORK_CONFIG_PATH="$(dirname "$SCRIPT_DIR")/.wholework.yml" \
+  "$SCRIPT_DIR/get-config-value.sh" spec-path docs/spec 2>/dev/null || echo "docs/spec")
+_SPEC_FILE_PRE=$(ls "$(dirname "$SCRIPT_DIR")/$_SPEC_DIR/issue-${ISSUE_NUMBER}-"*.md 2>/dev/null | head -1 || true)
+_PRE_COUNT=$(grep -c "^## Consumed Comments" "${_SPEC_FILE_PRE:-/dev/null}" 2>/dev/null || true)
+_PRE_COUNT="${_PRE_COUNT:-0}"
+
 # Specify --model and ANTHROPIC_MODEL both (workaround for -p mode bug)
 # See: https://github.com/anthropics/claude-code/issues/22362
 load_watchdog_timeout "$SCRIPT_DIR" "spec"
@@ -156,6 +164,17 @@ fi
 
 if [[ $EXIT_CODE -eq 0 && -n "${_EMIT_PHASE_OWNED:-}" ]]; then
   emit_event "phase_complete" "phase=${EMIT_PHASE_NAME}"
+fi
+
+# Post-processor fallback: if LLM did not append ## Consumed Comments, do it now.
+# Compare post-count with pre-count; trigger fallback when count did not increase.
+if [[ $EXIT_CODE -eq 0 ]]; then
+  _SPEC_FILE_POST=$(ls "$(dirname "$SCRIPT_DIR")/$_SPEC_DIR/issue-${ISSUE_NUMBER}-"*.md 2>/dev/null | head -1 || true)
+  _POST_COUNT=$(grep -c "^## Consumed Comments" "${_SPEC_FILE_POST:-/dev/null}" 2>/dev/null || true)
+  _POST_COUNT="${_POST_COUNT:-0}"
+  if [[ "$_POST_COUNT" -le "$_PRE_COUNT" ]]; then
+    _append_consumed_comments_section "$ISSUE_NUMBER" "spec" || true
+  fi
 fi
 
 echo "---"

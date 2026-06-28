@@ -149,6 +149,15 @@ consumed comment:
 
 If no comments were consumed: write "No new comments since last phase."
 
+**Bash wrapper fallback (Issue #811):** This step is LLM-driven and may be silently skipped
+under context pressure or on fix-cycle paths. Two safety nets ensure the section is written:
+- `/spec` and `/code` phases (bash-wrapped via `run-spec.sh` / `run-code.sh`): a pre/post
+  `## Consumed Comments` count comparison triggers `append-consumed-comments-section.sh` as a
+  post-processor when the LLM did not write the section.
+- `/verify` phase (in-session): `SKILL.md` contains an explicit `bash` call to
+  `append-consumed-comments-section.sh` after the LLM's comment consumption step, ensuring
+  deterministic writeback regardless of prose execution.
+
 **Step 6 — Emit event (handled by bash wrapper in auto mode; LLM skip):**
 
 In `/auto` mode (invoked via `scripts/run-auto-sub.sh`), the bash wrapper calls

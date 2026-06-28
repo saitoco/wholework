@@ -87,6 +87,7 @@ MOCK
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
 emit_event() { return 0; }
 _emit_comments_consumed() { :; }
+_append_consumed_comments_section() { :; }
 MOCK
 
     # Real guard-prefix.sh (sourced via WHOLEWORK_SCRIPT_DIR)
@@ -461,6 +462,7 @@ MOCK
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
 emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
 _emit_comments_consumed() { :; }
+_append_consumed_comments_section() { :; }
 MOCK
     run bash "$SCRIPT" 123 --pr
     [ "$status" -eq 0 ]
@@ -508,4 +510,53 @@ MOCK
     grep -q "heartbeat_called" "$HEARTBEAT_LOG"
     grep -q -- "--from spec" "$HEARTBEAT_LOG"
     grep -q -- "--to code" "$HEARTBEAT_LOG"
+}
+
+@test "fallback: no consumed comments section before and after claude → _append_consumed_comments_section called" {
+    # Create spec file without ## Consumed Comments section (simulates fresh spec)
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+    printf '%s\n' "# Issue #123: Test" > "$BATS_TEST_TMPDIR/docs/spec/issue-123-test.md"
+
+    FALLBACK_LOG="$BATS_TEST_TMPDIR/fallback.log"
+    export FALLBACK_LOG
+
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { return 0; }
+_emit_comments_consumed() { :; }
+_append_consumed_comments_section() { echo "CALLED \$*" >> "${FALLBACK_LOG}"; }
+MOCK
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [ -f "$FALLBACK_LOG" ]
+    grep -q "CALLED 123 code" "$FALLBACK_LOG"
+}
+
+@test "no fallback: consumed comments section added by claude (count increases) → _append_consumed_comments_section not called" {
+    # Create spec file without ## Consumed Comments section
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+    printf '%s\n' "# Issue #123: Test" > "$BATS_TEST_TMPDIR/docs/spec/issue-123-test.md"
+
+    FALLBACK_LOG="$BATS_TEST_TMPDIR/fallback.log"
+    SPEC_FILE_IN_MOCK="$BATS_TEST_TMPDIR/docs/spec/issue-123-test.md"
+    export FALLBACK_LOG SPEC_FILE_IN_MOCK
+
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { return 0; }
+_emit_comments_consumed() { :; }
+_append_consumed_comments_section() { echo "CALLED \$*" >> "${FALLBACK_LOG}"; }
+MOCK
+
+    # Claude mock writes ## Consumed Comments to the spec file (simulates LLM writing it)
+    cat > "$MOCK_DIR/claude" <<MOCK
+#!/bin/bash
+printf '\n%s\n' "## Consumed Comments" >> "${SPEC_FILE_IN_MOCK}"
+printf '%s\n' "No new comments since last phase." >> "${SPEC_FILE_IN_MOCK}"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/claude"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [ ! -f "$FALLBACK_LOG" ]
 }

@@ -85,6 +85,16 @@ emit_event() {
   fi
 }
 
+# Bash-side Consumed Comments section appender. Issue #811 — post-processor
+# fallback: calls append-consumed-comments-section.sh to write the
+# ## Consumed Comments section when the LLM phase did not write it.
+# Always exits 0 (best-effort). Called by run-spec.sh and run-code.sh after
+# the claude subprocess exits when the pre/post count comparison shows no
+# section was added by the LLM.
+_append_consumed_comments_section() {
+  "$SCRIPT_DIR/append-consumed-comments-section.sh" "$@" 2>/dev/null || true
+}
+
 # Bash-side comments_consumed event emitter. Issue #705 — replaces the LLM
 # Step 6 in l0-surfaces.md Comment Consumption Procedure, which was not firing
 # reliably because the LLM skips the emit step. Extracted from run-auto-sub.sh

@@ -118,3 +118,24 @@
 - `rubric` 条件 2 件とも PASS が AI 判定で確認できた (安定)
 - `command "bats ..."` は CI リファレンスフォールバックで PASS (local 実行不要)
 - UNCERTAIN 発生なし、verify command 品質は良好
+
+## Code Retrospective
+
+### 実装サマリ
+
+Candidate B (post-processor fallback) を採用した。`scripts/append-consumed-comments-section.sh` を新規作成し、`run-spec.sh` / `run-code.sh` に pre/post カウント比較ロジックを追加。`skills/verify/SKILL.md` には明示 bash call を追加して 3 フェーズ全てを網羅した。
+
+### 発見した技術的問題
+
+**`grep -c ... || echo 0` パターンのバグ**: `grep -c` はマッチなし時に `0` を stdout に出力して exit 1 する。`|| echo 0` を続けると command substitution が両方の出力を捕捉して `"0\n0"` を返し、`[[ "$count" -le 0 ]]` の整数比較が破綻してフォールバックが発火しない。修正: `|| true` に変更し `${COUNT:-0}` でデフォルト設定する形に統一。
+
+**git モックの引数位置ミス** (tests/run-verify.bats): `git -C /repo/path diff --quiet` の呼び出しで `$2` はパス、`$3` が `"diff"` になる。当初モックは `$2 == "diff"` を確認していたため diff 検出が機能せず test 68 が失敗。`$3 == "diff"` に修正。
+
+### テスト結果
+
+- 68 テスト全グリーン (run-code.bats, run-spec.bats, run-verify.bats)
+- 追加テスト: fallback 呼ばれる (2) + fallback 呼ばれない (2) + verify 動作 (6) = 計 10 新規テスト
+
+### PR
+
+https://github.com/saitoco/wholework/pull/813
