@@ -98,3 +98,29 @@ CONSIDER 件 1 件のみ: `batch_completion_section()` ヘルパー関数が bat
 - Post-merge AC (次回 /auto --batch 完了時の観察) が唯一の残存確認事項
 - verify-type: observation event=auto-run → 次回 /auto --batch 完了で自動チェックされる
 - 手動確認不要; /verify #823 を次回 /auto --batch 完了後に実行すれば全 AC クローズ可能
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- non-interactive mode で 3 件の ambiguity (AC3 テストファイル特定、AC1/AC2 補助 section_contains、Post-merge verify-type 再分類) を自動解決。verify command の品質が高く UNCERTAIN ゼロ。
+
+#### spec
+- batch route (`### Batch Completion Report`) のみに絞った scope 設定が明示的で、XL route との切り分けが明確。
+
+#### code
+- Spec 通り。bash 3.2+ 互換、best-effort 実装が `PENDING_LIST` 集約に適切。
+
+#### review
+- CONSIDER 1 件 (`batch_completion_section` helper 関数未使用、各テストでインライン awk が使われる構造ドリフト) を検出。コード修正不要レベルで MUST/SHOULD ゼロ。
+
+#### merge
+- PR #833 conflict なし、CI 緑、approved 状態で squash merge。
+
+#### verify
+- 3 件 pre-merge AC が `section_contains` + `rubric` + `command` の組み合わせで自動 PASS。UNCERTAIN ゼロ。
+
+### Improvement Proposals
+
+- `tests/auto-completion-report.bats` で定義されている `batch_completion_section()` helper 関数が各 `@test` でインライン awk に置き換えられて未使用となっている。helper の役割と運用ルール (どのテストから呼ぶか) を明示するか、未使用 helper を削除する小規模リファクタを後続 Issue で対応するとテスト保守性が向上する。
