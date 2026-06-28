@@ -125,6 +125,15 @@ fi
 
 # Append row (best-effort). Detail packs issue, transition, and aggregated snapshot.
 DETAIL="#${ISSUE} ${FROM}→${TO} snapshot:[${SNAPSHOT}]"
+
+# Dedup: skip if last row already contains this transition (best-effort).
+if [[ -f "$FILE" ]]; then
+  LAST_ROW=$(tail -1 "$FILE" 2>/dev/null || true)
+  if [[ -n "$LAST_ROW" && "$LAST_ROW" == *"$DETAIL"* ]]; then
+    exit 0
+  fi
+fi
+
 printf '| %s | %s | %s | %s |\n' "$TS" "$PHASE_LABEL" "phase-transition" "$DETAIL" >> "$FILE" 2>/dev/null || true
 
 exit 0

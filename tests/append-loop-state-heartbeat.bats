@@ -117,6 +117,17 @@ MOCK
     grep -q 'snapshot:\[snapshot-unavailable\]' "$file"
 }
 
+@test "duplicate transition: skips append when last row matches" {
+    fake_root="$BATS_TEST_TMPDIR/repo"
+    wrapper=$(_make_wrapper "$fake_root")
+    "$wrapper" --issue 701 --from spec --to code
+    "$wrapper" --issue 701 --from spec --to code
+    today=$(date -u +%Y-%m-%d)
+    file="$fake_root/docs/sessions/_daily/loop-state-$today.md"
+    count=$(grep -c '#701 spec→code' "$file")
+    [ "$count" -eq 1 ]
+}
+
 @test "phase-label override applies to the Phase column" {
     fake_root="$BATS_TEST_TMPDIR/repo"
     wrapper=$(_make_wrapper "$fake_root")
