@@ -235,19 +235,45 @@ Note: 既存 Tier 2 anomaly detector がパターンを追記済みの場合は 
 ### Uncertainty resolution
 - Nothing to note
 
+## Code Retrospective
+
+### Deviations from Design
+- `_write_manual_recovery_to_spec()` は Spec に記述の通り `set -euo pipefail` 直後に配置した。設計と一致
+
+### Design Gaps/Ambiguities
+- `skills/auto/SKILL.md` の更新で "then follow Step 4a (after all phases are done)" という旧文が `--write-manual-recovery` 呼び出しに完全置換された。Step 4a の `### Orchestration Anomalies` / `### Improvement Proposals` 参照が失われる懸念があったが、`--write-manual-recovery` は recovery record のみ書き込む機能に特化しており、Improvement Proposals は verify phase が担当するという役割分担で整合している
+
+### Rework
+- N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Spec の 5 実装ファイルはすべて PR diff に反映されており、構造的な乖離なし
+- `_write_manual_recovery_to_spec()` の配置 (set -euo pipefail 直後) も Spec 記述と一致
+
+### Recurring issues
+- `git diff --quiet` が untracked ファイルを検出できない問題が `scripts/run-auto-sub.sh` の `_write_manual_recovery_to_spec()` (line 46) に存在。既存の `_write_tier2_recovery_to_spec()` (line 196)、`_write_tier3_recovery_to_spec()` (line 243) にも同じパターンが繰り返されており、共通ヘルパー関数化または `git status --porcelain` への統一修正が効果的。後続 Issue として起票を推奨
+- `_write_manual_recovery_to_spec()` に `$issue` の数値バリデーションがなく、フォールバックパスでパストラバーサルが可能 (SHOULD)。既存 Tier 2/3 も同様であり、横断的な修正 Issue の余地あり
+
+### Acceptance criteria verification difficulty
+- rubric + grep の組み合わせで AC 検証が機械的に実施でき、UNCERTAIN なし
+- bats test の verify command (grep "manual.*recovery") が実装を直接確認できており verify command の品質は良好
+- POST-MERGE 観察条件 1 件は verify phase が担当
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `_write_manual_recovery_to_spec()` を `run-auto-sub.sh` の `set -euo pipefail` 直後に配置し、`SUB_NUMBER` 代入前に `--write-manual-recovery` dispatch を実装する設計を採用。`WHOLEWORK_SCRIPT_DIR` 環境変数でテスト可能にする
-- `skills/verify/SKILL.md` Step 12 skip 判定の更新も必要と判断 (Issue body 未記載だが目的達成のため必須)
-- Size: L (5ファイル + script argument handling 変更 → +1)、ROUTE=pr
+- MUST 問題は検出されず。SHOULD 4 件、CONSIDER 1 件をラインコメントとして記録
+- `git diff --quiet` vs untracked files バグ (SHOULD) は Tier 2/3 にも共通する既知パターンであるため、本 PR のブロッカーとはしない判断
+- セキュリティ所見 (path traversal via `$issue`) は内部ツール文脈 + `-recovery.md` 固定サフィックスの制約から SHOULD 止まりとした
 
 ### Deferred Items
-- `_write_manual_recovery_to_spec()` を `_write_tier3` と同じ場所 (line 148 近傍) に配置する alternative は見送り (関数定義を SUB_NUMBER より後に置けない制約があるため)
-- `orchestration-recoveries.md` への同時書き込みは今回スコープ外 (spec のみ対象)
+- `git diff --quiet` → `git status --porcelain` の横断修正は別 Issue で対応推奨
+- `$issue` / `$phase` / `$recovery_type` の入力バリデーション追加も別 Issue 候補
+- "Manual automatic recovery" の表現矛盾は次回 cleanup で修正
 
 ### Notes for Next Phase
-- `scripts/run-auto-sub.sh` への変更は `set -euo pipefail` 直後 (line 7 と line 8 の間) に挿入する必要がある — 間違って `SUB_NUMBER` 代入後に置かないよう注意
-- bats テストは `WHOLEWORK_SCRIPT_DIR=$MOCK_DIR` を使うため `_repo_root=$(dirname $MOCK_DIR)=$BATS_TEST_TMPDIR` になる。テスト内の `docs/spec/` ディレクトリは `$BATS_TEST_TMPDIR/docs/spec/` に作成すること
-- `skills/auto/SKILL.md` の変更で半角 `!` を使わないよう注意 (forbidden expression)
+- CI 全 SUCCESS、MUST 未検出につき `/merge 830` で直接 merge 可能
+- merge 後は next-cycle-seed または verify セッションで上記 SHOULD 問題の起票を検討

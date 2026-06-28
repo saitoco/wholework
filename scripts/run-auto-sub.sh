@@ -5,6 +5,67 @@
 # Usage: run-auto-sub.sh <sub-issue-number> [--base <branch>]
 
 set -euo pipefail
+
+# --write-manual-recovery subcommand: write manual recovery record to sub-issue Spec.
+# Usage: run-auto-sub.sh --write-manual-recovery ISSUE [PHASE] [RECOVERY_TYPE]
+# See modules/orchestration-fallbacks.md#manual-recovery-spec-write
+_write_manual_recovery_to_spec() {
+  local issue="$1"
+  local phase="${2:-unknown}"
+  local recovery_type="${3:-unspecified}"
+  local _script_dir="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
+  local _repo_root
+  _repo_root="$(dirname "$_script_dir")"
+  local spec_dir="$_repo_root/docs/spec"
+  local spec_file
+  spec_file=$(ls "$spec_dir/issue-${issue}-"*.md 2>/dev/null | head -1 || true)
+
+  if [[ -z "$spec_file" ]]; then
+    local title
+    title=$(gh issue view "$issue" --json title -q '.title' 2>/dev/null || echo "Issue #${issue}")
+    mkdir -p "$spec_dir"
+    spec_file="$spec_dir/issue-${issue}-recovery.md"
+    printf '%s\n' "# Issue #${issue}: ${title}" > "$spec_file"
+  fi
+
+  if ! grep -q "^## Auto Retrospective" "$spec_file" 2>/dev/null; then
+    printf '\n%s\n' "## Auto Retrospective" >> "$spec_file"
+  fi
+
+  local _date
+  _date=$(date -u '+%Y-%m-%d %H:%M UTC')
+  printf '\n%s\n' "### Manual recovery (${phase})" >> "$spec_file"
+  printf '%s\n' "- **Date**: ${_date}" >> "$spec_file"
+  printf '%s\n' "- **Issue**: #${issue}, phase: ${phase}" >> "$spec_file"
+  printf '%s\n' "- **Source**: parent session manual recovery" >> "$spec_file"
+  printf '%s\n' "- **Recovery type**: ${recovery_type}" >> "$spec_file"
+  printf '%s\n' "- **Outcome**: success" >> "$spec_file"
+
+  local spec_rel_path="${spec_file#$_repo_root/}"
+
+  if ! git -C "$_repo_root" diff --quiet "$spec_rel_path" 2>/dev/null; then
+    if git -C "$_repo_root" add "$spec_rel_path" \
+       && git -C "$_repo_root" commit -s -m "Record manual recovery in auto retrospective for issue #${issue}
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>" \
+       && git -C "$_repo_root" push origin HEAD; then
+      echo "[#${issue}] [recovery] spec auto retrospective updated for issue #${issue} (manual recovery)"
+    else
+      echo "[#${issue}] WARNING: could not commit/push manual recovery to spec; continuing" >&2
+    fi
+  fi
+}
+
+if [[ "${1:-}" == "--write-manual-recovery" ]]; then
+  shift
+  if [[ -z "${1:-}" ]]; then
+    echo "Error: --write-manual-recovery requires: ISSUE [PHASE] [RECOVERY_TYPE]" >&2
+    exit 1
+  fi
+  _write_manual_recovery_to_spec "$@"
+  exit 0
+fi
+
 SUB_NUMBER="${1:?Usage: run-auto-sub.sh <sub-issue-number> [--base <branch>]}"
 shift
 
