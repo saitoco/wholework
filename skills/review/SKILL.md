@@ -845,6 +845,8 @@ For Python script changes, additionally verify:
 - Newly added/moved function calls are inside try-except blocks (leaking outside try-except means exceptions propagate without being silenced, but can represent unintended exception boundary changes)
 - When existing try-except boundaries are changed, verify the caught exceptions haven't changed
 
+**Enum exhaustiveness check** (review-spec Perspective 1, Step 2.5): When the Spec defines an enum — a discrete named value set (e.g., `auto-stop-at: spec|code|review|merge|verify`, option lists in table cells, or "one of X/Y/Z" descriptions) — verify that every enum value has a corresponding implementation in the PR diff (case branch, if-elif chain, dictionary entry, mapping table entry, etc.). Missing enum value coverage is reported as a MUST finding. This check catches implementation gaps that are otherwise invisible to AC verification (the AC only tests the values that exist, not the values that are absent).
+
 ---
 
 ## Notes

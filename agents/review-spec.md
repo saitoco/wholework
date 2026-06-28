@@ -50,6 +50,11 @@ Execute only when a Spec path is provided:
    - Check for changes not described in the Spec (out-of-scope change detection)
    - Check for implementation decisions not described in the design steps (implicit judgment detection)
    - Verify the changed files list matches the "Files to Change" in the design
+2.5. **Enum coverage check** (execute only when Spec defines enum values):
+   - Scan the Spec for enum definitions: discrete named value sets (e.g., `auto-stop-at: spec|code|review|merge|verify`, option lists in table cells, or "one of X/Y/Z" descriptions)
+   - For each enum definition found, verify that every enum value has a corresponding implementation in the PR diff (case branch, if-elif chain, dictionary entry, mapping table entry, etc.)
+   - Missing enum value coverage → MUST finding
+
 3. **Uncertainty verification check**:
    - If the Spec has an "Uncertainties" section, verify each uncertainty is addressed in the PR:
      - Test additions (bats files, added test cases)
