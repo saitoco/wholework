@@ -48,7 +48,12 @@ SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
 export AUTO_EVENTS_LOG
 PGID=$(ps -o pgid= -p $$ | tr -d ' ')
-AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || echo '')}"
+# Primary: PGID-based file written by SKILL.md Step 1 (Issue #770/PR #793).
+# Fallback: auto-session-current for cases where PGID does not match (e.g., PGID
+# mismatch between Bash tool call contexts). As of PR #793 SKILL.md writes only the
+# PGID file; the auto-session-current fallback is defensive dead code unless a future
+# code path restores writes to that file (Issue #791 iteration B).
+AUTO_SESSION_ID="${AUTO_SESSION_ID:-$(cat ".tmp/auto-session-${PGID}" 2>/dev/null || cat ".tmp/auto-session-current" 2>/dev/null || echo '')}"
 export AUTO_SESSION_ID
 source "$SCRIPT_DIR/emit-event.sh"
 
