@@ -158,17 +158,18 @@ Nothing to note. 今回の PR では review-light の 4 観点すべてで MUST/
 Nothing to note. `rubric` + `grep` の 2 段構えの verify command が機能的だった。`command "bats tests/"` は safe mode のため CI reference fallback を使用したが、`Run bats tests` ジョブが明確に特定できスムーズに PASS 判定できた。Post-merge observation AC (verify-type: observation) は SKIPPED として正しく処理された。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `REVIEW_DEPTH=light` を適用 (--light フラグ明示) — 1 agent (review-light) で 4 観点を統合カバー
-- MUST/SHOULD issues なし → 修正フェーズ (Step 12) をスキップし直接 merge へ
-- CONSIDER 1 件 (stale mkdir-lock) は設計上許容済みとして skip 記録
+- PR #844 は MERGEABLE (mergeStateStatus=CLEAN、全 CI ジョブ SUCCESS) — スカッシュマージをそのまま実行
+- `gh pr merge "844" --squash --delete-branch` で squash merge + ブランチ削除を一度に完了
+- `closes #829` が PR body に存在し base が main → Issue #829 は自動クローズ済み
 
 ### Deferred Items
-- Post-merge 観察 AC: 次回 `/auto --batch` 実行後に `docs/sessions/_daily/loop-state-*.md` の重複行不発生を確認
-- verify-type: observation event=auto-run での自動評価
+- Post-merge 観察 AC: 次回 `/auto --batch` 実行後に `docs/sessions/_daily/loop-state-*.md` の重複行不発生を確認 (verify-type: observation event=auto-run)
+- observation AC は verify フェーズで SKIPPED として処理される想定
 
 ### Notes for Next Phase
-- All pre-merge AC PASS、CI 全ジョブ SUCCESS → merge に支障なし
-- `review-light` エージェントタイプが未登録 (available agents に存在しない) — インライン分析で代替した。次回 /auto 実行時に review-light の登録状態を確認することを推奨
+- Pre-merge AC はすべて CI で PASS 済み — verify フェーズで再実行は不要
+- Post-merge AC のみ観察ベースのため、verify は SKIPPED 扱いで完了させてよい
+- flock + mkdir-lock fallback の両パスが bats tests で検証済み
