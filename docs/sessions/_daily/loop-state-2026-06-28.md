@@ -22,3 +22,5 @@ date: 2026-06-28
 | 01:06:49 | review | phase-transition | #811 code→review snapshot:[issue:5 spec:0 code:1 review:1 verify:2] |
 | 01:12:58 | code | phase-transition | #804 spec→code snapshot:[issue:4 spec:1 code:0 review:1 verify:2] |
 | 01:12:58 | code | phase-transition | #804 spec→code snapshot:[issue:4 spec:1 code:0 review:1 verify:2] |
+| 01:17:04 | merge | phase-transition | #813 review→merge snapshot:[issue:5 spec:0 code:0 review:0 verify:2] |
+| 01:17:12 | merge | phase-transition | #811 review→merge snapshot:[issue:5 spec:0 code:0 review:0 verify:2] |
