@@ -120,3 +120,48 @@ milestone は 6段階: `initial` / `pre-commit` / `post-commit` / `post-push` / 
 - **resume ゲート信号** — 採用: 残存 worktree/branch 存在で first-run と resume を判別 / 理由: open PR は既存テスト mock が常に返すため判別に使うと happy-path を壊す。worktree/branch はテストに存在しない / 他候補: open PR 判定 (テスト破壊)
 - **pre-commit recovery** — 採用: `/code` 再実行 (未 commit 破棄) / 理由: 任意の未 commit 変更の自動 commit は sign-off 規律を欠き危険 / 他候補: 自動 commit (deferred)
 - **対象 route** — 採用: pr route (M/L) のみ / 理由: 6段階 milestone は PR を作る経路に対応。patch route は既存 reconciler が担当 / 他候補: patch route も含める (milestone 意味が崩れる)
+
+## issue retrospective
+
+(`/issue` フェーズの Issue Retrospective コメントを転記。https://github.com/saitoco/wholework/issues/806#issuecomment-4823838553)
+
+### Auto-Resolve Log (issue phase)
+
+- **milestone 段階数 → 6段階採用**: Issue 本文の3段階 (`commit_done`/`push_done`/`pr_created`) を Comment 1 の6段階 (`initial`/`pre-commit`/`post-commit`/`post-push`/`pre-PR-create`/`post-PR-create`) に更新。3段階では #780 (pre-commit kill — worktree dirty) をカバーできないため。
+- **Review phase scope → deferred (follow-up)**: review phase の kill milestone resume は本 Issue scope 外。Purpose が code phase を明示しており、reconciler-first 上 review phase は既存 `reconcile-phase-state.sh` で確認可能。
+- **--resume ロジック実装場所 → run-auto-sub.sh + SKILL.md 両方**: 旧 AC3 は SKILL.md Step 4 のみ対象だったが、bash 実装は `run-auto-sub.sh` 起動時処理にも必要として両方を AC に含めた。
+- **Checkpoint Design セクション更新 → AC 追加**: 既存セクションは `verify_iteration_count` のみ記載。`code_phase_milestone` 追加に伴い同セクション更新 AC を新設。
+- **AC2 grep の `-E` フラグ削除**: verify-executor は ripgrep (ERE デフォルト) のため `-E` は無効構文。削除。
+
+## spec retrospective
+
+### Minor observations
+- Issue 本文の "`run-auto-sub.sh` の code phase で各 milestone 通過時に checkpoint を更新" という表現は、code phase milestone が `/code` subprocess 内部で発生する事実と齟齬があった。`/issue` フェーズは 6段階 milestone は確定したが、milestone の発生主体 (subprocess black-box) と書込主体の不一致までは検出できていなかった。requirement の "どこで milestone が観測可能か" を `/issue` 段階で詰められると spec での conflict 解決が不要になる。
+
+### Judgment rationale
+- 実装コンフリクトの解決で「code SKILL.md を instrument する literal 解釈」ではなく「resume 時に observable state から reconcile する」案を採用した。決め手は (1) AC が code SKILL.md 改修を含まない、(2) worktree `.tmp/` 消失問題の回避、(3) 既存 reconciler-first / checkpoint-as-hint 原則との整合。同じ recovery 効果を低リスクで得られると判断。
+- resume の発火ゲートを「open PR 存在」ではなく「残存 worktree/branch 存在」にした。これは既存 `tests/run-auto-sub.bats` の gh mock が常に PR を返す事実を codebase 調査で発見したため。テスト互換性が設計選択を制約した好例。
+
+### Uncertainty resolution
+- `gh pr create --head <worktree-checked-out-branch>` / main repo からの `git push -u origin` は refs 共有により可能、という前提は標準的 git/gh 挙動として扱い、post-merge 観察 (Post-merge AC) で最終確認することにした。prototype は作らず uncertainty 節に明記。
+- `create-pr` / `push-and-pr` recovery の PR body が `/code` 生成の rich body より最小になる点は、review が diff + Spec を読むため許容と判断 (deferred せず本実装に含める)。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- milestone 書込は `run-auto-sub.sh` (粗い: initial/post-PR-create)、fine milestone は resume 時に `_observe_code_milestone` で git/GitHub 残存状態から reconcile (reconciler-first / checkpoint-as-hint と整合)。
+- `auto-checkpoint.sh` に純関数 `resume_action` を置き、milestone→action マッピングを `tests/auto-checkpoint.bats` で直接 assert できるようにした (AC5 を満たす testable 設計)。
+- recovery 実行は #776 の manual recovery を再現する deterministic bash (`git push` + `gh pr create`)、失敗時のみ既存 recovery tier へフォールバック。
+
+### Deferred Items
+- `pre-commit` (未 commit 変更) からの自動 commit 復旧は scope 外 (sign-off 規律を欠くため `/code` 再実行で破棄)。
+- review phase milestone resume (#800) は follow-up Issue。
+- `docs/workflow.md` / `docs/ja/workflow.md` の doc-sync は Implementation Step 8 で実施するが hard pre-merge gate には昇格していない (`/review` doc-consistency / translation-sync 義務でカバー)。
+
+### Notes for Next Phase
+- **resume ゲートは「残存 worktree/branch 存在」**: open PR 判定にすると既存 `tests/run-auto-sub.bats` の gh mock (常に PR を返す) が happy-path を壊す。実装時に必ず branch/worktree 存在で gate すること。
+- **`tests/run-auto-sub.bats` に mock `auto-checkpoint.sh` を追加必須**: `run-auto-sub.sh` が新たに `$SCRIPT_DIR/auto-checkpoint.sh` を呼ぶため。write 系は `|| true` で best-effort。
+- **merge セマンティクス**: `write_single` と `write_milestone` は read-then-write で互いのフィールドを保持すること。jq 失敗ガード (`|| return 1`) 必須。
+- **対象は pr route (M/L) のみ**: patch route には milestone preamble を追加しない。
+- **bash 3.2+ 互換**: `mapfile` 等 bash 4+ 構文を使わない (macOS system bash)。
