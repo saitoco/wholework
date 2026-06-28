@@ -53,3 +53,47 @@
 ## Consumed Comments
 
 - **saito** (MEMBER, first-class) — bats verify command 形式の修正・rubric 補足 verify 追加・bats test AC 補足 grep 追加の Auto-Resolve Log: https://github.com/saitoco/wholework/issues/831#issuecomment-4827005414
+
+## Code Retrospective
+
+### Deviations from Design
+
+- 既存の 3 テスト (tier2/tier3/manual recovery) の git mock を更新する必要があった。Spec の実装計画には新 3 テストの追加のみ記載されていたが、既存テストも `git diff --quiet` 前提の mock だったため、`git status --porcelain` を返すよう合わせて更新した。これは実装の自然な副作用であり、スコープ変更ではなくテスト整合性の維持。
+
+### Design Gaps/Ambiguities
+
+- `_spec_has_changes()` の引数名 `spec_rel_path` は AC verify command の grep パターンに依存するため Spec Notes に明記されており、実装に迷いはなかった。ただし、Notes がなければ引数名が異なった可能性があるため、verify command と実装の結合度の高さは将来の rename 時に注意が必要。
+
+### Rework
+
+- 既存 tier2/tier3/manual recovery テストの git mock を最初の commit では更新しなかったため、全テスト実行 (bats tests/) で tests 26-28 が FAIL した。2 回目の edit で修正した。新テスト追加時は既存テストへの影響を同時に確認すべきだった。
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- Nothing to note. 実装は Spec の設計通りで乖離なし。`_spec_has_changes()` の引数名・配置位置・`grep -q .` 判定方式いずれも Spec Notes と一致。
+
+### Recurring Issues
+
+- Nothing to note. review-light の 4観点すべてで問題なし。Bug type の特徴である regression tests も AC に含まれており、3件が適切に追加されている。
+
+### Acceptance Criteria Verification Difficulty
+
+- AC2 の verify command (`github_check "gh pr checks" "Run bats tests"`) は CI 完了後でないと判定できない構造。AC2 のチェックボックスが `[ ]` のまま PR が提出されたが、CI SUCCESS を確認後に `[x]` に更新した。この遅延検証は `github_check` verify の想定動作であり問題ない。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- REVIEW_DEPTH=light (--light 指定かつ Size M)。review-light の 4観点で問題なし。MUST 問題なし → COMMENT イベントで投稿。
+- AC2 のチェックボックスを `[x]` に更新 (`gh-issue-edit.sh` 経由)。CI SUCCESS を確認済み。
+
+### Deferred Items
+- Post-merge AC: 「次回 recovery 発生時に初回 Spec 作成 (untracked) ケースで commit が漏れないことを観察」は `/verify` のポストマージ観察に委ねる。
+- Spec Notes に記載された `orchestration-recoveries.md` の `git diff --quiet` (スコープ外) は将来の関連 Issue で対応。
+
+### Notes for Next Phase
+- MUST 問題なし、CI SUCCESS → `/merge 838` で即マージ可能。
+- Post-merge AC は `verify-type: observation event=auto-run` のため `/verify` の観察スコープ。
+- review-light エージェントが利用不可のためインライン実行した。次サイクルでエージェント登録を検討してもよい (Improvement Proposal 候補)。
