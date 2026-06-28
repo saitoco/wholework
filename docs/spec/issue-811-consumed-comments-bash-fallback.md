@@ -86,3 +86,35 @@
 - **`section 既存 → skip` ロジック**: `append-consumed-comments-section.sh` は `grep -q "^## Consumed Comments"` で既存チェック。複数フェーズでセクションが積み重なる場合、post-processor は 1 呼び出しにつき 1 回のみ追記するシンプル設計。重複防止は run-*.sh の pre/post カウント比較に依存
 - **git commit sign-off**: `git commit -s` を使用して DCO sign-off を付与 (既存 `_write_tier2_recovery_to_spec` パターン踏襲)
 - **`docs/ja/structure.md` 更新**: Japanese format の verify command に `## Consumed Comments` パターンは含まれないため format 影響なし
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- SHOULD issue 1 件 (`$NUMBER` 引用符不在 in skills/verify/SKILL.md) を修正してプッシュ済み
+- MUST issues なし → REQUEST_CHANGES ではなく COMMENT イベントでレビュー投稿
+- Candidate B 実装の全 3 フェーズ (spec/code/verify) 網羅を確認、受け入れ条件 3 件すべて PASS
+
+### Deferred Items
+- Post-merge observation AC (次回 /auto または /spec N 実行時の Spec ファイルへの Consumed Comments セクション追記確認) は merge 後の観察タスク
+- `docs/structure.md` スクリプトカウント drift 修正は別 Issue で対応予定
+
+### Notes for Next Phase
+- 修正コミット (912423e) がプッシュ済み、CI が通過すれば `/merge 813` で完了
+- `validate-skill-syntax.py` の既存警告 (`loop-paths-fallback` 未知フィールド) は本 PR と無関係なので無視してよい
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+特筆すべき構造的乖離なし。Candidate B の実装は Spec の設計意図に忠実で、3 フェーズ (spec/code/verify) の網羅が確認できた。
+
+### 繰り返しパターン (ワークフロー改善の余地)
+
+`skills/verify/SKILL.md` の bash call に `$NUMBER` の引用符不在 (SHOULD) を検出。SKILL.md 内の bash スニペットは手書き prose 混在のため変数引用符漏れが起きやすい。Spec に verify command を追記する際のテンプレートチェックリストで「変数は必ず `"$VAR"` 形式」を明記すると同種のパターンを予防できる。
+
+### 受け入れ条件検証の難易度
+
+- `rubric` 条件 2 件とも PASS が AI 判定で確認できた (安定)
+- `command "bats ..."` は CI リファレンスフォールバックで PASS (local 実行不要)
+- UNCERTAIN 発生なし、verify command 品質は良好
