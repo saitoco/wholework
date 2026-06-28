@@ -133,3 +133,21 @@ EOF
     [ "$status" -eq 2 ]
     [[ "$output" == *"docs/spec/issue-999-unrelated.md"* ]]
 }
+
+@test "loop-state heartbeat only dirty: exit 0 (built-in exempt)" {
+    cd "$REPO_DIR"
+    mkdir -p "docs/sessions/_daily"
+    make_dirty "docs/sessions/_daily/loop-state-2026-06-28.md"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ "Warning: ignoring dirty file excluded by verify-ignore-paths" ]]
+}
+
+@test "loop-state mixed with non-spec dirty: exit 1" {
+    cd "$REPO_DIR"
+    mkdir -p "docs/sessions/_daily"
+    make_dirty "docs/sessions/_daily/loop-state-2026-06-28.md"
+    make_dirty "scripts/some-script.sh"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 1 ]
+}
