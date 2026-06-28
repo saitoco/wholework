@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（58 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（59 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -169,6 +169,7 @@ wholework/
 **Phase banner:**
 - `scripts/phase-banner.sh` — run-*.sh スクリプトで `print_start_banner` / `print_end_banner` 関数を提供する source 可能なヘルパー
 - `scripts/emit-event.sh` — `.tmp/auto-events.jsonl` への構造化 JSONL イベント emission を提供する source 可能なヘルパー; run-*.sh、claude-watchdog.sh、wait-ci-checks.sh が使用
+- `scripts/append-consumed-comments-section.sh` — post-processor フォールバック: LLM が Step 5 を silent skip した際に Spec へ `## Consumed Comments` を追記; run-spec.sh / run-code.sh (pre/post カウント比較) と verify SKILL.md (明示 bash call) が使用
 
 **GitHub API ユーティリティ:**
 - `scripts/gh-graphql.sh` — キャッシュ付き GraphQL クエリ実行
