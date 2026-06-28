@@ -82,19 +82,18 @@ polling backoff (初回 30s 待機 → 再確認 → 2 回目 60s 待機 → 再
 - `command "bats tests/gh-pr-merge-status.bats"` は safe mode で CI 代替検証 (SUCCESS) を使用できた。CI fallback が機能した事例。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light (Size=M) で軽量統合レビューを実施。全 AC が PASS、CI が全 SUCCESS のため MUST/SHOULD 問題なし。
-- review-light エージェントタイプが未登録 (available agents に存在しない) のため、モジュールを読み込んで inline で 4 観点レビューを実施した。
-- CONSIDER 1 件 (bats abort テストの exit code 特定性不足) は skip。機能的に正しく regression リスクは低い。
+- PR #845 を squash merge で main にマージした (`gh pr merge 845 --squash --delete-branch`)。
+- mergeable=false, reason=unknown が検出されたが、非インタラクティブモードのため auto-resolve でマージを続行した (Issue #839 comment に記録済み)。
+- BASE_BRANCH=main のため `closes #839` により Issue は自動クローズされる。
 
 ### Deferred Items
-- CONSIDER: bats abort テストで `[ "$status" -eq 2 ]` ではなく `[ "$status" -ne 0 ]` を使用中。exit code 精緻化は機能的に問題ないが、将来の変更時の regression 検知精度を高めるための改善候補。
-- merge/SKILL.md での exit 2 ハンドリングは本 PR スコープ外 (code フェーズより引き継ぎ)。
-- Post-merge AC は `verify-type: observation event=auto-run` のため次回 merge phase での実観察が必要。
+- `exit 2` (`gh-pr-merge-status.sh` の polling timeout abort) が `merge/SKILL.md` および `run-merge.sh` 側で明示的にハンドリングされていない点は本 PR スコープ外。次サイクルの改善候補。
+- Post-merge AC `verify-type: observation event=auto-run` は次回 merge phase での実観察が必要。
 
 ### Notes for Next Phase
-- 全 AC が PASS、全 CI が SUCCESS。MUST 問題なし。`/merge 845` を実行可能。
-- `exit 2` が `merge/SKILL.md` または `run-merge.sh` 側で適切にハンドリングされているかの確認推奨 (本 PR では変更なし。code フェーズからの引き継ぎ事項)。
-- Post-merge AC は `verify-type: observation event=auto-run` として設定済み。次回 merge phase で `mergeable=UNKNOWN` が観察された際に polling backoff の動作を確認。
+- verify では Pre-merge AC のみ検証対象 (post-merge AC は observation-type のためスキップ)。
+- `scripts/gh-pr-merge-status.sh` と `tests/gh-pr-merge-status.bats` が main に入った。bats テストを実行して polling 成功/abort シナリオが通ることを確認推奨。
+- 本 PR の変更範囲は小さく局所的 (スクリプト 1 本 + テスト 1 本)。verify は軽量で完了する見込み。
