@@ -57,3 +57,34 @@
 - `figma-design-phase.md` は `type: domain` / `skill: spec` のドメインファイルであり、`/spec` 実行時のみ参照される。UI 実装に関する Issue であれば Figma 非使用でも本セクションが有効になる (MCP チェック前に配置するため)。
 - Auto-Resolve Log からの引き継ぎ: bats テストは LLM 出力 (Spec AC 内容) の機械的検証に不向きのため不採用。`grep` / `rubric` verify command に代替している。
 - Conflict detection: 実装なし。Issue body と既存コードに矛盾なし。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. Implementation followed the Spec exactly: `## Interactive UI — a11y Checklist` inserted before `## MCP Availability Check` in `figma-design-phase.md`, and section 21 added before `## Output` in `modules/verify-patterns.md`.
+
+### Design Gaps/Ambiguities
+
+- Spec listed `dialog / modal` with `aria-modal` but the AC template mentions only `aria-expanded`, `aria-controls`, `aria-label` (toggle-button-centric). Extended the `Required aria-* Attributes by Component` table to include `tabs` and `custom dropdown` rows beyond what the Spec enumerated (the Spec only listed toggle/menu/accordion/dialog) — consistent with the issue's intent to cover "interactive UI components" broadly.
+
+### Rework
+
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Placed `## Interactive UI — a11y Checklist` immediately before `## MCP Availability Check` so the section is never skipped when Figma MCP is unavailable — this was the primary design constraint from the Spec.
+- Extended the component table in both files to include `tabs` and `custom dropdown` beyond the Spec's four examples, improving breadth without changing the AC structure.
+- Used `verify-patterns.md` section 21 as the authoritative a11y verify command reference, consistent with the existing 1–20 pattern numbering.
+
+### Deferred Items
+- `/spec` behavioral test (post-merge manual AC): confirming that actual `/spec` runs produce `aria-*` ACs for interactive UI issues — deferred to post-merge observation by design.
+- Extension to non-Figma domain files (e.g., a code-phase domain file): out of scope per Issue notes.
+
+### Notes for Next Phase
+- All 5 pre-merge ACs verified PASS: grep and rubric checks all passed locally.
+- The `rubric` AC (AC4) is the most judgment-dependent — verify that the section placement in `figma-design-phase.md` is confirmed to be before `## MCP Availability Check` on review.
+- No new bats tests were added (Spec explicitly deferred bats to a separate path); verify phase should rely on the grep/rubric verify commands already in the Issue AC.
