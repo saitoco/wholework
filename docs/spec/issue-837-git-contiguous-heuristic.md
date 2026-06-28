@@ -62,3 +62,48 @@
 - **docs/structure.md count**: tests/ カウントが既に 91 (structure.md) vs 92 (実際) と 1 ずれている。本 Issue で verify-heuristics.bats を追加後は 93 になるため 93 に更新する。ただし Issue body に AC なし — /code フェーズで合わせて修正すること
 - **implementation placement**: §23 は `## Output` の直前に挿入する。§22 の最終行 (`Do not force...`) の後に改行を挟んで追加
 - **git -C example**: `scripts/append-loop-state-heartbeat.sh` line 142 の `git -C "$REPO_ROOT" commit -s -m "chore: loop-state heartbeat auto-commit $DATE [skip ci]"` がリファレンス例として使用可能 (非連続形式が実在することを確認済み)
+
+## Consumed Comments (code phase)
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Spec の実装ステップを設計通りに実行した。
+
+### Design Gaps/Ambiguities
+- `docs/ja/structure.md` の translation sync が Spec の Changed Files に明示されていなかったが、`docs/translation-workflow.md` のルールに従い `docs/structure.md` 更新に対応して同期した。
+
+### Rework
+- None.
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+- AC1 の rubric verify command は対象ファイルを 4 件列挙しているが、実装は `modules/verify-patterns.md` 1 件のみに追加された。rubric の "のいずれかに" 条件は満たされており、PASS。将来の Issue で同様の複数候補 rubric を書く場合、実装ターゲットを 1 件に絞る判断は code phase で行うため rubric は候補列挙で問題ない。
+
+### Recurring Issues
+- §23 の Decision Procedure (step 1) が `git commit` に限定されており、§23 本文の「汎化」と矛盾していた。ガイドライン文書では、本文での「汎化します」という宣言と手順書の具体例が一致しているか review phase で意識的にチェックすることを推奨。
+- ssh の例示に placeholder 文字列 (`host command`) を使っており、ガイドラインの実用性が低下していた。例示には常に実在するリテラル文字列を使うべきというルールを verify-patterns.md 自体が自己適用できていなかった。
+
+### Acceptance Criteria Verification Difficulty
+- pre-merge AC2 の `command "bats tests/verify-heuristics.bats"` は safe mode で CI reference fallback を使用した。CI `Run bats tests` SUCCESS で PASS を確認 — verify command と CI ジョブ名の対応が明確であり、fallback が正常に機能した。
+- AC1 の rubric は adversarial grader なしに AI judgment で PASS 判定した。対象ファイルが diff に明示的に含まれており、verify command 検証が容易だった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST 問題なし (全 SHOULD/CONSIDER を修正)。event = COMMENT で投稿。
+- SHOULD 3 件を修正: Decision Procedure 汎化、ssh placeholder 例の差し替え、commit -s vs commit -m の使い分け明示。
+- CONSIDER 1 件 (bats test anchor の specificity 向上) も合わせて修正。
+
+### Deferred Items
+- Post-merge observation AC は verify phase が担当 (`verify-type: observation event=auto-run`)。
+- Step 13 ポリシー変更なし — AC の更新不要。
+
+### Notes for Next Phase
+- 修正コミット `047d29a` を含む PR #840 が merge 可能な状態。
+- post-merge AC は verify phase で SKIPPED/post-merge manual として扱うこと。
+- CI は全ジョブ SUCCESS 確認済み。
