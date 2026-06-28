@@ -163,6 +163,29 @@ EOF
     grep "^| #699" "docs/reports/auto-events-rollup-2026-06-14.md" | grep -q "| code |"
 }
 
+# (h) auto-commit: git commit is called after successful rollup
+@test "auto-events-rollup: git commit is called after successful rollup" {
+    MOCK_DIR="$BATS_TEST_TMPDIR/mocks_rollup"
+    GIT_LOG="$BATS_TEST_TMPDIR/git-calls-rollup.log"
+    mkdir -p "$MOCK_DIR"
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "git \$*" >> "$GIT_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > .tmp/events_ac.jsonl << 'EOF'
+{"ts":"2026-06-14T07:01:38Z","issue":824,"event":"sub_start","size":"M"}
+{"ts":"2026-06-14T07:36:09Z","issue":824,"event":"sub_complete","exit_code":"0"}
+EOF
+
+    PATH="$MOCK_DIR:$PATH" run bash "$SCRIPT" --date 2026-06-14 --input .tmp/events_ac.jsonl --output-dir docs/reports
+    [ "$status" -eq 0 ]
+    [ -f "$GIT_LOG" ]
+    grep -q "commit" "$GIT_LOG"
+}
+
 # (d) Cleanup rotation: target date entries removed, other dates preserved
 @test "auto-events-rollup: cleanup removes target date entries and preserves others" {
     cat > .tmp/events.jsonl << 'EOF'

@@ -60,6 +60,8 @@ fi
 # Built-in exempt: loop-state heartbeat files are exempt from the dirty check.
 # Case B adopted (#798): verify-side exemption avoids commit/push overhead in append-loop-state-heartbeat.sh
 ignore_patterns+=("docs/sessions/_daily/loop-state-*.md")
+# auto-events-rollup files are exempt as a fallback for when auto-commit in auto-events-rollup.sh fails (#824)
+ignore_patterns+=("docs/sessions/_daily/auto-events-rollup-*.md")
 
 # Check if a file matches any ignore pattern
 # Handles both "file/path" and "dir/" (trailing slash from untracked directory entries)

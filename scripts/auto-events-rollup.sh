@@ -240,3 +240,10 @@ if [[ "$CLEANUP" == "true" ]]; then
 fi
 
 echo "Rollup complete: ${OUTPUT_FILE}"
+
+# Best-effort auto-commit: commit the rollup file immediately so verify workers see a clean state.
+# The || fallback is required because set -euo pipefail is active; failure must not abort the script.
+git add "$OUTPUT_FILE" 2>/dev/null && \
+  git commit -s -m "chore: auto-events-rollup auto-commit $TARGET_DATE [skip ci]" 2>/dev/null && \
+  git push origin HEAD 2>/dev/null || \
+  echo "Warning: auto-commit failed (non-fatal)" >&2
