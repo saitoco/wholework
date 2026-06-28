@@ -235,19 +235,29 @@ Note: 既存 Tier 2 anomaly detector がパターンを追記済みの場合は 
 ### Uncertainty resolution
 - Nothing to note
 
+## Code Retrospective
+
+### Deviations from Design
+- `_write_manual_recovery_to_spec()` は Spec に記述の通り `set -euo pipefail` 直後に配置した。設計と一致
+
+### Design Gaps/Ambiguities
+- `skills/auto/SKILL.md` の更新で "then follow Step 4a (after all phases are done)" という旧文が `--write-manual-recovery` 呼び出しに完全置換された。Step 4a の `### Orchestration Anomalies` / `### Improvement Proposals` 参照が失われる懸念があったが、`--write-manual-recovery` は recovery record のみ書き込む機能に特化しており、Improvement Proposals は verify phase が担当するという役割分担で整合している
+
+### Rework
+- N/A
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
-- `_write_manual_recovery_to_spec()` を `run-auto-sub.sh` の `set -euo pipefail` 直後に配置し、`SUB_NUMBER` 代入前に `--write-manual-recovery` dispatch を実装する設計を採用。`WHOLEWORK_SCRIPT_DIR` 環境変数でテスト可能にする
-- `skills/verify/SKILL.md` Step 12 skip 判定の更新も必要と判断 (Issue body 未記載だが目的達成のため必須)
-- Size: L (5ファイル + script argument handling 変更 → +1)、ROUTE=pr
+- `_write_manual_recovery_to_spec()` を `set -euo pipefail` 直後 (line 8 の前) に配置することで、`--write-manual-recovery` dispatch が `SUB_NUMBER` 代入前に実行されるようにした — これにより `bash run-auto-sub.sh --write-manual-recovery 42 code push-only` が正常動作する
+- `skills/auto/SKILL.md` Step 6 の更新は Step 4a 参照を削除し `--write-manual-recovery` 呼び出し一本に統一した
+- `skills/verify/SKILL.md` Step 12 の "Tier 2/3" → "Tier 2/3/Manual" 拡張で `### Manual recovery` エントリも "already recorded" として扱われる
 
 ### Deferred Items
-- `_write_manual_recovery_to_spec()` を `_write_tier3` と同じ場所 (line 148 近傍) に配置する alternative は見送り (関数定義を SUB_NUMBER より後に置けない制約があるため)
-- `orchestration-recoveries.md` への同時書き込みは今回スコープ外 (spec のみ対象)
+- `orchestration-recoveries.md` への同時書き込み (Tier 2/3 は書き込む) は今回スコープ外。manual recovery の session-level SSoT は引き続き手動で `orchestration-recoveries.md` に書くか省略する
+- `allowed-tools` への追加は不要 (既存 `run-auto-sub.sh:*` でカバー)
 
 ### Notes for Next Phase
-- `scripts/run-auto-sub.sh` への変更は `set -euo pipefail` 直後 (line 7 と line 8 の間) に挿入する必要がある — 間違って `SUB_NUMBER` 代入後に置かないよう注意
-- bats テストは `WHOLEWORK_SCRIPT_DIR=$MOCK_DIR` を使うため `_repo_root=$(dirname $MOCK_DIR)=$BATS_TEST_TMPDIR` になる。テスト内の `docs/spec/` ディレクトリは `$BATS_TEST_TMPDIR/docs/spec/` に作成すること
-- `skills/auto/SKILL.md` の変更で半角 `!` を使わないよう注意 (forbidden expression)
+- PR #830 の CI が通過すること、特に bats テスト全 32 件が PASS していることを確認
+- `--write-manual-recovery` の引数順は `ISSUE PHASE RECOVERY_TYPE` (全て位置引数) — PR body の verify サンプルを含めて review 担当が確認すると良い
