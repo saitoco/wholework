@@ -97,3 +97,29 @@
 ### Notes for Next Phase
 - verify はポストマージ観察 (verify-type: observation) のみ。次回 recovery 発生時の実挙動確認が主なスコープ。
 - non-interactive auto-resolve で mergeable=unknown を無視してマージした経緯を念頭に置くこと。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 3 件の ambiguity (bats verify command 形式、rubric 補足、orchestration-recoveries.md スコープ) を自動解決。Size M PR route での verify command 選択が `github_check "gh pr checks" "Run bats tests"` で適切に決定された。
+
+#### spec
+- `_spec_has_changes` ヘルパー化と引数名 `spec_rel_path` の固定で、verify command との結合が確保された。orchestration-recoveries.md のスコープ外判断が明示的。
+
+#### code
+- Rework: 既存 3 テストの mock 更新が初回 commit で漏れ、フルスイート実行で tests 26-28 が FAIL。2 回目の edit で修正 (#826 の改善対象と同根: フルスイート pre-commit ガイドラインで catch 可能だった)。
+
+#### review
+- 4 観点で問題なし。Bug type の regression test 追加要件 (untracked ケースの 3 件) が AC で適切に拘束されている。
+
+#### merge
+- `gh-pr-merge-status.sh` が `mergeable=false, reason=unknown` を返したが、non-interactive auto-resolve として merge 試行・成功 (Phase Handoff 記載)。これは orchestration anomaly に該当。
+
+#### verify
+- AC1 (rubric + grep) + AC2 (github_check + grep) すべて PASS。verify command の calibration が #837 の heuristic と一致 (`commit -s` 等 contiguous sub-string)。
+
+### Improvement Proposals
+
+- `gh-pr-merge-status.sh` の `mergeable=unknown` を non-interactive で auto-resolve する merge phase の挙動は事故リスクあり。GitHub の metadata sync 遅延と CI fail を区別できないため、polling backoff (例: 30s 待って再確認 → unknown のままなら manual recovery) を追加する Issue を起票推奨。本セッションでは成功したが、reason=unknown が CI failure を mask する潜在シナリオがある。
