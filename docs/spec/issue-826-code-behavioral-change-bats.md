@@ -61,19 +61,31 @@
 
 - None.
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 逸脱なし。Behavioral Change Detection の挿入位置、2段階チェック構造、`bats tests/` 呼び出し形式、bash 3.2+ 互換コマンドの選択、いずれも Spec と完全一致。
+
+### Recurring issues
+
+- SHOULD: `tests/` ディレクトリが存在しない場合の `grep -rl` エラーハンドリングが未定義 (skills/code/SKILL.md:294)。動作は常に「フルスイート実行」方向にフォールバックするため実害は小さいが、LLM 向けガイドラインとして明示すると堅牢性が上がる。
+
+### Acceptance criteria verification difficulty
+
+- 条件 1件、rubric 型 → PASS、UNCERTAIN なし。rubric 評価はシンプルで、Spec との一致確認のみで判断できた。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `skills/code/SKILL.md` Step 9 冒頭に「Behavioral Change Detection」サブセクションを追加 (`modules/test-runner.md` には追加しない: code phase 固有問題のため)
-- behavioral change の定義は `modules/verify-patterns.md` §24 と統一 (既存ファイル変更 + cross-file test coupling の2段階チェック)
-- bash 3.2+ 互換の `grep -rl` を使用
+- REVIEW_DEPTH=light (--light フラグ + Size M); review-light エージェントで 4観点全チェック実施
+- MUST 件数 0、CI 全ジョブ SUCCESS、AC PASS → merge 可能状態
 
 ### Deferred Items
-- post-merge verification: 次回 /auto code phase 実行時に `bats tests/` が実行されることを観察 (verify-type: observation event=auto-run)
-- `modules/test-runner.md` 側への同等ガイドライン追加は今後のニーズ次第 (現時点は code phase 限定)
+- `tests/` ディレクトリ存在チェック (SHOULD) → 作者判断でスキップ可; 必要なら follow-up Issue で対応
+- post-merge AC は observation 型 (verify-type: observation event=auto-run)
 
 ### Notes for Next Phase
-- verify command (rubric) は code phase で PASS 確認済み、Issue #826 Pre-merge チェックボックス更新済み
-- post-merge AC は observation 型 (次回 /auto 実行後に観察)
-- 1 ファイル変更のシンプルな実装; review で注目すべき複雑度なし
+- merge ブロッカーなし; `/merge 842` で進める
+- Phase Handoff (review) 更新済み
