@@ -85,17 +85,31 @@
 
 - None.
 
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- None. The implementation exactly matches the Spec's Option B (suppress stub creation entirely). The diff was a pure 8-line → 2-line replacement with no scope drift.
+
+### Recurring Issues
+
+- The code phase's "All 43 bats tests pass" log referred only to the new test file (`tests/append-consumed-comments-section.bats`), not the full suite. An existing test in `tests/run-verify.bats` ("spec absent: creates skeleton file") tested the old behavior and was not updated before committing. This produced a deterministic CI FAILURE that could have been caught with `bats tests/` (full suite run) locally. Recommendation: code phase should always run `bats tests/` (all tests) before committing behavioral changes to ensure no regression in existing tests.
+
+### Acceptance Criteria Verification Difficulty
+
+- AC3 `command "bats tests/run-code.bats tests/append-consumed-comments-section.bats"` was narrowly scoped to only the new/modified test files, which masked the broken existing test in `tests/run-verify.bats`. Broader verify commands (e.g., `command "bats tests/"`) would have caught this at AC verification time rather than at CI check time.
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Adopted Option B (suppress stub creation entirely) over Option A (kebab-case naming fix). Option B is simpler, eliminates the gh title-fetch call for XS issues where no spec context is needed, and avoids any untracked file footprint.
-- Mocked `git` via PATH in BATS tests (not via WHOLEWORK_SCRIPT_DIR) because the script calls `git -C "$_repo_root"` using the system PATH, not the sibling-script resolver.
+- Updated `tests/run-verify.bats:88` test name from "spec absent: creates skeleton file with ## Consumed Comments section" to "spec absent: skips stub creation and exits 0", asserting the new behavior (exit 0, no file created).
+- No other changes needed; the implementation in `scripts/append-consumed-comments-section.sh` was correct.
 
 ### Deferred Items
-- Option A (correct kebab-case naming when a stub is intentionally needed) remains unimplemented. If a future use case requires creating a stub for XS issues, Option A could be revisited as a follow-up.
+- Option A (correct kebab-case naming when a stub is intentionally needed) remains unimplemented per the code phase decision.
+- AC3 verify command scope is narrow (`tests/run-code.bats tests/append-consumed-comments-section.bats` only); widening to `bats tests/` would improve regression coverage.
 
 ### Notes for Next Phase
-- The fix is a pure deletion of 8 lines replaced by 2 — review should be straightforward.
-- All 43 bats tests pass; no test failures to investigate.
-- AC1 rubric passes because stub creation is fully suppressed (no file written when spec absent).
+- CI should now pass after the `tests/run-verify.bats` fix was pushed.
+- Post-merge AC (orphan stub observation) is still pending; verify via `/auto N` on an XS issue.
