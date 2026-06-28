@@ -61,6 +61,42 @@
 
 - 次回 `/auto --batch` 実行で `loop-state-*.md` / `auto-events-rollup-*.md` 由来の dirty file friction が発生しないことを観察
 
+## Code Retrospective
+
+### Deviations from Design
+
+- AC1 verify command `file_contains "scripts/append-loop-state-heartbeat.sh" "git commit"` was miscalibrated: the Spec-mandated `git -C "$REPO_ROOT" commit` form does not contain "git commit" as a contiguous substring. Corrected to `file_contains "scripts/append-loop-state-heartbeat.sh" "commit -s"` in both the Issue body and this Spec (Step 10 case 2: miscalibrated hint).
+- No deviations from the implementation steps themselves — all 5 steps in the Spec were implemented as specified.
+
+### Design Gaps/Ambiguities
+
+- The early-exit paths in `auto-events-rollup.sh` (no input data / no events for date) also write to `$OUTPUT_FILE` but were not given auto-commit per the Spec ("末尾の echo Rollup complete 行の後" only). This is acceptable because those early paths are edge cases unlikely to generate friction.
+- The `git -C "$REPO_ROOT"` form in `append-loop-state-heartbeat.sh` is necessary because the script can be invoked from any CWD (not necessarily the repo root). This distinction from `auto-events-rollup.sh` (which runs from the project CWD) was correctly captured in the Spec Notes.
+
+### Rework
+
+- One additional commit (`Fix miscalibrated verify command in spec for issue #824`) was needed to fix the Spec verify command before PR creation, because the initial implementation commit did not update the Spec verify command to match the corrected form.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+
+- `git -C "$REPO_ROOT" commit` (not bare `git commit`) is used in `append-loop-state-heartbeat.sh` because it may be called from any working directory. Verify commands checking for "git commit" as a literal substring will FAIL against this file — check for "commit -s" instead.
+- Dual defense pattern: auto-commit (primary) + verify-side exempt in `check-verify-dirty.sh` (fallback). The fallback ensures clean state even when auto-commit fails due to concurrent pushes or network issues.
+- AC1 verify command was corrected from `file_contains "scripts/append-loop-state-heartbeat.sh" "git commit"` to `file_contains "scripts/append-loop-state-heartbeat.sh" "commit -s"` during Step 10.
+
+### Deferred Items
+
+- Auto-commit in early-exit paths of `auto-events-rollup.sh` (no input data / no events for date) is not implemented — those paths are edge cases and not a friction source.
+- Post-merge observation (AC post-merge) requires manual verification in the next `/auto --batch` run.
+
+### Notes for Next Phase
+
+- All 34 bats tests (11 + 9 + 14) pass. CI should confirm the same.
+- The `[skip ci]` suffix in commit messages prevents heartbeat/rollup commits from triggering CI runs — verify that CI is not triggering on those commits after merge.
+- The `||` fallback in `auto-events-rollup.sh` is essential because `set -euo pipefail` is active; remove it and the script would abort on git failure.
+
 ## Notes
 
 - `append-loop-state-heartbeat.sh` は `set -uo pipefail` (no `-e`) を使用しているため、git コマンド失敗時も `||` fallback を使えば `exit 0` を保てる。`auto-events-rollup.sh` は `set -euo pipefail` (with `-e`) を使用しているため、`||` での fallback が必須
