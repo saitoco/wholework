@@ -88,3 +88,31 @@
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation followed Spec exactly: inserted the "Pending manual confirmation (best-effort):" block immediately after the "report results" line in `### Batch Completion Report`, and created `tests/auto-completion-report.bats` with 4 structural assertions.
+
+### Design Gaps/Ambiguities
+- The awk section-extraction pattern `/^## / && !/Batch Completion Report/{found=0}` uses half-width `!`. This appears inside a shell bats file (not in SKILL.md body), so the Forbidden Expressions restriction does not apply — confirmed by `check-forbidden-expressions.sh` returning no violations.
+- The Spec notes correctly identified that the section terminates at level-2 `## Notes` (not the next `###`). The awk pattern correctly handles this.
+
+### Rework
+- None. All 4 bats tests passed on first run, and no repair cycles were needed.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Inserted pending confirmation block as a `best-effort` (non-blocking) step between "report results" and the `next-action-guide.md` call in `### Batch Completion Report`
+- Used plain prose description (not bash code) in SKILL.md body to describe the gh issue view label lookup and verify-type counting — consistent with SKILL.md's LLM-instruction style
+- `tests/auto-completion-report.bats` uses the same structural assertion pattern as `auto-batch.bats` (section extraction via awk, then grep for keywords)
+
+### Deferred Items
+- XL route (`### Step 5: Completion Report`) pending confirmation aggregation is explicitly out of scope per Spec Notes — deferred to a follow-up Issue
+
+### Notes for Next Phase
+- PR #833 is on branch `worktree-code+issue-823`; all 3 pre-merge ACs are checked
+- Post-merge AC is `verify-type: observation event=auto-run` — will auto-trigger on next `/auto --batch` run
+- No documentation changes were required (Batch Completion Report output format is internal to the skill, not referenced in README/workflow.md)
