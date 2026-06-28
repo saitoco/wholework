@@ -20,6 +20,11 @@ step3a_section() {
     [[ "$output" == *"Post-spec route demotion"* ]]
 }
 
+@test "Step 3a section contains ALWAYS_PR demotion suppression" {
+    run step3a_section "$SKILL_FILE"
+    [[ "$output" == *"ALWAYS_PR"* ]]
+}
+
 # Extract Step 2a section: from "### Step 2a:" to the next "### " heading
 step2a_section() {
     awk '/^### Step 2a:/{found=1} found && /^### / && !/^### Step 2a:/{exit} found{print}' "$1"

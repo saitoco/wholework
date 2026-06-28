@@ -209,7 +209,9 @@ If route changed from Step 2, output a log line: "Post-spec Size refresh: Size u
 
 **Route demotion (pr → patch only):**
 
-If ROUTE changed from `pr` to `patch` (i.e., the prior ROUTE was `pr` and the refreshed ROUTE is `patch`):
+If `ALWAYS_PR=true` and the refreshed Size would set ROUTE to `patch`: suppress the demotion, keep ROUTE as `pr`, and output: "ALWAYS_PR=true: suppressing pr → patch demotion in Step 3a. Route stays pr." Then proceed to Step 4 with ROUTE unchanged (only REVIEW_DEPTH is updated per the table above).
+
+If ROUTE changed from `pr` to `patch` (i.e., the prior ROUTE was `pr` and the refreshed ROUTE is `patch`, and `ALWAYS_PR=false`):
 
 1. Output: "Post-spec route demotion: pr → patch, remaining phases re-planned"
 2. In Step 4, use the patch route sequence instead of the pr route sequence: run `code --patch` then `verify` (skip `review` and `merge`)
