@@ -70,3 +70,32 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/819#issuecomment-4826260581
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. The Spec's Option B (early exit when no spec file) was implemented as specified. The 8-line stub creation block (title fetch, mkdir, file create, H1 write) was replaced with a 2-line early exit matching the Spec exactly.
+
+### Design Gaps/Ambiguities
+
+- The `WHOLEWORK_SCRIPT_DIR` env var override causes `_repo_root` to be derived as `dirname(MOCK_DIR)`. Tests must structure `MOCK_DIR` as `$BATS_TEST_TMPDIR/repo/mocks` so that `_repo_root` resolves to `$BATS_TEST_TMPDIR/repo` and spec files are found at the correct path. This path convention was not documented in the Spec but was discovered during test authoring.
+
+### Rework
+
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Adopted Option B (suppress stub creation entirely) over Option A (kebab-case naming fix). Option B is simpler, eliminates the gh title-fetch call for XS issues where no spec context is needed, and avoids any untracked file footprint.
+- Mocked `git` via PATH in BATS tests (not via WHOLEWORK_SCRIPT_DIR) because the script calls `git -C "$_repo_root"` using the system PATH, not the sibling-script resolver.
+
+### Deferred Items
+- Option A (correct kebab-case naming when a stub is intentionally needed) remains unimplemented. If a future use case requires creating a stub for XS issues, Option A could be revisited as a follow-up.
+
+### Notes for Next Phase
+- The fix is a pure deletion of 8 lines replaced by 2 — review should be straightforward.
+- All 43 bats tests pass; no test failures to investigate.
+- AC1 rubric passes because stub creation is fully suppressed (no file written when spec absent).
