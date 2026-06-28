@@ -142,3 +142,33 @@ flock 実装パターンは既存の `scripts/emit-event.sh` の `command -v flo
 ### Phase Handoff
 
 PR #844 (branch: `worktree-code+issue-829`) をマージ後、post-merge AC として次回 `/auto --batch` での重複行不発生を観察する。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. Spec の実装ステップと PR diff が完全に一致しており、divergence なし。rubric + grep による AC 検証も期待通りに機能した。
+
+### Recurring issues
+
+Nothing to note. 今回の PR では review-light の 4 観点すべてで MUST/SHOULD issues が発生しなかった。CONSIDER 1 件 (stale mkdir-lock) は設計上許容済みのトレードオフであり、繰り返し問題ではない。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note. `rubric` + `grep` の 2 段構えの verify command が機能的だった。`command "bats tests/"` は safe mode のため CI reference fallback を使用したが、`Run bats tests` ジョブが明確に特定できスムーズに PASS 判定できた。Post-merge observation AC (verify-type: observation) は SKIPPED として正しく処理された。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `REVIEW_DEPTH=light` を適用 (--light フラグ明示) — 1 agent (review-light) で 4 観点を統合カバー
+- MUST/SHOULD issues なし → 修正フェーズ (Step 12) をスキップし直接 merge へ
+- CONSIDER 1 件 (stale mkdir-lock) は設計上許容済みとして skip 記録
+
+### Deferred Items
+- Post-merge 観察 AC: 次回 `/auto --batch` 実行後に `docs/sessions/_daily/loop-state-*.md` の重複行不発生を確認
+- verify-type: observation event=auto-run での自動評価
+
+### Notes for Next Phase
+- All pre-merge AC PASS、CI 全ジョブ SUCCESS → merge に支障なし
+- `review-light` エージェントタイプが未登録 (available agents に存在しない) — インライン分析で代替した。次回 /auto 実行時に review-light の登録状態を確認することを推奨
