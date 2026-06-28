@@ -36,3 +36,5 @@ date: 2026-06-28
 | 02:20:27 | merge | phase-transition | #815 review→merge snapshot:[issue:5 spec:0 code:0 review:0 verify:2] |
 | 02:20:28 | merge | phase-transition | #815 review→merge snapshot:[issue:5 spec:0 code:0 review:0 verify:2] |
 | 02:21:19 | merge | phase-transition | #814 review→merge snapshot:[issue:5 spec:0 code:0 review:0 verify:2] |
+| 02:52:03 | code | phase-transition | #795 spec→code snapshot:[issue:4 spec:1 code:0 review:0 verify:2] |
+| 02:52:04 | code | phase-transition | #795 spec→code snapshot:[issue:4 spec:1 code:0 review:0 verify:2] |
