@@ -1006,6 +1006,28 @@ Entered from Step 1 when `--batch --resume` is detected with no numeric tokens a
 
 After all Issues are processed, report results (success/skip/failure) for each Issue.
 
+**Pending manual confirmation (best-effort):**
+
+1. For each issue in BATCH_LIST, run `gh issue view $NUMBER --json labels -q '.labels[].name'` and check whether the output contains `phase/verify`. Collect matching issues into `PENDING_LIST`.
+2. If `PENDING_LIST` is empty: output "No issues pending manual confirmation." and continue to the next step.
+3. For each issue in `PENDING_LIST`, run `gh issue view $NUMBER --json body -q '.body'` and count:
+   - Unchecked checkbox lines (containing `- [ ]`) that also contain `<!-- verify-type: manual` → `MANUAL_N`
+   - Unchecked checkbox lines (containing `- [ ]`) that also contain `<!-- verify-type: observation` → `OBS_N`
+   - Unchecked checkbox lines (containing `- [ ]`) that also contain `<!-- verify-type: opportunistic` → `OPP_N`
+4. Accumulate `TOTAL_MANUAL`, `TOTAL_OBS`, `TOTAL_OPP` across all issues in `PENDING_LIST`.
+5. Output the aggregation in the following format:
+   ```
+   Pending manual confirmation (N issues in phase/verify):
+   - #NUMBER: MANUAL_N manual AC, OBS_N observation AC, OPP_N opportunistic AC
+   ...
+   verify-type breakdown: manual=TOTAL_MANUAL, observation=TOTAL_OBS, opportunistic=TOTAL_OPP
+   Recommended next action:
+   - For observation/opportunistic: wait for event fire (auto-checked next /verify run)
+   - For manual: review and confirm or run /verify $NUMBER
+   ```
+
+If any `gh issue view` call fails, skip that issue and continue (best-effort — do not block the batch report).
+
 Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
 - `SKILL_NAME=auto`
 - `RESULT=success`
