@@ -133,3 +133,65 @@ teardown() {
     [ "$status" -eq 0 ]
     [ "$output" = "" ]
 }
+
+@test "write_milestone and read_milestone: round-trip for all valid values" {
+    for ms in initial pre-commit post-commit post-push pre-PR-create post-PR-create; do
+        run bash "$SCRIPT" write_milestone 42 "$ms"
+        [ "$status" -eq 0 ]
+
+        run bash "$SCRIPT" read_milestone 42
+        [ "$status" -eq 0 ]
+        [ "$output" = "$ms" ]
+    done
+}
+
+@test "write_single preserves code_phase_milestone; write_milestone preserves verify_iteration_count" {
+    bash "$SCRIPT" write_milestone 42 "post-push"
+
+    bash "$SCRIPT" write_single 42 5
+
+    milestone=$(jq -r '.code_phase_milestone' .tmp/auto-state-42.json)
+    [ "$milestone" = "post-push" ]
+
+    count=$(jq -r '.verify_iteration_count' .tmp/auto-state-42.json)
+    [ "$count" = "5" ]
+
+    bash "$SCRIPT" write_milestone 42 "post-PR-create"
+
+    count=$(jq -r '.verify_iteration_count' .tmp/auto-state-42.json)
+    [ "$count" = "5" ]
+
+    milestone=$(jq -r '.code_phase_milestone' .tmp/auto-state-42.json)
+    [ "$milestone" = "post-PR-create" ]
+}
+
+@test "write_milestone with invalid milestone exits 1" {
+    run bash "$SCRIPT" write_milestone 42 "invalid-milestone"
+    [ "$status" -eq 1 ]
+}
+
+@test "resume_action: all milestones map to correct actions" {
+    run bash "$SCRIPT" resume_action "initial"
+    [ "$status" -eq 0 ]
+    [ "$output" = "run-code" ]
+
+    run bash "$SCRIPT" resume_action "pre-commit"
+    [ "$status" -eq 0 ]
+    [ "$output" = "run-code" ]
+
+    run bash "$SCRIPT" resume_action "post-commit"
+    [ "$status" -eq 0 ]
+    [ "$output" = "push-and-pr" ]
+
+    run bash "$SCRIPT" resume_action "post-push"
+    [ "$status" -eq 0 ]
+    [ "$output" = "create-pr" ]
+
+    run bash "$SCRIPT" resume_action "pre-PR-create"
+    [ "$status" -eq 0 ]
+    [ "$output" = "create-pr" ]
+
+    run bash "$SCRIPT" resume_action "post-PR-create"
+    [ "$status" -eq 0 ]
+    [ "$output" = "skip-to-review" ]
+}

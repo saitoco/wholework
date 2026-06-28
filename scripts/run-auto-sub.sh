@@ -191,6 +191,53 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>" \
   fi
 }
 
+# _observe_code_milestone NUMBER
+# Probes observable git/GitHub state to determine the current code_phase_milestone value.
+# Used by the pr-route resume preamble to reconcile the checkpoint with live state.
+# Priority: post-PR-create > post-push > post-commit > pre-commit > initial
+# Uses 2>/dev/null guards to avoid failures in offline/test environments.
+_observe_code_milestone() {
+  local number="$1"
+  local branch_name="worktree-code+issue-${number}"
+  local repo_root
+  repo_root="$(dirname "$SCRIPT_DIR")"
+
+  # Check for open PR with this branch as head
+  local pr_match
+  pr_match=$(gh pr list --json headRefName,state 2>/dev/null | \
+    jq -r ".[] | select(.headRefName == \"${branch_name}\") | select(.state == \"OPEN\") | .headRefName" \
+    2>/dev/null || true)
+  if [[ -n "$pr_match" ]]; then
+    echo "post-PR-create"
+    return
+  fi
+
+  # Check for remote branch
+  if git -C "$repo_root" ls-remote --heads origin "$branch_name" 2>/dev/null | grep -q .; then
+    echo "post-push"
+    return
+  fi
+
+  # Check for local branch with commits ahead of base
+  local ahead
+  ahead=$(git -C "$repo_root" rev-list "$branch_name" \
+    --not "${BASE_BRANCH:-main}" --count 2>/dev/null || echo "0")
+  if [[ "${ahead:-0}" -gt 0 ]]; then
+    echo "post-commit"
+    return
+  fi
+
+  # Check for dirty worktree (uncommitted changes)
+  local worktree_dir="${repo_root}/.claude/worktrees/code+issue-${number}"
+  if [[ -d "$worktree_dir" ]] && \
+     git -C "$worktree_dir" status --porcelain 2>/dev/null | grep -q .; then
+    echo "pre-commit"
+    return
+  fi
+
+  echo "initial"
+}
+
 run_phase_with_recovery() {
   local phase issue runner_script exit_code log_file
   phase="$1"; issue="$2"; runner_script="$3"; shift 3
@@ -392,8 +439,63 @@ case "$SIZE" in
     run_phase_with_recovery "code-patch" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --patch ${BASE_FLAG:-}
     ;;
   M)
-    echo "${LOG_PREFIX} --- code phase (pr): issue #${SUB_NUMBER} ---"
-    run_phase_with_recovery "code-pr" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --pr ${BASE_FLAG:-}
+    # Resume preamble: if residual worktree/branch exists from a prior interrupted run,
+    # observe the current milestone and dispatch to the appropriate recovery action.
+    # Gate: fire only when local branch or worktree dir exists (avoids first-run path).
+    _CODE_PR_DONE=false
+    _REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+    _WORKTREE_DIR="${_REPO_ROOT}/.claude/worktrees/code+issue-${SUB_NUMBER}"
+    _BRANCH_NAME="worktree-code+issue-${SUB_NUMBER}"
+    if [[ -d "$_WORKTREE_DIR" ]] || \
+       git -C "$_REPO_ROOT" rev-parse --verify "$_BRANCH_NAME" >/dev/null 2>&1; then
+      echo "${LOG_PREFIX} [resume] residual artifact detected for issue #${SUB_NUMBER}"
+      _OBSERVED_MS=$(_observe_code_milestone "$SUB_NUMBER")
+      echo "${LOG_PREFIX} [resume] observed milestone: ${_OBSERVED_MS}"
+      "$SCRIPT_DIR/auto-checkpoint.sh" write_milestone "$SUB_NUMBER" "$_OBSERVED_MS" || true
+      _RESUME_ACTION=$("$SCRIPT_DIR/auto-checkpoint.sh" resume_action "$_OBSERVED_MS")
+      echo "${LOG_PREFIX} [resume] action: ${_RESUME_ACTION}"
+      case "$_RESUME_ACTION" in
+        skip-to-review)
+          echo "${LOG_PREFIX} [resume] PR exists, skipping code phase"
+          _CODE_PR_DONE=true
+          ;;
+        create-pr)
+          echo "${LOG_PREFIX} [resume] push done, creating PR"
+          if gh pr create --head "$_BRANCH_NAME" --base "${BASE_BRANCH:-main}" \
+               --title "Issue #${SUB_NUMBER}: resume recovery" \
+               --body "$(printf 'Closes #%s\n\nSpec: docs/spec/issue-%s-*.md' \
+                          "$SUB_NUMBER" "$SUB_NUMBER")"; then
+            "$SCRIPT_DIR/auto-checkpoint.sh" write_milestone "$SUB_NUMBER" "post-PR-create" || true
+            _CODE_PR_DONE=true
+          else
+            echo "${LOG_PREFIX} [resume] create-pr failed, falling back to code phase" >&2
+          fi
+          ;;
+        push-and-pr)
+          echo "${LOG_PREFIX} [resume] commits done, pushing branch and creating PR"
+          if git -C "$_REPO_ROOT" push -u origin "$_BRANCH_NAME" 2>/dev/null \
+             && gh pr create --head "$_BRANCH_NAME" --base "${BASE_BRANCH:-main}" \
+               --title "Issue #${SUB_NUMBER}: resume recovery" \
+               --body "$(printf 'Closes #%s\n\nSpec: docs/spec/issue-%s-*.md' \
+                          "$SUB_NUMBER" "$SUB_NUMBER")"; then
+            "$SCRIPT_DIR/auto-checkpoint.sh" write_milestone "$SUB_NUMBER" "post-PR-create" || true
+            _CODE_PR_DONE=true
+          else
+            echo "${LOG_PREFIX} [resume] push-and-pr failed, falling back to code phase" >&2
+          fi
+          ;;
+        run-code)
+          echo "${LOG_PREFIX} [resume] no milestone recovery needed, running code phase normally"
+          ;;
+      esac
+    fi
+
+    if [[ "$_CODE_PR_DONE" == "false" ]]; then
+      echo "${LOG_PREFIX} --- code phase (pr): issue #${SUB_NUMBER} ---"
+      "$SCRIPT_DIR/auto-checkpoint.sh" write_milestone "$SUB_NUMBER" "initial" || true
+      run_phase_with_recovery "code-pr" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --pr ${BASE_FLAG:-}
+      "$SCRIPT_DIR/auto-checkpoint.sh" write_milestone "$SUB_NUMBER" "post-PR-create" || true
+    fi
 
     PR_NUMBER=$(gh pr list --json number,headRefName 2>/dev/null | jq -r ".[] | select(.headRefName == \"worktree-code+issue-${SUB_NUMBER}\") | .number" | head -1 || true)
     if [[ -z "$PR_NUMBER" ]]; then
@@ -409,8 +511,61 @@ case "$SIZE" in
     run_phase_with_recovery "merge" "$PR_NUMBER" "$SCRIPT_DIR/run-merge.sh"
     ;;
   L)
-    echo "${LOG_PREFIX} --- code phase (pr): issue #${SUB_NUMBER} ---"
-    run_phase_with_recovery "code-pr" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --pr ${BASE_FLAG:-}
+    # Resume preamble (same logic as M, pr route)
+    _CODE_PR_DONE=false
+    _REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+    _WORKTREE_DIR="${_REPO_ROOT}/.claude/worktrees/code+issue-${SUB_NUMBER}"
+    _BRANCH_NAME="worktree-code+issue-${SUB_NUMBER}"
+    if [[ -d "$_WORKTREE_DIR" ]] || \
+       git -C "$_REPO_ROOT" rev-parse --verify "$_BRANCH_NAME" >/dev/null 2>&1; then
+      echo "${LOG_PREFIX} [resume] residual artifact detected for issue #${SUB_NUMBER}"
+      _OBSERVED_MS=$(_observe_code_milestone "$SUB_NUMBER")
+      echo "${LOG_PREFIX} [resume] observed milestone: ${_OBSERVED_MS}"
+      "$SCRIPT_DIR/auto-checkpoint.sh" write_milestone "$SUB_NUMBER" "$_OBSERVED_MS" || true
+      _RESUME_ACTION=$("$SCRIPT_DIR/auto-checkpoint.sh" resume_action "$_OBSERVED_MS")
+      echo "${LOG_PREFIX} [resume] action: ${_RESUME_ACTION}"
+      case "$_RESUME_ACTION" in
+        skip-to-review)
+          echo "${LOG_PREFIX} [resume] PR exists, skipping code phase"
+          _CODE_PR_DONE=true
+          ;;
+        create-pr)
+          echo "${LOG_PREFIX} [resume] push done, creating PR"
+          if gh pr create --head "$_BRANCH_NAME" --base "${BASE_BRANCH:-main}" \
+               --title "Issue #${SUB_NUMBER}: resume recovery" \
+               --body "$(printf 'Closes #%s\n\nSpec: docs/spec/issue-%s-*.md' \
+                          "$SUB_NUMBER" "$SUB_NUMBER")"; then
+            "$SCRIPT_DIR/auto-checkpoint.sh" write_milestone "$SUB_NUMBER" "post-PR-create" || true
+            _CODE_PR_DONE=true
+          else
+            echo "${LOG_PREFIX} [resume] create-pr failed, falling back to code phase" >&2
+          fi
+          ;;
+        push-and-pr)
+          echo "${LOG_PREFIX} [resume] commits done, pushing branch and creating PR"
+          if git -C "$_REPO_ROOT" push -u origin "$_BRANCH_NAME" 2>/dev/null \
+             && gh pr create --head "$_BRANCH_NAME" --base "${BASE_BRANCH:-main}" \
+               --title "Issue #${SUB_NUMBER}: resume recovery" \
+               --body "$(printf 'Closes #%s\n\nSpec: docs/spec/issue-%s-*.md' \
+                          "$SUB_NUMBER" "$SUB_NUMBER")"; then
+            "$SCRIPT_DIR/auto-checkpoint.sh" write_milestone "$SUB_NUMBER" "post-PR-create" || true
+            _CODE_PR_DONE=true
+          else
+            echo "${LOG_PREFIX} [resume] push-and-pr failed, falling back to code phase" >&2
+          fi
+          ;;
+        run-code)
+          echo "${LOG_PREFIX} [resume] no milestone recovery needed, running code phase normally"
+          ;;
+      esac
+    fi
+
+    if [[ "$_CODE_PR_DONE" == "false" ]]; then
+      echo "${LOG_PREFIX} --- code phase (pr): issue #${SUB_NUMBER} ---"
+      "$SCRIPT_DIR/auto-checkpoint.sh" write_milestone "$SUB_NUMBER" "initial" || true
+      run_phase_with_recovery "code-pr" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --pr ${BASE_FLAG:-}
+      "$SCRIPT_DIR/auto-checkpoint.sh" write_milestone "$SUB_NUMBER" "post-PR-create" || true
+    fi
 
     PR_NUMBER=$(gh pr list --json number,headRefName 2>/dev/null | jq -r ".[] | select(.headRefName == \"worktree-code+issue-${SUB_NUMBER}\") | .number" | head -1 || true)
     if [[ -z "$PR_NUMBER" ]]; then

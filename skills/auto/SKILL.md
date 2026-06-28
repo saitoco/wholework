@@ -231,6 +231,7 @@ Run each phase via `run-*.sh`. Each script launches an independent process with 
 Before running any phase, initialize `VERIFY_ITERATION_COUNT`:
 - If `RESUME_MODE=true`: call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh read_single $NUMBER` and set `VERIFY_ITERATION_COUNT` to the returned value. Output: "Restored verify_iteration_count=$VERIFY_ITERATION_COUNT from checkpoint."
   - After restoring, also perform a label conflict check: fetch live labels with `gh issue view $NUMBER --json labels -q '.labels[].name'`. If the issue is already at `phase/done` (label `phase/done` present), the checkpoint is stale — call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`, set `VERIFY_ITERATION_COUNT=0`, and output: "Checkpoint discarded: live labels show phase/done."
+  - For pr route (M/L), `run-auto-sub.sh` automatically handles code phase resume via the `code_phase_milestone` checkpoint: at the start of the code phase, it probes observable git/GitHub state (`_observe_code_milestone`), writes the milestone, and dispatches to the appropriate action (`skip-to-review` / `create-pr` / `push-and-pr` / `run-code`). The `/auto` skill does not need to orchestrate this — it is handled transparently inside `run-auto-sub.sh`.
 - If `RESUME_MODE` is not set (normal mode): set `VERIFY_ITERATION_COUNT=0`
 
 ---
@@ -1072,8 +1073,9 @@ Set `ROUTE="batch"`, then follow the **L3 auto-retrospective** steps in Step 5 (
 | Route (patch/pr/XL) | Derived from Size | Not stored |
 | **verify iteration_count** | None (in-run variable only) | **Persisted** (cross-run limit management) |
 | **Batch remaining list** | None | **Persisted** (incomplete Issue list) |
+| **code phase milestone** | Observable git+GitHub state (worktree/branch/PR) | **Persisted** (hint; resume time observe-reconcile) |
 
-When checkpoint and labels conflict, labels win and the checkpoint is discarded (stale).
+When checkpoint and labels conflict, labels win and the checkpoint is discarded (stale). The `code_phase_milestone` hint is reconciled from live state at resume time — it is never treated as the sole authority.
 
 ### Checkpoint file schemas (JSON v1)
 
@@ -1083,6 +1085,7 @@ When checkpoint and labels conflict, labels win and the checkpoint is discarded 
   "schema_version": "v1",
   "issue_number": 317,
   "verify_iteration_count": 2,
+  "code_phase_milestone": "post-commit",
   "last_update": "2026-04-22T16:10:05Z"
 }
 ```
@@ -1136,6 +1139,37 @@ In both cases, the label + reconciler state is the authority and the checkpoint 
 
 `.tmp/` files are gitignored and are not committed.
 
+### code_phase_milestone: 6-stage resume hint (pr route only)
+
+`run-auto-sub.sh` writes a coarse milestone to the checkpoint when starting or completing the code phase (pr route: Size M/L). At resume time, `_observe_code_milestone` probes observable git/GitHub state to determine the fine milestone, which is then used to dispatch the recovery action.
+
+**6-stage milestone values:**
+
+| Milestone | Meaning | resume_action |
+|-----------|---------|---------------|
+| `initial` | Code phase not yet started (default) | `run-code` (run `/code` normally) |
+| `pre-commit` | Worktree has uncommitted changes; commit not done | `run-code` (re-run; uncommitted changes discarded) |
+| `post-commit` | All commits done in worktree; push not done | `push-and-pr` (push then create PR) |
+| `post-push` | Branch pushed to origin; PR not created | `create-pr` (create PR then proceed to review) |
+| `pre-PR-create` | In the middle of PR creation | `create-pr` (re-attempt PR creation) |
+| `post-PR-create` | PR number obtained; review not started | `skip-to-review` (skip code phase, proceed to review) |
+
+**Write semantics (run-auto-sub.sh):**
+- `write_milestone $NUMBER initial` — written before `run_phase_with_recovery "code-pr"` call (best-effort `|| true`)
+- `write_milestone $NUMBER post-PR-create` — written after code-pr succeeds (best-effort `|| true`)
+- Fine milestones (`pre-commit`, `post-commit`, `post-push`, `pre-PR-create`) are not written by `run-auto-sub.sh` — they are observed from git/GitHub state at resume time via `_observe_code_milestone`
+
+**Resume preamble (at sub-issue start for pr route):**
+
+Before calling `run_phase_with_recovery "code-pr"`, `run-auto-sub.sh` checks for residual artifacts:
+- **Gate**: local branch `worktree-code+issue-N` exists OR worktree directory `.claude/worktrees/code+issue-N` exists
+- If gate fires: call `_observe_code_milestone` → `write_milestone` (persist) → `resume_action` → dispatch
+- If gate does not fire (first run): proceed normally with `write_milestone initial` + `run_phase_with_recovery "code-pr"`
+
+`auto-checkpoint.sh resume_action <MILESTONE>` is a pure function mapping milestone → action, testable independently of the git/GitHub observation step.
+
 ### Scope
 
 XL route checkpoint (sub-issue dependency graph + parallel worktree state) is out of scope for this implementation. XL sub-issues can each be individually resumed with `/auto --resume N` on their sub-issue numbers.
+
+The `code_phase_milestone` resume preamble applies to pr route (Size M/L) only. patch route (Size XS/S) uses the existing `reconcile-phase-state.sh code-patch` completion check.
