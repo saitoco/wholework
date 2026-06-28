@@ -63,3 +63,30 @@
 - Issue Retrospective での自動解決: B (cwd fallback) は暗黙的 cwd 切替リスク、C (install on demand) はネットワーク必須・時間コストのため除外
 - verify-patterns.md の追記箇所: §1 テーブル (既存テーブル形式との整合)
 - `section_contains "modules/verify-patterns.md" "### 1." "node_modules"` の heading argument `"### 1."` は verify-patterns.md 内の既存 verify 例 (line 145) と同じ形式を踏襲
+
+## Code Retrospective
+
+### Deviations from Design
+- None
+
+### Design Gaps/Ambiguities
+- `check-forbidden-expressions.sh` detected the deprecated terminology (旧称: verify command の旧称) in the initial draft of the new `verify-patterns.md` table row. The term had been used correctly everywhere else in the design but slipped through when drafting the table. A second commit was required to fix it.
+
+### Rework
+- `modules/verify-patterns.md` table row required a one-word fix to replace the deprecated term with "verify commands" after the initial commit. The forbidden expressions guard caught it during Step 9 validation, which is the intended workflow.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Approach A (symlink guidance in Entry Section of `modules/worktree-lifecycle.md`) + D (false positive pattern in `modules/verify-patterns.md`) implemented as designed
+- Step 4 inserted directly after Step 3 in Entry Section, providing an opt-in bash 3.2+-compatible snippet for `.claude/hooks/worktree-init.sh`
+- Lockfile mismatch warning added alongside symlink guidance to prevent unsafe symlink usage
+
+### Deferred Items
+- Per-project worktree-init.sh hook implementation is out of scope for Wholework core (each project implements it independently)
+
+### Notes for Next Phase
+- All 4 pre-merge verify commands PASS locally
+- `check-forbidden-expressions.sh` passes (deprecated terminology replaced with "verify commands" in second commit)
+- bats test suite passes (1015 tests, exit code 0)
