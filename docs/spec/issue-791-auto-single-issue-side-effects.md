@@ -143,22 +143,42 @@
 - `command "bats ..."` は CI reference fallback で PASS 確認。安定していた
 - UNCERTAIN は 0 件。verify command の設計が適切だった
 
+## review retrospective (PR #814, iteration B)
+
+**実施日**: 2026-06-28
+**PR**: #814
+**モード**: light (--light)
+
+### Spec vs. 実装差異パターン
+
+- PR #814 の記述に重大な前提誤り: "parent /auto SKILL.md writes to .tmp/auto-session-current (固定名)" は PR #793 (Issue #770) 以降は誤り。SKILL.md は `.tmp/auto-session-${PGID}` に書き込む。
+- 結果として `auto-session-current` fallback は dead code になっており、観測されたバグ (session_id="" in /auto 811) の根本原因が未解決のまま。
+- この種の「過去の実装を参照した誤った前提」は iteration B / post-merge fix PR で発生しやすいパターン。記述前に現在の SSoT (SKILL.md, relevant Spec) を確認することで防止できる。
+
+### 繰り返しパターン (同種指摘)
+
+- PR #793 (Issue #770) と PR #814 は同じ `auto-session-current` に関するファイルを扱っているが、PR #814 の author が PR #793 の変更を把握していなかった。cross-Issue 依存は Spec の "Related Issues" 欄や commit history の参照で防止可能。
+
+### 受け入れ条件検証難易度
+
+- rubric AC 3 件はすべて PASS で問題なし。
+- MUST 指摘の発見は AC verification ではなく、code review (review-light aspect 1) で実施。verify command では「PR #793 で auto-session-current が廃止されているか」という横断的な整合性チェックができないため、コードレビューの重要性を示す事例。
+- Issue #770 の Spec (`file_not_contains "scripts/run-auto-sub.sh" "auto-session-current"`) のような廃止 AC が review フェーズでも活用できれば、根本原因不一致を事前検出できた可能性がある。
+
 ## Phase Handoff
-<!-- phase: merge -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- PR #809 をスクワッシュマージ (main へ) — 119/119 テスト green、CI SUCCESS、DCO 通過済みの状態で実行
-- ローカルブランチ `worktree-code+issue-791` は別 worktree 使用中のため `gh pr merge --delete-branch` で削除失敗したが、リモートブランチは削除済み。merge 本体への影響なし
-- label を `verify` へ遷移 — post-merge verify が次フェーズ
+- PR #814 の review 完了。MUST 指摘 (dead code fallback / root cause mismatch) を発見してコメント・ドキュメント修正を適用。
+- 根本原因 (PGID mismatch の実態) は調査が必要。fallback コードはそのまま残す (削除は Issue #770 設計との整合確認が必要)。
 
 ### Deferred Items
 
-- docs/structure.md の emit-event.sh 説明更新 (SHOULD レベル) は本 PR では見送り。Spec に理由記録済み
-- post-merge observation AC: 次回 single Issue `/auto N` (M/L pr route) 実行時に `auto-events.jsonl` と `loop-state-{date}.md` を確認
+- session_id="" の実際の根本原因 (PGID が Bash tool call 間で一致しないか、LLM が SKILL.md Step 1 を skip したか) の調査。
+- SKILL.md Step 1 の非コンプライアンスリスク: LLM が PGID ファイル書き込みを skip した場合の対策 (bash script 化等)。
 
 ### Notes for Next Phase
 
-- post-merge verify: pre-merge verify 4 件は PASS 済み。verify は post-merge observation AC (実際の実行での heartbeat/events 確認) を中心に実施
-- `worktree-code+issue-791` ローカルブランチが `.claude/worktrees/code+issue-791` で残存。cleanup は merge 後に別途 `git worktree remove` で可
-- 実装 AC の verify command は `bats tests/run-auto-sub.bats tests/auto.bats tests/run-code.bats tests/run-review.bats tests/run-merge.bats`
+- merge フェーズ: MUST 指摘の根本問題は未解決。merge 判断はユーザーに委ねる。
+- 根本原因調査: `ps -o pgid= -p $` を SKILL.md の bash call と run-code.sh の bash call の両方でログ出力して PGID が一致するか確認する手法が有効。
