@@ -6,7 +6,7 @@
 
 ## Consumed Comments
 
-- saito / MEMBER / first-class / Issue Retrospective: Approach A 自動選択、AC の正式化、"verify hint" → "verify command" 用語更新 / https://github.com/saitoco/wholework/issues/432#issuecomment-4824715925
+- saito / MEMBER / first-class / Issue Retrospective: Approach A 自動選択、AC の正式化、旧称: verify hint → "verify command" 用語更新 / https://github.com/saitoco/wholework/issues/432#issuecomment-4824715925
 
 ## Changed Files
 

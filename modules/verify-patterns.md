@@ -700,6 +700,24 @@ Without this step, `file_exists` / `file_contains` verify commands targeting `di
 - [ ] `dist/index.js` exists after running `npm run build` <!-- verify-type: post-merge manual -->
 ```
 
+### 20. Out-of-Tree File References — Use command python3 Instead of grep/file_contains
+
+When a `grep` or `file_contains` verify command references a path outside the project root (out-of-tree path, e.g., `~/.claude/settings.json`), Claude Code's Grep tool security sandbox rejects the access and the verify command returns UNCERTAIN.
+
+| Goal | NG | OK |
+|------|----|----|
+| Check whether `~/.claude/settings.json` contains a keyword | `grep "key" "~/.claude/settings.json"` | `command "python3 -c \"import json,os; data=json.load(open(os.path.expanduser('~/.claude/settings.json'))); assert 'keyword' in str(data)\""` |
+
+**Recommended pattern:**
+
+```
+command "python3 -c \"import json,os; data=json.load(open(os.path.expanduser('~/.claude/settings.json'))); assert 'keyword' in str(data)\""
+```
+
+**Security boundary:** The out-of-tree rejection of `grep`/`file_contains` is maintained as deny-by-default. The `command python3` form serves as an explicit opt-in path where the author intentionally declares out-of-tree access.
+
+**Note on verify mode:** `command` verify commands execute only in full mode. In `/review` (safe mode), `command` hints return UNCERTAIN — add a supplementary `rubric` for safe-mode coverage when needed.
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
