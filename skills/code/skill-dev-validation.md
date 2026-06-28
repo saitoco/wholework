@@ -116,6 +116,40 @@ case $rc in
 esac
 ```
 
+## PROJECT_ROOT Anchoring Pattern
+
+When creating a new bats test file, always define `PROJECT_ROOT` once at the top level of the file using `BATS_TEST_FILENAME`:
+
+```bash
+PROJECT_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
+```
+
+**Why**: bats tests may be invoked from any working directory (e.g., the repo root, the `tests/` directory, or a CI runner working directory). Relative paths like `../scripts/my-script.sh` break as soon as the invocation directory changes. `BATS_TEST_FILENAME` is always the absolute path to the test file itself, so anchoring from it is portable regardless of invocation directory.
+
+Derive all file paths from `PROJECT_ROOT`:
+
+```bash
+# Content-assertion test
+PROJECT_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
+TARGET="$PROJECT_ROOT/modules/some-module.md"
+
+@test "some-module: ## Purpose section exists" {
+    grep -q "## Purpose" "$TARGET"
+}
+
+# Script execution test
+PROJECT_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
+SCRIPT="$PROJECT_ROOT/scripts/my-script.sh"
+
+setup() {
+    MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
+    mkdir -p "$MOCK_DIR"
+    export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
+}
+```
+
+**Starting point**: copy `tests/_template.bats` as the basis for every new bats test file. The template defines `PROJECT_ROOT` correctly and includes a live sanity check that guards against future path anchoring regressions.
+
 ## Mock の副作用整合性
 
 When a bats mock is declared as `:` (no-op) and test assertions depend on observable side effects — such as file writes, network calls, or state mutations — CI may produce unexpected failures even when local tests pass. This divergence occurs because the no-op mock does not reproduce the real function's 観測可能な副作用 (observable side effects) that the assertions require.
