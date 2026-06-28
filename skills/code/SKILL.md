@@ -277,6 +277,29 @@ Skip this sub-step if no out-of-scope remediations are identified.
 
 ### Step 9: Run Tests
 
+#### Behavioral Change Detection
+
+Before delegating scope selection to test-runner, check whether this implementation includes behavioral changes. A behavioral change is a modification to an existing file that is referenced by tests beyond the file's directly-associated test (`modules/verify-patterns.md` §24).
+
+**Detection (2 checks):**
+
+1. **Does the implementation modify any existing file (not purely additive)?**
+   - Review the changed files in this implementation (use `git diff --name-only HEAD` or the staged-file list).
+   - If only new files were added with no modifications to existing files: skip this subsection and proceed to `Read test-runner.md` below — narrow scope is acceptable.
+   - If any existing file is modified: continue to check 2.
+
+2. **Are there existing tests that reference the modified file(s) outside the directly-associated test?**
+   - For each modified existing file, extract the filename (without path) and run (bash 3.2+ compatible):
+     ```bash
+     grep -rl "<filename>" tests/
+     ```
+   - If the only matching test file is the direct counterpart of the modified file (e.g., `tests/run-code.bats` for `scripts/run-code.sh`), or there are no matches: narrow scope is acceptable — proceed to `Read test-runner.md`.
+   - If additional test files reference the modified file: behavioral change confirmed — override test-runner auto-detection scope and run the full suite:
+     ```bash
+     bats tests/
+     ```
+   - Handle FAIL via Tier 0 structured recovery below. If PASS, continue with the remaining validations in this step.
+
 Read `${CLAUDE_PLUGIN_ROOT}/modules/test-runner.md` and follow the "Processing Steps" section to run tests.
 
 #### Tier 0: Structured Test-Failure Recovery

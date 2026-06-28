@@ -45,3 +45,47 @@
 ## Consumed Comments
 
 - saito (MEMBER / first-class): Issue Retrospective (auto-resolve log) — "behavioral change" の定義を `modules/verify-patterns.md` §24 に統一; Proposal A/C を統合して A/B 2択に整理; rubric を 3択→2択 (`skills/code/SKILL.md` または `modules/test-runner.md`) に絞り込み。これらの決定は Issue body に反映済み。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. Spec の実装ステップに従い、`skills/code/SKILL.md` Step 9 冒頭に「Behavioral Change Detection」サブセクションを追加した。挿入位置 (`Read test-runner.md` 行の直前) も Spec 通り。
+
+### Design Gaps/Ambiguities
+
+- `bats tests/` 実行後に `Read test-runner.md` も呼ぶかが Spec に明記されていなかった。Tier 0 / FAIL ハンドリングは test-runner.md 配下にあるため、behavioral change 検出時は「フルスイート実行 → その結果を Tier 0 フローに渡す」構造とし、`Read test-runner.md` はその後の処理 (FAIL 対応) として維持する構成を採用した。
+- Spec に「test-runner auto-detection を上書き」と記載されていたが、test-runner.md の Step 1 auto-detection が既に `bats tests/` を優先選択する。「上書き」は重複実行を避けるのではなく「明示的に誘導する」の意味と解釈し、behavioral change 時は full suite 実行を明確に指定するサブセクションを先置きする設計を採用した。
+
+### Rework
+
+- None.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 逸脱なし。Behavioral Change Detection の挿入位置、2段階チェック構造、`bats tests/` 呼び出し形式、bash 3.2+ 互換コマンドの選択、いずれも Spec と完全一致。
+
+### Recurring issues
+
+- SHOULD: `tests/` ディレクトリが存在しない場合の `grep -rl` エラーハンドリングが未定義 (skills/code/SKILL.md:294)。動作は常に「フルスイート実行」方向にフォールバックするため実害は小さいが、LLM 向けガイドラインとして明示すると堅牢性が上がる。
+
+### Acceptance criteria verification difficulty
+
+- 条件 1件、rubric 型 → PASS、UNCERTAIN なし。rubric 評価はシンプルで、Spec との一致確認のみで判断できた。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- REVIEW_DEPTH=light (--light フラグ + Size M); review-light エージェントで 4観点全チェック実施
+- MUST 件数 0、CI 全ジョブ SUCCESS、AC PASS → merge 可能状態
+
+### Deferred Items
+- `tests/` ディレクトリ存在チェック (SHOULD) → 作者判断でスキップ可; 必要なら follow-up Issue で対応
+- post-merge AC は observation 型 (verify-type: observation event=auto-run)
+
+### Notes for Next Phase
+- merge ブロッカーなし; `/merge 842` で進める
+- Phase Handoff (review) 更新済み
