@@ -92,3 +92,10 @@
 ### Notes for Next Phase
 - 実装は 3 ファイルへの追加のみ。既存ロジックへの変更はなし。verify phase では rubric AC2 つが PASS であることを確認する。
 - `docs/translation-workflow.md` と `docs/ja/translation-workflow.md` の Step 5 が対称的に追加されている点を確認する。
+
+## Auto Retrospective
+### Orchestration Anomalies
+- **[code-patch-silent-no-op]** Tier 2 fallback applied: phase=`code-patch`, action=run-code.sh-patch-retry, result=recovered.
+
+### Improvement Proposals
+- N/A (resolved by Tier 2 fallback catalog)
