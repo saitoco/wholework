@@ -65,3 +65,33 @@
 ## Consumed Comments
 
 - `saito (MEMBER / first-class)` — Issue Retrospective (Auto-Resolve Log): behavioral changes の定義・実装対象ファイル・post-merge verify-type の 3 点を自動解決した記録 — https://github.com/saitoco/wholework/issues/827#issuecomment-4827301727
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None
+
+### Design Gaps/Ambiguities
+
+- verify-heuristics.bats が既存ファイルとして存在していたため、新規作成ではなく末尾追記の形で実装した。Spec の "追加する" という表現は両方の解釈が可能だったが、既存ファイルへの追記が最も整合的。
+
+### Rework
+
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- §24 は `modules/verify-patterns.md` の末尾 (`## Output` 直前) に追加した。既存 §1-§23 と一貫したセクション構造。
+- rubric 型の AC は実装後に PASS 判定を確認し、Issue body のチェックボックスを `- [x]` に更新した。
+- `tests/verify-heuristics.bats` への追記のみで対応 (新規ファイル作成なし)。
+
+### Deferred Items
+- Post-merge AC: 次回 `/issue` 実行時に behavioral changes を含む Issue で broader scope verify command が生成されることを観察 (`verify-type: opportunistic`)。
+
+### Notes for Next Phase
+- 変更ファイルは `modules/verify-patterns.md` と `tests/verify-heuristics.bats` の 2 ファイルのみ (追加のみ、削除なし)。
+- bats フルスイートは全テスト PASS (exit 0) を確認済み。
+- `/verify` フェーズでは rubric AC の再評価と post-merge opportunistic AC の観察計画確認が主な作業。
