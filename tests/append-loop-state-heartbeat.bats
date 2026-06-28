@@ -138,6 +138,23 @@ MOCK
     grep -q '| code-patch | phase-transition |' "$file"
 }
 
+@test "parallel append: lock prevents duplicate rows from concurrent calls" {
+    fake_root="$BATS_TEST_TMPDIR/repo"
+    wrapper=$(_make_wrapper "$fake_root")
+    # Run two instances with the same transition in parallel
+    "$wrapper" --issue 701 --from spec --to code &
+    "$wrapper" --issue 701 --from spec --to code &
+    wait
+    today=$(date -u +%Y-%m-%d)
+    file="$fake_root/docs/sessions/_daily/loop-state-$today.md"
+    # Header must appear exactly once (no parallel file-creation race)
+    header_count=$(grep -c '| Time (UTC) | Phase | Event | Detail |' "$file")
+    [ "$header_count" -eq 1 ]
+    # Transition row must appear at most once (dedup inside critical section)
+    count=$(grep -c '#701 spec→code' "$file")
+    [ "$count" -le 1 ]
+}
+
 @test "auto-commit: git add and git commit are called after heartbeat append" {
     GIT_LOG="$BATS_TEST_TMPDIR/git-calls.log"
     cat > "$MOCK_DIR/git" <<MOCK
