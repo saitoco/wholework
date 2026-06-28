@@ -62,3 +62,35 @@
 - **docs/structure.md count**: tests/ カウントが既に 91 (structure.md) vs 92 (実際) と 1 ずれている。本 Issue で verify-heuristics.bats を追加後は 93 になるため 93 に更新する。ただし Issue body に AC なし — /code フェーズで合わせて修正すること
 - **implementation placement**: §23 は `## Output` の直前に挿入する。§22 の最終行 (`Do not force...`) の後に改行を挟んで追加
 - **git -C example**: `scripts/append-loop-state-heartbeat.sh` line 142 の `git -C "$REPO_ROOT" commit -s -m "chore: loop-state heartbeat auto-commit $DATE [skip ci]"` がリファレンス例として使用可能 (非連続形式が実在することを確認済み)
+
+## Consumed Comments (code phase)
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Spec の実装ステップを設計通りに実行した。
+
+### Design Gaps/Ambiguities
+- `docs/ja/structure.md` の translation sync が Spec の Changed Files に明示されていなかったが、`docs/translation-workflow.md` のルールに従い `docs/structure.md` 更新に対応して同期した。
+
+### Rework
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- §23 を `modules/verify-patterns.md` の `## Output` 直前に挿入した。他の候補ファイル (skills/issue/SKILL.md、verify-classifier.md、ambiguity-detector.md) より SSoT として最適。
+- `tests/verify-heuristics.bats` は Spec の指定通り 3 テスト (non-contiguous keyword / contiguous keyword / git -C example) で構成した。
+- `docs/structure.md` の tests/ カウントを 91 → 93 に更新し、translation sync として `docs/ja/structure.md` も同期した。
+
+### Deferred Items
+- Post-merge observation AC (次回 /auto または /issue 実行時の verify command 生成観察) は verify phase に委ねる。
+- `/issue` SKILL.md や他モジュールへの同 heuristic の追記は本 Issue スコープ外 (Proposal A は実施せず; verify-patterns.md SSoT で十分)。
+
+### Notes for Next Phase
+- PR #840 が CI を通過することを確認してから merge を進めること。
+- post-merge AC は `verify-type: observation event=auto-run` であり、機械的な検証は不要 — verify phase では SKIPPED/post-merge manual として扱う。
+- 全 pre-merge AC は code phase でチェック済み (AC1: rubric PASS、AC2: bats 3/3 PASS)。
