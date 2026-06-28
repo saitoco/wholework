@@ -562,11 +562,11 @@ MOCK
 }
 
 @test "AUTO_SESSION_ID resolves from .tmp/auto-session-current when PGID file absent (parent /auto path)" {
-    # Issue #791 iteration B: parent /auto SKILL.md writes to .tmp/auto-session-current
-    # (固定名), batch path writes to .tmp/auto-session-${PGID}. The resolve chain must
-    # try PGID first then fall back to current so both paths produce a non-empty
-    # AUTO_SESSION_ID — without this fallback, parent /auto path silently emits
-    # events with session_id="" (observed in /auto 811 run on 2026-06-28).
+    # Issue #791 iteration B: adds .tmp/auto-session-current as a fallback in the
+    # AUTO_SESSION_ID resolve chain. Note: as of PR #793 (Issue #770), SKILL.md writes
+    # to .tmp/auto-session-${PGID}, not auto-session-current. This fallback covers the
+    # case where the PGID file is absent (e.g., PGID mismatch between Bash tool call
+    # contexts, or if a future code path writes auto-session-current again).
     #
     # We assert the resolve logic by replaying the same shell snippet used in
     # scripts/run-code.sh L50-51 (and identical in run-spec/review/merge/issue.sh).
