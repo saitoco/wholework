@@ -512,6 +512,34 @@ See also: `#async-external-commit` (reconcile-first authority — `matches_expec
 
 ---
 
+## manual-recovery-spec-write
+
+### Symptom
+- Parent session manually called `worktree-merge-push.sh`, `gh pr create`, or `run-*.sh` to recover a sub-issue from a kill or mid-run failure — independent of Tier 1/2/3 automatic recovery
+- The sub-issue Spec's `## Auto Retrospective` section does not have a recovery entry for this manual intervention
+
+### Applicable Phases
+- code, review, merge (XL sub-issue parent session manual recovery)
+
+### Fallback Steps
+1. After the manual recovery action completes successfully, run:
+   ```bash
+   bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE RECOVERY_TYPE
+   ```
+   where `RECOVERY_TYPE` is a short string describing the action taken (e.g., `push-only`, `pr-create`, `review-rerun`)
+2. The subcommand calls `_write_manual_recovery_to_spec()` which appends a `### Manual recovery (PHASE)` entry to the Spec's `## Auto Retrospective` section and commits/pushes immediately
+3. The entry includes: date, issue/phase, source (`parent session manual recovery`), recovery type, and outcome (`success`)
+
+### Escalation
+- If the script exits non-zero (commit/push failure), a WARNING is logged to stderr and execution continues — spec write failure is non-fatal; the `/verify` session can still record the anomaly manually
+
+### Rationale
+- Introduced in Issue #822: `_write_tier2_recovery_to_spec()` and `_write_tier3_recovery_to_spec()` (Issue #800) only cover automatic recovery paths; manual recovery by the parent session left `## Auto Retrospective` incomplete, requiring verify-session manual supplementation
+- Symmetric with Tier 2/3 paths: same `## Auto Retrospective` section, same `### <type> recovery (phase)` heading format
+- `/verify` Step 12's skip-judgment now includes `### Manual recovery` entries as "already recorded" (alongside Tier 2/Tier 3), eliminating the need for manual supplementation
+
+---
+
 ## Operational Notes
 
 This catalog is consumed by:
@@ -535,6 +563,18 @@ Mechanism:
 - `_write_tier2_recovery_to_spec()` appends the metadata to the Spec's `## Auto Retrospective` section and commits/pushes immediately
 
 This write happens during the sub-issue execution phase, before the parent `/auto` Step 4a runs. When Step 4a Source 1 (`fallback-catalog`) runs later, the sub-issue Spec Auto Retrospective is already up to date. The parent session's Step 4a writes `orchestration-recoveries.md` as the session-level SSoT; the Spec write here serves the per-Issue paper trail.
+
+### Manual path: Spec Auto Retrospective write
+
+When the parent session performs a manual recovery (e.g., `worktree-merge-push.sh` re-run, `gh pr create` manual call, or `run-*.sh` re-execution), there is no automatic bash path to write the recovery record. The operator must explicitly call:
+
+```bash
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE RECOVERY_TYPE
+```
+
+This invokes `_write_manual_recovery_to_spec()`, which appends a `### Manual recovery (PHASE)` entry to the sub-issue Spec's `## Auto Retrospective` section and commits/pushes immediately — symmetric with the Tier 2 and Tier 3 bash paths described below. `/verify` Step 12 treats `### Manual recovery` entries as "already recorded" and skips redundant retrospective writing.
+
+See also: `modules/orchestration-fallbacks.md#manual-recovery-spec-write`
 
 ### Tier 3 bash path: Spec Auto Retrospective write
 
