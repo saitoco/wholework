@@ -68,3 +68,47 @@
 
 - saito (MEMBER / first-class) — 2026-06-28T03:56:24Z: Issue Retrospective 記録: AC2 分割 (append-loop-state-heartbeat.bats と verify-dirty-detection.bats を明示) および Post-merge AC の verify-type を `observation event=auto-run` に修正
   URL: https://github.com/saitoco/wholework/issues/798#issuecomment-4824704355
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. 実装ステップは Spec の通りに実行した。`verify-ignore-paths` ロードブロックの直後に built-in 免除パターンを追加し、テストケースも Spec 通りの 2 件を追加した。
+
+### Design Gaps/Ambiguities
+
+- 警告メッセージが built-in パターン経由でも "excluded by verify-ignore-paths" と表示されることは Spec Notes に明記されていたため問題なし。`_is_ignored()` 関数が `ignore_patterns` 配列を共通で使うため、built-in パターンと user-config パターンで同一メッセージが出力される設計は既存の期待に合致していた。
+
+### Rework
+
+- None. 1 回目のコミットで実装が完了し、全 12 テスト PASS。リワークは発生しなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- 全 4 観点のライトレビューで MUST / SHOULD / CONSIDER 問題なし。外部レビューツール (Copilot/CodeRabbit) は未設定のため Step 7 スキップ。
+- Forbidden Expressions check の FAILURE は `docs/spec/issue-432-out-of-tree-file-verify-guide.md` の既存問題で、このPRの変更とは無関係と確認。
+- 警告メッセージが "excluded by verify-ignore-paths" を built-in パターンにも使用する設計は、Spec で明示的に決定されたもので問題なし。
+
+### Deferred Items
+- Post-merge: 次回 `/auto --batch` 実行時に heartbeat dirty state が verify を block しないことを観察 (verify-type: observation event=auto-run)。
+
+### Notes for Next Phase
+- `/merge` では CI SUCCESS (Run bats tests × 2、Validate skill syntax × 2) を確認のうえマージ可能。
+- Forbidden Expressions check の FAILURE は既存問題のため merge ブロック要因ではない。
+- Post-merge AC は `observation event=auto-run` なので verify フェーズでは SKIPPED 扱い。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- None. Spec と実装の間に乖離なし。`ignore_patterns+=` の挿入位置、テストケースの assertionパターン、警告メッセージの維持、いずれも Spec の設計通りに実装されていた。
+
+### Recurring issues
+
+- None. 同種の問題は検出されなかった。4 観点すべてでクリーン。
+
+### Acceptance criteria verification difficulty
+
+- 全 AC が PASS (Post-merge は SKIPPED)。verify command (`bats` command) は CI "Run bats tests" SUCCESS を代替検証として使用 (safe mode)。rubric AC も diff から直接確認可能で UNCERTAIN なし。verify command の品質は良好。
