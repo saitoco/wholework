@@ -718,6 +718,41 @@ command "python3 -c \"import json,os; data=json.load(open(os.path.expanduser('~/
 
 **Note on verify mode:** `command` verify commands execute only in full mode. In `/review` (safe mode), `command` hints return UNCERTAIN — add a supplementary `rubric` for safe-mode coverage when needed.
 
+### 21. Interactive UI Components — a11y Acceptance Criteria Reference
+
+When writing verify commands for interactive UI components, use the table below to select the appropriate `aria-*` attributes and verify command patterns.
+
+| Component | Required aria-* Attributes | Verify Command Example |
+|-----------|---------------------------|------------------------|
+| toggle button | `aria-expanded`, `aria-controls`, `aria-label` | `file_contains "src/components/ToggleButton.tsx" "aria-expanded"` |
+| menu / hamburger | `aria-expanded`, `aria-controls`, `aria-label`, `aria-haspopup` | `file_contains "src/components/Menu.tsx" "aria-expanded"` |
+| accordion | `aria-expanded`, `aria-controls`, `role="region"` | `file_contains "src/components/Accordion.tsx" "aria-expanded"` |
+| dialog / modal | `aria-modal`, `aria-labelledby`, `aria-describedby` | `file_contains "src/components/Modal.tsx" "aria-modal"` |
+| tabs | `aria-selected`, `aria-controls`, `role="tab"` | `file_contains "src/components/Tabs.tsx" "aria-selected"` |
+| custom dropdown | `aria-expanded`, `aria-haspopup`, `aria-activedescendant` | `file_contains "src/components/Dropdown.tsx" "aria-expanded"` |
+
+**Dynamic update verification (most important):**
+
+```
+file_contains "src/components/ToggleButton.tsx" "aria-expanded"
+```
+
+This verifies that `aria-expanded` is present in the component file. For dynamic update logic (toggling true/false on state change), use a rubric:
+
+```
+rubric "ToggleButton component updates aria-expanded to the current open/closed state on every interaction"
+```
+
+**a11y AC template for Issues:**
+
+```markdown
+- [ ] `aria-expanded` is dynamically updated to `true`/`false` when the {component} is toggled <!-- verify: file_contains "path/to/component" "aria-expanded" -->
+- [ ] `aria-controls` references the ID of the controlled element <!-- verify: file_contains "path/to/component" "aria-controls" -->
+- [ ] `aria-label` (or visible label text) describes the purpose of the {component} <!-- verify: file_contains "path/to/component" "aria-label" -->
+```
+
+**Note**: This reference is for interactive UI accessibility (a11y). It is activated when the Issue involves component implementation. Do not apply to purely backend or CLI Issues.
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.

@@ -9,6 +9,44 @@ skill: spec
 
 Collect and organize design information for Issues that require UI design.
 
+## Interactive UI — a11y Checklist
+
+This section applies to any Issue involving interactive UI components (toggle buttons, menus, accordions, dialogs, etc.), regardless of whether Figma is used. It runs before MCP availability check so it is never skipped on Figma-unavailable setups.
+
+### Auto-detection Criteria
+
+Apply this checklist when the Issue includes any of the following:
+- Toggle buttons, hamburger menus, navigation menus
+- Accordion / disclosure widgets
+- Dialogs, modals, drawers
+- Tabs, carousels, custom dropdowns
+- Any component with open/closed or expanded/collapsed state
+
+If the Issue is purely backend, CLI, or has no interactive UI elements, skip this section.
+
+### Required aria-* Attributes by Component
+
+| Component | Required aria-* Attributes | Dynamic Update |
+|-----------|---------------------------|----------------|
+| toggle button | `aria-expanded` (true/false), `aria-controls`, `aria-label` | `aria-expanded` must update on every state change |
+| menu / hamburger | `aria-expanded`, `aria-controls`, `aria-label`, `aria-haspopup` | `aria-expanded` must toggle on open/close |
+| accordion | `aria-expanded`, `aria-controls`, `role="region"` on panel | `aria-expanded` must reflect item open/closed state |
+| dialog / modal | `aria-modal="true"`, `aria-labelledby`, `aria-describedby` | Focus trap required; `aria-modal` set at open |
+| tabs | `aria-selected`, `aria-controls`, `role="tab"` | `aria-selected` must update on tab switch |
+| custom dropdown | `aria-expanded`, `aria-haspopup="listbox"`, `aria-activedescendant` | `aria-expanded` toggles; `aria-activedescendant` tracks focus |
+
+### AC Template
+
+When writing Acceptance Criteria for an Issue with interactive UI, include at minimum:
+
+```markdown
+- [ ] `aria-expanded` is dynamically updated to `true`/`false` when the {component} opens and closes
+- [ ] `aria-controls` references the ID of the controlled element
+- [ ] `aria-label` (or visible label text) describes the {component}'s purpose
+```
+
+Adjust the template for the specific component type using the table above.
+
 ## MCP Availability Check
 
 First, ToolSearch for `mcp__plugin_figma_figma__get_design_context` to verify Figma MCP availability.
