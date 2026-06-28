@@ -103,3 +103,17 @@ notable 判定: **YES** (Tier 3 recovery 3 件、watchdog kill 3 件、concurren
 
 - [Data layer report](docs/sessions/13998-1782562514-2026-06-27/data-layer.md)
 - [Data layer report (日本語)](docs/sessions/13998-1782562514-2026-06-27/data-layer-ja.md)
+
+---
+
+## Filed Issues (from this L3 retrospective)
+
+| Issue | Tier | Title |
+|-------|------|-------|
+| #821 | Tier 1 | auto: session 中の skill self-update propagation を可視化 (skill_versions 記録 + session.md 注記) |
+| #822 | Tier 1 | auto: manual recovery 経路 (parent session 介入) の sub-issue Spec へ Auto Retrospective 自動追記 (#800 拡張) |
+
+Tier 2 / Tier 3 改善候補 (Issue 化なし):
+- Tier 2: `get-auto-session-report.sh` の retry-on-kill 適用 — memory 提案として記録
+- Tier 2: `concurrent_commit_detected` の self-commit filter — memory 提案として記録
+- Tier 3: `/auto --batch` 完走時の L3 step 強制実行 — 本 retrospective に運用注意点として記録 (Issue 化なし)
