@@ -83,17 +83,17 @@
 - AC2 の verify command (`github_check "gh pr checks" "Run bats tests"`) は CI 完了後でないと判定できない構造。AC2 のチェックボックスが `[ ]` のまま PR が提出されたが、CI SUCCESS を確認後に `[x]` に更新した。この遅延検証は `github_check` verify の想定動作であり問題ない。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light (--light 指定かつ Size M)。review-light の 4観点で問題なし。MUST 問題なし → COMMENT イベントで投稿。
-- AC2 のチェックボックスを `[x]` に更新 (`gh-issue-edit.sh` 経由)。CI SUCCESS を確認済み。
+- PR #838 を squash merge (--delete-branch) で main にマージした。
+- gh-pr-merge-status.sh が mergeable=false, reason=unknown を返したが、non-interactive auto-resolve として merge を試行し成功した (Issue #831 コメントに Auto-Resolve Log を記録)。
+- BASE_BRANCH=main のため、closes #831 により Issue は自動クローズされる。
 
 ### Deferred Items
-- Post-merge AC: 「次回 recovery 発生時に初回 Spec 作成 (untracked) ケースで commit が漏れないことを観察」は `/verify` のポストマージ観察に委ねる。
+- Post-merge AC: 「次回 recovery 発生時に初回 Spec 作成 (untracked) ケースで commit が漏れないことを観察」は `/verify` の観察スコープ。
 - Spec Notes に記載された `orchestration-recoveries.md` の `git diff --quiet` (スコープ外) は将来の関連 Issue で対応。
 
 ### Notes for Next Phase
-- MUST 問題なし、CI SUCCESS → `/merge 838` で即マージ可能。
-- Post-merge AC は `verify-type: observation event=auto-run` のため `/verify` の観察スコープ。
-- review-light エージェントが利用不可のためインライン実行した。次サイクルでエージェント登録を検討してもよい (Improvement Proposal 候補)。
+- verify はポストマージ観察 (verify-type: observation) のみ。次回 recovery 発生時の実挙動確認が主なスコープ。
+- non-interactive auto-resolve で mergeable=unknown を無視してマージした経緯を念頭に置くこと。
