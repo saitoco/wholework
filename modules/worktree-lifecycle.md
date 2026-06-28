@@ -27,6 +27,15 @@ The calling skill enters the worktree with the following steps:
    ```
    Do nothing if hook does not exist (skip).
 
+4. **`node_modules` symlink from parent repo (optional, for Node.js projects)**: When `command` verify types depend on binaries such as `pnpm exec` or `npx`, those binaries are not found inside the worktree because `node_modules/` only exists in the parent repository. If the parent repo has `node_modules/`, adding the following snippet to `.claude/hooks/worktree-init.sh` creates a symlink to share it:
+   ```bash
+   PARENT_ROOT="$(git worktree list | awk 'NR==1{print $1}')"
+   if [ -d "$PARENT_ROOT/node_modules" ] && [ ! -e "node_modules" ]; then
+     ln -s "$PARENT_ROOT/node_modules" node_modules
+   fi
+   ```
+   **Note**: The symlink is safe only when the lockfile in the worktree branch matches the parent. If the branch has a different lockfile, run `pnpm install --frozen-lockfile` instead of creating the symlink.
+
 ### Exit: merge-to-main Section (used by /spec, /code patch, /verify)
 
 The calling skill exits the worktree with the following steps after completing commits:
