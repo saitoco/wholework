@@ -56,3 +56,37 @@
 - AC2 の `file_not_contains "skills/spec/SKILL.md" "use Spec's"` は、Step 1 で変更後に "use Spec's" が SKILL.md から除去されることで PASS する
 - AC4 の `grep "SSoT" "modules/verify-patterns.md"` は現在 FAIL (SSoT の語が存在しない)。Step 2 で新セクション追加後に PASS する
 - Issue body の更新は不要 (変更方向を逆転させるだけであり、Issue body の verify コマンドは既に正しい)
+
+## Consumed Comments
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. Implementation followed the Spec exactly. Step 1 (SKILL.md edit) and Step 2 (verify-patterns.md §17 addition) both matched the specified text.
+
+### Design Gaps/Ambiguities
+
+- None identified. The Spec Notes correctly anticipated that the existing "Verify command sync rule" (SKILL.md line 471-473) was already in the correct direction, so only the "consistency check" bullet required the SSoT direction reversal.
+
+### Rework
+
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Changed only one bullet in the consistency check step (line 497), not the surrounding context — the surrounding detection logic was correct and only the action ("update Issue body" → "update Spec") needed reversing.
+- Added §17 to `modules/verify-patterns.md` verbatim from the Spec to keep language precise.
+
+### Deferred Items
+- None. Scope was narrow (1 SKILL.md bullet + 1 module section); completed in full.
+
+### Notes for Next Phase
+- All 4 pre-merge ACs verified PASS (rubric AC1/AC3 by grader judgment, AC2/AC4 by tool checks).
+- bats tests passed (exit code 0, 1005 tests).
+- No forbidden expression violations found.
+- Post-merge: none.
