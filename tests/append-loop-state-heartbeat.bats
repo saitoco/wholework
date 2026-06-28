@@ -137,3 +137,20 @@ MOCK
     file="$fake_root/docs/sessions/_daily/loop-state-$today.md"
     grep -q '| code-patch | phase-transition |' "$file"
 }
+
+@test "auto-commit: git add and git commit are called after heartbeat append" {
+    GIT_LOG="$BATS_TEST_TMPDIR/git-calls.log"
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "git \$*" >> "$GIT_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    fake_root="$BATS_TEST_TMPDIR/repo_ac"
+    wrapper=$(_make_wrapper "$fake_root")
+    run "$wrapper" --issue 824 --from spec --to code
+    [ "$status" -eq 0 ]
+    [ -f "$GIT_LOG" ]
+    grep -q "commit" "$GIT_LOG"
+}

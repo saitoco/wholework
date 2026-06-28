@@ -136,4 +136,11 @@ fi
 
 printf '| %s | %s | %s | %s |\n' "$TS" "$PHASE_LABEL" "phase-transition" "$DETAIL" >> "$FILE" 2>/dev/null || true
 
+# Best-effort auto-commit: commit the heartbeat file immediately so verify workers see a clean state.
+# Failure is non-fatal — the verify-side exempt in check-verify-dirty.sh (#824) acts as fallback.
+git -C "$REPO_ROOT" add "$FILE" 2>/dev/null && \
+  git -C "$REPO_ROOT" commit -s -m "chore: loop-state heartbeat auto-commit $DATE [skip ci]" 2>/dev/null && \
+  git -C "$REPO_ROOT" push origin HEAD 2>/dev/null || \
+  echo "append-loop-state-heartbeat.sh: WARNING — auto-commit failed (non-fatal)" >&2
+
 exit 0
