@@ -178,18 +178,17 @@ milestone は 6段階: `initial` / `pre-commit` / `post-commit` / `post-push` / 
 - UNCERTAIN なし、POST-MERGE 1件 (次回 kill 時の観察)。verify command の精度は高く、全 AC が確認可能だった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- SHOULD 指摘 (`gh pr list` に `--head` フィルタなし) はスキップ。`|| true` フォールバックで安全であり MUST ではないと判断。
-- review-spec / review-bug Workflow エージェントが未登録のため、インラインレビュー (diff 直接読み) に代替した。CI で全チェック GREEN 確認済み。
-- 全受け入れ基準 (pre-merge) PASS 確認。
+- PR #815 を squash merge (base: main)。`closes #806` により Issue #806 は自動クローズ予定。
+- Phase Handoff は main に squash commit として含まれた。
 
 ### Deferred Items
-- Post-merge AC (次回 kill 時の観察) は merge 後に自然に観察される。
-- `gh pr list` `--head` フィルタ追加 (SHOULD) はスキップ: 安全な fallback あり、本 Issue スコープ外。
-- Size L resume preamble テスト追加 (CONSIDER): M との重複ロジックのため優先度低い。
+- Post-merge AC (次回 `/auto --resume` kill-resume 実走観察) は merge 後に自然に観察される。
+- `gh pr list` `--head` フィルタ追加 (SHOULD) は本 Issue スコープ外として持ち越し。
 
 ### Notes for Next Phase
-- MUST issues なし。`/merge 815` で即座に進めてよい。
-- merge 後に Post-merge AC (次回 kill 時の `--resume` 完走観察) をスケジュールすること。
+- verify では `bats tests/auto-checkpoint.bats` (10件) および `bats tests/run-auto-sub.bats` (30件) を実行して全 PASS を確認すること。
+- AC3 (`resume_action post-commit` → `push-and-pr`) は CLI コマンド直接実行で確認可能。
+- Post-merge AC (kill-resume 実走) は verify スコープ外だが、観察できれば記録すること。
