@@ -176,6 +176,7 @@ if [[ -n "$BASE_FLAG" ]]; then
 fi
 
 source "$SCRIPT_DIR/guard-prefix.sh"
+source "$SCRIPT_DIR/retry-on-kill.sh"
 
 if [[ -n "$EXTRA_FLAGS" ]]; then
   PROMPT="${GUARD_PREFIX}
@@ -211,10 +212,11 @@ set +e
 if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
   TOKEN_USAGE_FILE=".tmp/token-usage-${ISSUE_NUMBER}.json"
   mkdir -p .tmp
-  ANTHROPIC_MODEL=sonnet \
+  # See modules/orchestration-fallbacks.md#wrapper-retry-on-kill
+  run_with_retry_on_kill env -u CLAUDECODE ANTHROPIC_MODEL=sonnet \
     WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
     OUTPUT_FORMAT_JSON=1 \
-    env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
+    "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
       --model sonnet \
       --effort high \
       --output-format json \
@@ -223,9 +225,10 @@ if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
   EXIT_CODE=$?
   jq -r '.result // empty' "$TOKEN_USAGE_FILE" 2>/dev/null || true
 else
-  ANTHROPIC_MODEL=sonnet \
+  # See modules/orchestration-fallbacks.md#wrapper-retry-on-kill
+  run_with_retry_on_kill env -u CLAUDECODE ANTHROPIC_MODEL=sonnet \
     WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
-    env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
+    "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
       --model sonnet \
       --effort high \
       $PERMISSION_FLAG
