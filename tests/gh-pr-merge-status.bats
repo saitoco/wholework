@@ -12,6 +12,13 @@ setup() {
     MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
     mkdir -p "$MOCK_DIR"
     export PATH="$MOCK_DIR:$PATH"
+
+    # no-op sleep mock (prevents real 30/60s delays in polling tests)
+    cat > "$MOCK_DIR/sleep" <<'MOCK'
+#!/bin/bash
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/sleep"
 }
 
 make_gh_mock() {
@@ -19,6 +26,27 @@ make_gh_mock() {
     local state="$2"
     # Use printf to expand variables properly
     printf '#!/bin/bash\necho '"'"'{"mergeable": "%s", "mergeStateStatus": "%s"}'"'"'\n' "$mergeable" "$state" > "$MOCK_DIR/gh"
+    chmod +x "$MOCK_DIR/gh"
+}
+
+# make_gh_mock_stateful: returns UNKNOWN/UNKNOWN for the first N calls, then the specified values
+# Usage: make_gh_mock_stateful <unknown_count> <final_mergeable> <final_state>
+make_gh_mock_stateful() {
+    local unknown_count="$1"
+    local final_mergeable="$2"
+    local final_state="$3"
+    local counter_file="$BATS_TEST_TMPDIR/gh_call_count"
+    echo "0" > "$counter_file"
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+count=\$(cat "$counter_file")
+if [ "\$count" -lt "$unknown_count" ]; then
+    echo '{"mergeable": "UNKNOWN", "mergeStateStatus": "UNKNOWN"}'
+    echo \$(( count + 1 )) > "$counter_file"
+else
+    echo '{"mergeable": "$final_mergeable", "mergeStateStatus": "$final_state"}'
+fi
+MOCK
     chmod +x "$MOCK_DIR/gh"
 }
 
@@ -92,4 +120,18 @@ make_gh_mock() {
     run bash "$SCRIPT" "123"
     [ "$status" -eq 1 ]
     [[ "$output" =~ "Error" ]]
+}
+
+@test "polling: UNKNOWN twice then CLEAN resolves to clean" {
+    make_gh_mock_stateful 2 "MERGEABLE" "CLEAN"
+    run bash "$SCRIPT" "123"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"mergeable": true'* ]]
+    [[ "$output" == *'"reason": "clean"'* ]]
+}
+
+@test "polling: max retries exceeded with UNKNOWN exits non-zero" {
+    make_gh_mock "UNKNOWN" "UNKNOWN"
+    run bash "$SCRIPT" "123"
+    [ "$status" -ne 0 ]
 }

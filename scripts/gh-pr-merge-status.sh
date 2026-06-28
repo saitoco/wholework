@@ -14,6 +14,11 @@
 #   ci_failing     - CI checks failing
 #   behind_base    - branch is behind base branch
 #   unknown        - unable to determine
+#
+# exit codes:
+#   0  - success (merge status determined)
+#   1  - error (gh fetch failed or invalid arguments)
+#   2  - polling timeout (mergeable=UNKNOWN persisted after all retries)
 
 set -euo pipefail
 
@@ -46,6 +51,27 @@ JSON=$(gh pr view "$PR" --json mergeable,mergeStateStatus) || { echo "Error: fai
 
 MERGEABLE=$(echo "$JSON" | jq -r '.mergeable')
 STATE=$(echo "$JSON" | jq -r '.mergeStateStatus')
+
+# Polling backoff for UNKNOWN (GitHub metadata sync delay)
+# UNKNOWN+UNKNOWN indicates GitHub hasn't synced CI/review state yet, not a genuine failure.
+# Retry with exponential delays before aborting to avoid CI bypass risk.
+if [[ "$MERGEABLE" == "UNKNOWN" && "$STATE" == "UNKNOWN" ]]; then
+  RETRY_DELAYS=(30 60)
+  retry_count=0
+  while [[ "$MERGEABLE" == "UNKNOWN" && "$STATE" == "UNKNOWN" ]]; do
+    if [[ $retry_count -ge ${#RETRY_DELAYS[@]} ]]; then
+      echo "Error: PR #$PR mergeable=UNKNOWN persists after ${#RETRY_DELAYS[@]} retries — aborting to avoid CI bypass risk" >&2
+      exit 2
+    fi
+    delay="${RETRY_DELAYS[$retry_count]}"
+    echo "Info: mergeable=UNKNOWN (attempt $((retry_count + 1))) — waiting ${delay}s before retry..." >&2
+    sleep "$delay"
+    JSON=$(gh pr view "$PR" --json mergeable,mergeStateStatus) || { echo "Error: failed to fetch PR #$PR" >&2; exit 1; }
+    MERGEABLE=$(echo "$JSON" | jq -r '.mergeable')
+    STATE=$(echo "$JSON" | jq -r '.mergeStateStatus')
+    retry_count=$((retry_count + 1))
+  done
+fi
 
 # Determine merge readiness
 if [[ "$MERGEABLE" == "MERGEABLE" && "$STATE" == "CLEAN" ]]; then
