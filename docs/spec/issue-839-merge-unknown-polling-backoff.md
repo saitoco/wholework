@@ -66,19 +66,35 @@ polling backoff (初回 30s 待機 → 再確認 → 2 回目 60s 待機 → 再
 
 - N/A
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec と実装は完全一致。polling backoff ブロックの挿入位置、`RETRY_DELAYS=(30 60)`、`exit 2`、stateful mock ヘルパーのすべてが Spec 記載通りに実装されていた。divergence なし。
+
+### Recurring issues
+
+- なし。コードの変更範囲が小さく、各ファイルの変更が明確に分離されていた (script に機能追加、test にテスト追加)。
+
+### Acceptance criteria verification difficulty
+
+- `rubric` + `grep "sleep"` の 2 重 verify は効果的。ただし `grep "sleep"` 単独では `sleep` を使う他の用途と区別できないため、rubric の意味的判定が補完として重要だった。
+- `command "bats tests/gh-pr-merge-status.bats"` は safe mode で CI 代替検証 (SUCCESS) を使用できた。CI fallback が機能した事例。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- polling backoff を `gh-pr-merge-status.sh` 内部に閉じ込める設計を採用。merge/SKILL.md の routing ロジックを変更しないため regression リスクが低い。
-- exit 2 を polling timeout 専用とし、exit 1 を gh fetch error 専用に分離。両者を区別することで呼び出し元の error handling が精緻になる。
-- `RETRY_DELAYS=(30 60)` の 2 ステップのみ (合計待機 90s 上限)。GitHub metadata sync は通常 30〜60s 以内に解決するため、過度な待機を避けつつリスクを低減できる判断。
+- REVIEW_DEPTH=light (Size=M) で軽量統合レビューを実施。全 AC が PASS、CI が全 SUCCESS のため MUST/SHOULD 問題なし。
+- review-light エージェントタイプが未登録 (available agents に存在しない) のため、モジュールを読み込んで inline で 4 観点レビューを実施した。
+- CONSIDER 1 件 (bats abort テストの exit code 特定性不足) は skip。機能的に正しく regression リスクは低い。
 
 ### Deferred Items
-- polling 成功/abort をログ以外の手段 (exit code 以外の structured output 等) で呼び出し元に通知する仕組みは本 Issue スコープ外。merge/SKILL.md での error handling 改善は別途検討。
-- `RETRY_DELAYS` の値を `.wholework.yml` で設定可能にする拡張は現時点で不要だが、将来の要望に備えて Spec Notes に記録済み。
+- CONSIDER: bats abort テストで `[ "$status" -eq 2 ]` ではなく `[ "$status" -ne 0 ]` を使用中。exit code 精緻化は機能的に問題ないが、将来の変更時の regression 検知精度を高めるための改善候補。
+- merge/SKILL.md での exit 2 ハンドリングは本 PR スコープ外 (code フェーズより引き継ぎ)。
+- Post-merge AC は `verify-type: observation event=auto-run` のため次回 merge phase での実観察が必要。
 
 ### Notes for Next Phase
-- CI で `bats tests/` が全 11 件 PASS することを確認する (polling test も含む)。
-- `exit 2` が `merge/SKILL.md` または `run-merge.sh` 側で適切にハンドリングされているか確認推奨 (本 PR では変更なし)。
-- Post-merge AC は `verify-type: observation event=auto-run` のため次回 merge phase での実観察が必要。
+- 全 AC が PASS、全 CI が SUCCESS。MUST 問題なし。`/merge 845` を実行可能。
+- `exit 2` が `merge/SKILL.md` または `run-merge.sh` 側で適切にハンドリングされているかの確認推奨 (本 PR では変更なし。code フェーズからの引き継ぎ事項)。
+- Post-merge AC は `verify-type: observation event=auto-run` として設定済み。次回 merge phase で `mergeable=UNKNOWN` が観察された際に polling backoff の動作を確認。
