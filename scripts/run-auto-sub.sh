@@ -6,6 +6,14 @@
 
 set -euo pipefail
 
+# Returns true if spec_rel_path has any changes (modified or untracked).
+# Uses git status --porcelain so untracked files are detected (unlike git diff --quiet).
+_spec_has_changes() {
+  local repo_root="$1"
+  local spec_rel_path="$2"
+  git -C "$repo_root" status --porcelain "$spec_rel_path" 2>/dev/null | grep -q .
+}
+
 # --write-manual-recovery subcommand: write manual recovery record to sub-issue Spec.
 # Usage: run-auto-sub.sh --write-manual-recovery ISSUE [PHASE] [RECOVERY_TYPE]
 # See modules/orchestration-fallbacks.md#manual-recovery-spec-write
@@ -43,7 +51,7 @@ _write_manual_recovery_to_spec() {
 
   local spec_rel_path="${spec_file#$_repo_root/}"
 
-  if ! git -C "$_repo_root" diff --quiet "$spec_rel_path" 2>/dev/null; then
+  if _spec_has_changes "$_repo_root" "$spec_rel_path"; then
     if git -C "$_repo_root" add "$spec_rel_path" \
        && git -C "$_repo_root" commit -s -m "Record manual recovery in auto retrospective for issue #${issue}
 
@@ -193,7 +201,7 @@ _write_tier2_recovery_to_spec() {
 
   local spec_rel_path="${spec_file#$_repo_root/}"
 
-  if ! git -C "$_repo_root" diff --quiet "$spec_rel_path" 2>/dev/null; then
+  if _spec_has_changes "$_repo_root" "$spec_rel_path"; then
     if git -C "$_repo_root" add "$spec_rel_path" \
        && git -C "$_repo_root" commit -s -m "Record Tier 2 recovery in auto retrospective for issue #${issue}
 
@@ -240,7 +248,7 @@ _write_tier3_recovery_to_spec() {
 
   local spec_rel_path="${spec_file#$_repo_root/}"
 
-  if ! git -C "$_repo_root" diff --quiet "$spec_rel_path" 2>/dev/null; then
+  if _spec_has_changes "$_repo_root" "$spec_rel_path"; then
     if git -C "$_repo_root" add "$spec_rel_path" \
        && git -C "$_repo_root" commit -s -m "Record Tier 3 recovery in auto retrospective for issue #${issue}
 
