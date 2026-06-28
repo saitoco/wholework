@@ -148,17 +148,17 @@
 
 ### Key Decisions
 
-- PR #809 をスクワッシュマージ (main へ) — 119/119 テスト green、CI SUCCESS、DCO 通過済みの状態で実行
-- ローカルブランチ `worktree-code+issue-791` は別 worktree 使用中のため `gh pr merge --delete-branch` で削除失敗したが、リモートブランチは削除済み。merge 本体への影響なし
-- label を `verify` へ遷移 — post-merge verify が次フェーズ
+- PR #814 (iteration B) をスカッシュマージ (main へ) — 37/37 テスト green (run-code.bats)、CI SUCCESS 状態で実行
+- AUTO_SESSION_ID 解決チェーンに `.tmp/auto-session-current` (parent /auto が書くファイル) を追加。優先順位: env var > PGID file (batch) > auto-session-current (parent) > empty
+- ローカルブランチ `worktree-code-iter2+issue-791` は別 worktree 使用中のため `gh pr merge --delete-branch` のローカル削除は失敗したが、リモートブランチは削除済み。マージ本体への影響なし
 
 ### Deferred Items
 
-- docs/structure.md の emit-event.sh 説明更新 (SHOULD レベル) は本 PR では見送り。Spec に理由記録済み
-- post-merge observation AC: 次回 single Issue `/auto N` (M/L pr route) 実行時に `auto-events.jsonl` と `loop-state-{date}.md` を確認
+- post-merge observation AC: 次回 single Issue `/auto N` (M/L pr route) 実行時に `.tmp/auto-events.jsonl` で `comments_consumed` イベントに non-empty `session_id` が記録されているか確認
+- iteration A (PR #809) と iteration B (PR #814) で 2 段階の実装完了。#791 本体 Issue の最終 close は verify PASS 後
 
 ### Notes for Next Phase
 
-- post-merge verify: pre-merge verify 4 件は PASS 済み。verify は post-merge observation AC (実際の実行での heartbeat/events 確認) を中心に実施
-- `worktree-code+issue-791` ローカルブランチが `.claude/worktrees/code+issue-791` で残存。cleanup は merge 後に別途 `git worktree remove` で可
-- 実装 AC の verify command は `bats tests/run-auto-sub.bats tests/auto.bats tests/run-code.bats tests/run-review.bats tests/run-merge.bats`
+- post-merge verify: bats テスト (37/37) は PASS 済み。verify は post-merge observation AC が中心 — 実際の `/auto N` 実行で `comments_consumed` イベントが正しく記録されるか確認
+- verify command: `bats tests/run-code.bats` (iteration B の直接テスト)
+- `worktree-code-iter2+issue-791` ローカルブランチが `.claude/worktrees/code-iter2+issue-791` で残存。cleanup は `git worktree remove` で別途実施可
