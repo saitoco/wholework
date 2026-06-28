@@ -70,3 +70,44 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective (Auto-Resolve Log: approach A/B OR 接続の確認、bats テスト追加が任意であることの確認) / https://github.com/saitoco/wholework/issues/820#issuecomment-4826400420
+
+## Code Retrospective
+
+### Deviations from Design
+- None — Spec の実装ステップと完全に一致。dedup チェックは DETAIL 変数代入直後、printf append 直前に挿入した。
+
+### Design Gaps/Ambiguities
+- snapshot が異なる場合 (同 issue・同 transition だが snapshot 変化) はデュープとして検出されない。Spec Notes で "直前行のみ比較" と明記されており設計上の意図 — 連続する完全一致行のみが重複対象。
+
+### Rework
+- None — 初回実装でテスト 10/10 all pass。
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+Nothing to note. 実装は Spec の実装ステップと完全に一致している。dedup ロジックの挿入位置 (DETAIL 変数代入直後、printf 直前) も Spec 通り。
+
+### Recurring Issues
+
+Nothing to note. 4 観点レビューで MUST/SHOULD/CONSIDER いずれの課題も検出されず。
+
+### Acceptance Criteria Verification Difficulty
+
+Nothing to note. AC1 (rubric) はスクリプト本体の読み取りで確認。AC2 (bats) は CI reference fallback (CI job "Run bats tests" SUCCESS) で PASS 判定。UNCERTAIN 0 件。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST 課題 0 件のため コード修正不要。PR はそのままマージ可能。
+- 軽量統合レビュー (light モード) で 4 観点を確認し、実装・テスト・ドキュメントすべてに問題なし。
+- CI 全ジョブ SUCCESS (DCO, bats, validate-skill-syntax, forbidden-expressions, macOS-compat)。
+
+### Deferred Items
+- post-merge AC (observation event=auto-run) は `/verify` 自動検証対象外。次回 `/auto --batch` 後に手動観察で確認。
+- flock による並列 race condition 対策は別 Issue で対応 (既知の Deferred Item)。
+
+### Notes for Next Phase
+- PR #828 は `/merge` 可能な状態。`/merge 828` を実行してよい。
+- Phase Handoff write: review フェーズ完了。
