@@ -67,3 +67,21 @@
 **テスト方針**: `auto-completion-report.bats` は SKILL.md セクション内容の structural assertion に留める (auto-batch.bats と同じパターン)。SKILL.md の手順は LLM が実行するため、実際の GitHub API 呼び出しをモックした functional test は不要。
 
 **bats awk セクション抽出**: `### Batch Completion Report` セクションは `## Notes` (次の `##` 見出し) で終端する。awk パターン: `/^### Batch Completion Report/{found=1} /^## / && !/Batch Completion Report/{found=0} found{print}`
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- `### Batch Completion Report` セクションのみを対象とした (XL route の Step 5 は verify コマンドのスコープ外)
+- 集約ロジックを `best-effort` とした (失敗しても batch フローをブロックしない)
+- `tests/auto-completion-report.bats` は SKILL.md セクションの structural assertion に留めた (LLM 実行ロジックの functional mock は不要)
+- verify-type カウントは issue body の `- [ ]` 行を `<!-- verify-type: TYPE -->` タグで分類する実装を指示した
+
+### Deferred Items
+- XL route (`### Step 5: Completion Report`) への同様の pending confirmation 集約は本 Issue スコープ外 (follow-up で検討)
+- None
+
+### Notes for Next Phase
+- Batch Completion Report セクションへの追記位置: "report results (success/skip/failure)" 行の直後に挿入
+- `tests/auto-completion-report.bats` の awk パターンは `## Notes` (level-2) で終端する点に注意 (level-3 `###` ではない)
+- SKILL.md への変更は既存の List mode section のラベルチェックとは独立した別ブロック
