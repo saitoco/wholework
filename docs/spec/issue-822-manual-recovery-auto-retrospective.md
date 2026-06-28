@@ -262,18 +262,19 @@ Note: 既存 Tier 2 anomaly detector がパターンを追記済みの場合は 
 - POST-MERGE 観察条件 1 件は verify phase が担当
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST 問題は検出されず。SHOULD 4 件、CONSIDER 1 件をラインコメントとして記録
-- `git diff --quiet` vs untracked files バグ (SHOULD) は Tier 2/3 にも共通する既知パターンであるため、本 PR のブロッカーとはしない判断
-- セキュリティ所見 (path traversal via `$issue`) は内部ツール文脈 + `-recovery.md` 固定サフィックスの制約から SHOULD 止まりとした
+- PR #830 はコンフリクトなし・CI SUCCESS・review 承認済みの状態でスカッシュマージを実行
+- `closes #822` が PR body に含まれ、BASE_BRANCH=main のため Issue #822 は自動クローズされる
+- Phase Handoff を Spec に書き込み、verify フェーズへ引き継ぐ
 
 ### Deferred Items
-- `git diff --quiet` → `git status --porcelain` の横断修正は別 Issue で対応推奨
-- `$issue` / `$phase` / `$recovery_type` の入力バリデーション追加も別 Issue 候補
-- "Manual automatic recovery" の表現矛盾は次回 cleanup で修正
+- `git diff --quiet` vs untracked files バグ (review フェーズ指摘 SHOULD) の横断修正は別 Issue 候補として未解決
+- `$issue` / `$phase` / `$recovery_type` の入力バリデーション (path traversal リスク) も別 Issue 候補として未解決
+- POST-MERGE 観察条件 1 件 (次回 manual recovery 時に Spec への自動追記が行われること) は verify フェーズが担当
 
 ### Notes for Next Phase
-- CI 全 SUCCESS、MUST 未検出につき `/merge 830` で直接 merge 可能
-- merge 後は next-cycle-seed または verify セッションで上記 SHOULD 問題の起票を検討
+- verify フェーズでは POST-MERGE 観察条件の確認と、review フェーズ指摘の SHOULD 問題の起票検討を行うこと
+- `_write_manual_recovery_to_spec()` は `scripts/run-auto-sub.sh` に実装済み; verify command は `grep "manual.*recovery"` で確認可能
+- `skills/verify/SKILL.md` Step 12 の skip 判定更新 (`### Manual recovery` エントリも "already recorded" として扱う) も main にマージ済み
