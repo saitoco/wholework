@@ -213,17 +213,18 @@ No new comments since last phase.
 - AC2 の verify command (`bats tests/run-issue.bats tests/run-spec.bats tests/run-code.bats tests/run-auto-sub.bats`) は本 PR の新規テスト 5 本が PASS することを確認できるが、間接的に壊れる周辺 bats (auto-sub-observability.bats, run-code-mergeability.bats) は検出できない。AC として `bats tests/` 全体実行 or 特定 bats ファイル追加が望ましかった。verify command の範囲が狭すぎると、周辺ファイルへの波及バグが CI まで見逃される。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `tests/auto-sub-observability.bats` と `tests/run-code-mergeability.bats` の `setup()` に `cp scripts/retry-on-kill.sh $MOCK_DIR/` を追加し CI 失敗 (6 tests) を修正した。
-- 実装本体 (retry-on-kill.sh、run-*.sh 統合、orchestration-fallbacks.md 文書化) は仕様通り正確に実装されており変更不要。
-- AC1/3/4/5/6 はすべて PASS、AC2 (bats) は修正後 PASS (130 tests)。
+- PR #816 を squash merge (`gh pr merge --squash --delete-branch`) で main にマージした。
+- `mergeable=false, reason=unknown` を non-interactive auto-resolve で継続: gh API のタイミング起因の transient 値であり実際のマージは成功した。
+- BASE_BRANCH=main のため `closes #807` により Issue #807 は自動クローズ。
 
 ### Deferred Items
-- sourceable helper 追加時に `grep -r "WHOLEWORK_SCRIPT_DIR" tests/` で影響 bats 全列挙するチェックリストは /auto-retrospective または CLAUDE.md への追記候補 (今回はレトロスペクティブ記録のみ)。
-- run-code.sh json branch の `--output-file` truncation 動作 (retry 時の partial write 上書き) は実観測が得られた場合のみ追加防御を検討 (Spec Uncertainty 記載済み)。
+- post-merge 手動 AC: 次回 /auto batch session で kill が発生した際に `orchestration-recoveries.md` に記録されることを観察する。
+- sourceable helper 追加時の周辺 bats チェックリスト (`grep -r "WHOLEWORK_SCRIPT_DIR" tests/`) は /auto-retrospective または CLAUDE.md 追記候補として保留。
 
 ### Notes for Next Phase
-- `/merge 816` を実行可能。修正コミット `dbc4ec2` が push 済み、CI 再実行を待って全 pass を確認してから merge 推奨。
-- post-merge AC: 次回 batch session の kill 発生時に orchestration-recoveries.md に記録されることを観察 (manual)。
+- verify phase では retry-on-kill の動作確認 (orchestration-recoveries.md 書き込み) が手動 AC として残る。自動化 verify command では確認不可のため観察ベースで判断。
+- bats 全体 (`bats tests/`) は PR マージ前に CI で確認済み (130 tests pass)。verify でのテスト再実行は不要。
+- None (その他特記事項なし)
