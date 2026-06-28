@@ -53,3 +53,34 @@
 ## Consumed Comments
 
 - **saito** (MEMBER, first-class) — bats verify command 形式の修正・rubric 補足 verify 追加・bats test AC 補足 grep 追加の Auto-Resolve Log: https://github.com/saitoco/wholework/issues/831#issuecomment-4827005414
+
+## Code Retrospective
+
+### Deviations from Design
+
+- 既存の 3 テスト (tier2/tier3/manual recovery) の git mock を更新する必要があった。Spec の実装計画には新 3 テストの追加のみ記載されていたが、既存テストも `git diff --quiet` 前提の mock だったため、`git status --porcelain` を返すよう合わせて更新した。これは実装の自然な副作用であり、スコープ変更ではなくテスト整合性の維持。
+
+### Design Gaps/Ambiguities
+
+- `_spec_has_changes()` の引数名 `spec_rel_path` は AC verify command の grep パターンに依存するため Spec Notes に明記されており、実装に迷いはなかった。ただし、Notes がなければ引数名が異なった可能性があるため、verify command と実装の結合度の高さは将来の rename 時に注意が必要。
+
+### Rework
+
+- 既存 tier2/tier3/manual recovery テストの git mock を最初の commit では更新しなかったため、全テスト実行 (bats tests/) で tests 26-28 が FAIL した。2 回目の edit で修正した。新テスト追加時は既存テストへの影響を同時に確認すべきだった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `_spec_has_changes()` を `set -euo pipefail` 直後に配置し、`_write_manual_recovery_to_spec()` の直前に置いた。スコープ的に最も近い位置であり、script の早期定義として読みやすい。
+- `git status --porcelain "$spec_rel_path"` の出力を `grep -q .` で non-empty 判定する方式を選択。`wc -l` や変数展開より簡潔で bash 3.2+ 互換。
+- 既存テストの git mock を `status --porcelain` 対応に更新した。これにより `git diff --quiet` の旧モックが残らず、テストが新ロジックのみを検証することが確認できる。
+
+### Deferred Items
+- `orchestration-recoveries.md` の `git diff --quiet` (lines 298, 486) はスコープ外のまま。これらは常に tracked ファイルへの書き込みなので問題なし。
+- AC2 の `github_check "gh pr checks" "Run bats tests"` は CI 実行後に確認。ローカル bats 全 1031 件 PASS 済み。
+
+### Notes for Next Phase
+- PR #838 で CI が通ることを `/verify` 前に確認すること。`Run bats tests` ジョブが最重要。
+- `_spec_has_changes()` は bash script の先頭部 (line 9-15) に定義済み。`/review` はこの位置を確認してコメント位置の適切性を評価してよい。
+- Spec Notes の verify command と実装の結合度についてはレビューコメント不要 (設計上の意図的な依存)。
