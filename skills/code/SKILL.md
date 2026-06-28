@@ -106,6 +106,19 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/l0-surfaces.md` and follow the "Comment Cons
 
 ### Step 2: Worktree Entry
 
+**Worktree skip for XS patch route (interactive direct-launch only):**
+
+Before following the Entry section, check all three conditions:
+- Route is **patch** (XS auto-route or `--patch` flag)
+- Size is specifically **XS** (not S — conservative scope)
+- ARGUMENTS does **not** contain `--non-interactive`
+
+If all conditions are met: set `ENTERED_WORKTREE=false` and skip EnterWorktree.
+This avoids the 30–60 s worktree lifecycle overhead for XS direct-launch code runs.
+For `--non-interactive` runs (via `run-code.sh`, `/auto`, batch), worktree is always created.
+
+If any condition is NOT met: follow the normal Entry section below.
+
 Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Entry section" to create a worktree.
 
 **Worktree naming convention (by route):**
