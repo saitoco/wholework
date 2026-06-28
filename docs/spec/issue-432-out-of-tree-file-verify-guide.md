@@ -45,3 +45,31 @@
 - Issue 体との実装コンフリクト: なし (modules/verify-patterns.md に out-of-tree 関連の既存記述は存在しない。grep "out-of-tree" "modules/verify-patterns.md" で確認済み)
 - 推奨パターン中の Python3 コードは、`json.load` + `os.path.expanduser` の組み合わせが CLI ツール依存なしで安全に動作するため採用
 - `command` verify タイプは full モードでのみ実行されるため、`/review` (safe モード) では UNCERTAIN になる点を §20 に明記する
+
+## Code Retrospective
+
+### Deviations from Design
+- None. §20 was added exactly as specified (section heading, background, NG/OK table, recommended pattern, security boundary note, verify mode note).
+
+### Design Gaps/Ambiguities
+- Spec's NG/OK table used Japanese column header ("やりたいこと") but verify-patterns.md uses English throughout; adapted to English ("Goal") for consistency with the surrounding document style.
+
+### Rework
+- `## Consumed Comments` contained a quoted deprecated term that triggered CI forbidden expression scan; fixed by adding `旧称:` prefix to the quoted comment text.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Approach A (guideline-only) implemented: §20 added to `modules/verify-patterns.md` as a standalone section before `## Output`.
+- English column headers used in the NG/OK table to match the surrounding document style (Spec used Japanese "やりたいこと" but the module is English-only).
+- The `command python3` pattern is positioned as explicit opt-in (not a fallback), preserving the deny-by-default security boundary.
+
+### Deferred Items
+- Approach B (`external_file_contains` command): out of scope, separate Issue required.
+- Approach C (auto-fallback in verify-executor): out of scope, separate Issue required.
+
+### Notes for Next Phase
+- No post-merge ACs; `/verify` can close the Issue immediately after confirming pre-merge checkboxes (already updated to [x]).
+- The rubric AC verifies semantic content of §20 — should PASS in full mode; in safe mode (`/review`) it still runs as `always_allow`.
+- All 3 pre-merge verify commands confirmed PASS during `/code` execution.
