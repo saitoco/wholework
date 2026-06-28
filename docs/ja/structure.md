@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（59 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（62 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -204,6 +204,7 @@ wholework/
 **プロセス管理:**
 - `scripts/auto-checkpoint.sh` — `/auto --resume` 用チェックポイントヘルパー: 単一 Issue の verify カウンタと batch 残リストの atomic 読み書き削除。BATCH_ID 名前空間化により並列 `--batch` セッション間の衝突を防止（サブコマンド: `read_single`、`write_single`、`delete_single`、`read_batch`、`write_batch`、`update_batch`、`delete_batch`、`list_active_batches`）
 - `scripts/watchdog-defaults.sh` — `WATCHDOG_TIMEOUT_DEFAULT` 定数と `load_watchdog_timeout` 関数を提供する run-*.sh 用 source 可能なヘルパー
+- `scripts/retry-on-kill.sh` — `run_with_retry_on_kill()` を提供する source 可能なヘルパー: SIGTERM/SIGKILL (exit 137/143) を early-kill ウィンドウ (<300s) 内で検出し自動 1 回リトライ。run-issue.sh、run-spec.sh、run-code.sh、run-auto-sub.sh が使用
 - `scripts/claude-watchdog.sh` — `claude -p` 呼び出し用の watchdog ラッパー（hang 検知 + 1 回リトライ）
 - `scripts/reconcile-phase-state.sh` — 全 phase の precondition チェックと completion チェックを行う汎用 state reconciler。`modules/phase-state.md` SSoT に基づく JSON v1 を出力（watchdog-reconcile.sh の後継）
 - `scripts/wait-ci-checks.sh` — claude 実行前に PR の全 CI チェック完了を待機

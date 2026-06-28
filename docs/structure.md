@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (59 files)
+├── scripts/             # Utility scripts used by skills and agents (62 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -212,6 +212,7 @@ Key modules:
 **Process management:**
 - `scripts/auto-checkpoint.sh` — checkpoint helper for `/auto --resume`: atomic read/write/delete of single-Issue verify counter and batch remaining list; BATCH_ID-namespaced per-session state files prevent parallel `--batch` collisions (subcommands: `read_single`, `write_single`, `delete_single`, `read_batch`, `write_batch`, `update_batch`, `delete_batch`, `list_active_batches`)
 - `scripts/watchdog-defaults.sh` — sourceable helper providing `WATCHDOG_TIMEOUT_DEFAULT` constant and `load_watchdog_timeout` function for run-*.sh scripts
+- `scripts/retry-on-kill.sh` — sourceable helper providing `run_with_retry_on_kill()`: detects SIGTERM/SIGKILL (exit 137/143) in the early-kill window (<300s) and auto-retries once; used by run-issue.sh, run-spec.sh, run-code.sh, run-auto-sub.sh
 - `scripts/claude-watchdog.sh` — watchdog wrapper for `claude -p` invocations (hang detection + 1 retry)
 - `scripts/reconcile-phase-state.sh` — general-purpose state reconciler for precondition and completion checks across all phases; outputs JSON v1 per `modules/phase-state.md` SSoT (supersedes watchdog-reconcile.sh)
 - `scripts/wait-ci-checks.sh` — wait for all CI checks to complete on a PR before running claude

@@ -479,6 +479,39 @@ See also: `#async-external-commit` (reconcile-first authority — `matches_expec
 
 ---
 
+## wrapper-retry-on-kill
+
+### Symptom
+- A `run-*.sh` wrapper's child process (claude invocation or child runner script) exits with code `137` (SIGKILL) or `143` (SIGTERM) within the early-kill window (< `WHOLEWORK_RETRY_ON_KILL_MAX_SEC`, default 300s)
+- Typical cause: external resource pressure, OOM kill, or scheduler intervention during the first 60–180s of execution
+- Distinguishable from watchdog hang-kill (which fires after elapsed >= `WATCHDOG_TIMEOUT` >= 600s, always outside the 300s window)
+
+### Applicable Phases
+- Any phase whose runner is `run-issue.sh`, `run-spec.sh`, `run-code.sh`, or `run-auto-sub.sh`
+- Layer A: claude invocation inside leaf wrappers (run-issue.sh, run-spec.sh, run-code.sh)
+- Layer B: child runner invocation inside `run-auto-sub.sh run_phase_with_recovery()`
+
+### Fallback Steps
+1. `scripts/retry-on-kill.sh` `run_with_retry_on_kill()` detects exit code 137 or 143 and measures elapsed time
+2. If elapsed < `WHOLEWORK_RETRY_ON_KILL_MAX_SEC` (default 300s): log to stderr `"retry-on-kill: command killed (exit N) after Ms (< Ks); auto-retrying once"`, set `_RETRY_ON_KILL_FIRED=true`, and retry the command once
+3. If retry succeeds (exit 0): normal wrapper flow continues; `run-auto-sub.sh` records a `wrapper-retry-on-kill success` entry to `docs/reports/orchestration-recoveries.md`
+4. If elapsed >= threshold (Branch C): no retry — this is a watchdog hang-kill handled by the parent `json-mode-silent-hang` pattern
+
+### Escalation
+- If retry also exits 137 or 143 (Branch D): log `"retry-on-kill: retry also killed; escalating to recovery/manual"` and return the kill exit code to the caller
+- Leaf wrappers (run-issue/spec/code): the kill exit code propagates to the parent `/auto` session for manual recovery
+- `run-auto-sub.sh`: the kill exit code reaches `run_phase_with_recovery()` which proceeds to Tier 1/2/3 adaptive recovery
+- Automatic retry is 1 time only; no further looping
+
+### Rationale
+- Introduced in Issue #807: `/auto --batch` sessions observed `run-issue.sh` being killed at 60–120s (before watchdog could fire at >= 600s); manual retry succeeded on the second attempt; this mechanism automates that pattern at the wrapper level
+- Implementation uses shared sourceable helper `scripts/retry-on-kill.sh` (same pattern as `watchdog-defaults.sh`, `guard-prefix.sh`) sourced by all 4 wrapper scripts
+- Threshold 300s ensures non-overlap with watchdog hang-kill (minimum watchdog timeout is merge phase at 600s); see `scripts/watchdog-defaults.sh` for phase-specific values
+- Complementary to `json-mode-silent-hang` (which handles watchdog-timeout kills via parent-session retry); these two patterns cover orthogonal elapsed-time ranges (< 300s vs >= 600s)
+- Pointer comment `# See modules/orchestration-fallbacks.md#wrapper-retry-on-kill` is placed immediately above the `run_with_retry_on_kill` call in each script
+
+---
+
 ## Operational Notes
 
 This catalog is consumed by:

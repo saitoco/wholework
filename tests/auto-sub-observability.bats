@@ -33,6 +33,9 @@ emit_event() {
 _emit_comments_consumed() { :; }
 MOCK
 
+    # Real retry-on-kill.sh (sourced via WHOLEWORK_SCRIPT_DIR; must be present or source fails)
+    cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/retry-on-kill.sh" "$MOCK_DIR/retry-on-kill.sh"
+
     # Mock phase-banner.sh (sourced by run-auto-sub.sh)
     cat > "$MOCK_DIR/phase-banner.sh" <<'MOCK'
 print_start_banner() { echo "Starting /$3 for issue #$2"; }

@@ -196,6 +196,7 @@ Issue 本文の "Scope" または "Acceptance Criteria" セクションに以下
 | `WHOLEWORK_MAX_RECOVERY_SUBAGENTS` | `1` | `scripts/spawn-recovery-subagent.sh` が生成する Tier 3 recovery sub-agent の最大並列数。XL 並列実行時のコスト上限のためデフォルト 1 (逐次回復)。 |
 | `WHOLEWORK_PATCH_LOCK_TIMEOUT` | `300` | `scripts/worktree-merge-push.sh` の patch lock タイムアウト秒数。優先順位: env var > `.wholework.yml` `patch-lock-timeout` > 300。 |
 | `WHOLEWORK_PATCH_LOCK_LOG_INTERVAL` | `30` | `scripts/worktree-merge-push.sh` で patch lock 待機中のログ出力間隔秒数。 |
+| `WHOLEWORK_RETRY_ON_KILL_MAX_SEC` | `300` | `scripts/retry-on-kill.sh` の early-kill ウィンドウ (秒)。run-*.sh ラッパーが exit 137/143 でこのウィンドウ内に終了した場合、自動で 1 回リトライする。テストでは `0` を設定して late-kill (no-retry) ブランチを強制可能。最小 `WATCHDOG_TIMEOUT` (merge フェーズで 600s) より厳密に小さい値を維持し、watchdog hang-kill が自動リトライされないようにする必要がある。 |
 | `WHOLEWORK_YML` | `${CLAUDE_PROJECT_DIR:-}/.wholework.yml` | `scripts/hook-rename-on-auto.sh` が参照する `.wholework.yml` のパス。`CLAUDE_PROJECT_DIR` から導出され、オペレーター override パターン (`${WHOLEWORK_YML:-...}`) ではない (スクリプトが直接代入)。 |
 
 ### Capability フラグ

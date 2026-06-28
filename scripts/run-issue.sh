@@ -96,6 +96,7 @@ fi
 SKILL_BODY=$(tail -n +"$((FRONTMATTER_END + 1))" "$SKILL_FILE")
 
 source "$SCRIPT_DIR/guard-prefix.sh"
+source "$SCRIPT_DIR/retry-on-kill.sh"
 
 PROMPT="${GUARD_PREFIX}
 
@@ -109,9 +110,10 @@ load_watchdog_timeout "$SCRIPT_DIR" "issue"
 
 SECONDS=0
 set +e
-ANTHROPIC_MODEL=sonnet \
+# See modules/orchestration-fallbacks.md#wrapper-retry-on-kill
+run_with_retry_on_kill env -u CLAUDECODE ANTHROPIC_MODEL=sonnet \
   WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
-  env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
+  "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
     --model sonnet \
     --effort high \
     $PERMISSION_FLAG

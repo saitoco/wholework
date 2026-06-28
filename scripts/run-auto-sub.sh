@@ -46,6 +46,7 @@ export AUTO_SESSION_ID
 export EMIT_ISSUE_NUMBER="$SUB_NUMBER"
 
 source "$SCRIPT_DIR/emit-event.sh"
+source "$SCRIPT_DIR/retry-on-kill.sh"
 
 _maybe_emit_phase_complete() {
   local _exit_code=$?
@@ -191,6 +192,61 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>" \
   fi
 }
 
+# _write_wrapper_retry_recovery ISSUE PHASE EXIT_CODE
+# Records a wrapper-retry-on-kill recovery event to orchestration-recoveries.md.
+# Skips silently if the file does not exist (file not in repo → return 0).
+# See modules/orchestration-fallbacks.md#wrapper-retry-on-kill
+_write_wrapper_retry_recovery() {
+  local issue="$1"
+  local phase="$2"
+  local exit_code_arg="$3"
+  local _repo_root
+  _repo_root="$(dirname "$SCRIPT_DIR")"
+  local _recoveries_file="${_repo_root}/docs/reports/orchestration-recoveries.md"
+  if [[ ! -f "$_recoveries_file" ]]; then
+    return 0
+  fi
+  local _date _outcome
+  _date=$(date -u '+%Y-%m-%d %H:%M UTC')
+  if [[ "$exit_code_arg" -eq 0 ]]; then
+    _outcome="success"
+  else
+    _outcome="escalated (retry also killed)"
+  fi
+  python3 << PYEOF 2>/dev/null || true
+fpath = "${_recoveries_file}"
+marker = "<!-- Log entries appear below, newest first. -->"
+entry = (
+    "\n### wrapper-retry-on-kill (${phase})\n"
+    "- **Date**: ${_date}\n"
+    "- **Issue**: #${issue}, phase: ${phase}\n"
+    "- **Source**: retry-on-kill.sh\n"
+    "- **Exit code**: ${exit_code_arg}\n"
+    "- **Outcome**: ${_outcome}\n"
+)
+try:
+    content = open(fpath).read()
+    idx = content.find(marker)
+    if idx != -1:
+        pos = idx + len(marker)
+        content = content[:pos] + entry + content[pos:]
+        open(fpath, "w").write(content)
+except Exception:
+    pass
+PYEOF
+  if ! git -C "$_repo_root" diff --quiet "docs/reports/orchestration-recoveries.md" 2>/dev/null; then
+    if git -C "$_repo_root" add "docs/reports/orchestration-recoveries.md" \
+       && git -C "$_repo_root" commit -s -m "Record wrapper-retry-on-kill recovery for issue #${issue} ${phase}
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>" \
+       && git -C "$_repo_root" push origin HEAD; then
+      echo "${LOG_PREFIX} [recovery] wrapper-retry-on-kill recovery log committed and pushed"
+    else
+      echo "${LOG_PREFIX} WARNING: could not commit/push wrapper-retry-on-kill recovery log" >&2
+    fi
+  fi
+}
+
 # _observe_code_milestone NUMBER
 # Probes observable git/GitHub state to determine the current code_phase_milestone value.
 # Used by the pr-route resume preamble to reconcile the checkpoint with live state.
@@ -260,9 +316,14 @@ run_phase_with_recovery() {
   emit_event "phase_start" "phase=${phase}"
 
   set +e
-  "$runner_script" "$issue" "$@" > "$log_file" 2>&1
+  # See modules/orchestration-fallbacks.md#wrapper-retry-on-kill
+  run_with_retry_on_kill "$runner_script" "$issue" "$@" > "$log_file" 2>&1
   exit_code=$?
   set -e
+
+  if [[ "${_RETRY_ON_KILL_FIRED:-false}" == "true" ]]; then
+    _write_wrapper_retry_recovery "$issue" "$phase" "$exit_code"
+  fi
 
   emit_event "wrapper_exit" "phase=${phase}" "exit_code=${exit_code}"
 

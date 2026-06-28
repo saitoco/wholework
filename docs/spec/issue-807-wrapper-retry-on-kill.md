@@ -180,3 +180,50 @@ No new comments since last phase.
 - scripts 数を `ls scripts/*.sh scripts/*.py | wc -l` (現状 61) で再計測し structure.md の "(N files)" を正確値に (既存 59 ドリフト是正)。
 - 既存 reconcile 143/0 branch は変更しない (137 へ拡張しない、保守的 escalation)。
 - `docs/ja/structure.md` / `docs/ja/tech.md` ミラーを translation-workflow.md に従い同期。
+
+## Code Retrospective
+
+### What went well
+- `"$@" || _exit=$?` パターンで `set -e` / `set +e` 両環境に安全な exit code キャプチャを実現できた
+- `env` 引数形式への移行 (`env -u CLAUDECODE NAME=VALUE ...`) により、関数ラッパー経由での環境変数伝播が確実になった
+- early-kill ウィンドウ 300s の選択: 最小 `WATCHDOG_TIMEOUT` (merge=600s) の半分以下を維持し、watchdog hang-kill (遅延) と外部 kill (早期) の非重複を保証できた
+- Layer A (claude 呼び出し) と Layer B (child runner) の 2 層構造で全 run-*.sh を網羅できた
+- カウンターファイル mock パターンが bats でのリトライ検証に有効だった
+
+### What was difficult
+- json ブランチ (`run-code.sh`) で stdout リダイレクト (`> "$TOKEN_USAGE_FILE"`) を関数ラッパー外に出す必要があり、ラッパー呼び出し側で `> file` を付ける形に変更が必要だった
+- `run-auto-sub.sh` の `_write_wrapper_retry_recovery` で python3 heredoc 内に bash 変数展開を混在させる構文が煩雑だった
+
+### Design decisions
+- `_RETRY_ON_KILL_FIRED` グローバルフラグで retry 発生を追跡し、`run-auto-sub.sh` が orchestration-recoveries.md への記録をトリガーする設計にした (ヘルパーと呼び出し側の責務分離)
+- 閾値超過 (Branch C) では retry せず as-is で返す — watchdog hang-kill は別経路 (watchdog 1回リトライ + tier 1/2/3 recovery) で処理されるため
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec handoff (phase-handoff.md) に「4 本すべての bats `setup()` で retry-on-kill.sh を cp」と注記されていたが、PR は主要 4 bats (`run-issue.bats`, `run-spec.bats`, `run-code.bats`, `run-auto-sub.bats`) のみ対応し、同じく `WHOLEWORK_SCRIPT_DIR=$MOCK_DIR` で `run-auto-sub.sh`/`run-code.sh` を実行する `auto-sub-observability.bats` と `run-code-mergeability.bats` の対応が漏れた。Spec の「4 本すべて」は main wrapper 4 本を指しており、周辺 bats ファイルまでスコープが広がっていなかった点が divergence の原因。
+
+### Recurring issues
+
+- sourceable helper (`retry-on-kill.sh`, `guard-prefix.sh`, `watchdog-defaults.sh`) を新規追加した際、`WHOLEWORK_SCRIPT_DIR` でオーバーライドされる可能性のある **全** bats ファイルへの cp 対応が漏れるパターンが今回初めて発生。guard-prefix.sh 追加時は `run-code-mergeability.bats` など周辺 bats で既に対応済みだったため表面化しなかった可能性がある。今後 sourceable helper 追加時は `grep -r "WHOLEWORK_SCRIPT_DIR" tests/` で影響 bats を全列挙するチェックが有効。
+
+### Acceptance criteria verification difficulty
+
+- AC2 の verify command (`bats tests/run-issue.bats tests/run-spec.bats tests/run-code.bats tests/run-auto-sub.bats`) は本 PR の新規テスト 5 本が PASS することを確認できるが、間接的に壊れる周辺 bats (auto-sub-observability.bats, run-code-mergeability.bats) は検出できない。AC として `bats tests/` 全体実行 or 特定 bats ファイル追加が望ましかった。verify command の範囲が狭すぎると、周辺ファイルへの波及バグが CI まで見逃される。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `tests/auto-sub-observability.bats` と `tests/run-code-mergeability.bats` の `setup()` に `cp scripts/retry-on-kill.sh $MOCK_DIR/` を追加し CI 失敗 (6 tests) を修正した。
+- 実装本体 (retry-on-kill.sh、run-*.sh 統合、orchestration-fallbacks.md 文書化) は仕様通り正確に実装されており変更不要。
+- AC1/3/4/5/6 はすべて PASS、AC2 (bats) は修正後 PASS (130 tests)。
+
+### Deferred Items
+- sourceable helper 追加時に `grep -r "WHOLEWORK_SCRIPT_DIR" tests/` で影響 bats 全列挙するチェックリストは /auto-retrospective または CLAUDE.md への追記候補 (今回はレトロスペクティブ記録のみ)。
+- run-code.sh json branch の `--output-file` truncation 動作 (retry 時の partial write 上書き) は実観測が得られた場合のみ追加防御を検討 (Spec Uncertainty 記載済み)。
+
+### Notes for Next Phase
+- `/merge 816` を実行可能。修正コミット `dbc4ec2` が push 済み、CI 再実行を待って全 pass を確認してから merge 推奨。
+- post-merge AC: 次回 batch session の kill 発生時に orchestration-recoveries.md に記録されることを観察 (manual)。
