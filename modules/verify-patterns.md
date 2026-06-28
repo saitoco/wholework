@@ -801,6 +801,45 @@ The first condition verifies installation (mechanical, dependency-free). The sec
 
 Do not force `command` hints onto authentication-dependent or external-service-dependent commands. If the command fails in CI due to missing credentials or an offline service, the condition produces FAIL/UNCERTAIN noise. Classify such conditions as `verify-type: opportunistic` from the start and add a lightweight `command "tool --version"` check as the automatable portion where available.
 
+### 23. Non-Contiguous Git Invocation — Prefer Contiguous Sub-strings
+
+When verifying git invocations with `file_contains` or `grep`, the full form `"git commit"` may not appear as a contiguous substring when the implementation inserts flags between `git` and the sub-command (e.g., `git -C "$REPO_ROOT" commit`). Use a sub-string that is guaranteed to appear contiguously on one line.
+
+**Anti-pattern:**
+
+```
+file_contains "scripts/foo.sh" "git commit"
+```
+
+This FAILs when the actual code is `git -C "$REPO_ROOT" commit -s -m "..."` — `git commit` is split by the `-C "$REPO_ROOT"` flag and does not appear on any single line.
+
+**Recommended patterns:**
+
+```
+file_contains "scripts/foo.sh" "commit -s"
+file_contains "scripts/foo.sh" "commit -m"
+```
+
+Both `commit -s` and `commit -m` are contiguous sub-strings regardless of what precedes `commit` on the line.
+
+**Real example:** `scripts/append-loop-state-heartbeat.sh` contains `git -C "$REPO_ROOT" commit -s -m "chore: ..."` — the contiguous anchor is `commit -s`, not `git commit`.
+
+**Generalizes to any command with inserted flags:**
+
+This pattern applies whenever option flags are inserted between a command name and its sub-command:
+
+| Full form (non-contiguous) | Contiguous anchor |
+|---------------------------|-------------------|
+| `git -C "$REPO_ROOT" commit` | `commit -s` / `commit -m` |
+| `git -C "$REPO_ROOT" push` | `push origin` |
+| `ssh -i key host command` | `host command` (the host+command part) |
+
+**Decision procedure:**
+
+1. Before writing `file_contains "path" "git commit"`, check whether the implementation may use `git -C` or other inserted flags
+2. If yes (or uncertain): use `commit -s`, `commit -m`, or another contiguous sub-string anchor instead
+3. Verify the chosen anchor appears literally in the implementation file (cross-reference procedure from §3)
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
