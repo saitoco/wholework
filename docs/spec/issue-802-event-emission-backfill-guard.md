@@ -76,7 +76,7 @@ The `### phase_complete (backfilled)` description was written to reflect intende
 - **Exit 143 = SIGTERM**: `_exit_code=143` corresponds to SIGTERM (128+15). Only SIGTERM is special-cased; other non-zero exits (e.g., 1 from claude failure, 127 from command-not-found) continue to skip backfill — they are tracked by `wrapper_exit` events instead.
 - **Test approach**: The bats test uses an inline helper script written to `$BATS_TEST_TMPDIR` rather than running the full `run-auto-sub.sh`, because triggering actual SIGTERM on a complex script in a bats test is timing-sensitive and flaky. The helper script directly exercises the updated `_maybe_emit_phase_complete()` logic.
 - **No `docs/structure.md` update needed**: `modules/event-emission.md` is already listed in Key Files; its description ("event emission contract SSoT") remains accurate.
-- **Count alignment warning**: Issue body has 2 pre-merge AC checkboxes; Spec has 3 verification lines (AC 2 carries 2 verify commands). This mismatch is expected — one AC item has two verify hints.
+- **Count alignment warning**: Issue body has 2 pre-merge AC checkboxes; Spec has 3 verification lines (AC 2 carries 2 verify commands). This mismatch is expected — one AC item has two verify commands.
 
 ## Consumed Comments
 
