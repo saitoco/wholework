@@ -106,3 +106,29 @@ No new comments since last phase.
 - Pre-merge AC (AC1 rubric, AC2 bats test) は review phase で PASS 確認済み。
 - verify phase では post-merge AC のみ残存 — `verify-type: observation` のため SKIPPED/post-merge manual 扱いが適切。
 - `modules/verify-patterns.md §23` および `tests/verify-heuristics.bats` が main に取り込まれた状態で verify を実施すること。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- non-interactive で 2 件の ambiguity (対象ファイル候補拡張、regression test 必須化) を自動解決。
+
+#### spec
+- Deviations なし。Spec の章節 §23 構造が明確。
+
+#### code
+- Rework なし。Spec の implementation steps を設計通り実行。
+
+#### review
+- Recurring Issues 2 件: (1) §23 Decision Procedure (step 1) が git commit に限定で本文の汎化と矛盾、(2) ssh 例示に placeholder 文字列を使用しているがガイドラインで「実在リテラルを使う」と推奨しているため自己矛盾。
+
+#### merge
+- mergeable=false reason=unknown を non-interactive auto-resolve で通過 (#831 と同根、#839 起票済み)。
+
+#### verify
+- 2 件 pre-merge AC PASS (rubric + bats)。calibration ミスなく一発 PASS。
+
+### Improvement Proposals
+
+- `modules/verify-patterns.md §23` の Decision Procedure を汎化し、git invocation 以外の non-contiguous シンボル (ssh, kubectl, docker compose 等) 例を含む形に修正。同時に「§23 が自己適用 (例示は実在リテラル) できているか」のチェックを `tests/verify-heuristics.bats` に追加する Issue を後続で起票推奨。
