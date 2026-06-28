@@ -613,6 +613,21 @@ Use `rubric` when exact string matching is too strict but semantic alignment mus
 - [ ] <!-- verify: grep "warning" "skills/verify/SKILL.md" --> implementation emits warning (consistency check)
 ```
 
+### 18. Issue Body Is SSoT for Verify Commands — Align Spec on Mismatch
+
+When verify commands in the Spec's `## Verification > Pre-merge` section diverge from the Issue body's `## Acceptance Criteria > Pre-merge` section, the Issue body is the SSoT (single source of truth). Update the Spec to match the Issue body — never the reverse.
+
+**Typical divergence patterns:**
+- LLM rewrites a verify command when copying from Issue body to Spec (e.g., `sync` → `check`, `build` → `build:prod`)
+- Issue body is updated after the Spec verify section was initially written
+
+**Resolution:**
+- Detect mismatch between Issue body `## Acceptance Criteria > Pre-merge` verify commands and Spec `## Verification > Pre-merge` verify commands
+- For each diverged item, replace the Spec's `<!-- verify: ... -->` hint with the Issue body's version verbatim
+- Do not update the Issue body from the Spec
+
+This SSoT principle is implemented in `/spec` SKILL.md's "Verification conditions vs. Issue body acceptance criteria consistency check" step.
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.

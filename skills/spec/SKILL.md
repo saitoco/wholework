@@ -494,7 +494,7 @@ After creating `## Verification > Pre-merge`, compare Spec items against Issue b
 - List each Spec `## Verification > Pre-merge` item
 - Compare against Issue body `## Acceptance Criteria > Pre-merge` items
 - Detect: Spec items not in Issue body (omission), or mismatched `<!-- verify: ... -->` hints
-- If mismatched, auto-update Issue body (use Spec's `## Verification > Pre-merge` as source of truth): `mkdir -p .tmp`, write to `.tmp/issue-body-$NUMBER.md`, update with `gh-issue-edit.sh`, delete temp file
+- If mismatched, auto-update Spec (use Issue body's `## Acceptance Criteria > Pre-merge` as source of truth): for each mismatched item, replace the Spec's `<!-- verify: ... -->` hint with the corresponding hint from the Issue body using the Edit tool
 
 **BRE metacharacter detection in verify commands:**
 
