@@ -85,3 +85,6 @@
 - Batch Completion Report セクションへの追記位置: "report results (success/skip/failure)" 行の直後に挿入
 - `tests/auto-completion-report.bats` の awk パターンは `## Notes` (level-2) で終端する点に注意 (level-3 `###` ではない)
 - SKILL.md への変更は既存の List mode section のラベルチェックとは独立した別ブロック
+
+## Consumed Comments
+No new comments since last phase.
