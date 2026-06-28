@@ -37,3 +37,12 @@ User invoked `/auto --batch` で 8 件の audit/drift および audit/fragility 
 
 - **PROPOSAL** (process): `/auto --batch` 完了報告に pending manual post-merge confirmation の集約セクションを追加し、人手 confirmation 必要 Issue を一覧化。
 - **PROPOSAL** (cleanup): `auto-events-rollup-*.md` の commit/ignore policy 整理 (verify dirty-file classifier の false trigger を防ぐ)。
+
+---
+
+## Filed Issues (late-filed after 13998 session retro audit)
+
+The following Improvement Proposals were originally surfaced in this session but not filed at the time. After cross-session audit during 13998-1782562514 session retro (2026-06-28), the following Issues were filed retroactively:
+
+- **#823** — auto: --batch 完了報告に pending manual confirmation セクションを追加 (from PROPOSAL process; re-observed in 13998 batch with 8 issues in phase/verify)
+- **#824** — auto: loop-state heartbeat / auto-events-rollup の auto-commit 化で dirty file friction を解消 (from PROPOSAL cleanup; #798 補強, re-observed in 64057 + 13998 sessions)

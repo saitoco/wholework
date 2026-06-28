@@ -41,3 +41,11 @@ Note: #798 (heartbeat dirty による /verify ブロック解消) は CLOSED だ
 ## See also
 
 - [Data layer report](data-layer.md)
+
+---
+
+## Cross-session Filed Issue
+
+The following Issue was filed during the 13998-1782562514 session retro audit (2026-06-28), addressing the heartbeat dirty file friction observed in this session as well as 22753-1782519060:
+
+- **#824** — auto: loop-state heartbeat / auto-events-rollup の auto-commit 化で dirty file friction を解消 (#798 補強)
