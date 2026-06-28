@@ -26,7 +26,7 @@ Read `.wholework.yml` from the project root using the Read tool.
 
 From the loaded content, search for each YAML key in the marker definition table below and extract values.
 
-**Marker Definition Table (fixed mappings):**
+### Marker Definition Table (fixed mappings)
 
 | YAML Key | Variable | Value When `true` | Value When `false`/Unset |
 |----------|----------|------------------|------------------------|
