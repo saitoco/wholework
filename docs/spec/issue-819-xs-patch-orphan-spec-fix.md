@@ -114,3 +114,31 @@
 ### Notes for Next Phase
 - verify phase should confirm the three pre-merge ACs (orphan stub suppressed, `tests/append-consumed-comments-section.bats` exists, bats suite passes).
 - The post-merge AC requires an actual XS `/auto N` run to observe absence of orphan stubs — cannot be verified statically.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Auto-Resolved Ambiguity Points 2 件 (AC2 分割、Related に run-auto-sub.sh 追加) は適切に処理された。
+
+#### spec
+- Option A/B/C の 3 アプローチを並列提示し Option B (early exit) を採択。rubric AC は実装方針に対し抽象化されており、Option A も PASS 可能な構成。
+
+#### code
+- Deviations なし。Spec の 8-line → 2-line 置換が正確に再現された。
+- 観察ギャップ: `WHOLEWORK_SCRIPT_DIR` env var による `_repo_root` 解決のテスト用 path convention (`$BATS_TEST_TMPDIR/repo/mocks` → `_repo_root=$BATS_TEST_TMPDIR/repo`) が Spec に未記載で、テスト作成時に発見・補完された。
+
+#### review
+- 既存テスト `tests/run-verify.bats` の "spec absent: creates skeleton file" が旧挙動を前提としていたため CI で FAIL したが review phase で適切に検出・修正された。
+
+#### merge
+- PR #825 がコンフリクトなく squash merge。base=main。
+
+#### verify
+- AC3 の verify command scope (`bats tests/run-code.bats tests/append-consumed-comments-section.bats`) が局所的で、本 Issue 自体は局所変更のためカバーされるが、code フェーズの先行検証としての regression coverage は不足していた。
+
+### Improvement Proposals
+
+- code phase で behavioral change を含むコミット前に `bats tests/` (フルスイート) を実行するガイドラインを追加することで、本 PR の CI FAILURE のような regression を事前検知できる。`scripts/run-code.sh` または `modules/test-runner.md` への記述追加候補。
+- AC 生成側 (`/issue` skill) で behavioral changes が含まれるとき verify command を局所ファイルではなく `bats tests/` 等のフルスイートにする推奨ロジックを検討。狭い scope は CI で検出されるが、verify-time に事前 catch できると review phase の reopen を削減できる。
