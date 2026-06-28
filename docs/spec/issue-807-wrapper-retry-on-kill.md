@@ -136,3 +136,47 @@ Step 6 (conflict detection) および Step 7 (ambiguity resolution) で以下を
 ## Consumed Comments
 
 No new comments since last phase.
+
+## issue retrospective
+
+(Transferred from Issue #807 comment — /issue phase Auto-Resolve Log)
+
+1. **AC1 rubric スコープ曖昧性 (HIGH)**: 「のいずれかに」→「すべて (または全スクリプトから呼び出される共通ヘルパー)」に変更。理由: タイトル・Purpose は全 4 スクリプト適用を意図。実装方法 (共通ヘルパー許容) は /spec に委譲。
+2. **AC2 bats テストファイル漏れ (HIGH)**: `tests/run-auto-sub.bats` を bats コマンドに追加 (run-auto-sub.sh は対象 4 本の 1 つ)。
+3. **AC3 補足 verify command 追加 (MEDIUM)**: 新エントリ確認のため `grep "137"` を追加。`grep "143"` は既存 json-mode-silent-hang にマッチするため不適切、137 (現状未記載) が最善。
+
+## spec retrospective
+
+### Minor observations
+- `docs/structure.md` の scripts ファイル数コメントは "(59 files)" だが実数 61 で既存ドリフトあり (調査中に発見)。本 PR で正確値へ更新するが、`/audit drift` の検出対象として記録に値する。
+- `claude-watchdog.sh` の "retrying disabled; please re-run manually" は hang-kill の retry を parent 主導とする意図的設計。本 Issue の wrapper retry は早期 kill (<300s) のみを対象とし、両者を非重複に保つ設計判断の根拠になった。
+
+### Judgment rationale
+- inline 重複ではなく共通 sourceable helper を採用 (watchdog-defaults.sh / phase-banner.sh と同パターン、AC1 許容)。
+- 早期 kill しきい値 300s: 全 production phase の WATCHDOG_TIMEOUT 既定 (>=600s) より小さく、外部早期 kill と watchdog hang-kill を重複なく分離できる。
+- run-auto-sub.sh は claude -p を直接呼ばないため、「主要 claude -p 呼び出し」を `run_phase_with_recovery()` の子 runner 呼び出し (Layer B) と解釈。
+- env 代入 prefix を `env` 引数列へ移動: 関数ラップ時の子コマンドへの export 保証が shell 代入 prefix では曖昧なため。
+
+### Uncertainty resolution
+- wrapper 自プロセス kill は対象外 (inner-call / child-wrapper kill のみ retry)。Issue 設計の明文と整合する境界として scoping で解決 (実装不要)。
+- run-code.sh json branch の retry 出力連結は、json mode の末尾一括出力特性 (早期 kill 時は無出力) により実害なしと判断。防御的 truncation は /code の任意検討事項として残置。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- 共通 helper `scripts/retry-on-kill.sh` (`run_with_retry_on_kill()`) を 4 wrapper が source。分岐挙動は Spec Notes に 4 branch で全列挙 (#642 準拠)。
+- 早期 kill 窓 300s (env `WHOLEWORK_RETRY_ON_KILL_MAX_SEC` で override)。全 WATCHDOG_TIMEOUT 既定より小。
+- 2 層構成: leaf (run-issue/spec/code) は claude 呼び出しをラップ (Layer A)、run-auto-sub は `run_phase_with_recovery()` の子 runner をラップ (Layer B) + orchestration-recoveries.md 記録。
+- env 変数を `env` 引数列へ移動し関数ラップ後も propagation を保証。
+
+### Deferred Items
+- orchestration-recoveries.md 記録は run-auto-sub.sh (Layer B) のみ実装。leaf-only retry は stderr で観測可能。専用 emit_event type は追加しない (event-emission.md SSoT churn 回避) — follow-up 候補。
+- wrapper 自プロセス kill は parent /auto manual recovery のまま (対象外)。
+- run-code.sh json branch の防御的 `: > "$TOKEN_USAGE_FILE"` truncation は retry 連結が実観測された場合のみ /code で追加検討。
+
+### Notes for Next Phase
+- **必須**: 4 本すべての bats `setup()` で実体 `scripts/retry-on-kill.sh` を `cp` で MOCK_DIR へ配置 (guard-prefix.sh と同様)。怠ると `set -e` 下で source 失敗し既存全テストが壊れる。
+- scripts 数を `ls scripts/*.sh scripts/*.py | wc -l` (現状 61) で再計測し structure.md の "(N files)" を正確値に (既存 59 ドリフト是正)。
+- 既存 reconcile 143/0 branch は変更しない (137 へ拡張しない、保守的 escalation)。
+- `docs/ja/structure.md` / `docs/ja/tech.md` ミラーを translation-workflow.md に従い同期。
