@@ -562,6 +562,57 @@ Both the SKILL.md side and the implementation script side must be covered.
 
 **Note**: Script-side old path residuals are not covered by CI or unit tests. Only explicit `file_not_contains` ACs catch them automatically before merge.
 
+### 17. Docs/Code Consistency — Verify Key Behavior Keywords in Both Layers
+
+When a docs file (e.g., `docs/guide/customization.md`) and its implementing code file (e.g., `skills/verify/SKILL.md`) are both changed in the same Issue, verify that key behavior keywords match across both layers. Without this check, terminology mismatches (e.g., "silently ignored" in docs vs. warning output in code) go undetected until the review or verify phase (real example: Issue #783).
+
+**Background**: In Issue #783, `docs/guide/customization.md` described a behavior as "silently ignored" while `skills/verify/SKILL.md` actually emitted a warning. The mismatch was caught only during review because no AC verified keyword consistency between the two files.
+
+**When to apply:**
+
+Apply this pattern when ALL of the following are true:
+
+1. The Issue's changed files include both a docs file and an implementation file (skill, script, or module)
+2. The docs file describes specific behavior using keywords (e.g., "silently ignored", "warning", "skip", "fallback")
+3. The implementation file is expected to exhibit the same behavior
+
+**Recommended pattern — exact keyword match (use `grep`):**
+
+When the same keyword must appear literally in both files:
+
+```
+<!-- verify: grep "silently ignored" "docs/guide/customization.md" -->
+<!-- verify: grep "silently ignored" "skills/verify/SKILL.md" -->
+```
+
+Both layers must contain the same keyword string. If the implementation uses a different but equivalent phrase, this pattern will FAIL and surface the inconsistency before merge.
+
+**Recommended pattern — semantic consistency only (use `rubric`):**
+
+When the docs and implementation may use different phrasing for the same behavior:
+
+```
+<!-- verify: rubric "docs/guide/customization.md の挙動説明と skills/verify/SKILL.md の実装が意味的に一致している (例: 'silently ignored' vs 警告なし)" -->
+```
+
+Use `rubric` when exact string matching is too strict but semantic alignment must still be confirmed.
+
+**Decision procedure:**
+
+1. Identify all docs files and implementation files in the Issue's change set
+2. For each docs file, extract key behavior-describing keywords (e.g., "warning", "skip", "fallback", "ignored", "disabled")
+3. For each keyword, grep the corresponding implementation file:
+   - Keyword found: add `grep "keyword" "docs-file"` + `grep "keyword" "impl-file"` as paired verify commands
+   - Keyword absent from implementation: add `rubric "..."` for semantic consistency check
+4. If no behavior keywords are present in docs (e.g., only structural changes): skip this pattern
+
+**Example AC for a docs+skills change Issue:**
+
+```markdown
+- [ ] <!-- verify: grep "warning" "docs/guide/customization.md" --> docs describes warning behavior
+- [ ] <!-- verify: grep "warning" "skills/verify/SKILL.md" --> implementation emits warning (consistency check)
+```
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
