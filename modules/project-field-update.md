@@ -98,6 +98,7 @@ After the GraphQL mutation in step 4 confirms success (exit 0 and `projectV2Item
 | Priority | `priority/` | `urgent`, `high`, `medium`, `low` | `--remove-label "priority/urgent" --remove-label "priority/high" --remove-label "priority/medium" --remove-label "priority/low"` |
 | Size | `size/` | `XS`, `S`, `M`, `L`, `XL` | `--remove-label "size/XS" --remove-label "size/S" --remove-label "size/M" --remove-label "size/L" --remove-label "size/XL"` |
 | Type | `type/` | `bug`, `feature`, `task` | `--remove-label "type/bug" --remove-label "type/feature" --remove-label "type/task"` |
+| Value | `value/` | `1`, `2`, `3`, `4`, `5` | `--remove-label "value/1" --remove-label "value/2" --remove-label "value/3" --remove-label "value/4" --remove-label "value/5"` |
 
 ### Updating Type Field
 
