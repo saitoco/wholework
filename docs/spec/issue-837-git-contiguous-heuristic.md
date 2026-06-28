@@ -78,19 +78,32 @@ No new comments since last phase.
 ### Rework
 - None.
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+- AC1 の rubric verify command は対象ファイルを 4 件列挙しているが、実装は `modules/verify-patterns.md` 1 件のみに追加された。rubric の "のいずれかに" 条件は満たされており、PASS。将来の Issue で同様の複数候補 rubric を書く場合、実装ターゲットを 1 件に絞る判断は code phase で行うため rubric は候補列挙で問題ない。
+
+### Recurring Issues
+- §23 の Decision Procedure (step 1) が `git commit` に限定されており、§23 本文の「汎化」と矛盾していた。ガイドライン文書では、本文での「汎化します」という宣言と手順書の具体例が一致しているか review phase で意識的にチェックすることを推奨。
+- ssh の例示に placeholder 文字列 (`host command`) を使っており、ガイドラインの実用性が低下していた。例示には常に実在するリテラル文字列を使うべきというルールを verify-patterns.md 自体が自己適用できていなかった。
+
+### Acceptance Criteria Verification Difficulty
+- pre-merge AC2 の `command "bats tests/verify-heuristics.bats"` は safe mode で CI reference fallback を使用した。CI `Run bats tests` SUCCESS で PASS を確認 — verify command と CI ジョブ名の対応が明確であり、fallback が正常に機能した。
+- AC1 の rubric は adversarial grader なしに AI judgment で PASS 判定した。対象ファイルが diff に明示的に含まれており、verify command 検証が容易だった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- §23 を `modules/verify-patterns.md` の `## Output` 直前に挿入した。他の候補ファイル (skills/issue/SKILL.md、verify-classifier.md、ambiguity-detector.md) より SSoT として最適。
-- `tests/verify-heuristics.bats` は Spec の指定通り 3 テスト (non-contiguous keyword / contiguous keyword / git -C example) で構成した。
-- `docs/structure.md` の tests/ カウントを 91 → 93 に更新し、translation sync として `docs/ja/structure.md` も同期した。
+- MUST 問題なし (全 SHOULD/CONSIDER を修正)。event = COMMENT で投稿。
+- SHOULD 3 件を修正: Decision Procedure 汎化、ssh placeholder 例の差し替え、commit -s vs commit -m の使い分け明示。
+- CONSIDER 1 件 (bats test anchor の specificity 向上) も合わせて修正。
 
 ### Deferred Items
-- Post-merge observation AC (次回 /auto または /issue 実行時の verify command 生成観察) は verify phase に委ねる。
-- `/issue` SKILL.md や他モジュールへの同 heuristic の追記は本 Issue スコープ外 (Proposal A は実施せず; verify-patterns.md SSoT で十分)。
+- Post-merge observation AC は verify phase が担当 (`verify-type: observation event=auto-run`)。
+- Step 13 ポリシー変更なし — AC の更新不要。
 
 ### Notes for Next Phase
-- PR #840 が CI を通過することを確認してから merge を進めること。
-- post-merge AC は `verify-type: observation event=auto-run` であり、機械的な検証は不要 — verify phase では SKIPPED/post-merge manual として扱う。
-- 全 pre-merge AC は code phase でチェック済み (AC1: rubric PASS、AC2: bats 3/3 PASS)。
+- 修正コミット `047d29a` を含む PR #840 が merge 可能な状態。
+- post-merge AC は verify phase で SKIPPED/post-merge manual として扱うこと。
+- CI は全ジョブ SUCCESS 確認済み。
