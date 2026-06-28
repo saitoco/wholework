@@ -180,3 +180,20 @@ No new comments since last phase.
 - scripts 数を `ls scripts/*.sh scripts/*.py | wc -l` (現状 61) で再計測し structure.md の "(N files)" を正確値に (既存 59 ドリフト是正)。
 - 既存 reconcile 143/0 branch は変更しない (137 へ拡張しない、保守的 escalation)。
 - `docs/ja/structure.md` / `docs/ja/tech.md` ミラーを translation-workflow.md に従い同期。
+
+## Code Retrospective
+
+### What went well
+- `"$@" || _exit=$?` パターンで `set -e` / `set +e` 両環境に安全な exit code キャプチャを実現できた
+- `env` 引数形式への移行 (`env -u CLAUDECODE NAME=VALUE ...`) により、関数ラッパー経由での環境変数伝播が確実になった
+- early-kill ウィンドウ 300s の選択: 最小 `WATCHDOG_TIMEOUT` (merge=600s) の半分以下を維持し、watchdog hang-kill (遅延) と外部 kill (早期) の非重複を保証できた
+- Layer A (claude 呼び出し) と Layer B (child runner) の 2 層構造で全 run-*.sh を網羅できた
+- カウンターファイル mock パターンが bats でのリトライ検証に有効だった
+
+### What was difficult
+- json ブランチ (`run-code.sh`) で stdout リダイレクト (`> "$TOKEN_USAGE_FILE"`) を関数ラッパー外に出す必要があり、ラッパー呼び出し側で `> file` を付ける形に変更が必要だった
+- `run-auto-sub.sh` の `_write_wrapper_retry_recovery` で python3 heredoc 内に bash 変数展開を混在させる構文が煩雑だった
+
+### Design decisions
+- `_RETRY_ON_KILL_FIRED` グローバルフラグで retry 発生を追跡し、`run-auto-sub.sh` が orchestration-recoveries.md への記録をトリガーする設計にした (ヘルパーと呼び出し側の責務分離)
+- 閾値超過 (Branch C) では retry せず as-is で返す — watchdog hang-kill は別経路 (watchdog 1回リトライ + tier 1/2/3 recovery) で処理されるため
