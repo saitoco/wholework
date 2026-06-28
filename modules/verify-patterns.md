@@ -840,6 +840,55 @@ This pattern applies whenever option flags are inserted between a command name a
 2. If yes (or uncertain): use `commit -s`, `commit -m`, or another contiguous sub-string anchor instead
 3. Verify the chosen anchor appears literally in the implementation file (cross-reference procedure from §3)
 
+### 24. Behavioral Changes — Prefer Full Test Suite for Verify Commands
+
+When the implementation modifies existing scripts or functions (not purely additive), the verify command should use the full test suite rather than a narrow per-file invocation. This guideline targets the `/issue` skill's verify command generation step.
+
+**Definition of behavioral changes:**
+
+A change is a "behavioral change" when it modifies an existing file (script, function, module) and that file is referenced by tests beyond those directly associated with the changed file. The key signal is cross-file test coupling: the modified file's behavior is relied upon by tests that will not be included in a locally-scoped verify command.
+
+**Detection heuristic (2 checks):**
+
+1. Does the implementation modify an existing file (not purely add new files)?
+   - If the change only adds new files with no modifications to existing ones → narrow scope is acceptable
+   - If any existing file is modified → continue to check 2
+2. Are there existing tests that reference the modified file(s) outside the narrow set?
+   - Check whether test files other than the directly-associated one import, source, or call the modified file
+   - If yes → behavioral change detected → use full test suite
+
+**Scope trade-off:**
+
+| Scope | Command example | Speed | Coverage |
+|-------|----------------|-------|----------|
+| Narrow (per-file) | `bats tests/run-code.bats` | Fast | New/modified file's own tests only |
+| Full suite | `bats tests/` | Slower | Includes regression detection for cross-file test coupling |
+
+Use narrow scope only when the implementation is purely additive (new files, no changes to existing files). For all behavioral changes, prefer full suite.
+
+**Recommended scope by test framework:**
+
+| Framework | Recommended command |
+|-----------|---------------------|
+| bats | `bats tests/` |
+| pytest | `pytest` |
+| Node.js (pnpm) | `pnpm test` |
+| Node.js (npm) | `npm test` |
+
+**Decision procedure (3 steps):**
+
+1. Identify which existing files are modified in the implementation
+2. Check whether any existing test references those files beyond the file's direct test counterpart (grep/search the test directory)
+3. If cross-file coupling found → use full test suite as the verify command; otherwise narrow scope is acceptable
+
+**Real example (Issue #819):**
+
+- Modified file: `scripts/run-code.sh`
+- Narrow verify command used: `bats tests/run-code.bats tests/append-consumed-comments-section.bats`
+- Missed: `tests/run-verify.bats` contained a "spec absent" test that relied on `run-code.sh`'s prior behavior
+- Consequence: regression was not caught at verify-time; CI detected the failure after merge
+- Correct verify command: `bats tests/` (full suite)
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.

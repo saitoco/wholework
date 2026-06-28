@@ -14,3 +14,7 @@ VERIFY_PATTERNS="$PROJECT_ROOT/modules/verify-patterns.md"
 @test "verify-heuristics: git -C example is present in verify-patterns.md" {
     grep -q 'git -C' "$VERIFY_PATTERNS"
 }
+
+@test "verify-heuristics: behavioral changes section exists in verify-patterns.md" {
+    grep -q "Behavioral Changes" "$VERIFY_PATTERNS"
+}
