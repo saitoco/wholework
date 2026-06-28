@@ -754,6 +754,53 @@ rubric "ToggleButton component updates aria-expanded to the current open/closed 
 
 **Note**: This reference is for interactive UI accessibility (a11y). It is activated when the Issue involves component implementation. Do not apply to purely backend or CLI Issues.
 
+### 22. Lightweight Command Hints for Opportunistic Conditions — Partial Automation with `--help` / `--version`
+
+When a post-merge acceptance condition requires a command that depends on authentication or external state, the full command cannot be automatically verified. However, lightweight dependency-free flags (`--help`, `--version`, startup checks only) can be verified automatically as a partial substitute.
+
+**Background**: Post-merge opportunistic conditions without a verify command fall into "Items Requiring User Verification" in `/verify` output (see §10). When a command's end-to-end behavior requires authentication or external service access, a full `command` hint will fail in CI due to missing credentials. But verifying that the binary is installed and outputs expected usage text is lightweight and dependency-free — it can be expressed as a `command` hint and verified mechanically.
+
+**When to use lightweight command hints:**
+
+Use a lightweight `command` hint when ALL of the following apply:
+1. The post-merge condition verifies a CLI tool, script, or service that has been installed or deployed
+2. The tool's full execution requires authentication or external state
+3. The tool supports `--help`, `--version`, or a startup check that exits 0 without requiring credentials or external services
+
+**Verify command selection by dependency level:**
+
+| Dependency level | Verify command | Example |
+|-----------------|----------------|---------|
+| No external dependency (binary check) | `command "tool --version"` or `command "tool --help"` | `command "gh --version"` |
+| Authentication required | `<!-- verify-type: opportunistic -->` (manual confirmation) | Login-dependent operations |
+| External state required | `<!-- verify-type: opportunistic -->` (manual confirmation) | API calls, database queries, live service checks |
+
+**Recommended pattern for partial automation:**
+
+```
+- [ ] <!-- verify: command "tool --version" --> tool is installed and outputs version (lightweight check)
+- [ ] tool connects to external service successfully <!-- verify-type: opportunistic -->
+```
+
+The first condition verifies installation (mechanical, dependency-free). The second defers to manual confirmation for the externally-dependent behavior.
+
+**Examples — lightweight (automatable) vs. authentication-required (opportunistic):**
+
+```
+✅ command "gh --version"          # lightweight: checks gh CLI is installed
+✅ command "python3 --version"     # lightweight: checks Python is available
+✅ command "node --help"           # lightweight: checks Node.js binary exists
+❌ command "gh api /user"          # authentication required → verify-type: opportunistic
+❌ command "curl https://api.example.com/data"  # external state required → verify-type: opportunistic
+```
+
+**Classification rule:**
+
+- `--help` / `--version` / startup-only checks that exit 0 without credentials → `command` verify type (lightweight, dependency-free)
+- Commands requiring authentication or external state → `verify-type: opportunistic` (manual confirmation)
+
+Do not force `command` hints onto authentication-dependent or external-service-dependent commands. If the command fails in CI due to missing credentials or an offline service, the condition produces FAIL/UNCERTAIN noise. Classify such conditions as `verify-type: opportunistic` from the start and add a lightweight `command "tool --version"` check as the automatable portion where available.
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
