@@ -81,3 +81,34 @@ The `### phase_complete (backfilled)` description was written to reflect intende
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A (implementation followed the Spec exactly)
+
+### Design Gaps/Ambiguities
+
+- The Spec's bats test description used HEREDOC with escaped variables (`\$?`, `\$_exit_code`), but in the actual bats file, the HEREDOC delimiter needed `HELPER` (unquoted) to allow variable expansion for `$MOCK_DIR` and `$AUTO_EVENTS_LOG` references, while inner function variables required `\$` escaping — minor shell quoting subtlety not captured in the Spec description.
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Chose Option 2 (code extension): extended all 4 `run-*.sh` guards to allow exit 143 (SIGTERM) through to backfill logic, rather than Option 1 (doc fix only). Rationale: SIGTERM backfill improves post-merge AC observability in Tier 3 recovery.
+- bats test uses an inline helper script written to `$BATS_TEST_TMPDIR` (not running full `run-auto-sub.sh`) because SIGTERM on a complex script is timing-sensitive and flaky in bats context.
+- The Spec also had a deprecated term (旧称: verify hints) remaining in the Notes section, fixed to "verify commands" in a separate commit.
+
+### Deferred Items
+- AC2 github_check ("Run bats tests" CI job) is UNCERTAIN at code time (CI not yet run). Will resolve after CI runs on PR #812.
+- Post-merge AC (observation event=watchdog-kill) deferred to natural occurrence of next Tier 3 recovery.
+
+### Notes for Next Phase
+- PR #812 created. Wait for CI to confirm bats tests pass before merging.
+- All 982 bats tests pass locally. The guard change is minimal (one `&& "$_exit_code" -ne 143` addition per script).
+- The `modules/event-emission.md` SSoT now correctly documents exit 0 or 143 backfill behavior — the `/review` phase should verify the rubric ACs confirm this alignment.
