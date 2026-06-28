@@ -136,6 +136,11 @@ _do_append() {
   printf '| %s | %s | %s | %s |\n' "$TS" "$PHASE_LABEL" "phase-transition" "$DETAIL" >> "$FILE" 2>/dev/null || true
 }
 
+# Ensure the parent directory exists before creating the lock file/dir.
+# Both flock (9>"$LOCK_FILE") and mkdir-lock ("$LOCK_DIR") require the parent
+# to exist. mkdir -p is idempotent so parallel calls are safe.
+mkdir -p "$SESSIONS_DAILY_DIR" 2>/dev/null || true
+
 # Acquire a file lock before running _do_append so that parallel batch workers
 # cannot interleave file-creation, dedup, and append — preventing duplicate rows.
 # flock -n (non-blocking): if the lock is held, skip gracefully (best-effort).
