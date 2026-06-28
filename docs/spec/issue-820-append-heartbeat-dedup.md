@@ -70,3 +70,29 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective (Auto-Resolve Log: approach A/B OR 接続の確認、bats テスト追加が任意であることの確認) / https://github.com/saitoco/wholework/issues/820#issuecomment-4826400420
+
+## Code Retrospective
+
+### Deviations from Design
+- None — Spec の実装ステップと完全に一致。dedup チェックは DETAIL 変数代入直後、printf append 直前に挿入した。
+
+### Design Gaps/Ambiguities
+- snapshot が異なる場合 (同 issue・同 transition だが snapshot 変化) はデュープとして検出されない。Spec Notes で "直前行のみ比較" と明記されており設計上の意図 — 連続する完全一致行のみが重複対象。
+
+### Rework
+- None — 初回実装でテスト 10/10 all pass。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Approach A (tail-based last-row dedup) を採用。Approach B (flock) は見送り — AC が OR 接続のため片方で十分、かつ実装コストが低い。
+- DETAIL 文字列 (`#N from→to snapshot:[...]`) 全体をパターンマッチ条件とし、timestamp と Phase column は判定対象外とした。
+- bats テストに新規ケースを追加 (AC2 上は任意だが品質向上のため実装)。
+
+### Deferred Items
+- flock による並列 race condition 防止は未実装。AC は OR 条件で満たしているが、ハイ並列 batch での完全排除が必要になれば別 Issue で対応。
+
+### Notes for Next Phase
+- テスト 10/10 all pass、forbidden expressions check clean — CI は問題なく通るはず。
+- post-merge AC は observation event=auto-run 型 — `/verify` での自動検証対象外。次回 `/auto --batch` 実行後に手動観察で確認。
