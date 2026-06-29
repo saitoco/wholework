@@ -111,6 +111,7 @@ Entries are grouped by workflow order (triage → issue → spec → code → re
 SSoT note: Model values in run-*.sh use CLI aliases (sonnet/opus); update this table when changing model/effort in run-*.sh, agents, or skills.
 
 - **Watchdog timeout calibration**: Phase-specific timeout constants in `scripts/watchdog-defaults.sh` are calibrated against the dominant parent orchestrator model's per-token latency. Recalibrate when the default parent model changes (e.g., Fable 5 → Sonnet 4.6 transition in #628 required raising `WATCHDOG_TIMEOUT_ISSUE_DEFAULT` from 600 to 1200).
+- **code-side auto-retry (silent no-op)**: When `auto-retry-on-fail.enabled: true` and `autonomy: L2/L3`, `run-code.sh` internally retries after detecting `matches_expected: false` (silent no-op) from `reconcile-phase-state.sh`. Max retries from `auto-retry-on-fail.max_iterations` (also accepts legacy `threshold` key; default: 3). Retry counter (`CODE_RETRY_COUNT`) is passed via exported env var across `exec`-based re-invocations. Symmetric with verify-side auto-retry in `skills/verify/SKILL.md` Step 11(b) (same tier gate: L2/L3 + `AUTO_RETRY_ENABLED=true` + count < max). When built-in retry is active, `apply-fallback.sh`'s `code-patch-silent-no-op` Tier 2 handler is suppressed to prevent double-retry.
 
 ## Wholework Label Management
 
