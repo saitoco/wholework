@@ -989,6 +989,36 @@ MOCK_EOF
     [[ "$output" == *"async"* ]]
 }
 
+@test "code-patch completion: reopen_ts non-null + phase/verify label + no fresh commit -> matches_expected false" {
+    cat > "$MOCK_DIR/gh-graphql.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "2026-06-01T00:00:00Z"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
+
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json labels"* ]]; then echo "phase/verify"; exit 0; fi
+if [[ "$*" == *"--json state"* ]]; then echo "OPEN"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "log" ]]; then echo ""; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-patch 55 --check-completion --strict
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
+}
+
 @test "code-patch precondition: Spec missing and Size != XS -> mismatch" {
     export MOCK_SPEC_PATH="$BATS_TEST_TMPDIR/empty-spec-patch"
     mkdir -p "$BATS_TEST_TMPDIR/empty-spec-patch"
