@@ -18,6 +18,8 @@ setup() {
     git init -q
     git config user.email "test@example.com"
     git config user.name "Test"
+    # Disable global gitignore so .claude/worktrees/ paths appear in git status
+    git config core.excludesFile /dev/null
     # Track docs/spec so individual spec files appear in git status --short
     touch docs/spec/.gitkeep
     git add docs/spec/.gitkeep
