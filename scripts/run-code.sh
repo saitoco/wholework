@@ -5,6 +5,8 @@
 set -euo pipefail
 ISSUE_NUMBER="${1:?Usage: run-code.sh <issue-number> [--patch|--pr] [--base <branch>]}"
 shift
+# Save trailing args before parsing loop so exec re-invocation can pass them unchanged
+_TRAILING_ARGS=("$@")
 
 # Parse options
 ROUTE_FLAG=""
@@ -279,7 +281,7 @@ if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
           "iteration=${CODE_RETRY_COUNT}" \
           "trigger_reason=silent_no_op"
       fi
-      exec bash "$0" "$@"
+      exec bash "$0" "$ISSUE_NUMBER" "${_TRAILING_ARGS[@]}"
     else
       if [[ ( "$AUTONOMY_TIER" == "L2" || "$AUTONOMY_TIER" == "L3" ) ]] && \
          [[ "$AUTO_RETRY_ENABLED" == "true" ]]; then
