@@ -54,3 +54,35 @@
 - `--no-github` は `scripts/get-auto-session-report.sh` line 56 に実装済み (Issue Retrospective で確認)
 - `--no-github` 指定時、data-layer.md の "Fully closed" / "phase/verify remaining" カラムは `N/A (--no-github)` となる。フル gh API モードのデータが必要な場合は `/audit auto-session <id>` を別途実行
 - Issue Retrospective の自動解決判定: AC2 の rubric 単独では semantic 判定のみになるため、`grep "data-layer-stderr"` 補足ヒントを追加済み (Issue 本文に反映済み)
+
+## Consumed Comments
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- commit prefix を `chore:` (Task type) ではなく `feat:` で実施。retry-once + stderr log という機能追加の側面があるため意図的選択
+
+### Design Gaps/Ambiguities
+
+- None
+
+### Rework
+
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の bash コードブロック例をそのまま適用。`if ! ... then if ! ... else rm -f ... fi else rm -f ... fi` 構造でファースト試行成功時とセカンド試行成功時の両方で stderr log を削除する対称設計
+- 1 回目失敗時の retry は `2>>` (append) で stderr を累積する設計: 2 回分の失敗原因を 1 ファイルにまとめることで診断容易性を向上
+
+### Deferred Items
+- post-merge AC: 次回 `/auto --batch` 完走後に `data-layer.md` 存在確認 (observation event=auto-run)
+
+### Notes for Next Phase
+- verify コマンドは `grep "get-auto-session-report.sh.*--no-github"` と `grep "data-layer-stderr"` の 2 つが core。どちらも PASS 確認済み
+- テスト 1045 件 PASS、forbidden expressions チェック PASS、validate-skill-syntax 警告 0 エラー
