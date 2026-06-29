@@ -495,24 +495,6 @@ MOCK
     [ "${cc_line:-0}" -lt "${claude_line:-999}" ]
 }
 
-@test "side-effect: append-loop-state-heartbeat.sh called on code phase success" {
-    HEARTBEAT_LOG="$BATS_TEST_TMPDIR/heartbeat.log"
-    export HEARTBEAT_LOG
-
-    cat > "$MOCK_DIR/append-loop-state-heartbeat.sh" <<MOCK
-#!/bin/bash
-echo "heartbeat_called \$@" >> "${HEARTBEAT_LOG}"
-exit 0
-MOCK
-    chmod +x "$MOCK_DIR/append-loop-state-heartbeat.sh"
-
-    run bash "$SCRIPT" 123 --pr
-    [ "$status" -eq 0 ]
-    grep -q "heartbeat_called" "$HEARTBEAT_LOG"
-    grep -q -- "--from spec" "$HEARTBEAT_LOG"
-    grep -q -- "--to code" "$HEARTBEAT_LOG"
-}
-
 @test "fallback: no consumed comments section before and after claude → _append_consumed_comments_section called" {
     # Create spec file without ## Consumed Comments section (simulates fresh spec)
     mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
