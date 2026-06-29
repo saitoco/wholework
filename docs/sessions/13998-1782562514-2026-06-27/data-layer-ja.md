@@ -109,19 +109,3 @@ Session 終了時に `phase/verify` に留まる Issue (post-merge AC が observ
 | `/verify` Step 8b の executability rubric 拡張 | source code 由来 observation を executable 例に追加 | **#780 起票済み + fix merged** |
 
 **全 retro Issue 完了**: 本 batch session で起票された 9 件の retro Issue は全て本 session 内で実装・merge 完了。recovery 自動化機構の self-improvement loop が機能した実例。
-
-## Narrative セクション (skeleton)
-
-### うまくいったこと
-- TBD (本 session の Spec retrospective + verify retrospective を全 Issue で記録済み。各 Spec の `## Verify Retrospective` を参照)
-
-### 限界と gap
-- TBD
-
-### 改善候補 (浮上分)
-- TBD
-
-### 結論
-- TBD
-
-> 注: `--full` mode の LLM narrative draft 経路は #776 で削除済み (`scripts/get-auto-session-report.sh --narrative-draft` および `auto-session-narrative-prompts.md` 撤去)。本レポートは #776 後の thin reader 仕様に従い data layer のみを記録。Narrative は本 session 中に生成された `session.md` (notable 判定で生成されていれば) または各 Spec の retrospective セクションを参照。

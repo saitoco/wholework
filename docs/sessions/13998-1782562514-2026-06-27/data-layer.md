@@ -109,19 +109,3 @@ This is expected for a single-user, single-parent-session batch run with manual 
 | `/verify` Step 8b executability rubric 拡張 | source code 由来 observation を executable 例として追加 | **#780 起票済み + fix merged** |
 
 **全 retro Issue 完了**: 本 batch session で起票された 9 件の retro Issue は全て本 session 内で実装・merge 完了。recovery 自動化機構の self-improvement loop が機能した実例。
-
-## Narrative Section (skeleton)
-
-### What worked
-- TBD (本 session の Spec retrospective + verify retrospective を全 Issue で記録済み; 各 Spec の `## Verify Retrospective` 参照)
-
-### Limits and gaps
-- TBD
-
-### Improvement candidates surfaced
-- TBD
-
-### Conclusion
-- TBD
-
-> Note: --full mode の LLM narrative draft 経路は #776 で削除済み (`scripts/get-auto-session-report.sh --narrative-draft` および `auto-session-narrative-prompts.md` 撤去)。本 report は #776 後の thin reader 仕様に従い data layer のみ。narrative は本 session 中に作成された `session.md` (もし notable 判定で生成されていれば) または各 Spec の retrospective セクションを参照。
