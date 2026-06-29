@@ -832,11 +832,13 @@ This pattern applies whenever option flags are inserted between a command name a
 |---------------------------|-------------------|
 | `git -C "$REPO_ROOT" commit` | `commit -s` / `commit -m` |
 | `git -C "$REPO_ROOT" push` | `push origin` |
-| `ssh -i key myserver "deploy.sh"` | `"deploy.sh"` (the literal command string) |
+| `ssh -i ~/.ssh/key user@host "deploy.sh"` | `"deploy.sh"` (the literal command string) |
+| `kubectl --context prod apply -f manifest.yaml` | `apply -f` |
+| `docker compose -f docker-compose.prod.yml up` | `compose up` / `up --detach` |
 
 **Decision procedure:**
 
-1. Before writing `file_contains "path" "<command> <subcommand>"` (e.g., `"git commit"`, `"git push"`), check whether the implementation may insert flags between the command name and sub-command (e.g., `git -C`, `ssh -i key host`)
+1. Before writing `file_contains "path" "<command> <subcommand>"` (e.g., `"git commit"`, `"git push"`, `"kubectl apply"`, `"docker compose up"`, `"ssh user@host"`), check whether the implementation may insert flags between the command name and sub-command (e.g., `git -C`, `ssh -i ~/.ssh/key user@host`, `kubectl --context prod`, `docker compose -f`)
 2. If yes (or uncertain): use `commit -s`, `commit -m`, or another contiguous sub-string anchor instead
 3. Verify the chosen anchor appears literally in the implementation file (cross-reference procedure from §3)
 

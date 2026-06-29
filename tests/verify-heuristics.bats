@@ -18,3 +18,15 @@ VERIFY_PATTERNS="$PROJECT_ROOT/modules/verify-patterns.md"
 @test "verify-heuristics: behavioral changes section exists in verify-patterns.md" {
     grep -q "Behavioral Changes" "$VERIFY_PATTERNS"
 }
+
+@test "verify-heuristics: §23 generalization includes kubectl example" {
+    grep -q "kubectl" "$VERIFY_PATTERNS"
+}
+
+@test "verify-heuristics: §23 generalization includes docker compose example" {
+    grep -q "docker compose" "$VERIFY_PATTERNS"
+}
+
+@test "verify-heuristics: §23 ssh example uses real key path" {
+    grep -q "~/.ssh/" "$VERIFY_PATTERNS"
+}
