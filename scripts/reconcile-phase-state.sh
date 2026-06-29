@@ -232,6 +232,14 @@ _completion_code_patch() {
   local labels state
   labels=$(gh issue view "$ISSUE_NUMBER" --json labels -q '.labels[].name' 2>/dev/null) || true
   state=$(gh issue view "$ISSUE_NUMBER" --json state -q '.state' 2>/dev/null) || true
+
+  # When issue was reopened (reopen_ts != null), phase/verify is stale from the previous
+  # verify run and must not be treated as a completion signal.
+  if [[ -n "$reopen_ts" && "$reopen_ts" != "null" ]]; then
+    _handle_mismatch "$mismatch_diag" "$actual_json"
+    return
+  fi
+
   if echo "$labels" | grep -qE '^phase/(verify|done)$' || [[ "$state" == "CLOSED" ]]; then
     _emit_result "true" "async external commit area: closes #${ISSUE_NUMBER} not in git log but phase label or state confirms completion" "$actual_json"
     return
