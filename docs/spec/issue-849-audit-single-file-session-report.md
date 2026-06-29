@@ -96,3 +96,48 @@
 ### Uncertainty resolution
 
 - Nothing to note — codebase investigation で全ての変更対象を特定できた。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. All Spec implementation steps were followed exactly as designed.
+
+### Design Gaps/Ambiguities
+
+- The Spec referenced line numbers (e.g., "lines 966-980") which had already shifted slightly; actual lines were approximately 966-977. Content-based editing handled this transparently.
+
+### Rework
+
+- None. The implementation proceeded cleanly in a single pass.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- All pre-merge verify commands passed (file_not_contains, file_not_exists, rubric) — no MUST/SHOULD/CONSIDER issues found
+- All CI checks passed: DCO, bats, validate-skill-syntax, Forbidden Expressions, macOS shell compat
+- Translation sync confirmed: docs/ja/structure.md and docs/ja/workflow.md updated in same commit as English counterparts
+
+### Deferred Items
+- Post-merge verification: confirm that the next `/audit auto-session` run produces only `data-layer.md` and no `-ja.md` sibling (observation event=auto-run, AC4 post-merge)
+
+### Notes for Next Phase
+- No issues from review phase; PR is ready for merge
+- Workflow path (capabilities.workflow: true) attempted but review-spec/review-bug agent types unavailable; general-purpose agents used as fallback — all reached same "no issues" conclusion
+- Post-merge: observe next /audit auto-session run to confirm AC4
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Nothing to note — the PR diff matched the Spec's Changed Files list exactly. All 12 files (1 SKILL.md + 5 deleted ja.md + 1 session.md + 2 structure.md + 2 workflow.md + 1 spec.md) were present and accounted for. The Spec file itself was updated with Code Retrospective + Phase Handoff as part of the normal /code flow.
+
+### Recurring issues
+
+- Nothing to note — this was a clean deletion PR with no structural complexity. No repeated issue patterns were detected.
+
+### Acceptance criteria verification difficulty
+
+- All pre-merge verify commands used `file_not_contains` and `file_not_exists` patterns, which are straightforward to verify automatically. The `rubric`-based conditions were evaluable from the diff context.
+- The post-merge condition (observation event=auto-run) is appropriately deferred — cannot be verified until the next `/audit auto-session` run.

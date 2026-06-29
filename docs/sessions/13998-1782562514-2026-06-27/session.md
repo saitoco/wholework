@@ -102,7 +102,6 @@ notable 判定: **YES** (Tier 3 recovery 3 件、watchdog kill 3 件、concurren
 ## See also
 
 - [Data layer report](docs/sessions/13998-1782562514-2026-06-27/data-layer.md)
-- [Data layer report (日本語)](docs/sessions/13998-1782562514-2026-06-27/data-layer-ja.md)
 
 ---
 
