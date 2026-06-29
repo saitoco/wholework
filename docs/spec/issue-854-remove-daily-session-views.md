@@ -213,3 +213,6 @@
 - **Token Usage Aggregate**: `token_usage` event schema に issue 粒度が無ければ session 合計でフォールバック (`/code` で schema 確認)。
 - **`run-auto-sub.sh`**: 単純な呼び出し行ではなく `_append_loop_state_heartbeat()` 関数 + 専用ヘルパ + 全呼び出し箇所を除去 (`file_not_contains "append-loop-state-heartbeat"` を満たす)。
 - 削除する bats `@test` の scenario は廃止 feature 専用のため別 test での再カバー不要 (#526)。
+
+## Consumed Comments
+No new comments since last phase.
