@@ -162,44 +162,8 @@ _maybe_emit_phase_complete() {
 }
 trap '_maybe_emit_phase_complete' EXIT
 
-# Maps the internal phase name used by run_phase_with_recovery to the
-# (from→to) labels used by the loop-state heartbeat. Phases not in the map
-# (anything outside the auto code/review/merge orchestration) trigger no
-# heartbeat — verify phase heartbeats are emitted by the parent /auto SKILL.md.
-_loop_state_from_phase() {
-  case "$1" in
-    code-patch|code-pr) echo "spec" ;;
-    review)             echo "code" ;;
-    merge)              echo "review" ;;
-    *)                  echo "" ;;
-  esac
-}
-
-_loop_state_to_phase() {
-  case "$1" in
-    code-patch|code-pr) echo "code" ;;
-    review)             echo "review" ;;
-    merge)              echo "merge" ;;
-    *)                  echo "" ;;
-  esac
-}
-
 # _emit_comments_consumed() is now defined in emit-event.sh (Issue #791).
 # Sourced via: source "$SCRIPT_DIR/emit-event.sh" above.
-
-# Best-effort heartbeat append. Never blocks the caller. Issue #701 — replaces
-# the LLM-driven inline procedure in skills/auto/SKILL.md that was not firing
-# in batch mode (which executes here through bash, bypassing the LLM steps).
-_append_loop_state_heartbeat() {
-  local phase="$1" issue="$2"
-  local from to
-  from=$(_loop_state_from_phase "$phase")
-  to=$(_loop_state_to_phase "$phase")
-  [[ -z "$from" || -z "$to" ]] && return 0
-  "$SCRIPT_DIR/append-loop-state-heartbeat.sh" \
-    --issue "$issue" --from "$from" --to "$to" --phase-label "$to" \
-    >/dev/null 2>&1 || true
-}
 
 _write_tier2_recovery_to_spec() {
   local issue="$1"
@@ -481,7 +445,6 @@ run_phase_with_recovery() {
       echo "$anomaly_out"
     fi
     emit_event "phase_complete" "phase=${phase}"
-    _append_loop_state_heartbeat "$phase" "$issue"
     return 0
   fi
 
@@ -491,7 +454,6 @@ run_phase_with_recovery() {
     echo "${LOG_PREFIX} [recovery] tier1 reconciler: phase completed despite wrapper exit $exit_code"
     emit_event "recovery" "phase=${phase}" "tier=1" "result=recovered"
     emit_event "phase_complete" "phase=${phase}"
-    _append_loop_state_heartbeat "$phase" "$issue"
     return 0
   fi
 
@@ -509,7 +471,6 @@ run_phase_with_recovery() {
     rm -f "$_fallback_meta_file"
     emit_event "recovery" "phase=${phase}" "tier=2" "result=recovered"
     emit_event "phase_complete" "phase=${phase}"
-    _append_loop_state_heartbeat "$phase" "$issue"
     return 0
   fi
   rm -f "$_fallback_meta_file"
@@ -530,7 +491,6 @@ run_phase_with_recovery() {
     _write_tier3_recovery_to_spec "$issue" "$phase" "$exit_code"
     emit_event "recovery" "phase=${phase}" "tier=3" "result=recovered"
     emit_event "phase_complete" "phase=${phase}"
-    _append_loop_state_heartbeat "$phase" "$issue"
     return 0
   fi
 

@@ -157,10 +157,6 @@ if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
   fi
 fi
 
-if [[ $EXIT_CODE -eq 0 ]]; then
-  "$SCRIPT_DIR/append-loop-state-heartbeat.sh" --issue "$PR_NUMBER" --from code --to review >/dev/null 2>&1 || true
-fi
-
 if [[ $EXIT_CODE -eq 0 && -n "${_EMIT_PHASE_OWNED:-}" ]]; then
   emit_event "phase_complete" "phase=${EMIT_PHASE_NAME}"
 fi
