@@ -1,13 +1,15 @@
 #!/bin/bash
-# check-verify-dirty.sh - Classify dirty files for /verify Step 1
+# check-verify-dirty.sh - Session-aware dirty file classifier for /verify Step 1
 #
 # Usage: check-verify-dirty.sh <issue-number>
 #
 # Exit codes:
-#   0 — working directory is clean
-#   1 — dirty files include related or non-spec files (hard-error abort)
-#   2 — all dirty files are unrelated spec files (docs/spec/issue-N-*.md, N != issue-number)
+#   0 — working directory is clean, or all dirty files are self-worktree / other-worktree / other-session
+#   1 — dirty files include related or non-spec parent-main files (hard-error abort)
+#   2 — all remaining (parent-main) dirty files are unrelated spec files (docs/spec/issue-N-*.md, N != issue-number)
 #
+# Outputs classify=... lines to stderr for each dirty file (4-way classification:
+#   self-worktree, other-worktree, other-session, parent-main).
 # On exit 2, prints the unrelated spec file paths to stdout (one per line).
 
 set -euo pipefail
@@ -94,6 +96,29 @@ if [[ ${#ignored_files[@]} -gt 0 ]]; then
   if [[ ${#filtered[@]} -eq 0 ]]; then exit 0; fi
   dirty_files=("${filtered[@]}")
 fi
+
+# Session-aware classification: classify dirty files by origin before spec classification.
+# self-worktree: own session's worktree directory -> exit 0 (not a true dirty conflict)
+# other-worktree: another session's worktree directory -> stderr warning only (not blocking)
+# other-session: another session's docs/sessions dir -> stderr warning only (not blocking)
+# parent-main: everything else -> pass through to existing classification
+parent_main_files=()
+for f in "${dirty_files[@]}"; do
+  if [[ "$f" == .claude/worktrees/*+issue-${NUMBER}/* ]]; then
+    echo "[check-verify-dirty] classify=self-worktree path=$f" >&2
+  elif [[ "$f" == .claude/worktrees/* ]]; then
+    echo "[check-verify-dirty] classify=other-worktree path=$f" >&2
+  elif [[ "$f" == docs/sessions/*-*/* ]]; then
+    echo "[check-verify-dirty] classify=other-session path=$f" >&2
+  else
+    echo "[check-verify-dirty] classify=parent-main path=$f" >&2
+    parent_main_files+=("$f")
+  fi
+done
+if [[ ${#parent_main_files[@]} -eq 0 ]]; then
+  exit 0
+fi
+dirty_files=("${parent_main_files[@]}")
 
 # Classify each dirty file
 unrelated_spec_files=()

@@ -238,7 +238,7 @@ Key modules:
 - `scripts/validate-permissions.sh` — validate skill directory ↔ name: field consistency
 - `scripts/validate-skill-syntax.py` — validate SKILL.md frontmatter and syntax
 - `scripts/check-file-overlap.sh` — detect file overlap between repos
-- `scripts/check-verify-dirty.sh` — classify dirty files as unrelated spec or other for /verify Step 1
+- `scripts/check-verify-dirty.sh` — session-aware dirty file classifier for /verify Step 1 (self-worktree / other-worktree / other-session / parent-main 4-way classification; outputs classify=... to stderr)
 - `scripts/check-translation-sync.sh` — check translation sync status of docs/ja/* against docs/*
 - `scripts/check-forbidden-expressions.sh` — detect deprecated terms from docs/product.md § Terms
 - `scripts/setup-labels.sh` — create GitHub labels for workflow

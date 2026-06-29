@@ -18,6 +18,8 @@ setup() {
     git init -q
     git config user.email "test@example.com"
     git config user.name "Test"
+    # Disable global gitignore so .claude/worktrees/ paths appear in git status
+    git config core.excludesFile /dev/null
     # Track docs/spec so individual spec files appear in git status --short
     touch docs/spec/.gitkeep
     git add docs/spec/.gitkeep
@@ -168,4 +170,47 @@ EOF
     make_dirty "scripts/some-script.sh"
     run bash "$REAL_SCRIPT" 123
     [ "$status" -eq 1 ]
+}
+
+@test "session-aware: self-worktree only dirty -> exit 0" {
+    cd "$REPO_DIR"
+    make_dirty ".claude/worktrees/code+issue-123/docs/spec/issue-123-foo.md"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"classify=self-worktree"* ]]
+}
+
+@test "session-aware: other-worktree only dirty -> exit 0 with warning" {
+    cd "$REPO_DIR"
+    make_dirty ".claude/worktrees/code+issue-999/scripts/foo.sh"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"classify=other-worktree"* ]]
+}
+
+@test "session-aware: other-session only dirty -> exit 0 with warning" {
+    cd "$REPO_DIR"
+    mkdir -p "docs/sessions/82534-1782700033"
+    make_dirty "docs/sessions/82534-1782700033/data-layer.md"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"classify=other-session"* ]]
+}
+
+@test "session-aware: parent-main only dirty -> exit 1" {
+    cd "$REPO_DIR"
+    make_dirty "scripts/some-script.sh"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"classify=parent-main"* ]]
+}
+
+@test "session-aware: self-worktree mixed with parent-main -> exit 1" {
+    cd "$REPO_DIR"
+    make_dirty ".claude/worktrees/code+issue-123/docs/spec/issue-123-foo.md"
+    make_dirty "scripts/foo.sh"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"classify=self-worktree"* ]]
+    [[ "$output" == *"classify=parent-main"* ]]
 }
