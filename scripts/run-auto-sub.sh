@@ -14,6 +14,30 @@ _spec_has_changes() {
   git -C "$repo_root" status --porcelain "$spec_rel_path" 2>/dev/null | grep -q .
 }
 
+# Validates recovery function arguments to prevent path traversal via glob patterns.
+# Usage: _validate_recovery_args ISSUE [PHASE] [RECOVERY_TYPE]
+# Returns 1 and prints to stderr if any argument fails validation.
+_validate_recovery_args() {
+  local _issue="${1:-}"
+  local _phase="${2:-}"
+  local _recovery_type="${3:-}"
+
+  if [[ -z "$_issue" ]] || ! [[ "$_issue" =~ ^[0-9]+$ ]]; then
+    echo "_validate_recovery_args: invalid issue: '${_issue}'" >&2
+    return 1
+  fi
+
+  if [[ -n "$_phase" ]] && ! [[ "$_phase" =~ ^[a-z][a-z0-9-]*$ ]]; then
+    echo "_validate_recovery_args: invalid phase: '${_phase}'" >&2
+    return 1
+  fi
+
+  if [[ -n "$_recovery_type" ]] && ! [[ "$_recovery_type" =~ ^[a-z][a-z0-9-]*$ ]]; then
+    echo "_validate_recovery_args: invalid recovery_type: '${_recovery_type}'" >&2
+    return 1
+  fi
+}
+
 # --write-manual-recovery subcommand: write manual recovery record to sub-issue Spec.
 # Usage: run-auto-sub.sh --write-manual-recovery ISSUE [PHASE] [RECOVERY_TYPE]
 # See modules/orchestration-fallbacks.md#manual-recovery-spec-write
@@ -21,6 +45,7 @@ _write_manual_recovery_to_spec() {
   local issue="$1"
   local phase="${2:-unknown}"
   local recovery_type="${3:-unspecified}"
+  _validate_recovery_args "$issue" "$phase" "$recovery_type" || return 1
   local _script_dir="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
   local _repo_root
   _repo_root="$(dirname "$_script_dir")"
@@ -179,6 +204,7 @@ _append_loop_state_heartbeat() {
 _write_tier2_recovery_to_spec() {
   local issue="$1"
   local meta_file="$2"
+  _validate_recovery_args "$issue" || return 1
   local _repo_root
   _repo_root="$(dirname "$SCRIPT_DIR")"
   local spec_dir="$_repo_root/docs/spec"
@@ -218,6 +244,7 @@ _write_tier3_recovery_to_spec() {
   local issue="$1"
   local phase="$2"
   local exit_code="$3"
+  _validate_recovery_args "$issue" "$phase" || return 1
   local _repo_root
   _repo_root="$(dirname "$SCRIPT_DIR")"
   local spec_dir="$_repo_root/docs/spec"

@@ -1016,6 +1016,21 @@ MOCK
     [[ "$output" == *"[resume]"* ]]
 }
 
+@test "validate: --write-manual-recovery rejects whitespace-only issue" {
+    run bash "$SCRIPT" --write-manual-recovery " " code push-only
+    [ "$status" -ne 0 ]
+}
+
+@test "validate: --write-manual-recovery rejects non-numeric issue" {
+    run bash "$SCRIPT" --write-manual-recovery "abc" code push-only
+    [ "$status" -ne 0 ]
+}
+
+@test "validate: --write-manual-recovery rejects phase with whitespace" {
+    run bash "$SCRIPT" --write-manual-recovery "42" "bad phase" push-only
+    [ "$status" -ne 0 ]
+}
+
 @test "retry-on-kill: child runner killed once then succeeds, run-auto-sub exits 0" {
     COUNTER_FILE="$BATS_TEST_TMPDIR/call_counter"
     echo "0" > "$COUNTER_FILE"
