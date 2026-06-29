@@ -96,3 +96,33 @@
 ### Uncertainty resolution
 
 - Nothing to note — codebase investigation で全ての変更対象を特定できた。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. All Spec implementation steps were followed exactly as designed.
+
+### Design Gaps/Ambiguities
+
+- The Spec referenced line numbers (e.g., "lines 966-980") which had already shifted slightly; actual lines were approximately 966-977. Content-based editing handled this transparently.
+
+### Rework
+
+- None. The implementation proceeded cleanly in a single pass.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Deleted all 5 existing `data-layer-ja.md` sibling files as specified; none were kept for historical reference
+- Removed the `--no-ja` flag from routing example, usage string, and argument parsing section — the flag is fully deprecated
+- Updated `docs/ja/` mirror files in the same commit to keep translation sync current
+
+### Deferred Items
+- Post-merge verification: confirm that the next `/audit auto-session` run produces only `data-layer.md` and no `-ja.md` sibling (observation event=auto-run, AC4)
+
+### Notes for Next Phase
+- All pre-merge verify commands passed locally; CI should confirm `file_not_contains` checks pass against the PR branch
+- The auto-session Subcommand now stops at Step 2 (Display Result) — the Step 3 heading no longer exists, which is correct
+- No forbidden expressions violations were found; the check passed cleanly
