@@ -669,6 +669,117 @@ MOCK
     [[ "$output" != *"Warning:"*"Signed-off-by"* ]]
 }
 
+@test "auto-retry: silent no-op + AUTO_RETRY_ENABLED=true fires retry (CODE_RETRY_COUNT increments)" {
+    # When reconcile returns matches_expected:false and auto-retry is configured,
+    # run-code.sh re-invokes itself via exec. To avoid an infinite loop in the test,
+    # the second invocation uses a reconcile mock that returns matches_expected:true.
+    RETRY_COUNTER_FILE="$BATS_TEST_TMPDIR/retry_count.txt"
+    echo "0" > "$RETRY_COUNTER_FILE"
+    export RETRY_COUNTER_FILE
+
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'EOF'
+permission-mode: bypass
+auto-retry-on-fail:
+  enabled: true
+  max_iterations: 3
+EOF
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    autonomy) echo "L3" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<MOCK
+#!/bin/bash
+N=\$(cat "${RETRY_COUNTER_FILE}" 2>/dev/null || echo 0)
+N=\$((N + 1))
+echo "\$N" > "${RETRY_COUNTER_FILE}"
+if [[ "\$N" -eq 1 ]]; then
+  echo '{"matches_expected":false,"phase":"code-pr"}'
+else
+  echo '{"matches_expected":true,"phase":"code-pr"}'
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    run bash "$SCRIPT" 123 --pr
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"auto-retry: code phase silent no-op"* ]]
+    [ "$(cat "$RETRY_COUNTER_FILE")" -ge 2 ]
+}
+
+@test "auto-retry: silent no-op + AUTO_RETRY_ENABLED=false does not retry, exits 1" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'EOF'
+permission-mode: bypass
+auto-retry-on-fail:
+  enabled: false
+EOF
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    autonomy) echo "L3" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false,"phase":"code-pr"}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    run bash "$SCRIPT" 123 --pr
+    [ "$status" -eq 1 ]
+    [[ "$output" != *"auto-retry: code phase silent no-op"* ]]
+}
+
+@test "auto-retry: CODE_RETRY_COUNT at max does not retry and exits 1 with advisory" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'EOF'
+permission-mode: bypass
+auto-retry-on-fail:
+  enabled: true
+  max_iterations: 3
+EOF
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    autonomy) echo "L3" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false,"phase":"code-pr"}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    CODE_RETRY_COUNT=3 run bash "$SCRIPT" 123 --pr
+    [ "$status" -eq 1 ]
+    [[ "$output" != *"auto-retry: code phase silent no-op, retry"* ]]
+    [[ "$output" == *"max iterations reached"* ]]
+}
+
 @test "retry-on-kill: retry-success - killed once then succeeds, wrapper exits 0" {
     COUNTER_FILE="$BATS_TEST_TMPDIR/call_counter"
     echo "0" > "$COUNTER_FILE"

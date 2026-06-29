@@ -89,7 +89,21 @@ apply_dco_signoff_autofix() {
 # Handler: code-patch-silent-no-op
 # Retries run-code.sh --patch once when a silent no-op is detected on the patch route.
 # Safe because reconcile confirms commits_found:false (clean state, no partial commit).
+# Guard: skips Tier 2 retry when run-code.sh built-in auto-retry is configured to prevent
+# double-retry (run-code.sh exhausts its retries before returning, so Tier 2 would be redundant).
 apply_code_patch_silent_no_op_retry() {
+  local _ww_yml
+  _ww_yml="$(dirname "$SCRIPT_DIR")/.wholework.yml"
+  local _auto_retry_enabled="false"
+  if [[ -f "$_ww_yml" ]]; then
+    local _raw
+    _raw=$(awk '/^auto-retry-on-fail:/{f=1; next} f && /^[[:space:]]+enabled:/{gsub(/.*enabled:[[:space:]]*/,""); gsub(/[[:space:]].*/,""); print; exit} /^[^[:space:]]/{f=0}' "$_ww_yml" | tr -d ' ')
+    [[ "$_raw" == "true" ]] && _auto_retry_enabled="true"
+  fi
+  if [[ "$_auto_retry_enabled" == "true" ]]; then
+    echo "[apply-fallback] code-patch-silent-no-op: AUTO_RETRY_ENABLED=true, built-in retry in run-code.sh already exhausted; skipping Tier 2 retry" >&2
+    return 0
+  fi
   echo "[apply-fallback] code-patch-silent-no-op: retrying run-code.sh --patch for issue $ISSUE" >&2
   "$SCRIPT_DIR/run-code.sh" "$ISSUE" --patch >> "$LOG_FILE" 2>&1
   echo "[apply-fallback] code-patch-silent-no-op: done" >&2

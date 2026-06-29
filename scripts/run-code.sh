@@ -5,6 +5,8 @@
 set -euo pipefail
 ISSUE_NUMBER="${1:?Usage: run-code.sh <issue-number> [--patch|--pr] [--base <branch>]}"
 shift
+# Save trailing args before parsing loop so exec re-invocation can pass them unchanged
+_TRAILING_ARGS=("$@")
 
 # Parse options
 ROUTE_FLAG=""
@@ -99,6 +101,22 @@ else
   PERMISSION_FLAG="--dangerously-skip-permissions"
   _PERM_LABEL="skip (autonomous mode)"
 fi
+
+AUTONOMY_TIER=$("$SCRIPT_DIR/get-config-value.sh" autonomy L1 2>/dev/null || echo L1)
+_REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+_WW_YML="${_REPO_ROOT}/.wholework.yml"
+AUTO_RETRY_ENABLED="false"
+AUTO_RETRY_MAX_ITERATIONS=3
+if [[ -f "$_WW_YML" ]]; then
+  _raw_enabled=$(awk '/^auto-retry-on-fail:/{f=1; next} f && /^[[:space:]]+enabled:/{gsub(/.*enabled:[[:space:]]*/,""); gsub(/[[:space:]].*/,""); print; exit} /^[^[:space:]]/{f=0}' "$_WW_YML" | tr -d ' ')
+  [[ "$_raw_enabled" == "true" ]] && AUTO_RETRY_ENABLED="true"
+  _raw_max=$(awk '/^auto-retry-on-fail:/{f=1; next} f && /^[[:space:]]+(max_iterations|threshold):/{gsub(/.*:[[:space:]]*/,""); gsub(/[[:space:]].*/,""); print; exit} /^[^[:space:]]/{f=0}' "$_WW_YML" | tr -d ' ')
+  if [[ -n "$_raw_max" && "$_raw_max" =~ ^[0-9]+$ && "$_raw_max" -gt 0 ]]; then
+    AUTO_RETRY_MAX_ITERATIONS="$_raw_max"
+  fi
+fi
+CODE_RETRY_COUNT=${CODE_RETRY_COUNT:-0}
+export CODE_RETRY_COUNT
 
 echo "=== run-code.sh: Starting /code for issue #${ISSUE_NUMBER} ==="
 source "$SCRIPT_DIR/phase-banner.sh"
@@ -252,7 +270,25 @@ if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
     fi
   elif echo "$_reconcile_out" | grep -q '"matches_expected":false'; then
     echo "Warning: claude exited 0 but $_RECONCILE_PHASE phase did not complete (silent no-op). reconcile: $_reconcile_out" >&2
-    EXIT_CODE=1
+    if [[ ( "$AUTONOMY_TIER" == "L2" || "$AUTONOMY_TIER" == "L3" ) ]] && \
+       [[ "$AUTO_RETRY_ENABLED" == "true" ]] && \
+       [[ "$CODE_RETRY_COUNT" -lt "$AUTO_RETRY_MAX_ITERATIONS" ]]; then
+      CODE_RETRY_COUNT=$(( CODE_RETRY_COUNT + 1 ))
+      export CODE_RETRY_COUNT
+      echo "auto-retry: code phase silent no-op, retry ${CODE_RETRY_COUNT}/${AUTO_RETRY_MAX_ITERATIONS}" >&2
+      if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+        EMIT_ISSUE_NUMBER="$ISSUE_NUMBER" emit_event "code_retry_fire" \
+          "iteration=${CODE_RETRY_COUNT}" \
+          "trigger_reason=silent_no_op"
+      fi
+      exec bash "$0" "$ISSUE_NUMBER" "${_TRAILING_ARGS[@]}"
+    else
+      if [[ ( "$AUTONOMY_TIER" == "L2" || "$AUTONOMY_TIER" == "L3" ) ]] && \
+         [[ "$AUTO_RETRY_ENABLED" == "true" ]]; then
+        echo "auto-retry: max iterations reached (${CODE_RETRY_COUNT}/${AUTO_RETRY_MAX_ITERATIONS}). Manual intervention required." >&2
+      fi
+      EXIT_CODE=1
+    fi
   fi
 fi
 

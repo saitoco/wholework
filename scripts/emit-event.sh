@@ -34,6 +34,10 @@
 #   trigger_reason=<reason>       ac_fail | verify_timeout | verify_uncertain
 #   budget_remaining_tokens=<n|unknown>   estimated remaining token budget; "unknown" when token tracking is not yet implemented
 #
+# code_retry_fire: run-code.sh detected silent no-op and fired auto-retry
+#   iteration=<n>                 code retry iteration counter (1-based within auto-retry)
+#   trigger_reason=<reason>       silent_no_op
+#
 # recoveries_threshold_fire: verify tail detected threshold-exceeding symptom and auto-filed Issue
 #   symptom=<symptom-short>       symptom identifier from orchestration-recoveries.md
 #   count=<n>                     occurrence count that exceeded threshold
