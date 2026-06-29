@@ -732,10 +732,17 @@ The script aggregates `gh issue list` open-issue counts by `phase/*` label (omit
      ```bash
      jq -c 'select(.session_id == "'"$AUTO_SESSION_ID"'")' .tmp/auto-events.jsonl > "$SESSION_DIR/events.jsonl" 2>/dev/null || true
      ```
-   - Generate data layer report (best-effort; log warning on failure and continue):
+   - Generate data layer report (--no-github; retry-once on failure; log stderr to data-layer-stderr.log):
      ```bash
-     "${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh" "$AUTO_SESSION_ID" --output "$SESSION_DIR/data-layer.md" 2>/dev/null \
-       || echo "Warning: data-layer.md generation failed — continuing without data layer report"
+     if ! "${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh" "$AUTO_SESSION_ID" --output "$SESSION_DIR/data-layer.md" --no-github 2>"$SESSION_DIR/data-layer-stderr.log"; then
+       if ! "${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh" "$AUTO_SESSION_ID" --output "$SESSION_DIR/data-layer.md" --no-github 2>>"$SESSION_DIR/data-layer-stderr.log"; then
+         echo "Warning: data-layer.md generation failed — continuing without data layer report"
+       else
+         rm -f "$SESSION_DIR/data-layer-stderr.log"
+       fi
+     else
+       rm -f "$SESSION_DIR/data-layer-stderr.log"
+     fi
      ```
 
 3. **Notable judgment** (using events from `.tmp/auto-events.jsonl` and in-context variables):
