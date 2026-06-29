@@ -44,3 +44,13 @@
 - #834 — tests: auto-completion-report.bats の helper 関数使用方針を統一
 - #836 — scripts: auto-events-rollup.sh の nothing-to-commit warning を silent skip 化
 - #837 — issue: verify command 生成時の git invocation contiguous sub-string heuristic を追加
+
+## Continuation session (Round 2 / Round 3 / Backlog drain)
+
+本 Round 1 session の完了後、AUTO_SESSION_ID=36439-1782670934 で同日内に継続実行:
+
+- Round 2: 5 件 (#831, #837, #827, #826, #829) を消化 + 4 件 retro 起票 (#839, #841, #843, +別)
+- Round 3: 5 件 (#839, #832, #836, #834, #841) を消化 + 0 件 retro (収束)
+- Backlog drain: #821 を Tier 2 recovery 経由で消化
+
+詳細は [継続セッション retrospective](../36439-1782670934-2026-06-28/session.md) 参照。最終的に本セッション対象の Backlog はゼロまで drain 完了。
