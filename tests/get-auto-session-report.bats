@@ -132,3 +132,21 @@ FIXTURE_EOF
     [ -f "$OUTPUT_PATH" ]
     ! grep -q "## See also" "$OUTPUT_PATH"
 }
+
+@test "concurrent_commit_detected: commit without #N hint does not abort report" {
+    # Regression test for #848 reopen: concurrent_commit_detected with a commit message
+    # that contains no "#NNN" reference (e.g. "chore: loop-state heartbeat auto-commit")
+    # used to abort the script via `set -e` + pipefail because the grep no-match exited 1.
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"session-grepfix","size":"S"}
+{"ts":"2026-06-14T10:01:00Z","issue":100,"event":"concurrent_commit_detected","session_id":"session-grepfix","phase":"code","commit_sha":"deadbeefdeadbeefdeadbeefdeadbeefdeadbeef","author":"Toshihiro Saito"}
+{"ts":"2026-06-14T10:02:00Z","issue":100,"event":"sub_complete","session_id":"session-grepfix","exit_code":"0"}
+FIXTURE_EOF
+
+    run bash "$SCRIPT" "session-grepfix" --output "$OUTPUT_PATH" --no-github
+    [ "$status" -eq 0 ]
+    [ -f "$OUTPUT_PATH" ]
+    grep -q "Concurrent Commits\|concurrent_commit_detected\|Concurrent commits" "$OUTPUT_PATH" || true
+    # The line for the commit without a #NNN hint should be present (without an issue hint).
+    grep -q "deadbeef" "$OUTPUT_PATH"
+}

@@ -586,7 +586,7 @@ if [[ "$CONCURRENT_COMMITS" -gt 0 ]]; then
     _issue_hint=""
     _commit_msg=$(git log -1 --format='%s%n%b' "$_sha" 2>/dev/null || true)
     if [[ -n "$_commit_msg" ]]; then
-      _issue_hint=$(echo "$_commit_msg" | grep -ioE '(closes|fixes|resolves)?[[:space:]]*#[0-9]+' | grep -oE '#[0-9]+' | head -1)
+      _issue_hint=$(echo "$_commit_msg" | grep -ioE '(closes|fixes|resolves)?[[:space:]]*#[0-9]+' | grep -oE '#[0-9]+' | head -1 || true)
     fi
     if [[ -n "$_issue_hint" ]]; then
       CONCURRENT_SECTION+="- [${_ts}] phase=${_phase} sha=${_sha8} → ${_issue_hint} (author=${_author})"$'\n'
