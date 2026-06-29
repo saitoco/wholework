@@ -155,11 +155,15 @@ Anthropic の Managed Agents + Outcomes は隣接する Outcome rubric ループ
 | Ambiguity point | Issue 本文中の複数解釈が可能な要件・制約・条件。`/issue` と `/spec` が ambiguity-detector パターンテーブルで検出し、ユーザー確認またはコードベースのパターンに基づく Auto-resolution で解消する | /issue, /spec | 曖昧点 |
 | Auto-resolution | モデル判断（最小リスク優先、既存パターン整合）で曖昧点を非対話的に解決する手段。選択肢と根拠は Auto-Resolve Log として Retrospective に記録される。skip（高影響行動の保留）や hard-error（前提条件未充足）とは別の tier | /issue, /spec、非対話モード | 自動解決 |
 | auto-verify | `/verify` が実行する自動検証プロセス。各受入条件の verify command を実行し、合格条件にチェックを入れ、失敗時に Issue を reopen する | /verify Skill | 自動検証 |
+| Autonomy tier | `autonomy:` フィールド（`L1` / `L2` / `L3`）で、スキルが L0 GitHub 状態をどこまで書き込み、L2→L1 パスを起動できるかを宣言する。SSoT: `modules/autonomy-tier.md`。`permission-mode` とは直交する概念 | スキル開発、設定 | Autonomy tier |
 | Capability | `.wholework.yml` `capabilities.*`（例: `capabilities.browser: true`）で宣言する機能の可用性。`HAS_{NAME}_CAPABILITY` 環境変数に変換され、スキルが補助ファイルの読み込みや adapter の呼び出し前に確認する。実行環境に応じたプログレッシブ・ディスクロージャーを実現する | スキル開発、設定 | Capability |
+| Config marker | `.wholework.yml` のキー（例: `capabilities.browser`）。`modules/detect-config-markers.md` がランタイムフラグ（`HAS_BROWSER_CAPABILITY`）に変換する。スキルは補助 Domain file の読み込みや adapter の呼び出し前にこれらのフラグを確認する | スキル開発 | コンフィグマーカー |
 | Domain file | スキルから marker 検出、ファイル存在確認、ディレクトリスキャンによって条件付きで読み込まれる補助 Markdown。SKILL.md のコアを補い、環境やプロジェクト固有のロジックを加えつつコアを軽量に保つ。プロジェクトローカルのカスタマイズは `.wholework/domains/{skill}/` で対応 | スキル開発 | Domain file |
 | Drift | ドキュメント化された仕様（Steering Documents や Spec）と実際のコード実装とのあいだの意味的乖離。`/audit drift` で検出 | /audit Skill | ドリフト |
 | Fork context | メインの対話に影響を与えないスキル実行モード | Claude Code | fork コンテキスト |
+| Issue triage | Type/Priority/Size/Value をメインワークフロー開始前にアサインする初期評価フェーズ。`/triage` スキルとして実装されており、Issue に `phase/*` ラベルがない場合は `/auto` が自動的に triage を連鎖させる | /triage, /auto | Issue triage |
 | Non-interactive mode | `run-*.sh` 経由で `claude -p --dangerously-skip-permissions` から呼び出されるスキル実行モード。`AskUserQuestion` が使えないため、意思決定点で 3-tier ポリシー（auto-resolve / skip / hard-error）を適用する。`ARGUMENTS` 内の `--non-interactive` で判定される | run-*.sh、/auto | 非対話モード |
+| Orchestration recovery | `/auto` オーケストレーション失敗に対する 3 段階復旧メカニズム: (1) `reconcile-phase-state.sh` による完了確認、(2) `apply-fallback.sh` による既知パターン復旧、(3) `spawn-recovery-subagent.sh` による Tier 3 サブエージェント診断 | /auto, orchestration | オーケストレーション復旧 |
 | Patch route | XS/S サイズ Issue のワークフロー経路。Pull Request を作成せず main ブランチに直接コミットする | 開発ワークフロー | パッチ経路 |
 | Phase Handoff | `modules/phase-handoff.md` に実装されたフェーズ横断の構造化サマリー機構。各フェーズは終了前に Handoff を書き込み、次フェーズが開始時に読み込む。次ステップの作業コンテキスト（AC 確認結果、スコープ注記、残存リスクなど）を伝達する。実行履歴を記録する Retrospective とは異なる概念。主に code → review → merge → verify のパスで使用 | /code、/merge、/review、/verify | Phase Handoff |
 | Phase label | Issue の現在のワークフローステージを示す `phase/*` GitHub ラベル（例: `phase/issue`、`phase/spec`、`phase/ready`、`phase/code`） | 開発ワークフロー | フェーズラベル |
@@ -172,6 +176,7 @@ Anthropic の Managed Agents + Outcomes は隣接する Outcome rubric ループ
 | Skill | Claude Code の拡張。処理ステップが `skills/<n>/SKILL.md` に記述され、`/<n>` で呼び出される | Claude Code | スキル |
 | Spec | `/spec` により作成される実装計画ドキュメント。`docs/spec/issue-N-short-title.md` に保存される。**各スキル実行後の Retrospective も蓄積し、ワークフロー横断のメモリとして機能する**。旧称: 'Design file' / 'Issue Spec' | 開発ワークフロー | Spec |
 | Steering Documents | 基盤ドキュメント（product/tech/structure）の総称。`docs/` 配下に保存 | /doc Skill | Steering Documents |
+| Steering hint | `modules/steering-hint.md` が出力する動的ガイダンス。Steering Documents が存在しない場合に `/doc init` を推奨する。`.wholework.yml` に `steering-hint: false` を設定すると無効化される | スキル開発 | Steering hint |
 | Sub-agent | Task ツール経由で起動されるサブエージェント。メインエージェントには結果のみを返す | Claude Code | サブエージェント |
 | Sub-issue | XL Issue を分解した子 Issue。`/auto` は `blockedBy` 依存グラフを読み、独立サブ issue を並列実行（worktree 分離）し、依存先はブロッカー完了後に順次実行する | 開発ワークフロー | サブ Issue |
 | verify command | `<!-- verify: ... -->` 形式の HTML コメント。受入条件に機械検証可能な方法を付与する。旧称: 'verification hint', 'verify hint', 'verify ヒント', '検証ヒント', 'Acceptance check' | /issue, /verify | verify command |
