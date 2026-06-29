@@ -113,4 +113,34 @@ git add "$OUTPUT_FILE" 2>/dev/null && \
 
 ## Consumed Comments
 
-- saito / MEMBER / first-class / Issue Retrospective: 変更検知方法 A vs B の auto-resolve 決定と AC 更新内容を記録 / https://github.com/saitoco/wholework/issues/836#issuecomment-...
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None — implementation followed Spec exactly.
+
+### Design Gaps/Ambiguities
+
+- None. The Spec Notes already addressed the `set -euo pipefail` interaction and confirmed the `if ... | grep -q .` pattern behaves correctly without a trailing `||` in the condition.
+
+### Rework
+
+- None — all tests passed on first attempt. Existing test (h) mock update was anticipated in the Spec Notes and applied correctly without iteration.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Adopted `git status --porcelain "$OUTPUT_FILE" | grep -q .` as the pre-check condition (option B from Spec), consistent with `run-auto-sub.sh` pattern from #831.
+- Updated test (h) git mock to return `M  some_file` output for `status` subcommand so the new `if` condition evaluates to true and commit is still asserted.
+- Added test (h2) asserting commit is NOT called when status returns empty (silent skip path).
+
+### Deferred Items
+- Post-merge observation (AC3): confirm no "nothing to commit" warning in next `/auto` run — deferred to runtime observation.
+
+### Notes for Next Phase
+- All pre-merge ACs verified: grep PASS, bats 10/10 PASS.
+- No structural or interface changes — review should be straightforward.
+- The `set -euo pipefail` interaction in the `if` condition is explained in Spec Notes; no behavior change risk.
