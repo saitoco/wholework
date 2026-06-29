@@ -229,7 +229,7 @@ wholework/
 - `scripts/validate-permissions.sh` — skill ディレクトリと name: フィールドの一貫性を検証
 - `scripts/validate-skill-syntax.py` — SKILL.md frontmatter と構文を検証
 - `scripts/check-file-overlap.sh` — リポジトリ間のファイル重複検出
-- `scripts/check-verify-dirty.sh` — dirty ファイルを unrelated spec または other に分類する /verify Step 1 ヘルパー
+- `scripts/check-verify-dirty.sh` — /verify Step 1 用 session-aware dirty file 分類スクリプト (self-worktree / other-worktree / other-session / parent-main の 4 分類; classify=... を stderr 出力)
 - `scripts/check-translation-sync.sh` — docs/ja/* と docs/* の翻訳同期状況を確認
 - `scripts/check-forbidden-expressions.sh` — docs/product.md § Terms の deprecated terms を検出
 - `scripts/setup-labels.sh` — ワークフロー用 GitHub ラベルを作成
