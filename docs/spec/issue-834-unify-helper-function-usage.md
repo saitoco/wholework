@@ -46,3 +46,29 @@
 - `auto-batch.bats` と `auto-xl-concurrency.bats` も同じ "helper 定義・inline awk 使用" パターンを持つが、本 Issue のスコープ外のため変更しない。
 
 **既存テスト確認:** 変更前に `bats tests/auto-completion-report.bats` を実行し、4 件全て PASS することを確認済み。
+
+## Code Retrospective
+
+### Deviations from Design
+- None: Spec の Implementation Steps の通りに実装できた。4 件の `@test` を `run bash -c "awk ... | grep -q ..."` + `[ "$status" -eq 0 ]` から `batch_completion_section | grep -q "..."` に正確に変換した。
+
+### Design Gaps/Ambiguities
+- None: Spec の変更後形式 (`batch_completion_section | grep -q "TEXT"`) は bats の動作モデルと一致しており、サブシェルで `batch_completion_section` が未定義になる問題もなかった (bats は同ファイル内の関数をテスト本体から直接呼び出し可能)。
+
+### Rework
+- None: 実装一発で全 4 件 PASS。`run bash -c` パターンを除去して直接パイプ呼び出しに変更したが、bats のスコープ規則を事前に把握していたため手戻りなし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Option A (helper 関数使用に統一) を採用。`batch_completion_section | grep -q` の直接呼び出しパターンを確立した。
+- `run bash -c` ラッパーを削除してシンプル化した結果、テストの可読性が向上した。
+
+### Deferred Items
+- `auto-batch.bats` と `auto-xl-concurrency.bats` も同じ "helper 定義・inline awk 使用" パターンを持つが、本 Issue スコープ外のため変更しなかった (将来の follow-up 候補)。
+- Proposal C (文書化) はスコープ外のまま。
+
+### Notes for Next Phase
+- verify command は全て PASS 済み (`rubric` + `bats` コマンド)。`/verify` での再確認は不要だが、形式的に実施しても問題ない。
+- Post-merge AC は `verify-type: observation event=auto-run` のため `/verify` ではスキップされる (SKIPPED として記録)。
