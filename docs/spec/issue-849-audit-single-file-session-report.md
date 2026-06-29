@@ -112,20 +112,20 @@
 - None. The implementation proceeded cleanly in a single pass.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- All pre-merge verify commands passed (file_not_contains, file_not_exists, rubric) — no MUST/SHOULD/CONSIDER issues found
-- All CI checks passed: DCO, bats, validate-skill-syntax, Forbidden Expressions, macOS shell compat
-- Translation sync confirmed: docs/ja/structure.md and docs/ja/workflow.md updated in same commit as English counterparts
+- PR #851 squash-merged to main (BASE_BRANCH=main); `closes #849` will auto-close Issue #849
+- Phase Handoff written to Spec on main so verify phase can read prior decisions
+- No conflict resolution required (mergeable=true, CI=success, review=approved)
 
 ### Deferred Items
-- Post-merge verification: confirm that the next `/audit auto-session` run produces only `data-layer.md` and no `-ja.md` sibling (observation event=auto-run, AC4 post-merge)
+- Post-merge AC4: confirm next `/audit auto-session <id>` run produces only `data-layer.md` and no `-ja.md` sibling (observation event=auto-run)
 
 ### Notes for Next Phase
-- No issues from review phase; PR is ready for merge
-- Workflow path (capabilities.workflow: true) attempted but review-spec/review-bug agent types unavailable; general-purpose agents used as fallback — all reached same "no issues" conclusion
-- Post-merge: observe next /audit auto-session run to confirm AC4
+- verify phase should confirm AC4 post-merge observation via a real `/audit auto-session` run
+- All pre-merge verify commands (file_not_contains, file_not_exists, rubric) were already confirmed in review phase
+- No regressions expected — this was a clean deletion with no logic changes
 
 ## review retrospective
 
