@@ -56,6 +56,31 @@
 - SKILL.md の挿入位置: Step 0 の `--light`/`--full` フラグ説明直後 (スタイル一貫性を優先)
 - `docs/ja/tech.md` は `/doc translate` 自動生成対象ではなく手動翻訳ファイル — AC に追加して `section_contains` で verify
 
+## issue retrospective
+
+### 自動解決した曖昧ポイント (Auto-Resolve Log)
+
+**1. docs/ja/tech.md のスコープ**
+- **選択**: AC に追加し `section_contains "docs/ja/tech.md" "## アーキテクチャ決定" "safe mode"` で verify
+- **理由**: Proposal に「翻訳ミラー (`docs/ja/tech.md`): A の追加を反映する」と明記されている。docs/ja/tech.md は `/doc translate` で自動生成されるファイルではなく手動翻訳ファイルと判断。verify-classifier.md の "Translation File Condition Verification" ガイドラインに従い `file_contains` / `section_contains` で `auto` 検証可能。
+- その他候補: AC に含めず Proposal のみの記述とする (→ 採用せず: Proposal 明記事項を AC に反映するのが一貫性を保つ)
+
+**2. `--max` フラグの適用条件**
+- **選択**: "Opus / Fable 5 のみ有効" の注記を SKILL.md の引数説明に含める
+- **理由**: `docs/tech.md` L86 に「Opus: xhigh (default), max (explicit `--max`)」と記載されており、`--max` が Opus / Fable 5 専用の effort override である旨が SSoT で確定している。実装の正確性を担保するため注記を明示する。
+- その他候補: 注記なしで `--max` のみ記載 (→ 採用せず: 適用条件が不明確になる)
+
+**3. SKILL.md フラグ挿入位置**
+- **選択**: Step 0: Mode Detection 内の既存 `--light` / `--full` リストの直後に追記
+- **理由**: `--light` / `--full` と同様にモード選択フラグであり、同一箇所に集約するのがユーザーの discovery-ability に最も効果的。`skill-help.md` の help 生成が SKILL.md body から `--` フラグを抽出するため、Step 0 への追記で `--help` 出力に自動反映される。
+- その他候補: 別サブセクション "Model flags" を設ける (→ 採用せず: 現在 SKILL.md に専用セクションはなく、過剰な構造化になる)
+
+### AC 変更内容
+
+- **追加 (Pre-merge)**: `docs/ja/tech.md` 翻訳ミラー更新の AC を追加 (Proposal 明記事項を反映)
+- **補強**: 各 rubric AC に `section_contains` 補完 verify command を追加 (機械的な安全網)
+- **変更 (Post-merge)**: `/spec --help` 確認条件を `verify-type: manual` → `verify-type: opportunistic` に変更 (実行パターンが "スキル実行時に検証" であり opportunistic 基準に合致)
+
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective (auto-resolved ambiguity points + AC changes) / https://github.com/saitoco/wholework/issues/867#issuecomment-4831439439
@@ -64,3 +89,31 @@
   - SKILL.md 挿入位置: `--light`/`--full` リストの直後
   - Pre-merge rubric AC に `section_contains` 補完 verify command を追加済み
   - Post-merge `/spec --help` 条件を `verify-type: manual` → `verify-type: opportunistic` に変更済み
+
+## spec retrospective
+
+### Minor observations
+- Nothing to note.
+
+### Judgment rationale
+- Issue retrospective コメントに 3 つの曖昧ポイントの解決策が明記されていたため、spec フェーズでの追加判断は不要だった。コメント内容をそのまま Spec に転記することで設計の一貫性を維持した。
+- SPEC_DEPTH=light (Size S) のため、詳細な曖昧点分析 (Step 7/8) をスキップ。Issue retrospective が代替情報源として機能し問題なかった。
+
+### Uncertainty resolution
+- Nothing to note.
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- `docs/tech.md` の safe/full mode narrative bullet は fork-context テーブルの直後 (`/auto` skill bullet の前) に配置。`modules/execution-context.md` への参照を重複させず、SSoT として参照するリンクを付ける形を採用した。
+- `skills/spec/SKILL.md` の model flags は Step 0 の `--light`/`--full` リスト直後に挿入。`--help` 出力への自動反映を優先した。
+- `docs/ja/tech.md` は `/doc translate` 自動生成ではなく手動翻訳ファイルのため、AC に含めて `section_contains` で verify する方針を採用。
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- 3 ファイルへの変更はすべて純粋な追記 (既存コードの変更なし) — コンフリクトリスクは低い
+- SKILL.md は `.claude/` 外ファイルのため Edit ツールで直接編集可能
+- `docs/ja/tech.md` の挿入位置は line 41 末尾の後、line 43 (`/auto` スキル bullet) の前
