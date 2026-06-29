@@ -42,12 +42,36 @@ Generate a session identifier and record it in a PGID-specific pointer file so s
    PGID=$(ps -o pgid= -p $$ | tr -d ' ')
    printf '%s\n' "$SESSION_ID" > ".tmp/auto-session-${PGID}"
    ```
-2. Write `.tmp/auto-session-${SESSION_ID}.json` using the Write tool with session metadata:
-   ```json
-   {"session_id": "<SESSION_ID>", "session_start": "<current UTC timestamp in ISO8601>"}
+2. Collect skill commit hashes for 8 major skills before writing the session metadata file (bash 3.2+ compatible; empty string on failure):
+   ```bash
+   SKILL_AUTO_HASH=$(git log -1 --format=%H -- skills/auto/SKILL.md 2>/dev/null || echo "")
+   SKILL_CODE_HASH=$(git log -1 --format=%H -- skills/code/SKILL.md 2>/dev/null || echo "")
+   SKILL_SPEC_HASH=$(git log -1 --format=%H -- skills/spec/SKILL.md 2>/dev/null || echo "")
+   SKILL_VERIFY_HASH=$(git log -1 --format=%H -- skills/verify/SKILL.md 2>/dev/null || echo "")
+   SKILL_REVIEW_HASH=$(git log -1 --format=%H -- skills/review/SKILL.md 2>/dev/null || echo "")
+   SKILL_MERGE_HASH=$(git log -1 --format=%H -- skills/merge/SKILL.md 2>/dev/null || echo "")
+   SKILL_ISSUE_HASH=$(git log -1 --format=%H -- skills/issue/SKILL.md 2>/dev/null || echo "")
+   SKILL_AUDIT_HASH=$(git log -1 --format=%H -- skills/audit/SKILL.md 2>/dev/null || echo "")
    ```
-   Substitute the actual `SESSION_ID` value and current timestamp before writing.
-3. Set `AUTO_SESSION_ID="$SESSION_ID"` in the current Bash context (does not persist across separate Bash tool calls; sub-processes read from the pointer file instead):
+3. Write `.tmp/auto-session-${SESSION_ID}.json` using the Write tool with session metadata including `skill_versions`:
+   ```json
+   {
+     "session_id": "<SESSION_ID>",
+     "session_start": "<current UTC timestamp in ISO8601>",
+     "skill_versions": {
+       "skills/auto/SKILL.md": "<SKILL_AUTO_HASH>",
+       "skills/code/SKILL.md": "<SKILL_CODE_HASH>",
+       "skills/spec/SKILL.md": "<SKILL_SPEC_HASH>",
+       "skills/verify/SKILL.md": "<SKILL_VERIFY_HASH>",
+       "skills/review/SKILL.md": "<SKILL_REVIEW_HASH>",
+       "skills/merge/SKILL.md": "<SKILL_MERGE_HASH>",
+       "skills/issue/SKILL.md": "<SKILL_ISSUE_HASH>",
+       "skills/audit/SKILL.md": "<SKILL_AUDIT_HASH>"
+     }
+   }
+   ```
+   Substitute the actual `SESSION_ID`, current UTC timestamp, and skill hash values before writing.
+4. Set `AUTO_SESSION_ID="$SESSION_ID"` in the current Bash context (does not persist across separate Bash tool calls; sub-processes read from the pointer file instead):
    ```bash
    export AUTO_SESSION_ID="$SESSION_ID"
    ```
@@ -771,7 +795,35 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 
 6. **Backlink**: If any Issues were filed, append a `## Filed Issues` section to `$SESSION_DIR/session.md` listing each filed Issue number as `- #N`.
 
-7. **Commit and push**:
+7. **Skill Self-Update Propagation check** (batch/XL routes only; runs after Backlink, before commit):
+   - Load `skill_versions` from `.tmp/auto-session-${AUTO_SESSION_ID}.json`:
+     ```bash
+     SKILL_VERSIONS=$(jq -r '.skill_versions // empty' ".tmp/auto-session-${AUTO_SESSION_ID}.json" 2>/dev/null)
+     ```
+     If the file is absent or `jq` fails (empty output), skip this sub-step entirely.
+   - For each of the 8 skills (auto/code/spec/verify/review/merge/issue/audit), compare the saved hash against the current `HEAD` hash:
+     ```bash
+     for skill in auto code spec verify review merge issue audit; do
+       START_HASH=$(echo "$SKILL_VERSIONS" | jq -r ".\"skills/${skill}/SKILL.md\" // \"\"" 2>/dev/null || echo "")
+       CURRENT_HASH=$(git log -1 --format=%H -- "skills/${skill}/SKILL.md" 2>/dev/null || echo "")
+       if [ -n "$START_HASH" ] && [ -n "$CURRENT_HASH" ] && [ "$START_HASH" != "$CURRENT_HASH" ]; then
+         CHANGED_SKILLS="${CHANGED_SKILLS:+$CHANGED_SKILLS }${skill}:${START_HASH}:${CURRENT_HASH}"
+       fi
+     done
+     ```
+   - If at least one skill has changed hashes, append a `## Skill Self-Update Propagation Note` section to `$SESSION_DIR/session.md`:
+     ```markdown
+     ## Skill Self-Update Propagation Note
+
+     Session 中に以下の skill が更新されました (本 session には未適用、次 session から反映):
+     - skills/auto/SKILL.md: <start-hash> → <current-hash>  (or "(no change)" when unchanged)
+     - skills/code/SKILL.md: (no change)
+     ...
+     ```
+     List all 8 skills — show `<start-hash> → <current-hash>` for changed ones and `(no change)` for unchanged ones.
+   - If no skills changed, skip the append (do not add the section).
+
+8. **Commit and push**:
    ```bash
    git add "$SESSION_DIR"
    git commit -s -m "Add L3 session retrospective for session ${AUTO_SESSION_ID}
