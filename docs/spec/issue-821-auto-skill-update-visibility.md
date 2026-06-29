@@ -112,3 +112,10 @@ No new comments since last phase.
 ### Notes for Next Phase
 - `/verify` では AC1-3 の mechanical verify が全 PASS したことを確認済み (section_contains + grep)。rubric verify は /verify フェーズで正式実行予定。
 - Post-merge AC (observation event=auto-run) は次回 `/auto --batch` 完走後に確認する。
+
+## Auto Retrospective
+### Orchestration Anomalies
+- **[code-patch-silent-no-op]** Tier 2 fallback applied: phase=`code-patch`, action=run-code.sh-patch-retry, result=recovered.
+
+### Improvement Proposals
+- N/A (resolved by Tier 2 fallback catalog)
