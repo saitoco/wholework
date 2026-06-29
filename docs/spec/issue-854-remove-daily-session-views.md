@@ -153,3 +153,63 @@
 - `skills/spec/SKILL.md` (lines 323, 337) — symbol-impact-discovery の teaching example (過去の path migration を例示する instruction 本文)
 - `skills/code/skill-dev-validation.md` (line 104) — `auto-events-rollup.sh` cleanup を「ある原則の発端 (PR #644 / #638)」として参照する歴史的 attribution。原則自体はスクリプト削除後も factual に成立
 - `docs/tech.md` / `docs/ja/tech.md` — `get-auto-session-report.sh` の `WHOLEWORK_ISSUE_BODY_DIR` env var 参照は per-session モードで存続するため変更不要
+
+## issue retrospective
+
+(transferred from issue comment — `/issue` phase)
+
+### 修正した verify コマンドエラー
+
+- **`file_exists_not` → `file_not_exists` (4箇所)**: サポートコマンド表に `file_exists_not` は存在しない。正しいコマンドは `file_not_exists`。対象は廃止スクリプト 2 本 / 廃止 bats 2 本の削除確認 AC。
+- **`command "bats tests/"` → `github_check "gh pr checks" "Run bats tests"`**: Size L は PR ルートのため `command` verify ではなく `github_check` を使用 (`modules/verify-classifier.md` 準拠)。`test.yml` の job 名 "Run bats tests" 確認済。
+
+### 追加した AC (/issue phase)
+
+- **`run-*.sh` heartbeat 呼び出し除去**: Proposal 明記だが AC 未記載。4 スクリプト全てで呼び出し確認済。
+- **`docs/structure.md` / `docs/ja/structure.md` 更新**: Proposal 明記。各参照を `file_not_contains` で確認。
+- **`dir_not_exists "docs/sessions/_daily"`**: 「空になれば削除」明記。13 ファイル存在のため削除確認 AC が必要。
+- **`check-verify-dirty.sh` の `auto-events-rollup-` チェック**: line 63-66 に両パターンの ignore_paths があるが既存 AC は `loop-state-` のみ。
+- **`skills/auto/SKILL.md` の補助 `file_not_contains`**: rubric だけでは allowed-tools / next-cycle-seed の loop-state append が漏れる可能性を補完。
+- **`modules/verify-executor.md` / `modules/verify-patterns.md` 更新**: dangling reference 化を rubric で確認。
+
+### Post-merge AC への verify-type 追加
+
+- 「次回 `/auto $N` 実行後」は `auto-run` イベント駆動の observation 型 → `<!-- verify-type: observation event=auto-run -->` を 2 件に追加。
+
+## spec retrospective
+
+### Minor observations
+
+- `/issue` phase は多数の AC を追加したが、**period mode 削除の consumer 側 impact chain** (`/audit auto-session` period delegation・`tests/audit-auto-session.bats` period test・`_period` docs・workflow docs・structure.md ファイル数カウント) を捕捉していなかった。AC が「スクリプトの feature 削除」を要求するとき、`/issue` 段階でも delegating skill / test / docs の impact chain を scan すべき (feature deletion impact chain は spec だけの責務ではない)。
+- 「session 別 data-layer.md format 強化」の 5 section は、現行 report に既に Verify Phase Residuals / Recovery Events が存在し、Per-Issue Durations / Summary が Sub-Issue Completion Timeline / Phase Activity 相当として流用可能だった。Issue 本文の「(新規)」表記は一部不正確 (既存を rename/強化で達成可能)。
+
+### Judgment rationale
+
+- **period mode の full 廃止採用**: Issue Notes「必要になれば別途 `get-auto-session-report.sh --day` を再実装する別 Issue」が full 廃止 intent を示す。script-only 削除では `/audit auto-session --day` が runtime error + dangling docs を残し、`tests/audit-auto-session.bats` の period test で CI red になるため却下。
+- **5-section の最小変更マッピング**: rubric は 5 section の「存在」のみ要求し他 section 削除は不要。よって既存 6 section を保持しつつ rename (Per-Issue Durations → Sub-Issue Completion Timeline) + 新規 2 section (Phase Activity Summary / Token Usage Aggregate) で達成。
+- **issue body への impact-chain AC 追加**: verify-sync rule (Spec は Issue AC を verbatim mirror) と count alignment を満たすため、impact-chain の検証可能性を issue body 側に追加。Step 6 conflict は Notes + Auto-Resolve Log comment にも記録。
+
+### Uncertainty resolution
+
+- **Token Usage Aggregate の粒度**: `token_usage` event に issue/phase 粒度が含まれるか未確認。含まれない場合は session 合計フォールバックを spec で許容 (rubric は session 別単独 view を要求するが per-sub-issue 細分は必須でない)。`/code` で event schema を確認すること。
+- **section rename の test 影響**: `Per-Issue Durations` → `Sub-Issue Completion Timeline` の rename は既存 bats アサーション (`tests/audit-auto-session.bats` line 20, `tests/get-auto-session-report.bats`) を破壊するため同時更新が必須と確定。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- period mode (`--day`/`--since-days`/`--range`) は full 廃止 (script + `skills/audit/SKILL.md` + `tests/audit-auto-session.bats` period test + `_period` docs + workflow docs)。Issue Notes の再実装は別 Issue 前提。
+- 5-section data-layer.md は既存 6 section を rename/追加でマッピング (既存追加 section は保持)。
+- next-cycle-seed の `loop-state-{DATE}.md` row append は廃止し、既存 `next_cycle_seeded` event + L3 session.md narrative で代替。
+
+### Deferred Items
+- 過去 phase/verify 残置 Issue の `phase/done` 一括移行 (本 Issue scope 外、merge 後の cleanup として実施)。
+- session 別 view の format 詳細 (色/絵文字/列順等の UI) は別 Issue。
+- `.wholework.yml` `verify-ignore-paths` の loop-state/rollup エントリは互換のため明示削除せず黙認。
+
+### Notes for Next Phase
+- **section rename の test 同時更新必須**: `tests/audit-auto-session.bats` (line 20 付近) / `tests/get-auto-session-report.bats` の旧 section 名アサーションを更新しないと CI red。
+- **validate-skill-syntax.py 制約**: `skills/auto/SKILL.md` / `skills/audit/SKILL.md` 編集時に半角 `!` / triple backtick / YAML block scalar を新規導入しない。audit frontmatter description は単一行維持。
+- **Token Usage Aggregate**: `token_usage` event schema に issue 粒度が無ければ session 合計でフォールバック (`/code` で schema 確認)。
+- **`run-auto-sub.sh`**: 単純な呼び出し行ではなく `_append_loop_state_heartbeat()` 関数 + 専用ヘルパ + 全呼び出し箇所を除去 (`file_not_contains "append-loop-state-heartbeat"` を満たす)。
+- 削除する bats `@test` の scenario は廃止 feature 専用のため別 test での再カバー不要 (#526)。
