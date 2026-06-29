@@ -3,7 +3,7 @@ name: auto
 description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues; `--batch N1 N2 ...` processes the explicitly listed Issues in order (assigns a BATCH_ID for parallel-safe checkpointing). `--resume N` resumes a single Issue (restores verify counter from checkpoint); `--batch --resume` resumes an interrupted batch using `list_active_batches` to identify the target session.
 loop-paths-used: [A, E]
 loop-paths-fallback: [A]
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-events-rollup.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-events-rollup.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Autonomous Execution
@@ -143,21 +143,31 @@ Set `REVIEW_DEPTH` from flags or Size (used unchanged in Step 4 unless Step 3a r
 
 ### Step 2a: Fix-cycle Detection
 
-Before checking the phase label in Step 3, detect whether the Issue is in a **fix-cycle state** — a condition where `/verify` has already run and flagged a FAIL, phase labels were cleared by `/verify`, and a Spec already exists. In this state, re-running issue/spec phases is unnecessary and risks overwriting the existing Spec.
+Before checking the phase label in Step 3, detect whether the Issue is in a **fix-cycle state** — a condition where `/verify` has already run and flagged a FAIL (or the Issue was reopened after merge), phase labels were cleared by `/verify`, and a Spec already exists. In this state, re-running issue/spec phases is unnecessary and risks overwriting the existing Spec.
 
 **Detection criteria (all three must hold):**
 
-1. **verify-fail marker exists**: At least one Issue comment contains `<!-- wholework-event: type=verify-fail` in its body.
-   ```bash
-   gh issue view "$NUMBER" --json comments \
-     --jq '[.comments[] | select(.body | contains("<!-- wholework-event: type=verify-fail"))] | length > 0'
-   ```
-   Use the most recent such comment (`createdAt` descending) as the FAIL event reference.
+1. **verify-fail marker exists OR Issue has been reopened after the most recent merge**:
+   - **verify-fail marker check**: At least one Issue comment contains `<!-- wholework-event: type=verify-fail` in its body.
+     ```bash
+     gh issue view "$NUMBER" --json comments \
+       --jq '[.comments[] | select(.body | contains("<!-- wholework-event: type=verify-fail"))] | length > 0'
+     ```
+     Use the most recent such comment (`createdAt` descending) as the FAIL event reference.
+   - **OR reopened check**: `gh-graphql.sh --query get-last-reopen -F "num=$NUMBER"` returns a non-null timestamp (the Issue was reopened after the most recent merge).
+     ```bash
+     reopen_ts=$("${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh" --query get-last-reopen \
+       -F "num=$NUMBER" \
+       --jq '.data.repository.issue.timelineItems.nodes[0].createdAt' 2>/dev/null \
+       | tr -d '"' || true)
+     ```
+     If `reopen_ts` is non-null and non-empty, the reopened criterion is satisfied.
+   - Either condition satisfying is sufficient for criterion 1.
 
-2. **No `phase/*` labels present**: The Issue has no label whose name starts with `phase/`.
+2. **No `phase/code`, `phase/review`, or `phase/spec` labels present**: The Issue has no label matching `phase/code`, `phase/review`, or `phase/spec`. (`phase/verify` is permitted — it may be left over from a previous verify run on a reopened Issue.)
    ```bash
    gh issue view "$NUMBER" --json labels \
-     --jq '[.labels[].name | select(startswith("phase/"))] | length == 0'
+     --jq '[.labels[].name | select(. == "phase/code" or . == "phase/review" or . == "phase/spec")] | length == 0'
    ```
 
 3. **Spec file exists**: At least one Spec file matches `$SPEC_PATH/issue-$NUMBER-*.md`.
@@ -166,6 +176,14 @@ Before checking the phase label in Step 3, detect whether the Issue is in a **fi
 **If all three criteria are met (fix-cycle state detected):**
 
 Output: "Fix-cycle detected for issue #$NUMBER — skipping issue/spec phases, running code directly."
+
+**phase/verify label reset (reopened-only path)**: If criterion 1 was satisfied via the reopened check only (no verify-fail marker), the `phase/verify` label may still be present from the previous verify run. Reset it before running code:
+
+```bash
+if gh issue view "$NUMBER" --json labels -q '.labels[].name' | grep -q '^phase/verify$'; then
+  "${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh" "$NUMBER" ready
+fi
+```
 
 Skip Step 3 and Step 3a entirely. Select the code phase run based on ROUTE (determined in Step 2 from flags or Size):
 
