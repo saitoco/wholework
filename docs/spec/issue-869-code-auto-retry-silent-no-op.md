@@ -149,6 +149,44 @@
 - 次回 silent no-op が観測された session で `code_retry_fire` イベントが `.tmp/auto-events.jsonl` に記録される <!-- verify-type: manual -->
 - `docs/tech.md` の Architecture Decisions セクションに code-side auto-retry の言及が追加されている <!-- verify: rubric "docs/tech.md の Architecture Decisions セクションに code-side auto-retry (silent no-op 検出時の retry ロジック) への言及が含まれている" --> <!-- verify: section_contains "docs/tech.md" "## Architecture Decisions" "auto-retry" --> <!-- verify-type: auto -->
 
+## Consumed Comments
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- `exec bash "$0" "$@"` では `$@` が parse 後に空になるため、Spec 通りに実装すると re-invocation が引数なしで呼ばれて失敗した。`shift` 前に `_TRAILING_ARGS=("$@")` でトレーリング引数を保存し、`exec bash "$0" "$ISSUE_NUMBER" "${_TRAILING_ARGS[@]}"` で再起動する形に修正した。Spec の pseudo-code は exec のシグネチャを正確に記述していなかったため、実装時に発覚。
+
+### Design Gaps/Ambiguities
+
+- `auto-retry-on-fail.max_iterations` vs `threshold` キーの非対称性: `.wholework.yml` では `threshold: 3` を使用しているが、`detect-config-markers.md` は `max_iterations` を定義している。実装では awk で両キーを読む後方互換対応を入れた (Spec Notes に記載済みだったが、awk パターンで両方読む実装の具体的な書き方は実装時に確定)。
+- `exec` のセマンティクス: Spec は EXIT trap の二重発火を避けるために `exec` を選択すると説明していたが、`exec` でプロセスを置き換える際に `_TRAILING_ARGS` を保持する必要があることは Spec に明示されていなかった。
+
+### Rework
+
+- テスト 40 (`auto-retry: silent no-op + AUTO_RETRY_ENABLED=true fires retry`) が最初の実装で失敗: `exec bash "$0" "$@"` が空 args で再起動し Usage エラーになった。`_TRAILING_ARGS` 変数を導入して修正 (追加コミット 1 本)。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- A 案 (run-code.sh wrapper 拡張) を採用し、`exec` でプロセスを置き換える方式で実装 (EXIT trap 二重発火防止)
+- `CODE_RETRY_COUNT` は `export` 済み env var で引き継ぐことで `exec` を跨いでカウンタを保持
+- `apply-fallback.sh` の Tier 2 ハンドラに `AUTO_RETRY_ENABLED` ガードを追加し二重リトライを防止
+- `_TRAILING_ARGS` で shift 前の引数を保存し、`exec` 時に `"$ISSUE_NUMBER" "${_TRAILING_ARGS[@]}"` を渡す
+
+### Deferred Items
+- B 案 (config サブキー化 `verify`/`code` 分割) は本 Issue でスコープ外 — follow-up 候補
+- C 案 (`apply-fallback.sh` Tier 2 統合) も別 Issue 候補
+- `detect-config-markers.md` への `threshold` キーサポート追加は本 Issue スコープ外
+
+### Notes for Next Phase
+- PR #871 が CI で PASS することを確認すること (`bats tests/` は全スイート PASS 済)
+- post-merge AC2 (`section_contains "docs/tech.md" "## Architecture Decisions" "auto-retry"`) は実装済みのため verify フェーズで PASS するはず
+- post-merge AC1 (次回 silent no-op での `code_retry_fire` イベント記録) は manual 検証が必要
+
 ## Notes
 
 ### 双方向 retry 防止設計
