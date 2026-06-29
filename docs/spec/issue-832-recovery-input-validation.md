@@ -94,17 +94,17 @@
 - AC3 (observation): post-merge 観察タイプで適切に SKIPPED。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 全 4 観点 (Spec 逸脱・エッジケース・セキュリティ・ドキュメント整合性) で Issue 0 件 → REQUEST_CHANGES なし、COMMENT 投稿
-- AC 検証: AC1 (rubric) PASS / AC2 (command→CI fallback) PASS / AC3 (POST-MERGE)
-- CI: 全ジョブ SUCCESS
+- PR #846 をスカッシュマージ (--squash --delete-branch)、コンフリクトなし・CI PASS・approved の clean 状態で直行
+- BASE_BRANCH=main のため closes #832 が Issue を自動クローズ
+- non-interactive モードで実行 (run-merge.sh 経由の自動マージ)
 
 ### Deferred Items
 - AC3 (observation): 次回 recovery 発生時に通常の数値 issue 番号で正常動作することを観察 (post-merge)
 
 ### Notes for Next Phase
-- MUST/SHOULD/CONSIDER ともに 0 件 — merge 直行可能
-- PR #846 ブランチ `worktree-code+issue-832` → base: `main`
-- review-summary コメント投稿済み (PR #846)
+- verify command: `bats tests/run-auto-sub.bats` — 38 テスト全 PASS を確認済み (CI で検証)
+- post-merge 観察 AC (AC3) は verify でスキップ対象
+- `_validate_recovery_args` の配置が `_repo_root` 代入より前である点 (set -u 対策) は Spec 通り
