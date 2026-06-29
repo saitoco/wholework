@@ -62,3 +62,49 @@
 ## Consumed Comments
 
 - `saito` / MEMBER / first-class / Issue Retrospective: 引数スコープ差異の自動解決結果と AC1 rubric 修正内容を記録。Spec Notes に反映済み / https://github.com/saitoco/wholework/issues/832#issuecomment-4827773707
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. 実装ステップの順序・内容ともに Spec 通りに実施した。
+
+### Design Gaps/Ambiguities
+
+- `_write_manual_recovery_to_spec` の `--write-manual-recovery` dispatch ブロックでは `_write_manual_recovery_to_spec "$@"; exit 0` となっており、`set -e` の動作に依存して非ゼロ返却時にスクリプト終了する形。`exit $?` への変更は Spec に記載がなく、`set -e` で目的を達成できるため変更不要と判断した。
+
+### Rework
+
+- None. 初回実装で全 38 テスト PASS。
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- None. 全 4 観点で Spec 逸脱なし。`_validate_recovery_args` の配置・引数構成・bats テスト 3 件ともに Spec 記述通りで、構造的逸脱は発生しなかった。
+
+### Recurring Issues
+
+- None. 単一種別の入力バリデーション実装であり、3 関数に一貫して適用されている。
+
+### Acceptance Criteria Verification Difficulty
+
+- AC1 (rubric): "non-zero exit on invalid input" という行動・結果ベースの rubric が機能した。diff から直接判定可能で UNCERTAIN なし。
+- AC2 (command "bats tests/run-auto-sub.bats"): CI reference fallback (Run bats tests: SUCCESS) で判定。`github_check` 形式に変更すると fallback なしで直接判定できる — 次回同種 Issue の改善余地。
+- AC3 (observation): post-merge 観察タイプで適切に SKIPPED。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- 全 4 観点 (Spec 逸脱・エッジケース・セキュリティ・ドキュメント整合性) で Issue 0 件 → REQUEST_CHANGES なし、COMMENT 投稿
+- AC 検証: AC1 (rubric) PASS / AC2 (command→CI fallback) PASS / AC3 (POST-MERGE)
+- CI: 全ジョブ SUCCESS
+
+### Deferred Items
+- AC3 (observation): 次回 recovery 発生時に通常の数値 issue 番号で正常動作することを観察 (post-merge)
+
+### Notes for Next Phase
+- MUST/SHOULD/CONSIDER ともに 0 件 — merge 直行可能
+- PR #846 ブランチ `worktree-code+issue-832` → base: `main`
+- review-summary コメント投稿済み (PR #846)
