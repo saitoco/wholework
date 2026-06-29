@@ -184,17 +184,18 @@ verify-fail marker なしで reopen された Issue を fix-cycle と認識で�
 - One SHOULD finding identified by review-light: `get-last-reopen` GraphQL query returns any reopen event without merge-time filtering, creating a false-positive fix-cycle detection risk in SKILL.md Step 2a. This is a behavior scope concern beyond the AC definitions — no verify command would have caught it pre-merge.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- All 5 pre-merge ACs PASS; CI all SUCCESS. No MUST issues found.
-- SHOULD finding (get-last-reopen without merge-time cross-check) skipped — out of scope for this Bug fix PR; should be tracked as a follow-up Issue.
-- Review posted as COMMENT event (no REQUEST_CHANGES).
+- PR #855 squash-merged to main without conflicts; all CI checks passed.
+- No conflict resolution required (mergeable=true, reason=clean at merge time).
+- Phase Handoff written to main branch post-merge for /verify to pick up.
 
 ### Deferred Items
-- SHOULD: `get-last-reopen` query returns any reopen event with no merge-time filter → could produce false-positive fix-cycle detection if Issue is reopened before any merge. Consider a follow-up Issue to add merge-time cross-check in SKILL.md Step 2a.
-- post-merge AC (verify-type: manual) remains for /verify phase.
+- SHOULD follow-up: `get-last-reopen` query has no merge-time cross-check → potential false-positive fix-cycle if Issue reopened before any merge. Track as a separate Issue.
+- post-merge AC (manual observation) deferred to /verify phase: run `/auto $N` on a reopen-after-merge scenario to confirm code phase executes correctly.
 
 ### Notes for Next Phase
-- No MUST issues → `/merge 855` can proceed immediately.
-- post-merge AC requires manual observation on the next `/auto $N` run after a reopen.
+- Only 1 post-merge AC remains: manual observation on next `/auto $N` after Issue reopen.
+- No code changes expected in /verify; this is purely an observation-type verification.
+- The SHOULD finding from /review (get-last-reopen scope) should be considered for a follow-up Issue if not already filed.
