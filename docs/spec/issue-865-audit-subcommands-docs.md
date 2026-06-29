@@ -56,3 +56,30 @@
 - `docs/ja/` ミラー更新は translation-workflow.md の義務に従い Step 3-4 として追加 (AC には含まれないが必須)
 - 表現案は提案 (Issue Notes 記載); Spec フェーズで「1 文/sub-command」形式に簡潔化済み
 - Auto-resolve (継承): `/audit` 独立エントリ追加は `Drift` エントリ拡張より discoverability が高く `/auto` 前例に沿う — issue retrospective コメントで確認済み
+
+## Code Retrospective
+
+### Deviations from Design
+- None — Spec の 4 ステップをそのまま順番通りに実装した。
+
+### Design Gaps/Ambiguities
+- None — Spec の行番号 (L102, L158, L100, L150) は参考値だったが、実際の行番号と完全一致した。
+
+### Rework
+- None — 1 回で 4 ファイルすべての編集が完了し、section_contains verify PASS を確認。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `/audit` エントリを `Drift` エントリの拡張ではなく独立行として追加した (Issue retrospective コメントで確定)。
+- `docs/ja/` ミラーも同一コミットで更新し、翻訳同期ギャップを解消した。
+- Spec の文言をそのまま使用 (Issue Notes に「提案であり Spec フェーズで再表現してよい」とあるが、Spec 表現が既に簡潔で適切だったため変更なし)。
+
+### Deferred Items
+- None — AC はすべて pre-merge verify で確認済み。post-merge は次回 `/doc sync --deep` での確認のみ。
+
+### Notes for Next Phase
+- section_contains PASS 確認済み: `docs/tech.md` L102 と `docs/product.md` L159 に全 5 サブコマンドが列挙されている。
+- rubric verify コマンドも含めて verify 段階で再実行する際は同じ 2 ファイルを確認すること。
+- 日本語ミラー (`docs/ja/`) も同一コミットで更新済みのため別途 sync 不要。
