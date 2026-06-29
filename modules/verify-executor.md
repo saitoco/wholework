@@ -129,11 +129,11 @@ The `grep` verify command uses the Grep tool (ripgrep), which defaults to **ERE 
 
 **Known example — #638 AC #3 ERE miscalibration:**
 
-Original form (false FAIL — `\|` treated as literal `|` in ERE, not OR): `<!-- verify: grep -- "--date\|--input\|--output-dir\|--cleanup" "scripts/auto-events-rollup.sh" -->`
+Original form (false FAIL — `\|` treated as literal `|` in ERE, not OR): `<!-- verify: grep -- "--date\|--input\|--output-dir\|--cleanup" "scripts/run-auto-sub.sh" -->`
 
-Corrected form (ERE OR alternation): `<!-- verify: grep -- "--date|--input|--output-dir|--cleanup" "scripts/auto-events-rollup.sh" -->`
+Corrected form (ERE OR alternation): `<!-- verify: grep -- "--date|--input|--output-dir|--cleanup" "scripts/run-auto-sub.sh" -->`
 
-Bare `|` alternation is the standard pattern for multi-option OR checks across CLI flags in `auto-events-rollup.sh`-style shell scripts.
+Bare `|` alternation is the standard pattern for multi-option OR checks across CLI flags in shell scripts.
 
 ### Rubric Command Semantics
 

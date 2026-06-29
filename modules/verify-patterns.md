@@ -542,7 +542,7 @@ Before writing verify commands for file-existence conditions, check:
 
 When an Issue involves migration, renaming, or path changes, SKILL.md (markdown skill definition) and bash scripts (implementation side) often both contain the same path references. A `file_not_contains` verify command applied only to SKILL.md will PASS even if the old path remains in the implementation script — creating a blind spot that only surfaces during `/review`.
 
-**Background (real example)**: Issue #772 AC8 `file_not_contains "skills/auto/SKILL.md" "docs/reports/loop-state-"` passed, but the same old path remained in `scripts/append-loop-state-heartbeat.sh` (the implementation counterpart). This was not detected until the review phase (commit d0a9288).
+**Background (real example)**: Issue #772 AC8 `file_not_contains "skills/auto/SKILL.md" "docs/reports/loop-state-"` passed, but the same old path remained in the implementation script (now deleted: `scripts/append-loop-state-heartbeat.sh`). This was not detected until the review phase (commit d0a9288).
 
 **Root cause**: CI cannot detect old path residuals in scripts (outside test coverage). Explicit `file_not_contains` ACs are the only automated detection mechanism.
 
@@ -550,7 +550,7 @@ When an Issue involves migration, renaming, or path changes, SKILL.md (markdown 
 
 ```
 <!-- verify: file_not_contains "skills/auto/SKILL.md" "docs/reports/old-path-" -->
-<!-- verify: file_not_contains "scripts/append-loop-state-heartbeat.sh" "docs/reports/old-path-" -->
+<!-- verify: file_not_contains "scripts/emit-event.sh" "docs/reports/old-path-" -->
 ```
 
 Both the SKILL.md side and the implementation script side must be covered.
@@ -822,7 +822,7 @@ file_contains "scripts/foo.sh" "commit -m"
 
 Both `commit -s` and `commit -m` are contiguous sub-strings regardless of what precedes `commit` on the line. Use `commit -s` for projects that require signed-off commits (DCO); use `commit -m` otherwise — always choose the anchor that matches what the implementation actually contains.
 
-**Real example:** `scripts/append-loop-state-heartbeat.sh` contains `git -C "$REPO_ROOT" commit -s -m "chore: ..."` — the contiguous anchor is `commit -s`, not `git commit`.
+**Real example:** `scripts/emit-event.sh` contains `git -C "$REPO_ROOT" commit -s -m "chore: ..."` — the contiguous anchor is `commit -s`, not `git commit`.
 
 **Generalizes to any command with inserted flags:**
 
