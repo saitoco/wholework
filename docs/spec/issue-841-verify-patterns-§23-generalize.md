@@ -55,3 +55,34 @@
 
 - **セクションタイトル変更スコープ外 (auto-resolved)**: §23 のタイトル `Non-Contiguous Git Invocation` は変更しない。既存の regression test (`grep -q "Non-Contiguous Git Invocation"` in `tests/verify-heuristics.bats`) との互換性を維持するため。タイトル変更は別 Issue に委ねる。
 - **実装前確認**: `kubectl`, `docker compose`, `~/.ssh/` はいずれも現在 `modules/verify-patterns.md` に存在しないことを確認済み (`grep -c` = 0)。実装後に `file_contains` verify command が通過する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- 実装コミットのプレフィックスを `chore:` (Type=Task) ではなく `feat:` を使用した。変更内容 (ガイドライン文書の機能追加) が Feature 相当と判断したため。影響なし。
+
+### Design Gaps/Ambiguities
+
+- Spec の Overview では `ssh -i key host` という placeholder 形式を記載していたが、実際の元テキストは `ssh -i key myserver "deploy.sh"` だった。Spec と現実の差異はあったが実装目標 (実在リテラル化) には影響なし。
+
+### Rework
+
+- None
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `ssh -i key myserver "deploy.sh"` → `ssh -i ~/.ssh/key user@host "deploy.sh"` に修正 (ホスト名 placeholder `myserver` も実在形式の `user@host` に置換)
+- Decision Procedure step 1 の e.g. リストに `"kubectl apply"`, `"docker compose up"`, `"ssh user@host"` を追加し、挿入フラグ例に `kubectl --context prod`, `docker compose -f` を明示
+- 既存 regression test との互換性保持のため §23 タイトル (`Non-Contiguous Git Invocation`) は変更しない
+
+### Deferred Items
+- §23 タイトルを "Non-Contiguous Symbol Invocation" に変更する件は別 Issue に委ねた
+- AC3 `github_check` は push 後に CI が実行されてから確認 (patch route 特性)
+
+### Notes for Next Phase
+- All file_contains verify commands (kubectl, docker compose, ~/.ssh/) PASS 済み。rubric PASS。CI (AC3) のみ push 後に確認
+- bats tests 全件 PASS (exit code 0、558 tests)
+- forbidden expressions check PASS (exit code 0)
