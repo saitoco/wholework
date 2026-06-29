@@ -34,3 +34,4 @@ date: 2026-06-29
 | 09:29:09 | code | phase-transition | #864 spec→code snapshot:[issue:4 spec:0 code:0 review:0 verify:2] |
 | 09:57:03 | code | phase-transition | #865 spec→code snapshot:[issue:4 spec:1 code:0 review:0 verify:2] |
 | 10:19:39 | code | phase-transition | #866 spec→code snapshot:[issue:4 spec:0 code:0 review:0 verify:2] |
+| 11:01:05 | verify | phase-transition | #867 code→verify snapshot:[issue:4 spec:0 code:1 review:0 verify:2] |
