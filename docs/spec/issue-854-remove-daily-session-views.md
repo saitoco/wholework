@@ -214,5 +214,45 @@
 - **`run-auto-sub.sh`**: 単純な呼び出し行ではなく `_append_loop_state_heartbeat()` 関数 + 専用ヘルパ + 全呼び出し箇所を除去 (`file_not_contains "append-loop-state-heartbeat"` を満たす)。
 - 削除する bats `@test` の scenario は廃止 feature 専用のため別 test での再カバー不要 (#526)。
 
+## code retrospective
+
+### What was implemented
+
+7 commits, 1021 bats tests green:
+
+1. `git rm` 4 files: `scripts/append-loop-state-heartbeat.sh`, `scripts/auto-events-rollup.sh`, `tests/append-loop-state-heartbeat.bats`, `tests/auto-events-rollup.bats`
+2. Removed heartbeat call sites from `scripts/run-code.sh`, `scripts/run-review.sh`, `scripts/run-merge.sh`, `scripts/run-auto-sub.sh` (functions `_loop_state_from_phase`/`_loop_state_to_phase`/`_append_loop_state_heartbeat` + 4 call sites)
+3. Removed heartbeat side-effect tests from `tests/run-code.bats`, `tests/run-review.bats`, `tests/run-merge.bats`
+4. Removed built-in ignore-paths from `scripts/check-verify-dirty.sh`; removed corresponding 4 `@test` blocks from `tests/verify-dirty-detection.bats`
+5. Rewrote `scripts/get-auto-session-report.sh`: removed period aggregate mode (`--day`/`--since-days`/`--range`), added Phase Activity Summary / Sub-Issue Completion Timeline (rename from Per-Issue Durations) / Token Usage Aggregate sections; Token Usage uses session-total fallback (event schema lacks per-issue granularity)
+6. Updated `tests/audit-auto-session.bats`: removed period `@test` blocks, updated "Per-Issue Durations" → "Sub-Issue Completion Timeline"; updated `tests/get-auto-session-report.bats`: added 5-section assertions
+7. Removed heartbeat/rollup references from `skills/auto/SKILL.md` (allowed-tools, phase completions, Loop State Heartbeat section, next-cycle-seed step)
+8. Removed period aggregate mode from `skills/audit/SKILL.md` (frontmatter description, routing, Argument Parsing, Step 1/Step 2); updated `docs/workflow.md` / `docs/ja/workflow.md`
+9. Replaced dangling `auto-events-rollup.sh`/`append-loop-state-heartbeat.sh` refs in `modules/verify-executor.md` / `modules/verify-patterns.md`
+10. Updated `docs/structure.md` / `docs/ja/structure.md`: removed `_daily/`/`_period/` directory entries, removed `auto-events-rollup.sh` entry, updated file counts (62→60 scripts, 93→91 tests); `git rm` 13 `docs/sessions/_daily/*.md` files
+
+### Minor surprises
+
+- `run-auto-sub.sh` had 3 helper functions for heartbeat (`_loop_state_from_phase`, `_loop_state_to_phase`, `_append_loop_state_heartbeat`) plus 4 call sites inside `run_phase_with_recovery` — more invasive than expected but cleanly removable without affecting recovery logic
+- Token Usage Aggregate: `token_usage` events in `auto-events.jsonl` lack per-issue granularity; session-total fallback was spec-permitted and implemented as described
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Status
+
+All implementation complete. All 1021 bats tests pass. validate-skill-syntax.py: 0 errors.
+
+### Verify Commands to Run
+
+Pre-merge ACs from spec (lines 76-92) — all `file_not_contains` / `file_not_exists` / `grep` ACs confirmed passing locally. `github_check "gh pr checks" "Run bats tests"` requires CI to complete post-push.
+
+### Deferred Items
+
+(unchanged from spec phase)
+- `phase/done` bulk migration for stale phase/verify Issues
+- per-session view format details (UI)
+- `.wholework.yml` `verify-ignore-paths` loop-state/rollup entries (黙認)
+
 ## Consumed Comments
 No new comments since last phase.
