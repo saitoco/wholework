@@ -1,0 +1,155 @@
+# Issue #854: auto: loop-state / auto-events-rollup の cross-session 日次集約を完全廃止し session 別 data-layer.md に集約
+
+## Overview
+
+`docs/sessions/_daily/` 配下の cross-session 日次集約 view (`loop-state-{DATE}.md` / `auto-events-rollup-{DATE}.md`) を完全廃止し、SSoT 構造を単純化する。
+
+- **データ層 SSoT**: `.tmp/auto-events.jsonl` のみ
+- **view 層 SSoT**: `docs/sessions/{ID}-{DATE}/{data-layer.md,session.md,events.jsonl}` (session 内 view)
+- **cross-session view**: 生成しない (必要時は session 別ファイルを直接読む)
+
+廃止に伴い、(1) 関連スクリプト 2 本と bats test 2 本を削除、(2) heartbeat / rollup 呼び出しを run-*.sh / `skills/auto/SKILL.md` から除去、(3) `get-auto-session-report.sh` の period aggregate モードを削除して session 別単独 view に集約 (5 セクション保証)、(4) その impact chain (`/audit auto-session` period mode・`docs/sessions/_period/` 記述・workflow docs・ファイル数カウント) を整理する。
+
+## Changed Files
+
+**削除 (`git rm`):**
+- `scripts/append-loop-state-heartbeat.sh`: delete
+- `scripts/auto-events-rollup.sh`: delete
+- `tests/append-loop-state-heartbeat.bats`: delete
+- `tests/auto-events-rollup.bats`: delete
+- `docs/sessions/_daily/loop-state-*.md` (4 件) + `docs/sessions/_daily/auto-events-rollup-*.md` (9 件) = 計 13 ファイル: delete。空になった `docs/sessions/_daily/` ディレクトリも削除
+
+**スクリプト改修 (bash 3.2+ 互換):**
+- `scripts/run-code.sh`: 成功時の `append-loop-state-heartbeat.sh` 呼び出し (`if [[ $EXIT_CODE -eq 0 ]]` ガードブロック lines 273-275 付近) を除去 — bash 3.2+ 互換
+- `scripts/run-review.sh`: 同上 (line 161 付近の呼び出しとガードブロック) を除去 — bash 3.2+ 互換
+- `scripts/run-merge.sh`: 同上 (line 195 付近) を除去 — bash 3.2+ 互換
+- `scripts/run-auto-sub.sh`: `_append_loop_state_heartbeat()` 関数 (lines 195-204 付近)・専用ヘルパ (`_loop_state_from_phase` / `_loop_state_to_phase` が本関数専用なら) ・全呼び出し箇所を除去 — bash 3.2+ 互換
+- `scripts/check-verify-dirty.sh`: built-in ignore-path への `docs/sessions/_daily/loop-state-*.md` / `docs/sessions/_daily/auto-events-rollup-*.md` 追加 (lines 62-66 付近) を除去 (`verify-ignore-paths` config 由来の動的追加ロジックは維持) — bash 3.2+ 互換
+- `scripts/get-auto-session-report.sh`: (a) period aggregate モード (`--day` / `--since-days` / `--range`) のパース (lines 70-82)・処理ブロック (lines 95-290)・usage コメント (lines 8-19 の period 行) を除去 (per-session report モードと `--since` list モードは維持)。(b) per-session report が 5 セクションを含むよう強化 (下記 Implementation Steps Step 5 参照) — bash 3.2+ 互換
+
+**test 改修:**
+- `tests/run-code.bats`: `side-effect: append-loop-state-heartbeat.sh called on code phase success` の `@test` ブロックと MOCK 生成 (lines 498-507 付近) を除去
+- `tests/run-review.bats`: 同上 (lines 375-384 付近) を除去
+- `tests/run-merge.bats`: 同上 (lines 554-563 付近) を除去
+- `tests/verify-dirty-detection.bats`: built-in exempt 系 4 `@test` (`loop-state heartbeat only dirty` / `loop-state mixed with non-spec dirty` / `auto-events-rollup only dirty` / `auto-events-rollup mixed with non-spec dirty`, lines 139-173 付近) を除去
+- `tests/audit-auto-session.bats`: period 系 `@test` (`--day generates _period report` / `--since-days generates _period since report`, lines 185-240 付近) を除去。section rename に伴い `per-issue durations` を検証する `@test` (line 20 付近) のアサーションを `Sub-Issue Completion Timeline` に更新
+- `tests/get-auto-session-report.bats`: section rename / 新 section 追加に伴うアサーション更新 (旧 `Per-Issue Durations` 検証箇所があれば `Sub-Issue Completion Timeline` に更新、新 section `Phase Activity Summary` / `Token Usage Aggregate` のアサーションを追加)
+
+**SKILL / module / doc 改修:**
+- `skills/auto/SKILL.md`: (a) `allowed-tools` から `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh:*` / `${CLAUDE_PLUGIN_ROOT}/scripts/auto-events-rollup.sh:*` を除去。(b) 各 phase 成功時の `append-loop-state-heartbeat.sh` 呼び出し記述 (lines 360, 369, 391, 396, 400, 409 付近) を除去。(c) `auto-events-rollup.sh` 実行記述 (lines 699, 1126 付近) を除去。(d) `## Loop State Heartbeat` セクション全文 (lines 701-734 付近) を削除。(e) next-cycle-seed の `loop-state-{DATE}.md` row append step (line 1152 付近) を除去 (代替: 既存の `next_cycle_seeded` event emit + L3 session.md narrative)
+- `skills/audit/SKILL.md`: `/audit auto-session` の period aggregate モード (`--day` / `--since Nd` / `--range`) 記述を除去 (frontmatter description line 3、mode 判定 lines 23/27、auto-session Subcommand の period セクション lines 864-938 付近、`_period/` 参照)。per-session モード + list モードのみ残す (`allowed-tools` の `get-auto-session-report.sh:*` は維持)
+- `modules/verify-executor.md`: 廃止済み `auto-events-rollup.sh` を実在スクリプトとして参照する例示 (lines 132-136) を、実在スクリプト or 汎用プレースホルダに差し替え
+- `modules/verify-patterns.md`: 廃止済み `append-loop-state-heartbeat.sh` を実在スクリプトとして参照する例示 (lines 545, 553, 825) を、実在スクリプト or 汎用プレースホルダに差し替え (過去事例参照は過去形/「(削除済み)」注記でも可)
+- `docs/structure.md`: Directory Layout の `_daily/` + `_period/` サブツリー (lines 69-75 付近) を削除、Scripts 一覧の `auto-events-rollup.sh` エントリ (line 193) を削除、ファイル数カウント `scripts/ ... (62 files)` → `(60 files)` (line 32)・`tests/ ... (93 files)` → `(91 files)` (line 45) を更新
+- `docs/ja/structure.md`: Directory Layout の `_daily/` + `_period/` サブツリー (lines 62-65 付近) を削除、Scripts 一覧の `auto-events-rollup.sh` エントリ (line 186) を削除 (ja/structure.md にはファイル数カウントなし)
+- `docs/workflow.md`: `/audit auto-session` 説明 (line 166) から period aggregate モード (`--day` / `--since {N}d` / `--range` → `docs/sessions/_period/`) の記述を除去
+- `docs/ja/workflow.md`: `/audit auto-session` 説明 (line 159) から同記述を除去 (docs/workflow.md の mirror)
+
+**変更不要 (grep 確認済み・Exclusions 参照):** `docs/tech.md` / `docs/ja/tech.md` (`get-auto-session-report.sh` の `WHOLEWORK_ISSUE_BODY_DIR` 参照は per-session モードで存続)、`scripts/validate-skill-syntax.py` (KNOWN_TOOLS に廃止スクリプト不在)、`README.md` / `CLAUDE.md` (参照なし)。
+
+## Implementation Steps
+
+1. 廃止スクリプトと bats test を `git rm` で削除: `scripts/append-loop-state-heartbeat.sh` / `scripts/auto-events-rollup.sh` / `tests/append-loop-state-heartbeat.bats` / `tests/auto-events-rollup.bats` (→ acceptance criteria 1, 2, 3, 4)
+
+2. run-*.sh から heartbeat 呼び出しを除去 (after 1): `run-code.sh` / `run-review.sh` / `run-merge.sh` の `if [[ $EXIT_CODE -eq 0 ]]` ガードブロック内の `append-loop-state-heartbeat.sh` 呼び出しを (ガードがその呼び出し専用なら) ブロックごと除去。`run-auto-sub.sh` は `_append_loop_state_heartbeat()` 関数本体・本関数専用ヘルパ・全呼び出し箇所を除去。bash 3.2+ 互換を維持 (→ acceptance criteria 8)
+
+3. run-*.bats の heartbeat side-effect test を除去 (after 2): `tests/run-code.bats` / `tests/run-review.bats` / `tests/run-merge.bats` の `side-effect: append-loop-state-heartbeat.sh called ...` `@test` と対応 MOCK 生成を削除。削除する scenario は廃止 feature 専用のため別 test での再カバーは不要 (#526) (→ acceptance criteria 17)
+
+4. `scripts/check-verify-dirty.sh` の built-in ignore-path 追加 (`docs/sessions/_daily/loop-state-*.md` / `docs/sessions/_daily/auto-events-rollup-*.md`, lines 62-66 付近) を除去し、`verify-ignore-paths` config 由来の動的ロジックは維持。あわせて `tests/verify-dirty-detection.bats` の built-in exempt 系 4 `@test` (lines 139-173 付近) を除去 (parallel with 1) (→ acceptance criteria 11, 17)
+
+5. `scripts/get-auto-session-report.sh` を改修 (parallel with 1): (a) period aggregate モード (`--day` / `--since-days` / `--range`) のパース・処理ブロック・usage コメントを除去し per-session report + `--since` list モードのみ残す。(b) per-session report の出力 heredoc が以下 5 セクション (相当の表) を含むよう強化 — `## Phase Activity Summary` (新規: phase_start/phase_complete を phase 別に集計した表) / `## Sub-Issue Completion Timeline` (既存 `## Per-Issue Durations` を rename し Route 列・Recovery 列を強化) / `## Token Usage Aggregate` (新規: token_usage event を issue 別に集計; event schema に issue 粒度が無い場合は session 合計でフォールバック) / `## Verify Phase Residuals` (既存維持) / `## Recovery Events` (既存維持)。既存の `## Summary` / `## Concurrent Sessions Detected` / `## Improvement Candidates Surfaced` は保持してよい。bash 3.2+ 互換 (→ acceptance criteria 6, 7)
+
+6. get-auto-session-report 系 bats を更新 (after 5): `tests/audit-auto-session.bats` の period 系 `@test` (lines 185-240 付近) を除去し、section rename に伴う旧 `Per-Issue Durations` アサーションを `Sub-Issue Completion Timeline` に更新。`tests/get-auto-session-report.bats` も同様に section 名アサーションを更新し、新 section (`Phase Activity Summary` / `Token Usage Aggregate`) のアサーションを追加。削除する period scenario は廃止 feature 専用のため再カバー不要 (#526) (→ acceptance criteria 17)
+
+7. `skills/auto/SKILL.md` を改修 (parallel with 1): `allowed-tools` から 廃止 2 スクリプトのエントリを除去 / 各 phase の heartbeat 呼び出し記述を除去 / `auto-events-rollup.sh` 実行記述 (lines 699, 1126 付近) を除去 / `## Loop State Heartbeat` セクション全文 (lines 701-734 付近) を削除 / next-cycle-seed の `loop-state-{DATE}.md` row append step を除去 (代替は既存 `next_cycle_seeded` event + L3 session.md)。半角 `!` / triple backtick / YAML block scalar を新規導入しないこと (validate-skill-syntax.py 制約) (→ acceptance criteria 5)
+
+8. `skills/audit/SKILL.md` + workflow docs から period mode を除去 (parallel with 1): `skills/audit/SKILL.md` の frontmatter description (line 3)・mode 判定 (lines 23, 27)・auto-session Subcommand の period セクション (lines 864-938 付近)・`_period/` 参照を除去し per-session / list モードのみ残す (frontmatter は単一行維持)。`docs/workflow.md` (line 166) / `docs/ja/workflow.md` (line 159) の `/audit auto-session` 説明から period aggregate モード記述を除去 (→ acceptance criteria 15)
+
+9. `modules/verify-executor.md` (lines 132-136) と `modules/verify-patterns.md` (lines 545, 553, 825) の例示を、廃止スクリプトを実在スクリプトとして参照しない形に差し替え (実在スクリプト or 汎用プレースホルダ; 過去事例は過去形/「(削除済み)」注記可) (parallel with 1) (→ acceptance criteria 14)
+
+10. structure docs 更新 + `_daily/` 実ファイル削除 (after 1): `docs/structure.md` の `_daily/`+`_period/` Directory Layout サブツリー (lines 69-75)・`auto-events-rollup.sh` Scripts エントリ (line 193) を削除し、ファイル数カウントを `(62 files)`→`(60 files)` (line 32) / `(93 files)`→`(91 files)` (line 45) に更新。`docs/ja/structure.md` も同様 (lines 62-65, 186; ja はカウントなし)。`docs/sessions/_daily/*.md` 13 ファイルを `git rm` し空の `docs/sessions/_daily/` ディレクトリを削除 (→ acceptance criteria 9, 10, 12, 13, 16)
+
+## Verification
+
+### Pre-merge
+
+- <!-- verify: file_not_exists "scripts/append-loop-state-heartbeat.sh" --> `scripts/append-loop-state-heartbeat.sh` が削除されている
+- <!-- verify: file_not_exists "scripts/auto-events-rollup.sh" --> `scripts/auto-events-rollup.sh` が削除されている
+- <!-- verify: file_not_exists "tests/append-loop-state-heartbeat.bats" --> `tests/append-loop-state-heartbeat.bats` が削除されている
+- <!-- verify: file_not_exists "tests/auto-events-rollup.bats" --> `tests/auto-events-rollup.bats` が削除されている
+- `skills/auto/SKILL.md` から `append-loop-state-heartbeat` / `auto-events-rollup` の呼び出しおよび `## Loop State Heartbeat` セクションが除去されている <!-- verify: rubric "skills/auto/SKILL.md に append-loop-state-heartbeat.sh / auto-events-rollup.sh の呼び出し記述および ## Loop State Heartbeat セクション全文が存在しない" --> <!-- verify: file_not_contains "skills/auto/SKILL.md" "append-loop-state-heartbeat" --> <!-- verify: file_not_contains "skills/auto/SKILL.md" "auto-events-rollup.sh" --> <!-- verify: file_not_contains "skills/auto/SKILL.md" "loop-state-" -->
+- <!-- verify: rubric "scripts/get-auto-session-report.sh の period aggregate モード (--day / --since-days / --range) のパラメータ解析・処理ロジックが削除されており、session 別単独実行モードのみ残っている" --> `scripts/get-auto-session-report.sh` から `--day` / `--since-days` / `--range` モードが削除されている
+- <!-- verify: rubric "scripts/get-auto-session-report.sh が生成する data-layer.md に Phase Activity / Sub-Issue Completion Timeline / Token Usage Aggregate / Verify Phase Residuals / Recovery Events の 5 セクション (相当の表) が含まれており、cross-session 集約ではなく session 別単独 view として完結している" --> `scripts/get-auto-session-report.sh` が session 別 data-layer.md として Phase Activity / Sub-Issue Completion Timeline / Token Usage Aggregate / Verify Phase Residuals / Recovery Events の 5 セクションを含む report を生成する
+- `scripts/run-code.sh` / `run-review.sh` / `run-merge.sh` / `run-auto-sub.sh` から `append-loop-state-heartbeat.sh` 呼び出しが除去されている <!-- verify: file_not_contains "scripts/run-code.sh" "append-loop-state-heartbeat" --> <!-- verify: file_not_contains "scripts/run-review.sh" "append-loop-state-heartbeat" --> <!-- verify: file_not_contains "scripts/run-merge.sh" "append-loop-state-heartbeat" --> <!-- verify: file_not_contains "scripts/run-auto-sub.sh" "append-loop-state-heartbeat" -->
+- <!-- verify: rubric "docs/sessions/_daily/ 配下に loop-state-*.md および auto-events-rollup-*.md ファイルが残存していない (ls docs/sessions/_daily/loop-state-*.md および ls docs/sessions/_daily/auto-events-rollup-*.md が空)" --> `docs/sessions/_daily/` 配下の `loop-state-*.md` および `auto-events-rollup-*.md` ファイルが全て削除されている
+- <!-- verify: dir_not_exists "docs/sessions/_daily" --> `docs/sessions/_daily/` ディレクトリが削除されている
+- `scripts/check-verify-dirty.sh` の built-in ignore-path から `loop-state-*.md` / `auto-events-rollup-*.md` 参照が除去されている <!-- verify: file_not_contains "scripts/check-verify-dirty.sh" "loop-state-" --> <!-- verify: file_not_contains "scripts/check-verify-dirty.sh" "auto-events-rollup-" -->
+- `docs/structure.md` から `docs/sessions/_daily/` ディレクトリ記述および `auto-events-rollup.sh` / `loop-state-` 参照が除去されている <!-- verify: file_not_contains "docs/structure.md" "_daily/" --> <!-- verify: file_not_contains "docs/structure.md" "auto-events-rollup.sh" --> <!-- verify: file_not_contains "docs/structure.md" "loop-state-" -->
+- `docs/ja/structure.md` も同様に更新されている <!-- verify: file_not_contains "docs/ja/structure.md" "_daily/" --> <!-- verify: file_not_contains "docs/ja/structure.md" "auto-events-rollup.sh" --> <!-- verify: file_not_contains "docs/ja/structure.md" "_period" -->
+- `modules/verify-executor.md` および `modules/verify-patterns.md` の例示が廃止スクリプトを実在するスクリプトとして参照していない <!-- verify: rubric "modules/verify-executor.md および modules/verify-patterns.md に廃止済みの auto-events-rollup.sh / append-loop-state-heartbeat.sh を実在するスクリプトとして参照している記述が残存していない" -->
+- `skills/audit/SKILL.md` / `docs/workflow.md` / `docs/ja/workflow.md` から `/audit auto-session` の period aggregate モード (`--day` / `--since Nd` / `--range`) の記述が除去され、per-session / list モードのみが残っている <!-- verify: rubric "skills/audit/SKILL.md / docs/workflow.md / docs/ja/workflow.md から /audit auto-session の period aggregate モード (--day / --since Nd / --range) の記述および _period 出力先参照が除去され、per-session モードと list モードのみが残っている" --> <!-- verify: file_not_contains "skills/audit/SKILL.md" "_period" --> <!-- verify: file_not_contains "docs/workflow.md" "_period" --> <!-- verify: file_not_contains "docs/ja/workflow.md" "_period" -->
+- `docs/structure.md` から `_period/` ディレクトリ記述が除去され、scripts / tests のファイル数カウントが更新されている (scripts 62→60 / tests 93→91) <!-- verify: file_not_contains "docs/structure.md" "_period" --> <!-- verify: grep "(60 files)" "docs/structure.md" --> <!-- verify: grep "(91 files)" "docs/structure.md" -->
+- <!-- verify: github_check "gh pr checks" "Run bats tests" --> bats test が緑のまま
+
+### Post-merge
+
+- 次回 `/auto $N` 実行後、`docs/sessions/{ID}-{DATE}/data-layer.md` が rollup 相当の 5 セクションを含む形で生成されることを観察 <!-- verify-type: observation event=auto-run -->
+- 次回 `/auto $N` 実行で `docs/sessions/_daily/` に新ファイルが生成されないことを観察 <!-- verify-type: observation event=auto-run -->
+
+## Tool Dependencies
+
+本 Issue は既存ツールの **削除** が中心で、新規 `allowed-tools` 追加は不要。
+
+### Bash Command Patterns
+- none (新規追加なし。`git rm` / `grep` 等は既存権限で実行可能)
+
+### Built-in Tools
+- none (`Read` / `Edit` / `Write` / `Bash` は既存)
+
+### MCP Tools
+- none
+
+## Notes
+
+### Conflict with implementation (period mode 廃止の impact chain)
+
+- **内容**: AC #6 は `scripts/get-auto-session-report.sh` の `--day` / `--since-days` / `--range` (period aggregate) モード削除を必須とするが、Issue 本文「廃止対象」の file list には consumer 側が含まれていなかった。
+- **Issue 本文の前提**: 「`scripts/get-auto-session-report.sh`: `--day` / `--since-days` / `--range` モード削除 (session 別単独実行のみ残す)」
+- **実装側の実態**: `skills/audit/SKILL.md` (lines 3, 23, 27, 864-938) が `/audit auto-session --day / --since Nd / --range` を script の period mode に delegate し、`tests/audit-auto-session.bats` (lines 185-240) が `--day` / `--since-days` を直接テスト。`docs/structure.md` (72-75) / `docs/ja/structure.md` (65) / `docs/workflow.md` (166) / `docs/ja/workflow.md` (159) が `_period/` を記載。
+- **自動解決 (non-interactive)**: full 廃止 (script + audit skill + period test + `_period` docs + workflow docs) を採用。Issue Notes の「cross-session view 機能の代替策は不要... 必要になれば別途 `get-auto-session-report.sh --day` を再実装する別 Issue」記述から、cross-session 集約の完全廃止が intent と判断。impact chain の AC を追加 (audit period・structure `_period`/カウント・workflow `_period`)。詳細は issue retrospective comment の Auto-Resolve Log 参照。
+
+### 5-section data-layer.md の design 判断
+
+- 現行 report の 6 セクション (`Summary` / `Per-Issue Durations` / `Recovery Events` / `Verify Phase Residuals` / `Concurrent Sessions Detected` / `Improvement Candidates Surfaced`) を、AC #7 要求の 5 section 名にマッピング:
+  - `Phase Activity Summary` ← 新規 (phase 別 activity 集計)
+  - `Sub-Issue Completion Timeline` ← `Per-Issue Durations` を rename + Route/Recovery 列強化
+  - `Token Usage Aggregate` ← 新規 (issue 別 token 集計; schema に issue 粒度が無ければ session 合計でフォールバック)
+  - `Verify Phase Residuals` / `Recovery Events` ← 既存維持
+- 既存の追加 section (`Summary` / `Concurrent Sessions` / `Improvement Candidates`) は削除不要 (rubric は 5 section の存在のみ要求)。
+- section rename は既存 bats アサーション (`tests/audit-auto-session.bats` line 20, `tests/get-auto-session-report.bats`) に影響するため同時更新が必要 (Step 6)。
+
+### next-cycle-seed の loop-state row append 代替
+
+- `skills/auto/SKILL.md` の batch path E (line 1152 付近) は loop-state row append + `next_cycle_seeded` event emit の二重記録。loop-state row append を除去し、SSoT である `next_cycle_seeded` event (auto-events.jsonl) + L3 session.md narrative で代替 (`file_not_contains "loop-state-"` を満たす)。
+
+### skill-dev 制約
+
+- `skills/auto/SKILL.md` / `skills/audit/SKILL.md` 編集時、半角 `!` / triple backtick / YAML block scalar を新規導入しないこと (validate-skill-syntax.py MUST 制約)。audit frontmatter description は単一行を維持。
+- `scripts/validate-skill-syntax.py` の KNOWN_TOOLS に廃止スクリプトは未登録 (grep 確認済) のため KNOWN_TOOLS 更新は不要。
+
+### verify command 補足
+
+- `grep "(60 files)" "docs/structure.md"` / `grep "(91 files)" "docs/structure.md"` は ripgrep ERE。`(...)` はグループ扱いで literal "60 files" / "91 files" にマッチする (parens は file 側の隣接文字として一致)。spec 作成時点では未存在の文字列で、Step 10 で /code が導入する。
+- `verify-ignore-paths` config 由来の `loop-state-*.md` / `auto-events-rollup-*.md` エントリは互換のため明示削除せず黙認 (Issue Notes 準拠)。
+
+## Exclusions
+
+以下は廃止シンボルを参照するが、**historical record / 非 load-bearing context** のため変更対象外:
+
+- `docs/spec/*.md` (過去 spec ファイル群) — 過去の設計記録
+- `docs/sessions/{ID}-{DATE}/*.md` (過去 session retrospective) — 過去の実行記録
+- `docs/reports/loop-engineering-wholework-2026-06-18.md` / `docs/ja/reports/loop-engineering-wholework-2026-06-18.md` — 日付付き過去レポート
+- `docs/reports/event-log-schema.md` (line 232) — `--narrative-draft` 廃止 (#776) の過去経緯としての参照 (period mode 非参照)
+- `skills/spec/SKILL.md` (lines 323, 337) — symbol-impact-discovery の teaching example (過去の path migration を例示する instruction 本文)
+- `skills/code/skill-dev-validation.md` (line 104) — `auto-events-rollup.sh` cleanup を「ある原則の発端 (PR #644 / #638)」として参照する歴史的 attribution。原則自体はスクリプト削除後も factual に成立
+- `docs/tech.md` / `docs/ja/tech.md` — `get-auto-session-report.sh` の `WHOLEWORK_ISSUE_BODY_DIR` env var 参照は per-session モードで存続するため変更不要
