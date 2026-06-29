@@ -59,7 +59,6 @@ wholework/
 │           session.md       # L3 ナラティブ（What worked / Limits and gaps / Improvement candidates）
 │           events.jsonl     # .tmp/auto-events.jsonl から抽出したセッションスコープイベント
 │           data-layer.md    # データレイヤーレポート（/audit auto-session が生成）
-│           data-layer-ja.md # 日本語翻訳 sibling
 │         _daily/        # 日次自動生成ファイル
 │           auto-events-rollup-{DATE}.md # 日次ロールアップ（scripts/auto-events-rollup.sh が生成）
 │           loop-state-{DATE}.md         # Loop state heartbeat ログ（/auto Loop State Heartbeat が生成）
