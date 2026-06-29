@@ -281,6 +281,14 @@ Skip this sub-step if no out-of-scope remediations are identified.
 
 Before delegating scope selection to test-runner, check whether this implementation includes behavioral changes. A behavioral change is a modification to an existing file that is referenced by tests beyond the file's directly-associated test (`modules/verify-patterns.md` §24).
 
+**Pre-check (defensive guard):** Before running any of the checks below, verify that the `tests/` directory exists at the project root:
+
+```bash
+[ -d tests ] || { echo "skip: tests/ directory not present — behavioral change detection skipped"; }
+```
+
+If `tests/` does not exist (e.g., projects without a bats test suite), skip this entire Behavioral Change Detection subsection — there are no tests to reference the modified file, and the full-suite override (`bats tests/`) cannot run. Proceed directly to `Read test-runner.md` below (which will return "Test framework not detected" if no test framework is configured at all).
+
 **Detection (2 checks):**
 
 1. **Does the implementation modify any existing file (not purely additive)?**
@@ -293,11 +301,13 @@ Before delegating scope selection to test-runner, check whether this implementat
      ```bash
      grep -rl "<filename>" tests/
      ```
+     (The pre-check above already confirmed `tests/` exists; without it, `grep -rl` would emit `No such file or directory` to stderr and exit non-zero.)
    - If the only matching test file is the direct counterpart of the modified file (e.g., `tests/run-code.bats` for `scripts/run-code.sh`), or there are no matches: narrow scope is acceptable — proceed to `Read test-runner.md`.
    - If additional test files reference the modified file: behavioral change confirmed — override test-runner auto-detection scope and run the full suite:
      ```bash
      bats tests/
      ```
+     (Same pre-check guard applies — `bats tests/` requires the directory to exist.)
    - Handle FAIL via Tier 0 structured recovery below. If PASS, continue with the remaining validations in this step.
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/test-runner.md` and follow the "Processing Steps" section to run tests.

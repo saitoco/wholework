@@ -34,13 +34,15 @@ Execution order: **type check → lint → build → test**
    - `playwright.config.ts` / `playwright.config.js` → `npx playwright test`
    - `vitest.config.ts` / `vitest.config.js` → `npx vitest run`, or `vite.config.ts` / `vite.config.js` with test config → `npx vitest run`
    - `cypress.config.ts` / `cypress.config.js` → `npx cypress run`
-   - `.bats` files in `tests/` directory → `bats tests/`
+   - `.bats` files in `tests/` directory → `bats tests/` (defensive guard: only triggers when `[ -d tests ]` AND `.bats` files exist; if `tests/` is absent this branch is skipped automatically)
    - `test` script in `package.json` → `npm test`
    - `test` target in `Makefile` → `make test`
    - `pytest.ini` / `pyproject.toml` → `pytest`
    - If not detected → return "Test framework not detected"
 
    **Note**: If Vitest and npm test coexist (`vitest.config.ts` / `vitest.config.js` exists and `package.json` also has a `test` script), prioritize Vitest.
+
+   **Defensive guard for `bats tests/`**: The bats branch presupposes that the `tests/` directory exists at the project root. If a caller (e.g., `/code` Behavioral Change Detection) forces a full-suite execution via `bats tests/`, it must precede the invocation with `[ -d tests ]` — without the guard, `bats` would fail with an opaque "no such file" error. Auto-detection here is already implicitly guarded because the `.bats` glob returns empty when `tests/` is absent.
 
 ### Step 2: Test Execution
 
