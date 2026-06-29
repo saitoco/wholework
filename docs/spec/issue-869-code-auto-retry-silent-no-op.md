@@ -169,23 +169,21 @@ No new comments since last phase.
 - テスト 40 (`auto-retry: silent no-op + AUTO_RETRY_ENABLED=true fires retry`) が最初の実装で失敗: `exec bash "$0" "$@"` が空 args で再起動し Usage エラーになった。`_TRAILING_ARGS` 変数を導入して修正 (追加コミット 1 本)。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- A 案 (run-code.sh wrapper 拡張) を採用し、`exec` でプロセスを置き換える方式で実装 (EXIT trap 二重発火防止)
-- `CODE_RETRY_COUNT` は `export` 済み env var で引き継ぐことで `exec` を跨いでカウンタを保持
-- `apply-fallback.sh` の Tier 2 ハンドラに `AUTO_RETRY_ENABLED` ガードを追加し二重リトライを防止
-- `_TRAILING_ARGS` で shift 前の引数を保存し、`exec` 時に `"$ISSUE_NUMBER" "${_TRAILING_ARGS[@]}"` を渡す
+- REVIEW_DEPTH=light (Size M) で全 5 pre-merge AC が PASS。MUST 問題なし → COMMENT イベントで Review 投稿
+- SHOULD 問題 1 件 (`apply-fallback.sh` の double-retry guard が `autonomy: L1` を考慮していない) はスキップ — フォローアップ候補
+- CI 全ジョブ SUCCESS (DCO, Run bats tests, Validate skill syntax, Forbidden Expressions check, macOS shell compatibility)
 
 ### Deferred Items
-- B 案 (config サブキー化 `verify`/`code` 分割) は本 Issue でスコープ外 — follow-up 候補
-- C 案 (`apply-fallback.sh` Tier 2 統合) も別 Issue 候補
-- `detect-config-markers.md` への `threshold` キーサポート追加は本 Issue スコープ外
+- `apply-fallback.sh` の guard に autonomy tier チェック追加 — 本 Issue スコープ外、フォローアップ起票候補
+- `AUTO_EVENTS_LOG` guard の dead code 整理 (CONSIDER) — リファクタリング候補
 
 ### Notes for Next Phase
-- PR #871 が CI で PASS することを確認すること (`bats tests/` は全スイート PASS 済)
 - post-merge AC2 (`section_contains "docs/tech.md" "## Architecture Decisions" "auto-retry"`) は実装済みのため verify フェーズで PASS するはず
 - post-merge AC1 (次回 silent no-op での `code_retry_fire` イベント記録) は manual 検証が必要
+- SHOULD 問題の `apply-fallback.sh` guard は L1 + enabled=true 構成では recovery なしになるリスクあり。verify 前にフォローアップ起票を検討
 
 ## Notes
 
@@ -204,3 +202,17 @@ No new comments since last phase.
 ### WHOLEWORK_SCRIPT_DIR mock への影響
 
 - 新規スクリプトを追加しないため (既存 `run-code.sh` の修正のみ)、`$MOCK_DIR` への mock 追加は不要
+
+## review retrospective
+
+### Spec vs. Implementation Divergence
+
+- Spec divergence: なし。Spec に記載された A 案の設計 (exec ベース retry、CODE_RETRY_COUNT via export、apply-fallback guard) はすべて正確に実装されていた。Spec の Code Retrospective が `_TRAILING_ARGS` の deviation を記録しており、実装と Spec の認識が一致している状態でレビューに入れた。
+
+### Recurring Issues
+
+- SHOULD 問題として `apply-fallback.sh` の guard 設計に autonomy tier チェック漏れを検出。`run-code.sh` の retry 条件 (L2/L3 + enabled) と guard 条件 (enabled のみ) の非対称性は設計時から存在していたが Spec では言及されていなかった。verify command がこのケースをカバーしていないため、フォローアップ Issue で修正が必要。
+
+### Acceptance Criteria Verification Difficulty
+
+- 全 5 pre-merge AC が verify command 付きで PASS。rubric 3 件 + file_contains 1 件 + command 1 件 (CI fallback) のバランスは適切。UNCERTAIN ゼロ。
