@@ -81,3 +81,34 @@
 2. **"主要 skill" の定義範囲**: 8 skills (auto/code/spec/verify/review/merge/issue/audit) を採用。`triage` は inline invocation で skill ファイル変更が minimal, `doc` は batch session で通常実行されない。
 
 3. **skill diff 比較の L3 サブステップ位置**: Backlink (step 6) とコミット (step 7) の間に独立サブステップとして追加。session.md のすべての本体コンテンツ (retro-proposals, backlink) 書き込み完了後に注記を末尾追記する形が実装上最も自然で、既存 L3 フローへの影響を最小化する。
+
+## Consumed Comments (code phase)
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- Step 1 の旧 step 3 (Set AUTO_SESSION_ID) を step 4 に繰り下げ: 新たに追加した hash 収集 (step 2) と JSON 書き込み (step 3) の挿入により既存の step 番号をシフトした。Spec には「JSON 書き込みの直前に追記」と記載されており、番号シフトは Spec の意図に沿った自然な結果。
+
+### Design Gaps/Ambiguities
+- L3 skill diff check の `CHANGED_SKILLS` 変数はローカル変数として bash ループ内で累積しているが、bash でのスペース区切り連結パターンは可読性が低い。実装上は機能するが、jq を使った配列構築の方が安全。今回は最小変更方針を維持し、既存の bash スタイルに合わせた。
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Step 1 に skill hash 収集 (bash 3.2+ 互換、failure-safe) → JSON schema 拡張という 2-sub-step 構成を採用。既存の step 1/2/3 番号体系を 1/2/3/4 に変更してシフトした。
+- L3 step 7 (新) を Backlink (step 6) とコミット (旧 step 7 → 新 step 8) の間に挿入。既存 L3 フローへの影響を最小化するため session.md の全コンテンツ書き込み完了後に追記する設計とした。
+- `CHANGED_SKILLS` 変数によるループ集積ではなく、8 skill 全件をリスト形式で `session.md` に出力する形式 (changed → hash、unchanged → "(no change)") を採用。
+
+### Deferred Items
+- L3 diff check の bash スタイル連結 (スペース区切り) は jq 配列構築に将来改善できるが、今回は最小変更を優先。
+- Smoke Test なし (Spec に `## Smoke Test` セクション不在)。次回 `/auto --batch` 実行による観察が事実上の統合テスト。
+
+### Notes for Next Phase
+- `/verify` では AC1-3 の mechanical verify が全 PASS したことを確認済み (section_contains + grep)。rubric verify は /verify フェーズで正式実行予定。
+- Post-merge AC (observation event=auto-run) は次回 `/auto --batch` 完走後に確認する。
