@@ -92,3 +92,35 @@ dirty file を以下 4 分類で判定し、`self-worktree` / `other-worktree` /
 - `.claude/worktrees/` は `.gitignore` で除外されているが、テスト用リポジトリには `.gitignore` がないため bats テストでは問題なく dirty として検出される。本番での `.claude/worktrees/` パスは `docs/sessions/` とは異なり現在は git status に現れないが、将来的な use case (verify が worktree 内から呼ばれる場合等) のために基礎機構として追加する。
 - `other-worktree` と `other-session` は blocking しない (exit 0 → no-op) が、stderr への出力は残す。後続 Issue で各 run-*.sh の冒頭 check がこの出力を利用できるようにするための基礎。
 - bash 3.2 互換: `=~` と `case`/glob パターン (`== glob`) は両方 bash 3.2 以上で動作。`[[ "$f" == .claude/worktrees/*+issue-${NUMBER}/* ]]` の glob マッチは bash 3.2+ 互換。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- SHOULD issue (`setup()` missing `git config core.excludesFile /dev/null`) was fixed inline during review (not deferred) — the fix is 2 lines and low risk
+- CONSIDER issue (`docs/sessions/*-*/*` over-matching) was skipped — current usage has no `-` in non-numeric dirs, real harm is nil
+- Review depth: light (Size M PR, explicit `--light` flag)
+
+### Deferred Items
+- CONSIDER: add comment to `check-verify-dirty.sh` line 111 to document that `*-*` means `{pid}-{timestamp}` numeric-only pattern intent — deferred to follow-up or merge-phase judgment
+- Post-merge observation: verify that self-worktree/other-worktree classification works correctly when called from a worktree context in a real parallel session
+
+### Notes for Next Phase
+- All CI checks passed (5/5 SUCCESS), PR is merge-ready
+- One additional commit pushed (`b630f4e`) addressing the bats test environment fix — merge should include this commit
+- No MUST issues; no REQUEST_CHANGES event posted
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+- 乖離なし。実装はSpec定義の4分類ロジック・stderr出力フォーマット・exit codeポリシーと完全に一致している。
+
+### 繰り返し発生するIssue
+
+- **テスト環境依存の想定漏れ**: Specの Notes に「テスト用リポジトリには `.gitignore` がないため bats テストでは問題なく dirty として検出される」と記述されていたが、グローバル gitignore (`~/.gitignore_global`) の影響を考慮していなかった。`git config core.excludesFile /dev/null` の設定は、`.claude/` を含む任意のパスを test repo で使用するすべてのテストファイルで必要になる可能性がある。verify-dirty-detection.bats 以外のテストがこのパスを使用する場合は同様の修正が必要。
+
+### 受入条件の検証困難度
+
+- `bats tests/` の検証は CI では PASS (Ubuntu runner にはグローバル gitignore がない) だが、macOS 開発者環境では FAIL する潜在的な環境依存がある。bats テストで `.claude/` 配下パスを使用する際は `git config core.excludesFile /dev/null` が標準パターンとして必要であることを今後の Issue/Spec で周知するとよい。
+- verify command `bats tests/` は適切で UNCERTAIN なし。他の verify commands (grep 系) もすべて確実に PASS を判定できた。
