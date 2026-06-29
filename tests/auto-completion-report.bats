@@ -13,21 +13,17 @@ batch_completion_section() {
 }
 
 @test "Batch Completion Report: Pending manual confirmation block present" {
-    run bash -c "awk '/^### Batch Completion Report/{found=1} /^## / && !/Batch Completion Report/{found=0} found{print}' '$SKILL_FILE' | grep -q 'Pending manual confirmation'"
-    [ "$status" -eq 0 ]
+    batch_completion_section | grep -q "Pending manual confirmation"
 }
 
 @test "Batch Completion Report: verify-type classification present" {
-    run bash -c "awk '/^### Batch Completion Report/{found=1} /^## / && !/Batch Completion Report/{found=0} found{print}' '$SKILL_FILE' | grep -q 'verify-type'"
-    [ "$status" -eq 0 ]
+    batch_completion_section | grep -q "verify-type"
 }
 
 @test "Batch Completion Report: phase/verify label check present" {
-    run bash -c "awk '/^### Batch Completion Report/{found=1} /^## / && !/Batch Completion Report/{found=0} found{print}' '$SKILL_FILE' | grep -q 'phase/verify'"
-    [ "$status" -eq 0 ]
+    batch_completion_section | grep -q "phase/verify"
 }
 
 @test "Batch Completion Report: Recommended next action guidance present" {
-    run bash -c "awk '/^### Batch Completion Report/{found=1} /^## / && !/Batch Completion Report/{found=0} found{print}' '$SKILL_FILE' | grep -q 'Recommended next action'"
-    [ "$status" -eq 0 ]
+    batch_completion_section | grep -q "Recommended next action"
 }
