@@ -744,6 +744,13 @@ The script aggregates `gh issue list` open-issue counts by `phase/*` label (omit
        rm -f "$SESSION_DIR/data-layer-stderr.log"
      fi
      ```
+   - **Empty-dir guard** (防止策): After all file writes above complete, remove the session dir if it is still empty. This prevents orphaned empty directories when the process aborts before writing any files (e.g., DATE-cross retry creates a new dir but writes nothing to it):
+     ```bash
+     if [ -d "$SESSION_DIR" ] && [ -z "$(ls -A "$SESSION_DIR")" ]; then
+       rmdir "$SESSION_DIR"
+       echo "Warning: No session data was written to $SESSION_DIR — removed empty session dir"
+     fi
+     ```
 
 3. **Notable judgment** (using events from `.tmp/auto-events.jsonl` and in-context variables):
    - Extract events for this session:
