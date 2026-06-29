@@ -124,3 +124,51 @@ dirty file を以下 4 分類で判定し、`self-worktree` / `other-worktree` /
 
 - `bats tests/` の検証は CI では PASS (Ubuntu runner にはグローバル gitignore がない) だが、macOS 開発者環境では FAIL する潜在的な環境依存がある。bats テストで `.claude/` 配下パスを使用する際は `git config core.excludesFile /dev/null` が標準パターンとして必要であることを今後の Issue/Spec で周知するとよい。
 - verify command `bats tests/` は適切で UNCERTAIN なし。他の verify commands (grep 系) もすべて確実に PASS を判定できた。
+
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| spec  | pr    | SUCCESS | run-spec.sh exit 0, Spec ファイル commit |
+| code  | pr    | SUCCESS (manual recovery) | run-code.sh が 2 回 exit 1 (silent no-op); worktree に 3 commits が存在したが push/PR 作成が漏れていた。手動で push + PR #868 作成して回復 |
+| review | pr   | SUCCESS | run-review.sh exit 0, lightweight review PASS |
+| merge | pr    | SUCCESS | run-merge.sh exit 0, squash-merge 完了 |
+| verify | -    | SUCCESS (pre-merge全PASS) | post-merge manual 1 件残り → phase/verify |
+
+### Orchestration Anomalies
+- `run-code.sh` で **silent no-op パターン** が 2 回連続発生:
+  - 1 回目: claude exit 0 だが branch/commit 未作成
+  - 2 回目: 自動で stale worktree cleanup → branch 削除後、claude 実行で 3 commits を作成したが、push と PR 作成が漏れて exit 1
+  - Tier 3 recovery sub-agent は `action=abort` を返した (rationale が「worktree-code+issue-859 was deleted」と誤判定; 実際には 2 回目の実行で commits は作成されていた)
+- 手動回復手順: `git push -u origin worktree-code+issue-859` → `gh pr create` → `reconcile-phase-state.sh --check-completion` で `matches_expected: true` 確認 → 後続 phases (review/merge/verify) を継続
+
+### Improvement Proposals
+- **`run-code.sh` の silent no-op 後 push/PR 漏れ自動回復**: `reconcile-phase-state.sh --check-completion` 失敗時に worktree の `git log origin/main..HEAD` を確認し、unpushed commits があれば自動で push + PR 作成を試みる recovery を Tier 2 fallback catalog に追加する (push-and-pr fallback パターン)
+- **Tier 3 recovery sub-agent の rationale 精度向上**: 「branch was deleted」判定が誤りだったケース。現在の worktree HEAD と branch tip を実際に確認してから rationale を構築する仕組みが必要 (現状は log tail と reconcile snapshot のみ参照)
+- **silent no-op 連続発生時の早期 escalation**: 同じ phase で 2 回連続 silent no-op が出た時点で Tier 3 を待たず即時に手動介入を促す banner を出す (15 分 × 2 = 30 分の wall time が失われる前に user 通知)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Spec ファイル名が `tests/check-verify-dirty.bats` (不存在) を参照していた問題を /issue 段階の audit で検出して修正した。/issue の AC verify command 監査が機能した好例。
+
+#### design
+- 4 分類ロジック (self/other-worktree/other-session/parent-main) の境界が明確で、後段の実装/review/verify で一切の解釈ブレが発生しなかった。
+
+#### code
+- silent no-op パターンの 2 回連続発生 → 手動回復で吸収。Improvement Proposals (Auto Retrospective) 参照。
+
+#### review
+- bats テストの macOS 環境依存問題を /review が SHOULD として検出・解決。`git config core.excludesFile /dev/null` 設定を test に追加。
+
+#### merge
+- 衝突なし、CI 5/5 PASS、squash-merge 完了。問題なし。
+
+#### verify
+- Pre-merge 4 件全 PASS。post-merge manual 観察 1 件は phase/verify で保留。`bats tests/` 1052/0 で既存挙動の維持を確認。
+
+### Improvement Proposals
+- (Auto Retrospective の Improvement Proposals を参照: silent no-op 後 push/PR 漏れ自動回復、Tier 3 rationale 精度向上、連続失敗の早期 escalation)
