@@ -177,3 +177,6 @@ bundled `visual-diff-adapter` (`modules/visual-diff-adapter.md`) の Step 5b/5c 
 - post-merge manual 条件をユーザーが下流 koganezawa-com#58 の再走で確認: diff highlight 生成 → 3-panel composite → `frontend-visual-review` レポート生成まで完走。`TypeError: pixelmatch is not a function` / `MODULE_NOT_FOUND (pngjs)` は不発生で、ESM interop / pnpm 非hoist 修正が実環境で有効と確定。
 - follow-on の画像高さ不一致は本再走で**再現せず**、別 Issue 起票は不要と判断 (adapter Notes の caveat は維持)。
 - 全 5 条件 PASS → Issue #543 を phase/done でクローズ。
+
+## Consumed Comments
+No new comments since last phase.
