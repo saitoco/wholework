@@ -172,9 +172,10 @@ No new comments since last phase.
 <!-- phase: review -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light (Size M) で全 5 pre-merge AC が PASS。MUST 問題なし → COMMENT イベントで Review 投稿
+- REVIEW_DEPTH=light (Size M、2 回目実行) で全 5 pre-merge AC が PASS。MUST 問題なし → COMMENT イベントで Review 投稿
 - SHOULD 問題 1 件 (`apply-fallback.sh` の double-retry guard が `autonomy: L1` を考慮していない) はスキップ — フォローアップ候補
 - CI 全ジョブ SUCCESS (DCO, Run bats tests, Validate skill syntax, Forbidden Expressions check, macOS shell compatibility)
+- 前回レビューから実装変更なし、新規 MUST 問題なし
 
 ### Deferred Items
 - `apply-fallback.sh` の guard に autonomy tier チェック追加 — 本 Issue スコープ外、フォローアップ起票候補
@@ -183,7 +184,7 @@ No new comments since last phase.
 ### Notes for Next Phase
 - post-merge AC2 (`section_contains "docs/tech.md" "## Architecture Decisions" "auto-retry"`) は実装済みのため verify フェーズで PASS するはず
 - post-merge AC1 (次回 silent no-op での `code_retry_fire` イベント記録) は manual 検証が必要
-- SHOULD 問題の `apply-fallback.sh` guard は L1 + enabled=true 構成では recovery なしになるリスクあり。verify 前にフォローアップ起票を検討
+- SHOULD 問題の `apply-fallback.sh` guard は L1 + enabled=true 構成では recovery なしになるリスクあり。フォローアップ起票を検討
 
 ## Notes
 
