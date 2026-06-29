@@ -856,7 +856,8 @@ The generated report (`docs/sessions/{session-id}-{date}/data-layer.md`) contain
 4. **Verify Phase Residuals** — issues that entered verify but did not complete it in this session
 5. **Concurrent Sessions Detected** — events where another session committed to main during a phase
 6. **Improvement Candidates Surfaced** — anomaly-derived improvement candidates (Tier 3 recoveries, Tier 2 recoveries approaching or reaching recoveries-auto-fire.threshold, unknown patterns)
-7. **Narrative Section (skeleton)** — TBD placeholders for "What worked", "Limits and gaps", "Improvement candidates surfaced", "Conclusion" (manual fill after review)
+
+Narrative content (what worked / limits / improvement candidates / conclusion) is owned by the L3 session retrospective `session.md` in the same directory; the data-layer report does not embed a skeleton for it.
 
 ### Argument Parsing
 
@@ -971,7 +972,7 @@ This step runs by default after Steps 1–2 complete. Skip entirely when `--no-j
 3. Translate the entire content to Japanese with the following rules:
    - Translate prose, headings, table column headers, and inline narrative
    - **Preserve as-is**: code blocks, file paths, command names, function/script identifiers (e.g., `spawn-recovery-subagent.sh`), Issue/PR references (`#666`), session IDs, ISO 8601 timestamps, SHA hashes
-   - Convert AC/section labels to Japanese natural equivalents (e.g., "Summary" → "サマリ", "Per-Issue Durations" → "Issue 別所要時間", "Recovery Events" → "リカバリイベント", "Verify Phase Residuals" → "Verify Phase 残留", "Concurrent Sessions Detected" → "並行セッション検出", "Improvement Candidates Surfaced" → "改善候補 (自動検出)", "Narrative Section" → "Narrative セクション", "What worked" → "うまくいったこと", "Limits and gaps" → "限界と gap", "Improvement candidates surfaced" → "改善候補 (浮上分)", "Conclusion" → "結論")
+   - Convert AC/section labels to Japanese natural equivalents (e.g., "Summary" → "サマリ", "Per-Issue Durations" → "Issue 別所要時間", "Recovery Events" → "リカバリイベント", "Verify Phase Residuals" → "Verify Phase 残留", "Concurrent Sessions Detected" → "並行セッション検出", "Improvement Candidates Surfaced" → "改善候補 (自動検出)")
    - Keep the same Markdown structure (heading levels, table layout, bullet hierarchy)
 4. Write the translated content to the sibling path using the Write tool
 5. Output: "Japanese sibling generated at `{sibling-path}`."

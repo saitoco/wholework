@@ -808,22 +808,6 @@ ${CONCURRENT_SECTION}
 ## Improvement Candidates Surfaced
 
 ${IMPROVEMENT_CANDIDATES}
-
----
-
-## Narrative Section (skeleton)
-
-### What worked
-TBD — fill in after reviewing the session
-
-### Limits and gaps
-TBD — fill in after reviewing the session
-
-### Improvement candidates surfaced
-TBD — fill in after reviewing the session
-
-### Conclusion
-TBD — fill in after reviewing the session
 REPORT_EOF
 
 # Cross-link to L3 session retrospective if it exists

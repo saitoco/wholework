@@ -40,9 +40,10 @@ FIXTURE_EOF
     grep -q "Issues processed" "$OUTPUT_PATH"
     grep -q "Per-Issue Durations" "$OUTPUT_PATH"
     grep -q "Recovery Events" "$OUTPUT_PATH"
-    grep -q "Narrative Section" "$OUTPUT_PATH"
     # Check route mix is computed (S=patch, M=pr)
     grep -q "patch:.*pr:" "$OUTPUT_PATH"
+    # Narrative content lives in session.md, not data-layer.md
+    ! grep -q "Narrative Section" "$OUTPUT_PATH"
 }
 
 @test "success: parallel session isolation — only specified session events are aggregated" {
@@ -101,8 +102,8 @@ FIXTURE_EOF
     # Report should still be generated with N/A or 0 values
     grep -q "Session Report.*nonexistent-000" "$OUTPUT_PATH"
     grep -q "Issues processed | 0" "$OUTPUT_PATH"
-    # Narrative section skeleton should still be present
-    grep -q "Narrative Section" "$OUTPUT_PATH"
+    # Narrative content lives in session.md, not data-layer.md
+    ! grep -q "Narrative Section" "$OUTPUT_PATH"
 }
 
 @test "success: backfilled phase_complete shows annotation and Backfilled count in Summary" {
