@@ -94,21 +94,21 @@ dirty file を以下 4 分類で判定し、`self-worktree` / `other-worktree` /
 - bash 3.2 互換: `=~` と `case`/glob パターン (`== glob`) は両方 bash 3.2 以上で動作。`[[ "$f" == .claude/worktrees/*+issue-${NUMBER}/* ]]` の glob マッチは bash 3.2+ 互換。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- SHOULD issue (`setup()` missing `git config core.excludesFile /dev/null`) was fixed inline during review (not deferred) — the fix is 2 lines and low risk
-- CONSIDER issue (`docs/sessions/*-*/*` over-matching) was skipped — current usage has no `-` in non-numeric dirs, real harm is nil
-- Review depth: light (Size M PR, explicit `--light` flag)
+- PR #868 squash-merged successfully; `worktree-code+issue-859` branch deleted from remote
+- CONSIDER comment about `*-*` pattern intent (line 111) was not added — pattern is self-evident from context and Notes section already documents the `{pid}-{timestamp}` numeric intent
+- No conflicts encountered; CI (5/5 SUCCESS) and review approval were already in place
 
 ### Deferred Items
-- CONSIDER: add comment to `check-verify-dirty.sh` line 111 to document that `*-*` means `{pid}-{timestamp}` numeric-only pattern intent — deferred to follow-up or merge-phase judgment
-- Post-merge observation: verify that self-worktree/other-worktree classification works correctly when called from a worktree context in a real parallel session
+- Post-merge observation: verify that self-worktree/other-worktree classification works correctly when called from a worktree context in a real parallel session (carried from review phase)
+- bats test environment pattern (`git config core.excludesFile /dev/null`) should be documented as standard for future tests using `.claude/` paths on macOS
 
 ### Notes for Next Phase
-- All CI checks passed (5/5 SUCCESS), PR is merge-ready
-- One additional commit pushed (`b630f4e`) addressing the bats test environment fix — merge should include this commit
-- No MUST issues; no REQUEST_CHANGES event posted
+- All verify commands are grep/rubric-based or `bats tests/` — straightforward to validate
+- The `bats tests/` verify command relies on CI environment (Ubuntu); macOS may need `core.excludesFile /dev/null` — already fixed in tests
+- Pre-merge verify commands can all be run directly against the merged main branch
 
 ## review retrospective
 
