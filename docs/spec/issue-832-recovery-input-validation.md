@@ -77,19 +77,34 @@
 
 - None. 初回実装で全 38 テスト PASS。
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+
+- None. 全 4 観点で Spec 逸脱なし。`_validate_recovery_args` の配置・引数構成・bats テスト 3 件ともに Spec 記述通りで、構造的逸脱は発生しなかった。
+
+### Recurring Issues
+
+- None. 単一種別の入力バリデーション実装であり、3 関数に一貫して適用されている。
+
+### Acceptance Criteria Verification Difficulty
+
+- AC1 (rubric): "non-zero exit on invalid input" という行動・結果ベースの rubric が機能した。diff から直接判定可能で UNCERTAIN なし。
+- AC2 (command "bats tests/run-auto-sub.bats"): CI reference fallback (Run bats tests: SUCCESS) で判定。`github_check` 形式に変更すると fallback なしで直接判定できる — 次回同種 Issue の改善余地。
+- AC3 (observation): post-merge 観察タイプで適切に SKIPPED。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `_validate_recovery_args()` を 3 関数の `local` 宣言直後・`_repo_root` 代入前に挿入し、`set -u` 環境でも安全な early return を実現した
-- `$phase` / `$recovery_type` は「非空の場合のみ」バリデーションとすることで、デフォルト値 ("unknown" / "unspecified") を持つ関数との整合性を保った
-- bats テスト名はすべて ASCII 英語で記述 (multibyte 禁止ルールに従う)
+- 全 4 観点 (Spec 逸脱・エッジケース・セキュリティ・ドキュメント整合性) で Issue 0 件 → REQUEST_CHANGES なし、COMMENT 投稿
+- AC 検証: AC1 (rubric) PASS / AC2 (command→CI fallback) PASS / AC3 (POST-MERGE)
+- CI: 全ジョブ SUCCESS
 
 ### Deferred Items
-- `_write_tier2_recovery_to_spec` の `$meta_file` 引数は path traversal リスクなしと判断しバリデーション対象外とした (最小リスク原則)
-- post-merge 動作確認 (AC3: observation) は次回 recovery 発生まで待機
+- AC3 (observation): 次回 recovery 発生時に通常の数値 issue 番号で正常動作することを観察 (post-merge)
 
 ### Notes for Next Phase
-- bats テスト 38 件全 PASS / forbidden expressions PASS / implementation is straightforward defensive coding
-- AC1 rubric は "non-zero exit on invalid input" が判定基準 — diff を見れば明確に満たされている
-- PR #846 のブランチ名: `worktree-code+issue-832`
+- MUST/SHOULD/CONSIDER ともに 0 件 — merge 直行可能
+- PR #846 ブランチ `worktree-code+issue-832` → base: `main`
+- review-summary コメント投稿済み (PR #846)
