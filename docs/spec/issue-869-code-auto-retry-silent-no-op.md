@@ -169,22 +169,22 @@ No new comments since last phase.
 - テスト 40 (`auto-retry: silent no-op + AUTO_RETRY_ENABLED=true fires retry`) が最初の実装で失敗: `exec bash "$0" "$@"` が空 args で再起動し Usage エラーになった。`_TRAILING_ARGS` 変数を導入して修正 (追加コミット 1 本)。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light (Size M、2 回目実行) で全 5 pre-merge AC が PASS。MUST 問題なし → COMMENT イベントで Review 投稿
-- SHOULD 問題 1 件 (`apply-fallback.sh` の double-retry guard が `autonomy: L1` を考慮していない) はスキップ — フォローアップ候補
-- CI 全ジョブ SUCCESS (DCO, Run bats tests, Validate skill syntax, Forbidden Expressions check, macOS shell compatibility)
-- 前回レビューから実装変更なし、新規 MUST 問題なし
+- PR #871 をスクワッシュマージ (mergeable=true、CI SUCCESS、approved)
+- Base branch = main なので `closes #869` により Issue は自動クローズ済み
+- Phase Handoff を verify フェーズへ引き渡すため Spec に merge handoff を追記してコミット
 
 ### Deferred Items
-- `apply-fallback.sh` の guard に autonomy tier チェック追加 — 本 Issue スコープ外、フォローアップ起票候補
-- `AUTO_EVENTS_LOG` guard の dead code 整理 (CONSIDER) — リファクタリング候補
+- `apply-fallback.sh` の guard に autonomy tier チェック追加 — review で検出した SHOULD 問題、フォローアップ起票候補 (#869 スコープ外)
+- `AUTO_EVENTS_LOG` guard の dead code 整理 — リファクタリング候補
+- post-merge AC1 (次回 silent no-op での `code_retry_fire` イベント記録) は manual 検証が必要
 
 ### Notes for Next Phase
-- post-merge AC2 (`section_contains "docs/tech.md" "## Architecture Decisions" "auto-retry"`) は実装済みのため verify フェーズで PASS するはず
-- post-merge AC1 (次回 silent no-op での `code_retry_fire` イベント記録) は manual 検証が必要
-- SHOULD 問題の `apply-fallback.sh` guard は L1 + enabled=true 構成では recovery なしになるリスクあり。フォローアップ起票を検討
+- post-merge AC2 (`section_contains "docs/tech.md" "## Architecture Decisions" "auto-retry"`) は実装済みのため verify で PASS するはず
+- post-merge AC1 は manual verify-type のため verify スキップ可能 (observation のみ)
+- SHOULD 問題の `apply-fallback.sh` guard は L1 + enabled=true 構成で recovery なしになるリスクあり — verify 後にフォローアップ起票を検討
 
 ## Notes
 
