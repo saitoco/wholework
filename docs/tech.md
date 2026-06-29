@@ -99,7 +99,7 @@ Entries are grouped by workflow order (triage → issue → spec → code → re
 | merge (skill) | merge | Sonnet | — | Mechanical merge operation; `model: sonnet` fixed in frontmatter. Effort not set (skill invocation; `run-merge.sh` sets `low` effort) |
 | verify (skill) | verify | Sonnet | — | Structured acceptance testing; `model: sonnet` fixed in frontmatter. Runs in caller's context (no wrapper script); effort not set at the skill level |
 | auto (skill) | orchestration | Sonnet | — | Parent orchestrator; runs in the user's Claude Code session inline (no `run-*.sh` wrapper). Each child phase runs via `run-*.sh` with phase-specific effort. Effort not set at the skill level |
-| audit (skill) | audit | Sonnet | — | Drift/fragility detection and stats; Sonnet sufficient. Invoked inline (no `run-*.sh` wrapper), so effort is not set |
+| audit (skill) | audit | Sonnet | — | Drift detection (`drift`), fragility analysis (`fragility`), project health stats (`stats`), XL sub-issue progress (`progress`), /auto session retrospective (`auto-session`); Sonnet sufficient. Invoked inline (no `run-*.sh` wrapper), so effort is not set |
 | doc (skill) | doc | Sonnet | — | Document management; Sonnet sufficient. Invoked inline (no `run-*.sh` wrapper), so effort is not set |
 
 **Opus 4.8 effort calibration**: Opus 4.8 enforces strict effort calibration — `low` and `medium` aggressively scope to literal task requirements. `max` carries a diminishing returns risk (overthinking) with Opus 4.8; reserve it for intelligence-demanding experimental tasks only. `xhigh` is the Opus 4.8 recommended default for most coding and agentic use cases. Sub-agent `model: opus` / `model: sonnet` alias values in agent frontmatter auto-resolve to the current Opus (4.8).

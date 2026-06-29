@@ -97,7 +97,7 @@
 | frontend-visual-review | verify（visual-diff） | Opus | — | 3 パネル比較画像からビジュアルギャップを列挙。`visual_diff` verify コマンド向けに `modules/visual-diff-adapter.md` が起動 |
 | triage（skill） | triage | Sonnet | — | メタデータ付与、Sonnet で十分。インライン実行（`run-*.sh` ラッパーなし）— `/auto` が未ラベル issue に triage を連鎖させる場合も含む — のため effort は設定しない |
 | auto（skill） | orchestration | Sonnet | — | 親オーケストレーター、ユーザーの Claude Code セッションでインライン実行（`run-*.sh` ラッパーなし）。各子フェーズはフェーズ固有の effort で `run-*.sh` 経由で実行される。スキルレベルでは effort を設定しない |
-| audit（skill） | audit | Sonnet | — | ドリフト・脆弱性検出と統計、Sonnet で十分。インライン実行（`run-*.sh` ラッパーなし）のため effort は設定しない |
+| audit（skill） | audit | Sonnet | — | drift 検出 (`drift`)・脆弱性解析 (`fragility`)・プロジェクト健全性統計 (`stats`)・XL サブ Issue 進捗 (`progress`)・/auto セッションレトロスペクティブ (`auto-session`); Sonnet で十分。インライン実行 (`run-*.sh` ラッパーなし) のため effort は設定しない |
 | doc（skill） | doc | Sonnet | — | ドキュメント管理、Sonnet で十分。インライン実行（`run-*.sh` ラッパーなし）のため effort は設定しない |
 
 **Opus 4.8 effort calibration**: Opus 4.8 は厳格な effort キャリブレーションを適用する — `low` と `medium` は文字通りのタスク要件に積極的にスコープを絞る。`max` は Opus 4.8 では過剰思考のリスク（diminishing returns）があるため、知的要求の高い実験的タスクにのみ使用する。`xhigh` が Opus 4.8 の多くのコーディング・エージェントユースケースにおける推奨デフォルト。エージェント frontmatter の `model: opus` / `model: sonnet` エイリアス値は現在の Opus（4.8）に auto-resolve する。

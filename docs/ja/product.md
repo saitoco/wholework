@@ -148,6 +148,7 @@ Anthropic の Managed Agents + Outcomes は隣接する Outcome rubric ループ
 | 用語 | 定義 | コンテキスト | 日本語訳 |
 |------|------------|---------|---------|
 | `/auto` | `claude -p` を介して非対話的に spec→code→review→merge→verify を連鎖させるオーケストレータースキル。`phase/*` ラベルが未設定の場合は issue triage から自動開始、`phase/ready` が無い場合は `/spec` を自動実行。`--batch N` はバックログから N 個の XS/S Issue を処理、XL Issue は独立サブ issue を並列実行（worktree 分離）する。`--base {branch}` でリリースブランチを対象にする。旧称: 'Dispatch' | 開発ワークフロー | `/auto` |
+| `/audit` | プロジェクト健全性検出のための複合スキル。サブコマンド: `/audit drift` (ドキュメント ↔ コードドリフト、Issue 自動生成)、`/audit fragility` (構造的脆弱性検出)、`/audit stats` (Issue スループット / 構成 / First-try 成功率集計、`--retention` でフェーズ/verify と Icebox 滞留メトリクスを追加)、`/audit progress` (XL サブ Issue 進捗スナップショット)、`/audit auto-session` (`.tmp/auto-events.jsonl` からのデータレイヤーレポートまたはフォールバック生成)。 | /audit Skill | `/audit` |
 | AC | 「Acceptance Criteria」の略称（インデックス参照時は個別の「Acceptance condition」の略、例: `AC1`, `AC2`）。Issue Retrospective、スキル出力、レビューコメントでの簡略表記として使用 | /issue, /spec, /review, /verify | AC |
 | Acceptance condition | Issue の受入条件内の、検証可能な単一要件項目。チェックリストの 1 行として現れ、通常 verify command と対になる | /issue, /verify | 受入条件項目 |
 | Acceptance criteria | Issue の受入条件の完全な集合。Issue 本文の `## Acceptance Criteria` 配下に定義される。L1 の集合としての L2 個別受入条件群 | /issue, /verify | 受入条件 |
