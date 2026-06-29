@@ -20,6 +20,8 @@ The harness is distributed as a composable set of Claude Code Skills covering ev
 
 `/issue` → `/spec` → `/code` → `/review` → `/merge` → `/verify`
 
+The final phase `/verify` runs independently post-merge: it executes verify commands for each Acceptance condition, confirms manual ACs interactively, and reopens the Issue on FAIL to return to the fix cycle. For L/XL Issues, `/issue` and `/review` invoke parallel sub-agents (scope / risk / precedent / bug / spec) to deepen investigation without bloating the main context.
+
 For the full workflow diagram, phase details, and label transitions, see [docs/workflow.md](workflow.md).
 
 <a id="spec-design-boundary"></a>
@@ -74,6 +76,7 @@ User-facing documentation is maintained under `docs/guide/`. It covers installat
 ## Future Direction
 
 - **Governance and verification depth**: As coding agents grow more autonomous, the value shifts from orchestration to governance — capturing requirements, gating changes, verifying outcomes, and maintaining an audit trail. Wholework's roadmap prioritizes deepening each layer of the harness as model autonomy grows.
+- **Autonomy-tiered governance**: Four layers — L0 (GitHub state: Issues, Labels, PRs, blockedBy) / L1 (Claude Code primitives: `/loop`, `ScheduleWakeup`, `CronCreate`) / L2 (Wholework skill internals: Spec, retro, `auto-events.jsonl`) / L3 (OS scheduler) — are orthogonal to `permission-mode`, which governs subprocess permissions rather than GitHub state scope. The `autonomy:` field in `.wholework.yml` declares how far skills may write L0 and fire L2→L1 paths; SSoT: `modules/autonomy-tier.md`.
 - **Configuration surface expansion**: Widen the set of Skill behaviors exposed through `.wholework.yml` so projects can adapt Wholework without patching Skills. New configurable behaviors are added as Skills generalize.
 - **Workflow optimization (3 axes)**: Balance quality, speed, and cost by tuning Model selection, Adaptive Thinking (`--effort`), and Advisor strategy. The phase-specific matrix in `docs/tech.md` (`ssot_for: model-effort-matrix`) is re-tuned as new models and usage data become available.
 - **Context isolation as a first-class constraint**: Keep execution-phase Skills in fork context and preserve Spec as cross-phase memory, so new Skills compose without inheriting context rot from earlier phases.
