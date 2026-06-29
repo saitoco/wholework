@@ -144,6 +144,7 @@ wholework/
 - `modules/domain-classifier.md` — 改善提案の Domain 分類（composable、LLM-in-context）
 - `modules/retro-proposals.md` — Improvement Proposal 収集と Issue 作成（/verify Step 13 と /auto Step 4a の共有モジュール）
 - `modules/l0-surfaces.md` — L0 (GitHub) surface の SSoT と comment を一級入力として扱うポリシー
+- `modules/label-conventions.md` — ラベル namespace 規則とベア namespace 例外の SSoT
 - `modules/filesystem-scope.md` — スキル/スクリプトのファイルシステムアクセススコープ制約と推奨パターン
 - `modules/phase-state.md` — phase の precondition/success signature と `reconcile-phase-state.sh` JSON v1 schema（SSoT）
 - `modules/skill-dev-doc-impact.md` — skill 開発プロジェクト向けの `/spec` および `/code` 用 Change Types（`doc-checker.md` 経由）

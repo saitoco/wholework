@@ -135,6 +135,7 @@ Key modules:
 - `modules/codebase-analysis.md` — codebase analysis for `/doc` deep mode
 - `modules/title-normalizer.md` — issue title normalization
 - `modules/l0-surfaces.md` — L0 (GitHub) surface SSoT and comment-as-first-class-input policy
+- `modules/label-conventions.md` — Label namespace conventions and bare-namespace exceptions (SSoT)
 - `modules/ambiguity-detector.md` — ambiguity detection in issue descriptions
 - `modules/review-output-format.md` — review output formatting and MUST/SHOULD/CONSIDER severity classification criteria
 - `modules/review-type-weighting.md` — review type weighting configuration
