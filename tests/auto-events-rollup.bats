@@ -171,6 +171,9 @@ EOF
     cat > "$MOCK_DIR/git" <<MOCK
 #!/bin/bash
 echo "git \$*" >> "$GIT_LOG"
+if [[ "\$1" == "status" ]]; then
+  echo "M  some_file"
+fi
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/git"
@@ -184,6 +187,30 @@ EOF
     [ "$status" -eq 0 ]
     [ -f "$GIT_LOG" ]
     grep -q "commit" "$GIT_LOG"
+}
+
+# (h2) auto-commit: git commit is skipped when output file has no changes
+@test "auto-events-rollup: git commit is skipped when output file has no changes" {
+    MOCK_DIR="$BATS_TEST_TMPDIR/mocks_rollup_skip"
+    GIT_LOG="$BATS_TEST_TMPDIR/git-calls-rollup-skip.log"
+    mkdir -p "$MOCK_DIR"
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "git \$*" >> "$GIT_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > .tmp/events_skip.jsonl << 'EOF'
+{"ts":"2026-06-14T07:01:38Z","issue":824,"event":"sub_start","size":"M"}
+{"ts":"2026-06-14T07:36:09Z","issue":824,"event":"sub_complete","exit_code":"0"}
+EOF
+
+    PATH="$MOCK_DIR:$PATH" run bash "$SCRIPT" --date 2026-06-14 --input .tmp/events_skip.jsonl --output-dir docs/reports
+    [ "$status" -eq 0 ]
+    [ -f "$GIT_LOG" ]
+    run grep "commit" "$GIT_LOG"
+    [ "$status" -ne 0 ]
 }
 
 # (d) Cleanup rotation: target date entries removed, other dates preserved
