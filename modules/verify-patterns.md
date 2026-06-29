@@ -822,7 +822,7 @@ file_contains "scripts/foo.sh" "commit -m"
 
 Both `commit -s` and `commit -m` are contiguous sub-strings regardless of what precedes `commit` on the line. Use `commit -s` for projects that require signed-off commits (DCO); use `commit -m` otherwise — always choose the anchor that matches what the implementation actually contains.
 
-**Real example:** `scripts/emit-event.sh` contains `git -C "$REPO_ROOT" commit -s -m "chore: ..."` — the contiguous anchor is `commit -s`, not `git commit`.
+**Real example:** `scripts/append-consumed-comments-section.sh` contains `git -C "$_repo_root" commit -s` — the contiguous anchor is `commit -s`, not `git commit`.
 
 **Generalizes to any command with inserted flags:**
 

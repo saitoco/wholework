@@ -129,9 +129,9 @@ The `grep` verify command uses the Grep tool (ripgrep), which defaults to **ERE 
 
 **Known example — #638 AC #3 ERE miscalibration:**
 
-Original form (false FAIL — `\|` treated as literal `|` in ERE, not OR): `<!-- verify: grep -- "--date\|--input\|--output-dir\|--cleanup" "scripts/run-auto-sub.sh" -->`
+Original form (false FAIL — `\|` treated as literal `|` in ERE, not OR): `<!-- verify: grep -- "--threshold\|--issues-json" "scripts/collect-recovery-candidates.sh" -->`
 
-Corrected form (ERE OR alternation): `<!-- verify: grep -- "--date|--input|--output-dir|--cleanup" "scripts/run-auto-sub.sh" -->`
+Corrected form (ERE OR alternation): `<!-- verify: grep -- "--threshold|--issues-json" "scripts/collect-recovery-candidates.sh" -->`
 
 Bare `|` alternation is the standard pattern for multi-option OR checks across CLI flags in shell scripts.
 
