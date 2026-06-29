@@ -3,7 +3,7 @@ name: auto
 description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues; `--batch N1 N2 ...` processes the explicitly listed Issues in order (assigns a BATCH_ID for parallel-safe checkpointing). `--resume N` resumes a single Issue (restores verify counter from checkpoint); `--batch --resume` resumes an interrupted batch using `list_active_batches` to identify the target session.
 loop-paths-used: [A, E]
 loop-paths-fallback: [A]
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-events-rollup.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Autonomous Execution
@@ -357,7 +357,7 @@ Each phase follows the Observe → Diagnose → Act pattern (same as pr route; s
 
 1. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-patch $NUMBER --check-precondition --warn-only`
 2. code phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER --patch [--base {branch}]` via Bash (timeout: 600000)
-3. Unconditional completion check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-patch $NUMBER --check-completion` — runs unconditionally regardless of exit code; if `matches_expected: false` (including exit 0), go to Step 6; if code exited non-zero but `matches_expected: true`, override to success; on success run `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh --issue $NUMBER --from spec --to code` (best-effort loop-state heartbeat; see `## Loop State Heartbeat`)
+3. Unconditional completion check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-patch $NUMBER --check-completion` — runs unconditionally regardless of exit code; if `matches_expected: false` (including exit 0), go to Step 6; if code exited non-zero but `matches_expected: true`, override to success
    - **stop-at check**: if `EFFECTIVE_STOP_AT == "code"`: output "Stopped at phase: code (auto-stop-at=code)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="code"`
 4. **XS only**: transcribe issue retrospective to Spec (see Step 4b)
 5. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh verify $NUMBER --check-precondition --warn-only`
@@ -366,7 +366,7 @@ Each phase follows the Observe → Diagnose → Act pattern (same as pr route; s
 8. verify phase: invoke `Skill(skill="wholework:verify", args="$NUMBER")` in the parent session (enables AskUserQuestion for manual AC confirmation)
 9. Based on verify result, proceed to Step 5 or Step 6
    - If verify output contains `MAX_ITERATIONS_REACHED`: max iterations has been reached; delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`); stop chained execution and proceed to Step 5 (human judgment required — do not re-run verify automatically)
-   - On verify success: delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`), run `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh --issue $NUMBER --from code --to verify` (best-effort loop-state heartbeat; see `## Loop State Heartbeat`), and proceed to Step 5
+   - On verify success: delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`), and proceed to Step 5
 
 **pr route (4 phases):**
 
@@ -388,16 +388,16 @@ Full phase sequence:
 
 1. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-pr $NUMBER --check-precondition --warn-only`
 2. Output `[1/4] code`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER --pr [--base {branch}]` via Bash (timeout: 600000)
-3. Unconditional completion check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-pr $NUMBER --check-completion` — runs unconditionally regardless of exit code; if `matches_expected: false` (including exit 0), go to Step 6; if `matches_expected: true`, output `[1/4] code → done (PR #N)`, run `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh --issue $NUMBER --from spec --to code` (best-effort loop-state heartbeat; see `## Loop State Heartbeat`), and continue
+3. Unconditional completion check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-pr $NUMBER --check-completion` — runs unconditionally regardless of exit code; if `matches_expected: false` (including exit 0), go to Step 6; if `matches_expected: true`, output `[1/4] code → done (PR #N)`, and continue
 4. Extract PR number via exact-match filter (matches SSoT branch name worktree-code+issue-N established by #310): `gh pr list --json number,headRefName | jq -r ".[] | select(.headRefName == \"worktree-code+issue-$NUMBER\") | .number" | head -1`
 5. If PR number cannot be fetched: report error and go to Step 6
    - **stop-at check**: if `EFFECTIVE_STOP_AT == "code"`: output "Stopped at phase: code (auto-stop-at=code)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="code"` (at this point `$PR_NUMBER` is known)
 6. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh review $NUMBER --pr $PR_NUMBER --check-precondition --warn-only`
-7. Output `[2/4] review`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh $PR_NUMBER $REVIEW_DEPTH` via Bash (timeout: 600000) (REVIEW_DEPTH set in Step 2, refreshed by Step 3a if applicable); on success output `[2/4] review → done`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh --issue $NUMBER --from code --to review` (best-effort loop-state heartbeat; see `## Loop State Heartbeat`)
+7. Output `[2/4] review`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh $PR_NUMBER $REVIEW_DEPTH` via Bash (timeout: 600000) (REVIEW_DEPTH set in Step 2, refreshed by Step 3a if applicable); on success output `[2/4] review → done`
    - **stop-at check**: if `EFFECTIVE_STOP_AT == "review"`: output "Stopped at phase: review (auto-stop-at=review)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="review"`
 8. If review fails: completion check `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh review $NUMBER --pr $PR_NUMBER --check-completion` — if `matches_expected: true`, override to success; otherwise go to Step 6
 9. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh merge $NUMBER --pr $PR_NUMBER --check-precondition --warn-only`
-10. Output `[3/4] merge`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh $PR_NUMBER` via Bash (timeout: 600000); on success output `[3/4] merge → done`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh --issue $NUMBER --from review --to merge` (best-effort loop-state heartbeat; see `## Loop State Heartbeat`)
+10. Output `[3/4] merge`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh $PR_NUMBER` via Bash (timeout: 600000); on success output `[3/4] merge → done`
     - **stop-at check**: if `EFFECTIVE_STOP_AT == "merge"`: output "Stopped at phase: merge (auto-stop-at=merge)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="merge"`
 11. If merge fails: completion check `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh merge $NUMBER --pr $PR_NUMBER --check-completion` — if `matches_expected: true`, override to success; otherwise go to Step 6
 12. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh verify $NUMBER --check-precondition --warn-only`
@@ -406,7 +406,7 @@ Full phase sequence:
 15. Output `[4/4] verify`, then invoke `Skill(skill="wholework:verify", args="$NUMBER")` in the parent session (enables AskUserQuestion for manual AC confirmation); on success output `[4/4] verify → done`
 16. Based on verify result, proceed to Step 5 or Step 6
     - If verify output contains `MAX_ITERATIONS_REACHED`: max iterations has been reached; delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`); stop chained execution and proceed to Step 5 (human judgment required — do not re-run verify automatically)
-    - On verify success: delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`), run `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh --issue $NUMBER --from merge --to verify` (best-effort loop-state heartbeat; see `## Loop State Heartbeat`), and proceed to Step 5
+    - On verify success: delete checkpoint (`${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_single $NUMBER`), and proceed to Step 5
 
 ### Step 4b: Issue Retrospective Transcription (XS patch route only)
 
@@ -694,49 +694,7 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 
 Run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run`
 
-**Daily rollup (best-effort, runs after observation scan regardless of success/failure):**
-
-Run `${CLAUDE_PLUGIN_ROOT}/scripts/auto-events-rollup.sh`. If the command fails, output "Warning: auto-events-rollup failed. Session will continue." and proceed without blocking.
-
-## Loop State Heartbeat
-
-After each phase completion, append a line to `docs/sessions/_daily/loop-state-{DATE}.md` (UTC date). This provides a human-readable, append-only point-in-time snapshot of repo phase state, complementing the machine-readable `auto-events.jsonl`.
-
-The heartbeat is emitted by `${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh` — a best-effort bash helper that never blocks its caller. Both call sites use it:
-
-- **Parent /auto session** (this SKILL.md): invokes the script at each step marked with "append loop-state heartbeat" (code/review/merge/verify success). See the per-phase step text above for the exact invocation.
-- **Batch mode** (`run-auto-sub.sh`): the script is called automatically from `run_phase_with_recovery` after every successful phase completion (including Tier 1/2/3 recoveries) for `code-patch`, `code-pr`, `review`, and `merge`. The verify phase remains parent-driven (see step 16 of the pr route).
-
-### Loop State File Format
-
-File: `docs/sessions/_daily/loop-state-{DATE}.md`. The schema is shared with the `next-cycle-seed` writer (#703) so phase-transition heartbeats and seed events coexist append-only in the same daily log:
-
-```markdown
----
-type: report
-description: Loop state log for {DATE} (phase-transition heartbeats and next-cycle seeds)
-date: {DATE}
----
-
-# Loop State — {DATE}
-
-| Time (UTC) | Phase | Event | Detail |
-|------------|-------|-------|--------|
-| HH:MM:SS | code | phase-transition | #N spec→code snapshot:[issue:N spec:N code:N review:N verify:N] |
-| HH:MM:SS | batch | next-cycle-seed | candidates:N |
-```
-
-### Heartbeat Append Procedure
-
-After confirming phase completion (`reconcile-phase-state.sh` returns `matches_expected: true`, or recovery succeeded), invoke:
-
-```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/append-loop-state-heartbeat.sh --issue $NUMBER --from <prev_phase> --to <next_phase>
-```
-
-The script aggregates `gh issue list` open-issue counts by `phase/*` label (omitting `phase/ready` and `phase/done`), creates the daily file with the shared header if absent, and appends a row. All failures are swallowed silently — the heartbeat must never block the main flow.
-
-**L3 auto-retrospective (batch/XL routes only, runs after Daily rollup regardless of success/failure):**
+**L3 auto-retrospective (batch/XL routes only, runs after observation scan regardless of success/failure):**
 
 1. **Route guard**: If `ROUTE` is neither `batch` nor `sub_issue` (XL route), output "L3 retrospective skipped: no notable orchestration content" and skip the remaining L3 steps.
 
@@ -1121,10 +1079,6 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 
 Run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run`
 
-**Daily rollup (batch, best-effort):**
-
-Run `${CLAUDE_PLUGIN_ROOT}/scripts/auto-events-rollup.sh`. If the command fails, output "Warning: auto-events-rollup failed. Session will continue." and proceed without blocking.
-
 **Next-cycle seed (batch, best-effort):**
 
 1. Load `AUTONOMY_TIER` and `NEXT_CYCLE_SEED_ENABLED` from `.wholework.yml` via `modules/detect-config-markers.md`.
@@ -1149,11 +1103,7 @@ Run `${CLAUDE_PLUGIN_ROOT}/scripts/auto-events-rollup.sh`. If the command fails,
      ]
    }
    ```
-7. Append a row to `docs/sessions/_daily/loop-state-{DATE}.md` (best-effort; create file with frontmatter and table header using Write tool if not present):
-   ```
-   | HH:MM:SS | batch | next-cycle-seed | candidates:N |
-   ```
-8. Emit `next_cycle_seeded` event via `source ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh && emit_event "next_cycle_seeded" "candidate_count=$CANDIDATE_COUNT" "source_breakdown=audit/drift:$DRIFT_N,audit/fragility:$FRAGILITY_N" "batch_session_id=$AUTO_SESSION_ID"` (best-effort; wrap in subshell to prevent failure propagation).
+7. Emit `next_cycle_seeded` event via `source ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh && emit_event "next_cycle_seeded" "candidate_count=$CANDIDATE_COUNT" "source_breakdown=audit/drift:$DRIFT_N,audit/fragility:$FRAGILITY_N" "batch_session_id=$AUTO_SESSION_ID"` (best-effort; wrap in subshell to prevent failure propagation).
 
 If any step in path E fails, print "Warning: next-cycle seed step N failed. Skipping." and continue (best-effort — never block the parent report).
 
