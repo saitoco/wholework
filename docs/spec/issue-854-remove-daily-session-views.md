@@ -236,23 +236,41 @@
 - `run-auto-sub.sh` had 3 helper functions for heartbeat (`_loop_state_from_phase`, `_loop_state_to_phase`, `_append_loop_state_heartbeat`) plus 4 call sites inside `run_phase_with_recovery` — more invasive than expected but cleanly removable without affecting recovery logic
 - Token Usage Aggregate: `token_usage` events in `auto-events.jsonl` lack per-issue granularity; session-total fallback was spec-permitted and implemented as described
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+The code phase replaced dangling references to deleted scripts (`auto-events-rollup.sh` / `append-loop-state-heartbeat.sh`) in `modules/verify-executor.md` and `modules/verify-patterns.md` with substitute scripts. However, the substitutions were factually inaccurate:
+- `verify-executor.md`: replaced with `scripts/run-auto-sub.sh`, but the listed CLI options (`--date|--input|--output-dir|--cleanup`) don't exist in that script
+- `verify-patterns.md`: replaced "Real example" script with `scripts/emit-event.sh`, but that script doesn't call `git commit -s`
+
+Root cause: when replacing a deleted script reference in a doc example, the code phase used plausible-looking replacements without verifying that the specific behavior cited (CLI options, git operations) actually exists in the replacement script. The `/review` phase caught both with a SHOULD-level finding and fixed them.
+
+Improvement opportunity: when the Spec says "replace dangling references to deleted scripts with existing scripts or placeholders," the code phase should grep for the specific behavior cited in the example before choosing a replacement.
+
+### Recurring issues
+
+Nothing to note. All other changes were clean deletions with no functional issues.
+
+### Acceptance criteria verification difficulty
+
+All `file_not_exists` / `file_not_contains` / `dir_not_exists` ACs verified cleanly. The rubric ACs for period mode removal and 5-section report were verified by direct code inspection (no grep misses). The `github_check "Run bats tests"` AC completed after CI finished.
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
-### Status
-
-All implementation complete. All 1021 bats tests pass. validate-skill-syntax.py: 0 errors.
-
-### Verify Commands to Run
-
-Pre-merge ACs from spec (lines 76-92) — all `file_not_contains` / `file_not_exists` / `grep` ACs confirmed passing locally. `github_check "gh pr checks" "Run bats tests"` requires CI to complete post-push.
+### Key Decisions
+- Fixed 2 SHOULD issues (factually incorrect script references in doc examples): verify-executor.md ERE example now uses `collect-recovery-candidates.sh --threshold|--issues-json`; verify-patterns.md "Real example" now uses `append-consumed-comments-section.sh`.
+- Skipped 1 CONSIDER issue (PHASE_ACTIVITY_TABLE jq field name `starts` vs. header "Event count"): functional impact is zero.
 
 ### Deferred Items
+- `phase/done` bulk migration for stale phase/verify Issues (scope-out from issue #854)
+- per-session view format details (UI) — separate issue
+- `.wholework.yml` `verify-ignore-paths` loop-state/rollup entries (黙認 per spec)
 
-(unchanged from spec phase)
-- `phase/done` bulk migration for stale phase/verify Issues
-- per-session view format details (UI)
-- `.wholework.yml` `verify-ignore-paths` loop-state/rollup entries (黙認)
+### Notes for Next Phase
+- All pre-merge ACs PASS including CI green. Ready for merge.
+- No MUST issues found. Post-merge ACs are observation-type (event=auto-run) — handled by verify at next /auto run.
 
 ## Consumed Comments
 No new comments since last phase.
