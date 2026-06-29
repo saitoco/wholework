@@ -65,19 +65,3 @@
 ## Improvement Candidates Surfaced
 
 (none — no Tier 3 recoveries or Tier 2 approaching recoveries-auto-fire threshold)
-
----
-
-## Narrative Section (skeleton)
-
-### What worked
-TBD — fill in after reviewing the session
-
-### Limits and gaps
-TBD — fill in after reviewing the session
-
-### Improvement candidates surfaced
-TBD — fill in after reviewing the session
-
-### Conclusion
-TBD — fill in after reviewing the session
