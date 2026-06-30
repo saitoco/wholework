@@ -90,6 +90,12 @@ _emit_comments_consumed() { :; }
 _append_consumed_comments_section() { :; }
 MOCK
 
+    cat > "$MOCK_DIR/check-verify-dirty.sh" <<'MOCK'
+#!/bin/bash
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/check-verify-dirty.sh"
+
     # Real guard-prefix.sh and retry-on-kill.sh (sourced via WHOLEWORK_SCRIPT_DIR)
     cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/guard-prefix.sh" "$MOCK_DIR/guard-prefix.sh"
     cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/retry-on-kill.sh" "$MOCK_DIR/retry-on-kill.sh"
@@ -778,4 +784,26 @@ MOCK
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
     [ "$(cat "$COUNTER_FILE")" -eq 2 ]
+}
+
+@test "session-isolation: exit 1 causes abort with error" {
+    cat > "$MOCK_DIR/check-verify-dirty.sh" <<'MOCK'
+#!/bin/bash
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/check-verify-dirty.sh"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"parent main has uncommitted changes"* ]]
+}
+
+@test "session-isolation: exit 2 shows warning and continues" {
+    cat > "$MOCK_DIR/check-verify-dirty.sh" <<'MOCK'
+#!/bin/bash
+exit 2
+MOCK
+    chmod +x "$MOCK_DIR/check-verify-dirty.sh"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"other-session dirty files"* ]]
 }

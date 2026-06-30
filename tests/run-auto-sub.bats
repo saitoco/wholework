@@ -36,6 +36,12 @@ emit_event() { :; }
 _emit_comments_consumed() { :; }
 MOCK
 
+    cat > "$MOCK_DIR/check-verify-dirty.sh" <<'MOCK'
+#!/bin/bash
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/check-verify-dirty.sh"
+
     # Mock phase-banner.sh (sourced by run-auto-sub.sh)
     cat > "$MOCK_DIR/phase-banner.sh" <<'MOCK'
 print_start_banner() { echo "Starting /$3 for issue #$2"; }
@@ -1056,4 +1062,26 @@ MOCK
     run bash "$SCRIPT" 42
     [ "$status" -eq 0 ]
     [ "$(cat "$COUNTER_FILE")" -eq 2 ]
+}
+
+@test "session-isolation: exit 1 causes abort with error" {
+    cat > "$MOCK_DIR/check-verify-dirty.sh" <<'MOCK'
+#!/bin/bash
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/check-verify-dirty.sh"
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"parent main has uncommitted changes"* ]]
+}
+
+@test "session-isolation: exit 2 shows warning and continues" {
+    cat > "$MOCK_DIR/check-verify-dirty.sh" <<'MOCK'
+#!/bin/bash
+exit 2
+MOCK
+    chmod +x "$MOCK_DIR/check-verify-dirty.sh"
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"other-session dirty files"* ]]
 }
