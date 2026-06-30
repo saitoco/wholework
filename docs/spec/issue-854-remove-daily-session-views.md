@@ -214,5 +214,63 @@
 - **`run-auto-sub.sh`**: 単純な呼び出し行ではなく `_append_loop_state_heartbeat()` 関数 + 専用ヘルパ + 全呼び出し箇所を除去 (`file_not_contains "append-loop-state-heartbeat"` を満たす)。
 - 削除する bats `@test` の scenario は廃止 feature 専用のため別 test での再カバー不要 (#526)。
 
+## code retrospective
+
+### What was implemented
+
+7 commits, 1021 bats tests green:
+
+1. `git rm` 4 files: `scripts/append-loop-state-heartbeat.sh`, `scripts/auto-events-rollup.sh`, `tests/append-loop-state-heartbeat.bats`, `tests/auto-events-rollup.bats`
+2. Removed heartbeat call sites from `scripts/run-code.sh`, `scripts/run-review.sh`, `scripts/run-merge.sh`, `scripts/run-auto-sub.sh` (functions `_loop_state_from_phase`/`_loop_state_to_phase`/`_append_loop_state_heartbeat` + 4 call sites)
+3. Removed heartbeat side-effect tests from `tests/run-code.bats`, `tests/run-review.bats`, `tests/run-merge.bats`
+4. Removed built-in ignore-paths from `scripts/check-verify-dirty.sh`; removed corresponding 4 `@test` blocks from `tests/verify-dirty-detection.bats`
+5. Rewrote `scripts/get-auto-session-report.sh`: removed period aggregate mode (`--day`/`--since-days`/`--range`), added Phase Activity Summary / Sub-Issue Completion Timeline (rename from Per-Issue Durations) / Token Usage Aggregate sections; Token Usage uses session-total fallback (event schema lacks per-issue granularity)
+6. Updated `tests/audit-auto-session.bats`: removed period `@test` blocks, updated "Per-Issue Durations" → "Sub-Issue Completion Timeline"; updated `tests/get-auto-session-report.bats`: added 5-section assertions
+7. Removed heartbeat/rollup references from `skills/auto/SKILL.md` (allowed-tools, phase completions, Loop State Heartbeat section, next-cycle-seed step)
+8. Removed period aggregate mode from `skills/audit/SKILL.md` (frontmatter description, routing, Argument Parsing, Step 1/Step 2); updated `docs/workflow.md` / `docs/ja/workflow.md`
+9. Replaced dangling `auto-events-rollup.sh`/`append-loop-state-heartbeat.sh` refs in `modules/verify-executor.md` / `modules/verify-patterns.md`
+10. Updated `docs/structure.md` / `docs/ja/structure.md`: removed `_daily/`/`_period/` directory entries, removed `auto-events-rollup.sh` entry, updated file counts (62→60 scripts, 93→91 tests); `git rm` 13 `docs/sessions/_daily/*.md` files
+
+### Minor surprises
+
+- `run-auto-sub.sh` had 3 helper functions for heartbeat (`_loop_state_from_phase`, `_loop_state_to_phase`, `_append_loop_state_heartbeat`) plus 4 call sites inside `run_phase_with_recovery` — more invasive than expected but cleanly removable without affecting recovery logic
+- Token Usage Aggregate: `token_usage` events in `auto-events.jsonl` lack per-issue granularity; session-total fallback was spec-permitted and implemented as described
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+The code phase replaced dangling references to deleted scripts (`auto-events-rollup.sh` / `append-loop-state-heartbeat.sh`) in `modules/verify-executor.md` and `modules/verify-patterns.md` with substitute scripts. However, the substitutions were factually inaccurate:
+- `verify-executor.md`: replaced with `scripts/run-auto-sub.sh`, but the listed CLI options (`--date|--input|--output-dir|--cleanup`) don't exist in that script
+- `verify-patterns.md`: replaced "Real example" script with `scripts/emit-event.sh`, but that script doesn't call `git commit -s`
+
+Root cause: when replacing a deleted script reference in a doc example, the code phase used plausible-looking replacements without verifying that the specific behavior cited (CLI options, git operations) actually exists in the replacement script. The `/review` phase caught both with a SHOULD-level finding and fixed them.
+
+Improvement opportunity: when the Spec says "replace dangling references to deleted scripts with existing scripts or placeholders," the code phase should grep for the specific behavior cited in the example before choosing a replacement.
+
+### Recurring issues
+
+Nothing to note. All other changes were clean deletions with no functional issues.
+
+### Acceptance criteria verification difficulty
+
+All `file_not_exists` / `file_not_contains` / `dir_not_exists` ACs verified cleanly. The rubric ACs for period mode removal and 5-section report were verified by direct code inspection (no grep misses). The `github_check "Run bats tests"` AC completed after CI finished.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Fixed 2 SHOULD issues (factually incorrect script references in doc examples): verify-executor.md ERE example now uses `collect-recovery-candidates.sh --threshold|--issues-json`; verify-patterns.md "Real example" now uses `append-consumed-comments-section.sh`.
+- Skipped 1 CONSIDER issue (PHASE_ACTIVITY_TABLE jq field name `starts` vs. header "Event count"): functional impact is zero.
+
+### Deferred Items
+- `phase/done` bulk migration for stale phase/verify Issues (scope-out from issue #854)
+- per-session view format details (UI) — separate issue
+- `.wholework.yml` `verify-ignore-paths` loop-state/rollup entries (黙認 per spec)
+
+### Notes for Next Phase
+- All pre-merge ACs PASS including CI green. Ready for merge.
+- No MUST issues found. Post-merge ACs are observation-type (event=auto-run) — handled by verify at next /auto run.
+
 ## Consumed Comments
 No new comments since last phase.

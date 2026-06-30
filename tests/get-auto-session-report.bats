@@ -28,6 +28,12 @@ FIXTURE_EOF
     grep -q "Issues processed | 1" "$OUTPUT_PATH"
     grep -q "#100" "$OUTPUT_PATH"
     ! grep -q "| #200 |" "$OUTPUT_PATH"
+    # New 5-section structure
+    grep -q "Phase Activity Summary" "$OUTPUT_PATH"
+    grep -q "Sub-Issue Completion Timeline" "$OUTPUT_PATH"
+    grep -q "Token Usage Aggregate" "$OUTPUT_PATH"
+    grep -q "Verify Phase Residuals" "$OUTPUT_PATH"
+    grep -q "Recovery Events" "$OUTPUT_PATH"
 }
 
 @test "--since list mode: lists distinct session_ids from event log" {

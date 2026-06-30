@@ -59,13 +59,6 @@ wholework/
 │           session.md       # L3 ナラティブ（What worked / Limits and gaps / Improvement candidates）
 │           events.jsonl     # .tmp/auto-events.jsonl から抽出したセッションスコープイベント
 │           data-layer.md    # データレイヤーレポート（/audit auto-session が生成）
-│         _daily/        # 日次自動生成ファイル
-│           auto-events-rollup-{DATE}.md # 日次ロールアップ（scripts/auto-events-rollup.sh が生成）
-│           loop-state-{DATE}.md         # Loop state heartbeat ログ（/auto Loop State Heartbeat が生成）
-│         _period/       # 期間集約レポート（/audit auto-session --day/--since/--range が生成）
-│           {DATE}.md              # --day YYYY-MM-DD 出力
-│           since-{DATE}-{N}d.md  # --since Nd 出力
-│           range-{START}-{END}.md # --range START..END 出力
 ├── .wholework/          # プロジェクトローカルな Wholework 設定（ユーザー管理、wholework リポジトリでは追跡しない）
 │   ├── adapters/        # 検証 adapter のオーバーライド
 │   ├── verify-commands/ # プロジェクトローカルのカスタム verify command ハンドラ
@@ -183,7 +176,6 @@ wholework/
 - `scripts/gh-pr-review.sh` — PR レビュー投稿
 
 **プロジェクトユーティリティ:**
-- `scripts/auto-events-rollup.sh` — `.tmp/auto-events.jsonl` を日付単位で集約し `docs/sessions/_daily/auto-events-rollup-YYYY-MM-DD.md` として出力。`--date`、`--input`、`--output-dir`、`--cleanup` に対応
 - `scripts/collect-recovery-candidates.sh` — `docs/reports/orchestration-recoveries.md` を parse し symptom-short の頻度を集計。起票済みエントリを除外し `--threshold K` フィルタを適用。`<symptom-short>\t<count>` 形式で候補を出力。`--issues-json PATH` で重複チェック用 open issues JSON を受け取り
 - `scripts/get-config-value.sh` — `.wholework.yml` から設定値を抽出
 - `scripts/handle-permission-mode-failure.sh` — `permission-mode: auto` 失敗を診断し remediation hint を stderr に出力（heuristic: exit!=0 かつ elapsed<=30s）

@@ -306,10 +306,6 @@ if [[ "$ROUTE_FLAG" == "--pr" && $EXIT_CODE -eq 0 ]]; then
   fi
 fi
 
-if [[ $EXIT_CODE -eq 0 ]]; then
-  "$SCRIPT_DIR/append-loop-state-heartbeat.sh" --issue "$ISSUE_NUMBER" --from spec --to code >/dev/null 2>&1 || true
-fi
-
 # bash-level post-execution Signed-off-by detection (safety net for DCO compliance)
 if [[ $EXIT_CODE -eq 0 && -n "${_PRE_HEAD:-}" ]]; then
   _new_commits=$(git log "${_PRE_HEAD}..HEAD" --format='%H' 2>/dev/null || true)
