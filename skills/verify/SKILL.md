@@ -696,7 +696,7 @@ As the final step of the workflow, verify conducts a retrospective of the entire
      ```
 
    **Retry Count append logic**: When writing the `## Verify Retrospective` section to the Spec, include the `### Retry Count` subsection only when `NEXT_ITERATION` ≥ 1 (auto-retry ran at least once). Substitute the actual values for N and `AUTO_RETRY_MAX_ITERATIONS`. Omit the subsection entirely when N=0 (first-attempt PASS).
-   - Append section at end of Spec with Edit tool
+   - Append section at end of Spec with Edit tool (use CWD-relative path in worktree sessions — see `modules/worktree-lifecycle.md` § Notes for Edit/Write conventions)
    - Commit (push is done in Step 11 Worktree Exit):
      ```bash
      git add $SPEC_PATH/issue-"$NUMBER"-*.md
