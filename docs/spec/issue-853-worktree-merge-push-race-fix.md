@@ -111,20 +111,21 @@ conflict 発生時は `rebase --abort` + 明示エラーで停止する現行方
 - Nothing to note
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST 指摘なし。SHOULD 1 件 (docs 矛盾) はマージブロッカーなし、CONSIDER 1 件 (inner fetch logging) は best-effort パターンと整合。
-- 既存テスト維持の確認: `--from with base-diverged` 系 2 テストへの `merge-base --is-ancestor` mock 追加は正確で、Type=Task 重点項目 (テスト維持) をクリア。
-- Phase Handoff を code → review に更新。
+- PR #873 を squash merge で main にマージ完了 (2026-06-30)。
+- ローカルブランチ削除はメイン worktree が使用中のため `--delete-branch` が失敗したが、`git push origin --delete` でリモートブランチを個別削除して対応。
+- Phase Handoff を review → merge に更新。
 
 ### Deferred Items
-- `modules/orchestration-fallbacks.md` の "retry up to 3 times" vs "On the 3rd failure, abort" の矛盾は SHOULD 指摘済み。機能上は問題なく、将来の改善候補として残す。
-- push retry loop 内の inner fetch エラーハンドリング (CONSIDER) は best-effort policy 踏襲のため defer。
+- `modules/orchestration-fallbacks.md` の "retry up to 3 times" vs "On the 3rd failure, abort" の矛盾は SHOULD 指摘済み (review フェーズより引き継ぎ)。機能上は問題なく、将来の改善候補として残す。
+- Post-merge の実際の race 復旧観察は /verify 対象外 (verify-type: observation) のため defer。
 
 ### Notes for Next Phase
-- AC 全 PASS、MUST 指摘なし → /merge 実行可。
-- Post-merge AC は観察系 (race が 3 回 retry 内で復旧) なので /verify では SKIP 扱いになる見込み (code phase 引き継ぎ通り)。
+- Post-merge AC (観察系) は /verify では SKIP 扱いにすること (code → review → merge 引き継ぎ通り)。
+- CI / bats 14 テスト全 PASS 確認済み (PR マージ時点)。
+- verify 実行可。
 
 ## Code Retrospective
 
