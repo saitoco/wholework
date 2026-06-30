@@ -78,6 +78,38 @@
 - `/spec` 時点での既存チェック (`skills/spec/SKILL.md` Step 10 allowed-tools impact chain check) は**新規** `scripts/*.sh` ファイル追加のみを対象とし、既存スクリプトの新規参照は対象外。本実装はこのギャップを `/code` Step 8 で補完する
 - 実装行数スコープ (測定時点: `scripts/` ディレクトリ, `ls` コマンド出力): 現在 60 ファイル + `git-hooks/` ディレクトリ = 61 エントリ → 新規 1 ファイル追加で 61 ファイル + `git-hooks/` = 62 エントリ; `docs/structure.md` の "60 files" 表記は ディレクトリを除いたファイル数 (git-hooks/ サブディレクトリ 1 個を除く)
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A (Spec の実装ステップに従い、差分なし)
+
+### Design Gaps/Ambiguities
+
+- `$stderr` キャプチャの bats 構文: bats 1.13.0 では `run --separate-stderr` が必要。Spec ではこの点が未記載だったが、既存テスト (`tests/check-file-overlap.bats`) を参照して `bats_require_minimum_version 1.5.0` と `--separate-stderr` を追加した
+- `docs/ja/structure.md` のファイルカウントが英語版よりも +2 先行していた (62 ファイル vs 60 ファイル) が、既存の drift であり本 PR では delta (+1) を適用するに留めた
+
+### Rework
+
+- 初回の bats テストで `$stderr` が空になる問題が発生。`run` を `run --separate-stderr` に変更することで解決。1ステップ修正のみで完了
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST issues なし; 全 4 受け入れ条件 PASS
+- `review-light` エージェントが実行環境で未登録のため、エージェント定義 (`agents/review-light.md`) を直接読み込み手動レビューとして実施
+- CI 全ジョブ SUCCESS を確認済み
+
+### Deferred Items
+- Post-merge 観察 AC (observation event `auto-run`) は merge 後の次回 SKILL.md 改修 Issue で観察
+- `docs/ja/structure.md` と英語版のファイルカウント差分 (+2) は pre-existing drift として未修正
+
+### Notes for Next Phase
+- MUST issues なし; `/merge 874` 実行可能
+- `bats tests/` 全 1041 テスト通過 (CI 確認済み)
+- `validate-skill-syntax.py` warnings: `loop-paths-fallback` (既存、本 PR 無関係)
+
 ## spec retrospective
 
 ### Minor observations
@@ -93,3 +125,18 @@
 ### Uncertainty resolution
 
 - `validate-skill-syntax.py` の出力フォーマット確認: "が allowed-tools の Bash" という文字列が `validate_body_scripts_in_allowed_tools` エラーメッセージに含まれることを line 718-722 で確認済み (`script_path_pattern not in allowed_tools` → `f"... が allowed-tools の Bash(...) パターンに含まれていません"`)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Nothing to note. 実装は Spec の 4 ステップと完全に一致。Spec 記載の変更ファイルがすべて PR に含まれていた。
+
+### Recurring issues
+
+- Nothing to note. 今回の PR は単機能追加 (check-allowed-tools.sh) のみ; 繰り返しパターンなし。
+
+### Acceptance criteria verification difficulty
+
+- `rubric` 条件は `validate-skill-syntax.py` の内部実装 (line 695 `validate_body_scripts_in_allowed_tools`) を参照しており、ソースコードを読まないと検証困難。次回 rubric 記述時は実装の参照可能な部分 (ファイルパス、関数名) を明示することで AI 検証の精度が上がる。
+- `command "bats tests/"` は safe mode では CI 参照フォールバックが必要; CI が SUCCESS であることが前提。CI 未完了の場合は PENDING になる点を注意 (今回は問題なし)。

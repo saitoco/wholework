@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (60 files)
+├── scripts/             # Utility scripts used by skills and agents (61 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -42,7 +42,7 @@ wholework/
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
 ├── examples/            # Example files for Wholework features
 │   └── decomposition/   # Decomposition YAML samples for /issue --from-decomposition-file
-├── tests/               # Bats test files for scripts (91 files)
+├── tests/               # Bats test files for scripts (92 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -226,6 +226,7 @@ Key modules:
 - `scripts/run-spec.sh` — run spec skill
 
 **Tooling:**
+- `scripts/check-allowed-tools.sh` — detect SKILL.md body-to-allowed-tools mismatches before intermediate commits; called from `skills/code/SKILL.md` Step 8
 - `scripts/check-eager-load-capability.sh` — detect capability guidance mixed into eager-load shared modules (verify-patterns.md, verify-executor.md); called from /audit drift Step 2
 - `scripts/validate-permissions.sh` — validate skill directory ↔ name: field consistency
 - `scripts/validate-skill-syntax.py` — validate SKILL.md frontmatter and syntax
