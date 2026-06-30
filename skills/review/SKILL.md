@@ -762,7 +762,7 @@ Reflect on the review phase; record improvement proposals in the Spec only. Issu
 
 1. Identify improvements from Steps 8 and 10 results
 2. **Write review retrospective to Spec**:
-   - Append `## review retrospective` section to the end of `$SPEC_PATH/issue-$ISSUE_NUMBER-*.md` using Edit tool
+   - Append `## review retrospective` section to the end of `$SPEC_PATH/issue-$ISSUE_NUMBER-*.md` using Edit tool (use CWD-relative path in worktree sessions — see `modules/worktree-lifecycle.md` § Notes for Edit/Write conventions)
    - Create subsections for each of the 3 aspects; write "Nothing to note" for aspects with nothing to record
 3. If `scripts/check-forbidden-expressions.sh` exists, Read `${CLAUDE_PLUGIN_ROOT}/skills/review/skill-dev-recheck.md` and follow the "Retrospective Guard" section.
 4. **Phase Handoff write** (before commit):
