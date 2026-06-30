@@ -77,6 +77,8 @@ acquire_lock() {
 
 acquire_lock
 
+git fetch origin "$BASE_BRANCH" 2>&1 || echo "Warning: git fetch origin ${BASE_BRANCH} failed; continuing with local refs" >&2
+
 if [[ -n "$FROM_BRANCH" ]]; then
   # See modules/orchestration-fallbacks.md#ff-only-merge-fallback
   if ! git merge "$FROM_BRANCH" --ff-only; then
@@ -84,18 +86,22 @@ if [[ -n "$FROM_BRANCH" ]]; then
     git pull --rebase origin "$BASE_BRANCH"
     if ! git merge "$FROM_BRANCH" --ff-only; then
       echo "FF merge still failed; base may have diverged. Rebasing ..." >&2
-      worktree_path=$(git worktree list --porcelain | awk -v b="refs/heads/${FROM_BRANCH}" '/^worktree /{p=$2} $0 == "branch " b {print p; exit}')
-      if [[ -n "$worktree_path" ]]; then
-        if ! git -C "$worktree_path" rebase "origin/${BASE_BRANCH}"; then
-          git -C "$worktree_path" rebase --abort 2>/dev/null || true
-          echo "Error: Rebase of ${FROM_BRANCH} onto origin/${BASE_BRANCH} failed with conflicts. Resolve manually." >&2
-          exit 1
-        fi
+      if git merge-base --is-ancestor "origin/${BASE_BRANCH}" "$FROM_BRANCH" 2>/dev/null; then
+        echo "Branch ${FROM_BRANCH} is already on origin/${BASE_BRANCH} (is-ancestor=true); skipping rebase" >&2
       else
-        if ! git rebase "$BASE_BRANCH" "$FROM_BRANCH"; then
-          git rebase --abort 2>/dev/null || true
-          echo "Error: Rebase of ${FROM_BRANCH} onto ${BASE_BRANCH} failed with conflicts. Resolve manually." >&2
-          exit 1
+        worktree_path=$(git worktree list --porcelain | awk -v b="refs/heads/${FROM_BRANCH}" '/^worktree /{p=$2} $0 == "branch " b {print p; exit}')
+        if [[ -n "$worktree_path" ]]; then
+          if ! git -C "$worktree_path" rebase "origin/${BASE_BRANCH}"; then
+            git -C "$worktree_path" rebase --abort 2>/dev/null || true
+            echo "Error: Rebase of ${FROM_BRANCH} onto origin/${BASE_BRANCH} failed with conflicts. Resolve manually." >&2
+            exit 1
+          fi
+        else
+          if ! git rebase "$BASE_BRANCH" "$FROM_BRANCH"; then
+            git rebase --abort 2>/dev/null || true
+            echo "Error: Rebase of ${FROM_BRANCH} onto ${BASE_BRANCH} failed with conflicts. Resolve manually." >&2
+            exit 1
+          fi
         fi
       fi
       git merge "$FROM_BRANCH" --ff-only
@@ -111,4 +117,23 @@ if [[ -n "$FROM_BRANCH" ]]; then
   fi
 fi
 
-git push origin "$BASE_BRANCH"
+MAX_PUSH_RETRY=3
+push_count=0
+while true; do
+  if git push origin "$BASE_BRANCH"; then
+    break
+  fi
+  push_count=$((push_count + 1))
+  if [[ $push_count -ge $MAX_PUSH_RETRY ]]; then
+    echo "Error: git push origin ${BASE_BRANCH} failed after ${MAX_PUSH_RETRY} retries. Manual push required." >&2
+    exit 1
+  fi
+  echo "Push rejected (non-fast-forward); retry ${push_count}/${MAX_PUSH_RETRY}: fetching and rebasing onto origin/${BASE_BRANCH}..." >&2
+  git fetch origin "$BASE_BRANCH"
+  if ! git rebase "origin/${BASE_BRANCH}"; then
+    git rebase --abort 2>/dev/null || true
+    echo "Error: Rebase during push retry failed with conflicts. Resolve manually." >&2
+    exit 1
+  fi
+  sleep 1
+done

@@ -109,3 +109,48 @@ conflict 発生時は `rebase --abort` + 明示エラーで停止する現行方
 ### Uncertainty resolution
 
 - Nothing to note
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST 指摘なし。SHOULD 1 件 (docs 矛盾) はマージブロッカーなし、CONSIDER 1 件 (inner fetch logging) は best-effort パターンと整合。
+- 既存テスト維持の確認: `--from with base-diverged` 系 2 テストへの `merge-base --is-ancestor` mock 追加は正確で、Type=Task 重点項目 (テスト維持) をクリア。
+- Phase Handoff を code → review に更新。
+
+### Deferred Items
+- `modules/orchestration-fallbacks.md` の "retry up to 3 times" vs "On the 3rd failure, abort" の矛盾は SHOULD 指摘済み。機能上は問題なく、将来の改善候補として残す。
+- push retry loop 内の inner fetch エラーハンドリング (CONSIDER) は best-effort policy 踏襲のため defer。
+
+### Notes for Next Phase
+- AC 全 PASS、MUST 指摘なし → /merge 実行可。
+- Post-merge AC は観察系 (race が 3 回 retry 内で復旧) なので /verify では SKIP 扱いになる見込み (code phase 引き継ぎ通り)。
+
+## Code Retrospective
+
+### Deviations from Design
+- Spec の実装ステップ順は A→C→B だが、スクリプト内の変更位置の自然な順序 (fetch → is-ancestor → push retry) がそのまま A→C→B になっており設計と一致。順序上の逸脱なし。
+- docs/structure.md (および docs/ja/structure.md) のエントリ更新は Spec に明示されていなかったが、doc-checker の impact 判定で必要と判断して追加した。
+
+### Design Gaps/Ambiguities
+- 既存テストの `merge-base --is-ancestor` モック不足: Spec は新規 3 テストのみ言及していたが、既存の base-diverged テスト 2 件が `merge-base` を mock せず exit 0 (ancestor=true) になり rebase skip が発生してテスト意図と矛盾することが実装時に判明。既存テストの mock に `merge-base` ケースを追加した。
+- push retry loop の対象スコープ: retry loop 内の `git rebase "origin/${BASE_BRANCH}"` は FROM_BRANCH なしの lock-only push モードでも到達可能な配置だが、retry 中の rebase は `git push` 失敗後にのみ実行されるため問題なし。
+
+### Rework
+- 既存テスト 2 件 (`--from with base-diverged triggers worktree rebase fallback` / `--from with base-diverged and rebase conflict aborts and exits non-zero`) に `merge-base --is-ancestor` の mock (`exit 1`) を追加した。Spec には記載がなかったが、is-ancestor check 追加後の動作整合性確保のため必要な修正。
+
+## Review Retrospective
+
+### Aspect 1: Spec vs. Implementation Divergence Patterns
+
+- 指摘なし。PR diff は Spec の A/B/C 三点実装と完全に一致。Phase Handoff (code) の「A→C→B 順でスクリプト内に配置」という記述通り、fetch-after-lock → is-ancestor → push retry の順序が維持されている。
+- modules/orchestration-fallbacks.md の "retry up to 3 times" / "On the 3rd failure, abort" の内部矛盾は Spec に明示されておらず、review フェーズで初めて顕在化した。ドキュメント記述の精度に改善余地あり (SHOULD 指摘)。
+
+### Aspect 2: Recurring Issues
+
+- 今回の SHOULD 指摘 (docs 内部矛盾) は、実装カウント (3 push 失敗で abort) とリトライ数の表現 ("retry up to N times") がずれるパターン。push retry loop を持つスクリプト実装では再発しやすい。verify command に `rubric "error message says MAX_PUSH_RETRY retries but only MAX_PUSH_RETRY-1 fetch+rebase cycles occur"` を加えることで次回以降に機械検出可能。ただし今回の AC には verify command がなく、CI でも検出されていない。
+
+### Aspect 3: Acceptance Criteria Verification Difficulty
+
+- 全 AC に verify command (rubric or command) が付与されており UNCERTAIN なし (観察系 AC は verify-type: observation で適切に除外)。AC 設計は良好。
+- push race シナリオの rubric は "bats テストが追加されているか" を確認しているが、"fetch+rebase+push の retry サイクル数が正確か" は rubric テキストに含まれておらず、docs 矛盾の検出を UNCERTAIN ではなく review 観点に頼っている。rubric テキストに "error message が実際の retry 回数と一致すること" を追記する改善余地あり。
