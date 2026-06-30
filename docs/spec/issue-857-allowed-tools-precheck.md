@@ -94,20 +94,20 @@
 - 初回の bats テストで `$stderr` が空になる問題が発生。`run` を `run --separate-stderr` に変更することで解決。1ステップ修正のみで完了
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `check-allowed-tools.sh` を独立スクリプトとして作成し、`validate-skill-syntax.py` のラッパーとして実装 (ロジック重複なし)
-- `bats_require_minimum_version 1.5.0` と `run --separate-stderr` を使用して stderr を正確にキャプチャ
-- `skills/code/SKILL.md` の `allowed-tools` フロントマターに `check-allowed-tools.sh:*` を追加
+- MUST issues なし; 全 4 受け入れ条件 PASS
+- `review-light` エージェントが実行環境で未登録のため、エージェント定義 (`agents/review-light.md`) を直接読み込み手動レビューとして実施
+- CI 全ジョブ SUCCESS を確認済み
 
 ### Deferred Items
-- `/spec` 時点での allowed-tools チェック (Proposal A) は本 PR の対象外。Spec Notes の既存チェックは新規スクリプト追加のみ対象
-- `docs/ja/structure.md` と英語版のファイルカウント差分 (+2) は pre-existing drift として本 PR では修正せず
+- Post-merge 観察 AC (observation event `auto-run`) は merge 後の次回 SKILL.md 改修 Issue で観察
+- `docs/ja/structure.md` と英語版のファイルカウント差分 (+2) は pre-existing drift として未修正
 
 ### Notes for Next Phase
-- PR #874 は CI テスト通過を確認してからマージすること
-- `bats tests/` は全 1041 テスト通過 (exit 0) を確認済み
+- MUST issues なし; `/merge 874` 実行可能
+- `bats tests/` 全 1041 テスト通過 (CI 確認済み)
 - `validate-skill-syntax.py` warnings: `loop-paths-fallback` (既存、本 PR 無関係)
 
 ## spec retrospective
@@ -125,3 +125,18 @@
 ### Uncertainty resolution
 
 - `validate-skill-syntax.py` の出力フォーマット確認: "が allowed-tools の Bash" という文字列が `validate_body_scripts_in_allowed_tools` エラーメッセージに含まれることを line 718-722 で確認済み (`script_path_pattern not in allowed_tools` → `f"... が allowed-tools の Bash(...) パターンに含まれていません"`)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Nothing to note. 実装は Spec の 4 ステップと完全に一致。Spec 記載の変更ファイルがすべて PR に含まれていた。
+
+### Recurring issues
+
+- Nothing to note. 今回の PR は単機能追加 (check-allowed-tools.sh) のみ; 繰り返しパターンなし。
+
+### Acceptance criteria verification difficulty
+
+- `rubric` 条件は `validate-skill-syntax.py` の内部実装 (line 695 `validate_body_scripts_in_allowed_tools`) を参照しており、ソースコードを読まないと検証困難。次回 rubric 記述時は実装の参照可能な部分 (ファイルパス、関数名) を明示することで AI 検証の精度が上がる。
+- `command "bats tests/"` は safe mode では CI 参照フォールバックが必要; CI が SUCCESS であることが前提。CI 未完了の場合は PENDING になる点を注意 (今回は問題なし)。
