@@ -115,3 +115,40 @@
 - Issue body の proposal コード `2>&1 | tee >(cat >&2) || _exit=$?` には PIPESTATUS bug がある (`||` は tee の exit code を捕捉する)。シンプルな `|| _dirty_exit=$?` パターンに変更して実装する。
 - `[[ -x "${SCRIPT_DIR}/check-verify-dirty.sh" ]]` guard により、スクリプト不存在時は check 全体を skip → main flow を block しない。
 - Issue body で auto-resolve されたあいまいさ: (1) bats test scope → `bats tests/` (full suite) 採用、(2) rubric の補完 grep → `run-code.sh` / `run-spec.sh` の 2 件のみ
+
+## review retrospective
+
+### Spec vs. 実装乖離パターン
+
+特記なし。Spec の実装ステップ (SCRIPT_DIR 直後への block 挿入、引数の選択、case 文パターン) が diff に忠実に反映されており、Spec → 実装の転写は正確だった。`run-review.sh` / `run-merge.sh` が `$PR_NUMBER` を proxy として使用する設計変更も Spec に明示されており、乖離なし。
+
+### 繰り返し発生する Issue
+
+- 特記なし。本 PR は全 5 スクリプトに同一パターンを追加するシンプルな変更のため、繰り返しパターンの課題はなかった。
+- CONSIDER 指摘: `case` 文に `*)` catch-all がない (予期しない exit code がサイレント通過)。best-effort 設計として許容範囲だが、同パターンが今後も発生する場合は Spec のテンプレートコードに `*)` を追加することを検討。
+
+### AC 検証難易度
+
+- 全 AC が PASS。`command "bats tests/"` は CI 代替検証 (Run bats tests SUCCESS) で PASS を確認できたため、safe mode でも問題なく処理できた。
+- rubric AC の判定は diff の内容から明確に評価でき、UNCERTAIN なし。verify command の品質が高く検証が容易だった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+
+- REVIEW_DEPTH=light を適用 (Size M + --light 引数)。Step 10.0 lightweight integrated review を単一エージェントで実行。
+- 外部レビューツール (copilot/claude-code-review/coderabbit) が全て無効のため Step 7 をスキップ。
+- MUST issues なし。CONSIDER 1 件 (case 文の `*)` catch-all 未実装) のみ。Step 12 フィックスはスキップ。
+- `review-light` サブエージェントの代わりにインライン分析を実施 (エージェントファイルがセッション未登録のため)。
+
+### Deferred Items
+
+- `*)` catch-all の追加は CONSIDER 相当のため今回は対応なし。必要であれば別 Issue で扱う。
+- Post-merge verification (並列セッション環境での warning 観察) はポスト・マージ手動確認タスク。
+
+### Notes for Next Phase
+
+- MUST issues なし → `/merge 872` を直接実行可能。
+- CI 全ジョブ SUCCESS 確認済み。
+- PR ブランチ `worktree-code+issue-861` は既存 worktree で使用中のため、merge phase は通常フローで実行すること。
