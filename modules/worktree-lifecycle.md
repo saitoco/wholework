@@ -106,6 +106,22 @@ sed -i 's/OLD_VALUE/NEW_VALUE/g' .claude/settings.json.template
 
 This constraint applies to all files under `.claude/`, including `settings.json.template`, `settings.json`, and hook scripts under `.claude/hooks/`.
 
+### Edit/Write path conventions in worktree sessions
+
+After calling `EnterWorktree` (`ENTERED_WORKTREE=true`), when editing files inside the
+worktree, **always use the worktree-local path** with the Edit or Write tool:
+
+- ✅ Absolute worktree path: `Edit .claude/worktrees/{NAME}/docs/spec/issue-N-foo.md`
+- ✅ CWD-relative path (when CWD is inside the worktree): `Edit docs/spec/issue-N-foo.md`
+- ❌ Absolute parent-repo path during a worktree session: `Edit /path/to/repo/docs/spec/issue-N-foo.md`
+
+**Why**: Using an absolute parent-repo path calls Edit on the parent repo's file instead
+of the worktree copy. In parallel-session environments, other sessions observing the
+resulting dirty state of the parent repo file may fail unexpectedly.
+
+**How to verify CWD**: Run `pwd` to confirm you are inside the worktree, or confirm that
+the return value from `EnterWorktree` points to the worktree path before calling Edit.
+
 ## Callers (auto-maintained)
 
 All callers that read this module. Update this table when a new Skill starts reading `modules/worktree-lifecycle.md`.
