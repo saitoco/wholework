@@ -152,3 +152,43 @@
 - MUST issues なし → `/merge 872` を直接実行可能。
 - CI 全ジョブ SUCCESS 確認済み。
 - PR ブランチ `worktree-code+issue-861` は既存 worktree で使用中のため、merge phase は通常フローで実行すること。
+
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| spec  | pr    | SUCCESS | Spec 完成、push 完了 |
+| code  | pr    | SUCCESS (manual recovery) | run-auto-sub.sh が SIGTERM (exit 143) で kill。worktree に 1 commit が存在したが push/PR 作成漏れ。手動で push + PR #872 作成 |
+| review (light) | pr | SUCCESS | run-review.sh exit 0、MUST 0 / CONSIDER 1 (skip) |
+| merge | pr    | SUCCESS (direct gh CLI) | wrapper をスキップして `gh pr merge --squash` 直接実行 (silent no-op パターン回避) |
+| verify | -    | SUCCESS (pre-merge全PASS) | post-merge manual 1 件残り → phase/verify |
+
+### Orchestration Anomalies
+- **run-auto-sub.sh SIGTERM kill (exit 143)**: code phase 開始直後にプロセスが kill された。1 commit は worktree に作成されていたが push と PR 作成が漏れた。
+- **手動回復手順**: `cd .claude/worktrees/code+issue-861 && git push -u origin worktree-code+issue-861` → `gh pr create` → reconcile で `matches_expected: true` 確認 → review/merge を継続
+
+### Improvement Proposals
+- (#859, #854 の Improvement Proposals と同種: silent no-op 後 push/PR 漏れ自動回復、SIGTERM 後の resume 機構強化)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Auto-Resolved Ambiguity Points で grep 補完と full suite 採用 (§24) を事前解決。後段の rework なし。
+
+#### code
+- SIGTERM kill された。実装 commit は完了していたが orchestration 層が中断したパターン。
+
+#### review
+- light review で MUST 0 / CONSIDER 1 のみ。最小限の rework で merge 進行。
+
+#### merge
+- `gh pr merge --squash --delete-branch` を直接実行することで silent no-op を回避。worktree 削除エラーは別途手動 cleanup。
+
+#### verify
+- pre-merge 5 件全 PASS (1034 bats tests pass)。post-merge manual observation 1 件は phase/verify で保留。
+
+### Improvement Proposals
+- (Auto Retrospective の Improvement Proposals 参照)
