@@ -272,6 +272,24 @@ If SPEC_DEPTH=full, read `${CLAUDE_PLUGIN_ROOT}/modules/skill-dev-checks.md` and
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-checker.md` and use the "Impact Assessment" section to decide whether to include documentation files in the changed-files list.
 
+**Steering Docs sync candidate check (when Changed Files includes SKILL.md or scripts/):**
+
+When the Spec's Changed Files section includes `SKILL.md` files (e.g., `skills/auto/SKILL.md`) or files under `scripts/`, run a grep across `docs/*.md` and `docs/ja/*.md` to find Steering Documents that reference the changed skill or script name. List found files as Steering Docs sync candidates in the Changed Files section.
+
+Steps:
+1. Extract the skill name or script filename from each changed file:
+   - `skills/{name}/SKILL.md` → keyword: `{name}` (e.g., `auto`, `spec`)
+   - `scripts/{script-name}.sh` → keyword: `{script-name}.sh` (e.g., `run-code.sh`)
+2. For each keyword, run:
+   ```bash
+   grep -l "<keyword>" docs/*.md docs/ja/*.md 2>/dev/null
+   ```
+3. For each file found, add a **Steering Docs sync candidate** entry to the Changed Files section:
+   e.g., `docs/workflow.md`: [Steering Docs sync candidate] verify that description of `<keyword>` is up to date; update if needed
+4. The `/code` phase makes the final include/exclude decision by reading each candidate; listing them here prevents silent omission at implementation time
+
+**Skip** if Changed Files does not include SKILL.md files or files under `scripts/`.
+
 **`docs/ja/` translation sync check:**
 
 If `docs/translation-workflow.md` exists, read it and follow the sync procedure.
