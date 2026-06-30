@@ -154,14 +154,23 @@ Before checking the phase label in Step 3, detect whether the Issue is in a **fi
        --jq '[.comments[] | select(.body | contains("<!-- wholework-event: type=verify-fail"))] | length > 0'
      ```
      Use the most recent such comment (`createdAt` descending) as the FAIL event reference.
-   - **OR reopened check**: `gh-graphql.sh --query get-last-reopen -F "num=$NUMBER"` returns a non-null timestamp (the Issue was reopened after the most recent merge).
+   - **OR reopened check**: `gh-graphql.sh --query get-last-reopen -F "num=$NUMBER"` returns a non-null timestamp AND that timestamp is after the last merge commit timestamp (`reopen_ts > last_merge_ts`).
      ```bash
      reopen_ts=$("${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh" --query get-last-reopen \
        -F "num=$NUMBER" \
        --jq '.data.repository.issue.timelineItems.nodes[0].createdAt' 2>/dev/null \
        | tr -d '"' || true)
+     # Cross-check: only count as "reopened after merge" if a merge commit exists before the reopen
+     if [[ -n "$reopen_ts" && "$reopen_ts" != "null" ]]; then
+       last_merge_ts=$(git log -1 --format=%cI --grep="closes #${NUMBER}" origin/main 2>/dev/null \
+         | tr -d '"' || true)
+       if [[ -z "$last_merge_ts" || ! "$reopen_ts" > "$last_merge_ts" ]]; then
+         reopen_ts=""
+       fi
+     fi
      ```
-     If `reopen_ts` is non-null and non-empty, the reopened criterion is satisfied.
+     `reopen_ts > last_merge_ts` の場合のみ criterion 1 (reopened) を満たす。
+     merge commit が存在しない場合 (`last_merge_ts` が空) や reopen が merge より前の場合は criterion 1 不満足。
    - Either condition satisfying is sufficient for criterion 1.
 
 2. **No `phase/code`, `phase/review`, or `phase/spec` labels present**: The Issue has no label matching `phase/code`, `phase/review`, or `phase/spec`. (`phase/verify` is permitted — it may be left over from a previous verify run on a reopened Issue.)

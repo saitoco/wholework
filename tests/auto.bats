@@ -51,6 +51,11 @@ step2a_section() {
     [[ "$output" == *"verify-fail"* ]]
 }
 
+@test "Step 2a section contains last_merge_ts merge-time cross-check" {
+    run step2a_section "$SKILL_FILE"
+    [[ "$output" == *"last_merge_ts"* ]]
+}
+
 # Tests for auto-stop-at / --stop-at support (Issue #783)
 
 @test "SKILL.md contains stop-at keyword" {
