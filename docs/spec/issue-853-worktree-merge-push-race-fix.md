@@ -109,3 +109,35 @@ conflict 発生時は `rebase --abort` + 明示エラーで停止する現行方
 ### Uncertainty resolution
 
 - Nothing to note
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- fetch-after-lock は `if [[ -n "$FROM_BRANCH" ]]; then` の外側 (無条件実行) に置いた。lock-only push モードでも stale ref 排除が必要なため。
+- is-ancestor check は 2 回目の ff-only 失敗後のみ走らせる。1 回目の失敗後は `git pull --rebase` を先に試みる既存ロジックを維持。
+- push retry loop の `git rebase "origin/${BASE_BRANCH}"` は worktree 内ではなく現在の HEAD に対して実行する。retry 中は FROM_BRANCH は既に main に merge 済みのため、HEAD (= main) を rebase するのが正しい。
+- 既存テスト 2 件の `merge-base --is-ancestor` mock は `exit 1` (not ancestor) に固定し、既存のrebase 検証パスが is-ancestor check 追加後も機能することを確認した。
+
+### Deferred Items
+- `MAX_PUSH_RETRY` の `.wholework.yml` expose は初期実装では scope-out (ハードコード 3)。将来 Issue で対応可能。
+- push retry loop 内の sleep 1 はネットワーク安定化用だが、lock 保持中のため値の最適化は観察後に判断。
+
+### Notes for Next Phase
+- PR #873: 変更対象は `scripts/worktree-merge-push.sh`, `tests/worktree-merge-push.bats`, `modules/orchestration-fallbacks.md`, `docs/structure.md`, `docs/ja/structure.md`
+- 全 14 bats テスト PASS、全 AC の pre-merge verify コマンド PASS 済み。
+- `--strategy-option` は追加していないことを review 時に確認すること (AC4)。
+- Post-merge AC は観察系 (並列 session で race が発生しないこと) のため /verify では SKIP 扱いになる見込み。
+
+## Code Retrospective
+
+### Deviations from Design
+- Spec の実装ステップ順は A→C→B だが、スクリプト内の変更位置の自然な順序 (fetch → is-ancestor → push retry) がそのまま A→C→B になっており設計と一致。順序上の逸脱なし。
+- docs/structure.md (および docs/ja/structure.md) のエントリ更新は Spec に明示されていなかったが、doc-checker の impact 判定で必要と判断して追加した。
+
+### Design Gaps/Ambiguities
+- 既存テストの `merge-base --is-ancestor` モック不足: Spec は新規 3 テストのみ言及していたが、既存の base-diverged テスト 2 件が `merge-base` を mock せず exit 0 (ancestor=true) になり rebase skip が発生してテスト意図と矛盾することが実装時に判明。既存テストの mock に `merge-base` ケースを追加した。
+- push retry loop の対象スコープ: retry loop 内の `git rebase "origin/${BASE_BRANCH}"` は FROM_BRANCH なしの lock-only push モードでも到達可能な配置だが、retry 中の rebase は `git push` 失敗後にのみ実行されるため問題なし。
+
+### Rework
+- 既存テスト 2 件 (`--from with base-diverged triggers worktree rebase fallback` / `--from with base-diverged and rebase conflict aborts and exits non-zero`) に `merge-base --is-ancestor` の mock (`exit 1`) を追加した。Spec には記載がなかったが、is-ancestor check 追加後の動作整合性確保のため必要な修正。
