@@ -90,3 +90,33 @@ commit を確認するパターンを既に持っており、今回は SKILL.md 
 ## Consumed Comments
 
 - saito (MEMBER, first-class): Issue Retrospective — AC2 verify command を `command "bats tests/"` に変更し、変更理由 (verify-patterns §3, §24 準拠) を記録 — https://github.com/saitoco/wholework/issues/856#issuecomment-4839631574
+
+## Code Retrospective
+
+### Deviations from Design
+
+- 実装コミット時に `feat:` プレフィックスを使用したが、Issue type が Bug のため `fix:` に修正 (--amend)。Spec 設計で明示的なプレフィックス指定がなかったため、Step 11 でタイプ確認前に誤プレフィックスでコミットした。
+
+### Design Gaps/Ambiguities
+
+- None
+
+### Rework
+
+- コミットプレフィックス修正 (feat: → fix:): git commit --amend で対処。push 前の local コミットのため影響なし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Approach B を採用: `skills/auto/SKILL.md` Step 2a に `last_merge_ts` cross-check を追加。`gh-graphql.sh` への変更は影響範囲が広いため除外。
+- bash 3.2+ 互換の文字列比較 `[[ "$reopen_ts" > "$last_merge_ts" ]]` を使用 (ISO 8601 UTC 文字列は辞書順比較で等価)。
+- テストは `tests/auto.bats` の既存 `step2a_section()` ヘルパーを活用して追加。
+
+### Deferred Items
+- Post-merge 検証: 「merge なし reopen Issue に対して `/auto $N` を実行し fix-cycle 誤判定がないこと」は manual 観察 (verify-type: manual)。
+- 実装は SKILL.md (LLM 実行) のみ。bash 実装への反映は別 Issue での対応余地あり。
+
+### Notes for Next Phase
+- `/verify` では AC1 rubric と AC2 bats を再確認。1035 テスト全 PASS 済みで問題なし。
+- Post-merge AC は manual 観察のため `/verify` では SKIPPED 扱い。
