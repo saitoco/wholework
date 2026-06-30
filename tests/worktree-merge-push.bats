@@ -194,6 +194,10 @@ fi
 if [[ "\$1" == "-C" && "\$3" == "rebase" ]]; then
     exit 0
 fi
+# merge-base --is-ancestor: return 1 (not ancestor) so rebase runs
+if [[ "\$1" == "merge-base" && "\$2" == "--is-ancestor" ]]; then
+    exit 1
+fi
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/git"
@@ -231,6 +235,10 @@ fi
 if [[ "\$1" == "-C" && "\$3" == "rebase" && "\$4" != "--abort" ]]; then
     exit 1
 fi
+# merge-base --is-ancestor: return 1 (not ancestor) so rebase runs
+if [[ "\$1" == "merge-base" && "\$2" == "--is-ancestor" ]]; then
+    exit 1
+fi
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/git"
@@ -239,6 +247,89 @@ MOCK
     [ "$status" -ne 0 ]
     [[ "$output" == *"Rebase"*"failed with conflicts"* ]]
     ! grep -q "push" "$GIT_LOG"
+}
+
+@test "push race: push fails once then succeeds after fetch-rebase retry" {
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GIT_LOG"
+if [[ "\$1" == "rev-parse" && "\$2" == "--show-toplevel" ]]; then
+    echo "${BATS_TEST_TMPDIR}/test-repo"
+    exit 0
+fi
+if [[ "\$1" == "push" ]]; then
+    COUNT_FILE="${BATS_TEST_TMPDIR}/push_count"
+    count=0
+    [ -f "\$COUNT_FILE" ] && count=\$(cat "\$COUNT_FILE")
+    count=\$((count + 1))
+    echo "\$count" > "\$COUNT_FILE"
+    [ "\$count" -eq 1 ] && exit 1
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"retry 1/3"* ]]
+    grep -q "fetch origin main" "$GIT_LOG"
+    push_count=$(grep -c "push origin main" "$GIT_LOG")
+    [ "$push_count" -eq 2 ]
+}
+
+@test "is-ancestor true: rebase is skipped when branch already contains origin base" {
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GIT_LOG"
+if [[ "\$1" == "rev-parse" && "\$2" == "--show-toplevel" ]]; then
+    echo "${BATS_TEST_TMPDIR}/test-repo"
+    exit 0
+fi
+if [[ "\$1" == "merge" ]]; then
+    COUNT_FILE="${BATS_TEST_TMPDIR}/merge_count"
+    count=0
+    [ -f "\$COUNT_FILE" ] && count=\$(cat "\$COUNT_FILE")
+    count=\$((count + 1))
+    echo "\$count" > "\$COUNT_FILE"
+    [ "\$count" -le 2 ] && exit 1
+    exit 0
+fi
+# merge-base --is-ancestor: return 0 (ancestor=true) so rebase is skipped
+if [[ "\$1" == "merge-base" && "\$2" == "--is-ancestor" ]]; then
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"is-ancestor=true"* ]]
+    ! grep -q "rebase origin/main" "$GIT_LOG"
+    ! grep -qE "\-C .+ rebase" "$GIT_LOG"
+    grep -q "push origin main" "$GIT_LOG"
+}
+
+@test "max-retry exhaustion: push always fails and script exits with error" {
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GIT_LOG"
+if [[ "\$1" == "rev-parse" && "\$2" == "--show-toplevel" ]]; then
+    echo "${BATS_TEST_TMPDIR}/test-repo"
+    exit 0
+fi
+if [[ "\$1" == "push" ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT'"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Error"* ]]
+    [[ "$output" == *"3 retries"* ]]
 }
 
 @test "conflict markers cause abort with non-zero exit and no push" {
