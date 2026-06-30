@@ -139,4 +139,21 @@
 ### Acceptance criteria verification difficulty
 
 - `rubric` 条件は `validate-skill-syntax.py` の内部実装 (line 695 `validate_body_scripts_in_allowed_tools`) を参照しており、ソースコードを読まないと検証困難。次回 rubric 記述時は実装の参照可能な部分 (ファイルパス、関数名) を明示することで AI 検証の精度が上がる。
+
+## Phase Handoff
+<!-- phase: merge -->
+
+### Key Decisions
+- スカッシュマージで PR #874 を main に統合: `check-allowed-tools.sh` の単機能追加 PR であり、コンフリクトなし・CI 通過・レビュー承認済みのクリーン状態だったため直接 Step 4 へ進んだ
+- ブランチ削除 (`--delete-branch`): PR マージ後にリモートブランチ `worktree-code+issue-857` を削除済み
+- Phase Handoff は review フェーズの事前ハンドオフなし: Spec に `## Phase Handoff` セクションが存在しなかったため新規書き込みのみ実施
+
+### Deferred Items
+- Post-merge 観察: 次回 SKILL.md 改修を伴う Issue で `check-allowed-tools.sh` が中間 commit 前に発火するか観察 (Spec § Post-merge 記載)
+- verify フェーズで `bats tests/` 全テスト通過と `scripts/check-allowed-tools.sh` の差分検出動作を確認
+
+### Notes for Next Phase
+- verify command: `bats tests/` — 全 bats テストが通過することを確認
+- `scripts/check-allowed-tools.sh` が `skills/code/SKILL.md` Step 8 の Allowed-tools Pre-commit Check サブセクションに統合されていることを確認
+- `tests/check-allowed-tools.bats` に 3 ケース (正常/差分検出/引数エラー) が含まれていることを確認
 - `command "bats tests/"` は safe mode では CI 参照フォールバックが必要; CI が SUCCESS であることが前提。CI 未完了の場合は PENDING になる点を注意 (今回は問題なし)。
