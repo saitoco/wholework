@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（62 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（63 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -35,7 +35,7 @@ wholework/
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用 decomposition YAML サンプル
-├── tests/               # スクリプトの Bats テストファイル（93 ファイル）
+├── tests/               # スクリプトの Bats テストファイル（94 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents
@@ -218,6 +218,7 @@ wholework/
 - `scripts/run-spec.sh` — spec スキル実行
 
 **ツーリング:**
+- `scripts/check-allowed-tools.sh` — SKILL.md body の ${CLAUDE_PLUGIN_ROOT}/scripts/* 参照と allowed-tools フロントマターの差分を中間 commit 前に検出する；`skills/code/SKILL.md` Step 8 から呼び出される
 - `scripts/check-eager-load-capability.sh` — eager-load 共通モジュール（verify-patterns.md、verify-executor.md）への capability guidance 混入検出スクリプト；/audit drift Step 2 から呼び出される
 - `scripts/validate-permissions.sh` — skill ディレクトリと name: フィールドの一貫性を検証
 - `scripts/validate-skill-syntax.py` — SKILL.md frontmatter と構文を検証
