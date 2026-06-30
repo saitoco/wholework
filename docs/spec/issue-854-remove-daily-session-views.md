@@ -274,3 +274,51 @@ All `file_not_exists` / `file_not_contains` / `dir_not_exists` ACs verified clea
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| spec  | pr    | SUCCESS | run-spec.sh exit 0 (spec creation), 2nd run also exit 0 (LLM correctly detected spec already complete, refused to re-create) |
+| code  | pr    | SUCCESS | PR #870 created after batch resume |
+| review (full) | pr | SUCCESS | 2 SHOULD fixed, 1 CONSIDER skipped |
+| merge | pr    | SUCCESS (manual recovery) | run-merge.sh が silent no-op で 2 回失敗 (claude exit 0 / PR OPEN)。原因は #859 マージで main が進み rebase conflict 発生。手動で rebase main → modify/delete conflict 解決 (delete 採用) → force-push → gh pr merge --squash 実行 |
+| verify | -    | SUCCESS (pre-merge全PASS) | post-merge observation 2 件は次回 /auto 実行待ち |
+
+### Orchestration Anomalies
+- **#854 spec を /auto --batch で開始 → 別 issue (#859) の verify を並列処理で実行 → main が進む → #854 が conflicting に**: List mode の direct sequential 実行と、verify Skill 内での parallel session の影響が衝突源となった
+- **merge silent no-op パターン (#859 でも観察された同種問題が再発)**: claude exit 0 だが PR は OPEN のまま。Tier 3 sub-agent は retry を指示したが retry も同パターンで失敗。最終的にプロセスが SIGTERM kill (exit 143)
+- **conflict 解決手順**: `cd .claude/worktrees/merge+pr-870 && git rebase origin/main` → modify/delete conflict (`docs/sessions/_daily/loop-state-2026-06-29.md` deleted in #854 commit, modified in main) → `git rm` で削除側採用 → `git rebase --continue` → `git push --force-with-lease` → CI 再 pass → `gh pr merge --squash` で merge 成功
+
+### Improvement Proposals
+- **silent no-op + conflict 検出と自動 fallback の組み合わせ**: `run-merge.sh` が silent no-op で失敗した時、`gh pr view --json mergeable` を確認し CONFLICTING の場合は Tier 2 fallback として「rebase main + modify/delete conflict 自動 resolution (deletes win for files deleted in PR but modified in main) + push + retry merge」を catalog 化
+- **silent no-op の早期 escalation**: 同じ phase (merge/code) で 2 回連続 silent no-op + retry → Tier 3 abort のパターンが頻発。1 回目の silent no-op 検出時点で「LLM 自己診断モード」(プロセス kill 前に reconcile 結果と前回コマンドを LLM に渡して push/PR create 必要性を判断させる) を試行する catalog エントリ追加
+- **batch + verify Skill 並列実行による race condition の文書化**: List mode で verify が main を更新中に次の Issue の code phase が動くと conflict が出やすい。SKILL.md または `docs/guide/customization.md` に「verify中は次 Issue 開始を待つ」または「verify は batch 完了後にまとめて」という運用パターンを明示
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 大規模廃止 Issue (17 pre-merge AC) を細かく分割せず 1 Spec で扱った。各 AC が明確で実装/検証ともスムーズ。
+- spec 再実行を LLM が正しく検出してスキップ (existing spec を尊重) — `/spec` の defensive design が機能した好例。
+
+#### design
+- impact chain (period mode 削除 → audit skill / workflow docs / structure.md counts) を Auto-Resolved Ambiguity Points で先回り解決。後段 phases に rework なし。
+
+#### code
+- 11 commits で 20 ファイル変更 (scripts 2 削除 / tests 2 削除 / SKILL.md 大幅整理 / docs 更新)。サイズの大きさにも関わらず 1 PR で完結。
+
+#### review
+- 2 SHOULD (factually incorrect script refs in doc examples) を auto-fix。`docs/reports/loop-state-` 等の dead path への参照を historical context として残すべきか実在 script として参照しているのかの境界が曖昧で、review が境界判断を補完した。
+
+#### merge
+- silent no-op + conflict の組み合わせが Tier 1/2/3 all-fail → 手動回復 (rebase + delete-side + force-push + gh pr merge)。Tier 2 catalog に該当エントリなし、Tier 3 sub-agent は retry → 同パターン再失敗で abort 判断もできず SIGTERM。
+- (Improvement Proposals 参照)
+
+#### verify
+- pre-merge 17 件全 PASS。observation 2 件 (auto-run 待ち) は次回 /auto 実行で自動 check。
+
+### Improvement Proposals
+- (Auto Retrospective の Improvement Proposals 参照: silent no-op + conflict fallback、early escalation、verify race 運用文書化)
