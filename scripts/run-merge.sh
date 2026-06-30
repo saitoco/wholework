@@ -12,6 +12,21 @@ if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
 fi
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
+# Session isolation check: detect other-session dirty files (best-effort)
+if [[ -x "${SCRIPT_DIR}/check-verify-dirty.sh" ]]; then
+  _dirty_exit=0
+  bash "${SCRIPT_DIR}/check-verify-dirty.sh" "${PR_NUMBER}" || _dirty_exit=$?
+  case "${_dirty_exit}" in
+    0) ;;
+    1)
+      echo "Error: parent main has uncommitted changes. Resolve before proceeding." >&2
+      exit 1
+      ;;
+    2)
+      echo "Warning: detected other-session dirty files. Proceeding (best-effort)." >&2
+      ;;
+  esac
+fi
 AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
 export AUTO_EVENTS_LOG
 PGID=$(ps -o pgid= -p $$ | tr -d ' ')
