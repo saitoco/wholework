@@ -78,6 +78,38 @@
 - `/spec` 時点での既存チェック (`skills/spec/SKILL.md` Step 10 allowed-tools impact chain check) は**新規** `scripts/*.sh` ファイル追加のみを対象とし、既存スクリプトの新規参照は対象外。本実装はこのギャップを `/code` Step 8 で補完する
 - 実装行数スコープ (測定時点: `scripts/` ディレクトリ, `ls` コマンド出力): 現在 60 ファイル + `git-hooks/` ディレクトリ = 61 エントリ → 新規 1 ファイル追加で 61 ファイル + `git-hooks/` = 62 エントリ; `docs/structure.md` の "60 files" 表記は ディレクトリを除いたファイル数 (git-hooks/ サブディレクトリ 1 個を除く)
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A (Spec の実装ステップに従い、差分なし)
+
+### Design Gaps/Ambiguities
+
+- `$stderr` キャプチャの bats 構文: bats 1.13.0 では `run --separate-stderr` が必要。Spec ではこの点が未記載だったが、既存テスト (`tests/check-file-overlap.bats`) を参照して `bats_require_minimum_version 1.5.0` と `--separate-stderr` を追加した
+- `docs/ja/structure.md` のファイルカウントが英語版よりも +2 先行していた (62 ファイル vs 60 ファイル) が、既存の drift であり本 PR では delta (+1) を適用するに留めた
+
+### Rework
+
+- 初回の bats テストで `$stderr` が空になる問題が発生。`run` を `run --separate-stderr` に変更することで解決。1ステップ修正のみで完了
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `check-allowed-tools.sh` を独立スクリプトとして作成し、`validate-skill-syntax.py` のラッパーとして実装 (ロジック重複なし)
+- `bats_require_minimum_version 1.5.0` と `run --separate-stderr` を使用して stderr を正確にキャプチャ
+- `skills/code/SKILL.md` の `allowed-tools` フロントマターに `check-allowed-tools.sh:*` を追加
+
+### Deferred Items
+- `/spec` 時点での allowed-tools チェック (Proposal A) は本 PR の対象外。Spec Notes の既存チェックは新規スクリプト追加のみ対象
+- `docs/ja/structure.md` と英語版のファイルカウント差分 (+2) は pre-existing drift として本 PR では修正せず
+
+### Notes for Next Phase
+- PR #874 は CI テスト通過を確認してからマージすること
+- `bats tests/` は全 1041 テスト通過 (exit 0) を確認済み
+- `validate-skill-syntax.py` warnings: `loop-paths-fallback` (既存、本 PR 無関係)
+
 ## spec retrospective
 
 ### Minor observations
