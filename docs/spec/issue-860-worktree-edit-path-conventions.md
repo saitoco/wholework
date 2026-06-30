@@ -93,3 +93,31 @@ path 規約記述が充分なため変更不要。
 - Proposal C (verify-patterns.md への検出 pattern 追加) は本 Issue スコープ外でスキップ (auto-resolved)
 - `worktree-lifecycle.md` の新サブセクションは `### Editing .claude/ files inside worktrees` と同列 (`###` level、sibling) に配置 (auto-resolved)
 - 本 Issue の Changed Files は `modules/` と `skills/` のみ。`docs/*.md` の変更はなく `docs/ja/` の translation sync 不要
+
+## Code Retrospective
+
+### Deviations from Design
+- 実装を 4 ステップ別コミット (modules/worktree-lifecycle.md → verify → spec → review) に分割した。Spec の「実装 step 1-4」に対応する個別コミットであり意図的。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `modules/worktree-lifecycle.md` の `## Notes` 配下に `### Edit/Write path conventions in worktree sessions` サブセクションを追加。`ENTERED_WORKTREE=true` 状態での ✅/❌ 例付きで規約を明文化した。
+- `skills/verify/SKILL.md`, `skills/spec/SKILL.md`, `skills/review/SKILL.md` の retrospective 追記ステップに `modules/worktree-lifecycle.md § Notes` への cross-reference を追加。
+- `skills/code/SKILL.md` と `skills/merge/SKILL.md` は既存記述が充分 (auto-resolved) のため変更不要と判断した。
+
+### Deferred Items
+- Post-merge AC: 次回 verify/spec/code session での動作観察 (manual check)。
+- Proposal C (verify-patterns.md への検出 pattern 追加) は本 Issue スコープ外でスキップ。
+
+### Notes for Next Phase
+- 変更はドキュメントのみ (4 files)。動作変更なし。CI は bats (1041 PASS) と validate-skill-syntax を通過済み。
+- verify コマンドは全 PASS (section_contains, file_contains, command, rubric)。
+- `/verify` は Post-merge AC (manual) のみ残っている。観察確認後に Close。
