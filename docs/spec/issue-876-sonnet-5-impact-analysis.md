@@ -109,22 +109,32 @@ No new comments since last phase.
 - **Sonnet 5 実運用 cost**: 実測前は projection。Phase 2 の default swap Issue に「1 週間サンプリング + 実測比較」を precondition として書き込むことで、本 Spec ではレポート §5 内の projection 明記のみで済ませる
 - **Tokenizer 1.0〜1.35× 分布**: 全面的に子 Issue #878 に委譲。本 Spec は report §4.4 で #878 への delegation を明示する記述のみを要件化
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1–10 were followed as written; no reordering, omission, or approach change.
+
+### Design Gaps/Ambiguities
+- N/A — the Spec's explicit section-numbering instruction (§1, skip §2, §3–§10) and the "Fable 5 paragraph → SSoT note" anchor for the tech.md insertion were both unambiguous and matched the actual file content on first read.
+
+### Rework
+- First write attempt used absolute main-repo paths (`/Users/saito/src/wholework/docs/...`) instead of CWD-relative worktree paths for both the new report `Write` and the `tech.md` `Edit`, despite `modules/worktree-lifecycle.md`'s explicit warning against this. Caught via the AC verify-command dry run (all `file_exists`/`grep` checks failed against the worktree) before committing. Fix: reverted the main-repo copies with `git checkout -- docs/tech.md` + `rm`, then re-applied both changes with CWD-relative paths inside the worktree. No main-repo state was left dirty. Lesson for future `/code` runs: after `EnterWorktree`, run `pwd`/`test -f .git` immediately before the *first* Write/Edit of the phase, not just once at Entry — the module's "always use CWD-relative paths" reminder is easy to skip when a skill hands you an issue's Spec content that already contains `docs/...`-style paths, which reads as if it were repo-root-relative from either location.
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
-- レポート `docs/reports/claude-sonnet-5-impact-strategy.md` を Fable 5 report と同構成 (§1〜§10) で作成し、§2 (existential question) は Sonnet 5 の tier 位置ゆえ省略
-- `docs/tech.md` matrix 表本体は変更せず、"Fable 5 (Mythos class)" 段落の直後に **Sonnet 5** 段落を追加する note-only 方針で、実 default 切替は Phase 2 の別 Issue に委譲
-- §8 Candidate Issues table に起票済み ( #877 / #878) と Phase 2/3/4 予定 Issue を混在列挙。Priority と Est. Size 列を必須
+- Followed all 10 Implementation Steps as written, no deviations; report structure §1, §3–§10 (§2 intentionally omitted per Spec) matches the Fable 5 report format
+- tech.md Sonnet 5 paragraph inserted exactly at the anchor point specified in the prior handoff (between the Fable 5 paragraph and the "SSoT note:" line), matrix table itself left untouched
+- Pre-merge AC checkboxes (5 items) marked `[x]` on the Issue after manually re-running each verify command locally (file_exists/section_contains/grep/file_contains all confirmed; rubric items visually confirmed against §7/§8 content)
 
 ### Deferred Items
 - default parent の実 swap (Sonnet 4.6 → Sonnet 5): Phase 2 の別 Issue、実測データ (子 Issue #877 / #878) 完了後
 - effort re-calibration (`run-*.sh` の phase 別 effort 見直し): Phase 3 の複数の patch/S 相当 Issue
 - `--effort=` フラグ露出 (Size × model × effort 3 軸): Phase 4、Icebox 判定含む
-- `docs/ja/reports/claude-sonnet-5-impact-strategy.md`: `docs/translation-workflow.md` Exclusions 対象、本 Issue では作成せず
+- `docs/ja/reports/claude-sonnet-5-impact-strategy.md` および `docs/ja/tech.md` sync: 本 Issue のスコープ外 (Spec Notes 記載の "Steering Docs sync candidate" 方針どおり、次回 tech.md 変更時に確認)
 
 ### Notes for Next Phase
-- レポート §8 の Candidate Issues 列 (Priority / Est. Size) は verify rubric で機械検証されるため、markdown table 形式を厳守する
-- `docs/tech.md` Sonnet 5 段落は "Fable 5 (Mythos class)" 段落と "SSoT note:" の間に挿入。段落順序が variable な場合は Fable 5 段落末尾を anchor に Edit する
-- `#877` / `#878` は既に blocked-by 関係が設定済み ([[github-issue-relationships]]) 。report §8 内でこの依存関係を可視化する際、body テキストで補足する形で問題なし
-- Simplicity rule 制約: Implementation Steps 10 個 / pre-merge verify 5 項目で full 上限。追加項目を提案する際は既存の再構成が必要
+- This Issue is analysis-only (Migration path Phase 1); `/review` and `/verify` should not expect any `run-*.sh` or matrix-table behavioral change — only new report content and a documentation note
+- Post-merge AC items are `verify-type: opportunistic` (`/audit drift`) and `verify-type: manual` (candidate Issue filing confirmation) — no automated post-merge verify command exists for this Issue
+- `#877` / `#878` already exist with blocked-by relationships set; the C1–C6 candidate Issues in report §8 are not yet filed — filing them is out of scope for this Issue per its own Out of Scope section
