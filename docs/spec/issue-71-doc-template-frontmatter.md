@@ -111,3 +111,6 @@ N/A
   - SKILL.md mapping 配置: 既存 Template Definitions テーブルに `type` / `ssot_for` カラムを拡張
   - prepend 対象フロー: Individual Create/Update Step 4 と sync reverse-generation Step 5 の両パス
   - translate-phase.md の変更は不要（Document Traversal で自然に除外）
+
+## Consumed Comments
+No new comments since last phase.
