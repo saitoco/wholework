@@ -169,3 +169,52 @@ Nothing to note. All 9 Pre-merge ACs used clear, mechanically verifiable hints (
 - `/verify` is the next step; label transition to `verify` was applied via `gh-label-transition.sh`.
 - The next `/auto --batch` run is the natural Post-merge observation point for the two observation-type ACs (session.md embeds `## Metrics`, no new `data-layer.md` generated).
 - If a follow-up Issue is opened for the Workflow-path agent-registration gap noted in the review retrospective, link it back to this PR.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+
+Nothing new beyond the `## issue retrospective` section already recorded: the `docs/workflow.md` / `docs/ja/workflow.md` AC gap was correctly auto-resolved following the #854 precedent; triage (Type=Task, Size=L, Value=3) and the AC Verify Command Audit (5 anti-patterns, none matched) held up through implementation with no deviation.
+
+#### design
+
+Nothing new beyond the `## spec retrospective` section already recorded: the two doc-sweep gaps found via code inspection (`tests/audit-auto-session.bats`, `docs/product.md` L162) were both correctly folded into Changed Files/Implementation Steps, and both are confirmed fixed in the merged diff (`grep data-layer` clean on `docs/product.md`, and `tests/audit-auto-session.bats` still passes as part of the green bats suite — see `#### verify` below).
+
+#### code
+
+An orchestration anomaly occurred, not yet recorded elsewhere in this Spec (no `## Auto Retrospective` section exists), so it is recorded here per the verify-retrospective skip-condition rule:
+
+- `run-code.sh` for this issue was killed by an external Bash-tool timeout after ~660–720s, mid-flight, while `/auto`'s pr-route Step 4 was following the skill's own literal instruction to invoke it "via Bash (timeout: 600000)" combined with `run_in_background: true`.
+- By the time of the kill, all 7 implementation commits were already made locally and DCO-signed, matching the Spec exactly (`git status` clean, `git log main..HEAD` showed the full expected commit set) — only the push + `gh pr create` steps had not yet run.
+- Recovery: Tier 1 (`reconcile-phase-state.sh code-pr --check-completion`) correctly reported `matches_expected: false` (no PR). Tier 2 (`detect-wrapper-anomaly.sh`) found no known pattern (log shows only watchdog silence lines, no error signature). Tier 3 (`orchestration-recovery` sub-agent) correctly diagnosed the "commits done, push/PR pending" state and proposed a 3-step `recover` plan (push branch → create PR → transition label to `phase/review`), validated by `validate-recovery-plan.sh` and applied successfully — confirmed via a second Tier 1 check (`matches_expected: true`, PR #879 OPEN).
+- **Root cause**: `skills/auto/SKILL.md`'s hard-coded `timeout: 600000` (10 min) in the pr-route Step 4 instructions conflicts with `run-*.sh`'s own internal watchdog design (visible via periodic "watchdog: still waiting" heartbeat lines), which is built to tolerate long silent windows. Size L code phases with `sonnet`/`high`-effort can legitimately exceed 10 minutes. By contrast, the review phase (~20 min) and merge phase in this same run were invoked with `run_in_background: true` and **no** explicit timeout, and both ran to natural completion without being killed — isolating `timeout: 600000` as the proximate cause rather than any inherent 10-minute platform ceiling.
+
+#### review
+
+Nothing new beyond the `## review retrospective` section already recorded. Reiterating for visibility since it links to an actionable follow-up (see Improvement Proposals): the `capabilities.workflow: true` Workflow path failed to find the `review-spec`/`review-bug` custom agent types in this session's Agent tool registry even though `agents/review-spec.md` and `agents/review-bug.md` exist in the repo, falling back to `general-purpose` agents with inline-seeded prompts (functionally equivalent findings, but without the schema-validated structured output + adversarial-refutation pipeline, at higher token cost).
+
+#### merge
+
+A second orchestration anomaly occurred, also not yet recorded elsewhere in this Spec:
+
+- `run-merge.sh` exited 1, but Tier 1 reconciliation (`reconcile-phase-state.sh merge --check-completion`) confirmed the squash-merge business logic had already succeeded (PR #879 `MERGED`, merge commit `78116b16`) — override to success applied, no Tier 2/3 escalation needed.
+- Per this Spec's own Phase Handoff (written by the merge phase before the wrapper failed): `gh pr merge 879 --squash --delete-branch`'s `--delete-branch` step failed because `main` was checked out in the sibling non-worktree repo directory at the time; the merge skill recovered by deleting the remote branch ref separately (`gh api -X DELETE .../git/refs/heads/...`).
+- The wrapper's *trailing* steps (`mkdir .tmp`, sourcing `emit-event.sh`, falling back to `handle-permission-mode-failure.sh`) then failed with "No such file or directory" — these ran using relative paths after the worktree directory itself had already been removed as part of the merge/cleanup sequence, so the CWD (or the paths resolved from it) no longer existed. This produced a nonzero wrapper exit code despite the actual merge already having succeeded, masking success as failure at the orchestration layer.
+
+#### verify
+
+No FAIL. All 9 pre-merge conditions (rubric / file_not_contains / command / github_check, several combined under AND semantics) were re-verified PASS on the first pass from a fresh worktree — none of the two orchestration anomalies above (code-phase kill, merge-phase wrapper exit) left any trace in the actual deliverable; both recoveries were clean. The 2 post-merge conditions are both `verify-type: observation event=auto-run` and remain correctly unchecked, to be confirmed automatically on the next `/auto --batch` run.
+
+### Retry Count
+
+(Omitted — N=0; verify PASSed on the first attempt, no auto-retry fired.)
+
+### Improvement Proposals
+
+1. **`skills/auto/SKILL.md`'s hard-coded `Bash(timeout: 600000)` instruction for `run-code.sh`/`run-review.sh`/`run-merge.sh` calls causes premature external kill of long-running phases.** Affects multiple phase invocations (code/review/merge all call this pattern per Step 4 of `skills/auto/SKILL.md`); recurs on any Size L/XL issue whose code phase legitimately exceeds 10 minutes (e.g., `sonnet`+`high`-effort implementation work), forcing a Tier 3 recovery cycle that is otherwise entirely avoidable. Recommend removing the explicit `timeout: 600000` cap for backgrounded `run-*.sh` invocations (or raising it well above the observed p95 duration for Size L/XL phases), relying on the wrapper's own internal watchdog/timeout mechanism instead of an external hard kill that fights it.
+
+2. **`run-merge.sh`'s trailing steps (`emit-event.sh` sourcing, `handle-permission-mode-failure.sh` fallback) are not robust to the worktree/CWD being removed by a preceding squash-merge + branch-cleanup sequence.** When the worktree directory disappears mid-script (e.g., after a `--delete-branch` conflict recovery), subsequent relative-path operations fail with "No such file or directory", producing a false-failure wrapper exit code even though the merge itself succeeded — this masks success as failure and requires a Tier 1 reconcile override to detect the true state on every occurrence. Recommend capturing an absolute path (or explicitly `cd`-ing back to the parent repo root) before any trailing cleanup/event-emission step that runs after worktree removal.
+
+3. **Follow-up on the review retrospective's Workflow-path agent-registration gap.** The `review-spec`/`review-bug` custom agent types referenced by `capabilities.workflow: true` (per `skills/review/workflow-guidance.md`) were not found in the Agent tool registry in this self-hosting execution environment, even though `agents/review-spec.md` and `agents/review-bug.md` exist in the repo — causing a silent fallback to `general-purpose` agents with inline-seeded prompts. This is functionally OK but loses the schema-validated structured output + adversarial-refutation pipeline described in `workflow-guidance.md`'s Cost Transparency section, at higher token cost. Recommend investigating why `agents/*.md` isn't installed/registered under the expected location in this plugin/self-hosting setup, or adding a startup check that warns when `capabilities.workflow: true` is set but the expected custom agent types are unavailable.
