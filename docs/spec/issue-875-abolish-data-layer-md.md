@@ -150,23 +150,22 @@ One infrastructure friction point observed, not specific to this PR's content: t
 Nothing to note. All 9 Pre-merge ACs used clear, mechanically verifiable hints (rubric / file_not_contains / command / github_check, some combined under AND semantics) and all verified PASS on the first pass with no UNCERTAIN results. Good template for future "abolish an unused generated artifact" Issues (#854 precedent).
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- No MUST issues found; all 9 pre-merge ACs verified PASS via static checks (rubric/file_not_contains/command/github_check) plus a full local `bats tests/*.bats` run (579/579 green) beyond the single AC-required bats file.
-- Fixed 1 SHOULD-level finding directly (`skills/audit/SKILL.md` Output Template Structure list was missing the "Phase Activity Summary" and "Token Usage Aggregate" subsections that the script and `docs/workflow.md` already describe) — safe, no-risk doc consistency fix.
-- Skipped 2 CONSIDER-level findings: the `METRICS_ONLY` inert flag in `scripts/get-auto-session-report.sh` and a stale `data-layer.md` fixture name in an out-of-scope test file — both low-value relative to fix risk/scope for this PR.
-- Attempted the `capabilities.workflow: true` Workflow path per Domain file guidance; fell back to static Task-fan-out via `general-purpose` agents because `review-spec`/`review-bug` agent types weren't registered in this session (see "Recurring issues" above).
+- Squash-merged PR #879 into `main` (`gh pr merge 879 --squash --delete-branch`); merge commit `78116b16`.
+- `--delete-branch` failed locally because `main` was already checked out in the sibling non-worktree repo directory; the remote merge itself succeeded (confirmed via `gh pr view --json state,mergedAt`) and the leftover remote branch `worktree-code+issue-875` was removed separately via `gh api -X DELETE .../git/refs/heads/...`.
+- Phase Handoff write and post-merge `main` sync were performed from `/Users/saito/src/wholework` (the pre-existing `main` worktree) rather than the `code+issue-875` worktree, since the latter's branch history diverged from `origin/main` after the squash and could not `--ff-only` merge.
 
 ### Deferred Items
 
-- `METRICS_ONLY` inert-flag cleanup in `scripts/get-auto-session-report.sh` — deferred as a CONSIDER-level non-blocking item; candidate for a small follow-up cleanup if it causes confusion later.
-- Stale `data-layer.md` fixture name in `tests/verify-dirty-detection.bats` — deferred, out of scope for #875.
-- Root-cause fixes for the 5 structural quality bugs in the Issue's Background (session_id inheritance, PR↔Issue mapping, verify phase event emission, manual recovery non-tracking, route mix double-counting) remain explicitly out of scope per the Issue's own "Out of Scope" section — unchanged by this review.
+- `METRICS_ONLY` inert-flag cleanup in `scripts/get-auto-session-report.sh` — still deferred (CONSIDER-level, non-blocking).
+- Stale `data-layer.md` fixture name in `tests/verify-dirty-detection.bats` — still deferred, out of scope for #875.
+- Root-cause fixes for the 5 structural quality bugs in the Issue's Background remain out of scope per the Issue's own "Out of Scope" section.
 
 ### Notes for Next Phase
 
-- `/merge 879` is the next step; no MUST issues block merge.
-- The next `/auto --batch` run is the natural Post-merge observation point for the two observation-type ACs (session.md embeds `## Metrics`, no new `data-layer.md` generated) — merge phase or a later `/verify` pass should watch for this.
-- If a follow-up Issue is opened for the Workflow-path agent-registration gap noted above, link it back to this PR's review retrospective for context.
+- `/verify` is the next step; label transition to `verify` was applied via `gh-label-transition.sh`.
+- The next `/auto --batch` run is the natural Post-merge observation point for the two observation-type ACs (session.md embeds `## Metrics`, no new `data-layer.md` generated).
+- If a follow-up Issue is opened for the Workflow-path agent-registration gap noted in the review retrospective, link it back to this PR.
