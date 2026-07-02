@@ -56,9 +56,8 @@ wholework/
 │   ├── stats/           # プロジェクト健全性診断レポート（/audit stats が生成、YYYY-MM-DD.md）
 │   └── sessions/        # セッション関連の自動生成物
 │         {SID}-{DATE}/  # L3 セッションレトロスペクティブ（/auto Step 5 L3 トリガーが生成、notable な batch/XL のみ）
-│           session.md       # L3 ナラティブ（What worked / Limits and gaps / Improvement candidates）
-│           events.jsonl     # .tmp/auto-events.jsonl から抽出したセッションスコープイベント
-│           data-layer.md    # データレイヤーレポート（/audit auto-session が生成）
+│           session.md       # L3 ナラティブ（What worked / Limits and gaps / Improvement candidates）に加え、機械生成された `## Metrics` 小節（get-auto-session-report.sh --metrics-only 経由）
+│           events.jsonl     # .tmp/auto-events.jsonl から抽出したセッションスコープイベント（not-notable なセッションはこのファイルのみをコミット）
 ├── .wholework/          # プロジェクトローカルな Wholework 設定（ユーザー管理、wholework リポジトリでは追跡しない）
 │   ├── adapters/        # 検証 adapter のオーバーライド
 │   ├── verify-commands/ # プロジェクトローカルのカスタム verify command ハンドラ
@@ -184,7 +183,7 @@ wholework/
 - `scripts/get-issue-type.sh` — issue タイプラベル取得
 - `scripts/get-issue-priority.sh` — issue priority フィールド取得
 - `scripts/get-sub-issue-graph.sh` — サブ issue 依存グラフ構築
-- `scripts/get-auto-session-report.sh` — `.tmp/auto-events.jsonl` から session_id でフィルタして `/auto` セッション retrospective レポートのデータ層を生成（`/audit auto-session` 用）
+- `scripts/get-auto-session-report.sh` — `.tmp/auto-events.jsonl` から session_id でフィルタし、`/auto` セッション retrospective の `## Metrics` markdown 小節（`--metrics-only`）を出力（`session.md` への埋め込みおよび `/audit auto-session` 用）
 - `scripts/get-verify-iteration.sh` — Issue コメントから `<!-- verify-iteration: N -->` マーカーの最大値を読み取る
 - `scripts/hook-rename-on-auto.sh` — UserPromptSubmit hook: プロンプトが `/auto` パターンにマッチした場合にセッション名を自動リネーム
 - `scripts/log-permission.sh` — 権限イベントログ（JSON 出力）

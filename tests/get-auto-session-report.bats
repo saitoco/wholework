@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 
 # Direct unit tests for scripts/get-auto-session-report.sh
-# Covers: session_id filter, --since list mode, empty jsonl, --narrative-draft insertion.
+# Covers: session_id filter, --since list mode, empty jsonl, --metrics-only stdout output.
 # All tests use --no-github for hermetic execution.
 
 PROJECT_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
@@ -9,10 +9,9 @@ SCRIPT="$PROJECT_ROOT/scripts/get-auto-session-report.sh"
 
 setup() {
     export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
-    export OUTPUT_PATH="$BATS_TEST_TMPDIR/report.md"
 }
 
-@test "session_id filter: only specified session events appear in report" {
+@test "session_id filter: only specified session events appear in Metrics section" {
     cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
 {"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"session-A","size":"S"}
 {"ts":"2026-06-14T10:01:00Z","issue":100,"event":"phase_start","session_id":"session-A","phase":"code-patch"}
@@ -22,18 +21,19 @@ setup() {
 {"ts":"2026-06-14T11:01:00Z","issue":200,"event":"sub_complete","session_id":"session-B","exit_code":"0"}
 FIXTURE_EOF
 
-    run bash "$SCRIPT" "session-A" --output "$OUTPUT_PATH" --no-github
+    run bash "$SCRIPT" "session-A" --metrics-only --no-github
     [ "$status" -eq 0 ]
-    [ -f "$OUTPUT_PATH" ]
-    grep -q "Issues processed | 1" "$OUTPUT_PATH"
-    grep -q "#100" "$OUTPUT_PATH"
-    ! grep -q "| #200 |" "$OUTPUT_PATH"
-    # New 5-section structure
-    grep -q "Phase Activity Summary" "$OUTPUT_PATH"
-    grep -q "Sub-Issue Completion Timeline" "$OUTPUT_PATH"
-    grep -q "Token Usage Aggregate" "$OUTPUT_PATH"
-    grep -q "Verify Phase Residuals" "$OUTPUT_PATH"
-    grep -q "Recovery Events" "$OUTPUT_PATH"
+    echo "$output" | grep -q "^## Metrics"
+    echo "$output" | grep -q "Issues processed | 1"
+    echo "$output" | grep -q "#100"
+    ! echo "$output" | grep -q "| #200 |"
+    # Required subsections
+    echo "$output" | grep -q "### Summary"
+    echo "$output" | grep -q "### Phase Activity Summary"
+    echo "$output" | grep -q "### Sub-Issue Completion Timeline"
+    echo "$output" | grep -q "### Token Usage Aggregate"
+    echo "$output" | grep -q "### Verify Phase Residuals"
+    echo "$output" | grep -q "### Recovery Events"
 }
 
 @test "--since list mode: lists distinct session_ids from event log" {
@@ -51,10 +51,10 @@ FIXTURE_EOF
 @test "empty jsonl: graceful degrade when log file is empty" {
     touch "$AUTO_EVENTS_LOG"
 
-    run bash "$SCRIPT" "arbitrary-session-id" --output "$OUTPUT_PATH" --no-github
+    run bash "$SCRIPT" "arbitrary-session-id" --metrics-only --no-github
     [ "$status" -eq 0 ]
-    [ -f "$OUTPUT_PATH" ]
-    grep -q "Issues processed | 0" "$OUTPUT_PATH"
+    echo "$output" | grep -q "^## Metrics"
+    echo "$output" | grep -q "Issues processed | 0"
 }
 
 @test "Tier 2 candidate surfacing: approaching threshold appears in Improvement Candidates" {
@@ -74,11 +74,10 @@ FIXTURE_EOF
     # WHOLEWORK_CONFIG_PATH=/dev/null forces default threshold=3 -> RECOVERIES_APPROACH=2
     # 2 Tier 2 events in phase=code-patch -> count=2 >= approach=2 -> should appear as "approaching threshold"
     export WHOLEWORK_CONFIG_PATH=/dev/null
-    run bash "$SCRIPT" "session-t2" --output "$OUTPUT_PATH" --no-github
+    run bash "$SCRIPT" "session-t2" --metrics-only --no-github
     [ "$status" -eq 0 ]
-    [ -f "$OUTPUT_PATH" ]
-    grep -q "Tier 2 recovery" "$OUTPUT_PATH"
-    grep -q "approaching threshold" "$OUTPUT_PATH"
+    echo "$output" | grep -q "Tier 2 recovery"
+    echo "$output" | grep -q "approaching threshold"
 }
 
 @test "Tier 2 candidate surfacing: threshold reached when count equals threshold" {
@@ -103,40 +102,10 @@ FIXTURE_EOF
     # WHOLEWORK_CONFIG_PATH=/dev/null forces default threshold=3 -> RECOVERIES_APPROACH=2
     # 3 Tier 2 events in phase=code-patch -> count=3 >= threshold=3 -> should appear as "threshold reached"
     export WHOLEWORK_CONFIG_PATH=/dev/null
-    run bash "$SCRIPT" "session-t3" --output "$OUTPUT_PATH" --no-github
+    run bash "$SCRIPT" "session-t3" --metrics-only --no-github
     [ "$status" -eq 0 ]
-    [ -f "$OUTPUT_PATH" ]
-    grep -q "Tier 2 recovery" "$OUTPUT_PATH"
-    grep -q "threshold reached" "$OUTPUT_PATH"
-}
-
-@test "cross-link: See also footer appended when L3 session.md exists" {
-    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
-{"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"session-xlink","size":"S"}
-{"ts":"2026-06-14T10:05:00Z","issue":100,"event":"sub_complete","session_id":"session-xlink","exit_code":"0"}
-FIXTURE_EOF
-
-    SESSION_DIR="$BATS_TEST_TMPDIR/docs/sessions/session-xlink-2026-06-14"
-    mkdir -p "$SESSION_DIR"
-    echo "# L3 Session Retrospective: session-xlink" > "$SESSION_DIR/session.md"
-
-    (cd "$BATS_TEST_TMPDIR" && mkdir -p docs/reports && \
-        bash "$SCRIPT" "session-xlink" --output "$OUTPUT_PATH" --no-github)
-    [ -f "$OUTPUT_PATH" ]
-    grep -q "## See also" "$OUTPUT_PATH"
-    grep -q "session.md" "$OUTPUT_PATH"
-}
-
-@test "cross-link: no footer when L3 session.md absent" {
-    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
-{"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"session-noxlink","size":"S"}
-{"ts":"2026-06-14T10:05:00Z","issue":100,"event":"sub_complete","session_id":"session-noxlink","exit_code":"0"}
-FIXTURE_EOF
-
-    run bash "$SCRIPT" "session-noxlink" --output "$OUTPUT_PATH" --no-github
-    [ "$status" -eq 0 ]
-    [ -f "$OUTPUT_PATH" ]
-    ! grep -q "## See also" "$OUTPUT_PATH"
+    echo "$output" | grep -q "Tier 2 recovery"
+    echo "$output" | grep -q "threshold reached"
 }
 
 @test "concurrent_commit_detected: commit without #N hint does not abort report" {
@@ -149,10 +118,9 @@ FIXTURE_EOF
 {"ts":"2026-06-14T10:02:00Z","issue":100,"event":"sub_complete","session_id":"session-grepfix","exit_code":"0"}
 FIXTURE_EOF
 
-    run bash "$SCRIPT" "session-grepfix" --output "$OUTPUT_PATH" --no-github
+    run bash "$SCRIPT" "session-grepfix" --metrics-only --no-github
     [ "$status" -eq 0 ]
-    [ -f "$OUTPUT_PATH" ]
-    grep -q "Concurrent Commits\|concurrent_commit_detected\|Concurrent commits" "$OUTPUT_PATH" || true
+    echo "$output" | grep -q "Concurrent Commits\|concurrent_commit_detected\|Concurrent commits" || true
     # The line for the commit without a #NNN hint should be present (without an issue hint).
-    grep -q "deadbeef" "$OUTPUT_PATH"
+    echo "$output" | grep -q "deadbeef"
 }

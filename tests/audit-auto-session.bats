@@ -9,12 +9,11 @@ SCRIPT="$PROJECT_ROOT/scripts/get-auto-session-report.sh"
 setup() {
     export TMPDIR_OVERRIDE="$BATS_TEST_TMPDIR"
     export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
-    export OUTPUT_PATH="$BATS_TEST_TMPDIR/report.md"
-    rm -f "$AUTO_EVENTS_LOG" "$OUTPUT_PATH"
+    rm -f "$AUTO_EVENTS_LOG"
 }
 
 teardown() {
-    rm -f "$AUTO_EVENTS_LOG" "$OUTPUT_PATH"
+    rm -f "$AUTO_EVENTS_LOG"
 }
 
 @test "success: single session generates per-issue durations and summary" {
@@ -30,24 +29,22 @@ teardown() {
 {"ts":"2026-06-14T10:20:01Z","issue":101,"event":"sub_complete","session_id":"abc-111","exit_code":"0"}
 FIXTURE_EOF
 
-    run bash "$SCRIPT" "abc-111" --output "$OUTPUT_PATH" --no-github
+    run bash "$SCRIPT" "abc-111" --metrics-only --no-github
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Report written to"* ]]
-    [ -f "$OUTPUT_PATH" ]
 
-    # Check report contains expected sections
-    grep -q "Session Report.*abc-111" "$OUTPUT_PATH"
-    grep -q "Issues processed" "$OUTPUT_PATH"
-    grep -q "Sub-Issue Completion Timeline" "$OUTPUT_PATH"
-    grep -q "Recovery Events" "$OUTPUT_PATH"
+    # Check Metrics section contains expected subsections
+    echo "$output" | grep -q "^## Metrics"
+    echo "$output" | grep -q "Issues processed"
+    echo "$output" | grep -q "Sub-Issue Completion Timeline"
+    echo "$output" | grep -q "Recovery Events"
     # Check route mix is computed (S=patch, M=pr)
-    grep -q "patch:.*pr:" "$OUTPUT_PATH"
-    # Narrative content lives in session.md, not data-layer.md
-    ! grep -q "Narrative Section" "$OUTPUT_PATH"
+    echo "$output" | grep -q "patch:.*pr:"
+    # Narrative content lives in the rest of session.md, not in the Metrics section
+    ! echo "$output" | grep -q "Narrative Section"
 }
 
 @test "success: parallel session isolation — only specified session events are aggregated" {
-    # Two sessions in the same log; only abc-222 should appear in the report
+    # Two sessions in the same log; only abc-222 should appear in the Metrics section
     cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
 {"ts":"2026-06-14T09:00:00Z","issue":200,"event":"sub_start","session_id":"abc-111","size":"S"}
 {"ts":"2026-06-14T09:01:00Z","issue":200,"event":"phase_complete","session_id":"abc-111","phase":"code-patch"}
@@ -57,16 +54,15 @@ FIXTURE_EOF
 {"ts":"2026-06-14T10:30:01Z","issue":300,"event":"sub_complete","session_id":"abc-222","exit_code":"0"}
 FIXTURE_EOF
 
-    run bash "$SCRIPT" "abc-222" --output "$OUTPUT_PATH" --no-github
+    run bash "$SCRIPT" "abc-222" --metrics-only --no-github
     [ "$status" -eq 0 ]
-    [ -f "$OUTPUT_PATH" ]
 
     # Issue 300 (abc-222) should appear, issue 200 (abc-111) should NOT
-    grep -q "300" "$OUTPUT_PATH"
+    echo "$output" | grep -q "300"
     # Issue 200 belongs to abc-111 and must not be counted
-    ! grep -q "Issues processed | 2" "$OUTPUT_PATH"
+    ! echo "$output" | grep -q "Issues processed | 2"
     # Exactly 1 issue processed (from abc-222)
-    grep -q "Issues processed | 1" "$OUTPUT_PATH"
+    echo "$output" | grep -q "Issues processed | 1"
 }
 
 @test "success: manual_intervention and verify_reopen_cycle events appear in Summary table" {
@@ -79,31 +75,29 @@ FIXTURE_EOF
 {"ts":"2026-06-14T10:35:00Z","issue":100,"event":"sub_complete","session_id":"abc-333","exit_code":"0"}
 FIXTURE_EOF
 
-    run bash "$SCRIPT" "abc-333" --output "$OUTPUT_PATH" --no-github
+    run bash "$SCRIPT" "abc-333" --metrics-only --no-github
     [ "$status" -eq 0 ]
-    [ -f "$OUTPUT_PATH" ]
-    grep -q "Parent session manual interventions" "$OUTPUT_PATH"
-    grep -q "verify FAIL.*reopen fix cycles" "$OUTPUT_PATH"
-    grep -q "manual interventions | 1" "$OUTPUT_PATH"
-    grep -q "reopen fix cycles | 1" "$OUTPUT_PATH"
+    echo "$output" | grep -q "Parent session manual interventions"
+    echo "$output" | grep -q "verify FAIL.*reopen fix cycles"
+    echo "$output" | grep -q "manual interventions | 1"
+    echo "$output" | grep -q "reopen fix cycles | 1"
 }
 
-@test "success: empty session — no matching session_id produces graceful report" {
+@test "success: empty session — no matching session_id produces graceful Metrics section" {
     # Log contains events for a different session only
     cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
 {"ts":"2026-06-14T08:00:00Z","issue":400,"event":"sub_start","session_id":"other-999","size":"XS"}
 {"ts":"2026-06-14T08:05:00Z","issue":400,"event":"sub_complete","session_id":"other-999","exit_code":"0"}
 FIXTURE_EOF
 
-    run bash "$SCRIPT" "nonexistent-000" --output "$OUTPUT_PATH" --no-github
+    run bash "$SCRIPT" "nonexistent-000" --metrics-only --no-github
     [ "$status" -eq 0 ]
-    [ -f "$OUTPUT_PATH" ]
 
-    # Report should still be generated with N/A or 0 values
-    grep -q "Session Report.*nonexistent-000" "$OUTPUT_PATH"
-    grep -q "Issues processed | 0" "$OUTPUT_PATH"
-    # Narrative content lives in session.md, not data-layer.md
-    ! grep -q "Narrative Section" "$OUTPUT_PATH"
+    # Metrics section should still be emitted with N/A or 0 values
+    echo "$output" | grep -q "^## Metrics"
+    echo "$output" | grep -q "Issues processed | 0"
+    # Narrative content lives in the rest of session.md, not in the Metrics section
+    ! echo "$output" | grep -q "Narrative Section"
 }
 
 @test "success: backfilled phase_complete shows annotation and Backfilled count in Summary" {
@@ -112,10 +106,10 @@ FIXTURE_EOF
 {"ts":"2026-06-14T10:00:01Z","issue":100,"event":"phase_start","session_id":"abc-backfill","phase":"code-patch"}
 {"ts":"2026-06-14T10:05:00Z","issue":100,"event":"phase_complete","session_id":"abc-backfill","phase":"code-patch","backfilled":true}
 FIXTURE_EOF
-    run bash "$SCRIPT" "abc-backfill" --output "$OUTPUT_PATH" --no-github
+    run bash "$SCRIPT" "abc-backfill" --metrics-only --no-github
     [ "$status" -eq 0 ]
-    grep -q "backfilled" "$OUTPUT_PATH"
-    grep -q "Backfilled phase_complete events" "$OUTPUT_PATH"
+    echo "$output" | grep -q "backfilled"
+    echo "$output" | grep -q "Backfilled phase_complete events"
 }
 
 @test "success: phase silent window threshold violation appears in Summary and Notes" {
@@ -129,16 +123,15 @@ FIXTURE_EOF
 {"ts":"2026-06-15T10:25:02Z","issue":500,"event":"sub_complete","session_id":"abc-666","exit_code":"0"}
 FIXTURE_EOF
 
-    run bash "$SCRIPT" "abc-666" --output "$OUTPUT_PATH" --no-github
+    run bash "$SCRIPT" "abc-666" --metrics-only --no-github
     [ "$status" -eq 0 ]
-    [ -f "$OUTPUT_PATH" ]
 
     # Summary row must be present
-    grep -q "Phase silent windows" "$OUTPUT_PATH"
+    echo "$output" | grep -q "Phase silent windows"
     # Phase breakdown must show spec:1 (1 violation in spec phase)
-    grep -q "spec:1" "$OUTPUT_PATH"
+    echo "$output" | grep -q "spec:1"
     # Per-issue Notes must include at-risk annotation
-    grep -q "within 600s of watchdog limit" "$OUTPUT_PATH"
+    echo "$output" | grep -q "within 600s of watchdog limit"
 }
 
 @test "success: verify-type breakdown appears in Verify Phase Residuals section" {
@@ -171,14 +164,12 @@ BODY_EOF
 BODY_EOF
 
     export WHOLEWORK_ISSUE_BODY_DIR="$BATS_TEST_TMPDIR/issue-bodies"
-    run bash "$SCRIPT" "abc-vtype" --output "$OUTPUT_PATH" --no-github
+    run bash "$SCRIPT" "abc-vtype" --metrics-only --no-github
     [ "$status" -eq 0 ]
-    [ -f "$OUTPUT_PATH" ]
 
-    grep -q "Verify Phase Residuals" "$OUTPUT_PATH"
-    grep -q "observation" "$OUTPUT_PATH"
-    grep -q "opportunistic" "$OUTPUT_PATH"
-    grep -q "#471" "$OUTPUT_PATH"
-    grep -q "auto-run" "$OUTPUT_PATH"
+    echo "$output" | grep -q "Verify Phase Residuals"
+    echo "$output" | grep -q "observation"
+    echo "$output" | grep -q "opportunistic"
+    echo "$output" | grep -q "#471"
+    echo "$output" | grep -q "auto-run"
 }
-

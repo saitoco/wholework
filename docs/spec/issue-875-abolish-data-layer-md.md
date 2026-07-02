@@ -135,25 +135,38 @@
 
 - 非 notable batch/XL session は session.md が生成されないため data-layer.md 廃止後は view 層メトリクスが永続化されない、という懸念を「許容 (events.jsonl から再生成可能、`/audit auto-session --metrics-only` で on-demand)」と解決した。#854 の「冗長 view を永続化しない」哲学と一致し、データ層 SSoT は不変であることが根拠。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. The review-spec agent cross-referenced all 13 Changed Files categories listed in the Spec against the PR diff (`--metrics-only` flag / `--output` removal, both SKILL.md updates, 4 doc files, 2 bats files, 11 `data-layer.md` deletions) and found an exact match — no out-of-scope changes, no undocumented implicit decisions, no enum-coverage gaps (Spec defines no enum in this Issue).
+
+### Recurring issues
+
+One infrastructure friction point observed, not specific to this PR's content: the `capabilities.workflow: true` Workflow path (Step 10, per `skills/review/workflow-guidance.md`) failed immediately because the `review-spec`/`review-bug` custom agent types (`agents/review-spec.md`, `agents/review-bug.md`) are not registered in this session's Agent tool registry, even though the definition files exist in the repo. Fell back to `general-purpose` agents seeded with the full agent-definition prompts inline — functionally equivalent findings, but without the schema-validated structured output and adversarial-refutation pipeline that `workflow-guidance.md`'s Cost Transparency section describes, and at higher token cost than the fallback static path would normally use (no overlap between finder and verify stages). This suggests the self-hosting plugin setup may not always have `agents/*.md` installed under `~/.claude/agents/` in every execution environment — worth a follow-up Issue if this recurs on other `/review --full` runs in repos with `capabilities.workflow: true`.
+
+### Acceptance criteria verification difficulty
+
+Nothing to note. All 9 Pre-merge ACs used clear, mechanically verifiable hints (rubric / file_not_contains / command / github_check, some combined under AND semantics) and all verified PASS on the first pass with no UNCERTAIN results. Good template for future "abolish an unused generated artifact" Issues (#854 precedent).
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- report mode の唯一の出力を stdout への `## Metrics` 小節に変更 (`--output` / ファイル書き込み / "See also" 追記を削除)。`--metrics-only` は全 caller が渡す明示的セレクタ。
-- `--metrics-only` 出力は現行 report の全小節を維持し、見出しは `## ` → `### ` に降格して session.md `## Metrics` 配下に nest させる。キャベア (verify 未計上 / manual recovery 未反映 / phase breakdown 順序) を `## Metrics` 冒頭に挿入する。
-- `docs/product.md` は Changed Files + Implementation Step 9 で修正するが pre-merge AC には追加しない (Issue body AC 集合 9 件を維持)。
+- No MUST issues found; all 9 pre-merge ACs verified PASS via static checks (rubric/file_not_contains/command/github_check) plus a full local `bats tests/*.bats` run (579/579 green) beyond the single AC-required bats file.
+- Fixed 1 SHOULD-level finding directly (`skills/audit/SKILL.md` Output Template Structure list was missing the "Phase Activity Summary" and "Token Usage Aggregate" subsections that the script and `docs/workflow.md` already describe) — safe, no-risk doc consistency fix.
+- Skipped 2 CONSIDER-level findings: the `METRICS_ONLY` inert flag in `scripts/get-auto-session-report.sh` and a stale `data-layer.md` fixture name in an out-of-scope test file — both low-value relative to fix risk/scope for this PR.
+- Attempted the `capabilities.workflow: true` Workflow path per Domain file guidance; fell back to static Task-fan-out via `general-purpose` agents because `review-spec`/`review-bug` agent types weren't registered in this session (see "Recurring issues" above).
 
 ### Deferred Items
 
-- 既知構造欠陥 (verify phase event emission / PR-Issue mapping / subprocess session_id 継承) の根本解決は本 Issue scope 外 (別 Issue)。Metrics 小節にキャベア明記で対応。
-- 過去 session の session.md への Metrics backfill は行わない (#854 と同方針、retro obsoleteance 許容)。
-- Post-merge observation (session.md への Metrics 埋め込み / data-layer.md 非生成) は次回 `/auto --batch` で観察。
+- `METRICS_ONLY` inert-flag cleanup in `scripts/get-auto-session-report.sh` — deferred as a CONSIDER-level non-blocking item; candidate for a small follow-up cleanup if it causes confusion later.
+- Stale `data-layer.md` fixture name in `tests/verify-dirty-detection.bats` — deferred, out of scope for #875.
+- Root-cause fixes for the 5 structural quality bugs in the Issue's Background (session_id inheritance, PR↔Issue mapping, verify phase event emission, manual recovery non-tracking, route mix double-counting) remain explicitly out of scope per the Issue's own "Out of Scope" section — unchanged by this review.
 
 ### Notes for Next Phase
 
-- **両 bats を必ず書き換える**: `tests/get-auto-session-report.bats` は AC 明示だが `tests/audit-auto-session.bats` は AC なし。`--output` 削除で後者も壊れるため両方 `--metrics-only` (stdout assert) に移行しないと suite-green AC が落ちる。
-- SKILL.md 本文編集は `validate-skill-syntax.py` MUST 制約遵守: 半角 `!` 禁止、本文 triple backtick 直書き禁止、frontmatter 単一行。
-- 4 ファイル (skills/auto, skills/audit, docs/structure.md, docs/ja/structure.md) から `data-layer.md` 文字列を、workflow.md/ja/workflow.md から "data-layer report"/"data-layer レポート" を完全除去すること (file_not_contains AC)。
-- scratch metrics 取得は `.tmp/auto-metrics-${AUTO_SESSION_ID}.md` (`.gitignore` 済み、埋め込み後削除)。
-- Size=L / pr route のため `github_check "gh pr checks"` は妥当 (PR あり)。
+- `/merge 879` is the next step; no MUST issues block merge.
+- The next `/auto --batch` run is the natural Post-merge observation point for the two observation-type ACs (session.md embeds `## Metrics`, no new `data-layer.md` generated) — merge phase or a later `/verify` pass should watch for this.
+- If a follow-up Issue is opened for the Workflow-path agent-registration gap noted above, link it back to this PR's review retrospective for context.
