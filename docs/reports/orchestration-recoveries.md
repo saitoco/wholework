@@ -64,6 +64,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
+## 2026-07-02 06:45 UTC: code-pr-external-timeout-kill
+
+### Context
+- Issue #875, phase: code-pr
+- Source: recovery-sub-agent
+- Wrapper: run-code.sh, exit code: killed (no explicit exit code — external Bash-tool timeout, not a script-internal failure)
+- Log tail: "watchdog: still waiting (json mode), silent for 660s (pid=39967)"
+
+### Diagnosis
+- `run-code.sh 875 --pr` was invoked by the `/auto` parent session via `Bash(timeout: 600000, run_in_background: true)`, following `skills/auto/SKILL.md`'s literal pr-route Step 4 instruction. The process was killed externally at ~660–720s while still mid-flight. By kill time, all 7 implementation commits were already made locally and DCO-signed, matching the Spec (`git status` clean, `git log main..HEAD` showed the full expected commit set) — only push + `gh pr create` remained. Tier 1 (`reconcile-phase-state.sh code-pr --check-completion`) correctly reported `matches_expected: false` (no PR). Tier 2 (`detect-wrapper-anomaly.sh`) found no known pattern (log shows only watchdog heartbeat lines, no error signature). This is a distinct variant from the 5 prior `code-pr-tier3-recovery` entries below and the 2026-06-05 "watchdog kill before PR creation" entry (Issue #522) — those were killed by `run-auto-sub.sh`'s own *internal* watchdog before commit; this one was killed by the *external* Bash-tool timeout parameter after commit, in a non-batch single-issue `/auto` run calling `run-code.sh` directly.
+
+### Recovery Applied
+- Tier 3 `orchestration-recovery` sub-agent correctly diagnosed the "commits done, push/PR pending" state and proposed a 3-step `recover` plan: `git push origin worktree-code+issue-875` → `gh pr create` → `scripts/gh-label-transition.sh 875 review`. Validated by `validate-recovery-plan.sh` (exit 0) and applied successfully. Second Tier 1 check confirmed `matches_expected: true` (PR #879 OPEN).
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 起票済み #880 (root cause: `skills/auto/SKILL.md`'s hard-coded `timeout: 600000` for `run-code.sh`/`run-review.sh`/`run-merge.sh` calls conflicts with `run-*.sh`'s own watchdog design, which is built to tolerate long silent windows; confirmed by this same session's review (~20min) and merge phases both completing naturally when invoked with `run_in_background: true` and no explicit timeout)
+
 ## 2026-06-27 18:15 UTC: code-pr-tier3-recovery
 
 ### Context
