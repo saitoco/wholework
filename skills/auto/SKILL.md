@@ -707,7 +707,7 @@ Run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run`
 
 1. **Route guard**: If `ROUTE` is neither `batch` nor `sub_issue` (XL route), output "L3 retrospective skipped: no notable orchestration content" and skip the remaining L3 steps.
 
-2. **Create session dir and generate data layer** (always for batch/XL routes, before notable judgment):
+2. **Create session dir and extract session events** (always for batch/XL routes, before notable judgment):
    ```bash
    DATE=$(date -u +%Y-%m-%d)
    SESSION_DIR="docs/sessions/${AUTO_SESSION_ID}-${DATE}"
@@ -716,18 +716,6 @@ Run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run`
    - Extract session events:
      ```bash
      jq -c 'select(.session_id == "'"$AUTO_SESSION_ID"'")' .tmp/auto-events.jsonl > "$SESSION_DIR/events.jsonl" 2>/dev/null || true
-     ```
-   - Generate data layer report (--no-github; retry-once on failure; log stderr to data-layer-stderr.log):
-     ```bash
-     if ! "${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh" "$AUTO_SESSION_ID" --output "$SESSION_DIR/data-layer.md" --no-github 2>"$SESSION_DIR/data-layer-stderr.log"; then
-       if ! "${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh" "$AUTO_SESSION_ID" --output "$SESSION_DIR/data-layer.md" --no-github 2>>"$SESSION_DIR/data-layer-stderr.log"; then
-         echo "Warning: data-layer.md generation failed — continuing without data layer report"
-       else
-         rm -f "$SESSION_DIR/data-layer-stderr.log"
-       fi
-     else
-       rm -f "$SESSION_DIR/data-layer-stderr.log"
-     fi
      ```
    - **Empty-dir guard** (防止策): After all file writes above complete, remove the session dir if it is still empty. This prevents orphaned empty directories when the process aborts before writing any files (e.g., DATE-cross retry creates a new dir but writes nothing to it):
      ```bash
@@ -751,7 +739,7 @@ Run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run`
      - Parallel race detected (conflicting commit event or explicit race event in filtered events)
      - Cross-cutting AC mismatch (any `FAIL` from Step 4's cross-cutting pre-verification)
      - At least 1 sub-issue failure in the execution summary
-   - If NOT notable: commit `data-layer.md` and `events.jsonl` for this session and stop:
+   - If NOT notable: commit `events.jsonl` for this session and stop:
      ```bash
      git add "$SESSION_DIR"
      git commit -s -m "Add L3 session data for session ${AUTO_SESSION_ID}
@@ -759,11 +747,30 @@ Run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run`
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
      git push origin main
      ```
-     Output "L3 data layer committed (not notable — session.md skipped)." and skip the remaining L3 steps.
+     Output "L3 session events committed (not notable — session.md skipped)." and skip the remaining L3 steps.
 
-4. **Write `$SESSION_DIR/session.md`** using the Write tool — format:
+4. **Fetch the Metrics section** (--no-github; retry-once on failure; log stderr to auto-metrics-stderr.log), capturing stdout to a scratch file:
+   ```bash
+   if ! "${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh" "$AUTO_SESSION_ID" --metrics-only --no-github > ".tmp/auto-metrics-${AUTO_SESSION_ID}.md" 2>".tmp/auto-metrics-${AUTO_SESSION_ID}-stderr.log"; then
+     if ! "${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh" "$AUTO_SESSION_ID" --metrics-only --no-github > ".tmp/auto-metrics-${AUTO_SESSION_ID}.md" 2>>".tmp/auto-metrics-${AUTO_SESSION_ID}-stderr.log"; then
+       echo "Warning: Metrics section generation failed — session.md will note the fallback"
+       echo "## Metrics" > ".tmp/auto-metrics-${AUTO_SESSION_ID}.md"
+       echo "" >> ".tmp/auto-metrics-${AUTO_SESSION_ID}.md"
+       echo "(unavailable — generation failed; re-run \`scripts/get-auto-session-report.sh ${AUTO_SESSION_ID} --metrics-only\` manually)" >> ".tmp/auto-metrics-${AUTO_SESSION_ID}.md"
+     else
+       rm -f ".tmp/auto-metrics-${AUTO_SESSION_ID}-stderr.log"
+     fi
+   else
+     rm -f ".tmp/auto-metrics-${AUTO_SESSION_ID}-stderr.log"
+   fi
+   ```
+   Read the scratch file's contents for use in the next step.
+
+5. **Write `$SESSION_DIR/session.md`** using the Write tool — insert the fetched `## Metrics` section between the title and `## What worked`, format:
    ```markdown
    # L3 Session Retrospective: {AUTO_SESSION_ID}
+
+   {contents of .tmp/auto-metrics-${AUTO_SESSION_ID}.md}
 
    ## What worked
    (successful phases, recovery patterns used)
@@ -777,24 +784,19 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
    ## Auto Retrospective
    ### Improvement Proposals
    (retro-proposals-compatible section; same content as Improvement candidates above)
-
-   ---
-
-   ## See also
-
-   - [Data layer report](docs/sessions/{AUTO_SESSION_ID}-{DATE}/data-layer.md)
    ```
+   After writing `session.md`, delete the scratch file: `rm -f ".tmp/auto-metrics-${AUTO_SESSION_ID}.md"`
 
-5. **Call `modules/retro-proposals.md`** — improvement Issue creation:
+6. **Call `modules/retro-proposals.md`** — improvement Issue creation:
    - Create a bridge file for retro-proposals.md interface compatibility:
      - XL route (`ROUTE="sub_issue"`): `BRIDGE_NUMBER=$NUMBER`; write bridge file at `$SESSION_DIR/issue-${BRIDGE_NUMBER}-l3session.md` containing the `## Auto Retrospective > ### Improvement Proposals` section from `session.md`
      - batch route (`ROUTE="batch"`): `BRIDGE_NUMBER="batch-${AUTO_SESSION_ID}"`; write bridge file at `$SESSION_DIR/issue-${BRIDGE_NUMBER}-l3session.md`
    - Read `${CLAUDE_PLUGIN_ROOT}/modules/retro-proposals.md` and follow "Processing Steps" with `SPEC_PATH=$SESSION_DIR`, `NUMBER=$BRIDGE_NUMBER`, `HAS_SKILL_PROPOSALS` (already retained from `.wholework.yml` detection).
    - Collect filed Issue numbers from retro-proposals output.
 
-6. **Backlink**: If any Issues were filed, append a `## Filed Issues` section to `$SESSION_DIR/session.md` listing each filed Issue number as `- #N`.
+7. **Backlink**: If any Issues were filed, append a `## Filed Issues` section to `$SESSION_DIR/session.md` listing each filed Issue number as `- #N`.
 
-7. **Skill Self-Update Propagation check** (batch/XL routes only; runs after Backlink, before commit):
+8. **Skill Self-Update Propagation check** (batch/XL routes only; runs after Backlink, before commit):
    - Load `skill_versions` from `.tmp/auto-session-${AUTO_SESSION_ID}.json`:
      ```bash
      SKILL_VERSIONS=$(jq -r '.skill_versions // empty' ".tmp/auto-session-${AUTO_SESSION_ID}.json" 2>/dev/null)
@@ -822,7 +824,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
      List all 8 skills — show `<start-hash> → <current-hash>` for changed ones and `(no change)` for unchanged ones.
    - If no skills changed, skip the append (do not add the section).
 
-8. **Commit and push**:
+9. **Commit and push**:
    ```bash
    git add "$SESSION_DIR"
    git commit -s -m "Add L3 session retrospective for session ${AUTO_SESSION_ID}
