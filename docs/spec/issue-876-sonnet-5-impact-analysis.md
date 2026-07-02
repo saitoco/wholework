@@ -94,3 +94,37 @@ No new comments since last phase.
 - **Fable 5 再展開 (2026-07-01) の触れ方**: report §4 内で 1〜2 段落程度、Fable 5 opt-in 方針の継続と、Sonnet 5 との tier 分離 (Sonnet 5 は default 候補、Fable 5 は opt-in) を明記する。Fable 5 の cyber classifier false-positive リスクは既存の Fable 5 report で扱われているため詳細は cross-reference で済ませる
 - **[[sonnet-5-migration]] memory との整合**: 本 Spec 完了後、memory の "How to apply" 節に report path (`docs/reports/claude-sonnet-5-impact-strategy.md`) を追加できる状態になる。 memory 更新は本 Issue のスコープ外 (別途 CLAUDE.md session retrospective で判断)
 - **Simplicity rule**: Implementation Steps は 10 個 (light 5 個、full 10 個の上限内) 、pre-merge verification は 5 項目で full 上限内
+
+## spec retrospective
+
+### Minor observations
+- 本 Issue は `/issue` を経由せず gh CLI で直接起票したため、Issue body に `## Acceptance Criteria` が欠けていた。 `/spec` Step 10 の verify command sync rule と Count alignment check を満たすため、 `/spec` 側で AC を追加し body update した。今後 impact-analysis 系 Issue を手動起票する際は `## Acceptance Criteria` セクションを最初から含めるテンプレを持つと healing がスムーズ
+
+### Judgment rationale
+- **matrix 本体を触らない判断**: default parent の Sonnet 4.6 → Sonnet 5 実 swap は CI-sensitive Size M 以上相当 ( [[feedback_ci_sensitive_size_m]] ) 、かつ実測データ (子 Issue #877 / #878) 前の swap は risk 過大。本 Issue は analysis-only とし、matrix 表本体は Phase 2 の別 Issue で扱う分離を採用
+- **Fable 5 report §2 相当セクションの省略**: Sonnet 5 は Fable 5 の下位 tier で「scaffold dissolution 圧」の議論は transitive に成り立つため、§1 末尾で言及するのみとし §2 セクションは省略。report 全体の scope を Phase 1 の inventory に集中させる
+- **報告書 §8 の "実装済み Issue vs 予定 Issue" の混在方針**: 起票済み ( #877 / #878) と Phase 2/3/4 の予定 Issue を同じ table に列挙して execution plan を可視化する Fable 5 report §8 の慣行を踏襲。読者が本 Issue の scope 境界を理解しやすくする
+
+### Uncertainty resolution
+- **Sonnet 5 実運用 cost**: 実測前は projection。Phase 2 の default swap Issue に「1 週間サンプリング + 実測比較」を precondition として書き込むことで、本 Spec ではレポート §5 内の projection 明記のみで済ませる
+- **Tokenizer 1.0〜1.35× 分布**: 全面的に子 Issue #878 に委譲。本 Spec は report §4.4 で #878 への delegation を明示する記述のみを要件化
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- レポート `docs/reports/claude-sonnet-5-impact-strategy.md` を Fable 5 report と同構成 (§1〜§10) で作成し、§2 (existential question) は Sonnet 5 の tier 位置ゆえ省略
+- `docs/tech.md` matrix 表本体は変更せず、"Fable 5 (Mythos class)" 段落の直後に **Sonnet 5** 段落を追加する note-only 方針で、実 default 切替は Phase 2 の別 Issue に委譲
+- §8 Candidate Issues table に起票済み ( #877 / #878) と Phase 2/3/4 予定 Issue を混在列挙。Priority と Est. Size 列を必須
+
+### Deferred Items
+- default parent の実 swap (Sonnet 4.6 → Sonnet 5): Phase 2 の別 Issue、実測データ (子 Issue #877 / #878) 完了後
+- effort re-calibration (`run-*.sh` の phase 別 effort 見直し): Phase 3 の複数の patch/S 相当 Issue
+- `--effort=` フラグ露出 (Size × model × effort 3 軸): Phase 4、Icebox 判定含む
+- `docs/ja/reports/claude-sonnet-5-impact-strategy.md`: `docs/translation-workflow.md` Exclusions 対象、本 Issue では作成せず
+
+### Notes for Next Phase
+- レポート §8 の Candidate Issues 列 (Priority / Est. Size) は verify rubric で機械検証されるため、markdown table 形式を厳守する
+- `docs/tech.md` Sonnet 5 段落は "Fable 5 (Mythos class)" 段落と "SSoT note:" の間に挿入。段落順序が variable な場合は Fable 5 段落末尾を anchor に Edit する
+- `#877` / `#878` は既に blocked-by 関係が設定済み ([[github-issue-relationships]]) 。report §8 内でこの依存関係を可視化する際、body テキストで補足する形で問題なし
+- Simplicity rule 制約: Implementation Steps 10 個 / pre-merge verify 5 項目で full 上限。追加項目を提案する際は既存の再構成が必要
