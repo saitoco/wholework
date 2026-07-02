@@ -65,8 +65,21 @@
 
 ## See also
 
-- [Data layer report](docs/sessions/59237-1782604910-2026-07-02/data-layer.md) (47 issue 混在の共有 session_id 由来のため、本バッチ固有情報は本ファイル参照)
+- [Data layer report](docs/sessions/59237-1782604910-2026-07-02/data-layer.md) — バッチ 8 issue のみを抽出・PR番号→issue番号 remap 後の view (186 events)
 - Individual issue specs: `docs/spec/issue-859-*.md`, `docs/spec/issue-854-*.md`, `docs/spec/issue-861-*.md` (Auto Retrospective 記録あり)
+
+## Data layer report caveats
+
+data-layer.md は生成できたが以下の制約に注意:
+
+1. **Phase breakdown の順序**: workflow 順 (issue → spec → code → review → merge) ではなく event 発生順で表示される。個々の phase 所要時間は正しい (例: #854 spec 342m は実際の spec phase 実時間)。
+2. **Verify phase が計上されない**: `/verify` は Skill invocation (wrapper なし) のため `phase_start/complete` event を emit しない。8 件全てが phase/verify に居るが Phase Activity Summary の verify 欄は空。
+3. **Recovery Events (no recovery events)**: 3 件の manual push+PR / conflict resolve は Tier 1/2/3 の recovery machinery を経由せず直接手動介入したため計上されない (本 session.md の "Batch Result" テーブル参照)。
+4. **Route mix 集計のズレ**: patch: 3 / pr: 6 と表示されるが実際は patch: 3 (#856,#858,#860) / pr: 5 (#853,#854,#857,#859,#861)。#859 の PR #868 と code-pr event の帰属が二重計上された可能性あり。
+5. **Concurrent commits 16 件検出**: 並列 verify Skill/spec-merge/heartbeat commit の副作用。retro-commit や別 session (`#862`, `#869`) の影響も混ざる。
+6. **See also link 誤り**: data-layer.md 末尾の `See also` link は `59237-1782604910-2026-06-28/session.md` を指すが、本バッチの session.md は `59237-1782604910-2026-07-02/session.md`。get-auto-session-report.sh の link 生成ロジックが session dir 命名を仮定している (session_id 先頭 + session_start date)。
+
+Batch の権威ある情報は個々の Spec `## Auto Retrospective` セクションと本 session.md の "Batch Result" テーブル。data-layer.md は補助 view。
 
 ## Filed Issues
 
