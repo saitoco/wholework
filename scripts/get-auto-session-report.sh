@@ -1,14 +1,14 @@
 #!/bin/bash
-# get-auto-session-report.sh - Generate a data-layer retrospective report for a /auto session.
-# Reads .tmp/auto-events.jsonl filtered by session_id and renders a markdown report.
+# get-auto-session-report.sh - Generate a Metrics section for a /auto session, for embedding into session.md.
+# Reads .tmp/auto-events.jsonl filtered by session_id and renders a markdown section to stdout.
 #
 # Usage:
-#   get-auto-session-report.sh <session-id> [--output <path>] [--no-github]
+#   get-auto-session-report.sh <session-id> --metrics-only [--no-github]
 #   get-auto-session-report.sh [--since <spec>]   # list mode: show distinct session_ids
 #
 # Options:
-#   <session-id>              Report for the specified session
-#   --output <path>           Output path (default: docs/sessions/<id>-<date>/data-layer.md)
+#   <session-id>              Emit the Metrics section for the specified session
+#   --metrics-only            Emit the `## Metrics` markdown section to stdout (report mode selector)
 #   --no-github               Skip gh issue/pr calls (for hermetic bats tests)
 #   --since <spec>            List mode: filter sessions by time (e.g. 24h, 2026-06-14)
 #
@@ -30,7 +30,7 @@ SILENT_THRESHOLD_ISSUE=$(( ${WATCHDOG_TIMEOUT_ISSUE_DEFAULT:-1200} - SILENT_MARG
 AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
 
 SESSION_ID=""
-OUTPUT_PATH=""
+METRICS_ONLY=false
 NO_GITHUB=false
 ISSUE_BODY_DIR="${WHOLEWORK_ISSUE_BODY_DIR:-}"
 LIST_MODE=false
@@ -39,9 +39,9 @@ SINCE_SPEC="24h"
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --output)
-      OUTPUT_PATH="${2:?--output requires a path}"
-      shift 2
+    --metrics-only)
+      METRICS_ONLY=true
+      shift
       ;;
     --no-github)
       NO_GITHUB=true
@@ -59,7 +59,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     -*)
       echo "Error: Unknown option: $1" >&2
-      echo "Usage: get-auto-session-report.sh <session-id> [--output <path>] [--no-github]" >&2
+      echo "Usage: get-auto-session-report.sh <session-id> --metrics-only [--no-github]" >&2
       exit 1
       ;;
     *)
@@ -126,17 +126,7 @@ if [[ "$LIST_MODE" == "true" ]] || [[ -z "$SESSION_ID" ]]; then
   exit 0
 fi
 
-# Report mode: generate report for the specified session
-echo "Generating report for session: $SESSION_ID"
-
-TODAY=$(date +%Y-%m-%d)
-
-if [[ -z "$OUTPUT_PATH" ]]; then
-  OUTPUT_PATH="docs/sessions/${SESSION_ID}-${TODAY}/data-layer.md"
-fi
-
-mkdir -p "$(dirname "$OUTPUT_PATH")"
-
+# Report mode: emit the Metrics section for the specified session
 # Extract events for this session (graceful degrade if file missing or empty)
 if [[ ! -f "$AUTO_EVENTS_LOG" ]]; then
   EVENTS_JSON="[]"
@@ -588,16 +578,21 @@ ${_row}"
 - manual waiting: ${_total_manual}"
 fi
 
-# Render the markdown report
-cat > "$OUTPUT_PATH" << REPORT_EOF
-# /auto Session Report — ${SESSION_ID}
+# Render the Metrics markdown section to stdout
+cat << REPORT_EOF
+## Metrics
+
+> Known structural gaps in this section (see Issue #875 Out of Scope):
+> - The verify phase does not emit phase_start/phase_complete events (/verify is a wrapper-less Skill invocation), so it is not counted here.
+> - Manually-performed silent no-op recoveries do not go through Tier 1/2/3 machinery, so they are not reflected in Recovery Events.
+> - The Phase breakdown order below follows event occurrence order, not a fixed pipeline order.
 
 **Session start**: ${SESSION_START}
 **Session end**: ${SESSION_END}
 **Wall-clock**: ${WALL_CLOCK}
 **Route mix**: ${ROUTE_MIX}
 
-## Summary
+### Summary
 
 | Metric | Value |
 |---|---|
@@ -616,28 +611,28 @@ cat > "$OUTPUT_PATH" << REPORT_EOF
 | Backfilled phase_complete events | ${BACKFILLED_COUNT} |
 | Merge conflicts | 0 |
 
-## Phase Activity Summary
+### Phase Activity Summary
 
 | Phase | Event count |
 |---|---|
 ${PHASE_ACTIVITY_TABLE}
 
-## Sub-Issue Completion Timeline
+### Sub-Issue Completion Timeline
 
 | Issue | Size/Route | Duration | Phase breakdown | PR | Recovery | Notes |
 |---|---|---|---|---|---|---|
 ${COMPLETION_TIMELINE_TABLE}
 
-## Token Usage Aggregate
+### Token Usage Aggregate
 
 ${TOKEN_USAGE_HEADER}
 ${TOKEN_USAGE_TABLE}
 
-## Recovery Events
+### Recovery Events
 
 ${RECOVERY_EVENTS}
 
-## Verify Phase Residuals
+### Verify Phase Residuals
 
 $(
   if [[ -z "$VERIFY_RESIDUALS" ]]; then
@@ -654,25 +649,11 @@ $(
   fi
 )
 
-## Concurrent Sessions Detected
+### Concurrent Sessions Detected
 
 ${CONCURRENT_SECTION}
 
-## Improvement Candidates Surfaced
+### Improvement Candidates Surfaced
 
 ${IMPROVEMENT_CANDIDATES}
 REPORT_EOF
-
-# Cross-link to L3 session retrospective if it exists
-_l3_session_found=""
-for _l3_dir in "docs/sessions/${SESSION_ID}-"*/; do
-  if [[ -f "${_l3_dir}session.md" ]]; then
-    _l3_session_found="${_l3_dir}session.md"
-    break
-  fi
-done
-if [[ -n "$_l3_session_found" ]]; then
-  printf '\n---\n\n## See also\n\n- [L3 Session Retrospective](%s)\n' "$_l3_session_found" >> "$OUTPUT_PATH"
-fi
-
-echo "Report written to: $OUTPUT_PATH"
