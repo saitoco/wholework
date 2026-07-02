@@ -138,3 +138,36 @@ No new comments since last phase.
 - This Issue is analysis-only (Migration path Phase 1); `/review` and `/verify` should not expect any `run-*.sh` or matrix-table behavioral change — only new report content and a documentation note
 - Post-merge AC items are `verify-type: opportunistic` (`/audit drift`) and `verify-type: manual` (candidate Issue filing confirmation) — no automated post-merge verify command exists for this Issue
 - `#877` / `#878` already exist with blocked-by relationships set; the C1–C6 candidate Issues in report §8 are not yet filed — filing them is out of scope for this Issue per its own Out of Scope section
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Issue #876 は `/issue` を経由せず gh CLI で直接起票された analysis-type Issue。 body に `## Acceptance Criteria` セクションが欠けていたため `/spec` が healing で追加した (spec retrospective に既述) 。 `/issue` skill を経由しない impact-analysis 系 Issue のテンプレ化余地あり
+
+#### spec
+- AC7 (Post-merge manual: "Priority=high 以上が起票済みまたはマッピング済み") の wording が本 Issue の Out of Scope ("filing them is out of scope for this Issue") と 部分的に矛盾。 verify 段階で lenient interpretation ("§8 execution plan への記載 = マッピング") で PASS 判定したが、AC 文言と Scope の整合性は spec 段階で検証すべきだった
+- 上記以外は Spec 通り実装完了。 §2 意図的省略、matrix 表本体は非変更、`docs/ja/*` sync 除外の 3 つの意図的スコープ判断は全て /code に正しく伝達されていた
+
+#### code
+- Rework 1 件発生: worktree Entry 直後の最初の Write/Edit で絶対 main-repo パスを誤用 (code retrospective に詳細)  。 AC verify command の dry run で発覚し main-repo は復元、worktree で正しく再適用。 `modules/worktree-lifecycle.md` の "always use CWD-relative paths" ガイダンスに従っていれば防止可能だった
+- Implementation Steps 10 個は Spec 通り、reordering や omission 無し
+
+#### review
+- N/A — patch route (Size S) は review phase をスキップ
+
+#### merge
+- N/A — patch route は merge phase をスキップ (直接 main コミット)
+
+#### verify
+- Pre-merge AC 5 個全て PASS (code phase で既にチェック済み、verify で再検証も PASS)
+- Post-merge AC 2 個: AC6 opportunistic は event 待機で未チェックのまま、AC7 manual は lenient interpretation で PASS 判定
+- AC7 の判定に主観が入った点は spec-side observation として上記に記録
+
+### Improvement Proposals
+
+- **PROPOSAL: worktree Entry 後の最初の Write/Edit で絶対 main-repo パス誤用を防ぐ pre-flight check**: `modules/worktree-lifecycle.md` に既存の "always use CWD-relative paths" ガイダンスは強調不足。 `/code` skill の Step レベルで、EnterWorktree 直後の最初の Write/Edit tool 呼び出し前に "現在の CWD が worktree 内か" を assert するチェックを追加する案。 本 Issue の code phase で発生した rework は AC dry-run で catch できたが、次回同種の pattern が発生した際に early catch できる仕組みが望ましい。 Distributable-first (SKILL.md/module 更新) 対象
+- **OBSERVATION: `/spec` の AC drafting において Scope との整合性チェックを追加**: 本 Issue では AC7 の "起票済みまたはマッピング済み" 要求が Scope の "filing them is out of scope" と部分的に矛盾。 `/spec` Step 10 の self-review check list に "AC 文言が Scope の Out of Scope と矛盾していないか" を追加する余地あり。ただし本件の判定は verify で lenient に吸収できたため、次回類似パターンが発生した際に再評価
+- **OBSERVATION: analysis-type Issue の直接起票 (gh CLI) 向けテンプレ化**: `/issue` skill を経由しないため AC セクションが欠けやすい。impact-strategy 系レポート起票用の Issue template (`.github/ISSUE_TEMPLATE/` 追加) 、あるいは `/issue` skill 側で "analysis type" を認識してテンプレ提供する案。 頻度低ければ Icebox 候補
+
