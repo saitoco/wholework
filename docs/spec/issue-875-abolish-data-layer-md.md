@@ -97,3 +97,63 @@
 - `--output` 削除後、report mode (session-id あり) の唯一の出力形態は stdout への `## Metrics` 小節。`--metrics-only` は明示的セレクタフラグとして全 caller (auto/audit SKILL.md、bats) が渡す。
 - `--output`/`OUTPUT_PATH` 削除に伴い両 bats の `setup()` 内 `export OUTPUT_PATH=...` は未使用となる (削除可)。`audit-auto-session.bats` の `teardown()` の `rm -f "$OUTPUT_PATH"` も同様。
 - `get-auto-session-report.bats` の cross-link テスト 2 件削除は機能廃止に伴うもので、保持すべきシナリオはない (#526 test replacement 観点で確認済 — cross-link 追記機能自体が消滅)。
+
+## issue retrospective
+
+### Ambiguity Auto-Resolution
+
+- **`docs/workflow.md` / `docs/ja/workflow.md` 更新の AC 欠落**: Proposal §E は `docs/workflow.md` / `docs/ja/workflow.md` の `/audit auto-session` 節の記述更新を明記していたが、対応する Pre-merge AC が存在しなかった (`docs/structure.md` は AC 化済みだったが `docs/workflow.md` は未記載)。
+  - コード調査で両ファイルの `/audit auto-session` 説明が現在 "data-layer レポート" (`docs/ja/workflow.md` L159) / "data-layer report" (`docs/workflow.md` L166) を参照していることを確認した。
+  - #854 (同パターンの precedent、cross-session `_daily/` view 廃止) の Issue Retrospective でも同種の「Proposal に明記されているが AC 未記載」ギャップが `docs/structure.md` 系で発生し、triage 後の追加 AC で補完されていた。同じ判断基準を適用し、rubric + `file_not_contains` の AC を追加した。
+  - 他の選択肢 (AC を追加せず `/verify` の AI fallback に委ねる) は、structure.md との一貫性を欠き、#854 retrospective の学びと矛盾するため不採用。
+
+### Triage 結果
+
+- Type: Task (廃止・統合系のメンテナンス変更)
+- Size: L (PR route)。#854 (同スコープ規模の precedent) と同じ Size 判定を適用
+- Value: 3 (Impact=2: skills/scripts/docs 横断の shared component、Alignment=2: Vision の "Governance and verification depth" と中程度整合)
+- 重複候補・停滞・依存関係の異常: なし
+
+### AC Verify Command Audit
+
+`skills/triage/skill-dev-verify-audit.md` の 5 パターン (grep 引数順・常時PASS/FAIL・patch route不整合・破壊的コマンド) をチェックし、該当なし。全 rubric/file_not_contains/command/github_check verify command は Size=L (PR route) と整合している。
+
+## spec retrospective
+
+### Minor observations
+
+- `tests/audit-auto-session.bats` も同じ `get-auto-session-report.sh` を `--output` 経由で叩いているが、どの Pre-merge AC にも名指しされていない。`--output` 削除でこのファイルは壊れるが、それを捕えるのは「bats suite 全体が緑」の github_check AC のみ。コード調査で両 bats を洗い出さないと code phase で見落としうる構造的リスク。両ファイルを Changed Files に明記した。
+- `docs/product.md` L162 が `/audit auto-session (existing data-layer report ...)` を参照しているが、Issue §E doc-sweep にも AC にも含まれていなかった。上記 workflow.md ギャップと同クラス (Proposal doc-sweep に一貫性がない)。Symbol impact discovery grep で拾い、Changed Files + Implementation Step 9 で補完した。
+
+### Judgment rationale
+
+- `--metrics-only` 出力に現行 report の全小節 (Recovery Events / Verify Phase Residuals / Concurrent Sessions / Improvement Candidates を含む) を維持した。Issue A の "含める内容" 6 項目は必須最小セットであり排他リストではなく、既存 bats がこれら追加小節の存在を assert しているため、削減は情報とカバレッジを失うだけで利得がない。
+- session.md `## Metrics` 配下に nest させるため既存 `## <section>` 見出しを `### ` に降格する設計とした。テキスト grep (小節名) は見出しレベルに依存しないため verify command への副作用はない。
+- `docs/product.md` は pre-merge AC 化せず Changed Files + Implementation Step のみでカバーした。triage 済み Issue body AC 集合 (9 件) を非対話モードで書き換える scope リスクを避けつつ doc-sweep を完遂する判断。verify の `/audit drift` が残存 stale を二次的に捕捉する。
+
+### Uncertainty resolution
+
+- 非 notable batch/XL session は session.md が生成されないため data-layer.md 廃止後は view 層メトリクスが永続化されない、という懸念を「許容 (events.jsonl から再生成可能、`/audit auto-session --metrics-only` で on-demand)」と解決した。#854 の「冗長 view を永続化しない」哲学と一致し、データ層 SSoT は不変であることが根拠。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- report mode の唯一の出力を stdout への `## Metrics` 小節に変更 (`--output` / ファイル書き込み / "See also" 追記を削除)。`--metrics-only` は全 caller が渡す明示的セレクタ。
+- `--metrics-only` 出力は現行 report の全小節を維持し、見出しは `## ` → `### ` に降格して session.md `## Metrics` 配下に nest させる。キャベア (verify 未計上 / manual recovery 未反映 / phase breakdown 順序) を `## Metrics` 冒頭に挿入する。
+- `docs/product.md` は Changed Files + Implementation Step 9 で修正するが pre-merge AC には追加しない (Issue body AC 集合 9 件を維持)。
+
+### Deferred Items
+
+- 既知構造欠陥 (verify phase event emission / PR-Issue mapping / subprocess session_id 継承) の根本解決は本 Issue scope 外 (別 Issue)。Metrics 小節にキャベア明記で対応。
+- 過去 session の session.md への Metrics backfill は行わない (#854 と同方針、retro obsoleteance 許容)。
+- Post-merge observation (session.md への Metrics 埋め込み / data-layer.md 非生成) は次回 `/auto --batch` で観察。
+
+### Notes for Next Phase
+
+- **両 bats を必ず書き換える**: `tests/get-auto-session-report.bats` は AC 明示だが `tests/audit-auto-session.bats` は AC なし。`--output` 削除で後者も壊れるため両方 `--metrics-only` (stdout assert) に移行しないと suite-green AC が落ちる。
+- SKILL.md 本文編集は `validate-skill-syntax.py` MUST 制約遵守: 半角 `!` 禁止、本文 triple backtick 直書き禁止、frontmatter 単一行。
+- 4 ファイル (skills/auto, skills/audit, docs/structure.md, docs/ja/structure.md) から `data-layer.md` 文字列を、workflow.md/ja/workflow.md から "data-layer report"/"data-layer レポート" を完全除去すること (file_not_contains AC)。
+- scratch metrics 取得は `.tmp/auto-metrics-${AUTO_SESSION_ID}.md` (`.gitignore` 済み、埋め込み後削除)。
+- Size=L / pr route のため `github_check "gh pr checks"` は妥当 (PR あり)。
