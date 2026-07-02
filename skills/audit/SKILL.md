@@ -851,11 +851,13 @@ Each event in `.tmp/auto-events.jsonl` includes a `session_id` field set to this
 The `## Metrics` section (embedded in `docs/sessions/{session-id}-{date}/session.md`, or generated on demand) contains the following subsections:
 
 1. **Summary** — aggregate metrics table (issues processed, route mix, throughput, recovery counts, watchdog kills, token usage, concurrent commits)
-2. **Sub-Issue Completion Timeline** — per-issue phase breakdown table (issue number, size/route, timestamps, PR link, notes)
-3. **Recovery Events** — chronological list of Tier 1/2/3 recovery events (phase, tier, result, affected issue)
-4. **Verify Phase Residuals** — issues that entered verify but did not complete it in this session
-5. **Concurrent Sessions Detected** — events where another session committed to main during a phase
-6. **Improvement Candidates Surfaced** — anomaly-derived improvement candidates (Tier 3 recoveries, Tier 2 recoveries approaching or reaching recoveries-auto-fire.threshold, unknown patterns)
+2. **Phase Activity Summary** — phase_start/phase_complete event count per phase
+3. **Sub-Issue Completion Timeline** — per-issue phase breakdown table (issue number, size/route, timestamps, PR link, notes)
+4. **Token Usage Aggregate** — per-issue input/output token totals
+5. **Recovery Events** — chronological list of Tier 1/2/3 recovery events (phase, tier, result, affected issue)
+6. **Verify Phase Residuals** — issues that entered verify but did not complete it in this session
+7. **Concurrent Sessions Detected** — events where another session committed to main during a phase
+8. **Improvement Candidates Surfaced** — anomaly-derived improvement candidates (Tier 3 recoveries, Tier 2 recoveries approaching or reaching recoveries-auto-fire.threshold, unknown patterns)
 
 Narrative content (what worked / limits / improvement candidates / conclusion) is owned by the rest of the L3 session retrospective `session.md`; the `## Metrics` section only covers the data layer.
 
