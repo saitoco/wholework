@@ -771,6 +771,108 @@ MOCK
     [[ "$output" == *"max iterations reached"* ]]
 }
 
+@test "auto-retry: preflight stashes parent-main stray untracked file before retry re-invocation" {
+    # Simulates Issue #886: claude's first invocation leaves a stray untracked file
+    # (silent no-op side effect) that would otherwise block check-verify-dirty.sh
+    # on the retry re-invocation. The preflight block must stash it via `git stash
+    # push` so the retry can proceed.
+    STRAY_FILE="$BATS_TEST_TMPDIR/stray-output.md"
+    GIT_CALL_LOG="$BATS_TEST_TMPDIR/git_calls.log"
+    : > "$GIT_CALL_LOG"
+    export GIT_CALL_LOG
+
+    RETRY_COUNTER_FILE="$BATS_TEST_TMPDIR/retry_count.txt"
+    echo "0" > "$RETRY_COUNTER_FILE"
+    export RETRY_COUNTER_FILE
+
+    CLAUDE_INVOKE_COUNTER_FILE="$BATS_TEST_TMPDIR/claude_invoke_count.txt"
+    echo "0" > "$CLAUDE_INVOKE_COUNTER_FILE"
+    export CLAUDE_INVOKE_COUNTER_FILE
+
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'EOF'
+permission-mode: bypass
+auto-retry-on-fail:
+  enabled: true
+  max_iterations: 3
+EOF
+
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+KEY="$1"; DEFAULT="${2:-}"
+case "$KEY" in
+    permission-mode) echo "bypass" ;;
+    autonomy) echo "L3" ;;
+    *) echo "$DEFAULT" ;;
+esac
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
+    # claude: only the first invocation leaves a stray untracked file behind
+    # (simulating a silent no-op side effect).
+    cat > "$MOCK_DIR/claude" <<MOCK
+#!/bin/bash
+N=\$(cat "$CLAUDE_INVOKE_COUNTER_FILE" 2>/dev/null || echo 0)
+N=\$((N + 1))
+echo "\$N" > "$CLAUDE_INVOKE_COUNTER_FILE"
+if [[ "\$N" -eq 1 ]]; then
+  touch "$STRAY_FILE"
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/claude"
+
+    # check-verify-dirty.sh: exit 1 while the stray file exists, exit 0 once
+    # it has been stashed away.
+    cat > "$MOCK_DIR/check-verify-dirty.sh" <<MOCK
+#!/bin/bash
+if [[ -f "$STRAY_FILE" ]]; then
+  exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/check-verify-dirty.sh"
+
+    # git: report the stray file for `ls-files --others --exclude-standard`,
+    # and remove it (simulating a real stash) on `stash push`, logging both calls.
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$*" >> "$GIT_CALL_LOG"
+if [[ "\$1" == "ls-files" ]]; then
+  if [[ -f "$STRAY_FILE" ]]; then
+    echo "stray-output.md"
+  fi
+  exit 0
+fi
+if [[ "\$1" == "stash" && "\$2" == "push" ]]; then
+  rm -f "$STRAY_FILE"
+  exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<MOCK
+#!/bin/bash
+N=\$(cat "${RETRY_COUNTER_FILE}" 2>/dev/null || echo 0)
+N=\$((N + 1))
+echo "\$N" > "${RETRY_COUNTER_FILE}"
+if [[ "\$N" -eq 1 ]]; then
+  echo '{"matches_expected":false,"phase":"code-pr"}'
+else
+  echo '{"matches_expected":true,"phase":"code-pr"}'
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    run bash "$SCRIPT" 123 --pr
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"auto-retry preflight: stashing parent-main untracked files: stray-output.md"* ]]
+    grep -q "stash push" "$GIT_CALL_LOG"
+    [ ! -f "$STRAY_FILE" ]
+}
+
 @test "retry-on-kill: retry-success - killed once then succeeds, wrapper exits 0" {
     COUNTER_FILE="$BATS_TEST_TMPDIR/call_counter"
     echo "0" > "$COUNTER_FILE"
