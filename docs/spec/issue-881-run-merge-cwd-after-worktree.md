@@ -88,3 +88,35 @@
 ### Scope boundary confirmation
 
 triage retrospective (Issue #881 コメント、Consumed Comments 参照) で、Background 記載の行番号・内容 (`SCRIPT_DIR` L14、`emit-event.sh` source L36、`handle-permission-mode-failure.sh` 呼び出し L153) が現状の `scripts/run-merge.sh` と一致することが確認済み。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Implementation Step 1 のコード片に `|| true` を追加した。Spec 記載のままの `MAIN_REPO_ROOT="$(git worktree list --porcelain 2>/dev/null | awk '...')"` を `set -euo pipefail` 環境下でそのまま実装すると、git リポジトリ外 (既存 bats テストの `$BATS_TEST_TMPDIR` など) で `git worktree list` が非ゼロ終了した際、`pipefail` によりパイプライン全体が失敗扱いになり、`set -e` によりコマンド置換を含む変数代入文全体でスクリプトが異常終了する (bash の既知の挙動: `VAR=$(failing_pipeline)` は `set -e` 下で代入自体の失敗として中断要因になる)。この回帰で既存 `tests/run-merge.bats` 24 件が exit code 不一致で failing した。`|| true` を式全体の末尾に付与することで、git リポジトリ外実行時も `MAIN_REPO_ROOT=""` となり既存の分岐 (`if [[ -n "$MAIN_REPO_ROOT" ]]`) が正しく機能するよう修正した。
+- Implementation Step 2 のテストシナリオを、Spec 記載の「mock claude が起動直後に linked worktree を rm -rf する」という時系列から、「run-merge.sh 起動前に (別プロセス・別フェーズの cleanup によって) 該当 worktree が既に削除されている」という時系列に変更した。理由は Design Gaps/Ambiguities を参照。
+
+### Design Gaps/Ambiguities
+
+- `[[ -d "$SCRIPT_DIR" ]] || SCRIPT_DIR="$MAIN_REPO_ROOT/scripts"` のフォールバック判定は、L14 直後 (`claude` サブプロセス起動より大幅に前) で一度だけ評価される。そのため「`claude` サブプロセスの実行中に (そのサブプロセス自身の worktree cleanup によって) SCRIPT_DIR が指す worktree が削除される」という時系列では、判定時点ではまだ worktree が存在するためフォールバックが発火せず、`SCRIPT_DIR` は削除予定の worktree パスを指したままになる。この場合、claude サブプロセス終了後の `"$SCRIPT_DIR/handle-permission-mode-failure.sh"` 等の絶対パス参照は依然として失敗し得る (一方 `cd "$MAIN_REPO_ROOT"` によるカレントディレクトリの安定化は、この時系列でも常に有効に働く)。今回の実装で確実に修正されるのは (a) CWD 相対パス参照 (`.tmp/auto-events.jsonl` 等) と、(b) `run-merge.sh` 起動前に SCRIPT_DIR が既に無効だったケース、の 2 パターン。「claude サブプロセス実行中に SCRIPT_DIR 自身が削除される」パターンへの対応が必要な場合は、`claude` 起動直前に `[[ -d "$SCRIPT_DIR" ]] || SCRIPT_DIR="$MAIN_REPO_ROOT/scripts"` を再評価するなどの追加対応を要する可能性がある。#887 (run-code.sh / run-review.sh の同種修正) 着手時に、この時系列差分を踏まえて設計を検討すること。
+- 上記の理由により、Implementation Step 2 のテストは Spec 記載の「claude 実行中に rm -rf」ではなく「run-merge.sh 起動前に worktree 削除済み」のシナリオで実装した (`WHOLEWORK_SCRIPT_DIR` を削除済み worktree パスに設定してから起動)。この時系列であれば `[[ -d "$SCRIPT_DIR" ]]` 判定が正しく発火し、`SCRIPT_DIR` が `$MAIN_REPO_ROOT/scripts` にフォールバックされるため、trailing steps を含め全体が exit code 0 で完走することを実際に確認した (修正前のコードでは同テストが `[ "$status" -eq 0 ]` で fail することも確認済み)。
+
+### Rework
+
+- 上記 pipefail 回帰の発覚後、`scripts/run-merge.sh` に `|| true` を追加し、`tests/run-merge.bats` 全 27 件および `tests/` 配下の全 1045 件 (behavioral change 判定により full suite 実行) が pass することを再確認した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec 記載のコードに `|| true` を追加した (`set -euo pipefail` 下での `git worktree list` 失敗によるスクリプト全体異常終了を防止するため)。詳細は Code Retrospective の Deviations from Design を参照。
+- AC1 検証は `tests/run-merge.bats` への実テストケース追加で行い、修正前のコードでは実際に `[ "$status" -eq 0 ]` が fail することを確認した上でテストの有効性を担保した。
+- AC2 は Spec Notes に既にあった調査結果を Issue #881 のコメントとして再掲し、発見した `run-code.sh` / `run-review.sh` の脆弱性修正を follow-up Issue #887 として切り出した。
+
+### Deferred Items
+- `run-code.sh` / `run-review.sh` の同種脆弱性の修正は Issue #887 に切り出し済み (本 Issue のスコープ外)。
+- 「claude サブプロセス実行中に SCRIPT_DIR 自身が削除される」時系列への対応 (Design Gaps/Ambiguities 参照) は本 Issue では未対応。#887 着手時に設計を検討する必要がある。
+
+### Notes for Next Phase
+- `/review` フェーズでは、`scripts/run-merge.sh` の `|| true` 追加箇所が Spec のコード片と異なる点をレビュー観点として認識しておくこと (Design Gaps/Ambiguities に理由を記載済み)。
+- `tests/run-merge.bats` の新規テストケース名は `worktree-recovery: SCRIPT_DIR pointing at a removed worktree falls back to main repo and completes trailing steps`。
