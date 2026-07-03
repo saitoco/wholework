@@ -116,6 +116,7 @@ run_with_retry_on_kill env -u CLAUDECODE ANTHROPIC_MODEL=sonnet \
   "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
     --model sonnet \
     --effort high \
+    --plugin-dir "$(dirname "$SCRIPT_DIR")" \
     $PERMISSION_FLAG
 EXIT_CODE=$?
 set -e

@@ -164,6 +164,7 @@ run_with_retry_on_kill env -u CLAUDECODE ANTHROPIC_MODEL="${MODEL}" \
   "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
     --model "${MODEL}" \
     --effort "${EFFORT}" \
+    --plugin-dir "$(dirname "$SCRIPT_DIR")" \
     $PERMISSION_FLAG
 EXIT_CODE=$?
 set -e
