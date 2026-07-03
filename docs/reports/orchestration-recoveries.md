@@ -64,6 +64,28 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
+## 2026-07-03 06:23 UTC: worktree-path-misuse-parent-dirty
+
+### Context
+- Issue #882, phase: code-pr
+- Source: parent session manual recovery (batch orchestration)
+- Wrapper: run-code.sh, exit code: 0 (silent no-op — check-verify-dirty gate blocked auto-retry after parent-main contamination)
+- Log tail: "[check-verify-dirty] classify=parent-main path=scripts/run-spec.sh / Error: parent main has uncommitted changes. Resolve before proceeding."
+
+### Diagnosis
+- During code-pr auto-retries, edits intended for the `code+issue-882` worktree landed as uncommitted changes directly in the parent main repo (2 tracked files: `docs/spec/issue-882-review-agent-not-registered.md`, `scripts/run-spec.sh`) instead of the worktree. The worktree itself was found completely clean (no diff, no extra commits), confirming the edits bypassed the worktree entirely. This is the same worktree-path-misuse failure mode already tracked in Issue #888 (`hook-worktree-path-guard.sh` suspected non-firing in `claude -p` subprocess sessions) — this occurrence recurred 2 more times during the same Issue's later phases (spec, code) but self-corrected each time; only this one instance left parent-repo contamination that blocked automated retry.
+- Root cause (identified independently by #882's own spec phase): `run-*.sh` wrappers invoke `claude -p` without `--plugin-dir`, so the wholework plugin (and its `hooks/hooks.json` PreToolUse registrations) is not loaded in headless subprocess sessions.
+
+### Recovery Applied
+- `git stash push -u` on the 2 dirty parent-main files (safety net, not discarded), verified clean state, then manually re-ran `scripts/run-code.sh 882 --pr` once. The retry succeeded cleanly (PR #889 created) with one more self-corrected worktree-path incident recorded in the PR's Code Retrospective.
+- A resulting merge conflict (PR branch and the manual-recovery-record commit on main both appended to the same Spec file region) was resolved manually via a temporary worktree, then pushed.
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 起票済み #888 (root-cause investigation; #882's `--plugin-dir` fix, merged as part of PR #889, is expected to resolve this recurrence going forward — pending confirmation)
+
 ## 2026-07-02 06:45 UTC: code-pr-external-timeout-kill
 
 ### Context
