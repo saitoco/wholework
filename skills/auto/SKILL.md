@@ -276,7 +276,9 @@ Select the route section below based on the current ROUTE value (set in Step 2 a
 Run each phase via `run-*.sh`. Each script launches an independent process with `claude -p --dangerously-skip-permissions` for a fresh context and full permission bypass.
 
 **Execution pattern:**
-- Each `run-*.sh` runs as a blocking call (`timeout: 600000`) in sequence
+- Each `run-*.sh` runs via Bash with `run_in_background: true` and **no explicit `timeout` parameter**, in sequence. Do not wrap the call in an external Bash timeout — a legitimately long-running phase (e.g., Size L/XL code phases) must not be killed by the harness before it finishes.
+- `run-*.sh` scripts already own a silent-window watchdog internally (`scripts/claude-watchdog.sh`, default 1800s, tunable via `watchdog-timeout-{phase}-seconds` in `.wholework.yml`; see `modules/detect-config-markers.md`) that kills a genuinely hung invocation. An external Bash-tool timeout duplicates and conflicts with this mechanism — it can fire mid-flight on a phase that is silently-but-correctly still working, well before the internal watchdog would. Backgrounding + relying on the internal watchdog avoids that conflict.
+- After starting a phase with `run_in_background: true`, wait for the harness completion notification rather than polling; do not add a manual wait/sleep loop.
 - PR number extraction is run by the parent session with `gh pr list` (included in `allowed-tools`)
 
 **VERIFY_ITERATION_COUNT initialization (single-Issue routes only — skip for batch modes):**
@@ -365,7 +367,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
 Each phase follows the Observe → Diagnose → Act pattern (same as pr route; see above).
 
 1. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-patch $NUMBER --check-precondition --warn-only`
-2. code phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER --patch [--base {branch}]` via Bash (timeout: 600000)
+2. code phase: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER --patch [--base {branch}]` via Bash with `run_in_background: true` (no external timeout — see Step 4 "Execution pattern")
 3. Unconditional completion check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-patch $NUMBER --check-completion` — runs unconditionally regardless of exit code; if `matches_expected: false` (including exit 0), go to Step 6; if code exited non-zero but `matches_expected: true`, override to success
    - **stop-at check**: if `EFFECTIVE_STOP_AT == "code"`: output "Stopped at phase: code (auto-stop-at=code)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="code"`
 4. **XS only**: transcribe issue retrospective to Spec (see Step 4b)
@@ -396,17 +398,17 @@ Each phase follows the Observe → Diagnose → Act pattern:
 Full phase sequence:
 
 1. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-pr $NUMBER --check-precondition --warn-only`
-2. Output `[1/4] code`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER --pr [--base {branch}]` via Bash (timeout: 600000)
+2. Output `[1/4] code`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER --pr [--base {branch}]` via Bash with `run_in_background: true` (no external timeout — see Step 4 "Execution pattern")
 3. Unconditional completion check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh code-pr $NUMBER --check-completion` — runs unconditionally regardless of exit code; if `matches_expected: false` (including exit 0), go to Step 6; if `matches_expected: true`, output `[1/4] code → done (PR #N)`, and continue
 4. Extract PR number via exact-match filter (matches SSoT branch name worktree-code+issue-N established by #310): `gh pr list --json number,headRefName | jq -r ".[] | select(.headRefName == \"worktree-code+issue-$NUMBER\") | .number" | head -1`
 5. If PR number cannot be fetched: report error and go to Step 6
    - **stop-at check**: if `EFFECTIVE_STOP_AT == "code"`: output "Stopped at phase: code (auto-stop-at=code)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="code"` (at this point `$PR_NUMBER` is known)
 6. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh review $NUMBER --pr $PR_NUMBER --check-precondition --warn-only`
-7. Output `[2/4] review`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh $PR_NUMBER $REVIEW_DEPTH` via Bash (timeout: 600000) (REVIEW_DEPTH set in Step 2, refreshed by Step 3a if applicable); on success output `[2/4] review → done`
+7. Output `[2/4] review`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh $PR_NUMBER $REVIEW_DEPTH` via Bash with `run_in_background: true` (no external timeout — see Step 4 "Execution pattern") (REVIEW_DEPTH set in Step 2, refreshed by Step 3a if applicable); on success output `[2/4] review → done`
    - **stop-at check**: if `EFFECTIVE_STOP_AT == "review"`: output "Stopped at phase: review (auto-stop-at=review)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="review"`
 8. If review fails: completion check `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh review $NUMBER --pr $PR_NUMBER --check-completion` — if `matches_expected: true`, override to success; otherwise go to Step 6
 9. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh merge $NUMBER --pr $PR_NUMBER --check-precondition --warn-only`
-10. Output `[3/4] merge`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh $PR_NUMBER` via Bash (timeout: 600000); on success output `[3/4] merge → done`
+10. Output `[3/4] merge`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh $PR_NUMBER` via Bash with `run_in_background: true` (no external timeout — see Step 4 "Execution pattern"); on success output `[3/4] merge → done`
     - **stop-at check**: if `EFFECTIVE_STOP_AT == "merge"`: output "Stopped at phase: merge (auto-stop-at=merge)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="merge"`
 11. If merge fails: completion check `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh merge $NUMBER --pr $PR_NUMBER --check-completion` — if `matches_expected: true`, override to success; otherwise go to Step 6
 12. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh verify $NUMBER --check-precondition --warn-only`
