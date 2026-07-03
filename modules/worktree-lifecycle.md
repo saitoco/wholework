@@ -122,6 +122,8 @@ resulting dirty state of the parent repo file may fail unexpectedly.
 **How to verify CWD**: Run `pwd` to confirm you are inside the worktree, or confirm that
 the return value from `EnterWorktree` points to the worktree path before calling Edit.
 
+**Enforcement**: This convention is mechanically enforced by `scripts/hook-worktree-path-guard.sh` (registered as a PreToolUse hook in `hooks/hooks.json`), which blocks Edit/Write calls whose `file_path` is an absolute parent-repo path while the session is inside a worktree. **Scope limit**: the hook matches only the Edit/Write/NotebookEdit tools — Bash-based edits, including the `.claude/` file workaround above, are not covered, so the worktree-local-path discipline must still be applied manually there.
+
 ## Callers (auto-maintained)
 
 All callers that read this module. Update this table when a new Skill starts reading `modules/worktree-lifecycle.md`.
