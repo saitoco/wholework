@@ -71,3 +71,33 @@
 - **agentType namespace 化の残留不確実性**: Root Cause 参照。`/code` フェーズは実装後、可能であれば実際に `run-review.sh` (または同等の headless 呼び出し) を一度実行し、`review-spec` が意図通り解決されるか経験的に確認することが望ましい。namespace 化されていることが判明した場合は `agentType:` / `subagent_type=` 参照値への追加修正が必要になる可能性があるが、Implementation Step 3 の検出・フォールバックが defense-in-depth として機能するため、その場合でも AC2 は満たされる。
 - **スコープについて**: `capabilities.workflow` を実際に消費するのは現状 `/review` のみだが、`--plugin-dir` の欠落は `run-*.sh` 全 5 ファイルに共通する構造的な問題であり (`/issue` の L/XL サブエージェント分割 `issue-scope` / `issue-risk` / `issue-precedent` も同じ agentType 未解決リスクを抱える)、5 ファイル全てへの適用が妥当と判断した。
 - **issue #888 との関係**: Root Cause 参照。issue #888 は `hook-worktree-path-guard.sh` が `claude -p` サブプロセスで発火するかどうかを別スコープで調査中であり、本 Issue の根本原因 (`--plugin-dir` 欠落) が同じ現象の原因である可能性が高い。本 Issue のスコープには含めないが、issue #888 側の調査で参照される可能性がある。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — 4 つの Implementation Step をすべて設計通りに実装した (順序も Spec 記載どおり)。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- worktree セッション中、最初の Edit 呼び出しで `file_path` にメインリポジトリの絶対パス (`/Users/saito/src/wholework/scripts/...`) を誤って指定し、worktree ではなくメインリポジトリ側のファイルが変更されてしまった (`modules/worktree-lifecycle.md` の「Edit/Write path conventions in worktree sessions」に明記された既知の失敗パターン)。`git status`/`grep` の不一致で即座に検知し、`git checkout --` でメインリポジトリ側を復元してから worktree 絶対パス (`.claude/worktrees/code+issue-882/...`) で全編集をやり直した。実害 (誤コミット) は発生していない。
+
+### Post-merge follow-up (not blocking, recorded per Spec Notes)
+- Spec Notes の「agentType namespace 化の残留不確実性」に記載の通り、`run-review.sh` を実際に headless 実行して `review-spec` agentType が意図通り解決されるかの経験的確認は本 PR ではスコープ外とし、PR body の Verification (post-merge) に記録した。namespace 化されていた場合は追加修正が必要になる可能性があるが、Implementation Step 3 の Pre-flight 検出・フォールバックが defense-in-depth として機能するため AC2 は本 PR の変更のみで満たされる。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `--plugin-dir "$(dirname "$SCRIPT_DIR")"` を全 5 run-*.sh・計 8 箇所に追加。`run-merge.sh` の `MAIN_REPO_ROOT` フォールバック分岐でも `SCRIPT_DIR` は常に scripts/ ディレクトリを指すため、`dirname` で一貫してプラグインルートに解決できることを確認済み。
+- Pre-flight 検出は `skills/review/workflow-guidance.md` 側 (Workflow パス直前) に置いた。呼び出し元の `skills/review/SKILL.md` ではなく Domain file 側に置いたのは、Workflow パスの実行判断そのものがこのファイルの責務だからで、静的 Task fan-out 側には変更を加えていない。
+- bats mock の更新は、arg-parsing `case` 文を持つブロックのみに `--plugin-dir` ケースを追加した (catch-all `echo "$@"` ブロックや counter/exit-code 専用ブロックは元々全引数をログするか case 文自体を持たないため変更不要と判断)。
+
+### Deferred Items
+- `review-spec` / `review-bug` agentType が `--plugin-dir` ロード後に namespace 化されずに解決されるか (bare 名 vs `wholework:review-spec` 形式) の経験的確認は post-merge 作業として PR body に記録し、本 PR ではスコープ外とした。
+- `docs/product.md` / `docs/guide/index.md` / `docs/guide/troubleshooting.md` / `docs/ja/guide/autonomy.md` の翻訳同期ギャップ (`check-translation-sync.sh` で検出) は本 Issue と無関係の既存差分のため未着手。
+
+### Notes for Next Phase
+- `/review` フェーズで実際に `capabilities.workflow: true` 環境の Workflow パスを通す機会があれば、Pre-flight ログ (agentType 一覧に review-spec/review-bug が含まれるか) を確認し、`--plugin-dir` 修正が意図通り機能しているか経験的に検証してほしい。
+- AC1/AC2 とも rubric 型検証であり、`/code` フェーズで自己判定して Issue チェックボックスを更新済み。`/verify` フェーズで改めて rubric grader によるフル評価が行われる。
