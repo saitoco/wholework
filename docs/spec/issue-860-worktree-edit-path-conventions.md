@@ -115,18 +115,20 @@
 - N/A
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: spec -->
 
 ### Key Decisions
-- `modules/worktree-lifecycle.md` の `## Notes` 配下に `### Edit/Write path conventions in worktree sessions` サブセクションを追加。`ENTERED_WORKTREE=true` 状態での ✅/❌ 例付きで規約を明文化した。
-- `skills/verify/SKILL.md`, `skills/spec/SKILL.md`, `skills/review/SKILL.md` の retrospective 追記ステップに `modules/worktree-lifecycle.md § Notes` への cross-reference を追加。
-- `skills/code/SKILL.md` と `skills/merge/SKILL.md` は既存記述が充分 (auto-resolved) のため変更不要と判断した。
+- **Revised design**: 初回実装 (prose 注記のみ) が verify FAIL となったため、本 Spec で PreToolUse hook による structural enforcement を追加する
+- Hook script は `scripts/hook-rename-on-auto.sh` のパターン (bash 3.2+ 、jq JSON parse、`INPUT=$(cat)`) を踏襲。 exit 2 + stderr message で block、exit 0 で allow
+- Matcher は `Edit|Write|NotebookEdit` の 3 tool。 Bash tool は対象外 (bash script 経由の parent-repo write は合法 use case が多いため)
+- 既存の prose 注記 (`modules/worktree-lifecycle.md`) は削除せず、hook 参照の 1 行を追加する形で維持 (defense-in-depth)
 
 ### Deferred Items
-- Post-merge AC: 次回 verify/spec/code session での動作観察 (manual check)。
-- Proposal C (verify-patterns.md への検出 pattern 追加) は本 Issue スコープ外でスキップ。
+- Post-merge AC は observation type: 次回 verify/spec/code session で hook block が発火することを実運用で確認
+- Claude Code の PreToolUse hook exit 2 + stderr の block API 仕様は Notes の Uncertainty で記録。 bats test で exit 2 を assert しつつ、実運用時の Claude 側の応答 (block message を受けて次 tool call を修正) は observe 段階で確認
 
 ### Notes for Next Phase
-- 変更はドキュメントのみ (4 files)。動作変更なし。CI は bats (1041 PASS) と validate-skill-syntax を通過済み。
-- verify コマンドは全 PASS (section_contains, file_contains, command, rubric)。
-- `/verify` は Post-merge AC (manual) のみ残っている。観察確認後に Close。
+- **前回の実装 (prose 注記のみ) は既に main に merge 済み**。 本 Spec は「その上に hook を追加」する additive 変更。 既存 prose 注記および `skills/*/SKILL.md` の cross-reference は削除しないこと
+- Changed Files 5 個。 Axis 1 は M (3-5 files) に該当し、CI-sensitive (hook が全 Edit/Write に発火) なので M 最低ライン。 patch route → pr route に bump される (Post-Spec Size Refresh で自動判定される想定)
+- Test data 形式: bats test は stdin JSON payload を `bash -c "cat << EOF"` heredoc または `printf` で hook に渡す。 詳細は Implementation Step 3 参照
+- Hook 実装後、実際の Claude Code session で block が発火するかは実行時観察のみで確認可能 (bats は hook スクリプト単体の unit test)
