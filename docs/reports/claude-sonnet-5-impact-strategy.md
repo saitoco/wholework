@@ -136,6 +136,7 @@ The Size × model × effort three-axis flag exposure (Phase 4) has no urgent dri
 
 - [x] Publish `docs/reports/claude-sonnet-5-impact-strategy.md` (this report)
 - [x] Add Sonnet 5 note-only paragraph to `docs/tech.md`'s Phase-specific model/effort matrix section, linking to this report
+- [x] Create `docs/ja/reports/claude-sonnet-5-impact-strategy.md` ja translation (2026-07-03, separate explicit decision per §9)
 - [ ] Confirm candidate Issues (§8) are filed or mapped to existing Issues (`#877`/`#878` already exist; C-series to be filed per Phase)
 - [ ] (optional) Prepare Phase 2 default-parent-swap Issue draft, held pending #877/#878 completion
 - [ ] (optional) Prepare Phase 3 effort-recalibration Issue drafts (one per `run-*.sh` script), held pending Phase 2
@@ -170,7 +171,7 @@ All follow the Wholework Standard Format (Background / Purpose / Acceptance Crit
 - No per-agent frontmatter model swap implementation (`review-bug`, `review-spec`, `issue-scope`, `issue-risk`, `issue-precedent`, `frontend-visual-review`) — §4.3 recommends holding Opus 4.8 for these roles; any future swap is a separate, individually-judged Issue.
 - No actual default-parent swap in this Issue — that is Phase 2 (C1, §8), sequenced after `#877`/`#878`.
 - No `docs/tech.md` matrix table edits — only the note-only paragraph described in §5.1 and the Implementation Steps.
-- No `docs/ja/reports/claude-sonnet-5-impact-strategy.md` translation — `docs/reports/` is excluded from the translation-sync obligation (`docs/translation-workflow.md` § Exclusions); a ja mirror may be created later as a separate, explicit decision if demand emerges.
+- No translation-sync obligation for the ja mirror — `docs/reports/` is excluded from translation-sync (`docs/translation-workflow.md` § Exclusions); the `docs/ja/reports/claude-sonnet-5-impact-strategy.md` mirror created on 2026-07-03 is maintained manually as a separate, explicit decision, not auto-synced.
 
 ## 10. References
 
