@@ -733,6 +733,10 @@ Before committing the Spec, verify internal consistency:
   - Verify fallback behavior (error message, default value) when the template file is missing is documented in implementation steps
   - Verify consistent use of structured format (fixed text) vs. placeholder format (variable content)
 - **Post-merge skill name alignment**: if `## Verification > Post-merge` mentions a target skill name (`/foo`), verify it matches the target skill in the Issue purpose
+- **AC vs Out of Scope consistency**: verify that Pre-merge/Post-merge acceptance criteria do not require items listed in the Issue body's `## Out of Scope` section. If a contradiction is found, resolve it at the spec stage using one of:
+  - relax the AC wording (e.g., "filed or mapped to an existing issue" → "filed or documented in the execution plan")
+  - narrow the Out of Scope section (if the AC requirement turns out to be correct)
+  - remove the AC itself (if the condition is unverifiable)
 
 ### Step 11: Title Drift Check
 
