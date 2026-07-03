@@ -86,6 +86,15 @@
 ### Post-merge follow-up (not blocking, recorded per Spec Notes)
 - Spec Notes の「agentType namespace 化の残留不確実性」に記載の通り、`run-review.sh` を実際に headless 実行して `review-spec` agentType が意図通り解決されるかの経験的確認は本 PR ではスコープ外とし、PR body の Verification (post-merge) に記録した。namespace 化されていた場合は追加修正が必要になる可能性があるが、Implementation Step 3 の Pre-flight 検出・フォールバックが defense-in-depth として機能するため AC2 は本 PR の変更のみで満たされる。
 
+## Auto Retrospective
+
+### Manual recovery (code-pr)
+- **Date**: 2026-07-03 06:52 UTC
+- **Issue**: #882, phase: code-pr
+- **Source**: parent session manual recovery
+- **Recovery type**: stash-and-retry
+- **Outcome**: success
+
 ## review retrospective
 
 ### Spec vs. implementation divergence patterns
