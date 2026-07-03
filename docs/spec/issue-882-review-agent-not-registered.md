@@ -86,18 +86,31 @@
 ### Post-merge follow-up (not blocking, recorded per Spec Notes)
 - Spec Notes の「agentType namespace 化の残留不確実性」に記載の通り、`run-review.sh` を実際に headless 実行して `review-spec` agentType が意図通り解決されるかの経験的確認は本 PR ではスコープ外とし、PR body の Verification (post-merge) に記録した。namespace 化されていた場合は追加修正が必要になる可能性があるが、Implementation Step 3 の Pre-flight 検出・フォールバックが defense-in-depth として機能するため AC2 は本 PR の変更のみで満たされる。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — review-spec の Perspective 1 (Spec Deviation) で乖離ゼロと判定された。変更ファイル一覧・`--plugin-dir` 挿入位置ともに Spec 記載通りで、スコープ外の変更もなかった。
+
+### Recurring issues
+
+本 Issue #882 自体が、issue #875 の review retrospective (Workflow パスの `review-spec`/`review-bug` agentType 未解決 fallback) から起票された改善提案である。今回 `--plugin-dir` 修正と Pre-flight 検出の両方が実装されたことで、同種の fallback イベントが再発しても headless 実行の根本原因側は解消され、Pre-flight 側で警告付きの安全なフォールバックが機能する二重の備えができた。実際、本 review フェーズ自身のセッションでも `review-spec`/`review-bug` が agentType 一覧に含まれておらず Pre-flight フォールバックが発火しており (PR コメント参照)、このセッションの起動経路 (`--plugin-dir` 未使用) が今回の修正でカバーされる範囲か否かは post-merge で `run-review.sh` を実地実行して確認する必要がある (Spec Notes for Next Phase に記載済み、未解消のまま残る)。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — AC1/AC2 とも rubric 型検証で、アドバーサリアルグレーダー (独立した general-purpose エージェント2体) による検証で両方 PASS と明確に判定できた。UNCERTAIN は発生せず、rubric の文言自体も曖昧さは検出されなかった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `--plugin-dir "$(dirname "$SCRIPT_DIR")"` を全 5 run-*.sh・計 8 箇所に追加。`run-merge.sh` の `MAIN_REPO_ROOT` フォールバック分岐でも `SCRIPT_DIR` は常に scripts/ ディレクトリを指すため、`dirname` で一貫してプラグインルートに解決できることを確認済み。
-- Pre-flight 検出は `skills/review/workflow-guidance.md` 側 (Workflow パス直前) に置いた。呼び出し元の `skills/review/SKILL.md` ではなく Domain file 側に置いたのは、Workflow パスの実行判断そのものがこのファイルの責務だからで、静的 Task fan-out 側には変更を加えていない。
-- bats mock の更新は、arg-parsing `case` 文を持つブロックのみに `--plugin-dir` ケースを追加した (catch-all `echo "$@"` ブロックや counter/exit-code 専用ブロックは元々全引数をログするか case 文自体を持たないため変更不要と判断)。
+- review-spec の SHOULD 指摘 (Pre-flight チェックが `skills/review/SKILL.md:300` の「follow the Processing Steps」という文言から見て素通りされうる導線問題) を修正: `skills/review/SKILL.md:300` に Pre-flight を先に実行する旨を明記した。Pre-flight セクション自体を Processing Steps 内に統合する代替案もあったが、Domain file 側の構造 (Pre-flight → Processing Steps の順で独立した見出し) を変えずに呼び出し元の文言だけで導線を明確化する方が影響範囲が小さいと判断した。
+- Workflow パス (`capabilities.workflow: true`) が有効だったため、本 PR で追加された Pre-flight チェックを review フェーズ自身に適用し、静的 Task fan-out にフォールバックして実行した。これにより Spec の Notes for Next Phase が求めていた経験的検証を部分的に実施できた。
 
 ### Deferred Items
-- `review-spec` / `review-bug` agentType が `--plugin-dir` ロード後に namespace 化されずに解決されるか (bare 名 vs `wholework:review-spec` 形式) の経験的確認は post-merge 作業として PR body に記録し、本 PR ではスコープ外とした。
-- `docs/product.md` / `docs/guide/index.md` / `docs/guide/troubleshooting.md` / `docs/ja/guide/autonomy.md` の翻訳同期ギャップ (`check-translation-sync.sh` で検出) は本 Issue と無関係の既存差分のため未着手。
+- `review-spec` / `review-bug` agentType が `--plugin-dir` 修正後に `run-review.sh` 経由の headless 実行で実際に解決されるかの経験的確認は、本 review セッション自体が `--plugin-dir` 未使用の別経路で起動されていたため確認できず、post-merge フォローアップとして残る。
+- `docs/product.md` 等の翻訳同期ギャップは本 Issue と無関係のため未着手のまま。
 
 ### Notes for Next Phase
-- `/review` フェーズで実際に `capabilities.workflow: true` 環境の Workflow パスを通す機会があれば、Pre-flight ログ (agentType 一覧に review-spec/review-bug が含まれるか) を確認し、`--plugin-dir` 修正が意図通り機能しているか経験的に検証してほしい。
-- AC1/AC2 とも rubric 型検証であり、`/code` フェーズで自己判定して Issue チェックボックスを更新済み。`/verify` フェーズで改めて rubric grader によるフル評価が行われる。
+- `/merge 889` を実行する前提が整っている (MUST 指摘なし、CI 全 SUCCESS、AC1/AC2 とも PASS)。
+- post-merge で `run-review.sh` を実際に headless 実行し、`review-spec`/`review-bug` agentType が Pre-flight ログ上で利用可能と判定されるかを確認することを推奨する (Spec Notes 記載の検証項目、review フェーズでは代替できなかった)。
