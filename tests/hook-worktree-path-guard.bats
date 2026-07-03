@@ -46,3 +46,11 @@ teardown() {
     run bash -c "echo '$INPUT' | \"$SCRIPT\""
     [ "$status" -eq 0 ]
 }
+
+@test "inside worktree + NotebookEdit + parent-repo absolute notebook_path -> exit 2 (block)" {
+    cd "$FIXTURE_WORKTREE"
+    INPUT=$(printf '{"tool_name":"NotebookEdit","tool_input":{"notebook_path":"%s/docs/foo.ipynb"}}' "$FIXTURE_PARENT")
+    run bash -c "echo '$INPUT' | \"$SCRIPT\""
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"hook-worktree-path-guard"* ]]
+}

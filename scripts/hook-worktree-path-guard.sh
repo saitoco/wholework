@@ -12,7 +12,7 @@ case "$TOOL_NAME" in
   *) exit 0 ;;
 esac
 
-FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty')
+FILE_PATH=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // .tool_input.notebook_path // empty')
 
 [ -z "$FILE_PATH" ] && exit 0
 
