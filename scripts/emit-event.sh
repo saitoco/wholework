@@ -51,6 +51,13 @@
 # verify_fail_marker_posted: /verify FAIL 時に machine-readable marker comment を Issue に append した
 #   iteration=<n>                 verify iteration counter (NEXT_ITERATION)
 #   failed_ac_count=<n>           number of FAIL conditions in auto-verification targets
+#
+# worktree-path-block: hook-worktree-path-guard.sh blocked an Edit/Write/NotebookEdit call
+#   that passed a parent-repo absolute path while the session was inside a worktree
+#   tool=<name>                   Edit | Write | NotebookEdit
+#   cwd=<path>                    working directory at block time
+#   file_path=<path>              the blocked absolute path
+#   worktree_root=<path>          the worktree root the session was inside
 
 emit_event() {
   local event_type="$1"; shift

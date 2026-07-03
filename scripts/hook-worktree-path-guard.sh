@@ -38,6 +38,12 @@ esac
 case "$FILE_PATH" in
   "$PARENT_REPO"/*)
     echo "hook-worktree-path-guard: blocked $TOOL_NAME on parent-repo absolute path '$FILE_PATH' while inside worktree session at '$CWD'. Use the worktree-local path instead (see modules/worktree-lifecycle.md § Edit/Write path conventions in worktree sessions)." >&2
+    source "$(dirname "${BASH_SOURCE[0]}")/emit-event.sh" 2>/dev/null || true
+    EMIT_ISSUE_NUMBER="${WHOLEWORK_ISSUE_NUMBER:-}" AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-$PARENT_REPO/.tmp/auto-events.jsonl}" emit_event "worktree-path-block" \
+      "tool=$TOOL_NAME" \
+      "cwd=$CWD" \
+      "file_path=$FILE_PATH" \
+      "worktree_root=$WORKTREE_ROOT" 2>/dev/null || true
     exit 2
     ;;
 esac
