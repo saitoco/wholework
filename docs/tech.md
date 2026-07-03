@@ -40,7 +40,7 @@ English | [日本語](ja/tech.md)
   | issue | Conditional | headless (run-issue.sh) / in-session (direct) | Shared when invoked directly; fork when via run-issue.sh (sub-agents run in isolated context for L/XL parallel investigation) |
   | spec | Conditional | headless (run-spec.sh) / in-session (direct) | Shared when invoked directly; fork when via run-spec.sh |
   | code | Yes | headless (run-code.sh) / in-session (direct) | Reads Spec and executes independently; not influenced by pre-implementation context |
-  | review | Yes | In-session (Workflow opt-in via capabilities.workflow: true) / headless fallback | Reviews code from a clean perspective without inheriting implementation phase bias |
+  | review | Yes | headless (run-review.sh) / in-session (direct) | Reviews code from a clean perspective without inheriting implementation phase bias |
   | merge | Yes | headless (run-merge.sh) | Decision completes with Spec + PR metadata; does not carry over review context |
   | verify | No | In-session | Mostly mechanical (verify command execution + checkbox update); manual AC confirmation requires AskUserQuestion which cannot run in fork context; FAIL → /code (fork) re-runs so bias propagation risk is low |
   | auto | No | In-session | Parent orchestrator runs in the user's Claude Code session; each child phase runs as an independent `claude -p` process via `run-*.sh` |

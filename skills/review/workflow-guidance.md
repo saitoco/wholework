@@ -33,6 +33,15 @@ The Workflow execution path preserves the same find/filter separation contract a
 - **Adversarial verification** plays the **filter role**: each finding is independently challenged by a refutation agent. Findings that survive adversarial refutation (`refuted: false`) become confirmed issues
 - **Fallback path**: when `HAS_WORKFLOW_CAPABILITY=false` or unset (the default), Steps 10.1–10.3 static Task fan-out run unchanged
 
+## Pre-flight: agentType Availability Check
+
+Before running the Workflow pipeline (Processing Steps below), confirm that `review-spec` and `review-bug` are both present in the session's Agent tool available agentType list (the list surfaced in the system context at session start).
+
+- **Both present**: proceed with the Processing Steps (Workflow Path) unchanged.
+- **Either missing**: output a warning that names the missing agentType(s) and references issue #882 for background (headless `claude -p` sessions launched without `--plugin-dir` do not load this plugin's `agents/*.md` custom agentTypes), then fall back to the static Task fan-out in `skills/review/SKILL.md` Steps 10.1–10.3 for this run instead of the Workflow path.
+
+This check exists because `capabilities.workflow: true` alone does not guarantee the custom agentTypes are resolvable — see issue #882 Root Cause for the headless `--plugin-dir` failure mode this guards against.
+
 ## Processing Steps (Workflow Path)
 
 When `HAS_WORKFLOW_CAPABILITY=true` and `REVIEW_DEPTH=full`, replace Steps 10.1–10.3 with the following:

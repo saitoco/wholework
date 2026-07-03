@@ -72,6 +72,20 @@
 - **スコープについて**: `capabilities.workflow` を実際に消費するのは現状 `/review` のみだが、`--plugin-dir` の欠落は `run-*.sh` 全 5 ファイルに共通する構造的な問題であり (`/issue` の L/XL サブエージェント分割 `issue-scope` / `issue-risk` / `issue-precedent` も同じ agentType 未解決リスクを抱える)、5 ファイル全てへの適用が妥当と判断した。
 - **issue #888 との関係**: Root Cause 参照。issue #888 は `hook-worktree-path-guard.sh` が `claude -p` サブプロセスで発火するかどうかを別スコープで調査中であり、本 Issue の根本原因 (`--plugin-dir` 欠落) が同じ現象の原因である可能性が高い。本 Issue のスコープには含めないが、issue #888 側の調査で参照される可能性がある。
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A — 4 つの Implementation Step をすべて設計通りに実装した (順序も Spec 記載どおり)。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- worktree セッション中、最初の Edit 呼び出しで `file_path` にメインリポジトリの絶対パス (`/Users/saito/src/wholework/scripts/...`) を誤って指定し、worktree ではなくメインリポジトリ側のファイルが変更されてしまった (`modules/worktree-lifecycle.md` の「Edit/Write path conventions in worktree sessions」に明記された既知の失敗パターン)。`git status`/`grep` の不一致で即座に検知し、`git checkout --` でメインリポジトリ側を復元してから worktree 絶対パス (`.claude/worktrees/code+issue-882/...`) で全編集をやり直した。実害 (誤コミット) は発生していない。
+
+### Post-merge follow-up (not blocking, recorded per Spec Notes)
+- Spec Notes の「agentType namespace 化の残留不確実性」に記載の通り、`run-review.sh` を実際に headless 実行して `review-spec` agentType が意図通り解決されるかの経験的確認は本 PR ではスコープ外とし、PR body の Verification (post-merge) に記録した。namespace 化されていた場合は追加修正が必要になる可能性があるが、Implementation Step 3 の Pre-flight 検出・フォールバックが defense-in-depth として機能するため AC2 は本 PR の変更のみで満たされる。
+
 ## Auto Retrospective
 
 ### Manual recovery (code-pr)
@@ -80,3 +94,32 @@
 - **Source**: parent session manual recovery
 - **Recovery type**: stash-and-retry
 - **Outcome**: success
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — review-spec の Perspective 1 (Spec Deviation) で乖離ゼロと判定された。変更ファイル一覧・`--plugin-dir` 挿入位置ともに Spec 記載通りで、スコープ外の変更もなかった。
+
+### Recurring issues
+
+本 Issue #882 自体が、issue #875 の review retrospective (Workflow パスの `review-spec`/`review-bug` agentType 未解決 fallback) から起票された改善提案である。今回 `--plugin-dir` 修正と Pre-flight 検出の両方が実装されたことで、同種の fallback イベントが再発しても headless 実行の根本原因側は解消され、Pre-flight 側で警告付きの安全なフォールバックが機能する二重の備えができた。実際、本 review フェーズ自身のセッションでも `review-spec`/`review-bug` が agentType 一覧に含まれておらず Pre-flight フォールバックが発火しており (PR コメント参照)、このセッションの起動経路 (`--plugin-dir` 未使用) が今回の修正でカバーされる範囲か否かは post-merge で `run-review.sh` を実地実行して確認する必要がある (Spec Notes for Next Phase に記載済み、未解消のまま残る)。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — AC1/AC2 とも rubric 型検証で、アドバーサリアルグレーダー (独立した general-purpose エージェント2体) による検証で両方 PASS と明確に判定できた。UNCERTAIN は発生せず、rubric の文言自体も曖昧さは検出されなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- review-spec の SHOULD 指摘 (Pre-flight チェックが `skills/review/SKILL.md:300` の「follow the Processing Steps」という文言から見て素通りされうる導線問題) を修正: `skills/review/SKILL.md:300` に Pre-flight を先に実行する旨を明記した。Pre-flight セクション自体を Processing Steps 内に統合する代替案もあったが、Domain file 側の構造 (Pre-flight → Processing Steps の順で独立した見出し) を変えずに呼び出し元の文言だけで導線を明確化する方が影響範囲が小さいと判断した。
+- Workflow パス (`capabilities.workflow: true`) が有効だったため、本 PR で追加された Pre-flight チェックを review フェーズ自身に適用し、静的 Task fan-out にフォールバックして実行した。これにより Spec の Notes for Next Phase が求めていた経験的検証を部分的に実施できた。
+
+### Deferred Items
+- `review-spec` / `review-bug` agentType が `--plugin-dir` 修正後に `run-review.sh` 経由の headless 実行で実際に解決されるかの経験的確認は、本 review セッション自体が `--plugin-dir` 未使用の別経路で起動されていたため確認できず、post-merge フォローアップとして残る。
+- `docs/product.md` 等の翻訳同期ギャップは本 Issue と無関係のため未着手のまま。
+
+### Notes for Next Phase
+- `/merge 889` を実行する前提が整っている (MUST 指摘なし、CI 全 SUCCESS、AC1/AC2 とも PASS)。
+- post-merge で `run-review.sh` を実際に headless 実行し、`review-spec`/`review-bug` agentType が Pre-flight ログ上で利用可能と判定されるかを確認することを推奨する (Spec Notes 記載の検証項目、review フェーズでは代替できなかった)。

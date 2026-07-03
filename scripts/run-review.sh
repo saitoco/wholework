@@ -135,6 +135,7 @@ if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
       --model sonnet \
       --effort high \
       --output-format json \
+      --plugin-dir "$(dirname "$SCRIPT_DIR")" \
       $PERMISSION_FLAG \
       > "$TOKEN_USAGE_FILE"
   EXIT_CODE=$?
@@ -145,6 +146,7 @@ else
     env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
       --model sonnet \
       --effort high \
+      --plugin-dir "$(dirname "$SCRIPT_DIR")" \
       $PERMISSION_FLAG
   EXIT_CODE=$?
 fi

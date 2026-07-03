@@ -41,6 +41,7 @@ for arg in "$@"; do
         --dangerously-skip-permissions) echo "FLAG_SKIP_PERMS=1" >> "$CLAUDE_CALL_LOG" ;;
         --permission-mode) echo "FLAG_PERM_MODE=1" >> "$CLAUDE_CALL_LOG" ;;
         --effort) echo "FLAG_EFFORT=1" >> "$CLAUDE_CALL_LOG" ;;
+        --plugin-dir) echo "FLAG_PLUGIN_DIR=1" >> "$CLAUDE_CALL_LOG" ;;
     esac
 done
 echo "ANTHROPIC_MODEL=$ANTHROPIC_MODEL" >> "$CLAUDE_CALL_LOG"
@@ -189,6 +190,7 @@ teardown() {
     [ "$status" -eq 0 ]
     grep -q "MODEL_VALUE=sonnet" "$CLAUDE_CALL_LOG"
     grep -q "ANTHROPIC_MODEL=sonnet" "$CLAUDE_CALL_LOG"
+    grep -q "FLAG_PLUGIN_DIR=1" "$CLAUDE_CALL_LOG"
 }
 
 @test "success: default effort is max" {
@@ -269,6 +271,7 @@ for arg in "$@"; do
     case "$arg" in
         --dangerously-skip-permissions) echo "FLAG_SKIP_PERMS=1" >> "$CLAUDE_CALL_LOG" ;;
         --permission-mode) echo "FLAG_PERM_MODE=1" >> "$CLAUDE_CALL_LOG" ;;
+        --plugin-dir) echo "FLAG_PLUGIN_DIR=1" >> "$CLAUDE_CALL_LOG" ;;
     esac
 done
 exit 0
