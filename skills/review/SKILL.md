@@ -346,8 +346,8 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
 
 | Group | Aspects | Model | Agent file |
 |-------|---------|-------|-----------|
-| **Spec: spec/documentation** | Spec divergence, documentation consistency, steering document alignment | **opus** | `~/.claude/agents/review-spec.md` |
-| **Bug: bug/logic error detection** | HIGH SIGNAL bugs, logic errors, security issues | **opus** | `~/.claude/agents/review-bug.md` (×2 parallel) |
+| **Spec: spec/documentation** | Spec divergence, documentation consistency, steering document alignment | **opus** | `agents/review-spec.md` |
+| **Bug: bug/logic error detection** | HIGH SIGNAL bugs, logic errors, security issues | **opus** | `agents/review-bug.md` (×2 parallel) |
 
 ### 10.2. Parallel Execution Steps
 

@@ -31,7 +31,7 @@
   | issue | 条件付き | headless（run-issue.sh）/ in-session（直接呼び出し） | 直接呼び出し時は shared、run-issue.sh 経由時は fork（L/XL 並列調査ではサブエージェントが分離コンテキストで実行） |
   | spec | 条件付き | headless（run-spec.sh）/ in-session（直接呼び出し） | 直接呼び出し時は shared、run-spec.sh 経由時は fork |
   | code | 必要 | headless（run-code.sh）/ in-session（直接呼び出し） | Spec を読み独立して実行する、実装前のコンテキストの影響を受けない |
-  | review | 必要 | In-session（Workflow opt-in: capabilities.workflow: true）/ headless フォールバック | 実装フェーズのバイアスを継がず、クリーンな視点でコードをレビューする |
+  | review | 必要 | headless（run-review.sh）/ in-session（直接呼び出し） | 実装フェーズのバイアスを継がず、クリーンな視点でコードをレビューする |
   | merge | 必要 | headless（run-merge.sh） | 判断は Spec + PR メタデータで完結、レビューコンテキストを持ち越さない |
   | verify | 不要 | In-session | 大部分が機械的処理（verify command 実行 + checkbox 更新）、manual AC 確認には fork コンテキストで実行できない AskUserQuestion が必要、FAIL → /code（fork）で再実行するため bias 伝播リスクは低い |
   | auto | 不要 | In-session | 親オーケストレーターはユーザーの Claude Code セッションで実行される、各子フェーズは `run-*.sh` 経由で独立した `claude -p` プロセスとして実行 |
