@@ -71,3 +71,12 @@
 - **agentType namespace 化の残留不確実性**: Root Cause 参照。`/code` フェーズは実装後、可能であれば実際に `run-review.sh` (または同等の headless 呼び出し) を一度実行し、`review-spec` が意図通り解決されるか経験的に確認することが望ましい。namespace 化されていることが判明した場合は `agentType:` / `subagent_type=` 参照値への追加修正が必要になる可能性があるが、Implementation Step 3 の検出・フォールバックが defense-in-depth として機能するため、その場合でも AC2 は満たされる。
 - **スコープについて**: `capabilities.workflow` を実際に消費するのは現状 `/review` のみだが、`--plugin-dir` の欠落は `run-*.sh` 全 5 ファイルに共通する構造的な問題であり (`/issue` の L/XL サブエージェント分割 `issue-scope` / `issue-risk` / `issue-precedent` も同じ agentType 未解決リスクを抱える)、5 ファイル全てへの適用が妥当と判断した。
 - **issue #888 との関係**: Root Cause 参照。issue #888 は `hook-worktree-path-guard.sh` が `claude -p` サブプロセスで発火するかどうかを別スコープで調査中であり、本 Issue の根本原因 (`--plugin-dir` 欠落) が同じ現象の原因である可能性が高い。本 Issue のスコープには含めないが、issue #888 側の調査で参照される可能性がある。
+
+## Auto Retrospective
+
+### Manual recovery (code-pr)
+- **Date**: 2026-07-03 06:52 UTC
+- **Issue**: #882, phase: code-pr
+- **Source**: parent session manual recovery
+- **Recovery type**: stash-and-retry
+- **Outcome**: success
