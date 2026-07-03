@@ -298,6 +298,14 @@ if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
           "iteration=${CODE_RETRY_COUNT}" \
           "trigger_reason=silent_no_op"
       fi
+      # auto-retry preflight: stash parent-main untracked files (except in-progress
+      # docs/sessions/** from other concurrent sessions) so a silent no-op's stray
+      # file does not block check-verify-dirty.sh on the retry re-invocation.
+      _STRAY_UNTRACKED=$(git ls-files --others --exclude-standard -- ':!docs/sessions/**' 2>/dev/null | head -5)
+      if [[ -n "$_STRAY_UNTRACKED" ]]; then
+        echo "auto-retry preflight: stashing parent-main untracked files: $_STRAY_UNTRACKED" >&2
+        git stash push --include-untracked -m "auto-retry preflight for #$ISSUE_NUMBER" -- ':!docs/sessions/**' 2>/dev/null || true
+      fi
       exec bash "$0" "$ISSUE_NUMBER" "${_TRAILING_ARGS[@]}"
     else
       if [[ ( "$AUTONOMY_TIER" == "L2" || "$AUTONOMY_TIER" == "L3" ) ]] && \
