@@ -120,3 +120,29 @@ triage retrospective (Issue #881 コメント、Consumed Comments 参照) で、
 ### Notes for Next Phase
 - `/review` フェーズでは、`scripts/run-merge.sh` の `|| true` 追加箇所が Spec のコード片と異なる点をレビュー観点として認識しておくこと (Design Gaps/Ambiguities に理由を記載済み)。
 - `tests/run-merge.bats` の新規テストケース名は `worktree-recovery: SCRIPT_DIR pointing at a removed worktree falls back to main repo and completes trailing steps`。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- `run-spec.sh` (`claude -p` サブプロセス) 実行中、worktree セッション内で親リポジトリ絶対パスを使った Write が発生し、ファイルが誤って親リポジトリ側に配置される事故が発生した (spec フェーズ完了報告の補足に記載)。即座に検知・自己復旧され、最終的な commit/push には影響していない。
+- 特筆すべき点: この事故は Issue #860 (`scripts/hook-worktree-path-guard.sh` による PreToolUse hook structural block) が既に main にマージ済み (2026-07-03T03:34:34Z、本 spec フェーズ開始 (2026-07-03T04:27Z 頃) より前) の状態で発生している。本来この hook が block するはずのパターンであり、`claude -p` サブプロセス実行環境で hook が意図通り機能していない可能性がある (plugin キャッシュの版ずれ、`claude -p` 起動時の hooks.json 読み込みタイミング等の仮説はあるが未検証)。
+
+#### design
+- (観察なし)
+
+#### code
+- 上記 Code Retrospective 記載の pipefail regression rework 以外に特筆すべき観察なし。
+
+#### review
+- (patch route のため review フェーズなし)
+
+#### merge
+- (patch route のため merge フェーズなし)
+
+#### verify
+- 観察なし。AC1/AC2 とも一発 PASS。
+
+### Improvement Proposals
+- Issue #860 の `hook-worktree-path-guard.sh` が `run-spec.sh` / `run-code.sh` / `run-review.sh` 等が起動する `claude -p` サブプロセスセッションで実際に発火しているか調査する。発火していない場合、原因 (plugin キャッシュ版ずれ、hooks.json 読み込みタイミング、`${CLAUDE_PLUGIN_ROOT}` 解決の違い等) を特定し、必要な修正を行う。今回は自己検知・復旧により実害はなかったが、hook が効いていないとすれば #860 の structural enforcement が `claude -p` 経由の全フェーズで無効化されていることになり、影響範囲は広い。
