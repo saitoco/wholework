@@ -8,6 +8,10 @@
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class — `/issue 904 --non-interactive` の Issue Retrospective。triage 自動連鎖 (Type=Bug, Size=S, Value=3)、タイトル正規化、Background 行番号ドリフト修正 (409-415 → 425-435)、および曖昧点3件 (書き込み側修正の要否、複数 model キー時の選択ルール、Reference 行番号) の非対話自動解決ログを含む。内容は既に Issue 本文の Auto-Resolve Log セクションに反映済み。 (https://github.com/saitoco/wholework/issues/904#issuecomment-4883441136)
 
+### code phase (cutoff: 2026-07-04T18:58:04Z)
+
+No new comments since last phase.
+
 ## Reproduction Steps
 
 1. 実際にリポジトリへ残存するアーカイブ済みセッションログを確認する: `token_usage` イベントを1件以上含む `docs/sessions/*/events.jsonl` をサンプル走査した5件 (`62650-1782653419-2026-06-28`, `82534-1782700033-2026-06-29`, `89954-1782720565-2026-06-29`, `98315-1782515143-2026-06-27`, `98856-1781977087-2026-06-22`) すべてで、`model` フィールドが例外なく `"unknown"` になっていることを確認した (例: `{"ts":"2026-06-20T18:01:34Z","issue":696,"event":"token_usage",...,"model":"unknown",...}`)。
@@ -58,3 +62,10 @@
 - 複数 `modelUsage` キーのトークン合計が完全に同点の場合にどちらのキーが選ばれるかは jq `max_by` の実装挙動に依存するが、Issue の受入条件はこの挙動を規定しておらず本 Spec でも追加の規定は行わない (Issue フェーズの Auto-Resolve Log が採用した「最小リスクな解釈」の範囲内)。
 - `jq` の `max_by` / `to_entries` / `// empty` の各構文は `scripts/get-auto-session-report.sh:346` で既に `max_by` が使われているなど、本リポジトリの既存パターンと整合している。加えて実サンプルファイル (`.tmp/token-usage-891.json`, `-884.json`) に対して実際に実行し、意図通りの挙動 (単一キー → そのキー、2キー → トークン合計最大のキー) を確認済み。
 - `docs/reports/event-log-schema.md` は `modules/doc-checker.md` の Impact Assessment 既定スコープ (`docs/reports/` は除外対象) の対象外だが、Issue 本文の Reference が直接この節を指しており、本修正で `model` フィールドの実質的な意味 (常に `unknown` → 実 ID、かつ新規のタイブレークルール) が変わるため、Changed Files に含めた。
+
+## Auto Retrospective
+### Orchestration Anomalies
+- **[code-patch-silent-no-op]** Tier 2 fallback applied: phase=`code-patch`, action=run-code.sh-patch-retry, result=recovered.
+
+### Improvement Proposals
+- N/A (resolved by Tier 2 fallback catalog)
