@@ -76,6 +76,15 @@ Generate a session identifier and record it in a PGID-specific pointer file so s
    export AUTO_SESSION_ID="$SESSION_ID"
    ```
 
+**Pointer file regeneration required before every `run-*.sh` / `run-auto-sub.sh` call**: Each Bash tool call spawns a brand-new process group, so its PGID differs from the PGID used when the pointer file was first written in step 1 above. The pointer file at `.tmp/auto-session-${PGID}` is therefore valid only for the Bash tool call that created it — it is **not** a one-time setup step. Because `SESSION_ID` does not persist as a shell variable across separate Bash tool calls (see step 4 above), the literal `SESSION_ID` string recorded in step 1 must be substituted directly into the command. Immediately before every subsequent Bash tool call that invokes `run-code.sh`, `run-review.sh`, `run-merge.sh`, or `run-auto-sub.sh`, recompute the current PGID and rewrite (再生成) the pointer file in that same Bash call, e.g.:
+```bash
+mkdir -p .tmp
+PGID=$(ps -o pgid= -p $$ | tr -d ' ')
+printf '%s\n' "<literal SESSION_ID value from step 1>" > ".tmp/auto-session-${PGID}"
+${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh $NUMBER --patch
+```
+Skipping this pointer file re-generation (再生成) means the sub-process reads an empty `AUTO_SESSION_ID`, and the emitted event's `session_id` field is dropped — degrading event aggregation and L3 session-retrospective boundary detection.
+
 **`--resume` detection (single-Issue resume):**
 
 If ARGUMENTS contains `--resume` but NOT `--batch`: record `RESUME_MODE=true` and extract the numeric token following `--resume` as `NUMBER`. Output a log line: "Resume mode: restoring checkpoint for issue #$NUMBER". Proceed to Step 2 as normal (checkpoint restoration happens in Step 4 before the verify loop).
