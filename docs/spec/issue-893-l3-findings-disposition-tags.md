@@ -116,6 +116,10 @@ L0 comment consumption (cutoff = 最新 `phase/issue` label 付与時刻 `2026-0
 - saito / MEMBER / first-class — Issue Retrospective (triage 出力: Type=Task, Size=L, Value=4, 曖昧点自動解決 1 件, 非対話スキップ記録)。createdAt `2026-07-04T14:47:00Z` (cutoff 以降)。https://github.com/saitoco/wholework/issues/893#issuecomment (Issue Retrospective)
 - saito / MEMBER / first-class — 前例の追記 (2026-06-28 再発事例): #823/#824 遡及起票、PROPOSAL/OBSERVATION prefix の Tier 曖昧さ、手動 cross-audit 運用の機械代替検討を `/spec` に依頼。createdAt `2026-07-04T13:22:10Z` (cutoff 以前だが `/spec` フェーズ設計へ明示的に宛てられた設計入力のため consume。上記「コメント #1 への設計上の応答」で反映)。
 
+### /code phase (cutoff = 最新 `phase/*` label 付与時刻 `2026-07-04T15:06:16Z` = `phase/code` 付与)
+
+No new comments since last phase.
+
 ## issue retrospective
 
 (以下は triage フェーズの Issue Retrospective コメントを転記。)
