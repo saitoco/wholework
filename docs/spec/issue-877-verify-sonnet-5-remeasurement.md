@@ -108,3 +108,31 @@ Sonnet 5 (2026-06-30 リリース) 環境下で `/verify` の interactive モー
 
 ### Scope Assessment
 [non-interactive mode] Skipping high-stakes action: sub-issue splitting. Size M で単一アウトプット (レポート1件) のため、対話モードで再実行しても分割は不要と判断される見込み。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Acceptance Criteria は元 Issue に存在せず spec が §A/§B/§C から 4 件を抽出。判定 (GO/部分適用/NO-GO) を rubric 化した設計は verify で機械的に検証でき、条件品質は良好だった
+- spec が Size を M→XS に再評価 (変更 1 ファイル)。#876 (2 ファイルで S) と整合した粒度判断で、以降の route demotion (pr→patch) も正しく機能した
+
+#### design
+- spec が「#485 は既にクローズ済み (2026-05-26)」という Issue 本文の陳腐化した前提を検出し、「対策の持続性再測定」に訂正して設計した点が最も価値の高い判断。誤前提のまま code に進むと的外れなレポートになっていた
+- 明示的な re-run なしで Sonnet 4.6/5 両コホートを sample 母集団の自然な cutover から構成する方式は、計装が無い制約下での現実的な設計
+
+#### code
+- 代理指標 (proxy metrics) の限界を隠さず §Background と §C 根拠3で明記した。NO-GO を「Sonnet 5 が劣る」ではなく「測定可能性の欠如」として正しくフレーミングした
+- fixup/amend の痕跡なし。手戻りなしで実装完了
+
+#### review
+- patch route (Size XS) のため /review フェーズはスキップ (route 通り)。verify が rubric で最終品質を担保
+
+#### merge
+- patch route の main 直コミット。conflict なし
+
+#### verify
+- 全 pre-merge AC が file_exists/rubric で PASS。verify command の不整合なし。1st-attempt PASS (auto-retry 発火なし)
+
+### Improvement Proposals
+- N/A — 陳腐化した Issue 前提 (#485 の状態誤認) は spec 段階で自己修正され、計装ギャップは follow-up #902 で既に起票済み。いずれも本ワークフローの自己修正機構が正しく機能した事例であり、新規の構造的改善 Issue を要しない
