@@ -79,7 +79,7 @@ emit_event() {
   json="${json}}"
   mkdir -p "$(dirname "${_log}")"
   if command -v flock >/dev/null 2>&1; then
-    (flock -x 200; echo "${json}" >> "${_log}") 200>"${_log}.lock"
+    (flock -x 9; echo "${json}" >> "${_log}") 9>"${_log}.lock"
   else
     local lock_dir="${_log}.lockdir"
     local tries=0
