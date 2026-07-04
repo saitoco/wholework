@@ -70,3 +70,33 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class) — `/issue 906 --non-interactive` の Issue Retrospective。実装対象ファイルの訂正 (`apply-fallback.sh`) と AC1〜3 の確定内容を記録したコメント。内容は既に Issue 本文に反映済みのため、Spec 側での追加対応は不要と判断した。
+- `/code 906 --pr --non-interactive` (code フェーズ): No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps の Option A どおりに実装した。
+
+### Design Gaps/Ambiguities
+- `apply_code_patch_silent_no_op_retry()` の completion check は「関数末尾」に置く設計だったため、既存の `AUTO_RETRY_ENABLED=true` 分岐の早期 `return 0` を `if/else` に書き換えて両分岐が同じ completion check に合流するようにした。Spec の Implementation Steps には明記されていなかった小さな構造変更だが、「retry (または skip) 後に完了を確認する」という Purpose の要求を両分岐に一律適用するために必要だった。
+- `/code` skill 自身の Step 11 (pr route) に `gh pr create` 実行前の `git push origin HEAD` の明記がなく、未 push のブランチで `gh pr create` が失敗する事象を実際に踏んだ。本 Issue のスコープ外 (`/code` skill 自体の改善) のため、フォローアップ Issue #908 (`retro/code`) を起票した。
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `apply_code_patch_silent_no_op_retry()` の completion check は、retry を実行した分岐と `AUTO_RETRY_ENABLED=true` によりスキップした分岐の両方が合流する関数末尾に置いた (`if/else` + 共通の completion check)。理由: skip 分岐だけ検証を免除すると、built-in retry が既に使い果たされているケースでの silent no-op を見逃す可能性が残るため。
+- `case "code-patch-silent-no-op)"` は `apply_code_patch_silent_no_op_retry` の戻り値で分岐させ、失敗時は `printf` をスキップして `exit 1` とした。新しい abort 経路は追加せず、既存の Tier 2→Tier 3 (`run-auto-sub.sh` の exit-code ベース) エスカレーションをそのまま再利用する Issue 本文の方針に従った。
+- `tests/apply-fallback.bats` の `setup()` に `reconcile-phase-state.sh` のデフォルトモック (`matches_expected:true`) を追加し、既存の 2 件の `code-patch-silent-no-op` テストが回帰なく PASS することを確認した。
+
+### Deferred Items
+- Option B (他の Tier 2 ハンドラへの同型ガード全走査) は Issue 本文で明示的にスコープ外とされているため未着手。
+- `/code` skill 自身の pr route Step 11 に `git push origin HEAD` の明記がない gap はフォローアップ Issue #908 (`retro/code`) に切り出し、本 Issue のスコープ外とした。
+
+### Notes for Next Phase
+- `bats tests/` フルスイート (1064 tests) を実行し全件 PASS を確認済み (behavioral change detection により `tests/apply-fallback.bats` 単体ではなくフルスイートを実行)。
+- Issue AC3 (`github_check "gh pr checks" "Run bats tests"`) は PR 作成前のため pre-merge 時点では UNCERTAIN。PR #907 の CI green を review/merge フェーズで確認すること。
+- PR #907 は `closes #906` を含む。
