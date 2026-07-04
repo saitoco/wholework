@@ -64,18 +64,30 @@
 
 - なし（実装手順の逸脱は上記2件のみで、手戻りは発生しなかった）
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec の Changed Files 列挙外だった `docs/guide/customization.md` / `docs/ja/guide/customization.md` の変更は、Code Retrospective に理由が明記されており実質的な乖離ではなかった。ただし、その修正自体が同一ファイル内の**参照テーブル行のみ**を対象とし、同じ値を記載した別の箇所 (コメントアウト済みサンプル設定ブロック、52-53行目 / 46-47行目) が更新対象から漏れていた。「1つの設定値が同一ドキュメント内に複数箇所存在し、片方だけ更新される」というパターンは今後も再発しうる (SHOULD で指摘・修正済み)。
+
+### Recurring issues
+
+- 今回検出した issue は上記1件 (根本原因は共通) のみで、workflow 改善が必要となるような重複パターンは見られなかった。
+
+### Acceptance criteria verification difficulty
+
+- 4条件すべて `rubric` / `file_contains` の verify command で明確に PASS 判定でき、UNCERTAIN は0件だった。verify command の記述自体も実装 (`docs/tech.md` の `#903` / `prompt slimming` という語の明記) と過不足なく対応しており、改善提案なし。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- watchdog timeout は `WATCHDOG_TIMEOUT_CODE_DEFAULT` 3600→4680、`WATCHDOG_TIMEOUT_REVIEW_DEFAULT` 2000→2600 (いずれも×1.3) に更新。実測 p95/max が現行値の80%マージン基準を超過していたため（code: p95 81.3%/max 93.8%、review: p95 92.2%/max 100.2%）。
-- 実測は新規のダミー実行ではなく、GitHub Issue/PR タイムラインから再構成した実際の本番データ（Sonnet 5 リリース 2026-06-30 以降）を用いた。
-- prompt slimming は2候補のうち `/auto` L3 auto-retrospective の "notable judgment" ステップのみ対応価値ありと判断（follow-up Issue 起票が必要、本 Issue はスコープ外）。L/XL parallel investigation の sub-agent input は精度リスクを理由に slimming 不要と判断。
+- MUST issueは無し。SHOULD 1件 (`docs/guide/customization.md` / `docs/ja/guide/customization.md` のコメントアウト済みサンプル設定ブロックが旧値のまま) を検出し、`4680`/`2600` に修正・push済み。
+- 当該指摘はこのPRのdiffが触れていない行のため `gh-pr-review.sh` のインライン行コメントが `Line could not be resolved` で失敗し、General Comments (レビュー本文) に振り替えて投稿した。
+- Spec Changed Files 列挙外の2ファイル変更 (既存drift修正) は CONSIDER として記録のみで対応不要と判断。
 
 ### Deferred Items
-- `/auto` L3 auto-retrospective "notable judgment" ステップの events.jsonl 生読み込みを jq 集計サマリに置き換える改善は、follow-up Issue として別途起票が必要（本 Issue のスコープは調査・判断のみ）。
-- `docs/guide/customization.md` の watchdog fallback 値記載の既存 drift（本 Issue の変更対象2行は修正済みだが、他のフェーズの記載に同種の drift がないかは未確認）。
+- `/auto` L3 auto-retrospective "notable judgment" ステップの events.jsonl 生読み込みを jq 集計サマリに置き換える改善は、引き続き follow-up Issue として別途起票が必要 (本 Issue のスコープ外、code フェーズからの引き継ぎ事項)。
 
 ### Notes for Next Phase
-- review フェーズでは、本 PR が変更した `scripts/watchdog-defaults.sh` の新しい定数値がテスト (`tests/watchdog-defaults.bats`) および両言語のドキュメント (`docs/tech.md`/`docs/ja/tech.md`、`docs/guide/customization.md`/`docs/ja/guide/customization.md`) と一致していることを確認してほしい。
-- `docs/reports/sonnet-5-watchdog-recalibration.md` は `docs/reports/` 配下のため `docs/ja/` ミラー対象外（`docs/translation-workflow.md` § Exclusions、#877/#876/#878 と同じ precedent）。翻訳漏れの誤検知に注意。
+- `/merge 912` 実行時、追加コミット (f5b989da, ドキュメントのサンプル値同期) が含まれることを確認。CIは全ジョブSUCCESS、再チェック (bats 11/11、validate-skill-syntax 0 errors、forbidden-expressions) もPASS済み。
