@@ -426,7 +426,7 @@ run_phase_with_recovery() {
   local _token_usage_file=".tmp/token-usage-${issue}.json"
   if [[ -f "$_token_usage_file" ]]; then
     local _model _input _output _cache_read
-    _model=$(jq -r '.model // empty' "$_token_usage_file" 2>/dev/null || true)
+    _model=$(jq -r '.modelUsage // {} | to_entries | if length == 0 then empty else (max_by(.value.inputTokens + .value.outputTokens) | .key) end' "$_token_usage_file" 2>/dev/null || true)
     _input=$(jq -r '.usage.input_tokens // empty' "$_token_usage_file" 2>/dev/null || true)
     _output=$(jq -r '.usage.output_tokens // empty' "$_token_usage_file" 2>/dev/null || true)
     _cache_read=$(jq -r '.usage.cache_read_input_tokens // empty' "$_token_usage_file" 2>/dev/null || true)
