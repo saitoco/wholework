@@ -64,6 +64,29 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
+## 2026-07-04 15:25 UTC: code-pr-tier3-recovery
+
+### Context
+- Issue #893, phase: code-pr
+- Source: recovery-sub-agent
+- Wrapper: run-code-pr.sh, exit code: 1
+- Log tail: "Error: parent main has uncommitted changes. Resolve before proceeding."
+
+### Diagnosis
+- The uncommitted diff blocking check-verify-dirty is the /code phase's own L0 comment-consumption log entry written to docs/spec/issue-893-l3-findings-disposition-tags.md before the watchdog killed the process. It is a legitimate bookkeeping addition for issue #893, not unrelated stray work, so committing it on main clears the persistent dirty-tree block and allows the code-pr phase retry to proceed.
+
+### Recovery Applied
+- action=recover
+- steps: 1 step(s)
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+---
+
 ## 2026-07-03 06:23 UTC: worktree-path-misuse-parent-dirty
 
 ### Context
