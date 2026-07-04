@@ -3,7 +3,7 @@ name: auto
 description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues; `--batch N1 N2 ...` processes the explicitly listed Issues in order (assigns a BATCH_ID for parallel-safe checkpointing). `--resume N` resumes a single Issue (restores verify counter from checkpoint); `--batch --resume` resumes an interrupted batch using `list_active_batches` to identify the target session.
 loop-paths-used: [A, E]
 loop-paths-fallback: [A]
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-session-findings-disposition.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Autonomous Execution
@@ -777,15 +777,24 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
    ## What worked
    (successful phases, recovery patterns used)
 
-   ## Limits and gaps
-   (cross-cutting conflicts, concurrent commit issues, AC mismatches, tier gaps)
-
-   ## Improvement candidates
-   (proposals for structural improvements)
+   ## Findings
+   (single list covering cross-cutting conflicts, concurrent commit issues, AC mismatches,
+   tier gaps, and structural improvement candidates. Each top-level bullet MUST end with
+   exactly one of the following canonical disposition tags — exhaustive:
+   - `[Filed: pending]` — a new Issue should be filed for this finding. Use the `pending`
+     placeholder at authoring time (the Issue number is not yet known — retro-proposals in
+     sub-step 6 below files it, and the Backlink sub-step backfills the real `#N`).
+   - `[No action: <reason>]` — accepted as-is, no Issue needed. `<reason>` is required
+     (e.g., "already covered by #100").
+   - `[Resolved directly: <what was done>]` — resolved within this session (e.g., a
+     follow-up comment was posted). `<what was done>` is required.
+   )
 
    ## Auto Retrospective
    ### Improvement Proposals
-   (retro-proposals-compatible section; same content as Improvement candidates above)
+   (mechanically transcribed from `## Findings`: every bullet tagged `[Filed: ...]` above,
+   listed here verbatim. `modules/retro-proposals.md` reads this section — its read logic
+   is unchanged.)
    ```
    After writing `session.md`, delete the scratch file: `rm -f ".tmp/auto-metrics-${AUTO_SESSION_ID}.md"`
 
@@ -797,6 +806,13 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
    - Collect filed Issue numbers from retro-proposals output.
 
 7. **Backlink**: If any Issues were filed, append a `## Filed Issues` section to `$SESSION_DIR/session.md` listing each filed Issue number as `- #N`.
+
+   **`## Findings` disposition backfill**: For each `[Filed: pending]` bullet in `## Findings`,
+   replace it with `[Filed: #N]` using the Issue number retro-proposals filed for the
+   corresponding proposal. If retro-proposals skipped a proposal (dedup against an existing
+   Issue, or considered already resolved), replace its `[Filed: pending]` with
+   `[No action: <reason retro-proposals gave, e.g. duplicate of #M>]` instead. Complete this
+   backfill in this sub-step, before the check in sub-step 9 and the commit in sub-step 10.
 
 8. **Skill Self-Update Propagation check** (batch/XL routes only; runs after Backlink, before commit):
    - Load `skill_versions` from `.tmp/auto-session-${AUTO_SESSION_ID}.json`:
@@ -826,14 +842,21 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
      List all 8 skills — show `<start-hash> → <current-hash>` for changed ones and `(no change)` for unchanged ones.
    - If no skills changed, skip the append (do not add the section).
 
-9. **Commit and push**:
-   ```bash
-   git add "$SESSION_DIR"
-   git commit -s -m "Add L3 session retrospective for session ${AUTO_SESSION_ID}
+9. **Findings disposition tag check (warn-only)**: Run
+   `bash ${CLAUDE_PLUGIN_ROOT}/scripts/check-session-findings-disposition.sh "$SESSION_DIR/session.md"`.
+   This is warn-only — a non-zero exit prints a warning (including the untagged lines from
+   the script's output) but does not abort the commit. Aborting here would leave
+   `session.md` itself uncommitted, losing the retrospective entirely, which is worse than
+   committing with a tagging gap that can be caught on the next cross-audit pass.
+
+10. **Commit and push**:
+    ```bash
+    git add "$SESSION_DIR"
+    git commit -s -m "Add L3 session retrospective for session ${AUTO_SESSION_ID}
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
-   git push origin main
-   ```
+    git push origin main
+    ```
 
 ### Step 6: On Failure: 3-Tier Recovery
 
