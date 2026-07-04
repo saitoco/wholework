@@ -115,3 +115,61 @@ L0 comment consumption (cutoff = 最新 `phase/issue` label 付与時刻 `2026-0
 
 - saito / MEMBER / first-class — Issue Retrospective (triage 出力: Type=Task, Size=L, Value=4, 曖昧点自動解決 1 件, 非対話スキップ記録)。createdAt `2026-07-04T14:47:00Z` (cutoff 以降)。https://github.com/saitoco/wholework/issues/893#issuecomment (Issue Retrospective)
 - saito / MEMBER / first-class — 前例の追記 (2026-06-28 再発事例): #823/#824 遡及起票、PROPOSAL/OBSERVATION prefix の Tier 曖昧さ、手動 cross-audit 運用の機械代替検討を `/spec` に依頼。createdAt `2026-07-04T13:22:10Z` (cutoff 以前だが `/spec` フェーズ設計へ明示的に宛てられた設計入力のため consume。上記「コメント #1 への設計上の応答」で反映)。
+
+## issue retrospective
+
+(以下は triage フェーズの Issue Retrospective コメントを転記。)
+
+### Triage 結果
+
+- Title: 変更なし (既に naming convention に準拠)
+- Type: Task (テンプレート統合 + 決定的チェックスクリプト新設という保守・構造改善作業のため)
+- Priority: 未検出 (本文・タイトルに優先度シグナルなし)
+- Size: L (変更対象ファイル数見積り 3-5 + script logic changes による複雑度補正で 1 段階引き上げ)
+- Value: 4 (Impact=3: #894 からの言及 + shared component、Alignment=4: product.md Vision「governance-and-verification harness」との強い整合)
+- 依存関係チェック: `Blocked by #N` 記載なし、blocked-by 関係設定不要
+
+### 曖昧点の自動解決 (triage 時, 1件)
+
+`modules/retro-proposals.md` を Related の対象 file 一覧が変更対象のように列挙していたが、Proposal A 本文は「読み取りロジック不変」と明記。参照・確認対象であり実装対象ではないと解釈し `## Auto-Resolved Ambiguity Points` に記録済み (本 Spec も踏襲)。
+
+### 非対話モードでのスキップ (triage 時)
+
+Scope Assessment (sub-issue 分割検討) は High-Stakes Decision のため非対話モードでスキップ。Size=L 単一機能スコープのため分割不要と判断。
+
+## spec retrospective
+
+### Minor observations
+
+- 順序パラドックス (retro-proposals が Step 5 書き出し後に #N を採番するのに `## Findings` は `[Filed: #N]` を要求) が本設計で最も非自明な点。`[Filed: pending]` プレースホルダ + Backlink バックフィルで解決したが、`/code` が authoring 時に実 #N を書こうとしないよう Implementation Step 3/4 に明記した。
+- 「Improvement candidates」という同名の artifact が 2 つ存在する: (a) L3 session.md テンプレート (本 Issue 対象) と (b) `scripts/get-auto-session-report.sh` の `/audit auto-session --full` narrative (issue-632)。混同源になりやすいため Notes でスコープ外を明示した。
+
+### Judgment rationale
+
+- チェックは warn-only を採用。commit 直前に走るため blocking にすると session.md 自体が未 commit で失われ retrospective が消える (現状より悪化) という least-risk 判断。
+- チェックスクリプト引数は file path を採用 (issue 番号ではない)。単一 file 検査のため repo-wide grep を避け、bats fixture への self-reference false positive を構造的に排除できる。
+
+### Uncertainty resolution
+
+- `get-auto-session-report.sh` 434 行目の "Improvement candidates" が本 Issue 対象か懸念 → `--metrics-only` (Step 5 が使う mode) では narrative 部が出力されないことを確認し、別 artifact = スコープ外と確定。
+- `### Improvement Proposals` を読む既存 consumer (retro-proposals / verify / apply-fallback / detect-wrapper-anomaly) が壊れないか懸念 → 本設計は同セクションを維持するため影響なしと確認。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- チェック呼び出しは warn-only (commit は中断しない)。スクリプト自体は非ゼロ exit を返し cross-audit / bats で再利用可能。
+- `## Findings` の `[Filed: #N]` は authoring 時 `[Filed: pending]` を置き、retro-proposals 起票後の Backlink で実 #N (or `[No action: ...]`) にバックフィルする。
+- チェックスクリプト引数は `<session-md-path>` (file path)。repo-wide grep せず単一 file のみ走査。
+- `## Auto Retrospective > ### Improvement Proposals` は retro-proposals の入力として維持 (読み取りロジック不変)。
+
+### Deferred Items
+- 月次手動 cross-audit 運用の廃止/頻度低下は本 Issue 着地後の follow-up 観察 (post-merge)。AC には含めない。
+- 「`[No action]` が実は Tier 1 か」を意味判断する completeness critic は icebox (Issue Notes 記載、スコープ外)。
+
+### Notes for Next Phase
+- `skills/auto/SKILL.md` の `allowed-tools` に `${CLAUDE_PLUGIN_ROOT}/scripts/check-session-findings-disposition.sh:*` の追加が必須 (`validate-skill-syntax.py` / `check-allowed-tools.sh` が本文参照との不整合を検出する)。
+- チェック sub-step 挿入時、後続の「Commit and push」sub-step をリナンバー (decimal step 番号禁止)。
+- SKILL.md 本文に half-width `!` を入れない (validator 検出)。テンプレート追記テキストは `[...]` タグのみで `!` 不使用。
+- `docs/ja/structure.md` は `docs/structure.md` と同一 2 箇所を日本語ミラーで更新する。
+- `scripts/get-auto-session-report.sh` は変更しない (別 artifact、スコープ外)。
