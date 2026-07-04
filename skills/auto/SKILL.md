@@ -780,10 +780,12 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
    ## Findings
    (single list covering cross-cutting conflicts, concurrent commit issues, AC mismatches,
    tier gaps, and structural improvement candidates. Each top-level bullet MUST end with
-   exactly one of the following canonical disposition tags — exhaustive:
+   exactly one of the following disposition tags — exhaustive:
    - `[Filed: pending]` — a new Issue should be filed for this finding. Use the `pending`
-     placeholder at authoring time (the Issue number is not yet known — retro-proposals in
-     sub-step 6 below files it, and the Backlink sub-step backfills the real `#N`).
+     placeholder at authoring time only (the Issue number is not yet known — retro-proposals
+     in sub-step 6 below files it, and the Backlink sub-step backfills the real `#N` before
+     commit). `check-session-findings-disposition.sh` treats `[Filed: pending]` as
+     non-canonical and flags it if left unresolved — this placeholder must not survive to commit.
    - `[No action: <reason>]` — accepted as-is, no Issue needed. `<reason>` is required
      (e.g., "already covered by #100").
    - `[Resolved directly: <what was done>]` — resolved within this session (e.g., a
