@@ -56,7 +56,7 @@ wholework/
 │   ├── stats/           # プロジェクト健全性診断レポート（/audit stats が生成、YYYY-MM-DD.md）
 │   └── sessions/        # セッション関連の自動生成物
 │         {SID}-{DATE}/  # L3 セッションレトロスペクティブ（/auto Step 5 L3 トリガーが生成、notable な batch/XL のみ）
-│           session.md       # L3 ナラティブ（What worked / Limits and gaps / Improvement candidates）に加え、機械生成された `## Metrics` 小節（get-auto-session-report.sh --metrics-only 経由）
+│           session.md       # L3 ナラティブ（What worked / Findings — disposition タグ付き）に加え、機械生成された `## Metrics` 小節（get-auto-session-report.sh --metrics-only 経由）
 │           events.jsonl     # .tmp/auto-events.jsonl から抽出したセッションスコープイベント（not-notable なセッションはこのファイルのみをコミット）
 ├── .wholework/          # プロジェクトローカルな Wholework 設定（ユーザー管理、wholework リポジトリでは追跡しない）
 │   ├── adapters/        # 検証 adapter のオーバーライド
@@ -224,6 +224,7 @@ wholework/
 - `scripts/validate-skill-syntax.py` — SKILL.md frontmatter と構文を検証
 - `scripts/check-file-overlap.sh` — リポジトリ間のファイル重複検出
 - `scripts/check-verify-dirty.sh` — /verify Step 1 用 session-aware dirty file 分類スクリプト (self-worktree / other-worktree / other-session / parent-main の 4 分類; classify=... を stderr 出力)
+- `scripts/check-session-findings-disposition.sh` — L3 `session.md` の `## Findings` から canonical disposition タグ欠落を検出；`skills/auto/SKILL.md` Step 5 の commit 直前に warn-only で呼び出される
 - `scripts/check-translation-sync.sh` — docs/ja/* と docs/* の翻訳同期状況を確認
 - `scripts/check-forbidden-expressions.sh` — docs/product.md § Terms の deprecated terms を検出
 - `scripts/setup-labels.sh` — ワークフロー用 GitHub ラベルを作成
