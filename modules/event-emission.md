@@ -122,6 +122,10 @@ stays empty and `phase_start` / `phase_complete` are not emitted — preventing 
 | `run-merge.sh` | `merge` | |
 | `run-auto-sub.sh` | Sets `EMIT_PHASE_NAME` before delegating | Orchestrator; delegates to above |
 
+## Non-Wrapper Emitters
+
+`skills/verify/SKILL.md` emits `phase_start`/`phase_complete` (phase=`verify`) inline — directly from the skill body, gated only on `AUTO_EVENTS_LOG` being set — rather than through a `run-*.sh` wrapper. This is intentional: `/verify` has no `run-verify.sh` wrapper (removed in #485 when `/verify` moved to in-session execution), so the `_EMIT_PHASE_OWNED` pattern above, which lives in wrapper scripts, does not apply. `phase_complete` fires at every terminal branch of Step 11 (PASS/SKIPPED, FAIL retry, FAIL max-iterations, PENDING, UNCERTAIN) — not only on full PASS — because reaching an AC verdict, not the verdict itself, is the phase's completion signal. The skill also emits `verify_user_confirm` (phase-specific event, not a lifecycle event) at Step 8b whenever the interactive-mode manual-AC `AskUserQuestion` receives a response.
+
 ## Backfill
 
 `_maybe_emit_phase_complete()` is registered as an EXIT trap in each wrapper. On exit, it checks

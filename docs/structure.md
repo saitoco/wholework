@@ -167,7 +167,7 @@ Key modules:
 
 **Phase banner:**
 - `scripts/phase-banner.sh` — sourceable helper providing `print_start_banner` / `print_end_banner` functions for run-*.sh scripts
-- `scripts/emit-event.sh` — sourceable helper providing `emit_event()` for structured JSONL event emission to `.tmp/auto-events.jsonl`; used by run-*.sh, claude-watchdog.sh, and wait-ci-checks.sh
+- `scripts/emit-event.sh` — sourceable helper providing `emit_event()` for structured JSONL event emission to `.tmp/auto-events.jsonl`; used by run-*.sh, claude-watchdog.sh, wait-ci-checks.sh, and `skills/verify/SKILL.md` (explicit bash call, no wrapper)
 - `scripts/append-consumed-comments-section.sh` — post-processor fallback: appends `## Consumed Comments` to Spec when LLM silently skips Step 5; used by run-spec.sh / run-code.sh (pre/post count comparison) and verify SKILL.md (explicit bash call)
 - `scripts/hook-worktree-path-guard.sh` — PreToolUse hook: blocks Edit/Write calls with parent-repo absolute file_path while inside a worktree session (structural enforcement of `modules/worktree-lifecycle.md § Edit/Write path conventions in worktree sessions`)
 
