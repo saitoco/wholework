@@ -59,3 +59,35 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue 897` の Issue Retrospective コメント (トリアージ結果: Type=Bug, Size=M, Value=3。Auto-Resolve Log 3点の詳細説明。内容は Issue 本文末尾の `## Auto-Resolved Ambiguity Points` セクションと重複しており、本 Spec の設計判断に新規情報の追加はなし) / https://github.com/saitoco/wholework/issues/897#issuecomment-4883649759
+
+No new comments since last phase (`phase/ready` 付与時刻 2026-07-04T20:21:51Z 以降のコメントなし).
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1〜5 は Spec 記載順序・内容通りに実装した (変数名 `OBSERVATION_MATCHES`、tier 分岐、`BATCH_LIST` 除外ロジック、`allowed-tools` への `Skill` 追加、`docs/structure.md`/`docs/ja/structure.md` 同期を含む)。
+
+### Design Gaps/Ambiguities
+
+- Spec の Implementation Steps には明記されていなかったが、`modules/observation-trigger.md` の新規セクション見出しに使った語が `scripts/check-forbidden-expressions.sh` が検出する旧称 (`/auto` の旧称) と一致していた。`docs/tech.md` § Forbidden Expressions は `check-forbidden-expressions.sh` 実行時のみ判明する制約であり、Spec 段階では見えにくい。同様に emitter 関連の Issue で prose を書く際は、この旧称の大文字始まり表記を避け "invoke" 等の言い換えを使う判断が必要になる。
+
+### Rework
+
+- 上記の forbidden expression 検出により、`modules/observation-trigger.md` の見出し・文言を1箇所リワードする追加コミットが発生した (実装ロジック自体の手戻りではなく、用語選択のみの修正)。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `AUTONOMY_TIER` gating (`L1`: advisory-only / `L2`・`L3`: dispatch) を `skills/triage/SKILL.md` の blocked-by backfill と同型パターンで実装した (Spec の設計判断通り)
+- dispatch 対象の除外は、単発ルートは現在処理中の `$NUMBER`、バッチルートは `BATCH_LIST` を用い、二重 dispatch を防いだ
+- `scripts/claude-watchdog.sh` は無変更 — stdout を捨てる既存呼び出しのため影響がないことをコード上で確認済み (137行目付近)
+
+### Deferred Items
+- dispatch 件数上限・コスト制御は Issue Notes の通り本 Issue のスコープ外のまま (`/spec` の Auto-Resolved Ambiguity Points で明記済み)
+- Post-merge AC (`次回 /auto --batch 実行での自動 dispatch 観察`, `verify-type: observation event=auto-run`) は `/verify` フェーズで観察待ち
+
+### Notes for Next Phase
+- `/review` フェーズでは `skills/review/SKILL.md` の `allowed-tools` に `Skill` を追加した点を含め、rubric 4件 (AC1〜4) の再確認を行うこと
+- Post-merge AC は次回 `/auto --batch` 実行時にバッチ対象外 Issue への `/verify` 自動 dispatch が観察されるまで保留のままでよい
