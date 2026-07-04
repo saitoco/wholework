@@ -87,17 +87,15 @@
 3件すべて rubric ベースで、うち1件は `file_contains` による補助検証も付与されていたため、判定に迷う UNCERTAIN は発生しなかった。Post-merge の1件は `verify-type: opportunistic` であり `/merge` 後の次回 `/verify` 実行で観測されるため、本レビューでの判定対象外として扱った。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Pre-merge AC 3件はすべて PASS。`file_contains` 補助検証済みの2件を含め UNCERTAIN なし
-- SHOULD指摘2件 (`${N}`/`${RESPONSE}` 記法不整合、`docs/structure.md` の記述漏れ) はレビュー中に修正 (追加コミット `78fafc29`)
-- `docs/structure.md` への指摘は本PRの diff 外ファイルのため line comment ではなく Review body の General Comments に記載 (GitHub API は diff 外パスへの line comment を 422 で拒否する)
+- Squash merge を実行 (mergeable=true、conflict なし)。マージコミット `fdee8d3d`
+- レビュー指摘対応の追加コミット `78fafc29` を含めてマージ完了
 
 ### Deferred Items
 - `scripts/get-auto-session-report.sh` の Metrics 出力キャベア文言 (「The verify phase does not emit phase_start/phase_complete events...」) は本実装後は事実と異なる記述になるが、Spec の Notes 記載通りスコープ外として別 Issue 送りとする
-- Post-merge AC (opportunistic): 次回 `/merge` 後の `/verify` 実行で `phase_start`/`phase_complete`/`verify_user_confirm` の実記録を観測する必要あり
+- Post-merge AC (opportunistic): 次回 `/verify` 実行で `phase_start`/`phase_complete`/`verify_user_confirm` の実記録を観測する必要あり
 
 ### Notes for Next Phase
-- `/merge` 実行時、追加コミット `78fafc29` (レビュー指摘対応) を含めてマージすること
-- マージ後の次回 `/verify` 実行時、Post-merge AC の opportunistic 観測を忘れずに行うこと
+- `/verify` 実行時、Post-merge AC の opportunistic 観測 (`.tmp/auto-events.jsonl` への実イベント記録確認) を忘れずに行うこと
