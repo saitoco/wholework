@@ -535,8 +535,9 @@ See also: `#async-external-commit` (reconcile-first authority — `matches_expec
    bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE RECOVERY_TYPE
    ```
    where `RECOVERY_TYPE` is a short string describing the action taken (e.g., `push-only`, `pr-create`, `review-rerun`)
-2. The subcommand calls `_write_manual_recovery_to_spec()` which appends a `### Manual recovery (PHASE)` entry to the Spec's `## Auto Retrospective` section and commits/pushes immediately
-3. The entry includes: date, issue/phase, source (`parent session manual recovery`), recovery type, and outcome (`success`)
+2. Before writing, the subcommand checks for an open PR linked to the issue (`gh pr list --search "closes #ISSUE" --state open`). If one exists, it skips the Spec write and commit/push entirely and logs a warning to retry after the PR merges — this avoids a self-induced merge conflict between the manual-recovery commit on main and the open PR's branch touching the same Spec region (#890)
+3. Otherwise, `_write_manual_recovery_to_spec()` appends a `### Manual recovery (PHASE)` entry to the Spec's `## Auto Retrospective` section and commits/pushes immediately
+4. The entry includes: date, issue/phase, source (`parent session manual recovery`), recovery type, and outcome (`success`)
 
 ### Escalation
 - If the script exits non-zero (commit/push failure), a WARNING is logged to stderr and execution continues — spec write failure is non-fatal; the `/verify` session can still record the anomaly manually
@@ -580,7 +581,7 @@ When the parent session performs a manual recovery (e.g., `worktree-merge-push.s
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE RECOVERY_TYPE
 ```
 
-This invokes `_write_manual_recovery_to_spec()`, which appends a `### Manual recovery (PHASE)` entry to the sub-issue Spec's `## Auto Retrospective` section and commits/pushes immediately — symmetric with the Tier 2 and Tier 3 bash paths described below. `/verify` Step 12 treats `### Manual recovery` entries as "already recorded" and skips redundant retrospective writing.
+This invokes `_write_manual_recovery_to_spec()`, which first checks for an open PR linked to the issue and, if none exists, appends a `### Manual recovery (PHASE)` entry to the sub-issue Spec's `## Auto Retrospective` section and commits/pushes immediately — symmetric with the Tier 2 and Tier 3 bash paths described below. If an open PR exists for the issue, the write and commit/push are skipped to avoid a self-induced merge conflict with that PR's branch (#890); a warning is logged and the operator should retry after the PR merges. `/verify` Step 12 treats `### Manual recovery` entries as "already recorded" and skips redundant retrospective writing.
 
 See also: `modules/orchestration-fallbacks.md#manual-recovery-spec-write`
 
