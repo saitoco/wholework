@@ -125,3 +125,14 @@ teardown() {
     run jq . "$AUTO_EVENTS_LOG"
     [ "$status" -eq 0 ]
 }
+
+@test "emit_event sourced under zsh parses without error (regression #891)" {
+    command -v zsh >/dev/null 2>&1 || skip "zsh not installed"
+    run zsh -c "source \"$SCRIPT\" && emit_event \"zsh_compat\" \"phase=code\""
+    [ "$status" -eq 0 ]
+    [ -f "$AUTO_EVENTS_LOG" ]
+    local line
+    line=$(cat "$AUTO_EVENTS_LOG")
+    [[ "$line" == *'"event":"zsh_compat"'* ]]
+    [[ "$line" == *'"phase":"code"'* ]]
+}
