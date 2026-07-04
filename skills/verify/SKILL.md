@@ -328,8 +328,8 @@ Immediately after receiving the user's response, emit `verify_user_confirm` (onl
 if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
   source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
   EMIT_ISSUE_NUMBER=$NUMBER emit_event "verify_user_confirm" \
-    "ac_index=${N}" \
-    "response=${RESPONSE}"
+    "ac_index={N}" \
+    "response={the selected option text}"
 fi
 ```
 
