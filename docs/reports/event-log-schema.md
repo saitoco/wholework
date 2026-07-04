@@ -46,10 +46,12 @@ Emitted by `run-auto-sub.sh` after each phase completes, parsed from `TOKEN_USAG
 | `issue` | Yes | Issue number |
 | `event` | Yes | `"token_usage"` |
 | `phase` | Yes | Phase name (`code`, `review`, `merge`) |
-| `model` | Yes | Model identifier (e.g. `claude-sonnet-4-6`) |
+| `model` | Yes | Model identifier (e.g. `claude-sonnet-4-6`), extracted from the `modelUsage.<model-id>.*` keys of `TOKEN_USAGE_FILE` (the CLI's top-level `.model` key is always `null` and is not used) |
 | `input_tokens` | Yes | Input token count (string) |
 | `output_tokens` | Yes | Output token count (string) |
 | `cache_read_tokens` | Yes | Cache read token count (string, `0` if none) |
+
+When `modelUsage` contains multiple keys (e.g. a sub-agent used a different model than the main session), the key with the largest `inputTokens + outputTokens` total is selected as the phase's representative `model`.
 
 **Emission point**: `run-auto-sub.sh` `run_phase_with_recovery()`, immediately after `wrapper_exit` event, when `.tmp/token-usage-{issue}.json` exists.
 
