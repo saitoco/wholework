@@ -38,6 +38,16 @@ _validate_recovery_args() {
   fi
 }
 
+# Returns the open PR number linked to an issue via "closes #N", or empty if none.
+# Follows the gh pr list --search "closes #N" detection pattern already used by
+# scripts/reconcile-phase-state.sh, scoped to --state open here.
+_open_pr_for_issue() {
+  local issue="$1"
+  local pr_json
+  pr_json=$(gh pr list --search "closes #${issue}" --state open --json number 2>/dev/null || true)
+  printf '%s' "$pr_json" | jq -r '.[0].number // empty' 2>/dev/null || true
+}
+
 # --write-manual-recovery subcommand: write manual recovery record to sub-issue Spec.
 # Usage: run-auto-sub.sh --write-manual-recovery ISSUE [PHASE] [RECOVERY_TYPE]
 # See modules/orchestration-fallbacks.md#manual-recovery-spec-write
@@ -46,6 +56,16 @@ _write_manual_recovery_to_spec() {
   local phase="${2:-unknown}"
   local recovery_type="${3:-unspecified}"
   _validate_recovery_args "$issue" "$phase" "$recovery_type" || return 1
+
+  # Skip if an open PR for this issue is already touching the same Spec file:
+  # committing to main here would self-induce a merge conflict with that PR (#890).
+  local open_pr
+  open_pr=$(_open_pr_for_issue "$issue")
+  if [[ -n "$open_pr" ]]; then
+    echo "[#${issue}] WARNING: open PR #${open_pr} exists for issue #${issue}. Skipping manual recovery commit to main to avoid a self-induced merge conflict. Retry --write-manual-recovery after PR #${open_pr} is merged." >&2
+    return 0
+  fi
+
   local _script_dir="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
   local _repo_root
   _repo_root="$(dirname "$_script_dir")"

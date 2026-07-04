@@ -820,11 +820,57 @@ exit 0
 MOCK
     chmod +x "$MOCK_DIR/git"
 
+    # No open PR for this issue: override the global gh mock's pr list default.
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
     run bash "$SCRIPT" --write-manual-recovery 42 code push-only
     [ "$status" -eq 0 ]
     grep -q "Auto Retrospective" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
     grep -q "Manual recovery" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
     grep -qE "commit.*manual recovery" "$GIT_LOG"
+}
+
+@test "run-auto-sub: manual recovery: skips commit when an open PR exists for the issue" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+    export GH_LOG="$BATS_TEST_TMPDIR/gh.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+    echo "# Issue #42: test spec" > "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GH_LOG"
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo '[{"number":123}]'
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"PR #123"* ]]
+    [[ "$output" == *"Retry"* ]]
+    ! grep -qE "commit.*manual recovery" "$GIT_LOG"
+    ! grep -q "Auto Retrospective" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    grep -q -- "closes #42" "$GH_LOG"
+    grep -q -- "--state open" "$GH_LOG"
 }
 
 @test "run-auto-sub: tier2 recovery: commits when spec file is untracked" {
@@ -945,6 +991,17 @@ fi
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/git"
+
+    # No open PR for this issue: override the global gh mock's pr list default.
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
 
     run bash "$SCRIPT" --write-manual-recovery 42 code push-only
     [ "$status" -eq 0 ]
