@@ -97,5 +97,34 @@
 - `scripts/get-auto-session-report.sh` の Metrics 出力キャベア文言 (「The verify phase does not emit phase_start/phase_complete events...」) は本実装後は事実と異なる記述になるが、Spec の Notes 記載通りスコープ外として別 Issue 送りとする
 - Post-merge AC (opportunistic): 次回 `/verify` 実行で `phase_start`/`phase_complete`/`verify_user_confirm` の実記録を観測する必要あり
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC を rubric + file_contains の多層構成にした設計は verify で機械的に検証でき良好。Size S は妥当
+- spec がクローズ済み #900 の「/verify は実データ上 phase==verify イベントを emit していない」証拠を発見し Background 主張を裏付けた
+
+#### design
+- `/verify` は #485 で run-verify.sh が削除され wrapper を持たないため、skill 本体からインラインで emit する設計は正しい。`phase_complete` を Step 11 の全終端分岐で発火する判断も妥当
+
+#### code
+- **silent no-op アノマリ (手動リカバリ)**: code-pr フェーズが worktree branch `worktree-code+issue-902` に実装コミット `ae0d6165` を作成したが push / PR 作成に至らず終了。run-code.sh の auto-retry が 3/3 まで回ったが各回とも no-op (コミット済みを検知せず push+PR に進めなかった) だった。parent session が手動で push + PR #909 作成してリカバリ
+- これは #906/#907 で対応中の `code-patch-silent-no-op` の **pr-route 変種**。run-auto-sub.sh が持つ `code_phase_milestone` (post-commit → push-and-pr) resume は、/auto pr route が直接呼ぶ standalone `run-code.sh --pr` 経路には効かないため取りこぼした
+- 実装自体は fixup/amend なしで妥当
+
+#### review
+- review-light が SHOULD 2件 (`${N}`/`${RESPONSE}` 記法統一、docs/structure.md 更新) を検出・即修正。CI 全 SUCCESS。有効に機能した
+
+#### merge
+- conflict なし squash merge。ただし本実装により `get-auto-session-report.sh` の verify-phase caveat 文言が事実と drift する点を merge handoff が検出し deferred 化した
+
+#### verify
+- pre-merge 3件すべて file_contains/rubric/bats で PASS。post-merge (opportunistic) は本 verify 実行が計装反映前スキルで走ったため未計測 → phase/verify で opportunistic pending
+
+### Improvement Proposals
+- **code フェーズの AC 駆動 follow-up Issue 作成に重複チェックが無い**: #877 の code フェーズが AC4 (「follow-up Issue 作成」) を満たすため `gh issue create` で #902 を直接起票したが、既に同趣旨の #898/#899 が存在していた。code フェーズの follow-up 起票は retro-proposals の dedup パイプラインを通らず open Issue との照合が無いため、三重重複 (#898/#899/#902) を招いた。code フェーズの follow-up Issue 作成前に軽量な open-issue 重複チェック (retro-proposals の dedup ロジック共用) を挟むことを提案する (複数箇所で follow-up 起票が発生する構造的問題)
+- **`get-auto-session-report.sh` の verify-phase caveat 文言 drift**: 本 Issue の計装追加により「The verify phase does not emit phase_start/phase_complete events...」という caveat が事実と異なる記述になった。`scripts/get-auto-session-report.sh` (および関連ドキュメント) の当該文言を、verify phase も phase_start/phase_complete を emit する前提に更新する必要がある (merge phase handoff で deferred 化済み)
+
 ### Notes for Next Phase
 - `/verify` 実行時、Post-merge AC の opportunistic 観測 (`.tmp/auto-events.jsonl` への実イベント記録確認) を忘れずに行うこと
