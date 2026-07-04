@@ -594,12 +594,13 @@ emit_event() {
 _emit_comments_consumed() { :; }
 MOCK
 
-    # Make run-code.sh write a token usage JSON file
+    # Make run-code.sh write a token usage JSON file (real CLI output shape:
+    # top-level "model" is always null; the actual model ID lives under modelUsage.<id>.*)
     cat > "$MOCK_DIR/run-code.sh" <<MOCK
 #!/bin/bash
 mkdir -p .tmp
 cat > ".tmp/token-usage-42.json" <<'JSON'
-{"model":"claude-sonnet-4-6","usage":{"input_tokens":100,"output_tokens":50,"cache_read_input_tokens":20}}
+{"model":null,"usage":{"input_tokens":100,"output_tokens":50,"cache_read_input_tokens":20},"modelUsage":{"claude-sonnet-5":{"inputTokens":100,"outputTokens":50}}}
 JSON
 exit 0
 MOCK
@@ -622,8 +623,50 @@ MOCK
 
     run bash "$SCRIPT" 42
     [ "$status" -eq 0 ]
-    grep -q "token_usage" "$BATS_TEST_TMPDIR/emit.log" 2>/dev/null || \
-      skip "token_usage event not logged (emit mock not capturing)"
+    grep -q "model=claude-sonnet-5" "$BATS_TEST_TMPDIR/emit.log"
+}
+
+@test "token_usage: selects modelUsage key with highest input+output token total" {
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    export EMIT_ISSUE_NUMBER="42"
+
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() {
+  echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
+}
+_emit_comments_consumed() { :; }
+MOCK
+
+    # Two modelUsage keys: main session (claude-sonnet-5, total=105562) and a
+    # sub-agent that used a different model (claude-haiku-4-5-20251001, total=58899).
+    # The key with the larger input+output total must be selected as the phase's model.
+    cat > "$MOCK_DIR/run-code.sh" <<MOCK
+#!/bin/bash
+mkdir -p .tmp
+cat > ".tmp/token-usage-42.json" <<'JSON'
+{"model":null,"usage":{"input_tokens":100,"output_tokens":50,"cache_read_input_tokens":20},"modelUsage":{"claude-sonnet-5":{"inputTokens":52549,"outputTokens":53013},"claude-haiku-4-5-20251001":{"inputTokens":57614,"outputTokens":1285}}}
+JSON
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "model=claude-sonnet-5" "$BATS_TEST_TMPDIR/emit.log"
 }
 
 @test "test_result: emit_event called when bats output detected in log" {
