@@ -77,3 +77,28 @@ fd 番号を1桁 (`9`) に変更する案について、`scripts/*.sh` および
 ### CI 検知範囲に関する既知の限界
 
 `.github/workflows/test.yml` の `macos-shell` ジョブは `scripts/*.sh` 全体に対して `bash -n` (bash構文チェックのみ) を実行しており、zsh でのパース可否は検証していない。そのため本種の不具合は今回のように実際に zsh 環境で LLM が Bash tool 経由で実行した際に初めて顕在化する。本 Issue の修正範囲外だが、将来的に zsh 構文チェックを CI に追加する余地がある旨を記録しておく (別 Issue 起票は本 Spec のスコープ外と判断)。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 通り、fd番号を `200` から `9` に変更し (L82)、`tests/emit-event.bats` に zsh 互換性の regression テストを追加した。
+
+### Design Gaps/Ambiguities
+- コミット分割の都合上、`closes #891` タグは実装コミット (fd修正・テスト追加) ではなく本 Retrospective コミットに付与した。Step 8 で各実装ステップごとに中間コミットを作成する運用と、Step 11 が「1コミットに closes タグを含める」ことを前提とした記述の間に、明文化されたギャップがある。GitHub はデフォルトブランチへの任意のコミットメッセージ中の closing keyword を認識するため機能的な問題はない。
+
+### Rework
+- N/A — 手戻りなし。Spec の Root Cause 分析が正確だったため、実装は Implementation Steps 通り一度で完了した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `scripts/emit-event.sh` L82 の flock fd 番号を `200` (複数桁) から `9` (1桁) に変更し、zsh でも bash でもパース可能な構文に統一した (Spec で採用と決定した approach (a))。SKILL.md 側の呼び出し文言 (計5箇所) は変更不要だった。
+- `tests/emit-event.bats` に `zsh -c` 経由の regression テストを追加し、`command -v zsh` ガードで zsh 未インストール環境の CI を壊さないようにした。
+
+### Deferred Items
+- CI (`macos-shell` ジョブ) は `bash -n` のみで zsh パース可否を検証しないという既知の限界が残る。将来的な zsh 構文チェック追加は本 Issue のスコープ外 (Spec Notes 参照)。
+
+### Notes for Next Phase
+- Pre-merge AC (rubric ×2) は `/code` フェーズ内で実機検証済み (zsh -c 経由での実行成功をログで確認)。`/verify` では同じ確認の再現で足りる想定。
+- Post-merge AC はなし。
