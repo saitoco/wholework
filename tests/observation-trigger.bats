@@ -72,6 +72,7 @@ teardown() {
     [ "$status" -eq 0 ]
     grep -q "issue comment 42" "$BATS_TEST_TMPDIR/gh-calls.log"
     grep -q "watchdog-kill" "$BATS_TEST_TMPDIR/gh-calls.log"
+    [ "$output" = "42" ]
 }
 
 @test "success: multiple matches post one comment each" {
@@ -80,6 +81,8 @@ teardown() {
     [ "$status" -eq 0 ]
     grep -q "issue comment 10" "$BATS_TEST_TMPDIR/gh-calls.log"
     grep -q "issue comment 20" "$BATS_TEST_TMPDIR/gh-calls.log"
+    [[ "$output" == *"10"* ]]
+    [[ "$output" == *"20"* ]]
 }
 
 @test "resilience: opportunistic-search.sh error does not abort trigger" {

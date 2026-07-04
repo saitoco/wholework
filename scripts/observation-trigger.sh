@@ -61,3 +61,5 @@ fi
 for N in $NUMBERS; do
     gh issue comment "$N" --body "observation event \`${EVENT_NAME}\` detected. Run \`/verify ${N}\` to verify the condition and update the checkbox." 2>/dev/null || true
 done
+
+echo "$NUMBERS"

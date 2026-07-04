@@ -712,7 +712,11 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 
 **Event-based observation scan (auto-run event, runs after Completion Report regardless of success/failure):**
 
-Run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run`
+Run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run` and capture stdout as `OBSERVATION_MATCHES` (newline-separated Issue numbers; may be empty).
+
+If `OBSERVATION_MATCHES` is non-empty, read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to load `AUTONOMY_TIER`, then apply tier-aware dispatch:
+- **L1**: skip dispatch (advisory-only — the comment already posted by `observation-trigger.sh` is the only action)
+- **L2 / L3**: for each number in `OBSERVATION_MATCHES` other than `$NUMBER` (the Issue this `/auto` run just processed), dispatch `Skill(skill="wholework:verify", args="$N")` sequentially
 
 **L3 auto-retrospective (batch/XL routes only, runs after observation scan regardless of success/failure):**
 
@@ -1124,7 +1128,11 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 
 **Event-based observation scan (batch, best-effort):**
 
-Run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run`
+Run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run` and capture stdout as `OBSERVATION_MATCHES` (newline-separated Issue numbers; may be empty).
+
+If `OBSERVATION_MATCHES` is non-empty, read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to load `AUTONOMY_TIER`, then apply tier-aware dispatch:
+- **L1**: skip dispatch (advisory-only — the comment already posted by `observation-trigger.sh` is the only action)
+- **L2 / L3**: for each number in `OBSERVATION_MATCHES` not already included in `BATCH_LIST` (Issues already processed by this batch), dispatch `Skill(skill="wholework:verify", args="$N")` sequentially
 
 **Next-cycle seed (batch, best-effort):**
 

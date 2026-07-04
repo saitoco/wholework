@@ -59,3 +59,53 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue 897` の Issue Retrospective コメント (トリアージ結果: Type=Bug, Size=M, Value=3。Auto-Resolve Log 3点の詳細説明。内容は Issue 本文末尾の `## Auto-Resolved Ambiguity Points` セクションと重複しており、本 Spec の設計判断に新規情報の追加はなし) / https://github.com/saitoco/wholework/issues/897#issuecomment-4883649759
+
+No new comments since last phase (`phase/ready` 付与時刻 2026-07-04T20:21:51Z 以降のコメントなし).
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1〜5 は Spec 記載順序・内容通りに実装した (変数名 `OBSERVATION_MATCHES`、tier 分岐、`BATCH_LIST` 除外ロジック、`allowed-tools` への `Skill` 追加、`docs/structure.md`/`docs/ja/structure.md` 同期を含む)。
+
+### Design Gaps/Ambiguities
+
+- Spec の Implementation Steps には明記されていなかったが、`modules/observation-trigger.md` の新規セクション見出しに使った語が `scripts/check-forbidden-expressions.sh` が検出する旧称 (`/auto` の旧称) と一致していた。`docs/tech.md` § Forbidden Expressions は `check-forbidden-expressions.sh` 実行時のみ判明する制約であり、Spec 段階では見えにくい。同様に emitter 関連の Issue で prose を書く際は、この旧称の大文字始まり表記を避け "invoke" 等の言い換えを使う判断が必要になる。
+
+### Rework
+
+- 上記の forbidden expression 検出により、`modules/observation-trigger.md` の見出し・文言を1箇所リワードする追加コミットが発生した (実装ロジック自体の手戻りではなく、用語選択のみの修正)。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Pre-merge rubric AC 4件 (A〜D) はすべて実装内容から直接 PASS 判定し、UNCERTAIN・FAIL なし
+- review-light agent (light mode, 4 perspectives) で CONSIDER 1件 (Resume mode の dispatch 除外漏れ) を検出し、影響が低く既存パターンの踏襲であることから修正はスキップと判断した
+- CI 全ジョブ SUCCESS、MUST issue なしのため Step 12 修正作業・Step 12.3 再チェックは実施なし
+
+### Deferred Items
+- CONSIDER issue (`skills/auto/SKILL.md:1135`, Resume mode の `BATCH_LIST`/`REMAINING` 再利用による dispatch 除外漏れ) は対応見送り。将来 batch checkpoint と合わせた「dispatch/processed 済み」セット永続化を検討する余地がある (review retrospective に記録済み)
+- Post-merge AC (`次回 /auto --batch 実行での自動 dispatch 観察`, `verify-type: observation event=auto-run`) は引き続き `/verify` フェーズで観察待ち
+
+### Notes for Next Phase
+- `/merge` フェーズでは MUST issue なし・CI 全SUCCESSのため通常のマージ手順で進行可能
+- Post-merge AC の観察は次回 `/auto --batch` 実行時まで保留のままでよい
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — review-light agent (4 perspectives) は Spec の Implementation Steps 5件・rubric AC 4件すべてで実装と Spec の一致を確認した。乖離なし。
+
+### Recurring issues
+
+Nothing to note — 検出された issue は CONSIDER 1件のみで、複数箇所にまたがる同種の繰り返し issue ではない。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — Pre-merge AC 4件はすべて rubric 形式で、UNCERTAIN 判定なく PASS 判定できた。verify command の記述・網羅性に問題は見られなかった。
+
+### Improvement proposals
+
+- **[CONSIDER] Resume mode (`--batch --resume`) の `BATCH_LIST`/`REMAINING` 再利用による dispatch 除外漏れ** — `skills/auto/SKILL.md:1135` の observation scan dispatch 除外判定が resume 後の `REMAINING` を参照するため、resume 前に処理済みの Issue が除外対象から漏れ、冗長な `/verify` dispatch が発生しうる。本 PR のスコープ外の既存パターン (line 1104 の Pending manual confirmation と同型) であり、影響も低い (概ね idempotent) ため今回は対応見送り。将来的に batch checkpoint と合わせた「dispatch/processed 済み」セット永続化を検討する余地がある。
