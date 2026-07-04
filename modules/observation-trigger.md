@@ -98,9 +98,9 @@ unconditional regardless of caller context). It also prints the matched Issue nu
 callers with a dispatch mechanism can act on the result directly instead of relying on
 the human reading the comment.
 
-**Dispatch responsibility split (since #897):** `observation-trigger.sh` itself never
-dispatches `/verify` — it only posts the comment and prints the matched numbers. Whether
-those numbers are turned into an actual `/verify` dispatch is the calling emitter's
+**Who invokes `/verify` (since #897):** `observation-trigger.sh` itself never
+invokes `/verify` — it only posts the comment and prints the matched numbers. Whether
+those numbers are turned into an actual `/verify` call is the calling emitter's
 responsibility:
 
 - **LLM-session emitters** (`/auto`, `/review`) capture stdout and, when `AUTONOMY_TIER`
