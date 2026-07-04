@@ -14,6 +14,16 @@ if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
 fi
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
+# Capture the main repository root now, before /review's own worktree
+# lifecycle (Step Entry -> Exit) or a concurrent phase's cleanup can
+# remove the worktree this script started in. `git worktree list` always
+# lists the main worktree first, even from a linked worktree, and that
+# entry is never a target of `git worktree remove`.
+MAIN_REPO_ROOT="$(git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}')" || true
+if [[ -n "$MAIN_REPO_ROOT" ]]; then
+  cd "$MAIN_REPO_ROOT"
+  [[ -d "$SCRIPT_DIR" ]] || SCRIPT_DIR="$MAIN_REPO_ROOT/scripts"
+fi
 # Session isolation check: detect other-session dirty files (best-effort)
 if [[ -x "${SCRIPT_DIR}/check-verify-dirty.sh" ]]; then
   _dirty_exit=0

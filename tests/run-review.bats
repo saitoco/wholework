@@ -403,3 +403,37 @@ MOCK
     [ "$status" -eq 0 ]
     [[ "$output" == *"other-session dirty files"* ]]
 }
+
+@test "worktree-recovery: SCRIPT_DIR pointing at a removed worktree falls back to main repo and completes trailing steps" {
+    MAIN_REPO="$BATS_TEST_TMPDIR/main_repo"
+    mkdir -p "$MAIN_REPO"
+    (
+        cd "$MAIN_REPO"
+        git init -q
+        git config user.email "test@example.com"
+        git config user.name "Test"
+        mkdir -p scripts skills/review
+        cp "$MOCK_DIR"/*.sh scripts/
+        chmod +x scripts/*.sh
+        cp "$BATS_TEST_TMPDIR/skills/review/SKILL.md" skills/review/SKILL.md
+        git add -A
+        git commit -q -m init
+    )
+
+    WORKTREE_DIR="$BATS_TEST_TMPDIR/linked_wt"
+    git -C "$MAIN_REPO" worktree add -q -b wt-issue-887-test "$WORKTREE_DIR"
+    # Simulate the linked worktree already having been removed (e.g. by /review's
+    # own worktree-lifecycle Exit) by the time run-review.sh captures SCRIPT_DIR
+    # from a stale WHOLEWORK_SCRIPT_DIR reference.
+    git -C "$MAIN_REPO" worktree remove --force "$WORKTREE_DIR"
+
+    export WHOLEWORK_SCRIPT_DIR="$WORKTREE_DIR/scripts"
+    cd "$MAIN_REPO"
+
+    run bash "$SCRIPT" 555
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Exit code: 0"* ]]
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+
+    cd "$BATS_TEST_TMPDIR"
+}
