@@ -13,6 +13,18 @@ REAL_SCRIPT="$PROJECT_ROOT/scripts/check-session-findings-disposition.sh"
 
 setup() {
     FIXTURE_DIR="$BATS_TEST_TMPDIR"
+    # Stub `gh` so the script's best-effort `gh issue view` existence check
+    # (scripts/check-session-findings-disposition.sh) never depends on live
+    # network access or `gh` auth state. Without this stub, that check fails
+    # in CI (no GH_TOKEN exported to this job) and its stderr warning pollutes
+    # bats' combined stdout+stderr $output, breaking exact-match assertions.
+    mkdir -p "$FIXTURE_DIR/bin"
+    cat > "$FIXTURE_DIR/bin/gh" <<'STUBEOF'
+#!/bin/bash
+exit 0
+STUBEOF
+    chmod +x "$FIXTURE_DIR/bin/gh"
+    PATH="$FIXTURE_DIR/bin:$PATH"
 }
 
 write_fixture() {
