@@ -53,7 +53,7 @@ if [ -z "$RESULTS" ] || [ "$RESULTS" = "[]" ]; then
     exit 0
 fi
 
-NUMBERS=$(echo "$RESULTS" | jq -r '.[].number' 2>/dev/null || true)
+NUMBERS=$(echo "$RESULTS" | jq -r '.[].number' 2>/dev/null | sort -un || true)
 if [ -z "$NUMBERS" ]; then
     exit 0
 fi

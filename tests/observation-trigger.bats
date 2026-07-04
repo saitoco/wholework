@@ -85,6 +85,14 @@ teardown() {
     [[ "$output" == *"20"* ]]
 }
 
+@test "dedup: same issue with multiple matching conditions posts one comment" {
+    export MOCK_SEARCH_OUTPUT='[{"number": 875, "condition": "first"},{"number": 875, "condition": "second"}]'
+    run bash "$SCRIPT" --event auto-run
+    [ "$status" -eq 0 ]
+    [ "$(grep -c "issue comment 875" "$BATS_TEST_TMPDIR/gh-calls.log")" -eq 1 ]
+    [ "$output" = "875" ]
+}
+
 @test "resilience: opportunistic-search.sh error does not abort trigger" {
     export MOCK_SEARCH_EXIT=1
     export MOCK_SEARCH_OUTPUT=""
