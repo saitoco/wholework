@@ -196,7 +196,7 @@ Key modules:
 - `scripts/get-verify-iteration.sh` — read highest `<!-- verify-iteration: N -->` marker from Issue comments
 - `scripts/hook-rename-on-auto.sh` — UserPromptSubmit hook: auto-rename session title when prompt matches `/auto` pattern
 - `scripts/log-permission.sh` — log permission events (JSON output)
-- `scripts/observation-trigger.sh` — dispatch observation-type ACs on event: calls `opportunistic-search.sh --event`, posts comment to each matched Issue recommending `/verify` re-run
+- `scripts/observation-trigger.sh` — dispatch observation-type ACs on event: calls `opportunistic-search.sh --event`, posts comment to each matched Issue recommending `/verify` re-run, and prints matched Issue numbers to stdout for caller dispatch
 - `scripts/opportunistic-search.sh` — opportunistic skill search and observation event scan
 - `scripts/post_merge_check.sh` — bundle and run post-merge manual (verify-type: manual) ACs for multiple Issues in one session; prompts P/F/S per AC; transitions to phase/done on all-PASS or reopens on FAIL
 - `scripts/triage-backlog-filter.sh` — filter backlog for triage

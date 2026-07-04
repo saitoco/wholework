@@ -188,7 +188,7 @@ wholework/
 - `scripts/get-verify-iteration.sh` — Issue コメントから `<!-- verify-iteration: N -->` マーカーの最大値を読み取る
 - `scripts/hook-rename-on-auto.sh` — UserPromptSubmit hook: プロンプトが `/auto` パターンにマッチした場合にセッション名を自動リネーム
 - `scripts/log-permission.sh` — 権限イベントログ（JSON 出力）
-- `scripts/observation-trigger.sh` — イベント発火時に observation AC をディスパッチ: `opportunistic-search.sh --event` を呼び出し、マッチした各 Issue に `/verify` 再実行を促すコメントを投稿
+- `scripts/observation-trigger.sh` — イベント発火時に observation AC をディスパッチ: `opportunistic-search.sh --event` を呼び出し、マッチした各 Issue に `/verify` 再実行を促すコメントを投稿し、マッチした Issue 番号一覧を呼び出し元向けに stdout へ出力
 - `scripts/opportunistic-search.sh` — opportunistic スキル検索と observation イベントスキャン
 - `scripts/post_merge_check.sh` — 複数 Issue の post-merge 手動 AC（verify-type: manual）を 1 セッションでバンドル実行; AC ごとに P/F/S を対話入力; 全 PASS で phase/done 遷移、FAIL で reopen
 - `scripts/triage-backlog-filter.sh` — triage 向けバックログフィルタ

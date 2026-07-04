@@ -82,7 +82,7 @@ In shell contexts where `/verify` cannot be spawned (e.g., inside `claude-watchd
 - Post a comment to the Issue noting the event was observed
 - Recommend the user re-run `/verify <number>` to update the checkbox
 
-## `scripts/observation-trigger.sh` (実装済み #656)
+## `scripts/observation-trigger.sh` (実装済み #656; stdout output added in #897)
 
 A dedicated dispatch script (`scripts/observation-trigger.sh`) encapsulates the
 processing contract above, making emitter integration a one-liner:
@@ -92,8 +92,26 @@ processing contract above, making emitter integration a one-liner:
 ```
 
 The script calls `opportunistic-search.sh --event <name>`, and for each matched Issue
-posts a comment recommending the user re-run `/verify <N>` (comment-posting dispatch;
-no AI judgment in shell context). Implemented in #656.
+posts a comment recommending the user re-run `/verify <N>` (comment-posting side effect;
+unconditional regardless of caller context). It also prints the matched Issue numbers
+(newline-separated, one per line; empty output when no matches) to stdout, so that
+callers with a dispatch mechanism can act on the result directly instead of relying on
+the human reading the comment.
+
+**Dispatch responsibility split (since #897):** `observation-trigger.sh` itself never
+dispatches `/verify` — it only posts the comment and prints the matched numbers. Whether
+those numbers are turned into an actual `/verify` dispatch is the calling emitter's
+responsibility:
+
+- **LLM-session emitters** (`/auto`, `/review`) capture stdout and, when `AUTONOMY_TIER`
+  is `L2`/`L3` (via `modules/detect-config-markers.md`), dispatch
+  `Skill(skill="wholework:verify", args="$N")` for each matched number (excluding the
+  Issue the current phase just processed). At `L1`, dispatch is skipped and the posted
+  comment remains the only signal (advisory-only, matching the `L1` semantics in
+  `modules/autonomy-tier.md`).
+- **`scripts/claude-watchdog.sh`** (shell-only context, no `Skill` tool available) does
+  not capture or act on stdout — its existing comment-posting-only fallback is
+  unaffected by this change.
 
 ## Notes
 
