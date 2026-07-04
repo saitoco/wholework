@@ -52,6 +52,10 @@
 #   iteration=<n>                 verify iteration counter (NEXT_ITERATION)
 #   failed_ac_count=<n>           number of FAIL conditions in auto-verification targets
 #
+# verify_user_confirm: /verify interactive mode で manual AC の AskUserQuestion に回答した
+#   ac_index=<n>                  acceptance condition index (1-based) the question was asked for
+#   response=<response>           Claude Execute | Manual Verification (Show Guide) | SKIP
+#
 # worktree-path-block: hook-worktree-path-guard.sh blocked an Edit/Write/NotebookEdit call
 #   that passed a parent-repo absolute path while the session was inside a worktree
 #   tool=<name>                   Edit | Write | NotebookEdit

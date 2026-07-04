@@ -39,6 +39,14 @@ Handle by exit code:
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="issue", ENTITY_NUMBER=$NUMBER, SKILL_NAME="verify".
 
+Emit `phase_start` (phase=verify) immediately after the banner (only when `AUTO_EVENTS_LOG` is set):
+```bash
+if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+  source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
+  EMIT_ISSUE_NUMBER=$NUMBER emit_event "phase_start" "phase=verify"
+fi
+```
+
 **pre-check: all-checked, no-implementation pattern**
 
 After the banner, detect the false-ready state: all acceptance conditions are pre-checked (`[x]`) but no implementation commit or merged PR exists for this issue. If detected, output a warning and continue (do not abort).
@@ -315,6 +323,16 @@ For each executable condition, ask:
   - "Manual Verification (Show Guide)" — display verification guide; leave checkbox unchecked
   - "SKIP" — skip for now; leave checkbox unchecked
 
+Immediately after receiving the user's response, emit `verify_user_confirm` (only when `AUTO_EVENTS_LOG` is set):
+```bash
+if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+  source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
+  EMIT_ISSUE_NUMBER=$NUMBER emit_event "verify_user_confirm" \
+    "ac_index=${N}" \
+    "response=${RESPONSE}"
+fi
+```
+
 If "Claude Execute" is selected: run the command/approach → judge PASS or FAIL → record result for checkbox flip.
 
 **2b. If not executable: display verification guide only**
@@ -419,6 +437,14 @@ Apply the following judgment based on the verification results (exhaustive):
 
 **(a) All auto-verification target conditions are PASS or SKIPPED (0 FAIL/UNCERTAIN among auto-verification targets; SKIPPED is ignored as environment conditions were unmet):**
 
+Emit `phase_complete` (phase=verify; only when `AUTO_EVENTS_LOG` is set):
+```bash
+if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+  source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
+  EMIT_ISSUE_NUMBER=$NUMBER emit_event "phase_complete" "phase=verify"
+fi
+```
+
 - Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->`, `<!-- verify-type: observation ... -->`, or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body (manual conditions SKIPped in Step 8 remain unchecked; observation conditions remain unchecked until their event fires)
 - **If unchecked opportunistic, observation, or manual conditions remain**: assign `phase/verify` (Issue state unchanged):
     ```bash
@@ -503,6 +529,13 @@ NEXT_ITERATION=$((CURRENT_ITERATION + 1))
           "failed_ac_count=${FAIL_COUNT}"
       fi
       ```
+    - Emit `phase_complete` (phase=verify; only when `AUTO_EVENTS_LOG` is set):
+      ```bash
+      if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+        source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
+        EMIT_ISSUE_NUMBER=$NUMBER emit_event "phase_complete" "phase=verify"
+      fi
+      ```
     - Output guidance for the user:
       ```
       Issue #N を再オープンしました。以下のいずれかで修正してください:
@@ -585,6 +618,13 @@ NEXT_ITERATION=$((CURRENT_ITERATION + 1))
           "failed_ac_count=${FAIL_COUNT}"
       fi
       ```
+    - Emit `phase_complete` (phase=verify; only when `AUTO_EVENTS_LOG` is set):
+      ```bash
+      if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+        source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
+        EMIT_ISSUE_NUMBER=$NUMBER emit_event "phase_complete" "phase=verify"
+      fi
+      ```
     - Assign `phase/verify` label (Issue state unchanged):
       ```bash
       ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
@@ -597,6 +637,14 @@ NEXT_ITERATION=$((CURRENT_ITERATION + 1))
 
 **(c) PENDING only (no FAIL, PENDING ≥1):**
 
+Emit `phase_complete` (phase=verify; only when `AUTO_EVENTS_LOG` is set):
+```bash
+if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+  source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
+  EMIT_ISSUE_NUMBER=$NUMBER emit_event "phase_complete" "phase=verify"
+fi
+```
+
 - Assign `phase/verify` label (Issue state unchanged):
     ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
@@ -604,6 +652,14 @@ NEXT_ITERATION=$((CURRENT_ITERATION + 1))
 - Notify user: "CI が実行中のため一部の条件が PENDING です。CI 完了後に `/verify $NUMBER` を再実行してください。"
 
 **(d) UNCERTAIN only (no FAIL, UNCERTAIN ≥1):**
+
+Emit `phase_complete` (phase=verify; only when `AUTO_EVENTS_LOG` is set):
+```bash
+if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+  source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
+  EMIT_ISSUE_NUMBER=$NUMBER emit_event "phase_complete" "phase=verify"
+fi
+```
 
 - Assign `phase/verify` label (Issue state unchanged):
     ```bash

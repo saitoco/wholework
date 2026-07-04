@@ -126,6 +126,40 @@ teardown() {
     [ "$status" -eq 0 ]
 }
 
+@test "emit_event writes phase=verify phase_start with correct JSON shape" {
+    bash -c "source \"$SCRIPT\" && emit_event \"phase_start\" \"phase=verify\""
+    run jq . "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    local line
+    line=$(cat "$AUTO_EVENTS_LOG")
+    [[ "$line" == *'"event":"phase_start"'* ]]
+    [[ "$line" == *'"phase":"verify"'* ]]
+    [[ "$line" == *'"issue":42'* ]]
+}
+
+@test "emit_event writes phase=verify phase_complete with correct JSON shape" {
+    bash -c "source \"$SCRIPT\" && emit_event \"phase_complete\" \"phase=verify\""
+    run jq . "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    local line
+    line=$(cat "$AUTO_EVENTS_LOG")
+    [[ "$line" == *'"event":"phase_complete"'* ]]
+    [[ "$line" == *'"phase":"verify"'* ]]
+    [[ "$line" == *'"issue":42'* ]]
+}
+
+@test "emit_event writes verify_user_confirm with ac_index and response fields" {
+    bash -c "source \"$SCRIPT\" && emit_event \"verify_user_confirm\" \"ac_index=2\" \"response=Claude Execute\""
+    run jq . "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    run jq -r '.ac_index' "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    [[ "$output" == "2" ]]
+    run jq -r '.response' "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    [[ "$output" == "Claude Execute" ]]
+}
+
 @test "emit_event sourced under zsh parses without error (regression #891)" {
     command -v zsh >/dev/null 2>&1 || skip "zsh not installed"
     run zsh -c "source \"$SCRIPT\" && emit_event \"zsh_compat\" \"phase=code\""
