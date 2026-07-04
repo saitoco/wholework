@@ -4,7 +4,7 @@ GitHub issue-driven Claude Code skills for agentic work.
 
 ## Language Conventions
 
-These conventions apply to all Skill-generated output (Issue bodies, Spec files, PR bodies, commit messages, etc.).
+These conventions apply to all Skill-generated output (Issue bodies, Spec files, PR bodies, commit messages, etc.). Skills themselves stay language-agnostic — this table is the per-project override point, so other projects using these Skills can localize to their own language here instead.
 
 | Artifact | Language | Notes |
 |----------|----------|-------|
@@ -16,6 +16,7 @@ These conventions apply to all Skill-generated output (Issue bodies, Spec files,
 | Spec files | Japanese | Disposable, same treatment as issue bodies |
 | PR body | Japanese | Summaries and verification sections |
 | Skill output (terminal) | Japanese | User-facing messages and status output |
+| Session retrospective files (`docs/sessions/*/session.md`) | Japanese | Body content only — section headers follow the skill's template structure as-is (English), same split as Spec files |
 
 ## Skills Migration Guidelines
 
