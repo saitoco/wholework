@@ -466,11 +466,11 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 - code (patch route)
 
 ### Fallback Steps
-1. Retry `run-code.sh <issue> --patch` once
-2. If the second run also exits 1 (still no commit detected by reconcile) → escalate to Tier 3
+1. Retry `run-code.sh <issue> --patch` once (skipped when `run-code.sh`'s built-in `auto-retry-on-fail` has already exhausted its retries, to avoid double-retry)
+2. After the retry (or skip), check `matches_expected` via `reconcile-phase-state.sh code-patch <issue> --check-completion`. If `false` → escalate to Tier 3
 
 ### Escalation
-- If the retry itself exits non-zero and reconcile still reports `commits_found:false`, escalate to Tier 3 (recovery sub-agent)
+- If the retry (or skip) is followed by `matches_expected:false` from the completion check, escalate to Tier 3 (recovery sub-agent) — this also covers the case where the retry itself exits 0 but is itself a silent no-op (Issues #895, #904)
 - Do not retry more than once automatically; a second silent no-op may indicate a structural issue requiring human investigation
 
 ### Exception Condition

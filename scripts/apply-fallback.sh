@@ -91,6 +91,9 @@ apply_dco_signoff_autofix() {
 # Safe because reconcile confirms commits_found:false (clean state, no partial commit).
 # Guard: skips Tier 2 retry when run-code.sh built-in auto-retry is configured to prevent
 # double-retry (run-code.sh exhausts its retries before returning, so Tier 2 would be redundant).
+# After the retry (or skip), the completion signature is re-checked via
+# reconcile-phase-state.sh --check-completion so a retry that itself returns a silent no-op
+# is not mistakenly reported as recovered (Issues #895, #904).
 apply_code_patch_silent_no_op_retry() {
   local _ww_yml
   _ww_yml="$(dirname "$SCRIPT_DIR")/.wholework.yml"
@@ -102,11 +105,17 @@ apply_code_patch_silent_no_op_retry() {
   fi
   if [[ "$_auto_retry_enabled" == "true" ]]; then
     echo "[apply-fallback] code-patch-silent-no-op: AUTO_RETRY_ENABLED=true, built-in retry in run-code.sh already exhausted; skipping Tier 2 retry" >&2
+  else
+    echo "[apply-fallback] code-patch-silent-no-op: retrying run-code.sh --patch for issue $ISSUE" >&2
+    "$SCRIPT_DIR/run-code.sh" "$ISSUE" --patch >> "$LOG_FILE" 2>&1
+    echo "[apply-fallback] code-patch-silent-no-op: done" >&2
+  fi
+
+  if "$SCRIPT_DIR/reconcile-phase-state.sh" "$PHASE" "$ISSUE" --check-completion 2>/dev/null | grep -q '"matches_expected":true'; then
     return 0
   fi
-  echo "[apply-fallback] code-patch-silent-no-op: retrying run-code.sh --patch for issue $ISSUE" >&2
-  "$SCRIPT_DIR/run-code.sh" "$ISSUE" --patch >> "$LOG_FILE" 2>&1
-  echo "[apply-fallback] code-patch-silent-no-op: done" >&2
+  echo "[apply-fallback] code-patch-silent-no-op: completion check still reports matches_expected:false after retry/skip; escalating to Tier 3" >&2
+  return 1
 }
 
 # Handler: json-mode-silent-hang
@@ -131,13 +140,16 @@ case "$symptom_anchor" in
       "- N/A (resolved by Tier 2 fallback catalog)"
     ;;
   code-patch-silent-no-op)
-    apply_code_patch_silent_no_op_retry
-    printf '%s\n' \
-      "### Orchestration Anomalies" \
-      "- **[code-patch-silent-no-op]** Tier 2 fallback applied: phase=\`$PHASE\`, action=run-code.sh-patch-retry, result=recovered." \
-      "" \
-      "### Improvement Proposals" \
-      "- N/A (resolved by Tier 2 fallback catalog)"
+    if apply_code_patch_silent_no_op_retry; then
+      printf '%s\n' \
+        "### Orchestration Anomalies" \
+        "- **[code-patch-silent-no-op]** Tier 2 fallback applied: phase=\`$PHASE\`, action=run-code.sh-patch-retry, result=recovered." \
+        "" \
+        "### Improvement Proposals" \
+        "- N/A (resolved by Tier 2 fallback catalog)"
+    else
+      exit 1
+    fi
     ;;
   json-mode-silent-hang)
     apply_json_mode_silent_hang_retry

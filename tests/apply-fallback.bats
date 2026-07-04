@@ -32,6 +32,15 @@ fi
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/git"
+
+    # Default mock: reconcile-phase-state.sh reports completion succeeded.
+    # Individual tests override this to simulate matches_expected:false.
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":true}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
 }
 
 teardown() {
@@ -153,6 +162,36 @@ MOCK
     [[ "$output" == *"Orchestration Anomalies"* ]]
     [[ "$output" == *"dco-signoff-missing-autofix"* ]]
     [[ "$output" == *"result=recovered"* ]]
+}
+
+@test "code-patch-silent-no-op: retry itself returns silent no-op → not reported as recovered, escalates to Tier 3" {
+    LOG_FILE="$BATS_TEST_TMPDIR/test.log"
+    echo "Warning: claude exited 0 but code-patch phase did not complete (silent no-op)." > "$LOG_FILE"
+
+    RUN_CODE_LOG="$BATS_TEST_TMPDIR/run-code.log"
+    cat > "$MOCK_DIR/run-code.sh" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$RUN_CODE_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    # Override the default mock: retry completed (exit 0) but produced no commit,
+    # so the post-retry completion check still reports matches_expected:false.
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    run bash "$SCRIPT" code-patch 42 --log "$LOG_FILE"
+    [ "$status" -ne 0 ]
+    [[ "$output" != *"result=recovered"* ]]
+
+    # The retry was still attempted before the completion check failed
+    grep -q "42" "$RUN_CODE_LOG"
+    grep -q -- "--patch" "$RUN_CODE_LOG"
 }
 
 @test "apply-fallback: code-patch-silent-no-op: stdout contains Orchestration Anomalies metadata" {
