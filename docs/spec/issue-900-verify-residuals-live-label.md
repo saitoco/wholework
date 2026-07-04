@@ -4,6 +4,10 @@
 
 No new comments since last phase.
 
+## Autonomous Auto-Resolve Log
+
+- **`phase/ready` ラベル不在 (Step 3)**: Issue #900 のラベルは `triaged`, `phase/code`, `retro/verify` のみで `phase/ready` が存在しなかった (`reconcile-phase-state.sh --check-precondition` も同じ理由で `matches_expected=false` を返した)。ただし Spec (本ファイル) は既に作成済みであり内容も充実しているため、auto-resolve として実行を続行した。`phase/code` ラベルが既に付与されている状態は、直前の `/code` 実行が Step 4 (ラベル遷移) まで到達した後 commit 前に中断した (worktree branch が merge されず破棄された) ことを示唆する。
+
 ## Overview
 
 `scripts/get-auto-session-report.sh` の `### Verify Phase Residuals` セクションは、`phase_start`/`phase_complete` (`phase=="verify"`) イベントの差分で残留 Issue を検出する設計だが、`/verify` はラッパーなしの Skill 呼び出しでありこれらのイベントを一切 emit しない。そのため本セクションは実装以来一度も残留を検出したことがない。検出方式を「セッション中に処理された Issue 番号」×「現在の `phase/verify` ラベル状態 (live lookup)」に置き換える。

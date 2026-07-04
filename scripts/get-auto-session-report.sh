@@ -247,16 +247,11 @@ VERIFY_REOPEN_CYCLES=$(echo "$EVENTS_JSON" | jq '[.[] | select(.event == "verify
 # Backfilled phase_complete events
 BACKFILLED_COUNT=$(echo "$EVENTS_JSON" | jq '[.[] | select(.event == "phase_complete" and .backfilled == true)] | length' 2>/dev/null || echo 0)
 
-# Verify phase residuals: issues that have phase_start for verify but no phase_complete for verify
-VERIFY_RESIDUALS=$(echo "$EVENTS_JSON" | jq -r '
-  . as $all |
-  [.[] | select(.event == "sub_complete" and (.exit_code == "0" or .exit_code == 0)) | .issue] as $completed |
-  ([$all[] | select(.event == "phase_start" and .phase == "verify") | .issue] -
-   [$all[] | select(.event == "phase_complete" and .phase == "verify") | .issue]) |
-  unique |
-  map(select(. as $i | $completed | contains([$i]) | not)) |
-  .[]
-' 2>/dev/null || true)
+# Verify phase residuals: issues currently carrying the phase/verify label (live lookup).
+# Populated below in the GitHub state lookups block, since /verify is a wrapper-less Skill
+# invocation and never emits phase_start/phase_complete(phase=="verify") events (see #900).
+VERIFY_RESIDUALS=""
+VERIFY_RESIDUALS_NO_GITHUB_NOTE=""
 
 # Phase Activity Summary — phase_start/phase_complete counts per phase
 PHASE_ACTIVITY_TABLE=$(echo "$EVENTS_JSON" | jq -r '
@@ -472,11 +467,18 @@ if [[ "$NO_GITHUB" == "false" ]]; then
       FULLY_CLOSED=$(( FULLY_CLOSED + 1 ))
     elif echo "$_labels" | grep -q "phase/verify"; then
       VERIFY_REMAINING=$(( VERIFY_REMAINING + 1 ))
+      if [[ -z "$VERIFY_RESIDUALS" ]]; then
+        VERIFY_RESIDUALS="$_num"
+      else
+        VERIFY_RESIDUALS="${VERIFY_RESIDUALS}
+${_num}"
+      fi
     fi
   done
 else
   FULLY_CLOSED="N/A (--no-github)"
   VERIFY_REMAINING="N/A (--no-github)"
+  VERIFY_RESIDUALS_NO_GITHUB_NOTE="(--no-github mode: cannot detect phase/verify residuals via live label lookup. Re-run without --no-github to populate this section.)"
 fi
 
 # Compute throughput (issues/hr from wall-clock, reusing epoch values computed above)
@@ -583,7 +585,7 @@ cat << REPORT_EOF
 ## Metrics
 
 > Known structural gaps in this section (see Issue #875 Out of Scope):
-> - The verify phase does not emit phase_start/phase_complete events (/verify is a wrapper-less Skill invocation), so it is not counted here.
+> - The verify phase does not emit phase_start/phase_complete events (/verify is a wrapper-less Skill invocation), so it is not counted in the Phase Activity Summary / Sub-Issue Completion Timeline phase breakdown.
 > - Manually-performed silent no-op recoveries do not go through Tier 1/2/3 machinery, so they are not reflected in Recovery Events.
 > - The Phase breakdown order below follows event occurrence order, not a fixed pipeline order.
 
@@ -635,7 +637,9 @@ ${RECOVERY_EVENTS}
 ### Verify Phase Residuals
 
 $(
-  if [[ -z "$VERIFY_RESIDUALS" ]]; then
+  if [[ -n "$VERIFY_RESIDUALS_NO_GITHUB_NOTE" ]]; then
+    echo "$VERIFY_RESIDUALS_NO_GITHUB_NOTE"
+  elif [[ -z "$VERIFY_RESIDUALS" ]]; then
     echo "(none)"
   else
     # verify-type breakdown: observation / opportunistic / manual

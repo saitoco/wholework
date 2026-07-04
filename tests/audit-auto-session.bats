@@ -2,6 +2,9 @@
 
 # Tests for scripts/get-auto-session-report.sh
 # Uses synthetic .jsonl fixtures and --no-github flag for hermetic execution.
+# Exception: "verify-type breakdown appears in Verify Phase Residuals section" exercises the
+# live `phase/verify` label lookup path, so it mocks `gh` via PATH (see tests/get-issue-type.bats
+# for the same convention) instead of using --no-github.
 
 PROJECT_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 SCRIPT="$PROJECT_ROOT/scripts/get-auto-session-report.sh"
@@ -135,13 +138,12 @@ FIXTURE_EOF
 }
 
 @test "success: verify-type breakdown appears in Verify Phase Residuals section" {
-    # Issue 471: has verify phase_start but no phase_complete (residual)
-    # Issue 645: same
+    # Issue 471 and 645 both still carry the live phase/verify label (mocked below),
+    # which is now the sole detection source (#900 — phase_start/phase_complete(phase="verify")
+    # events are never emitted in production, so the old event-diff approach never fired).
     cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
 {"ts":"2026-06-15T10:00:00Z","issue":471,"event":"sub_start","session_id":"abc-vtype","size":"M"}
-{"ts":"2026-06-15T10:01:00Z","issue":471,"event":"phase_start","session_id":"abc-vtype","phase":"verify"}
 {"ts":"2026-06-15T10:02:00Z","issue":645,"event":"sub_start","session_id":"abc-vtype","size":"M"}
-{"ts":"2026-06-15T10:03:00Z","issue":645,"event":"phase_start","session_id":"abc-vtype","phase":"verify"}
 FIXTURE_EOF
 
     # Create issue body fixtures with verify-type markers in Post-merge section
@@ -163,8 +165,27 @@ BODY_EOF
 - [ ] Manual review of output format <!-- verify-type: manual -->
 BODY_EOF
 
+    # Mock `gh` via PATH (tests/get-issue-type.bats convention) so the live phase/verify
+    # label lookup finds both issues without --no-github.
+    MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
+    mkdir -p "$MOCK_DIR"
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" ]]; then
+    echo "phase/verify"
+    exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
     export WHOLEWORK_ISSUE_BODY_DIR="$BATS_TEST_TMPDIR/issue-bodies"
-    run bash "$SCRIPT" "abc-vtype" --metrics-only --no-github
+    run bash "$SCRIPT" "abc-vtype" --metrics-only
     [ "$status" -eq 0 ]
 
     echo "$output" | grep -q "Verify Phase Residuals"

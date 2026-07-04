@@ -3,6 +3,9 @@
 # Direct unit tests for scripts/get-auto-session-report.sh
 # Covers: session_id filter, --since list mode, empty jsonl, --metrics-only stdout output.
 # All tests use --no-github for hermetic execution.
+# Exception: the "live phase/verify label lookup" test below mocks `gh` via PATH
+# (see tests/get-issue-type.bats for the same convention) instead of using --no-github,
+# since it exercises the live label lookup path directly (#900).
 
 PROJECT_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 SCRIPT="$PROJECT_ROOT/scripts/get-auto-session-report.sh"
@@ -123,4 +126,50 @@ FIXTURE_EOF
     echo "$output" | grep -q "Concurrent Commits\|concurrent_commit_detected\|Concurrent commits" || true
     # The line for the commit without a #NNN hint should be present (without an issue hint).
     echo "$output" | grep -q "deadbeef"
+}
+
+@test "Verify Phase Residuals: issue carrying live phase/verify label is detected" {
+    # #900: detection is based solely on the current phase/verify label (live lookup),
+    # not on phase_start/phase_complete(phase=="verify") events (which /verify never emits).
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-06-14T10:00:00Z","issue":300,"event":"sub_start","session_id":"session-residual","size":"M"}
+FIXTURE_EOF
+
+    MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
+    mkdir -p "$MOCK_DIR"
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" ]]; then
+    if [[ "$*" == *"body,title"* ]]; then
+        echo '{"body":"","title":"#300"}'
+    else
+        echo "phase/verify"
+    fi
+    exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" "session-residual" --metrics-only
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "### Verify Phase Residuals"
+    echo "$output" | grep -q "#300"
+    ! echo "$output" | grep -qE "^\(none\)$"
+}
+
+@test "Verify Phase Residuals: --no-github shows explicit non-detection note" {
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-06-14T10:00:00Z","issue":300,"event":"sub_start","session_id":"session-nogh","size":"M"}
+FIXTURE_EOF
+
+    run bash "$SCRIPT" "session-nogh" --metrics-only --no-github
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "### Verify Phase Residuals"
+    echo "$output" | grep -q -- "--no-github mode: cannot detect phase/verify residuals"
 }

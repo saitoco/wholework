@@ -49,7 +49,7 @@ The following patterns have caused silent bugs where all structural verify comma
 | Pattern | Symptom | Root Cause |
 |---------|---------|-----------|
 | `THROUGHPUT` metric always `N/A` | ISO8601 timestamp (`2026-06-14T22:00:00Z`) passed to `tonumber` fails silently because the `Z` suffix is non-numeric | Use `gsub("Z$";"") | tonumber` or `fromdate` instead of bare `tonumber` for ISO8601 strings |
-| `VERIFY_RESIDUALS` always empty | After `select(...)` filter in a jq pipe, `. ` refers to the filtered element but the outer context (full object) is lost | Bind the full input with `. as $root` before filtering; reference `$root` where the full object is needed (jq context loss) |
+| `VERIFY_RESIDUALS` always empty | After `select(...)` filter in a jq pipe, `. ` refers to the filtered element but the outer context (full object) is lost | Bind the full input with `. as $root` before filtering; reference `$root` where the full object is needed (jq context loss). A deeper structural cause was found in #900: the original design computed residuals from a `phase_start`/`phase_complete` (`phase=="verify"`) event diff, but `/verify` is a wrapper-less Skill invocation that never emits those events in production — the diff was always an empty-set-minus-empty-set, independent of the jq context-loss bug. Fixed by replacing the event-diff computation with a live `phase/verify` label lookup integrated into the existing per-issue GitHub state lookup loop. |
 
 ### Example: Input → Expected Output Assertion
 
