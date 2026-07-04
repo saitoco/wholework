@@ -64,6 +64,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
+## 2026-07-05 07:35 UTC: code-pr-silent-no-op
+
+### Context
+- Issue #902, phase: code-pr
+- Source: manual-parent-recovery
+- Wrapper: run-code.sh, exit code: 1
+- Log tail: "Warning: claude exited 0 but code-pr phase did not complete (silent no-op) ... auto-retry: max iterations reached (3/3)"
+
+### Diagnosis
+- code-pr フェーズが worktree branch `worktree-code+issue-902` に実装コミット `ae0d6165` (4 files, +98) を作成したが、push / PR 作成に至らず終了。run-code.sh の auto-retry が 3/3 まで回ったが各回とも no-op (コミット済みを検知せず push+PR に進めなかった)。#906/#907 で対応中の `code-patch-silent-no-op` の pr-route 変種。standalone `run-code.sh --pr` は run-auto-sub.sh の `code_phase_milestone` (post-commit → push-and-pr) resume を持たないため取りこぼした。
+
+### Recovery Applied
+- parent session が worktree branch の commit を確認 (`git log origin/main..worktree-code+issue-902` で `ae0d6165` を検出) し、手動で `git push -u origin worktree-code+issue-902` + `gh pr create` (PR #909) を実行。以降 review → merge → verify は正常完走。
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 起票済み #910 (code フェーズ follow-up の重複防止は別件だが同 retro で起票)。pr-route silent-no-op resume 欠如は #906/#907 の関連領域として要確認 (standalone run-code.sh --pr への milestone resume 適用)
+
 ## 2026-07-04 15:25 UTC: code-pr-tier3-recovery
 
 ### Context
