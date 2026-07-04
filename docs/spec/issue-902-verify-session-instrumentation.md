@@ -71,3 +71,33 @@
 - **Issue #900 との整合性確認**: `scripts/get-auto-session-report.sh` の Verify Phase Residuals 検出は Issue #900 でライブラベル参照方式 (`gh issue list --label phase/verify`) に切り替え済みであり、本 Issue が追加する `phase_start`/`phase_complete` (phase=verify) イベントには依存しない。したがって本実装は既存の集計ロジックに影響しない、純粋な追加のみの変更である。
 - **フォローアップ候補 (本 Spec のスコープ外)**: `scripts/get-auto-session-report.sh` 内の Metrics 出力キャベア (「The verify phase does not emit phase_start/phase_complete events...」という一文) は、本 Issue 実装後は事実と異なる記述になる。同ファイルの `PHASE_ACTIVITY_TABLE`/`_phase_breakdown` 集計ロジック自体は `.phase` 値ベースの汎用実装のため、コード変更なしで `verify` フェーズも自動的に集計対象に含まれる。ただし当該キャベア文言の削除・更新は本 Issue の Acceptance Criteria に含まれないスコープ外の変更のため、別 Issue での対応を推奨する。
 - **重複 Issue のクローズ状況**: #898・#899 は `/issue` フェーズで本 Issue (#902) を正 (canonical) として重複クローズ済み。#898 は実装未了で「#902 を正として実装を進める」と明記されている。本 Spec の設計に影響する重複実装は存在しない。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+実装は Implementation Steps 1〜5 の内容と厳密に一致していた (発火箇所・イベント名・フィールド名・Step 11 の5終端分岐カバレッジすべて)。ただし Step 3 のコードスニペットに含まれていた `${N}`/`${RESPONSE}` という bash 変数代入前提の記法は、本 Spec 自身がそのまま実装へ転記した結果であり、コード化フェーズで新たに生じた乖離ではない。`skills/verify/SKILL.md` の既存慣例 (`{N}` のようなプレースホルダーは `$` なしで書く。実際の bash 変数を指す場合のみ `${NEXT_ITERATION}` のように `$` を使う) との不整合が Spec 作成時点から埋め込まれていたことになる。次回同種の Spec 作成時は、SKILL.md 内の既存コードスニペット記法 (代入済み変数か prose プレースホルダーか) を踏襲するよう明記するとよい。
+
+### Recurring issues
+
+なし。今回の2件の SHOULD 指摘 (記法不整合、`docs/structure.md` の記述漏れ) はいずれも単発の軽微な指摘であり、過去レビューで繰り返し出ているパターンとは異なる。
+
+### Acceptance criteria verification difficulty
+
+3件すべて rubric ベースで、うち1件は `file_contains` による補助検証も付与されていたため、判定に迷う UNCERTAIN は発生しなかった。Post-merge の1件は `verify-type: opportunistic` であり `/merge` 後の次回 `/verify` 実行で観測されるため、本レビューでの判定対象外として扱った。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Pre-merge AC 3件はすべて PASS。`file_contains` 補助検証済みの2件を含め UNCERTAIN なし
+- SHOULD指摘2件 (`${N}`/`${RESPONSE}` 記法不整合、`docs/structure.md` の記述漏れ) はレビュー中に修正 (追加コミット `78fafc29`)
+- `docs/structure.md` への指摘は本PRの diff 外ファイルのため line comment ではなく Review body の General Comments に記載 (GitHub API は diff 外パスへの line comment を 422 で拒否する)
+
+### Deferred Items
+- `scripts/get-auto-session-report.sh` の Metrics 出力キャベア文言 (「The verify phase does not emit phase_start/phase_complete events...」) は本実装後は事実と異なる記述になるが、Spec の Notes 記載通りスコープ外として別 Issue 送りとする
+- Post-merge AC (opportunistic): 次回 `/merge` 後の `/verify` 実行で `phase_start`/`phase_complete`/`verify_user_confirm` の実記録を観測する必要あり
+
+### Notes for Next Phase
+- `/merge` 実行時、追加コミット `78fafc29` (レビュー指摘対応) を含めてマージすること
+- マージ後の次回 `/verify` 実行時、Post-merge AC の opportunistic 観測を忘れずに行うこと
