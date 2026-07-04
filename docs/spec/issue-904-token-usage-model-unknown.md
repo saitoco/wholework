@@ -41,6 +41,7 @@ No new comments since last phase.
 2. `tests/run-auto-sub.bats` の既存 `token_usage: emit_event called ...` テスト (L585-627) の fixture JSON を実際の CLI 出力形状に合わせて書き換え (`"model":null` を含み、`modelUsage` に単一キーを持つ形)、アサーションを `grep -q "model=<実ID>"` へ強化する (after 1) (→ acceptance criteria AC1)
 3. `tests/run-auto-sub.bats` に、`modelUsage` に2キー (トークン合計が異なる) を持つ fixture を用いた新規テストケースを追加し、トークン合計最大のキーが `model=` として emit されることを検証する (after 1) (→ acceptance criteria AC3)
 4. `docs/reports/event-log-schema.md` の `token_usage` イベント節に、複数 `modelUsage` キー時の主要 model 選択ルールを1文追記する (→ ドキュメント整合性、直接対応する AC なし)
+5. `tests/run-auto-sub.bats` に、`modelUsage` 選択 jq 式を直接検証する compute テスト (単一キー、複数キー、`modelUsage` 欠如の3ケース) を追加する (`skills/code/stale-test-check.md` の jq compute logic ガイドラインに従う。after 3) (→ acceptance criteria AC1, AC3 の追加裏付け)
 
 ## Verification
 
@@ -62,6 +63,34 @@ No new comments since last phase.
 - 複数 `modelUsage` キーのトークン合計が完全に同点の場合にどちらのキーが選ばれるかは jq `max_by` の実装挙動に依存するが、Issue の受入条件はこの挙動を規定しておらず本 Spec でも追加の規定は行わない (Issue フェーズの Auto-Resolve Log が採用した「最小リスクな解釈」の範囲内)。
 - `jq` の `max_by` / `to_entries` / `// empty` の各構文は `scripts/get-auto-session-report.sh:346` で既に `max_by` が使われているなど、本リポジトリの既存パターンと整合している。加えて実サンプルファイル (`.tmp/token-usage-891.json`, `-884.json`) に対して実際に実行し、意図通りの挙動 (単一キー → そのキー、2キー → トークン合計最大のキー) を確認済み。
 - `docs/reports/event-log-schema.md` は `modules/doc-checker.md` の Impact Assessment 既定スコープ (`docs/reports/` は除外対象) の対象外だが、Issue 本文の Reference が直接この節を指しており、本修正で `model` フィールドの実質的な意味 (常に `unknown` → 実 ID、かつ新規のタイブレークルール) が変わるため、Changed Files に含めた。
+
+## Code Retrospective
+
+### Deviations from Design
+- Spec の Implementation Steps 1-4 には明記されていなかったが、`skills/code/stale-test-check.md` の「jq compute Logic: Dedicated Bats Test Cases」ガイドラインに従い、`modelUsage` 選択ロジック (jq の `to_entries` / `max_by` 式) を直接検証する dedicated compute テストを3件追加した (単一キー、複数キー、`modelUsage` 欠如)。`run-auto-sub.sh` 全体をモック経由で実行する既存の統合テストだけでは、jq 式の compute 誤り (例: `max_by` の対象フィールド取り違え) が `grep`/`file_contains` 等の構造チェックからは検知不能なため。Implementation Steps に step 5 として追記済み。
+
+### Design Gaps/Ambiguities
+- N/A (Issue/Spec フェーズで3件の曖昧点 [書き込み側修正の要否・複数 model キー時の選択ルール・Reference 行番号] が既に自動解決済みで、Code フェーズで新たに発見した設計上のギャップはなかった)
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `_model` 抽出を `jq -r '.modelUsage // {} | to_entries | if length == 0 then empty else (max_by(.value.inputTokens + .value.outputTokens) | .key) end'` に置換 — 実サンプル (`.tmp/token-usage-891.json`, `-884.json`) で単一キー・複数キーとも意図通りの挙動を確認済み
+- 既存の統合テスト (fixture 経由の `run-code.sh` モック) に加え、jq 式を直接検証する compute テストを3件追加 — `skills/code/stale-test-check.md` ガイドラインに従い、compute ロジックのバグを構造チェックとは独立に検知できるようにした
+- 修正範囲は `run-auto-sub.sh` の抽出ロジックのみに限定 (書き込み側スクリプトは無関係) — Issue/Spec フェーズの調査結論を踏襲
+
+### Deferred Items
+- Post-merge observation AC (次回 `/auto` 実行後の実 model ID 記録確認) は `/verify` フェーズで観察する
+- 複数 `modelUsage` キーのトークン合計が完全同点の場合の tie-break 挙動は未規定のまま (Spec Notes に明記済み、追加規定は行わない方針)
+
+### Notes for Next Phase
+- Pre-merge AC 3件は全て PASS 判定済み (rubric 2件 + grep 1件)、Issue チェックボックス更新済み
+- Full bats suite (`bats tests/`, 1070件) が behavioral change detection により実行され全件 PASS — `run-auto-sub.sh` を参照する `tests/auto-sub-observability.bats` / `tests/run-code.bats` 含む
+- `docs/reports/event-log-schema.md` 以外の steering docs (`docs/migration-notes.md`, `docs/structure.md`, `docs/tech.md`, `docs/workflow.md`) は `run-auto-sub.sh` への参照はあるが `token_usage`/`model` フィールドとは無関係と確認済み、変更不要
 
 ## Auto Retrospective
 ### Orchestration Anomalies
