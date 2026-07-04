@@ -90,3 +90,30 @@
 
 ### Notes for Next Phase
 - `/verify 903` 実行時、Issue AC の post-merge検証項目は「なし」(Issue AC has no post-merge items) と明記されている点に注意。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC を rubric + file_contains の多層構成にした設計は verify で機械的に検証でき良好
+- spec は wall-clock 測定を「Sonnet 5 で数件の /code・/review を新規実行」で計画したが、code フェーズで cost/副作用の観点から却下され log ベース再構成 (#877/#878 と同方式) に変更された。#877/#878 が既に log ベース手法を確立していたため、spec 段階でその方式を第一候補にできた余地がある
+
+#### design
+- watchdog 定数の校正基準 (wall-clock <80% → 据え置き、以上 → ~1.3-1.4× 引き上げ) を Issue 本文で事前確定していたのは良い設計。過剰引き上げ (#628 の 2×) を Icebox #596 のトレードオフを根拠に回避した判断も妥当
+
+#### code
+- 手戻り (fixup/amend) なし。rubric 判定を独立 adversarial sub-agent 2件で検証した点は堅牢
+- **gap**: docs/tech.md (#903 entry) は L3 notable-judgment の prompt slimming を「a real, addressable candidate, filed as follow-up work」と記述したが、実際には follow-up Issue が起票されていない (merge phase handoff Deferred Items でも「別途起票が必要」と明記)。doc の記述が実態を先取り (overstate) している
+
+#### review
+- MUST 0、SHOULD 1 (customization.md 日英サンプル値ドリフト) を検出・即修正。CI 全 SUCCESS。有効に機能
+
+#### merge
+- conflict なし squash merge。#903 auto-close 済み
+
+#### verify
+- 全 pre-merge AC が rubric/file_contains で PASS。watchdog 定数 (4680/2600) と bats を確認。1st-attempt PASS
+
+### Improvement Proposals
+- **L3 auto-retrospective の notable-judgment prompt slimming follow-up が未起票**: docs/tech.md (#903 entry) と merge phase handoff Deferred Items の双方が、`/auto` L3 auto-retrospective の "notable judgment" ステップが純粋に機械的な判断のためにセッション全体の `events.jsonl` を生読み込みしている問題への対応 (jq 集計サマリ化) を follow-up として要すると記録している。しかし tech.md は「filed as follow-up work」と既に起票済みかのように記述しているにもかかわらず、実際の Issue は存在しない。この follow-up (L3 notable-judgment の events.jsonl 入力を jq 集計サマリに置き換える prompt slimming) を起票し、tech.md の記述と実態を整合させる
