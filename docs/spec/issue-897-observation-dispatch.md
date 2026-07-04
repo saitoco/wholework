@@ -77,20 +77,17 @@ No new comments since last phase (`phase/ready` 付与時刻 2026-07-04T20:21:51
 - 上記の forbidden expression 検出により、`modules/observation-trigger.md` の見出し・文言を1箇所リワードする追加コミットが発生した (実装ロジック自体の手戻りではなく、用語選択のみの修正)。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Pre-merge rubric AC 4件 (A〜D) はすべて実装内容から直接 PASS 判定し、UNCERTAIN・FAIL なし
-- review-light agent (light mode, 4 perspectives) で CONSIDER 1件 (Resume mode の dispatch 除外漏れ) を検出し、影響が低く既存パターンの踏襲であることから修正はスキップと判断した
-- CI 全ジョブ SUCCESS、MUST issue なしのため Step 12 修正作業・Step 12.3 再チェックは実施なし
+- Squash merge を conflict なしでそのまま実行 (`gh pr merge --squash --delete-branch`)。CI SUCCESS・review approved 済みのため conflict 解消手順・テスト再実行は不要だった
 
 ### Deferred Items
-- CONSIDER issue (`skills/auto/SKILL.md:1135`, Resume mode の `BATCH_LIST`/`REMAINING` 再利用による dispatch 除外漏れ) は対応見送り。将来 batch checkpoint と合わせた「dispatch/processed 済み」セット永続化を検討する余地がある (review retrospective に記録済み)
+- CONSIDER issue (`skills/auto/SKILL.md:1135`, Resume mode の `BATCH_LIST`/`REMAINING` 再利用による dispatch 除外漏れ) は本 PR のスコープ外のまま据え置き (review retrospective に記録済み)
 - Post-merge AC (`次回 /auto --batch 実行での自動 dispatch 観察`, `verify-type: observation event=auto-run`) は引き続き `/verify` フェーズで観察待ち
 
 ### Notes for Next Phase
-- `/merge` フェーズでは MUST issue なし・CI 全SUCCESSのため通常のマージ手順で進行可能
-- Post-merge AC の観察は次回 `/auto --batch` 実行時まで保留のままでよい
+- `/verify` フェーズでは Post-merge AC (observation event の実観察) が唯一の残項目。次回 `/auto --batch` 実行を待つ必要があるため、即時観察できない場合は保留判断が妥当
 
 ## review retrospective
 
