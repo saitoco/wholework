@@ -70,6 +70,19 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class) — `/issue 906 --non-interactive` の Issue Retrospective。実装対象ファイルの訂正 (`apply-fallback.sh`) と AC1〜3 の確定内容を記録したコメント。内容は既に Issue 本文に反映済みのため、Spec 側での追加対応は不要と判断した。
+
+## Phase Handoff
+<!-- phase: merge -->
+
+### Key Decisions
+- PR #907 は mergeable=true (CI green, review approved) のため conflict 解消ステップをスキップし、squash merge を直接実行した
+- squash merge 後、`review+pr-907` worktree が旧ブランチ `worktree-code+issue-906` を占有していたため merge 完了を妨げていた stale worktree を削除し、ローカルブランチも削除した
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- Post-merge verification は次回 `/auto --batch` 実行時に Tier 2 fallback 発火 Issue の `result=recovered` エントリと実 commit の一致を観察することで行う (Spec の Post-merge 節参照)
 - `/code 906 --pr --non-interactive` (code フェーズ): No new comments since last phase.
 
 ## Code Retrospective
