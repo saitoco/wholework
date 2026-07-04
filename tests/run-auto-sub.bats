@@ -669,6 +669,27 @@ MOCK
     grep -q "model=claude-sonnet-5" "$BATS_TEST_TMPDIR/emit.log"
 }
 
+@test "compute: modelUsage jq expression selects single key directly" {
+    local input='{"model":null,"modelUsage":{"claude-sonnet-5":{"inputTokens":100,"outputTokens":50}}}'
+    local result
+    result=$(echo "$input" | jq -r '.modelUsage // {} | to_entries | if length == 0 then empty else (max_by(.value.inputTokens + .value.outputTokens) | .key) end')
+    [ "$result" = "claude-sonnet-5" ]
+}
+
+@test "compute: modelUsage jq expression selects highest-total key among multiple" {
+    local input='{"model":null,"modelUsage":{"claude-sonnet-5":{"inputTokens":52549,"outputTokens":53013},"claude-haiku-4-5-20251001":{"inputTokens":57614,"outputTokens":1285}}}'
+    local result
+    result=$(echo "$input" | jq -r '.modelUsage // {} | to_entries | if length == 0 then empty else (max_by(.value.inputTokens + .value.outputTokens) | .key) end')
+    [ "$result" = "claude-sonnet-5" ]
+}
+
+@test "compute: modelUsage jq expression returns empty when modelUsage is absent" {
+    local input='{"model":null}'
+    local result
+    result=$(echo "$input" | jq -r '.modelUsage // {} | to_entries | if length == 0 then empty else (max_by(.value.inputTokens + .value.outputTokens) | .key) end')
+    [ -z "$result" ]
+}
+
 @test "test_result: emit_event called when bats output detected in log" {
     export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
     export EMIT_ISSUE_NUMBER="42"
