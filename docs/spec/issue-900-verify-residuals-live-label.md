@@ -55,3 +55,29 @@ No new comments since last phase.
 - **`tests/audit-auto-session.bats` の既存テストが本修正で壊れる件**: 同ファイルの `"success: verify-type breakdown appears in Verify Phase Residuals section"` テストは、コメントで明示されている通り「Issue 471: has verify phase_start but no phase_complete (residual)」という、本 Issue が破棄対象とする前提 (合成イベントによる残留判定) に依存していた。本修正後はこの前提が意味を持たなくなるため、`gh` mock ベースへの書き換えが必須。Changed Files と Implementation Steps に明記済み。
 - **AC2 のテスト追加先**: Issue body の rubric 記述が `tests/get-auto-session-report.bats` を名指ししているため、新規テストは同ファイルに追加する。ただし `tests/audit-auto-session.bats` の既存テスト修正も (回帰防止のため) 別途必須であり、両ファイルとも Changed Files に含めた。
 - **キャベア文言の扱い**: Metrics 冒頭のキャベア「verify phase は計上されない」は Phase Activity Summary / Sub-Issue Completion Timeline の phase breakdown については本修正後も真であり続ける (`/verify` は依然として `phase_start`/`phase_complete` を emit しないため)。Verify Phase Residuals セクションについてのみ真でなくなるため、キャベア全体を削除せず記述範囲を限定する。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜5 の順序・内容通りに実装した。
+
+### Design Gaps/Ambiguities
+- Spec の Implementation Steps 4/5 は「`$BATS_TEST_TMPDIR/mocks/gh` mock で `phase/verify` ラベルを返す」とのみ記述していたが、実際には同じ `gh` mock 実行ファイルが `gh issue view <n> --json labels ...` (ラベル判定用) と `gh issue view <n> --json body,title` (verify-type breakdown 用、`WHOLEWORK_ISSUE_BODY_DIR` 未設定時のフォールバック経路) の両方から呼ばれるため、引数を見て分岐する必要があった。単純に固定文字列 `"phase/verify"` を返すだけの mock では `--json body,title` 呼び出し先で jq が非JSON入力を受け取りパースエラーで異常終了した。
+
+### Rework
+- `tests/get-auto-session-report.bats` の新規テスト (`Verify Phase Residuals: issue carrying live phase/verify label is detected`) で上記の mock 分岐漏れにより最初 `bats` が FAIL (`status != 0`, jq parse error) した。`gh` mock に `--json body,title` を含むかどうかで応答を分岐する条件を追加して解消した (`tests/audit-auto-session.bats` の既存テストは `WHOLEWORK_ISSUE_BODY_DIR` を設定していたため同じ経路を通らず、この分岐漏れは表面化していなかった)。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `VERIFY_RESIDUALS` の検出を、既存の `FULLY_CLOSED`/`VERIFY_REMAINING` 計算ループ (`gh issue view --json labels` を Issue ごとに呼ぶループ) に統合し、新規の `gh` 呼び出しパターンを追加しなかった。
+- `--no-github` 実行時は空文字列ではなく明示的な `VERIFY_RESIDUALS_NO_GITHUB_NOTE` 文言をレンダーブロックで最優先表示するようにした。
+
+### Deferred Items
+- `/verify` が `phase_start`/`phase_complete` イベントを emit しない設計自体の変更 (Issue #875 Out of Scope として既知) は本 Issue のスコープ外のまま。
+- Post-merge AC (`次回 /auto --batch 完走後の観察`) は次回バッチ実行後に人手確認が必要。
+
+### Notes for Next Phase
+- `tests/audit-auto-session.bats` / `tests/get-auto-session-report.bats` の `gh` mock は `--json labels` と `--json body,title` の両方に応答できるよう分岐している点に注意 (単純な固定文字列 mock だと `--json body,title` 経路で jq パースエラーになる)。
+- Issue #900 の Pre-merge AC 3件は本フェーズで PASS 判定しチェック済み。Post-merge AC 1件は未チェックのまま残している。
