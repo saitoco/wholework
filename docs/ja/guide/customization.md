@@ -43,8 +43,8 @@ watchdog-timeout-seconds: 3600
 
 # フェーズ別上書き（オプション; watchdog-timeout-seconds より優先）
 # watchdog-timeout-spec-seconds: 1800
-# watchdog-timeout-code-seconds: 1800
-# watchdog-timeout-review-seconds: 2000
+# watchdog-timeout-code-seconds: 4680
+# watchdog-timeout-review-seconds: 2600
 # watchdog-timeout-merge-seconds: 600
 # watchdog-timeout-issue-seconds: 600
 
