@@ -122,7 +122,7 @@ MOCK
     [ "$output" = "2700" ]
 }
 
-@test "load_watchdog_timeout uses WATCHDOG_TIMEOUT_CODE_DEFAULT=3600 when phase is code" {
+@test "load_watchdog_timeout uses WATCHDOG_TIMEOUT_CODE_DEFAULT=4680 when phase is code" {
     cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
 #!/bin/bash
 echo ""
@@ -130,5 +130,5 @@ MOCK
     chmod +x "$MOCK_DIR/get-config-value.sh"
     run bash -c "source '$SCRIPT_DIR/watchdog-defaults.sh'; load_watchdog_timeout '$MOCK_DIR' 'code' 2>/dev/null; echo \$WATCHDOG_TIMEOUT"
     [ "$status" -eq 0 ]
-    [ "$output" = "3600" ]
+    [ "$output" = "4680" ]
 }

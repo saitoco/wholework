@@ -13,9 +13,13 @@ WATCHDOG_TIMEOUT_DEFAULT=2700
 #   - If true-stall detection becomes too slow, consider per-effort tuning (Icebox #596)
 #   - Empirical baseline: docs/reports/auto-session-performance-2026-06-13.md (Fable 5),
 #     docs/reports/auto-batch-list-mode-2026-06-14.md (Sonnet 4.6)
+#   - CODE_DEFAULT / REVIEW_DEFAULT raised ~1.3x (Sonnet 5 tokenizer recalibration,
+#     #903, docs/reports/sonnet-5-watchdog-recalibration.md): wall-clock samples
+#     recorded p95/max close to the prior 80% margin threshold under the Sonnet 5
+#     tokenizer (#878 measured 1.3-1.4x more tokens for equivalent content)
 WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800
-WATCHDOG_TIMEOUT_CODE_DEFAULT=3600
-WATCHDOG_TIMEOUT_REVIEW_DEFAULT=2000
+WATCHDOG_TIMEOUT_CODE_DEFAULT=4680
+WATCHDOG_TIMEOUT_REVIEW_DEFAULT=2600
 WATCHDOG_TIMEOUT_MERGE_DEFAULT=600
 WATCHDOG_TIMEOUT_ISSUE_DEFAULT=1200
 
