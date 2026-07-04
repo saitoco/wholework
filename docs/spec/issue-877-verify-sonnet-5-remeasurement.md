@@ -88,3 +88,23 @@ Sonnet 5 (2026-06-30 リリース) 環境下で `/verify` の interactive モー
 ### Notes for Next Phase
 - `/review` フェーズでは report の判定根拠 (特に「代理指標が #485 の本来の測定対象を捉えていない」という限界の説明) が rubric 上十分に明記されているかを重点確認してほしい
 - follow-up Issue #902 の作成は本 Issue の AC4 を満たす行為であり、`closes #877` とは独立して残る (902 は別 Issue として今後 triage される)
+
+## Issue Retrospective
+
+**非対話モード (`--non-interactive`) で実行。**
+
+### Triage
+- Type: Task / Size: M / Value: 3 (Impact低: blocking・mentions 0件、Alignment中: `docs/product.md` Vision の /verify コア workflow に直接関連)
+- Priority: 未検出のため据え置き (本文中の「Priority=high」は参照先 #485 の性質であり本 Issue 自体の優先度情報ではないと判断)
+- 重複候補: なし (#878 は Sonnet 5 関連だが tokenizer/context budget が対象で scope が異なる)
+- Blocked-by: #876 は既存の GitHub native 関係を確認済み (追加設定不要)
+
+### Acceptance Criteria 追加の判断根拠
+本 Issue は元々「Proposal (Outline)」のみで Acceptance Criteria セクションが存在しなかったため、既存の §A (測定シナリオ)・§B (判定基準)・§C (アウトプット) の記述内容から Pre-merge AC 4件を抽出・追加した。Post-merge は「なし」とした — アウトプットはレポートファイル作成と #485 への更新コメント/follow-up 作成であり、いずれも PR マージ前に完了・検証可能なため。
+
+### Auto-Resolved Ambiguity Points (詳細は Issue 本文末尾を参照)
+1. 測定対象 Issue の厳密な選定方法は明記せず既存の「3〜5件サンプリング」の記述を維持 (How は `/spec` フェーズの責務)
+2. Post-merge セクションを「なし」とした (SKILL.md de-prescription は判定結果次第の条件付き作業のため、本体 AC ではなく follow-up Issue のスコープとした)
+
+### Scope Assessment
+[non-interactive mode] Skipping high-stakes action: sub-issue splitting. Size M で単一アウトプット (レポート1件) のため、対話モードで再実行しても分割は不要と判断される見込み。
