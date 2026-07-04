@@ -88,3 +88,31 @@
 ### Bash 3.2 互換性
 
 #881 で確認済みの `|| true` を含むコード片をそのまま流用する。macOS システム bash (3.2) でも動作する構文のみを使用。
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1〜4 をそのまま実装し、コード片・挿入位置・テスト構成は Spec の記載と完全に一致した。
+
+### Design Gaps/Ambiguities
+
+N/A — Spec の Notes (既知の残存リスクの回答) で #881 からの引き継ぎ事項は既に解消済みであり、実装時に新たなギャップは見つからなかった。
+
+### Rework
+
+N/A — 各ステップは初回実装で bats テスト (`run-code.bats` / `run-review.bats` の `worktree-recovery` ケース) と `bats tests/` フルスイート (1050 件、失敗 0) を PASS した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- #881 (`run-merge.sh`) で確立済みの `MAIN_REPO_ROOT` キャプチャ + `cd` フォールバックパターンをそのまま `run-code.sh` / `run-review.sh` に適用し、独自の設計判断は追加しなかった (Spec 記載どおり)。
+- `run-code.bats` の `worktree-recovery` テストのみ、既定の no-op `$MOCK_DIR/git` モックを `rm -f` して実 git に戻した (`run-review.bats` は元々 git をモックしていないため不要)。
+
+### Deferred Items
+- `exec bash "$0" "$ISSUE_NUMBER" ...` (auto-retry 再実行) の `$0` 絶対パス解決問題は、本 Issue の AC (「trailing steps」の CWD 安全化) のスコープ外として明示的に除外 (Issue 本文 Auto-Resolved Ambiguity Points 参照)。必要になれば別 Issue で追跡。
+
+### Notes for Next Phase
+- Issue AC の rubric 検証 (verify-executor full mode) は 2 件とも PASS 済み。Issue body のチェックボックスは `/code` 実行中に更新済み。
+- `bats tests/` フルスイート (1050 件) を実行し、既存テストへの回帰がないことを確認済み (behavioral change 検知により full-suite override が発動)。
