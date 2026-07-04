@@ -77,17 +77,35 @@ No new comments since last phase (`phase/ready` 付与時刻 2026-07-04T20:21:51
 - 上記の forbidden expression 検出により、`modules/observation-trigger.md` の見出し・文言を1箇所リワードする追加コミットが発生した (実装ロジック自体の手戻りではなく、用語選択のみの修正)。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `AUTONOMY_TIER` gating (`L1`: advisory-only / `L2`・`L3`: dispatch) を `skills/triage/SKILL.md` の blocked-by backfill と同型パターンで実装した (Spec の設計判断通り)
-- dispatch 対象の除外は、単発ルートは現在処理中の `$NUMBER`、バッチルートは `BATCH_LIST` を用い、二重 dispatch を防いだ
-- `scripts/claude-watchdog.sh` は無変更 — stdout を捨てる既存呼び出しのため影響がないことをコード上で確認済み (137行目付近)
+- Pre-merge rubric AC 4件 (A〜D) はすべて実装内容から直接 PASS 判定し、UNCERTAIN・FAIL なし
+- review-light agent (light mode, 4 perspectives) で CONSIDER 1件 (Resume mode の dispatch 除外漏れ) を検出し、影響が低く既存パターンの踏襲であることから修正はスキップと判断した
+- CI 全ジョブ SUCCESS、MUST issue なしのため Step 12 修正作業・Step 12.3 再チェックは実施なし
 
 ### Deferred Items
-- dispatch 件数上限・コスト制御は Issue Notes の通り本 Issue のスコープ外のまま (`/spec` の Auto-Resolved Ambiguity Points で明記済み)
-- Post-merge AC (`次回 /auto --batch 実行での自動 dispatch 観察`, `verify-type: observation event=auto-run`) は `/verify` フェーズで観察待ち
+- CONSIDER issue (`skills/auto/SKILL.md:1135`, Resume mode の `BATCH_LIST`/`REMAINING` 再利用による dispatch 除外漏れ) は対応見送り。将来 batch checkpoint と合わせた「dispatch/processed 済み」セット永続化を検討する余地がある (review retrospective に記録済み)
+- Post-merge AC (`次回 /auto --batch 実行での自動 dispatch 観察`, `verify-type: observation event=auto-run`) は引き続き `/verify` フェーズで観察待ち
 
 ### Notes for Next Phase
-- `/review` フェーズでは `skills/review/SKILL.md` の `allowed-tools` に `Skill` を追加した点を含め、rubric 4件 (AC1〜4) の再確認を行うこと
-- Post-merge AC は次回 `/auto --batch` 実行時にバッチ対象外 Issue への `/verify` 自動 dispatch が観察されるまで保留のままでよい
+- `/merge` フェーズでは MUST issue なし・CI 全SUCCESSのため通常のマージ手順で進行可能
+- Post-merge AC の観察は次回 `/auto --batch` 実行時まで保留のままでよい
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — review-light agent (4 perspectives) は Spec の Implementation Steps 5件・rubric AC 4件すべてで実装と Spec の一致を確認した。乖離なし。
+
+### Recurring issues
+
+Nothing to note — 検出された issue は CONSIDER 1件のみで、複数箇所にまたがる同種の繰り返し issue ではない。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — Pre-merge AC 4件はすべて rubric 形式で、UNCERTAIN 判定なく PASS 判定できた。verify command の記述・網羅性に問題は見られなかった。
+
+### Improvement proposals
+
+- **[CONSIDER] Resume mode (`--batch --resume`) の `BATCH_LIST`/`REMAINING` 再利用による dispatch 除外漏れ** — `skills/auto/SKILL.md:1135` の observation scan dispatch 除外判定が resume 後の `REMAINING` を参照するため、resume 前に処理済みの Issue が除外対象から漏れ、冗長な `/verify` dispatch が発生しうる。本 PR のスコープ外の既存パターン (line 1104 の Pending manual confirmation と同型) であり、影響も低い (概ね idempotent) ため今回は対応見送り。将来的に batch checkpoint と合わせた「dispatch/processed 済み」セット永続化を検討する余地がある。
