@@ -439,16 +439,22 @@ run_phase_with_recovery() {
     fi
   fi
 
-  # concurrent_commit_detected: check for commits on origin/main since phase start
+  # concurrent_commit_detected: check for commits on origin/main since phase start,
+  # excluding this issue's own phase commits (identified via #N in the subject line)
   local _commits
   _commits=$(git log origin/main --since="@${PHASE_START}" --format="%H %an" 2>/dev/null || true)
   if [[ -n "$_commits" ]]; then
     local _phase_end; _phase_end=$(date +%s)
     local _since_sec=$(( _phase_end - PHASE_START ))
+    local _self_issue_pattern="#${issue}([^0-9]|$)"
     while IFS= read -r _commit_line; do
       [[ -z "$_commit_line" ]] && continue
       local _sha="${_commit_line%% *}"
       local _author="${_commit_line#* }"
+      local _subject; _subject=$(git log -1 --format="%s" "$_sha" 2>/dev/null || true)
+      if [[ "$_subject" =~ $_self_issue_pattern ]]; then
+        continue
+      fi
       emit_event "concurrent_commit_detected" "phase=${phase}" \
         "commit_sha=${_sha}" \
         "author=${_author}" \

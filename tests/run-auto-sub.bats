@@ -700,6 +700,90 @@ MOCK
       skip "concurrent_commit_detected event not logged (emit mock not capturing)"
 }
 
+@test "concurrent_commit_detected: self-issue-only commit is not emitted (no false positive)" {
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    export EMIT_ISSUE_NUMBER="42"
+
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() {
+  echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
+}
+_emit_comments_consumed() { :; }
+MOCK
+
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    # Mock git: origin/main has exactly one commit, authored by this issue's own
+    # phase (subject contains "closes #42"). Must not be treated as concurrent.
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+if [[ "$*" == *"log origin/main"* ]]; then
+  echo "aaa1111 Test User"
+  exit 0
+fi
+if [[ "$*" == *"log -1"* && "$*" == *"aaa1111"* ]]; then
+  echo "chore: patch (closes #42)"
+  exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    ! grep -q "concurrent_commit_detected" "$BATS_TEST_TMPDIR/emit.log" 2>/dev/null
+}
+
+@test "concurrent_commit_detected: other-issue commit is emitted while self-issue commit is excluded" {
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    export EMIT_ISSUE_NUMBER="42"
+
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() {
+  echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
+}
+_emit_comments_consumed() { :; }
+MOCK
+
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    # Mock git: origin/main has two commits since phase start — one from this
+    # issue's own phase (#42, must be excluded) and one from another issue's
+    # phase (#99, a true concurrent commit that must still be emitted).
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+if [[ "$*" == *"log origin/main"* ]]; then
+  printf '%s\n' "aaa1111 Test User" "bbb2222 Other User"
+  exit 0
+fi
+if [[ "$*" == *"log -1"* && "$*" == *"aaa1111"* ]]; then
+  echo "chore: patch (closes #42)"
+  exit 0
+fi
+if [[ "$*" == *"log -1"* && "$*" == *"bbb2222"* ]]; then
+  echo "chore: patch (closes #99)"
+  exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "concurrent_commit_detected.*commit_sha=bbb2222" "$BATS_TEST_TMPDIR/emit.log"
+    ! grep -q "commit_sha=aaa1111" "$BATS_TEST_TMPDIR/emit.log"
+}
+
 @test "run-auto-sub: tier2 recovery: writes Auto Retrospective to spec file" {
     export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
 
