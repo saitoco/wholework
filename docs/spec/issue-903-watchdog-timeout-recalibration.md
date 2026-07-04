@@ -79,15 +79,14 @@
 - 4条件すべて `rubric` / `file_contains` の verify command で明確に PASS 判定でき、UNCERTAIN は0件だった。verify command の記述自体も実装 (`docs/tech.md` の `#903` / `prompt slimming` という語の明記) と過不足なく対応しており、改善提案なし。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST issueは無し。SHOULD 1件 (`docs/guide/customization.md` / `docs/ja/guide/customization.md` のコメントアウト済みサンプル設定ブロックが旧値のまま) を検出し、`4680`/`2600` に修正・push済み。
-- 当該指摘はこのPRのdiffが触れていない行のため `gh-pr-review.sh` のインライン行コメントが `Line could not be resolved` で失敗し、General Comments (レビュー本文) に振り替えて投稿した。
-- Spec Changed Files 列挙外の2ファイル変更 (既存drift修正) は CONSIDER として記録のみで対応不要と判断。
+- `gh pr merge 912 --squash --delete-branch` で正常にマージ完了。mergeable=clean、CI success、review approved を事前確認済みでconflict解消は不要だった。
+- baseRefNameは`main`のため、PR body の `closes #903` によりIssueは自動クローズされる見込み。
 
 ### Deferred Items
-- `/auto` L3 auto-retrospective "notable judgment" ステップの events.jsonl 生読み込みを jq 集計サマリに置き換える改善は、引き続き follow-up Issue として別途起票が必要 (本 Issue のスコープ外、code フェーズからの引き継ぎ事項)。
+- `/auto` L3 auto-retrospective の events.jsonl 生読み込みをjq集計サマリに置き換える改善は、follow-up Issueとして別途起票が必要 (本Issueのスコープ外)。
 
 ### Notes for Next Phase
-- `/merge 912` 実行時、追加コミット (f5b989da, ドキュメントのサンプル値同期) が含まれることを確認。CIは全ジョブSUCCESS、再チェック (bats 11/11、validate-skill-syntax 0 errors、forbidden-expressions) もPASS済み。
+- `/verify 903` 実行時、Issue AC の post-merge検証項目は「なし」(Issue AC has no post-merge items) と明記されている点に注意。
