@@ -57,3 +57,34 @@ Sonnet 5 (2026-06-30 リリース) 環境下で `/verify` の interactive モー
 - **代理指標の限界**: 4指標のいずれも `/verify` 専用の計装 (wall-clock やユーザ介入回数の記録) は存在しない (`docs/sessions/*/events.jsonl` の `phase_start`/`phase_complete` イベントは `spec`/`code`/`review`/`merge` のみが対象で `verify` は対象外 — `run-verify.sh` が #485 で削除され in-session 実行に変わったため) 。レポートの数値は GitHub Issue タイムライン・コメントからの近似値であり、真の wall-clock や interactive プロンプト回数の正確な計測ではない。この限界をレポートの測定シナリオ節に明記すること
 - **カットオーバー日時の精度**: 2026-06-30 前後数時間以内に verify コメントが投稿された Issue は、実行時刻の Sonnet 4.6/5 判定が曖昧なため、コホートから除外するか個別に注記することを推奨する
 - 関連: `docs/reports/claude-sonnet-5-impact-strategy.md` §4.1 (decision matrix) / §4.5 (delegated to #877) / §8 (candidate issues) 、`docs/reports/claude-fable-5-impact-strategy.md` §4.3 (de-prescription audit 先例) 、`docs/translation-workflow.md` § Exclusions により `docs/reports/` は ja mirror 対象外 (追加作業不要)
+
+## Code Retrospective
+
+### Deviations from Design
+
+なし。Implementation Steps 1〜4 の順序・方法論どおりに実施した。
+
+### Design Gaps/Ambiguities
+
+- **代理指標の限界が判定そのものを左右した**: Spec Notes で事前に指摘していた「4指標いずれも `/verify` 専用の計装が存在しない」という限界が、実測の結果 NO-GO 判定の主因になった。具体的には、wall clock (label→コメント時間差) と verify command PASS 率の2指標はコホート間で有意差が無く、残り2指標 (ユーザ介入件数・reopen率) は改善方向の差が出たものの n=5 の小サンプルかつ #485 が本来対象とした `AskUserQuestion` 往復回数を全く捕捉していないため、判定の根拠として採用しなかった。これは Spec が事前に見込んでいたリスクが実際に顕在化した事例であり、今後同種の再測定 Issue を起票する際は計装の有無を先に確認すべきという教訓になる (→ follow-up #902 で計装追加を提案)
+- **Sonnet 4.6→5 切替境界の実務上の扱い**: 2026-06-30 当日にコメント投稿された Issue (#853/#854/#856/#857/#858/#860/#861) は Spec Notes 通り両コホートから除外した。除外により各コホート n=5 を確保できたが、母集団がやや逼迫気味だった (前後1週間の window でギリギリ5件ずつ) 。今後 window を広げる場合は 3〜4 週間に拡張する余地がある
+
+### Rework
+
+- Consumed Comments セクションへの追記を、誤って `EnterWorktree` 実行前 (main repo 側の絶対パス) に適用してしまい、`git status` で main repo 側に意図しない変更が残っていることに気づいて `git checkout --` で revert し、worktree 側のパスへ再適用する手戻りが発生した。原因は Spec 読み込み (Read) を worktree 突入前に行い、その後の Edit も同じ絶対パスを使い続けたこと。教訓: `/code` の "Edit/Write path conventions inside worktree" 規律は、worktree 突入 **前** に Read したファイルパスをそのまま使い続けないよう、EnterWorktree 直後に一度 `pwd` で CWD を再確認してから Edit する運用を徹底すべき
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 判定は NO-GO とした。理由は Sonnet 5 が改善しなかったからではなく、GitHub アーティファクトからの代理指標では #485 が対象とした `AskUserQuestion` 往復回数を直接測定できないため (詳細は report §C)
+- NO-GO のため #485 へのコメントではなく follow-up Issue #902 (計装追加提案) を新規作成した。#485 は全 AC 達成済みのため reopen しない方針を維持
+- サンプルコホートは 2026-06-30 当日投稿分を両コホートから除外し、明確に前後の日付 (Sonnet 4.6: 06-29 以前 / Sonnet 5: 07-01 以降) から各5件抽出した
+
+### Deferred Items
+- `/verify` セッション計装 (phase_start/phase_complete + AskUserQuestion 回数記録) の実装は #902 に委譲し、本 Issue のスコープには含めない
+- SKILL.md の de-prescription (Issue Purpose #3) は GO/部分適用時のみ発生し得る条件付き作業のため、NO-GO 判定により本 Issue では実施しない (Issue 本文 Auto-Resolved Ambiguity Points で既定路線どおり)
+
+### Notes for Next Phase
+- `/review` フェーズでは report の判定根拠 (特に「代理指標が #485 の本来の測定対象を捉えていない」という限界の説明) が rubric 上十分に明記されているかを重点確認してほしい
+- follow-up Issue #902 の作成は本 Issue の AC4 を満たす行為であり、`closes #877` とは独立して残る (902 は別 Issue として今後 triage される)
