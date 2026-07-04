@@ -271,7 +271,15 @@ If the implementation creates or modifies a file under `modules/` that declares 
 
 #### Follow-up Issue Creation
 
-If scope-out remediations are identified during implementation, create a follow-up Issue using the `retro/code` label:
+If scope-out remediations are identified during implementation, create a follow-up Issue using the `retro/code` label.
+
+**Duplicate check (before `gh issue create`)**: Fetch the list of open Issues and compare the remediation title against them, using the same criteria as `modules/retro-proposals.md` step 9 (duplicate: title or content is identical/substantially similar, or an existing Issue's background/purpose targets substantially the same improvement):
+
+```bash
+gh issue list --state open --limit 200 --json number,title
+```
+
+If a duplicate is found, skip `gh issue create` and output "Skipping follow-up Issue creation due to duplicate: {remediation title} (existing: #{number})", then continue to the next remediation (or the next step if none remain). Otherwise, proceed to create the Issue:
 
 ```bash
 gh issue create --title "{remediation title}" --label "retro/code" --body "..."

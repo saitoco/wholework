@@ -10,6 +10,11 @@ step0_section() {
     awk '/^### Step 0:/{found=1} found && /^### / && !/^### Step 0:/{exit} found{print}' "$1"
 }
 
+# Extract Follow-up Issue Creation section: from "#### Follow-up Issue Creation" to the next heading
+followup_issue_section() {
+    awk '/^#### Follow-up Issue Creation/{found=1; next} found && /^#{1,4} /{exit} found{print}' "$1"
+}
+
 @test "Step 0 section contains always-pr keyword" {
     run step0_section "$SKILL_FILE"
     [[ "$output" == *"always-pr"* ]]
@@ -35,4 +40,9 @@ step0_section() {
     run step0_section "$SKILL_FILE"
     [[ "$output" == *"--patch"* ]]
     [[ "$output" == *"ignored"* ]] || [[ "$output" == *"Warning"* ]]
+}
+
+@test "Follow-up Issue Creation section contains open-issue duplicate check" {
+    run followup_issue_section "$SKILL_FILE"
+    [[ "$output" == *"gh issue list"* ]]
 }
