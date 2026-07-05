@@ -82,18 +82,27 @@ Issue 本文 Option A が提案する通り、merge phase 専用に `gh pr view 
 ### Rework
 - N/A
 
+## review retrospective
+
+### Spec vs implementation divergence patterns
+特になし。Implementation Steps 1〜3 は Spec の記述通りに実装されており、乖離は検出されなかった。
+
+### Recurring issues
+特になし。review-light の4観点 (Spec乖離 / Bug・ロジックエラー / セキュリティ / ドキュメント整合性) いずれも issue 0件。`_merge_pr_state=$(...); [[ $? -eq 0 ]]` のイディオムはコマンド置換直後の終了ステータスを正しく捕捉することを確認済み。
+
+### Acceptance criteria verification difficulty
+特になし。Pre-merge 3件の verify command (rubric×2, file_contains×1) はいずれも明確に PASS 判定可能で、UNCERTAIN は発生しなかった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Placed the merge-phase `gh pr view` MERGED check as the first branch inside the `elif [[ "$EXIT_CODE" == "0" ]]` block, ahead of the existing `matches_expected:true` and success-phrase checks, so it short-circuits before any log-based logic runs.
-- Kept the fail-safe default exactly as specified: only an explicit `MERGED` state (exit 0 from `gh pr view`) suppresses the anomaly; any other state or command failure falls through unchanged to existing logic.
-- Named the new local variables (`_merge_pr_confirmed_merged`, `_merge_pr_state`) distinctly from existing ones (`_found_on_origin`) to avoid any accidental variable reuse across branches.
+- review-light (軽量統合レビュー) を4観点 (Spec乖離/Bug/セキュリティ/ドキュメント整合性) で実行し、issue 0件を確認した上でそのまま `/merge` を推奨する結論とした。
+- `--issue` 引数が merge phase では実際には PR 番号を保持するという Spec Notes の既存挙動を、`run-auto-sub.sh` の呼び出し規約から独立して再確認し、バグではないことを検証した。
 
 ### Deferred Items
-- Option B (origin/main fallback fetch extended to merge phase) was explicitly not implemented, per the Spec's decision to treat Option A as sufficient.
-- `modules/orchestration-fallbacks.md` update was treated as a SHOULD-level doc sync (no dedicated verify command), completed alongside the code change but not gated by an AC.
+- None
 
 ### Notes for Next Phase
-- Post-merge AC is `verify-type: opportunistic` — the next `/auto` pr route merge phase completion is the natural observation point; no dedicated action needed at review/merge time.
-- All 3 pre-merge ACs verified PASS in this phase; Issue checkboxes already updated to `[x]`.
+- 全 Pre-merge AC は PASS 済み、CI も全ジョブ SUCCESS。`/merge 924` にそのまま進んで問題ない。
+- Post-merge AC (`verify-type: opportunistic`) は次回 `/auto` pr route の merge phase 完了時に観察する。
