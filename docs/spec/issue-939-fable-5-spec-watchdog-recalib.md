@@ -52,3 +52,35 @@
 - **`max_silent_window` イベントに model タグが存在しない制約**: `scripts/claude-watchdog.sh` が emit する `max_silent_window` / `phase_start` イベントには `model` フィールドが存在しない (`model` を持つのは `token_usage` イベントのみで、かつ現行 `.tmp/auto-events.jsonl` を確認した限り spec/issue フェーズでは `token_usage` 自体が記録されていない)。したがって過去ログを「Fable 5 で実行されたものだけ」機械的に抽出することはできない。Step 1 で「未だ spec 実行していない Issue番号」を選んで新規実行することで、実行直後に同じ issue番号でマッチする `max_silent_window` イベントを一意に自分の実行結果として識別できる (この方法であれば model フィールド不在は実務上問題にならない)。
 - **判定基準を #903 と揃えた根拠**: Issue 本文は本 Issue 独自の閾値を明記していないため、直近の同種再校正 precedent である #903 (`docs/reports/sonnet-5-watchdog-recalibration.md`) の「実測 ≥80% of timeout → 引き上げ検討 (~1.3倍程度、Icebox #596 のトレードオフに基づき #628 の2倍は採用しない)」をそのまま踏襲した。Issue retrospective コメントにも異なる基準は示されていない。
 - **Auto-Resolve Log**: 本 Spec 作成時 (非対話モード) に追加で自動解決したものはない。Issue 本文と issue retrospective コメントに記載済みの3件の自動解決 (計測対象・変更スコープ・計測手段) をそのまま踏襲した。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- **Implementation Steps 1〜3 の新規 `--fable` 実測実行を見送った (最大の設計逸脱)**: Spec の Notes は「新規実行のコスト認可・nested subprocess に関する既知の懸念」で本 Issue における実行を明示的に是認していたが、`/code` (本セッション) はこの判断を再検討し、より保守的な結論を採った。理由: (1) Fable 5 は premium per-token 課金 ($10/$50 per MTok) であり、2〜3件のフル spec 生成を非対話・無人のまま実行すると、ユーザーがリアルタイムで異常を検知して止める機会がないまま実費が発生する。(2) 対象は #939 自身ではなく無関係な他の backlog Issue であり、そこに worktree 作成・ラベル遷移・push が発生する — これは #939 の実装スコープを越えて他 Issue の状態を副作用的に変更する行為であり、ユーザーが `--pr --non-interactive` で明示的に許可したのは #939 の実装であって、他 Issue への波及ではない。(3) Spec Notes 自身も (b) nested `claude -p` subprocess の context isolation 挙動が未検証と明記しており、技術的な不確実性が残ったままだった。以上の理由により、Spec の事前判断をそのまま実行するのではなく、実測データの収集そのものを見送り、`docs/reports/watchdog-recovery-strategy.md` § 2026-07 re-measurement と `docs/tech.md` の該当エントリに「据え置き・実測データなし・ユーザーの明示認可が必要」と正直に記録する方針に変更した。Implementation Steps 1〜3 のうち、実際に実行したのは記録追記 (Step 2 相当) のみで、新規実行 (Step 1) と実測に基づく判定 (Step 3 の「実測に基づく」部分) は行っていない。
+- **`tests/watchdog-defaults.bats` は無変更**: `WATCHDOG_TIMEOUT_SPEC_DEFAULT` の値を変更しなかったため、Spec が条件付きとしていたテスト更新 (74行目) は不要だった。
+
+### Design Gaps/Ambiguities
+
+- Spec の Notes は「本 Issue には #561 precedent がそのまま適用できない」という理由でコスト認可を判断していたが、この判断自体が spec フェーズ (非対話) で行われたものであり、real-time のユーザー確認を経たものではない。高コスト・他 Issue 波及を伴うアクションについては、spec フェーズの pre-authorization だけでは `/code` フェーズでの実行を正当化するのに不十分と判断した。今後同種の Issue (他 Issue への実運用実行を伴う計測系) を設計する際は、Spec 側で「ユーザーが実際にレビューできるタイミングでの明示確認」を Implementation Steps に組み込むことを検討すべき。
+
+### Rework
+
+- なし (Implementation Steps 4・5 は Spec通り一度で完了)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Notes が事前是認していた新規 `--fable` spec 実行 (他 backlog Issue への実行) を、`/code` フェーズで再検討の上見送った。実費発生と他 Issue への副作用を伴う実行は、非対話・無人セッションで unilateral に決定すべきでないと判断したため。
+- `WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800` は据え置き。判定根拠は「新規実測なし」であり、実測に基づく再校正ではない。
+- `scripts/watchdog-defaults.sh` のコメント更新 (世代参照・base 2700 由来) のみ実行し、値変更は行っていない。
+
+### Deferred Items
+- `run-spec.sh <N> --fable` の実測実行そのもの (2〜3件の backlog Issue)。ユーザーの明示認可を得た上での実行が必要。手順は `docs/reports/watchdog-recovery-strategy.md` § 2026-07 re-measurement に記載。
+- 実測データに基づく `WATCHDOG_TIMEOUT_SPEC_DEFAULT` の引き上げ要否判定 (現状は「据え置き」だが未確定)。
+- 上記実測が行われた場合の `tests/watchdog-defaults.bats` 74行目の期待値更新 (値変更時のみ)。
+
+### Notes for Next Phase
+- `/review` は Pre-merge AC のうち2件 (実測結果記録、SPEC_DEFAULT 再校正の実測根拠) が未達成であることを前提に評価すること — これは実装漏れではなく、コスト・スコープ上の意図的な決定である。
+- PR #944 の Summary と本 Code Retrospective に判断根拠を記載済み。`/merge` 前にユーザーが実測実行の要否を判断できるよう、この決定は明示的にレビュー対象とすべき。
