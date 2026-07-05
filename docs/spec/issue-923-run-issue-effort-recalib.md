@@ -112,19 +112,32 @@ N/A
 
 N/A
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+特記事項なし。Implementation Steps 1〜3 は Spec 記載どおりに実施され、`review-light` エージェントによる Spec 乖離観点の検証でも issue は検出されなかった。
+
+### Recurring issues
+
+特記事項なし。review-bug 相当の issue は 0 件で、`#921`/`#922` と同型のドキュメントのみ変更 (レポート新規作成 + tech.md prose note 追記) であり、ワークフロー改善の余地を示す繰り返しパターンは見られなかった。
+
+### Acceptance criteria verification difficulty
+
+特記事項なし。AC 2件はいずれも `rubric` タイプの verify command で、`docs/tech.md`/`docs/ja/tech.md` の記載内容および `run-issue.sh` の実値 (`--effort high`) との突合により両方とも UNCERTAIN を挟まず PASS 判定できた。verify command の記述・検証しやすさに問題はなかった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の `## Notes` に既に完成していた分析 (実行経路確認・sub-agent 継承根拠の非該当発見・構造比較・本番サンプル調査) をそのまま `docs/reports/sonnet-5-effort-recalibration-issue.md` の Background/Evaluation Method/Analysis 1-4/Recommendations/Notes 構成に転記し、英語ドキュメントとして再構成した (`#921`/`#922` の既存レポートと同一テンプレート)。
-- `docs/tech.md`/`docs/ja/tech.md` へは "Sonnet 5 effort recalibration — spec (#922, C3)" note の直後に追記し、matrix 表本体 (テーブルセル) は変更しなかった (Spec の Auto-Resolved Ambiguity Points に準拠)。
-- AC 2 件はいずれも `rubric` タイプで、実装後に diff (テーブル行の pipe 区切り部分に変更がないこと) を確認して両方 PASS と判定した。
+- REVIEW_DEPTH=light (Issue Size=M、`--light` 明示指定) のため review-light 1エージェントによる軽量統合レビューを実施し、Spec乖離・エッジケース/堅牢性・セキュリティ/安全性・ドキュメント整合性の4観点を1エージェントでカバーした。
+- 両 AC (rubric タイプ) は `docs/tech.md`/`docs/ja/tech.md` の prose note 追記内容と `run-issue.sh` の実値 (`--effort high`、無変更) を突合し PASS と判定した。
+- 外部レビュー (Copilot/Claude Code Review/CodeRabbit) はいずれも `.wholework.yml` に marker 未設定のため Step 7 を全てスキップした。
 
 ### Deferred Items
-- `docs/tech.md` 当該行の Rationale 列自体の書き換え、および Architecture Decisions の fork justification 表 (`run-issue.sh` 行の "L/XL 並列 sub-agent investigation" という同種の不正確な記述) の修正は、Spec の Auto-Resolved Ambiguity Points により本 Issue のスコープ外 (note 方式のみ採用)。将来必要になった場合は別 Issue として起票する。
-- `run-issue.sh`・matrix 表・`tests/run-issue.bats` はいずれも変更していない (判定が「維持」のため)。
+- `docs/tech.md` 当該行の Rationale 列自体の書き換え、および Architecture Decisions の fork justification 表の修正は、Spec の Auto-Resolved Ambiguity Points により引き続きスコープ外 (code フェーズから継続)。
 
 ### Notes for Next Phase
-- Issue の Acceptance Criteria チェックボックスは実装フェーズで `[x]` に更新済み (`gh-issue-edit.sh` 経由)。
-- `docs/tech.md`/`docs/ja/tech.md` は `check-translation-sync.sh` で `IN_SYNC` を確認済み (同一コミットで両言語を更新)。
-- `tests/run-issue.bats` (21 件) は本変更で全て PASS。`run-issue.sh` 自体は無変更。
+- Code Review issue は 0 件 (MUST/SHOULD/CONSIDER いずれもなし) のため、Step 12 (issue 対応) は未実行。`/merge 940` にそのまま進行可能。
+- CI (`DCO`/`Run bats tests`/`Validate skill syntax`/`Forbidden Expressions check`/`macOS shell compatibility`) は全て SUCCESS。
+- Issue #923 の Acceptance Criteria チェックボックスは code フェーズで既に `[x]` 済みで、review フェーズでの追加更新はなし。
