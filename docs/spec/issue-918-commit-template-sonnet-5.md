@@ -97,3 +97,28 @@ Issue 本文は「計約17箇所」と記載しているが、grep 実測では1
 
 ### Acceptance criteria verification difficulty
 - Nothing to note — 全11条件が `file_contains`/`file_not_contains` の機械的チェックのみで PASS/FAIL を判定でき、UNCERTAIN は発生しなかった。verify command の過不足も見られなかった
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 特記事項なし。11件の verify command は Issue 本文と完全一致し、Post-merge 条件はなし。
+
+#### design
+- 特記事項なし。
+
+#### code
+- code-pr phase で `code-completed-no-pr` anomaly (worktree に commit ありだが PR 未作成、reference #415) が発生したが、既存の Tier 2 fallback カタログが自動適用され PR #929 の作成に成功、review phase へ正常継続した。#915 の Verify Retrospective で記録済みの既知パターンと同型で、新規の改善提案は不要。
+
+#### review
+- review phase で `silent-no-op` (#365) の false positive が再発した (clean review、コミットなしで完了)。これは Issue #917 の verify で発見し **Issue #927 として既に起票済み** のパターンの **2件目の実証跡** である。新規の改善提案は不要 (#927 が既にカバー) だが、発生頻度の記録として意味がある。
+
+#### merge
+- 特記事項なし。`mergeable=true` を確認の上、通常の squash merge フローで完了。
+
+#### verify
+- Pre-merge 11件すべて PASS (機械的チェックのみ、UNCERTAIN なし)。Post-merge 条件なしのため `phase/done` に遷移、Issue は CLOSED のまま。
+
+### Improvement Proposals
+- N/A (review phase の false positive は #927 で既に追跡中。code phase の anomaly は既知パターンで自動リカバリ済み)
