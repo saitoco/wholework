@@ -41,3 +41,27 @@ No new comments since last phase.
 - **除外ファイル (履歴記録)**: 以下は現行 (修正前) の Rationale 文言をそれ自体の分析対象として引用している履歴記録であり、本 Issue の変更対象から除外する: `docs/spec/issue-923-run-issue-effort-recalib.md` / `docs/spec/issue-108-effort-matrix.md` (disposable Spec)、`docs/reports/sonnet-5-effort-recalibration-issue.md` (report)。`docs/tech.md`/`docs/ja/tech.md` 以外を変更しないという方針は、tech.md 自身の "Spec-first (disposable)" architecture decision と整合する。
 - `tests/*.bats` に Rationale 列の文言を検証するテストは存在しないことを grep で確認済み (変更不要)。
 - Issue body の Background 記述 (#923/#921 発見内容) を `docs/tech.md` の実ファイル内容 (89, 92, 121, 123行目) と突き合わせ、齟齬がないことを確認済み (conflict検出なし)。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Spec の Implementation Steps 1-3 の推奨文言をそのまま採用し、計画通りに実装した。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps 1-3 で提示された推奨文言 (英語・日本語とも) をそのまま採用した。Rationale 列の記述精度のみが本 Issue のスコープであり、文言自体の独自解釈による変更はリスクを増やすだけで利益がないため。
+- `docs/tech.md`/`docs/ja/tech.md` の2行のみを変更し、Effort 列・run-*.sh 実効値・disposable Spec/report 等の除外ファイルには一切触れなかった (Spec Notes の除外方針に準拠)。
+
+### Deferred Items
+- None — 本 Issue は Rationale 列の記述精度修正のみを対象としており、後続フェーズへの繰越事項はない。
+
+### Notes for Next Phase
+- 全 1107 bats テスト PASS、`validate-skill-syntax.py`・`check-forbidden-expressions.sh` とも問題なし。docs-only の軽微な変更であるため、review/merge フェーズでの追加確認は Rationale 文言の意味的正確性 (rubric 判定) に絞ってよい。
