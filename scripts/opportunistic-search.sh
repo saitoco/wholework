@@ -143,7 +143,7 @@ for N in $ISSUE_NUMBERS; do
         # Condition check gate: skip lines whose keyword= attribute does not
         # appear in CONTEXT_FILE. No keyword= attribute or no --context-file
         # means unconditional match (backward compatible).
-        KEYWORD=$(echo "$line" | grep -oE 'keyword=[^ >]+' | sed 's/^keyword=//' || true)
+        KEYWORD=$(echo "$line" | grep -oE 'keyword=[^ >]+' | sed -e 's/^keyword=//' -e 's/-*$//' || true)
         if [ -n "$KEYWORD" ] && [ -n "$CONTEXT_FILE" ]; then
             if ! grep -qi -- "$KEYWORD" "$CONTEXT_FILE"; then
                 continue

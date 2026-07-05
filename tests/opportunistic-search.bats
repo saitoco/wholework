@@ -216,6 +216,17 @@ teardown() {
     echo "$output" | grep -v "^Warning" | jq -e '.[0].number == 504' > /dev/null
 }
 
+@test "context gate: keyword= with no space before --> is extracted without trailing dashes" {
+    export MOCK_ISSUE_LIST='[{"number": 505}]'
+    export MOCK_ISSUE_BODY_505='- [ ] Verify enum coverage <!-- verify-type: observation event=pr-review-full keyword=enum--> '
+    echo "This spec defines an enum for status codes." > "$BATS_TEST_TMPDIR/context-has-enum-2.md"
+
+    run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-has-enum-2.md"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 505' > /dev/null
+}
+
 @test "event filter: unknown event emits warning and falls back" {
     export MOCK_ISSUE_LIST='[{"number": 403}]'
     export MOCK_ISSUE_BODY_403='- [ ] /review skill creates review after execution <!-- verify-type: opportunistic -->'
