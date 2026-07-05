@@ -740,18 +740,23 @@ If `OBSERVATION_MATCHES` is non-empty, read `${CLAUDE_PLUGIN_ROOT}/modules/detec
      fi
      ```
 
-3. **Notable judgment** (using events from `.tmp/auto-events.jsonl` and in-context variables):
-   - Extract events for this session:
+3. **Notable judgment** (using an aggregated summary of `$SESSION_DIR/events.jsonl` and in-context variables):
+   - Compute the aggregated event-count summary (works on an empty file — all counts resolve to `0`):
      ```bash
-     jq -c 'select(.session_id == "'"$AUTO_SESSION_ID"'")' .tmp/auto-events.jsonl 2>/dev/null
+     jq -sc '{
+       recovery_tier2_3: ([.[] | select(.event=="recovery" and (.tier=="2" or .tier=="3"))] | length),
+       watchdog_kill: ([.[] | select(.event=="watchdog_kill")] | length),
+       concurrent_commit: ([.[] | select(.event=="concurrent_commit_detected")] | length),
+       commit_event: ([.[] | select(.event=="commit")] | length)
+     }' "$SESSION_DIR/events.jsonl" 2>/dev/null
      ```
    - **batch route** (`ROUTE="batch"`) — notable if ANY of:
-     - Tier 2/3 recovery fired (`TIER3_RECOVERY_PHASE` is set, OR recovery event detected in events)
+     - Tier 2/3 recovery fired (`TIER3_RECOVERY_PHASE` is set, OR `recovery_tier2_3 > 0`)
      - Verify FAIL (any Issue label `phase/verify` with unchecked `- [ ]` at batch end)
-     - Commit count for this session >= 3 (`commit` events in filtered events; if the events log does not emit `commit` events, use `git log --oneline --since="$session_start"` line count as a fallback)
-     - Watchdog kill detected (`watchdog_timeout` event in filtered events)
+     - Commit count for this session >= 3 (`commit_event > 0`; the events log does not currently emit `commit` events, so this stays at `0` — use `git log --oneline --since="$session_start"` line count as the fallback)
+     - Watchdog kill detected (`watchdog_kill > 0`)
    - **XL route** (`ROUTE="sub_issue"`) — notable if ANY of:
-     - Parallel race detected (conflicting commit event or explicit race event in filtered events)
+     - Parallel race detected (`concurrent_commit > 0`)
      - Cross-cutting AC mismatch (any `FAIL` from Step 4's cross-cutting pre-verification)
      - At least 1 sub-issue failure in the execution summary
    - If NOT notable: commit `events.jsonl` for this session and stop:

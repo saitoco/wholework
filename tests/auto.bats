@@ -102,3 +102,62 @@ step5_section() {
     run step5_section "$SKILL_FILE"
     [[ "$output" == *"STOPPED_AT"* ]]
 }
+
+# Extract Notable judgment sub-step (L3 auto-retrospective step 3): from
+# "3. **Notable judgment**" to the next numbered sub-step heading (Issue #913)
+notable_judgment_section() {
+    awk '/^3\. \*\*Notable judgment\*\*/{found=1} found && /^4\. \*\*/{exit} found{print}' "$1"
+}
+
+@test "Notable judgment section uses jq -sc aggregation, not a raw events dump" {
+    run notable_judgment_section "$SKILL_FILE"
+    [[ "$output" == *"jq -sc"* ]]
+    [[ "$output" != *"jq -c 'select(.session_id"* ]]
+}
+
+@test "Notable judgment section references all four aggregated count fields" {
+    run notable_judgment_section "$SKILL_FILE"
+    [[ "$output" == *"recovery_tier2_3"* ]]
+    [[ "$output" == *"watchdog_kill"* ]]
+    [[ "$output" == *"concurrent_commit"* ]]
+    [[ "$output" == *"commit_event"* ]]
+}
+
+@test "Notable judgment section no longer references the non-existent watchdog_timeout event" {
+    run notable_judgment_section "$SKILL_FILE"
+    [[ "$output" != *"watchdog_timeout"* ]]
+}
+
+# Extract the jq aggregation command embedded in the Notable judgment sub-step
+# (first fenced ```bash block only — later blocks in the same sub-step cover the
+# "commit events.jsonl and stop" git sequence, not the aggregation itself)
+notable_judgment_jq_command() {
+    awk '/^3\. \*\*Notable judgment\*\*/{found=1} found && /^4\. \*\*/{exit} found{print}' "$1" \
+        | awk '/```bash/{p=1; next} p && /```/{exit} p'
+}
+
+@test "Notable judgment jq aggregation produces zeroed counts on an empty events file" {
+    empty_events="$BATS_TEST_TMPDIR/events-empty.jsonl"
+    : > "$empty_events"
+    cmd=$(notable_judgment_jq_command "$SKILL_FILE" | sed "s#\"\$SESSION_DIR/events.jsonl\"#'$empty_events'#")
+    run bash -c "$cmd"
+    [ "$status" -eq 0 ]
+    [ "$output" = '{"recovery_tier2_3":0,"watchdog_kill":0,"concurrent_commit":0,"commit_event":0}' ]
+}
+
+@test "Notable judgment jq aggregation counts matching events and ignores unrelated ones" {
+    fixture_events="$BATS_TEST_TMPDIR/events-fixture.jsonl"
+    cat > "$fixture_events" <<'EOF'
+{"event":"recovery","tier":"1","result":"recovered"}
+{"event":"recovery","tier":"2","result":"recovered"}
+{"event":"recovery","tier":"3","result":"recovered"}
+{"event":"watchdog_kill"}
+{"event":"watchdog_kill"}
+{"event":"concurrent_commit_detected"}
+{"event":"phase_start","phase":"code"}
+EOF
+    cmd=$(notable_judgment_jq_command "$SKILL_FILE" | sed "s#\"\$SESSION_DIR/events.jsonl\"#'$fixture_events'#")
+    run bash -c "$cmd"
+    [ "$status" -eq 0 ]
+    [ "$output" = '{"recovery_tier2_3":2,"watchdog_kill":2,"concurrent_commit":1,"commit_event":0}' ]
+}
