@@ -116,25 +116,38 @@
 
 実装は Implementation Steps 1〜5 の内容と厳密に一致していた (発火箇所・イベント名・フィールド名・Step 11 の5終端分岐カバレッジすべて)。ただし Step 3 のコードスニペットに含まれていた `${N}`/`${RESPONSE}` という bash 変数代入前提の記法は、本 Spec 自身がそのまま実装へ転記した結果であり、コード化フェーズで新たに生じた乖離ではない。`skills/verify/SKILL.md` の既存慣例 (`{N}` のようなプレースホルダーは `$` なしで書く。実際の bash 変数を指す場合のみ `${NEXT_ITERATION}` のように `$` を使う) との不整合が Spec 作成時点から埋め込まれていたことになる。次回同種の Spec 作成時は、SKILL.md 内の既存コードスニペット記法 (代入済み変数か prose プレースホルダーか) を踏襲するよう明記するとよい。
 
+**(Fix Cycle, PR #928 再レビュー)**: `verify_retry_fire` 発火箇所に関する Spec/実装乖離 (Spec の Changed Files では既存ガード付きと記載されていたが実際は無ガードだった) は Code Retrospective/Phase Handoff に既に開示されており、review-spec エージェントも独立に同一の乖離を検出し severity: CONSIDER・対応不要と判定した。開示内容と review 側の独立検出が一致しており、Fix Cycle の透明性は良好。
+
 ### Recurring issues
 
 なし。今回の2件の SHOULD 指摘 (記法不整合、`docs/structure.md` の記述漏れ) はいずれも単発の軽微な指摘であり、過去レビューで繰り返し出ているパターンとは異なる。
+
+**(Fix Cycle, PR #928 再レビュー)**: `workflow-guidance.md` の Inline Workflow Script が agentType を bare 名 (`review-spec`/`review-bug`) で指定しているため、このセッションでは `wholework:review-spec`/`wholework:review-bug` という namespaced 名しか解決できず、Workflow パスが3エージェントとも `agent type not found` で即失敗した (Issue #882 が指す headless custom agentType 未解決パターンと同根)。Pre-flight チェック手順は「Agent tool available agentType list に存在するか」を確認する設計だが、実際にスクリプトへ渡す文字列 (bare 名) と一致するかまでは検証していないため、`capabilities.workflow: true` の環境では毎回この失敗 → 静的フォールバックが再現する可能性が高い。`workflow-guidance.md` のスクリプト内 `agentType` を namespaced 名に更新する改善を提案する (verify 側で aggregate 起票を検討)。
 
 ### Acceptance criteria verification difficulty
 
 3件すべて rubric ベースで、うち1件は `file_contains` による補助検証も付与されていたため、判定に迷う UNCERTAIN は発生しなかった。Post-merge の1件は `verify-type: opportunistic` であり `/merge` 後の次回 `/verify` 実行で観測されるため、本レビューでの判定対象外として扱った。
 
+**(Fix Cycle, PR #928 再レビュー)**: Fix Cycle で追加された新規 AC 2件 (AUTO_EVENTS_LOG/AUTO_SESSION_ID 復元、および復元ロジックの bats テスト) もいずれも rubric ベースで、PR diff との突合のみで判定可能だった。UNCERTAIN は発生せず。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `restore_auto_session_pointer()` を `scripts/emit-event.sh` に追加し、`skills/verify/SKILL.md` の全11箇所の `AUTO_EVENTS_LOG` ガード発火箇所 (`phase_start` ×1、`verify_user_confirm` ×1、`phase_complete` ×5、`verify_fail_marker_posted` ×2、`verify_retry_fire` ×1、`verify_reopen_cycle` ×1) すべてに適用した
-- `skills/auto/SKILL.md` の Step 1 (AUTO_SESSION_ID generation、一度きりの生成箇所) で `.tmp/auto-session-current` を追加書き込み。再生成ブロック (「Pointer file regeneration required before every `run-*.sh` call」) は対象外のまま維持 (Spec Notes 通り)
-- `verify_retry_fire` 箇所は元々 `AUTO_EVENTS_LOG` ガードが欠落していたため (Code Retrospective 参照)、他10箇所との一貫性を優先しガードを新規追加した
+- CI (DCO / bats / validate-skill-syntax / forbidden-expressions / macOS shell compat) すべて SUCCESS を確認
+- `capabilities.workflow: true` により Workflow パスの Pre-flight を試みたが、`review-spec`/`review-bug` の bare agentType 名解決に失敗 (namespaced 名のみ利用可能) したため静的 Task fan-out (review-spec + review-bug×2) にフォールバックして実行した
+- review-spec が1件の CONSIDER 指摘 (`verify_retry_fire` ガード追加、Spec 記載との差異) を検出したが、Code Retrospective/Phase Handoff に既に開示済みの意図的判断と確認できたため修正せずスキップとした
+- review-bug×2 (diff scan / security scan) はいずれも問題なし
+- MUST/SHOULD 指摘が0件のため Issue #902 の checkbox 更新・AC整合性チェック (Step 13) はいずれも不要と判断
 
 ### Deferred Items
 - `scripts/get-auto-session-report.sh` の Metrics 出力キャベア文言 (「The verify phase does not emit phase_start/phase_complete events...」) は1周目マージ時点で deferred 化されたままスコープ外 (別 Issue 送り、本 Fix Cycle でも対応せず)
 - Post-merge AC (opportunistic): 次回 `/verify` 実行で `phase_start`/`phase_complete`/`verify_user_confirm` の実記録を、`/auto` in-session `Skill()` 呼び出し経由のケースを含めて観測する必要あり
+- `workflow-guidance.md` の Inline Workflow Script の agentType bare 名指定 (review retrospective の Recurring issues 参照) — namespaced 名への修正が未対応のまま残っている
+
+### Notes for Next Phase
+- `/merge 928` 実行可 (MUST 指摘なし、CI 全SUCCESS)
+- `/merge` 後の `/verify 902` で Post-merge AC (opportunistic) の実記録確認が必要
 
 ## Verify Retrospective
 
