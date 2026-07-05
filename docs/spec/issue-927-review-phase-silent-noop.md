@@ -55,3 +55,29 @@
 - **`--issue` パラメータの意味論**: review phase では `run-auto-sub.sh` の `run_phase_with_recovery "review" "$PR_NUMBER" "$SCRIPT_DIR/run-review.sh"` という既存の呼び出し規約により、`detect-wrapper-anomaly.sh` の `--issue` 引数は実際には PR 番号を受け取る (#916 の merge phase と同型)。既存の呼び出し規約の変更は本 Issue のスコープ外。
 - **`modules/orchestration-fallbacks.md` 更新は SHOULD レベル**: Issue 本文の Acceptance Criteria (Pre-merge 3件) はいずれも `scripts/detect-wrapper-anomaly.sh` とそのテストのみを対象としており、専用の verify command は設定しない (#916 と同様の判断。Verify command sync のため Issue 本文と件数を完全一致させる)。
 - **Verify command sync 確認**: 本 Spec の `## Verification > Pre-merge` は Issue 本文 `## Acceptance Criteria > Pre-merge` の3項目と verify コマンドを含め完全一致 (件数一致: Issue側3件 / Spec側3件)。Post-merge も Issue 本文の1件と一致。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜3 を記載順どおりに実装した。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Mirrored the #916 merge-phase live-check pattern exactly for the review phase (`gh pr view --json reviews --jq '.reviews[].body'` + grep for "Acceptance Criteria Verification Results"), placed directly after the existing `_merge_pr_confirmed_merged` computation and wired as a new `elif` branch ahead of the log/git-log-based checks.
+- Kept the fail-safe default: `gh pr view` failure or no matching Review falls through to the existing silent-no-op logic (not fail-open), consistent with #916 and `post-fallback-review-summary.sh`.
+
+### Deferred Items
+- `modules/orchestration-fallbacks.md` update is SHOULD-level only (no dedicated pre-merge verify command targets it), consistent with the #916 precedent.
+- Post-merge AC (opportunistic observation of a real `/auto` pr-route review phase clean-review completion) is deferred to natural occurrence — no action needed at code phase.
+
+### Notes for Next Phase
+- Full `bats tests/` suite (1094 tests) passes after this change; no other test file references `scripts/detect-wrapper-anomaly.sh` or `modules/orchestration-fallbacks.md` beyond their direct-counterpart test files.
+- No SKILL.md files were touched; `docs/structure.md` / `docs/ja/structure.md` descriptions of `detect-wrapper-anomaly.sh` remain accurate at the current level of detail (checked, no update needed).
