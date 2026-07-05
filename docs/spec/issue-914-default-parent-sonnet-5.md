@@ -75,18 +75,28 @@
 - N/A — 本セッション内での手戻りは発生していない。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 表直前に「default parent = Sonnet 5」を明記する一文を新設し、既存の "Sonnet 5" note 段落は "note only" 表現を除去した上で #877 (NO-GO)・#878 (有意、#903 で対応済み) の着地事実を追記する形にリライトした (テーブル行自体 (`Sonnet` bare alias 表記) は変更していない)。
-- Alias pin 方針は bare `sonnet` エイリアス継続を採用し、`claude-sonnet-5` への明示 pin は不採用と決定 (根拠は Spec Notes 参照)。
-- `docs/ja/tech.md` に欠落していた "Sonnet 5" 段落を新規追加として反映し (#876 Notes からの持ち越し欠落を解消)、pin 方針も日本語で追記した。
-- スコープ外の関連発見 (10ファイルの `Co-Authored-By: Claude Sonnet 4.6` ハードコード) はフォローアップ Issue #918 として起票し、本 Issue のスコープには含めなかった。
+- `--light --non-interactive` 指定に従い `REVIEW_DEPTH=light` で実行し、review-light エージェント1体に4観点 (spec逸脱・エッジケース・セキュリティ・ドキュメント整合性) を集約して実施した。
+- Pre-merge rubric AC 4件全てを PR ブランチの `docs/tech.md` に対して独立に再評価し、いずれも PASS を再確認した (Issue のチェックボックスは既に `[x]` 済みだったため上書き編集は不要だった)。
+- Code Phase Handoff の Notes 通り、AC4 (Opus ルート据え置き) を diff 上で機械的に確認し、review-bug/review-spec/issue-scope/issue-risk/issue-precedent/frontend-visual-review いずれの行も変更されていないことを確認した。
+- フォローアップ Issue #918 の実在 (OPEN 状態) を `gh issue view` で確認した。
 
 ### Deferred Items
-- フォローアップ Issue #918 (co-author テンプレートの Sonnet 4.6 → Sonnet 5 一括更新) は未着手のまま起票のみ完了。
-- `docs/product.md` / `docs/structure.md` / `docs/guide/autonomy.md` / `docs/guide/index.md` / `docs/guide/troubleshooting.md` の `docs/ja/` 同期ギャップ (`check-translation-sync.sh` で検出) は本 Issue のスコープ外のため未対応 (本 Issue が変更したのは `docs/tech.md` のみで、これらのファイルは無関係)。
+- なし — MUST/SHOULD/CONSIDER のいずれの課題も検出されなかったため、修正の持ち越しは発生していない。
 
 ### Notes for Next Phase
-- `/review` では AC4 (Opus ルート据え置き) の確認観点として、`git diff` に review-bug/review-spec/issue-scope/issue-risk/issue-precedent/frontend-visual-review の行が一切含まれないことを機械的にチェックすると良い。
-- 本 Issue の変更はドキュメントのみ (`docs/tech.md`、`docs/ja/tech.md`) であり、`run-*.sh` やスキル/サブエージェント frontmatter の model 文字列は意図的に変更していない。
+- `/merge 919` にそのまま進行可能 — 未解決のレビュー課題なし、CI 5ジョブ全て SUCCESS。
+- フォローアップ Issue #918 (Co-Authored-By テンプレート一括更新) は未着手のまま残っている (本 PR のマージ可否とは無関係)。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- 特になし — テーブル行 (bare `Sonnet` alias 表記) は変更せず周辺の説明文のみを更新するという Spec の設計方針通りに実装されており、diff と Spec (Changed Files / Implementation Steps / Code Retrospective) の記述は完全に一致していた。
+
+### Recurring issues
+- 特になし — 同種の課題の複数発生は見られなかった。
+
+### Acceptance criteria verification difficulty
+- 4件全て rubric ベースの verify command で、文言・対象範囲が明確だったため UNCERTAIN は発生しなかった。ただし Issue のチェックボックスが実装着手前から既に `[x]` 済みという特殊な前提状態があった (Code Retrospective の Design Gaps/Ambiguities に記載の通り、以前の `/code 914` 試行が中断したことが原因と推定)。今回は rubric による独立再評価で問題なしと確認できたが、チェックボックスの事前状態を鵜呑みにせず実装内容に対して再検証する運用が有効に機能した一例として記録する。
