@@ -114,17 +114,28 @@ Auto-Resolved Ambiguity Points により厳密な同一タスク medium/high 二
 ### Rework
 - N/A — 手戻りは発生しなかった。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note — 実装 (`docs/tech.md`/`docs/ja/tech.md` note 追記 + 新規レポート) は Spec の Implementation Steps 1-3 と完全に一致していた。
+
+### Recurring issues
+- Nothing to note — レビューで検出された issue はゼロ (MUST/SHOULD/CONSIDER いずれもなし)。
+
+### Acceptance criteria verification difficulty
+- Nothing to note — rubric 型 AC 2件はいずれも意味的に明確で、UNCERTAIN なく即座に PASS 判定できた。`docs/tech.md` の該当 note と `run-code.sh`/`run-review.sh` の実値 (`--effort high` 変更なし) を直接照合するだけで検証が完結し、rubric grader 呼び出しに追加の曖昧性は生じなかった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 判定サマリ (両スクリプトとも `high` 維持) を `docs/tech.md` § Phase-specific model and effort matrix に prose note として追記し、詳細な根拠は専用レポート `docs/reports/sonnet-5-effort-recalibration-code-review.md` に分離。`#903`/`#914` と同じ「詳細レポート + tech.md 要約 note」の記録慣習に従った。
-- `run-*.sh` 本体・matrix 表本体・エージェント frontmatter は変更しない (判定が「両方とも維持」のため)。`docs/ja/tech.md` にのみ note の日本語ミラーを同期し、`docs/reports/` は翻訳同期対象外のため ja ミラーを作成しなかった。
+- Step 8 (rubric 検証) は Issue 本文で既に `[x]` 済みだった AC 2件について、`docs/tech.md`/`docs/ja/tech.md` の note 内容と `scripts/run-code.sh`/`scripts/run-review.sh` の実際の `--effort` 値 (ともに `high` のまま) を直接照合し、PASS として再確認した。
+- Step 10 は `REVIEW_DEPTH=light` (`--light` 明示指定) のため `review-light` エージェント 1体による4観点統合レビューを実施。ドキュメントのみの変更のため、Spec 逸脱・ドキュメント整合性の2観点が中心となり、エッジケース/セキュリティ観点は "該当なし" と判定。
 
 ### Deferred Items
-- `agents/review-bug.md` / `agents/review-spec.md` への明示的な `effort: high` frontmatter 追加は、将来 `run-review.sh` の effort を再検討する際の前提条件としてレポート内に記録したのみで、本 Issue のスコープには含めていない。
+- `agents/review-bug.md` / `agents/review-spec.md` への明示的な `effort: high` frontmatter 追加 (将来の `run-review.sh` 再評価の前提条件) は本 Issue のスコープ外のまま。
 - `--effort=` フラグ露出によるサイズ条件付き effort tiering (impact strategy レポート §8 C5) は Icebox 候補として別スコープのまま。
 
 ### Notes for Next Phase
-- Issue 本文の AC (rubric 2件) は既に `[x]` でチェック済みの状態だった (以前の中断した `/code` 実行によるものと推測)。Review フェーズでは、今回のコミット内容 (レポート新規作成 + tech.md/ja tech.md への note 追記のみ) が AC を満たしていることを改めて確認すること。
-- 変更ファイルはすべてドキュメント (`docs/reports/`, `docs/tech.md`, `docs/ja/tech.md`) のみで、`run-*.sh` やテストへの変更はない。Review でコードロジックの深掘りは不要、rubric ベースの意味的検証が中心となる想定。
+- MUST/SHOULD issue が一切ないため `/merge 925` へ直接進行可能。
+- 変更ファイルはすべてドキュメント (`docs/reports/`, `docs/tech.md`, `docs/ja/tech.md`, `docs/spec/`) のみで、`run-*.sh`/matrix 表本体・エージェント frontmatter への変更はなし。
