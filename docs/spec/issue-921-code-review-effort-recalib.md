@@ -102,3 +102,29 @@ Auto-Resolved Ambiguity Points により厳密な同一タスク medium/high 二
 ### docs/ja/reports/ ミラー
 
 `docs/translation-workflow.md` § Exclusions により `docs/reports/` は翻訳同期対象外。新規レポート `docs/reports/sonnet-5-effort-recalibration-code-review.md` に ja ミラーは作成しない (`#229`/`#903` の既存レポートも ja ミラーなしで前例と整合)。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-3 を順序通りに実施し、Spec `## Notes` に記載済みの分析・判定文言をそのまま使用した。
+
+### Design Gaps/Ambiguities
+- `/code` Step 3 の `phase/ready` ラベルチェック時点で、Issue #921 は既に `phase/code` に遷移済みだった (GitHub timeline 確認: `phase/ready` 付与 06:28:17 → `phase/code` 遷移 06:33:42、いずれも本 Issue の作業当日)。ワークツリーや PR は存在せず、実装コミットも無かったため、以前の `/code` 実行が Step 4 (ラベル遷移) 到達後・実装着手前に中断したものと判断し、既存の完成済み Spec をそのまま正として実装を継続した。`reconcile-phase-state.sh --check-precondition` は `matches_expected: false` を返したが、Spec が存在し内容も完結していたため、非対話モードの auto-resolve 方針 (Spec 不在時のみ Issue 本文から読み取る) とは別扱いとして「既存 Spec を正として続行」を選択した。
+
+### Rework
+- N/A — 手戻りは発生しなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 判定サマリ (両スクリプトとも `high` 維持) を `docs/tech.md` § Phase-specific model and effort matrix に prose note として追記し、詳細な根拠は専用レポート `docs/reports/sonnet-5-effort-recalibration-code-review.md` に分離。`#903`/`#914` と同じ「詳細レポート + tech.md 要約 note」の記録慣習に従った。
+- `run-*.sh` 本体・matrix 表本体・エージェント frontmatter は変更しない (判定が「両方とも維持」のため)。`docs/ja/tech.md` にのみ note の日本語ミラーを同期し、`docs/reports/` は翻訳同期対象外のため ja ミラーを作成しなかった。
+
+### Deferred Items
+- `agents/review-bug.md` / `agents/review-spec.md` への明示的な `effort: high` frontmatter 追加は、将来 `run-review.sh` の effort を再検討する際の前提条件としてレポート内に記録したのみで、本 Issue のスコープには含めていない。
+- `--effort=` フラグ露出によるサイズ条件付き effort tiering (impact strategy レポート §8 C5) は Icebox 候補として別スコープのまま。
+
+### Notes for Next Phase
+- Issue 本文の AC (rubric 2件) は既に `[x]` でチェック済みの状態だった (以前の中断した `/code` 実行によるものと推測)。Review フェーズでは、今回のコミット内容 (レポート新規作成 + tech.md/ja tech.md への note 追記のみ) が AC を満たしていることを改めて確認すること。
+- 変更ファイルはすべてドキュメント (`docs/reports/`, `docs/tech.md`, `docs/ja/tech.md`) のみで、`run-*.sh` やテストへの変更はない。Review でコードロジックの深掘りは不要、rubric ベースの意味的検証が中心となる想定。
