@@ -131,23 +131,20 @@
 **(Fix Cycle, PR #928 再レビュー)**: Fix Cycle で追加された新規 AC 2件 (AUTO_EVENTS_LOG/AUTO_SESSION_ID 復元、および復元ロジックの bats テスト) もいずれも rubric ベースで、PR diff との突合のみで判定可能だった。UNCERTAIN は発生せず。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- CI (DCO / bats / validate-skill-syntax / forbidden-expressions / macOS shell compat) すべて SUCCESS を確認
-- `capabilities.workflow: true` により Workflow パスの Pre-flight を試みたが、`review-spec`/`review-bug` の bare agentType 名解決に失敗 (namespaced 名のみ利用可能) したため静的 Task fan-out (review-spec + review-bug×2) にフォールバックして実行した
-- review-spec が1件の CONSIDER 指摘 (`verify_retry_fire` ガード追加、Spec 記載との差異) を検出したが、Code Retrospective/Phase Handoff に既に開示済みの意図的判断と確認できたため修正せずスキップとした
-- review-bug×2 (diff scan / security scan) はいずれも問題なし
-- MUST/SHOULD 指摘が0件のため Issue #902 の checkbox 更新・AC整合性チェック (Step 13) はいずれも不要と判断
+- PR #928 は conflict なしで squash merge 完了 (`gh pr merge --squash --delete-branch`)
+- BASE_BRANCH は `main` のため `closes #902` により Issue は自動クローズされる見込み
+- review フェーズで指摘済みの `get-auto-session-report.sh` verify-phase caveat 文言の drift は本 merge フェーズでも対応せず、deferred のまま次フェーズへ引き継ぐ
 
 ### Deferred Items
-- `scripts/get-auto-session-report.sh` の Metrics 出力キャベア文言 (「The verify phase does not emit phase_start/phase_complete events...」) は1周目マージ時点で deferred 化されたままスコープ外 (別 Issue 送り、本 Fix Cycle でも対応せず)
+- `scripts/get-auto-session-report.sh` の Metrics 出力キャベア文言 (「The verify phase does not emit phase_start/phase_complete events...」) の drift 修正は本 Issue のスコープ外 (別 Issue 送り)
 - Post-merge AC (opportunistic): 次回 `/verify` 実行で `phase_start`/`phase_complete`/`verify_user_confirm` の実記録を、`/auto` in-session `Skill()` 呼び出し経由のケースを含めて観測する必要あり
 - `workflow-guidance.md` の Inline Workflow Script の agentType bare 名指定 (review retrospective の Recurring issues 参照) — namespaced 名への修正が未対応のまま残っている
 
 ### Notes for Next Phase
-- `/merge 928` 実行可 (MUST 指摘なし、CI 全SUCCESS)
-- `/merge` 後の `/verify 902` で Post-merge AC (opportunistic) の実記録確認が必要
+- `/verify 902` を実行し、Post-merge AC (opportunistic) の実記録確認 (`.tmp/auto-events.jsonl` への `phase_start`/`phase_complete`/`verify_user_confirm` 記録) を行うこと
 
 ## Verify Retrospective
 
