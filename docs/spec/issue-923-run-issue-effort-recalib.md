@@ -97,3 +97,34 @@ issue フェーズの成果物 (title・body・受入条件・verify command・S
 ### docs/ja/reports/ ミラー
 
 `docs/translation-workflow.md` § Exclusions により `docs/reports/` は翻訳同期対象外。新規レポート `docs/reports/sonnet-5-effort-recalibration-issue.md` に ja ミラーは作成しない (`#229`/`#903`/`#921`/`#922` の既存レポートも ja ミラーなしで前例と整合)。
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1〜3 を Spec 記載の順序・内容どおりに実施した。
+
+### Design Gaps/Ambiguities
+
+N/A
+
+### Rework
+
+N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の `## Notes` に既に完成していた分析 (実行経路確認・sub-agent 継承根拠の非該当発見・構造比較・本番サンプル調査) をそのまま `docs/reports/sonnet-5-effort-recalibration-issue.md` の Background/Evaluation Method/Analysis 1-4/Recommendations/Notes 構成に転記し、英語ドキュメントとして再構成した (`#921`/`#922` の既存レポートと同一テンプレート)。
+- `docs/tech.md`/`docs/ja/tech.md` へは "Sonnet 5 effort recalibration — spec (#922, C3)" note の直後に追記し、matrix 表本体 (テーブルセル) は変更しなかった (Spec の Auto-Resolved Ambiguity Points に準拠)。
+- AC 2 件はいずれも `rubric` タイプで、実装後に diff (テーブル行の pipe 区切り部分に変更がないこと) を確認して両方 PASS と判定した。
+
+### Deferred Items
+- `docs/tech.md` 当該行の Rationale 列自体の書き換え、および Architecture Decisions の fork justification 表 (`run-issue.sh` 行の "L/XL 並列 sub-agent investigation" という同種の不正確な記述) の修正は、Spec の Auto-Resolved Ambiguity Points により本 Issue のスコープ外 (note 方式のみ採用)。将来必要になった場合は別 Issue として起票する。
+- `run-issue.sh`・matrix 表・`tests/run-issue.bats` はいずれも変更していない (判定が「維持」のため)。
+
+### Notes for Next Phase
+- Issue の Acceptance Criteria チェックボックスは実装フェーズで `[x]` に更新済み (`gh-issue-edit.sh` 経由)。
+- `docs/tech.md`/`docs/ja/tech.md` は `check-translation-sync.sh` で `IN_SYNC` を確認済み (同一コミットで両言語を更新)。
+- `tests/run-issue.bats` (21 件) は本変更で全て PASS。`run-issue.sh` 自体は無変更。
