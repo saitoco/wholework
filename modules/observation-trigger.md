@@ -29,6 +29,7 @@ Each emitter calls the following command when its event fires:
 |----------|-------------|
 | `--event <event-name>` | Required. The event name from the table in `modules/verify-classifier.md § observation Type` |
 | `--dry-run` | Optional. Skip API calls; return empty array (for testing) |
+| `--context-file <path>` | Optional. Gates matches carrying a `keyword=` AC attribute against this file's content. See § Condition Check Gate below |
 
 **Output (stdout):** JSON array
 
