@@ -4,13 +4,20 @@
 #
 # Usage:
 #   scripts/opportunistic-search.sh <skill-name> [--dry-run]
-#   scripts/opportunistic-search.sh --event <event-name> [--dry-run]
+#   scripts/opportunistic-search.sh --event <event-name> [--dry-run] [--context-file <path>]
 #
 # Examples:
 #   scripts/opportunistic-search.sh /issue
 #   scripts/opportunistic-search.sh /spec --dry-run
 #   scripts/opportunistic-search.sh --event pr-review-full
 #   scripts/opportunistic-search.sh --event auto-run --dry-run
+#   scripts/opportunistic-search.sh --event pr-review-full --context-file /tmp/spec.md
+#
+# --context-file gates event-mode matches: when a matched AC line carries a
+# `keyword=<text>` attribute and --context-file is given, the Issue is only
+# included if the context file contains that keyword (case-insensitive). ACs
+# without `keyword=`, or runs without --context-file, match unconditionally
+# (backward compatible). See modules/observation-trigger.md § Condition Check Gate.
 #
 # Output: JSON array [{"number": N, "condition": "condition text"}]
 #         Empty array [] when no matches found
@@ -23,6 +30,7 @@ SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 SKILL_NAME=""
 EVENT_NAME=""
 DRY_RUN=false
+CONTEXT_FILE=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -36,6 +44,14 @@ while [ $# -gt 0 ]; do
                 exit 1
             fi
             EVENT_NAME="$2"
+            shift 2
+            ;;
+        --context-file)
+            if [ $# -lt 2 ]; then
+                echo "Error: --context-file requires an argument" >&2
+                exit 1
+            fi
+            CONTEXT_FILE="$2"
             shift 2
             ;;
         -*)
@@ -83,6 +99,12 @@ if [ -n "$EVENT_NAME" ]; then
     fi
 fi
 
+# --context-file gate: if the path does not exist, disable the gate (fall back to unconditional match)
+if [ -n "$CONTEXT_FILE" ] && [ ! -f "$CONTEXT_FILE" ]; then
+    echo "Warning: --context-file '${CONTEXT_FILE}' not found, disabling condition check gate" >&2
+    CONTEXT_FILE=""
+fi
+
 # dry-run mode: skip actual API calls and exit successfully
 if [ "$DRY_RUN" = true ]; then
     echo "[]"
@@ -118,6 +140,16 @@ for N in $ISSUE_NUMBERS; do
 
     # Convert each matched line to a JSON entry
     while IFS= read -r line; do
+        # Condition check gate: skip lines whose keyword= attribute does not
+        # appear in CONTEXT_FILE. No keyword= attribute or no --context-file
+        # means unconditional match (backward compatible).
+        KEYWORD=$(echo "$line" | grep -oE 'keyword=[^ >]+' | sed -e 's/^keyword=//' -e 's/-*$//' || true)
+        if [ -n "$KEYWORD" ] && [ -n "$CONTEXT_FILE" ]; then
+            if ! grep -qi -- "$KEYWORD" "$CONTEXT_FILE"; then
+                continue
+            fi
+        fi
+
         # Extract text with HTML comments and checkbox markup removed
         CONDITION=$(echo "$line" \
             | sed 's/^- \[ \] //' \

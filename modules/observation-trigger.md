@@ -29,6 +29,7 @@ Each emitter calls the following command when its event fires:
 |----------|-------------|
 | `--event <event-name>` | Required. The event name from the table in `modules/verify-classifier.md § observation Type` |
 | `--dry-run` | Optional. Skip API calls; return empty array (for testing) |
+| `--context-file <path>` | Optional. Gates matches carrying a `keyword=` AC attribute against this file's content. See § Condition Check Gate below |
 
 **Output (stdout):** JSON array
 
@@ -112,6 +113,42 @@ responsibility:
 - **`scripts/claude-watchdog.sh`** (shell-only context, no `Skill` tool available) does
   not capture or act on stdout — its existing comment-posting-only fallback is
   unaffected by this change.
+
+## Condition Check Gate (`keyword=`)
+
+Problem: an `event=<name>` fires for *any* completion of the triggering action, regardless of
+whether the specific Issue's condition actually applies. Issue #794 observed `event=pr-review-full`
+fire 8 times over a week, 7 of which resolved SKIP because the reviewed Spec had no `enum`
+definition — each SKIP still cost a full `/verify` dispatch round-trip.
+
+The gate adds an optional `keyword=<text>` attribute to the observation AC tag:
+
+```
+<!-- verify-type: observation event=pr-review-full keyword=enum -->
+```
+
+When the emitter also passes `--context-file <path>` (e.g., the Spec file for the review that
+just completed), `opportunistic-search.sh`/`observation-trigger.sh` only include Issues whose
+matched AC line carries a `keyword=` value found in that file's content (case-insensitive
+substring match via `grep -qi`). ACs without `keyword=`, or invocations without
+`--context-file`, match unconditionally — the existing behavior is preserved.
+
+**Arguments table addition (both scripts):**
+
+| Argument | Description |
+|----------|-------------|
+| `--context-file <path>` | Optional. Path to a file whose content is checked against each matched AC's `keyword=` value. If the path does not exist, the gate is disabled (falls back to unconditional match) and a warning is printed to stderr. `observation-trigger.sh` forwards this argument as-is to `opportunistic-search.sh`. |
+
+**Matching specification:**
+
+- Extraction: `keyword=<value>` is read from the AC line via `grep -oE 'keyword=[^ >]+'` (stops at the next space or `-->`).
+- Comparison: case-insensitive substring match of `<value>` against `--context-file`'s full content (`grep -qi -- "$KEYWORD" "$CONTEXT_FILE"`).
+- Gate disabled (unconditional match) when: no `keyword=` attribute on the AC line, no `--context-file` given, or the given path does not exist.
+- No semantic/LLM judgment is performed here — this is a lightweight pre-filter; the actual acceptance decision still belongs to `/verify`.
+
+This is a lighter-weight alternative to adding a new fine-grained event name for every condition
+pattern (see the `KNOWN_EVENTS` addition steps below) — it reuses the existing grep-based
+event-matching mechanism instead of growing the event namespace combinatorially.
 
 ## Notes
 

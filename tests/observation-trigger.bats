@@ -23,6 +23,7 @@ MOCK_EOF
 
     cat > "$MOCK_DIR/opportunistic-search.sh" << 'MOCK_EOF'
 #!/bin/bash
+echo "opportunistic-search.sh called: $*" >> "$BATS_TEST_TMPDIR/search-calls.log"
 echo "${MOCK_SEARCH_OUTPUT:-[]}"
 exit "${MOCK_SEARCH_EXIT:-0}"
 MOCK_EOF
@@ -91,6 +92,20 @@ teardown() {
     [ "$status" -eq 0 ]
     [ "$(grep -c "issue comment 875" "$BATS_TEST_TMPDIR/gh-calls.log")" -eq 1 ]
     [ "$output" = "875" ]
+}
+
+@test "forwarding: --context-file is forwarded to opportunistic-search.sh" {
+    export MOCK_SEARCH_OUTPUT="[]"
+    run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/spec.md"
+    [ "$status" -eq 0 ]
+    grep -q -- "--context-file $BATS_TEST_TMPDIR/spec.md" "$BATS_TEST_TMPDIR/search-calls.log"
+}
+
+@test "forwarding: no --context-file means opportunistic-search.sh is called without it" {
+    export MOCK_SEARCH_OUTPUT="[]"
+    run bash "$SCRIPT" --event pr-review-full
+    [ "$status" -eq 0 ]
+    ! grep -q -- "--context-file" "$BATS_TEST_TMPDIR/search-calls.log"
 }
 
 @test "resilience: opportunistic-search.sh error does not abort trigger" {
