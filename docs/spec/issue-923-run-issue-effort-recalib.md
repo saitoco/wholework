@@ -139,3 +139,29 @@ N/A
 ### Notes for Next Phase
 - `closes #923` により Issue は squash merge で自動クローズ済み (base branch = main)。
 - Issue #923 の Acceptance Criteria チェックボックスは code フェーズで既に `[x]` 済み。`/verify 923` で post-merge 検証 (該当なし) を確認可能。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- rubric 型 AC 2件は意味的に明確で、`/verify` が両者を UNCERTAIN なく即 PASS 判定できた。前例調査 (#217/#229 で run-issue.sh の Sonnet パスが初評価と確定) と rubric 単独構成 (C2/C3 に続く 3 件目の踏襲) が spec 時点で確立されており、AC 検証の曖昧性を事前に排除できていた。良好。
+
+#### design
+- Spec が「maintain high」判定と根拠 (非対話モードでの sub-agent fan-out スキップ・最上流成果物生成) を spec 時点で固定。実装は Implementation Steps 1-3 と完全一致。C2 (#921)/C3 (#922) の前例を踏襲した堅実な設計。
+
+#### code
+- 手戻り・fixup/amend なし (git 履歴クリーン、squash merge 1 コミット)。
+- **注目観察 (matrix Rationale 列の不正確性 — C-series 横断 recurring)**: 再校正の過程で、matrix 表の run-issue.sh 行 Rationale 列「L/XL scope analysis and sub-issue splitting require thorough orchestration」が、非対話モードでは到達しないコードパス (Step 12 の L/XL sub-agent fan-out) を記述しており不正確であることを発見した。recalibration note で正しい根拠を文書化したが、Auto-Resolved Ambiguity により Rationale 列セル自体の書き換えはスコープ外とし未修正のまま。これは #921 が run-review.sh の「sub-agents handle deep analysis / mechanical」framing について指摘した不正確性と同型で、C-series 横断の recurring パターン。
+
+#### review
+- issue 0件 (clean review、MUST/SHOULD/CONSIDER なし)。doc-only の低リスク差分に対し review-light が適切に軽量。過検出・見逃しの兆候なし。
+
+#### merge
+- squash merge クリーン (`mergeable=true`/`reason=clean`、CI success・review approved)。コンフリクトなし。問題なし。
+
+#### verify
+- rubric 型 AC 2件とも初回 PASS、reopen サイクルなし。verify command 整合性: `run-issue.sh` の `--effort high` (line 118) が matrix 表 (Sonnet: high) と SSoT 一致し、「据え置き=表未変更」を機械照合できた。`tests/run-issue.bats` も無変更。inconsistency なし。
+
+### Improvement Proposals
+- (Tier 1 candidate, skill-infra) `docs/tech.md` § Phase-specific model and effort matrix の Rationale 列を recalibration 発見と整合させる。run-issue.sh 行の Rationale「L/XL scope analysis and sub-issue splitting require thorough orchestration」は非対話モードで到達しないコードパスを記述しており不正確 (#923 で発見)。run-review.sh 行の「Review orchestration; sub-agents handle deep analysis」も orchestrator 自身が実質的推論 (fix コミット生成) を行うため同型の不正確性 (#921 で発見)。両行の Rationale 列を、各 recalibration note が文書化した正しい根拠 (最上流/実質的推論の成果物生成、blast radius) に更新する。C-series (#921/#923) 横断の recurring パターンであり、SSoT である matrix 表の Rationale 列の記述精度に関わる skill-infrastructure improvement。
