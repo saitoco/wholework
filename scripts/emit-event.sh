@@ -100,6 +100,24 @@ emit_event() {
   fi
 }
 
+# Restores AUTO_SESSION_ID/AUTO_EVENTS_LOG from pointer files when the caller's
+# environment does not already have AUTO_EVENTS_LOG set. Issue #902 Fix Cycle —
+# /verify runs via in-session Skill() calls (e.g. /auto --batch List mode), so
+# each Bash tool call is a separate process group and does not inherit env vars
+# exported by a wrapper script. Priority: env var > PGID pointer file >
+# auto-session-current pointer file > no-op (standalone /verify stays
+# uninstrumented by design). bash 3.2+ compatible.
+restore_auto_session_pointer() {
+  [[ -n "${AUTO_EVENTS_LOG:-}" ]] && return 0
+  local _pgid; _pgid=$(ps -o pgid= -p $$ | tr -d ' ')
+  local _sid
+  _sid="$(cat ".tmp/auto-session-${_pgid}" 2>/dev/null || cat ".tmp/auto-session-current" 2>/dev/null || echo '')"
+  [[ -z "${_sid}" ]] && return 0
+  AUTO_SESSION_ID="${AUTO_SESSION_ID:-$_sid}"
+  AUTO_EVENTS_LOG=".tmp/auto-events.jsonl"
+  export AUTO_SESSION_ID AUTO_EVENTS_LOG
+}
+
 # Bash-side Consumed Comments section appender. Issue #811 — post-processor
 # fallback: calls append-consumed-comments-section.sh to write the
 # ## Consumed Comments section when the LLM phase did not write it.
