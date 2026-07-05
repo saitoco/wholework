@@ -65,14 +65,14 @@ No new comments since last phase.
 - Nothing to note — 3件すべて `rubric` 形式で明確に判定でき、UNCERTAIN は発生しなかった。verify command の過不足も見当たらない。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light (Size M / `--light` 明示指定) により review-light 1エージェントで4観点統合レビューを実施し、静的な2グループ並列レビューはスキップした。
-- 外部レビューツール (Copilot/Claude Code Review/CodeRabbit) はすべて `.wholework.yml` で無効のため Step 7 を全面スキップした。
+- mergeable=true (reason=clean, CI success, review approved) のため conflict resolution は不要、直接 squash merge を実行した。
+- BASE_BRANCH=main のため `closes #941` により Issue は squash merge と同時に自動クローズされる。
 
 ### Deferred Items
-- None — MUST/SHOULD/CONSIDER いずれの指摘もなく、Step 12 の修正作業は発生しなかった。
+- None
 
 ### Notes for Next Phase
-- Acceptance Criteria 3件は Issue 側で既に `[x]` 済みだったが、`/review` の rubric 再検証でも独立して PASS を確認済み。`/merge 949` にそのまま進んでよい。
+- Post-merge Verification は Spec 上「なし」。`/verify 941` では Pre-merge Acceptance Criteria 3件が PR 側で既に PASS 済みであることの確認のみで足りる。
