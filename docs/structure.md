@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (64 files)
+├── scripts/             # Utility scripts used by skills and agents (65 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -210,6 +210,7 @@ Key modules:
 - `scripts/wait-ci-checks.sh` — wait for all CI checks to complete on a PR before running claude
 - `scripts/pre-merge-check.sh` — baseline diff classifier: runs a specified check on both base and head branches in ephemeral worktrees; classifies result as NEW_FAILURE (exit 2) / PRE_EXISTING / FIXED / CLEAN (exit 0) / env error (exit 1)
 - `scripts/worktree-merge-push.sh` — acquire short-lived patch lock; fetch-after-lock, ff-only merge with is-ancestor rebase-skip, and push-retry loop (max 3) for parallel session race hardening
+- `scripts/detect-foreign-worktree.sh` — detect whether CWD is inside a foreign (different-owner) git worktree; used by `modules/worktree-lifecycle.md` Entry section
 - `scripts/detect-wrapper-anomaly.sh` — detect known failure patterns in shell wrapper output and generate Auto Retrospective markdown fragments
 - `scripts/test-failure-classify.sh` — classify test failure output into recovery categories (snapshot/mock/fixture/logic/infra); exit 0 = repairable, exit 1 = not repairable
 - `scripts/validate-recovery-plan.sh` — validate recovery plan JSON from orchestration-recovery sub-agent (schema check + forbidden ops guard)

@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（64 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（65 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -202,6 +202,7 @@ wholework/
 - `scripts/wait-ci-checks.sh` — claude 実行前に PR の全 CI チェック完了を待機
 - `scripts/pre-merge-check.sh` — ベースライン diff 分類器: 指定チェックをベースブランチと head ブランチで ephemeral worktree で実行し、結果を NEW_FAILURE (exit 2) / PRE_EXISTING / FIXED / CLEAN (exit 0) / env error (exit 1) に分類
 - `scripts/worktree-merge-push.sh` — 短命な patch lock を取得し、fetch-after-lock・is-ancestor による rebase skip・push retry loop (max 3) で並列 session race に対応した merge + push を実行
+- `scripts/detect-foreign-worktree.sh` — CWD が foreign（呼び出し元と異なる owner の）git worktree 内かどうかを判定する。`modules/worktree-lifecycle.md` の Entry section から使用される
 - `scripts/detect-wrapper-anomaly.sh` — shell wrapper 出力の既知失敗パターンを検出し、Auto Retrospective の markdown 断片を生成
 - `scripts/test-failure-classify.sh` — テスト失敗出力を回復カテゴリに分類（snapshot/mock/fixture/logic/infra）。exit 0 = 修復可、exit 1 = 修復不可
 - `scripts/validate-recovery-plan.sh` — orchestration-recovery sub-agent が出力する recovery plan JSON を検証（schema チェック + forbidden ops ガード）
