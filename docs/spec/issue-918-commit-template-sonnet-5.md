@@ -60,3 +60,30 @@
 ### 実測件数
 
 Issue 本文は「計約17箇所」と記載しているが、grep 実測では10ファイル合計18箇所 (内訳は `## Changed Files` 参照)。近似表記の範囲内であり、対象ファイル一覧・各ファイルの検証方式には影響ない。
+
+## Phase Handoff
+
+<!-- phase: code -->
+
+### Key Decisions
+- 対象10ファイル内の `Claude Sonnet 4.6` (計18箇所) を `Claude Sonnet 5` に単純文字列置換した。置換前後で grep 実測件数が Spec の想定 (10ファイル18箇所) と完全一致することを確認済み
+- 除外対象の歴史的記録ファイル5件 (`docs/reports/sonnet-5-tokenizer-impact.md` および disposable Spec 4件) が変更されていないことを確認済み
+- Behavioral Change Detection の basename grep (`SKILL.md` 等が広範囲のテストファイルに一致) により、対象を絞らずフルスイート (`bats tests/`、1088件) を実行し全件 PASS を確認した
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- 各 AC の verify command は `file_not_contains`/`file_contains` の機械的チェックのみで、post-merge (`/verify`) でも同一結果が再現されるはず
+- Post-merge AC は「なし」のため `/verify` での追加確認事項はない
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps の記載通りに実施し、逸脱なし
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
