@@ -170,6 +170,13 @@
 
 #### verify
 - pre-merge 3件すべて file_contains/rubric/bats で PASS。post-merge (opportunistic) は本 verify 実行が計装反映前スキルで走ったため未計測 → phase/verify で opportunistic pending
+- **(Fix Cycle, PR #928 後の re-verify)**: Fix Cycle で追加された pre-merge AC 2件 (AC4 復元ロジック、AC5 復元 bats テスト) は既存 AC1〜3 と同様 `file_contains`/`rubric`/`bats` 検証で PASS。post-merge AC (opportunistic) は本 re-verify が `/auto 902` (pr route Step 4 phase [4/4] verify) から `Skill(wholework:verify, "902")` として in-session 呼び出しされたケースで、`.tmp/auto-events.jsonl` に `phase_start` (2026-07-05T08:43:25Z) と `phase_complete` (2026-07-05T08:46:42Z、いずれも `session_id=68567-1783235854`, `phase=verify`) の実記録を確認 → PASS。Fix Cycle 全体で opportunistic loop が正しく閉じた
+- `restore_auto_session_pointer` の実装後、本セッション自身のポインタ (`.tmp/auto-session-current` に `68567-1783235854`) を書き込むまで restore は旧 session ID (`59237-...`) を返した。理由は `/auto` を Fix Cycle merge (`48a1b083`) 前にロード済みで、pre-merge 版 `skills/auto/SKILL.md` は `.tmp/auto-session-current` を書き込まないため。次回以降の `/auto` 起動時は自動的に current pointer が更新されるため、この乖離は再発しない
+
+### Fix Cycle Re-verify Observation (2026-07-05)
+
+- 本 re-verify は `/auto` 経由の in-session `Skill()` 呼び出しで実行され、Fix Cycle 修正が想定するユースケースそのものを検証対象にできた。post-merge AC を「機構が動く」ことの実観測で PASS 判定できた点は理想的な結果
+- 唯一の観察: 本 `/verify` 実行中は `AskUserQuestion` の使用機会が無かった (全 AC が rubric/file_contains ベースの自動判定) ため、`verify_user_confirm` イベントの本番発火は未検証。ただし bats テスト (AC3) で JSON 形状は検証済みで、SKILL.md Step 8b の呼び出しパターンも `AUTO_EVENTS_LOG` ガード + `restore_auto_session_pointer` 呼び出しのペアで他 emit sites と同一の構造。将来 manual/executable AC を含む Issue の `/verify` 実行時に実発火が確認されることを期待
 
 ### Improvement Proposals
 - **code フェーズの AC 駆動 follow-up Issue 作成に重複チェックが無い**: #877 の code フェーズが AC4 (「follow-up Issue 作成」) を満たすため `gh issue create` で #902 を直接起票したが、既に同趣旨の #898/#899 が存在していた。code フェーズの follow-up 起票は retro-proposals の dedup パイプラインを通らず open Issue との照合が無いため、三重重複 (#898/#899/#902) を招いた。code フェーズの follow-up Issue 作成前に軽量な open-issue 重複チェック (retro-proposals の dedup ロジック共用) を挟むことを提案する (複数箇所で follow-up 起票が発生する構造的問題)
