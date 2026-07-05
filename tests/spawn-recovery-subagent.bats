@@ -212,6 +212,36 @@ MOCK
     grep -q "gh" "$RUNNER_LOG"
 }
 
+@test "spawn-recovery: code-pr dirty-tree-cleanup-plus-PR-creation - run_command steps for symptom-fix, push, and gh pr create exit 0" {
+    # Minimal git/gh mocks that record invocations to RUNNER_LOG
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "git $*" >> "$RUNNER_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+echo "gh $*" >> "$RUNNER_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    # code-pr Tier 3 recovery plan (Issue #917 incident shape): dirty-tree cleanup on main
+    # (unrelated symptom) + worktree branch push + gh pr create, in a single recover plan
+    make_claude_mock '{"action":"recover","rationale":"main has an unrelated dirty-tree blocker which must be cleared, but worktree-code+issue-893 already has unpushed implementation commits and no PR exists yet.","steps":[{"op":"run_command","cmd":"echo resolving-reported-dirty-tree-symptom"},{"op":"run_command","cmd":"git push origin worktree-code+issue-893"},{"op":"run_command","cmd":"gh pr create --base main --head worktree-code+issue-893 --title Issue893 --body closes893"}]}'
+    cd "$BATS_TEST_TMPDIR"
+
+    run bash "$SCRIPT" code-pr 893 --log "$LOG_FILE"
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"unsupported op"* ]]
+    [[ "$output" == *"all recovery steps completed"* ]]
+    [ -f "$RUNNER_LOG" ]
+    grep -q "push origin worktree-code+issue-893" "$RUNNER_LOG"
+    grep -q "gh pr create" "$RUNNER_LOG"
+}
+
 # Integration test: tagged with 'integration', excluded from CI runs
 # @test "spawn-recovery integration: real claude -p returns valid JSON" {
 #     # tags: integration
