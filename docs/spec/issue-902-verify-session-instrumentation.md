@@ -96,6 +96,20 @@
 - **`run-review.sh` 等との差分**: `run-review.sh`/`run-code.sh`/`run-merge.sh` は wrapper が nested Claude session を起動する前に env var を export するため、nested session の全 Bash tool call が OS 環境変数として自動継承する。`/verify` は `Skill()` 経由で親セッションと同一プロセスの一部として実行され、各 Bash tool call が独立した新規プロセスグループになる (`skills/auto/SKILL.md` の「SESSION_ID does not persist as a shell variable across separate Bash tool calls」と同じ制約)。そのため `restore_auto_session_pointer` は発火箇所ごとに毎回呼び出す必要があり、Step 1 で一度呼べば足りるものではない。
 - **重複 Issue のクローズ状況 (1周目・再掲)**: #898・#899 は `/issue` フェーズで本 Issue (#902) を正 (canonical) として重複クローズ済み。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。Implementation Steps 1〜5 の内容と実装は一致している (`restore_auto_session_pointer()` のシグネチャ、`skills/verify/SKILL.md` の全ガード箇所への適用範囲、`skills/auto/SKILL.md` のポインタ書き込み追加箇所、いずれも Spec 記載通り)。
+
+### Design Gaps/Ambiguities
+
+- **`verify_retry_fire` 発火箇所は元々 `AUTO_EVENTS_LOG` ガード自体が存在しなかった**: Spec の Changed Files は「同箇所に同居する `verify_fail_marker_posted` ×2・`verify_retry_fire` ×1・`verify_reopen_cycle` ×1」を既存ガード付き発火箇所として列挙していたが、実装時に確認したところ `verify_retry_fire` 箇所 (Step 11 tier-gated auto-retry) は `source emit-event.sh` の直後に `if` ガードなしで `emit_event` を無条件呼び出す形になっていた (周辺の tier ゲート条件 — `AUTONOMY_TIER` が L2/L3 かつ `AUTO_RETRY_ENABLED=true` — が実質的な発火制御として機能していたためと推測される)。他の10箇所との一貫性を優先し、`restore_auto_session_pointer` 呼び出し後に `AUTO_EVENTS_LOG` ガードを新規追加する形で統一した。この分岐は tier ゲート自体で `/auto` セッション内実行がほぼ保証されるため実害はないが、ガードの有無が箇所ごとに不揃いだったという事実は Spec 作成時点では認識されていなかった。
+
+### Rework
+
+- なし。
+
 ## review retrospective
 
 ### Spec vs. implementation divergence patterns
@@ -111,15 +125,16 @@
 3件すべて rubric ベースで、うち1件は `file_contains` による補助検証も付与されていたため、判定に迷う UNCERTAIN は発生しなかった。Post-merge の1件は `verify-type: opportunistic` であり `/merge` 後の次回 `/verify` 実行で観測されるため、本レビューでの判定対象外として扱った。
 
 ## Phase Handoff
-<!-- phase: merge -->
+<!-- phase: code -->
 
 ### Key Decisions
-- Squash merge を実行 (mergeable=true、conflict なし)。マージコミット `fdee8d3d`
-- レビュー指摘対応の追加コミット `78fafc29` を含めてマージ完了
+- `restore_auto_session_pointer()` を `scripts/emit-event.sh` に追加し、`skills/verify/SKILL.md` の全11箇所の `AUTO_EVENTS_LOG` ガード発火箇所 (`phase_start` ×1、`verify_user_confirm` ×1、`phase_complete` ×5、`verify_fail_marker_posted` ×2、`verify_retry_fire` ×1、`verify_reopen_cycle` ×1) すべてに適用した
+- `skills/auto/SKILL.md` の Step 1 (AUTO_SESSION_ID generation、一度きりの生成箇所) で `.tmp/auto-session-current` を追加書き込み。再生成ブロック (「Pointer file regeneration required before every `run-*.sh` call」) は対象外のまま維持 (Spec Notes 通り)
+- `verify_retry_fire` 箇所は元々 `AUTO_EVENTS_LOG` ガードが欠落していたため (Code Retrospective 参照)、他10箇所との一貫性を優先しガードを新規追加した
 
 ### Deferred Items
-- `scripts/get-auto-session-report.sh` の Metrics 出力キャベア文言 (「The verify phase does not emit phase_start/phase_complete events...」) は本実装後は事実と異なる記述になるが、Spec の Notes 記載通りスコープ外として別 Issue 送りとする
-- Post-merge AC (opportunistic): 次回 `/verify` 実行で `phase_start`/`phase_complete`/`verify_user_confirm` の実記録を観測する必要あり
+- `scripts/get-auto-session-report.sh` の Metrics 出力キャベア文言 (「The verify phase does not emit phase_start/phase_complete events...」) は1周目マージ時点で deferred 化されたままスコープ外 (別 Issue 送り、本 Fix Cycle でも対応せず)
+- Post-merge AC (opportunistic): 次回 `/verify` 実行で `phase_start`/`phase_complete`/`verify_user_confirm` の実記録を、`/auto` in-session `Skill()` 呼び出し経由のケースを含めて観測する必要あり
 
 ## Verify Retrospective
 
