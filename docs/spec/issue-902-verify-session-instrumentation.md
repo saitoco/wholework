@@ -178,6 +178,26 @@
 - 本 re-verify は `/auto` 経由の in-session `Skill()` 呼び出しで実行され、Fix Cycle 修正が想定するユースケースそのものを検証対象にできた。post-merge AC を「機構が動く」ことの実観測で PASS 判定できた点は理想的な結果
 - 唯一の観察: 本 `/verify` 実行中は `AskUserQuestion` の使用機会が無かった (全 AC が rubric/file_contains ベースの自動判定) ため、`verify_user_confirm` イベントの本番発火は未検証。ただし bats テスト (AC3) で JSON 形状は検証済みで、SKILL.md Step 8b の呼び出しパターンも `AUTO_EVENTS_LOG` ガード + `restore_auto_session_pointer` 呼び出しのペアで他 emit sites と同一の構造。将来 manual/executable AC を含む Issue の `/verify` 実行時に実発火が確認されることを期待
 
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| issue | pr    | SUCCESS | Size auto-triage kept S initially |
+| spec  | pr    | SUCCESS | Size promotion S→L (scope widened to 6 files: verify SKILL + emit-event.sh + auto SKILL + event-emission module + audit SKILL + structure.md) |
+| code  | pr    | SUCCESS (1 CI fail auto-fixed) | PR #928 |
+| review | pr   | SUCCESS (--full, MUST/SHOULD 0) | 1 orchestration anomaly during Opportunistic Verification (see below) |
+| merge | pr    | SUCCESS | squash-merge, closes #902 |
+| verify | -    | SUCCESS | 6/6 AC PASS; phase=verify events observed with session_id=68567-1783235854 |
+
+### Orchestration Anomalies
+
+- **nested `/verify 794` が review worktree に誤コミット**: `/review 928 --full` の Opportunistic Verification (Step: Event-based observation scan) で `observation-trigger.sh --event pr-review-full` が Issue #794 にマッチし `Skill(wholework:verify, args="794")` を dispatch。sub-session が Verify Retrospective 追記を PR #928 のレビュー worktree (`worktree-code+issue-902` branch) に誤コミット。リカバリのため一時ブランチ + cherry-pick で `origin/main` へ docs-only 差分 (`ab6af076`, 26 行) を push。誤コミットは worktree ごと破棄。PR #928 実装への影響なし、`origin/main` の差分は Verify Retrospective 追記のみで内容的には正常 (通常 `/verify 794` が実行していた commit と等価)。ただし正規フロー逸脱 (main への直接 push) が発生した点は記録に値する。詳細は `docs/reports/orchestration-recoveries.md` 該当エントリ参照
+
+### Improvement Proposals
+
+- **nested `/verify` (opportunistic dispatch 経由) が親コンテキストの worktree/CWD をそのまま継承する構造**: `Skill()` 経由で呼び出された `/verify` が呼び出し元 (`/review` の PR worktree) の CWD を継承し、commit 先を誤認する。structural な分離手段 (`/verify` が opportunistic dispatch 経由と判定した場合に自動で main worktree にリセットする、または worktree 内での opportunistic dispatch そのものを抑制する) が必要
+
 ### Improvement Proposals
 - **code フェーズの AC 駆動 follow-up Issue 作成に重複チェックが無い**: #877 の code フェーズが AC4 (「follow-up Issue 作成」) を満たすため `gh issue create` で #902 を直接起票したが、既に同趣旨の #898/#899 が存在していた。code フェーズの follow-up 起票は retro-proposals の dedup パイプラインを通らず open Issue との照合が無いため、三重重複 (#898/#899/#902) を招いた。code フェーズの follow-up Issue 作成前に軽量な open-issue 重複チェック (retro-proposals の dedup ロジック共用) を挟むことを提案する (複数箇所で follow-up 起票が発生する構造的問題)
 - **`get-auto-session-report.sh` の verify-phase caveat 文言 drift**: 本 Issue の計装追加により「The verify phase does not emit phase_start/phase_complete events...」という caveat が事実と異なる記述になった。`scripts/get-auto-session-report.sh` (および関連ドキュメント) の当該文言を、verify phase も phase_start/phase_complete を emit する前提に更新する必要がある (merge phase handoff で deferred 化済み)

@@ -64,6 +64,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
+## 2026-07-05 08:37 UTC: nested-verify-committed-to-review-worktree
+
+### Context
+- Issue #902, phase: review
+- Source: recovery-sub-agent
+- Wrapper: run-review.sh, exit code: 0 (review phase itself succeeded)
+- Log tail: "`/verify 794` の中で誤って PR #928 のレビュー worktree にコミット、一時ブランチ経由 cherry-pick で origin/main に push"
+
+### Diagnosis
+- `/review 928 --full` 完了直前の Opportunistic Verification Step で `observation-trigger.sh --event pr-review-full` が Issue #794 にマッチ、`Skill(wholework:verify, args="794")` を dispatch。sub-session が Verify Retrospective 追記を review worktree (`worktree-code+issue-902` branch) に誤コミットし、リカバリのため一時ブランチ + cherry-pick + push を実施。この push (`ab6af076`) が権限分類器で正規フロー外検出され後続 op が block された
+
+### Recovery Applied
+- Sub-agent が一時ブランチ経由で `origin/main` へ docs-only 差分 (26 行の Verify Retrospective 追記のみ) を push、誤コミットは worktree ごと破棄。Issue #902 の実装 PR (#928) には影響なし。人間確認後 (2026-07-05 会話中で) 続行判断
+
+### Outcome
+- partial
+
+### Improvement Candidate
+- 未起票 (nested `/verify` が親 PR の worktree に commit してしまう構造的問題。`Skill()` 経由の `/verify` が呼び出し元の CWD をそのまま継承する挙動を分離する仕組みが必要)
+
 ## 2026-07-05 07:35 UTC: code-pr-silent-no-op
 
 ### Context
