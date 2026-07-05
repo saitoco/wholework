@@ -492,12 +492,19 @@ Push is done in Step 13 Worktree Exit (merge-to-main pattern). Label transition 
 
 **For pr route (branch + PR)**:
 
-Before creating the PR, emit a progress line so the watchdog resets its silence counter:
+Before `gh pr create` can succeed, the worktree branch must exist on the remote — `gh pr create` requires a remote branch to open the PR against and fails with "you must first push the current branch to a remote" otherwise. Push the branch first, then create the PR:
+
+```bash
+echo "progress: Pushing branch to origin for issue #$NUMBER..."
+git push origin HEAD
+```
 
 ```bash
 echo "progress: Creating PR for issue #$NUMBER..."
 gh pr create --title "Issue #$NUMBER: {summary of changes}" --base "${BASE_BRANCH}" --body "..."
 ```
+
+**Note**: this push publishes the branch as it stands after Step 11's implementation commits. It is a distinct, necessary push from the one in Step 12 — Step 12 adds a new Code Retrospective commit *after* the PR is created, so that commit still needs its own `git push origin HEAD` to reach the remote branch. Neither push is redundant with the other; they publish different commits at different points in the flow.
 
 Include `closes #N` in PR body only when BASE_BRANCH is `main`. If BASE_BRANCH is not main, omit `closes #N` and instead note: "Since the base branch is `{BASE_BRANCH}`, please close the Issue manually at final merge."
 
