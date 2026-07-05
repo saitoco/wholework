@@ -139,3 +139,29 @@ Auto-Resolved Ambiguity Points により厳密な同一タスク medium/high 二
 ### Notes for Next Phase
 - Post-merge AC は「なし」(Spec `## Verification` 参照)。`/verify 921` は形式的な no-op 確認のみで良い。
 - 変更ファイルはすべてドキュメント (`docs/reports/`, `docs/tech.md`, `docs/ja/tech.md`, `docs/spec/`) のみで、`run-*.sh`/matrix 表本体・エージェント frontmatter への変更はなし。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- rubric 型 AC 2件は意味的に明確で、`/verify` が両者を UNCERTAIN なく即 PASS 判定できた。Issue 本文に Auto-Resolved Ambiguity Points (記録フォーマット・A/B 手法) が含まれており、実装フェーズの曖昧性を事前に潰せていた。AC 品質・検証容易性ともに良好。
+
+#### design
+- spec フェーズ時点で Explore sub-agent 併用の実質的分析を完了し「両方 high 維持」の判定まで確定させていたため、code フェーズは note 追記+レポート作成の機械的作業に縮退した。Issue=WHAT / Spec=HOW の分離が有効に機能し、code フェーズのリスクを構造的に下げた良い前例。実装は Implementation Steps 1-3 と完全一致。
+
+#### code
+- 手戻り・fixup/amend なし (git 履歴クリーン、本 Issue は squash merge 1 コミット)。
+- **注目観察 (phase-state 不一致からの再開)**: `/code` Step 3 の `phase/ready` プリコンディションチェック時点で Issue #921 が既に `phase/code` へ遷移済みだった。先行 `/code` 実行が「ラベル遷移後・実装着手前」に中断したものと判断され、`reconcile-phase-state.sh --check-precondition` は `matches_expected: false` を返したが、完成済み Spec が存在し PR/worktree/実装コミットは皆無だったため「既存 Spec を正として続行」で解決した。非対話モードの auto-resolve 方針は「Spec 不在時のみ Issue 本文から読み取る」を明文化しているが、この「`phase/code` 既遷移 + 完成 Spec 存在 + 実装ゼロ」の中断リカバリケースは明示されていない。`## Auto Retrospective` に未記録のため notable として本 retro に記録。
+
+#### review
+- 検出 issue ゼロ (MUST/SHOULD/CONSIDER いずれもなし)。doc-only の低リスク差分に対し review は適切に軽量で、実際の diff (tech.md note + 新規レポート) がクリーンだった事実と整合。過検出・見逃しの兆候なし。
+
+#### merge
+- squash merge クリーン (`mergeable=true`/`reason=clean`、CI success・review approved)。コンフリクトなし。問題なし。
+
+#### verify
+- rubric 型 AC 2件とも初回 PASS、reopen サイクルなし。verify command 整合性: `run-code.sh`/`run-review.sh` の実効値 `--effort high` が matrix 表 (Effort=high) と SSoT 一致しており、「据え置き=表未変更」を機械照合できた。inconsistency なし。
+
+### Improvement Proposals
+- (candidate, 低優先度) `/code` 非対話モードの auto-resolve 方針に「`phase/code` 既遷移 + 完成 Spec 存在 + 実装 (PR/worktree/commit) 皆無 → 既存 Spec を正として再開」の中断リカバリケースを明文化する。現状は `reconcile-phase-state.sh --check-precondition` が `matches_expected: false` を返す状況での判断が個別 judgment に依存している (skill-infrastructure improvement: `/code` skill / `reconcile-phase-state.sh` / modules 系)。低頻度かつ既に妥当な挙動で解決済みのため優先度は低い。
