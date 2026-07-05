@@ -75,20 +75,17 @@
 - N/A — 本セッション内での手戻りは発生していない。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `--light --non-interactive` 指定に従い `REVIEW_DEPTH=light` で実行し、review-light エージェント1体に4観点 (spec逸脱・エッジケース・セキュリティ・ドキュメント整合性) を集約して実施した。
-- Pre-merge rubric AC 4件全てを PR ブランチの `docs/tech.md` に対して独立に再評価し、いずれも PASS を再確認した (Issue のチェックボックスは既に `[x]` 済みだったため上書き編集は不要だった)。
-- Code Phase Handoff の Notes 通り、AC4 (Opus ルート据え置き) を diff 上で機械的に確認し、review-bug/review-spec/issue-scope/issue-risk/issue-precedent/frontend-visual-review いずれの行も変更されていないことを確認した。
-- フォローアップ Issue #918 の実在 (OPEN 状態) を `gh issue view` で確認した。
+- `gh-pr-merge-status.sh` で `mergeable=true, reason=clean` を確認し、conflict 解消ステップ (Step 3) を経ずに直接 Squash Merge (Step 4) を実行した。
+- `gh pr merge 919 --squash --delete-branch` によりリモートブランチは削除済み。`BASE_BRANCH=main` かつ PR body に `closes #914` を含むため Issue #914 は自動クローズされる見込み。
 
 ### Deferred Items
-- なし — MUST/SHOULD/CONSIDER のいずれの課題も検出されなかったため、修正の持ち越しは発生していない。
+- フォローアップ Issue #918 (Co-Authored-By テンプレート一括更新) は未着手のまま残っている (本 PR のスコープ外)。
 
 ### Notes for Next Phase
-- `/merge 919` にそのまま進行可能 — 未解決のレビュー課題なし、CI 5ジョブ全て SUCCESS。
-- フォローアップ Issue #918 (Co-Authored-By テンプレート一括更新) は未着手のまま残っている (本 PR のマージ可否とは無関係)。
+- `/verify 914` に進行可能。Pre-merge rubric AC 4件は review フェーズで PASS 済み、Post-merge 検証項目は「なし」。
 
 ## review retrospective
 
