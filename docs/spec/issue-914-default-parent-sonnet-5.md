@@ -62,3 +62,31 @@
 **Issue body vs 実装の整合性確認**: Issue Background の記述 (「表本体は依然 Sonnet 4.6 を default parent として記載」「note only」) は `docs/tech.md` の現行内容と一致していることを確認済み。コンフリクトなし。
 
 **Verify command sync 確認**: 本 Spec の `## Verification > Pre-merge` は Issue 本文 `## Acceptance Criteria > Pre-merge` の4項目と verify コマンドを含め完全に一致 (件数一致: Issue側4件 / Spec側4件)。Post-merge は Issue本文どおり「なし」。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-5 を設計どおりの順序・内容で実施した (表直前の一文追加 → note 段落書き換え → pin 方針追記 → ja ミラー同期 → Opus ルート据え置き確認)。
+
+### Design Gaps/Ambiguities
+- 実装着手前の時点で、Issue 本文の Pre-merge AC 4件がすべて `[x]` 済みになっていた (直近のコミット履歴には本 Issue のコード変更や worktree の残骸がなく、以前の `/code 914` 試行が Step 10 のチェックボックス更新まで到達したものの、Step 11 のコミット前に worktree 変更が失われたことが原因と推定される)。本セッションでは実装を最初からやり直した上で、4件の rubric AC を実装済みの `docs/tech.md` に対して再評価し、いずれも PASS を再確認した。チェックボックス自体は既に正しい状態だったため上書き編集は行っていない。
+
+### Rework
+- N/A — 本セッション内での手戻りは発生していない。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 表直前に「default parent = Sonnet 5」を明記する一文を新設し、既存の "Sonnet 5" note 段落は "note only" 表現を除去した上で #877 (NO-GO)・#878 (有意、#903 で対応済み) の着地事実を追記する形にリライトした (テーブル行自体 (`Sonnet` bare alias 表記) は変更していない)。
+- Alias pin 方針は bare `sonnet` エイリアス継続を採用し、`claude-sonnet-5` への明示 pin は不採用と決定 (根拠は Spec Notes 参照)。
+- `docs/ja/tech.md` に欠落していた "Sonnet 5" 段落を新規追加として反映し (#876 Notes からの持ち越し欠落を解消)、pin 方針も日本語で追記した。
+- スコープ外の関連発見 (10ファイルの `Co-Authored-By: Claude Sonnet 4.6` ハードコード) はフォローアップ Issue #918 として起票し、本 Issue のスコープには含めなかった。
+
+### Deferred Items
+- フォローアップ Issue #918 (co-author テンプレートの Sonnet 4.6 → Sonnet 5 一括更新) は未着手のまま起票のみ完了。
+- `docs/product.md` / `docs/structure.md` / `docs/guide/autonomy.md` / `docs/guide/index.md` / `docs/guide/troubleshooting.md` の `docs/ja/` 同期ギャップ (`check-translation-sync.sh` で検出) は本 Issue のスコープ外のため未対応 (本 Issue が変更したのは `docs/tech.md` のみで、これらのファイルは無関係)。
+
+### Notes for Next Phase
+- `/review` では AC4 (Opus ルート据え置き) の確認観点として、`git diff` に review-bug/review-spec/issue-scope/issue-risk/issue-precedent/frontend-visual-review の行が一切含まれないことを機械的にチェックすると良い。
+- 本 Issue の変更はドキュメントのみ (`docs/tech.md`、`docs/ja/tech.md`) であり、`run-*.sh` やスキル/サブエージェント frontmatter の model 文字列は意図的に変更していない。
