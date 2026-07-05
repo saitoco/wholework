@@ -54,3 +54,32 @@
 - **外部仕様依存チェック**: GitHub REST API 公式ドキュメント (`docs.github.com/en/rest/pulls/reviews`) では `line`/`side`/`start_line`/`start_side` フィールドの詳細な制約は明記されていない。422 発生条件 ("Pull request review thread line must be part of the diff") は公式ドキュメントに明文化されたエラーメッセージではなく、実運用時の community reports (GitHub Discussions) および Issue #934 での実際の発生事例から確認した。この点は `gh-pr-review.sh` の実装が「未文書化だが実運用で確認された API 制約」に依拠することを意味し、将来 GitHub 側の挙動が変わった場合は本ロジックの見直しが必要になりうる
 - **diff の取得方法**: `skills/review/SKILL.md` は `gh pr diff "$NUMBER"` (オプションなし、素の unified diff 形式) を既に Step 10 で使用しており (`.tmp/pr-diff-$NUMBER.txt` に保存)、本 Issue の `gh-pr-review.sh` 内実装もこの既存呼び出し規約と同一のコマンド形式 (`gh pr diff "$PR_NUMBER"`) を用いる
 - **doc-checker Impact Assessment**: Change Type 表 (workflow phase changes / project structure changes) にはいずれも該当しない (スクリプト内部ロジックの堅牢化であり、ワークフローフェーズやディレクトリ構成の変更を伴わない)。Steering Docs sync candidate として列挙した4ファイルは、いずれも `gh-pr-review.sh` の一行説明・Interface changes 記載のみを含み、本 Issue の変更 (内部フォールバック機構の追加) では記載内容の実質的な変更は不要と判断したが、最終確認は `/code` に委ねる
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜4 の順序・範囲通りに実装した (再構成・省略なし)
+
+### Design Gaps/Ambiguities
+- Spec Notes は新設する `gh pr diff` モック分岐のフィクスチャ diff について、範囲外テストケースの line 番号選定にのみ言及していたが、実装時に判明した点として、`gh-pr-review.sh` は line comments が存在する限り無条件で `gh pr diff` を呼ぶようになるため、既存5テストケース (`scripts/example.sh:10/42`、`scripts/other.sh:10/20`、`scripts/valid.sh:5`) を壊さないよう、フィクスチャの各ファイルのハンク範囲を `1-50` まで広げる必要があった。既存テストとの整合性確保は Spec に明記されておらず、実装時の判断で対応した
+
+### Rework
+- N/A —手戻りは発生しなかった
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 実装箇所は Issue Retrospective で自動解決済みの方針通り `scripts/gh-pr-review.sh` に一本化した
+- diff ハンク範囲のパースは python3 heredoc 内で正規表現 (`^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@`) により実装し、bash 側は `mktemp` + `trap EXIT` での一時ファイル管理のみに留めた (既存コードスタイルと統一)
+- General Comments へのマージは、本文中に `### General Comments` 見出しが既にあればその直後に追記、なければ `### General Comments (auto-added: line outside PR diff range)` を新設するロジックとした (`skills/review/SKILL.md` Step 11 の既存パターンを再利用)
+- `HAS_MUST` (REQUEST_CHANGES 判定) は変更せず、`$LINE_COMMENTS_FILE` 全件を対象にした既存ロジックのまま維持し、範囲外へ振り分けられた MUST コメントも判定に引き続き寄与させた
+
+### Deferred Items
+- Post-merge の "422 エラーによる手戻りが発生しないことを観察" は `/verify` フェーズに委ねる (opportunistic verify-type)
+- `side: LEFT` のケースは Spec Notes 記載の通りスコープ外のまま (現行コードベースに使用箇所なし)
+
+### Notes for Next Phase
+- `tests/gh-pr-review.bats` は新規3ケース (範囲外フォールバック単体・範囲内範囲外混在・既存 General Comments 見出しへの追記) と回帰用の `gh pr diff` 失敗ケース1件を追加し、既存5ケースを含む全17ケースが PASS
+- Issue #945 の Pre-merge AC 2件は `rubric` 判定で PASS 済みでチェック済み、Issue body 更新済み
+- PR #950 (base: main) 作成済み。ドキュメント同期は不要と判断済み (`docs/structure.md` / `docs/migration-notes.md` および ja ミラーの記載は変更なしで正確)
