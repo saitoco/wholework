@@ -102,3 +102,40 @@ Auto-Resolved Ambiguity Points により厳密な同一タスク medium/high 二
 ### docs/ja/reports/ ミラー
 
 `docs/translation-workflow.md` § Exclusions により `docs/reports/` は翻訳同期対象外。新規レポート `docs/reports/sonnet-5-effort-recalibration-code-review.md` に ja ミラーは作成しない (`#229`/`#903` の既存レポートも ja ミラーなしで前例と整合)。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-3 を順序通りに実施し、Spec `## Notes` に記載済みの分析・判定文言をそのまま使用した。
+
+### Design Gaps/Ambiguities
+- `/code` Step 3 の `phase/ready` ラベルチェック時点で、Issue #921 は既に `phase/code` に遷移済みだった (GitHub timeline 確認: `phase/ready` 付与 06:28:17 → `phase/code` 遷移 06:33:42、いずれも本 Issue の作業当日)。ワークツリーや PR は存在せず、実装コミットも無かったため、以前の `/code` 実行が Step 4 (ラベル遷移) 到達後・実装着手前に中断したものと判断し、既存の完成済み Spec をそのまま正として実装を継続した。`reconcile-phase-state.sh --check-precondition` は `matches_expected: false` を返したが、Spec が存在し内容も完結していたため、非対話モードの auto-resolve 方針 (Spec 不在時のみ Issue 本文から読み取る) とは別扱いとして「既存 Spec を正として続行」を選択した。
+
+### Rework
+- N/A — 手戻りは発生しなかった。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note — 実装 (`docs/tech.md`/`docs/ja/tech.md` note 追記 + 新規レポート) は Spec の Implementation Steps 1-3 と完全に一致していた。
+
+### Recurring issues
+- Nothing to note — レビューで検出された issue はゼロ (MUST/SHOULD/CONSIDER いずれもなし)。
+
+### Acceptance criteria verification difficulty
+- Nothing to note — rubric 型 AC 2件はいずれも意味的に明確で、UNCERTAIN なく即座に PASS 判定できた。`docs/tech.md` の該当 note と `run-code.sh`/`run-review.sh` の実値 (`--effort high` 変更なし) を直接照合するだけで検証が完結し、rubric grader 呼び出しに追加の曖昧性は生じなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Step 8 (rubric 検証) は Issue 本文で既に `[x]` 済みだった AC 2件について、`docs/tech.md`/`docs/ja/tech.md` の note 内容と `scripts/run-code.sh`/`scripts/run-review.sh` の実際の `--effort` 値 (ともに `high` のまま) を直接照合し、PASS として再確認した。
+- Step 10 は `REVIEW_DEPTH=light` (`--light` 明示指定) のため `review-light` エージェント 1体による4観点統合レビューを実施。ドキュメントのみの変更のため、Spec 逸脱・ドキュメント整合性の2観点が中心となり、エッジケース/セキュリティ観点は "該当なし" と判定。
+
+### Deferred Items
+- `agents/review-bug.md` / `agents/review-spec.md` への明示的な `effort: high` frontmatter 追加 (将来の `run-review.sh` 再評価の前提条件) は本 Issue のスコープ外のまま。
+- `--effort=` フラグ露出によるサイズ条件付き effort tiering (impact strategy レポート §8 C5) は Icebox 候補として別スコープのまま。
+
+### Notes for Next Phase
+- MUST/SHOULD issue が一切ないため `/merge 925` へ直接進行可能。
+- 変更ファイルはすべてドキュメント (`docs/reports/`, `docs/tech.md`, `docs/ja/tech.md`, `docs/spec/`) のみで、`run-*.sh`/matrix 表本体・エージェント frontmatter への変更はなし。
