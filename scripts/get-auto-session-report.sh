@@ -248,8 +248,10 @@ VERIFY_REOPEN_CYCLES=$(echo "$EVENTS_JSON" | jq '[.[] | select(.event == "verify
 BACKFILLED_COUNT=$(echo "$EVENTS_JSON" | jq '[.[] | select(.event == "phase_complete" and .backfilled == true)] | length' 2>/dev/null || echo 0)
 
 # Verify phase residuals: issues currently carrying the phase/verify label (live lookup).
-# Populated below in the GitHub state lookups block, since /verify is a wrapper-less Skill
-# invocation and never emits phase_start/phase_complete(phase=="verify") events (see #900).
+# Populated below in the GitHub state lookups block. /verify now emits phase_start/phase_complete
+# (phase=="verify") events (see #902), but this live lookup independently captures the current
+# GitHub state of in-progress verify phases (e.g. mid-verify at session end), which the session's
+# event log alone cannot show.
 VERIFY_RESIDUALS=""
 VERIFY_RESIDUALS_NO_GITHUB_NOTE=""
 
@@ -585,7 +587,6 @@ cat << REPORT_EOF
 ## Metrics
 
 > Known structural gaps in this section (see Issue #875 Out of Scope):
-> - The verify phase does not emit phase_start/phase_complete events (/verify is a wrapper-less Skill invocation), so it is not counted in the Phase Activity Summary / Sub-Issue Completion Timeline phase breakdown.
 > - Manually-performed silent no-op recoveries do not go through Tier 1/2/3 machinery, so they are not reflected in Recovery Events.
 > - The Phase breakdown order below follows event occurrence order, not a fixed pipeline order.
 
