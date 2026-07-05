@@ -122,3 +122,28 @@ Nothing to note (Copilot/Claude 双方の外部レビューは未設定 `.wholew
 
 ### Acceptance criteria verification difficulty
 2 件とも `rubric` 形式の AC だったが、実装コード (該当関数・分岐) と bats テストを直接読んで判定するのに十分な情報量があり UNCERTAIN は発生しなかった。強いて言えば、rubric テキスト自体は「仕組みが実装されている」という抽象度の高い記述で、対象ファイル名を明示していなかったため、対象範囲の特定は PR diff のファイルリストから逆算する必要があった。今後同種の rubric を書く際は `docs/tech.md` の記載 (rubric ガイドライン) に倣い、対象スクリプト名を明示すると verify 実行がより機械的になる。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 特記事項なし。Issue 本文の rubric AC (2件) と Spec の Verification セクションは件数・内容とも完全一致していた。
+
+#### design
+- 特記事項なし。Option B (fallback 投稿) 採用の根拠が Spec Notes に明記されており、実装との乖離もなかった。
+
+#### code
+- `run-auto-sub.sh` の code-pr フェーズ実行中に **`[code-completed-no-pr]` パターン** (commit 完了後、PR 作成前に watchdog がプロセスを終了、reference: #415) が検出された。既存の Tier 2 fallback カタログ (`modules/orchestration-fallbacks.md#code-completed-no-pr`) が自動適用され、worktree ブランチの checkout → rebase → push → `gh pr create` を自律的に実行し、PR #920 の作成に成功、review フェーズへ正常に継続した。親セッション (batch `/auto`) による手動介入は一切不要だった。本 Issue (#915) 自体が「run-review.sh の silent no-op リカバリ不足」を修正対象としているのは皮肉だが、今回発火した `code-completed-no-pr` は #915 のスコープ外の別パターンであり、かつ既存カタログが正しく機能した事例のため、新規 improvement proposal は不要と判断する。
+
+#### review
+- 特記事項なし。review-light の単一エージェント実行で Spec との乖離なしと判定された。
+
+#### merge
+- 特記事項なし。`mergeable=true, reason=clean, review_status=approved` を確認の上、通常の squash merge フローで完了。
+
+#### verify
+- Pre-merge rubric AC 2件とも PASS。post-merge の opportunistic AC 1件は次回 `/auto`/`/review` 実行時の自動観測待ちのため未チェックのまま `phase/verify` を維持。
+
+### Improvement Proposals
+- N/A (今回発火した `code-completed-no-pr` の Tier 2 自動リカバリは想定通り機能しており、追加の改善提案は不要)
