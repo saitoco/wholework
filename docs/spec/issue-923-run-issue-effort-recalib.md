@@ -97,3 +97,47 @@ issue フェーズの成果物 (title・body・受入条件・verify command・S
 ### docs/ja/reports/ ミラー
 
 `docs/translation-workflow.md` § Exclusions により `docs/reports/` は翻訳同期対象外。新規レポート `docs/reports/sonnet-5-effort-recalibration-issue.md` に ja ミラーは作成しない (`#229`/`#903`/`#921`/`#922` の既存レポートも ja ミラーなしで前例と整合)。
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1〜3 を Spec 記載の順序・内容どおりに実施した。
+
+### Design Gaps/Ambiguities
+
+N/A
+
+### Rework
+
+N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+特記事項なし。Implementation Steps 1〜3 は Spec 記載どおりに実施され、`review-light` エージェントによる Spec 乖離観点の検証でも issue は検出されなかった。
+
+### Recurring issues
+
+特記事項なし。review-bug 相当の issue は 0 件で、`#921`/`#922` と同型のドキュメントのみ変更 (レポート新規作成 + tech.md prose note 追記) であり、ワークフロー改善の余地を示す繰り返しパターンは見られなかった。
+
+### Acceptance criteria verification difficulty
+
+特記事項なし。AC 2件はいずれも `rubric` タイプの verify command で、`docs/tech.md`/`docs/ja/tech.md` の記載内容および `run-issue.sh` の実値 (`--effort high`) との突合により両方とも UNCERTAIN を挟まず PASS 判定できた。verify command の記述・検証しやすさに問題はなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- REVIEW_DEPTH=light (Issue Size=M、`--light` 明示指定) のため review-light 1エージェントによる軽量統合レビューを実施し、Spec乖離・エッジケース/堅牢性・セキュリティ/安全性・ドキュメント整合性の4観点を1エージェントでカバーした。
+- 両 AC (rubric タイプ) は `docs/tech.md`/`docs/ja/tech.md` の prose note 追記内容と `run-issue.sh` の実値 (`--effort high`、無変更) を突合し PASS と判定した。
+- 外部レビュー (Copilot/Claude Code Review/CodeRabbit) はいずれも `.wholework.yml` に marker 未設定のため Step 7 を全てスキップした。
+
+### Deferred Items
+- `docs/tech.md` 当該行の Rationale 列自体の書き換え、および Architecture Decisions の fork justification 表の修正は、Spec の Auto-Resolved Ambiguity Points により引き続きスコープ外 (code フェーズから継続)。
+
+### Notes for Next Phase
+- Code Review issue は 0 件 (MUST/SHOULD/CONSIDER いずれもなし) のため、Step 12 (issue 対応) は未実行。`/merge 940` にそのまま進行可能。
+- CI (`DCO`/`Run bats tests`/`Validate skill syntax`/`Forbidden Expressions check`/`macOS shell compatibility`) は全て SUCCESS。
+- Issue #923 の Acceptance Criteria チェックボックスは code フェーズで既に `[x]` 済みで、review フェーズでの追加更新はなし。
