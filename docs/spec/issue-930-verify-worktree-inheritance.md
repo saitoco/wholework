@@ -205,4 +205,29 @@ Background セクションの技術的主張 (`observation-trigger.sh`, `pr-revi
 
 ### Notes for Next Phase
 - `/verify 930` 実行時、Post-merge observation AC (`pr-review-full` / `auto-run` イベントでの opportunistic verify dispatch 挙動) はまだ実観察されていないため、次回の該当イベント発生時にあわせて確認すること。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 特記事項なし。issue/spec retrospective とも記録済みで、Pre-merge AC 2件と Spec Verification セクションは完全一致していた。
+
+#### design
+- 特記事項なし。5 skill 横断の shared module 修正という設計判断は妥当で、実装との乖離もなかった。
+
+#### code
+- Code Retrospective に記録済みの自律判断 (Spec 存在を優先し `phase/code` ラベル不一致を継続実行と解釈) は妥当な判断だった。bats テストのパス比較修正 (`pwd -P`) は環境依存の軽微な手戻り。
+
+#### review
+- review retrospective で **Workflow agentType 解決の bare 名 vs namespace 名の不一致** が発見された (`capabilities.workflow: true` 時、`workflow-guidance.md` のインラインスクリプトが `review-spec`/`review-bug` の bare 名をハードコードしているが、実際に解決可能なのは `wholework:review-spec`/`wholework:review-bug` の namespace 付きのみ)。#882 (plugin-dir 未指定によるagentType未登録) と同型の failure mode だが、根本原因は異なる。review retrospective で「次回 `/verify` 集約時の起票候補」と明記されていた通り、新規 Issue を起票する。
+
+#### merge
+- 特記事項なし。CI green・review承認済み・Pre-merge AC 2件 PASS 済みで squash merge 完了。
+
+#### verify
+- Pre-merge rubric AC 2件とも PASS (bats 4件全て実行し PASS を確認)。post-merge の observation AC 2件 (`event=pr-review-full` / `event=auto-run`) は該当イベント発火まで未チェックのまま `phase/verify` を維持。
+
+### Improvement Proposals
+- `skills/review/workflow-guidance.md` のインラインスクリプトの `FINDERS` 定義 (`agentType: 'review-spec'` / `'review-bug'`) を `wholework:review-spec` / `wholework:review-bug` の namespace 付きに修正する。Pre-flight チェックの文言も「FINDERS 内で使用する正確な文字列で Agent tool available agentType list の存在確認をすること」に明確化する。#882 と同型の failure mode (headless セッションでのカスタム agentType 未解決) の再発防止。
 - 本 PR (#933) 自身が次回 `/review --full` を実行した際の `pr-review-full` イベント opportunistic verify dispatch で、Post-merge observation AC の実挙動を観察できる。
