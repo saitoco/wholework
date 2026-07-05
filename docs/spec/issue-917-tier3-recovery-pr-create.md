@@ -70,16 +70,29 @@ Tier 3 recovery (`agents/orchestration-recovery` sub-agent、`scripts/spawn-reco
 - 上記の Design Gaps に伴い、`agents/orchestration-recovery.md` の新規例と `tests/spawn-recovery-subagent.bats` の新規テストの両方で、main 分岐の commit+push ステップの cmd 文字列を1回書き直した (具体的な `git push`/`git push origin main` → 抽象的なプレースホルダー / `echo` スタブ)。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Implementation Steps 1–3 をそのまま実施 (Spec からの逸脱なし)。`agents/orchestration-recovery.md` に「### 3a. code-pr Phase: Probe the Worktree Branch」を新設し、`tests/spawn-recovery-subagent.bats` に該当ケースの bats test を1件追加した。
-- `orchestration-recovery.md` 内の新規例・bats test の両方で、main 分岐への commit+push ステップは具体的な git コマンド文言を明示せず抽象的なプレースホルダー/スタブに留めた。理由: `validate-recovery-plan.sh` の forbidden pattern (`push\s.*origin\s.*(main|master)`) を回避する具体的な代替コマンド (`git push` 等) を明記すると、safety validator の検知意図を実質的に回避する記述になり、auto-mode の security classifier が拒否したため。worktree branch 側の push (`git push origin worktree-code+issue-N`) は forbidden pattern に該当しないため具体的なコマンドのまま残している。
+- review-light (light mode, 4 perspectives) を実施し、MUST issue なし・SHOULD 2件・CONSIDER 1件を検出。安全性に関わる recovery agent 文書の明確化のため3件とも修正した (abort/recover 優先順位の明記、5-step budget 整合ガイダンスの追記、bats test タイトルの修正)。
+- rubric ベースの2 pre-merge AC はいずれも独立した grader 判定で PASS — `/code` phase の self-assessment と一致した。
 
 ### Deferred Items
-- "partial recovery" の明示的な報告機構 (Issue 本文 Purpose の選択肢3) は Spec Notes の判断通り本 Issue のスコープ外。`write_recovery_entry()` の outcome 拡張は別 Issue 候補。
-- Option B (`run-auto-sub.sh` 側の `_observe_code_milestone()` を Tier 3 recovery 直後に再利用する分岐) は不採用のまま。将来的に Option A だけでは不十分と判明した場合の代替案として記録のみ。
+- "partial recovery" の明示的な報告機構 (Issue 本文 Purpose の選択肢3) は code phase に続き review phase でも対象外のまま。`write_recovery_entry()` の outcome 拡張は別 Issue 候補。
+- Option B (`run-auto-sub.sh` 側の `_observe_code_milestone()` を Tier 3 recovery 直後に再利用する分岐) は不採用のまま変更なし。
 
 ### Notes for Next Phase
+- merge phase では、Step 3a に追加した「4. Precedence」項目が既存の Step 3 anomaly-pattern table と整合していることを前提に進めてよい (review で確認済み)。
+- 次回 code-pr phase で Tier 3 recovery が実際に発火した際、5-step 上限に抵触しないか (Step 3a の compact 化ガイダンスが機能しているか) を post-merge observation で確認する価値がある。
 - レビュー時、`agents/orchestration-recovery.md` の新規ガイダンス例に main への直接 push コマンドが具体的に書かれていないか (プレースホルダーのままか) を確認すること — 具体的な push コマンドが書かれていると security classifier に拒否される、または `validate-recovery-plan.sh` の forbidden pattern を回避する記述として問題視される可能性がある。
 - rubric AC 2件はいずれもセルフアセスメントで PASS 判定済み (`/code` Step 10)。`/review` phase での独立した rubric grader 実行でも同様の結果になるはずだが、念のため再確認すること。
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+- なし。Implementation Steps 1–3 は Spec 通り実施されており、review で検出した3件の issue (SHOULD×2, CONSIDER×1) はいずれも Spec からの逸脱ではなく、Spec レベルでは想定されていなかった記述明確化 (abort/recover の優先順位、5-step budget との整合、test タイトルの軽微な不一致) だった。
+
+### Recurring Issues
+- 「安全側マージン (5-step 上限、abort 優先度) の明記漏れ」は本 Issue 固有の問題だが、recovery-agent 系のガイダンス文書 (`agents/orchestration-recovery.md`) に新規パターンを追記する際に共通して起きやすい抜け漏れとして今後の類似 Issue でも注視する価値がある。
+
+### Acceptance Criteria Verification Difficulty
+- 両 AC とも `rubric` verify command で明確に PASS 判定でき、UNCERTAIN は発生しなかった。Issue #319 由来のガイドライン (rubric text にセキュリティ重要 sub-field を明記する) は今回のケースでは該当なし — 今回の rubric は trigger 条件全体の有無を問うものであり、sub-field 粒度の検証課題は生じていない。
