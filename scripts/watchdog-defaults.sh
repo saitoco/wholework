@@ -2,11 +2,16 @@
 # sourceable helper — do not execute directly
 
 WATCHDOG_TIMEOUT_DEFAULT=2700
+# Base 2700 raised from 1800 following the #556 spike (Fable 5, 2026-06-13):
+# analytical/multi-paragraph prompts showed ~120s silent windows even in a
+# short-form spike, and hard production tasks (spec design, PR body
+# composition, review synthesis) were extrapolated at 600-2000s — see
+# docs/reports/watchdog-recovery-strategy.md § Fable 5 long-turn findings.
 
 # Phase-specific watchdog timeouts (in seconds).
 # Calibrated against typical silent windows observed under the dominant parent
 # orchestrator model. Lower-latency parent models (e.g. Fable 5) can use tighter
-# values; high-effort triage under Sonnet 4.6 / Opus 4.7 requires more headroom.
+# values; high-effort triage under Sonnet 5 / Opus 4.8 requires more headroom.
 #
 # Recalibration guidance:
 #   - If watchdog kills become frequent on a phase, raise that phase's *_DEFAULT
