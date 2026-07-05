@@ -8,8 +8,6 @@ English | [日本語](../ja/reports/claude-fable-5-impact-strategy.md)
 **Scope**: Wholework's reason to exist under a Mythos-class model, plus distributable components (skills, agents, scripts) and Steering Documents
 **Status**: Proposal — see "Candidate Issues" (§8) for an execution plan
 
-> ⚠️ **Suspension Notice (2026-06-13)**: Fable 5 (`claude-fable-5`) is currently suspended by Anthropic under a government directive. API access will likely return an error. Suspension duration is unknown but not expected to be long-term. The analysis and candidate issues below remain valid for when access resumes. To restore: remove this notice and the matching suspension warning in `scripts/run-spec.sh`.
-
 **Companion**: builds on `docs/reports/claude-opus-4-7-optimization-strategy.md`
 
 ## 1. Executive Summary
