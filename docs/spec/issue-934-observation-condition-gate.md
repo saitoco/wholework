@@ -96,3 +96,29 @@ review-light エージェントが指摘した「ドキュメント不整合」(
 ### Acceptance criteria verification difficulty
 
 Nothing to note — 両 AC とも `verify-type: rubric` で明確に判定でき、UNCERTAIN は発生しなかった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 特記事項なし。Issue 本文の rubric AC (2件) と Spec の Verification セクションは完全一致していた。
+
+#### design
+- 特記事項なし。Option B (条件チェックゲート) 採用の根拠は Issue 本文の Auto-Resolved Ambiguity Points の推奨を踏襲しており妥当。
+
+#### code
+- Code Retrospective に記録済みの bash 3.2 空配列 + `set -u` の手戻りは環境依存の既知の落とし穴で、Spec の "bash 3.2+ 互換" 明記はあったが具体的な落とし穴までは書かれていなかった点が手戻りの一因。
+- code phase で `json-mode-silent-hang` の Tier 2 fallback recovery が発生したが、`## Auto Retrospective` に既に記録済みのため本セクションでは重複記載しない。
+
+#### review
+- review retrospective で **`gh-pr-review.sh` の 422 エラー (diff 範囲外行へのインラインコメント)** という新たな失敗パターンが発見された。review-light エージェントが「既存箇所の未更新」を指摘する際、対象行が diff hunk の外側 (変更されていない pre-existing 行) だと GitHub Review API が `422 Line could not be resolved` を返す。今回は診断済みの回避策 (diff 内の関連する新規行に付け替え) で解消できたが、同種の指摘は今後も起こりうる再発可能性のあるパターンであり、review retrospective 内で具体的な改善策 (`path`/`line` の事前チェック + 自動付け替え or General Comments へのフォールバック) まで提示されている。
+
+#### merge
+- Phase Handoff に記録済みの2件 (Auto Retrospective セクションの rebase 競合解消・worktree 構成に起因する `--delete-branch` の個別対応) はいずれも merge phase 固有の運用上の判断で、追加の改善提案は不要。
+
+#### verify
+- Pre-merge rubric AC 2件とも PASS (bats 33件全て実行し PASS を確認)。Post-merge 条件なしのため `phase/done` に遷移。
+
+### Improvement Proposals
+- `skills/review/SKILL.md` の Step 10 (統合フェーズ) または `scripts/gh-pr-review.sh` に、レビューエージェントが出力する `path`/`line` が実際に PR diff のハンク範囲内かを事前チェックする仕組みを追加する。範囲外の場合は diff 内の関連する新規追加行に自動的に付け替えるか、`path: null` の General Comments 扱いにフォールバックする。`gh-pr-review.sh` の `422 Line could not be resolved` エラーによる review 手戻りの再発防止。
