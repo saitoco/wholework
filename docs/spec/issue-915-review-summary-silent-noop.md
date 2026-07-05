@@ -87,20 +87,20 @@ No new comments since last phase.
 - **Verify command sync 確認**: 本 Spec の `## Verification > Pre-merge` は Issue 本文 `## Acceptance Criteria > Pre-merge` の2項目と verify コマンドを含め完全に一致 (件数一致: Issue側2件 / Spec側2件)。Post-merge も Issue本文の1件と一致。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の Implementation Steps 1〜5 をそのままの順序・内容で実装した (deviation なし)
-- `post-fallback-review-summary.sh` のガード条件は Spec 記載どおり "Acceptance Criteria Verification Results" を含む既存 Review の有無とし、修正コミットの有無はガードに使わなかった (#907 が修正コミットなしのケースだったため)
-- `tests/run-review.bats` の再チェック用 `reconcile-phase-state.sh` mock は呼び出し回数に応じて出力を切り替えるステートフルな実装 (1回目 false、2回目以降 true) にして、フォールバック投稿前後の状態遷移を検証した
+- `/review 920 --light --non-interactive` で軽量統合レビュー (review-light エージェント 1 体) を実行。Spec deviation / Edge cases・robustness / Security / Documentation consistency の 4 観点すべてで指摘なしと判定
+- 2 件の rubric 形式 AC ("修正コミット push 後の Response Summary 投稿を保証する仕組み" / "silent no-op ケースをカバーする bats test") は、実装ファイル (`scripts/post-fallback-review-summary.sh`, `scripts/run-review.sh` の該当分岐) を直接読み、`tests/post-fallback-review-summary.bats` + `tests/run-review.bats` をローカル実行 (全 30 テスト PASS) して両方 PASS と判定した
+- 修正コミットが発生しなかったため Step 12 (Issue 対応)・Step 13 (受け入れ条件整合性チェック) は共にスキップ
 
 ### Deferred Items
-- `scripts/detect-wrapper-anomaly.sh` の `reconciler-header-mismatch` パターンの誤帰属修正 (Spec Notes に記載、別 Issue 推奨。本 Issue のスコープ外)
-- フォールバック投稿と本来の Step 14 投稿が両方成功した場合の重複コメント dedup ロジック (Spec Notes に記載、cosmetic tradeoff として許容)
+- `scripts/detect-wrapper-anomaly.sh` の `reconciler-header-mismatch` パターンの誤帰属修正 (Spec Notes に記載、別 Issue 推奨。本 Issue のスコープ外、review phase でも変更なし)
+- フォールバック投稿と本来の Step 14 投稿が両方成功した場合の重複コメント dedup ロジック (Spec Notes に記載、cosmetic tradeoff として許容のまま)
 
 ### Notes for Next Phase
-- Review phase (`/review` on PR #920) で本 PR 自体をレビューする際、`scripts/run-review.sh` の変更が review skill 自身の completion 検出ロジックに影響するため、review 実行時に silent no-op が発生した場合は今回追加したフォールバックが作動することを期待した挙動として扱う
-- Behavioral Change Detection (Step 9) により `scripts/run-review.sh` の変更が `tests/run-auto-sub.bats` からも参照されていることを検出し、`bats tests/` フルスイート (1084 tests) を実行して回帰なしを確認済み
+- Merge phase (`/merge 920`) では MUST issue が存在しないため通常の merge フローで進行可能
+- 本 PR がレビューしている `scripts/run-review.sh` の変更 (silent no-op フォールバック) 自体は、今回の `/review` 実行中には発火しなかった (通常どおり Step 14 で Response Summary が投稿された) — dogfooding の観察事項として記録
 
 ## Code Retrospective
 
@@ -112,3 +112,14 @@ No new comments since last phase.
 
 ### Rework
 - N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Nothing to note (review-light の 4 観点すべてで Spec と実装の乖離なしと判定)。
+
+### Recurring issues
+Nothing to note (Copilot/Claude 双方の外部レビューは未設定 `.wholework.yml` により Step 7 は全てスキップ、Step 10 light mode の単一 review-light エージェント実行のみで完結)。
+
+### Acceptance criteria verification difficulty
+2 件とも `rubric` 形式の AC だったが、実装コード (該当関数・分岐) と bats テストを直接読んで判定するのに十分な情報量があり UNCERTAIN は発生しなかった。強いて言えば、rubric テキスト自体は「仕組みが実装されている」という抽象度の高い記述で、対象ファイル名を明示していなかったため、対象範囲の特定は PR diff のファイルリストから逆算する必要があった。今後同種の rubric を書く際は `docs/tech.md` の記載 (rubric ガイドライン) に倣い、対象スクリプト名を明示すると verify 実行がより機械的になる。
