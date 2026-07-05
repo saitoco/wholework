@@ -61,3 +61,29 @@ No new comments since last phase.
 - **`docs/reports/orchestration-recoveries.md` は対象外**: 同ファイルは自動生成の追記専用レポートであり、本 Issue のスコープは将来の誤記録の発生を防ぐことにあるため、既存の誤記録レコードを遡って訂正する対象にはしない。
 - **`modules/orchestration-fallbacks.md` 更新は SHOULD レベル**: Issue 本文の Acceptance Criteria (Pre-merge 2件) はいずれも `scripts/detect-wrapper-anomaly.sh` とそのテストのみを対象としており、専用の verify command は設定しない (#927 の同種判断を踏襲)。
 - **Verify command sync 確認**: 本 Spec の `## Verification > Pre-merge` は Issue 本文 `## Acceptance Criteria > Pre-merge` の2項目と verify コマンドを含め完全一致 (件数一致: Issue 側2件 / Spec 側2件)。Post-merge も Issue 本文の1件と一致 (`verify-type: opportunistic` を含め verbatim コピー)。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜3 をそのまま実施した
+
+### Design Gaps/Ambiguities
+- N/A — Uncertainties セクションはなく、Notes に記載済みの判断 (recheck 判定方式・Bug-type conflict check・SHOULD レベル判断) で実装完了まで到達できた
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の指示通り、`review-completion-false-negative` の `elif` 条件に `&& ! grep -q '"matches_expected":true' "$LOG_FILE"` を追加し、既存の `EXIT_CODE=0` 分岐の reconcile-first authority ロジックと同型の抑止条件とした
+- 新規 bats テストは Spec 指定通り既存の "no detection for unrelated log" テストの直後に追加し、`post-fallback-review-summary.sh` の recovery 成功ログメッセージを模した内容とした
+
+### Deferred Items
+- `docs/structure.md` / `docs/ja/structure.md` の sync candidate 確認: 両ファイルの `detect-wrapper-anomaly.sh` 説明文 ("detect known failure patterns...") は本修正後も妥当なため更新不要と判断 (更新自体は見送りではなく、確認の結果不要と判明したもの)
+- Post-merge の opportunistic observation (次回 `/auto` review phase での実地確認) は次フェーズ以降で発生
+
+### Notes for Next Phase
+- Pre-merge verify command 2件 (rubric) は `bats tests/detect-wrapper-anomaly.bats` 40/40 PASS の実行結果を根拠に PASS と判断し、Issue チェックボックスを更新済み
+- `modules/orchestration-fallbacks.md` の Rationale 追記は Spec Notes 記載の通り SHOULD レベル (専用 verify command なし) のため、review phase で追加の verify command 要求は不要
