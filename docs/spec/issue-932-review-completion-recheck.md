@@ -97,3 +97,28 @@ No new comments since last phase.
 
 ### Acceptance criteria verification difficulty
 - Nothing to note — Pre-merge 2件はいずれも rubric 形式の verify command で、`bats tests/detect-wrapper-anomaly.bats` の実行結果 (40/40 PASS、新規テスト含む) を根拠に機械的に PASS 判定できた。UNCERTAIN は発生しなかった
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 特記事項なし。Issue 本文の rubric AC (2件) と Spec の Verification セクションは件数・内容とも完全一致していた。
+
+#### design
+- 特記事項なし。既存の reconcile-first authority パターン (silent-no-op 分岐) を流用する設計判断は妥当で、実装との乖離もなかった。
+
+#### code
+- 特記事項なし。Implementation Steps 1-3 通りに実装され、code phase・review phase とも anomaly の発生なくクリーンに完了した。
+
+#### review
+- review retrospective で構造的な傾向が指摘されている: 本 Issue は #916 (merge phase live check) / #927 (review phase live check) に続く同系統3件目の false positive 修正であり、`detect-wrapper-anomaly.sh` の `elif` チェーンに新しい recovery/fallback 機構を追加するたびに既存の静的パターン判定が古くなる傾向がある。ただし現時点で具体的な未修正の残存パターンは特定されていない (メタ観察のレベル)。
+
+#### merge
+- 特記事項なし。mergeable=clean を確認の上、通常の squash merge フローで完了。
+
+#### verify
+- Pre-merge rubric AC 2件とも PASS (bats 40件全て実行し PASS を確認)。post-merge の opportunistic AC 1件は次回 review phase での post-fallback recovery 成功時の自動観測待ちのため未チェックのまま `phase/verify` を維持。
+
+### Improvement Proposals
+- N/A (review retrospective のメタ観察は具体的な未修正パターンを指摘するものではなく、新規 Issue 化するには具体性が不足している。今後 `docs/reports/orchestration-recoveries.md` の `recoveries-auto-fire` 閾値集計で同種パターンが繰り返し検出された場合に、その時点で具体的な対象を伴う Issue 化を検討する)
