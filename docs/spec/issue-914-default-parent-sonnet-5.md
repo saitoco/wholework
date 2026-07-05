@@ -97,3 +97,31 @@
 
 ### Acceptance criteria verification difficulty
 - 4件全て rubric ベースの verify command で、文言・対象範囲が明確だったため UNCERTAIN は発生しなかった。ただし Issue のチェックボックスが実装着手前から既に `[x]` 済みという特殊な前提状態があった (Code Retrospective の Design Gaps/Ambiguities に記載の通り、以前の `/code 914` 試行が中断したことが原因と推定)。今回は rubric による独立再評価で問題なしと確認できたが、チェックボックスの事前状態を鵜呑みにせず実装内容に対して再検証する運用が有効に機能した一例として記録する。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- pin 方針の決定を「実装時の成果物」として意図的に開いたまま設計したのは適切。code フェーズで bare alias 継続 + 3 点根拠として確定した
+- spec が調査中に `Co-Authored-By: Claude Sonnet 4.6` のハードコード drift (実態 Sonnet 5 との乖離) をスコープ外で検出し、code フェーズが #918 に分離起票した。スコープ規律を保ちつつ発見を取りこぼさない良い連携
+
+#### design
+- C1 の実質が「スクリプトの model 変更」ではなく「docs/matrix 整合 + pin 方針決定」であることを正しく捉えた設計。runtime が既に bare `sonnet` alias で Sonnet 5 稼働中だった実態を前提に置けていた
+
+#### code
+- 手戻り (fixup/amend) なし。docs/ja/tech.md ミラーを新規追加し #876 で持ち越されていた同期漏れも opportunistic に解消
+- 副次発見 (Co-Authored-By drift) を本 Issue に混ぜず #918 に分離した判断が適切
+
+#### review
+- docs-only 変更のため review-light で指摘なし・CI 全 SUCCESS
+- Issue のチェックボックスが実装前から `[x]` 済み (以前の中断した /code 914 試行が原因) だったが、rubric による独立再評価で事前状態に依存せず検証できた
+
+#### merge
+- conflict なし squash merge。#914 auto-close
+
+#### verify
+- 全 4 AC が rubric/file_contains で PASS。1st-attempt PASS
+
+### Improvement Proposals
+- N/A — 唯一の actionable な発見 (`Co-Authored-By: Claude Sonnet 4.6` ハードコード drift) は code フェーズが #918 に分離起票済み。ワークフローはクリーンに完走し、新規の構造的改善 Issue を要しない
