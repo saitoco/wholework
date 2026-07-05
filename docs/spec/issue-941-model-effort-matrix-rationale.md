@@ -41,3 +41,38 @@ No new comments since last phase.
 - **除外ファイル (履歴記録)**: 以下は現行 (修正前) の Rationale 文言をそれ自体の分析対象として引用している履歴記録であり、本 Issue の変更対象から除外する: `docs/spec/issue-923-run-issue-effort-recalib.md` / `docs/spec/issue-108-effort-matrix.md` (disposable Spec)、`docs/reports/sonnet-5-effort-recalibration-issue.md` (report)。`docs/tech.md`/`docs/ja/tech.md` 以外を変更しないという方針は、tech.md 自身の "Spec-first (disposable)" architecture decision と整合する。
 - `tests/*.bats` に Rationale 列の文言を検証するテストは存在しないことを grep で確認済み (変更不要)。
 - Issue body の Background 記述 (#923/#921 発見内容) を `docs/tech.md` の実ファイル内容 (89, 92, 121, 123行目) と突き合わせ、齟齬がないことを確認済み (conflict検出なし)。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Spec の Implementation Steps 1-3 の推奨文言をそのまま採用し、計画通りに実装した。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note — 実装は Spec の Implementation Steps 1-3 の推奨文言をそのまま採用しており、構造的な乖離はなかった。
+
+### Recurring issues
+- Nothing to note — 同種の指摘の繰り返しはなかった (rubric 3件とも一発 PASS)。
+
+### Acceptance criteria verification difficulty
+- Nothing to note — 3件すべて `rubric` 形式で明確に判定でき、UNCERTAIN は発生しなかった。verify command の過不足も見当たらない。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- REVIEW_DEPTH=light (Size M / `--light` 明示指定) により review-light 1エージェントで4観点統合レビューを実施し、静的な2グループ並列レビューはスキップした。
+- 外部レビューツール (Copilot/Claude Code Review/CodeRabbit) はすべて `.wholework.yml` で無効のため Step 7 を全面スキップした。
+
+### Deferred Items
+- None — MUST/SHOULD/CONSIDER いずれの指摘もなく、Step 12 の修正作業は発生しなかった。
+
+### Notes for Next Phase
+- Acceptance Criteria 3件は Issue 側で既に `[x]` 済みだったが、`/review` の rubric 再検証でも独立して PASS を確認済み。`/merge 949` にそのまま進んでよい。

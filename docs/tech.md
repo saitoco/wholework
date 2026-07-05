@@ -86,10 +86,10 @@ Entries are grouped by workflow order (triage → issue → spec → code → re
 
 | Component | Phase | Model | Effort | Rationale |
 |-----------|-------|-------|--------|-----------|
-| run-issue.sh | issue | Sonnet | high | L/XL scope analysis and sub-issue splitting require thorough orchestration |
+| run-issue.sh | issue | Sonnet | high | Existing Issue Refinement performs substantive judgment work (ambiguity resolution, AC/verify-command authoring) to produce the pipeline's most upstream artifact; errors propagate through every downstream phase — the longest blast radius in the C-series |
 | run-spec.sh | spec | Sonnet (Opus via `--opus` for L; Fable 5 via `--fable`) | Sonnet: max; Opus: xhigh (default), max (explicit `--max`); Fable 5: high (default), max (explicit `--max`) | Design quality is critical; spec errors propagate to all subsequent phases. `/auto` passes `--opus` for L-size only (XL is split before spec) |
 | run-code.sh | code | Sonnet | high | Implementation requires thorough reasoning |
-| run-review.sh | review | Sonnet | high | Review orchestration; sub-agents handle deep analysis |
+| run-review.sh | review | Sonnet | high | Orchestrator performs substantive reasoning beyond dispatch — Steps 7.2/7.4/7.6 interpret external review feedback and author fix commits, work comparable to run-code.sh's own implementation reasoning |
 | run-merge.sh | merge | Sonnet | low | Mechanical merge operation; minimal reasoning needed |
 | issue-scope | issue (L/XL only) | Opus | — | Called by `/issue` Step 11a for L/XL parallel investigation. Scope identification accuracy is critical for sub-issue boundary decisions |
 | issue-risk | issue (L/XL only) | Opus | — | Called by `/issue` Step 11a for L/XL parallel investigation. Risk assessment accuracy improves acceptance criteria quality |
