@@ -74,23 +74,18 @@ No new comments since last phase.
 - N/A
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light (`--light` 明示指定) で review-light agent による軽量統合レビュー (4 観点) を実施し、elif チェーンの実行時挙動 (reconciler-header-mismatch 分岐や EXIT_CODE=0 分岐との相互作用) まで踏み込んで検証した
-- MUST/SHOULD/CONSIDER のいずれも検出されず、Issue 12 (Issue Resolution) はスキップして Step 13 (Acceptance Criteria Consistency Check) に進んだ
+- PR #937 は mergeable=true (reason=clean, CI success, review approved) だったため、conflict 解消フローはスキップし直接 squash merge を実行した
+- Squash merge 後、Issue #932 は `closes #932` により自動クローズされる (base branch が main のため)
 
 ### Deferred Items
-- `docs/structure.md` / `docs/ja/structure.md` の sync candidate 確認は code phase で完了済み (更新不要と判断)。review phase で再確認し同結論を維持
-- Post-merge の opportunistic observation (次回 `/auto` review phase での実地確認) は merge 後に発生
+- Post-merge の opportunistic observation (次回 `/auto` review phase での実地確認) は verify phase の観察対象として引き継ぐ
 
 ### Notes for Next Phase
-- MUST issue なし、CI 全 SUCCESS のため `/merge 937` にそのまま進める
-- Acceptance Criteria の Pre-merge 2件は Issue 側で既に `[x]` 済み (review 側で再検証し PASS を確認、追加更新は不要)
-
-### Notes for Next Phase
-- Pre-merge verify command 2件 (rubric) は `bats tests/detect-wrapper-anomaly.bats` 40/40 PASS の実行結果を根拠に PASS と判断し、Issue チェックボックスを更新済み
-- `modules/orchestration-fallbacks.md` の Rationale 追記は Spec Notes 記載の通り SHOULD レベル (専用 verify command なし) のため、review phase で追加の verify command 要求は不要
+- Post-merge verify command 1件 (opportunistic) が残っている: 次回 `/auto` review phase で post-fallback recovery 成功時に false-positive anomaly が発生しないことを観察
+- Pre-merge の2件は review phase までに PASS 確認済みで追加対応不要
 
 ## review retrospective
 
