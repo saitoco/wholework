@@ -89,12 +89,11 @@
 - Nothing to note — 6件の Pre-merge AC (rubric×3、file_not_contains×1、file_contains×1、github_check×1) は全て UNCERTAIN なく PASS/FAIL に分類できた。2件の rubric FAIL は PR 本文が自己申告していた内容と完全に一致しており、grader 判定に曖昧さはなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Pre-merge AC 6件中 FAIL 2件 (実測結果記録、SPEC_DEFAULT 再校正の実測根拠) は `/code` の意図的な決定によるものであり、review 側では実測実行や authorization 取得を代行せず、Issue チェックボックスに FAIL として正直に反映するに留めた (該当2件は unchecked のまま)。
-- Spec の Pre-merge Verification セクション (35〜36行目) に deferred 状態の注記を追加 (MUST fix)。`docs/structure.md` 確認結果を Code Retrospective に追記 (CONSIDER fix)。いずれも Spec ファイル内の記述整合性を取るための変更で、Issue 側の AC テキストや GitHub の検証結果には影響しない。
-- レビューは GitHub 上で self-authored PR のため `REQUEST_CHANGES` を発行できず (422)、`COMMENT` イベントで投稿。MUST issue は本文と Step 14 のレスポンスサマリーで明示している。
+- PR #944 は mergeable=true / CI success / review approved の状態だったため、conflict resolution は不要で squash merge を直接実行した。
+- Merge phase での判断・分岐は発生せず、review フェーズが記録した2件の deferred AC (実測結果記録、SPEC_DEFAULT 再校正の実測根拠) の状態はそのまま引き継いだ。
 
 ### Deferred Items
 - `run-spec.sh <N> --fable` の実測実行そのもの (2〜3件の backlog Issue)。ユーザーの明示認可が必要 — `/code` フェーズからの継続的な deferral。
@@ -102,5 +101,5 @@
 - 上記実測が行われた場合の `tests/watchdog-defaults.bats` 74行目の期待値更新 (値変更時のみ)。
 
 ### Notes for Next Phase
-- `/merge` 前にユーザーが本 PR の Summary (2件の未達 AC と判断根拠) を確認し、実測実行の要否を判断すること。
+- `/verify` は Issue #939 のチェックボックスのうち、review フェーズで FAIL 判定済みの2件 (実測結果記録、SPEC_DEFAULT 再校正の実測根拠) が unchecked のままであることを踏まえて判定すること。
 - Post-merge AC (opportunistic observation) は次回 `--fable` spec 実行時に自動検証される想定。
