@@ -15,9 +15,10 @@ Provides a shared worktree Entry/Exit lifecycle common to all skills (/spec, /co
 
 The calling skill enters the worktree with the following steps:
 
-1. **Determine if already in a worktree**: Run `test -f .git`
-   - **If file (inside worktree)**: Already running inside a worktree. Record `ENTERED_WORKTREE=false` and skip EnterWorktree, proceeding to the next step
-   - **If directory (normal repository)**: Record `ENTERED_WORKTREE=true` and proceed to the next step
+1. **Determine worktree context**: Run `${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh "$WORKTREE_NAME"` (pass the same value used for `EnterWorktree`'s `name` parameter in step 2):
+   - **Output `none`** (not inside any worktree): Record `ENTERED_WORKTREE=true` and proceed to the next step
+   - **Output `own`** (already inside the worktree matching `WORKTREE_NAME`): Record `ENTERED_WORKTREE=false` and skip EnterWorktree, proceeding to the next step
+   - **Output `foreign <path>`** (inside a *different* worktree — e.g. inherited via a nested `Skill()` dispatch from a parent phase's Opportunistic Verification / Event-based observation scan, or a leftover worktree from a prior phase that was never exited): run `cd <path>` to return to the main repository root, then record `ENTERED_WORKTREE=true` and proceed to the next step exactly as in the `none` case (this creates the skill's own properly isolated worktree instead of silently operating — and potentially committing — inside the foreign one)
 
 2. Only when `ENTERED_WORKTREE=true`: Call `EnterWorktree(name: WORKTREE_NAME)`
 
