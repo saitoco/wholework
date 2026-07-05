@@ -91,3 +91,30 @@
 ### Acceptance criteria verification difficulty
 
 - Nothing to note — 両 AC とも rubric 単独構成 (Spec Notes に記載の通り、意図的な設計) で UNCERTAIN なく PASS 判定できた。verify command の過不足や記述不備は見られなかった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- rubric 型 AC 2件は意味的に明確で、`/verify` が両者を UNCERTAIN なく即 PASS 判定できた。Issue 本文の Auto-Resolved Ambiguity Points (A/B 方法論・Opus fallback 比較範囲・据え置き時の記録場所) と、rubric 単独構成の意図的採用 (補助 `section_contains` は「run-spec.sh」「xhigh」が既に Opus パス記述で表内に存在するため常時 PASS を招くとして意図的に不採用) が spec Notes に明記されており、AC 検証の曖昧性を事前に排除できていた。良好。
+
+#### design
+- Spec が前例調査 (#217: Sonnet パスは Opus xhigh 導入時にスコープ外 / #229: run-spec.sh は評価対象外) で「Sonnet パス max は初評価」であることを確定させ、判定 (maintain max) の根拠構造を spec 時点で固めていた。実装は Implementation Steps 1-5 と完全一致。品質クリティカルなフェーズに対し #921 (C2) の前例を踏襲した堅実な設計。
+
+#### code
+- 手戻り・fixup/amend なし (git 履歴クリーン、squash merge 1 コミット)。
+- **注目観察 (本番サンプル母集団の time-proxy 制約)**: 本番サンプル調査で #921 (C2) が用いた「Sonnet 5 リリース日以降にマージされた PR」という時間軸フィルタが、本リポジトリの squash 環境ではコミット日時が全て同日記録されるため使えず、Issue 番号を時系列の代理指標に切り替えた。これは C4 (#923) など今後の本番サンプルベース再校正でも再発する制約であり、方法論的な知見として記録に値する。
+
+#### review
+- MUST 0件、SHOULD 2件を検出・解決 (新規レポート内の外部参照の陳腐化: #217 の日付プレースホルダと #927 の Code Retrospective 完了状況)。判定結果には影響なし。review は doc-audit 品質の精度指摘を適切に機能させた。
+- **注目観察 (横断参照レポートの陳腐化リスク)**: C-series (#921/#922/#927) の状態を横断参照するレポートは、参照先の状態 (日付・retrospective 完了状況) が執筆後マージ前に変化しうる。本件は軽微 (review で修正済み) だが、C4 (#923) 以降の同型レポートで再発しうる recurring パターン。
+
+#### merge
+- squash merge クリーン (`mergeable=true`/`reason=clean`、CI success・review approved)。コンフリクトなし。問題なし。
+
+#### verify
+- rubric 型 AC 2件とも初回 PASS、reopen サイクルなし。verify command 整合性: `run-spec.sh` の Sonnet デフォルト `EFFORT="max"` (line 12) が matrix 表 (Sonnet: max) と SSoT 一致し、「据え置き=表未変更」を機械照合できた。`tests/run-spec.bats` も無変更。inconsistency なし。
+
+### Improvement Proposals
+- (candidate, convention/低優先) 並行 C-series Issue (#921/#922/#923/#927) の状態を横断参照する監査品質レポートを書く際は、「日付・retrospective 完了状況などの外部参照は生成直前に再確認する」というライティング規律 (convention/lesson) を徹底する。#922 で 2件の SHOULD (陳腐化した外部参照・未確定プレースホルダ) が review で検出された recurring パターンであり、C4 (#923) 以降で再発リスクがある。構造変更ではなく convention レベルの lesson。
