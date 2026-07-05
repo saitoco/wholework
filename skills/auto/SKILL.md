@@ -454,7 +454,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
    git add $SPEC_PATH/issue-$NUMBER-*.md
    git commit -s -m "Add issue retrospective for issue #$NUMBER
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
    git push origin main
    ```
 
@@ -573,7 +573,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
    git add $SPEC_PATH/issue-$NUMBER-*.md docs/reports/orchestration-recoveries.md
    git commit -s -m "Add auto retrospective for issue #$NUMBER
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
    git push origin main
    ```
 
@@ -764,7 +764,7 @@ If `OBSERVATION_MATCHES` is non-empty, read `${CLAUDE_PLUGIN_ROOT}/modules/detec
      git add "$SESSION_DIR"
      git commit -s -m "Add L3 session data for session ${AUTO_SESSION_ID}
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
      git push origin main
      ```
      Output "L3 session events committed (not notable — session.md skipped)." and skip the remaining L3 steps.
@@ -874,7 +874,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
     git add "$SESSION_DIR"
     git commit -s -m "Add L3 session retrospective for session ${AUTO_SESSION_ID}
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
     git push origin main
     ```
 

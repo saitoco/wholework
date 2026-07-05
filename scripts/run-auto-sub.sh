@@ -100,7 +100,7 @@ _write_manual_recovery_to_spec() {
     if git -C "$_repo_root" add "$spec_rel_path" \
        && git -C "$_repo_root" commit -s -m "Record manual recovery in auto retrospective for issue #${issue}
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>" \
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
        && git -C "$_repo_root" push origin HEAD; then
       echo "[#${issue}] [recovery] spec auto retrospective updated for issue #${issue} (manual recovery)"
     else
@@ -230,7 +230,7 @@ _write_tier2_recovery_to_spec() {
     if git -C "$_repo_root" add "$spec_rel_path" \
        && git -C "$_repo_root" commit -s -m "Record Tier 2 recovery in auto retrospective for issue #${issue}
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>" \
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
        && git -C "$_repo_root" push origin HEAD; then
       echo "${LOG_PREFIX} [recovery] spec auto retrospective updated for issue #${issue}"
     else
@@ -278,7 +278,7 @@ _write_tier3_recovery_to_spec() {
     if git -C "$_repo_root" add "$spec_rel_path" \
        && git -C "$_repo_root" commit -s -m "Record Tier 3 recovery in auto retrospective for issue #${issue}
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>" \
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
        && git -C "$_repo_root" push origin HEAD; then
       echo "${LOG_PREFIX} [recovery] spec auto retrospective updated for issue #${issue} (tier3)"
     else
@@ -333,7 +333,7 @@ PYEOF
     if git -C "$_repo_root" add "docs/reports/orchestration-recoveries.md" \
        && git -C "$_repo_root" commit -s -m "Record wrapper-retry-on-kill recovery for issue #${issue} ${phase}
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>" \
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
        && git -C "$_repo_root" push origin HEAD; then
       echo "${LOG_PREFIX} [recovery] wrapper-retry-on-kill recovery log committed and pushed"
     else

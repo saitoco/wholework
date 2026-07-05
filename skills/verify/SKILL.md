@@ -758,7 +758,7 @@ As the final step of the workflow, verify conducts a retrospective of the entire
      git add $SPEC_PATH/issue-"$NUMBER"-*.md
      git commit -s -m "Add verify retrospective for issue #$NUMBER
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
      ```
      ```bash
      git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }

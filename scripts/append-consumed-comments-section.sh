@@ -106,7 +106,7 @@ if ! git -C "$_repo_root" diff --quiet "$SPEC_REL" 2>/dev/null; then
     && git -C "$_repo_root" commit -s \
          -m "Add consumed comments fallback for issue #${ISSUE_NUMBER} (${PHASE_NAME} phase)
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>" 2>/dev/null \
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" 2>/dev/null \
     && git -C "$_repo_root" push origin HEAD 2>/dev/null \
     || echo "append-consumed-comments-section.sh: WARNING — commit/push failed (best-effort)" >&2
 fi
