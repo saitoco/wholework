@@ -87,20 +87,19 @@ No new comments since last phase.
 - **Verify command sync 確認**: 本 Spec の `## Verification > Pre-merge` は Issue 本文 `## Acceptance Criteria > Pre-merge` の2項目と verify コマンドを含め完全に一致 (件数一致: Issue側2件 / Spec側2件)。Post-merge も Issue本文の1件と一致。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `/review 920 --light --non-interactive` で軽量統合レビュー (review-light エージェント 1 体) を実行。Spec deviation / Edge cases・robustness / Security / Documentation consistency の 4 観点すべてで指摘なしと判定
-- 2 件の rubric 形式 AC ("修正コミット push 後の Response Summary 投稿を保証する仕組み" / "silent no-op ケースをカバーする bats test") は、実装ファイル (`scripts/post-fallback-review-summary.sh`, `scripts/run-review.sh` の該当分岐) を直接読み、`tests/post-fallback-review-summary.bats` + `tests/run-review.bats` をローカル実行 (全 30 テスト PASS) して両方 PASS と判定した
-- 修正コミットが発生しなかったため Step 12 (Issue 対応)・Step 13 (受け入れ条件整合性チェック) は共にスキップ
+- `gh-pr-merge-status.sh` で `mergeable=true, reason=clean, review_status=approved` を確認し、conflictなしのため通常のsquash mergeフローで進行
+- PR #920 を squash merge し、リモートブランチ `worktree-code+issue-915` を削除
 
 ### Deferred Items
-- `scripts/detect-wrapper-anomaly.sh` の `reconciler-header-mismatch` パターンの誤帰属修正 (Spec Notes に記載、別 Issue 推奨。本 Issue のスコープ外、review phase でも変更なし)
+- `scripts/detect-wrapper-anomaly.sh` の `reconciler-header-mismatch` パターンの誤帰属修正 (Spec Notes に記載、別 Issue 推奨。本 Issue のスコープ外)
 - フォールバック投稿と本来の Step 14 投稿が両方成功した場合の重複コメント dedup ロジック (Spec Notes に記載、cosmetic tradeoff として許容のまま)
 
 ### Notes for Next Phase
-- Merge phase (`/merge 920`) では MUST issue が存在しないため通常の merge フローで進行可能
-- 本 PR がレビューしている `scripts/run-review.sh` の変更 (silent no-op フォールバック) 自体は、今回の `/review` 実行中には発火しなかった (通常どおり Step 14 で Response Summary が投稿された) — dogfooding の観察事項として記録
+- Verify phase (`/verify 915`) では Issue #915 の Acceptance Criteria (pre-merge/post-merge) を再検証する
+- Post-merge の Verification 観点: 次回 `/auto` セッション実行時に、修正コミットのある PR で Response Summary の欠落が発生しない (または wrapper が確実に補完する) ことを観察する必要がある
 
 ## Code Retrospective
 
