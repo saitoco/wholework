@@ -93,3 +93,28 @@ Tier 3 recovery (`agents/orchestration-recovery` sub-agent、`scripts/spawn-reco
 
 ### Acceptance Criteria Verification Difficulty
 - 両 AC とも `rubric` verify command で明確に PASS 判定でき、UNCERTAIN は発生しなかった。Issue #319 由来のガイドライン (rubric text にセキュリティ重要 sub-field を明記する) は今回のケースでは該当なし — 今回の rubric は trigger 条件全体の有無を問うものであり、sub-field 粒度の検証課題は生じていない。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 特記事項なし。Issue 本文の rubric AC (2件) と Spec の Verification セクションは件数・内容とも完全一致していた。
+
+#### design
+- 特記事項なし。Option A 採用の根拠 (既存の "Watchdog-kill-before-PR" パターンの延長) は妥当で、実装との乖離もなかった。
+
+#### code
+- 特記事項なし。Implementation Steps 1-3 通りに実装され、Code Retrospective に記録済みの forbidden-pattern 抵触の発見・是正は健全なセルフチェックとして機能した。
+
+#### review
+- 本 Issue #917 自身の `/auto` 実行中、review phase (`run-review.sh`, PR #926) で `detect-wrapper-anomaly.sh` の `silent-no-op` (#365) パターンが誤検出された。実際には review は正常完了 (`gh pr view 926` で MERGED 状態・"## Acceptance Criteria Verification Results" を含む Review を確認済み) しており、MUST 修正が不要な clean review だったため新規コミットが存在しなかっただけだが、検出ロジックは「完了フレーズ + 対応コミットなし」を無条件に anomaly として報告した。これは #916 が `merge` phase 限定で修正した `PR MERGED live check` と同型の false positive パターンであり、`review` phase には未適用である。ただし `run-auto-sub.sh` 側でこの anomaly は情報ログとしてのみ扱われ (`exit_code=0` の分岐内で return 0 する設計のため) pipeline は正常に merge phase へ継続しており、実害はなかった。
+
+#### merge
+- 特記事項なし。`mergeable=true, reason=clean, ci_status=success, review_status=approved` を確認の上、通常の squash merge フローで完了。
+
+#### verify
+- Pre-merge rubric AC 2件とも PASS (bats 11件全て実行し PASS を確認)。post-merge の opportunistic AC 1件は次回 code-pr phase Tier 3 recovery 発火時の自動観測待ちのため未チェックのまま `phase/verify` を維持。
+
+### Improvement Proposals
+- `scripts/detect-wrapper-anomaly.sh` の `silent-no-op` (#365) 判定を `review` phase にも `merge` phase 同様の live-state チェックで補正する: `review` phase かつ `EXIT_CODE=0` かつ完了フレーズ検出時、コミット有無だけで anomaly 判定する前に `gh pr view <PR> --json reviews` で "Acceptance Criteria Verification Results" を含む Review が既に投稿されているかを確認し、投稿済みなら (新規コミット有無に関わらず) anomaly を抑止する。#916 で `merge` phase に導入した `gh pr view --json state` の MERGED live check と同型のパターンであり、実装コストは低いと見込まれる。実害 (pipeline 継続を妨げない informational-only ログ) は小さいが、Auto Retrospective / recovery-candidates 集計に事実誤認レコードが蓄積するリスクがある。
