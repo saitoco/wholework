@@ -63,19 +63,19 @@ Issue 本文は「計約17箇所」と記載しているが、grep 実測では1
 
 ## Phase Handoff
 
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 対象10ファイル内の `Claude Sonnet 4.6` (計18箇所) を `Claude Sonnet 5` に単純文字列置換した。置換前後で grep 実測件数が Spec の想定 (10ファイル18箇所) と完全一致することを確認済み
-- 除外対象の歴史的記録ファイル5件 (`docs/reports/sonnet-5-tokenizer-impact.md` および disposable Spec 4件) が変更されていないことを確認済み
-- Behavioral Change Detection の basename grep (`SKILL.md` 等が広範囲のテストファイルに一致) により、対象を絞らずフルスイート (`bats tests/`、1088件) を実行し全件 PASS を確認した
+- 全11条件を `file_contains`/`file_not_contains` の機械的チェックで検証し、全件 PASS を確認した (UNCERTAIN なし)
+- REVIEW_DEPTH=light (Size=M、`--light` 明示指定) のため review-light による4観点統合レビューを実施し、issue 検出なしを確認した
+- 外部レビューツール (Copilot/Claude Code Review/CodeRabbit) は `.wholework.yml` 未設定のため Step 7 は全体スキップした
 
 ### Deferred Items
 - None
 
 ### Notes for Next Phase
-- 各 AC の verify command は `file_not_contains`/`file_contains` の機械的チェックのみで、post-merge (`/verify`) でも同一結果が再現されるはず
 - Post-merge AC は「なし」のため `/verify` での追加確認事項はない
+- MUST issue が無かったため Step 12 (修正サイクル) は未実行。`/merge 929` にそのまま進行可能
 
 ## Code Retrospective
 
@@ -87,3 +87,14 @@ Issue 本文は「計約17箇所」と記載しているが、grep 実測では1
 
 ### Rework
 - N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note — 実装は Spec の Implementation Steps 通りで、Spec と PR diff の間に構造的な乖離はなかった
+
+### Recurring issues
+- Nothing to note — review-light の4観点すべてで issue 検出なし。単純文字列置換タスクとして issue の再発パターンは見られなかった
+
+### Acceptance criteria verification difficulty
+- Nothing to note — 全11条件が `file_contains`/`file_not_contains` の機械的チェックのみで PASS/FAIL を判定でき、UNCERTAIN は発生しなかった。verify command の過不足も見られなかった
