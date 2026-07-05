@@ -94,15 +94,13 @@ Issue 本文 Option A が提案する通り、merge phase 専用に `gh pr view 
 特になし。Pre-merge 3件の verify command (rubric×2, file_contains×1) はいずれも明確に PASS 判定可能で、UNCERTAIN は発生しなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- review-light (軽量統合レビュー) を4観点 (Spec乖離/Bug/セキュリティ/ドキュメント整合性) で実行し、issue 0件を確認した上でそのまま `/merge` を推奨する結論とした。
-- `--issue` 引数が merge phase では実際には PR 番号を保持するという Spec Notes の既存挙動を、`run-auto-sub.sh` の呼び出し規約から独立して再確認し、バグではないことを検証した。
+- PR #924 を squash merge し、リモートブランチ (`worktree-code+issue-916`) を削除した。conflictなし・CIグリーンだったため rebase/conflict解決は不要だった。
 
 ### Deferred Items
 - None
 
 ### Notes for Next Phase
-- 全 Pre-merge AC は PASS 済み、CI も全ジョブ SUCCESS。`/merge 924` にそのまま進んで問題ない。
-- Post-merge AC (`verify-type: opportunistic`) は次回 `/auto` pr route の merge phase 完了時に観察する。
+- Post-merge AC (`verify-type: opportunistic`)「次回 `/auto` の pr route merge phase 完了時、false-positive silent-no-op が発生しないことを観察」は `/verify` 実行時、または次回 `/auto` pr route 完走時に確認すること。
