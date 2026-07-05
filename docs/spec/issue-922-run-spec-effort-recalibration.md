@@ -48,3 +48,48 @@
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: `/issue` フェーズ (非対話モード) の Issue Retrospective — Type=Task・Size=M (CI-sensitive override) 判定、曖昧性自動解決ログ (3点)、verify command 監査 (rubric 単独が意図的である根拠)、Scope Assessment (sub-issue 分割不要) を記録。新規の指示・要求は含まれず、本 spec はその判断根拠をそのまま引き継ぐ / URL: https://github.com/saitoco/wholework/issues/922#issuecomment-4885926702
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1〜5 をそのまま実施した (前例調査 → 3-way 比較評価 → レポート新規作成 → docs/tech.md・docs/ja/tech.md へのノート追加 → 判定「据え置き」のため run-spec.sh/tests/run-spec.bats は無変更)。
+
+### Design Gaps/Ambiguities
+
+- Spec 段階では言及されていなかった実施細部として、本番サンプル調査 (Implementation Step 2) の母集団を「#914 (Sonnet 5 デフォルト化) 以降にコードされた Issue」に絞り込む判断を実装時に行った。#921 (C2) が採用した「Sonnet 5 リリース日 (2026-06-30) 以降にマージされた PR」という時間軸フィルタは、本リポジトリのコミット日時がすべて同日に記録される (squash 環境の制約) ため使えなかった。Issue 番号を時系列の代理指標として用いる方が本件の目的 (Sonnet 5 max 効果の実測サンプル抽出) には適切と判断した。
+- AC2 の「据え置いた場合は表に変更がない」という文言は、Issue 本文の Auto-Resolved Ambiguity Points で「表セル自体は変更せず、表下の自由記述ノートとして根拠を追記する」と事前解決済みだったため、実装時に新たな曖昧さは生じなかった。
+
+### Rework
+
+- N/A — 手戻りは発生しなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- 判定「Sonnet デフォルトパス `max` 維持」は review フェーズで妥当と確認。2件の rubric AC (判定・根拠記録、SSoT 一致) はいずれも UNCERTAIN なく PASS。`run-spec.sh`/`tests/run-spec.bats` が実際に無変更であることを worktree 上で確認済み。
+- review-light (Size M light mode) で2件の SHOULD 指摘 (新規レポート内: Issue #217 の未確定日付プレースホルダ、Issue #927 production-sample 行の陳腐化した記述) を検出し、いずれも修正・コミット・プッシュ済み。判定結果・根拠の実質には影響しない、レポートの事実精度の訂正のみ。
+- MUST issue はゼロ。CI は全ジョブ SUCCESS (DCO/bats/skill syntax/forbidden expressions/macOS shell compatibility)。
+
+### Deferred Items
+- なし。
+
+### Notes for Next Phase
+- `/merge` では追加の実装差分確認は不要 (レビュー起因の修正はレポートの事実精度訂正のみで、AC 判定に影響しない)。
+- `/verify` では2件の rubric AC を再評価する。docs/tech.md の新規ノート段落と、run-spec.sh/tests/run-spec.bats が無変更であることを確認すれば足りる (review フェーズでの確認内容と同一)。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- N/A — Implementation Steps 1〜5 は Spec 通りに実施されており、PR diff との構造的な乖離はなかった。2件の SHOULD 指摘 (後述) はいずれも Spec の設計判断そのものではなく、新規レポート内の事実記述の精度に関するものだった。
+
+### Recurring issues
+
+- 2件の SHOULD 指摘は根本原因が共通していた: 新規レポート (`docs/reports/sonnet-5-effort-recalibration-spec.md`) が言及する外部情報 (Issue #217 の日付、Issue #927 の Code Retrospective 完了状況) が、レポート執筆時点でのスナップショットのまま固定され、実際にマージされるまでの間に情報が古くなった、あるいは最初から未確定のまま `xx-xx` プレースホルダとして残された。本 Issue 単体では初出だが、「並行 Issue (#921/#922/#927 の C-series) の情報を横断参照するレポートは、参照先の状態が執筆後に変化しうる」という一般的なリスクパターンとして今後の類似レポート作成時に留意する価値がある。
+- 実害は軽微 (判定結果には影響なし) だったが、監査品質のレポートとしての正確性を損なう type のため、今後同様のレポートを書く際は「日付/状態を含む外部参照は生成直前に再確認する」運用を徹底するとよい。
+
+### Acceptance criteria verification difficulty
+
+- Nothing to note — 両 AC とも rubric 単独構成 (Spec Notes に記載の通り、意図的な設計) で UNCERTAIN なく PASS 判定できた。verify command の過不足や記述不備は見られなかった。
