@@ -264,6 +264,7 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 - First observed during Issue #528 implementation: PR #544 had a review summary comment with heading `## レビューレスポンスサマリー` (not covered by existing fallback signatures) and the `<!-- review-summary -->` marker was absent; `reconcile-phase-state.sh` returned `matches_expected:false` and `run-review.sh` exited non-zero; Tier 2 `detect-wrapper-anomaly.sh` returned empty output (pattern not cataloged)
 - Issue #528 introduced `<!-- review-summary -->` as the primary signature in `modules/phase-state.md`, resolving the root cause; this catalog entry serves as the safety net when LLM omits the marker and uses a non-standard heading simultaneously
 - Exclusivity with `reconciler-header-mismatch`: the `elif` chain in `scripts/detect-wrapper-anomaly.sh` ensures that logs containing `Review Summary` are caught by `reconciler-header-mismatch` first; `review-completion-false-negative` fires only when that pattern does not match
+- Suppression on recovery (#932): if the same log later contains a `"matches_expected":true` line (e.g. after `post-fallback-review-summary.sh` recovers the phase), the `review-completion-false-negative` condition is skipped entirely — the same reconcile-first-authority principle used by the `EXIT_CODE=0` silent-no-op branch, applied here to avoid reporting an anomaly for a phase that has already recovered
 
 ---
 

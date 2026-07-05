@@ -86,7 +86,8 @@ elif grep -q '"matches_expected":false' "$LOG_FILE" && grep -q "Review Summary" 
   PATTERN_NAME="reconciler-header-mismatch"
   ANOMALY_DESC="Reconciler detected header mismatch in phase \`$PHASE\` (exit code $EXIT_CODE): \`matches_expected:false\` and \`Review Summary\` pattern detected in wrapper output. The reconciler could not find \`## Review Response Summary\` in the PR comment, indicating a mismatch between the skill output header and the reconciler's expected pattern. Reference: #394."
   IMPROVEMENT_HINT="Check whether \`run-review.sh\` or the review skill changed the header format of the PR comment. The reconciler expects \`## Review Response Summary\` as defined in \`modules/phase-state.md\`. See \`modules/orchestration-fallbacks.md#reconciler-header-mismatch\` for the full recovery procedure."
-elif grep -q '"matches_expected":false' "$LOG_FILE" && grep -q '"phase":"review"' "$LOG_FILE"; then
+elif grep -q '"matches_expected":false' "$LOG_FILE" && grep -q '"phase":"review"' "$LOG_FILE" && ! grep -q '"matches_expected":true' "$LOG_FILE"; then
+  # reconcile-first authority: a later matches_expected:true in the same log (post-fallback-review-summary.sh recovery) suppresses this anomaly
   PATTERN_NAME="review-completion-false-negative"
   ANOMALY_DESC="Review phase completion false-negative in phase \`$PHASE\` (exit code $EXIT_CODE): \`matches_expected:false\` and \`phase:review\` detected in reconciler output, but no existing fallback header (## Review Response Summary / ## レビュー回答サマリ) was found in wrapper log. Likely caused by LLM omitting the \`<!-- review-summary -->\` marker and using a non-standard heading. Reference: #547."
   IMPROVEMENT_HINT="Follow the recovery procedure at \`modules/orchestration-fallbacks.md#review-completion-false-negative\`: re-run reconcile, check PR comments for summary, add \`<!-- review-summary -->\` marker if present, or re-run /review if absent."

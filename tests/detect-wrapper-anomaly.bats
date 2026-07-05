@@ -434,3 +434,11 @@ MOCK
     [ "$status" -eq 0 ]
     [[ "$output" != *"review-completion-false-negative"* ]]
 }
+
+@test "review-completion-false-negative: suppressed when recheck recovers to matches_expected true" {
+    printf '"matches_expected":false\n"phase":"review"\npost-fallback-review-summary: fallback Response Summary posted, review phase recovered. recheck: "matches_expected":true\n' > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 547 --phase review
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"review-completion-false-negative"* ]]
+    [ -z "$output" ]
+}
