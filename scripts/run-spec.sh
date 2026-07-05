@@ -114,7 +114,7 @@ echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
 if [[ "$MODEL" == "claude-fable-5" ]]; then
   echo "WARNING: Fable 5 opt-in — cost \$10/\$50 per MTok (2x Opus 4.8, ~3.3x Sonnet)"
-  echo "WARNING: Usage credits required after 2026-06-22 (subscription plans)"
+  echo "WARNING: Usage credits required (subscription plans)"
   echo "WARNING: 30-day retention required — ZDR organizations not supported"
 fi
 
