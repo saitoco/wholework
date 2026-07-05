@@ -56,6 +56,17 @@ Cross-reference log tail and reconcile state to identify the anomaly:
 
 Use minimal, conservative judgment: when in doubt, prefer `abort` over risky `recover` steps.
 
+### 3a. code-pr Phase: Probe the Worktree Branch
+
+If `phase` is `code-pr`, before finalizing the plan, probe whether the phase's actual deliverable (a pushed worktree branch with an open PR) already exists — independent of whatever symptom triggered this Tier 3 escalation:
+
+1. Derive the expected worktree branch name: `worktree-code+issue-{issue_number}`.
+2. Using only the already-permitted tool prefixes (`git branch:*`, `git log:*`, `gh pr list:*`), check:
+   - **(a)** Does the branch exist locally with commits ahead of the base branch? Run `git log <branch> --not main --oneline` (non-empty output means unpushed implementation commits exist).
+   - **(b)** Does an open (or any-state) PR already exist for that branch? Run `gh pr list --head <branch> --state all --json number,state`.
+3. If the branch has commits ahead of base **and** no PR exists yet: the `action` must be `recover` (never `skip`/`abort` for this condition alone). Compose `steps` to include whatever step(s) resolve the originally-reported symptom (e.g., cleaning an unrelated dirty tree on `main`), **plus** a step to push the worktree branch (`git push origin <branch>`) **plus** a step to create the PR (`gh pr create ...`) — even when the reported blocking symptom is unrelated to the worktree branch itself (e.g., a dirty `main` tree). Resolving only the reported symptom while leaving the branch unpushed and PR-less is an incomplete recovery for this phase.
+4. If the branch already has an open PR, or has no commits ahead of base, this probe adds no additional steps — proceed with the plan derived from the anomaly pattern in Step 3 as normal.
+
 ### 4. Produce Recovery Plan
 
 Output a single JSON object (no markdown fences, no surrounding text) with exactly these keys:
@@ -106,6 +117,24 @@ When the log shows a watchdog kill after implementation was complete but before 
 ```
 
 Replace `N` and `worktree-code+issue-N` with actual values from `issue_number` and `branch` inputs. Use `gh-label-transition.sh` in a fourth `run_command` step if the phase label also needs advancing.
+
+**Dirty-tree-cleanup-plus-PR-creation recovery example (Issue #917):**
+
+When the reported blocking symptom is unrelated to the worktree branch itself (e.g., a dirty `main` tree blocking `run-code.sh --pr` retry), but Step 3a's probe finds the worktree branch already has unpushed implementation commits and no PR yet, the recovery plan must resolve the reported symptom **and** complete the phase's actual deliverable in the same plan:
+
+```json
+{
+  "action": "recover",
+  "rationale": "main has an unrelated dirty-tree blocker (uncommitted L0 log entry) which must be cleared, but worktree-code+issue-N already has unpushed implementation commits and no PR exists yet. Resolving only the dirty tree would leave code-pr phase incomplete, so this plan also pushes the branch and creates the PR.",
+  "steps": [
+    { "op": "run_command", "cmd": "<step(s) resolving the originally-reported symptom, e.g. committing the unrelated dirty-tree file via the phase's own automated commit path>" },
+    { "op": "run_command", "cmd": "git push origin worktree-code+issue-N" },
+    { "op": "run_command", "cmd": "gh pr create --base main --head worktree-code+issue-N --title 'Issue #N: summary' --body 'closes #N'" }
+  ]
+}
+```
+
+**Do not stop recovery once the reported blocking condition is cleared** — for `code-pr` phase, always continue to push the worktree branch and create the PR when Step 3a determines they are outstanding.
 
 ## Output
 
