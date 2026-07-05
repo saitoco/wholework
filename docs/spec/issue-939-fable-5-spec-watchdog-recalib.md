@@ -103,3 +103,32 @@
 ### Notes for Next Phase
 - `/verify` は Issue #939 のチェックボックスのうち、review フェーズで FAIL 判定済みの2件 (実測結果記録、SPEC_DEFAULT 再校正の実測根拠) が unchecked のままであることを踏まえて判定すること。
 - Post-merge AC (opportunistic observation) は次回 `--fable` spec 実行時に自動検証される想定。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Issue 本文の AC は verifiability の観点で概ね良好 (rubric 3 件は semantic 判定可能、file_not_contains / file_contains / github_check は機械的)。ただし AC 1・2 の rubric 判定が「実測データの存在」を条件としており、`/code` の実装裁量 (実測を行うか、cost/authorization 考慮で見送るか) に強く依存する構造は Issue 起票段階で認識されていなかった。
+
+#### spec
+- Notes に「新規実行のコスト認可・nested subprocess に関する既知の懸念」を明記し pre-authorize したが、pre-authorize が非対話 spec フェーズで行われたことにより、実質的な cost/副作用の判断がユーザーレビューを経ずに行われた形になった。`/code` フェーズがこの pre-authorize を覆したことで、Spec の判断精度に構造的な限界があることが露呈した。
+
+#### code
+- Spec の pre-authorization を honestly override して deferral に切り替えた判断は、cost/user-oversight の観点から妥当。Code Retrospective の Deviations from Design セクションで詳細に記録している点も良好。ただし Verification セクション本体への注記追加が遅れ、`/review` の Spec Deviation 検出で MUST として指摘された (review retrospective 参照)。
+
+#### review
+- Spec Deviation 検出が的確に発火し、`## Verification` セクションへの注記追加を MUST 指摘として扱った。review light 相当のカバレッジで十分機能した事例。
+
+#### merge
+- CI green + review approved + mergeable=true の状態で conflict resolution 不要。特筆事項なし。
+
+#### verify
+- **rubric grader 判定は Spec の Code Retrospective の予告通り FAIL に落ちた** — 判定内容に曖昧さはなく、`/code` の自己申告 (実測データなし) と一致。
+- **auto-retry 判断の分岐**: SKILL の tier-gated auto-retry (L3 + AUTO_RETRY_ENABLED=true + iter 1<3) が発火可能な状態だったが、FAIL が Spec/Code/Review 全てで「実測データ収集にユーザーの明示的な `--fable` 実行認可が必要」と文書化された意図的 deferral であり、`/code` の再実行では同じ deferral に到達する可能性が極めて高かった。ユーザー確認 (AskUserQuestion) を経て auto-retry を skip した。SKILL の mechanical path を LLM 判断で override した事例として記録。
+
+### Improvement Proposals
+
+- **/verify SKILL に「documented deferral」escape hatch を追加**: 現行 SKILL は tier-gated auto-retry の発火条件を tier + config + iteration count のみで判定しており、FAIL の性質 (実装バグ vs 意図的 deferral) を区別していない。documented deferral の場合、`/code` 再実行は同じ deferral を反復するだけで compute を浪費する。改善案: (a) FAIL marker comment に `deferral=true` marker を追加し、`/verify` が検出したら auto-retry を skip する、または (b) Spec の Verification section に `<!-- known-deferral: reason=... -->` を認める形式を導入し、`/verify` がこれを検出したら FAIL 扱いだが auto-retry を skip する。この提案は #593-#599 (Icebox) の "escape hatch pattern" 系列と関連する。
+- **AC 設計時の "実測依存 rubric" ガイドライン追加**: 本 Issue のように AC が「実測データの存在」を条件とする場合、`/issue` フェーズで「実測が実施されない場合の deferral protocol」も同時に定義することを推奨するガイドラインを `modules/verify-patterns.md` に追加すべき。現状は AC 完全達成のみが verify PASS 基準となるため、意図的 deferral が structural に不整合を生じる。
+
