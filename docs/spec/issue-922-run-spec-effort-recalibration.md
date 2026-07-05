@@ -65,19 +65,17 @@
 - N/A — 手戻りは発生しなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 判定「Sonnet デフォルトパス `max` 維持」は review フェーズで妥当と確認。2件の rubric AC (判定・根拠記録、SSoT 一致) はいずれも UNCERTAIN なく PASS。`run-spec.sh`/`tests/run-spec.bats` が実際に無変更であることを worktree 上で確認済み。
-- review-light (Size M light mode) で2件の SHOULD 指摘 (新規レポート内: Issue #217 の未確定日付プレースホルダ、Issue #927 production-sample 行の陳腐化した記述) を検出し、いずれも修正・コミット・プッシュ済み。判定結果・根拠の実質には影響しない、レポートの事実精度の訂正のみ。
-- MUST issue はゼロ。CI は全ジョブ SUCCESS (DCO/bats/skill syntax/forbidden expressions/macOS shell compatibility)。
+- PR #936 を squash merge で main へ統合。マージ前チェック (mergeable=true, reason=clean, CI=success, review=approved) はいずれも問題なし、コンフリクト解消は不要だった。
+- review フェーズで確定した判定「Sonnet デフォルトパス `max` 維持」および run-spec.sh/tests/run-spec.bats 無変更の状態をそのまま維持してマージした。
 
 ### Deferred Items
 - なし。
 
 ### Notes for Next Phase
-- `/merge` では追加の実装差分確認は不要 (レビュー起因の修正はレポートの事実精度訂正のみで、AC 判定に影響しない)。
-- `/verify` では2件の rubric AC を再評価する。docs/tech.md の新規ノート段落と、run-spec.sh/tests/run-spec.bats が無変更であることを確認すれば足りる (review フェーズでの確認内容と同一)。
+- `/verify` では2件の rubric AC (判定・根拠記録が docs/tech.md にあること、SSoT 一致) を再評価する。docs/tech.md の新規ノート段落と、run-spec.sh/tests/run-spec.bats が無変更であることを確認すれば足りる (review フェーズでの確認内容と同一)。
 
 ## review retrospective
 
