@@ -126,16 +126,16 @@ Auto-Resolved Ambiguity Points により厳密な同一タスク medium/high 二
 - Nothing to note — rubric 型 AC 2件はいずれも意味的に明確で、UNCERTAIN なく即座に PASS 判定できた。`docs/tech.md` の該当 note と `run-code.sh`/`run-review.sh` の実値 (`--effort high` 変更なし) を直接照合するだけで検証が完結し、rubric grader 呼び出しに追加の曖昧性は生じなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Step 8 (rubric 検証) は Issue 本文で既に `[x]` 済みだった AC 2件について、`docs/tech.md`/`docs/ja/tech.md` の note 内容と `scripts/run-code.sh`/`scripts/run-review.sh` の実際の `--effort` 値 (ともに `high` のまま) を直接照合し、PASS として再確認した。
-- Step 10 は `REVIEW_DEPTH=light` (`--light` 明示指定) のため `review-light` エージェント 1体による4観点統合レビューを実施。ドキュメントのみの変更のため、Spec 逸脱・ドキュメント整合性の2観点が中心となり、エッジケース/セキュリティ観点は "該当なし" と判定。
+- PR #925 は `mergeable=true`/`reason=clean` (CI success、review approved) だったため worktree entry / conflict resolution はスキップし、squash merge を直接実行した。
+- ローカル main を `origin/main` に ff-only で追従させ、squash 後の main 上の Spec ファイルに対して Phase Handoff の rotation (review → merge) を実施した。
 
 ### Deferred Items
 - `agents/review-bug.md` / `agents/review-spec.md` への明示的な `effort: high` frontmatter 追加 (将来の `run-review.sh` 再評価の前提条件) は本 Issue のスコープ外のまま。
 - `--effort=` フラグ露出によるサイズ条件付き effort tiering (impact strategy レポート §8 C5) は Icebox 候補として別スコープのまま。
 
 ### Notes for Next Phase
-- MUST/SHOULD issue が一切ないため `/merge 925` へ直接進行可能。
+- Post-merge AC は「なし」(Spec `## Verification` 参照)。`/verify 921` は形式的な no-op 確認のみで良い。
 - 変更ファイルはすべてドキュメント (`docs/reports/`, `docs/tech.md`, `docs/ja/tech.md`, `docs/spec/`) のみで、`run-*.sh`/matrix 表本体・エージェント frontmatter への変更はなし。
