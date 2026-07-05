@@ -35,3 +35,4 @@ fi
 
 MAIN_ROOT="$(git worktree list --porcelain | awk '/^worktree /{print $2; exit}')"
 echo "foreign $MAIN_ROOT"
+exit 0
