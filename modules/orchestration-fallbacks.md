@@ -480,6 +480,8 @@ When `reconcile-phase-state.sh --check-completion` returns `"matches_expected":t
 
 For the `merge` phase specifically, `detect-wrapper-anomaly.sh` additionally runs an independent live check (`gh pr view <PR> --json state -q '.state'`) before falling through to the log/git-log-based checks above. If the PR state is confirmed `MERGED`, the silent-no-op entry is skipped regardless of wrapper log content or local git history. This is necessary because a squash merge lands on `origin/main` via the GitHub API and the local working tree is not automatically fetched, making the log-based and git-log-based checks unreliable for this phase (Issue #916). If the `gh pr view` call fails (API error, rate limit) or the state is not `MERGED`, detection falls through to the existing logic (fail-safe, not fail-open).
 
+For the `review` phase, `detect-wrapper-anomaly.sh` similarly runs an independent live check (`gh pr view <PR> --json reviews --jq '.reviews[].body'`) before falling through to the log/git-log-based checks above. If the output contains "Acceptance Criteria Verification Results", the silent-no-op entry is skipped regardless of wrapper log content or local git history — this covers the clean review case (MUST fixes not required, no new commit produced) where the review itself completed successfully. If the `gh pr view` call fails or no matching Review is found, detection falls through to the existing logic (fail-safe, not fail-open; Issue #927).
+
 See also: `#async-external-commit` (reconcile-first authority — `matches_expected:true` takes precedence over `commits_found` in anomaly detection).
 
 ### Rationale
