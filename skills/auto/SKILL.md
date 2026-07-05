@@ -35,12 +35,13 @@ Generate a session identifier and record it in a PGID-specific pointer file so s
 
 **Session boundary isolation design**: Each `/auto` session uses its process group ID (PGID) as part of the pointer file name (`.tmp/auto-session-${PGID}`). This prevents parallel `/auto` sessions from overwriting each other's pointer file — each session's sub-processes (run-auto-sub.sh, run-code.sh, run-review.sh, run-merge.sh) share the same PGID as their parent, so they naturally read the correct session_id without cross-session contamination.
 
-1. Generate `SESSION_ID` and create the PGID-specific pointer file:
+1. Generate `SESSION_ID` and create the PGID-specific pointer file. Also write the PGID-independent `.tmp/auto-session-current` pointer so skills invoked via in-session `Skill()` calls (e.g. `/verify` during `--batch` List mode, which has no wrapper script to export env vars into a child process) can still recover `AUTO_SESSION_ID` — see `restore_auto_session_pointer()` in `modules/event-emission.md`:
    ```bash
    mkdir -p .tmp
    SESSION_ID="$$-$(date +%s)"
    PGID=$(ps -o pgid= -p $$ | tr -d ' ')
    printf '%s\n' "$SESSION_ID" > ".tmp/auto-session-${PGID}"
+   printf '%s\n' "$SESSION_ID" > ".tmp/auto-session-current"
    ```
 2. Collect skill commit hashes for 8 major skills before writing the session metadata file (bash 3.2+ compatible; empty string on failure):
    ```bash

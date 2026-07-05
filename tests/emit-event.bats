@@ -170,3 +170,27 @@ teardown() {
     [[ "$line" == *'"event":"zsh_compat"'* ]]
     [[ "$line" == *'"phase":"code"'* ]]
 }
+
+@test "restore_auto_session_pointer restores AUTO_SESSION_ID/AUTO_EVENTS_LOG from auto-session-current (Issue #902)" {
+    mkdir -p "$BATS_TEST_TMPDIR/work1/.tmp"
+    echo "test-session-123" > "$BATS_TEST_TMPDIR/work1/.tmp/auto-session-current"
+    run bash -c "cd \"$BATS_TEST_TMPDIR/work1\" && unset AUTO_EVENTS_LOG AUTO_SESSION_ID && source \"$SCRIPT\" && restore_auto_session_pointer && echo \"SID=[\$AUTO_SESSION_ID] LOG=[\$AUTO_EVENTS_LOG]\""
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"SID=[test-session-123]"* ]]
+    [[ "$output" == *"LOG=[.tmp/auto-events.jsonl]"* ]]
+}
+
+@test "restore_auto_session_pointer no-ops when no pointer file exists (Issue #902)" {
+    mkdir -p "$BATS_TEST_TMPDIR/work2/.tmp"
+    run bash -c "cd \"$BATS_TEST_TMPDIR/work2\" && unset AUTO_EVENTS_LOG AUTO_SESSION_ID && source \"$SCRIPT\" && restore_auto_session_pointer && echo \"LOG=[\$AUTO_EVENTS_LOG]\""
+    [ "$status" -eq 0 ]
+    [[ "$output" == "LOG=[]" ]]
+}
+
+@test "restore_auto_session_pointer does not overwrite an already-set AUTO_EVENTS_LOG (Issue #902)" {
+    mkdir -p "$BATS_TEST_TMPDIR/work3/.tmp"
+    echo "other-session" > "$BATS_TEST_TMPDIR/work3/.tmp/auto-session-current"
+    run bash -c "cd \"$BATS_TEST_TMPDIR/work3\" && unset AUTO_SESSION_ID && export AUTO_EVENTS_LOG=/preset/path.jsonl && source \"$SCRIPT\" && restore_auto_session_pointer && echo \"LOG=[\$AUTO_EVENTS_LOG] SID=[\$AUTO_SESSION_ID]\""
+    [ "$status" -eq 0 ]
+    [[ "$output" == "LOG=[/preset/path.jsonl] SID=[]" ]]
+}
