@@ -798,8 +798,9 @@ If `opportunistic-verify: true` is set in `.wholework.yml`, read `${CLAUDE_PLUGI
 
 After the opportunistic verification above (or in its place if `opportunistic-verify` is not set), fire the observation trigger:
 
-- If `REVIEW_DEPTH=full`: run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event pr-review-full`
-- If `REVIEW_DEPTH=light`: run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event pr-review-light`
+- **Resolve the Spec file path**: if `$ISSUE_NUMBER` is non-empty, Glob for `$SPEC_PATH/issue-$ISSUE_NUMBER-*.md` and record the matched path as `DESIGN_FILE_PATH` (empty string if no match, or if `$ISSUE_NUMBER` is empty). Same pattern as Step 10.0/10.2.
+- If `REVIEW_DEPTH=full`: run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event pr-review-full --context-file "$DESIGN_FILE_PATH"`
+- If `REVIEW_DEPTH=light`: run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event pr-review-light --context-file "$DESIGN_FILE_PATH"`
 
 Capture the command's stdout as `OBSERVATION_MATCHES` (newline-separated Issue numbers; may be empty). If non-empty, read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to load `AUTONOMY_TIER`, then apply tier-aware dispatch:
 - **L1**: skip dispatch (advisory-only — the comment already posted by `observation-trigger.sh` is the only action)
