@@ -158,7 +158,7 @@ def in_diff_range(path, line_no):
 in_range_comments = []
 out_of_range_comments = []
 for c in clean_comments:
-    if c.get('side') == 'RIGHT' and not in_diff_range(c['path'], c['line']):
+    if c.get('side', 'RIGHT') == 'RIGHT' and not in_diff_range(c['path'], c['line']):
         out_of_range_comments.append(c)
     else:
         in_range_comments.append(c)

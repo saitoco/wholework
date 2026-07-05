@@ -226,6 +226,23 @@ assert 'scripts/other.sh:999' in body
 "
 }
 
+@test "success: out-of-range comment with omitted side defaults to RIGHT and falls back" {
+    echo "review body text" > "$BATS_TEST_TMPDIR/review.md"
+    cat > "$BATS_TEST_TMPDIR/comments.json" <<'JSON'
+[
+  {"path": "scripts/example.sh", "line": 999, "body": "SHOULD fix this out-of-range", "severity": "SHOULD"}
+]
+JSON
+    run bash "$SCRIPT" 159 "$BATS_TEST_TMPDIR/review.md" "$BATS_TEST_TMPDIR/comments.json"
+    [ "$status" -eq 0 ]
+    python3 -c "
+import json
+payload = json.load(open('$GH_API_STDIN'))
+assert 'comments' not in payload, 'comment with omitted side should be treated as RIGHT and fall back'
+assert 'scripts/example.sh:999' in payload['body']
+"
+}
+
 # --- Error cases ---
 
 @test "error: no arguments" {
