@@ -68,16 +68,13 @@
 - N/A
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Mirrored the #916 merge-phase live-check pattern exactly for the review phase (`gh pr view --json reviews --jq '.reviews[].body'` + grep for "Acceptance Criteria Verification Results"), placed directly after the existing `_merge_pr_confirmed_merged` computation and wired as a new `elif` branch ahead of the log/git-log-based checks.
-- Kept the fail-safe default: `gh pr view` failure or no matching Review falls through to the existing silent-no-op logic (not fail-open), consistent with #916 and `post-fallback-review-summary.sh`.
+- Squash-merged #931 into main as-is (CI green, review approved, no conflicts); no additional changes made at merge phase.
 
 ### Deferred Items
-- `modules/orchestration-fallbacks.md` update is SHOULD-level only (no dedicated pre-merge verify command targets it), consistent with the #916 precedent.
-- Post-merge AC (opportunistic observation of a real `/auto` pr-route review phase clean-review completion) is deferred to natural occurrence — no action needed at code phase.
+- Post-merge AC (opportunistic observation of a real `/auto` pr-route review phase clean-review completion) remains deferred to natural occurrence.
 
 ### Notes for Next Phase
-- Full `bats tests/` suite (1094 tests) passes after this change; no other test file references `scripts/detect-wrapper-anomaly.sh` or `modules/orchestration-fallbacks.md` beyond their direct-counterpart test files.
-- No SKILL.md files were touched; `docs/structure.md` / `docs/ja/structure.md` descriptions of `detect-wrapper-anomaly.sh` remain accurate at the current level of detail (checked, no update needed).
+- verify phase should confirm the "Verification (post-merge)" opportunistic AC in the Issue body when a matching clean-review event is next observed; otherwise the merge-time verification items are already satisfied by the merged bats suite (1094 PASS).
