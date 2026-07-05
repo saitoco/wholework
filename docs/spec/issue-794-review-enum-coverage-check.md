@@ -94,8 +94,9 @@ Spec が enum (離散値の名前付きセット、例: `auto-stop-at: spec|code
 - Nothing to note (patch route, direct commit — no PR/merge conflict history).
 
 #### verify
-- Post-merge の observation 条件 (`event=pr-review-full`) が PR #928 (`/review 928 --full`, Issue #902) の完了時に発火し、`/verify 794` が dispatch された。しかし PR #928 の Spec (`docs/spec/issue-902-verify-session-instrumentation.md`) は enum を定義しておらず、enum coverage check の適用対象が存在しなかったため SKIPPED と判定し、checkbox は未チェックのまま維持した。
-- 観察: `event=pr-review-full` は enum を含む Spec かどうかに関わらず、あらゆる `/review --full` 完了時に無条件で発火する。そのため今回のように「enum を含まない review」がたまたま先に完了すると、本 AC は SKIPPED を繰り返すだけで一向に確定判定 (PASS) に到達しない可能性がある。イベント自体は正しく発火しており実装の不具合ではないが、observation 型 AC の設計として「対象条件 (enum を含む Spec) をイベント発火条件自体に組み込む」か、「粒度の細かいイベント名 (例: `review-enum-check-applicable`) を新設し、review-spec エージェントが実際に enum coverage check を評価した場合にのみ発火する」方が、無駄な `/verify` dispatch (今回のようなSKIP確定のみのラウンドトリップ) を減らせる可能性がある。
+- Post-merge の observation 条件 (`event=pr-review-full`) は 2026-06-28〜07-05 の間に計8回発火したが、最初の7回 (PR #928/Issue #902 含む) はいずれも対象 Spec が enum を定義していなかったため SKIPPED だった (詳細は前回記録の通り)。
+- 8回目の発火 (`/review 933 --full`, Issue #930) で、対象 Spec (`docs/spec/issue-930-verify-worktree-inheritance.md`) が `none`/`own`/`foreign` の3値 enum を定義しており、review-spec エージェントが実際に Enum exhaustiveness check を評価し Complete coverage を報告した。これにより本 AC は初めて PASS 判定に到達し、Issue #794 は `phase/done` に遷移した。
+- 結論: SKIP が7回連続した後の8回目で確定 PASS に到達しており、下記の改善提案 (粒度の細かいイベント新設) は依然として妥当な最適化候補だが、今回のケースでは「無限に確定しない」わけではなく、実用上妥当な回数で収束した。
 
 ### Improvement Proposals
-- observation 型 AC (`verify-type: observation event=X`) のうち、イベント名が「実行契機」(例: `pr-review-full` = /review --full が完了した) を表すだけで「対象条件の成立」(例: enum を含む Spec だった) までは保証しない場合、SKIP が何度も繰り返されるだけで確定しないループになりうる。Issue #794 のようなケースでは、より粒度の細かいイベント (review-spec が実際に enum coverage check を評価したときのみ発火するイベント) を新設するか、observation-trigger.sh 側で「イベント発火 かつ 対象条件充足」の両方を条件にする設計を検討する余地がある。
+- observation 型 AC (`verify-type: observation event=X`) のうち、イベント名が「実行契機」(例: `pr-review-full` = /review --full が完了した) を表すだけで「対象条件の成立」(例: enum を含む Spec だった) までは保証しない場合、SKIP が複数回繰り返されてから確定するまでの `/verify` dispatch オーバーヘッドが発生する (今回は8回、うち7回が無駄な SKIP ラウンドトリップ)。より粒度の細かいイベント (review-spec が実際に enum coverage check を評価したときのみ発火するイベント) を新設するか、observation-trigger.sh 側で「イベント発火 かつ 対象条件充足」の両方を条件にする設計を検討する余地がある。
