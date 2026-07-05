@@ -74,16 +74,31 @@ No new comments since last phase.
 - N/A
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の指示通り、`review-completion-false-negative` の `elif` 条件に `&& ! grep -q '"matches_expected":true' "$LOG_FILE"` を追加し、既存の `EXIT_CODE=0` 分岐の reconcile-first authority ロジックと同型の抑止条件とした
-- 新規 bats テストは Spec 指定通り既存の "no detection for unrelated log" テストの直後に追加し、`post-fallback-review-summary.sh` の recovery 成功ログメッセージを模した内容とした
+- REVIEW_DEPTH=light (`--light` 明示指定) で review-light agent による軽量統合レビュー (4 観点) を実施し、elif チェーンの実行時挙動 (reconciler-header-mismatch 分岐や EXIT_CODE=0 分岐との相互作用) まで踏み込んで検証した
+- MUST/SHOULD/CONSIDER のいずれも検出されず、Issue 12 (Issue Resolution) はスキップして Step 13 (Acceptance Criteria Consistency Check) に進んだ
 
 ### Deferred Items
-- `docs/structure.md` / `docs/ja/structure.md` の sync candidate 確認: 両ファイルの `detect-wrapper-anomaly.sh` 説明文 ("detect known failure patterns...") は本修正後も妥当なため更新不要と判断 (更新自体は見送りではなく、確認の結果不要と判明したもの)
-- Post-merge の opportunistic observation (次回 `/auto` review phase での実地確認) は次フェーズ以降で発生
+- `docs/structure.md` / `docs/ja/structure.md` の sync candidate 確認は code phase で完了済み (更新不要と判断)。review phase で再確認し同結論を維持
+- Post-merge の opportunistic observation (次回 `/auto` review phase での実地確認) は merge 後に発生
+
+### Notes for Next Phase
+- MUST issue なし、CI 全 SUCCESS のため `/merge 937` にそのまま進める
+- Acceptance Criteria の Pre-merge 2件は Issue 側で既に `[x]` 済み (review 側で再検証し PASS を確認、追加更新は不要)
 
 ### Notes for Next Phase
 - Pre-merge verify command 2件 (rubric) は `bats tests/detect-wrapper-anomaly.bats` 40/40 PASS の実行結果を根拠に PASS と判断し、Issue チェックボックスを更新済み
 - `modules/orchestration-fallbacks.md` の Rationale 追記は Spec Notes 記載の通り SHOULD レベル (専用 verify command なし) のため、review phase で追加の verify command 要求は不要
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note — PR diff は Spec の Implementation Steps 1〜3 と verbatim 一致していた (review-light agent が `scripts/detect-wrapper-anomaly.sh` の elif 条件追加・bats テスト追加位置・`modules/orchestration-fallbacks.md` の Rationale 追記文の3点を個別に確認済み)
+
+### Recurring issues
+- Nothing to note (review workflow 上の問題ではない) — ただし本 Issue 自体が #916 (merge phase live check) / #927 (review phase live check) に続く同系統3件目の false positive 修正であり、`detect-wrapper-anomaly.sh` の `elif` チェーンに新しい recovery/fallback 機構を追加するたびに既存の静的パターン判定が古くなるという構造的な傾向が見える。review-light agent は今回、後続の `mid-run-api-error`・`EXIT_CODE=0` 分岐への影響 (elif チェーン順序・ログ内容の重複) まで踏み込んで実行時挙動を検証しており、この種の「静的ログマッチ + 新規リカバリ機構」の組み合わせでは、レビュー側が elif チェーン全体の実行時トレースを行うのが有効というパターンが確認できた
+
+### Acceptance criteria verification difficulty
+- Nothing to note — Pre-merge 2件はいずれも rubric 形式の verify command で、`bats tests/detect-wrapper-anomaly.bats` の実行結果 (40/40 PASS、新規テスト含む) を根拠に機械的に PASS 判定できた。UNCERTAIN は発生しなかった
