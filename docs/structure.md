@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (63 files)
+├── scripts/             # Utility scripts used by skills and agents (64 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -42,7 +42,7 @@ wholework/
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
 ├── examples/            # Example files for Wholework features
 │   └── decomposition/   # Decomposition YAML samples for /issue --from-decomposition-file
-├── tests/               # Bats test files for scripts (94 files)
+├── tests/               # Bats test files for scripts (95 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -215,6 +215,7 @@ Key modules:
 - `scripts/validate-recovery-plan.sh` — validate recovery plan JSON from orchestration-recovery sub-agent (schema check + forbidden ops guard)
 - `scripts/apply-fallback.sh` — Tier 2 bash projection of `modules/orchestration-fallbacks.md`; detects known symptom anchors from wrapper logs and dispatches recovery handlers (handlers: dco-signoff-missing-autofix, code-patch-silent-no-op)
 - `scripts/spawn-recovery-subagent.sh` — Tier 3 recovery orchestrator invoked by `run-auto-sub.sh`; spawns `agents/orchestration-recovery` via `claude -p`, validates the returned plan with `validate-recovery-plan.sh`, enforces concurrency via `WHOLEWORK_MAX_RECOVERY_SUBAGENTS` mkdir-based slot locks, and records successful recoveries to `docs/reports/orchestration-recoveries.md` via `write_recovery_entry()`
+- `scripts/post-fallback-review-summary.sh` — called by `run-review.sh` on exit 0 + `matches_expected:false` (silent no-op); posts a `<!-- review-summary -->`-marked fallback Review Response Summary only when a prior review containing "Acceptance Criteria Verification Results" is found for the PR, otherwise exits 1 without posting
 
 **Skill runners:**
 - `scripts/guard-prefix.sh` — shared GUARD_PREFIX definition sourced by all run-*.sh; includes anti-early-stop and boundary reminders for autonomous execution
