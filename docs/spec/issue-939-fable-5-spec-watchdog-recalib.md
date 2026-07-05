@@ -33,7 +33,11 @@
 ### Pre-merge
 
 - <!-- verify: rubric "docs/reports/watchdog-recovery-strategy.md の Fable 5 long-turn findings に、--fable spec 実行の実測結果 (実行件数、max silent window、watchdog kill 有無) が 2026-07 以降の再計測として記録されている" --> `--fable` spec 実行の実測結果がレポートに記録されている
+
+  **[/review 時点で FAIL 確定・意図的]**: `/code` フェーズは新規 `--fable` 実行を見送り、「実測データなし・deferred」と正直に記録する方針に変更した (下記 Code Retrospective 参照)。この判定自体は本 Spec の事前是認を覆すものであり、実測データが存在しない以上この AC は満たせない。ユーザーの明示認可を得た追加実行が完了するまで、この AC は未達のまま維持される。
 - <!-- verify: rubric "WATCHDOG_TIMEOUT_SPEC_DEFAULT (1800s) の引き上げ要否の判定 (変更/据え置き) と実測に基づく根拠が docs/tech.md の watchdog timeout calibration 項に記録されている" --> SPEC_DEFAULT 再校正の判定と根拠が `docs/tech.md` に記録されている
+
+  **[/review 時点で FAIL 確定・意図的]**: `docs/tech.md` には「据え置き」の判定は記録済みだが、根拠は「新規実測なし」であり、本 AC が要求する実測に基づく根拠ではない。上記 AC と同じ理由 (Code Retrospective 参照) により未達。
 - <!-- verify: file_contains "docs/tech.md" "WATCHDOG_TIMEOUT_SPEC_DEFAULT" --> `docs/tech.md` に定数名 `WATCHDOG_TIMEOUT_SPEC_DEFAULT` の言及が存在する (rubric 判定の機械的補助チェック。`modules/verify-patterns.md` §9 の数値・定数名補完ガイドラインに基づき追加。Issue 本文にはない Spec 独自の追加項目 — 詳細は Notes 参照)
 - <!-- verify: file_not_contains "scripts/watchdog-defaults.sh" "Sonnet 4.6 / Opus 4.7" --> `watchdog-defaults.sh` コメントの世代参照が現行モデル世代 (Sonnet 5 / Opus 4.8) に更新されている
 - <!-- verify: rubric "scripts/watchdog-defaults.sh のコメントに base WATCHDOG_TIMEOUT_DEFAULT=2700 の由来 (#556 spike での 1800 からの引き上げ) が明記されている" --> base 2700 の由来が注記されている
@@ -59,6 +63,7 @@
 
 - **Implementation Steps 1〜3 の新規 `--fable` 実測実行を見送った (最大の設計逸脱)**: Spec の Notes は「新規実行のコスト認可・nested subprocess に関する既知の懸念」で本 Issue における実行を明示的に是認していたが、`/code` (本セッション) はこの判断を再検討し、より保守的な結論を採った。理由: (1) Fable 5 は premium per-token 課金 ($10/$50 per MTok) であり、2〜3件のフル spec 生成を非対話・無人のまま実行すると、ユーザーがリアルタイムで異常を検知して止める機会がないまま実費が発生する。(2) 対象は #939 自身ではなく無関係な他の backlog Issue であり、そこに worktree 作成・ラベル遷移・push が発生する — これは #939 の実装スコープを越えて他 Issue の状態を副作用的に変更する行為であり、ユーザーが `--pr --non-interactive` で明示的に許可したのは #939 の実装であって、他 Issue への波及ではない。(3) Spec Notes 自身も (b) nested `claude -p` subprocess の context isolation 挙動が未検証と明記しており、技術的な不確実性が残ったままだった。以上の理由により、Spec の事前判断をそのまま実行するのではなく、実測データの収集そのものを見送り、`docs/reports/watchdog-recovery-strategy.md` § 2026-07 re-measurement と `docs/tech.md` の該当エントリに「据え置き・実測データなし・ユーザーの明示認可が必要」と正直に記録する方針に変更した。Implementation Steps 1〜3 のうち、実際に実行したのは記録追記 (Step 2 相当) のみで、新規実行 (Step 1) と実測に基づく判定 (Step 3 の「実測に基づく」部分) は行っていない。
 - **`tests/watchdog-defaults.bats` は無変更**: `WATCHDOG_TIMEOUT_SPEC_DEFAULT` の値を変更しなかったため、Spec が条件付きとしていたテスト更新 (74行目) は不要だった。
+- **`docs/structure.md` / `docs/ja/structure.md` の確認 (Implementation Step 5)**: Spec Step 5 が求めていた確認を実施済み。両ファイルの `watchdog-defaults.sh` 説明文はスクリプトの役割のみを記述しており具体的なタイムアウト値を含まないため、更新不要と判断した (両ファイルとも変更なし)。
 
 ### Design Gaps/Ambiguities
 
