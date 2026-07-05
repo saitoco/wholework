@@ -86,10 +86,10 @@
 
 | コンポーネント | フェーズ | モデル | Effort | 根拠 |
 |-----------|-------|-------|--------|-----------|
-| run-issue.sh | issue | Sonnet | high | L/XL のスコープ分析とサブ issue 分割には徹底したオーケストレーションが必要 |
+| run-issue.sh | issue | Sonnet | high | Existing Issue Refinement は曖昧性解決・受入条件と verify command の作成などの実質的な判断作業を行い、パイプライン最上流の成果物を生成する。その誤りは下流の全フェーズに伝播し、C-series の中で最も波及範囲が広い |
 | run-spec.sh | spec | Sonnet（L では `--opus` で Opus；`--fable` で Fable 5） | Sonnet: max；Opus: xhigh（デフォルト）、max（`--max` 明示）；Fable 5: high（デフォルト）、max（`--max` 明示） | 設計品質が重要、spec のエラーは後続全フェーズに波及する。`/auto` は L サイズのみ `--opus` を渡す（XL は spec 前に分割済み） |
 | run-code.sh | code | Sonnet | high | 実装には徹底した推論が必要 |
-| run-review.sh | review | Sonnet | high | レビューのオーケストレーション、深い分析はサブエージェントが担う |
+| run-review.sh | review | Sonnet | high | orchestrator は dispatch 以外にも実質的な推論作業を行う — Step 7.2/7.4/7.6 は外部レビューのフィードバックを解釈して fix コミットを作成しており、run-code.sh 自身の実装推論と同種の作業である |
 | run-merge.sh | merge | Sonnet | low | 機械的なマージ操作、推論は最小限でよい |
 | issue-scope | issue（L/XL のみ） | Opus | — | `/issue` Step 11a で L/XL 並列調査向けに呼び出される。スコープ特定精度はサブ issue 境界判断に直結 |
 | issue-risk | issue（L/XL のみ） | Opus | — | `/issue` Step 11a で L/XL 並列調査向けに呼び出される。リスク評価精度が受入条件品質を高める |
