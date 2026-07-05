@@ -193,18 +193,16 @@ Background セクションの技術的主張 (`observation-trigger.sh`, `pr-revi
 - 特記事項なし。Pre-merge AC 2件はいずれも `rubric` タイプで曖昧さがなく、アドバーサリアル・グレーディングも一意に PASS 判定できた。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Pre-merge rubric AC 2件を独立にアドバーサリアル・グレーディングし、両方 PASS を再確認した (code phase の判定と一致)。
-- Workflow パスの agentType 解決失敗を検知し、`workflow-guidance.md` の指示通り静的 Task fan-out (review-spec + review-bug×2 + 検証サブエージェント×2) にフォールバックして Step 10 を完遂した。
-- review-bug 由来の指摘2件 (awk 空白パス分割、pipefail/SIGPIPE) はいずれもアドバーサリアル検証で REJECT (実環境で発現しない理論上のエッジケース) と判定し、修正不要と判断した。
-- review-spec 由来の CONSIDER (`foreign` 分岐の `exit 0` 欠落) は低リスクな Spec 整合性向上のため修正・コミット・push 済み。
+- CI 全ジョブ SUCCESS・review 承認済み・Pre-merge AC 2件 PASS 済みのため、conflict resolution 不要で `gh pr merge --squash --delete-branch` を直接実行した (mergeable=clean)。
+- BASE_BRANCH は `main` のため、PR body の `closes #930` により Issue #930 は squash merge と同時に自動クローズされる想定。
 
 ### Deferred Items
 - Post-merge observation AC (`event=pr-review-full` / `event=auto-run`) は引き続き次回の実 `/review --full`・`/auto` 実行時の観察に委ねる。変更なし (Spec どおり)。
 - `EnterWorktree` の post-cd CWD 解決挙動の検証も同じ post-merge observation に委ねる。変更なし (Spec どおり)。
 
 ### Notes for Next Phase
-- `/merge 933` 実行時、CI は全ジョブ SUCCESS 済み・MUST issue なし・Pre-merge AC 2件 PASS 済みのためブロッカーなしでマージ可能。
-- マージ後、本 PR (#933) 自身が次回 `/review --full` を実行した際の `pr-review-full` イベント opportunistic verify dispatch で、Post-merge observation AC の実挙動を観察できる。
+- `/verify 930` 実行時、Post-merge observation AC (`pr-review-full` / `auto-run` イベントでの opportunistic verify dispatch 挙動) はまだ実観察されていないため、次回の該当イベント発生時にあわせて確認すること。
+- 本 PR (#933) 自身が次回 `/review --full` を実行した際の `pr-review-full` イベント opportunistic verify dispatch で、Post-merge observation AC の実挙動を観察できる。
