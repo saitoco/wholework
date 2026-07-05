@@ -102,8 +102,17 @@ elif [[ "$EXIT_CODE" == "0" ]]; then
       _merge_pr_confirmed_merged=true
     fi
   fi
+  _review_confirmed_posted=false
+  if [[ "$PHASE" == "review" ]]; then
+    _review_bodies=$(gh pr view "$ISSUE_NUMBER" --json reviews --jq '.reviews[].body' 2>/dev/null)
+    if [[ $? -eq 0 ]] && echo "$_review_bodies" | grep -q "Acceptance Criteria Verification Results"; then
+      _review_confirmed_posted=true
+    fi
+  fi
   if [[ "$_merge_pr_confirmed_merged" == "true" ]]; then
     : # merge phase live check: gh pr view confirms PR MERGED, skip silent-no-op detection entirely (fail-safe: gh failure or non-MERGED state falls through to existing logic below)
+  elif [[ "$_review_confirmed_posted" == "true" ]]; then
+    : # review phase live check: gh pr view confirms a Review with Acceptance Criteria Verification Results was posted, skip silent-no-op detection entirely (fail-safe: gh failure or no matching Review falls through to existing logic below)
   elif grep -q '"matches_expected":true' "$LOG_FILE"; then
     : # reconcile-first authority: matches_expected:true skips silent-no-op (covers async external commit recognition)
   elif grep -qiE "完了しました|commit and push|successfully committed|pushed to|changes have been committed" "$LOG_FILE"; then
