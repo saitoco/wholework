@@ -110,7 +110,7 @@ When the log shows a watchdog kill after implementation was complete but before 
   "action": "recover",
   "rationale": "Watchdog killed run-code.sh after implementation but before commit or PR creation. Recovering by committing uncommitted changes, pushing the feature branch, and creating the PR.",
   "steps": [
-    { "op": "run_command", "cmd": "git add -A && git commit -s -m 'feat: implement issue #N (closes #N)\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>'" },
+    { "op": "run_command", "cmd": "git add -A && git commit -s -m 'feat: implement issue #N (closes #N)\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>'" },
     { "op": "run_command", "cmd": "git push origin worktree-code+issue-N" },
     { "op": "run_command", "cmd": "gh pr create --base main --head worktree-code+issue-N --title 'Issue #N: summary' --body 'closes #N'" }
   ]

@@ -225,7 +225,7 @@ merge is an intermediate phase — write the Phase Handoff so verify can read it
    ```bash
    git commit -s -m "Add merge phase handoff for issue #$ISSUE_NUMBER
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
    ```
    ```bash
    git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }

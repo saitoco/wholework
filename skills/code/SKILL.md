@@ -481,7 +481,7 @@ git add <changed files>
 # If BASE_BRANCH is not main: "{prefix} <summary>"
 git commit -s -m "{prefix} <summary>
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
 ```bash
@@ -611,7 +611,7 @@ If there are items under "Deviations from Design" (reordering of implementation 
    git add $SPEC_PATH/issue-$NUMBER-*.md
    git commit -s -m "Add code retrospective for issue #$NUMBER
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
    ```
    ```bash
    git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
