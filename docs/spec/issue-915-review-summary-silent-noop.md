@@ -85,3 +85,30 @@ No new comments since last phase.
 - **allowed-tools への影響なし**: `post-fallback-review-summary.sh` は `run-review.sh` (bash サブプロセス) から呼び出されるため、`skills/review/SKILL.md` の `allowed-tools` frontmatter への追加は不要 (既存の `apply-fallback.sh` 等、wrapper script 間の内部呼び出しと同じパターン)。
 - **Issue body vs 実装の整合性確認**: Issue Background に記載の「reconcile: matches_expected:false ... → wrapper exit 1」は `scripts/run-review.sh` の現行実装 (L178-181) と一致していることを確認済み。コンフリクトなし。
 - **Verify command sync 確認**: 本 Spec の `## Verification > Pre-merge` は Issue 本文 `## Acceptance Criteria > Pre-merge` の2項目と verify コマンドを含め完全に一致 (件数一致: Issue側2件 / Spec側2件)。Post-merge も Issue本文の1件と一致。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps 1〜5 をそのままの順序・内容で実装した (deviation なし)
+- `post-fallback-review-summary.sh` のガード条件は Spec 記載どおり "Acceptance Criteria Verification Results" を含む既存 Review の有無とし、修正コミットの有無はガードに使わなかった (#907 が修正コミットなしのケースだったため)
+- `tests/run-review.bats` の再チェック用 `reconcile-phase-state.sh` mock は呼び出し回数に応じて出力を切り替えるステートフルな実装 (1回目 false、2回目以降 true) にして、フォールバック投稿前後の状態遷移を検証した
+
+### Deferred Items
+- `scripts/detect-wrapper-anomaly.sh` の `reconciler-header-mismatch` パターンの誤帰属修正 (Spec Notes に記載、別 Issue 推奨。本 Issue のスコープ外)
+- フォールバック投稿と本来の Step 14 投稿が両方成功した場合の重複コメント dedup ロジック (Spec Notes に記載、cosmetic tradeoff として許容)
+
+### Notes for Next Phase
+- Review phase (`/review` on PR #920) で本 PR 自体をレビューする際、`scripts/run-review.sh` の変更が review skill 自身の completion 検出ロジックに影響するため、review 実行時に silent no-op が発生した場合は今回追加したフォールバックが作動することを期待した挙動として扱う
+- Behavioral Change Detection (Step 9) により `scripts/run-review.sh` の変更が `tests/run-auto-sub.bats` からも参照されていることを検出し、`bats tests/` フルスイート (1084 tests) を実行して回帰なしを確認済み
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A (Spec の Implementation Steps 1〜5 をそのまま実装)
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
