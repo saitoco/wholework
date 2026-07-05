@@ -178,18 +178,33 @@ Background セクションの技術的主張 (`observation-trigger.sh`, `pr-revi
 - **自動解決 (非対話モードのため AskUserQuestion 不使用)**: Spec の存在を優先し、ラベル不一致を「Spec なしで進めてよいか」の分岐ではなく「直前の `/auto` 自動リトライサイクルにより既に `phase/code` へ遷移済みの状態からの再実行」と解釈して続行した。
 - **判断根拠**: `.tmp/auto-events.jsonl` および `.tmp/wrapper-out-930-code-pr.log` を確認したところ、本セッション開始前に同一 Issue に対する `/code 930 --pr --non-interactive` の実行が2回試行され、いずれも `silent_no_op` (bats テストのバックグラウンド完了待ちで進行がタイムアウトし、`auto-retry-on-fail` によって worktree/branch がクリーンアップされた上でリトライ) と判定されていたことを確認した (`code_retry_fire` iteration 1, 2)。本セッションはその3回目 (最終) の試行であり、ラベルは初回試行時の Step 4 で既に `phase/code` へ遷移済みのまま残っていた。Spec の内容と Issue 本文に矛盾はなく、Spec 不在時の代替パス (Issue 本文から要件を読み取る) を取る理由がないため、Spec を正として実装を進めた。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 構造的な乖離なし。review-spec エージェントが enum 網羅性 (`none`/`own`/`foreign` 3分岐)・Changed Files 一致・ブランチ名導出式を Spec と突き合わせ、完全準拠を確認した。唯一の指摘 (`scripts/detect-foreign-worktree.sh` の `foreign` 分岐で明示的な `exit 0` が Spec 文言・他2分岐と非対称) は CONSIDER レベルの軽微なスタイル差分で、レビュー中に修正済み。
+
+### Recurring issues
+
+- **Workflow agentType 解決の bare 名 vs namespace 名の不一致**: `capabilities.workflow: true` により `skills/review/workflow-guidance.md` の Workflow パスを試行したが、インラインスクリプトが `agentType: 'review-spec'` / `'review-bug'` の bare 名をハードコードしており、Workflow 内部の agent() 解決では bare 名は見つからず (実際に解決可能なのは `wholework:review-spec` / `wholework:review-bug` の namespace 付きのみ)。事前の Pre-flight チェック文言は「セッションの Agent tool available agentType list に `review-spec`/`review-bug` が存在するか」を確認する形になっているが、実際にリストへ表示されるのは namespace 付きの形のみであり、bare 名前提のチェックでは齟齬に気づけない。Issue #882 と同型の failure mode (headless セッションでのカスタム agentType 未解決) が、今回は「plugin-dir 未指定」ではなく「bare 名 vs namespace 名のミスマッチ」という別要因で顕在化した。改善提案: `workflow-guidance.md` のインラインスクリプトの `FINDERS` 定義を `wholework:review-spec` / `wholework:review-bug` に修正し、Pre-flight チェックの文言も「FINDERS 内で使用する正確な文字列で存在確認すること」に明確化する (次回 `/verify` 集約時の起票候補)。
+
+### Acceptance criteria verification difficulty
+
+- 特記事項なし。Pre-merge AC 2件はいずれも `rubric` タイプで曖昧さがなく、アドバーサリアル・グレーディングも一意に PASS 判定できた。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の Implementation Steps 1〜5 をそのまま実装した (逸脱なし)。`scripts/detect-foreign-worktree.sh` の3分岐仕様、`modules/worktree-lifecycle.md` Entry section の置き換え文言も Spec 記載どおり。
-- Issue #930 のラベルが `phase/ready` ではなく既に `phase/code` だった点は、Spec 不在の分岐ではなく直前の `/auto` 自動リトライ (silent_no_op ×2) による状態残存と判断し、Spec を正として続行した (詳細は Code Retrospective 参照)。
-- Pre-merge の rubric AC 2件はアドバーサリアル・グレーディング用サブエージェントに委譲して判定し、両方 PASS を確認した。
+- Pre-merge rubric AC 2件を独立にアドバーサリアル・グレーディングし、両方 PASS を再確認した (code phase の判定と一致)。
+- Workflow パスの agentType 解決失敗を検知し、`workflow-guidance.md` の指示通り静的 Task fan-out (review-spec + review-bug×2 + 検証サブエージェント×2) にフォールバックして Step 10 を完遂した。
+- review-bug 由来の指摘2件 (awk 空白パス分割、pipefail/SIGPIPE) はいずれもアドバーサリアル検証で REJECT (実環境で発現しない理論上のエッジケース) と判定し、修正不要と判断した。
+- review-spec 由来の CONSIDER (`foreign` 分岐の `exit 0` 欠落) は低リスクな Spec 整合性向上のため修正・コミット・push 済み。
 
 ### Deferred Items
-- Post-merge observation AC (`event=pr-review-full` / `event=auto-run`) は次回の実 `/review --full`・`/auto` 実行時の観察に委ねる。変更なし (Spec どおり)。
+- Post-merge observation AC (`event=pr-review-full` / `event=auto-run`) は引き続き次回の実 `/review --full`・`/auto` 実行時の観察に委ねる。変更なし (Spec どおり)。
 - `EnterWorktree` の post-cd CWD 解決挙動の検証も同じ post-merge observation に委ねる。変更なし (Spec どおり)。
 
 ### Notes for Next Phase
-- `/review` は本 PR (#933) のマージ後、次回自身の `--full` 実行で `pr-review-full` イベントの opportunistic verify dispatch が発生した際、nested `/verify` が本修正により main worktree root から正しく isolate されることを確認できる。
-- bats フルスイート (96ファイル/1098テスト) はローカルで全件 PASS 済み。`allowed-tools` 変更が `SKILL.md` という汎用的なベース名で広範囲のテストに一致したため、behavioral change 判定により full suite を実行した。
+- `/merge 933` 実行時、CI は全ジョブ SUCCESS 済み・MUST issue なし・Pre-merge AC 2件 PASS 済みのためブロッカーなしでマージ可能。
+- マージ後、本 PR (#933) 自身が次回 `/review --full` を実行した際の `pr-review-full` イベント opportunistic verify dispatch で、Post-merge observation AC の実挙動を観察できる。
