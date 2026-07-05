@@ -158,20 +158,38 @@ Background セクションの技術的主張 (`observation-trigger.sh`, `pr-revi
 - `EnterWorktree` の post-cd (Bash tool による `cd` 実行後) の CWD 解決挙動は公開ドキュメントに明記された保証ではなく、既存コードベースの慣習からの類推に基づく設計とした。Post-merge の observation AC (次回実行時の実挙動観察) で検証される設計であり、Pre-merge 側の判定には影響しない。
 - Session 68567-1783235854 における foreign CWD 発生経路 (nested `Skill()` の直接継承か、`run-review.sh` サブプロセスが親シェルの dangling CWD を継承したものか) の完全な再現はできなかったが、本 Spec の判定ロジックは経路に依存せず「現在のブランチ名が期待値と一致するか」のみで判断するため、実装設計そのものには影響しないと判断した。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — 実装は Spec の Implementation Steps 1〜5 をそのまま踏襲した。`detect-foreign-worktree.sh` の3分岐仕様、`worktree-lifecycle.md` Entry section の置き換え文言、5 SKILL.md への機械的追加、`docs/structure.md`/`docs/ja/structure.md` の同期のいずれも Spec 記載どおり。
+
+### Design Gaps/Ambiguities
+
+- Spec には明記されていなかった実装上の詳細として、bats テスト `tests/detect-foreign-worktree.bats` の "in a foreign worktree" ケースで `$BATS_TEST_TMPDIR` 配下のパス (macOS では `/tmp` が `/private/tmp` へのシンボリックリンク) をそのまま期待値として比較すると、`git worktree list --porcelain` が返す解決済み実パスと文字列不一致で FAIL した。`MAIN_REPO` を `git init` 直後に `$(cd "$MAIN_REPO" && pwd -P)` で実パス解決してから比較する形に修正して解消した (スクリプト本体 `scripts/detect-foreign-worktree.sh` 自体の実装には変更なし。純粋にテスト環境依存の比較方法の問題)。
+
+### Rework
+
+- 上記の bats テストのパス比較修正 (`pwd -P` 追加) の1回のみ。他の実装ステップに手戻りはなかった。
+
+### Autonomous Auto-Resolve Log (code phase)
+
+- **論点**: Step 3 (`phase/ready` label check) で Issue #930 のラベルを確認したところ `phase/ready` ではなく既に `phase/code` が付与されていた。通常この状態は Spec 不在を意味する分岐だが、本 Issue には Spec (`docs/spec/issue-930-verify-worktree-inheritance.md`) が既に存在していた。
+- **自動解決 (非対話モードのため AskUserQuestion 不使用)**: Spec の存在を優先し、ラベル不一致を「Spec なしで進めてよいか」の分岐ではなく「直前の `/auto` 自動リトライサイクルにより既に `phase/code` へ遷移済みの状態からの再実行」と解釈して続行した。
+- **判断根拠**: `.tmp/auto-events.jsonl` および `.tmp/wrapper-out-930-code-pr.log` を確認したところ、本セッション開始前に同一 Issue に対する `/code 930 --pr --non-interactive` の実行が2回試行され、いずれも `silent_no_op` (bats テストのバックグラウンド完了待ちで進行がタイムアウトし、`auto-retry-on-fail` によって worktree/branch がクリーンアップされた上でリトライ) と判定されていたことを確認した (`code_retry_fire` iteration 1, 2)。本セッションはその3回目 (最終) の試行であり、ラベルは初回試行時の Step 4 で既に `phase/code` へ遷移済みのまま残っていた。Spec の内容と Issue 本文に矛盾はなく、Spec 不在時の代替パス (Issue 本文から要件を読み取る) を取る理由がないため、Spec を正として実装を進めた。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
-- 「今いる worktree が自分のものか foreign か」の曖昧性を `modules/worktree-lifecycle.md` の Entry section 一箇所 (新規 `scripts/detect-foreign-worktree.sh` 経由) で解消する設計とした。`/review`・`/auto` の dispatch 直前ガード (Option C) や `observation-trigger.sh` の非同期化 (Option B) は採用せず、spec/code/review/merge/verify 全5 skill と `/auto` の複数の直接 `Skill(verify)` 呼び出し箇所を一律にカバーする。
-- foreign 検出時は `git worktree list --porcelain` の先頭行 (メインリポジトリ root) へ `cd` した上で、通常の `EnterWorktree(name=...)` パスに合流させる設計とした。これにより Exit section (merge-to-main / push-and-remove いずれも) は無変更で済む。
-- 検出ロジックは prose のみに留めず独立した bats テスト可能な script (`scripts/detect-foreign-worktree.sh`) として切り出した。AC2 (自動検証の存在) を満たすため。
+- Spec の Implementation Steps 1〜5 をそのまま実装した (逸脱なし)。`scripts/detect-foreign-worktree.sh` の3分岐仕様、`modules/worktree-lifecycle.md` Entry section の置き換え文言も Spec 記載どおり。
+- Issue #930 のラベルが `phase/ready` ではなく既に `phase/code` だった点は、Spec 不在の分岐ではなく直前の `/auto` 自動リトライ (silent_no_op ×2) による状態残存と判断し、Spec を正として続行した (詳細は Code Retrospective 参照)。
+- Pre-merge の rubric AC 2件はアドバーサリアル・グレーディング用サブエージェントに委譲して判定し、両方 PASS を確認した。
 
 ### Deferred Items
-- Post-merge observation AC (`event=pr-review-full` / `event=auto-run`) は次回の実 `/review --full`・`/auto` 実行時の観察に委ねる設計。Spec の Verification > Post-merge に反映済み。
-- `EnterWorktree` が Bash tool の `cd` 直後に post-cd の CWD を正しく解決するかは独立検証していない。Spec の `## Uncertainty` に記載の通り、同じ post-merge observation で顕在化する設計。
-- `modules/observation-trigger.md` へのクロスリファレンス注記 (この安全策の存在を示す一文) の追加は検討したが、変更範囲を最小に保つため見送った。AC達成に必須ではない任意のフォローアップとして残る。
+- Post-merge observation AC (`event=pr-review-full` / `event=auto-run`) は次回の実 `/review --full`・`/auto` 実行時の観察に委ねる。変更なし (Spec どおり)。
+- `EnterWorktree` の post-cd CWD 解決挙動の検証も同じ post-merge observation に委ねる。変更なし (Spec どおり)。
 
 ### Notes for Next Phase
-- `/code` は Implementation Step 1 に列挙した3分岐 (`none`/`own`/`foreign <path>`) をそのまま実装する。各分岐の exit code・git 失敗時のフォールスルー (`set -euo pipefail` 任せ、追加ハンドリングなし) まで仕様化済みのため、追加の設計判断は不要なはず。
-- Implementation Step 4 の5 SKILL.md `allowed-tools` 追加は5ファイルとも機械的に同一パターン。
-- Implementation Step 5 の `docs/ja/structure.md` 同期は、ファイル数更新と Scripts リストの新規エントリの両方を日本語で反映する (`docs/translation-workflow.md` 準拠)。
+- `/review` は本 PR (#933) のマージ後、次回自身の `--full` 実行で `pr-review-full` イベントの opportunistic verify dispatch が発生した際、nested `/verify` が本修正により main worktree root から正しく isolate されることを確認できる。
+- bats フルスイート (96ファイル/1098テスト) はローカルで全件 PASS 済み。`allowed-tools` 変更が `SKILL.md` という汎用的なベース名で広範囲のテストに一致したため、behavioral change 判定により full suite を実行した。
