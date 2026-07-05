@@ -65,16 +65,31 @@
 - N/A — 手戻りは発生しなかった。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 判定は「Sonnet デフォルトパスの `max` を維持」。根拠は (1) #217/#229 とも本パスを未評価のまま残していたこと、(2) `/spec` が `run-code.sh` と同様 sub-agent fan-out のない単一チェーンで、かつ spec エラーは code/review/merge の3フェーズに波及する (code エラーより波及範囲が広い)、(3) `max` の diminishing-returns 根拠は docs/tech.md 上 Opus 4.8 専用であり Sonnet 5 には未実証、の3点。
-- Opus fallback (`--opus`, L サイズ、`xhigh`) との比較は「転用不可のエビデンス」と結論。モデル世代 (Opus 4.8 vs Sonnet 5) 間で effort tier の意味論が異なり、また Opus fallback は L サイズ限定のためスコープも異なる。
-- 本番サンプル調査は #914 以降の Issue (#915/#916/#917/#918/#921/#930) の Code Retrospective を対象とし、設計推論由来のギャップが皆無であることを確認 (中立的シグナル、downgrade の裏付けにも反証にもならない)。
+- 判定「Sonnet デフォルトパス `max` 維持」は review フェーズで妥当と確認。2件の rubric AC (判定・根拠記録、SSoT 一致) はいずれも UNCERTAIN なく PASS。`run-spec.sh`/`tests/run-spec.bats` が実際に無変更であることを worktree 上で確認済み。
+- review-light (Size M light mode) で2件の SHOULD 指摘 (新規レポート内: Issue #217 の未確定日付プレースホルダ、Issue #927 production-sample 行の陳腐化した記述) を検出し、いずれも修正・コミット・プッシュ済み。判定結果・根拠の実質には影響しない、レポートの事実精度の訂正のみ。
+- MUST issue はゼロ。CI は全ジョブ SUCCESS (DCO/bats/skill syntax/forbidden expressions/macOS shell compatibility)。
 
 ### Deferred Items
-- なし。判定が「据え置き」のため run-spec.sh / tests/run-spec.bats への変更は発生せず、`/verify` フェーズで追加確認すべき実装差分はない。
+- なし。
 
 ### Notes for Next Phase
-- `/verify` では2件の rubric AC (判定・根拠の記録、SSoT 一致) を再評価する。docs/tech.md の新規ノート段落と、run-spec.sh/tests/run-spec.bats が無変更であることを確認すれば足りる。
-- 本 Issue は C-series (#921 C2, #922 C3) の一部。残る C4 (`run-issue.sh` の effort 再校正) は独立 Issue として別途扱われる想定 (本 Issue のスコープ外)。
+- `/merge` では追加の実装差分確認は不要 (レビュー起因の修正はレポートの事実精度訂正のみで、AC 判定に影響しない)。
+- `/verify` では2件の rubric AC を再評価する。docs/tech.md の新規ノート段落と、run-spec.sh/tests/run-spec.bats が無変更であることを確認すれば足りる (review フェーズでの確認内容と同一)。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- N/A — Implementation Steps 1〜5 は Spec 通りに実施されており、PR diff との構造的な乖離はなかった。2件の SHOULD 指摘 (後述) はいずれも Spec の設計判断そのものではなく、新規レポート内の事実記述の精度に関するものだった。
+
+### Recurring issues
+
+- 2件の SHOULD 指摘は根本原因が共通していた: 新規レポート (`docs/reports/sonnet-5-effort-recalibration-spec.md`) が言及する外部情報 (Issue #217 の日付、Issue #927 の Code Retrospective 完了状況) が、レポート執筆時点でのスナップショットのまま固定され、実際にマージされるまでの間に情報が古くなった、あるいは最初から未確定のまま `xx-xx` プレースホルダとして残された。本 Issue 単体では初出だが、「並行 Issue (#921/#922/#927 の C-series) の情報を横断参照するレポートは、参照先の状態が執筆後に変化しうる」という一般的なリスクパターンとして今後の類似レポート作成時に留意する価値がある。
+- 実害は軽微 (判定結果には影響なし) だったが、監査品質のレポートとしての正確性を損なう type のため、今後同様のレポートを書く際は「日付/状態を含む外部参照は生成直前に再確認する」運用を徹底するとよい。
+
+### Acceptance criteria verification difficulty
+
+- Nothing to note — 両 AC とも rubric 単独構成 (Spec Notes に記載の通り、意図的な設計) で UNCERTAIN なく PASS 判定できた。verify command の過不足や記述不備は見られなかった。
