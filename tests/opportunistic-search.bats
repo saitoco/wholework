@@ -163,6 +163,59 @@ teardown() {
     [ "$output" = "[]" ]
 }
 
+@test "context gate: keyword found in context file includes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 500}]'
+    export MOCK_ISSUE_BODY_500='- [ ] Verify enum coverage <!-- verify-type: observation event=pr-review-full keyword=enum -->'
+    echo "This spec defines an enum for status codes." > "$BATS_TEST_TMPDIR/context-has-enum.md"
+
+    run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-has-enum.md"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 500' > /dev/null
+}
+
+@test "context gate: keyword absent from context file excludes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 501}]'
+    export MOCK_ISSUE_BODY_501='- [ ] Verify enum coverage <!-- verify-type: observation event=pr-review-full keyword=enum -->'
+    echo "This spec covers formatting only." > "$BATS_TEST_TMPDIR/context-no-enum.md"
+
+    run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-no-enum.md"
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
+}
+
+@test "context gate: AC without keyword= matches unconditionally even with --context-file" {
+    export MOCK_ISSUE_LIST='[{"number": 502}]'
+    export MOCK_ISSUE_BODY_502='- [ ] Next /review --full auto-checks this condition <!-- verify-type: observation event=pr-review-full -->'
+    echo "Irrelevant content." > "$BATS_TEST_TMPDIR/context-any.md"
+
+    run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-any.md"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 502' > /dev/null
+}
+
+@test "context gate: keyword= present but no --context-file matches unconditionally" {
+    export MOCK_ISSUE_LIST='[{"number": 503}]'
+    export MOCK_ISSUE_BODY_503='- [ ] Verify enum coverage <!-- verify-type: observation event=pr-review-full keyword=enum -->'
+
+    run bash "$SCRIPT" --event pr-review-full
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 503' > /dev/null
+}
+
+@test "context gate: nonexistent --context-file path disables gate with a warning" {
+    export MOCK_ISSUE_LIST='[{"number": 504}]'
+    export MOCK_ISSUE_BODY_504='- [ ] Verify enum coverage <!-- verify-type: observation event=pr-review-full keyword=enum -->'
+
+    run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/does-not-exist.md" 2>&1
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Warning:"*"does-not-exist.md"*"not found"* ]]
+    echo "$output" | grep -v "^Warning" | jq -e 'length == 1' > /dev/null
+    echo "$output" | grep -v "^Warning" | jq -e '.[0].number == 504' > /dev/null
+}
+
 @test "event filter: unknown event emits warning and falls back" {
     export MOCK_ISSUE_LIST='[{"number": 403}]'
     export MOCK_ISSUE_BODY_403='- [ ] /review skill creates review after execution <!-- verify-type: opportunistic -->'

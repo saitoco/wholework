@@ -60,12 +60,11 @@ if [ "$DRY_RUN" = true ]; then
     exit 0
 fi
 
-CONTEXT_FILE_ARGS=()
 if [ -n "$CONTEXT_FILE" ]; then
-    CONTEXT_FILE_ARGS=(--context-file "$CONTEXT_FILE")
+    RESULTS=$("${SCRIPT_DIR}/opportunistic-search.sh" --event "$EVENT_NAME" --context-file "$CONTEXT_FILE" 2>/dev/null || true)
+else
+    RESULTS=$("${SCRIPT_DIR}/opportunistic-search.sh" --event "$EVENT_NAME" 2>/dev/null || true)
 fi
-
-RESULTS=$("${SCRIPT_DIR}/opportunistic-search.sh" --event "$EVENT_NAME" "${CONTEXT_FILE_ARGS[@]}" 2>/dev/null || true)
 
 if [ -z "$RESULTS" ] || [ "$RESULTS" = "[]" ]; then
     exit 0
