@@ -120,3 +120,58 @@
 ### 影響を受けない箇所の確認
 
 `modules/worktree-lifecycle.md` の Exit section (merge-to-main / push-and-remove いずれも) は `ENTERED_WORKTREE` の値のみで分岐しており、本修正後も foreign worktree 検出時は `ENTERED_WORKTREE=true` に正規化されるため、Exit section 自体への変更は不要 (既存の `ENTERED_WORKTREE=true` 分岐がそのまま正しく機能する)。`modules/observation-trigger.md`・`modules/opportunistic-verify.md` の dispatch contract もこの修正により変更不要 (dispatch は同期のまま、dispatch **先**の `/verify` 自身が安全になる)。
+
+## issue retrospective
+
+`/issue 930 --non-interactive` によるリファインメントの結果 (Issue コメントより転記)。
+
+### 背景ファクト検証 (advisory)
+
+Background セクションの技術的主張 (`observation-trigger.sh`, `pr-review-full`, `worktree-merge-push`, `docs/reports/orchestration-recoveries.md` の該当エントリ) はすべてコードベース上に実体が確認でき、警告なしで通過。
+
+### 自動解決した曖昧ポイント (Autonomous Auto-Resolve Log)
+
+- **AC 適用範囲を `/review` 単独ではなく `/review` + `/auto` の両エミッターに拡大**
+  - 理由: `modules/observation-trigger.md` の「Who invokes `/verify`」節を確認したところ、`Skill(skill="wholework:verify", ...)` を実際に dispatch する LLM-session emitter は `/review` と `/auto` の2つのみ (`AUTONOMY_TIER` が L2/L3 のとき) であることが判明した。`/auto` は XL Issue のサブ Issue 並列実行で worktree を利用するため、同一の worktree/CWD 継承バグに同様に晒される。
+  - 他候補: `/review` のみに限定 (Background の直接の発生源のみ) — 採用しなかった理由: 同一の未修正 dispatch 経路を持つ `/auto` 側の再発を見逃すリスクがあるため
+- **Post-merge AC の `verify-type` を `opportunistic` から `observation event=<name>` へ修正**
+  - 理由: `modules/verify-classifier.md` の分類基準を確認したところ、「次回 `/review --full` の自動チェックを観察する」という文言は `observation` タイプの例示そのものと一致しており、`event=pr-review-full` / `event=auto-run` を明示することで `scripts/opportunistic-search.sh --event <name>` のイベント駆動再評価の対象として正しく機能する。
+
+### その他
+
+- タイトルドリフト: なし。Blocked-by: オープンなブロッカーなし。Scope Assessment (sub-issue 分割): non-interactive モードのためスキップ。
+
+## spec retrospective
+
+### Minor observations
+
+- Issue body の Background 記載の技術的主張は `/issue` retrospective で既にコードベース照合済みだったため、`/spec` 側の Step 6 Conflict Detection (Issue body vs. 実装の矛盾検出) では新たな不整合は検出されなかった。
+- Pre-merge AC 2件はいずれも `rubric` 型で、`file_contains` 等の deterministic な verify command とは併用していない。対象が「shared module 内のロジック分岐が実装されているか」という意味的判断であり、`modules/verify-patterns.md` §9 の rubric 選択基準 (意味的等価性の判断) に整合すると判断した。
+
+### Judgment rationale
+
+- Option A/B/C のうち `modules/worktree-lifecycle.md` Entry section への一般化された Option A を採用した判断根拠は本 Spec の Notes 「Ambiguity Resolution (Auto-Resolve Log)」に記載の通り。要点: Option C (`/review`・`/auto` の dispatch 直前ガード) は `/review` 自身の Worktree Entry が既に同じ曖昧性を抱えているため手遅れ、Option B (deferred queue 化) は dispatch contract の同期性を変更する不釣り合いに大きい変更と判断した。
+- `docs/structure.md`/`docs/ja/structure.md` の同期は SHOULD レベルの変更として扱い、Pre-merge の rubric AC 2件には含めていない (Issue 本文の Acceptance Criteria との件数一致を優先する Verify command sync rule に従った)。
+
+### Uncertainty resolution
+
+- `EnterWorktree` の post-cd (Bash tool による `cd` 実行後) の CWD 解決挙動は公開ドキュメントに明記された保証ではなく、既存コードベースの慣習からの類推に基づく設計とした。Post-merge の observation AC (次回実行時の実挙動観察) で検証される設計であり、Pre-merge 側の判定には影響しない。
+- Session 68567-1783235854 における foreign CWD 発生経路 (nested `Skill()` の直接継承か、`run-review.sh` サブプロセスが親シェルの dangling CWD を継承したものか) の完全な再現はできなかったが、本 Spec の判定ロジックは経路に依存せず「現在のブランチ名が期待値と一致するか」のみで判断するため、実装設計そのものには影響しないと判断した。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- 「今いる worktree が自分のものか foreign か」の曖昧性を `modules/worktree-lifecycle.md` の Entry section 一箇所 (新規 `scripts/detect-foreign-worktree.sh` 経由) で解消する設計とした。`/review`・`/auto` の dispatch 直前ガード (Option C) や `observation-trigger.sh` の非同期化 (Option B) は採用せず、spec/code/review/merge/verify 全5 skill と `/auto` の複数の直接 `Skill(verify)` 呼び出し箇所を一律にカバーする。
+- foreign 検出時は `git worktree list --porcelain` の先頭行 (メインリポジトリ root) へ `cd` した上で、通常の `EnterWorktree(name=...)` パスに合流させる設計とした。これにより Exit section (merge-to-main / push-and-remove いずれも) は無変更で済む。
+- 検出ロジックは prose のみに留めず独立した bats テスト可能な script (`scripts/detect-foreign-worktree.sh`) として切り出した。AC2 (自動検証の存在) を満たすため。
+
+### Deferred Items
+- Post-merge observation AC (`event=pr-review-full` / `event=auto-run`) は次回の実 `/review --full`・`/auto` 実行時の観察に委ねる設計。Spec の Verification > Post-merge に反映済み。
+- `EnterWorktree` が Bash tool の `cd` 直後に post-cd の CWD を正しく解決するかは独立検証していない。Spec の `## Uncertainty` に記載の通り、同じ post-merge observation で顕在化する設計。
+- `modules/observation-trigger.md` へのクロスリファレンス注記 (この安全策の存在を示す一文) の追加は検討したが、変更範囲を最小に保つため見送った。AC達成に必須ではない任意のフォローアップとして残る。
+
+### Notes for Next Phase
+- `/code` は Implementation Step 1 に列挙した3分岐 (`none`/`own`/`foreign <path>`) をそのまま実装する。各分岐の exit code・git 失敗時のフォールスルー (`set -euo pipefail` 任せ、追加ハンドリングなし) まで仕様化済みのため、追加の設計判断は不要なはず。
+- Implementation Step 4 の5 SKILL.md `allowed-tools` 追加は5ファイルとも機械的に同一パターン。
+- Implementation Step 5 の `docs/ja/structure.md` 同期は、ファイル数更新と Scripts リストの新規エントリの両方を日本語で反映する (`docs/translation-workflow.md` 準拠)。
