@@ -38,3 +38,27 @@
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / summary: Issue Retrospective — スコープを `skills/code/SKILL.md` に限定する判断の根拠 (`scripts/collect-recovery-candidates.sh` と `modules/retro-proposals.md` step 9 は実装済みと確認済み) と、AC1 への `section_contains "gh issue list"` 補助チェック追加の決定を記録。AC2 には補助チェックを追加しない判断 (実装自由度を AC 文言が既に許容) も記載。 / url: https://github.com/saitoco/wholework/issues/910#issuecomment-4884131799
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A (Spec の Implementation Steps 1-2 をそのまま実施。テストヘルパーは既存の `step0_section()` と同じ awk パターンを踏襲し、bash 3.2+ 互換を維持)
+
+### Design Gaps/Ambiguities
+- N/A (Spec Notes に実装方式・ドキュメント同期・Issue 本文整合性の判断が既に記録済みで、Code フェーズで新たに発見した設計上のギャップはなかった)
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Adopted the inline dedup criteria from `modules/retro-proposals.md` step 9 (same `gh issue list` command and duplicate-judgment wording) rather than extracting a shared helper, per the Spec Notes rationale (Size S scope, blast-radius concerns for a module shared with `/verify`/`/auto`).
+- Added a `followup_issue_section()` awk helper to `tests/code.bats` mirroring the existing `step0_section()` pattern, scoped to headings level 1-4 so it works for the `####`-level "Follow-up Issue Creation" sub-step.
+
+### Deferred Items
+- None — Issue scope was explicitly limited to the `skills/code/SKILL.md` follow-up Issue creation path; `skills/verify/SKILL.md` recoveries-auto-fire and `modules/retro-proposals.md` step 9 were confirmed already protected and out of scope.
+
+### Notes for Next Phase
+- Both pre-merge ACs (rubric + section_contains) already verified PASS during code phase and Issue checkboxes updated; `/verify` should find no outstanding pre-merge work for this Issue (no post-merge ACs defined).
