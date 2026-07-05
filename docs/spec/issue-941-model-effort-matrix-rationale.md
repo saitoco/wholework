@@ -53,15 +53,26 @@ No new comments since last phase.
 ### Rework
 - N/A
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note — 実装は Spec の Implementation Steps 1-3 の推奨文言をそのまま採用しており、構造的な乖離はなかった。
+
+### Recurring issues
+- Nothing to note — 同種の指摘の繰り返しはなかった (rubric 3件とも一発 PASS)。
+
+### Acceptance criteria verification difficulty
+- Nothing to note — 3件すべて `rubric` 形式で明確に判定でき、UNCERTAIN は発生しなかった。verify command の過不足も見当たらない。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の Implementation Steps 1-3 で提示された推奨文言 (英語・日本語とも) をそのまま採用した。Rationale 列の記述精度のみが本 Issue のスコープであり、文言自体の独自解釈による変更はリスクを増やすだけで利益がないため。
-- `docs/tech.md`/`docs/ja/tech.md` の2行のみを変更し、Effort 列・run-*.sh 実効値・disposable Spec/report 等の除外ファイルには一切触れなかった (Spec Notes の除外方針に準拠)。
+- REVIEW_DEPTH=light (Size M / `--light` 明示指定) により review-light 1エージェントで4観点統合レビューを実施し、静的な2グループ並列レビューはスキップした。
+- 外部レビューツール (Copilot/Claude Code Review/CodeRabbit) はすべて `.wholework.yml` で無効のため Step 7 を全面スキップした。
 
 ### Deferred Items
-- None — 本 Issue は Rationale 列の記述精度修正のみを対象としており、後続フェーズへの繰越事項はない。
+- None — MUST/SHOULD/CONSIDER いずれの指摘もなく、Step 12 の修正作業は発生しなかった。
 
 ### Notes for Next Phase
-- 全 1107 bats テスト PASS、`validate-skill-syntax.py`・`check-forbidden-expressions.sh` とも問題なし。docs-only の軽微な変更であるため、review/merge フェーズでの追加確認は Rationale 文言の意味的正確性 (rubric 判定) に絞ってよい。
+- Acceptance Criteria 3件は Issue 側で既に `[x]` 済みだったが、`/review` の rubric 再検証でも独立して PASS を確認済み。`/merge 949` にそのまま進んでよい。
