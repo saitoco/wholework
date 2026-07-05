@@ -177,7 +177,18 @@ if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
       fi
     elif echo "$_reconcile_out" | grep -q '"matches_expected":false'; then
       echo "Warning: claude exited 0 but review phase did not complete (silent no-op). reconcile: $_reconcile_out" >&2
-      EXIT_CODE=1
+      if "$SCRIPT_DIR/post-fallback-review-summary.sh" "$PR_NUMBER"; then
+        _recheck_out=$("$SCRIPT_DIR/reconcile-phase-state.sh" review "$_REVIEW_ISSUE" --pr "$PR_NUMBER" --check-completion 2>/dev/null) || true
+        if echo "$_recheck_out" | grep -q '"matches_expected":true'; then
+          echo "post-fallback-review-summary: fallback Response Summary posted, review phase recovered. recheck: $_recheck_out"
+          EXIT_CODE=0
+        else
+          echo "post-fallback-review-summary: fallback post succeeded but recheck still does not match expected. recheck: $_recheck_out" >&2
+          EXIT_CODE=1
+        fi
+      else
+        EXIT_CODE=1
+      fi
     fi
   else
     echo "reconcile-phase-state: could not extract issue number from PR #${PR_NUMBER}, skipping reconcile" >&2
