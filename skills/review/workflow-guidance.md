@@ -35,12 +35,12 @@ The Workflow execution path preserves the same find/filter separation contract a
 
 ## Pre-flight: agentType Availability Check
 
-Before running the Workflow pipeline (Processing Steps below), confirm that `review-spec` and `review-bug` are both present in the session's Agent tool available agentType list (the list surfaced in the system context at session start).
+Before running the Workflow pipeline (Processing Steps below), confirm that `wholework:review-spec` and `wholework:review-bug` — the exact, namespace-prefixed `agentType` strings used in the `FINDERS` definition below — are both present in the session's Agent tool available agentType list (the list surfaced in the system context at session start). Checking for the bare names (`review-spec` / `review-bug`) does not confirm resolvability: the list only ever surfaces the namespace-prefixed form.
 
 - **Both present**: proceed with the Processing Steps (Workflow Path) unchanged.
 - **Either missing**: output a warning that names the missing agentType(s) and references issue #882 for background (headless `claude -p` sessions launched without `--plugin-dir` do not load this plugin's `agents/*.md` custom agentTypes), then fall back to the static Task fan-out in `skills/review/SKILL.md` Steps 10.1–10.3 for this run instead of the Workflow path.
 
-This check exists because `capabilities.workflow: true` alone does not guarantee the custom agentTypes are resolvable — see issue #882 Root Cause for the headless `--plugin-dir` failure mode this guards against.
+This check exists because `capabilities.workflow: true` alone does not guarantee the custom agentTypes are resolvable — see issue #882 Root Cause for the headless `--plugin-dir` failure mode this guards against, and issue #935 for the separate bare-name-vs-namespace mismatch this section now guards against.
 
 ## Processing Steps (Workflow Path)
 
@@ -110,11 +110,11 @@ const VERDICT_SCHEMA = {
 const SKIP_BUG = args && args.skipReviewBug
 
 const FINDERS = SKIP_BUG
-  ? [{ agentType: 'review-spec', label: 'find:spec' }]
+  ? [{ agentType: 'wholework:review-spec', label: 'find:spec' }]
   : [
-      { agentType: 'review-spec', label: 'find:spec' },
-      { agentType: 'review-bug', label: 'find:bug-diff' },
-      { agentType: 'review-bug', label: 'find:bug-security' },
+      { agentType: 'wholework:review-spec', label: 'find:spec' },
+      { agentType: 'wholework:review-bug', label: 'find:bug-diff' },
+      { agentType: 'wholework:review-bug', label: 'find:bug-security' },
     ]
 
 if (!args) throw new Error('Workflow args required: number, issueNumber, type, specPath, steeringDocs, skipReviewBug')
