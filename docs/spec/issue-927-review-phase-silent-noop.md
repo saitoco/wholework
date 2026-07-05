@@ -78,3 +78,28 @@
 
 ### Notes for Next Phase
 - verify phase should confirm the "Verification (post-merge)" opportunistic AC in the Issue body when a matching clean-review event is next observed; otherwise the merge-time verification items are already satisfied by the merged bats suite (1094 PASS).
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 特記事項なし。Issue 本文の rubric AC (3件) と Spec の Verification セクションは件数・内容とも完全一致していた。
+
+#### design
+- 特記事項なし。#916 の merge phase live check と並行する設計は妥当で、実装との乖離もなかった。
+
+#### code
+- 特記事項なし。Implementation Steps 1-3 通りに実装され、bats 39件を実行し全 PASS を確認。
+
+#### review
+- 本 Issue #927 自身の `/auto` 実行中、review phase (`run-review.sh`, PR #931) で `detect-wrapper-anomaly.sh` の **別の** anomaly パターン `review-completion-false-negative` (#547) が誤検出した。実際には review は正常完了 (`gh pr view 931` で MERGED・AC Verification Results 投稿済みを確認) しており、加えて **#915 のフォールバック機構 (`post-fallback-review-summary.sh`) が実際に発火し Response Summary を正しく自動投稿していた** ことも確認した (`<!-- review-summary -->` マーカー付きコメントを確認済み)。このパターンは本 Issue #927 が対象とする `silent-no-op` (#365) とは独立した if-elif 分岐であり、スコープ外。post-hoc ログスキャンがログ内の初期警告文字列にのみマッチし、後続の recovery 成功メッセージを考慮していないことが原因と推測される。
+
+#### merge
+- 特記事項なし。CI green・review approved・conflict なしで squash merge 完了。
+
+#### verify
+- Pre-merge rubric AC 3件とも PASS (bats 39件全て実行し PASS を確認)。post-merge の opportunistic AC 1件は次回 clean review 完了時の自動観測待ちのため未チェックのまま `phase/verify` を維持。
+
+### Improvement Proposals
+- `scripts/detect-wrapper-anomaly.sh` の `review-completion-false-negative` (#547) パターンを、`post-fallback-review-summary.sh` による recovery 成功 (recheck で `matches_expected:true` に復帰) を考慮するよう補正する: `mid-run-api-error` パターンが既に採用している「Tier 1 reconciler (`reconcile-phase-state.sh --check-completion`) を再実行して `matches_expected:true` なら anomaly を抑止する」という手法を、`review-completion-false-negative` パターンにも同様に適用できると見込まれる。#916 (merge phase MERGED live check) および #927 (review phase Review 投稿 live check、本 Issue) に続く、同系統3件目の false positive 修正候補。実害は informational-only ログの事実誤認に限られるため優先度は中程度。
