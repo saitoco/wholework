@@ -95,7 +95,16 @@ elif grep -qiE "APIConnectionError|Request timed out|overloaded_error|529.*[Oo]v
   ANOMALY_DESC="API connection error in phase \`$PHASE\` (exit code $EXIT_CODE): API connection/overload pattern detected in wrapper output. The forked session terminated mid-run before phase completion."
   IMPROVEMENT_HINT="Follow the recovery procedure at \`modules/orchestration-fallbacks.md#mid-run-api-error\`: run reconcile-phase-state.sh to check actual completion, restore the phase label if needed, then retry the phase once with the corresponding run-*.sh script."
 elif [[ "$EXIT_CODE" == "0" ]]; then
-  if grep -q '"matches_expected":true' "$LOG_FILE"; then
+  _merge_pr_confirmed_merged=false
+  if [[ "$PHASE" == "merge" ]]; then
+    _merge_pr_state=$(gh pr view "$ISSUE_NUMBER" --json state -q '.state' 2>/dev/null)
+    if [[ $? -eq 0 && "$_merge_pr_state" == "MERGED" ]]; then
+      _merge_pr_confirmed_merged=true
+    fi
+  fi
+  if [[ "$_merge_pr_confirmed_merged" == "true" ]]; then
+    : # merge phase live check: gh pr view confirms PR MERGED, skip silent-no-op detection entirely (fail-safe: gh failure or non-MERGED state falls through to existing logic below)
+  elif grep -q '"matches_expected":true' "$LOG_FILE"; then
     : # reconcile-first authority: matches_expected:true skips silent-no-op (covers async external commit recognition)
   elif grep -qiE "完了しました|commit and push|successfully committed|pushed to|changes have been committed" "$LOG_FILE"; then
     if ! git log --oneline -20 2>/dev/null | grep -q "#${ISSUE_NUMBER}"; then
