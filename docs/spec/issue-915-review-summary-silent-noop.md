@@ -85,3 +85,41 @@ No new comments since last phase.
 - **allowed-tools への影響なし**: `post-fallback-review-summary.sh` は `run-review.sh` (bash サブプロセス) から呼び出されるため、`skills/review/SKILL.md` の `allowed-tools` frontmatter への追加は不要 (既存の `apply-fallback.sh` 等、wrapper script 間の内部呼び出しと同じパターン)。
 - **Issue body vs 実装の整合性確認**: Issue Background に記載の「reconcile: matches_expected:false ... → wrapper exit 1」は `scripts/run-review.sh` の現行実装 (L178-181) と一致していることを確認済み。コンフリクトなし。
 - **Verify command sync 確認**: 本 Spec の `## Verification > Pre-merge` は Issue 本文 `## Acceptance Criteria > Pre-merge` の2項目と verify コマンドを含め完全に一致 (件数一致: Issue側2件 / Spec側2件)。Post-merge も Issue本文の1件と一致。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `/review 920 --light --non-interactive` で軽量統合レビュー (review-light エージェント 1 体) を実行。Spec deviation / Edge cases・robustness / Security / Documentation consistency の 4 観点すべてで指摘なしと判定
+- 2 件の rubric 形式 AC ("修正コミット push 後の Response Summary 投稿を保証する仕組み" / "silent no-op ケースをカバーする bats test") は、実装ファイル (`scripts/post-fallback-review-summary.sh`, `scripts/run-review.sh` の該当分岐) を直接読み、`tests/post-fallback-review-summary.bats` + `tests/run-review.bats` をローカル実行 (全 30 テスト PASS) して両方 PASS と判定した
+- 修正コミットが発生しなかったため Step 12 (Issue 対応)・Step 13 (受け入れ条件整合性チェック) は共にスキップ
+
+### Deferred Items
+- `scripts/detect-wrapper-anomaly.sh` の `reconciler-header-mismatch` パターンの誤帰属修正 (Spec Notes に記載、別 Issue 推奨。本 Issue のスコープ外、review phase でも変更なし)
+- フォールバック投稿と本来の Step 14 投稿が両方成功した場合の重複コメント dedup ロジック (Spec Notes に記載、cosmetic tradeoff として許容のまま)
+
+### Notes for Next Phase
+- Merge phase (`/merge 920`) では MUST issue が存在しないため通常の merge フローで進行可能
+- 本 PR がレビューしている `scripts/run-review.sh` の変更 (silent no-op フォールバック) 自体は、今回の `/review` 実行中には発火しなかった (通常どおり Step 14 で Response Summary が投稿された) — dogfooding の観察事項として記録
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A (Spec の Implementation Steps 1〜5 をそのまま実装)
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Nothing to note (review-light の 4 観点すべてで Spec と実装の乖離なしと判定)。
+
+### Recurring issues
+Nothing to note (Copilot/Claude 双方の外部レビューは未設定 `.wholework.yml` により Step 7 は全てスキップ、Step 10 light mode の単一 review-light エージェント実行のみで完結)。
+
+### Acceptance criteria verification difficulty
+2 件とも `rubric` 形式の AC だったが、実装コード (該当関数・分岐) と bats テストを直接読んで判定するのに十分な情報量があり UNCERTAIN は発生しなかった。強いて言えば、rubric テキスト自体は「仕組みが実装されている」という抽象度の高い記述で、対象ファイル名を明示していなかったため、対象範囲の特定は PR diff のファイルリストから逆算する必要があった。今後同種の rubric を書く際は `docs/tech.md` の記載 (rubric ガイドライン) に倣い、対象スクリプト名を明示すると verify 実行がより機械的になる。

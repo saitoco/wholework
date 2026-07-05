@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（63 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（64 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -35,7 +35,7 @@ wholework/
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用 decomposition YAML サンプル
-├── tests/               # スクリプトの Bats テストファイル（94 ファイル）
+├── tests/               # スクリプトの Bats テストファイル（95 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents
@@ -207,6 +207,7 @@ wholework/
 - `scripts/validate-recovery-plan.sh` — orchestration-recovery sub-agent が出力する recovery plan JSON を検証（schema チェック + forbidden ops ガード）
 - `scripts/apply-fallback.sh` — `modules/orchestration-fallbacks.md` の Tier 2 bash projection。wrapper ログから既知の symptom anchor を検出し recovery handler を dispatch する（ハンドラ: dco-signoff-missing-autofix、code-patch-silent-no-op）
 - `scripts/spawn-recovery-subagent.sh` — `run-auto-sub.sh` が呼び出す Tier 3 recovery オーケストレーター。`claude -p` で `agents/orchestration-recovery` を spawn し、`validate-recovery-plan.sh` で plan を検証し、`WHOLEWORK_MAX_RECOVERY_SUBAGENTS` による mkdir-based スロットロックで並列性を制御し、成功時に `write_recovery_entry()` で `docs/reports/orchestration-recoveries.md` にエントリを記録する
+- `scripts/post-fallback-review-summary.sh` — `run-review.sh` が exit 0 + `matches_expected:false`（silent no-op）を検出した際に呼び出す。PR に "Acceptance Criteria Verification Results" を含む既存レビューが見つかった場合のみ `<!-- review-summary -->` マーカー付きのフォールバック Review Response Summary を投稿し、見つからない場合は投稿せず exit 1 を返す
 
 **Skill runners:**
 - `scripts/guard-prefix.sh` — 全 run-*.sh がソースする共有 GUARD_PREFIX 定義。自律実行向けのアーリーストップ防止とバウンダリリマインダーを含む

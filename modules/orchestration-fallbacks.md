@@ -251,6 +251,7 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 - review
 
 ### Fallback Steps
+0. `run-review.sh` already attempts an automated fallback post before this catalog entry is reached: on exit 0 + `matches_expected:false`, it calls `scripts/post-fallback-review-summary.sh <PR>`, which posts a `<!-- review-summary -->`-marked Response Summary only when a prior review containing "Acceptance Criteria Verification Results" is found for the PR, then re-checks completion. The manual steps below are needed only when that automated fallback also failed (guard evidence not found, or `gh pr comment` itself failed).
 1. Re-run `reconcile-phase-state.sh review --pr <N>` to check whether a cache-related false negative caused the mismatch; if the result flips to `matches_expected:true`, continue normally
 2. Run `gh pr view <N> --comments` to inspect PR comments directly; check whether a summary-style comment exists (any heading containing "review", "summary", "サマリ", "レビュー", etc.)
 3. If a summary comment exists but `<!-- review-summary -->` marker is absent: edit the comment via `gh api repos/{owner}/{repo}/issues/comments/<comment-id> -f body="<!-- review-summary -->\n<original-body>"` to prepend the marker, then re-run `reconcile-phase-state.sh review --pr <N>` to confirm `matches_expected:true`. If the heading is a localized variant not covered by existing fallback signatures, open a follow-up Issue to add the regex to `scripts/reconcile-phase-state.sh`

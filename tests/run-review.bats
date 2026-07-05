@@ -139,6 +139,13 @@ exit 0
 MOCK
     chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
 
+    # Mock post-fallback-review-summary.sh: default exit 1 (no recovery)
+    cat > "$MOCK_DIR/post-fallback-review-summary.sh" <<'MOCK'
+#!/bin/bash
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/post-fallback-review-summary.sh"
+
     # Create SKILL.md fixture
     mkdir -p "$BATS_TEST_TMPDIR/skills/review"
     cat > "$BATS_TEST_TMPDIR/skills/review/SKILL.md" <<'SKILL'
@@ -300,6 +307,53 @@ echo '{"matches_expected":false,"phase":"review"}'
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Warning:"*"silent no-op"* ]]
+}
+
+@test "reconcile: fallback post succeeds and recheck confirms matches_expected:true results in exit 0" {
+    RECONCILE_CALL_COUNT_FILE="$BATS_TEST_TMPDIR/reconcile_call_count"
+    echo 0 > "$RECONCILE_CALL_COUNT_FILE"
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<MOCK
+#!/bin/bash
+COUNT=\$(cat "$RECONCILE_CALL_COUNT_FILE")
+COUNT=\$((COUNT + 1))
+echo "\$COUNT" > "$RECONCILE_CALL_COUNT_FILE"
+if [[ "\$COUNT" -eq 1 ]]; then
+    echo '{"matches_expected":false,"phase":"review"}'
+else
+    echo '{"matches_expected":true,"phase":"review"}'
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    cat > "$MOCK_DIR/post-fallback-review-summary.sh" <<'MOCK'
+#!/bin/bash
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/post-fallback-review-summary.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"fallback Response Summary posted"* ]]
+}
+
+@test "reconcile: fallback post itself fails keeps exit 1" {
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false,"phase":"review"}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    cat > "$MOCK_DIR/post-fallback-review-summary.sh" <<'MOCK'
+#!/bin/bash
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/post-fallback-review-summary.sh"
+
     run bash "$SCRIPT" 123
     [ "$status" -eq 1 ]
     [[ "$output" == *"Warning:"*"silent no-op"* ]]
