@@ -67,19 +67,32 @@
 - N/A —手戻りは発生しなかった
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 実装箇所は Issue Retrospective で自動解決済みの方針通り `scripts/gh-pr-review.sh` に一本化した
-- diff ハンク範囲のパースは python3 heredoc 内で正規表現 (`^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@`) により実装し、bash 側は `mktemp` + `trap EXIT` での一時ファイル管理のみに留めた (既存コードスタイルと統一)
-- General Comments へのマージは、本文中に `### General Comments` 見出しが既にあればその直後に追記、なければ `### General Comments (auto-added: line outside PR diff range)` を新設するロジックとした (`skills/review/SKILL.md` Step 11 の既存パターンを再利用)
-- `HAS_MUST` (REQUEST_CHANGES 判定) は変更せず、`$LINE_COMMENTS_FILE` 全件を対象にした既存ロジックのまま維持し、範囲外へ振り分けられた MUST コメントも判定に引き続き寄与させた
+- review-light (軽量統合レビュー、REVIEW_DEPTH=light) を実行し、SHOULD 1件・CONSIDER 1件を検出。MUST はなし
+- SHOULD 指摘 (`side` 省略時に diff range チェックをすり抜ける) は修正: `c.get('side') == 'RIGHT'` を `c.get('side', 'RIGHT') == 'RIGHT'` に変更し、GitHub API 自体の `side` デフォルト値と挙動を揃えた。bats テストを1件追加 (18/18 PASS)
+- CONSIDER 指摘 (`line` の型未検証による TypeError リスク) は見送り: 唯一の呼び出し元 (`skills/review/SKILL.md` Step 10) が常に整数の `line` を渡す契約であり、現時点では顕在化しない入力依存のエッジケースと判断
+- Issue #945 の Pre-merge AC 2件は rubric 判定で PASS (実装・bats テストの両方を確認済み)
 
 ### Deferred Items
 - Post-merge の "422 エラーによる手戻りが発生しないことを観察" は `/verify` フェーズに委ねる (opportunistic verify-type)
 - `side: LEFT` のケースは Spec Notes 記載の通りスコープ外のまま (現行コードベースに使用箇所なし)
+- CONSIDER 指摘 (`line` 型検証) は対応見送り。将来 `gh-pr-review.sh` を独立 CLI として非 SKILL.md 経由で呼ぶ利用者が現れた場合に再評価
 
 ### Notes for Next Phase
-- `tests/gh-pr-review.bats` は新規3ケース (範囲外フォールバック単体・範囲内範囲外混在・既存 General Comments 見出しへの追記) と回帰用の `gh pr diff` 失敗ケース1件を追加し、既存5ケースを含む全17ケースが PASS
-- Issue #945 の Pre-merge AC 2件は `rubric` 判定で PASS 済みでチェック済み、Issue body 更新済み
-- PR #950 (base: main) 作成済み。ドキュメント同期は不要と判断済み (`docs/structure.md` / `docs/migration-notes.md` および ja ミラーの記載は変更なしで正確)
+- `tests/gh-pr-review.bats` は本 review フェーズで追加した1件を含め全18ケースが PASS (元の17ケース + `side` 省略時のフォールバック検証1件)
+- CI (DCO / bats / validate-skill-syntax / Forbidden Expressions / macOS shell compatibility) は全て SUCCESS
+- ポリシー変更は検出されなかったため Issue の受け入れ条件は未更新
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- N/A — Implementation Steps 1〜4 と PR diff の間に構造的な乖離はなかった。`side` 省略時の扱いは Spec Notes (53行目) に「`side: RIGHT` のみを対象とする」と明記されていたが、「省略された場合の扱い」は明示されておらず、review-light が指摘するまで気づかれなかった暗黙のギャップだった
+
+### Recurring issues
+- N/A — 同種の指摘が複数出るパターンは見られなかった (SHOULD 1件・CONSIDER 1件はいずれも異なる観点)
+
+### Acceptance criteria verification difficulty
+- 2件とも `rubric` 判定で UNCERTAIN にならず明確に PASS 判定できた。Spec Notes に実装箇所・振り分けロジック・bats フィクスチャ形式まで詳細に記述されていたため、rubric grader が参照すべき実装差分の範囲が曖昧にならなかったことが要因と考えられる
+- 今回のように「スコープ外」と明記した項目 (`side: LEFT`) がある場合、"未言及の暗黙のデフォルト値" (今回は `side` 省略時のデフォルト) についても Spec Notes で明示しておくと、review フェーズでの SHOULD 指摘を未然に防げた可能性がある。今後 rubric 対象の Spec を書く際の一般的な改善点として記録するが、Issue化するほどの汎用性は現時点では確認できていない
