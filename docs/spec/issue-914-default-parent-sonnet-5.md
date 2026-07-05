@@ -62,3 +62,41 @@
 **Issue body vs 実装の整合性確認**: Issue Background の記述 (「表本体は依然 Sonnet 4.6 を default parent として記載」「note only」) は `docs/tech.md` の現行内容と一致していることを確認済み。コンフリクトなし。
 
 **Verify command sync 確認**: 本 Spec の `## Verification > Pre-merge` は Issue 本文 `## Acceptance Criteria > Pre-merge` の4項目と verify コマンドを含め完全に一致 (件数一致: Issue側4件 / Spec側4件)。Post-merge は Issue本文どおり「なし」。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-5 を設計どおりの順序・内容で実施した (表直前の一文追加 → note 段落書き換え → pin 方針追記 → ja ミラー同期 → Opus ルート据え置き確認)。
+
+### Design Gaps/Ambiguities
+- 実装着手前の時点で、Issue 本文の Pre-merge AC 4件がすべて `[x]` 済みになっていた (直近のコミット履歴には本 Issue のコード変更や worktree の残骸がなく、以前の `/code 914` 試行が Step 10 のチェックボックス更新まで到達したものの、Step 11 のコミット前に worktree 変更が失われたことが原因と推定される)。本セッションでは実装を最初からやり直した上で、4件の rubric AC を実装済みの `docs/tech.md` に対して再評価し、いずれも PASS を再確認した。チェックボックス自体は既に正しい状態だったため上書き編集は行っていない。
+
+### Rework
+- N/A — 本セッション内での手戻りは発生していない。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `--light --non-interactive` 指定に従い `REVIEW_DEPTH=light` で実行し、review-light エージェント1体に4観点 (spec逸脱・エッジケース・セキュリティ・ドキュメント整合性) を集約して実施した。
+- Pre-merge rubric AC 4件全てを PR ブランチの `docs/tech.md` に対して独立に再評価し、いずれも PASS を再確認した (Issue のチェックボックスは既に `[x]` 済みだったため上書き編集は不要だった)。
+- Code Phase Handoff の Notes 通り、AC4 (Opus ルート据え置き) を diff 上で機械的に確認し、review-bug/review-spec/issue-scope/issue-risk/issue-precedent/frontend-visual-review いずれの行も変更されていないことを確認した。
+- フォローアップ Issue #918 の実在 (OPEN 状態) を `gh issue view` で確認した。
+
+### Deferred Items
+- なし — MUST/SHOULD/CONSIDER のいずれの課題も検出されなかったため、修正の持ち越しは発生していない。
+
+### Notes for Next Phase
+- `/merge 919` にそのまま進行可能 — 未解決のレビュー課題なし、CI 5ジョブ全て SUCCESS。
+- フォローアップ Issue #918 (Co-Authored-By テンプレート一括更新) は未着手のまま残っている (本 PR のマージ可否とは無関係)。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- 特になし — テーブル行 (bare `Sonnet` alias 表記) は変更せず周辺の説明文のみを更新するという Spec の設計方針通りに実装されており、diff と Spec (Changed Files / Implementation Steps / Code Retrospective) の記述は完全に一致していた。
+
+### Recurring issues
+- 特になし — 同種の課題の複数発生は見られなかった。
+
+### Acceptance criteria verification difficulty
+- 4件全て rubric ベースの verify command で、文言・対象範囲が明確だったため UNCERTAIN は発生しなかった。ただし Issue のチェックボックスが実装着手前から既に `[x]` 済みという特殊な前提状態があった (Code Retrospective の Design Gaps/Ambiguities に記載の通り、以前の `/code 914` 試行が中断したことが原因と推定)。今回は rubric による独立再評価で問題なしと確認できたが、チェックボックスの事前状態を鵜呑みにせず実装内容に対して再検証する運用が有効に機能した一例として記録する。
