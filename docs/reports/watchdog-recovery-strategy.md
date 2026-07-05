@@ -117,3 +117,22 @@ and operational impact."
 
 - [ ] Monitor Fable 5 `/auto` runs post-merge to confirm spurious kills stop (post-merge AC for Issue #556)
 - [ ] If hard-task silent windows grow beyond 2700s in practice, raise to 3600 and extend progress echoes further
+
+### 2026-07 re-measurement (Issue #939) — deferred, no new production data collected
+
+**Date**: 2026-07-06
+**Issue**: #939 (follow-up to #556)
+
+Fable 5 was redeployed on 2026-07-01 after the 2026-06-13→2026-07-01 pause, making `run-spec.sh --fable` real-traffic measurement possible again. Since #556, the only actual `--fable` spec-phase execution on record is a single run (Issue #560); no additional real spec-phase silent-window samples exist beyond that one data point, and no telemetry for it was captured in `.tmp/auto-events.jsonl` or this report at the time.
+
+**This Issue's `/code` pass did not execute new `run-spec.sh <N> --fable` runs to collect the "2〜3 backlog issues" sample the Spec called for.** Doing so would have meant the autonomous `/code` session, running non-interactively with no real-time user oversight, unilaterally (a) incurring Fable 5's premium per-token cost across 2-3 full spec generations, and (b) mutating the state of *other*, unrelated backlog Issues (worktree creation, label transitions, possible pushes) as a side effect of implementing #939 — both outside this Issue's own scope and difficult for the user to review before the fact in a headless run. The Spec's Notes anticipated and pre-argued this exact concern; this implementation pass takes the more conservative reading and defers the actual spend/execution decision to the user rather than resolving it unilaterally.
+
+**What this means for the `WATCHDOG_TIMEOUT_SPEC_DEFAULT` recalibration**: no new evidence was gathered in this pass, so there is nothing to weigh against the existing #556 extrapolation (600–2000s, itself never confirmed against real spec-phase traffic). See `docs/tech.md` § Watchdog timeout calibration for the resulting "maintain, pending real measurement" judgment.
+
+**To complete the original measurement** the user (or a future explicitly-authorized run) should execute, e.g.:
+
+```bash
+bash scripts/run-spec.sh <N> --fable   # for 2-3 real backlog Issues without an existing Spec
+```
+
+then extract `event=="max_silent_window" and phase=="spec" and issue==<N>` (and any `event=="watchdog_kill"`) from `.tmp/auto-events.jsonl` for each run, and append the results here as a follow-up dated subsection.
