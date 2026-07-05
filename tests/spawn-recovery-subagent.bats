@@ -212,7 +212,7 @@ MOCK
     grep -q "gh" "$RUNNER_LOG"
 }
 
-@test "spawn-recovery: code-pr dirty-tree-cleanup-plus-PR-creation - run_command steps for commit, push, and gh pr create exit 0" {
+@test "spawn-recovery: code-pr dirty-tree-cleanup-plus-PR-creation - run_command steps for symptom-fix, push, and gh pr create exit 0" {
     # Minimal git/gh mocks that record invocations to RUNNER_LOG
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
