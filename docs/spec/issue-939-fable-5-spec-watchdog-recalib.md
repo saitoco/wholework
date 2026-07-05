@@ -73,19 +73,34 @@
 
 - なし (Implementation Steps 4・5 は Spec通り一度で完了)
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- **検出した乖離**: `/code` は Spec Notes の事前是認 (新規 `--fable` 実行) を覆し、実測実行を見送る判断に変更した。この判断自体は Code Retrospective / Phase Handoff / PR Summary の3箇所に正直に記録されていたが、本 Spec の `## Verification` → `### Pre-merge` セクション (35〜41行目) 自体は無編集のままで、2件の rubric AC が deferred 状態であることを示す注記が無かった。`/review` の review-light (Spec Deviation 観点) がこれを MUST として検出し、該当2ブロックに注記を追加する形で解消した。
+- **構造的な示唆**: Code Retrospective / Phase Handoff は Spec ファイルの末尾に追記される一方、`## Verification` セクションは先頭寄りに位置するため、`/code` が実装方針を覆した際に両セクション間の整合を取る手順が明示的に存在しない。今後、`/code` が Spec の事前判断を覆すケース (特に「実行見送り」のような AC 未達を伴う decision reversal) では、Code Retrospective 執筆と同時に該当する Verification 項目へのインライン注記も行うことを `skills/code/SKILL.md` の Retrospective ガイダンスに明記する価値がある。
+
+### Recurring issues
+
+- 「Spec フェーズでコスト・副作用を伴う実行を pre-authorize したが、`/code` フェーズ (非対話・無人) がその判断を再検討し実行を見送る」というパターンは、本 Issue の Spec Notes 自体が #903 の precedent として言及している (2回目の発生)。単発の逸脱ではなく再発パターンであるため、Icebox 候補として「costly/irreversible な Implementation Step を含む Issue の Spec フェーズでは、pre-authorization ではなく `/code` フェーズでの明示確認 (AskUserQuestion 等) をステップとして組み込むべきか」を検討する価値がある。
+
+### Acceptance criteria verification difficulty
+
+- Nothing to note — 6件の Pre-merge AC (rubric×3、file_not_contains×1、file_contains×1、github_check×1) は全て UNCERTAIN なく PASS/FAIL に分類できた。2件の rubric FAIL は PR 本文が自己申告していた内容と完全に一致しており、grader 判定に曖昧さはなかった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec Notes が事前是認していた新規 `--fable` spec 実行 (他 backlog Issue への実行) を、`/code` フェーズで再検討の上見送った。実費発生と他 Issue への副作用を伴う実行は、非対話・無人セッションで unilateral に決定すべきでないと判断したため。
-- `WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800` は据え置き。判定根拠は「新規実測なし」であり、実測に基づく再校正ではない。
-- `scripts/watchdog-defaults.sh` のコメント更新 (世代参照・base 2700 由来) のみ実行し、値変更は行っていない。
+- Pre-merge AC 6件中 FAIL 2件 (実測結果記録、SPEC_DEFAULT 再校正の実測根拠) は `/code` の意図的な決定によるものであり、review 側では実測実行や authorization 取得を代行せず、Issue チェックボックスに FAIL として正直に反映するに留めた (該当2件は unchecked のまま)。
+- Spec の Pre-merge Verification セクション (35〜36行目) に deferred 状態の注記を追加 (MUST fix)。`docs/structure.md` 確認結果を Code Retrospective に追記 (CONSIDER fix)。いずれも Spec ファイル内の記述整合性を取るための変更で、Issue 側の AC テキストや GitHub の検証結果には影響しない。
+- レビューは GitHub 上で self-authored PR のため `REQUEST_CHANGES` を発行できず (422)、`COMMENT` イベントで投稿。MUST issue は本文と Step 14 のレスポンスサマリーで明示している。
 
 ### Deferred Items
-- `run-spec.sh <N> --fable` の実測実行そのもの (2〜3件の backlog Issue)。ユーザーの明示認可を得た上での実行が必要。手順は `docs/reports/watchdog-recovery-strategy.md` § 2026-07 re-measurement に記載。
-- 実測データに基づく `WATCHDOG_TIMEOUT_SPEC_DEFAULT` の引き上げ要否判定 (現状は「据え置き」だが未確定)。
+- `run-spec.sh <N> --fable` の実測実行そのもの (2〜3件の backlog Issue)。ユーザーの明示認可が必要 — `/code` フェーズからの継続的な deferral。
+- 実測データに基づく `WATCHDOG_TIMEOUT_SPEC_DEFAULT` の引き上げ要否判定。
 - 上記実測が行われた場合の `tests/watchdog-defaults.bats` 74行目の期待値更新 (値変更時のみ)。
 
 ### Notes for Next Phase
-- `/review` は Pre-merge AC のうち2件 (実測結果記録、SPEC_DEFAULT 再校正の実測根拠) が未達成であることを前提に評価すること — これは実装漏れではなく、コスト・スコープ上の意図的な決定である。
-- PR #944 の Summary と本 Code Retrospective に判断根拠を記載済み。`/merge` 前にユーザーが実測実行の要否を判断できるよう、この決定は明示的にレビュー対象とすべき。
+- `/merge` 前にユーザーが本 PR の Summary (2件の未達 AC と判断根拠) を確認し、実測実行の要否を判断すること。
+- Post-merge AC (opportunistic observation) は次回 `--fable` spec 実行時に自動検証される想定。
