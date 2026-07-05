@@ -478,6 +478,8 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 When `reconcile-phase-state.sh --check-completion` returns `"matches_expected":true`, `detect-wrapper-anomaly.sh` skips the silent-no-op entry entirely, regardless of `commits_found`. This covers the async external commit recognition pattern: a skill detects that the target Issue was already implemented in a prior PR and transitions directly to `phase/verify` without creating a new commit. The reconciler's phase-label and state checks confirm completion (`matches_expected:true`), so no anomaly entry is warranted.
 
+For the `merge` phase specifically, `detect-wrapper-anomaly.sh` additionally runs an independent live check (`gh pr view <PR> --json state -q '.state'`) before falling through to the log/git-log-based checks above. If the PR state is confirmed `MERGED`, the silent-no-op entry is skipped regardless of wrapper log content or local git history. This is necessary because a squash merge lands on `origin/main` via the GitHub API and the local working tree is not automatically fetched, making the log-based and git-log-based checks unreliable for this phase (Issue #916). If the `gh pr view` call fails (API error, rate limit) or the state is not `MERGED`, detection falls through to the existing logic (fail-safe, not fail-open).
+
 See also: `#async-external-commit` (reconcile-first authority — `matches_expected:true` takes precedence over `commits_found` in anomaly detection).
 
 ### Rationale

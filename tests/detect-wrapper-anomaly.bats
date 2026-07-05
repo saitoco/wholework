@@ -112,6 +112,67 @@ MOCK
     [ -z "$output" ]
 }
 
+@test "silent no-op: suppressed for merge phase when gh pr view confirms MERGED" {
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/git" <<'MOCK'
+#!/bin/bash
+# mock git: returns empty output for all subcommands
+exit 0
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/git"
+    cat > "$BATS_TEST_TMPDIR/bin/gh" <<'MOCK'
+#!/bin/bash
+echo "MERGED"
+exit 0
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/gh"
+    echo "実装が完了しました。commit and push も完了しています。" > "$LOG_FILE"
+    run env PATH="$BATS_TEST_TMPDIR/bin:$PATH" bash "$SCRIPT" --log "$LOG_FILE" --exit-code 0 --issue 905 --phase merge
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
+@test "silent no-op: still detected for merge phase when gh pr view returns non-MERGED state" {
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/git" <<'MOCK'
+#!/bin/bash
+# mock git: returns empty output for all subcommands
+exit 0
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/git"
+    cat > "$BATS_TEST_TMPDIR/bin/gh" <<'MOCK'
+#!/bin/bash
+echo "OPEN"
+exit 0
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/gh"
+    echo "実装が完了しました。commit and push も完了しています。" > "$LOG_FILE"
+    run env PATH="$BATS_TEST_TMPDIR/bin:$PATH" bash "$SCRIPT" --log "$LOG_FILE" --exit-code 0 --issue 905 --phase merge
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"silent-no-op"* ]]
+    [[ "$output" == *"### Orchestration Anomalies"* ]]
+}
+
+@test "silent no-op: falls through to existing logic when gh pr view fails" {
+    mkdir -p "$BATS_TEST_TMPDIR/bin"
+    cat > "$BATS_TEST_TMPDIR/bin/git" <<'MOCK'
+#!/bin/bash
+# mock git: returns empty output for all subcommands
+exit 0
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/git"
+    cat > "$BATS_TEST_TMPDIR/bin/gh" <<'MOCK'
+#!/bin/bash
+exit 1
+MOCK
+    chmod +x "$BATS_TEST_TMPDIR/bin/gh"
+    echo "実装が完了しました。commit and push も完了しています。" > "$LOG_FILE"
+    run env PATH="$BATS_TEST_TMPDIR/bin:$PATH" bash "$SCRIPT" --log "$LOG_FILE" --exit-code 0 --issue 905 --phase merge
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"silent-no-op"* ]]
+    [[ "$output" == *"### Orchestration Anomalies"* ]]
+}
+
 @test "dirty working tree: detects VERIFY_FAILED with uncommitted changes" {
     printf "VERIFY_FAILED\nCannot run verify because there are uncommitted changes in the working tree.\n" > "$LOG_FILE"
     run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 393 --phase verify

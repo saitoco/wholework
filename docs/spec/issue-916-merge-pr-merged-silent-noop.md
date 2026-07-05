@@ -70,3 +70,39 @@ Issue 本文 Option A が提案する通り、merge phase 専用に `gh pr view 
 - **`modules/orchestration-fallbacks.md` 更新は SHOULD レベル**: Issue 本文の Acceptance Criteria (Pre-merge 3件) はいずれも `scripts/detect-wrapper-anomaly.sh` とそのテストのみを対象としており、`modules/orchestration-fallbacks.md` の更新には専用の verify command が設定されていない。本 Spec でも Issue 本文の3件と件数・内容を完全一致させるため、`## Verification > Pre-merge` には追加の verify item を設けない (ドキュメント同期は Implementation Step 3 で対応する SHOULD 項目として扱う)。
 - **Verify command sync 確認**: 本 Spec の `## Verification > Pre-merge` は Issue 本文 `## Acceptance Criteria > Pre-merge` の3項目と verify コマンドを含め完全に一致 (件数一致: Issue側3件 / Spec側3件)。Post-merge も Issue本文の1件と一致。
 - **Issue body vs 実装の整合性確認**: Issue Background に記載の「既存の origin/main フォールバック fetch は `code-patch`/`code` phase 限定」という記述は `scripts/detect-wrapper-anomaly.sh` 現行実装 (line 103: `if [[ "$PHASE" == "code-patch" || "$PHASE" == "code" ]]`) と一致していることを確認済み。コンフリクトなし。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜3 は Spec の記述通りに実装した。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## review retrospective
+
+### Spec vs implementation divergence patterns
+特になし。Implementation Steps 1〜3 は Spec の記述通りに実装されており、乖離は検出されなかった。
+
+### Recurring issues
+特になし。review-light の4観点 (Spec乖離 / Bug・ロジックエラー / セキュリティ / ドキュメント整合性) いずれも issue 0件。`_merge_pr_state=$(...); [[ $? -eq 0 ]]` のイディオムはコマンド置換直後の終了ステータスを正しく捕捉することを確認済み。
+
+### Acceptance criteria verification difficulty
+特になし。Pre-merge 3件の verify command (rubric×2, file_contains×1) はいずれも明確に PASS 判定可能で、UNCERTAIN は発生しなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- review-light (軽量統合レビュー) を4観点 (Spec乖離/Bug/セキュリティ/ドキュメント整合性) で実行し、issue 0件を確認した上でそのまま `/merge` を推奨する結論とした。
+- `--issue` 引数が merge phase では実際には PR 番号を保持するという Spec Notes の既存挙動を、`run-auto-sub.sh` の呼び出し規約から独立して再確認し、バグではないことを検証した。
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- 全 Pre-merge AC は PASS 済み、CI も全ジョブ SUCCESS。`/merge 924` にそのまま進んで問題ない。
+- Post-merge AC (`verify-type: opportunistic`) は次回 `/auto` pr route の merge phase 完了時に観察する。
