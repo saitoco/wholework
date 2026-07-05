@@ -82,6 +82,8 @@
 
 エントリはワークフロー順（triage → issue → spec → code → review → merge → verify）でグループ化: まずオーケストレーションスクリプト、次にフェーズ別のサブエージェント、最後に skill のみのエントリ。
 
+**デフォルト親モデル = Sonnet 5**（`claude-sonnet-5`、2026-06-30 リリース）: 下記の表全体（`run-*.sh`、skill、サブエージェントの frontmatter）で使われている bare `Sonnet` エイリアスは、現在 Sonnet 5 に解決される。これにより旧デフォルトの Sonnet 4.6 は置き換えられた。切替の根拠と alias pin 方針については表の下の **Sonnet 5** の注記を参照。
+
 | コンポーネント | フェーズ | モデル | Effort | 根拠 |
 |-----------|-------|-------|--------|-----------|
 | run-issue.sh | issue | Sonnet | high | L/XL のスコープ分析とサブ issue 分割には徹底したオーケストレーションが必要 |
@@ -105,6 +107,10 @@
 **Opus 4.8 effort calibration**: Opus 4.8 は厳格な effort キャリブレーションを適用する — `low` と `medium` は文字通りのタスク要件に積極的にスコープを絞る。`max` は Opus 4.8 では過剰思考のリスク（diminishing returns）があるため、知的要求の高い実験的タスクにのみ使用する。`xhigh` が Opus 4.8 の多くのコーディング・エージェントユースケースにおける推奨デフォルト。エージェント frontmatter の `model: opus` / `model: sonnet` エイリアス値は現在の Opus（4.8）に auto-resolve する。
 
 **Fable 5（Mythos クラス）**: Fable 5（`claude-fable-5`）は Opus より上のティアであり、`opus` エイリアスでは**到達できない** — 明示的なモデル文字列 `claude-fable-5` が必要。以下のハード制約によりデフォルトモデル変更ではなく**オプトイン**のみ許可: コスト $10/$50 per MTok（Opus 4.8 の 2 倍、Sonnet 4.6 の 3.3 倍）、30 日 retention 必須（ゼロデータ保持 org は非対応）、2026-06-22 以降はサブスクリプションの usage credit ゲート。Fable 5 オプトインを公開するスキル（例: `/spec --fable`）はスキル単位でドキュメント化する。採用ガイダンスは `docs/reports/claude-fable-5-impact-strategy.md` §3.3 および §5.2 を参照。Fable 5 上で実行する場合、レビューフェーズのセキュリティ関連クエリは cyber classifier によって Opus 4.8 へ自動ルーティングされる可能性がある（CLI 経由では透過）— Fable 5 がセキュリティ分析を直接処理することを前提としないこと。
+
+**Sonnet 5**: Sonnet 5（`claude-sonnet-5`、2026-06-30 リリース）は、旧デフォルト親モデル（Sonnet 4.6）に対する大幅なエージェント性能の向上であり、多くのタスクで `effort: xhigh` 時に Opus 4.8 に迫る性能を、Opus 4.8 のおよそ 40–60% の価格（導入価格 $2/$10 per MTok、2026-08-31 まで。以降は標準価格 $3/$15 — Wholework のコストモデルで Sonnet 4.6 が既に占めていたのと同じ価格帯）で実現する。Opus 4.7 の変更と同系統のトークナイザー更新を伴い（同一入力に対しトークン数が 1.0×–1.35× 増加）、`claude-watchdog.sh` のタイムアウトキャリブレーションおよびコンテキストバジェットのヒューリスティクスに直接影響する。2 件のブロッキング計測はいずれも着地済み: `#877`（`/verify` interactive 摩擦の再測定）は **NO-GO**（再設計不要）と判定され、`#878`（トークナイザー/watchdog 影響測定）は**有意**と判定され `#903` の再校正（`WATCHDOG_TIMEOUT_CODE_DEFAULT` 3600→4680、`WATCHDOG_TIMEOUT_REVIEW_DEFAULT` 2000→2600）で対応済み。両ブロッカーの着地により、デフォルト親モデルの Sonnet 5 への切替は**確定・最終**となった — もはや note only のエントリではなく、上記マトリクス表は既に Sonnet 5 をデフォルト親モデルとして記載している（表直前の一文を参照）。完全な影響分析、decision matrix（§4.1）、候補 Issue 実行計画（§8）は `docs/reports/claude-sonnet-5-impact-strategy.md` を参照。
+
+**Alias pin 方針**: Wholework は `claude-sonnet-5` への明示的な pin ではなく、bare `sonnet` CLI エイリアス（および `ANTHROPIC_MODEL=sonnet`）を継続して使用する。根拠: (1) reactive recalibration は既に実績のある運用パターンである — Fable 5 → Sonnet 4.6 移行（`#628`）および今回の Sonnet 5 移行自体（`#877`/`#878`/`#903`）の両方が、事前ゲートではなく切替後の watchdog/effort フォローアップで問題なく対応できている。(2) 明示的な pin を行うには 5 本の `run-*.sh` スクリプトと `model: sonnet` を持つ約 10 の skill/サブエージェント frontmatter への協調編集が必要になるが、Anthropic が bare エイリアスの参照先を変更するのは意図的・大規模なモデルローンチ時のみであるため、安全性の効果は限定的である。(3) トレードオフ: 将来のモデル世代についても、専用の計測 Issue が着地する前にエイリアス経由でデフォルト親モデルとして自動採用されてしまう（今回の Sonnet 5 で実際に発生したのと同様）— reactive recalibration SOP の実績（`#628`、`#903`）を踏まえ、Wholework はこのリスクを許容する。
 
 SSoT 備考: run-*.sh のモデル値は CLI エイリアス（sonnet/opus）を使用する。run-*.sh、agents、skills でモデル/effort を変更する際はこの表を更新すること。
 
