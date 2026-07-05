@@ -48,3 +48,33 @@
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: `/issue` フェーズ (非対話モード) の Issue Retrospective — Type=Task・Size=M (CI-sensitive override) 判定、曖昧性自動解決ログ (3点)、verify command 監査 (rubric 単独が意図的である根拠)、Scope Assessment (sub-issue 分割不要) を記録。新規の指示・要求は含まれず、本 spec はその判断根拠をそのまま引き継ぐ / URL: https://github.com/saitoco/wholework/issues/922#issuecomment-4885926702
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1〜5 をそのまま実施した (前例調査 → 3-way 比較評価 → レポート新規作成 → docs/tech.md・docs/ja/tech.md へのノート追加 → 判定「据え置き」のため run-spec.sh/tests/run-spec.bats は無変更)。
+
+### Design Gaps/Ambiguities
+
+- Spec 段階では言及されていなかった実施細部として、本番サンプル調査 (Implementation Step 2) の母集団を「#914 (Sonnet 5 デフォルト化) 以降にコードされた Issue」に絞り込む判断を実装時に行った。#921 (C2) が採用した「Sonnet 5 リリース日 (2026-06-30) 以降にマージされた PR」という時間軸フィルタは、本リポジトリのコミット日時がすべて同日に記録される (squash 環境の制約) ため使えなかった。Issue 番号を時系列の代理指標として用いる方が本件の目的 (Sonnet 5 max 効果の実測サンプル抽出) には適切と判断した。
+- AC2 の「据え置いた場合は表に変更がない」という文言は、Issue 本文の Auto-Resolved Ambiguity Points で「表セル自体は変更せず、表下の自由記述ノートとして根拠を追記する」と事前解決済みだったため、実装時に新たな曖昧さは生じなかった。
+
+### Rework
+
+- N/A — 手戻りは発生しなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 判定は「Sonnet デフォルトパスの `max` を維持」。根拠は (1) #217/#229 とも本パスを未評価のまま残していたこと、(2) `/spec` が `run-code.sh` と同様 sub-agent fan-out のない単一チェーンで、かつ spec エラーは code/review/merge の3フェーズに波及する (code エラーより波及範囲が広い)、(3) `max` の diminishing-returns 根拠は docs/tech.md 上 Opus 4.8 専用であり Sonnet 5 には未実証、の3点。
+- Opus fallback (`--opus`, L サイズ、`xhigh`) との比較は「転用不可のエビデンス」と結論。モデル世代 (Opus 4.8 vs Sonnet 5) 間で effort tier の意味論が異なり、また Opus fallback は L サイズ限定のためスコープも異なる。
+- 本番サンプル調査は #914 以降の Issue (#915/#916/#917/#918/#921/#930) の Code Retrospective を対象とし、設計推論由来のギャップが皆無であることを確認 (中立的シグナル、downgrade の裏付けにも反証にもならない)。
+
+### Deferred Items
+- なし。判定が「据え置き」のため run-spec.sh / tests/run-spec.bats への変更は発生せず、`/verify` フェーズで追加確認すべき実装差分はない。
+
+### Notes for Next Phase
+- `/verify` では2件の rubric AC (判定・根拠の記録、SSoT 一致) を再評価する。docs/tech.md の新規ノート段落と、run-spec.sh/tests/run-spec.bats が無変更であることを確認すれば足りる。
+- 本 Issue は C-series (#921 C2, #922 C3) の一部。残る C4 (`run-issue.sh` の effort 再校正) は独立 Issue として別途扱われる想定 (本 Issue のスコープ外)。
