@@ -127,17 +127,15 @@ N/A
 特記事項なし。AC 2件はいずれも `rubric` タイプの verify command で、`docs/tech.md`/`docs/ja/tech.md` の記載内容および `run-issue.sh` の実値 (`--effort high`) との突合により両方とも UNCERTAIN を挟まず PASS 判定できた。verify command の記述・検証しやすさに問題はなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light (Issue Size=M、`--light` 明示指定) のため review-light 1エージェントによる軽量統合レビューを実施し、Spec乖離・エッジケース/堅牢性・セキュリティ/安全性・ドキュメント整合性の4観点を1エージェントでカバーした。
-- 両 AC (rubric タイプ) は `docs/tech.md`/`docs/ja/tech.md` の prose note 追記内容と `run-issue.sh` の実値 (`--effort high`、無変更) を突合し PASS と判定した。
-- 外部レビュー (Copilot/Claude Code Review/CodeRabbit) はいずれも `.wholework.yml` に marker 未設定のため Step 7 を全てスキップした。
+- PR #940 は mergeable=true (reason=clean、CI success、review approved) だったため、コンフリクト解消手順やテスト再実行は不要で、そのまま squash merge した。
+- レビュー issue 0件・外部レビュー未設定 (`.wholework.yml` marker 未設定) だったため、追加の手動確認は行わず review フェーズのハンドオフ判定をそのまま踏襲した。
 
 ### Deferred Items
-- `docs/tech.md` 当該行の Rationale 列自体の書き換え、および Architecture Decisions の fork justification 表の修正は、Spec の Auto-Resolved Ambiguity Points により引き続きスコープ外 (code フェーズから継続)。
+- `docs/tech.md` 当該行の Rationale 列自体の書き換え、および Architecture Decisions の fork justification 表の修正は、Spec の Auto-Resolved Ambiguity Points により引き続きスコープ外。
 
 ### Notes for Next Phase
-- Code Review issue は 0 件 (MUST/SHOULD/CONSIDER いずれもなし) のため、Step 12 (issue 対応) は未実行。`/merge 940` にそのまま進行可能。
-- CI (`DCO`/`Run bats tests`/`Validate skill syntax`/`Forbidden Expressions check`/`macOS shell compatibility`) は全て SUCCESS。
-- Issue #923 の Acceptance Criteria チェックボックスは code フェーズで既に `[x]` 済みで、review フェーズでの追加更新はなし。
+- `closes #923` により Issue は squash merge で自動クローズ済み (base branch = main)。
+- Issue #923 の Acceptance Criteria チェックボックスは code フェーズで既に `[x]` 済み。`/verify 923` で post-merge 検証 (該当なし) を確認可能。
