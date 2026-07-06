@@ -377,19 +377,19 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
 
    ```text
    Task(
-     subagent_type="review-spec",
+     subagent_type="wholework:review-spec",
      description="Spec review",
      prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_FILES, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json"
    )
 
    Task(
-     subagent_type="review-bug",
+     subagent_type="wholework:review-bug",
      description="Bug review (diff bug scan)",
      prompt="Run review: PR=$NUMBER, Type=$TYPE, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json. Focus on + lines in the diff; detect clear bugs and logic errors using HIGH SIGNAL principles."
    )
 
    Task(
-     subagent_type="review-bug",
+     subagent_type="wholework:review-bug",
      description="Bug review (security scan)",
      prompt="Run review: PR=$NUMBER, Type=$TYPE, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json. Detect security issues and invalid logic in changed code using HIGH SIGNAL principles."
    )
