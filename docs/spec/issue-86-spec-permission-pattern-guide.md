@@ -75,6 +75,3 @@
 
 ### Improvement Proposals
 - N/A
-
-## Consumed Comments
-No new comments since last phase.
