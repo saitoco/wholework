@@ -56,3 +56,31 @@ Issue #939 の `/verify` 実行時、Pre-merge AC のうち rubric 2件が FAIL 
 - **`skills/code/SKILL.md` 側の別課題との切り分け**: `docs/spec/issue-939-fable-5-spec-watchdog-recalib.md` の review retrospective は、「`/code` が Spec の事前判断を覆す際に Verification section へのインライン注記が漏れる」構造的な課題を別途指摘しているが、これは Spec ファイル側の記法の話であり、本 Issue (`/verify` の auto-retry 判定ロジック) とは独立した別課題のため本 Spec のスコープに含めない。
 - **Steering Docs sync candidate の絞り込み根拠**: `skills/verify/SKILL.md` のファイル名由来キーワード `verify` で `docs/*.md`/`docs/ja/*.md` を機械的に grep すると18ファイルがヒットするが、いずれも "verify" という汎用語への一致でノイズが大きい。代わりに変更対象の実体 (`auto-retry-on-fail`/`tier-gated`/`verify-fail`) で絞り込み、Step 11(b) の tier gate 説明を含む `docs/tech.md` のみを sync candidate とした。
 - **Auto-Resolve Log (非対話モード)**: `DEFERRAL_DETECTED` の具体的な判定アルゴリズム (marker 検出との OR 構成、検出主体を `/verify` 自身の LLM 判断とする点) は Issue 本文に明記がなく、本 Spec 作成時に自動解決した。根拠は上記「検出ロジックを...OR とした理由」の通り。`skills/verify/SKILL.md` は LLM が逐次実行する prose であり、既存の rubric AC 判定や「cannot-auto-verify deferral」フォールバック (Step 11 内、305行目近傍) も同様に LLM 判断に委ねられているため、本判定を厳密なキーワードリストではなく LLM 判断として設計することは既存パターンと整合する。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜4 を計画通りの順序で実装した。
+
+### Design Gaps/Ambiguities
+- **`docs/tech.md` sync 採否 (Changed Files で `/code` フェーズの最終判断とされていた点)**: 120行目付近の「code-side auto-retry (silent no-op)」記述は `run-code.sh` 側の別の auto-retry ロジックを説明しているが、「verify-side auto-retry と対称的 (同じ tier ゲート)」という一文があり、本 Issue で verify 側に tier ゲートより優先される escape hatch を追加したことで、この対称性の記述が不正確になる (tier ゲートの手前に非対称な分岐が増えた)。実装を選択し、対称性の例外として escape hatch の存在を追記した (`docs/tech.md` / `docs/ja/tech.md` 両方)。
+- **Phase Handoff だけでは検出に不十分な点の明示**: Spec Notes は「既存の申し送り習慣に検出ロジックが乗る設計」と記していたが、`modules/phase-handoff.md` のローテーション方式 (最新1フェーズのみ保持) を踏まえると、Step 4 で読む Phase Handoff だけでは `## Code Retrospective` (code フェーズ由来) の内容が確実に含まれる保証がない。そのため実装では「同一実行内の新規判定」の情報源として Phase Handoff に加え、Spec ファイルの `## Code Retrospective`/`## Review Retrospective` セクションを直接読む経路も明記した。
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Documented deferral detection を Step 11(b) の「Check iteration counter:」直後、`NEXT_ITERATION < VERIFY_MAX_ITERATIONS` 分岐の手前に追加し、`DEFERRAL_DETECTED`/`DEFERRAL_REASON` を算出したうえで Tier-gated auto-retry check の先頭でこれを最優先判定として扱う構成にした (Spec Implementation Steps 1〜3 の通り)。
+- 検出は「既存 FAIL marker (`deferral=true`) 検出」と「同一実行内の Spec Code/Review Retrospective・Phase Handoff Deferred Items からの新規判定」の OR とし、後者を主経路、前者を2回目以降の defense-in-depth とした (Spec Notes に根拠記載済み)。
+- `modules/l0-surfaces.md` に新規 marker 系統を追加せず、既存 `wholework-event: type=verify-fail` の末尾属性追加のみで完結させた (SSoT 単一化)。
+
+### Deferred Items
+- `docs/tech.md`/`docs/ja/tech.md` の「code-side auto-retry (silent no-op)」記述に、verify 側 escape hatch との非対称性を注記として追加したが、`run-code.sh` 自体のロジック変更は本 Issue のスコープ外のため行っていない。
+- Post-merge AC (「次回 `/verify` 実行時に auto-retry が自動 skip されることを観察」) は `verify-type: opportunistic` のまま。専用 observation イベントの新設は Spec Notes の通りスコープ外と判断し、着手していない。
+
+### Notes for Next Phase
+- `/verify` はこの Issue 自身に対しては FAIL が発生しない想定 (実装 Issue であり、documented deferral の実例ではない) — pre-merge AC 3件は rubric/file_contains により本 `/code` フェーズ内で PASS 判定済みで、Issue 本文のチェックボックスも更新済み。
+- Post-merge の observation AC は次回、実際に documented deferral を含む別 Issue の `/verify` 実行時に自然発火して確認される想定 (opportunistic)。`/verify` が本 Issue を処理する際は、この AC が unchecked のまま `phase/verify` に留まる分岐になる可能性を踏まえて判定すること。
