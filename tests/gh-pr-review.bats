@@ -26,6 +26,27 @@ if [ "\$1" = "repo" ] && [ "\$2" = "view" ]; then
     echo "owner/repo"
     exit 0
 fi
+# pr diff: fixture unified diff with wide hunk ranges covering the paths/lines used in tests
+if [ "\$1" = "pr" ] && [ "\$2" = "diff" ]; then
+    cat <<'DIFF'
+diff --git a/scripts/example.sh b/scripts/example.sh
+index 1111111..2222222 100644
+--- a/scripts/example.sh
++++ b/scripts/example.sh
+@@ -1,50 +1,50 @@
+diff --git a/scripts/other.sh b/scripts/other.sh
+index 3333333..4444444 100644
+--- a/scripts/other.sh
++++ b/scripts/other.sh
+@@ -1,50 +1,50 @@
+diff --git a/scripts/valid.sh b/scripts/valid.sh
+index 5555555..6666666 100644
+--- a/scripts/valid.sh
++++ b/scripts/valid.sh
+@@ -1,50 +1,50 @@
+DIFF
+    exit 0
+fi
 # api: capture stdin when --input - is used
 if [ "\$1" = "api" ]; then
     if echo "\$@" | grep -q -- "--input"; then
@@ -142,6 +163,86 @@ for c in comments:
 "
 }
 
+# --- Diff-range fallback cases ---
+
+@test "success: line comment outside PR diff range falls back to General Comments" {
+    echo "review body text" > "$BATS_TEST_TMPDIR/review.md"
+    cat > "$BATS_TEST_TMPDIR/comments.json" <<'JSON'
+[
+  {"path": "scripts/example.sh", "line": 999, "body": "MUST update this pre-existing line", "side": "RIGHT", "severity": "MUST"}
+]
+JSON
+    run bash "$SCRIPT" 159 "$BATS_TEST_TMPDIR/review.md" "$BATS_TEST_TMPDIR/comments.json"
+    [ "$status" -eq 0 ]
+    grep -q "ARGS: pr diff 159" "$GH_CALL_LOG"
+    python3 -c "
+import json
+payload = json.load(open('$GH_API_STDIN'))
+# out-of-range MUST comment still drives REQUEST_CHANGES
+assert payload['event'] == 'REQUEST_CHANGES', f'Expected REQUEST_CHANGES, got {payload[\"event\"]}'
+assert 'comments' not in payload, 'out-of-range comment should not remain in comments[]'
+assert '### General Comments' in payload['body']
+assert 'scripts/example.sh:999' in payload['body']
+assert 'MUST update this pre-existing line' in payload['body']
+"
+}
+
+@test "success: mix of in-range and out-of-range comments splits correctly" {
+    echo "review body text" > "$BATS_TEST_TMPDIR/review.md"
+    cat > "$BATS_TEST_TMPDIR/comments.json" <<'JSON'
+[
+  {"path": "scripts/example.sh", "line": 10, "body": "SHOULD fix this in-range", "side": "RIGHT", "severity": "SHOULD"},
+  {"path": "scripts/other.sh", "line": 999, "body": "SHOULD fix this out-of-range", "side": "RIGHT", "severity": "SHOULD"}
+]
+JSON
+    run bash "$SCRIPT" 159 "$BATS_TEST_TMPDIR/review.md" "$BATS_TEST_TMPDIR/comments.json"
+    [ "$status" -eq 0 ]
+    python3 -c "
+import json
+payload = json.load(open('$GH_API_STDIN'))
+assert len(payload['comments']) == 1, 'only the in-range comment should remain'
+assert payload['comments'][0]['path'] == 'scripts/example.sh'
+assert 'scripts/other.sh:999' in payload['body']
+assert 'SHOULD fix this out-of-range' in payload['body']
+"
+}
+
+@test "success: out-of-range comment merges after an existing General Comments heading" {
+    printf 'review body text\n\n### General Comments\n- existing note\n' > "$BATS_TEST_TMPDIR/review.md"
+    cat > "$BATS_TEST_TMPDIR/comments.json" <<'JSON'
+[
+  {"path": "scripts/other.sh", "line": 999, "body": "SHOULD fix this out-of-range", "side": "RIGHT", "severity": "SHOULD"}
+]
+JSON
+    run bash "$SCRIPT" 159 "$BATS_TEST_TMPDIR/review.md" "$BATS_TEST_TMPDIR/comments.json"
+    [ "$status" -eq 0 ]
+    python3 -c "
+import json
+payload = json.load(open('$GH_API_STDIN'))
+body = payload['body']
+assert body.count('### General Comments') == 1, 'should reuse the existing heading, not add a new one'
+assert '- existing note' in body
+assert 'scripts/other.sh:999' in body
+"
+}
+
+@test "success: out-of-range comment with omitted side defaults to RIGHT and falls back" {
+    echo "review body text" > "$BATS_TEST_TMPDIR/review.md"
+    cat > "$BATS_TEST_TMPDIR/comments.json" <<'JSON'
+[
+  {"path": "scripts/example.sh", "line": 999, "body": "SHOULD fix this out-of-range", "severity": "SHOULD"}
+]
+JSON
+    run bash "$SCRIPT" 159 "$BATS_TEST_TMPDIR/review.md" "$BATS_TEST_TMPDIR/comments.json"
+    [ "$status" -eq 0 ]
+    python3 -c "
+import json
+payload = json.load(open('$GH_API_STDIN'))
+assert 'comments' not in payload, 'comment with omitted side should be treated as RIGHT and fall back'
+assert 'scripts/example.sh:999' in payload['body']
+"
+}
+
 # --- Error cases ---
 
 @test "error: no arguments" {
@@ -187,6 +288,33 @@ for c in comments:
     run bash "$SCRIPT" 159 "$BATS_TEST_TMPDIR/review.md" "$BATS_TEST_TMPDIR/bad.json"
     [ "$status" -eq 1 ]
     [[ "$output" == *"invalid line comments JSON"* ]]
+}
+
+@test "error: gh pr diff failure exits with code 1 and Error message" {
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+echo "ARGS: \$@" >> "$GH_CALL_LOG"
+if [ "\$1" = "repo" ] && [ "\$2" = "view" ]; then
+    echo "owner/repo"
+    exit 0
+fi
+if [ "\$1" = "pr" ] && [ "\$2" = "diff" ]; then
+    echo "error: pull request not found" >&2
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    echo "review body text" > "$BATS_TEST_TMPDIR/review.md"
+    cat > "$BATS_TEST_TMPDIR/comments.json" <<'JSON'
+[
+  {"path": "scripts/example.sh", "line": 10, "body": "SHOULD fix this", "side": "RIGHT", "severity": "SHOULD"}
+]
+JSON
+    run bash "$SCRIPT" 159 "$BATS_TEST_TMPDIR/review.md" "$BATS_TEST_TMPDIR/comments.json"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"failed to fetch PR diff"* ]]
 }
 
 @test "error: gh api POST failure exits with code 1 and Error message" {

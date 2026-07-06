@@ -54,3 +54,45 @@
 - **外部仕様依存チェック**: GitHub REST API 公式ドキュメント (`docs.github.com/en/rest/pulls/reviews`) では `line`/`side`/`start_line`/`start_side` フィールドの詳細な制約は明記されていない。422 発生条件 ("Pull request review thread line must be part of the diff") は公式ドキュメントに明文化されたエラーメッセージではなく、実運用時の community reports (GitHub Discussions) および Issue #934 での実際の発生事例から確認した。この点は `gh-pr-review.sh` の実装が「未文書化だが実運用で確認された API 制約」に依拠することを意味し、将来 GitHub 側の挙動が変わった場合は本ロジックの見直しが必要になりうる
 - **diff の取得方法**: `skills/review/SKILL.md` は `gh pr diff "$NUMBER"` (オプションなし、素の unified diff 形式) を既に Step 10 で使用しており (`.tmp/pr-diff-$NUMBER.txt` に保存)、本 Issue の `gh-pr-review.sh` 内実装もこの既存呼び出し規約と同一のコマンド形式 (`gh pr diff "$PR_NUMBER"`) を用いる
 - **doc-checker Impact Assessment**: Change Type 表 (workflow phase changes / project structure changes) にはいずれも該当しない (スクリプト内部ロジックの堅牢化であり、ワークフローフェーズやディレクトリ構成の変更を伴わない)。Steering Docs sync candidate として列挙した4ファイルは、いずれも `gh-pr-review.sh` の一行説明・Interface changes 記載のみを含み、本 Issue の変更 (内部フォールバック機構の追加) では記載内容の実質的な変更は不要と判断したが、最終確認は `/code` に委ねる
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜4 の順序・範囲通りに実装した (再構成・省略なし)
+
+### Design Gaps/Ambiguities
+- Spec Notes は新設する `gh pr diff` モック分岐のフィクスチャ diff について、範囲外テストケースの line 番号選定にのみ言及していたが、実装時に判明した点として、`gh-pr-review.sh` は line comments が存在する限り無条件で `gh pr diff` を呼ぶようになるため、既存5テストケース (`scripts/example.sh:10/42`、`scripts/other.sh:10/20`、`scripts/valid.sh:5`) を壊さないよう、フィクスチャの各ファイルのハンク範囲を `1-50` まで広げる必要があった。既存テストとの整合性確保は Spec に明記されておらず、実装時の判断で対応した
+
+### Rework
+- N/A —手戻りは発生しなかった
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- review-light (軽量統合レビュー、REVIEW_DEPTH=light) を実行し、SHOULD 1件・CONSIDER 1件を検出。MUST はなし
+- SHOULD 指摘 (`side` 省略時に diff range チェックをすり抜ける) は修正: `c.get('side') == 'RIGHT'` を `c.get('side', 'RIGHT') == 'RIGHT'` に変更し、GitHub API 自体の `side` デフォルト値と挙動を揃えた。bats テストを1件追加 (18/18 PASS)
+- CONSIDER 指摘 (`line` の型未検証による TypeError リスク) は見送り: 唯一の呼び出し元 (`skills/review/SKILL.md` Step 10) が常に整数の `line` を渡す契約であり、現時点では顕在化しない入力依存のエッジケースと判断
+- Issue #945 の Pre-merge AC 2件は rubric 判定で PASS (実装・bats テストの両方を確認済み)
+
+### Deferred Items
+- Post-merge の "422 エラーによる手戻りが発生しないことを観察" は `/verify` フェーズに委ねる (opportunistic verify-type)
+- `side: LEFT` のケースは Spec Notes 記載の通りスコープ外のまま (現行コードベースに使用箇所なし)
+- CONSIDER 指摘 (`line` 型検証) は対応見送り。将来 `gh-pr-review.sh` を独立 CLI として非 SKILL.md 経由で呼ぶ利用者が現れた場合に再評価
+
+### Notes for Next Phase
+- `tests/gh-pr-review.bats` は本 review フェーズで追加した1件を含め全18ケースが PASS (元の17ケース + `side` 省略時のフォールバック検証1件)
+- CI (DCO / bats / validate-skill-syntax / Forbidden Expressions / macOS shell compatibility) は全て SUCCESS
+- ポリシー変更は検出されなかったため Issue の受け入れ条件は未更新
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- N/A — Implementation Steps 1〜4 と PR diff の間に構造的な乖離はなかった。`side` 省略時の扱いは Spec Notes (53行目) に「`side: RIGHT` のみを対象とする」と明記されていたが、「省略された場合の扱い」は明示されておらず、review-light が指摘するまで気づかれなかった暗黙のギャップだった
+
+### Recurring issues
+- N/A — 同種の指摘が複数出るパターンは見られなかった (SHOULD 1件・CONSIDER 1件はいずれも異なる観点)
+
+### Acceptance criteria verification difficulty
+- 2件とも `rubric` 判定で UNCERTAIN にならず明確に PASS 判定できた。Spec Notes に実装箇所・振り分けロジック・bats フィクスチャ形式まで詳細に記述されていたため、rubric grader が参照すべき実装差分の範囲が曖昧にならなかったことが要因と考えられる
+- 今回のように「スコープ外」と明記した項目 (`side: LEFT`) がある場合、"未言及の暗黙のデフォルト値" (今回は `side` 省略時のデフォルト) についても Spec Notes で明示しておくと、review フェーズでの SHOULD 指摘を未然に防げた可能性がある。今後 rubric 対象の Spec を書く際の一般的な改善点として記録するが、Issue化するほどの汎用性は現時点では確認できていない
