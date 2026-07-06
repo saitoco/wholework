@@ -67,23 +67,18 @@
 - N/A —手戻りは発生しなかった
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- review-light (軽量統合レビュー、REVIEW_DEPTH=light) を実行し、SHOULD 1件・CONSIDER 1件を検出。MUST はなし
-- SHOULD 指摘 (`side` 省略時に diff range チェックをすり抜ける) は修正: `c.get('side') == 'RIGHT'` を `c.get('side', 'RIGHT') == 'RIGHT'` に変更し、GitHub API 自体の `side` デフォルト値と挙動を揃えた。bats テストを1件追加 (18/18 PASS)
-- CONSIDER 指摘 (`line` の型未検証による TypeError リスク) は見送り: 唯一の呼び出し元 (`skills/review/SKILL.md` Step 10) が常に整数の `line` を渡す契約であり、現時点では顕在化しない入力依存のエッジケースと判断
-- Issue #945 の Pre-merge AC 2件は rubric 判定で PASS (実装・bats テストの両方を確認済み)
+- mergeable=true (CI success, review approved, conflicts なし) だったため conflict 解消フローは不要で、Squash Merge を直接実行
+- PR #950 を `--squash --delete-branch` でマージ、`closes #945` により Issue #945 は auto-close 対象 (base branch は main)
 
 ### Deferred Items
-- Post-merge の "422 エラーによる手戻りが発生しないことを観察" は `/verify` フェーズに委ねる (opportunistic verify-type)
-- `side: LEFT` のケースは Spec Notes 記載の通りスコープ外のまま (現行コードベースに使用箇所なし)
-- CONSIDER 指摘 (`line` 型検証) は対応見送り。将来 `gh-pr-review.sh` を独立 CLI として非 SKILL.md 経由で呼ぶ利用者が現れた場合に再評価
+- Post-merge の "422 エラーによる手戻りが発生しないことを観察" は引き続き `/verify` フェーズに委ねる (opportunistic verify-type)
 
 ### Notes for Next Phase
-- `tests/gh-pr-review.bats` は本 review フェーズで追加した1件を含め全18ケースが PASS (元の17ケース + `side` 省略時のフォールバック検証1件)
-- CI (DCO / bats / validate-skill-syntax / Forbidden Expressions / macOS shell compatibility) は全て SUCCESS
-- ポリシー変更は検出されなかったため Issue の受け入れ条件は未更新
+- `/verify` は Post-merge 観察項目 1件のみ確認すればよい (次回 review エージェントが既存箇所の未更新を指摘した際に 422 エラーが再発しないこと)
+- Pre-merge AC 2件は review フェーズで既に PASS 判定済み
 
 ## review retrospective
 
