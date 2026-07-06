@@ -88,7 +88,8 @@
 
 - **`/verify` SKILL に documented deferral の escape hatch がない**: tier-gated auto-retry の発火条件が tier + config + iteration count のみで判定されており、FAIL の性質を区別しない。documented deferral の場合、`/code` 再実行は同じ deferral を反復するだけで compute を浪費する構造。auto-retry mechanism は「実装バグ FAIL」を想定した設計で、「意図的 deferral FAIL」を想定していない。[Filed: #947]
 - **AC 設計時の「実測依存 rubric」ガイドラインが `modules/verify-patterns.md` にない**: 本 session の #939 のように AC が「実測データの存在」を条件とする場合、`/issue` フェーズで「実測が実施されない場合の deferral protocol」も同時に定義することを推奨する仕組みが欠けている。現状は AC 完全達成のみが verify PASS 基準となるため、意図的 deferral が structural に不整合を生じる。[Filed: #948]
-- **observation-trigger の dispatch fan-out に上限が定義されていない**: batch 完了時の event-based observation scan が 17 件の Issue を dispatch 対象として検出した。SKILL の記述は「sequentially」dispatch するとあるが、compute burn を考慮した cap や user confirmation の仕組みがない。1 session 内で 17 verify を回すのは非現実的なため手動で skip したが、SKILL 側で対応すべきかは要検討。[No action: 現時点では 17 件全部が真に必要かの判断も含めユーザ判断が妥当、SKILL に一律 cap を入れると他のケースを害する可能性あり]
+- **Spec pre-authorization → /code override の再発パターン (2回目)**: #939 の `/review` retrospective が明記した通り、「Spec フェーズでコスト・副作用を伴う実行を pre-authorize したが、`/code` フェーズが再検討し実行を見送る」パターンは #903 に続く 2 回目の発生。`/spec` の非対話 pre-authorization は user レビュー機会を欠くため、`/code` フェーズでの explicit confirmation (AskUserQuestion 等) や costly step marker の導入が構造的に必要。#947 (verify 側の症状) と対をなす spec/code 側の根本原因対応。[Filed: #951]
+- **observation-trigger の dispatch fan-out に上限が定義されていない**: batch 完了時の event-based observation scan が 17 件の Issue を dispatch 対象として検出した。SKILL の記述は「sequentially」dispatch するとあるが、compute burn を考慮した cap や user confirmation の仕組みがない。1 session 内で 17 verify を回すのは非現実的なため手動で skip したが、L3 autonomy = 「無停止で全件実行」の設計意図と実務上の compute burn の乖離が構造的問題として存在。threshold-based confirmation / deferred mode / priority cap 等の制御が必要。[Filed: #952]
 - **max silent window 1230s (Issue #938 spec) と 1060s (Issue #939 spec)**: Watchdog timeout 1800s に対する使用率は 68% / 59% で、#903 の 80% 再校正閾値未満。#939 自身が `WATCHDOG_TIMEOUT_SPEC_DEFAULT` の再校正判定を扱う Issue だったが、本 session の実測値は Sonnet parent + `--fable` なしのため #939 の直接エビデンスにはならない。[No action: #939 の deferral 議論とは独立、`--fable` 実測が別途必要]
 - **並行 session による #934 の 3 連続 commit と本 session の #939 merge が同時刻に発生**: Concurrent Sessions Detected セクションが 4 件全てを記録。本 session への実害はなく (`worktree-merge-push.sh` の rebase fallback が正常機能)、GitHub SSoT パターンとしての並行運用が healthy に機能している事例。[Resolved directly: recovery 側 (worktree-merge-push.sh の rebase fallback) が既に対応済み、追加アクション不要]
 
@@ -97,8 +98,12 @@
 
 - **/verify SKILL に「documented deferral」escape hatch を追加**: 現行 SKILL は tier-gated auto-retry の発火条件を tier + config + iteration count のみで判定しており、FAIL の性質 (実装バグ vs 意図的 deferral) を区別していない。documented deferral の場合、`/code` 再実行は同じ deferral を反復するだけで compute を浪費する。改善案: (a) FAIL marker comment に `deferral=true` marker を追加し、`/verify` が検出したら auto-retry を skip する、または (b) Spec の Verification section に `<!-- known-deferral: reason=... -->` を認める形式を導入し、`/verify` がこれを検出したら FAIL 扱いだが auto-retry を skip する。
 - **AC 設計時の "実測依存 rubric" ガイドライン追加**: 本 session の #939 のように AC が「実測データの存在」を条件とする場合、`/issue` フェーズで「実測が実施されない場合の deferral protocol」も同時に定義することを推奨するガイドラインを `modules/verify-patterns.md` に追加すべき。現状は AC 完全達成のみが verify PASS 基準となるため、意図的 deferral が structural に不整合を生じる。
+- **Spec pre-authorization → /code override の再発パターン (2回目)**: `/spec` の非対話 pre-authorization は user レビュー機会を欠き、`/code` フェーズが cost/authorization を理由に override する pattern が #903 に続き #939 で 2 回目の発生。costly/irreversible step を含む Issue の spec/code 境界に explicit confirmation mechanism (marker、AskUserQuestion、deferral protocol 必須化のいずれか) を導入すべき。#947 と対をなす spec/code 側の根本原因対応。
+- **observation-trigger dispatch fan-out 制御**: `/auto --batch` 完了時の event-based observation scan が 17 件を dispatch 対象として検出した。L3 autonomy = 「無停止で全件実行」の設計意図と compute burn の乖離が構造的問題。threshold-based user confirmation、deferred mode、priority cap 等の制御が必要。
 
 ## Filed Issues
 
-- #947
-- #948
+- #947 (`/verify` documented deferral escape hatch)
+- #948 (`modules/verify-patterns.md` 実測依存 rubric AC ガイドライン)
+- #951 (spec/code costly step 明示確認 — Spec pre-auth 再発パターンへの根本対応)
+- #952 (`/auto` observation-scan dispatch fan-out 制御)
