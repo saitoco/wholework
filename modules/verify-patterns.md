@@ -891,6 +891,36 @@ Use narrow scope only when the implementation is purely additive (new files, no 
 - Consequence: regression was not caught at verify-time; CI detected the failure after merge
 - Correct verify command: `bats tests/` (full suite)
 
+### 25. Measurement-Dependent Rubric AC — Deferral Protocol Guideline
+
+When a rubric AC's judgment condition requires "実測データの存在" (the existence of measured/empirical data — e.g., execution counts, benchmark numbers, a recalibration decision backed by production measurements) that only becomes available after a later phase actually runs it, and that later phase (typically `/code`) intentionally defers the run (for reasons such as cost, side effects on other Issues, or lack of real-time user oversight), the AC and the deferral decision become structurally misaligned. `/verify` judges the rubric FAIL and enters the standard fail cycle (Issue reopen, `phase/*` label removal, auto-retry evaluation) even when the deferral itself was a reasonable, honest engineering call.
+
+**Real example (Issue #939):** the AC required (1) execution results (run count, max silent window, watchdog kill occurrence) recorded in a report, and (2) a `SPEC_DEFAULT` recalibration decision backed by 実測 recorded in `docs/tech.md`. `/code` intentionally deferred the actual measurement run — a reasonable decision given Fable 5's premium cost, side effects on other Issues, and the lack of real-time user oversight — but the rubric still required proof of measurement, so `/verify` FAILed.
+
+**Guideline for AC authoring (`/issue`, `/spec`):**
+
+1. **Flag measurement dependency explicitly.** When an AC's rubric condition depends on empirical/measured data ("実測データの存在") that only exists after a later phase executes it, state this dependency explicitly in the Issue Notes or Spec Notes at authoring time — do not leave it implicit in the rubric wording alone.
+
+2. **Define the deferral protocol up front.** For each measurement-dependent AC, specify:
+   - Whether deferral is permitted for that specific AC (structural/documentation ACs are generally not deferrable; ACs gated on live/costly measurement runs often are)
+   - What alternative verification applies when the measurement is deferred (e.g., "implementation is verified structurally; the report carries a placeholder pending the measurement run" or "a follow-up Issue tracks running the measurement")
+
+3. **Document deferral through the existing detection path — do not invent a new marker system.** `/verify`'s documented-deferral escape hatch (Issue #947) already recognizes deferrals recorded in:
+   - Spec `## Code Retrospective` § `### Deviations from Design`
+   - Spec `## Review Retrospective`
+   - Phase Handoff `### Deferred Items`
+
+   When a measurement-dependent AC is deferred, record the reason in one of these sections (not only in Issue body prose) so `/verify` recognizes it as a known deferral without requiring any additional marker convention.
+
+**Template (Issue/Spec Notes):**
+
+```
+Notes:
+- AC N depends on 実測データの存在 (e.g., execution counts, benchmark results). If a later phase defers the actual measurement run, the deferral reason must be recorded in the Spec's Code Retrospective (Deviations from Design), Review Retrospective, or Phase Handoff Deferred Items — not only in the Issue body — so /verify's documented-deferral detection (#947) recognizes it.
+```
+
+**When NOT to apply:** the AC only requires structural presence (a section exists, a keyword is present) with no dependency on a later phase's execution results — regular hard-pattern/`rubric` guidance (§9) applies as-is.
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
