@@ -82,6 +82,12 @@ FAIL detected on AC 2: the expected string was not found in the output.
 This marker namespace (`wholework-event:`) is consistent with existing HTML comment markers
 in the codebase (`<!-- verify-type: ... -->`, `<!-- verify: ... -->`).
 
+**Optional attributes for `type=verify-fail`**: this marker may additionally carry `deferral=true reason="<text>"` appended to the line when `/verify` (Step 11(b)) detects that the FAIL is a documented, intentional deferral rather than an implementation bug (see `skills/verify/SKILL.md` Step 11(b) "Documented deferral detection"). When present, `deferral=true` signals downstream `/verify` runs to skip the tier-gated auto-retry unconditionally. Example:
+```
+<!-- wholework-event: type=verify-fail phase=verify issue=42 iteration=1 deferral=true reason="pending explicit user authorization for --fable run" -->
+```
+Consumers matching on the `<!-- wholework-event: type=verify-fail` prefix (see Notes below) are unaffected by this attribute, since it is appended after the existing fields rather than altering them.
+
 When consuming comments (see Processing Steps), a comment containing `<!-- wholework-event:`
 in its body from a bot actor is treated as a Wholework-authored structured comment and consumed (bot exception above).
 

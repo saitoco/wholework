@@ -472,6 +472,15 @@ CURRENT_ITERATION=$(${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh "$NUMB
 NEXT_ITERATION=$((CURRENT_ITERATION + 1))
 ```
 
+**Documented deferral detection** (evaluate once per FAIL, before branching on `NEXT_ITERATION`):
+
+Determine `DEFERRAL_DETECTED` (`true`/`false`) as the OR of the following two conditions. When `true`, also determine a one-line `DEFERRAL_REASON` (sanitize to remove double quotes so it is safe to embed in a marker attribute).
+
+1. **Existing marker check (defensive fallback)**: Among the comments consumed for this Issue in Step 4 (including the verify-fail marker exception in `modules/l0-surfaces.md`, which surfaces prior FAIL markers regardless of cutoff), any `<!-- wholework-event: type=verify-fail ... -->` comment already carries `deferral=true`. If found, set `DEFERRAL_DETECTED=true` and take `DEFERRAL_REASON` from that comment's `reason="..."` attribute (or "previously flagged as documented deferral" if the attribute is absent).
+2. **Same-run judgment (primary path)**: Check whether the currently failing acceptance condition(s) are documented as an intentional deferral in any of: the Spec's `## Code Retrospective` (`### Deviations from Design`), the Spec's `## Review Retrospective`, or the Phase Handoff `### Deferred Items` (already read in Step 4). If the Spec file exists, read these sections directly (`$SPEC_PATH/issue-$NUMBER-*.md`) — the Phase Handoff read in Step 4 only carries the latest phase's handoff forward (see `modules/phase-handoff.md` rotation), so the Spec sections themselves remain the authoritative record across phases. If any of these sources documents the failing condition(s) as deliberately deferred (e.g., pending explicit user authorization, out of scope for this Issue), set `DEFERRAL_DETECTED=true` and set `DEFERRAL_REASON` to a short paraphrase of the documented reason.
+
+If neither condition holds, `DEFERRAL_DETECTED=false` and `DEFERRAL_REASON` is unset. This detection is an LLM judgment call (rubric-style), consistent with the existing "cannot-auto-verify deferral" fallback in Step 5.
+
 - If `NEXT_ITERATION < VERIFY_MAX_ITERATIONS` (limit not yet reached):
     - Post a comment with the updated counter marker (text varies by `ISSUE_STATE`):
       - When `ISSUE_STATE` is `CLOSED`:
@@ -508,7 +517,7 @@ NEXT_ITERATION=$((CURRENT_ITERATION + 1))
       ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER"
       ```
     - Post a machine-readable FAIL marker comment:
-      Write the following to `.tmp/verify-fail-comment-$NUMBER.md` with Write tool:
+      Write the following to `.tmp/verify-fail-comment-$NUMBER.md` with Write tool. When `DEFERRAL_DETECTED=true`, append ` deferral=true reason="${DEFERRAL_REASON}"` to the end of the `<!-- wholework-event: ... -->` line; when `DEFERRAL_DETECTED=false`, leave the marker line unchanged (current format):
       ```
       <!-- wholework-event: type=verify-fail phase=verify issue=$NUMBER iteration=$NEXT_ITERATION -->
       ## /verify FAIL — {TIMESTAMP}
@@ -552,7 +561,13 @@ NEXT_ITERATION=$((CURRENT_ITERATION + 1))
       ```
     - **Tier-gated auto-retry check** (`auto-retry-on-fail` config key):
 
-      If `AUTONOMY_TIER` is `L2` or `L3` AND `AUTO_RETRY_ENABLED=true` (i.e., `auto-retry-on-fail.enabled: true` in `.wholework.yml`) AND `NEXT_ITERATION` < `AUTO_RETRY_MAX_ITERATIONS`:
+      If `DEFERRAL_DETECTED=true` (evaluated above, before all other conditions): skip auto-retry unconditionally, regardless of `AUTONOMY_TIER`, `AUTO_RETRY_ENABLED`, or `NEXT_ITERATION`. Do not invoke `run-code.sh`. Print advisory:
+      ```
+      documented deferral を検出したため auto-retry をスキップしました: ${DEFERRAL_REASON}
+      次の手として `/goal` または `/code --patch $NUMBER` で再発火可能です。
+      ```
+
+      Else if `AUTONOMY_TIER` is `L2` or `L3` AND `AUTO_RETRY_ENABLED=true` (i.e., `auto-retry-on-fail.enabled: true` in `.wholework.yml`) AND `NEXT_ITERATION` < `AUTO_RETRY_MAX_ITERATIONS`:
         a. Emit `verify_retry_fire` event (only when `AUTO_EVENTS_LOG` is set; restore the pointer first):
            ```bash
            source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
@@ -602,7 +617,7 @@ NEXT_ITERATION=$((CURRENT_ITERATION + 1))
       max iterations reached (${NEXT_ITERATION}/${VERIFY_MAX_ITERATIONS}). Stopping verify-reopen loop. Issue stays in phase/verify for human judgment.
       ```
     - Post a machine-readable FAIL marker comment:
-      Write the following to `.tmp/verify-fail-comment-$NUMBER.md` with Write tool:
+      Write the following to `.tmp/verify-fail-comment-$NUMBER.md` with Write tool. When `DEFERRAL_DETECTED=true`, append ` deferral=true reason="${DEFERRAL_REASON}"` to the end of the `<!-- wholework-event: ... -->` line; when `DEFERRAL_DETECTED=false`, leave the marker line unchanged (current format):
       ```
       <!-- wholework-event: type=verify-fail phase=verify issue=$NUMBER iteration=$NEXT_ITERATION -->
       ## /verify FAIL — {TIMESTAMP}
