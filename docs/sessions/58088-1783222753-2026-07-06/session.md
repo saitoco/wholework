@@ -15,21 +15,21 @@
 
 | Metric | Value |
 |---|---|
-| Issues processed | 16 (goal-driven, this session's own `/auto --batch` invocations) |
-| Fully closed (phase/done) | 9 (#915, #916, #927, #934, #941, #942, #946, #947, #948) |
-| phase/verify remaining | 5 (#917, #930, #932, #935, #945 — post-merge opportunistic/observation ACs pending natural occurrence) |
-| Failed | 1 (#908 — handed off to a separate concurrent session per user instruction) |
-| Throughput | 1.2 issues/hr (session-wide aggregate, includes concurrent third-party activity) |
-| Tier 1/2/3 recoveries | 0 / 1 (logged) / 0 — additional Tier 2 `code-completed-no-pr` self-heals observed narratively for #915/#918/#930/#934 but not all emitted as structured `recovery` events |
+| Issues processed | 16件 (goal 駆動、本 session 自身の `/auto --batch` 呼び出し分) |
+| Fully closed (phase/done) | 9件 (#915, #916, #927, #934, #941, #942, #946, #947, #948) |
+| phase/verify remaining | 5件 (#917, #930, #932, #935, #945 — post-merge の opportunistic/observation AC が自然発火待ち) |
+| Failed | 1件 (#908 — ユーザー指示により別の並行セッションへ引き継ぎ済み) |
+| Throughput | 1.2 issues/hr (session 全体の集計値、並行する第三者活動を含む) |
+| Tier 1/2/3 recoveries | 0 / 1 件 (ログ記録分) / 0 — `code-completed-no-pr` の Tier 2 自動リカバリは #915/#918/#930/#934 でも観測されたが、構造化 `recovery` イベントとして記録されたのは1件のみ |
 | Watchdog kills | 0 |
-| Max silent window (any phase) | 1520s |
-| Total token usage | input 938,921 / output 637,053 (session-wide aggregate, includes concurrent third-party activity) |
-| Concurrent commits detected | 30 (confirms a separate `/auto` session — id `73702-...` — ran throughout in parallel) |
+| Max silent window (any phase) | 1520秒 |
+| Total token usage | input 938,921 / output 637,053 (session 全体の集計値、並行する第三者活動を含む) |
+| Concurrent commits detected | 30件 (別の `/auto` セッション — id `73702-...` — が並行稼働していたことを裏付ける) |
 | Parent session manual interventions | 0 |
 | verify FAIL → reopen fix cycles | 0 |
-| New Issues filed from this session's own verify passes | 5 (#927, #932, #935, #945, #946) |
+| 本 session 自身の verify 実行過程で起票した新規 Issue | 5件 (#927, #932, #935, #945, #946) |
 
-Note: the raw `get-auto-session-report.sh --metrics-only` output (27 issues, full phase/token tables) aggregates **all** activity tagged with this session ID, including some entries (#794, #920, #921, #922, #923, #924, #926, #929, #931, #933, #937, #938, #939, #943, #949, #950) that belong to the concurrently-running `/auto` session sharing infrastructure, not to the 16 issues this session's own `/auto --batch` calls actually drove. The Summary table above is scoped to this session's own work; see the raw report tables above the "Summary" override for the full aggregate.
+補足: `get-auto-session-report.sh --metrics-only` の生データ (27件、フルの phase/token テーブル) は、本セッション ID にタグ付けされた **全ての** 活動を集計しており、本セッション自身の `/auto --batch` 呼び出しが実際に駆動した16件ではなく、インフラを共有する別の並行 `/auto` セッションに属する一部エントリ (#794, #920, #921, #922, #923, #924, #926, #929, #931, #933, #937, #938, #939, #943, #949, #950) も含まれている。上記 Summary テーブルは本セッション自身の作業にスコープを絞ったもので、フル集計は上部の生レポートテーブルを参照のこと。
 
 ### Phase Activity Summary
 
@@ -49,29 +49,29 @@ Note: the raw `get-auto-session-report.sh --metrics-only` output (27 issues, ful
 
 ### Concurrent Sessions Detected
 
-30 concurrent-commit events were recorded across the session window (see raw metrics above), all attributable to a separate, independently-running `/auto` session (id `73702-1783257992...` and predecessors) that filed and processed its own retro/* Issues (#920–#943, #921–#939 chore/effort-recalibration work, etc.) on the same repository throughout this session's runtime. No conflicts or corruption resulted; `worktree-merge-push.sh`'s rebase fallback handled the one divergence encountered (see Findings).
+session 期間中に30件の concurrent-commit イベントが記録された (上部の生メトリクス参照)。いずれも別の独立稼働 `/auto` セッション (id `73702-1783257992...` およびその前身) によるもので、同一リポジトリ上で自身の retro/* Issue (#920–#943、#921–#939 の chore/effort-recalibration 系作業など) を本セッションの稼働時間全体にわたって並行して起票・処理していた。コンフリクトや破損は一切発生せず、`worktree-merge-push.sh` の rebase フォールバックが唯一発生した diverge を自動処理した (詳細は Findings 参照)。
 
 ## What worked
 
-- **Goal-driven batch draining loop**: `/goal` ("drain Backlog retro/* to zero") combined with `/auto --batch N1 N2 ...` List mode let the session process an initially-unknown, growing backlog across 4 rounds (5 → 2 new → 3 new → 2 new → 0) without needing a fixed issue list up front. Each `/verify` pass's own discoveries fed the next round automatically.
-- **Opportunistic verification cross-pollination**: Verifying one Issue routinely produced direct empirical evidence (via `gh pr view`/`gh issue view` on live state) that satisfied a *different*, related Issue's post-merge opportunistic/observation condition in the same pass — e.g., #930's own `/auto` run confirmed #927's post-merge condition; #927's own run confirmed #915's. This is the "throughput as verification opportunity" design working as intended, and let 3 additional Issues (#915, #916, #927) reach full `phase/done` closure without a dedicated observation event.
-- **Tier 2 fallback catalog self-healing**: The `code-completed-no-pr` pattern (commit exists on worktree branch, PR not yet created) fired repeatedly (#915, #918, #930, #934) and was resolved automatically by `run-auto-sub.sh`'s internal catalog — zero parent-session manual salvage was needed for any of these, in contrast to the precedent incidents (#893/#906/#897) that originally motivated #915/#916/#927's fixes.
-- **Chained false-positive bug hunting via direct evidence**: Each `/verify` pass that encountered a `detect-wrapper-anomaly.sh` false positive was cross-checked against live GitHub state (`gh pr view --json reviews/state`) rather than trusted at face value, which surfaced two related-but-distinct bug families across the session: `#916 (merge/MERGED)` → `#927 (review/AC-posted)` → `#932 (review-completion-false-negative/recheck)`, and `#935 (Workflow agent() bare-name)` → `#946 (Task subagent_type bare-name, empirically reproduced via a live failing call)`. All were confirmed, fixed, and verified within the session rather than left as unconfirmed theories.
-- **`worktree-merge-push.sh` rebase fallback**: One `git pull --rebase` divergence (main had advanced from the concurrent session) during #930's verify exit was handled automatically without manual intervention.
+- **goal 駆動のバッチ消化ループ**: `/goal` (「Backlog の retro/* をゼロにする」) と `/auto --batch N1 N2 ...` の List mode を組み合わせることで、当初件数が未確定かつ増加し続ける backlog を、固定リストなしに4ラウンド (5件 → 新規2件 → 新規3件 → 新規2件 → 0件) にわたって処理できた。各 `/verify` パスでの発見がそのまま次ラウンドの投入対象になった。
+- **opportunistic verification の相互検証効果**: ある Issue の verify 実行が、`gh pr view`/`gh issue view` によるライブ状態の直接的な実証拠を通じて、*別の* 関連 Issue の post-merge opportunistic/observation 条件を同一パス内で満たすケースが繰り返し発生した (例: #930 自身の `/auto` 実行が #927 の post-merge 条件を確認、#927 自身の実行が #915 の条件を確認)。これは「スループット自体が検証機会になる」設計が意図通り機能した例であり、専用の observation イベントを待たずに追加で3件 (#915, #916, #927) が完全な `phase/done` クローズに到達した。
+- **Tier 2 fallback catalog の無介入自己修復**: `code-completed-no-pr` パターン (worktree branch に commit は存在するが PR 未作成) が繰り返し発火した (#915, #918, #930, #934) が、いずれも `run-auto-sub.sh` 内部のカタログにより自動解決され、親セッションによる手動 salvage は一切不要だった。これは #915/#916/#927 の修正の発端となった過去のインシデント (#893/#906/#897) とは対照的な結果である。
+- **直接的証拠に基づく false-positive の連鎖調査**: `detect-wrapper-anomaly.sh` の false positive に遭遇するたびに、額面通り信用せず `gh pr view --json reviews/state` でライブの GitHub 状態と突き合わせて確認した。これにより session 内で関連するが異なる2つの bug 系統が発見された: `#916 (merge/MERGED)` → `#927 (review/AC投稿済み)` → `#932 (review-completion-false-negative/recheck)`、および `#935 (Workflow agent() の bare 名)` → `#946 (Task subagent_type の bare 名、実際に失敗する呼び出しで実地確認)`。いずれも未確認の仮説のまま放置せず、session 内で確認・修正・検証まで完了した。
+- **`worktree-merge-push.sh` の rebase フォールバック**: #930 の verify exit 時に発生した `git pull --rebase` の diverge (並行セッションにより main が進んでいた) は、手動介入なしに自動処理された。
 
 ## Findings
 
-- `/verify` invoked via `Skill()` from a parent `/auto --batch` orchestration (not via a `run-*.sh` bash wrapper) never has `AUTO_EVENTS_LOG`/`AUTO_SESSION_ID` set, so the phase_start/phase_complete/verify_user_confirm instrumentation added by #902 never fires in this invocation pattern — confirmed directly (checked `${AUTO_EVENTS_LOG:-}` was empty) during #915's verify pass. [No action: already reported via comment on #902 — existing Issue tracks this instrumentation gap]
-- #908 (patch route, XS) exhausted all 3 internal auto-retry attempts because each attempt's full bats-suite background wait outran the retry cycle before a commit could land, leaving a complete, correct fix stranded on an unmerged worktree branch (`worktree-code+issue-908`, commit `cfb7f4a6`) with the phase silently defaulting to Tier3 `abort`. [No action: root-cause class (silent no-op detection gaps in code phase) already tracked by open Issue #465; specific Issue #908 hand-off confirmed to a separate concurrent session by the user]
-- A background task for #948's code-patch phase reported `killed` status, but the underlying commit (`978d3f97`, `closes #948`) had already landed correctly before the kill signal was observed — the harness's background-task completion/kill-notification ordering raced with the actual process completion. [No action: harness-level background-task lifecycle behavior, outside this repository's scope]
-- Three concurrent `/auto` sessions (this one, `73702-...`, and at least one earlier one referenced in `docs/reports/orchestration-recoveries.md`) ran against the same repository throughout the observation window without coordination beyond git's own conflict resolution; `check-verify-dirty.sh`'s `other-session` classification and `worktree-merge-push.sh`'s rebase fallback both handled this gracefully every time they were exercised. [No action: expected multi-session behavior; no defect observed, existing icebox candidates #598/#668 already track deeper orchestration-scale improvements in this area]
-- `docs/reports/orchestration-recoveries.md`'s `recoveries-auto-fire` threshold-based auto-filing (Step 15) produced empty output on every one of the 16 verify passes this session ran, despite the `code-completed-no-pr` Tier 2 pattern recurring at least 4 times narratively — the structured `recovery` event only got logged once, so the per-symptom count likely never reached the configured threshold. [No action: mechanism behaved as designed given the logged counts; if under-logging of Tier 2 self-heals turns out to be systemic it would need dedicated investigation, but that is speculative beyond this session's evidence]
+- 親 `/auto --batch` オーケストレーションから `Skill()` 経由で起動された `/verify` (`run-*.sh` bash wrapper 経由ではない) では `AUTO_EVENTS_LOG`/`AUTO_SESSION_ID` が一度も設定されず、#902 で追加された phase_start/phase_complete/verify_user_confirm の計装がこの起動パターンでは発火しない — #915 の verify パスで `${AUTO_EVENTS_LOG:-}` が空であることを直接確認して裏付けた。[No action: 既に #902 へのコメントで報告済み — 既存 Issue が本計装ギャップを追跡している]
+- #908 (patch route、XS) は、各試行のフル bats スイートのバックグラウンド待機が retry サイクルを超過し commit が着地する前に終わってしまうため、内部 auto-retry を3回すべて使い切った。結果として完全で正しい修正が未マージの worktree branch (`worktree-code+issue-908`、commit `cfb7f4a6`) に取り残され、phase は暗黙的に Tier3 `abort` へ帰着した。[No action: 根本原因のクラス (code phase における silent no-op 検知のギャップ) は既存の open Issue #465 で追跡済み。#908 個別の引き継ぎはユーザー指示により別の並行セッションへ確定済み]
+- #948 の code-patch phase のバックグラウンドタスクが `killed` ステータスを報告したが、実際には該当 commit (`978d3f97`、`closes #948`) は kill シグナル検知より前に正しく着地済みだった — ハーネスのバックグラウンドタスク完了通知と kill 通知の順序が実プロセス完了とレースした。[No action: ハーネス側のバックグラウンドタスクライフサイクルの挙動であり、本リポジトリのスコープ外]
+- 観測期間全体を通じて3つの並行 `/auto` セッション (本セッション、`73702-...`、および `docs/reports/orchestration-recoveries.md` に記載のある少なくとも1件の先行セッション) が同一リポジトリに対して git 自身のコンフリクト解決以上の調整なしに稼働していたが、`check-verify-dirty.sh` の `other-session` 分類と `worktree-merge-push.sh` の rebase フォールバックは、実際に発火した際にはいずれも問題なく処理した。[No action: 複数セッション並行稼働時の想定内挙動であり、不具合は観測されなかった。この領域のより深いオーケストレーション規模の改善は既存の icebox 候補 #598/#668 が既に追跡している]
+- `docs/reports/orchestration-recoveries.md` の `recoveries-auto-fire` 閾値ベース自動起票 (Step 15) は、本セッションが実行した16回の verify パスすべてで空出力だった。`code-completed-no-pr` の Tier 2 パターンは体感的には少なくとも4回再発していたにもかかわらず、構造化 `recovery` イベントとして記録されたのは1件のみで、symptom 別カウントが設定閾値に到達しなかったためと考えられる。[No action: ログに記録された件数を前提とすれば機構は設計通りに動作している。Tier 2 自己修復のログ記録漏れが構造的なものであれば専用調査が必要になるが、本セッションの証拠だけではその域を出ない推測にとどまる]
 
 ## Auto Retrospective
 
 ### Improvement Proposals
 
-- N/A — all findings above resolved to `[No action: ...]`; no new Issue filed from this retrospective. (5 Issues were filed during the session's own `/verify` passes — #927, #932, #935, #945, #946 — and are already tracked as closed/in-flight; see Concurrent Sessions / Metrics above.)
+- N/A — 上記の Findings はすべて `[No action: ...]` に帰着しており、本 retrospective からの新規 Issue 起票はなし (session 自身の `/verify` パス中に5件 — #927, #932, #935, #945, #946 — を起票済みで、いずれも既にクローズ/対応中として追跡されている。詳細は上部の Concurrent Sessions / Metrics を参照)。
 
 ## Skill Self-Update Propagation Note
 
@@ -85,12 +85,12 @@ Session 中に以下の skill が更新されました (本 session には未適
 - skills/issue/SKILL.md: (no change)
 - skills/audit/SKILL.md: 78116b16 → 48a1b083
 
-Most of these hash changes stem from #930's `detect-foreign-worktree.sh` addition, which touched the shared `allowed-tools` frontmatter of 5 SKILL.md files (spec/code/review/merge/verify), plus #946/#935's `subagent_type` namespace fixes to `skills/review/SKILL.md`. None of these were behavioral regressions relative to this session's own work — they were this session's own commits landing mid-session and being picked up by the next `/auto` invocation's fresh subprocess.
+これらのハッシュ変更のほとんどは、#930 の `detect-foreign-worktree.sh` 追加 (5つの SKILL.md ファイル [spec/code/review/merge/verify] の共有 `allowed-tools` frontmatter を変更) と、#946/#935 による `skills/review/SKILL.md` への `subagent_type` namespace 修正に由来する。いずれも本セッション自身の作業に対する挙動退行ではなく、本セッション自身の commit が session 途中で着地し、次の `/auto` 呼び出しの新規 subprocess に反映されたものである。
 
 ## Filed Issues
 
-- #927 (detect-wrapper-anomaly review-phase silent-no-op false positive)
-- #932 (detect-wrapper-anomaly review-completion-false-negative post-recovery false positive)
-- #935 (workflow-guidance.md FINDERS bare agentType name)
-- #945 (gh-pr-review.sh diff-range-outside 422 error)
-- #946 (SKILL.md static Task fan-out bare agentType name)
+- #927 (detect-wrapper-anomaly の review phase silent-no-op 誤検出)
+- #932 (detect-wrapper-anomaly の review-completion-false-negative リカバリ後誤検出)
+- #935 (workflow-guidance.md の FINDERS bare agentType 名)
+- #945 (gh-pr-review.sh の diff 範囲外行 422 エラー)
+- #946 (SKILL.md の静的 Task fan-out bare agentType 名)
