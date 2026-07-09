@@ -8,3 +8,6 @@
 - **Source**: parent session manual recovery
 - **Recovery type**: silent-hang-after-triage-body-refinement-completed-manually
 - **Outcome**: success
+
+## Consumed Comments
+No new comments since last phase.
