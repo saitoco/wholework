@@ -113,12 +113,24 @@ _repo_root="$(dirname "$SCRIPT_DIR")"
 
 ## Auto Retrospective
 
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| code  | patch | SUCCESS (manual recovery) | `run-code.sh` background task stopped externally mid-run; parent session completed remaining work (bats run confirmation, test-mock commit, Code Retrospective, worktree merge) manually |
+| verify | -    | SUCCESS | All 5 acceptance conditions PASS on first attempt |
+
+### Orchestration Anomalies
+- `run-code.sh`'s internal auto-retry (silent no-op detection) fired once, then its second-attempt stale-worktree cleanup failed (`Failed to remove stale worktree` / `Failed to delete stale branch`) because the worktree carried an administrative `git worktree lock` from the first session that was never released (the session ended via external background-task termination rather than the normal exit path). The parent `/auto` session subsequently lost visibility into the retry attempt (background task reported `killed`/`stopped`), requiring manual reconciliation: `git worktree unlock` → merge via `worktree-merge-push.sh` → cleanup.
+
 ### Manual recovery (code-patch)
 - **Date**: 2026-07-09 14:48 UTC
 - **Issue**: #966, phase: code-patch
 - **Source**: parent session manual recovery
 - **Recovery type**: background-task-killed-manual-completion
 - **Outcome**: success
+
+### Improvement Proposals
+- See `## Verify Retrospective` → `### Improvement Proposals` (filed as #969: `run-code.sh` stale worktree cleanup should call `git worktree unlock` before `git worktree remove --force`).
 
 ## Verify Retrospective
 
