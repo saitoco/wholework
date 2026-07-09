@@ -110,6 +110,10 @@ MOCK
     # Real retry-on-kill.sh (sourced via WHOLEWORK_SCRIPT_DIR; must be present or source fails)
     cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/retry-on-kill.sh" "$MOCK_DIR/retry-on-kill.sh"
 
+    # Real get-config-value.sh (needed to exercise .wholework.yml always-pr reads per test)
+    cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/get-config-value.sh" "$MOCK_DIR/get-config-value.sh"
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+
     # Mock auto-checkpoint.sh: no-op milestone operations so existing tests are unaffected
     cat > "$MOCK_DIR/auto-checkpoint.sh" <<'MOCK'
 #!/bin/bash
@@ -206,6 +210,40 @@ MOCK
     grep -q "42 --patch" "$RUN_CODE_LOG"
     [ ! -f "$RUN_REVIEW_LOG" ]
     [ ! -f "$RUN_MERGE_LOG" ]
+}
+
+@test "Size XS + always-pr: true: promoted to pr route (run-code.sh --pr, run-review.sh, run-merge.sh called)" {
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+    echo "always-pr: true" >> "$BATS_TEST_TMPDIR/.wholework.yml"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"always-pr: true is set in .wholework.yml. Promoting to pr route."* ]]
+    grep -q "42 --pr" "$RUN_CODE_LOG"
+    [ -f "$RUN_REVIEW_LOG" ]
+    [ -f "$RUN_MERGE_LOG" ]
+}
+
+@test "Size S + always-pr: true: promoted to pr route (run-code.sh --pr, run-review.sh, run-merge.sh called)" {
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "S"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+    echo "always-pr: true" >> "$BATS_TEST_TMPDIR/.wholework.yml"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"always-pr: true is set in .wholework.yml. Promoting to pr route."* ]]
+    grep -q "42 --pr" "$RUN_CODE_LOG"
+    [ -f "$RUN_REVIEW_LOG" ]
+    [ -f "$RUN_MERGE_LOG" ]
 }
 
 @test "Size M: run-code.sh --pr, run-review.sh --light, run-merge.sh called; verify is NOT called (deferred to parent /auto)" {
