@@ -101,18 +101,28 @@ fi
 ### Rework
 - なし (実装は Spec Implementation Steps 1-5 の順に一度で完了。上記2件のテストギャップはフルスイート実行時に発見・その場で追加修正し、そのまま最終コミットに含めた)
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Code Retrospective で報告済みの2件 (`tests/run-verify.bats` の Spec 未記載、`tests/run-code.bats` stash テストの個別依存判定漏れ) 以外に、review-light によるフルスコープ再確認でも新規の乖離は検出されなかった。5スクリプトの修正内容は Spec Implementation Steps と行単位で一致していた。
+
+### Recurring issues
+`dirname "$SCRIPT_DIR"` による repo-root 誤算出パターンは #966 (`worktree-merge-push.sh`) → 本 Issue (5ファイル) → `check-file-overlap.sh:36` (follow-up 対象として特定済み、未着手) と複数 Issue にまたがって出現している。同種パターンが `scripts/` 配下に散発する背景には、プラグインとして他プロジェクトから呼び出される wholework の実行モデル (`SCRIPT_DIR` がプラグインインストール場所を指し、CWD ベースの repo root と乖離する) があり、根本的な再発防止には「新規スクリプト追加時に repo-root 算出を `git rev-parse --show-toplevel` ベースの共通ヘルパーに強制する」仕組み (lint ルールや共有関数化) が有効な可能性がある。現状は Issue 単位のスポット修正が続いている。
+
+### Acceptance criteria verification difficulty
+UNCERTAIN なし。5件の `grep "git rev-parse --show-toplevel"` AC は機械的に一意に判定でき、横断確認 rubric も `dirname "$SCRIPT_DIR"` の再 grep で客観的に検証できた。Issue Notes に記載の通り「rubric → 機械検証への差し替え」が事前に行われていたことが、今回の検証容易性に直接寄与している。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Size=S だが `--pr --non-interactive` の明示フラグに従い pr route (branch+PR) で実行した (Size 自動判定より明示フラグを優先する既定ルール通り)。
-- 対象5ファイルすべてで `git rev-parse --show-toplevel 2>/dev/null || pwd` パターンに統一し、`#966` (`run-auto-sub.sh`) で確立済みのパターンを踏襲した。
-- `bats tests/` フルスイートで behavioral change を検出したため (`grep -rl` で対象スクリプト名が Spec 未記載のテストファイルにもヒット)、narrow scope ではなくフルスイートを実行し、Spec 未記載だった `tests/run-verify.bats` のテストギャップを実装段階で発見・修正した。
+- Size M (`get-issue-size.sh` 値) だが `--light --non-interactive` の明示フラグに従い light mode (review-light 1 エージェント統合レビュー) で実行した。
+- 5件の grep AC・横断確認 rubric AC をすべて自ら独立に再検証 (grep 実行) してから PASS 判定した。既に Issue 側で `[x]` 済みだった状態と一致することを確認し、チェックボックスの再更新は no-op とした。
 
 ### Deferred Items
-- `scripts/check-file-overlap.sh:36` の同型パターンは Spec Notes の通り本 Issue のスコープ外とし、follow-up Issue での対応を推奨する (dead code かつ既存テストとの分離設計に緊張関係があるため単純な置換では済まない)。
+- `scripts/check-file-overlap.sh:36` の同型パターン修正は本 Issue のスコープ外のまま (follow-up Issue 未起票)。
 - Post-merge AC (別プロジェクト実地確認) は manual verify-type のため `/verify` フェーズでの人手確認待ち。
 
 ### Notes for Next Phase
-- `/review` では Spec Notes の「Size 再評価の見込み」記述 (実際の Changed Files 8件は Axis 1 で L 相当) を踏まえつつ、明示 `--pr` 指定により pr route が既に適用済みである点を前提に進めてよい。
-- Code Retrospective の Design Gaps 2件 (テストスイート網羅漏れ、git モック上書き箇所の個別依存判定) は、今後同種の repo-root 修正 Issue のレビュー観点として活用できる。
+- `/merge` は MUST issue なし・CI 全 SUCCESS のため通常フローで進めてよい。
+- `/verify` では Post-merge AC (tofas 等別プロジェクトでの実地確認) が唯一の残タスク。
