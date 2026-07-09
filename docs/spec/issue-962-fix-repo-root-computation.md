@@ -88,3 +88,31 @@ fi
 
 ### Size 再評価の見込み
 本 Issue は triage 時点で Size=S (patch route) だが、実際の Changed Files は本番スクリプト5件 + テスト3件の計8件となり、`modules/size-workflow-table.md` の Axis 1 (6-10件 → L) に該当する。Axis 2 の「root cause の明確なバグ修正 (-1 step)」を適用しても M 相当となる可能性が高い。Step 18 (Size-to-Workflow Determination) で正式に再評価し、必要であれば pr route (M) に昇格する。参考: Issue #966 (対象1ファイル + テスト1ファイルの計2件、同種の修正) は Size=S/patch route のまま完了しているが、本 Issue は対象ファイル数が5倍のため異なる判断になる可能性がある。
+
+## Code Retrospective
+
+### Deviations from Design
+- Spec の Size 再評価見込み (Notes 末尾) を待たず、`--pr --non-interactive` フラグが明示指定されていたため pr route (branch+PR) で実行した。明示フラグは Size 自動判定より優先される既定の挙動であり、逸脱ではなく設計通りの優先順位適用。
+
+### Design Gaps/Ambiguities
+- Spec の Changed Files は `tests/append-consumed-comments-section.bats`・`tests/run-code.bats`・`tests/apply-fallback.bats` の3ファイルのみを変更対象として列挙していたが、実装後の `bats tests/` フルスイート実行で `tests/run-verify.bats` (同じく `append-consumed-comments-section.sh` を対象とする別系統のテストスイート) が4件 FAIL した。原因は同ファイルの `setup()` デフォルト `$MOCK_DIR/git` モックと2箇所の個別テスト内モックがいずれも `rev-parse --show-toplevel` 未対応で、`_repo_root` が空文字列に解決されたため。Spec の「横断確認」は `scripts/*.sh` 側のみを対象としており、`tests/` 側で同一スクリプトを参照する別スイートの網羅までは対象にしていなかった。同様の齟齬を避けるため、今後 repo-root 算出パターンを変更する Issue では `git grep -l "<変更対象スクリプト名>" tests/` で影響テストファイルを事前に洗い出すことを推奨する。
+- Spec は `tests/run-code.bats` の git モック上書き4箇所 (stale-branch/signoff×2/stash) を「対象外で問題ない」と分類していたが、実際には stash テスト (`auto-retry: preflight stashes parent-main stray untracked file before retry re-invocation`) のみ `_REPO_ROOT` (→ `.wholework.yml` の `auto-retry-on-fail` 判定) に依存しており、ハンドラ追加が必要だった。他の3箇所 (stale-branch/signoff×2) は該当コードパスが `_REPO_ROOT` を経由しないため無害という判定は正しかった。「4箇所とも対象外」という一括判定ではなく、各上書きモックが `_REPO_ROOT`/`_WW_YML` 依存パスに到達するかを個別に確認する必要があった。
+
+### Rework
+- なし (実装は Spec Implementation Steps 1-5 の順に一度で完了。上記2件のテストギャップはフルスイート実行時に発見・その場で追加修正し、そのまま最終コミットに含めた)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Size=S だが `--pr --non-interactive` の明示フラグに従い pr route (branch+PR) で実行した (Size 自動判定より明示フラグを優先する既定ルール通り)。
+- 対象5ファイルすべてで `git rev-parse --show-toplevel 2>/dev/null || pwd` パターンに統一し、`#966` (`run-auto-sub.sh`) で確立済みのパターンを踏襲した。
+- `bats tests/` フルスイートで behavioral change を検出したため (`grep -rl` で対象スクリプト名が Spec 未記載のテストファイルにもヒット)、narrow scope ではなくフルスイートを実行し、Spec 未記載だった `tests/run-verify.bats` のテストギャップを実装段階で発見・修正した。
+
+### Deferred Items
+- `scripts/check-file-overlap.sh:36` の同型パターンは Spec Notes の通り本 Issue のスコープ外とし、follow-up Issue での対応を推奨する (dead code かつ既存テストとの分離設計に緊張関係があるため単純な置換では済まない)。
+- Post-merge AC (別プロジェクト実地確認) は manual verify-type のため `/verify` フェーズでの人手確認待ち。
+
+### Notes for Next Phase
+- `/review` では Spec Notes の「Size 再評価の見込み」記述 (実際の Changed Files 8件は Axis 1 で L 相当) を踏まえつつ、明示 `--pr` 指定により pr route が既に適用済みである点を前提に進めてよい。
+- Code Retrospective の Design Gaps 2件 (テストスイート網羅漏れ、git モック上書き箇所の個別依存判定) は、今後同種の repo-root 修正 Issue のレビュー観点として活用できる。
