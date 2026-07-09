@@ -227,6 +227,7 @@ Background セクションの技術的主張 (`observation-trigger.sh`, `pr-revi
 
 #### verify
 - Pre-merge rubric AC 2件とも PASS (bats 4件全て実行し PASS を確認)。post-merge の observation AC 2件 (`event=pr-review-full` / `event=auto-run`) は該当イベント発火まで未チェックのまま `phase/verify` を維持。
+- **2026-07-09 追記 (`/auto 955` 経由の observation cascade)**: AC4 (`event=auto-run`) を PASS 判定。本 `/verify` 実行自体が `/auto 955` の Event-based observation scan から dispatch された nested `/verify` であり、#774〜#930 まで16件を逐次処理する過程で毎回 `detect-foreign-worktree.sh` が `none` を返し、専用 worktree の作成→`ExitWorktree`→`worktree-merge-push.sh`→cleanup という正規フローで安全に `origin/main` へコミットされたことを実証した。誤コミットや worktree 混入は一度も発生しなかった。AC3 (`event=pr-review-full`) は `/review` 未実行のため引き続き未確認。
 
 ### Improvement Proposals
 - `skills/review/workflow-guidance.md` のインラインスクリプトの `FINDERS` 定義 (`agentType: 'review-spec'` / `'review-bug'`) を `wholework:review-spec` / `wholework:review-bug` の namespace 付きに修正する。Pre-flight チェックの文言も「FINDERS 内で使用する正確な文字列で Agent tool available agentType list の存在確認をすること」に明確化する。#882 と同型の failure mode (headless セッションでのカスタム agentType 未解決) の再発防止。
