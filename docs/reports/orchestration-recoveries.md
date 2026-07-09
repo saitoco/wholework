@@ -64,29 +64,6 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
-## 2026-07-09 08:44 UTC: code-patch-tier3-recovery
-
-### Context
-- Issue #268, phase: code-patch
-- Source: recovery-sub-agent
-- Wrapper: run-code-patch.sh, exit code: 1
-- Log tail: "Error: parent main has uncommitted changes. Resolve before proceeding."
-
-### Diagnosis
-- always-pr: true により --patch 指定が無視され PR ルート (branch + PR) で実行された結果、PR #276 (state: OPEN, closes #268) が既に作成済みであることを gh pr view で確認した。reconcile-phase-state は patch ルート専用の「origin/main への直接コミット」基準でチェックしたため matches_expected: false という false negative になっており、実際にはフェーズは完了している。これ以上の retry は重複 PR 作成のリスクがあり、かつ無関係な dirty main (select.tsx, globals.css) によりどのみちブロックされるため、skip して次フェーズへ進むのが適切。
-
-### Recovery Applied
-- action=skip
-- steps: none
-
-### Outcome
-- success
-
-### Improvement Candidate
-- 未起票
-
----
-
 ## 2026-07-05 08:37 UTC: nested-verify-committed-to-review-worktree
 
 ### Context
