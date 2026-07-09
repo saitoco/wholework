@@ -11,3 +11,8 @@
 
 ## Consumed Comments
 No new comments since last phase.
+### Orchestration Anomalies
+- **[json-mode-silent-hang]** Tier 2 fallback applied: phase=`code-pr`, action=run-code.sh-pr-retry, result=recovered.
+
+### Improvement Proposals
+- N/A (resolved by Tier 2 fallback catalog)
