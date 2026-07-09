@@ -60,3 +60,6 @@ Title "spec: 振る舞いを変える設定追加時に docs/tech.md を Changed
 
 ### Improvement Proposals
 - N/A
+
+## Consumed Comments
+No new comments since last phase.
