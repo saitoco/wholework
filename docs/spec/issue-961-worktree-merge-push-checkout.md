@@ -99,3 +99,34 @@
 - `/verify` は Post-merge AC (複数セッションでの merge-to-main が他セッションのブランチに影響しないことの実地確認) を人手確認として扱うこと。
 - CI は全ジョブ SUCCESS 済み、squash merge・remote branch 削除ともに正常完了。
 - push-retry ループの checkout 依存 (review フェーズ Deferred Items 参照) について、follow-up Issue 起票の要否を判断すること。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- `/issue 961` の非対話実行が triage 直後 (Triage AC audit コメント投稿後) に silent hang → kill され、親セッション (`/auto --batch`) が引き継いで AC2 の verify command 差し替え (常時 PASS だった `file_not_contains "git checkout"` を実在文字列 `git pull --rebase` に差し替え) を含む refinement を完了させた。詳細は `docs/spec/issue-961-recovery.md` (manual recovery 記録) 参照。
+
+#### spec
+- `/spec 961` も同様に silent hang → kill されたが、Tier 1 reconciliation (`reconcile-phase-state.sh issue --check-completion`) は `matches_expected: true` を返した後、実際には spec phase 自体は最終的に正常完了 (Design complete メッセージがログに記録済み) しており、真の kill は spec 完了後・code phase 遷移の間際だったと判明した。Spec 内容そのものに欠陥はなかった。
+
+#### code
+- code phase は Tier 2 fallback catalog による自動リカバリが1回発生 (`[recovery] tier2 fallback catalog: recovered`) し、Spec の Auto Retrospective に記録済み。Code Retrospective の Rework 節が記録する「worktree-local path 取り違え」(絶対パス指定時に worktree セグメントを欠落させ共有メインリポジトリを誤編集) は、review フェーズでも再発した (下記)。
+
+#### review
+- review phase は harness kill (SIGKILL 相当、ログが phase 開始直後で途切れ、PR にコメント0件) で1回中断した。Tier 2 (anomaly detector) は unknown pattern、Tier 3 (`orchestration-recovery` sub-agent) は "transient failure, nothing to preserve" と診断し `action=retry` を返却。`run-review.sh 968 --light` の再実行で正常完了した (Review Response Summary 確認済み)。
+- 再実行直前、共有 main 作業ディレクトリに **wholework に存在しない Issue #267 / PR #289 を参照する `docs/reports/orchestration-recoveries.md` への未コミット変更**を発見した。これは Issue #966 (`_repo_root` 誤算出によるリカバリ記録の誤リポジトリ書き込み、既に CLOSED = 修正済みのはず) と同型のパターンが再発したものと推測される。ユーザー承認を得て `git stash` で退避し (削除はしていない)、review 再実行をブロックしないようにした。詳細は Improvement Proposals 参照。
+- review-light は Code Retrospective と同型の「worktree-local path 取り違え」(絶対パス指定時に worktree セグメントを欠落) を独立に経験し、`git show HEAD:...` で復旧した (Review Retrospective の Recurring issues 節に記録済み)。同一パターンが code/review 2 フェーズで連続再発している。
+- review-light は push-retry ループ (行129-148) の checkout 依存という SHOULD 指摘を検出したが、Issue #961 の Changed Files が明示的にスコープ外としているため Skip 判定・follow-up 化を Deferred Items へ引き継いだ (Improvement Proposals 参照)。
+
+#### merge
+- squash merge は mergeable=true / CI success / review 済みで一発完了。conflict なし。
+
+#### verify
+- Pre-merge 3件 (rubric×2, file_not_contains×1) はいずれも UNCERTAIN なく一発 PASS。Post-merge の manual AC (複数セッション実地確認) は Claude 非実行のため未チェックのまま `phase/verify` を維持。verify command 自体の不整合は検出されなかった。
+
+### Improvement Proposals
+
+- **push-retry ループの checkout 依存 (`scripts/worktree-merge-push.sh` 行129-148) の解消**: 本 Issue #961 が解消したのは primary merge path のみで、push 失敗時の retry ループは同一スクリプト内に残る `git rebase "origin/${BASE_BRANCH}"` (bare、`-C` 指定なし) が引き続き共有ディレクトリの現在の checkout に暗黙依存している。#961 と同一の Root Cause パターンが同一ファイル内の別関数に残存しており、再発性が高い (パターン/構造的 — Tier 1 相当)。
+- **worktree-local path 取り違えが code/review 2 フェーズで連続再発**: 絶対パスで `Read`/`Edit` する際に worktree セグメント (`.claude/worktrees/{name}/`) を欠落させ、共有メインリポジトリ側を誤って参照・編集する事象が、本 Issue の code フェーズと review フェーズの両方で独立に発生した。`modules/worktree-lifecycle.md` は Edit/Write 呼び出しについて `hook-worktree-path-guard.sh` で構造的に強制しているが、**Read** ツールでの誤参照 (今回2件とも実際に発生したのは Read/Edit 対象の取り違えで、Edit 自体はガードされたか手動で気づいて復旧した) は同ガードの対象外であり、繰り返し発生している (パターン/lesson — Tier 2 相当の可能性もあるが、複数 skill にまたがる共有モジュールの挙動のため Tier 1 寄りと判断)。
+- **`docs/reports/orchestration-recoveries.md` への誤リポジトリ書き込みが Issue #966 修正後も再発**: review フェーズ再開直前、wholework に存在しない Issue #267/PR #289 を参照するリカバリー記録が共有 main 作業ディレクトリに未コミットで存在していた。Issue #966 (`run-auto-sub.sh` の `_repo_root` を `git rev-parse --show-toplevel` ベースに修正、CLOSED 済み) と同型の症状だが、#966 の Acceptance Criteria は `run-auto-sub.sh` の `_repo_root` のみを対象としており、Tier 3 リカバリ経路 (`spawn-recovery-subagent.sh` 等) 独自の repo-root 解決ロジックが同種の欠陥を持ったまま残っている可能性が高い。安全側で `git stash` により退避済み (削除はしていない、ユーザー承認済み)。実際に誤書き込みを行ったスクリプト・セッションを特定できていないため、Tier 1 の構造的リスク (再発・複数スクリプトにまたがる可能性) として起票を推奨する。
