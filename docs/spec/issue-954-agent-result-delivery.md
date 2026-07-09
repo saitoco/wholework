@@ -111,3 +111,29 @@ No new comments since last phase.
 
 ### Acceptance criteria verification difficulty
 - N/A — `file_contains`×6 / `section_contains`×1 / `rubric`×1 の Pre-merge AC はいずれも UNCERTAIN なく一発で PASS 判定できた。rubric 条件文が SendMessage 主経路と Write フォールバックの両方を明示的に言語化していたため、grader 判断に曖昧さはなかった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- SPEC_DEPTH=light だったため `## issue retrospective` の Spec への転記 (Step 13) はスキップされた。これは light テンプレートの既定動作であり不備ではないが、GitHub Issue 側のコメントには `## Issue Retrospective` が残っているため、今回の verify retrospective は Issue コメント側の記録を直接参照して評価した。
+- Spec 作成時、`SendMessage` の実仕様を WebFetch/WebSearch ではなく ToolSearch で確認したことが Root Cause / Implementation Steps の精度に直結した。ハーネス内蔵ツールを対象とする Spec では、公開ドキュメントではなく実際の tool schema を ToolSearch で確認するのが有効なパターンとして機能した。
+
+#### design
+- N/A — Spec の Implementation Steps と Verification 項目数 (Pre-merge 8件) は Issue body の AC と完全一致しており、設計時点での抜け漏れはなかった。
+
+#### code
+- Implementation 自体は Spec 通りで逸脱なし (Code Retrospective 記載の通り)。ただし `run-code.sh` は 2 回の "silent no-op" (claude exited 0 だが PR 未作成) を経て 3 回目の試行で成功しており、その 3 回目もバックグラウンドタスクが `killed` 状態で終了した (`reconcile-phase-state.sh` の Tier 1 チェックで PR #959 の存在を確認し成功と判定)。オーケストレーション上のノイズであり実装内容には影響しなかったが、`/auto` 側の Step 4a Auto Retrospective で個別に記録する。
+
+#### review
+- review-light が Edge Cases/Robustness の観点で SHOULD 2 件を検出し、PR 内で両方修正済み: (1) team-lead のメッセージ待ちに閾値がなく無限ブロックの恐れ、(2) fallback ファイルが Step 12b 後もクリーンアップされない恐れ。Spec の Implementation Steps にはこの 2 点の記載がなかった — `SendMessage`/`Write` 併用型の配信パターンを新設する際は「待機タイムアウト」と「一時ファイル後始末」をセットで設計に含めるべき、という一般化可能な教訓 (Improvement Proposals 参照)。
+
+#### merge
+- N/A — CI success・review approved 相当を確認した squash merge。conflict なし。
+
+#### verify
+- Pre-merge 8 件はすべて UNCERTAIN なく一発 PASS。post-merge の manual AC (Size=XL Issue での実地確認) は Claude 非実行のため未チェックのまま `phase/verify` を維持。verify command 自体の不整合は検出されなかった。
+
+### Improvement Proposals
+- **配信系パターンの Spec チェックリスト化**: エージェントが `SendMessage`/`Write` 併用でオーケストレータへ結果配信する設計を Spec 化する際、Implementation Steps に「待機タイムアウト (何回の idle_notification / 何秒で fallback とみなすか)」と「一時ファイルの後始末 (`rm -f` 等)」を明示的に含めることをチェックリスト化する。今回は review フェーズで検出・修正されたが、Spec 作成時点で `skills/spec/skill-dev-constraints.md` のような SHOULD constraints リストに項目化しておけば `/spec` 段階で先回りできた (パターン/lesson — 今後同種の agent-to-orchestrator 配信パターンを設計する際に再利用可能)。
