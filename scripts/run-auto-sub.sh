@@ -6,6 +6,12 @@
 
 set -euo pipefail
 
+# Repo root of the caller's actual working directory (the project being worked on),
+# not the plugin's own install path. SCRIPT_DIR below resolves where this script
+# itself lives (${CLAUDE_PLUGIN_ROOT}/scripts) and must never be used to derive the
+# repo root that recovery commits/pushes target.
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+
 # Returns true if spec_rel_path has any changes (modified or untracked).
 # Uses git status --porcelain so untracked files are detected (unlike git diff --quiet).
 _spec_has_changes() {
@@ -66,9 +72,7 @@ _write_manual_recovery_to_spec() {
     return 0
   fi
 
-  local _script_dir="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
-  local _repo_root
-  _repo_root="$(dirname "$_script_dir")"
+  local _repo_root="$REPO_ROOT"
   local spec_dir="$_repo_root/docs/spec"
   local spec_file
   spec_file=$(ls "$spec_dir/issue-${issue}-"*.md 2>/dev/null | head -1 || true)
@@ -204,8 +208,7 @@ _write_tier2_recovery_to_spec() {
   local issue="$1"
   local meta_file="$2"
   _validate_recovery_args "$issue" || return 1
-  local _repo_root
-  _repo_root="$(dirname "$SCRIPT_DIR")"
+  local _repo_root="$REPO_ROOT"
   local spec_dir="$_repo_root/docs/spec"
   local spec_file
   spec_file=$(ls "$spec_dir/issue-${issue}-"*.md 2>/dev/null | head -1 || true)
@@ -244,8 +247,7 @@ _write_tier3_recovery_to_spec() {
   local phase="$2"
   local exit_code="$3"
   _validate_recovery_args "$issue" "$phase" || return 1
-  local _repo_root
-  _repo_root="$(dirname "$SCRIPT_DIR")"
+  local _repo_root="$REPO_ROOT"
   local spec_dir="$_repo_root/docs/spec"
   local spec_file
   spec_file=$(ls "$spec_dir/issue-${issue}-"*.md 2>/dev/null | head -1 || true)
@@ -295,8 +297,7 @@ _write_wrapper_retry_recovery() {
   local issue="$1"
   local phase="$2"
   local exit_code_arg="$3"
-  local _repo_root
-  _repo_root="$(dirname "$SCRIPT_DIR")"
+  local _repo_root="$REPO_ROOT"
   local _recoveries_file="${_repo_root}/docs/reports/orchestration-recoveries.md"
   if [[ ! -f "$_recoveries_file" ]]; then
     return 0
@@ -350,8 +351,7 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
 _observe_code_milestone() {
   local number="$1"
   local branch_name="worktree-code+issue-${number}"
-  local repo_root
-  repo_root="$(dirname "$SCRIPT_DIR")"
+  local repo_root="$REPO_ROOT"
 
   # Check for open PR with this branch as head
   local pr_match
@@ -519,7 +519,7 @@ run_phase_with_recovery() {
   # Tier 3: recovery sub-agent via claude -p (expensive, unknown anomaly only)
   if "$SCRIPT_DIR/spawn-recovery-subagent.sh" "$phase" "$issue" --log "$log_file" --exit-code "$exit_code"; then
     echo "${LOG_PREFIX} [recovery] tier3 sub-agent: recovered"
-    local _repo_root; _repo_root="$(dirname "$SCRIPT_DIR")"
+    local _repo_root="$REPO_ROOT"
     if ! git -C "$_repo_root" diff --quiet "docs/reports/orchestration-recoveries.md" 2>/dev/null; then
       if git -C "$_repo_root" add "docs/reports/orchestration-recoveries.md" \
          && git -C "$_repo_root" commit -s -m "Record Tier 3 recovery event for issue #${issue} ${phase} phase" \
@@ -609,7 +609,7 @@ case "$EFFECTIVE_SIZE" in
     # observe the current milestone and dispatch to the appropriate recovery action.
     # Gate: fire only when local branch or worktree dir exists (avoids first-run path).
     _CODE_PR_DONE=false
-    _REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+    _REPO_ROOT="$REPO_ROOT"
     _WORKTREE_DIR="${_REPO_ROOT}/.claude/worktrees/code+issue-${SUB_NUMBER}"
     _BRANCH_NAME="worktree-code+issue-${SUB_NUMBER}"
     if [[ -d "$_WORKTREE_DIR" ]] || \
@@ -679,7 +679,7 @@ case "$EFFECTIVE_SIZE" in
   L)
     # Resume preamble (same logic as M, pr route)
     _CODE_PR_DONE=false
-    _REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+    _REPO_ROOT="$REPO_ROOT"
     _WORKTREE_DIR="${_REPO_ROOT}/.claude/worktrees/code+issue-${SUB_NUMBER}"
     _BRANCH_NAME="worktree-code+issue-${SUB_NUMBER}"
     if [[ -d "$_WORKTREE_DIR" ]] || \
