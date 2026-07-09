@@ -60,3 +60,42 @@
 - **Auto-Resolve Log は本フェーズでは追加なし**: Issue 側の Auto-Resolve Log (Issue Retrospective コメントに記録済み) で AC2 の verify command が既に `file_not_contains "git pull --rebase"` に差し替えられており、Spec フェーズで新たに解決すべき曖昧点はなかった。
 - **非 `-C` フォールバックの削除は挙動変更を伴わない見込み**: 現行スクリプトで `git rebase "$BASE_BRANCH" "$FROM_BRANCH"` (worktree パスが見つからない場合の最終手段) に到達するのは `$FROM_BRANCH` の worktree が既に存在しない場合のみだが、Wholework の呼び出しパターンでは常に `ExitWorktree(action: "keep")` を経てから本スクリプトを呼ぶため、この分岐は実運用ではそもそも到達しない。削除は観測可能な挙動を変えるものではなく、潜在的な欠陥経路を閉じるものである。
 - `docs/spec/issue-961-recovery.md` は `/issue` フェーズでの silent-hang に対する手動リカバリ記録であり、本 Issue の技術設計とは無関係のため本 Spec には引き継いでいない (プロセス上の記録として別ファイルのまま残す)。
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜4 を計画通りに実装した。Step 1 (`scripts/worktree-merge-push.sh` の primary path 書き換え) は本セッション開始前に既に別セッションでコミット済み (34a59d1c) だったため、本セッションでは Spec の設計 (primary path / フォールバック tier 1・2 の分岐条件) と実装内容が一致していることを確認したのみで、追加変更は行っていない。
+
+### Design Gaps/Ambiguities
+- なし。Spec の Notes に技術的前提の実証結果が記録済みで、実装時に新たに確認すべき曖昧点はなかった。
+
+### Rework
+- worktree に `EnterWorktree` を経由せずセッションを再開したため、`modules/orchestration-fallbacks.md` と `tests/worktree-merge-push.bats` への最初の Edit 呼び出しが誤って共有メインリポジトリ (`/Users/saito/src/wholework/...`) の絶対パスに対して行われ、worktree 側 (`.claude/worktrees/code+issue-961/`) には反映されなかった。`bats tests/worktree-merge-push.bats` をworktree側で実行した際に旧テスト名のまま (`--from triggers git merge --ff-only` 等) 出力されたことで発覚。差分を worktree 側にコピーし、`git checkout --` でメインリポジトリ側を元の状態に復元して解消した。再開セッションでは、Edit/Write の対象パスが実際に worktree 内を指しているか (`pwd` 確認) を先に行うべきだった。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- なし。Primary FF-merge path・rebase fallback は Spec の Implementation Steps (tier1/tier2 フォールバック分岐) と実装が完全に一致しており、構造的な乖離は見られなかった。
+
+### Recurring issues
+- **worktree-local path の取り違えが code フェーズと review フェーズで連続して発生**: 本 review フェーズでも、`Read` ツールで最初に `scripts/worktree-merge-push.sh` を絶対パス指定した際、誤って共有メインリポジトリ側 (`/Users/saito/src/wholework/scripts/...`、worktree セグメント欠落) を読み込み、旧ロジック (`git pull --rebase` あり) を見てしまうという事象があった。`git show HEAD:...` で worktree 側の実コミット内容を確認して復旧した。code フェーズの Rework 記録 (同じ取り違えを Edit で経験) と合わせて、worktree セッションで絶対パスを扱う際は `pwd` 確認または worktree セグメントを含む絶対パスの使用を徹底する運用上の弱点が2フェーズ連続で顕在化した。
+- **push-retry ループの checkout 依存が本 Issue のスコープ境界をまたいで見落とされていた**: Issue #961 の Changed Files 節は primary merge path (行83-109) のみを修正対象と明示的にスコープしていたが、同一スクリプト内の push-retry ループ (行129-148、#853 由来、本 PR 未変更) には本 Issue の Root Cause と同一クラスの checkout 依存 (`git rebase` が HEAD に対して無条件に動作) が残存していた。スコープ境界の外側にある「同じ根本原因を共有するコード片」を横断的に検知する仕組みがなく、review-light エージェントへの追加コンテキスト注入 (プロンプトで明示的に当該箇所を指示) によって初めて発見できた。
+
+### Acceptance criteria verification difficulty
+- なし。Pre-merge AC 3件はいずれも rubric / file_not_contains ベースで機械的に PASS 判定でき、UNCERTAIN は発生しなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Code Review (review-light) で検出した push-retry ループの checkout 依存 (SHOULD) と関連ドキュメント整合性 (CONSIDER) は、Issue #961 の Changed Files 節が明示的にスコープ外としていること、および本 PR の主目的 (primary merge path の checkout レス化) が達成されていることを踏まえ、本 PR では修正せずレビューコメントとして記録するに留めた。
+- MUST issue が0件のため、gh-pr-review.sh は `COMMENT` イベントで投稿された (`REQUEST_CHANGES` は発生していない)。
+
+### Deferred Items
+- push-retry ループ (`scripts/worktree-merge-push.sh` 行129-148) の bare `git rebase "origin/${BASE_BRANCH}"` が HEAD (共有ディレクトリの現在のチェックアウト) に対して動作するため、foreign checkout + push race が重なると本 Issue と同種の欠陥 (無関係セッションのブランチを誤って書き換える) を再現しうる。follow-up Issue 化を検討 (`/verify` フェーズでの Improvement Proposal 集約に委ねる)。
+- Post-merge AC (複数セッション環境での実地確認) は manual verify-type のため、`/verify` フェーズでの人手確認待ち。
+
+### Notes for Next Phase
+- Pre-merge AC 3件はいずれも rubric / file_not_contains ベースで PASS 判定済み、Issue 本文のチェックボックスは既に `[x]` 済み (code フェーズ側で更新済みのものを維持)。
+- CI (`bats tests`, `Validate skill syntax`, `Forbidden Expressions check`, `macOS shell compatibility`, `DCO`) は全ジョブ SUCCESS。
+- Post-merge の manual AC 確認時は、共有メインディレクトリが他ブランチを checkout した状態で `worktree-merge-push.sh --from <branch>` を実行し、ref-fetch が拒否されつつ bare な rebase/merge が一切発行されないことに加え、push-retry ループに到達するケース (non-fast-forward push race) がある場合は push-retry の checkout 依存リスクも併せて観察すること。

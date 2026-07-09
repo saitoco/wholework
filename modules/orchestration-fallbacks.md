@@ -35,43 +35,41 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 ## ff-only-merge-fallback
 
 ### Symptom
-- `git merge <branch> --ff-only` exits non-zero
-- Typical message: `fatal: Not possible to fast-forward, aborting.`
+- `git fetch . <from-branch>:<base-branch>` exits non-zero
+- Typical messages: `fatal: refusing to fetch into branch 'refs/heads/<base>' checked out at ...` (exit 128, base is checked out somewhere) or `! [rejected] ... (non-fast-forward)` (exit 1, not a fast-forward)
 
 ### Applicable Phases
 - code (patch route — `scripts/worktree-merge-push.sh`)
 - merge
 
 ### Fallback Steps
-0. Immediately after `acquire_lock` (before the `--from` merge block): run `git fetch origin <base-branch>` as best-effort — failure emits a warning to stderr but does not abort. This ensures that subsequent ff-only merge and rebase steps reference an up-to-date `origin/<base-branch>` ref rather than a stale local snapshot.
-1. Log the FF failure to stderr: `echo "FF merge failed, attempting git pull --rebase origin <base>..." >&2`
-2. Run `git pull --rebase origin <base-branch>` to bring the local branch up to date with remote
-3. Re-attempt `git merge <worktree-branch> --ff-only`
-4. If the second attempt also fails (base advanced while worktree was running — local base is already in sync with origin but worktree branch has diverged):
-   a. Log to stderr: `echo "FF merge still failed; base may have diverged. Rebasing ..." >&2`
-   4a. Run `git merge-base --is-ancestor "origin/<base-branch>" "<from-branch>"` to check whether the worktree branch already contains `origin/<base-branch>` as an ancestor:
-       - Exit 0 (ancestor): log "is-ancestor=true; skipping rebase" to stderr and skip to step 4e directly — the silent `git rebase` no-op path is eliminated
-       - Exit non-0 (not ancestor) or command error: fall through to step 4b
-   b. Detect the worktree path for FROM_BRANCH via `git worktree list --porcelain | awk -v b="refs/heads/<from>" '/^worktree /{p=$2} $0 == "branch " b {print p; exit}'`
-   c. If a worktree path is found: run `git -C <worktree-path> rebase origin/<base-branch>` (rebase from inside the checked-out worktree, which avoids the "already checked out" error); on conflict, run `git -C <worktree-path> rebase --abort 2>/dev/null || true` and exit 1
-   d. If no worktree path is found (branch not checked out in any worktree): run `git rebase <base-branch> <from-branch>`; on conflict, run `git rebase --abort 2>/dev/null || true` and exit 1
-   e. On successful rebase (or is-ancestor skip): re-attempt `git merge <worktree-branch> --ff-only` (third attempt); failure propagates via `set -e`
+0. Immediately after `acquire_lock` (before the `--from` merge block): run `git fetch origin <base-branch>` as best-effort — failure emits a warning to stderr but does not abort. This ensures that subsequent ref-fetch and rebase steps reference an up-to-date `origin/<base-branch>` ref rather than a stale local snapshot.
+1. **Primary path**: run `git fetch . "<from-branch>:<base-branch>"` — a checkout-less ref-to-ref fetch within the same repository. Git itself refuses this when `<base-branch>` is checked out in any worktree (exit 128) or when it would not be a fast-forward (exit 1), so success means `<base-branch>` was fast-forwarded without touching the shared directory's working tree or HEAD.
+2. If the ref-fetch fails, check whether the shared directory itself has `<base-branch>` checked out (`git rev-parse --abbrev-ref HEAD`):
+   - If it matches `<base-branch>`: this is the one case ref-fetch is expected to reject on its own target. Run `git merge <from-branch> --ff-only` in place (safe, since the shared directory genuinely is `<base-branch>`). Failure here aborts with exit 1 and an explicit "resolve manually" message.
+   - If it does not match `<base-branch>` (a true divergence, or another session's foreign checkout): continue to step 3. Do **not** fall back to a bare `git rebase`/`git merge` against the shared directory's current HEAD — that would reintroduce the checkout-dependent defect this fallback exists to close.
+3. Run `git merge-base --is-ancestor "origin/<base-branch>" "<from-branch>"` to check whether the worktree branch already contains `origin/<base-branch>` as an ancestor:
+   - Exit 0 (ancestor): log "is-ancestor=true; skipping rebase" to stderr and skip to step 6 directly — the silent `git rebase` no-op path is eliminated
+   - Exit non-0 (not ancestor) or command error: fall through to step 4
+4. Detect the worktree path for FROM_BRANCH via `git worktree list --porcelain | awk -v b="refs/heads/<from>" '/^worktree /{p=$2} $0 == "branch " b {print p; exit}'`
+5. If a worktree path is found: run `git -C <worktree-path> rebase origin/<base-branch>` (rebase from inside the checked-out worktree, which avoids touching the shared directory and avoids the "already checked out" error); on conflict, run `git -C <worktree-path> rebase --abort 2>/dev/null || true` and exit 1. If no worktree path is found (branch not checked out in any worktree), exit 1 with an explicit "resolve manually" message — a bare `git rebase <base> <from>` is not used, since it would implicitly check out `<from-branch>` in the shared directory, the same defect class this fallback closes.
+6. On successful rebase (or is-ancestor skip): re-attempt `git fetch . "<from-branch>:<base-branch>"` (not a third bare `git merge --ff-only` — the ref-fetch keeps this retry checkout-less too); failure propagates via `set -e`
 
 ### Escalation
-- If `git pull --rebase` itself fails (e.g., rebase conflict), abort with a non-zero exit and output an error message requesting manual conflict resolution
-- If the rebase in step 4 encounters conflicts, abort rebase and exit 1 — hand off to recovery sub-agent (#316) or request human intervention
-- Automatic rebase is attempted only once; no further looping after step 4e failure
+- If the ref-fetch in step 1 fails for a reason other than the shared directory holding `<base-branch>` checked out (step 2's non-matching branch), and no worktree is found for `<from-branch>` in step 5, abort with a non-zero exit and output an error message requesting manual resolution
+- If the rebase in step 5 encounters conflicts, abort rebase and exit 1 — hand off to recovery sub-agent (#316) or request human intervention
+- Automatic rebase is attempted only once; no further looping after step 6 failure
 - Push retry loop (max 3): after all merge/rebase steps complete, `git push origin <base>` failures trigger a `git fetch + git rebase origin/<base> + git push` retry up to 3 times. On the 3rd failure, abort with exit 1 and "Manual push required." message. Rebase conflict during retry aborts with exit 1 (policy D maintained — no auto-resolve).
 
 ### Rationale
 - Inline logic in `scripts/worktree-merge-push.sh`
-- `git pull --rebase` is preferred over `git merge origin/<base>` to preserve a linear history
-- Step 4 (base-diverged rebase) added in #522: the existing `git pull --rebase` retry (steps 1–3) only handles the case where local base lags origin; when local base is already in sync with origin but the worktree branch was forked before a concurrent merge advanced base, a second ff-only failure occurs and worktree-branch rebase is required
-- `git -C <worktree-path> rebase` is preferred over `git rebase <base> <branch>` when the branch is checked out in a worktree, because git rejects rebase of a branch that is currently checked out elsewhere ("already checked out")
+- `git fetch . <from>:<base>` is preferred over `git pull --rebase origin <base>` as the primary path because it never depends on, or mutates, the shared directory's current checkout — git's own ref-fetch safety checks (checked-out-branch refusal, non-fast-forward refusal) reproduce `--ff-only` safety guarantees without ever touching working tree state. This closes the defect reported in #961, where the old `git pull --rebase origin <base>` fallback ran unconditionally against whatever branch the shared directory happened to have checked out, silently rebasing an unrelated session's in-progress branch
+- Step 3 (base-diverged rebase) added in #522: when local base is already in sync with origin but the worktree branch was forked before a concurrent merge advanced base, the ref-fetch is rejected as non-fast-forward and a worktree-branch rebase is required
+- `git -C <worktree-path> rebase` is preferred over a bare `git rebase <base> <branch>` when the branch is checked out in a worktree, because a bare rebase implicitly checks out `<branch>` in the shared directory — the same checkout-dependent defect class this fallback closes; the non-worktree bare-rebase fallback was removed in #961 for the same reason
 - Step 0 (fetch-after-lock) added in #853: in parallel session environments, the `origin/<base>` ref may be stale at lock acquisition time; an explicit fetch immediately after the lock is acquired ensures all subsequent ref comparisons use current remote state
-- Step 4a (is-ancestor check) added in #853: when `git rebase` reports "Current branch is up to date" (is-ancestor=true) but the local main ref differs, the subsequent ff-only merge still fails silently; the explicit is-ancestor check detects this and skips directly to ff-only merge, eliminating the silent no-op path
+- Step 3 (is-ancestor check) added in #853: when `git rebase` reports "Current branch is up to date" (is-ancestor=true) but the local main ref differs, the subsequent ref-fetch still fails silently; the explicit is-ancestor check detects this and skips directly to the ref-fetch retry, eliminating the silent no-op path
 - Push retry loop added in #853: in parallel session environments a concurrent session may push between the worktree rebase and the local push, causing a non-fast-forward push failure; the retry loop (max 3, fetch+rebase+push each iteration) resolves this without requiring human intervention
-- See also: #314 (phase state reconciler), #308 (orchestration improvement series), #517 (incident that triggered #522), #853 (parallel session race hardening)
+- See also: #314 (phase state reconciler), #308 (orchestration improvement series), #517 (incident that triggered #522), #853 (parallel session race hardening), #961 (checkout-less ref-fetch replacement for the `git pull --rebase` fallback, and removal of the non-worktree bare-rebase branch)
 
 ---
 

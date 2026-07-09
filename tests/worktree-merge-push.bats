@@ -124,14 +124,15 @@ MOCK
     grep -q -- ':-300}' "$SCRIPT"
 }
 
-@test "--from triggers git merge --ff-only" {
+@test "--from triggers checkout-less ref-fetch (primary path)" {
     run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch"
     [ "$status" -eq 0 ]
-    grep -q "merge test-branch --ff-only" "$GIT_LOG"
+    grep -q "fetch . test-branch:main" "$GIT_LOG"
     grep -q "push origin main" "$GIT_LOG"
+    ! grep -q "merge test-branch --ff-only" "$GIT_LOG"
 }
 
-@test "--from with FF failure triggers git pull --rebase and retry" {
+@test "--from with ref-fetch rejected while base is checked out locally merges in place" {
     cat > "$MOCK_DIR/git" <<MOCK
 #!/bin/bash
 echo "\$@" >> "$GIT_LOG"
@@ -139,13 +140,14 @@ if [[ "\$1" == "rev-parse" && "\$2" == "--show-toplevel" ]]; then
     echo "${BATS_TEST_TMPDIR}/test-repo"
     exit 0
 fi
+if [[ "\$1" == "fetch" && "\$2" == "." ]]; then
+    exit 1
+fi
+if [[ "\$1" == "rev-parse" && "\$2" == "--abbrev-ref" ]]; then
+    echo "main"
+    exit 0
+fi
 if [[ "\$1" == "merge" ]]; then
-    COUNT_FILE="${BATS_TEST_TMPDIR}/merge_count"
-    count=0
-    [ -f "\$COUNT_FILE" ] && count=\$(cat "\$COUNT_FILE")
-    count=\$((count + 1))
-    echo "\$count" > "\$COUNT_FILE"
-    [ "\$count" -eq 1 ] && exit 1
     exit 0
 fi
 exit 0
@@ -154,9 +156,10 @@ MOCK
 
     run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"FF merge failed"* ]]
-    grep -q "pull --rebase origin main" "$GIT_LOG"
+    [[ "$output" == *"checked out here; merging in place"* ]]
+    grep -q "merge test-branch --ff-only" "$GIT_LOG"
     grep -q "push origin main" "$GIT_LOG"
+    ! grep -q "pull --rebase" "$GIT_LOG"
 }
 
 @test "--base targets non-main branch" {
@@ -176,14 +179,17 @@ if [[ "\$1" == "rev-parse" && "\$2" == "--show-toplevel" ]]; then
     echo "${BATS_TEST_TMPDIR}/test-repo"
     exit 0
 fi
-if [[ "\$1" == "merge" ]]; then
-    COUNT_FILE="${BATS_TEST_TMPDIR}/merge_count"
+if [[ "\$1" == "rev-parse" && "\$2" == "--abbrev-ref" ]]; then
+    echo "other-branch"
+    exit 0
+fi
+if [[ "\$1" == "fetch" && "\$2" == "." ]]; then
+    COUNT_FILE="${BATS_TEST_TMPDIR}/fetch_count"
     count=0
     [ -f "\$COUNT_FILE" ] && count=\$(cat "\$COUNT_FILE")
     count=\$((count + 1))
     echo "\$count" > "\$COUNT_FILE"
-    # First two merge attempts fail; third succeeds
-    [ "\$count" -le 2 ] && exit 1
+    [ "\$count" -eq 1 ] && exit 1
     exit 0
 fi
 if [[ "\$1" == "worktree" && "\$2" == "list" ]]; then
@@ -206,8 +212,11 @@ MOCK
     [ "$status" -eq 0 ]
     [[ "$output" == *"base may have diverged"* ]]
     grep -q "worktree list --porcelain" "$GIT_LOG"
-    grep -q "rebase origin/main" "$GIT_LOG"
+    grep -q -- "-C ${WORKTREE_PATH} rebase origin/main" "$GIT_LOG"
     grep -q "push origin main" "$GIT_LOG"
+    ! grep -q "merge test-branch --ff-only" "$GIT_LOG"
+    fetch_count=$(grep -c "fetch . test-branch:main" "$GIT_LOG")
+    [ "$fetch_count" -eq 2 ]
 }
 
 @test "--from with base-diverged and rebase conflict aborts and exits non-zero" {
@@ -221,11 +230,12 @@ if [[ "\$1" == "rev-parse" && "\$2" == "--show-toplevel" ]]; then
     echo "${BATS_TEST_TMPDIR}/test-repo"
     exit 0
 fi
-if [[ "\$1" == "merge" ]]; then
-    exit 1
-fi
-if [[ "\$1" == "pull" ]]; then
+if [[ "\$1" == "rev-parse" && "\$2" == "--abbrev-ref" ]]; then
+    echo "other-branch"
     exit 0
+fi
+if [[ "\$1" == "fetch" && "\$2" == "." ]]; then
+    exit 1
 fi
 if [[ "\$1" == "worktree" && "\$2" == "list" ]]; then
     printf "worktree ${WORKTREE_PATH}\nbranch refs/heads/test-branch\n\n"
@@ -246,6 +256,40 @@ MOCK
     run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch"
     [ "$status" -ne 0 ]
     [[ "$output" == *"Rebase"*"failed with conflicts"* ]]
+    ! grep -q "push" "$GIT_LOG"
+}
+
+@test "--from with foreign checkout and no worktree found aborts without touching shared directory" {
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GIT_LOG"
+if [[ "\$1" == "rev-parse" && "\$2" == "--show-toplevel" ]]; then
+    echo "${BATS_TEST_TMPDIR}/test-repo"
+    exit 0
+fi
+if [[ "\$1" == "rev-parse" && "\$2" == "--abbrev-ref" ]]; then
+    echo "some-other-session-branch"
+    exit 0
+fi
+if [[ "\$1" == "fetch" && "\$2" == "." ]]; then
+    exit 1
+fi
+if [[ "\$1" == "worktree" && "\$2" == "list" ]]; then
+    printf ""
+    exit 0
+fi
+if [[ "\$1" == "merge-base" && "\$2" == "--is-ancestor" ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Cannot locate a worktree"* ]]
+    ! grep -q "merge test-branch --ff-only" "$GIT_LOG"
+    ! grep -qE "^rebase " "$GIT_LOG"
     ! grep -q "push" "$GIT_LOG"
 }
 
@@ -286,13 +330,17 @@ if [[ "\$1" == "rev-parse" && "\$2" == "--show-toplevel" ]]; then
     echo "${BATS_TEST_TMPDIR}/test-repo"
     exit 0
 fi
-if [[ "\$1" == "merge" ]]; then
-    COUNT_FILE="${BATS_TEST_TMPDIR}/merge_count"
+if [[ "\$1" == "rev-parse" && "\$2" == "--abbrev-ref" ]]; then
+    echo "other-branch"
+    exit 0
+fi
+if [[ "\$1" == "fetch" && "\$2" == "." ]]; then
+    COUNT_FILE="${BATS_TEST_TMPDIR}/fetch_count"
     count=0
     [ -f "\$COUNT_FILE" ] && count=\$(cat "\$COUNT_FILE")
     count=\$((count + 1))
     echo "\$count" > "\$COUNT_FILE"
-    [ "\$count" -le 2 ] && exit 1
+    [ "\$count" -eq 1 ] && exit 1
     exit 0
 fi
 # merge-base --is-ancestor: return 0 (ancestor=true) so rebase is skipped
@@ -309,6 +357,8 @@ MOCK
     ! grep -q "rebase origin/main" "$GIT_LOG"
     ! grep -qE "\-C .+ rebase" "$GIT_LOG"
     grep -q "push origin main" "$GIT_LOG"
+    fetch_count=$(grep -c "fetch . test-branch:main" "$GIT_LOG")
+    [ "$fetch_count" -eq 2 ]
 }
 
 @test "max-retry exhaustion: push always fails and script exits with error" {
