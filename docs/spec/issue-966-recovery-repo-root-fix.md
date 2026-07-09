@@ -83,3 +83,30 @@ _repo_root="$(dirname "$SCRIPT_DIR")"
 - **#962 との重複整理は本 Issue のスコープ外**: `scripts/append-consumed-comments-section.sh` の同型パターン修正は #962 側で独立に対応する。
 - **`_repo_root` 修正の設計判断**: 8 箇所の個別 inline 修正ではなく、グローバル `REPO_ROOT` 一箇所に集約する設計を採用。理由: (1) AC3 の補助チェック `grep "git rev-parse --show-toplevel"` は文字列が1回でも存在すれば PASS するため集約で十分、(2) 変数名 (`_repo_root`/`repo_root`/`_REPO_ROOT`) は変更せず代入式右辺のみ差し替えることで既存の参照箇所すべてに影響を波及させずに済み、diff サイズと回帰リスクを最小化できる。
 - **テストモックへの影響範囲の根拠**: `tests/run-auto-sub.bats` の `$MOCK_DIR/git` モック実装を実際に読み込んで確認した結果、14 箇所の custom git mock がいずれも `rev-parse --show-toplevel` を未処理のまま catch-all `exit 0` (空文字出力) を返すことを確認した。この分析に基づき Implementation Step 2 を設計した。
+
+## Code Retrospective
+
+### Deviations from Design
+- Implementation Steps 1・3・2 の順でコミットを分割した (Spec は Step 番号順の単一コミットを想定していないため計画通り)。Step 4 (`bats tests/` フルスイート) はコミット後にまとめて実行し、Step 2 のコミットメッセージに `(closes #966)` を付与して patch route の closing commit とした。
+
+### Design Gaps/Ambiguities
+- None
+
+### Rework
+- `run-code.sh` の実行が外部要因 (バックグラウンドタスクの停止) により中断され、`tests/run-auto-sub.bats` の未コミット修正と `bats tests/` フルスイート未実行の状態で worktree が取り残された。`/auto` 親セッションが Tier 1 (reconcile-phase-state.sh) で状態を確認した上で、残作業 (bats 実行確認・コミット・Code Retrospective 追記) を手動リカバリとして完了させた。詳細は Issue #966 の Auto Retrospective (`run-auto-sub.sh --write-manual-recovery` により記録) を参照。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Root Cause 表の8箇所を個別修正せず、グローバル `REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"` 一箇所に集約する設計を採用 (Spec の設計判断どおり)
+- テストモック側の `rev-parse --show-toplevel` ハンドラは既存の `$MOCK_DIR/git` カスタムモック14箇所すべてに追加し、`$BATS_TEST_TMPDIR` を返すことで既存アサーションとの整合を維持
+- patch route の closing commit (`closes #966`) はテストモック修正コミット (Step 2) に付与し、本体 fix コミット (Step 1) とは分離したまま維持
+
+### Deferred Items
+- #962 (`append-consumed-comments-section.sh` の同型パターン修正) との重複整理は本 Issue のスコープ外のまま据え置き (Spec Notes 記載どおり)
+- Post-merge AC (誤 push ファイルのクリーンアップ) は `docs/spec/issue-268-recovery.md` の削除と `orchestration-recoveries.md` のエントリ削除としてすでに Step 3 で実施済みだが、他プロジェクトの誤 push ファイルが他にも存在しないかの網羅的な横断確認は行っていない (本 Issue のスコープは wholework 自身のリポジトリ内で確認済みのファイルに限定)
+
+### Notes for Next Phase
+- `bats tests/` フルスイートは exit code 0 / not ok 0件で PASS 済み (`.tmp/bats-full-966.log` に記録、`.tmp/` は gitignore 対象のためコミットには含めない)
+- verify フェーズでは Post-merge AC の `file_not_exists`/`file_not_contains` の自動検証に加え、Pre-merge の rubric 系検証 (原因特定・修正内容の適合性) も確認すること
