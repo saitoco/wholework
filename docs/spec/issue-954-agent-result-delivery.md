@@ -72,3 +72,33 @@
 - **外部仕様確認**: `SendMessage` は Claude Code ハーネス内蔵ツールであり公開 API ドキュメントは存在しないため、`modules/external-spec.md` の WebFetch/WebSearch 手順ではなく ToolSearch で実際の tool schema を取得して仕様を確認した (`to: "main"` — バックグラウンドサブエージェントが親セッションへ届ける唯一の経路。"Messages from teammates are delivered automatically" — team-lead 側のポーリングは不要かつ非対応)。
 - **Steering Docs sync candidate 調査**: `skills/issue/SKILL.md` を変更対象に含むため、キーワード `issue` で `docs/*.md` / `docs/ja/*.md` を grep したが、"issue" は汎用語のため全 steering doc (8 件) にヒットし信号にならなかった (scope: `docs/*.md`, `docs/ja/*.md` 全体、除外なし)。代わりにエージェント名 (`issue-scope` / `issue-risk` / `issue-precedent`) で `docs/workflow.md` と `README.md` を個別に grep したが 0 件だった (scope: `docs/workflow.md`, `README.md` の全文)。`docs/structure.md` の Agents 表は description のみを記載し tools 列を持たないため更新不要。以上より Steering Docs sync candidate なしと判断した。
 - **スコープ**: Issue #954 の Auto-Resolved Ambiguity Points により、本 Spec の対象は `issue-scope` / `issue-risk` / `issue-precedent` の 3 エージェントに限定する。`agents/review-bug.md` 等の同種パターンを持つ他エージェントの横断監査は対象外 (別 Issue で扱う)。
+
+## Consumed Comments
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — 実装は Implementation Steps の記述通り (3エージェントへの `SendMessage, Write` 追加 + Deliver Results サブセクション、SKILL.md Step 12a への配信指示・Result collection 追記) に完了しており、設計からの逸脱はなかった。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+
+### Key Decisions
+- `SendMessage` を主経路、`Write` を到達性フォールバックとする配信方式を Spec 通りに実装 (Q&A で確定した方針、変更なし)
+- 3エージェントの verify command を `SendMessage` / `Write` の2本立てに分割した設計 (Purpose文言との整合性確保) をそのまま踏襲
+
+### Deferred Items
+- `agents/review-bug.md` 等、同種の tools 不足パターンを持つ他エージェントの横断監査 (Issue #954 Notes 欄に記載、別 Issue でのスコープ)
+- Post-merge AC: Size=XL の Issue で実際に `/issue` を実行し、SendMessage 経由 (または Write+Read フォールバック経由) で手動介入なしに結果回収できることの確認
+
+### Notes for Next Phase
+- 3エージェントの `### N. Deliver Results` サブセクションは Primary/Fallback の文言パターンが統一されているか確認すること
+- `agents/*.md` 単体を対象とする bats テストは存在しない (フルスイート1115件は間接的なサニティチェックに留まる) — レビュー時はテスト結果ではなく差分の目視確認を優先すること
+- 同時期に進行した Issue #955 (`/issue` sub-issue split Step 3) も `skills/issue/SKILL.md` を変更しているが、three-dot diff (`main...`) で確認した通り編集箇所は重複しない (#954 は Step 12a、#955 は Step 3)
