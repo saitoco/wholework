@@ -585,9 +585,17 @@ fi
 
 echo "${LOG_PREFIX} Size: ${SIZE}"
 
+ALWAYS_PR=$("$SCRIPT_DIR/get-config-value.sh" always-pr false 2>/dev/null || echo false)
+EFFECTIVE_SIZE="$SIZE"
+if [[ "$ALWAYS_PR" == "true" ]] && [[ "$SIZE" =~ ^(XS|S)$ ]]; then
+  echo "${LOG_PREFIX} always-pr: true is set in .wholework.yml. Promoting to pr route."
+  emit_event "always_pr_promotion" "size=${SIZE}"
+  EFFECTIVE_SIZE="M"
+fi
+
 # Execute phases according to Size-based route.
 # verify is deferred to the parent /auto session (issue #485)
-case "$SIZE" in
+case "$EFFECTIVE_SIZE" in
   XS)
     echo "${LOG_PREFIX} --- code phase (patch): issue #${SUB_NUMBER} ---"
     run_phase_with_recovery "code-patch" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --patch ${BASE_FLAG:-}
