@@ -72,19 +72,30 @@
 ### Rework
 - worktree に `EnterWorktree` を経由せずセッションを再開したため、`modules/orchestration-fallbacks.md` と `tests/worktree-merge-push.bats` への最初の Edit 呼び出しが誤って共有メインリポジトリ (`/Users/saito/src/wholework/...`) の絶対パスに対して行われ、worktree 側 (`.claude/worktrees/code+issue-961/`) には反映されなかった。`bats tests/worktree-merge-push.bats` をworktree側で実行した際に旧テスト名のまま (`--from triggers git merge --ff-only` 等) 出力されたことで発覚。差分を worktree 側にコピーし、`git checkout --` でメインリポジトリ側を元の状態に復元して解消した。再開セッションでは、Edit/Write の対象パスが実際に worktree 内を指しているか (`pwd` 確認) を先に行うべきだった。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- なし。Primary FF-merge path・rebase fallback は Spec の Implementation Steps (tier1/tier2 フォールバック分岐) と実装が完全に一致しており、構造的な乖離は見られなかった。
+
+### Recurring issues
+- **worktree-local path の取り違えが code フェーズと review フェーズで連続して発生**: 本 review フェーズでも、`Read` ツールで最初に `scripts/worktree-merge-push.sh` を絶対パス指定した際、誤って共有メインリポジトリ側 (`/Users/saito/src/wholework/scripts/...`、worktree セグメント欠落) を読み込み、旧ロジック (`git pull --rebase` あり) を見てしまうという事象があった。`git show HEAD:...` で worktree 側の実コミット内容を確認して復旧した。code フェーズの Rework 記録 (同じ取り違えを Edit で経験) と合わせて、worktree セッションで絶対パスを扱う際は `pwd` 確認または worktree セグメントを含む絶対パスの使用を徹底する運用上の弱点が2フェーズ連続で顕在化した。
+- **push-retry ループの checkout 依存が本 Issue のスコープ境界をまたいで見落とされていた**: Issue #961 の Changed Files 節は primary merge path (行83-109) のみを修正対象と明示的にスコープしていたが、同一スクリプト内の push-retry ループ (行129-148、#853 由来、本 PR 未変更) には本 Issue の Root Cause と同一クラスの checkout 依存 (`git rebase` が HEAD に対して無条件に動作) が残存していた。スコープ境界の外側にある「同じ根本原因を共有するコード片」を横断的に検知する仕組みがなく、review-light エージェントへの追加コンテキスト注入 (プロンプトで明示的に当該箇所を指示) によって初めて発見できた。
+
+### Acceptance criteria verification difficulty
+- なし。Pre-merge AC 3件はいずれも rubric / file_not_contains ベースで機械的に PASS 判定でき、UNCERTAIN は発生しなかった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `scripts/worktree-merge-push.sh` の primary path 実装 (前セッションでコミット済みの `git fetch . <from>:<base>` ロジック) はそのまま採用し、追加変更なしと判断した — Spec の tier 1/tier 2 フォールバック分岐と実装が一致していることを確認済み。
-- `modules/orchestration-fallbacks.md` の `#ff-only-merge-fallback` エントリは Symptom/Fallback Steps/Escalation/Rationale の全セクションを新ロジックに合わせて全面書き換えし、旧 `git pull --rebase` ベースの記述を残さなかった。
-- `tests/worktree-merge-push.bats` に、foreign checkout かつ worktree 未検出時に bare な rebase/merge が一切発行されないことを検証する新規テストを追加し、AC1/AC2 の safety 特性をテストレベルでも担保した。
+- Code Review (review-light) で検出した push-retry ループの checkout 依存 (SHOULD) と関連ドキュメント整合性 (CONSIDER) は、Issue #961 の Changed Files 節が明示的にスコープ外としていること、および本 PR の主目的 (primary merge path の checkout レス化) が達成されていることを踏まえ、本 PR では修正せずレビューコメントとして記録するに留めた。
+- MUST issue が0件のため、gh-pr-review.sh は `COMMENT` イベントで投稿された (`REQUEST_CHANGES` は発生していない)。
 
 ### Deferred Items
+- push-retry ループ (`scripts/worktree-merge-push.sh` 行129-148) の bare `git rebase "origin/${BASE_BRANCH}"` が HEAD (共有ディレクトリの現在のチェックアウト) に対して動作するため、foreign checkout + push race が重なると本 Issue と同種の欠陥 (無関係セッションのブランチを誤って書き換える) を再現しうる。follow-up Issue 化を検討 (`/verify` フェーズでの Improvement Proposal 集約に委ねる)。
 - Post-merge AC (複数セッション環境での実地確認) は manual verify-type のため、`/verify` フェーズでの人手確認待ち。
-- なし (その他のフォローアップ Issue は本実装スコープでは発生していない)。
 
 ### Notes for Next Phase
-- Pre-merge AC 3件はいずれも rubric / file_not_contains ベースで PASS 判定済み、Issue 本文のチェックボックスは更新済み。
-- `bats tests/` フルスイート (1118 tests, 0 failures) を実行済み — `modules/orchestration-fallbacks.md` を参照する `tests/orchestration-fallbacks.bats` (schema validation) も含めて確認済み。
-- Post-merge の manual AC 確認時は、共有メインディレクトリが他ブランチを checkout した状態で `worktree-merge-push.sh --from <branch>` を実行し、ref-fetch が拒否されつつ bare な rebase/merge が一切発行されないことを実地で確認すること。
+- Pre-merge AC 3件はいずれも rubric / file_not_contains ベースで PASS 判定済み、Issue 本文のチェックボックスは既に `[x]` 済み (code フェーズ側で更新済みのものを維持)。
+- CI (`bats tests`, `Validate skill syntax`, `Forbidden Expressions check`, `macOS shell compatibility`, `DCO`) は全ジョブ SUCCESS。
+- Post-merge の manual AC 確認時は、共有メインディレクトリが他ブランチを checkout した状態で `worktree-merge-push.sh --from <branch>` を実行し、ref-fetch が拒否されつつ bare な rebase/merge が一切発行されないことに加え、push-retry ループに到達するケース (non-fast-forward push race) がある場合は push-retry の checkout 依存リスクも併せて観察すること。
