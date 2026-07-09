@@ -9,3 +9,10 @@
 - **Wrapper exit code**: 1
 - **Outcome**: success
 - **Recovery details**: see docs/reports/orchestration-recoveries.md
+
+### Manual recovery (code-patch)
+- **Date**: 2026-07-09 09:54 UTC
+- **Issue**: #268, phase: code-patch
+- **Source**: parent session manual recovery
+- **Recovery type**: pr-fallback-merge
+- **Outcome**: success
