@@ -82,3 +82,28 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class) — Issue Retrospective: Title/Type/Size/Value 決定根拠、Auto-Resolve Log (config 読み込みパターン・ログ形式の2件)、AC1 の BRE→ERE 修正、Background factual claim の検証結果を記録。新規要件の追加なし — https://github.com/saitoco/wholework/issues/960#issuecomment-4925611232
+
+## Code Retrospective
+
+### Deviations from Design
+N/A — Implementation Steps 1–3 を Spec の記載どおりに実装した。
+
+### Design Gaps/Ambiguities
+N/A — Notes に記録済みの Auto-Resolved Ambiguity Points (config 読み込みパターン、ログ出力形式) で判断済みであり、実装時に新たな曖昧点は発生しなかった。
+
+### Rework
+N/A — bats テスト (`run-auto-sub.bats` 49件、full suite 1117件) は初回実行で全件 PASS した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `run-auto-sub.sh` の `case "$SIZE" in` は `case "$EFFECTIVE_SIZE" in` に変更し、元の `SIZE` はログ・イベント出力用に保持したまま promotion 後の実効値のみを分岐に使う設計とした (Spec Implementation Steps 1 の指示どおり)
+- `tests/run-auto-sub.bats` の `setup()` に `get-config-value.sh` の実スクリプトコピーを追加し、テストごとに `.wholework.yml` へ `always-pr: true` を追記する形で promotion を検証した (stub ではなく実スクリプトを使うことで `.wholework.yml` の実際のパース挙動まで検証範囲に含めた)
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- Behavioral change detection により full suite (`bats tests/`, 1117件) を実行し全件 PASS を確認済み — `/review` 側で個別に再実行する必要は薄い
+- AC2/AC3 (rubric) は本フェーズで実装内容と直接突き合わせて PASS 相当と判断した。`/review` の rubric grader による独立判定でも同じ結論になるはずだが、念のため確認を推奨
