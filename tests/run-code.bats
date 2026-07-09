@@ -101,8 +101,12 @@ MOCK
     cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/guard-prefix.sh" "$MOCK_DIR/guard-prefix.sh"
     cp "$(dirname "$BATS_TEST_FILENAME")/../scripts/retry-on-kill.sh" "$MOCK_DIR/retry-on-kill.sh"
 
-    cat > "$MOCK_DIR/git" <<'MOCK'
+    cat > "$MOCK_DIR/git" <<MOCK
 #!/bin/bash
+if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/git"
@@ -846,6 +850,10 @@ if [[ "\$1" == "ls-files" ]]; then
 fi
 if [[ "\$1" == "stash" && "\$2" == "push" ]]; then
   rm -f "$STRAY_FILE"
+  exit 0
+fi
+if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then
+  echo "$BATS_TEST_TMPDIR"
   exit 0
 fi
 exit 0
