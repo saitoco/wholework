@@ -380,10 +380,13 @@ Omitting `verify-type: opportunistic` when a verify command is attached is corre
 
 ### 11. Manual AC Quick Reference — Replace with automatable/rubric
 
-When an acceptance condition is tagged `<!-- verify-type: manual -->`, check if it can be replaced with an automatable verify command before finalizing. Use the table below as a quick reference:
+When an acceptance condition is tagged `<!-- verify-type: manual -->`, first check whether the *action itself* — not just its verification — can be executed automatically via an available MCP tool, CLI, or API. A condition often ends up as `manual` not because verification is inherently hard, but because no executor was ever considered for the action itself: the author assumed a human must perform the operation, when in fact a connected MCP tool (e.g., a headless CMS write tool, a ticketing API) could perform it directly. If such a tool exists, the condition no longer needs `verify-type: manual` at all — treat it as a normal auto-verified condition (e.g., executed and verified via `mcp_call`).
+
+If the action still genuinely requires a human to perform, check whether it can at least be replaced with an automatable *verification* method before finalizing. Use the table below as a quick reference:
 
 | Pattern often written as `manual` | Replacement candidate | Example |
 |-----------------------------------|-----------------------|---------|
+| Action can be performed by an available MCP tool / CLI / API, not just a human | `mcp_call "tool_name" ...` / `command "cli-tool ..."` | `mcp_call "mcp__cms__patch_documents" {...}` — a content fix executed by the CMS's own MCP tool instead of a manual edit |
 | Command X succeeds | `command "X"` / `build_success "X"` | `build_success "npm run build"` |
 | URL X returns expected response | `http_status "URL" "200"` / `html_check` / `api_check` | `http_status "https://example.com/api" "200"` |
 | Component / feature is coherent (semantic check) | `rubric "..."` | `rubric "The new component renders without errors and matches the design spec"` |
@@ -391,6 +394,13 @@ When an acceptance condition is tagged `<!-- verify-type: manual -->`, check if 
 | File contains expected content | `file_contains "path" "keyword"` | `file_contains "config.json" "feature_flag"` |
 
 If a replacement is possible, update the verify command in both the Spec and the Issue body AC. Combining `rubric` with `file_contains`/`section_contains` is also effective (see §9).
+
+**Decision procedure (execution vs. verification):**
+
+1. Before marking a condition `manual`, ask: "Is there an MCP tool, CLI, or API that can execute this action directly?" (check `ToolSearch` / connected MCP servers, not just built-in shell commands)
+2. If yes: execute the action through that tool and verify the result mechanically — the condition is no longer `manual`
+3. If no executor exists but the *outcome* can still be checked mechanically: apply the table above to find an automatable verify command
+4. Only when neither an executor nor a mechanical verification exists should the condition remain `verify-type: manual`
 
 ### 12. Indirect Reflection Pattern — Classify as post-merge manual or command type
 
