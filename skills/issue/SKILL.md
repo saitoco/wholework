@@ -189,9 +189,9 @@ Append `--when="shell_condition"` to any check to skip it when the condition is 
 | Specific CLI required | `--when="command -v lighthouse"` |
 | CI only | `--when="test -n \"$CI\""` |
 
-**MCP tool detection and mcp_call proposal (conditional):**
+**MCP tool detection and mcp_call proposal:**
 
-Reuse `MCP_TOOLS` already fetched via `detect-config-markers.md` in Step 2. If non-empty, read `skills/issue/mcp-call-guidelines.md` and follow the "Declaration Priority" section. If empty, skip `mcp_call` hints.
+Always read `skills/issue/mcp-call-guidelines.md` and follow the "Declaration-first Fallback" section, regardless of whether `MCP_TOOLS` (already fetched via `detect-config-markers.md` in Step 2) is empty or non-empty — the fallback section itself branches on `MCP_TOOLS` (declared → trust it; empty → dynamic detection via ToolSearch; neither → skip `mcp_call` hints), consistent with `docs/environment-adaptation.md` § Layer 2.
 
 **Assign verify-type tags to post-merge conditions:**
 

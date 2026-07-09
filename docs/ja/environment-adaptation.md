@@ -140,7 +140,7 @@ applies_to_proposals:               # 省略可; 改善提案 Issue をこの Do
 | `skills/verify/lighthouse-guidance.md` | `/verify` | `HAS_LIGHTHOUSE_CAPABILITY=true` | `capability: lighthouse` | Lighthouse verify ガイダンス |
 | `skills/spec/visual-diff-guidance.md` | `/spec` | `HAS_VISUAL_DIFF_CAPABILITY=true` | `capability: visual-diff` | 視覚再現 verify ガイダンス |
 | `skills/spec/visual-state-enumeration.md` | `/spec` | `HAS_VISUAL_DIFF_CAPABILITY=true` | `capability: visual-diff` | 視覚再現 state enumeration scaffold |
-| `skills/issue/mcp-call-guidelines.md` | `/issue` | `MCP_TOOLS` が空でない | `capability: mcp` | MCP ツール検出 |
+| `skills/issue/mcp-call-guidelines.md` | `/issue` | 常に読み込み、内部で `MCP_TOOLS` / ToolSearch により分岐 | _（なし — 実行時検出）_ | MCP ツール検出 |
 | `skills/review/workflow-guidance.md` | `/review` | `HAS_WORKFLOW_CAPABILITY=true` | `capability: workflow` | Workflow 実行ガイダンス |
 | `skills/doc/translate-phase.md` | `/doc` | `translate` サブコマンド | `arg_starts_with: translate` | 翻訳生成 |
 | `skills/doc/skill-dev-sync.md` | `/doc` | `validate-skill-syntax.py` または `skills/` が存在 | `file_exists_any: [scripts/validate-skill-syntax.py, skills/]` | スキル開発同期 |
