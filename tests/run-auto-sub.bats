@@ -435,6 +435,10 @@ MOCK
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
 echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
 if [[ "$*" == *"diff"* && "$*" == *"orchestration-recoveries.md"* ]]; then
     exit 1
 fi
@@ -654,6 +658,10 @@ MOCK
     # Mock git to return no concurrent commits
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
 echo ""
 exit 0
 MOCK
@@ -697,6 +705,10 @@ MOCK
 
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
 echo ""
 exit 0
 MOCK
@@ -757,6 +769,10 @@ MOCK
 
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
 echo ""
 exit 0
 MOCK
@@ -788,6 +804,10 @@ MOCK
     # Mock git to return a concurrent commit
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
 if [[ "$*" == *"log origin/main"* ]]; then
   echo "abc1234 Test User"
   exit 0
@@ -824,6 +844,10 @@ MOCK
     # phase (subject contains "closes #42"). Must not be treated as concurrent.
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
 if [[ "$*" == *"log origin/main"* ]]; then
   echo "aaa1111 Test User"
   exit 0
@@ -864,6 +888,10 @@ MOCK
     # phase (#99, a true concurrent commit that must still be emitted).
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
 if [[ "$*" == *"log origin/main"* ]]; then
   printf '%s\n' "aaa1111 Test User" "bbb2222 Other User"
   exit 0
@@ -895,6 +923,10 @@ MOCK
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
 echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
 if [[ "$*" == *"status"* && "$*" == *"--porcelain"* && "$*" == *"issue-42"* ]]; then
     echo " M docs/spec/issue-42-test.md"
     exit 0
@@ -948,6 +980,10 @@ MOCK
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
 echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
 if [[ "$*" == *"status"* && "$*" == *"--porcelain"* && "$*" == *"issue-42"* ]]; then
     echo " M docs/spec/issue-42-test.md"
     exit 0
@@ -998,6 +1034,10 @@ MOCK
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
 echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
 if [[ "$*" == *"status"* && "$*" == *"--porcelain"* && "$*" == *"issue-42"* ]]; then
     echo " M docs/spec/issue-42-test.md"
     exit 0
@@ -1034,6 +1074,10 @@ MOCK
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
 echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/git"
@@ -1068,6 +1112,10 @@ MOCK
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
 echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
 if [[ "$*" == *"status"* && "$*" == *"--porcelain"* && "$*" == *"issue-42"* ]]; then
     echo "?? docs/spec/issue-42-recovery.md"
     exit 0
@@ -1120,6 +1168,10 @@ MOCK
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
 echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
 if [[ "$*" == *"status"* && "$*" == *"--porcelain"* && "$*" == *"issue-42"* ]]; then
     echo "?? docs/spec/issue-42-recovery.md"
     exit 0
@@ -1170,6 +1222,10 @@ MOCK
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
 echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
 if [[ "$*" == *"status"* && "$*" == *"--porcelain"* && "$*" == *"issue-42"* ]]; then
     echo "?? docs/spec/issue-42-recovery.md"
     exit 0
