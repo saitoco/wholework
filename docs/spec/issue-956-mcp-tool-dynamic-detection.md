@@ -39,3 +39,28 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective。`docs/environment-adaptation.md` § Layer 2 が本 Issue の要求する 3 段階フローを既に SSoT として文書化済みと判明したことを記録し、Auto-Resolved Ambiguity Points (変更対象ファイル、優先順位/マージ方針) を記載 (内容は Issue 本文の Notes / Auto-Resolved Ambiguity Points に反映済み) / https://github.com/saitoco/wholework/issues/956#issuecomment-4923722416
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A（Implementation Steps 1〜3 と Changed Files の4ファイルを完全に一致させて実装した）
+
+### Design Gaps/Ambiguities
+- `worktree-lifecycle.md` の Entry section (`own`/`foreign`/`none` 判定) は、同名ブランチのワークツリーが既に存在するが起動プロセスが終了済み (stale lock) のケースを想定していない。本 Issue では前回セッションが crash した際の未コミット実装 (Implementation Steps 1〜3 と完全一致) が `.claude/worktrees/code+issue-956` に残っていたため、ロックファイルの PID (`ps -p`) でプロセス終了を確認したうえで `EnterWorktree(path: ...)` により手動で再開した。今回は内容が Spec と一致していたため再利用できたが、内容が不完全・矛盾していた場合の判断基準 (再利用 vs 破棄) は明文化されていない。
+
+### Rework
+- N/A（前回セッションの未コミット実装をそのまま再利用し、修正は不要だった）
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 前回セッション (crash) が `.claude/worktrees/code+issue-956` に残した未コミット実装 (4ファイル) が Spec の Implementation Steps と完全一致していたため、再実装せずそのまま検証・コミットして再利用した
+- Pre-merge AC (rubric ×2, file_contains ×2) を verify-executor full mode で実行し全件 PASS を確認、Issue のチェックボックスを更新済み
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- `/verify` は Post-merge AC が「なし」のため、実質的にチェックすべき項目はない
+- 本実装は `skills/issue/mcp-call-guidelines.md` の `load_when` frontmatter を削除し無条件ロードに変更しているため、`/issue` を実行する既存プロジェクトすべてで本ファイルが読み込まれるようになる (挙動変化は Declaration-first Fallback 内で `MCP_TOOLS` 分岐により吸収される設計)
