@@ -119,3 +119,26 @@ _repo_root="$(dirname "$SCRIPT_DIR")"
 - **Source**: parent session manual recovery
 - **Recovery type**: background-task-killed-manual-completion
 - **Outcome**: success
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Triage (Type=Bug, Size=S, Value=4) は妥当。#962 (`append-consumed-comments-section.sh` の同型パターン) を重複候補として issue コメントで報告しつつ自動クローズしなかった判断は適切 (対応方針の決定を `/code` 時に委ねている)。
+
+#### spec (design)
+- 独立した `## Spec Retrospective` セクションは記録されていないが、Root Cause 表で8箇所すべてを列挙し、`worktree-merge-push.sh` の既存パターン (`git rev-parse --show-toplevel`) を修正方針として明示した設計は的確だった。Post-merge AC を `verify-type: manual` から `file_not_exists`/`file_not_contains` の `verify-type: auto` に更新した判断も適切 (実際に本 verify で両方 PASS 確認できた)。
+
+#### code
+- 実装内容 (8箇所の `$REPO_ROOT` 統一、テストモック14箇所の `rev-parse --show-toplevel` 追加、誤 push ファイルの削除) は Spec 通りに完了し、`bats tests/` フルスイート (1115 tests) が exit code 0 / not ok 0件で PASS した。
+- **Rework**: `run-code.sh` のバックグラウンドセッションが外部要因 (harness によるバックグラウンドタスクの停止) で中断された。中断前に `run-code.sh` 自身の内蔵 auto-retry (silent no-op 検出) が一度発火していたが、2回目の試行のworktreeクリーンアップが `Failed to remove stale worktree` / `Failed to delete stale branch` で失敗しており (詳細は Improvement Proposals 参照)、結果的に `/auto` 親セッションによる手動リカバリ (bats実行確認・テスト修正コミット・Code Retrospective追記・worktree merge・manual recovery記録) が必要になった。この手動リカバリ自体は上記 `## Auto Retrospective` に既に記録済みのため、verify retrospective としては原因側 (下記 Improvement Proposals) のみを新規記録する。
+
+#### review / merge
+- patch route (Size S) のため review/merge フェーズは実行されず、対象外。
+
+#### verify
+- Pre-merge rubric 2件・grep 1件・Post-merge file_not_exists/file_not_contains 2件、全5条件が PASS。FAIL/UNCERTAIN なし、auto-retry (verify側) は発火していない。
+
+### Improvement Proposals
+- `scripts/run-code.sh` の stale worktree クリーンアップ (178-184行目付近、`run-code.sh` 内蔵 auto-retry が "silent no-op" を検出した際に発火) は `git worktree remove --force "$WORKTREE_PATH"` のみを実行しており、`git worktree unlock` を事前に呼び出していない。セッションが正常な `ExitWorktree`/`worktree-merge-push.sh` の終了経路を通らずに異常終了 (今回のような外部要因によるバックグラウンドタスク停止、クラッシュ等) した場合、セッション開始時に設定された worktree lock (例: `claude session code/issue-N (pid ... start ...)`) が残存したままとなり、`git worktree remove --force` だけではロックを解除できず失敗する (今回実際に `Warning: Failed to remove stale worktree` / `Warning: Failed to delete stale branch` が発生し、2回目の retry 試行は残存 worktree 内でそのまま継続していた)。`git worktree unlock "$WORKTREE_PATH" 2>/dev/null` を `git worktree remove --force` の前に追加することで、異常終了後の retry パスでもクリーンな状態から再開できるようにすべき。
