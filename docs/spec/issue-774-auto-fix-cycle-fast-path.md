@@ -93,3 +93,15 @@
 ### Acceptance Criteria Verification Difficulty
 
 - AC6 (command "bats tests/auto.bats") was UNCERTAIN in safe mode; resolved to PASS via CI log inspection. The pre-existing failures (tests 11–15) required CI log analysis to distinguish from PR-introduced failures — this investigation was straightforward once the main branch CI state was checked. Consider documenting the baseline failure state in CLAUDE.md or a pinned issue for faster triage.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### verify
+
+- AC8 (observation: Consumed Comments セクションへの verify-fail marker 記録) は18回以上の `auto-run` イベント発火を経ても未確認のまま残っていた。2026-06-27 の調査で構造的 gap と判明し #811 に分離済みだったが、#811 解決後の再確認が行われていなかった。
+- 本セッション (2026-07-09, `/auto #955` 経由の observation cascade) で #811 (bash/post-processor 駆動移行) のマージ状態と、#811 マージ後の実際の fix-cycle 事例 (#860, `/auto` M route, 2026-07-03) を確認し、`docs/spec/issue-860-worktree-edit-path-conventions.md` の `## Consumed Comments` セクションに verify-fail marker への言及が実際に記録されていることを実証。AC8 を PASS 判定し、Issue #774 を `phase/done` にクローズした。
+
+### Improvement Proposals
+- N/A
