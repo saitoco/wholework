@@ -82,3 +82,37 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class) — Issue Retrospective: Title/Type/Size/Value 決定根拠、Auto-Resolve Log (config 読み込みパターン・ログ形式の2件)、AC1 の BRE→ERE 修正、Background factual claim の検証結果を記録。新規要件の追加なし — https://github.com/saitoco/wholework/issues/960#issuecomment-4925611232
+
+## Code Retrospective
+
+### Deviations from Design
+N/A — Implementation Steps 1–3 を Spec の記載どおりに実装した。
+
+### Design Gaps/Ambiguities
+N/A — Notes に記録済みの Auto-Resolved Ambiguity Points (config 読み込みパターン、ログ出力形式) で判断済みであり、実装時に新たな曖昧点は発生しなかった。
+
+### Rework
+N/A — bats テスト (`run-auto-sub.bats` 49件、full suite 1117件) は初回実行で全件 PASS した。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+N/A — review-light の Perspective 1 (Spec Deviation) で構造的な逸脱は検出されなかった。Implementation Steps 1–3 は Spec の記載どおりに実装されており、`skills/auto/SKILL.md` の追記文言も Step 2 の promotion ロジックへの参照として正確だった。
+
+### Recurring issues
+N/A — review-light 4観点 (Spec 逸脱・エッジケース/堅牢性・セキュリティ・ドキュメント整合性) すべてで指摘なし。同種の課題が繰り返し検出されるパターンは見られなかった。
+
+### Acceptance criteria verification difficulty
+N/A — AC1 (`grep`) は PR ブランチ上で一意にマッチし機械的に PASS 判定できた。AC2/AC3 (`rubric`) も code フェーズの Phase Handoff (Notes for Next Phase) で事前に PASS 相当と判断されていた内容と、review フェーズでの独立判定が一致した。UNCERTAIN や verify command の不備は発生しなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Size M (light mode 相当) のため review-light エージェント1体による4観点統合レビューを実施した。SKIP_REVIEW_BUG マーカーが `.wholework.yml` に未設定 (デフォルト false) のため全4観点を実行対象とした
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- Claude review 指摘は0件、CI (DCO / Run bats tests / Validate skill syntax / Forbidden Expressions check / macOS shell compatibility) は全て SUCCESS — `/merge 967` にそのまま進んで問題ない
