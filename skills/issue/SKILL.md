@@ -305,8 +305,13 @@ Analyze the issue background and acceptance criteria to determine whether sub-is
 **Procedure:**
 1. Propose split plan via AskUserQuestion (sub-issue count, scope of each, dependencies)
 2. After approval, create sub-issues with `gh issue create`
-3. Redistribute acceptance criteria; retain only cross-cutting conditions in the parent
+3. Redistribute acceptance criteria; retain only cross-cutting conditions in the parent. `PARENT_NUMBER` here refers to the Issue being split (i.e. `$NUMBER` at the top of this procedure) — named distinctly to avoid confusion with the per-sub-issue `$NUMBER` used inside the step 3a loop below. Run once, after all sub-issues from step 2 have been created:
+   - Read the parent Issue body: `gh issue view $PARENT_NUMBER --json body`
+   - Remove the Pre-merge/Post-merge condition lines that were redistributed to sub-issues, retaining only conditions that remain cross-cutting to the parent
+   - Write the updated body to `.tmp/issue-body-$PARENT_NUMBER.md` with the Write tool
+   - Apply with `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh $PARENT_NUMBER .tmp/issue-body-$PARENT_NUMBER.md`, then delete the temp file with `rm -f .tmp/issue-body-$PARENT_NUMBER.md`
 3a. Run lightweight refinement loop per sub-issue (steering doc alignment, verify command assignment, lightweight ambiguity detection, auto-resolution, record unresolved points, update body)
+3b. Verify redistribution completion (run before step 8): re-fetch the parent Issue body (`gh issue view $PARENT_NUMBER --json body`) and confirm the redistributed conditions are no longer present. If any remain, retry the step 3 update once. If they still remain after the retry, output a warning and continue — do not block step 4 (follows the verify-after-write pattern in `modules/project-field-update.md`: reread → retry → warn-only on persistent mismatch, appropriate here since this is a non-destructive documentation edit)
 4. Set parent-child relationships via `addSubIssue` GraphQL mutation
 5. Set sub-issue dependencies with `addBlockedBy` if applicable
 6. Apply `phase/issue` label to each sub-issue
@@ -498,8 +503,13 @@ Integrate outputs into a structured split proposal: sub-issue boundaries (from s
 
 Run the standard sub-issue creation flow (New Issue Creation Step 9, procedures 2–8):
 2. Create sub-issues with `gh issue create`
-3. Redistribute acceptance criteria; retain only cross-cutting conditions in the parent
+3. Redistribute acceptance criteria; retain only cross-cutting conditions in the parent. `PARENT_NUMBER` here refers to the Issue being split (i.e. `$NUMBER` at the top of this procedure) — named distinctly to avoid confusion with the per-sub-issue `$NUMBER` used inside the step 3a loop below. Run once, after all sub-issues from step 2 have been created:
+   - Read the parent Issue body: `gh issue view $PARENT_NUMBER --json body`
+   - Remove the Pre-merge/Post-merge condition lines that were redistributed to sub-issues, retaining only conditions that remain cross-cutting to the parent
+   - Write the updated body to `.tmp/issue-body-$PARENT_NUMBER.md` with the Write tool
+   - Apply with `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh $PARENT_NUMBER .tmp/issue-body-$PARENT_NUMBER.md`, then delete the temp file with `rm -f .tmp/issue-body-$PARENT_NUMBER.md`
 3a. Run lightweight refinement loop per sub-issue (steering doc alignment, verify command assignment, lightweight ambiguity detection, auto-resolution, record unresolved points, update body)
+3b. Verify redistribution completion (run before step 8): re-fetch the parent Issue body (`gh issue view $PARENT_NUMBER --json body`) and confirm the redistributed conditions are no longer present. If any remain, retry the step 3 update once. If they still remain after the retry, output a warning and continue — do not block step 4 (follows the verify-after-write pattern in `modules/project-field-update.md`: reread → retry → warn-only on persistent mismatch, appropriate here since this is a non-destructive documentation edit)
 4. Set parent-child relationships via `addSubIssue` GraphQL mutation
 5. Set sub-issue dependencies with `addBlockedBy` if applicable
 6. Apply `phase/issue` label to each sub-issue
