@@ -1,7 +1,7 @@
 ---
 name: issue-scope
 description: Scope Investigation: identify change targets and impact scope (for L/XL Issue parallel investigation)
-tools: Read, Glob, Grep, Bash(git log:*, git diff:*)
+tools: Read, Glob, Grep, Bash(git log:*, git diff:*), SendMessage, Write
 model: opus
 ---
 
@@ -51,6 +51,11 @@ Use the extracted keywords to investigate with Glob/Grep/Read:
 ### 3. Dependency Mapping
 
 Organize the investigation results by structuring file dependencies in text format.
+
+### 4. Deliver Results
+
+- **Primary**: after generating the Output Format markdown, call `SendMessage({to: "main", message: <full Output Format markdown>, summary: "<5-10 words>"})` to deliver the results to the team-lead.
+- **Fallback**: if `SendMessage` is unavailable or errors, `Write` the same markdown to `.tmp/issue-$NUMBER-scope.md` and state that path in your final response text.
 
 ## Output Format
 
