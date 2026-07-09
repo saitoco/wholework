@@ -10,6 +10,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 
 PHASE="${1:?Usage: spawn-recovery-subagent.sh <phase> <issue> --log <log-file>}"
@@ -205,7 +206,7 @@ fi
 write_recovery_entry() {
   local action="$1"
   local report_file
-  report_file="$(dirname "$SCRIPT_DIR")/docs/reports/orchestration-recoveries.md"
+  report_file="${REPO_ROOT}/docs/reports/orchestration-recoveries.md"
   if [[ ! -f "$report_file" ]]; then
     echo "[spawn-recovery] orchestration-recoveries.md not found; skipping record" >&2
     return 0
