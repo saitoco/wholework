@@ -81,11 +81,20 @@ git fetch origin "$BASE_BRANCH" 2>&1 || echo "Warning: git fetch origin ${BASE_B
 
 if [[ -n "$FROM_BRANCH" ]]; then
   # See modules/orchestration-fallbacks.md#ff-only-merge-fallback
-  if ! git merge "$FROM_BRANCH" --ff-only; then
-    echo "FF merge failed, attempting git pull --rebase origin ${BASE_BRANCH}..." >&2
-    git pull --rebase origin "$BASE_BRANCH"
-    if ! git merge "$FROM_BRANCH" --ff-only; then
-      echo "FF merge still failed; base may have diverged. Rebasing ..." >&2
+  # Primary path: a checkout-less ref-to-ref fetch. git itself refuses this when
+  # BASE_BRANCH is checked out in any worktree (exit 128) or when it would not be a
+  # fast-forward (exit 1) -- giving --ff-only-equivalent safety without touching the
+  # shared directory's working tree or HEAD.
+  if ! git fetch . "${FROM_BRANCH}:${BASE_BRANCH}"; then
+    current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+    if [[ "$current_branch" == "$BASE_BRANCH" ]]; then
+      echo "ref-fetch rejected because ${BASE_BRANCH} is checked out here; merging in place instead..." >&2
+      if ! git merge "$FROM_BRANCH" --ff-only; then
+        echo "Error: FF merge failed even though ${BASE_BRANCH} is checked out locally. Resolve manually." >&2
+        exit 1
+      fi
+    else
+      echo "ref-fetch rejected; base may have diverged. Checking ancestry..." >&2
       if git merge-base --is-ancestor "origin/${BASE_BRANCH}" "$FROM_BRANCH" 2>/dev/null; then
         echo "Branch ${FROM_BRANCH} is already on origin/${BASE_BRANCH} (is-ancestor=true); skipping rebase" >&2
       else
@@ -97,14 +106,14 @@ if [[ -n "$FROM_BRANCH" ]]; then
             exit 1
           fi
         else
-          if ! git rebase "$BASE_BRANCH" "$FROM_BRANCH"; then
-            git rebase --abort 2>/dev/null || true
-            echo "Error: Rebase of ${FROM_BRANCH} onto ${BASE_BRANCH} failed with conflicts. Resolve manually." >&2
-            exit 1
-          fi
+          echo "Error: Cannot locate a worktree for ${FROM_BRANCH} to rebase without touching the shared directory's checkout. Resolve manually." >&2
+          exit 1
         fi
       fi
-      git merge "$FROM_BRANCH" --ff-only
+      if ! git fetch . "${FROM_BRANCH}:${BASE_BRANCH}"; then
+        echo "Error: ref-fetch of ${FROM_BRANCH} into ${BASE_BRANCH} still failed after rebase. Resolve manually." >&2
+        exit 1
+      fi
     fi
   fi
 
