@@ -110,3 +110,6 @@ Deprecated terms to detect (source: `docs/product.md` § Terms, Formerly called 
 - **Test directory isolation**: bats tests should create a temp directory with controlled content to avoid scanning the real repo; use `BATS_TEST_TMPDIR` for isolated fixtures
 - **Exclusion generalization**: the `grep -iv "| $term |"` exclusion uses the term as a literal substring of the table-row pattern. This handles the existing `| verify command |` exclusion and extends it to all terms generically.
 - Issue retrospective: auto-resolved ambiguity (from Issue body) — implementation approach (c) = standalone script chosen for bats testability; `Shared module` included as 6th term per Background section; verify commands target `scripts/check-forbidden-expressions.sh` not `test.yml`
+
+## Consumed Comments
+No new comments since last phase.
