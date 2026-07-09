@@ -48,8 +48,12 @@ MOCK
     chmod +x "$MOCK_DIR/gh"
 
     # Default git mock: no changes (diff --quiet exits 0 = no diff)
-    cat > "$MOCK_DIR/git" <<'MOCK'
+    cat > "$MOCK_DIR/git" <<MOCK
 #!/bin/bash
+if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/git"
@@ -98,6 +102,10 @@ teardown() {
     export GIT_LOG
     cat > "$MOCK_DIR/git" <<MOCK
 #!/bin/bash
+if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
 echo "GIT_CALLED: \$*" >> "${GIT_LOG}"
 exit 0
 MOCK
@@ -155,6 +163,10 @@ MOCK
     # Note: script calls "git -C /repo/root diff --quiet", so $3 == "diff"
     cat > "$MOCK_DIR/git" <<MOCK
 #!/bin/bash
+if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
 if [[ "\$3" == "diff" && "\$*" == *"--quiet"* ]]; then
     exit 1
 fi
