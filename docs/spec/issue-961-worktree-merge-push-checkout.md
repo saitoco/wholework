@@ -85,17 +85,17 @@
 - なし。Pre-merge AC 3件はいずれも rubric / file_not_contains ベースで機械的に PASS 判定でき、UNCERTAIN は発生しなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Code Review (review-light) で検出した push-retry ループの checkout 依存 (SHOULD) と関連ドキュメント整合性 (CONSIDER) は、Issue #961 の Changed Files 節が明示的にスコープ外としていること、および本 PR の主目的 (primary merge path の checkout レス化) が達成されていることを踏まえ、本 PR では修正せずレビューコメントとして記録するに留めた。
-- MUST issue が0件のため、gh-pr-review.sh は `COMMENT` イベントで投稿された (`REQUEST_CHANGES` は発生していない)。
+- PR #968 は mergeable=true / CI success / review approved の状態で Step 1 の判定条件に合致したため、conflict resolution (Step 3) を経ずに直接 Step 4 (Squash Merge) を実行した。
+- `gh pr merge --squash --delete-branch` により squash merge し、リモートブランチを削除した。PR body に `closes #961` が含まれ base は `main` のため、Issue #961 は自動クローズされる想定。
 
 ### Deferred Items
-- push-retry ループ (`scripts/worktree-merge-push.sh` 行129-148) の bare `git rebase "origin/${BASE_BRANCH}"` が HEAD (共有ディレクトリの現在のチェックアウト) に対して動作するため、foreign checkout + push race が重なると本 Issue と同種の欠陥 (無関係セッションのブランチを誤って書き換える) を再現しうる。follow-up Issue 化を検討 (`/verify` フェーズでの Improvement Proposal 集約に委ねる)。
+- push-retry ループ (`scripts/worktree-merge-push.sh` 行129-148) の checkout 依存は review フェーズで見送られたスコープ外事項のまま。follow-up Issue 化は `/verify` フェーズでの Improvement Proposal 集約に委ねる (review フェーズからの引き継ぎを維持)。
 - Post-merge AC (複数セッション環境での実地確認) は manual verify-type のため、`/verify` フェーズでの人手確認待ち。
 
 ### Notes for Next Phase
-- Pre-merge AC 3件はいずれも rubric / file_not_contains ベースで PASS 判定済み、Issue 本文のチェックボックスは既に `[x]` 済み (code フェーズ側で更新済みのものを維持)。
-- CI (`bats tests`, `Validate skill syntax`, `Forbidden Expressions check`, `macOS shell compatibility`, `DCO`) は全ジョブ SUCCESS。
-- Post-merge の manual AC 確認時は、共有メインディレクトリが他ブランチを checkout した状態で `worktree-merge-push.sh --from <branch>` を実行し、ref-fetch が拒否されつつ bare な rebase/merge が一切発行されないことに加え、push-retry ループに到達するケース (non-fast-forward push race) がある場合は push-retry の checkout 依存リスクも併せて観察すること。
+- `/verify` は Post-merge AC (複数セッションでの merge-to-main が他セッションのブランチに影響しないことの実地確認) を人手確認として扱うこと。
+- CI は全ジョブ SUCCESS 済み、squash merge・remote branch 削除ともに正常完了。
+- push-retry ループの checkout 依存 (review フェーズ Deferred Items 参照) について、follow-up Issue 起票の要否を判断すること。
