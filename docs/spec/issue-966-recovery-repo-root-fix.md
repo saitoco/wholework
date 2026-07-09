@@ -110,3 +110,12 @@ _repo_root="$(dirname "$SCRIPT_DIR")"
 ### Notes for Next Phase
 - `bats tests/` フルスイートは exit code 0 / not ok 0件で PASS 済み (`.tmp/bats-full-966.log` に記録、`.tmp/` は gitignore 対象のためコミットには含めない)
 - verify フェーズでは Post-merge AC の `file_not_exists`/`file_not_contains` の自動検証に加え、Pre-merge の rubric 系検証 (原因特定・修正内容の適合性) も確認すること
+
+## Auto Retrospective
+
+### Manual recovery (code-patch)
+- **Date**: 2026-07-09 14:48 UTC
+- **Issue**: #966, phase: code-patch
+- **Source**: parent session manual recovery
+- **Recovery type**: background-task-killed-manual-completion
+- **Outcome**: success
