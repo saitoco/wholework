@@ -9,6 +9,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 PHASE="${1:?Usage: apply-fallback.sh <phase> <issue> --log <log-file>}"
 ISSUE="${2:?Usage: apply-fallback.sh <phase> <issue> --log <log-file>}"
@@ -96,7 +97,7 @@ apply_dco_signoff_autofix() {
 # is not mistakenly reported as recovered (Issues #895, #904).
 apply_code_patch_silent_no_op_retry() {
   local _ww_yml
-  _ww_yml="$(dirname "$SCRIPT_DIR")/.wholework.yml"
+  _ww_yml="${REPO_ROOT}/.wholework.yml"
   local _auto_retry_enabled="false"
   if [[ -f "$_ww_yml" ]]; then
     local _raw

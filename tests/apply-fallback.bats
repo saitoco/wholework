@@ -15,18 +15,22 @@ setup() {
     export GIT_PUSH_LOG="$BATS_TEST_TMPDIR/git-push.log"
 
     # Mock git: capture amend and push invocations
-    cat > "$MOCK_DIR/git" <<'MOCK'
+    cat > "$MOCK_DIR/git" <<MOCK
 #!/bin/bash
-if [[ "$1" == "rev-parse" && "$2" == "--abbrev-ref" ]]; then
+if [[ "\$1" == "rev-parse" && "\$2" == "--abbrev-ref" ]]; then
     echo "worktree-code+issue-42"
     exit 0
 fi
-if [[ "$1" == "commit" && "$*" == *"--amend"* ]]; then
-    echo "$@" >> "$GIT_AMEND_LOG"
+if [[ "\$1" == "commit" && "\$*" == *"--amend"* ]]; then
+    echo "\$@" >> "$GIT_AMEND_LOG"
     exit 0
 fi
-if [[ "$1" == "push" && "$*" == *"--force-with-lease"* ]]; then
-    echo "$@" >> "$GIT_PUSH_LOG"
+if [[ "\$1" == "push" && "\$*" == *"--force-with-lease"* ]]; then
+    echo "\$@" >> "$GIT_PUSH_LOG"
+    exit 0
+fi
+if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
     exit 0
 fi
 exit 0

@@ -18,7 +18,7 @@ if [[ -z "$ISSUE_NUMBER" || -z "$PHASE_NAME" ]]; then
 fi
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
-_repo_root="$(dirname "$SCRIPT_DIR")"
+_repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 # Get spec directory (pass config path explicitly to avoid CWD sensitivity)
 SPEC_DIR=$(WHOLEWORK_CONFIG_PATH="$_repo_root/.wholework.yml" \

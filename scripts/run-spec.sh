@@ -41,6 +41,7 @@ if ! [[ "$ISSUE_NUMBER" =~ ^[0-9]+$ ]]; then
 fi
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 # Session isolation check: detect other-session dirty files (best-effort)
 if [[ -x "${SCRIPT_DIR}/check-verify-dirty.sh" ]]; then
@@ -145,9 +146,9 @@ ARGUMENTS: ${ISSUE_NUMBER} --non-interactive"
 
 # Pre-count: capture ## Consumed Comments section count before claude runs.
 # Used by post-processor fallback to detect when LLM silently skipped writeback.
-_SPEC_DIR=$(WHOLEWORK_CONFIG_PATH="$(dirname "$SCRIPT_DIR")/.wholework.yml" \
+_SPEC_DIR=$(WHOLEWORK_CONFIG_PATH="${REPO_ROOT}/.wholework.yml" \
   "$SCRIPT_DIR/get-config-value.sh" spec-path docs/spec 2>/dev/null || echo "docs/spec")
-_SPEC_FILE_PRE=$(ls "$(dirname "$SCRIPT_DIR")/$_SPEC_DIR/issue-${ISSUE_NUMBER}-"*.md 2>/dev/null | head -1 || true)
+_SPEC_FILE_PRE=$(ls "${REPO_ROOT}/$_SPEC_DIR/issue-${ISSUE_NUMBER}-"*.md 2>/dev/null | head -1 || true)
 _PRE_COUNT=$(grep -c "^## Consumed Comments" "${_SPEC_FILE_PRE:-/dev/null}" 2>/dev/null || true)
 _PRE_COUNT="${_PRE_COUNT:-0}"
 
@@ -188,7 +189,7 @@ fi
 # Post-processor fallback: if LLM did not append ## Consumed Comments, do it now.
 # Compare post-count with pre-count; trigger fallback when count did not increase.
 if [[ $EXIT_CODE -eq 0 ]]; then
-  _SPEC_FILE_POST=$(ls "$(dirname "$SCRIPT_DIR")/$_SPEC_DIR/issue-${ISSUE_NUMBER}-"*.md 2>/dev/null | head -1 || true)
+  _SPEC_FILE_POST=$(ls "${REPO_ROOT}/$_SPEC_DIR/issue-${ISSUE_NUMBER}-"*.md 2>/dev/null | head -1 || true)
   _POST_COUNT=$(grep -c "^## Consumed Comments" "${_SPEC_FILE_POST:-/dev/null}" 2>/dev/null || true)
   _POST_COUNT="${_POST_COUNT:-0}"
   if [[ "$_POST_COUNT" -le "$_PRE_COUNT" ]]; then

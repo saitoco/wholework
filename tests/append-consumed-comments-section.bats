@@ -36,10 +36,14 @@ exit 0
 MOCK
     chmod +x "$MOCK_DIR/gh"
 
-    cat > "$MOCK_DIR/git" <<'MOCK'
+    cat > "$MOCK_DIR/git" <<MOCK
 #!/bin/bash
-if [[ " $* " == *" diff "* ]] && [[ " $* " == *" --quiet "* ]]; then
+if [[ " \$* " == *" diff "* ]] && [[ " \$* " == *" --quiet "* ]]; then
     exit 1
+fi
+if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$REPO_ROOT"
+    exit 0
 fi
 exit 0
 MOCK
