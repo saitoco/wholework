@@ -89,16 +89,27 @@ No new comments since last phase.
 - N/A
 
 ## Phase Handoff
+<!-- phase: review -->
 
 ### Key Decisions
-- `SendMessage` を主経路、`Write` を到達性フォールバックとする配信方式を Spec 通りに実装 (Q&A で確定した方針、変更なし)
-- 3エージェントの verify command を `SendMessage` / `Write` の2本立てに分割した設計 (Purpose文言との整合性確保) をそのまま踏襲
+- レビューで検出された SHOULD 2件 (待機タイムアウト未定義・フォールバックファイル未クリーンアップ) はいずれも低リスクな改善のため、その場で修正してから merge 待ちとした (MUST ではないが既存の `.tmp/` 後始末慣習との不整合を残さない判断)
+- Pre-merge AC 8件 (file_contains×6 / section_contains×1 / rubric×1) は全て PASS。ポリシー変更に該当する修正はなかったため Issue 本文の受け入れ条件は更新していない
 
 ### Deferred Items
-- `agents/review-bug.md` 等、同種の tools 不足パターンを持つ他エージェントの横断監査 (Issue #954 Notes 欄に記載、別 Issue でのスコープ)
+- `agents/review-bug.md` 等、同種の tools 不足パターンを持つ他エージェントの横断監査 (Issue #954 Notes 欄に記載、別 Issue でのスコープ) — review フェーズでも変更なし
 - Post-merge AC: Size=XL の Issue で実際に `/issue` を実行し、SendMessage 経由 (または Write+Read フォールバック経由) で手動介入なしに結果回収できることの確認
 
 ### Notes for Next Phase
-- 3エージェントの `### N. Deliver Results` サブセクションは Primary/Fallback の文言パターンが統一されているか確認すること
-- `agents/*.md` 単体を対象とする bats テストは存在しない (フルスイート1115件は間接的なサニティチェックに留まる) — レビュー時はテスト結果ではなく差分の目視確認を優先すること
-- 同時期に進行した Issue #955 (`/issue` sub-issue split Step 3) も `skills/issue/SKILL.md` を変更しているが、three-dot diff (`main...`) で確認した通り編集箇所は重複しない (#954 は Step 12a、#955 は Step 3)
+- `/merge` 実行時、review フェーズの修正コミット (idle-cycle 閾値 + フォールバックファイル cleanup 追加) が最終差分に含まれていることを確認すること
+- Post-merge AC の実地確認 (Size=XL Issue での `/issue` 実行) は `/verify` フェーズで扱う
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- N/A — review-light の Perspective 1 (Spec Deviation) でも「Implementation Steps の記述と完全一致」と確認された。逸脱なし。
+
+### Recurring issues
+- review-light の Perspective 2 (Edge Cases/Robustness) で SHOULD 2件を検出: (1) team-lead 側の「メッセージ待ち」に idle_notification 回数などの閾値がなく無限ブロックの恐れ、(2) `.tmp/issue-$NUMBER-{scope,risk,precedent}.md` フォールバックファイルが Step 12b 後もクリーンアップされず残存する恐れ (同一 SKILL.md 内の他ステップは `rm -f` で後始末している慣習と不整合)。いずれも Spec の Implementation Steps には記載がなかった観点で、`SendMessage`/`Write` 併用型の配信パターンを新設する際は「待機タイムアウト」と「一時ファイル後始末」をセットで設計に含めるべき、という一般化可能な教訓。両方とも本 PR で修正済み。
+
+### Acceptance criteria verification difficulty
+- N/A — `file_contains`×6 / `section_contains`×1 / `rubric`×1 の Pre-merge AC はいずれも UNCERTAIN なく一発で PASS 判定できた。rubric 条件文が SendMessage 主経路と Write フォールバックの両方を明示的に言語化していたため、grader 判断に曖昧さはなかった。
