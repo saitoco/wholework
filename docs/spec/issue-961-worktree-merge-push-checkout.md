@@ -60,3 +60,31 @@
 - **Auto-Resolve Log は本フェーズでは追加なし**: Issue 側の Auto-Resolve Log (Issue Retrospective コメントに記録済み) で AC2 の verify command が既に `file_not_contains "git pull --rebase"` に差し替えられており、Spec フェーズで新たに解決すべき曖昧点はなかった。
 - **非 `-C` フォールバックの削除は挙動変更を伴わない見込み**: 現行スクリプトで `git rebase "$BASE_BRANCH" "$FROM_BRANCH"` (worktree パスが見つからない場合の最終手段) に到達するのは `$FROM_BRANCH` の worktree が既に存在しない場合のみだが、Wholework の呼び出しパターンでは常に `ExitWorktree(action: "keep")` を経てから本スクリプトを呼ぶため、この分岐は実運用ではそもそも到達しない。削除は観測可能な挙動を変えるものではなく、潜在的な欠陥経路を閉じるものである。
 - `docs/spec/issue-961-recovery.md` は `/issue` フェーズでの silent-hang に対する手動リカバリ記録であり、本 Issue の技術設計とは無関係のため本 Spec には引き継いでいない (プロセス上の記録として別ファイルのまま残す)。
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜4 を計画通りに実装した。Step 1 (`scripts/worktree-merge-push.sh` の primary path 書き換え) は本セッション開始前に既に別セッションでコミット済み (34a59d1c) だったため、本セッションでは Spec の設計 (primary path / フォールバック tier 1・2 の分岐条件) と実装内容が一致していることを確認したのみで、追加変更は行っていない。
+
+### Design Gaps/Ambiguities
+- なし。Spec の Notes に技術的前提の実証結果が記録済みで、実装時に新たに確認すべき曖昧点はなかった。
+
+### Rework
+- worktree に `EnterWorktree` を経由せずセッションを再開したため、`modules/orchestration-fallbacks.md` と `tests/worktree-merge-push.bats` への最初の Edit 呼び出しが誤って共有メインリポジトリ (`/Users/saito/src/wholework/...`) の絶対パスに対して行われ、worktree 側 (`.claude/worktrees/code+issue-961/`) には反映されなかった。`bats tests/worktree-merge-push.bats` をworktree側で実行した際に旧テスト名のまま (`--from triggers git merge --ff-only` 等) 出力されたことで発覚。差分を worktree 側にコピーし、`git checkout --` でメインリポジトリ側を元の状態に復元して解消した。再開セッションでは、Edit/Write の対象パスが実際に worktree 内を指しているか (`pwd` 確認) を先に行うべきだった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `scripts/worktree-merge-push.sh` の primary path 実装 (前セッションでコミット済みの `git fetch . <from>:<base>` ロジック) はそのまま採用し、追加変更なしと判断した — Spec の tier 1/tier 2 フォールバック分岐と実装が一致していることを確認済み。
+- `modules/orchestration-fallbacks.md` の `#ff-only-merge-fallback` エントリは Symptom/Fallback Steps/Escalation/Rationale の全セクションを新ロジックに合わせて全面書き換えし、旧 `git pull --rebase` ベースの記述を残さなかった。
+- `tests/worktree-merge-push.bats` に、foreign checkout かつ worktree 未検出時に bare な rebase/merge が一切発行されないことを検証する新規テストを追加し、AC1/AC2 の safety 特性をテストレベルでも担保した。
+
+### Deferred Items
+- Post-merge AC (複数セッション環境での実地確認) は manual verify-type のため、`/verify` フェーズでの人手確認待ち。
+- なし (その他のフォローアップ Issue は本実装スコープでは発生していない)。
+
+### Notes for Next Phase
+- Pre-merge AC 3件はいずれも rubric / file_not_contains ベースで PASS 判定済み、Issue 本文のチェックボックスは更新済み。
+- `bats tests/` フルスイート (1118 tests, 0 failures) を実行済み — `modules/orchestration-fallbacks.md` を参照する `tests/orchestration-fallbacks.bats` (schema validation) も含めて確認済み。
+- Post-merge の manual AC 確認時は、共有メインディレクトリが他ブランチを checkout した状態で `worktree-merge-push.sh --from <branch>` を実行し、ref-fetch が拒否されつつ bare な rebase/merge が一切発行されないことを実地で確認すること。
