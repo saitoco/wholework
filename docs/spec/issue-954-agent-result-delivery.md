@@ -89,19 +89,17 @@ No new comments since last phase.
 - N/A
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- レビューで検出された SHOULD 2件 (待機タイムアウト未定義・フォールバックファイル未クリーンアップ) はいずれも低リスクな改善のため、その場で修正してから merge 待ちとした (MUST ではないが既存の `.tmp/` 後始末慣習との不整合を残さない判断)
-- Pre-merge AC 8件 (file_contains×6 / section_contains×1 / rubric×1) は全て PASS。ポリシー変更に該当する修正はなかったため Issue 本文の受け入れ条件は更新していない
+- mergeable=true (CI success, review approved) を確認した上で squash merge を実行。conflict なし、rebase 不要だった
 
 ### Deferred Items
-- `agents/review-bug.md` 等、同種の tools 不足パターンを持つ他エージェントの横断監査 (Issue #954 Notes 欄に記載、別 Issue でのスコープ) — review フェーズでも変更なし
-- Post-merge AC: Size=XL の Issue で実際に `/issue` を実行し、SendMessage 経由 (または Write+Read フォールバック経由) で手動介入なしに結果回収できることの確認
+- Post-merge AC: Size=XL の Issue で実際に `/issue` を実行し、SendMessage 経由 (または Write+Read フォールバック経由) で手動介入なしに結果回収できることの確認 (review フェーズから継続)
 
 ### Notes for Next Phase
-- `/merge` 実行時、review フェーズの修正コミット (idle-cycle 閾値 + フォールバックファイル cleanup 追加) が最終差分に含まれていることを確認すること
 - Post-merge AC の実地確認 (Size=XL Issue での `/issue` 実行) は `/verify` フェーズで扱う
+- Issue #954 Notes 欄に記載の他エージェント横断監査は別 Issue のスコープのため verify では対象外
 
 ## review retrospective
 
