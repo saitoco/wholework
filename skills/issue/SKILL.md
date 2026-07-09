@@ -488,9 +488,11 @@ Task(subagent_type="issue-precedent", description="Precedent investigation",
   prompt="Issue=$NUMBER, Issue body=<full text>. Deliver your Output Format markdown via SendMessage(to=\"main\") on completion; if SendMessage is unavailable or fails, Write it to .tmp/issue-$NUMBER-precedent.md instead and state the path in your final response.")
 ```
 
-**Result collection**: `SendMessage` delivers each agent's Output Format markdown automatically — no team-lead polling required. Wait to receive messages from all 3 agents before proceeding to Step 12b. If a message from a given agent does not arrive (e.g., it errored out), read that agent's fallback file (`.tmp/issue-$NUMBER-scope.md` / `.tmp/issue-$NUMBER-risk.md` / `.tmp/issue-$NUMBER-precedent.md`) with `Read` to recover its results instead.
+**Result collection**: `SendMessage` delivers each agent's Output Format markdown automatically — no team-lead polling required. Wait to receive messages from all 3 agents before proceeding to Step 12b. If no message and no fallback file appear from a given agent within 3 `idle_notification` cycles, treat it as silently failed: read that agent's fallback file (`.tmp/issue-$NUMBER-scope.md` / `.tmp/issue-$NUMBER-risk.md` / `.tmp/issue-$NUMBER-precedent.md`) with `Read` to recover its results, applying the same handling as an explicit error if the file is also absent.
 
 On failure: fall back to standard scope assessment (when both `SendMessage` delivery and the `Write` fallback fail for an agent).
+
+After Step 12b integrates the results, delete any fallback files that were created: `rm -f .tmp/issue-$NUMBER-scope.md .tmp/issue-$NUMBER-risk.md .tmp/issue-$NUMBER-precedent.md` (best-effort; ignores files that were never created because `SendMessage` succeeded).
 
 #### Step 12b: Split Proposal (integrate results)
 
