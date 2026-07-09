@@ -303,6 +303,8 @@ Before running any phase, initialize `VERIFY_ITERATION_COUNT`:
 
 **XL route: sub-issue dependency graph with parallel execution (`run-auto-sub.sh` checks each sub-issue's `phase/ready` and auto-runs spec if not set):**
 
+`run-auto-sub.sh` independently loads `ALWAYS_PR` from `.wholework.yml` (via `get-config-value.sh always-pr false`) and applies the same patch→pr promotion logic as Step 2 above when determining each sub-issue's Size-based route — so `always-pr: true` is honored consistently for both the single-Issue path and the XL sub-issue path.
+
 Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `AUTO_MAX_CONCURRENT` (maximum concurrent sub-issue executions; default: 5).
 
 1. **Fetch dependency graph**:
