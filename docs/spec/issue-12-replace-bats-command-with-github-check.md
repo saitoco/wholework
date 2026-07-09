@@ -90,6 +90,3 @@ CI job key: `bats`, display name: `Run bats tests` (from `.github/workflows/test
 
 ### Improvement Proposals
 - N/A
-
-## Consumed Comments
-No new comments since last phase.
