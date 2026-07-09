@@ -137,3 +137,22 @@ No new comments since last phase.
 
 ### Improvement Proposals
 - **配信系パターンの Spec チェックリスト化**: エージェントが `SendMessage`/`Write` 併用でオーケストレータへ結果配信する設計を Spec 化する際、Implementation Steps に「待機タイムアウト (何回の idle_notification / 何秒で fallback とみなすか)」と「一時ファイルの後始末 (`rm -f` 等)」を明示的に含めることをチェックリスト化する。今回は review フェーズで検出・修正されたが、Spec 作成時点で `skills/spec/skill-dev-constraints.md` のような SHOULD constraints リストに項目化しておけば `/spec` 段階で先回りできた (パターン/lesson — 今後同種の agent-to-orchestrator 配信パターンを設計する際に再利用可能)。
+
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| code  | pr    | SUCCESS (Tier 1 reconciliation override) | `run-code.sh` background task ended with harness status `killed` after 2 internal silent-no-op auto-retries (retry 1/3, 2/3); `reconcile-phase-state.sh code-pr 954 --check-completion` confirmed PR #959 already existed (`matches_expected: true`) — treated as success without further intervention |
+| review | pr   | SUCCESS | `run-review.sh 959 --light` completed cleanly (exit 0); 2 SHOULD issues found and fixed in-PR |
+| merge | pr    | SUCCESS | `run-merge.sh 959` completed cleanly (exit 0); PR #959 merged |
+| verify | -    | SUCCESS | All 8 pre-merge ACs PASS; 1 post-merge manual AC left unchecked (`phase/verify` retained) |
+
+### Parallel Execution Issues
+- None (single-Issue pr route; no parallel worktree contention observed)
+
+### Orchestration Anomalies
+- **code phase**: `run-code.sh` background invocation (task id `bhs2q66ls`) ended with harness status `killed` rather than a clean exit code. Log tail showed 2 prior "silent no-op" cycles (`claude` exited 0 but no PR was created; `auto-retry-on-fail` fired internally within `run-code.sh`, retry 1/3 then 2/3), followed by a 3rd attempt that created PR #959 successfully before the background task was killed externally. Tier 1 (Observe) reconciliation (`reconcile-phase-state.sh code-pr 954 --check-completion`) confirmed `matches_expected: true` with PR #959 open — treated as success per the Tier 1 override rule; no Tier 2/3 recovery was needed.
+
+### Improvement Proposals
+- N/A — the existing Tier 1 reconciliation mechanism handled this cleanly; no gap identified in the recovery hierarchy itself. The silent-no-op root cause on the first 2 code-phase attempts is already covered by the existing `auto-retry-on-fail` mechanism and is not a new pattern.
