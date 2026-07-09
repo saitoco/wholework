@@ -72,3 +72,44 @@
 - **外部仕様確認**: `SendMessage` は Claude Code ハーネス内蔵ツールであり公開 API ドキュメントは存在しないため、`modules/external-spec.md` の WebFetch/WebSearch 手順ではなく ToolSearch で実際の tool schema を取得して仕様を確認した (`to: "main"` — バックグラウンドサブエージェントが親セッションへ届ける唯一の経路。"Messages from teammates are delivered automatically" — team-lead 側のポーリングは不要かつ非対応)。
 - **Steering Docs sync candidate 調査**: `skills/issue/SKILL.md` を変更対象に含むため、キーワード `issue` で `docs/*.md` / `docs/ja/*.md` を grep したが、"issue" は汎用語のため全 steering doc (8 件) にヒットし信号にならなかった (scope: `docs/*.md`, `docs/ja/*.md` 全体、除外なし)。代わりにエージェント名 (`issue-scope` / `issue-risk` / `issue-precedent`) で `docs/workflow.md` と `README.md` を個別に grep したが 0 件だった (scope: `docs/workflow.md`, `README.md` の全文)。`docs/structure.md` の Agents 表は description のみを記載し tools 列を持たないため更新不要。以上より Steering Docs sync candidate なしと判断した。
 - **スコープ**: Issue #954 の Auto-Resolved Ambiguity Points により、本 Spec の対象は `issue-scope` / `issue-risk` / `issue-precedent` の 3 エージェントに限定する。`agents/review-bug.md` 等の同種パターンを持つ他エージェントの横断監査は対象外 (別 Issue で扱う)。
+
+## Consumed Comments
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — 実装は Implementation Steps の記述通り (3エージェントへの `SendMessage, Write` 追加 + Deliver Results サブセクション、SKILL.md Step 12a への配信指示・Result collection 追記) に完了しており、設計からの逸脱はなかった。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- レビューで検出された SHOULD 2件 (待機タイムアウト未定義・フォールバックファイル未クリーンアップ) はいずれも低リスクな改善のため、その場で修正してから merge 待ちとした (MUST ではないが既存の `.tmp/` 後始末慣習との不整合を残さない判断)
+- Pre-merge AC 8件 (file_contains×6 / section_contains×1 / rubric×1) は全て PASS。ポリシー変更に該当する修正はなかったため Issue 本文の受け入れ条件は更新していない
+
+### Deferred Items
+- `agents/review-bug.md` 等、同種の tools 不足パターンを持つ他エージェントの横断監査 (Issue #954 Notes 欄に記載、別 Issue でのスコープ) — review フェーズでも変更なし
+- Post-merge AC: Size=XL の Issue で実際に `/issue` を実行し、SendMessage 経由 (または Write+Read フォールバック経由) で手動介入なしに結果回収できることの確認
+
+### Notes for Next Phase
+- `/merge` 実行時、review フェーズの修正コミット (idle-cycle 閾値 + フォールバックファイル cleanup 追加) が最終差分に含まれていることを確認すること
+- Post-merge AC の実地確認 (Size=XL Issue での `/issue` 実行) は `/verify` フェーズで扱う
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- N/A — review-light の Perspective 1 (Spec Deviation) でも「Implementation Steps の記述と完全一致」と確認された。逸脱なし。
+
+### Recurring issues
+- review-light の Perspective 2 (Edge Cases/Robustness) で SHOULD 2件を検出: (1) team-lead 側の「メッセージ待ち」に idle_notification 回数などの閾値がなく無限ブロックの恐れ、(2) `.tmp/issue-$NUMBER-{scope,risk,precedent}.md` フォールバックファイルが Step 12b 後もクリーンアップされず残存する恐れ (同一 SKILL.md 内の他ステップは `rm -f` で後始末している慣習と不整合)。いずれも Spec の Implementation Steps には記載がなかった観点で、`SendMessage`/`Write` 併用型の配信パターンを新設する際は「待機タイムアウト」と「一時ファイル後始末」をセットで設計に含めるべき、という一般化可能な教訓。両方とも本 PR で修正済み。
+
+### Acceptance criteria verification difficulty
+- N/A — `file_contains`×6 / `section_contains`×1 / `rubric`×1 の Pre-merge AC はいずれも UNCERTAIN なく一発で PASS 判定できた。rubric 条件文が SendMessage 主経路と Write フォールバックの両方を明示的に言語化していたため、grader 判断に曖昧さはなかった。

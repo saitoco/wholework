@@ -1,7 +1,7 @@
 ---
 name: issue-precedent
 description: Precedent Investigation: extract learnings from similar Issue/Spec retrospectives (for L/XL Issue parallel investigation)
-tools: Read, Glob, Grep
+tools: Read, Glob, Grep, SendMessage, Write
 model: opus
 ---
 
@@ -47,6 +47,11 @@ Analyze the collected retrospective information for:
 - **Failure patterns**: Common factors that caused rework or design changes
 - **Watch points**: Problems that repeatedly occurred across similar Issues
 - **Applicable insights**: Past decisions and solutions directly applicable to the current Issue
+
+### 4. Deliver Results
+
+- **Primary**: after generating the Output Format markdown, call `SendMessage({to: "main", message: <full Output Format markdown>, summary: "<5-10 words>"})` to deliver the results to the team-lead.
+- **Fallback**: if `SendMessage` is unavailable or errors, `Write` the same markdown to `.tmp/issue-$NUMBER-precedent.md` and state that path in your final response text.
 
 ## Output Format
 
