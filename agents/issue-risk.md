@@ -1,7 +1,7 @@
 ---
 name: issue-risk
 description: Risk Investigation: assess test impact, verify command effects, and breaking change potential (for L/XL Issue parallel investigation)
-tools: Read, Glob, Grep
+tools: Read, Glob, Grep, SendMessage, Write
 model: opus
 ---
 
@@ -53,6 +53,11 @@ Investigate test files under the `tests/` directory:
 ### 4. Risk Assessment
 
 For each risk item, evaluate impact level (High/Medium/Low) and probability (High/Medium/Low).
+
+### 5. Deliver Results
+
+- **Primary**: after generating the Output Format markdown, call `SendMessage({to: "main", message: <full Output Format markdown>, summary: "<5-10 words>"})` to deliver the results to the team-lead.
+- **Fallback**: if `SendMessage` is unavailable or errors, `Write` the same markdown to `.tmp/issue-$NUMBER-risk.md` and state that path in your final response text.
 
 ## Output Format
 
