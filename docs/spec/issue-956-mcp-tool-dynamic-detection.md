@@ -64,3 +64,28 @@
 ### Notes for Next Phase
 - `/verify` は Post-merge AC が「なし」のため、実質的にチェックすべき項目はない
 - 本実装は `skills/issue/mcp-call-guidelines.md` の `load_when` frontmatter を削除し無条件ロードに変更しているため、`/issue` を実行する既存プロジェクトすべてで本ファイルが読み込まれるようになる (挙動変化は Declaration-first Fallback 内で `MCP_TOOLS` 分岐により吸収される設計)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- N/A — Issue 本文の Auto-Resolved Ambiguity Points (対象ファイル選定、優先順位/マージ方針) が SPEC_DEPTH=light の Spec にそのまま反映されており、齟齬はなかった。
+
+#### design
+- N/A — Changed Files (4ファイル) と Implementation Steps (3ステップ) の対応が一貫しており、設計上の抜け漏れは見当たらなかった。
+
+#### code
+- Design Gaps/Ambiguities で記録された通り、前回セッションが crash して `.claude/worktrees/code+issue-956` に未コミット実装を残した状態からの再開が発生した。`worktree-lifecycle.md` の Entry section は `own`/`foreign`/`none` の3判定のみを持ち、「プロセス終了済みの stale worktree に、Spec と一致する未コミット実装が残っている」ケースの扱い (再利用 vs 破棄) を明文化していない。今回はロックファイルの PID 確認 + 手動 `EnterWorktree(path: ...)` + Spec との内容一致確認という即興対応で正しく再利用できたが、内容が不完全・矛盾していた場合の判断基準がなく、`worktree-lifecycle.md` は spec/code/review/merge/verify 全スキルの共有モジュールであるため再発時の影響範囲は広い (Improvement Proposals 参照)。
+
+#### review
+- N/A — Size=S (patch route) のため review フェーズなし。
+
+#### merge
+- N/A — Size=S (patch route) のため merge フェーズなし (main 直コミット)。
+
+#### verify
+- Pre-merge 4件 (rubric ×2, file_contains ×2) はいずれも UNCERTAIN なく一発 PASS。`docs/environment-adaptation.md` § Layer 2 の記述と実装内容 (`mcp-call-guidelines.md`, `SKILL.md`) を直接照合し、rubric 条件文が要求する3段階フローとの整合性を確認した。Post-merge 条件はなし。verify command 自体の不整合は検出されなかった。
+
+### Improvement Proposals
+- **`worktree-lifecycle.md` に stale worktree 再開時の再利用/破棄判断基準を追加**: 現在の Entry section は `detect-foreign-worktree.sh` による `own`/`foreign`/`none` の3値判定のみを持ち、「起動プロセスが終了済み (stale lock) だが worktree ディレクトリに未コミット実装が残っている」ケースを扱う手順がない。判断基準の例: (a) 残存内容が対象 Issue の Spec Implementation Steps と一致するかを確認し、一致すれば再利用、(b) 不一致または確認不能なら破棄して `run-code.sh`/`run-spec.sh` 等を最初からやり直す。`worktree-lifecycle.md` は spec/code/review/merge/verify の全スキルが参照する共有モジュールのため、影響範囲が広く再発性もある構造的な gap (Tier 1 相当)。
