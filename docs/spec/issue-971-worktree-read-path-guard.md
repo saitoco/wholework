@@ -94,3 +94,29 @@ Codebase Investigation で、Issue 本文が言及していなかった追加の
 - **Source**: parent session manual recovery
 - **Recovery type**: review-rerun
 - **Outcome**: success
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 5 件すべてに機械検証可能な verify command が付与され、特に AC5 (hooks.json の matcher 更新) は Spec の Codebase Investigation で「case 文拡張だけでは hook に到達しない」という落とし穴を事前に特定して AC 化した好例。verify は全件機械判定で完了。
+
+#### design
+- 設計逸脱なし。
+
+#### code
+- code-pr 初回試行が watchdog で kill され `code_retry_fire` の内部リトライが成功 (PR #985 作成)。リトライ成功後の exit-0 経路で `code-completed-no-pr` の false-positive anomaly echo が再発 — #964 と同一パターンの追加事例 (#981 で起票済み、新規起票なし)。本バッチの pr route code phase 3 件中 2 件で watchdog kill → retry が発生しており、code phase の silent window 校正は L3 session retrospective で件数集計のうえ判断する。
+
+#### review
+- review phase 実行中に background タスクが外部停止 (kill) され、親セッションが手動リカバリ (stale review worktree を #963 の基準で破棄 → run-review.sh 再実行 → run-merge.sh → verify)。リカバリ自体は Auto Retrospective に記録済み (review-rerun)。
+- **`--write-manual-recovery` の push 競合**: 記録コミットの push が non-fast-forward で拒否された (remote main が merge handoff コミットで先行)。スクリプトは WARNING を出して続行するのみで、親セッションが rebase 中止 → origin/main へ整列 → 再適用で復旧した。recovery 記録の書き込み経路 (manual/Tier 2/Tier 3 とも `git push` 一発) は remote 先行時のリトライを持たない。
+
+#### merge
+- squash merge、コンフリクトなし。クリーン。
+
+#### verify
+- 全 5 AC が初回 verify で PASS (file_contains/grep/file_not_contains 4 件 + rubric 1 件)。
+
+### Improvement Proposals
+- run-auto-sub.sh の recovery 記録書き込み経路 (`_write_manual_recovery_to_spec` / `_write_tier2_recovery_to_spec` / `_write_tier3_recovery_to_spec` および recoveries log の commit+push): remote main が先行している場合に `git push` が non-fast-forward で拒否され、WARNING のみで記録が失われる (今回は親セッションが手動復旧)。push 失敗時に `git pull --rebase` → push を有限回リトライする共通処理を追加すべき。batch/並列実行では remote 先行が常態のため再発性が高い (Skill infrastructure improvement)。
