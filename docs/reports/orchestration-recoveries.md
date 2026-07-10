@@ -64,6 +64,29 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
+## 2026-07-10 18:09 UTC: review-tier3-recovery
+
+### Context
+- Issue #983, phase: review
+- Source: recovery-sub-agent
+- Wrapper: run-review.sh, exit code: 1
+- Log tail: "Finished at: 2026-07-11 02:47:05"
+
+### Diagnosis
+- Claude exited 0 but produced a silent no-op: reconcile shows matches_expected:false with diagnosis 'Review Response Summary not found in PR #983 comments'. No persistent/unrecoverable error in the log — CI checks completed and the review command simply never posted a response before the watchdog-adjacent timeout. Re-running the review phase should complete it.
+
+### Recovery Applied
+- action=retry
+- steps: none
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+---
+
 ## 2026-07-05 08:37 UTC: nested-verify-committed-to-review-worktree
 
 ### Context
