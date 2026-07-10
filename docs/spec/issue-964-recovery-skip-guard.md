@@ -93,18 +93,18 @@ N/A
 N/A — Spec の設計 (fail-closed、abort と同じ exit code 契約、write_recovery_entry を呼ばない) をそのまま実装し、関連4ファイルのフルスイート (72件) がローカルで一発 pass した。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Step 3 のレビュー深度判定で `--light` 指定 (ARGUMENTS) を優先し、Size 参照なしで `REVIEW_DEPTH=light` に確定。1エージェント (review-light) による4観点統合レビューを実施
-- AC3 (`github_check`) を PR #978 の CI 完了後に確認し PASS と判定、Issue チェックボックスを更新して完了
+- mergeable=true (reason=clean, CI success, review approved) を確認したため Step 3 (競合解決) をスキップし、Step 4 (squash merge) に直接進んだ
+- `gh pr merge 978 --squash --delete-branch` で main へ squash merge、リモートブランチ `worktree-code+issue-964` を削除
 
 ### Deferred Items
 - None
 
 ### Notes for Next Phase
-- `/merge 978` を実行可能。MUST issue なし、CI 全ジョブ SUCCESS、AC3件すべて PASS 済み
-- ローカル regression (bats 4ファイル計72件、review-light 実行時の再確認では関連17件) は pass 済みだが、CI 側は "Run bats tests" ジョブの conclusion のみ参照 (フルログは未取得)
+- `/verify 964` を実行可能。closes #964 により Issue は squash merge 時に自動クローズ済み
+- Post-merge verification 項目は Spec 上「なし」
 
 ## review retrospective
 
