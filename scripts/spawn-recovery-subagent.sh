@@ -307,6 +307,20 @@ case "$ACTION" in
     write_recovery_entry "retry" || true
     ;;
   skip)
+    SKIP_MATCHES_EXPECTED=$(python3 -c "
+import json, sys
+try:
+    data = json.loads(sys.argv[1])
+    print('true' if data.get('matches_expected') is True else 'false')
+except Exception:
+    print('false')
+" "$RECONCILE_OUTPUT")
+
+    if [[ "$SKIP_MATCHES_EXPECTED" != "true" ]]; then
+      echo "[spawn-recovery] action=skip rejected: matches_expected != true in RECONCILE_OUTPUT; stopping for human judgment" >&2
+      exit 1
+    fi
+
     echo "[spawn-recovery] action=skip: treating phase as complete"
     write_recovery_entry "skip" || true
     exit 0

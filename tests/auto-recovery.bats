@@ -97,6 +97,12 @@ REPORT_FILE="$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
 
 @test "auto-recovery: action=skip writes recovery-sub-agent entry to report" {
     make_claude_mock '{"action":"skip","rationale":"phase already completed","steps":[]}'
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":true}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
     cd "$BATS_TEST_TMPDIR"
 
     run bash "$SCRIPT" code 42 --log "$LOG_FILE"
@@ -139,6 +145,12 @@ REPORT_FILE="$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
 
 @test "auto-recovery: missing report file skips write gracefully" {
     make_claude_mock '{"action":"skip","rationale":"already done","steps":[]}'
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":true}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
     cd "$BATS_TEST_TMPDIR"
     rm -f "$REPORT_FILE"
 
