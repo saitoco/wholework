@@ -1,8 +1,8 @@
 #!/usr/bin/env bats
 
 # Tests for hook-worktree-path-guard.sh
-# Validates PreToolUse block/allow decisions for Edit/Write/NotebookEdit calls
-# depending on cwd (inside/outside a worktree) and file_path (relative,
+# Validates PreToolUse block/allow decisions for Edit/Write/NotebookEdit/Read
+# calls depending on cwd (inside/outside a worktree) and file_path (relative,
 # worktree-local absolute, or parent-repo absolute).
 
 SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/hook-worktree-path-guard.sh"
@@ -53,6 +53,21 @@ teardown() {
     run bash -c "echo '$INPUT' | \"$SCRIPT\""
     [ "$status" -eq 2 ]
     [[ "$output" == *"hook-worktree-path-guard"* ]]
+}
+
+@test "inside worktree + Read + parent-repo absolute path -> exit 2 (block)" {
+    cd "$FIXTURE_WORKTREE"
+    INPUT=$(printf '{"tool_name":"Read","tool_input":{"file_path":"%s/docs/foo.md"}}' "$FIXTURE_PARENT")
+    run bash -c "echo '$INPUT' | \"$SCRIPT\""
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"hook-worktree-path-guard"* ]]
+}
+
+@test "inside worktree + Read + worktree absolute path -> exit 0 (allow)" {
+    cd "$FIXTURE_WORKTREE"
+    INPUT=$(printf '{"tool_name":"Read","tool_input":{"file_path":"%s/docs/foo.md"}}' "$FIXTURE_WORKTREE")
+    run bash -c "echo '$INPUT' | \"$SCRIPT\""
+    [ "$status" -eq 0 ]
 }
 
 @test "inside worktree + parent-repo absolute path -> emits worktree-path-block event" {
