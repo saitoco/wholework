@@ -440,13 +440,19 @@ run_phase_with_recovery() {
   fi
 
   # concurrent_commit_detected: check for commits on origin/main since phase start,
-  # excluding this issue's own phase commits (identified via #N in the subject line)
+  # excluding this issue's own phase commits (identified via #N in the subject line).
+  # For review/merge phases, `issue` holds the PR number, but self-commits (squash
+  # merge, phase handoffs) reference the originating Issue number instead — callers
+  # set _EXTRA_SELF_ISSUE to that Issue number so both are excluded (issue #974).
   local _commits
   _commits=$(git log origin/main --since="@${PHASE_START}" --format="%H %an" 2>/dev/null || true)
   if [[ -n "$_commits" ]]; then
     local _phase_end; _phase_end=$(date +%s)
     local _since_sec=$(( _phase_end - PHASE_START ))
     local _self_issue_pattern="#${issue}([^0-9]|$)"
+    if [[ -n "${_EXTRA_SELF_ISSUE:-}" ]] && [[ "${_EXTRA_SELF_ISSUE}" != "${issue}" ]]; then
+      _self_issue_pattern="#(${issue}|${_EXTRA_SELF_ISSUE})([^0-9]|$)"
+    fi
     while IFS= read -r _commit_line; do
       [[ -z "$_commit_line" ]] && continue
       local _sha="${_commit_line%% *}"
@@ -671,10 +677,10 @@ case "$EFFECTIVE_SIZE" in
     echo "${LOG_PREFIX} PR number: ${PR_NUMBER}"
 
     echo "${LOG_PREFIX} --- review phase (light): PR #${PR_NUMBER} ---"
-    run_phase_with_recovery "review" "$PR_NUMBER" "$SCRIPT_DIR/run-review.sh" --light
+    _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "review" "$PR_NUMBER" "$SCRIPT_DIR/run-review.sh" --light
 
     echo "${LOG_PREFIX} --- merge phase: PR #${PR_NUMBER} ---"
-    run_phase_with_recovery "merge" "$PR_NUMBER" "$SCRIPT_DIR/run-merge.sh"
+    _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "merge" "$PR_NUMBER" "$SCRIPT_DIR/run-merge.sh"
     ;;
   L)
     # Resume preamble (same logic as M, pr route)
@@ -741,10 +747,10 @@ case "$EFFECTIVE_SIZE" in
     echo "${LOG_PREFIX} PR number: ${PR_NUMBER}"
 
     echo "${LOG_PREFIX} --- review phase (full): PR #${PR_NUMBER} ---"
-    run_phase_with_recovery "review" "$PR_NUMBER" "$SCRIPT_DIR/run-review.sh" --full
+    _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "review" "$PR_NUMBER" "$SCRIPT_DIR/run-review.sh" --full
 
     echo "${LOG_PREFIX} --- merge phase: PR #${PR_NUMBER} ---"
-    run_phase_with_recovery "merge" "$PR_NUMBER" "$SCRIPT_DIR/run-merge.sh"
+    _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "merge" "$PR_NUMBER" "$SCRIPT_DIR/run-merge.sh"
     ;;
   *)
     echo "${LOG_PREFIX} Error: Unknown Size: ${SIZE}" >&2

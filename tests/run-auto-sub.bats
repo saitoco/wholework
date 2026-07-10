@@ -914,6 +914,81 @@ MOCK
     ! grep -q "commit_sha=aaa1111" "$BATS_TEST_TMPDIR/emit.log"
 }
 
+@test "concurrent_commit_detected: merge/review phase self-commit referencing the Issue number (not the PR number) is excluded (issue #974)" {
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    export EMIT_ISSUE_NUMBER="42"
+
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() {
+  echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
+}
+_emit_comments_consumed() { :; }
+MOCK
+
+    # Default Size is M (see setup): code-pr phase is called with issue=42, and
+    # review/merge phases are called with issue=$PR_NUMBER=99. The commit below
+    # is one of this run's own phase commits, but its subject references the
+    # originating Issue number (#42) rather than the PR number (#99) — the
+    # scenario that previously false-positived during review/merge.
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"log origin/main"* ]]; then
+  echo "aaa1111 Test User"
+  exit 0
+fi
+if [[ "$*" == *"log -1"* && "$*" == *"aaa1111"* ]]; then
+  echo "Add merge phase handoff for issue #42"
+  exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    ! grep -q "concurrent_commit_detected" "$BATS_TEST_TMPDIR/emit.log" 2>/dev/null
+}
+
+@test "concurrent_commit_detected: an unrelated commit is still detected during review/merge phase (issue #974)" {
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    export EMIT_ISSUE_NUMBER="42"
+
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() {
+  echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
+}
+_emit_comments_consumed() { :; }
+MOCK
+
+    # A commit from a different Issue (#123) must still be flagged as concurrent,
+    # confirming the Issue-number self-exclusion does not over-exclude.
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"log origin/main"* ]]; then
+  echo "ccc3333 Other User"
+  exit 0
+fi
+if [[ "$*" == *"log -1"* && "$*" == *"ccc3333"* ]]; then
+  echo "chore: unrelated patch (closes #123)"
+  exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "concurrent_commit_detected.*commit_sha=ccc3333" "$BATS_TEST_TMPDIR/emit.log"
+}
+
 @test "run-auto-sub: tier2 recovery: writes Auto Retrospective to spec file" {
     export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
 
