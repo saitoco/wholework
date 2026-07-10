@@ -45,3 +45,28 @@ Issue #956 の `/code` フェーズでセッションが crash した際、`.cla
 - **既存の別レイヤーの stale worktree 破棄機構との関係**: `scripts/run-code.sh` (headless `/code` 起動のラッパー) には `claude -p` 起動前に同名 worktree ディレクトリ/ブランチを無条件で `git worktree remove --force` する既存 cleanup ロジックがある (`run-code.sh` の "Cleanup stale worktrees/branches from previous failed runs" ブロック)。また `/auto --resume` の PR route milestone 機構 (`skills/auto/SKILL.md` "Resume preamble") でも `pre-commit` milestone は「再実行、未コミット変更は破棄」という無条件破棄方針を取る。これらはいずれも LLM セッションが存在しない、または再開判断を bash レベルで完結させる必要があるヘッドレス自動再実行の文脈で動く安全側の仕組みであり、今回 Entry Section に追加する再利用/破棄判断基準 (LLM セッションが Spec の内容と照合して判断する、対話的/手動再開を含む文脈向け) とは適用レイヤーが異なる。両者は独立して機能するため統一の必要はないと判断し、本 Issue のスコープ外とした。
 - **プロセス終了確認の具体的な検出手段は規定しない**: Issue の Background では「ロックファイルの PID を `ps -p` で確認」という即興対応が記録されているが、worktree Entry 時点で汎用的に参照できるロック/PID ファイルの仕組みは現状のコードベースに存在しない (`worktree-merge-push.sh` の PID スタンプ付きロックは merge 時点専用で Entry Section とは無関係)。そのため新規ステップでは「終了の積極的な証拠がない限り live とみなし、自動処理せず衝突として表面化させる」という判断原則のみを明記し、特定の技術的検出手段 (lock ファイル形式など) は規定しない。
 - **Changed Files をドキュメントのみに限定した判断 (Auto-Resolve, non-interactive mode)**: 本 Issue は `modules/worktree-lifecycle.md` という手順書 (LLM が読んで実行する Markdown) への追記のみで完結し、対応する `.sh` スクリプトや bats テストは存在しない (`tests/` 配下に `worktree-lifecycle` を対象とするテストなし、確認済み)。再利用/破棄の判断ロジック自体が「Spec の内容と実際の diff を照合する」という LLM 解釈を前提とするため、既存 Entry Section の他ステップ (例: step 4 の node_modules symlink 手順) と同様、専用スクリプト化はせずプレーンな手順記述として追加する。
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。実装内容 (`modules/worktree-lifecycle.md` の Entry Section への新規 step 2 挿入、旧 step 2/3/4 の繰り下げ、旧 step 1 の前方参照修正) は Spec の Implementation Steps と完全一致。
+
+### Design Gaps/Ambiguities
+- 本セッション自体が Issue #963 が扱う stale worktree シナリオに該当した。前回セッションが `EnterWorktree(name: "code/issue-963")` で作成した worktree 内で実装・コミット (`07e9b1df`) まで完了させたが、Step 12 (retrospective) 以降で crash し、`.claude/worktrees/code+issue-963` が未クリーンアップのまま残存していた。今回のセッションで同名 worktree に再エントリした際、`git status --porcelain` で未コミット差分がないこと、および残存コミットの内容が Spec の Implementation Steps と完全一致することを確認した上で、今回追加した Entry Section step 2 の再利用判定基準に沿って再実装せず再利用した。Issue が定義した基準を Issue 自身の実装再開に適用する形になった。
+
+### Rework
+- なし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- stale worktree (前回セッションの実装済みコミット `07e9b1df` が残る `.claude/worktrees/code+issue-963`) を検出し、Spec Implementation Steps との内容一致を確認した上で再利用した。再実装は行っていない。
+- pre-merge verify command 2件 (`rubric`, `section_contains "### Entry Section" "stale"`) をこのセッションで実行し PASS を確認、Issue の Acceptance Criteria チェックボックスを更新済み。
+
+### Deferred Items
+- なし。
+
+### Notes for Next Phase
+- `/review` フェーズでは、コミット `07e9b1df` (chore: add stale worktree reuse/discard criteria...) の内容を確認すること。差分は `modules/worktree-lifecycle.md` の Entry Section のみ (11 insertions, 4 deletions)。
+- patch route のため `/merge` は不要 (Step 13 でこのセッションが直接 main へ push する)。
