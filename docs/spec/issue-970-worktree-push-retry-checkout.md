@@ -100,14 +100,4 @@ push-retry ループ (行129-148, #853 由来) は #961 が導入した checkout
 - **スコープ判断: `$FROM_BRANCH` が空 (lock+push-only モード) の push-retry は bare rebase のまま維持**: Issue 本文は「push-retry ループの checkout レス化」を求めているが、`$FROM_BRANCH` が空の場合は worktree スコープの rebase 対象となる別ブランチが存在しない。このモードは `modules/worktree-lifecycle.md` の Exit 節で `ENTERED_WORKTREE=false` (= 呼び出し元セッションが自身の対象 worktree に既に入っている、または直接 `$BASE_BRANCH` 上で作業している) 時にのみ `--from` なしで呼ばれる契約であり、primary merge path 自体も `if [[ -n "$FROM_BRANCH" ]]` でマージブロック全体をスキップして this モードでは何もしない。既存 bats テスト `"max-retry exhaustion..."` (行364-383) も `--from` なしで push-retry ループを直接検証しており、この対称性を壊さないために bare rebase を維持する判断とした。rubric AC1 の「共有ディレクトリの現在の checkout に対して bare git rebase を実行しない」は、Issue 本文の具体的な発火シナリオ (`--from` 経由の push race) を指しており、この判断と矛盾しない。
 - **技術的前提の再利用**: worktree 検索 (`git worktree list --porcelain` + awk) と `git -C <path> rebase` の組み合わせは、primary merge path (現行101-111行目) で既に実装・レビュー・テスト済みのパターンをそのまま再利用するものであり、#961 Spec で実施済みのサンドボックス実証(`git fetch . <src>:<dst>` の安全特性)を超えて新たに外部仕様を確認する必要はない。
 - **Steering Docs sync candidate の確認結果**: `docs/structure.md` (212行目) と `docs/tech.md` (225-226行目) は grep で該当行を確認済みで、いずれも push-retry ループの内部実装 (worktree スコープ rebase かどうか) までは踏み込まない一行要約/lock機構の説明のため、本Issueでの変更は不要と判断した。`/code` フェーズでの再確認を妨げないよう Changed Files に候補として残す。
-
-## spec retrospective
-
-### Minor observations
-- Nothing to note.
-
-### Judgment rationale
-- push-retry ループの `$FROM_BRANCH` 空欄時 (lock+push-only モード) の扱いについて、bare rebase を維持するかどうかが唯一の設計判断点だった。primary merge path 自体が同条件でマージブロックを丸ごとスキップする既存の非対称設計と整合させ、既存テスト (`"max-retry exhaustion..."`) の契約を壊さないことを優先し、bare rebase 維持を選択した。Notes に記録済み。
-
-### Uncertainty resolution
-- Nothing to note.
+- **設計判断の記録**: push-retry ループの `$FROM_BRANCH` 空欄時 (lock+push-only モード) の扱いについて、bare rebase を維持するかどうかが唯一の判断点だった。primary merge path 自体が同条件でマージブロックを丸ごとスキップする既存の非対称設計と整合させ、既存テスト (`"max-retry exhaustion..."`) の契約を壊さないことを優先し、bare rebase 維持を選択した (詳細は上記1項目目)。
