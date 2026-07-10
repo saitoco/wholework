@@ -427,6 +427,71 @@ MOCK
     [[ "$output" == *"retry 1/3"* ]]
 }
 
+@test "push race with --from: retry loop aborts when no worktree is found for rebase" {
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GIT_LOG"
+if [[ "\$1" == "rev-parse" && "\$2" == "--show-toplevel" ]]; then
+    echo "${BATS_TEST_TMPDIR}/test-repo"
+    exit 0
+fi
+if [[ "\$1" == "fetch" && "\$2" == "." ]]; then
+    exit 0
+fi
+if [[ "\$1" == "push" ]]; then
+    exit 1
+fi
+if [[ "\$1" == "worktree" && "\$2" == "list" ]]; then
+    printf ""
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Cannot locate a worktree"* ]]
+    push_count=$(grep -c "push origin main" "$GIT_LOG")
+    [ "$push_count" -eq 1 ]
+}
+
+@test "push race with --from: retry loop aborts when the retry-scoped rebase conflicts" {
+    WORKTREE_PATH="$BATS_TEST_TMPDIR/fake-worktree"
+    mkdir -p "$WORKTREE_PATH"
+
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GIT_LOG"
+if [[ "\$1" == "rev-parse" && "\$2" == "--show-toplevel" ]]; then
+    echo "${BATS_TEST_TMPDIR}/test-repo"
+    exit 0
+fi
+if [[ "\$1" == "fetch" && "\$2" == "." ]]; then
+    exit 0
+fi
+if [[ "\$1" == "push" ]]; then
+    exit 1
+fi
+if [[ "\$1" == "worktree" && "\$2" == "list" ]]; then
+    printf "worktree ${WORKTREE_PATH}\nbranch refs/heads/test-branch\n\n"
+    exit 0
+fi
+if [[ "\$1" == "-C" && "\$3" == "rebase" && "\$4" != "--abort" ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Rebase during push retry failed with conflicts"* ]]
+    grep -q -- "-C ${WORKTREE_PATH} rebase --abort" "$GIT_LOG"
+    push_count=$(grep -c "push origin main" "$GIT_LOG")
+    [ "$push_count" -eq 1 ]
+}
+
 @test "is-ancestor true: rebase is skipped when branch already contains origin base" {
     cat > "$MOCK_DIR/git" <<MOCK
 #!/bin/bash
