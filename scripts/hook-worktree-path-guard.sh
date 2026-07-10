@@ -1,5 +1,5 @@
 #!/bin/bash
-# PreToolUse hook: block Edit/Write/NotebookEdit calls that pass an absolute
+# PreToolUse hook: block Edit/Write/NotebookEdit/Read calls that pass an absolute
 # parent-repo path while the session is inside a worktree.
 # Exit 0 (allow) except when a worktree-session parent-repo absolute path is detected (exit 2, block).
 
@@ -8,7 +8,7 @@ INPUT=$(cat)
 TOOL_NAME=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty')
 
 case "$TOOL_NAME" in
-  Edit|Write|NotebookEdit) ;;
+  Edit|Write|NotebookEdit|Read) ;;
   *) exit 0 ;;
 esac
 
