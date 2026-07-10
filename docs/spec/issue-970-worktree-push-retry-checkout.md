@@ -130,15 +130,14 @@ push-retry ループ (行129-148, #853 由来) は #961 が導入した checkout
 - PR 本文の bats 実行結果表記 ("16/16 PASS") が、本 PR で追加した新規テスト2件を含む実際の総数 (17→19) と一致しておらず、軽微な記述の陳腐化が見られた。AC自体の判定には影響しなかったが、PR 説明文の数値は生成後にテストを追加した場合ずれやすいので注意。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- レビューで検出した SHOULD 3件 (Spec Retrospective の不正確な記述、orchestration-fallbacks.md の force refspec 未記載、retry ループ自身の worktree-not-found/conflict 分岐の未テスト) はいずれも低リスクで修正方針が明確だったため、その場で修正しコミット・push した (`d5c35b4f`, `08a834a0`, `47d4f539`)。MUST issue は今回の review では検出されなかった (以前のレビューコメントで報告された force refspec の MUST バグは review 開始前に commit 211eb33d で既に修正済みであることを確認)。
-- 3件の修正はそれぞれ独立した関心事 (Spec/Retrospective 訂正、ドキュメント整合性、テストカバレッジ追加) のため、1コミットにまとめず3コミットに分割し、各コミットに対応する PR inline comment の `Refs:` リンクを個別に付与した。
+- PR #983 は mergeable=clean / CI success / review approved で、conflict 解消は不要だった。squash merge を `gh pr merge 983 --squash --delete-branch` で直接実行した。
+- Issue 番号は PR body の `closes #970` から抽出。base branch は `main` のため、squash merge により Issue #970 は自動クローズされる。
 
 ### Deferred Items
-- なし。SHOULD 3件はすべて本フェーズ内で解消済み。
+- なし。
 
 ### Notes for Next Phase
-- `/merge 983` に進んで良い。CI (DCO / bats / skill syntax / forbidden expressions / macOS shell compat) はすべて SUCCESS、bats は 19/19 green。
-- Acceptance Criteria 3件はすべて Issue 側で既に `[x]` 済み (Step 8 で変更不要と確認)。
+- `/verify 970` に進んで良い。Pre-merge verification 3件 (rubric 2件、bats command 1件) はレビューフェーズ内で確認済み。Post-merge verification は「なし」。
