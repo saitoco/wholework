@@ -108,8 +108,24 @@ MOCK
     grep -q "42" "$RUNNER_LOG"
 }
 
-@test "spawn-recovery: CLAUDE_BIN mock returns action=skip: exits 0 without runner invocation" {
+@test "spawn-recovery: CLAUDE_BIN mock returns action=skip with matches_expected:false: rejected" {
     make_claude_mock '{"action":"skip","rationale":"phase already completed","steps":[]}'
+    cd "$BATS_TEST_TMPDIR"
+
+    run bash "$SCRIPT" code 42 --log "$LOG_FILE"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"rejected"* ]]
+    [ ! -f "$RUNNER_LOG" ]
+}
+
+@test "spawn-recovery: CLAUDE_BIN mock returns action=skip with matches_expected:true: exits 0 without runner invocation" {
+    make_claude_mock '{"action":"skip","rationale":"phase already completed","steps":[]}'
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":true}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
     cd "$BATS_TEST_TMPDIR"
 
     run bash "$SCRIPT" code 42 --log "$LOG_FILE"
@@ -159,6 +175,12 @@ MOCK
 
 @test "spawn-recovery: stale slot lock (dead pid) is reclaimed and script proceeds" {
     make_claude_mock '{"action":"skip","rationale":"already done","steps":[]}'
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":true}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
     cd "$BATS_TEST_TMPDIR"
     mkdir -p ".tmp"
     mkdir ".tmp/recovery-subagent-slot-1"
@@ -176,6 +198,12 @@ MOCK
 printf 'Let me analyze this issue.\n\n{"action":"skip","rationale":"already resolved","steps":[]}\n\nHope that helps!'
 MOCK
     chmod +x "$MOCK_DIR/claude-mock"
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":true}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
     cd "$BATS_TEST_TMPDIR"
 
     run bash "$SCRIPT" code 42 --log "$LOG_FILE"

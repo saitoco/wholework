@@ -80,3 +80,39 @@
 - **Steering Docs sync candidate 6件は変更不要の見込み**: `docs/product.md`/`docs/structure.md`/`docs/tech.md`/日本語ミラー3件は `spawn-recovery-subagent.sh` に言及するが、いずれも Tier 3 全体の役割 (サブエージェント起動・バリデーション・並行制御・recovery entry 記録) を抽象度高く説明しており、`skip` 分岐内部のガード有無という実装詳細には踏み込んでいない (grep 済み、既存記述はそのまま正確)。`doc-checker.md` の必須列挙ルールに従い候補として列挙したが、`/code` フェーズでの実読による最終確認を経ても変更不要と判断される可能性が高い。
 - **tests/run-auto-sub.bats・tests/auto-sub-observability.bats はソース変更不要**: 両ファイルとも `setup()` で `$MOCK_DIR/spawn-recovery-subagent.sh` 自体を丸ごとモックスクリプトに置き換えており (`run-auto-sub.sh` 側から見て `WHOLEWORK_SCRIPT_DIR` 経由で解決される)、実体である `scripts/spawn-recovery-subagent.sh` のロジック変更の影響を受けない。Issue 本文 AC3 が両ファイルを「cross-file test coupling」としてフルスイートに含めているのは安全網としての実行であり、ソース側の修正が必要という意味ではないことを確認済み。
 - **Issue body の背景記述との整合性確認**: Background に記載された行番号 (111行目の `RECONCILE_OUTPUT`、289-313行目の `skip)` 分岐) は実装コードの現況と一致しており、コンフリクトは検出しなかった。
+
+## Code Retrospective
+
+### Deviations from Design
+N/A — 実装は Implementation Steps 1-3 の記述通り。
+
+### Design Gaps/Ambiguities
+N/A
+
+### Rework
+N/A — Spec の設計 (fail-closed、abort と同じ exit code 契約、write_recovery_entry を呼ばない) をそのまま実装し、関連4ファイルのフルスイート (72件) がローカルで一発 pass した。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Step 3 のレビュー深度判定で `--light` 指定 (ARGUMENTS) を優先し、Size 参照なしで `REVIEW_DEPTH=light` に確定。1エージェント (review-light) による4観点統合レビューを実施
+- AC3 (`github_check`) を PR #978 の CI 完了後に確認し PASS と判定、Issue チェックボックスを更新して完了
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- `/merge 978` を実行可能。MUST issue なし、CI 全ジョブ SUCCESS、AC3件すべて PASS 済み
+- ローカル regression (bats 4ファイル計72件、review-light 実行時の再確認では関連17件) は pass 済みだが、CI 側は "Run bats tests" ジョブの conclusion のみ参照 (フルログは未取得)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Nothing to note — diff は Spec の Implementation Steps の記述と一致しており、構造的な乖離は検出しなかった。
+
+### Recurring issues
+Nothing to note — `review-light` (4観点: spec deviation / edge cases・robustness / security・safety / documentation consistency) で issue 0件。同種の指摘の繰り返しも観測されなかった。
+
+### Acceptance criteria verification difficulty
+Nothing to note — AC1 (`grep`)・AC2 (`rubric`)・AC3 (`github_check`) の3件とも UNCERTAIN なく機械的に PASS 判定できた。AC3 は Phase Handoff (code) の "Notes for Next Phase" が指示した通り、PR #978 の CI ("Run bats tests" ジョブ) 完了後に確認しチェックボックスを更新した。
