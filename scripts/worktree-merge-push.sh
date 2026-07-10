@@ -151,7 +151,12 @@ while true; do
       echo "Error: Rebase during push retry failed with conflicts. Resolve manually." >&2
       exit 1
     fi
-    if ! git fetch . "${FROM_BRANCH}:${BASE_BRANCH}"; then
+    # Force refspec: local $BASE_BRANCH still holds the pre-race value set by the
+    # primary merge path, so a plain (non-force) fetch would reject this update as
+    # non-fast-forward -- the rebase above already re-based FROM_BRANCH onto the
+    # freshly-fetched origin/$BASE_BRANCH, so overwriting the stale local ref here is
+    # the correct outcome, not an unsafe force-push.
+    if ! git fetch . "+${FROM_BRANCH}:${BASE_BRANCH}"; then
       echo "Error: ref-fetch retry after push-rebase failed. Resolve manually." >&2
       exit 1
     fi
