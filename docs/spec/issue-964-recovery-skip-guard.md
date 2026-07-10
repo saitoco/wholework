@@ -93,17 +93,26 @@ N/A
 N/A — Spec の設計 (fail-closed、abort と同じ exit code 契約、write_recovery_entry を呼ばない) をそのまま実装し、関連4ファイルのフルスイート (72件) がローカルで一発 pass した。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec Notes の fail-closed 判断をそのまま採用: `RECONCILE_OUTPUT` が空/パース不能な場合も `matches_expected != true` として拒否側に倒した (`python3 -c` の `except Exception: print('false')`)
-- 拒否時は `abort` 分岐と同じ契約 (`write_recovery_entry` を呼ばず非ゼロ exit) に揃え、retry/recover への自動フォールバックは行わない設計を維持
+- Step 3 のレビュー深度判定で `--light` 指定 (ARGUMENTS) を優先し、Size 参照なしで `REVIEW_DEPTH=light` に確定。1エージェント (review-light) による4観点統合レビューを実施
+- AC3 (`github_check`) を PR #978 の CI 完了後に確認し PASS と判定、Issue チェックボックスを更新して完了
 
 ### Deferred Items
-- AC3 (`github_check`) は PR #978 の CI 実行完了後にのみ確認可能なため、Issue のチェックボックスは AC1・AC2 のみ更新済み (AC3 は未チェックのまま `/review` フェーズ以降で確認)
-- Steering Docs sync candidate 6件 (`docs/product.md`/`docs/structure.md`/`docs/tech.md` と日本語ミラー) は grep で内容確認済みで変更不要と判断 (Spec Notes の見立て通り)
+- None
 
 ### Notes for Next Phase
-- `/review` フェーズでは PR #978 の CI (`test.yml` ワークフローの "Run bats tests" ジョブ) が pass することを確認し、AC3 のチェックボックスを更新すること
-- ローカルでは `bats tests/spawn-recovery-subagent.bats tests/auto-recovery.bats tests/run-auto-sub.bats tests/auto-sub-observability.bats` の72件が全て pass 済み
-- 未解決の Uncertainties や設計上の懸念は残っていない
+- `/merge 978` を実行可能。MUST issue なし、CI 全ジョブ SUCCESS、AC3件すべて PASS 済み
+- ローカル regression (bats 4ファイル計72件、review-light 実行時の再確認では関連17件) は pass 済みだが、CI 側は "Run bats tests" ジョブの conclusion のみ参照 (フルログは未取得)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Nothing to note — diff は Spec の Implementation Steps の記述と一致しており、構造的な乖離は検出しなかった。
+
+### Recurring issues
+Nothing to note — `review-light` (4観点: spec deviation / edge cases・robustness / security・safety / documentation consistency) で issue 0件。同種の指摘の繰り返しも観測されなかった。
+
+### Acceptance criteria verification difficulty
+Nothing to note — AC1 (`grep`)・AC2 (`rubric`)・AC3 (`github_check`) の3件とも UNCERTAIN なく機械的に PASS 判定できた。AC3 は Phase Handoff (code) の "Notes for Next Phase" が指示した通り、PR #978 の CI ("Run bats tests" ジョブ) 完了後に確認しチェックボックスを更新した。
