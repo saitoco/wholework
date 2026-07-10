@@ -388,6 +388,8 @@ MOCK
     cd "$SHARED"
     git config user.email test@test.com
     git config user.name test
+    # Force the branch name regardless of the runner's init.defaultBranch config.
+    git checkout -q -B main
     echo base > base.txt
     git add base.txt
     git commit -q -m "base"
@@ -413,6 +415,7 @@ MOCK
     cd "$OTHER"
     git config user.email test@test.com
     git config user.name test
+    git checkout -q main
     echo other > other.txt
     git add other.txt
     git commit -q -m "other session work"
