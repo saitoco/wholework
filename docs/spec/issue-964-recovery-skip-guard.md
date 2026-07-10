@@ -116,3 +116,29 @@ Nothing to note — `review-light` (4観点: spec deviation / edge cases・robus
 
 ### Acceptance criteria verification difficulty
 Nothing to note — AC1 (`grep`)・AC2 (`rubric`)・AC3 (`github_check`) の3件とも UNCERTAIN なく機械的に PASS 判定できた。AC3 は Phase Handoff (code) の "Notes for Next Phase" が指示した通り、PR #978 の CI ("Run bats tests" ジョブ) 完了後に確認しチェックボックスを更新した。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue phase での AC 品質が高い: 3 件の曖昧ポイント自動解決 (対象スクリプト特定・fail 時挙動・テスト範囲) と verify command の job-level `github_check` への昇格により、verify は全件機械判定で完了した。
+
+#### design
+- Spec は Issue AC の 2 値前提 (`true`/`false`) を超えて「`RECONCILE_OUTPUT` が空/パース不能」ケースを fail-closed に倒す設計判断を追加。実装・テストにそのまま反映された良好なパターン。
+
+#### code
+- code-pr 初回試行が watchdog (max_silent_window, 15:51 UTC) で kill され、`code_retry_fire` による内部リトライが成功して PR #978 を作成 (15:57 UTC 完了)。リトライ機構は設計通りに機能した。
+
+#### review
+- review-light で指摘 0 件。クリーン。
+
+#### merge
+- squash merge、コンフリクトなし。クリーン。
+
+#### verify
+- 全 3 AC が初回 verify で PASS (機械判定)。
+- **False-positive anomaly 観察**: code-pr 完了後の exit-0 経路 (`run-auto-sub.sh` の `detect-wrapper-anomaly.sh` informational 呼び出し) が、ログに残る初回試行の watchdog kill 痕跡から `code-completed-no-pr` を検出し「The run-code.sh phase exited without creating a PR」と出力した。実際には リトライ成功で PR #978 が作成済みであり false-positive。echo のみで状態影響はないが、`### Orchestration Anomalies` 形式のテキストがログに残るため、`/auto` Completion Report の anomaly スキャンや L3 notable 判定を誤誘導しうる。#932 (review phase の post-fallback false-positive anomaly、CLOSED・observation 待ち) と同型の別 phase 事例。
+
+### Improvement Proposals
+- detect-wrapper-anomaly.sh の exit-0 informational 経路: `code_retry_fire` によるリトライ成功後のログには初回試行の kill 痕跡が残るため、`code-completed-no-pr` 等のパターンが false-positive 検出される。ログスキャンを最終試行分に限定するか、リトライ成功 (PR 抽出成功等の完了根拠) を検出した場合に anomaly 出力を抑制すべき (Skill infrastructure improvement)。
