@@ -15,20 +15,27 @@ Provides a shared worktree Entry/Exit lifecycle common to all skills (/spec, /co
 
 The calling skill enters the worktree with the following steps:
 
-1. **Determine worktree context**: Run `${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh "$WORKTREE_NAME"` (pass the same value used for `EnterWorktree`'s `name` parameter in step 2):
+1. **Determine worktree context**: Run `${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh "$WORKTREE_NAME"` (pass the same value used for `EnterWorktree`'s `name` parameter in step 3):
    - **Output `none`** (not inside any worktree): Record `ENTERED_WORKTREE=true` and proceed to the next step
    - **Output `own`** (already inside the worktree matching `WORKTREE_NAME`): Record `ENTERED_WORKTREE=false` and skip EnterWorktree, proceeding to the next step
    - **Output `foreign <path>`** (inside a *different* worktree — e.g. inherited via a nested `Skill()` dispatch from a parent phase's Opportunistic Verification / Event-based observation scan, or a leftover worktree from a prior phase that was never exited): run `cd <path>` to return to the main repository root, then record `ENTERED_WORKTREE=true` and proceed to the next step exactly as in the `none` case (this creates the skill's own properly isolated worktree instead of silently operating — and potentially committing — inside the foreign one)
 
-2. Only when `ENTERED_WORKTREE=true`: Call `EnterWorktree(name: WORKTREE_NAME)`
+2. **Stale worktree check** (when step 1 recorded `ENTERED_WORKTREE=true`; run before calling `EnterWorktree(name: WORKTREE_NAME)` in step 3): `detect-foreign-worktree.sh` only inspects the *current* branch, so it cannot see a worktree directory left behind by a previous session that crashed or exited without calling `ExitWorktree` — from the main repo root, such a worktree is invisible to step 1 and would otherwise conflict with a fresh `EnterWorktree(name: ...)` call. Check whether `.claude/worktrees/$WORKTREE_NAME` already exists on disk:
+   - **Does not exist**: no stale worktree — proceed to step 3 as normal.
+   - **Exists** (candidate stale worktree): treat it as a live conflict — not stale — unless there is positive evidence the owning process has actually ended (e.g., no concurrent session or `/auto` run is known to hold it); when in doubt, stop and surface the conflict instead of acting automatically. Once confirmed stale, decide **reuse vs. discard**:
+     - Inspect residual content: `git -C ".claude/worktrees/$WORKTREE_NAME" status --porcelain` (and `git diff` for detail).
+     - **No uncommitted changes**, or changes **consistent with this phase's intended work** (e.g., for `/code`, matching the Spec's Implementation Steps at `docs/spec/issue-N-*.md`) → **reuse**: call `EnterWorktree(path: ".claude/worktrees/$WORKTREE_NAME")` instead of step 3's `name` form.
+     - Changes that **contradict or only partially match** the intended work, or nothing to compare against → **discard**: remove the stale worktree and branch (`git worktree remove --force ".claude/worktrees/$WORKTREE_NAME"`; `git branch -D "worktree-${WORKTREE_NAME//\//+}"`), then proceed to step 3 to create a fresh worktree.
 
-3. **Run worktree initialization hook**: Run only if `.claude/hooks/worktree-init.sh` exists:
+3. Only when `ENTERED_WORKTREE=true`: Call `EnterWorktree(name: WORKTREE_NAME)`
+
+4. **Run worktree initialization hook**: Run only if `.claude/hooks/worktree-init.sh` exists:
    ```bash
    test -x .claude/hooks/worktree-init.sh && bash .claude/hooks/worktree-init.sh
    ```
    Do nothing if hook does not exist (skip).
 
-4. **`node_modules` symlink from parent repo (optional, for Node.js projects)**: When `command` verify types depend on binaries such as `pnpm exec` or `npx`, those binaries are not found inside the worktree because `node_modules/` only exists in the parent repository. If the parent repo has `node_modules/`, adding the following snippet to `.claude/hooks/worktree-init.sh` creates a symlink to share it:
+5. **`node_modules` symlink from parent repo (optional, for Node.js projects)**: When `command` verify types depend on binaries such as `pnpm exec` or `npx`, those binaries are not found inside the worktree because `node_modules/` only exists in the parent repository. If the parent repo has `node_modules/`, adding the following snippet to `.claude/hooks/worktree-init.sh` creates a symlink to share it:
    ```bash
    PARENT_ROOT="$(git worktree list | awk 'NR==1{print $1}')"
    if [ -d "$PARENT_ROOT/node_modules" ] && [ ! -e "node_modules" ]; then
