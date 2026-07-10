@@ -61,8 +61,30 @@ Codebase Investigation で、Issue 本文が言及していなかった追加の
 ### Rework
 - N/A — Implementation Steps 1-4 を計画通り実装し、bats テスト (9/9 PASS) と5件の pre-merge verify command が初回実行で全て PASS した。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note — Implementation Steps 1-4 と PR diff は 1:1 対応しており、構造的な乖離は検出されなかった (review-light Perspective 1 で確認済み)。
+
+### Recurring issues
+- Nothing to note — MUST/SHOULD/CONSIDER いずれの指摘も発生しなかった。
+
+### Acceptance criteria verification difficulty
+- Nothing to note — 5件の verify command (file_contains ×2, grep, file_not_contains, rubric) はいずれも曖昧さなく機械的に判定でき、UNCERTAIN は発生しなかった。code フェーズで既に PASS 済みだった内容を review フェーズで独立に再検証し、同じ結果 (全PASS) を得た。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
+
+### Key Decisions
+- Light mode (`--light` 明示指定) で review-light エージェント1体による4観点統合レビューを実施。M サイズ相当の diff (117行、5ファイル) に対して妥当な深度と判断。
+- 外部レビューツール (copilot/claude-code-review/coderabbit) は `.wholework.yml` 未設定のため Step 7 を全体スキップ。
+
+### Deferred Items
+- Nothing to note — MUST/SHOULD/CONSIDER 指摘が発生しなかったため Step 12 の修正作業は不要だった。
+
+### Notes for Next Phase
+- 5件の pre-merge verify command は review フェーズでも独立に再検証し、全て PASS (code フェーズでの判定と一致)。
+- CI 全ジョブ SUCCESS (DCO, bats tests ×2, skill syntax ×2, forbidden expressions ×2, macOS shell compatibility ×2)。`/merge 985` に進んで問題なし。
 
 ### Key Decisions
 - Spec の Implementation Steps 1-4 をそのまま実装 (`hooks/hooks.json` matcher、`hook-worktree-path-guard.sh` case 文、bats テスト2件追加、`worktree-lifecycle.md` Scope limit 文言更新)。設計からの逸脱なし。
