@@ -49,3 +49,29 @@ Codebase Investigation で、Issue 本文が言及していなかった追加の
 - **`docs/structure.md` / `docs/ja/structure.md` 一行要約のリネームは見送り**: `hook-worktree-path-guard.sh` を grep した結果、両ファイルとも "blocks Edit/Write calls" という一行要約 (NotebookEdit 言及も元々省略された簡略表現) がヒットした。今回の変更に伴い "blocks Edit/Write/Read calls" 等へ更新することも検討したが、AC4 が要求するスコープは `modules/worktree-lifecycle.md` の Scope limit 文言の是正のみであり、`docs/structure.md` の一行要約は既存の簡略化された表現の範囲内 (NotebookEdit 追加時も更新されていない) と判断し、今回は Changed Files に Steering Docs sync candidate として残すに留めた。
 - **`modules/worktree-lifecycle.md` のセクション見出し ( `### Edit/Write path conventions in worktree sessions` ) のリネームも見送り**: 見出し名自体を "Edit/Write/Read path conventions" 等に変更すると、`docs/structure.md`・`docs/ja/structure.md`・`scripts/hook-worktree-path-guard.sh` の echo メッセージ内の cross-reference 文字列 (`§ Edit/Write path conventions in worktree sessions`) や過去の disposable Spec ( `docs/spec/issue-860-*.md` 等) への波及確認が必要になり、AC4 が要求するスコープ (Scope limit 文言の是正) を超える。AC4 の `file_not_contains` は見出し名ではなく Enforcement 段落内の特定フレーズのみを対象としているため、見出し名は変更せず据え置く。
 - **関連 Issue #888 (CLOSED / phase/done) の確認**: `hook: claude -p サブプロセスセッションでの hook-worktree-path-guard.sh 発火を検証` は解決済み。hook 自体の起動メカニズム (`--plugin-dir` 経由のプラグインロード) は実行環境で健全であることが既に確認されており、本 Issue の実装を妨げる要因はない。
+
+## Code Retrospective
+
+### Deviations from Design
+- Implementation Steps に明記されていなかった軽微な追加として、`scripts/hook-worktree-path-guard.sh` 冒頭のヘッダーコメント (`# PreToolUse hook: block Edit/Write/NotebookEdit calls ...`) も `Read` を含む記述に更新した。同じファイル・同じ行が対象とする `TOOL_NAME` case 文の直近にあり、更新しないと case 文の変更内容とヘッダーコメントの記述が食い違うため、ドキュメント整合性維持の一環として実施した。AC・Verification には影響しない。
+
+### Design Gaps/Ambiguities
+- N/A — Spec の Codebase Investigation (`hooks/hooks.json` matcher の発見) により、実装時に新たな設計ギャップは見つからなかった。
+
+### Rework
+- N/A — Implementation Steps 1-4 を計画通り実装し、bats テスト (9/9 PASS) と5件の pre-merge verify command が初回実行で全て PASS した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps 1-4 をそのまま実装 (`hooks/hooks.json` matcher、`hook-worktree-path-guard.sh` case 文、bats テスト2件追加、`worktree-lifecycle.md` Scope limit 文言更新)。設計からの逸脱なし。
+- `hook-worktree-path-guard.sh` 冒頭のヘッダーコメントも Read を含む記述に更新 (Spec には未記載の軽微な追加、AC・Verification には無影響)。
+
+### Deferred Items
+- `docs/structure.md` / `docs/ja/structure.md` の一行要約リネームは Spec Notes 通り見送り (AC4 のスコープ外と判断済み)。
+- `modules/worktree-lifecycle.md` のセクション見出しリネームも Spec Notes 通り見送り。
+
+### Notes for Next Phase
+- Pre-merge verify command 5件は本フェーズで実行済み・全て PASS (Issue 側チェックボックスも更新済み)。review フェーズでの再確認は不要だが、CI 側の bats 実行結果は別途確認すること。
+- 変更ファイルは `hooks/hooks.json`, `scripts/hook-worktree-path-guard.sh`, `tests/hook-worktree-path-guard.bats`, `modules/worktree-lifecycle.md` の4件のみ。`docs/structure.md` 系は意図的に未変更。
