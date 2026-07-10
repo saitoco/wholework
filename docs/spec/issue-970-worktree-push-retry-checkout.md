@@ -60,7 +60,7 @@ push-retry ループ (行129-148, #853 由来) は #961 が導入した checkout
          echo "Error: Rebase during push retry failed with conflicts. Resolve manually." >&2
          exit 1
        fi
-       if ! git fetch . "${FROM_BRANCH}:${BASE_BRANCH}"; then
+       if ! git fetch . "+${FROM_BRANCH}:${BASE_BRANCH}"; then
          echo "Error: ref-fetch retry after push-rebase failed. Resolve manually." >&2
          exit 1
        fi
@@ -75,7 +75,7 @@ push-retry ループ (行129-148, #853 由来) は #961 が導入した checkout
    done
    ```
 
-   `$FROM_BRANCH` が設定されている場合は、primary merge path (行101-111) と同じ `git worktree list --porcelain` の awk 検索で `$FROM_BRANCH` の worktree を特定し、そこで `git -C <worktree_path> rebase` を実行後、`git fetch . "${FROM_BRANCH}:${BASE_BRANCH}"` で共有ディレクトリの checkout に触れずローカル `$BASE_BRANCH` を更新する。worktree が見つからない場合は bare rebase にフォールバックせず明示エラーで exit 1。`$FROM_BRANCH` が空 (lock+push-only モード) の場合は既存の bare `git rebase` を維持する — このモードは呼び出し元の現在のブランチが `$BASE_BRANCH` そのものであることが前提のため、primary merge path 自体も `$FROM_BRANCH` が空のときはマージブロック全体をスキップしており、対称的な扱いとなる (Notes 参照)。
+   `$FROM_BRANCH` が設定されている場合は、primary merge path (行101-111) と同じ `git worktree list --porcelain` の awk 検索で `$FROM_BRANCH` の worktree を特定し、そこで `git -C <worktree_path> rebase` を実行後、`git fetch . "+${FROM_BRANCH}:${BASE_BRANCH}"` (**force refspec**) で共有ディレクトリの checkout に触れずローカル `$BASE_BRANCH` を更新する。force refspec が必要な理由: このリトライ時点でローカル `$BASE_BRANCH` は primary merge path が以前に設定した値のままだが、rebase 後の `$FROM_BRANCH` tip は新しく fetch した `origin/$BASE_BRANCH` を親に持つため、非 force fetch では non-fast-forward として拒否されリトライが機能しない (実 git で再現確認済み、後述の bats テスト参照)。worktree が見つからない場合は bare rebase にフォールバックせず明示エラーで exit 1。`$FROM_BRANCH` が空 (lock+push-only モード) の場合は既存の bare `git rebase` を維持する — このモードは呼び出し元の現在のブランチが `$BASE_BRANCH` そのものであることが前提のため、primary merge path 自体も `$FROM_BRANCH` が空のときはマージブロック全体をスキップしており、対称的な扱いとなる (Notes 参照)。
 
 2. `modules/orchestration-fallbacks.md` — `## ff-only-merge-fallback` の Escalation 節にある「Push retry loop (max 3)」の記述を、Step 1 のロジックを反映して更新する: `<from-branch>` 指定時は worktree スコープの `git -C <worktree-path> rebase origin/<base>` + `git fetch . <from>:<base>` の再試行になること、worktree が見つからない場合は resolve manually で abort すること、`<from-branch>` 未指定時は bare rebase を維持すること (呼び出し元の現在のブランチが `<base>` 自体である前提のため) を明記する。Rationale に「push-retry ループの rebase を #970 でステップ5と同じ checkout レス設計に揃えた」旨の一文を追記する。(after 1) (→ acceptance criteria AC2)
 
@@ -101,3 +101,44 @@ push-retry ループ (行129-148, #853 由来) は #961 が導入した checkout
 - **技術的前提の再利用**: worktree 検索 (`git worktree list --porcelain` + awk) と `git -C <path> rebase` の組み合わせは、primary merge path (現行101-111行目) で既に実装・レビュー・テスト済みのパターンをそのまま再利用するものであり、#961 Spec で実施済みのサンドボックス実証(`git fetch . <src>:<dst>` の安全特性)を超えて新たに外部仕様を確認する必要はない。
 - **Steering Docs sync candidate の確認結果**: `docs/structure.md` (212行目) と `docs/tech.md` (225-226行目) は grep で該当行を確認済みで、いずれも push-retry ループの内部実装 (worktree スコープ rebase かどうか) までは踏み込まない一行要約/lock機構の説明のため、本Issueでの変更は不要と判断した。`/code` フェーズでの再確認を妨げないよう Changed Files に候補として残す。
 - **設計判断の記録**: push-retry ループの `$FROM_BRANCH` 空欄時 (lock+push-only モード) の扱いについて、bare rebase を維持するかどうかが唯一の判断点だった。primary merge path 自体が同条件でマージブロックを丸ごとスキップする既存の非対称設計と整合させ、既存テスト (`"max-retry exhaustion..."`) の契約を壊さないことを優先し、bare rebase 維持を選択した (詳細は上記1項目目)。
+
+## Code Retrospective
+
+### Deviations from Design
+- レビューフィードバック対応で1点、実装時点の Spec 記載から逸脱した: push-retry ループの retry-scoped ref-fetch (`git fetch . "${FROM_BRANCH}:${BASE_BRANCH}"`) が実際の push race シナリオで non-fast-forward 拒否されることが判明し (レビューコメント参照)、force refspec (`git fetch . "+${FROM_BRANCH}:${BASE_BRANCH}"`) に修正した。Spec 本文・コードサンプルは本 Retrospective 追記と同じコミットで force refspec を反映済み。上記以外は Implementation Steps 1–4 を Spec の記載どおりに実装した (script rewrite → doc update → bats test → suite実行)。
+
+### Design Gaps/Ambiguities
+- N/A — Notes 節に記録済みの `$FROM_BRANCH` 空欄時の非対称設計判断以外に、実装中に新たな曖昧点は見つからなかった。
+
+### Rework
+- N/A
+
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+- push-retry ループの retry-scoped ref-fetch は、review コメント (2026-07-10) で non-fast-forward 拒否の MUST バグが指摘され、`git fetch . "${FROM_BRANCH}:${BASE_BRANCH}"` → force refspec `"+${FROM_BRANCH}:${BASE_BRANCH}"` へ修正された (commit 211eb33d)。このコミットはスクリプトと bats テストのみを更新し、Spec のコードサンプルおよび `modules/orchestration-fallbacks.md` の Escalation 記述は非 force のまま取り残されていた。review フェーズ (review-light) の Documentation Consistency / Spec Deviation 観点が両方の乖離を独立に検出し、本フェーズ内で修正済み。**パターン**: レビュー起因の修正コミットがコード+テストのみを更新し、Spec / カタログ系ドキュメント (orchestration-fallbacks.md 等) の追随更新を忘れるケースが再発している。次回以降、レビュー中に fix commit を作る際は「Spec のコードサンプル」「関連する orchestration-fallbacks.md 等のカタログドキュメント」も差分対象に含めるチェックを明示的に行うことを推奨。
+- Code Retrospective の "Deviations from Design: N/A" は、上記の force refspec 差分を記録し損ねていた (review-light が検出、本フェーズで修正)。"Spec どおりに実装した" という記述は、レビュー起因の修正が入った時点で再確認が必要。
+
+### 繰り返しイシューの有無
+
+- 本 Issue (#970) 自体、PR #968 の review-light が検出した SHOULD 指摘から起票されたものであり、「#961 が primary merge path のみをスコープした結果、同型の欠陥が push-retry ループに残存した」という構造的パターンの再発である。今回もレビュー中に検出された force refspec バグは、#961→#970 と同様に「一部だけ checkout レス化して、関連箇所への展開が漏れる」パターンの一種と言える。今後、checkout 依存排除のような横断的な設計変更を行う Issue では、Changed Files 節に「同一スクリプト内の類似コードパス (retry ループ、エラーハンドリング分岐等) を網羅的に洗い出したか」を明示的にチェックする観点を追加すると良い。
+
+### 受入条件検証の難易度
+
+- rubric AC1/AC2 は問題なく判定できた。特に AC1 は `$FROM_BRANCH` 空欄時の bare rebase 維持という非対称設計を「未修正」と誤検出するリスクがあったが、Spec Notes 節に判断根拠が記録されていたため正しく PASS 判定できた — rubric 対象に複雑な条件分岐がある場合、Spec Notes への判断根拠の明記が UNCERTAIN/誤 FAIL を防ぐ効果を持つことを確認できた好例。
+- PR 本文の bats 実行結果表記 ("16/16 PASS") が、本 PR で追加した新規テスト2件を含む実際の総数 (17→19) と一致しておらず、軽微な記述の陳腐化が見られた。AC自体の判定には影響しなかったが、PR 説明文の数値は生成後にテストを追加した場合ずれやすいので注意。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- レビューで検出した SHOULD 3件 (Spec Retrospective の不正確な記述、orchestration-fallbacks.md の force refspec 未記載、retry ループ自身の worktree-not-found/conflict 分岐の未テスト) はいずれも低リスクで修正方針が明確だったため、その場で修正しコミット・push した (`d5c35b4f`, `08a834a0`, `47d4f539`)。MUST issue は今回の review では検出されなかった (以前のレビューコメントで報告された force refspec の MUST バグは review 開始前に commit 211eb33d で既に修正済みであることを確認)。
+- 3件の修正はそれぞれ独立した関心事 (Spec/Retrospective 訂正、ドキュメント整合性、テストカバレッジ追加) のため、1コミットにまとめず3コミットに分割し、各コミットに対応する PR inline comment の `Refs:` リンクを個別に付与した。
+
+### Deferred Items
+- なし。SHOULD 3件はすべて本フェーズ内で解消済み。
+
+### Notes for Next Phase
+- `/merge 983` に進んで良い。CI (DCO / bats / skill syntax / forbidden expressions / macOS shell compat) はすべて SUCCESS、bats は 19/19 green。
+- Acceptance Criteria 3件はすべて Issue 側で既に `[x]` 済み (Step 8 で変更不要と確認)。
