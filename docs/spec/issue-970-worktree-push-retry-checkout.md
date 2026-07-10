@@ -113,17 +113,32 @@ push-retry ループ (行129-148, #853 由来) は #961 が導入した checkout
 ### Rework
 - N/A
 
+## review retrospective
+
+### Spec vs. 実装の乖離パターン
+
+- push-retry ループの retry-scoped ref-fetch は、review コメント (2026-07-10) で non-fast-forward 拒否の MUST バグが指摘され、`git fetch . "${FROM_BRANCH}:${BASE_BRANCH}"` → force refspec `"+${FROM_BRANCH}:${BASE_BRANCH}"` へ修正された (commit 211eb33d)。このコミットはスクリプトと bats テストのみを更新し、Spec のコードサンプルおよび `modules/orchestration-fallbacks.md` の Escalation 記述は非 force のまま取り残されていた。review フェーズ (review-light) の Documentation Consistency / Spec Deviation 観点が両方の乖離を独立に検出し、本フェーズ内で修正済み。**パターン**: レビュー起因の修正コミットがコード+テストのみを更新し、Spec / カタログ系ドキュメント (orchestration-fallbacks.md 等) の追随更新を忘れるケースが再発している。次回以降、レビュー中に fix commit を作る際は「Spec のコードサンプル」「関連する orchestration-fallbacks.md 等のカタログドキュメント」も差分対象に含めるチェックを明示的に行うことを推奨。
+- Code Retrospective の "Deviations from Design: N/A" は、上記の force refspec 差分を記録し損ねていた (review-light が検出、本フェーズで修正)。"Spec どおりに実装した" という記述は、レビュー起因の修正が入った時点で再確認が必要。
+
+### 繰り返しイシューの有無
+
+- 本 Issue (#970) 自体、PR #968 の review-light が検出した SHOULD 指摘から起票されたものであり、「#961 が primary merge path のみをスコープした結果、同型の欠陥が push-retry ループに残存した」という構造的パターンの再発である。今回もレビュー中に検出された force refspec バグは、#961→#970 と同様に「一部だけ checkout レス化して、関連箇所への展開が漏れる」パターンの一種と言える。今後、checkout 依存排除のような横断的な設計変更を行う Issue では、Changed Files 節に「同一スクリプト内の類似コードパス (retry ループ、エラーハンドリング分岐等) を網羅的に洗い出したか」を明示的にチェックする観点を追加すると良い。
+
+### 受入条件検証の難易度
+
+- rubric AC1/AC2 は問題なく判定できた。特に AC1 は `$FROM_BRANCH` 空欄時の bare rebase 維持という非対称設計を「未修正」と誤検出するリスクがあったが、Spec Notes 節に判断根拠が記録されていたため正しく PASS 判定できた — rubric 対象に複雑な条件分岐がある場合、Spec Notes への判断根拠の明記が UNCERTAIN/誤 FAIL を防ぐ効果を持つことを確認できた好例。
+- PR 本文の bats 実行結果表記 ("16/16 PASS") が、本 PR で追加した新規テスト2件を含む実際の総数 (17→19) と一致しておらず、軽微な記述の陳腐化が見られた。AC自体の判定には影響しなかったが、PR 説明文の数値は生成後にテストを追加した場合ずれやすいので注意。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Push-retry ループの rebase を `$FROM_BRANCH` の有無で分岐: 設定時は primary merge path (step 5) と同じ `git worktree list --porcelain` + awk で worktree を特定し `git -C <path> rebase origin/<base>` を実行、未設定時 (lock+push-only モード) は bare `git rebase` を維持。primary merge path 自体が `$FROM_BRANCH` 空欄時にマージブロック全体をスキップする既存の非対称設計と整合させた。
-- worktree が見つからない場合は bare rebase へのフォールバックを行わず明示エラーで exit 1 — #961 が閉じた「暗黙の checkout 依存」の再導入を避けるため。
-- 既存 bats テスト (`"push race..."`) のモックに `worktree list --porcelain` ハンドラを追加して green を維持しつつ、`git -C <path> rebase` の呼び出しを直接アサートする新規テストを追加した。
+- レビューで検出した SHOULD 3件 (Spec Retrospective の不正確な記述、orchestration-fallbacks.md の force refspec 未記載、retry ループ自身の worktree-not-found/conflict 分岐の未テスト) はいずれも低リスクで修正方針が明確だったため、その場で修正しコミット・push した (`d5c35b4f`, `08a834a0`, `47d4f539`)。MUST issue は今回の review では検出されなかった (以前のレビューコメントで報告された force refspec の MUST バグは review 開始前に commit 211eb33d で既に修正済みであることを確認)。
+- 3件の修正はそれぞれ独立した関心事 (Spec/Retrospective 訂正、ドキュメント整合性、テストカバレッジ追加) のため、1コミットにまとめず3コミットに分割し、各コミットに対応する PR inline comment の `Refs:` リンクを個別に付与した。
 
 ### Deferred Items
-- なし。Spec の Implementation Steps 1–4 をすべて実装済み。
+- なし。SHOULD 3件はすべて本フェーズ内で解消済み。
 
 ### Notes for Next Phase
-- review フェーズでは、rubric AC1 が `$FROM_BRANCH` 空欄時の bare rebase 維持を「未修正」と誤検出しないか確認してほしい (Spec Notes 節に判断根拠を記録済み)。
-- `bats tests/worktree-merge-push.bats` は 16/16 green (ローカル実行済み)。CI でも再確認可能。
+- `/merge 983` に進んで良い。CI (DCO / bats / skill syntax / forbidden expressions / macOS shell compat) はすべて SUCCESS、bats は 19/19 green。
+- Acceptance Criteria 3件はすべて Issue 側で既に `[x]` 済み (Step 8 で変更不要と確認)。
