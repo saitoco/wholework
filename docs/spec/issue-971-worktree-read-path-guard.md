@@ -85,3 +85,12 @@ Codebase Investigation で、Issue 本文が言及していなかった追加の
 ### Notes for Next Phase
 - Pre-merge verify command 5件は code/review 両フェーズで PASS 済み。Post-merge verify command はなし (Spec Verification § Post-merge = 「なし」)。
 - `/verify 971` は post-merge 確認事項がないため、label transition のみで完了する見込み。
+
+## Auto Retrospective
+
+### Manual recovery (review)
+- **Date**: 2026-07-10 19:31 UTC
+- **Issue**: #971, phase: review
+- **Source**: parent session manual recovery
+- **Recovery type**: review-rerun
+- **Outcome**: success
