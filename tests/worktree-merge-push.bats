@@ -294,6 +294,9 @@ MOCK
 }
 
 @test "push race: push fails once then succeeds after fetch-rebase retry" {
+    WORKTREE_PATH="$BATS_TEST_TMPDIR/fake-worktree"
+    mkdir -p "$WORKTREE_PATH"
+
     cat > "$MOCK_DIR/git" <<MOCK
 #!/bin/bash
 echo "\$@" >> "$GIT_LOG"
@@ -310,6 +313,13 @@ if [[ "\$1" == "push" ]]; then
     [ "\$count" -eq 1 ] && exit 1
     exit 0
 fi
+if [[ "\$1" == "worktree" && "\$2" == "list" ]]; then
+    printf "worktree ${WORKTREE_PATH}\nbranch refs/heads/test-branch\n\n"
+    exit 0
+fi
+if [[ "\$1" == "-C" && "\$3" == "rebase" ]]; then
+    exit 0
+fi
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/git"
@@ -320,6 +330,43 @@ MOCK
     grep -q "fetch origin main" "$GIT_LOG"
     push_count=$(grep -c "push origin main" "$GIT_LOG")
     [ "$push_count" -eq 2 ]
+}
+
+@test "push race with --from uses worktree-scoped rebase, not a bare rebase" {
+    WORKTREE_PATH="$BATS_TEST_TMPDIR/fake-worktree"
+    mkdir -p "$WORKTREE_PATH"
+
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GIT_LOG"
+if [[ "\$1" == "rev-parse" && "\$2" == "--show-toplevel" ]]; then
+    echo "${BATS_TEST_TMPDIR}/test-repo"
+    exit 0
+fi
+if [[ "\$1" == "push" ]]; then
+    COUNT_FILE="${BATS_TEST_TMPDIR}/push_count"
+    count=0
+    [ -f "\$COUNT_FILE" ] && count=\$(cat "\$COUNT_FILE")
+    count=\$((count + 1))
+    echo "\$count" > "\$COUNT_FILE"
+    [ "\$count" -eq 1 ] && exit 1
+    exit 0
+fi
+if [[ "\$1" == "worktree" && "\$2" == "list" ]]; then
+    printf "worktree ${WORKTREE_PATH}\nbranch refs/heads/test-branch\n\n"
+    exit 0
+fi
+if [[ "\$1" == "-C" && "\$3" == "rebase" ]]; then
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch"
+    [ "$status" -eq 0 ]
+    grep -q -- "-C ${WORKTREE_PATH} rebase origin/main" "$GIT_LOG"
+    ! grep -qE "^rebase origin/main" "$GIT_LOG"
 }
 
 @test "is-ancestor true: rebase is skipped when branch already contains origin base" {
