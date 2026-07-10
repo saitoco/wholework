@@ -33,6 +33,11 @@ MOCK_EOF
 
     SCRIPT="$REPO_DIR/scripts/check-file-overlap.sh"
     SPEC_DIR="$REPO_DIR/docs/spec"
+
+    # REPO_DIR is not a git repository, so `git rev-parse --show-toplevel`
+    # fails here and the script falls back to `pwd` — cd into it so that
+    # fallback resolves to REPO_DIR instead of the real project root.
+    cd "$REPO_DIR"
 }
 
 teardown() {

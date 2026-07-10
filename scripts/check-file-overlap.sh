@@ -33,7 +33,7 @@ if ! [[ "$PARENT_NUMBER" =~ ^[0-9]+$ ]]; then
 fi
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 # Get sub-issue list (OPEN sub-issues only)
 SUB_ISSUE_JSON=$("$SCRIPT_DIR/get-sub-issue-graph.sh" "$PARENT_NUMBER" 2>/dev/null)
