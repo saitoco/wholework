@@ -70,3 +70,29 @@ Issue #956 の `/code` フェーズでセッションが crash した際、`.cla
 ### Notes for Next Phase
 - `/review` フェーズでは、コミット `07e9b1df` (chore: add stale worktree reuse/discard criteria...) の内容を確認すること。差分は `modules/worktree-lifecycle.md` の Entry Section のみ (11 insertions, 4 deletions)。
 - patch route のため `/merge` は不要 (Step 13 でこのセッションが直接 main へ push する)。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue phase で常時 PASS する不良 verify command (`grep "stale" ...`) が `section_contains` に修正されており、AC の検証可能性が実装前に確保されていた (Issue Retrospective コメントに記録済み)。良好なパターン。
+
+#### design
+- Spec の Implementation Steps と実装 (`07e9b1df`) が完全一致。設計逸脱なし。
+
+#### code
+- 本 Issue の実装セッション自体が stale worktree シナリオに遭遇し、追加したばかりの判断基準 (Spec Implementation Steps との内容一致 → reuse) を自己適用して再利用に成功した (Code Retrospective に記録済み)。
+
+#### review
+- N/A (patch route のため review phase なし)。
+
+#### merge
+- N/A (patch route、worktree-merge-push.sh で直接 main へ push)。
+
+#### verify
+- 全 AC が初回 verify で PASS。pre-merge チェックボックスは code phase が verify command を先行実行して更新済みだったため、verify では冪等な再検証のみ。
+- **Orchestration 観察**: `/auto --batch --resume` からの再開時、Issue ラベルが既に `phase/code` であったにもかかわらず `run-auto-sub.sh` が spec phase を再ディスパッチした。`/spec` セッション自身が状態を調査して実行を辞退 (exit 0) したため実害はなかったが、丸ごと 1 回の `claude -p` セッション (~4 分) が冗長に消費された。「auto-starting from the current phase/* state」という文書化された挙動と矛盾する。
+
+### Improvement Proposals
+- run-auto-sub.sh: resume 時に Issue ラベルが `phase/code` 以降であっても spec phase を再ディスパッチする。ラベル状態 (`phase/code`/`phase/review`/`phase/verify`) または Spec ファイル存在 + `## Design Complete` コメント既投稿の検出により spec phase を skip する分岐を追加すべき (Skill infrastructure improvement)。
