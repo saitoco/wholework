@@ -73,27 +73,15 @@ Codebase Investigation で、Issue 本文が言及していなかった追加の
 - Nothing to note — 5件の verify command (file_contains ×2, grep, file_not_contains, rubric) はいずれも曖昧さなく機械的に判定でき、UNCERTAIN は発生しなかった。code フェーズで既に PASS 済みだった内容を review フェーズで独立に再検証し、同じ結果 (全PASS) を得た。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Light mode (`--light` 明示指定) で review-light エージェント1体による4観点統合レビューを実施。M サイズ相当の diff (117行、5ファイル) に対して妥当な深度と判断。
-- 外部レビューツール (copilot/claude-code-review/coderabbit) は `.wholework.yml` 未設定のため Step 7 を全体スキップ。
+- PR #985 は mergeable=true (clean, CI success, review approved) であったため、conflict resolution はスキップし squash merge を直接実行。
+- squash merge 後、worktree ブランチを `origin/main` に ff-only で追従させ、同一 commit 上で Phase Handoff を書き込む通常フローに従った。
 
 ### Deferred Items
-- Nothing to note — MUST/SHOULD/CONSIDER 指摘が発生しなかったため Step 12 の修正作業は不要だった。
+- Nothing to note — merge フェーズでの追加対応は発生しなかった。
 
 ### Notes for Next Phase
-- 5件の pre-merge verify command は review フェーズでも独立に再検証し、全て PASS (code フェーズでの判定と一致)。
-- CI 全ジョブ SUCCESS (DCO, bats tests ×2, skill syntax ×2, forbidden expressions ×2, macOS shell compatibility ×2)。`/merge 985` に進んで問題なし。
-
-### Key Decisions
-- Spec の Implementation Steps 1-4 をそのまま実装 (`hooks/hooks.json` matcher、`hook-worktree-path-guard.sh` case 文、bats テスト2件追加、`worktree-lifecycle.md` Scope limit 文言更新)。設計からの逸脱なし。
-- `hook-worktree-path-guard.sh` 冒頭のヘッダーコメントも Read を含む記述に更新 (Spec には未記載の軽微な追加、AC・Verification には無影響)。
-
-### Deferred Items
-- `docs/structure.md` / `docs/ja/structure.md` の一行要約リネームは Spec Notes 通り見送り (AC4 のスコープ外と判断済み)。
-- `modules/worktree-lifecycle.md` のセクション見出しリネームも Spec Notes 通り見送り。
-
-### Notes for Next Phase
-- Pre-merge verify command 5件は本フェーズで実行済み・全て PASS (Issue 側チェックボックスも更新済み)。review フェーズでの再確認は不要だが、CI 側の bats 実行結果は別途確認すること。
-- 変更ファイルは `hooks/hooks.json`, `scripts/hook-worktree-path-guard.sh`, `tests/hook-worktree-path-guard.bats`, `modules/worktree-lifecycle.md` の4件のみ。`docs/structure.md` 系は意図的に未変更。
+- Pre-merge verify command 5件は code/review 両フェーズで PASS 済み。Post-merge verify command はなし (Spec Verification § Post-merge = 「なし」)。
+- `/verify 971` は post-merge 確認事項がないため、label transition のみで完了する見込み。
