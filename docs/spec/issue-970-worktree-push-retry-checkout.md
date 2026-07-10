@@ -60,7 +60,7 @@ push-retry ループ (行129-148, #853 由来) は #961 が導入した checkout
          echo "Error: Rebase during push retry failed with conflicts. Resolve manually." >&2
          exit 1
        fi
-       if ! git fetch . "${FROM_BRANCH}:${BASE_BRANCH}"; then
+       if ! git fetch . "+${FROM_BRANCH}:${BASE_BRANCH}"; then
          echo "Error: ref-fetch retry after push-rebase failed. Resolve manually." >&2
          exit 1
        fi
@@ -75,7 +75,7 @@ push-retry ループ (行129-148, #853 由来) は #961 が導入した checkout
    done
    ```
 
-   `$FROM_BRANCH` が設定されている場合は、primary merge path (行101-111) と同じ `git worktree list --porcelain` の awk 検索で `$FROM_BRANCH` の worktree を特定し、そこで `git -C <worktree_path> rebase` を実行後、`git fetch . "${FROM_BRANCH}:${BASE_BRANCH}"` で共有ディレクトリの checkout に触れずローカル `$BASE_BRANCH` を更新する。worktree が見つからない場合は bare rebase にフォールバックせず明示エラーで exit 1。`$FROM_BRANCH` が空 (lock+push-only モード) の場合は既存の bare `git rebase` を維持する — このモードは呼び出し元の現在のブランチが `$BASE_BRANCH` そのものであることが前提のため、primary merge path 自体も `$FROM_BRANCH` が空のときはマージブロック全体をスキップしており、対称的な扱いとなる (Notes 参照)。
+   `$FROM_BRANCH` が設定されている場合は、primary merge path (行101-111) と同じ `git worktree list --porcelain` の awk 検索で `$FROM_BRANCH` の worktree を特定し、そこで `git -C <worktree_path> rebase` を実行後、`git fetch . "+${FROM_BRANCH}:${BASE_BRANCH}"` (**force refspec**) で共有ディレクトリの checkout に触れずローカル `$BASE_BRANCH` を更新する。force refspec が必要な理由: このリトライ時点でローカル `$BASE_BRANCH` は primary merge path が以前に設定した値のままだが、rebase 後の `$FROM_BRANCH` tip は新しく fetch した `origin/$BASE_BRANCH` を親に持つため、非 force fetch では non-fast-forward として拒否されリトライが機能しない (実 git で再現確認済み、後述の bats テスト参照)。worktree が見つからない場合は bare rebase にフォールバックせず明示エラーで exit 1。`$FROM_BRANCH` が空 (lock+push-only モード) の場合は既存の bare `git rebase` を維持する — このモードは呼び出し元の現在のブランチが `$BASE_BRANCH` そのものであることが前提のため、primary merge path 自体も `$FROM_BRANCH` が空のときはマージブロック全体をスキップしており、対称的な扱いとなる (Notes 参照)。
 
 2. `modules/orchestration-fallbacks.md` — `## ff-only-merge-fallback` の Escalation 節にある「Push retry loop (max 3)」の記述を、Step 1 のロジックを反映して更新する: `<from-branch>` 指定時は worktree スコープの `git -C <worktree-path> rebase origin/<base>` + `git fetch . <from>:<base>` の再試行になること、worktree が見つからない場合は resolve manually で abort すること、`<from-branch>` 未指定時は bare rebase を維持すること (呼び出し元の現在のブランチが `<base>` 自体である前提のため) を明記する。Rationale に「push-retry ループの rebase を #970 でステップ5と同じ checkout レス設計に揃えた」旨の一文を追記する。(after 1) (→ acceptance criteria AC2)
 
@@ -105,7 +105,7 @@ push-retry ループ (行129-148, #853 由来) は #961 が導入した checkout
 ## Code Retrospective
 
 ### Deviations from Design
-- N/A — Implementation Steps 1–4 を Spec の記載どおりに実装した (script rewrite → doc update → bats test → suite実行)。
+- レビューフィードバック対応で1点、実装時点の Spec 記載から逸脱した: push-retry ループの retry-scoped ref-fetch (`git fetch . "${FROM_BRANCH}:${BASE_BRANCH}"`) が実際の push race シナリオで non-fast-forward 拒否されることが判明し (レビューコメント参照)、force refspec (`git fetch . "+${FROM_BRANCH}:${BASE_BRANCH}"`) に修正した。Spec 本文・コードサンプルは本 Retrospective 追記と同じコミットで force refspec を反映済み。上記以外は Implementation Steps 1–4 を Spec の記載どおりに実装した (script rewrite → doc update → bats test → suite実行)。
 
 ### Design Gaps/Ambiguities
 - N/A — Notes 節に記録済みの `$FROM_BRANCH` 空欄時の非対称設計判断以外に、実装中に新たな曖昧点は見つからなかった。
