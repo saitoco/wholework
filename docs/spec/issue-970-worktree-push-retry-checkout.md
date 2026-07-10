@@ -141,3 +141,41 @@ push-retry ループ (行129-148, #853 由来) は #961 が導入した checkout
 
 ### Notes for Next Phase
 - `/verify 970` に進んで良い。Pre-merge verification 3件 (rubric 2件、bats command 1件) はレビューフェーズ内で確認済み。Post-merge verification は「なし」。
+
+## Auto Retrospective
+
+### Tier 3 recovery (review)
+- **Date**: 2026-07-10 18:09 UTC
+- **Issue**: #970 (PR #983) — 発生時は誤って `#983` (PR 番号) として記録された。verify フェーズで本 Spec へ是正転記し、誤設置ファイル `docs/spec/issue-983-recovery.md` は削除済み
+- **Source**: spawn-recovery-subagent.sh
+- **Wrapper exit code**: 1 (run-review.sh)
+- **Diagnosis**: review phase の silent no-op — CI 完了済みだが Review Response Summary が PR #983 に未投稿のまま終了 (reconcile: matches_expected:false)
+- **Recovery**: action=retry (run-review.sh 983 再実行) → success。false-positive anomaly の後続発生なし
+- **Recovery details**: docs/reports/orchestration-recoveries.md の `2026-07-10 18:09 UTC: review-tier3-recovery` エントリ参照 (同エントリの "Issue #983" も同じ誤記)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- #961 の Verify Retrospective 改善提案 + PR #968 review の SHOULD 指摘から起票された Issue で、AC は 3 件とも機械検証可能。retro → 起票 → 実装パイプラインの好例。
+
+#### design
+- `$FROM_BRANCH` 空欄時の bare rebase 維持という非対称設計の判断根拠を Spec Notes に明記したことで、rubric AC1 の誤 FAIL を防止 (review retrospective に記録済みの好パターン)。
+
+#### code
+- review で検出された force refspec の MUST バグ (非 force fetch が non-FF 拒否されリトライ不能) を review phase 内で修正 (commit 211eb33d)。レビュー起因 fix commit が Spec/カタログドキュメントの追随更新を忘れるパターンは review retrospective に記録済み。
+
+#### review
+- review-light が MUST バグ + ドキュメント乖離を検出し、フェーズ内で解決。実効性の高いレビューだった。
+- **Tier 3 recovery (review phase)**: review セッションが Review Response Summary 未投稿の silent no-op で終了し、Tier 3 sub-agent が action=retry を選択、再実行で成功。リカバリ自体は設計通りに機能した。
+
+#### merge
+- squash merge、コンフリクトなし。クリーン。
+
+#### verify
+- 全 3 AC が初回 verify で PASS (rubric 2 件 + bats 19 tests 0 failures)。
+- **Recovery 記録の PR/Issue 番号混同**: Tier 3 recovery の記録処理 (`spawn-recovery-subagent.sh` の recoveries log 書き込みと `run-auto-sub.sh` の `_write_tier3_recovery_to_spec`) が、review phase では PR 番号 (983) を issue 番号として扱い、存在しない `docs/spec/issue-983-recovery.md` を新規作成、orchestration-recoveries.md にも "Issue #983" と誤記録した。post-code phase (review/merge) では wrapper 引数が PR 番号になるためで、open issue #974 (concurrent_commit_detected の自己除外が merge/review で機能しない) と同一の根本原因クラス。verify フェーズで本 Spec へ是正転記し誤設置ファイルを削除した。
+
+### Improvement Proposals
+- run-auto-sub.sh / spawn-recovery-subagent.sh の recovery 記録経路: review/merge phase では引数が PR 番号のため、Tier 3 recovery 記録が PR 番号を issue 番号として Spec ファイル作成 (`issue-<PR>-recovery.md`) と orchestration-recoveries.md 記録に使ってしまう。PR body の `closes #N` から issue 番号を解決する共通処理を挟むべき。#974 と同一根本原因クラスのため、共通の issue-number 解決ヘルパでまとめて修正するのが望ましい (Skill infrastructure improvement)。
