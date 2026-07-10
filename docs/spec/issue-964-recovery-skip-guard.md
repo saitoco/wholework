@@ -80,3 +80,30 @@
 - **Steering Docs sync candidate 6件は変更不要の見込み**: `docs/product.md`/`docs/structure.md`/`docs/tech.md`/日本語ミラー3件は `spawn-recovery-subagent.sh` に言及するが、いずれも Tier 3 全体の役割 (サブエージェント起動・バリデーション・並行制御・recovery entry 記録) を抽象度高く説明しており、`skip` 分岐内部のガード有無という実装詳細には踏み込んでいない (grep 済み、既存記述はそのまま正確)。`doc-checker.md` の必須列挙ルールに従い候補として列挙したが、`/code` フェーズでの実読による最終確認を経ても変更不要と判断される可能性が高い。
 - **tests/run-auto-sub.bats・tests/auto-sub-observability.bats はソース変更不要**: 両ファイルとも `setup()` で `$MOCK_DIR/spawn-recovery-subagent.sh` 自体を丸ごとモックスクリプトに置き換えており (`run-auto-sub.sh` 側から見て `WHOLEWORK_SCRIPT_DIR` 経由で解決される)、実体である `scripts/spawn-recovery-subagent.sh` のロジック変更の影響を受けない。Issue 本文 AC3 が両ファイルを「cross-file test coupling」としてフルスイートに含めているのは安全網としての実行であり、ソース側の修正が必要という意味ではないことを確認済み。
 - **Issue body の背景記述との整合性確認**: Background に記載された行番号 (111行目の `RECONCILE_OUTPUT`、289-313行目の `skip)` 分岐) は実装コードの現況と一致しており、コンフリクトは検出しなかった。
+
+## Code Retrospective
+
+### Deviations from Design
+N/A — 実装は Implementation Steps 1-3 の記述通り。
+
+### Design Gaps/Ambiguities
+N/A
+
+### Rework
+N/A — Spec の設計 (fail-closed、abort と同じ exit code 契約、write_recovery_entry を呼ばない) をそのまま実装し、関連4ファイルのフルスイート (72件) がローカルで一発 pass した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Notes の fail-closed 判断をそのまま採用: `RECONCILE_OUTPUT` が空/パース不能な場合も `matches_expected != true` として拒否側に倒した (`python3 -c` の `except Exception: print('false')`)
+- 拒否時は `abort` 分岐と同じ契約 (`write_recovery_entry` を呼ばず非ゼロ exit) に揃え、retry/recover への自動フォールバックは行わない設計を維持
+
+### Deferred Items
+- AC3 (`github_check`) は PR #978 の CI 実行完了後にのみ確認可能なため、Issue のチェックボックスは AC1・AC2 のみ更新済み (AC3 は未チェックのまま `/review` フェーズ以降で確認)
+- Steering Docs sync candidate 6件 (`docs/product.md`/`docs/structure.md`/`docs/tech.md` と日本語ミラー) は grep で内容確認済みで変更不要と判断 (Spec Notes の見立て通り)
+
+### Notes for Next Phase
+- `/review` フェーズでは PR #978 の CI (`test.yml` ワークフローの "Run bats tests" ジョブ) が pass することを確認し、AC3 のチェックボックスを更新すること
+- ローカルでは `bats tests/spawn-recovery-subagent.bats tests/auto-recovery.bats tests/run-auto-sub.bats tests/auto-sub-observability.bats` の72件が全て pass 済み
+- 未解決の Uncertainties や設計上の懸念は残っていない
