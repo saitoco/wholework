@@ -101,3 +101,29 @@ push-retry ループ (行129-148, #853 由来) は #961 が導入した checkout
 - **技術的前提の再利用**: worktree 検索 (`git worktree list --porcelain` + awk) と `git -C <path> rebase` の組み合わせは、primary merge path (現行101-111行目) で既に実装・レビュー・テスト済みのパターンをそのまま再利用するものであり、#961 Spec で実施済みのサンドボックス実証(`git fetch . <src>:<dst>` の安全特性)を超えて新たに外部仕様を確認する必要はない。
 - **Steering Docs sync candidate の確認結果**: `docs/structure.md` (212行目) と `docs/tech.md` (225-226行目) は grep で該当行を確認済みで、いずれも push-retry ループの内部実装 (worktree スコープ rebase かどうか) までは踏み込まない一行要約/lock機構の説明のため、本Issueでの変更は不要と判断した。`/code` フェーズでの再確認を妨げないよう Changed Files に候補として残す。
 - **設計判断の記録**: push-retry ループの `$FROM_BRANCH` 空欄時 (lock+push-only モード) の扱いについて、bare rebase を維持するかどうかが唯一の判断点だった。primary merge path 自体が同条件でマージブロックを丸ごとスキップする既存の非対称設計と整合させ、既存テスト (`"max-retry exhaustion..."`) の契約を壊さないことを優先し、bare rebase 維持を選択した (詳細は上記1項目目)。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1–4 を Spec の記載どおりに実装した (script rewrite → doc update → bats test → suite実行)。
+
+### Design Gaps/Ambiguities
+- N/A — Notes 節に記録済みの `$FROM_BRANCH` 空欄時の非対称設計判断以外に、実装中に新たな曖昧点は見つからなかった。
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Push-retry ループの rebase を `$FROM_BRANCH` の有無で分岐: 設定時は primary merge path (step 5) と同じ `git worktree list --porcelain` + awk で worktree を特定し `git -C <path> rebase origin/<base>` を実行、未設定時 (lock+push-only モード) は bare `git rebase` を維持。primary merge path 自体が `$FROM_BRANCH` 空欄時にマージブロック全体をスキップする既存の非対称設計と整合させた。
+- worktree が見つからない場合は bare rebase へのフォールバックを行わず明示エラーで exit 1 — #961 が閉じた「暗黙の checkout 依存」の再導入を避けるため。
+- 既存 bats テスト (`"push race..."`) のモックに `worktree list --porcelain` ハンドラを追加して green を維持しつつ、`git -C <path> rebase` の呼び出しを直接アサートする新規テストを追加した。
+
+### Deferred Items
+- なし。Spec の Implementation Steps 1–4 をすべて実装済み。
+
+### Notes for Next Phase
+- review フェーズでは、rubric AC1 が `$FROM_BRANCH` 空欄時の bare rebase 維持を「未修正」と誤検出しないか確認してほしい (Spec Notes 節に判断根拠を記録済み)。
+- `bats tests/worktree-merge-push.bats` は 16/16 green (ローカル実行済み)。CI でも再確認可能。
