@@ -137,12 +137,30 @@ while true; do
     echo "Error: git push origin ${BASE_BRANCH} failed after ${MAX_PUSH_RETRY} retries. Manual push required." >&2
     exit 1
   fi
-  echo "Push rejected (non-fast-forward); retry ${push_count}/${MAX_PUSH_RETRY}: fetching and rebasing onto origin/${BASE_BRANCH}..." >&2
+  echo "Push rejected (non-fast-forward); retry ${push_count}/${MAX_PUSH_RETRY}: fetching and retrying onto origin/${BASE_BRANCH}..." >&2
   git fetch origin "$BASE_BRANCH"
-  if ! git rebase "origin/${BASE_BRANCH}"; then
-    git rebase --abort 2>/dev/null || true
-    echo "Error: Rebase during push retry failed with conflicts. Resolve manually." >&2
-    exit 1
+  if [[ -n "$FROM_BRANCH" ]]; then
+    # See modules/orchestration-fallbacks.md#ff-only-merge-fallback
+    worktree_path=$(git worktree list --porcelain | awk -v b="refs/heads/${FROM_BRANCH}" '/^worktree /{p=$2} $0 == "branch " b {print p; exit}')
+    if [[ -z "$worktree_path" ]]; then
+      echo "Error: Cannot locate a worktree for ${FROM_BRANCH} to rebase without touching the shared directory's checkout. Resolve manually." >&2
+      exit 1
+    fi
+    if ! git -C "$worktree_path" rebase "origin/${BASE_BRANCH}"; then
+      git -C "$worktree_path" rebase --abort 2>/dev/null || true
+      echo "Error: Rebase during push retry failed with conflicts. Resolve manually." >&2
+      exit 1
+    fi
+    if ! git fetch . "${FROM_BRANCH}:${BASE_BRANCH}"; then
+      echo "Error: ref-fetch retry after push-rebase failed. Resolve manually." >&2
+      exit 1
+    fi
+  else
+    if ! git rebase "origin/${BASE_BRANCH}"; then
+      git rebase --abort 2>/dev/null || true
+      echo "Error: Rebase during push retry failed with conflicts. Resolve manually." >&2
+      exit 1
+    fi
   fi
   sleep 1
 done
