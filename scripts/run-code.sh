@@ -180,6 +180,7 @@ WORKTREE_PATH="${SCRIPT_DIR}/../.claude/worktrees/code+issue-${ISSUE_NUMBER}"
 WORKTREE_BRANCH="worktree-code+issue-${ISSUE_NUMBER}"
 if [[ -d "$WORKTREE_PATH" ]]; then
   echo "run-code.sh: stale worktree detected, cleaning up: $WORKTREE_PATH"
+  git worktree unlock "$WORKTREE_PATH" 2>/dev/null || true
   git worktree remove --force "$WORKTREE_PATH" 2>/dev/null \
     || echo "Warning: Failed to remove stale worktree: $WORKTREE_PATH"
 fi
