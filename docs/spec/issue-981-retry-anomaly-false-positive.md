@@ -72,3 +72,27 @@ No new comments since last phase.
 - Issue 本文は「run-auto-sub.sh の informational anomaly check、L482-487」と行番号を記載しているが、現行コード (このリポジトリの現在の main) では該当ロジックは 524-533 行目付近にある。挙動の記述自体 (exit-0 経路で `detect-wrapper-anomaly.sh` を呼ぶ) は現行実装と一致しており、単なる行番号ドリフト (Issue 起票後のファイル変更によるもの) と判断した。実装は行番号ではなく `if [[ $exit_code -eq 0 ]]` というコード文脈で特定する。
 - 本 Issue の修正は、#547 (`review-completion-false-negative` パターン導入) → #932 (同パターンに reconcile-first authority ガードを追加、review フェーズの false-positive を解消。`modules/orchestration-fallbacks.md` に記録済み) と同一の技術 (ログ内の後続 `matches_expected:true` を検出したら抑制) を `code-completed-no-pr` (#415 で導入) に適用するもの。既存パターンとの一貫性を優先し、新規メカニズムは導入しない。
 - 検証方法について: rubric の判定材料として、実装後の `scripts/detect-wrapper-anomaly.sh` の diff と `tests/detect-wrapper-anomaly.bats` の新規テスト実行結果を直接参照できるため、hard-pattern (grep/file_contains) の補助チェックは追加していない。`"matches_expected":true` という文字列自体は同ファイル内の他の 2 箇所 (89, 117 行目) に既存で出現するため、単純な file_contains では「正しい elif ブロックに追加されたか」を一意に検証できず、rubric による意味的検証の方が適切と判断した。
+
+## Code Retrospective
+
+### Deviations from Design
+- Spec は Size M による pr route 自動判定を前提 (SPEC_DEPTH=light の由来) だったが、`/code 981 --patch --non-interactive` で `--patch` フラグが明示されたため、フラグ優先順位ルール (`ALWAYS_PR=false` かつ `--patch` 指定 → patch route) により patch route (main へ直接コミット) で実行した。実装内容・Verification 手順は route に依存しないため Spec の Implementation Steps 自体への影響はない。
+
+### Design Gaps/Ambiguities
+- N/A — Spec の Implementation Steps (elif 条件変更、bats テスト追加、orchestration-fallbacks.md 追記) は具体的なコード例まで示されており、実装中に曖昧な判断は発生しなかった。
+
+### Rework
+- N/A — Implementation Steps の記載順どおり一度で実装完了。bats 41件全PASS (新規テスト含む) を初回実行で確認。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `code-completed-no-pr` elif 条件に `&& ! grep -q '"matches_expected":true' "$LOG_FILE"` を追加し、`review-completion-false-negative` (#932) と同型の reconcile-first authority ガードを適用した。新規メカニズムは導入せず、既存パターンとの一貫性を優先。
+- patch route (`--patch` フラグ明示) で実行したため main へ直接コミットし、`/review`/`/merge` はスキップして `phase/verify` へ直接遷移する。
+
+### Deferred Items
+- Post-merge AC (「次回 `/auto` で watchdog kill → retry 成功が発生した際、false-positive anomaly が出力されないことを観察」) は observation 型のため、実際の `/auto` 実行での再発時まで確認を保留。
+
+### Notes for Next Phase
+- `/verify` では pre-merge の 2 rubric 条件は本フェーズで PASS 判定済み (Issue チェックボックス更新済み)。post-merge の observation 項目は次回 watchdog kill → retry 成功シナリオの発生を待って確認する。
