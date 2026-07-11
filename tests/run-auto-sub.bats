@@ -1261,6 +1261,10 @@ MOCK
     [[ "$output" == *"WARNING: could not commit/push manual recovery to spec; continuing"* ]]
     push_count=$(grep -c "push origin HEAD" "$GIT_LOG")
     [ "$push_count" -eq 3 ]
+    fetch_count=$(grep -c "fetch origin main" "$GIT_LOG")
+    [ "$fetch_count" -eq 2 ]
+    rebase_count=$(grep -c "rebase origin/main" "$GIT_LOG")
+    [ "$rebase_count" -eq 2 ]
 }
 
 @test "run-auto-sub: manual recovery: skips commit when an open PR exists for the issue" {
