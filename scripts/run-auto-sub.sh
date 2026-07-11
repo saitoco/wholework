@@ -652,6 +652,10 @@ case "$EFFECTIVE_SIZE" in
         _STOP_AT=$("$SCRIPT_DIR/get-config-value.sh" auto-stop-at verify 2>/dev/null || echo verify)
         if [[ "$_STOP_AT" == "code" || "$_STOP_AT" == "spec" ]]; then
           echo "${LOG_PREFIX} [recovery] tier3 skip revealed PR #${_SKIP_PR_NUMBER} for issue #${SUB_NUMBER}, but auto-stop-at=${_STOP_AT}: not continuing"
+        elif [[ "$_STOP_AT" == "review" ]]; then
+          echo "${LOG_PREFIX} [recovery] tier3 skip revealed PR #${_SKIP_PR_NUMBER} for issue #${SUB_NUMBER}; continuing to review only (auto-stop-at=review)"
+          echo "${LOG_PREFIX} --- review phase (light): PR #${_SKIP_PR_NUMBER} ---"
+          _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "review" "$_SKIP_PR_NUMBER" "$SCRIPT_DIR/run-review.sh" --light
         else
           echo "${LOG_PREFIX} [recovery] tier3 skip revealed PR #${_SKIP_PR_NUMBER} for issue #${SUB_NUMBER}; continuing to review/merge"
           echo "${LOG_PREFIX} --- review phase (light): PR #${_SKIP_PR_NUMBER} ---"
