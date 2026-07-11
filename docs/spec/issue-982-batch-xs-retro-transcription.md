@@ -50,3 +50,31 @@ Issue body の Auto-Resolved Ambiguity Points により、実装先は `run-auto
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 要旨: Issue #982 自身の Issue Retrospective — 実装先のあいまいさ解決根拠 (SKILL.md 側の Batch Mode ステップへの実装を推奨) を記録。内容は Issue body の Auto-Resolved Ambiguity Points セクションと同一。 / URL: https://github.com/saitoco/wholework/issues/982#issuecomment-4948305940
+
+No new comments since last phase (code phase cutoff: 2026-07-11T18:48:25Z).
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1–4 were followed as written; no reordering, omission, or approach change.
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Implemented both Step 4b's idempotency-check text and the Count/List mode call sites exactly as specified in the Spec's Implementation Steps — no deviation.
+- Added a `count_mode_section()` awk helper to `tests/auto-batch.bats` mirroring the existing `list_mode_section()` helper, so both batch modes have symmetric structural test coverage for the Step 4b reference.
+- Since this Issue only edits `skills/auto/SKILL.md` (a file referenced by multiple test files beyond its direct counterpart), ran the full `bats tests/` suite per the Behavioral Change Detection check rather than scoping to `tests/auto-batch.bats` alone; all tests passed.
+
+### Deferred Items
+- None — Issue #982's scope is XS-only symmetry restoration; the Spec's Notes section already records the related-but-out-of-scope observation about Size S Issues under `SPEC_DEPTH=light` as a candidate for a future Issue.
+
+### Notes for Next Phase
+- Patch route (Size S): this Issue commits directly to `main`, so `/review` and `/merge` phases do not apply. `/verify` is the next phase.
+- Post-merge AC is an `observation` type gated on the next real `/auto --batch` run processing an XS Issue — no action needed until that event fires naturally.
