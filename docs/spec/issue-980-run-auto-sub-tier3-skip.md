@@ -109,19 +109,19 @@ No new comments since last phase.
 
 ## Phase Handoff
 
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- review (light) で検出した MUST 2件 (bats テスト欠落・`auto-stop-at: review` の enum 網羅性欠落) はこの review サイクル内で直接修正し、push 済み (commit bd36b4f2, b2ded965)。
-- MUST 3件目 (`_completion_code_patch` が stray PR を completion signature として検出できない可能性) は、`reconcile-phase-state.sh` が `/auto` SKILL.md Step 6 からも共有される点を踏まえ、本 PR の Changed Files 範囲を超える設計変更と判断し、この review サイクルでは修正しなかった。
+- `gh pr merge --squash --delete-branch` はローカルブランチ削除に失敗した (別 worktree `.claude/worktrees/code+issue-980` が `worktree-code+issue-980` を使用中のためロック)。マージ自体 (squash + remote merge) は成功していることを `gh pr view` で確認済み。
+- リモートブランチ `worktree-code+issue-980` は `gh` が削除できなかったため `git push origin --delete` で手動削除した。
 
 ### Deferred Items
 
-- フォローアップ Issue #993 (`_completion_code_patch` の stray-PR 未検出) を起票済み。#980 の merge をブロックしない (blocked-by 関係は設定していない)。実際に必要かどうかは #993 の Spec フェーズで再検証すること。
-- `auto-stop-at` の enum 網羅性ギャップが再発パターン (#783 系) であることを retrospective に記録した。共通ヘルパー化の改善候補は起票していない (この review では見送り)。
+- フォローアップ Issue #993 (`_completion_code_patch` の stray-PR 未検出) は #980 の merge をブロックしない方針のまま据え置き。
+- `.claude/worktrees/code+issue-980` (ローカル worktree ディレクトリとブランチ `worktree-code+issue-980`) が本セッションでは未削除のまま残存している。所有プロセスの生死を確認できなかったため、merge スキルの権限では削除を見送った。次回作業時に `git worktree list` で確認のうえ安全に `git worktree remove` すること (紐づくリモートブランチは既に削除済み)。
 
 ### Notes for Next Phase
 
-- merge 前提条件: AC1/AC2 とも PASS 済み、CI 全て SUCCESS、bats 58/58 PASS。
-- `docs/spec/issue-980-*.md` に紐づく worktree (`.claude/worktrees/code+issue-980`) が、PID 消滅済みのロックを保持したまま残存している (今回 review では detached HEAD で作業し削除は権限上見送った)。merge/次セッションで安全に `git worktree remove` してよい (branch `worktree-code+issue-980` の HEAD はリモートと一致済み)。
+- verify 前提条件: AC1/AC2 とも PASS 済み、CI 全て SUCCESS、bats 58/58 PASS。squash commit は `3b24f01dd1694cf256ba10ffc7bcc77d12887b93` (main)。
+- Issue #980 は `closes #980` により自動クローズ済みのはず (BASE_BRANCH=main)。
