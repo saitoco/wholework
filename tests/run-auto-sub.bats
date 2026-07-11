@@ -995,7 +995,7 @@ MOCK
 
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
 emit_event() {
-  echo "phase=\$EMIT_PHASE_NAME issue=\$EMIT_ISSUE_NUMBER pr=\${EMIT_PR_NUMBER:-<unset>} event=\$1" >> "$BATS_TEST_TMPDIR/emit.log"
+  echo "phase=\${EMIT_PHASE_NAME:-} issue=\${EMIT_ISSUE_NUMBER:-} pr=\${EMIT_PR_NUMBER:-<unset>} event=\$1" >> "$BATS_TEST_TMPDIR/emit.log"
 }
 _emit_comments_consumed() { :; }
 MOCK

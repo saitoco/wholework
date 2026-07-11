@@ -61,7 +61,7 @@ is written with `"backfilled": true`. This covers exit code 0 (clean exit) and e
 
 For review/merge phase events dispatched via `run-auto-sub.sh`'s `run_phase_with_recovery()`,
 the `issue` field always holds the real Issue number (not the PR number the phase was invoked
-with) — resolved from `_EXTRA_SELF_ISSUE` (see `_EMIT_PHASE_OWNED` pattern below). The PR number
+with) — resolved from `_EXTRA_SELF_ISSUE` (see `run-auto-sub.sh` row in Wrapper Coverage Table below). The PR number
 is recorded separately in a `pr` field so both remain traceable without the PR being double-counted
 as an independent Issue by `get-auto-session-report.sh` (#987):
 
