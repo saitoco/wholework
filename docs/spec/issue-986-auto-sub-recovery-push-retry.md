@@ -74,3 +74,31 @@
 - **`_write_wrapper_retry_recovery` のコミットメッセージ形式差異は本 Issue のスコープ外**: 同関数のコミットメッセージは他 4 箇所と異なり `Co-Authored-By:` トレーラーを含まないが、push リトライとは無関係な既存の差異であり本 Issue では触れない。
 - **Steering Docs sync candidate 確認結果**: `docs/structure.md` (L207, L218, L223) / `docs/tech.md` (L55) / `docs/workflow.md` (L111, L113) / `docs/migration-notes.md` (L48-52, L554-558) はいずれも grep 済みで、`run-auto-sub.sh` の一行要約または高レベルな動作説明に留まり、recovery 記録 push のリトライ機構という粒度までは踏み込んでいないため、本 Issue での変更は不要と判断した。`/code` での再確認を妨げないよう Changed Files に候補として残す。
 - **関連 Issue #984 はスコープ外**: Related Issues に挙げられている #984 (recovery 記録の PR番号/Issue番号混同) は同じ 5 つの recovery-write 経路に関わる別欠陥だが、push リトライとは独立した問題であり本 Issue では対応しない。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜5 をそのままの順序・位置で実装した。
+
+### Design Gaps/Ambiguities
+- Notes の「`_write_wrapper_retry_recovery` のコミットメッセージ形式差異」記述 (同関数のコミットメッセージは他 4 箇所と異なり `Co-Authored-By:` トレーラーを含まない、という記載) は、実装時点のソースでは実際には含まれていることを確認した。差異が既に解消済みか、Spec 起草時の調査に誤りがあった可能性があるが、いずれにせよ push リトライとは無関係かつ本 Issue のスコープ外のため、修正は行わなかった。
+
+### Rework
+- N/A — 手戻りは発生しなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `_push_with_retry()` は `worktree-merge-push.sh` の lock+push-only mode (`<from-branch>` 未指定) の既存リトライアルゴリズムをそのまま踏襲し、新規パターンを発明しなかった (Spec Notes の既存方針どおり)。
+- リトライ回数は "計 3 回の push 試行" (初回 + 2 回の fetch+rebase リトライ) というカウント方式を `worktree-merge-push.sh` の `MAX_PUSH_RETRY=3` に合わせて統一した。
+- 失敗時は `exit` せず `return 1` のみとし、5 箇所の呼び出し元が持つ既存の best-effort `if/else WARNING` 構造をそのまま維持した (記録より phase 継続を優先する既存方針を壊さない)。
+
+### Deferred Items
+- Post-merge AC (次回 batch 実行中の実地観察) は `/verify` フェーズでの observation イベント待ちのまま。
+- Notes に記載の `_write_wrapper_retry_recovery` コミットメッセージ形式差異の記述不一致 (Code Retrospective 参照) は本 Issue のスコープ外として未着手。
+- 関連 Issue #984 (recovery 記録の PR番号/Issue番号混同) は本 Issue と独立した別欠陥として未対応のまま。
+
+### Notes for Next Phase
+- `/review` では 5 箇所すべてが `_push_with_retry` を呼び出していること、および `add`/`commit` 部分やメッセージ文言が変更されていないことを diff で確認すると効率的。
+- `bats tests/` フルスイート (1132 件) が green であることを確認済み — `run-auto-sub.sh` を参照する `tests/auto-sub-observability.bats` / `tests/run-code.bats` への影響もないことを確認済み。
