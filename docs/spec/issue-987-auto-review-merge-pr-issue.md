@@ -59,3 +59,31 @@
 - **`run-review.sh` / `run-merge.sh` 自身の backfill trap は対象外とする判断**: 両スクリプトはそれぞれ独自の `_maybe_emit_phase_complete()` (printf 直書き、`emit_event()` 非経由) を持つが、`EMIT_ISSUE_NUMBER`/`EMIT_PR_NUMBER` は `run-auto-sub.sh` からの `export` を子プロセスとして継承するため、`issue` フィールド自体は本 Spec の Implementation Steps 2 の修正のみで正しくなる (`EMIT_PHASE_NAME` が既に設定されているため、両スクリプト自身の `_EMIT_PHASE_OWNED` ブロック — `export EMIT_ISSUE_NUMBER="$PR_NUMBER"` を含む — は実行されない)。両スクリプト自身の backfill JSON に `pr` フィールドを追加する対応 (SIGTERM/watchdog kill 時の稀な backfill レコードのみに影響する軽微な一貫性向上) は、AC の必須要件ではなく light spec のスコープ外として見送った。
 - **`get-auto-session-report.sh` は変更不要と判断**: 同スクリプトの `unique | length` によるユニーク Issue 集計 (line 175, 272 付近) は `issue` フィールドをそのまま使う既存ロジックであり、emit 時点で `issue` フィールドが正しくなれば追加の集計側修正なしに "Issues processed" の水増しは解消される。同スクリプトが既に持つ `_pr_num=$(gh pr list --search "closes #${_num}" ...)` (line 312 付近、表の PR 列表示用) は本 Issue が明示的に不採用とした「集計時解決」とは別目的の既存機能であり、本 Spec では変更しない。
 - **docs/workflow.md, docs/tech.md, docs/structure.md, docs/migration-notes.md は変更不要と判断**: いずれも `run-auto-sub.sh`/`emit-event.sh` に言及があるが (grep 済み)、ワークフロー全体像やアーキテクチャ概要レベルの記述に留まり、イベント JSON スキーマの詳細 (今回変更対象) には踏み込んでいない。`docs/migration-notes.md` の言及は private→public 移行時点の履歴記録であり対象外。SSoT である `modules/event-emission.md` のみを更新する。
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1〜5 を設計通りの順序・内容で実装した。
+
+### Design Gaps/Ambiguities
+- **`/code` Step 3 の `phase/ready` チェック前提と実際の label 履歴の不一致**: 実行開始時点で Issue #987 のラベルは `phase/ready` ではなく既に `phase/code` だった。GitHub timeline を確認したところ、本セッション開始前に別の `/code` 実行が `phase/ready→phase/code` 遷移まで完了させた後、実装コミットを残さず中断していたことが判明した (Spec は既存、コミット履歴には spec コミットのみ)。`/code` Step 3 の分岐は「`phase/ready` 不在 = Spec 未生成」を暗黙の前提としているが、今回のように「前回実行が既に `phase/code` へ進めた後に中断した」ケースでは Spec が既存のまま `phase/ready` が不在になる。既存 Spec を読み込んで続行することで正しく処理できたが、この中断→再開パターンを Step 3 のチェックロジックが明示的に区別していない点は改善余地として残る (直接のスコープ外、独立した改善提案として起票は見送り — 発生頻度が低く、既存 Spec の有無で安全にフォールバックできているため)。
+
+### Rework
+- なし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `run_phase_with_recovery()` の `EMIT_ISSUE_NUMBER`/`EMIT_PR_NUMBER` 解決を `_EXTRA_SELF_ISSUE` の有無・差分で分岐させ、review/merge phase 以外 (code-patch/code-pr) では `EMIT_PR_NUMBER` を明示的に unset して次呼び出しへの値漏れを防いだ (Spec Implementation Steps 2 の指示通り)。
+- `_maybe_emit_phase_complete()` の backfill JSON にも `pr` フィールドを追加し、EXIT trap 経由の printf 直書きパスでも `emit_event()` と一貫した形状にした。
+- PR ルート (Size M) を採用し、実装ファイル (scripts 2 件、モジュール 1 件、テスト 2 件) を 1 コミットにまとめて main への直接コミットを避けた。
+
+### Deferred Items
+- `run-review.sh`/`run-merge.sh` 自身の backfill trap への `pr` フィールド追加は、Spec Notes に記載の通り本 Issue のスコープ外として見送った (SIGTERM/watchdog kill 時の稀な backfill レコードのみに影響する軽微な一貫性向上)。
+- Post-merge observation AC (「次回 `/auto --batch` の L3 session report で Issues processed が実 Issue 数と一致する」) は次回の pr route を含む batch 実行時に `/verify` が rubric で再評価する。
+
+### Notes for Next Phase
+- Pre-merge AC 2件は rubric 判定で PASS 済み (Issue 本文チェックボックスも更新済み)。Post-merge AC 1件は残っており、`/review`/`/merge` は変更しない。
+- `bats tests/` フルスイート (1130件) 実行済み、0 failures。behavioral change 判定によりフルスイートを実行した (emit-event.sh/run-auto-sub.sh が直接カウンターパート以外の複数テストファイルから参照されているため)。
+- Issue #987 の `phase/ready` ラベルが実行開始時点で既に `phase/code` に遷移済みだった (前回 `/code` 実行が中断した形跡)。Spec は既存だったため、そのまま利用して続行した。詳細は Code Retrospective の Design Gaps/Ambiguities を参照。
