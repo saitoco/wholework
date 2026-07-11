@@ -84,18 +84,16 @@
 - なし。Pre-merge AC 2件は rubric verify command により UNCERTAIN なく PASS 判定できた。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- CI (`Run bats tests`) が FAILURE だったため、`gh run view --log` でジョブログを取得し `not ok 718` の失敗テストを特定、`env -i` によるクリーン環境ローカル再現で根本原因 (`tests/run-auto-sub.bats:998` のモックが `set -u` 下で `$EMIT_PHASE_NAME` を無防備参照) を確定してから修正した。
-- MUST 修正 (bats モックのデフォルト値展開) と CONSIDER 修正 (`modules/event-emission.md` の相互参照訂正) を実施。SHOULD 指摘 (`_maybe_emit_phase_complete()` backfill パスの regression テスト欠如) は EXIT trap 発火の安全な再現に追加の足場が必要でリスク・工数が見合わないため見送った。
-- 修正後、`env -i` クリーン環境でフルスイート (1130件) を実行し 0 failures を確認 (並列実行 (`--jobs`) 時に見られた 2 件の flaky failure は逐次実行で再現せず、本 PR の変更とは無関係と判断)。
+- `gh-pr-merge-status.sh` で mergeable=true (ci_status=success, review_status=approved) を確認し、コンフリクト解消・rebase ステップは不要と判断した。
+- squash merge (`gh pr merge --squash --delete-branch`) を実行し、リモートブランチ `worktree-code+issue-987` を削除済み。
 
 ### Deferred Items
-- `_maybe_emit_phase_complete()` backfill パスへの `pr` フィールド regression テスト追加 (SHOULD) — レビューコメントとして記録済み、次回関連改修時に着手余地あり。
-- `run-review.sh`/`run-merge.sh` 自身の backfill trap への `pr` フィールド追加は Spec Notes 記載の通りスコープ外 (変更なし)。
+- `_maybe_emit_phase_complete()` backfill パスへの `pr` フィールド regression テスト追加 (SHOULD) — review retrospective 記載の通り次回関連改修時に着手余地あり。
 - Post-merge observation AC は次回の pr route を含む batch 実行時に `/verify` が rubric で再評価する (変更なし)。
 
 ### Notes for Next Phase
-- `/merge` はそのまま実行可能。MUST issue は修正済み、CI は再実行後に確認が必要 (プッシュ済みの修正コミットで再トリガー済み)。
-- review retrospective に「開発環境の env var 汚染がテストのバグを隠蔽するパターン」を Recurring issues として記録した。`/verify` での Improvement Proposal 集約時に起票判断すること。
+- `/verify` は post-merge observation AC (`auto-run` イベント発火時の rubric 再評価) を確認すること。
+- review retrospective に記録された「開発環境の env var 汚染がテストのバグを隠蔽するパターン」の Improvement Proposal 起票判断は `/verify` 側で行うこと。
