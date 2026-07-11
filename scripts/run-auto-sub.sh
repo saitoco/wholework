@@ -194,8 +194,10 @@ _maybe_emit_phase_complete() {
         '[.[] | select(.issue == $n)] | last // empty | .event // ""' 2>/dev/null || true)
   if [[ "${_last_event}" == "phase_start" ]]; then
     local _ts; _ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    local _pr_field=""
+    [[ -n "${EMIT_PR_NUMBER:-}" ]] && _pr_field=",\"pr\":${EMIT_PR_NUMBER}"
     printf '%s\n' \
-      "{\"ts\":\"${_ts}\",\"issue\":${EMIT_ISSUE_NUMBER},\"event\":\"phase_complete\",\"session_id\":\"${AUTO_SESSION_ID}\",\"phase\":\"${EMIT_PHASE_NAME}\",\"backfilled\":true}" \
+      "{\"ts\":\"${_ts}\",\"issue\":${EMIT_ISSUE_NUMBER},\"event\":\"phase_complete\",\"session_id\":\"${AUTO_SESSION_ID}\"${_pr_field},\"phase\":\"${EMIT_PHASE_NAME}\",\"backfilled\":true}" \
       >> "${AUTO_EVENTS_LOG}" 2>/dev/null || true
   fi
 }
@@ -396,7 +398,13 @@ run_phase_with_recovery() {
   mkdir -p .tmp
   log_file=".tmp/wrapper-out-${issue}-${phase}.log"
 
-  export EMIT_ISSUE_NUMBER="$issue"
+  if [[ -n "${_EXTRA_SELF_ISSUE:-}" ]] && [[ "${_EXTRA_SELF_ISSUE}" != "${issue}" ]]; then
+    export EMIT_ISSUE_NUMBER="$_EXTRA_SELF_ISSUE"
+    export EMIT_PR_NUMBER="$issue"
+  else
+    export EMIT_ISSUE_NUMBER="$issue"
+    unset EMIT_PR_NUMBER
+  fi
   export EMIT_PHASE_NAME="$phase"
 
   # Bash-side comments_consumed emit for code phases (issue-level comment consumption).

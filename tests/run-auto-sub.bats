@@ -989,6 +989,31 @@ MOCK
     grep -q "concurrent_commit_detected.*commit_sha=ccc3333" "$BATS_TEST_TMPDIR/emit.log"
 }
 
+@test "review/merge phase events emit issue=<real Issue number> and pr=<PR number> (issue #987)" {
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    export EMIT_ISSUE_NUMBER="42"
+
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() {
+  echo "phase=\${EMIT_PHASE_NAME:-} issue=\${EMIT_ISSUE_NUMBER:-} pr=\${EMIT_PR_NUMBER:-<unset>} event=\$1" >> "$BATS_TEST_TMPDIR/emit.log"
+}
+_emit_comments_consumed() { :; }
+MOCK
+
+    # Default fixture (see setup): SUB_NUMBER=42, PR_NUMBER=99, Size M.
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+
+    # code-pr phase is called with the real Issue number and no PR context.
+    grep -q "phase=code-pr issue=42 pr=<unset>" "$BATS_TEST_TMPDIR/emit.log"
+
+    # review/merge phases are called with issue=$PR_NUMBER=99, but _EXTRA_SELF_ISSUE=42
+    # resolves EMIT_ISSUE_NUMBER back to the real Issue number, with the PR number
+    # preserved separately in EMIT_PR_NUMBER.
+    grep -q "phase=review issue=42 pr=99" "$BATS_TEST_TMPDIR/emit.log"
+    grep -q "phase=merge issue=42 pr=99" "$BATS_TEST_TMPDIR/emit.log"
+}
+
 @test "run-auto-sub: tier2 recovery: writes Auto Retrospective to spec file" {
     export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
 

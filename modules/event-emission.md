@@ -57,6 +57,28 @@ is written with `"backfilled": true`. This covers exit code 0 (clean exit) and e
 }
 ```
 
+### pr field (review/merge phase events)
+
+For review/merge phase events dispatched via `run-auto-sub.sh`'s `run_phase_with_recovery()`,
+the `issue` field always holds the real Issue number (not the PR number the phase was invoked
+with) — resolved from `_EXTRA_SELF_ISSUE` (see `run-auto-sub.sh` row in Wrapper Coverage Table below). The PR number
+is recorded separately in a `pr` field so both remain traceable without the PR being double-counted
+as an independent Issue by `get-auto-session-report.sh` (#987):
+
+```json
+{
+  "ts": "2026-07-11T00:00:00Z",
+  "issue": 987,
+  "event": "phase_start",
+  "session_id": "abc123",
+  "pr": 1001,
+  "phase": "review"
+}
+```
+
+The `pr` field is added only when `EMIT_PR_NUMBER` is set (code phase events, which are called
+with the real Issue number directly, never carry a `pr` field).
+
 ### wrapper_exit
 
 Emitted by `claude-watchdog.sh` on abnormal wrapper exit. Field: `exit_code`.
@@ -76,6 +98,12 @@ Emitted after a successful `--output-format json` run. Fields: `input_tokens`, `
 | `AUTO_SESSION_ID` | wrapper (from `.tmp/auto-session-{PGID}`) | Identifies the `/auto` session |
 | `EMIT_ISSUE_NUMBER` | wrapper | Issue number for the current phase |
 | `EMIT_PHASE_NAME` | wrapper | Phase name (see Wrapper Coverage Table below) |
+
+### Optional environment variables
+
+| Variable | Set by | Description |
+|----------|--------|-------------|
+| `EMIT_PR_NUMBER` | `run-auto-sub.sh` (review/merge phase calls only) | PR number, recorded in a separate `pr` field alongside the real Issue number in `EMIT_ISSUE_NUMBER` (see "pr field" above) |
 
 ### _EMIT_PHASE_OWNED pattern
 
@@ -120,7 +148,7 @@ stays empty and `phase_start` / `phase_complete` are not emitted — preventing 
 | `run-code.sh` | `code-pr` \| `code-patch` \| `code` | Selects based on route flag |
 | `run-review.sh` | `review` | |
 | `run-merge.sh` | `merge` | |
-| `run-auto-sub.sh` | Sets `EMIT_PHASE_NAME` before delegating | Orchestrator; delegates to above |
+| `run-auto-sub.sh` | Sets `EMIT_PHASE_NAME` before delegating | Orchestrator; delegates to above. For review/merge phase calls, resolves `EMIT_ISSUE_NUMBER`/`EMIT_PR_NUMBER` from `_EXTRA_SELF_ISSUE` so the real Issue number (not the PR number) lands in the `issue` field (#987) |
 
 ## Non-Wrapper Emitters
 
