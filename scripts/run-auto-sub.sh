@@ -423,6 +423,7 @@ _observe_code_milestone() {
 run_phase_with_recovery() {
   local phase issue runner_script exit_code log_file
   phase="$1"; issue="$2"; runner_script="$3"; shift 3
+  _TIER3_RECOVERY_ACTION=""
 
   mkdir -p .tmp
   log_file=".tmp/wrapper-out-${issue}-${phase}.log"
@@ -562,6 +563,9 @@ run_phase_with_recovery() {
   # Tier 3: recovery sub-agent via claude -p (expensive, unknown anomaly only)
   if "$SCRIPT_DIR/spawn-recovery-subagent.sh" "$phase" "$issue" --log "$log_file" --exit-code "$exit_code" --record-issue "$EMIT_ISSUE_NUMBER"; then
     echo "${LOG_PREFIX} [recovery] tier3 sub-agent: recovered"
+    local _plan_file=".tmp/recovery-plan-${issue}-${phase}.json"
+    _TIER3_RECOVERY_ACTION=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('action','unknown'))" "$_plan_file" 2>/dev/null || echo "unknown")
+    rm -f "$_plan_file"
     local _repo_root="$REPO_ROOT"
     if ! git -C "$_repo_root" diff --quiet "docs/reports/orchestration-recoveries.md" 2>/dev/null; then
       if git -C "$_repo_root" add "docs/reports/orchestration-recoveries.md" \
@@ -639,13 +643,24 @@ fi
 # Execute phases according to Size-based route.
 # verify is deferred to the parent /auto session (issue #485)
 case "$EFFECTIVE_SIZE" in
-  XS)
+  XS|S)
     echo "${LOG_PREFIX} --- code phase (patch): issue #${SUB_NUMBER} ---"
     run_phase_with_recovery "code-patch" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --patch ${BASE_FLAG:-}
-    ;;
-  S)
-    echo "${LOG_PREFIX} --- code phase (patch): issue #${SUB_NUMBER} ---"
-    run_phase_with_recovery "code-patch" "$SUB_NUMBER" "$SCRIPT_DIR/run-code.sh" --patch ${BASE_FLAG:-}
+    if [[ "${_TIER3_RECOVERY_ACTION:-}" == "skip" ]]; then
+      _SKIP_PR_NUMBER=$(gh pr list --json number,headRefName 2>/dev/null | jq -r ".[] | select(.headRefName == \"worktree-code+issue-${SUB_NUMBER}\") | .number" | head -1 || true)
+      if [[ -n "$_SKIP_PR_NUMBER" ]]; then
+        _STOP_AT=$("$SCRIPT_DIR/get-config-value.sh" auto-stop-at verify 2>/dev/null || echo verify)
+        if [[ "$_STOP_AT" == "code" || "$_STOP_AT" == "spec" ]]; then
+          echo "${LOG_PREFIX} [recovery] tier3 skip revealed PR #${_SKIP_PR_NUMBER} for issue #${SUB_NUMBER}, but auto-stop-at=${_STOP_AT}: not continuing"
+        else
+          echo "${LOG_PREFIX} [recovery] tier3 skip revealed PR #${_SKIP_PR_NUMBER} for issue #${SUB_NUMBER}; continuing to review/merge"
+          echo "${LOG_PREFIX} --- review phase (light): PR #${_SKIP_PR_NUMBER} ---"
+          _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "review" "$_SKIP_PR_NUMBER" "$SCRIPT_DIR/run-review.sh" --light
+          echo "${LOG_PREFIX} --- merge phase: PR #${_SKIP_PR_NUMBER} ---"
+          _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "merge" "$_SKIP_PR_NUMBER" "$SCRIPT_DIR/run-merge.sh"
+        fi
+      fi
+    fi
     ;;
   M)
     # Resume preamble: if residual worktree/branch exists from a prior interrupted run,
