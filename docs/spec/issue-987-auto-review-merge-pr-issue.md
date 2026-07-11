@@ -110,7 +110,7 @@
 
 #### code
 - 前回 `/code` 実行が `phase/ready→phase/code` 遷移後に実装コミットなしで中断していた状態からの再開だった (Code Retrospective 記載)。既存 Spec の読み込みで安全にフォールバックできた。
-- code-pr wrapper で silent no-op (`code-completed-no-pr`) が検出され、Tier 2 recovery (fallback catalog) で PR #988 を作成して継続した。ただしこの recovery は Spec の `## Auto Retrospective`、`docs/reports/orchestration-recoveries.md`、`.tmp/auto-events.jsonl` の `recovery` イベントのいずれにも記録されていない (記録経路のギャップ — Improvement Proposals 参照)。
+- code-pr wrapper の exit-0 informational anomaly check が `code-completed-no-pr` を出力したが、実際には PR #988 は作成済みで false-positive だった (watchdog kill → 内部 retry 成功後の初回試行痕跡による誤検出)。これは既起票 #981 の既知パターンそのものであり、本 batch 内で #981 の修正が予定されている。recovery は発生しておらず、記録ギャップではない (verify 時の初期解釈を訂正)。
 
 #### review
 - CI FAIL (開発環境の env var 汚染がテストのバグを隠蔽するパターン) を review Step 9 が検出し、`env -i` によるクリーン環境再現で根本原因を特定・修正できた。review が機能した好例。
@@ -123,5 +123,5 @@
 - 本 Issue 自身の `/auto` 実行は修正前の `run-auto-sub.sh` で走ったため、当該セッションの review/merge イベントは `issue=988` (PR 番号) で記録されている (bootstrap 実行の既知アーティファクト)。修正は同一 batch セッション内の後続 Issue および次回セッションから有効。
 
 ### Improvement Proposals
-- bats テストの env var 汚染への防御的初期化: `/auto` 経由の worktree セッションでは `EMIT_ISSUE_NUMBER`/`EMIT_PHASE_NAME`/`EMIT_PR_NUMBER`/`_EXTRA_SELF_ISSUE`/`AUTO_SESSION_ID` がアンビエントに export されており、これらを参照するテストのバグを隠蔽して false PASS を生む (本 Issue の review で実例発生)。bats の共通 setup (test helper) でこれらを明示的に `unset` する防御的初期化を追加する。
-- Tier 2 recovery の記録経路ギャップ: `run-auto-sub.sh` の `code-completed-no-pr` Tier 2 recovery 成功時に、Spec `## Auto Retrospective` (`_write_tier2_recovery_to_spec()`)、`docs/reports/orchestration-recoveries.md`、`recovery` イベント emit のいずれも実行されなかった。記録が残らないと `/audit recoveries` の頻度検出や recoveries-auto-fire が機能しないため、この recovery パスの記録漏れを調査し記録を保証する。
+- bats テストの env var 汚染への防御的初期化: `/auto` 経由の worktree セッションでは `EMIT_ISSUE_NUMBER`/`EMIT_PHASE_NAME`/`EMIT_PR_NUMBER`/`_EXTRA_SELF_ISSUE`/`AUTO_SESSION_ID` がアンビエントに export されており、これらを参照するテストのバグを隠蔽して false PASS を生む (本 Issue の review で実例発生。`tests/run-auto-sub.bats` / `tests/emit-event.bats` の setup() には防御的 unset がない — `tests/run-spec.bats` 等には既に部分的に存在)。bats の setup() でこれらを明示的に `unset` する防御的初期化を追加する。
+- ~~Tier 2 recovery の記録経路ギャップ~~ → 訂正: 実際は recovery ではなく #981 既知の exit-0 false-positive anomaly 出力だった。#981 で対応済みのため起票不要。
