@@ -6,6 +6,12 @@
 SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/run-auto-sub.sh"
 
 setup() {
+    # Isolate from ambient EMIT_*/_EXTRA_SELF_ISSUE possibly exported by an
+    # outer run-auto-sub.sh process (e.g. this suite invoked from inside a
+    # live /review or /merge phase session) — tests below assert issue-42
+    # targeting under the assumption these start unset, per issue #984 fix.
+    unset EMIT_ISSUE_NUMBER EMIT_PR_NUMBER EMIT_PHASE_NAME _EXTRA_SELF_ISSUE
+
     # Isolate test from repo .wholework.yml
     echo "permission-mode: bypass" > "$BATS_TEST_TMPDIR/.wholework.yml"
     cd "$BATS_TEST_TMPDIR"
@@ -1123,6 +1129,117 @@ MOCK
     [ "$status" -eq 0 ]
     grep -q "Auto Retrospective" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
     grep -qE "commit.*Tier 3 recovery" "$GIT_LOG"
+}
+
+@test "run-auto-sub: tier2 recovery during review phase records real Issue number, not PR number (issue #984)" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+    echo "# Issue #42: test spec" > "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"status"* && "$*" == *"--porcelain"* && "$*" == *"issue-42"* ]]; then
+    echo " M docs/spec/issue-42-test.md"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/apply-fallback.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$APPLY_FALLBACK_LOG"
+printf '%s\n' \
+  "### Orchestration Anomalies" \
+  "- **[review-tier2]** Tier 2 fallback applied: result=recovered."
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/apply-fallback.sh"
+
+    # Default fixture (see setup): SUB_NUMBER=42, PR_NUMBER=99, Size M.
+    # run-review.sh fails so the review phase falls through past Tier 1 to Tier 2 recovery.
+    cat > "$MOCK_DIR/run-review.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$RUN_REVIEW_LOG"
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/run-review.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+
+    # Spec file is issue-42 (real Issue number), not issue-99 (PR number).
+    grep -q "Auto Retrospective" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    grep -q "review-tier2" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    [ ! -f "$BATS_TEST_TMPDIR/docs/spec/issue-99-recovery.md" ]
+
+    # Commit message references the real Issue number (#42), not the PR number (#99).
+    grep -qE "commit.*Tier 2 recovery.*issue #42" "$GIT_LOG"
+    ! grep -q "issue #99" "$GIT_LOG"
+}
+
+@test "run-auto-sub: tier3 recovery during review phase records real Issue number, not PR number (issue #984)" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+    echo "# Issue #42: test spec" > "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"diff --quiet"* && "$*" == *"orchestration-recoveries.md"* ]]; then
+    exit 1
+fi
+if [[ "$*" == *"status"* && "$*" == *"--porcelain"* && "$*" == *"issue-42"* ]]; then
+    echo " M docs/spec/issue-42-test.md"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/spawn-recovery-subagent.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$SPAWN_RECOVERY_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/spawn-recovery-subagent.sh"
+
+    # Default fixture (see setup): SUB_NUMBER=42, PR_NUMBER=99, Size M.
+    # run-review.sh fails so the review phase falls through Tier 1/2 to Tier 3 recovery.
+    cat > "$MOCK_DIR/run-review.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$RUN_REVIEW_LOG"
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/run-review.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+
+    # spawn-recovery-subagent.sh receives the PR number as the positional <issue>
+    # arg (needed for retry/reconcile targeting against the PR's phase state), but
+    # --record-issue carries the real Issue number for recording purposes.
+    grep -qE "^review 99 --log .* --exit-code 1 --record-issue 42$" "$SPAWN_RECOVERY_LOG"
+
+    # Spec file is issue-42 (real Issue number), not issue-99 (PR number).
+    grep -q "Auto Retrospective" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    grep -q "Tier 3 recovery (review)" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    [ ! -f "$BATS_TEST_TMPDIR/docs/spec/issue-99-recovery.md" ]
+
+    # Commit messages reference the real Issue number (#42), not the PR number (#99).
+    grep -qE "commit.*Record Tier 3 recovery event for issue #42 review phase" "$GIT_LOG"
+    ! grep -q "issue #99" "$GIT_LOG"
 }
 
 @test "run-auto-sub: manual recovery: writes Auto Retrospective to spec file" {

@@ -454,7 +454,7 @@ run_phase_with_recovery() {
   set -e
 
   if [[ "${_RETRY_ON_KILL_FIRED:-false}" == "true" ]]; then
-    _write_wrapper_retry_recovery "$issue" "$phase" "$exit_code"
+    _write_wrapper_retry_recovery "$EMIT_ISSUE_NUMBER" "$phase" "$exit_code"
   fi
 
   emit_event "wrapper_exit" "phase=${phase}" "exit_code=${exit_code}"
@@ -550,7 +550,7 @@ run_phase_with_recovery() {
   if [[ $_fallback_exit -eq 0 ]]; then
     echo "${LOG_PREFIX} [recovery] tier2 fallback catalog: recovered"
     if [[ -s "$_fallback_meta_file" ]]; then
-      _write_tier2_recovery_to_spec "$issue" "$_fallback_meta_file"
+      _write_tier2_recovery_to_spec "$EMIT_ISSUE_NUMBER" "$_fallback_meta_file"
     fi
     rm -f "$_fallback_meta_file"
     emit_event "recovery" "phase=${phase}" "tier=2" "result=recovered"
@@ -560,19 +560,19 @@ run_phase_with_recovery() {
   rm -f "$_fallback_meta_file"
 
   # Tier 3: recovery sub-agent via claude -p (expensive, unknown anomaly only)
-  if "$SCRIPT_DIR/spawn-recovery-subagent.sh" "$phase" "$issue" --log "$log_file" --exit-code "$exit_code"; then
+  if "$SCRIPT_DIR/spawn-recovery-subagent.sh" "$phase" "$issue" --log "$log_file" --exit-code "$exit_code" --record-issue "$EMIT_ISSUE_NUMBER"; then
     echo "${LOG_PREFIX} [recovery] tier3 sub-agent: recovered"
     local _repo_root="$REPO_ROOT"
     if ! git -C "$_repo_root" diff --quiet "docs/reports/orchestration-recoveries.md" 2>/dev/null; then
       if git -C "$_repo_root" add "docs/reports/orchestration-recoveries.md" \
-         && git -C "$_repo_root" commit -s -m "Record Tier 3 recovery event for issue #${issue} ${phase} phase" \
+         && git -C "$_repo_root" commit -s -m "Record Tier 3 recovery event for issue #${EMIT_ISSUE_NUMBER} ${phase} phase" \
          && _push_with_retry "$_repo_root"; then
         echo "${LOG_PREFIX} [recovery] recovery log committed and pushed"
       else
         echo "${LOG_PREFIX} WARNING: could not commit/push recovery log; /verify may detect dirty file" >&2
       fi
     fi
-    _write_tier3_recovery_to_spec "$issue" "$phase" "$exit_code"
+    _write_tier3_recovery_to_spec "$EMIT_ISSUE_NUMBER" "$phase" "$exit_code"
     emit_event "recovery" "phase=${phase}" "tier=3" "result=recovered"
     emit_event "phase_complete" "phase=${phase}"
     return 0
