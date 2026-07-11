@@ -435,6 +435,85 @@ MOCK
     [ -f "$SPAWN_RECOVERY_LOG" ]
 }
 
+@test "run-auto-sub: tier3 skip reveals stray PR: continues to review/merge" {
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "S"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$RUN_CODE_LOG"
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    # tier1 no match, tier2 fails, tier3 returns action=skip
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    cat > "$MOCK_DIR/spawn-recovery-subagent.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$SPAWN_RECOVERY_LOG"
+mkdir -p .tmp
+echo '{"action":"skip","rationale":"stray PR already exists","steps":[]}' > ".tmp/recovery-plan-${2}-${1}.json"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/spawn-recovery-subagent.sh"
+
+    # Default gh mock already returns PR #99 for worktree-code+issue-42
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [ -f "$RUN_REVIEW_LOG" ]
+    grep -q -- "--light" "$RUN_REVIEW_LOG"
+    [ -f "$RUN_MERGE_LOG" ]
+}
+
+@test "run-auto-sub: tier3 skip reveals stray PR + auto-stop-at: code: does not continue to review/merge" {
+    echo "auto-stop-at: code" >> "$BATS_TEST_TMPDIR/.wholework.yml"
+
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "S"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$RUN_CODE_LOG"
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    cat > "$MOCK_DIR/spawn-recovery-subagent.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$SPAWN_RECOVERY_LOG"
+mkdir -p .tmp
+echo '{"action":"skip","rationale":"stray PR already exists","steps":[]}' > ".tmp/recovery-plan-${2}-${1}.json"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/spawn-recovery-subagent.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [ ! -f "$RUN_REVIEW_LOG" ]
+    [ ! -f "$RUN_MERGE_LOG" ]
+}
+
 @test "run-auto-sub: tier3 recovery: commits orchestration-recoveries.md when dirty" {
     export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
 
