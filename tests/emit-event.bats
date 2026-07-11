@@ -171,6 +171,29 @@ teardown() {
     [[ "$line" == *'"phase":"code"'* ]]
 }
 
+@test "emit_event includes pr field when EMIT_PR_NUMBER is set (Issue #987)" {
+    export EMIT_PR_NUMBER="1001"
+    bash -c "source \"$SCRIPT\" && emit_event \"phase_start\" \"phase=review\""
+    run jq . "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    run jq -r '.pr' "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    [[ "$output" == "1001" ]]
+    run jq -r '.issue' "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    [[ "$output" == "42" ]]
+}
+
+@test "emit_event omits pr field when EMIT_PR_NUMBER is unset (Issue #987)" {
+    unset EMIT_PR_NUMBER
+    bash -c "source \"$SCRIPT\" && emit_event \"phase_start\" \"phase=code-pr\""
+    run jq . "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    run jq -r 'has("pr")' "$AUTO_EVENTS_LOG"
+    [ "$status" -eq 0 ]
+    [[ "$output" == "false" ]]
+}
+
 @test "restore_auto_session_pointer restores AUTO_SESSION_ID/AUTO_EVENTS_LOG from auto-session-current (Issue #902)" {
     mkdir -p "$BATS_TEST_TMPDIR/work1/.tmp"
     echo "test-session-123" > "$BATS_TEST_TMPDIR/work1/.tmp/auto-session-current"

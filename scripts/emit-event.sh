@@ -10,6 +10,8 @@
 #
 # Optional env vars:
 #   EMIT_PHASE_NAME    - Phase name for the current execution context
+#   EMIT_PR_NUMBER     - PR number when the current phase is called with a PR number
+#                        (e.g. review/merge); adds a "pr" field distinct from "issue"
 
 # Documented event schemas:
 #
@@ -70,6 +72,9 @@ emit_event() {
   local _issue="${EMIT_ISSUE_NUMBER:-0}"
   local _sid="${AUTO_SESSION_ID:-}"
   local json="{\"ts\":\"${ts}\",\"issue\":${_issue},\"event\":\"${event_type}\",\"session_id\":\"${_sid}\""
+  if [[ -n "${EMIT_PR_NUMBER:-}" ]]; then
+    json="${json},\"pr\":${EMIT_PR_NUMBER}"
+  fi
   while [[ $# -gt 0 ]]; do
     local kv="$1"; local k="${kv%%=*}"; local v="${kv#*=}"
     # sanitize value: strip newlines, replace tabs, escape backslash and double-quote
