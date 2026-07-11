@@ -20,6 +20,35 @@ _spec_has_changes() {
   git -C "$repo_root" status --porcelain "$spec_rel_path" 2>/dev/null | grep -q .
 }
 
+# Pushes HEAD to origin, retrying with fetch+rebase on non-fast-forward rejection.
+# Lock+push-only mode variant (no --from branch to rebase separately) of the push
+# retry loop in scripts/worktree-merge-push.sh.
+# See modules/orchestration-fallbacks.md#ff-only-merge-fallback
+# Usage: _push_with_retry REPO_ROOT
+# Returns 0 on success, 1 if all retries are exhausted or a step fails. Never exits
+# the script -- callers keep their existing best-effort if/else WARNING handling.
+_push_with_retry() {
+  local repo_root="$1"
+  local attempt=0
+  local branch
+
+  while true; do
+    if git -C "$repo_root" push origin HEAD; then
+      return 0
+    fi
+    attempt=$((attempt + 1))
+    if [[ $attempt -ge 3 ]]; then
+      return 1
+    fi
+    branch=$(git -C "$repo_root" rev-parse --abbrev-ref HEAD) || return 1
+    git -C "$repo_root" fetch origin "$branch" || return 1
+    if ! git -C "$repo_root" rebase "origin/${branch}"; then
+      git -C "$repo_root" rebase --abort 2>/dev/null || true
+      return 1
+    fi
+  done
+}
+
 # Validates recovery function arguments to prevent path traversal via glob patterns.
 # Usage: _validate_recovery_args ISSUE [PHASE] [RECOVERY_TYPE]
 # Returns 1 and prints to stderr if any argument fails validation.
@@ -105,7 +134,7 @@ _write_manual_recovery_to_spec() {
        && git -C "$_repo_root" commit -s -m "Record manual recovery in auto retrospective for issue #${issue}
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
-       && git -C "$_repo_root" push origin HEAD; then
+       && _push_with_retry "$_repo_root"; then
       echo "[#${issue}] [recovery] spec auto retrospective updated for issue #${issue} (manual recovery)"
     else
       echo "[#${issue}] WARNING: could not commit/push manual recovery to spec; continuing" >&2
@@ -236,7 +265,7 @@ _write_tier2_recovery_to_spec() {
        && git -C "$_repo_root" commit -s -m "Record Tier 2 recovery in auto retrospective for issue #${issue}
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
-       && git -C "$_repo_root" push origin HEAD; then
+       && _push_with_retry "$_repo_root"; then
       echo "${LOG_PREFIX} [recovery] spec auto retrospective updated for issue #${issue}"
     else
       echo "${LOG_PREFIX} WARNING: could not commit/push Tier 2 recovery to spec; continuing" >&2
@@ -283,7 +312,7 @@ _write_tier3_recovery_to_spec() {
        && git -C "$_repo_root" commit -s -m "Record Tier 3 recovery in auto retrospective for issue #${issue}
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
-       && git -C "$_repo_root" push origin HEAD; then
+       && _push_with_retry "$_repo_root"; then
       echo "${LOG_PREFIX} [recovery] spec auto retrospective updated for issue #${issue} (tier3)"
     else
       echo "${LOG_PREFIX} WARNING: could not commit/push Tier 3 recovery to spec; continuing" >&2
@@ -337,7 +366,7 @@ PYEOF
        && git -C "$_repo_root" commit -s -m "Record wrapper-retry-on-kill recovery for issue #${issue} ${phase}
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
-       && git -C "$_repo_root" push origin HEAD; then
+       && _push_with_retry "$_repo_root"; then
       echo "${LOG_PREFIX} [recovery] wrapper-retry-on-kill recovery log committed and pushed"
     else
       echo "${LOG_PREFIX} WARNING: could not commit/push wrapper-retry-on-kill recovery log" >&2
@@ -537,7 +566,7 @@ run_phase_with_recovery() {
     if ! git -C "$_repo_root" diff --quiet "docs/reports/orchestration-recoveries.md" 2>/dev/null; then
       if git -C "$_repo_root" add "docs/reports/orchestration-recoveries.md" \
          && git -C "$_repo_root" commit -s -m "Record Tier 3 recovery event for issue #${issue} ${phase} phase" \
-         && git -C "$_repo_root" push origin HEAD; then
+         && _push_with_retry "$_repo_root"; then
         echo "${LOG_PREFIX} [recovery] recovery log committed and pushed"
       else
         echo "${LOG_PREFIX} WARNING: could not commit/push recovery log; /verify may detect dirty file" >&2

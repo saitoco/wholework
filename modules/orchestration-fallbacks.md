@@ -41,6 +41,7 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 ### Applicable Phases
 - code (patch route — `scripts/worktree-merge-push.sh`)
 - merge
+- auto (`run-auto-sub.sh`'s recovery-record push, 5 sites — lock+push-only mode variant, no `--from` branch)
 
 ### Fallback Steps
 0. Immediately after `acquire_lock` (before the `--from` merge block): run `git fetch origin <base-branch>` as best-effort — failure emits a warning to stderr but does not abort. This ensures that subsequent ref-fetch and rebase steps reference an up-to-date `origin/<base-branch>` ref rather than a stale local snapshot.
@@ -70,7 +71,7 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 - Step 3 (is-ancestor check) added in #853: when `git rebase` reports "Current branch is up to date" (is-ancestor=true) but the local main ref differs, the subsequent ref-fetch still fails silently; the explicit is-ancestor check detects this and skips directly to the ref-fetch retry, eliminating the silent no-op path
 - Push retry loop added in #853: in parallel session environments a concurrent session may push between the worktree rebase and the local push, causing a non-fast-forward push failure; the retry loop (max 3, fetch+rebase+push each iteration) resolves this without requiring human intervention
 - Push retry loop aligned with the checkout-less design in #970: the retry-scoped rebase reused a bare `git rebase origin/<base>` against the shared directory's current HEAD, which is the same checkout-dependent defect class #961 closed for the primary merge path — it just went unnoticed because #961's Changed Files scoped out this loop. #970 brings the retry rebase in line with step 5's worktree-scoped rebase whenever `<from-branch>` is available, leaving the bare rebase only for the `<from-branch>`-unset lock+push-only mode where no other branch exists to rebase
-- See also: #314 (phase state reconciler), #308 (orchestration improvement series), #517 (incident that triggered #522), #853 (parallel session race hardening), #961 (checkout-less ref-fetch replacement for the `git pull --rebase` fallback, and removal of the non-worktree bare-rebase branch), #970 (checkout-less rewrite of the push-retry loop's rebase, closing the gap #961 left out of scope)
+- See also: #314 (phase state reconciler), #308 (orchestration improvement series), #517 (incident that triggered #522), #853 (parallel session race hardening), #961 (checkout-less ref-fetch replacement for the `git pull --rebase` fallback, and removal of the non-worktree bare-rebase branch), #970 (checkout-less rewrite of the push-retry loop's rebase, closing the gap #961 left out of scope), #986 (applied this push retry pattern to `run-auto-sub.sh`'s 5 recovery-record write paths via the shared `_push_with_retry()` helper, the lock+push-only mode variant of this fallback)
 
 ---
 

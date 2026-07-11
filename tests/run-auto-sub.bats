@@ -1164,6 +1164,105 @@ MOCK
     grep -qE "commit.*manual recovery" "$GIT_LOG"
 }
 
+@test "run-auto-sub: push retry: non-fast-forward push succeeds after one fetch+rebase retry" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+    echo "# Issue #42: test spec" > "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"status"* && "$*" == *"--porcelain"* && "$*" == *"issue-42"* ]]; then
+    echo " M docs/spec/issue-42-test.md"
+    exit 0
+fi
+if [[ "$*" == *"rev-parse --abbrev-ref HEAD"* ]]; then
+    echo "main"
+    exit 0
+fi
+if [[ "$*" == *"push origin HEAD"* ]]; then
+    COUNT_FILE="$BATS_TEST_TMPDIR/push_count"
+    count=0
+    [ -f "$COUNT_FILE" ] && count=$(cat "$COUNT_FILE")
+    count=$((count + 1))
+    echo "$count" > "$COUNT_FILE"
+    [ "$count" -eq 1 ] && exit 1
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    # No open PR for this issue: override the global gh mock's pr list default.
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only
+    [ "$status" -eq 0 ]
+    push_count=$(grep -c "push origin HEAD" "$GIT_LOG")
+    [ "$push_count" -eq 2 ]
+    grep -q "fetch origin main" "$GIT_LOG"
+    grep -q "rebase origin/main" "$GIT_LOG"
+}
+
+@test "run-auto-sub: push retry: gives up after 3 attempts and warns but continues" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+    echo "# Issue #42: test spec" > "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"status"* && "$*" == *"--porcelain"* && "$*" == *"issue-42"* ]]; then
+    echo " M docs/spec/issue-42-test.md"
+    exit 0
+fi
+if [[ "$*" == *"rev-parse --abbrev-ref HEAD"* ]]; then
+    echo "main"
+    exit 0
+fi
+if [[ "$*" == *"push origin HEAD"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    # No open PR for this issue: override the global gh mock's pr list default.
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"WARNING: could not commit/push manual recovery to spec; continuing"* ]]
+    push_count=$(grep -c "push origin HEAD" "$GIT_LOG")
+    [ "$push_count" -eq 3 ]
+}
+
 @test "run-auto-sub: manual recovery: skips commit when an open PR exists for the issue" {
     export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
     export GH_LOG="$BATS_TEST_TMPDIR/gh.log"
