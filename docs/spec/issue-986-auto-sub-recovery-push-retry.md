@@ -74,3 +74,40 @@
 - **`_write_wrapper_retry_recovery` のコミットメッセージ形式差異は本 Issue のスコープ外**: 同関数のコミットメッセージは他 4 箇所と異なり `Co-Authored-By:` トレーラーを含まないが、push リトライとは無関係な既存の差異であり本 Issue では触れない。
 - **Steering Docs sync candidate 確認結果**: `docs/structure.md` (L207, L218, L223) / `docs/tech.md` (L55) / `docs/workflow.md` (L111, L113) / `docs/migration-notes.md` (L48-52, L554-558) はいずれも grep 済みで、`run-auto-sub.sh` の一行要約または高レベルな動作説明に留まり、recovery 記録 push のリトライ機構という粒度までは踏み込んでいないため、本 Issue での変更は不要と判断した。`/code` での再確認を妨げないよう Changed Files に候補として残す。
 - **関連 Issue #984 はスコープ外**: Related Issues に挙げられている #984 (recovery 記録の PR番号/Issue番号混同) は同じ 5 つの recovery-write 経路に関わる別欠陥だが、push リトライとは独立した問題であり本 Issue では対応しない。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜5 をそのままの順序・位置で実装した。
+
+### Design Gaps/Ambiguities
+- Notes の「`_write_wrapper_retry_recovery` のコミットメッセージ形式差異」記述 (同関数のコミットメッセージは他 4 箇所と異なり `Co-Authored-By:` トレーラーを含まない、という記載) は、実装時点のソースでは実際には含まれていることを確認した。差異が既に解消済みか、Spec 起草時の調査に誤りがあった可能性があるが、いずれにせよ push リトライとは無関係かつ本 Issue のスコープ外のため、修正は行わなかった。
+
+### Rework
+- N/A — 手戻りは発生しなかった。
+
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+- Nothing to note — Implementation Steps どおり、5 箇所すべてが `_push_with_retry()` を経由する形で実装されており、diff レベルで Spec と実装の乖離は見られなかった。
+
+### Recurring Issues
+- リトライループを持つ bats テストで、最終カウント (`push_count`) のみを assert し、リトライ間に挟まる中間ステップ (今回は `fetch`/`rebase`) の呼び出し回数を assert しない、という抜けが見られた (`tests/run-auto-sub.bats` の exhausted-retry テスト)。`worktree-merge-push.bats` 等、同種の push retry loop を検証する既存テストでも同じ抜けがないか、次回の関連改修時に確認する価値がある。
+
+### Acceptance Criteria Verification Difficulty
+- 2 件とも `rubric` で PASS に解決。5 箇所の置換箇所が diff で機械的に確認でき、テストシナリオも Issue の記述 (成功/上限到達) と1対1で対応していたため、grader 判断に曖昧さはなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- review-light (light mode) を実行し、4 観点 (Spec 逸脱 / Edge Case / セキュリティ / ドキュメント整合性) を1エージェントで統合的にチェックした。CONSIDER 1件 (テストの fetch/rebase 回数未検証) を検出し、修正コストが低く価値があると判断してその場で修正した。
+- ローカル `bats tests/run-auto-sub.bats` 実行で無関係な既存失敗 (test 36, Issue #987 関連) を検出したが、この PR の変更を stash して再実行しても同じ失敗が再現したため pre-existing と確認し、CI (Run bats tests SUCCESS ×2) を正としてこの PR のブロッカーとしなかった。
+
+### Deferred Items
+- Post-merge AC (次回 batch 実行中の実地観察) は引き続き `/verify` フェーズでの observation イベント待ち。
+- test 36 (Issue #987 関連、ローカル環境依存の可能性がある既存失敗) はこの PR のスコープ外として未調査のまま。
+
+### Notes for Next Phase
+- `/merge` 前に CI が全て green であることを確認済み (DCO / Run bats tests ×2 / Validate skill syntax ×2 / Forbidden Expressions check ×2 / macOS shell compatibility ×2)。
+- MUST 指摘なし、CONSIDER 1件は修正済み。追加の re-review は不要。
