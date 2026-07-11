@@ -98,16 +98,16 @@
 - 2 件とも `rubric` で PASS に解決。5 箇所の置換箇所が diff で機械的に確認でき、テストシナリオも Issue の記述 (成功/上限到達) と1対1で対応していたため、grader 判断に曖昧さはなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- review-light (light mode) を実行し、4 観点 (Spec 逸脱 / Edge Case / セキュリティ / ドキュメント整合性) を1エージェントで統合的にチェックした。CONSIDER 1件 (テストの fetch/rebase 回数未検証) を検出し、修正コストが低く価値があると判断してその場で修正した。
-- ローカル `bats tests/run-auto-sub.bats` 実行で無関係な既存失敗 (test 36, Issue #987 関連) を検出したが、この PR の変更を stash して再実行しても同じ失敗が再現したため pre-existing と確認し、CI (Run bats tests SUCCESS ×2) を正としてこの PR のブロッカーとしなかった。
+- PR #990 は mergeable=true (CI green / review approved) だったため、conflict 解消フローをスキップし squash merge を直接実行した。
+- worktree には入らず、メインリポジトリの作業ディレクトリ上で `git fetch` → `git merge origin/main --ff-only` により Phase Handoff 書き込み対象のブランチ状態を同期した。
 
 ### Deferred Items
 - Post-merge AC (次回 batch 実行中の実地観察) は引き続き `/verify` フェーズでの observation イベント待ち。
 - test 36 (Issue #987 関連、ローカル環境依存の可能性がある既存失敗) はこの PR のスコープ外として未調査のまま。
 
 ### Notes for Next Phase
-- `/merge` 前に CI が全て green であることを確認済み (DCO / Run bats tests ×2 / Validate skill syntax ×2 / Forbidden Expressions check ×2 / macOS shell compatibility ×2)。
-- MUST 指摘なし、CONSIDER 1件は修正済み。追加の re-review は不要。
+- squash merge 完了、リモートブランチ `worktree-code+issue-986` は削除済み。
+- `/verify` では Post-merge AC (observation イベント) の確認を行うこと。
