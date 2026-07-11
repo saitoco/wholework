@@ -437,6 +437,8 @@ Full phase sequence:
 
 The XS patch route does not go through the `/spec` phase, so no Spec file exists. To allow the `/verify` improvement proposal pipeline to collect the issue retrospective, create a Spec file and transcribe it using the following steps.
 
+In addition to the single-issue path's Step 4 above, this step is also called from Batch Mode's Count mode and List mode (XS Issues only) after their respective `run-auto-sub.sh` execution — see `## Batch Mode (--batch)` below.
+
 Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH` for use in subsequent steps.
 
 1. **Check for issue retrospective in Issue comments**:
@@ -447,6 +449,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
 2. **Determine Spec file path**: `$SPEC_PATH/issue-$NUMBER-<short-title>.md`
    - Generate `short-title` as English kebab-case from Issue title (e.g., `xs-patch-retro`)
    - If an existing Spec file is found, use it
+   - **Idempotency check**: if the existing Spec file already contains a `## Issue Retrospective` heading, skip steps 3–4 (already transcribed — avoid duplicate transcription)
 
 3. **Create (or update) Spec file and append issue retrospective**:
    - For new files: include a `# Issue #$NUMBER: $TITLE` heading at the top
@@ -1030,9 +1033,10 @@ Process the selected N Issues **sequentially** (serially):
 1. Check Issue labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
 2. **If no `phase/*` labels**: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh $NUMBER` (issue triage → Size setting → `phase/ready` assignment)
    - On failure: output a warning and skip to the next Issue (do not abort the entire batch)
-3. Re-check Size: call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`; if Size is M, L, or XL: output a warning and skip to the next Issue (do not abort the entire batch)
+3. call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`; retain the result as `$ISSUE_SIZE`; if `$ISSUE_SIZE` is M, L, or XL: output a warning and skip to the next Issue (do not abort the entire batch)
 4. Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh $NUMBER` (all phases spec→code→review→merge→verify, auto-starting from the current `phase/*` state)
    - On failure: output a warning and skip to the next Issue (do not abort the entire batch)
+5. **If `$ISSUE_SIZE` is XS**: transcribe issue retrospective to Spec (see Step 4b)
 
 ### List mode (--batch N1 N2 ...)
 
@@ -1056,7 +1060,7 @@ Process each Issue in `BATCH_LIST` in order:
 1. Check Issue labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
 2. **If no `phase/*` labels**: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh $NUMBER` (issue triage → Size setting → `phase/ready` assignment)
    - On failure: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
-3. Re-check Size: call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`; if Size is XL: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
+3. call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`; retain the result as `$ISSUE_SIZE`; if `$ISSUE_SIZE` is XL: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
 4. **Blocked-by check**: Extract blocker numbers from the Issue body:
    ```
    gh issue view $NUMBER --json body -q '.body' | grep -ioE "blocked by #[0-9]+" | grep -oE "[0-9]+"
@@ -1074,7 +1078,8 @@ Process each Issue in `BATCH_LIST` in order:
 5. Run `${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh $NUMBER` (all phases spec→code→review→merge→verify, auto-starting from the current `phase/*` state)
    - On success: proceed to step 6
    - On failure: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
-6. **Verify orchestration** (after run-auto-sub.sh success):
+6. **XS only**: transcribe issue retrospective to Spec (see Step 4b)
+7. **Verify orchestration** (after run-auto-sub.sh success):
    - Re-fetch current labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
    - If `phase/verify` is present in labels:
      - If `--non-interactive` is NOT in ARGUMENTS: invoke `Skill(skill="wholework:verify", args="$NUMBER")` in the parent session
