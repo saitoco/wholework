@@ -296,6 +296,7 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 - `reconcile-phase-state.sh` `_completion_code_pr()` returns `matches_expected:false` only when the expected PR is absent (the sole mismatch case); combined with `"phase":"code-pr"` in the JSON output, this uniquely identifies the code-completed-no-pr scenario
 - `run-code.sh` now logs `reconcile-phase-state result:` (added in #415) so Tier 2 can detect this pattern from the wrapper log; prior to this change, `_reconcile_out` was silently discarded and Tier 2 would return empty output (unknown pattern)
 - The `code-completed-no-pr` check precedes `watchdog-kill` in the detector to win the first-match-wins priority, since both signatures can co-occur in the same log
+- Suppression on recovery (#981): if the same log later contains a `"matches_expected":true` line for phase code-pr (e.g. after `code_retry_fire`'s exec-based retry succeeds), the `code-completed-no-pr` condition is skipped entirely — the same reconcile-first-authority principle applied to `review-completion-false-negative` (#932), extended here to the code-pr phase
 
 ---
 

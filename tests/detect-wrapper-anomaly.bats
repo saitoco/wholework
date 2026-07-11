@@ -306,6 +306,13 @@ MOCK
     [ -z "$output" ]
 }
 
+@test "code completed no PR: suppressed when retry succeeds (later matches_expected true present)" {
+    printf '"matches_expected":false\n"phase":"code-pr"\nretry-on-kill: command killed...\n"matches_expected":true\n"phase":"code-pr"\n' > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 0 --issue 385 --phase code
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+}
+
 @test "API connection error: detects APIConnectionError pattern" {
     echo "anthropic.APIConnectionError: Connection error." > "$LOG_FILE"
     run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 500 --phase spec

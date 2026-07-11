@@ -66,7 +66,8 @@ elif grep -q "ERROR: missing sign-off" "$LOG_FILE"; then
   PATTERN_NAME="dco-missing"
   ANOMALY_DESC="DCO sign-off missing in phase \`$PHASE\` (exit code $EXIT_CODE): \`ERROR: missing sign-off\` detected. Commit was created without \`git commit -s\`."
   IMPROVEMENT_HINT="Ensure \`git commit -s\` is used in all SKILL.md commit steps. Check the corresponding skill's commit instructions for missing \`-s\` flag."
-elif grep -q '"matches_expected":false' "$LOG_FILE" && grep -q '"phase":"code-pr"' "$LOG_FILE"; then
+elif grep -q '"matches_expected":false' "$LOG_FILE" && grep -q '"phase":"code-pr"' "$LOG_FILE" && ! grep -q '"matches_expected":true' "$LOG_FILE"; then
+  # reconcile-first authority: a later matches_expected:true in the same log (e.g. code_retry_fire retry success) suppresses this anomaly
   PATTERN_NAME="code-completed-no-pr"
   ANOMALY_DESC="Watchdog killed the process in phase \`$PHASE\` (exit code $EXIT_CODE) after code-pr completed its commits but before PR creation: \`matches_expected:false\` and \`phase:code-pr\` detected in reconcile-phase-state output. The run-code.sh phase exited without creating a PR. Reference: #415."
   IMPROVEMENT_HINT="Follow the recovery procedure at \`modules/orchestration-fallbacks.md#code-completed-no-pr\`: checkout the worktree branch, rebase onto latest main, push the branch, and create the PR with \`gh pr create\`, then continue with \`/review\`."
