@@ -68,7 +68,7 @@ fi
 # - Match lines of the form: key: value (with optional surrounding whitespace)
 # - Strip leading/trailing whitespace and surrounding single or double quotes
 VALUE=""
-while IFS= read -r line; do
+while IFS= read -r line || [ -n "$line" ]; do
     # Skip comment lines
     case "$line" in
         \#*) continue ;;
@@ -76,7 +76,7 @@ while IFS= read -r line; do
 
     # Match: key: value (key must match exactly)
     if echo "$line" | grep -qE "^[[:space:]]*${KEY}[[:space:]]*:"; then
-        VALUE=$(echo "$line" | sed -E "s/^[[:space:]]*${KEY}[[:space:]]*:[[:space:]]*//" | sed -E "s/[[:space:]]*$//" | sed -E "s/^['\"]|['\"]$//" | sed -E "s/^['\"]|['\"]$//")
+        VALUE=$(echo "$line" | sed -E "s/^[[:space:]]*${KEY}[[:space:]]*:[[:space:]]*//" | sed -E "s/[[:space:]]+#.*$//" | sed -E "s/[[:space:]]*$//" | sed -E "s/^['\"]|['\"]$//" | sed -E "s/^['\"]|['\"]$//")
         break
     fi
 done < "$CONFIG_FILE"

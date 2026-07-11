@@ -105,6 +105,20 @@ EOF
     [ "$output" = "real/path" ]
 }
 
+@test "inline comment: comment is stripped from value" {
+    printf 'k1: v1  # comment\nk2: v2\n' > .wholework.yml
+    run bash "$SCRIPT" k1
+    [ "$status" -eq 0 ]
+    [ "$output" = "v1" ]
+}
+
+@test "no trailing newline: last line key is read" {
+    printf 'k1: v1  # comment\nk2: v2' > .wholework.yml
+    run bash "$SCRIPT" k2
+    [ "$status" -eq 0 ]
+    [ "$output" = "v2" ]
+}
+
 @test "empty .wholework.yml: returns default" {
     touch .wholework.yml
     run bash "$SCRIPT" spec-path "docs/spec"
