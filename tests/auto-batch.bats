@@ -11,6 +11,11 @@ list_mode_section() {
     awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' "$SKILL_FILE"
 }
 
+# Extract the "### Count mode (--batch N)" section from SKILL.md
+count_mode_section() {
+    awk '/^### Count mode/{found=1} /^### / && !/Count mode/{found=0} found{print}' "$SKILL_FILE"
+}
+
 @test "List mode section: wholework:verify Skill invocation present" {
     run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'wholework:verify'"
     [ "$status" -eq 0 ]
@@ -38,5 +43,15 @@ list_mode_section() {
 
 @test "List mode section: --batch --resume in blocked warning present" {
     run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q -- '--batch --resume'"
+    [ "$status" -eq 0 ]
+}
+
+@test "List mode section: Issue Retrospective Transcription reference present" {
+    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'Step 4b'"
+    [ "$status" -eq 0 ]
+}
+
+@test "Count mode section: Issue Retrospective Transcription reference present" {
+    run bash -c "awk '/^### Count mode/{found=1} /^### / && !/Count mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'Step 4b'"
     [ "$status" -eq 0 ]
 }
