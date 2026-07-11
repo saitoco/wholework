@@ -96,3 +96,25 @@ No new comments since last phase.
 
 ### Notes for Next Phase
 - `/verify` では pre-merge の 2 rubric 条件は本フェーズで PASS 判定済み (Issue チェックボックス更新済み)。post-merge の observation 項目は次回 watchdog kill → retry 成功シナリオの発生を待って確認する。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- `/auto --batch` の issue triage phase (`run-issue.sh 981`) が silent window 300 秒超の時点で外部停止 (kill) された。ただし triage の本質的出力 (`triaged`/`phase/issue` ラベル、Size M、AC + rubric 付きの body) は停止時点で設定済みだったため、親セッションが状態を確認のうえ後続フェーズへ続行した (Issue Retrospective コメントの投稿のみ未実施)。状態ベースの続行判断が機能した事例。
+
+#### spec
+- spec phase で Size M → S に降格され、patch route に再計画された。降格判定は正常に機能。
+
+#### code
+- 問題なし。patch route で main へ直コミット (930d773c)。
+
+#### review / merge
+- patch route のため対象外。
+
+#### verify
+- pre-merge 2 件 rubric PASS。抑制条件の実装は「同一ログ内の後続 `matches_expected:true` を完了根拠として抑制」方式。本 batch session 内の #987 code-pr phase で同 false-positive が実際に発生しており、修正の必要性が実例で裏付けられた。
+
+### Improvement Proposals
+- N/A (triage 中断は外部停止であり系統的欠陥ではない。watchdog silent window の較正は既存 #939 が追跡中)
