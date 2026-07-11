@@ -86,19 +86,28 @@
 ### Rework
 - N/A — 手戻りは発生しなかった。
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+- Nothing to note — Implementation Steps どおり、5 箇所すべてが `_push_with_retry()` を経由する形で実装されており、diff レベルで Spec と実装の乖離は見られなかった。
+
+### Recurring Issues
+- リトライループを持つ bats テストで、最終カウント (`push_count`) のみを assert し、リトライ間に挟まる中間ステップ (今回は `fetch`/`rebase`) の呼び出し回数を assert しない、という抜けが見られた (`tests/run-auto-sub.bats` の exhausted-retry テスト)。`worktree-merge-push.bats` 等、同種の push retry loop を検証する既存テストでも同じ抜けがないか、次回の関連改修時に確認する価値がある。
+
+### Acceptance Criteria Verification Difficulty
+- 2 件とも `rubric` で PASS に解決。5 箇所の置換箇所が diff で機械的に確認でき、テストシナリオも Issue の記述 (成功/上限到達) と1対1で対応していたため、grader 判断に曖昧さはなかった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `_push_with_retry()` は `worktree-merge-push.sh` の lock+push-only mode (`<from-branch>` 未指定) の既存リトライアルゴリズムをそのまま踏襲し、新規パターンを発明しなかった (Spec Notes の既存方針どおり)。
-- リトライ回数は "計 3 回の push 試行" (初回 + 2 回の fetch+rebase リトライ) というカウント方式を `worktree-merge-push.sh` の `MAX_PUSH_RETRY=3` に合わせて統一した。
-- 失敗時は `exit` せず `return 1` のみとし、5 箇所の呼び出し元が持つ既存の best-effort `if/else WARNING` 構造をそのまま維持した (記録より phase 継続を優先する既存方針を壊さない)。
+- review-light (light mode) を実行し、4 観点 (Spec 逸脱 / Edge Case / セキュリティ / ドキュメント整合性) を1エージェントで統合的にチェックした。CONSIDER 1件 (テストの fetch/rebase 回数未検証) を検出し、修正コストが低く価値があると判断してその場で修正した。
+- ローカル `bats tests/run-auto-sub.bats` 実行で無関係な既存失敗 (test 36, Issue #987 関連) を検出したが、この PR の変更を stash して再実行しても同じ失敗が再現したため pre-existing と確認し、CI (Run bats tests SUCCESS ×2) を正としてこの PR のブロッカーとしなかった。
 
 ### Deferred Items
-- Post-merge AC (次回 batch 実行中の実地観察) は `/verify` フェーズでの observation イベント待ちのまま。
-- Notes に記載の `_write_wrapper_retry_recovery` コミットメッセージ形式差異の記述不一致 (Code Retrospective 参照) は本 Issue のスコープ外として未着手。
-- 関連 Issue #984 (recovery 記録の PR番号/Issue番号混同) は本 Issue と独立した別欠陥として未対応のまま。
+- Post-merge AC (次回 batch 実行中の実地観察) は引き続き `/verify` フェーズでの observation イベント待ち。
+- test 36 (Issue #987 関連、ローカル環境依存の可能性がある既存失敗) はこの PR のスコープ外として未調査のまま。
 
 ### Notes for Next Phase
-- `/review` では 5 箇所すべてが `_push_with_retry` を呼び出していること、および `add`/`commit` 部分やメッセージ文言が変更されていないことを diff で確認すると効率的。
-- `bats tests/` フルスイート (1132 件) が green であることを確認済み — `run-auto-sub.sh` を参照する `tests/auto-sub-observability.bats` / `tests/run-code.bats` への影響もないことを確認済み。
+- `/merge` 前に CI が全て green であることを確認済み (DCO / Run bats tests ×2 / Validate skill syntax ×2 / Forbidden Expressions check ×2 / macOS shell compatibility ×2)。
+- MUST 指摘なし、CONSIDER 1件は修正済み。追加の re-review は不要。
