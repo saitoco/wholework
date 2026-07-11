@@ -90,3 +90,38 @@ No new comments since last phase.
 - 新規変数名 `_TIER3_RECOVERY_ACTION` は `skills/auto/SKILL.md` Step 6 5b の `TIER3_RECOVERY_ACTION` (in-session 変数名) に用語を合わせつつ、`run-auto-sub.sh` 内の既存の script-scope 変数命名規則 (`_` prefix、例: `_CODE_PR_DONE`, `_RESUME_ACTION`) に整合させた。
 - `.tmp/recovery-plan-${issue}-${phase}.json` の読み取り後クリーンアップ (`rm -f`) は Tier3 recovery 成功時全般 (retry/recover を含む全 phase) に適用される。従来 `run-auto-sub.sh` 側は本ファイルを一切クリーンアップしていなかった (副次的なリークの解消)。
 - Related Issue #979 (`get-config-value.sh` のインラインコメント未 strip・改行なし最終行パース欠陥) は本 Issue が説明する実インシデントの根本原因だが、別 Issue として既に起票・スコープ分離されているため、本 Spec では扱わない。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec の Changed Files/Implementation Step 3 は `tests/run-auto-sub.bats` への 2 件のテスト追加を明示していたが、PR #992 の diff は `scripts/run-auto-sub.sh` のみで、テストファイルは未変更のまま提出されていた。AC2 の verify command (`file_contains`) がこの乖離を機械的に検出し FAIL と判定した (review Step 8 で確認)。review で追加実装し解消した。
+- `auto-stop-at` の 3 値 (`code`/`spec` → 停止, それ以外 → review+merge 継続) という実装は、Spec Notes が明示する「stop-at 設定を尊重する」という Purpose と比べて `review` 値の扱いが漏れていた (5値enumのうち `review` が停止側にも継続側にも正しく分類されず、merge 側のデフォルトに落ちる)。Spec 自身は「ローカルガードとして限定実装」と明記し retrofit の対象外と判断していたが、その限定実装の内部でも enum 網羅性が担保されていなかった。「一部の値だけスコープ内とする」判断をする際は、スコープ内の値についてだけは全列挙を満たすことを Spec の Verification に明記すると良い。
+
+### Recurring issues
+
+- `auto-stop-at` の enum 網羅性ギャップは `skills/review/SKILL.md:853` に記録されている既存パターン (#783 の `spec` 値欠落) と同じクラスの不具合であり、今回で少なくとも 2 件目の発生。`auto-stop-at` を読み取る箇所が複数 (in-session `/auto` フロー、`run-auto-sub.sh` の複数 case 分岐) に分散しており、値を追加/変更するたびに全呼び出し箇所を手動で網羅する必要がある構造そのものが再発の温床になっている。共通ヘルパー化 (例: `auto-stop-at` の値を「継続可否」の bool に正規化する単一関数) を検討する価値がある。
+
+### Acceptance criteria verification difficulty
+
+- AC1/AC2 の verify command (`grep`/`file_contains`) はいずれも意図通り機械検証でき、AC2 は実際に本来検出すべき欠落を正しく FAIL 判定した。verify command 自体の設計に問題はなかった。
+- 一方、AC ではカバーされない深い到達可能性の問題を review で発見した: `spawn-recovery-subagent.sh` の `skip)` 分岐は自前で `matches_expected` を再検証して拒否する内部ガードを持つが、bats テスト (今回追加した 2 件を含む) はすべて `spawn-recovery-subagent.sh` 自体をモックしているため、この内部ガードは一度もテストで運動 (exercise) されない。結果として、PR の対象シナリオ (route 誤判定によるstray PR) では `_completion_code_patch()` が `matches_expected:false` を返し続け、`spawn-recovery-subagent.sh` の内部ガードが `action=skip` を拒否し、本 PR の新規継続ロジックそのものに到達しない可能性が高いことが判明した (フォローアップ Issue #993 として起票)。Tier3 recovery のような多層 (dispatch script 内部ガード + 呼び出し元ロジック) な機構については、外側だけでなく実 dispatch script の内部ガードを最低 1 パスは実運動する統合テストが無いと、全テスト PASS でも機能が到達不能なまま merge されうる。
+
+## Phase Handoff
+
+<!-- phase: review -->
+
+### Key Decisions
+
+- review (light) で検出した MUST 2件 (bats テスト欠落・`auto-stop-at: review` の enum 網羅性欠落) はこの review サイクル内で直接修正し、push 済み (commit bd36b4f2, b2ded965)。
+- MUST 3件目 (`_completion_code_patch` が stray PR を completion signature として検出できない可能性) は、`reconcile-phase-state.sh` が `/auto` SKILL.md Step 6 からも共有される点を踏まえ、本 PR の Changed Files 範囲を超える設計変更と判断し、この review サイクルでは修正しなかった。
+
+### Deferred Items
+
+- フォローアップ Issue #993 (`_completion_code_patch` の stray-PR 未検出) を起票済み。#980 の merge をブロックしない (blocked-by 関係は設定していない)。実際に必要かどうかは #993 の Spec フェーズで再検証すること。
+- `auto-stop-at` の enum 網羅性ギャップが再発パターン (#783 系) であることを retrospective に記録した。共通ヘルパー化の改善候補は起票していない (この review では見送り)。
+
+### Notes for Next Phase
+
+- merge 前提条件: AC1/AC2 とも PASS 済み、CI 全て SUCCESS、bats 58/58 PASS。
+- `docs/spec/issue-980-*.md` に紐づく worktree (`.claude/worktrees/code+issue-980`) が、PID 消滅済みのロックを保持したまま残存している (今回 review では detached HEAD で作業し削除は権限上見送った)。merge/次セッションで安全に `git worktree remove` してよい (branch `worktree-code+issue-980` の HEAD はリモートと一致済み)。
