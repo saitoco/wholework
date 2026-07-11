@@ -108,6 +108,40 @@ MOCK
     grep -q "42" "$RUNNER_LOG"
 }
 
+@test "spawn-recovery: --record-issue overrides the recorded Issue number without affecting the retry target (issue #984)" {
+    make_claude_mock '{"action":"retry","rationale":"transient failure","steps":[]}'
+    cd "$BATS_TEST_TMPDIR"
+
+    # run-review.sh mock: review/merge phase retry target (called with the
+    # positional <issue> arg, which review/merge phases pass as the PR number).
+    cat > "$MOCK_DIR/run-review.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$RUNNER_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/run-review.sh"
+
+    mkdir -p docs/reports
+    cat > docs/reports/orchestration-recoveries.md <<'EOF'
+# Orchestration Recoveries
+
+<!-- Log entries appear below, newest first. -->
+EOF
+
+    run bash "$SCRIPT" review 99 --log "$LOG_FILE" --record-issue 42
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"action=retry"* ]]
+
+    # Retry target (positional <issue>) is unaffected by --record-issue:
+    # run-review.sh is re-invoked with 99 (the PR number).
+    [ -f "$RUNNER_LOG" ]
+    grep -q "99" "$RUNNER_LOG"
+
+    # The recovery entry records the real Issue number (42), not the PR number (99).
+    grep -q "Issue #42, phase: review" docs/reports/orchestration-recoveries.md
+    ! grep -q "Issue #99, phase: review" docs/reports/orchestration-recoveries.md
+}
+
 @test "spawn-recovery: CLAUDE_BIN mock returns action=skip with matches_expected:false: rejected" {
     make_claude_mock '{"action":"skip","rationale":"phase already completed","steps":[]}'
     cd "$BATS_TEST_TMPDIR"

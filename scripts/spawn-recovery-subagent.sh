@@ -3,7 +3,10 @@
 # Spawns agents/orchestration-recovery via claude -p, validates the returned plan
 # with validate-recovery-plan.sh (SSoT shared with #316), and executes the recovery.
 #
-# Usage: spawn-recovery-subagent.sh <phase> <issue> --log <log-file> [--exit-code <code>]
+# Usage: spawn-recovery-subagent.sh <phase> <issue> --log <log-file> [--exit-code <code>] [--record-issue <issue>]
+# --record-issue overrides the Issue number written to orchestration-recoveries.md
+# (review/merge phases pass the real Issue number here while <issue> stays the PR
+# number used for reconcile-phase-state.sh / retry execution).
 # Exit 0 on successful recovery, exit 1 on abort or unrecoverable failure.
 # Bash 3.2+ compatible (no associative arrays, no mapfile).
 
@@ -19,6 +22,7 @@ shift 2
 
 LOG_FILE=""
 EXIT_CODE_PARAM="unknown"
+RECORD_ISSUE="$ISSUE"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -32,6 +36,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --exit-code)
       EXIT_CODE_PARAM="${2:-unknown}"
+      shift 2
+      ;;
+    --record-issue)
+      RECORD_ISSUE="${2:-$ISSUE}"
       shift 2
       ;;
     *)
@@ -227,7 +235,7 @@ write_recovery_entry() {
   WRE_REPORT_FILE="$report_file" \
   WRE_TIMESTAMP="$timestamp" \
   WRE_PHASE="$PHASE" \
-  WRE_ISSUE="$ISSUE" \
+  WRE_ISSUE="$RECORD_ISSUE" \
   WRE_EXIT_CODE="$EXIT_CODE_PARAM" \
   WRE_LOG_TAIL="$log_tail_line" \
   WRE_RATIONALE="$rationale" \
