@@ -71,19 +71,31 @@
 ### Rework
 - なし。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- なし。review-spec 相当の観点 (review-light Perspective 1) で Spec Implementation Steps 1〜5 と PR diff の一致を確認した。
+
+### Recurring issues
+- **「開発環境の偶発的な env var 汚染がテストのバグを隠蔽する」パターンを検出**: 本 Issue が修正しようとしていた対象そのもの (`run_phase_with_recovery()` が `EMIT_ISSUE_NUMBER`/`EMIT_PHASE_NAME`/`_EXTRA_SELF_ISSUE` を `export` する仕組み) により、`/auto` 経由で起動された worktree セッション (今回の `/code`/`/review` 実行環境を含む) には、これらの変数がアンビエントに存在する。今回追加された regression テスト (tests/run-auto-sub.bats:998) のモックは `$EMIT_PHASE_NAME` を `set -u` 下でデフォルト値なしに参照しており、`emit_event "sub_start"` (EMIT_PHASE_NAME 設定前) 呼び出し時にクラッシュするバグを含んでいた。PR 作成者のローカル実行では偶然これらの変数が既にエクスポートされていたため「フルスイート 1130 件すべて PASS」と誤って報告され、クリーンな GitHub Actions ランナーでのみ実際に FAIL した。`/review` Step 9 (CI Status Check) が FAILURE を検出し、`env -i` によるクリーン環境再現で根本原因を特定できた。
+  - **改善提案**: `EMIT_*`/`_EXTRA_SELF_ISSUE` のような env var を介した状態伝搬パターンをテストするコードは、bats テスト実行前に `env -i HOME="$HOME" PATH="$PATH" bash -c 'bats ...'` のようなクリーン環境での実行を Local 開発ガイドラインに明記する、または CI 設定自体がクリーン環境である前提に依存せず bats のテストヘルパー内で明示的に `unset EMIT_ISSUE_NUMBER EMIT_PHASE_NAME EMIT_PR_NUMBER _EXTRA_SELF_ISSUE AUTO_SESSION_ID` する setup() の防御的初期化を追加する、のいずれかを検討する価値がある (`/verify` での Improvement Proposal 集約時に起票判断)。
+
+### Acceptance criteria verification difficulty
+- なし。Pre-merge AC 2件は rubric verify command により UNCERTAIN なく PASS 判定できた。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `run_phase_with_recovery()` の `EMIT_ISSUE_NUMBER`/`EMIT_PR_NUMBER` 解決を `_EXTRA_SELF_ISSUE` の有無・差分で分岐させ、review/merge phase 以外 (code-patch/code-pr) では `EMIT_PR_NUMBER` を明示的に unset して次呼び出しへの値漏れを防いだ (Spec Implementation Steps 2 の指示通り)。
-- `_maybe_emit_phase_complete()` の backfill JSON にも `pr` フィールドを追加し、EXIT trap 経由の printf 直書きパスでも `emit_event()` と一貫した形状にした。
-- PR ルート (Size M) を採用し、実装ファイル (scripts 2 件、モジュール 1 件、テスト 2 件) を 1 コミットにまとめて main への直接コミットを避けた。
+- CI (`Run bats tests`) が FAILURE だったため、`gh run view --log` でジョブログを取得し `not ok 718` の失敗テストを特定、`env -i` によるクリーン環境ローカル再現で根本原因 (`tests/run-auto-sub.bats:998` のモックが `set -u` 下で `$EMIT_PHASE_NAME` を無防備参照) を確定してから修正した。
+- MUST 修正 (bats モックのデフォルト値展開) と CONSIDER 修正 (`modules/event-emission.md` の相互参照訂正) を実施。SHOULD 指摘 (`_maybe_emit_phase_complete()` backfill パスの regression テスト欠如) は EXIT trap 発火の安全な再現に追加の足場が必要でリスク・工数が見合わないため見送った。
+- 修正後、`env -i` クリーン環境でフルスイート (1130件) を実行し 0 failures を確認 (並列実行 (`--jobs`) 時に見られた 2 件の flaky failure は逐次実行で再現せず、本 PR の変更とは無関係と判断)。
 
 ### Deferred Items
-- `run-review.sh`/`run-merge.sh` 自身の backfill trap への `pr` フィールド追加は、Spec Notes に記載の通り本 Issue のスコープ外として見送った (SIGTERM/watchdog kill 時の稀な backfill レコードのみに影響する軽微な一貫性向上)。
-- Post-merge observation AC (「次回 `/auto --batch` の L3 session report で Issues processed が実 Issue 数と一致する」) は次回の pr route を含む batch 実行時に `/verify` が rubric で再評価する。
+- `_maybe_emit_phase_complete()` backfill パスへの `pr` フィールド regression テスト追加 (SHOULD) — レビューコメントとして記録済み、次回関連改修時に着手余地あり。
+- `run-review.sh`/`run-merge.sh` 自身の backfill trap への `pr` フィールド追加は Spec Notes 記載の通りスコープ外 (変更なし)。
+- Post-merge observation AC は次回の pr route を含む batch 実行時に `/verify` が rubric で再評価する (変更なし)。
 
 ### Notes for Next Phase
-- Pre-merge AC 2件は rubric 判定で PASS 済み (Issue 本文チェックボックスも更新済み)。Post-merge AC 1件は残っており、`/review`/`/merge` は変更しない。
-- `bats tests/` フルスイート (1130件) 実行済み、0 failures。behavioral change 判定によりフルスイートを実行した (emit-event.sh/run-auto-sub.sh が直接カウンターパート以外の複数テストファイルから参照されているため)。
-- Issue #987 の `phase/ready` ラベルが実行開始時点で既に `phase/code` に遷移済みだった (前回 `/code` 実行が中断した形跡)。Spec は既存だったため、そのまま利用して続行した。詳細は Code Retrospective の Design Gaps/Ambiguities を参照。
+- `/merge` はそのまま実行可能。MUST issue は修正済み、CI は再実行後に確認が必要 (プッシュ済みの修正コミットで再トリガー済み)。
+- review retrospective に「開発環境の env var 汚染がテストのバグを隠蔽するパターン」を Recurring issues として記録した。`/verify` での Improvement Proposal 集約時に起票判断すること。
