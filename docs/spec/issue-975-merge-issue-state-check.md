@@ -13,3 +13,16 @@
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 補完 AC のキーワードに日本語「フォールバック」を選定した結果、英語ドキュメントである `skills/merge/SKILL.md` に日本語が混入した (CLAUDE.md の言語規約では skill ドキュメントは英語)。実装は「Fallback / フォールバック」併記で緩和したが、補完キーワードは対象ファイルの言語に合わせて選定すべきだった。
+
+#### code / verify
+- XS patch route。pre-merge 2 件 PASS。post-merge opportunistic AC は該当ケース (closes #N 失敗) の発生待ち。
+
+### Improvement Proposals
+- (Tier 2 memory 相当) `/issue` の補完 AC キーワード選定 (verify-patterns.md §9) では、対象ファイルの記述言語に一致するキーワードを選ぶ。英語ドキュメントに日本語キーワードを課すと言語規約違反の混入を誘発する。単発の選定ミスのため Issue 起票はせず記録のみ。
