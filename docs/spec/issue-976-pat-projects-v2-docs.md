@@ -22,3 +22,16 @@
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Post-merge セクションが「- [ ] なし」というチェックボックス付きプレースホルダとして生成されていた。未チェックの `- [ ]` 行として残るため、`/verify` の「全条件チェック済み → phase/done」判定を機械的にブロックする (今回は verify がプレースホルダと判断して手動チェックで解消)。post-merge 条件が存在しない場合はチェックボックスなしの「なし」表記が望ましい。
+
+#### code / verify
+- XS patch route。実装・検証とも問題なし。batch List mode の Step 4b (Issue Retrospective 転記、#982 で追加) が本 Issue で初めて実運用され、正常に機能した。
+
+### Improvement Proposals
+- (Tier 2 memory 相当) `/issue` の AC 生成時、post-merge 条件が存在しない場合は「### Post-merge」配下にチェックボックス付き「- [ ] なし」を生成しない (プレーンテキスト「なし」とする)。単発の書式ゆらぎのため Issue 起票はせず記録のみ。
