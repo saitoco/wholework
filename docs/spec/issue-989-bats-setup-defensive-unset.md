@@ -62,15 +62,27 @@ Issue #987 の review フェーズで、`run-auto-sub.sh` の `run_phase_with_re
 ### Rework
 - N/A
 
+## review retrospective
+
+### Spec vs. Implementation Divergence Patterns
+- Nothing to note (PR diff は Spec Implementation Steps 1-2 と完全一致。乖離なし)
+
+### Recurring Issues
+- Nothing to note (review-light の4観点いずれも issue 検出なし)
+
+### Acceptance Criteria Verification Difficulty
+- Nothing to note (rubric / command とも UNCERTAIN なく決定的に PASS 判定できた。Spec の Pre-merge Verification 件数 (4件: Issue AC 2件 + file_contains 補強2件) と Issue 本文の Pre-merge AC 件数 (2件) の差は Spec Notes で意図的な差分として既に説明済みで、review 時に混乱は発生しなかった)
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec Implementation Steps 1-2 の記述通り、`unset → 明示 export` の順序を維持したまま両ファイルの setup() を修正した
-- Pre-merge verify command は Spec の4件 (Issue AC 2件 + file_contains 補強2件) を全て実行し、rubric/command/file_contains×2 いずれも PASS
+- Issue Size = M (REVIEW_DEPTH=light) のため review-light エージェント1体による4観点統合レビューを実施し、Step 10.1-10.3 の並列 review-spec/review-bug 構成は使用しなかった
+- 外部レビューツール (Copilot/Claude Code Review/CodeRabbit) はすべて `.wholework.yml` 未設定のため Step 7 を全スキップし、Step 8 (静的 AC 検証) から開始した
 
 ### Deferred Items
-- `docs/tech.md` へのパターン文書化 (Spec Notes に記載の将来フォローアップ候補) は本 Issue のスコープ外のまま据え置き
+- None (issue なしのため Step 12 の fix 作業も AC 更新も発生しなかった)
 
 ### Notes for Next Phase
-- Post-merge AC は CI 上の bats フルスイート green 確認のみ。対象2ファイル以外への副作用は Pre-merge 時点のローカル実行 (83/83 green) で観測されていない
+- `/merge 997` 実行可。MUST issue なし、CI 全ジョブ green、Issue AC 2件とも PASS 済み
+- Post-merge AC (CI 上の bats フルスイート green 確認) は `/verify` で確認予定
