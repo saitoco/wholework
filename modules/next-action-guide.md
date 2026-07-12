@@ -15,7 +15,7 @@ Variables passed by the calling skill:
 - `ISSUE_NUMBER` (int, optional): Issue number. Pass when available
 - `PR_NUMBER` (int, optional): PR number. Pass when available (primarily for `code`, `review`, `merge`)
 - `SIZE` (string, optional): Issue size. One of: `XS` / `S` / `M` / `L` / `XL` / empty string
-- `ROUTE` (string, optional): Workflow route. One of: `patch` / `pr` / `sub_issue`. When omitted, derived from SIZE using `modules/size-workflow-table.md`
+- `ROUTE` (string, optional): Workflow route. One of: `patch` / `pr` / `sub_issue` / `operate`. When omitted, derived from SIZE using `modules/size-workflow-table.md`. `operate` cannot be derived from SIZE (it is an orthogonal diff-less-axis value — see `modules/size-workflow-table.md` § "Diff-less Axis (operate route)") and must always be passed explicitly by the caller
 - `BLOCKED_BY_OPEN` (bool, optional, default `false`): Whether open blocked-by relationships exist
 
 ## Processing Steps
@@ -29,6 +29,8 @@ Use contextual understanding to determine the appropriate guidance. This is a ju
 - `success` → Proceed to Step 2
 
 ### Step 2: Derive ROUTE from SIZE (when ROUTE is not provided)
+
+If the caller passed `ROUTE` explicitly, skip this derivation step entirely — do not overwrite it from SIZE. This matters in particular for `operate`, which cannot be derived from SIZE (see Input above).
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` to derive ROUTE from SIZE:
 - `XS` or `S` → `patch`
@@ -51,6 +53,7 @@ Use the table below as guidance. Contextual factors (e.g., whether acceptance cr
 | `spec`     | success | sub_issue (XL)                      | `/issue {ISSUE_NUMBER}` (split) | —                         |
 | `code`     | success | patch                               | `/verify {ISSUE_NUMBER}` | `/auto {ISSUE_NUMBER}`         |
 | `code`     | success | pr                                  | `/review {PR_NUMBER}`    | `/auto {ISSUE_NUMBER}`         |
+| `code`     | success | operate                             | `/verify {ISSUE_NUMBER}` | `/auto {ISSUE_NUMBER}`         |
 | `review`   | success | any                                 | `/merge {PR_NUMBER}`     | `/auto {ISSUE_NUMBER}`         |
 | `merge`    | success | any                                 | `/verify {ISSUE_NUMBER}` | `/auto {ISSUE_NUMBER}`         |
 | `verify`   | success (PASS) | any                          | (no guidance)            | —                              |

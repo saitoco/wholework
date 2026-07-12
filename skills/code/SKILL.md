@@ -61,7 +61,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banne
 
 **Load project config (run before Size fetch):**
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `ALWAYS_PR` for use in route detection below.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `ALWAYS_PR` and `SPEC_PATH` for use in route detection below.
 
 First, fetch Size (run before route detection):
 
@@ -74,6 +74,16 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh "$NUMBER" 2>/dev/null
 **Fetch base branch (run before route detection)**:
 
 If ARGUMENTS contains `--base {branch}`, use that value as `BASE_BRANCH`. If `--base` is not specified, default to `BASE_BRANCH=main` (backward compatibility).
+
+**Operate route detection (Spec-derived, run before flag precedence):**
+
+Glob `$SPEC_PATH/issue-$NUMBER-*.md`. If a Spec exists, apply the same diff-less criteria as `modules/size-workflow-table.md` § "Diff-less Axis (operate route)":
+- `## Changed Files` contains no repository file entries (empty, "none", or only external-system targets)
+- Every entry in `## Implementation Steps` is an external-tool operation (MCP tool call, or CLI/HTTP API call against an external system) — no file edits or commit steps
+
+If both hold, set **ROUTE=operate** and skip the Flag precedence and Size auto-detection blocks below entirely (proceed directly to Step 1). This determination takes priority over `--pr`, `ALWAYS_PR=true`, and `--patch` alike — an empty diff cannot produce a meaningful PR, so PR route cannot apply regardless of flags. When overriding an explicit `--pr`/`--patch` flag or `ALWAYS_PR=true`, output: "Warning: operate route detected (Spec has no repository file changes). --pr / always-pr is ignored."
+
+If no Spec exists, or either criterion fails, ROUTE is not `operate` — proceed to Flag precedence below as normal.
 
 **Flag precedence (explicit flag > ALWAYS_PR > Size auto-detection)**:
 - ARGUMENTS contains `--pr` → **pr route** (branch + PR flow)
@@ -90,7 +100,7 @@ Follow the Size→workflow mapping table in `${CLAUDE_PLUGIN_ROOT}/modules/size-
 - Size not set (empty output) and interactive mode → use AskUserQuestion to let the user choose the route (patch / pr)
 - Size not set (empty output) and `--non-interactive` mode → output error message, guide "Set Size via the Project field or `size/*` label, then run `/code $NUMBER` interactively", and abort
 
-Record the result (patch / pr) for use in subsequent steps.
+Record the result (patch / pr / operate) for use in subsequent steps.
 
 ### Step 1: Fetch Issue Info
 
@@ -238,6 +248,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/domain-loader.md` and follow the "Processing
 
 ### Step 8: Implement
 
+**If `ROUTE=operate` (detected in Step 0), skip the rest of this step and follow `#### Operate Route: External Operation Execution` below instead.**
+
 Implement the code following the "Implementation Steps" in the Spec.
 
 **Implementation scope: all Spec steps are required**
@@ -293,7 +305,19 @@ Follow-up Issue body format:
 Do not add the `triaged` label — it is assigned by `/triage` afterward.
 Skip this sub-step if no out-of-scope remediations are identified.
 
+#### Operate Route: External Operation Execution
+
+If `ROUTE=operate` (detected in Step 0), follow this subsection instead of the standard implementation flow above:
+
+1. **Autonomy tier gate**: Read `${CLAUDE_PLUGIN_ROOT}/modules/autonomy-tier.md` § "Tier × External System Write (operate route)" and resolve `AUTONOMY_TIER` (from `.wholework.yml` `autonomy` key, default `L1`).
+   - **`L1`**: do not execute any external operation. Instead, build an `## Execution Plan` listing, for each Implementation Step, the planned external operation (tool/command name, target, argument summary with secret values masked), and post it as an Issue comment via `gh-issue-comment.sh`. Leave the Issue at `phase/code` — this is a path A (advisory) degrade, per `modules/autonomy-tier.md`. Skip Step 9 and the Step 11 commit/PR/Execution Log blocks (there is nothing to test or log yet); still run Step 12 if there are retrospective decisions worth recording, then proceed to Step 13's `L1` branch and the Completion Report.
+   - **`L2`/`L3`**: proceed to step 2 below.
+2. Execute the Spec's Implementation Steps in order, each performing the external operation it describes (an MCP tool resolved via `ToolSearch`, or an existing allowed Bash pattern). By the Step 0 detection criteria, operate route Implementation Steps are external-tool operations only — no repository files are edited by this step.
+3. Because no implementation diff is produced, skip `git add` / `git commit` here — Step 11's `#### Operate Route: Execution Log` records the results as an Issue comment instead of a commit.
+
 ### Step 9: Run Tests
+
+**Operate route**: skip this entire Step 9 (no repository code changes to test) and proceed directly to Step 10.
 
 #### Behavioral Change Detection
 
@@ -434,6 +458,8 @@ Handle results as follows:
 
 ### Step 11: Commit, Push, or Create PR
 
+**Operate route**: after the Smoke Test subsection below, skip the "For patch route" and "For pr route" commit blocks entirely and follow `#### Operate Route: Execution Log` at the end of this step instead.
+
 #### Smoke Test (pre-commit behavioral check)
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-executor.md` and follow the "Processing Steps" section to run verify commands in **full mode**. Target: the `## Smoke Test` section of the Spec loaded in Step 5 (`$SPEC_PATH/issue-$NUMBER-*.md`).
@@ -566,6 +592,23 @@ Comment format:
 - {change summary 2}
 ```
 
+#### Operate Route: Execution Log
+
+If `ROUTE=operate` and Step 8 executed external operations (`AUTONOMY_TIER` was `L2`/`L3` — not the `L1` advisory-only early exit), record the results as an Issue comment in place of a commit/push/PR:
+
+1. Write the comment body to `.tmp/execution-log-$NUMBER.md` with the Write tool. First line: `<!-- wholework-event: type=execution-log phase=code issue=$NUMBER -->` (machine-readable marker per `modules/l0-surfaces.md` § "Machine-Readable Event Marker"), followed by:
+   - `## Execution Log` heading
+   - The tool/command name and target for each executed operation
+   - An argument summary per operation (mask secret values)
+   - The observed result for each Spec Implementation Step
+2. Post via:
+   ```bash
+   mkdir -p .tmp
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $NUMBER .tmp/execution-log-$NUMBER.md
+   rm -f .tmp/execution-log-$NUMBER.md
+   ```
+3. No `git add` / `git commit` / `git push` / `gh pr create` is performed for the implementation diff (there is none). Step 12's Spec retrospective + Phase Handoff commit still applies (bookkeeping only — see Step 12 and Step 13 below).
+
 ### Step 12: Code Retrospective
 
 Append retrospective information to the Spec and commit.
@@ -644,6 +687,11 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER verify
 
 patch route completes here. Follow the completion report section to inform the user.
 
+**operate route (merge-to-main pattern, same as patch):**
+Follow "Exit: merge-to-main section" (only Step 12's Spec retrospective + Phase Handoff commit is merged/pushed here — there is no implementation-diff commit).
+- **`L2`/`L3` (Step 8 executed external operations)**: after push completes, transition to `phase/verify` using the same command as patch route above. operate route completes here.
+- **`L1` (advisory-only — Execution Plan comment posted, no operations executed)**: after push completes, do **not** transition the label; the Issue remains at `phase/code` awaiting a human to raise the autonomy tier or act on the Execution Plan directly. operate route completes here.
+
 **pr route (push-and-remove pattern):**
 Follow "Exit: push-and-remove section" (push was done in Step 12, so only delete the worktree).
 
@@ -657,12 +705,14 @@ Output the route-specific prefix, then read `${CLAUDE_PLUGIN_ROOT}/modules/next-
 
 - **patch route prefix**: "Direct commit and push to main complete."
 - **pr route prefix**: "PR creation complete."
+- **operate route prefix (`L2`/`L3`, operations executed)**: "External operations executed. Execution Log posted to the Issue."
+- **operate route prefix (`L1`, advisory-only)**: "Execution Plan posted to the Issue (autonomy tier L1 — external operations not executed)."
 
 Parameters to pass to next-action-guide:
 - `SKILL_NAME=code`
 - `ISSUE_NUMBER=$NUMBER`
 - `PR_NUMBER={PR number if pr route}`
-- `ROUTE={patch|pr}`
+- `ROUTE={patch|pr|operate}`
 - `RESULT=success`
 
 ## Notes

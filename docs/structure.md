@@ -96,7 +96,7 @@ Each skill lives in `skills/<skill-name>/SKILL.md`. Many skills include auxiliar
 |---|---|---|
 | issue | `skills/issue/SKILL.md` | Issue creation and refinement (What-level) |
 | spec | `skills/spec/SKILL.md` | Issue specification and implementation plan (How-level) |
-| code | `skills/code/SKILL.md` | Local implementation (patch/PR route) |
+| code | `skills/code/SKILL.md` | Local implementation (patch / pr / operate route) |
 | review | `skills/review/SKILL.md` | PR review (acceptance criteria + multi-perspective) |
 | merge | `skills/merge/SKILL.md` | Squash merge and branch deletion |
 | verify | `skills/verify/SKILL.md` | Post-merge acceptance testing |

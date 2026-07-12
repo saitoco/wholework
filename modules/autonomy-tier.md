@@ -58,6 +58,18 @@ Autonomy tier controls how far a skill may write GitHub state. For the exhaustiv
 | **L2 Assisted** | ○ | ○ (current `/auto` / `/verify` behavior) | × (human judgment required) |
 | **L3 Unattended** | ○ | ○ | ○ (`/audit recurring` and future features) |
 
+### Tier × External System Write (operate route)
+
+`/code`'s operate route (Issue #995) writes to external systems (CMS, infrastructure, third-party APIs) that fall outside the L0 surface table above — L0 is GitHub state specifically, and this write happens on a different system. It is gated as an independent surface rather than folded into the Tier × L0 Write Matrix above:
+
+| Tier | External system write (operate route) |
+|------|----------------------------------------|
+| **L1 Report** | × — degrade to path A (advisory): post the planned operations as an `## Execution Plan` Issue comment; a human executes them |
+| **L2 Assisted** | ○ — execute directly |
+| **L3 Unattended** | ○ — execute directly |
+
+**Rationale**: operate route collapses `/code`'s normal "propose (Implementation Steps) → gate (`/review`) → apply (`/merge`)" separation, because there is no PR and therefore no post-hoc diff review as a safety net. `phase/ready` (the pre-code gate) becomes the only checkpoint before an external system is written to. Defaulting unattended (L3-only) execution to on would be unsafe, so `L1` reuses the existing path A (Advisory) semantics from the [L2→L1 Path Catalog](#l2l1-path-catalog-exhaustive) above — no new tier axis is introduced.
+
 ## `.wholework.yml` Schema
 
 ```yaml

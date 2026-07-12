@@ -875,7 +875,13 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` and re-evaluate Size
 
 3. If re-evaluation differs from triage-time Size, read `${CLAUDE_PLUGIN_ROOT}/modules/project-field-update.md` and update Size (steps 1→2→3→4). Use label fallback (step 5) only if GraphQL fails. When GitHub Projects is not configured, step 1 returns empty `projectsV2.nodes` and falls through to step 5 automatically.
 
-4. Store the final workflow route as `ROUTE`:
+4. **Operate route detection**: Read the "Diff-less Axis (operate route)" section of `size-workflow-table.md` (loaded above) and check both criteria against the Spec just written:
+   - `## Changed Files` contains no repository file entries (empty, "none", or only external-system targets)
+   - Every entry in `## Implementation Steps` is an external-tool operation (MCP tool call, or CLI/HTTP API call against an external system) — no file edits or commit steps
+
+   If both hold, set `ROUTE=operate`. This determination takes priority over the Size-based mapping in the next step — Size itself is still re-evaluated/updated as usual (Size remains the effort axis; operate is an orthogonal route value, not a Size value).
+
+5. If `ROUTE` was not set to `operate` in the previous step, store the final workflow route from Size:
    - `XS` or `S` → `patch`
    - `M` or `L` → `pr`
    - `XL` → `sub_issue`
