@@ -50,3 +50,27 @@ Issue #987 の review フェーズで、`run-auto-sub.sh` の `run_phase_with_re
 - **SPEC_DEPTH=light (Size M) のため Step 7 (Ambiguity Resolution) / Step 8 (Uncertainty Identification) はスキップ。** ただし Issue 本文に `/issue` フェーズの non-interactive 自動解決結果が既に記載されている: setup() には「unset → 明示 export」の順で5変数を追加する方針を採用 (`tests/run-spec.bats` / `tests/run-merge.bats` / `tests/run-code.bats` の既存パターン (`unset EMIT_PHASE_NAME EMIT_ISSUE_NUMBER AUTO_SESSION_ID` を setup() 後半に配置) と整合)。不採用案 (emit-event.bats の明示 export を削除し各テスト個別に export させる) は影響範囲が広いため見送り。
 - **Verify command 補強について**: rubric の grader 記述が `EMIT_ISSUE_NUMBER` / `EMIT_PHASE_NAME` / `EMIT_PR_NUMBER` / `_EXTRA_SELF_ISSUE` / `AUTO_SESSION_ID` という具体的な変数名 (定数名) を列挙しているため (`modules/verify-patterns.md` §9 の rubric+定数名補強ルールに該当)、決定的な補強として `file_contains "AUTO_SESSION_ID"` を両ファイルに追加した。この2件は Issue 本文の Pre-merge AC (2件) には存在しないため、Spec の Pre-merge Verification 件数 (4件) と Issue 本文の Pre-merge AC 件数 (2件) は意図的な差分 (Count alignment check の警告は許容する)。他4変数は実装前から両ファイル中に (異なる文脈で) 既に出現するため before/after のデルタシグナルとして機能しない一方、`AUTO_SESSION_ID` は両ファイルとも実装前0件のため補強対象として選定した。
 - **ドキュメント同期は対象外と判断**: この防御的 unset パターンは `docs/tech.md` § BATS Mocking Convention (`WHOLEWORK_SCRIPT_DIR`) とは別の関心事であり、Issue 本文も変更対象を2ファイルに明示的に限定している (不採用案の理由と同じく影響範囲拡大を回避する方針)。パターンをテスト規約として `docs/tech.md` に文書化する提案は将来のフォローアップ候補として残すが、本 Issue の Acceptance Criteria には含めない。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A (Implementation Steps 1-2 をそのまま適用。`tests/run-auto-sub.bats` は既存 unset 行への追記、`tests/emit-event.bats` は明示 export 直前への unset 追加という Spec の指定通り)
+
+### Design Gaps/Ambiguities
+- N/A (setup() 変更の落とし所は Issue 本文の Auto-Resolve Log で既に確定済みで、実装時に新たな曖昧点は発生しなかった)
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Steps 1-2 の記述通り、`unset → 明示 export` の順序を維持したまま両ファイルの setup() を修正した
+- Pre-merge verify command は Spec の4件 (Issue AC 2件 + file_contains 補強2件) を全て実行し、rubric/command/file_contains×2 いずれも PASS
+
+### Deferred Items
+- `docs/tech.md` へのパターン文書化 (Spec Notes に記載の将来フォローアップ候補) は本 Issue のスコープ外のまま据え置き
+
+### Notes for Next Phase
+- Post-merge AC は CI 上の bats フルスイート green 確認のみ。対象2ファイル以外への副作用は Pre-merge 時点のローカル実行 (83/83 green) で観測されていない
