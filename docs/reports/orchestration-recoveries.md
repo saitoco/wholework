@@ -64,6 +64,29 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 <!-- Log entries appear below, newest first. -->
 
+## 2026-07-12 06:18 UTC: code-pr-tier3-recovery
+
+### Context
+- Issue #995, phase: code-pr
+- Source: recovery-sub-agent
+- Wrapper: run-code-pr.sh, exit code: 1
+- Log tail: "Finished at: 2026-07-12 15:17:09"
+
+### Diagnosis
+- reconcile_snapshot と2サイクル分のログはPRが存在しないことのみ示すが、worktree-code+issue-995 の作業ツリーには実装完了済みの未コミット差分（14ファイル変更＋新規 tests/operate-route.bats）が残存しており、ブランチHEADはmainと同一（コミット未実施）。bats実行待ちのwatchdog killが繰り返され、コミット・push・PR作成の直前で毎回中断されたパターンと判断し、実装を確定させてPRを作成する。
+
+### Recovery Applied
+- action=recover
+- steps: 3 step(s)
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+---
+
 ## 2026-07-10 18:09 UTC: review-tier3-recovery
 
 ### Context
