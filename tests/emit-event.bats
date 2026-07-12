@@ -9,6 +9,7 @@ setup() {
     mkdir -p "$MOCK_DIR"
     export PATH="$MOCK_DIR:$PATH"
     export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    unset EMIT_ISSUE_NUMBER EMIT_PR_NUMBER EMIT_PHASE_NAME _EXTRA_SELF_ISSUE AUTO_SESSION_ID
     export EMIT_ISSUE_NUMBER="42"
     export EMIT_PHASE_NAME="code"
 

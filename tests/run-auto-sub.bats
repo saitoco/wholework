@@ -10,7 +10,7 @@ setup() {
     # outer run-auto-sub.sh process (e.g. this suite invoked from inside a
     # live /review or /merge phase session) — tests below assert issue-42
     # targeting under the assumption these start unset, per issue #984 fix.
-    unset EMIT_ISSUE_NUMBER EMIT_PR_NUMBER EMIT_PHASE_NAME _EXTRA_SELF_ISSUE
+    unset EMIT_ISSUE_NUMBER EMIT_PR_NUMBER EMIT_PHASE_NAME _EXTRA_SELF_ISSUE AUTO_SESSION_ID
 
     # Isolate test from repo .wholework.yml
     echo "permission-mode: bypass" > "$BATS_TEST_TMPDIR/.wholework.yml"
