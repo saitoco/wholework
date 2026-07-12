@@ -497,21 +497,27 @@ When a `## Smoke Test` section is present:
 1. Run `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh $NUMBER` and get the returned Type name (`Bug`/`Feature`/`Task`)
 2. If none are set (empty string): use `patch:` prefix
 
-Include `closes #N` only when the base branch is `main` (GitHub auto-close via `closes #N` only works when merging to the default branch).
+Include `closes #N` only when the base branch is `main` (GitHub auto-close via `closes #N` only works when merging to the default branch). This suffix is mandatory (not optional) whenever `BASE_BRANCH` is `main` — its absence from the actual implementation commit (rather than just the surrounding comment) caused a `concurrent_commit_detected` false-positive in the self-exclusion logic (Issue #996), since that logic matches on the `#N` pattern in the commit subject.
 
 **DCO compliance: use `git commit -s` to add `Signed-off-by:`. Do NOT use the global HEREDOC pattern from `~/.claude/CLAUDE.md` — it omits `-s`.**
 
 ```bash
 git add <changed files>
-# If BASE_BRANCH is main: "{prefix} <summary> (closes #$NUMBER)"
-# If BASE_BRANCH is not main: "{prefix} <summary>"
-git commit -s -m "{prefix} <summary>
+# When BASE_BRANCH is main:
+git commit -s -m "{prefix} <summary> (closes #$NUMBER)
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
+# When BASE_BRANCH is not main, omit the "(closes #$NUMBER)" suffix instead:
+# git commit -s -m "{prefix} <summary>
+#
+# Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
 ```bash
 git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
+if [[ "$BASE_BRANCH" == "main" ]]; then
+  git log -1 --format='%s' | grep -q "#$NUMBER" || { echo "ERROR: commit subject missing #$NUMBER reference (required when BASE_BRANCH is main)"; exit 1; }
+fi
 ```
 
 Push is done in Step 13 Worktree Exit (merge-to-main pattern). Label transition happens after push completes (after Step 13).

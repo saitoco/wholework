@@ -46,3 +46,18 @@ followup_issue_section() {
     run followup_issue_section "$SKILL_FILE"
     [[ "$output" == *"gh issue list"* ]]
 }
+
+# Extract Step 11 section: from "### Step 11:" to the next "### " heading
+step11_section() {
+    awk '/^### Step 11:/{found=1} found && /^### / && !/^### Step 11:/{exit} found{print}' "$1"
+}
+
+@test "Step 11 patch route commit template includes closes NUMBER inline" {
+    run step11_section "$SKILL_FILE"
+    [[ "$output" == *'(closes #$NUMBER)'* ]]
+}
+
+@test "Step 11 patch route includes commit subject issue-number guard" {
+    run step11_section "$SKILL_FILE"
+    [[ "$output" == *'missing #$NUMBER reference'* ]]
+}
