@@ -102,3 +102,29 @@ Option A の具体化として以下の設計を採る (詳細実装は本 Issue
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective。Acceptance Criteria が `TBD` のまま起票されていたため、Spec に設計方針が記録された時点を完了条件とする3件の rubric AC への具体化、比較検討軸 (#437 の教訓) の明記、sibling issue 番号 (#956・#957) の補完を自動解決 (auto-resolve) した記録。内容は既に Issue 本文 (Autonomous Auto-Resolve Log) に反映済みであり、本 Spec の設計内容に追加の対応は不要と判断した。 / https://github.com/saitoco/wholework/issues/958#issuecomment-4949567063
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps は「Spec の Overview が3件の rubric AC を満たすことの確認」のみであり、Spec は `/spec` フェーズの時点で既に全内容 (Option Comparison / Decision / Phase handling / フォローアップアクション) を含んで確定していたため、`/code` フェーズでの追加編集は発生しなかった。
+
+### Design Gaps/Ambiguities
+- N/A — 3件の rubric AC を full mode で個別に adversarial 判定した結果、いずれも Spec 内の該当セクション (Option Comparison/Decision、Phase handling for diff-less Issues、フォローアップアクション) で具体的に充足されており、gap は検出されなかった。
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec が既に3件の Pre-merge rubric AC を満たす内容で確定していたため、コード・ドキュメントへの追加変更は行わず、AC 充足の確認のみを実施した (Issue 本文「完了条件」および Spec Implementation Steps の記述に整合)。
+- 3件の rubric AC はいずれも `docs/spec/issue-958-*.md` を明示的に対象とする特殊形であり、`verify-executor.md` の「rubric テキストに明示された file は grader 入力に含む」規定に基づき Spec 内容を直接判定した。
+
+### Deferred Items
+- フォローアップ実装 Issue (`operate route: git diff を伴わない操作型 Issue 向けの /code 拡張`) の起票は本 Issue のスコープ外。`skill-proposals: true` により `/verify` の retrospective 集約ステップが拾い上げる可能性がある (Spec 「起票要否の位置づけ」参照)。
+- operate route 設計自体の実装 (`modules/size-workflow-table.md`・`skills/spec/SKILL.md`・`skills/code/SKILL.md` 等への反映) は上記フォローアップ Issue のスコープ。
+
+### Notes for Next Phase
+- 本 Issue には Post-merge 条件がなく、Size=S (patch route) につき `/review`・`/merge` は通常通りスキップされる。
+- `/verify` は post-merge AC が存在しないため実質的にスキップとなる想定 (Spec Notes 参照)。
