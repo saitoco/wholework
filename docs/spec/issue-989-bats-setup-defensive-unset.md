@@ -74,15 +74,15 @@ Issue #987 の review フェーズで、`run-auto-sub.sh` の `run_phase_with_re
 - Nothing to note (rubric / command とも UNCERTAIN なく決定的に PASS 判定できた。Spec の Pre-merge Verification 件数 (4件: Issue AC 2件 + file_contains 補強2件) と Issue 本文の Pre-merge AC 件数 (2件) の差は Spec Notes で意図的な差分として既に説明済みで、review 時に混乱は発生しなかった)
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Issue Size = M (REVIEW_DEPTH=light) のため review-light エージェント1体による4観点統合レビューを実施し、Step 10.1-10.3 の並列 review-spec/review-bug 構成は使用しなかった
-- 外部レビューツール (Copilot/Claude Code Review/CodeRabbit) はすべて `.wholework.yml` 未設定のため Step 7 を全スキップし、Step 8 (静的 AC 検証) から開始した
+- mergeable=true (clean, CI success, review approved) だったため conflict 解消フローは不要、Step 4 (Squash Merge) に直接進んだ
+- `--non-interactive` 実行だが auto-resolve が必要な分岐は発生しなかった (mergeable=true の直行ルート)
 
 ### Deferred Items
-- None (issue なしのため Step 12 の fix 作業も AC 更新も発生しなかった)
+- None
 
 ### Notes for Next Phase
-- `/merge 997` 実行可。MUST issue なし、CI 全ジョブ green、Issue AC 2件とも PASS 済み
-- Post-merge AC (CI 上の bats フルスイート green 確認) は `/verify` で確認予定
+- `/verify 989` で post-merge AC (CI 上の bats フルスイート green 確認) を検証すること
+- squash merge 済み、リモートブランチ `worktree-code+issue-989` は削除済み
