@@ -23,6 +23,19 @@ gh auth status
 
 Wholework は `gh` がインストール済みで対象リポジトリにアクセスできる認証状態を要求します。GitHub App やトークンを使う場合、`repo` スコープ（Issues、PRs、Contents）が必要です。
 
+## Fine-Grained PAT に GitHub Projects V2 の権限が不足している
+
+**症状**: fine-grained personal access token を使う GitHub Actions workflow（またはスクリプト）が、GraphQL API (`addProjectV2ItemById` → `updateProjectV2ItemFieldValue`) で Organization 所有の GitHub Projects V2 ボードを更新しようとすると、トークンに Projects へのアクセス権が設定されているように見えても `Resource not accessible by personal access token` エラーで失敗する。
+
+**修正**: Organization 所有の Projects V2 ボードへの書き込みには、fine-grained PAT に以下の**両方**の権限が必要です:
+
+- **Organization permissions**: `Projects: Read and write`
+- **Repository permissions**: `Issues: Read`（PR を対象にする場合は `Pull requests: Read`）— 対象コンテンツのノード ID を解決するために必要
+
+どちらか一方が欠けていても同じ `Resource not accessible by personal access token` エラーになるため、トークンスコープや classic PAT の制限の問題と誤診断しやすい。
+
+**補足**: Organization の「Restrict access via personal access tokens (classic)」設定は fine-grained token とは無関係です — 別の設定画面にあり、この権限要件には影響しません。
+
 ## Plugin インストール失敗
 
 **症状**: `/wholework:code` が認識されない、スキルが利用不可と表示される。

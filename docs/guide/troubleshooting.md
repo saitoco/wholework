@@ -27,6 +27,19 @@ gh auth status
 
 Wholework requires `gh` to be installed and authenticated with access to the target repository. If you use a GitHub App or token, ensure it has `repo` scope (Issues, PRs, Contents).
 
+## Fine-Grained PAT Missing GitHub Projects V2 Permissions
+
+**Symptom**: A GitHub Actions workflow (or script) using a fine-grained personal access token to update an organization-owned GitHub Projects V2 board via the GraphQL API (`addProjectV2ItemById` → `updateProjectV2ItemFieldValue`) fails with `Resource not accessible by personal access token`, even though the token appears to have Projects access configured.
+
+**Fix**: Writing to an organization-owned Projects V2 board requires **both** of the following permissions on the fine-grained PAT:
+
+- **Organization permissions**: `Projects: Read and write`
+- **Repository permissions**: `Issues: Read` (or `Pull requests: Read` when targeting PRs) — needed to resolve the node ID of the target content
+
+Missing either one produces the same `Resource not accessible by personal access token` error, which makes it easy to misdiagnose as a token scope or classic-PAT-restriction issue.
+
+**Note**: the organization's "Restrict access via personal access tokens (classic)" setting is unrelated to fine-grained tokens — it lives on a separate settings page and has no effect on this permission requirement.
+
 ## Plugin Install Failures
 
 **Symptom**: `/wholework:code` is not recognized, or skills show as unavailable.
