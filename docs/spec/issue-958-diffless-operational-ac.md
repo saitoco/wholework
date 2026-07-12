@@ -128,3 +128,16 @@ Option A の具体化として以下の設計を採る (詳細実装は本 Issue
 ### Notes for Next Phase
 - 本 Issue には Post-merge 条件がなく、Size=S (patch route) につき `/review`・`/merge` は通常通りスキップされる。
 - `/verify` は post-merge AC が存在しないため実質的にスキップとなる想定 (Spec Notes 参照)。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue / spec
+- 設計検討 Issue の完了条件を「Spec への設計方針記録」とする 3 rubric AC への具体化 (#437 の「考察と判断の親 Issue」パターン踏襲) が機能し、pre-merge 3 件とも UNCERTAIN なく PASS 判定できた。
+
+#### code / verify
+- patch route で Spec (設計記録) を main へ直接コミット。全 AC PASS、post-merge 条件なしで phase/done へ遷移。
+
+### Improvement Proposals
+- operate route: git diff を伴わない操作型 Issue 向けの /code 拡張 — Spec のフォローアップアクション推奨に基づく実装 Issue。スコープ: modules/size-workflow-table.md (operate route 追加、Size と diff-less 判定の直交 2 軸を明記)、skills/spec/SKILL.md Step 18 (Changed Files 実質空 → ROUTE=operate 判定)、skills/code/SKILL.md (worktree/commit/push/PR スキップ + 外部操作直接実行 + Execution Log 記録 + patch route 同一 label 遷移)、docs/workflow.md・docs/structure.md・docs/tech.md の Steering Docs sync、判定ロジックのユニットテスト。Size 見積り M〜L。残存リスク (提案→ゲート→適用分離の喪失に対する autonomy tier ゲーティング適用可否) の検討も含む。
