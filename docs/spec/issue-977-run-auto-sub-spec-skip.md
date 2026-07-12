@@ -78,3 +78,28 @@ Issue 本文の Acceptance Criteria 1 (rubric) は `phase/code`/`phase/review`/`
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — implementation matches the Spec's Implementation Steps exactly (5-label gate extension, same code block, same test structure).
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Implemented the gate exactly as specified in the Spec's Implementation Steps: `elif` branch preserved for the `phase/ready`-absent dispatch path, new `if` branch added ahead of it for the 5-label skip condition (`phase/code|review|merge|verify|done`).
+- Added 5 new positive-case bats tests (one per skip label) immediately after the existing "phase/ready present" test, each asserting `status -eq 0`, no `run-spec.sh` invocation, and the `"skipping dispatch"` log substring — matching the Spec's test placement and mock-reuse instructions.
+
+### Deferred Items
+- Post-merge observation AC (next `/auto --batch --resume` run against a `phase/code`-or-later Issue) is left for post-merge verification, per the Spec's Post-merge section.
+
+### Notes for Next Phase
+- Full `bats tests/` suite (1147 tests) passes; behavioral-change detection triggered the full-suite run because `tests/auto-sub-observability.bats` and `tests/run-code.bats` also reference `run-auto-sub.sh`.
+- Both pre-merge rubric ACs were graded PASS against the git diff and Issue body; checkboxes updated on the Issue.
