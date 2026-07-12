@@ -123,3 +123,33 @@ No new comments since last phase.
 - 同根クラス: #895 (code-patch 自己除外の導入)、#974 (merge/review フェーズへの適用)、本 Issue (#996、commit 規約側での解消)
 - 検出元 Issue: #979 (get-config-value パース修正 — 誤検出の発生現場)
 - 参考: #668 (icebox — 並行 commit と Issue 結果の相関分類)
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps の記述通りに実装した。
+
+### Design Gaps/Ambiguities
+
+N/A
+
+### Rework
+
+N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps に忠実に実装: `skills/code/SKILL.md` Step 11 の patch route commit ブロックへ `(closes #$NUMBER)` を本体埋め込みし、`BASE_BRANCH == main` 時のみ発動する commit subject ガード (`grep -q "#$NUMBER"` 失敗で `exit 1`) を追加した。
+- `tests/code.bats` に `step11_section()` ヘルパー + 2 `@test` を追加し、テンプレート本体の `(closes #$NUMBER)` とガード文言 `missing #$NUMBER reference` の存在を regression test 化した。
+
+### Deferred Items
+- Option B (検出ロジック側の commit message 非依存化) は不採用のまま据え置き。将来 message ベース検出が 3 度目の再発を超えて構造的限界に達した場合の setpoint として Related Issues の同根クラス (#895 → #974 → #996) に記録済み。
+- Post-merge AC (次回 `/auto --batch` patch route 実行での false-positive 0 件観察) は merge 後の `/verify` フェーズで確認する。
+
+### Notes for Next Phase
+- 本 Issue は Size S / patch route のため `/review` は経由しない。次フェーズは `/verify`。
+- Pre-merge AC 3 件はすべて rubric — Spec の Option A/B 比較検討記録、SKILL.md の commit 規約変更、tests/code.bats の regression test 追加を対象に PASS 判定済み (Issue 本文チェックボックス更新済み)。
+- Post-merge AC は observation 型 (`event=auto-run`) のため `/verify` では SKIPPED 扱いとなり、実際の `/auto --batch` 実行時に別途評価される。
