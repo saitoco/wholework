@@ -3,7 +3,7 @@ name: merge
 description: Squash-merge a PR and delete the remote branch (`/merge 88`). Use when merging review-approved, CI-passing PRs. Automatically attempts conflict resolution when conflicts occur.
 context: fork
 model: sonnet
-allowed-tools: Bash(gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*), Read, Edit, Grep, Glob, EnterWorktree, ExitWorktree
+allowed-tools: Bash(gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, gh issue view:*, gh issue close:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*), Read, Edit, Grep, Glob, EnterWorktree, ExitWorktree
 ---
 
 # Squash Merge
@@ -242,7 +242,27 @@ Extract the related Issue number from the PR body (`closes #N`, `Related to #N`,
 ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$ISSUE_NUMBER" verify
 ```
 
-### Step 6: Worktree Exit (push-and-remove)
+### Step 6: Verify Issue State (Fallback / フォールバック)
+
+After the label transition in Step 5, verify that the Issue actually reached its expected post-merge state. `closes #N` auto-close and `gh-label-transition.sh` can silently fail to take effect (e.g., a transient GitHub API error or a race condition), leaving the Issue `OPEN` with a stale `phase/*` label.
+
+**Skip this step entirely if `BASE_BRANCH` is not `main`** — as noted in Step 4, the Issue is not expected to auto-close on a non-default base branch, so there is no fallback to apply.
+
+When `BASE_BRANCH` is `main`:
+
+1. Fetch the current Issue state:
+   ```bash
+   gh issue view "$ISSUE_NUMBER" --json state,labels
+   ```
+2. Expected state: `state=CLOSED` and the `phase/verify` label present.
+3. If the actual state matches the expected state: proceed to Step 7 (Worktree Exit).
+4. If it does not match (e.g., `state=OPEN` and/or `phase/verify` missing), apply the フォールバック (fallback):
+   - If `phase/verify` is missing: re-run `${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$ISSUE_NUMBER" verify`
+   - If `state` is still `OPEN`: run `gh issue close "$ISSUE_NUMBER"`
+   - Output: "Warning: Issue #$ISSUE_NUMBER did not reach the expected post-merge state after `closes #N`/label transition. Applied フォールバック: manual label transition and/or issue close."
+5. Re-check once with `gh issue view "$ISSUE_NUMBER" --json state,labels` after applying the フォールバック. If the state is still mismatched, keep the warning visible in the completion report but do not block Step 7 — this requires manual follow-up.
+
+### Step 7: Worktree Exit (push-and-remove)
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Exit: push-and-remove section" to exit the worktree.
 
