@@ -165,6 +165,7 @@ Anthropic の Managed Agents + Outcomes は隣接する Outcome rubric ループ
 | Issue triage | Type/Priority/Size/Value をメインワークフロー開始前にアサインする初期評価フェーズ。`/triage` スキルとして実装されており、Issue に `phase/*` ラベルがない場合は `/auto` が自動的に triage を連鎖させる | /triage, /auto | Issue triage |
 | Non-interactive mode | `run-*.sh` 経由で `claude -p --dangerously-skip-permissions` から呼び出されるスキル実行モード。`AskUserQuestion` が使えないため、意思決定点で 3-tier ポリシー（auto-resolve / skip / hard-error）を適用する。`ARGUMENTS` 内の `--non-interactive` で判定される | run-*.sh、/auto | 非対話モード |
 | Orchestration recovery | `/auto` オーケストレーション失敗に対する 3 段階復旧メカニズム: (1) `reconcile-phase-state.sh` による完了確認、(2) `apply-fallback.sh` による既知パターン復旧、(3) `spawn-recovery-subagent.sh` による Tier 3 サブエージェント診断 | /auto, orchestration | オーケストレーション復旧 |
+| Operate route | git diff を伴わない操作型 Issue (CMS 編集・インフラ操作など) のワークフロー経路。commit や Pull Request を作成せず外部の MCP/CLI/API 操作を直接実行し、git diff の代わりに `## Execution Log` Issue コメントを記録する。Spec から機械的に判定され、Size とは直交する軸である (`## Changed Files` が空 + Implementation Steps が外部操作のみ) | 開発ワークフロー | Operate 経路 |
 | Patch route | XS/S サイズ Issue のワークフロー経路。Pull Request を作成せず main ブランチに直接コミットする | 開発ワークフロー | パッチ経路 |
 | Phase Handoff | `modules/phase-handoff.md` に実装されたフェーズ横断の構造化サマリー機構。各フェーズは終了前に Handoff を書き込み、次フェーズが開始時に読み込む。次ステップの作業コンテキスト（AC 確認結果、スコープ注記、残存リスクなど）を伝達する。実行履歴を記録する Retrospective とは異なる概念。主に code → review → merge → verify のパスで使用 | /code、/merge、/review、/verify | Phase Handoff |
 | Phase label | Issue の現在のワークフローステージを示す `phase/*` GitHub ラベル（例: `phase/issue`、`phase/spec`、`phase/ready`、`phase/code`） | 開発ワークフロー | フェーズラベル |

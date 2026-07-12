@@ -19,6 +19,7 @@ If ARGUMENTS contains `--help`, Read `${CLAUDE_PLUGIN_ROOT}/modules/skill-help.m
 | patch (XS/S) | XS, S | `spec (when needed) → code(--patch) → verify` |
 | pr (M) | M | `spec (when needed) → code → review(--light) → merge → verify` |
 | pr (L) | L | `spec (when needed) → code → review(--full) → merge → verify` |
+| operate (diff-less) | (Size-independent) | `spec (when needed) → code(--patch) → verify` — same phase sequence as patch route; `/code` resolves `--patch` to the operate route internally via Spec-derived detection (see `modules/size-workflow-table.md` § "Diff-less Axis (operate route)") |
 | XL | XL | Sub-issue dependency graph with parallel execution (spec auto-runs per sub-issue) |
 
 - **Size not set**: default to pr route (safe fallback since AskUserQuestion is unavailable in non-interactive mode)
@@ -107,7 +108,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banne
 
 **Load project config and stop-at settings (run before flag detection):**
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `AUTO_STOP_AT` and `ALWAYS_PR` for use in route detection and phase execution below.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `AUTO_STOP_AT`, `ALWAYS_PR`, and `SPEC_PATH` for use in route detection and phase execution below.
 
 Parse the `--stop-at=<phase>` flag from ARGUMENTS (per-invocation override):
 - If `--stop-at=<phase>` is present, extract the phase value (valid values: `spec`, `code`, `review`, `merge`, `verify`)
@@ -140,6 +141,14 @@ If no flags, fetch Size to auto-detect route:
 ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh "$NUMBER" 2>/dev/null
 ```
 
+**Operate route detection (run after ALWAYS_PR promotion, before REVIEW_DEPTH):**
+
+If the Issue already has the `phase/ready` label (Spec phase complete) and a Spec exists at `$SPEC_PATH/issue-$NUMBER-*.md`, apply the same diff-less criteria as `modules/size-workflow-table.md` § "Diff-less Axis (operate route)":
+- `## Changed Files` contains no repository file entries (empty, "none", or only external-system targets)
+- Every entry in `## Implementation Steps` is an external-tool operation only — no file edits or commit steps
+
+If both hold, set `ROUTE=operate`, overriding whatever route was set above (flag-based or `ALWAYS_PR` promotion) — an empty diff cannot produce a meaningful PR. If the Spec does not exist yet at this point (e.g., `/spec` has not run within this `/auto` invocation), skip this check here — Step 3a performs the equivalent check after the spec phase completes.
+
 Set `REVIEW_DEPTH` from flags or Size (used unchanged in Step 4 unless Step 3a refreshes it):
 
 | Condition | REVIEW_DEPTH |
@@ -147,6 +156,7 @@ Set `REVIEW_DEPTH` from flags or Size (used unchanged in Step 4 unless Step 3a r
 | `--review=full` flag present | `--full` |
 | `--review=light` flag present | `--light` |
 | `--patch` flag present | (not applicable — patch route) |
+| ROUTE=operate | (not applicable — operate route) |
 | Auto-detect or `--pr` without `--review=...`: Size M | `--light` |
 | Auto-detect or `--pr` without `--review=...`: Size L | `--full` |
 | Auto-detect or `--pr` without `--review=...`: other/unset | `--light` (safe fallback) |
@@ -247,6 +257,16 @@ Fetch labels with `gh issue view $NUMBER --json labels -q '.labels[].name'` and 
   - On issue failure, go to Step 6 (error report)
 
 ### Step 3a: Post-Spec Size Refresh
+
+**Operate route demotion (pr/patch → operate):**
+
+Run only when `run-spec.sh` was called and succeeded in Step 3 (spec was executed this invocation). Read the Spec at `$SPEC_PATH/issue-$NUMBER-*.md` and apply the same diff-less criteria as `modules/size-workflow-table.md` § "Diff-less Axis (operate route)":
+- `## Changed Files` contains no repository file entries (empty, "none", or only external-system targets)
+- Every entry in `## Implementation Steps` is an external-tool operation only — no file edits or commit steps
+
+If both hold, set `ROUTE=operate` and skip `/review`/`/merge` for the remaining phases (Step 4 uses the same phase sequence as patch route: `code(--patch) → verify`, since `/code` resolves the operate branch internally). This demotion is **not** suppressed by `ALWAYS_PR=true` — unlike the pr → patch demotion below, which `ALWAYS_PR=true` does suppress — because an empty diff cannot produce a meaningful PR regardless of the `always-pr` setting. It is also **not** skipped by an explicit `--patch`/`--pr`/`--review=...` flag, mirroring `/code`'s own Spec-derived operate override (Step 0 of `skills/code/SKILL.md`), which likewise takes priority over all flags. Output: "Post-spec operate detection: Spec has no repository file changes, route re-determined as operate." Then proceed directly to Step 4 with ROUTE=operate, skipping the Size-based refresh below.
+
+If the operate criteria are not both met, continue to the Size-based refresh below.
 
 **Run only when** `run-spec.sh` was called and succeeded in Step 3 (i.e., spec was executed — not when `phase/ready` was already set at Step 3 entry, and not when Size was XS which skips spec). Also skip if `--patch`, `--pr`, or `--review=...` flag is present in ARGUMENTS (preserve explicit-flag priority behavior).
 
@@ -375,6 +395,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
 ---
 
 **patch route XS/S (2 phases):**
+
+**ROUTE=operate reuses this section verbatim** — no separate operate phase sequence exists. `run-code.sh $NUMBER --patch` is the same command call; `/code` resolves the operate branch internally from the Spec's diff-less criteria (Step 0 of `skills/code/SKILL.md`), so `run-code.sh` itself is unaware of the `operate`/`patch` distinction.
 
 Each phase follows the Observe → Diagnose → Act pattern (same as pr route; see above).
 

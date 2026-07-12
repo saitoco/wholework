@@ -65,15 +65,27 @@ Note: This override is additive — if Axes 1–2 already produce L or XL, that 
 | L    | pr        | Branch + PR, full review | Required | Yes |
 | XL   | split guidance | Guide to split into sub-issues | Required | — |
 
+### Diff-less Axis (operate route)
+
+Orthogonal to Axes 1–2 above. Size (Axis 1–2) measures change scope/effort (XS–XL); the diff-less axis determines whether a route produces a git diff at all. This axis contributes a third route value, `operate`, alongside `patch` and `pr` in the Size-to-Workflow Mapping Table above — `operate` is a route value, not a Size value, so it does not replace or extend the Size scale.
+
+**Determination criteria** (both must hold; evaluated by `/spec` from the Spec it produces, and re-checked by `/code` from the same Spec):
+- `## Changed Files` contains no repository file entries (empty, "none", or only external-system targets)
+- Every entry in `## Implementation Steps` is an external-tool operation (an MCP tool call, or a CLI/HTTP API call against an external system) — no file edits or commit steps
+
+When both hold, ROUTE=operate. This determination takes priority over the Size-to-Workflow Mapping Table above and over explicit `--patch`/`--pr` flags or `always-pr: true` (an empty diff cannot produce a meaningful PR, so PR route cannot apply regardless of flags).
+
+**operate route characteristics**: no worktree-based commit/push/PR for the implementation diff; external operations (MCP/CLI/API) execute directly from `/code`; results are recorded as an Issue comment (`## Execution Log`) and Phase Handoff in place of a git diff; phase label transition mirrors patch route (`phase/code` → `phase/verify`, skipping `/review`/`/merge`).
+
 ### Phase-Level Light/Full Mapping
 
-| Phase | patch (XS/S) | pr (M/L) |
-|-------|-------------|---------|
-| spec  | XS: not required, S: required | Required |
-| code  | Direct to main (`--patch`) | Branch + PR |
-| review | None | M: lightweight (`--light`), L: full (`--full`) |
-| merge | None | Execute |
-| verify | Execute | Execute |
+| Phase | patch (XS/S) | pr (M/L) | operate (diff-less) |
+|-------|-------------|---------|---------------------|
+| spec  | XS: not required, S: required | Required | Required |
+| code  | Direct to main (`--patch`) | Branch + PR | Direct external operation execution (no implementation-diff commit) |
+| review | None | M: lightweight (`--light`), L: full (`--full`) | None (no PR to review) |
+| merge | None | Execute | None (no PR to merge) |
+| verify | Execute | Execute | Execute |
 
 ### Option System
 

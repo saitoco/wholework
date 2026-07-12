@@ -89,7 +89,7 @@ wholework/
 |---|---|---|
 | issue | `skills/issue/SKILL.md` | Issue 作成・精緻化（What レベル） |
 | spec | `skills/spec/SKILL.md` | Issue 仕様化と実装計画（How レベル） |
-| code | `skills/code/SKILL.md` | ローカル実装（patch/PR 経路） |
+| code | `skills/code/SKILL.md` | ローカル実装（patch / pr / operate 経路） |
 | review | `skills/review/SKILL.md` | PR レビュー（受入条件 + 多観点） |
 | merge | `skills/merge/SKILL.md` | Squash マージとブランチ削除 |
 | verify | `skills/verify/SKILL.md` | マージ後の受入テスト |

@@ -51,6 +51,8 @@ Investigates the codebase from Issue requirements and creates a Spec (`docs/spec
 
 Implements the design from the Spec. Size-based routing: XS/S → **patch** (direct commit to main, no PR); M/L → **pr** (branch + PR). XS skips the spec-existence check. Explicit `--patch`/`--pr` flags override auto-detection. Set `always-pr: true` in `.wholework.yml` to force PR route regardless of Size (useful for website projects where direct push to main equals publish).
 
+A third route, **operate**, applies when the Spec's `## Changed Files` is effectively empty and its `## Implementation Steps` consist solely of external-tool operations (CMS edits, infrastructure operations, etc.) — no repository file changes. This is detected from the Spec, not from Size, and takes priority over `--pr`/`--patch`/`always-pr` (an empty diff cannot produce a meaningful PR). operate route skips the worktree commit/PR flow entirely: external operations (MCP tools via `ToolSearch`, or existing allowed Bash patterns) execute directly, and results are recorded as an `## Execution Log` Issue comment plus a Phase Handoff in place of a git diff. Under `autonomy: L1` (`.wholework.yml`), execution degrades to advisory — the planned operations are posted as an `## Execution Plan` Issue comment instead of being run. Because `/code`'s `allowed-tools` only permits a fixed set of Bash patterns (`gh`, `git`, `python3`, `bats`, etc.), operate route's primary support channel is MCP tools and those existing patterns; a project needing an arbitrary external CLI must extend `/code`'s allowed-tools or set `permission-mode: bypass`. See `modules/size-workflow-table.md` § "Diff-less Axis (operate route)" and `modules/autonomy-tier.md` § "Tier × External System Write (operate route)".
+
 Three implementation paths:
 - **Claude Code**: `/code 123` for local implementation
 - **GitHub Copilot**: Select "Assign to Copilot" in the Issue
@@ -71,6 +73,8 @@ Integrates PR acceptance criteria verification, multi-perspective code review, a
 | XS, S | skip (early exit) | Exits with "review not required" message (patch route) |
 | M | light | Runs Step 10 as lightweight integrated review (1 agent) |
 | L, XL | full | Runs all steps |
+
+**operate route**: `/review` is skipped entirely — operate route produces no PR (see `/code` above), so there is nothing to review.
 
 **External review tool integration**: Create `.wholework.yml` at the project root and set values to enable (all disabled by default):
 
