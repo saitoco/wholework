@@ -599,9 +599,15 @@ SIZE=$("$SCRIPT_DIR/get-issue-size.sh" --no-cache "$SUB_NUMBER" 2>/dev/null || t
 
 emit_event "sub_start" "size=${SIZE}"
 
-# spec phase: run only if phase/ready label is not present
+# spec phase: run only if phase/ready is absent AND the issue hasn't already progressed
+# past spec. "spec 完了以降" (spec-complete-or-later) covers phase/code, phase/review,
+# phase/merge, phase/verify, and phase/done — phase/ready is removed once /code starts
+# and is not restored on this path, so without this check every one of those states
+# would redundantly re-dispatch run-spec.sh on a resumed run (issue #977).
 LABELS=$(gh issue view "$SUB_NUMBER" --json labels -q '.labels[].name' 2>/dev/null || true)
-if ! echo "$LABELS" | grep -q "phase/ready"; then
+if echo "$LABELS" | grep -qE "phase/(code|review|merge|verify|done)"; then
+  echo "${LOG_PREFIX} spec phase: skipping dispatch for issue #${SUB_NUMBER} (phase/code, phase/review, phase/merge, phase/verify, or phase/done label present; spec already completed)"
+elif ! echo "$LABELS" | grep -q "phase/ready"; then
   echo "${LOG_PREFIX} --- spec phase: issue #${SUB_NUMBER} ---"
   # Bash-side comments_consumed emit for spec phase. (Issue #705)
   _emit_comments_consumed "$SUB_NUMBER" "spec" || true

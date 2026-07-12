@@ -297,6 +297,116 @@ MOCK
     [ ! -f "$RUN_SPEC_LOG" ]
 }
 
+@test "phase/code present: spec phase is skipped with a skip-reason log (issue #977)" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json labels"* ]]; then
+    echo "phase/code"
+    exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo '[{"headRefName":"worktree-code+issue-42","number":99}]'
+    exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [ ! -f "$RUN_SPEC_LOG" ]
+    [[ "$output" == *"skipping dispatch"* ]]
+}
+
+@test "phase/review present: spec phase is skipped with a skip-reason log (issue #977)" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json labels"* ]]; then
+    echo "phase/review"
+    exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo '[{"headRefName":"worktree-code+issue-42","number":99}]'
+    exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [ ! -f "$RUN_SPEC_LOG" ]
+    [[ "$output" == *"skipping dispatch"* ]]
+}
+
+@test "phase/merge present: spec phase is skipped with a skip-reason log (issue #977)" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json labels"* ]]; then
+    echo "phase/merge"
+    exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo '[{"headRefName":"worktree-code+issue-42","number":99}]'
+    exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [ ! -f "$RUN_SPEC_LOG" ]
+    [[ "$output" == *"skipping dispatch"* ]]
+}
+
+@test "phase/verify present: spec phase is skipped with a skip-reason log (issue #977)" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json labels"* ]]; then
+    echo "phase/verify"
+    exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo '[{"headRefName":"worktree-code+issue-42","number":99}]'
+    exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [ ! -f "$RUN_SPEC_LOG" ]
+    [[ "$output" == *"skipping dispatch"* ]]
+}
+
+@test "phase/done present: spec phase is skipped with a skip-reason log (issue #977)" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json labels"* ]]; then
+    echo "phase/done"
+    exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo '[{"headRefName":"worktree-code+issue-42","number":99}]'
+    exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [ ! -f "$RUN_SPEC_LOG" ]
+    [[ "$output" == *"skipping dispatch"* ]]
+}
+
 @test "phase/ready absent: run-spec.sh is called" {
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
