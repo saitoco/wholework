@@ -164,3 +164,69 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue 995 --non-interactive` の Issue Retrospective。(1) `docs/product.md` § Terms への `Operate route` エントリ追加を Scope / AC に追加、(2)「実質空」の判定基準は #958 に既出のため追加対応不要、(3) autonomy tier ゲーティングは `/spec`・`/code` へ委譲、の 3 点を auto-resolve した記録。本 Spec では (1) を Changed Files / Implementation Step 9 に、(3) を Implementation Step 5 + Notes「autonomy tier ゲーティングの判断」に反映した。(2) は追加対応不要の判断をそのまま踏襲した。 / https://github.com/saitoco/wholework/issues/995#issuecomment-4949900094
+
+## Issue Retrospective
+
+`/issue 995 --non-interactive` で既存 Issue のリファインメントを実行した記録 (Issue コメントから転記)。
+
+### Triage (auto-chain)
+
+- `triaged` ラベルが未付与だったため triage を自動連鎖実行
+- Type: Feature / Size: L / Value: 3 (Impact=2: shared component 該当のみ、Alignment=4: product.md Vision 「every phase from Issue creation through post-merge verification」に直結) / Priority: 未検出
+- 重複候補: なし / Stale 判定: 停滞なし / 依存関係: `Blocked by` 記載なし
+- AC verify command audit (grep 引数順・常時 PASS/FAIL・patch route 不整合・destructive command の 5 パターン): 問題なし
+
+### Ambiguity 自動解決 (Auto-Resolve Log)
+
+Size=L のため検出上限 5 件のうち、実質的なギャップは 1 件のみ検出した。
+
+1. **docs/product.md § Terms への `Operate route` エントリ追加**: Spec (#958) のフォローアップ推奨スコープは `docs/workflow.md`・`docs/structure.md`・`docs/tech.md` のみを列挙していたが、既存の `Patch route`・`PR route` はいずれも `docs/product.md` § Terms にエントリを持つため、用語一貫性を優先して Scope と Pre-merge AC に追加した (rubric + `section_contains` の補完チェック)。
+2. **「実質空」の判定基準**: Spec (#958) の Design セクションに基準が既に明記され、Issue 本文の記述と完全一致していたため追加対応不要と判断。
+3. **残存リスク (autonomy tier ゲーティング適用可否)**: Spec (#958) が「実装時に検討する」と次フェーズへ明示的に委譲していたため、`/issue` フェーズで AC 化せず Related Issues の注記のまま維持。
+
+### Scope Assessment
+
+非対話モードのため sub-issue 分割検討 (High-Stakes Decision) はスキップした。Size=L のため元々 XL 分割閾値 (11+ ファイルまたは複数独立機能) には該当しない。
+
+## Spec Retrospective
+
+### Minor observations
+
+- Changed Files が 15 件となり Axis 1 (ファイル数) 単独では XL (11+) に該当するが、うち 4 件は `docs/ja/` の機械的ミラー、4 件は Steering Docs の 1〜数行更新であり、実体は「既存の 2 値分岐 (patch/pr) に 3 つ目の値を足す」単一の lateral extension である。Axis 2 の「Simple lateral extension of existing patterns」で −1 補正し **Size=L を維持** した (triage 時の Size と一致するため Project field の更新は不要)。`docs/ja/` ミラーが Axis 1 のファイル数を実質 2 倍に膨らませる構造は、本 Issue に固有ではなく Steering Docs を触るすべての Issue に共通する Size 判定上のノイズである。
+- `modules/next-action-guide.md` は Issue 本文の Scope に含まれていなかったが、`ROUTE` の列挙が `patch / pr / sub_issue` にハードコードされており、`ROUTE=operate` を渡すと未定義値になる。Symbol impact discovery (`ROUTE=` の全文検索) で検出し Changed Files に追加した。Issue 起票時の Scope 列挙は #958 の推奨スコープをそのまま引き継いだものであり、実装対象の全文検索を経ていなかったことが原因。
+
+### Judgment rationale
+
+- **#958 との相違 (Spec 側 commit の扱い)**: #958 の Phase handling テーブルは operate route の `/code` を「worktree 不要・commit は行わない」と記述するが、同じ行が「Phase Handoff に記録」とも要求しており、Phase Handoff の記録先はリポジトリ内の Spec ファイルである。両立しない。「commit は行わない」を **実装 diff の commit / PR 作成** の意味に限定解釈し、Spec 側のブックキーピング commit は patch route と同じ worktree + merge-to-main で実施する設計に解決した。記録先を Issue コメントへ移す代替案は `modules/phase-handoff.md` の Read Procedure 変更 (= `/review`・`/merge`・`/verify` への波及) を要し、#958 自身の「新しいアーティファクト種別は導入しない」方針に反するため不採用。
+- **`--operate` フラグを導入しない判断**: フラグを足すと `run-code.sh` の引数処理・`tests/run-code.bats`・`skills/auto/SKILL.md` の呼び出しに波及し、Changed Files が 2〜3 件増える。#958 が「既存の Spec 内容から機械的に判定できるため新しいメタデータを追加しない」を設計前提としているため、Spec 由来の自動判定のみとした。結果として `/auto` は operate route でも `run-code.sh $NUMBER --patch` を呼び、`/code` が内部で operate へ解決する構造になり、script 層の変更がゼロになった。
+- **autonomy tier ゲーティングを「適用する」と判断した根拠**: 既存の `modules/autonomy-tier.md` に L1 = 「advisory print only; human acts」というセマンティクスが既に存在するため、新しい tier 軸を作らずに L1 = Execution Plan の advisory 投稿のみ / L2・L3 = 実行、というマッピングがそのまま成立した。既存の `Tier × L0 Write Matrix` に列を足すのではなく独立サブセクションにしたのは、外部システム書き込みが L0 (GitHub state) とは別サーフェスであり、`modules/l0-surfaces.md` の SSoT テーブルに新しい行を足さずに済ませるため。
+
+### Uncertainty resolution
+
+- **operate route の外部 CLI 操作と `/code` の allowed-tools 制約**: `skills/code/SKILL.md` の `allowed-tools` は `Bash(...)` を列挙型で制限しており (`gh`・`git`・`python3`・`bats` 等)、任意の外部 CLI は許可されていない。設計段階で frontmatter を実読して確認した。解決方針は「operate route の一次サポートチャネルを MCP ツール (`ToolSearch` 経由、既存 allowed-tools に含まれる) と既存許可済み Bash パターンに限定し、任意の外部 CLI が必要なプロジェクトは allowed-tools 拡張または `permission-mode: bypass` を使う」旨を SKILL.md と `docs/workflow.md` に明記すること。`Bash(*)` への緩和は全 route に影響するセキュリティ後退になるため採らない。この制約は Spec の Uncertainty セクションに残し、`/code` フェーズで再確認する。
+- **`section_contains "docs/product.md" "## Terms" "Operate route"` の成立性**: `modules/verify-executor.md` の `section_contains` 定義 (heading 引数は部分一致) を実読し、`## Terms` が `docs/product.md:157` に実在することを確認した。Term エントリ追加後に PASS することが確定しているため Uncertainty からは除外できる。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- **operate 判定は Spec 由来の機械判定のみ**。`--operate` フラグ・新ラベル・新 Issue メタデータは一切追加しない。結果として `scripts/` 配下の変更がゼロになり、`/code` の `allowed-tools` も無変更で済む (新規 script 参照がないため `check-allowed-tools.sh` は green のはず)。
+- **operate route は `--pr` / `always-pr` / `--patch` / Size 自動判定のすべてに優先する**。差分が存在しない以上 PR route は空 PR になり成立しないため、`ALWAYS_PR=true` でも operate 降格を抑制しない (`/auto` Step 3a の既存 pr→patch demotion 抑制ロジックとは意図的に挙動を変えている — 実装時に混同しないこと)。
+- **Spec 側の commit は operate route でも実施する**。#958 の「commit は行わない」は実装 diff の commit / PR 作成を指すと限定解釈した。Code Retrospective + Phase Handoff は Spec ファイル (リポジトリ内) に記録され `/verify` が参照するため、patch route と同じ worktree + `Exit: merge-to-main` を使う。
+- **autonomy tier ゲーティングを適用する** (#958 が本フェーズへ委譲した残存リスクの結論)。`L1` = 外部操作を実行せず `## Execution Plan` を advisory コメントとして投稿して終了、`L2`/`L3` = 実行。既存の path A (Advisory) セマンティクスを流用し、新しい tier 軸は追加しない。
+
+### Deferred Items
+
+- **任意の外部 CLI 操作のサポート**は本 Issue のスコープ外。operate route の一次サポートチャネルは MCP ツール (`ToolSearch` 経由) と `/code` の既存許可済み Bash パターンに限定し、それ以外が必要なプロジェクトは allowed-tools 拡張または `permission-mode: bypass` を使う旨をドキュメントに明記するに留める。`allowed-tools` を `Bash(*)` へ緩和することは全 route に影響するため行わない。
+- **`modules/verify-classifier.md` / `modules/verify-patterns.md` の patch-route 注記**は operate route にも同じ制約 (PR が存在しないため `github_check "gh pr checks"` 不可) が当てはまるが、operate route の verify command は `mcp_call` / `http_status` が主となる想定であり、本 Issue では変更しない。実運用で `github_check` を使う operate Issue が現れた時点で追補する。
+- **`skills/review/SKILL.md` の early-exit テーブル**は変更しない。`/auto` の operate route が `/review` を呼ばないため到達しない。ユーザーが手動で `/review` を実行した場合は PR が存在せず自然に失敗する。
+
+### Notes for Next Phase
+
+- **Changed Files は 15 件**。うち `docs/ja/` 4 件は英語版の変更に追随する機械的ミラー (`docs/translation-workflow.md` 準拠)。英語側だけ更新して `docs/ja/` を落とすと `/code` Step 9 の translation sync gap 検出で引っかかるため、同一コミットで同期すること。
+- **`docs/ja/*` の verify command / grep パターンには日本語版の文字列を使う**。英語パターンを使うと翻訳ミラーの書式に意図しない影響が出る。
+- **`tests/operate-route.bats` の `@test` 名は英語 (ASCII)**。マルチバイト文字はテスト名のパース失敗を招き 0 tests executed になる (#226)。
+- Pre-merge AC は `/spec` フェーズで 7 件 → **8 件** に増えている (autonomy tier ゲーティングの rubric を追加)。Issue 本文と Spec の `## Verification > Pre-merge` は同期済み。
+- Size は L のまま維持 (Axis 1 のファイル数は XL 相当だが Axis 2 の lateral extension で −1 補正)。Project field の更新は不要。
+
