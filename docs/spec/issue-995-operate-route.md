@@ -43,7 +43,7 @@
 
 3. `skills/code/SKILL.md` Step 0 (Route Detection) に Spec 由来の operate 判定を追加する (parallel with 2)。Step 0 で既に読み込んでいる `detect-config-markers.md` の `SPEC_PATH` を使って `$SPEC_PATH/issue-$NUMBER-*.md` を Glob し、Spec が存在する場合は Step 2 と同一の diff-less 基準を適用する。判定順序を「operate 判定 → 既存の flag precedence (`--pr` / `ALWAYS_PR` / `--patch`) → Size 自動判定」とし、operate 検出時は `--pr`・`ALWAYS_PR=true`・`--patch` をすべて上書きする (差分が存在しない以上、PR route は空 PR になるため成立しない)。上書き時は警告を出力する: `Warning: operate route detected (Spec has no repository file changes). --pr / always-pr is ignored.` (→ AC3)
 
-4. `skills/code/SKILL.md` に ROUTE=operate 時の実行分岐を追加する (after 3) (→ AC3, AC8)
+4. `skills/code/SKILL.md` に ROUTE=operate 時の実行分岐を追加する (after 3) (→ AC3, AC7)
    - **Step 8**: `#### Operate Route: External Operation Execution` を追加。(a) `AUTONOMY_TIER` を読み込み、`L1` の場合は外部操作を実行せず、実行予定の操作一覧を `## Execution Plan` として Issue コメントに投稿し、`phase/code` のまま終了する (path A = advisory に degrade)。`L2`/`L3` の場合のみ実行する。(b) Spec の Implementation Steps に列挙された外部操作 (MCP ツール / CLI / HTTP API) を順に実行する。実装 diff は生じないため `git add` / `git commit` は行わない
    - **Step 9 (Run Tests)**: operate route ではスキップする (リポジトリ内コードの変更がないため)
    - **Step 10 (Verify Command Consistency)**: 変更なし (pre-merge verify command を full mode で実行する既存挙動をそのまま使う)
@@ -52,7 +52,7 @@
    - **Step 13 (Worktree Exit)**: patch route と同じ `Exit: merge-to-main` を実行し、push 完了後に `gh-label-transition.sh $NUMBER verify` で `phase/verify` へ遷移する
    - **Completion Report**: operate route の prefix を `External operations executed. Execution Log posted to the Issue.` とし、`ROUTE=operate` を `next-action-guide.md` に渡す
 
-5. `modules/autonomy-tier.md` に `### Tier × External System Write (operate route)` サブセクションを追加する (parallel with 4)。operate route の外部システム書き込み (CMS / インフラ / 外部 API への write) は L0 write とは別のサーフェスであることを明記し、`L1` = 実行禁止 (Execution Plan の advisory 投稿のみ)、`L2`/`L3` = 実行可、というテーブルを定義する。判断根拠として「operate route では `/review` による事後 diff レビューという安全弁が存在せず、`phase/ready` 到達が唯一の事前ゲートになる」(#958 残存リスク) を記載する (→ AC8)
+5. `modules/autonomy-tier.md` に `### Tier × External System Write (operate route)` サブセクションを追加する (parallel with 4)。operate route の外部システム書き込み (CMS / インフラ / 外部 API への write) は L0 write とは別のサーフェスであることを明記し、`L1` = 実行禁止 (Execution Plan の advisory 投稿のみ)、`L2`/`L3` = 実行可、というテーブルを定義する。判断根拠として「operate route では `/review` による事後 diff レビューという安全弁が存在せず、`phase/ready` 到達が唯一の事前ゲートになる」(#958 残存リスク) を記載する (→ AC7)
 
 6. `modules/next-action-guide.md` に operate route を反映する (parallel with 4)。Input の `ROUTE` 列挙に `operate` を追加し、Step 3 の判断テーブルに `code / success / operate → 推奨 /verify {ISSUE_NUMBER}、代替 /auto {ISSUE_NUMBER}` 行を追加する。Step 2 に「ROUTE が呼び出し元から明示的に渡された場合は SIZE からの導出を行わない」注記を追加する (operate は Size から導出できないため) (→ AC3)
 
@@ -68,7 +68,7 @@
    | Operate route | Workflow path for diff-less operational Issues (CMS edits, infrastructure operations); executes external MCP/CLI/API operations directly without creating a commit or Pull Request, and records an `## Execution Log` Issue comment in place of a git diff. Determined from the Spec (empty `## Changed Files` + external-operation-only Implementation Steps), orthogonal to Size | Development workflow | Operate 経路 |
    ```
 
-10. `docs/ja/` ミラーを同期し (`docs/ja/workflow.md`・`docs/ja/structure.md`・`docs/ja/tech.md`・`docs/ja/product.md`)、`tests/operate-route.bats` を新規追加する (after 8, 9) (→ AC4, AC5, AC7)
+10. `docs/ja/` ミラーを同期し (`docs/ja/workflow.md`・`docs/ja/structure.md`・`docs/ja/tech.md`・`docs/ja/product.md`)、`tests/operate-route.bats` を新規追加する (after 8, 9) (→ AC4, AC5, AC8)
     - `tests/operate-route.bats` の検証内容 (すべて grep ベースの shallow test、bash 3.2+ 互換):
       - `modules/size-workflow-table.md` に `operate` route と `orthogonal` の記述が存在する
       - `skills/spec/SKILL.md` に `ROUTE=operate` の記述が存在する
