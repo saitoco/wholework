@@ -67,3 +67,35 @@ WHOLEWORK_CONFIG_PATH=/tmp/gcv-test.yml scripts/get-config-value.sh k2
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 「`/issue 979 --non-interactive` の triage 判断根拠 (Type=Bug, Size=S, Value=4) と Auto-Resolve Log (コメント開始判定・quote内#スコープ外・回帰テスト追加方針の3件) を記録した Issue Retrospective」/ https://github.com/saitoco/wholework/issues/979#issuecomment-4949014017
+
+## Autonomous Auto-Resolve Log
+
+- **[continue execution using the existing Spec]** — reason: `/code 979 --patch --non-interactive` の Step 3 で `phase/ready` ラベルが不在であることを検出した (直前の3回の自動リトライが `auto-retry-on-fail.max_iterations: 3` を使い切って `phase/code` のまま停止していたため)。ただし `docs/spec/issue-979-get-config-value-parse-fix.md` の Spec 自体は既に存在し内容も有効だったため、Issue 本文のみへのフォールバックではなく Spec を継続利用して実装を進めた。
+  - Other candidates: 中断して `/spec 979` の再実行を促す (Spec が既に有効なため不要と判断)
+
+## Code Retrospective
+
+### Deviations from Design
+- 実装コミット (Step 8) の時点では `(closes #979)` サフィックスを付けなかった。Step 11 が要求する形式だが、実装変更はその1コミットで完結しておりコミット単位を分割する理由がなかったため、`closes #979` は本 Retrospective コミット (同じく main へ push される) のメッセージに含めることで GitHub の自動クローズ条件を満たす。
+
+### Design Gaps/Ambiguities
+- Step 9 の Behavioral Change Detection は `scripts/get-config-value.sh` が15件以上のテストファイルから参照されていることを正しく検出し、`bats tests/` フルスイート実行を要求した。直前の3回の自動リトライはこのフルスイートをバックグラウンドで起動し、完了通知を待ち続けたまま進捗せず auto-retry を使い切っていた (`.tmp/wrapper-out-979-code-patch.log` に記録)。本セッションでは同じフルスイートをフォアグラウンドで実行し、約6分47秒で正常完了した。この非対話実行時のバックグラウンド待機問題は Issue #979 のスコープ外のため、follow-up Issue #994 として起票した。
+- フルスイート初回実行で `tests/run-code.bats` の auto-retry 関連テスト2件が一時的に FAIL したが、原因を追跡した結果、実装や既存テストの欠陥ではなく、対話デバッグセッション中に同一シェルへ `CODE_RETRY_COUNT` 等の環境変数が残留していたことによる汚染と判明した (`env -u CODE_RETRY_COUNT` で該当2件は PASS、かつ本Issueの変更前コミット `3c089a02` でも同一条件で同じ FAIL を再現)。クリーンな環境での再実行 (`env -u ... bats tests/`) で全1142件 PASS を確認した。
+
+### Rework
+- 上記の調査以外に実装のやり直しは発生していない。実装自体は Spec の Implementation Steps 通り一度で完了した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `bats tests/` フルスイートはフォアグラウンドで実行した (バックグラウンド化すると headless 実行で完了通知が届かず無限待機になるため。follow-up #994 参照)。
+- 実装コミット単体には `closes #979` を含めず、本 Retrospective コミットの方に含めた (両方とも同じ push で main に反映されるため、GitHub 側の自動クローズ条件は満たされる)。
+
+### Deferred Items
+- headless (`--non-interactive`) 実行時のフルスイート実行ガイダンス整備は follow-up #994 に委譲した。
+
+### Notes for Next Phase
+- 本 Issue はパッチルート (直接 main コミット) のため `/review` フェーズは走らない。`/verify` フェーズでは AC の2つの verify command (`get-config-value.sh k1`/`k2`) が引き続き PASS することを確認すればよい。
+- `tests/run-code.bats` の auto-retry 関連テストで FAIL が再現した場合、まず環境変数 (`CODE_RETRY_COUNT` 等) の残留汚染を疑うこと — 本 Issue の実装とは無関係な既知の偽陽性パターンである。
+
