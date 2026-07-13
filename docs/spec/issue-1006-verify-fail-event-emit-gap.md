@@ -86,16 +86,15 @@ Nothing to note. review-light (4 perspectives: spec divergence, edge cases, secu
 Nothing to note. All 3 Pre-merge conditions resolved cleanly: 2 `rubric` checks PASS against the Spec's `## Root Cause` section and the diff's structural fix, and the `command "bats tests/emit-event.bats"` check PASS via CI reference fallback (`Run bats tests` job SUCCESS). No UNCERTAIN results.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Ran `REVIEW_DEPTH=light` (explicit `--light` flag) with the 1-agent `review-light` integrated review covering all 4 aspects, since the diff is small (3 files, ~48 lines changed) and self-contained.
-- All 3 Pre-merge acceptance conditions verified PASS: 2 `rubric` checks graded directly against the Spec's `## Root Cause` section and the diff, and the `command "bats tests/emit-event.bats"` check resolved via CI reference fallback (`Run bats tests` job SUCCESS) rather than local execution, per safe-mode policy.
-- No fixes were needed — review-light found zero issues across spec divergence, edge cases, security, and documentation consistency.
+- Merged via `--non-interactive` mode with `mergeable=true`/`reason=clean` from `gh-pr-merge-status.sh` — no conflict resolution needed, proceeded straight to squash merge.
+- `gh pr merge --squash --delete-branch` failed to delete the local `worktree-code+issue-1006` branch because a stale `code+issue-1006` worktree still referenced it; the remote branch had already merged successfully, so the remote branch was deleted separately with `git push origin --delete worktree-code+issue-1006`. The local stale worktree itself was left untouched (out of scope for this merge).
 
 ### Deferred Items
-- None.
+- The stale `.claude/worktrees/code+issue-1006` local worktree directory (holding the now-deleted `worktree-code+issue-1006` branch ref) was not cleaned up — left for a future session or manual `git worktree remove`.
 
 ### Notes for Next Phase
-- `/merge 1011` can proceed directly — no MUST/SHOULD issues, CI fully green, no unresolved Policy Change detection needed (no implementation changes were made during review).
+- `/verify 1006` can proceed directly — CI fully green, PR merged cleanly to `main`.
 - The Issue's single Post-merge condition (`<!-- verify-type: observation event=fix-cycle -->`) has no emitter yet (documented in the Issue's Auto-Resolved Ambiguity Points as out of scope, deferred to the #650 series) — `/verify` will need to fall back to manual confirmation of `events.jsonl` on the next verify FAIL cycle rather than relying on automatic observation dispatch.
