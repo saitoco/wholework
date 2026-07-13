@@ -108,3 +108,11 @@ Nothing to note. All 3 Pre-merge conditions resolved cleanly: 2 `rubric` checks 
 - **Recovery type**: respawn
 - **Wrapper exit code**: unknown
 - **Outcome**: success
+
+### Manual recovery (code-pr)
+- **Date**: 2026-07-13 17:00 UTC
+- **Issue**: #1006, phase: code-pr
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn
+- **Wrapper exit code**: unknown
+- **Outcome**: success
