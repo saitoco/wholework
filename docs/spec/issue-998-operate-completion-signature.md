@@ -138,3 +138,64 @@ reopen timestamp が取得できないケースで、同一 Issue の Spec が o
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective (トリアージ結果 Type=Bug・Size=L・Value=3、タイトル正規化、#993 との重複判定、非対話モードでの自動解決 3 件、Background 記載事実のコードベース突合結果) — https://github.com/saitoco/wholework/issues/998#issuecomment-4953352587
+
+## Issue Retrospective
+
+**トリアージ結果**: Type=Bug (誤検知バグ)、Size=L (`modules/phase-state.md` / `scripts/reconcile-phase-state.sh` / `skills/auto/SKILL.md` / bats テストの4ファイル + script logic 変更で複雑度+1)、Value=3 (Impact=2: shared component 該当、Alignment=4: `docs/product.md` Vision の "governance-and-verification harness" — 自律実行の安全性に直結)。Priority は本文・タイトルに情報なく未設定。
+
+**タイトル正規化**: noun-ending rule により末尾 "誤検知する" → "誤検知" に変更。
+
+**重複検出**: #993 (`_completion_code_patch()` の stray PR 検出ギャップ) と同一関数・同一検証経路 (`/auto` Step 6 Tier 1 completion check) を扱うが、問題自体は別 (stray PR 検出 vs operate route の completion signature 欠如) と判断し重複扱いはせず、Related Issues に追記するに留めた。実装時の競合可能性を Notes として明記。
+
+**自動解決したあいまい性 (非対話モードのため AskUserQuestion 未使用、モデル判断で解決)**:
+
+1. **verify command の route 不整合**: AC3「テストスイートが green」の verify command が `command "bats tests/"` だったが、本 Issue は Size=L (pr route) と判定されたため `github_check "gh pr checks" "Run bats tests"` に変更した。`command` hint は safe mode で UNCERTAIN 扱いとなり `/review` での自動検証に適さないため。
+2. **Post-merge セクションの欠落**: 本 Issue は completion-check ロジックの false-negative 修正であり、真の妥当性検証は次回 operate route 実行時にしか行えない。同種の挙動修正 Issue (#993, #952, #951) の既存パターンに倣い、Post-merge に opportunistic observation AC を追加した。
+3. **AC1 への補助チェック追加**: `rubric` + 機械的補助チェック併用ガイドライン (`modules/verify-patterns.md` §9) に従い、`modules/phase-state.md` に現状 "operate" の記載が一切ないこと (`grep` で確認済み) を踏まえ、`file_contains "modules/phase-state.md" "operate"` を supplementary check として追加した。常時 PASS にはならない。
+
+**あえて変更しなかった点**: AC1・AC2 の rubric 文言自体 (新規 `code-operate` エントリを作るか `code-patch` 内に operate-aware 分岐を作るかの実装方式選択) は `/issue` (What) と `/spec` (How) の責務境界 (`docs/product.md` 参照) に従い、Background に記載した二択のどちらでも満たせる outcome-based な記述のまま維持した。
+
+**Background 記載の事実確認 (advisory)**: `modules/phase-state.md` の `code-patch` completion signature、`skills/auto/SKILL.md` の operate route フェーズシーケンス記述、`skills/code/SKILL.md` Step 11/12 の commit 挙動について、いずれもコードベースと突き合わせて事実と一致することを確認した。
+
+**Blocked-by**: 本文に `Blocked by #N` 記載なし。依存関係チェックは open blocker なしで完了 (exit 0)。
+
+## Spec Retrospective
+
+### Minor observations
+
+- Issue 本文は誤検知の帰結を「orchestration recovery の誤発火」または「不要な auto-retry」と一段で述べていたが、コードを追うと 3 つの異なる経路に分岐していた (fix-cycle での external write 再実行 / L1 advisory の hard failure / 初回実行での偽陽性 PASS + 誤 diagnosis)。`/issue` フェーズの調査は「シグネチャが一致しない」ところで止まっており、その先の分岐 (`scripts/run-code.sh` line 292-328 の silent no-op 判定と tier gate) までは追っていなかった。Bug Issue で「誤検知が起きる」と書かれている場合、誤検知後にどのコードパスへ流れるかまで追わないと危険度と修正範囲を見誤る。
+- 初回 (reopen なし) の L2/L3 operate 実行は、`phase/verify` ラベルによる async-external-commit fallback (#461 で追加) に偶然引っかかって `matches_expected: true` を返していた。つまりバグは「常に失敗する」のではなく「fix-cycle と L1 でだけ失敗し、初回は誤った診断名で通る」という部分的な症状であり、実運用での再現頻度が低いまま潜伏しうる形をしていた。
+- `tests/operate-route.bats` (#995 由来) は「ドキュメントに operate route が記載されているか」を grep する shallow test しか持たない。#995 の実装が phase-state 側の signature を触らなかったこと自体は、この test 群では構造的に検出できなかった。
+
+### Judgment rationale
+
+- 実装方式の二択 (新規 `code-operate` phase vs `code-patch` 内分岐) は、caller 契約から一意に決まった。`skills/auto/SKILL.md` が "run-code.sh itself is unaware of the operate/patch distinction" と明示している以上、phase 名を分けると Spec 由来の semantic 判定 (Implementation Steps が全て外部ツール操作か) を bash 側に再実装する必要が生じる。あいまい性として user に問う余地はなく、非対話モードでの自動解決として妥当と判断した。
+- L1 advisory を completion signature に含めるかは判断が割れうる点だった (「何も実行していないのに完了扱いか」という反論がありうる)。`skills/code/SKILL.md` Step 13 が L1 についても "operate route completes here" と明記している — つまり L1 は設計上の正常完了である — という一次資料を根拠に含める側に倒した。含めなければ false-negative の半分が残り、Bug 修正として不完全になる。
+- 鮮度判定 (freshness gate) は既存 `closes #N` signature と同一セマンティクス (reopen_ts があれば `createdAt > reopen_ts`、なければ無制限) に揃えた。より厳密な判定 (`phase/code` ラベル付与時刻を timeline API から取得) も設計可能だが、既存シグネチャと非対称な鮮度判定は新しい失敗モードのクラスを生む。対称性を優先し、残る制約 (route 変更を跨いだ stale marker) は Notes と `modules/phase-state.md` に明記する方針とした。
+
+### Uncertainty resolution
+
+- `gh issue view --json comments` の `createdAt` と GraphQL `ReopenedEvent.createdAt` が同一フォーマットか (辞書順比較の前提) — 実 Issue #998 で `gh issue view 998 --json comments --jq '.comments[] | .createdAt'` を実行し `2026-07-13T00:14:10Z` を確認。両者とも固定長 ISO-8601 UTC で、`modules/l0-surfaces.md` の Comment Consumption Procedure も同じ前提で辞書順比較している。解消。
+- 既存 bats テストへの回帰リスク (新しい `gh issue view --json comments` 呼び出しに既存 mock が応答しない) — 既存 5 ケースの mock を読み、`--json labels` / `--json state` 以外の引数では出力なし・exit 0 になることを確認。空出力は「マーカーなし」として扱われ既存 fallback にフォールスルーするため期待値は変わらない。解消 (実装後に `bats tests/reconcile-phase-state.bats` 全 green の確認は必要)。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- `code-patch` phase 名を維持し、その completion signature を「`closes #N` コミット **または** operate route のコメントマーカー」に拡張する。新規 `code-operate` phase 名は、全 caller (`run-code.sh` / `run-auto-sub.sh` / `skills/auto/SKILL.md`) が `--patch`/`--pr` フラグから phase 名を導出する既存契約を壊すため不採用。
+- operate signal の分岐は `_completion_code_patch()` のラベル/state fallback より **手前** に置く。reopen_ts が非 null のときラベル fallback は無条件スキップされるため、後ろに置くと最も危険な fix-cycle ケース (external write の再実行) を救えない。
+- L1 advisory の `## Execution Plan` コメントにも machine-readable マーカー (`type=execution-plan`) を新規付与し、L2/L3 の `type=execution-log` と併せて signature として受理する。L1 は `skills/code/SKILL.md` Step 13 上「正常完了」であり、除外すると `run-code.sh` が `EXIT_CODE=1` を返して orchestration recovery が誤発火する。
+
+### Deferred Items
+
+- route 変更を跨いだ stale marker の隠蔽 (operate → patch へ Spec を書き換え、かつ reopen していない場合) は追加の鮮度判定を入れず、`modules/phase-state.md` に既知の制約として記載するに留める。既存 `closes #N` signature が持つ同種の制約 (reopen timestamp 不在時の無制限 grep) と同じ性質のため。
+- `modules/l0-surfaces.md` への `wholework-event` marker type 一覧の新設は行わない。同ファイルは type のレジストリを持たず (`type=verify-fail` も Example として載っているだけ)、`type=execution-log` も未登録のため、本 Issue で一覧を新設するのはスコープ外。
+
+### Notes for Next Phase
+
+- **#993 との conflict 注意**: #993 も `_completion_code_patch()` を変更する (stray PR 検出ギャップ)。本 Issue の挿入位置 (commit 未検出後・ラベル fallback 手前) と物理的に近接する。先にマージされた側を base に rebase して解消すること。
+- **bash 3.2 互換**: `scripts/reconcile-phase-state.sh` は `declare -A` / `mapfile` を使わない方針。タイムスタンプ比較は `[[ "$a" > "$b" ]]` の文字列比較 (固定長 ISO-8601 UTC なので辞書順で正しい)。`gh` 組み込みの `--jq` を使い外部 `jq` へのパイプは行わない (ファイル内の既存スタイル)。
+- **`ISSUE_NUMBER` の jq フィルタ補間は安全**: script 冒頭 (line 67) で `^[0-9]+$` 検証済みのため、マーカー文字列への直接補間で injection リスクはない。
+- **`skills/*/SKILL.md` の validator 制約**: 本文追記時に半角 `!` を裸で置かない (マーカー文字列はインラインコードで囲む)、Step 番号に小数を使わない、code fence 外に triple backtick を置かない。
+- **既存 bats mock の回帰確認**: `tests/reconcile-phase-state.bats` の既存 `code-patch` ケース 5 件は `--json comments` に応答しない mock を使っているが、空出力 = マーカーなしとして扱われるため期待値は不変。実装後に全 green を確認すること。
