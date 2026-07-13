@@ -199,3 +199,12 @@ reopen timestamp が取得できないケースで、同一 Issue の Spec が o
 - **`ISSUE_NUMBER` の jq フィルタ補間は安全**: script 冒頭 (line 67) で `^[0-9]+$` 検証済みのため、マーカー文字列への直接補間で injection リスクはない。
 - **`skills/*/SKILL.md` の validator 制約**: 本文追記時に半角 `!` を裸で置かない (マーカー文字列はインラインコードで囲む)、Step 番号に小数を使わない、code fence 外に triple backtick を置かない。
 - **既存 bats mock の回帰確認**: `tests/reconcile-phase-state.bats` の既存 `code-patch` ケース 5 件は `--json comments` に応答しない mock を使っているが、空出力 = マーカーなしとして扱われるため期待値は不変。実装後に全 green を確認すること。
+
+## Auto Retrospective
+
+### Manual recovery (merge)
+- **Date**: 2026-07-13 01:18 UTC
+- **Issue**: #998, phase: merge
+- **Source**: parent session manual recovery
+- **Recovery type**: review-rerun
+- **Outcome**: success
