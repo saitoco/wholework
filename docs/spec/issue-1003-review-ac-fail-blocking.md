@@ -69,3 +69,34 @@
 
 ## Consumed Comments
 - saito (MEMBER, first-class): Issue phase retrospective — triage 結果 (Type=Task/Size=S/Value=3) の確認と、3件の Auto-Resolved Ambiguity Points (AC1/AC2/AC3 の採用理由) を記録。AC本文・verify command 自体への変更なし。https://github.com/saitoco/wholework/issues/1003#issuecomment-4954255801
+- code phase (2026-07-13): No new comments since last phase (cutoff: most recent `phase/*` label assignment, 2026-07-13T04:07:26Z).
+
+## Autonomous Auto-Resolve Log
+
+- **`phase/ready` label absent at code phase start**: at the start of this `/code 1003 --patch --non-interactive` run, the Issue already carried `phase/code` (not `phase/ready`). A Spec already existed at `docs/spec/issue-1003-review-ac-fail-blocking.md` and matched the Issue's acceptance criteria, so auto-resolved by proceeding with execution using the existing Spec rather than aborting. No content gap was found — the label state reflects an already-advanced phase transition, not a missing Spec.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — the 4 Implementation Steps were followed as written (Step 8 FAIL Blocking Behavior subsection, Step 9 Blocking by default paragraph, Step 10 10.0/10.2 injection bullets, `tests/review.bats` structural tests).
+
+### Design Gaps/Ambiguities
+- The Behavioral Change Detection guard in `/code` Step 9 found `tests/run-review.bats` also matches the `skills/review` grep (it builds a fixture `SKILL.md` under a temp dir for its own unrelated tests, not a dependency on this PR's Step 8/9 content changes). This triggered a full-suite `bats tests/` run instead of the narrower `tests/review.bats` scope; the full suite (1173 tests) passed, so no functional gap, only extra runtime.
+
+### Rework
+- N/A — no rework was required; all edits and the added tests passed on the first attempt.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Reused the existing MUST issue → `REQUEST_CHANGES` gate (`gh-pr-review.sh` `HAS_MUST` scan) for both Step 8 FAIL and Step 9 CI FAILURE, per the Spec's design choice — no new blocking mechanism was introduced.
+- Added the 2 new structural tests to the existing `tests/review.bats` file rather than a new file, following the file's established awk-section-extraction pattern.
+
+### Deferred Items
+- No allowlist for known-flaky/unrelated CI job failures — every FAILURE job blocks by default (per Spec Notes); a follow-up Issue would need to define an allowlist if that proves too strict in practice.
+- Post-merge AC (opportunistic) observes the new behavior on the next PR route Issue's `/review` run — not verifiable within this patch-route Issue itself, since Size=S skips `/review`.
+
+### Notes for Next Phase
+- This is a patch route (direct commit to main, no `/review`/`/merge` phase) — `/verify` is the next phase and should focus on the post-merge opportunistic AC (observe blocking behavior on a future PR route review).
+- Full `bats tests/` suite (1173 tests) was run and passed due to Behavioral Change Detection matching `tests/run-review.bats` (unrelated fixture reference, not a real dependency) — no action needed, just informational for `/verify`.
