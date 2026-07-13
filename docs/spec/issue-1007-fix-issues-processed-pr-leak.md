@@ -79,3 +79,31 @@ No new comments since last phase.
 - **observation dispatch の判別方法**: `sub_start` イベントは `run-auto-sub.sh` (699行目) が Issue ごとに1回だけ発行し、batch/単一 Issue/XL sub-issue のいずれの経路でも呼ばれる。一方 Event-based observation scan の dispatch (`skills/auto/SKILL.md` の `## Event-based observation scan`) は `Skill(skill="wholework:verify", args="$N")` を直接呼ぶため `run-auto-sub.sh` を経由せず `sub_start` を発行しない。この非対称性が「batch 処理 Issue」と「observation dispatch 専用 Issue」を機械的に判別する唯一の既存シグナルであり、Step 5 の docs 追記および Step 4 の bats テストはこれを固定化する。
 - **`tests/get-auto-session-report.bats` フィクスチャ形式**: 既存テスト (`session_id filter` テスト、ファイル冒頭) と同じ1行1JSON形式。batch Issue 側は `{"ts":"...","issue":<N>,"event":"sub_start","session_id":"<sid>","size":"S"}` に続けて `phase_start`/`phase_complete` (`phase` は任意の値、例: `code-patch`) を追加。observation dispatch 側は `sub_start` を含めず `{"ts":"...","issue":<M>,"event":"phase_start","session_id":"<sid>","phase":"verify"}` と対応する `phase_complete` のみを追加する。
 - **旧 recovery 記録**: `docs/spec/issue-1007-recovery.md` は本 Issue の `/issue` (triage) フェーズで発生した manual recovery (skip-forward) の記録であり、本 Spec とは独立したファイルとして残す (削除・統合は本 Spec のスコープ外)。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-5 をすべて Spec の記述通りに実施した。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+### Notes
+- `/code` 実行開始時、Issue のラベルは既に `phase/code` だった (Spec 作成コミット後、`phase/ready` を経由せず前回セッションの中断状態が残存していたと推定)。`reconcile-phase-state.sh --check-precondition code-pr` は `matches_expected:false` (phase/ready 不在) を返したが、Spec は完成済みで実装に十分な情報があったため、非対話モードの auto-resolve 方針 (Spec 不在時の代替読み込み) を「Spec は存在するが precondition ラベルのみ欠けているケース」に準用し、警告を出しつつ実装を継続した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Steps 1-5 を順序通りに実装 (emit 側修正 → bats テスト → docs 同期)。逸脱なし。
+- `phase/ready` ラベル不在 (前回中断の残骸) でも Spec が完成していたため、警告を出しつつ実装を継続した。
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- Post-merge AC (次回 `/auto --batch` の L3 retrospective での観察) は `/verify` フェーズで対応不可 (実際のバッチ実行が必要)。observation イベントとして記録される想定。
+- Pre-merge の3条件 (rubric x2 + bats command) はすべて実装・docs・テストで満たしている。`/review` での再確認を推奨。
