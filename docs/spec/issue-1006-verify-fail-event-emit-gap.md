@@ -116,3 +116,32 @@ Nothing to note. All 3 Pre-merge conditions resolved cleanly: 2 `rubric` checks 
 - **Recovery type**: respawn
 - **Wrapper exit code**: unknown
 - **Outcome**: success
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 実セッションの events.jsonl を直接調査して Root Cause を決定的に特定した (CWD 相対探索 + gitignore による worktree 内 `.tmp/` 不在 + `run-code.sh` の cd-then-read パターンとの対比傍証)。Issue 本文の曖昧な原因候補を「全 FAIL 分岐 emit が worktree CWD で一律無効化される構造的欠陥」へ精密化した好例。
+- Issue AC3 の verify command (`bats tests/verify.bats` — 無関係な structural テスト) を実修正対象に対応する `bats tests/emit-event.bats` へ修正し、Issue body にも反映した (Step 6 conflict detection の適切な発動)。
+
+#### design
+- 修正を `scripts/emit-event.sh` 一箇所に一元化し `skills/verify/SKILL.md` 無改修とした設計は、全 emitter (verify Step 1/8/11 + 他 skill の in-session emit) を同時に堅牢化する最小変更。既存イディオム (`git worktree list --porcelain`) の流用も #1005 と一貫。
+
+#### code
+- 実装 rework なし (PR #1011 diff は Implementation Steps 1-3 と完全一致)。
+- オーケストレーション層: 外部 kill が 2 回発生 (spec phase 実行中 + code-pr phase 開始直後、通算 8-9 回目)。いずれも親セッション再スポーンで復帰し、`## Auto Retrospective` の Manual recovery エントリ ×2 として #1005 の新機構で記録済み (機構の初実地適用)。2 回目の kill 時点で code phase は commit 済みだったため milestone resume (`post-commit` → `push-and-pr`) が作業を保全した。
+- **新観察 (SIGTERM 系の初事例)**: spec phase の kill では EXIT trap による backfilled `phase_complete` (`"backfilled":true`) が記録された。過去 7 回 (F2: trap 未発火 = SIGKILL) と異なり、SIGTERM 系で落ちたことを示す。`docs/reports/external-kill-investigation.md` の残存仮説の判別材料 (今後 `wrapper_exit_code` の蓄積で 137/143 の判別が可能になる) として、kill が単一原因ではない可能性を示唆する。
+
+#### review
+- light review で指摘なし (4 観点)。UNCERTAIN ゼロ。
+
+#### merge
+- squash merge 成功。ローカル branch 削除は stale worktree (`code+issue-1006`) の参照で失敗し、remote branch のみ個別削除 (Phase Handoff に記録済み。stale worktree 掃除は将来セッションへ)。
+
+#### verify
+- Pre-merge 3 件一発 PASS (bats 21/21)。AC2 は本 verify 自身の worktree CWD からの `restore_auto_session_pointer` 実行で live 検証でき、`AUTO_EVENTS_LOG` が main root 絶対パスに解決された。本 verify の Step 11 `phase_complete` emit 自体が修正後コードの初の実地成功例。
+- **記録機構初適用時の push conflict (新発見)**: `--write-manual-recovery 1006 spec respawn` の実行時、local main が remote に遅れていた (PR #1011 squash 未 pull) 状態で Spec へ commit したため、push が non-fast-forward で失敗し `git pull --rebase` リトライも同一 Spec ファイルの conflict で停止した (`WARNING: could not commit/push manual recovery to spec` ×2)。open-PR ガード (#890) は PR が **merged 済み** のため発火しない盲点。親セッションが rebase conflict を手動解決して復旧した。→ Improvement Proposals へ。
+
+### Improvement Proposals
+- `run-auto-sub.sh --write-manual-recovery` の Spec 書き込み経路が、local main が remote より遅れた状態 (直前に merge された PR の squash commit 未 pull) で実行されると、push が non-fast-forward → `git pull --rebase` リトライが同一 Spec ファイルの conflict で停止し、WARNING を出して記録が local に取り残される。書き込み前に `git pull --ff-only` で main を最新化する (または conflict 時に remote 版へ再適用する) 堅牢化が必要 (検出元: #1006 の recovery 記録実施時、2026-07-13 16:58 UTC の実事例。手動 rebase 解決で復旧済み)
