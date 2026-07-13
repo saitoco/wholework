@@ -396,7 +396,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
 
 **patch route XS/S (2 phases):**
 
-**ROUTE=operate reuses this section verbatim** — no separate operate phase sequence exists. `run-code.sh $NUMBER --patch` is the same command call; `/code` resolves the operate branch internally from the Spec's diff-less criteria (Step 0 of `skills/code/SKILL.md`), so `run-code.sh` itself is unaware of the `operate`/`patch` distinction.
+**ROUTE=operate reuses this section verbatim** — no separate operate phase sequence exists. `run-code.sh $NUMBER --patch` is the same command call; `/code` resolves the operate branch internally from the Spec's diff-less criteria (Step 0 of `skills/code/SKILL.md`), so `run-code.sh` itself is unaware of the `operate`/`patch` distinction. Step 3's `code-patch` completion check accounts for this: operate route produces no `closes #N` commit, so it also recognizes the Execution Log (L2/L3) or Execution Plan (L1 advisory) marker comment posted to the Issue as an alternate success signature (`modules/phase-state.md` § "Operate Route Completion Signature") — a successful operate route run still returns `matches_expected: true` without a commit.
 
 Each phase follows the Observe → Diagnose → Act pattern (same as pr route; see above).
 

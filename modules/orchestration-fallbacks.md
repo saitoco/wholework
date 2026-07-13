@@ -381,10 +381,11 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 - code (patch route — `_completion_code_patch` in `scripts/reconcile-phase-state.sh`)
 
 ### Fallback Steps
-- No manual intervention required. `_completion_code_patch` includes a built-in two-stage check:
+- No manual intervention required. `_completion_code_patch` includes a built-in three-stage check:
   1. Primary: `git log origin/main --grep="closes #${ISSUE_NUMBER}"` (existing check)
-  2. Fallback (when primary finds nothing): `gh issue view "$ISSUE_NUMBER" --json labels` and `--json state` to confirm `phase/verify`, `phase/done`, or `CLOSED` state
-- If the fallback confirms completion, `_completion_code_patch` returns `matches_expected:true` automatically, preventing Tier 3 sub-agent escalation
+  2. Operate marker (when primary finds nothing): `_operate_signal_ts` checks for an execution-log/execution-plan marker comment on the Issue, confirming a diff-less operate route completion (`modules/phase-state.md` § "Operate Route Completion Signature")
+  3. Label/state fallback (when both above find nothing): `gh issue view "$ISSUE_NUMBER" --json labels` and `--json state` to confirm `phase/verify`, `phase/done`, or `CLOSED` state
+- If either fallback stage confirms completion, `_completion_code_patch` returns `matches_expected:true` automatically, preventing Tier 3 sub-agent escalation
 
 ### Escalation
 - If both the git log check and the phase label / state fallback fail to confirm completion, the reconciler returns `matches_expected:false` and Tier 2 / Tier 3 escalation proceeds normally
