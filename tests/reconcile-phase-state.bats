@@ -1019,6 +1019,179 @@ MOCK_EOF
     [[ "$output" == *'"matches_expected":false'* ]]
 }
 
+# --- code-patch completion: operate route completion signal (Issue #998) ---
+# See modules/phase-state.md § "Operate Route Completion Signature"
+
+@test "code-patch completion: operate route - no closes commit + execution-log marker -> matches_expected true, operate_signal true" {
+    cat > "$MOCK_DIR/gh-graphql.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "null"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
+
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json comments"* ]]; then echo "2026-07-13T02:00:00Z"; exit 0; fi
+if [[ "$*" == *"--json labels"* ]]; then echo "triaged"; exit 0; fi
+if [[ "$*" == *"--json state"* ]]; then echo "OPEN"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "log" ]]; then echo ""; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-patch 55 --check-completion --strict
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"matches_expected":true'* ]]
+    [[ "$output" == *'"operate_signal":true'* ]]
+    [[ "$output" == *"execution-log/plan marker comment found"* ]]
+}
+
+@test "code-patch completion: operate route - no closes commit + execution-plan (L1 advisory) marker -> matches_expected true" {
+    cat > "$MOCK_DIR/gh-graphql.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "null"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
+
+    # Simulates an L1 advisory run: skills/code/SKILL.md Step 8's L1 branch never
+    # produces a closes #N commit (no operation is executed), so the only signal
+    # is the Execution Plan marker comment. The same jq OR-condition in
+    # _operate_signal_ts accepts this marker type, not just execution-log.
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json comments"* ]]; then echo "2026-07-13T03:00:00Z"; exit 0; fi
+if [[ "$*" == *"--json labels"* ]]; then echo "phase/code"; exit 0; fi
+if [[ "$*" == *"--json state"* ]]; then echo "OPEN"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "log" ]]; then echo ""; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-patch 55 --check-completion --strict
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"matches_expected":true'* ]]
+    [[ "$output" == *'"operate_signal":true'* ]]
+}
+
+@test "code-patch completion: operate route - no marker at all -> matches_expected false, operate_signal false" {
+    cat > "$MOCK_DIR/gh-graphql.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "null"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
+
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json comments"* ]]; then echo ""; exit 0; fi
+if [[ "$*" == *"--json labels"* ]]; then echo "triaged"; exit 0; fi
+if [[ "$*" == *"--json state"* ]]; then echo "OPEN"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "log" ]]; then echo ""; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-patch 55 --check-completion --strict
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
+    [[ "$output" == *'"operate_signal":false'* ]]
+}
+
+@test "code-patch completion: operate route - marker older than reopen timestamp -> freshness gate rejects" {
+    cat > "$MOCK_DIR/gh-graphql.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "2026-06-01T00:00:00Z"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
+
+    # Fix-cycle re-run (reopen_ts non-null): a marker comment from a prior
+    # operate cycle predating the reopen must not be accepted as completion,
+    # else a genuine repeated silent no-op after reopen would be masked.
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json comments"* ]]; then echo "2026-01-01T00:00:00Z"; exit 0; fi
+if [[ "$*" == *"--json labels"* ]]; then echo "phase/code"; exit 0; fi
+if [[ "$*" == *"--json state"* ]]; then echo "OPEN"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "log" ]]; then echo ""; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-patch 55 --check-completion --strict
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
+}
+
+@test "code-patch completion: operate route - malformed marker timestamp (degraded gh) -> operate_signal false" {
+    cat > "$MOCK_DIR/gh-graphql.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "null"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
+
+    # _operate_signal_ts must reject non-ISO8601 output (e.g. a degraded gh
+    # printing an error string) rather than letting it flow into the
+    # lexicographic freshness comparison as a false signal.
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json comments"* ]]; then echo "gh: rate limited, try again later"; exit 0; fi
+if [[ "$*" == *"--json labels"* ]]; then echo "triaged"; exit 0; fi
+if [[ "$*" == *"--json state"* ]]; then echo "OPEN"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "log" ]]; then echo ""; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-patch 55 --check-completion --strict
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
+    [[ "$output" == *'"operate_signal":false'* ]]
+}
+
 @test "code-patch precondition: Spec missing and Size != XS -> mismatch" {
     export MOCK_SPEC_PATH="$BATS_TEST_TMPDIR/empty-spec-patch"
     mkdir -p "$BATS_TEST_TMPDIR/empty-spec-patch"

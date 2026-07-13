@@ -11,6 +11,7 @@ SPEC_SKILL="$PROJECT_ROOT/skills/spec/SKILL.md"
 CODE_SKILL="$PROJECT_ROOT/skills/code/SKILL.md"
 AUTO_SKILL="$PROJECT_ROOT/skills/auto/SKILL.md"
 AUTONOMY_TIER="$PROJECT_ROOT/modules/autonomy-tier.md"
+PHASE_STATE="$PROJECT_ROOT/modules/phase-state.md"
 
 @test "size-workflow-table: operate route is documented" {
     grep -q "operate route" "$SIZE_WORKFLOW_TABLE"
@@ -38,4 +39,12 @@ AUTONOMY_TIER="$PROJECT_ROOT/modules/autonomy-tier.md"
 
 @test "autonomy-tier: operate route external system write gate is documented" {
     grep -q "External System Write (operate route)" "$AUTONOMY_TIER"
+}
+
+@test "phase-state: operate route completion signature is documented (Issue #998)" {
+    grep -q "Operate Route Completion Signature" "$PHASE_STATE"
+}
+
+@test "code skill: L1 advisory execution-plan marker feeds the completion signature (Issue #998)" {
+    grep -q "type=execution-plan" "$CODE_SKILL"
 }
