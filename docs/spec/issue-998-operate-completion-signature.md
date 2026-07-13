@@ -178,27 +178,36 @@ reopen timestamp が取得できないケースで、同一 Issue の Spec が o
 - `gh issue view --json comments` の `createdAt` と GraphQL `ReopenedEvent.createdAt` が同一フォーマットか (辞書順比較の前提) — 実 Issue #998 で `gh issue view 998 --json comments --jq '.comments[] | .createdAt'` を実行し `2026-07-13T00:14:10Z` を確認。両者とも固定長 ISO-8601 UTC で、`modules/l0-surfaces.md` の Comment Consumption Procedure も同じ前提で辞書順比較している。解消。
 - 既存 bats テストへの回帰リスク (新しい `gh issue view --json comments` 呼び出しに既存 mock が応答しない) — 既存 5 ケースの mock を読み、`--json labels` / `--json state` 以外の引数では出力なし・exit 0 になることを確認。空出力は「マーカーなし」として扱われ既存 fallback にフォールスルーするため期待値は変わらない。解消 (実装後に `bats tests/reconcile-phase-state.bats` 全 green の確認は必要)。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1-7 (`modules/phase-state.md` / `scripts/reconcile-phase-state.sh` / `skills/code/SKILL.md` / `skills/auto/SKILL.md` / `modules/orchestration-fallbacks.md`) はすべて PR #1001 で先行実装済みだったため、本 fix cycle では Implementation Steps 8-10 (bats テスト・shallow test・docs/tech.md 追記) のみを実施した。ステップの順序・内容自体に逸脱はない。
+
+### Design Gaps/Ambiguities
+
+- Spec の Implementation Step 8 は 4 ケース (a)-(d) を指定していたが、`/verify` FAIL コメント (2026-07-13T01:21:21Z) が追加で提示した「非 ISO8601 な壊れた `gh` 出力」ケースも実装済みの防御コード (`_operate_signal_ts()` の ISO8601 正規表現検証、commit 20338988 で追加) の直接的なテストカバレッジとして有用と判断し、5 件目として追加した。Spec の記述を超える追加だが、Spec の意図 (受け入れ基準 5, 6 の充足) と矛盾しない。
+
+### Rework
+
+- 本 Issue 自体が PR #1001 の fix cycle (`/verify` FAIL 後の再オープン) であり、rework は Issue 全体が rework に相当する。fix cycle 内での手戻りは発生していない。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- `code-patch` phase 名を維持し、その completion signature を「`closes #N` コミット **または** operate route のコメントマーカー」に拡張する。新規 `code-operate` phase 名は、全 caller (`run-code.sh` / `run-auto-sub.sh` / `skills/auto/SKILL.md`) が `--patch`/`--pr` フラグから phase 名を導出する既存契約を壊すため不採用。
-- operate signal の分岐は `_completion_code_patch()` のラベル/state fallback より **手前** に置く。reopen_ts が非 null のときラベル fallback は無条件スキップされるため、後ろに置くと最も危険な fix-cycle ケース (external write の再実行) を救えない。
-- L1 advisory の `## Execution Plan` コメントにも machine-readable マーカー (`type=execution-plan`) を新規付与し、L2/L3 の `type=execution-log` と併せて signature として受理する。L1 は `skills/code/SKILL.md` Step 13 上「正常完了」であり、除外すると `run-code.sh` が `EXIT_CODE=1` を返して orchestration recovery が誤発火する。
+- Implementation Steps 1-7 (phase-state.md / reconcile-phase-state.sh / skills/code/SKILL.md / skills/auto/SKILL.md / orchestration-fallbacks.md) はすべて PR #1001 で既に main にマージ済みと判明したため、本 fix cycle では未実施だった Steps 8-10 (bats テスト・shallow test・docs/tech.md 追記) のみを実施した。
+- `tests/reconcile-phase-state.bats` に Spec 指定の 4 ケースに加え、`_operate_signal_ts()` の ISO8601 検証コードパス (commit 20338988 で追加済み) を直接カバーする「壊れた `gh` 出力」ケースを 5 件目として追加した。
 
 ### Deferred Items
 
-- route 変更を跨いだ stale marker の隠蔽 (operate → patch へ Spec を書き換え、かつ reopen していない場合) は追加の鮮度判定を入れず、`modules/phase-state.md` に既知の制約として記載するに留める。既存 `closes #N` signature が持つ同種の制約 (reopen timestamp 不在時の無制限 grep) と同じ性質のため。
-- `modules/l0-surfaces.md` への `wholework-event` marker type 一覧の新設は行わない。同ファイルは type のレジストリを持たず (`type=verify-fail` も Example として載っているだけ)、`type=execution-log` も未登録のため、本 Issue で一覧を新設するのはスコープ外。
+- なし — 本 fix cycle で Pre-merge AC のうち `github_check "gh pr checks"` 以外はすべて充足済み。CI 結果は PR #1002 で確認する。
 
 ### Notes for Next Phase
 
-- **#993 との conflict 注意**: #993 も `_completion_code_patch()` を変更する (stray PR 検出ギャップ)。本 Issue の挿入位置 (commit 未検出後・ラベル fallback 手前) と物理的に近接する。先にマージされた側を base に rebase して解消すること。
-- **bash 3.2 互換**: `scripts/reconcile-phase-state.sh` は `declare -A` / `mapfile` を使わない方針。タイムスタンプ比較は `[[ "$a" > "$b" ]]` の文字列比較 (固定長 ISO-8601 UTC なので辞書順で正しい)。`gh` 組み込みの `--jq` を使い外部 `jq` へのパイプは行わない (ファイル内の既存スタイル)。
-- **`ISSUE_NUMBER` の jq フィルタ補間は安全**: script 冒頭 (line 67) で `^[0-9]+$` 検証済みのため、マーカー文字列への直接補間で injection リスクはない。
-- **`skills/*/SKILL.md` の validator 制約**: 本文追記時に半角 `!` を裸で置かない (マーカー文字列はインラインコードで囲む)、Step 番号に小数を使わない、code fence 外に triple backtick を置かない。
-- **既存 bats mock の回帰確認**: `tests/reconcile-phase-state.bats` の既存 `code-patch` ケース 5 件は `--json comments` に応答しない mock を使っているが、空出力 = マーカーなしとして扱われるため期待値は不変。実装後に全 green を確認すること。
+- `/verify` は本 PR マージ後、Pre-merge AC 6 件すべてと Post-merge の opportunistic observation (次回 operate route 実行時の `matches_expected: true` 観察) を確認すること。
+- PR #1001 で発生した CI 回帰 (test 670 の期待値誤り) は commit 20338988 で既に修正済みであり、本 PR には含まれない。本 PR は純粋にテスト・ドキュメント追加のみ。
 
 ## Auto Retrospective
 
