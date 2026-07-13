@@ -66,6 +66,25 @@ After the banner, detect the false-ready state: all acceptance conditions are pr
 
 ### Step 2: Detect and Update Base Branch
 
+**Worktree context guard (run first, before base branch detection):**
+
+`/verify` can be dispatched as a nested `Skill(skill="wholework:verify", ...)` call from `/review` or `/auto`, which runs in the same session and inherits the caller's CWD. If that CWD is still inside the caller's worktree when this Step reaches the base branch checkout below, one of two failure modes occurs: (a) if the main repository already has the base branch checked out, the checkout fails with `fatal: '<base>' is already used by worktree at ...` (exit 128); (b) if it does not, the checkout succeeds but silently switches the caller's worktree HEAD to the base branch. Step 3's Worktree Entry foreign-worktree detection runs too late to prevent either outcome — it only guards this skill's own worktree creation, not the checkout below.
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh "verify/issue-$NUMBER"
+```
+
+**Worktree context branches (exhaustive):**
+
+- **`none`** (main repository root — normal case): proceed with base branch detection and the `git checkout`/`git pull` below as written.
+- **`own`** (already inside the `verify/issue-$NUMBER` worktree — re-entrant call): still run base branch detection (`BASE_BRANCH` is needed by Step 13's Worktree Exit), but skip the `git checkout`/`git pull` at the end of this Step — the main repository already has the base branch checked out, so checking it out again inside this worktree would fail with exit 128. Proceed to Step 3; the Entry section will record `ENTERED_WORKTREE=false`.
+- **`foreign <path>`** (inherited the caller's worktree): do not run `git checkout`/`git pull`. Instead:
+  1. Output: `Warning: /verify was dispatched with the caller's worktree still active (<path>). Returning to the main repository root before base branch checkout.`
+  2. Call `ExitWorktree(action: "keep")` to exit the caller's worktree session (leaves the caller's worktree and branch on disk; a no-op if no session is active).
+  3. `cd <path>` (the path reported by the detection command above) to normalize CWD to the main repository root.
+  4. Re-run `${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh "verify/issue-$NUMBER"`. If it still does not report `none`, output `Error: Failed to return to the main repository root from <path>. Complete the caller's Worktree Exit, then re-run /verify $NUMBER.` and abort — do not proceed to checkout.
+  5. Once it reports `none`, continue with base branch detection and the `git checkout`/`git pull` below as written.
+
 If ARGUMENTS contains `--base {branch}`, use that as `BASE_BRANCH`. Otherwise, search for a merged PR linked to the Issue and fetch `baseRefName`:
 
 ```bash

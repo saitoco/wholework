@@ -792,6 +792,22 @@ Since the retrospective push (`git push origin HEAD`) is complete, call ExitWork
 
 ## Opportunistic Verification
 
+**Precondition (run first, before anything below in this section):**
+
+This section — including the Event-based observation scan below, which runs regardless of the `opportunistic-verify` setting — dispatches nested `Skill(skill="wholework:verify", ...)` calls in the same session and CWD. That dispatch is only safe once the preceding `## Worktree Exit (push-and-remove)` section has completed (Issue #930 / #1000); otherwise `/verify` inherits this session's still-active worktree.
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh "review/pr-$NUMBER"
+```
+
+(`$NUMBER` here is `/review`'s PR number, matching the `review/pr-$NUMBER` convention from Step 2.)
+
+**Worktree context branches (exhaustive):**
+
+- **`none`**: Worktree Exit already completed (or `ENTERED_WORKTREE=false` — no worktree was ever created). Continue with this section.
+- **`own`**: the `## Worktree Exit (push-and-remove)` section above has not run, or did not complete, and this session is still inside `review/pr-$NUMBER`. Go back and complete that section, then re-run this assertion. Do not dispatch nested `/verify` until this reports `none`.
+- **`foreign <path>`**: CWD is inside a different skill's worktree. Call `ExitWorktree(action: "keep")`, then `cd <path>` to return to the main repository root, then re-run this assertion. If it still does not report `none`, skip this entire section (both opportunistic verification and the Event-based observation scan) and output `Warning: skipping Opportunistic Verification — could not return to the main repository root from <path>.`
+
 If `opportunistic-verify: true` is set in `.wholework.yml`, read `${CLAUDE_PLUGIN_ROOT}/modules/opportunistic-verify.md` and follow "Processing Steps". Skill name: `/review`. Skip if not set.
 
 **Event-based observation scan (runs regardless of `opportunistic-verify` setting):**
