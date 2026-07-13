@@ -98,3 +98,13 @@ Nothing to note. All 3 Pre-merge conditions resolved cleanly: 2 `rubric` checks 
 ### Notes for Next Phase
 - `/verify 1006` can proceed directly — CI fully green, PR merged cleanly to `main`.
 - The Issue's single Post-merge condition (`<!-- verify-type: observation event=fix-cycle -->`) has no emitter yet (documented in the Issue's Auto-Resolved Ambiguity Points as out of scope, deferred to the #650 series) — `/verify` will need to fall back to manual confirmation of `events.jsonl` on the next verify FAIL cycle rather than relying on automatic observation dispatch.
+
+## Auto Retrospective
+
+### Manual recovery (spec)
+- **Date**: 2026-07-13 16:58 UTC
+- **Issue**: #1006, phase: spec
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn
+- **Wrapper exit code**: unknown
+- **Outcome**: success
