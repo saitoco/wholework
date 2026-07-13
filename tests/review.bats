@@ -23,3 +23,21 @@ opportunistic_verification_section() {
 @test "Opportunistic Verification: pr-review-light call passes --context-file" {
     opportunistic_verification_section | grep -q -- "--event pr-review-light --context-file"
 }
+
+@test "Opportunistic Verification: worktree exit precondition is asserted" {
+    opportunistic_verification_section | grep -q -F "detect-foreign-worktree.sh"
+}
+
+@test "Opportunistic Verification: all three worktree contexts are enumerated" {
+    opportunistic_verification_section | grep -q "none"
+    opportunistic_verification_section | grep -q "own"
+    opportunistic_verification_section | grep -q "foreign"
+}
+
+@test "Worktree Exit section precedes Opportunistic Verification" {
+    exit_line=$(grep -n -F "## Worktree Exit (push-and-remove)" "$SKILL_FILE" | head -1 | cut -d: -f1)
+    verify_line=$(grep -n -F "## Opportunistic Verification" "$SKILL_FILE" | head -1 | cut -d: -f1)
+    [ -n "$exit_line" ]
+    [ -n "$verify_line" ]
+    [ "$exit_line" -lt "$verify_line" ]
+}

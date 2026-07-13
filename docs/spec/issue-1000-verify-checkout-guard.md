@@ -165,25 +165,48 @@ Background セクションの技術的主張 (`skills/verify/SKILL.md` Step 2/St
 - 「worktree 内で base branch を checkout するとどうなるか」は Uncertainty として残さず、使い捨てリポジトリでの実測により Spec 作成中に解消した (2 つの failure mode を確認)。これが論点 1 の決め手になった。
 - `ExitWorktree` を nested skill から呼んだときの呼び出し元セッションへの影響は、ツール仕様の「no-op outside an EnterWorktree session」記述までは確認できたが、アクティブセッションを nested 側から exit した際の呼び出し元の挙動は実測していない。Uncertainty セクションに記録し、post-merge observation に委ねた。`/review` 側のアサーションが機能すれば `/verify` 側の `foreign` 分岐は発火しないため、実運用上の露出は小さい。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Changed Files (5件) と Implementation Steps (5件) は PR diff とすべて一致した。ガードブロックの位置・分岐構成 (`none`/`own`/`foreign`)・bats テストの追加方針のいずれも設計どおり。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- base branch checkout の保護方式は「Step 2 直前へのガード追加」を採用。`/issue` フェーズが有力視していた「Step 2/3 の順序入れ替え」は、worktree 内での `git checkout <base>` が exit 128 で失敗する (メインリポジトリが当該ブランチを checkout 済みの場合) か、worktree の HEAD をサイレントに切り替える (そうでない場合) ことを実測で確認したため棄却した。
-- `foreign` 検出時の復帰は `ExitWorktree(action: "keep")` → `cd <path>` → 再判定の 3 段。`cd` だけでは呼び出し元の worktree セッションが生きたままとなり、Step 3 の `EnterWorktree(name: ...)` がツール制約で失敗する。
-- `/review` 側の前提アサーションは `## Opportunistic Verification` セクション冒頭に直接配置する。`modules/opportunistic-verify.md` に置くと、`opportunistic-verify: false` 環境でも常時実行される Event-based observation scan ブロックをカバーできない。
-- 3 箇所に散る `detect-foreign-worktree.sh` の 3 分岐骨格は、tail action が異なるため共有モジュール化しない。
+- `/code` Step 12 の欠落 (Code Retrospective・Phase Handoff 未更新) を SHOULD 指摘として検出し、`/review` 側で修正コミットを追加した。実装ロジック自体には逸脱がなかったため、Spec の Implementation Steps は更新していない。
+- Pre-merge AC 4件はすべて PASS。MUST issue はゼロのため `event=COMMENT` でレビューを投稿した。
 
 ### Deferred Items
 
-- `own` 分岐 (`/verify` 再入呼び出し) の実挙動は現行の通常フローでは到達しないため、bats 構造テストによる分岐記述の存在確認に留めた。実挙動の観測は再入ケースが実際に発生した時点。
-- nested skill から `ExitWorktree` でアクティブな呼び出し元セッションを exit した際の呼び出し元挙動は未実測。post-merge observation AC (`event=pr-review-full`) に委ねた。
-- `docs/structure.md` の `tests/` ファイル数コメントのドリフト (95 → 実測 98) は本 Issue のスコープ外。
+- `own` 分岐 (`/verify` 再入呼び出し) の実挙動観測は再入ケースが実際に発生した時点まで保留。
+- nested skill から `ExitWorktree` でアクティブな呼び出し元セッションを exit した際の挙動は post-merge observation AC (`event=pr-review-full`) に委ねたまま未実測。
 
 ### Notes for Next Phase
 
-- SKILL.md に追加する分岐リストには **(exhaustive)** マーカーを付与すること。半角の感嘆符は使用不可 (`validate-skill-syntax.py`)。Step 2 の見出し文言・番号は変更しない。
-- `tests/verify.bats` は `tests/review.bats` の構造テスト方式 (awk でセクション抽出 → grep) をそのまま踏襲する。bash 3.2+ 互換 (`mapfile` 不可)。
-- `tests/review.bats` の既存ヘルパー `opportunistic_verification_section()` は awk で次の `## ` 見出しまでを抽出する。追加するアサーションブロックに `## ` 見出しを含めないこと (含めると既存 3 テストが壊れる)。
-- `allowed-tools` の変更は不要 (`detect-foreign-worktree.sh:*`・`ExitWorktree` は両 SKILL.md に登録済み)。追加すると `validate-skill-syntax.py` の KNOWN_TOOLS 同期が必要になるため、不要な追加を行わないこと。
+- Post-merge observation AC (`event=pr-review-full`) は本 `/review --full` の Opportunistic Verification / Event-based observation scan で発火する。`/verify` はこの観察結果 (nested `/verify` dispatch セッションでの `detect-foreign-worktree.sh` が `none` を返しているか) を確認すること。
+- `/code` フェーズでの Step 12 (Code Retrospective + Phase Handoff 書き込み) 未実行が今回発生した。再発時は `/verify` フェーズの retrospective で頻度を確認すること。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 構造的な乖離ではなく、プロセス上の欠落を1件検出した: `/code` Step 12 が要求する `## Code Retrospective` セクションの追加と Phase Handoff の `phase: code` への書き換えが、本 PR の `/code` 実行では行われていなかった (Spec は `phase: spec` のまま、PR ブランチのコミットは実装コミット1件のみ)。review-spec エージェントが検出し、`/review` 側で `/code` Step 12 相当の作業を代行して修正した (SHOULD 指摘としてインラインコメントに記録済み)。実装内容自体 (SKILL.md 変更・bats テスト) は Spec の Changed Files・Implementation Steps と完全一致しており、実装ロジックの乖離はなかった。
+
+### Recurring issues
+
+- review-bug (diff scan・security scan) 双方とも HIGH SIGNAL な指摘はゼロ。プロンプト系ドキュメント変更 + 構造テスト追加という変更内容の性質上、想定どおり低リスクだった。
+
+### Acceptance criteria verification difficulty
+
+- UNCERTAIN 判定なし。Pre-merge AC 4件はすべて PASS (rubric 3件は `/spec` フェーズで outcome ベースに調整済みの文言が奏功し、grader が実装内容から明確に判定できた。`command` 1件は CI job `Run bats tests` の成功による代替検証で解決)。`/issue` フェーズの Auto-Resolve Log が AC1/AC2 を outcome ベース記述に書き換えた判断 (実装手段を AC に埋め込まない) は、rubric grader の判定精度にも寄与したとみられる。
