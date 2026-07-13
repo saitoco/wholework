@@ -536,6 +536,33 @@ MOCK
     grep -q "phase=merge" "$EMIT_LOG"
 }
 
+@test "emit: EMIT_ISSUE_NUMBER uses resolved issue number, not PR number" {
+    EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { echo "\$1 issue=\$EMIT_ISSUE_NUMBER" >> "${EMIT_LOG}"; }
+MOCK
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    grep -q "issue=99" "$EMIT_LOG"
+    ! grep -q "issue=88" "$EMIT_LOG"
+}
+
+@test "emit: EMIT_ISSUE_NUMBER falls back to PR number when issue resolution fails" {
+    EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    cat > "$MOCK_DIR/gh-extract-issue-from-pr.sh" <<'MOCK'
+#!/bin/bash
+echo ""
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/gh-extract-issue-from-pr.sh"
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { echo "\$1 issue=\$EMIT_ISSUE_NUMBER" >> "${EMIT_LOG}"; }
+MOCK
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    grep -q "issue=88" "$EMIT_LOG"
+}
+
 @test "emit: phase_start not emitted when EMIT_PHASE_NAME is pre-set (no double emit)" {
     EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
     cat > "$MOCK_DIR/emit-event.sh" <<MOCK
