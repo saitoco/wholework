@@ -118,3 +118,13 @@ No new comments since last phase.
 ### Notes for Next Phase
 - `/verify` should confirm the post-merge observation AC by checking the next `/auto --batch` L3 retrospective for correct "Issues processed" counts.
 - No MUST/SHOULD/CONSIDER issues were raised during review; merge was clean.
+
+## Auto Retrospective
+
+### Manual recovery (code-pr)
+- **Date**: 2026-07-13 18:28 UTC
+- **Issue**: #1007, phase: code-pr
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn
+- **Wrapper exit code**: unknown
+- **Outcome**: success
