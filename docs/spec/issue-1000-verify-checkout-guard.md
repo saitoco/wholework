@@ -210,3 +210,30 @@ Background セクションの技術的主張 (`skills/verify/SKILL.md` Step 2/St
 ### Acceptance criteria verification difficulty
 
 - UNCERTAIN 判定なし。Pre-merge AC 4件はすべて PASS (rubric 3件は `/spec` フェーズで outcome ベースに調整済みの文言が奏功し、grader が実装内容から明確に判定できた。`command` 1件は CI job `Run bats tests` の成功による代替検証で解決)。`/issue` フェーズの Auto-Resolve Log が AC1/AC2 を outcome ベース記述に書き換えた判断 (実装手段を AC に埋め込まない) は、rubric grader の判定精度にも寄与したとみられる。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 品質は良好。outcome ベースの rubric 文言 (実装手段を埋め込まない) が verify 時の rubric 判定でも明確な PASS 根拠を与えた (review 時と同一の判定結果を再現)。
+- `/spec` フェーズが「Step 2/3 順序入れ替え」案を使い捨てリポジトリでの実測で棄却した判断は、実装・テスト・検証の全フェーズで一度も揺り戻しが発生せず有効だった。
+
+#### design
+- 二層防御 (`/review` 側 precondition が主、`/verify` 側 Step 2 guard が最終防衛線) の設計は Changed Files 5 件・Implementation Steps 5 件すべて PR diff と一致 (Code Retrospective で確認済み)。
+
+#### code
+- 実装内容の rework なし。ただしオーケストレーション層で外部要因の異常が発生: `run-auto-sub.sh 1000` の code phase (バックグラウンドの `claude -p`) が原因不明の外部 kill で停止した。親セッションが `run-auto-sub.sh 1000` を再実行し、code_phase_milestone resume (observed milestone: post-commit → action: push-and-pr) により commit 済みの作業を失わず PR #1004 として復帰した。この復帰は Tier 1/2/3 recovery 機構の外 (親セッション主導の再スポーン) で行われたため、Spec の `## Auto Retrospective` にも `docs/reports/orchestration-recoveries.md` にも記録されていない。本セッションでは同型の外部 kill が計 3 回発生しており、横断分析は L3 session retrospective (session 37830-1783901301) の Findings で扱う。
+
+#### review
+- `/code` Step 12 の欠落 (Code Retrospective 未追記・Phase Handoff 未更新) を review-spec エージェントが検出し `/review` が代行修正した (review retrospective に記録済み)。検出→代行のループは機能したが、`/code` 側の欠落自体は上記の外部 kill → resume と同一実行内の事象であり、resume 経路が Step 12 を通らない構造 (milestone: post-commit からの再開は push-and-pr へ直行する) が原因とみられる。
+
+#### merge
+- conflict なし (mergeable=true で Squash Merge 直行)。`closes #1000` による Issue 自動クローズも想定どおり動作。
+
+#### verify
+- Pre-merge AC 4 件すべて一発 PASS (rubric 3 + command 1、bats 10/10)。FAIL・UNCERTAIN・PENDING なし。
+- Post-merge observation AC (`event=pr-review-full`) はイベント待ちで未消化。次回 `/review --full` 時に自動観察される。
+
+### Improvement Proposals
+- N/A — 外部 kill → 親セッション再スポーン + milestone resume の記録ギャップ (Tier 1/2/3 機構外の recovery が orchestration-recoveries.md に残らない) は、本セッションで 3 回発生した横断事象として L3 session retrospective の Findings で集約判断する (Issue 単体の提案としては起票しない)。
