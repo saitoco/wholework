@@ -162,6 +162,15 @@ _append_hints_to_actual() {
     "${json%\}}" "$hint_commit_val" "$hint_pr_val"
 }
 
+# Return the createdAt timestamp of the most recent operate route completion
+# marker comment (execution-log for L2/L3, or execution-plan for L1 advisory)
+# on the issue, or empty string if none found or the gh call fails.
+_operate_signal_ts() {
+  gh issue view "$ISSUE_NUMBER" --json comments \
+    --jq "[.comments[] | select(.body | contains(\"<!-- wholework-event: type=execution-log phase=code issue=${ISSUE_NUMBER}\") or contains(\"<!-- wholework-event: type=execution-plan phase=code issue=${ISSUE_NUMBER}\")) | .createdAt] | sort | last // empty" \
+    2>/dev/null || true
+}
+
 _completion_spec() {
   local spec_path
   spec_path=$("$SCRIPT_DIR/get-config-value.sh" spec-path "docs/spec" 2>/dev/null) || spec_path="docs/spec"
@@ -226,6 +235,28 @@ _completion_code_patch() {
     fi
     mismatch_diag="no commit with closes #${ISSUE_NUMBER} found on origin/main"
   fi
+
+  # Operate route completion signal: operate route (see Step 0 ROUTE=operate in
+  # skills/code/SKILL.md) never produces a closes #N commit, so accept an
+  # execution-log/execution-plan marker comment as an alternate success signature.
+  # Checked before the label/state fallback so it also applies during a fix-cycle
+  # re-run (reopen_ts non-null skips the label/state fallback below).
+  # See modules/phase-state.md#operate-route-completion-signature
+  local operate_ts
+  operate_ts=$(_operate_signal_ts)
+  local operate_signal=false
+  if [[ -n "$operate_ts" && "$operate_ts" != "null" ]]; then
+    if [[ -z "$reopen_ts" || "$reopen_ts" == "null" ]] || [[ "$operate_ts" > "$reopen_ts" ]]; then
+      operate_signal=true
+    fi
+  fi
+
+  if [[ "$operate_signal" == "true" ]]; then
+    actual_json="${actual_json%\}},\"operate_signal\":true}"
+    _emit_result "true" "operate route completion: execution-log/plan marker comment found (${operate_ts}) for issue #${ISSUE_NUMBER}; no closes #${ISSUE_NUMBER} commit expected" "$actual_json"
+    return
+  fi
+  actual_json="${actual_json%\}},\"operate_signal\":false}"
 
   # Fallback: check phase labels or issue state for async external commit areas.
   # See modules/orchestration-fallbacks.md#async-external-commit
