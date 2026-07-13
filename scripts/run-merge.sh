@@ -64,10 +64,14 @@ _maybe_emit_phase_complete() {
 }
 trap '_maybe_emit_phase_complete' EXIT
 
+_MERGE_ISSUE=$("$SCRIPT_DIR/gh-extract-issue-from-pr.sh" "$PR_NUMBER" 2>/dev/null \
+  | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('issue_number',''))" 2>/dev/null || echo "")
+
 _EMIT_PHASE_OWNED=""
 if [[ -z "${EMIT_PHASE_NAME:-}" ]]; then
   _EMIT_PHASE_OWNED=1
-  export EMIT_ISSUE_NUMBER="$PR_NUMBER"
+  export EMIT_ISSUE_NUMBER="${_MERGE_ISSUE:-$PR_NUMBER}"
+  export EMIT_PR_NUMBER="$PR_NUMBER"
   export EMIT_PHASE_NAME="merge"
   emit_event "phase_start" "phase=${EMIT_PHASE_NAME}"
 fi
@@ -162,9 +166,6 @@ else
 fi
 set -e
 "$SCRIPT_DIR/handle-permission-mode-failure.sh" "$EXIT_CODE" "$SECONDS" "$PERMISSION_MODE"
-
-_MERGE_ISSUE=$("$SCRIPT_DIR/gh-extract-issue-from-pr.sh" "$PR_NUMBER" 2>/dev/null \
-  | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('issue_number',''))" 2>/dev/null || echo "")
 
 if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
   if [[ -n "$_MERGE_ISSUE" ]]; then

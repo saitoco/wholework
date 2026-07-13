@@ -39,6 +39,21 @@ FIXTURE_EOF
     echo "$output" | grep -q "### Recovery Events"
 }
 
+@test "Issues processed: batch Issue and observation dispatch Issue are both counted" {
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"session-mix","size":"S"}
+{"ts":"2026-06-14T10:01:00Z","issue":100,"event":"phase_start","session_id":"session-mix","phase":"code-patch"}
+{"ts":"2026-06-14T10:05:00Z","issue":100,"event":"phase_complete","session_id":"session-mix","phase":"code-patch"}
+{"ts":"2026-06-14T10:05:01Z","issue":100,"event":"sub_complete","session_id":"session-mix","exit_code":"0"}
+{"ts":"2026-06-14T11:00:00Z","issue":200,"event":"phase_start","session_id":"session-mix","phase":"verify"}
+{"ts":"2026-06-14T11:02:00Z","issue":200,"event":"phase_complete","session_id":"session-mix","phase":"verify"}
+FIXTURE_EOF
+
+    run bash "$SCRIPT" "session-mix" --metrics-only --no-github
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "Issues processed | 2"
+}
+
 @test "--since list mode: lists distinct session_ids from event log" {
     cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
 {"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"session-X","size":"S"}
