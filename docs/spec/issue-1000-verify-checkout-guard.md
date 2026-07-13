@@ -180,19 +180,33 @@ Background セクションの技術的主張 (`skills/verify/SKILL.md` Step 2/St
 - N/A
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Spec の Implementation Steps をそのまま適用し、設計からの逸脱なく実装した。base branch checkout の保護方式・`foreign` 復帰手順・`/review` 側アサーション配置・共有モジュール化見送りの判断は、いずれも spec retrospective の記録どおり維持した。
+- `/code` Step 12 の欠落 (Code Retrospective・Phase Handoff 未更新) を SHOULD 指摘として検出し、`/review` 側で修正コミットを追加した。実装ロジック自体には逸脱がなかったため、Spec の Implementation Steps は更新していない。
+- Pre-merge AC 4件はすべて PASS。MUST issue はゼロのため `event=COMMENT` でレビューを投稿した。
 
 ### Deferred Items
 
-- `own` 分岐 (`/verify` 再入呼び出し) の実挙動は現行の通常フローでは到達しないため、bats 構造テストによる分岐記述の存在確認に留めた。実挙動の観測は再入ケースが実際に発生した時点。
-- nested skill から `ExitWorktree` でアクティブな呼び出し元セッションを exit した際の呼び出し元挙動は未実測。post-merge observation AC (`event=pr-review-full`) に委ねた。
-- `docs/structure.md` の `tests/` ファイル数コメントのドリフト (95 → 実測 98) は本 Issue のスコープ外。
+- `own` 分岐 (`/verify` 再入呼び出し) の実挙動観測は再入ケースが実際に発生した時点まで保留。
+- nested skill から `ExitWorktree` でアクティブな呼び出し元セッションを exit した際の挙動は post-merge observation AC (`event=pr-review-full`) に委ねたまま未実測。
 
 ### Notes for Next Phase
 
-- Pre-merge AC 4件はすべて `/review` で PASS 判定済み (rubric x3、`command "bats tests/verify.bats tests/review.bats"` は CI job `Run bats tests` の成功による代替検証)。
-- Post-merge observation AC (`event=pr-review-full`) は本 PR の `/review --full` 完了時点で発火する Event-based observation scan によって初めて検証機会を得る。次フェーズ (`/verify`) はこの観察結果を確認すること。
+- Post-merge observation AC (`event=pr-review-full`) は本 `/review --full` の Opportunistic Verification / Event-based observation scan で発火する。`/verify` はこの観察結果 (nested `/verify` dispatch セッションでの `detect-foreign-worktree.sh` が `none` を返しているか) を確認すること。
+- `/code` フェーズでの Step 12 (Code Retrospective + Phase Handoff 書き込み) 未実行が今回発生した。再発時は `/verify` フェーズの retrospective で頻度を確認すること。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 構造的な乖離ではなく、プロセス上の欠落を1件検出した: `/code` Step 12 が要求する `## Code Retrospective` セクションの追加と Phase Handoff の `phase: code` への書き換えが、本 PR の `/code` 実行では行われていなかった (Spec は `phase: spec` のまま、PR ブランチのコミットは実装コミット1件のみ)。review-spec エージェントが検出し、`/review` 側で `/code` Step 12 相当の作業を代行して修正した (SHOULD 指摘としてインラインコメントに記録済み)。実装内容自体 (SKILL.md 変更・bats テスト) は Spec の Changed Files・Implementation Steps と完全一致しており、実装ロジックの乖離はなかった。
+
+### Recurring issues
+
+- review-bug (diff scan・security scan) 双方とも HIGH SIGNAL な指摘はゼロ。プロンプト系ドキュメント変更 + 構造テスト追加という変更内容の性質上、想定どおり低リスクだった。
+
+### Acceptance criteria verification difficulty
+
+- UNCERTAIN 判定なし。Pre-merge AC 4件はすべて PASS (rubric 3件は `/spec` フェーズで outcome ベースに調整済みの文言が奏功し、grader が実装内容から明確に判定できた。`command` 1件は CI job `Run bats tests` の成功による代替検証で解決)。`/issue` フェーズの Auto-Resolve Log が AC1/AC2 を outcome ベース記述に書き換えた判断 (実装手段を AC に埋め込まない) は、rubric grader の判定精度にも寄与したとみられる。
