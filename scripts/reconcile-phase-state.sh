@@ -166,9 +166,16 @@ _append_hints_to_actual() {
 # marker comment (execution-log for L2/L3, or execution-plan for L1 advisory)
 # on the issue, or empty string if none found or the gh call fails.
 _operate_signal_ts() {
-  gh issue view "$ISSUE_NUMBER" --json comments \
+  local ts
+  ts=$(gh issue view "$ISSUE_NUMBER" --json comments \
     --jq "[.comments[] | select(.body | contains(\"<!-- wholework-event: type=execution-log phase=code issue=${ISSUE_NUMBER}\") or contains(\"<!-- wholework-event: type=execution-plan phase=code issue=${ISSUE_NUMBER}\")) | .createdAt] | sort | last // empty" \
-    2>/dev/null || true
+    2>/dev/null) || true
+  # Accept only ISO8601-shaped values: the freshness gate compares this string
+  # against reopen_ts lexicographically, so a non-timestamp value (e.g. from a
+  # degraded gh that prints unrelated text) must not pass as a marker signal.
+  if [[ "$ts" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T ]]; then
+    printf '%s\n' "$ts"
+  fi
 }
 
 _completion_spec() {
