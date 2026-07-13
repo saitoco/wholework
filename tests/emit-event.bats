@@ -218,3 +218,34 @@ teardown() {
     [ "$status" -eq 0 ]
     [[ "$output" == "LOG=[/preset/path.jsonl] SID=[]" ]]
 }
+
+@test "restore_auto_session_pointer finds main worktree pointer file from a linked worktree CWD (Issue #1006)" {
+    # Same fixture convention as tests/detect-foreign-worktree.bats: real git
+    # repo + linked worktree (no git binary mocking).
+    MAIN_REPO="$BATS_TEST_TMPDIR/main"
+    git init -q "$MAIN_REPO"
+    git -C "$MAIN_REPO" config user.email "test@example.com"
+    git -C "$MAIN_REPO" config user.name "Test"
+    (
+        cd "$MAIN_REPO"
+        echo "init" > file.txt
+        git add -A
+        git commit -q -m init
+    )
+    # Resolve to the real path (e.g. macOS /tmp -> /private/tmp) so it matches
+    # what `git worktree list` reports.
+    MAIN_REPO="$(cd "$MAIN_REPO" && pwd -P)"
+
+    mkdir -p "$MAIN_REPO/.tmp"
+    echo "worktree-session-456" > "$MAIN_REPO/.tmp/auto-session-current"
+
+    LINKED_WORKTREE="$BATS_TEST_TMPDIR/linked_wt"
+    git -C "$MAIN_REPO" worktree add -q -b worktree-code+issue-1006 "$LINKED_WORKTREE"
+
+    run bash -c "cd \"$LINKED_WORKTREE\" && unset AUTO_EVENTS_LOG AUTO_SESSION_ID && source \"$SCRIPT\" && restore_auto_session_pointer && echo \"SID=[\$AUTO_SESSION_ID] LOG=[\$AUTO_EVENTS_LOG]\""
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"SID=[worktree-session-456]"* ]]
+    [[ "$output" == *"LOG=[${MAIN_REPO}/.tmp/auto-events.jsonl]"* ]]
+    # Must resolve under the main repo root, never the linked worktree path.
+    [[ "$output" != *"LOG=[${LINKED_WORKTREE}"* ]]
+}
