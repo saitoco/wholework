@@ -100,3 +100,31 @@
 ### Notes for Next Phase
 - This is a patch route (direct commit to main, no `/review`/`/merge` phase) — `/verify` is the next phase and should focus on the post-merge opportunistic AC (observe blocking behavior on a future PR route review).
 - Full `bats tests/` suite (1173 tests) was run and passed due to Behavioral Change Detection matching `tests/run-review.bats` (unrelated fixture reference, not a real dependency) — no action needed, just informational for `/verify`.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue 本文の Auto-Resolved Ambiguity Points が参照していた「Step 7」が現行 SKILL.md では Step 8 (Static Acceptance Criteria Verification) である齟齬を Spec が検出し、実際のステップ番号で実装対象を確定した。前フェーズ記述のファクト検証が機能した好例。
+- FAIL 判定全般 (コマンド種別を問わない) を MUST 相当とする一般化判断は、Step 8 が曖昧ケースで常に UNCERTAIN を返す既存設計を根拠としており、rubric 判定でも明確な PASS 根拠になった。
+
+#### design
+- 既存の MUST issue → `REQUEST_CHANGES` ゲート再利用 (新規ブロック機構を作らない) という Issue 段階の方針が Spec → 実装まで一貫し、変更は 2 ファイル 43 行に収まった。
+
+#### code
+- 実装は Implementation Steps 4 件どおりで rework なし。ただしオーケストレーション層で外部要因の異常が 1 回発生: 初回の `run-auto-sub.sh 1003` が spec phase 完走直後、code phase (patch) の開始直後に原因不明の外部 kill で停止した (silent 840s 経過後の spec 完了メッセージ直後)。親セッションが `run-auto-sub.sh 1003` を再実行し、spec は `phase/code` ラベルによりスキップ、code phase は最初から実行されて完走した (commit なしからの再実行のため milestone resume は不要だった)。この復帰は Tier 1/2/3 recovery 機構の外 (親セッション主導の再スポーン) で行われ、`## Auto Retrospective` にも `docs/reports/orchestration-recoveries.md` にも記録されていない。同型の外部 kill は本セッション通算 4 回目であり、横断分析は L3 session retrospective (session 37830-1783901301) の Findings で扱う。
+- Behavioral Change Detection が `tests/run-review.bats` の fixture 参照 (実依存なし) にマッチし full suite (1173 tests) を実行した。誤検知だが safe 側への倒れ方であり、追加ランタイム以外の実害なし。
+
+#### review
+- N/A — patch route のため review phase なし。本 Issue が変更した `/review` の新挙動は次回 PR route Issue で初適用される。
+
+#### merge
+- N/A — patch route (main 直コミット fc641025、`closes #1003` によるクローズも正常)。
+
+#### verify
+- Pre-merge AC 3 件すべて一発 PASS (rubric 3、bats 8/8)。FAIL・UNCERTAIN・PENDING なし。
+- Post-merge opportunistic AC は次回 PR route review 時に消化予定。本 Issue の実装 (review ブロッキング) と #998 で観察されたすり抜け実例が同一バッチ内で起票→着地まで完結した。
+
+### Improvement Proposals
+- N/A — 外部 kill → 親セッション再スポーンの記録ギャップは本セッション横断事象として L3 session retrospective の Findings で集約判断する (Issue 単体では起票しない)。
