@@ -1123,6 +1123,43 @@ MOCK_EOF
     [[ "$output" == *'"operate_signal":false'* ]]
 }
 
+@test "code-patch completion: operate route - reopen present + marker after reopen -> matches_expected true (fix-cycle re-run prevention)" {
+    cat > "$MOCK_DIR/gh-graphql.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "2026-06-01T00:00:00Z"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
+
+    # Fix-cycle re-run (reopen_ts non-null): the operate route re-executes after
+    # reopen and posts a fresh marker comment. This is the freshness-gate PASS
+    # branch (operate_ts > reopen_ts) — the most dangerous scenario from the
+    # Background (case (a)): without this signal, run-code.sh would misdiagnose
+    # the successful re-run as a silent no-op and re-execute the external write.
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json comments"* ]]; then echo "2026-07-13T04:00:00Z"; exit 0; fi
+if [[ "$*" == *"--json labels"* ]]; then echo "phase/code"; exit 0; fi
+if [[ "$*" == *"--json state"* ]]; then echo "OPEN"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "log" ]]; then echo ""; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-patch 55 --check-completion --strict
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"matches_expected":true'* ]]
+    [[ "$output" == *'"operate_signal":true'* ]]
+}
+
 @test "code-patch completion: operate route - marker older than reopen timestamp -> freshness gate rejects" {
     cat > "$MOCK_DIR/gh-graphql.sh" << 'MOCK_EOF'
 #!/bin/bash
