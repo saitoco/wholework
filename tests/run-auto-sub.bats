@@ -40,6 +40,7 @@ MOCK
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
 emit_event() { :; }
 _emit_comments_consumed() { :; }
+restore_auto_session_pointer() { :; }
 MOCK
 
     cat > "$MOCK_DIR/check-verify-dirty.sh" <<'MOCK'
@@ -1610,6 +1611,180 @@ MOCK
     ! grep -q "Auto Retrospective" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
     grep -q -- "closes #42" "$GH_LOG"
     grep -q -- "--state open" "$GH_LOG"
+}
+
+@test "run-auto-sub: manual recovery: resolves the main worktree root instead of a worktree-local toplevel" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+    export MAIN_ROOT="$BATS_TEST_TMPDIR/main"
+    export WT_ROOT="$BATS_TEST_TMPDIR/wt"
+    mkdir -p "$MAIN_ROOT/docs/spec" "$MAIN_ROOT/docs/reports" "$WT_ROOT"
+    echo "# Issue #42: test spec" > "$MAIN_ROOT/docs/spec/issue-42-test.md"
+    printf '%s\n' "# Orchestration Recovery Log" "<!-- Log entries appear below, newest first. -->" > "$MAIN_ROOT/docs/reports/orchestration-recoveries.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"worktree list --porcelain"* ]]; then
+    echo "worktree $MAIN_ROOT"
+    exit 0
+fi
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$WT_ROOT"
+    exit 0
+fi
+if [[ "$*" == *"status"* && "$*" == *"--porcelain"* && "$*" == *"issue-42"* ]]; then
+    echo " M docs/spec/issue-42-test.md"
+    exit 0
+fi
+if [[ "$*" == *"diff"* && "$*" == *"orchestration-recoveries.md"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    cd "$WT_ROOT"
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only
+    [ "$status" -eq 0 ]
+    grep -q "Manual recovery" "$MAIN_ROOT/docs/spec/issue-42-test.md"
+    grep -q "manual-recovery-push-only" "$MAIN_ROOT/docs/reports/orchestration-recoveries.md"
+    grep -q -- "-C $MAIN_ROOT " "$GIT_LOG"
+    ! grep -q -- "-C $WT_ROOT" "$GIT_LOG"
+}
+
+@test "run-auto-sub: manual recovery: appends canonical H2 entry to orchestration-recoveries.md" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+    mkdir -p "$BATS_TEST_TMPDIR/docs/reports"
+    printf '%s\n' "# Orchestration Recovery Log" "<!-- Log entries appear below, newest first. -->" > "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"diff"* && "$*" == *"orchestration-recoveries.md"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only 137
+    [ "$status" -eq 0 ]
+    grep -qE "^## [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2} UTC: manual-recovery-push-only$" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    grep -q "Wrapper: run-auto-sub.sh, exit code: 137" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    grep -qE "commit.*manual-recovery-push-only" "$GIT_LOG"
+}
+
+@test "run-auto-sub: manual recovery: emits manual_intervention event with intervention_type" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+    export EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+    echo "# Issue #42: test spec" > "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+emit_event() { echo "$@" >> "$EMIT_LOG"; }
+_emit_comments_consumed() { :; }
+restore_auto_session_pointer() { :; }
+MOCK
+
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only 143
+    [ "$status" -eq 0 ]
+    grep -q "manual_intervention" "$EMIT_LOG"
+    grep -q "intervention_type=push-only" "$EMIT_LOG"
+    grep -q "wrapper_exit_code=143" "$EMIT_LOG"
+    grep -q "recovery_target=code" "$EMIT_LOG"
+}
+
+@test "run-auto-sub: manual recovery: open PR skips spec write but still records recoveries log and event" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+    export GH_LOG="$BATS_TEST_TMPDIR/gh.log"
+    export EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec" "$BATS_TEST_TMPDIR/docs/reports"
+    echo "# Issue #42: test spec" > "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    printf '%s\n' "# Orchestration Recovery Log" "<!-- Log entries appear below, newest first. -->" > "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"diff"* && "$*" == *"orchestration-recoveries.md"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GH_LOG"
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo '[{"number":123}]'
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+emit_event() { echo "$@" >> "$EMIT_LOG"; }
+_emit_comments_consumed() { :; }
+restore_auto_session_pointer() { :; }
+MOCK
+
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only
+    [ "$status" -eq 0 ]
+    ! grep -q "Auto Retrospective" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    grep -q "manual-recovery-push-only" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    grep -q "manual_intervention" "$EMIT_LOG"
 }
 
 @test "run-auto-sub: tier2 recovery: commits when spec file is untracked" {

@@ -528,6 +528,34 @@ See also: `#async-external-commit` (reconcile-first authority — `matches_expec
 
 ---
 
+## external-kill-parent-respawn
+
+### Symptom
+- A background `run-*.sh` wrapper (invoked via `claude -p` from a parent `/auto` session) stops producing output and never returns, with no `Exit code:` trailer line in `.tmp/wrapper-out-$NUMBER-$PHASE.log`
+- `.tmp/auto-events.jsonl` has no `wrapper_exit` event for the phase, and no backfilled `phase_complete` event either — the `_maybe_emit_phase_complete()` EXIT trap fires on exit 0/143 but never ran, meaning the wrapper's own process (not just its leaf `claude -p` child) was killed before its trap could execute
+- Not a watchdog timeout: observed silent windows (e.g. "silent for 480s", "silent for 1260s") are well under the phase's configured watchdog timeout
+- Not a jetsam/OOM kill: `/Library/Logs/DiagnosticReports/` and `~/Library/Logs/DiagnosticReports/` show no matching `JetsamEvent-*` report for the kill window
+- Elapsed time to kill is not fixed (observed range: roughly 2–22 minutes across 7 occurrences)
+
+### Applicable Phases
+- Any phase launched as a background wrapper by the parent `/auto` session: `run-auto-sub.sh`, `run-code.sh`, `run-spec.sh`, `run-review.sh`, `run-merge.sh`
+
+### Fallback Steps
+1. Detect the signature above (see `skills/auto/SKILL.md` Step 6 "External kill pre-check (before Tier 1)")
+2. Respawn the same `run-*.sh` with the same arguments — the `phase/*` label (SSoT) and the `code_phase_milestone` checkpoint restore existing progress, so the respawn resumes rather than restarting from scratch
+3. After the respawned phase completes, record the recovery via `#manual-recovery-spec-write` below, using recovery type `respawn`
+
+### Escalation
+- None — the parent session is the only actor able to observe and act on this kill (see Rationale); there is no deeper tier to escalate to
+
+### Rationale
+- Introduced in Issue #1005: investigation of session 37830 (2026-07-13) `events.jsonl` found that killed phases have neither a `wrapper_exit` event nor a backfilled `phase_complete` event, confirming the wrapper process itself (including its EXIT trap) was terminated, not merely its leaf `claude -p` child
+- This makes `retry-on-kill.sh`'s Layer B (`run_with_retry_on_kill()` running inside `run-auto-sub.sh`) structurally unable to fire: it executes inside the same process group that gets killed, so it cannot observe or react to its own termination — see `wrapper-retry-on-kill` above for the process-group-internal case this pattern cannot cover
+- Because the wrapper cannot self-detect or self-recover, the parent `/auto` session is the only recovery-capable actor; this is a deliberate design constraint, not an implementation gap
+- Root cause of the external kill itself remains an open hypothesis (Claude Code harness background-task lifecycle vs. terminal/shell process-group kill vs. unknown); see `docs/reports/external-kill-investigation.md`
+
+---
+
 ## manual-recovery-spec-write
 
 ### Symptom
@@ -535,25 +563,29 @@ See also: `#async-external-commit` (reconcile-first authority — `matches_expec
 - The sub-issue Spec's `## Auto Retrospective` section does not have a recovery entry for this manual intervention
 
 ### Applicable Phases
-- code, review, merge (XL sub-issue parent session manual recovery)
+- code, review, merge (XL sub-issue parent session manual recovery); also the `external-kill-parent-respawn` pattern above
 
 ### Fallback Steps
 1. After the manual recovery action completes successfully, run:
    ```bash
-   bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE RECOVERY_TYPE
+   bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE RECOVERY_TYPE EXIT_CODE
    ```
-   where `RECOVERY_TYPE` is a short string describing the action taken (e.g., `push-only`, `pr-create`, `review-rerun`)
-2. Before writing, the subcommand checks for an open PR linked to the issue (`gh pr list --search "closes #ISSUE" --state open`). If one exists, it skips the Spec write and commit/push entirely and logs a warning to retry after the PR merges — this avoids a self-induced merge conflict between the manual-recovery commit on main and the open PR's branch touching the same Spec region (#890)
-3. Otherwise, `_write_manual_recovery_to_spec()` appends a `### Manual recovery (PHASE)` entry to the Spec's `## Auto Retrospective` section and commits/pushes immediately
-4. The entry includes: date, issue/phase, source (`parent session manual recovery`), recovery type, and outcome (`success`)
+   where `RECOVERY_TYPE` is a short string describing the action taken (e.g., `push-only`, `pr-create`, `review-rerun`, `respawn`) and `EXIT_CODE` is the original wrapper exit code, or `unknown` if it could not be observed
+2. Before doing anything, the subcommand resolves the *main* repository root (via `git worktree list --porcelain`, falling back to `git rev-parse --show-toplevel` then `pwd`) and `cd`s there, so all writes below land on main even when the subcommand is invoked from a non-main worktree CWD (see #1005 — a `--write-manual-recovery` call made from a code worktree CWD previously pushed its record to that worktree's PR branch instead of main)
+3. The subcommand then writes to three places, each with a distinct consumer:
+   - `_write_manual_recovery_to_spec()`: appends a `### Manual recovery (PHASE)` entry to the sub-issue Spec's `## Auto Retrospective` section (consumed by `/verify` Step 12's skip-judgment)
+   - `_write_manual_recovery_to_recoveries_log()`: appends a `## <date> UTC: manual-recovery-<type>` (H2) entry to `docs/reports/orchestration-recoveries.md` (consumed by `scripts/collect-recovery-candidates.sh` frequency detection and `recoveries-auto-fire`)
+   - `emit_event "manual_intervention" ...`: appends a `manual_intervention` event to `.tmp/auto-events.jsonl` (consumed by the L3 session retrospective's `Parent session manual interventions` Metrics row)
+4. The open-PR guard (`gh pr list --search "closes #ISSUE" --state open`) applies **only** to the Spec write in step 3's first bullet — a self-induced merge conflict risk exists only there, since the open PR's branch may also touch the same Spec file (#890). The recoveries log and event writes proceed unconditionally: `orchestration-recoveries.md` is not touched by PR branches, and the event log has no merge-conflict surface at all
 
 ### Escalation
-- If the script exits non-zero (commit/push failure), a WARNING is logged to stderr and execution continues — spec write failure is non-fatal; the `/verify` session can still record the anomaly manually
+- If any individual write fails (commit/push failure for the Spec or recoveries-log write), a WARNING is logged to stderr for that write and execution continues to the remaining writes — a failure in one of the three recording paths is non-fatal to the others
 
 ### Rationale
 - Introduced in Issue #822: `_write_tier2_recovery_to_spec()` and `_write_tier3_recovery_to_spec()` (Issue #800) only cover automatic recovery paths; manual recovery by the parent session left `## Auto Retrospective` incomplete, requiring verify-session manual supplementation
 - Symmetric with Tier 2/3 paths: same `## Auto Retrospective` section, same `### <type> recovery (phase)` heading format
 - `/verify` Step 12's skip-judgment now includes `### Manual recovery` entries as "already recorded" (alongside Tier 2/Tier 3), eliminating the need for manual supplementation
+- Extended in Issue #1005 to also write `docs/reports/orchestration-recoveries.md` and emit a `manual_intervention` event: the Spec-only write left cross-Issue frequency detection and session Metrics permanently at zero, since parent-session-driven recovery happens entirely outside the Tier 1/2/3 machinery that feeds those other two consumers
 
 ---
 
