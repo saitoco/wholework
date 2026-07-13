@@ -231,3 +231,27 @@ reopen timestamp が取得できないケースで、同一 Issue の Spec が o
 ### Acceptance criteria verification difficulty
 
 - 特になし。Issue #998 の 6 件の Pre-merge AC (rubric×2, file_contains×3, github_check×1) はいずれも安全に自動判定でき、UNCERTAIN は発生しなかった。`github_check "gh pr checks" "Run bats tests"` は safe mode allowlist 経由で問題なく実行できた。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### code
+- 初回実装 (PR #1001) が AC5 の要求する bats テスト (`tests/reconcile-phase-state.bats` への operate signal テスト追加) を含まないまま PR 化された。実装本体・ドキュメントは Spec 通りだが、テストだけが欠落した。
+
+#### review
+- **full review (PR #1001) が AC5 の未達を検出しなかった**。AC5 は `file_contains "tests/reconcile-phase-state.bats" "operate"` という safe-mode 互換の機械チェックであり、review の AC 検証ステップで FAIL を検出できたはずだが、review は通過した。verify 初回実行での FAIL 検出まで持ち越された (Improvement Proposals 参照)。
+- また PR #1001 は既存テスト 670 を CI FAIL させたまま review を通過し、merge phase で初めてブロックされた。
+
+#### merge
+- 初回 merge は CI FAIL (テスト 670 の crude gh モックが新設 `_operate_signal_ts` の comments クエリに誤マッチ) でブロック。`_operate_signal_ts` への ISO8601 形状検証追加 (commit 20338988) で解消し、manual recovery として `## Auto Retrospective` に記録済み。
+
+#### verify
+- 初回検証で AC5 FAIL → verify-fail marker (修正ガイダンス付き) を投稿し、L3 auto-retry (iteration 1/3) が発火。fix cycle (`/code --pr` → PR #1002 → full review → merge) の後の再検証で全 6 AC PASS。**verify FAIL → auto-retry → 再検証 PASS の完全ループが初めて live で完走した事例**。FAIL marker の修正ガイダンス (追加すべきテストケース 5 点の列挙) が fix cycle の code phase に一級入力として機能した。
+
+### Retry Count
+
+Retry Count: 1/3
+
+### Improvement Proposals
+- review の pre-merge AC 検証で safe-mode 互換の機械チェック (file_contains 等) が FAIL した場合に review 通過をブロックする (または MUST issue 化する) ことを保証する。本 Issue では AC5 (`file_contains "tests/reconcile-phase-state.bats" "operate"`) が review 時点で機械的に FAIL 判定可能だったにもかかわらず full review が通過し、verify まで検出が持ち越されて 1 回の auto-retry サイクル (PR 1 本 + review + merge) のコストが発生した。`skills/review/SKILL.md` の AC 検証ステップの FAIL 時挙動を調査し、ブロッキング動作を明確化する。
