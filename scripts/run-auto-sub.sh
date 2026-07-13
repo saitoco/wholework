@@ -6,11 +6,24 @@
 
 set -euo pipefail
 
+# Resolved before cd (below) -- a relative $0 would break dirname resolution once CWD changes.
+SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
+
 # Repo root of the caller's actual working directory (the project being worked on),
-# not the plugin's own install path. SCRIPT_DIR below resolves where this script
-# itself lives (${CLAUDE_PLUGIN_ROOT}/scripts) and must never be used to derive the
-# repo root that recovery commits/pushes target.
-REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+# not the plugin's own install path. Resolved as the *main* worktree root even when
+# this script is invoked from inside a non-main worktree (e.g. a code/review worktree
+# CWD), so that recovery commits/pushes always target main -- never the calling
+# worktree (see #1005: a --write-manual-recovery call run from a code worktree CWD
+# pushed its record to that worktree's PR branch instead of main).
+REPO_ROOT="$(git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}')" || true
+if [[ -z "$REPO_ROOT" ]]; then
+  REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+fi
+if [[ -z "$REPO_ROOT" ]]; then
+  REPO_ROOT="$(pwd)"
+fi
+cd "$REPO_ROOT"
+[[ -d "$SCRIPT_DIR" ]] || SCRIPT_DIR="$REPO_ROOT/scripts"
 
 # Returns true if spec_rel_path has any changes (modified or untracked).
 # Uses git status --porcelain so untracked files are detected (unlike git diff --quiet).
@@ -50,12 +63,13 @@ _push_with_retry() {
 }
 
 # Validates recovery function arguments to prevent path traversal via glob patterns.
-# Usage: _validate_recovery_args ISSUE [PHASE] [RECOVERY_TYPE]
+# Usage: _validate_recovery_args ISSUE [PHASE] [RECOVERY_TYPE] [EXIT_CODE]
 # Returns 1 and prints to stderr if any argument fails validation.
 _validate_recovery_args() {
   local _issue="${1:-}"
   local _phase="${2:-}"
   local _recovery_type="${3:-}"
+  local _exit_code="${4:-}"
 
   if [[ -z "$_issue" ]] || ! [[ "$_issue" =~ ^[0-9]+$ ]]; then
     echo "_validate_recovery_args: invalid issue: '${_issue}'" >&2
@@ -71,6 +85,11 @@ _validate_recovery_args() {
     echo "_validate_recovery_args: invalid recovery_type: '${_recovery_type}'" >&2
     return 1
   fi
+
+  if [[ -n "$_exit_code" ]] && ! [[ "$_exit_code" =~ ^[0-9]+$ ]]; then
+    echo "_validate_recovery_args: invalid exit_code: '${_exit_code}'" >&2
+    return 1
+  fi
 }
 
 # Returns the open PR number linked to an issue via "closes #N", or empty if none.
@@ -84,13 +103,14 @@ _open_pr_for_issue() {
 }
 
 # --write-manual-recovery subcommand: write manual recovery record to sub-issue Spec.
-# Usage: run-auto-sub.sh --write-manual-recovery ISSUE [PHASE] [RECOVERY_TYPE]
+# Usage: run-auto-sub.sh --write-manual-recovery ISSUE [PHASE] [RECOVERY_TYPE] [EXIT_CODE]
 # See modules/orchestration-fallbacks.md#manual-recovery-spec-write
 _write_manual_recovery_to_spec() {
   local issue="$1"
   local phase="${2:-unknown}"
   local recovery_type="${3:-unspecified}"
-  _validate_recovery_args "$issue" "$phase" "$recovery_type" || return 1
+  local exit_code="${4:-unknown}"
+  _validate_recovery_args "$issue" "$phase" "$recovery_type" "${4:-}" || return 1
 
   # Skip if an open PR for this issue is already touching the same Spec file:
   # committing to main here would self-induce a merge conflict with that PR (#890).
@@ -125,6 +145,7 @@ _write_manual_recovery_to_spec() {
   printf '%s\n' "- **Issue**: #${issue}, phase: ${phase}" >> "$spec_file"
   printf '%s\n' "- **Source**: parent session manual recovery" >> "$spec_file"
   printf '%s\n' "- **Recovery type**: ${recovery_type}" >> "$spec_file"
+  printf '%s\n' "- **Wrapper exit code**: ${exit_code}" >> "$spec_file"
   printf '%s\n' "- **Outcome**: success" >> "$spec_file"
 
   local spec_rel_path="${spec_file#$_repo_root/}"
@@ -142,13 +163,92 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
   fi
 }
 
+# _write_manual_recovery_to_recoveries_log ISSUE PHASE RECOVERY_TYPE [EXIT_CODE]
+# Records a parent-session-driven manual recovery event to orchestration-recoveries.md,
+# in the canonical H2 entry format so scripts/collect-recovery-candidates.sh can pick it
+# up for frequency detection / recoveries-auto-fire (unlike the H3 wrapper-retry-on-kill
+# entries defined further below -- see #1005 spec Notes). Defined here, immediately
+# after _write_manual_recovery_to_spec, rather than grouped with the other
+# _write_*_recovery helpers further down: the --write-manual-recovery dispatch below
+# calls it before an early exit, so it must be defined earlier in the script than that
+# call site (bash only registers a function once its definition line has executed).
+# Skips silently if the file does not exist (file not in repo → return 0).
+# See modules/orchestration-fallbacks.md#external-kill-parent-respawn
+_write_manual_recovery_to_recoveries_log() {
+  local issue="$1"
+  local phase="${2:-unknown}"
+  local recovery_type="${3:-unspecified}"
+  local exit_code="${4:-unknown}"
+  local _repo_root="$REPO_ROOT"
+  local _recoveries_file="${_repo_root}/docs/reports/orchestration-recoveries.md"
+  if [[ ! -f "$_recoveries_file" ]]; then
+    return 0
+  fi
+  local _date
+  _date=$(date -u '+%Y-%m-%d %H:%M UTC')
+  python3 << PYEOF 2>/dev/null || true
+fpath = "${_recoveries_file}"
+marker = "<!-- Log entries appear below, newest first. -->"
+entry = (
+    "\n## ${_date}: manual-recovery-${recovery_type}\n"
+    "\n### Context\n"
+    "- Issue #${issue}, phase: ${phase}\n"
+    "- Source: parent-session-manual-recovery\n"
+    "- Wrapper: run-auto-sub.sh, exit code: ${exit_code}\n"
+    "\n### Diagnosis\n"
+    "- Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: ${recovery_type})\n"
+    "\n### Recovery Applied\n"
+    "- modules/orchestration-fallbacks.md#manual-recovery-spec-write\n"
+    "\n### Outcome\n"
+    "- success\n"
+    "\n### Improvement Candidate\n"
+    "- 未起票\n"
+)
+try:
+    content = open(fpath).read()
+    idx = content.find(marker)
+    if idx != -1:
+        pos = idx + len(marker)
+        content = content[:pos] + entry + content[pos:]
+        open(fpath, "w").write(content)
+except Exception:
+    pass
+PYEOF
+  if ! git -C "$_repo_root" diff --quiet "docs/reports/orchestration-recoveries.md" 2>/dev/null; then
+    if git -C "$_repo_root" add "docs/reports/orchestration-recoveries.md" \
+       && git -C "$_repo_root" commit -s -m "Record manual-recovery-${recovery_type} recovery for issue #${issue} ${phase}
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
+       && _push_with_retry "$_repo_root"; then
+      echo "[#${issue}] [recovery] manual-recovery-${recovery_type} recovery log committed and pushed"
+    else
+      echo "[#${issue}] WARNING: could not commit/push manual recovery log" >&2
+    fi
+  fi
+}
+
 if [[ "${1:-}" == "--write-manual-recovery" ]]; then
   shift
   if [[ -z "${1:-}" ]]; then
-    echo "Error: --write-manual-recovery requires: ISSUE [PHASE] [RECOVERY_TYPE]" >&2
+    echo "Error: --write-manual-recovery requires: ISSUE [PHASE] [RECOVERY_TYPE] [EXIT_CODE]" >&2
     exit 1
   fi
-  _write_manual_recovery_to_spec "$@"
+  _mr_issue="$1"
+  _mr_phase="${2:-unknown}"
+  _mr_recovery_type="${3:-unspecified}"
+  # Left un-defaulted (unlike _mr_phase/_mr_recovery_type above): passed through as-is to
+  # _validate_recovery_args, which only applies its numeric-format check when non-empty.
+  # Defaulting to the literal "unknown" here would make that check fail every time no
+  # EXIT_CODE is supplied, since "unknown" does not match ^[0-9]+$.
+  _mr_exit_code="${4:-}"
+
+  source "$SCRIPT_DIR/emit-event.sh"
+  restore_auto_session_pointer
+  export EMIT_ISSUE_NUMBER="$_mr_issue"
+
+  _write_manual_recovery_to_spec "$_mr_issue" "$_mr_phase" "$_mr_recovery_type" "$_mr_exit_code"
+  _write_manual_recovery_to_recoveries_log "$_mr_issue" "$_mr_phase" "$_mr_recovery_type" "$_mr_exit_code"
+  emit_event "manual_intervention" "recovery_target=${_mr_phase}" "wrapper_exit_code=${_mr_exit_code:-unknown}" "intervention_type=${_mr_recovery_type}"
   exit 0
 fi
 
@@ -183,7 +283,6 @@ if ! [[ "$SUB_NUMBER" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 # Session isolation check: detect other-session dirty files (best-effort)
 if [[ -x "${SCRIPT_DIR}/check-verify-dirty.sh" ]]; then
   _dirty_exit=0

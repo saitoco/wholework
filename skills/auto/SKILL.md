@@ -914,6 +914,20 @@ If any phase exits with a non-zero exit code, apply the following 3-tier recover
 
 ---
 
+#### External kill pre-check (before Tier 1)
+
+Before entering the Tier 1/2/3 diagnosis flow below, check whether the failed phase's background wrapper was killed externally (its process group was SIGKILLed rather than exiting through its own EXIT trap) — see `modules/orchestration-fallbacks.md#external-kill-parent-respawn` for the full symptom/rationale writeup and #1005 for the investigation this pre-check is based on.
+
+- **Detection signature**: the background `run-*.sh` exited with code 137 or 143, OR `.tmp/wrapper-out-$NUMBER-$PHASE.log` has no `Exit code:` trailer line AND `.tmp/auto-events.jsonl` has no `wrapper_exit` event for this phase. Either condition means the wrapper's own process group was killed externally — its EXIT trap never ran, so the wrapper could not emit its usual completion markers.
+- **Response**: do not proceed into Tier 1/2/3 diagnosis. Respawn the same `run-*.sh` with the same arguments — the `phase/*` label (SSoT) and the `code_phase_milestone` checkpoint restore existing progress, so the respawned run resumes rather than restarting from scratch. Do not introduce a new Tier number for this — the pre-check sits outside the Tier 1/2/3 vocabulary shared with `docs/tech.md` and `modules/orchestration-fallbacks.md`.
+- **Recording (mandatory)**: after the respawned phase completes, call:
+  ```bash
+  bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE respawn EXIT_CODE
+  ```
+  The subcommand self-resolves the main repository root, so it is safe to call from any CWD (including a code/review worktree left over from the killed phase).
+
+---
+
 #### Tier 1 (Observe): State Reconciliation
 
 Run the completion check for the failed phase:
@@ -1016,7 +1030,7 @@ Do not invoke subsequent phases.
 - merge phase failure: invalid PR state (not approved, CI failure), conflict resolution failure
 - verify phase failure: acceptance condition FAIL, Issue reopened
 
-**Manual recovery hand-off**: If the parent session manually recovers and continues to subsequent phases instead of stopping here, complete the remaining phases via manual recovery first, then call `bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE RECOVERY_TYPE` to automatically write the recovery record to the sub-issue Spec's `## Auto Retrospective` section (where RECOVERY_TYPE describes the action taken, e.g., `push-only`, `pr-create`, `review-rerun`). Skip this call if the Tier 2 anomaly detector already appended a recovery entry for this event to avoid duplicate entries. Then proceed to Step 5.
+**Manual recovery hand-off**: If the parent session manually recovers and continues to subsequent phases instead of stopping here, complete the remaining phases via manual recovery first, then call `bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE RECOVERY_TYPE EXIT_CODE` (where RECOVERY_TYPE describes the action taken, e.g., `push-only`, `pr-create`, `review-rerun`, or `respawn` for the external-kill pre-check above; EXIT_CODE is the original wrapper exit code, or `unknown` if it could not be observed). The subcommand self-resolves the main repository root regardless of the calling CWD, and records the recovery in three places: the sub-issue Spec's `## Auto Retrospective` section, `docs/reports/orchestration-recoveries.md`, and a `manual_intervention` event in `.tmp/auto-events.jsonl`. Skip this call if the Tier 2 anomaly detector already appended a recovery entry for this event to avoid duplicate entries. Then proceed to Step 5.
 
 Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
 - `SKILL_NAME=auto`

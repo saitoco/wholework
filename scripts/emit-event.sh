@@ -15,10 +15,15 @@
 
 # Documented event schemas:
 #
-# manual_intervention: parent session manually recovered a child wrapper failure
+# manual_intervention: parent session manually recovered a child wrapper failure.
+# Emitted by run-auto-sub.sh --write-manual-recovery (see #1005).
 #   recovery_target=<phase>       e.g. code-patch, verify
-#   wrapper_exit_code=<code>      original wrapper exit code
-#   intervention_type=<type>      silent_no_op_manual_fix | tier3_abort_manual_fix | direct_commit
+#   wrapper_exit_code=<code|unknown>   original wrapper exit code; "unknown" when the
+#                                  parent session could not observe the wrapper's exit
+#                                  status (e.g. an external kill left no exit trailer)
+#   intervention_type=<type>      silent_no_op_manual_fix | tier3_abort_manual_fix | direct_commit |
+#                                  respawn | push-only | pr-create | review-rerun
+#                                  (the last four are --write-manual-recovery RECOVERY_TYPE values)
 #
 # verify_reopen_cycle: /verify FAIL -> issue reopen fix cycle entered
 #   iteration=<n>                 verify iteration counter (from get-verify-iteration.sh)
