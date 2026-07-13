@@ -193,21 +193,19 @@ reopen timestamp が取得できないケースで、同一 Issue の Spec が o
 - 本 Issue 自体が PR #1001 の fix cycle (`/verify` FAIL 後の再オープン) であり、rework は Issue 全体が rework に相当する。fix cycle 内での手戻りは発生していない。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Step 10 (review-spec 観点) で Spec Implementation Step 8 のケース (c) (reopen あり + fresh commit なし + reopen より後のマーカーあり → matches_expected:true) が bats テストから欠落していることを検出し、MUST issue として `tests/reconcile-phase-state.bats:1126` にライン コメントで投稿した。
-- Step 12 で該当ケースのテストを追加して修正し、`bats tests/reconcile-phase-state.bats tests/operate-route.bats` 全 76 件 green を確認した (`validate-skill-syntax.py` も 0 error)。
-- Step 13 のポリシー変更検出では、本修正が Spec の元々の意図 (4 ケース全網羅) に沿うテスト追加のみであり設計変更を伴わないため、Issue 本文・AC の更新は行わなかった。
+- Step 1 の `gh-pr-merge-status.sh` により mergeable=true (reason=clean, ci_status=success, review_status=approved) を確認し、conflict 解消ステップ (Step 3) はスキップして Step 4 のスクワッシュマージへ直接進んだ。
+- `gh pr merge 1002 --squash --delete-branch` を実行し、`closes #998` により Issue #998 を auto-close させた (BASE_BRANCH=main のため手動 close 不要)。
 
 ### Deferred Items
 
-- Step 10 の Workflow パイプライン (`skills/review/workflow-guidance.md`) に発見した不具合 (adversarial verify ステージが未実行のまま `confirmed: []` を返す) の修正は本 PR のスコープ外。review retrospective に記録済みで、Issue 起票判断は `/verify` に委ねる。
+- Step 10 で発見された Workflow パイプライン (`skills/review/workflow-guidance.md`) の不具合 (adversarial verify 未実行で `confirmed: []` を返す) は本 PR スコープ外のまま。review retrospective に記録済み、Issue 起票判断は `/verify` に委ねる。
 
 ### Notes for Next Phase
 
-- `/merge` はこの PR (#1002) を CI green・MUST issue 解消済みの状態でマージしてよい。
 - `/verify` は本 PR マージ後、Pre-merge AC 6 件すべてと Post-merge の opportunistic observation (次回 operate route 実行時の `matches_expected: true` 観察) を確認すること。
 
 ## Auto Retrospective
