@@ -117,14 +117,27 @@ emit_event() {
 # exported by a wrapper script. Priority: env var > PGID pointer file >
 # auto-session-current pointer file > no-op (standalone /verify stays
 # uninstrumented by design). bash 3.2+ compatible.
+#
+# Issue #1006: pointer file lookup and AUTO_EVENTS_LOG must not be CWD-relative,
+# because /verify Step 11's FAIL-branch emits run after Worktree Entry (CWD =
+# verify/issue-N worktree), where .tmp/ (gitignored) does not exist. Resolve the
+# main repo root via `git worktree list --porcelain` (same idiom as
+# detect-foreign-worktree.sh / run-code.sh) and prefix both the pointer file
+# search and AUTO_EVENTS_LOG with it. Outside a git repo (e.g. bats tmpdir
+# fixtures), `git worktree list` fails and the prefix stays empty, preserving
+# the previous CWD-relative behavior.
 restore_auto_session_pointer() {
   [[ -n "${AUTO_EVENTS_LOG:-}" ]] && return 0
+  local _root
+  _root="$(git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}')"
+  local _prefix=""
+  [[ -n "${_root}" ]] && _prefix="${_root}/"
   local _pgid; _pgid=$(ps -o pgid= -p $$ | tr -d ' ')
   local _sid
-  _sid="$(cat ".tmp/auto-session-${_pgid}" 2>/dev/null || cat ".tmp/auto-session-current" 2>/dev/null || echo '')"
+  _sid="$(cat "${_prefix}.tmp/auto-session-${_pgid}" 2>/dev/null || cat "${_prefix}.tmp/auto-session-current" 2>/dev/null || echo '')"
   [[ -z "${_sid}" ]] && return 0
   AUTO_SESSION_ID="${AUTO_SESSION_ID:-$_sid}"
-  AUTO_EVENTS_LOG=".tmp/auto-events.jsonl"
+  AUTO_EVENTS_LOG="${_prefix}.tmp/auto-events.jsonl"
   export AUTO_SESSION_ID AUTO_EVENTS_LOG
 }
 
