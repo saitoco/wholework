@@ -269,3 +269,33 @@ Spec と実装 (skills/auto/SKILL.md, scripts/run-auto-sub.sh, docs/reports/exte
 
 - Post-merge AC (observation) は次回の実際の外部 kill 発生時まで検証できない — `/verify` は現時点では PASS/FAIL 判定不能な観測待ち状態として扱うこと。
 - `/verify 1005` を実行して Issue のチェックボックス更新を行うこと。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 実測ベースの Investigation Findings (F1-F6) を Spec 段階で確定させたことで、設計選択 (親セッション主導の明示記録) が推測ではなく観測に基づいた。AC 文言も rubric grader が迷わない粒度で、UNCERTAIN ゼロ。
+- ただし Spec 内の F2 記述 (「exit 0 / 143 で発火」) と Implementation Step 7 (「exit 137/143 = 外部 kill」) の間に論理矛盾が内在し、SKILL.md にそのまま伝播した (review が検出・修正)。Findings と Implementation Steps の自己整合性チェックは `/spec` の改善余地。
+
+#### design
+- 記録先 3 箇所 (Spec / recoveries log / manual_intervention イベント) の分離設計は、消費者 (verify skip 判定 / 頻度検出 / Metrics) がそれぞれ異なることを根拠にしており妥当。open-PR ガードのスコープ限定 (Spec 書き込みのみ) も #890 との整合が取れている。
+
+#### code
+- rework 1 件: EXIT_CODE のデフォルト化タイミング (dispatch で `unknown` に変換してから渡すと `_validate_recovery_args` の数値チェックが常時 FAIL)。bats で顕在化し即修正、Code Retrospective に記録済み。
+- 本 Issue の実行自体は外部 kill なしで完走した (バッチ 4 で初)。
+
+#### review
+- Spec 内在の論理矛盾 (F2 vs Step 7) を検出し SKILL.md の Detection signature を修正した — review の実効性を示す実例。
+- **`capabilities.workflow: true` 下の Step 10 Workflow パスで finder → adversarial-verify パイプラインの verify ステージが一度も実行されないバグを検出** (`modules/workflow-guidance.md` のインラインスクリプトが thunk 配列を実行せず null に落とし `confirmed: []` を返す)。false negative を静かに握りつぶす構造であり、本レビューでは手動検証で救済した。→ Improvement Proposals へ。
+
+#### merge
+- conflict なし、CI 全件 SUCCESS で squash merge。
+
+#### verify
+- Pre-merge AC 4 件すべて一発 PASS (rubric 3 + bats 67/67)。FAIL・UNCERTAIN なし。
+- Post-merge observation AC は次回外部 kill 発生時まで観測待ち — 皮肉なことに、この AC の消化には kill の再発が必要 (再発しなければそれ自体が望ましい結果)。
+
+### Improvement Proposals
+- `scripts/run-auto-sub.sh` の `_write_wrapper_retry_recovery()` が H3 形式 (`### wrapper-retry-on-kill (phase)`) で orchestration-recoveries.md にエントリを書いており、canonical な H2 形式を前提とする `collect-recovery-candidates.sh` の頻度検出と `recoveries-auto-fire` 閾値判定から不可視になっている。H2 形式 (`## YYYY-MM-DD HH:MM UTC: wrapper-retry-on-kill`) への修正が必要 (検出元: 本 Spec の Minor observations / Deferred Items)
+- `modules/workflow-guidance.md` のインライン workflow スクリプトで、finder → adversarial-verify パイプラインの verify ステージが実行されない (pipeline 第 2 ステージが thunk 配列を返すのみで await されず、結果が null に落ちて `confirmed: []` になる)。`capabilities.workflow: true` の全プロジェクトの `/review --full` で検出結果が静かに消える false negative リスク (検出元: 本 Spec の review retrospective / Deferred Items。PR #1008 review では review-bug の SHOULD/CONSIDER 検出を手動検証で救済)
