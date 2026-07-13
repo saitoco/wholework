@@ -3,6 +3,8 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective (`/issue 1000 --non-interactive` の実行結果。Triage 判定 [Type=Feature / Size=L / Value=3]、Background ファクト検証の通過、AC1/AC2 を outcome ベース記述へ書き換えて実装方式の決定を `/spec` に委譲した経緯を記録。本 Spec の設計判断はこの委譲を引き継いでいる) / https://github.com/saitoco/wholework/issues/1000#issuecomment-4953903239
+- saito / MEMBER / first-class / 前回 `/verify 1000` 実行の Acceptance Test Results (pre-merge AC 4件 PASS、post-merge observation は当時未消化) / issue #1000 comment 2026-07-13T03:39:47Z
+- saito / MEMBER / first-class / observation-trigger.sh が投稿した `pr-review-full` イベント検知通知 (`Run /verify 1000 to verify the condition and update the checkbox.`) — 本セッションの `/verify 1000` dispatch のトリガーそのもの / issue #1000 comment 2026-07-13T15:26:53Z
 
 ## Overview
 
@@ -233,7 +235,7 @@ Background セクションの技術的主張 (`skills/verify/SKILL.md` Step 2/St
 
 #### verify
 - Pre-merge AC 4 件すべて一発 PASS (rubric 3 + command 1、bats 10/10)。FAIL・UNCERTAIN・PENDING なし。
-- Post-merge observation AC (`event=pr-review-full`) はイベント待ちで未消化。次回 `/review --full` 時に自動観察される。
+- Post-merge observation AC (`event=pr-review-full`) はイベント待ちで未消化だったが、`/review 1008` (Issue #1005) の `pr-review-full` イベントで観察・PASS 確定した。実測内容: (1) `/review 1008` の Worktree Exit (push-and-remove) 完了後、Opportunistic Verification の Precondition (`detect-foreign-worktree.sh "review/pr-1008"`) が `none` を返した、(2) Event-based observation scan が本 Issue にマッチし nested `Skill(wholework:verify, args="1000")` を dispatch、(3) nested `/verify` 側の Step 2 Worktree context guard (`detect-foreign-worktree.sh "verify/issue-1000"`) も `none` を返し、foreign 検出による中断・復帰は不要だった。二層防御 (`/review` 側 precondition が主、`/verify` 側 Step 2 guard が最終防衛線) が設計どおり機能したことを実運用で確認。全 5 条件 PASS、Issue #1000 は `phase/done` へ遷移。
 
 ### Improvement Proposals
 - N/A — 外部 kill → 親セッション再スポーン + milestone resume の記録ギャップ (Tier 1/2/3 機構外の recovery が orchestration-recoveries.md に残らない) は、本セッションで 3 回発生した横断事象として L3 session retrospective の Findings で集約判断する (Issue 単体の提案としては起票しない)。
