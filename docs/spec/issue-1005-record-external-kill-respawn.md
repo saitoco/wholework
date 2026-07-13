@@ -252,22 +252,20 @@ Spec と実装 (skills/auto/SKILL.md, scripts/run-auto-sub.sh, docs/reports/exte
 4件の pre-merge AC (rubric 3件 + bats command 1件) はいずれも判定に迷いなく PASS 確定できた — rubric の文言が「何を確認すればよいか」を具体的に特定できる粒度で書かれており、UNCERTAIN の発生はゼロだった。Post-merge の observation AC は設計どおり判定保留。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Step 10 の Workflow パス (finder → adversarial-verify) は `capabilities.workflow: true` により実行したが、verify ステージが実際には起動しない script 側のバグを発見したため、finder が検出した2件 (SHOULD 1件・CONSIDER 1件) を直接コード/Spec/diff を読んで手動検証し、レビュー結果に採用した。
-- SHOULD (skills/auto/SKILL.md:921 の Detection signature 内部矛盾) は Issue のコア目的 (kill/recovery 計測の正確性) に直結するため修正。CONSIDER (run-auto-sub.sh:189 のヒアドキュメント変数展開) は現状 exploit 不可・既存の同種パターンと一貫しているため見送り。
-- 修正は SKILL.md の条件分岐の厳密化のみで、AC の文言や verify command と矛盾しないため Step 13 (Acceptance Criteria Consistency Check) はスキップ判定。
+- レビュー承認済み・CI全件SUCCESSのため conflict なしで squash merge を実行した (`gh pr merge 1008 --squash --delete-branch`)。
+- Phase Handoff をこの merge フェーズの内容に更新し、次フェーズ (`/verify`) が読めるよう main へコミットする。
 
 ### Deferred Items
 
 - `_write_wrapper_retry_recovery()` の H3 → H2 形式修正は本 Issue のスコープ外 (spec retrospective の Minor observations に記録済み。`/verify` Step 13 が Improvement Proposal として起票する)。
-- 外部 kill の発生源そのもの (H-a/H-b/H-c) は特定できず、`docs/reports/external-kill-investigation.md` に残存仮説として文書化した。
-- `modules/workflow-guidance.md` インラインスクリプトの verify ステージ未実行バグは本 PR スコープ外 — 上記 Recurring issues に記録、`/verify` での Improvement Proposal 起票を推奨。
-- CONSIDER (run-auto-sub.sh:189 ヒアドキュメント変数展開) は未修正のまま残存 (exploit 不可と判断し見送り)。
+- `modules/workflow-guidance.md` インラインスクリプトの verify ステージ未実行バグ (review retrospective の Recurring issues に記録) は本 PR スコープ外 — `/verify` での Improvement Proposal 起票を推奨。
+- 外部 kill の発生源そのもの (H-a/H-b/H-c) は特定できず、`docs/reports/external-kill-investigation.md` に残存仮説として文書化済み。
 
 ### Notes for Next Phase
 
 - Post-merge AC (observation) は次回の実際の外部 kill 発生時まで検証できない — `/verify` は現時点では PASS/FAIL 判定不能な観測待ち状態として扱うこと。
-- `/merge 1008` 実行可 (MUST issue なし、CI 全件 SUCCESS)。
+- `/verify 1005` を実行して Issue のチェックボックス更新を行うこと。
