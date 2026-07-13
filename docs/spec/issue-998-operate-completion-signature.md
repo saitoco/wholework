@@ -178,27 +178,37 @@ reopen timestamp が取得できないケースで、同一 Issue の Spec が o
 - `gh issue view --json comments` の `createdAt` と GraphQL `ReopenedEvent.createdAt` が同一フォーマットか (辞書順比較の前提) — 実 Issue #998 で `gh issue view 998 --json comments --jq '.comments[] | .createdAt'` を実行し `2026-07-13T00:14:10Z` を確認。両者とも固定長 ISO-8601 UTC で、`modules/l0-surfaces.md` の Comment Consumption Procedure も同じ前提で辞書順比較している。解消。
 - 既存 bats テストへの回帰リスク (新しい `gh issue view --json comments` 呼び出しに既存 mock が応答しない) — 既存 5 ケースの mock を読み、`--json labels` / `--json state` 以外の引数では出力なし・exit 0 になることを確認。空出力は「マーカーなし」として扱われ既存 fallback にフォールスルーするため期待値は変わらない。解消 (実装後に `bats tests/reconcile-phase-state.bats` 全 green の確認は必要)。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1-7 (`modules/phase-state.md` / `scripts/reconcile-phase-state.sh` / `skills/code/SKILL.md` / `skills/auto/SKILL.md` / `modules/orchestration-fallbacks.md`) はすべて PR #1001 で先行実装済みだったため、本 fix cycle では Implementation Steps 8-10 (bats テスト・shallow test・docs/tech.md 追記) のみを実施した。ステップの順序・内容自体に逸脱はない。
+
+### Design Gaps/Ambiguities
+
+- Spec の Implementation Step 8 は 4 ケース (a)-(d) を指定していたが、`/verify` FAIL コメント (2026-07-13T01:21:21Z) が追加で提示した「非 ISO8601 な壊れた `gh` 出力」ケースも実装済みの防御コード (`_operate_signal_ts()` の ISO8601 正規表現検証、commit 20338988 で追加) の直接的なテストカバレッジとして有用と判断し、5 件目として追加した。Spec の記述を超える追加だが、Spec の意図 (受け入れ基準 5, 6 の充足) と矛盾しない。
+
+### Rework
+
+- 本 Issue 自体が PR #1001 の fix cycle (`/verify` FAIL 後の再オープン) であり、rework は Issue 全体が rework に相当する。fix cycle 内での手戻りは発生していない。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- `code-patch` phase 名を維持し、その completion signature を「`closes #N` コミット **または** operate route のコメントマーカー」に拡張する。新規 `code-operate` phase 名は、全 caller (`run-code.sh` / `run-auto-sub.sh` / `skills/auto/SKILL.md`) が `--patch`/`--pr` フラグから phase 名を導出する既存契約を壊すため不採用。
-- operate signal の分岐は `_completion_code_patch()` のラベル/state fallback より **手前** に置く。reopen_ts が非 null のときラベル fallback は無条件スキップされるため、後ろに置くと最も危険な fix-cycle ケース (external write の再実行) を救えない。
-- L1 advisory の `## Execution Plan` コメントにも machine-readable マーカー (`type=execution-plan`) を新規付与し、L2/L3 の `type=execution-log` と併せて signature として受理する。L1 は `skills/code/SKILL.md` Step 13 上「正常完了」であり、除外すると `run-code.sh` が `EXIT_CODE=1` を返して orchestration recovery が誤発火する。
+- Step 10 (review-spec 観点) で Spec Implementation Step 8 のケース (c) (reopen あり + fresh commit なし + reopen より後のマーカーあり → matches_expected:true) が bats テストから欠落していることを検出し、MUST issue として `tests/reconcile-phase-state.bats:1126` にライン コメントで投稿した。
+- Step 12 で該当ケースのテストを追加して修正し、`bats tests/reconcile-phase-state.bats tests/operate-route.bats` 全 76 件 green を確認した (`validate-skill-syntax.py` も 0 error)。
+- Step 13 のポリシー変更検出では、本修正が Spec の元々の意図 (4 ケース全網羅) に沿うテスト追加のみであり設計変更を伴わないため、Issue 本文・AC の更新は行わなかった。
 
 ### Deferred Items
 
-- route 変更を跨いだ stale marker の隠蔽 (operate → patch へ Spec を書き換え、かつ reopen していない場合) は追加の鮮度判定を入れず、`modules/phase-state.md` に既知の制約として記載するに留める。既存 `closes #N` signature が持つ同種の制約 (reopen timestamp 不在時の無制限 grep) と同じ性質のため。
-- `modules/l0-surfaces.md` への `wholework-event` marker type 一覧の新設は行わない。同ファイルは type のレジストリを持たず (`type=verify-fail` も Example として載っているだけ)、`type=execution-log` も未登録のため、本 Issue で一覧を新設するのはスコープ外。
+- Step 10 の Workflow パイプライン (`skills/review/workflow-guidance.md`) に発見した不具合 (adversarial verify ステージが未実行のまま `confirmed: []` を返す) の修正は本 PR のスコープ外。review retrospective に記録済みで、Issue 起票判断は `/verify` に委ねる。
 
 ### Notes for Next Phase
 
-- **#993 との conflict 注意**: #993 も `_completion_code_patch()` を変更する (stray PR 検出ギャップ)。本 Issue の挿入位置 (commit 未検出後・ラベル fallback 手前) と物理的に近接する。先にマージされた側を base に rebase して解消すること。
-- **bash 3.2 互換**: `scripts/reconcile-phase-state.sh` は `declare -A` / `mapfile` を使わない方針。タイムスタンプ比較は `[[ "$a" > "$b" ]]` の文字列比較 (固定長 ISO-8601 UTC なので辞書順で正しい)。`gh` 組み込みの `--jq` を使い外部 `jq` へのパイプは行わない (ファイル内の既存スタイル)。
-- **`ISSUE_NUMBER` の jq フィルタ補間は安全**: script 冒頭 (line 67) で `^[0-9]+$` 検証済みのため、マーカー文字列への直接補間で injection リスクはない。
-- **`skills/*/SKILL.md` の validator 制約**: 本文追記時に半角 `!` を裸で置かない (マーカー文字列はインラインコードで囲む)、Step 番号に小数を使わない、code fence 外に triple backtick を置かない。
-- **既存 bats mock の回帰確認**: `tests/reconcile-phase-state.bats` の既存 `code-patch` ケース 5 件は `--json comments` に応答しない mock を使っているが、空出力 = マーカーなしとして扱われるため期待値は不変。実装後に全 green を確認すること。
+- `/merge` はこの PR (#1002) を CI green・MUST issue 解消済みの状態でマージしてよい。
+- `/verify` は本 PR マージ後、Pre-merge AC 6 件すべてと Post-merge の opportunistic observation (次回 operate route 実行時の `matches_expected: true` 観察) を確認すること。
 
 ## Auto Retrospective
 
@@ -208,3 +218,18 @@ reopen timestamp が取得できないケースで、同一 Issue の Spec が o
 - **Source**: parent session manual recovery
 - **Recovery type**: review-rerun
 - **Outcome**: success
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec の Implementation Step 8 は operate route completion のテストケースを (a)-(d) の 4 種類として明示していたが、実装 (5 件のテスト) は (a)(b)(d) + Spec 外の新規 2 ケース (no-marker, malformed) をカバーし、(c) (reopen あり + fresh commit なし + reopen より後のマーカーあり → matches_expected:true — fix-cycle 再実行防止シナリオ、Background で「最も危険」と明記されている Issue #998 の root cause 直撃ケース) が欠落していた。加えて Spec の Code Retrospective / Phase Handoff は「Spec 指定の 4 ケースに加え... 5 件目を追加した」と記載しており、実際のカバレッジと乖離していた。`/review` の review-spec 観点でこの乖離を検出し、Step 12 で該当ケースを追加して解消した (`tests/reconcile-phase-state.bats` 全 67 件 green)。
+- 教訓: 「Spec のケース一覧 + 追加 N 件」という記述はケースの入れ替わりを隠しやすい。実装後に Spec のケース一覧と実装済みテスト名を 1 対 1 で突き合わせる工程があれば、この乖離はより早く検出できた可能性がある。
+
+### Recurring issues
+
+- `capabilities.workflow: true` による Step 10 Workflow パイプライン (`skills/review/workflow-guidance.md` Inline Workflow Script) に実装上の不具合を発見した: `pipeline()` の第 2 ステージが `finderResult.findings.map(finding => () => agent(...))` という「未実行のサンクの配列」を返しており、`parallel()` などで実際に呼び出されていない。この結果、finder が検出した finding は adversarial verify ステージを一度も経由せず、`allFindings.flat().filter(Boolean)` が関数オブジェクトを保持したまま `f.refuted === false` を評価するため常に `confirmed: []` となり、`totalFound` の集計もサンク配列の内部を数えないため不正確になる (今回の実行では実際には 1 件の MUST finding が存在したにも関わらず `totalFound: 0` と報告された)。今回は journal.jsonl を直接確認し、手動で二次検証することで finding を救済したが、この不具合が放置されると Workflow モードを有効化している全リポジトリで「実際には検出されている MUST issue が `confirmed: []` として握りつぶされる」サイレント障害が継続する。Improvement Proposal 候補として `/verify` 側での起票判断に委ねる (本 retrospective には記録のみ、Issue 起票は行わない)。
+
+### Acceptance criteria verification difficulty
+
+- 特になし。Issue #998 の 6 件の Pre-merge AC (rubric×2, file_contains×3, github_check×1) はいずれも安全に自動判定でき、UNCERTAIN は発生しなかった。`github_check "gh pr checks" "Run bats tests"` は safe mode allowlist 経由で問題なく実行できた。
