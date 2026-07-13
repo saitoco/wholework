@@ -180,22 +180,22 @@ Background セクションの技術的主張 (`skills/verify/SKILL.md` Step 2/St
 - N/A
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- `/code` Step 12 の欠落 (Code Retrospective・Phase Handoff 未更新) を SHOULD 指摘として検出し、`/review` 側で修正コミットを追加した。実装ロジック自体には逸脱がなかったため、Spec の Implementation Steps は更新していない。
-- Pre-merge AC 4件はすべて PASS。MUST issue はゼロのため `event=COMMENT` でレビューを投稿した。
+- mergeable=true (clean) だったため conflict 解消フローは実行せず、Step 4 の Squash Merge へ直行した。
+- Phase Handoff は worktree を origin/main に `--ff-only` で追従させた後、worktree ローカルパスに対して書き込んだ (worktree-lifecycle.md の Edit/Write パス規約に準拠)。
 
 ### Deferred Items
 
-- `own` 分岐 (`/verify` 再入呼び出し) の実挙動観測は再入ケースが実際に発生した時点まで保留。
-- nested skill から `ExitWorktree` でアクティブな呼び出し元セッションを exit した際の挙動は post-merge observation AC (`event=pr-review-full`) に委ねたまま未実測。
+- `own` 分岐 (`/verify` 再入呼び出し) の実挙動観測は再入ケースが実際に発生した時点まで保留 (review phase から継続)。
+- nested skill から `ExitWorktree` でアクティブな呼び出し元セッションを exit した際の挙動は post-merge observation AC (`event=pr-review-full`) に委ねたまま未実測 (review phase から継続)。
 
 ### Notes for Next Phase
 
-- Post-merge observation AC (`event=pr-review-full`) は本 `/review --full` の Opportunistic Verification / Event-based observation scan で発火する。`/verify` はこの観察結果 (nested `/verify` dispatch セッションでの `detect-foreign-worktree.sh` が `none` を返しているか) を確認すること。
-- `/code` フェーズでの Step 12 (Code Retrospective + Phase Handoff 書き込み) 未実行が今回発生した。再発時は `/verify` フェーズの retrospective で頻度を確認すること。
+- `/verify` は Post-merge observation AC (`event=pr-review-full`) の観察結果 (nested `/verify` dispatch セッションでの `detect-foreign-worktree.sh` が `none` を返しているか) を確認すること。
+- Issue #1000 は `closes #1000` により squash merge で自動クローズされる想定。Issue 状態のフォールバック検証 (Step 6) の結果も併せて確認すること。
 
 ## review retrospective
 
