@@ -165,15 +165,26 @@ Background セクションの技術的主張 (`skills/verify/SKILL.md` Step 2/St
 - 「worktree 内で base branch を checkout するとどうなるか」は Uncertainty として残さず、使い捨てリポジトリでの実測により Spec 作成中に解消した (2 つの failure mode を確認)。これが論点 1 の決め手になった。
 - `ExitWorktree` を nested skill から呼んだときの呼び出し元セッションへの影響は、ツール仕様の「no-op outside an EnterWorktree session」記述までは確認できたが、アクティブセッションを nested 側から exit した際の呼び出し元の挙動は実測していない。Uncertainty セクションに記録し、post-merge observation に委ねた。`/review` 側のアサーションが機能すれば `/verify` 側の `foreign` 分岐は発火しないため、実運用上の露出は小さい。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Changed Files (5件) と Implementation Steps (5件) は PR diff とすべて一致した。ガードブロックの位置・分岐構成 (`none`/`own`/`foreign`)・bats テストの追加方針のいずれも設計どおり。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- base branch checkout の保護方式は「Step 2 直前へのガード追加」を採用。`/issue` フェーズが有力視していた「Step 2/3 の順序入れ替え」は、worktree 内での `git checkout <base>` が exit 128 で失敗する (メインリポジトリが当該ブランチを checkout 済みの場合) か、worktree の HEAD をサイレントに切り替える (そうでない場合) ことを実測で確認したため棄却した。
-- `foreign` 検出時の復帰は `ExitWorktree(action: "keep")` → `cd <path>` → 再判定の 3 段。`cd` だけでは呼び出し元の worktree セッションが生きたままとなり、Step 3 の `EnterWorktree(name: ...)` がツール制約で失敗する。
-- `/review` 側の前提アサーションは `## Opportunistic Verification` セクション冒頭に直接配置する。`modules/opportunistic-verify.md` に置くと、`opportunistic-verify: false` 環境でも常時実行される Event-based observation scan ブロックをカバーできない。
-- 3 箇所に散る `detect-foreign-worktree.sh` の 3 分岐骨格は、tail action が異なるため共有モジュール化しない。
+- Spec の Implementation Steps をそのまま適用し、設計からの逸脱なく実装した。base branch checkout の保護方式・`foreign` 復帰手順・`/review` 側アサーション配置・共有モジュール化見送りの判断は、いずれも spec retrospective の記録どおり維持した。
 
 ### Deferred Items
 
@@ -183,7 +194,5 @@ Background セクションの技術的主張 (`skills/verify/SKILL.md` Step 2/St
 
 ### Notes for Next Phase
 
-- SKILL.md に追加する分岐リストには **(exhaustive)** マーカーを付与すること。半角の感嘆符は使用不可 (`validate-skill-syntax.py`)。Step 2 の見出し文言・番号は変更しない。
-- `tests/verify.bats` は `tests/review.bats` の構造テスト方式 (awk でセクション抽出 → grep) をそのまま踏襲する。bash 3.2+ 互換 (`mapfile` 不可)。
-- `tests/review.bats` の既存ヘルパー `opportunistic_verification_section()` は awk で次の `## ` 見出しまでを抽出する。追加するアサーションブロックに `## ` 見出しを含めないこと (含めると既存 3 テストが壊れる)。
-- `allowed-tools` の変更は不要 (`detect-foreign-worktree.sh:*`・`ExitWorktree` は両 SKILL.md に登録済み)。追加すると `validate-skill-syntax.py` の KNOWN_TOOLS 同期が必要になるため、不要な追加を行わないこと。
+- Pre-merge AC 4件はすべて `/review` で PASS 判定済み (rubric x3、`command "bats tests/verify.bats tests/review.bats"` は CI job `Run bats tests` の成功による代替検証)。
+- Post-merge observation AC (`event=pr-review-full`) は本 PR の `/review --full` 完了時点で発火する Event-based observation scan によって初めて検証機会を得る。次フェーズ (`/verify`) はこの観察結果を確認すること。
