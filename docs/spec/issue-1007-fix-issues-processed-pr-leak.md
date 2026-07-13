@@ -106,25 +106,15 @@ No new comments since last phase.
 - Nothing to note — all 3 pre-merge conditions (rubric x2, bats command) resolved cleanly to PASS with no UNCERTAIN; the rubric wording explicitly allowing either "emit 側" or "集計側" fix location avoided ambiguity at verification time.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- No fixes needed — review-light found no issues across Spec deviation, edge cases/robustness, security, and documentation consistency.
-- Verified beyond static reading: ran the 3 target bats files locally (67/67 pass), shellcheck on both modified scripts, and check-translation-sync.sh (IN_SYNC).
+- Merge proceeded directly (mergeable=true, reason=clean; CI success, review approved) — no conflict resolution needed.
+- Squash-merged PR #1013 into main and deleted the remote branch.
 
 ### Deferred Items
-- Post-merge AC (次回 `/auto --batch` の L3 retrospective での「Issues processed」実 Issue 数一致の観察) remains for post-merge observation — cannot be verified pre-merge.
+- Post-merge AC (次回 `/auto --batch` の L3 retrospective での「Issues processed」実 Issue 数一致の観察) remains for post-merge observation — not verifiable at merge time.
 
 ### Notes for Next Phase
-- `/merge` can proceed directly; no MUST/SHOULD/CONSIDER issues were raised in this review.
-
-### Key Decisions
-- Spec Implementation Steps 1-5 を順序通りに実装 (emit 側修正 → bats テスト → docs 同期)。逸脱なし。
-- `phase/ready` ラベル不在 (前回中断の残骸) でも Spec が完成していたため、警告を出しつつ実装を継続した。
-
-### Deferred Items
-- None
-
-### Notes for Next Phase
-- Post-merge AC (次回 `/auto --batch` の L3 retrospective での観察) は `/verify` フェーズで対応不可 (実際のバッチ実行が必要)。observation イベントとして記録される想定。
-- Pre-merge の3条件 (rubric x2 + bats command) はすべて実装・docs・テストで満たしている。`/review` での再確認を推奨。
+- `/verify` should confirm the post-merge observation AC by checking the next `/auto --batch` L3 retrospective for correct "Issues processed" counts.
+- No MUST/SHOULD/CONSIDER issues were raised during review; merge was clean.
