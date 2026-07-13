@@ -12,6 +12,18 @@ opportunistic_verification_section() {
     awk '/^## Opportunistic Verification/{found=1} /^## / && !/Opportunistic Verification/{found=0} found{print}' "$SKILL_FILE"
 }
 
+# Extract the "## Step 8: Static Acceptance Criteria Verification" section from SKILL.md.
+# The section ends at the next level-2 (## ) heading (## Step 9: CI Status Check).
+step8_section() {
+    awk '/^## Step 8: Static Acceptance Criteria Verification/{found=1} /^## Step 9/{found=0} found{print}' "$SKILL_FILE"
+}
+
+# Extract the "## Step 9: CI Status Check" section from SKILL.md.
+# The section ends at the next level-2 (## ) heading (## Step 10: Multi-perspective Code Review).
+step9_section() {
+    awk '/^## Step 9: CI Status Check/{found=1} /^## Step 10/{found=0} found{print}' "$SKILL_FILE"
+}
+
 @test "Opportunistic Verification: DESIGN_FILE_PATH resolution present" {
     opportunistic_verification_section | grep -q "DESIGN_FILE_PATH"
 }
@@ -40,4 +52,13 @@ opportunistic_verification_section() {
     [ -n "$exit_line" ]
     [ -n "$verify_line" ]
     [ "$exit_line" -lt "$verify_line" ]
+}
+
+@test "Step 8: FAIL Blocking Behavior heading and REQUEST_CHANGES mentioned" {
+    step8_section | grep -q "FAIL Blocking Behavior"
+    step8_section | grep -q "REQUEST_CHANGES"
+}
+
+@test "Step 9: Blocking by default mentioned" {
+    step9_section | grep -q "Blocking by default"
 }

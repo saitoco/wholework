@@ -261,6 +261,19 @@ Verify each condition:
 
 For `file_contains` verify commands, verify that the pattern is an exact substring of the implementation code in the PR diff. Shell quoting causes false negatives: `get-config-value.sh permission-mode auto` will not match `"$SCRIPT_DIR/get-config-value.sh" permission-mode auto`. When a FAIL result stems from a quoting or path-prefix discrepancy rather than a genuine implementation gap, report it as a spec quality issue requiring a verify command update.
 
+### FAIL Blocking Behavior
+
+Any condition classified **FAIL** in this step is MUST-equivalent, not a passive
+table row: Step 10 (10.0/10.2) MUST add a `"severity": "MUST"`, `"path": null`
+entry for it (see Step 10's injection instructions). This reuses the existing
+MUST issue → `REQUEST_CHANGES` gate in `gh-pr-review.sh` (`HAS_MUST` scan over
+`.tmp/review-comments-$NUMBER.json`) rather than introducing a separate blocking
+mechanism — a genuinely FAILing condition (any command type; Step 8 only returns
+FAIL when the result is deterministic, never for ambiguous cases, which instead
+return UNCERTAIN) forces the review to post as `REQUEST_CHANGES` and must be
+fixed in Step 12 before `/merge`. UNCERTAIN, SKIPPED, PENDING, and POST-MERGE
+classifications do not block review.
+
 ### Checkbox Updates
 
 For "Pre-merge (auto-verified)" conditions that PASS in Step 7 verification, update Issue checkboxes:
@@ -292,6 +305,13 @@ gh pr view "$NUMBER" --json statusCheckRollup
 - **All jobs SUCCESS (or SKIPPED)**: note CI is successful and proceed
 - **PENDING/IN_PROGRESS jobs** (after wait timeout): note CI wait timed out; list pending checks and proceed with caution
 - **FAILURE jobs**: list failed job names and statuses; suggest fixes where possible. If `scripts/validate-skill-syntax.py` exists, also read `skills/review/skill-dev-recheck.md` and follow the "Step 8: Additional Suggestions on CI Failure" section.
+
+**Blocking by default**: CI FAILURE joins the same MUST-equivalent gate as
+Step 8's FAIL Blocking Behavior — Step 10 (10.0/10.2) MUST add one
+`"severity": "MUST"`, `"path": null` entry summarizing the failed job(s) so
+review cannot complete as `COMMENT` while CI is FAILURE. No built-in exception
+exists for known-flaky or unrelated-job failures; every FAILURE job blocks
+until a follow-up Issue defines an allowlist.
 
 ---
 
@@ -334,6 +354,7 @@ If `SKIP_REVIEW_BUG=true`, specify in the prompt to run only review-light's spec
    - Extract `path`, `line`, `body`, `severity` from `review-light` output
    - Issues where `path` is not `null` → add to line comments array (with `side: "RIGHT"`)
    - Issues where `path` is `null` → merge into "General Comments" section of Review body (**MUST issues MUST be included in General Comments** — even with `path: null`, MUST is the basis for `event=REQUEST_CHANGES`, so not including in Review body leaves it unclear what the problem is)
+   - **Inject Step 8/Step 9 blocking entries**: for each Step 8 condition classified FAIL, and the Step 9 CI FAILURE summary (if any), add one `severity: "MUST"`, `path: null` entry per the FAIL Blocking Behavior / Blocking by default rules
    - `mkdir -p .tmp`
    - Write line comments array to `.tmp/review-comments-$NUMBER.json` (JSON array format)
    - Write Review body (acceptance criteria table + CI status + General Comments + issue count summary) to `.tmp/review-body-$NUMBER.md`
@@ -404,6 +425,7 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
      - Determine severity from `Issue. Severity: MUST / SHOULD / CONSIDER`
      - Issues where `path` is not `null` → add to line comments array (with `side: "RIGHT"`)
      - Issues where `path` is `null` → merge into "General Comments" section of Review body (**MUST issues MUST be included in General Comments** — even with `path: null`, MUST is the basis for `event=REQUEST_CHANGES`, so not including in Review body leaves it unclear what the problem is)
+   - **Inject Step 8/Step 9 blocking entries**: for each Step 8 condition classified FAIL, and the Step 9 CI FAILURE summary (if any), add one `severity: "MUST"`, `path: null` entry per the FAIL Blocking Behavior / Blocking by default rules
    - `mkdir -p .tmp`
    - Write line comments array to `.tmp/review-comments-$NUMBER.json` (JSON array format)
    - Write Review body (acceptance criteria table + CI status + General Comments + issue count summary) to `.tmp/review-body-$NUMBER.md`
