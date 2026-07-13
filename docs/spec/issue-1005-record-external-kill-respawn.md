@@ -235,22 +235,39 @@ AC3 (`--write-manual-recovery` の CWD 非依存動作) について、当初の
 
 - 上記 EXIT_CODE のデフォルト化タイミングの不具合修正が唯一の手戻り。実装当初の dispatch ブロックを 1 回書き直した (関数呼び出しへの引数渡し方を変更)。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Spec と実装 (skills/auto/SKILL.md, scripts/run-auto-sub.sh, docs/reports/external-kill-investigation.md) の間に構造的な乖離はなし — Implementation Step 7 の記述はそのまま SKILL.md に転記されていた。ただし、その転記元である Spec 自身 (line 25 の F2 記述: 「exit 0 / 143 で発火する」) と Implementation Step 7 (line 103: 「exit 137/143 で終了 = 外部 kill されプロセスグループごと落ちた」) の間に論理的矛盾が内在しており、これが SKILL.md にそのまま伝播していた。`/review` Step 12 で SKILL.md 側の Detection signature を「exit 143 は第2条件 (`Exit code:` トレーラー欠落 かつ `wrapper_exit` イベント欠落) との併用が必要」に修正して解消したが、根本原因は Spec 自体の矛盾にあったため、次回同種の Spec 執筆時は「調査結果セクション (Findings)」と「実装ステップ (Implementation Steps)」の記述が同じ条件分岐について矛盾しないか、`/spec` フェーズでの自己整合性チェックを強化する余地がある。
+
+### Recurring issues
+
+`capabilities.workflow: true` 設定下の Step 10 Workflow パス (`modules/workflow-guidance.md` のインラインスクリプト) で、finder → adversarial-verify パイプラインの verify ステージが実際には一度も実行されなかった (workflow 診断で agent_count=3 = finder 3件のみ、verify agent 0件)。原因は pipeline の第2ステージが `finding => () => agent(...)` という thunk (未実行の関数) の配列を返しているだけで、それを実行する `parallel()`/awaited呼び出しが script 内に存在しないこと — 返り値がシリアライズ不能な関数を含むため `null` に落ちて `finderResults.flat().filter(Boolean)` で消え、`confirmed: []` / `totalFound: 0` という「0件検出」に見える結果になった。実際には review-bug×2 が SHOULD 1件・CONSIDER 1件を検出しており、これを本レビューでは手動で直接検証 (diff・Spec・該当ファイルの読み込み) して救済した。`modules/workflow-guidance.md` のインラインスクリプト自体のバグであり本 PR のスコープ外だが、`capabilities.workflow: true` を設定している他プロジェクトの `/review --full` すべてに影響するため、Improvement Proposal 候補として `/verify` 側での起票を推奨 (finder 検出後の verify 未実行を静かに握りつぶす = false negative のリスク)。
+
+また、Issue #1005 本文の「Verification (pre-merge)」に記載の `tests/auto-sub-observability.bats (52件)` という件数表記は、実際にファイルを確認すると6件のみ (`grep -c "^@test"` = 6) であり、Issue 本文の記述精度に軽微な誤りがあった。AC のチェックボックスや verify command には影響しないため FAIL 扱いにはしていないが、Issue 起票時のテスト件数記載を実測値と照合する運用上の注意点として記録する。
+
+### Acceptance criteria verification difficulty
+
+4件の pre-merge AC (rubric 3件 + bats command 1件) はいずれも判定に迷いなく PASS 確定できた — rubric の文言が「何を確認すればよいか」を具体的に特定できる粒度で書かれており、UNCERTAIN の発生はゼロだった。Post-merge の observation AC は設計どおり判定保留。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- `_write_manual_recovery_to_recoveries_log()` は `_write_wrapper_retry_recovery()` の直後ではなく `_write_manual_recovery_to_spec()` の直後 (dispatch ブロックの手前) に定義した。bash の関数登録は定義行の実行時点で確定するため、`SUB_NUMBER` パース前に `exit 0` する dispatch ブロックより後方に置くと未定義エラーになる。
-- dispatch の EXIT_CODE は空文字列のまま (`"${4:-}"`) 各関数へ渡し、`unknown` へのデフォルト化は `emit_event` の表示値でのみ行う。先にデフォルト化すると `_validate_recovery_args` の数値チェックが常に FAIL する。
-- `docs/tech.md` / `docs/workflow.md` (+ `docs/ja/` ミラー) は Steering Docs sync candidate だったが、親セッション主導の再スポーン recovery が Tier 1/2/3 の語彙と別系統であることを明示する価値があると判断し、両ファイルとミラーを更新した。`docs/structure.md` は Spec 記載どおり更新不要。
+- Step 10 の Workflow パス (finder → adversarial-verify) は `capabilities.workflow: true` により実行したが、verify ステージが実際には起動しない script 側のバグを発見したため、finder が検出した2件 (SHOULD 1件・CONSIDER 1件) を直接コード/Spec/diff を読んで手動検証し、レビュー結果に採用した。
+- SHOULD (skills/auto/SKILL.md:921 の Detection signature 内部矛盾) は Issue のコア目的 (kill/recovery 計測の正確性) に直結するため修正。CONSIDER (run-auto-sub.sh:189 のヒアドキュメント変数展開) は現状 exploit 不可・既存の同種パターンと一貫しているため見送り。
+- 修正は SKILL.md の条件分岐の厳密化のみで、AC の文言や verify command と矛盾しないため Step 13 (Acceptance Criteria Consistency Check) はスキップ判定。
 
 ### Deferred Items
 
 - `_write_wrapper_retry_recovery()` の H3 → H2 形式修正は本 Issue のスコープ外 (spec retrospective の Minor observations に記録済み。`/verify` Step 13 が Improvement Proposal として起票する)。
-- 外部 kill の発生源そのもの (H-a/H-b/H-c) は特定できず、`docs/reports/external-kill-investigation.md` に残存仮説として文書化した。macOS unified log の追加調査 (`memorystatus`/`jetsam`/`SIGKILL` 文字列検索) は否定的結果 (該当ログなし) で、ログ取得自体は可能だったことも記録済み。
+- 外部 kill の発生源そのもの (H-a/H-b/H-c) は特定できず、`docs/reports/external-kill-investigation.md` に残存仮説として文書化した。
+- `modules/workflow-guidance.md` インラインスクリプトの verify ステージ未実行バグは本 PR スコープ外 — 上記 Recurring issues に記録、`/verify` での Improvement Proposal 起票を推奨。
+- CONSIDER (run-auto-sub.sh:189 ヒアドキュメント変数展開) は未修正のまま残存 (exploit 不可と判断し見送り)。
 
 ### Notes for Next Phase
 
-- `bats tests/run-auto-sub.bats` 67 件、`tests/auto-sub-observability.bats` 52 件、`tests/run-code.bats` 全件 PASS 済み (behavioral change detection によりフルスイート実行)。
-- Pre-merge AC 4件 (rubric 3件、bats command 1件) はいずれも自己判定で PASS 済みだが、`/review` フェーズでの独立した再検証を妨げるものではない。
 - Post-merge AC (observation) は次回の実際の外部 kill 発生時まで検証できない — `/verify` は現時点では PASS/FAIL 判定不能な観測待ち状態として扱うこと。
+- `/merge 1008` 実行可 (MUST issue なし、CI 全件 SUCCESS)。
