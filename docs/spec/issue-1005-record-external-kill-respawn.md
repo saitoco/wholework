@@ -170,3 +170,75 @@ log show --start "2026-07-13 09:35:00" --end "2026-07-13 09:45:00" \
 - **REPO_ROOT の main-root 化は 5 つの書き込み経路すべてを同時に堅牢化する**: `REPO_ROOT` はグローバルに `_write_manual_recovery_to_spec` / `_write_tier2_recovery_to_spec` / `_write_tier3_recovery_to_spec` / `_write_wrapper_retry_recovery` / `run_phase_with_recovery` 内 Tier3 push (#986 で列挙された 5 箇所) と resume preamble から参照される。main worktree 解決に変更しても、通常の呼び出し (親 `/auto` セッションが repo root から起動) では現行と同じ値になり、worktree からの呼び出しでのみ挙動が変わる (= 望ましい方向のみ)
 
 - **`skills/auto/SKILL.md` 編集時の制約**: 本文に半角の感嘆符を書かない (`scripts/validate-skill-syntax.py` が zsh history expansion 誤検知として検出する)
+
+## issue retrospective
+
+**Triage (auto-chain, `triaged` ラベル不在のため実行):**
+- Title: 変更なし (既存の命名規則 `component: 説明` に準拠済み)
+- Type: Feature (Issue Types API)
+- Priority: 検出なし (本文・タイトルに優先度キーワードなし)
+- Size: L — 既存 Tier 1/2/3 recovery 機構の外側で動く新規記録機構の追加 + `run-auto-sub.sh` のスクリプトロジック変更 (複数箇所) + CWD 依存解消 + bats テスト追加という規模から判定 (新規アーキテクチャパターン導入で +1 調整)
+- Value: 3 — Impact=2 (shared component: `run-auto-sub.sh`/`skills/auto/SKILL.md` は auto パイプライン全体で共有される基盤スクリプト、blocking/mentions/parent なし)、Alignment=4 (`docs/product.md` Vision の「governance-and-verification harness」= 可観測性・監査可能性の強化に直接寄与)、raw=6 → Value 3
+- 重複候補: なし (関連 Issue #483 #598 #465 は本文中で既に別スコープと明記済み)
+- 停滞チェック: 停滞パターンなし
+- 依存チェック: `Blocked by #N` 記法なし、依存関係なし
+
+**Ambiguity 解決 (Auto-Resolved、詳細は Issue 本文の `## Auto-Resolved Ambiguity Points` セクション参照):**
+
+AC3 (`--write-manual-recovery` の CWD 非依存動作) について、当初の文言「repo root で動作する」は #966 (CLOSED) の既存修正 (`git rev-parse --show-toplevel` ベースの `REPO_ROOT`) で字面上 PASS してしまう可能性があると判断した。#966 の `REPO_ROOT` は worktree 内で実行すると **worktree 自身のルート** を返す設計であり、これは本 Issue の Background に記載された session 37830 の事故 (code worktree の CWD で `--write-manual-recovery` を実行し、記録が PR ブランチへ誤 push された) の直接の原因パターンと一致する。そのため AC3 の文言を「main リポジトリのルートに書き込む (worktree 自身のルートではなく main を解決する)」に具体化し、rubric もこれに合わせて調整した。実装アプローチ (`git worktree list --porcelain` ベースの MAIN_ROOT パターンなど、`run-code.sh`/`run-merge.sh`/`run-review.sh` に既存パターンあり) の選定は `/spec` に委ねる。
+
+他のクラリフィケーションポイント (AC1 の文書化先、AC2 の記録先/実装方式) は Issue 本文の AC 文言自体に「Spec または docs/ 配下」「orchestration-recoveries.md または events.jsonl (あるいは両方)」「自動記録、または明示的な記録手順のいずれか」という選択肢が既に明記されており、/issue (What) と /spec (How) の責務分界に従い実装方式の確定は /spec に委ねるべき性質のため、追加のクラリフィケーションは行わなかった。
+
+**AC verify command 監査:** 問題パターンなし (rubric 3件、bats command 1件、いずれも安全)。
+
+## spec retrospective
+
+### Autonomous Auto-Resolve Log
+
+- **記録先は `docs/reports/orchestration-recoveries.md` + `manual_intervention` イベントの両方** — reason: AC2 は「いずれか」を許容するが、前者は cross-Issue の頻度検出 (`collect-recovery-candidates.sh` / `recoveries-auto-fire`)、後者は session Metrics (`Parent session manual interventions` 行) という別々の消費者を持ち、どちらか一方では Issue が問題視した「計測不能」の片方しか解消しない。両方書くコストは追加関数 1 つと emit 1 行で済む。
+  - Other candidates: recoveries.md のみ (却下 — Metrics が 0 のまま)、events.jsonl のみ (却下 — cross-Issue の paper trail と頻度検出が残らない)
+- **イベント型は既存の `manual_intervention` を使い、`recovery` (tier=manual) は新設しない** — reason: `manual_intervention` は `scripts/emit-event.sh` に「parent session manually recovered a child wrapper failure」として既にスキーマ定義済みで、`get-auto-session-report.sh` にも専用の Metrics 行がある (production の emitter が存在しないため常に 0 だった)。`recovery` に tier=manual を足すと `docs/tech.md` / `modules/orchestration-fallbacks.md` と共有する Tier 1/2/3 の語彙が曖昧になる。
+  - Other candidates: `recovery` イベントに `tier=manual` を追加 (却下 — Tier 語彙の汚染)、新規イベント型の追加 (却下 — 既存スキーマで足りる)
+- **main root 解決は `REPO_ROOT` グローバルごと `git worktree list --porcelain` 方式に切り替える** — reason: `run-code.sh` / `run-merge.sh` / `run-review.sh` に確立済みの既存パターン。`--write-manual-recovery` だけをローカルに修正するより、`REPO_ROOT` を参照する 5 つの recovery 書き込み経路 (#986 で列挙) すべてを同時に堅牢化できる。通常呼び出し (repo root 起動) では値が変わらないため後退リスクがない。
+  - Other candidates: `_write_manual_recovery_to_spec()` 内でローカルに main root を再解決 (却下 — 他 4 経路に同じ脆弱性が残る)
+- **open-PR ガード (#890) は Spec 書き込みのみに適用し、recoveries log とイベントは記録を続行する** — reason: 外部 kill の再スポーン事例は open PR 存在下 (#998 code-pr → PR #1001) で起きるケースが多く、ガードが 3 記録すべてを巻き込むと本 Issue の目的を達成できない。コンフリクト回避が必要なのは PR ブランチも触る Spec ファイルだけであり、`orchestration-recoveries.md` は Tier 3 経路が既に open PR 存在下で main に commit している。
+  - Other candidates: ガードを全記録に適用 (却下 — 記録漏れが残る)、ガード自体を撤廃 (却下 — #890 の自己誘発コンフリクトが再発する)
+- **AC1 の文書化先は `docs/reports/external-kill-investigation.md` (新規)** — reason: AC1 は「Spec または docs/ 配下」を許容するが、Spec は disposable (`docs/tech.md` Spec-first 原則) であり、通算 7 回・複数セッションに跨る調査記録は cross-Issue な保存先が要る。`docs/reports/` には `watchdog-recovery-strategy.md` 等の同型の先例がある。
+  - Other candidates: Spec 内に留める (却下 — Spec は disposable)
+
+### Minor observations
+
+- `_write_wrapper_retry_recovery()` は `### wrapper-retry-on-kill (phase)` という H3 形式で `orchestration-recoveries.md` にエントリを書いているが、同ファイルの Entry Format 定義・`spawn-recovery-subagent.sh` の `write_recovery_entry()` の実エントリ・`collect-recovery-candidates.sh` のパーサはいずれも H2 形式 (`## YYYY-MM-DD HH:MM UTC: <symptom-short>`) を前提としている。結果として wrapper-retry-on-kill の記録は `/audit recoveries` の頻度検出と `recoveries-auto-fire` の閾値判定から不可視になっている。本 Issue のスコープ外 (親セッション再スポーン経路が対象) だが、同種の「記録はされるが計測されない」構造的欠陥であり、Improvement Proposal 候補として起票を推奨する。
+- L3 session retrospective の Metrics 行 `Parent session manual interventions` は、`manual_intervention` イベントの production emitter が 1 つも存在しなかったため、導入以来ずっと構造的に 0 だった。本 Issue が最初の emitter を追加する。
+
+### Judgment rationale
+
+- Issue 本文の「recovery が記録されない」という症状に対し、最初は `run-auto-sub.sh` 側での自動検知を検討したが、session 37830 の events.jsonl 調査で「kill されたフェーズには `wrapper_exit` イベントも backfilled `phase_complete` も残っていない」ことを確認し、wrapper 自身がプロセスグループごと SIGKILL されていると判断した。この事実が「親セッションが唯一の recovery 主体である」という設計制約 (Alternatives A の却下理由) を確定させ、既存 `--write-manual-recovery` の拡張という方針を一意に決めた。証拠 (F1/F2) を先に取ったことで設計選択が推測ではなく観測に基づくものになった。
+
+### Uncertainty resolution
+
+- **macOS jetsam (OOM kill) 仮説**: `/Library/Logs/DiagnosticReports/` と `~/Library/Logs/DiagnosticReports/` を実際に確認し、`JetsamEvent-*` レポートが 1 件も存在しないことを設計時に確認した (jetsam kill は必ずレポートを残す)。メモリ逼迫由来の OOM kill 仮説は現時点の証拠では支持されない、という否定的結果を Spec の Investigation Findings (F4) に記録した。
+- **watchdog kill 仮説**: wrapper ログが "silent for 480s" / "silent for 1260s" の heartbeat 行で切断されており、code フェーズの watchdog timeout (4680s) に遠く及ばないことを確認した (F3)。watchdog kill ではない。
+- **`cd "$REPO_ROOT"` の bats 後退リスク**: `tests/run-auto-sub.bats` の `git` モック実装を読み、`worktree list` に対して空文字列を返す (= `rev-parse --show-toplevel` にフォールバックする) ことを確認したため、既存テストへの影響はないと判断した。`/code` でフルスイート実行して確定させる。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 親セッション主導の記録という方針は、session 37830 の events.jsonl 調査 (F1/F2: kill されたフェーズに `wrapper_exit` も backfilled `phase_complete` も残っていない) から導いた構造的帰結である。`run-auto-sub.sh` 内での自動検知・自動記録は原理的に不可能なので、実装中にその方向へ戻らないこと。
+- 記録先は 3 箇所 (Spec `## Auto Retrospective` / `docs/reports/orchestration-recoveries.md` / `manual_intervention` イベント)。それぞれ消費者が異なる (verify Step 12 の skip 判定 / `collect-recovery-candidates.sh` の頻度検出 / session Metrics)。1 つでも欠けると Issue の目的の一部が未達になる。
+- `orchestration-recoveries.md` のエントリは **H2 形式** (`## YYYY-MM-DD HH:MM UTC: manual-recovery-<type>`) で書く。`_write_wrapper_retry_recovery()` の H3 形式をコピーしないこと (パーサに拾われない)。
+- `REPO_ROOT` のグローバル書き換え (main worktree 解決) により、`--write-manual-recovery` 以外の 4 つの recovery 書き込み経路も同時に堅牢化される。
+
+### Deferred Items
+
+- `_write_wrapper_retry_recovery()` の H3 → H2 形式修正は本 Issue のスコープ外 (spec retrospective の Minor observations に記録済み。`/verify` Step 13 が Improvement Proposal として起票する)。
+- 外部 kill の発生源そのものの特定は、`log show` クエリの結果次第では残存仮説 (H-a/H-b/H-c) のまま文書化して終える。AC1 の rubric がこれを許容している。
+
+### Notes for Next Phase
+
+- `tests/run-auto-sub.bats` の `setup()` にある `$MOCK_DIR/emit-event.sh` モックに `restore_auto_session_pointer() { :; }` を **必ず** 追加すること。production 側が `set -euo pipefail` 下でこの関数を無条件に呼ぶため、未定義だと exit 127 で既存の `--write-manual-recovery` テスト 5 件がすべて落ちる。
+- `SCRIPT_DIR` の定義は `cd "$REPO_ROOT"` より **前** に置くこと。相対パスで `$0` が渡された場合に `cd` 後の `dirname "$0"` が壊れる。
+- `skills/auto/SKILL.md` の本文に半角の感嘆符を書かない (`validate-skill-syntax.py` が CI で落とす)。
+- `docs/structure.md` / `docs/tech.md` / `docs/workflow.md` (+ `docs/ja/` ミラー) は Steering Docs sync candidate として Changed Files に列挙してある。各ファイルを実際に読んで更新要否を判断すること (`docs/structure.md` は更新不要と判定済み)。
