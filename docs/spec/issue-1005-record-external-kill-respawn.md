@@ -69,7 +69,7 @@ log show --start "2026-07-13 09:35:00" --end "2026-07-13 09:45:00" \
 
 2. **`scripts/run-auto-sub.sh` — `_validate_recovery_args` に EXIT_CODE を追加** (after 1) (→ AC3, AC4)。第4引数 `_exit_code` を受け取り、非空の場合のみ `^[0-9]+$` で検証する (既存 3 引数の検証ロジックは変更しない)
 
-3. **`scripts/run-auto-sub.sh` — `_write_manual_recovery_to_recoveries_log()` を新規追加** (after 2) (→ AC2)。引数は `ISSUE PHASE RECOVERY_TYPE [EXIT_CODE]`。`_write_wrapper_retry_recovery()` (現 327-375 行目) の直後に定義し、同関数の実装パターン (ファイル不在なら `return 0`、`python3` heredoc で `<!-- Log entries appear below, newest first. -->` マーカー直後に prepend、`git add` → `git commit -s` → `_push_with_retry` の best-effort チェーン) を踏襲する。**エントリ形式は canonical な H2 形式** を使う (`_write_wrapper_retry_recovery` の H3 形式ではない — Notes 参照):
+3. **`scripts/run-auto-sub.sh` — `_write_manual_recovery_to_recoveries_log()` を新規追加** (after 2) (→ AC2)。引数は `ISSUE PHASE RECOVERY_TYPE [EXIT_CODE]`。実装パターン (ファイル不在なら `return 0`、`python3` heredoc で `<!-- Log entries appear below, newest first. -->` マーカー直後に prepend、`git add` → `git commit -s` → `_push_with_retry` の best-effort チェーン) は `_write_wrapper_retry_recovery()` を踏襲するが、**定義位置は `_write_manual_recovery_to_spec()` の直後 (dispatch ブロックの手前)** — `_write_wrapper_retry_recovery()` の直後 (dispatch よりファイル上で後方) ではない。理由: bash は関数定義行が実行されて初めてその関数をシェルに登録するため、`SUB_NUMBER` パース等より前で `exit 0` する dispatch ブロックより後方に定義すると、dispatch がその関数を呼び出す時点で未定義 (`command not found`) になる (Code Retrospective 参照)。**エントリ形式は canonical な H2 形式** を使う (`_write_wrapper_retry_recovery` の H3 形式ではない — Notes 参照):
 
    ```
    ## <YYYY-MM-DD HH:MM UTC>: manual-recovery-<recovery_type>
@@ -96,7 +96,7 @@ log show --start "2026-07-13 09:35:00" --end "2026-07-13 09:45:00" \
 
 4. **`scripts/run-auto-sub.sh` — `_write_manual_recovery_to_spec()` に exit_code を追加** (after 2) (→ AC2)。第4引数 `exit_code` (既定 `unknown`) を受け取り、Spec エントリに `- **Wrapper exit code**: <exit_code>` 行を追加する (Tier 3 エントリと対称)。`_validate_recovery_args` 呼び出しにも第4引数を渡す。**既存の open-PR ガード (#890、現 97-102 行目) はそのまま維持する** — 早期 `return 0` する対象は Spec 書き込みのみであり、後続の recoveries log 書き込みとイベント emit は dispatch 側で継続するため (Notes 参照)
 
-5. **`scripts/run-auto-sub.sh` — `--write-manual-recovery` dispatch ブロックを拡張** (after 1, 2, 3, 4) (→ AC2)。現 145-153 行目のブロックを次のように拡張する: (a) 引数を `ISSUE [PHASE] [RECOVERY_TYPE] [EXIT_CODE]` として受け取る (usage 文言も更新)、(b) `source "$SCRIPT_DIR/emit-event.sh"` の後に `restore_auto_session_pointer` を呼び、`export EMIT_ISSUE_NUMBER="$ISSUE"` を設定、(c) `_write_manual_recovery_to_spec` → `_write_manual_recovery_to_recoveries_log` の順に呼ぶ、(d) `emit_event "manual_intervention" "recovery_target=<phase>" "wrapper_exit_code=<exit_code|unknown>" "intervention_type=<recovery_type>"` を emit、(e) `exit 0`。emit-event.sh の source を dispatch ブロック内に置く理由: 現行の 210 行目の source は dispatch (145 行目) より後にあり到達しないため
+5. **`scripts/run-auto-sub.sh` — `--write-manual-recovery` dispatch ブロックを拡張** (after 1, 2, 3, 4) (→ AC2)。現 145-153 行目のブロックを次のように拡張する: (a) 引数を `ISSUE [PHASE] [RECOVERY_TYPE] [EXIT_CODE]` として受け取る (usage 文言も更新)、(b) `source "$SCRIPT_DIR/emit-event.sh"` の後に `restore_auto_session_pointer` を呼び、`export EMIT_ISSUE_NUMBER="$ISSUE"` を設定、(c) `_write_manual_recovery_to_spec` → `_write_manual_recovery_to_recoveries_log` の順に呼ぶ、(d) `emit_event "manual_intervention" "recovery_target=<phase>" "wrapper_exit_code=<exit_code|unknown>" "intervention_type=<recovery_type>"` を emit、(e) `exit 0`。emit-event.sh の source を dispatch ブロック内に置く理由: 現行の 210 行目の source は dispatch (145 行目) より後にあり到達しないため。**EXIT_CODE のデフォルト化タイミングに注意**: dispatch 変数 (例 `_mr_exit_code`) は未指定時に空文字列のまま (`"${4:-}"`) 各関数へ渡すこと。ここで `unknown` にデフォルト化してから渡すと、`_validate_recovery_args` の `^[0-9]+$` チェックに非数値文字列が渡り常に FAIL する (Code Retrospective 参照)。`emit_event` の表示専用の値としてのみ `${_mr_exit_code:-unknown}` のようにその場でデフォルト化する
 
 6. **`scripts/emit-event.sh` — `manual_intervention` スキーマコメントを更新** (parallel with 1-5) (→ AC2)。`intervention_type` の説明を「`--write-manual-recovery` の RECOVERY_TYPE 値を運ぶ (例: `respawn`, `push-only`, `pr-create`, `review-rerun`)」に更新し、`wrapper_exit_code` が `unknown` を取りうることを明記する。emitter が `run-auto-sub.sh --write-manual-recovery` であることも 1 行で追記する
 
@@ -221,24 +221,36 @@ AC3 (`--write-manual-recovery` の CWD 非依存動作) について、当初の
 - **watchdog kill 仮説**: wrapper ログが "silent for 480s" / "silent for 1260s" の heartbeat 行で切断されており、code フェーズの watchdog timeout (4680s) に遠く及ばないことを確認した (F3)。watchdog kill ではない。
 - **`cd "$REPO_ROOT"` の bats 後退リスク**: `tests/run-auto-sub.bats` の `git` モック実装を読み、`worktree list` に対して空文字列を返す (= `rev-parse --show-toplevel` にフォールバックする) ことを確認したため、既存テストへの影響はないと判断した。`/code` でフルスイート実行して確定させる。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- **`_write_manual_recovery_to_recoveries_log()` の定義位置を Implementation Step 3 の指示 (`_write_wrapper_retry_recovery()` の直後) から変更し、`_write_manual_recovery_to_spec()` の直後 (dispatch ブロックの手前) に置いた** — reason: bash は関数定義行が実行された時点で初めてその関数をシェルに登録する。`--write-manual-recovery` dispatch ブロックは `SUB_NUMBER` パース等より前で `exit 0` して早期リターンする構造のため、`_write_wrapper_retry_recovery()` の直後 (dispatch よりファイル上で後方) に定義すると、dispatch がその関数を呼び出す時点でまだ定義に到達しておらず `command not found` になる。実行順序上の制約により、呼び出し元より前に定義する必要があった。
+
+### Design Gaps/Ambiguities
+
+- **dispatch 側で EXIT_CODE を先にデフォルト値 `unknown` へ変換してから `_write_manual_recovery_to_spec` に渡すと、`_validate_recovery_args` の数値正規表現チェック (`^[0-9]+$`) に "unknown" という非数値文字列が渡り常に validation FAIL する不具合が発生した** — Spec Implementation Step 2/4 は「非空の場合のみ検証する」設計だったが、Step 5 のドラフト実装で dispatch 側が EXIT_CODE を空のまま関数へ渡さず先にデフォルト化してしまい、この前提を壊していた。修正: dispatch では `_mr_exit_code="${4:-}"` として未指定時は空文字列のまま関数群に渡し (`_validate_recovery_args` が空を許容してスキップする)、`emit_event` へのイベント値表示でのみ `${_mr_exit_code:-unknown}` として個別にデフォルト化する。bats テスト (`writes Auto Retrospective to spec file` 等、既存 5 件) の実行で顕在化し、修正後に全 67 件 PASS を確認した。
+
+### Rework
+
+- 上記 EXIT_CODE のデフォルト化タイミングの不具合修正が唯一の手戻り。実装当初の dispatch ブロックを 1 回書き直した (関数呼び出しへの引数渡し方を変更)。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 親セッション主導の記録という方針は、session 37830 の events.jsonl 調査 (F1/F2: kill されたフェーズに `wrapper_exit` も backfilled `phase_complete` も残っていない) から導いた構造的帰結である。`run-auto-sub.sh` 内での自動検知・自動記録は原理的に不可能なので、実装中にその方向へ戻らないこと。
-- 記録先は 3 箇所 (Spec `## Auto Retrospective` / `docs/reports/orchestration-recoveries.md` / `manual_intervention` イベント)。それぞれ消費者が異なる (verify Step 12 の skip 判定 / `collect-recovery-candidates.sh` の頻度検出 / session Metrics)。1 つでも欠けると Issue の目的の一部が未達になる。
-- `orchestration-recoveries.md` のエントリは **H2 形式** (`## YYYY-MM-DD HH:MM UTC: manual-recovery-<type>`) で書く。`_write_wrapper_retry_recovery()` の H3 形式をコピーしないこと (パーサに拾われない)。
-- `REPO_ROOT` のグローバル書き換え (main worktree 解決) により、`--write-manual-recovery` 以外の 4 つの recovery 書き込み経路も同時に堅牢化される。
+- `_write_manual_recovery_to_recoveries_log()` は `_write_wrapper_retry_recovery()` の直後ではなく `_write_manual_recovery_to_spec()` の直後 (dispatch ブロックの手前) に定義した。bash の関数登録は定義行の実行時点で確定するため、`SUB_NUMBER` パース前に `exit 0` する dispatch ブロックより後方に置くと未定義エラーになる。
+- dispatch の EXIT_CODE は空文字列のまま (`"${4:-}"`) 各関数へ渡し、`unknown` へのデフォルト化は `emit_event` の表示値でのみ行う。先にデフォルト化すると `_validate_recovery_args` の数値チェックが常に FAIL する。
+- `docs/tech.md` / `docs/workflow.md` (+ `docs/ja/` ミラー) は Steering Docs sync candidate だったが、親セッション主導の再スポーン recovery が Tier 1/2/3 の語彙と別系統であることを明示する価値があると判断し、両ファイルとミラーを更新した。`docs/structure.md` は Spec 記載どおり更新不要。
 
 ### Deferred Items
 
 - `_write_wrapper_retry_recovery()` の H3 → H2 形式修正は本 Issue のスコープ外 (spec retrospective の Minor observations に記録済み。`/verify` Step 13 が Improvement Proposal として起票する)。
-- 外部 kill の発生源そのものの特定は、`log show` クエリの結果次第では残存仮説 (H-a/H-b/H-c) のまま文書化して終える。AC1 の rubric がこれを許容している。
+- 外部 kill の発生源そのもの (H-a/H-b/H-c) は特定できず、`docs/reports/external-kill-investigation.md` に残存仮説として文書化した。macOS unified log の追加調査 (`memorystatus`/`jetsam`/`SIGKILL` 文字列検索) は否定的結果 (該当ログなし) で、ログ取得自体は可能だったことも記録済み。
 
 ### Notes for Next Phase
 
-- `tests/run-auto-sub.bats` の `setup()` にある `$MOCK_DIR/emit-event.sh` モックに `restore_auto_session_pointer() { :; }` を **必ず** 追加すること。production 側が `set -euo pipefail` 下でこの関数を無条件に呼ぶため、未定義だと exit 127 で既存の `--write-manual-recovery` テスト 5 件がすべて落ちる。
-- `SCRIPT_DIR` の定義は `cd "$REPO_ROOT"` より **前** に置くこと。相対パスで `$0` が渡された場合に `cd` 後の `dirname "$0"` が壊れる。
-- `skills/auto/SKILL.md` の本文に半角の感嘆符を書かない (`validate-skill-syntax.py` が CI で落とす)。
-- `docs/structure.md` / `docs/tech.md` / `docs/workflow.md` (+ `docs/ja/` ミラー) は Steering Docs sync candidate として Changed Files に列挙してある。各ファイルを実際に読んで更新要否を判断すること (`docs/structure.md` は更新不要と判定済み)。
+- `bats tests/run-auto-sub.bats` 67 件、`tests/auto-sub-observability.bats` 52 件、`tests/run-code.bats` 全件 PASS 済み (behavioral change detection によりフルスイート実行)。
+- Pre-merge AC 4件 (rubric 3件、bats command 1件) はいずれも自己判定で PASS 済みだが、`/review` フェーズでの独立した再検証を妨げるものではない。
+- Post-merge AC (observation) は次回の実際の外部 kill 発生時まで検証できない — `/verify` は現時点では PASS/FAIL 判定不能な観測待ち状態として扱うこと。
