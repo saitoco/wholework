@@ -193,21 +193,22 @@ reopen timestamp が取得できないケースで、同一 Issue の Spec が o
 - 本 Issue 自体が PR #1001 の fix cycle (`/verify` FAIL 後の再オープン) であり、rework は Issue 全体が rework に相当する。fix cycle 内での手戻りは発生していない。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Implementation Steps 1-7 (phase-state.md / reconcile-phase-state.sh / skills/code/SKILL.md / skills/auto/SKILL.md / orchestration-fallbacks.md) はすべて PR #1001 で既に main にマージ済みと判明したため、本 fix cycle では未実施だった Steps 8-10 (bats テスト・shallow test・docs/tech.md 追記) のみを実施した。
-- `tests/reconcile-phase-state.bats` に Spec 指定の 4 ケースに加え、`_operate_signal_ts()` の ISO8601 検証コードパス (commit 20338988 で追加済み) を直接カバーする「壊れた `gh` 出力」ケースを 5 件目として追加した。
+- Step 10 (review-spec 観点) で Spec Implementation Step 8 のケース (c) (reopen あり + fresh commit なし + reopen より後のマーカーあり → matches_expected:true) が bats テストから欠落していることを検出し、MUST issue として `tests/reconcile-phase-state.bats:1126` にライン コメントで投稿した。
+- Step 12 で該当ケースのテストを追加して修正し、`bats tests/reconcile-phase-state.bats tests/operate-route.bats` 全 76 件 green を確認した (`validate-skill-syntax.py` も 0 error)。
+- Step 13 のポリシー変更検出では、本修正が Spec の元々の意図 (4 ケース全網羅) に沿うテスト追加のみであり設計変更を伴わないため、Issue 本文・AC の更新は行わなかった。
 
 ### Deferred Items
 
-- なし — 本 fix cycle で Pre-merge AC のうち `github_check "gh pr checks"` 以外はすべて充足済み。CI 結果は PR #1002 で確認する。
+- Step 10 の Workflow パイプライン (`skills/review/workflow-guidance.md`) に発見した不具合 (adversarial verify ステージが未実行のまま `confirmed: []` を返す) の修正は本 PR のスコープ外。review retrospective に記録済みで、Issue 起票判断は `/verify` に委ねる。
 
 ### Notes for Next Phase
 
+- `/merge` はこの PR (#1002) を CI green・MUST issue 解消済みの状態でマージしてよい。
 - `/verify` は本 PR マージ後、Pre-merge AC 6 件すべてと Post-merge の opportunistic observation (次回 operate route 実行時の `matches_expected: true` 観察) を確認すること。
-- PR #1001 で発生した CI 回帰 (test 670 の期待値誤り) は commit 20338988 で既に修正済みであり、本 PR には含まれない。本 PR は純粋にテスト・ドキュメント追加のみ。
 
 ## Auto Retrospective
 
@@ -217,3 +218,18 @@ reopen timestamp が取得できないケースで、同一 Issue の Spec が o
 - **Source**: parent session manual recovery
 - **Recovery type**: review-rerun
 - **Outcome**: success
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec の Implementation Step 8 は operate route completion のテストケースを (a)-(d) の 4 種類として明示していたが、実装 (5 件のテスト) は (a)(b)(d) + Spec 外の新規 2 ケース (no-marker, malformed) をカバーし、(c) (reopen あり + fresh commit なし + reopen より後のマーカーあり → matches_expected:true — fix-cycle 再実行防止シナリオ、Background で「最も危険」と明記されている Issue #998 の root cause 直撃ケース) が欠落していた。加えて Spec の Code Retrospective / Phase Handoff は「Spec 指定の 4 ケースに加え... 5 件目を追加した」と記載しており、実際のカバレッジと乖離していた。`/review` の review-spec 観点でこの乖離を検出し、Step 12 で該当ケースを追加して解消した (`tests/reconcile-phase-state.bats` 全 67 件 green)。
+- 教訓: 「Spec のケース一覧 + 追加 N 件」という記述はケースの入れ替わりを隠しやすい。実装後に Spec のケース一覧と実装済みテスト名を 1 対 1 で突き合わせる工程があれば、この乖離はより早く検出できた可能性がある。
+
+### Recurring issues
+
+- `capabilities.workflow: true` による Step 10 Workflow パイプライン (`skills/review/workflow-guidance.md` Inline Workflow Script) に実装上の不具合を発見した: `pipeline()` の第 2 ステージが `finderResult.findings.map(finding => () => agent(...))` という「未実行のサンクの配列」を返しており、`parallel()` などで実際に呼び出されていない。この結果、finder が検出した finding は adversarial verify ステージを一度も経由せず、`allFindings.flat().filter(Boolean)` が関数オブジェクトを保持したまま `f.refuted === false` を評価するため常に `confirmed: []` となり、`totalFound` の集計もサンク配列の内部を数えないため不正確になる (今回の実行では実際には 1 件の MUST finding が存在したにも関わらず `totalFound: 0` と報告された)。今回は journal.jsonl を直接確認し、手動で二次検証することで finding を救済したが、この不具合が放置されると Workflow モードを有効化している全リポジトリで「実際には検出されている MUST issue が `confirmed: []` として握りつぶされる」サイレント障害が継続する。Improvement Proposal 候補として `/verify` 側での起票判断に委ねる (本 retrospective には記録のみ、Issue 起票は行わない)。
+
+### Acceptance criteria verification difficulty
+
+- 特になし。Issue #998 の 6 件の Pre-merge AC (rubric×2, file_contains×3, github_check×1) はいずれも安全に自動判定でき、UNCERTAIN は発生しなかった。`github_check "gh pr checks" "Run bats tests"` は safe mode allowlist 経由で問題なく実行できた。
