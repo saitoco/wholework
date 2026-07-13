@@ -94,8 +94,29 @@ No new comments since last phase.
 ### Notes
 - `/code` 実行開始時、Issue のラベルは既に `phase/code` だった (Spec 作成コミット後、`phase/ready` を経由せず前回セッションの中断状態が残存していたと推定)。`reconcile-phase-state.sh --check-precondition code-pr` は `matches_expected:false` (phase/ready 不在) を返したが、Spec は完成済みで実装に十分な情報があったため、非対話モードの auto-resolve 方針 (Spec 不在時の代替読み込み) を「Spec は存在するが precondition ラベルのみ欠けているケース」に準用し、警告を出しつつ実装を継続した。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note — Implementation Steps 1-5 followed exactly (emit-side fix, EMIT_PR_NUMBER export, bats tests, docs sync), no structural divergence found in the diff.
+
+### Recurring issues
+- Nothing to note — no recurring issue patterns observed in this review.
+
+### Acceptance criteria verification difficulty
+- Nothing to note — all 3 pre-merge conditions (rubric x2, bats command) resolved cleanly to PASS with no UNCERTAIN; the rubric wording explicitly allowing either "emit 側" or "集計側" fix location avoided ambiguity at verification time.
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
+
+### Key Decisions
+- No fixes needed — review-light found no issues across Spec deviation, edge cases/robustness, security, and documentation consistency.
+- Verified beyond static reading: ran the 3 target bats files locally (67/67 pass), shellcheck on both modified scripts, and check-translation-sync.sh (IN_SYNC).
+
+### Deferred Items
+- Post-merge AC (次回 `/auto --batch` の L3 retrospective での「Issues processed」実 Issue 数一致の観察) remains for post-merge observation — cannot be verified pre-merge.
+
+### Notes for Next Phase
+- `/merge` can proceed directly; no MUST/SHOULD/CONSIDER issues were raised in this review.
 
 ### Key Decisions
 - Spec Implementation Steps 1-5 を順序通りに実装 (emit 側修正 → bats テスト → docs 同期)。逸脱なし。
