@@ -122,3 +122,68 @@
 ### validate-skill-syntax.py 制約の確認
 
 追加する SKILL.md 本文には半角の感嘆符を含めない。分岐リストには **(exhaustive)** マーカーを付与する。Step 番号は整数のまま (Step 2 の見出し・番号は変更しない)。
+
+## issue retrospective
+
+`/issue 1000 --non-interactive` によるリファインメントの結果 (Issue コメントより転記)。
+
+### Triage
+
+- Title: 変更なし (既に命名規則に準拠)
+- Type: Feature / Priority: 未検出 / Size: L (対象ファイル 3+、複数 skill 横断のスクリプトロジック変更。precedent #930 も Size L) / Value: 3
+
+### Background ファクト検証 (advisory)
+
+Background セクションの技術的主張 (`skills/verify/SKILL.md` Step 2/Step 3 の構造、`skills/review/SKILL.md` の Worktree Exit → Opportunistic Verification の文書順序) は、該当ファイルを直接読み込み実体を確認済み。警告なしで通過。
+
+### 自動解決した曖昧ポイント (Autonomous Auto-Resolve Log)
+
+- **AC1 (base branch checkout の保護方式)**: AC 本文から実装手段 (ファイル名・Step 順序入れ替え) の列挙を除去し、outcome ベースの記述に書き換え。実装アプローチの選択は `/spec` に委譲した。`/issue` 時点では #930 の Spec retrospective の設計判断 (共有ロジックの一箇所修正の方が DRY) を根拠に「順序入れ替え」を有力視していたが、確定はさせなかった。
+- **AC2 (Opportunistic Verification の前提保証方式)**: 同様に実装手段の列挙を除去し outcome ベースの記述へ。
+- **AC3 (テストフレームワークの許容範囲)**: 「bats テスト等」を現状維持。既存テストが一貫して bats のみのため実質的な曖昧さは低いと判断。
+
+### その他
+
+- タイトルドリフト: なし。Blocked-by: オープンなブロッカーなし (#930 は CLOSED)。Scope Assessment (sub-issue 分割): 非対話モードのためスキップ。
+
+## spec retrospective
+
+### Minor observations
+
+- `/issue` の retrospective コメントは Type=Feature と記録していたが、GitHub の Issue Type フィールドは実際には未設定 (`get-issue-type.sh` が空文字を返す) だった。本 Spec は `ISSUE_TYPE=unset` として full テンプレート (型別セクションの追加・省略なし) で作成した。`/issue` が Type を判定しても GitHub 側に書き戻していないケースがある可能性があり、`/triage` 未実行の Issue では同様のズレが起きうる。
+- `docs/structure.md` の `tests/` ファイル数コメント (`(95 files)`) が実測 98 件とドリフトしていた。ファイル数更新ルール (structure.md:89) が `modules/` と `scripts/` のみを対象としているため、`tests/` のカウントは誰も更新していない構造になっている。本 Issue のスコープ外として Notes に記録するに留めた。
+
+### Judgment rationale
+
+- `/issue` フェーズが有力視していた「Step 2/3 の順序入れ替え」案を、使い捨て git リポジトリでの実測により棄却した。worktree 内での `git checkout <base>` は、メインリポジトリが当該ブランチを checkout 済みなら exit 128 で失敗し、そうでなければ worktree の HEAD をサイレントに切り替える。前フェーズの推奨案であっても、設計前提はコマンドを実際に走らせて確認する価値があると再確認した。
+- `foreign` 検出時の復帰に `cd <path>` だけでなく `ExitWorktree(action: "keep")` を先行させる設計にしたのは、EnterWorktree のツール制約「Must not already be in a worktree session when creating a new worktree (`name`)」を読んだため。CWD の正規化とツールレベルの worktree セッション状態は別物であり、両方を戻さないと Step 3 の EnterWorktree が失敗する。
+- `/review` 側のアサーションを `modules/opportunistic-verify.md` ではなく `skills/review/SKILL.md` に直接置いたのは、実際に nested `/verify` を dispatch する Event-based observation scan が `opportunistic-verify` 設定と無関係に常時実行されるため。モジュール側に置くと dispatch 経路をカバーできない。
+- 3 箇所 (worktree-lifecycle Entry / verify Step 2 / review アサーション) で `detect-foreign-worktree.sh` の 3 分岐骨格が重複するが、tail action が互いに異なるため共有モジュール抽出は見送った。3 つ目の skill が同じ tail を必要とした時点が抽出の判断点。
+
+### Uncertainty resolution
+
+- 「worktree 内で base branch を checkout するとどうなるか」は Uncertainty として残さず、使い捨てリポジトリでの実測により Spec 作成中に解消した (2 つの failure mode を確認)。これが論点 1 の決め手になった。
+- `ExitWorktree` を nested skill から呼んだときの呼び出し元セッションへの影響は、ツール仕様の「no-op outside an EnterWorktree session」記述までは確認できたが、アクティブセッションを nested 側から exit した際の呼び出し元の挙動は実測していない。Uncertainty セクションに記録し、post-merge observation に委ねた。`/review` 側のアサーションが機能すれば `/verify` 側の `foreign` 分岐は発火しないため、実運用上の露出は小さい。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- base branch checkout の保護方式は「Step 2 直前へのガード追加」を採用。`/issue` フェーズが有力視していた「Step 2/3 の順序入れ替え」は、worktree 内での `git checkout <base>` が exit 128 で失敗する (メインリポジトリが当該ブランチを checkout 済みの場合) か、worktree の HEAD をサイレントに切り替える (そうでない場合) ことを実測で確認したため棄却した。
+- `foreign` 検出時の復帰は `ExitWorktree(action: "keep")` → `cd <path>` → 再判定の 3 段。`cd` だけでは呼び出し元の worktree セッションが生きたままとなり、Step 3 の `EnterWorktree(name: ...)` がツール制約で失敗する。
+- `/review` 側の前提アサーションは `## Opportunistic Verification` セクション冒頭に直接配置する。`modules/opportunistic-verify.md` に置くと、`opportunistic-verify: false` 環境でも常時実行される Event-based observation scan ブロックをカバーできない。
+- 3 箇所に散る `detect-foreign-worktree.sh` の 3 分岐骨格は、tail action が異なるため共有モジュール化しない。
+
+### Deferred Items
+
+- `own` 分岐 (`/verify` 再入呼び出し) の実挙動は現行の通常フローでは到達しないため、bats 構造テストによる分岐記述の存在確認に留めた。実挙動の観測は再入ケースが実際に発生した時点。
+- nested skill から `ExitWorktree` でアクティブな呼び出し元セッションを exit した際の呼び出し元挙動は未実測。post-merge observation AC (`event=pr-review-full`) に委ねた。
+- `docs/structure.md` の `tests/` ファイル数コメントのドリフト (95 → 実測 98) は本 Issue のスコープ外。
+
+### Notes for Next Phase
+
+- SKILL.md に追加する分岐リストには **(exhaustive)** マーカーを付与すること。半角の感嘆符は使用不可 (`validate-skill-syntax.py`)。Step 2 の見出し文言・番号は変更しない。
+- `tests/verify.bats` は `tests/review.bats` の構造テスト方式 (awk でセクション抽出 → grep) をそのまま踏襲する。bash 3.2+ 互換 (`mapfile` 不可)。
+- `tests/review.bats` の既存ヘルパー `opportunistic_verification_section()` は awk で次の `## ` 見出しまでを抽出する。追加するアサーションブロックに `## ` 見出しを含めないこと (含めると既存 3 テストが壊れる)。
+- `allowed-tools` の変更は不要 (`detect-foreign-worktree.sh:*`・`ExitWorktree` は両 SKILL.md に登録済み)。追加すると `validate-skill-syntax.py` の KNOWN_TOOLS 同期が必要になるため、不要な追加を行わないこと。
