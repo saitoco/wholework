@@ -121,6 +121,15 @@ No new comments since last phase.
 
 ## Auto Retrospective
 
+### Manual recovery (issue)
+- **Date**: 2026-07-13 17:12 UTC
+- **Issue**: #1007, phase: issue
+- **Source**: parent session manual recovery
+- **Recovery type**: skip-forward
+- **Wrapper exit code**: unknown
+- **Outcome**: success
+- (transferred from the pre-spec stub `issue-1007-recovery.md`, which was created because `--write-manual-recovery` ran before the spec phase produced the formal Spec; the stub has been removed after this consolidation)
+
 ### Manual recovery (code-pr)
 - **Date**: 2026-07-13 18:28 UTC
 - **Issue**: #1007, phase: code-pr
@@ -136,3 +145,30 @@ No new comments since last phase.
 - **Recovery type**: respawn
 - **Wrapper exit code**: unknown
 - **Outcome**: success
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 3 件とも rubric/command が実装対象を正確に指しており UNCERTAIN ゼロ。emit 側修正 (wrapper での Issue 番号解決) と集計仕様文書化の二本立てが AC1/AC2 に素直に対応した。
+
+#### design
+- 集計側フィルタではなく emit 側での帰属修正を選んだ設計は、events.jsonl 自体を正しいデータにする (下流のすべての消費者が恩恵を受ける) 点で妥当。解決失敗時の PR 番号フォールバックも安全側。
+
+#### code
+- 実装 rework なし。オーケストレーション層では外部 kill が 3 回発生 (issue phase 実行中 / code phase 開始直後 / review phase 実行中 — 1 Issue で最多、通算 10-12 回目)。いずれも親セッション主導で復帰し `## Auto Retrospective` に記録済み (issue: skip-forward — triage 実質完了を確認して再実行せず先へ進んだ初の recovery type、code-pr/review: respawn — milestone resume `post-PR-create` → `skip-to-review` が機能)。
+- **Spec stub 分裂の観察**: issue phase の kill 記録時、Spec 未作成のため `_write_manual_recovery_to_spec()` が stub (`issue-1007-recovery.md`) を新規作成した。その後 spec phase が正式 Spec (`issue-1007-fix-issues-processed-pr-leak.md`) を別名で作成したため、`issue-1007-*.md` glob に 2 ファイルがマッチする分裂状態になった (verify Step 12 の Spec 読み込みや retro-proposals の Glob が多義になる)。本 verify で stub の Manual recovery エントリを正式 Spec に統合し stub を削除した。→ Improvement Proposals へ。
+
+#### review
+- light review で指摘なし。UNCERTAIN ゼロ。
+
+#### merge
+- conflict なし、squash merge 成功。
+
+#### verify
+- Pre-merge 3 件一発 PASS (get-auto-session-report.bats 9/9 + wrapper 側 4 テスト)。
+- Post-merge observation AC は次回バッチが対象 — 本修正は emit 側のため、修正前に記録された本バッチ (session 33265) のイベントには遡及せず、本バッチの L3 retro では PR 番号混入が残る見込みであることをコメントに明記した。
+
+### Improvement Proposals
+- `--write-manual-recovery` が Spec 未作成の段階 (triage/spec phase の kill) で呼ばれると stub Spec (`issue-N-recovery.md`) を新規作成し、後続の spec phase が正式 Spec を別名で作るため `issue-N-*.md` glob が 2 ファイルにマッチする分裂状態になる。spec phase が stub を検出して正式 Spec へ統合する、または recovery 書き込みが Spec 不在時は recoveries log + イベントのみに記録して Spec 書き込みを spec phase 後まで遅延する等の解消が必要 (検出元: #1007 の issue phase kill 記録、本 verify で手動統合済み)
