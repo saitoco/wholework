@@ -66,6 +66,25 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ## 2026-07-13 18:28 UTC: manual-recovery-respawn
 
 ### Context
+- Issue #1007, phase: review
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: unknown
+
+### Diagnosis
+- Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: respawn)
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+## 2026-07-13 18:28 UTC: manual-recovery-respawn
+
+### Context
 - Issue #1007, phase: code-pr
 - Source: parent-session-manual-recovery
 - Wrapper: run-auto-sub.sh, exit code: unknown
