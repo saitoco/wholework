@@ -53,3 +53,30 @@
 - **`--ff-only` の外部仕様確認は省略**: `--ff-only` の挙動 (fast-forward できない場合は作業ツリーを変更せず失敗する) は `modules/orchestration-fallbacks.md#ff-only-merge-fallback` で既に本リポジトリ内の確立された前提として扱われており、WebFetch による追加の外部ドキュメント確認は行わなかった。
 - **Auto-Resolved Ambiguity Points (Issue #1012 本文より)**: 「書き込み前の pre-pull」vs「push 失敗時の remote 版再適用」の 2 案のうち前者を採用済み (`/issue` フェーズで非対話モード自動解決)。本 Spec はその決定に従う。
 - **Steering Docs 更新は不要と判断**: `docs/tech.md` / `docs/workflow.md` (日本語版含む) は `--write-manual-recovery` に言及しているが、いずれも「3 箇所に書き込む」という外部契約レベルの説明に留まり、push 再試行の内部機構には触れていないため、本修正後も記述は正確なまま変更不要 (`grep -l "write-manual-recovery" docs/*.md docs/ja/*.md` で確認)。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜4 をそのまま実施した (ヘルパー名・呼び出し位置・ドキュメント更新箇所・回帰テストのモック構成いずれも Spec の指定どおり)。
+
+### Design Gaps/Ambiguities
+- Issue は本セッション開始時点で既に `phase/code` ラベル (`phase/ready` は消費済み) の状態だったが、`docs/spec/issue-1012-manual-recovery-stale-main.md` は完成済みだった。SKILL.md Step 3 の「`phase/ready` 不在 → Spec なしとして続行」の auto-resolve 分岐はこのケース (前回セッションが原因不明 kill で `/code` 中断、resume) を想定した書き方になっておらず、機械的に従うと「Spec なし」の誤判定を招きかねない。今回は Spec の実在と内容の完成度を確認したうえで通常どおり Step 4 以降に進んだ。`reconcile-phase-state.sh --check-precondition` も同じ理由で `matches_expected: false` を返す (non-interactive では warn-only として想定どおり)。
+
+### Rework
+- N/A — 手戻りは発生しなかった。ただし Step 8 で 3 つの中間コミットに分けて実装したところ、いずれのコミット subject にも `#1012` 参照が含まれておらず、Step 11 の「(closes #N) を実装コミットの subject に含める」要件 (concurrent_commit_detected 誤検知対策、#996) を満たしていなかった。push 前 (worktree ローカル、未 push) だったため `git reset --soft origin/main` で 3 コミットをまとめ直し、`fix: ... (closes #1012)` の単一コミットに squash して要件を満たした。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- pre-pull は単一の `git pull --ff-only` コマンドとして実装した (分解形の fetch+rebase にすると既存の push-retry カウント系テストのアサーションが壊れるため、Spec Notes の指示どおり)
+- 呼び出し位置は Spec 指定どおり: `_write_manual_recovery_to_spec` は open PR ガード直後・`spec_dir` 計算前、`_write_manual_recovery_to_recoveries_log` は `_recoveries_file` 代入直後・ファイル存在チェック前
+- Step 8 の 3 つの中間コミットを `origin/main` まで squash し、`fix: ... (closes #1012)` という単一コミットに統合した (concurrent_commit_detected 誤検知対策として commit subject への `#1012` 参照が必須のため)
+
+### Deferred Items
+- None — Spec の Implementation Steps に deferred 項目はなし
+
+### Notes for Next Phase
+- pre-merge verify command 3件 (rubric ×2、`command "bats tests/run-auto-sub.bats"`) はすべて PASS 済みで、Issue のチェックボックスも更新済み
+- post-merge AC (`verify-type: observation event=auto-run`) は次回 merge 直後の `--write-manual-recovery` 実呼び出しで自然に検証される — 追加のフォローアップ不要
+- Behavioral Change Detection により `bats tests/run-auto-sub.bats` (68件) に加えリポジトリ全体 `bats tests/` (1184件) も実行し、全件 PASS を確認済み
