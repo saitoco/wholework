@@ -105,17 +105,14 @@ No new comments since last phase.
 - N/A — rubric 型 AC は diff から直接確認可能、command 型 AC (`bats tests/run-auto-sub.bats`) は CI 参照フォールバック (`Run bats tests` ジョブ SUCCESS) で PASS 判定でき、UNCERTAIN は発生しなかった
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Light review (review-light エージェントによる4観点統合レビュー) を実施し、実装は Spec Implementation Steps 1-4 と完全一致、Issue 0件と判定
-- AC2 (`bats tests/run-auto-sub.bats`) は CI 参照フォールバックで PASS 判定 (再実行不要と判断)
-- 修正対応 (Step 12) は発生せず、Policy Change 検出 (Step 13) も対象なしのためスキップ
+- Squash merge を実行し、PR #1018 を main にマージ (`worktree-code+issue-1015` ブランチは削除済み)
+- CI 全ジョブ SUCCESS、review 承認済みで conflict なし。mergeable=clean のため conflict 解消フローは未使用
 
 ### Deferred Items
-- Tier2/Tier3 の同型修正、既存分裂/stub インスタンス (#957, #850, #961) のバックフィルは引き続き本 Issue のスコープ外 (review でも変更なし)
-- Post-merge observation AC (次回 kill 実発生時に Spec 非分裂を確認) は merge 後の `/verify` に委ねる
+- Tier2/Tier3 の同型修正、既存分裂/stub インスタンス (#957, #850, #961) のバックフィルは引き続き本 Issue のスコープ外
 
 ### Notes for Next Phase
-- `/merge` 実行時点で全 CI ジョブ SUCCESS 済み、追加確認は不要
-- `/verify` では post-merge observation 条件 (`verify-type: observation event=auto-run`) の確認を行うこと
+- `/verify` では post-merge observation 条件 (`verify-type: observation event=auto-run`) の確認を行うこと (次回 kill 実発生時に Spec 非分裂を確認)
