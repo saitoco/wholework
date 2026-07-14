@@ -100,3 +100,13 @@ No new comments since last phase. (cutoff: 2026-07-14T18:01:57Z, most recent `ph
 ### Notes for Next Phase
 - Post-merge AC (`orchestration-recoveries.md に本 Issue 作成日以降の新規 未起票 manual-recovery-respawn エントリが無いこと`) の自動判定を `/verify` で実施する。6件目 (#1014 自身の spec phase kill) の記録タイミングについては code phase の Notes を参照
 - 孤立 worktree (`review+pr-1016`) のクリーンアップ状況を次回のセッションで確認し、必要なら `git worktree remove --force .claude/worktrees/review+pr-1016` と `git branch -D worktree-code+issue-1014` を実行してほしい
+
+## Auto Retrospective
+
+### Manual recovery (spec)
+- **Date**: 2026-07-14 19:28 UTC
+- **Issue**: #1014, phase: spec
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn
+- **Wrapper exit code**: unknown
+- **Outcome**: success
