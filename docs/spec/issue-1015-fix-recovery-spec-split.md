@@ -81,3 +81,41 @@ No new comments since last phase.
   - Spec 側への反映は、正式 Spec 作成後に `/verify` Step 12 の既存ルール (`## Auto Retrospective` 未記録なら notable content として Verify Retrospective に記録) が自然にカバーするため、情報が失われるわけではなく「記録タイミングが即時から `/verify` 時点に変わる」だけである
 - **Tier2/Tier3 の同型パターン (スコープ外)**: `_write_tier2_recovery_to_spec()` / `_write_tier3_recovery_to_spec()` (`scripts/run-auto-sub.sh` 356-439行目) も `_write_manual_recovery_to_spec()` と同一の stub 作成分岐を持つ。本 Issue の Purpose 文が名指しするのは `_write_manual_recovery_to_spec()` のみのため、Tier2/Tier3 側の同種修正は本 Spec のスコープ外とした。特に Tier2 (`_write_tier2_recovery_to_spec()`) は Manual recovery 系と異なり `docs/reports/orchestration-recoveries.md` への書き込みが無く、Spec 書き込みが唯一の永続記録であるため、同じ「stub を作らない」修正を機械的に適用すると記録が完全に失われる回帰を招く — Tier2 側を修正する場合は recoveries log への書き込み追加とセットで設計する必要がある。`/verify` の retro-proposals パイプラインを preempt しないため本 Spec では起票しない
 - **既存の分裂/stub インスタンス (バックフィル対象外)**: 調査中に3件の実例を確認した。(1) `docs/spec/issue-957-recovery.md` (`_write_manual_recovery_to_spec()` 由来、issue #957 は phase/done で closed、他に正式 Spec が作成されず stub のみが恒久化)、(2) `docs/spec/issue-850-recovery.md` (`_write_tier2_recovery_to_spec()` 由来、issue #850 は phase/done で closed、同様に stub のみ)、(3) `docs/spec/issue-961-recovery.md` (issue #961 は CLOSED/phase/verify、正式 Spec `docs/spec/issue-961-worktree-merge-push-checkout.md` と**現在も分裂したまま** — 当時の `/spec` 実行が Notes で「別ファイルのまま残す」と意図的に非統合を選択した)。いずれも本 Issue の再発防止スコープには含めず、バックフィル/統合が必要であれば別 Issue で扱う
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-4 をそのまま順に実施した
+
+### Design Gaps/Ambiguities
+- `_write_manual_recovery_to_spec()` の stub 作成分岐は `scripts/run-auto-sub.sh` 内に3箇所同一パターンで存在した (Manual/Tier2/Tier3)。Edit ツールの一意性制約により対象箇所 (147-153行目付近、Manual recovery 用) を周辺コンテキストで一意に特定する必要があった。Spec の「Changed Files」記載行数 (127-182行目) はおおむね正確だったが、実際のブロック開始行はやや異なっていた (誤差は軽微で実装に支障なし)
+
+### Rework
+- N/A — 手戻りなし
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- N/A — review-light エージェントによる4観点統合レビューの結果、diff は Spec Implementation Steps 1-4 と完全一致しており、構造的な乖離は検出されなかった
+
+### Recurring issues
+- N/A — Issue 指摘は0件だった (MUST/SHOULD/CONSIDER いずれもなし)
+
+### Acceptance criteria verification difficulty
+- N/A — rubric 型 AC は diff から直接確認可能、command 型 AC (`bats tests/run-auto-sub.bats`) は CI 参照フォールバック (`Run bats tests` ジョブ SUCCESS) で PASS 判定でき、UNCERTAIN は発生しなかった
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Light review (review-light エージェントによる4観点統合レビュー) を実施し、実装は Spec Implementation Steps 1-4 と完全一致、Issue 0件と判定
+- AC2 (`bats tests/run-auto-sub.bats`) は CI 参照フォールバックで PASS 判定 (再実行不要と判断)
+- 修正対応 (Step 12) は発生せず、Policy Change 検出 (Step 13) も対象なしのためスキップ
+
+### Deferred Items
+- Tier2/Tier3 の同型修正、既存分裂/stub インスタンス (#957, #850, #961) のバックフィルは引き続き本 Issue のスコープ外 (review でも変更なし)
+- Post-merge observation AC (次回 kill 実発生時に Spec 非分裂を確認) は merge 後の `/verify` に委ねる
+
+### Notes for Next Phase
+- `/merge` 実行時点で全 CI ジョブ SUCCESS 済み、追加確認は不要
+- `/verify` では post-merge observation 条件 (`verify-type: observation event=auto-run`) の確認を行うこと
