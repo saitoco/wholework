@@ -93,17 +93,29 @@ No new comments since last phase.
 ### Rework
 - N/A — 手戻りなし
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- N/A — review-light エージェントによる4観点統合レビューの結果、diff は Spec Implementation Steps 1-4 と完全一致しており、構造的な乖離は検出されなかった
+
+### Recurring issues
+- N/A — Issue 指摘は0件だった (MUST/SHOULD/CONSIDER いずれもなし)
+
+### Acceptance criteria verification difficulty
+- N/A — rubric 型 AC は diff から直接確認可能、command 型 AC (`bats tests/run-auto-sub.bats`) は CI 参照フォールバック (`Run bats tests` ジョブ SUCCESS) で PASS 判定でき、UNCERTAIN は発生しなかった
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec Notes で確定済みの方式 (b: stub 非作成 + early return) をそのまま採用し、実装は Spec Implementation Steps 1-4 の順に完了
-- Tier2/Tier3 の同型 stub 作成分岐には触れず、Spec Notes の "スコープ外" 判断を踏襲した
+- Light review (review-light エージェントによる4観点統合レビュー) を実施し、実装は Spec Implementation Steps 1-4 と完全一致、Issue 0件と判定
+- AC2 (`bats tests/run-auto-sub.bats`) は CI 参照フォールバックで PASS 判定 (再実行不要と判断)
+- 修正対応 (Step 12) は発生せず、Policy Change 検出 (Step 13) も対象なしのためスキップ
 
 ### Deferred Items
-- Tier2/Tier3 (`_write_tier2_recovery_to_spec()` / `_write_tier3_recovery_to_spec()`) の同種修正は本 Issue のスコープ外 (Spec Notes に判断根拠あり、起票はしない方針)
-- 既存の分裂/stub インスタンス (#957, #850, #961) のバックフィル/統合は本 Issue のスコープ外
+- Tier2/Tier3 の同型修正、既存分裂/stub インスタンス (#957, #850, #961) のバックフィルは引き続き本 Issue のスコープ外 (review でも変更なし)
+- Post-merge observation AC (次回 kill 実発生時に Spec 非分裂を確認) は merge 後の `/verify` に委ねる
 
 ### Notes for Next Phase
-- Behavioral change 検出により `bats tests/` フルスイート (1197件) を実行し全 PASS を確認済み — review 側で改めてフルスイートを回す必要は薄い
-- `docs/tech.md` / `docs/ja/tech.md` は同一コミットで同期済み (`check-translation-sync.sh` で `docs/tech.md` IN_SYNC 確認済み)。他の pre-existing sync gap (`docs/guide/autonomy.md` 等) は本 Issue と無関係
+- `/merge` 実行時点で全 CI ジョブ SUCCESS 済み、追加確認は不要
+- `/verify` では post-merge observation 条件 (`verify-type: observation event=auto-run`) の確認を行うこと
