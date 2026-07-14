@@ -87,17 +87,16 @@ No new comments since last phase. (cutoff: 2026-07-14T18:01:57Z, most recent `ph
 - 上記の pipe chain バグは実装中に気づいて修正したもので、bats テストケース (「different phase」「different issue」のケース) を先に書いていたことで検出できた。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `scripts/detect-external-kill.sh` の exit code 規約は `test-failure-classify.sh` に倣い、exit 0 = `external-kill` (match)、exit 1 = `no-match`、exit 2 = usage/引数エラーとした (`detect-wrapper-anomaly.sh` の「常に exit 0、stdout の有無で判定」パターンとは異なる — こちらは複数パターンの中から1つを選ぶ検出器ではなく、単一シグネチャの有無を判定する二値の検出器のため、exit code で結果を表現する方が自然と判断した)
-- `docs/tech.md` の "Parent-session manual respawn" 節は外部契約レベルの記述 (記録先3箇所) に留まり検知ロジックの内部実装には触れていないため、変更不要と判断した (Spec Notes の判断を実装完了後に再確認し、据え置き)
-- 根源原因 (H-a/H-b/H-c) の追加調査は行わず、再スポーン検知の機械化のみを実装した — `wrapper_exit_code` が全件 `unknown` で観測ギャップが判明し、新たな検証可能な手がかりが無かったため (Spec Overview 参照)
+- CI green / review approved (mergeable=true, reason=clean) を確認し、conflict 解消手順は不要だったため squash merge をそのまま実行した
+- squash merge 後、`gh pr merge --delete-branch` によるローカルブランチ削除が、別セッションが残した孤立 worktree 登録 (`review+pr-1016` が指すディレクトリが実際には存在しない) により失敗した。remote merge/remote branch 削除自体は正常完了しているため、squash merge の成否には影響しないと判断し、ローカルブランチ削除の失敗は許容してそのまま後続ステップを継続した
 
 ### Deferred Items
-- H-a/H-b/H-c (Claude Code harness のバックグラウンドタスクライフサイクル / ターミナル・シェル側 kill / 不明) は未解明のまま。新たな検証可能な手がかりが得られるまで追加調査を見送る
-- Issue #1014 自身の spec phase kill (6件目の manual-recovery-respawn) は `docs/reports/orchestration-recoveries.md` に未記録 — 親 `/auto` セッションの `--write-manual-recovery` 呼び出しで記録される想定 (本 Spec のスコープ外、Notes 参照)
+- `review+pr-1016` worktree の孤立 git 管理領域 (`.git/worktrees/review+pr-1016`) と、それに紐づくローカルブランチ `worktree-code+issue-1014` の削除は本 merge スキルのスコープ外として保留 — 手動 (`git worktree unlock` 済み、あとは `git worktree remove --force` または `git branch -D` の再試行) でのクリーンアップが必要
+- H-a/H-b/H-c (external kill の根源原因) は引き続き未解明のまま — code phase の Deferred Items を参照
 
 ### Notes for Next Phase
-- Post-merge AC (`orchestration-recoveries.md に本 Issue 作成日以降の新規 未起票 manual-recovery-respawn エントリが無いこと`) は `/verify` が自動判定する。ただし判定時点で6件目 (#1014 自身の spec phase kill) が `--write-manual-recovery` によりまだ `起票済み #1014` として記録されていない可能性がある点に注意 (Notes の「スコープ外の除外」参照。この6件目は本 Issue の実装漏れではなく、記録タイミングの構造上の理由による)
-- `skills/auto/SKILL.md` Step 6 の変更は次回 kill 発生時に初めて実地で検証される。`/review` では `detect-external-kill.sh` の呼び出し引数 (`--log`/`--events`/`--exit-code`/`--issue`/`--phase`) が Step 6 の他の変数 (`$NUMBER`/`$PHASE`/`$EXIT_CODE`) と整合しているかを確認してほしい
+- Post-merge AC (`orchestration-recoveries.md に本 Issue 作成日以降の新規 未起票 manual-recovery-respawn エントリが無いこと`) の自動判定を `/verify` で実施する。6件目 (#1014 自身の spec phase kill) の記録タイミングについては code phase の Notes を参照
+- 孤立 worktree (`review+pr-1016`) のクリーンアップ状況を次回のセッションで確認し、必要なら `git worktree remove --force .claude/worktrees/review+pr-1016` と `git branch -D worktree-code+issue-1014` を実行してほしい
