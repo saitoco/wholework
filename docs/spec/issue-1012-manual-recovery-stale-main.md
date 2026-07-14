@@ -90,3 +90,29 @@
 - **Recovery type**: respawn
 - **Wrapper exit code**: unknown
 - **Outcome**: success
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC 3 件 (rubric ×2 + command ×1) はいずれも実装対象を正確に指し、UNCERTAIN ゼロ。pull-first の実装位置 (`_pull_ff_only` の単一呼び出し維持 — 既存 bats の grep カウント前提への配慮) まで Spec/実装コメントに明記されており、テスト前提との整合が意識された設計だった。
+
+#### design
+- 「書き込み前 pull (一次) + `_push_with_retry` (二次)」の二層防御は、#1006 で観測された conflict 停止ケースの再発面を狭める妥当な構成。pull 失敗時に WARNING + fallthrough とした非致命設計も記録喪失より継続を優先する本機構の目的に合う。
+
+#### code
+- 実装 rework なし。ただしオーケストレーション層で **外部 kill が 4 連続で発生 (通算 14-17 回目、1 phase での最多記録)**。kill 1-3 は code-patch 実行中 (再スポーン 3 回)、kill 4 は **code phase 完遂後の wrapper 末尾処理中** — patch commit (3165fb6c)・retrospective commit・phase/verify 遷移まで完了しており、kill 通知にもかかわらず作業は無傷という新パターン (「killed 通知 = フェーズ失敗」ではないことの実例)。kill 3 時点では worktree に未 commit の実装 79 insertions が残り、4 回目の実行が完遂させた。Manual recovery は `## Auto Retrospective` に記録済み。バッチあたりの kill 回数は 3→4→5→4 と高止まりしており、原因調査は #1014 (本バッチの次 Issue) が扱う。
+
+#### review
+- N/A — patch route のため review phase なし。
+
+#### merge
+- N/A — patch route (main 直コミット 3165fb6c)。
+
+#### verify
+- Pre-merge 3 件一発 PASS (bats 68/68)。AC1 は本バッチの #1012 自身の recovery 記録実行で `_pull_ff_only` の発火痕跡 (`Already up to date.` ×2) を live 確認できた — 修正が merge された直後に自分自身の recovery 記録で使われるという self-hosting の即時ループ。
+- Post-merge observation は「手動 pull なしの自然発生 stale ケース」での観察を継続 (今回は親セッションが手動 pull 済みだったため no-op 通過の確認に留まる)。
+
+### Improvement Proposals
+- N/A — 外部 kill の頻度高止まり (4 連続) は #1014 (recoveries: manual-recovery-respawn、本バッチで処理予定) の調査対象に含まれるため、個別起票しない。
