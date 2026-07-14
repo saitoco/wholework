@@ -80,7 +80,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1014
 
 ## 2026-07-13 18:28 UTC: manual-recovery-respawn
 
@@ -99,7 +99,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1014
 
 ## 2026-07-13 18:28 UTC: manual-recovery-respawn
 
@@ -118,7 +118,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1014
 
 ## 2026-07-13 17:12 UTC: manual-recovery-skip-forward
 
@@ -156,7 +156,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1014
 
 ## 2026-07-13 16:58 UTC: manual-recovery-respawn
 
@@ -175,7 +175,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1014
 
 
 ## 2026-07-12 06:18 UTC: code-pr-tier3-recovery

@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（65 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（66 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -204,6 +204,7 @@ wholework/
 - `scripts/worktree-merge-push.sh` — 短命な patch lock を取得し、fetch-after-lock・checkout レスの ref-fetch マージ (`git fetch . <from>:<base>`)・is-ancestor による rebase skip・push retry loop (max 3) で並列 session race に対応した merge + push を実行
 - `scripts/detect-foreign-worktree.sh` — CWD が foreign (呼び出し元と異なる owner の) git worktree 内かどうかを判定する。`modules/worktree-lifecycle.md` の Entry section、`skills/verify/SKILL.md` Step 2 (base branch checkout guard)、`skills/review/SKILL.md` の Opportunistic Verification (worktree exit precondition) から使用される
 - `scripts/detect-wrapper-anomaly.sh` — shell wrapper 出力の既知失敗パターンを検出し、Auto Retrospective の markdown 断片を生成
+- `scripts/detect-external-kill.sh` — `external-kill-parent-respawn` シグネチャ（exit code 137 単独、または exit code 143/unknown かつ wrapper ログの `Exit code: ` トレーラーと `auto-events.jsonl` の `wrapper_exit` イベントの両方が issue/phase について欠如）を機械的に判定する。exit 0 = match、exit 1 = no-match（`modules/orchestration-fallbacks.md#external-kill-parent-respawn` 参照）
 - `scripts/test-failure-classify.sh` — テスト失敗出力を回復カテゴリに分類（snapshot/mock/fixture/logic/infra）。exit 0 = 修復可、exit 1 = 修復不可
 - `scripts/validate-recovery-plan.sh` — orchestration-recovery sub-agent が出力する recovery plan JSON を検証（schema チェック + forbidden ops ガード）
 - `scripts/apply-fallback.sh` — `modules/orchestration-fallbacks.md` の Tier 2 bash projection。wrapper ログから既知の symptom anchor を検出し recovery handler を dispatch する（ハンドラ: dco-signoff-missing-autofix、code-patch-silent-no-op）
