@@ -1471,6 +1471,64 @@ MOCK
     grep -qE "commit.*manual recovery" "$GIT_LOG"
 }
 
+@test "run-auto-sub: manual recovery: pre-pull preserves a remote-added entry alongside the local one (no record loss)" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+    echo "# Issue #42: test spec" > "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"pull --ff-only"* ]]; then
+    # Simulate a remote that already advanced past local main (e.g. another
+    # session's PR merged this exact spec file's Auto Retrospective section
+    # between when this run started and when it reached the write step).
+    {
+        echo ""
+        echo "## Auto Retrospective"
+        echo ""
+        echo "### Manual recovery (review)"
+        echo "- **Date**: 2026-07-14 10:00 UTC"
+        echo "- **Issue**: #42, phase: review"
+        echo "- **Source**: parent session manual recovery"
+        echo "- **Recovery type**: pr-create"
+        echo "- **Wrapper exit code**: unknown"
+        echo "- **Outcome**: success"
+    } >> "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    exit 0
+fi
+if [[ "$*" == *"status"* && "$*" == *"--porcelain"* && "$*" == *"issue-42"* ]]; then
+    echo " M docs/spec/issue-42-test.md"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    # No open PR for this issue: override the global gh mock's pr list default.
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only
+    [ "$status" -eq 0 ]
+    grep -q "pull --ff-only" "$GIT_LOG"
+    grep -q "Manual recovery (review)" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    grep -q "Manual recovery (code)" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    [[ "$output" != *"WARNING: could not commit/push"* ]]
+}
+
 @test "run-auto-sub: push retry: non-fast-forward push succeeds after one fetch+rebase retry" {
     export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
 

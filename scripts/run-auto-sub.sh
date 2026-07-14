@@ -62,6 +62,23 @@ _push_with_retry() {
   done
 }
 
+# Fast-forward-only pulls REPO_ROOT before a manual-recovery read/write/commit, so a
+# local main left behind by an un-pulled prior merge (e.g. #1006: a PR merged between
+# sessions) doesn't cause the subsequent commit's push to be rejected non-fast-forward.
+# Non-fatal: on pull failure, warns to stderr and falls through -- callers proceed with
+# their existing commit/push flow, with _push_with_retry as the secondary safety net.
+# Must stay a single `git pull --ff-only` call (not a decomposed fetch+rebase): the
+# "push retry: gives up after 3 attempts" bats test counts fetch/rebase invocations by
+# grep -c and a decomposed form here would inflate that count.
+# Usage: _pull_ff_only REPO_ROOT
+_pull_ff_only() {
+  local repo_root="$1"
+  if ! git -C "$repo_root" pull --ff-only; then
+    echo "WARNING: git pull --ff-only failed in ${repo_root}; continuing with possibly stale local state" >&2
+  fi
+  return 0
+}
+
 # Validates recovery function arguments to prevent path traversal via glob patterns.
 # Usage: _validate_recovery_args ISSUE [PHASE] [RECOVERY_TYPE] [EXIT_CODE]
 # Returns 1 and prints to stderr if any argument fails validation.
@@ -122,6 +139,7 @@ _write_manual_recovery_to_spec() {
   fi
 
   local _repo_root="$REPO_ROOT"
+  _pull_ff_only "$_repo_root"
   local spec_dir="$_repo_root/docs/spec"
   local spec_file
   spec_file=$(ls "$spec_dir/issue-${issue}-"*.md 2>/dev/null | head -1 || true)
@@ -181,6 +199,7 @@ _write_manual_recovery_to_recoveries_log() {
   local exit_code="${4:-unknown}"
   local _repo_root="$REPO_ROOT"
   local _recoveries_file="${_repo_root}/docs/reports/orchestration-recoveries.md"
+  _pull_ff_only "$_repo_root"
   if [[ ! -f "$_recoveries_file" ]]; then
     return 0
   fi

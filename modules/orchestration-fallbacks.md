@@ -586,6 +586,7 @@ See also: `#async-external-commit` (reconcile-first authority — `matches_expec
 - Symmetric with Tier 2/3 paths: same `## Auto Retrospective` section, same `### <type> recovery (phase)` heading format
 - `/verify` Step 12's skip-judgment now includes `### Manual recovery` entries as "already recorded" (alongside Tier 2/Tier 3), eliminating the need for manual supplementation
 - Extended in Issue #1005 to also write `docs/reports/orchestration-recoveries.md` and emit a `manual_intervention` event: the Spec-only write left cross-Issue frequency detection and session Metrics permanently at zero, since parent-session-driven recovery happens entirely outside the Tier 1/2/3 machinery that feeds those other two consumers
+- Hardened in Issue #1012: both `_write_manual_recovery_to_spec()` and `_write_manual_recovery_to_recoveries_log()` now call `_pull_ff_only()` (a fast-forward-only `git pull`) at the start of their read/write/commit sequence, so a local main left behind by an un-pulled prior merge no longer causes the subsequent commit's push to be rejected non-fast-forward and the recovery record to be lost
 
 ---
 
