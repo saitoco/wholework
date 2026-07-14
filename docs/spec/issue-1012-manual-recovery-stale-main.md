@@ -80,3 +80,13 @@
 - pre-merge verify command 3件 (rubric ×2、`command "bats tests/run-auto-sub.bats"`) はすべて PASS 済みで、Issue のチェックボックスも更新済み
 - post-merge AC (`verify-type: observation event=auto-run`) は次回 merge 直後の `--write-manual-recovery` 実呼び出しで自然に検証される — 追加のフォローアップ不要
 - Behavioral Change Detection により `bats tests/run-auto-sub.bats` (68件) に加えリポジトリ全体 `bats tests/` (1184件) も実行し、全件 PASS を確認済み
+
+## Auto Retrospective
+
+### Manual recovery (code-patch)
+- **Date**: 2026-07-14 17:40 UTC
+- **Issue**: #1012, phase: code-patch
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn
+- **Wrapper exit code**: unknown
+- **Outcome**: success
