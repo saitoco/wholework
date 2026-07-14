@@ -1958,8 +1958,9 @@ MOCK
 @test "run-auto-sub: manual recovery: commits when spec file is untracked" {
     export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
 
-    # No pre-existing spec file: simulates untracked (initial creation) state
+    # Formal spec file pre-created but untracked (initial creation) state
     mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+    echo "# Issue #42: test spec" > "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
 
     cat > "$MOCK_DIR/git" <<'MOCK'
 #!/bin/bash
@@ -1969,7 +1970,7 @@ if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
     exit 0
 fi
 if [[ "$*" == *"status"* && "$*" == *"--porcelain"* && "$*" == *"issue-42"* ]]; then
-    echo "?? docs/spec/issue-42-recovery.md"
+    echo "?? docs/spec/issue-42-test.md"
     exit 0
 fi
 exit 0
@@ -1989,9 +1990,42 @@ MOCK
 
     run bash "$SCRIPT" --write-manual-recovery 42 code push-only
     [ "$status" -eq 0 ]
-    grep -q "Auto Retrospective" "$BATS_TEST_TMPDIR/docs/spec/issue-42-recovery.md"
-    grep -q "Manual recovery" "$BATS_TEST_TMPDIR/docs/spec/issue-42-recovery.md"
+    grep -q "Auto Retrospective" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    grep -q "Manual recovery" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
     grep -qE "commit.*manual recovery" "$GIT_LOG"
+}
+
+@test "run-auto-sub: manual recovery: skips spec write entirely when no spec exists (no stub created)" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+
+    # No pre-existing spec file at all: docs/spec/ has no issue-42-*.md entries
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    # No open PR for this issue: override the global gh mock's pr list default.
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only
+    [ "$status" -eq 0 ]
+    [ ! -f "$BATS_TEST_TMPDIR/docs/spec/issue-42-recovery.md" ]
 }
 
 @test "post-spec size unchanged XS->XS: Post-spec is not logged" {
