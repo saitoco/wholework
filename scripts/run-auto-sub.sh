@@ -145,11 +145,8 @@ _write_manual_recovery_to_spec() {
   spec_file=$(ls "$spec_dir/issue-${issue}-"*.md 2>/dev/null | head -1 || true)
 
   if [[ -z "$spec_file" ]]; then
-    local title
-    title=$(gh issue view "$issue" --json title -q '.title' 2>/dev/null || echo "Issue #${issue}")
-    mkdir -p "$spec_dir"
-    spec_file="$spec_dir/issue-${issue}-recovery.md"
-    printf '%s\n' "# Issue #${issue}: ${title}" > "$spec_file"
+    echo "[#${issue}] Spec not yet created for issue #${issue}; skipping spec-side manual recovery record (preserved via recoveries log + manual_intervention event; spec phase will fold this into the formal Spec once created)." >&2
+    return 0
   fi
 
   if ! grep -q "^## Auto Retrospective" "$spec_file" 2>/dev/null; then
