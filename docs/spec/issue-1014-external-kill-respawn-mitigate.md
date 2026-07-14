@@ -118,3 +118,11 @@ No new comments since last phase. (cutoff: 2026-07-14T18:01:57Z, most recent `ph
 - **Recovery type**: respawn
 - **Wrapper exit code**: unknown
 - **Outcome**: success
+
+### Manual recovery (review)
+- **Date**: 2026-07-14 19:28 UTC
+- **Issue**: #1014, phase: review
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn
+- **Wrapper exit code**: unknown
+- **Outcome**: success
