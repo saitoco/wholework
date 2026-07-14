@@ -81,3 +81,29 @@ No new comments since last phase.
   - Spec 側への反映は、正式 Spec 作成後に `/verify` Step 12 の既存ルール (`## Auto Retrospective` 未記録なら notable content として Verify Retrospective に記録) が自然にカバーするため、情報が失われるわけではなく「記録タイミングが即時から `/verify` 時点に変わる」だけである
 - **Tier2/Tier3 の同型パターン (スコープ外)**: `_write_tier2_recovery_to_spec()` / `_write_tier3_recovery_to_spec()` (`scripts/run-auto-sub.sh` 356-439行目) も `_write_manual_recovery_to_spec()` と同一の stub 作成分岐を持つ。本 Issue の Purpose 文が名指しするのは `_write_manual_recovery_to_spec()` のみのため、Tier2/Tier3 側の同種修正は本 Spec のスコープ外とした。特に Tier2 (`_write_tier2_recovery_to_spec()`) は Manual recovery 系と異なり `docs/reports/orchestration-recoveries.md` への書き込みが無く、Spec 書き込みが唯一の永続記録であるため、同じ「stub を作らない」修正を機械的に適用すると記録が完全に失われる回帰を招く — Tier2 側を修正する場合は recoveries log への書き込み追加とセットで設計する必要がある。`/verify` の retro-proposals パイプラインを preempt しないため本 Spec では起票しない
 - **既存の分裂/stub インスタンス (バックフィル対象外)**: 調査中に3件の実例を確認した。(1) `docs/spec/issue-957-recovery.md` (`_write_manual_recovery_to_spec()` 由来、issue #957 は phase/done で closed、他に正式 Spec が作成されず stub のみが恒久化)、(2) `docs/spec/issue-850-recovery.md` (`_write_tier2_recovery_to_spec()` 由来、issue #850 は phase/done で closed、同様に stub のみ)、(3) `docs/spec/issue-961-recovery.md` (issue #961 は CLOSED/phase/verify、正式 Spec `docs/spec/issue-961-worktree-merge-push-checkout.md` と**現在も分裂したまま** — 当時の `/spec` 実行が Notes で「別ファイルのまま残す」と意図的に非統合を選択した)。いずれも本 Issue の再発防止スコープには含めず、バックフィル/統合が必要であれば別 Issue で扱う
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-4 をそのまま順に実施した
+
+### Design Gaps/Ambiguities
+- `_write_manual_recovery_to_spec()` の stub 作成分岐は `scripts/run-auto-sub.sh` 内に3箇所同一パターンで存在した (Manual/Tier2/Tier3)。Edit ツールの一意性制約により対象箇所 (147-153行目付近、Manual recovery 用) を周辺コンテキストで一意に特定する必要があった。Spec の「Changed Files」記載行数 (127-182行目) はおおむね正確だったが、実際のブロック開始行はやや異なっていた (誤差は軽微で実装に支障なし)
+
+### Rework
+- N/A — 手戻りなし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Notes で確定済みの方式 (b: stub 非作成 + early return) をそのまま採用し、実装は Spec Implementation Steps 1-4 の順に完了
+- Tier2/Tier3 の同型 stub 作成分岐には触れず、Spec Notes の "スコープ外" 判断を踏襲した
+
+### Deferred Items
+- Tier2/Tier3 (`_write_tier2_recovery_to_spec()` / `_write_tier3_recovery_to_spec()`) の同種修正は本 Issue のスコープ外 (Spec Notes に判断根拠あり、起票はしない方針)
+- 既存の分裂/stub インスタンス (#957, #850, #961) のバックフィル/統合は本 Issue のスコープ外
+
+### Notes for Next Phase
+- Behavioral change 検出により `bats tests/` フルスイート (1197件) を実行し全 PASS を確認済み — review 側で改めてフルスイートを回す必要は薄い
+- `docs/tech.md` / `docs/ja/tech.md` は同一コミットで同期済み (`check-translation-sync.sh` で `docs/tech.md` IN_SYNC 確認済み)。他の pre-existing sync gap (`docs/guide/autonomy.md` 等) は本 Issue と無関係
