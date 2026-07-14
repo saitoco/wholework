@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (65 files)
+├── scripts/             # Utility scripts used by skills and agents (66 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -212,6 +212,7 @@ Key modules:
 - `scripts/worktree-merge-push.sh` — acquire short-lived patch lock; fetch-after-lock, checkout-less ref-fetch merge (`git fetch . <from>:<base>`) with is-ancestor rebase-skip, and push-retry loop (max 3) for parallel session race hardening
 - `scripts/detect-foreign-worktree.sh` — detect whether CWD is inside a foreign (different-owner) git worktree; used by `modules/worktree-lifecycle.md` Entry section, `skills/verify/SKILL.md` Step 2 (base branch checkout guard), and `skills/review/SKILL.md` Opportunistic Verification (worktree exit precondition)
 - `scripts/detect-wrapper-anomaly.sh` — detect known failure patterns in shell wrapper output and generate Auto Retrospective markdown fragments
+- `scripts/detect-external-kill.sh` — mechanically detect the `external-kill-parent-respawn` signature (exit code 137 alone, or exit code 143/unknown with both the wrapper log `Exit code: ` trailer and the `auto-events.jsonl` `wrapper_exit` event absent for the issue/phase); exit 0 = match, exit 1 = no-match (see `modules/orchestration-fallbacks.md#external-kill-parent-respawn`)
 - `scripts/test-failure-classify.sh` — classify test failure output into recovery categories (snapshot/mock/fixture/logic/infra); exit 0 = repairable, exit 1 = not repairable
 - `scripts/validate-recovery-plan.sh` — validate recovery plan JSON from orchestration-recovery sub-agent (schema check + forbidden ops guard)
 - `scripts/apply-fallback.sh` — Tier 2 bash projection of `modules/orchestration-fallbacks.md`; detects known symptom anchors from wrapper logs and dispatches recovery handlers (handlers: dco-signoff-missing-autofix, code-patch-silent-no-op)
