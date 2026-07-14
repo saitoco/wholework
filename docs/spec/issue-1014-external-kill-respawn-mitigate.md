@@ -69,3 +69,35 @@ No new comments since last phase. (cutoff: 2026-07-14T18:01:57Z, most recent `ph
 ### bash 互換性
 
 `scripts/detect-external-kill.sh` は `scripts/detect-wrapper-anomaly.sh` と同様、macOS システム bash (3.2) 互換の構文 (`mapfile` 等の bash 4+ 専用機能を使わない) で実装する。
+
+## Autonomous Auto-Resolve Log
+
+- **`phase/ready` ラベル不在 (Step 3 チェック)**: `/code` 開始時、Issue #1014 のラベルは `phase/ready` ではなく既に `phase/code` だった (ラベル履歴で `phase/ready`→`phase/code` の遷移が確認できた)。これは本 Issue 自身が調査対象とする `manual-recovery-respawn` 症状により、直前の `/code` 実行が Step 4 (worktree entry + label transition) 完了後・実装完了前に外部 kill されたため (`run-code.sh` がセッション開始前に stale worktree/branch を検出・削除済み)。Spec (`docs/spec/issue-1014-external-kill-respawn-mitigate.md`) は既に完全な内容で存在することを確認できたため、「Spec なしで Issue 本文から実装」の auto-resolve 分岐は適用せず、既存 Spec をそのまま使用して実装を継続した。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1–4 を記載順どおりに実装した。
+
+### Design Gaps/Ambiguities
+- Spec は `scripts/detect-external-kill.sh` の CLI インターフェース (フラグ名、exit code の意味、`--events` ファイル欠如時の扱い) を明記していなかったため、`scripts/test-failure-classify.sh` (exit 0 = 該当, exit 1 = 非該当という2値パターン) を参考に設計した。`--events` ファイルが存在しない場合は "corroborating evidence なし" として `external-kill` 側に倒す (該当シグネチャの検出漏れより過検出の方が安全 — 誤って respawn しても `code_phase_milestone` チェックポイントにより冪等に再開できるため)。
+- `auto-events.jsonl` の `wrapper_exit` イベント照合で、issue/phase が同一行 (同一 JSON イベント) で一致するかを確認する必要があった。単純に `grep` を3回ファイル全体に対して実行すると、別々の行にある issue 一致・phase 一致が誤って「同一イベントに一致」と判定されるバグになる (false negative: 本来 external-kill と判定すべきケースを no-match と誤判定する)。pipe chain で各段階が前段階の一致行のみを絞り込む形に修正して対応した。
+
+### Rework
+- 上記の pipe chain バグは実装中に気づいて修正したもので、bats テストケース (「different phase」「different issue」のケース) を先に書いていたことで検出できた。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `scripts/detect-external-kill.sh` の exit code 規約は `test-failure-classify.sh` に倣い、exit 0 = `external-kill` (match)、exit 1 = `no-match`、exit 2 = usage/引数エラーとした (`detect-wrapper-anomaly.sh` の「常に exit 0、stdout の有無で判定」パターンとは異なる — こちらは複数パターンの中から1つを選ぶ検出器ではなく、単一シグネチャの有無を判定する二値の検出器のため、exit code で結果を表現する方が自然と判断した)
+- `docs/tech.md` の "Parent-session manual respawn" 節は外部契約レベルの記述 (記録先3箇所) に留まり検知ロジックの内部実装には触れていないため、変更不要と判断した (Spec Notes の判断を実装完了後に再確認し、据え置き)
+- 根源原因 (H-a/H-b/H-c) の追加調査は行わず、再スポーン検知の機械化のみを実装した — `wrapper_exit_code` が全件 `unknown` で観測ギャップが判明し、新たな検証可能な手がかりが無かったため (Spec Overview 参照)
+
+### Deferred Items
+- H-a/H-b/H-c (Claude Code harness のバックグラウンドタスクライフサイクル / ターミナル・シェル側 kill / 不明) は未解明のまま。新たな検証可能な手がかりが得られるまで追加調査を見送る
+- Issue #1014 自身の spec phase kill (6件目の manual-recovery-respawn) は `docs/reports/orchestration-recoveries.md` に未記録 — 親 `/auto` セッションの `--write-manual-recovery` 呼び出しで記録される想定 (本 Spec のスコープ外、Notes 参照)
+
+### Notes for Next Phase
+- Post-merge AC (`orchestration-recoveries.md に本 Issue 作成日以降の新規 未起票 manual-recovery-respawn エントリが無いこと`) は `/verify` が自動判定する。ただし判定時点で6件目 (#1014 自身の spec phase kill) が `--write-manual-recovery` によりまだ `起票済み #1014` として記録されていない可能性がある点に注意 (Notes の「スコープ外の除外」参照。この6件目は本 Issue の実装漏れではなく、記録タイミングの構造上の理由による)
+- `skills/auto/SKILL.md` Step 6 の変更は次回 kill 発生時に初めて実地で検証される。`/review` では `detect-external-kill.sh` の呼び出し引数 (`--log`/`--events`/`--exit-code`/`--issue`/`--phase`) が Step 6 の他の変数 (`$NUMBER`/`$PHASE`/`$EXIT_CODE`) と整合しているかを確認してほしい
