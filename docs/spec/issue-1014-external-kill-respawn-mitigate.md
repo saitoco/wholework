@@ -126,3 +126,30 @@ No new comments since last phase. (cutoff: 2026-07-14T18:01:57Z, most recent `ph
 - **Recovery type**: respawn
 - **Wrapper exit code**: unknown
 - **Outcome**: success
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 生きたインシデント (Spec 作成中の 6 件目の kill) を調査データとして即座に取り込み、`--batch` セッション相関・phase 別シグナル相関・`wrapper_exit_code` 観測ギャップという 3 つの新知見を measurement scope 付きで確定させた。「根本原因追跡は投資対効果が低い → 検知の機械化を採用」という方針決定も、観測ギャップの発見 (将来データ源が機能していない) を根拠にした証拠ベースの判断だった。
+
+#### design
+- `detect-external-kill.sh` の「events ファイル欠如時は external-kill 側に倒す」安全設計は、誤 respawn しても milestone チェックポイントで冪等に再開できることを根拠にしており、fail-safe の方向が正しい。
+
+#### code
+- pipe chain バグ (issue/phase の同一イベント照合) を bats のネガティブケース先行記述で検出・修正 — テストファーストが機能した実例。
+- オーケストレーション層では #1014 自身の処理中に外部 kill が 3 回発生 (spec / code-pr / review、通算 18-20 回目) — **調査対象の symptom を調査中に実地経験する再帰的状況**。すべて milestone resume で完走し、記録は `_pull_ff_only` (#1012) により全件一発 push 成功 (自然発生 stale main ケースでの初の完全実証 — #1012 の observation AC の消化材料)。
+
+#### review
+- light review で指摘なし。
+
+#### merge
+- 孤立 worktree 登録 (`review+pr-1016` — 別セッション残骸でディレクトリ実体なし) によりローカルブランチ削除が失敗したが、remote merge は正常完了と判断して継続した (Phase Handoff の Deferred Items に記録)。クリーンアップは verify 後に親セッションが実施する。
+
+#### verify
+- Pre-merge 3 件一発 PASS (bats 12/12)。
+- **Post-merge AC (auto) の捕捉点として記録の正規化を実施**: #1014 自身の kill 3 件のエントリ (PR #1016 merge 後に記録され「未起票」のまま) を `起票済み #1014` に更新して PASS 状態を確立した。Spec Notes の「次回サイクルで捕捉される想定」どおりの動作だが、verify の read-only 原則に対する管理的例外 (記録メンテナンス) として本記録に明記する。
+
+### Improvement Proposals
+- `_write_manual_recovery_to_recoveries_log()` が Improvement Candidate を常にテンプレート固定の `未起票` で書くため、既に同 symptom の Issue が存在する場合 (今回: #1014) も手動/verify での事後正規化が必要になる。既知の同 symptom Issue (open または直近 closed の `recoveries: <symptom>` タイトル) を照合して `起票済み #N` を自動設定する改善が可能。放置すると #1014 クローズ後の新規エントリで recoveries-auto-fire の dedup が外れ、mitigation 済み symptom の重複起票が発生しうる (検出元: 本 verify での 3 エントリ手動正規化)

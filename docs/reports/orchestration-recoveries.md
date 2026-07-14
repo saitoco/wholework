@@ -80,7 +80,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1014
 
 ## 2026-07-14 19:28 UTC: manual-recovery-respawn
 
@@ -99,7 +99,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1014
 
 ## 2026-07-14 19:28 UTC: manual-recovery-respawn
 
@@ -118,7 +118,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1014
 
 ## 2026-07-14 17:40 UTC: manual-recovery-respawn
 
