@@ -61,3 +61,33 @@ No new comments since last phase.
 - **`gh issue list --search` を採用しなかった判断**: Issue body の Auto-Resolved Ambiguity Points はタイブレーク根拠として `gh issue list --search` のソート順に触れているが、本 Spec では `--search` ではなく `--state <open|closed> --json ... --limit <N>` の単純リスト取得 + ローカル Python contains フィルタを採用する。理由: GitHub 検索バックエンドのトークナイズ挙動 (ハイフン区切りの symptom-short、例 `manual-recovery-respawn`、に対する厳密な部分一致保証が `gh issue list --help` の公式説明からは確認できない) に依存すると偽陰性(真の一致を見逃す)リスクがあり、既存の `collect-recovery-candidates.sh` が同じ問題領域で既に採用している「ローカル contains フィルタ」方式 (`grep -qF`) と技術的に一貫させる方が安全。タイブレーク自体 (open優先・日時降順) は Python 側のソートで実現するため、`--search` の `sort:` 機能に依存しなくても同じポリシーを実現できる。
 - **フェッチ件数の上限**: open は `--limit 500` (現在の open Issue 数は24件で十分な余裕)、closed は `--limit 1000` (現在の closed Issue 数は約722件)。`skills/verify/SKILL.md` Step 15 の既存の `--limit 200` 前例に倣った固定値であり、ページネーションは行わない。`_write_manual_recovery_to_recoveries_log()` は外部強制終了からの手動復旧という低頻度パスでのみ呼ばれるため、コスト面の懸念は小さい。
 - **Post-merge AC の強化**: 元の Issue body の post-merge AC は `<!-- verify-type: observation event=auto-run -->` のみで観測構造 (期待される出力) が未記載だったため、`modules/verify-classifier.md` の observation AC 構造チェックに従い Option B (rubric verify command 付与) で強化し、Issue body ・ Spec 双方に反映した。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note。diff は Implementation Steps 1〜5 と1対1で対応しており、構造的な逸脱は見られなかった。
+
+### 再発している問題パターン
+
+Nothing to note。今回のレビューで検出された問題は CONSIDER 1件 (固定 `--limit` 値の将来的なスケール懸念) のみで、Spec Notes で既に既知のトレードオフとして明記済みのものだった。ワークフロー上の改善点として抽出すべき繰り返しパターンはない。
+
+### Acceptance Criteria の検証難易度
+
+Nothing to note。pre-merge AC 3件 (rubric x2, command x1) はいずれも diff・bats 結果と明確に対応しており、UNCERTAIN は発生しなかった。verify command の記載・精度に問題はなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- pre-merge AC 3件 (rubric x2, command x1) を diff 内容と bats 実行結果から再検証し、いずれも PASS を確認 (Issue body は既に `[x]` 済みだったため更新なし)
+- REVIEW_DEPTH=light (Size M と `--light` 指定) のため review-light agent 1体で全4アスペクトを実行し、MUST/SHOULD 無し・CONSIDER 1件のみを確認
+- CONSIDER 1件 (固定 `--limit 500`/`1000` の将来的なスケール懸念) は Spec Notes で既に許容済みのトレードオフと判断し、修正せずインラインコメントのみ投稿
+
+### Deferred Items
+- `--limit 500`/`1000` の固定値は closed Issue 数が1000に近づいた場合の再検討事項として CONSIDER コメントに記録 (対応は不要、将来のフォローアップ候補)
+- post-merge AC (`起票済み #N` 初期化の観察) は次回 manual recovery 記録時に `/verify` で検証される
+
+### Notes for Next Phase
+- MUST issue 無し、CI 全 SUCCESS のため `/merge 1019` にそのまま進行可能
+- worktree `code+issue-1017` が stale ロック状態で残存していたため review 開始時に削除・ブランチ再作成済み (プロセス終了済みを確認の上で強制削除)
