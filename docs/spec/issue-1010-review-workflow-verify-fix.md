@@ -72,3 +72,28 @@ finderResult => {
 - **CI-sensitive changes Size M 格上げルールの適用対象外と判断**: `tests/workflow-guidance.bats` は新規 bats テストの追加だが、grep ベースの静的構造チェックでありローカルで完全に再現・検証可能。テスト並列化やフィクスチャ共有構造の変更、CI実行環境固有のレース条件には該当しないため、triage 時点の Size S (patch route) を維持する。
 - **verify command 補強なし**: 3件の rubric はいずれも制御フロー的な性質記述であり、数値リテラルや定数名を含まないため、`modules/verify-patterns.md` §9 の rubric+定数名補強ルール (file_contains 追加) は非該当と判断した。
 - **ドキュメント同期は対象外**: `skills/review/workflow-guidance.md` の公開インターフェース (capability フラグ名、セクション見出し、Processing Steps の手順) は変更されないため、`docs/structure.md` 等の参照更新は不要と判断した。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1・2 を Spec 記載どおりの手順・差分で実施した。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の実装ガイド (Notes) に記載された差分をそのまま適用: `finderResult.findings.map(...)` の戻り値を `parallel(...)` でラップし、対応する閉じ括弧を1つ追加した。`allFindings`/`confirmed` の集約ロジック (147-148行目) は無変更。
+- `tests/workflow-guidance.bats` は `tests/visual-diff-adapter.bats` と同じ `PROJECT_ROOT` アンカリングパターンで作成し、grep ベースの構造回帰テスト (`## Inline Workflow Script` セクション存在 + `return parallel(finderResult.findings.map(finding =>` 形式の存在) の2件とした。
+
+### Deferred Items
+- Post-merge AC (`verify-type: observation event=pr-review-full`) は次回 `capabilities.workflow: true` 環境下での `/review --full` 実行時に自然発生的に観測される想定。追加の手動トリガーは不要。
+
+### Notes for Next Phase
+- Pre-merge の rubric 検証は3件とも `/code` Step 10 内で実行済み・PASS 判定し、Issue #1010 のチェックボックスを更新済み。`/review` フェーズでの重複判定時も同じ diff・同じ rubric 文言のため PASS が期待される。
+- `tests/workflow-guidance.bats` は新規追加のためフルスイート (`bats tests/`) には未実行 (behavioral change detection の narrow-scope 判定により対象ファイルに限定実行、PASS 確認済み)。CI では `.github/workflows/test.yml` の bats ジョブでフルスイートに含まれ実行される。
