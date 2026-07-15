@@ -168,6 +168,58 @@ MOCK
     [ ! -f "$RUNNER_LOG" ]
 }
 
+@test "spawn-recovery: stray PR completion via real reconcile-phase-state.sh (no mock) -> action=skip accepted (issue #993)" {
+    # Unlike every other skip) test above, this one does NOT replace
+    # reconcile-phase-state.sh with a canned matches_expected mock — it runs the
+    # real script (only its gh/git/gh-graphql.sh dependencies are mocked). This
+    # exercises the skip) dispatch guard's actual re-validation of
+    # matches_expected against live state (#980 review found no existing test
+    # did this: every skip) test mocked reconcile-phase-state.sh directly,
+    # so the guard's own re-check logic was never really executed). The live
+    # state simulated here is the #993 stray-PR scenario: route misdetection
+    # left an open PR on the worktree-code+issue-N branch instead of a
+    # closes #N commit, which _completion_code_patch's new stray-PR signature
+    # must recognize as completion for action=skip to be accepted.
+    cp "$REAL_SCRIPTS_DIR/reconcile-phase-state.sh" "$MOCK_DIR/reconcile-phase-state.sh"
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    cat > "$MOCK_DIR/gh-graphql.sh" <<'MOCK'
+#!/bin/bash
+echo "null"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$*" == *"--json comments"* ]]; then echo ""; exit 0; fi
+if [[ "$*" == *"--json labels"* ]]; then echo "triaged"; exit 0; fi
+if [[ "$*" == *"--json state"* ]]; then echo "OPEN"; exit 0; fi
+if [[ "$*" == *"-q length"* ]]; then echo "1"; exit 0; fi
+if [[ "$*" == *"-q .[0].createdAt"* ]]; then echo "2026-07-14T00:00:00Z"; exit 0; fi
+if [[ "$*" == *"-q .[0].number"* ]]; then echo "42"; exit 0; fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "log" ]]; then echo ""; fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    make_claude_mock '{"action":"skip","rationale":"open PR found for the issue worktree branch, treat as complete","steps":[]}'
+    cd "$BATS_TEST_TMPDIR"
+
+    run bash "$SCRIPT" code-patch 55 --log "$LOG_FILE"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"action=skip"* ]]
+    [[ "$output" != *"rejected"* ]]
+    [ ! -f "$RUNNER_LOG" ]
+}
+
 @test "spawn-recovery: CLAUDE_BIN mock returns plan with forbidden op force_push: validation aborts" {
     make_claude_mock '{"action":"recover","rationale":"fix","steps":[{"op":"force_push","cmd":"git push -f"}]}'
     cd "$BATS_TEST_TMPDIR"
