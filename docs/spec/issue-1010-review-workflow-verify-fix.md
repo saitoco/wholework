@@ -97,3 +97,13 @@ finderResult => {
 ### Notes for Next Phase
 - Pre-merge の rubric 検証は3件とも `/code` Step 10 内で実行済み・PASS 判定し、Issue #1010 のチェックボックスを更新済み。`/review` フェーズでの重複判定時も同じ diff・同じ rubric 文言のため PASS が期待される。
 - `tests/workflow-guidance.bats` は新規追加のためフルスイート (`bats tests/`) には未実行 (behavioral change detection の narrow-scope 判定により対象ファイルに限定実行、PASS 確認済み)。CI では `.github/workflows/test.yml` の bats ジョブでフルスイートに含まれ実行される。
+
+## Auto Retrospective
+
+### Manual recovery (spec)
+- **Date**: 2026-07-15 08:15 UTC
+- **Issue**: #1010, phase: spec
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn
+- **Wrapper exit code**: unknown
+- **Outcome**: success
