@@ -77,17 +77,16 @@ Nothing to note。今回のレビューで検出された問題は CONSIDER 1件
 Nothing to note。pre-merge AC 3件 (rubric x2, command x1) はいずれも diff・bats 結果と明確に対応しており、UNCERTAIN は発生しなかった。verify command の記載・精度に問題はなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- pre-merge AC 3件 (rubric x2, command x1) を diff 内容と bats 実行結果から再検証し、いずれも PASS を確認 (Issue body は既に `[x]` 済みだったため更新なし)
-- REVIEW_DEPTH=light (Size M と `--light` 指定) のため review-light agent 1体で全4アスペクトを実行し、MUST/SHOULD 無し・CONSIDER 1件のみを確認
-- CONSIDER 1件 (固定 `--limit 500`/`1000` の将来的なスケール懸念) は Spec Notes で既に許容済みのトレードオフと判断し、修正せずインラインコメントのみ投稿
+- Step 1 の `gh-pr-merge-status.sh` 判定が `mergeable=true, reason=clean` だったため、Step 2 (Worktree Entry) / Step 3 (Resolve Conflicts) をスキップし Step 4 (Squash Merge) に直接進行 (--non-interactive)
+- `gh pr merge 1019 --squash --delete-branch` で squash merge・リモートブランチ削除を実行
 
 ### Deferred Items
-- `--limit 500`/`1000` の固定値は closed Issue 数が1000に近づいた場合の再検討事項として CONSIDER コメントに記録 (対応は不要、将来のフォローアップ候補)
 - post-merge AC (`起票済み #N` 初期化の観察) は次回 manual recovery 記録時に `/verify` で検証される
+- `--limit 500`/`1000` の固定値は closed Issue 数が1000に近づいた場合の再検討事項 (review phase から引き継ぎ、対応不要)
 
 ### Notes for Next Phase
-- MUST issue 無し、CI 全 SUCCESS のため `/merge 1019` にそのまま進行可能
-- worktree `code+issue-1017` が stale ロック状態で残存していたため review 開始時に削除・ブランチ再作成済み (プロセス終了済みを確認の上で強制削除)
+- `/verify 1017` で post-merge observation AC 1件を検証すること
+- BASE_BRANCH=main のため `closes #1017` により Issue は自動クローズされる見込み
