@@ -381,21 +381,23 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 - code (patch route — `_completion_code_patch` in `scripts/reconcile-phase-state.sh`)
 
 ### Fallback Steps
-- No manual intervention required. `_completion_code_patch` includes a built-in three-stage check:
+- No manual intervention required. `_completion_code_patch` includes a built-in four-stage check:
   1. Primary: `git log origin/main --grep="closes #${ISSUE_NUMBER}"` (existing check)
   2. Operate marker (when primary finds nothing): `_operate_signal_ts` checks for an execution-log/execution-plan marker comment on the Issue, confirming a diff-less operate route completion (`modules/phase-state.md` § "Operate Route Completion Signature")
-  3. Label/state fallback (when both above find nothing): `gh issue view "$ISSUE_NUMBER" --json labels` and `--json state` to confirm `phase/verify`, `phase/done`, or `CLOSED` state
-- If either fallback stage confirms completion, `_completion_code_patch` returns `matches_expected:true` automatically, preventing Tier 3 sub-agent escalation
+  3. Stray PR (when both above find nothing): `gh pr list --head "worktree-code+issue-${ISSUE_NUMBER}" --state open` checks for an open PR on the SSoT worktree branch, confirming a route-misdetection outcome where the phase's actual artifact is a PR instead of a `closes #N` commit (`modules/phase-state.md` § "Stray PR Completion Signature")
+  4. Label/state fallback (when all three above find nothing): `gh issue view "$ISSUE_NUMBER" --json labels` and `--json state` to confirm `phase/verify`, `phase/done`, or `CLOSED` state
+- If any fallback stage confirms completion, `_completion_code_patch` returns `matches_expected:true` automatically, preventing Tier 3 sub-agent escalation
 
 ### Escalation
-- If both the git log check and the phase label / state fallback fail to confirm completion, the reconciler returns `matches_expected:false` and Tier 2 / Tier 3 escalation proceeds normally
+- If the git log check, operate marker, stray PR check, and the phase label / state fallback all fail to confirm completion, the reconciler returns `matches_expected:false` and Tier 2 / Tier 3 escalation proceeds normally
 - If the `gh` API call fails (network error, rate limit), `labels` and `state` are empty strings; the fallback condition evaluates to false and falls through to the existing mismatch path — no silent false-positive
 
 ### Rationale
 - Introduced in Issue #461: patch Issues whose only artifact is an external-tool auto-commit (no `closes #N` in commit message) caused systematic false-negatives in `_completion_code_patch`, triggering unnecessary Tier 3 sub-agent spawning on every orchestrator re-run
 - Mirrors the two-stage pattern already used in `_completion_spec` (spec file presence + ready-or-later label), keeping the reconciler consistent
 - `phase/verify` is set by `/review` skill after merge confirmation, making it a reliable proxy for code-patch completion when the commit does not carry `closes #N`
-- See also: Issue #461 (introducing this fallback), Issue #460 (`git_committed` verify command), Issue #462 (`verify-patterns.md` recommended pattern)
+- Stage 3 (stray PR) introduced in Issue #993: route misdetection (#979-series) can leave `code-patch`'s actual artifact as an open PR instead of a `closes #N` commit, which none of the original two fallback stages recognized; reuses the branch-name pattern already established by `_completion_code_pr()`
+- See also: Issue #461 (introducing this fallback), Issue #460 (`git_committed` verify command), Issue #462 (`verify-patterns.md` recommended pattern), Issue #993 (stray PR stage)
 
 ---
 

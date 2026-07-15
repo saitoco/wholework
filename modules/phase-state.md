@@ -35,7 +35,7 @@ For precondition checks, `reconcile-phase-state.sh` verifies whether the require
 |-------|-------------|-------------------------------|----------------------|
 | issue | Issue exists and state != CLOSED | `triaged` label on issue | Implemented |
 | spec | `phase/issue` or `phase/spec` label on issue | `$SPEC_PATH/issue-N-*.md` exists AND `phase/(ready\|code\|review\|merge\|verify\|done)` label | Implemented |
-| code-patch | `phase/ready` label on issue, Spec exists OR Size=XS | `git log origin/main --after=<reopen_ts> --grep="closes #N"` returns ≥1 fresh commit (reopen timestamp obtained via `get-last-reopen`); falls back to `git log origin/main --grep="closes #N"` when reopen timestamp unavailable; OR an operate route completion marker comment is found (see "Operate Route Completion Signature" below) | Precondition: `phase/ready` — Implemented; Spec exists OR Size=XS — Implemented (Spec exists OR Size=XS). Completion: Implemented |
+| code-patch | `phase/ready` label on issue, Spec exists OR Size=XS | `git log origin/main --after=<reopen_ts> --grep="closes #N"` returns ≥1 fresh commit (reopen timestamp obtained via `get-last-reopen`); falls back to `git log origin/main --grep="closes #N"` when reopen timestamp unavailable; OR an operate route completion marker comment is found (see "Operate Route Completion Signature" below); OR an open PR on the `worktree-code+issue-N` branch is found (see "Stray PR Completion Signature" below) | Precondition: `phase/ready` — Implemented; Spec exists OR Size=XS — Implemented (Spec exists OR Size=XS). Completion: Implemented |
 | code-pr | `phase/ready` label on issue, Spec exists OR Size=XS | Open PR on `worktree-code+issue-N` branch (#310 SSoT) | Precondition: `phase/ready` — Implemented; Spec exists OR Size=XS — Implemented (Spec exists OR Size=XS). Completion: Implemented |
 | review | PR is OPEN | PR has a comment containing `<!-- review-summary -->` marker (primary); or `## Review Response Summary` / `## レビュー回答サマリ` (fallback for marker-absent posts) | Implemented |
 | merge | PR is OPEN and reviewDecision is APPROVED | `gh pr view --json state == MERGED` | Implemented |
@@ -57,6 +57,18 @@ To close this gap, `_completion_code_patch()` in `scripts/reconcile-phase-state.
 **Check order**: commit (`closes #N`) → operate marker → label/state fallback (`phase/verify`/`phase/done`/`CLOSED`). The operate marker check runs before the label/state fallback so that it also applies during a fix-cycle re-run (when `reopen_ts` is non-null, the label/state fallback is unconditionally skipped — placing the operate marker check earlier lets it still catch a successful operate route re-run and prevents `run-code.sh` from re-executing the external write).
 
 **Known limitation**: if a reopen timestamp is unavailable and an Issue's Spec is rewritten from operate route to patch route without being reopened, a stale marker from the previous operate cycle can mask a genuine patch route silent no-op. This mirrors the same-shaped limitation already present in the `closes #N` fallback (unbounded grep when no reopen timestamp is available) and is accepted for the same reason — adding asymmetric freshness handling for only one signature would introduce a new class of failure mode.
+
+### Stray PR Completion Signature
+
+Route misdetection (#979-series) can leave the `code-patch` phase's actual artifact as a pushed branch + open PR (a pr-route-shaped outcome) instead of the expected `closes #N` commit to `main`. Without a dedicated signature for this, `_completion_code_patch()` reports `matches_expected: false` even though the Issue's work is genuinely done, which causes `spawn-recovery-subagent.sh`'s `skip)` dispatch guard to reject a correct `action=skip` recovery recommendation (see #993).
+
+`_completion_code_patch()` closes this gap by checking for an open PR on the SSoT worktree branch name, `worktree-code+issue-N` — the same branch-name pattern `_completion_code_pr()` already uses (`gh pr list --head "worktree-code+issue-N" --state open`).
+
+**Detection method**: query the open PR count for the branch; when ≥1, fetch the PR's `createdAt` and apply the freshness gate below; on pass, fetch the PR number and emit `matches_expected: true` with `actual.stray_pr_signal: true` and `actual.pr_number` set.
+
+**Freshness gate**: identical semantics to the "Operate Route Completion Signature" gate above — when a reopen timestamp is available (via `get-last-reopen`), the PR's `createdAt` must be after it; when unavailable, no freshness constraint is applied. This prevents a stray PR left over from *before* a fix-cycle reopen from masking a genuine re-run failure.
+
+**Check order**: commit (`closes #N`) → operate marker → stray PR → label/state fallback (`phase/verify`/`phase/done`/`CLOSED`). The stray PR check runs immediately after the operate marker check and before the label/state fallback, for the same reason the operate marker check is positioned there: when `reopen_ts` is non-null the label/state fallback is unconditionally skipped, so placing the stray PR check earlier lets it still catch a stray PR created during a fix-cycle re-run.
 
 ### JSON Schema (v1)
 
@@ -92,6 +104,7 @@ To close this gap, `_completion_code_patch()` in `scripts/reconcile-phase-state.
 | `actual.pr_number` | number\|null | When PR is checked | PR number, or `null` if not found |
 | `actual.commits_found` | boolean | When git log is checked | `true` if matching commit found on origin/main |
 | `actual.operate_signal` | boolean | When `code-patch` completion does not find a `closes #N` commit | `true` if an operate route completion marker comment (execution-log or execution-plan) was found; see "Operate Route Completion Signature" above |
+| `actual.stray_pr_signal` | boolean | When `code-patch` completion does not find a `closes #N` commit or operate marker | `true` if an open PR on the `worktree-code+issue-N` branch was found and passed the freshness gate; see "Stray PR Completion Signature" above. When `true`, `actual.pr_number` is also set to the PR number |
 | `actual.spec_file` | string\|null | When spec is checked | Path to spec file, or `null` if not found |
 | `actual.issue_state` | string | When issue state is checked | `"OPEN"` or `"CLOSED"` |
 | `actual.size` | string | When spec precondition is checked with Size check | Issue size value (e.g., `"M"`, `"XS"`, `""`) returned by `get-issue-size.sh`. Present when Spec is missing and Size check is performed. |

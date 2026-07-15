@@ -78,3 +78,46 @@ AC3 の Issue 本文は `tests/reconcile-phase-state.bats` を主候補としつ
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective (トリアージ結果 Type=Bug・Size=M、Background 記載の行番号事実誤認の修正、曖昧点 3 件の自動解決、Pre-merge AC 3 件全てへの verify command 新規付与、Related Issues への #998 追加) — https://github.com/saitoco/wholework/issues/993#issuecomment-4979750986
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Implementation Step 1 は `gh pr list ... -q 'length'` の結果をそのまま `-gt 0` 比較する記述だったが、既存 bats テスト (`tests/reconcile-phase-state.bats` の「same phase: precondition passes but completion not yet reached」) の汎用 `gh` モックが `_completion_code_patch()` 内の全 `gh` 呼び出しに対して非数値文字列 (`phase/ready`) を返す構成だったため、そのまま比較すると bash の算術評価が変数参照として `phase` を解釈しようとし `unbound variable` エラーで異常終了した。`stray_pr_count`・`stray_pr_num` の双方に `=~ ^[0-9]+$` の正規表現ガードを追加し、非数値出力を安全に `0`/シグナル無効として扱うよう変更した。これは `_operate_signal_ts()` が既に採用しているタイムスタンプ形式ガードと同じ防御方針であり、実装全体の一貫性は保たれている。
+
+### Design Gaps/Ambiguities
+
+- Spec の Implementation Step 1 は `gh pr list` の戻り値が常に数値であることを暗黙の前提としていたが、`gh` 呼び出しが失敗した場合や予期しない出力を返した場合の非数値フォールバックは明記されていなかった。今回のテスト回帰で顕在化したため、`_completion_code_pr()` 側の既存コードには存在しないこの種の正規表現ガードを stray PR 検出側にのみ追加した。将来 `_completion_code_pr()` を改修する際は同様のガードの要否を再検討する価値がある。
+
+### Rework
+
+- なし (Implementation Step 1 のガード追加は上記 Deviations に記載の1回の修正で完了し、以降の re-work は発生していない)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note。review-light agent による Spec Deviation 観点の検証で乖離なし (Implementation Steps 1–4、freshness gate、JSON field 追加、ドキュメント更新のいずれも Spec 記載通り)。
+
+### Recurring issues
+
+コメント内のコード行番号への直接参照 (`_completion_code_pr() (line 289)`) が、同一 PR 内の別箇所への挿入 (29行) だけで陳腐化するという指摘 (CONSIDER) を検出・修正した。行番号を直接埋め込むコメントは今後の diff で容易にずれるため、関数名参照のみに留める書き方を今後の実装でも意識する価値がある。
+
+### Acceptance criteria verification difficulty
+
+AC2 (`github_check "gh pr checks" "Run bats tests"`) の初回検証で、本 PR が変更していない `tests/worktree-merge-push.bats` の無関係なテストが CI 上で FAILURE となった。ローカルで単体・フルスイート双方で複数回実行し安定して PASS することを確認した上で CI 環境固有の flaky failure と判断し、`gh run rerun --failed` で再実行して解消した。`github_check` タイプの verify command は対象ジョブ名のみを見るため、無関係な同名ジョブ内の他テストの偶発的失敗も FAIL 判定に巻き込まれる — レビュー側での flaky 判定と再実行の判断ロジック自体は verify command の記述だけでは自動化できておらず、引き続き人間/AIの判断に依存する。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- review-light agent (全4観点) を Size=M / `--light` 指定に従い実行、Spec 記載の実装方針との乖離なしと確認
+- CONSIDER 2件のうち、行番号記述のみ修正 (低リスク・高価値)。複数 `gh pr list` 呼び出しの統合は既存の自己ガードで機能的リスクがないため見送り、レビューコメントに理由を記録済み
+- AC2 の CI 初回 FAILURE は無関係ファイルのテストであることを確認した上で flaky と判断し再実行で解消 (コード変更なし)
+
+### Deferred Items
+- `scripts/reconcile-phase-state.sh:277` の複数 `gh pr list` 呼び出しの単一呼び出しへの統合 (CONSIDER、efficiency/robustness) は未対応のまま。再改修の機会があれば検討対象
+
+### Notes for Next Phase
+- `/merge` 時点で追加の懸念事項なし。MUST/SHOULD issue はゼロ、CI 全ジョブ SUCCESS
+- Post-merge Verification 条件なし (Issue 本文 Post-merge セクションは「なし」)

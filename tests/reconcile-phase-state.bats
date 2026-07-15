@@ -1229,6 +1229,122 @@ MOCK_EOF
     [[ "$output" == *'"operate_signal":false'* ]]
 }
 
+@test "code-patch completion: stray PR - open PR on worktree branch, no reopen -> matches_expected true, stray_pr_signal true" {
+    cat > "$MOCK_DIR/gh-graphql.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "null"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
+
+    # Route misdetection (#979-series) scenario: patch route ended up pushing a
+    # branch + PR instead of a closes #N commit. No reopen has happened yet, so
+    # the freshness gate's "reopen_ts empty" branch applies unconditionally.
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json comments"* ]]; then echo ""; exit 0; fi
+if [[ "$*" == *"--json labels"* ]]; then echo "triaged"; exit 0; fi
+if [[ "$*" == *"--json state"* ]]; then echo "OPEN"; exit 0; fi
+if [[ "$*" == *"-q length"* ]]; then echo "1"; exit 0; fi
+if [[ "$*" == *"-q .[0].createdAt"* ]]; then echo "2026-07-14T00:00:00Z"; exit 0; fi
+if [[ "$*" == *"-q .[0].number"* ]]; then echo "1234"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "log" ]]; then echo ""; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-patch 55 --check-completion --strict
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"matches_expected":true'* ]]
+    [[ "$output" == *'"stray_pr_signal":true'* ]]
+    [[ "$output" == *'"pr_number":1234'* ]]
+    [[ "$output" == *"stray PR completion"* ]]
+}
+
+@test "code-patch completion: stray PR - reopen present + PR created after reopen -> matches_expected true (fix-cycle re-run prevention)" {
+    cat > "$MOCK_DIR/gh-graphql.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "2026-06-01T00:00:00Z"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
+
+    # Fix-cycle re-run: the stray PR was (re-)created after the reopen, so it
+    # reflects the current cycle's actual output rather than a stale artifact
+    # from before the reopen.
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json comments"* ]]; then echo ""; exit 0; fi
+if [[ "$*" == *"--json labels"* ]]; then echo "phase/code"; exit 0; fi
+if [[ "$*" == *"--json state"* ]]; then echo "OPEN"; exit 0; fi
+if [[ "$*" == *"-q length"* ]]; then echo "1"; exit 0; fi
+if [[ "$*" == *"-q .[0].createdAt"* ]]; then echo "2026-07-14T00:00:00Z"; exit 0; fi
+if [[ "$*" == *"-q .[0].number"* ]]; then echo "5678"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "log" ]]; then echo ""; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-patch 55 --check-completion --strict
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"matches_expected":true'* ]]
+    [[ "$output" == *'"stray_pr_signal":true'* ]]
+}
+
+@test "code-patch completion: stray PR - reopen present + PR created before reopen (stale) -> freshness gate rejects" {
+    cat > "$MOCK_DIR/gh-graphql.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "2026-06-01T00:00:00Z"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
+
+    # The open PR predates the reopen — it is a leftover artifact from before
+    # the fix-cycle started and must not be treated as evidence that this
+    # cycle's work is complete.
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json comments"* ]]; then echo ""; exit 0; fi
+if [[ "$*" == *"--json labels"* ]]; then echo "phase/code"; exit 0; fi
+if [[ "$*" == *"--json state"* ]]; then echo "OPEN"; exit 0; fi
+if [[ "$*" == *"-q length"* ]]; then echo "1"; exit 0; fi
+if [[ "$*" == *"-q .[0].createdAt"* ]]; then echo "2026-01-01T00:00:00Z"; exit 0; fi
+if [[ "$*" == *"-q .[0].number"* ]]; then echo "9999"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "log" ]]; then echo ""; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-patch 55 --check-completion --strict
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
+    [[ "$output" == *'"stray_pr_signal":false'* ]]
+}
+
 @test "code-patch precondition: Spec missing and Size != XS -> mismatch" {
     export MOCK_SPEC_PATH="$BATS_TEST_TMPDIR/empty-spec-patch"
     mkdir -p "$BATS_TEST_TMPDIR/empty-spec-patch"
