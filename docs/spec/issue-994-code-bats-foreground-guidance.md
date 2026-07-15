@@ -29,3 +29,26 @@ Issue #979 の `/code --non-interactive` 実行で、Behavioral Change Detection
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 「`/issue 994 --non-interactive` のリファインメント実施記録。Type=Task, Size=XS, Value=2 の triage 根拠、Background記載事実の確認 (skills/code/SKILL.md Step 9 の実在確認、test-runner.md に既存の background/foreground 記述がないことの確認)、Auto-Resolved Ambiguity Points 2件の判断根拠を記録した Issue Retrospective」/ https://github.com/saitoco/wholework/issues/994#issuecomment-4979349164
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps の箇条書き1件を記載どおりに追加した
+
+### Design Gaps/Ambiguities
+- Behavioral Change Detection の `grep -rl "SKILL.md" tests/` は (ファイル名ベースの一致のため) `skills/code/SKILL.md` 専用の対応テストファイル以外にも汎用的にヒットし、本Issue自身の実装時にも full suite override が発火した。結果として、本Issueが追加したばかりのガイダンス (`--non-interactive` 実行時はフォアグラウンド + 明示的timeout) をその場で実運用検証する機会になり、`bats tests/` (1202件) をフォアグラウンド・timeout 600000ms 指定で実行して正常完了 (無限待機なし) を確認できた
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Steps に記載された1箇所 (Step 9 `bats tests/` override直後) にのみガイダンスを追加し、`modules/test-runner.md` への重複追記は行わなかった (Spec Notes の判断を踏襲)
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- 本Issue実装自体が Behavioral Change Detection を誘発し、追加直後のガイダンスをフォアグラウンド実行で dogfood 検証済み (上記 Design Gaps/Ambiguities 参照) — review/verify フェーズでの追加検証は不要
