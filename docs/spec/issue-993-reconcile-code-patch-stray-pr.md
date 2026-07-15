@@ -108,16 +108,15 @@ Nothing to note。review-light agent による Spec Deviation 観点の検証で
 AC2 (`github_check "gh pr checks" "Run bats tests"`) の初回検証で、本 PR が変更していない `tests/worktree-merge-push.bats` の無関係なテストが CI 上で FAILURE となった。ローカルで単体・フルスイート双方で複数回実行し安定して PASS することを確認した上で CI 環境固有の flaky failure と判断し、`gh run rerun --failed` で再実行して解消した。`github_check` タイプの verify command は対象ジョブ名のみを見るため、無関係な同名ジョブ内の他テストの偶発的失敗も FAIL 判定に巻き込まれる — レビュー側での flaky 判定と再実行の判断ロジック自体は verify command の記述だけでは自動化できておらず、引き続き人間/AIの判断に依存する。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- review-light agent (全4観点) を Size=M / `--light` 指定に従い実行、Spec 記載の実装方針との乖離なしと確認
-- CONSIDER 2件のうち、行番号記述のみ修正 (低リスク・高価値)。複数 `gh pr list` 呼び出しの統合は既存の自己ガードで機能的リスクがないため見送り、レビューコメントに理由を記録済み
-- AC2 の CI 初回 FAILURE は無関係ファイルのテストであることを確認した上で flaky と判断し再実行で解消 (コード変更なし)
+- Squash merge を非対話モードで実行 (`gh pr merge --squash --delete-branch`)。マージ前チェック (`gh-pr-merge-status.sh`) で `mergeable=true, reason=clean` を確認済みのため、コンフリクト解消ステップは不要だった
+- ベースブランチは `main` のため `closes #993` により Issue は自動クローズされる想定
 
 ### Deferred Items
-- `scripts/reconcile-phase-state.sh:277` の複数 `gh pr list` 呼び出しの単一呼び出しへの統合 (CONSIDER、efficiency/robustness) は未対応のまま。再改修の機会があれば検討対象
+- `scripts/reconcile-phase-state.sh:277` の複数 `gh pr list` 呼び出しの単一呼び出しへの統合 (review phase で見送り済みの CONSIDER) は未対応のまま
 
 ### Notes for Next Phase
-- `/merge` 時点で追加の懸念事項なし。MUST/SHOULD issue はゼロ、CI 全ジョブ SUCCESS
 - Post-merge Verification 条件なし (Issue 本文 Post-merge セクションは「なし」)
+- `/verify` 実行時に追加の確認事項は特になし
