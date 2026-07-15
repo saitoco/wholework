@@ -116,3 +116,13 @@ No new comments since last phase.
 
 ### Notes for Next Phase
 - `/verify` では post-merge observation 条件 (`verify-type: observation event=auto-run`) の確認を行うこと (次回 kill 実発生時に Spec 非分裂を確認)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### verify
+- Post-merge observation AC を PASS 確定。同一 batch session 内の Issue #994 の issue (triage) phase で外部kill respawn が実際に発生し、`_write_manual_recovery_to_spec()` が「Spec 未作成のため stub 非作成、recoveries log + イベントのみ記録」の分岐を実際に通過した (`[#994] Spec not yet created for issue #994; skipping spec-side manual recovery record` ログを確認)。その後の spec phase で作成された正式 Spec (`docs/spec/issue-994-code-bats-foreground-guidance.md`) は `docs/spec/issue-994-*.md` glob に単一ファイルとしてのみマッチし、分裂は発生しなかった。修正の効果が実運用で確認できた
+
+### Improvement Proposals
+- N/A
