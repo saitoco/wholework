@@ -110,3 +110,13 @@ Steering Docs sync candidate grep (`grep -l "run-auto-sub.sh" docs/*.md docs/ja/
 
 ### Acceptance criteria verification difficulty
 - Nothing to note — 4件の Pre-merge AC (rubric ×2, file_not_contains ×1, command ×1) はいずれも UNCERTAIN なく PASS 判定できた。`command` hint は safe mode のため CI 参照フォールバック (`Run bats tests` job SUCCESS) で解決した。
+
+## Auto Retrospective
+
+### Manual recovery (spec)
+- **Date**: 2026-07-15 09:52 UTC
+- **Issue**: #1009, phase: spec
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn
+- **Wrapper exit code**: unknown
+- **Outcome**: success
