@@ -76,3 +76,42 @@ FIXTURE_EOF
   echo "$output" | grep -qF "target-symptom"
   echo "$output" | grep -E $'^target-symptom\t3$'
 }
+
+@test "wrapper-retry-on-kill: H2 entries detected by frequency parser" {
+  cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
+## 2026-06-01 10:00 UTC: wrapper-retry-on-kill
+
+### Context
+- Issue #100, phase: code-patch
+- Source: retry-on-kill.sh
+- Wrapper: run-code.sh, exit code: 0
+
+### Outcome
+- success
+
+## 2026-06-02 10:00 UTC: wrapper-retry-on-kill
+
+### Context
+- Issue #200, phase: code-pr
+- Source: retry-on-kill.sh
+- Wrapper: run-code.sh, exit code: 0
+
+### Outcome
+- success
+
+## 2026-06-03 10:00 UTC: wrapper-retry-on-kill
+
+### Context
+- Issue #300, phase: review
+- Source: retry-on-kill.sh
+- Wrapper: run-review.sh, exit code: 0
+
+### Outcome
+- success
+
+FIXTURE_EOF
+
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 3
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -E $'^wrapper-retry-on-kill\t3$'
+}
