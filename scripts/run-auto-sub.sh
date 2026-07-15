@@ -178,6 +178,56 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
   fi
 }
 
+# Returns the "number" of the first issue in a `gh issue list --json number,title,<DATE_FIELD>`
+# result whose title contains TARGET as a substring, sorted by DATE_FIELD descending. Empty
+# output on no match or any failure (gh error, empty/malformed JSON) -- never exits the script.
+# Uses the same substring ("contains") matching policy as
+# scripts/collect-recovery-candidates.sh's `grep -qF` duplicate check (applied locally in
+# Python here instead of `gh issue list --search`; see Spec Notes: the search backend's
+# tokenization of hyphenated symptom-shorts is not documented to preserve exact substring
+# matching, so a local contains filter is used for consistency with the existing dedup logic).
+# Usage: _search_recoveries_issue TARGET STATE DATE_FIELD LIMIT
+_search_recoveries_issue() {
+  local target="$1"
+  local state="$2"
+  local date_field="$3"
+  local limit="$4"
+  local issues_json
+  issues_json="$(gh issue list --state "$state" --json "number,title,${date_field}" --limit "$limit" 2>/dev/null)" || issues_json=""
+  [[ -z "$issues_json" ]] && return 0
+  printf '%s' "$issues_json" | python3 -c "
+import json, sys
+target = sys.argv[1]
+date_field = sys.argv[2]
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+matches = [item for item in data if target in item.get('title', '')]
+matches.sort(key=lambda item: item.get(date_field) or '', reverse=True)
+if matches:
+    print(matches[0].get('number', ''))
+" "$target" "$date_field" 2>/dev/null || true
+}
+
+# Resolves the known Issue number for a given symptom-short (e.g.
+# "manual-recovery-push-only") by matching `recoveries: <symptom-short>` against Issue
+# titles (contains match, see _search_recoveries_issue). Prefers an open Issue (most
+# recently created); falls back to the most recently closed Issue if no open match exists.
+# Empty output if neither search matches.
+# Usage: _find_known_recoveries_issue SYMPTOM_SHORT
+_find_known_recoveries_issue() {
+  local symptom_short="$1"
+  local target="recoveries: ${symptom_short}"
+  local matched
+  matched="$(_search_recoveries_issue "$target" open createdAt 500)"
+  if [[ -n "$matched" ]]; then
+    printf '%s' "$matched"
+    return 0
+  fi
+  _search_recoveries_issue "$target" closed closedAt 1000
+}
+
 # _write_manual_recovery_to_recoveries_log ISSUE PHASE RECOVERY_TYPE [EXIT_CODE]
 # Records a parent-session-driven manual recovery event to orchestration-recoveries.md,
 # in the canonical H2 entry format so scripts/collect-recovery-candidates.sh can pick it
@@ -200,6 +250,13 @@ _write_manual_recovery_to_recoveries_log() {
   if [[ ! -f "$_recoveries_file" ]]; then
     return 0
   fi
+  local _symptom_short="manual-recovery-${recovery_type}"
+  local _matched_issue
+  _matched_issue="$(_find_known_recoveries_issue "$_symptom_short")"
+  local _improvement_candidate="未起票"
+  if [[ -n "$_matched_issue" ]]; then
+    _improvement_candidate="起票済み #${_matched_issue}"
+  fi
   local _date
   _date=$(date -u '+%Y-%m-%d %H:%M UTC')
   python3 << PYEOF 2>/dev/null || true
@@ -218,7 +275,7 @@ entry = (
     "\n### Outcome\n"
     "- success\n"
     "\n### Improvement Candidate\n"
-    "- 未起票\n"
+    "- ${_improvement_candidate}\n"
 )
 try:
     content = open(fpath).read()

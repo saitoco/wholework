@@ -1754,6 +1754,45 @@ MOCK
     grep -qE "^## [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2} UTC: manual-recovery-push-only$" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
     grep -q "Wrapper: run-auto-sub.sh, exit code: 137" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
     grep -qE "commit.*manual-recovery-push-only" "$GIT_LOG"
+    grep -q -- "- 未起票" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+}
+
+@test "run-auto-sub: manual recovery: known symptom issue match initializes Improvement Candidate as filed" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+    mkdir -p "$BATS_TEST_TMPDIR/docs/reports"
+    printf '%s\n' "# Orchestration Recovery Log" "<!-- Log entries appear below, newest first. -->" > "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"diff"* && "$*" == *"orchestration-recoveries.md"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+if [[ "$1" == "issue" && "$2" == "list" && "$*" == *"--state open"* ]]; then
+    echo '[{"number":555,"title":"recoveries: manual-recovery-push-only","createdAt":"2026-07-10T00:00:00Z"}]'
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only
+    [ "$status" -eq 0 ]
+    grep -q -- "- 起票済み #555" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
 }
 
 @test "run-auto-sub: manual recovery: emits manual_intervention event with intervention_type" {
