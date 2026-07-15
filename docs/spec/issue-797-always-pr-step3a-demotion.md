@@ -88,3 +88,13 @@
 - verify コマンド 3 点すべて PASS 済み (section_contains, grep, bats)
 - Post-merge AC は `<!-- verify-type: observation event=auto-run -->` として自動検証不可 — /verify で手動確認
 - 既存テスト 14 件すべて PASS、forbidden expressions 違反なし
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### verify
+- 3回目の `/verify` 実行 (2026-06-28, 2026-07-09, 2026-07-15) でも Post-merge observation AC は同一結論 (PENDING) — 本リポジトリの `.wholework.yml` に `always-pr: true` が設定されておらず、demotion 抑止シナリオ自体が構造的に発生しないため。`auto-run` イベントは `/auto` 完走のたびに広く発火するため、この間 30件超の「observation event detected」通知コメントが Issue に蓄積したが、いずれも実質的な進展をもたらさなかった
+
+### Improvement Proposals
+- Memory proposal (Tier 2, Issue 起票なし): `verify-type: observation event=auto-run` は「任意の /auto 完走」という広いイベントに対して発火するため、対象の観察条件が特定のプロジェクト設定 (`always-pr: true` 等、本リポジトリで無効) に依存する場合、条件が原理的に観察不能であるにもかかわらず notification コメントだけが繰り返し蓄積する。`opportunistic-search.sh` の `--context-file` によるキーワードゲート機構 (既存) と同様に、observation AC 側に「本プロジェクトの `.wholework.yml` で該当設定が有効か」を事前チェックするゲートを追加する余地がある。同種のパターンは #783 (`auto-stop-at: review`) 等、プロジェクト設定依存の observation AC 全般に及ぶ可能性がある
