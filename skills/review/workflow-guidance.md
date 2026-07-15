@@ -135,12 +135,12 @@ const finderResults = await pipeline(
   }),
   finderResult => {
     if (!finderResult) return []
-    return finderResult.findings.map(finding =>
+    return parallel(finderResult.findings.map(finding =>
       () => agent(
         `Adversarially refute the following review finding. Default to refuted=true if uncertain.\n\nFinding:\npath: ${finding.path}\nline: ${finding.line}\nbody: ${finding.body}\nseverity: ${finding.severity}\nconfidence: ${finding.confidence}\n\nTry to find a concrete reason why this finding is NOT a real issue. Only set refuted=false if the finding is clearly a genuine problem.`,
         { label: `verify:${finding.path || 'general'}:${finding.severity}`, phase: 'Verify', schema: VERDICT_SCHEMA }
       ).then(verdict => ({ ...finding, refuted: verdict ? verdict.refuted : true }))
-    )
+    ))
   },
 )
 
