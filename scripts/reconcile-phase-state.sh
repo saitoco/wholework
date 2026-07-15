@@ -265,6 +265,35 @@ _completion_code_patch() {
   fi
   actual_json="${actual_json%\}},\"operate_signal\":false}"
 
+  # Stray PR completion signal: route misdetection (#979-series) can leave code-patch
+  # phase's actual artifact as a PR (pushed to worktree-code+issue-N branch) instead of
+  # a closes #N commit to main. Detect an open PR on the SSoT worktree branch name as an
+  # alternate success signature, reusing the same branch-name pattern as
+  # _completion_code_pr() (line 289) and the same freshness gate as operate_signal above.
+  # Checked before the label/state fallback so it also applies during a fix-cycle re-run
+  # (reopen_ts non-null skips the label/state fallback below).
+  # See modules/phase-state.md#stray-pr-completion-signature
+  local stray_pr_count
+  stray_pr_count=$(gh pr list --head "worktree-code+issue-${ISSUE_NUMBER}" --state open --json number -q 'length' 2>/dev/null) || stray_pr_count=0
+  [[ "$stray_pr_count" =~ ^[0-9]+$ ]] || stray_pr_count=0
+  local stray_pr_signal=false
+  local stray_pr_num=""
+  if [[ "$stray_pr_count" -gt 0 ]]; then
+    local stray_pr_created_at
+    stray_pr_created_at=$(gh pr list --head "worktree-code+issue-${ISSUE_NUMBER}" --state open --json createdAt -q '.[0].createdAt' 2>/dev/null) || stray_pr_created_at=""
+    if [[ -z "$reopen_ts" || "$reopen_ts" == "null" ]] || [[ "$stray_pr_created_at" > "$reopen_ts" ]]; then
+      stray_pr_num=$(gh pr list --head "worktree-code+issue-${ISSUE_NUMBER}" --state open --json number -q '.[0].number' 2>/dev/null) || stray_pr_num=""
+      [[ "$stray_pr_num" =~ ^[0-9]+$ ]] && stray_pr_signal=true
+    fi
+  fi
+
+  if [[ "$stray_pr_signal" == "true" ]]; then
+    actual_json="${actual_json%\}},\"stray_pr_signal\":true,\"pr_number\":${stray_pr_num}}"
+    _emit_result "true" "stray PR completion: open PR #${stray_pr_num} found for worktree-code+issue-${ISSUE_NUMBER} branch (route misdetection recovery)" "$actual_json"
+    return
+  fi
+  actual_json="${actual_json%\}},\"stray_pr_signal\":false}"
+
   # Fallback: check phase labels or issue state for async external commit areas.
   # See modules/orchestration-fallbacks.md#async-external-commit
   local labels state
