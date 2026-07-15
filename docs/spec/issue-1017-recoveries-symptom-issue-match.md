@@ -100,3 +100,28 @@ Nothing to note。pre-merge AC 3件 (rubric x2, command x1) はいずれも diff
 - **Recovery type**: respawn
 - **Wrapper exit code**: unknown
 - **Outcome**: success
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 既知 symptom Issue 照合の contains 方式 / タイブレーク基準の判断根拠が Auto-Resolved Ambiguity Points として明記されており、実装との乖離なし
+
+#### design
+- N/A (spec に統合済み)
+
+#### code
+- `_find_known_recoveries_issue` / `_search_recoveries_issue` の実装が Purpose 文どおり: `recoveries: <symptom-short>` への contains 一致、open優先(createdAt降順)→closed(closedAt降順)のタイブレークを実装
+
+#### review
+- 特筆すべき指摘なし
+
+#### merge
+- squash merge がクリーンに完了 (`gh pr merge 1019 --squash --delete-branch`)
+
+#### verify
+- 外部kill (code-pr phase) が発生し、respawn で復帰 (`## Auto Retrospective` に既記録)。この過程で `scripts/run-auto-sub.sh --write-manual-recovery` の `EXIT_CODE` 引数仕様に不一致を発見: `skills/auto/SKILL.md` は "EXIT_CODE is the original wrapper exit code, or `unknown` if it could not be observed" と記載しているが、`_validate_recovery_args` は `^[0-9]+$` のみ許容し `unknown` を拒否する (`_validate_recovery_args: invalid exit_code: 'unknown'` で exit 1)。今回は EXIT_CODE 引数を省略して回避した
+
+### Improvement Proposals
+- `skills/auto/SKILL.md` の外部kill pre-check手順が `EXIT_CODE=unknown` を渡す指示になっているが、`scripts/run-auto-sub.sh` の `_validate_recovery_args` はこれを拒否する。ドキュメントと実装のどちらかを修正すべき — 案: `_validate_recovery_args` の exit_code 検証を `^([0-9]+|unknown)$` に緩和するか、SKILL.md 側の記述を「未観測時は引数省略」に統一する
