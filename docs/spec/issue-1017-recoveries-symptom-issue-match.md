@@ -90,3 +90,13 @@ Nothing to note。pre-merge AC 3件 (rubric x2, command x1) はいずれも diff
 ### Notes for Next Phase
 - `/verify 1017` で post-merge observation AC 1件を検証すること
 - BASE_BRANCH=main のため `closes #1017` により Issue は自動クローズされる見込み
+
+## Auto Retrospective
+
+### Manual recovery (code-pr)
+- **Date**: 2026-07-15 07:22 UTC
+- **Issue**: #1017, phase: code-pr
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn
+- **Wrapper exit code**: unknown
+- **Outcome**: success
