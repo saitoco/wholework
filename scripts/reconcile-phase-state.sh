@@ -269,7 +269,7 @@ _completion_code_patch() {
   # phase's actual artifact as a PR (pushed to worktree-code+issue-N branch) instead of
   # a closes #N commit to main. Detect an open PR on the SSoT worktree branch name as an
   # alternate success signature, reusing the same branch-name pattern as
-  # _completion_code_pr() (line 289) and the same freshness gate as operate_signal above.
+  # _completion_code_pr() and the same freshness gate as operate_signal above.
   # Checked before the label/state fallback so it also applies during a fix-cycle re-run
   # (reopen_ts non-null skips the label/state fallback below).
   # See modules/phase-state.md#stray-pr-completion-signature
