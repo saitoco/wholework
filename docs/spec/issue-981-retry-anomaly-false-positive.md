@@ -115,6 +115,7 @@ No new comments since last phase.
 
 #### verify
 - pre-merge 2 件 rubric PASS。抑制条件の実装は「同一ログ内の後続 `matches_expected:true` を完了根拠として抑制」方式。本 batch session 内の #987 code-pr phase で同 false-positive が実際に発生しており、修正の必要性が実例で裏付けられた。
+- 【2回目 verify (2026-07-15)】Post-merge observation AC を PASS 確定。同一 batch session 内の Issue #1009 code-pr phase で `code_retry_fire` (silent_no_op トリガー) が2回発火した後、最終的に成功し PR #1021 を作成した実ログを確認したところ、`[anomaly]` 系の false-positive 出力は皆無だった。抑制ロジックが実運用で正しく機能することを実例で確認できたため、全 AC PASS で Issue クローズ。
 
 ### Improvement Proposals
 - N/A (triage 中断は外部停止であり系統的欠陥ではない。watchdog silent window の較正は既存 #939 が追跡中)
