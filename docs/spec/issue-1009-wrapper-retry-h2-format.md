@@ -73,3 +73,30 @@ Steering Docs sync candidate grep (`grep -l "run-auto-sub.sh" docs/*.md docs/ja/
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 一行要約: `/issue 1009 --non-interactive` の Issue Retrospective コメント。Type=Bug, Size=M, Value=2 の判定根拠と、rubric AC への補助 `file_not_contains` 追加理由、Auto-Resolve Log (Diagnosis 文言・Recovery Applied 参照先・Improvement Candidate 記入方法の 3 点) を記録 / URL: https://github.com/saitoco/wholework/issues/1009#issuecomment-4978480709
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜4 を設計どおりの順序・内容で実装した。4 番目の引数 `RUNNER_SCRIPT_NAME` の追加も Notes に記載された設計判断のとおり。
+
+### Design Gaps/Ambiguities
+- N/A — Spec の Notes (Steering Docs sync 不要の判断根拠、バックフィル不要の判断根拠) が実装時に発生しうる疑問を先回りして解消しており、追加の曖昧点は発生しなかった。
+
+### Rework
+- N/A — テスト追加を含め、最初の実装で `bats tests/run-auto-sub.bats tests/collect-recovery-candidates.bats` (76 tests) が PASS した。
+
+## Phase Handoff
+
+<!-- phase: code -->
+
+### Key Decisions
+- `_write_wrapper_retry_recovery()` を `_write_manual_recovery_to_recoveries_log()` (#1005) と同型の H2 5 セクション構成 (Context/Diagnosis/Recovery Applied/Outcome/Improvement Candidate) に書き換えた。既存の success/escalated 判定ロジックは変更せず `### Outcome` に流用した。
+- `RUNNER_SCRIPT_NAME` を 4 番目の引数として追加し、デフォルト値 `run-auto-sub.sh` を持たせた。呼び出し箇所は `$(basename "$runner_script")` を渡す。
+- 新規テストは `tests/run-auto-sub.bats` の既存 `retry-on-kill: child runner killed once then succeeds` テストの直後に、`tests/collect-recovery-candidates.bats` の既存 `normal detection` テストの直後に、それぞれ Spec 指定どおりの位置に追加した。
+
+### Deferred Items
+- Post-merge AC (次回 wrapper-retry-on-kill recovery 発生時の H2 形式観察) は `/verify` の `auto-run` イベント発火時の再評価に委ねる。バックフィルは対象外 (Spec Notes のとおり既存データ 0 件を確認済み)。
+
+### Notes for Next Phase
+- Steering Docs (`docs/tech.md` 等) への同期は Spec Notes で不要と判断済み。`/review` で再度同じ grep 確認をやり直す必要はない。
+- `file_not_contains "scripts/run-auto-sub.sh" "### wrapper-retry-on-kill ("` の pre-merge AC は grep で直接確認済み (旧 H3 テンプレート文字列は完全に除去)。
