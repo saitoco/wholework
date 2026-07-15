@@ -87,20 +87,18 @@ Steering Docs sync candidate grep (`grep -l "run-auto-sub.sh" docs/*.md docs/ja/
 
 ## Phase Handoff
 
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `--light` モードのため review-light エージェント1体で全4観点 (Spec乖離/edge case/security/documentation) を統合実施した。MUST/SHOULD issue はゼロ、CONSIDER 1件のみだったため Step 12 の修正作業はスキップした。
-- Step 8 の Pre-merge AC 4件は rubric ×2 / file_not_contains ×1 / command ×1 の全てが safe mode で PASS 判定できた (`command` は CI 参照フォールバックで `Run bats tests` job SUCCESS を確認)。
-- CONSIDER 1件 (`_write_wrapper_retry_recovery()` の `escalated` 分岐に対するテストカバレッジ不足) は PR 起因の regression ではなく既存分岐の未着手ギャップと判断し、General Comments に記録のみ行い修正は見送った。
+- mergeable=true (clean) だったため conflict 解消ステップは不要、Step 4 のsquash mergeに直接進んだ。
+- Phase Handoff write は squash merge 後に origin/main へ ff-only merge してから実施した (squash commit を含む main を土台にする規約どおり)。
 
 ### Deferred Items
-- Post-merge AC (次回 wrapper-retry-on-kill recovery 発生時の H2 形式観察) は `/verify` の `auto-run` イベント発火時の再評価に委ねる (Spec Notes / code フェーズの Handoff から継続)。
-- CONSIDER issue (`escalated` 分岐のテストカバレッジ) は任意対応のため今回は着手せず、要望があれば別 Issue 化を検討。
+- Post-merge AC (次回 wrapper-retry-on-kill recovery 発生時の H2 形式観察) は `/verify` の `auto-run` イベント発火時の再評価に委ねる。
+- CONSIDER issue (`escalated` 分岐のテストカバレッジ) は任意対応のため未着手のまま。
 
 ### Notes for Next Phase
-- MUST issue がないため `event=COMMENT` でレビュー投稿済み。`/merge 1021` にそのまま進行可能。
-- Post-merge AC の observation rubric は `/verify` 側で `auto-run` イベント発火を待つ。該当する recovery 発火が観測されない場合は対象外として扱ってよい (Issue本文/Spec双方に明記済み)。
+- `/verify 1009` で Post-merge AC (observation rubric) の評価を実施する。該当する recovery 発火が観測されない場合は対象外として扱ってよい。
 
 ## review retrospective
 
