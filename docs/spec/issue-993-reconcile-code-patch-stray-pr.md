@@ -78,3 +78,33 @@ AC3 の Issue 本文は `tests/reconcile-phase-state.bats` を主候補としつ
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective (トリアージ結果 Type=Bug・Size=M、Background 記載の行番号事実誤認の修正、曖昧点 3 件の自動解決、Pre-merge AC 3 件全てへの verify command 新規付与、Related Issues への #998 追加) — https://github.com/saitoco/wholework/issues/993#issuecomment-4979750986
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Implementation Step 1 は `gh pr list ... -q 'length'` の結果をそのまま `-gt 0` 比較する記述だったが、既存 bats テスト (`tests/reconcile-phase-state.bats` の「same phase: precondition passes but completion not yet reached」) の汎用 `gh` モックが `_completion_code_patch()` 内の全 `gh` 呼び出しに対して非数値文字列 (`phase/ready`) を返す構成だったため、そのまま比較すると bash の算術評価が変数参照として `phase` を解釈しようとし `unbound variable` エラーで異常終了した。`stray_pr_count`・`stray_pr_num` の双方に `=~ ^[0-9]+$` の正規表現ガードを追加し、非数値出力を安全に `0`/シグナル無効として扱うよう変更した。これは `_operate_signal_ts()` が既に採用しているタイムスタンプ形式ガードと同じ防御方針であり、実装全体の一貫性は保たれている。
+
+### Design Gaps/Ambiguities
+
+- Spec の Implementation Step 1 は `gh pr list` の戻り値が常に数値であることを暗黙の前提としていたが、`gh` 呼び出しが失敗した場合や予期しない出力を返した場合の非数値フォールバックは明記されていなかった。今回のテスト回帰で顕在化したため、`_completion_code_pr()` 側の既存コードには存在しないこの種の正規表現ガードを stray PR 検出側にのみ追加した。将来 `_completion_code_pr()` を改修する際は同様のガードの要否を再検討する価値がある。
+
+### Rework
+
+- なし (Implementation Step 1 のガード追加は上記 Deviations に記載の1回の修正で完了し、以降の re-work は発生していない)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- stray PR 検出条件は Issue 本文 Auto-Resolved Ambiguity Points の方針通り `_completion_code_pr()` と同一のブランチ名パターン (`worktree-code+issue-N`) を再利用した
+- freshness gate は `operate_signal` と同型 (`reopen_ts` 比較) を踏襲し、挿入位置も operate marker の直後・label/state fallback の直前とした (#998 と同じ配置方針)
+- AC3 のテストは `tests/spawn-recovery-subagent.bats` に「reconcile-phase-state.sh を実スクリプトのまま動作させる」統合テストとして追加 (Spec Notes の判断を踏襲)
+
+### Deferred Items
+- `agents/orchestration-recovery.md` への code-patch 向け probe セクション追加は Spec Notes の判断通り不要と確認済み (追加作業なし)
+- `_completion_code_pr()` 側の非数値ガード追加は本 Issue のスコープ外 (Code Retrospective の Design Gaps/Ambiguities 参照)。再改修の機会があれば検討対象
+
+### Notes for Next Phase
+- `review` フェーズでは、既存 `_completion_code_patch` 呼び出し元 (`run-auto-sub.sh` Tier1, `/auto` SKILL.md Step 6) が本変更で回帰していないことを CI (`gh pr checks`) で確認すること (AC2 は github_check のため /code 時点では UNCERTAIN 扱い)
+- bats フルスイート (1206件) はローカルで PASS 済み。CI 上でも同様に PASS するか確認すること
