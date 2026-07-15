@@ -350,6 +350,7 @@ If `tests/` does not exist (e.g., projects without a bats test suite), skip this
      bats tests/
      ```
      (Same pre-check guard applies — `bats tests/` requires the directory to exist.)
+   - When `/code` itself is running in `--non-interactive` mode, run the above `bats tests/` override in the **foreground** (do not set `run_in_background: true`), with an explicit Bash `timeout` covering the measured full-suite duration (approx. 407s — e.g. `timeout: 600000`, the tool's 10-minute ceiling; the default 120s ceiling is too short). A headless `claude -p` process has no guaranteed subsequent turn to receive a background Bash task's completion notification, so backgrounding it risks an infinite wait that silently exhausts `auto-retry-on-fail.max_iterations` (Issue #994). Interactive-mode behavior (background + await notification) is unchanged.
    - Handle FAIL via Tier 0 structured recovery below. If PASS, continue with the remaining validations in this step.
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/test-runner.md` and follow the "Processing Steps" section to run tests.
