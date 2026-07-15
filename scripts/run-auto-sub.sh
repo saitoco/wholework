@@ -492,14 +492,18 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
   fi
 }
 
-# _write_wrapper_retry_recovery ISSUE PHASE EXIT_CODE
-# Records a wrapper-retry-on-kill recovery event to orchestration-recoveries.md.
+# _write_wrapper_retry_recovery ISSUE PHASE EXIT_CODE [RUNNER_SCRIPT_NAME]
+# Records a wrapper-retry-on-kill recovery event to orchestration-recoveries.md, in the
+# canonical H2 entry format so scripts/collect-recovery-candidates.sh can pick it up for
+# frequency detection / recoveries-auto-fire (see #1009; previously an H3 entry that the
+# H2-only parser skipped over).
 # Skips silently if the file does not exist (file not in repo → return 0).
 # See modules/orchestration-fallbacks.md#wrapper-retry-on-kill
 _write_wrapper_retry_recovery() {
   local issue="$1"
   local phase="$2"
   local exit_code_arg="$3"
+  local runner_name="${4:-run-auto-sub.sh}"
   local _repo_root="$REPO_ROOT"
   local _recoveries_file="${_repo_root}/docs/reports/orchestration-recoveries.md"
   if [[ ! -f "$_recoveries_file" ]]; then
@@ -512,16 +516,29 @@ _write_wrapper_retry_recovery() {
   else
     _outcome="escalated (retry also killed)"
   fi
+  local _matched_issue
+  _matched_issue="$(_find_known_recoveries_issue "wrapper-retry-on-kill")"
+  local _improvement_candidate="未起票"
+  if [[ -n "$_matched_issue" ]]; then
+    _improvement_candidate="起票済み #${_matched_issue}"
+  fi
   python3 << PYEOF 2>/dev/null || true
 fpath = "${_recoveries_file}"
 marker = "<!-- Log entries appear below, newest first. -->"
 entry = (
-    "\n### wrapper-retry-on-kill (${phase})\n"
-    "- **Date**: ${_date}\n"
-    "- **Issue**: #${issue}, phase: ${phase}\n"
-    "- **Source**: retry-on-kill.sh\n"
-    "- **Exit code**: ${exit_code_arg}\n"
-    "- **Outcome**: ${_outcome}\n"
+    "\n## ${_date}: wrapper-retry-on-kill\n"
+    "\n### Context\n"
+    "- Issue #${issue}, phase: ${phase}\n"
+    "- Source: retry-on-kill.sh\n"
+    "- Wrapper: ${runner_name}, exit code: ${exit_code_arg}\n"
+    "\n### Diagnosis\n"
+    "- wrapper (${runner_name}) が early-kill window (WHOLEWORK_RETRY_ON_KILL_MAX_SEC) 内に exit code ${exit_code_arg} で終了し、retry-on-kill.sh が自動再試行した\n"
+    "\n### Recovery Applied\n"
+    "- modules/orchestration-fallbacks.md#wrapper-retry-on-kill\n"
+    "\n### Outcome\n"
+    "- ${_outcome}\n"
+    "\n### Improvement Candidate\n"
+    "- ${_improvement_candidate}\n"
 )
 try:
     content = open(fpath).read()
@@ -627,7 +644,7 @@ run_phase_with_recovery() {
   set -e
 
   if [[ "${_RETRY_ON_KILL_FIRED:-false}" == "true" ]]; then
-    _write_wrapper_retry_recovery "$EMIT_ISSUE_NUMBER" "$phase" "$exit_code"
+    _write_wrapper_retry_recovery "$EMIT_ISSUE_NUMBER" "$phase" "$exit_code" "$(basename "$runner_script")"
   fi
 
   emit_event "wrapper_exit" "phase=${phase}" "exit_code=${exit_code}"

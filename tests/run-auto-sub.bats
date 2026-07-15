@@ -2178,6 +2178,68 @@ MOCK
     [ "$(cat "$COUNTER_FILE")" -eq 2 ]
 }
 
+@test "retry-on-kill: wrapper-retry-on-kill recovery writes canonical H2 entry" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+    mkdir -p "$BATS_TEST_TMPDIR/docs/reports"
+    printf '%s\n' "# Orchestration Recovery Log" "<!-- Log entries appear below, newest first. -->" > "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"diff"* && "$*" == *"orchestration-recoveries.md"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+if [[ "$1" == "issue" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    COUNTER_FILE="$BATS_TEST_TMPDIR/call_counter"
+    echo "0" > "$COUNTER_FILE"
+    export COUNTER_FILE
+    # XS route: only code-patch phase, shortest path
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+    # Counter mock: 1st call exits 143 (SIGTERM), 2nd call exits 0
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+#!/bin/bash
+N=$(cat "$COUNTER_FILE" 2>/dev/null || echo 0)
+N=$((N + 1))
+echo "$N" > "$COUNTER_FILE"
+if [[ $N -eq 1 ]]; then exit 143; fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [ "$(cat "$COUNTER_FILE")" -eq 2 ]
+    grep -qE "^## [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2} UTC: wrapper-retry-on-kill$" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    grep -q "Wrapper: run-code.sh, exit code: 0" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    ! grep -q -- "### wrapper-retry-on-kill (" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+}
+
 @test "session-isolation: exit 1 causes abort with error" {
     cat > "$MOCK_DIR/check-verify-dirty.sh" <<'MOCK'
 #!/bin/bash
