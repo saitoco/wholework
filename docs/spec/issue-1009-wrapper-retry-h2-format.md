@@ -87,16 +87,28 @@ Steering Docs sync candidate grep (`grep -l "run-auto-sub.sh" docs/*.md docs/ja/
 
 ## Phase Handoff
 
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `_write_wrapper_retry_recovery()` を `_write_manual_recovery_to_recoveries_log()` (#1005) と同型の H2 5 セクション構成 (Context/Diagnosis/Recovery Applied/Outcome/Improvement Candidate) に書き換えた。既存の success/escalated 判定ロジックは変更せず `### Outcome` に流用した。
-- `RUNNER_SCRIPT_NAME` を 4 番目の引数として追加し、デフォルト値 `run-auto-sub.sh` を持たせた。呼び出し箇所は `$(basename "$runner_script")` を渡す。
-- 新規テストは `tests/run-auto-sub.bats` の既存 `retry-on-kill: child runner killed once then succeeds` テストの直後に、`tests/collect-recovery-candidates.bats` の既存 `normal detection` テストの直後に、それぞれ Spec 指定どおりの位置に追加した。
+- `--light` モードのため review-light エージェント1体で全4観点 (Spec乖離/edge case/security/documentation) を統合実施した。MUST/SHOULD issue はゼロ、CONSIDER 1件のみだったため Step 12 の修正作業はスキップした。
+- Step 8 の Pre-merge AC 4件は rubric ×2 / file_not_contains ×1 / command ×1 の全てが safe mode で PASS 判定できた (`command` は CI 参照フォールバックで `Run bats tests` job SUCCESS を確認)。
+- CONSIDER 1件 (`_write_wrapper_retry_recovery()` の `escalated` 分岐に対するテストカバレッジ不足) は PR 起因の regression ではなく既存分岐の未着手ギャップと判断し、General Comments に記録のみ行い修正は見送った。
 
 ### Deferred Items
-- Post-merge AC (次回 wrapper-retry-on-kill recovery 発生時の H2 形式観察) は `/verify` の `auto-run` イベント発火時の再評価に委ねる。バックフィルは対象外 (Spec Notes のとおり既存データ 0 件を確認済み)。
+- Post-merge AC (次回 wrapper-retry-on-kill recovery 発生時の H2 形式観察) は `/verify` の `auto-run` イベント発火時の再評価に委ねる (Spec Notes / code フェーズの Handoff から継続)。
+- CONSIDER issue (`escalated` 分岐のテストカバレッジ) は任意対応のため今回は着手せず、要望があれば別 Issue 化を検討。
 
 ### Notes for Next Phase
-- Steering Docs (`docs/tech.md` 等) への同期は Spec Notes で不要と判断済み。`/review` で再度同じ grep 確認をやり直す必要はない。
-- `file_not_contains "scripts/run-auto-sub.sh" "### wrapper-retry-on-kill ("` の pre-merge AC は grep で直接確認済み (旧 H3 テンプレート文字列は完全に除去)。
+- MUST issue がないため `event=COMMENT` でレビュー投稿済み。`/merge 1021` にそのまま進行可能。
+- Post-merge AC の observation rubric は `/verify` 側で `auto-run` イベント発火を待つ。該当する recovery 発火が観測されない場合は対象外として扱ってよい (Issue本文/Spec双方に明記済み)。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note — review-light の Perspective 1 (Spec Deviation) で「No issues found」と判定された。H2 5セクション構成、見出しフォーマット、`RUNNER_SCRIPT_NAME` 引数追加、`_find_known_recoveries_issue` の再利用は Spec の Implementation Steps と一致していた。
+
+### Recurring issues
+- Nothing to note — CONSIDER 1件 (`tests/run-auto-sub.bats` の `escalated` 分岐に対するテストカバレッジ不足) のみで、他の Issue と共通するパターンとは言えない (PR 起因の regression ではなく、`_write_wrapper_retry_recovery()` の既存分岐に対する未着手のテストギャップ)。
+
+### Acceptance criteria verification difficulty
+- Nothing to note — 4件の Pre-merge AC (rubric ×2, file_not_contains ×1, command ×1) はいずれも UNCERTAIN なく PASS 判定できた。`command` hint は safe mode のため CI 参照フォールバック (`Run bats tests` job SUCCESS) で解決した。
