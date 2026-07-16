@@ -83,3 +83,13 @@ No new comments since last phase.
 ### Notes for Next Phase
 - Behavioral Change Detection により、`skills/auto/SKILL.md` を直接参照する構造テスト (auto.bats, auto-batch.bats, auto-xl-concurrency.bats, auto-completion-report.bats, operate-route.bats, check-file-overlap.bats など) が direct counterpart 以外にも複数存在すると判定されたため、`bats tests/run-auto-sub.bats -f 'exit_code'` だけでなくフルスイート (`bats tests/`, 1207 件) を実行し、0 failures を確認済み。/verify での再実行時もこの前提を踏襲してよい。
 - `scripts/check-translation-sync.sh` はこの Issue と無関係な既存の同期ギャップ (`docs/guide/autonomy.md` の ja 訳未作成、`docs/guide/index.md` の ja 訳が outdated) を検出したが、いずれも本 Issue の Changed Files に含まれないため対応不要と判断した。
+
+## Auto Retrospective
+
+### Manual recovery (code-patch)
+- **Date**: 2026-07-16 04:12 UTC
+- **Issue**: #1020, phase: code-patch
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn
+- **Wrapper exit code**: unknown
+- **Outcome**: success
