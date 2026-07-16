@@ -570,9 +570,9 @@ See also: `#async-external-commit` (reconcile-first authority — `matches_expec
 ### Fallback Steps
 1. After the manual recovery action completes successfully, run:
    ```bash
-   bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE RECOVERY_TYPE EXIT_CODE
+   bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE RECOVERY_TYPE [EXIT_CODE]
    ```
-   where `RECOVERY_TYPE` is a short string describing the action taken (e.g., `push-only`, `pr-create`, `review-rerun`, `respawn`) and `EXIT_CODE` is the original wrapper exit code, or `unknown` if it could not be observed
+   where `RECOVERY_TYPE` is a short string describing the action taken (e.g., `push-only`, `pr-create`, `review-rerun`, `respawn`) and `EXIT_CODE` is the original wrapper exit code — if it could not be observed, omit the argument entirely rather than passing the string `unknown`; `_validate_recovery_args` only accepts a numeric exit code and rejects any non-numeric value
 2. Before doing anything, the subcommand resolves the *main* repository root (via `git worktree list --porcelain`, falling back to `git rev-parse --show-toplevel` then `pwd`) and `cd`s there, so all writes below land on main even when the subcommand is invoked from a non-main worktree CWD (see #1005 — a `--write-manual-recovery` call made from a code worktree CWD previously pushed its record to that worktree's PR branch instead of main)
 3. The subcommand then writes to three places, each with a distinct consumer:
    - `_write_manual_recovery_to_spec()`: appends a `### Manual recovery (PHASE)` entry to the sub-issue Spec's `## Auto Retrospective` section **only when a formal Spec (`docs/spec/issue-N-*.md`) already exists** (consumed by `/verify` Step 12's skip-judgment). If no formal Spec exists yet (e.g., a kill during triage/spec phase before the Spec was created), the write is skipped entirely — no stub Spec file is created — and a message is logged to stderr; the record still reaches `/verify` Step 12 once the formal Spec is created and folds this manual recovery in as notable content, avoiding the permanent Spec-file split that stub creation used to cause (#1015)

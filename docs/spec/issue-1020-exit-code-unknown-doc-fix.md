@@ -8,7 +8,7 @@ Issue 本文の Auto-Resolved Ambiguity Points の判断により、実装 (`_va
 
 ## Consumed Comments
 
-- login: saito / authorAssociation: MEMBER / trust tier: first-class / 一言要約: `/issue` フェーズの Auto-Resolved Ambiguity Points (実装ではなく SKILL.md 側を修正する方針) の判断根拠を記録した Issue Retrospective コメント。新規指示ではなく、Issue 本文にすでに反映済みの決定を裏付ける情報として参照した。 / https://github.com/saitoco/wholework/issues/1020#issuecomment-4987595963
+No new comments since last phase.
 
 ## Reproduction Steps
 

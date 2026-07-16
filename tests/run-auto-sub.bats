@@ -2151,6 +2151,11 @@ MOCK
     [ "$status" -ne 0 ]
 }
 
+@test "validate: --write-manual-recovery rejects literal 'unknown' exit_code (must omit the argument instead)" {
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only unknown
+    [ "$status" -ne 0 ]
+}
+
 @test "retry-on-kill: child runner killed once then succeeds, run-auto-sub exits 0" {
     COUNTER_FILE="$BATS_TEST_TMPDIR/call_counter"
     echo "0" > "$COUNTER_FILE"

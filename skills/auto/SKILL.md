@@ -926,8 +926,9 @@ Before entering the Tier 1/2/3 diagnosis flow below, check whether the failed ph
 - **Response**: do not proceed into Tier 1/2/3 diagnosis. Respawn the same `run-*.sh` with the same arguments — the `phase/*` label (SSoT) and the `code_phase_milestone` checkpoint restore existing progress, so the respawned run resumes rather than restarting from scratch. Do not introduce a new Tier number for this — the pre-check sits outside the Tier 1/2/3 vocabulary shared with `docs/tech.md` and `modules/orchestration-fallbacks.md`.
 - **Recording (mandatory)**: after the respawned phase completes, call:
   ```bash
-  bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE respawn EXIT_CODE
+  bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE respawn [EXIT_CODE]
   ```
+  If `EXIT_CODE` was not observed, omit the argument entirely — do not pass the string `unknown`; `_validate_recovery_args` only accepts a numeric exit code and rejects any non-numeric value including `unknown`.
   The subcommand self-resolves the main repository root, so it is safe to call from any CWD (including a code/review worktree left over from the killed phase).
 
 ---
@@ -1034,7 +1035,7 @@ Do not invoke subsequent phases.
 - merge phase failure: invalid PR state (not approved, CI failure), conflict resolution failure
 - verify phase failure: acceptance condition FAIL, Issue reopened
 
-**Manual recovery hand-off**: If the parent session manually recovers and continues to subsequent phases instead of stopping here, complete the remaining phases via manual recovery first, then call `bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE RECOVERY_TYPE EXIT_CODE` (where RECOVERY_TYPE describes the action taken, e.g., `push-only`, `pr-create`, `review-rerun`, or `respawn` for the external-kill pre-check above; EXIT_CODE is the original wrapper exit code, or `unknown` if it could not be observed). The subcommand self-resolves the main repository root regardless of the calling CWD, and records the recovery in three places: the sub-issue Spec's `## Auto Retrospective` section, `docs/reports/orchestration-recoveries.md`, and a `manual_intervention` event in `.tmp/auto-events.jsonl`. Skip this call if the Tier 2 anomaly detector already appended a recovery entry for this event to avoid duplicate entries. Then proceed to Step 5.
+**Manual recovery hand-off**: If the parent session manually recovers and continues to subsequent phases instead of stopping here, complete the remaining phases via manual recovery first, then call `bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE RECOVERY_TYPE [EXIT_CODE]` (where RECOVERY_TYPE describes the action taken, e.g., `push-only`, `pr-create`, `review-rerun`, or `respawn` for the external-kill pre-check above; EXIT_CODE is the original wrapper exit code — if it could not be observed, omit the argument entirely rather than passing the string `unknown`, since `_validate_recovery_args` only accepts a numeric exit code). The subcommand self-resolves the main repository root regardless of the calling CWD, and records the recovery in three places: the sub-issue Spec's `## Auto Retrospective` section, `docs/reports/orchestration-recoveries.md`, and a `manual_intervention` event in `.tmp/auto-events.jsonl`. Skip this call if the Tier 2 anomaly detector already appended a recovery entry for this event to avoid duplicate entries. Then proceed to Step 5.
 
 Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "Processing Steps" section with:
 - `SKILL_NAME=auto`
