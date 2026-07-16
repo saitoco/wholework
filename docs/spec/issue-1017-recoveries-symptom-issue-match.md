@@ -124,4 +124,7 @@ Nothing to note。pre-merge AC 3件 (rubric x2, command x1) はいずれも diff
 - 外部kill (code-pr phase) が発生し、respawn で復帰 (`## Auto Retrospective` に既記録)。この過程で `scripts/run-auto-sub.sh --write-manual-recovery` の `EXIT_CODE` 引数仕様に不一致を発見: `skills/auto/SKILL.md` は "EXIT_CODE is the original wrapper exit code, or `unknown` if it could not be observed" と記載しているが、`_validate_recovery_args` は `^[0-9]+$` のみ許容し `unknown` を拒否する (`_validate_recovery_args: invalid exit_code: 'unknown'` で exit 1)。今回は EXIT_CODE 引数を省略して回避した
 
 ### Improvement Proposals
-- `skills/auto/SKILL.md` の外部kill pre-check手順が `EXIT_CODE=unknown` を渡す指示になっているが、`scripts/run-auto-sub.sh` の `_validate_recovery_args` はこれを拒否する。ドキュメントと実装のどちらかを修正すべき — 案: `_validate_recovery_args` の exit_code 検証を `^([0-9]+|unknown)$` に緩和するか、SKILL.md 側の記述を「未観測時は引数省略」に統一する
+- `skills/auto/SKILL.md` の外部kill pre-check手順が `EXIT_CODE=unknown` を渡す指示になっているが、`scripts/run-auto-sub.sh` の `_validate_recovery_args` はこれを拒否する。ドキュメントと実装のどちらかを修正すべき — 案: `_validate_recovery_args` の exit_code 検証を `^([0-9]+|unknown)$` に緩和するか、SKILL.md 側の記述を「未観測時は引数省略」に統一する → **#1020 で解消済み** (ドキュメント側を実装に合わせて修正)
+
+### Post-merge Observation Closure (2026-07-16)
+- Post-merge observation AC (`起票済み #N` 初期化の観察) が PASS 確定。Issue #1020 の `/auto` 実行中に発生した外部kill respawn 2件がいずれも `docs/reports/orchestration-recoveries.md` に `起票済み #1014` で正しく初期化されており、本 Issue の実装が実運用で機能することを確認した。全 AC PASS のため `phase/done` に遷移・クローズ
