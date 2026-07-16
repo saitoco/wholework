@@ -93,3 +93,11 @@ No new comments since last phase.
 - **Recovery type**: respawn
 - **Wrapper exit code**: unknown
 - **Outcome**: success
+
+### Manual recovery (code-patch)
+- **Date**: 2026-07-16 04:12 UTC
+- **Issue**: #1020, phase: code-patch
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn
+- **Wrapper exit code**: unknown
+- **Outcome**: success
