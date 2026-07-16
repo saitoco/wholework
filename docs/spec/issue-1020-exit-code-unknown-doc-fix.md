@@ -59,3 +59,27 @@ No new comments since last phase.
 - **調査方法の補足 (Steering Docs sync candidate check)**: `skills/auto/SKILL.md` が Changed Files に含まれるため、`grep -l "run-auto-sub\|/auto\b" docs/*.md docs/ja/*.md` によるスキル名ベースの候補洗い出しを実施したが、ヒット数が多く (13ファイル) 一般的すぎたため、より的確なキーワード `write-manual-recovery` で絞り込み、実際に古いコマンドテンプレートを含む `docs/workflow.md` / `docs/ja/workflow.md` のみを Changed Files に採用した。`docs/tech.md` にも `--write-manual-recovery` への言及があるが、EXIT_CODE 引数のリテラルテンプレートを含まないため (引数一覧を展開せず `run-auto-sub.sh --write-manual-recovery` とだけ記載) 修正対象外と判断した。
 - **実装非変更の判断根拠**: `_validate_recovery_args` の数値限定チェックは、`run-auto-sub.sh` 自身のコードコメント (312-315行目) および `docs/spec/issue-1005-record-external-kill-respawn.md` の Code Retrospective に記録された過去の意図的な設計判断 (dispatch 側で EXIT_CODE を先にデフォルト化すると数値チェックが常に FAIL するため、未指定時は空文字列のまま渡す) と整合しているため、実装は変更しない。ドキュメント側の記述を実装に合わせる方向で統一する。
 - **bats フィルタとの整合性**: 修正前時点で `bats tests/run-auto-sub.bats -f 'exit_code'` を実行すると、`exit_code` を含む既存テスト名が0件のため `1..0` で exit 0 (trivial pass) になることを確認済み。Implementation Step 4 で `exit_code` を含む実テストケースを追加することで、この verify command が実質的な検証として機能するようにする。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1–4 を計画通りに実施した。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Notes の「実装非変更の判断根拠」通り、`_validate_recovery_args` の数値限定チェックには手を入れず、ドキュメント側 (`skills/auto/SKILL.md` 2箇所、`modules/orchestration-fallbacks.md`、`docs/workflow.md`/`docs/ja/workflow.md`) のみを修正する方針を踏襲した。
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- Behavioral Change Detection により、`skills/auto/SKILL.md` を直接参照する構造テスト (auto.bats, auto-batch.bats, auto-xl-concurrency.bats, auto-completion-report.bats, operate-route.bats, check-file-overlap.bats など) が direct counterpart 以外にも複数存在すると判定されたため、`bats tests/run-auto-sub.bats -f 'exit_code'` だけでなくフルスイート (`bats tests/`, 1207 件) を実行し、0 failures を確認済み。/verify での再実行時もこの前提を踏襲してよい。
+- `scripts/check-translation-sync.sh` はこの Issue と無関係な既存の同期ギャップ (`docs/guide/autonomy.md` の ja 訳未作成、`docs/guide/index.md` の ja 訳が outdated) を検出したが、いずれも本 Issue の Changed Files に含まれないため対応不要と判断した。
