@@ -206,6 +206,18 @@ After assigning verify-type tags, determine whether this Issue is diff-less — 
 
 When both hold and the marker is not already present, attach `<!-- implementation-type: metadata-only -->` as the first line of the Issue body (before `## Background`). This is a best-effort determination made without a Spec — do not remove an already-present marker, and do not re-evaluate once attached; `/spec`/`/code` remain free to discover mid-implementation that file changes are in fact required, in which case they proceed normally (a stale marker only disables `/verify`'s false-ready warning, per skills/verify/SKILL.md Step 1, and does not block verification of an issue that has a real commit or merged PR).
 
+**External-service operation account/権限 prerequisite (Background):**
+
+For any AC whose verify command belongs to the external-system-targeting set defined above in "Metadata-only implementation-type marker (auto-attach)" (`http_status`, `html_check`, `api_check`, `http_header`, `http_redirect`, `lighthouse_check`, `browser_check`, `browser_screenshot`, `mcp_call`, `github_check`, or an externally-targeted `rubric`/`json_field`/`command`), check whether performing the operation requires a specific account or 権限 (permission) level — e.g., an admin/owner-level role, verified-owner status on an external console, or a service-specific access tier.
+
+If it does:
+- Record in `## Background` which account or 権限 level is required to perform the operation (e.g., "requires Verified Owner permission on both the source and destination properties in Google Search Console").
+- If it is not yet known whether the executing account holds that 権限, note this explicitly as an open question rather than assuming access is available. Surfacing the gap at `/issue` time avoids discovering the 権限 shortfall only after implementation reaches `/verify`, where the resulting coordination delay is far more costly.
+
+If the required 権限 turns out to be insufficient (discovered during implementation or verification):
+- Add or update an AC that captures the remediation path — e.g., "the 権限 holder is notified and requested to perform the operation" — instead of leaving the Issue blocked with no documented next step.
+- Do not silently drop the AC to sidestep the check; the goal is to make the access gap visible as early as possible.
+
 **BRE metacharacter detection in verify commands:**
 
 After assigning verify-type tags, scan all `<!-- verify: grep "PATTERN" ... -->` commands in the Issue body. For each `grep` verify command, extract the PATTERN string (the first quoted argument after `grep`) and check whether it contains BRE metacharacters: `\|`, `\(`, `\)`, `\+`, `\?`.
