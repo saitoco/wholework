@@ -43,7 +43,15 @@ If Basic authentication is required for preview or production environments, get 
 - `PREVIEW_BASIC_USER`: Basic authentication username
 - `PREVIEW_BASIC_PASS`: Basic authentication password
 
-If these environment variables are set, attach authentication credentials in Step 4's tool-specific execution. Do NOT output credential information (`PREVIEW_BASIC_USER` / `PREVIEW_BASIC_PASS`) in logs or verification result notes (mask as `****`). If environment variables are not set, connect without authentication.
+If these environment variables are set, attach authentication credentials in Step 4's tool-specific execution. Do NOT output credential information (`PREVIEW_BASIC_USER` / `PREVIEW_BASIC_PASS`) in logs or verification result notes (mask as `****`). This masking policy applies to every path below, including the CDP-attach fallback: even though the fallback carries no explicit `PREVIEW_BASIC_USER` / `PREVIEW_BASIC_PASS` value, do not output Basic Auth prompts, cookies, or session headers observed during the attached session either.
+
+**When environment variables are not set — authenticated local browser (CDP attach) fallback:**
+
+If `PREVIEW_BASIC_USER` / `PREVIEW_BASIC_PASS` are unset and the tool detected in Step 2 is **browser-use CLI**, do not immediately fall back to an unauthenticated connection. Instead, rely on browser-use CLI's default behavior of attaching via CDP (Chrome DevTools Protocol) to the user's already-running, authenticated local Chrome instance rather than launching an isolated browser context. Because the CDP-attached session reuses the local browser's stored credentials and session cookies, it can pass Basic Auth on protected preview/production environments without any explicit credential injection.
+
+- **This fallback requires browser-use CLI specifically.** chrome-devtools MCP's `new_page` tool opens an independent browser context that does not carry over the local browser's saved credentials or authenticated sessions, so it cannot be used to replicate this fallback — do not substitute `new_page` for this step.
+- If the local browser is also unauthenticated (the Basic Auth challenge still appears, or the request still fails), fall back to UNCERTAIN per Step 5's normal handling, and include "ローカルブラウザも未認証" (local browser is also unauthenticated) in the detail reason, so downstream phases (`/verify`) know a real local-browser auth check was attempted and failed rather than merely skipped.
+- If the tool detected in Step 2 is Playwright MCP (not browser-use CLI), this fallback does not apply — connect without authentication as before, since Playwright MCP always opens an isolated context with no access to local browser sessions.
 
 ### Step 4: Tool-Specific Execution
 
