@@ -197,6 +197,15 @@ Always read `skills/issue/mcp-call-guidelines.md` and follow the "Declaration-fi
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md` and assign `<!-- verify-type: auto|opportunistic|manual -->` tags to each post-merge condition.
 
+**Metadata-only implementation-type marker (auto-attach):**
+
+After assigning verify-type tags, determine whether this Issue is diff-less — i.e., its implementation will consist entirely of external-tool/GitHub-metadata operations with no repository file changes. This translates `modules/size-workflow-table.md` § "Diff-less Axis (operate route)" (evaluated there from a Spec's `## Changed Files` / `## Implementation Steps`) into criteria evaluable at `/issue` time, before a Spec exists, from the AC classification just performed:
+
+- `### Pre-merge (auto-verified)` has no condition whose verify command targets a repository file or path — i.e., it is empty, or every verify command present belongs to the external-system-targeting set (`http_status`, `html_check`, `api_check`, `http_header`, `http_redirect`, `lighthouse_check`, `browser_check`, `browser_screenshot`, `mcp_call`, `github_check`, or a `rubric`/`json_field`/`command` whose target is external rather than a repo path). None of `file_exists`, `file_not_exists`, `dir_exists`, `dir_not_exists`, `file_contains`, `file_not_contains`, `grep`, `section_contains`, `section_not_contains`, `symlink`, `build_success`, or a repo-path-targeting `command` appear.
+- Every condition in `### Post-merge` is tagged `verify-type: manual` or `verify-type: opportunistic`, and its condition text describes an external-service operation or GitHub-metadata change (issue/PR labels, comments, project fields, etc.) rather than a repository file change.
+
+When both hold and the marker is not already present, attach `<!-- implementation-type: metadata-only -->` as the first line of the Issue body (before `## Background`). This is a best-effort determination made without a Spec — do not remove an already-present marker, and do not re-evaluate once attached; `/spec`/`/code` remain free to discover mid-implementation that file changes are in fact required, in which case they proceed normally (a stale marker only disables `/verify`'s false-ready warning, per skills/verify/SKILL.md Step 1, and does not block verification of an issue that has a real commit or merged PR).
+
 **BRE metacharacter detection in verify commands:**
 
 After assigning verify-type tags, scan all `<!-- verify: grep "PATTERN" ... -->` commands in the Issue body. For each `grep` verify command, extract the PATTERN string (the first quoted argument after `grep`) and check whether it contains BRE metacharacters: `\|`, `\(`, `\)`, `\+`, `\?`.
@@ -429,7 +438,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/ambiguity-detector.md`. Get Size with `get-i
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-patterns.md` and follow the "Processing Steps" section guidelines to design verify command patterns.
 
-Follow the full procedure defined in "New Issue Creation → Step 4: Classify Acceptance Criteria and Assign Verify Commands" above: classify each acceptance criterion as "pre-merge" or "post-merge", assign verify commands using the supported command table, apply translation document exclusions, prefer dedicated commands over `command` hints, apply `--when` modifiers, perform MCP tool detection, and assign verify-type tags to post-merge conditions.
+Follow the full procedure defined in "New Issue Creation → Step 4: Classify Acceptance Criteria and Assign Verify Commands" above: classify each acceptance criterion as "pre-merge" or "post-merge", assign verify commands using the supported command table, apply translation document exclusions, prefer dedicated commands over `command` hints, apply `--when` modifiers, perform MCP tool detection, assign verify-type tags to post-merge conditions, and evaluate/attach the metadata-only implementation-type marker.
 
 Propose "Pre-merge" / "Post-merge" section split for existing issues lacking sections.
 
