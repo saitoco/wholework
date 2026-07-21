@@ -260,19 +260,28 @@ Verify each condition:
 **Preview-tier unverified marker (defense in depth):** After classification, collect the
 1-based indices (counted across the full Issue body AC enumeration, same convention as
 `gh-issue-edit.sh --checkbox`) of every Pre-merge condition tagged `<!-- ac-tier: preview -->`
-that was classified UNCERTAIN in this step. If this set is non-empty, write a comment body to
-`.tmp/preview-ac-unverified-$ISSUE_NUMBER.md` with the Write tool — first line
-`<!-- wholework-event: type=preview-ac-unverified phase=review issue=$ISSUE_NUMBER ac=<comma-separated indices> -->`
-(see `modules/l0-surfaces.md` § "Machine-Readable Event Marker"), followed by a short
-human-readable note listing which preview-tier ACs could not be verified and why — then post it:
+that was classified UNCERTAIN in this step. When the Pre-merge section contains one or more
+`ac-tier: preview` conditions, post this marker on every run of this step, regardless of
+whether the collected set is empty — only skip the comment entirely when the Pre-merge section
+has zero `ac-tier: preview` conditions to begin with. Posting on every run (rather than only
+when the set is non-empty) matters because Issue comments are append-only: a later run that
+finds zero UNCERTAIN conditions cannot retract an earlier run's marker, so `/verify`'s
+latest-wins lookup would otherwise keep resolving a stale, superseded marker after a fix cycle
+re-verifies a previously UNCERTAIN condition (see `modules/l0-surfaces.md` § "Machine-Readable
+Event Marker"). Write a comment body to `.tmp/preview-ac-unverified-$ISSUE_NUMBER.md` with the
+Write tool — first line
+`<!-- wholework-event: type=preview-ac-unverified phase=review issue=$ISSUE_NUMBER ac=<comma-separated indices, or the literal none when the set is empty> -->`,
+followed by a short human-readable note listing which preview-tier ACs could not be verified and
+why, or noting that all preview-tier ACs were verified when the set is empty — then post it:
 ```bash
 mkdir -p .tmp
 ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh "$ISSUE_NUMBER" .tmp/preview-ac-unverified-$ISSUE_NUMBER.md
 rm -f .tmp/preview-ac-unverified-$ISSUE_NUMBER.md
 ```
-This records the unverified state so `/verify`'s pre-merge-preview AC skip rule (Step 5) does
-not silently treat these conditions as verified once the PR merges and the preview environment
-disappears. If no preview-tier AC was classified UNCERTAIN, skip this comment entirely.
+This records the current-run verification state so `/verify`'s pre-merge-preview AC skip rule
+(Step 5) does not silently treat conditions as verified once the PR merges and the preview
+environment disappears, and so a fix cycle's re-verification is never masked by an earlier,
+now-superseded marker.
 
 **`file_contains` exact match check:**
 
