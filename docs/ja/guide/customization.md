@@ -117,7 +117,7 @@ capabilities:
 | `steering-docs-path` | string | `docs` | steering document の配置先 |
 | `capabilities.browser` | boolean | `false` | Playwright ベースの verify command を有効化する |
 | `capabilities.workflow` | boolean | `false` | `/review --full` で Workflow ベースのマルチエージェント実行を有効化する（opt-in; 未設定時は static Task fan-out にフォールバック） |
-| `capabilities.pr-preview` | boolean | `false` | PR preview URL の存在を宣言する。URL/UX 系 AC を pre-merge-preview に分類し、`PREVIEW_URL` 環境変数が設定されている場合に `/review` 時に実行する。`/verify` post-merge では二重検証防止のため skip する。 |
+| `capabilities.pr-preview` | boolean | `false` | PR preview URL の存在を宣言する。URL/UX 系 AC を pre-merge-preview に分類し、`PREVIEW_URL` 環境変数が設定されている場合に `/review` 時に実行する。`/verify` post-merge では二重検証防止のため skip するが、`/review` が投稿する最新の `type=preview-ac-unverified` マーカーがその AC を未検証としている場合は `/verify` が本番 URL に対するフォールバック検証を行う。 |
 | `capabilities.mcp` | list | `[]` | スキルから利用できる MCP ツール名 |
 | `capabilities.{name}` | boolean | `false` | 動的 capability マッピング（例: `capabilities.invoice-api: true`） |
 | `watchdog-timeout-seconds` | integer | `2700` | watchdog が silent な `claude -p` プロセスを kill するまでのタイムアウト秒数。Size L+ タスク（特に Opus / xhigh effort）では claude の長い思考時間により 2700 秒を超える silent 期間が発生しうる。メタ開発や Size L+ 作業では `3600` を推奨。0 以下の値はデフォルトにフォールバック。 |

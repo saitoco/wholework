@@ -128,7 +128,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `steering-docs-path` | string | `docs` | Where steering documents live |
 | `capabilities.browser` | boolean | `false` | Enable Playwright-based verify commands |
 | `capabilities.workflow` | boolean | `false` | Enable Workflow-based multi-agent execution in `/review --full` (opt-in; falls back to static Task fan-out when unset) |
-| `capabilities.pr-preview` | boolean | `false` | Declare PR preview availability; URL/UX ACs are classified as pre-merge-preview and executed at `/review` when the `PREVIEW_URL` env variable is set. Skipped in `/verify` post-merge to prevent double verification. |
+| `capabilities.pr-preview` | boolean | `false` | Declare PR preview availability; URL/UX ACs are classified as pre-merge-preview and executed at `/review` when the `PREVIEW_URL` env variable is set. Skipped in `/verify` post-merge to prevent double verification, unless `/review`'s latest `type=preview-ac-unverified` marker lists the AC as unverified, in which case `/verify` falls back to a production-URL check. |
 | `capabilities.mcp` | list | `[]` | MCP tool names available to skills |
 | `capabilities.{name}` | boolean | `false` | Dynamic capability mapping (e.g., `capabilities.invoice-api: true`) |
 | `watchdog-timeout-seconds` | integer | `2700` | Watchdog timeout in seconds before killing a silent `claude -p` process. Claude's extended thinking time on Size L+ tasks (especially Opus with high effort) can produce silent periods exceeding 2700 seconds; set to `3600` for meta-development or Size L+ work. Values ≤0 fall back to the default. |
