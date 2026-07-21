@@ -174,11 +174,18 @@ This is an early Spec read specifically for Phase Handoff context; SPEC_PATH is 
 
 **Scope**: This step processes **pre-merge conditions only**. Post-merge conditions (hint-based and manual) are processed in Steps 7–8, after pre-merge results are locked into the Issue. If the Issue has no section divisions, treat all conditions as pre-merge and process them here.
 
-**pre-merge-preview AC skip rule (double-verification prevention):**
+**pre-merge-preview AC skip rule (double-verification prevention, with unverified fallback):**
 
-Within the `### Pre-merge` section, any AC line that carries a `<!-- ac-tier: preview -->` tag is classified as a preview-tier AC. These ACs were verified at `/review` time against the preview URL and must be skipped here to prevent double verification. Record each skipped AC as SKIPPED in the results table with the note "preview-tier AC; verified at /review against preview URL".
+Within the `### Pre-merge` section, any AC line that carries a `<!-- ac-tier: preview -->` tag is classified as a preview-tier AC. These ACs are normally treated as already verified at `/review` time against the preview URL and skipped here to prevent double verification — but this assumption must be checked against the `type=preview-ac-unverified` marker collected during Step 4's comment consumption, since `/review` may have ended some preview-tier ACs as UNCERTAIN instead of actually verifying them.
 
-If the same URL/UX verification is also needed against the production URL, duplicate the AC in the `### Post-merge` section without the `<!-- ac-tier: preview -->` tag; `/verify` will then execute it against `PRODUCTION_URL` (resolved via `{{base_url}}` and the `production-url` key in `.wholework.yml`).
+From the comments consumed in Step 4, identify the most recent (`createdAt` maximum) comment whose body contains `<!-- wholework-event: type=preview-ac-unverified`, and read its `ac=` attribute (comma-separated 1-based indices, per `modules/l0-surfaces.md` § "Machine-Readable Event Marker"). For each `ac-tier: preview` AC in this Pre-merge section, using its own 1-based index in the Issue body's full AC enumeration:
+
+- **No such marker comment exists, or this AC's index is not in the marker's `ac=` list**: unchanged — record as SKIPPED with the note "preview-tier AC; verified at /review against preview URL".
+- **This AC's index is in the marker's `ac=` list** (i.e., `/review` left it UNCERTAIN and never actually verified it against the preview URL): do not record as SKIPPED. Instead:
+  - **`PRODUCTION_URL` is non-empty**: resolve the verify command's `{{base_url}}` to `PRODUCTION_URL` and actually execute it, exactly as a normal post-merge AC would be. Record the resulting PASS/FAIL/UNCERTAIN classification with the note "preview-tier AC unverified at /review; fallback-verified against production URL".
+  - **`PRODUCTION_URL` is empty**: record as UNCERTAIN with the note "preview-tier AC unverified at /review; no production-url configured for fallback — manual verification required".
+
+If the same URL/UX verification is also needed against the production URL regardless of this fallback (e.g., to cover both a preview-time check and a standing production check), duplicate the AC in the `### Post-merge` section without the `<!-- ac-tier: preview -->` tag; `/verify` will then execute it against `PRODUCTION_URL` (resolved via `{{base_url}}` and the `production-url` key in `.wholework.yml`).
 
 **Patch route detection (run before verification):**
 
