@@ -73,3 +73,33 @@ triage retrospective コメント (2026-07-21) で「マーカーの記録場所
 ### Doc sync scope note
 
 Steering Docs sync candidate check の一般手順 (skill 名 "review"/"verify" での grep) は、これらが一般的な英単語のため大量の無関係ヒットを生む。代わりに `ac-tier: preview` / `pre-merge-preview` というより特異的なキーワードで直接調査し、`docs/guide/customization.md` (と ja ミラー) のみが該当することを確認した。`docs/tech.md` は新規 `.wholework.yml` キーを追加しないため変更不要。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜4 を Spec 記載順・記載内容通りに実施した。追加/省略/並べ替えはない。
+
+### Design Gaps/Ambiguities
+- N/A — Spec Notes の Auto-Resolve Log で記録場所・粒度・cutoff 越境問題が事前に解決済みだったため、実装時に新たな曖昧性は発生しなかった。
+
+### Rework
+- N/A — 手戻りは発生しなかった。
+
+### Test scope note (out-of-spec observation)
+- `skills/code/SKILL.md` Step 9 の Behavioral Change Detection は、変更ファイル名 (パス抜き) で `tests/` 配下を grep する経験則を持つが、`SKILL.md` は全 Skill 共通のファイル名であるため、`skills/review/SKILL.md` / `skills/verify/SKILL.md` という狭い変更に対しても常に `bats tests/` フルスイート (1213 件) が発火した。実測は PASS (0 failures) だったため本 Issue の実装自体には影響しないが、経験則の汎用ファイル名対応漏れという `/code` 自体の改善余地であり、本 Issue のスコープ外のため follow-up Issue #1034 (`retro/code`) として起票した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の設計通り、preview AC 未検証マーカーは Issue コメント (PR コメントではなく) に `<!-- wholework-event: type=preview-ac-unverified ac=<indices> -->` として記録する方式を採用 (Spec Notes の Auto-Resolve Log 通り、実装からの逸脱なし)。
+- `modules/l0-surfaces.md` の「verify-fail marker exception」を「Cross-phase marker exception」に汎化し、`type=verify-fail` と `type=preview-ac-unverified` の両方を cutoff 越境スキャン対象にした (新規の並行 bypass 機構は作らず既存機構を再利用)。
+- `skills/verify/SKILL.md` Step 5 のフォールバックは、`PRODUCTION_URL` の有無で分岐 (設定時は実検証、未設定時は明示的 UNCERTAIN 警告) する Spec 記載の仕様通りに実装した。
+
+### Deferred Items
+- 新規 bats テストは追加していない (Spec Notes の判断を踏襲: 両 AC が `rubric` のみのため既存 content-assertion テストと衝突しない)。`/verify` 実行時、両 rubric AC が実際に PASS 判定されるかは post-merge の実地確認が必要。
+- Behavioral Change Detection の汎用ファイル名対応漏れは follow-up Issue #1034 に切り出し、本 Issue では対応していない。
+
+### Notes for Next Phase
+- 本 Issue はコードレベルの変更のみで、`.wholework.yml` の新規キー追加はない。`docs/tech.md` の更新も不要と判断済み (Doc sync scope note 参照)。
+- `skills/review/SKILL.md` Step 8 の新規段落と `skills/verify/SKILL.md` Step 5 の書き換えが、既存の Step 見出し構造・番号を変更していないことを Spec Notes で確認済み — `/review`/`/merge` フェーズは通常のフローで進行してよい。
