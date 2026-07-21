@@ -6,6 +6,8 @@
 |-------|--------------------|-----------|--------|-----|
 | saito | MEMBER | first-class | Issue Retrospective (`/issue 1029 --non-interactive`)。Background の実装記述 (`_write_manual_recovery_to_spec` は open PR 時のみ Spec 書き込みをスキップ、`_write_manual_recovery_to_recoveries_log` は PR 状態に関わらず常に追記) を実コードと突合し一致を確認。Auto-Resolved Ambiguity Points 2件 (`manual_intervention` イベント再発火はスコープ外／dedup 時間窓は `/spec` に委譲) を記録。Size=S のため sub-issue 分割評価は対象外 | https://github.com/saitoco/wholework/issues/1029#issuecomment-5031992097 |
 
+`/code` フェーズ (cutoff: 2026-07-21T09:08:09Z、`phase/ready` ラベル付与時刻): 新規コメントなし。
+
 ## Overview
 
 `run-auto-sub.sh --write-manual-recovery ISSUE PHASE RECOVERY_TYPE` は回復記録を (1) Spec の `## Auto Retrospective`、(2) `docs/reports/orchestration-recoveries.md`、(3) `manual_intervention` イベントの3箇所に書き込む。対象 Issue に open PR が存在する場合、(1) は self-conflict 回避のためスキップされるが (2)(3) は無条件に書き込まれる。案内メッセージに従い PR マージ後に同一引数で再実行すると (1) は今度は成功するが、(2) には dedup チェックがないため同一イベントが重複して追記される。本 Issue は `_write_manual_recovery_to_recoveries_log()` に、同一イベント (同一 Issue・phase・recovery type・近接タイムスタンプ) の既存エントリを検出して追記をスキップする dedup チェックを追加し、`--write-manual-recovery` 全体を「部分完了 → 再実行」シナリオに対して冪等にする。

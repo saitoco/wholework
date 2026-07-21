@@ -260,8 +260,13 @@ _write_manual_recovery_to_recoveries_log() {
   local _date
   _date=$(date -u '+%Y-%m-%d %H:%M UTC')
   python3 << PYEOF 2>/dev/null || true
+import re
+from datetime import datetime, timezone, timedelta
+
 fpath = "${_recoveries_file}"
 marker = "<!-- Log entries appear below, newest first. -->"
+symptom_short = "${_symptom_short}"
+context_line = "- Issue #${issue}, phase: ${phase}"
 entry = (
     "\n## ${_date}: manual-recovery-${recovery_type}\n"
     "\n### Context\n"
@@ -277,13 +282,35 @@ entry = (
     "\n### Improvement Candidate\n"
     "- ${_improvement_candidate}\n"
 )
+
+def _is_duplicate(tail):
+    now = datetime.now(timezone.utc)
+    for m in re.finditer(
+        r"^## (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) UTC: (\S+)\n(.*?)(?=\n## |\Z)",
+        tail,
+        re.DOTALL | re.MULTILINE,
+    ):
+        ts_str, existing_symptom, block = m.group(1), m.group(2), m.group(3)
+        if existing_symptom != symptom_short or context_line not in block:
+            continue
+        try:
+            existing_ts = datetime.strptime(ts_str, "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+        if now - existing_ts <= timedelta(hours=24):
+            return True
+    return False
+
 try:
     content = open(fpath).read()
     idx = content.find(marker)
     if idx != -1:
         pos = idx + len(marker)
-        content = content[:pos] + entry + content[pos:]
-        open(fpath, "w").write(content)
+        if _is_duplicate(content[pos:]):
+            print("[#${issue}] [recovery] manual-recovery-${recovery_type} already recorded for issue #${issue} phase ${phase} within the last 24h; skipping duplicate recoveries log entry")
+        else:
+            content = content[:pos] + entry + content[pos:]
+            open(fpath, "w").write(content)
 except Exception:
     pass
 PYEOF
