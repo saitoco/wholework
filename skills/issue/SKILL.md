@@ -501,20 +501,28 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md`.
 
 #### Step 12a: Parallel Investigation (Scope / Risk / Precedent Agents)
 
-Get steering doc paths with Glob. Launch these 3 subagents in a single message to ensure parallel fan-out (single-message fan-out prevents serialization regardless of model generation):
+Get steering doc paths with Glob. Launch these 3 subagents in a single message to ensure parallel fan-out (single-message fan-out prevents serialization regardless of model generation). Give each an explicit `name:` so it can be addressed individually by `TaskStop` in Result collection below — without it, the agent has no stable identifier to stop by:
 
 ```text
-Task(subagent_type="issue-scope", description="Scope investigation",
+Task(subagent_type="issue-scope", description="Scope investigation", name="scope-$NUMBER",
   prompt="Issue=$NUMBER, Steering Documents=$STEERING_DOCS_FILES, Issue body=<full text>. Deliver your Output Format markdown via SendMessage(to=\"main\") on completion; if SendMessage is unavailable or fails, Write it to .tmp/issue-$NUMBER-scope.md instead and state the path in your final response.")
 
-Task(subagent_type="issue-risk", description="Risk investigation",
+Task(subagent_type="issue-risk", description="Risk investigation", name="risk-$NUMBER",
   prompt="Issue=$NUMBER, Issue body=<full text>. Deliver your Output Format markdown via SendMessage(to=\"main\") on completion; if SendMessage is unavailable or fails, Write it to .tmp/issue-$NUMBER-risk.md instead and state the path in your final response.")
 
-Task(subagent_type="issue-precedent", description="Precedent investigation",
+Task(subagent_type="issue-precedent", description="Precedent investigation", name="precedent-$NUMBER",
   prompt="Issue=$NUMBER, Issue body=<full text>. Deliver your Output Format markdown via SendMessage(to=\"main\") on completion; if SendMessage is unavailable or fails, Write it to .tmp/issue-$NUMBER-precedent.md instead and state the path in your final response.")
 ```
 
-**Result collection**: `SendMessage` delivers each agent's Output Format markdown automatically — no team-lead polling required. Wait to receive messages from all 3 agents before proceeding to Step 12b. If no message and no fallback file appear from a given agent within 3 `idle_notification` cycles, treat it as silently failed: read that agent's fallback file (`.tmp/issue-$NUMBER-scope.md` / `.tmp/issue-$NUMBER-risk.md` / `.tmp/issue-$NUMBER-precedent.md`) with `Read` to recover its results, applying the same handling as an explicit error if the file is also absent.
+**Result collection**: `SendMessage` delivers each agent's Output Format markdown automatically — no team-lead polling required. Wait to receive messages from all 3 agents before proceeding to Step 12b. As soon as a given agent's result arrives, immediately stop that agent alone — rather than waiting for all 3 — so no agent sits idle in a pane longer than necessary:
+
+```text
+TaskStop(task_id: "scope-$NUMBER")      # right after receiving the scope agent's SendMessage
+TaskStop(task_id: "risk-$NUMBER")       # right after receiving the risk agent's SendMessage
+TaskStop(task_id: "precedent-$NUMBER")  # right after receiving the precedent agent's SendMessage
+```
+
+If no message and no fallback file appear from a given agent within 3 `idle_notification` cycles, treat it as silently failed: read that agent's fallback file (`.tmp/issue-$NUMBER-scope.md` / `.tmp/issue-$NUMBER-risk.md` / `.tmp/issue-$NUMBER-precedent.md`) with `Read` to recover its results, applying the same handling as an explicit error if the file is also absent — then still call `TaskStop(task_id: "<agent-name>")` for that agent to release its pane.
 
 On failure: fall back to standard scope assessment (when both `SendMessage` delivery and the `Write` fallback fail for an agent).
 
