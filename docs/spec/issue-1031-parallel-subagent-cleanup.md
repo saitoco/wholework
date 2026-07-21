@@ -21,3 +21,6 @@
 ### Scope Assessment
 
 Size=XS のため sub-issue 分割の対象外。非対話モードのため該当ステップ自体もスキップ (High-Stakes Decision)。
+
+## Consumed Comments
+No new comments since last phase.
