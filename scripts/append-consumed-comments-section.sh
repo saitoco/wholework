@@ -99,6 +99,15 @@ else
   printf '%s\n' "$ENTRIES" >> "$SPEC_FILE" 2>/dev/null || true
 fi
 
+# Defense-in-depth: warn if not running inside an isolated worktree (was
+# skills/verify/SKILL.md Step 3 skipped?). --git-dir and --git-common-dir
+# are equal only in the main tree; they differ inside any linked worktree.
+_git_dir="$(git rev-parse --git-dir 2>/dev/null || true)"
+_git_common_dir="$(git rev-parse --git-common-dir 2>/dev/null || true)"
+if [[ -n "$_git_dir" && -n "$_git_common_dir" && "$_git_dir" == "$_git_common_dir" ]]; then
+  echo "append-consumed-comments-section.sh: WARNING — not running inside an isolated worktree (was skills/verify/SKILL.md Step 3 skipped?); commit/push below lands directly on the current branch" >&2
+fi
+
 # Commit and push (best-effort; failures do not block caller)
 SPEC_REL="${SPEC_FILE#$_repo_root/}"
 if ! git -C "$_repo_root" diff --quiet "$SPEC_REL" 2>/dev/null; then
