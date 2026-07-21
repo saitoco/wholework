@@ -57,3 +57,30 @@
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 要旨: Issue #1026 の triage フェーズ Issue Retrospective。Size M / Type Feature / Value 3 の判定根拠、実装場所を `opportunistic-search.sh` 軸と想定する Auto-Resolve Log の追記、`file_contains` 補助 verify command 2 件の追加を記録。`capabilities.*` ネストキーの扱いと #797 等既存 Issue への適用スコープは `/spec` 判断に委任する旨を明記。 / URL: https://github.com/saitoco/wholework/issues/1026#issuecomment-5030312095
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps に記載された挿入位置・抽出パターン・ゲート判定ロジックをそのまま実装した。逸脱なし。
+
+### Design Gaps/Ambiguities
+- N/A — Spec の Notes セクションで実装箇所・スコープ境界 (`capabilities.*` 対象外、真偽値のみ)・既存 Issue への適用範囲があらかじめ確定していたため、実装時に新たな曖昧点は生じなかった。
+
+### Rework
+- N/A — 巻き戻しや設計変更は発生しなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `config=<key>` ゲートは `keyword=`/`CONTEXT_FILE` ゲートブロックの直後、`# Extract text with HTML comments...` コメントの直前に実装した (Spec 指定の挿入位置どおり)。新規 CLI 引数は追加せず、`get-config-value.sh` を `${SCRIPT_DIR}/get-config-value.sh` 経由で直接呼び出す設計を採用した。
+- `modules/observation-trigger.md` の `config=` セクションは既存の `keyword=` セクションと同型の構成 (Problem → AC 例 → Matching specification) で追加し、スコープ制約 (フラット kebab-case キーのみ、真偽値のみ) を明記した。
+- テストは 3 ケース (有効時マッチ / 無効時除外 / 属性なし無条件マッチ) を `tests/opportunistic-search.bats` に追加し、`WHOLEWORK_CONFIG_PATH` によるヘルメティックなオーバーライドパターン (既存の `get-config-value.bats` 等と同型) を踏襲した。
+
+### Deferred Items
+- #797 等、既存 observation AC への `config=` 属性の付与は本 Issue のスコープ外 (Spec Notes に明記済み)。follow-up Issue 化は本 PR 範囲外。
+- `capabilities.*` ネストキーおよび enum 値キー (`auto-stop-at` 等) への対応拡張 (`config=key:value` 形式等) は将来の follow-up 候補として `modules/observation-trigger.md` に記録済み。
+
+### Notes for Next Phase
+- Behavioral Change Detection により `tests/observation-trigger.bats` が `opportunistic-search.sh` を参照していることが検出され、フルスイート (`bats tests/`, 1210 件) を実行して全件 PASS を確認済み。`/review`/`/verify` でも同様の再確認は不要 (CI で担保される)。
+- Pre-merge AC 5 件はすべて PASS 判定済みで Issue の該当チェックボックスを更新済み。Post-merge の observation AC (`event=auto-run`) は本 PR merge 後、次回 `/auto` 完走時に発火する。
