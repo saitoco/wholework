@@ -127,6 +127,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Entry
 
 **Worktree naming convention:** `verify/issue-$NUMBER`
 
+This step is always mandatory regardless of the Issue's Size or route (including XS/S patch route) — there is no condition under which it may be skipped. Skipping it causes Step 4's `append-consumed-comments-section.sh` to commit/push directly onto a branch outside the worktree, bypassing `worktree-merge-push.sh`'s locking mechanism and risking a race when multiple `/verify` runs execute concurrently (e.g. under `/auto --batch`) (Issue #1037).
+
 Record the `ENTERED_WORKTREE` variable for use in subsequent steps.
 
 ### Step 4: Fetch Issue Acceptance Conditions
