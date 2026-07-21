@@ -73,17 +73,15 @@
 - N/A — dedup ロジックはサンドボックス (`/tmp`) での事前検証 (重複スキップ・24時間超の非重複扱いの両方) で一発で意図通り動作し、bats テスト追加後も修正なしで全 PASS した。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- dedup チェックは既存 Python heredoc 内に実装し、bash 側の分岐は追加しなかった (Spec Implementation Step 1 の指示通り)。`_symptom_short` の bash 変数をそのまま heredoc に渡して python 側の `symptom_short` と一致させ、文字列生成ロジックの重複を避けた。
-- 正規表現による H2 エントリ抽出は `re.DOTALL | re.MULTILINE` + 非貪欲 `(?=\n## |\Z)` の先読みで実装。マーカー直後からの走査で全既存エントリを一度に評価できる。
-- `datetime.strptime` のパース失敗は個別に `try/except ValueError: continue` で握りつぶし、1件のエントリの日付形式が壊れていても dedup 走査全体が落ちないようにした (外側の `except Exception: pass` に巻き込まれて書き込み自体がスキップされる事態を避けるため)。
+- PR #1036 は conflict なし (mergeable=true, reason=clean) だったため squash merge のみで完了、リベース・コンフリクト解消手順はスキップした。
+- squash merge 自体は成功したが、`gh pr merge --delete-branch` のローカルブランチ削除ステップは、同一ブランチ (`worktree-code+issue-1029`) を掴んだままの review フェーズ worktree (別セッション PID 82451 が保持中) により失敗した。稼働中セッションのロック付き worktree だったため強制削除はせず、その場は放置してマージ後続処理を継続した。
 
 ### Deferred Items
-- `manual_intervention` イベントの重複発火防止は Issue 本文の Auto-Resolved Ambiguity Points により明示的にスコープ外。
-- `_write_manual_recovery_to_spec()` 側への dedup 追加も Spec Notes によりスコープ外 (open-PR ガードが実質的に補完動作を果たすため)。
+- `review+pr-1036` worktree (ブランチ `worktree-code+issue-1029`) の削除は、当該セッションの終了を待って手動または次回セッションでのクリーンアップに委ねる。
 
 ### Notes for Next Phase
-- `/review` では、追加した2件の bats テスト (#55 部分完了→再実行, #56 dedup ウィンドウ外) が dedup ロジックの正例・負例を両方カバーしている点を確認してほしい。
-- `scripts/run-auto-sub.sh` は `tests/run-code.bats` / `tests/auto-sub-observability.bats` からも参照されるため、behavioral change detection によりフルスイート (`bats tests/`, 1215件) を実行済み・全 PASS。
+- `/verify` では、既にマージ済みの dedup ロジック (bats テスト2件含む) が acceptance criteria A/B を満たすことを確認する。
+- リモートブランチは削除済み。ローカルの stale worktree/branch (`worktree-code+issue-1029`) が残っている場合があるので、`git worktree list` で確認のうえ片付けること。
