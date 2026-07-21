@@ -2,7 +2,8 @@
 
 ## Consumed Comments
 
-No new comments since last phase.
+- saito / MEMBER / first-class / 前回 `/verify` 実行結果 (Pre-merge AC 3件 PASS、Post-merge observation AC は SKIPPED として記録) / https://github.com/saitoco/wholework/issues/1010#issuecomment-4978380989
+- saito / MEMBER / first-class / `/review` #1038 (`pr-review-full` event) からの observation トリガー通知 — `/verify 1010` の再実行を促す / https://github.com/saitoco/wholework/issues/1010#issuecomment-5035187294
 
 ## Overview
 
