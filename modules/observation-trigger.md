@@ -150,6 +150,37 @@ This is a lighter-weight alternative to adding a new fine-grained event name for
 pattern (see the `KNOWN_EVENTS` addition steps below) — it reuses the existing grep-based
 event-matching mechanism instead of growing the event namespace combinatorially.
 
+## Condition Check Gate (`config=`)
+
+Problem: an `event=<name>` fires for any completion of the triggering action, even when the
+Issue's observation condition depends on a specific project-local `.wholework.yml` setting.
+If that setting is not enabled in the target repository, the condition is principled
+unobservable, yet the notification comment still accumulates on every dispatch. Issue #1026
+observed this with #797's `always-pr` observation: `always-pr` is unset in this repository, so
+the condition can never resolve, but notification comments piled up past 30 and all 4 `/verify`
+re-runs resolved SKIPPED.
+
+The gate adds an optional `config=<key>` attribute to the observation AC tag:
+
+```
+<!-- verify-type: observation event=auto-run config=always-pr -->
+```
+
+`opportunistic-search.sh` resolves `<key>` against the current repository's `.wholework.yml` via
+`scripts/get-config-value.sh` and only includes Issues whose matched AC line carries a `config=`
+value that resolves to `"true"` (case-insensitive). ACs without `config=` match unconditionally —
+the existing behavior is preserved. Unlike `keyword=`, this gate needs no `--context-file`
+argument: `.wholework.yml` is read directly from the working directory, so no new CLI argument is
+added to either script.
+
+**Matching specification:**
+
+- Extraction: `config=<key>` is read from the AC line via `grep -oE 'config=[^ >]+'` (stops at the next space or `-->`).
+- Resolution: `<key>`'s value is resolved via `"${SCRIPT_DIR}/get-config-value.sh" "$CONFIG_KEY" "false"`, then lowercased.
+- Comparison: the resolved value must equal `"true"` exactly; any other value (including the `"false"` fallback) excludes the Issue from match results.
+- Gate disabled (unconditional match) when: no `config=` attribute is present on the AC line.
+- Scope: `<key>` must be a flat kebab-case key, matching `get-config-value.sh`'s own constraint — nested keys (e.g. `capabilities.browser`) are not supported. The comparison is boolean-only (`true`/`false`); enum-valued keys (e.g. `auto-stop-at`) are out of scope. Both are candidates for a `config=key:value` extension if a future Issue needs them.
+
 ## Notes
 
 - `opportunistic-search.sh` is the single source of truth for event-name validation (`KNOWN_EVENTS` list)
