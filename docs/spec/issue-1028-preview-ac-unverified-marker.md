@@ -89,17 +89,35 @@ Steering Docs sync candidate check の一般手順 (skill 名 "review"/"verify" 
 - `skills/code/SKILL.md` Step 9 の Behavioral Change Detection は、変更ファイル名 (パス抜き) で `tests/` 配下を grep する経験則を持つが、`SKILL.md` は全 Skill 共通のファイル名であるため、`skills/review/SKILL.md` / `skills/verify/SKILL.md` という狭い変更に対しても常に `bats tests/` フルスイート (1213 件) が発火した。実測は PASS (0 failures) だったため本 Issue の実装自体には影響しないが、経験則の汎用ファイル名対応漏れという `/code` 自体の改善余地であり、本 Issue のスコープ外のため follow-up Issue #1034 (`retro/code`) として起票した。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の設計通り、preview AC 未検証マーカーは Issue コメント (PR コメントではなく) に `<!-- wholework-event: type=preview-ac-unverified ac=<indices> -->` として記録する方式を採用 (Spec Notes の Auto-Resolve Log 通り、実装からの逸脱なし)。
-- `modules/l0-surfaces.md` の「verify-fail marker exception」を「Cross-phase marker exception」に汎化し、`type=verify-fail` と `type=preview-ac-unverified` の両方を cutoff 越境スキャン対象にした (新規の並行 bypass 機構は作らず既存機構を再利用)。
-- `skills/verify/SKILL.md` Step 5 のフォールバックは、`PRODUCTION_URL` の有無で分岐 (設定時は実検証、未設定時は明示的 UNCERTAIN 警告) する Spec 記載の仕様通りに実装した。
+- REVIEW_DEPTH=light (`--light` 明示指定) で review-light エージェント 1 体による 4 アスペクト統合レビューを実施した。
+- Issue 本文の両 AC (`rubric`) は verify-executor により両方 PASS と判定 (既に `[x]` 済みのためチェックボックス変更なし)。CI 5 ジョブすべて SUCCESS。
+- review-light が検出した SHOULD レベル指摘 2 件 (マーカー陳腐化・テストカバレッジ不足) は、いずれも Issue #1028 のスコープを超える設計変更または Spec の Deferred Items で既に認識済みの内容のため、修正せず PR ラインコメントとして記録するに留めた (MUST 相当の指摘なし、event=COMMENT で投稿)。
 
 ### Deferred Items
-- 新規 bats テストは追加していない (Spec Notes の判断を踏襲: 両 AC が `rubric` のみのため既存 content-assertion テストと衝突しない)。`/verify` 実行時、両 rubric AC が実際に PASS 判定されるかは post-merge の実地確認が必要。
-- Behavioral Change Detection の汎用ファイル名対応漏れは follow-up Issue #1034 に切り出し、本 Issue では対応していない。
+- マーカー陳腐化問題 (`skills/verify/SKILL.md:181`): 後続の fix-cycle 再レビューで preview AC が実際に検証済みになっても新規マーカーが投稿されず、`/verify` が古いマーカーを誤って参照し続ける可能性がある。follow-up Issue 化を検討の余地あり (未起票)。
+- 新規マーカー投稿・フォールバックロジックの自動テストは未追加のまま (Spec Deferred Items を踏襲)。`/verify` 実行時の post-merge 実地確認が引き続き必要。
 
 ### Notes for Next Phase
-- 本 Issue はコードレベルの変更のみで、`.wholework.yml` の新規キー追加はない。`docs/tech.md` の更新も不要と判断済み (Doc sync scope note 参照)。
-- `skills/review/SKILL.md` Step 8 の新規段落と `skills/verify/SKILL.md` Step 5 の書き換えが、既存の Step 見出し構造・番号を変更していないことを Spec Notes で確認済み — `/review`/`/merge` フェーズは通常のフローで進行してよい。
+- `/merge` はこのまま通常フローで進行してよい。MUST issue はなく、CI もすべて green。
+- `/verify` 実行時は、両 rubric AC が実際に PASS 判定されるか (post-merge の実地確認) と、preview-ac-unverified マーカー関連のフォールバック分岐が意図通り動作するかを重点確認すること。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — PR diff は Spec の Implementation Steps 1〜4 と 1:1 対応しており (`modules/l0-surfaces.md`、`skills/review/SKILL.md` Step 8、`skills/verify/SKILL.md` Step 5、`docs/guide/customization.md` + ja ミラー)、`ac=` インデックス規約 (`gh-issue-edit.sh --checkbox` と同一) も 3 ファイル間で一貫していた。review-light の Perspective 1 (Spec Deviation) でも issue なしと判定された。
+
+### Recurring issues
+
+review-light が SHOULD レベルの指摘を 2 件検出した:
+- マーカーの陳腐化問題 (`skills/verify/SKILL.md:181`): `/review` が preview AC を UNCERTAIN のまま終えた後、後続の fix-cycle 再レビューで実際には検証済みになっても新規マーカーが投稿されないため、`/verify` が古いマーカーを「最新」として誤って参照し続ける可能性がある。Issue #1028 のスコープを超える設計変更 (マーカーを常時投稿する、または無効化用の counter-marker を追加する) が必要なため、本 PR では対応せず follow-up 候補として記録するに留めた。
+- テストカバレッジ不足 (`docs/spec/issue-1028-preview-ac-unverified-marker.md:100`): 新規マーカー投稿ロジック・フォールバックロジックに対する自動テストが未追加。Spec の Deferred Items が既にこの点を認識しており、prose-driven な SKILL.md Step への bats カバレッジの実務上の難しさから post-merge の手動確認に委ねる判断を維持した。
+
+いずれも既存の workflow パターン内で対処可能な水準であり、`/review` プロセス自体の改善が必要な再発パターンではない。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — 両 AC (`rubric`) は Issue 本文記載時点で triage により defective な grep 系 supplementary check が意図的に除去されていたため、`rubric` 単体での判定が明確に行えた。UNCERTAIN は発生しなかった。
