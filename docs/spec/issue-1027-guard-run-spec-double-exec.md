@@ -91,3 +91,29 @@
 - Pre-merge verify command 3件 (rubric ×2、file_contains ×1) はすべて PASS 済み、Issue AC チェックボックスは更新済み
 - 動作変更検知 (`tests/run-spec.bats` が `run-auto-sub.bats` / `check-file-overlap.bats` からも参照される) によりフルスイート (`bats tests/`, 1213 tests) を実行し全件 PASS を確認済み
 - ドキュメント同期は Spec Notes の判断通り不要 (steering docs sync candidate を grep 済み、内容に影響なしと判断済み)
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Review モードは `--light` 指定 (Issue Size=M とも一致) のため、review-light エージェント1体による4観点統合レビューを実行 — spec/bug 分割の2エージェント並列レビューは不要と判断
+- Pre-merge AC 3件 (rubric ×2、file_contains ×1) は Issue 本文の verify command をそのまま safe mode で再実行し、いずれも PASS を再確認 (code フェーズの判定を review フェーズで独立検証)
+
+### Deferred Items
+- Post-merge AC (`/auto` の pr route 実行での実運用確認) は merge 後の観測イベント (`event=auto-run`) で検証 — review フェーズでは対象外
+- 二重実行を引き起こした起動経路の根本原因調査は本 Issue のスコープ外 (code フェーズから継続して deferred)
+
+### Notes for Next Phase
+- MUST/SHOULD/CONSIDER いずれの指摘もなし、CI 全ジョブ SUCCESS — `/merge 1032` にそのまま進行可能
+- 外部レビューツール (Copilot/Claude Code Review/CodeRabbit) は `.wholework.yml` に設定なし、Step 7 は完全スキップ
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Nothing to note — 実装は Spec の Implementation Steps および Notes の設計判断 (実装配置・観測可能性チャネル・fail-open 方針) と完全に一致していた。
+
+### Recurring issues
+Nothing to note — 同種の指摘の再発なし。
+
+### Acceptance criteria verification difficulty
+Nothing to note — rubric 2件・file_contains 1件とも verify command が明確で、UNCERTAIN 判定は発生しなかった。
