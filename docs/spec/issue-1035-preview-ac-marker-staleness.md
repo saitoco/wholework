@@ -245,3 +245,30 @@ N/A — 手戻りは発生しなかった。
 
 - Post-merge AC (downstream プロジェクトでの fix-cycle 誤 fallback 観察) は observation type のため `/verify` 時に手動確認が必要。
 - Issue #1035 の Pre-merge AC 4 件は全て `[x]` 済み。squash merge 完了、Issue 自動クローズ・`phase/verify` ラベル遷移待ち。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Nothing to note — Auto-Resolved Ambiguity Points に triage 判断の根拠が明記されており、`/spec` フェーズで訂正された事実誤認 (tests/review.bats・tests/verify.bats の性質) は Spec Notes に追記済み。issue triage 品質は妥当。
+
+#### spec
+- Spec Notes で「Steering Docs sync candidate」として `HAS_PR_PREVIEW_CAPABILITY` の tech.md 記述を include したが、同キーを説明する `docs/guide/customization.md` の config-reference table (L131) と ja 版 (L120) は sync 対象として明示認識されておらず、review-spec で SHOULD 検出された。ここは Recurring issue パターン (下記) として次回以降 `grep -rn` cross-search が必要。
+
+#### code
+- Nothing to note — Implementation Steps 1-8 通りに実装、逸脱なし。テストは Spec 記載の 4 ケース + fail-open 対応で 9 ケースに増強され、いずれも 1 発 PASS。
+
+#### review
+- review-spec が SHOULD で sync gap を検出し Step 12 で修正済み (`docs/guide/customization.md` L131 と ja 版 L120)。review process 自体が期待通り機能した。
+- ただし「複数箇所 sync 漏れ」パターンが #1028 と本 #1035 の 2 サイクル連続で観測された。1 度目 (#1028) は observation として記録に留めたが、2 度目 (#1035) で再現した以上、Spec フェーズでの cross-search 手順化を提案する (Improvement Proposal 参照)。
+
+#### merge
+- Nothing to note — 通常のスカッシュマージ成功。
+
+#### verify
+- Nothing to note — Pre-merge AC 4 件はすべて自動検証で PASS、UNCERTAIN 0。scripts 切り出しにより rubric AC が bats テストで裏付け可能になったのは #1028 の Review Retrospective で指摘された課題への有効な対処。
+
+### Improvement Proposals
+
+- **Spec Notes での Steering Docs sync candidate 洗い出しに `grep -rn` cross-search を明示的手順化**: 2 サイクル連続で「同じ挙動変更を説明する複数箇所 (prose 箇条書き / 変数テーブル / config-reference table) の sync 漏れ」が発生 (#1028 → #1035)。Spec Notes で対象キー (例: `HAS_PR_PREVIEW_CAPABILITY`) を確定する際、`grep -rn "<key>" docs/` で全出現箇所を洗い出し、prose 箇条書き以外のテーブル・リファレンス系の記述も明示的に sync 対象へ include するステップを `skills/spec/SKILL.md` (または `modules/detect-config-markers.md` の Steering Docs sync candidate 節) に追記する。優先度は low-medium (review-spec が catch する safety net が既にあるため実害は最小限だが、review の負荷軽減効果あり)。
