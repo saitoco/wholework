@@ -88,18 +88,34 @@ in the codebase (`<!-- verify-type: ... -->`, `<!-- verify: ... -->`).
 ```
 Consumers matching on the `<!-- wholework-event: type=verify-fail` prefix (see Notes below) are unaffected by this attribute, since it is appended after the existing fields rather than altering them.
 
-**`type=preview-ac-unverified`**: posted by `/review` (Step 8) when one or more `ac-tier: preview`
-acceptance conditions were classified `UNCERTAIN` — i.e., `/review` could not actually verify them
-against the preview URL before the PR merges and the preview environment disappears. The `ac=`
-attribute carries a comma-separated list of 1-based indices into the Issue body's full AC
-enumeration, using the same indexing convention as `gh-issue-edit.sh --checkbox`. Example:
+**`type=preview-ac-unverified`**: posted by `/review` (Step 8) whenever the Pre-merge section
+contains one or more `ac-tier: preview` acceptance conditions — every such `/review` run posts
+this marker, not only runs that found an `UNCERTAIN` condition. The `ac=` attribute carries a
+comma-separated list of 1-based indices, into the Issue body's full AC enumeration (same
+convention as `gh-issue-edit.sh --checkbox`), of the AC that were classified `UNCERTAIN` — i.e.,
+`/review` could not actually verify them against the preview URL before the PR merges and the
+preview environment disappears — **as of this run**. When no `ac-tier: preview` condition was
+`UNCERTAIN` in this run, `ac=` carries the literal sentinel `none` rather than being left empty
+(an empty `ac=` value would leave the attribute's boundary with the following token ambiguous).
+Example:
 ```
 <!-- wholework-event: type=preview-ac-unverified phase=review issue=42 ac=2,5 -->
 Preview-tier AC 2 and 5 could not be verified against the preview URL (UNCERTAIN) before merge.
 ```
-`/verify`'s pre-merge-preview AC skip rule (`skills/verify/SKILL.md` Step 5) consults this marker
-to decide whether an `ac-tier: preview` condition was actually verified at `/review` or must fall
-back to a post-merge check.
+```
+<!-- wholework-event: type=preview-ac-unverified phase=review issue=42 ac=none -->
+All preview-tier AC were verified against the preview URL before merge.
+```
+Issue comments are append-only (see the L0 Surface SSoT table above), so a `/review` re-run
+after a fix cycle cannot retract or edit an earlier marker — it can only post a new one. Because
+of this, consumers must always resolve **only the single comment with the greatest `createdAt`
+timestamp among `type=preview-ac-unverified` markers (latest-wins)** and disregard every earlier
+marker for this Issue; an earlier marker's `ac=` set is superseded in full, never merged with a
+later one. A latest marker carrying `ac=none` means zero preview-tier AC are unverified as of
+that run, so the consumer's fallback set is empty. `/verify`'s pre-merge-preview AC skip rule
+(`skills/verify/SKILL.md` Step 5) consults this marker, via
+`scripts/resolve-preview-ac-fallback.sh`, to decide whether an `ac-tier: preview` condition was
+actually verified at `/review` or must fall back to a post-merge check.
 
 When consuming comments (see Processing Steps), a comment containing `<!-- wholework-event:`
 in its body from a bot actor is treated as a Wholework-authored structured comment and consumed (bot exception above).
