@@ -213,21 +213,37 @@ N/A — Implementation Steps 1–8 は Spec の記述どおりに実装した。
 
 N/A — 手戻りは発生しなかった。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 構造的な乖離は無し。Implementation Steps 1–8 は `/code` で Spec どおりに実装されており、`/review` の Step 8 (rubric AC1–3) 再確認でも PASS を再現できた。
+- ただし Spec の Design Gaps/Ambiguities で「include (更新する)」と判断した Steering Docs sync candidate (`HAS_PR_PREVIEW_CAPABILITY` / preview AC skip 挙動の説明箇所) の sync 範囲確定が、`docs/tech.md` の変数テーブルセルと `docs/guide/customization.md` の詳細な箇条書き (旧 L200 付近) の 2 箇所に留まっていた。同じ `capabilities.pr-preview` の挙動を説明する `docs/guide/customization.md` の設定リファレンス表セル (config-reference table、L131) と ja 版 (L120) は sync 対象として認識されず、旧仕様 (無条件 skip) の記述のまま残っていた。`/review` の Multi-perspective Code Review (review-spec) がこれを SHOULD として検出し、Step 12 で修正済み。
+
+### Recurring issues
+
+- 「1 つの挙動変更につき、同じキーを説明する複数箇所 (詳細な prose の箇条書き / 変数テーブル / 設定リファレンス表など) が独立して存在し、sync 漏れが起きやすい」というパターンは #1028 (本 Issue の検出元) の Review Retrospective でも触れられていた一般的な論点であり、本 PR でも再現した。Spec Notes で Steering Docs sync candidate を洗い出す際は、変更対象キーを `grep -rn` で横断的に検索し、prose 箇条書きだけでなく設定リファレンス表 (config-reference table) のようなテーブル形式の記述も明示的に sync 対象へ含めることを次回以降の Spec フェーズで意識するとよい。
+
+### Acceptance criteria verification difficulty
+
+- UNCERTAIN・verify command の不備は無し。rubric AC (AC1–3) は `/code` 実装済み内容との突き合わせで PASS 判定でき、`github_check` AC (AC4) は CI (`Run bats tests` 含む全ジョブ SUCCESS) で機械的に PASS 判定できた。AC3 (「テストが存在する」) がスクリプト切り出し (`resolve-preview-ac-fallback.sh`) により実挙動ベースの bats アサーションとして検証可能になっていた点は、#1028 が指摘した「prose-driven SKILL.md ステップは bats で検証しづらい」という課題への有効な対処であり、AC 記述の検証難度を下げていた。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Spec の Implementation Steps 1–8 をそのまま実装した (逸脱なし)。`scripts/resolve-preview-ac-fallback.sh` は Spec の入出力インタフェース仕様どおり (usage/exit code/`ac=none` 判定/fail-open) に作成し、bats 9 件が全て PASS。
-- `docs/tech.md` L241 / `docs/ja/tech.md` L228 の Steering Docs sync candidate は **include (更新する)** と判断した。理由: `/verify` post-merge の skip 挙動が「常時 skip」から「最新マーカーが未検証の場合はフォールバック」に変わったため、既存の無条件 skip 記述を残すと新仕様と矛盾する。
-- Behavioral Change Detection (tests/review.bats は tests/run-review.bats からも、tests/verify.bats は tests/verify-dirty-detection.bats からも参照されている) により `bats tests/` フルスイートを実行し、1228 件全て PASS を確認した。
+- Step 8 の Preview-tier unverified marker 投稿は本 Issue #1035 の対象外 (Issue #1035 自身の AC に `ac-tier: preview` タグ付き AC が無い) のためスキップした。マーカー投稿ロジック自体の正しさは Step 8 の rubric AC1–3 判定と `tests/resolve-preview-ac-fallback.bats` で確認済み。
+- `capabilities.workflow: true` により Workflow パイプライン (finder×3 + adversarial verify) で Step 10 を実行した。SHOULD 2 件 (`docs/guide/customization.md` / `docs/ja/guide/customization.md` の `capabilities.pr-preview` テーブルセルが旧仕様のまま) を検出・修正済み。MUST 0 件のため event は `COMMENT`。
+- 外部レビューツール (Copilot/Claude Code Review/CodeRabbit) は `.wholework.yml` 未設定のため Step 7 は全面スキップした。
 
 ### Deferred Items
 
-- `gh` の `--jq` 式 (`sort_by(.createdAt) | .[-1]`) の正しさは bats では検証できず、Post-merge の observation AC に委ねる (Spec Uncertainty のとおり、変更なし)。
-- prose-driven SKILL.md ステップのスクリプト切り出しを他ステップへ横展開する話は本 Issue のスコープ外 (Spec Cross-phase note のとおり)。
+- Spec Deferred Items を継承: `gh` の `--jq` 式 (`sort_by(.createdAt) | .[-1]`) の正しさは bats で検証できず、Post-merge の observation AC に委ねる。
+- prose-driven SKILL.md ステップのスクリプト切り出しを他ステップへ横展開する話は本 Issue のスコープ外 (変更なし)。
+- 「設定キー変更時の sync 対象洗い出しを prose 箇条書きだけでなくテーブル形式の記述にも広げる」という retrospective 上の学びは、本 Issue のスコープを超えるプロセス改善候補として記録するに留め、follow-up Issue 化は見送る。
 
 ### Notes for Next Phase
 
-- AC1–3 (rubric) は `/code` で実装内容と突き合わせて PASS 判定し、Issue チェックボックスを更新済み。AC4 (`github_check "gh pr checks" "Run bats tests"`) は PR #1038 作成直後のため CI 結果待ち — `/review` で確認すること。
-- `skills/verify/SKILL.md` Step 5 は `resolve-preview-ac-fallback.sh` の stdout を直接 fallback 対象リストとして使う形に変更済み。同スクリプトの単体テストは通っているが、実 `gh` 経由の統合的な動作確認は Post-merge の observation AC 任せになっている。
+- `/merge` はこのまま進めて問題ない。Post-merge AC (downstream プロジェクトでの fix-cycle 誤 fallback 観察) は observation type のため `/verify` 時に手動確認が必要。
+- Issue #1035 の Pre-merge AC 4 件は全て `[x]` 済み。
