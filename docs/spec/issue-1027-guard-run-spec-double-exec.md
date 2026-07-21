@@ -63,3 +63,31 @@
 ## Autonomous Auto-Resolve Log
 
 - **`/code 1027 --pr --non-interactive` Step 3 (phase/ready ラベル確認)**: Issue timeline を確認したところ `phase/ready` は 2026-07-21T06:20:25Z に付与された後、同 06:23:40Z に `phase/code` へ既に遷移済み (ブランチ・PR は未作成のまま — 直前の `/code` 試行が未完了で終わったとみられる)。Spec (`docs/spec/issue-1027-guard-run-spec-double-exec.md`) は完備しており、`reconcile-phase-state.sh code-pr 1027 --check-precondition` の `matches_expected: false` は `phase/ready` 不在のみを理由とする軽微な逸脱と判断し、auto-resolve でそのまま実行を継続した。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps の記述通り、`REPO_ROOT` 定義直後・`# Session isolation check` 直前にガードを挿入し、`tests/run-spec.bats` に新規ケース3件 (`phase/code` 遮断・`phase/merge` 遮断・`phase/ready` 非遮断) を追加した。
+
+### Design Gaps/Ambiguities
+- N/A — Spec の Notes に設計判断 (実装配置・観測可能性チャネル・fail-open 方針) が既に記載されており、実装時に新たな曖昧さは発生しなかった。
+
+### Rework
+- N/A — 手戻りなし。既存の bats テストデフォルトモック (`gh` が空ラベルを返す) により、新設ガードは既存35件超のテストに影響を与えず、新規3件のみ追加した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `run-spec.sh` 本体にインライン実装 (`check-verify-dirty.sh` のような独立スクリプト化はしない) — ロジックが「ラベル一覧取得 + membership チェック」の数行で完結するため
+- ガード発火時のログは `check-verify-dirty.sh` の `classify=` パターンに揃え、`[run-spec] classify=phase-guard-blocked issue=... label=...` の形式で stderr へ出力
+- `gh` API 呼び出し失敗時はガードを発火させない fail-open 方針を採用 (`gh-label-transition.sh` の既存フォールバックと同じ)
+
+### Deferred Items
+- 二重実行を引き起こした起動経路の根本原因調査は本 Issue のスコープ外 (Issue 本文に明記済み、別 Issue 対応)
+- Post-merge AC (`/auto` の pr route 実行での実運用確認) は merge 後の観測イベントで検証
+
+### Notes for Next Phase
+- Pre-merge verify command 3件 (rubric ×2、file_contains ×1) はすべて PASS 済み、Issue AC チェックボックスは更新済み
+- 動作変更検知 (`tests/run-spec.bats` が `run-auto-sub.bats` / `check-file-overlap.bats` からも参照される) によりフルスイート (`bats tests/`, 1213 tests) を実行し全件 PASS を確認済み
+- ドキュメント同期は Spec Notes の判断通り不要 (steering docs sync candidate を grep 済み、内容に影響なしと判断済み)
