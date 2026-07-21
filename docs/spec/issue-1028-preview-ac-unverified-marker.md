@@ -119,3 +119,29 @@ review-light が SHOULD レベルの指摘を 2 件検出した:
 ### Acceptance criteria verification difficulty
 
 Nothing to note — 両 AC (`rubric`) は Issue 本文記載時点で triage により defective な grep 系 supplementary check が意図的に除去されていたため、`rubric` 単体での判定が明確に行えた。UNCERTAIN は発生しなかった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Nothing to note — Spec Notes の Auto-Resolve Log で cutoff 越境問題を含む主要な曖昧性が事前解決されており、以降の phase で新たな設計曖昧性は発生しなかった。
+
+#### code
+- N/A — Implementation Steps 1〜4 を Spec 記載通りに実装、逸脱なし。
+- test scope observation は本 Issue のスコープ外として #1034 に既に起票済み (retro/code)。verify retrospective では重複記録を避ける。
+
+#### review
+- review-light で SHOULD レベル 2 件を検出したが、両方とも本 Issue のスコープを超える判断で follow-up 候補として記録に留めた:
+  1. マーカー陳腐化問題 (`skills/verify/SKILL.md:181` 付近) — `/review` が preview AC を UNCERTAIN のまま終えた後、fix-cycle 再レビューで実際に検証済みになっても新規マーカーが投稿されないため、`/verify` が古いマーカーを最新として誤参照する可能性がある。
+  2. テストカバレッジ不足 — 新規マーカー投稿ロジック・フォールバックロジックに対する自動テストが未追加。prose-driven SKILL.md Step への bats カバレッジの実務的難しさから post-merge の手動確認に委ねる判断を維持。
+
+#### merge
+- Nothing to note — mergeable=true / CI success / review approved のためコンフリクト解決不要でスカッシュマージ完了。
+
+#### verify
+- Nothing to note — Pre-merge AC 2 件 (rubric) はいずれも SKILL.md への実装が Spec 通り存在することが grep で機械的に確認でき、UNCERTAIN は発生しなかった。Post-merge AC なし。
+
+### Improvement Proposals
+
+- **preview-ac-unverified マーカーの陳腐化ガード**: `/review` の fix-cycle 再実行時に preview AC が UNCERTAIN → PASS に変化した場合、新規マーカーが投稿されないため `/verify` が古い `type=preview-ac-unverified` マーカーを「最新」として参照し、実際には検証済みの AC を fallback 実行してしまう可能性がある。Counter-marker (`type=preview-ac-verified` 等) の導入、または `/review` 実行毎に status 更新マーカーを常時投稿する運用への変更を検討する。優先度は low (fix-cycle 発生時のみ再現、実害は fallback 実行 = double-verify で不要作業のみ)。
