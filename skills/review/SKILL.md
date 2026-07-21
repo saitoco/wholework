@@ -257,6 +257,23 @@ Verify each condition:
    - UNCERTAIN — cannot auto-determine
    - POST-MERGE — condition to verify after merge
 
+**Preview-tier unverified marker (defense in depth):** After classification, collect the
+1-based indices (counted across the full Issue body AC enumeration, same convention as
+`gh-issue-edit.sh --checkbox`) of every Pre-merge condition tagged `<!-- ac-tier: preview -->`
+that was classified UNCERTAIN in this step. If this set is non-empty, write a comment body to
+`.tmp/preview-ac-unverified-$ISSUE_NUMBER.md` with the Write tool — first line
+`<!-- wholework-event: type=preview-ac-unverified phase=review issue=$ISSUE_NUMBER ac=<comma-separated indices> -->`
+(see `modules/l0-surfaces.md` § "Machine-Readable Event Marker"), followed by a short
+human-readable note listing which preview-tier ACs could not be verified and why — then post it:
+```bash
+mkdir -p .tmp
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh "$ISSUE_NUMBER" .tmp/preview-ac-unverified-$ISSUE_NUMBER.md
+rm -f .tmp/preview-ac-unverified-$ISSUE_NUMBER.md
+```
+This records the unverified state so `/verify`'s pre-merge-preview AC skip rule (Step 5) does
+not silently treat these conditions as verified once the PR merges and the preview environment
+disappears. If no preview-tier AC was classified UNCERTAIN, skip this comment entirely.
+
 **`file_contains` exact match check:**
 
 For `file_contains` verify commands, verify that the pattern is an exact substring of the implementation code in the PR diff. Shell quoting causes false negatives: `get-config-value.sh permission-mode auto` will not match `"$SCRIPT_DIR/get-config-value.sh" permission-mode auto`. When a FAIL result stems from a quoting or path-prefix discrepancy rather than a genuine implementation gap, report it as a spec quality issue requiring a verify command update.
