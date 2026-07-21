@@ -6,6 +6,8 @@
 |-------|--------------------|-----------|--------|-----|
 | saito | MEMBER | first-class | Issue Retrospective (`/issue 1029 --non-interactive`)。Background の実装記述 (`_write_manual_recovery_to_spec` は open PR 時のみ Spec 書き込みをスキップ、`_write_manual_recovery_to_recoveries_log` は PR 状態に関わらず常に追記) を実コードと突合し一致を確認。Auto-Resolved Ambiguity Points 2件 (`manual_intervention` イベント再発火はスコープ外／dedup 時間窓は `/spec` に委譲) を記録。Size=S のため sub-issue 分割評価は対象外 | https://github.com/saitoco/wholework/issues/1029#issuecomment-5031992097 |
 
+`/code` フェーズ (cutoff: 2026-07-21T09:08:09Z、`phase/ready` ラベル付与時刻): 新規コメントなし。
+
 ## Overview
 
 `run-auto-sub.sh --write-manual-recovery ISSUE PHASE RECOVERY_TYPE` は回復記録を (1) Spec の `## Auto Retrospective`、(2) `docs/reports/orchestration-recoveries.md`、(3) `manual_intervention` イベントの3箇所に書き込む。対象 Issue に open PR が存在する場合、(1) は self-conflict 回避のためスキップされるが (2)(3) は無条件に書き込まれる。案内メッセージに従い PR マージ後に同一引数で再実行すると (1) は今度は成功するが、(2) には dedup チェックがないため同一イベントが重複して追記される。本 Issue は `_write_manual_recovery_to_recoveries_log()` に、同一イベント (同一 Issue・phase・recovery type・近接タイムスタンプ) の既存エントリを検出して追記をスキップする dedup チェックを追加し、`--write-manual-recovery` 全体を「部分完了 → 再実行」シナリオに対して冪等にする。
@@ -58,3 +60,30 @@
 - **`manual_intervention` イベントの再発火は Issue 本文の Auto-Resolved Ambiguity Points により本 Issue のスコープ外**: dedup ガードは `_write_manual_recovery_to_recoveries_log()` のみに適用し、event emission (`emit_event "manual_intervention" ...`) は引き続き無条件のまま変更しない。
 - **`_write_manual_recovery_to_spec()` には dedup ロジックを追加しない**: 本 Issue の実害シナリオ (open PR で1回目 skip → PR マージ後の2回目で初めて成功) では、Spec 書き込みは2回目で初めて完了するため、既存の open-PR ガードが実質的に「未完了の場合のみ書き込む」という補完動作を果たす。3回目以降の重複呼び出しで Spec 側にも重複が生じるケースは Background に記載された実害 (recoveries ログの症状カウント water down) の対象外であり、本 Issue のスコープ外と判断した。
 - **ドキュメント同期**: Changed Files の Steering Docs sync candidate は内容確認済みで、いずれも本変更 (内部 dedup ロジックの追加) による更新は不要と判断した。`modules/orchestration-fallbacks.md` の `manual-recovery-spec-write` セクションのみが実際の動作記述を持つため更新対象とした。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜5 を順序通りそのまま実装した。
+
+### Design Gaps/Ambiguities
+- N/A — dedup キー・時間窓は Spec Notes の設計判断で既に確定しており、実装時に新たな曖昧点は発生しなかった。
+
+### Rework
+- N/A — dedup ロジックはサンドボックス (`/tmp`) での事前検証 (重複スキップ・24時間超の非重複扱いの両方) で一発で意図通り動作し、bats テスト追加後も修正なしで全 PASS した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- dedup チェックは既存 Python heredoc 内に実装し、bash 側の分岐は追加しなかった (Spec Implementation Step 1 の指示通り)。`_symptom_short` の bash 変数をそのまま heredoc に渡して python 側の `symptom_short` と一致させ、文字列生成ロジックの重複を避けた。
+- 正規表現による H2 エントリ抽出は `re.DOTALL | re.MULTILINE` + 非貪欲 `(?=\n## |\Z)` の先読みで実装。マーカー直後からの走査で全既存エントリを一度に評価できる。
+- `datetime.strptime` のパース失敗は個別に `try/except ValueError: continue` で握りつぶし、1件のエントリの日付形式が壊れていても dedup 走査全体が落ちないようにした (外側の `except Exception: pass` に巻き込まれて書き込み自体がスキップされる事態を避けるため)。
+
+### Deferred Items
+- `manual_intervention` イベントの重複発火防止は Issue 本文の Auto-Resolved Ambiguity Points により明示的にスコープ外。
+- `_write_manual_recovery_to_spec()` 側への dedup 追加も Spec Notes によりスコープ外 (open-PR ガードが実質的に補完動作を果たすため)。
+
+### Notes for Next Phase
+- `/review` では、追加した2件の bats テスト (#55 部分完了→再実行, #56 dedup ウィンドウ外) が dedup ロジックの正例・負例を両方カバーしている点を確認してほしい。
+- `scripts/run-auto-sub.sh` は `tests/run-code.bats` / `tests/auto-sub-observability.bats` からも参照されるため、behavioral change detection によりフルスイート (`bats tests/`, 1215件) を実行済み・全 PASS。

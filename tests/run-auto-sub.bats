@@ -1757,6 +1757,123 @@ MOCK
     grep -q -- "- 未起票" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
 }
 
+@test "run-auto-sub: manual recovery: reissue after PR merge completes the spec write without duplicating the recoveries log entry" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec" "$BATS_TEST_TMPDIR/docs/reports"
+    echo "# Issue #42: test spec" > "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    printf '%s\n' "# Orchestration Recovery Log" "<!-- Log entries appear below, newest first. -->" > "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"status"* && "$*" == *"--porcelain"* && "$*" == *"issue-42"* ]]; then
+    echo " M docs/spec/issue-42-test.md"
+    exit 0
+fi
+if [[ "$*" == *"diff"* && "$*" == *"orchestration-recoveries.md"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    # 1st call: open PR exists for the issue -> spec write is skipped (existing open-PR
+    # guard), but the recoveries log write is unconditional and proceeds.
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo '[{"number":123}]'
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" --write-manual-recovery 42 code respawn
+    [ "$status" -eq 0 ]
+    ! grep -q "Auto Retrospective" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    [ "$(grep -c "manual-recovery-respawn" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md")" -eq 1 ]
+
+    # 2nd call: same args, following the guidance message to retry after the PR merges.
+    # PR is now closed, so the spec write completes this time.
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" --write-manual-recovery 42 code respawn
+    [ "$status" -eq 0 ]
+    grep -q "Auto Retrospective" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    grep -q "Manual recovery" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    [ "$(grep -c "manual-recovery-respawn" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md")" -eq 1 ]
+}
+
+@test "run-auto-sub: manual recovery: an existing entry outside the dedup window is treated as a separate event" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+    mkdir -p "$BATS_TEST_TMPDIR/docs/reports"
+    {
+        echo "# Orchestration Recovery Log"
+        echo "<!-- Log entries appear below, newest first. -->"
+        echo ""
+        echo "## 2020-01-01 00:00 UTC: manual-recovery-respawn"
+        echo ""
+        echo "### Context"
+        echo "- Issue #42, phase: code"
+        echo "- Source: parent-session-manual-recovery"
+        echo "- Wrapper: run-auto-sub.sh, exit code: 137"
+        echo ""
+        echo "### Diagnosis"
+        echo "- Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: respawn)"
+        echo ""
+        echo "### Recovery Applied"
+        echo "- modules/orchestration-fallbacks.md#manual-recovery-spec-write"
+        echo ""
+        echo "### Outcome"
+        echo "- success"
+        echo ""
+        echo "### Improvement Candidate"
+        echo "- 未起票"
+    } > "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"diff"* && "$*" == *"orchestration-recoveries.md"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" --write-manual-recovery 42 code respawn
+    [ "$status" -eq 0 ]
+    [ "$(grep -c "manual-recovery-respawn" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md")" -eq 2 ]
+}
+
 @test "run-auto-sub: manual recovery: known symptom issue match initializes Improvement Candidate as filed" {
     export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
     mkdir -p "$BATS_TEST_TMPDIR/docs/reports"
