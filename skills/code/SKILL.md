@@ -339,11 +339,11 @@ If `tests/` does not exist (e.g., projects without a bats test suite), skip this
    - If any existing file is modified: continue to check 2.
 
 2. **Are there existing tests that reference the modified file(s) outside the directly-associated test?**
-   - For each modified existing file, extract the filename (without path) and run (bash 3.2+ compatible):
+   - For each modified existing file, reuse the repository-root-relative full path already obtained in check 1 (from `git diff --name-only HEAD` or the staged-file list) — do not reduce it to the bare filename. Escape regex metacharacters in the path (e.g. `.` → `\.`) before using it as a grep pattern, then run (bash 3.2+ compatible):
      ```bash
-     grep -rl "<filename>" tests/
+     grep -rl "<escaped-path>" tests/
      ```
-     (The pre-check above already confirmed `tests/` exists; without it, `grep -rl` would emit `No such file or directory` to stderr and exit non-zero.)
+     (The pre-check above already confirmed `tests/` exists; without it, `grep -rl` would emit `No such file or directory` to stderr and exit non-zero.) A bare-filename match (e.g. `SKILL.md`) collides across every Skill's identically-named file and false-positives on unrelated tests; the full path match scopes the check to genuine references.
    - If the only matching test file is the direct counterpart of the modified file (e.g., `tests/run-code.bats` for `scripts/run-code.sh`), or there are no matches: narrow scope is acceptable — proceed to `Read test-runner.md`.
    - If additional test files reference the modified file: behavioral change confirmed — override test-runner auto-detection scope and run the full suite:
      ```bash
