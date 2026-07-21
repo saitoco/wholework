@@ -491,3 +491,43 @@ MOCK
     [ "$status" -eq 0 ]
     [[ "$output" == *"other-session dirty files"* ]]
 }
+
+@test "phase-guard: phase/code label blocks spec execution" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+echo "phase/code"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"classify=phase-guard-blocked"* ]]
+    [[ "$output" == *"issue #123 already has label 'phase/code'"* ]]
+    [ ! -f "$CLAUDE_CALL_LOG" ]
+}
+
+@test "phase-guard: phase/merge label blocks spec execution" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+echo "phase/merge"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"classify=phase-guard-blocked"* ]]
+    [[ "$output" == *"issue #123 already has label 'phase/merge'"* ]]
+    [ ! -f "$CLAUDE_CALL_LOG" ]
+}
+
+@test "phase-guard: phase/ready label does not block spec execution" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+echo "phase/ready"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"classify=phase-guard-blocked"* ]]
+}

@@ -43,6 +43,17 @@ fi
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
+# Phase guard: block spec execution if the issue already advanced past phase/code
+# (prevents a duplicate/late-firing run-spec.sh from rewinding phase/code+ back to phase/spec)
+_PHASE_GUARD_LABELS=$(gh issue view "$ISSUE_NUMBER" --json labels --jq '.labels[].name' 2>/dev/null || true)
+for _phase in phase/code phase/review phase/merge phase/verify phase/done; do
+  if echo "$_PHASE_GUARD_LABELS" | grep -qx "$_phase"; then
+    echo "[run-spec] classify=phase-guard-blocked issue=${ISSUE_NUMBER} label=${_phase}" >&2
+    echo "Error: issue #${ISSUE_NUMBER} already has label '${_phase}' (phase/code or later) — aborting spec to prevent duplicate execution." >&2
+    exit 1
+  fi
+done
+
 # Session isolation check: detect other-session dirty files (best-effort)
 if [[ -x "${SCRIPT_DIR}/check-verify-dirty.sh" ]]; then
   _dirty_exit=0

@@ -6,6 +6,8 @@
 |-------|--------------------|-----------|--------|-----|
 | saito | MEMBER | first-class | Issue Retrospective (`/issue 1027 --non-interactive` の Auto-Resolve Log: 実装配置場所=run-spec.sh 本体、観測可能性チャネル=stderr ログ、フェーズラベル列挙に phase/merge を追加、という3件の判断根拠)。内容は Issue 本文の Auto-Resolved Ambiguity Points と整合しており、追加の設計変更は不要と判断 | https://github.com/saitoco/wholework/issues/1027#issuecomment-5030693973 |
 
+`/code 1027 --pr --non-interactive` (code phase, cutoff `phase/code` label assigned at 2026-07-21T06:23:40Z): No new comments since last phase.
+
 ## Overview
 
 `/auto` の pr route 実行中に、同一 Issue に対する `/spec` フェーズの二重実行が観測された (2026-07-20、利用側プロジェクト実測)。1 回目の `run-spec.sh` 完了後、code フェーズ進行中に 2 回目の `run-spec.sh` が (起動経路不明のまま) 実行され、Spec への追加コミットが main へ push されて `phase/code` → `phase/spec` へのラベル巻き戻し、および PR の base conflict という連鎖障害に至った。本 Issue は `scripts/run-spec.sh` に `scripts/check-verify-dirty.sh` と同様のシェルレベル precondition ガードを追加し、対象 Issue のフェーズラベルが `phase/code` 以降 (code/review/merge/verify/done) の場合に spec 実行を構造的に中断する。
@@ -57,3 +59,61 @@
 - **fail-open 方針**: `gh` API 呼び出し失敗時はガードを発火させず素通りする (`scripts/gh-label-transition.sh` の既存フォールバック方針と同じ)。理由: 一時的な API 障害時は後続の Step 1 (`gh issue view $NUMBER --json title,body,labels`) を含む `/spec` 本体の GitHub 呼び出しも同様に失敗する可能性が高く、このガード単体を fail-closed にしても実質的な安全性向上にならない一方、誤検知で正当な spec 実行をブロックするリスクの方が大きい。
 - **ドキュメント同期は対象外と判断**: `README.md` / `docs/workflow.md` に "run-spec" への言及なし (grep 実施、0 件)。`docs/structure.md` / `docs/tech.md` / `docs/migration-notes.md` (および対応する `docs/ja/*`) には `run-spec.sh` への言及があり Changed Files の Steering Docs sync candidate として列挙したが、内容確認の結果いずれも役割説明・model/effort 表・移行履歴レベルの記述にとどまり、本変更 (内部的な安全策の追加) は既存の CLI インターフェース (usage 文字列・フラグ) や model/effort/fork 要否に影響しないため、実質的な参照更新は不要と判断した。`modules/skill-dev-doc-impact.md` の「Script addition, change, or deletion」変更種別には技術的に該当するが、上記の通り更新不要と判断している。
 - **起動経路の根本原因は本 Issue の対象外**: Issue 本文が明記する通り、2 回目の `run-spec.sh` がどの経路で再起動されたかは未特定 (watchdog kill → 再実行系のパスが疑われるのみ)。本 Spec は症状 (二重実行がフェーズ状態を破壊しうること) を構造的にガードすることに限定し、起動経路そのものの調査・修正は別 Issue のスコープとする。
+
+## Autonomous Auto-Resolve Log
+
+- **`/code 1027 --pr --non-interactive` Step 3 (phase/ready ラベル確認)**: Issue timeline を確認したところ `phase/ready` は 2026-07-21T06:20:25Z に付与された後、同 06:23:40Z に `phase/code` へ既に遷移済み (ブランチ・PR は未作成のまま — 直前の `/code` 試行が未完了で終わったとみられる)。Spec (`docs/spec/issue-1027-guard-run-spec-double-exec.md`) は完備しており、`reconcile-phase-state.sh code-pr 1027 --check-precondition` の `matches_expected: false` は `phase/ready` 不在のみを理由とする軽微な逸脱と判断し、auto-resolve でそのまま実行を継続した。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps の記述通り、`REPO_ROOT` 定義直後・`# Session isolation check` 直前にガードを挿入し、`tests/run-spec.bats` に新規ケース3件 (`phase/code` 遮断・`phase/merge` 遮断・`phase/ready` 非遮断) を追加した。
+
+### Design Gaps/Ambiguities
+- N/A — Spec の Notes に設計判断 (実装配置・観測可能性チャネル・fail-open 方針) が既に記載されており、実装時に新たな曖昧さは発生しなかった。
+
+### Rework
+- N/A — 手戻りなし。既存の bats テストデフォルトモック (`gh` が空ラベルを返す) により、新設ガードは既存35件超のテストに影響を与えず、新規3件のみ追加した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `run-spec.sh` 本体にインライン実装 (`check-verify-dirty.sh` のような独立スクリプト化はしない) — ロジックが「ラベル一覧取得 + membership チェック」の数行で完結するため
+- ガード発火時のログは `check-verify-dirty.sh` の `classify=` パターンに揃え、`[run-spec] classify=phase-guard-blocked issue=... label=...` の形式で stderr へ出力
+- `gh` API 呼び出し失敗時はガードを発火させない fail-open 方針を採用 (`gh-label-transition.sh` の既存フォールバックと同じ)
+
+### Deferred Items
+- 二重実行を引き起こした起動経路の根本原因調査は本 Issue のスコープ外 (Issue 本文に明記済み、別 Issue 対応)
+- Post-merge AC (`/auto` の pr route 実行での実運用確認) は merge 後の観測イベントで検証
+
+### Notes for Next Phase
+- Pre-merge verify command 3件 (rubric ×2、file_contains ×1) はすべて PASS 済み、Issue AC チェックボックスは更新済み
+- 動作変更検知 (`tests/run-spec.bats` が `run-auto-sub.bats` / `check-file-overlap.bats` からも参照される) によりフルスイート (`bats tests/`, 1213 tests) を実行し全件 PASS を確認済み
+- ドキュメント同期は Spec Notes の判断通り不要 (steering docs sync candidate を grep 済み、内容に影響なしと判断済み)
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Review モードは `--light` 指定 (Issue Size=M とも一致) のため、review-light エージェント1体による4観点統合レビューを実行 — spec/bug 分割の2エージェント並列レビューは不要と判断
+- Pre-merge AC 3件 (rubric ×2、file_contains ×1) は Issue 本文の verify command をそのまま safe mode で再実行し、いずれも PASS を再確認 (code フェーズの判定を review フェーズで独立検証)
+
+### Deferred Items
+- Post-merge AC (`/auto` の pr route 実行での実運用確認) は merge 後の観測イベント (`event=auto-run`) で検証 — review フェーズでは対象外
+- 二重実行を引き起こした起動経路の根本原因調査は本 Issue のスコープ外 (code フェーズから継続して deferred)
+
+### Notes for Next Phase
+- MUST/SHOULD/CONSIDER いずれの指摘もなし、CI 全ジョブ SUCCESS — `/merge 1032` にそのまま進行可能
+- 外部レビューツール (Copilot/Claude Code Review/CodeRabbit) は `.wholework.yml` に設定なし、Step 7 は完全スキップ
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Nothing to note — 実装は Spec の Implementation Steps および Notes の設計判断 (実装配置・観測可能性チャネル・fail-open 方針) と完全に一致していた。
+
+### Recurring issues
+Nothing to note — 同種の指摘の再発なし。
+
+### Acceptance criteria verification difficulty
+Nothing to note — rubric 2件・file_contains 1件とも verify command が明確で、UNCERTAIN 判定は発生しなかった。
