@@ -70,17 +70,29 @@
 - N/A — 巻き戻しや設計変更は発生しなかった。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `config=<key>` ゲートは `keyword=`/`CONTEXT_FILE` ゲートブロックの直後、`# Extract text with HTML comments...` コメントの直前に実装した (Spec 指定の挿入位置どおり)。新規 CLI 引数は追加せず、`get-config-value.sh` を `${SCRIPT_DIR}/get-config-value.sh` 経由で直接呼び出す設計を採用した。
-- `modules/observation-trigger.md` の `config=` セクションは既存の `keyword=` セクションと同型の構成 (Problem → AC 例 → Matching specification) で追加し、スコープ制約 (フラット kebab-case キーのみ、真偽値のみ) を明記した。
-- テストは 3 ケース (有効時マッチ / 無効時除外 / 属性なし無条件マッチ) を `tests/opportunistic-search.bats` に追加し、`WHOLEWORK_CONFIG_PATH` によるヘルメティックなオーバーライドパターン (既存の `get-config-value.bats` 等と同型) を踏襲した。
+- REVIEW_DEPTH=light (`--light` 明示指定、Issue Size=M とも一致) のため、review-light エージェント1体による4観点統合レビュー (Spec乖離 / エッジケース・堅牢性 / セキュリティ / ドキュメント整合性) を実施した。
+- Pre-merge AC 5件は verify command (rubric / file_contains) に加え、`bats tests/opportunistic-search.bats` (25/25 PASS) および関連スイート (`get-config-value.bats`, `observation-trigger.bats`) をローカル実行して機械的に PASS 判定した。
+- 検出された CONSIDER 1件 (`config=` ゲートに「`-->` 前スペースなし」回帰テストがない) は修正を見送った。抽出ロジックは `keyword=` ゲートと共有コードパスであり、同シナリオは既存の `keyword=` 用テストで既にカバー済みと判断。
 
 ### Deferred Items
-- #797 等、既存 observation AC への `config=` 属性の付与は本 Issue のスコープ外 (Spec Notes に明記済み)。follow-up Issue 化は本 PR 範囲外。
-- `capabilities.*` ネストキーおよび enum 値キー (`auto-stop-at` 等) への対応拡張 (`config=key:value` 形式等) は将来の follow-up 候補として `modules/observation-trigger.md` に記録済み。
+- CONSIDER: `config=some-flag-->` (スペースなし) パターンの回帰テスト追加は任意対応として見送り。follow-up Issue 化はしない (severity が低いため)。
+- Post-merge の observation AC (`event=auto-run`) は未検証のまま。次回 `/auto` 完走後の observation dispatch で観察が必要。
 
 ### Notes for Next Phase
-- Behavioral Change Detection により `tests/observation-trigger.bats` が `opportunistic-search.sh` を参照していることが検出され、フルスイート (`bats tests/`, 1210 件) を実行して全件 PASS を確認済み。`/review`/`/verify` でも同様の再確認は不要 (CI で担保される)。
-- Pre-merge AC 5 件はすべて PASS 判定済みで Issue の該当チェックボックスを更新済み。Post-merge の observation AC (`event=auto-run`) は本 PR merge 後、次回 `/auto` 完走時に発火する。
+- MUST issue は 0 件、CI は全ジョブ SUCCESS。レビューは `COMMENTED` (REQUEST_CHANGES ではない) で投稿済みのため、`/merge 1030` をそのまま実行可能。
+- 本レビューでの実装変更は発生していないため、Issue 受け入れ条件・verify command の更新は不要 (Step 13 スキップ)。
+- Post-merge AC (observation コメント蓄積の抑止) は merge 後の `/verify 1026` 実行、または次回 `/auto` 完走時の L3 observation dispatch で確認すること。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- N/A — Spec の Implementation Steps (挿入位置・抽出パターン・ゲート判定ロジック) と実装が完全に一致しており、構造的な乖離は検出されなかった。
+
+### Recurring issues
+- N/A — review-light (4観点統合レビュー) で検出された問題は CONSIDER 1件のみで、同種の問題が複数観測されるパターンはなかった。
+
+### Acceptance criteria verification difficulty
+- N/A — Pre-merge AC 5件すべてに `rubric` または `file_contains` の verify command が付与されており、いずれもコード読解とローカルテスト実行 (`bats tests/opportunistic-search.bats` 25/25 PASS) で機械的に PASS 判定できた。UNCERTAIN は 0 件。
