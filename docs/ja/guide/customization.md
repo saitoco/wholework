@@ -184,7 +184,7 @@ export PREVIEW_URL="https://my-pr-123.example-preview.com"
 
 - `/review` 時に `PREVIEW_URL` が設定されている: preview 層 AC を preview URL に対して実行する。
 - `/review` 時に `PREVIEW_URL` が未設定: `--when` ガードが発動し preview 層 AC は SKIPPED になる（人間がフォローアップ）。
-- `/verify` (post-merge) 時: `ac-tier: preview` 付き AC はすべて skip される（二重検証防止）。本番でも同 AC を検証したい場合は、`### Post-merge` セクションへタグなしで複製する。
+- `/verify` (post-merge) 時: `ac-tier: preview` 付き AC はデフォルトで skip される (二重検証防止)。`/review` が preview 層 AC を UNCERTAIN のまま終えた場合 (preview URL 未解決・外部制約など) は `type=preview-ac-unverified` マーカーコメントを Issue に投稿し、`/verify` がそのマーカーを検出して SKIPPED にせずフォールバックする — `production-url` が設定されていればそれに対して実際に検証し、未設定なら明示的な「未検証」警告を記録する。このフォールバックとは別に本番でも同 AC を検証したい場合は、`### Post-merge` セクションへタグなしで複製する。
 
 ## `.wholework/domains/`
 
