@@ -59,6 +59,15 @@ step9_section() {
     step8_section | grep -q "REQUEST_CHANGES"
 }
 
+@test "Step 8: preview-ac-unverified marker posts on every run, not only when UNCERTAIN set is non-empty" {
+    step8_section | grep -q -F "type=preview-ac-unverified"
+    step8_section | grep -q -F "post this marker on every run of this step"
+}
+
+@test "Step 8: preview-ac-unverified marker documents the ac=none sentinel" {
+    step8_section | grep -q -F "the literal none when the set is empty"
+}
+
 @test "Step 9: Blocking by default mentioned" {
     step9_section | grep -q "Blocking by default"
 }
