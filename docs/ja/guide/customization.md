@@ -117,7 +117,7 @@ capabilities:
 | `steering-docs-path` | string | `docs` | steering document の配置先 |
 | `capabilities.browser` | boolean | `false` | Playwright ベースの verify command を有効化する |
 | `capabilities.workflow` | boolean | `false` | `/review --full` で Workflow ベースのマルチエージェント実行を有効化する（opt-in; 未設定時は static Task fan-out にフォールバック） |
-| `capabilities.pr-preview` | boolean | `false` | PR preview URL の存在を宣言する。URL/UX 系 AC を pre-merge-preview に分類し、`PREVIEW_URL` 環境変数が設定されている場合に `/review` 時に実行する。`/verify` post-merge では二重検証防止のため skip する。 |
+| `capabilities.pr-preview` | boolean | `false` | PR preview URL の存在を宣言する。URL/UX 系 AC を pre-merge-preview に分類し、`PREVIEW_URL` 環境変数が設定されている場合に `/review` 時に実行する。`/verify` post-merge では二重検証防止のため skip するが、`/review` が投稿する最新の `type=preview-ac-unverified` マーカーがその AC を未検証としている場合は `/verify` が本番 URL に対するフォールバック検証を行う。 |
 | `capabilities.mcp` | list | `[]` | スキルから利用できる MCP ツール名 |
 | `capabilities.{name}` | boolean | `false` | 動的 capability マッピング（例: `capabilities.invoice-api: true`） |
 | `watchdog-timeout-seconds` | integer | `2700` | watchdog が silent な `claude -p` プロセスを kill するまでのタイムアウト秒数。Size L+ タスク（特に Opus / xhigh effort）では claude の長い思考時間により 2700 秒を超える silent 期間が発生しうる。メタ開発や Size L+ 作業では `3600` を推奨。0 以下の値はデフォルトにフォールバック。 |
@@ -184,7 +184,7 @@ export PREVIEW_URL="https://my-pr-123.example-preview.com"
 
 - `/review` 時に `PREVIEW_URL` が設定されている: preview 層 AC を preview URL に対して実行する。
 - `/review` 時に `PREVIEW_URL` が未設定: `--when` ガードが発動し preview 層 AC は SKIPPED になる（人間がフォローアップ）。
-- `/verify` (post-merge) 時: `ac-tier: preview` 付き AC はデフォルトで skip される (二重検証防止)。`/review` が preview 層 AC を UNCERTAIN のまま終えた場合 (preview URL 未解決・外部制約など) は `type=preview-ac-unverified` マーカーコメントを Issue に投稿し、`/verify` がそのマーカーを検出して SKIPPED にせずフォールバックする — `production-url` が設定されていればそれに対して実際に検証し、未設定なら明示的な「未検証」警告を記録する。このフォールバックとは別に本番でも同 AC を検証したい場合は、`### Post-merge` セクションへタグなしで複製する。
+- `/verify` (post-merge) 時: `ac-tier: preview` 付き AC はデフォルトで skip される (二重検証防止)。`/review` は Pre-merge に `ac-tier: preview` AC が 1 件以上ある実行ごとに毎回 `type=preview-ac-unverified` マーカーコメントを投稿する — 今回 UNCERTAIN のまま終わったインデックスの一覧、あるいは全て検証済みなら `ac=none` sentinel のいずれかを持つ。`/verify` は常に最新 1 件のマーカーのみを参照する (latest-wins) ため、fix-cycle で `/review` が再実行され以前 UNCERTAIN だった AC が検証済みになった場合でも、古いマーカーが最新として誤参照されることはない。その最新マーカーで未検証のまま残っている AC については、`/verify` が SKIPPED にせずフォールバックする — `production-url` が設定されていればそれに対して実際に検証し、未設定なら明示的な「未検証」警告を記録する。このフォールバックとは別に本番でも同 AC を検証したい場合は、`### Post-merge` セクションへタグなしで複製する。
 
 ## `.wholework/domains/`
 

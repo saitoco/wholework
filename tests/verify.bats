@@ -12,6 +12,12 @@ step2_section() {
     awk '/^### Step 2: Detect and Update Base Branch/{found=1} /^### Step / && !/Step 2: Detect and Update Base Branch/{found=0} found{print}' "$SKILL_FILE"
 }
 
+# Extract the "### Step 5: Verify Each Condition (Pre-merge Only)" section from SKILL.md.
+# The section ends at the next level-3 (### Step ) heading.
+step5_section() {
+    awk '/^### Step 5: /{found=1} /^### Step / && !/Step 5: /{found=0} found{print}' "$SKILL_FILE"
+}
+
 @test "Step 2 guard: detect-foreign-worktree.sh runs before base branch checkout" {
     guard_line=$(step2_section | grep -n -F "detect-foreign-worktree.sh" | head -1 | cut -d: -f1)
     checkout_line=$(step2_section | grep -n -F 'git checkout "${BASE_BRANCH}"' | head -1 | cut -d: -f1)
@@ -33,4 +39,12 @@ step2_section() {
 @test "Step 2 guard: foreign branch skips checkout and pull" {
     step2_section | grep -q -F "do not run"
     step2_section | grep -q -F "git checkout"
+}
+
+@test "Step 5 pre-merge-preview AC skip rule delegates to resolve-preview-ac-fallback.sh" {
+    step5_section | grep -q -F "resolve-preview-ac-fallback.sh"
+}
+
+@test "Step 5 pre-merge-preview AC skip rule documents latest-wins resolution" {
+    step5_section | grep -q -F "latest-wins"
 }

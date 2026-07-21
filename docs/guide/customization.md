@@ -128,7 +128,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `steering-docs-path` | string | `docs` | Where steering documents live |
 | `capabilities.browser` | boolean | `false` | Enable Playwright-based verify commands |
 | `capabilities.workflow` | boolean | `false` | Enable Workflow-based multi-agent execution in `/review --full` (opt-in; falls back to static Task fan-out when unset) |
-| `capabilities.pr-preview` | boolean | `false` | Declare PR preview availability; URL/UX ACs are classified as pre-merge-preview and executed at `/review` when the `PREVIEW_URL` env variable is set. Skipped in `/verify` post-merge to prevent double verification. |
+| `capabilities.pr-preview` | boolean | `false` | Declare PR preview availability; URL/UX ACs are classified as pre-merge-preview and executed at `/review` when the `PREVIEW_URL` env variable is set. Skipped in `/verify` post-merge to prevent double verification, unless `/review`'s latest `type=preview-ac-unverified` marker lists the AC as unverified, in which case `/verify` falls back to a production-URL check. |
 | `capabilities.mcp` | list | `[]` | MCP tool names available to skills |
 | `capabilities.{name}` | boolean | `false` | Dynamic capability mapping (e.g., `capabilities.invoice-api: true`) |
 | `watchdog-timeout-seconds` | integer | `2700` | Watchdog timeout in seconds before killing a silent `claude -p` process. Claude's extended thinking time on Size L+ tasks (especially Opus with high effort) can produce silent periods exceeding 2700 seconds; set to `3600` for meta-development or Size L+ work. Values ≤0 fall back to the default. |
@@ -197,7 +197,7 @@ export PREVIEW_URL="https://my-pr-123.example-preview.com"
 
 - `PREVIEW_URL` set at `/review` time: preview-tier ACs are executed against the preview URL.
 - `PREVIEW_URL` not set: preview-tier ACs are SKIPPED (the `--when` guard fires) and remain unchecked for human follow-up.
-- At `/verify` (post-merge): `ac-tier: preview` ACs are skipped by default to prevent double verification. If `/review` left a preview-tier AC UNCERTAIN (e.g., preview URL unresolved, external constraints), it posts a `type=preview-ac-unverified` marker comment on the Issue; `/verify` detects this marker and falls back — verifying against `production-url` if configured, or recording an explicit "unverified" warning if not — instead of silently marking it as SKIPPED. To also verify against production regardless of this fallback, duplicate the AC in the `### Post-merge` section without the tag.
+- At `/verify` (post-merge): `ac-tier: preview` ACs are skipped by default to prevent double verification. `/review` posts a `type=preview-ac-unverified` marker comment on every run that has at least one `ac-tier: preview` AC in Pre-merge — listing the indices left UNCERTAIN this run, or the sentinel `ac=none` when all preview-tier ACs were verified. `/verify` always resolves only the single most-recent such marker (latest-wins), so a later `/review` run (e.g., after a fix cycle) that clears a previously UNCERTAIN AC is reflected correctly instead of leaving an earlier, now-stale marker as the reference. For any AC still listed as unverified in that latest marker, `/verify` falls back — verifying against `production-url` if configured, or recording an explicit "unverified" warning if not — instead of silently marking it as SKIPPED. To also verify against production regardless of this fallback, duplicate the AC in the `### Post-merge` section without the tag.
 
 ## `.wholework/domains/`
 

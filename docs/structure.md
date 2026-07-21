@@ -194,6 +194,7 @@ Key modules:
 - `scripts/get-sub-issue-progress.sh` — fetch all sub-issues (OPEN + CLOSED) under an XL parent issue with state, labels, timestamps, and blockedBy for `/audit progress`
 - `scripts/get-auto-session-report.sh` — emit the `## Metrics` markdown section (`--metrics-only`) of a /auto session retrospective from `.tmp/auto-events.jsonl` (filtered by session_id), for embedding into `session.md` and for `/audit auto-session`
 - `scripts/get-verify-iteration.sh` — read highest `<!-- verify-iteration: N -->` marker from Issue comments
+- `scripts/resolve-preview-ac-fallback.sh` — resolve the latest `type=preview-ac-unverified` marker from Issue comments and print the 1-based AC indices needing `/verify` fallback (empty when none)
 - `scripts/hook-rename-on-auto.sh` — UserPromptSubmit hook: auto-rename session title when prompt matches `/auto` pattern
 - `scripts/log-permission.sh` — log permission events (JSON output)
 - `scripts/observation-trigger.sh` — dispatch observation-type ACs on event: calls `opportunistic-search.sh --event`, posts comment to each matched Issue recommending `/verify` re-run, and prints matched Issue numbers to stdout for caller dispatch
