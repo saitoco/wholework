@@ -19,6 +19,14 @@
 # without `keyword=`, or runs without --context-file, match unconditionally
 # (backward compatible). See modules/observation-trigger.md § Condition Check Gate.
 #
+# `config=<key>` gates event-mode matches on .wholework.yml validity: when a
+# matched AC line carries a `config=<key>` attribute, the Issue is only
+# included if that flat kebab-case key resolves to "true" (case-insensitive)
+# in the current repository's .wholework.yml (via get-config-value.sh). ACs
+# without `config=` match unconditionally (backward compatible). No new CLI
+# argument is needed — .wholework.yml is read directly from CWD. See
+# modules/observation-trigger.md § Condition Check Gate (config=).
+#
 # Output: JSON array [{"number": N, "condition": "condition text"}]
 #         Empty array [] when no matches found
 
@@ -146,6 +154,17 @@ for N in $ISSUE_NUMBERS; do
         KEYWORD=$(echo "$line" | grep -oE 'keyword=[^ >]+' | sed -e 's/^keyword=//' -e 's/-*$//' || true)
         if [ -n "$KEYWORD" ] && [ -n "$CONTEXT_FILE" ]; then
             if ! grep -qi -- "$KEYWORD" "$CONTEXT_FILE"; then
+                continue
+            fi
+        fi
+
+        # Config check gate: skip lines whose config= attribute names a
+        # .wholework.yml key that is not "true" in this repository. No
+        # config= attribute means unconditional match (backward compatible).
+        CONFIG_KEY=$(echo "$line" | grep -oE 'config=[^ >]+' | sed -e 's/^config=//' -e 's/-*$//' || true)
+        if [ -n "$CONFIG_KEY" ]; then
+            CONFIG_VALUE=$("${SCRIPT_DIR}/get-config-value.sh" "$CONFIG_KEY" "false" | tr '[:upper:]' '[:lower:]')
+            if [ "$CONFIG_VALUE" != "true" ]; then
                 continue
             fi
         fi
