@@ -89,20 +89,18 @@ Steering Docs sync candidate check の一般手順 (skill 名 "review"/"verify" 
 - `skills/code/SKILL.md` Step 9 の Behavioral Change Detection は、変更ファイル名 (パス抜き) で `tests/` 配下を grep する経験則を持つが、`SKILL.md` は全 Skill 共通のファイル名であるため、`skills/review/SKILL.md` / `skills/verify/SKILL.md` という狭い変更に対しても常に `bats tests/` フルスイート (1213 件) が発火した。実測は PASS (0 failures) だったため本 Issue の実装自体には影響しないが、経験則の汎用ファイル名対応漏れという `/code` 自体の改善余地であり、本 Issue のスコープ外のため follow-up Issue #1034 (`retro/code`) として起票した。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light (`--light` 明示指定) で review-light エージェント 1 体による 4 アスペクト統合レビューを実施した。
-- Issue 本文の両 AC (`rubric`) は verify-executor により両方 PASS と判定 (既に `[x]` 済みのためチェックボックス変更なし)。CI 5 ジョブすべて SUCCESS。
-- review-light が検出した SHOULD レベル指摘 2 件 (マーカー陳腐化・テストカバレッジ不足) は、いずれも Issue #1028 のスコープを超える設計変更または Spec の Deferred Items で既に認識済みの内容のため、修正せず PR ラインコメントとして記録するに留めた (MUST 相当の指摘なし、event=COMMENT で投稿)。
+- 非対話モード (`--non-interactive`) で実行。`gh-pr-merge-status.sh` の結果は mergeable=true / reason=clean / CI success / review approved だったため、conflict resolution (Step 3) は不要でそのまま squash merge を実行した。
+- squash merge 後、`docs/spec/issue-1028-*.md` の既存 Phase Handoff (phase: review) を merge phase の内容にローテーション置換した。
 
 ### Deferred Items
-- マーカー陳腐化問題 (`skills/verify/SKILL.md:181`): 後続の fix-cycle 再レビューで preview AC が実際に検証済みになっても新規マーカーが投稿されず、`/verify` が古いマーカーを誤って参照し続ける可能性がある。follow-up Issue 化を検討の余地あり (未起票)。
-- 新規マーカー投稿・フォールバックロジックの自動テストは未追加のまま (Spec Deferred Items を踏襲)。`/verify` 実行時の post-merge 実地確認が引き続き必要。
+- マーカー陳腐化問題 (`skills/verify/SKILL.md:181`) と新規ロジックの自動テスト未追加は review phase から継続して未解決 (Spec Deferred Items 参照)。
 
 ### Notes for Next Phase
-- `/merge` はこのまま通常フローで進行してよい。MUST issue はなく、CI もすべて green。
 - `/verify` 実行時は、両 rubric AC が実際に PASS 判定されるか (post-merge の実地確認) と、preview-ac-unverified マーカー関連のフォールバック分岐が意図通り動作するかを重点確認すること。
+- Issue #1034 (retro/code follow-up) は本 Issue #1028 とは別スコープのため `/verify` 対象外。
 
 ## review retrospective
 
