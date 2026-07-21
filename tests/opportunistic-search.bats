@@ -227,6 +227,42 @@ teardown() {
     echo "$output" | jq -e '.[0].number == 505' > /dev/null
 }
 
+@test "config gate: enabled config key includes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 600}]'
+    export MOCK_ISSUE_BODY_600='- [ ] Verify demotion is suppressed <!-- verify-type: observation event=auto-run config=some-flag -->'
+    echo "some-flag: true" > "$BATS_TEST_TMPDIR/config-enabled.yml"
+    export WHOLEWORK_CONFIG_PATH="$BATS_TEST_TMPDIR/config-enabled.yml"
+
+    run bash "$SCRIPT" --event auto-run
+    unset WHOLEWORK_CONFIG_PATH
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 600' > /dev/null
+}
+
+@test "config gate: disabled config key excludes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 601}]'
+    export MOCK_ISSUE_BODY_601='- [ ] Verify demotion is suppressed <!-- verify-type: observation event=auto-run config=some-flag -->'
+    export WHOLEWORK_CONFIG_PATH=/dev/null
+
+    run bash "$SCRIPT" --event auto-run
+    unset WHOLEWORK_CONFIG_PATH
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
+}
+
+@test "config gate: AC without config= matches unconditionally" {
+    export MOCK_ISSUE_LIST='[{"number": 602}]'
+    export MOCK_ISSUE_BODY_602='- [ ] Verify demotion is suppressed <!-- verify-type: observation event=auto-run -->'
+    export WHOLEWORK_CONFIG_PATH=/dev/null
+
+    run bash "$SCRIPT" --event auto-run
+    unset WHOLEWORK_CONFIG_PATH
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 602' > /dev/null
+}
+
 @test "event filter: unknown event emits warning and falls back" {
     export MOCK_ISSUE_LIST='[{"number": 403}]'
     export MOCK_ISSUE_BODY_403='- [ ] /review skill creates review after execution <!-- verify-type: opportunistic -->'
