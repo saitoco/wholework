@@ -197,7 +197,7 @@ export PREVIEW_URL="https://my-pr-123.example-preview.com"
 
 - `PREVIEW_URL` set at `/review` time: preview-tier ACs are executed against the preview URL.
 - `PREVIEW_URL` not set: preview-tier ACs are SKIPPED (the `--when` guard fires) and remain unchecked for human follow-up.
-- At `/verify` (post-merge): all `ac-tier: preview` ACs are skipped to prevent double verification. To also verify against production, duplicate the AC in the `### Post-merge` section without the tag.
+- At `/verify` (post-merge): `ac-tier: preview` ACs are skipped by default to prevent double verification. If `/review` left a preview-tier AC UNCERTAIN (e.g., preview URL unresolved, external constraints), it posts a `type=preview-ac-unverified` marker comment on the Issue; `/verify` detects this marker and falls back — verifying against `production-url` if configured, or recording an explicit "unverified" warning if not — instead of silently marking it as SKIPPED. To also verify against production regardless of this fallback, duplicate the AC in the `### Post-merge` section without the tag.
 
 ## `.wholework/domains/`
 
