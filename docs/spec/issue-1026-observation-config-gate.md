@@ -70,21 +70,19 @@
 - N/A — 巻き戻しや設計変更は発生しなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light (`--light` 明示指定、Issue Size=M とも一致) のため、review-light エージェント1体による4観点統合レビュー (Spec乖離 / エッジケース・堅牢性 / セキュリティ / ドキュメント整合性) を実施した。
-- Pre-merge AC 5件は verify command (rubric / file_contains) に加え、`bats tests/opportunistic-search.bats` (25/25 PASS) および関連スイート (`get-config-value.bats`, `observation-trigger.bats`) をローカル実行して機械的に PASS 判定した。
-- 検出された CONSIDER 1件 (`config=` ゲートに「`-->` 前スペースなし」回帰テストがない) は修正を見送った。抽出ロジックは `keyword=` ゲートと共有コードパスであり、同シナリオは既存の `keyword=` 用テストで既にカバー済みと判断。
+- PR #1030 は mergeable=true (reason=clean、CI success、review approved) のためコンフリクト解決フローは不要と判断し、Step 3 をスキップして直接スカッシュマージを実行した。
+- ワークツリー作成 (Step 2) は非対話モードの単純マージ経路では省略し、ローカル main を origin/main へ fast-forward させた上で Phase Handoff の書き込み・コミットを直接行った。
 
 ### Deferred Items
-- CONSIDER: `config=some-flag-->` (スペースなし) パターンの回帰テスト追加は任意対応として見送り。follow-up Issue 化はしない (severity が低いため)。
 - Post-merge の observation AC (`event=auto-run`) は未検証のまま。次回 `/auto` 完走後の observation dispatch で観察が必要。
+- CONSIDER: `config=some-flag-->` (スペースなし) パターンの回帰テスト追加は review フェーズで見送り済み。follow-up Issue 化はしない (severity が低いため)。
 
 ### Notes for Next Phase
-- MUST issue は 0 件、CI は全ジョブ SUCCESS。レビューは `COMMENTED` (REQUEST_CHANGES ではない) で投稿済みのため、`/merge 1030` をそのまま実行可能。
-- 本レビューでの実装変更は発生していないため、Issue 受け入れ条件・verify command の更新は不要 (Step 13 スキップ)。
-- Post-merge AC (observation コメント蓄積の抑止) は merge 後の `/verify 1026` 実行、または次回 `/auto` 完走時の L3 observation dispatch で確認すること。
+- `/verify 1026` は Post-merge AC (設定無効プロジェクトで observation コメントが蓄積しないこと) の確認が必要。既存の accumulated notification コメント (#797 由来) がある場合は、本 Issue のマージ後の挙動観察で判定すること。
+- BASE_BRANCH=main のため `closes #1026` により Issue は自動クローズされる見込み。Step 6 のフォールバック確認で state を検証する。
 
 ## review retrospective
 
