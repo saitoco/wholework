@@ -229,21 +229,19 @@ N/A — 手戻りは発生しなかった。
 - UNCERTAIN・verify command の不備は無し。rubric AC (AC1–3) は `/code` 実装済み内容との突き合わせで PASS 判定でき、`github_check` AC (AC4) は CI (`Run bats tests` 含む全ジョブ SUCCESS) で機械的に PASS 判定できた。AC3 (「テストが存在する」) がスクリプト切り出し (`resolve-preview-ac-fallback.sh`) により実挙動ベースの bats アサーションとして検証可能になっていた点は、#1028 が指摘した「prose-driven SKILL.md ステップは bats で検証しづらい」という課題への有効な対処であり、AC 記述の検証難度を下げていた。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Step 8 の Preview-tier unverified marker 投稿は本 Issue #1035 の対象外 (Issue #1035 自身の AC に `ac-tier: preview` タグ付き AC が無い) のためスキップした。マーカー投稿ロジック自体の正しさは Step 8 の rubric AC1–3 判定と `tests/resolve-preview-ac-fallback.bats` で確認済み。
-- `capabilities.workflow: true` により Workflow パイプライン (finder×3 + adversarial verify) で Step 10 を実行した。SHOULD 2 件 (`docs/guide/customization.md` / `docs/ja/guide/customization.md` の `capabilities.pr-preview` テーブルセルが旧仕様のまま) を検出・修正済み。MUST 0 件のため event は `COMMENT`。
-- 外部レビューツール (Copilot/Claude Code Review/CodeRabbit) は `.wholework.yml` 未設定のため Step 7 は全面スキップした。
+- `mergeable=true` (clean/CI success/review approved) だったため、Step 3 (Resolve Conflicts) はスキップし Step 4 (Squash Merge) へ直接進んだ。
+- `gh pr merge 1038 --squash --delete-branch` で squash merge・リモートブランチ削除を実行し、`closes #1035` により Issue #1035 は自動クローズ対象 (BASE_BRANCH=main)。
 
 ### Deferred Items
 
 - Spec Deferred Items を継承: `gh` の `--jq` 式 (`sort_by(.createdAt) | .[-1]`) の正しさは bats で検証できず、Post-merge の observation AC に委ねる。
 - prose-driven SKILL.md ステップのスクリプト切り出しを他ステップへ横展開する話は本 Issue のスコープ外 (変更なし)。
-- 「設定キー変更時の sync 対象洗い出しを prose 箇条書きだけでなくテーブル形式の記述にも広げる」という retrospective 上の学びは、本 Issue のスコープを超えるプロセス改善候補として記録するに留め、follow-up Issue 化は見送る。
 
 ### Notes for Next Phase
 
-- `/merge` はこのまま進めて問題ない。Post-merge AC (downstream プロジェクトでの fix-cycle 誤 fallback 観察) は observation type のため `/verify` 時に手動確認が必要。
-- Issue #1035 の Pre-merge AC 4 件は全て `[x]` 済み。
+- Post-merge AC (downstream プロジェクトでの fix-cycle 誤 fallback 観察) は observation type のため `/verify` 時に手動確認が必要。
+- Issue #1035 の Pre-merge AC 4 件は全て `[x]` 済み。squash merge 完了、Issue 自動クローズ・`phase/verify` ラベル遷移待ち。
