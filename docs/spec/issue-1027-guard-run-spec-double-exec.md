@@ -76,36 +76,19 @@
 - N/A — 手戻りなし。既存の bats テストデフォルトモック (`gh` が空ラベルを返す) により、新設ガードは既存35件超のテストに影響を与えず、新規3件のみ追加した。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `run-spec.sh` 本体にインライン実装 (`check-verify-dirty.sh` のような独立スクリプト化はしない) — ロジックが「ラベル一覧取得 + membership チェック」の数行で完結するため
-- ガード発火時のログは `check-verify-dirty.sh` の `classify=` パターンに揃え、`[run-spec] classify=phase-guard-blocked issue=... label=...` の形式で stderr へ出力
-- `gh` API 呼び出し失敗時はガードを発火させない fail-open 方針を採用 (`gh-label-transition.sh` の既存フォールバックと同じ)
+- Step 1 で mergeable=true / CI success / review approved を確認し、Step 3 (Resolve Conflicts) は対象外としてそのまま Step 4 のスクワッシュマージへ進んだ
+- `gh pr merge 1032 --squash --delete-branch` を実行し、`closes #1027` により Issue #1027 は main へのマージで自動クローズされる想定 (BASE_BRANCH=main)
 
 ### Deferred Items
-- 二重実行を引き起こした起動経路の根本原因調査は本 Issue のスコープ外 (Issue 本文に明記済み、別 Issue 対応)
-- Post-merge AC (`/auto` の pr route 実行での実運用確認) は merge 後の観測イベントで検証
+- 二重実行を引き起こした起動経路の根本原因調査は本 Issue のスコープ外 (code/review フェーズから継続して deferred、別 Issue 対応)
+- Post-merge AC (`/auto` の pr route 実行での実運用確認) は merge 後の観測イベント (`event=auto-run`) で検証
 
 ### Notes for Next Phase
-- Pre-merge verify command 3件 (rubric ×2、file_contains ×1) はすべて PASS 済み、Issue AC チェックボックスは更新済み
-- 動作変更検知 (`tests/run-spec.bats` が `run-auto-sub.bats` / `check-file-overlap.bats` からも参照される) によりフルスイート (`bats tests/`, 1213 tests) を実行し全件 PASS を確認済み
-- ドキュメント同期は Spec Notes の判断通り不要 (steering docs sync candidate を grep 済み、内容に影響なしと判断済み)
-
-## Phase Handoff
-<!-- phase: review -->
-
-### Key Decisions
-- Review モードは `--light` 指定 (Issue Size=M とも一致) のため、review-light エージェント1体による4観点統合レビューを実行 — spec/bug 分割の2エージェント並列レビューは不要と判断
-- Pre-merge AC 3件 (rubric ×2、file_contains ×1) は Issue 本文の verify command をそのまま safe mode で再実行し、いずれも PASS を再確認 (code フェーズの判定を review フェーズで独立検証)
-
-### Deferred Items
-- Post-merge AC (`/auto` の pr route 実行での実運用確認) は merge 後の観測イベント (`event=auto-run`) で検証 — review フェーズでは対象外
-- 二重実行を引き起こした起動経路の根本原因調査は本 Issue のスコープ外 (code フェーズから継続して deferred)
-
-### Notes for Next Phase
-- MUST/SHOULD/CONSIDER いずれの指摘もなし、CI 全ジョブ SUCCESS — `/merge 1032` にそのまま進行可能
-- 外部レビューツール (Copilot/Claude Code Review/CodeRabbit) は `.wholework.yml` に設定なし、Step 7 は完全スキップ
+- verify フェーズでは Post-merge AC (「`/auto` の pr route 実行で spec → code 進行中に spec が再実行されないこと」) の実運用確認が必要
+- Issue #1027 の state / `phase/verify` ラベル遷移を Step 6 のフォールバック確認で検証済み
 
 ## review retrospective
 
