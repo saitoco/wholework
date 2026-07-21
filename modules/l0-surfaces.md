@@ -88,6 +88,19 @@ in the codebase (`<!-- verify-type: ... -->`, `<!-- verify: ... -->`).
 ```
 Consumers matching on the `<!-- wholework-event: type=verify-fail` prefix (see Notes below) are unaffected by this attribute, since it is appended after the existing fields rather than altering them.
 
+**`type=preview-ac-unverified`**: posted by `/review` (Step 8) when one or more `ac-tier: preview`
+acceptance conditions were classified `UNCERTAIN` — i.e., `/review` could not actually verify them
+against the preview URL before the PR merges and the preview environment disappears. The `ac=`
+attribute carries a comma-separated list of 1-based indices into the Issue body's full AC
+enumeration, using the same indexing convention as `gh-issue-edit.sh --checkbox`. Example:
+```
+<!-- wholework-event: type=preview-ac-unverified phase=review issue=42 ac=2,5 -->
+Preview-tier AC 2 and 5 could not be verified against the preview URL (UNCERTAIN) before merge.
+```
+`/verify`'s pre-merge-preview AC skip rule (`skills/verify/SKILL.md` Step 5) consults this marker
+to decide whether an `ac-tier: preview` condition was actually verified at `/review` or must fall
+back to a post-merge check.
+
 When consuming comments (see Processing Steps), a comment containing `<!-- wholework-event:`
 in its body from a bot actor is treated as a Wholework-authored structured comment and consumed (bot exception above).
 
@@ -122,16 +135,20 @@ If CUTOFF is empty, omit the `select` filter (fetch all comments).
 
 ISO 8601 UTC strings are lexicographically comparable, so `date` conversion is not needed.
 
-**verify-fail marker exception (defense in depth):** After fetching cutoff-filtered comments,
+**Cross-phase marker exception (defense in depth):** After fetching cutoff-filtered comments,
 additionally scan all comments regardless of cutoff for any comment whose body contains
-`<!-- wholework-event: type=verify-fail`. Include any such comments in the consume set even
-if their `createdAt` is before or equal to `CUTOFF`. This ensures that `/verify` FAIL marker
-comments posted before the current phase's cutoff are never silently dropped. Deduplicate
-by comment URL so that comments already included by the cutoff filter are not injected twice.
+`<!-- wholework-event: type=verify-fail` or `<!-- wholework-event: type=preview-ac-unverified`.
+Include any such comments in the consume set even if their `createdAt` is before or equal to
+`CUTOFF`. This ensures that marker comments posted before the current phase's cutoff are never
+silently dropped — `/verify` FAIL markers can predate a later fix-cycle's cutoff, and
+`preview-ac-unverified` markers posted by `/review` always predate `/verify`'s cutoff (the
+`phase/verify` label is assigned by `/merge`, not `/review`, so the marker is necessarily older
+than the timestamp `/verify`'s Step 1 resolves as cutoff). Deduplicate by comment URL so that
+comments already included by the cutoff filter are not injected twice.
 
 ```
 gh issue view "$ISSUE_NUMBER" --json comments \
-  --jq '.comments[] | select(.body | contains("<!-- wholework-event: type=verify-fail"))'
+  --jq '.comments[] | select(.body | contains("<!-- wholework-event: type=verify-fail") or contains("<!-- wholework-event: type=preview-ac-unverified"))'
 ```
 
 If `COMMENT_SCOPE=issue+pr`: also fetch PR comments with `gh pr view <PR_NUMBER> --json comments`
