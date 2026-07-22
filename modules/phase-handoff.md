@@ -73,6 +73,13 @@ Calling phases: `code` (after Step 5 Spec load), `review` (after Step 5), `merge
 
    Output: `[phase-handoff] Loaded handoff from phase: {phase-name}` (extract `{phase-name}` from the `<!-- phase: {phase-name} -->` marker).
 
+4. **AC cross-reference (Deferred Items staleness check)**: This step is part of the Read Procedure's common processing and therefore applies automatically to all four calling phases (`code`, `review`, `merge`, `verify`) — no per-skill logic is required. `### Deferred Items` is written once by the producing phase and does not update on its own; if the referenced acceptance conditions change out-of-band (a different session, a human's manual follow-up, or a concurrently running skill) after the handoff was written, the stale text would otherwise be surfaced verbatim in this phase's own report. Cross-reference each Deferred Items line against the Issue's current AC checkbox state before using it:
+   - For each bullet under `### Deferred Items`, attempt to extract an AC reference: an explicit AC number, an `ac=` index list, or a quoted condition string that matches an Issue checklist line. If no AC reference can be identified in a bullet, leave that bullet as-is (skip the cross-reference for it) — do not guess at a match.
+   - Fetch the current Issue body: `gh issue view $ISSUE_NUMBER --json body`.
+   - For each extracted AC reference, locate the corresponding checkbox line in the Issue body's Acceptance Criteria list, using the same 1-based index convention as `gh-issue-edit.sh --checkbox`.
+   - If the located checkbox is already `[x]`: the item was resolved after the handoff was written. Either exclude that bullet from this phase's own output/report entirely, or — if retaining full text for audit purposes — append `~~` around the bullet text plus the literal string `(resolved after handoff)`, so the resolution is visible without erasing the historical record.
+   - If the checkbox is still `[ ]`, or no AC reference could be identified for the bullet: leave the bullet unchanged and continue treating it as an active deferred item.
+
 ## Phase Position Asymmetry
 
 | Phase | Read | Write | Reason |
@@ -88,3 +95,4 @@ Calling phases: `code` (after Step 5 Spec load), `review` (after Step 5), `merge
 - This module's read/write operations are deterministic (Spec file existence check → Edit/Read). No AskUserQuestion required; safe in `--non-interactive` mode.
 - XS route: In `/auto` XS handling, the Spec may not exist at code execution time (it is generated post-code in Step 4b). The Spec existence check (step 1 of both procedures) handles this gracefully — output the skip log and continue without error.
 - The handoff section is part of the Spec file and will be included in the worktree branch, committed with the retrospective.
+- **Handoff semantics — writer's viewpoint, Issue body is the final authority**: Phase Handoff reflects the producing phase's assessment at the moment it was written, including the AC checkbox state observed at that time. It is not re-synchronized when the Issue changes afterward. When a handoff's `### Deferred Items` (or any other subsection) disagrees with the Issue body's current AC checkbox state, the Issue body is the source of truth — the Read Procedure's AC cross-reference step (above) exists specifically to reconcile this gap for Deferred Items, but the same precedence rule applies to any other observed conflict between handoff text and live Issue state.

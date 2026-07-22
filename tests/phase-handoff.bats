@@ -30,3 +30,7 @@ PHASE_HANDOFF="$PROJECT_ROOT/modules/phase-handoff.md"
 @test "phase-handoff: Phase Position Asymmetry table is documented" {
     grep -q "Phase Position Asymmetry" "$PHASE_HANDOFF"
 }
+
+@test "phase-handoff: AC cross-reference staleness check is documented" {
+    grep -q "resolved after handoff" "$PHASE_HANDOFF"
+}
