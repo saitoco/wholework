@@ -274,18 +274,24 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/doc-checker.md` and use the "Impact Assessme
 
 **Steering Docs sync candidate check (when Changed Files includes SKILL.md or scripts/):**
 
-When the Spec's Changed Files section includes `SKILL.md` files (e.g., `skills/auto/SKILL.md`) or files under `scripts/`, run a grep across `docs/*.md` and `docs/ja/*.md` to find Steering Documents that reference the changed skill or script name. List found files as Steering Docs sync candidates in the Changed Files section.
+When the Spec's Changed Files section includes `SKILL.md` files (e.g., `skills/auto/SKILL.md`) or files under `scripts/`, run a recursive `grep -rn` cross-search across `docs/`, `tests/`, and `scripts/` to find files that reference the changed skill/script name, or any config key / marker name / function name this Issue introduces or changes. List found files as sync candidates in the Changed Files section.
 
 Steps:
-1. Extract the skill name or script filename from each changed file:
+1. Extract target keywords from each changed file:
    - `skills/{name}/SKILL.md` → keyword: `{name}` (e.g., `auto`, `spec`)
    - `scripts/{script-name}.sh` → keyword: `{script-name}.sh` (e.g., `run-code.sh`)
+   - Also extract any config key, marker name (`type=...`), or function name this Issue introduces or changes (e.g., `capabilities.pr-preview`, `type=preview-ac-unverified`) — these are often more specific sync-relevant terms than the skill/script name alone
 2. For each keyword, run:
    ```bash
-   grep -l "<keyword>" docs/*.md docs/ja/*.md 2>/dev/null
+   grep -rn "<keyword>" docs/ tests/ scripts/ 2>/dev/null
    ```
-3. For each file found, add a **Steering Docs sync candidate** entry to the Changed Files section:
-   e.g., `docs/workflow.md`: [Steering Docs sync candidate] verify that description of `<keyword>` is up to date; update if needed
+   Unlike a `docs/*.md`-style non-recursive glob (which misses second-level files such as `docs/guide/customization.md`), this reaches every file under the three directories. The `-n` output shows each matching line's content, not just the filename, so a prose bullet and a table cell are both visible in one pass.
+3. For each file found, add a **Steering Docs sync candidate** entry to the Changed Files section, checking category-specific patterns:
+   - **docs/**: check ALL occurrence formats (prose bullets, config-reference tables, variable tables, code blocks) — a table cell can go stale independently of a prose paragraph describing the same key elsewhere in the same file
+   - **tests/**: check whether another `.bats` file targets the same script/behavior (e.g., both `tests/run-verify.bats` and `tests/verify.bats` may need the same update)
+   - **scripts/**: check whether a helper script called by the changed script also references the keyword
+
+   e.g., `docs/guide/customization.md`: [Steering Docs sync candidate] verify `<keyword>` description is current across prose and config-reference table occurrences; update if needed
 4. The `/code` phase makes the final include/exclude decision by reading each candidate; listing them here prevents silent omission at implementation time
 
 **Skip** if Changed Files does not include SKILL.md files or files under `scripts/`.
