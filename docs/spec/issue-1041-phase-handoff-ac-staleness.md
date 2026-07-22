@@ -56,3 +56,28 @@ Phase Handoff (`modules/phase-handoff.md`) の Read Procedure は、書き手フ
 - `skills/merge/SKILL.md` / `skills/verify/SKILL.md` は編集不要と判断した。両ファイルとも Phase Handoff の Read 処理を独自実装せず `modules/phase-handoff.md` の Read Procedure セクションへ完全委譲していることを grep で確認済み (`skills/merge/SKILL.md:59`, `skills/verify/SKILL.md:160` はいずれも "Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Read Procedure" section." のみで独自ロジックを持たない)
 - `docs/product.md` (Terms: Phase Handoff) および `docs/tech.md` (Cross-phase memory mechanisms) の既存記述は本修正後も引き続き正確であり、更新不要と判断した — Phase Handoff の定義自体 (「書き手が exiting 前に書き、次フェーズが entry 時に読む構造化サマリ」) は変わらず、読み手側の突き合わせロジックが Read Procedure 内部に追加されるのみのため
 - Issue Retrospective (`/issue --non-interactive` 実行時) で、AC1 の verify command が実装前から常時 PASS してしまう欠陥 (対象文字列 `Deferred Items` がすでに main の見出しとして存在していたため) と、AC4 の verify 対象ファイルが `skills/merge/SKILL.md` から `modules/phase-handoff.md` の Read Procedure に修正された旨がすでに記録されている。本 Spec の `## Verification` は、この修正後の Issue body を正としてそのまま転記した (Verify command sync rule)
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-3 を計画どおりの順序・内容で実装した
+
+### Design Gaps/Ambiguities
+- N/A — Implementation Steps の記述が具体的だったため、実装時に追加の判断が必要な曖昧点はなかった
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps どおり、`modules/phase-handoff.md` の Read Procedure に Step 4 (AC cross-reference) を追加し、`## Notes` に semantics (Option C) を追記した。書き手側 (`skills/merge/SKILL.md` 等) は編集不要というコードベース調査結果を踏襲し、実際に他ファイルへの変更は行っていない
+- Pre-merge の 4 件の verify command (`section_contains` 1件 + `rubric` 3件) は `/code` Step 10 内でそのまま自己評価し、全件 PASS と判定して Issue の checkbox を `[x]` に更新した
+
+### Deferred Items
+- Post-merge AC (downstream repo `saitoco/tofas` での out-of-band AC 更新後の /merge・/verify 再現確認) は `verify-type: manual` のため本フェーズでは未実施 — post-merge の人手検証待ち
+
+### Notes for Next Phase
+- 本 Issue は patch route (Size S) のため `/review` を経由しない。次は `/verify` が post-merge AC (manual) の確認を担当する
+- Post-merge AC の検証は downstream repo (`saitoco/tofas` 等) での実地確認が必要な性質のため、`/verify` 側で機械的な verify command による自動判定はできない。人間による確認結果を待つ形になる
