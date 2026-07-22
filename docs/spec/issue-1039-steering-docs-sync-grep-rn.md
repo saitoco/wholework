@@ -75,3 +75,29 @@ Issue Proposal の Option A (grep -rn への修正 + 対象キー拡張 + フォ
 - Changed Files: 1 ファイル (制限 5 以内 ✓)
 - Implementation Steps: 1 ステップ (制限 5 以内 ✓)
 - Verification Pre-merge: 2 項目 (制限 5 以内 ✓)
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 記載の置き換え内容をそのまま `skills/spec/SKILL.md` L275-291 に適用した。逸脱なし。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps どおり `skills/spec/SKILL.md` 1 ファイルのみを修正し、Option B (`modules/detect-config-markers.md` への集約) は不採用のまま維持した — Spec Notes の不採用理由 (共有モジュール化は 2 つ目の消費者が現れてから判断) を継承
+- 変更ファイルが `skills/spec/SKILL.md` のみで、かつ `tests/check-file-overlap.bats` / `tests/run-spec.bats` / `tests/operate-route.bats` の複数ファイルが同ファイルを参照していたため、Behavioral Change Detection の基準に従い `bats tests/` full suite を実行 (1230 件 PASS、FAIL 0)
+- pre-merge AC 2 件はいずれも rubric 条件のため、diff を根拠に adversarial に自己評価し両方 PASS と判定、Issue checkbox を更新した
+
+### Deferred Items
+- Post-merge の observation AC (`次回の Spec Notes 記述で config key/marker/function name の cross-search が実施されることを観察`) は定義上、次回の `/spec` 実行時に事後観察されるものであり、本フェーズでは検証不可 — `/verify` は通常実行時にスキップし、`event=auto-run` 発火時に再評価される
+
+### Notes for Next Phase
+- patch route (Size S) のため PR は作成されない。`/verify` は merge-to-main 後の main ブランチに対して直接実行される
+- Spec 本文の "根本原因の確認 (dogfooding)" セクションで、本 Issue 自身の変更について Steering Docs 側の sync candidate が存在しないことを既に検証済み (`grep -rln "Steering Docs sync candidate" .` で `skills/spec/SKILL.md` のみヒットを確認) — `/verify` 側で追加の doc sync 確認は不要
