@@ -101,3 +101,13 @@ Issue Proposal の Option A (grep -rn への修正 + 対象キー拡張 + フォ
 ### Notes for Next Phase
 - patch route (Size S) のため PR は作成されない。`/verify` は merge-to-main 後の main ブランチに対して直接実行される
 - Spec 本文の "根本原因の確認 (dogfooding)" セクションで、本 Issue 自身の変更について Steering Docs 側の sync candidate が存在しないことを既に検証済み (`grep -rln "Steering Docs sync candidate" .` で `skills/spec/SKILL.md` のみヒットを確認) — `/verify` 側で追加の doc sync 確認は不要
+
+## Auto Retrospective
+
+### Manual recovery (code-patch)
+- **Date**: 2026-07-22 16:18 UTC
+- **Issue**: #1039, phase: code-patch
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn-skip-code
+- **Wrapper exit code**: unknown
+- **Outcome**: success
