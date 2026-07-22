@@ -63,6 +63,25 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-07-22 16:19 UTC: manual-recovery-respawn-skip-code
+
+### Context
+- Issue #1039, phase: code-patch
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: unknown
+
+### Diagnosis
+- Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: respawn-skip-code)
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-07-20 07:17 UTC: manual-recovery-respawn
 
 ### Context
