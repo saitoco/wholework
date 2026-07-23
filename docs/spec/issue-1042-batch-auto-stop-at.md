@@ -111,16 +111,16 @@ No new comments since last phase.
 - N/A — 2件の rubric 条件はいずれも UNCERTAIN なく明確に PASS 判定できた。Issue Notes に auto-resolve 済みのスコープ決定 (spec/code 同一視、粒度定義) が明記されていたため、rubric grader の判断材料が十分だった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST issue なし、CI 全 SUCCESS のため `COMMENT` イベントでレビューを投稿 (event=REQUEST_CHANGES には該当せず)。
-- CONSIDER 2件 (サブプロセス呼び出しコスト、`auto-stop-at: merge` のバッチモード非対応) はいずれも本 Issue のスコープ外と判断し、修正は行わずフォローアップ候補として記録するに留めた。
+- Conflictなし、CI/レビュー承認済みのため rebase を経ずに直接 squash merge を実行した。
+- Phase Handoff (review→merge) の内容を踏襲し、post-merge AC と別 Issue 起票候補をそのまま Deferred Items として引き継ぐ。
 
 ### Deferred Items
-- Post-merge AC (tofas repo での `/auto --batch` 実行確認) は未消化のまま — `/verify` フェーズで manual 検証として扱う (Code Retrospective からの引き継ぎ、変更なし)。
+- Post-merge AC (tofas repo での `/auto --batch` 実行確認) は未消化のまま — `/verify` フェーズで manual 検証として扱う。
 - `auto-stop-at: merge` がバッチモードの Verify orchestration ステップ (`skills/auto/SKILL.md`) に反映されない件は、別 Issue としての起票を推奨 (本 PR のスコープ外)。
 
 ### Notes for Next Phase
-- `/merge` 実行時に追加の確認事項なし。CI 全 SUCCESS、AC 2件 PASS 済み。
-- Post-merge AC (manual) は `/verify` フェーズで tofas repo 等での実行確認が必要。
+- `/verify` 実行時、Post-merge AC (manual: tofas repo 等での `/auto --batch` 実行確認) の検証が必要。
+- base branch は `main` のため `closes #1042` により Issue は自動クローズされる想定。
