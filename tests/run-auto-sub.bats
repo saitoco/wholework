@@ -278,6 +278,28 @@ MOCK
     [ ! -f "$BATS_TEST_TMPDIR/run-verify.log" ]
 }
 
+@test "Size M + auto-stop-at: review: run-review.sh is called, run-merge.sh is not called" {
+    echo "auto-stop-at: review" >> "$BATS_TEST_TMPDIR/.wholework.yml"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "42 --pr" "$RUN_CODE_LOG"
+    [ -f "$RUN_REVIEW_LOG" ]
+    [ ! -f "$RUN_MERGE_LOG" ]
+    [[ "$output" == *"Stopped at phase: review"* ]]
+}
+
+@test "Size M + auto-stop-at: code: run-review.sh and run-merge.sh are not called" {
+    echo "auto-stop-at: code" >> "$BATS_TEST_TMPDIR/.wholework.yml"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "42 --pr" "$RUN_CODE_LOG"
+    [ ! -f "$RUN_REVIEW_LOG" ]
+    [ ! -f "$RUN_MERGE_LOG" ]
+    [[ "$output" == *"Stopped at phase: code"* ]]
+}
+
 @test "Size XL: exits with error about sub-issue splitting" {
     cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
 #!/bin/bash

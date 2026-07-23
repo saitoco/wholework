@@ -4,6 +4,10 @@
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 要約: 「Issue Retrospective」— `/issue` non-interactive 実行時の Auto-Resolve Log (AC スコープを List+Count 両モードに拡張、stop-at 到達時の粒度を明確化) と、`run-auto-sub.sh` grep による Background 事実確認 (pr route 主系列に stop-at check が無いことを確認)、Triage 結果 (Type=Bug, Size=M, Value=3) を記録。本 Spec の設計判断 (Changed Files を `run-auto-sub.sh` 内部修正に一本化する方針) と整合していることを確認済み / URL: https://github.com/saitoco/wholework/issues/1042#issuecomment-5053468973
 
+### /code phase (cutoff: phase/ready assigned 2026-07-23T02:10:33Z)
+
+No new comments since last phase.
+
 ## Overview
 
 `/auto --batch` (Count mode `--batch N` / List mode `--batch N1 N2 ...`) 経由で呼ばれる `scripts/run-auto-sub.sh` の pr route (Size M/L) 主系列は、`code-pr` phase 完了後に `review` phase を、`review` phase 完了後に `merge` phase を、`.wholework.yml` の `auto-stop-at` 設定を一切確認せず無条件に実行する。このため `auto-stop-at: review` を設定していても、batch mode 経由の Issue は human review を経ずに auto-merge される (tofas repo での実インシデントとして報告済み)。
@@ -82,3 +86,41 @@
 ## Smoke Test
 
 該当なし (Issue body に外部/MCP ツール呼び出しの verify command は含まれない)。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1–4 の通りに実装した (AUTO_STOP_AT のホイスト、M)/L) への stop-at gate 追加、bats テスト2件追加)。
+
+### Design Gaps/Ambiguities
+- N/A — Spec Notes の auto-resolve 決定 (spec/code 同一視、共通ヘルパー化見送り) が実装時の判断をすべてカバーしており、新たな曖昧点は発生しなかった。
+
+### Rework
+- N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- N/A — Implementation Steps 1–4 と PR diff の間に構造的な乖離は見られなかった。`AUTO_STOP_AT` のホイスト位置、M)/L) の stop-at gate の分岐構造、echo メッセージ文言 (単独 `/auto N` との整合) はいずれも Spec 記載通りに実装されていた。
+
+### Recurring issues
+- rubric 検証で PASS と判定した後の追加調査で、`auto-stop-at: merge` がバッチモードの `/verify` 呼び出し抑制には反映されないという別種のギャップを発見した (PR #1043 review コメントに記録)。ただしこれは本 Issue が対象とする「review 停止インシデント」とは異なる箇所 (`skills/auto/SKILL.md` の Verify orchestration ステップ) に起因し、Tier3 skip 分岐 (#980) にも同型の限界が既に存在していたため、本 PR による新規回帰ではなく既存の設計限界と判断した。
+- Spec Notes が指摘した「`auto-stop-at` を読み取る箇所が複数箇所に分散している」構造的懸念 (共通ヘルパー化見送りの判断根拠) は、今回の追加調査でさらに裏付けられた形になる — stop-at 判定箇所は `run-auto-sub.sh` 内の3箇所に加え、`skills/auto/SKILL.md` の単独 `/auto N` 経路とバッチモード Verify orchestration ステップにも分散しており、後者は今回未対応のまま残っている。共通ヘルパー化の再検討タイミングで、この分散範囲全体 (SKILL.md 側も含む) を対象に含めることを推奨する。
+
+### Acceptance criteria verification difficulty
+- N/A — 2件の rubric 条件はいずれも UNCERTAIN なく明確に PASS 判定できた。Issue Notes に auto-resolve 済みのスコープ決定 (spec/code 同一視、粒度定義) が明記されていたため、rubric grader の判断材料が十分だった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST issue なし、CI 全 SUCCESS のため `COMMENT` イベントでレビューを投稿 (event=REQUEST_CHANGES には該当せず)。
+- CONSIDER 2件 (サブプロセス呼び出しコスト、`auto-stop-at: merge` のバッチモード非対応) はいずれも本 Issue のスコープ外と判断し、修正は行わずフォローアップ候補として記録するに留めた。
+
+### Deferred Items
+- Post-merge AC (tofas repo での `/auto --batch` 実行確認) は未消化のまま — `/verify` フェーズで manual 検証として扱う (Code Retrospective からの引き継ぎ、変更なし)。
+- `auto-stop-at: merge` がバッチモードの Verify orchestration ステップ (`skills/auto/SKILL.md`) に反映されない件は、別 Issue としての起票を推奨 (本 PR のスコープ外)。
+
+### Notes for Next Phase
+- `/merge` 実行時に追加の確認事項なし。CI 全 SUCCESS、AC 2件 PASS 済み。
+- Post-merge AC (manual) は `/verify` フェーズで tofas repo 等での実行確認が必要。
