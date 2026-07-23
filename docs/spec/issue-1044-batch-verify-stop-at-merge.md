@@ -83,3 +83,13 @@ No new comments since last phase.
 - **フォローアップ候補 (本 Issue のスコープ外、2件)**:
   1. Count mode (`--batch N`) に List mode Step 7 相当の verify orchestration ステップ自体が存在しない件 (Issue 本文 Notes 記載の既知ギャップ)。
   2. `auto-stop-at` 判定ロジックの共通ヘルパー化 (`should-stop-at-phase.sh` 等) — 本 Issue の実装により分散箇所が合計6箇所 (`run-auto-sub.sh` 内3箇所 + `skills/auto/SKILL.md` 単独 `/auto N` 経路 + List mode Step 7 + Count mode の潜在箇所) に達し、#1042 が設定した「4箇所目で再検討」の閾値を超過している。
+
+## Auto Retrospective
+
+### Manual recovery (spec)
+- **Date**: 2026-07-23 12:44 UTC
+- **Issue**: #1044, phase: spec
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn
+- **Wrapper exit code**: unknown
+- **Outcome**: success
