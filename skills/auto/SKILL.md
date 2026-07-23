@@ -1096,6 +1096,10 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh write_batch "$BATCH_ID" "N1 N2 
 ```
 (`BATCH_ID` is used for all subsequent checkpoint calls in this batch session; first list arg: space-separated full list in double quotes — quoting is required when the list contains spaces; remaining args: empty strings for completed and failed)
 
+**Load stop-at setting (List mode only):**
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `AUTO_STOP_AT` for use in step 7's verify orchestration gate below.
+
 Process each Issue in `BATCH_LIST` in order:
 
 1. Check Issue labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
@@ -1123,10 +1127,11 @@ Process each Issue in `BATCH_LIST` in order:
 7. **Verify orchestration** (after run-auto-sub.sh success):
    - Re-fetch current labels: `gh issue view $NUMBER --json labels -q '.labels[].name'`
    - If `phase/verify` is present in labels:
-     - If `--non-interactive` is NOT in ARGUMENTS: invoke `Skill(skill="wholework:verify", args="$NUMBER")` in the parent session
+     - If `AUTO_STOP_AT == "merge"`: output "Skipping verify for #$NUMBER (auto-stop-at=merge); phase/verify remains"; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER complete`
+     - Else if `--non-interactive` is NOT in ARGUMENTS: invoke `Skill(skill="wholework:verify", args="$NUMBER")` in the parent session
        - On success: call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER complete`
        - On failure or output contains `MAX_ITERATIONS_REACHED`: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER fail`; skip to the next Issue
-     - If `--non-interactive` IS in ARGUMENTS: output "Skipping verify for #$NUMBER (non-interactive mode); phase/verify remains"; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER complete`
+     - Else (`--non-interactive` IS in ARGUMENTS): output "Skipping verify for #$NUMBER (non-interactive mode); phase/verify remains"; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER complete`
    - If `phase/verify` is NOT in labels: call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER complete`
 
 After all Issues are processed, delete the batch checkpoint:
