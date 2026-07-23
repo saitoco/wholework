@@ -10,6 +10,10 @@
   - 内容: `/issue 1045 --non-interactive` の retrospective コメント。AC 分類 (post-merge 条件の verify-type を `manual` に修正) の経緯を記録するとともに、Pre-merge AC の Option A/B/C 実装方式決定は `/issue` (What) / `/spec` (How) の責務境界 (`docs/product.md`) に従い `/spec` フェーズに委譲する旨を明記。
   - URL: https://github.com/saitoco/wholework/issues/1045#issuecomment-5058895944
 
+### code phase (cutoff: 2026-07-23T13:43:22Z, phase/ready label assignment)
+
+No new comments since last phase.
+
 ## Changed Files
 
 - `scripts/run-auto-sub.sh`: `run_phase_with_recovery()` 内および top-level 制御フローに `wrapper_alive` heartbeat event の emit を追加 (bash 3.2+ compatible、既存構文のみ使用)
@@ -61,3 +65,32 @@
 - **Recovery type**: respawn
 - **Wrapper exit code**: unknown
 - **Outcome**: success
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. PR diff (`scripts/run-auto-sub.sh`, `scripts/emit-event.sh`, `tests/run-auto-sub.bats`, `tests/auto-sub-observability.bats`) matched Implementation Steps 1–3 exactly, including checkpoint names, `phase=` field presence/absence per checkpoint, and the `_maybe_emit_phase_complete()` backfill extension. No structural divergence found.
+
+### Recurring issues
+
+One recurring pattern worth naming: a PR that changes shared control-flow logic (`_maybe_emit_phase_complete()`'s OR-condition) can silently invalidate an existing test's premise without the test itself failing. Here, adding `emit_event "wrapper_alive" ...` immediately after `emit_event "phase_start" ...` meant the existing "phase_start only" backfill test could no longer produce a bare-`phase_start`-as-last-event scenario through the real code path — it kept passing, but for the wrong reason (it started exercising a different OR-branch). The only test that still constructed that raw scenario did so via a hand-duplicated, unsynced copy of the function, so the real branch had silently lost coverage. This class of bug (test still green, but no longer covering what its name claims) is not caught by CI pass/fail alone — worth flagging in review whenever a diff touches a helper function that tests duplicate inline via heredoc/mock rather than sourcing directly. No process change proposed here (fixed inline this cycle), but noting the pattern for future `/review` passes on this file.
+
+### Acceptance criteria verification difficulty
+
+Nothing to note. Both pre-merge ACs had unambiguous verify commands (`file_contains` + `rubric`) and resolved cleanly to PASS; the post-merge AC's `manual` verify-type was already confirmed appropriate at `/spec` time (see Notes section above).
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Reviewed at `--light` depth (Size M, review-light single-agent covering all 4 aspects); no MUST issues found, review posted as `COMMENTED` (not `REQUEST_CHANGES`).
+- Fixed the one SHOULD finding (stale test duplicate of `_maybe_emit_phase_complete()` no longer covering the real `phase_start`-only backfill branch) by syncing the SIGTERM helper's inline function copy to current production logic and adding a companion test for the `wrapper_alive`/`pre_subprocess` last-event case.
+- Skipped the one CONSIDER finding (duplicate `"phase"` JSON key in a test mock) — harmless per jq's last-value-wins, not worth the churn at light-review depth.
+
+### Deferred Items
+- Post-merge AC ("次回 external kill 発生時に control-flow kill vs subprocess kill が判別できる", `verify-type: manual`) remains open — requires an actual future external-kill observation against `.tmp/auto-events.jsonl`, out of scope for `/merge`.
+
+### Notes for Next Phase
+- No policy/design changes were made during review (fix was test-only), so Step 13 (AC consistency check) found nothing to update in the Issue body.
+- CI is green (DCO, bats, skill-syntax, forbidden-expressions, macOS shell compat all SUCCESS) and the review-response fix commit (`9a5ced81`) has already been pushed to `worktree-code+issue-1045` — `/merge` should not need to wait on additional CI cycles beyond re-confirming the new commit's checks.

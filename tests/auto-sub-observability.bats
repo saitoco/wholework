@@ -108,6 +108,13 @@ teardown() {
     grep -q '"event":' "$AUTO_EVENTS_LOG"
 }
 
+@test "wrapper-alive-check: AUTO_EVENTS_LOG contains a wrapper_alive event" {
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [ -f "$AUTO_EVENTS_LOG" ]
+    grep -q '"event":"wrapper_alive"' "$AUTO_EVENTS_LOG"
+}
+
 @test "append-no-clobber: two runs produce at least two log entries" {
     run bash "$SCRIPT" 42
     [ "$status" -eq 0 ]
@@ -122,14 +129,22 @@ teardown() {
     # Override emit-event.sh to suppress completion events, leaving phase_start as last event
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
 emit_event() {
-    local event_name="$1"
+    local event_name="$1"; shift
     case "$event_name" in
         phase_complete|sub_complete|wrapper_exit) return 0 ;;
     esac
+    # Pass remaining kv args through as extra JSON fields (e.g. checkpoint=...)
+    # so the real backfill logic's checkpoint check can be exercised faithfully.
+    local extra=""
+    while [[ $# -gt 0 ]]; do
+        local kv="$1"; local k="${kv%%=*}"; local v="${kv#*=}"
+        extra="${extra},\"${k}\":\"${v}\""
+        shift
+    done
     mkdir -p "$(dirname "${AUTO_EVENTS_LOG}")"
-    printf '{"ts":"%s","issue":%s,"event":"%s","session_id":"%s","phase":"%s"}\n' \
+    printf '{"ts":"%s","issue":%s,"event":"%s","session_id":"%s","phase":"%s"%s}\n' \
         "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${EMIT_ISSUE_NUMBER:-0}" "${event_name}" \
-        "${AUTO_SESSION_ID:-}" "${EMIT_PHASE_NAME:-}" >> "${AUTO_EVENTS_LOG}"
+        "${AUTO_SESSION_ID:-}" "${EMIT_PHASE_NAME:-}" "${extra}" >> "${AUTO_EVENTS_LOG}"
 }
 _emit_comments_consumed() { :; }
 MOCK
@@ -157,11 +172,14 @@ _maybe_emit_phase_complete() {
   [[ -z "\${AUTO_SESSION_ID:-}" ]] && return 0
   [[ -z "\${EMIT_ISSUE_NUMBER:-}" ]] && return 0
   [[ -z "\${EMIT_PHASE_NAME:-}" ]] && return 0
-  local _last_event
-  _last_event=\$(grep "\\"session_id\\":\\"\${AUTO_SESSION_ID}\\"" "\${AUTO_EVENTS_LOG}" 2>/dev/null \
+  local _last_event _last_checkpoint _last_json
+  _last_json=\$(grep "\\"session_id\\":\\"\${AUTO_SESSION_ID}\\"" "\${AUTO_EVENTS_LOG}" 2>/dev/null \
       | jq -rs --argjson n "\${EMIT_ISSUE_NUMBER}" \
-        '[.[] | select(.issue == \$n)] | last // empty | .event // ""' 2>/dev/null || true)
-  if [[ "\${_last_event}" == "phase_start" ]]; then
+        '[.[] | select(.issue == \$n)] | last // empty' 2>/dev/null || true)
+  _last_event=\$(echo "\${_last_json}" | jq -r '.event // ""' 2>/dev/null || true)
+  _last_checkpoint=\$(echo "\${_last_json}" | jq -r '.checkpoint // ""' 2>/dev/null || true)
+  if [[ "\${_last_event}" == "phase_start" ]] || \
+     { [[ "\${_last_event}" == "wrapper_alive" ]] && [[ "\${_last_checkpoint}" == "pre_subprocess" ]]; }; then
     local _ts; _ts=\$(date -u +%Y-%m-%dT%H:%M:%SZ)
     printf '%s\n' \
       "{\\"ts\\":\\"\${_ts}\\",\\"issue\\":\${EMIT_ISSUE_NUMBER},\\"event\\":\\"phase_complete\\",\\"session_id\\":\\"\${AUTO_SESSION_ID}\\",\\"phase\\":\\"\${EMIT_PHASE_NAME}\\",\\"backfilled\\":true}" \
@@ -172,6 +190,48 @@ trap '_maybe_emit_phase_complete' EXIT
 exit 143
 HELPER
     run bash "$BATS_TEST_TMPDIR/sigterm-helper.sh"
+    [ "$status" -eq 143 ]
+    grep -q '"backfilled":true' "$AUTO_EVENTS_LOG"
+}
+
+@test "backfill-emit: SIGTERM (exit 143) with wrapper_alive checkpoint=pre_subprocess as last event also backfills" {
+    export AUTO_SESSION_ID="test-session-sigterm-heartbeat"
+    export EMIT_ISSUE_NUMBER="42"
+    export EMIT_PHASE_NAME="code-pr"
+    mkdir -p "$(dirname "$AUTO_EVENTS_LOG")"
+    printf '{"ts":"2026-01-01T00:00:00Z","issue":42,"event":"phase_start","session_id":"test-session-sigterm-heartbeat","phase":"code-pr"}\n' \
+        >> "$AUTO_EVENTS_LOG"
+    printf '{"ts":"2026-01-01T00:00:01Z","issue":42,"event":"wrapper_alive","session_id":"test-session-sigterm-heartbeat","phase":"code-pr","checkpoint":"pre_subprocess"}\n' \
+        >> "$AUTO_EVENTS_LOG"
+
+    cat > "$BATS_TEST_TMPDIR/sigterm-heartbeat-helper.sh" <<HELPER
+#!/usr/bin/env bash
+source "$MOCK_DIR/emit-event.sh"
+_maybe_emit_phase_complete() {
+  local _exit_code=\$?
+  [[ "\$_exit_code" -ne 0 && "\$_exit_code" -ne 143 ]] && return 0
+  [[ -z "\${AUTO_EVENTS_LOG:-}" ]] && return 0
+  [[ -z "\${AUTO_SESSION_ID:-}" ]] && return 0
+  [[ -z "\${EMIT_ISSUE_NUMBER:-}" ]] && return 0
+  [[ -z "\${EMIT_PHASE_NAME:-}" ]] && return 0
+  local _last_event _last_checkpoint _last_json
+  _last_json=\$(grep "\\"session_id\\":\\"\${AUTO_SESSION_ID}\\"" "\${AUTO_EVENTS_LOG}" 2>/dev/null \
+      | jq -rs --argjson n "\${EMIT_ISSUE_NUMBER}" \
+        '[.[] | select(.issue == \$n)] | last // empty' 2>/dev/null || true)
+  _last_event=\$(echo "\${_last_json}" | jq -r '.event // ""' 2>/dev/null || true)
+  _last_checkpoint=\$(echo "\${_last_json}" | jq -r '.checkpoint // ""' 2>/dev/null || true)
+  if [[ "\${_last_event}" == "phase_start" ]] || \
+     { [[ "\${_last_event}" == "wrapper_alive" ]] && [[ "\${_last_checkpoint}" == "pre_subprocess" ]]; }; then
+    local _ts; _ts=\$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    printf '%s\n' \
+      "{\\"ts\\":\\"\${_ts}\\",\\"issue\\":\${EMIT_ISSUE_NUMBER},\\"event\\":\\"phase_complete\\",\\"session_id\\":\\"\${AUTO_SESSION_ID}\\",\\"phase\\":\\"\${EMIT_PHASE_NAME}\\",\\"backfilled\\":true}" \
+      >> "\${AUTO_EVENTS_LOG}" 2>/dev/null || true
+  fi
+}
+trap '_maybe_emit_phase_complete' EXIT
+exit 143
+HELPER
+    run bash "$BATS_TEST_TMPDIR/sigterm-heartbeat-helper.sh"
     [ "$status" -eq 143 ]
     grep -q '"backfilled":true' "$AUTO_EVENTS_LOG"
 }

@@ -69,6 +69,27 @@
 #   cwd=<path>                    working directory at block time
 #   file_path=<path>              the blocked absolute path
 #   worktree_root=<path>          the worktree root the session was inside
+#
+# wrapper_alive: run-auto-sub.sh control-flow heartbeat, emitted at wrapper-only
+#   checkpoints (never while a child `claude -p` subprocess is running) to let
+#   external-kill diagnosis distinguish control-flow kills from subprocess kills
+#   (see #1045, [[project_external_kill_pattern]]).
+#   checkpoint=<name>             pre_subprocess | pre_phase_dispatch | post_code_pre_review
+#                                  pre_subprocess: run_phase_with_recovery(), immediately after
+#                                    phase_start and before the blocking run_with_retry_on_kill
+#                                    call — last point the wrapper is known alive before the
+#                                    subprocess blocks it
+#                                  pre_phase_dispatch: top-level, right before the
+#                                    Size-based `case "$EFFECTIVE_SIZE" in` dispatch
+#                                  post_code_pre_review: Size M/L route, right before the
+#                                    `gh pr list` PR_NUMBER lookup that follows the code phase
+#                                    (the exact gap where #1042's kill was observed)
+#   phase=<phase>                 phase name; present only for the pre_subprocess checkpoint
+#                                  (the other two checkpoints are not scoped to a single phase)
+#   Diagnosis: compare a kill's observed time against the most recent wrapper_alive event in
+#   .tmp/auto-events.jsonl. A short gap indicates a control-flow kill (wrapper itself was
+#   killed between checkpoints); a gap approaching the phase's typical duration indicates a
+#   subprocess-execution kill (no heartbeat could be emitted while blocked on the subprocess).
 
 emit_event() {
   local event_type="$1"; shift

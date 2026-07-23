@@ -416,11 +416,20 @@ _maybe_emit_phase_complete() {
   [[ -z "${AUTO_SESSION_ID:-}" ]] && return 0
   [[ -z "${EMIT_ISSUE_NUMBER:-}" ]] && return 0
   [[ -z "${EMIT_PHASE_NAME:-}" ]] && return 0
-  local _last_event
-  _last_event=$(grep "\"session_id\":\"${AUTO_SESSION_ID}\"" "${AUTO_EVENTS_LOG}" 2>/dev/null \
+  local _last_event _last_checkpoint _last_json
+  _last_json=$(grep "\"session_id\":\"${AUTO_SESSION_ID}\"" "${AUTO_EVENTS_LOG}" 2>/dev/null \
       | jq -rs --argjson n "${EMIT_ISSUE_NUMBER}" \
-        '[.[] | select(.issue == $n)] | last // empty | .event // ""' 2>/dev/null || true)
-  if [[ "${_last_event}" == "phase_start" ]]; then
+        '[.[] | select(.issue == $n)] | last // empty' 2>/dev/null || true)
+  _last_event=$(echo "${_last_json}" | jq -r '.event // ""' 2>/dev/null || true)
+  _last_checkpoint=$(echo "${_last_json}" | jq -r '.checkpoint // ""' 2>/dev/null || true)
+  # wrapper_alive checkpoint=pre_subprocess is emitted right after phase_start and before the
+  # blocking subprocess call, so it carries the same "phase not yet complete" meaning as
+  # phase_start for backfill purposes. The other checkpoints (pre_phase_dispatch,
+  # post_code_pre_review) occur in gaps AFTER a phase has already completed normally, so they
+  # must NOT trigger a backfill here — doing so would emit a duplicate phase_complete for a
+  # phase that already recorded one. (#1045)
+  if [[ "${_last_event}" == "phase_start" ]] || \
+     { [[ "${_last_event}" == "wrapper_alive" ]] && [[ "${_last_checkpoint}" == "pre_subprocess" ]]; }; then
     local _ts; _ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     local _pr_field=""
     [[ -n "${EMIT_PR_NUMBER:-}" ]] && _pr_field=",\"pr\":${EMIT_PR_NUMBER}"
@@ -663,6 +672,7 @@ run_phase_with_recovery() {
   local PHASE_START
   PHASE_START=$(date +%s)
   emit_event "phase_start" "phase=${phase}"
+  emit_event "wrapper_alive" "checkpoint=pre_subprocess" "phase=${phase}"
 
   set +e
   # See modules/orchestration-fallbacks.md#wrapper-retry-on-kill
@@ -863,6 +873,8 @@ if [[ "$ALWAYS_PR" == "true" ]] && [[ "$SIZE" =~ ^(XS|S)$ ]]; then
   EFFECTIVE_SIZE="M"
 fi
 
+emit_event "wrapper_alive" "checkpoint=pre_phase_dispatch"
+
 # Execute phases according to Size-based route.
 # verify is deferred to the parent /auto session (issue #485)
 case "$EFFECTIVE_SIZE" in
@@ -947,6 +959,7 @@ case "$EFFECTIVE_SIZE" in
       "$SCRIPT_DIR/auto-checkpoint.sh" write_milestone "$SUB_NUMBER" "post-PR-create" || true
     fi
 
+    emit_event "wrapper_alive" "checkpoint=post_code_pre_review"
     PR_NUMBER=$(gh pr list --json number,headRefName 2>/dev/null | jq -r ".[] | select(.headRefName == \"worktree-code+issue-${SUB_NUMBER}\") | .number" | head -1 || true)
     if [[ -z "$PR_NUMBER" ]]; then
       echo "${LOG_PREFIX} Error: Could not retrieve PR number for issue #${SUB_NUMBER}" >&2
@@ -1025,6 +1038,7 @@ case "$EFFECTIVE_SIZE" in
       "$SCRIPT_DIR/auto-checkpoint.sh" write_milestone "$SUB_NUMBER" "post-PR-create" || true
     fi
 
+    emit_event "wrapper_alive" "checkpoint=post_code_pre_review"
     PR_NUMBER=$(gh pr list --json number,headRefName 2>/dev/null | jq -r ".[] | select(.headRefName == \"worktree-code+issue-${SUB_NUMBER}\") | .number" | head -1 || true)
     if [[ -z "$PR_NUMBER" ]]; then
       echo "${LOG_PREFIX} Error: Could not retrieve PR number for issue #${SUB_NUMBER}" >&2
