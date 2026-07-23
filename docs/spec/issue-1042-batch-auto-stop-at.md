@@ -124,3 +124,44 @@ No new comments since last phase.
 ### Notes for Next Phase
 - `/verify` 実行時、Post-merge AC (manual: tofas repo 等での `/auto --batch` 実行確認) の検証が必要。
 - base branch は `main` のため `closes #1042` により Issue は自動クローズされる想定。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Ambiguity auto-resolve が 2 件 (AC スコープを List+Count 両モードに拡張、stop-at 到達時の粒度定義) で機能し、`/spec` 以降のフェーズが根拠に沿って設計・実装できた。issue phase の grep 事実確認と triage 判定 (Type=Bug, Size=M) が下流の設計判断を明確化した好例。
+
+#### spec
+- Spec Notes が spec/code 同一視の設計判断根拠 (既存 Tier3 skip 分岐 #980 との慣例整合) を明記し、`/code` 実装時の判断迷いを予防した。共通ヘルパー化見送りの理由 (差分最小化) も明記され、`/review` の recurring issue 指摘との整合が取れた。
+
+#### code
+- Implementation Steps 通りに 1 file (scripts/run-auto-sub.sh) + tests 1 file の最小差分で完了、Rework 0。M)/L) の並列パターンをそのまま複製し、Spec の共通ヘルパー化見送り判断を実装レベルでも踏襲。
+
+#### review
+- review-light agent が rubric PASS を判定した後の追加調査で、本 PR スコープ外の関連ギャップ (`auto-stop-at: merge` がバッチモード Verify orchestration に反映されない) を発見・記録した。この追加調査は本 PR の承認判断には影響しない範囲で、後続 Issue 起票候補として活用可能な情報になった。
+
+#### merge
+- Phase Handoff (review→merge) の Deferred Items をそのまま次フェーズへ引き継ぎ、conflict なし・CI PASS で rebase なし直 squash merge。
+
+#### verify
+- Pre-merge rubric 2 件は Spec の実装内容と bats テスト実行結果 (3/3 PASS) から明確に PASS 判定。Post-merge AC は別 repo (tofas) での実行が必要な manual 検証のため、guide 提示のみで unchecked のまま維持。
+- Wrapper external kill が code-pr phase 開始時に発生し、Tier 3 handler 起動なしに wrapper のみ silent kill された (`## Auto Retrospective` 参照)。code-pr 完了・review 未開始状態から手動で run-review.sh → run-merge.sh を parent session で再実行して復旧。この復旧経路が機能したのは、code phase の観測状態 (PR #1043 作成済み、CI 全 SUCCESS、reviews:0) から明確に再開点を判定できたため。
+
+### Improvement Proposals
+
+- **`skills/auto/SKILL.md` の batch mode Verify orchestration ステップに `auto-stop-at: merge` を反映する** — 現状 batch mode (List mode Step 7 / Count mode) では `run-auto-sub.sh` が merge phase 完了後に return し、その後 parent の LLM が `Skill(skill="wholework:verify")` を無条件 dispatch する構造。`auto-stop-at: merge` を設定していても verify phase が実行されるため、`run-auto-sub.sh` 内の stop-at gate だけでは carrying not sufficient。修正方針: List mode / Count mode の Verify orchestration ブロックで、verify dispatch 前に `AUTO_STOP_AT` を読み `merge` なら skip する gate を追加。PR #1043 review コメントで発見済み。
+
+### Deferred (existing design limitation, watched for 4th usage)
+
+- **`auto-stop-at` 判定箇所の共通ヘルパー化再検討** — 現状 `run-auto-sub.sh` 内 3 箇所 (`XS|S` Tier3 skip、`M)`、`L)`) + `skills/auto/SKILL.md` の単独 `/auto N` 経路 + batch Verify orchestration (未対応) の合計 5 箇所に stop-at 判定ロジックが分散。4 箇所目 (Verify orchestration 対応 Issue) の対応時に共通ヘルパー化を検討する価値あり。Spec Notes と review retrospective の両方で同種指摘があり、変更コスト対効果が閾値を超えたタイミングでの再検討が妥当。この提案は起票せず watch とする ([[project_skill_consolidation_trigger]] のパターンに従う)。
+
+## Auto Retrospective
+
+### Manual recovery (code-pr)
+- **Date**: 2026-07-23 02:44 UTC
+- **Issue**: #1042, phase: code-pr
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn-skip-code
+- **Wrapper exit code**: unknown
+- **Outcome**: success — code-pr 完了 (PR #1043 作成、CI 全 SUCCESS) 後に wrapper 外部 kill。review 未実行の状態から parent session で `run-review.sh 1043 --light` → `run-merge.sh 1043` を順次手動 dispatch して復旧。
