@@ -51,3 +51,13 @@
 - Steering Docs sync candidate 確認: `docs/structure.md`/`docs/ja/structure.md` の `scripts/emit-event.sh` 該当行は `emit_event()`/`restore_auto_session_pointer()` という汎用ヘルパーの説明であり、個別の event type を列挙していないため、更新不要と判断した。
 - verify-type tag 確認: Issue body の post-merge 条件 (`verify-type: manual`) は妥当と確認した。次回の実際の external kill 発生という不定期な未来事象を待って人手で `.tmp/auto-events.jsonl` を確認する必要があり、`modules/verify-patterns.md` §11 の代替候補 (`mcp_call`/`command`/`http_status`/`rubric`/`file_exists`/`file_contains`) はいずれも適用できない (事象発生前は検証対象の成果物が存在しないため)。
 - Issue body と既存実装との間に矛盾は検出されなかった (Background セクションの記述はコードベースの実際の挙動と整合)。
+
+## Auto Retrospective
+
+### Manual recovery (spec)
+- **Date**: 2026-07-23 13:44 UTC
+- **Issue**: #1045, phase: spec
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn
+- **Wrapper exit code**: unknown
+- **Outcome**: success
