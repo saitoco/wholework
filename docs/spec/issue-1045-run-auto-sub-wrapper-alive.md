@@ -10,6 +10,10 @@
   - 内容: `/issue 1045 --non-interactive` の retrospective コメント。AC 分類 (post-merge 条件の verify-type を `manual` に修正) の経緯を記録するとともに、Pre-merge AC の Option A/B/C 実装方式決定は `/issue` (What) / `/spec` (How) の責務境界 (`docs/product.md`) に従い `/spec` フェーズに委譲する旨を明記。
   - URL: https://github.com/saitoco/wholework/issues/1045#issuecomment-5058895944
 
+### code phase (cutoff: 2026-07-23T13:43:22Z, phase/ready label assignment)
+
+No new comments since last phase.
+
 ## Changed Files
 
 - `scripts/run-auto-sub.sh`: `run_phase_with_recovery()` 内および top-level 制御フローに `wrapper_alive` heartbeat event の emit を追加 (bash 3.2+ compatible、既存構文のみ使用)

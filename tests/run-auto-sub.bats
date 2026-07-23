@@ -937,6 +937,30 @@ MOCK
     grep -q "model=claude-sonnet-5" "$BATS_TEST_TMPDIR/emit.log"
 }
 
+@test "wrapper_alive: emit_event called with checkpoint=pre_subprocess before the phase runner blocks" {
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    export EMIT_ISSUE_NUMBER="42"
+
+    # Override emit-event.sh mock to record calls
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() {
+  echo "emit_event \$*" >> "$BATS_TEST_TMPDIR/emit.log"
+}
+_emit_comments_consumed() { :; }
+MOCK
+
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "wrapper_alive checkpoint=pre_subprocess phase=code-patch" "$BATS_TEST_TMPDIR/emit.log"
+}
+
 @test "compute: modelUsage jq expression selects single key directly" {
     local input='{"model":null,"modelUsage":{"claude-sonnet-5":{"inputTokens":100,"outputTokens":50}}}'
     local result
