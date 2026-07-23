@@ -84,6 +84,20 @@ No new comments since last phase.
   1. Count mode (`--batch N`) に List mode Step 7 相当の verify orchestration ステップ自体が存在しない件 (Issue 本文 Notes 記載の既知ギャップ)。
   2. `auto-stop-at` 判定ロジックの共通ヘルパー化 (`should-stop-at-phase.sh` 等) — 本 Issue の実装により分散箇所が合計6箇所 (`run-auto-sub.sh` 内3箇所 + `skills/auto/SKILL.md` 単独 `/auto N` 経路 + List mode Step 7 + Count mode の潜在箇所) に達し、#1042 が設定した「4箇所目で再検討」の閾値を超過している。
 
+## Phase Handoff
+<!-- phase: merge -->
+
+### Key Decisions
+- PR #1046 was clean-mergeable (CI success, review approved, no conflicts) — squash-merged directly without rebase/conflict resolution.
+- `gh pr merge --squash --delete-branch` succeeded remotely (merge commit `eb8bda5b`); the local `--delete-branch` step errored only because an unrelated stale worktree (`code+issue-1044`) still held that branch checked out locally — left untouched as out of scope for this merge.
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- Verify phase should confirm `phase/verify` label transition landed and Issue #1044 is CLOSED after merge (BASE_BRANCH=main, so auto-close via `closes #1044` is expected).
+- Two follow-up Issues were recommended in the Notes section (Count mode gap, `auto-stop-at` helper consolidation) but are explicitly out of scope for #1044 — no action needed from verify.
+
 ## Auto Retrospective
 
 ### Manual recovery (spec)
