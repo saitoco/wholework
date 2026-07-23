@@ -855,6 +855,7 @@ fi
 echo "${LOG_PREFIX} Size: ${SIZE}"
 
 ALWAYS_PR=$("$SCRIPT_DIR/get-config-value.sh" always-pr false 2>/dev/null || echo false)
+AUTO_STOP_AT=$("$SCRIPT_DIR/get-config-value.sh" auto-stop-at verify 2>/dev/null || echo verify)
 EFFECTIVE_SIZE="$SIZE"
 if [[ "$ALWAYS_PR" == "true" ]] && [[ "$SIZE" =~ ^(XS|S)$ ]]; then
   echo "${LOG_PREFIX} always-pr: true is set in .wholework.yml. Promoting to pr route."
@@ -871,10 +872,9 @@ case "$EFFECTIVE_SIZE" in
     if [[ "${_TIER3_RECOVERY_ACTION:-}" == "skip" ]]; then
       _SKIP_PR_NUMBER=$(gh pr list --json number,headRefName 2>/dev/null | jq -r ".[] | select(.headRefName == \"worktree-code+issue-${SUB_NUMBER}\") | .number" | head -1 || true)
       if [[ -n "$_SKIP_PR_NUMBER" ]]; then
-        _STOP_AT=$("$SCRIPT_DIR/get-config-value.sh" auto-stop-at verify 2>/dev/null || echo verify)
-        if [[ "$_STOP_AT" == "code" || "$_STOP_AT" == "spec" ]]; then
-          echo "${LOG_PREFIX} [recovery] tier3 skip revealed PR #${_SKIP_PR_NUMBER} for issue #${SUB_NUMBER}, but auto-stop-at=${_STOP_AT}: not continuing"
-        elif [[ "$_STOP_AT" == "review" ]]; then
+        if [[ "$AUTO_STOP_AT" == "code" || "$AUTO_STOP_AT" == "spec" ]]; then
+          echo "${LOG_PREFIX} [recovery] tier3 skip revealed PR #${_SKIP_PR_NUMBER} for issue #${SUB_NUMBER}, but auto-stop-at=${AUTO_STOP_AT}: not continuing"
+        elif [[ "$AUTO_STOP_AT" == "review" ]]; then
           echo "${LOG_PREFIX} [recovery] tier3 skip revealed PR #${_SKIP_PR_NUMBER} for issue #${SUB_NUMBER}; continuing to review only (auto-stop-at=review)"
           echo "${LOG_PREFIX} --- review phase (light): PR #${_SKIP_PR_NUMBER} ---"
           _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "review" "$_SKIP_PR_NUMBER" "$SCRIPT_DIR/run-review.sh" --light
@@ -954,11 +954,19 @@ case "$EFFECTIVE_SIZE" in
     fi
     echo "${LOG_PREFIX} PR number: ${PR_NUMBER}"
 
-    echo "${LOG_PREFIX} --- review phase (light): PR #${PR_NUMBER} ---"
-    _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "review" "$PR_NUMBER" "$SCRIPT_DIR/run-review.sh" --light
+    if [[ "$AUTO_STOP_AT" == "spec" || "$AUTO_STOP_AT" == "code" ]]; then
+      echo "${LOG_PREFIX} Stopped at phase: code (auto-stop-at=${AUTO_STOP_AT})"
+    else
+      echo "${LOG_PREFIX} --- review phase (light): PR #${PR_NUMBER} ---"
+      _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "review" "$PR_NUMBER" "$SCRIPT_DIR/run-review.sh" --light
 
-    echo "${LOG_PREFIX} --- merge phase: PR #${PR_NUMBER} ---"
-    _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "merge" "$PR_NUMBER" "$SCRIPT_DIR/run-merge.sh"
+      if [[ "$AUTO_STOP_AT" == "review" ]]; then
+        echo "${LOG_PREFIX} Stopped at phase: review (auto-stop-at=review)"
+      else
+        echo "${LOG_PREFIX} --- merge phase: PR #${PR_NUMBER} ---"
+        _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "merge" "$PR_NUMBER" "$SCRIPT_DIR/run-merge.sh"
+      fi
+    fi
     ;;
   L)
     # Resume preamble (same logic as M, pr route)
@@ -1024,11 +1032,19 @@ case "$EFFECTIVE_SIZE" in
     fi
     echo "${LOG_PREFIX} PR number: ${PR_NUMBER}"
 
-    echo "${LOG_PREFIX} --- review phase (full): PR #${PR_NUMBER} ---"
-    _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "review" "$PR_NUMBER" "$SCRIPT_DIR/run-review.sh" --full
+    if [[ "$AUTO_STOP_AT" == "spec" || "$AUTO_STOP_AT" == "code" ]]; then
+      echo "${LOG_PREFIX} Stopped at phase: code (auto-stop-at=${AUTO_STOP_AT})"
+    else
+      echo "${LOG_PREFIX} --- review phase (full): PR #${PR_NUMBER} ---"
+      _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "review" "$PR_NUMBER" "$SCRIPT_DIR/run-review.sh" --full
 
-    echo "${LOG_PREFIX} --- merge phase: PR #${PR_NUMBER} ---"
-    _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "merge" "$PR_NUMBER" "$SCRIPT_DIR/run-merge.sh"
+      if [[ "$AUTO_STOP_AT" == "review" ]]; then
+        echo "${LOG_PREFIX} Stopped at phase: review (auto-stop-at=review)"
+      else
+        echo "${LOG_PREFIX} --- merge phase: PR #${PR_NUMBER} ---"
+        _EXTRA_SELF_ISSUE="$SUB_NUMBER" run_phase_with_recovery "merge" "$PR_NUMBER" "$SCRIPT_DIR/run-merge.sh"
+      fi
+    fi
     ;;
   *)
     echo "${LOG_PREFIX} Error: Unknown Size: ${SIZE}" >&2
