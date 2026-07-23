@@ -81,16 +81,15 @@ One recurring pattern worth naming: a PR that changes shared control-flow logic 
 Nothing to note. Both pre-merge ACs had unambiguous verify commands (`file_contains` + `rubric`) and resolved cleanly to PASS; the post-merge AC's `manual` verify-type was already confirmed appropriate at `/spec` time (see Notes section above).
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Reviewed at `--light` depth (Size M, review-light single-agent covering all 4 aspects); no MUST issues found, review posted as `COMMENTED` (not `REQUEST_CHANGES`).
-- Fixed the one SHOULD finding (stale test duplicate of `_maybe_emit_phase_complete()` no longer covering the real `phase_start`-only backfill branch) by syncing the SIGTERM helper's inline function copy to current production logic and adding a companion test for the `wrapper_alive`/`pre_subprocess` last-event case.
-- Skipped the one CONSIDER finding (duplicate `"phase"` JSON key in a test mock) — harmless per jq's last-value-wins, not worth the churn at light-review depth.
+- Merged via squash without conflicts (`gh-pr-merge-status.sh` reported `mergeable=true, reason=clean`); no rebase/conflict-resolution path was needed.
+- Local branch `worktree-code+issue-1045` failed to auto-delete after merge because a stale `code+issue-1045` worktree still held it checked out — removed that worktree and the branch manually as part of this merge, no functional impact on the squash merge itself (remote branch and PR were already merged/deleted).
 
 ### Deferred Items
-- Post-merge AC ("次回 external kill 発生時に control-flow kill vs subprocess kill が判別できる", `verify-type: manual`) remains open — requires an actual future external-kill observation against `.tmp/auto-events.jsonl`, out of scope for `/merge`.
+- Post-merge AC ("次回 external kill 発生時に control-flow kill vs subprocess kill が判別できる", `verify-type: manual`) remains open — requires an actual future external-kill observation against `.tmp/auto-events.jsonl`, out of scope for `/merge` and carried forward to `/verify`.
 
 ### Notes for Next Phase
-- No policy/design changes were made during review (fix was test-only), so Step 13 (AC consistency check) found nothing to update in the Issue body.
-- CI is green (DCO, bats, skill-syntax, forbidden-expressions, macOS shell compat all SUCCESS) and the review-response fix commit (`9a5ced81`) has already been pushed to `worktree-code+issue-1045` — `/merge` should not need to wait on additional CI cycles beyond re-confirming the new commit's checks.
+- No policy/design changes were made during merge; Issue #1045 will auto-close via `closes #1045` since base branch is `main`.
+- `/verify` should confirm the manual post-merge AC stays open (pending future observation) rather than treating it as resolved by this merge.
