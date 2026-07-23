@@ -107,3 +107,38 @@ No new comments since last phase.
 - **Recovery type**: respawn
 - **Wrapper exit code**: unknown
 - **Outcome**: success
+
+### Manual recovery (code-pr)
+- **Date**: 2026-07-23 12:56 UTC
+- **Issue**: #1044, phase: code-pr
+- **Source**: parent session manual recovery
+- **Recovery type**: push-and-pr (worktree に 2 commits 済み、post-commit milestone から手動 push + gh pr create)
+- **Wrapper exit code**: unknown
+- **Outcome**: success — PR #1046 作成
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Issue refinement 時の codebase 調査で AC スコープの当初想定 (Count mode にも gate 必要) を修正、List mode のみに限定し Count mode gap をフォローアップ推奨として Notes に明記した。この scope 修正判断が code phase の実装スコープを明確化した。
+
+#### spec
+- Spec Notes で `should-stop-at-phase.sh` 共通ヘルパー化を推奨するも実装時は差分最小化を優先し見送り。この判断は既存 `run-auto-sub.sh` 内 5 箇所 + SKILL.md 単独パス + 本 Issue の SKILL.md List mode Step 7 = 合計 7 箇所への分散を追加させたが、まだ helper 化コストが分散コストを上回るとは判定していない。
+
+#### code
+- Implementation は SKILL.md 修正 9 lines + bats test 10 lines のみで完了。差分最小化方針を厳守。実装内容は Spec Implementation Steps どおりで rework なし。
+
+#### review
+- review-light agent が rubric PASS を判定。追加調査で発見された関連ギャップ (Count mode dispatch step 未存在) は Issue Notes に既記述済のため新規改善候補としては起票不要と判断。
+
+#### merge
+- Clean-mergeable (CI success, review approved, no conflicts) で squash merge 成功。ローカル worktree cleanup で無関係な stale worktree が branch を保持していたが、リモート merge・branch 削除は成功。
+
+#### verify
+- Pre-merge rubric 2 件は SKILL.md 該当箇所 + bats テスト実行結果 (1/1 PASS) から明確に PASS 判定。Post-merge AC は tofas repo での実行が必要な manual 検証のため guide 提示のみで unchecked のまま維持。
+- Wrapper external kill が本 Issue で 2 回発生 (spec phase 実行中、code-pr phase 開始直後)。1 回目 (spec) は run-spec.sh 実行中に kill されたが、respawn で復旧成功 (spec 完了・commit 済み)。2 回目 (code-pr) は worktree に 2 commits 済みだったため手動で push + gh pr create で復旧。
+
+### Improvement Proposals
+
+- **Count mode に verify orchestration ステップを追加** — `skills/auto/SKILL.md` の Count mode (`Process Each Issue` セクション) には verify dispatch ステップ自体が存在せず、`run-auto-sub.sh` も verify を呼ばない設計のため、Count mode で処理された Issue は verify が自動実行されない。List mode Step 7 相当の verify orchestration + `AUTO_STOP_AT` gate + `--non-interactive` gate を Count mode にも追加することで両モードの挙動を統一する。Issue #1044 Notes に「フォローアップ Issue の起票を推奨」と明記済み。
