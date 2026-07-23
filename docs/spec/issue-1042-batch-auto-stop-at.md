@@ -98,18 +98,29 @@ No new comments since last phase.
 ### Rework
 - N/A
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- N/A — Implementation Steps 1–4 と PR diff の間に構造的な乖離は見られなかった。`AUTO_STOP_AT` のホイスト位置、M)/L) の stop-at gate の分岐構造、echo メッセージ文言 (単独 `/auto N` との整合) はいずれも Spec 記載通りに実装されていた。
+
+### Recurring issues
+- rubric 検証で PASS と判定した後の追加調査で、`auto-stop-at: merge` がバッチモードの `/verify` 呼び出し抑制には反映されないという別種のギャップを発見した (PR #1043 review コメントに記録)。ただしこれは本 Issue が対象とする「review 停止インシデント」とは異なる箇所 (`skills/auto/SKILL.md` の Verify orchestration ステップ) に起因し、Tier3 skip 分岐 (#980) にも同型の限界が既に存在していたため、本 PR による新規回帰ではなく既存の設計限界と判断した。
+- Spec Notes が指摘した「`auto-stop-at` を読み取る箇所が複数箇所に分散している」構造的懸念 (共通ヘルパー化見送りの判断根拠) は、今回の追加調査でさらに裏付けられた形になる — stop-at 判定箇所は `run-auto-sub.sh` 内の3箇所に加え、`skills/auto/SKILL.md` の単独 `/auto N` 経路とバッチモード Verify orchestration ステップにも分散しており、後者は今回未対応のまま残っている。共通ヘルパー化の再検討タイミングで、この分散範囲全体 (SKILL.md 側も含む) を対象に含めることを推奨する。
+
+### Acceptance criteria verification difficulty
+- N/A — 2件の rubric 条件はいずれも UNCERTAIN なく明確に PASS 判定できた。Issue Notes に auto-resolve 済みのスコープ決定 (spec/code 同一視、粒度定義) が明記されていたため、rubric grader の判断材料が十分だった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec Notes の「共通ヘルパー化の見送り」方針に従い、M)/L) の stop-at gate は既存 Tier3 skip 分岐と同型の if/elif 複製として実装した (新規ヘルパー関数は導入せず)。
-- `AUTO_STOP_AT` を `ALWAYS_PR` 直後で一度だけ読み込み、Tier3 skip 分岐の局所的な `_STOP_AT` 読み込みをこの変数の再利用に置き換えた (読み込み一本化、挙動変更なし)。
+- MUST issue なし、CI 全 SUCCESS のため `COMMENT` イベントでレビューを投稿 (event=REQUEST_CHANGES には該当せず)。
+- CONSIDER 2件 (サブプロセス呼び出しコスト、`auto-stop-at: merge` のバッチモード非対応) はいずれも本 Issue のスコープ外と判断し、修正は行わずフォローアップ候補として記録するに留めた。
 
 ### Deferred Items
-- Post-merge AC (tofas repo など実際の `auto-stop-at` 設定リポジトリでの `/auto --batch` 実行確認) は本 PR では未実施 — `/verify` フェーズで manual 検証として扱う。
-- stop-at 判定箇所が4箇所目に増えた時点での共通ヘルパー化再検討は、Spec Notes の記載通り本 Issue のスコープ外のまま維持。
+- Post-merge AC (tofas repo での `/auto --batch` 実行確認) は未消化のまま — `/verify` フェーズで manual 検証として扱う (Code Retrospective からの引き継ぎ、変更なし)。
+- `auto-stop-at: merge` がバッチモードの Verify orchestration ステップ (`skills/auto/SKILL.md`) に反映されない件は、別 Issue としての起票を推奨 (本 PR のスコープ外)。
 
 ### Notes for Next Phase
-- M)/L) の stop-at gate 追加箇所の echo メッセージ ("Stopped at phase: X (auto-stop-at=Y)") は単独 `/auto N` (`skills/auto/SKILL.md` L439, L442) と同一文言に揃えてある — レビュー時に文言一致を確認すると良い。
-- Behavioral Change Detection により `bats tests/` (1232件) をフル実行済み、全件 PASS。`tests/auto-sub-observability.bats` が `scripts/run-auto-sub.sh` を参照しているため full suite 実行がトリガーされたが、本 Issue の変更とは無関係な既存参照。
-- Issue AC 2件 (rubric) は pre-merge で PASS 判定し、Issue body のチェックボックスを更新済み。Post-merge AC 1件 (manual) は未消化のまま残っている。
+- `/merge` 実行時に追加の確認事項なし。CI 全 SUCCESS、AC 2件 PASS 済み。
+- Post-merge AC (manual) は `/verify` フェーズで tofas repo 等での実行確認が必要。
