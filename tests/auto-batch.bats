@@ -51,6 +51,16 @@ count_mode_section() {
     [ "$status" -eq 0 ]
 }
 
+@test "List mode section: AUTO_STOP_AT retained for verify gate" {
+    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'AUTO_STOP_AT'"
+    [ "$status" -eq 0 ]
+}
+
+@test "List mode section: auto-stop-at merge skip behavior present" {
+    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'auto-stop-at=merge'"
+    [ "$status" -eq 0 ]
+}
+
 @test "Count mode section: Issue Retrospective Transcription reference present" {
     run bash -c "awk '/^### Count mode/{found=1} /^### / && !/Count mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'Step 4b'"
     [ "$status" -eq 0 ]
