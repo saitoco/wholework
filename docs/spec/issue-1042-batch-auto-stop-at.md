@@ -4,6 +4,10 @@
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 要約: 「Issue Retrospective」— `/issue` non-interactive 実行時の Auto-Resolve Log (AC スコープを List+Count 両モードに拡張、stop-at 到達時の粒度を明確化) と、`run-auto-sub.sh` grep による Background 事実確認 (pr route 主系列に stop-at check が無いことを確認)、Triage 結果 (Type=Bug, Size=M, Value=3) を記録。本 Spec の設計判断 (Changed Files を `run-auto-sub.sh` 内部修正に一本化する方針) と整合していることを確認済み / URL: https://github.com/saitoco/wholework/issues/1042#issuecomment-5053468973
 
+### /code phase (cutoff: phase/ready assigned 2026-07-23T02:10:33Z)
+
+No new comments since last phase.
+
 ## Overview
 
 `/auto --batch` (Count mode `--batch N` / List mode `--batch N1 N2 ...`) 経由で呼ばれる `scripts/run-auto-sub.sh` の pr route (Size M/L) 主系列は、`code-pr` phase 完了後に `review` phase を、`review` phase 完了後に `merge` phase を、`.wholework.yml` の `auto-stop-at` 設定を一切確認せず無条件に実行する。このため `auto-stop-at: review` を設定していても、batch mode 経由の Issue は human review を経ずに auto-merge される (tofas repo での実インシデントとして報告済み)。
@@ -82,3 +86,30 @@
 ## Smoke Test
 
 該当なし (Issue body に外部/MCP ツール呼び出しの verify command は含まれない)。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1–4 の通りに実装した (AUTO_STOP_AT のホイスト、M)/L) への stop-at gate 追加、bats テスト2件追加)。
+
+### Design Gaps/Ambiguities
+- N/A — Spec Notes の auto-resolve 決定 (spec/code 同一視、共通ヘルパー化見送り) が実装時の判断をすべてカバーしており、新たな曖昧点は発生しなかった。
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Notes の「共通ヘルパー化の見送り」方針に従い、M)/L) の stop-at gate は既存 Tier3 skip 分岐と同型の if/elif 複製として実装した (新規ヘルパー関数は導入せず)。
+- `AUTO_STOP_AT` を `ALWAYS_PR` 直後で一度だけ読み込み、Tier3 skip 分岐の局所的な `_STOP_AT` 読み込みをこの変数の再利用に置き換えた (読み込み一本化、挙動変更なし)。
+
+### Deferred Items
+- Post-merge AC (tofas repo など実際の `auto-stop-at` 設定リポジトリでの `/auto --batch` 実行確認) は本 PR では未実施 — `/verify` フェーズで manual 検証として扱う。
+- stop-at 判定箇所が4箇所目に増えた時点での共通ヘルパー化再検討は、Spec Notes の記載通り本 Issue のスコープ外のまま維持。
+
+### Notes for Next Phase
+- M)/L) の stop-at gate 追加箇所の echo メッセージ ("Stopped at phase: X (auto-stop-at=Y)") は単独 `/auto N` (`skills/auto/SKILL.md` L439, L442) と同一文言に揃えてある — レビュー時に文言一致を確認すると良い。
+- Behavioral Change Detection により `bats tests/` (1232件) をフル実行済み、全件 PASS。`tests/auto-sub-observability.bats` が `scripts/run-auto-sub.sh` を参照しているため full suite 実行がトリガーされたが、本 Issue の変更とは無関係な既存参照。
+- Issue AC 2件 (rubric) は pre-merge で PASS 判定し、Issue body のチェックボックスを更新済み。Post-merge AC 1件 (manual) は未消化のまま残っている。
