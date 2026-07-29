@@ -65,6 +65,22 @@ Note: This override is additive — if Axes 1–2 already produce L or XL, that 
 | L    | pr        | Branch + PR, full review | Required | Yes |
 | XL   | split guidance | Guide to split into sub-issues | Required | — |
 
+### ALWAYS_PR Override
+
+When `.wholework.yml` sets `always-pr: true` (`modules/detect-config-markers.md` provides this as `ALWAYS_PR=true`), a Size-derived `patch` route is promoted to `pr` regardless of Size. Only `patch` is promoted — `pr` and `split guidance` (XL) are unaffected, since their result already matches or is orthogonal to the override.
+
+**Priority order (exhaustive)**, applied before any caller uses the Size-to-Workflow Mapping Table's result:
+
+1. operate route (`### Diff-less Axis (operate route)` below) — takes priority over both `always-pr: true` and explicit `--patch`/`--pr` flags
+2. explicit `--pr` flag
+3. `ALWAYS_PR=true` — overrides an explicit `--patch` flag too (a caller honoring this override outputs a warning that `--patch` is ignored and pr route is forced)
+4. explicit `--patch` flag
+5. Size-to-Workflow Mapping Table above
+
+This override applies not only to the route value itself but to any **route-dependent behavior** derived from Size. A rule that assumes "Size XS/S implies patch route, therefore no PR exists" is in scope of this override: under `always-pr: true`, Size XS/S resolves to pr route, a PR does exist, and a `github_check "gh pr checks"` acceptance condition is valid and must not be rewritten to `gh run list` form. See `modules/verify-classifier.md` § "Patch Route CI Verification Note".
+
+**Callers that must apply this override (exhaustive)**: `skills/auto/SKILL.md` (Step 2, Step 3a), `skills/code/SKILL.md` (Step 0, Patch route verify command check), `skills/spec/SKILL.md` (Patch route verify command check, Step 18), `skills/issue/SKILL.md` (Acceptance Criteria Writing Guide), `skills/issue/spec-test-guidelines.md` (Route selection), `skills/triage/skill-dev-verify-audit.md` (Pattern 4), `scripts/run-auto-sub.sh`.
+
 ### Diff-less Axis (operate route)
 
 Orthogonal to Axes 1–2 above. Size (Axis 1–2) measures change scope/effort (XS–XL); the diff-less axis determines whether a route produces a git diff at all. This axis contributes a third route value, `operate`, alongside `patch` and `pr` in the Size-to-Workflow Mapping Table above — `operate` is a route value, not a Size value, so it does not replace or extend the Size scale.

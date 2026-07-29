@@ -95,6 +95,8 @@ When a keyword cannot be identified, fall back to `grep` with a broader pattern:
 
 For Issues implemented via the patch route (direct commit to main, no PR), `github_check "gh pr checks"` **cannot be used** — no PR exists in the patch route.
 
+This note applies only when the Issue actually takes the patch route. When `.wholework.yml` sets `always-pr: true`, Size XS/S is promoted to pr route (see `modules/size-workflow-table.md` § "ALWAYS_PR Override"), a PR does exist, and `github_check "gh pr checks"` is the correct form. Derive the route from `ALWAYS_PR` first, not from Size alone.
+
 Use the `github_check "gh run list"` form instead:
 
 ```

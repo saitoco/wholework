@@ -38,3 +38,12 @@ SIZE_WORKFLOW_TABLE="$PROJECT_ROOT/modules/size-workflow-table.md"
 @test "size-workflow-table: pr workflow route is documented" {
     grep -q "pr" "$SIZE_WORKFLOW_TABLE"
 }
+
+@test "size-workflow-table: ALWAYS_PR Override section is documented" {
+    grep -q "ALWAYS_PR Override" "$SIZE_WORKFLOW_TABLE"
+}
+
+@test "size-workflow-table: ALWAYS_PR Override documents patch to pr promotion" {
+    grep -q "always-pr: true" "$SIZE_WORKFLOW_TABLE"
+    grep -qi "promot" "$SIZE_WORKFLOW_TABLE"
+}

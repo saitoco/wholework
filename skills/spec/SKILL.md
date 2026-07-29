@@ -98,7 +98,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh $NUMBER --dry-run
 
 ### Step 5: Reference Steering Documents (if present)
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH` and `STEERING_DOCS_PATH` for use in subsequent steps.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH`, `STEERING_DOCS_PATH`, and `ALWAYS_PR` for use in subsequent steps.
 
 Check whether the following steering documents exist using Glob, then read only those that exist:
 
@@ -545,7 +545,9 @@ Note: verify-executor uses ripgrep (ERE); \| in BRE means OR but is a literal | 
 
 **Patch route verify command check:**
 
-After `## Verification > Pre-merge` is finalized and the Issue body is updated, if Size is `XS` or `S` (patch route — no PR exists), scan `## Verification > Pre-merge` in the Spec for `github_check "gh pr checks"` entries.
+If `ALWAYS_PR=true` (retained in Step 5), skip this entire check — `always-pr: true` promotes Size XS/S to pr route (see `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` § "ALWAYS_PR Override"), so a PR does exist and `github_check "gh pr checks"` is the correct form; auto-fixing it to `gh run list` form here would be incorrect.
+
+After `## Verification > Pre-merge` is finalized and the Issue body is updated, if `ALWAYS_PR=false` and Size is `XS` or `S` (patch route — no PR exists), scan `## Verification > Pre-merge` in the Spec for `github_check "gh pr checks"` entries.
 - If found: output "Warning: patch route — `github_check "gh pr checks"` is incompatible (no PR exists in patch route). Auto-fixing to `github_check "gh run list"` form." and replace each with `github_check "gh run list --limit=1 --json conclusion --jq '.[0].conclusion'" "success"` (change `expected_value` from the job name to `"success"` — `gh run list` outputs run-level conclusion, not job names; add `--workflow=<filename>` if there are multiple workflow files under `.github/workflows/`). Update Spec file using Edit tool. Also update Issue body via `gh-issue-edit.sh`.
 
 **Changed-file modification types (examples, both templates):**
@@ -891,6 +893,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` and re-evaluate Size
    - `XS` or `S` → `patch`
    - `M` or `L` → `pr`
    - `XL` → `sub_issue`
+
+   **ALWAYS_PR override**: after deriving the Size-based route above, if `ALWAYS_PR=true` (retained in Step 5) and the derived route is `patch`, promote it to `pr` and output "always-pr: true is set in .wholework.yml. Promoting to pr route." (see `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` § "ALWAYS_PR Override"). Routes other than `patch` (`pr`, `sub_issue`) are unaffected.
 
 ### Step 19: Completion Message
 

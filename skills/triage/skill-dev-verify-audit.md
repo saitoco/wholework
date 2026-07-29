@@ -79,7 +79,7 @@ Fix: Update the expected string to match what the implementation will actually p
 
 ### Pattern 4: patch route × `gh pr checks` 不整合
 
-Detect: Issues with Size XS or S (patch route) whose AC uses
+Detect: Issues with Size XS or S and `ALWAYS_PR=false` (patch route) whose AC uses
 `github_check "gh pr checks"`.
 
 The patch route commits directly to `main` without creating a PR. Therefore,
@@ -89,6 +89,11 @@ Detection approach:
 - In Single Issue Execution: read the Size assigned in Step 6 (Size Assignment)
 - In Bulk Execution (Step 3 substep 8): read the `size` field from the Step 2 classification
   JSON for the current issue
+- `ALWAYS_PR` is retained from `skills/triage/SKILL.md`'s "Configuration Detection" section
+  (a common section that precedes both Single Issue Execution and Bulk Execution). When
+  `ALWAYS_PR=true`, skip Pattern 4 entirely — `always-pr: true` promotes Size XS/S to pr route,
+  so `github_check "gh pr checks"` is the correct form (see `modules/size-workflow-table.md`
+  § "ALWAYS_PR Override")
 
 Fix: Replace `github_check "gh pr checks"` with a `github_check "gh run list"` form,
 for example:

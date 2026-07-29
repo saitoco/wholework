@@ -66,7 +66,7 @@ gh issue view 123 --json number,title,body,labels && echo "---" && gh issue view
 
 ## Configuration Detection
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `STEERING_DOCS_PATH` for use in subsequent steps.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `STEERING_DOCS_PATH` and `ALWAYS_PR` for use in subsequent steps.
 
 ---
 
