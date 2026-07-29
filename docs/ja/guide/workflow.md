@@ -104,7 +104,7 @@ M サイズ issue では軽量単一エージェントレビューが実行さ�
 
 ### `/merge` — PR マージ
 
-PR を squash merge してリモートブランチを削除します。
+PR を squash merge してリモートブランチを削除します。マージ前に issue の pre-merge acceptance criteria が全てチェック済みかを確認し、未チェックがあれば提示して merge をブロックします（記録済み override がある場合を除く）。
 
 ```
 /merge 88

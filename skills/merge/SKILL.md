@@ -3,7 +3,7 @@ name: merge
 description: Squash-merge a PR and delete the remote branch (`/merge 88`). Use when merging review-approved, CI-passing PRs. Automatically attempts conflict resolution when conflicts occur.
 context: fork
 model: sonnet
-allowed-tools: Bash(gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, gh issue view:*, gh issue close:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*), Read, Edit, Grep, Glob, EnterWorktree, ExitWorktree
+allowed-tools: Bash(gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, gh issue view:*, gh issue close:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-pre-merge-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*), Read, Edit, Write, Grep, Glob, EnterWorktree, ExitWorktree
 ---
 
 # Squash Merge
@@ -59,7 +59,34 @@ Key per-step behavior in non-interactive mode:
    Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Read Procedure" section.
    Parameters: `SPEC_PATH`, `ISSUE_NUMBER`, `PHASE_NAME=merge`. (If ISSUE_NUMBER is not yet determined, skip with log.)
 
-2. Determine mergeability:
+2. Check pre-merge Acceptance Criteria (pre-merge AC gate):
+   - If `ISSUE_NUMBER` could not be extracted (see item 1's Early Issue number extraction), skip the gate — output `[pre-merge-ac] No related Issue resolved — skipping gate.` and proceed to item 3
+   - Otherwise run:
+     ```bash
+     ${CLAUDE_PLUGIN_ROOT}/scripts/check-pre-merge-ac.sh "$ISSUE_NUMBER"
+     ```
+   - Branch on the JSON output (exhaustive):
+     - `resolved` is `false`: output `Warning: pre-merge AC state could not be resolved for issue #$ISSUE_NUMBER; proceeding (fail-open).` and proceed to item 3
+     - `unchecked_count` is `0`: output `[pre-merge-ac] All N pre-merge acceptance conditions are checked.` (`N` = `pre_merge_total`) and proceed to item 3
+     - `unchecked_count` is 1 or more:
+       - **Recorded decision check**: run
+         ```bash
+         gh issue view "$ISSUE_NUMBER" --json comments --jq '[.comments[] | select(.body | contains("<!-- wholework-event: type=pre-merge-ac-gate"))] | sort_by(.createdAt) | .[-1].body // empty'
+         ```
+         and resolve **only the latest matching comment** (latest-wins — do not union `ac=` sets across multiple markers). If that marker has `decision=override` and its `ac=` index set is a superset of the current `unchecked_indices`, output `[pre-merge-ac] Proceeding under recorded override: <reason>` and proceed to item 3
+       - **Present and decide** (no valid recorded override found): output each unchecked pre-merge AC as `#<index> <text>`, one per line, then:
+         - **Interactive mode**: use AskUserQuestion with options `Abort merge` (default), `Re-run /review to re-verify`, `Approve and merge anyway`
+           - `Approve and merge anyway`: ask the user for a one-line reason, post a `decision=override` marker (see Marker format below), then proceed to item 3
+           - either other option: stop processing — do not proceed to any subsequent step
+         - **Non-interactive mode**: do not merge. Post a `decision=blocked` marker (see Marker format below), output `Error: N unchecked pre-merge acceptance conditions on issue #$ISSUE_NUMBER. Merge blocked.`, and exit with non-zero
+   - **Marker format**: write the comment body with the Write tool to `.tmp/pre-merge-ac-gate-$ISSUE_NUMBER.md`. First line: `<!-- wholework-event: type=pre-merge-ac-gate phase=merge issue=$ISSUE_NUMBER decision=blocked ac=<comma-separated 1-based indices> reason="<one-line reason>" -->` (use `decision=override` for the override case), followed by a human-readable list of the unchecked conditions. Post with:
+     ```bash
+     mkdir -p .tmp
+     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh "$ISSUE_NUMBER" .tmp/pre-merge-ac-gate-$ISSUE_NUMBER.md
+     rm -f .tmp/pre-merge-ac-gate-$ISSUE_NUMBER.md
+     ```
+
+3. Determine mergeability:
    ```bash
    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh "$NUMBER"
    ```
@@ -73,6 +100,14 @@ Note: Always wrap `$NUMBER` in double quotes.
 - **Other (e.g., reason=review_pending)**: Report the error and reason, then use AskUserQuestion to ask the user how to proceed (non-interactive mode: auto-resolve — see "Non-Interactive Mode Behavior" section)
   - User selects "Abort": Stop processing (do not proceed to subsequent steps)
   - User selects "Treat as conflict": Proceed to Step 2 (Resolve Conflicts)
+
+#### Post-Review Re-Verification Responsibility
+
+- `/review` does not block on UNCERTAIN classifications, so `/review` can complete with pre-merge AC checkboxes still unchecked.
+- Detecting that unchecked state is the responsibility of the pre-merge AC gate above (item 2) — a single detection point, not spread across phases.
+- **Re-verification execution is the responsibility of re-running `/review`.** Once the environmental cause has cleared (e.g., CI has since fired, or a missing external binary has since been installed), re-run `/review $PR_NUMBER` — its Step 8 re-verifies against the PR branch and updates the checkboxes.
+- `/verify` is a post-merge phase and does not act as a merge gate, so it does not carry this re-verification responsibility.
+- If the environmental cause does not clear, record the decision explicitly with an override marker (see item 2) and merge under that recorded override.
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="pr", ENTITY_NUMBER=$NUMBER, SKILL_NAME="merge".
 
