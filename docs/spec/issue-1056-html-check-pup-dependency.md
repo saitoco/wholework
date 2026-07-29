@@ -72,3 +72,33 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue` フェーズの Issue Retrospective コメント。AC3 の verify command を `grep "html_check" ...` から `file_not_contains ... "If pup exists, run"` に変更した理由 (main 時点で `html_check` という文字列自体は 5 箇所存在し常時 PASS するパターンだったため) と、代替案 A/B/C の選定が `/spec` の責務である旨を確認。post-merge AC の主語明示についても言及。 (https://github.com/saitoco/wholework/issues/1056#issuecomment-5111434384)
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1〜5 を Spec の記述どおりの順序・内容で実装した。
+
+### Design Gaps/Ambiguities
+
+N/A — セレクタ文法・マッチング実装・エラー時挙動 (非 0 exit → UNCERTAIN、空 stdin → 0 件扱い) が Spec に具体的に規定されていたため、実装判断で迷う箇所はなかった。
+
+### Rework
+
+N/A — 手戻りは発生しなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Steps 1〜5 をそのままの順序で実装。`scripts/html-selector-match.py` は Option B (内製 Python パース) として `html.parser.HTMLParser` の `handle_starttag` オーバーライドで実装し、compound selector (`tag`/`#id`/`.class`/`[attr]`/`[attr='value']`) をサポート。
+- セレクタパース中の正規表現マッチは `pos` オフセット付き `.match(selector, pos)` を使用し、パターン先頭の `^` アンカーは意図的に外した (`^` は絶対文字列先頭のみを指し `pos` 相対にならないため、含めると 2 トークン目以降が常にマッチ失敗する)。
+- `modules/verify-executor.md` の `html_check` (L74 翻訳テーブル行 + L266 Differentiation 節) を pup 依存の記述から `html-selector-match.py` 呼び出しに置換。判定は script exit code 非 0 → UNCERTAIN、0 → 出力マッチ数で `--exists`/`--count=N` 判定という 2 段階を明記。
+
+### Deferred Items
+- Post-merge AC (「実装者が `pup` 未インストールの環境で `html_check` を含む AC を実行し PASS/FAIL が返ることを確認する」) は manual verify-type のため merge 後に別途実施が必要。
+- None
+
+### Notes for Next Phase
+- Behavioral Change Detection により `modules/verify-executor.md` を参照する既存テスト (`tests/verify-rubric.bats`, `tests/review-rubric-safe.bats`, `tests/check-eager-load-capability.bats`) が検出されたため、`bats tests/` フルスイートを実行済み (1246 件 PASS、FAIL 0)。/review でも同様の full suite 実行が妥当。
+- Pre-merge AC 3 件 (rubric x2, file_not_contains x1) は自己評価で PASS 済み・Issue チェックボックス反映済み。/review での再検証時も同じ判定になるはず (実装内容に変更なし)。
