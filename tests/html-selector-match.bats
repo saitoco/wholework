@@ -46,3 +46,63 @@ REAL_SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/html-sel
     [ "$status" -eq 0 ]
     [ "$output" = "0" ]
 }
+
+@test "combinator: adjacent sibling + matches void elements in document order" {
+    run bash -c "printf '<input name=\"first_name\"><input name=\"last_name\">' | python3 '$REAL_SCRIPT' \"input[name='first_name'] + input[name='last_name']\""
+    [ "$status" -eq 0 ]
+    [ "$output" = "1" ]
+}
+
+@test "combinator: adjacent sibling + returns 0 when order is reversed" {
+    run bash -c "printf '<input name=\"first_name\"><input name=\"last_name\">' | python3 '$REAL_SCRIPT' \"input[name='last_name'] + input[name='first_name']\""
+    [ "$status" -eq 0 ]
+    [ "$output" = "0" ]
+}
+
+@test "combinator: child > matches direct children only, not grandchildren" {
+    run bash -c "printf '<form><div class=\"row\"><input></div></form>' | python3 '$REAL_SCRIPT' 'form > div.row'"
+    [ "$status" -eq 0 ]
+    [ "$output" = "1" ]
+    run bash -c "printf '<form><div class=\"row\"><input></div></form>' | python3 '$REAL_SCRIPT' 'form > input'"
+    [ "$status" -eq 0 ]
+    [ "$output" = "0" ]
+}
+
+@test "combinator: descendant (space) matches grandchildren" {
+    run bash -c "printf '<form><div class=\"row\"><input></div></form>' | python3 '$REAL_SCRIPT' 'form input'"
+    [ "$status" -eq 0 ]
+    [ "$output" = "1" ]
+}
+
+@test "combinator: general sibling ~ matches all following siblings but not preceding ones" {
+    run bash -c "printf '<div class=\"row\"></div><p></p><span></span>' | python3 '$REAL_SCRIPT' 'div.row ~ span'"
+    [ "$status" -eq 0 ]
+    [ "$output" = "1" ]
+    run bash -c "printf '<div class=\"row\"></div><p></p><span></span>' | python3 '$REAL_SCRIPT' 'span ~ div.row'"
+    [ "$status" -eq 0 ]
+    [ "$output" = "0" ]
+}
+
+@test "combinator: quoted attribute value containing a space works alongside child >" {
+    run bash -c "printf '<div data-x=\"a b\"><span></span></div>' | python3 '$REAL_SCRIPT' \"div[data-x='a b'] > span\""
+    [ "$status" -eq 0 ]
+    [ "$output" = "1" ]
+}
+
+@test "combinator: invalid combinator selectors exit non-zero with empty stdout" {
+    run bash -c "printf '<div></div>' | python3 '$REAL_SCRIPT' '> div' 2>/dev/null"
+    [ "$status" -ne 0 ]
+    [ -z "$output" ]
+    run bash -c "printf '<div></div>' | python3 '$REAL_SCRIPT' 'div >' 2>/dev/null"
+    [ "$status" -ne 0 ]
+    [ -z "$output" ]
+    run bash -c "printf '<div></div>' | python3 '$REAL_SCRIPT' 'div>>bad' 2>/dev/null"
+    [ "$status" -ne 0 ]
+    [ -z "$output" ]
+}
+
+@test "combinator: malformed nesting with an orphan end tag does not raise and still counts" {
+    run bash -c "printf '</i><div>x</div>' | python3 '$REAL_SCRIPT' 'div'"
+    [ "$status" -eq 0 ]
+    [ "$output" = "1" ]
+}

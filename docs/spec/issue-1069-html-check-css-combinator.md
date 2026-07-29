@@ -147,6 +147,7 @@ none
 ## Consumed Comments
 
 - saito (MEMBER / first-class): `/issue 1069 --non-interactive` の Issue Retrospective。(1) Size L 判定の根拠 (`html-selector-match.py` のパーサ設計変更 + `verify-executor.md` 更新 + テスト追加)、(2) 案 B 推奨は `/issue` フェーズの暫定判断であり最終決定は `/spec` に委ねる旨、(3) AC は rubric ベースでどの実装方式でも検証可能な文言にしてあるため AC 自体は変更していない旨、(4) Pre-merge に bats テスト追加の `grep` 検証と CI 通過確認の 2 件を追加した経緯。本 Spec ではこれを受け、htmlq の実機検証を行ったうえで案 A を最終決定した (https://github.com/saitoco/wholework/issues/1069#issuecomment-5112370359)
+- code phase (2026-07-29): No new comments since last phase (cutoff: most recent `phase/*` label assignment, 2026-07-29T03:29:33Z).
 
 ## Notes
 

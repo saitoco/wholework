@@ -39,3 +39,7 @@ VERIFY_EXECUTOR="$PROJECT_ROOT/modules/verify-executor.md"
 @test "verify-executor: html_check no longer gates on which pup" {
     ! grep -q "If pup exists, run" "$VERIFY_EXECUTOR"
 }
+
+@test "verify-executor: html_check documents combinator support" {
+    grep -q "combinator" "$VERIFY_EXECUTOR"
+}
