@@ -147,6 +147,7 @@ none
 ## Consumed Comments
 
 - saito (MEMBER / first-class): `/issue 1069 --non-interactive` の Issue Retrospective。(1) Size L 判定の根拠 (`html-selector-match.py` のパーサ設計変更 + `verify-executor.md` 更新 + テスト追加)、(2) 案 B 推奨は `/issue` フェーズの暫定判断であり最終決定は `/spec` に委ねる旨、(3) AC は rubric ベースでどの実装方式でも検証可能な文言にしてあるため AC 自体は変更していない旨、(4) Pre-merge に bats テスト追加の `grep` 検証と CI 通過確認の 2 件を追加した経緯。本 Spec ではこれを受け、htmlq の実機検証を行ったうえで案 A を最終決定した (https://github.com/saitoco/wholework/issues/1069#issuecomment-5112370359)
+- code phase (2026-07-29): No new comments since last phase (cutoff: most recent `phase/*` label assignment, 2026-07-29T03:29:33Z).
 
 ## Notes
 
@@ -257,28 +258,68 @@ AC1 / AC2 の rubric 文言には `/` 区切りが含まれるが、いずれも
 - **U2 (兄弟走査の計算量)**: `list.index()` による前方兄弟参照は兄弟数が多い文書で `~` 照合を O(n^2) にする。`Node.sibling_index` を持たせて O(1) 化する方針を Implementation Step 2 に明記して解消した。
 - **htmlq の exit code 意味論**: Issue 本文の記載 (不正セレクタで exit 101 panic、マッチ 0 件と matched を exit code で区別不能) を実機で再現確認し、Notes の生データ表に記録した。案 A 採用により実装には影響しないが、将来 htmlq 採用が再検討された場合の一次情報として残す。
 
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1-4 の記述どおりに `split_selector` / `parse_compound` / `TreeBuilder` / `Node` / `matches_compound` / `matches_chain` を実装した。プロトタイプ検証の生データ表 (Notes) に記載された全パターン (12 セレクタケース + 不正セレクタ 4 種 + 空 stdin) を実装後に再実測し、全て一致することを確認した。
+
+### Design Gaps/Ambiguities
+
+- `matches_chain` の `chain` 内で「どの要素とどの combinator が対応するか」のインデックス規約が Implementation Step 3 の文章だけでは一意に確定しなかった。`split_selector` (Step 1) の出力形式 (「先頭要素の combinator は `None`、以降は前の compound とを結ぶ combinator」) から逆算し、`chain[i][0]` を「`chain[i-1]` と `chain[i]` を結ぶ combinator」と定義して実装した。この対応関係は自明ではあるが、Step 3 に明記されていれば再確認の手間が省けた。
+- `/code` スキル自身の Step 順序に起因する問題を発見した: Step 1 (Consumed Comments を Spec に記録) はメインリポジトリのワーキングツリーに対して行われるが、直後の Step 2 (Worktree Entry) はデフォルト `baseRef: fresh` (= `origin/<default-branch>` から分岐) で worktree を作成するため、Step 1 の未コミット変更が worktree 側に一切引き継がれない。本セッションで実際にこの状態を踏み、worktree 側で同内容を再記録し、メインリポジトリ側の孤立した diff を `git checkout --` で破棄して回避した。本 Issue の実装スコープ外 (`/code` スキル自体の構造的な穴) のため、follow-up Issue #1078 (`retro/code`) として起票した。
+
+### Rework
+
+- Rework 自体は発生していない (実装ロジックは Spec のプロトタイプ検証を踏襲し一度で全ケース一致)。上記の Consumed Comments 孤立 diff の復旧作業のみ、本来不要だったやり直しに当たる。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- **案 A (内製実装の拡張) を採用**。案 B (htmlq 委譲) は `--count=N` を表現できない (件数出力オプションなし・行数代用が不成立) 点が決定打。判定エンジン二重化・#1056 の失敗モード再導入・Adapter 適用要件の非該当も理由 (詳細は「Alternatives Considered」)
-- **CLI 契約と `verify-executor` の 2 段階判定ロジックは変更しない**。引数 1 個 / stdin から HTML / stdout にマッチ数 / 解析失敗時 exit 2 を維持することで、`modules/verify-executor.md` の呼び出し記述と既存 bats 7 ケースがそのまま回帰ガードとして機能する
-- **セレクタ文法のスコープは combinator 4 種のみ**。selector list (`,`) や疑似クラス (`:nth-child` 等) は対象外とし、現行の compound 文法を維持する (AC1 が 4 種を明示列挙しているため)
-- **void element はスタックに push しない**のが階層判定の要。`html.parser` は void element に `handle_endtag` を呼ばないため、push するとスタックが閉じられず以降の判定がすべて崩れる
+- **`origin/main` を PR ブランチに取り込んだ**。分岐後に main へ入った #1074 (curl 系 URL command の Basic Auth) が `modules/verify-executor.md` の `html_check` 行を編集しており、本 PR と同一行で conflict していた。どちらか一方を丸ごと採用すると他方が失われるため、main 側の `--config "$config_file"` を土台に本 PR の combinator 説明文を `Judge in two stages` の直前へ挿入する形で解決した
+- **同種の取りこぼしを止める回帰ガードを 2 件追加した** (`tests/verify-executor.bats`)。`html_check` 行に `--config` と `combinator` が同居することと、curl 系 5 コマンド全行が `--config` を保持することを確認する。マージ前の PR 側の行に対して実際に FAIL することも検証済み
+- **`matches_chain` にメモ化を入れた**。子孫 / 一般兄弟の照合が O(n · d^(k-1)) で、58 KB の 2000 行テーブル + `thead ~ tr ~ tr` が 93.6 秒かかっていた。`(id(node), 残チェーン長)` をキーにするだけで 0.39 秒になる。結果はノードとチェーン残量のみで決まり探索経路に依存しないため、30,000 件の差分ファジングで不一致 0 件を確認した
+- Pre-merge AC 6 件はすべて PASS。CI も全ジョブ SUCCESS。ただし CI は main とマージしていないブランチ単体で走るため、上記の conflict は CI では検知できなかった
 
 ### Deferred Items
 
-- implied end tag 規則 (`<p>` の自動クローズ等) への対応は見送り。既知の制約として docstring と `modules/verify-executor.md` に明記するに留める (Uncertainty U1)
-- Post-merge AC 2 件はいずれも `verify-type: manual`。実 URL に対する隣接兄弟セレクタの PASS/FAIL 反転確認と、不正セレクタの UNCERTAIN 確認は `/verify` フェーズで人間が実施する
+- CONSIDER 5 件は未対応のまま著者判断に委ねた: `selector.strip()` の Spec 未記載 (docstring / Spec への追記)、implied end tag 制約の回帰テスト、`ValueError` 3 経路のテスト、`verify-executor.md:268` の "unlike" 列挙の精度、`docs/structure.md` の `tests/` ファイル数ドリフト (先行ドリフト、別 Issue 推奨)
+- Post-merge AC 2 件はいずれも `verify-type: manual`。`/verify` フェーズで人間が実施する
 
 ### Notes for Next Phase
 
-- `tests/html-selector-match.bats` の既存 7 ケースは**削除・改変しない**こと。特に `invalid selector syntax exits non-zero with empty stdout` は `div>>bad` を使っており、新しい `split_selector()` でも「連続 combinator」として exit 2 + stdout 空を返す必要がある
-- 追加する `@test` 名に `combinator` の語を含めること (AC5 の `grep "combinator" "tests/html-selector-match.bats"` を満たすため)。`modules/verify-executor.md` にも `combinator` の語が必要 (AC4)
-- `modules/verify-executor.md` には「外部バイナリを一切必要としない」旨を**明示的に**書くこと。AC2 の条件節の前件が偽であることを grader から可読にするため
-- `scripts/validate-skill-syntax.py` は変更不要 (`_parse_verify_args()` の実測確認済み)。`docs/structure.md` のファイル数記述も新規ファイルがないため不変
-- プロトタイプ (`.tmp/proto.py`, gitignore 対象) は `/spec` セッション限りのもので commit していない。実装は Implementation Steps 1-4 の記述から起こすこと
+- **マージ時は追加の conflict 解決は不要**。`origin/main` を取り込み済みで、`git merge-tree` による再確認でも conflict は解消している
+- `modules/verify-executor.md` の `html_check` 行は #1074 と #1069 の両方の変更を含む。今後この行を触る際は `tests/verify-executor.bats` の 2 件のガードが両立を強制する
+- `scripts/html-selector-match.py` はレビュー中にメモ化を追加したため、`/code` フェーズ完了時点の実装とは差分がある。CLI 契約 (引数 1 個 / stdin / stdout にマッチ数 / 解析失敗時 exit 2) は不変
+
+## review retrospective
+
+### Spec と実装の乖離パターン
+
+- 実装本体の乖離は**ほぼゼロ**だった。Implementation Steps 1-4 が関数単位・分岐単位まで具体的に書かれており、`split_selector` / `parse_compound` / `TreeBuilder` / `Node` / `matches_compound` / `matches_chain` はすべて記述どおりに実装されていた。combinator 4 種、`VOID_ELEMENTS` 14 要素、`ValueError` 6 条件はいずれも Spec が「exhaustive」と宣言した集合と完全一致しており、enum 網羅性チェックでも欠落なし。Spec に exhaustive と明記する運用が、レビュー時の false positive を実際に抑制した (review-bug が挙げた「legacy void 要素の欠落」は、Spec の exhaustive 宣言を根拠に却下できた)
+- 唯一の乖離は `split_selector()` 冒頭の `selector.strip()`。Spec の不正入力 exhaustive リストにも CLI 契約の不変性宣言にも記述がない暗黙の入力正規化で、base では exit 2 (→ UNCERTAIN) だった `" div"` が exit 0 + マッチ数を返すようになる観測可能な差分を生んでいた。**「exhaustive」と宣言されたリストに対する追加は乖離として検知できるが、リストに載っていない軸 (入力の前処理) での追加は検知が難しい**という構造的な穴が見えた
+- Spec が「変更不要」と判断したファイルの根拠数値が実際には古かった (`docs/structure.md` の `tests/ (95 files)` が実測 103)。結論 (本 PR では不変) は正しかったため実害はないが、Spec の根拠として引用する数値は引用時点で実測する運用が要る
+
+### 繰り返し発生している問題
+
+- **`/review` にベースブランチとの conflict 検査が存在しない**。本 PR 最大の指摘 (MUST) は「main 側の #1074 と同一行を編集しており、素直に解決すると Basic Auth 対応が消える」というもので、これは `git merge-tree $(git merge-base HEAD origin/main) HEAD origin/main` を明示的に叩いて初めて発見できた。CI は main とマージしていないブランチ単体で走るため SUCCESS のままであり、`/review` の既存ステップ (AC 検証 / CI 確認 / 多観点コードレビュー) はいずれもこの種の欠落を構造的に見ない。同一ファイルの同一行を複数 Issue が触る状況は `modules/verify-executor.md` のような SSoT 文書で繰り返し起きる (#424 / #1056 / #1074 / #1069 がいずれもこの行を編集している) ため、再発は確実
+- **単一アカウント運用で MUST 指摘が必ず投稿失敗する**。`scripts/gh-pr-review.sh` は MUST があると無条件に `event=REQUEST_CHANGES` を選ぶが、GitHub は自分自身の PR への `REQUEST_CHANGES` を拒否する (`422 Review Can not request changes on your own pull request`)。本セッションでは手動で `COMMENT` にフォールバックして投稿し直した。自己ホスト運用では MUST 指摘のたびに同じ失敗を踏む
+- **`capabilities.workflow: true` を設定していても Workflow パスに入れなかった**。`skills/review/workflow-guidance.md` の Pre-flight は `agentType` の解決可能性のみを検査するが、本セッションでは `agentType` は両方利用可能な一方で **Workflow ツール自体がセッションに存在しなかった**ため、静的 Task fan-out へフォールバックした。Pre-flight の検査項目に穴がある
+
+### 受入条件の検証しやすさ
+
+- 6 件中 4 件が rubric、2 件が grep / github_check という構成で、**UNCERTAIN は 1 件も出なかった**。特に AC2 は「外部バイナリが必要な場合は未インストール時の挙動が定義されている」という条件節の形になっており、案 A (外部バイナリ不要) では前件が偽になる。Spec がこれを見越して `modules/verify-executor.md` に「外部バイナリを一切必要としない」旨を明示的に書く方針を立てていたため、grader が前件の偽を可読に判定できた。**実装方式が未決の段階で AC を書く際に、どの方式でも判定可能な条件節の形にしておく**手法が有効に機能した実例
+- 一方 `github_check "gh pr checks" "Run bats tests"` は `/code` フェーズ時点では PR/CI が存在せず UNCERTAIN 確定になる。Phase Handoff の Deferred Items で `/review` に持ち越す運用で吸収できたが、**PR 作成前のフェーズでは原理的に検証不能な AC** が Pre-merge に混じる構造は残る
+- AC がすべて `[x]` の状態で `/review` に入った (前回の `/review` 試行が external-kill で中断した影響)。チェックボックスが既に立っていても `/review` 側で再検証する運用になっているため実害はなかったが、**チェックボックスの状態を信頼せず毎回再検証する**前提が明文化されていることの価値が確認できた
+
+### Improvement Proposals
+
+- `/review` に「ベースブランチとの conflict 事前検査」ステップを追加する。`git merge-tree $(git merge-base HEAD origin/<base>) HEAD origin/<base>` を実行し、`changed in both` が出たファイルについて「両方の変更が保持される解決になっているか」をレビュー対象にする。SSoT 文書 (`modules/verify-executor.md` 等) で特に効く
+- `scripts/gh-pr-review.sh` に `REQUEST_CHANGES` 失敗時の `COMMENT` フォールバックを実装する。422 (`Can not request changes on your own pull request`) を検知したら event を `COMMENT` に落として再投稿し、本文にその旨を注記する。単一アカウント運用が前提の自己ホスト環境では必須
+- `skills/review/workflow-guidance.md` の Pre-flight に「Workflow ツール自体の利用可能性」を追加する。現在は `agentType` の解決可能性しか見ておらず、ツール不在時の分岐が定義されていない
+- verify command に**実行タイムアウトの既定値**を設ける。`html_check` は実行コストを持つ verify command のうち唯一タイムアウトが規定されておらず (`shell_condition` 10s / `github_check` 30s / `command` 60s / `build_success` 120s)、本 PR で見つかった性能問題は「UNCERTAIN に落ちる」のではなく「verify ステップが張り付く」形で表面化していた
 
 ## Auto Retrospective
 

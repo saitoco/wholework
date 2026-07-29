@@ -39,3 +39,26 @@ VERIFY_EXECUTOR="$PROJECT_ROOT/modules/verify-executor.md"
 @test "verify-executor: html_check no longer gates on which pup" {
     ! grep -q "If pup exists, run" "$VERIFY_EXECUTOR"
 }
+
+@test "verify-executor: html_check documents combinator support" {
+    grep -q "combinator" "$VERIFY_EXECUTOR"
+}
+
+# Regression guard: the html_check row is edited by both the Basic Auth work
+# (#1074, which injects credentials via a curl --config file rather than argv)
+# and the combinator work (#1069). A merge that resolves that row by taking one
+# side wholesale silently drops the other. Pin both on the same line.
+@test "verify-executor: html_check row keeps both Basic Auth --config and combinator support" {
+    row=$(grep -- '^| `html_check ' "$VERIFY_EXECUTOR")
+    [ -n "$row" ]
+    printf '%s' "$row" | grep -q -- '--config "\$config_file"'
+    printf '%s' "$row" | grep -q "combinator"
+}
+
+@test "verify-executor: every curl-based URL command keeps the Basic Auth --config hook" {
+    for cmd in http_status html_check api_check http_header http_redirect; do
+        row=$(grep -- "^| \`$cmd " "$VERIFY_EXECUTOR")
+        [ -n "$row" ]
+        printf '%s' "$row" | grep -q -- '--config "\$config_file"'
+    done
+}
