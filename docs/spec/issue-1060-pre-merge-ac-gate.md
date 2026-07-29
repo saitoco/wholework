@@ -266,6 +266,43 @@ Size L のため検出上限 5 件のうち、影響度の高い 3 件を特定�
 - 4 件とも UNCERTAIN や verify command の構文エラーは無く、Step 8 の自動判定は円滑だった (rubric 2 件は Spec 由来の PR diff と Issue 本文から明確に判定可能、section_contains と grep は機械的に確定)
 - Workflow (finder → adversarial verify) パイプラインは 21 件の finding のうち 11 件を adversarial refutation で除外し、確認できた 10 件 (実質ユニーク 7 件) はいずれも MUST ではなかったが、うち 2 件は実際にバグとして再現確認できる質の高い指摘だった。static Task fan-out (Step 10.1–10.3) では検出できたかどうか比較対象がないため、今回の実行だけでは Workflow path の有効性を断定できないが、finder のカバレッジ (specific line + reproduction手順付き) は高かった
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- `/issue` の AC verify command 監査が、AC2 の `section_contains "skills/merge/SKILL.md" "### Step 1" "pre-merge AC"` が恒久的に UNCERTAIN になる欠陥を検出できず、`/spec` の Judgment rationale 段階で初めて修正された (見出し引数は先頭の `#` を除去して部分一致するため `"### Step 1"` はどの見出しにもマッチしない)。`/issue` の監査は「常時 PASS になる verify command」(#1059 の `grep` 誤用) は捕捉できたが、「常時 UNCERTAIN になる verify command」は捕捉していない。監査の対象が PASS 側に偏っている。
+- 非対話モードの自動解決 3 件はいずれも Issue 本文の記述に忠実で、`/spec`・`/code` 側で覆されていない。判断根拠を「## Auto-Resolved Ambiguity Points」として本文に残す運用は機能した。
+
+#### spec
+- Autonomous Auto-Resolve Log 4 件がいずれも実装まで維持された。特に「`gh-pr-merge-status.sh` 拡張ではなく新規スクリプト `check-pre-merge-ac.sh`」の判断は、共有 JSON 契約の consumer (`run-code.sh:335`, `modules/orchestration-fallbacks.md`) を実際に確認したうえでの結論であり、Issue 本文の示唆 (フィールド追加) を根拠付きで覆した良い事例。
+- 「ゲートの見出しレベルを h4 にしたのは、h3 だと `section_contains "Step 1"` の走査範囲を打ち切るため」という Judgment rationale は、**verify command の走査範囲が実装側の見出しレベルを拘束している**ことを示している。AC の検証手段が実装構造に制約を与える結合であり、設計時に意識が必要という指摘は妥当。
+- Minor observations で記録された 2 件のドリフト (`docs/structure.md` の `tests/` 件数が 95 → 実際 103、`skills/spec/SKILL.md` Step 7 の「at most 3」と `modules/ambiguity-detector.md` の L/XL 最大 5 件の食い違い) は本 Issue のスコープ外として据え置かれており、未起票のまま。
+
+#### code
+- fixup/amend パターンなし、Rework は N/A。
+- Spec が判断を `/code` に委任していた Steering Docs sync candidate 3 件について、`docs/guide/workflow.md` は「追加」、`modules/phase-state.md` と `tests/gh-pr-merge-status.bats` は「変更しない」と個別に判断し、その根拠を Code Retrospective に記録している。委任型の sync candidate 運用が機能した事例。
+
+#### review
+- Workflow (finder → adversarial verify) パイプラインが 21 件の finding を 10 件まで絞り込み、うち 2 件は再現確認できる実バグ (pipefail による fail-open、`>` を含む HTML コメントの除去失敗) だった。いずれも AC 検証では捕捉できず bug-detection finder で初めて検出されている。
+- review retrospective 自身が指摘するとおり、`check-pre-merge-ac.sh` のような「安全側に倒れるべき」スクリプトについて、Spec の Implementation Steps に「大きな入力」「特殊文字を含む入力」に対する期待動作が書かれていれば実装時点で防げた可能性がある。merge ゲートという性質上、fail-open バグは実害が大きい。
+
+#### merge
+- CI 全 SUCCESS・conflicts なしで squash merge 完了。特記事項なし。
+- ただし本 PR 自身が追加した pre-merge AC ゲートは、マージ時点で 4/4 PASS 済みだったため発火せず未検証のまま merge された。「ゲート機能を追加する PR 自身ではゲートを検証できない」という構造は避けられないが、post-merge AC がその穴を埋める設計になっている。
+
+#### verify
+- 自動検証 4 件はすべて PASS。加えて `check-pre-merge-ac.sh` を #1060 (全チェック済み) と #1071 (4 件未チェック) の両方に対して実行し、`unchecked_count` / `unchecked_indices` / `unchecked_items` が期待どおり返ることを確認した。negative case を含む実動作確認が取れている。
+- `check-pre-merge-ac.sh` は `scripts/gh-issue-edit.sh` と同一の awk パターン (`/^- \[[ xX]\]/`、本文全体対象) を意図的に採用しているため、#1071 で起票した「fenced code block 内の checkbox が AC 列挙に混入する」問題を構造的に共有している。merge ゲートは index を提示・記録 (`ac=` marker) するため、この混入は override marker の superset 判定を誤らせる経路を持つ。#1071 の修正時に `check-pre-merge-ac.sh` も同時対応が必要。
+
+### Improvement Proposals
+
+- `/issue` の AC verify command 監査が「常時 PASS になる verify command」に偏っており、「常時 UNCERTAIN になる verify command」を検出できない。#1060 の AC2 (`section_contains` の見出し引数に `###` を含めたため恒久 UNCERTAIN) は `/spec` 段階まで残った。監査基準に「見出し引数の先頭 `#` 混入」「存在しないファイルパス」「引数個数不足」など UNCERTAIN 側の典型パターンを追加すべき。
+- `check-pre-merge-ac.sh` が `scripts/gh-issue-edit.sh` と同一の checkbox 列挙パターンを採用しているため、#1071 (fenced code block 内 checkbox の混入) の影響を直接受ける。merge ゲートは未チェック AC の index を `<!-- wholework-event: type=pre-merge-ac-gate ac=... -->` marker に記録し、override 判定でその index 集合の superset 比較を行うため、index がずれると override が誤って無効化される (または誤って有効化される) 経路がある。#1071 の対象ファイルに `check-pre-merge-ac.sh` を明示的に含めるべき。
+- `section_contains` verify command の走査範囲 (指定見出しから次の同レベル以上の見出しまで) が、実装側の見出しレベル選択を拘束している。#1060 では「h3 にすると `section_contains "Step 1"` の走査が打ち切られる」ためゲート説明を h4 にする判断が発生した。AC の検証手段が実装構造に制約を与える結合であり、`modules/verify-patterns.md` に「`section_contains` を使う AC は実装側の見出しレベルを拘束する」旨の注意書きを追加すべき。
+- `skills/spec/SKILL.md` Step 7 の「extract at most 3」と `modules/ambiguity-detector.md` Size Routing Table の「L/XL は最大 5 件」が食い違っている (#1060 の Spec Minor observations で検出、本 Issue のスコープ外として据え置き)。上限値の SSoT を一方に寄せるべき。
+- 安全側に倒れるべきスクリプト (merge ゲート、validator、recovery plan 検証など) について、`/spec` の Implementation Steps に「大きな入力」「特殊文字を含む入力」「空入力」に対する期待動作を明記させるガイドラインがない。#1060 では fail-open バグ 2 件が AC 検証をすり抜け、review の bug-detection finder で初めて検出された。fail-open が実害となるスクリプトを識別する基準と、その場合に Implementation Steps へ edge case の期待動作を書かせる手順を `/spec` に追加すべき。
+
 ## Auto Retrospective
 
 ### Manual recovery (review)
