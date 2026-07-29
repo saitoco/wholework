@@ -335,3 +335,11 @@ N/A — Implementation Steps 1-4 の記述どおりに `split_selector` / `parse
 - **Recovery type**: respawn
 - **Wrapper exit code**: unknown
 - **Outcome**: success
+
+### Manual recovery (review)
+- **Date**: 2026-07-29 06:01 UTC
+- **Issue**: #1069, phase: review
+- **Source**: parent session manual recovery
+- **Recovery type**: review-rerun
+- **Wrapper exit code**: 1
+- **Outcome**: success
