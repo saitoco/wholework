@@ -247,3 +247,76 @@ Issue 本文が「実装時に実機で確認すること」と留保してい�
 | saito | MEMBER | first-class | `/issue 1066 --non-interactive` の Issue Retrospective。曖昧点 1 件 (プレビュービルド修正ループの再試行上限とエスケープハッチ) を自動解決し Issue 本文へ追記した旨、AC は変更なしである旨、および Background の事実記述 (`skills/code/SKILL.md` の pr route 記述、`wait-ci-checks.sh` の完了判定ロジック) がコードベースと一致することを確認済みである旨を報告 | https://github.com/saitoco/wholework/issues/1066#issuecomment-5113593972 |
 
 cutoff: `2026-07-29T05:20:59Z` (直近の `phase/*` ラベル付与時刻)。上記 1 件のみが cutoff 以降のコメント。`wholework-event: type=verify-fail` / `type=preview-ac-unverified` マーカーを持つコメントは存在しない。
+
+## issue retrospective
+
+`/issue 1066 --non-interactive` で既存 Issue Refinement を実行した。
+
+### 曖昧性検出・自動解決
+
+Size=L (検出上限5件) に対し、実質的な曖昧点は1件のみ検出した。
+
+- **プレビュービルド修正ループの再試行上限と非収束時のエスケープハッチ** — Issue 本文の「検討事項」は「ビルド失敗時のリトライ回数 — 無限ループを避けるため上限を設ける」という懸念を既に記載していたが、上限値や上限到達時の挙動 (エスケープハッチ) は未規定だった。
+  - **自動解決**: 既存コードベースに `verify-max-iterations` (default 3)、`auto-retry-on-fail.max_iterations` (default 3)、`/auto` の `MAX_ITERATIONS_REACHED` パターン (上限到達時にチェーンを停止し人間の判断を待つ) という一貫した前例があるため、同様の方針 (再試行上限を設け、到達時は code フェーズを停止して失敗報告) を Issue 本文に `## Auto-Resolved Ambiguity Points` として追記した。
+  - 判断根拠: (1) 既存パターンから一意に推論可能、(2) 過去の類似判断 (verify-max-iterations 等) と整合、(3) 具体的な上限値・実装詳細は `/spec` に委ねられるため AC テキストへの影響なし — 三条件をすべて満たすため自動解決とした。
+  - 却下した選択肢: watchdog タイムアウトのみに委ねて明示的な上限を設けない案 — cost/UX の観点、および Issue 本文の既存の懸念記載と整合しないため却下。
+
+### Acceptance Criteria の変更
+
+変更なし。既存 AC1 の rubric 表現 (「失敗時は code フェーズ内で修正するステップが追加されている」) が既に上限値を固定しない抽象度で書かれており、`/spec` の実装判断余地を残す設計として適切だったため、AC テキストはそのまま維持した。
+
+### Scope Assessment (Step 12)
+
+non-interactive モードのため sub-issue 分割検討をスキップした (High-Stakes Decision)。Size=L のままとし、変更なし。
+
+### その他
+
+- ラベル遷移: `phase/issue` を付与済み (triaged 済みのため triage auto-chain はスキップ)
+- Background の事実記述 (`skills/code/SKILL.md` の pr route 記述、`wait-ci-checks.sh` の完了判定ロジック) はいずれもコードベースと突合し正確であることを確認した
+- blocked-by: Issue 本文に `Blocked by #N` パターンなし。ブロッカーなし (exit 0)
+
+## spec retrospective
+
+### Minor observations
+
+- Issue 本文が「実装時に実機で確認すること」と留保していた `gh pr checks --json state` の queued 時の実値は、`gh pr checks --help` の 1 行 (「`--json` 出力には `state` を `pass`/`fail`/`pending`/`skipping`/`cancel` に分類する `bucket` フィールドが含まれる」) を読んだ時点で設計問題そのものが消滅した。外部 CLI 依存の不確実性に対しては、実測を計画する前にまず `--help` を読むほうが速い場合がある。
+- `modules/verify-executor.md` の `github_check` 行が「`gh pr checks` の state 値は `SUCCESS`, `FAILURE`, `IN_PROGRESS`」と記述しており、これは実際の 14 state に対して不正確であるうえ、`in_progress` 検出は本 Issue の穴 1 と同型の取りこぼしを持つ。本 Issue のスコープ外のため Steering Docs sync candidate として記録するに留めた。同系統の 3 例目が出た時点で独立 Issue にする価値がある。
+- `tests/wait-ci-checks.bats` のモックに `bucket` を追加し忘れると、既存のタイムアウト系テストがアサーション上は PASS したまま「即 break する」別経路へ静かにすり替わる。テストの sentinel 性が失われる典型例のため、Notes の「実装上の注意」に明示した。
+
+### Judgment rationale
+
+- **preview 待ちを wrapper ではなく skill 内 (Step 13) に置いた理由**: Issue の要件「失敗時は code フェーズ内で修正する」は claude セッションが生存している間でなければ満たせない。`run-review.sh` / `run-merge.sh` が wrapper で `wait-ci-checks.sh` を呼ぶ既存パターンをそのまま模倣すると、待機は claude 終了後になり修正ループが成立しない。既存パターンへの追随より要件の充足を優先した。
+- **exit code を 0 のまま維持した理由**: `wait-ci-checks.sh` を CI 失敗時に非 0 化すると、`set -euo pipefail` 配下で呼ぶ `run-review.sh` (102 行目) / `run-merge.sh` (99 行目) が review / merge フェーズ開始前に abort する。呼び出し側への結果伝達は stdout の `ci_result:` サマリ行という追加チャネルで行い、既存の exit code 契約には触れない設計にした。
+- **穴 2 の対策で `expected-checks` 宣言を採らなかった理由**: AC が 3 択を明示的に許しており、かつ Issue 本文自身が「check 名は hosting provider やリージョンに依存する」として宣言必須化を否定していた。新 YAML キー 1 個は `modules/detect-config-markers.md` + 英日 `customization.md` + 英日 `tech.md` の 5 ファイル同期を連れてくるため、設定ゼロで効く grace period のほうが費用対効果が高いと判断した。
+- **修正上限到達時に非 0 exit させなかった理由**: `skills/code/SKILL.md:386` の既存 pr route 規約 (`continue — CI will detect the failure; report remaining failures in the completion message`) と整合させた。commit と PR は既に push 済みの正当な成果物であり、非 0 exit は `/auto` の silent no-op 検知と code-side auto-retry を、実際には完了しているフェーズに対して誤発火させる。上記の「exit code を 0 のまま維持した理由」と同じ「既存の失敗伝達契約を壊さない」判断軸に立っている。
+
+### Uncertainty resolution
+
+- **解決**: `gh pr checks --json state` の未完了 state 全集合 — gh CLI 2.96.0 の `pkg/cmd/pr/checks/aggregate.go` を参照し、14 state → 5 bucket のマッピングを確定した。`bucket == "pending"` が `EXPECTED` / `REQUESTED` / `WAITING` / `QUEUED` / `PENDING` / `IN_PROGRESS` / `STALE` の 7 state を吸収する。実機 (`gh pr checks 1077 --json name,state,bucket`) でも `bucket` フィールドの返却を確認済み。
+- **解決**: check 0 件時の `gh pr checks --json` の挙動 — `pkg/cmd/pr/checks/checks.go` を参照し、exporter が空配列 `[]` を書き出す (併せて `no checks reported on the '<branch>' branch` を返す) ことを確認した。これにより穴 2 の再現条件が「gh がエラーで空文字列を返す」ではなく「gh が `[]` を返す」であると特定でき、grace period を `_total -eq 0` 分岐に置く設計が導けた。
+- **未解決 (緩和策あり)**: Bash ツールの単一呼び出し 10 分上限が headless `claude -p` 内でも適用されるか。根拠として参照した `docs/spec/issue-875-abolish-data-layer-md.md` の外部 kill 記録は `/auto` (対話セッション) からの呼び出しであり、headless 内の直接的な実測ではない。`WHOLEWORK_CI_TIMEOUT_SEC=540` (上限 600 秒の内側) + 最大 4 ラウンドという構成は、上限が存在しない環境でも安全側に働く (待機が分割されるだけ) ため、実測を待たずに実装可能と判断した。
+- **未解決 (エスケープハッチあり)**: 外部 provider (Amplify 等) のビルド失敗ログを code フェーズが取得できるか。`gh pr checks --json link` が返すのは provider コンソールの外部 URL であり `gh run view` では読めない。診断不能時は修正ループ step 5 のエスケープハッチ (失敗レポート出力 → Step 14 へ進む) に落ちるため無限ループにはならない。post-merge の 1 件目の受入条件で実観察する。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- `wait-ci-checks.sh` の完了判定は state の列挙ではなく `gh pr checks --json bucket` の `bucket == "pending"` 1 条件で実装する。gh CLI が 14 state → 5 bucket の正規化を既に提供しており、将来の state 追加にも追随不要になるため。
+- `wait-ci-checks.sh` の exit code は全分岐で 0 のまま維持し、呼び出し側への結果伝達は stdout の `ci_result: total=N passed=N failed=N pending=N zero_checks=true|false` 1 行で行う。非 0 化は `set -euo pipefail` 配下の `run-review.sh` / `run-merge.sh` を破壊するため。
+- preview ビルド待ちは wrapper ではなく `skills/code/SKILL.md` の新規 Step 13 に置く。1 回の Bash 呼び出しを `WHOLEWORK_CI_TIMEOUT_SEC=540` に制限し最大 4 ラウンド繰り返す (Bash ツールの 10 分上限対策)。修正ループは最大 3 反復、上限到達時は非 0 exit せず失敗レポートを出して Step 14 へ進む。
+- 穴 2 の対策は grace period (`WHOLEWORK_CI_MIN_CHECKS_WAIT_SEC`、既定 120 秒) + 明示的警告とし、`.wholework.yml` への `expected-checks` 宣言は導入しない。
+
+### Deferred Items
+
+- `modules/verify-executor.md` の `github_check` 行が持つ同型の `in_progress` 取りこぼしと state 値記述の不正確さ — Steering Docs sync candidate として記録済み。本 Issue のスコープ外 (Issue 本文は `wait-ci-checks.sh` と `skills/code/SKILL.md` のみを対象と明記)。
+- 外部 provider のビルド失敗ログ取得手段 — 診断不能時はエスケープハッチに落ちる設計とし、恒久対応は post-merge の観察結果を待つ。
+- Bash ツール 10 分上限の headless 環境での実測 — `WHOLEWORK_CI_TIMEOUT_SEC=540` の緩和策で先に実装する。
+
+### Notes for Next Phase
+
+- `tests/wait-ci-checks.bats` の `gh` モック**全件**に `bucket` フィールドを追加すること。付け忘れると既存タイムアウト系テストがアサーション上 PASS したまま別経路へすり替わり、漏れが検知されない。
+- `skills/code/SKILL.md` の Step 番号繰り上げ (13→14、14→15) に伴い、本文中の Step 番号参照 4 箇所 (Implementation Steps 5 に列挙) も同時に更新すること。行番号は挿入でずれるため周辺文脈で位置を特定する。
+- `skills/code/SKILL.md` の `allowed-tools` に 3 パターン (`wait-ci-checks.sh:*`、`gh pr checks:*`、`gh run view:*`) を追加すること。追加漏れは実行時の permission エラーとして初めて顕在化する。
+- Step 13 の分岐表とループ挙動は曖昧表現 (「同様に処理」「適切にハンドル」「必要に応じて」) を使わず全列挙すること (`skills/spec/skill-dev-constraints.md` の該当節)。
+- `docs/` 配下の変更は英日ミラー対で行うこと (`tech.md` / `workflow.md` / `structure.md` / `guide/customization.md`)。`docs/reports/event-log-schema.md` は translation-workflow の除外対象のためミラー不要。
