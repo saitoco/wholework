@@ -103,6 +103,41 @@ Nothing to note — Implementation Steps 1–3 は Spec の記述通りに実装
 
 Nothing to note — Pre-merge (auto-verified) 4 件はすべて `rubric` verify command で、PR diff の該当箇所と 1 対 1 で対応が取れており UNCERTAIN は発生しなかった。verify command の記述と実装内容の乖離もなし。
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Pre-merge AC 4 件はすべて `rubric` verify command で記述されており、PR diff の該当箇所と 1 対 1 で対応が取れた。`/issue` 時点で `grep` (常時 PASS になる欠陥形) から `rubric` へ差し替える監査が入っていたことが、verify 段階での誤 PASS を未然に防いだ。AC の verify command 監査が実際に機能した事例。
+- Post-merge AC を manual のまま維持した判断 (Spec Notes) は妥当だった。`file_exists`/`http_status`/`rubric` のいずれにも置換できない動的なスキル実行観測であり、`/verify` 側でも human-check として扱われている。
+
+#### design
+- 「タイミング (pre-merge/post-merge)」と「検証手段 (auto/manual)」の 2 軸が混線していたという Issue の根本原因分析が正確で、Spec の Implementation Steps 1–3 がそのまま実装に落ちた。設計逸脱ゼロ。
+- Changed Files に `docs/tech.md` / `docs/guide/customization.md` を追加した Spec 側の判断 (`grep -rn` による Steering Docs sync candidate check) が、ドキュメント側の記述漏れを事前に防いだ。
+
+#### code
+- fixup/amend パターンなし。各 Implementation Step の初回編集で bats・`validate-skill-syntax.py`・`check-forbidden-expressions.sh` が一発 PASS。
+- `docs/ja/` ミラー同期 (PATCH 4/6) が独立コミットとして追加されている。Spec の Changed Files には `docs/ja/` が列挙されていなかったが、code phase が自律的に検出して同期した。Spec 側の Changed Files 抽出で `docs/ja/` ミラーを機械的に含める仕組みがあれば、この検出は設計時に前倒しできる。
+
+#### review
+- `verify-type: manual` タグの意味論拡張 (post-merge 専用 → pre-merge/post-merge 両対応) が、スコープ外の下流集計スキルに副作用を及ぼす点を review が検出した。これは「enum の意味論拡張時に、その値を消費する全箇所を横断的に洗い出す」という汎用パターンの検出であり、review の有効性が高かった事例。
+- ただし検出された SHOULD/CONSIDER 2 件はスコープ外として見送られ、フォローアップ Issue も本 verify 時点まで未起票のまま残っていた。review が「フォローアップ Issue 化を推奨」と記録するだけでは起票が担保されない。
+
+#### merge
+- CI SUCCESS・approved・mergeable=clean で conflict 解決手続きなし。特記事項なし。
+
+#### verify
+- Issue 本文の ` ```markdown ` コードフェンス内にある説明用サンプル `- [ ] <!-- ac-tier: preview --> <!-- verify-type: manual --> preview で実送信し...` (本文 55 行目) が、AC のチェックボックス番号付けに混入していることを検出した。実 AC は index 2–6 であり index 1 はサンプル。本 Issue では checkbox 更新が発生しなかったため実害はなかったが、`gh-issue-edit.sh --checkbox` を使う経路では off-by-N の誤更新を起こし得る。
+- 同じサンプル行は `verify-type: manual` + 未チェックの形をしているため、`/auto` の Pending manual confirmation 集計や `/audit` の Manual Waiting Count でも「未対応の manual AC」として誤カウントされる。review が検出した「pre-merge manual preview AC の誤カウント」と症状は同じだが、原因が異なる (コードフェンス内サンプル vs. セクション前提の誤り)。
+
+### Improvement Proposals
+
+- `/verify`・`/audit`・`/auto` の AC チェックボックス列挙が、Issue 本文の fenced code block (` ``` ` で囲まれた領域) 内の `- [ ]` 行を実 AC として数えてしまう。記法例を本文中に示す Issue では必ず発生し、`gh-issue-edit.sh --checkbox` の index が実 AC とずれるため checkbox 誤更新のリスクがある。チェックボックス列挙時に fenced code block 内の行を除外する共通ルールを `modules/` 側に定義し、`gh-issue-edit.sh` と各スキルの列挙処理を揃えるべき。
+- `skills/audit/SKILL.md` の Manual Waiting Count と `skills/auto/SKILL.md` の Pending manual confirmation 集計が、Issue 本文全体を post-merge 限定の前提でスキャンしている。#1059 で `verify-type: manual` が pre-merge にも配置可能になったため、pre-merge の manual preview AC (`/verify` で恒久的に SKIPPED/unchecked のまま) が「未対応の manual AC」として誤カウントされる。集計対象を `### Post-merge` セクション配下に限定するか、`ac-tier: preview` タグを除外条件に加えるべき。
+- `modules/verify-classifier.md` の Purpose/Input 記述が「`verify-type: manual` は post-merge 専用」という前提のままで、#1059 の意味論拡張 (pre-merge にも配置可能) を反映していない。分類器の入力仕様と実際のタグ意味論が乖離している。
+- タグ・enum の意味論を拡張する Issue において、その enum 値を消費する全箇所を横断的に洗い出す手順が `/spec` に存在しない。#1059 では review phase で初めて下流の集計スキルへの副作用が検出された。`/spec` の調査ステップに「変更するタグ/enum 値を `grep -rn` で全消費箇所に展開し、Changed Files または Notes に影響評価を記録する」を追加すべき。
+- `/spec` の Changed Files 抽出が `docs/ja/` ミラーを機械的に含めていない。#1059 では code phase が自律的に検出して同期したが、検出漏れれば英日で記述が乖離する。`docs/` 配下のファイルを Changed Files に含める際、対応する `docs/ja/` ミラーの存在を確認して自動的に併記するルールを追加すべき。
+
 ## Auto Retrospective
 
 ### Manual recovery (spec)
