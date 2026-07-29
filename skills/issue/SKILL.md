@@ -33,7 +33,7 @@ Use AskUserQuestion to collect:
 
 ### Step 2: Reference Steering Documents (if present)
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH`, `STEERING_DOCS_PATH`, and `HAS_PR_PREVIEW_CAPABILITY` for use in subsequent steps.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH`, `STEERING_DOCS_PATH`, `HAS_PR_PREVIEW_CAPABILITY`, and `ALWAYS_PR` for use in subsequent steps.
 
 Check whether the following steering documents exist using Glob, then read only those that exist:
 
@@ -414,7 +414,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER issue
 
 ### Step 4: Reference Steering Documents (if present)
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH`, `STEERING_DOCS_PATH`, and `HAS_PR_PREVIEW_CAPABILITY` for use in subsequent steps.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `SPEC_PATH`, `STEERING_DOCS_PATH`, `HAS_PR_PREVIEW_CAPABILITY`, and `ALWAYS_PR` for use in subsequent steps.
 
 Check whether the following steering documents exist using Glob, then read only those that exist:
 
@@ -746,6 +746,8 @@ Good:
 - [ ] <!-- verify: github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> CI (test.yml) all jobs pass (patch route)
 
 Note: Size XS/S → patch route → `gh run list` form; Size M/L → PR route → `gh pr checks` form (details: `modules/verify-classifier.md`).
+
+Exception: when `ALWAYS_PR=true` (`.wholework.yml` `always-pr: true`, retained in Step 2 / Step 4), Size XS/S is promoted to pr route, so use the `gh pr checks` form regardless of Size (see `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` § "ALWAYS_PR Override").
 
 **Do not embed implementation means in ACs:**
 

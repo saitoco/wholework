@@ -243,15 +243,40 @@ Background 内の技術的主張 (`ALWAYS_PR` を参照する箇所、`skills/sp
 - AC の 4 つの `grep` パターン (`ALWAYS_PR Override` / `ALWAYS_PR` × 2 / `always-pr`) が対象ファイルに現在含まれていないことを実行して確認済み。いずれも実装後にのみ PASS する検証シグナルになる
 - `/triage` Bulk Execution から Configuration Detection の結果を参照できるかはセクション順序からの推定であり、明示的な引き継ぎ記述はない。Uncertainty セクションに代替案 (`get-config-value.sh` 直接呼び出し) 付きで記録した
 
+## Code Retrospective
+
+**この節は `/code` 自身ではなく親セッション (`/auto --batch`) が再構成したものである。** code フェーズは実装編集の完了後・commit の直前に外部 kill され (`run-auto-sub.sh` の wrapper が自身の終了経路を通らずに停止)、`/code` による retrospective の書き込みまで到達しなかった。以下は親セッションが worktree の状態から観測できた事実のみを記録している。`/code` 内部の試行錯誤や判断過程は記録されていない。
+
+### Deviations from Design
+
+- 観測範囲では逸脱なし。worktree の変更ファイルは Spec の `## Changed Files` に列挙された 9 件と完全に一致していた (`modules/size-workflow-table.md`, `modules/verify-classifier.md`, `skills/code/SKILL.md`, `skills/issue/SKILL.md`, `skills/issue/spec-test-guidelines.md`, `skills/spec/SKILL.md`, `skills/triage/SKILL.md`, `skills/triage/skill-dev-verify-audit.md`, `tests/size-workflow-table.bats`)。過不足はない
+- Spec の「Steering Docs sync candidate」6 件はいずれも変更されていない。Spec 側の「更新不要の見込み」という事前判断と一致するが、`/code` が各ファイルを実際に読んで判断したかどうかは観測できない
+
+### Design Gaps/Ambiguities
+
+- 観測不能 (`/code` が記録する前に kill されたため)
+
+### Rework
+
+- 観測不能。worktree に commit が 1 件も存在しなかったため、commit 履歴からの fixup/amend パターン検出はできない
+
+### Verification at recovery time
+
+親セッションが worktree 内で実施した検証:
+
+- `bats tests/*.bats` — 1266 件すべて PASS (`not ok` ゼロ)
+- `python3 scripts/validate-skill-syntax.py skills/code/SKILL.md skills/issue/SKILL.md skills/spec/SKILL.md skills/triage/SKILL.md` — 4 件すべて PASS
+- `bash scripts/check-forbidden-expressions.sh` — 出力なし (違反なし)
+- `bats tests/size-workflow-table.bats` — 新規追加の 2 件 (`ALWAYS_PR Override section is documented`, `ALWAYS_PR Override documents patch to pr promotion`) を含む 10 件 PASS
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- route 決定の SSoT を `modules/size-workflow-table.md` の新 `ALWAYS_PR Override` 節に置き、Size から route または route 依存の挙動を導出する全 caller がそこを参照する形にした。個別 caller への条件分岐追加だけでは今後の caller で同じ欠落が再発するため
-- 優先順位は `skills/code/SKILL.md` Step 0 の**列挙ルールの実挙動** (operate > `--pr` > `ALWAYS_PR` > `--patch` > Size) を SSoT に記述する。Step 0 の見出し文字列 (「explicit flag > ALWAYS_PR」) は実挙動と食い違うが、本 Issue では変更しない
-- スコープを Issue 本文 対応方針 B の 4 箇所から 8 箇所へ拡大 (`/code` Step 10、`skills/issue/spec-test-guidelines.md`、`skills/triage/skill-dev-verify-audit.md` Pattern 4、`skills/triage/SKILL.md`)。Purpose の「全箇所」に従った
-- `ALWAYS_PR` の取得手段は SKILL.md 系すべてで `modules/detect-config-markers.md` の retain に統一する。Domain file からの `get-config-value.sh` 直接呼び出しは採らない
+- (spec フェーズからの引き継ぎ) route 決定の SSoT を `modules/size-workflow-table.md` の新 `ALWAYS_PR Override` 節に置き、Size から route または route 依存の挙動を導出する全 caller がそこを参照する形にした
+- (spec フェーズからの引き継ぎ) 優先順位は `skills/code/SKILL.md` Step 0 の列挙ルールの実挙動 (operate > `--pr` > `ALWAYS_PR` > `--patch` > Size) を SSoT に記述した
+- 実装は上記の設計どおりに完了しているが、**commit は親セッションが外部 kill からの復旧として行った**。`/code` 自身の commit ステップは実行されていない
 
 ### Deferred Items
 
@@ -261,8 +286,6 @@ Background 内の技術的主張 (`ALWAYS_PR` を参照する箇所、`skills/sp
 
 ### Notes for Next Phase
 
-- `modules/size-workflow-table.md` の `ALWAYS_PR Override` 節は「Size-to-Workflow Mapping Table」の表の直後・`### Diff-less Axis (operate route)` 見出しの直前に h3 で挿入すること。`tests/operate-route.bats` は operate route 節の文言をアサートしているため、operate route 節そのものは変更しない
-- `skills/*/SKILL.md` の編集では half-width `!`・小数 Step 番号・triple backtick を本文に入れないこと (`scripts/validate-skill-syntax.py` が検出する)
-- `tests/code.bats` は Step 0 セクションのみをアサートしている。`/code` の変更対象は Step 10 内なので既存テストには影響しないが、Step 0 の文言を巻き込んで編集しないこと
-- Changed Files の「Steering Docs sync candidate」6 件はいずれも「更新不要の見込み」と記載しているが、`/code` 側で各ファイルを実際に読んで最終判断すること
-- AC 8・9 の `grep` パターン (`always-pr` / `ALWAYS_PR`) は対象ファイルに現在含まれていない。実装時にこの文字列が実際に出現する形で記述すること
+- **`/review` への注意**: code フェーズの retrospective は親セッションによる再構成であり、`/code` 自身が記録した設計逸脱・rework の情報は存在しない。diff と Spec の照合を通常より丁寧に行うこと
+- Pre-merge AC 10 件のうち 4 件は決定的な `grep` で、`/spec` 時点で「パターンが対象ファイルに存在しないこと」を実行確認済み (常時 PASS ではない)。実装後は出現するはずなので PASS になることを確認すること
+- `tests/operate-route.bats` は operate route 節の文言をアサートしている。`ALWAYS_PR Override` 節は operate route 節の**前**に挿入されており、既存アサーションには影響していない (全テスト PASS で確認済み)

@@ -79,7 +79,7 @@ patch route (Size XS/S):
 - [ ] <!-- verify: github_check "gh run list --workflow=test.yml --commit=$(git rev-parse HEAD) --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> CI (test.yml) all jobs pass (patch route)
 ```
 
-**Route selection:** Size XS/S → patch route → use `gh run list` form; Size M/L → PR route → use `gh pr checks` form. For detailed routing logic (UNCERTAIN handling when PR_NUMBER is absent, etc.), see `modules/verify-classifier.md` § Patch Route CI Verification Note.
+**Route selection:** Size XS/S → patch route → use `gh run list` form; Size M/L → PR route → use `gh pr checks` form. For detailed routing logic (UNCERTAIN handling when PR_NUMBER is absent, etc.), see `modules/verify-classifier.md` § Patch Route CI Verification Note. Exception: when `.wholework.yml` sets `always-pr: true` (`ALWAYS_PR=true`), Size XS/S is promoted to pr route, so use the `gh pr checks` form regardless of Size (see `modules/size-workflow-table.md` § "ALWAYS_PR Override").
 
 **Pattern to avoid (requires local execution or fallback inference):**
 
