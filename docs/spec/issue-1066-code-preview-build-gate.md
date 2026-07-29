@@ -298,25 +298,20 @@ non-interactive モードのため sub-issue 分割検討をスキップした (
 - **未解決 (エスケープハッチあり)**: 外部 provider (Amplify 等) のビルド失敗ログを code フェーズが取得できるか。`gh pr checks --json link` が返すのは provider コンソールの外部 URL であり `gh run view` では読めない。診断不能時は修正ループ step 5 のエスケープハッチ (失敗レポート出力 → Step 14 へ進む) に落ちるため無限ループにはならない。post-merge の 1 件目の受入条件で実観察する。
 
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- `wait-ci-checks.sh` の完了判定は state の列挙ではなく `gh pr checks --json bucket` の `bucket == "pending"` 1 条件で実装する。gh CLI が 14 state → 5 bucket の正規化を既に提供しており、将来の state 追加にも追随不要になるため。
-- `wait-ci-checks.sh` の exit code は全分岐で 0 のまま維持し、呼び出し側への結果伝達は stdout の `ci_result: total=N passed=N failed=N pending=N zero_checks=true|false` 1 行で行う。非 0 化は `set -euo pipefail` 配下の `run-review.sh` / `run-merge.sh` を破壊するため。
-- preview ビルド待ちは wrapper ではなく `skills/code/SKILL.md` の新規 Step 13 に置く。1 回の Bash 呼び出しを `WHOLEWORK_CI_TIMEOUT_SEC=540` に制限し最大 4 ラウンド繰り返す (Bash ツールの 10 分上限対策)。修正ループは最大 3 反復、上限到達時は非 0 exit せず失敗レポートを出して Step 14 へ進む。
-- 穴 2 の対策は grace period (`WHOLEWORK_CI_MIN_CHECKS_WAIT_SEC`、既定 120 秒) + 明示的警告とし、`.wholework.yml` への `expected-checks` 宣言は導入しない。
+- Squash merge は conflicts なし (mergeable=true, reason=clean) のため Step 3 の conflict resolution は不要だった。
+- `gh pr merge --squash --delete-branch` がローカルブランチ `worktree-code+issue-1066` の削除に失敗 (別 worktree `review+pr-1091` が同ブランチを保持) したため、`git worktree prune` → `git worktree remove --force review+pr-1091` → `git branch -D` の順で手動クリーンアップした。リモートブランチも `gh pr merge` 実行後に残存していたため `gh api -X DELETE repos/saitoco/wholework/git/refs/heads/worktree-code+issue-1066` で個別削除した。
+- Phase Handoff の write 先はこのセクション (rotation) — spec phase の内容を merge phase の内容で置き換える。
 
 ### Deferred Items
 
-- `modules/verify-executor.md` の `github_check` 行が持つ同型の `in_progress` 取りこぼしと state 値記述の不正確さ — Steering Docs sync candidate として記録済み。本 Issue のスコープ外 (Issue 本文は `wait-ci-checks.sh` と `skills/code/SKILL.md` のみを対象と明記)。
-- 外部 provider のビルド失敗ログ取得手段 — 診断不能時はエスケープハッチに落ちる設計とし、恒久対応は post-merge の観察結果を待つ。
-- Bash ツール 10 分上限の headless 環境での実測 — `WHOLEWORK_CI_TIMEOUT_SEC=540` の緩和策で先に実装する。
+- 前フェーズ (spec) からの Deferred Items は残っていた場合そのまま次フェーズへ引き継がれるべきだが、rotation ポリシー上 1 phase のみ保持のため今回で失われる。詳細は本 Issue クローズ後の履歴 (このコミット以前の diff) を参照。
+- `review+pr-1091` のような、レビュー完了後に残存する worktree の自動クリーンアップは `/review` の Exit 処理の責務範囲外になっている可能性がある — 別 Issue 化を検討。
 
 ### Notes for Next Phase
 
-- `tests/wait-ci-checks.bats` の `gh` モック**全件**に `bucket` フィールドを追加すること。付け忘れると既存タイムアウト系テストがアサーション上 PASS したまま別経路へすり替わり、漏れが検知されない。
-- `skills/code/SKILL.md` の Step 番号繰り上げ (13→14、14→15) に伴い、本文中の Step 番号参照 4 箇所 (Implementation Steps 5 に列挙) も同時に更新すること。行番号は挿入でずれるため周辺文脈で位置を特定する。
-- `skills/code/SKILL.md` の `allowed-tools` に 3 パターン (`wait-ci-checks.sh:*`、`gh pr checks:*`、`gh run view:*`) を追加すること。追加漏れは実行時の permission エラーとして初めて顕在化する。
-- Step 13 の分岐表とループ挙動は曖昧表現 (「同様に処理」「適切にハンドル」「必要に応じて」) を使わず全列挙すること (`skills/spec/skill-dev-constraints.md` の該当節)。
-- `docs/` 配下の変更は英日ミラー対で行うこと (`tech.md` / `workflow.md` / `structure.md` / `guide/customization.md`)。`docs/reports/event-log-schema.md` は translation-workflow の除外対象のためミラー不要。
+- `/verify` は Post-merge 検証項目 2 件 (意図的ビルド失敗の検知確認、queued 段階での待機継続確認) を実施すること。前者は manual 検証、後者は bats でカバー済み。
+- Squash merge 後、`main` は 13 ファイル分の追加コミット (このブランチ以外の並行マージ分) を含んでいた。`/verify` 実行時は最新 `main` を基準に確認すること。
