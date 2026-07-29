@@ -174,3 +174,67 @@ BODY
     result="$output"
     [ "$(echo "$result" | jq -r '.unchecked_items[0].text')" = "visible text here" ]
 }
+
+@test "text strips HTML comment containing a > character" {
+    make_gh_mock_body <<'BODY'
+## Acceptance Criteria
+
+### Pre-merge (auto-verified)
+
+- [ ] <!-- verify: command "python3 bin/daily_routine.py 2>&1 | grep foo" --> new column appears
+BODY
+    run bash "$SCRIPT" "123"
+    [ "$status" -eq 0 ]
+    result="$output"
+    [ "$(echo "$result" | jq -r '.unchecked_items[0].text')" = "new column appears" ]
+}
+
+@test "large Pre-merge body (>64KB following heading) still resolves the section" {
+    {
+        echo "## Acceptance Criteria"
+        echo
+        echo "### Pre-merge (auto-verified)"
+        echo
+        echo "- [ ] pre item one"
+        head -c 70000 < /dev/zero | tr '\0' 'x'
+        echo
+    } > "$BATS_TEST_TMPDIR/body.txt"
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+cat "$BATS_TEST_TMPDIR/body.txt"
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+    run bash "$SCRIPT" "123"
+    [ "$status" -eq 0 ]
+    result="$output"
+    [ "$(echo "$result" | jq -r '.pre_merge_total')" = "1" ]
+    [ "$(echo "$result" | jq -r '.unchecked_count')" = "1" ]
+}
+
+@test "checkbox with no trailing space after bracket still strips prefix" {
+    make_gh_mock_body <<'BODY'
+## Acceptance Criteria
+
+### Pre-merge (auto-verified)
+
+- [ ]
+BODY
+    run bash "$SCRIPT" "123"
+    [ "$status" -eq 0 ]
+    result="$output"
+    [ "$(echo "$result" | jq -r '.unchecked_items[0].text')" = "" ]
+}
+
+@test "CRLF body does not leave trailing carriage return in text" {
+    printf '## Acceptance Criteria\r\n\r\n### Pre-merge (auto-verified)\r\n\r\n- [ ] item one\r\n' > "$BATS_TEST_TMPDIR/body.txt"
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+cat "$BATS_TEST_TMPDIR/body.txt"
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+    run bash "$SCRIPT" "123"
+    [ "$status" -eq 0 ]
+    result="$output"
+    text="$(echo "$result" | jq -r '.unchecked_items[0].text')"
+    [ "$text" = "item one" ]
+}

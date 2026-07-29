@@ -47,7 +47,7 @@ if [[ -z "$BODY" ]]; then
   fail_open
 fi
 
-if ! printf '%s\n' "$BODY" | grep -q '^### Pre-merge'; then
+if ! grep -q '^### Pre-merge' <<<"$BODY"; then
   echo '{"resolved":true,"pre_merge_total":0,"unchecked_count":0,"unchecked_indices":"","unchecked_items":[]}'
   exit 0
 fi
@@ -66,10 +66,10 @@ RECORDS=$(printf '%s\n' "$BODY" | awk '
     if (in_section) {
       checked = (substr($0, 4, 1) == " ") ? 0 : 1
       text = $0
-      sub(/^- \[[ xX]\] /, "", text)
-      gsub(/<!--[^>]*-->/, "", text)
+      sub(/^- \[[ xX]\][ \t]*/, "", text)
+      gsub(/<!--([^-]|-[^-]|--[^>])*-->/, "", text)
       gsub(/^[ \t]+/, "", text)
-      gsub(/[ \t]+$/, "", text)
+      gsub(/[ \t\r]+$/, "", text)
       print idx "\t" checked "\t" text
     }
     next
