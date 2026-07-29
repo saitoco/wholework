@@ -186,3 +186,83 @@ Issue 本文 対応方針 B は 4 箇所を挙げているが、コードベー�
 ### `docs/ja/` 翻訳同期
 
 `docs/translation-workflow.md` の同期義務は top-level `docs/*.md` を対象とする。本 Issue の変更対象は `modules/`・`skills/`・`tests/` に閉じており、`docs/ja/` 配下に対応するミラーは存在しないため翻訳同期は発生しない。
+
+## issue retrospective
+
+`/issue 1061 --non-interactive` によるリファインメントを実行しました (title/Type/Size/Value のトリアージ、Steering Docs 参照、Background 事実確認、曖昧性検出、AC 更新)。
+
+### トリアージ結果
+
+- Type: Bug (「誤って自動修正しようとする事象が発生した」という既発生の不具合報告のため)
+- Size: L (対象 4 ファイル `modules/size-workflow-table.md` / `skills/spec/SKILL.md` / `skills/issue/SKILL.md` / `modules/verify-classifier.md` が複数 skill/module にまたがるため、Axis1 で M と見積もった後 Axis2「複数 skill にまたがる変更」で +1 調整)
+- Value: 3 (Impact=2 [shared component: modules/ 配下・複数 skill が対象], Alignment=4 [product.md Vision「検証が実態と一致すること」に直結する不整合修正のため])
+
+### Background 事実確認
+
+Background 内の技術的主張 (`ALWAYS_PR` を参照する箇所、`skills/spec/SKILL.md` Step 10/Step 18 の存在など) をコードベースに対して grep で照合し、いずれも裏付けが取れました。
+
+### AC 監査で検出した問題と修正
+
+トリアージの AC verify command 監査で、以下の常時 PASS パターンを検出しました。
+
+- `<!-- verify: grep "always-pr" "modules/size-workflow-table.md" -->` は、`main` の現時点で `modules/size-workflow-table.md` 76 行目 (operate route 節) に既に `always-pr` という文字列を含んでいるため、本 Issue の実装 (ALWAYS_PR Override 節の追加) の有無に関わらず常に PASS してしまい検証シグナルにならない
+- 修正: 検索対象を実装後にのみ出現する見出し文字列 `ALWAYS_PR Override` に変更
+
+### 非対話モードでの自動解決 (Auto-Resolve)
+
+以下の曖昧点を、非対話モードのポリシーに従いモデル判断で自動解決しました (詳細は Issue body 末尾の `## Autonomous Auto-Resolve Log` を参照)。
+
+1. **Post-merge AC の検証手順が未規定だった点**: `always-pr: true` は wholework 自体の `.wholework.yml` には常設されていないため、元の AC 文言のままでは「誰が・どの環境で」この post-merge 条件を確認するのか不明瞭でした。`.wholework.yml` への一時的な `always-pr: true` 設定 + テスト用 Size XS/S Issue での確認、という具体的な手順を AC に追記しました
+2. **AC2 の grep 対象文字列**: 上記の常時 PASS 検出に基づき修正
+
+### ラベル/依存関係
+
+`triaged` ラベルを付与、`phase/issue` へ遷移。`Blocked by #N` の記載はなく、依存関係の追加設定はありません。Size=L のため sub-issue 分割評価の対象でしたが、非対話モードのため High-Stakes Decision としてスキップしています (`/issue 1061` を対話モードで再実行すると評価可能)。
+
+### Opportunistic Verification
+
+`opportunistic-search.sh issue` で 1 件 (#1003 の `/review` 観察条件) がヒットしましたが、本セッションの実行内容 (`/issue` 単体のリファインメント) とは無関係のため SKIP としました。
+
+## spec retrospective
+
+### Minor observations
+
+- Issue 本文の 対応方針 は「(案)」と明記されており、Purpose の「全箇所」との間に粒度差があった。コードベース調査で対応方針に載っていない同一クラスの箇所が 3 つ見つかったため、Purpose を上位の指示として扱いスコープを 4 → 8 箇所へ拡大した。「(案)」表記のある対応方針は網羅性を前提にせず、Purpose の文言をスコープの正とするのが妥当と判断した
+- `skills/spec/SKILL.md` の「Patch route verify command check」と `skills/code/SKILL.md` の同名チェックは、名前・目的・自動修正内容がほぼ同一のロジックが 2 箇所に複製されている。今回は両方に個別修正を入れたが、3 箇所目が現れた時点で `modules/` への抽出候補になる (`docs/tech.md`「Shared module pattern」の「2 箇所以上で使われるなら抽出」基準に該当しつつ、現時点では prose の重複が浅いため見送り)
+- `/triage` の `skill-dev-verify-audit.md` Pattern 4 は「AC の欠陥を検出して修正する」監査ロジックだが、その検出条件自体が Size 由来 route の前提を持っていた。監査ロジックの前提が誤っていると、正しい AC を欠陥として書き換えるという逆方向の害になる。監査系ロジックのレビュー時は「検出条件の前提」を明示的に確認するのが有効
+
+### Judgment rationale
+
+- 優先順位の SSoT 表記について、Issue 本文が引用する `skills/code/SKILL.md` Step 0 の見出し文字列 (「explicit flag > ALWAYS_PR」) と、その直下の列挙ルール (`ALWAYS_PR=true` + `--patch` → pr 強制) が矛盾していた。SSoT には見出し文字列ではなく列挙ルールの実挙動を書くと決めた — 見出しをそのまま転記すると新たな drift を SSoT 側に作り込むことになるため。`skills/code/SKILL.md` 88 行目自体の修正はスコープ外とし、Notes に「実装との齟齬」として記録した
+- `/triage` から `ALWAYS_PR` を参照する手段として、`skill-dev-verify-audit.md` 内で `get-config-value.sh` を直接呼ぶ案と、`/triage` SKILL.md の Configuration Detection で retain する案があった。後者を採った理由は、Configuration Detection が Single / Bulk 双方より手前の共通セクションであり両経路をカバーできること、および SKILL.md 系は `detect-config-markers.md` 経由という既存パターンに揃うこと。前者は `scripts/run-auto-sub.sh` (bash なのでモジュールを読めない) の事情による例外であり、Domain file に横展開すべきパターンではないと判断した
+- AC の verify command は可能な限り `rubric` ではなく決定的な `grep` を選んだ (AC 8・9)。ただし `skills/code/SKILL.md` は既に `ALWAYS_PR` を含んでいるため `grep "ALWAYS_PR"` が常時 PASS になる。AC 7 のみ `rubric` を採用したのはこの理由による
+
+### Uncertainty resolution
+
+- Issue 本文の Background テーブルの技術的主張 (9 行) をすべて grep / Read で照合し、`✅`/`❌` の判定がいずれも実態と一致することを確認した。加えて `skills/spec/skill-dev-constraints.md` と `modules/verify-patterns.md` の patch route 記述は route ベース (Size 由来でない) であることを Read で確認し、「変更不要」を根拠付きで Changed Files に明記した
+- AC の 4 つの `grep` パターン (`ALWAYS_PR Override` / `ALWAYS_PR` × 2 / `always-pr`) が対象ファイルに現在含まれていないことを実行して確認済み。いずれも実装後にのみ PASS する検証シグナルになる
+- `/triage` Bulk Execution から Configuration Detection の結果を参照できるかはセクション順序からの推定であり、明示的な引き継ぎ記述はない。Uncertainty セクションに代替案 (`get-config-value.sh` 直接呼び出し) 付きで記録した
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- route 決定の SSoT を `modules/size-workflow-table.md` の新 `ALWAYS_PR Override` 節に置き、Size から route または route 依存の挙動を導出する全 caller がそこを参照する形にした。個別 caller への条件分岐追加だけでは今後の caller で同じ欠落が再発するため
+- 優先順位は `skills/code/SKILL.md` Step 0 の**列挙ルールの実挙動** (operate > `--pr` > `ALWAYS_PR` > `--patch` > Size) を SSoT に記述する。Step 0 の見出し文字列 (「explicit flag > ALWAYS_PR」) は実挙動と食い違うが、本 Issue では変更しない
+- スコープを Issue 本文 対応方針 B の 4 箇所から 8 箇所へ拡大 (`/code` Step 10、`skills/issue/spec-test-guidelines.md`、`skills/triage/skill-dev-verify-audit.md` Pattern 4、`skills/triage/SKILL.md`)。Purpose の「全箇所」に従った
+- `ALWAYS_PR` の取得手段は SKILL.md 系すべてで `modules/detect-config-markers.md` の retain に統一する。Domain file からの `get-config-value.sh` 直接呼び出しは採らない
+
+### Deferred Items
+
+- `skills/code/SKILL.md` 88 行目の見出し文字列 (`Flag precedence (explicit flag > ALWAYS_PR > Size auto-detection)`) と列挙ルールの齟齬は本 Issue のスコープ外。必要なら follow-up Issue で扱う
+- `/spec` と `/code` に重複している「Patch route verify command check」の `modules/` 抽出は、3 箇所目が現れるまで見送り
+- post-merge AC (`always-pr: true` を一時設定しての `/spec` 非対話実行) は `verify-type: manual`。`/verify` は自動実行せず人手確認項目として提示する
+
+### Notes for Next Phase
+
+- `modules/size-workflow-table.md` の `ALWAYS_PR Override` 節は「Size-to-Workflow Mapping Table」の表の直後・`### Diff-less Axis (operate route)` 見出しの直前に h3 で挿入すること。`tests/operate-route.bats` は operate route 節の文言をアサートしているため、operate route 節そのものは変更しない
+- `skills/*/SKILL.md` の編集では half-width `!`・小数 Step 番号・triple backtick を本文に入れないこと (`scripts/validate-skill-syntax.py` が検出する)
+- `tests/code.bats` は Step 0 セクションのみをアサートしている。`/code` の変更対象は Step 10 内なので既存テストには影響しないが、Step 0 の文言を巻き込んで編集しないこと
+- Changed Files の「Steering Docs sync candidate」6 件はいずれも「更新不要の見込み」と記載しているが、`/code` 側で各ファイルを実際に読んで最終判断すること
+- AC 8・9 の `grep` パターン (`always-pr` / `ALWAYS_PR`) は対象ファイルに現在含まれていない。実装時にこの文字列が実際に出現する形で記述すること
