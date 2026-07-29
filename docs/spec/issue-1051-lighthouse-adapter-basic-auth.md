@@ -69,3 +69,30 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue` フェーズの Issue Retrospective コメント (2026-07-29T02:39:22Z)。curl 系 verify command への同種対応をスコープ外とした Auto-Resolve 判断の理由、Related Issues (#1056, #1059) を追加した経緯を記録したもので、内容は本 Issue 本文の Background / Auto-Resolved Ambiguity Points に既に反映済みのため、Spec 作成上の追加対応は不要と判断した。 (https://github.com/saitoco/wholework/issues/1051#issuecomment-5112167503)
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A (Implementation Steps 1-4 をそのまま実装した)
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps 通り、`modules/lighthouse-adapter.md` に Step 2 (Basic Authentication Setup) を新設し、既存 Step 2/3 を Step 3/4 に繰り下げた。`modules/browser-adapter.md` Step 3 と同一の環境変数名・マスキング方針を踏襲。
+- `--extra-headers` はインライン JSON 文字列ではなく一時 JSON ヘッダファイルパス形式を採用 (認証情報の生値をコマンドライン文字列に残さないため)。
+
+### Deferred Items
+- Post-merge AC (opportunistic): Basic Auth 保護下の URL に対する `lighthouse_check` AC を含む Issue の `/review` または `/verify` 実行で PASS/FAIL が機械判定されることの確認。wholework 自身のリポジトリには Basic Auth 保護下の preview URL が存在しないため、対象読者環境でのみ確認可能。
+- curl 系 verify command (`html_check` 等) への同種の Basic Auth 対応は本 Issue のスコープ外 (Issue 本文の Auto-Resolved Ambiguity Points により別 Issue 起票を推奨)。
+
+### Notes for Next Phase
+- 全 pre-merge AC (grep×2, rubric×1) はローカルで PASS 確認済み、Issue チェックボックスも更新済み。
+- テストスイート (`bats tests/`, 1246 tests) 全 PASS、`check-forbidden-expressions.sh` / `validate-skill-syntax.py` も問題なし。
+- 本 Issue はドキュメント (Markdown モジュール) のみの変更で、bats/CI 実行系コードへの機能追加はない。
