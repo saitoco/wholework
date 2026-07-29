@@ -307,3 +307,43 @@ Background 内の技術的主張 (`ALWAYS_PR` を参照する箇所、`skills/sp
 - **Recovery type**: review-rerun
 - **Wrapper exit code**: unknown
 - **Outcome**: success
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- `/issue` の AC 監査が `grep "always-pr" "modules/size-workflow-table.md"` の常時 PASS を検出し `grep "ALWAYS_PR Override"` へ修正した。PASS 側の欠陥検出は機能している。
+- ただし `/spec` が追加した AC のうち `tests/size-workflow-table.bats` の `grep -q "always-pr: true"` は同じ常時 PASS の欠陥を持ったまま実装され、`/review` の Test Quality finder まで検出されなかった。**Issue 本文の AC に対する監査は `/issue` にあるが、実装コードに書かれるテストの assert に対する同種の監査はどのフェーズにも存在しない**。同じ欠陥クラスが AC からテストへ場所を変えて再発している。
+
+#### spec
+- Spec の `spec retrospective` は「AC を 6 → 10 件に拡張。うち 4 件は決定的な `grep` で、パターンが対象ファイルに現時点で存在しないことを実行確認済み (常時 PASS でないことを担保)」と記録しており、AC 側では常時 PASS の検証を実際に行っている。この検証手順が bats テストの assert には適用されなかった。
+- `ALWAYS_PR Override` 節に「Callers that must apply this override (exhaustive)」という exhaustive 宣言を置いた設計自体は妥当だが、列挙が実際には網羅できていなかった (`/review` が `skills/review/SKILL.md` Step 3 と `modules/next-action-guide.md` Step 2 の欠落を検出)。`(exhaustive)` を宣言する節を新設する際、その網羅性を機械的に検証する手段がない。
+
+#### code
+- 実装は Spec の Changed Files 9 件と完全一致し、全 1266 テスト PASS・validator PASS で完了していた。設計逸脱なし。
+- ただし code フェーズは **commit 直前に外部 kill** され、`/code` 自身の commit・retrospective 書き込みまで到達しなかった。`## Code Retrospective` は親セッションによる再構成であり、`/code` 内部の試行錯誤・rework の記録は失われている。
+- `run-code.sh` は既存 worktree を無条件に `git worktree remove --force` するため、respawn すると未コミットの実装 9 ファイルが失われる構造だった。親セッションが respawn 前に worktree 状態を検査し、Spec の Changed Files との一致と全テスト PASS を確認したうえで手動 commit することで保全した。
+
+#### review
+- review フェーズは 3 回失敗した (1 回目: silent no-op → Tier 3 retry → 外部 kill、2 回目: 外部 kill、3 回目: 直接実行で完走)。3 回目も `/review` セッションが bats をバックグラウンド実行して通知待ちのままターンを終える silent no-op に陥り、`post-fallback-review-summary.sh` の fallback で phase 完了扱いに復旧している。
+- **fallback は機能した**: 先行 review (AC 検証結果 10 件 + Code Review) は投稿済みだったため、fallback は「先行 review あり」を正しく検出して Response Summary のみを補完した。review の実体は失われていない。
+- review の finder は質の高い指摘を出している。特に Test Quality の「`grep -q "always-pr: true"` は operate route 節の既存文字列にマッチするため常時 PASS」は、AC 検証では絶対に検出できない欠陥を捕捉した。
+- **一方で SHOULD 3 件はいずれも未解消のまま merge された**。MUST でないため merge はブロックされないが、うち 2 件 (exhaustive 列挙の欠落、operate route の narrowing) は実挙動の欠陥であり、AC が PASS していても実装は不完全である。
+
+#### merge
+- `mergeable=true, reason=clean, ci_status=success, review_status=approved` で通常どおり squash merge。特記事項なし。
+- #1060 で導入された pre-merge AC ゲートは、AC 10/10 チェック済みだったため発火せず通過した。
+
+#### verify
+- 自動検証 10 件すべて PASS。うち 4 件は決定的な `grep` で、`/spec` 時点で「実装前は 0 件」を確認済みのため常時 PASS ではない。
+- 本 Issue の AC は「各ファイルが `ALWAYS_PR` を参照しているか」を問うており、「参照箇所が網羅されているか」は問うていない。そのため review が検出した exhaustive 列挙の欠落は AC 検証を素通りする。**exhaustive を宣言する成果物に対して、その網羅性を検証する AC を書く手段がない**という構造的なギャップ。
+
+### Improvement Proposals
+
+- `ALWAYS_PR Override` 節の「Callers that must apply this override (exhaustive)」が `skills/review/SKILL.md` Step 3 (Size XS/S → `REVIEW_DEPTH=skip` で「Patch route — review is not needed.」と早期終了する分岐) と `modules/next-action-guide.md` Step 2 (Size → ROUTE 導出) を含んでいない。`always-pr: true` 下では XS/S でも PR が存在するため、前者は review が不当にスキップされる実挙動の欠陥。`(exhaustive)` を宣言している節が実際には網羅できていない点も含めて修正が必要。
+- `skills/code/SKILL.md` Step 10「Patch route verify command check」の発火条件を `ROUTE is patch` に絞ったことで、`ROUTE=operate` が対象外になった。operate route も PR を作らない (`modules/size-workflow-table.md` が「no worktree-based commit/push/PR for the implementation diff」と明記) ため、operate route の Issue で `github_check "gh pr checks"` の自動修正が効かなくなる。発火条件を `patch` または `operate` に広げるべき。
+- `tests/size-workflow-table.bats` の `@test "size-workflow-table: ALWAYS_PR Override documents patch to pr promotion"` にある `grep -q "always-pr: true"` は、`main` 時点で既に「Diff-less Axis (operate route)」節に同文字列が含まれているため、`ALWAYS_PR Override` 節の有無に関わらず常時 PASS する。`section_contains` 相当のスコープ限定か、`ALWAYS_PR Override` 節に固有の文字列への変更が必要。
+- **常時 PASS 検証の適用範囲が AC に限定されており、実装コードに書かれるテストの assert に適用されていない**。#1061 では `/issue` の AC 監査と `/spec` の「実装前に 0 件であることを実行確認」がどちらも AC に対しては機能したが、同じ Issue 内で追加された bats テストの `grep` assert は同じ欠陥を持ったまま実装され、`/review` の Test Quality finder まで到達した。`/code` が新規追加した検証系 assert (`grep -q` / `test -f` 等) について、実装前の状態で FAIL することを確認する手順を追加すべき。
+- **`(exhaustive)` を宣言する成果物の網羅性を検証する手段がない**。#1061 は「Callers that must apply this override (exhaustive)」という宣言を新設したが、その列挙が実際に網羅されているかを検証する AC は書けなかった (AC は「各ファイルが参照しているか」しか問えない)。`/issue` または `/spec` に「`(exhaustive)` を宣言する列挙を追加する場合、列挙元となる検索条件 (`grep` パターン等) を Spec に明記し、AC でその検索結果と列挙の一致を検証する」ガイドラインを追加すべき。
+- `skills/triage/skill-dev-verify-audit.md` の「In Bulk Execution (Step 3 substep 8)」が実際は substep 7 (`skills/triage/SKILL.md` の Step 3 内で substep 6 が Duplicate comment、7 が AC verify command audit)。既存の off-by-one で本 PR のスコープ外だが、当該行の直後に追記しているため同時修正が望ましかった。
