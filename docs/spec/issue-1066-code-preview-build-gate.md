@@ -315,3 +315,53 @@ non-interactive モードのため sub-issue 分割検討をスキップした (
 
 - `/verify` は Post-merge 検証項目 2 件 (意図的ビルド失敗の検知確認、queued 段階での待機継続確認) を実施すること。前者は manual 検証、後者は bats でカバー済み。
 - Squash merge 後、`main` は 13 ファイル分の追加コミット (このブランチ以外の並行マージ分) を含んでいた。`/verify` 実行時は最新 `main` を基準に確認すること。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 再試行上限が未規定だった点を、既存の `verify-max-iterations` / `auto-retry-on-fail.max_iterations` / `MAX_ITERATIONS_REACHED` に揃える形で自動解決できた。既存パターンへの参照があったため非対話モードでも判断が安定した。
+
+#### spec
+- Issue 本文が「`gh pr checks --json state` の `queued` 時の実値は未実測。実装時に実機確認すること」と留保していた最大の未解決点を、**state を列挙するのではなく gh CLI の `bucket` フィールドで解く**という形で構造的に解決した。`bucket == "pending"` 1 条件で 7 種の未完了 state を吸収し、将来の state 追加にも耐える。Issue 側の想定 (列挙) より優れた解であり、実機確認そのものが不要になった。
+- 一方で待機ラウンド数の見積り (「540 秒 × 4 ラウンド = 36 分」) が実装と 1 ラウンドずれ、review の CONSIDER 指摘で判明した。Auto-Resolve Log に数値根拠を書く場合、実装側の境界条件 (0 始まりカウンタ) と突き合わせる手順が要る。
+
+#### code
+- 実装そのものは Spec の Implementation Steps に忠実で、Deviations は N/A。
+- ただし **bats のモックが実機 `gh` の挙動と乖離**しており (`echo '[]'` vs 実際は stdout 空 + exit 1 + stderr)、AC4 の実装が本番未到達のままテストだけ通る状態を作り込んだ。外部コマンドの異常系をモックする際に実機の出力を確認する手順がなかった。
+
+#### review
+- `--full` review がこの乖離を **MUST として正しく検出**した。実機 `gh` 2.96.0 の挙動を確認したうえでの指摘で、根拠も再現手順も具体的だった。review の存在価値が明確に出たケース。
+- review は所見の投稿と修正の着手までは完了したが、修正コミット前に外部 kill された。`reconcile-phase-state.sh review --check-completion` が Review Response Summary の不在を検出して `matches_expected: false` を返し、未完了を正しく検知できた (silent no-op にはならなかった)。
+- review の修正案に含まれていなかった欠陥を 1 件、引き継ぎ時に追加発見した: EXIT trap の `rm` が PATH 制限テストで解決できず、`set -e` 下で trap の失敗がスクリプトの終了コードを 127 に上書きしていた。trap の非致命化で解決 (`ce636423`)。
+
+#### merge
+- 特記事項なし。並行セッションが `#1061` を main にマージしていたため spec フェーズで FF 失敗が起きたが、`orchestration-fallbacks.md#ff-only-merge-fallback` の worktree rebase で解消済み。
+
+#### verify
+- pre-merge 5 件 + post-merge の自動検証 1 件すべて初回 PASS。FAIL / UNCERTAIN なし、auto-retry 発火なし。
+- 残る manual 条件 1 件は wholework 自身が `capabilities.pr-preview` を宣言していないため対象読者環境でのみ検証可能。設計どおり `phase/verify` に留置。
+
+### Orchestration Anomalies
+
+本 Issue の実行中、バックグラウンドの `claude -p` が **3 回 kill** された。
+
+| 試行 | 対象 | 到達点 |
+|---|---|---|
+| 1 | `run-auto-sub.sh` (全フェーズ連結) | spec 完走 → code 実装中 (未コミット 12 ファイル) で停止 |
+| 2 | `run-auto-sub.sh` 再実行 | resume 機構が `pre-commit` を検出し正しく再開 → 実装コミット 5 件完了、push 前で停止 |
+| 3 | `run-review.sh --full` | 所見投稿 + 修正着手まで完了、Review Response Summary 投稿前で停止 |
+
+- `code_phase_milestone` の resume 機構は試行 2 で意図どおり機能し、破棄されるはずだった未コミット変更をコミットまで進めた。設計の有効性が実地で確認できた。
+- 試行 3 以降はフェーズを個別のバックグラウンド呼び出しに分割し、残りは手動で完了させた (`--write-manual-recovery` で `docs/reports/orchestration-recoveries.md` に記録済み)。
+
+### Improvement Proposals
+
+- **`detect-external-kill.sh` が複数フェーズを連結したログで false negative を返す**: 仕様は「当該 issue/phase について wrapper log の `Exit code: ` トレーラと `wrapper_exit` イベントの**両方が存在しない**こと」を external-kill の判定条件としている (`skills/auto/SKILL.md` Step 6 の External kill pre-check)。しかし `run-auto-sub.sh` は spec → code → review → merge を**単一のログに連結して出力する**ため、先行フェーズが正常終了していると、そのフェーズの `Exit code: 0` トレーラがログ中に残る。スクリプトがログ全体を対象に trailer の有無を見ている場合、後続フェーズが kill されても「trailer がある」と判定され `no-match` になる。本実行で実測: 試行 1 のログは spec の `Exit code: 0` を含む一方 code-pr の完了トレーラを持たず、`wrapper_exit` イベントも #1066 について 0 件だったが、`detect-external-kill.sh --exit-code unknown --issue 1066 --phase code-pr` は `no-match` (exit 1) を返した。結果として external-kill pre-check がスキップされ Tier 1→2→3 の診断経路に落ちた (正しい対処は同一引数での respawn であり両経路とも同じ結論に至ったため実害はなかったが、pre-check が本来担うべき早期判定が働かなかった)。対策候補: (a) trailer 探索を `--phase` で渡されたフェーズのログ区間に限定する (`run-*.sh: Finished /<phase>` バナーで区切る)、(b) `wrapper_exit` イベントの issue/phase 一致のみを判定に使い、ログ trailer を補助証拠に降格する、(c) `run-auto-sub.sh` がフェーズごとに別ファイルへログを分離する。
+
+- **`--write-manual-recovery` が Spec の `## Auto Retrospective` に書かない経路がある**: `skills/auto/SKILL.md` の Manual recovery hand-off は「sub-issue Spec の `## Auto Retrospective` セクション、`docs/reports/orchestration-recoveries.md`、`manual_intervention` イベントの 3 箇所に記録する」と規定しているが、本実行で `--write-manual-recovery 1066 code-pr push-and-pr` を呼んだ結果、`orchestration-recoveries.md` には記録された一方 `docs/spec/issue-1066-code-preview-build-gate.md` に `## Auto Retrospective` は作られなかった。`/verify` Step 12 の skip 条件は「Spec の `## Auto Retrospective` に Manual recovery が記録されていれば non-notable として扱う」という機械的判定に依存しているため、書き込み先が 1 箇所欠けると、同じ復旧が verify retrospective 側で二重に記録されるか、逆に取りこぼされる。3 箇所すべてに書かれることをテストで固定するか、規定側を実装に合わせて修正するか、いずれかで整合を取る必要がある。
+
+### 観察 (Issue 化は保留)
+
+- 本 Issue の長時間フェーズは 3/3 で kill された一方、#1051 / #1056 の短いフェーズ呼び出しは 0/6 だった。ただし `docs/sessions/` の既存調査では「セッション長依存説 (H-a) は棄却方向」と記録されており、本件は**セッション寿命ではなく単一フェーズ呼び出しの実行時間**という別軸の観察になる。単独では母数が小さく因果を主張できないため、既存の external kill 調査 (通算 25 件超) にデータ点として供する位置づけに留める。
