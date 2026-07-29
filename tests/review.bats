@@ -71,3 +71,8 @@ step9_section() {
 @test "Step 9: Blocking by default mentioned" {
     step9_section | grep -q "Blocking by default"
 }
+
+@test "Step 8: manual preview-tier AC classified UNCERTAIN without AI judgment" {
+    step8_section | grep -q -F "ac-tier: preview --> <!-- verify-type: manual -->"
+    step8_section | grep -q -F "human-check against the preview URL is required"
+}

@@ -48,3 +48,8 @@ step5_section() {
 @test "Step 5 pre-merge-preview AC skip rule documents latest-wins resolution" {
     step5_section | grep -q -F "latest-wins"
 }
+
+@test "Step 5 pre-merge-preview AC skip rule applies to manual subcase without automatic fallback" {
+    step5_section | grep -q -F "verify-type: manual"
+    step5_section | grep -q -F "no automatic fallback exists"
+}

@@ -65,19 +65,27 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-patterns.md` and follow the "Processi
 
 After ambiguity detection, classify each acceptance criterion as "pre-merge" or "post-merge" and assign verify commands.
 
-**pre-merge-preview tier (URL/UX AC classification):**
+**pre-merge-preview tier (preview-environment AC classification):**
 
-When `HAS_PR_PREVIEW_CAPABILITY` is `true` (i.e., `.wholework.yml` has `capabilities.pr-preview: true`), classify URL/UX-based verify commands into the **pre-merge-preview** tier instead of post-merge.
+When `HAS_PR_PREVIEW_CAPABILITY` is `true` (i.e., `.wholework.yml` has `capabilities.pr-preview: true`), classify ACs that can only be confirmed against the PR preview environment into the **pre-merge-preview** tier instead of post-merge — regardless of whether the AC has a verify command (auto) or requires human judgment (manual). The classification axis is "does this AC verify against the preview environment," not "what kind of verify command does it have."
 
-URL/UX verify command set (exhaustive): `http_status`, `html_check`, `api_check`, `http_header`, `http_redirect`, `browser_check`, `browser_screenshot`, `lighthouse_check`.
+**(a) Auto subcase** — the AC has a verify command from the URL/UX verify command set (exhaustive): `http_status`, `html_check`, `api_check`, `http_header`, `http_redirect`, `browser_check`, `browser_screenshot`, `lighthouse_check`.
 
-For each AC whose verify command belongs to the above set and `HAS_PR_PREVIEW_CAPABILITY=true`:
+For each such AC when `HAS_PR_PREVIEW_CAPABILITY=true`:
 - Place the AC in the `### Pre-merge (auto-verified)` section (not in Post-merge)
 - Append `<!-- ac-tier: preview -->` to the AC line (after the checkbox text, before any `<!-- verify-type: ... -->` tag)
 - Auto-append `--when="test -n \"$PREVIEW_URL\""` to the verify command so the check is SKIPPED when the `PREVIEW_URL` env variable is not set (see `--when` modifier table entry "Preview URL required")
 - `/review` will execute these ACs against the preview URL when `PREVIEW_URL` is exported; `/verify` will skip them post-merge to prevent double verification
 
-When `HAS_PR_PREVIEW_CAPABILITY` is `false` or unset: classify URL/UX-based ACs as post-merge as before (existing behavior unchanged).
+**(b) Manual subcase** — the AC has no verify command, but confirming it inherently requires a human to look at or operate the PR preview (e.g., visual/UX behavior that cannot be reduced to a mechanical check).
+
+For each such AC when `HAS_PR_PREVIEW_CAPABILITY=true`:
+- Place the AC in the `### Pre-merge (auto-verified)` section (not in Post-merge) — do not leave it in Post-merge, where the preview environment will already be gone by the time it is checked
+- Append `<!-- ac-tier: preview --> <!-- verify-type: manual -->` to the AC line
+- Do not add a verify command line or a `--when` guard (there is no command to gate)
+- `/review` presents these ACs as human-check items against the preview URL instead of attempting automated verification; `/verify` skips them post-merge for the same reason as the auto subcase
+
+When `HAS_PR_PREVIEW_CAPABILITY` is `false` or unset: classify preview-only ACs (both subcases) as post-merge as before (existing behavior unchanged).
 
 **Classification guidance (examples):**
 

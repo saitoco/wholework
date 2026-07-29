@@ -59,3 +59,49 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue --non-interactive` によるリファインメントの Issue Retrospective コメント。Type=Bug / Size=M の判定根拠、Pre-merge AC3・AC4 の verify command を `grep` (常時 PASS 判定) から `rubric` へ変更した理由、および「検討事項」2 点 (manual preview AC のチェック責務の切り分け、`--when` 未使用方針) の自動解決ログを記録したもの。いずれも Issue 本文に既に反映済みの内容であり、本 Spec の設計判断に新規の変更は生じていない。(https://github.com/saitoco/wholework/issues/1059#issuecomment-5111765584)
+- `/code --non-interactive` 実行時点でカットオフ (最新 `phase/*` ラベル付与時刻) 以降の新規コメントなし。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1–3 を Spec の記述通りに実装した。
+
+### Design Gaps/Ambiguities
+- `skills/review/SKILL.md` Step 8 の項目挿入位置について、Spec は「項目 1 と項目 2 の間、または項目 2 の冒頭」の 2 択を許容していたため、新規分岐を項目 2 として挿入し、既存の「No hint: attempt AI judgment」を項目 3 に、「Classify each condition」を項目 4 に繰り下げた。これは Spec の許容範囲内の選択であり、設計逸脱ではない。
+
+### Rework
+- N/A — 各 Implementation Step の初回編集で bats テスト・`validate-skill-syntax.py`・`check-forbidden-expressions.sh` がいずれも一発で PASS し、やり直しは発生しなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Pre-merge (auto-verified) の rubric AC 4 件はすべて PR diff の該当箇所と 1 対 1 で対応しており PASS と判定した。checkbox はすでに `[x]` 済みであったため更新なし。
+- SHOULD/CONSIDER の指摘 2 件 (`skills/audit/SKILL.md`, `modules/verify-classifier.md`) は本 PR のスコープ外ファイルであり、Spec の Notes に明記された変更範囲 (issue/review/verify の 3 スキル) を尊重して今回は修正を見送った。
+
+### Deferred Items
+- `skills/audit/SKILL.md` の Manual Waiting Count と `skills/auto/SKILL.md` の Pending manual confirmation 集計が、pre-merge な manual preview AC (SKIPPED のまま恒久的に unchecked) を誤カウントし得る問題。フォローアップ Issue での対応を推奨 (レビューコメントに記録済み)。
+- `modules/verify-classifier.md` の Purpose/Input 記述が post-merge 専用のままで、pre-merge manual preview AC への `verify-type: manual` 拡張を反映していない (CONSIDER、軽微)。
+- Post-merge AC (「preview 環境で人間が確認する AC を含む Issue を 1 件通しで実行し、pre-merge セクションに配置され merge 前に確認される流れになることを確認する」) は動的な振る舞い確認であり、`/verify` 実行時に人間が確認する。
+- manual preview AC のチェック責務の正式な割り当て (merge ゲートでの強制など) は、Issue 本文の「検討事項」記載通り別 Issue に委ねられており、本 PR のスコープ外。
+
+### Notes for Next Phase
+- `/merge` はこの PR を通常通りマージしてよい (MUST 相当の指摘なし、CI 全 SUCCESS)。
+- `/verify` は Post-merge 実行時、Step 5 の pre-merge-preview AC skip rule により auto/manual いずれの preview-tier AC もデフォルトで SKIPPED として扱う。`type=preview-ac-unverified` マーカーで未検証と報告された manual AC は、production-URL フォールバックを試みず常に UNCERTAIN (human verification required) として記録される。
+- Post-merge の唯一の未チェック AC (「preview 環境で人間が確認する AC を含む Issue を 1 件通しで実行し…」) は動的確認が必要なため、`/verify` 側で human-check として扱われる想定。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — Implementation Steps 1–3 は Spec の記述通りに実装されており、`/review` の rubric ベース AC 検証 4 件もすべて PASS で diff と Spec 記述に構造的な乖離はなかった。
+
+### Recurring issues
+
+`verify-type: manual` タグの意味論拡張 (post-merge 専用 → pre-merge/post-merge 両対応) が、本 PR のスコープ外にある下流の集計スキルに副作用を及ぼす形跡を確認した。`skills/audit/SKILL.md` の Manual Waiting Count と `skills/auto/SKILL.md` の Pending manual confirmation 集計は、いずれも Issue 本文全体を post-merge 限定の前提でスキャンしており、pre-merge な manual preview AC ( `/verify` で SKIPPED のまま恒久的に unchecked になる) を誤って「未対応の manual AC」としてカウントし得る。`modules/verify-classifier.md` の Purpose/Input 記述も post-merge 専用という前提のままで、今回の意味論拡張を反映していない。
+
+これは「タグ・enum の意味論を拡張する変更が、その enum 値を消費する全箇所を横断的に洗い出せていない」という、タグ拡張系 Issue に共通しやすいパターンの一例と見られる。個別の SHOULD/CONSIDER としてレビューコメントに記録済み (このレビューのスコープでは修正見送り、フォローアップ Issue 化を推奨)。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — Pre-merge (auto-verified) 4 件はすべて `rubric` verify command で、PR diff の該当箇所と 1 対 1 で対応が取れており UNCERTAIN は発生しなかった。verify command の記述と実装内容の乖離もなし。
