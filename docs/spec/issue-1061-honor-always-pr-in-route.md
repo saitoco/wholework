@@ -299,3 +299,11 @@ Background 内の技術的主張 (`ALWAYS_PR` を参照する箇所、`skills/sp
 - **Recovery type**: push-only
 - **Wrapper exit code**: unknown
 - **Outcome**: success
+
+### Manual recovery (review)
+- **Date**: 2026-07-29 07:26 UTC
+- **Issue**: #1061, phase: review
+- **Source**: parent session manual recovery
+- **Recovery type**: review-rerun
+- **Wrapper exit code**: unknown
+- **Outcome**: success
