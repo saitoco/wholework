@@ -73,22 +73,19 @@
 - N/A — 各 Implementation Step の初回編集で bats テスト・`validate-skill-syntax.py`・`check-forbidden-expressions.sh` がいずれも一発で PASS し、やり直しは発生しなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Pre-merge (auto-verified) の rubric AC 4 件はすべて PR diff の該当箇所と 1 対 1 で対応しており PASS と判定した。checkbox はすでに `[x]` 済みであったため更新なし。
-- SHOULD/CONSIDER の指摘 2 件 (`skills/audit/SKILL.md`, `modules/verify-classifier.md`) は本 PR のスコープ外ファイルであり、Spec の Notes に明記された変更範囲 (issue/review/verify の 3 スキル) を尊重して今回は修正を見送った。
+- PR #1068 は CI SUCCESS・review approved・conflicts なし (mergeable=clean) だったため、conflict 解決手続きを経ずに squash merge をそのまま実行した。
+- squash merge 後、worktree を `origin/main` に `--ff-only` で追随させてから Spec の Phase Handoff を書き換えた (merge phase はマージ後にも Spec 編集ができるよう worktree を最新化する必要がある)。
 
 ### Deferred Items
-- `skills/audit/SKILL.md` の Manual Waiting Count と `skills/auto/SKILL.md` の Pending manual confirmation 集計が、pre-merge な manual preview AC (SKIPPED のまま恒久的に unchecked) を誤カウントし得る問題。フォローアップ Issue での対応を推奨 (レビューコメントに記録済み)。
-- `modules/verify-classifier.md` の Purpose/Input 記述が post-merge 専用のままで、pre-merge manual preview AC への `verify-type: manual` 拡張を反映していない (CONSIDER、軽微)。
-- Post-merge AC (「preview 環境で人間が確認する AC を含む Issue を 1 件通しで実行し、pre-merge セクションに配置され merge 前に確認される流れになることを確認する」) は動的な振る舞い確認であり、`/verify` 実行時に人間が確認する。
+- `skills/audit/SKILL.md` の Manual Waiting Count と `skills/auto/SKILL.md` の Pending manual confirmation 集計が pre-merge な manual preview AC を誤カウントし得る問題、および `modules/verify-classifier.md` の Purpose/Input 記述更新は、review phase で SHOULD/CONSIDER としてレビューコメントに記録済みでスコープ外のため据え置き。フォローアップ Issue化を推奨。
 - manual preview AC のチェック責務の正式な割り当て (merge ゲートでの強制など) は、Issue 本文の「検討事項」記載通り別 Issue に委ねられており、本 PR のスコープ外。
 
 ### Notes for Next Phase
-- `/merge` はこの PR を通常通りマージしてよい (MUST 相当の指摘なし、CI 全 SUCCESS)。
 - `/verify` は Post-merge 実行時、Step 5 の pre-merge-preview AC skip rule により auto/manual いずれの preview-tier AC もデフォルトで SKIPPED として扱う。`type=preview-ac-unverified` マーカーで未検証と報告された manual AC は、production-URL フォールバックを試みず常に UNCERTAIN (human verification required) として記録される。
-- Post-merge の唯一の未チェック AC (「preview 環境で人間が確認する AC を含む Issue を 1 件通しで実行し…」) は動的確認が必要なため、`/verify` 側で human-check として扱われる想定。
+- Post-merge の唯一の未チェック AC (「preview 環境で人間が確認する AC を含む Issue を 1 件通しで実行し、pre-merge セクションに配置され merge 前に確認される流れになることを確認する」) は動的確認が必要なため、`/verify` 側で human-check として扱われる想定。
 
 ## review retrospective
 
