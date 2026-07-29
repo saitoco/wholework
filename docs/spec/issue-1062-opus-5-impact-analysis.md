@@ -113,17 +113,15 @@ None. The one SHOULD finding was a single, isolated instance (an internal cross-
 None. All 8 Pre-merge conditions carried well-specified verify commands (`file_exists` / `grep` / `file_contains` / `file_not_contains` / `rubric`) and all resolved to PASS deterministically on the first pass — no UNCERTAIN classifications and no verify command corrections were needed.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Fixed the single SHOULD-level review finding (dangling report self-references, 6 occurrences) directly in Step 12 rather than deferring — a trivial documentation text correction with no design implication.
-- Ran the full lightweight re-check (`python3 scripts/validate-skill-syntax.py skills/` — 0 error) even though the fix was docs-only, to confirm no incidental regression before posting the Step 14 summary.
-- Skipped Step 13 (Acceptance Criteria Consistency Check) — the fix was a pure documentation-consistency correction, not a policy/design change, so none of the 8 Pre-merge ACs needed rewording.
+- Squash-merged PR #1067 into `main` with no conflicts (`mergeable=true`, `reason=clean`, CI green, review approved) — no rebase/conflict-resolution path was needed.
+- Wrote this Phase Handoff after fast-forwarding the worktree to `origin/main` (which now contains the squash commit), per the standard merge-phase handoff procedure.
 
 ### Deferred Items
-- None beyond what `/code` already deferred to `#1063`/`#1064` (sub-agent `effort:` frontmatter, `run-spec.sh --opus` effort recalibration) — review surfaced no new deferrable work.
+- None beyond what prior phases already deferred to `#1063`/`#1064` (sub-agent `effort:` frontmatter, `run-spec.sh --opus` effort recalibration) — merge surfaced no new deferrable work.
 
 ### Notes for Next Phase
-- PR is ready for `/merge 1067`: all 8 Pre-merge ACs PASS, CI green post-fix, 0 MUST issues, and the 1 SHOULD issue is already resolved and pushed (commit `02be008f`).
-- `/verify` should check the 2 Post-merge conditions: (1) no Opus 5-related drift surfaces in the next `/audit drift` narrative check (opportunistic), (2) re-confirm `#1063`/`#1064` are still Priority=`medium` at verify time (i.e., below the Priority=high filing threshold noted in the report's Post-merge condition).
-- The prior phase's citation-protection concern (`#922`'s reference to the `Opus 4.8 effort calibration` heading, and the relocated `auto-resolve to the current Opus (4.8)` sentence) was re-confirmed correct during this review pass — no further action needed.
+- `/verify 1062` should check the 2 Post-merge conditions recorded in the Verification section: (1) no Opus 5-related drift surfaces in the next `/audit drift` narrative check (opportunistic), (2) re-confirm `#1063`/`#1064` are still Priority=`medium` at verify time (below the Priority=high filing threshold).
+- Issue #1062 is expected to auto-close via `closes #1062` in the PR body since `BASE_BRANCH=main`; verify should double check `state=CLOSED` and `phase/verify` label landed correctly.
