@@ -274,25 +274,22 @@ N/A — Implementation Steps 1-4 の記述どおりに `split_selector` / `parse
 - Rework 自体は発生していない (実装ロジックは Spec のプロトタイプ検証を踏襲し一度で全ケース一致)。上記の Consumed Comments 孤立 diff の復旧作業のみ、本来不要だったやり直しに当たる。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- **`origin/main` を PR ブランチに取り込んだ**。分岐後に main へ入った #1074 (curl 系 URL command の Basic Auth) が `modules/verify-executor.md` の `html_check` 行を編集しており、本 PR と同一行で conflict していた。どちらか一方を丸ごと採用すると他方が失われるため、main 側の `--config "$config_file"` を土台に本 PR の combinator 説明文を `Judge in two stages` の直前へ挿入する形で解決した
-- **同種の取りこぼしを止める回帰ガードを 2 件追加した** (`tests/verify-executor.bats`)。`html_check` 行に `--config` と `combinator` が同居することと、curl 系 5 コマンド全行が `--config` を保持することを確認する。マージ前の PR 側の行に対して実際に FAIL することも検証済み
-- **`matches_chain` にメモ化を入れた**。子孫 / 一般兄弟の照合が O(n · d^(k-1)) で、58 KB の 2000 行テーブル + `thead ~ tr ~ tr` が 93.6 秒かかっていた。`(id(node), 残チェーン長)` をキーにするだけで 0.39 秒になる。結果はノードとチェーン残量のみで決まり探索経路に依存しないため、30,000 件の差分ファジングで不一致 0 件を確認した
-- Pre-merge AC 6 件はすべて PASS。CI も全ジョブ SUCCESS。ただし CI は main とマージしていないブランチ単体で走るため、上記の conflict は CI では検知できなかった
+- **squash merge を conflict なしで実行**。review フェーズで `origin/main` を既に取り込み済みだったため、`gh pr merge --squash --delete-branch` はそのまま成功した (追加の rebase / conflict 解決は不要)
+- Pre-merge AC 6 件はすべて `[x]` 済みであることを再確認してからマージした (`check-pre-merge-ac.sh` で `unchecked_count=0`)
 
 ### Deferred Items
 
-- CONSIDER 5 件は未対応のまま著者判断に委ねた: `selector.strip()` の Spec 未記載 (docstring / Spec への追記)、implied end tag 制約の回帰テスト、`ValueError` 3 経路のテスト、`verify-executor.md:268` の "unlike" 列挙の精度、`docs/structure.md` の `tests/` ファイル数ドリフト (先行ドリフト、別 Issue 推奨)
-- Post-merge AC 2 件はいずれも `verify-type: manual`。`/verify` フェーズで人間が実施する
+- Post-merge AC 2 件 (隣接兄弟セレクタの PASS/FAIL 反転確認、不正セレクタの UNCERTAIN 確認) はいずれも `verify-type: manual`。`/verify` フェーズで人間が実施する
+- CONSIDER 5 件 (review retrospective 参照) は著者判断で見送り継続。別 Issue化の要否は未検討のまま
 
 ### Notes for Next Phase
 
-- **マージ時は追加の conflict 解決は不要**。`origin/main` を取り込み済みで、`git merge-tree` による再確認でも conflict は解消している
-- `modules/verify-executor.md` の `html_check` 行は #1074 と #1069 の両方の変更を含む。今後この行を触る際は `tests/verify-executor.bats` の 2 件のガードが両立を強制する
-- `scripts/html-selector-match.py` はレビュー中にメモ化を追加したため、`/code` フェーズ完了時点の実装とは差分がある。CLI 契約 (引数 1 個 / stdin / stdout にマッチ数 / 解析失敗時 exit 2) は不変
+- `/verify` は Manual AC 2 件を実 URL に対して人手で実行し、PASS/FAIL/UNCERTAIN を確認すること
+- `scripts/html-selector-match.py` の CLI 契約 (引数 1 個 / stdin / stdout にマッチ数 / 解析失敗時 exit 2) は不変のため、`/verify` の実行手順に変更は不要
 
 ## review retrospective
 
