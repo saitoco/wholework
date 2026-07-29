@@ -94,3 +94,16 @@
 
 ### Acceptance criteria verification difficulty
 - N/A — Pre-merge AC 5件すべてに `rubric` または `file_contains` の verify command が付与されており、いずれもコード読解とローカルテスト実行 (`bats tests/opportunistic-search.bats` 25/25 PASS) で機械的に PASS 判定できた。UNCERTAIN は 0 件。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### verify
+- Pre-merge 5 件は再検証でも全 PASS (`bats tests/opportunistic-search.bats` 25/25、ゲート 3 ケースを個別確認)
+- Post-merge observation AC は `/auto 1074` (2026-07-29) の observation scan でも観測不能だった。リポジトリ内のどの observation AC も `config=` 属性を宣言していないため、ゲートが作用する対象が存在しない。同 scan で 12 件に notification コメントが投稿され、うち #797 は観察条件が `always-pr: true` (本リポジトリで無効) に依存する典型例だが、AC 行に `config=` がないため後方互換仕様どおり無条件マッチしている (ゲートの誤動作ではない)
+- 本 Issue の Spec § Notes は既存 Issue への `config=` 付与を明示的にスコープ外とし「#797 等への `config=` 付与は別途 follow-up Issue として扱う」と記録していたが、その follow-up が未起票のまま残っていた。機構は shipped だが適用対象が 0 件のため、報告された症状 (設定無効な observation AC への notification 蓄積) は解消していない
+
+### Improvement Proposals
+
+- **`config=` ゲートの適用対象がゼロのままで効果が発現していない — 既存 observation AC へのレトロフィットが未実施**: #1026 で `config=<key>` ゲートは `scripts/opportunistic-search.sh` に実装・テスト済みだが、リポジトリ内の既存 observation AC は 1 件も `config=` を宣言しておらず、ゲートが作用する対象が存在しない。結果として #1026 が解決を目指した症状 — 設定依存の observation AC への notification コメント蓄積 — はそのまま継続している (#797 は本セッション時点で 47 件超のコメントが蓄積)。本 Issue の Spec § Notes は「#797 等への `config=` 付与は別途 follow-up Issue として扱う」と明記していたが、その follow-up は未起票だった。対応候補: (a) 設定依存の observation AC を横断監査し該当 AC に `config=<key>` を付与する (#797 → `config=always-pr` が確定的な 1 件目)、(b) `/issue` の AC 生成時に「観察条件が `.wholework.yml` の特定設定に依存する場合は `config=` を付与する」旨をガイドラインとして追加し、今後の新規 AC で同じ負債が積み上がらないようにする。なお `#783` (`auto-stop-at: review`) のような enum 値キーは現行ゲートが真偽値のみ対応のため対象外で、`config=key:value` 形式への拡張が別途必要 (Spec § Notes L53 に follow-up として記録済み)
