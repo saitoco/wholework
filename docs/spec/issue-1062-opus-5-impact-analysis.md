@@ -98,24 +98,32 @@ No new comments since last phase (cutoff: 2026-07-29T02:02:15Z, most recent `pha
 
 - One process correction, not implementation rework: while updating Issue #1062's pre-merge checkboxes, a `.tmp/` scratch file was first written via a `python3 -c` Bash invocation, which violates the global CLAUDE.md rule requiring the Write tool for all `.tmp/` file creation (Bash redirects/scripts are prohibited for this purpose). Caught before committing; the file was deleted and recreated correctly via Read + Write. No implementation file was affected.
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+None. Implementation matched the Spec's 5 Implementation Steps exactly. The single review finding (dangling `(§ Implementation Steps N)` self-references inside the newly created report) was a documentation-quality slip introduced when Spec-internal section-reference phrasing leaked into the disposable report's own prose — not a Spec/code divergence, since the Spec never specified that phrasing for the report body.
+
+### Recurring issues
+
+None. The one SHOULD finding was a single, isolated instance (an internal cross-reference naming mismatch), not a pattern repeated across multiple files or sections in this PR.
+
+### Acceptance criteria verification difficulty
+
+None. All 8 Pre-merge conditions carried well-specified verify commands (`file_exists` / `grep` / `file_contains` / `file_not_contains` / `rubric`) and all resolved to PASS deterministically on the first pass — no UNCERTAIN classifications and no verify command corrections were needed.
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Preserved the `**Opus 4.8 effort calibration**` heading text verbatim (marked historical) and added a separate `**Opus 5 effort calibration**` paragraph, rather than rewriting the existing heading in place — required because `#922`'s recalibration entry cites this exact heading string as its judgment basis (`docs/tech.md:124`), and rewriting it would have broken that citation.
-- Recorded the Sonnet 5 → Opus 5 default-parent evaluation as a `docs/tech.md` note-paragraph verdict (deferred) rather than filing a swap Issue — `#914`/`#921`/`#922`/`#923` give no cost/quality basis for a swap today; the note records the re-evaluation trigger instead.
-- Made no implementation changes for sub-agent `effort:` frontmatter or `run-spec.sh --opus`'s own effort value — both are fully delegated to the already-filed, already-blocked-by child Issues `#1063`/`#1064`, consistent with the Spec's Out of Scope section.
-- Ran the full `bats tests/` suite (1237/1237 PASS) despite the change being docs-only — the Behavioral Change Detection step found no test references to the modified files, but `test-runner.md`'s auto-detection has no partial-scope mechanism for a markdown-only repository, so full-suite execution was the only available path.
+- Fixed the single SHOULD-level review finding (dangling report self-references, 6 occurrences) directly in Step 12 rather than deferring — a trivial documentation text correction with no design implication.
+- Ran the full lightweight re-check (`python3 scripts/validate-skill-syntax.py skills/` — 0 error) even though the fix was docs-only, to confirm no incidental regression before posting the Step 14 summary.
+- Skipped Step 13 (Acceptance Criteria Consistency Check) — the fix was a pure documentation-consistency correction, not a policy/design change, so none of the 8 Pre-merge ACs needed rewording.
 
 ### Deferred Items
-- Sub-agent `effort:` frontmatter introduction — `#1063` (already filed, `blocked-by` child of `#1062`).
-- `run-spec.sh --opus` effort recalibration under Opus 5 guidance — `#1064` (already filed, `blocked-by` child of `#1062`).
-- Prompt-side response to Opus 5's behavioral shifts (verbosity-driven output growth, task-scope expansion, over-verification) — no Issue filed; the report lists this only as a non-enumerated future candidate (§9 Non-goals), since no concrete instance has been observed yet.
-- Watchdog Opus 5 perspective — explicitly out of scope for this Issue; to be added as a comment on the existing `#939` (whose own `WATCHDOG_TIMEOUT_SPEC_DEFAULT` verdict is still pending), not as a new Issue.
-- `docs/ja/tech.md` translation sync — excluded per the prior `/issue`-phase retrospective decision (Consumed Comments above), not implemented in this phase.
+- None beyond what `/code` already deferred to `#1063`/`#1064` (sub-agent `effort:` frontmatter, `run-spec.sh --opus` effort recalibration) — review surfaced no new deferrable work.
 
 ### Notes for Next Phase
-- No code or script changes are in this PR — only `docs/reports/claude-opus-5-impact-strategy.md` (new), `docs/tech.md`, and `agents/review-bug.md` changed. Review should weigh documentation accuracy/rubric-style semantic checks more heavily than typical bug-pattern detection.
-- Confirm `#922`'s citation ("the \"Opus 4.8 effort calibration\" note above") still resolves correctly in the merged `docs/tech.md` — the heading text was deliberately kept unchanged for this reason.
-- Confirm the removed alias-resolution sentence (`auto-resolve to the current Opus (4.8)`) does not reappear elsewhere in `docs/tech.md` outside the paragraph it was moved from.
-- `review-bug` (Opus-routed sub-agent) itself now resolves to Opus 5 per this PR's own subject matter — expect the sub-agent's own cyber-classifier note (as edited by this PR) to apply to its own review pass.
+- PR is ready for `/merge 1067`: all 8 Pre-merge ACs PASS, CI green post-fix, 0 MUST issues, and the 1 SHOULD issue is already resolved and pushed (commit `02be008f`).
+- `/verify` should check the 2 Post-merge conditions: (1) no Opus 5-related drift surfaces in the next `/audit drift` narrative check (opportunistic), (2) re-confirm `#1063`/`#1064` are still Priority=`medium` at verify time (i.e., below the Priority=high filing threshold noted in the report's Post-merge condition).
+- The prior phase's citation-protection concern (`#922`'s reference to the `Opus 4.8 effort calibration` heading, and the relocated `auto-resolve to the current Opus (4.8)` sentence) was re-confirmed correct during this review pass — no further action needed.
