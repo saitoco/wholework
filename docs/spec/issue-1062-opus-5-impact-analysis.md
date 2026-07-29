@@ -143,3 +143,40 @@ None. All 8 Pre-merge conditions carried well-specified verify commands (`file_e
 - **Recovery type**: respawn
 - **Wrapper exit code**: unknown
 - **Outcome**: success
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 受入条件は rubric と機械的 command を併記する設計になっており、verify 時に 8 件すべてが曖昧さなく判定できた。特に AC4 の `file_not_contains "auto-resolve to the current Opus (4.8)"` は「古い記述が残っていないこと」を直接検証しており、追加のみで済ませる実装を機械的に排除できた。
+- 一方で AC10 (`§8 の Priority=high 以上が起票済み`) は **vacuous truth で PASS する構造** だった。§8 に high 以上の行が 0 件なら条件は自動的に充足する。今回は実データ照合で `#1063`/`#1064` の実在と `medium` を確認して補強したが、AC 文面だけでは「high 行が無いこと」と「high 行があって起票済みであること」を区別できない。`modules/verify-patterns.md` の「不在を検証する AC に参照点を持たせる」ガイドライン (`#1054`) と同種の課題。
+
+#### spec
+- `#922` が `Opus 4.8 effort calibration` という**見出し文字列を判定根拠として直接引用している**ことを spec 段階で検出し、見出しをリネームせず historical note として残して `Opus 5 effort calibration` を別段落で新設する 2 段落構成を選択した。Issue 本文の auto-resolve は「既存注記を改稿する」方針だったため、spec の判断が過去判定の根拠喪失を防いだ。ドキュメント間の引用関係を変更前に洗い出す手順が有効に働いた例。
+
+#### code
+- 変更 3 ファイル・AC 8 件すべてを一度の実装で PASS させ、rework なし。`bats` 1237 件・`validate-skill-syntax.py`・forbidden-expressions すべて green。
+
+#### review
+- `--light` (Size M) で SHOULD 1 件を検出・解決 (`02be008f`)。MUST は 0 件。
+
+#### merge
+- squash merge、コンフリクトなし、`closes #1062` による auto-close と `phase/verify` 遷移がフォールバックなしで成立。
+
+#### verify
+- FAIL・UNCERTAIN 0 件。pre-merge 8 件の冪等再検証もすべて PASS。
+- `hook-worktree-path-guard.sh` が worktree セッション中の親リポジトリ絶対パスへの Write を正しくブロックした (`.tmp/issue-comment-1062.md`)。設計通りの防御が実際に発火した記録。
+
+### Orchestration Anomalies
+
+本 `/auto` 実行では **外部 kill が 2 回** 発生した (`docs/reports/external-kill-investigation.md` の通算で 26・27 回目)。個々の復旧は上記 `## Auto Retrospective` に記録済みのため、ここでは skill 設計側の観察のみ記録する。
+
+- **review phase (26 回目)**: silent 480s 時点で途絶。review の watchdog timeout は 2600s であり watchdog 起因ではない。`Exit code:` トレーラ・`wrapper_exit` イベントともに欠落し `detect-external-kill.sh` が `external-kill` を返した。respawn すると前セッションの worktree 状態 (Step 12 修正 push 済み) を resume して継続完了。**external-kill-parent-respawn の設計意図どおりに機能した。**
+- **merge phase (27 回目)**: silent 180s 時点で途絶。ただし wrapper ログには "Merge complete" が記録済みで、PR #1067 は MERGED、Issue は CLOSED + `phase/verify` に遷移済みだった。つまり **実処理は完了しており kill されたのは EXIT trap 直前**。
+
+### Improvement Proposals
+
+- `/auto` Step 6 の外部 kill 事前チェックが completion check より前に置かれているため、**「処理は完了したが EXIT trap 直前に kill された」ケースで respawn を指示してしまう**。今回の merge phase がまさにこれで、指示どおり respawn していれば merge 済み PR に対する無駄な (かつ状態次第では有害な) 再実行になっていた。親セッションが PR state を手動確認して回避したが、これは skill の記述に無い判断。external-kill 検出後に `reconcile-phase-state.sh --check-completion` を先に走らせ、`matches_expected: true` なら respawn せず success override する分岐を Step 6 に追加すべき。特に merge のような非冪等フェーズでは必須。
+- `restore_auto_session_pointer` が本 `/auto` セッション (`25781-1785289625`) とは別の session_id (`46196-1785292524`) を復元した。`.tmp/auto-session-${PGID}` は PGID をキーにしており、**PGID は OS により再利用される**ため、過去セッションの残存ポインタファイルに新しい Bash 呼び出しの PGID が一致しうる。結果として verify phase の `phase_start` / `verify_user_confirm` / `phase_complete` イベントが誤った session_id で記録され、L3 session retrospective の境界検出と `get-auto-session-report.sh` の集計が汚染される。ポインタファイルに書き込み時刻または生成元セッションの検証子を含め、読み出し側で鮮度を確認する必要がある。`.tmp/auto-session-current` も同じ汚染経路を持つ。
+- AC10 のような「該当行が 0 件なら自動的に充足する」形の AC は、`#1054` (不在を検証する AC に参照点を持たせる) の対象パターンに含まれる可能性がある。`modules/verify-patterns.md` のガイドラインが「ファイルに文字列が無いこと」だけでなく「テーブルに該当行が無いこと」も射程に含むか、`#1054` の実装時に確認したい。
