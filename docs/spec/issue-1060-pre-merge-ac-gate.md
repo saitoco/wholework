@@ -213,29 +213,45 @@ Size L のため検出上限 5 件のうち、影響度の高い 3 件を特定�
 - **グローバル AC index の整合性**: `scripts/gh-issue-edit.sh` の awk パターン (`/^- \[[ xX]\]/`、本文全体対象、行頭一致のみ) を実際に読み、新スクリプトで同一パターンを使うことで構成上一致させる方針に決めた。行頭一致のみなのでインデントされたチェックボックスは数えられない点も含めて同一挙動になる
 - **非ゼロ終了が `/auto` に与える影響**: `skills/auto/SKILL.md` Step 4 項目 11 (merge 失敗時は completion check → `matches_expected:false` なら Step 6) を確認し、既存の失敗経路にそのまま乗ることを確認した。復旧ループの誘発懸念は解消
 
+## Code Retrospective
+
+### Deviations from Design
+
+- **`docs/guide/workflow.md` / `docs/ja/guide/workflow.md` にゲート説明を追加した**: Spec Notes は sync candidate 扱いで要否判断を `/code` に委ねていた。ユーザー向けマニュアルの `### /merge — Merge the PR` 節は `/merge` の挙動を簡潔に説明する箇所であり、pre-merge AC ゲートは merge がブロックされうる挙動変更のため、1 文の追記価値があると判断し追加した (Changed Files の想定範囲を超える追加だが、Spec が明示的に判断を委任していた項目)
+
+### Design Gaps/Ambiguities
+
+- N/A (Implementation Steps 1–9 は設計どおりに実装でき、実装中に新たな設計上の欠陥や曖昧さは見つからなかった)
+
+### Rework
+
+- N/A
+
+### Steering Docs sync candidate の判断結果
+
+- `modules/phase-state.md` の `merge` 行: **変更しない**。Spec Deferred Items の判断 (`reconcile-phase-state.sh` の precondition 判定は SKILL.md 内ゲートとは別機構) をそのまま踏襲した
+- `docs/guide/workflow.md` / `docs/ja/guide/workflow.md`: **追加した** (上記 Deviations 参照)。`check-translation-sync.sh` で IN_SYNC を確認済み
+- `tests/gh-pr-merge-status.bats` / `tests/run-merge.bats`: **変更しない**。`git status --short scripts/gh-pr-merge-status.sh scripts/run-merge.sh` で両スクリプト共に無変更であることを再確認した
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- AC 状態の取得は新規スクリプト `scripts/check-pre-merge-ac.sh` で行い、`scripts/gh-pr-merge-status.sh` は変更しない (共有 JSON 契約の consumer 影響と、`mergeable:false` 相乗りがゲートとして機能しない問題を回避するため)
-- ゲートは `skills/merge/SKILL.md` Step 1 の項目 2 として挿入する。既存の項目 2 (Determine mergeability) は項目 3 に繰り下げる
-- 非対話モードでは merge せずマーカー投稿 + 非ゼロ終了。対話モードは AskUserQuestion で Abort / Re-run review / Approve の 3 択
-- 再検証の実行責務は `/review` 再実行に割り当て、`/merge` はインライン再検証を行わない (`docs/tech.md` の「merge は機械的操作」決定との衝突回避)
-- 新マーカー `type=pre-merge-ac-gate` (`decision=blocked|override`) を `modules/l0-surfaces.md` に追加し、latest-wins で解決する
+- Spec Implementation Steps 1–9 を順序どおりに実装し、設計からの逸脱は無し
+- `docs/guide/workflow.md` / `docs/ja/guide/workflow.md` (sync candidate) はゲートの挙動変更をユーザー向けマニュアルにも反映すべきと判断し、1 文を追記した
+- `modules/phase-state.md` の `merge` 行と `tests/gh-pr-merge-status.bats` / `tests/run-merge.bats` (いずれも sync candidate) は Spec の判断どおり変更不要とした
+- Issue #1060 の pre-merge AC 4 件は全て PASS (rubric 2 件・section_contains 1 件・grep 1 件) のためチェック済みに更新した
 
 ### Deferred Items
 
-- `.wholework.yml` によるゲートの有効/無効設定は追加しない (Issue の要求外。必要になれば別 Issue)
-- `modules/phase-state.md` の merge precondition 行の更新は sync candidate 扱いで、`reconcile-phase-state.sh` の挙動変更は本 Issue のスコープ外
+- `.wholework.yml` によるゲートの有効/無効設定は追加しない (Spec の判断を踏襲)
+- `modules/phase-state.md` の merge precondition 行の更新は本 Issue のスコープ外のまま
 - `docs/structure.md` の `tests/` 件数ドリフト (95 → 実際 103) は本 Issue では修正しない
-- `docs/guide/workflow.md` / `docs/ja/guide/workflow.md` へのゲート説明追加は sync candidate 扱い (`/code` が要否を判断)
+- Post-merge AC (「pre-merge AC を意図的に 1 件未チェックのまま `/merge` を実行し、ゲートが機能することを確認する」) は manual verify-type のため `/verify` フェーズでの人手確認が必要
 
 ### Notes for Next Phase
 
-- `skills/merge/SKILL.md` の `allowed-tools` には `${CLAUDE_PLUGIN_ROOT}/scripts/check-pre-merge-ac.sh:*` と `Write` の両方を追加すること。`AskUserQuestion` は `validate-skill-syntax.py` の `FORBIDDEN_ALLOWED_TOOLS` に含まれるため追加してはならない
-- Step 5 で追加する再検証責務のサブセクションは **h4 (`####`)** にすること。h3 にすると AC2 の `section_contains "skills/merge/SKILL.md" "Step 1" "pre-merge AC"` の走査範囲が打ち切られる
-- `check-pre-merge-ac.sh` のグローバル index は `scripts/gh-issue-edit.sh` の awk パターン `/^- \[[ xX]\]/` と完全一致させること (本文全体対象・行頭一致のみ)。ずれると override マーカーの `ac=` 集合と照合できなくなる
-- bash 3.2 互換必須 (`mapfile` / 連想配列 / `${var^^}` 禁止)。awk + jq のみで実装する
-- SKILL.md 本文には半角の感嘆符と 3 連バッククォートを書かないこと (`validate-skill-syntax.py` が検出する)
-- `docs/workflow.md` / `docs/structure.md` を変更したら `docs/translation-workflow.md` の Sync Procedure に従って `docs/ja/` ミラーも同一 PR で更新すること (コードフェンス数の一致確認を含む)
+- `/review` は `check-pre-merge-ac.sh 1060` (dogfooding) で `unchecked_count:0` を確認済み — pre-merge AC ゲート自体が正しく動作することの一次的な裏付けとして参照可能
+- post-merge の manual AC 検証時は、意図的に pre-merge AC を 1 件未チェックに戻した状態で `/merge` を実行し、非対話モードでの `decision=blocked` マーカー投稿と非ゼロ終了、対話モードでの 3 択提示の両方を確認すること
+- `check-pre-merge-ac.sh` のグローバル index は `gh-issue-edit.sh` の awk パターンと完全一致させてあるため、override マーカーの `ac=` 集合との照合はそのまま機能する
