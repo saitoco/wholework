@@ -117,7 +117,7 @@ capabilities:
 | `steering-docs-path` | string | `docs` | steering document の配置先 |
 | `capabilities.browser` | boolean | `false` | Playwright ベースの verify command を有効化する |
 | `capabilities.workflow` | boolean | `false` | `/review --full` で Workflow ベースのマルチエージェント実行を有効化する（opt-in; 未設定時は static Task fan-out にフォールバック） |
-| `capabilities.pr-preview` | boolean | `false` | PR preview URL の存在を宣言する。URL/UX 系 AC を pre-merge-preview に分類し、`PREVIEW_URL` 環境変数が設定されている場合に `/review` 時に実行する。`/verify` post-merge では二重検証防止のため skip するが、`/review` が投稿する最新の `type=preview-ac-unverified` マーカーがその AC を未検証としている場合は `/verify` が本番 URL に対するフォールバック検証を行う。 |
+| `capabilities.pr-preview` | boolean | `false` | PR preview URL の存在を宣言する。preview 環境でしか確認できない AC は、verify command の有無を問わず pre-merge-preview に分類される (auto: `PREVIEW_URL` が設定されている場合に `/review` 時に実行。manual: `/review` 時に人間の確認項目として提示)。`/verify` post-merge では二重検証防止のため skip するが、auto サブケースは `/review` が投稿する最新の `type=preview-ac-unverified` マーカーがその AC を未検証としている場合に `/verify` が本番 URL に対するフォールバック検証を行う。 |
 | `capabilities.mcp` | list | `[]` | スキルから利用できる MCP ツール名 |
 | `capabilities.{name}` | boolean | `false` | 動的 capability マッピング（例: `capabilities.invoice-api: true`） |
 | `watchdog-timeout-seconds` | integer | `2700` | watchdog が silent な `claude -p` プロセスを kill するまでのタイムアウト秒数。Size L+ タスク（特に Opus / xhigh effort）では claude の長い思考時間により 2700 秒を超える silent 期間が発生しうる。メタ開発や Size L+ 作業では `3600` を推奨。0 以下の値はデフォルトにフォールバック。 |
@@ -164,12 +164,12 @@ Wholework は acceptance criteria を 3 層に分類します。
 | 層 | 実行タイミング | 対象 AC 例 |
 |---|---|---|
 | **pre-merge-local** | `/review` safe mode（常時） | ファイル存在・テキスト一致・コード品質・テスト結果 |
-| **pre-merge-preview** | `PREVIEW_URL` が設定された `/review` 時 | `http_status`、`html_check`、`api_check`、`http_header`、`http_redirect`、`browser_check`、`browser_screenshot`、`lighthouse_check` |
+| **pre-merge-preview** | `/review` 時、preview 環境に対して | auto サブケース (verify command あり、`PREVIEW_URL` 設定時に実行): `http_status`、`html_check`、`api_check`、`http_header`、`http_redirect`、`browser_check`、`browser_screenshot`、`lighthouse_check`。manual サブケース (verify command なし、人間の確認項目として提示): preview を見る・操作することでしか確認できない見た目・UX 挙動 |
 | **post-merge-production** | `/verify` full mode | 本番デプロイ確認・本番固有の動作 |
 
 **pre-merge-preview の有効化:**
 
-`.wholework.yml` に `capabilities.pr-preview: true` を設定します。`/issue` が URL/UX 系 verify command を持つ AC を作成・更新する際、それらの AC は `### Pre-merge (auto-verified)` セクションに `<!-- ac-tier: preview -->` タグと `--when="test -n \"$PREVIEW_URL\""` ガードを付与して配置されます。
+`.wholework.yml` に `capabilities.pr-preview: true` を設定します。`/issue` が preview 環境でしか確認できない AC を作成・更新する際、それらの AC は verify command の有無を問わず `### Pre-merge (auto-verified)` セクションに `<!-- ac-tier: preview -->` タグを付与して配置されます。URL/UX 系 verify command を持つ AC (auto サブケース) にはさらに `--when="test -n \"$PREVIEW_URL\""` ガードが付与されます。verify command を持たない AC (manual サブケース) にはさらに `<!-- verify-type: manual -->` タグが付与され、ガードは付与されません。
 
 **`PREVIEW_URL` の解決:**
 
@@ -182,9 +182,9 @@ export PREVIEW_URL="https://my-pr-123.example-preview.com"
 
 **動作まとめ:**
 
-- `/review` 時に `PREVIEW_URL` が設定されている: preview 層 AC を preview URL に対して実行する。
-- `/review` 時に `PREVIEW_URL` が未設定: `--when` ガードが発動し preview 層 AC は SKIPPED になる（人間がフォローアップ）。
-- `/verify` (post-merge) 時: `ac-tier: preview` 付き AC はデフォルトで skip される (二重検証防止)。`/review` は Pre-merge に `ac-tier: preview` AC が 1 件以上ある実行ごとに毎回 `type=preview-ac-unverified` マーカーコメントを投稿する — 今回 UNCERTAIN のまま終わったインデックスの一覧、あるいは全て検証済みなら `ac=none` sentinel のいずれかを持つ。`/verify` は常に最新 1 件のマーカーのみを参照する (latest-wins) ため、fix-cycle で `/review` が再実行され以前 UNCERTAIN だった AC が検証済みになった場合でも、古いマーカーが最新として誤参照されることはない。その最新マーカーで未検証のまま残っている AC については、`/verify` が SKIPPED にせずフォールバックする — `production-url` が設定されていればそれに対して実際に検証し、未設定なら明示的な「未検証」警告を記録する。このフォールバックとは別に本番でも同 AC を検証したい場合は、`### Post-merge` セクションへタグなしで複製する。
+- `/review` 時に `PREVIEW_URL` が設定されている: auto サブケースの preview 層 AC は preview URL に対して実行される。manual サブケースの preview 層 AC は同じ URL に対する人間の確認項目として提示される (verify command がないため `--when` ガードで `PREVIEW_URL` をゲートする対象がない)。
+- `/review` 時に `PREVIEW_URL` が未設定: auto サブケースの preview 層 AC は `--when` ガードが発動し SKIPPED になる（人間がフォローアップ）。manual サブケースの preview 層 AC はガードを持たないため `PREVIEW_URL` の有無に関わらず引き続き人間の確認項目として提示される。
+- `/verify` (post-merge) 時: `ac-tier: preview` 付き AC (auto・manual 両サブケース) はデフォルトで skip される (二重検証防止)。`/review` は Pre-merge に `ac-tier: preview` AC が 1 件以上ある実行ごとに毎回 `type=preview-ac-unverified` マーカーコメントを投稿する — 今回 UNCERTAIN のまま終わったインデックスの一覧、あるいは全て検証・確認済みなら `ac=none` sentinel のいずれかを持つ。`/verify` は常に最新 1 件のマーカーのみを参照する (latest-wins) ため、fix-cycle で `/review` が再実行され以前 UNCERTAIN だった AC が検証済みになった場合でも、古いマーカーが最新として誤参照されることはない。その最新マーカーで未検証のまま残っている AC については、`/verify` が verify command の有無で分岐する — auto サブケースは SKIPPED にせずフォールバックする (`production-url` が設定されていればそれに対して実際に検証し、未設定なら明示的な「未検証」警告を記録する)。manual サブケースはフォールバックできる verify command がないため、常に人間による確認が必要な旨を記録する。このフォールバックとは別に本番でも同 AC (auto サブケース) を検証したい場合は、`### Post-merge` セクションへタグなしで複製する。
 
 ## `.wholework/domains/`
 
