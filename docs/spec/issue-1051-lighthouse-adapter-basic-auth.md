@@ -96,3 +96,33 @@
 - 全 pre-merge AC (grep×2, rubric×1) はローカルで PASS 確認済み、Issue チェックボックスも更新済み。
 - テストスイート (`bats tests/`, 1246 tests) 全 PASS、`check-forbidden-expressions.sh` / `validate-skill-syntax.py` も問題なし。
 - 本 Issue はドキュメント (Markdown モジュール) のみの変更で、bats/CI 実行系コードへの機能追加はない。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- AC は `grep` × 2 + `rubric` × 1 の構成で、いずれも実装の核心 (環境変数名 / `--extra-headers` / 認証情報の非露出) を判定できる形になっていた。実装前の main では `grep -rln "extra-headers"` が 0 件だったことが Spec Notes に記録されており、常時 PASS な verify command は含まれていない。
+- Lighthouse CLI 公式仕様 (`--extra-headers` が JSON 文字列とファイルパスの両方を受け付ける) を外部ドキュメントで確認したうえでファイルパス形式を選定しており、選定理由 (AC3 のマスキング要件) が追跡可能な形で残っている。
+
+#### design
+- `modules/browser-adapter.md` Step 3 の既存規約 (環境変数名・マスキング方針) を踏襲する判断により、認証情報の扱いを再発明せずに済んだ。
+- Spec 作成時の副次的発見として `modules/verify-executor.md` の「Basic Authentication Support」節が `browser_check`/`browser_screenshot` 限定の記述のままだと実装後に不整合になる点を先回りで検出し、Changed Files に含めている。drift の作り込みを未然に防いだ good case。
+
+#### code
+- Code Retrospective は Deviations / Design Gaps / Rework すべて N/A。fixup/amend パターンなし、実装は 1 コミット (`c794c8a6`) で完結。
+
+#### review
+- patch route (Size S) のため review フェーズなし。
+
+#### merge
+- patch route のため merge フェーズなし (main 直コミット)。
+
+#### verify
+- pre-merge AC 3 件すべて初回 PASS。FAIL / UNCERTAIN なし、auto-retry 発火なし。
+- post-merge AC 1 件は `verify-type: opportunistic` のため未チェックのまま `phase/verify` に留置。wholework 自身のリポジトリに Basic Auth 保護下の preview URL が存在しないため、これは設計どおりの状態。
+- 本実行中に event の `session_id` 誤帰属を検出した (下記 Improvement Proposals)。
+
+### Improvement Proposals
+
+- **in-session `/verify` の event が並行 `/auto` セッションの `session_id` に誤帰属する**: `restore_auto_session_pointer()` は `.tmp/auto-session-${PGID}` → `.tmp/auto-session-current` の順にポインタを探すが、`/verify` は wrapper を持たず Bash 呼び出しごとに新しい PGID を得るため、実質的に常に後者 (PGID 非依存の単一グローバルファイル) にフォールバックする。このファイルは `/auto` Step 1 が起動時に無条件で上書きするため、**並行して別の `/auto` セッションが起動すると、先行セッションの in-session `/verify` が emit する event が後発セッションの ID で記録される**。本実行で実証: batch セッション `46196-1785292524` の `/verify 1051` が emit した `phase_start` / `phase_complete` が `.tmp/auto-events.jsonl` 上で `session_id=74736-1785294462` (#1059/#1069 を処理していた並行セッション) として記録された。一方 `run-auto-sub.sh` 経由の #1051 の event は PGID ポインタ経由で正しく `46196-...` を記録できており、誤帰属は in-session emit 経路にのみ現れる。影響範囲は batch/XL の L3 retrospective の event 抽出 (`jq 'select(.session_id == ...)'`)、`/audit auto-session` のメトリクス、および L3 notable 判定で、いずれも並行セッション運用下で件数を取りこぼす / 他セッション分を混入させる。`.tmp/auto-session-current` は #791 iter B / #902 fix cycle で in-session `/verify` 救済のために導入されたものだが、並行 `/auto` セッションを想定していない。対策候補: (a) `/auto` が `Skill(wholework:verify)` を呼ぶ際に `AUTO_SESSION_ID` を引数として明示的に引き渡し、`/verify` 側がそれを最優先で使う、(b) ポインタファイルを Issue 番号でスコープする (`.tmp/auto-session-issue-N`) ことで並行セッション間の衝突を構造的に排除する、(c) `auto-session-current` を「単一 `/auto` セッション運用時のみ有効」と明示し、並行運用時は誤帰属しうる旨を `modules/event-emission.md` に既知の制約として記載する。(a) が最も確実だが、(b) は既存の呼び出し規約を変えずに済む。
