@@ -279,3 +279,13 @@ AC1 / AC2 の rubric 文言には `/` 区切りが含まれるが、いずれも
 - `modules/verify-executor.md` には「外部バイナリを一切必要としない」旨を**明示的に**書くこと。AC2 の条件節の前件が偽であることを grader から可読にするため
 - `scripts/validate-skill-syntax.py` は変更不要 (`_parse_verify_args()` の実測確認済み)。`docs/structure.md` のファイル数記述も新規ファイルがないため不変
 - プロトタイプ (`.tmp/proto.py`, gitignore 対象) は `/spec` セッション限りのもので commit していない。実装は Implementation Steps 1-4 の記述から起こすこと
+
+## Auto Retrospective
+
+### Orchestration Anomalies
+- **[external-kill]** `run-review.sh` (1st attempt, PR #1077) was killed externally during the CI wait window; no `Exit code:` trailer and no `wrapper_exit` event were emitted. `scripts/detect-external-kill.sh` returned `external-kill`. Recovery: respawned `run-review.sh 1077 --full` with identical arguments (phase label SSoT preserved progress). See `modules/orchestration-fallbacks.md#external-kill-parent-respawn`.
+- **[review-completion-false-negative]** Review phase completion false-negative in phase `review` (exit code 1): `matches_expected:false` and `phase:review` detected in reconciler output, but no existing fallback header (## Review Response Summary / ## レビュー回答サマリ) was found in wrapper log. Likely caused by LLM omitting the `<!-- review-summary -->` marker and using a non-standard heading. Reference: #547.
+  - Actual diagnosis in this run differs from the cataloged likely-cause: `gh pr view 1077 --json comments,reviews` returned **zero** comments and **zero** reviews, i.e. the `claude -p` invocation produced no output at all after ~840s of watchdog silence and exited 0 (silent no-op). This is Fallback Step 4 ("no summary comment found — re-run `/review`"), not the marker/heading-mismatch path (Steps 2-3).
+
+### Improvement Proposals
+- `scripts/detect-wrapper-anomaly.sh` の `review-completion-false-negative` は「marker 欠落 + 非標準見出し」を likely cause として報告するが、PR にコメントが 0 件の silent no-op ケースも同じパターンに吸収されてしまう。両者は復旧手順が異なる (前者は marker 追記、後者は再実行) ため、検出時に PR コメント件数を確認して `review-silent-no-op` を別パターンとして切り出すことを検討する。
