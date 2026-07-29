@@ -111,3 +111,16 @@ Issue Proposal の Option A (grep -rn への修正 + 対象キー拡張 + フォ
 - **Recovery type**: respawn-skip-code
 - **Wrapper exit code**: unknown
 - **Outcome**: success
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### verify
+- Pre-merge 2 件は再検証でも PASS。`skills/spec/SKILL.md` L275-300 に Proposal A + D が統合実装され、非再帰 glob の再帰化 (`grep -rn ... docs/ tests/ scripts/`) と category 別確認手順 (docs の table/prose 両形式、tests の同一対象別ファイル、scripts の helper) が揃っている
+- Post-merge observation AC は `/auto 1074` (2026-07-29) の spec フェーズで初めて実観測に成功し PASS とした。`docs/spec/issue-1074-curl-url-command-basic-auth.md` § Notes に marker 名 5 件の再帰 cross-search (`grep -rln ... docs/guide/ ... modules/`) とヒット 5 ファイルの更新要否判断が記録されている。#1039 の根本原因だった 2 階層目 `docs/guide/` が明示的に走査対象へ含まれていた点が決定的だった
+- ただし当該 cross-search は**手順のゲート条件の外側で**実施されていた (#1074 の Changed Files は `modules/verify-executor.md` のみで、ゲート「Changed Files includes SKILL.md or scripts/」は発火していない)。実行者の裁量で補われた形であり、手順として保証されているわけではない
+
+### Improvement Proposals
+
+- **Steering Docs sync candidate check のゲート条件に `modules/*.md` が含まれていない**: `skills/spec/SKILL.md` L275 のゲートは「Changed Files includes SKILL.md or scripts/」で、`modules/*.md` のみを変更する Issue では手順が発火しない。しかし `modules/` 配下のファイルは Steering Docs から広く参照されており (`docs/environment-adaptation.md` の safe/full mode 実行可否表、`docs/guide/customization.md` の config-reference table 等)、module の挙動変更は Steering Docs sync を要する。実例: #1074 は `modules/verify-executor.md` の curl 系 5 command に Basic Auth 注入を追加したが、ゲート不発火のため `docs/guide/customization.md` の記載漏れ (`PREVIEW_BASIC_USER` / `PREVIEW_BASIC_PASS` が未記載、実測で該当 grep のヒット 0 件) が「既存ギャップでありスコープ外」として据え置かれた。`/spec` が裁量で cross-search を実施したため候補自体は認識されたが、手順として保証されていない。対応候補: (a) ゲート条件に `modules/*.md` を追加する、(b) ゲートを撤廃し「Changed Files に 1 件でもエントリがあれば実施」に単純化する (cross-search は読み取り専用でコストが小さく、#1039 の Proposal D は既に「すべての `/spec` フェーズで実施」のルール化を選択肢として挙げていた)
