@@ -64,3 +64,13 @@
 ## Autonomous Auto-Resolve Log
 
 - **`phase/ready` ラベル不在 (Step 3 precondition check)**: `/code` 開始時点で Issue #1074 のラベルは `triaged` / `phase/code` / `retro/verify` で、`phase/ready` が付与されないまま `phase/code` に遷移していた (`reconcile-phase-state.sh code-patch 1074 --check-precondition` も `matches_expected: false` を返した)。ただし Spec (`docs/spec/issue-1074-curl-url-command-basic-auth.md`) 自体は Design Complete コメントまで完了した内容で既に存在するため、「Spec なしで Issue 本文から直接実装」ではなく、既存の完成済み Spec を正としてそのまま実装を進めた。
+
+## Auto Retrospective
+
+### Manual recovery (code-patch)
+- **Date**: 2026-07-29 04:34 UTC
+- **Issue**: #1074, phase: code-patch
+- **Source**: parent session manual recovery
+- **Recovery type**: push-only
+- **Wrapper exit code**: unknown
+- **Outcome**: success
