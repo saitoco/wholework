@@ -117,6 +117,35 @@ that run, so the consumer's fallback set is empty. `/verify`'s pre-merge-preview
 `scripts/resolve-preview-ac-fallback.sh`, to decide whether an `ac-tier: preview` condition was
 actually verified at `/review` or must fall back to a post-merge check.
 
+**`type=pre-merge-ac-gate`**: posted by `/merge` (Step 1's pre-merge AC gate) when one or more
+Pre-merge acceptance conditions are unchecked. Attributes: `decision=blocked` (non-interactive
+mode — merge did not proceed) or `decision=override` (an explicit human/AI decision to merge
+anyway); `ac=` carries a comma-separated list of 1-based indices into the Issue body's full AC
+enumeration (same convention as `gh-issue-edit.sh --checkbox`, and as `check-pre-merge-ac.sh`'s
+`unchecked_indices` output) identifying the unchecked conditions at the time of posting;
+`reason="<one-line reason>"` records why (for `decision=blocked`, the automatic block reason; for
+`decision=override`, the human-supplied justification). Example:
+```
+<!-- wholework-event: type=pre-merge-ac-gate phase=merge issue=42 decision=blocked ac=2,5 reason="2 unchecked pre-merge acceptance conditions" -->
+Merge blocked: 2 unchecked pre-merge acceptance conditions on issue #42.
+
+#2 CI (lint) passes on the merge commit
+#5 preview screenshot matches the design
+```
+```
+<!-- wholework-event: type=pre-merge-ac-gate phase=merge issue=42 decision=override ac=2,5 reason="lint job not yet triggered on this commit; verified manually" -->
+Proceeding with merge despite 2 unchecked pre-merge acceptance conditions, per recorded override.
+```
+Issue comments are append-only (see the L0 Surface SSoT table above), so consumers must always
+resolve **only the single comment with the greatest `createdAt` timestamp among
+`type=pre-merge-ac-gate` markers for this Issue (latest-wins)** — never union `ac=` sets across
+multiple markers. The gate only treats a resolved marker as authorizing merge when it has
+`decision=override` **and** its `ac=` index set is a superset of the currently unchecked
+`unchecked_indices` set; otherwise the gate presents the unchecked conditions again and blocks
+(non-interactive) or asks (interactive) as usual. Because `/merge` resolves this marker directly
+via `gh issue view` within the same phase (not through the Comment Consumption Procedure), no
+change to the Cross-phase marker exception in Processing Steps is needed for this marker type.
+
 When consuming comments (see Processing Steps), a comment containing `<!-- wholework-event:`
 in its body from a bot actor is treated as a Wholework-authored structured comment and consumed (bot exception above).
 

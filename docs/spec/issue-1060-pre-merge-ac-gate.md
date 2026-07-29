@@ -213,29 +213,58 @@ Size L のため検出上限 5 件のうち、影響度の高い 3 件を特定�
 - **グローバル AC index の整合性**: `scripts/gh-issue-edit.sh` の awk パターン (`/^- \[[ xX]\]/`、本文全体対象、行頭一致のみ) を実際に読み、新スクリプトで同一パターンを使うことで構成上一致させる方針に決めた。行頭一致のみなのでインデントされたチェックボックスは数えられない点も含めて同一挙動になる
 - **非ゼロ終了が `/auto` に与える影響**: `skills/auto/SKILL.md` Step 4 項目 11 (merge 失敗時は completion check → `matches_expected:false` なら Step 6) を確認し、既存の失敗経路にそのまま乗ることを確認した。復旧ループの誘発懸念は解消
 
+## Code Retrospective
+
+### Deviations from Design
+
+- **`docs/guide/workflow.md` / `docs/ja/guide/workflow.md` にゲート説明を追加した**: Spec Notes は sync candidate 扱いで要否判断を `/code` に委ねていた。ユーザー向けマニュアルの `### /merge — Merge the PR` 節は `/merge` の挙動を簡潔に説明する箇所であり、pre-merge AC ゲートは merge がブロックされうる挙動変更のため、1 文の追記価値があると判断し追加した (Changed Files の想定範囲を超える追加だが、Spec が明示的に判断を委任していた項目)
+
+### Design Gaps/Ambiguities
+
+- N/A (Implementation Steps 1–9 は設計どおりに実装でき、実装中に新たな設計上の欠陥や曖昧さは見つからなかった)
+
+### Rework
+
+- N/A
+
+### Steering Docs sync candidate の判断結果
+
+- `modules/phase-state.md` の `merge` 行: **変更しない**。Spec Deferred Items の判断 (`reconcile-phase-state.sh` の precondition 判定は SKILL.md 内ゲートとは別機構) をそのまま踏襲した
+- `docs/guide/workflow.md` / `docs/ja/guide/workflow.md`: **追加した** (上記 Deviations 参照)。`check-translation-sync.sh` で IN_SYNC を確認済み
+- `tests/gh-pr-merge-status.bats` / `tests/run-merge.bats`: **変更しない**。`git status --short scripts/gh-pr-merge-status.sh scripts/run-merge.sh` で両スクリプト共に無変更であることを再確認した
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- AC 状態の取得は新規スクリプト `scripts/check-pre-merge-ac.sh` で行い、`scripts/gh-pr-merge-status.sh` は変更しない (共有 JSON 契約の consumer 影響と、`mergeable:false` 相乗りがゲートとして機能しない問題を回避するため)
-- ゲートは `skills/merge/SKILL.md` Step 1 の項目 2 として挿入する。既存の項目 2 (Determine mergeability) は項目 3 に繰り下げる
-- 非対話モードでは merge せずマーカー投稿 + 非ゼロ終了。対話モードは AskUserQuestion で Abort / Re-run review / Approve の 3 択
-- 再検証の実行責務は `/review` 再実行に割り当て、`/merge` はインライン再検証を行わない (`docs/tech.md` の「merge は機械的操作」決定との衝突回避)
-- 新マーカー `type=pre-merge-ac-gate` (`decision=blocked|override`) を `modules/l0-surfaces.md` に追加し、latest-wins で解決する
+- Step 8 で pre-merge AC 4 件を再判定し全て PASS を確認 (既にチェック済みの状態と一致、更新不要)
+- `HAS_WORKFLOW_CAPABILITY=true` のため Step 10 は静的 Task fan-out ではなく Workflow (finder → adversarial verify) パイプラインを実行。review-spec + review-bug ×2 → adversarial refutation で 21 件中 10 件 (実質ユニーク 7 件) を確認、MUST は 0 件
+- SHOULD 2 件 (pipefail による fail-open、`>` を含む HTML コメント除去失敗) と CONSIDER 4 件 (CRLF trim、checkbox separator、allowed-tools 不足、見出し配置) を修正してコミット・push 済み。CONSIDER 1 件 (jq タブ文字切り詰め、confidence: low) は skip
 
 ### Deferred Items
 
-- `.wholework.yml` によるゲートの有効/無効設定は追加しない (Issue の要求外。必要になれば別 Issue)
-- `modules/phase-state.md` の merge precondition 行の更新は sync candidate 扱いで、`reconcile-phase-state.sh` の挙動変更は本 Issue のスコープ外
-- `docs/structure.md` の `tests/` 件数ドリフト (95 → 実際 103) は本 Issue では修正しない
-- `docs/guide/workflow.md` / `docs/ja/guide/workflow.md` へのゲート説明追加は sync candidate 扱い (`/code` が要否を判断)
+- `scripts/check-pre-merge-ac.sh:86` の jq タブ文字切り詰め (CONSIDER, confidence: low) — 低頻度な edge case のため今回は見送り
+- Post-merge AC (「pre-merge AC を意図的に 1 件未チェックのまま `/merge` を実行し、ゲートが機能することを確認する」) は manual verify-type のため `/verify` フェーズでの人手確認が必要 (code phase から引き継ぎ、未解消のまま)
 
 ### Notes for Next Phase
 
-- `skills/merge/SKILL.md` の `allowed-tools` には `${CLAUDE_PLUGIN_ROOT}/scripts/check-pre-merge-ac.sh:*` と `Write` の両方を追加すること。`AskUserQuestion` は `validate-skill-syntax.py` の `FORBIDDEN_ALLOWED_TOOLS` に含まれるため追加してはならない
-- Step 5 で追加する再検証責務のサブセクションは **h4 (`####`)** にすること。h3 にすると AC2 の `section_contains "skills/merge/SKILL.md" "Step 1" "pre-merge AC"` の走査範囲が打ち切られる
-- `check-pre-merge-ac.sh` のグローバル index は `scripts/gh-issue-edit.sh` の awk パターン `/^- \[[ xX]\]/` と完全一致させること (本文全体対象・行頭一致のみ)。ずれると override マーカーの `ac=` 集合と照合できなくなる
-- bash 3.2 互換必須 (`mapfile` / 連想配列 / `${var^^}` 禁止)。awk + jq のみで実装する
-- SKILL.md 本文には半角の感嘆符と 3 連バッククォートを書かないこと (`validate-skill-syntax.py` が検出する)
-- `docs/workflow.md` / `docs/structure.md` を変更したら `docs/translation-workflow.md` の Sync Procedure に従って `docs/ja/` ミラーも同一 PR で更新すること (コードフェンス数の一致確認を含む)
+- `/merge` 実行時、pre-merge AC は 4/4 PASS (チェック済み) のためゲートは素通りする見込み。ゲート自体の動作確認は Post-merge AC の manual 検証で行うこと
+- `check-pre-merge-ac.sh` に bats テストを 4 件追加済み (>64KB body、`>` を含むマーカー、区切り文字なしチェックボックス、CRLF) — 全 15 件 PASS
+- `skills/merge/SKILL.md` の `allowed-tools` に `mkdir:*, rm:*` を追加した。今後 `.tmp/` を使う新しい Bash ステップを他スキルに追加する際は同様の allowlist 漏れに注意
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 構造的な逸脱は無し。Pre-merge AC 4 件 (rubric ×2 / section_contains ×1 / grep ×1) は Step 8 で全て PASS と再判定でき、Spec Implementation Steps どおりの実装だった
+- ただし Spec / Issue AC のいずれも `check-pre-merge-ac.sh` のテキスト整形ロジック (HTML コメント除去・CRLF・チェックボックス直後の区切り文字) に対する edge case を明示的にカバーしておらず、この部分の 2 件の SHOULD バグ (pipefail による fail-open、`>` を含むコメントの除去失敗) は AC 検証をすり抜けて Step 10 の bug-detection finder で初めて検出された。merge ゲートのような「安全側に倒れるべき」スクリプトについては、Spec の Implementation Steps 段階で「大きな入力」「特殊文字を含む入力」に対する期待動作を明記しておくと、実装時点でこれらのバグを防げた可能性がある
+
+### Recurring issues
+
+- 目立った再発パターンは無し。本 Issue は #1060 の初回 review であり、過去の review サイクルとの比較対象は無い
+
+### Acceptance criteria verification difficulty
+
+- 4 件とも UNCERTAIN や verify command の構文エラーは無く、Step 8 の自動判定は円滑だった (rubric 2 件は Spec 由来の PR diff と Issue 本文から明確に判定可能、section_contains と grep は機械的に確定)
+- Workflow (finder → adversarial verify) パイプラインは 21 件の finding のうち 11 件を adversarial refutation で除外し、確認できた 10 件 (実質ユニーク 7 件) はいずれも MUST ではなかったが、うち 2 件は実際にバグとして再現確認できる質の高い指摘だった。static Task fan-out (Step 10.1–10.3) では検出できたかどうか比較対象がないため、今回の実行だけでは Workflow path の有効性を断定できないが、finder のカバレッジ (specific line + reproduction手順付き) は高かった

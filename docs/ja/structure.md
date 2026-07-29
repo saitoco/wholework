@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（68 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（69 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -187,6 +187,7 @@ wholework/
 - `scripts/get-auto-session-report.sh` — `.tmp/auto-events.jsonl` から session_id でフィルタし、`/auto` セッション retrospective の `## Metrics` markdown 小節（`--metrics-only`）を出力（`session.md` への埋め込みおよび `/audit auto-session` 用）
 - `scripts/get-verify-iteration.sh` — Issue コメントから `<!-- verify-iteration: N -->` マーカーの最大値を読み取る
 - `scripts/resolve-preview-ac-fallback.sh` — Issue コメントから最新の `type=preview-ac-unverified` マーカーを解決し、`/verify` のフォールバックが必要な 1-based AC インデックスを出力 (無ければ空)
+- `scripts/check-pre-merge-ac.sh` — Issue 本文の `### Pre-merge` サブセクション内の未チェックチェックボックスを走査し、本文全体基準の 1-based index とテキストを JSON で出力。`skills/merge/SKILL.md` Step 1 の pre-merge AC ゲートが使用
 - `scripts/hook-rename-on-auto.sh` — UserPromptSubmit hook: プロンプトが `/auto` パターンにマッチした場合にセッション名を自動リネーム
 - `scripts/log-permission.sh` — 権限イベントログ（JSON 出力）
 - `scripts/observation-trigger.sh` — イベント発火時に observation AC をディスパッチ: `opportunistic-search.sh --event` を呼び出し、マッチした各 Issue に `/verify` 再実行を促すコメントを投稿し、マッチした Issue 番号一覧を呼び出し元向けに stdout へ出力

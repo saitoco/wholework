@@ -302,6 +302,11 @@ return UNCERTAIN) forces the review to post as `REQUEST_CHANGES` and must be
 fixed in Step 12 before `/merge`. UNCERTAIN, SKIPPED, PENDING, and POST-MERGE
 classifications do not block review.
 
+UNCERTAIN does not block review, but a Pre-merge condition left UNCERTAIN stays
+unchecked (`- [ ]`) per the Checkbox Updates rule below, and `skills/merge/SKILL.md`
+Step 1's pre-merge AC gate blocks merge on any unchecked Pre-merge condition. Resolving
+that UNCERTAIN state — not `/verify` — is the responsibility of re-running `/review`.
+
 ### Checkbox Updates
 
 For "Pre-merge (auto-verified)" conditions that PASS in Step 7 verification, update Issue checkboxes:
