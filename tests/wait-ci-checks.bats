@@ -27,7 +27,7 @@ MOCK
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
 if [[ "$1" == "pr" && "$2" == "checks" ]]; then
-    echo '[{"name":"Run bats tests","state":"SUCCESS"}]'
+    echo '[{"name":"Run bats tests","state":"SUCCESS","bucket":"pass"}]'
     exit 0
 fi
 echo ""
@@ -112,7 +112,7 @@ MOCK
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
 if [[ "$1" == "pr" && "$2" == "checks" ]]; then
-    echo '[{"name":"Run bats tests","state":"IN_PROGRESS"}]'
+    echo '[{"name":"Run bats tests","state":"IN_PROGRESS","bucket":"pending"}]'
     exit 0
 fi
 exit 0
@@ -126,7 +126,8 @@ MOCK
 }
 
 @test "success: continues even when gh pr checks fails" {
-    # gh exits 1 but prints [] so _in_progress=0 and loop breaks immediately
+    # gh exits 1 but prints [] so _total=0; with grace period disabled the
+    # zero-checks branch is entered on the first poll and breaks immediately
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
 if [[ "$1" == "pr" && "$2" == "checks" ]]; then
@@ -137,9 +138,72 @@ exit 0
 MOCK
     chmod +x "$MOCK_DIR/gh"
 
+    export WHOLEWORK_CI_MIN_CHECKS_WAIT_SEC=0
     run bash "$SCRIPT" 88
     [ "$status" -eq 0 ]
     [[ "$output" == *"CI check wait complete for PR #88"* ]]
+}
+
+@test "success: QUEUED state (bucket pending) does not break immediately" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "checks" ]]; then
+    echo '[{"name":"Deploy preview","state":"QUEUED","bucket":"pending"}]'
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    export WHOLEWORK_CI_TIMEOUT_SEC=2
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"CI checks pending: 1 of 1 check(s) not yet complete"* ]]
+    [[ "$output" == *"CI check wait timed out after 2s"* ]]
+}
+
+@test "zero checks: warns and stops after grace period elapses" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "checks" ]]; then
+    echo '[]'
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    export WHOLEWORK_CI_MIN_CHECKS_WAIT_SEC=0
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Warning: no CI checks registered on PR #88 after 0s grace period"* ]]
+    [[ "$output" == *"zero_checks=true"* ]]
+}
+
+@test "zero checks: keeps waiting when grace period has not elapsed" {
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "checks" ]]; then
+    echo '[]'
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    export WHOLEWORK_CI_TIMEOUT_SEC=2
+    export WHOLEWORK_CI_MIN_CHECKS_WAIT_SEC=999
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"No CI checks registered yet on PR #88; waiting (grace period 999s)"* ]]
+    [[ "$output" == *"CI check wait timed out after 2s"* ]]
+    [[ "$output" == *"zero_checks=false"* ]]
+}
+
+@test "ci_result: stdout summary line contains all expected keys" {
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"ci_result: total=1 passed=1 failed=0 pending=0 zero_checks=false"* ]]
 }
 
 @test "success: uses gtimeout when timeout is not available" {
@@ -223,7 +287,7 @@ MOCK
 #!/bin/bash
 echo "gh $@" >> "$GH_CALL_LOG"
 if [[ "$1" == "pr" && "$2" == "checks" ]]; then
-    echo '[{"name":"Run bats tests","state":"SUCCESS"}]'
+    echo '[{"name":"Run bats tests","state":"SUCCESS","bucket":"pass"}]'
     exit 0
 fi
 exit 0
@@ -243,11 +307,11 @@ MOCK
     emit_event_src="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/emit-event.sh"
     cp "$emit_event_src" "$EMIT_DIR/emit-event.sh"
 
-    # gh outputs FAILURE JSON: _in_progress=0 so loop breaks; checks_passed=0
+    # gh outputs FAILURE JSON: bucket=fail so _pending=0 and loop breaks; checks_passed=0
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
 if [[ "$1" == "pr" && "$2" == "checks" ]]; then
-    echo '[{"name":"c1","state":"FAILURE"}]'
+    echo '[{"name":"c1","state":"FAILURE","bucket":"fail"}]'
     exit 0
 fi
 exit 0
