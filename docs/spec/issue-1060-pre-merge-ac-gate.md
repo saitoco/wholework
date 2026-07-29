@@ -265,3 +265,13 @@ Size L のため検出上限 5 件のうち、影響度の高い 3 件を特定�
 
 - 4 件とも UNCERTAIN や verify command の構文エラーは無く、Step 8 の自動判定は円滑だった (rubric 2 件は Spec 由来の PR diff と Issue 本文から明確に判定可能、section_contains と grep は機械的に確定)
 - Workflow (finder → adversarial verify) パイプラインは 21 件の finding のうち 11 件を adversarial refutation で除外し、確認できた 10 件 (実質ユニーク 7 件) はいずれも MUST ではなかったが、うち 2 件は実際にバグとして再現確認できる質の高い指摘だった。static Task fan-out (Step 10.1–10.3) では検出できたかどうか比較対象がないため、今回の実行だけでは Workflow path の有効性を断定できないが、finder のカバレッジ (specific line + reproduction手順付き) は高かった
+
+## Auto Retrospective
+
+### Manual recovery (review)
+- **Date**: 2026-07-29 05:01 UTC
+- **Issue**: #1060, phase: review
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn
+- **Wrapper exit code**: unknown
+- **Outcome**: success
