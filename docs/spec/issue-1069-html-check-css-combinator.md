@@ -208,3 +208,74 @@ AC1 / AC2 の rubric 文言には `/` 区切りが含まれるが、いずれも
 - **#825 (既存パーサ挙動の検証)**: `scripts/validate-skill-syntax.py` の `_parse_verify_args()` を実際に import して combinator セレクタの引数分解を実測確認した (Changed Files の「変更不要」節に記載)
 - **#672 (引数パーサのエッジケース)**: 未終端の引用符 / 空セレクタ / 不正文字 (連続 combinator) / 括弧の不均衡を Implementation Step 1 の exhaustive リストとテストケース (g) に含めた
 - **#526 (テスト置換のシナリオ網羅)**: 既存 7 ケースを削除・改変しない方針を Step 6 に明記した
+
+## issue retrospective
+
+`/issue 1069 --non-interactive` によるリファインを実施。
+
+### Triage
+- Title を noun-ending 規則に合わせて正規化: `...を扱えるようにする` → `...を扱えるように`
+- Type: Feature (Issue Types API)
+- Size: L (`scripts/html-selector-match.py` のパーサ設計変更 + `modules/verify-executor.md` 更新 + テスト追加、という複数ファイル・実装ロジック変更を伴うため Axis 1 = M から Complexity adjustment で +1)
+- Value: 3 (Impact=2: `modules/verify-executor.md` は多数の Skill から参照される共有コンポーネント。Alignment=4: `docs/product.md` の検証ハーネスとしての Vision に直結。raw=6 → Value 3)
+- 重複候補: なし
+
+### Auto-Resolve Log (non-interactive mode)
+
+- **実装方式は 案 B (htmlq 委譲 + 内製実装フォールバック) を推奨** — reason: Issue 本文中の実測データ (htmlq 0.4.0 の combinator 完全サポート、Homebrew 導入容易性) に加え、`docs/product.md` の「オプショナル依存はグレースフルフォールバック」という既存方針、および `Adapter` 概念 (detect → translate → delegate) と設計思想が一致するため。ただし AC (Pre-merge 2/3 件目) は rubric ベースでどの実装方式でも検証可能な文言のため、AC 自体は変更せず Issue 本文に推奨と根拠のみ追記した。最終決定は `/spec` に委ねる。
+  - Other candidates: 案 A (内製実装のみ拡張)、案 C (htmlq 必須化 — #1056 の目的に反するため非推奨)
+  - **`/spec` フェーズでの結末**: 実機検証の結果、この推奨は覆り 案 A を採用した (本 Spec の「Alternatives Considered」参照)
+
+### Acceptance Criteria の変更
+
+- Pre-merge に 2 件追加:
+  - `tests/html-selector-match.bats` に combinator 用テストケースが追加されていることの `grep` 検証 (既存 4 件の rubric/grep は「実装方針が決定された」ことしか検証しておらず、実際の動作を検証する項目が欠けていたため)
+  - `github_check "gh pr checks" "Run bats tests"` — Size L (PR route) に合わせた CI テスト pass 確認。`.github/workflows/test.yml` の `Run bats tests` ジョブ名と一致することを確認済み
+
+### スキップした操作
+
+- Step 12 (Scope Assessment / sub-issue splitting): non-interactive mode のため High-Stakes Decision としてスキップ。Size L は分割不要な規模と判断し XL への変更は行っていない
+
+## spec retrospective
+
+### Minor observations
+
+- `/issue` の Auto-Resolve Log が「この推奨は暫定であり `/spec` で実機再確認したうえで最終決定すること」という引き継ぎ指示を明示していたため、`/spec` 側が推奨を無批判に踏襲せず検証を実行できた。非対話モードの auto-resolve は「暫定判断 + 下流への検証指示」の形で渡すと、誤った早期確定を防げる。
+- Issue 本文が案 B の根拠として引用していた downstream 実測 (「`--attribute` 指定時は 1 マッチ 1 行になるため行数で代用できる」) は、`/spec` の追試で成立しないことが判明した。属性を持たない要素は空行ではなく 0 バイト出力になり、要素が複数行にまたがると 1 マッチで 4 行出力される。**Issue 本文に記載された実測データであっても、設計判断の主軸になる場合は `/spec` で追試する価値がある**。
+- 設計判断が「実装コストの見積」に依存する場合 (本件では「内製拡張は実装量が膨らむ」という Issue 本文の懸念)、`/spec` 段階でプロトタイプを書いて実測すると見積の不確実性を除去できた。約 30 分のプロトタイプ実装で「追加約 120 行・void element 対応は 1 箇所の判定・不正入れ子は例外なし」まで確定した。
+
+### Judgment rationale
+
+- `docs/product.md` の「Everything else is optional; each Skill falls back gracefully when optional dependencies are absent」を外部依存導入の根拠にできるのは、**フォールバック先が機能的に劣化版でも成立する場合に限る**と判断した。本件は compound selector では DOM 順序を原理的に判定できず、フォールバック先が存在しない (UNCERTAIN = 機能なし) ため、同方針は適用条件を満たさない。`/issue` の Auto-Resolve Log はこの適用条件を検証せずに「方針と整合する」と読んでいた。
+- Adapter パターンの適用可否は `docs/environment-adaptation.md` § "Adapter Pattern Application Requirements" (複数の実装選択肢の抽象化が必要か) を判定基準とした。CSS セレクタ判定は実装選択肢が実質 1 つであり、`mcp_call` がアダプタ層を持たない理由と同じ論理が当てはまる。Issue 本文の `Adapter` 用語定義 (detect → translate → delegate) との「設計思想の一致」は、適用要件そのものではない。
+- AC2 の rubric 文言が条件節 (「外部バイナリが必要な場合は」) であるため案 A では空虚に真になるが、adversarial な grader が無条件要件と誤読するリスクを見込み、`modules/verify-executor.md` に「外部バイナリを一切必要としないため未インストール時の分岐は存在しない」旨を明示的に書く指示を Implementation Step 5 に入れた。**条件付き AC は、前件が偽であることを成果物側で可読にしておく**のが grader 対策として有効。
+- AC 文言自体は 1 件も変更しなかった。`modules/verify-patterns.md` §18 (Issue Body Is SSoT for Verify Commands) に従い、実装方式の決定 (HOW) は Spec と Issue 本文の Auto-Resolved Ambiguity Points に記録するに留めた。
+
+### Uncertainty resolution
+
+- **U1 (implied end tag 非対応)**: プロトタイプ実測で `<div><p>a<p>b</div>` に対する `div > p` が 1 (ブラウザ準拠なら 2) と確定。仕様として受け入れ、docstring と `modules/verify-executor.md` に既知の制約として明記する方針とした。本 Issue の動機ケース (`<input>` 兄弟の順序判定) は void element のため implied end tag と無関係であることを確認した。
+- **U2 (兄弟走査の計算量)**: `list.index()` による前方兄弟参照は兄弟数が多い文書で `~` 照合を O(n^2) にする。`Node.sibling_index` を持たせて O(1) 化する方針を Implementation Step 2 に明記して解消した。
+- **htmlq の exit code 意味論**: Issue 本文の記載 (不正セレクタで exit 101 panic、マッチ 0 件と matched を exit code で区別不能) を実機で再現確認し、Notes の生データ表に記録した。案 A 採用により実装には影響しないが、将来 htmlq 採用が再検討された場合の一次情報として残す。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- **案 A (内製実装の拡張) を採用**。案 B (htmlq 委譲) は `--count=N` を表現できない (件数出力オプションなし・行数代用が不成立) 点が決定打。判定エンジン二重化・#1056 の失敗モード再導入・Adapter 適用要件の非該当も理由 (詳細は「Alternatives Considered」)
+- **CLI 契約と `verify-executor` の 2 段階判定ロジックは変更しない**。引数 1 個 / stdin から HTML / stdout にマッチ数 / 解析失敗時 exit 2 を維持することで、`modules/verify-executor.md` の呼び出し記述と既存 bats 7 ケースがそのまま回帰ガードとして機能する
+- **セレクタ文法のスコープは combinator 4 種のみ**。selector list (`,`) や疑似クラス (`:nth-child` 等) は対象外とし、現行の compound 文法を維持する (AC1 が 4 種を明示列挙しているため)
+- **void element はスタックに push しない**のが階層判定の要。`html.parser` は void element に `handle_endtag` を呼ばないため、push するとスタックが閉じられず以降の判定がすべて崩れる
+
+### Deferred Items
+
+- implied end tag 規則 (`<p>` の自動クローズ等) への対応は見送り。既知の制約として docstring と `modules/verify-executor.md` に明記するに留める (Uncertainty U1)
+- Post-merge AC 2 件はいずれも `verify-type: manual`。実 URL に対する隣接兄弟セレクタの PASS/FAIL 反転確認と、不正セレクタの UNCERTAIN 確認は `/verify` フェーズで人間が実施する
+
+### Notes for Next Phase
+
+- `tests/html-selector-match.bats` の既存 7 ケースは**削除・改変しない**こと。特に `invalid selector syntax exits non-zero with empty stdout` は `div>>bad` を使っており、新しい `split_selector()` でも「連続 combinator」として exit 2 + stdout 空を返す必要がある
+- 追加する `@test` 名に `combinator` の語を含めること (AC5 の `grep "combinator" "tests/html-selector-match.bats"` を満たすため)。`modules/verify-executor.md` にも `combinator` の語が必要 (AC4)
+- `modules/verify-executor.md` には「外部バイナリを一切必要としない」旨を**明示的に**書くこと。AC2 の条件節の前件が偽であることを grader から可読にするため
+- `scripts/validate-skill-syntax.py` は変更不要 (`_parse_verify_args()` の実測確認済み)。`docs/structure.md` のファイル数記述も新規ファイルがないため不変
+- プロトタイプ (`.tmp/proto.py`, gitignore 対象) は `/spec` セッション限りのもので commit していない。実装は Implementation Steps 1-4 の記述から起こすこと
