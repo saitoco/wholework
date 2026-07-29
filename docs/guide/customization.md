@@ -128,7 +128,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `steering-docs-path` | string | `docs` | Where steering documents live |
 | `capabilities.browser` | boolean | `false` | Enable Playwright-based verify commands |
 | `capabilities.workflow` | boolean | `false` | Enable Workflow-based multi-agent execution in `/review --full` (opt-in; falls back to static Task fan-out when unset) |
-| `capabilities.pr-preview` | boolean | `false` | Declare PR preview availability; URL/UX ACs are classified as pre-merge-preview and executed at `/review` when the `PREVIEW_URL` env variable is set. Skipped in `/verify` post-merge to prevent double verification, unless `/review`'s latest `type=preview-ac-unverified` marker lists the AC as unverified, in which case `/verify` falls back to a production-URL check. |
+| `capabilities.pr-preview` | boolean | `false` | Declare PR preview availability; ACs that can only be confirmed against the preview environment are classified as pre-merge-preview, whether or not they have a verify command (auto: executed at `/review` when `PREVIEW_URL` is set; manual: presented as a human-check item at `/review`). Skipped in `/verify` post-merge to prevent double verification; for the auto subcase, unless `/review`'s latest `type=preview-ac-unverified` marker lists the AC as unverified, in which case `/verify` falls back to a production-URL check. |
 | `capabilities.mcp` | list | `[]` | MCP tool names available to skills |
 | `capabilities.{name}` | boolean | `false` | Dynamic capability mapping (e.g., `capabilities.invoice-api: true`) |
 | `watchdog-timeout-seconds` | integer | `2700` | Watchdog timeout in seconds before killing a silent `claude -p` process. Claude's extended thinking time on Size L+ tasks (especially Opus with high effort) can produce silent periods exceeding 2700 seconds; set to `3600` for meta-development or Size L+ work. Values ≤0 fall back to the default. |
@@ -177,12 +177,12 @@ Wholework classifies acceptance criteria into three verification tiers:
 | Tier | When executed | Typical ACs |
 |------|--------------|-------------|
 | **pre-merge-local** | `/review` safe mode (always) | File existence, text containment, code quality, test results |
-| **pre-merge-preview** | `/review` when `PREVIEW_URL` is set | `http_status`, `html_check`, `api_check`, `http_header`, `http_redirect`, `browser_check`, `browser_screenshot`, `lighthouse_check` |
+| **pre-merge-preview** | `/review`, against the preview environment | Auto subcase (has a verify command, executed when `PREVIEW_URL` is set): `http_status`, `html_check`, `api_check`, `http_header`, `http_redirect`, `browser_check`, `browser_screenshot`, `lighthouse_check`. Manual subcase (no verify command, presented as a human-check item): visual/UX behavior that can only be confirmed by looking at or operating the preview |
 | **post-merge-production** | `/verify` full mode | Production deployment confirmation, production-only behavior |
 
 **Enabling pre-merge-preview:**
 
-Set `capabilities.pr-preview: true` in `.wholework.yml`. When `/issue` creates or refines an Issue with URL/UX-based verify commands, those ACs are placed in the `### Pre-merge (auto-verified)` section with a `<!-- ac-tier: preview -->` tag and a `--when="test -n \"$PREVIEW_URL\""` guard.
+Set `capabilities.pr-preview: true` in `.wholework.yml`. When `/issue` creates or refines an Issue with ACs that can only be confirmed against the preview environment, those ACs are placed in the `### Pre-merge (auto-verified)` section with a `<!-- ac-tier: preview -->` tag — regardless of whether they have a verify command. ACs with a URL/UX verify command (auto subcase) additionally get a `--when="test -n \"$PREVIEW_URL\""` guard. ACs with no verify command (manual subcase) additionally get a `<!-- verify-type: manual -->` tag and no guard.
 
 **Resolving `PREVIEW_URL`:**
 
@@ -195,8 +195,8 @@ export PREVIEW_URL="https://my-pr-123.example-preview.com"
 
 **Behavior summary:**
 
-- `PREVIEW_URL` set at `/review` time: preview-tier ACs are executed against the preview URL.
-- `PREVIEW_URL` not set: preview-tier ACs are SKIPPED (the `--when` guard fires) and remain unchecked for human follow-up.
+- `PREVIEW_URL` set at `/review` time: auto-subcase preview-tier ACs are executed against the preview URL; manual-subcase preview-tier ACs are presented as human-check items against the same URL (they have no `--when` guard to gate on `PREVIEW_URL`, since there is no verify command to run).
+- `PREVIEW_URL` not set: auto-subcase preview-tier ACs are SKIPPED (the `--when` guard fires) and remain unchecked for human follow-up; manual-subcase preview-tier ACs are still presented as human-check items (unaffected by `PREVIEW_URL`, since they have no guard).
 - At `/verify` (post-merge): `ac-tier: preview` ACs are skipped by default to prevent double verification. `/review` posts a `type=preview-ac-unverified` marker comment on every run that has at least one `ac-tier: preview` AC in Pre-merge — listing the indices left UNCERTAIN this run, or the sentinel `ac=none` when all preview-tier ACs were verified. `/verify` always resolves only the single most-recent such marker (latest-wins), so a later `/review` run (e.g., after a fix cycle) that clears a previously UNCERTAIN AC is reflected correctly instead of leaving an earlier, now-stale marker as the reference. For any AC still listed as unverified in that latest marker, `/verify` falls back — verifying against `production-url` if configured, or recording an explicit "unverified" warning if not — instead of silently marking it as SKIPPED. To also verify against production regardless of this fallback, duplicate the AC in the `### Post-merge` section without the tag.
 
 ## `.wholework/domains/`

@@ -23,3 +23,7 @@ setup() {
 @test "detect-config-markers documents pr-preview capability" {
     grep -q 'pr-preview' "$PROJECT_ROOT/modules/detect-config-markers.md" && grep -q 'HAS_PR_PREVIEW_CAPABILITY' "$PROJECT_ROOT/modules/detect-config-markers.md"
 }
+
+@test "issue skill Step 4 documents manual preview-tier AC tag convention" {
+    grep -q 'ac-tier: preview --> <!-- verify-type: manual' "$PROJECT_ROOT/skills/issue/SKILL.md"
+}
