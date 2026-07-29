@@ -289,3 +289,13 @@ Background 内の技術的主張 (`ALWAYS_PR` を参照する箇所、`skills/sp
 - **`/verify` への注意**: post-merge AC は manual 検証項目 (`.wholework.yml` へ `always-pr: true` を一時設定して `/spec` 非対話実行を確認) であり、自動 verify command では判定できない
 - Pre-merge AC 10 件は `check-pre-merge-ac.sh` で全件 checked 済みを確認してからマージした (unchecked_count=0)
 - code フェーズの retrospective は親セッションによる再構成であり、`/code` 自身が記録した設計逸脱・rework の情報は存在しない点は引き続き留意すること
+
+## Auto Retrospective
+
+### Manual recovery (code-pr)
+- **Date**: 2026-07-29 07:26 UTC
+- **Issue**: #1061, phase: code-pr
+- **Source**: parent session manual recovery
+- **Recovery type**: push-only
+- **Wrapper exit code**: unknown
+- **Outcome**: success
