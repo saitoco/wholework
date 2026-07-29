@@ -274,23 +274,59 @@ N/A — Implementation Steps 1-4 の記述どおりに `split_selector` / `parse
 - Rework 自体は発生していない (実装ロジックは Spec のプロトタイプ検証を踏襲し一度で全ケース一致)。上記の Consumed Comments 孤立 diff の復旧作業のみ、本来不要だったやり直しに当たる。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Implementation Steps 1-4 の記述どおりに `split_selector` / `parse_compound` / `TreeBuilder` / `Node` / `matches_compound` / `matches_chain` を実装。Spec Notes のプロトタイプ検証表 (12 セレクタ + 不正セレクタ 4 種 + 空 stdin) を実装後に再実測し、全一致を確認した
-- `matches_chain` の chain インデックス規約 (`chain[i][0]` は `chain[i-1]` と `chain[i]` を結ぶ combinator) は `split_selector` の出力形式から一意に決定し、そのまま再帰実装した
-- 既存 7 bats ケース + 新規 combinator ケース 8 件、および `modules/verify-executor.md` / `skills/issue/SKILL.md` の関連ドキュメント更新をすべて含め、フルスイート (1258 件) が PASS することを確認した (`html-selector-match.py` は複数の bats ファイルから参照されるため behavioral change 扱いとしてフルスイートを実行)
-- Pre-merge AC 6 件中、rubric/grep の 4 件は本フェーズ内で PASS 確認済み。`github_check "gh pr checks" "Run bats tests"` は PR/CI が本フェーズ完了時点でまだ存在しないため UNCERTAIN のまま — CI 完了後に確認される
+- **`origin/main` を PR ブランチに取り込んだ**。分岐後に main へ入った #1074 (curl 系 URL command の Basic Auth) が `modules/verify-executor.md` の `html_check` 行を編集しており、本 PR と同一行で conflict していた。どちらか一方を丸ごと採用すると他方が失われるため、main 側の `--config "$config_file"` を土台に本 PR の combinator 説明文を `Judge in two stages` の直前へ挿入する形で解決した
+- **同種の取りこぼしを止める回帰ガードを 2 件追加した** (`tests/verify-executor.bats`)。`html_check` 行に `--config` と `combinator` が同居することと、curl 系 5 コマンド全行が `--config` を保持することを確認する。マージ前の PR 側の行に対して実際に FAIL することも検証済み
+- **`matches_chain` にメモ化を入れた**。子孫 / 一般兄弟の照合が O(n · d^(k-1)) で、58 KB の 2000 行テーブル + `thead ~ tr ~ tr` が 93.6 秒かかっていた。`(id(node), 残チェーン長)` をキーにするだけで 0.39 秒になる。結果はノードとチェーン残量のみで決まり探索経路に依存しないため、30,000 件の差分ファジングで不一致 0 件を確認した
+- Pre-merge AC 6 件はすべて PASS。CI も全ジョブ SUCCESS。ただし CI は main とマージしていないブランチ単体で走るため、上記の conflict は CI では検知できなかった
 
 ### Deferred Items
 
-- implied end tag 規則への非対応は Spec 記載どおり既知の制約として docstring と `modules/verify-executor.md` に明記した (U1 の対応方針を踏襲、追加対応なし)
+- CONSIDER 5 件は未対応のまま著者判断に委ねた: `selector.strip()` の Spec 未記載 (docstring / Spec への追記)、implied end tag 制約の回帰テスト、`ValueError` 3 経路のテスト、`verify-executor.md:268` の "unlike" 列挙の精度、`docs/structure.md` の `tests/` ファイル数ドリフト (先行ドリフト、別 Issue 推奨)
 - Post-merge AC 2 件はいずれも `verify-type: manual`。`/verify` フェーズで人間が実施する
-- `github_check "gh pr checks" "Run bats tests"` (Pre-merge AC6) の PASS 確認は CI 完了後 (`/review` または `/verify`) に持ち越し
 
 ### Notes for Next Phase
 
-- `/code` スキル自身の Step 1 (Consumed Comments 記録) と Step 2 (worktree fresh 作成) の順序矛盾により、メインリポジトリ側に孤立した diff が発生する事象を本セッションで確認・復旧した。follow-up Issue #1078 (`retro/code`) を起票済み — `/review` 側で特別な対応は不要
-- 実装は CLI 契約 (引数1個/stdin/stdout/exit code) を変更していないため、`html_check` を呼び出す既存の Issue AC には影響しない
-- `docs/structure.md` / `scripts/validate-skill-syntax.py` は Spec の判断どおり変更不要のまま (`/spec` フェーズの実測確認を踏襲、`/code` 側での再確認でも変更不要と再確認)
+- **マージ時は追加の conflict 解決は不要**。`origin/main` を取り込み済みで、`git merge-tree` による再確認でも conflict は解消している
+- `modules/verify-executor.md` の `html_check` 行は #1074 と #1069 の両方の変更を含む。今後この行を触る際は `tests/verify-executor.bats` の 2 件のガードが両立を強制する
+- `scripts/html-selector-match.py` はレビュー中にメモ化を追加したため、`/code` フェーズ完了時点の実装とは差分がある。CLI 契約 (引数 1 個 / stdin / stdout にマッチ数 / 解析失敗時 exit 2) は不変
+
+## review retrospective
+
+### Spec と実装の乖離パターン
+
+- 実装本体の乖離は**ほぼゼロ**だった。Implementation Steps 1-4 が関数単位・分岐単位まで具体的に書かれており、`split_selector` / `parse_compound` / `TreeBuilder` / `Node` / `matches_compound` / `matches_chain` はすべて記述どおりに実装されていた。combinator 4 種、`VOID_ELEMENTS` 14 要素、`ValueError` 6 条件はいずれも Spec が「exhaustive」と宣言した集合と完全一致しており、enum 網羅性チェックでも欠落なし。Spec に exhaustive と明記する運用が、レビュー時の false positive を実際に抑制した (review-bug が挙げた「legacy void 要素の欠落」は、Spec の exhaustive 宣言を根拠に却下できた)
+- 唯一の乖離は `split_selector()` 冒頭の `selector.strip()`。Spec の不正入力 exhaustive リストにも CLI 契約の不変性宣言にも記述がない暗黙の入力正規化で、base では exit 2 (→ UNCERTAIN) だった `" div"` が exit 0 + マッチ数を返すようになる観測可能な差分を生んでいた。**「exhaustive」と宣言されたリストに対する追加は乖離として検知できるが、リストに載っていない軸 (入力の前処理) での追加は検知が難しい**という構造的な穴が見えた
+- Spec が「変更不要」と判断したファイルの根拠数値が実際には古かった (`docs/structure.md` の `tests/ (95 files)` が実測 103)。結論 (本 PR では不変) は正しかったため実害はないが、Spec の根拠として引用する数値は引用時点で実測する運用が要る
+
+### 繰り返し発生している問題
+
+- **`/review` にベースブランチとの conflict 検査が存在しない**。本 PR 最大の指摘 (MUST) は「main 側の #1074 と同一行を編集しており、素直に解決すると Basic Auth 対応が消える」というもので、これは `git merge-tree $(git merge-base HEAD origin/main) HEAD origin/main` を明示的に叩いて初めて発見できた。CI は main とマージしていないブランチ単体で走るため SUCCESS のままであり、`/review` の既存ステップ (AC 検証 / CI 確認 / 多観点コードレビュー) はいずれもこの種の欠落を構造的に見ない。同一ファイルの同一行を複数 Issue が触る状況は `modules/verify-executor.md` のような SSoT 文書で繰り返し起きる (#424 / #1056 / #1074 / #1069 がいずれもこの行を編集している) ため、再発は確実
+- **単一アカウント運用で MUST 指摘が必ず投稿失敗する**。`scripts/gh-pr-review.sh` は MUST があると無条件に `event=REQUEST_CHANGES` を選ぶが、GitHub は自分自身の PR への `REQUEST_CHANGES` を拒否する (`422 Review Can not request changes on your own pull request`)。本セッションでは手動で `COMMENT` にフォールバックして投稿し直した。自己ホスト運用では MUST 指摘のたびに同じ失敗を踏む
+- **`capabilities.workflow: true` を設定していても Workflow パスに入れなかった**。`skills/review/workflow-guidance.md` の Pre-flight は `agentType` の解決可能性のみを検査するが、本セッションでは `agentType` は両方利用可能な一方で **Workflow ツール自体がセッションに存在しなかった**ため、静的 Task fan-out へフォールバックした。Pre-flight の検査項目に穴がある
+
+### 受入条件の検証しやすさ
+
+- 6 件中 4 件が rubric、2 件が grep / github_check という構成で、**UNCERTAIN は 1 件も出なかった**。特に AC2 は「外部バイナリが必要な場合は未インストール時の挙動が定義されている」という条件節の形になっており、案 A (外部バイナリ不要) では前件が偽になる。Spec がこれを見越して `modules/verify-executor.md` に「外部バイナリを一切必要としない」旨を明示的に書く方針を立てていたため、grader が前件の偽を可読に判定できた。**実装方式が未決の段階で AC を書く際に、どの方式でも判定可能な条件節の形にしておく**手法が有効に機能した実例
+- 一方 `github_check "gh pr checks" "Run bats tests"` は `/code` フェーズ時点では PR/CI が存在せず UNCERTAIN 確定になる。Phase Handoff の Deferred Items で `/review` に持ち越す運用で吸収できたが、**PR 作成前のフェーズでは原理的に検証不能な AC** が Pre-merge に混じる構造は残る
+- AC がすべて `[x]` の状態で `/review` に入った (前回の `/review` 試行が external-kill で中断した影響)。チェックボックスが既に立っていても `/review` 側で再検証する運用になっているため実害はなかったが、**チェックボックスの状態を信頼せず毎回再検証する**前提が明文化されていることの価値が確認できた
+
+### Improvement Proposals
+
+- `/review` に「ベースブランチとの conflict 事前検査」ステップを追加する。`git merge-tree $(git merge-base HEAD origin/<base>) HEAD origin/<base>` を実行し、`changed in both` が出たファイルについて「両方の変更が保持される解決になっているか」をレビュー対象にする。SSoT 文書 (`modules/verify-executor.md` 等) で特に効く
+- `scripts/gh-pr-review.sh` に `REQUEST_CHANGES` 失敗時の `COMMENT` フォールバックを実装する。422 (`Can not request changes on your own pull request`) を検知したら event を `COMMENT` に落として再投稿し、本文にその旨を注記する。単一アカウント運用が前提の自己ホスト環境では必須
+- `skills/review/workflow-guidance.md` の Pre-flight に「Workflow ツール自体の利用可能性」を追加する。現在は `agentType` の解決可能性しか見ておらず、ツール不在時の分岐が定義されていない
+- verify command に**実行タイムアウトの既定値**を設ける。`html_check` は実行コストを持つ verify command のうち唯一タイムアウトが規定されておらず (`shell_condition` 10s / `github_check` 30s / `command` 60s / `build_success` 120s)、本 PR で見つかった性能問題は「UNCERTAIN に落ちる」のではなく「verify ステップが張り付く」形で表面化していた
+
+## Auto Retrospective
+
+### Orchestration Anomalies
+- **[external-kill]** `run-review.sh` (1st attempt, PR #1077) was killed externally during the CI wait window; no `Exit code:` trailer and no `wrapper_exit` event were emitted. `scripts/detect-external-kill.sh` returned `external-kill`. Recovery: respawned `run-review.sh 1077 --full` with identical arguments (phase label SSoT preserved progress). See `modules/orchestration-fallbacks.md#external-kill-parent-respawn`.
+- **[review-completion-false-negative]** Review phase completion false-negative in phase `review` (exit code 1): `matches_expected:false` and `phase:review` detected in reconciler output, but no existing fallback header (## Review Response Summary / ## レビュー回答サマリ) was found in wrapper log. Likely caused by LLM omitting the `<!-- review-summary -->` marker and using a non-standard heading. Reference: #547.
+  - Actual diagnosis in this run differs from the cataloged likely-cause: `gh pr view 1077 --json comments,reviews` returned **zero** comments and **zero** reviews, i.e. the `claude -p` invocation produced no output at all after ~840s of watchdog silence and exited 0 (silent no-op). This is Fallback Step 4 ("no summary comment found — re-run `/review`"), not the marker/heading-mismatch path (Steps 2-3).
+
+### Improvement Proposals
+- `scripts/detect-wrapper-anomaly.sh` の `review-completion-false-negative` は「marker 欠落 + 非標準見出し」を likely cause として報告するが、PR にコメントが 0 件の silent no-op ケースも同じパターンに吸収されてしまう。両者は復旧手順が異なる (前者は marker 追記、後者は再実行) ため、検出時に PR コメント件数を確認して `review-silent-no-op` を別パターンとして切り出すことを検討する。

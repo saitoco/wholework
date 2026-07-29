@@ -234,45 +234,67 @@ def matches_compound(node, compound):
     return True
 
 
-def matches_chain(node, chain):
+def matches_chain(node, chain, memo=None):
     """Match `node` against the last compound of `chain`, then resolve the
-    remaining (combinator, compound) pairs against node's ancestors/siblings."""
-    if not matches_compound(node, chain[-1][1]):
-        return False
-    if len(chain) == 1:
-        return True
+    remaining (combinator, compound) pairs against node's ancestors/siblings.
 
-    combinator = chain[-1][0]
-    rest = chain[:-1]
+    `memo` caches (node, remaining-chain-length) -> bool across the whole run.
+    The descendant and general sibling branches re-explore the entire ancestor
+    / preceding-sibling axis at every chain step, so without caching a
+    k-compound chain costs O(n * d^(k-1)); an ordinary 2000-row table with a
+    3-compound `~` chain already took ~90s. The verdict depends only on the
+    node and how much of the chain is left to resolve, never on the path taken
+    to reach it, so caching is result-preserving and brings the cost back to
+    O(n * d * k).
+    """
+    if memo is None:
+        memo = {}
+    key = (id(node), len(chain))
+    cached = memo.get(key)
+    if cached is not None:
+        return cached
 
-    if combinator == '>':
-        parent = node.parent
-        if parent is None or parent.tag == '#document':
-            return False
-        return matches_chain(parent, rest)
+    result = False
+    if matches_compound(node, chain[-1][1]):
+        if len(chain) == 1:
+            result = True
+        else:
+            combinator = chain[-1][0]
+            rest = chain[:-1]
 
-    if combinator == ' ':
-        ancestor = node.parent
-        while ancestor is not None and ancestor.tag != '#document':
-            if matches_chain(ancestor, rest):
-                return True
-            ancestor = ancestor.parent
-        return False
+            if combinator == '>':
+                parent = node.parent
+                result = (
+                    parent is not None
+                    and parent.tag != '#document'
+                    and matches_chain(parent, rest, memo)
+                )
 
-    if combinator == '+':
-        if node.sibling_index == 0:
-            return False
-        prev = node.parent.children[node.sibling_index - 1]
-        return matches_chain(prev, rest)
+            elif combinator == ' ':
+                ancestor = node.parent
+                while ancestor is not None and ancestor.tag != '#document':
+                    if matches_chain(ancestor, rest, memo):
+                        result = True
+                        break
+                    ancestor = ancestor.parent
 
-    if combinator == '~':
-        siblings = node.parent.children
-        for i in range(node.sibling_index - 1, -1, -1):
-            if matches_chain(siblings[i], rest):
-                return True
-        return False
+            elif combinator == '+':
+                if node.sibling_index > 0:
+                    prev = node.parent.children[node.sibling_index - 1]
+                    result = matches_chain(prev, rest, memo)
 
-    raise ValueError("unknown combinator: {!r}".format(combinator))
+            elif combinator == '~':
+                siblings = node.parent.children
+                for i in range(node.sibling_index - 1, -1, -1):
+                    if matches_chain(siblings[i], rest, memo):
+                        result = True
+                        break
+
+            else:
+                raise ValueError("unknown combinator: {!r}".format(combinator))
+
+    memo[key] = result
+    return result
 
 
 def main():
@@ -299,7 +321,8 @@ def main():
         print("html parse error: {}".format(e), file=sys.stderr)
         sys.exit(2)
 
-    count = sum(1 for node in builder.nodes if matches_chain(node, parsed))
+    memo = {}
+    count = sum(1 for node in builder.nodes if matches_chain(node, parsed, memo))
 
     print(count)
     sys.exit(0)

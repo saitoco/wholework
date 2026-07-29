@@ -85,7 +85,7 @@ review-bug: false           # Step 9 の review-bug agent を無効化（review-
 
 ### 5. `/merge` — マージ
 
-squash merge を実行してリモートブランチを削除します。コンフリクトがある場合は自動解決を試みます。詳細: [`skills/merge/SKILL.md`](../../skills/merge/SKILL.md)
+squash merge を実行してリモートブランチを削除します。コンフリクトがある場合は自動解決を試みます。マージ前に対象 Issue の pre-merge acceptance criteria が全てチェック済みかを検証し、未チェックがある場合は提示して merge をブロックします (記録済み override がある場合を除く)。詳細: [`skills/merge/SKILL.md`](../../skills/merge/SKILL.md)
 
 ### 6. `/verify` — 受入テスト
 

@@ -108,7 +108,7 @@ For M-size issues, a lightweight single-agent review runs. For L-size, a full mu
 
 ### `/merge` — Merge the PR
 
-Squash-merges the PR and deletes the remote branch.
+Squash-merges the PR and deletes the remote branch. Before merging, checks that the issue's pre-merge acceptance criteria are all checked off; if any are unchecked, it presents them and blocks the merge unless a recorded override exists.
 
 ```
 /merge 88
