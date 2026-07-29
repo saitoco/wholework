@@ -59,3 +59,31 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue --non-interactive` によるリファインメントの Issue Retrospective コメント。Type=Bug / Size=M の判定根拠、Pre-merge AC3・AC4 の verify command を `grep` (常時 PASS 判定) から `rubric` へ変更した理由、および「検討事項」2 点 (manual preview AC のチェック責務の切り分け、`--when` 未使用方針) の自動解決ログを記録したもの。いずれも Issue 本文に既に反映済みの内容であり、本 Spec の設計判断に新規の変更は生じていない。(https://github.com/saitoco/wholework/issues/1059#issuecomment-5111765584)
+- `/code --non-interactive` 実行時点でカットオフ (最新 `phase/*` ラベル付与時刻) 以降の新規コメントなし。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1–3 を Spec の記述通りに実装した。
+
+### Design Gaps/Ambiguities
+- `skills/review/SKILL.md` Step 8 の項目挿入位置について、Spec は「項目 1 と項目 2 の間、または項目 2 の冒頭」の 2 択を許容していたため、新規分岐を項目 2 として挿入し、既存の「No hint: attempt AI judgment」を項目 3 に、「Classify each condition」を項目 4 に繰り下げた。これは Spec の許容範囲内の選択であり、設計逸脱ではない。
+
+### Rework
+- N/A — 各 Implementation Step の初回編集で bats テスト・`validate-skill-syntax.py`・`check-forbidden-expressions.sh` がいずれも一発で PASS し、やり直しは発生しなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- pre-merge-preview tier の分類軸を「verify command の種類」から「検証環境 (preview で確認するか)」に変更し、auto/manual の 2 サブケースとして表現した (Spec Implementation Step 1 の設計をそのまま採用)。
+- `skills/review/SKILL.md` Step 8 では、manual preview-tier AC を AI 判定にかけず直接 UNCERTAIN に倒す分岐を、既存の「No hint: attempt AI judgment」の手前に独立項目として追加した。
+- `skills/verify/SKILL.md` Step 5 では、fallback 分岐の先頭で verify command の有無により分岐し、manual AC は `PRODUCTION_URL` の設定有無を問わず常に human-check 要と記録するようにした。
+
+### Deferred Items
+- Post-merge AC (「preview 環境で人間が確認する AC を含む Issue を 1 件通しで実行し、pre-merge セクションに配置され merge 前に確認される流れになることを確認する」) は動的な振る舞い確認であり、`/verify` 実行時に人間が確認する。
+- manual preview AC のチェック責務の正式な割り当て (merge ゲートでの強制など) は、Issue 本文の「検討事項」記載通り別 Issue に委ねられており、本 PR のスコープ外。
+
+### Notes for Next Phase
+- `/review` は、Pre-merge セクションに `<!-- ac-tier: preview --> <!-- verify-type: manual -->` の AC がある場合、Step 8 で直接 UNCERTAIN 判定し「human-check against the preview URL is required」という Notes を残す。この UNCERTAIN は Step 8 の FAIL Blocking Behavior の対象外 (UNCERTAIN は非ブロッキング) なので、REQUEST_CHANGES にはならない想定。
+- `/verify` は Post-merge 実行時、Step 5 の pre-merge-preview AC skip rule により auto/manual いずれの preview-tier AC もデフォルトで SKIPPED として扱う。`type=preview-ac-unverified` マーカーで未検証と報告された manual AC は、production-URL フォールバックを試みず常に UNCERTAIN (human verification required) として記録される。
