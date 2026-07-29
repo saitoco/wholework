@@ -270,13 +270,13 @@ Background 内の技術的主張 (`ALWAYS_PR` を参照する箇所、`skills/sp
 - `bats tests/size-workflow-table.bats` — 新規追加の 2 件 (`ALWAYS_PR Override section is documented`, `ALWAYS_PR Override documents patch to pr promotion`) を含む 10 件 PASS
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- (spec フェーズからの引き継ぎ) route 決定の SSoT を `modules/size-workflow-table.md` の新 `ALWAYS_PR Override` 節に置き、Size から route または route 依存の挙動を導出する全 caller がそこを参照する形にした
-- (spec フェーズからの引き継ぎ) 優先順位は `skills/code/SKILL.md` Step 0 の列挙ルールの実挙動 (operate > `--pr` > `ALWAYS_PR` > `--patch` > Size) を SSoT に記述した
-- 実装は上記の設計どおりに完了しているが、**commit は親セッションが外部 kill からの復旧として行った**。`/code` 自身の commit ステップは実行されていない
+- PR #1090 は `mergeable=true` (CI success, review approved) だったため merge スキルの Step 2/3 (worktree entry / conflict resolution) をスキップし、squash merge を直接実行した
+- `gh pr merge --squash --delete-branch` はリモートのブランチ削除に失敗した (ローカル worktree `review+pr-1090` がブランチを使用中だったため)。マージ自体は成功していたため、`git push origin --delete worktree-code+issue-1061` で手動フォローアップした
+- Phase Handoff はワークツリーに入らず main リポジトリのルートで直接 `git merge origin/main --ff-only` して適用した (Step 2 をスキップしたため)
 
 ### Deferred Items
 
@@ -286,6 +286,6 @@ Background 内の技術的主張 (`ALWAYS_PR` を参照する箇所、`skills/sp
 
 ### Notes for Next Phase
 
-- **`/review` への注意**: code フェーズの retrospective は親セッションによる再構成であり、`/code` 自身が記録した設計逸脱・rework の情報は存在しない。diff と Spec の照合を通常より丁寧に行うこと
-- Pre-merge AC 10 件のうち 4 件は決定的な `grep` で、`/spec` 時点で「パターンが対象ファイルに存在しないこと」を実行確認済み (常時 PASS ではない)。実装後は出現するはずなので PASS になることを確認すること
-- `tests/operate-route.bats` は operate route 節の文言をアサートしている。`ALWAYS_PR Override` 節は operate route 節の**前**に挿入されており、既存アサーションには影響していない (全テスト PASS で確認済み)
+- **`/verify` への注意**: post-merge AC は manual 検証項目 (`.wholework.yml` へ `always-pr: true` を一時設定して `/spec` 非対話実行を確認) であり、自動 verify command では判定できない
+- Pre-merge AC 10 件は `check-pre-merge-ac.sh` で全件 checked 済みを確認してからマージした (unchecked_count=0)
+- code フェーズの retrospective は親セッションによる再構成であり、`/code` 自身が記録した設計逸脱・rework の情報は存在しない点は引き続き留意すること
