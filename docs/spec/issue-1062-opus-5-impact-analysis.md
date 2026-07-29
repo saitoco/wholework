@@ -79,3 +79,43 @@ sub-agent の `effort:` frontmatter 導入 (blocked-by 子 Issue #1063) と `run
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue` フェーズの Issue Retrospective コメント。(1) #1063/#1064 を sub-issue ではなく blocked-by で連結した理由 (本 Issue が Size M の単独完結タスクであり sub-issue 分割時の XL 昇格ルールと整合しないため、および Sonnet 5 の先行連鎖 [#876 他] も blocked-by 構成だったため)、(2) Triage 判定根拠 (Type=Task、Size=M、Value=5、Priority=high)、(3) `docs/ja/tech.md` を受入条件の verify command 対象から除外した判断、を記録。(https://github.com/saitoco/wholework/issues/1062#issuecomment-5111778278)
+
+### /code phase
+
+No new comments since last phase (cutoff: 2026-07-29T02:02:15Z, most recent `phase/*` label assignment).
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. All 5 Implementation Steps were executed as specified, including the two-paragraph split for the effort calibration note (heading text preserved verbatim for `#922`'s citation) and the placement of the deferral/watch-item paragraphs directly after the Alias pin policy paragraph.
+
+### Design Gaps/Ambiguities
+
+- None found during implementation. The Spec's Notes section (citation protection, `docs/ja/tech.md` exclusion, `docs/reports/` translation-sync exclusion) matched the actual repository state exactly, so no additional judgment calls were required beyond what the Spec already resolved.
+
+### Rework
+
+- One process correction, not implementation rework: while updating Issue #1062's pre-merge checkboxes, a `.tmp/` scratch file was first written via a `python3 -c` Bash invocation, which violates the global CLAUDE.md rule requiring the Write tool for all `.tmp/` file creation (Bash redirects/scripts are prohibited for this purpose). Caught before committing; the file was deleted and recreated correctly via Read + Write. No implementation file was affected.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Preserved the `**Opus 4.8 effort calibration**` heading text verbatim (marked historical) and added a separate `**Opus 5 effort calibration**` paragraph, rather than rewriting the existing heading in place — required because `#922`'s recalibration entry cites this exact heading string as its judgment basis (`docs/tech.md:124`), and rewriting it would have broken that citation.
+- Recorded the Sonnet 5 → Opus 5 default-parent evaluation as a `docs/tech.md` note-paragraph verdict (deferred) rather than filing a swap Issue — `#914`/`#921`/`#922`/`#923` give no cost/quality basis for a swap today; the note records the re-evaluation trigger instead.
+- Made no implementation changes for sub-agent `effort:` frontmatter or `run-spec.sh --opus`'s own effort value — both are fully delegated to the already-filed, already-blocked-by child Issues `#1063`/`#1064`, consistent with the Spec's Out of Scope section.
+- Ran the full `bats tests/` suite (1237/1237 PASS) despite the change being docs-only — the Behavioral Change Detection step found no test references to the modified files, but `test-runner.md`'s auto-detection has no partial-scope mechanism for a markdown-only repository, so full-suite execution was the only available path.
+
+### Deferred Items
+- Sub-agent `effort:` frontmatter introduction — `#1063` (already filed, `blocked-by` child of `#1062`).
+- `run-spec.sh --opus` effort recalibration under Opus 5 guidance — `#1064` (already filed, `blocked-by` child of `#1062`).
+- Prompt-side response to Opus 5's behavioral shifts (verbosity-driven output growth, task-scope expansion, over-verification) — no Issue filed; the report lists this only as a non-enumerated future candidate (§9 Non-goals), since no concrete instance has been observed yet.
+- Watchdog Opus 5 perspective — explicitly out of scope for this Issue; to be added as a comment on the existing `#939` (whose own `WATCHDOG_TIMEOUT_SPEC_DEFAULT` verdict is still pending), not as a new Issue.
+- `docs/ja/tech.md` translation sync — excluded per the prior `/issue`-phase retrospective decision (Consumed Comments above), not implemented in this phase.
+
+### Notes for Next Phase
+- No code or script changes are in this PR — only `docs/reports/claude-opus-5-impact-strategy.md` (new), `docs/tech.md`, and `agents/review-bug.md` changed. Review should weigh documentation accuracy/rubric-style semantic checks more heavily than typical bug-pattern detection.
+- Confirm `#922`'s citation ("the \"Opus 4.8 effort calibration\" note above") still resolves correctly in the merged `docs/tech.md` — the heading text was deliberately kept unchanged for this reason.
+- Confirm the removed alias-resolution sentence (`auto-resolve to the current Opus (4.8)`) does not reappear elsewhere in `docs/tech.md` outside the paragraph it was moved from.
+- `review-bug` (Opus-routed sub-agent) itself now resolves to Opus 5 per this PR's own subject matter — expect the sub-agent's own cyber-classifier note (as edited by this PR) to apply to its own review pass.
