@@ -327,3 +327,11 @@ N/A — Implementation Steps 1-4 の記述どおりに `split_selector` / `parse
 
 ### Improvement Proposals
 - `scripts/detect-wrapper-anomaly.sh` の `review-completion-false-negative` は「marker 欠落 + 非標準見出し」を likely cause として報告するが、PR にコメントが 0 件の silent no-op ケースも同じパターンに吸収されてしまう。両者は復旧手順が異なる (前者は marker 追記、後者は再実行) ため、検出時に PR コメント件数を確認して `review-silent-no-op` を別パターンとして切り出すことを検討する。
+
+### Manual recovery (review)
+- **Date**: 2026-07-29 06:01 UTC
+- **Issue**: #1069, phase: review
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn
+- **Wrapper exit code**: unknown
+- **Outcome**: success
