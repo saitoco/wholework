@@ -135,3 +135,11 @@ None. All 8 Pre-merge conditions carried well-specified verify commands (`file_e
 - **Recovery type**: completion-override
 - **Wrapper exit code**: unknown
 - **Outcome**: success
+
+### Manual recovery (review)
+- **Date**: 2026-07-29 03:02 UTC
+- **Issue**: #1062, phase: review
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn
+- **Wrapper exit code**: unknown
+- **Outcome**: success
