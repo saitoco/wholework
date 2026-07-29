@@ -88,20 +88,19 @@ N/A — セレクタ文法・マッチング実装・エラー時挙動 (非 0 e
 N/A — 手戻りは発生しなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Pre-merge AC 3 件 (rubric x2、`file_not_contains` x1) を独立に再検証し、いずれも PASS を確認 (code phase の自己評価と一致)。Issue チェックボックスは既に `[x]` で変更不要と判断。
-- `review-light` エージェント (全 4 観点: Spec 逸脱・エッジケース/堅牢性・セキュリティ・ドキュメント整合性) による軽量統合レビューを実施し、Issue 検出なし。
-- AC レベルの `file_not_contains` チェックに加え、`bats tests/html-selector-match.bats tests/verify-executor.bats` の実行 (14/14 PASS) とリポジトリ全体 grep で `which pup`/`ericchiang/pup`/`If pup exists` の残存なしを独立確認し、回帰ガードが実際に機能することを検証した。
+- Step 1 で mergeable=true (`ci_status: success`, `review_status: approved`) を確認し、コンフリクト解消不要で Step 4 (squash merge) に直接進んだ。
+- `gh pr merge 1065 --squash --delete-branch` を実行し、squash merge + リモートブランチ削除を完了。
 
 ### Deferred Items
-- Post-merge AC (「実装者が `pup` 未インストールの環境で `html_check` を含む AC を実行し PASS/FAIL が返ることを確認する」) は manual verify-type のため merge 後に別途実施が必要 (code phase から継続)。
-- `tests/post_merge_check.bats` の高並列実行時 flaky failure (本 PR 非改変・単体実行では PASS・CI は SUCCESS) は本 Issue のスコープ外と判断し、Issue 起票は見送った。再発が続く場合は再評価対象。
+- Post-merge AC (「実装者が `pup` 未インストールの環境で `html_check` を含む AC を実行し PASS/FAIL が返ることを確認する」) は manual verify-type のため merge 後も引き続き未実施 (review phase から継続)。
+- `tests/post_merge_check.bats` の高並列実行時 flaky failure (本 PR 非改変) は review phase 同様、本 Issue のスコープ外と判断し据え置き。
 
 ### Notes for Next Phase
-- MUST/SHOULD/CONSIDER の Code Review Issue はゼロ件。CI は全ジョブ SUCCESS (DCO / bats tests ×2 / skill syntax ×2 / forbidden expressions ×2 / macOS shell compat ×2)。`/merge 1065` に進んで問題ない。
-- merge 後、Post-merge AC (`pup` 未インストール環境での手動確認) の実施を忘れないこと。
+- `/verify 1056` で Post-merge AC の manual 確認 (pup 未インストール環境での html_check 実行) を忘れないこと。
+- Pre-merge AC 3 件は review phase で PASS 確認済み。verify phase では主に post-merge AC の確認が中心となる想定。
 
 ## review retrospective
 
