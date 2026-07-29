@@ -79,3 +79,51 @@ sub-agent の `effort:` frontmatter 導入 (blocked-by 子 Issue #1063) と `run
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue` フェーズの Issue Retrospective コメント。(1) #1063/#1064 を sub-issue ではなく blocked-by で連結した理由 (本 Issue が Size M の単独完結タスクであり sub-issue 分割時の XL 昇格ルールと整合しないため、および Sonnet 5 の先行連鎖 [#876 他] も blocked-by 構成だったため)、(2) Triage 判定根拠 (Type=Task、Size=M、Value=5、Priority=high)、(3) `docs/ja/tech.md` を受入条件の verify command 対象から除外した判断、を記録。(https://github.com/saitoco/wholework/issues/1062#issuecomment-5111778278)
+
+### /code phase
+
+No new comments since last phase (cutoff: 2026-07-29T02:02:15Z, most recent `phase/*` label assignment).
+
+## Code Retrospective
+
+### Deviations from Design
+
+- None. All 5 Implementation Steps were executed as specified, including the two-paragraph split for the effort calibration note (heading text preserved verbatim for `#922`'s citation) and the placement of the deferral/watch-item paragraphs directly after the Alias pin policy paragraph.
+
+### Design Gaps/Ambiguities
+
+- None found during implementation. The Spec's Notes section (citation protection, `docs/ja/tech.md` exclusion, `docs/reports/` translation-sync exclusion) matched the actual repository state exactly, so no additional judgment calls were required beyond what the Spec already resolved.
+
+### Rework
+
+- One process correction, not implementation rework: while updating Issue #1062's pre-merge checkboxes, a `.tmp/` scratch file was first written via a `python3 -c` Bash invocation, which violates the global CLAUDE.md rule requiring the Write tool for all `.tmp/` file creation (Bash redirects/scripts are prohibited for this purpose). Caught before committing; the file was deleted and recreated correctly via Read + Write. No implementation file was affected.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+None. Implementation matched the Spec's 5 Implementation Steps exactly. The single review finding (dangling `(§ Implementation Steps N)` self-references inside the newly created report) was a documentation-quality slip introduced when Spec-internal section-reference phrasing leaked into the disposable report's own prose — not a Spec/code divergence, since the Spec never specified that phrasing for the report body.
+
+### Recurring issues
+
+None. The one SHOULD finding was a single, isolated instance (an internal cross-reference naming mismatch), not a pattern repeated across multiple files or sections in this PR.
+
+### Acceptance criteria verification difficulty
+
+None. All 8 Pre-merge conditions carried well-specified verify commands (`file_exists` / `grep` / `file_contains` / `file_not_contains` / `rubric`) and all resolved to PASS deterministically on the first pass — no UNCERTAIN classifications and no verify command corrections were needed.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Fixed the single SHOULD-level review finding (dangling report self-references, 6 occurrences) directly in Step 12 rather than deferring — a trivial documentation text correction with no design implication.
+- Ran the full lightweight re-check (`python3 scripts/validate-skill-syntax.py skills/` — 0 error) even though the fix was docs-only, to confirm no incidental regression before posting the Step 14 summary.
+- Skipped Step 13 (Acceptance Criteria Consistency Check) — the fix was a pure documentation-consistency correction, not a policy/design change, so none of the 8 Pre-merge ACs needed rewording.
+
+### Deferred Items
+- None beyond what `/code` already deferred to `#1063`/`#1064` (sub-agent `effort:` frontmatter, `run-spec.sh --opus` effort recalibration) — review surfaced no new deferrable work.
+
+### Notes for Next Phase
+- PR is ready for `/merge 1067`: all 8 Pre-merge ACs PASS, CI green post-fix, 0 MUST issues, and the 1 SHOULD issue is already resolved and pushed (commit `02be008f`).
+- `/verify` should check the 2 Post-merge conditions: (1) no Opus 5-related drift surfaces in the next `/audit drift` narrative check (opportunistic), (2) re-confirm `#1063`/`#1064` are still Priority=`medium` at verify time (i.e., below the Priority=high filing threshold noted in the report's Post-merge condition).
+- The prior phase's citation-protection concern (`#922`'s reference to the `Opus 4.8 effort calibration` heading, and the relocated `auto-resolve to the current Opus (4.8)` sentence) was re-confirmed correct during this review pass — no further action needed.
