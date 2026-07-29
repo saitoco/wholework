@@ -74,3 +74,36 @@
 - **Recovery type**: push-only
 - **Wrapper exit code**: unknown
 - **Outcome**: success
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- `/issue` の AC 監査が `<!-- verify: grep "PREVIEW_BASIC_USER" -->` を「変更前から常時 PASS する」defect として検出し `grep "curl --config"` に差し替えた判断は有効に機能した。差し替え後の AC5 は実装後にのみ PASS する状態になっており、verify 時に実質的な回帰検知として働いた
+- 一時ファイル方式の曖昧点 (`--config` vs `--netrc-file`) を `/issue` 段階で確定させたため、`/spec` 以降で方式の再議論が発生しなかった
+
+#### design
+- Spec の Notes に `curl --config` の実機検証結果 (`Authorization: Basic ...` ヘッダ送信確認) と `mktemp` のデフォルト権限 600 の実測を残したため、verify 側は再実測なしに AC2 の「権限設定が定義されている」根拠を確認できた
+- 翻訳テーブルの curl 記述を safe mode と full mode が共有する構造を Spec が明示していたため、実装が 1 箇所の追記で両モードをカバーでき、Issue 本文が報告する実害 (`/review` の safe mode で 401 FAIL) を取りこぼさなかった
+- 影響範囲調査 (`docs/guide/customization.md` 等は更新不要) の結論が Spec に残っていたため、verify 側で追加の波及確認が不要だった
+
+#### code
+- 実装は Spec の Implementation Steps に 1:1 対応し、Pre-merge AC 5 件すべてを一発で満たした (fixup/amend コミットなし)
+- 1 回目の code 試行はバックグラウンドの `bats tests/` 完了待ちのまま exit 0 となり commit を残さなかった (既知の `code-patch-silent-no-op` パターン)。`auto-retry-on-fail` が正しく発火し、2 回目の試行が実装コミット `5724906f` まで到達した
+- ただし 2 回目は commit 直後・push 前に external kill を受け、完成済みコミットが worktree に取り残された状態で phase が終了した
+
+#### review
+- Size S の patch route のため `/review` は実行されていない。Pre-merge AC が rubric 中心で実装直後に機械判定でき、review 不在に起因する検知漏れは observed されなかった
+
+#### merge
+- patch route のため `/merge` は実行されていない。push は parent session の manual recovery (`worktree-merge-push.sh --from worktree-code+issue-1074`) で完了した (`## Auto Retrospective` に記録済み)
+
+#### verify
+- Pre-merge 5 件すべて PASS。rubric の根拠確認では記述の存在だけでなく、`modules/browser-adapter.md` Step 3 / `modules/lighthouse-adapter.md` Step 2 という相互参照先が実在しマスキング記述 (`mask as ****`) も一致することまで突き合わせた
+- Post-merge 2 件は Basic Auth 保護下の preview 環境とその認証情報を必要とし、wholework 自身のリポジトリには該当環境がないため検証不能。#1051 と同一構造であり、この種の AC は downstream 環境でしか閉じられない
+
+### Improvement Proposals
+
+- **`external-kill-parent-respawn` の respawn 手順が patch route で完成済みコミットを破棄する**: `modules/orchestration-fallbacks.md#external-kill-parent-respawn` の Fallback Step 2 は「`phase/*` ラベルと `code_phase_milestone` checkpoint が既存の進捗を復元するため respawn は最初からやり直しにならない」と述べているが、この前提は pr route でしか成立しない。`scripts/run-code.sh` の idempotency guard (L165-176) は `ROUTE_FLAG == "--pr"` の場合のみ動作し、その直後の stale worktree cleanup (L178-191) は route に関係なく `git worktree remove --force` + `git branch -D` を無条件に実行する。また `code_phase_milestone` は設計上 pr route 限定 (`skills/auto/SKILL.md` § Checkpoint Design)。本 Issue では external kill 時点で worktree に実装完了コミット `5724906f` (`closes #1074`) が残っていたため、カタログ通りに respawn していれば約 13 分の完成済み作業を破棄して再実装させていた。parent session は破棄を避けるため `worktree-merge-push.sh --from worktree-code+issue-1074` で push を完了させる manual recovery (`push-only`) に切り替えた。対応候補: (a) fallback catalog に patch route 版の「commit 済み・push 未完」エントリ (pr route の `code-completed-no-pr` 相当) を追加する、(b) `run-code.sh` の stale worktree cleanup を「worktree branch に base より先行するコミットが存在する場合は削除せず push 経路へ回す」よう条件付きにする、(c) `external-kill-parent-respawn` の Fallback Steps に patch route の分岐を明記する
+- **`code-patch` の完了判定が「worktree コミット済み・push 未完」を「未着手」と区別できない**: `reconcile-phase-state.sh code-patch --check-completion` は origin/main 上の `closes #N` コミット有無のみを見るため、worktree にコミット済みだが push 前の中間状態が `commits_found: false` (= 未着手) と同じ観測値になる。本 Issue では 1 回目の試行がこの判定で `silent_no_op` と分類されて auto-retry が発火したが、external kill 後の 2 回目についても同じ判定では「実装が存在しない」と誤読される状態だった (実際には完成済みコミットが worktree に存在した)。対応候補: `_completion_code_patch()` の `actual` に worktree branch の先行コミット有無を示す hint フィールド (例: `worktree_commits_found`) を追加し、Tier 1/2 の診断と `code-patch-silent-no-op` の判定が push 未完状態を区別できるようにする
