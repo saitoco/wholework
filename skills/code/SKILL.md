@@ -2,7 +2,7 @@
 name: code
 description: Local implementation (`/code 123`). Size auto-detection routes XS/S→patch (direct commit to main), M/L→branch+PR. Override with `--patch`/`--pr`. Does not update CLAUDE.md, run session retrospectives, or manage memory.
 context: fork
-allowed-tools: Bash(gh issue view:*, gh issue edit:*, gh issue list:*, gh issue create:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, git checkout:*, git pull:*, git add:*, git status:*, git diff:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh pr create:*, gh pr comment:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/test-failure-classify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-allowed-tools.sh:*, python3:*, bats:*), Glob, Grep, Read, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, ToolSearch
+allowed-tools: Bash(gh issue view:*, gh issue edit:*, gh issue list:*, gh issue create:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, git checkout:*, git pull:*, git add:*, git status:*, git diff:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh pr create:*, gh pr comment:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/test-failure-classify.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-allowed-tools.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, gh pr checks:*, gh run view:*, python3:*, bats:*), Glob, Grep, Read, Write, Edit, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, ToolSearch
 ---
 
 # Local Implementation
@@ -61,7 +61,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banne
 
 **Load project config (run before Size fetch):**
 
-Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `ALWAYS_PR` and `SPEC_PATH` for use in route detection below.
+Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `ALWAYS_PR`, `SPEC_PATH`, and `HAS_PR_PREVIEW_CAPABILITY` for use in route detection below.
 
 First, fetch Size (run before route detection):
 
@@ -310,7 +310,7 @@ Skip this sub-step if no out-of-scope remediations are identified.
 If `ROUTE=operate` (detected in Step 0), follow this subsection instead of the standard implementation flow above:
 
 1. **Autonomy tier gate**: Read `${CLAUDE_PLUGIN_ROOT}/modules/autonomy-tier.md` § "Tier × External System Write (operate route)" and resolve `AUTONOMY_TIER` (from `.wholework.yml` `autonomy` key, default `L1`).
-   - **`L1`**: do not execute any external operation. Instead, build an `## Execution Plan` listing, for each Implementation Step, the planned external operation (tool/command name, target, argument summary with secret values masked), and post it as an Issue comment via `gh-issue-comment.sh`. Write the comment body with the Write tool; first line: `<!-- wholework-event: type=execution-plan phase=code issue=$NUMBER -->` (machine-readable marker per `modules/l0-surfaces.md` § "Machine-Readable Event Marker" — this marker is what lets `reconcile-phase-state.sh` recognize a successful L1 advisory run as `code-patch` phase completion; see `modules/phase-state.md` § "Operate Route Completion Signature"). Leave the Issue at `phase/code` — this is a path A (advisory) degrade, per `modules/autonomy-tier.md`. Skip Step 9 and the Step 11 commit/PR/Execution Log blocks (there is nothing to test or log yet); still run Step 12 if there are retrospective decisions worth recording, then proceed to Step 13's `L1` branch and the Completion Report.
+   - **`L1`**: do not execute any external operation. Instead, build an `## Execution Plan` listing, for each Implementation Step, the planned external operation (tool/command name, target, argument summary with secret values masked), and post it as an Issue comment via `gh-issue-comment.sh`. Write the comment body with the Write tool; first line: `<!-- wholework-event: type=execution-plan phase=code issue=$NUMBER -->` (machine-readable marker per `modules/l0-surfaces.md` § "Machine-Readable Event Marker" — this marker is what lets `reconcile-phase-state.sh` recognize a successful L1 advisory run as `code-patch` phase completion; see `modules/phase-state.md` § "Operate Route Completion Signature"). Leave the Issue at `phase/code` — this is a path A (advisory) degrade, per `modules/autonomy-tier.md`. Skip Step 9 and the Step 11 commit/PR/Execution Log blocks (there is nothing to test or log yet); still run Step 12 if there are retrospective decisions worth recording, then proceed to Step 14's `L1` branch and the Completion Report.
    - **`L2`/`L3`**: proceed to step 2 below.
 2. Execute the Spec's Implementation Steps in order, each performing the external operation it describes (an MCP tool resolved via `ToolSearch`, or an existing allowed Bash pattern). By the Step 0 detection criteria, operate route Implementation Steps are external-tool operations only — no repository files are edited by this step.
 3. Because no implementation diff is produced, skip `git add` / `git commit` here — Step 11's `#### Operate Route: Execution Log` records the results as an Issue comment instead of a commit.
@@ -521,7 +521,7 @@ if [[ "$BASE_BRANCH" == "main" ]]; then
 fi
 ```
 
-Push is done in Step 13 Worktree Exit (merge-to-main pattern). Label transition happens after push completes (after Step 13).
+Push is done in Step 14 Worktree Exit (merge-to-main pattern). Label transition happens after push completes (after Step 14).
 
 **For pr route (branch + PR)**:
 
@@ -614,7 +614,7 @@ If `ROUTE=operate` and Step 8 executed external operations (`AUTONOMY_TIER` was 
    ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $NUMBER .tmp/execution-log-$NUMBER.md
    rm -f .tmp/execution-log-$NUMBER.md
    ```
-3. No `git add` / `git commit` / `git push` / `gh pr create` is performed for the implementation diff (there is none). Step 12's Spec retrospective + Phase Handoff commit still applies (bookkeeping only — see Step 12 and Step 13 below).
+3. No `git add` / `git commit` / `git push` / `gh pr create` is performed for the implementation diff (there is none). Step 12's Spec retrospective + Phase Handoff commit still applies (bookkeeping only — see Step 12 and Step 14 below).
 
 ### Step 12: Code Retrospective
 
@@ -663,7 +663,7 @@ If there are items under "Deviations from Design" (reordering of implementation 
    Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Write Procedure" section.
    Parameters: `SPEC_PATH`, `ISSUE_NUMBER=$NUMBER`, `PHASE_NAME=code`.
    The handoff is staged with the Spec in the same `git add` and committed together.
-6. Commit (push is done in Step 13 Worktree Exit):
+6. Commit (push is done in Step 14 Worktree Exit):
    ```bash
    git add $SPEC_PATH/issue-$NUMBER-*.md
    git commit -s -m "Add code retrospective for issue #$NUMBER
@@ -679,7 +679,44 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
      git push origin HEAD
      ```
 
-### Step 13: Worktree Exit
+### Step 13: Preview Build Verification (pr route only)
+
+**Fire condition**: this step runs only when ROUTE is `pr` **and** `HAS_PR_PREVIEW_CAPABILITY` is `true` (derived from `capabilities.pr-preview: true` in `.wholework.yml`, retained in Step 0). If either condition is false, skip this entire step and proceed to Step 14. Projects that do not declare `capabilities.pr-preview` keep the existing behavior unchanged — the code phase completes at PR creation and CI / preview failure detection is left to `/review`.
+
+When the fire condition holds, track a wait-round counter starting at 0 (reset to 0 whenever the fix loop below pushes a new commit).
+
+**Wait call:**
+
+```bash
+echo "progress: Waiting for deploy/preview build on PR #$PR_NUMBER (issue #$NUMBER)..."
+```
+```bash
+WHOLEWORK_CI_TIMEOUT_SEC=540 ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh $PR_NUMBER
+```
+
+Run the Bash tool call above with `timeout: 600000` (the tool's 10-minute ceiling). `WHOLEWORK_CI_TIMEOUT_SEC=540` places the script's own cutoff inside that ceiling and must not be changed — see `docs/spec/issue-1066-code-preview-build-gate.md` Uncertainty section for the rationale.
+
+**Branch on the `ci_result:` stdout line — evaluate top to bottom, first match wins (exhaustive):**
+
+| # | Condition | Behavior |
+|---|-----------|----------|
+| 1 | `failed>0` | Enter the fix loop below. Evaluated first because `failed>0` and `pending>0` can hold simultaneously (e.g. `total=3 passed=1 failed=1 pending=1`) — a check that has already failed is actionable now, so waiting out the remaining rounds only delays the fix |
+| 2 | `zero_checks=true` | Output a warning that no checks were ever registered, then proceed to Step 14 |
+| 3 | `pending>0` and wait-round count < 3 | Increment the wait-round count by 1 and re-run the same wait call |
+| 4 | `pending>0` and wait-round count = 3 | Stop waiting. Output a warning listing the still-incomplete check names, then proceed to Step 14 (`/review` continues to wait on CI) |
+| 5 | `total>0` and `failed=0` and `pending=0` | Success. Proceed to Step 14 |
+
+Rows 3–4 bound the wait to **4 wait calls** (counter values 0, 1, 2, 3) — 4 × 540s = 2160s (36 minutes), matching the estimate in `docs/spec/issue-1066-code-preview-build-gate.md`. When changing the counter bound, update that estimate in the same commit.
+
+**Fix loop (maximum 3 iterations, mirrors the `verify-max-iterations` / `auto-retry-on-fail.max_iterations` default of 3):**
+
+1. Run `gh pr checks $PR_NUMBER --json name,state,bucket,link` and collect the name and link of every check whose bucket is `fail`.
+2. Diagnose the failure. If the link points to `github.com/.../actions/runs/` (a GitHub Actions check), run `gh run view --log-failed` on that run to read the failure log. If the link points to an external provider console (Amplify / Vercel / Netlify, etc.), no log can be fetched directly — reproduce the project's build command locally when possible (e.g. `scripts.build` in `package.json`), otherwise use the check's `description` text as the only available signal.
+3. Apply the fix inside the worktree, then `git add`, `git commit -s -m "Fix preview build failure for issue #$NUMBER"`, `git push origin HEAD`.
+4. Reset the wait-round count to 0 and restart from the wait call above.
+5. **Escape hatch** — reached when 3 fix iterations complete with `failed>0` still true, or step 2 yields no actionable diagnosis: stop attempting further fixes, output a failure report naming the failing checks and their links, then proceed to Step 14. Do not exit non-zero — the commit and PR are already valid deliverables, and `/review` continues to detect the CI failure (see `skills/code/SKILL.md` pr route convention).
+
+### Step 14: Worktree Exit
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the Exit section appropriate for the route.
 
@@ -702,7 +739,7 @@ Follow "Exit: merge-to-main section" (only Step 12's Spec retrospective + Phase 
 **pr route (push-and-remove pattern):**
 Follow "Exit: push-and-remove section" (push was done in Step 12, so only delete the worktree).
 
-### Step 14: Opportunistic Verification
+### Step 15: Opportunistic Verification
 
 Only if `.wholework.yml` in the project has `opportunistic-verify: true`, Read `${CLAUDE_PLUGIN_ROOT}/modules/opportunistic-verify.md` and follow the "Processing Steps" section to run opportunistic verification. The skill name is `/code`. Skip this step if not configured.
 
@@ -712,6 +749,7 @@ Output the route-specific prefix, then read `${CLAUDE_PLUGIN_ROOT}/modules/next-
 
 - **patch route prefix**: "Direct commit and push to main complete."
 - **pr route prefix**: "PR creation complete."
+- **pr route prefix (preview build failed after fix attempts exhausted)**: "PR creation complete (preview build FAILED — N check(s) failing after M fix attempts)."
 - **operate route prefix (`L2`/`L3`, operations executed)**: "External operations executed. Execution Log posted to the Issue."
 - **operate route prefix (`L1`, advisory-only)**: "Execution Plan posted to the Issue (autonomy tier L1 — external operations not executed)."
 

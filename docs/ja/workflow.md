@@ -46,6 +46,8 @@ Spec に基づいて設計を実装します。サイズベースのルーティ
 
 第三の経路 **operate** は、Spec の `## Changed Files` が実質空で `## Implementation Steps` が外部ツール操作 (CMS 編集・インフラ操作など) のみで構成される場合に適用されます — リポジトリ内のファイル変更を伴いません。この判定は Size ではなく Spec から機械的に行われ、`--pr`/`--patch`/`always-pr` より優先されます (差分が存在しない以上、意味のある PR を作成できないため)。operate route は worktree による commit/PR フローを完全にスキップします: 外部操作 (`ToolSearch` 経由の MCP ツール、または既存の許可済み Bash パターン) を直接実行し、結果は git diff の代わりに `## Execution Log` Issue コメントと Phase Handoff に記録されます。`.wholework.yml` の `autonomy: L1` では実行が advisory に degrade し、実行予定の操作は `## Execution Plan` Issue コメントとして投稿されるのみで実行はされません。`/code` の `allowed-tools` は固定された Bash パターン (`gh`・`git`・`python3`・`bats` 等) のみを許可するため、operate route の一次サポートチャネルは MCP ツールとこれらの既存パターンに限られます — 任意の外部 CLI が必要なプロジェクトは `/code` の allowed-tools を拡張するか `permission-mode: bypass` を設定する必要があります。詳細: `modules/size-workflow-table.md` § "Diff-less Axis (operate route)"、`modules/autonomy-tier.md` § "Tier × External System Write (operate route)"。
 
+`capabilities.pr-preview: true` が設定されている場合、pr route は PR 作成後に hosting provider のデプロイ/preview ビルドの完了を待ち、失敗時は code フェーズ内から修正コミットを push して (最大 3 回まで) 再検証します。この capability を宣言していないプロジェクトでは従来どおり PR 作成時点で code フェーズが完了し、CI/preview の失敗検知は `/review` に委ねられます。
+
 3 つの実装経路:
 - **Claude Code**: `/code 123` でローカル実装
 - **GitHub Copilot**: Issue で "Assign to Copilot" を選択

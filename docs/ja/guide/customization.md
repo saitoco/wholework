@@ -117,7 +117,7 @@ capabilities:
 | `steering-docs-path` | string | `docs` | steering document の配置先 |
 | `capabilities.browser` | boolean | `false` | Playwright ベースの verify command を有効化する |
 | `capabilities.workflow` | boolean | `false` | `/review --full` で Workflow ベースのマルチエージェント実行を有効化する（opt-in; 未設定時は static Task fan-out にフォールバック） |
-| `capabilities.pr-preview` | boolean | `false` | PR preview URL の存在を宣言する。preview 環境でしか確認できない AC は、verify command の有無を問わず pre-merge-preview に分類される (auto: `PREVIEW_URL` が設定されている場合に `/review` 時に実行。manual: `/review` 時に人間の確認項目として提示)。`/verify` post-merge では二重検証防止のため skip するが、auto サブケースは `/review` が投稿する最新の `type=preview-ac-unverified` マーカーがその AC を未検証としている場合に `/verify` が本番 URL に対するフォールバック検証を行う。 |
+| `capabilities.pr-preview` | boolean | `false` | PR preview URL の存在を宣言する。preview 環境でしか確認できない AC は、verify command の有無を問わず pre-merge-preview に分類される (auto: `PREVIEW_URL` が設定されている場合に `/review` 時に実行。manual: `/review` 時に人間の確認項目として提示)。`/verify` post-merge では二重検証防止のため skip するが、auto サブケースは `/review` が投稿する最新の `type=preview-ac-unverified` マーカーがその AC を未検証としている場合に `/verify` が本番 URL に対するフォールバック検証を行う。`/code` の pr route もこの capability でゲートされる: `true` のとき `/code` は PR 作成後にデプロイ/preview ビルドの完了を待ち、失敗時は修正コミットを push する (最大 3 回まで)。上限に達した場合は `/review` に処理を委ねる。 |
 | `capabilities.mcp` | list | `[]` | スキルから利用できる MCP ツール名 |
 | `capabilities.{name}` | boolean | `false` | 動的 capability マッピング（例: `capabilities.invoice-api: true`） |
 | `watchdog-timeout-seconds` | integer | `2700` | watchdog が silent な `claude -p` プロセスを kill するまでのタイムアウト秒数。Size L+ タスク（特に Opus / xhigh effort）では claude の長い思考時間により 2700 秒を超える silent 期間が発生しうる。メタ開発や Size L+ 作業では `3600` を推奨。0 以下の値はデフォルトにフォールバック。 |
@@ -170,6 +170,8 @@ Wholework は acceptance criteria を 3 層に分類します。
 **pre-merge-preview の有効化:**
 
 `.wholework.yml` に `capabilities.pr-preview: true` を設定します。`/issue` が preview 環境でしか確認できない AC を作成・更新する際、それらの AC は verify command の有無を問わず `### Pre-merge (auto-verified)` セクションに `<!-- ac-tier: preview -->` タグを付与して配置されます。URL/UX 系 verify command を持つ AC (auto サブケース) にはさらに `--when="test -n \"$PREVIEW_URL\""` ガードが付与されます。verify command を持たない AC (manual サブケース) にはさらに `<!-- verify-type: manual -->` タグが付与され、ガードは付与されません。
+
+同じフラグは `/code` の pr route もゲートします: PR 作成後、`/code` は `wait-ci-checks.sh` 経由で hosting provider のデプロイ/preview ビルドの完了を待ち、失敗時は code フェーズ内から修正して再 push を試みます (最大 3 回まで)。失敗が続く場合は `/review` に処理を委ねます。`capabilities.pr-preview` を宣言していないプロジェクトでは `/code` の従来動作 (PR 作成時点でビルド待ちなしに完了) が維持されます。
 
 **`PREVIEW_URL` の解決:**
 

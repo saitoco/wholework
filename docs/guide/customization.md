@@ -128,7 +128,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `steering-docs-path` | string | `docs` | Where steering documents live |
 | `capabilities.browser` | boolean | `false` | Enable Playwright-based verify commands |
 | `capabilities.workflow` | boolean | `false` | Enable Workflow-based multi-agent execution in `/review --full` (opt-in; falls back to static Task fan-out when unset) |
-| `capabilities.pr-preview` | boolean | `false` | Declare PR preview availability; ACs that can only be confirmed against the preview environment are classified as pre-merge-preview, whether or not they have a verify command (auto: executed at `/review` when `PREVIEW_URL` is set; manual: presented as a human-check item at `/review`). Skipped in `/verify` post-merge to prevent double verification; for the auto subcase, unless `/review`'s latest `type=preview-ac-unverified` marker lists the AC as unverified, in which case `/verify` falls back to a production-URL check. |
+| `capabilities.pr-preview` | boolean | `false` | Declare PR preview availability; ACs that can only be confirmed against the preview environment are classified as pre-merge-preview, whether or not they have a verify command (auto: executed at `/review` when `PREVIEW_URL` is set; manual: presented as a human-check item at `/review`). Skipped in `/verify` post-merge to prevent double verification; for the auto subcase, unless `/review`'s latest `type=preview-ac-unverified` marker lists the AC as unverified, in which case `/verify` falls back to a production-URL check. Also gates `/code`'s pr route: when `true`, `/code` waits for the deploy/preview build to complete after PR creation and pushes fix commits (bounded to 3 attempts) on failure before falling through to `/review`. |
 | `capabilities.mcp` | list | `[]` | MCP tool names available to skills |
 | `capabilities.{name}` | boolean | `false` | Dynamic capability mapping (e.g., `capabilities.invoice-api: true`) |
 | `watchdog-timeout-seconds` | integer | `2700` | Watchdog timeout in seconds before killing a silent `claude -p` process. Claude's extended thinking time on Size L+ tasks (especially Opus with high effort) can produce silent periods exceeding 2700 seconds; set to `3600` for meta-development or Size L+ work. Values ≤0 fall back to the default. |
@@ -183,6 +183,8 @@ Wholework classifies acceptance criteria into three verification tiers:
 **Enabling pre-merge-preview:**
 
 Set `capabilities.pr-preview: true` in `.wholework.yml`. When `/issue` creates or refines an Issue with ACs that can only be confirmed against the preview environment, those ACs are placed in the `### Pre-merge (auto-verified)` section with a `<!-- ac-tier: preview -->` tag — regardless of whether they have a verify command. ACs with a URL/UX verify command (auto subcase) additionally get a `--when="test -n \"$PREVIEW_URL\""` guard. ACs with no verify command (manual subcase) additionally get a `<!-- verify-type: manual -->` tag and no guard.
+
+The same flag also gates `/code`'s pr route: after PR creation, `/code` waits for the hosting provider's deploy/preview build to complete via `wait-ci-checks.sh`, and on build failure attempts to fix and re-push from within the code phase (bounded to 3 attempts) before falling through to `/review`. Projects that do not declare `capabilities.pr-preview` keep `/code`'s prior behavior unchanged — the code phase completes at PR creation with no build wait.
 
 **Resolving `PREVIEW_URL`:**
 
