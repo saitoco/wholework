@@ -249,9 +249,11 @@ Verify each condition:
    - Valid syntax: run the specified command's corresponding processing
    - **Invalid syntax** (unknown command name, missing args, etc.) → treat as UNCERTAIN, fall back to AI judgment. Note error details.
 
-2. **No hint**: attempt AI judgment (check if diff adds a file, if text is present, etc.)
+2. **No verify command, tagged `<!-- ac-tier: preview --> <!-- verify-type: manual -->`**: this AC can only be confirmed by a human looking at or operating the PR preview — do not attempt AI judgment. Classify directly as UNCERTAIN and record in Notes that "human-check against the preview URL is required."
 
-3. Classify each condition:
+3. **No hint (and not the manual preview-tier case above)**: attempt AI judgment (check if diff adds a file, if text is present, etc.)
+
+4. Classify each condition:
    - PASS — condition met
    - FAIL — condition not met
    - UNCERTAIN — cannot auto-determine
@@ -548,6 +550,7 @@ rm -f .tmp/review-body-$NUMBER.md .tmp/review-comments-$NUMBER.json
 | Condition summary | PASS | — |
 | Condition summary | FAIL | Missing content |
 | Condition summary | UNCERTAIN | Why auto-determination failed |
+| Condition summary | UNCERTAIN | Human-check against the preview URL is required (manual preview-tier AC) |
 | Condition summary | POST-MERGE | Verify after merge |
 
 ## CI Status
