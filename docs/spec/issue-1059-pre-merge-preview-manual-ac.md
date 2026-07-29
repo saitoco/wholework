@@ -102,3 +102,13 @@ Nothing to note — Implementation Steps 1–3 は Spec の記述通りに実装
 ### Acceptance criteria verification difficulty
 
 Nothing to note — Pre-merge (auto-verified) 4 件はすべて `rubric` verify command で、PR diff の該当箇所と 1 対 1 で対応が取れており UNCERTAIN は発生しなかった。verify command の記述と実装内容の乖離もなし。
+
+## Auto Retrospective
+
+### Manual recovery (spec)
+- **Date**: 2026-07-29 03:15 UTC
+- **Issue**: #1059, phase: spec
+- **Source**: parent session manual recovery
+- **Recovery type**: respawn
+- **Wrapper exit code**: unknown
+- **Outcome**: success
