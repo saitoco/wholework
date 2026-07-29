@@ -144,3 +144,98 @@
 ## Consumed Comments
 
 - `saito` / `MEMBER` / first-class / `/issue 1060 --non-interactive` の Issue Retrospective。Triage 結果 (Type=Feature, Size=M→L, Value=4)、Background 事実確認 (3 主張とも codebase と一致)、AC verify command の監査結果、あいまいさの自動解決 3 件 (ゲート挙動は「提示 + 明示的承認がなければ中断」、対応方針は B-1 軸 + B-2 補助、UNCERTAIN のまま merge する場合はコメントに理由を記録) を報告。本 Spec の設計はこの 3 件の自動解決方針を前提として引き継いでいる。 / https://github.com/saitoco/wholework/issues/1060#issuecomment-5112496825
+
+## Issue Retrospective
+
+`--non-interactive` モードで実行 (`/issue 1060 --non-interactive`)。
+
+### Triage 結果
+
+- Type: Feature (新規のゲート機構追加)
+- Priority: 未検出
+- Size: M→L (`skills/merge/SKILL.md` + `scripts/gh-pr-merge-status.sh` + `skills/review/SKILL.md` にまたがる複数スキル変更のため複雑度補正)
+- Value: 4 (Impact=3: mention #1072 ×1 + shared_flag(複数スキル)×2, Alignment=5: product.md Vision の「gate」機能と直結, raw=8)
+- 重複候補: なし。#1053 は Issue 本文で既に「隣接するが異なるフェーズ」と整理済み
+
+### Background 事実確認 (advisory)
+
+Background 内の以下の主張は codebase と照合し、いずれも一致を確認した (警告なし):
+- `skills/review/SKILL.md` の "UNCERTAIN, SKIPPED, PENDING, and POST-MERGE classifications do not block review." — 該当行を確認
+- `skills/merge/SKILL.md` に acceptance criteria への言及がない — grep で不在を確認
+- `scripts/gh-pr-merge-status.sh` は mergeable/CI status/review status のみを返し、AC チェック状態は返さない — スクリプト内容で確認
+
+### AC / verify command
+
+- 監査 (triage AC verify command integrity audit): 問題なし。`grep "Acceptance" "skills/merge/SKILL.md"` は実装前提の意図的な未一致であり、常時 FAIL パターンには該当しない
+- `verify-patterns.md` §9 のガイドラインに基づき、AC1 (rubric: pre-merge AC ゲート追加) に対する補助検証として `section_contains` を追加した。対象ファイル・セクション (`/merge` Step 1) が事前に予測可能なため
+- AC2 (rubric: 再検証責務の明文化) は実装先ファイル/セクションが「対応方針 B」の候補次第で未確定のため、補助検証は追加せず rubric 単独とした
+
+### あいまいさの自動解決 (Auto-Resolve Log)
+
+Size L のため検出上限 5 件のうち、影響度の高い 3 件を特定し自動解決した (詳細は Issue 本文 「## Auto-Resolved Ambiguity Points」 セクションに記録):
+
+1. **未チェック pre-merge AC 検出時の `/merge` の挙動**: 「一覧提示 + 明示的な承認がない限り中断」をデフォルト方針として採用
+2. **対応方針 B の候補選定**: 「B-1 を軸に B-2 を補助的に使う」構成を採用。B-3 は過剰ブロックのリスクにより不採用
+3. **UNCERTAIN のまま merge する場合の判断記録方法**: 「ゲートで提示し、承認したら理由をコメントに残す」を採用方針として明記
+
+### その他の判断
+
+- Related セクションのプレースホルダーが既に #1059 (CLOSED) として実体化していることを確認し、具体的な Issue 番号を指すよう更新した
+- Size L のため通常は sub-issue 分割の並列調査を実行する対象だが、非対話モードのため High-Stakes Decision としてスキップした
+
+## Spec Retrospective
+
+`--non-interactive` モードで実行 (`/spec 1060 --non-interactive`)。SPEC_DEPTH=full (Size L)。
+
+### Autonomous Auto-Resolve Log
+
+- **AC 状態の取得手段を `gh-pr-merge-status.sh` 拡張ではなく新規スクリプト `check-pre-merge-ac.sh` にした** — 理由: `gh-pr-merge-status.sh` は `scripts/run-code.sh:335` と `modules/orchestration-fallbacks.md` からも消費される PR スコープの共有 JSON 契約であり、Issue 本文パースを混ぜると無関係な consumer に影響が及ぶ。さらに `mergeable:false` へ相乗りさせると `/merge` Step 1 の既存分岐 (非対話時は「そのまま merge を試行」に自動解決) に吸収され、ゲートとして機能しない
+  - 他候補: Issue 本文が示唆した `gh-pr-merge-status.sh` へのフィールド追加
+- **未チェック検出時の非対話モード挙動を「マーカー投稿 + 非ゼロ終了」にした** — 理由: `/issue` フェーズで記録済みの方針 (明示的な承認がない限り中断) に忠実。`/auto` 側は既存の merge phase failure 経路にそのまま乗ることを `skills/auto/SKILL.md` Step 4 項目 11 で確認済み
+  - 他候補: 警告のみで継続 (元インシデントの再発リスクがあるため不採用)
+- **再検証の実行責務を `/merge` インライン実行ではなく `/review` 再実行に割り当てた** — 理由: インライン再検証は worktree で PR head を checkout し verify-executor を回す必要があり、`docs/tech.md` の SSoT (merge は機械的操作、`model: sonnet` + `effort: low`) と衝突する。B-1 の意図である「検出の単一箇所化」はゲート側で達成できる
+  - 他候補: `/merge` ゲート内での verify command 再実行 (B-1 の字義通りの解釈)
+- **`.wholework.yml` 設定キーを追加しない判断** — 理由: Issue が要求していない。`### Pre-merge` 見出しを持たない Issue 本文では自動 no-op になり、override マーカーが escape hatch として機能するため、設定キー無しでも過剰ブロックにはならない
+  - 他候補: `pre-merge-ac-gate: true/false` キーの追加 (detect-config-markers.md + docs/guide/customization.md + ja ミラー 2 件の変更が付随)
+
+### Minor observations
+
+- `docs/structure.md` の Directory Layout は `tests/` を `(95 files)` と記載しているが実際は 103 件。structure.md 自身の維持ルールが件数更新を求めているのは `modules/` と `scripts/` のみのため本 Issue では触れないが、ドリフトとして残っている
+- `skills/spec/SKILL.md` Step 7 は「extract **at most 3**」と書いているのに対し、`modules/ambiguity-detector.md` の Size Routing Table は L/XL で最大 5 件としており、両者が食い違っている。本 Spec では両方の上限を満たす 3 件で運用した
+
+### Judgment rationale
+
+- Issue 本文 AC2 の `section_contains "skills/merge/SKILL.md" "### Step 1" "pre-merge AC"` は、`modules/verify-executor.md` の仕様 (見出し行から先頭の `#` と空白を除去したうえで部分一致) により恒久的に UNCERTAIN になる欠陥があった。`"Step 1"` に修正し、`verify-patterns.md` §18 (Issue Body Is SSoT) を保つため Issue 本文と Spec の両方を同じ内容に更新した。Spec 側だけを直すと SSoT が崩れる
+- ゲートの見出しレベルを h4 (`####`) にしたのは、h3 だと `section_contains "skills/merge/SKILL.md" "Step 1" ...` の走査範囲 (次の同レベル以上の見出しまで) を打ち切ってしまうため。verify command の走査範囲と実装の見出しレベルが結合している点は設計時に意識する必要がある
+
+### Uncertainty resolution
+
+- **グローバル AC index の整合性**: `scripts/gh-issue-edit.sh` の awk パターン (`/^- \[[ xX]\]/`、本文全体対象、行頭一致のみ) を実際に読み、新スクリプトで同一パターンを使うことで構成上一致させる方針に決めた。行頭一致のみなのでインデントされたチェックボックスは数えられない点も含めて同一挙動になる
+- **非ゼロ終了が `/auto` に与える影響**: `skills/auto/SKILL.md` Step 4 項目 11 (merge 失敗時は completion check → `matches_expected:false` なら Step 6) を確認し、既存の失敗経路にそのまま乗ることを確認した。復旧ループの誘発懸念は解消
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- AC 状態の取得は新規スクリプト `scripts/check-pre-merge-ac.sh` で行い、`scripts/gh-pr-merge-status.sh` は変更しない (共有 JSON 契約の consumer 影響と、`mergeable:false` 相乗りがゲートとして機能しない問題を回避するため)
+- ゲートは `skills/merge/SKILL.md` Step 1 の項目 2 として挿入する。既存の項目 2 (Determine mergeability) は項目 3 に繰り下げる
+- 非対話モードでは merge せずマーカー投稿 + 非ゼロ終了。対話モードは AskUserQuestion で Abort / Re-run review / Approve の 3 択
+- 再検証の実行責務は `/review` 再実行に割り当て、`/merge` はインライン再検証を行わない (`docs/tech.md` の「merge は機械的操作」決定との衝突回避)
+- 新マーカー `type=pre-merge-ac-gate` (`decision=blocked|override`) を `modules/l0-surfaces.md` に追加し、latest-wins で解決する
+
+### Deferred Items
+
+- `.wholework.yml` によるゲートの有効/無効設定は追加しない (Issue の要求外。必要になれば別 Issue)
+- `modules/phase-state.md` の merge precondition 行の更新は sync candidate 扱いで、`reconcile-phase-state.sh` の挙動変更は本 Issue のスコープ外
+- `docs/structure.md` の `tests/` 件数ドリフト (95 → 実際 103) は本 Issue では修正しない
+- `docs/guide/workflow.md` / `docs/ja/guide/workflow.md` へのゲート説明追加は sync candidate 扱い (`/code` が要否を判断)
+
+### Notes for Next Phase
+
+- `skills/merge/SKILL.md` の `allowed-tools` には `${CLAUDE_PLUGIN_ROOT}/scripts/check-pre-merge-ac.sh:*` と `Write` の両方を追加すること。`AskUserQuestion` は `validate-skill-syntax.py` の `FORBIDDEN_ALLOWED_TOOLS` に含まれるため追加してはならない
+- Step 5 で追加する再検証責務のサブセクションは **h4 (`####`)** にすること。h3 にすると AC2 の `section_contains "skills/merge/SKILL.md" "Step 1" "pre-merge AC"` の走査範囲が打ち切られる
+- `check-pre-merge-ac.sh` のグローバル index は `scripts/gh-issue-edit.sh` の awk パターン `/^- \[[ xX]\]/` と完全一致させること (本文全体対象・行頭一致のみ)。ずれると override マーカーの `ac=` 集合と照合できなくなる
+- bash 3.2 互換必須 (`mapfile` / 連想配列 / `${var^^}` 禁止)。awk + jq のみで実装する
+- SKILL.md 本文には半角の感嘆符と 3 連バッククォートを書かないこと (`validate-skill-syntax.py` が検出する)
+- `docs/workflow.md` / `docs/structure.md` を変更したら `docs/translation-workflow.md` の Sync Procedure に従って `docs/ja/` ミラーも同一 PR で更新すること (コードフェンス数の一致確認を含む)
