@@ -257,6 +257,8 @@ When a condition carries a `<!-- verify-type: ... -->` marker, apply the followi
 
 For Basic authentication in `browser_check` / `browser_screenshot`, refer to the browser adapter's Processing Steps (Step 3: Basic Authentication Setup) resolved via `${CLAUDE_PLUGIN_ROOT}/modules/adapter-resolver.md`. Auth info retrieval, attachment, and masking using `PREVIEW_BASIC_USER` / `PREVIEW_BASIC_PASS` environment variables are managed centrally in the browser-adapter.
 
+`lighthouse_check` supports the same environment variables via the lighthouse adapter's own Basic Authentication Setup step (`--extra-headers` Authorization injection); see `modules/lighthouse-adapter.md`.
+
 ### Differentiation Between `http_status` / `html_check` / `api_check` / `build_success` / `github_check` and `command`
 
 `http_status`, `html_check`, `api_check`, `build_success`, and `github_check` are specialized commands for web app, build, and GitHub state verification. Key differentiators from `command`:

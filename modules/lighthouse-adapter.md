@@ -26,17 +26,46 @@ Run `which lighthouse` in Bash to confirm Lighthouse CLI is present.
 
 - **Not detected**: Return UNCERTAIN. State in detail: "Lighthouse CLI not found (`which lighthouse` failed). Install Lighthouse: `npm install -g lighthouse`".
 
-### Step 2: Lighthouse Execution
+### Step 2: Basic Authentication Setup
+
+If Basic authentication is required for preview or production environments, get credentials from the same environment variables used by `modules/browser-adapter.md` Step 3:
+
+- `PREVIEW_BASIC_USER`: Basic authentication username
+- `PREVIEW_BASIC_PASS`: Basic authentication password
+
+If both are set, build a temporary JSON header file for the Authorization header instead of embedding credentials directly in the command line string:
+
+```bash
+mkdir -p .tmp
+header_file="$(mktemp .tmp/lighthouse-headers-XXXXXX.json)"
+printf '{"Authorization":"Basic %s"}' "$(printf '%s:%s' "$PREVIEW_BASIC_USER" "$PREVIEW_BASIC_PASS" | base64 | tr -d '\n')" > "$header_file"
+```
+
+(`tr -d '\n'` removes the line-wrap newlines GNU coreutils' `base64` inserts every 76 characters by default; a leftover wrap would corrupt the JSON string value.)
+
+Pass `--extra-headers="$header_file"` to Step 3's execution command. If either environment variable is unset, skip header injection and run Step 3 without `--extra-headers` (current unauthenticated behavior is preserved).
+
+Do NOT output `PREVIEW_BASIC_USER` / `PREVIEW_BASIC_PASS` values, the base64-encoded credential string, or the header file's contents in logs or verification result details (mask as `****`), following the same masking policy as `modules/browser-adapter.md` Step 3.
+
+After Step 4 completes (whether it succeeds or fails), clean up the temporary header file: `rm -f "$header_file"`.
+
+### Step 3: Lighthouse Execution
 
 Run the following command in Bash (timeout: 120 seconds):
 
+Without Basic Auth (default, unchanged):
 ```
 lighthouse "URL" --output=json --quiet --chrome-flags="--headless --no-sandbox" --only-categories="category"
 ```
 
+With Basic Auth (when Step 2 created `$header_file`):
+```
+lighthouse "URL" --output=json --quiet --chrome-flags="--headless --no-sandbox" --only-categories="category" --extra-headers="$header_file"
+```
+
 If execution error (non-zero exit code), return UNCERTAIN. State in detail: "Lighthouse execution failed: {error content}".
 
-### Step 3: Score Evaluation
+### Step 4: Score Evaluation
 
 Get `categories.{category}.score` from the JSON output (0-1 scale).
 
