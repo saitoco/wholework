@@ -125,3 +125,13 @@ None. All 8 Pre-merge conditions carried well-specified verify commands (`file_e
 ### Notes for Next Phase
 - `/verify 1062` should check the 2 Post-merge conditions recorded in the Verification section: (1) no Opus 5-related drift surfaces in the next `/audit drift` narrative check (opportunistic), (2) re-confirm `#1063`/`#1064` are still Priority=`medium` at verify time (below the Priority=high filing threshold).
 - Issue #1062 is expected to auto-close via `closes #1062` in the PR body since `BASE_BRANCH=main`; verify should double check `state=CLOSED` and `phase/verify` label landed correctly.
+
+## Auto Retrospective
+
+### Manual recovery (merge)
+- **Date**: 2026-07-29 03:02 UTC
+- **Issue**: #1062, phase: merge
+- **Source**: parent session manual recovery
+- **Recovery type**: completion-override
+- **Wrapper exit code**: unknown
+- **Outcome**: success
