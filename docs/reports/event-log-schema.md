@@ -168,12 +168,12 @@ Emitted by `wait-ci-checks.sh` after CI polling completes.
 | `event` | Yes | `"ci_wait"` |
 | `phase` | Yes | Phase name (from `EMIT_PHASE_NAME`, `review` if unset) |
 | `wait_sec` | Yes | Total seconds spent waiting for CI |
-| `checks_passed` | Yes | Approximate count of passed checks (grep-based) |
-| `checks_failed` | Yes | Approximate count of failed checks (grep-based) |
+| `checks_passed` | Yes | Count of checks whose `gh pr checks --json bucket` value is `pass` |
+| `checks_failed` | Yes | Count of checks whose `gh pr checks --json bucket` value is `fail` (covers `ERROR`/`FAILURE`/`TIMED_OUT`/`ACTION_REQUIRED` states) |
 
 **Emission point**: `wait-ci-checks.sh`, immediately before the final completion log line.
 
-**Note**: `checks_passed` and `checks_failed` are approximate values derived from `grep -c` on `gh pr checks` stdout and may differ from the true GitHub check counts.
+**Note**: `checks_passed` and `checks_failed` are computed via `jq` from the `bucket` field returned by `gh pr checks --json name,state,bucket`, not by grepping raw output.
 
 ---
 

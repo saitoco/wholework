@@ -201,7 +201,7 @@ wholework/
 - `scripts/retry-on-kill.sh` — `run_with_retry_on_kill()` を提供する source 可能なヘルパー: SIGTERM/SIGKILL (exit 137/143) を early-kill ウィンドウ (<300s) 内で検出し自動 1 回リトライ。run-issue.sh、run-spec.sh、run-code.sh、run-auto-sub.sh が使用
 - `scripts/claude-watchdog.sh` — `claude -p` 呼び出し用の watchdog ラッパー（hang 検知 + 1 回リトライ）
 - `scripts/reconcile-phase-state.sh` — 全 phase の precondition チェックと completion チェックを行う汎用 state reconciler。`modules/phase-state.md` SSoT に基づく JSON v1 を出力（watchdog-reconcile.sh の後継）
-- `scripts/wait-ci-checks.sh` — claude 実行前に PR の全 CI チェック完了を待機
+- `scripts/wait-ci-checks.sh` — PR の全 CI チェックが `gh pr checks --json bucket` で非 pending 状態 (pass/fail/skipping/cancel) になるまで待機。check 0 件時は猶予期間 + 警告を挟む。`/review`・`/merge` が claude 実行前に呼ぶほか、`capabilities.pr-preview: true` のとき `/code` の pr route からも呼ばれる
 - `scripts/pre-merge-check.sh` — ベースライン diff 分類器: 指定チェックをベースブランチと head ブランチで ephemeral worktree で実行し、結果を NEW_FAILURE (exit 2) / PRE_EXISTING / FIXED / CLEAN (exit 0) / env error (exit 1) に分類
 - `scripts/worktree-merge-push.sh` — 短命な patch lock を取得し、fetch-after-lock・checkout レスの ref-fetch マージ (`git fetch . <from>:<base>`)・is-ancestor による rebase skip・push retry loop (max 3) で並列 session race に対応した merge + push を実行
 - `scripts/detect-foreign-worktree.sh` — CWD が foreign (呼び出し元と異なる owner の) git worktree 内かどうかを判定する。`modules/worktree-lifecycle.md` の Entry section、`skills/verify/SKILL.md` Step 2 (base branch checkout guard)、`skills/review/SKILL.md` の Opportunistic Verification (worktree exit precondition) から使用される
