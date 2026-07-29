@@ -75,6 +75,29 @@
 - **Wrapper exit code**: unknown
 - **Outcome**: success
 
+### Execution Summary
+
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| issue | -     | SUCCESS | Size=S / Type=Feature / Value=3 を設定、`phase/issue` へ遷移 |
+| spec  | patch | SUCCESS | `phase/ready` へ遷移。Step 3a の operate 判定は非該当 (リポジトリファイル変更あり) |
+| code  | patch | SUCCESS (manual push-only recovery) | 1 回目は silent no-op で auto-retry 発火、2 回目は commit 後・push 前に外部 kill。親セッションが `worktree-merge-push.sh` で push を完了 |
+| verify | -    | SUCCESS | Pre-merge AC 5/5 PASS。Post-merge manual 2 件は未検証のまま `phase/verify` |
+
+### Orchestration Anomalies
+
+- **code phase 1 回目: silent no-op (既知パターン)**: バックグラウンドの `bats tests/` 完了待ちのまま `claude -p` が exit 0 し、コミットを残さず終了した。`run-code.sh` の completion check が `commits_found: false` を返し、`code-patch-silent-no-op` として `auto-retry-on-fail` が正しく発火 (`code_retry_fire`, iteration 1)。**復旧は自動、介入なし**
+- **code phase 2 回目: 外部 kill (`external-kill-parent-respawn`)**: 実装完了コミット `5724906f` (`closes #1074`) を worktree に作成した直後、push 前に wrapper のプロセスグループが外部 kill された。`.tmp/wrapper-out-1074-code-patch.log` に `Exit code:` トレーラなし、`auto-events.jsonl` に `wrapper_exit` イベントなし。`detect-external-kill.sh` が `external-kill` を返し検出は正常に機能した
+- **カタログ手順からの意図的な逸脱**: `external-kill-parent-respawn` の Fallback Step 2 は respawn を指示するが、`scripts/run-code.sh` の idempotency guard は `--pr` 限定 (L164-176) で、その直後の stale worktree cleanup (L178-191) は route 無条件に `git worktree remove --force` + `git branch -D` を実行する。また `code_phase_milestone` は pr route 限定。したがって patch route の respawn は完成済みコミットを確実に破棄する。親セッションは respawn せず `worktree-merge-push.sh --from worktree-code+issue-1074 --base main` で push を完了させる `push-only` 復旧に切り替え、`--write-manual-recovery` で記録した (上記 Manual recovery エントリ)
+- **並行セッションとの干渉なし**: 本セッション実行中、別セッションが #1069 (code) と #1060 (spec/review) を並行実行していたが、patch lock と PGID 単位の session pointer により競合は発生しなかった。他セッションの dirty file (`docs/spec/issue-1069-*.md`) にも触れていない
+
+### Improvement Proposals
+
+本セクションの改善提案は `## Verify Retrospective` → `### Improvement Proposals` に集約済みで、`/verify` Step 16 (retro-proposals) が以下のとおり起票を完了している。重複起票を避けるため、ここでは起票結果への参照のみを記録する。
+
+- #1081 — auto: patch route の外部 kill respawn で worktree の未 push コミットを破棄しない
+- #1082 — reconcile-phase-state: code-patch の completion check に worktree コミット有無の hint を追加
+
 ## Verify Retrospective
 
 ### Phase-by-Phase Review
