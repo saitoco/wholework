@@ -7,6 +7,7 @@
 PROJECT_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 VERIFY_CLASSIFIER="$PROJECT_ROOT/modules/verify-classifier.md"
 SPEC_TEST_GUIDELINES="$PROJECT_ROOT/skills/issue/spec-test-guidelines.md"
+VERIFY_EXECUTOR="$PROJECT_ROOT/modules/verify-executor.md"
 
 @test "verify-classifier: --commit filter is present in patch route template" {
     grep -q -- "--commit" "$VERIFY_CLASSIFIER"
@@ -29,4 +30,12 @@ SPEC_TEST_GUIDELINES="$PROJECT_ROOT/skills/issue/spec-test-guidelines.md"
     result=$(bash -c 'git -C "'"$PROJECT_ROOT"'" rev-parse HEAD')
     [ "${#result}" -eq 40 ]
     [[ "$result" =~ ^[0-9a-f]{40}$ ]]
+}
+
+@test "verify-executor: html_check uses html-selector-match.py" {
+    grep -q "html-selector-match.py" "$VERIFY_EXECUTOR"
+}
+
+@test "verify-executor: html_check no longer gates on which pup" {
+    ! grep -q "If pup exists, run" "$VERIFY_EXECUTOR"
 }
