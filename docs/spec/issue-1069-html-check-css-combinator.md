@@ -258,25 +258,39 @@ AC1 / AC2 の rubric 文言には `/` 区切りが含まれるが、いずれも
 - **U2 (兄弟走査の計算量)**: `list.index()` による前方兄弟参照は兄弟数が多い文書で `~` 照合を O(n^2) にする。`Node.sibling_index` を持たせて O(1) 化する方針を Implementation Step 2 に明記して解消した。
 - **htmlq の exit code 意味論**: Issue 本文の記載 (不正セレクタで exit 101 panic、マッチ 0 件と matched を exit code で区別不能) を実機で再現確認し、Notes の生データ表に記録した。案 A 採用により実装には影響しないが、将来 htmlq 採用が再検討された場合の一次情報として残す。
 
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1-4 の記述どおりに `split_selector` / `parse_compound` / `TreeBuilder` / `Node` / `matches_compound` / `matches_chain` を実装した。プロトタイプ検証の生データ表 (Notes) に記載された全パターン (12 セレクタケース + 不正セレクタ 4 種 + 空 stdin) を実装後に再実測し、全て一致することを確認した。
+
+### Design Gaps/Ambiguities
+
+- `matches_chain` の `chain` 内で「どの要素とどの combinator が対応するか」のインデックス規約が Implementation Step 3 の文章だけでは一意に確定しなかった。`split_selector` (Step 1) の出力形式 (「先頭要素の combinator は `None`、以降は前の compound とを結ぶ combinator」) から逆算し、`chain[i][0]` を「`chain[i-1]` と `chain[i]` を結ぶ combinator」と定義して実装した。この対応関係は自明ではあるが、Step 3 に明記されていれば再確認の手間が省けた。
+- `/code` スキル自身の Step 順序に起因する問題を発見した: Step 1 (Consumed Comments を Spec に記録) はメインリポジトリのワーキングツリーに対して行われるが、直後の Step 2 (Worktree Entry) はデフォルト `baseRef: fresh` (= `origin/<default-branch>` から分岐) で worktree を作成するため、Step 1 の未コミット変更が worktree 側に一切引き継がれない。本セッションで実際にこの状態を踏み、worktree 側で同内容を再記録し、メインリポジトリ側の孤立した diff を `git checkout --` で破棄して回避した。本 Issue の実装スコープ外 (`/code` スキル自体の構造的な穴) のため、follow-up Issue #1078 (`retro/code`) として起票した。
+
+### Rework
+
+- Rework 自体は発生していない (実装ロジックは Spec のプロトタイプ検証を踏襲し一度で全ケース一致)。上記の Consumed Comments 孤立 diff の復旧作業のみ、本来不要だったやり直しに当たる。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- **案 A (内製実装の拡張) を採用**。案 B (htmlq 委譲) は `--count=N` を表現できない (件数出力オプションなし・行数代用が不成立) 点が決定打。判定エンジン二重化・#1056 の失敗モード再導入・Adapter 適用要件の非該当も理由 (詳細は「Alternatives Considered」)
-- **CLI 契約と `verify-executor` の 2 段階判定ロジックは変更しない**。引数 1 個 / stdin から HTML / stdout にマッチ数 / 解析失敗時 exit 2 を維持することで、`modules/verify-executor.md` の呼び出し記述と既存 bats 7 ケースがそのまま回帰ガードとして機能する
-- **セレクタ文法のスコープは combinator 4 種のみ**。selector list (`,`) や疑似クラス (`:nth-child` 等) は対象外とし、現行の compound 文法を維持する (AC1 が 4 種を明示列挙しているため)
-- **void element はスタックに push しない**のが階層判定の要。`html.parser` は void element に `handle_endtag` を呼ばないため、push するとスタックが閉じられず以降の判定がすべて崩れる
+- Implementation Steps 1-4 の記述どおりに `split_selector` / `parse_compound` / `TreeBuilder` / `Node` / `matches_compound` / `matches_chain` を実装。Spec Notes のプロトタイプ検証表 (12 セレクタ + 不正セレクタ 4 種 + 空 stdin) を実装後に再実測し、全一致を確認した
+- `matches_chain` の chain インデックス規約 (`chain[i][0]` は `chain[i-1]` と `chain[i]` を結ぶ combinator) は `split_selector` の出力形式から一意に決定し、そのまま再帰実装した
+- 既存 7 bats ケース + 新規 combinator ケース 8 件、および `modules/verify-executor.md` / `skills/issue/SKILL.md` の関連ドキュメント更新をすべて含め、フルスイート (1258 件) が PASS することを確認した (`html-selector-match.py` は複数の bats ファイルから参照されるため behavioral change 扱いとしてフルスイートを実行)
+- Pre-merge AC 6 件中、rubric/grep の 4 件は本フェーズ内で PASS 確認済み。`github_check "gh pr checks" "Run bats tests"` は PR/CI が本フェーズ完了時点でまだ存在しないため UNCERTAIN のまま — CI 完了後に確認される
 
 ### Deferred Items
 
-- implied end tag 規則 (`<p>` の自動クローズ等) への対応は見送り。既知の制約として docstring と `modules/verify-executor.md` に明記するに留める (Uncertainty U1)
-- Post-merge AC 2 件はいずれも `verify-type: manual`。実 URL に対する隣接兄弟セレクタの PASS/FAIL 反転確認と、不正セレクタの UNCERTAIN 確認は `/verify` フェーズで人間が実施する
+- implied end tag 規則への非対応は Spec 記載どおり既知の制約として docstring と `modules/verify-executor.md` に明記した (U1 の対応方針を踏襲、追加対応なし)
+- Post-merge AC 2 件はいずれも `verify-type: manual`。`/verify` フェーズで人間が実施する
+- `github_check "gh pr checks" "Run bats tests"` (Pre-merge AC6) の PASS 確認は CI 完了後 (`/review` または `/verify`) に持ち越し
 
 ### Notes for Next Phase
 
-- `tests/html-selector-match.bats` の既存 7 ケースは**削除・改変しない**こと。特に `invalid selector syntax exits non-zero with empty stdout` は `div>>bad` を使っており、新しい `split_selector()` でも「連続 combinator」として exit 2 + stdout 空を返す必要がある
-- 追加する `@test` 名に `combinator` の語を含めること (AC5 の `grep "combinator" "tests/html-selector-match.bats"` を満たすため)。`modules/verify-executor.md` にも `combinator` の語が必要 (AC4)
-- `modules/verify-executor.md` には「外部バイナリを一切必要としない」旨を**明示的に**書くこと。AC2 の条件節の前件が偽であることを grader から可読にするため
-- `scripts/validate-skill-syntax.py` は変更不要 (`_parse_verify_args()` の実測確認済み)。`docs/structure.md` のファイル数記述も新規ファイルがないため不変
-- プロトタイプ (`.tmp/proto.py`, gitignore 対象) は `/spec` セッション限りのもので commit していない。実装は Implementation Steps 1-4 の記述から起こすこと
+- `/code` スキル自身の Step 1 (Consumed Comments 記録) と Step 2 (worktree fresh 作成) の順序矛盾により、メインリポジトリ側に孤立した diff が発生する事象を本セッションで確認・復旧した。follow-up Issue #1078 (`retro/code`) を起票済み — `/review` 側で特別な対応は不要
+- 実装は CLI 契約 (引数1個/stdin/stdout/exit code) を変更していないため、`html_check` を呼び出す既存の Issue AC には影響しない
+- `docs/structure.md` / `scripts/validate-skill-syntax.py` は Spec の判断どおり変更不要のまま (`/spec` フェーズの実測確認を踏襲、`/code` 側での再確認でも変更不要と再確認)
