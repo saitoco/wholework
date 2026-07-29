@@ -696,15 +696,17 @@ WHOLEWORK_CI_TIMEOUT_SEC=540 ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh $PR
 
 Run the Bash tool call above with `timeout: 600000` (the tool's 10-minute ceiling). `WHOLEWORK_CI_TIMEOUT_SEC=540` places the script's own cutoff inside that ceiling and must not be changed — see `docs/spec/issue-1066-code-preview-build-gate.md` Uncertainty section for the rationale.
 
-**Branch on the `ci_result:` stdout line (exhaustive):**
+**Branch on the `ci_result:` stdout line — evaluate top to bottom, first match wins (exhaustive):**
 
-| Condition | Behavior |
-|-----------|----------|
-| `pending>0` and wait-round count < 4 | Increment the wait-round count by 1 and re-run the same wait call |
-| `pending>0` and wait-round count = 4 | Stop waiting. Output a warning listing the still-incomplete check names, then proceed to Step 14 (`/review` continues to wait on CI) |
-| `failed>0` | Enter the fix loop below |
-| `zero_checks=true` | Output a warning that no checks were ever registered, then proceed to Step 14 |
-| `total>0` and `failed=0` and `pending=0` | Success. Proceed to Step 14 |
+| # | Condition | Behavior |
+|---|-----------|----------|
+| 1 | `failed>0` | Enter the fix loop below. Evaluated first because `failed>0` and `pending>0` can hold simultaneously (e.g. `total=3 passed=1 failed=1 pending=1`) — a check that has already failed is actionable now, so waiting out the remaining rounds only delays the fix |
+| 2 | `zero_checks=true` | Output a warning that no checks were ever registered, then proceed to Step 14 |
+| 3 | `pending>0` and wait-round count < 3 | Increment the wait-round count by 1 and re-run the same wait call |
+| 4 | `pending>0` and wait-round count = 3 | Stop waiting. Output a warning listing the still-incomplete check names, then proceed to Step 14 (`/review` continues to wait on CI) |
+| 5 | `total>0` and `failed=0` and `pending=0` | Success. Proceed to Step 14 |
+
+Rows 3–4 bound the wait to **4 wait calls** (counter values 0, 1, 2, 3) — 4 × 540s = 2160s (36 minutes), matching the estimate in `docs/spec/issue-1066-code-preview-build-gate.md`. When changing the counter bound, update that estimate in the same commit.
 
 **Fix loop (maximum 3 iterations, mirrors the `verify-max-iterations` / `auto-retry-on-fail.max_iterations` default of 3):**
 

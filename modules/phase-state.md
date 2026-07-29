@@ -50,7 +50,7 @@ The `code-patch` phase reuses the same completion signature for both patch route
 To close this gap, `_completion_code_patch()` in `scripts/reconcile-phase-state.sh` treats an operate route completion marker comment as an alternate success signature:
 
 - **L2/L3** (external operations executed): the Issue comment posted by Step 11 begins with `<!-- wholework-event: type=execution-log phase=code issue=N -->`.
-- **L1 advisory** (Execution Plan only, no operations executed): the Issue comment posted by Step 8 begins with `<!-- wholework-event: type=execution-plan phase=code issue=N -->`. L1 advisory is a normal, successful completion of `/code` (see `skills/code/SKILL.md` Step 13), so its marker is accepted as a completion signal on equal footing with the L2/L3 marker.
+- **L1 advisory** (Execution Plan only, no operations executed): the Issue comment posted by Step 8 begins with `<!-- wholework-event: type=execution-plan phase=code issue=N -->`. L1 advisory is a normal, successful completion of `/code` (see `skills/code/SKILL.md` Step 14), so its marker is accepted as a completion signal on equal footing with the L2/L3 marker.
 
 **Freshness gate**: identical semantics to the existing `closes #N` signature — when a reopen timestamp is available (via `get-last-reopen`), the marker comment's `createdAt` must be after it; when unavailable, no freshness constraint is applied (unbounded, same as the existing `closes #N` fallback).
 

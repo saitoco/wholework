@@ -27,6 +27,11 @@ echo "Waiting for CI checks on PR #${PR_NUMBER} (timeout: ${TIMEOUT_SEC}s)..." >
 
 _ci_checks_output=""
 _zero_checks_seen=false
+_poll_err_file=$(mktemp)
+# Keep the cleanup non-fatal: under `set -e` a failing EXIT trap overwrites the
+# script's exit status, and `rm` is not guaranteed to resolve when the caller has
+# restricted PATH. A leftover temp file is preferable to a bogus exit code.
+trap 'rm -f "$_poll_err_file" 2>/dev/null || true' EXIT
 _poll_start=$(date +%s)
 while true; do
   _elapsed=$(( $(date +%s) - _poll_start ))
@@ -35,12 +40,19 @@ while true; do
     break
   fi
   _poll_result=""
+  : > "$_poll_err_file"
   if command -v timeout >/dev/null 2>&1; then
-    _poll_result=$(timeout --kill-after=10 30 gh pr checks "$PR_NUMBER" --json name,state,bucket 2>/dev/null) || true
+    _poll_result=$(timeout --kill-after=10 30 gh pr checks "$PR_NUMBER" --json name,state,bucket 2>"$_poll_err_file") || true
   elif command -v gtimeout >/dev/null 2>&1; then
-    _poll_result=$(gtimeout 30 gh pr checks "$PR_NUMBER" --json name,state,bucket 2>/dev/null) || true
+    _poll_result=$(gtimeout 30 gh pr checks "$PR_NUMBER" --json name,state,bucket 2>"$_poll_err_file") || true
   else
-    _poll_result=$(gh pr checks "$PR_NUMBER" --json name,state,bucket 2>/dev/null) || true
+    _poll_result=$(gh pr checks "$PR_NUMBER" --json name,state,bucket 2>"$_poll_err_file") || true
+  fi
+  # Real `gh` prints nothing to stdout for a PR with zero registered checks (it
+  # exits non-zero with "no checks reported on the '<branch>' branch" on stderr
+  # instead of `[]`), so treat that message as the zero-checks case explicitly.
+  if [[ -z "$_poll_result" ]] && grep -q "no checks reported" "$_poll_err_file" 2>/dev/null; then
+    _poll_result="[]"
   fi
   if [[ -n "$_poll_result" ]]; then
     _ci_checks_output="$_poll_result"
@@ -75,6 +87,8 @@ _failed=$(echo "${_ci_checks_output:-[]}" | jq '[.[] | select(.bucket == "fail")
 _failed=${_failed:-0}
 _pending_final=$(echo "${_ci_checks_output:-[]}" | jq '[.[] | select(.bucket == "pending")] | length' 2>/dev/null || echo "0")
 _pending_final=${_pending_final:-0}
+_cancelled=$(echo "${_ci_checks_output:-[]}" | jq '[.[] | select(.bucket == "cancel")] | length' 2>/dev/null || echo "0")
+_cancelled=${_cancelled:-0}
 
 if [[ "$_emit_ci_wait" == "true" ]]; then
   _ci_wait_end=$(date +%s)
@@ -87,4 +101,4 @@ if [[ "$_emit_ci_wait" == "true" ]]; then
 fi
 
 echo "CI check wait complete for PR #${PR_NUMBER}" >&2
-echo "ci_result: total=${_total_final} passed=${_passed} failed=${_failed} pending=${_pending_final} zero_checks=${_zero_checks_seen}"
+echo "ci_result: total=${_total_final} passed=${_passed} failed=${_failed} pending=${_pending_final} cancelled=${_cancelled} zero_checks=${_zero_checks_seen}"
