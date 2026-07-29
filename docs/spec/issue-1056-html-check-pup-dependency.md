@@ -88,17 +88,33 @@ N/A — セレクタ文法・マッチング実装・エラー時挙動 (非 0 e
 N/A — 手戻りは発生しなかった。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec Implementation Steps 1〜5 をそのままの順序で実装。`scripts/html-selector-match.py` は Option B (内製 Python パース) として `html.parser.HTMLParser` の `handle_starttag` オーバーライドで実装し、compound selector (`tag`/`#id`/`.class`/`[attr]`/`[attr='value']`) をサポート。
-- セレクタパース中の正規表現マッチは `pos` オフセット付き `.match(selector, pos)` を使用し、パターン先頭の `^` アンカーは意図的に外した (`^` は絶対文字列先頭のみを指し `pos` 相対にならないため、含めると 2 トークン目以降が常にマッチ失敗する)。
-- `modules/verify-executor.md` の `html_check` (L74 翻訳テーブル行 + L266 Differentiation 節) を pup 依存の記述から `html-selector-match.py` 呼び出しに置換。判定は script exit code 非 0 → UNCERTAIN、0 → 出力マッチ数で `--exists`/`--count=N` 判定という 2 段階を明記。
+- Pre-merge AC 3 件 (rubric x2、`file_not_contains` x1) を独立に再検証し、いずれも PASS を確認 (code phase の自己評価と一致)。Issue チェックボックスは既に `[x]` で変更不要と判断。
+- `review-light` エージェント (全 4 観点: Spec 逸脱・エッジケース/堅牢性・セキュリティ・ドキュメント整合性) による軽量統合レビューを実施し、Issue 検出なし。
+- AC レベルの `file_not_contains` チェックに加え、`bats tests/html-selector-match.bats tests/verify-executor.bats` の実行 (14/14 PASS) とリポジトリ全体 grep で `which pup`/`ericchiang/pup`/`If pup exists` の残存なしを独立確認し、回帰ガードが実際に機能することを検証した。
 
 ### Deferred Items
-- Post-merge AC (「実装者が `pup` 未インストールの環境で `html_check` を含む AC を実行し PASS/FAIL が返ることを確認する」) は manual verify-type のため merge 後に別途実施が必要。
-- None
+- Post-merge AC (「実装者が `pup` 未インストールの環境で `html_check` を含む AC を実行し PASS/FAIL が返ることを確認する」) は manual verify-type のため merge 後に別途実施が必要 (code phase から継続)。
+- `tests/post_merge_check.bats` の高並列実行時 flaky failure (本 PR 非改変・単体実行では PASS・CI は SUCCESS) は本 Issue のスコープ外と判断し、Issue 起票は見送った。再発が続く場合は再評価対象。
 
 ### Notes for Next Phase
-- Behavioral Change Detection により `modules/verify-executor.md` を参照する既存テスト (`tests/verify-rubric.bats`, `tests/review-rubric-safe.bats`, `tests/check-eager-load-capability.bats`) が検出されたため、`bats tests/` フルスイートを実行済み (1246 件 PASS、FAIL 0)。/review でも同様の full suite 実行が妥当。
-- Pre-merge AC 3 件 (rubric x2, file_not_contains x1) は自己評価で PASS 済み・Issue チェックボックス反映済み。/review での再検証時も同じ判定になるはず (実装内容に変更なし)。
+- MUST/SHOULD/CONSIDER の Code Review Issue はゼロ件。CI は全ジョブ SUCCESS (DCO / bats tests ×2 / skill syntax ×2 / forbidden expressions ×2 / macOS shell compat ×2)。`/merge 1065` に進んで問題ない。
+- merge 後、Post-merge AC (`pup` 未インストール環境での手動確認) の実施を忘れないこと。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — Implementation Steps 1〜5 は Spec の記述通りに実装されており、`modules/verify-executor.md` の 2 段階判定 (script exit code 非ゼロ → UNCERTAIN、0 → マッチ数判定) も Spec のデザイン決定と完全に一致していた。
+
+### Recurring issues
+
+Nothing to note — `review-light` エージェントによる 4 観点 (Spec 逸脱・エッジケース/堅牢性・セキュリティ・ドキュメント整合性) チェックで問題は検出されなかった。
+
+なお本レビュー中、`bats tests/*.bats` フルスイート (1246 件) を高並列 (`--jobs`) で実行した際に `tests/post_merge_check.bats` で 1 件の flaky failure を観測した。本 PR が変更していないファイルであり、単体実行では PASS、CI の bats ジョブも SUCCESS だったため、本 PR のリグレッションではなく既存の並列実行時 flake と判断した。本 Issue の対応範囲外のため Issue 起票は見送るが、同種の flake が今後も観測される場合は再評価対象とする。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — Pre-merge AC 3 件 (rubric x2, `file_not_contains` x1) はいずれも UNCERTAIN なく PASS 判定できた。triage 監査で verify command が事前に修正されていた ([Issue #1056](https://github.com/saitoco/wholework/issues/1056) 参照) ことも、恒常 PASS パターンの再発を防ぐ上で有効だった。
