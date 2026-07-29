@@ -60,3 +60,7 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue` 非対話フローの Issue Retrospective コメント (2026-07-29T03:48:20Z)。Size=S / Type=Feature / Value=3 のトリアージ結果、AC verify command 監査で発見した常時 PASS defect (`grep "PREVIEW_BASIC_USER"` から `grep "curl --config"` への修正)、`--config` 方式の自動解決根拠を記録したもので、いずれも本 Issue 本文の Acceptance Criteria / Auto-Resolved Ambiguity Points に既に反映済みのため、Spec 作成上の追加対応は不要と判断した。 (https://github.com/saitoco/wholework/issues/1074#issuecomment-5112604944)
+
+## Autonomous Auto-Resolve Log
+
+- **`phase/ready` ラベル不在 (Step 3 precondition check)**: `/code` 開始時点で Issue #1074 のラベルは `triaged` / `phase/code` / `retro/verify` で、`phase/ready` が付与されないまま `phase/code` に遷移していた (`reconcile-phase-state.sh code-patch 1074 --check-precondition` も `matches_expected: false` を返した)。ただし Spec (`docs/spec/issue-1074-curl-url-command-basic-auth.md`) 自体は Design Complete コメントまで完了した内容で既に存在するため、「Spec なしで Issue 本文から直接実装」ではなく、既存の完成済み Spec を正としてそのまま実装を進めた。
