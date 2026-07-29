@@ -86,3 +86,15 @@
 - All file_contains verify commands (kubectl, docker compose, ~/.ssh/) PASS 済み。rubric PASS。CI (AC3) のみ push 後に確認
 - bats tests 全件 PASS (exit code 0、558 tests)
 - forbidden expressions check PASS (exit code 0)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### verify
+- Pre-merge 3 件は再検証でも全 PASS。§23 の汎化表 (ssh / kubectl / docker compose)、placeholder 排除、`tests/verify-heuristics.bats` の 3 regression test をいずれも確認した
+- Post-merge observation AC は `/auto 1074` (2026-07-29) で初めて **git 以外の non-contiguous シンボルに対する verify command 生成**という該当ケースが観測された。`/issue 1074` が AC 監査で `grep "curl --config"` を生成し、`/spec 1074` が非連続性を認識して Implementation Step に連続リテラルの埋め込みを明記した。非連続性リスクの認識は汎化して機能しているが、採られた対処が §23 の decision procedure と逆方向 (実装を anchor に合わせる) だったため、heuristic そのものの機能確認としては部分観測に留め AC は未チェックとした
+
+### Improvement Proposals
+
+- **§23 に「実装前に AC を書く場合」の分岐が欠けている**: `modules/verify-patterns.md` §23 の decision procedure は step 2 で「実装に現れる連続部分文字列を anchor として選び直す」、step 3 で「選んだ anchor が実装ファイルに literal で現れることを確認する (§3 の cross-reference 手順)」と定めているが、いずれも**実装ファイルが既に存在すること**を前提にしている。Wholework の AC は `/issue` / `/spec` フェーズ (実装前) に書かれるため、この前提は多くのケースで成立しない。実際 `/auto 1074` では `curl --config` という非連続 anchor に対し、`/spec` が「Implementation Steps に連続リテラルを含めることを要求する」という逆方向の解法を採った (結果として AC は正しく機能した)。この解法は妥当だが §23 に記述がなく、実行者ごとに再発明されている状態。対応候補: §23 の decision procedure に「実装が未存在の場合 (issue/spec フェーズでの AC 作成時) は、anchor を選び直す代わりに Implementation Steps 側で当該連続リテラルの出現を要求し、その旨を Spec に明記する」分岐を追記する
