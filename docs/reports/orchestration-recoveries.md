@@ -63,6 +63,25 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-07-29 06:01 UTC: manual-recovery-review-rerun
+
+### Context
+- Issue #1069, phase: review
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 1
+
+### Diagnosis
+- Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: review-rerun)
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-07-29 06:01 UTC: manual-recovery-respawn
 
 ### Context
