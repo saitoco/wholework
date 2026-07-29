@@ -234,24 +234,21 @@ Size L のため検出上限 5 件のうち、影響度の高い 3 件を特定�
 - `tests/gh-pr-merge-status.bats` / `tests/run-merge.bats`: **変更しない**。`git status --short scripts/gh-pr-merge-status.sh scripts/run-merge.sh` で両スクリプト共に無変更であることを再確認した
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Step 8 で pre-merge AC 4 件を再判定し全て PASS を確認 (既にチェック済みの状態と一致、更新不要)
-- `HAS_WORKFLOW_CAPABILITY=true` のため Step 10 は静的 Task fan-out ではなく Workflow (finder → adversarial verify) パイプラインを実行。review-spec + review-bug ×2 → adversarial refutation で 21 件中 10 件 (実質ユニーク 7 件) を確認、MUST は 0 件
-- SHOULD 2 件 (pipefail による fail-open、`>` を含む HTML コメント除去失敗) と CONSIDER 4 件 (CRLF trim、checkbox separator、allowed-tools 不足、見出し配置) を修正してコミット・push 済み。CONSIDER 1 件 (jq タブ文字切り詰め、confidence: low) は skip
+- Step 1 の mergeability チェックは `mergeable=true, reason=clean` だったため、pre-merge AC ゲート (今回の PR 自身が追加する機能) を経由せず Step 4 (Execute Squash Merge) に直接進んだ
+- `gh pr merge --squash --delete-branch` で通常どおりスクワッシュマージを実行、コンフリクトは無し
 
 ### Deferred Items
 
-- `scripts/check-pre-merge-ac.sh:86` の jq タブ文字切り詰め (CONSIDER, confidence: low) — 低頻度な edge case のため今回は見送り
-- Post-merge AC (「pre-merge AC を意図的に 1 件未チェックのまま `/merge` を実行し、ゲートが機能することを確認する」) は manual verify-type のため `/verify` フェーズでの人手確認が必要 (code phase から引き継ぎ、未解消のまま)
+- Post-merge AC (「pre-merge AC を意図的に 1 件未チェックのまま `/merge` を実行し、ゲートが機能することを確認する」) は manual verify-type のため `/verify` フェーズでの人手確認が必要 (review phase から未解消のまま引き継ぎ)
 
 ### Notes for Next Phase
 
-- `/merge` 実行時、pre-merge AC は 4/4 PASS (チェック済み) のためゲートは素通りする見込み。ゲート自体の動作確認は Post-merge AC の manual 検証で行うこと
-- `check-pre-merge-ac.sh` に bats テストを 4 件追加済み (>64KB body、`>` を含むマーカー、区切り文字なしチェックボックス、CRLF) — 全 15 件 PASS
-- `skills/merge/SKILL.md` の `allowed-tools` に `mkdir:*, rm:*` を追加した。今後 `.tmp/` を使う新しい Bash ステップを他スキルに追加する際は同様の allowlist 漏れに注意
+- `/verify` では pre-merge AC ゲート自体の動作確認 (意図的に未チェック AC を残した状態での `/merge` 実行) が必要。本 PR のマージ自体は 4/4 PASS 済みだったためゲート発火は未検証
+- `check-pre-merge-ac.sh` に bats テストを追加済み、全 15 件 PASS 済みであることは review phase で確認済み
 
 ## review retrospective
 
