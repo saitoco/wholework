@@ -112,9 +112,17 @@ else
 
   EXISTING_BODY=$(sed -n "$((HEADING_LINE + 1)),$((BOUNDARY_LINE - 1))p" "$SPEC_FILE" 2>/dev/null || true)
 
+  # Match on the exact last "/"-delimited field of each existing entry line
+  # (the URL), not raw substring containment: GitHub issuecomment IDs are not
+  # fixed-width, so a shorter new URL can be a literal string-prefix of an
+  # already-recorded longer URL (e.g. "issuecomment-5123" vs
+  # "issuecomment-51230"), which would falsely match via `contains()` and
+  # silently drop a legitimate new comment forever.
   NEW_COMMENTS=$(echo "$ALL_COMMENTS" | \
-    jq --arg body "$EXISTING_BODY" '[.[] | select((.url // "") as $u | ($body | contains($u)) | not)]' \
-    2>/dev/null || echo "[]")
+    jq --arg body "$EXISTING_BODY" '
+      ($body | split("\n") | map(split(" / ") | last)) as $existing_urls |
+      [.[] | select((.url // "") as $u | ($existing_urls | index($u) != null) | not)]
+    ' 2>/dev/null || echo "[]")
 
   NEW_ENTRIES=$(format_entries "$NEW_COMMENTS")
 
