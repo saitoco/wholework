@@ -111,6 +111,19 @@ if [[ "${_ci_pending:-0}" -gt 0 || "${_ci_zero_checks:-false}" == "true" ]]; the
 fi
 
 # Wait for PR preview deployment (capabilities.pr-preview: true projects only)
+_gh_api_bounded() {
+  # Bound each gh api call so a stalled network request cannot extend the
+  # preview-wait loop past WHOLEWORK_PREVIEW_TIMEOUT_SEC (same pattern as
+  # wait-ci-checks.sh's timeout/gtimeout fallback for gh pr checks).
+  if command -v timeout >/dev/null 2>&1; then
+    timeout --kill-after=10 30 gh api "$@" 2>/dev/null
+  elif command -v gtimeout >/dev/null 2>&1; then
+    gtimeout 30 gh api "$@" 2>/dev/null
+  else
+    gh api "$@" 2>/dev/null
+  fi
+}
+
 if [[ -z "$_pending_reason" ]] && [[ -f .wholework.yml ]] \
    && grep -A 20 '^capabilities:' .wholework.yml 2>/dev/null | grep -qE '^[[:space:]]*pr-preview:[[:space:]]*true'; then
   echo "Waiting for PR preview deployment on PR #${PR_NUMBER}..." >&2
@@ -120,9 +133,9 @@ if [[ -z "$_pending_reason" ]] && [[ -f .wholework.yml ]] \
   if [[ -n "$_preview_branch" ]]; then
     _preview_start=$(date +%s)
     while [[ $(( $(date +%s) - _preview_start )) -lt "$_preview_timeout_sec" ]]; do
-      _deploy_id=$(gh api "repos/:owner/:repo/deployments?ref=${_preview_branch}&per_page=10" -q '.[0].id' 2>/dev/null || echo "")
+      _deploy_id=$(_gh_api_bounded "repos/:owner/:repo/deployments?ref=${_preview_branch}&per_page=10" -q '.[0].id' || echo "")
       if [[ -n "$_deploy_id" && "$_deploy_id" != "null" ]]; then
-        _preview_state=$(gh api "repos/:owner/:repo/deployments/${_deploy_id}/statuses?per_page=1" -q '.[0].state' 2>/dev/null || echo "")
+        _preview_state=$(_gh_api_bounded "repos/:owner/:repo/deployments/${_deploy_id}/statuses?per_page=1" -q '.[0].state' || echo "")
         [[ "$_preview_state" == "success" ]] && break
       fi
       sleep 30
