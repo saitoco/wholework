@@ -86,17 +86,17 @@ L36-38 の dedup ガードは「`## Consumed Comments` という文字列が Spe
 - なし。Pre-merge AC 4件 (rubric x3, file_not_contains x1) はいずれも diff と grep/bats 実行のみで機械的に PASS 判定でき、UNCERTAIN は発生しなかった。file_not_contains (不在検証型) の参照点も Issue Notes に事前記録されており判定が容易だった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- レビュー (light mode, review-light agent) で SHOULD 指摘 1 件を検出: 既存セクションへの新規 URL 判定が `contains()` (部分一致) を使っており、issuecomment ID の桁数非固定により偽陽性で新規コメントが永久に取りこぼされうるエッジケースを jq で再現確認のうえ修正
-- 修正は既存行を `\n` 分割し各行の最後フィールド (URL) との完全一致 (`index($u) != null`) に置き換える方式を採用。既存 6 テスト + 修正シナリオの単体再現の両方で確認
-- Pre-merge AC 4件・CI 9 ジョブは修正前後とも PASS/SUCCESS のまま変化なし。ポリシー変更 (Step 13) には該当しないため Issue 本文・AC は未更新
+- Pre-merge AC gate は 4件とも既にチェック済み (`unchecked_count: 0`) だったため、override なしでそのまま進行
+- `gh-pr-merge-status.sh` で `mergeable=true, reason=clean, ci_status=success, review_status=approved` を確認し、conflict 解消ステップ (Step 3) は不要と判断
+- squash merge + delete-branch を実行し、`closes #1107` により Issue は main マージで自動クローズされる想定 (base branch は main)
 
 ### Deferred Items
 - なし
 
 ### Notes for Next Phase
-- Post-merge AC (observation, event=auto-run) は次回 `/verify` 実行時に別 Issue でのコメント投稿を待って自然検証される想定。`/merge` 後の `/verify` で確認すること
+- Post-merge AC (observation, event=auto-run) は次回 `/verify` 実行時に別 Issue でのコメント投稿を待って自然検証される想定
 - `#1078` (worktree fresh 作成時の Consumed Comments 追記消失) は本 Issue のスコープ外の別機構の問題として明示的に残置されている
-- review retrospective の Recurring issues に、ID 的トークンの重複判定における `contains()` 部分一致の一般的リスクを記録した。将来 `review-bug`/`skill-dev-recheck.md` の観点追加を検討する際の参考にすること
+- review retrospective で記録された ID 的トークンの `contains()` 部分一致リスクの観点は `/verify` の直接スコープ外だが、参考情報として引き継ぐ
