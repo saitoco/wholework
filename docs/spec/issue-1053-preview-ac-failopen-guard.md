@@ -62,3 +62,54 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue` フェーズの Issue Retrospective。Background の技術的記述 (`resolve-preview-ac-fallback.sh` の fail-open 挙動、`l0-surfaces.md` の `ac=none` sentinel 設計、`reconcile-phase-state.sh` の Review Response Summary 判定ロジック、`orchestration-fallbacks.md` の `review-completion-false-negative` エントリ) を実ファイルで確認済みと報告。`skills/verify/SKILL.md` に現時点で "Review Response Summary" という文字列が存在しないことも確認済み (受入条件2 は未実装 → 実装後 PASS の健全な pre-merge チェックとして機能する)。AC3 に補助的な `section_contains` verify command (`--light` キーワード) を追加した Auto-Resolve Log を記録済み。本 Spec のコードベース調査でも同内容を独立に再確認した (矛盾なし)。 — https://github.com/saitoco/wholework/issues/1053#issuecomment-5132345005
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1〜3 は Spec の記載通りに実装した (Step 5 の新設パラグラフ位置・per-AC 分岐構造・`orchestration-fallbacks.md` Step 4 への追記位置を含め、順序・範囲とも設計通り)。
+
+### Design Gaps/Ambiguities
+
+- `docs/guide/customization.md` (Changed Files に「安全網の追記可否は `/code` が最終判断する」と明記されていた任意項目) は更新しないと判断した。理由: 同ファイルは `PREVIEW_URL`/`type=preview-ac-unverified` marker ベースの既存 fallback 分岐 (auto/manual サブケース) のみを説明しており、本 Issue が追加した「marker 自体が無い (=summary 不在) ケースの安全網」を書き足すと当該分岐の説明がより正確になるが、AC の verify command はいずれもこのファイルを対象にしておらず、追記しなくても受入条件は full に満たせる。スコープを Changed Files が要求する最小限に留め、ドキュメントの完全性より diff の小ささを優先した。
+
+### Rework
+
+- N/A — 手戻りは発生しなかった。
+
+## Autonomous Auto-Resolve Log
+
+- **Step 3 の `phase/ready` ラベル欠如を許容して実装を継続** — reason: Issue #1053 のラベルは `phase/ready` ではなく `phase/code` (かつ Spec ファイルは既に完全な内容で存在) だった。`reconcile-phase-state.sh code-pr 1053 --check-precondition` も `matches_expected:false` (`phase/ready` 欠如が理由) を返したが、`--non-interactive` モードのポリシー (`modules/ambiguity-detector.md` Three-Tier Policy の auto-resolve) に従い、warn のみで続行した。ブランチ・worktree・PR は事前に存在せず (`git branch -a` / `git worktree list` / `gh pr list` で確認済み)、コミット履歴も Spec 作成コミットのみだったため、以前の `/code` 実行が Step 4 (ラベル遷移) 直後に中断した状態と推測される。Spec 本文は完全であり要件解釈に不確実性はないため、実装への影響はない。
+  - Other candidates: hard-error abort して `/spec` の再実行を促す (Spec は既に完全な内容で存在しており、再実行は無駄な手戻りになるため見送り)
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+
+- SHOULD 指摘 (Spec Implementation Step 1 の「書き換え」指示が実装では削除のみに留まっていた点) を `/review` 側で修正し、`resolve-preview-ac-fallback.sh` 自体が失敗した場合も同じ fail-closed パスを経由する旨を `skills/verify/SKILL.md` Step 5 に追記した。修正内容は既存ロジックの説明補足のみで、挙動・設計方針の変更を伴わないため Step 13 (Acceptance Criteria Consistency Check) はスキップと判断した。
+- CONSIDER 指摘 (`--base` override 時の `PR_NUMBER` 未設定パスの未文書化) は、実行時に `REVIEW_SUMMARY_FOUND=false` の fail-closed パスへ安全に縮退することを確認済みであり、機能的な問題がないため見送った。
+
+### Deferred Items
+
+- Post-merge の observation AC (`/review` が異常終了した Issue で `/verify` を実行した際、preview tier AC が SKIPPED にならないことの確認) は実環境での `/review` 異常終了再現が必要なため、`/verify` フェーズでの opportunistic 観察に委ねる (code phase からの持ち越し)。
+- `docs/guide/customization.md` への安全網追記 (任意項目) は本 PR では実施しなかった (code phase からの持ち越し、変更なし)。
+
+### Notes for Next Phase
+
+- `/merge` → `/verify` では、本 Issue 自体には `ac-tier: preview` の AC が存在しないため、Step 5 の新ロジックは本 Issue の `/verify` 実行では経路を通らない (ロジックの効果は他の preview-tier AC を持つ Issue で発現する)。
+- CI は全 5 種のジョブ (DCO / Run bats tests / Validate skill syntax / Forbidden Expressions check / macOS shell compatibility) が SUCCESS。`/merge` 実行時に追加の懸念事項はない。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 軽微な乖離を1件検出: Spec の Implementation Step 1 は「`resolve-preview-ac-fallback.sh` 自体が失敗した場合も fail-open で空を返す」という既存の一文を、削除ではなく `REVIEW_SUMMARY_FOUND=false` 経由の fail-closed パスに倒れる旨へ**書き換える**よう明示的に指示していたが、実装では単純削除のみが行われ、置き換え相当の説明が追加されていなかった。Code Retrospective の「Deviations from Design: N/A」という自己申告はこの点を見落としていた。実行時の挙動自体は正しく (どちらのスクリプトが失敗しても同じ fail-closed パスを通る) 機能バグではなかったが、Spec の「書き換え」指示が「削除」として実装され、かつ自己レトロスペクティブでも検知されなかった点は、`/review` 側の独立検証 (review-light agent) が有効に機能した事例として記録する。SHOULD として指摘し、`/review` 側で修正済み。
+
+### Recurring issues
+
+- Nothing to note — 検出した2件の指摘 (SHOULD 1件・CONSIDER 1件) はいずれも本 PR 固有の内容であり、ワークフロー改善を要する反復パターンは見られなかった。
+
+### Acceptance criteria verification difficulty
+
+- Nothing to note — Pre-merge AC 4件 (rubric 2件・grep 1件・section_contains 1件) はいずれも明確に PASS 判定でき、UNCERTAIN や verify command の不備は発生しなかった。
