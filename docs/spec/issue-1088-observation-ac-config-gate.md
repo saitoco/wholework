@@ -58,3 +58,6 @@ Issue 本文の `## Auto-Resolved Ambiguity Points` は横断監査のスコー�
 ### #952 との関係
 
 Out of Scope に記載の通り、observation scan の dispatch fan-out 制御 (#952) とは独立。本 Issue は「どの AC がゲート対象になるか」という設定側、#952 は「マッチした Issue 群をどう dispatch するか」という実行側であり競合しない。
+
+## Consumed Comments
+No new comments since last phase.
