@@ -974,6 +974,30 @@ The table/set case is a vacuous-truth pattern: a claim of the form "no element i
 3. At verify time, check that the observed result matches the *expected diff* against that reference point, not just that the count is zero
 4. If no reference point is recorded, the AC is at risk of a vacuous pass — treat this as a design gap and add one before relying on the result
 
+### 27. Bulk Asset Ingestion — Delegate Fetching to Shell Commands to Avoid Content Filtering
+
+When an Issue's `## Changed Files` includes a large number of asset files (rule of thumb: dozens or more images, SVGs, fonts, icon sets, etc.), writing every asset's raw content through the LLM's own output during `/code` risks tripping `API Error: Output blocked by content filtering policy` and aborting the phase mid-run.
+
+**Background (real example)**: an Issue that ingested 126 SVG files into the repository via `/code` hit content filtering after ~360s of silence, causing the wrapper to exit 1. Tier 1 (`reconcile-phase-state.sh`) reported `matches_expected: false`, and the failure did not match any known Tier 2 pattern. On inspection, the worktree already had the assets fetched and the implementation complete — only the commit was missing. Re-running the same `run-code.sh` against the existing worktree succeeded, because the assets were not re-fetched and did not flow through the LLM's output a second time.
+
+**Root cause**: piping large volumes of asset bytes (images, SVGs, fonts) through the model's own output — e.g., embedding file content inline to write it via `Write`, or echoing binary/text asset payloads for inspection — is what triggers content filtering, not the mere presence of the files in the repository.
+
+**Spec guidance (for `/spec` when an Issue's Changed Files include bulk assets)**:
+
+1. Detect whether the Issue's Changed Files list a large number of asset files (dozens+ of images/SVG/fonts/icons)
+2. If yes: write Implementation Steps so that asset acquisition is delegated to a shell command (`curl`, `cp`, `npm pack`, `tar`, `unzip`, etc.) run via Bash, rather than an Edit/Write step that carries the asset's content through the LLM's output
+3. Record the acquisition source, license, and destination path in the Spec, so `/code` can execute the fetch command without reading or re-emitting the file content itself
+
+**Example (before and after):**
+
+```markdown
+# Before — asset content flows through LLM output; risks content filtering at scale
+- Implementation Step: "Create icons/foo.svg with the following content: <svg>...</svg>" (repeated for 126 files)
+
+# After — acquisition delegated to a shell command; LLM output stays free of asset bytes
+- Implementation Step: "Fetch icon set from https://example.com/icons-v2.tar.gz (MIT license) and extract to icons/ via `curl -L <url> | tar -xz -C icons/`"
+```
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
