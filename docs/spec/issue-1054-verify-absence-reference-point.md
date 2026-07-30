@@ -42,3 +42,30 @@
 - **`scripts/check-eager-load-capability.sh` 抵触確認**: 同スクリプトは `modules/*-adapter.md` 由来の capability 名 (browser / visual-diff / lighthouse) を見出しに含むセクションのみを検知対象とする。新設セクション見出し `Absence-Verifying Acceptance Conditions — Require a Reference Point` はこれらの capability 名を含まないため抵触しない (grep で確認済み)。
 - **ドキュメント同期確認**: `grep -rln "verify-patterns" docs/ README.md CLAUDE.md`(sessions/reports/spec/ja 配下を除く) の結果は `docs/structure.md` (モジュール一覧、説明文は変更不要)、`docs/tech.md` (Progressive disclosure の例示、変更不要)、`docs/environment-adaptation.md` (Domain file化ガイドの例示、変更不要) の3件のみで、いずれも本変更による更新は不要と確認した。
 - **テスト更新不要確認**: `grep -rl "verify-patterns" tests/` は `verify-heuristics.bats` 等 5 件をヒットしたが、いずれも `verify-executor.md` の実行時挙動 (verify command の解釈・実行) を検証するテストであり、`verify-patterns.md` のガイドライン文面自体はテスト対象に含まれないことを確認した。追加のテスト更新は不要。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation followed the Spec's Implementation Steps as written: added `### 26. Absence-Verifying Acceptance Conditions — Require a Reference Point` at the position specified (after `### 25.`, before `## Output`), with no renumbering conflicts (25 remained the last existing section at implementation time).
+
+### Design Gaps/Ambiguities
+- N/A — No gaps found. The Spec's element list (a)-(d) mapped directly onto the section content: a comparison table for scope (a), the four reference-point options (b), the verification principle (c), and an explicit differentiation from §1/§8 (d). Both `参照点` and `母集団` appear as literal inline glosses, satisfying the two `grep` pre-merge verify commands.
+
+### Rework
+- N/A — Single-pass edit; all three pre-merge verify commands (rubric + 2 grep) passed on first evaluation with no follow-up correction needed.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Documentation-only change: added `### 26.` to `modules/verify-patterns.md` with no code/script changes, since the Issue's scope is a guideline addition.
+- Kept the existing English-prose section style (table + numbered decision procedure + examples), matching sections §1-§25, with `参照点` and `母集団` retained as literal inline glosses per the Spec Notes' language-convention guidance.
+- Ran the full `bats tests/` suite (not a narrow per-file scope) because Behavioral Change Detection found 5 test files referencing `modules/verify-patterns.md` beyond a single direct counterpart; all 1283 tests passed with no test file changes required.
+
+### Deferred Items
+- The post-merge opportunistic AC ("`/issue` or `/spec` records a reference point when authoring a future absence-verifying AC") cannot be verified at code time — it depends on a future Issue actually exercising the new guideline.
+
+### Notes for Next Phase
+- All 3 pre-merge ACs (1 rubric + 2 grep) were verified during `/code` and the Issue body checkboxes are already marked `[x]`.
+- No documentation sync is required elsewhere — confirmed against `docs/structure.md`, `docs/tech.md`, `docs/environment-adaptation.md` (all 3 references are illustrative examples, unaffected by this change).
+- This is a patch-route (XS) Issue with `closes #1054` in the commit — `/verify` should find the commit already merged to `main` and only needs to confirm the post-merge opportunistic condition when relevant future activity occurs.
