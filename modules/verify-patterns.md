@@ -931,6 +931,49 @@ Notes:
 
 **When NOT to apply:** the AC only requires structural presence (a section exists, a keyword is present) with no dependency on a later phase's execution results — regular hard-pattern/`rubric` guidance (§9) applies as-is.
 
+### 26. Absence-Verifying Acceptance Conditions — Require a Reference Point
+
+When an acceptance condition verifies that something is *absent* — "X is no longer detected", "0 references to X remain" — the result alone cannot distinguish two very different outcomes: the target genuinely disappeared, or the verification itself ran vacuously (the scan never executed, the population being checked was empty, or the check matched nothing because there was nothing to match against in the first place). A bare "0 hits" is consistent with both. To close this gap, an absence-verifying AC must record a **reference point (参照点)** — some pre-change baseline — at authoring time, so that `/verify` can confirm the expected *difference* disappeared rather than merely observing zero.
+
+**Scope**: this guideline covers two structurally identical patterns:
+
+| | Verification target | How the check goes vacuous |
+|---|---|---|
+| Typical case | A string's absence in a file | The file itself does not exist, or is empty |
+| Table/set case | Rows/elements in a table or set satisfying some condition | The table or set itself is empty, or no element meets the condition — a **母集団 (population)** with zero elements trivially satisfies "no element satisfies X" |
+
+The table/set case is a vacuous-truth pattern: a claim of the form "no element in the population satisfies X" is true whenever the population itself is empty, regardless of whether X was ever actually removed.
+
+**Reference point — pick one of four at AC authoring time:**
+
+1. **Pre-change count**: record the count before the change (e.g., "9 matches today; after the fix, 6 should remain")
+2. **Pre-change detection list**: record which specific items existed before the change, so the expected removals are enumerable
+3. **Control group**: identify items that must *not* disappear — their continued presence confirms the scan actually ran, rather than returning empty because it never executed
+4. **Population non-emptiness (母集団 の非空性)**: for the table/set case, confirm the target population itself is non-empty — so "no matching row" reflects the condition being satisfied, not an empty table
+
+**Verification principle**: at `/verify` time, confirm that the *expected diff* disappeared — not merely that the count reached zero. A drop from 9 to 6 that matches the 3 items slated for removal is confirming evidence; a bare "grep returned nothing" is not, on its own.
+
+**How this differs from §1 and §8**: §1's "`file_not_contains` for negation expressions" and §8's "Policy change Issues" guidance are about *avoiding false positives from ambiguous phrasing* (e.g., negated text that still contains the string being checked). This section addresses a different failure mode — *confirming the check itself was not vacuous* — and applies even when the phrasing is unambiguous.
+
+**Recommended pattern (pre-change count as reference point):**
+
+```markdown
+- [ ] <!-- verify: command "test $(grep -c 'legacy-asset-ref' report.json) -eq 6" --> Detection count dropped from 9 (pre-change baseline, recorded in Issue Notes) to the expected 6 — not merely "zero remain"
+```
+
+**Recommended pattern (population non-emptiness, table/set case):**
+
+```markdown
+- [ ] <!-- verify: rubric "The Priority table contains at least one row (母集団 is non-empty), and no row with Priority >= high lacks an assignee" --> Confirms the table itself is populated before asserting the absence condition
+```
+
+**Decision procedure:**
+
+1. Identify whether the AC verifies an absence — a string not present in a file, or no table/set element satisfying a condition
+2. If yes: choose one of the four reference-point forms above and record it in the Issue or Spec at authoring time (not only the target "0" state)
+3. At verify time, check that the observed result matches the *expected diff* against that reference point, not just that the count is zero
+4. If no reference point is recorded, the AC is at risk of a vacuous pass — treat this as a design gap and add one before relying on the result
+
 ## Output
 
 Design verify commands following these guidelines and apply them to acceptance criteria.
