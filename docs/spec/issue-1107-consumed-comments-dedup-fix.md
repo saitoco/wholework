@@ -57,3 +57,35 @@ L36-38 の dedup ガードは「`## Consumed Comments` という文字列が Spe
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue 1107 --non-interactive` の Issue Retrospective。#1054 の opportunistic verification で、本 Issue の Pre-merge AC 2 番目 (不在検証型) に参照点が authoring 時点で未記録だったことを検出し、`## Notes` セクションに 2026-07-30 時点の参照点 (`scripts/append-consumed-comments-section.sh` L36 に該当コメントが存在) を追加した経緯を記録したもの。この追加は Issue 本文に既に反映済みで、本 Spec の `## Notes` に引き継ぎ済み。あわせて Type=Bug・Size=M・タイトル/AC分類/sub-issue分割は変更なしと確認。 (https://github.com/saitoco/wholework/issues/1107#issuecomment-5132340110)
+
+## Autonomous Auto-Resolve Log
+
+- **`phase/ready` ラベル不在のまま実行を継続** — reason: Issue のラベルは `phase/code` (Spec は既に存在) であり、`/spec` フェーズがラベルを `phase/ready` を経由せず直接 `phase/code` に遷移させたと推測される。`reconcile-phase-state.sh --check-precondition code-pr` は `matches_expected: false` を返したが、Spec ファイル自体は存在し内容も完備しているため、SKILL.md の非対話モード既定 (「warn and continue」) に従い、警告を出力のうえ Spec を使用して実装を続行した。
+  - Other candidates: 実行を中断し `/spec 1107` の再実行を促す (Spec が既に存在するため不要と判断)
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec の Implementation Steps 1-5 をそのまま実装した。
+
+### Design Gaps/Ambiguities
+- なし。Spec の `## Notes` (方針 B 採用理由) が十分具体的で、実装中に追加の解釈判断は不要だった。
+
+### Rework
+- jq フィルタ `select(($body | contains(.url // "")) | not)` は jq のパイプスコープ規則により `.url` が `$body` context (文字列) に対して評価されてしまい `Cannot index string with string ("url")` エラーとなっていた。エラーは `2>/dev/null` に隠蔽され `NEW_COMMENTS` が常に `[]` にフォールバックし、新規テストが無言で FAIL していた。`(.url // "") as $u | ($body | contains($u)) | not` の形に修正し、`.url` をオブジェクトコンテキストで先に束縛することで解消した。jq のパイプ内で `.` を再束縛する式に他のフィールド参照を混在させる際は、参照対象を `as` で先に固定してからパイプする必要がある。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の方針 B (URL 単位の重複排除 + 既存セクション追記) をそのまま採用し、実装は Spec Implementation Steps 1-5 通りに完了した
+- 既存セクションに新規エントリが 0 件の場合はファイルを一切変更せず `exit 0` する設計とした (プレースホルダー "No new comments since last phase." を上書きしない仕様も Spec 通り維持)
+- behavioral change detection (`tests/run-verify.bats` が対象ファイルを参照) によりフルスイート `bats tests/` (1285 tests) を実行し全て PASS を確認
+
+### Deferred Items
+- なし
+
+### Notes for Next Phase
+- Pre-merge AC 4件 (rubric x3, file_not_contains x1) は本フェーズで目視検証済みで Issue チェックボックスを更新済み。`/review` では念のため再確認を推奨
+- Post-merge AC (observation, event=auto-run) は次回 `/verify` 実行時に別 Issue でのコメント投稿を待って自然検証される想定。今回の PR 内では検証不要
+- `#1078` (worktree fresh 作成時の Consumed Comments 追記消失) は本 Issue のスコープ外の別機構の問題として明示的に残置されている
