@@ -113,3 +113,51 @@
 ### Acceptance criteria verification difficulty
 
 - Nothing to note — Pre-merge AC 4件 (rubric 2件・grep 1件・section_contains 1件) はいずれも明確に PASS 判定でき、UNCERTAIN や verify command の不備は発生しなかった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue / spec
+- Spec の設計 (空出力時に `reconcile-phase-state.sh review --check-completion` で summary 存在を追加確認し fail-closed に倒す) が、本 batch 内で実際に踏んだ事象 (#1066 の review が kill され Review Response Summary 不在のまま終了、completion check が `matches_expected: false` を返して未完了を検知) と正確に対応していた。実運用で観測された経路をそのまま安全側判定に組み込む設計になっている。
+
+#### code
+- Deviations / Rework とも N/A。実装は Spec の想定を超えて 2 つの縁のケースまで fail-closed 側に倒しており (「`reconcile-phase-state.sh` 自体が失敗し stdout が出ない場合」を既定で `false` に落とす、「verify command を持たない manual preview-tier AC」は `PRODUCTION_URL` の有無によらずフォールバック実行を試みず UNCERTAIN にする)、設計意図の理解が正確だった。
+- `docs/guide/customization.md` を更新しない判断も、AC の verify command が同ファイルを対象にしていないことを根拠に明示的に記録されている。
+
+#### review
+- `--light` で実施。修正コミット 2 件が追加され、silent no-op なし (comments 0→1、reviews 0→1、`matches_expected: true`)。
+
+#### merge
+- pre-merge AC 4/4 checked、`mergeable=true, reason=clean` を確認して squash merge。conflict なし。
+
+#### verify
+- pre-merge 4 件すべて PASS、FAIL / UNCERTAIN なし、auto-retry 発火なし。
+- post-merge の opportunistic 1 件は未チェックのまま `phase/verify` 留置 (設計どおり)。
+
+### Improvement Proposals
+
+- **`skills/code/SKILL.md` Step 3 が `--check-precondition` の `matches_expected: false` を「Spec missing」と誤って説明している**: L169 は次のように書かれている。
+
+  > Parse the JSON output. If `matches_expected` is `false` (**Spec missing** and Size is not XS):
+  > - Output: "Spec が見つかりません。`/spec $NUMBER` を実行してください"
+
+  しかし `scripts/reconcile-phase-state.sh <code-pr|code-patch> --check-precondition` が実際に評価しているのは **`phase/ready` ラベルの有無**であって Spec ファイルの存在ではない。本 batch 内で観測した実際の出力 (#1066):
+
+  ```json
+  {"phase":"code-pr","matches_expected":true,
+   "actual":{"labels":["triaged","phase/ready","retro/verify"],"spec_file":"docs/spec/issue-1066-....md"},
+   "diagnosis":"issue #1066 has phase/ready label (code phase precondition met)"}
+  ```
+
+  `diagnosis` が示すとおり判定軸はラベルであり、`spec_file` は付随情報として返されるだけである。
+
+  **実害 (本 Issue で発生)**: `/code` 実行時に precondition が `false` を返した際、SKILL.md の説明に従って「Spec が無い」と解釈された結果、`## Autonomous Auto-Resolve Log` に「`phase/ready` ラベル欠如を許容して実装を継続」「Spec ファイルは既に完全な内容で存在」という噛み合わない記述が残った。同ログは原因を「以前の `/code` 実行が Step 4 直後に中断した状態」と推測しているが、Issue のラベル timeline を確認すると `phase/ready` (15:04:09Z) → `phase/code` (15:07:35Z) と遷移しており、この `phase/code` は**本実行自身の Step 4** による遷移で説明がつく。先行する中断済み `/code` 実行の痕跡 (ブランチ・worktree・PR・コミット) はいずれも存在しなかったと同ログ自身が記録しており、推測された原因は成立しない。
+
+  誤った説明が誤った原因推定を誘導し、それが retrospective に残って後続の判断材料を汚染する経路になっている。
+
+  **対応方針 (案)**: (a) L169 の括弧書きを実際の判定軸に合わせる (`phase/ready` label absent)。あわせて L170 の出力文言も「Spec が見つかりません」から実態に合わせる。(b) precondition の判定軸を Spec ファイル存在に変える (説明側を正とする)。(c) 両方を判定材料にし、`diagnosis` でどちらが欠けているか区別できるようにする。現状の `actual` は `labels` と `spec_file` の両方を返しているため (c) の実装コストは低い。
+
+### 観察
+
+- 本 Issue はフェーズを個別のバックグラウンド呼び出しに分割して実行し (issue / spec / code / review / merge を別々に起動)、**kill ゼロで pr route を完走**した。連結実行 (`run-auto-sub.sh`) を用いた #1066 (Size L) が 3 回 kill されたのと対照的。本 batch 時点での集計は「分割: 完走 5/5、連結: kill 3 回」。ただし Size (M vs L) も同時に異なるため、分割の効果と規模の効果は本データだけでは分離できない。
