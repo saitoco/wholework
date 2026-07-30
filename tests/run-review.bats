@@ -108,6 +108,13 @@ exit 0
 MOCK
     chmod +x "$MOCK_DIR/wait-ci-checks.sh"
 
+    # sleep mock: no-op to keep preview-poll tests fast (tests/wait-ci-checks.bats convention)
+    cat > "$MOCK_DIR/sleep" <<'MOCK'
+#!/bin/bash
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/sleep"
+
     cat > "$MOCK_DIR/gh" <<'MOCK'
 #!/bin/bash
 if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
@@ -242,6 +249,124 @@ teardown() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"Waiting for CI checks on PR #123"* ]]
     [[ "$output" == *"CI check wait complete for PR #123"* ]]
+}
+
+@test "PENDING: ci_result pending>0 skips claude and exits 2" {
+    cat > "$MOCK_DIR/wait-ci-checks.sh" <<'MOCK'
+#!/bin/bash
+echo "Waiting for CI checks on PR #$1"
+echo "CI check wait complete for PR #$1"
+echo "ci_result: total=1 passed=0 failed=0 pending=1 cancelled=0 zero_checks=false"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/wait-ci-checks.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"PENDING:"* ]]
+    [ ! -f "$CLAUDE_CALL_LOG" ]
+}
+
+@test "PENDING: ci_result zero_checks=true skips claude and exits 2" {
+    cat > "$MOCK_DIR/wait-ci-checks.sh" <<'MOCK'
+#!/bin/bash
+echo "Waiting for CI checks on PR #$1"
+echo "CI check wait complete for PR #$1"
+echo "ci_result: total=0 passed=0 failed=0 pending=0 cancelled=0 zero_checks=true"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/wait-ci-checks.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"PENDING:"* ]]
+    [ ! -f "$CLAUDE_CALL_LOG" ]
+}
+
+@test "PENDING: pr-preview capability pending deployment skips claude and exits 2" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=1
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".headRefName"* ]]; then
+    echo "feature-branch"
+  fi
+  exit 0
+fi
+if [[ "$1" == "api" ]]; then
+  if [[ "$*" == *"/deployments?ref="* ]]; then
+    echo "1"
+  elif [[ "$*" == *"/statuses"* ]]; then
+    echo "pending"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"PENDING:"* ]]
+    [[ "$output" == *"PR preview deployment not confirmed"* ]]
+    [ ! -f "$CLAUDE_CALL_LOG" ]
+}
+
+@test "success: pr-preview capability with successful deployment runs claude normally" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=5
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".headRefName"* ]]; then
+    echo "feature-branch"
+  fi
+  exit 0
+fi
+if [[ "$1" == "api" ]]; then
+  if [[ "$*" == *"/deployments?ref="* ]]; then
+    echo "1"
+  elif [[ "$*" == *"/statuses"* ]]; then
+    echo "success"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"PR preview deployment ready"* ]]
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "no-op: pr-preview capability unset does not trigger preview wait branch" {
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"Waiting for PR preview deployment"* ]]
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
 }
 
 @test "error: claude command fails with non-zero exit code" {

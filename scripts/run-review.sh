@@ -99,7 +99,52 @@ echo "Started at: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "---"
 
 # Wait for CI checks to complete before running claude
-"$SCRIPT_DIR/wait-ci-checks.sh" "$PR_NUMBER"
+_ci_wait_output=$("$SCRIPT_DIR/wait-ci-checks.sh" "$PR_NUMBER")
+echo "$_ci_wait_output"
+_ci_result_line=$(echo "$_ci_wait_output" | grep '^ci_result:' || true)
+_ci_pending=$(echo "$_ci_result_line" | grep -oE 'pending=[0-9]+' | cut -d= -f2 || echo 0)
+_ci_zero_checks=$(echo "$_ci_result_line" | grep -oE 'zero_checks=[a-z]+' | cut -d= -f2 || echo false)
+
+_pending_reason=""
+if [[ "${_ci_pending:-0}" -gt 0 || "${_ci_zero_checks:-false}" == "true" ]]; then
+  _pending_reason="CI check wait did not reach a confirmed state for PR #${PR_NUMBER} (${_ci_result_line:-no ci_result line captured})"
+fi
+
+# Wait for PR preview deployment (capabilities.pr-preview: true projects only)
+if [[ -z "$_pending_reason" ]] && [[ -f .wholework.yml ]] \
+   && grep -A 20 '^capabilities:' .wholework.yml 2>/dev/null | grep -qE '^[[:space:]]*pr-preview:[[:space:]]*true'; then
+  echo "Waiting for PR preview deployment on PR #${PR_NUMBER}..." >&2
+  _preview_timeout_sec="${WHOLEWORK_PREVIEW_TIMEOUT_SEC:-600}"
+  _preview_branch=$(gh pr view "$PR_NUMBER" --json headRefName -q '.headRefName' 2>/dev/null || echo "")
+  _preview_state=""
+  if [[ -n "$_preview_branch" ]]; then
+    _preview_start=$(date +%s)
+    while [[ $(( $(date +%s) - _preview_start )) -lt "$_preview_timeout_sec" ]]; do
+      _deploy_id=$(gh api "repos/:owner/:repo/deployments?ref=${_preview_branch}&per_page=10" -q '.[0].id' 2>/dev/null || echo "")
+      if [[ -n "$_deploy_id" && "$_deploy_id" != "null" ]]; then
+        _preview_state=$(gh api "repos/:owner/:repo/deployments/${_deploy_id}/statuses?per_page=1" -q '.[0].state' 2>/dev/null || echo "")
+        [[ "$_preview_state" == "success" ]] && break
+      fi
+      sleep 30
+    done
+  fi
+  if [[ "$_preview_state" != "success" ]]; then
+    _pending_reason="PR preview deployment not confirmed for PR #${PR_NUMBER} (branch=${_preview_branch:-unknown} state=${_preview_state:-none})"
+  else
+    echo "PR preview deployment ready for PR #${PR_NUMBER}" >&2
+  fi
+fi
+
+if [[ -n "$_pending_reason" ]]; then
+  echo "PENDING: ${_pending_reason}; skipping review session" >&2
+  EXIT_CODE=2
+  echo "---"
+  echo "=== run-review.sh: Finished /review for PR #${PR_NUMBER} ==="
+  print_end_banner "pr" "$PR_NUMBER" "review"
+  echo "Exit code: ${EXIT_CODE}"
+  echo "Finished at: $(date '+%Y-%m-%d %H:%M:%S')"
+  exit $EXIT_CODE
+fi
 
 # Pass SKILL.md body directly as prompt (avoids context: fork issue)
 # /review has context: fork, so calling it via claude -p "/review N" prevents

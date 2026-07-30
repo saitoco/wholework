@@ -4,6 +4,8 @@
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective (曖昧性自動解決ログとタイトルドリフト記録)。内容は Issue body の `## Autonomous Auto-Resolve Log` に既に反映済みで、本 Spec の設計に追加で取り込む新規情報はなし / https://github.com/saitoco/wholework/issues/1050#issuecomment-5133601470
 
+`/code` フェーズ (cutoff: 2026-07-30T16:56:39Z、`phase/ready` ラベル付与時刻): 新規コメントなし。
+
 ## Overview
 
 `scripts/run-review.sh` は `wait-ci-checks.sh` を呼び出した後、その結果を一切判別せずに無条件で `claude -p` の review セッションを起動している。このため次の 2 パターンで、待機対象が確定しないまま review セッションが起動し、silent no-op (セッションが実質的な作業をせず exit 0 で終了) → `post-fallback-review-summary.sh` のフォールバックスタブ投稿 → review phase が complete 扱いになる、という誤った完了判定が発生する。
