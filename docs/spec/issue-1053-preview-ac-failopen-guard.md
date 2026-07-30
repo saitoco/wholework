@@ -83,22 +83,22 @@
   - Other candidates: hard-error abort して `/spec` の再実行を促す (Spec は既に完全な内容で存在しており、再実行は無駄な手戻りになるため見送り)
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- SHOULD 指摘 (Spec Implementation Step 1 の「書き換え」指示が実装では削除のみに留まっていた点) を `/review` 側で修正し、`resolve-preview-ac-fallback.sh` 自体が失敗した場合も同じ fail-closed パスを経由する旨を `skills/verify/SKILL.md` Step 5 に追記した。修正内容は既存ロジックの説明補足のみで、挙動・設計方針の変更を伴わないため Step 13 (Acceptance Criteria Consistency Check) はスキップと判断した。
-- CONSIDER 指摘 (`--base` override 時の `PR_NUMBER` 未設定パスの未文書化) は、実行時に `REVIEW_SUMMARY_FOUND=false` の fail-closed パスへ安全に縮退することを確認済みであり、機能的な問題がないため見送った。
+- pre-merge AC ゲートは 4/4 checked、`gh-pr-merge-status.sh` は `mergeable=true, reason=clean` だったため、conflict 解消・test 再実行を行わず Step 4 (Squash Merge) に直行した。
+- `--non-interactive` モードで実行したが、AskUserQuestion を要する分岐 (conflict・review_pending 等) は一切発生しなかった。
 
 ### Deferred Items
 
-- Post-merge の observation AC (`/review` が異常終了した Issue で `/verify` を実行した際、preview tier AC が SKIPPED にならないことの確認) は実環境での `/review` 異常終了再現が必要なため、`/verify` フェーズでの opportunistic 観察に委ねる (code phase からの持ち越し)。
-- `docs/guide/customization.md` への安全網追記 (任意項目) は本 PR では実施しなかった (code phase からの持ち越し、変更なし)。
+- Post-merge の observation AC (`/review` が異常終了した Issue で `/verify` を実行した際、preview tier AC が SKIPPED にならないことの確認) は引き続き `/verify` フェーズでの opportunistic 観察に委ねる (review phase からの持ち越し、未解消)。
+- `docs/guide/customization.md` への安全網追記 (任意項目) は本 PR では実施しなかった (review phase からの持ち越し、変更なし)。
 
 ### Notes for Next Phase
 
-- `/merge` → `/verify` では、本 Issue 自体には `ac-tier: preview` の AC が存在しないため、Step 5 の新ロジックは本 Issue の `/verify` 実行では経路を通らない (ロジックの効果は他の preview-tier AC を持つ Issue で発現する)。
-- CI は全 5 種のジョブ (DCO / Run bats tests / Validate skill syntax / Forbidden Expressions check / macOS shell compatibility) が SUCCESS。`/merge` 実行時に追加の懸念事項はない。
+- `/verify` では、本 Issue 自体には `ac-tier: preview` の AC が存在しないため、Step 5 の新ロジックは本 Issue の `/verify` 実行では経路を通らない (ロジックの効果は他の preview-tier AC を持つ Issue で発現する) — review phase からの申し送り事項を維持。
+- squash merge 後、`closes #1053` により Issue は auto-close される見込み (base branch は `main`)。Step 6 (Verify Issue State) のフォールバック確認で state を再確認すること。
 
 ## review retrospective
 
