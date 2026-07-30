@@ -143,17 +143,29 @@ fi
 - N/A — 手戻りは発生しなかった。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec Step 1〜3 のコードブロックをそのまま `scripts/run-review.sh` の該当箇所に適用した。CI pending/zero-checks 判定と preview デプロイ未確定判定を同一の `_pending_reason` 変数に集約し、単一の PENDING 終了分岐 (exit code 2) で両ケースを処理する設計を踏襲。
-- `tests/run-review.bats` に Spec Step 4 の 5 ケースを追加し、`sleep` の no-op モックを `tests/wait-ci-checks.bats` の慣例に合わせて導入。既存 29 ケースを含む全 34 ケースが PASS することを確認。
-- `docs/tech.md` / `docs/ja/tech.md` の `HAS_PR_PREVIEW_CAPABILITY` 行と Environment Variables 表を Spec Step 5 の指示通り更新。
+- `review-light` エージェントによる light mode 統合レビューを実施し、Implementation Steps と実装コードの逐語一致を確認 (spec divergence なし)。
+- SHOULD 指摘 (preview-wait ループ内 `gh api` 呼び出しの per-call timeout 欠如) を修正し、`wait-ci-checks.sh` と同じ `timeout --kill-after=10 30 ... || gtimeout 30 ...` フォールバックパターンを踏襲する `_gh_api_bounded` ヘルパーを追加。
+- CONSIDER 指摘 (`_preview_branch` の URL 非エンコード埋め込み) は `skills/review/SKILL.md` Step 8.0 の既存パターンと同一の pre-existing convention と判断し、本 PR では対応不要とした。
 
 ### Deferred Items
-- Post-merge AC (opportunistic): preview ビルドが長引く PR、または CI check-suite 作成前にタイムアウトする PR での `/review` 実況確認は、実際にそのような PR が発生した際の opportunistic 検証に委ねる。
-- Notes に記載の通り、`run-auto-sub.sh` の Tier 1-3 recovery cascade への PENDING 専用ハンドリング追加、および `capabilities.pr-preview` inline hash 形式の bash 側検出対応は本 Issue のスコープ外として意図的に見送った (別 Issue 候補)。
+- Post-merge AC (opportunistic): preview ビルドが長引く PR、または CI check-suite 作成前にタイムアウトする PR での `/review` 実況確認は引き続き opportunistic 検証に委ねる。
+- `_preview_branch` の URL エンコード対応は、`skills/review/SKILL.md` Step 8.0 側の既存パターンとまとめて別 Issue で検討する候補として見送った。
 
 ### Notes for Next Phase
-- Pre-merge AC 3件は本フェーズで PASS 確認済み・チェック済み。`/review` では追加の pre-merge 検証は不要だが、rubric AC の再確認は通常フロー通り実施される。
-- `docs/ja/tech.md` の同期は本フェーズで完了済みのため、`/review` の翻訳同期チェックで新たな gap は検出されない見込み。
+- Pre-merge AC 3件は PASS 確認・チェック済み。CI は 9/9 SUCCESS。MUST 指摘なし (COMMENTED でレビュー投稿済み)。
+- SHOULD 修正コミット (`_gh_api_bounded` 追加) を push 済み。`/merge` 前の追加対応は不要。
+- Post-merge AC は opportunistic 検証待ちのまま — `/verify` 実行時に未チェックのまま残る想定。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- N/A — `review-light` エージェントが Implementation Steps 1〜3 のコードブロックと `scripts/run-review.sh` L101-147 を文字単位で突合し、逸脱なしと確認した。
+
+### Recurring issues
+- SHOULD 指摘 1件: 新規追加した preview デプロイ待機ループ内の `gh api` 呼び出しに per-call timeout がなく、`wait-ci-checks.sh` が同一 PR で既に確立していた `timeout --kill-after=10 30 ... || gtimeout 30 ... || <bare>` フォールバックパターンが踏襲されていなかった。同一 Issue/PR 内に手本となる前例があるにもかかわらず新規コードで再適用されなかったケースであり、「ポーリングループを新規追加する際は、同一リポジトリ内の既存ポーリング実装 (wait-ci-checks.sh 等) のタイムアウト境界パターンを踏襲する」という観点を Spec の Implementation Steps または review チェックリストに明記する余地がある。次回同様のポーリングループ追加時は、Spec 作成段階で既存の類似実装への参照を明示すると手戻りを防げる可能性がある。
+
+### Acceptance criteria verification difficulty
+- Nothing to note — Pre-merge AC 3件はいずれも `rubric` / `grep` で明確に PASS 判定でき、UNCERTAIN は発生しなかった。
