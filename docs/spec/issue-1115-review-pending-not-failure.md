@@ -105,3 +105,39 @@ No new comments since last phase.
 ### Notes for Next Phase
 - `/verify` は Post-merge AC (opportunistic) が UNCERTAIN/PENDING のまま残る想定で処理すること
 - base branch は `main` のため `closes #1115` で Issue は自動クローズされる見込み
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Background の主張 (「exit code 2 を他の非 0 と区別する分岐が存在しない」) を `run-review.sh` / `run-auto-sub.sh` / `skills/auto/SKILL.md` の実コードと照合して確認しており、事実確認のステップが機能した。
+- 案 A/B/C の選択を `/issue` (What) ではなく `/spec` (How) の責務として意図的に未確定のまま残す判断も、`docs/product.md` の責務境界に沿っている。
+- **一方でラベル遷移が実行されなかった** (下記 Improvement Proposals)。
+
+#### spec / code
+- 実装は「exit 2 なら待機して再実行、それ以外の非 0 または再試行上限到達後にのみ completion check → 3-Tier recovery」という順序を採っており、意図的な PENDING が recovery に流れない。再試行の間隔・上限を環境変数 (`WHOLEWORK_REVIEW_PENDING_RETRY_SEC` 既定 300s / `WHOLEWORK_REVIEW_PENDING_MAX_RETRIES` 既定 2) で外出しした点も、CI の所要時間がプロジェクトごとに異なることへの対応として妥当。
+- exit code contract を `run-review.sh` のヘッダに書き、`orchestration-fallbacks.md#review-pending-not-failure` から参照する二段構えにしたことで、スクリプト単体を読む人と catalog を辿る人の両方に届く形になっている。
+
+#### review
+- `--light` で実施。修正コミット 2 件が追加され silent no-op なし (comments 0→1、reviews 0→1、`matches_expected: true`)。
+
+#### merge
+- CI 7 SUCCESS / 2 実行中の状態から `run-merge.sh` が完了まで待機して squash merge。conflict なし。
+
+#### verify
+- pre-merge 3 件すべて PASS、FAIL / UNCERTAIN なし、auto-retry 発火なし。
+
+### Improvement Proposals
+
+- **`/issue` フェーズが実作業完了・exit 0 のままラベル遷移せず終了することがあり、issue / spec フェーズには機械的な completion check が存在しない**: 本 Issue の `/issue` 実行 (`run-issue.sh 1115`) は exit 0 で終了し、出力上も Step 1〜14 の実作業 (Background の主張とコードの照合、曖昧性検出、AC 分類、blocked-by チェック、opportunistic verification) を完了したと報告していた。しかし直後にラベルを確認すると `triaged retro/verify` のままで、**`phase/issue` が付与されていなかった**。
+  - **対比**: 同一 batch 内の #1054 / #1053 の `/issue` 実行では「ラベル遷移: `phase/issue` 付与」が出力に明示されていた。本実行の出力にはラベル遷移に関する記述自体が存在しない。
+  - **なぜ検出しにくいか**: `scripts/reconcile-phase-state.sh` がサポートする phase は `code-pr` / `code-patch` / `review` / `merge` / `verify` であり、**issue と spec のフェーズには completion check が無い**。`/auto` Step 3 も「ラベルを読んで分岐する」だけで、`run-issue.sh` の実行後にラベルが期待どおり遷移したかを検証するステップを持たない。今回はラベルを直接確認していたため気づけたが、`run-auto-sub.sh` 経由なら「`phase/ready` も `phase/issue` も無い」状態のまま spec dispatch 条件 (`phase/ready` が無い) を満たして spec が走り、症状が別の形に化けていた可能性がある。
+  - **本 Issue との関係**: 皮肉なことに、本 Issue 自身が「wrapper が silent no-op で完了扱いされるのを防ぐ」ための Issue である。#1050 が `/review` について塞いだのと同型の穴が、`/issue` フェーズには残っている。
+  - **対応方針 (案)**: (a) `reconcile-phase-state.sh` に `issue` / `spec` フェーズの completion check を追加する (期待ラベル: issue → `phase/issue` または `phase/ready`、spec → `phase/ready`)。`/auto` Step 3 の各 `run-*.sh` 呼び出し後に completion check を挟む。(b) `run-issue.sh` / `run-spec.sh` の wrapper 側で、終了前にラベル遷移が行われたかを確認し、未遷移なら非 0 で終了する。(c) `/issue` SKILL.md のラベル遷移ステップを、他ステップの成否によらず必ず実行される位置に移す。
+  - (a) は既存の Observe → Diagnose → Act パターンに揃うため一貫性が高く、(b) は wrapper 単体で完結するため `/auto` を経由しない手動実行でも効く。両者は排他ではない。
+
+### 観察
+
+- 本 Issue の merge により preview / CI 待機の防御が 4 層揃った (#1066 上流 / #1050 中間 / #1115 接続 / #1053 下流)。
+- フェーズ分割方式での完走はこれで 7/7 (kill ゼロ)。連結実行 (`run-auto-sub.sh`) を用いた #1066 のみ kill 3 回という対比が維持されている。
