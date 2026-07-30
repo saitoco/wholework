@@ -84,6 +84,56 @@ MOCK
     [ "$section_count" -eq 1 ]
 }
 
+@test "existing section with new comment: appends new entry without removing existing one" {
+    SPEC_FILE="$BATS_TEST_TMPDIR/repo/docs/spec/issue-42-some-title.md"
+    printf '# Issue #42\n\n## Consumed Comments\n- alice / MEMBER / first-class / old comment / https://github.com/org/repo/issues/42#issuecomment-1\n\n## Phase Handoff\n- placeholder\n' > "$SPEC_FILE"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "api" ]]; then
+    echo ""
+    exit 0
+fi
+cat <<'JSON'
+[{"author":{"login":"bob"},"authorAssociation":"MEMBER","url":"https://github.com/org/repo/issues/42#issuecomment-2","body":"new comment body","createdAt":"2026-07-31T00:00:00Z"}]
+JSON
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run "$SCRIPT" 42 verify
+    [ "$status" -eq 0 ]
+    grep -q "issuecomment-1" "$SPEC_FILE"
+    grep -q "issuecomment-2" "$SPEC_FILE"
+    section_count=$(grep -c "^## Consumed Comments" "$SPEC_FILE")
+    [ "$section_count" -eq 1 ]
+    # The new entry must land inside the Consumed Comments section, before the next "## " heading.
+    [[ "$(sed -n '/^## Phase Handoff/,$p' "$SPEC_FILE")" != *"issuecomment-2"* ]]
+}
+
+@test "existing section re-run with same comment: no duplicate entry added" {
+    SPEC_FILE="$BATS_TEST_TMPDIR/repo/docs/spec/issue-42-some-title.md"
+    printf '# Issue #42\n\n## Consumed Comments\n- bob / MEMBER / first-class / new comment body / https://github.com/org/repo/issues/42#issuecomment-2\n' > "$SPEC_FILE"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "api" ]]; then
+    echo ""
+    exit 0
+fi
+cat <<'JSON'
+[{"author":{"login":"bob"},"authorAssociation":"MEMBER","url":"https://github.com/org/repo/issues/42#issuecomment-2","body":"new comment body","createdAt":"2026-07-31T00:00:00Z"}]
+JSON
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run "$SCRIPT" 42 verify
+    [ "$status" -eq 0 ]
+    occurrence_count=$(grep -c "issuecomment-2" "$SPEC_FILE")
+    [ "$occurrence_count" -eq 1 ]
+}
+
 @test "not in worktree: emits defense-in-depth warning" {
     SPEC_FILE="$BATS_TEST_TMPDIR/repo/docs/spec/issue-42-some-title.md"
     printf '# Issue #42: some title\n\n## Overview\nSome content.\n' > "$SPEC_FILE"

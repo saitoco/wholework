@@ -57,3 +57,46 @@ L36-38 の dedup ガードは「`## Consumed Comments` という文字列が Spe
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue 1107 --non-interactive` の Issue Retrospective。#1054 の opportunistic verification で、本 Issue の Pre-merge AC 2 番目 (不在検証型) に参照点が authoring 時点で未記録だったことを検出し、`## Notes` セクションに 2026-07-30 時点の参照点 (`scripts/append-consumed-comments-section.sh` L36 に該当コメントが存在) を追加した経緯を記録したもの。この追加は Issue 本文に既に反映済みで、本 Spec の `## Notes` に引き継ぎ済み。あわせて Type=Bug・Size=M・タイトル/AC分類/sub-issue分割は変更なしと確認。 (https://github.com/saitoco/wholework/issues/1107#issuecomment-5132340110)
+
+## Autonomous Auto-Resolve Log
+
+- **`phase/ready` ラベル不在のまま実行を継続** — reason: Issue のラベルは `phase/code` (Spec は既に存在) であり、`/spec` フェーズがラベルを `phase/ready` を経由せず直接 `phase/code` に遷移させたと推測される。`reconcile-phase-state.sh --check-precondition code-pr` は `matches_expected: false` を返したが、Spec ファイル自体は存在し内容も完備しているため、SKILL.md の非対話モード既定 (「warn and continue」) に従い、警告を出力のうえ Spec を使用して実装を続行した。
+  - Other candidates: 実行を中断し `/spec 1107` の再実行を促す (Spec が既に存在するため不要と判断)
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Spec の Implementation Steps 1-5 をそのまま実装した。
+
+### Design Gaps/Ambiguities
+- なし。Spec の `## Notes` (方針 B 採用理由) が十分具体的で、実装中に追加の解釈判断は不要だった。
+
+### Rework
+- jq フィルタ `select(($body | contains(.url // "")) | not)` は jq のパイプスコープ規則により `.url` が `$body` context (文字列) に対して評価されてしまい `Cannot index string with string ("url")` エラーとなっていた。エラーは `2>/dev/null` に隠蔽され `NEW_COMMENTS` が常に `[]` にフォールバックし、新規テストが無言で FAIL していた。`(.url // "") as $u | ($body | contains($u)) | not` の形に修正し、`.url` をオブジェクトコンテキストで先に束縛することで解消した。jq のパイプ内で `.` を再束縛する式に他のフィールド参照を混在させる際は、参照対象を `as` で先に固定してからパイプする必要がある。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- なし。実装は Spec Implementation Steps 1-5 通りで、構造的な乖離は見られなかった。ただし Spec の方針 B 記述には URL 一致方式の詳細 (完全一致 vs 部分一致) までは規定されておらず、実装が `contains()` (部分一致) を選んだ結果、後述のエッジケースが生じた。次回同種の Spec では「URL 一致は完全一致で行うこと」まで明記すると実装時の解釈揺れを防げる。
+
+### Recurring issues
+- `/review` (review-light agent) が、GitHub issuecomment ID が固定長でないために `contains()` (部分一致) ベースの重複判定が偽陽性を起こしうるエッジケースを検出した (`scripts/append-consumed-comments-section.sh:116`)。ID 的トークン (URL, ハッシュ, 連番 ID など) に対する `contains()`/文字列部分一致は、この Issue 自体が修正しようとした「サイレントな取りこぼし」を別の形で再発させやすい一般的な落とし穴であり、`review-bug` エージェントの HIGH SIGNAL チェック観点、または `skill-dev-recheck.md` に「ID 的トークンの重複判定に部分一致を使っていないか」を追加する価値がある。単発の指摘に留め、Issue 起票は見送る (再現頻度が低く、今回の PR 内で修正済みのため)。
+
+### Acceptance criteria verification difficulty
+- なし。Pre-merge AC 4件 (rubric x3, file_not_contains x1) はいずれも diff と grep/bats 実行のみで機械的に PASS 判定でき、UNCERTAIN は発生しなかった。file_not_contains (不在検証型) の参照点も Issue Notes に事前記録されており判定が容易だった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- レビュー (light mode, review-light agent) で SHOULD 指摘 1 件を検出: 既存セクションへの新規 URL 判定が `contains()` (部分一致) を使っており、issuecomment ID の桁数非固定により偽陽性で新規コメントが永久に取りこぼされうるエッジケースを jq で再現確認のうえ修正
+- 修正は既存行を `\n` 分割し各行の最後フィールド (URL) との完全一致 (`index($u) != null`) に置き換える方式を採用。既存 6 テスト + 修正シナリオの単体再現の両方で確認
+- Pre-merge AC 4件・CI 9 ジョブは修正前後とも PASS/SUCCESS のまま変化なし。ポリシー変更 (Step 13) には該当しないため Issue 本文・AC は未更新
+
+### Deferred Items
+- なし
+
+### Notes for Next Phase
+- Post-merge AC (observation, event=auto-run) は次回 `/verify` 実行時に別 Issue でのコメント投稿を待って自然検証される想定。`/merge` 後の `/verify` で確認すること
+- `#1078` (worktree fresh 作成時の Consumed Comments 追記消失) は本 Issue のスコープ外の別機構の問題として明示的に残置されている
+- review retrospective の Recurring issues に、ID 的トークンの重複判定における `contains()` 部分一致の一般的リスクを記録した。将来 `review-bug`/`skill-dev-recheck.md` の観点追加を検討する際の参考にすること

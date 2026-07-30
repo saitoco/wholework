@@ -33,10 +33,29 @@ if [[ -z "$SPEC_FILE" ]]; then
   exit 0
 fi
 
-# Check if section already exists; skip if present (deduplicate guard)
-if grep -q "^## Consumed Comments" "$SPEC_FILE" 2>/dev/null; then
-  exit 0
-fi
+# Format a JSON comment array into "## Consumed Comments" entry lines, applying
+# trust boundary classification. Trust tiers: OWNER/MEMBER/COLLABORATOR =
+# first-class, CONTRIBUTOR/NONE = external. Logins ending with [bot] = bot
+# (skip), unless body contains <!-- wholework-event:
+format_entries() {
+  echo "$1" | jq -r '
+    .[] |
+    ((.author.login) // "unknown") as $login |
+    (.authorAssociation // "NONE") as $assoc |
+    (.url // "") as $url |
+    (.body // "") as $body |
+    (if ($login | test("\\[bot\\]$"))
+     then (if ($body | contains("<!-- wholework-event:")) then "first-class" else "bot" end)
+     elif ($assoc == "OWNER" or $assoc == "MEMBER" or $assoc == "COLLABORATOR") then "first-class"
+     else "external"
+     end) as $tier |
+    if $tier == "bot" then empty
+    else
+      ($body | split("\n") | .[0] // "" | .[0:80]) as $summary |
+      "- \($login) / \($assoc) / \($tier) / \($summary) / \($url)"
+    end
+  ' 2>/dev/null
+}
 
 # Get cutoff timestamp from GitHub Issue timeline (most recent phase/* label assignment)
 CUTOFF=$(gh api "repos/{owner}/{repo}/issues/${ISSUE_NUMBER}/timeline" --paginate \
@@ -66,37 +85,62 @@ ALL_COMMENTS=$(jq -n \
   --argjson b "$VERIFYFAIL" \
   '($a + $b) | unique_by(.url)' 2>/dev/null || echo "[]")
 
-# Format entries applying trust boundary classification
-# Trust tiers: OWNER/MEMBER/COLLABORATOR = first-class, CONTRIBUTOR/NONE = external
-# Logins ending with [bot] = bot (skip), unless body contains <!-- wholework-event:
-ENTRIES=$(echo "$ALL_COMMENTS" | jq -r '
-  .[] |
-  ((.author.login) // "unknown") as $login |
-  (.authorAssociation // "NONE") as $assoc |
-  (.url // "") as $url |
-  (.body // "") as $body |
-  (if ($login | test("\\[bot\\]$"))
-   then (if ($body | contains("<!-- wholework-event:")) then "first-class" else "bot" end)
-   elif ($assoc == "OWNER" or $assoc == "MEMBER" or $assoc == "COLLABORATOR") then "first-class"
-   else "external"
-   end) as $tier |
-  if $tier == "bot" then empty
+HEADING_LINE=$(grep -n "^## Consumed Comments" "$SPEC_FILE" 2>/dev/null | head -1 | cut -d: -f1 || true)
+
+if [[ -z "$HEADING_LINE" ]]; then
+  # No existing section: create it (current behavior, unchanged).
+  ENTRIES=$(format_entries "$ALL_COMMENTS")
+
+  printf '\n%s\n' "## Consumed Comments" >> "$SPEC_FILE" 2>/dev/null || {
+    echo "append-consumed-comments-section.sh: WARNING — skip (cannot append to spec file)" >&2
+    exit 0
+  }
+
+  if [[ -z "$ENTRIES" ]]; then
+    printf '%s\n' "No new comments since last phase." >> "$SPEC_FILE" 2>/dev/null || true
   else
-    ($body | split("\n") | .[0] // "" | .[0:80]) as $summary |
-    "- \($login) / \($assoc) / \($tier) / \($summary) / \($url)"
-  end
-' 2>/dev/null || true)
-
-# Append section to spec file
-printf '\n%s\n' "## Consumed Comments" >> "$SPEC_FILE" 2>/dev/null || {
-  echo "append-consumed-comments-section.sh: WARNING — skip (cannot append to spec file)" >&2
-  exit 0
-}
-
-if [[ -z "$ENTRIES" ]]; then
-  printf '%s\n' "No new comments since last phase." >> "$SPEC_FILE" 2>/dev/null || true
+    printf '%s\n' "$ENTRIES" >> "$SPEC_FILE" 2>/dev/null || true
+  fi
 else
-  printf '%s\n' "$ENTRIES" >> "$SPEC_FILE" 2>/dev/null || true
+  # Existing section: append only entries whose URL is not already recorded in
+  # the existing section body. If nothing new, leave the file untouched.
+  TOTAL_LINES=$(wc -l < "$SPEC_FILE" 2>/dev/null | tr -d ' ')
+  BOUNDARY_LINE=$(awk -v start="$HEADING_LINE" 'NR>start && /^## /{print NR; exit}' "$SPEC_FILE" 2>/dev/null || true)
+  if [[ -z "$BOUNDARY_LINE" ]]; then
+    BOUNDARY_LINE=$((TOTAL_LINES + 1))
+  fi
+
+  EXISTING_BODY=$(sed -n "$((HEADING_LINE + 1)),$((BOUNDARY_LINE - 1))p" "$SPEC_FILE" 2>/dev/null || true)
+
+  # Match on the exact last "/"-delimited field of each existing entry line
+  # (the URL), not raw substring containment: GitHub issuecomment IDs are not
+  # fixed-width, so a shorter new URL can be a literal string-prefix of an
+  # already-recorded longer URL (e.g. "issuecomment-5123" vs
+  # "issuecomment-51230"), which would falsely match via `contains()` and
+  # silently drop a legitimate new comment forever.
+  NEW_COMMENTS=$(echo "$ALL_COMMENTS" | \
+    jq --arg body "$EXISTING_BODY" '
+      ($body | split("\n") | map(split(" / ") | last)) as $existing_urls |
+      [.[] | select((.url // "") as $u | ($existing_urls | index($u) != null) | not)]
+    ' 2>/dev/null || echo "[]")
+
+  NEW_ENTRIES=$(format_entries "$NEW_COMMENTS")
+
+  if [[ -z "$NEW_ENTRIES" ]]; then
+    # No new entries for this run — nothing to change (also covers a same-phase
+    # re-run where every comment is already recorded).
+    exit 0
+  fi
+
+  {
+    sed -n "1,$((BOUNDARY_LINE - 1))p" "$SPEC_FILE"
+    printf '%s\n' "$NEW_ENTRIES"
+    sed -n "${BOUNDARY_LINE},\$p" "$SPEC_FILE"
+  } > "$SPEC_FILE.tmp" 2>/dev/null && mv "$SPEC_FILE.tmp" "$SPEC_FILE" || {
+    echo "append-consumed-comments-section.sh: WARNING — skip (cannot update spec file)" >&2
+    rm -f "$SPEC_FILE.tmp" 2>/dev/null || true
+    exit 0
+  }
 fi
 
 # Defense-in-depth: warn if not running inside an isolated worktree (was
