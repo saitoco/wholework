@@ -1,6 +1,12 @@
 #!/bin/bash
 # run-review.sh - Autonomous /review execution with Sonnet model
 # Usage: run-review.sh <pr-number> [--review-only] [--light | --full]
+#
+# Exit code contract (see modules/orchestration-fallbacks.md#review-pending-not-failure):
+#   0     = review completed (or overridden to success via Tier 1 reconcile)
+#   2     = PENDING (CI/preview state not yet confirmed; caller should retry
+#           after a delay, not treat this as a failure)
+#   other = review phase failed
 
 set -euo pipefail
 PR_NUMBER="${1:?Usage: run-review.sh <pr-number>}"
