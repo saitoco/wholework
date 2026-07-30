@@ -53,3 +53,8 @@ step5_section() {
     step5_section | grep -q -F "verify-type: manual"
     step5_section | grep -q -F "no automatic fallback exists"
 }
+
+@test "Step 5 pre-merge-preview AC skip rule checks for a Review Response Summary via reconcile-phase-state.sh" {
+    step5_section | grep -q -F "Review Response Summary"
+    step5_section | grep -q -F "reconcile-phase-state.sh"
+}
