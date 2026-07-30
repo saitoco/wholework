@@ -343,3 +343,47 @@ N/A — Implementation Steps 1-4 の記述どおりに `split_selector` / `parse
 - **Recovery type**: review-rerun
 - **Wrapper exit code**: 1
 - **Outcome**: success
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- AC を**実装方式未決の段階でも判定可能な条件節の形**で書いた設計が有効に機能した。AC2 「外部バイナリが必要な場合は未インストール時の挙動が定義されている」は案 A (外部バイナリ不要) では前件が偽になり、`modules/verify-executor.md` に「外部バイナリを一切必要としない」旨を明記する方針を Spec が立てていたため grader が前件の偽を可読に判定できた。結果として全 8 AC で UNCERTAIN が 0 件
+- 一方 `github_check "gh pr checks" "Run bats tests"` を Pre-merge に置く構造は、`/code` フェーズ時点では PR/CI が存在せず**原理的に検証不能**な AC が Pre-merge に混じる (review retrospective も同じ指摘)。Phase Handoff の Deferred Items で `/review` に持ち越す運用で吸収できたが構造は残る
+
+#### spec
+
+- Implementation Steps が関数単位・分岐単位まで具体的だったため実装乖離はほぼゼロ。combinator 4 種・`VOID_ELEMENTS` 14 要素・`ValueError` 6 条件を **exhaustive と明記**した運用が review の false positive を実際に抑制した (review-bug の「legacy void 要素の欠落」指摘を exhaustive 宣言を根拠に却下できた)
+- 唯一の乖離 `split_selector()` の `selector.strip()` は、**exhaustive と宣言したリストに載っていない軸 (入力の前処理) での追加**であり、リスト内の欠落と違って検知が構造的に難しい
+- Spec が「変更不要」の根拠に引用した数値 (`docs/structure.md` の `tests/ (95 files)`) が実測 103 で古かった。結論は正しかったが、根拠数値は引用時点で実測する運用が要る
+
+#### code
+
+- 実装本体は Spec どおり。フルテストスイート 1258 件 PASS
+- `/code` スキル自身の Step 1 (Consumed Comments 記録) と Step 2 (worktree 作成、デフォルト fresh baseRef) の順序に起因し、メインリポジトリ側の未コミット編集が worktree に引き継がれず孤立する構造的な穴を実行中に発見・復旧 → #1078 (`retro/code`) として起票済み
+
+#### review
+
+- 最大の指摘 (MUST) は `modules/verify-executor.md:74` が main 側 #1074 (Basic Auth) と**同一行で conflict**していた件。CI は main とマージしていないブランチ単体で走るため SUCCESS のままで、`git merge-tree` を明示的に叩いて初めて発見できた。`/review` に conflict 事前検査が存在しない (review retrospective に Improvement Proposal 記録済み)
+- SHOULD 指摘のメモ化欠如は 58 KB / 2000 行のテーブルに `thead ~ tr ~ tr` で **93.6 秒 → 0.39 秒**。`html_check` は実行コストを持つ verify command で唯一タイムアウト規定がなく、UNCERTAIN ではなく**ハング**として表面化する構造 (review retrospective に記録済み)
+- 単一アカウント運用で `scripts/gh-pr-review.sh` の `REQUEST_CHANGES` が 422 で必ず失敗 (review retrospective に記録済み)
+
+#### merge
+
+- review フェーズで `origin/main` を取り込み済みだったため conflict なしで squash merge 成功
+- ただし `reconcile-phase-state.sh merge --check-precondition` が `reviewDecision is , not APPROVED` で `matches_expected: false` を返した。GitHub は自己 PR への `APPROVE` / `REQUEST_CHANGES` をいずれも 422 で拒否するため、**単一アカウント運用では reviewDecision が構造的に永久に空**になる。warn-only のため進行はしたが、この警告は毎回必ず出る
+
+#### verify
+
+- 全 8 AC PASS / UNCERTAIN 0。Post-merge manual AC 2 件はいずれも Claude 実行可能と判定でき、ユーザー承認のうえ実 URL (`https://example.com`) に対する end-to-end 実測 (`curl \| html-selector-match.py`) と不正セレクタ 8 パターンの網羅で判定した。**「実 URL に対して実行」「不正入力が UNCERTAIN になる」という manual AC は、判定基準が機械的であれば Claude 実行可能側に落ちる**実例
+- **`/auto` の review フェーズが 4 回連続失敗した**。根本原因は `.wholework.yml` の `capabilities.workflow: true` により `/review --full` が Workflow パス (`skills/review/workflow-guidance.md`) に入る一方、`run-review.sh` は `claude -p` (headless) で起動するため **Workflow 完了通知を受け取る次のターンが存在しない**点。Workflow を起動した時点でターンが終了し、exit 0 / 出力ゼロ (silent no-op) になる。決定的証拠は `.tmp/token-usage-1077.json` の `result` フィールド: 「Workflow はハーネスが追跡するバックグラウンドタスクのため、完了時に自動的に通知されます。ポーリングは不要なので、通知を待ちます。」。`is_error: false` / `subtype: "success"` / `num_turns: 67` で、Workflow 配下の agent 自体は動いていた (sonnet 54k + opus 50k output tokens、$8.6 相当) が成果物が PR に一切届かなかった。4 回の内訳は silent no-op 2 回 + external kill 2 回
+- 復旧は親セッション (Workflow 通知が届く) で `Skill(wholework:review)` を fork 実行して成功。皮肉にもその fork セッションには Workflow ツール自体が存在せず静的 Task fan-out にフォールバックしており、`workflow-guidance.md` の Pre-flight が `agentType` の解決可能性しか見ていない穴 (review retrospective に記録済み) と同じ根に触れている
+- `detect-wrapper-anomaly.sh` はこれを `review-completion-false-negative` として報告するが、同パターンの likely cause は「marker 欠落 + 非標準見出し」で復旧手順が異なる (marker 追記 vs 再実行)。PR コメント 0 件の silent no-op は別パターンとして切り出すべき (Auto Retrospective に記録済み)
+
+### Improvement Proposals
+
+- `run-review.sh` (および `capabilities.workflow: true` 環境で Workflow パスに入りうる全 headless フェーズ) の **Workflow / headless 非互換**を解消する。`claude -p` は Workflow の完了通知を受け取る次のターンを持たないため、Workflow を起動した瞬間に silent no-op が確定する。取りうる方向は (a) headless 実行時は Workflow パスを無効化して静的 Task fan-out に固定する、(b) `run-*.sh` 側で Workflow 完了を同期的に待てる起動形態にする、(c) `capabilities.workflow` の適用範囲を「親セッションで実行されるフェーズ (verify 等) のみ」に限定する、のいずれか。現状は `capabilities.workflow: true` + Size M/L (= `--review=full`) の Issue すべてで `/auto` の review フェーズが構造的に失敗する
+- `reconcile-phase-state.sh merge --check-precondition` の `reviewDecision=APPROVED` 要求を、単一アカウント運用で成立する形に見直す。GitHub は自己 PR への `APPROVE` / `REQUEST_CHANGES` をいずれも 422 で拒否するため、self-hosted 運用では reviewDecision が永久に空のままで警告が毎回出る。`<!-- review-summary -->` marker の存在 (= review フェーズ完了) を代替シグナルにする等の緩和が要る
+- Spec の「exhaustive」宣言の**適用軸を明示する**運用を検討する。本 Issue では combinator 種別・void element・`ValueError` 条件のリストに対する exhaustive 宣言が review の false positive 抑制に有効だった一方、`selector.strip()` のような「リストに載っていない軸 (入力の前処理)」での追加は検知できなかった。exhaustive 宣言に「この宣言が覆う軸」を併記すれば、覆っていない軸の変更をレビュー時に検知しやすくなる
