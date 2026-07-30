@@ -69,3 +69,30 @@
 - All 3 pre-merge ACs (1 rubric + 2 grep) were verified during `/code` and the Issue body checkboxes are already marked `[x]`.
 - No documentation sync is required elsewhere — confirmed against `docs/structure.md`, `docs/tech.md`, `docs/environment-adaptation.md` (all 3 references are illustrative examples, unaffected by this change).
 - This is a patch-route (XS) Issue with `closes #1054` in the commit — `/verify` should find the commit already merged to `main` and only needs to confirm the post-merge opportunistic condition when relevant future activity occurs.
+
+## Issue Retrospective
+
+`/issue 1054 --non-interactive` による既存 Issue refinement を実行した。
+
+### Ambiguity Points と Auto-Resolve Log
+
+1. **ガイドラインの射程にテーブル・集合の vacuous truth パターンを含めるか**
+   - 検出元: 2026-07-29 付コメント (Issue #1062 の `/verify` 実行時に踏んだ「Priority=high 以上の行が 0 件で AC が vacuous truth に PASS する」ケース)。コメントは本 Issue が想定する `file_not_contains` 型 (ファイル中の文字列不在) との構造的な対応関係を対比表で示しつつ、射程を広げるかどうかの確認を求めていた。
+   - 判断: **含める。** コメント自身が「参照点 (母集団の非空性、対象の実在) を AC に持たせる」という解決策を既に提示しており、構造的に同一の問題であることが明確だったため、既存パターンから一意に推論可能と判断した。リスクも低い (既存の rubric + grep という AC の形式は変えず、対象範囲の記述を広げるだけ)。
+   - 反映内容: Background に該当パターンの例を追加、Purpose・対応方針 (案) に射程拡大の明記と対比表を追加、Pre-merge AC に「母集団」を対象とする grep 補助チェックを追加。
+   - 見送った代替案: `file_not_contains` 型に限定し、テーブル/集合パターンは別 Issue として起票する。同じ「参照点が無いと空振りと区別できない」という構造を持つため、同一ガイドライン節で扱う方が一貫性が高いと判断し見送った。
+
+2. **`## 関連` の downstream Issue プレースホルダーが未解消だった**
+   - 調査: `docs/spec/`, `docs/sessions/` 配下、および git log を「アセット参照」「9 件」「6 件」等のキーワードで検索したが、本 Issue の Background が記述する具体的なスキャンシナリオ (スキャン実行前 9 件 → 実行後 6 件) に対応する Issue をこのリポジトリ内に見つけられなかった。
+   - 判断: 発生元 Issue 番号は特定不能と明記する形に置き換えた。プレースホルダーをそのまま残すと壊れた Markdown リンクとしてレンダリングされるため。
+   - 別途、コメントで言及された Issue #1062 は本 Issue の直接の発生元ではないが、ガイドライン射程の検討材料として `Related to #1062` の形で明記した。
+
+### Acceptance Criteria の変更理由
+
+- Pre-merge の rubric AC の文言に「ファイル中の文字列不在に加え、テーブル・集合中の条件を満たす要素の不在も含む」を追加し、射程拡大を verify 時に判定できるようにした。
+- Pre-merge に `grep "母集団" "modules/verify-patterns.md"` を追加した。rubric との併用ガイドライン (`modules/verify-patterns.md` §9) に沿い、rubric が誤って PASS した場合の機械的なセーフティネットとする。
+- Post-merge の条件は変更なし (射程拡大によって observation の対象が変わるものではないため)。
+
+### Scope Assessment
+
+Size=XS のため、サブ Issue 分割の評価対象外 (非対話モードでも High-Stakes スキップの判定に該当しない規模)。
