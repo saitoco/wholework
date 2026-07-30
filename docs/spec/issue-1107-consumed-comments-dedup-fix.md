@@ -74,18 +74,29 @@ L36-38 の dedup ガードは「`## Consumed Comments` という文字列が Spe
 ### Rework
 - jq フィルタ `select(($body | contains(.url // "")) | not)` は jq のパイプスコープ規則により `.url` が `$body` context (文字列) に対して評価されてしまい `Cannot index string with string ("url")` エラーとなっていた。エラーは `2>/dev/null` に隠蔽され `NEW_COMMENTS` が常に `[]` にフォールバックし、新規テストが無言で FAIL していた。`(.url // "") as $u | ($body | contains($u)) | not` の形に修正し、`.url` をオブジェクトコンテキストで先に束縛することで解消した。jq のパイプ内で `.` を再束縛する式に他のフィールド参照を混在させる際は、参照対象を `as` で先に固定してからパイプする必要がある。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- なし。実装は Spec Implementation Steps 1-5 通りで、構造的な乖離は見られなかった。ただし Spec の方針 B 記述には URL 一致方式の詳細 (完全一致 vs 部分一致) までは規定されておらず、実装が `contains()` (部分一致) を選んだ結果、後述のエッジケースが生じた。次回同種の Spec では「URL 一致は完全一致で行うこと」まで明記すると実装時の解釈揺れを防げる。
+
+### Recurring issues
+- `/review` (review-light agent) が、GitHub issuecomment ID が固定長でないために `contains()` (部分一致) ベースの重複判定が偽陽性を起こしうるエッジケースを検出した (`scripts/append-consumed-comments-section.sh:116`)。ID 的トークン (URL, ハッシュ, 連番 ID など) に対する `contains()`/文字列部分一致は、この Issue 自体が修正しようとした「サイレントな取りこぼし」を別の形で再発させやすい一般的な落とし穴であり、`review-bug` エージェントの HIGH SIGNAL チェック観点、または `skill-dev-recheck.md` に「ID 的トークンの重複判定に部分一致を使っていないか」を追加する価値がある。単発の指摘に留め、Issue 起票は見送る (再現頻度が低く、今回の PR 内で修正済みのため)。
+
+### Acceptance criteria verification difficulty
+- なし。Pre-merge AC 4件 (rubric x3, file_not_contains x1) はいずれも diff と grep/bats 実行のみで機械的に PASS 判定でき、UNCERTAIN は発生しなかった。file_not_contains (不在検証型) の参照点も Issue Notes に事前記録されており判定が容易だった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の方針 B (URL 単位の重複排除 + 既存セクション追記) をそのまま採用し、実装は Spec Implementation Steps 1-5 通りに完了した
-- 既存セクションに新規エントリが 0 件の場合はファイルを一切変更せず `exit 0` する設計とした (プレースホルダー "No new comments since last phase." を上書きしない仕様も Spec 通り維持)
-- behavioral change detection (`tests/run-verify.bats` が対象ファイルを参照) によりフルスイート `bats tests/` (1285 tests) を実行し全て PASS を確認
+- レビュー (light mode, review-light agent) で SHOULD 指摘 1 件を検出: 既存セクションへの新規 URL 判定が `contains()` (部分一致) を使っており、issuecomment ID の桁数非固定により偽陽性で新規コメントが永久に取りこぼされうるエッジケースを jq で再現確認のうえ修正
+- 修正は既存行を `\n` 分割し各行の最後フィールド (URL) との完全一致 (`index($u) != null`) に置き換える方式を採用。既存 6 テスト + 修正シナリオの単体再現の両方で確認
+- Pre-merge AC 4件・CI 9 ジョブは修正前後とも PASS/SUCCESS のまま変化なし。ポリシー変更 (Step 13) には該当しないため Issue 本文・AC は未更新
 
 ### Deferred Items
 - なし
 
 ### Notes for Next Phase
-- Pre-merge AC 4件 (rubric x3, file_not_contains x1) は本フェーズで目視検証済みで Issue チェックボックスを更新済み。`/review` では念のため再確認を推奨
-- Post-merge AC (observation, event=auto-run) は次回 `/verify` 実行時に別 Issue でのコメント投稿を待って自然検証される想定。今回の PR 内では検証不要
+- Post-merge AC (observation, event=auto-run) は次回 `/verify` 実行時に別 Issue でのコメント投稿を待って自然検証される想定。`/merge` 後の `/verify` で確認すること
 - `#1078` (worktree fresh 作成時の Consumed Comments 追記消失) は本 Issue のスコープ外の別機構の問題として明示的に残置されている
+- review retrospective の Recurring issues に、ID 的トークンの重複判定における `contains()` 部分一致の一般的リスクを記録した。将来 `review-bug`/`skill-dev-recheck.md` の観点追加を検討する際の参考にすること
