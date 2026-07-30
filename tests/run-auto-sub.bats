@@ -568,6 +568,64 @@ MOCK
     [ -f "$SPAWN_RECOVERY_LOG" ]
 }
 
+@test "run-auto-sub: review PENDING (exit 2) then success on retry: recovers without 3-Tier recovery (issue #1115)" {
+    export WHOLEWORK_REVIEW_PENDING_RETRY_SEC=0
+    export WHOLEWORK_REVIEW_PENDING_MAX_RETRIES=2
+
+    cat > "$MOCK_DIR/run-review.sh" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$RUN_REVIEW_LOG"
+count_file="$BATS_TEST_TMPDIR/review-call-count"
+count=0
+[ -f "\$count_file" ] && count=\$(cat "\$count_file")
+count=\$((count + 1))
+echo "\$count" > "\$count_file"
+if [ "\$count" -eq 1 ]; then
+  echo "PENDING: ci not confirmed; skipping review session" >&2
+  exit 2
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/run-review.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[pending] review phase PENDING"* ]]
+    [[ "$output" == *"[pending] review phase completed after PENDING retry"* ]]
+    [ "$(cat "$BATS_TEST_TMPDIR/review-call-count")" -eq 2 ]
+}
+
+@test "run-auto-sub: review PENDING (exit 2) persists past retry limit: falls through to tier1 reconciler (issue #1115)" {
+    export WHOLEWORK_REVIEW_PENDING_RETRY_SEC=0
+    export WHOLEWORK_REVIEW_PENDING_MAX_RETRIES=2
+
+    cat > "$MOCK_DIR/run-review.sh" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$RUN_REVIEW_LOG"
+count_file="$BATS_TEST_TMPDIR/review-call-count"
+count=0
+[ -f "\$count_file" ] && count=\$(cat "\$count_file")
+count=\$((count + 1))
+echo "\$count" > "\$count_file"
+echo "PENDING: ci not confirmed; skipping review session" >&2
+exit 2
+MOCK
+    chmod +x "$MOCK_DIR/run-review.sh"
+
+    # tier1 reconciler reports the phase as complete despite the exhausted PENDING retries
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":true}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"tier1 reconciler"* ]]
+    [ "$(cat "$BATS_TEST_TMPDIR/review-call-count")" -eq 3 ]
+}
+
 @test "run-auto-sub: tier3 skip reveals stray PR: continues to review/merge" {
     cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
 #!/bin/bash

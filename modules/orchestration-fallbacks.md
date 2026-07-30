@@ -558,6 +558,29 @@ See also: `#async-external-commit` (reconcile-first authority — `matches_expec
 
 ---
 
+## review-pending-not-failure
+
+### Symptom
+- `run-review.sh` returns exit code 2 because CI/preview state is not yet confirmed within its timeout, printing `PENDING: ...; skipping review session` and never starting a review session
+- This is an intended non-failure wait state (see #1050), not an anomaly — but a naive 0-vs-nonzero exit code check treats it identically to any other failure
+
+### Applicable Phases
+- review
+
+### Fallback Steps
+1. Sleep `${WHOLEWORK_REVIEW_PENDING_RETRY_SEC:-300}` seconds, then re-run `run-review.sh` with the same arguments
+2. Repeat up to `${WHOLEWORK_REVIEW_PENDING_MAX_RETRIES:-2}` times, stopping early on the first non-2 exit code
+3. If a retry succeeds (exit 0), treat the phase as complete as normal
+
+### Escalation
+- If exit code 2 persists after the retry limit is reached, or the retry returns any other non-zero exit code, proceed to the normal Tier 1/2/3 recovery path for the review phase
+
+### Rationale
+- Introduced in Issue #1115: #1050 added exit code 2 (PENDING) to `run-review.sh` as an intentional third terminal state, but neither `run_phase_with_recovery()` in `scripts/run-auto-sub.sh` nor `skills/auto/SKILL.md` pr route item 8 distinguished it from any other non-zero exit — so a correctly-behaving wrapper could trigger expensive Tier 3 sub-agent diagnosis under a false "review crashed" premise
+- See also #1066 (`wait-ci-checks.sh` bucket-based `ci_result:` reporting, the upstream signal `run-review.sh` PENDING relies on) and #1053 (preview-tier AC fail-open hardening)
+
+---
+
 ## manual-recovery-spec-write
 
 ### Symptom

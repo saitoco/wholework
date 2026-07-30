@@ -748,7 +748,10 @@ run_phase_with_recovery() {
     fi
   fi
 
-  if [[ $exit_code -eq 0 ]]; then
+  # _complete_phase_after_success: shared by the first-try success path and
+  # the PENDING-retry success path below so both get the same silent no-op
+  # anomaly detection (issue #1115 review feedback).
+  _complete_phase_after_success() {
     local anomaly_out
     anomaly_out=$("$SCRIPT_DIR/detect-wrapper-anomaly.sh" --log "$log_file" --exit-code 0 --issue "$issue" --phase "$phase" 2>/dev/null || true)
     if [[ -n "$anomaly_out" ]]; then
@@ -756,7 +759,36 @@ run_phase_with_recovery() {
       echo "$anomaly_out"
     fi
     emit_event "phase_complete" "phase=${phase}"
+  }
+
+  if [[ $exit_code -eq 0 ]]; then
+    _complete_phase_after_success
     return 0
+  fi
+
+  # PENDING pre-check (review phase only): run-review.sh exit code 2 means
+  # CI/preview state is not yet confirmed — an intended non-failure wait
+  # state, not an anomaly. Retry after a delay, bounded, before falling
+  # through to Tier 1/2/3 recovery. See
+  # modules/orchestration-fallbacks.md#review-pending-not-failure
+  if [[ "$phase" == "review" ]] && [[ $exit_code -eq 2 ]]; then
+    local _pending_retry_sec="${WHOLEWORK_REVIEW_PENDING_RETRY_SEC:-300}"
+    local _pending_max_retries="${WHOLEWORK_REVIEW_PENDING_MAX_RETRIES:-2}"
+    local _pending_attempt=0
+    while [[ $exit_code -eq 2 ]] && [[ $_pending_attempt -lt $_pending_max_retries ]]; do
+      _pending_attempt=$((_pending_attempt + 1))
+      echo "${LOG_PREFIX} [pending] review phase PENDING (exit 2); retry ${_pending_attempt}/${_pending_max_retries} after ${_pending_retry_sec}s"
+      sleep "$_pending_retry_sec"
+      set +e
+      run_with_retry_on_kill "$runner_script" "$issue" "$@" > "$log_file" 2>&1
+      exit_code=$?
+      set -e
+    done
+    if [[ $exit_code -eq 0 ]]; then
+      echo "${LOG_PREFIX} [pending] review phase completed after PENDING retry"
+      _complete_phase_after_success
+      return 0
+    fi
   fi
 
   # Tier 1: reconciler (bash, cheap) — completion check

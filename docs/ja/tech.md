@@ -217,6 +217,8 @@ Issue 本文の "Scope" または "Acceptance Criteria" セクションに以下
 | `WHOLEWORK_RETRY_ON_KILL_MAX_SEC` | `300` | `scripts/retry-on-kill.sh` の early-kill ウィンドウ (秒)。run-*.sh ラッパーが exit 137/143 でこのウィンドウ内に終了した場合、自動で 1 回リトライする。テストでは `0` を設定して late-kill (no-retry) ブランチを強制可能。最小 `WATCHDOG_TIMEOUT` (merge フェーズで 600s) より厳密に小さい値を維持し、watchdog hang-kill が自動リトライされないようにする必要がある。 |
 | `WHOLEWORK_YML` | `${CLAUDE_PROJECT_DIR:-}/.wholework.yml` | `scripts/hook-rename-on-auto.sh` が参照する `.wholework.yml` のパス。`CLAUDE_PROJECT_DIR` から導出され、オペレーター override パターン (`${WHOLEWORK_YML:-...}`) ではない (スクリプトが直接代入)。 |
 | `WHOLEWORK_PREVIEW_TIMEOUT_SEC` | `600` | `scripts/run-review.sh` の PR preview デプロイ待機ポーリングの最大待機秒数 (`capabilities.pr-preview: true` のプロジェクトのみ)。GitHub Deployments API で PR ブランチの最新デプロイ `state` を確認する。タイムアウト内に `success` が確認できない場合、`run-review.sh` は review セッションを起動せずに `PENDING` (exit code 2) で終了する。 |
+| `WHOLEWORK_REVIEW_PENDING_RETRY_SEC` | `300` | `run-review.sh` が `PENDING` (exit code 2) で終了した後、review フェーズを再試行するまでの sleep 秒数。`scripts/run-auto-sub.sh` の `run_phase_with_recovery()` と `skills/auto/SKILL.md` pr route item 8 が参照する。`modules/orchestration-fallbacks.md#review-pending-not-failure` を参照。 |
+| `WHOLEWORK_REVIEW_PENDING_MAX_RETRIES` | `2` | `run-review.sh` が `PENDING` (exit code 2) で終了した後、通常の Tier 1/2/3 リカバリ経路にフォールスルーするまでの上限再試行回数。参照元は `WHOLEWORK_REVIEW_PENDING_RETRY_SEC` と同じ。 |
 
 ### Capability フラグ
 
