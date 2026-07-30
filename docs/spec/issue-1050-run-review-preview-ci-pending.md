@@ -167,3 +167,36 @@ fi
 
 ### Acceptance criteria verification difficulty
 - Nothing to note — Pre-merge AC 3件はいずれも `rubric` / `grep` で明確に PASS 判定でき、UNCERTAIN は発生しなかった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- リファインメント時にタイトルが「preview ビルド未完了時」→「preview/CI 待機未確定時」に更新された。#1066 で `wait-ci-checks.sh` を bucket ベースに直した結果、問題の範囲が preview ビルド固有ではなく CI 待機全般に及ぶことが明確になったためで、同一 batch 内の先行 Issue の成果がスコープ定義に反映された good case。
+
+#### spec / code
+- 2 経路 (CI 待機未確定 / preview 未確定) を単一の `_pending_reason` 変数に集約し、終了処理を 1 箇所 (L151-159) にまとめる構成になっており、分岐の見通しが良い。preview 経路を「CI 側が確定済みの場合のみ実行」とガードしている点も、二重待機を避ける設計として妥当。
+- Deviations / Rework とも N/A。
+
+#### review
+- `--light` で実施。修正コミット 2 件が追加され silent no-op なし (comments 0→1、reviews 0→1、`matches_expected: true`)。
+
+#### merge
+- CI 7 SUCCESS / 2 実行中の状態から `run-merge.sh` が完了まで待機して squash merge。conflict なし。
+
+#### verify
+- pre-merge 3 件すべて PASS、FAIL / UNCERTAIN なし、auto-retry 発火なし。
+- post-merge の opportunistic 1 件は未チェックのまま `phase/verify` 留置 (設計どおり)。
+
+### Improvement Proposals
+
+- **`run-review.sh` が新設した `EXIT_CODE=2` (PENDING) を、呼び出し側が他の非 0 終了と区別していない**: 本 PR は preview/CI 待機が確定しない場合に `PENDING: ...; skipping review session` を出力して `EXIT_CODE=2` で終了する経路を追加した (L151-159)。これは「失敗」ではなく「まだ判定できないので待つべき」という**第三の終了状態**である。しかし `scripts/run-auto-sub.sh` と `skills/auto/SKILL.md` を検索した範囲では、exit code 2 を特別扱いする分岐は存在しない (auto 側の `PENDING` 言及は batch 完了レポートの `PENDING_LIST` = `phase/verify` ラベル集計で、本件とは無関係)。
+  - **想定される経路**: `/auto` の pr route step 8 は「review が失敗したら completion check を実行し、`matches_expected: true` なら成功に上書き、そうでなければ Step 6 (3-Tier recovery) へ」と規定している。PENDING 終了時は review セッション自体が起動していないため Review Response Summary は当然存在せず、Tier 1 は `matches_expected: false` を返す。Tier 2 の anomaly detector にも該当パターンは登録されていないため、Tier 3 (recovery sub-agent) まで進む。**意図どおりに動作した結果が、復旧機構を起動させる**という逆転が起きうる。
+  - **本 Issue の AC との関係**: 本 Issue の AC 3 件は wrapper 側の挙動のみを対象としており、いずれも PASS。呼び出し側の対応はスコープ外であり、AC の不備ではない。
+  - **対応方針 (案)**: (a) `/auto` の review フェーズ分岐に exit code 2 の明示的なハンドリングを追加し、3-Tier recovery に流さず「CI/preview 確定待ちのため再実行が必要」として扱う (再実行は待機時間を置いてから)。(b) `reconcile-phase-state.sh review --check-completion` に PENDING 状態を表現できる第三の返り値を持たせる。(c) Tier 2 の `detect-wrapper-anomaly.sh` に `review-pending-not-failure` パターンを登録し、fallback catalog 側で「失敗ではない」と判定して再実行に導く。(a) が最も直接的だが、`run-code.sh` など他 wrapper が将来同じ PENDING セマンティクスを持つ場合を考えると (b) の方が拡張性がある。
+
+### 観察
+
+- 本 Issue もフェーズ分割方式 (issue / spec / code / review / merge を個別のバックグラウンド呼び出しで起動) で **kill ゼロ完走**。batch 全体での集計は「分割: 完走 6/6 (#1051, #1054, #1052, #1053, #1050 と #1066 の途中から)、連結 (`run-auto-sub.sh`): #1066 で kill 3 回」。Size M の pr route が 2 件 (#1053, #1050) とも分割で完走したことで、#1066 の kill が Size L 固有ではなく実行方式に依存する可能性が補強された。ただし依然として交絡は残る (#1066 のみ Size L)。
+- preview 系の多層防御が本 batch で 3 層とも揃った: #1066 (上流 — code がビルド成功を保証)、#1050 (中間 — review が未確定なら PENDING で止まる)、#1053 (下流 — verify が preview tier AC を fail-open しない)。
