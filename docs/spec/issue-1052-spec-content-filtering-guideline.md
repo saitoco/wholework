@@ -25,3 +25,6 @@ XS patch route のため `/spec` フェーズを経ておらず、本ファイ�
 - Size XS のためサブIssue分割は評価不要 (非対話モードでも high-stakes decision として一律スキップ対象)。
 - Blocked-by 関係は検出されなかった (`gh-check-blocking.sh` exit 0)。
 - Background 内の事実主張 (content filtering インシデントの記述) はコードベース照合対象パターン (生成/呼び出し/依存の主張) に該当せず、advisory チェックはスキップした。
+
+## Consumed Comments
+No new comments since last phase.
