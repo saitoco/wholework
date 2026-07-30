@@ -62,3 +62,34 @@ No new comments since last phase.
 - retry 成功時に Tier 1/2/3 と同様の `emit_event "recovery" ... "tier=N"` を追加することも検討したが、`get-auto-session-report.sh` の集計が `tier == "1"/"2"/"3"` に固定されており、新しい tier 値を追加するには集計スクリプト側の変更も必要になる。3 件の受入条件のいずれにも要求されていないため、本 Issue のスコープ外として意図的に見送った (observability 拡張は別 Issue の対象)。
 - `scripts/detect-wrapper-anomaly.sh` への新規パターン登録は行わない。exit code 2 は既に一意で曖昧さのないシグナルであり (external-kill pre-check のように exit code 137/143/unknown を log/event と突き合わせて判別する必要がある曖昧なケースとは異なる)、専用の検出スクリプトを追加する理由がない。
 - bats テスト入力形式: `tests/run-auto-sub.bats` の新規テストは、既存の `$MOCK_DIR/run-review.sh` モックパターン (`WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"`) を踏襲する。retry の 1 回目と 2 回目で異なる exit code を返す必要があるため、モックスクリプト内でカウンタファイル (例: `$MOCK_DIR/review-call-count`) をインクリメントし、呼び出し回数に応じて exit code を切り替える形にする。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜5 をすべて Spec 記載どおりの箇所・構成で実装した。`run_phase_with_recovery()` への挿入位置 (現行L760 `fi` 直後・L762 `# Tier 1: reconciler` 直前) は実装時点でも一致していた
+
+### Design Gaps/Ambiguities
+- N/A — 実装中に Spec の記述で解釈に迷う箇所はなかった
+
+### Rework
+- N/A — 初回実装で bats テスト (新規2件・既存77件) と `bats tests/` フルスイート (1293件) が一発 PASS した。手戻りは発生していない
+
+### Minor Implementation Note
+- bats テストのカウンタファイルパスは Spec の例示 (`$MOCK_DIR/review-call-count`) ではなく `$BATS_TEST_TMPDIR/review-call-count` を使用した。Spec の記述が「例:」であり拘束的でないため、テスト間の独立性がより明確な `BATS_TEST_TMPDIR` を選んだ (`MOCK_DIR` は teardown で `rm -rf` される一時ディレクトリであり、カウンタ専用の状態を置く意味的な適切さの観点で `BATS_TEST_TMPDIR` を優先)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 案 A (呼び出し側への直接ハンドリング) を Spec どおり採用し、`run_phase_with_recovery()` と `skills/auto/SKILL.md` pr route item 8 の両方に review 限定の PENDING pre-check を実装した
+- PENDING pre-check は `phase == "review"` に明示的に限定し、code/merge 共通の 3-Tier recovery ロジックには手を入れていない (他の run-*.sh は exit code 2 を使わないことを確認済み)
+- リトライ間隔/上限のデフォルト値 (300秒 / 2回) は既存の `WHOLEWORK_RETRY_ON_KILL_MAX_SEC` 系のスケール感を踏襲した
+
+### Deferred Items
+- Post-merge AC (`CI check-suite が作成されない PR、または preview が確定しない PR に対して /auto を実行し...確認する`, `verify-type: opportunistic`) は未検証のまま — 実際の PENDING 発生条件下での `/auto` 実行確認が必要
+- retry 成功時の `emit_event "recovery" ... "tier=N"` 相当の observability 拡張は、本 Issue のスコープ外として意図的に見送った (Notes 参照)
+
+### Notes for Next Phase
+- `/review` は 3件の pre-merge rubric AC が実装で満たされていることを、`git diff` (scripts/run-auto-sub.sh, skills/auto/SKILL.md, scripts/run-review.sh, modules/orchestration-fallbacks.md) から改めて確認できる
+- bats フルスイート (1293 tests) は本実装時点で全件 PASS 済み。CI でも同様に PASS する見込み
+- 新規追加した `WHOLEWORK_REVIEW_PENDING_RETRY_SEC` / `WHOLEWORK_REVIEW_PENDING_MAX_RETRIES` は `docs/tech.md` Environment Variables 表と `docs/ja/tech.md` に反映済み (翻訳同期済み)
