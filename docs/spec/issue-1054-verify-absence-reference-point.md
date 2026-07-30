@@ -96,3 +96,39 @@
 ### Scope Assessment
 
 Size=XS のため、サブ Issue 分割の評価対象外 (非対話モードでも High-Stakes スキップの判定に該当しない規模)。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 射程拡大 (テーブル・集合の vacuous truth を含めるか) の判断を、コメント側が既に解決策の骨子を提示していたことを根拠に auto-resolve できた。Auto-Resolve Log に採用理由と見送った代替案の両方が残っており、後から覆せる形になっている。
+- `## 関連` の downstream Issue プレースホルダーが未解消だった点を検出し、リポジトリ内を検索したうえで「特定不能」と明記する形に置き換えている。プレースホルダーを放置すると壊れたリンクとしてレンダリングされるため、妥当な処理。
+
+#### spec
+- Spec の element list (a)-(d) が実装内容に 1:1 で対応しており、Design Gaps は N/A。`参照点` / `母集団` を literal な inline gloss として置く設計が、2 つの `grep` AC をそのまま満たす形になっていた。AC と実装の対応が設計時点で担保されていた good case。
+
+#### code
+- Deviations / Design Gaps / Rework すべて N/A。single-pass edit で pre-merge AC 3 件が初回評価で PASS。
+- 節番号 (`### 26.`) の挿入位置に採番衝突がないことを実装時に確認しており、後続節の繰り上げが発生しなかった。
+
+#### review
+- patch route (XS) のため review フェーズなし。
+
+#### merge
+- patch route のため merge フェーズなし (main 直コミット)。
+
+#### verify
+- pre-merge 3 件すべて PASS、FAIL / UNCERTAIN なし、auto-retry 発火なし。
+- post-merge の opportunistic 1 件は未チェックのまま `phase/verify` 留置 (設計どおり)。
+
+### Improvement Proposals
+
+- **`run-auto-sub.sh` の spec dispatch が Size を見ておらず、`/auto` の「XS は spec 不要」規定と食い違う**: `skills/auto/SKILL.md` Step 3 は単一 Issue 経路について「**Size is XS**: Spec not needed — skip spec and proceed to Step 4」と明記している。一方 `scripts/run-auto-sub.sh` (L828-837) の spec dispatch 条件は「`phase/ready` が無く、かつ `phase/code` / `phase/review` / `phase/merge` / `phase/verify` / `phase/done` のいずれも無い」だけで、**Size を判定材料に含めていない**。このため `--batch` / XL 経路では XS Issue でも spec フェーズが走る。本 Issue で実測: Size=XS かつ `phase/issue` の状態で `run-auto-sub.sh 1054` を実行したところ、`docs/spec/issue-1054-verify-absence-reference-point.md` が作成された (commit `7ebce2dd`)。
+  - **影響 1 (前提の齟齬)**: `skills/auto/SKILL.md` Step 4b は「The XS patch route does not go through the `/spec` phase, so no Spec file exists」という前提で、Spec を新規作成して issue retrospective を転記する手順になっている。batch 経路ではこの前提が成り立たない。今回は Step 4b の冪等性チェック (Spec に `## Issue Retrospective` 見出しがあるか) が効いて二重転記は避けられたが、前提と実態のずれは残る。
+  - **影響 2 (実行コスト)**: XS Issue に対して不要な spec フェーズ (`claude -p` の 1 セッション) が走る。batch で XS を多数処理する場合に累積する。
+  - **判断が必要な点**: どちらを正とするか。(a) `run-auto-sub.sh` に Size 判定を足して規定に合わせる、(b) 規定側を「XS でも spec を走らせる」に改め Step 4b を「Spec が無ければ作る」から「Spec が無ければ作る、あれば追記する」に明確化する、(c) XS の spec を任意とし設定キーで制御する。なお本 Issue に限れば Spec があったことで Code Retrospective / Phase Handoff / issue retrospective 転記先が確保され、`/verify` の情報源としても有用だったため、(b) にも実利はある。
+
+### 観察 (Issue 化は保留)
+
+- 本 Issue の実行は kill を含むオーケストレーション異常がゼロで、issue → code → verify が素直に完走した。#1066 (Size L、kill 3 回) との対比から、フェーズ数と 1 フェーズあたりの実行時間が短いほど完走率が高いという既存の観察を補強するデータ点になる。
