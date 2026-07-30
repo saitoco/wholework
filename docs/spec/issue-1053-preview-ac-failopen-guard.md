@@ -62,3 +62,41 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue` フェーズの Issue Retrospective。Background の技術的記述 (`resolve-preview-ac-fallback.sh` の fail-open 挙動、`l0-surfaces.md` の `ac=none` sentinel 設計、`reconcile-phase-state.sh` の Review Response Summary 判定ロジック、`orchestration-fallbacks.md` の `review-completion-false-negative` エントリ) を実ファイルで確認済みと報告。`skills/verify/SKILL.md` に現時点で "Review Response Summary" という文字列が存在しないことも確認済み (受入条件2 は未実装 → 実装後 PASS の健全な pre-merge チェックとして機能する)。AC3 に補助的な `section_contains` verify command (`--light` キーワード) を追加した Auto-Resolve Log を記録済み。本 Spec のコードベース調査でも同内容を独立に再確認した (矛盾なし)。 — https://github.com/saitoco/wholework/issues/1053#issuecomment-5132345005
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1〜3 は Spec の記載通りに実装した (Step 5 の新設パラグラフ位置・per-AC 分岐構造・`orchestration-fallbacks.md` Step 4 への追記位置を含め、順序・範囲とも設計通り)。
+
+### Design Gaps/Ambiguities
+
+- `docs/guide/customization.md` (Changed Files に「安全網の追記可否は `/code` が最終判断する」と明記されていた任意項目) は更新しないと判断した。理由: 同ファイルは `PREVIEW_URL`/`type=preview-ac-unverified` marker ベースの既存 fallback 分岐 (auto/manual サブケース) のみを説明しており、本 Issue が追加した「marker 自体が無い (=summary 不在) ケースの安全網」を書き足すと当該分岐の説明がより正確になるが、AC の verify command はいずれもこのファイルを対象にしておらず、追記しなくても受入条件は full に満たせる。スコープを Changed Files が要求する最小限に留め、ドキュメントの完全性より diff の小ささを優先した。
+
+### Rework
+
+- N/A — 手戻りは発生しなかった。
+
+## Autonomous Auto-Resolve Log
+
+- **Step 3 の `phase/ready` ラベル欠如を許容して実装を継続** — reason: Issue #1053 のラベルは `phase/ready` ではなく `phase/code` (かつ Spec ファイルは既に完全な内容で存在) だった。`reconcile-phase-state.sh code-pr 1053 --check-precondition` も `matches_expected:false` (`phase/ready` 欠如が理由) を返したが、`--non-interactive` モードのポリシー (`modules/ambiguity-detector.md` Three-Tier Policy の auto-resolve) に従い、warn のみで続行した。ブランチ・worktree・PR は事前に存在せず (`git branch -a` / `git worktree list` / `gh pr list` で確認済み)、コミット履歴も Spec 作成コミットのみだったため、以前の `/code` 実行が Step 4 (ラベル遷移) 直後に中断した状態と推測される。Spec 本文は完全であり要件解釈に不確実性はないため、実装への影響はない。
+  - Other candidates: hard-error abort して `/spec` の再実行を促す (Spec は既に完全な内容で存在しており、再実行は無駄な手戻りになるため見送り)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+
+- `/verify` Step 5 に「script 出力が空のときに限り 1 回だけ `reconcile-phase-state.sh review --check-completion` を呼ぶ」という review completion check を新設し、`REVIEW_SUMMARY_FOUND` を fail-closed (true 以外はすべて false 扱い) で決定する設計を採用した。`resolve-preview-ac-fallback.sh` 自体は変更せず (Spec Notes の設計方針通り)、判定の追加シグナルを `/verify` 側の別スクリプト呼び出しに閉じ込めた。
+- SKIPPED 判定条件を「script 出力が非空かつ index 不在」または「script 出力が空かつ `REVIEW_SUMMARY_FOUND=true`」の OR 条件に書き換え、それ以外のケース (marker 由来の UNCERTAIN と Review Response Summary 不在由来の UNCERTAIN) は同じ verify-command/`PRODUCTION_URL` 分岐ロジックを共有しつつ、note 文言のみ書き分けて両者を区別可能にした。
+- `tests/verify.bats` には既存の Step 5 構造テスト (grep ベース) と同じパターンで 1 件追加するに留め、`reconcile-phase-state.sh` の呼び出しをモックした振る舞いテストは追加しなかった (既存の Step 5 テスト群も grep アサーションのみで統一されており、パターンを踏襲)。
+
+### Deferred Items
+
+- Post-merge の observation AC (`/review` が異常終了した Issue で `/verify` を実行した際、preview tier AC が SKIPPED にならないことの確認) は実環境での `/review` 異常終了再現が必要なため、`/verify` フェーズでの opportunistic 観察に委ねる。
+- `docs/guide/customization.md` への安全網追記 (任意項目、Design Gaps/Ambiguities 参照) は本 PR では実施しなかった。将来的にこのファイルの preview-tier AC fallback 説明を更新する機会があれば、summary 不在ケースの説明も合わせて追記するとよい。
+
+### Notes for Next Phase
+
+- `/review` は本 PR 自体が `skills/verify/SKILL.md` の変更であるため、Step 5 の新しい分岐ロジック (SKIPPED 条件の OR 条件化、note 文言の書き分け) を実際のコードパスとして注意深くレビューすること。
+- `/merge` → `/verify` では、本 Issue 自体には `ac-tier: preview` の AC が存在しないため、Step 5 の新ロジックは本 Issue の `/verify` 実行では経路を通らない (ロジックの効果は他の preview-tier AC を持つ Issue で発現する)。
