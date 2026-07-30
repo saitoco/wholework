@@ -77,19 +77,32 @@ No new comments since last phase.
 ### Minor Implementation Note
 - bats テストのカウンタファイルパスは Spec の例示 (`$MOCK_DIR/review-call-count`) ではなく `$BATS_TEST_TMPDIR/review-call-count` を使用した。Spec の記述が「例:」であり拘束的でないため、テスト間の独立性がより明確な `BATS_TEST_TMPDIR` を選んだ (`MOCK_DIR` は teardown で `rm -rf` される一時ディレクトリであり、カウンタ専用の状態を置く意味的な適切さの観点で `BATS_TEST_TMPDIR` を優先)
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- なし。Spec の Implementation Steps 1〜5 と実装 (`scripts/run-auto-sub.sh`, `skills/auto/SKILL.md`, `scripts/run-review.sh`, `modules/orchestration-fallbacks.md`, `docs/tech.md` 系) は構造・挿入位置とも一致していた。
+
+### Recurring issues
+
+- review-light が検出した 3 件の指摘 (SHOULD 1 / CONSIDER 2) はすべて同一の根本原因に起因していた: 新設した PENDING retry 成功パス (`scripts/run-auto-sub.sh` L780-784) が、既存の初回成功パス (L751-759) が持つ副作用 (anomaly 検出・`_RETRY_ON_KILL_FIRED` 記録・ログ保持) の一部を引き継いでいなかった。「既存の成功パスと並行する新しい成功パスを追加する際、既存パスの副作用を意図的に洗い出して引き継ぐか判断する」というチェック観点は、今回のように単一 PR 内でも複数件検出されるパターンであり、review-bug/review-spec の汎用チェックリストに追加する価値がありそうだが、本 review フェーズでは Issue 起票は行わず本記録に留める (Issue 起票は `/verify` で集約)。
+
+### Acceptance criteria verification difficulty
+
+- なし。3件の rubric AC はいずれも文言が明確で、PR diff を読むだけで PASS/FAIL を機械的に判定できた。UNCERTAIN は発生していない。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 案 A (呼び出し側への直接ハンドリング) を Spec どおり採用し、`run_phase_with_recovery()` と `skills/auto/SKILL.md` pr route item 8 の両方に review 限定の PENDING pre-check を実装した
-- PENDING pre-check は `phase == "review"` に明示的に限定し、code/merge 共通の 3-Tier recovery ロジックには手を入れていない (他の run-*.sh は exit code 2 を使わないことを確認済み)
-- リトライ間隔/上限のデフォルト値 (300秒 / 2回) は既存の `WHOLEWORK_RETRY_ON_KILL_MAX_SEC` 系のスケール感を踏襲した
+- review-light (light mode, 4観点統合) を実行し、SHOULD 1件・CONSIDER 2件を検出。SHOULD (PENDING retry 成功パスが anomaly 検出をスキップする非対称性) は共通処理を `_complete_phase_after_success` ヘルパーに切り出す形で修正し、両成功パスに同じ副作用を持たせた
+- CONSIDER 2件 (`_RETRY_ON_KILL_FIRED` の PENDING retry ループ内非対応、`$log_file` の PENDING retry 間上書き) は本 Issue の受入条件範囲外の observability/診断性向上に留まるため見送り、PR 上にコメントとして記録するに留めた
+- 3件の pre-merge rubric AC はすべて PASS。CI (9 ジョブ) もすべて SUCCESS
 
 ### Deferred Items
-- Post-merge AC (`CI check-suite が作成されない PR、または preview が確定しない PR に対して /auto を実行し...確認する`, `verify-type: opportunistic`) は未検証のまま — 実際の PENDING 発生条件下での `/auto` 実行確認が必要
-- retry 成功時の `emit_event "recovery" ... "tier=N"` 相当の observability 拡張は、本 Issue のスコープ外として意図的に見送った (Notes 参照)
+- Post-merge AC (CI check-suite 未作成 / preview 未確定の PR での `/auto` 実行確認, verify-type: opportunistic) は引き続き未検証 — `/verify` または実運用での偶発的発生を待つ
+- CONSIDER 2件 (`_RETRY_ON_KILL_FIRED` 非対応、ログ上書き) は本 Issue のスコープ外として見送り。将来 observability/診断性の要求が高まった場合に別 Issue で対応を検討
 
 ### Notes for Next Phase
-- `/review` は 3件の pre-merge rubric AC が実装で満たされていることを、`git diff` (scripts/run-auto-sub.sh, skills/auto/SKILL.md, scripts/run-review.sh, modules/orchestration-fallbacks.md) から改めて確認できる
-- bats フルスイート (1293 tests) は本実装時点で全件 PASS 済み。CI でも同様に PASS する見込み
-- 新規追加した `WHOLEWORK_REVIEW_PENDING_RETRY_SEC` / `WHOLEWORK_REVIEW_PENDING_MAX_RETRIES` は `docs/tech.md` Environment Variables 表と `docs/ja/tech.md` に反映済み (翻訳同期済み)
+- `/merge` 実行前に fix commit (`9494bef2`) が CI を再度通過することを確認すること (bats フルスイート・validate-skill-syntax は review フェーズ内でローカル実行済みで PASS 済み)
+- Post-merge AC は merge 後も未検証のまま残るため、`/verify` はこの1件が UNCERTAIN/PENDING のまま残る想定で処理すること
