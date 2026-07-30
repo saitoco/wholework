@@ -124,7 +124,13 @@
 
 #### verify
 - Pre-merge 5 件すべて PASS。rubric の根拠確認では記述の存在だけでなく、`modules/browser-adapter.md` Step 3 / `modules/lighthouse-adapter.md` Step 2 という相互参照先が実在しマスキング記述 (`mask as ****`) も一致することまで突き合わせた
-- Post-merge 2 件は Basic Auth 保護下の preview 環境とその認証情報を必要とし、wholework 自身のリポジトリには該当環境がないため検証不能。#1051 と同一構造であり、この種の AC は downstream 環境でしか閉じられない
+- Post-merge 2 件は Basic Auth 保護下の preview 環境とその認証情報を必要とし、wholework 自身のリポジトリには該当環境がないため初回 `/verify` (2026-07-29) 時点では検証不能だった。#1051 と同一構造であり、この種の AC は downstream 環境でしか閉じられない
+- **2026-07-30 追記 — downstream 実測により post-merge 2 件とも PASS 確定**: 起票元の downstream プロジェクトで実地検証が行われ、結果が Issue コメント (issuecomment-5125089305) として報告された。これを 2 回目の `/verify` が first-class 入力として消費し、AC 6/7 をチェック済みにして `phase/done` へ遷移した
+  - AC 6: Amplify PR preview (`pr-352`) で認証なし 401 / `-u` 付き 200 を確認したうえ、`ac-tier: preview` の `html_check` AC 2 件が両方 PASS。401 のボディがセレクタマッチャに渡らず実 HTML に対する判定が返ることを実機で確認。対応前は同じ AC が 401 により恒常的に FAIL / UNCERTAIN だった
+  - AC 7: 環境変数が関与しない本番 URL (認証不要) 経路で同じ `html_check` が PASS。`--config` の挿入が両変数セット時のみの条件付きであることが機能していると確認
+  - 設計判断 (条件付き `--config` 注入 / 一時ファイル + マスキング / `ps` 非露出) が end-to-end で裏付けられた。`/review` / `/verify` の実行ログ・PR コメント・Issue コメントのいずれにも認証情報は出力されなかった
+  - Spec § Notes が予告していた「safe/full mode 両対応が本 Issue の核心」という判断も、`/review` の safe mode 実行で preview URL の AC が PASS したことで裏付けられた
+  - 本 Issue と #1069 (combinator 対応) が揃って初めて preview URL に対する DOM 順序判定 AC が機械化できた、という当初の想定どおりの結果になった
 
 ### Improvement Proposals
 
