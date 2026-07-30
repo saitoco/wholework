@@ -83,20 +83,33 @@
   - Other candidates: hard-error abort して `/spec` の再実行を促す (Spec は既に完全な内容で存在しており、再実行は無駄な手戻りになるため見送り)
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- `/verify` Step 5 に「script 出力が空のときに限り 1 回だけ `reconcile-phase-state.sh review --check-completion` を呼ぶ」という review completion check を新設し、`REVIEW_SUMMARY_FOUND` を fail-closed (true 以外はすべて false 扱い) で決定する設計を採用した。`resolve-preview-ac-fallback.sh` 自体は変更せず (Spec Notes の設計方針通り)、判定の追加シグナルを `/verify` 側の別スクリプト呼び出しに閉じ込めた。
-- SKIPPED 判定条件を「script 出力が非空かつ index 不在」または「script 出力が空かつ `REVIEW_SUMMARY_FOUND=true`」の OR 条件に書き換え、それ以外のケース (marker 由来の UNCERTAIN と Review Response Summary 不在由来の UNCERTAIN) は同じ verify-command/`PRODUCTION_URL` 分岐ロジックを共有しつつ、note 文言のみ書き分けて両者を区別可能にした。
-- `tests/verify.bats` には既存の Step 5 構造テスト (grep ベース) と同じパターンで 1 件追加するに留め、`reconcile-phase-state.sh` の呼び出しをモックした振る舞いテストは追加しなかった (既存の Step 5 テスト群も grep アサーションのみで統一されており、パターンを踏襲)。
+- SHOULD 指摘 (Spec Implementation Step 1 の「書き換え」指示が実装では削除のみに留まっていた点) を `/review` 側で修正し、`resolve-preview-ac-fallback.sh` 自体が失敗した場合も同じ fail-closed パスを経由する旨を `skills/verify/SKILL.md` Step 5 に追記した。修正内容は既存ロジックの説明補足のみで、挙動・設計方針の変更を伴わないため Step 13 (Acceptance Criteria Consistency Check) はスキップと判断した。
+- CONSIDER 指摘 (`--base` override 時の `PR_NUMBER` 未設定パスの未文書化) は、実行時に `REVIEW_SUMMARY_FOUND=false` の fail-closed パスへ安全に縮退することを確認済みであり、機能的な問題がないため見送った。
 
 ### Deferred Items
 
-- Post-merge の observation AC (`/review` が異常終了した Issue で `/verify` を実行した際、preview tier AC が SKIPPED にならないことの確認) は実環境での `/review` 異常終了再現が必要なため、`/verify` フェーズでの opportunistic 観察に委ねる。
-- `docs/guide/customization.md` への安全網追記 (任意項目、Design Gaps/Ambiguities 参照) は本 PR では実施しなかった。将来的にこのファイルの preview-tier AC fallback 説明を更新する機会があれば、summary 不在ケースの説明も合わせて追記するとよい。
+- Post-merge の observation AC (`/review` が異常終了した Issue で `/verify` を実行した際、preview tier AC が SKIPPED にならないことの確認) は実環境での `/review` 異常終了再現が必要なため、`/verify` フェーズでの opportunistic 観察に委ねる (code phase からの持ち越し)。
+- `docs/guide/customization.md` への安全網追記 (任意項目) は本 PR では実施しなかった (code phase からの持ち越し、変更なし)。
 
 ### Notes for Next Phase
 
-- `/review` は本 PR 自体が `skills/verify/SKILL.md` の変更であるため、Step 5 の新しい分岐ロジック (SKIPPED 条件の OR 条件化、note 文言の書き分け) を実際のコードパスとして注意深くレビューすること。
 - `/merge` → `/verify` では、本 Issue 自体には `ac-tier: preview` の AC が存在しないため、Step 5 の新ロジックは本 Issue の `/verify` 実行では経路を通らない (ロジックの効果は他の preview-tier AC を持つ Issue で発現する)。
+- CI は全 5 種のジョブ (DCO / Run bats tests / Validate skill syntax / Forbidden Expressions check / macOS shell compatibility) が SUCCESS。`/merge` 実行時に追加の懸念事項はない。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 軽微な乖離を1件検出: Spec の Implementation Step 1 は「`resolve-preview-ac-fallback.sh` 自体が失敗した場合も fail-open で空を返す」という既存の一文を、削除ではなく `REVIEW_SUMMARY_FOUND=false` 経由の fail-closed パスに倒れる旨へ**書き換える**よう明示的に指示していたが、実装では単純削除のみが行われ、置き換え相当の説明が追加されていなかった。Code Retrospective の「Deviations from Design: N/A」という自己申告はこの点を見落としていた。実行時の挙動自体は正しく (どちらのスクリプトが失敗しても同じ fail-closed パスを通る) 機能バグではなかったが、Spec の「書き換え」指示が「削除」として実装され、かつ自己レトロスペクティブでも検知されなかった点は、`/review` 側の独立検証 (review-light agent) が有効に機能した事例として記録する。SHOULD として指摘し、`/review` 側で修正済み。
+
+### Recurring issues
+
+- Nothing to note — 検出した2件の指摘 (SHOULD 1件・CONSIDER 1件) はいずれも本 PR 固有の内容であり、ワークフロー改善を要する反復パターンは見られなかった。
+
+### Acceptance criteria verification difficulty
+
+- Nothing to note — Pre-merge AC 4件 (rubric 2件・grep 1件・section_contains 1件) はいずれも明確に PASS 判定でき、UNCERTAIN や verify command の不備は発生しなかった。
