@@ -62,6 +62,39 @@ Out of Scope に記載の通り、observation scan の dispatch fan-out 制御 (
 ## Consumed Comments
 No new comments since last phase.
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 非対話モードで曖昧点 2 件 (横断監査のスコープ、Proposal A の適用範囲) を自動解決し、AC テキストを変更せずに `## Auto-Resolved Ambiguity Points` へ記録した。AC を書き換えずに判断だけを記録する運用が機能している。
+- post-merge の observation AC に意図的に `config=` を付けていない点が自己整合的だった。本 AC の観測対象は「ゲート機構そのものの挙動」であり、特定の設定に依存しないため無条件マッチが正しい。`config=` を付けるべき AC と付けるべきでない AC の区別が、本 Issue 自身の AC で実演されている。
+
+#### spec
+- Changed Files に「Issue #797 body (GitHub メタデータ、リポジトリファイルではない)」を明示的に区別して記載しており、operate route 判定 (`## Changed Files` にリポジトリファイルがあるか) が正しく patch route へ倒れた。GitHub メタデータ変更を含む Issue で route 判定を誤らせない書き方の good example。
+- spec フェーズの worktree merge で ff-only 失敗が発生した (並行セッションの #1107 コミットが main を進めたため)。`modules/orchestration-fallbacks.md#ff-only-merge-fallback` の手順 (worktree ブランチを origin/main に rebase → 再マージ) に従って `/spec` 自身が解消し push まで完了している。この復旧は `## Auto Retrospective` に記録されていないため、本節に記録する。
+
+#### code
+- fixup/amend パターンなし、Rework は N/A。Implementation Steps 1–3 を設計どおりに実装。
+- 横断監査 (対象 20 Issue / 21 件の observation AC) を実施し、該当が #797 のみであることを確認したうえで `config=` を付与している。監査結果を Issue コメントとして残したため、AC1 の rubric 判定が機械的に可能になった。
+- `bats tests/` 全 1283 件 PASS。
+
+#### review
+- patch route のため `/review` は実行されていない (Size S)。
+
+#### merge
+- patch route のため `/merge` は実行されていない。main への直接コミット (`c1e38064`)。
+
+#### verify
+- post-merge の observation AC を **本セッション内で即座に PASS 判定できた**。`scripts/opportunistic-search.sh --event auto-run` が `observation-trigger.sh` の内部で使われる検索そのもの (`observation-trigger.sh:64,66`) であり、notification 投稿は `observation-trigger.sh:79` 側にしかないため、副作用なしでゲート結果を実測できた。実装前 11 件 → 実装後 9 件、#797 が除外されることを確認。
+- ただしこの判定手順は SKILL に明文化されていない。`modules/verify-executor.md:244` の verify-type 表は `observation` を「**Skip during normal `/verify` run**」と規定し、常に SKIPPED として記録するよう指示している。一方 `scripts/observation-trigger.sh:79` は event 発火時に「Run `/verify N` to verify the condition and update the checkbox」というコメントを投稿する。**event 発火後に `/verify` を実行しても、executor の規定に従う限り SKIPPED にしかならない**という矛盾がある。
+- 直前のセッションで observation-scan がマッチした 11 件に `/verify` を順次実行した際も、この矛盾のため各 AC の評価手順を都度即興で組み立てる必要があった。
+
+### Improvement Proposals
+
+- **observation AC の評価手順が `/verify` に定義されていない**。`modules/verify-executor.md:244` は `observation` を「Skip during normal `/verify` run」と規定し無条件に SKIPPED とするが、`scripts/observation-trigger.sh:79` は event 発火時に「Run `/verify N` to verify the condition and update the checkbox」と案内する。両者が矛盾しており、event 発火後に `/verify` を実行しても規定どおりなら checkbox は永久に更新されない。`/verify` に「対象 AC の `event=` が既に発火している場合は SKIPPED にせず、当該 event 発火時の実行内容と照合して PASS/FAIL/UNCERTAIN を判定する」分岐を追加し、判定に使える証拠 (直近の `/auto` 実行ログ、`events.jsonl`、read-only な `opportunistic-search.sh` の結果など) を列挙すべき。発火済みかどうかは Step 4 の comment consumption で拾える `observation event ... detected` コメントの有無で判定できる。
+- **observation 条件が scan 自体の挙動を問う場合、`opportunistic-search.sh` を read-only で実行して即座に判定できる**ことがどこにも記載されていない。本 Issue の post-merge AC はこの手法で副作用なく PASS 判定できた (`observation-trigger.sh` が内部で呼ぶ検索と同一で、コメント投稿は trigger 側にしかない)。上記の評価手順を定義する際、この技法を証拠収集手段の 1 つとして明記すべき。
+
 ## Code Retrospective
 
 ### Deviations from Design
