@@ -148,6 +148,7 @@ none
 
 - saito (MEMBER / first-class): `/issue 1069 --non-interactive` の Issue Retrospective。(1) Size L 判定の根拠 (`html-selector-match.py` のパーサ設計変更 + `verify-executor.md` 更新 + テスト追加)、(2) 案 B 推奨は `/issue` フェーズの暫定判断であり最終決定は `/spec` に委ねる旨、(3) AC は rubric ベースでどの実装方式でも検証可能な文言にしてあるため AC 自体は変更していない旨、(4) Pre-merge に bats テスト追加の `grep` 検証と CI 通過確認の 2 件を追加した経緯。本 Spec ではこれを受け、htmlq の実機検証を行ったうえで案 A を最終決定した (https://github.com/saitoco/wholework/issues/1069#issuecomment-5112370359)
 - code phase (2026-07-29): No new comments since last phase (cutoff: most recent `phase/*` label assignment, 2026-07-29T03:29:33Z).
+- saito (MEMBER / first-class): downstream プロジェクトでの combinator 対応の実測データ (2026-07-30T01:01:00Z)。起票元である `capabilities.pr-preview: true` の downstream プロジェクトで、(1) 隣接兄弟セレクタが実装前後で結果を反転させること (実装前は `first_name + last_name` が count=1、実装後は `last_name + first_name` が count=1、逆順はいずれも count=0)、(2) 不正セレクタ 3 パターンがすべて exit=2 と具体的な stderr を返すこと、(3) 既存 compound selector に回帰がないこと、(4) `pup` 未インストール環境で外部バイナリなしに combinator が評価できること、を実測で確認したもの。Post-merge AC 2 件の PASS 根拠として提供された。**本コメントは 2026-07-30 13:21 の `/verify` 実行時点で cutoff より前だったため consume されず、同実行は `https://example.com` に対する独自の end-to-end 実測で同じ結論に到達していた**。2026-07-30 の 2 回目の `/verify` で本記録を追加した (AC 判定結果に変更なし) (https://github.com/saitoco/wholework/issues/1069#issuecomment-5125085214)
 
 ## Notes
 
@@ -387,3 +388,17 @@ N/A — Implementation Steps 1-4 の記述どおりに `split_selector` / `parse
 - `run-review.sh` (および `capabilities.workflow: true` 環境で Workflow パスに入りうる全 headless フェーズ) の **Workflow / headless 非互換**を解消する。`claude -p` は Workflow の完了通知を受け取る次のターンを持たないため、Workflow を起動した瞬間に silent no-op が確定する。取りうる方向は (a) headless 実行時は Workflow パスを無効化して静的 Task fan-out に固定する、(b) `run-*.sh` 側で Workflow 完了を同期的に待てる起動形態にする、(c) `capabilities.workflow` の適用範囲を「親セッションで実行されるフェーズ (verify 等) のみ」に限定する、のいずれか。現状は `capabilities.workflow: true` + Size M/L (= `--review=full`) の Issue すべてで `/auto` の review フェーズが構造的に失敗する
 - `reconcile-phase-state.sh merge --check-precondition` の `reviewDecision=APPROVED` 要求を、単一アカウント運用で成立する形に見直す。GitHub は自己 PR への `APPROVE` / `REQUEST_CHANGES` をいずれも 422 で拒否するため、self-hosted 運用では reviewDecision が永久に空のままで警告が毎回出る。`<!-- review-summary -->` marker の存在 (= review フェーズ完了) を代替シグナルにする等の緩和が要る
 - Spec の「exhaustive」宣言の**適用軸を明示する**運用を検討する。本 Issue では combinator 種別・void element・`ValueError` 条件のリストに対する exhaustive 宣言が review の false positive 抑制に有効だった一方、`selector.strip()` のような「リストに載っていない軸 (入力の前処理)」での追加は検知できなかった。exhaustive 宣言に「この宣言が覆う軸」を併記すれば、覆っていない軸の変更をレビュー時に検知しやすくなる
+
+### 2026-07-30 追記 — downstream 実測による独立裏付け (2 回目の `/verify`)
+
+起票元の downstream プロジェクトから実測データが Issue コメント (issuecomment-5125085214, 01:01 UTC) として提供されていたが、13:21 の `/verify` 実行時点で cutoff より前だったため consume されず、同実行は `https://example.com` に対する独自の end-to-end 実測で Post-merge AC 2 件を PASS 判定していた。2 回目の `/verify` (本追記) で downstream データを `## Consumed Comments` に記録し、独立に再検証した。
+
+- **AC 判定結果に変更なし** — 全 8 AC PASS のまま。2 つの独立した検証経路 (`example.com` 実測 / downstream 本番実測) が同一結論に到達している
+- **combinator 4 種の動作をローカルで再確認**: 隣接兄弟 (順序どおり count=1 / 逆順 count=0)、子 (`form > div`)、子孫 (`form input` → 2)、一般兄弟 (`~`) をすべて期待値どおり確認
+- **不正セレクタ 3 パターンの再確認**: `input[[[` → `unbalanced brackets`、空文字列 → `empty selector`、`input:nth-child(2)` → `invalid selector syntax at position 5` — いずれも exit=2 で具体的な理由を stderr に出力。downstream の報告と完全一致
+- **downstream 実測の固有の価値**: 実装前後の本番 HTML に対して同じセレクタの結果が反転すること (`first_name + last_name` count=1 → `last_name + first_name` count=1) を示しており、`example.com` に対する静的検証では得られない「回帰検知として機能する」証拠になっている。また `pup` 未インストール環境 (#1056 で削除済み) での実測であり、案 A (外部バイナリ不要) の設計判断を実環境で裏付けている
+- **原因特定**: 当初は cutoff の問題を疑ったが、`phase/verify` は 2026-07-29T05:59:57Z 付与で downstream コメント (07-30 01:01) は cutoff より**後**であり、consume 対象だった。真因は決定的フォールバック `scripts/append-consumed-comments-section.sh` の dedup ガード (L36-38) が `## Consumed Comments` **見出しの存在のみ**を見て `exit 0` する点にある。同見出しは `/spec` / `/code` フェーズで必ず作られるため、`/verify` 到達時には常に存在し、**verify の安全網は構造的に一度も発火できない**。#1074 でも同じ取りこぼしが発生していることを確認済み (下記 Improvement Proposals)
+
+### Improvement Proposals (2026-07-30 追記)
+
+- **`append-consumed-comments-section.sh` の dedup ガードが phase 単位でなく見出し単位のため、`/verify` の安全網が構造的に発火しない**: 同スクリプト L36-38 は `grep -q "^## Consumed Comments"` が真なら即 `exit 0` する。`## Consumed Comments` 見出しは `/spec` / `/code` フェーズで作成されるため `/verify` 実行時には必ず存在し、当該フェーズのエントリが未記録でも追記されない。`modules/l0-surfaces.md` は「`/verify` phase (in-session): `SKILL.md` contains an explicit bash call to `append-consumed-comments-section.sh` after the LLM's comment consumption step, ensuring deterministic writeback regardless of prose execution」と安全網の役割を規定しているが、この dedup ガードにより規定どおりに機能していない。実測: #1069 の 2026-07-30 13:21 の `/verify` は downstream 実測コメント (cutoff より後、consume 対象) を Spec に記録せず、フォールバック呼び出しも見出し存在により no-op した。#1074 でも同じ取りこぼしを確認。対応候補: (a) dedup ガードを「当該 phase 名のエントリが既に存在するか」で判定する (エントリ行に phase 名を含める運用は `code phase (2026-07-29): ...` の形で既に一部存在)、(b) 見出しが存在する場合は既存セクション末尾へ追記する動作に変更し、URL による重複排除を行う。なお `#1078` (worktree fresh 作成時の追記消失) は別機構の問題で、本件とは独立
