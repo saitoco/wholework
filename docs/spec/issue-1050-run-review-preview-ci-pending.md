@@ -4,6 +4,8 @@
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective (曖昧性自動解決ログとタイトルドリフト記録)。内容は Issue body の `## Autonomous Auto-Resolve Log` に既に反映済みで、本 Spec の設計に追加で取り込む新規情報はなし / https://github.com/saitoco/wholework/issues/1050#issuecomment-5133601470
 
+`/code` フェーズ (cutoff: 2026-07-30T16:56:39Z、`phase/ready` ラベル付与時刻): 新規コメントなし。
+
 ## Overview
 
 `scripts/run-review.sh` は `wait-ci-checks.sh` を呼び出した後、その結果を一切判別せずに無条件で `claude -p` の review セッションを起動している。このため次の 2 パターンで、待機対象が確定しないまま review セッションが起動し、silent no-op (セッションが実質的な作業をせず exit 0 で終了) → `post-fallback-review-summary.sh` のフォールバックスタブ投稿 → review phase が complete 扱いになる、という誤った完了判定が発生する。
@@ -128,3 +130,42 @@ fi
 - **preview capability 検出のスコープ限定**: `run-review.sh` は bash wrapper であり、`modules/detect-config-markers.md` が定義する LLM 駆動の `capabilities.*` 解釈 (inline hash `capabilities: { pr-preview: true }` とブロック形式の両方に対応) を利用できない。既存の `scripts/get-config-value.sh` も「nested keys (`capabilities.browser` 等) は非対応」と明示的にスコープを限定しており、本 Issue でもこの前例に倣い、bash 側の検出はブロック形式 (`capabilities:\n  pr-preview: true`) のみに対応する簡易 grep とする。inline hash 形式は本 Issue のスコープ外とし、必要になった場合は別 Issue で `get-config-value.sh` 等への共通化を検討する。
 - **preview デプロイ待機のタイムアウト設計**: `WHOLEWORK_PREVIEW_TIMEOUT_SEC` のデフォルト 600 秒は、既存の `wait-ci-checks.sh` 呼び出し (デフォルト上限 1200 秒) と合わせても review phase の watchdog 上限 (`WATCHDOG_TIMEOUT_REVIEW_SECONDS` デフォルト 2600 秒、`docs/tech.md` #903 再較正) を超えない。両方の待機が上限に達した場合はいずれも PENDING として `claude -p` を起動せずに終了するため、実際にレビューセッションへ進むケースでは待機時間が上限に達することは想定されない。
 - **`skills/review/SKILL.md` 側は変更しない**: 本 Issue の AC2/AC3 は `scripts/run-review.sh` を明示的に対象としており、AC1 の rubric も「run-review.sh または review skill」のいずれかで要件を満たせば良いと記述している。`claude -p` はステートレスな 1 ターン完結プロセスであるため、前提条件が未確定な状態を検知して "待つ" ことは wrapper 側でのみ可能であり (Root Cause 参照)、修正を `scripts/run-review.sh` に集約することで `skills/review/SKILL.md` Step 8.0 の既存 UNCERTAIN 分類ロジックとは独立に (かつそれを壊さずに) 前提条件を保証できる。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜5 のコードブロックをそのまま適用し、設計からの逸脱はなかった。
+
+### Design Gaps/Ambiguities
+- N/A — 実装過程で新たに発見された設計上の曖昧性はなかった。`wait-ci-checks.sh` の `ci_result:` 行が stdout のみに出力される (進捗ログは stderr) という Spec の前提は実装スクリプトの現物確認で裏付けが取れた。
+
+### Rework
+- N/A — 手戻りは発生しなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `review-light` エージェントによる light mode 統合レビューを実施し、Implementation Steps と実装コードの逐語一致を確認 (spec divergence なし)。
+- SHOULD 指摘 (preview-wait ループ内 `gh api` 呼び出しの per-call timeout 欠如) を修正し、`wait-ci-checks.sh` と同じ `timeout --kill-after=10 30 ... || gtimeout 30 ...` フォールバックパターンを踏襲する `_gh_api_bounded` ヘルパーを追加。
+- CONSIDER 指摘 (`_preview_branch` の URL 非エンコード埋め込み) は `skills/review/SKILL.md` Step 8.0 の既存パターンと同一の pre-existing convention と判断し、本 PR では対応不要とした。
+
+### Deferred Items
+- Post-merge AC (opportunistic): preview ビルドが長引く PR、または CI check-suite 作成前にタイムアウトする PR での `/review` 実況確認は引き続き opportunistic 検証に委ねる。
+- `_preview_branch` の URL エンコード対応は、`skills/review/SKILL.md` Step 8.0 側の既存パターンとまとめて別 Issue で検討する候補として見送った。
+
+### Notes for Next Phase
+- Pre-merge AC 3件は PASS 確認・チェック済み。CI は 9/9 SUCCESS。MUST 指摘なし (COMMENTED でレビュー投稿済み)。
+- SHOULD 修正コミット (`_gh_api_bounded` 追加) を push 済み。`/merge` 前の追加対応は不要。
+- Post-merge AC は opportunistic 検証待ちのまま — `/verify` 実行時に未チェックのまま残る想定。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- N/A — `review-light` エージェントが Implementation Steps 1〜3 のコードブロックと `scripts/run-review.sh` L101-147 を文字単位で突合し、逸脱なしと確認した。
+
+### Recurring issues
+- SHOULD 指摘 1件: 新規追加した preview デプロイ待機ループ内の `gh api` 呼び出しに per-call timeout がなく、`wait-ci-checks.sh` が同一 PR で既に確立していた `timeout --kill-after=10 30 ... || gtimeout 30 ... || <bare>` フォールバックパターンが踏襲されていなかった。同一 Issue/PR 内に手本となる前例があるにもかかわらず新規コードで再適用されなかったケースであり、「ポーリングループを新規追加する際は、同一リポジトリ内の既存ポーリング実装 (wait-ci-checks.sh 等) のタイムアウト境界パターンを踏襲する」という観点を Spec の Implementation Steps または review チェックリストに明記する余地がある。次回同様のポーリングループ追加時は、Spec 作成段階で既存の類似実装への参照を明示すると手戻りを防げる可能性がある。
+
+### Acceptance criteria verification difficulty
+- Nothing to note — Pre-merge AC 3件はいずれも `rubric` / `grep` で明確に PASS 判定でき、UNCERTAIN は発生しなかった。
