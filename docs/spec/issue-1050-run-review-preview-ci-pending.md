@@ -143,21 +143,19 @@ fi
 - N/A — 手戻りは発生しなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `review-light` エージェントによる light mode 統合レビューを実施し、Implementation Steps と実装コードの逐語一致を確認 (spec divergence なし)。
-- SHOULD 指摘 (preview-wait ループ内 `gh api` 呼び出しの per-call timeout 欠如) を修正し、`wait-ci-checks.sh` と同じ `timeout --kill-after=10 30 ... || gtimeout 30 ...` フォールバックパターンを踏襲する `_gh_api_bounded` ヘルパーを追加。
-- CONSIDER 指摘 (`_preview_branch` の URL 非エンコード埋め込み) は `skills/review/SKILL.md` Step 8.0 の既存パターンと同一の pre-existing convention と判断し、本 PR では対応不要とした。
+- Pre-merge AC 3件 (rubric/grep判定) がすべて PASS/チェック済みであることを確認し、squash merge を実行した。
+- `--non-interactive` モードで実行し、pre-merge AC ゲート・mergeability 判定はいずれも auto-resolve 不要でクリーンに通過 (mergeable=true, reason=clean)。
 
 ### Deferred Items
-- Post-merge AC (opportunistic): preview ビルドが長引く PR、または CI check-suite 作成前にタイムアウトする PR での `/review` 実況確認は引き続き opportunistic 検証に委ねる。
-- `_preview_branch` の URL エンコード対応は、`skills/review/SKILL.md` Step 8.0 側の既存パターンとまとめて別 Issue で検討する候補として見送った。
+- Post-merge AC (opportunistic): preview ビルドが長引く PR、または CI check-suite 作成前にタイムアウトする PR での `/review` 実況確認は、引き続き opportunistic 検証に委ねる (未解消のまま `/verify` に引き継ぐ)。
+- `_preview_branch` の URL エンコード対応は、`skills/review/SKILL.md` Step 8.0 側の既存パターンとまとめて別 Issue で検討する候補として見送ったまま。
 
 ### Notes for Next Phase
-- Pre-merge AC 3件は PASS 確認・チェック済み。CI は 9/9 SUCCESS。MUST 指摘なし (COMMENTED でレビュー投稿済み)。
-- SHOULD 修正コミット (`_gh_api_bounded` 追加) を push 済み。`/merge` 前の追加対応は不要。
-- Post-merge AC は opportunistic 検証待ちのまま — `/verify` 実行時に未チェックのまま残る想定。
+- `closes #1050` により Issue は squash merge (`d8e0cf92`) で自動クローズされる見込み。base branch は `main`。
+- Post-merge AC は opportunistic 検証待ちのまま — `/verify` 実行時に未チェックのまま残る想定 (手動で機会があれば検証)。
 
 ## review retrospective
 
