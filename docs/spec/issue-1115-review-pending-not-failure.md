@@ -92,17 +92,16 @@ No new comments since last phase.
 - なし。3件の rubric AC はいずれも文言が明確で、PR diff を読むだけで PASS/FAIL を機械的に判定できた。UNCERTAIN は発生していない。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- review-light (light mode, 4観点統合) を実行し、SHOULD 1件・CONSIDER 2件を検出。SHOULD (PENDING retry 成功パスが anomaly 検出をスキップする非対称性) は共通処理を `_complete_phase_after_success` ヘルパーに切り出す形で修正し、両成功パスに同じ副作用を持たせた
-- CONSIDER 2件 (`_RETRY_ON_KILL_FIRED` の PENDING retry ループ内非対応、`$log_file` の PENDING retry 間上書き) は本 Issue の受入条件範囲外の observability/診断性向上に留まるため見送り、PR 上にコメントとして記録するに留めた
-- 3件の pre-merge rubric AC はすべて PASS。CI (9 ジョブ) もすべて SUCCESS
+- PR #1116 は squash merge (`gh pr merge --squash --delete-branch`) で main にマージ。mergeable=true (CI success / review approved) だったため conflict 解消手順・worktree は不要だった
+- pre-merge AC gate: 3件の rubric AC すべて `[x]` 済みを再確認 (`check-pre-merge-ac.sh` で `unchecked_count: 0`) してからマージを実行した
 
 ### Deferred Items
-- Post-merge AC (CI check-suite 未作成 / preview 未確定の PR での `/auto` 実行確認, verify-type: opportunistic) は引き続き未検証 — `/verify` または実運用での偶発的発生を待つ
-- CONSIDER 2件 (`_RETRY_ON_KILL_FIRED` 非対応、ログ上書き) は本 Issue のスコープ外として見送り。将来 observability/診断性の要求が高まった場合に別 Issue で対応を検討
+- Post-merge AC (CI check-suite 未作成 / preview 未確定の PR での `/auto` 実行確認, verify-type: opportunistic) は未検証のまま — `/verify` または実運用での偶発的発生を待つ
+- CONSIDER 2件 (`_RETRY_ON_KILL_FIRED` の PENDING retry 非対応、`$log_file` の PENDING retry 間上書き) は本 Issue スコープ外として見送り継続。将来 observability 要求が高まった場合に別 Issue で対応を検討
 
 ### Notes for Next Phase
-- `/merge` 実行前に fix commit (`9494bef2`) が CI を再度通過することを確認すること (bats フルスイート・validate-skill-syntax は review フェーズ内でローカル実行済みで PASS 済み)
-- Post-merge AC は merge 後も未検証のまま残るため、`/verify` はこの1件が UNCERTAIN/PENDING のまま残る想定で処理すること
+- `/verify` は Post-merge AC (opportunistic) が UNCERTAIN/PENDING のまま残る想定で処理すること
+- base branch は `main` のため `closes #1115` で Issue は自動クローズされる見込み
