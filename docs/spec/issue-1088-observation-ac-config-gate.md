@@ -61,3 +61,29 @@ Out of Scope に記載の通り、observation scan の dispatch fan-out 制御 (
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1–3 were followed as written; no reordering, omission, or approach change occurred.
+
+### Design Gaps/Ambiguities
+- N/A — no new gaps surfaced during implementation beyond the scope-discrepancy already resolved in this Spec's Notes section (open vs. closed+phase/verify audit scope).
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Inserted the `config=<key>` guideline subsection into `modules/verify-classifier.md` directly after the "Syntax note" paragraph and before "### Tag Assignment Example", per Implementation Step 1 — keeps the new guidance adjacent to the `event=` syntax it extends.
+- Reused the audit results already recorded in this Spec's Notes section verbatim for the Issue #1088 comment (Implementation Step 3), rather than re-running the cross-repo audit — the Spec's investigation was already authoritative and current.
+
+### Deferred Items
+- Follow-up Issue candidate (not filed): `#627`/`#908` use `event=` values (`concurrent-batch`, `batch-resume`, `code-pr-run`) absent from `KNOWN_EVENTS` in `modules/verify-classifier.md`, which should fall back to `opportunistic` treatment. Unrelated to the `config=` gate; recorded as a candidate only, per Spec Notes.
+- Post-merge observation AC (`config=` gate suppresses notification accumulation) — verified passively via `/auto` re-runs; no action needed until the event fires.
+
+### Notes for Next Phase
+- `/verify` should treat the two rubric-based pre-merge AC (audit performed; guideline defined) as already PASS-graded during this `/code` run — both were mechanically cross-checked against the Issue #1088 comment and `modules/verify-classifier.md` content before checking the boxes.
+- Issue #797's post-merge observation AC now carries `config=always-pr`; confirm on next `/auto` run in this repo (where `always-pr` is unset) that it is excluded from `opportunistic-search.sh --event auto-run` dispatch — this is the Issue's own post-merge AC.
