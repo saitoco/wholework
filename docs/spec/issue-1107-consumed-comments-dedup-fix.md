@@ -100,3 +100,34 @@ L36-38 の dedup ガードは「`## Consumed Comments` という文字列が Spe
 - Post-merge AC (observation, event=auto-run) は次回 `/verify` 実行時に別 Issue でのコメント投稿を待って自然検証される想定
 - `#1078` (worktree fresh 作成時の Consumed Comments 追記消失) は本 Issue のスコープ外の別機構の問題として明示的に残置されている
 - review retrospective で記録された ID 的トークンの `contains()` 部分一致リスクの観点は `/verify` の直接スコープ外だが、参考情報として引き継ぐ
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC 4 件がいずれも rubric x3 + `file_not_contains` x1 で、diff と grep/bats のみで機械判定でき UNCERTAIN 0 件だった。特に不在検証型 AC (`file_not_contains`) について `/issue` が opportunistic verification (#1054) を契機に `## Notes` へ参照点 (2026-07-30 時点で該当コメントが L36 に存在) を事前記録していたため、`/verify` 側は「元々無かったのか、削除されたのか」を判別する追加調査が不要だった。#1054 のガイドラインが実際に機能した実例
+
+#### spec
+- Issue 本文が方針 A / B を両論併記していたのに対し、`/spec` が方針 B (URL 単位の重複排除 + 既存セクション追記) を選び、その理由として「方針 A は `verify-max-iterations` による `/verify` 再起動ループで 2 回目以降が丸ごとスキップされる correctness gap を持つ」と記録した判断は妥当だった。phase 名によるガードは同一 phase の再実行を区別できず、本 Issue が塞ごうとした取りこぼしを別の形で再発させる
+- 一方 review retrospective の指摘どおり、方針 B の記述は「URL 一致」までで完全一致か部分一致かを規定しておらず、実装が `contains()` を選んだ結果エッジケースが生じた。ID 的トークンの一致方式は Spec で明示する余地がある
+
+#### code
+- Implementation Steps 1-5 に対する乖離ゼロ、fixup/amend コミットなし
+- Code Retrospective が記録した jq スコープエラー (`select(($body | contains(.url // "")) | not)` が `Cannot index string with string ("url")` になる) は、`2>/dev/null` に隠蔽されて `NEW_COMMENTS` が常に `[]` にフォールバックし、新規テストが無言で FAIL していた。実装者が原因に到達できたのは良いが、**この隠蔽経路は出荷版にもそのまま残っている** (下記 Improvement Proposals)
+
+#### review
+- `--light` でありながら、`contains()` (部分一致) による重複判定が GitHub issuecomment ID の可変長ゆえに偽陽性を起こしうるエッジケースを検出し、jq で再現確認したうえで完全一致方式 (`split(" / ") | last`) に修正して push した。本 Issue が塞ごうとした「サイレントな取りこぼし」を別経路で再発させうる欠陥であり、review が最も価値を出した箇所
+- 単一アカウント運用のため `reconcile-phase-state.sh merge --check-precondition` が `reviewDecision is , not APPROVED` の警告を出したが warn-only で進行 (既知、`#1106` で追跡中)
+
+#### merge
+- conflict なし、CI 9/9 SUCCESS で squash merge 成功。`closes #1107` により Issue 自動クローズ
+
+#### verify
+- Pre-merge 4/4 PASS。`bats tests/append-consumed-comments-section.bats` 6/6 ok
+- **本 `/verify` 自身が修正後のスクリプトを実行**しており、Spec に `## Consumed Comments` 見出しが既存の状態で cutoff 後コメント 0 件 → URL 突き合わせを経てファイル無変更で `exit 0` する経路を実地確認できた。修正前は見出しの存在だけで即 `exit 0` していた分岐である
+- Post-merge observation AC は、merge から `/verify` までの間に新規コメントが投稿されなかったため実地観測できず未チェック。追記経路そのものは bats (`existing section with new comment: ...`) で検証済み。本 AC は #1069 / #1074 のように merge 後・verify 前に人間がコメントを投稿するケースでのみ観測可能
+
+### Improvement Proposals
+
+- **`append-consumed-comments-section.sh` の jq 呼び出しが `2>/dev/null || echo "[]"` でエラーを空配列に潰しており、安全網が無言で発火しない経路が残っている**: 同スクリプトは L80 / L86 / L125 で jq の結果を `2>/dev/null || echo "[]"` で受けている。jq がエラーになった場合 (構文エラー、スコープ誤り、GitHub API のレスポンス形状変化など) 結果は空配列となり、「新規エントリ 0 件 → ファイル無変更 → `exit 0`」という**正常系とまったく同じ挙動**になる。呼び出し側 (`/verify` SKILL.md) も exit 0 を成功として扱うため、安全網が機能していないことを誰も検知できない。これは #1107 が塞いだ「`/verify` の安全網が構造的に発火しない」問題と同一の症状クラスであり、原因が heading ガードから jq のエラー隠蔽に移っただけとも言える。**本 Issue の実装中に実際にこの経路を踏んでいる**: Code Retrospective が「jq スコープエラーが `2>/dev/null` に隠蔽され `NEW_COMMENTS` が常に `[]` にフォールバックし、新規テストが無言で FAIL していた」と記録しており、bats テストがあったからこそ発覚したが、本番実行では発覚しない。対応候補: (a) jq の exit status を判定し、エラー時は空配列フォールバックの代わりに stderr へ警告 (`append-consumed-comments-section.sh: WARNING — jq failed; consumed comments not recorded`) を出す、(b) `2>/dev/null` を外して jq の stderr をそのまま通し、`|| echo "[]"` は残すことでフェイルセーフ性は維持しつつ観測可能にする。なお `#1086` (fail-open が実害となるスクリプトに edge case の期待動作を Spec で明記させる) は `/spec` 手順側の予防策で、本件はスクリプト実体の欠陥という点で対象が異なる
