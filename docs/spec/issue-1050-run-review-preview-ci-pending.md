@@ -130,3 +130,30 @@ fi
 - **preview capability 検出のスコープ限定**: `run-review.sh` は bash wrapper であり、`modules/detect-config-markers.md` が定義する LLM 駆動の `capabilities.*` 解釈 (inline hash `capabilities: { pr-preview: true }` とブロック形式の両方に対応) を利用できない。既存の `scripts/get-config-value.sh` も「nested keys (`capabilities.browser` 等) は非対応」と明示的にスコープを限定しており、本 Issue でもこの前例に倣い、bash 側の検出はブロック形式 (`capabilities:\n  pr-preview: true`) のみに対応する簡易 grep とする。inline hash 形式は本 Issue のスコープ外とし、必要になった場合は別 Issue で `get-config-value.sh` 等への共通化を検討する。
 - **preview デプロイ待機のタイムアウト設計**: `WHOLEWORK_PREVIEW_TIMEOUT_SEC` のデフォルト 600 秒は、既存の `wait-ci-checks.sh` 呼び出し (デフォルト上限 1200 秒) と合わせても review phase の watchdog 上限 (`WATCHDOG_TIMEOUT_REVIEW_SECONDS` デフォルト 2600 秒、`docs/tech.md` #903 再較正) を超えない。両方の待機が上限に達した場合はいずれも PENDING として `claude -p` を起動せずに終了するため、実際にレビューセッションへ進むケースでは待機時間が上限に達することは想定されない。
 - **`skills/review/SKILL.md` 側は変更しない**: 本 Issue の AC2/AC3 は `scripts/run-review.sh` を明示的に対象としており、AC1 の rubric も「run-review.sh または review skill」のいずれかで要件を満たせば良いと記述している。`claude -p` はステートレスな 1 ターン完結プロセスであるため、前提条件が未確定な状態を検知して "待つ" ことは wrapper 側でのみ可能であり (Root Cause 参照)、修正を `scripts/run-review.sh` に集約することで `skills/review/SKILL.md` Step 8.0 の既存 UNCERTAIN 分類ロジックとは独立に (かつそれを壊さずに) 前提条件を保証できる。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜5 のコードブロックをそのまま適用し、設計からの逸脱はなかった。
+
+### Design Gaps/Ambiguities
+- N/A — 実装過程で新たに発見された設計上の曖昧性はなかった。`wait-ci-checks.sh` の `ci_result:` 行が stdout のみに出力される (進捗ログは stderr) という Spec の前提は実装スクリプトの現物確認で裏付けが取れた。
+
+### Rework
+- N/A — 手戻りは発生しなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Step 1〜3 のコードブロックをそのまま `scripts/run-review.sh` の該当箇所に適用した。CI pending/zero-checks 判定と preview デプロイ未確定判定を同一の `_pending_reason` 変数に集約し、単一の PENDING 終了分岐 (exit code 2) で両ケースを処理する設計を踏襲。
+- `tests/run-review.bats` に Spec Step 4 の 5 ケースを追加し、`sleep` の no-op モックを `tests/wait-ci-checks.bats` の慣例に合わせて導入。既存 29 ケースを含む全 34 ケースが PASS することを確認。
+- `docs/tech.md` / `docs/ja/tech.md` の `HAS_PR_PREVIEW_CAPABILITY` 行と Environment Variables 表を Spec Step 5 の指示通り更新。
+
+### Deferred Items
+- Post-merge AC (opportunistic): preview ビルドが長引く PR、または CI check-suite 作成前にタイムアウトする PR での `/review` 実況確認は、実際にそのような PR が発生した際の opportunistic 検証に委ねる。
+- Notes に記載の通り、`run-auto-sub.sh` の Tier 1-3 recovery cascade への PENDING 専用ハンドリング追加、および `capabilities.pr-preview` inline hash 形式の bash 側検出対応は本 Issue のスコープ外として意図的に見送った (別 Issue 候補)。
+
+### Notes for Next Phase
+- Pre-merge AC 3件は本フェーズで PASS 確認済み・チェック済み。`/review` では追加の pre-merge 検証は不要だが、rubric AC の再確認は通常フロー通り実施される。
+- `docs/ja/tech.md` の同期は本フェーズで完了済みのため、`/review` の翻訳同期チェックで新たな gap は検出されない見込み。
