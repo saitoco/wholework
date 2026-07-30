@@ -748,7 +748,10 @@ run_phase_with_recovery() {
     fi
   fi
 
-  if [[ $exit_code -eq 0 ]]; then
+  # _complete_phase_after_success: shared by the first-try success path and
+  # the PENDING-retry success path below so both get the same silent no-op
+  # anomaly detection (issue #1115 review feedback).
+  _complete_phase_after_success() {
     local anomaly_out
     anomaly_out=$("$SCRIPT_DIR/detect-wrapper-anomaly.sh" --log "$log_file" --exit-code 0 --issue "$issue" --phase "$phase" 2>/dev/null || true)
     if [[ -n "$anomaly_out" ]]; then
@@ -756,6 +759,10 @@ run_phase_with_recovery() {
       echo "$anomaly_out"
     fi
     emit_event "phase_complete" "phase=${phase}"
+  }
+
+  if [[ $exit_code -eq 0 ]]; then
+    _complete_phase_after_success
     return 0
   fi
 
@@ -779,7 +786,7 @@ run_phase_with_recovery() {
     done
     if [[ $exit_code -eq 0 ]]; then
       echo "${LOG_PREFIX} [pending] review phase completed after PENDING retry"
-      emit_event "phase_complete" "phase=${phase}"
+      _complete_phase_after_success
       return 0
     fi
   fi
