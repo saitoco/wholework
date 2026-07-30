@@ -48,6 +48,24 @@ Then treat the condition as `verify-type: opportunistic` (backward-compatible).
 
 **Syntax note**: The `event=` parameter is a required attribute of `verify-type: observation`. Omitting `event=` is treated as an unknown event and triggers the fallback above.
 
+**`config=<key>` for setting-dependent observation conditions**: when the observation condition's
+text depends on a specific `.wholework.yml` setting (e.g., "observe X under `always-pr: true`"),
+append a `config=<key>` attribute to the tag:
+
+```
+<!-- verify-type: observation event=auto-run config=always-pr -->
+```
+
+If `config=` is omitted for a setting-dependent condition, the AC matches unconditionally on every
+`event=` dispatch — including in repositories where the referenced setting is unset or `false`, so
+the condition can never actually resolve. The result is notification comments accumulating on the
+Issue indefinitely with no path to PASS. See `modules/observation-trigger.md` § Condition Check
+Gate (`config=`) for the resolution mechanics.
+
+`<key>` must be a flat kebab-case key matching `get-config-value.sh`'s own constraint — nested keys
+(e.g. `capabilities.browser`) are not supported, and the comparison is boolean-only (`true`/`false`);
+enum-valued keys (e.g. `auto-stop-at`) are out of scope for `config=`.
+
 ### Tag Assignment Example
 
 ```markdown
