@@ -60,3 +60,15 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class) — 2026-07-31T01:43:04Z — `/issue` フェーズの Issue Retrospective コメント。#1088 により前提「現時点で実害はない」が崩れたことを受けて Issue 本文 (Background/Purpose/対応方針/AC) を全面更新した経緯の記録。案 A 単独では不可・案 B または D のいずれかで振る舞い修正が必須という結論、および Post-merge AC を将来形から opportunistic 確認形へ差し替えた理由を含む。Issue 本文には既に反映済みであり、本 Spec の設計判断に対する新たな指示は含まれない。 https://github.com/saitoco/wholework/issues/1055#issuecomment-5138247917
+
+## Auto Retrospective
+
+### Orchestration Anomalies
+- **[code-completed-no-pr]** Watchdog killed the process in phase `code-pr` (exit code 1) after code-pr completed its commits but before PR creation: `matches_expected:false` and `phase:code-pr` detected in reconcile-phase-state output. The run-code.sh phase exited without creating a PR. Reference: #415.
+  - Root cause observed in this run is the **headless background-execution pattern**, not a watchdog timeout. The wrapper log's last LLM output line is `バックグラウンドで bats tests/ フルスイート実行中です。完了通知を待ちます (ポーリングはしません)。` — the code phase committed its work, then launched the full bats suite in the background and ended its turn waiting for a completion notification that `claude -p` can never deliver. `checkpoint milestone = post-commit` / `resume_action = push-and-pr`.
+  - This is the **second confirmed occurrence** of the pattern #1097 describes (first: session `25766-1785288928`, PR #1090, `/review` phase). #1097's scope covers `modules/test-runner.md` and `skills/review/SKILL.md`; this occurrence is in the **`/code` phase**, which #1097's Acceptance Criteria do not cover.
+- **[auto-retry blocked by parallel-session dirty files]** `run-code.sh`'s built-in auto-retry (`auto-retry: code phase silent no-op, retry 2/3`) aborted immediately with `Error: parent main has uncommitted changes. Resolve before proceeding.` The dirty files (`scripts/append-consumed-comments-section.sh`, `tests/append-consumed-comments-section.bats`) belong to a **concurrent session working on #1113**, not to this Issue. The parent-main dirty guard is session-agnostic, so an unrelated session's work-in-progress silently disables auto-retry for every other running `/auto`.
+
+### Improvement Proposals
+- `#1097` の対象範囲を `/code` フェーズにも広げる (または `/code` 用の follow-up を立てる)。現在の AC は `modules/test-runner.md` と `skills/review/SKILL.md` のみを対象としており、本件のように `/code` がフルスイートをバックグラウンド実行して通知待ちするケースは修正後も残る。`modules/test-runner.md` 側に headless 制約を書けば両フェーズを同時にカバーできる可能性がある。
+- `run-code.sh` の parent-main dirty guard を **セッション帰属で判定**できるようにする。現状は main に未コミット変更があれば発生源を問わず auto-retry を止めるため、並行セッションが作業中のファイルによって無関係な `/auto` の自動復旧が無効化される。`scripts/check-verify-dirty.sh` は既に `classify=parent-main` を出力しているので、対象 Issue の変更ファイル集合 (Spec の `## Changed Files`) と突き合わせて「自分に関係しない dirty は auto-retry を止めない」判定にする余地がある。
