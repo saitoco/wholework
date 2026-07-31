@@ -132,25 +132,55 @@ _gh_api_bounded() {
 
 if [[ -z "$_pending_reason" ]] && [[ -f .wholework.yml ]] \
    && grep -A 20 '^capabilities:' .wholework.yml 2>/dev/null | grep -qE '^[[:space:]]*pr-preview:[[:space:]]*true'; then
-  echo "Waiting for PR preview deployment on PR #${PR_NUMBER}..." >&2
   _preview_timeout_sec="${WHOLEWORK_PREVIEW_TIMEOUT_SEC:-600}"
-  _preview_branch=$(gh pr view "$PR_NUMBER" --json headRefName -q '.headRefName' 2>/dev/null || echo "")
-  _preview_state=""
-  if [[ -n "$_preview_branch" ]]; then
-    _preview_start=$(date +%s)
-    while [[ $(( $(date +%s) - _preview_start )) -lt "$_preview_timeout_sec" ]]; do
-      _deploy_id=$(_gh_api_bounded "repos/:owner/:repo/deployments?ref=${_preview_branch}&per_page=10" -q '.[0].id' || echo "")
-      if [[ -n "$_deploy_id" && "$_deploy_id" != "null" ]]; then
-        _preview_state=$(_gh_api_bounded "repos/:owner/:repo/deployments/${_deploy_id}/statuses?per_page=1" -q '.[0].state' || echo "")
-        [[ "$_preview_state" == "success" ]] && break
-      fi
-      sleep 30
-    done
-  fi
-  if [[ "$_preview_state" != "success" ]]; then
-    _pending_reason="PR preview deployment not confirmed for PR #${PR_NUMBER} (branch=${_preview_branch:-unknown} state=${_preview_state:-none})"
+  if [[ -n "${PREVIEW_URL:-}" ]]; then
+    # Fast path (#1128): mirror skills/review/SKILL.md Step 8.0, which already
+    # prefers an exported PREVIEW_URL and skips the Deployments API lookup.
+    # Providers that never create a GitHub deployment (e.g. AWS Amplify
+    # Hosting) would otherwise get stuck here even when PREVIEW_URL is set.
+    if ! command -v curl >/dev/null 2>&1; then
+      echo "Warning: curl not found; accepting PREVIEW_URL without a reachability probe" >&2
+    else
+      _preview_http_code=""
+      _preview_start=$(date +%s)
+      while [[ $(( $(date +%s) - _preview_start )) -lt "$_preview_timeout_sec" ]]; do
+        _preview_http_code=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 10 "$PREVIEW_URL" 2>/dev/null || true)
+        [[ -z "$_preview_http_code" ]] && _preview_http_code="000"
+        case "$_preview_http_code" in
+          2??|401|403)
+            echo "PR preview reachable via PREVIEW_URL for PR #${PR_NUMBER} (HTTP ${_preview_http_code})" >&2
+            break
+            ;;
+        esac
+        sleep 30
+      done
+      case "$_preview_http_code" in
+        2??|401|403) ;;
+        *)
+          _pending_reason="PR preview URL not reachable for PR #${PR_NUMBER} (PREVIEW_URL set, last HTTP status=${_preview_http_code:-none})"
+          ;;
+      esac
+    fi
   else
-    echo "PR preview deployment ready for PR #${PR_NUMBER}" >&2
+    echo "Waiting for PR preview deployment on PR #${PR_NUMBER}..." >&2
+    _preview_branch=$(gh pr view "$PR_NUMBER" --json headRefName -q '.headRefName' 2>/dev/null || echo "")
+    _preview_state=""
+    if [[ -n "$_preview_branch" ]]; then
+      _preview_start=$(date +%s)
+      while [[ $(( $(date +%s) - _preview_start )) -lt "$_preview_timeout_sec" ]]; do
+        _deploy_id=$(_gh_api_bounded "repos/:owner/:repo/deployments?ref=${_preview_branch}&per_page=10" -q '.[0].id' || echo "")
+        if [[ -n "$_deploy_id" && "$_deploy_id" != "null" ]]; then
+          _preview_state=$(_gh_api_bounded "repos/:owner/:repo/deployments/${_deploy_id}/statuses?per_page=1" -q '.[0].state' || echo "")
+          [[ "$_preview_state" == "success" ]] && break
+        fi
+        sleep 30
+      done
+    fi
+    if [[ "$_preview_state" != "success" ]]; then
+      _pending_reason="PR preview deployment not confirmed for PR #${PR_NUMBER} (branch=${_preview_branch:-unknown} state=${_preview_state:-none})"
+    else
+      echo "PR preview deployment ready for PR #${PR_NUMBER}" >&2
+    fi
   fi
 fi
 
