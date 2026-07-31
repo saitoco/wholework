@@ -16,7 +16,9 @@
 #   Exits with code 1 on usage error
 #
 # Notes:
-#   - Supports only flat kebab-case keys (nested keys like capabilities.browser are not supported)
+#   - Supports flat kebab-case keys and single-level nested keys in block format
+#     (e.g., capabilities.workflow). Keys with two or more dots, or inline hash
+#     format (capabilities: { workflow: true }), are not supported.
 #   - Strips surrounding quotes from values
 #   - Ignores comment lines (starting with #)
 #   - Returns default value if key is absent or .wholework.yml does not exist
@@ -45,7 +47,9 @@ Examples:
   get-config-value.sh production-url ""
 
 Notes:
-  - Only flat kebab-case keys are supported (nested keys like capabilities.browser are not supported)
+  - Flat kebab-case keys and single-level nested keys in block format are
+    supported (e.g., capabilities.workflow). Keys with two or more dots, or
+    inline hash format (capabilities: { workflow: true }), are not supported.
   - Values are returned with surrounding quotes stripped
   - Comment lines (starting with #) are ignored
 EOF
@@ -80,6 +84,50 @@ while IFS= read -r line || [ -n "$line" ]; do
         break
     fi
 done < "$CONFIG_FILE"
+
+# Fallback: single-level nested key in block format (e.g., capabilities.workflow).
+# Only triggered when the flat-key loop above found nothing and KEY contains
+# exactly one dot (KEY.SUBKEY). Two-or-more-dot keys and inline hash format are
+# not supported.
+if [ -z "$VALUE" ]; then
+    DOT_COUNT=$(echo "$KEY" | tr -cd '.' | wc -c | tr -d '[:space:]')
+    if [ "$DOT_COUNT" = "1" ]; then
+        SECTION="${KEY%%.*}"
+        SUBKEY="${KEY#*.}"
+        IN_SECTION=false
+        while IFS= read -r line || [ -n "$line" ]; do
+            # Skip comment lines
+            case "$line" in
+                \#*) continue ;;
+            esac
+
+            if [ "$IN_SECTION" = "true" ]; then
+                if [ -z "$line" ]; then
+                    # Blank line: section continues
+                    continue
+                fi
+                case "$line" in
+                    [[:space:]]*)
+                        if echo "$line" | grep -qE "^[[:space:]]+${SUBKEY}[[:space:]]*:"; then
+                            VALUE=$(echo "$line" | sed -E "s/^[[:space:]]+${SUBKEY}[[:space:]]*:[[:space:]]*//" | sed -E "s/[[:space:]]+#.*$//" | sed -E "s/[[:space:]]*$//" | sed -E "s/^['\"]|['\"]$//" | sed -E "s/^['\"]|['\"]$//")
+                            break
+                        fi
+                        ;;
+                    *)
+                        # Non-indented line: section ends here
+                        IN_SECTION=false
+                        ;;
+                esac
+            fi
+
+            if [ "$IN_SECTION" = "false" ]; then
+                if echo "$line" | grep -qE "^${SECTION}[[:space:]]*:[[:space:]]*$"; then
+                    IN_SECTION=true
+                fi
+            fi
+        done < "$CONFIG_FILE"
+    fi
+fi
 
 if [ -z "$VALUE" ]; then
     echo "$DEFAULT"

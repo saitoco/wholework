@@ -173,3 +173,35 @@ EOF
     [ "$status" -eq 0 ]
     [ "$output" = "from-cwd-config" ]
 }
+
+@test "nested key (block format): returns value from section" {
+    cat > .wholework.yml << 'EOF'
+capabilities:
+  workflow: true
+EOF
+    run bash "$SCRIPT" capabilities.workflow false
+    [ "$status" -eq 0 ]
+    [ "$output" = "true" ]
+}
+
+@test "nested key (block format): subkey absent returns default" {
+    cat > .wholework.yml << 'EOF'
+capabilities:
+  browser: true
+EOF
+    run bash "$SCRIPT" capabilities.workflow false
+    [ "$status" -eq 0 ]
+    [ "$output" = "false" ]
+}
+
+@test "nested key (block format): section boundary is respected, does not leak into next section" {
+    cat > .wholework.yml << 'EOF'
+recoveries-auto-fire:
+  enabled: true
+capabilities:
+  workflow: true
+EOF
+    run bash "$SCRIPT" recoveries-auto-fire.workflow false
+    [ "$status" -eq 0 ]
+    [ "$output" = "false" ]
+}
