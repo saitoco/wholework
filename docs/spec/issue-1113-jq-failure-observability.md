@@ -56,3 +56,13 @@
 - **Steering Docs sync candidate check**: `append-consumed-comments-section.sh` で `docs/` `tests/` `scripts/` を横断 grep した結果、`docs/structure.md` / `docs/ja/structure.md` の役割説明、`scripts/emit-event.sh` の呼び出し (`|| true` による best-effort 呼び出しのまま) はいずれも内容確認済みで変更不要と判断した。`tests/run-verify.bats` は同スクリプトを別シナリオ (verify フェーズの決定的書き戻し) でテストする既存ファイルだが、AC4 が `tests/append-consumed-comments-section.bats` を明示的に対象指定しているため (Issue Retrospective コメントでも既存ファイルであることを確認済み)、新規テストはそちらにのみ追加し `tests/run-verify.bats` は変更しない。
 - **doc-checker Impact Assessment**: 本 Issue はスクリプト内部のエラー可観測性追加のみであり、ワークフローフェーズ変更・プロジェクト構造変更・新規スクリプト追加のいずれにも該当しない (`modules/skill-dev-doc-impact.md` の Change Type 表と照合済み)。`README.md` / `README.ja.md` / `docs/workflow.md` に本スクリプト名の言及がないことを grep で確認済み。ドキュメント変更は不要と判断した。
 - **Auto-Resolved Ambiguity Points は Issue body に記載済み**: `/issue --non-interactive` で解決済みの3点 (Option A を必須実装とする、`gh` 失敗と jq エラーを区別しない、`<step>` は変数名を使用する) は Issue body の `## Auto-Resolved Ambiguity Points` に記載済みであり、`/spec` (light) での追加解決は不要と判断した。
+
+## Auto Retrospective
+
+### Manual recovery (code-patch)
+- **Date**: 2026-07-31 02:58 UTC
+- **Issue**: #1113, phase: code-patch
+- **Source**: parent session manual recovery
+- **Recovery type**: commit-push
+- **Wrapper exit code**: 1
+- **Outcome**: success
