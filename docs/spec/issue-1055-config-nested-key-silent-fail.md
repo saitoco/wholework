@@ -102,23 +102,19 @@ UNCERTAIN は 0 件、Pre-merge 4 件すべて PASS で、verify command の記�
 - `modules/verify-executor.md` の CI Reference Fallback 節に、「CI ジョブが AC と同一の入力を検証していると確信できない場合は PASS ではなく UNCERTAIN に倒す」指針を明記する。現状は関連ジョブが SUCCESS であれば PASS とするだけで、検証対象の同一性はモデル判断に委ねられている。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- `review-light` は指摘 0 件で完了したが、レビュー側の独自 edge case 実測で SHOULD×2 / CONSIDER×1 を検出した。MUST ではないものの、いずれも本 Issue が解消対象としている silent failure と同一クラス (エラーにならず誤った値 / default が返る) だったため、フォローアップに回さず review フェーズ内で修正した (commit `7a84ecac`)。
-- 修正内容は 3 点: (a) nested キーの照合をセクション直下の子に限定 (孫キーの誤採用を防止)、(b) セクションヘッダー行の末尾インラインコメントを許容、(c) キー文字種を `[A-Za-z0-9._-]` に制限。
-- (c) のガードはスクリプト冒頭 (flat キーループより前) に配置した。free-text 由来のキーは flat ループの正規表現にも補間されるため、nested フォールバック内に閉じたガードでは露出面の半分しか塞げないという判断。既存の静的呼び出し元はすべてこの文字種に収まることを確認済み。
-- 受入条件の更新は行っていない。3 点の修正はいずれも照合範囲を厳密化する方向であり、AC テキストおよび verify command と矛盾しない (Pre-merge 4 件は修正後も PASS を維持)。
+- Squash merge を non-interactive モードで実行 (pre-merge AC ゲートは 4/4 チェック済みで通過、mergeable=true/clean/CI success/approved を確認済み)。
+- PR ブランチが code フェーズの silent no-op 由来の worktree (`.claude/worktrees/code+issue-1055`) にチェックアウトされたままだった件は、`gh pr merge --squash --delete-branch` がリモートブランチの削除まで正常完了したため、追加の `git worktree remove` 対応は不要だった。
 
 ### Deferred Items
 
-- Post-merge AC (nested キーを `config=` に指定した observation/opportunistic AC の実運用確認) は未消化。`/verify` の opportunistic 判定に委ねる。
-- `get-config-value.sh` の行指向パースの根本整理 (仕様テーブル化 / 最小 YAML パーサ化) は本 Issue のスコープ外として見送り、上記 Improvement Proposals に記録した。
-- inline hash format (`capabilities: { workflow: true }`) は Spec の明示的スコープ外のまま据え置き。
+- Post-merge AC (nested キーを `config=` に指定した observation/opportunistic AC の実運用確認) は未消化のまま。`/verify` の opportunistic 判定に委ねる。
+- `get-config-value.sh` の行指向パースの根本整理 (仕様テーブル化 / 最小 YAML パーサ化) は本 Issue のスコープ外として見送り済み (review retrospective の Improvement Proposals 参照)。
 
 ### Notes for Next Phase
 
-- PR ブランチ `worktree-code+issue-1055` は `.claude/worktrees/code+issue-1055` (code フェーズの silent no-op の残骸) にチェックアウトされたままである。merge 後のブランチ削除がこれで失敗する可能性があるため、必要に応じて先に `git worktree remove` を実施すること。
-- review 中の追加コミット (`7a84ecac` 修正 / `2625abc8` retrospective) に対する CI は確認済み: 9 checks 全 PASS (`wait-ci-checks.sh 1120` → `total=9 passed=9 failed=0`)。
-- ローカル実行分は確認済み: `bats tests/get-config-value.bats` 27/27 PASS、`validate-skill-syntax.py skills/` 0 error、`bash -n scripts/get-config-value.sh` PASS。
+- `/verify` は Post-merge AC (opportunistic 確認) の判定と、review retrospective に記録された Improvement Proposals (`get-config-value.sh` の根本整理、review 定型手順への edge case 実測追加、CI Reference Fallback の UNCERTAIN 指針) の起票要否を確認すること。
+- Pre-merge AC 4 件は全て `[x]` チェック済みで merge 前ゲートを通過している。
