@@ -7,6 +7,12 @@ SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/claude-watchd
 setup() {
     MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
     mkdir -p "$MOCK_DIR"
+
+    # Isolate emit-event env inherited from a wrapper (/auto) process so that
+    # test-origin watchdog_kill / max_silent_window events never reach the
+    # production .tmp/auto-events.jsonl (issue #1136; same class as #989).
+    unset EMIT_ISSUE_NUMBER EMIT_PR_NUMBER EMIT_PHASE_NAME AUTO_SESSION_ID
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
 }
 
 teardown() {

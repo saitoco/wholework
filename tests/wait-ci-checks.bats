@@ -8,6 +8,12 @@ SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/wait-ci-check
 setup() {
     MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
     mkdir -p "$MOCK_DIR"
+
+    # Isolate emit-event env inherited from a wrapper (/auto) process so that
+    # test-origin ci_wait events never reach the production
+    # .tmp/auto-events.jsonl (issue #1136; same class as #989).
+    unset AUTO_EVENTS_LOG EMIT_ISSUE_NUMBER EMIT_PR_NUMBER EMIT_PHASE_NAME AUTO_SESSION_ID
+
     export PATH="$MOCK_DIR:$PATH"
 
     TIMEOUT_CALL_LOG="$BATS_TEST_TMPDIR/timeout_calls.log"

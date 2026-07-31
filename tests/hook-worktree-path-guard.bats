@@ -12,6 +12,11 @@ setup() {
     FIXTURE_WORKTREE="$FIXTURE_PARENT/.claude/worktrees/test-issue"
     mkdir -p "$FIXTURE_WORKTREE/docs"
     mkdir -p "$FIXTURE_PARENT/docs"
+
+    # Isolate emit-event env inherited from a wrapper (/auto) process so that
+    # test-origin worktree-path-block events never reach the production
+    # .tmp/auto-events.jsonl (issue #1136; same class as #989).
+    unset AUTO_EVENTS_LOG EMIT_ISSUE_NUMBER EMIT_PR_NUMBER EMIT_PHASE_NAME AUTO_SESSION_ID
 }
 
 teardown() {
