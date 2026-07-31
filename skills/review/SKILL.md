@@ -36,6 +36,7 @@ Key per-step behavior in non-interactive mode:
 - **Any AskUserQuestion during review comment resolution** (Steps 7.2, 7.4, 7.6): auto-resolve using model judgment (apply the fix that best matches the review comment intent); record the decision in the Auto-Resolve Log as an issue comment
 - **External review timeout waiting**: auto-resolve by proceeding without waiting (the review results may be incomplete; note this in the review summary)
 - **Unclear review comment intent**: auto-resolve by adopting the most conservative interpretation (e.g., add a comment rather than delete code)
+- **Foreground (前景) execution for test/build commands (including commands run by Step 10's review sub-agents)**: always run these in the foreground — do not set `run_in_background: true` and end the turn waiting for a completion notification. A headless `claude -p` process has no subsequent turn to receive a background Bash task's completion notification, so ending the turn to await one leaves the phase permanently incomplete (silent no-op) rather than merely delayed — the same root cause as Issue #994's `/code` precedent. Interactive-mode behavior (background execution + await notification) is unaffected.
 
 ## Review-only Mode (--review-only)
 

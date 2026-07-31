@@ -24,6 +24,12 @@ step9_section() {
     awk '/^## Step 9: CI Status Check/{found=1} /^## Step 10/{found=0} found{print}' "$SKILL_FILE"
 }
 
+# Extract the "## Non-Interactive Mode Behavior" section from SKILL.md.
+# The section ends at the next level-2 (## ) heading (## Review-only Mode).
+non_interactive_mode_behavior_section() {
+    awk '/^## Non-Interactive Mode Behavior/{found=1} /^## Review-only Mode/{found=0} found{print}' "$SKILL_FILE"
+}
+
 @test "Opportunistic Verification: DESIGN_FILE_PATH resolution present" {
     opportunistic_verification_section | grep -q "DESIGN_FILE_PATH"
 }
@@ -75,4 +81,9 @@ step9_section() {
 @test "Step 8: manual preview-tier AC classified UNCERTAIN without AI judgment" {
     step8_section | grep -q -F "ac-tier: preview --> <!-- verify-type: manual -->"
     step8_section | grep -q -F "human-check against the preview URL is required"
+}
+
+@test "Non-Interactive Mode Behavior: foreground execution required for test/build commands" {
+    non_interactive_mode_behavior_section | grep -q "前景"
+    non_interactive_mode_behavior_section | grep -q -F "run_in_background"
 }

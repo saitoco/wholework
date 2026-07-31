@@ -48,6 +48,8 @@ Execution order: **type check → lint → build → test**
 
 1. Execute the test command in Bash (timeout: 120 seconds)
 
+**Note (non-interactive mode)**: When the calling skill is running in non-interactive mode (headless `claude -p`, e.g. `--non-interactive` in `ARGUMENTS`), always run the test command in the **foreground** — do not dispatch it with `run_in_background: true` and end the turn waiting for a completion notification. A background task's completion notification is delivered only when the harness re-invokes an interactive parent session; a headless `claude -p` process has no such subsequent turn, so the notification can never arrive in principle. Ending the turn to await it leaves the phase permanently incomplete (silent no-op), not merely delayed. Interactive-mode behavior (background execution + await notification) is unaffected by this constraint.
+
 ### Step 3: Result Analysis
 
 1. Parse the output and extract:
