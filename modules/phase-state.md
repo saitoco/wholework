@@ -38,7 +38,7 @@ For precondition checks, `reconcile-phase-state.sh` verifies whether the require
 | code-patch | `phase/ready` label on issue, Spec exists OR Size=XS | `git log origin/main --after=<reopen_ts> --grep="closes #N"` returns ≥1 fresh commit (reopen timestamp obtained via `get-last-reopen`); falls back to `git log origin/main --grep="closes #N"` when reopen timestamp unavailable; OR an operate route completion marker comment is found (see "Operate Route Completion Signature" below); OR an open PR on the `worktree-code+issue-N` branch is found (see "Stray PR Completion Signature" below) | Precondition: `phase/ready` — Implemented; Spec exists OR Size=XS — Implemented (Spec exists OR Size=XS). Completion: Implemented |
 | code-pr | `phase/ready` label on issue, Spec exists OR Size=XS | Open PR on `worktree-code+issue-N` branch (#310 SSoT) | Precondition: `phase/ready` — Implemented; Spec exists OR Size=XS — Implemented (Spec exists OR Size=XS). Completion: Implemented |
 | review | PR is OPEN | PR has a comment containing `<!-- review-summary -->` marker (primary); or `## Review Response Summary` / `## レビュー回答サマリ` (fallback for marker-absent posts) | Implemented |
-| merge | PR is OPEN and reviewDecision is APPROVED | `gh pr view --json state == MERGED` | Implemented |
+| merge | PR is OPEN and (reviewDecision is APPROVED, OR reviewDecision is not CHANGES_REQUESTED and a review-summary marker is found in PR comments/reviews — see "Merge Precondition Marker Fallback" below); reviewDecision=CHANGES_REQUESTED is an unconditional mismatch | `gh pr view --json state == MERGED` | Implemented |
 | verify | Issue has `phase/verify` label or is CLOSED | Issue is CLOSED or has `phase/done` label | Implemented |
 
 **Note**: Stage 2 recovery (push + PR creation for code-pr after watchdog kill) is delegated to #316 recovery sub-agent. `reconcile-phase-state.sh` performs inspection only — no recovery actions.
@@ -69,6 +69,16 @@ Route misdetection (#979-series) can leave the `code-patch` phase's actual artif
 **Freshness gate**: identical semantics to the "Operate Route Completion Signature" gate above — when a reopen timestamp is available (via `get-last-reopen`), the PR's `createdAt` must be after it; when unavailable, no freshness constraint is applied. This prevents a stray PR left over from *before* a fix-cycle reopen from masking a genuine re-run failure.
 
 **Check order**: commit (`closes #N`) → operate marker → stray PR → label/state fallback (`phase/verify`/`phase/done`/`CLOSED`). The stray PR check runs immediately after the operate marker check and before the label/state fallback, for the same reason the operate marker check is positioned there: when `reopen_ts` is non-null the label/state fallback is unconditionally skipped, so placing the stray PR check earlier lets it still catch a stray PR created during a fix-cycle re-run.
+
+### Merge Precondition Marker Fallback
+
+Wholework's self-hosted operation model has a single account performing Issue triage, implementation, review, and merge. GitHub rejects a self-`APPROVE`/`REQUEST_CHANGES` action with HTTP 422, so `reviewDecision` can never reach `APPROVED` on a self-PR — it stays empty or `REVIEW_REQUIRED` indefinitely. Checking only `reviewDecision == APPROVED` therefore makes the merge precondition warn on every single run, which is not a usable signal (it cannot distinguish "review genuinely incomplete" from "self-PR structurally can't be APPROVED").
+
+`_precondition_merge()` in `scripts/reconcile-phase-state.sh` adopts the same review-summary marker detection `_completion_review()` already uses (PR comments + `gh api repos/{owner}/{repo}/pulls/${PR_NUMBER}/reviews`, matched against `<!-- review-summary -->` / `## Review Response Summary` / `## レビュー回答サマリ`) as an alternate signal:
+
+- `reviewDecision == APPROVED`: precondition met (unchanged from prior behavior).
+- `reviewDecision == CHANGES_REQUESTED`: precondition not met, unconditionally — the marker fallback does not apply, since unresolved requested changes must block merge regardless of a stale/premature review-summary comment.
+- Any other value (empty, `REVIEW_REQUIRED`, or otherwise): precondition met only if a review-summary marker is found; not met otherwise.
 
 ### JSON Schema (v1)
 
