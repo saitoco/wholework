@@ -71,6 +71,10 @@
 - **`config=` ゲートとの役割分担**: `opportunistic-search.sh` の `config=` ゲート (`modules/observation-trigger.md` 参照) は、フラットな boolean キー1つで表現できる前提条件を通知コメント投稿前にフィルタする。Step 8c の「前提不成立時は SKIPPED」判定はこれと重複するものではなく、`config=` で表現しきれない前提 (ディレクトリ構成など) を証拠収集後に発見した場合の受け皿として設けている。
 - **Issue Retrospective からの引き継ぎ**: `/issue` フェーズの Auto-Resolve Log により、「対応方針 (案) 4.」の記録先は "Notes" ではなく `## Acceptance Test Results` の Details 列に統一済み。本 Spec の Implementation Steps 3 もこの用語に合わせている。
 
+## Autonomous Auto-Resolve Log
+
+- **`/code 1109 --pr --non-interactive` Step 3 (phase/ready ラベルチェック)**: Issue のラベルは `phase/ready` ではなく既に `phase/code` だった。タイムライン (`labeled phase/ready` → 3分後に `unlabeled phase/ready` / `labeled phase/code`) から、前回の `/code` 実行がラベル遷移 (Step 4) までは完了したが、ブランチ・worktree・PR を残さず中断したと判断した。Spec (`docs/spec/issue-1109-verify-observation-eval.md`) は Design Complete まで完了しており内容も完備しているため、AskUserQuestion による確認を経ずに既存 Spec を使って実装を続行した。
+
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue 1109 --non-interactive` の Issue Retrospective。曖昧ポイント1件 (「対応方針 (案) 4.」の記録先を Notes から Details 列へ) を自動解決し、Background の事実確認 (`modules/verify-executor.md:244` と `scripts/observation-trigger.sh:79` の矛盾) を実施した記録。AC 変更なし。 (https://github.com/saitoco/wholework/issues/1109#issuecomment-5138255302)

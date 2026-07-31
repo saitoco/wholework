@@ -241,7 +241,7 @@ When a condition carries a `<!-- verify-type: ... -->` marker, apply the followi
 |-------------|-------------------------------|
 | `auto` | Normal verify command processing (Steps 1–4 above) |
 | `opportunistic` | Processed by opportunistic-search.sh at skill completion; during normal `/verify` run, execute the attached verify command if present |
-| `observation` | **Skip during normal `/verify` run** — the condition is re-evaluated when the specified `event=<name>` fires via `opportunistic-search.sh --event <name>`. During skip, record as SKIPPED with detail: "observation: waiting for event=<event-name>". If the event is unknown, emit a warning and fall back to opportunistic treatment. |
+| `observation` | **Branches on whether the specified `event=<name>` has already fired** (fired = `opportunistic-search.sh --event <name>` has posted a detection comment on this Issue): if not yet fired, record as SKIPPED with detail: "observation: waiting for event=<event-name>" (unchanged from prior behavior). If already fired, do **not** SKIP — evaluate the condition per `skills/verify/SKILL.md` Step 8c (fired-event detection, evidence collection, PASS/FAIL/UNCERTAIN/SKIPPED judgment). If the event name is unknown, emit a warning and fall back to opportunistic treatment. |
 | `manual` | Processed in Step 8b (Claude executability judgment + verification guide or AskUserQuestion) |
 
 5. Treat syntax errors (unknown command names, missing arguments, etc.) as UNCERTAIN
