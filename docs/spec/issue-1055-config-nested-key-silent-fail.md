@@ -120,5 +120,5 @@ UNCERTAIN は 0 件、Pre-merge 4 件すべて PASS で、verify command の記�
 ### Notes for Next Phase
 
 - PR ブランチ `worktree-code+issue-1055` は `.claude/worktrees/code+issue-1055` (code フェーズの silent no-op の残骸) にチェックアウトされたままである。merge 後のブランチ削除がこれで失敗する可能性があるため、必要に応じて先に `git worktree remove` を実施すること。
-- review 中の追加コミット `7a84ecac` に対する CI は未確認。merge 前に `statusCheckRollup` を再確認すること (`d798266e` 時点では全ジョブ SUCCESS)。
+- review 中の追加コミット (`7a84ecac` 修正 / `2625abc8` retrospective) に対する CI は確認済み: 9 checks 全 PASS (`wait-ci-checks.sh 1120` → `total=9 passed=9 failed=0`)。
 - ローカル実行分は確認済み: `bats tests/get-config-value.bats` 27/27 PASS、`validate-skill-syntax.py skills/` 0 error、`bash -n scripts/get-config-value.sh` PASS。
