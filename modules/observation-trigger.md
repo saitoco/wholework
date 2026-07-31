@@ -179,7 +179,7 @@ added to either script.
 - Resolution: `<key>`'s value is resolved via `"${SCRIPT_DIR}/get-config-value.sh" "$CONFIG_KEY" "false"`, then lowercased.
 - Comparison: the resolved value must equal `"true"` exactly; any other value (including the `"false"` fallback) excludes the Issue from match results.
 - Gate disabled (unconditional match) when: no `config=` attribute is present on the AC line.
-- Scope: `<key>` must be a flat kebab-case key, matching `get-config-value.sh`'s own constraint — nested keys (e.g. `capabilities.browser`) are not supported. The comparison is boolean-only (`true`/`false`); enum-valued keys (e.g. `auto-stop-at`) are out of scope. Both are candidates for a `config=key:value` extension if a future Issue needs them.
+- Scope: `<key>` must be a flat kebab-case key or a single-level nested key in block format (e.g. `capabilities.workflow`), matching `get-config-value.sh`'s own constraint — inline hash format and keys with two or more dots are not supported. The comparison is boolean-only (`true`/`false`); enum-valued keys (e.g. `auto-stop-at`) are out of scope. Both are candidates for a `config=key:value` extension if a future Issue needs them.
 
 ## Notes
 

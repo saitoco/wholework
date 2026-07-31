@@ -62,8 +62,9 @@ the condition can never actually resolve. The result is notification comments ac
 Issue indefinitely with no path to PASS. See `modules/observation-trigger.md` § Condition Check
 Gate (`config=`) for the resolution mechanics.
 
-`<key>` must be a flat kebab-case key matching `get-config-value.sh`'s own constraint — nested keys
-(e.g. `capabilities.browser`) are not supported, and the comparison is boolean-only (`true`/`false`);
+`<key>` must be a flat kebab-case key or a single-level nested key in block format (e.g.
+`capabilities.workflow`), matching `get-config-value.sh`'s own constraint — inline hash format and
+keys with two or more dots are not supported, and the comparison is boolean-only (`true`/`false`);
 enum-valued keys (e.g. `auto-stop-at`) are out of scope for `config=`.
 
 ### Tag Assignment Example

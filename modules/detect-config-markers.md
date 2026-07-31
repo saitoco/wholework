@@ -99,6 +99,7 @@ Example: `capabilities.invoice-api: true` → `HAS_INVOICE_API_CAPABILITY=true`
 - Comment lines (lines starting with `#`) are ignored
 - Nested values under `capabilities:` section are interpreted as `capabilities.{key}`. Both inline hash format (`capabilities: { browser: true }`) and block format (`capabilities:\n  browser: true`) are supported. If `capabilities:` section is undefined, all capability variables are `false`
 - `capabilities.mcp` is written in list format (`- tool_name`) and converted to comma-separated string (e.g., `["mf_list_quotes", "mf_list_invoices"]` → `"mf_list_quotes,mf_list_invoices"`). Inline list format (`[tool1, tool2]`) is not supported in the initial implementation. If `capabilities.mcp` is undefined or an empty list, `MCP_TOOLS=""`
+- `scripts/get-config-value.sh` (the bash-side reader used outside this LLM-driven module) supports flat keys and single-level nested keys in block format (e.g., `capabilities.workflow`) as of #1055. Keys with two or more dots, and inline hash format, remain unsupported on the bash side even though this module supports both via the LLM-driven interpretation above. On the bash side a nested key resolves only against a section's **direct children** (a deeper-indented `capabilities.mcp.workflow` does not answer `capabilities.workflow`), and keys are restricted to `[A-Za-z0-9._-]` so that free-text keys can never be interpreted as regex patterns.
 
 ## Output Format
 
