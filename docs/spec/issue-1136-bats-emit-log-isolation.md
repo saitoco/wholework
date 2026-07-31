@@ -141,22 +141,22 @@ No new comments since last phase. Issue #1136 has 1 comment total (2026-07-31T16
 - `scripts/check-forbidden-expressions.sh` failed due to a pre-existing deprecated-term usage (旧称: Issue Spec) in `docs/spec/issue-1135-external-kill-root-cause.md`, unrelated to this Issue's diff (confirmed via `git diff main -- docs/spec/issue-1135-external-kill-root-cause.md` returning empty). Filed as #1137 rather than fixing inline, to keep this PR's diff scoped to #1136.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Ran in `--light` mode (Size=M, confirmed via `scripts/get-issue-size.sh`): 1 `review-light` agent covering all 4 aspects instead of the full spec+bug×2 fan-out. No issues found by the agent; independently re-verified test/purge evidence myself before trusting the agent's "no issues" verdict.
-- Treated the pre-existing, diff-unrelated `Forbidden Expressions check` CI FAILURE as MUST per Step 9's no-exception blocking rule, and fixed it inline (one-word term replacement in `docs/spec/issue-1135-external-kill-root-cause.md`) rather than waiting on #1137, since the fix was trivial and the rule has no allowlist escape hatch yet.
-- Kept the `REQUEST_CHANGES` review event as `COMMENT` (GitHub rejects self-authored `REQUEST_CHANGES` with 422) and relied on the review body's prose ("MUST issues found...") to carry the blocking signal instead.
+- Pre-merge AC gate: all 5 pre-merge acceptance conditions were already checked on the Issue (`unchecked_count=0`), so the merge proceeded without needing an override marker.
+- `gh-pr-merge-status.sh` reported `mergeable=true reason=clean ci_status=success review_status=approved`; squash-merged directly with no conflict resolution needed.
+- Ran in `--non-interactive` mode per invocation args; no ambiguity requiring auto-resolve/log arose during this run.
 
 ### Deferred Items
-- #1137 (pre-existing deprecated-term cleanup) — now effectively resolved by this PR's inline fix; recommend closing #1137 as a duplicate/superseded once this PR merges, referencing this PR.
-- The `scripts/claude-watchdog.sh` JSON-mode spurious-kill race — not fixed here, out of this Issue's scope (unchanged from code phase).
+- #1137 (pre-existing deprecated-term cleanup) — recommend closing as duplicate/superseded now that this PR's inline fix resolved it (unchanged from review phase).
+- The `scripts/claude-watchdog.sh` JSON-mode spurious-kill race — out of this Issue's scope, not fixed (unchanged from code phase).
 - `ci_wait` events already in production `.tmp/auto-events.jsonl` from prior `wait-ci-checks.bats` leakage — not retroactively purged (unchanged from code phase).
-- New: whether to file an Issue for (a) `Forbidden Expressions check`'s lack of diff-scoping (pre-existing `main` violations block unrelated PRs) and (b) `gh-pr-review.sh`'s missing self-review 422 fallback — both recorded in this Spec's `## review retrospective § Recurring issues` but not yet filed as Issues.
+- Whether to file Issues for (a) `Forbidden Expressions check`'s lack of diff-scoping and (b) `gh-pr-review.sh`'s missing self-review 422 fallback — both recorded in `## review retrospective § Recurring issues` but not yet filed (unchanged from review phase).
 
 ### Notes for Next Phase
-- Post-merge AC (observing `.tmp/auto-events.jsonl` after a bats-full-suite `/auto` batch run) still applies unchanged — `/verify` should check this.
-- `/merge` can proceed once a human confirms the MUST fix (already pushed, CI 9/9 PASS) — the PR review event is `COMMENT` not `REQUEST_CHANGES` due to the self-review platform limit noted above, so `/merge`'s own gate logic (if any) should not rely solely on review event type for this repo.
+- Post-merge AC (observing `.tmp/auto-events.jsonl` after a bats-full-suite `/auto` batch run) still applies — `/verify` should check this.
+- `BASE_BRANCH` was `main`, so the Issue is expected to auto-close via `closes #1136` in the PR body; `/verify` should confirm the Issue reached `CLOSED` + `phase/verify` state (Step 6 fallback already covers this at merge time).
 
 ## review retrospective
 
