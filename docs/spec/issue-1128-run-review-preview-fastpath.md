@@ -6,6 +6,10 @@
 
 cutoff: `2026-07-31T08:05:31Z` (最新の `phase/*` label 付与時刻)
 
+### code phase (cutoff: `2026-07-31T08:23:58Z`)
+
+新規コメントなし。
+
 ## Overview
 
 `skills/review/SKILL.md` Step 8.0 は `PREVIEW_URL` 環境変数が export 済みなら GitHub Deployments API lookup を skip する fast path を持つ。一方 `#1050` で `scripts/run-review.sh` に追加された review セッション起動前の preview 待ちゲートには fast path が無く、`capabilities.pr-preview: true` なら `PREVIEW_URL` の有無に関わらず Deployments API を無条件にポーリングする。
