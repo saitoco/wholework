@@ -205,3 +205,70 @@ EOF
     [ "$status" -eq 0 ]
     [ "$output" = "false" ]
 }
+
+@test "nested key (block format): grandchild key does not answer a single-level key" {
+    cat > .wholework.yml << 'EOF'
+capabilities:
+  mcp:
+    workflow: true
+always-pr: false
+EOF
+    run bash "$SCRIPT" capabilities.workflow default
+    [ "$status" -eq 0 ]
+    [ "$output" = "default" ]
+}
+
+@test "nested key (block format): direct child after a nested block is still found" {
+    cat > .wholework.yml << 'EOF'
+capabilities:
+  mcp:
+    workflow: true
+  browser: true
+EOF
+    run bash "$SCRIPT" capabilities.browser false
+    [ "$status" -eq 0 ]
+    [ "$output" = "true" ]
+}
+
+@test "nested key (block format): section header with inline comment is recognized" {
+    cat > .wholework.yml << 'EOF'
+capabilities:   # enabled capabilities
+  workflow: true
+EOF
+    run bash "$SCRIPT" capabilities.workflow false
+    [ "$status" -eq 0 ]
+    [ "$output" = "true" ]
+}
+
+@test "nested key (block format): blank line inside section does not end it" {
+    cat > .wholework.yml << 'EOF'
+capabilities:
+  browser: true
+
+  workflow: true
+EOF
+    run bash "$SCRIPT" capabilities.workflow false
+    [ "$status" -eq 0 ]
+    [ "$output" = "true" ]
+}
+
+@test "invalid key: regex metacharacters return default without matching" {
+    cat > .wholework.yml << 'EOF'
+capabilities:   # enabled capabilities
+  workflow: true
+EOF
+    run bash "$SCRIPT" 'capabilities.*' default
+    [ "$status" -eq 0 ]
+    [ "$output" = "default" ]
+}
+
+@test "invalid key: unbalanced parenthesis returns default without grep errors" {
+    cat > .wholework.yml << 'EOF'
+capabilities:
+  workflow: true
+EOF
+    run bash "$SCRIPT" 'capabilities.(workflow' default
+    [ "$status" -eq 0 ]
+    [ "$output" = "default" ]
+    [[ "$output" != *"grep"* ]]
+}
