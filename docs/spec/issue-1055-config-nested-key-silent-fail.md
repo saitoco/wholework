@@ -139,3 +139,41 @@ UNCERTAIN は 0 件、Pre-merge 4 件すべて PASS で、verify command の記�
 - **Recovery type**: review-rerun
 - **Wrapper exit code**: 1
 - **Outcome**: success
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- 起票時の前提「現時点で実害はない / `get-config-value.sh` に nested キーを渡している箇所は 0 件」が #1088 で崩れていた点を、`/issue` フェーズが consumed comment から拾って Background/Purpose/AC を全面更新できた。**「実害なし」と書かれた Issue は前提の失効を定期的に検査する価値がある**という実例 (本件は前提失効から実害顕在化まで約 1 か月)
+- AC2 を `command "test \"$(scripts/get-config-value.sh capabilities.workflow false)\" = true"` という**実測 1 行**で書いたのが有効だった。rubric だけだと「対応した」の判定が曖昧になるところ、本リポジトリの実設定に対する具体値で PASS/FAIL が決まる
+
+#### spec
+
+- 案 A〜D のうち案 B を採り、案 D (ゲート側ガード) を「実際の値判定が直らない」で明確に落としている。**症状 (ゲートが誤判定する) ではなく原因 (reader が nested を読めない) の側で直す**判断が、結果的に `auto-retry-on-fail.*` 等の他の nested キー利用箇所も同時に救った
+- Size を S → M に再判定 (実変更 5 ファイル)。patch → pr route に切り替わったことで review フェーズが入り、後述の silent failure 3 件が検出された。**Size 見積りの精度が検出機会に直結した**ケース
+
+#### code
+
+- 実装自体は Spec どおりで乖離なし。ただしフェーズは silent no-op で終了 (`## Auto Retrospective` 参照)
+- 実装は完了・コミット済みだったため、`code_phase_milestone = post-commit` / `resume_action = push-and-pr` の判定どおり push + PR 作成だけで復旧できた。**checkpoint 設計が想定どおり機能した**
+
+#### review
+
+- `--light` にもかかわらず、レビュー側の独自 edge case 実測で **本 Issue が解消対象としているのと同一クラスの silent failure を 3 件**検出した (孫キーの誤採用 / セクションヘッダー末尾コメントの取りこぼし / 正規表現メタ文字の混入)。いずれも「エラーにならず無言で誤った値が返る」型
+- 3 件とも一時 `.wholework.yml` を構成しての実測でのみ発見されている。静的な差分読解では出てこない。review retrospective の提案 (b)「パーサ系 PR では negative/edge case 入力を実際に構成して実行することを定型手順化」は、本件が根拠として十分強い
+- 皮肉な構図として、**silent failure を直す PR が新たな silent failure を 3 件持ち込んでいた**。同一クラスのバグを直す変更こそ同じ観点で自己検査すべき、という教訓
+
+#### merge
+
+- conflict なし、CI 9/9 SUCCESS で完了。`reviewDecision` が空 (自己 PR) による precondition 警告は既知 (#1106) で warn-only のため進行に影響なし
+
+#### verify
+
+- Pre-merge 4 件すべて PASS、UNCERTAIN 0。ゲートの end-to-end 確認 (`opportunistic-search.sh --event auto-run` が `config=always-pr` の #797/#1026 を除外) を read-only で実施でき、**ユニット + 統合の 2 段で確証を取れた**
+- Post-merge の opportunistic AC は「実運用で nested `config=` が判定されること」だが、**リポジトリ内に nested キーを `config=` に指定した AC が 0 件**のため観察機会が発生しない。#1118 (実行文脈条件の宣言機構) が入って `config=`/`when=` 宣言が増えれば自然に観察される見込み
+
+### Improvement Proposals
+
+- `docs/reports/` などに「**前提失効の再検査**」を組み込む余地。本 Issue は「現時点で実害はない」と明記して起票され、その前提が別 Issue (#1088) の実装で崩れたが、崩れたことを検知する仕組みがなく約 1 か月放置された。Issue 本文に「実害なし」「将来リスク」と書かれたものを定期的に洗い出し、前提条件が今も成立するかを確認する `/audit` の観点を追加する (既存の `/audit drift` はドキュメントと実装の乖離を見るが、**Issue 本文の前提と実装の乖離**は見ていない)。
