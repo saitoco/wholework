@@ -78,3 +78,34 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue 1109 --non-interactive` の Issue Retrospective。曖昧ポイント1件 (「対応方針 (案) 4.」の記録先を Notes から Details 列へ) を自動解決し、Background の事実確認 (`modules/verify-executor.md:244` と `scripts/observation-trigger.sh:79` の矛盾) を実施した記録。AC 変更なし。 (https://github.com/saitoco/wholework/issues/1109#issuecomment-5138255302)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Spec の Notes 節はステアリングドキュメント同期の監査対象として `docs/structure.md` / `docs/workflow.md` のみを検討しており、`modules/observation-trigger.md` と `modules/verify-classifier.md` が漏れていた。両ファイルとも本 Issue が修正した「常に SKIPPED」という pre-fix の記述をそのまま残しており、`modules/verify-executor.md` だけが更新される非対称な状態になっていた。監査対象の選定は「PR diff で変更したファイル」に閉じず、「同じ仕様事項を別の角度から記述している既存ドキュメント」まで広げる必要がある。今回は `/review` の Documentation Consistency 観点で検出・修正したが、次回以降は Spec 作成時点で `grep -rl "verify-type: observation"` 等の横断検索を Implementation Steps に含めることを検討したい。
+
+### Recurring issues
+
+新設した Step 8c のロジックに対する回帰テストが Implementation Steps に明記されておらず、Pre-merge AC `command "bats tests/verify.bats"` の PASS が新ロジックを実際には検証していなかった (既存スイートに `observation` 関連ケースが皆無)。`skill-dev-recheck.md` の Type=Bug 重み付けにより `/review` の review-light エージェントがこれを検出したが、本来は Spec の Implementation Steps に「対応する bats ケースを追加する」ことを明記すべきだった。新しい分岐ロジックを追加する Issue では、Verification 節の command AC を「既存スイートが PASS すること」だけでなく「新ロジックを検証する新規ケースを追加すること」まで含めて記述する運用を検討したい。
+
+### Acceptance criteria verification difficulty
+
+3件の rubric 系 AC は diff の内容と一致しており UNCERTAIN なく判定できた。ただし `/review` の修正作業中、Step 8c の説明文に二重バッククォート形式のインラインコード (`` `text` `` ``) を導入したところ、`scripts/validate-skill-syntax.py` の素朴な単一バッククォート正規表現ストリッパーが誤マッチし、文書の広い範囲を巻き込んで無関係な `<!-- verify: ... -->` プレースホルダーを「未知の verify コマンド」として誤検出した。この地雷は AC 自体には現れないが、SKILL.md 本文を編集する際は二重バッククォートのインラインコード表記を避けるべきという運用上の注意点として記録する。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Pre-merge AC 4件 (rubric×3 + command×1) はすべて PASS 判定。CI 全9チェック SUCCESS。MUST issue はゼロのため review は COMMENT で投稿。
+- review-light エージェントが検出した SHOULD 4件はすべて修正 (ドキュメント不整合2ファイル、Step 8c のエッジケース2件、bats 回帰テスト追加)。Spec 自体の監査ノート更新は Spec が disposable であるため見送った。
+- Step 8c の説明文修正中に validate-skill-syntax.py の二重バッククォート地雷を踏んだため、二重バッククォートを使わない書き方に書き直した。
+
+### Deferred Items
+- Post-merge の観察系 AC (`event 発火後に /verify を実行し checkbox が更新されることを確認する`) は `verify-type: manual` のため引き続き人手確認待ち。
+- None
+
+### Notes for Next Phase
+- `/merge` 実行時、CI は全 SUCCESS 済みなので追加の CI 待ちは不要。
+- `/verify` 実行時、Post-merge の manual AC 1件が残っている点に注意。
+- SKILL.md / モジュールファイルを編集する際は二重バッククォートのインラインコード表記 (`` `text` ``) を避けること — `scripts/validate-skill-syntax.py` の正規表現ストリッパーがこれを誤処理する。
