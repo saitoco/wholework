@@ -4,7 +4,8 @@
 # Structural tests: verify that skills/verify/SKILL.md Step 2 runs the
 # foreign-worktree guard ahead of the base branch checkout.
 
-SKILL_FILE="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/skills/verify/SKILL.md"
+PROJECT_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
+SKILL_FILE="$PROJECT_ROOT/skills/verify/SKILL.md"
 
 # Extract the "### Step 2: Detect and Update Base Branch" section from SKILL.md.
 # The section ends at the next level-3 (### Step ) heading.
@@ -16,6 +17,12 @@ step2_section() {
 # The section ends at the next level-3 (### Step ) heading.
 step5_section() {
     awk '/^### Step 5: /{found=1} /^### Step / && !/Step 5: /{found=0} found{print}' "$SKILL_FILE"
+}
+
+# Extract the "#### Step 8c: Observation Post-merge Conditions" section from SKILL.md.
+# The section ends at the next heading (level-3 or level-4).
+step8c_section() {
+    awk '/^#### Step 8c: /{found=1} (/^#### / || /^### /) && !/Step 8c: /{found=0} found{print}' "$SKILL_FILE"
 }
 
 @test "Step 2 guard: detect-foreign-worktree.sh runs before base branch checkout" {
@@ -57,4 +64,42 @@ step5_section() {
 @test "Step 5 pre-merge-preview AC skip rule checks for a Review Response Summary via reconcile-phase-state.sh" {
     step5_section | grep -q -F "Review Response Summary"
     step5_section | grep -q -F "reconcile-phase-state.sh"
+}
+
+@test "Step 8c: fired observation ACs are evaluated, not always SKIPPED" {
+    step8c_section | grep -q -F "Match found"
+    step8c_section | grep -q -F "Proceed to evidence collection"
+}
+
+@test "Step 8c: unfired observation ACs still record SKIPPED" {
+    step8c_section | grep -q -F "No match"
+    step8c_section | grep -q -F "waiting for event=<event-name>"
+}
+
+@test "Step 8c: judgment covers PASS/FAIL/UNCERTAIN/SKIPPED" {
+    step8c_section | grep -q -F "**PASS**"
+    step8c_section | grep -q -F "**FAIL**"
+    step8c_section | grep -q -F "**UNCERTAIN**"
+    step8c_section | grep -q -F "**SKIPPED**"
+}
+
+@test "Step 8c: evidence collection lists auto logs, auto-events.jsonl, and opportunistic-search.sh" {
+    step8c_section | grep -q -F "/auto"
+    step8c_section | grep -q -F "auto-events.jsonl"
+    step8c_section | grep -q -F "opportunistic-search.sh --event"
+}
+
+@test "Step 8c: gh issue view failure is not silently treated as unfired" {
+    step8c_section | grep -q -F "GH_EXIT"
+    step8c_section | grep -q -F "could not confirm fired status"
+}
+
+@test "Step 8c: fired-event match is anchored to the backtick-quoted token" {
+    step8c_section | grep -q -F '\`${EVENT_NAME}\` detected'
+}
+
+@test "verify-executor.md: observation row branches on fired status instead of always SKIPPED" {
+    run grep -F "Branches on whether the specified" "$PROJECT_ROOT/modules/verify-executor.md"
+    [ "$status" -eq 0 ]
+    ! grep -q -F "Skip during normal \`/verify\` run" "$PROJECT_ROOT/modules/verify-executor.md"
 }
