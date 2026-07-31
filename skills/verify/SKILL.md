@@ -385,12 +385,19 @@ For each unchecked post-merge condition marked `<!-- verify-type: observation ev
 Extract `<name>` from the `event=<name>` attribute. Fired status is not subject to Step 4's comment-consumption cutoff — search the Issue's full comment history directly:
 
 ```bash
-gh issue view "$NUMBER" --json comments --jq '.comments[].body' \
-  | grep -F "observation event" | grep -F "detected" | grep -F -- "$EVENT_NAME"
+COMMENTS_JSON=$(gh issue view "$NUMBER" --json comments --jq '.comments[].body' 2>&1)
+GH_EXIT=$?
 ```
 
-- **No match**: the event has not fired yet. Record as SKIPPED with detail: "observation: waiting for event=<event-name>" (unchanged from prior behavior). Do not proceed to evidence collection.
-- **Match found**: the event has fired. Proceed to evidence collection.
+- **`gh issue view` fails** (`GH_EXIT` non-zero — auth/network/rate-limit error): do not treat this as "not fired." Record as UNCERTAIN with detail: "could not confirm fired status (gh error)". Do not proceed to evidence collection.
+- **`gh issue view` succeeds**: search `$COMMENTS_JSON` for the exact event token as posted by `scripts/observation-trigger.sh:79` (the event name surrounded by backticks, immediately followed by "detected"), not a bare unanchored substring — this avoids one event name matching as a substring of another (e.g. a future `event=auto` vs. `event=auto-run`):
+
+  ```bash
+  echo "$COMMENTS_JSON" | grep -F -- "\`${EVENT_NAME}\` detected"
+  ```
+
+  - **No match**: the event has not fired yet. Record as SKIPPED with detail: "observation: waiting for event=<event-name>" (unchanged from prior behavior). Do not proceed to evidence collection.
+  - **Match found**: the event has fired. Proceed to evidence collection.
 
 **2. Evidence collection (best-effort — not every source is available every time)**
 
