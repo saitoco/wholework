@@ -67,6 +67,28 @@
 - **Wrapper exit code**: 1
 - **Outcome**: success
 
+### Execution Summary
+
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| issue | — | SUCCESS | `triaged` / Size=S は事前設定済み。曖昧点 3 件を非対話 3-Tier Policy で自動解決 |
+| spec | patch | SUCCESS | ROUTE=patch 確定。main 先行による ff マージ失敗を wrapper 内でリベース自己復旧 |
+| code | patch | SUCCESS (manual commit-push recovery) | silent no-op 2 回 → auto-retry 2/3 が dirty-tree precondition で停止 → 親セッションが検証のうえコミット・push |
+| verify | — | SUCCESS | Pre-merge AC 4/4 PASS。Post-merge observation 1 件は未観測で `phase/verify` 継続 |
+
+### Orchestration Anomalies
+
+- **code phase: silent no-op ×2 (`code-patch-silent-no-op`)**: `/code` セッションがフルテストスイートを background 実行し「完了通知を待ちます」としてターンを終えたが、`claude -p` (headless) には通知を運ぶ後続ターンが存在しないため必ず未完了になる。`skills/code/SKILL.md` L353 に非対話モードでの foreground 実行指示 (#994 で追加) が既にあったにもかかわらず遵守されなかった
+- **auto-retry 2/3 の dirty-tree 停止**: 先行試行が実装編集を parent main の作業ツリーに未コミットで残していたため、`check-verify-dirty` が `classify=parent-main` で 2 ファイルを検出し `Error: parent main has uncommitted changes` で中断。完成済み実装がコミットされないまま宙に浮いた
+- **既存診断機構がいずれも未ヒット**: 外部 kill pre-check = `no-match` (正)、Tier 2 `detect-wrapper-anomaly.sh` = 出力なし (未知パターン)、`#dirty-working-tree` catalog エントリは Applicable Phases が verify のみで code 非対象。親セッションが diff と Spec の突き合わせ + テスト 1294 件を検証して手動復旧した
+
+### Improvement Proposals
+
+分析と提案は `## Verify Retrospective` → `### Improvement Proposals` に集約済み。`/verify` Step 16 が以下のとおり処理を完了している (重複起票を避けるため参照のみ記録)。
+
+- #1097 — 既存 foreground 指示の不遵守という実測データを既存 Issue にコメント報告 (同 Issue が `/code` を含む全 headless skill を既にスコープ済みのため新規起票せず)
+- #1122 — parent main に未コミットで残った実装の復旧エントリを catalog に追加
+
 ## Verify Retrospective
 
 ### Phase-by-Phase Review
