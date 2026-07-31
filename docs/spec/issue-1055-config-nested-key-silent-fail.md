@@ -72,3 +72,53 @@
 ### Improvement Proposals
 - `#1097` の対象範囲を `/code` フェーズにも広げる (または `/code` 用の follow-up を立てる)。現在の AC は `modules/test-runner.md` と `skills/review/SKILL.md` のみを対象としており、本件のように `/code` がフルスイートをバックグラウンド実行して通知待ちするケースは修正後も残る。`modules/test-runner.md` 側に headless 制約を書けば両フェーズを同時にカバーできる可能性がある。
 - `run-code.sh` の parent-main dirty guard を **セッション帰属で判定**できるようにする。現状は main に未コミット変更があれば発生源を問わず auto-retry を止めるため、並行セッションが作業中のファイルによって無関係な `/auto` の自動復旧が無効化される。`scripts/check-verify-dirty.sh` は既に `classify=parent-main` を出力しているので、対象 Issue の変更ファイル集合 (Spec の `## Changed Files`) と突き合わせて「自分に関係しない dirty は auto-retry を止めない」判定にする余地がある。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+構造的な乖離はなし。実装は Spec の Implementation Steps を忠実に再現していた。**問題は乖離ではなく Spec 側の仕様の穴**だった。
+
+Spec の Step 1 は nested フォールバックのパース規則を「空白始まりの行が `^[[:space:]]+${SUBKEY}[[:space:]]*:` に一致したら」と正規表現レベルまで書き下ろしていたが、(a) インデント深度の検証、(b) セクションヘッダー行の末尾インラインコメント、(c) キー文字種の検証、の 3 点を規定していなかった。実装者は書き下ろされた正規表現をそのまま転記したため、3 点とも silent failure として残った (レビューで検出・修正、commit `7a84ecac`)。
+
+学び: パーサ系の Spec では正規表現そのものではなく **満たすべき性質** (「セクション直下の子のみに一致する」「ヘッダーの末尾コメントを許容する」「キーは正規表現として解釈されない」) を書くほうがよい。具体的な正規表現を Spec に置くと、実装フェーズでその妥当性が再検討されずに転記されやすい。
+
+### Recurring issues
+
+1. **同一スクリプトへの制約の継ぎ足しが 3 件目**。#979 (インラインコメントの strip)、#1055 (nested キーの block format)、今回のレビュー修正 (直下の子限定 + キー文字種) と、`scripts/get-config-value.sh` の行指向 grep/sed パースは対応形状を継ぎ足す形で拡張が続いている。Issue 本文の補足も「同一スクリプトに関する 2 つ目の制約となるため、まとめて整理する価値があるかもしれない」と既に述べていた。
+
+2. **AC でも Spec でも検出されない欠陥が、レビュー時の手動 edge case 実測ではじめて表面化した**。今回の 3 件はいずれも一時的な `.wholework.yml` を作って実際にスクリプトを走らせることで検出した。review-light エージェントは静的読解と既存テストの実行までは行ったが、未テストの入力形状を自分で構成して実行するところまでは踏み込まず、指摘 0 件で完了している。パーサ・バリデータ系の変更を含む PR では、negative/edge case 入力を実際に構成して実行することを review の定型手順にする価値がある。
+
+### Acceptance criteria verification difficulty
+
+UNCERTAIN は 0 件、Pre-merge 4 件すべて PASS で、verify command の記述精度そのものに問題はなかった。
+
+ただし `command` type の AC (`test "$(scripts/get-config-value.sh capabilities.workflow false)" = true`) は safe mode では直接実行されず CI 参照フォールバックに落ちる。今回は `Run bats tests` job に同等の回帰テストがあったため PASS と判定したが、**AC は「本リポジトリの実 `.wholework.yml` に対する挙動」を問うているのに対し、bats テストは一時ファイルに対する挙動を検証している**という差がある。両者の同一性は現状モデル判断に委ねられており、判定根拠が暗黙になりやすい。
+
+### Improvement Proposals
+
+- `scripts/get-config-value.sh` の行指向パースの根本整理。対応/非対応の入力形状を 1 箇所に列挙した仕様テーブルを設け、テーブル駆動テストに寄せるか、最小 YAML サブセットパーサへ一本化する。制約の継ぎ足しが 3 件目であり、次の拡張要求が来る前に整理する価値がある。
+- パーサ・バリデータ系の変更を含む PR に対する review フェーズの定型手順として、「negative/edge case 入力を実際に構成して実行する」ことを明文化する。今回の 3 件はすべてこの手順でのみ検出された。`review-light` / `review-bug` の観点定義に反映する余地がある。
+- `modules/verify-executor.md` の CI Reference Fallback 節に、「CI ジョブが AC と同一の入力を検証していると確信できない場合は PASS ではなく UNCERTAIN に倒す」指針を明記する。現状は関連ジョブが SUCCESS であれば PASS とするだけで、検証対象の同一性はモデル判断に委ねられている。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+
+- `review-light` は指摘 0 件で完了したが、レビュー側の独自 edge case 実測で SHOULD×2 / CONSIDER×1 を検出した。MUST ではないものの、いずれも本 Issue が解消対象としている silent failure と同一クラス (エラーにならず誤った値 / default が返る) だったため、フォローアップに回さず review フェーズ内で修正した (commit `7a84ecac`)。
+- 修正内容は 3 点: (a) nested キーの照合をセクション直下の子に限定 (孫キーの誤採用を防止)、(b) セクションヘッダー行の末尾インラインコメントを許容、(c) キー文字種を `[A-Za-z0-9._-]` に制限。
+- (c) のガードはスクリプト冒頭 (flat キーループより前) に配置した。free-text 由来のキーは flat ループの正規表現にも補間されるため、nested フォールバック内に閉じたガードでは露出面の半分しか塞げないという判断。既存の静的呼び出し元はすべてこの文字種に収まることを確認済み。
+- 受入条件の更新は行っていない。3 点の修正はいずれも照合範囲を厳密化する方向であり、AC テキストおよび verify command と矛盾しない (Pre-merge 4 件は修正後も PASS を維持)。
+
+### Deferred Items
+
+- Post-merge AC (nested キーを `config=` に指定した observation/opportunistic AC の実運用確認) は未消化。`/verify` の opportunistic 判定に委ねる。
+- `get-config-value.sh` の行指向パースの根本整理 (仕様テーブル化 / 最小 YAML パーサ化) は本 Issue のスコープ外として見送り、上記 Improvement Proposals に記録した。
+- inline hash format (`capabilities: { workflow: true }`) は Spec の明示的スコープ外のまま据え置き。
+
+### Notes for Next Phase
+
+- PR ブランチ `worktree-code+issue-1055` は `.claude/worktrees/code+issue-1055` (code フェーズの silent no-op の残骸) にチェックアウトされたままである。merge 後のブランチ削除がこれで失敗する可能性があるため、必要に応じて先に `git worktree remove` を実施すること。
+- review 中の追加コミット `7a84ecac` に対する CI は未確認。merge 前に `statusCheckRollup` を再確認すること (`d798266e` 時点では全ジョブ SUCCESS)。
+- ローカル実行分は確認済み: `bats tests/get-config-value.bats` 27/27 PASS、`validate-skill-syntax.py skills/` 0 error、`bash -n scripts/get-config-value.sh` PASS。
