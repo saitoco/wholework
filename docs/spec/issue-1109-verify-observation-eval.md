@@ -94,18 +94,17 @@ Spec の Notes 節はステアリングドキュメント同期の監査対象�
 3件の rubric 系 AC は diff の内容と一致しており UNCERTAIN なく判定できた。ただし `/review` の修正作業中、Step 8c の説明文に二重バッククォート形式のインラインコード (`` `text` `` ``) を導入したところ、`scripts/validate-skill-syntax.py` の素朴な単一バッククォート正規表現ストリッパーが誤マッチし、文書の広い範囲を巻き込んで無関係な `<!-- verify: ... -->` プレースホルダーを「未知の verify コマンド」として誤検出した。この地雷は AC 自体には現れないが、SKILL.md 本文を編集する際は二重バッククォートのインラインコード表記を避けるべきという運用上の注意点として記録する。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Pre-merge AC 4件 (rubric×3 + command×1) はすべて PASS 判定。CI 全9チェック SUCCESS。MUST issue はゼロのため review は COMMENT で投稿。
-- review-light エージェントが検出した SHOULD 4件はすべて修正 (ドキュメント不整合2ファイル、Step 8c のエッジケース2件、bats 回帰テスト追加)。Spec 自体の監査ノート更新は Spec が disposable であるため見送った。
-- Step 8c の説明文修正中に validate-skill-syntax.py の二重バッククォート地雷を踏んだため、二重バッククォートを使わない書き方に書き直した。
+- pre-merge AC ゲート (`check-pre-merge-ac.sh`) は 4件すべて checked (unchecked_count=0) を確認済みのため、ゲート通過は無条件で進行した。
+- PR #1121 は mergeable=true / CI success / review approved だったため、コンフリクト解消ステップ (Step 3) は不要でそのまま squash merge を実行した。
+- squash merge 自体は成功したが、`gh pr merge --delete-branch` のローカルブランチ削除は失敗した (`worktree-code+issue-1109` ブランチが別 worktree `.claude/worktrees/code+issue-1109` で使用中のため)。リモートブランチは削除済み、PR は MERGED 済みであることを確認し、ローカル残存ブランチ・worktree はそのまま維持した (今回のスコープ外の削除操作は行わない判断)。
 
 ### Deferred Items
 - Post-merge の観察系 AC (`event 発火後に /verify を実行し checkbox が更新されることを確認する`) は `verify-type: manual` のため引き続き人手確認待ち。
-- None
+- ローカルに残存する `worktree-code+issue-1109` ブランチと `.claude/worktrees/code+issue-1109` worktree の後片付けは未実施 (別セッションの作業物である可能性があるため、merge フェーズの範囲外として保留)。
 
 ### Notes for Next Phase
-- `/merge` 実行時、CI は全 SUCCESS 済みなので追加の CI 待ちは不要。
 - `/verify` 実行時、Post-merge の manual AC 1件が残っている点に注意。
 - SKILL.md / モジュールファイルを編集する際は二重バッククォートのインラインコード表記 (`` `text` ``) を避けること — `scripts/validate-skill-syntax.py` の正規表現ストリッパーがこれを誤処理する。
