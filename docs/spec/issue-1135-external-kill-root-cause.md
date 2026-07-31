@@ -59,3 +59,31 @@
 - **Recovery type**: commit-push
 - **Wrapper exit code**: 1
 - **Outcome**: success
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC の rubric/file_contains 構成は検証容易性が高く、全 6 件を機械実行 + rubric で判定できた。実験系 Issue で「再現に失敗した場合の判定は未決」を Auto-Resolve Log で事前確定していたため、実験不再現 (0/3 vs 0/3) でも verify に摩擦が生じなかった
+
+#### spec
+- データソースを `.tmp/auto-events.jsonl` ではなく committed 済み `docs/sessions/*/events.jsonl` に切り替えた判断が正確 (worktree からの参照可能性と #1136 の偽イベント除去作業との交差回避を両立)
+- 実験規模は目安 (実 Issue 5 件) から read-only 模擬ワークロード 3+3 に縮小されたが、縮小理由と検出力の限界はレポート Limitations に開示済み
+
+#### code
+- **notable (構造的知見)**: code phase (headless `claude -p`) が実験アーム (a) 実行のため harness 内 background タスク 3 件を起動し「完了通知を待つ」でターン終了 → silent no-op。#1123 Cause A / #465 / #1097 と同一クラスの決定論的再現であり、皮肉にも本 Issue の調査対象そのものを実演した。**実験アーム (a)「harness 管理下 background」は headless 内では原理的に実行不可能** — harness の background 完了通知は interactive セッションにしか届かないため。実験系 Issue のこの類のステップは親セッション代行が構造的に必須
+- **notable (新形状の観察)**: silent no-op 検出後の auto-retry 1/3 は正しく発火したが、leaf 自身が親リポの Spec に直接書いた Consumed Comments 追記 1 行を `check-verify-dirty.sh` が `parent-main` dirty と分類しハードエラー (exit 1) → **auto-retry 機構が自己の残骸でブロックされる**形状。並行セッション由来 (#1123 Cause B) とは異なる「自 Issue Spec の残骸」ケース。#1123 の dirty guard 再設計 (セッション/Issue 帰属の考慮) のスコープに含めるべき観察として #1123 にコメントで接続
+- 復旧: 親セッション (interactive) が実験を代行実行し、分析・レポート追記・commit-push まで manual recovery で完遂 (`## Auto Retrospective` に記録済み)
+
+#### review
+- (patch route のため対象外)
+
+#### merge
+- (patch route のため対象外)
+
+#### verify
+- FAIL 0 / UNCERTAIN 0。rubric 3 件は adversarial 評価で PASS。rubric 3 の「同等の batch 実行」はワークロード簡略化との差分があるが、Spec 手順 2 の「同等」の要求 (アーム間の件数・時間帯の同等性) は充足しており、実 batch でない点はレポートに開示済み
+
+### Improvement Proposals
+- N/A (新規起票なし — code phase の 2 観察は既存 #1123 のスコープに接続する方が適切なため #1123 へのコメントで対応。retro 起票の fan-out 抑制方針とも整合)
