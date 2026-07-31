@@ -367,3 +367,27 @@ Type=Bug, Priority=検出なし, Size=L, Value=3 (Impact=2 [shared: `modules/` �
 
 - 生成される診断メッセージ内に埋め込みコマンド文字列を含むスクリプト (`scripts/detect-wrapper-anomaly.sh` の `IMPROVEMENT_HINT` 等) について、bats アサーションが「部分文字列の有無」しか検証しておらず、二重エスケープ破損 (`\\\"` が出力にバックスラッシュを残す) を検知できなかった。診断メッセージに埋め込みコマンドを含む場合は、bats 側で出力文字列がシェルとして valid か (例: `bash -n <<< "$extracted_cmd"`) まで踏み込むか、rubric verify command でエスケープ妥当性を明示的に問う規約を `modules/verify-patterns.md` に追加する。今回は review の adversarial verify が拾ったため実害ゼロだったが、review 深度に依存した検知であり再発性がある
 - `reconcile-phase-state.sh merge --check-precondition` が `reviewDecision != APPROVED` を常に warning として出す点の再検討。`/review` が MUST issue ゼロ時に `COMMENTED` で投稿する運用 (本 Issue でもそうだった) では毎回 warning が出るため、`COMMENTED` かつ MUST issue ゼロを precondition 充足として扱うか、warning 文言に「COMMENTED 運用では正常」である旨を含める
+
+## Auto Retrospective
+
+### Execution Summary
+
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| issue  | pr | SUCCESS | Size 未設定・`phase/*` ラベルなしのため triage から開始。Size=L 確定 |
+| spec   | pr | SUCCESS | `--opus` で実行。`worktree-merge-push.sh` の ff-only 失敗を `orchestration-fallbacks.md#ff-only-merge-fallback` step 5 で自己復旧済み (spec フェーズ内で完結) |
+| code   | pr | SUCCESS | PR #1131 作成。ただし parent-main に未コミット差分を残した (下記異常 2) |
+| review | pr | SUCCESS | `--full`。Workflow モードで 17 指摘 → 6 生存 → 4 件を line comment 投稿、4 resolved |
+| merge  | pr | SUCCESS | CI 9/9 SUCCESS。precondition が `reviewDecision` 空で `matches_expected: false` を返したが `--warn-only` のため続行 |
+| verify | -  | SUCCESS (手動復旧後) | Step 1 の dirty guard で abort 条件に該当 → 親セッションが手動復旧して続行 (下記異常 2) |
+
+### Orchestration Anomalies
+
+- **異常 1: セッションポインタ汚染 (`.tmp/auto-session-current`)** — `/auto` Step 1 で書き込んだ本セッション ID `28292-1785484796` が、code/review フェーズ実行中 (17:31) に 2 日前のセッション ID `46196-1785292524` で上書きされていた。`/verify` Step 1 の `phase_start` イベントが誤った `session_id` で `.tmp/auto-events.jsonl` に記録された。親セッションが `.tmp/auto-session-${PGID}` と `.tmp/auto-session-current` の両方を再生成して復旧し、以降の `phase_complete` は正しい ID で記録された。`/auto` SKILL.md は `run-*.sh` 呼び出し直前ごとの PGID ポインタ再生成を規定しているが、PGID 非依存の `auto-session-current` には再生成規定がない。既起票 **#1075** に観測を追記済み (想定と逆方向の上書き / 単一 Issue path でも発生、の 2 点が新規データポイント)
+- **異常 2: parent-main の dirty file による `/verify` ブロック** — code フェーズが親リポジトリ (main) の作業ツリーに未コミットの `## Consumed Comments` 追記 (`### code phase (cutoff: ...)` 4 行) を残した。`/verify` Step 1 の `check-verify-dirty.sh` が `classify=parent-main` / exit 1 を返し、SKILL.md 規定では abort する状態だった。親セッションが `git stash` → `git pull --ff-only` → `git stash pop` → commit (`a3c93f19`) → push で内容を失わずに復旧して続行した。既起票 **#1078** に観測を追記済み (影響が「混乱リスク」ではなく「後続 `/verify` の仕様上ブロック」である点が新規データポイント)
+
+いずれも Tier 2 / Tier 3 recovery は発火しておらず (`detect-wrapper-anomaly.sh` / `apply-fallback.sh` / recovery sub-agent はいずれも未起動)、全 `run-*.sh` は exit 0 で終了している。`docs/reports/orchestration-recoveries.md` への追記対象となる source は存在しない。
+
+### Improvement Proposals
+
+- N/A — 本セクションで記録した異常 2 件はいずれも既起票 Issue (**#1075** / **#1078**) に該当し、新規データポイントを comment として追記済み。`## Verify Retrospective` 由来の改善提案は **#1132** として起票、および **#1106** と重複のため skip 済み
