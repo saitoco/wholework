@@ -195,6 +195,8 @@ The `PREVIEW_URL` environment variable must be exported before invoking `/review
 export PREVIEW_URL="https://my-pr-123.example-preview.com"
 ```
 
+`scripts/run-review.sh` (the wrapper that launches `/review` in autonomous flows) reads the same `PREVIEW_URL` variable: if it is already exported when the wrapper's pre-session preview-wait gate runs, the wrapper takes a fast path that skips the GitHub Deployments API lookup and instead confirms readiness via HTTP reachability to `PREVIEW_URL` (2xx, or 401/403 for Basic-Auth-protected previews). This matters for hosting providers that never create a GitHub deployment (e.g. AWS Amplify Hosting) — without `PREVIEW_URL` exported, the wrapper's gate polls the Deployments API until `WHOLEWORK_PREVIEW_TIMEOUT_SEC` elapses and then exits `PENDING` (exit code 2), so the preview is never confirmed even though it is running.
+
 **Behavior summary:**
 
 - `PREVIEW_URL` set at `/review` time: auto-subcase preview-tier ACs are executed against the preview URL; manual-subcase preview-tier ACs are presented as human-check items against the same URL (they have no `--when` guard to gate on `PREVIEW_URL`, since there is no verify command to run).

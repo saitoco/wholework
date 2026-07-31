@@ -96,6 +96,10 @@ elif grep -qiE "APIConnectionError|Request timed out|overloaded_error|529.*[Oo]v
   PATTERN_NAME="mid-run-api-error"
   ANOMALY_DESC="API connection error in phase \`$PHASE\` (exit code $EXIT_CODE): API connection/overload pattern detected in wrapper output. The forked session terminated mid-run before phase completion."
   IMPROVEMENT_HINT="Follow the recovery procedure at \`modules/orchestration-fallbacks.md#mid-run-api-error\`: run reconcile-phase-state.sh to check actual completion, restore the phase label if needed, then retry the phase once with the corresponding run-*.sh script."
+elif grep -q "PENDING: PR preview deployment not confirmed" "$LOG_FILE" && grep -q "state=none" "$LOG_FILE"; then
+  PATTERN_NAME="preview-deployment-absent"
+  ANOMALY_DESC="Structural preview PENDING in phase \`$PHASE\` (exit code $EXIT_CODE): \`PENDING: PR preview deployment not confirmed\` and \`state=none\` detected in wrapper output. The PR branch has zero GitHub deployments, meaning this hosting provider never creates one (e.g. AWS Amplify Hosting) — retrying will not resolve this on its own. Reference: #1128."
+  IMPROVEMENT_HINT="Confirm with \`gh api 'repos/:owner/:repo/deployments?per_page=1' --jq 'length'\`: if it returns 0 for the whole repo, this provider does not create GitHub deployments. Export \`PREVIEW_URL\` on the project side and re-run \`run-review.sh\` — its fast path will bypass the Deployments API polling and confirm readiness via HTTP reachability instead. See \`modules/orchestration-fallbacks.md#review-pending-not-failure\`."
 elif [[ "$EXIT_CODE" == "0" ]]; then
   _merge_pr_confirmed_merged=false
   if [[ "$PHASE" == "merge" ]]; then

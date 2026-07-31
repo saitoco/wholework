@@ -182,6 +182,8 @@ Wholework は acceptance criteria を 3 層に分類します。
 export PREVIEW_URL="https://my-pr-123.example-preview.com"
 ```
 
+`scripts/run-review.sh` (自律実行フローで `/review` を起動する wrapper) も同じ `PREVIEW_URL` 変数を参照します。wrapper のセッション起動前 preview 待ちゲートが実行される時点で既に export されていれば、GitHub Deployments API のルックアップを skip する fast path を通り、代わりに `PREVIEW_URL` への HTTP 到達性 (2xx、または Basic 認証保護下の preview を示す 401/403) で稼働を確認します。これは GitHub deployment を作成しないホスティングプロバイダ (AWS Amplify Hosting 等) を使う場合に重要です — `PREVIEW_URL` を export していないと、wrapper のゲートは `WHOLEWORK_PREVIEW_TIMEOUT_SEC` の上限までポーリングした末に `PENDING` (exit code 2) で終了し、preview が実際には稼働していても稼働を確認できません。
+
 **動作まとめ:**
 
 - `/review` 時に `PREVIEW_URL` が設定されている: auto サブケースの preview 層 AC は preview URL に対して実行される。manual サブケースの preview 層 AC は同じ URL に対する人間の確認項目として提示される (verify command がないため `--when` ガードで `PREVIEW_URL` をゲートする対象がない)。

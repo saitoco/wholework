@@ -336,6 +336,41 @@ MOCK
     [[ "$output" != *"mid-run-api-error"* ]]
 }
 
+@test "preview deployment absent: detects structural PENDING with state=none (exit-code 2)" {
+    printf 'PENDING: PR preview deployment not confirmed for PR #362 (branch=worktree-code+issue-334 state=none); skipping review session\n' > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 2 --issue 1128 --phase review
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"preview-deployment-absent"* ]]
+    [[ "$output" == *"PREVIEW_URL"* ]]
+}
+
+@test "preview deployment absent: detects structural PENDING with state=none (exit-code 0)" {
+    printf 'PENDING: PR preview deployment not confirmed for PR #362 (branch=worktree-code+issue-334 state=none); skipping review session\n' > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 0 --issue 1128 --phase review
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"preview-deployment-absent"* ]]
+    [[ "$output" == *"PREVIEW_URL"* ]]
+}
+
+@test "preview deployment absent: no detection when state=pending (deployment exists but incomplete)" {
+    printf 'PENDING: PR preview deployment not confirmed for PR #362 (branch=worktree-code+issue-334 state=pending); skipping review session\n' > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 2 --issue 1128 --phase review
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"preview-deployment-absent"* ]]
+}
+
+@test "preview deployment absent: no detection with only one of the two required strings" {
+    echo "state=none but no PENDING marker here" > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 2 --issue 1128 --phase review
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"preview-deployment-absent"* ]]
+
+    printf 'PENDING: PR preview deployment not confirmed for PR #362 (branch=x state=unknown)\n' > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 2 --issue 1128 --phase review
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"preview-deployment-absent"* ]]
+}
+
 @test "silent no-op: no false positive for code-patch when commit found on origin/main" {
     mkdir -p "$BATS_TEST_TMPDIR/bin"
     cat > "$BATS_TEST_TMPDIR/bin/git" <<'MOCK'

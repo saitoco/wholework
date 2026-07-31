@@ -83,7 +83,15 @@ load_watchdog_timeout() { WATCHDOG_TIMEOUT=1800; }
 MOCK
 
     # Isolate from parent process env (e.g. running inside /code or /auto session)
-    unset EMIT_PHASE_NAME EMIT_ISSUE_NUMBER AUTO_SESSION_ID
+    unset EMIT_PHASE_NAME EMIT_ISSUE_NUMBER AUTO_SESSION_ID PREVIEW_URL
+
+    # Mock curl: default responds 200 (only reached when PREVIEW_URL fast path tests override it)
+    cat > "$MOCK_DIR/curl" <<'MOCK'
+#!/bin/bash
+echo -n "200"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/curl"
 
     cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
 emit_event() { return 0; }
@@ -358,6 +366,126 @@ MOCK
 
     run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
+    [[ "$output" == *"PR preview deployment ready"* ]]
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: PREVIEW_URL fast path with curl 200 runs claude without polling Deployments API" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=5
+    export PREVIEW_URL="https://pr-123.example-preview.com"
+
+    GH_API_CALL_LOG="$BATS_TEST_TMPDIR/gh_api_calls.log"
+    export GH_API_CALL_LOG
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "api" ]]; then
+  echo "$*" >> "$GH_API_CALL_LOG"
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/curl" <<'MOCK'
+#!/bin/bash
+echo -n "200"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/curl"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"PR preview reachable via PREVIEW_URL"* ]]
+    [ ! -f "$GH_API_CALL_LOG" ]
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: PREVIEW_URL fast path with curl 401 (Basic Auth) is treated as reachable" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=5
+    export PREVIEW_URL="https://pr-123.example-preview.com"
+
+    cat > "$MOCK_DIR/curl" <<'MOCK'
+#!/bin/bash
+echo -n "401"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/curl"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"PR preview reachable via PREVIEW_URL"* ]]
+    grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
+}
+
+@test "PENDING: PREVIEW_URL fast path unreachable (curl 000) exits 2 without running claude" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=1
+    export PREVIEW_URL="https://pr-123.example-preview.com"
+
+    cat > "$MOCK_DIR/curl" <<'MOCK'
+#!/bin/bash
+echo -n "000"
+exit 6
+MOCK
+    chmod +x "$MOCK_DIR/curl"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"PENDING:"* ]]
+    [[ "$output" == *"PR preview URL not reachable"* ]]
+    [ ! -f "$CLAUDE_CALL_LOG" ]
+}
+
+@test "success: PREVIEW_URL unset falls back to existing Deployments API branch" {
+    cat > "$BATS_TEST_TMPDIR/.wholework.yml" <<'YML'
+permission-mode: bypass
+capabilities:
+  pr-preview: true
+YML
+    export WHOLEWORK_PREVIEW_TIMEOUT_SEC=5
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".headRefName"* ]]; then
+    echo "feature-branch"
+  fi
+  exit 0
+fi
+if [[ "$1" == "api" ]]; then
+  if [[ "$*" == *"/deployments?ref="* ]]; then
+    echo "1"
+  elif [[ "$*" == *"/statuses"* ]]; then
+    echo "success"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Waiting for PR preview deployment"* ]]
     [[ "$output" == *"PR preview deployment ready"* ]]
     grep -q "FLAG_P=1" "$CLAUDE_CALL_LOG"
 }
