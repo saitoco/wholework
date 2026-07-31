@@ -141,18 +141,34 @@ No new comments since last phase. Issue #1136 has 1 comment total (2026-07-31T16
 - `scripts/check-forbidden-expressions.sh` failed due to a pre-existing deprecated-term usage (旧称: Issue Spec) in `docs/spec/issue-1135-external-kill-root-cause.md`, unrelated to this Issue's diff (confirmed via `git diff main -- docs/spec/issue-1135-external-kill-root-cause.md` returning empty). Filed as #1137 rather than fixing inline, to keep this PR's diff scoped to #1136.
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Used an explicit test-tmpdir override (`export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"`) for `claude-watchdog.bats`, but plain `unset` (no override) for `wait-ci-checks.bats` and `hook-worktree-path-guard.bats`, because those two files each have a test that asserts "no event emitted when unset" — exporting would have broken that assertion.
-- Purged only the 12 `watchdog_kill` events with `timeout_setting < 600` from the main repo's `.tmp/auto-events.jsonl`; left `max_silent_window` test-origin entries in place since `get-auto-session-report.sh`'s `max` aggregation makes them metrics-inert.
-- Filed the pre-existing forbidden-expressions violation in `docs/spec/issue-1135-external-kill-root-cause.md` as follow-up #1137 instead of fixing it inline, to keep this PR's diff scoped to #1136.
+- Ran in `--light` mode (Size=M, confirmed via `scripts/get-issue-size.sh`): 1 `review-light` agent covering all 4 aspects instead of the full spec+bug×2 fan-out. No issues found by the agent; independently re-verified test/purge evidence myself before trusting the agent's "no issues" verdict.
+- Treated the pre-existing, diff-unrelated `Forbidden Expressions check` CI FAILURE as MUST per Step 9's no-exception blocking rule, and fixed it inline (one-word term replacement in `docs/spec/issue-1135-external-kill-root-cause.md`) rather than waiting on #1137, since the fix was trivial and the rule has no allowlist escape hatch yet.
+- Kept the `REQUEST_CHANGES` review event as `COMMENT` (GitHub rejects self-authored `REQUEST_CHANGES` with 422) and relied on the review body's prose ("MUST issues found...") to carry the blocking signal instead.
 
 ### Deferred Items
-- #1137 (pre-existing deprecated-term cleanup in an unrelated Spec file) — separate PR.
-- The `scripts/claude-watchdog.sh` JSON-mode spurious-kill race (documented in Notes § 対象外だが記録すべき発見) — not fixed here, scope is the leak path only.
-- `ci_wait` events already in production `.tmp/auto-events.jsonl` from `wait-ci-checks.bats` leakage are not retroactively purged (no reliable signature to distinguish them from genuine short CI waits) — only future leakage is stopped.
+- #1137 (pre-existing deprecated-term cleanup) — now effectively resolved by this PR's inline fix; recommend closing #1137 as a duplicate/superseded once this PR merges, referencing this PR.
+- The `scripts/claude-watchdog.sh` JSON-mode spurious-kill race — not fixed here, out of this Issue's scope (unchanged from code phase).
+- `ci_wait` events already in production `.tmp/auto-events.jsonl` from prior `wait-ci-checks.bats` leakage — not retroactively purged (unchanged from code phase).
+- New: whether to file an Issue for (a) `Forbidden Expressions check`'s lack of diff-scoping (pre-existing `main` violations block unrelated PRs) and (b) `gh-pr-review.sh`'s missing self-review 422 fallback — both recorded in this Spec's `## review retrospective § Recurring issues` but not yet filed as Issues.
 
 ### Notes for Next Phase
-- Post-merge AC requires observing `.tmp/auto-events.jsonl` after a bats-full-suite `/auto` batch run to confirm no new sub-600s-timeout `watchdog_kill` appears — this can only be checked some time after merge, once such a batch has run.
-- The purge step required a temporary `ExitWorktree`/`EnterWorktree` round-trip because the auto-mode classifier blocks some writes to the parent-repo path from inside a worktree session (see Code Retrospective § Design Gaps/Ambiguities) — if `/verify` or `/review` need to touch `.tmp/auto-events.jsonl` again, expect the same friction and prefer `cp`-over-target rather than `mv` if `mv` is denied.
+- Post-merge AC (observing `.tmp/auto-events.jsonl` after a bats-full-suite `/auto` batch run) still applies unchanged — `/verify` should check this.
+- `/merge` can proceed once a human confirms the MUST fix (already pushed, CI 9/9 PASS) — the PR review event is `COMMENT` not `REQUEST_CHANGES` due to the self-review platform limit noted above, so `/merge`'s own gate logic (if any) should not rely solely on review event type for this repo.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — the diff matched the Spec's Implementation Steps 1-3 verbatim (setup() edits, `export` vs `unset` choice per file, purge scope). No divergence detected.
+
+### Recurring issues
+
+- **CI Blocking rule collided with an unrelated pre-existing failure**: `Forbidden Expressions check` failed on `docs/spec/issue-1135-external-kill-root-cause.md` (deprecated term `Issue Spec`, already present on `main` before this PR, tracked separately as #1137). Per `skills/review/SKILL.md` Step 9 ("no built-in exception exists for known-flaky or unrelated-job failures; every FAILURE job blocks until a follow-up Issue defines an allowlist"), this was treated as MUST and fixed inline (one-word term replacement) rather than left blocking indefinitely on #1137. Worth flagging as a recurring friction point: any repo-wide `check-forbidden-expressions.sh` regression on `main` now blocks every unrelated PR's `/review` until either fixed or an allowlist mechanism is added — the current design has no distinction between "this PR introduced the failure" and "this PR merely inherited it from `main`". Consider proposing an allowlist or a `command`-hint-style "verify only files touched by this diff" mode for `Forbidden Expressions check` specifically, so pre-existing `main`-branch violations do not block unrelated PRs.
+- **`gh-pr-review.sh` cannot post `REQUEST_CHANGES` on a self-authored PR**: this PR's author and the `/review`-executing `gh` identity are the same user (`saito`). GitHub's API rejects `REQUEST_CHANGES` (and `APPROVE`) reviews from a PR's own author with `422 Unprocessable Entity`, so even with a `severity: MUST` entry in the line-comments JSON, the review event silently cannot become `REQUEST_CHANGES` — it stays `COMMENT`. `gh-pr-review.sh` has no fallback or detection for this case; the failure surfaces only as a generic "Error: failed to post review" if attempted, or silently succeeds as `COMMENT` if `HAS_MUST` was computed as `false` on the first attempt (as happened here — the first post used an empty comments array before the MUST entry was added, so it went through as `COMMENT` without even hitting the 422). This is a structural gap for any repo where `/review` runs under the same GitHub identity as the PR author (single-maintainer repos, this repo included) — the MUST-blocking mechanism's mechanical signal (`REQUEST_CHANGES` event) can never fire, and only the review body's prose ("MUST issues found...") carries the blocking intent. Recommend filing an Issue to either (a) have `gh-pr-review.sh` detect the self-review 422 and fall back gracefully with a clear terminal warning, or (b) document this as a known limitation in `modules/verify-executor.md` / `skills/review/SKILL.md` Step 11 so future `/review` runs don't silently assume `REQUEST_CHANGES` succeeded.
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — all 5 Pre-merge conditions had clear, well-scoped verify commands (1 `rubric`, 1 `file_contains`, 1 `rubric`, 1 `command`, 1 `rubric`) and all resolved to PASS on the first pass with no ambiguity.
