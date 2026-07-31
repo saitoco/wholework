@@ -227,3 +227,75 @@ Issue 本文の「派生論点」2 件 (`/auto` 経由で `PREVIEW_URL` を expo
   - Other candidates: `docs/tech.md` / `docs/ja/tech.md` のみに絞る (AC が要求するのはこの 2 ファイルのみ) — 契約 SSoT が古いまま残るため不採用
 - **fast path のログに `PREVIEW_URL` の値を出力しない** — reason: `https://user:pass@host/` 形式でクレデンシャルが埋まりうる。`modules/verify-executor.md` のマスク方針と整合させる
   - Other candidates: デバッグ性を優先して URL を出力する — ログが CI アーティファクトや Issue コメントに残る経路があるため不採用
+
+## issue retrospective
+
+### Ambiguity Resolution Rationale
+
+Issue 本文には `## Acceptance Criteria` セクションが存在しなかったため (`## Proposal (Outline)` に自然文で提案が書かれているのみ)、Proposal の内容を Pre-merge 条件として分解し、verify command を割り当てた。Post-merge は「なし」とした — 変更対象 (`scripts/run-review.sh` の分岐追加、`docs/tech.md` / `docs/ja/tech.md` の記述同期、`modules/orchestration-fallbacks.md` への追記、`scripts/detect-wrapper-anomaly.sh` へのパターン追加) はすべてリポジトリ内で機械的に検証可能であり、マージ後の環境観測を要する条件が存在しないため。
+
+`PREVIEW_URL` 未設定時のフォールバック挙動と、fast path の稼働判定基準 (2xx に加え 401/403 を稼働とみなす) は文言のニュアンスが評価対象になるため `rubric` を用い、対象ファイル・キーワードが事前に予測できる箇所には `grep` / `file_contains` / `section_contains` を補助チェックとして併記した (`modules/verify-patterns.md` §9 のガイドラインに従う)。
+
+### Key Policy Decisions (Non-Interactive Auto-Resolve Log)
+
+- **Post-merge を「なし」とする** — reason: 本 Issue の変更範囲は全てマージ前に本リポジトリ内で検証できるため
+  - Other candidates: `/auto` 経由の実運用確認を Post-merge (verify-type: manual) として追加する案 — 検証対象が downstream リポジトリでの観測になり本リポジトリの `/verify` では確認できないため不採用
+- **Size = L** (Axis1: 対象5ファイルで M 相当 [3–5] の上限、Axis2: `run-review.sh` と `detect-wrapper-anomaly.sh` の2本にまたがるスクリプトロジック変更で +1 段) — reason: `modules/size-workflow-table.md` の「Script logic changes (adding branches, ...)」がスクリプト2本に該当するため
+  - Other candidates: M のまま据え置き — スクリプトロジック変更の重みを軽視することになるため不採用
+- **派生論点 (`/auto` 経由で `PREVIEW_URL` を export するフックの整備) を本 Issue のスコープ外とする** — reason: Issue 本文中で著者自身が「別 Issue にすべきかもしれない」と留保しており、AC の文言はどちらの選択でも影響を受けない低優先度のあいまいさのため自動解決。`## Out of Scope` に明記して追跡可能にした
+  - Other candidates: 本 Issue の AC に含める — 本件の主目的 (wrapper/skill 契約不整合の解消) と混ざり検証範囲が拡散するため不採用
+- **`--when="test -n \"$PREVIEW_URL\""` ガード未尊重疑いの切り分け調査を本 Issue のスコープ外とする** — reason: 特定の過去 review 実行に対する事後調査であり、完了条件を AC として固定できるほど検証対象が定まっていないため
+  - Other candidates: Post-merge (manual) AC として追加 — 調査対象が「未確認」の域を出ておらず完了条件を定義できないため不採用
+
+### Acceptance Criteria Changes
+
+- `## Acceptance Criteria` セクション (Pre-merge 9件 / Post-merge なし) を新設。既存の `## Proposal (Outline)` の3項目 (fast path 追加・稼働判定基準・フォールバック) と、あわせて記載の3項目 (`docs/tech.md` / `docs/ja/tech.md` 同期・`orchestration-fallbacks.md` 追記・`detect-wrapper-anomaly.sh` パターン追加) をそれぞれ Pre-merge 条件化し、bats テスト pass (PR route, `gh pr checks` 形式) を1件追加した
+- `## Out of Scope` に2項目 (`/auto` の `PREVIEW_URL` export フック整備、fail-open 疑いの切り分け調査) を追記し、`## 派生論点` で著者が留保した論点を明示的にスコープ外として固定した
+
+### Triage Summary
+
+Type=Bug, Priority=検出なし, Size=L, Value=3 (Impact=2 [shared: `modules/` 変更 +2]、Alignment=3 [Vision: harness の契約整合性に直結])。重複候補・停滞パターン・未解決の blocked-by 依存はいずれも検出されなかった。
+
+## spec retrospective
+
+### Minor observations
+
+- 「Tier 2」という語が 2 つの異なる実装を指している。`skills/auto/SKILL.md` の Tier 2 は `detect-wrapper-anomaly.sh` を実 exit code 付きで呼ぶが、`scripts/run-auto-sub.sh` の Tier 2 は `apply-fallback.sh` であり、`detect-wrapper-anomaly.sh` は exit 0 の成功経路 (`_complete_phase_after_success`) から `--exit-code 0` 固定で呼ばれるだけ。Issue 本文の「Tier 2 で既知パターンとして拾えるようにする」という表現はこの二重性を前提にしておらず、実装条件を exit code で絞ると片方でしか発火しない設計になっていた
+- Issue の Auto-Resolve Log が Size=L の根拠を「対象5ファイル」としていたが、Steering Docs sync candidate まで含めると 12 ファイルになった。triage 時点の Size は粗い見積もりであり、実質的な確定は Spec 側の再評価 (`/spec` Step 18) が担っている
+
+### Judgment rationale
+
+- fast path を「1 回プローブ」ではなく「タイムアウトまでポーリング」にした。ゲートの目的 (`#1050`) が「未稼働 preview に対して review を起動しない」ことである以上、待機は本質的な機能であり、既存 Deployments API 分岐と同じ `_preview_timeout_sec` / `sleep 30` を再利用するのが最小の一貫した設計になる
+- curl 未検出時を fail-open (稼働とみなして起動) にした。Deployments API 分岐へのフォールバックは本 Issue が修正しようとしている失敗経路そのものに戻ってしまうため、`PREVIEW_URL` がプロジェクト側責務という既存契約 (`docs/guide/customization.md`) を優先した
+- `detect-wrapper-anomaly.sh` の新パターンから `EXIT_CODE` 条件を外し、ログ文字列 2 本 (`PENDING: PR preview deployment not confirmed` と `state=none`) の AND だけで判定することにした。上記「Tier 2 の二重性」への直接の対処であり、`state=none` が「deployment が 1 件も無い」= 構造的、`state=pending` が「deployment はあるが未完了」= 一時的、という判別軸をそのまま検出条件に写している
+
+### Uncertainty resolution
+
+- `PREVIEW_URL` が `claude -p` の review セッションへ伝播するかは未確認だったが、`scripts/run-review.sh` が `env -u CLAUDECODE` で `CLAUDECODE` のみを除去し他の環境変数はそのまま継承させていることをコードで確認して解決した (伝播する)。wrapper 側のゲートと `skills/review/SKILL.md` Step 8.0 の fast path が同じ値を見る前提が成立する
+- curl の `%{http_code}` が接続失敗時に何を返すかは未確認だったが、`curl -s -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 3 <存在しないホスト>` を実行して stdout に `000` / exit code 6 を実測した。`set -euo pipefail` 下では `|| true` で終了コードを吸収しないと wrapper 全体が abort するという実装制約に落とし込んで Implementation Steps に明記した
+- 未解決のまま残したのは curl 未検出分岐の bats カバレッジのみ。`## Uncertainty` に検証方法と影響範囲を記載した
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- fast path は `capabilities.pr-preview: true` ゲートの内側に置き、`PREVIEW_URL` 非空を分岐条件とする。既存の Deployments API ポーリングは `else` 側へそのまま退避させ、後方互換 (AC5) を構造で担保する
+- 稼働判定は HTTP 到達性のみで行い、`2xx` / `401` / `403` を稼働とみなす。判定は bash 3.2 互換の `case ... in 2??|401|403)` で書く
+- `detect-wrapper-anomaly.sh` の新パターンは `EXIT_CODE` を条件に含めず、ログ文字列 2 本の AND のみで判定する (呼び出し口 2 つで渡される exit code が非対称なため)
+- fast path のログには `PREVIEW_URL` の値を出さず HTTP status code のみを出力する (URL にクレデンシャルが埋まりうるため)
+
+### Deferred Items
+
+- `/auto` 経由で `PREVIEW_URL` を export するフックの整備 — Issue の `## Out of Scope` で別 Issue に分離済み。本 Issue の修正後も `/auto` 経由では `PREVIEW_URL` は設定されないままである点に注意
+- `--when="test -n \"$PREVIEW_URL\""` ガード未尊重疑いの切り分け調査 — 同じく `## Out of Scope`
+- `scripts/apply-fallback.sh` への `preview-deployment-absent` ハンドラ追加 — 自動復旧手段が存在しない (復旧は「プロジェクト側で `PREVIEW_URL` を export する」) ため本 Issue では検出のみに留めた
+- `docs/workflow.md` / `docs/ja/workflow.md` / `docs/structure.md` / `docs/ja/structure.md` の更新要否 — Steering Docs sync candidate として列挙のみ。`/code` が実際に読んで include/exclude を最終判断する
+
+### Notes for Next Phase
+
+- `tests/run-review.bats` の `setup()` にある `unset EMIT_PHASE_NAME EMIT_ISSUE_NUMBER AUTO_SESSION_ID` へ `PREVIEW_URL` を必ず追加すること。これを忘れると、親シェルに `PREVIEW_URL` が export されている環境で既存の pr-preview テスト 3 件が fast path 側に落ちて壊れる
+- `run-review.sh` は `set -euo pipefail` 下で動く。`_preview_http_code=$(curl ...)` は curl の非 0 終了 (接続失敗時 exit 6) でスクリプト全体を落とすため `|| true` が必須
+- `detect-wrapper-anomaly.sh` の `ANOMALY_DESC` / `IMPROVEMENT_HINT` は二重引用符文字列。バッククォートは既存行と同じくバックスラッシュでエスケープしないとコマンド置換として解釈される
+- 既存の `echo "Waiting for PR preview deployment on PR #${PR_NUMBER}..."` は Deployments API 分岐の内側へ移す。`tests/run-review.bats` の「pr-preview capability unset」テストがこの文字列の不在を assert しているため、移動先を誤ると失敗する
+- `docs/guide/customization.md` を変更する場合、`scripts/check-translation-sync.sh` が `docs/guide/*.md` を同期対象に含むため `docs/ja/guide/customization.md` の更新が必須
