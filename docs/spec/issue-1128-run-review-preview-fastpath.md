@@ -306,21 +306,19 @@ Type=Bug, Priority=検出なし, Size=L, Value=3 (Impact=2 [shared: `modules/` �
 - 10 件の pre-merge AC (grep 3件、file_contains 1件、section_contains 1件、github_check 1件、rubric 4件) はいずれも一発で PASS し、UNCERTAIN は 0 件だった。grep/section_contains/file_contains は対象文字列がそのまま実装に存在し曖昧さがなく、rubric 4件もアドバーサリアルグレーダーへの丸投げで迷いなく判定できた。verify command の設計自体に改善の余地はなし
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Workflow モード (finder×3 → adversarial verify) で `/review` を実行し、17 件の指摘のうち 6 件 (統合後 4 件のコメント) が生存。いずれも MUST ではなく SHOULD/CONSIDER のドキュメント精度・診断メッセージのエスケープ修正であり、全て `/review` 内で修正・push 済み
-- 修正はすべて低リスクな文言/エスケープ修正であり `run-review.sh` / `detect-wrapper-anomaly.sh` のロジック自体には変更を加えていない。Step 13 のポリシー変更判定でも "no policy change" と判断し、Issue の Acceptance Criteria 更新は不要と結論した
-- 修正後に `python3 scripts/validate-skill-syntax.py skills/` (0 error)、`bats tests/run-review.bats` (38/38)、`bats tests/detect-wrapper-anomaly.bats` (45/45) を再実行し回帰がないことを確認した
+- CI green (9/9 SUCCESS)、review approved、pre-merge AC 10/10 PASS を確認済みだったため、通常のスクワッシュマージ手順で `/merge` を実行した (conflict resolution 不要)
+- `gh pr merge --squash --delete-branch` によりリモートブランチを削除し、`closes #1128` によって Issue #1128 は自動クローズされる見込み
 
 ### Deferred Items
 
-- `/auto` 経由で `PREVIEW_URL` を export するフックの整備 — Issue の `## Out of Scope` で別 Issue に分離済み。`/merge` 後も未着手のまま
+- `/auto` 経由で `PREVIEW_URL` を export するフックの整備 — Issue の `## Out of Scope` で別 Issue に分離済み。未着手のまま
 - `--when="test -n \"$PREVIEW_URL\""` ガード未尊重疑いの切り分け調査 — 同じく `## Out of Scope`、未着手
 - `scripts/apply-fallback.sh` への `preview-deployment-absent` ハンドラ追加 — 自動復旧手段が存在しないため本 Issue では検出のみ
 
 ### Notes for Next Phase
 
-- `/merge` は通常のマージ手順でよい。MUST issue はなく、CI (9/9 SUCCESS) と全 10 pre-merge AC (すべて PASS) は確認済み
 - Post-merge 検証条件は Issue 本文に「なし」と明記されているため、`/verify` は AC チェックのみで完了する見込み
