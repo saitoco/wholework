@@ -73,7 +73,7 @@
 
 #### code
 - **notable (構造的知見)**: code phase (headless `claude -p`) が実験アーム (a) 実行のため harness 内 background タスク 3 件を起動し「完了通知を待つ」でターン終了 → silent no-op。#1123 Cause A / #465 / #1097 と同一クラスの決定論的再現であり、皮肉にも本 Issue の調査対象そのものを実演した。**実験アーム (a)「harness 管理下 background」は headless 内では原理的に実行不可能** — harness の background 完了通知は interactive セッションにしか届かないため。実験系 Issue のこの類のステップは親セッション代行が構造的に必須
-- **notable (新形状の観察)**: silent no-op 検出後の auto-retry 1/3 は正しく発火したが、leaf 自身が親リポの Spec に直接書いた Consumed Comments 追記 1 行を `check-verify-dirty.sh` が `parent-main` dirty と分類しハードエラー (exit 1) → **auto-retry 機構が自己の残骸でブロックされる**形状。並行セッション由来 (#1123 Cause B) とは異なる「自 Issue Spec の残骸」ケース。#1123 の dirty guard 再設計 (セッション/Issue 帰属の考慮) のスコープに含めるべき観察として #1123 にコメントで接続
+- **notable (新形状の観察)**: silent no-op 検出後の auto-retry 1/3 は正しく発火したが、leaf 自身が親リポの Spec に直接書いた Consumed Comments 追記 1 行を `check-verify-dirty.sh` が `parent-main` dirty と分類しハードエラー (exit 1) → **auto-retry 機構が自己の残骸でブロックされる**形状。並行セッション由来 (#1123 Cause B) とは異なる「自 Spec の残骸」ケース。#1123 の dirty guard 再設計 (セッション/Issue 帰属の考慮) のスコープに含めるべき観察として #1123 にコメントで接続
 - 復旧: 親セッション (interactive) が実験を代行実行し、分析・レポート追記・commit-push まで manual recovery で完遂 (`## Auto Retrospective` に記録済み)
 
 #### review
