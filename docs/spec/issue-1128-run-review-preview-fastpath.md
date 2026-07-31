@@ -275,27 +275,36 @@ Type=Bug, Priority=検出なし, Size=L, Value=3 (Impact=2 [shared: `modules/` �
 - curl の `%{http_code}` が接続失敗時に何を返すかは未確認だったが、`curl -s -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 3 <存在しないホスト>` を実行して stdout に `000` / exit code 6 を実測した。`set -euo pipefail` 下では `|| true` で終了コードを吸収しないと wrapper 全体が abort するという実装制約に落とし込んで Implementation Steps に明記した
 - 未解決のまま残したのは curl 未検出分岐の bats カバレッジのみ。`## Uncertainty` に検証方法と影響範囲を記載した
 
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。Implementation Steps 1–9 を設計どおりに実装した。
+
+### Design Gaps/Ambiguities
+
+- なし。Step 7 の Steering Docs sync candidate 判断 (`docs/guide/customization.md` / `docs/ja/guide/customization.md` は「wrapper も同じ `PREVIEW_URL` を読む」旨を追記して更新、`docs/workflow.md` / `docs/ja/workflow.md` の Review PENDING retry 記述と `docs/structure.md` / `docs/ja/structure.md` の 1 行説明はいずれも既存の記述と矛盾せず汎用的に成立するため更新不要と判断) は Spec が想定した「`/code` に委ねる」判断そのものであり、実装時に新たな曖昧さは生じなかった。
+
+### Rework
+
+- なし。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- fast path は `capabilities.pr-preview: true` ゲートの内側に置き、`PREVIEW_URL` 非空を分岐条件とする。既存の Deployments API ポーリングは `else` 側へそのまま退避させ、後方互換 (AC5) を構造で担保する
-- 稼働判定は HTTP 到達性のみで行い、`2xx` / `401` / `403` を稼働とみなす。判定は bash 3.2 互換の `case ... in 2??|401|403)` で書く
-- `detect-wrapper-anomaly.sh` の新パターンは `EXIT_CODE` を条件に含めず、ログ文字列 2 本の AND のみで判定する (呼び出し口 2 つで渡される exit code が非対称なため)
-- fast path のログには `PREVIEW_URL` の値を出さず HTTP status code のみを出力する (URL にクレデンシャルが埋まりうるため)
+- Implementation Steps 1–9 を設計どおりに実装した。`run-review.sh` の fast path / `detect-wrapper-anomaly.sh` の新パターン / ドキュメント同期のいずれも Spec の記述から逸脱していない
+- Steering Docs sync candidate 4 箇所のうち `docs/guide/customization.md` (+ ja ミラー) は「wrapper も同じ `PREVIEW_URL` を読む」旨を追記して更新し、`docs/workflow.md` / `docs/ja/workflow.md` の Review PENDING retry 記述と `docs/structure.md` / `docs/ja/structure.md` の 1 行説明は既存の記述と矛盾せず汎用的に成立するため更新不要と判断した
+- bats テストは `tests/run-review.bats` に4件 (curl 200/401/000/PREVIEW_URL 未設定)、`tests/detect-wrapper-anomaly.bats` に4件 (exit-code 2/0 検出・state=pending 非検出・片方のみ非検出) を追加し、既存分含め全 83 件が pass することを確認した
 
 ### Deferred Items
 
 - `/auto` 経由で `PREVIEW_URL` を export するフックの整備 — Issue の `## Out of Scope` で別 Issue に分離済み。本 Issue の修正後も `/auto` 経由では `PREVIEW_URL` は設定されないままである点に注意
 - `--when="test -n \"$PREVIEW_URL\""` ガード未尊重疑いの切り分け調査 — 同じく `## Out of Scope`
 - `scripts/apply-fallback.sh` への `preview-deployment-absent` ハンドラ追加 — 自動復旧手段が存在しない (復旧は「プロジェクト側で `PREVIEW_URL` を export する」) ため本 Issue では検出のみに留めた
-- `docs/workflow.md` / `docs/ja/workflow.md` / `docs/structure.md` / `docs/ja/structure.md` の更新要否 — Steering Docs sync candidate として列挙のみ。`/code` が実際に読んで include/exclude を最終判断する
 
 ### Notes for Next Phase
 
-- `tests/run-review.bats` の `setup()` にある `unset EMIT_PHASE_NAME EMIT_ISSUE_NUMBER AUTO_SESSION_ID` へ `PREVIEW_URL` を必ず追加すること。これを忘れると、親シェルに `PREVIEW_URL` が export されている環境で既存の pr-preview テスト 3 件が fast path 側に落ちて壊れる
-- `run-review.sh` は `set -euo pipefail` 下で動く。`_preview_http_code=$(curl ...)` は curl の非 0 終了 (接続失敗時 exit 6) でスクリプト全体を落とすため `|| true` が必須
-- `detect-wrapper-anomaly.sh` の `ANOMALY_DESC` / `IMPROVEMENT_HINT` は二重引用符文字列。バッククォートは既存行と同じくバックスラッシュでエスケープしないとコマンド置換として解釈される
-- 既存の `echo "Waiting for PR preview deployment on PR #${PR_NUMBER}..."` は Deployments API 分岐の内側へ移す。`tests/run-review.bats` の「pr-preview capability unset」テストがこの文字列の不在を assert しているため、移動先を誤ると失敗する
-- `docs/guide/customization.md` を変更する場合、`scripts/check-translation-sync.sh` が `docs/guide/*.md` を同期対象に含むため `docs/ja/guide/customization.md` の更新が必須
+- pre-merge AC の `github_check "gh pr checks" "Run bats tests"` は PR #1131 作成時点では CI 未実行のため未確認。`/review` で CI 完了後に確認すること
+- 他の pre-merge AC (grep/rubric/file_contains/section_contains 系 8 件) は `/code` 側で実装内容と照合済み。`/review` は再照合の重複コストを避けるため、この Phase Handoff の Key Decisions を参照してよい
