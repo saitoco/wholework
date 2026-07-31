@@ -704,6 +704,72 @@ MOCK_EOF
     [[ "$output" == *'"matches_expected":false'* ]]
 }
 
+@test "merge precondition: reviewDecision empty and review-summary marker found -> matches_expected true" {
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json state"* ]]; then
+    echo "OPEN"
+elif [[ "$*" == *"--json reviewDecision"* ]]; then
+    echo ""
+elif [[ "$*" == *"--json comments"* ]]; then
+    echo "<!-- review-summary -->"
+elif [[ "$1" == "api" ]]; then
+    echo ""
+fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" merge 42 --pr 10 --check-precondition --strict
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"matches_expected":true'* ]]
+}
+
+@test "merge precondition: reviewDecision empty and no review-summary marker -> mismatch" {
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json state"* ]]; then
+    echo "OPEN"
+elif [[ "$*" == *"--json reviewDecision"* ]]; then
+    echo ""
+elif [[ "$*" == *"--json comments"* ]]; then
+    echo "just a regular comment"
+elif [[ "$1" == "api" ]]; then
+    echo ""
+fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" merge 42 --pr 10 --check-precondition --strict
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
+}
+
+@test "merge precondition: reviewDecision CHANGES_REQUESTED is unconditional mismatch even with marker" {
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json state"* ]]; then
+    echo "OPEN"
+elif [[ "$*" == *"--json reviewDecision"* ]]; then
+    echo "CHANGES_REQUESTED"
+elif [[ "$*" == *"--json comments"* ]]; then
+    echo "<!-- review-summary -->"
+elif [[ "$1" == "api" ]]; then
+    echo ""
+fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" merge 42 --pr 10 --check-precondition --strict
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
+}
+
 @test "verify precondition: issue has phase/verify label -> matches_expected true" {
     cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
 #!/bin/bash
