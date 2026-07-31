@@ -88,6 +88,10 @@ wc -l /tmp/sentinel.jsonl
 
 No new comments since last phase. (cutoff undetermined — Issue #1136 に `phase/*` label の付与履歴がなく、`.tmp/auto-events.jsonl` にも本 Issue の `phase_start` が存在しないため、全コメントを対象に best-effort で走査した。コメント 0 件)
 
+### code phase (cutoff: `phase/ready` labeled at 2026-07-31T16:33:29Z)
+
+No new comments since last phase. Issue #1136 has 1 comment total (2026-07-31T16:33:25Z, author saito), predating the `phase/ready` label assignment — nothing new to consume for the code phase.
+
 ## Notes
 
 ### Cross-search 結果 (AC2)
