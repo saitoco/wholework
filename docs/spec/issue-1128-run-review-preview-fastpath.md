@@ -289,22 +289,38 @@ Type=Bug, Priority=検出なし, Size=L, Value=3 (Impact=2 [shared: `modules/` �
 
 - なし。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec/Implementation 自体 (`run-review.sh` のロジック) には divergence なし。ただし `/code` フェーズで追加した Steering Docs 同期文 (`docs/guide/customization.md` / `docs/ja/guide/customization.md`) に「Deployments API を indefinitely (無期限に) ポーリングする」という表現があり、同じ PR で更新した `docs/tech.md` の「`WHOLEWORK_PREVIEW_TIMEOUT_SEC` で打ち切られる」という記述と矛盾していた。実装は最初から bounded (timeout → `PENDING` exit) だったが、prose 側の記述だけが unbounded であるかのように書かれており、実装とドキュメントの間の drift として Workflow review (adversarial verify) で検出・修正した
+- `docs/tech.md` の `HAS_PR_PREVIEW_CAPABILITY` 説明が「`skills/review/SKILL.md` Step 8.0 の契約と一致する」と書いていたが、実際に一致するのは「`PREVIEW_URL` 設定時に Deployments API lookup を skip する」部分のみで、2xx/401/403 による HTTP reachability probe は `run-review.sh` 側の新規挙動だった。「一致する」の範囲を精査せずに広く書いてしまう pattern も divergence の一種として記録
+
+### Recurring issues
+
+- 同一テーマの指摘が en/ja ミラー双方に重複して出現した (「indefinitely」表現 ×2、「一致する」の過大表現 ×2)。Steering Docs sync で日本語ミラーを追記する際、英語側の不正確な表現をそのまま翻訳してしまうと、修正時も両言語で同じ修正を重複して行う必要が生じる。英語側のドキュメント文言を書く時点で「bounded by X」を明示する習慣があれば、ミラー側の修正コストも同時に防げた
+- `scripts/detect-wrapper-anomaly.sh` の `IMPROVEMENT_HINT` に二重エスケープバグ (`\\\"` → 出力にバックスラッシュが残る) があったが、bats テストは `preview-deployment-absent` / `PREVIEW_URL` という部分文字列の有無しか assert しておらず、エスケープの破損を検知できなかった。生成される診断メッセージ内に埋め込みコマンド文字列がある場合、bats アサーションを「部分文字列の有無」だけでなく「実際にシェルとして valid か」まで踏み込ませるか、rubric verify command 側でエスケープの妥当性を明示的に問う設計が今後の再発防止に有効
+
+### Acceptance criteria verification difficulty
+
+- 10 件の pre-merge AC (grep 3件、file_contains 1件、section_contains 1件、github_check 1件、rubric 4件) はいずれも一発で PASS し、UNCERTAIN は 0 件だった。grep/section_contains/file_contains は対象文字列がそのまま実装に存在し曖昧さがなく、rubric 4件もアドバーサリアルグレーダーへの丸投げで迷いなく判定できた。verify command の設計自体に改善の余地はなし
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Implementation Steps 1–9 を設計どおりに実装した。`run-review.sh` の fast path / `detect-wrapper-anomaly.sh` の新パターン / ドキュメント同期のいずれも Spec の記述から逸脱していない
-- Steering Docs sync candidate 4 箇所のうち `docs/guide/customization.md` (+ ja ミラー) は「wrapper も同じ `PREVIEW_URL` を読む」旨を追記して更新し、`docs/workflow.md` / `docs/ja/workflow.md` の Review PENDING retry 記述と `docs/structure.md` / `docs/ja/structure.md` の 1 行説明は既存の記述と矛盾せず汎用的に成立するため更新不要と判断した
-- bats テストは `tests/run-review.bats` に4件 (curl 200/401/000/PREVIEW_URL 未設定)、`tests/detect-wrapper-anomaly.bats` に4件 (exit-code 2/0 検出・state=pending 非検出・片方のみ非検出) を追加し、既存分含め全 83 件が pass することを確認した
+- Workflow モード (finder×3 → adversarial verify) で `/review` を実行し、17 件の指摘のうち 6 件 (統合後 4 件のコメント) が生存。いずれも MUST ではなく SHOULD/CONSIDER のドキュメント精度・診断メッセージのエスケープ修正であり、全て `/review` 内で修正・push 済み
+- 修正はすべて低リスクな文言/エスケープ修正であり `run-review.sh` / `detect-wrapper-anomaly.sh` のロジック自体には変更を加えていない。Step 13 のポリシー変更判定でも "no policy change" と判断し、Issue の Acceptance Criteria 更新は不要と結論した
+- 修正後に `python3 scripts/validate-skill-syntax.py skills/` (0 error)、`bats tests/run-review.bats` (38/38)、`bats tests/detect-wrapper-anomaly.bats` (45/45) を再実行し回帰がないことを確認した
 
 ### Deferred Items
 
-- `/auto` 経由で `PREVIEW_URL` を export するフックの整備 — Issue の `## Out of Scope` で別 Issue に分離済み。本 Issue の修正後も `/auto` 経由では `PREVIEW_URL` は設定されないままである点に注意
-- `--when="test -n \"$PREVIEW_URL\""` ガード未尊重疑いの切り分け調査 — 同じく `## Out of Scope`
-- `scripts/apply-fallback.sh` への `preview-deployment-absent` ハンドラ追加 — 自動復旧手段が存在しない (復旧は「プロジェクト側で `PREVIEW_URL` を export する」) ため本 Issue では検出のみに留めた
+- `/auto` 経由で `PREVIEW_URL` を export するフックの整備 — Issue の `## Out of Scope` で別 Issue に分離済み。`/merge` 後も未着手のまま
+- `--when="test -n \"$PREVIEW_URL\""` ガード未尊重疑いの切り分け調査 — 同じく `## Out of Scope`、未着手
+- `scripts/apply-fallback.sh` への `preview-deployment-absent` ハンドラ追加 — 自動復旧手段が存在しないため本 Issue では検出のみ
 
 ### Notes for Next Phase
 
-- pre-merge AC の `github_check "gh pr checks" "Run bats tests"` は PR #1131 作成時点では CI 未実行のため未確認。`/review` で CI 完了後に確認すること
-- 他の pre-merge AC (grep/rubric/file_contains/section_contains 系 8 件) は `/code` 側で実装内容と照合済み。`/review` は再照合の重複コストを避けるため、この Phase Handoff の Key Decisions を参照してよい
+- `/merge` は通常のマージ手順でよい。MUST issue はなく、CI (9/9 SUCCESS) と全 10 pre-merge AC (すべて PASS) は確認済み
+- Post-merge 検証条件は Issue 本文に「なし」と明記されているため、`/verify` は AC チェックのみで完了する見込み
