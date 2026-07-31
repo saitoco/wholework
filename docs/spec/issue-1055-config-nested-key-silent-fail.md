@@ -118,3 +118,11 @@ UNCERTAIN は 0 件、Pre-merge 4 件すべて PASS で、verify command の記�
 
 - `/verify` は Post-merge AC (opportunistic 確認) の判定と、review retrospective に記録された Improvement Proposals (`get-config-value.sh` の根本整理、review 定型手順への edge case 実測追加、CI Reference Fallback の UNCERTAIN 指針) の起票要否を確認すること。
 - Pre-merge AC 4 件は全て `[x]` チェック済みで merge 前ゲートを通過している。
+
+### Manual recovery (code-pr)
+- **Date**: 2026-07-31 03:08 UTC
+- **Issue**: #1055, phase: code-pr
+- **Source**: parent session manual recovery
+- **Recovery type**: pr-create
+- **Wrapper exit code**: 1
+- **Outcome**: success
