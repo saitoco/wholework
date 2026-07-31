@@ -63,6 +63,25 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-07-31 03:08 UTC: manual-recovery-pr-create
+
+### Context
+- Issue #1055, phase: code-pr
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 1
+
+### Diagnosis
+- Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: pr-create)
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-07-31 02:58 UTC: manual-recovery-commit-push
 
 ### Context
