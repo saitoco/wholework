@@ -48,3 +48,4 @@
 
 - **saito** (MEMBER, first-class) — `/issue` フェーズの Issue Retrospective コメント。非対話モードでの Auto-Resolve Log (H-c の判定基準をデフォルト「未決」とする根拠、Post-merge AC の回避策が調査結果依存であることの扱い) と、Background 事実確認の結果 (裏付け確認済み) を記録。本 `/spec` フェーズへの直接のアクション項目はなし、設計はそのまま踏襲。
   https://github.com/saitoco/wholework/issues/1135#issuecomment-5144982703
+- code phase (2026-08-01): No new comments since last phase (cutoff: most recent `phase/*` label assignment, 2026-07-31T16:21:49Z).
