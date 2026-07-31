@@ -326,3 +326,44 @@ Type=Bug, Priority=検出なし, Size=L, Value=3 (Impact=2 [shared: `modules/` �
 ### Notes for Next Phase
 
 - Post-merge 検証条件は Issue 本文に「なし」と明記されているため、`/verify` は AC チェックのみで完了する見込み
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+
+- `/issue` フェーズが `## Proposal (Outline)` の自然文を 10 件の Pre-merge AC に分解した設計が、verify 段階まで一貫して機能した。grep / file_contains / section_contains / github_check の 6 件は対象文字列が実装にそのまま存在し曖昧さゼロ、rubric 4 件も UNCERTAIN なしで判定できた。AC の粒度・verify command の選択に改善余地なし
+- Post-merge を「なし」とした判断も妥当だった。実際に `/verify` は AC 再検証のみで完了し、手動確認項目・observation 待ちがゼロだったため `phase/verify` 滞留が発生していない
+
+#### design
+
+- `/spec` が「Tier 2 という語が `skills/auto/SKILL.md` (= `detect-wrapper-anomaly.sh`) と `scripts/run-auto-sub.sh` (= `apply-fallback.sh`) の 2 実装を指す」二重性を発見し、検出条件から `EXIT_CODE` を外してログ文字列 2 本の AND に落とした判断は、verify 時点でも正しかったと確認できる。exit code を条件に含めていれば片方の経路でしか発火しない実装になっていた
+- Size=L の根拠 (triage 時「対象 5 ファイル」→ Spec 再評価で 12 ファイル) の乖離を `/spec` が自己申告していた点は、triage Size が粗い見積もりであるという既知の設計前提どおりに機能した例
+
+#### code
+
+- Deviations / Rework いずれも「なし」。Implementation Steps 1–9 を設計どおり実装し、review でも実装ロジック自体への指摘はゼロだった
+- 一方で **code フェーズが親リポジトリ (main) の作業ツリーに未コミットの `## Consumed Comments` 追記 (`### code phase (cutoff: ...)` 4 行) を残した**。これは `/verify` Step 1 の `check-verify-dirty.sh` が `classify=parent-main` / exit 1 を返す原因となり、`/verify` の abort 条件に該当した (下記 verify セクション参照)。既起票 **#1078** が同じ根本原因 (Step 1 の Spec 書き込み → Step 2 の fresh worktree 作成という順序矛盾) を扱っている
+
+#### review
+
+- Workflow モード (finder×3 → adversarial verify) が実装ロジックではなく **prose 側の drift** を的確に捕捉した: `docs/guide/customization.md` の「indefinitely にポーリング」が同一 PR 内の `docs/tech.md`「`WHOLEWORK_PREVIEW_TIMEOUT_SEC` で打ち切られる」と矛盾、および `docs/tech.md` の「Step 8.0 の契約と一致する」が reachability probe まで含む過大表現になっていた点。いずれも verify 時点では解消済みで、AC6/AC7 の rubric が PASS している
+- review retrospective が指摘した「en/ja ミラー双方に同一指摘が重複 (計 4 件)」は、英語側の文言精度を上げれば日本語側の修正コストも同時に消える構造。今回は実害が review 内での重複修正に留まった
+- `scripts/detect-wrapper-anomaly.sh` の `IMPROVEMENT_HINT` 二重エスケープバグを bats が検知できなかった点は、下記 Improvement Proposals に転記
+
+#### merge
+
+- CI 9/9 SUCCESS、pre-merge AC 10/10 PASS を確認したうえでのスクワッシュマージで、conflict resolution 不要。`closes #1128` による自動クローズと `phase/verify` 遷移も想定どおり動作し、フォールバック不要だった
+- なお `/auto` の merge precondition check (`reconcile-phase-state.sh merge --check-precondition`) は `reviewDecision` が空 (review が MUST なしで `COMMENTED` 投稿) のため `matches_expected: false` を返したが、`--warn-only` のため続行し結果的に正しくマージできた。COMMENTED 運用と precondition 期待値 (`APPROVED`) の不一致は毎回 warning を出す構造で、warning 疲れの温床になりうる
+
+#### verify
+
+- Pre-merge 10 件すべて PASS、FAIL / UNCERTAIN / PENDING / SKIPPED ゼロ。auto-retry は発火せず (Retry Count = 0)
+- **オーケストレーション異常 1: `.tmp/auto-session-current` のセッションポインタ汚染**。`/auto` Step 1 が書いた本セッション ID `28292-1785484796` が、code/review フェーズ実行中 (17:31) に **2 日前のセッション ID `46196-1785292524`** で上書きされていた。その結果 `/verify` Step 1 の `phase_start` イベントが誤った `session_id` で `.tmp/auto-events.jsonl` に記録された。親セッションがポインタを再生成して復旧し、以降の `phase_complete` は正しい ID で記録された。既起票 **#1075** が同一症状を扱っているが、そこで想定されている「後発 `/auto` セッションが先発を上書きする」方向とは逆に、**古いセッション ID が新しいものを上書きした**点、および batch/XL だけでなく **単一 Issue path でも発生する** 点が新しい観測。`/auto` SKILL.md が「run-*.sh 呼び出しの直前ごとに PGID ポインタを再生成せよ」と規定している一方、PGID 非依存の `auto-session-current` については再生成規定がないことが構造的な穴
+- **オーケストレーション異常 2: parent-main の dirty file による `/verify` ブロック**。上記 code セクションの残留 diff により `check-verify-dirty.sh` が exit 1 を返し、`/verify` は仕様上 abort する状態だった。親セッションが stash → `git pull --ff-only` → stash pop → commit (`a3c93f19`) → push で内容を失わず復旧した。**#1078** は本症状を「次に作業するセッションが混乱する / 誤って別変更と一緒にコミットされるリスク」と記述しているが、実際には **後続 `/verify` を仕様上 abort させる**というより強い影響が確認された
+
+### Improvement Proposals
+
+- 生成される診断メッセージ内に埋め込みコマンド文字列を含むスクリプト (`scripts/detect-wrapper-anomaly.sh` の `IMPROVEMENT_HINT` 等) について、bats アサーションが「部分文字列の有無」しか検証しておらず、二重エスケープ破損 (`\\\"` が出力にバックスラッシュを残す) を検知できなかった。診断メッセージに埋め込みコマンドを含む場合は、bats 側で出力文字列がシェルとして valid か (例: `bash -n <<< "$extracted_cmd"`) まで踏み込むか、rubric verify command でエスケープ妥当性を明示的に問う規約を `modules/verify-patterns.md` に追加する。今回は review の adversarial verify が拾ったため実害ゼロだったが、review 深度に依存した検知であり再発性がある
+- `reconcile-phase-state.sh merge --check-precondition` が `reviewDecision != APPROVED` を常に warning として出す点の再検討。`/review` が MUST issue ゼロ時に `COMMENTED` で投稿する運用 (本 Issue でもそうだった) では毎回 warning が出るため、`COMMENTED` かつ MUST issue ゼロを precondition 充足として扱うか、warning 文言に「COMMENTED 運用では正常」である旨を含める
