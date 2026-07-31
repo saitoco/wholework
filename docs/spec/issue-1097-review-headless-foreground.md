@@ -98,3 +98,34 @@ N/A — Implementation Steps 1〜4 をそのまま実施し、設計からの逸
 ### Notes for Next Phase
 - Changed Files は Spec記載の3ファイルのみで完結しており、ドキュメント同期の追加対象はない (Spec Notes 参照)
 - AC1/AC2 は rubric 型のため `/review` の Step 8 で AI 判定が行われる — 本 diff は Issue 本文の要求文言をそのまま反映しているため PASS を想定
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue / spec
+- スコープを「`modules/test-runner.md` (一般原則) と `skills/review/SKILL.md` (`/review` 固有の注記) の 2 箇所」に限定し、`/spec` `/verify` への同種注記追加を明示的にスコープ外としたのは妥当。#994 で `/code` が個別対応済みという先行事例を踏まえ、共有モジュール側に一般原則を置いたことで、今後の skill 追加時にも効く形になっている。
+- AC3 (`section_contains ... "前景"`) を rubric の補助的な機械チェックとして併置した設計も、`modules/verify-patterns.md` §9 の rubric + grep 併用ガイドラインに沿っている。
+
+#### code
+- ドキュメントのみの変更で single-pass 完了 (`226c2839`)。rework なし。
+- 注記が「何をすべきか」(前景実行) だけでなく「なぜ通知が届かないか」(完了通知は対話セッション再起動時にのみ配送される) まで書かれている点が良い。理由が無いと、将来「待てば届くのでは」と誤解される余地が残る。
+- `tests/review.bats` に `Non-Interactive Mode Behavior: foreground execution required for test/build commands` を追加し、規約を回帰ガードで保護している。
+
+#### review / merge
+- patch route (Size S) のため review / merge フェーズなし。
+
+#### verify
+- pre-merge 4 件すべて PASS、FAIL / UNCERTAIN なし、auto-retry 発火なし。
+- AC4 (`command "bats tests/review.bats"`) は本 Issue が定めた規約どおり**前景で実行**し、全 12 ケース PASS を確認した。
+- post-merge の manual 1 件は Size L の実 PR に対する `--full` review の実走が必要で Claude では実行不能。`phase/verify` 留置。
+
+### Improvement Proposals
+
+- N/A — 本実行では新規の構造的問題を検出しなかった。
+
+### 観察
+
+- **本 Issue の症状が、直前の #1106 code フェーズで実際に発現していた**。#1106 のログには「フルテストスイート (`bats tests/`) の完了を待っています。完了次第、続きの検証・コミット作業を進めます。」と記録され、`reconcile-phase-state.sh` は `matches_expected: false` (silent no-op) を返した。本 Issue の修正が先に入っていれば回避できた可能性が高い。実行順を #1106 → #1097 から #1097 → #1106 に組み替えた判断は、この実例によって事後的に裏づけられた。
+- ただし #1106 の失敗は auto-retry の中断 (並行セッションが parent main を汚していたため `check-verify-dirty` が exit 1) とも重なっており、単一原因ではない。本 Issue の修正だけで #1106 が完走したとは断定できない。
+- 本 `/verify` 実行時、parent main には別セッションの無関係な Spec ファイル (`docs/spec/issue-1128-*.md`) が未コミットで存在していた (`check-verify-dirty` exit 2)。skill の規定では AskUserQuestion で stash 可否を問う分岐だが、他セッションの未コミット作業に触れない方針を優先し、stash せずに続行した。verify は自前の worktree で作業しコミット対象も `docs/spec/issue-1097-*.md` に限定されるため干渉しないと判断した。
