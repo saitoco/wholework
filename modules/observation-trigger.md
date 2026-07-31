@@ -4,8 +4,7 @@ Design specification for the observation AC trigger mechanism.
 
 ## Purpose
 
-`verify-type: observation event=<name>` ACs are not verified during a normal `/verify` run.
-Instead, they are re-evaluated automatically when the specified event fires.
+`verify-type: observation event=<name>` ACs are not verified during a normal `/verify` run **until the specified event has fired**. Once the event has fired (a detection comment has been posted on the Issue), the condition is evaluated during the next normal `/verify` run per `skills/verify/SKILL.md` Step 8c — it is no longer SKIPPED at that point.
 This module documents the trigger interface: who calls the trigger, with what arguments, and what the output contract is.
 
 The actual dispatch is handled by `scripts/opportunistic-search.sh --event <name>`, which:

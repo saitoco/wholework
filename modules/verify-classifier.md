@@ -28,7 +28,7 @@ Skills that Read this file should evaluate each post-merge condition against the
 ### observation Type: Event Values and Syntax
 
 `<!-- verify-type: observation event=<event-name> -->` marks a condition as an event-driven observation.
-The condition is **not** verified during a normal `/verify` run; instead, it is re-evaluated automatically when the specified event fires.
+The condition is **not** verified during a normal `/verify` run **while the specified event has not yet fired**; instead, it is re-evaluated once the event fires. After the event fires, the condition is evaluated (not skipped) during the next normal `/verify` run per `skills/verify/SKILL.md` Step 8c.
 
 **Valid `event-name` values (restricted by convention):**
 
