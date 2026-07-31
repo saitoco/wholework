@@ -66,3 +66,33 @@
 - **Recovery type**: commit-push
 - **Wrapper exit code**: 1
 - **Outcome**: success
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- `triaged` / Size=S は事前設定済みだったため triage をスキップし、曖昧点 3 件 (Option A/B の選択、`gh` 失敗と jq エラーの区別要否、警告の `<step>` 内容) を非対話 3-Tier Policy でモデル判断し `## Auto-Resolved Ambiguity Points` に記録した。この 3 件が `/spec` 段階での再議論を防いでいる
+
+#### spec
+- Implementation Steps が「5 箇所の変数名 (RAW_COMMENTS / SINCE_CUTOFF / VERIFYFAIL / ALL_COMMENTS / NEW_COMMENTS) を列挙し、`if ! VAR=$(...); then warn_jq_failed "<変数名>"; VAR="[]"; fi` 形式に書き換える」と具体的だったため、実装乖離ゼロで 5/5 が変換された。verify 側も `grep -c 'warn_jq_failed "'` = 5 と `|| echo "[]"` の残存 0 件で機械確認できた
+- spec フェーズ自身が main 先行による ff マージ失敗をリベースで自己復旧している (wrapper 内で完結、exit 0)
+
+#### code
+- **silent no-op を 2 回連続で起こした**。いずれも同一原因: `/code` セッションがフルテストスイートをバックグラウンド実行し「完了通知を待ちます」としてターンを終えたが、`claude -p` (headless) には harness の再呼び出しが存在せず通知が原理的に届かない。ログの決定的証拠: 「バックグラウンドのフルテストスイート実行完了を待ちます。完了通知が届き次第、結果を確認してコミット・プッシュに進みます。」→ `matches_expected: false` → `auto-retry: code phase silent no-op, retry 2/3`
+- **auto-retry 2/3 が dirty-tree precondition で停止した**。先行試行が実装編集を worktree ではなく parent main の作業ツリーに残していたため、`check-verify-dirty` が `classify=parent-main` で 2 ファイルを検出し `Error: parent main has uncommitted changes. Resolve before proceeding.` で中断。実装は完成していたが、コミットされないまま宙に浮いた
+- 親セッションが diff を Spec の Implementation Steps と突き合わせ、`bats tests/append-consumed-comments-section.bats` 7/7 とフルスイート 1294 件 failure 0 を確認したうえでコミット・push する manual recovery (`commit-push`) を実施 (`## Auto Retrospective` に記録済み)
+
+#### review
+- patch route のため `/review` は実行されていない
+
+#### merge
+- patch route のため `/merge` は実行されていない。push は親セッションの manual recovery で完了
+
+#### verify
+- Pre-merge 4/4 PASS。`|| echo "[]"` によるエラー隠蔽が 5 箇所 → 0 箇所になったことを機械確認できた点が決定的だった
+- Post-merge observation AC は、本 `/verify` 自身が修正後スクリプトを実行したものの jq がすべて正常終了したため警告経路に入らず未観測。警告経路自体は bats の jq 失敗ケースで検証済み
+
+### Improvement Proposals
+
+- **`/code` が headless 実行でテストをバックグラウンド実行し通知待ちでターンを終える silent no-op — #1097 の code フェーズ版**: `#1097` は同一の根本原因 (`claude -p` には background task の完了通知を運ぶ harness 再呼び出しが存在しないため、「通知待ちでターンを終える」選択は headless では必ず silent no-op になる) を扱っているが、Background・実例・復旧の議論 (`post-fallback-review-summary.sh` / Response Summary / Review Retrospective) がいずれも `/review` 専用スコープで、`/code` は対象外。本 Issue の code フェーズは 2 回連続でこれを踏み、`#1074` でも 1 回発生している (計 3 回)。code フェーズ固有の帰結として、**先行試行が parent main の作業ツリーに実装編集を残すと、auto-retry が `check-verify-dirty` の dirty-tree precondition (`Error: parent main has uncommitted changes`) で停止し、完成済み実装がコミットされないまま宙に浮く**。review 側の `post-fallback-review-summary.sh` に相当する自動復旧経路が code 側には無く、親セッションが diff とテストを検証して手動コミットするしかない。対応候補: (a) `#1097` の対策を全 headless フェーズ (`run-code.sh` / `run-spec.sh` / `run-review.sh` / `run-merge.sh`) に一般化し、SKILL.md に「headless 実行ではテストを foreground で実行し、background + 通知待ちでターンを終えない」旨を明記する、(b) `/code` SKILL.md のテスト実行手順を foreground 固定にする、(c) 加えて `modules/orchestration-fallbacks.md` に「parent main の作業ツリーに実装が未コミットで残った状態」の復旧エントリ (diff と Spec の突き合わせ → テスト実行 → commit-push) を追加し、`#1081` (patch route の worktree 未 push コミット) と対になる形で catalog を揃える
