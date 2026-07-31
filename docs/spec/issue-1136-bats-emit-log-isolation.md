@@ -172,3 +172,44 @@ Nothing to note — the diff matched the Spec's Implementation Steps 1-3 verbati
 ### Acceptance criteria verification difficulty
 
 Nothing to note — all 5 Pre-merge conditions had clear, well-scoped verify commands (1 `rubric`, 1 `file_contains`, 1 `rubric`, 1 `command`, 1 `rubric`) and all resolved to PASS on the first pass with no ambiguity.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+
+- **AC の追加が verify を実質的に強化した**: `/spec` が rubric AC1 の構造的補完として `file_contains` AC を 1 件追加した (Pre-merge 4 → 5 件) 判断は正しかった。rubric 単独だと grader の変動で「setup() が遮断している」の判定が揺れうるが、`unset EMIT_ISSUE_NUMBER EMIT_PR_NUMBER EMIT_PHASE_NAME AUTO_SESSION_ID` という完全一致文字列を pin したことで、verify phase で決定論的に PASS を確定できた。`modules/verify-patterns.md` §9 の「rubric + 補完チェック」パターンが機能した実例
+- **cross-search を AC 化したことで scope 拡大が統制された**: AC2 (cross-search 記録) が先に存在したため、`/spec` の調査で同型の漏れ 2 件を発見した際に「発見したが直さない」という中途半端な着地を回避できた。AC の bats コマンドを 3 ファイルに拡張し Issue body と Spec を同時更新する、という統制された scope 拡大になった
+
+#### design
+
+- **Spec の再現手順が verify phase でそのまま検証コマンドになった**: Spec の `## Reproduction Steps` に wrapper env を模した具体的な `env ... bats ...` コマンドを書いておいたため、code / review / verify の 3 フェーズすべてが同一手順で修正の実効性を測定できた。バグ Issue の Spec に「再現コマンド」を実行可能な形で残す価値が確認できた
+- **purge の閾値根拠を Spec に明記したことが verify を容易にした**: 閾値 600 の根拠 (`scripts/watchdog-defaults.sh` の phase 別既定値の最小 `WATCHDOG_TIMEOUT_MERGE_DEFAULT=600`) を Spec に書いたため、verify phase で「残存 13 件がすべて本番既定域内 (1800×12 / 600×1)」を機械的に確認するだけで AC5 を PASS 判定できた
+
+#### code
+
+- **Spec の Step 4 が worktree 前提を欠いていた**: purge をメインリポジトリで実行する必要があるのに、Spec のコマンドブロックは素の shell セッションを前提としていた。実際には `/code` は worktree 内で動くうえ path-scoped permission guard があり、`ExitWorktree`/`EnterWorktree` の往復 + `mv` 拒否に対する `cp`-over-target の代替が必要だった (Code Retrospective に記録済み)。「worktree スコープの skill 実行の中に main-repo 限定の Step が混ざる」パターンは今後も起こりうる
+- **gitignored な本番ファイルへの書き込み手段の知見**: `mv` は拒否されるが `cp`(上書き)は通る、という非自明な挙動差。`--dangerously-skip-permissions` に頼らずに済む代替手段として記録価値がある
+
+#### review
+
+- **CI Blocking ルールが無関係な pre-existing 失敗と衝突した**: `Forbidden Expressions check` が `main` 上の別 Issue の Spec (`docs/spec/issue-1135-*.md`) の旧称残存で失敗しており、本 PR の diff とは無関係だったが、`skills/review/SKILL.md` Step 9 に allowlist 機構がないため MUST として inline 修正された。結果的に CI は green になり #1137 の実体も解消したが、「この PR が壊した」と「main から継承しただけ」を区別する仕組みがない
+- **自己レビューでは REQUEST_CHANGES を送れない構造的制約**: PR 作者と `/review` 実行者が同一 GitHub identity の場合 (単一メンテナリポジトリ)、GitHub API が 422 を返すため MUST の機械的シグナルが原理的に発火しない。`gh-pr-review.sh` に検出も fallback もない
+
+#### merge
+
+- Nothing to note — `mergeable=true reason=clean ci_status=success review_status=approved` で squash-merge、コンフリクト解消不要。pre-merge AC gate も 5 件チェック済みで通過した
+
+#### verify
+
+- **observation AC の実質を verify phase で先取り測定できた**: Post-merge AC (`event=auto-run`) は未発火のため形式上 SKIPPED だが、その実質 (「本番既定域外の watchdog_kill が新規追加されない」) は verify phase で直接測定した — wrapper env 付き bats 実行で sentinel ファイルが作成すらされず漏洩 0 件、かつ本番ログ行数が 6569 → 6569 と不変。observation AC が「発火待ち」で宙吊りになる場合でも、同等の測定を verify phase で実施して結果コメントに残せば、後続の判断材料として機能する
+- **#1137 が実体解消済みのまま OPEN で残っている**: `git show origin/main:docs/spec/issue-1135-external-kill-root-cause.md | grep -c "Issue Spec"` が 0、`scripts/check-forbidden-expressions.sh` が exit 0 を確認済み。本 PR の inline 修正で superseded になったため、close 相当
+
+### Improvement Proposals
+
+- **`Forbidden Expressions check` に diff スコープ限定モードまたは allowlist を追加する**: 現状 `main` 上に禁止表現の違反が 1 件でもあると、無関係な全 PR の `/review` が MUST でブロックされる。「この PR が導入した違反」と「main から継承した違反」を区別できないため、無関係な PR の作者が他 Issue の成果物を直す羽目になる (本 Issue で実際に発生し、#1137 の対象ファイルを本 PR が修正した)。`scripts/check-forbidden-expressions.sh` に `--diff-only` 相当のモードを追加するか、`skills/review/SKILL.md` Step 9 に「pre-existing 失敗は MUST から除外し follow-up Issue に委ねる」判定を入れる
+- **`gh-pr-review.sh` に自己レビュー 422 の検出と fallback を追加する**: PR 作者と `/review` 実行者が同一 GitHub identity の場合、`REQUEST_CHANGES` / `APPROVE` は 422 で拒否され、MUST の機械的シグナルが原理的に発火しない。単一メンテナリポジトリ (本リポジトリを含む) では常にこの経路になる。(a) 422 を検出して明示的な端末警告付きで `COMMENT` にフォールバックする、または (b) 既知の制約として `skills/review/SKILL.md` Step 11 に明記して「`REQUEST_CHANGES` が成功した」という暗黙の前提を排除する
+- **`scripts/claude-watchdog.sh` の JSON モードにある spurious watchdog_kill race を修正する**: L65 の `while kill -0` がスリープ**前**にしか生存確認しないため、`sleep _CHECK_INTERVAL` 中に正常終了したプロセスに対しても `unchanged_time` を加算して kill 分岐に入り、偽の `watchdog_kill` を emit する。本 Issue で purge した 12 件のうち `timeout_setting=10` の 2 件がこの経路。本番 (JSON モード / timeout 2600s / check interval 10s) でも「タイムアウト直前 10 秒以内に正常終了したプロセス」で再現しうるため、`watchdog_kill` メトリクスの信頼性に関わる残存欠陥。ループ内の kill 分岐直前に `kill -0 "$cmd_pid"` を再確認する修正で塞げる
+- **`modules/worktree-lifecycle.md` に「worktree スコープ実行内の main-repo 限定 Step」パターンを追記する**: gitignored な本番ファイル (`.tmp/*` 等) を操作する Step は worktree 内から実行できず、`ExitWorktree(action: "keep")` → 実行 → `EnterWorktree(path: ...)` の往復が必要になる。あわせて、auto-mode classifier が親リポの gitignored パスへの `mv` を拒否する一方 `cp`(上書き)は通るという挙動差も、`--dangerously-skip-permissions` に頼らない代替手段として記録する
+- **#1137 を superseded として close する**: 本 PR の inline 修正で対象語句が `main` から除去され、`scripts/check-forbidden-expressions.sh` は exit 0 になったことを確認済み (新規 Issue ではなく既存 Issue のクローズ操作)
