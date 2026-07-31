@@ -79,3 +79,22 @@
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 要旨: `/issue` フェーズの Issue Retrospective。AC2 の修正先を `skills/review/SKILL.md` の `## Non-Interactive Mode Behavior` 節に特定し、機械チェック用に AC3 (`section_contains ... "前景"`) を追加し、`/spec`・`/verify` への同種の個別注記追加を本 Issue のスコープ外と確定した経緯を記録 / URL: https://github.com/saitoco/wholework/issues/1097#issuecomment-5140788831
+
+## Code Retrospective
+
+N/A — Implementation Steps 1〜4 をそのまま実施し、設計からの逸脱・手戻り・未解決の曖昧さはなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Steps 1〜4 を逐語通りに実施 (test-runner.md への Note 追加、review/SKILL.md へのブレット追加、review.bats へのヘルパー + テスト追加)
+- `bats tests/review.bats` は前景実行で完了まで待ち、12/12 PASS を確認した
+
+### Deferred Items
+- Post-merge AC (Size L の PR で `run-review.sh <PR> --full` を実行し silent no-op が発生しないことを確認) は未実施 — `/verify` フェーズで対応
+- Issue 本文「対応方針 (案)」項目 3 (fallback コメントへの retrospective/Phase Handoff 未書き込み注記) は Spec Notes で明記済みの通りスコープ外のまま
+
+### Notes for Next Phase
+- Changed Files は Spec記載の3ファイルのみで完結しており、ドキュメント同期の追加対象はない (Spec Notes 参照)
+- AC1/AC2 は rubric 型のため `/review` の Step 8 で AI 判定が行われる — 本 diff は Issue 本文の要求文言をそのまま反映しているため PASS を想定
