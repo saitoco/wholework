@@ -33,6 +33,12 @@ if [[ -z "$SPEC_FILE" ]]; then
   exit 0
 fi
 
+# Warn on stderr when a jq/gh --jq call fails, distinguishing "jq errored" from
+# the "0 new comments" happy path that also yields an empty array.
+warn_jq_failed() {
+  echo "append-consumed-comments-section.sh: WARNING — jq failed at $1; consumed comments not recorded" >&2
+}
+
 # Format a JSON comment array into "## Consumed Comments" entry lines, applying
 # trust boundary classification. Trust tiers: OWNER/MEMBER/COLLABORATOR =
 # first-class, CONTRIBUTOR/NONE = external. Logins ending with [bot] = bot
@@ -63,27 +69,39 @@ CUTOFF=$(gh api "repos/{owner}/{repo}/issues/${ISSUE_NUMBER}/timeline" --paginat
   2>/dev/null || true)
 
 # Fetch all comments from the Issue
-RAW_COMMENTS=$(gh issue view "$ISSUE_NUMBER" --json comments \
-  --jq '.comments' 2>/dev/null || echo "[]")
+if ! RAW_COMMENTS=$(gh issue view "$ISSUE_NUMBER" --json comments \
+  --jq '.comments' 2>/dev/null); then
+  warn_jq_failed "RAW_COMMENTS"
+  RAW_COMMENTS="[]"
+fi
 
 # Filter comments since cutoff
 if [[ -n "$CUTOFF" ]]; then
-  SINCE_CUTOFF=$(echo "$RAW_COMMENTS" | \
-    jq --arg c "$CUTOFF" '[.[] | select(.createdAt > $c)]' 2>/dev/null || echo "[]")
+  if ! SINCE_CUTOFF=$(echo "$RAW_COMMENTS" | \
+    jq --arg c "$CUTOFF" '[.[] | select(.createdAt > $c)]' 2>/dev/null); then
+    warn_jq_failed "SINCE_CUTOFF"
+    SINCE_CUTOFF="[]"
+  fi
 else
   SINCE_CUTOFF="$RAW_COMMENTS"
 fi
 
 # Fetch verify-fail marker comments regardless of cutoff (defense in depth)
-VERIFYFAIL=$(echo "$RAW_COMMENTS" | \
+if ! VERIFYFAIL=$(echo "$RAW_COMMENTS" | \
   jq '[.[] | select(.body | contains("<!-- wholework-event: type=verify-fail"))]' \
-  2>/dev/null || echo "[]")
+  2>/dev/null); then
+  warn_jq_failed "VERIFYFAIL"
+  VERIFYFAIL="[]"
+fi
 
 # Combine and deduplicate by URL
-ALL_COMMENTS=$(jq -n \
+if ! ALL_COMMENTS=$(jq -n \
   --argjson a "$SINCE_CUTOFF" \
   --argjson b "$VERIFYFAIL" \
-  '($a + $b) | unique_by(.url)' 2>/dev/null || echo "[]")
+  '($a + $b) | unique_by(.url)' 2>/dev/null); then
+  warn_jq_failed "ALL_COMMENTS"
+  ALL_COMMENTS="[]"
+fi
 
 HEADING_LINE=$(grep -n "^## Consumed Comments" "$SPEC_FILE" 2>/dev/null | head -1 | cut -d: -f1 || true)
 
@@ -118,11 +136,14 @@ else
   # already-recorded longer URL (e.g. "issuecomment-5123" vs
   # "issuecomment-51230"), which would falsely match via `contains()` and
   # silently drop a legitimate new comment forever.
-  NEW_COMMENTS=$(echo "$ALL_COMMENTS" | \
+  if ! NEW_COMMENTS=$(echo "$ALL_COMMENTS" | \
     jq --arg body "$EXISTING_BODY" '
       ($body | split("\n") | map(split(" / ") | last)) as $existing_urls |
       [.[] | select((.url // "") as $u | ($existing_urls | index($u) != null) | not)]
-    ' 2>/dev/null || echo "[]")
+    ' 2>/dev/null); then
+    warn_jq_failed "NEW_COMMENTS"
+    NEW_COMMENTS="[]"
+  fi
 
   NEW_ENTRIES=$(format_entries "$NEW_COMMENTS")
 

@@ -134,6 +134,32 @@ MOCK
     [ "$occurrence_count" -eq 1 ]
 }
 
+@test "jq failure on RAW_COMMENTS: warns on stderr, falls back to empty array, exits 0" {
+    SPEC_FILE="$BATS_TEST_TMPDIR/repo/docs/spec/issue-42-some-title.md"
+    printf '# Issue #42: some title\n\n## Overview\nSome content.\n' > "$SPEC_FILE"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "api" ]]; then
+    echo ""
+    exit 0
+fi
+if [[ "$1" == "issue" && "$2" == "view" ]]; then
+    echo "not valid json"
+    exit 1
+fi
+echo "[]"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run "$SCRIPT" 42 code
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"jq failed"* ]]
+    [[ "$output" == *"RAW_COMMENTS"* ]]
+    grep -q "^## Consumed Comments" "$SPEC_FILE"
+}
+
 @test "not in worktree: emits defense-in-depth warning" {
     SPEC_FILE="$BATS_TEST_TMPDIR/repo/docs/spec/issue-42-some-title.md"
     printf '# Issue #42: some title\n\n## Overview\nSome content.\n' > "$SPEC_FILE"
