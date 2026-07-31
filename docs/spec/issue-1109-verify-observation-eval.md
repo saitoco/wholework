@@ -79,6 +79,49 @@
 
 - saito (MEMBER, first-class): `/issue 1109 --non-interactive` の Issue Retrospective。曖昧ポイント1件 (「対応方針 (案) 4.」の記録先を Notes から Details 列へ) を自動解決し、Background の事実確認 (`modules/verify-executor.md:244` と `scripts/observation-trigger.sh:79` の矛盾) を実施した記録。AC 変更なし。 (https://github.com/saitoco/wholework/issues/1109#issuecomment-5138255302)
 
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Background が `modules/verify-executor.md:244` と `scripts/observation-trigger.sh:79` という 2 箇所の矛盾を行番号付きで特定しており、`/issue` の事実確認でも実コードと一致することが確認された。矛盾を「仕様 A と仕様 B が食い違う」形で提示できたため、Spec 以降の設計判断が最短で進んだ。
+- 曖昧点の自動解決 (記録先を「Notes」から既存の `## Acceptance Test Results` Details 列へ統一) は、既存の出力フォーマットに存在しない項目名を導入しないための修正であり妥当。AC テキストは変更されていない。
+
+#### spec
+- Changed Files に「Steering Docs sync candidate (grep 済み、変更不要と確認)」として `docs/structure.md` / `docs/workflow.md` / 3 つの bats を挙げ、それぞれ不要と判断した根拠まで書いている。この形式自体は良い。
+- **ただし監査対象の選定に漏れがあった**。`modules/observation-trigger.md` と `modules/verify-classifier.md` が「常に SKIPPED」という pre-fix の記述を保持したままで、`modules/verify-executor.md` だけが更新される非対称な状態になっていた。review retrospective が指摘するとおり、監査対象を「PR diff で変更したファイル」ではなく「同じ仕様事項を別角度から記述している既存ドキュメント」まで広げる必要があった。
+- **回帰テストが Implementation Steps に明記されていなかった**。Pre-merge AC の `command "bats tests/verify.bats"` は既存スイートの PASS しか保証せず、既存スイートに `observation` 関連ケースが皆無だったため、新設した Step 8c のロジックを実際には一切検証していなかった。
+
+#### code
+- worktree の変更 3 ファイルは Spec の Changed Files と完全一致し、Implementation Steps 5 箇所 (Step 4 routing / Step 7 列ガイダンス / Step 8c 新設 / Post-Step 8 checkpoint / Step 11(a)) をすべて実装していた。設計逸脱なし。
+- **code フェーズは silent no-op で 3 回連続失敗した**。`/code` が headless (`claude -p`) で bats テストスイートをバックグラウンド実行し、届かない完了通知を待ってターンを終える — #1097 として起票済みのパターンそのものの再現。3 回目は並行セッションが main に未コミット変更を持っていたため `check-verify-dirty` のガードで停止した。
+- 親セッションが worktree の状態を検査し (Changed Files 一致・Implementation Steps 網羅・bats 90 件 PASS・validator 通過を確認)、commit → rebase → push → PR 作成で復旧した。`/code` 自身の commit ステップは実行されていないため `## Code Retrospective` は存在しない。
+
+#### review
+- `/review` が 3 件の実質的な欠陥を検出し、いずれも同一 PR 内で修正した。
+  - Documentation Consistency: `modules/observation-trigger.md` / `modules/verify-classifier.md` の pre-fix 記述の残存 (spec の監査漏れを回収)
+  - Bug: Step 8c の `gh issue view` 失敗を「未発火」と誤認する経路 → UNCERTAIN 化
+  - Bug: 発火判定の部分一致衝突 (`event=auto` が `event=auto-run` にマッチしうる) → バッククォート完全一致へ
+  - Test Quality: 新ロジックの回帰テストが皆無 → `tests/verify.bats` に 7 件追加
+- **AC 検証では 3 件とも原理的に捕捉できなかった**。rubric AC は「分岐が追加されているか」「証拠収集手段が列挙されているか」を問うており、その分岐の内部的な正しさ (エラーハンドリング・マッチの厳密性) やテストの実効性は問えない。review の付加価値が明確に出た事例。
+
+#### merge
+- pre-merge AC ゲート (#1060 で導入) が 4/4 checked を確認して通過。`mergeable=true` / CI 9 件 SUCCESS / approved で squash merge 完了。
+- `gh pr merge --delete-branch` のローカルブランチ削除が失敗した (`worktree-code+issue-1109` が worktree で使用中)。リモートブランチ削除と PR MERGED は成功しており、merge フェーズはスコープ外として残存を許容した。この判断は妥当。
+- 親セッション側の観測: `scripts/gh-pr-merge-status.sh` が CI の `IN_PROGRESS` を `ci_status: failing` / `reason: ci_failing` と分類した。実際には 7 件 SUCCESS + 2 件 IN_PROGRESS で失敗は 0 件。CI 完了後に再実行したところ `mergeable: true / clean / success` に変わった。in-progress と failing を同一視すると、merge 可否の判断が誤る (親セッションは一度 merge を見送った)。
+
+#### verify
+- 自動検証 4 件すべて PASS。`bats tests/verify.bats` は 15 件 (review が追加した 7 件を含む) すべて PASS。
+- post-merge の manual AC は、**条件が充足される observation AC を持つ Issue が現時点で存在しない**ため実行不可と判定した。`auto-run` でマッチする 10 件 (#839, #841, #843, #984, #995, #1009, #1035, #1037, #1107, #1113) はいずれも観測前提が本リポジトリで成立せず、Step 8c の判定では SKIPPED になる。
+- 参考として、本 Issue のマージ**前**に #1027 と #1026 で「event 発火後に `/verify` → PASS 判定 → checkbox 更新 → `phase/done`」の流れを実測している。ただし当時は判定手順を都度即興で組み立てており (それ自体が本 Issue の起票理由)、マージされた Step 8c の手順による確認には代えられない。
+
+### Improvement Proposals
+
+- **`scripts/gh-pr-merge-status.sh` が CI の `IN_PROGRESS` を `failing` と分類する**。PR #1121 では 7 件 SUCCESS + 2 件 IN_PROGRESS の状態で `{"mergeable": false, "reason": "ci_failing", "ci_status": "failing"}` を返した。失敗は 0 件であり、CI 完了後は `{"mergeable": true, "reason": "clean", "ci_status": "success"}` に変わった。`/merge` Step 1 はこの JSON で分岐するため、in-progress を failing と扱うと「CI 失敗」として誤った経路 (AskUserQuestion / 非対話時の自動解決) に入る。`ci_status` に `pending` 相当の値を追加し、`reason` も `ci_pending` として区別すべき。呼び出し側は pending なら待機、failing なら中断という分岐にできる。
+- **`scripts/validate-skill-syntax.py` の単一バッククォート正規表現ストリッパーが、二重バッククォートのインラインコード表記を誤処理する**。`/review` の修正作業中に Step 8c へ二重バッククォート形式のインラインコードを導入したところ、ストリッパーが誤マッチして文書の広い範囲を巻き込み、無関係な `<!-- verify: ... -->` プレースホルダーを「未知の verify コマンド」として誤検出した。SKILL.md 本文で二重バッククォートを使えないという暗黙の制約が生まれており、しかもエラーメッセージからは原因が読み取れない。ストリッパーを二重バッククォート対応にするか、少なくとも制約として明文化すべき。
+- **新しい分岐ロジックを追加する Issue で、対応する回帰テストの追加が Implementation Steps に明記されない**。#1109 では Pre-merge AC の `command "bats tests/verify.bats"` が既存スイートの PASS しか保証せず、既存スイートに `observation` 関連ケースが皆無だったため新ロジックを一切検証していなかった。`/review` の Test Quality finder が検出して 7 件追加したが、本来は Spec 段階で担保すべき。Verification 節の command AC を「既存スイートが PASS すること」ではなく「新ロジックを検証する新規ケースを追加したうえでスイートが PASS すること」と書かせる運用が必要。(関連: #1096 は「新規 assert が実装前に FAIL することを確認させる」で、本提案は「そもそも新規 assert を追加させる」側)
+- **Steering Docs sync candidate の監査対象が「PR diff で変更したファイル」に閉じている**。#1109 では `modules/observation-trigger.md` / `modules/verify-classifier.md` が同じ仕様事項 (observation AC の扱い) を別角度から記述していたにもかかわらず監査対象から漏れ、pre-fix の記述が残った。`/spec` の監査手順に「変更する仕様事項を表すキーワード (例: `verify-type: observation`) で `grep -rl` し、ヒットした全ファイルを監査対象に含める」を追加すべき。(関連: #1073 はタグ・enum の意味論拡張時の消費箇所洗い出し、#1089 は sync candidate check のゲート条件に `modules/` を含める — 本提案はキーワード横断検索による対象選定という第三の角度)
+
 ## review retrospective
 
 ### Spec vs. implementation divergence patterns
