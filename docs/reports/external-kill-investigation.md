@@ -113,3 +113,23 @@ Combined with the 7/23 #1042 occurrence (killed one second after a clean `wrappe
 **Operational workaround:** no new workaround was validated by this experiment (the setsid detachment could not be tested against a reproducing kill). 回避策なし — 既存の respawn 補償層による観測を継続する。The already-observed operational avoidance stands: prefer single-shot `/auto` invocations (never killed to date) over long `--batch` sessions where feasible.
 
 **Next actions / next iteration (designed, not yet run):** reproduce first, then isolate. Run a real `/auto --batch` workload (2–3 real issues, pr-route, 15+ minute wrappers) twice: once with wrappers on the harness-managed surface (control — expected to reproduce at recent rates) and once with the same batch's wrappers detached via `start_new_session` (treatment). If the control reproduces and the treatment does not, H-a is confirmed and the detachment doubles as the fix (feeding the #598 in-session migration re-evaluation and the Anthropic report preparation with 30+ occurrences of reproduction data); if both reproduce, H-a is refuted in favor of H-b/H-c. This requires a detachment flag in `run-auto-sub.sh`'s spawn path and is deliberately sequenced after #1136 (event-log decontamination) lands, so kill-rate metrics are computed from clean data. The #598 icebox re-evaluation trigger ("watchdog kill rate worsens beyond 5.7%") is separately noted as already quantitatively fired (7/23 pr-route 4/4) — posted to #598 as part of this Issue's next-action hand-off.
+
+## 2026-08-01 Addendum (host-uptime / PID-reuse variant of H-b)
+
+Prompted by an operational observation: the host Mac has not been rebooted for an extended period, and the terminal emulator (Ghostty) and tmux sessions have been running equally long. This addendum records whether host/terminal uptime could contribute to the kill, and folds a cheap discriminating step into the next iteration.
+
+**What existing data already says (uptime as a *primary* cause is disfavored):**
+
+1. Single-shot invocations run kill-free on the same long-uptime host/terminal/tmux (0 occurrences to date, including #1135's own verify run) — a pure environment-age cause would not discriminate batch from single-shot.
+2. The 2026-07-15 experiment (session 32651) restarted the terminal and Claude Code session and kills continued undiminished — terminal-process uptime alone is already refuted in that direction. Host (kernel/OS) uptime, however, was **not** reset in that experiment and remains unfalsified.
+3. No jetsam/OOM evidence (F4) and no SIGKILL trace in the unified log; resource exhaustion from long uptime would typically surface there, or as spawn failures rather than the disappearance of running process groups. tmux/Ghostty have no ordinary code path that SIGKILLs a process group (session teardown sends SIGHUP, which does not match the F1/F2 signature).
+
+**The one uptime-correlated mechanism that fits the batch-exclusivity: PID/PGID reuse.** On a long-uptime host, macOS PID numbers wrap (max 99999), and a `/auto --batch` session spawns processes at a rate far exceeding single-shot use — raising the probability that a PID/PGID recorded earlier by some managing layer (e.g., the harness's background-task tracking) is later reused by an unrelated process group. A stale-PGID kill issued after reuse would look exactly like the observed signature: an indiscriminate process-group SIGKILL uncorrelated with what the wrapper is doing. This variant is consistent with (a) batch-exclusivity via spawn volume, (b) the terminal-restart experiment's null result (PID space is kernel state, not reset by terminal restart), and (c) the absence of jetsam/log traces. It is recorded here as an unverified hypothesis — no direct evidence yet.
+
+**Discriminating step added to the next iteration (order matters — do not reboot ad hoc):**
+
+1. After #1136 lands, reproduce first on the **current, long-uptime environment** (control arm of the next iteration above).
+2. If reproduction succeeds, **reboot the host Mac** (resetting PID space and all accumulated kernel/launchd state) and re-run the identical control workload once. Kill rate collapses after reboot → the uptime/PID-reuse variant (H-b') becomes the leading hypothesis; kill rate unchanged → H-a (harness lifecycle, uptime-independent) is further strengthened.
+3. Only then proceed to the `start_new_session` detachment (treatment) arm comparison.
+
+Rebooting before step 1 would destroy the reproduction baseline and muddy the isolation — the reboot is itself one of the experiment's arms, not maintenance.
