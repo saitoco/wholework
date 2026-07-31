@@ -80,3 +80,40 @@ GitHub GraphQL API の `PullRequestReviewDecision` enum は `APPROVED` / `CHANGE
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: issue phase の Auto-Resolve Log — `reviewDecision` 中間状態の扱いと review-summary marker 検出範囲の2点のambiguityを解決し、AC4 の verify command を patch route 形式 (`gh run view` 経由) に修正したことを記録。`_precondition_merge` (L500-526) と `_completion_review` (L343-364) の実コード内容を grep で事実確認済みと記載。 / URL: https://github.com/saitoco/wholework/issues/1106#issuecomment-5138236658
+
+### code phase (cutoff: `2026-07-31T01:56:15Z`)
+
+新規コメントなし。
+
+## Autonomous Auto-Resolve Log
+
+- **`phase/ready` ラベル不在 (code phase Step 3)**: Issue は既に `phase/code` ラベルが付与されており `phase/ready` が存在しなかった。`reconcile-phase-state.sh code-patch 1106 --check-precondition` も `matches_expected: false` (`issue #1106 does not have phase/ready label`) を返したが、Spec ファイル (`docs/spec/issue-1106-merge-precondition-selfhost.md`) 自体は存在し内容も完備しているため「Spec 欠落」には該当しない。`git log --grep=1106` / `gh pr list --search 1106` で確認した限り実装コミットも PR も存在せず、直前の `/code` 実行が Step 4 (ラベル遷移) 直後で中断し実装未着手のまま終了した状態と判断した。非対話モードの auto-resolve ポリシーに従い、既存 Spec を正として実装を続行する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Changed Files には `modules/phase-state.md` の Phase Table merge 行更新のみが明記されていたが、実装では既存の「Operate Route Completion Signature」「Stray PR Completion Signature」と同じ文書構成に合わせ、新規の `### Merge Precondition Marker Fallback` 説明セクションも追加した。Phase Table の行だけでは「なぜ marker フォールバックが必要か」という背景 (自己ホスト運用での 422 拒否) が読み取れず、他の SSoT セクションとの一貫性を優先した。AC (grep / rubric) はどちらも満たされており、追加セクションは補足情報のため AC の内容や verify command には影響しない。
+
+### Design Gaps/Ambiguities
+
+- Spec の Implementation Steps は「Step 8: 各ステップ完了後に commit」と「Step 11: `{prefix} <summary> (closes #N)` 形式の単一コミット」という2つの commit 規約を暗黙に前提としているが、本 Issue のように Implementation Steps が複数ステップ (scripts / modules / tests) に分かれ Step 8 の指示どおり都度コミットすると、Step 11 で新規に commit すべき差分が残らず `closes #N` 付与のタイミングを失う。今回は worktree ローカルの未push状態であることを確認した上で最終コミットを `git commit --amend` して `(closes #1106)` を追加し要件を満たしたが、SKILL.md 上はこのケース (Step 8 の粒度コミットと Step 11 の closes-commit 要件の衝突) が明文化されていない。将来的に Step 8 の粒度コミット規約と Step 11 の closes-commit 要件を明示的に整合させる余地がある。
+
+### Rework
+
+- N/A — 実装・テスト追加ともに手戻りなし。全73件 (`tests/reconcile-phase-state.bats` 単体) および全1322件 (`bats tests/` フルスイート、`modules/phase-state.md` が `tests/operate-route.bats` からも参照されているため behavioral change detection によりフル実行) がいずれも1回のテスト実行で PASS した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `_precondition_merge()` に `_completion_review()` と同一の marker 検出ロジック (PR comments + `gh api .../reviews`、同一正規表現) を導入し、コードの重複よりも既存パターンとの一貫性を優先した。
+- `reviewDecision=CHANGES_REQUESTED` は marker の有無に関わらず無条件 mismatch とし、marker フォールバックの対象から明示的に除外した (未解決の指摘を merge 可能状態に見せない安全側の設計)。
+- `modules/phase-state.md` に新規 `### Merge Precondition Marker Fallback` セクションを追加し、Phase Table の1行だけでは伝わらない背景 (自己ホスト運用での 422 拒否) を明文化した。
+
+### Deferred Items
+- Post-merge AC (「自己 PR に対して `/auto` の pr route を実行し、merge precondition の警告が出ずに進行することを確認する」, `verify-type: manual`) は本 PR のマージ後、実際の自己 PR 運用下で手動確認が必要。
+
+### Notes for Next Phase
+- Pre-merge AC 4件はすべて実装確認済み (rubric x2 / grep / github_check) だが、AC4 (`github_check ... test.yml ... "Run bats tests"`) は push 前時点での baseline CI run に対する確認であり、本コミット群に対する CI 実行結果ではない。push 後の CI (patch route の場合、`worktree-merge-push.sh` によるマージ後の origin/main 上の CI run) で改めて green を確認すること。
+- Step 8 の粒度別コミット (3件) と Step 11 の closes-commit 要件が衝突したため、最終コミットを `git commit --amend` して `(closes #1106)` を追加した (未 push のローカル worktree 内でのみの操作、履歴共有前)。Code Retrospective の Design Gaps/Ambiguities に詳細を記録済み。
