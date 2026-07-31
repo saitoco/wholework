@@ -520,8 +520,30 @@ _precondition_merge() {
 
   if [[ "$pr_review_decision" == "APPROVED" ]]; then
     _emit_result "true" "PR #${PR_NUMBER} is OPEN and APPROVED (merge precondition met)" "$actual_json"
+    return
+  fi
+
+  if [[ "$pr_review_decision" == "CHANGES_REQUESTED" ]]; then
+    _handle_mismatch "PR #${PR_NUMBER} reviewDecision is CHANGES_REQUESTED (merge precondition not met)" "$actual_json"
+    return
+  fi
+
+  # reviewDecision is neither APPROVED nor CHANGES_REQUESTED (empty / REVIEW_REQUIRED / other):
+  # GitHub rejects self-review actions with 422 on single-account (self-hosted) operation, so
+  # reviewDecision can never reach APPROVED there. Fall back to the same review-summary marker
+  # detection _completion_review() uses (PR comments + PR reviews) as an alternate merge signal.
+  local pr_comments
+  pr_comments=$(gh pr view "$PR_NUMBER" --json comments -q '.comments[].body' 2>/dev/null) || true
+
+  local pr_reviews
+  pr_reviews=$(gh api "repos/{owner}/{repo}/pulls/${PR_NUMBER}/reviews" -q '.[].body' 2>/dev/null) || true
+
+  local combined="${pr_comments}${pr_reviews}"
+
+  if echo "$combined" | grep -qE "<!--[[:space:]]*review-summary[[:space:]]*-->|## Review Response Summary|## レビュー回答サマリ"; then
+    _emit_result "true" "PR #${PR_NUMBER} is OPEN and review-summary marker found (merge precondition met via marker fallback)" "$actual_json"
   else
-    _handle_mismatch "PR #${PR_NUMBER} reviewDecision is ${pr_review_decision}, not APPROVED (merge precondition not met)" "$actual_json"
+    _handle_mismatch "PR #${PR_NUMBER} reviewDecision is ${pr_review_decision}, not APPROVED, and no review-summary marker found (merge precondition not met)" "$actual_json"
   fi
 }
 
