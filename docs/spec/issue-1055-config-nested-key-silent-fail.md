@@ -126,3 +126,11 @@ UNCERTAIN は 0 件、Pre-merge 4 件すべて PASS で、verify command の記�
 - **Recovery type**: pr-create
 - **Wrapper exit code**: 1
 - **Outcome**: success
+
+### Manual recovery (review)
+- **Date**: 2026-07-31 03:08 UTC
+- **Issue**: #1055, phase: review
+- **Source**: parent session manual recovery
+- **Recovery type**: review-rerun
+- **Wrapper exit code**: 1
+- **Outcome**: success
