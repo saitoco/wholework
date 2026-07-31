@@ -117,3 +117,34 @@ GitHub GraphQL API の `PullRequestReviewDecision` enum は `APPROVED` / `CHANGE
 ### Notes for Next Phase
 - Pre-merge AC 4件はすべて実装確認済み (rubric x2 / grep / github_check) だが、AC4 (`github_check ... test.yml ... "Run bats tests"`) は push 前時点での baseline CI run に対する確認であり、本コミット群に対する CI 実行結果ではない。push 後の CI (patch route の場合、`worktree-merge-push.sh` によるマージ後の origin/main 上の CI run) で改めて green を確認すること。
 - Step 8 の粒度別コミット (3件) と Step 11 の closes-commit 要件が衝突したため、最終コミットを `git commit --amend` して `(closes #1106)` を追加した (未 push のローカル worktree 内でのみの操作、履歴共有前)。Code Retrospective の Design Gaps/Ambiguities に詳細を記録済み。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue / spec
+- 「自己ホスト運用では GitHub が self-`APPROVE` を 422 で拒否するため `reviewDecision` が構造的に `APPROVED` に到達できない」という根本原因の特定が正確で、GraphQL の `PullRequestReviewDecision` enum を公式ドキュメントで裏付けている。
+- 解法として、同一スクリプト内の `_completion_review()` が既に採用している `<!-- review-summary -->` marker 検出を流用する設計は、新機構を持ち込まず一貫性を保つ点で優れている。とくに **`CHANGES_REQUESTED` を従来どおり mismatch のまま維持**した点が重要で、「常時発火する警告を黙らせる」だけの緩和に陥らず、本物の却下は fail-closed のまま残している。
+
+#### code
+- Changed Files の想定 (Phase Table の行更新のみ) を超えて `### Merge Precondition Marker Fallback` 説明セクションを追加した判断は妥当。既存の「Operate Route Completion Signature」等と同じ文書構成に揃えており、AC への影響もない。
+- テストは 3 経路 (marker あり→満足 / marker なし→mismatch / `CHANGES_REQUESTED`→無条件 mismatch) を追加し、既存の APPROVED / not-APPROVED と合わせて 5 経路を保護している。negative case を明示的に含めた点が良い。
+- Rework なし。`tests/reconcile-phase-state.bats` 73 件、フルスイート 1322 件がいずれも 1 回で PASS。
+
+#### verify
+- pre-merge 4 件すべて PASS。AC4 は判定時点で CI が `in_progress` だったため **PENDING で打ち切らず完了まで待機**し、`Run bats tests` = `success` を確認して確定させた。これは Phase Handoff が明示的に要請していた「push 後の CI で改めて green を確認すること」に対応する。
+- post-merge の manual 1 件 (自己 PR での pr route 実走) は Claude では実行不能。`phase/verify` 留置。
+
+### Improvement Proposals
+
+- **`/code` Step 8 の粒度別コミット規約と Step 11 の closes-commit 要件が衝突し、`git commit --amend` での回避が必要になる**: `skills/code/SKILL.md` は Step 8 で「各 Implementation Step 完了後にコミットする」ことを求め、Step 11 で「`{prefix} <summary> (closes #N)` 形式のコミット」を求めている。本 Issue のように Implementation Steps が複数 (scripts / modules / tests) に分かれ、Step 8 の指示どおり都度コミットすると、**Step 11 の時点で新規にコミットすべき差分が残らず `closes #N` を付与するタイミングを失う**。
+  - 本実行では worktree ローカルの未 push 状態であることを確認したうえで最終コミットを `git commit --amend` して `(closes #1106)` を追加し要件を満たした。履歴共有前の操作であり安全だが、**SKILL.md にはこのケースの扱いが明文化されていない**ため、実行者ごとに回避方法が分かれうる (amend / 空コミット / 最後のステップだけコミットを遅延、など)。
+  - `closes #N` は `reconcile-phase-state.sh` の `code-patch` completion check が完了判定に使う一級のシグナルであるため、付与に失敗すると silent no-op と誤判定される。回避方法が非決定的なのはリスクがある。
+  - **対応方針 (案)**: (a) Step 11 に「Step 8 の粒度コミットにより新規差分が無い場合は、最終コミットを `--amend` して `closes #N` を付与する (push 前に限る)」と明記する。(b) Step 8 の規約を「最終ステップのコミットは Step 11 に委ねる」と変更し、衝突自体を作らない。(c) `closes #N` をコミットメッセージではなく Issue コメントの marker で表現し、コミット粒度から独立させる。(a) が最小変更、(b) が構造的。
+
+### 観察
+
+- **#1097 の修正効果が確認できた**: 本 Issue の code フェーズは 1 回目 (#1097 merge 前) に「フルテストスイートの完了を待っています」でターンを終了して silent no-op で失敗し、2 回目 (#1097 merge 後) は同一 Issue・同一 patch route・テスト実行を伴う実装という条件で **silent no-op ゼロ**で完走した (`grep -c "silent no-op"` = 0)。
+  - ただし 1 回目の失敗には並行セッションの dirty tree による auto-retry 中断も重なっており、変数は完全には統制されていない。それでも「background 実行 → 通知待ちでターン終了」という症状そのものが消えた点は #1097 の直接的な効果と見てよい。
+  - ドキュメント注記 (`modules/test-runner.md` への一般原則追加) が headless セッションの実際の挙動を変えた事例として記録に値する。
+- 本 Issue の修正により、本セッションの merge 4 件すべて (#1066 / #1053 / #1050 / #1115) で観測していた `reviewDecision is , not APPROVED` の常時発火警告が解消される見込み。
