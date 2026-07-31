@@ -171,6 +171,7 @@ This is an early Spec read specifically for Phase Handoff context; SPEC_PATH is 
   - **Pre-merge**: treat all conditions as auto-verification targets (with or without hints)
   - **Post-merge + with hints** (`<!-- verify: ... -->`): auto-verification targets — processed in Step 8a
   - **Post-merge + without hints**: manual conditions — processed in Step 8b (Claude executability judgment + verification guide or per-condition AskUserQuestion)
+  - **Post-merge + `<!-- verify-type: observation event=<name> -->`**: routed to Step 8c (fired-event detection, evidence collection, PASS/FAIL/UNCERTAIN/SKIPPED judgment) regardless of whether the condition also carries a verify command
 
 ### Step 5: Verify Each Condition (Pre-merge Only)
 
@@ -328,7 +329,7 @@ Output the following overview to terminal:
 **Column guidance:**
 - **N**: total count of post-merge ACs
 - **Type**: `auto-verify (hint)` if `<!-- verify: ... -->` is present; `observation (<event-name>)` if `<!-- verify-type: observation event=* -->` is present; `manual` if `<!-- verify-type: manual -->` or no hint
-- **Claude Executable?**: for manual conditions only — quick preview judgment based on condition text (rubric detailed in Step 8b). For executable conditions, show the candidate command or approach. For non-executable conditions, show "No (requires manual inspection)". For auto-verify conditions, show "—". For observation conditions, show "— (waiting for event)".
+- **Claude Executable?**: for manual conditions only — quick preview judgment based on condition text (rubric detailed in Step 8b). For executable conditions, show the candidate command or approach. For non-executable conditions, show "No (requires manual inspection)". For auto-verify conditions, show "—". For observation conditions, branch on fired status: not yet fired → "— (waiting for event)"; already fired → "Yes — evaluate now (event fired)" (evaluated in Step 8c).
 
 ### Step 8: Post-merge Processing
 
@@ -375,9 +376,47 @@ If "Claude Execute" is selected: run the command/approach → judge PASS or FAIL
 
 Output a verification guide to terminal (specific URL / expected command / expected state). Do **not** invoke `AskUserQuestion`. Leave checkbox unchecked. The user completes manual verification and re-runs `/verify $NUMBER` when ready.
 
+#### Step 8c: Observation Post-merge Conditions
+
+For each unchecked post-merge condition marked `<!-- verify-type: observation event=<name> -->`:
+
+**1. Fired detection**
+
+Extract `<name>` from the `event=<name>` attribute. Fired status is not subject to Step 4's comment-consumption cutoff — search the Issue's full comment history directly:
+
+```bash
+COMMENTS_JSON=$(gh issue view "$NUMBER" --json comments --jq '.comments[].body' 2>&1)
+GH_EXIT=$?
+```
+
+- **`gh issue view` fails** (`GH_EXIT` non-zero — auth/network/rate-limit error): do not treat this as "not fired." Record as UNCERTAIN with detail: "could not confirm fired status (gh error)". Do not proceed to evidence collection.
+- **`gh issue view` succeeds**: search `$COMMENTS_JSON` for the exact event token as posted by `scripts/observation-trigger.sh:79` (the event name surrounded by backticks, immediately followed by "detected"), not a bare unanchored substring — this avoids one event name matching as a substring of another (e.g. a future `event=auto` vs. `event=auto-run`):
+
+  ```bash
+  echo "$COMMENTS_JSON" | grep -F -- "\`${EVENT_NAME}\` detected"
+  ```
+
+  - **No match**: the event has not fired yet. Record as SKIPPED with detail: "observation: waiting for event=<event-name>" (unchanged from prior behavior). Do not proceed to evidence collection.
+  - **Match found**: the event has fired. Proceed to evidence collection.
+
+**2. Evidence collection (best-effort — not every source is available every time)**
+
+- Recent `/auto` execution logs and phase output
+- `.tmp/auto-events.jsonl` events for the relevant session_id, if the file currently exists
+- Read-only re-run of `${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh --event <name>` (no side effects — confirmed it never calls `gh issue comment` / `gh issue edit`)
+- The target repository's `.wholework.yml` configuration and directory/file layout (whether the condition's premise holds in this repository)
+
+**3. Judgment**
+
+Based on the collected evidence:
+- Condition is satisfied → **PASS**
+- Evidence contradicts the condition → **FAIL**
+- Evidence is insufficient or ambiguous → **UNCERTAIN**
+- The observed premise itself does not hold in this repository (e.g., a referenced `config=` key is unset/false, or a referenced directory/feature does not exist) → **SKIPPED** (record the reason in the Details column of the Step 9 `## Acceptance Test Results` comment)
+
 **Post-Step 8 checkpoint: flip post-merge PASS checkboxes**
 
-After all post-merge conditions are processed, identify conditions that resulted in PASS (Step 8a auto-verify PASS or Step 8b "Claude Execute" PASS) and update their checkboxes:
+After all post-merge conditions are processed, identify conditions that resulted in PASS (Step 8a auto-verify PASS, Step 8b "Claude Execute" PASS, or Step 8c fired-and-evaluated PASS) and update their checkboxes:
 
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh "$NUMBER" --checkbox <post-merge-pass-indices> --check
@@ -467,6 +506,7 @@ gh issue view "$NUMBER" --json state --jq '.state'
 - All pre-merge conditions (with or without hints)
 - Post-merge conditions with hints (`<!-- verify: ... -->`)
 - Post-merge `<!-- verify-type: manual -->` conditions confirmed as PASS or FAIL in Step 8 (SKIP responses are excluded)
+- Post-merge `<!-- verify-type: observation ... -->` conditions confirmed as PASS or FAIL in Step 8c (conditions remaining SKIPPED — not yet fired, or prerequisite unmet — are excluded)
 - **Post-merge conditions without hints (and no verify-type marker) are excluded** (user verification items)
 
 Apply the following judgment based on the verification results (exhaustive):
@@ -482,12 +522,12 @@ if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
 fi
 ```
 
-- Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->`, `<!-- verify-type: observation ... -->`, or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body (manual conditions SKIPped in Step 8 remain unchecked; observation conditions remain unchecked until their event fires)
+- Check if any unchecked (`- [ ]`) `<!-- verify-type: opportunistic -->`, `<!-- verify-type: observation ... -->`, or `<!-- verify-type: manual -->` conditions remain in the post-merge section of the Issue body (manual conditions SKIPped in Step 8 remain unchecked; observation conditions remain unchecked while unfired, and also remain unchecked if Step 8c evaluates a fired event as FAIL/UNCERTAIN/SKIPPED — only fired-and-PASS observation conditions are checked)
 - **If unchecked opportunistic, observation, or manual conditions remain**: assign `phase/verify` (Issue state unchanged):
     ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" verify
     ```
-    Inform the user: "Unchecked opportunistic/observation/manual conditions remain. Re-run `/verify $NUMBER` when ready to confirm them (observation conditions are checked automatically when the specified event fires)."
+    Inform the user: "Unchecked opportunistic/observation/manual conditions remain. Re-run `/verify $NUMBER` when ready to confirm them (observation conditions are evaluated automatically once the specified event fires; only a PASS result checks the box)."
 - **If all conditions are checked**: assign `phase/done`, then close the Issue only when `ISSUE_STATE` is `OPEN` (handles both auto-close disabled repos and XL parent Issues not auto-closed by PR's `closes #N`):
     ```bash
     ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh "$NUMBER" done
