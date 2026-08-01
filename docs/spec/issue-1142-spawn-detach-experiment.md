@@ -74,20 +74,45 @@
 ### Uncertainty resolution
 - shim が kill された後の harness 側挙動 (完了通知の有無) は事前検証不能 → 実験の観測対象に組み込み、detached 子の完走判定を L0 (labels/PR/commit) + WRAPPER_EXIT trailer ベースにして親通知非依存の設計とした
 
+## Code Retrospective
+
+### Deviations from Design
+- `WHOLEWORK_SPAWN_DETACH` の文書化判断 (Spec が code フェーズに委任した sync candidate) は「記載する」で確定: `docs/tech.md` の Environment Variables 表 + `docs/ja/tech.md` ミラーに 1 行追加。理由: 同表はテスト専用変数まで掲載する WHOLEWORK_* の網羅的リファレンスであり、省略すると /audit drift の検出対象になる。`docs/workflow.md` は追記なし (実験用 opt-in はワークフロー本文の記述に影響しないため)
+- スコープ外の付随修正 1 件: `docs/spec/issue-1136-bats-emit-log-isolation.md` の deprecated term 引用行に除外マーカー (旧称 プレフィックス) を追加。main が forbidden-expressions スキャンで赤の状態にあり、放置すると本 PR の CI と /review Step 9 が確実にブロックされるため、#1136 review の inline 修正先例に準拠して別コミットで解消
+
+### Design Gaps/Ambiguities
+- なし。Spec Notes の設計要点 (AUTO_SESSION_ID burn-in、挿入位置は `cd "$REPO_ROOT"` 直後、`--write-manual-recovery` への影響なし) はいずれもそのまま成立。`restore_auto_session_pointer()` が `${AUTO_SESSION_ID:-$_sid}` で env 値を優先することを実装検証で確認済み — burn-in 設計の前提が正しいことの裏付け
+
+### Rework
+- なし。本セッションは前回 /code セッション (外部 kill と推定される中断 — 本 Issue の調査対象事象そのもの) の resume。worktree に残っていた未コミット実装が Spec Steps 1–2 と一致していたため採用し、追加検証を経てコミットした
+
+### Confirmed Approaches
+- macOS /bin/bash 3.2.57 では `set -u` + 引数ゼロの `"$@"` はエラーにならないことを実機確認 (shim の `exec python3 ... bash "$_SELF_PATH" "$@"` は bash 3.2 互換ガード不要)
+- shim の負 returncode → 128+N 変換により `retry-on-kill.sh` の 137/143 検出が shim 越しでも維持される
+- canary bash テストパターン (PATH 解決される `bash` を MOCK_DIR に置き、shim 発火時のみ canary が呼ばれる構造) により、外部依存なしで shim の発火/非発火を両方向検証できた
+- Tier 0 recovery: 発動なし (フルスイート 1329 tests + `tests/run-auto-sub.bats` 単体 86 tests とも初回 PASS)。Smoke Test: Spec に節なしのためスキップ
+
+## Consumed Comments
+
+No new comments since last phase. (cutoff: `phase/ready` 付与 2026-08-01T00:39:49Z。それ以前の Design Complete コメント (saito, OWNER, 2026-08-01T00:39:46Z) は /spec 自身の出力のため対象外。cross-phase marker `type=verify-fail` / `type=preview-ac-unverified` も検出なし)
+
+## Autonomous Auto-Resolve Log
+
+- **`phase/ready` ラベル不在での続行 (resume 判定)**: Step 3 の `phase/ready` チェック時点でラベルは既に `phase/code` (2026-08-01T01:39:31Z 遷移済み)。前回の /code セッションが実装途中 (`scripts/run-auto-sub.sh` / `tests/run-auto-sub.bats` の未コミット変更が worktree に残存) で中断された resume ケースと判定し、Spec 存在 + 実装内容が Spec Steps 1–2 と一致することを確認のうえ続行を選択。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
-- self-re-exec shim 方式を採用 (子 wrapper detach 案・SKILL.md prose 変更案は不採用 — Alternatives Considered 参照)
-- shim は detach 前に現 PGID で `.tmp/auto-session-${PGID}` を解決し `AUTO_SESSION_ID` を env に焼き込む (session_id 欠落防止 — 実装の最重要ポイント)
-- 挿入位置は `cd "$REPO_ROOT"` 直後 (pointer の相対パス解決のため)
+- 前セッション (中断) の未コミット実装を検証の上そのまま採用 (resume)。フルスイート 1329 tests + `tests/run-auto-sub.bats` 単体 86 tests PASS を確認してコミット
+- `WHOLEWORK_SPAWN_DETACH` を `docs/tech.md` 環境変数表 + `docs/ja/tech.md` ミラーに記載 (網羅的リファレンスのため「記載する」判断。`docs/workflow.md` は追記なし)
+- main 由来の forbidden-expressions スキャン赤 (issue-1136 spec の deprecated term 引用) を 1 行の除外マーカー追加で解消 (別コミット、#1136 review の inline 修正先例)
 
 ### Deferred Items
-- Implementation Steps 3–6 (3 アーム実験と investigation.md 追記) は code フェーズでは実行しない — PR 作成後・merge 前に親セッションで対話実行する (受入条件 3, 4 はこの実験フェーズで満たされる)
-- docs/workflow.md・docs/tech.md への WHOLEWORK_SPAWN_DETACH 追記要否は code フェーズで判断 (実験用 opt-in のため「記載しない」判断も可、理由を PR に記録)
+- 受入条件 3, 4 (3 アーム実験 + `docs/reports/external-kill-investigation.md` Update 追記): PR #1143 open 中に親セッションで対話実行 — /code では実行しない (Spec Notes の phase 分割運用)
+- Post-merge AC (H-a 確定時の detachment デフォルト有効化 / #598 移行判断の別 Issue 起票): 実験結果判明後に判断
 
 ### Notes for Next Phase
-- code フェーズの担当は Steps 1–2 のみ (shim 実装 + bats テスト)。flag 未設定時の挙動が完全に不変であることが最重要 (orchestration 中核への変更)
-- テストは既存の `WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` mock 慣行に従う。統合テストは外部依存なしの軽量経路 (--write-manual-recovery の validation-error 等) を使う
-- bash 3.2+ 互換必須 (mapfile 等禁止)。python3 ワンライナーは本スクリプト内に既存実績あり
-- 受入条件 3, 4 (実験結果) は code 完了時点で未達のまま PR を open 状態に保つ — /review をすぐ呼ばないこと
+- **/review は実験結果 (受入条件 3, 4) の追記後に実行すること**。それまで AC 3, 4 が未チェックのまま PR #1143 が open なのは正常状態。`/auto` 一気通貫は不可 (headless では background 意味論が成立しない — #1135 実証)
+- 実験順序厳守: Arm 1 (flag 未設定・現環境) → Arm 2 (Arm 1 再現時のみ・ホスト再起動) → Arm 3 (`WHOLEWORK_SPAWN_DETACH=1`)。実験中は並行セッション・並行 /auto 禁止 (交絡排除)
+- detached 子の完走判定は L0 (labels/PR/commit) + wrapper ログの `WRAPPER_EXIT` trailer ベースで行う (shim が kill された場合の親通知に依存しない — Spec Uncertainty 参照)
