@@ -84,7 +84,7 @@
 - なし。Spec Notes の設計要点 (AUTO_SESSION_ID burn-in、挿入位置は `cd "$REPO_ROOT"` 直後、`--write-manual-recovery` への影響なし) はいずれもそのまま成立。`restore_auto_session_pointer()` が `${AUTO_SESSION_ID:-$_sid}` で env 値を優先することを実装検証で確認済み — burn-in 設計の前提が正しいことの裏付け
 
 ### Rework
-- なし。本セッションは前回 /code セッション (外部 kill と推定される中断 — 本 Issue の調査対象事象そのもの) の resume。worktree に残っていた未コミット実装が Spec Steps 1–2 と一致していたため採用し、追加検証を経てコミットした
+- なし。本セッションは前回 /code セッション (親セッションがユーザーのオフライン移行に伴い TaskStop で明示停止した中断 — **外部 kill ではない**。resume 実行時の推定「外部 kill と推定される中断」は誤りだったため親セッションが訂正済み。kill 統計 (orchestration-recoveries.md / manual_intervention event) への記録なしを確認済み) の resume。worktree に残っていた未コミット実装が Spec Steps 1–2 と一致していたため採用し、追加検証を経てコミットした
 
 ### Confirmed Approaches
 - macOS /bin/bash 3.2.57 では `set -u` + 引数ゼロの `"$@"` はエラーにならないことを実機確認 (shim の `exec python3 ... bash "$_SELF_PATH" "$@"` は bash 3.2 互換ガード不要)
