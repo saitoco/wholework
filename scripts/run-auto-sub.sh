@@ -9,6 +9,12 @@ set -euo pipefail
 # Resolved before cd (below) -- a relative $0 would break dirname resolution once CWD changes.
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 
+# Absolute path to this script itself, resolved before cd (below) for the same reason
+# as SCRIPT_DIR. Used by the spawn detachment shim, which re-execs this script after
+# CWD has already changed to REPO_ROOT. Deliberately NOT derived from
+# WHOLEWORK_SCRIPT_DIR: the shim must re-exec this exact script, not a test mock.
+_SELF_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+
 # Repo root of the caller's actual working directory (the project being worked on),
 # not the plugin's own install path. Resolved as the *main* worktree root even when
 # this script is invoked from inside a non-main worktree (e.g. a code/review worktree
@@ -24,6 +30,50 @@ if [[ -z "$REPO_ROOT" ]]; then
 fi
 cd "$REPO_ROOT"
 [[ -d "$SCRIPT_DIR" ]] || SCRIPT_DIR="$REPO_ROOT/scripts"
+
+# --- Spawn detachment shim (issue #1142) --------------------------------------
+# Opt-in via WHOLEWORK_SPAWN_DETACH=1: re-exec this wrapper as the leader of a new
+# session/process group, so a process-group-wide external SIGKILL aimed at the
+# spawning group cannot take down the wrapper subtree. macOS has no setsid(1)
+# binary, so python3 subprocess start_new_session=True is used instead. Default
+# (flag unset) leaves existing behavior completely unchanged. Experiment context:
+# docs/reports/external-kill-investigation.md (H-a vs H-b' arbitration).
+#
+# Placement: must run after cd "$REPO_ROOT" so the .tmp/auto-session-${PGID}
+# pointer read below resolves relative to the repo root.
+
+# True when detachment is requested and this process is not already the re-exec'd
+# child (_WHOLEWORK_DETACHED is the recursion guard set before re-exec).
+_should_detach() {
+  [[ "${WHOLEWORK_SPAWN_DETACH:-}" == "1" && -z "${_WHOLEWORK_DETACHED:-}" ]]
+}
+
+if _should_detach; then
+  # Resolve AUTO_SESSION_ID with the CURRENT (pre-detach) PGID and burn it into
+  # the environment: detaching changes the child's PGID, so the PGID-keyed
+  # pointer file (read again on the main path below) would no longer match and
+  # emitted events would lose their session_id.
+  if [[ -z "${AUTO_SESSION_ID:-}" ]]; then
+    _detach_pgid=$(ps -o pgid= -p $$ | tr -d ' ')
+    AUTO_SESSION_ID="$(cat ".tmp/auto-session-${_detach_pgid}" 2>/dev/null || echo '')"
+  fi
+  if [[ -n "${AUTO_SESSION_ID:-}" ]]; then
+    export AUTO_SESSION_ID
+  fi
+  export _WHOLEWORK_DETACHED=1
+  # Synchronous by design: p.wait() keeps the caller-visible contract (blocking
+  # call, exit code passthrough) identical to the non-detached path -- including
+  # the --write-manual-recovery subcommand. A negative returncode (child killed
+  # by signal N) is mapped to the conventional 128+N shell encoding so
+  # retry-on-kill.sh's 137/143 detection keeps working through the shim.
+  exec python3 -c '
+import subprocess, sys
+p = subprocess.Popen(sys.argv[1:], start_new_session=True)
+rc = p.wait()
+sys.exit(128 - rc if rc < 0 else rc)
+' bash "$_SELF_PATH" "$@"
+fi
+# --- End spawn detachment shim -------------------------------------------------
 
 # Returns true if spec_rel_path has any changes (modified or untracked).
 # Uses git status --porcelain so untracked files are detected (unlike git diff --quiet).
