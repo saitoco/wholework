@@ -59,3 +59,35 @@
 - **`--write-manual-recovery` 経路への影響なし**: flag 有効時も shim の `p.wait()` で同期するため、呼び出し側から見た挙動 (同期実行・exit code) は不変
 - **実験の交絡排除**: 実験中は並行セッション・並行 /auto を走らせない。Arm 間で Issue 件数・route・時間帯を揃える。Arm 2 の再起動は実験のアームでありメンテナンスではない (external-kill-investigation.md Addendum の順序厳守)
 - **macOS 互換**: setsid(1) バイナリは macOS に存在しないため python3 `start_new_session=True` を使う (#1135 実験 wrapper の先例)。`ps -o pgid=` は POSIX で macOS / Linux CI 両対応
+
+## spec retrospective
+
+### Minor observations
+- `run-auto-sub.sh` の PGID ベース pointer 復元 (L405 付近) は、spawn 方式を変えるあらゆる変更に対する隠れた結合点。今後 detach / supervisor / in-session 移行 (#598) を扱う Issue は必ずこの復元経路への影響を確認すべき
+- WHOLEWORK_ 環境変数の文書化場所は docs/workflow.md と docs/tech.md に分散しており、単一の環境変数リファレンスが存在しない (今回は sync candidate として個別確認で対応)
+
+### Judgment rationale
+- detach 対象を子 wrapper でなく run-auto-sub.sh 自身 (self-re-exec shim) にした: F1/F2 の kill シグネチャが「run-auto-sub.sh のプロセスグループごと SIGKILL」であるため、守る単位は wrapper サブツリー全体でなければ実験として意味をなさない
+- 実験 (Steps 3–6) を code フェーズから切り離し「PR open 中の親セッション対話実行」とした: #1135 の code フェーズが headless で background 意味論を再現できず silent no-op になった実証に基づく。/auto 一気通貫不可を Spec に明記した
+- 実験ワークロードは Spec に固定せず選定基準のみ記載: backlog は流動的で、実行時点の open M/L から選ぶ方が Arm 間の比較可能性を保ちやすい
+
+### Uncertainty resolution
+- shim が kill された後の harness 側挙動 (完了通知の有無) は事前検証不能 → 実験の観測対象に組み込み、detached 子の完走判定を L0 (labels/PR/commit) + WRAPPER_EXIT trailer ベースにして親通知非依存の設計とした
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- self-re-exec shim 方式を採用 (子 wrapper detach 案・SKILL.md prose 変更案は不採用 — Alternatives Considered 参照)
+- shim は detach 前に現 PGID で `.tmp/auto-session-${PGID}` を解決し `AUTO_SESSION_ID` を env に焼き込む (session_id 欠落防止 — 実装の最重要ポイント)
+- 挿入位置は `cd "$REPO_ROOT"` 直後 (pointer の相対パス解決のため)
+
+### Deferred Items
+- Implementation Steps 3–6 (3 アーム実験と investigation.md 追記) は code フェーズでは実行しない — PR 作成後・merge 前に親セッションで対話実行する (受入条件 3, 4 はこの実験フェーズで満たされる)
+- docs/workflow.md・docs/tech.md への WHOLEWORK_SPAWN_DETACH 追記要否は code フェーズで判断 (実験用 opt-in のため「記載しない」判断も可、理由を PR に記録)
+
+### Notes for Next Phase
+- code フェーズの担当は Steps 1–2 のみ (shim 実装 + bats テスト)。flag 未設定時の挙動が完全に不変であることが最重要 (orchestration 中核への変更)
+- テストは既存の `WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` mock 慣行に従う。統合テストは外部依存なしの軽量経路 (--write-manual-recovery の validation-error 等) を使う
+- bash 3.2+ 互換必須 (mapfile 等禁止)。python3 ワンライナーは本スクリプト内に既存実績あり
+- 受入条件 3, 4 (実験結果) は code 完了時点で未達のまま PR を open 状態に保つ — /review をすぐ呼ばないこと
