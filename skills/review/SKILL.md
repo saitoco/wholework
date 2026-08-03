@@ -351,13 +351,9 @@ until a follow-up Issue defines an allowlist.
 
 ## Step 10: Multi-perspective Code Review (parallel execution)
 
-**Workflow path (opt-in)**: When `HAS_WORKFLOW_CAPABILITY=true` and `REVIEW_DEPTH=full`, first run the "Pre-flight: agentType Availability Check" in `skills/review/workflow-guidance.md` (loaded in Step 3), then follow that file's Processing Steps to run a finder → adversarial verify pipeline using the Workflow tool. When `HAS_WORKFLOW_CAPABILITY=false` or unset (the default), run the static Task fan-out below (Steps 10.0–10.3) unchanged.
-
-**In light mode**: if `REVIEW_DEPTH=light` and Issue number was extracted (Step 7 ran), run 1-agent lightweight integrated review instead of 2-agent parallel (see 10.0). If Issue number was not extracted and Step 7 was skipped, run full mode (10.1–10.3) regardless of `REVIEW_DEPTH`.
-
 ### Base Branch Conflict Pre-check
 
-Run before any of 10.0/10.1–10.3/the Workflow path below — this applies to every review path (light, full, and Workflow) equally. CI runs on the branch alone and stays green even when the branch and the base have edited the same line in conflicting ways; `git merge-tree` is the only step in `/review` that inspects the base branch's own concurrent changes, so it must run first regardless of which review path follows.
+Run this section first, before evaluating either branch-decision paragraph below (Workflow path / light mode) — this applies to every review path (light, full, and Workflow) equally. CI runs on the branch alone and stays green even when the branch and the base have edited the same line in conflicting ways; `git merge-tree` is the only step in `/review` that inspects the base branch's own concurrent changes, so it must run first regardless of which review path follows.
 
 1. Update the base ref and compute the merge base:
    ```bash
@@ -376,6 +372,10 @@ Run before any of 10.0/10.1–10.3/the Workflow path below — this applies to e
    Flag the path `[SSoT]` if it matches `modules/*.md` or `docs/*.md` — these are documents referenced by multiple Skills, so a base-side change lost during conflict resolution has wider blast radius than an ordinary file.
 5. If one or more paths were found, write path / `[SSoT]` flag / base-side diff for each to `.tmp/base-conflict-context-$NUMBER.md`. If zero paths were found, do not write the file — no additional context is passed to the review agents below.
 6. Add `.tmp/base-conflict-context-$NUMBER.md` to the `rm -f` cleanup list in 14.2.
+
+**Workflow path (opt-in)**: After the Base Branch Conflict Pre-check above, when `HAS_WORKFLOW_CAPABILITY=true` and `REVIEW_DEPTH=full`, first run the "Pre-flight: agentType Availability Check" in `skills/review/workflow-guidance.md` (loaded in Step 3), then follow that file's Processing Steps to run a finder → adversarial verify pipeline using the Workflow tool. When `HAS_WORKFLOW_CAPABILITY=false` or unset (the default), run the static Task fan-out below (Steps 10.0–10.3) unchanged.
+
+**In light mode**: after the Base Branch Conflict Pre-check above, if `REVIEW_DEPTH=light` and Issue number was extracted (Step 7 ran), run 1-agent lightweight integrated review instead of 2-agent parallel (see 10.0). If Issue number was not extracted and Step 7 was skipped, run full mode (10.1–10.3) regardless of `REVIEW_DEPTH`.
 
 ### 10.0. Lightweight Integrated Review (REVIEW_DEPTH=light only)
 
