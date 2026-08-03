@@ -11,7 +11,8 @@
 #   has_hooks      - mergeable (after required hooks run)
 #   conflicts      - has merge conflicts
 #   review_pending - review not yet approved
-#   ci_failing     - CI checks failing
+#   ci_failing     - CI checks failing (1 or more checks in bucket=fail)
+#   ci_pending     - CI checks still in progress (0 failing, 1+ pending)
 #   behind_base    - branch is behind base branch
 #   unknown        - unable to determine
 #
@@ -83,7 +84,20 @@ elif [[ "$MERGEABLE" == "CONFLICTING" ]]; then
 elif [[ "$STATE" == "BLOCKED" ]]; then
   echo '{"mergeable": false, "reason": "review_pending", "ci_status": "unknown", "review_status": "pending"}'
 elif [[ "$STATE" == "UNSTABLE" ]]; then
-  echo '{"mergeable": false, "reason": "ci_failing", "ci_status": "failing", "review_status": "unknown"}'
+  # UNSTABLE is a coarse GitHub aggregate that covers both "required check failed" and
+  # "required check still running" — disambiguate via per-check bucket state.
+  CHECKS_JSON=$(gh pr checks "$PR" --json state,bucket 2>/dev/null) || CHECKS_JSON='[]'
+  FAIL_COUNT=$(echo "$CHECKS_JSON" | jq '[.[]? | select(.bucket == "fail")] | length' 2>/dev/null || echo 0)
+  PENDING_COUNT=$(echo "$CHECKS_JSON" | jq '[.[]? | select(.bucket == "pending")] | length' 2>/dev/null || echo 0)
+  if [[ "$FAIL_COUNT" -gt 0 ]]; then
+    echo '{"mergeable": false, "reason": "ci_failing", "ci_status": "failing", "review_status": "unknown"}'
+  elif [[ "$PENDING_COUNT" -gt 0 ]]; then
+    echo '{"mergeable": false, "reason": "ci_pending", "ci_status": "pending", "review_status": "unknown"}'
+  else
+    # UNSTABLE with 0 fail / 0 pending: GitHub-side sync lag between mergeStateStatus and
+    # per-check bucket state. Fail safe rather than silently treating as mergeable.
+    echo '{"mergeable": false, "reason": "ci_failing", "ci_status": "failing", "review_status": "unknown"}'
+  fi
 elif [[ "$STATE" == "BEHIND" ]]; then
   echo '{"mergeable": false, "reason": "behind_base", "ci_status": "unknown", "review_status": "unknown"}'
 else

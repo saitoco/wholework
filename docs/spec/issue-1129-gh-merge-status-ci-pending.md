@@ -54,3 +54,35 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue` フェーズの Issue Retrospective。Background の事実確認結果 (UNSTABLE の無条件 ci_failing 化を実装で確認済み)、CI 待機経路の実装方針 (wait-ci-checks.sh 再利用) と pending/failing 判定データソース (gh pr checks) の Auto-Resolve Log、AC 追加3件 (file_contains/section_contains の機械的セーフティネット) の記録。https://github.com/saitoco/wholework/issues/1129#issuecomment-5161154838
+
+`code` フェーズ: 新規コメントなし (cutoff 以降のコメントなし)。
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1〜3 を設計通りに実装した。
+
+### Design Gaps/Ambiguities
+
+N/A
+
+### Rework
+
+N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `gh pr checks "$PR" --json state,bucket` を追加参照し、`bucket` の `fail`/`pending` 件数で `ci_failing`/`ci_pending`/フォールバック `ci_failing` を判定する順序 (fail優先) をそのまま実装した (Spec Implementation Step 1 通り)
+- `skills/merge/SKILL.md` の `ci_pending` 分岐は `wait-ci-checks.sh` (300秒タイムアウト) の再利用とし、再評価してもなお `ci_pending` なら Other 分岐にフォールスルーする一度きりの待機とした (無限リトライを避ける設計)
+- `make_gh_mock` を `gh pr view` / `gh pr checks` で分岐する形に拡張し、第3引数 `checks_json` (デフォルト `[]`) で任意のチェック応答を注入できるようにした。既存の UNSTABLE テストは無変更で fail=0/pending=0 のフォールバック経路を通り PASS した
+
+### Deferred Items
+- Post-merge AC (`/merge` 実行時に実際に `ci_pending` を待って merge へ進むことの確認) は post-merge 検証であり本 PR のスコープ外 — `/verify` フェーズで確認する
+- None
+
+### Notes for Next Phase
+- `/review` では `gh-pr-merge-status.sh` の UNSTABLE 分岐 (fail/pending/フォールバックの3分岐) と `skills/merge/SKILL.md` Step 1 の `ci_pending` 枝の両方が Spec Implementation Steps と一致しているか確認すること
+- pre-existing の forbidden-expressions 違反 (`docs/spec/issue-1136-bats-emit-log-isolation.md` の `Issue Spec` 引用) は本 Issue の変更と無関係。既存違反であり本 PR のスコープ外
