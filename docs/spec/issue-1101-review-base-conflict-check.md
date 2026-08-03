@@ -77,3 +77,34 @@ AC1 の rubric と AC2 の `grep "merge-tree"` はいずれも `changed in both`
 ### Domain Classification
 
 `/issue` フェーズで Core (`skills/review/SKILL.md`) 対象と確定済み (`skills/review/skill-dev-recheck.md` は `scripts/validate-skill-syntax.py` が存在する skill 開発リポジトリ限定の Domain file であり対象外)。本 Spec も同じ判断を継承する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1〜4 をそのままの順序・挿入位置で実装した。
+
+### Design Gaps/Ambiguities
+
+- Implementation Steps 3/4 の「conflict context をプロンプトに追記する」は、`.tmp/base-conflict-context-$NUMBER.md` が存在しない場合の扱いを明示していなかった。実装では各 Task プロンプト文字列に `[, base branch conflict context: <contents ..., if present>]` という条件付き断片を埋め込み、ファイル不在時は何も追記されない形にした (Workflow パス側は `args.conflictContext` が空文字列なら `CONFLICT_SUFFIX` も空文字列になる同等のロジック)。プロンプト文字列自体は静的なテンプレートであり実行時分岐を書けないため、この表現が妥当と判断した。
+
+### Rework
+
+N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Base Branch Conflict Pre-check を Step 10 の分岐点 (light/full/Workflow) より前に無番号セクションとして挿入し、どの経路でも共通実行されるようにした (Spec Implementation Steps 2 の指示通り)
+- `git merge-tree` は非推奨の 3 引数 `--trivial-merge` 形式を意図的にそのまま使用 (`--write-tree` 2 引数形式には置き換えない) — `changed in both` 文字列の検出に依存する AC2 のため
+- conflict context をプロンプトに渡す際は、`.tmp/base-conflict-context-$NUMBER.md` の有無で分岐する条件付きテンプレート断片として各 Task プロンプト文字列 (static 側 10.0/10.2 の3箇所、Workflow 側 finderPrompts の3箇所、計6箇所) に埋め込んだ
+
+### Deferred Items
+- Post-merge の手動検証 (「ベースブランチ側と同一行を変更する PR を実際にレビューし、conflict が MUST 指摘として検出されることを確認する」) は本 PR のマージ後に人手で実施する
+- `docs/workflow.md` の更新は Spec Notes で不要と判断済み (フェーズ境界やルーティングを変えない内部品質強化のため)
+
+### Notes for Next Phase
+- AC4 (`github_check "gh pr checks" "Run bats tests"`) は PR 作成前は UNCERTAIN (対象 PR が存在しないため) — PR #1145 作成後の CI 結果で確認すること
+- ローカルで `bats tests/` を実行し 1325 件全て pass を確認済み (behavioral change 検出により full suite 実行)
+- Post-merge 手動検証時は Issue #1102 (`event=REQUEST_CHANGES` の 422 既知問題) と評価軸を分けること (Spec Notes 参照)
