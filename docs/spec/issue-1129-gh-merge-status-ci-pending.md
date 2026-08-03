@@ -72,17 +72,16 @@ N/A
 N/A
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `gh pr checks "$PR" --json state,bucket` を追加参照し、`bucket` の `fail`/`pending` 件数で `ci_failing`/`ci_pending`/フォールバック `ci_failing` を判定する順序 (fail優先) をそのまま実装した (Spec Implementation Step 1 通り)
-- `skills/merge/SKILL.md` の `ci_pending` 分岐は `wait-ci-checks.sh` (300秒タイムアウト) の再利用とし、再評価してもなお `ci_pending` なら Other 分岐にフォールスルーする一度きりの待機とした (無限リトライを避ける設計)
-- `make_gh_mock` を `gh pr view` / `gh pr checks` で分岐する形に拡張し、第3引数 `checks_json` (デフォルト `[]`) で任意のチェック応答を注入できるようにした。既存の UNSTABLE テストは無変更で fail=0/pending=0 のフォールバック経路を通り PASS した
+- pre-merge AC 7件すべてチェック済み、`gh-pr-merge-status.sh` の判定は `mergeable=true, reason=clean` のため conflict 解消は不要と判断し、そのまま squash merge を実行した
+- `gh pr merge --squash --delete-branch` がローカルブランチ削除に失敗 (別 worktree `review+pr-1144` がロック中) したが、リモート側の merge 自体は成功 (`state=MERGED`) していたため、残ったリモートブランチのみ `git push origin --delete` で個別に削除した
 
 ### Deferred Items
-- Post-merge AC (`/merge` 実行時に実際に `ci_pending` を待って merge へ進むことの確認) は post-merge 検証であり本 PR のスコープ外 — `/verify` フェーズで確認する
-- None
+- Post-merge AC (`/merge` 実行時に実際に `ci_pending` を待って merge へ進むことの確認) は `/verify` フェーズで確認する
+- ローカルブランチ `worktree-code+issue-1129` は他 worktree (`review+pr-1144`) が使用中のため未削除のまま残っている — そちらの worktree 終了後に手動整理が必要
 
 ### Notes for Next Phase
-- `/review` では `gh-pr-merge-status.sh` の UNSTABLE 分岐 (fail/pending/フォールバックの3分岐) と `skills/merge/SKILL.md` Step 1 の `ci_pending` 枝の両方が Spec Implementation Steps と一致しているか確認すること
-- pre-existing の forbidden-expressions 違反 (`docs/spec/issue-1136-bats-emit-log-isolation.md` の `Issue Spec` 引用) は本 Issue の変更と無関係。既存違反であり本 PR のスコープ外
+- `/verify` では post-merge AC (CI 実行中の PR に対する `/merge` 実行で `ci_failing` として中断されず待機経路に入ることの確認) を実施すること
+- pre-existing の forbidden-expressions 違反 (`docs/spec/issue-1136-bats-emit-log-isolation.md` の `Issue Spec` 引用) は本 Issue の変更と無関係。既存違反であり対応不要
