@@ -55,6 +55,12 @@ VERIFY_EXECUTOR="$PROJECT_ROOT/modules/verify-executor.md"
     printf '%s' "$row" | grep -q "combinator"
 }
 
+@test "verify-executor: html_check row declares a 30s execution timeout" {
+    row=$(grep -- '^| `html_check ' "$VERIFY_EXECUTOR")
+    [ -n "$row" ]
+    printf '%s' "$row" | grep -q "html-selector-match\.py.*30"
+}
+
 @test "verify-executor: every curl-based URL command keeps the Basic Auth --config hook" {
     for cmd in http_status html_check api_check http_header http_redirect; do
         row=$(grep -- "^| \`$cmd " "$VERIFY_EXECUTOR")

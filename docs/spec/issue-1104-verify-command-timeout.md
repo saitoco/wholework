@@ -25,7 +25,7 @@
 - <!-- verify: grep "html-selector-match\.py.*30" "modules/verify-executor.md" --> `html_check` 行にタイムアウト秒数 (30) が明記されている
 - <!-- verify: rubric "modules/verify-executor.md の翻訳テーブルのうち、verify-executor 自身が直接 bash subprocess / curl を起動する command (--when, command, build_success, github_check, http_status/api_check/http_header/http_redirect, html_check) すべてにタイムアウトが規定されていることが確認されている。アダプタ委譲系 (browser_check 等) と mcp_call/rubric はスコープ外として扱われている" --> 実行コストを持つ command でタイムアウト未規定のものが残っていない (アダプタ委譲系・mcp_call・rubric は対象外)
 - <!-- verify: grep "timeout" "modules/verify-executor.md" --> `verify-executor.md` がタイムアウトに言及している
-- <!-- verify: github_check "gh pr checks" "Run bats tests" --> bats テストスイートが CI で pass する
+- <!-- verify: github_check "gh run list --workflow=test.yml --commit=$(git rev-parse HEAD) --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> bats テストスイートが CI で pass する
 
 ### Post-merge
 
