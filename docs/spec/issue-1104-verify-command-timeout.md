@@ -42,3 +42,33 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue` フェーズの Issue Retrospective。`html_check` の実行タイムアウトを 30 秒に確定した Auto-Resolve Log (`github_check` の 30 秒との整合を優先し、`command` の 60 秒より厳格・`--when` の 10 秒より緩い中間値として確定)、および翻訳テーブル全体見直し (AC3) のスコープを「verify-executor.md が直接 bash subprocess / curl を起動する command」に限定した Auto-Resolve Log (アダプタ委譲系・`mcp_call`・`rubric` は対象外) を記録。Background の事実確認 (各 command のタイムアウト規定状況) も実ファイルで確認済みと記載されている。https://github.com/saitoco/wholework/issues/1104#issuecomment-5161392034
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1〜3 をそのまま実施した
+
+### Design Gaps/Ambiguities
+
+- Issue 本文・Spec の pre-merge AC5 に `github_check "gh pr checks" "Run bats tests"` が残っていた。本 Issue は patch route (`--patch`) で実装したため PR が存在せず、`gh pr checks` は使えない。`modules/verify-classifier.md` の Patch Route CI Verification Note に従い `github_check "gh run list --workflow=test.yml --commit=$(git rev-parse HEAD) --limit=1 --json conclusion --jq '.[0].conclusion'" "success"` 形式へ Issue body / Spec の両方を修正した (`/code` Step 10 の patch route 自動修正ルール通り)。Spec 作成時点 (pr route を仮定しない `/spec --light`) では route 未確定のため、この手の AC は `/code` の route 確定後に定型的に修正が必要になる — Spec 側で route 未確定なうちから `gh run list` 形式を採用しておく余地はあるが、Issue 本文との整合を優先し `/code` 側での自動修正に委ねる現行フローの方が一貫している
+
+### Rework
+
+- N/A — 手戻りなし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `html_check` 行に「30秒タイムアウト到達 → UNCERTAIN (理由記録)」を既存の exit-code 判定 (Judge in two stages) より前に評価する分岐 (0) として追加した。既存の (a)(b) 判定はタイムアウト内に完了した場合の判定として温存
+- 新設「Timeout Coverage Audit (#1104)」節は html_check 限定ではなく、監査対象の全 command (`--when`/`command`/`build_success`/`github_check`/`http_status` 系/`html_check`) 共通の「タイムアウト=UNCERTAIN」原則として記載 (Spec の Auto-Resolve Log の判断を踏襲)
+- 各 command 自体の既存行テキストは変更せず、新設監査節に一覧表としてまとめる形にとどめた (Simplicity Rule 範囲内)
+
+### Deferred Items
+- Post-merge AC (高コストセレクタ + 大きな HTML での実際のタイムアウト発火確認、`verify-type: manual`) は本フェーズでは未実施。`/verify` 後の手動確認が必要
+- pre-merge AC5 (`github_check "gh run list"` によるCI成功確認) はコミット前のため未検証。push 後に CI 実行結果で判定される
+
+### Notes for Next Phase
+- `/review` は AC5 の `gh run list --workflow=test.yml --commit=$(git rev-parse HEAD) ...` が実際の CI 実行と一致するか確認すること (patch route のため PR は存在しない)
+- Post-merge の手動確認 (張り付かずにタイムアウトして UNCERTAIN になること) は `/verify` フェーズで人手対応が必要な項目として明記済み
