@@ -77,3 +77,49 @@ AC1 の rubric と AC2 の `grep "merge-tree"` はいずれも `changed in both`
 ### Domain Classification
 
 `/issue` フェーズで Core (`skills/review/SKILL.md`) 対象と確定済み (`skills/review/skill-dev-recheck.md` は `scripts/validate-skill-syntax.py` が存在する skill 開発リポジトリ限定の Domain file であり対象外)。本 Spec も同じ判断を継承する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1〜4 をそのままの順序・挿入位置で実装した。
+
+### Design Gaps/Ambiguities
+
+- Implementation Steps 3/4 の「conflict context をプロンプトに追記する」は、`.tmp/base-conflict-context-$NUMBER.md` が存在しない場合の扱いを明示していなかった。実装では各 Task プロンプト文字列に `[, base branch conflict context: <contents ..., if present>]` という条件付き断片を埋め込み、ファイル不在時は何も追記されない形にした (Workflow パス側は `args.conflictContext` が空文字列なら `CONFLICT_SUFFIX` も空文字列になる同等のロジック)。プロンプト文字列自体は静的なテンプレートであり実行時分岐を書けないため、この表現が妥当と判断した。
+
+### Rework
+
+N/A
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `/review` (`--light --non-interactive`) を実行し、Pre-merge AC 4件 (rubric / grep merge-tree / grep SSoT / github_check bats) を全て PASS 判定、Issue #1101 のチェックボックスを更新した
+- `review-light` エージェントが SHOULD 指摘 1件を検出: `skills/review/SKILL.md` の "Workflow path (opt-in)" / "In light mode" 段落が新設の "Base Branch Conflict Pre-check" サブセクションより前に配置されており、`HAS_WORKFLOW_CAPABILITY=true` かつ `REVIEW_DEPTH=full` の場合に Workflow path 段落を「即座に飛ぶべき指示」と読んだ agent が Pre-check を素通りしうるリスクを指摘。妥当な指摘と判断し、Pre-check セクションを `## Step 10` 見出い直後・両段落より前に並べ替える修正を適用しコミット・push 済み (`fa0a54e7`)
+- 上記の並べ替えは Spec Implementation Steps 2 が指定した挿入位置 (「In light mode 段落の直後、### 10.0 見出しの直前」) とは異なる配置になった。AC1 (rubric)/AC2/AC3 (grep) はいずれも文字列の存在のみを検証するため再確認後も PASS を維持しており、Issue 本文の Acceptance Criteria 文言・検証コマンドの更新は不要と判断した (Step 13 Policy Change Detection: AC の意味論を変えない並べ替えのため policy change 扱いとしなかった)
+
+### Deferred Items
+- Post-merge の手動検証 (「ベースブランチ側と同一行を変更する PR を実際にレビューし、conflict が MUST 指摘として検出されることを確認する」) は本 PR のマージ後に人手で実施する (未解決、`- [ ]` のまま)
+- `docs/workflow.md` の更新は Spec Notes で不要と判断済み (フェーズ境界やルーティングを変えない内部品質強化のため) — 変更なし
+
+### Notes for Next Phase
+- `/merge 1145` 実行前提: MUST 指摘なし、CI 全ジョブ SUCCESS
+- Spec の `## Implementation Steps` セクション (2番目の項目) は、レビューで確定した最終配置 (Pre-check が両分岐段落より前) と字面上ずれている。将来この Spec を参照する際は、コード側の実配置 (`skills/review/SKILL.md` の実ファイル) を正とすること
+- Post-merge 手動検証時は Issue #1102 (`event=REQUEST_CHANGES` の 422 既知問題) と評価軸を分けること (Spec Notes 参照、変更なし)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 実装 (code フェーズ) は Spec Implementation Steps 2 の指定通り、Base Branch Conflict Pre-check を「In light mode 段落の直後・### 10.0 見出しの直前」に挿入しており、Code Retrospective の "Deviations from Design: N/A" は正確だった。
+- レビューで新たな乖離が発生した: `review-light` が「Workflow path (opt-in)」段落を最初に読んだ agent が Pre-check セクションへ到達せずワークフローツールへ即座に分岐しうる (`workflow-guidance.md` は conflict context ファイル不在時に「conflict なし」として黙って処理を続行する) というロバスト性上の懸念を SHOULD として報告した。妥当な指摘と判断しコミット `fa0a54e7` で Pre-check セクションを両分岐段落より前に並べ替えた。この結果、実装の最終配置は Spec Implementation Steps 2 の記述と字面上ずれている (AC1〜AC3 の検証コマンドは文字列存在チェックのみのため実害なし)。Spec 側は更新していない — Spec は HOW のスナップショットであり、この乖離は本 review retrospective と Phase Handoff `Notes for Next Phase` に明記することで足りると判断した。
+
+### Recurring issues
+
+- `review-light` の指摘カテゴリ名 ("Spec Deviation") が実態と一致していなかった: 実装は Spec の指示通りであり、指摘の本質は「新設サブセクションの文書内配置が、既存の分岐記述段落に対して読み手の実行順を誤誘導しうる」というロバスト性/ドキュメント設計の懸念だった。Spec 本文を直接参照せずに "Spec Deviation" と分類したため、レビュー結果を読む側 (このセッション) が一次情報 (Spec Implementation Steps) に立ち返って確認する追加のステップが必要になった。今後同種の指摘を見た場合、まず Spec の該当 Implementation Step 本文を直接 grep/読み合わせてから分類の妥当性を検証するとよい。
+
+### Acceptance criteria verification difficulty
+
+- Nothing to note — rubric / grep / github_check の4条件はいずれも一意に PASS 判定でき、UNCERTAIN は発生しなかった。

@@ -2,7 +2,7 @@
 name: review
 description: PR review (`/review 88`). Automatically runs acceptance criteria verification, multi-perspective code review, issue resolution, and summary posting. Use after `/code` creates a PR and before `/merge` (`--light`/`--full` to adjust depth).
 context: fork
-allowed-tools: Bash(gh pr view:*, gh pr diff:*, gh pr comment:*, gh issue view:*, gh issue edit:*, gh issue create:*, gh issue list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-external-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, wc:*, diff:*, git log:*, git diff:*, git show:*, git add:*, git commit:*, git push:*, git fetch:*, git checkout:*, git worktree:*, git branch:*, python3:*), Read, Write, Edit, Glob, Grep, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, Workflow, Skill
+allowed-tools: Bash(gh pr view:*, gh pr diff:*, gh pr comment:*, gh issue view:*, gh issue edit:*, gh issue create:*, gh issue list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-external-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, wc:*, diff:*, git log:*, git diff:*, git show:*, git add:*, git commit:*, git push:*, git fetch:*, git checkout:*, git worktree:*, git branch:*, git merge-tree:*, git merge-base:*, python3:*), Read, Write, Edit, Glob, Grep, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterWorktree, ExitWorktree, Workflow, Skill
 ---
 
 # PR Review
@@ -351,9 +351,31 @@ until a follow-up Issue defines an allowlist.
 
 ## Step 10: Multi-perspective Code Review (parallel execution)
 
-**Workflow path (opt-in)**: When `HAS_WORKFLOW_CAPABILITY=true` and `REVIEW_DEPTH=full`, first run the "Pre-flight: agentType Availability Check" in `skills/review/workflow-guidance.md` (loaded in Step 3), then follow that file's Processing Steps to run a finder → adversarial verify pipeline using the Workflow tool. When `HAS_WORKFLOW_CAPABILITY=false` or unset (the default), run the static Task fan-out below (Steps 10.0–10.3) unchanged.
+### Base Branch Conflict Pre-check
 
-**In light mode**: if `REVIEW_DEPTH=light` and Issue number was extracted (Step 7 ran), run 1-agent lightweight integrated review instead of 2-agent parallel (see 10.0). If Issue number was not extracted and Step 7 was skipped, run full mode (10.1–10.3) regardless of `REVIEW_DEPTH`.
+Run this section first, before evaluating either branch-decision paragraph below (Workflow path / light mode) — this applies to every review path (light, full, and Workflow) equally. CI runs on the branch alone and stays green even when the branch and the base have edited the same line in conflicting ways; `git merge-tree` is the only step in `/review` that inspects the base branch's own concurrent changes, so it must run first regardless of which review path follows.
+
+1. Update the base ref and compute the merge base:
+   ```bash
+   git fetch origin "$BASE_REF"
+   MERGE_BASE_SHA=$(git merge-base HEAD "origin/$BASE_REF")
+   ```
+2. Run the merge-tree conflict scan. **Use this exact deprecated 3-argument `--trivial-merge` form — do not replace it with the current `--write-tree` 2-argument form.** The 3-argument form emits a `changed in both` header for same-line conflicts; the 2-argument form reports the same case as `CONFLICT (content): Merge conflict in <path>` and never emits the string `changed in both`, which the parsing step below depends on:
+   ```bash
+   git merge-tree "$MERGE_BASE_SHA" HEAD "origin/$BASE_REF"
+   ```
+3. Parse the output block by block. For each `changed in both` block, extract the file path from its `their` line.
+4. For each extracted path, fetch the base side's change:
+   ```bash
+   git diff "$MERGE_BASE_SHA" "origin/$BASE_REF" -- "<path>"
+   ```
+   Flag the path `[SSoT]` if it matches `modules/*.md` or `docs/*.md` — these are documents referenced by multiple Skills, so a base-side change lost during conflict resolution has wider blast radius than an ordinary file.
+5. If one or more paths were found, write path / `[SSoT]` flag / base-side diff for each to `.tmp/base-conflict-context-$NUMBER.md`. If zero paths were found, do not write the file — no additional context is passed to the review agents below.
+6. Add `.tmp/base-conflict-context-$NUMBER.md` to the `rm -f` cleanup list in 14.2.
+
+**Workflow path (opt-in)**: After the Base Branch Conflict Pre-check above, when `HAS_WORKFLOW_CAPABILITY=true` and `REVIEW_DEPTH=full`, first run the "Pre-flight: agentType Availability Check" in `skills/review/workflow-guidance.md` (loaded in Step 3), then follow that file's Processing Steps to run a finder → adversarial verify pipeline using the Workflow tool. When `HAS_WORKFLOW_CAPABILITY=false` or unset (the default), run the static Task fan-out below (Steps 10.0–10.3) unchanged.
+
+**In light mode**: after the Base Branch Conflict Pre-check above, if `REVIEW_DEPTH=light` and Issue number was extracted (Step 7 ran), run 1-agent lightweight integrated review instead of 2-agent parallel (see 10.0). If Issue number was not extracted and Step 7 was skipped, run full mode (10.1–10.3) regardless of `REVIEW_DEPTH`.
 
 ### 10.0. Lightweight Integrated Review (REVIEW_DEPTH=light only)
 
@@ -376,11 +398,13 @@ If `SKIP_REVIEW_BUG=true`, specify in the prompt to run only review-light's spec
 
 4. **Launch 1 `review-light` agent**:
 
+   If `.tmp/base-conflict-context-$NUMBER.md` exists (written by the Base Branch Conflict Pre-check above), append its content to the prompt below, followed by: "For the files listed above, if the PR's current resolution loses either side's change, report it as MUST. Files flagged `[SSoT]` are referenced by multiple Skills — check them with priority."
+
    ```text
    Task(
      subagent_type="review-light",
      description="Lightweight integrated review (all 4 aspects)",
-     prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_FILES, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json"
+     prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_FILES, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json[, base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>]"
    )
    ```
 
@@ -430,23 +454,25 @@ Split into 2 groups and run in parallel using Task tool (`REVIEW_DEPTH=full` or 
 
    Launch these subagents in a single message to ensure parallel fan-out (single-message fan-out prevents serialization regardless of model generation):
 
+   If `.tmp/base-conflict-context-$NUMBER.md` exists (written by the Base Branch Conflict Pre-check above), append its content to each of the 3 prompts below, followed by: "For the files listed above, if the PR's current resolution loses either side's change, report it as MUST. Files flagged `[SSoT]` are referenced by multiple Skills — check them with priority."
+
    ```text
    Task(
      subagent_type="wholework:review-spec",
      description="Spec review",
-     prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_FILES, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json"
+     prompt="Run review: PR=$NUMBER, Issue=$ISSUE_NUMBER, Type=$TYPE, Spec=$DESIGN_FILE_PATH, Steering Documents=$STEERING_DOCS_FILES, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json[, base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>]"
    )
 
    Task(
      subagent_type="wholework:review-bug",
      description="Bug review (diff bug scan)",
-     prompt="Run review: PR=$NUMBER, Type=$TYPE, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json. Focus on + lines in the diff; detect clear bugs and logic errors using HIGH SIGNAL principles."
+     prompt="Run review: PR=$NUMBER, Type=$TYPE, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json. Focus on + lines in the diff; detect clear bugs and logic errors using HIGH SIGNAL principles.[ base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>]"
    )
 
    Task(
      subagent_type="wholework:review-bug",
      description="Bug review (security scan)",
-     prompt="Run review: PR=$NUMBER, Type=$TYPE, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json. Detect security issues and invalid logic in changed code using HIGH SIGNAL principles."
+     prompt="Run review: PR=$NUMBER, Type=$TYPE, PR diff=.tmp/pr-diff-$NUMBER.txt, changed files=.tmp/pr-files-$NUMBER.json. Detect security issues and invalid logic in changed code using HIGH SIGNAL principles.[ base branch conflict context: <contents of .tmp/base-conflict-context-$NUMBER.md, if present>]"
    )
    ```
 
@@ -791,7 +817,7 @@ The `<!-- review-summary -->` marker line must be included verbatim even when th
 ```bash
 mkdir -p .tmp
 gh pr comment "$NUMBER" --body-file .tmp/review-summary-$NUMBER.md
-rm -f .tmp/review-summary-$NUMBER.md .tmp/pr-diff-$NUMBER.txt .tmp/pr-files-$NUMBER.json .tmp/issue-body-$ISSUE_NUMBER.md
+rm -f .tmp/review-summary-$NUMBER.md .tmp/pr-diff-$NUMBER.txt .tmp/pr-files-$NUMBER.json .tmp/issue-body-$ISSUE_NUMBER.md .tmp/base-conflict-context-$NUMBER.md
 ```
 
 **On failure**: output summary to terminal (fallback).
