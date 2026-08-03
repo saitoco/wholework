@@ -204,7 +204,7 @@ Nothing to note — all 5 Pre-merge conditions had clear, well-scoped verify com
 #### verify
 
 - **observation AC の実質を verify phase で先取り測定できた**: Post-merge AC (`event=auto-run`) は未発火のため形式上 SKIPPED だが、その実質 (「本番既定域外の watchdog_kill が新規追加されない」) は verify phase で直接測定した — wrapper env 付き bats 実行で sentinel ファイルが作成すらされず漏洩 0 件、かつ本番ログ行数が 6569 → 6569 と不変。observation AC が「発火待ち」で宙吊りになる場合でも、同等の測定を verify phase で実施して結果コメントに残せば、後続の判断材料として機能する
-- **#1137 が実体解消済みのまま OPEN で残っている**: `git show origin/main:docs/spec/issue-1135-external-kill-root-cause.md | grep -c "Issue Spec"` が 0、`scripts/check-forbidden-expressions.sh` が exit 0 を確認済み。本 PR の inline 修正で superseded になったため、close 相当
+- **#1137 が実体解消済みのまま OPEN で残っている**: `git show origin/main:docs/spec/issue-1135-external-kill-root-cause.md | grep -c` (旧称: Issue Spec の出現数を検索) が 0、`scripts/check-forbidden-expressions.sh` が exit 0 を確認済み。本 PR の inline 修正で superseded になったため、close 相当
 
 ### Improvement Proposals
 
