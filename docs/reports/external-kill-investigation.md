@@ -133,3 +133,27 @@ Prompted by an operational observation: the host Mac has not been rebooted for a
 3. Only then proceed to the `start_new_session` detachment (treatment) arm comparison.
 
 Rebooting before step 1 would destroy the reproduction baseline and muddy the isolation — the reboot is itself one of the experiment's arms, not maintenance.
+
+## 2026-08-03 Update (Issue #1142 Arm 1: control reproduction attempt — 再現条件に未到達 / no reproduction)
+
+The 3-arm experiment's Arm 1 (control: current long-uptime host, harness-managed spawn, `WHOLEWORK_SPAWN_DETACH` unset) ran as a real `/auto --batch`-equivalent workload — 3 real backlog issues (#1129 M pr-route, #1104 M→patch after post-spec demotion, #1101 M pr-route) processed serially from an interactive parent session with no concurrent sessions (session 64199-1785717064, 2026-08-03 00:33–03:37 UTC).
+
+**Result: 0 kills across 6 background wrappers / 13 phase subprocesses (~3 hours wall-clock).** All wrappers emitted their `wrapper_exit` trailers with exit 0. The workload included the exact conditions that showed a 4/4 (100%) kill rate on 7/23: continuous wrapper lifetimes of 41 / 43 / 63 minutes and four 15-minute-plus phase subprocesses (review 17m, code-patch 25m, code-pr 25m, review 16m).
+
+| Wrapper | Lifetime | Phases (subprocess durations) | Kills |
+|---|---|---|---|
+| #1129 run-issue | 6m | issue | 0 |
+| #1129 run-auto-sub | 41m | spec 12m / code-pr 9.5m / review 17m / merge 2m | 0 |
+| #1104 run-issue | 5m | issue | 0 |
+| #1104 run-auto-sub | 43m | spec 18m / code-patch 25m | 0 |
+| #1101 run-issue | 5m | issue | 0 |
+| #1101 run-auto-sub | 63m | spec 18m / code-pr 25m / review 16m / merge 4m | 0 |
+
+**Interpretation (facts vs. readings):** The non-reproduction is consistent with at least three readings, none of which this single window can separate: (a) **burstiness** — 7/21 already showed two consecutive fully-clean sessions in the middle of the kill wave, so one clean 3-hour window is weak evidence of absence; (b) **environmental change** — the kill wave's onset correlated with the 6/30–7/1 model/harness deployments, and a subsequent harness update (late July / early August) may equally have removed the trigger; (c) **condition mismatch** — this parent session started as a single-shot `/auto` and grew into batch orchestration, whereas the July kill sessions were `/auto --batch` from the start; if the trigger keys on something established at batch-session start, this window may not have armed it. Per the experiment design, Arms 2 (host reboot) and 3 (detached spawn) were **not run** — with zero kills in the control arm there is nothing to isolate against, and running them would produce uninterpretable "0 vs 0" comparisons.
+
+**Verdicts: unchanged.** H-a generalized / H-b' (PID-reuse) / H-b all remain 未決 (undetermined). No new evidence for or against any of them.
+
+**Redesign plan (再設計方針):**
+1. **Repeat Arm 1 opportunistically** — treat every future real `/auto --batch` run (starting the session as `--batch` from the outset, matching the July condition) as an Arm 1 window, recording kill rate per wrapper in this report. No dedicated workload is spent on this; normal backlog consumption doubles as the experiment.
+2. **Arm 2/3 are armed and standing by** — the `WHOLEWORK_SPAWN_DETACH` flag is implemented and tested (PR #1143); the moment any future window reproduces a kill, run the reboot arm and the detach arm against the then-current conditions per the 2026-08-01 Addendum sequence.
+3. **Expiry criterion** — if no external kill is observed across 2 weeks of normal batch operation (through ~2026-08-17), conclude "trigger removed by environment change (likely harness update), root cause unidentified but moot," close the H-a/H-b'/H-b line of investigation as overtaken by events, and file the respawn-compensation-layer slimming decision (#1070/#1081/#1093/#1119 scope reduction) plus the #598 re-evaluation with that conclusion as input.
