@@ -101,18 +101,18 @@ No new comments since last phase. (cutoff: `phase/ready` 付与 2026-08-01T00:39
 - **`phase/ready` ラベル不在での続行 (resume 判定)**: Step 3 の `phase/ready` チェック時点でラベルは既に `phase/code` (2026-08-01T01:39:31Z 遷移済み)。前回の /code セッションが実装途中 (`scripts/run-auto-sub.sh` / `tests/run-auto-sub.bats` の未コミット変更が worktree に残存) で中断された resume ケースと判定し、Spec 存在 + 実装内容が Spec Steps 1–2 と一致することを確認のうえ続行を選択。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 前セッション (中断) の未コミット実装を検証の上そのまま採用 (resume)。フルスイート 1329 tests + `tests/run-auto-sub.bats` 単体 86 tests PASS を確認してコミット
-- `WHOLEWORK_SPAWN_DETACH` を `docs/tech.md` 環境変数表 + `docs/ja/tech.md` ミラーに記載 (網羅的リファレンスのため「記載する」判断。`docs/workflow.md` は追記なし)
-- main 由来の forbidden-expressions スキャン赤 (issue-1136 spec の deprecated term 引用) を 1 行の除外マーカー追加で解消 (別コミット、#1136 review の inline 修正先例)
+- rebase conflict (`docs/spec/issue-1136-bats-emit-log-isolation.md`) を origin/main 側 (HEAD) の既存 forbidden-expressions 修正を採用して解消: 本 PR 自身の独立修正コミット (`f3904bd7`) は main の別コミットで同一 CI 問題が既に解消済みだったための重複修正だったので、main 側の検証済みバージョンを残し重複マーカーを排除
+- 解消後にフルスイート `bats tests/` を再実行 (Step 6 必須) — 1332 tests 全 PASS を確認してから push
+- `gh pr merge --squash --delete-branch` がローカル `main` checkout 競合 (primary worktree で `main` が既にチェックアウト済み) で local branch 削除に失敗したため、remote branch は `gh api -X DELETE` で明示削除し、Phase Handoff コミット用に `git checkout --detach origin/main` で代替 (`main` ブランチ名を使わず detached HEAD で `git push origin HEAD:main` に接続)
 
 ### Deferred Items
-- 受入条件 3, 4 (3 アーム実験 + `docs/reports/external-kill-investigation.md` Update 追記): PR #1143 open 中に親セッションで対話実行 — /code では実行しない (Spec Notes の phase 分割運用)
-- Post-merge AC (H-a 確定時の detachment デフォルト有効化 / #598 移行判断の別 Issue 起票): 実験結果判明後に判断
+- Post-merge AC (H-a 確定時の detachment デフォルト有効化 / #598 移行判断): 全仮説 (H-a 一般形 / H-b' / H-b) が Arm 1 不再現により未決のまま。次アクションは #1146 (Arm 1 opportunistic 再観測 + ~2026-08-17 expiry 判断) に接続済み — 現時点では「該当なし」として手動チェックされる見込み
+- 3 アーム実験のうち Arm 2 (reboot) / Arm 3 (detach) は Arm 1 不再現のため未実施のまま (実験設計上の意図的スキップ、再設計方針は `docs/reports/external-kill-investigation.md` § 2026-08-03 Update 参照)
 
 ### Notes for Next Phase
-- **/review は実験結果 (受入条件 3, 4) の追記後に実行すること**。それまで AC 3, 4 が未チェックのまま PR #1143 が open なのは正常状態。`/auto` 一気通貫は不可 (headless では background 意味論が成立しない — #1135 実証)
-- 実験順序厳守: Arm 1 (flag 未設定・現環境) → Arm 2 (Arm 1 再現時のみ・ホスト再起動) → Arm 3 (`WHOLEWORK_SPAWN_DETACH=1`)。実験中は並行セッション・並行 /auto 禁止 (交絡排除)
-- detached 子の完走判定は L0 (labels/PR/commit) + wrapper ログの `WRAPPER_EXIT` trailer ベースで行う (shim が kill された場合の親通知に依存しない — Spec Uncertainty 参照)
+- `/verify` は Post-merge AC (`H-a 確定時...`) を確認すること。現状は全仮説未決のため「該当なし」判定・手動チェックになる見込み (PR Verification (post-merge) 節と一致させること)
+- 一次証跡は `docs/sessions/64199-1785717064-2026-08-03/events.jsonl` と `docs/reports/external-kill-investigation.md` § 2026-08-03 Update — Arm 1 (control): 0 kills / 6 wrappers / 13 phase subprocesses (~3時間)
+- 今回発生した worktree 競合 (`main` の二重 checkout 不可によるブランチ削除失敗) は merge スキル運用上の既知の落とし穴として記録: 再発時は remote branch の明示削除 + `origin/main` への detached HEAD checkout で回避可能
