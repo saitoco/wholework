@@ -93,21 +93,19 @@ N/A — Implementation Steps 1〜4 をそのままの順序・挿入位置で実
 N/A
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `/review` (`--light --non-interactive`) を実行し、Pre-merge AC 4件 (rubric / grep merge-tree / grep SSoT / github_check bats) を全て PASS 判定、Issue #1101 のチェックボックスを更新した
-- `review-light` エージェントが SHOULD 指摘 1件を検出: `skills/review/SKILL.md` の "Workflow path (opt-in)" / "In light mode" 段落が新設の "Base Branch Conflict Pre-check" サブセクションより前に配置されており、`HAS_WORKFLOW_CAPABILITY=true` かつ `REVIEW_DEPTH=full` の場合に Workflow path 段落を「即座に飛ぶべき指示」と読んだ agent が Pre-check を素通りしうるリスクを指摘。妥当な指摘と判断し、Pre-check セクションを `## Step 10` 見出い直後・両段落より前に並べ替える修正を適用しコミット・push 済み (`fa0a54e7`)
-- 上記の並べ替えは Spec Implementation Steps 2 が指定した挿入位置 (「In light mode 段落の直後、### 10.0 見出しの直前」) とは異なる配置になった。AC1 (rubric)/AC2/AC3 (grep) はいずれも文字列の存在のみを検証するため再確認後も PASS を維持しており、Issue 本文の Acceptance Criteria 文言・検証コマンドの更新は不要と判断した (Step 13 Policy Change Detection: AC の意味論を変えない並べ替えのため policy change 扱いとしなかった)
+- pre-merge AC ゲート (`check-pre-merge-ac.sh 1101`) で 4件全てチェック済みと確認、`gh-pr-merge-status.sh` で `mergeable=true, reason=clean` を確認した上でそのまま squash merge を実行した (conflict 解消・追加対応なし)
+- `--non-interactive` モードで実行、AskUserQuestion は使用していない
 
 ### Deferred Items
-- Post-merge の手動検証 (「ベースブランチ側と同一行を変更する PR を実際にレビューし、conflict が MUST 指摘として検出されることを確認する」) は本 PR のマージ後に人手で実施する (未解決、`- [ ]` のまま)
-- `docs/workflow.md` の更新は Spec Notes で不要と判断済み (フェーズ境界やルーティングを変えない内部品質強化のため) — 変更なし
+- Post-merge の手動検証 (「ベースブランチ側と同一行を変更する PR を実際にレビューし、conflict が MUST 指摘として検出されることを確認する」) は引き続き未実施 (review フェーズから継続)
+- `docs/workflow.md` の更新は Spec Notes で不要と判断済み — 変更なし
 
 ### Notes for Next Phase
-- `/merge 1145` 実行前提: MUST 指摘なし、CI 全ジョブ SUCCESS
-- Spec の `## Implementation Steps` セクション (2番目の項目) は、レビューで確定した最終配置 (Pre-check が両分岐段落より前) と字面上ずれている。将来この Spec を参照する際は、コード側の実配置 (`skills/review/SKILL.md` の実ファイル) を正とすること
-- Post-merge 手動検証時は Issue #1102 (`event=REQUEST_CHANGES` の 422 既知問題) と評価軸を分けること (Spec Notes 参照、変更なし)
+- `/verify 1101` 実行時、Post-merge AC (手動検証項目) が唯一の残項目。Issue #1102 (`event=REQUEST_CHANGES` の 422 既知問題) とは評価軸を分けること
+- Spec の `## Implementation Steps` セクション (2番目の項目) は review フェーズで確定した最終配置 (Pre-check が両分岐段落より前) と字面上ずれている。コード側の実配置 (`skills/review/SKILL.md` の実ファイル) を正とすること
 
 ## review retrospective
 
