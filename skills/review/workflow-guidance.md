@@ -59,7 +59,7 @@ When `HAS_WORKFLOW_CAPABILITY=true` and `REVIEW_DEPTH=full`, replace Steps 10.1�
    - Glob for `$STEERING_DOCS_PATH/product.md`, `$STEERING_DOCS_PATH/tech.md`, `$STEERING_DOCS_PATH/structure.md`
    - Record comma-separated as `STEERING_DOCS_FILES`
 
-4. **Run Workflow pipeline** using the inline script below. Call the Workflow tool with `args: { number: NUMBER, issueNumber: ISSUE_NUMBER, type: TYPE, specPath: DESIGN_FILE_PATH, steeringDocs: STEERING_DOCS_FILES, skipReviewBug: SKIP_REVIEW_BUG === 'true' }` — these are accessed inside the script as `args.*`.
+4. **Run Workflow pipeline** using the inline script below. Call the Workflow tool with `args: { number: NUMBER, issueNumber: ISSUE_NUMBER, type: TYPE, specPath: DESIGN_FILE_PATH, steeringDocs: STEERING_DOCS_FILES, skipReviewBug: SKIP_REVIEW_BUG === 'true', conflictContext: <contents of .tmp/base-conflict-context-$NUMBER.md, or '' if the file does not exist> }` — these are accessed inside the script as `args.*`. `conflictContext` carries the same Base Branch Conflict Pre-check output consumed by the static path's 10.2 step 3.
 
 5. **Integrate results** the same way as Step 10.2 step 4: extract `path`, `line`, `body`, `severity` from confirmed findings; write `review-comments-$NUMBER.json` and `review-body-$NUMBER.md`.
 
@@ -119,10 +119,14 @@ const FINDERS = SKIP_BUG
 
 if (!args) throw new Error('Workflow args required: number, issueNumber, type, specPath, steeringDocs, skipReviewBug')
 
+const CONFLICT_SUFFIX = args.conflictContext
+  ? `\n\nBase branch conflict context:\n${args.conflictContext}\n\nFor the files listed above, if the PR's current resolution loses either side's change, report it as MUST. Files flagged [SSoT] are referenced by multiple Skills — check them with priority.`
+  : ''
+
 const finderPrompts = {
-  'find:spec': `Run review: PR=${args.number}, Issue=${args.issueNumber}, Type=${args.type}, Spec=${args.specPath}, Steering Documents=${args.steeringDocs}, PR diff=.tmp/pr-diff-${args.number}.txt, changed files=.tmp/pr-files-${args.number}.json`,
-  'find:bug-diff': `Run review: PR=${args.number}, Type=${args.type}, PR diff=.tmp/pr-diff-${args.number}.txt, changed files=.tmp/pr-files-${args.number}.json. Focus on + lines in the diff; detect clear bugs and logic errors using HIGH SIGNAL principles.`,
-  'find:bug-security': `Run review: PR=${args.number}, Type=${args.type}, PR diff=.tmp/pr-diff-${args.number}.txt, changed files=.tmp/pr-files-${args.number}.json. Detect security issues and invalid logic in changed code using HIGH SIGNAL principles.`,
+  'find:spec': `Run review: PR=${args.number}, Issue=${args.issueNumber}, Type=${args.type}, Spec=${args.specPath}, Steering Documents=${args.steeringDocs}, PR diff=.tmp/pr-diff-${args.number}.txt, changed files=.tmp/pr-files-${args.number}.json${CONFLICT_SUFFIX}`,
+  'find:bug-diff': `Run review: PR=${args.number}, Type=${args.type}, PR diff=.tmp/pr-diff-${args.number}.txt, changed files=.tmp/pr-files-${args.number}.json. Focus on + lines in the diff; detect clear bugs and logic errors using HIGH SIGNAL principles.${CONFLICT_SUFFIX}`,
+  'find:bug-security': `Run review: PR=${args.number}, Type=${args.type}, PR diff=.tmp/pr-diff-${args.number}.txt, changed files=.tmp/pr-files-${args.number}.json. Detect security issues and invalid logic in changed code using HIGH SIGNAL principles.${CONFLICT_SUFFIX}`,
 }
 
 const finderResults = await pipeline(
