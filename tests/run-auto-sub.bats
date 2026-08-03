@@ -11,6 +11,9 @@ setup() {
     # live /review or /merge phase session) — tests below assert issue-42
     # targeting under the assumption these start unset, per issue #984 fix.
     unset EMIT_ISSUE_NUMBER EMIT_PR_NUMBER EMIT_PHASE_NAME _EXTRA_SELF_ISSUE AUTO_SESSION_ID
+    # Spawn detachment shim isolation (issue #1142): an ambient flag would make
+    # every test below re-exec through the detachment shim.
+    unset WHOLEWORK_SPAWN_DETACH _WHOLEWORK_DETACHED
 
     # Isolate test from repo .wholework.yml
     echo "permission-mode: bypass" > "$BATS_TEST_TMPDIR/.wholework.yml"
@@ -2486,4 +2489,92 @@ MOCK
     run bash "$SCRIPT" 42
     [ "$status" -eq 0 ]
     [[ "$output" == *"other-session dirty files"* ]]
+}
+
+# --- Spawn detachment shim (issue #1142) ---
+# Unit tests extract the real _should_detach() from the script under test.
+# Integration tests exploit the shim's re-exec argv ("bash" resolved via PATH):
+# a canary bash placed in MOCK_DIR (already on PATH) is only ever invoked when
+# the shim engages, while the outer script is started via /bin/bash directly.
+
+@test "spawn-detach: _should_detach is false when WHOLEWORK_SPAWN_DETACH is unset" {
+    eval "$(sed -n '/^_should_detach()/,/^}/p' "$SCRIPT")"
+    run _should_detach
+    [ "$status" -ne 0 ]
+}
+
+@test "spawn-detach: _should_detach is false when already detached (recursion guard)" {
+    eval "$(sed -n '/^_should_detach()/,/^}/p' "$SCRIPT")"
+    export WHOLEWORK_SPAWN_DETACH=1
+    export _WHOLEWORK_DETACHED=1
+    run _should_detach
+    [ "$status" -ne 0 ]
+}
+
+@test "spawn-detach: _should_detach is true when flag set and not yet detached" {
+    eval "$(sed -n '/^_should_detach()/,/^}/p' "$SCRIPT")"
+    export WHOLEWORK_SPAWN_DETACH=1
+    run _should_detach
+    [ "$status" -eq 0 ]
+}
+
+@test "spawn-detach: flag unset: shim does not engage (canary bash never invoked)" {
+    cat > "$MOCK_DIR/bash" <<'MOCK'
+#!/bin/bash
+echo "CANARY_BASH_INVOKED"
+exit 99
+MOCK
+    chmod +x "$MOCK_DIR/bash"
+    run /bin/bash "$SCRIPT" --write-manual-recovery
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"--write-manual-recovery requires"* ]]
+    [[ "$output" != *"CANARY_BASH_INVOKED"* ]]
+}
+
+@test "spawn-detach: flag set but already detached: shim does not re-engage (recursion guard, canary bash never invoked)" {
+    cat > "$MOCK_DIR/bash" <<'MOCK'
+#!/bin/bash
+echo "CANARY_BASH_INVOKED"
+exit 99
+MOCK
+    chmod +x "$MOCK_DIR/bash"
+    export WHOLEWORK_SPAWN_DETACH=1
+    export _WHOLEWORK_DETACHED=1
+    run /bin/bash "$SCRIPT" --write-manual-recovery
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"--write-manual-recovery requires"* ]]
+    [[ "$output" != *"CANARY_BASH_INVOKED"* ]]
+}
+
+@test "spawn-detach: flag set: detached child runs in a new process group (pgid == pid) and exit code passes through" {
+    cat > "$MOCK_DIR/bash" <<'MOCK'
+#!/bin/bash
+pid=$$
+pgid=$(ps -o pgid= -p $$ | tr -d ' ')
+echo "detached child pid=$pid pgid=$pgid"
+if [[ "$pid" == "$pgid" ]]; then exit 7; fi
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/bash"
+    export WHOLEWORK_SPAWN_DETACH=1
+    run /bin/bash "$SCRIPT" --write-manual-recovery
+    [ "$status" -eq 7 ]
+    [[ "$output" == *"detached child pid="* ]]
+}
+
+@test "spawn-detach: AUTO_SESSION_ID resolved from pre-detach PGID pointer and burned into child env" {
+    cat > "$MOCK_DIR/bash" <<'MOCK'
+#!/bin/bash
+echo "child AUTO_SESSION_ID=${AUTO_SESSION_ID:-} DETACHED=${_WHOLEWORK_DETACHED:-}"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/bash"
+    export WHOLEWORK_SPAWN_DETACH=1
+    # Write the pointer file keyed by the PGID the script will observe pre-detach.
+    # The wrapper /bin/bash -c process exec's into the script (same pid/pgid), so
+    # the pointer key computed here is exactly what the shim reads.
+    run /bin/bash -c "mkdir -p .tmp && pgid=\$(ps -o pgid= -p \$\$ | tr -d ' ') && echo sess-detach-test > \".tmp/auto-session-\${pgid}\" && exec /bin/bash '$SCRIPT' --write-manual-recovery"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"AUTO_SESSION_ID=sess-detach-test"* ]]
+    [[ "$output" == *"DETACHED=1"* ]]
 }
