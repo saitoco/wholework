@@ -3,7 +3,7 @@ name: merge
 description: Squash-merge a PR and delete the remote branch (`/merge 88`). Use when merging review-approved, CI-passing PRs. Automatically attempts conflict resolution when conflicts occur.
 context: fork
 model: sonnet
-allowed-tools: Bash(gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, gh issue view:*, gh issue close:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-pre-merge-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*, mkdir:*, rm:*), Read, Edit, Write, Grep, Glob, EnterWorktree, ExitWorktree
+allowed-tools: Bash(gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, gh issue view:*, gh issue close:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-pre-merge-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*, mkdir:*, rm:*), Read, Edit, Write, Grep, Glob, EnterWorktree, ExitWorktree
 ---
 
 # Squash Merge
@@ -96,6 +96,12 @@ Note: Always wrap `$NUMBER` in double quotes.
 - **isDraft is true**: Run `gh pr ready "$NUMBER"` to un-draft, then continue
 - **mergeable=true**: Proceed directly to Step 4 (Execute Squash Merge)
 - **mergeable=false, reason=conflicts**: Proceed to Step 3 (Resolve Conflicts)
+- **mergeable=false, reason=ci_pending**: CI checks are still running (0 failing, 1+ pending) — this resolves itself by waiting, unlike a genuine failure. Run:
+  ```bash
+  WHOLEWORK_CI_TIMEOUT_SEC=300 ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh "$NUMBER"
+  ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh "$NUMBER"
+  ```
+  (300s timeout keeps the wait within the merge phase's watchdog budget, matching `WHOLEWORK_REVIEW_PENDING_RETRY_SEC`'s 300s bounded-retry convention.) Re-evaluate this branch list against the new result. If the re-evaluation still yields `reason=ci_pending`, do not wait again — fall through to the "Other" branch below.
 - **Other (e.g., reason=review_pending)**: Report the error and reason, then use AskUserQuestion to ask the user how to proceed (non-interactive mode: auto-resolve — see "Non-Interactive Mode Behavior" section)
   - User selects "Abort": Stop processing (do not proceed to subsequent steps)
   - User selects "Treat as conflict": Proceed to Step 2 (Resolve Conflicts)

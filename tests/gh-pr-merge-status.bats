@@ -24,8 +24,15 @@ MOCK
 make_gh_mock() {
     local mergeable="$1"
     local state="$2"
-    # Use printf to expand variables properly
-    printf '#!/bin/bash\necho '"'"'{"mergeable": "%s", "mergeStateStatus": "%s"}'"'"'\n' "$mergeable" "$state" > "$MOCK_DIR/gh"
+    local checks_json="${3:-[]}"
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+if [ "\$1" = "pr" ] && [ "\$2" = "checks" ]; then
+    echo '$checks_json'
+else
+    echo '{"mergeable": "$mergeable", "mergeStateStatus": "$state"}'
+fi
+MOCK
     chmod +x "$MOCK_DIR/gh"
 }
 
@@ -107,6 +114,24 @@ MOCK
 
 @test "success: UNSTABLE state returns mergeable false with reason ci_failing" {
     make_gh_mock "MERGEABLE" "UNSTABLE"
+    run bash "$SCRIPT" "123"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"mergeable": false'* ]]
+    [[ "$output" == *'"reason": "ci_failing"'* ]]
+    [[ "$output" == *'"ci_status": "failing"'* ]]
+}
+
+@test "success: UNSTABLE with pending-only checks returns mergeable false with reason ci_pending" {
+    make_gh_mock "MERGEABLE" "UNSTABLE" '[{"state":"IN_PROGRESS","bucket":"pending"},{"state":"SUCCESS","bucket":"pass"}]'
+    run bash "$SCRIPT" "123"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"mergeable": false'* ]]
+    [[ "$output" == *'"reason": "ci_pending"'* ]]
+    [[ "$output" == *'"ci_status": "pending"'* ]]
+}
+
+@test "success: UNSTABLE with fail and pending mixed returns mergeable false with reason ci_failing (fail takes priority)" {
+    make_gh_mock "MERGEABLE" "UNSTABLE" '[{"state":"FAILURE","bucket":"fail"},{"state":"IN_PROGRESS","bucket":"pending"}]'
     run bash "$SCRIPT" "123"
     [ "$status" -eq 0 ]
     [[ "$output" == *'"mergeable": false'* ]]
