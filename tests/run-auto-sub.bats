@@ -1864,6 +1864,51 @@ MOCK
     grep -q -- "- 未起票" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
 }
 
+@test "run-auto-sub: manual recovery: --cause and multi-line --diagnosis are recorded without a silent write skip" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+    mkdir -p "$BATS_TEST_TMPDIR/docs/reports"
+    printf '%s\n' "# Orchestration Recovery Log" "<!-- Log entries appear below, newest first. -->" > "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"diff"* && "$*" == *"orchestration-recoveries.md"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+if [[ "$1" == "issue" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    # A --diagnosis value containing a newline previously broke the embedded Python string
+    # literal with a SyntaxError silently discarded by `2>/dev/null || true`, so the log
+    # entry was never written even though the command still exited 0 (Issue #1123 review
+    # finding). The fix passes cause/diagnosis via environment variables instead.
+    run bash "$SCRIPT" --write-manual-recovery 42 code respawn 137 --cause dirty-guard --diagnosis $'first line\nsecond line'
+    [ "$status" -eq 0 ]
+    grep -qE "^## [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2} UTC: manual-recovery-respawn$" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    grep -q -- "- cause: dirty-guard" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    grep -q -- "- first line" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    grep -q "^second line$" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+}
+
 @test "run-auto-sub: manual recovery: reissue after PR merge completes the spec write without duplicating the recoveries log entry" {
     export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
 
@@ -2017,6 +2062,52 @@ MOCK
     run bash "$SCRIPT" --write-manual-recovery 42 code push-only
     [ "$status" -eq 0 ]
     grep -q -- "- 起票済み #555" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+}
+
+@test "run-auto-sub: manual recovery: bare group-key is not matched by a cause-suffixed sibling issue title" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+    mkdir -p "$BATS_TEST_TMPDIR/docs/reports"
+    printf '%s\n' "# Orchestration Recovery Log" "<!-- Log entries appear below, newest first. -->" > "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"diff"* && "$*" == *"orchestration-recoveries.md"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    # Only a cause-suffixed sibling title exists ("push-only/dirty-guard"); a bare-key
+    # write-manual-recovery call (no --cause) must NOT be matched against it via substring
+    # containment (Issue #1123 review finding), so Improvement Candidate stays 未起票.
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+if [[ "$1" == "issue" && "$2" == "list" && "$*" == *"--state open"* ]]; then
+    echo '[{"number":555,"title":"recoveries: manual-recovery-push-only/dirty-guard","createdAt":"2026-07-10T00:00:00Z"}]'
+    exit 0
+fi
+if [[ "$1" == "issue" && "$2" == "list" && "$*" == *"--state closed"* ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only
+    [ "$status" -eq 0 ]
+    grep -q -- "- 未起票" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    ! grep -q -- "- 起票済み" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
 }
 
 @test "run-auto-sub: manual recovery: emits manual_intervention event with intervention_type" {
@@ -2378,6 +2469,18 @@ MOCK
 @test "validate: --write-manual-recovery rejects literal 'unknown' exit_code (must omit the argument instead)" {
     run bash "$SCRIPT" --write-manual-recovery 42 code push-only unknown
     [ "$status" -ne 0 ]
+}
+
+@test "validate: --write-manual-recovery rejects --cause with no value (with diagnostic message, not a bare shift failure)" {
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only --cause
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"--cause requires a value"* ]]
+}
+
+@test "validate: --write-manual-recovery rejects --diagnosis with no value (with diagnostic message, not a bare shift failure)" {
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only --cause dirty-guard --diagnosis
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"--diagnosis requires a value"* ]]
 }
 
 @test "retry-on-kill: child runner killed once then succeeds, run-auto-sub exits 0" {

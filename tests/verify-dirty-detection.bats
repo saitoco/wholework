@@ -4,9 +4,9 @@ bats_require_minimum_version 1.5.0
 
 # Tests for check-verify-dirty.sh
 # Verifies dirty file classification for /verify Step 1:
-#   exit 0 — clean
-#   exit 1 — related or non-spec dirty files
-#   exit 2 — all dirty files are unrelated spec files
+#   exit 0 — clean, or all dirty files are self-spec / foreign-session (non-blocking)
+#   exit 1 — dirty files include own-issue-scope, or attribution is undetermined
+#   exit 2 — all dirty files are unrelated spec files (a different issue's Spec)
 
 PROJECT_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 REAL_SCRIPT="$PROJECT_ROOT/scripts/check-verify-dirty.sh"
@@ -52,11 +52,12 @@ make_dirty() {
     [[ "$output" == *"docs/spec/issue-999-some-spec.md"* ]]
 }
 
-@test "related spec dirty: exit 1 when related spec file (same issue) is dirty" {
+@test "self-spec dirty: exit 0 when own issue's own spec file (same issue) is dirty" {
     cd "$REPO_DIR"
     make_dirty "docs/spec/issue-123-my-spec.md"
     run bash "$REAL_SCRIPT" 123
-    [ "$status" -eq 1 ]
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"classify=self-spec"* ]]
 }
 
 @test "non-spec dirty: exit 1 when non-spec file is dirty" {
@@ -177,4 +178,110 @@ EOF
     [ "$status" -eq 1 ]
     [[ "$output" == *"classify=self-worktree"* ]]
     [[ "$output" == *"classify=parent-main"* ]]
+}
+
+@test "own-issue-scope: dirty file listed in own Spec's Changed Files -> exit 1 (negative case)" {
+    cd "$REPO_DIR"
+    cat > docs/spec/issue-123-my-spec.md <<'EOF'
+# Issue #123: example
+
+## Changed Files
+
+- `scripts/run-review.sh`: some change
+- `scripts/run-merge.sh`: another change
+
+## Implementation Steps
+
+1. do the thing
+EOF
+    git add docs/spec/issue-123-my-spec.md && git commit -q -m "add spec"
+    make_dirty "scripts/run-review.sh"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"classify=own-issue-scope"* ]]
+}
+
+@test "foreign-session: dirty file not listed in own Spec's Changed Files -> exit 0" {
+    cd "$REPO_DIR"
+    cat > docs/spec/issue-123-my-spec.md <<'EOF'
+# Issue #123: example
+
+## Changed Files
+
+- `scripts/run-review.sh`: some change
+
+## Implementation Steps
+
+1. do the thing
+EOF
+    git add docs/spec/issue-123-my-spec.md && git commit -q -m "add spec"
+    make_dirty "scripts/foo.sh"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"classify=foreign-session"* ]]
+}
+
+@test "own-issue-scope: indented sub-bullet path under a parent bullet is captured" {
+    cd "$REPO_DIR"
+    cat > docs/spec/issue-123-my-spec.md <<'EOF'
+# Issue #123: example
+
+## Changed Files
+
+- Steering Docs sync candidates:
+  - `scripts/run-review.sh` / `docs/ja/run-review.md`
+  - `docs/tech.md`
+
+## Implementation Steps
+
+1. do the thing
+EOF
+    git add docs/spec/issue-123-my-spec.md && git commit -q -m "add spec"
+    make_dirty "scripts/run-review.sh"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"classify=own-issue-scope"* ]]
+}
+
+@test "own-issue-scope: bullet with a [label] prefix before the backtick path is captured" {
+    cd "$REPO_DIR"
+    cat > docs/spec/issue-123-my-spec.md <<'EOF'
+# Issue #123: example
+
+## Changed Files
+
+- [Steering Docs sync candidate] `docs/tech.md` / `docs/ja/tech.md`: description
+
+## Implementation Steps
+
+1. do the thing
+EOF
+    git add docs/spec/issue-123-my-spec.md && git commit -q -m "add spec"
+    make_dirty "docs/tech.md"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"classify=own-issue-scope"* ]]
+}
+
+@test "mixed: unrelated spec file + foreign-session file -> exit 0, not exit 2" {
+    cd "$REPO_DIR"
+    cat > docs/spec/issue-123-my-spec.md <<'EOF'
+# Issue #123: example
+
+## Changed Files
+
+- `scripts/run-review.sh`: some change
+
+## Implementation Steps
+
+1. do the thing
+EOF
+    git add docs/spec/issue-123-my-spec.md && git commit -q -m "add spec"
+    make_dirty "docs/spec/issue-999-unrelated.md"
+    make_dirty "scripts/foo.sh"
+    run bash "$REAL_SCRIPT" 123
+    # Must NOT be exit 2 (an unscoped `git stash` at exit 2 would also sweep up the
+    # foreign-session file, which is never printed to stdout) -- falls through to exit 0.
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"classify=foreign-session"* ]]
 }

@@ -42,6 +42,13 @@ Before running the Workflow pipeline (Processing Steps below), confirm that `who
 
 This check exists because `capabilities.workflow: true` alone does not guarantee the custom agentTypes are resolvable — see issue #882 Root Cause for the headless `--plugin-dir` failure mode this guards against, and issue #935 for the separate bare-name-vs-namespace mismatch this section now guards against.
 
+**The Workflow tool's own execution path has no re-invocation guarantee**: launching a Workflow run and ending the turn to await its completion notification is itself an instance of the notification-dependent waiting this file's caller (`/review`) must avoid — see `${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting" for the exhaustive list of affected execution surfaces and the MUST rule. The Processing Steps below must run the Workflow call synchronously (foreground) and consume its return value within the same turn, not by dispatching it and waiting for a later notification.
+
+**No synchronous invocation mode exists on the Workflow tool itself (Issue #1123 finding)**: unlike the Agent tool (which accepts `run_in_background: false` to block and return a result in the same tool call), the Workflow tool always launches in the background and returns immediately with a task ID — there is no parameter to make it block for its result within the current turn. This means the "run the Workflow call synchronously (foreground)" instruction above cannot be literally satisfied by the tool as implemented.
+
+- **When a re-invocation guarantee is confirmed** (direct execution inside an interactive session — see `modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting"): the Workflow path may be used normally; awaiting its completion notification is safe because the session is guaranteed to be re-invoked.
+- **When a re-invocation guarantee is absent or cannot be confirmed** (headless `claude -p`, a fork-executed Skill, or any other execution surface listed in `modules/execution-context.md`'s exhaustive list): do NOT launch the Workflow tool for this step. Skip the Workflow Path entirely and fall back to the static Task fan-out in `skills/review/SKILL.md` Steps 10.1–10.3, using the Agent tool with `run_in_background: false` for each finder/verifier call instead — this is the only mechanism available in this tool surface that can genuinely block for a result within the same turn.
+
 ## Processing Steps (Workflow Path)
 
 When `HAS_WORKFLOW_CAPABILITY=true` and `REVIEW_DEPTH=full`, replace Steps 10.1–10.3 with the following:
