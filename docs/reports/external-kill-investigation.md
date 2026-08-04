@@ -156,4 +156,63 @@ The 3-arm experiment's Arm 1 (control: current long-uptime host, harness-managed
 **Redesign plan (再設計方針):**
 1. **Repeat Arm 1 opportunistically** — treat every future real `/auto --batch` run (starting the session as `--batch` from the outset, matching the July condition) as an Arm 1 window, recording kill rate per wrapper in this report. No dedicated workload is spent on this; normal backlog consumption doubles as the experiment.
 2. **Arm 2/3 are armed and standing by** — the `WHOLEWORK_SPAWN_DETACH` flag is implemented and tested (PR #1143); the moment any future window reproduces a kill, run the reboot arm and the detach arm against the then-current conditions per the 2026-08-01 Addendum sequence.
-3. **Expiry criterion** — if no external kill is observed across 2 weeks of normal batch operation (through ~2026-08-17), conclude "trigger removed by environment change (likely harness update), root cause unidentified but moot," close the H-a/H-b'/H-b line of investigation as overtaken by events, and file the respawn-compensation-layer slimming decision (#1070/#1081/#1093/#1119 scope reduction) plus the #598 re-evaluation with that conclusion as input.
+3. **Expiry criterion** — if no external kill is observed across 2 weeks of normal batch operation (through ~2026-08-17), conclude "trigger removed by environment change (likely harness update), root cause unidentified but moot," close the H-a/H-b'/H-b line of investigation as overtaken by events, and file the respawn-compensation-layer slimming decision (#1070/#1081/#1093/#1119 scope reduction) plus the #598 re-evaluation with that conclusion as input. **(Revised 2026-08-05 — see the criterion revision below; the conclusion clause of this item no longer stands.)**
+
+## 2026-08-05 Update (upstream issue cross-reference — anthropics/claude-code)
+
+Every section above reasons exclusively from local data. A search of the `anthropics/claude-code` issue tracker on 2026-08-05 found the same symptom reported independently by other users on the same tool surface (Bash tool with `run_in_background: true`), including one report filed **2026-08-04 against 2.1.221 — the exact version this host runs**. This is the first external corroboration this investigation has had, and it moves two things: the evidentiary basis for H-a, and the validity of the expiry criterion above.
+
+### Three near-identical upstream reports (all OPEN, none with an Anthropic response)
+
+| Issue | Filed / CC version | Platform | Reported signature |
+|---|---|---|---|
+| [#76974](https://github.com/anthropics/claude-code/issues/76974) | 2026-07-12 / 2.1.207 | Linux (Debian 13, tmux) | Process-group SIGKILL of background Bash tasks by "the CLI's task supervision"; 1.45% of 965 sandboxed background dispatches, 0.84% of 477 unsandboxed, measured over 30 days / 304 sessions / ~28.5k dispatches |
+| [#76942](https://github.com/anthropics/claude-code/issues/76942) | 2026-07-12 / 2.1.207 | macOS (Terminal.app) | External SIGTERM mid-run, "only after a session runs long"; first tasks in a session complete, later ones die at progressively different points |
+| [#83814](https://github.com/anthropics/claude-code/issues/83814) | 2026-08-04 / **2.1.221** | macOS | Exit 143 on 10–60 min background tasks (headless `claude -p` / `codex exec` subprocesses) in long-lived interactive sessions |
+
+**#76974 independently reproduces F1/F2/F4/F5 with kernel-level evidence this investigation could not obtain on macOS.** Its author correlated killed tasks against Linux process accounting (`acct`) and the kernel journal:
+
+| This report's finding | #76974's independent observation |
+|---|---|
+| F1 — the wrapper's whole process group dies, not just the leaf | Every process in the task tree (`bash` + `git` + grandchildren) carries the acct "killed by signal" flag at the same death instant — a process-group signal |
+| F2 — no EXIT-trap backfill, pointing to SIGKILL | "Trap handlers never fire (EXIT traps produce no output), consistent with SIGKILL specifically" |
+| F4 — no jetsam/OOM evidence | Zero kernel OOM lines across the observation window; session cgroup had no memory limit |
+| F5 — time-to-kill is not fixed (2–22 min) | Kills at 28–136 s, one at 317 s, one at 3600.4 s, while other tasks ran 2 h+ untouched |
+| 2026-08-03 Arm 1: 0 kills across a 3-hour window | "Kills are **BURSTY** — several within a few minutes, then days of silence — suggesting an episodic supervision state rather than per-job decisions" |
+| Batch-session exclusivity (30+ occurrences, never single-shot) | Foreground Bash calls effectively immune (2 lost of 27,032 ≈ 0.007%) vs. 1.45% for background; user-typed `!` commands never enter the task-supervision tree at all |
+
+The last row is the sharpest external match: both datasets say the discriminator is **which supervision tree the process lands in**, not what the process does. #76942's corroborating comment (2026-07-20, 2.1.214, macOS, ~11 occurrences) adds that an immediate identical relaunch succeeds ~11/11 — the same "respawn always works" property our compensation layer relies on.
+
+### Lead 1 — a single mechanism that explains the phase-correlated SIGTERM/SIGKILL split
+
+[#82586](https://github.com/anthropics/claude-code/issues/82586) (2026-07-30, 2.1.220) reports, from third-party inspection of the CLI bundle, that the harness's own task-kill path is **SIGTERM to the task shell, followed by a delayed SIGKILL to its process group**. If that is accurate, the "phase-correlated signal-type split" recorded in the #1014 and 2026-07-15 sections is not phase-dependent at all: it is a race against that grace window. Whether a killed wrapper leaves a backfilled `phase_complete` depends only on whether its EXIT trap finished before the follow-up SIGKILL landed — and short phases (`spec`, `issue`) plausibly have less trap work in flight than long ones (`code-pr`, `review`). This subsumes the two-vs-four and three-vs-two splits under one mechanism and removes the need to explain a phase dependency that may never have existed.
+
+This is a third-party reverse-engineering claim, not an official statement, and we have not verified it. Recorded as the leading explanation of the split, superseding nothing in the observational record.
+
+### Lead 2 — an observable discriminator the parent session already receives
+
+The same report states that the two kill origins are distinguishable from the **task notification text alone**: the harness's own stop path renders `status: killed` / "Background command … was stopped", whereas a genuinely external signal renders "failed with exit code N" (verified there against a `pkill` control case that surfaced as exit 144). #82586 also observed one killed task's child in a *different* process group surviving orphaned and completing 10 minutes later — consistent with a group-scoped harness kill, inconsistent with a pattern-matching external killer.
+
+This matters because the `wrapper_exit_code` channel the 2026-07-15 section found structurally unobtainable is not the only signal available: the parent `/auto` session receives the task notification directly, and its wording is a free harness-vs-external discriminator that we have never recorded. Tracked as **#1153**.
+
+### Lead 3 — the expiry criterion's conclusion clause is contradicted
+
+The 2026-08-03 Redesign plan's item 3 would conclude, on 2 quiet weeks, that the trigger was "removed by environment change (likely harness update)". That clause is now directly contradicted: #83814 is an active report of this exact symptom on 2.1.221, filed 2026-08-04, and CHANGELOG entries for 2.1.217 through 2.1.221 contain no fix for this class. Combined with #76974's burstiness finding (days of silence between bursts is the normal shape) and its ~1.45%-per-dispatch base rate, a quiet local window is much weaker evidence of upstream repair than the criterion assumed.
+
+**Revised criterion**: a quiet window through ~2026-08-17 supports only "not reproducing locally under current conditions" — it does not license the "trigger removed upstream" conclusion, and therefore does not by itself justify retiring the respawn compensation layer. The Arm 2/3 standby and the compensation layer both remain warranted while the upstream issues are open and unanswered. The #598 / #596 re-evaluation inputs are unchanged in kind but should now carry the upstream reports as evidence rather than a local-only inference.
+
+### Precedent: this bug class is real in the harness
+
+[#72660](https://github.com/anthropics/claude-code/issues/72660) (closed 2026-07-04 as a duplicate of #72233) captured, via `strace`, a Claude Code background-agent daemon issuing `kill(0, SIGKILL)` — a self-directed process-group SIGKILL — on a ~50-second idle timer, taking down every background task sharing that group (699 daemon starts vs. 53 graceful shutdowns in one log). That is not our symptom (different component, different cadence, and it was fixed), but it establishes that harness code paths issuing indiscriminate process-group SIGKILLs exist and have shipped before. Separately, [#59691](https://github.com/anthropics/claude-code/issues/59691) asked whether the documented ~1 h supervisor reaping kills in-flight `run_in_background` children and was closed as stale without an answer — the lifecycle contract H-a depends on is still undocumented upstream.
+
+### Verdicts (判定)
+
+- **H-a generalized (harness per-background-task lifecycle): 未決 (undetermined), but materially strengthened.** Three independent reporters on two platforms describe the same process-group-scoped, activity-uncorrelated, bursty kill of `run_in_background` tasks, with kernel-level evidence (#76974) matching F1/F2/F4/F5. The foreground-vs-background rate gap (0.007% vs 1.45%) localizes the mechanism to the background task-supervision path specifically. This is corroboration, not confirmation: no reporter has identified the sending code path, and Anthropic has not responded to any of the three issues.
+- **H-b (terminal/shell-side process-group kill): 未決, weakened.** #76974 reproduces on Linux/tmux and #76942/#83814 on macOS/Terminal.app and zsh — the symptom crosses terminal emulators and shells, which a terminal-side cause would not.
+- **H-b' (host-uptime / PID-reuse): 未決, weakened.** Same reasoning: the symptom appears across independent hosts with unrelated uptimes, and #76974's per-dispatch rate is stable enough over 30 days to be hard to reconcile with PID-space wraparound.
+
+### Next actions
+
+1. **#1153** — record the parent-observed task-notification wording on the external-kill recovery path (Lead 2), so the harness-stop vs. external-signal discriminator accumulates across occurrences.
+2. **#1146** — apply the revised expiry criterion above at the ~2026-08-17 decision point; a quiet window no longer concludes "trigger removed upstream".
+3. **Upstream corroboration (optional, not yet filed)** — our 30+ occurrences with `wrapper_alive` checkpoint correlation and the 0/3-vs-0/3 detachment experiment would add macOS-side depth to #76974, whose kernel evidence is Linux-only. Deferred pending the #1153 notification-class data, which would make the report materially stronger.
