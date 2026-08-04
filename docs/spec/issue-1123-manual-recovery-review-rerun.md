@@ -242,30 +242,42 @@ No new comments since last phase.
 - **既存テストが AC と正面から矛盾していた**: `tests/verify-dirty-detection.bats` の `"related spec dirty: exit 1 when related spec file (same issue) is dirty"` は「自 Issue の Spec は blocking」を仕様として固定しており、AC2 / AC3 の第 3 ケースと両立しない。Spec 段階で検出できたため、`/code` フェーズで「テストが落ちる」形の発見にならずに済んだ。意図的な破壊的更新として Implementation Step 5 と Notes に明記した。
 - **`_is_duplicate()` の 24h 重複抑止が cause を見ない点**: 同一 issue + phase で 24h 以内に別 cause が記録されると後発が抑止される。発生頻度が低く、含めるかどうかで Spec 本文が変わらないため実装時判断に委ね、Uncertainty に残した。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- `tests/run-review.bats` の `gh-extract-issue-from-pr.sh` モックは Spec (Notes / Implementation Step 5) が「ヘッダコメント L5 に記載があるのに実体が存在しない」と記していたが、実装時に確認したところ既にモック (`.tmp/mocks/gh-extract-issue-from-pr.sh`, `{"issue_number": 99}` を返す) が存在していた。追加作業は不要と判断し、`tests/run-review.bats` / `tests/run-merge.bats` を無変更のまま実行して 38/29 件 PASS を確認した。
+- `skills/verify/SKILL.md` の更新範囲を Spec 記載の 2 点 (Step 1 の exit 1 説明、(b) Cluster by cause への注記) から拡張した。recoveries-auto-fire の (a) Extract source entries が `{symptom-short}` のみを前提にヘッダマッチしていたため、group-key (`symptom-short/cause-slug`) をそのままヘッダ照合に使うと cause 付き候補が 1 件もマッチせず機能しなくなる。そのため (a) に group-key の分割ロジックと cause 行によるエントリ絞り込みを追加し、Issue テンプレート内の残りの `{symptom-short}` プレースホルダも `{group-key}` に統一した。Spec の Changed Files には明記がなかったが、AC4 の「頻度検出が機能する」という要求を満たすために必要な修正だった。
+
+### Design Gaps/Ambiguities
+
+- なし (Spec の Uncertainty 節で既出の 3 点以外に、実装中に新たな設計上の空白は見つからなかった)
+
+### Rework
+
+- `skills/verify/SKILL.md` を `{symptom-short}` → `{group-key}` に一括置換した際、part (a) の「ヘッダは `{symptom-short}` で照合する」という説明文まで誤って `{group-key}` に書き換わってしまった (ヘッダは cause を含まないため誤り)。`validate-skill-syntax.py` は構文チェックのみでこの意味的な誤りを検出できず、diff を読み返して発見し修正した。
+- `scripts/check-verify-dirty.sh` の新テスト (self-spec / foreign-session のみが dirty なケース) を追加した際、bash 3.2 の `"${arr[@]}"` 空配列 unbound-variable バグを踏んだ。既存コードの `${ignore_patterns[@]+"${ignore_patterns[@]}"}` パターンを流用して修正した。旧実装では `unrelated_spec_files` が空になる経路 (has_other=false かつ unrelated_spec_files 空) が構造的に存在しなかったため、このバグは今回の分類拡張で初めて表面化したものであり、Spec の設計自体に誤りはない。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- Cause A の横断規約は新規モジュールではなく `modules/execution-context.md` への追記とする。適用条件は「headless」ではなく「再喚起保証のない実行文脈全般」で定義し、既存の前景実行注記 4 箇所からこの単一 SSoT を参照させる。
-- Cause B の帰属判定根拠は「自 Issue の Spec `## Changed Files` に列挙されたパス」とする。`self-spec` (自 Issue の Spec 残骸) は非ブロック、`own-issue-scope` (Changed Files 記載) はブロック、`foreign-session` (それ以外) は非ブロック。
-- 修正は `scripts/check-verify-dirty.sh` の内部で行い、5 つの呼び出し元の `case` ブロックは変更しない (exit code 0/1/2 の意味を保つ)。
-- AC4 は H2 ヘッダを変えず、`### Diagnosis` の `- cause: <slug>` 行を `scripts/collect-recovery-candidates.sh` が読んでグループキー `<symptom>/<cause>` を合成する方式にする。
-- Spec 不在時・`## Changed Files` 節不在時は帰属判定不能として現行の全ブロック挙動にフォールバックする (既存テストの大半がこの経路で無変更のまま PASS する)。
+- Spec の設計どおり実装した。`check-verify-dirty.sh` は `self-spec` / `own-issue-scope` / `foreign-session` の3分類を追加し、`run-review.sh` / `run-merge.sh` は Issue 番号解決を dirty guard より前に移動した。
+- `skills/verify/SKILL.md` の recoveries-auto-fire は、Spec が明示した2箇所 (Step 1 の exit 1 説明、(b) のクラスタリング注記) に加えて (a) Extract source entries のヘッダ照合ロジックも group-key 対応に修正した (Spec 未記載だが AC4 の機能要件として必須と判断)。
+- Spec の Notes が「`tests/run-review.bats` のモック実体が存在しない」としていた点は実装時確認で誤りと判明 (既に存在) — モック追加はスキップし、既存38テストのPASSで代替確認した。
 
 ### Deferred Items
 
-- `_is_duplicate()` (`scripts/run-auto-sub.sh`) の 24h 重複抑止条件に cause を含めるかは実装時判断とした。含めない場合は現行挙動を維持する。
-- `docs/reports/orchestration-recoveries.md` の既存 4 エントリへの cause 行の遡及付与は行わない (append-only の履歴記録として扱う)。
-- Post-merge の 2 条件 (並行セッション dirty 下での `/auto` 完走、新規 `manual-recovery-review-rerun` エントリが増えないことの観察) は本 PR では検証しない。
+- `_is_duplicate()` (`scripts/run-auto-sub.sh`) の 24h 重複抑止条件に cause を含めるかは、Spec の判断どおり実装時 (今回) は含めないことにした。現行の symptom + context_line 一致による抑止挙動を維持。
+- `docs/reports/orchestration-recoveries.md` の既存 4 エントリへの cause 行の遡及付与は行っていない (Spec の判断どおり)。
+- Post-merge の2条件 (並行セッション dirty 下での `/auto` 完走、新規 `manual-recovery-review-rerun` エントリが増えないことの観察) は本 PR では未検証。マージ後の `/verify` で確認する。
 
 ### Notes for Next Phase
 
-- `scripts/run-review.sh` L36 と `scripts/run-merge.sh` L27 は `check-verify-dirty.sh` に **PR 番号** を渡している。Issue 番号を解決する `_REVIEW_ISSUE` / `_MERGE_ISSUE` は同ファイルの L76 / L67 (dirty guard より後ろ) にある。この解決行を dirty guard の直前へ移動しないと AC2 の修正が review / merge フェーズに効かない。
-- `tests/verify-dirty-detection.bats` の `"related spec dirty: exit 1 when related spec file (same issue) is dirty"` は AC と矛盾するため exit 0 への更新が必須。他の既存テスト (Spec 不在で `scripts/foo.sh` が dirty → exit 1 など) はフォールバック経路により無変更で PASS するはず。
-- グループキーのセパレータに `/` を使うこと。`scripts/collect-recovery-candidates.sh` L89 / L106 が H2 ヘッダ末尾の括弧付きサフィックスを `sed 's/ ([^)]*) *$//'` で除去するため、`(cause: X)` 形式は衝突する。
-- SKILL.md 本文を編集する際は `scripts/validate-skill-syntax.py` の制約 (半角感嘆符・3 連バッククォート不可) に注意すること。
-- `tests/run-review.bats` はヘッダコメント L5 で `gh-extract-issue-from-pr.sh` のモックに言及しているが実体が存在しない。移動後の解決経路をカバーするためモック追加が必要。
+- Pre-merge AC (rubric ×4 + command ×1) はセルフレビューで PASS 判定し、Issue のチェックボックスは既に `[x]` 済み。`/verify` では特にこのセルフレビューの妥当性 (rubric の adversarial grading) を独立した視点で再確認すること。
+- `bats tests/` フルスイート (1341件) が PASS 済み。`/review` では behavioral change の影響範囲 (execution-context.md 参照元4ファイル、check-verify-dirty.sh 呼び出し元5スクリプト) が Spec の Changed Files と一致しているか確認すること。
+- Post-merge AC の検証には、並行セッションが dirty な状態で `/auto` を実際に走らせる必要がある。`/verify` 単体では再現が難しいため、実運用での観察 (`docs/reports/orchestration-recoveries.md` に新規 `manual-recovery-review-rerun` が増えないこと) が事実上の検証手段になる。
 
 ## Auto Retrospective
 
