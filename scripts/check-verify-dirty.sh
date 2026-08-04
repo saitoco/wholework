@@ -182,7 +182,10 @@ fi
 
 # All remaining dirty files are non-blocking: self-spec, foreign-session, and/or unrelated
 # spec files belonging to a different issue (M != NUMBER). Only the latter print to stdout.
-for f in "${unrelated_spec_files[@]}"; do
+# (bash 3.2 empty-array workaround: "${arr[@]}" alone is unbound-variable under set -u when arr
+# has zero elements — self-spec/foreign-session-only runs now legitimately reach this point with
+# an empty unrelated_spec_files array.)
+for f in "${unrelated_spec_files[@]+"${unrelated_spec_files[@]}"}"; do
   echo "$f"
 done
 if [[ ${#unrelated_spec_files[@]} -gt 0 ]]; then
