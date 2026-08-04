@@ -1,0 +1,281 @@
+# Issue #1157: auto/verify: /auto 実行の事実から充足済み AC を検出し phase/verify 滞留を解消
+
+## Overview
+
+`/auto` 完走時に、その実行の**事実** (route / Size / 各 phase の結果 / PR 番号と状態 / `.tmp/auto-events.jsonl` のイベント列) を構造化して収集し、`phase/verify` に滞留する Issue の pending post-merge AC と照合して、充足された AC を検出する。検出結果は autonomy tier でゲートし、L1 は候補提示のみ、L2/L3 は自動チェックする。照合が曖昧な場合は tier を問わず候補提示に倒す (fail-safe)。
+
+**対応方針の確定: 案 B (実行事実の構造化を独立スクリプトに切り出す) を採用。** 根拠は「Alternatives Considered」参照。
+
+パイプラインは 3 スクリプト + 1 module + `/auto` からの呼び出しで構成する:
+
+```
+/auto 完走
+  → (既存) Event-based observation scan
+  → (新規) Run-fact AC reconciliation
+       1. collect-run-facts.sh    … 実行事実を JSON 化 (決定的)
+       2. scan-pending-ac.sh      … pending post-merge AC を列挙し fact token で事前絞り込み (決定的)
+       3. LLM rubric 判定          … 条件文 × 実行事実 → verdict (satisfied / not_satisfied / ambiguous)
+       4. apply-run-fact-match.sh … tier ゲート + fail-safe + 自動チェック/候補提示 (決定的)
+```
+
+LLM 判定を中央の 1 段のみに閉じ込め、その前後を決定的スクリプトで挟むことで、AC5 が要求する 3 経路 (検出 / 非検出 / 曖昧時フォールバック) を bats で検証可能にする。
+
+### 母集団の実測 (2026-08-05 時点)
+
+| 指標 | 実測値 |
+|---|---|
+| `phase/verify` かつ closed の Issue 数 | 312 |
+| うち未チェック post-merge AC を持つ Issue 数 | 306 |
+| 未チェック post-merge AC 総数 | 414 |
+| verify-type 内訳 | manual 244 / opportunistic 132 / observation 34 / auto 4 |
+| fact token 事前絞り込み後の候補数 (route=pr / Size L / PR #1151 の実行を想定) | **17** |
+
+- **計測スコープ**: `gh issue list --label "phase/verify" --state closed --json number,body --limit 400` の全件。各 Issue body の `### Post-merge` または `## Post-merge` 見出し以降 (次の `##`/`###` 見出しまで) の `- [ ]` 行のみ。`verify-type` タグなしの行は `manual` として計上 (`/verify` Step 8b の扱いに合わせた)
+- **計測コマンド**: 上記 `gh issue list` の出力を Python で節スキャンして集計
+- **事前絞り込みの token 集合** (計測時): `pr route` / `patch route` / `size l` / `run-review.sh` / `run-code.sh` / `run-merge.sh` / `run-spec.sh` / `#1151`。汎用トークン `/auto` は**意図的に除外**した (単独で 414 件中 84 件にヒットし、絞り込みとして機能しないため)
+
+414 件を毎回 LLM に投げるのは非現実的だが、17 件なら 1 回の rubric 判定で扱える。この事前絞り込みが設計の要である。
+
+## Changed Files
+
+- `scripts/collect-run-facts.sh`: 新規。`/auto` 実行事実を単一行 JSON で stdout 出力 — bash 3.2+ 互換 (`mapfile` / `${VAR,,}` を使わず `tr` を使用)
+- `scripts/scan-pending-ac.sh`: 新規。`phase/verify` closed Issue の未チェック post-merge AC を列挙し、`--facts` で fact token 事前絞り込みを行う — bash 3.2+ 互換
+- `scripts/apply-run-fact-match.sh`: 新規。verdict × autonomy tier の決定的ゲートと反映 (自動チェック / 候補提示 / 何もしない) — bash 3.2+ 互換
+- `modules/run-fact-matching.md`: 新規。照合手順の SSoT (Purpose / Input / Processing Steps / Output の 4 節構造)。verdict 契約・fail-safe 判定基準・marker 形式を定義
+- `modules/autonomy-tier.md`: `### Tier × External System Write (operate route)` 節の直後に `### Tier × Run-Fact AC Match` 節を追加
+- `skills/auto/SKILL.md`: 2 箇所 (single-issue route の "Event-based observation scan (auto-run event, ...)" 直後、batch route の "Event-based observation scan (batch, best-effort)" 直後) に Run-fact AC reconciliation ブロックを追加。frontmatter `allowed-tools` に 3 スクリプトの literal エントリを追加
+- `tests/run-fact-matching.bats`: 新規。3 スクリプトを feature 単位でカバー。AC5 の 3 経路を `apply-run-fact-match.sh --dry-run` で検証
+- `docs/structure.md`: Modules 一覧に `modules/run-fact-matching.md`、Scripts 一覧 (`observation-trigger.sh` 近傍) に新規 3 スクリプトの行を追加
+- `docs/ja/structure.md`: `docs/structure.md` の対応箇所を日本語でミラー (`docs/translation-workflow.md` の同期手順に従う)
+
+**Steering Docs sync candidate** (`/code` フェーズで各ファイルを読んで最終判断すること):
+
+- `docs/workflow.md`: `/auto` 完走時の挙動が増えるため、`phase/verify` 残留の説明 (L223 / L262 付近の "All auto-verify PASS + opportunistic/observation/manual unchecked → phase/verify") に本機構への言及が必要か確認。追記した場合は `docs/ja/workflow.md` も同期 (translation-workflow.md の対象)
+- `docs/guide/autonomy.md`: L1/L2/L3 のユーザ向け説明に run-fact AC match のゲートを追記すべきか確認 (`docs/ja/guide/autonomy.md` は存在しないためミラー義務なし)
+- `docs/guide/customization.md` / `docs/ja/guide/customization.md`: 本 Spec では `.wholework.yml` に新規キーを追加しない方針のため原則変更不要。上限値を config 化する判断に変えた場合のみ Available Keys テーブルへの行追加が必要
+- `modules/observation-trigger.md`: 「event 名マッチのみ」という現行スコープの記述が本機構の追加後も正確か確認 (相補関係への相互参照 1 行の追加が候補)
+- `modules/l0-surfaces.md`: 新規 marker `type=run-fact-ac-match` を Machine-Readable Event Marker 節に追記するか確認。`type=observation-trigger` が `modules/observation-trigger.md` 側に記載されている前例に倣い、本 Spec では `modules/run-fact-matching.md` 側に記載する方針とした
+- `docs/tech.md`: 環境変数テーブルに新規変数を追加しない方針 (既存の `AUTO_EVENTS_LOG` / `AUTO_SESSION_ID` / `WHOLEWORK_SCRIPT_DIR` / `WHOLEWORK_CONFIG_PATH` のみ使用) のため原則変更不要
+
+「変更不要」と記載した項目はいずれも grep で参照箇所を確認済みだが、実装内容が Spec からずれた場合は判断が変わるため `/code` で再確認すること。
+
+## Implementation Steps
+
+1. `scripts/collect-run-facts.sh` を新規作成する (→ acceptance criteria AC1)
+
+   - Usage: `collect-run-facts.sh [--session <session-id>] [--issue <N>] [--no-github]`
+   - session 解決順: `--session` 引数 → `AUTO_SESSION_ID` 環境変数 → `.tmp/auto-session-current` ポインタ。いずれも解決できなければ exit 1
+   - `${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}` を `session_id` で絞り込む。ファイルが存在しない場合は `{"session_id":"<id>","issues":[]}` を出力して exit 0 (fail-open)
+   - Issue ごとに以下を組み立て、単一行 JSON として stdout に出力する:
+     - `number` — `.issue` フィールド
+     - `size` — イベント列中の `sub_start.size` (存在すれば最新の `size_refresh` を優先)。イベントに無い場合は `get-issue-size.sh <N>` にフォールバック。`--no-github` 指定時および解決不能時は空文字列
+     - `route` — `code-pr` phase があれば `pr`、`code-patch` phase があれば `patch`、いずれも無ければ `unknown`
+     - `pr` — 当該 Issue のイベントに現れる `pr` フィールドの値 (無ければ `null`)
+     - `pr_state` — `gh pr view <pr> --json state -q .state` の結果。`--no-github` 指定時・PR 番号なし・取得失敗時は空文字列
+     - `phases` — `[{"name":..., "status":"complete"|"started", "backfilled":true|false}]`。`phase_complete` があれば `complete`、`phase_start` のみなら `started`
+     - `anomalies` — `recovery` / `watchdog_kill` / `manual_intervention` / `concurrent_commit_detected` / `code_retry_fire` の各イベント件数 (exhaustive)
+     - `fact_tokens` — 後段の事前絞り込み用トークン配列。生成規則は Step 2 と共有するため本スクリプト側で確定させる (下記)
+   - `fact_tokens` の生成規則 (exhaustive):
+     - `route` が `unknown` 以外のとき `"<route> route"` (例 `pr route`)
+     - `size` が空でないとき `"Size <SIZE>"` (例 `Size L`)
+     - 実行された各 phase 名 (`issue` / `spec` / `code-pr` / `code-patch` / `review` / `merge` / `verify`) と、その wrapper スクリプト名 (`run-issue.sh` / `run-spec.sh` / `run-code.sh` / `run-review.sh` / `run-merge.sh`)。`verify` は wrapper が存在しないため phase 名のみ
+     - `pr` が非 null のとき `"#<pr>"`
+     - `anomalies` のうち件数が 1 以上のイベント名
+     - 汎用トークン `/auto` は**含めない** (Overview の実測どおり絞り込みが機能しなくなるため)。この除外理由をスクリプトのヘッダコメントに明記する
+   - `--no-github` 指定時は `gh` および `get-issue-size.sh` を一切呼ばない (bats のヘルメティック実行用)
+   - jq パイプラインは失敗時に `|| { echo "Error: ..." >&2; exit 1; }` でガードする
+
+2. `scripts/scan-pending-ac.sh` を新規作成する (parallel with 1) (→ acceptance criteria AC2)
+
+   - Usage: `scan-pending-ac.sh [--facts <path>] [--limit <N>] [--max-candidates <N>]`
+   - Issue 取得は `gh issue list --label "phase/verify" --state closed --json number,body --limit ${LIMIT:-400}` の **1 回の API 呼び出し**で行う (Issue ごとの `gh issue view` ループは使わない。312 件で実測 4.1 秒)
+   - 各 Issue body について:
+     - グローバル 1-based チェックボックス index を body 全体の `^- \[[ xX]\]` 行で数える (`scripts/gh-issue-edit.sh` および `scripts/check-pre-merge-ac.sh` と同一規約。`gh-issue-edit.sh --checkbox` にそのまま渡せる値であること)
+     - `^### Post-merge` または `^## Post-merge` 見出しの次行から、次の `^##` / `^### ` 見出しまでを post-merge 節とする (`check-pre-merge-ac.sh` の Pre-merge 節範囲定義と同型)
+     - post-merge 節内の `^- \[ \]` 行を候補として抽出する
+     - `verify_type` は行内の `verify-type: <t>` から取得し、**タグが無い行は `manual` とする** (`skills/verify/SKILL.md` Step 8b の「verify command も verify-type も無い条件は manual として扱う」規約に一致)。`manual` / `observation` / `opportunistic` / `auto` のいずれも除外しない — AC2 が要求する「manual AC も照合対象に含まれる」はここで実現される
+     - `condition` はチェックボックス記法と `<!-- ... -->` を除去したテキスト
+   - `--facts <path>` が指定されたとき: `fact_tokens` 配列を読み、いずれか 1 つ以上が `condition` に大小文字を無視した部分一致でヒットする行のみを残す。`--facts` 未指定時は全件通過 (後方互換・デバッグ用)
+   - `--max-candidates` (デフォルト 30) で件数を打ち切る。打ち切った場合は stderr に `Note: truncated N candidate AC(s) to <max>; deferred to the next run.` を出力する (silent cap を作らない)
+   - `gh issue list` の返却件数が `--limit` と一致した場合は stderr に `Warning: issue list hit the --limit <N> cap; some phase/verify Issues were not scanned.` を出力する
+   - 出力は JSON 配列 `[{"number":N,"ac_index":I,"verify_type":"manual","condition":"..."}]`。該当なしは `[]`
+   - `gh` 呼び出し失敗時は `[]` を出力して exit 0 (fail-open — `/auto` を止めない)
+
+3. `scripts/apply-run-fact-match.sh` を新規作成する (after 1, 2) (→ acceptance criteria AC3, AC4)
+
+   - Usage: `apply-run-fact-match.sh --issue <N> --ac <index> --verdict satisfied|not_satisfied|ambiguous [--evidence <text>] [--dry-run]`
+   - tier 解決: `AUTONOMY_TIER` 環境変数 → `"${SCRIPT_DIR}/get-config-value.sh" autonomy L1`。`L1` / `L2` / `L3` 以外は `L1` にフォールバック (`modules/detect-config-markers.md` の既存規約と一致)
+   - verdict × tier ゲート表 (exhaustive):
+
+     | verdict | L1 | L2 | L3 |
+     |---|---|---|---|
+     | `satisfied` | `advisory` | `auto-check` | `auto-check` |
+     | `ambiguous` | `advisory` | `advisory` | `advisory` |
+     | `not_satisfied` | `none` | `none` | `none` |
+
+   - **fail-safe**: `--verdict` が未指定・空・上記 3 値以外の場合は `ambiguous` として扱い、stderr に `Warning: unknown verdict '<v>', treating as ambiguous (fail-safe).` を出力する。曖昧側は tier を問わず `auto-check` に到達しない
+   - stdout の 1 行目は常に `action=<auto-check|advisory|none>`
+   - `advisory` のとき 2 行目に `Recommend: /verify <N> — post-merge AC #<index> may be satisfied by this run (<evidence>)` を出力する (`modules/autonomy-tier.md` path A の `Recommend:` プレフィックス慣行に従う。Issue コメント化はしない)
+   - `auto-check` かつ `--dry-run` 無指定のとき、この順で実行する:
+     1. `"${SCRIPT_DIR}/gh-issue-edit.sh" <N> --checkbox <index> --check`
+     2. `"${SCRIPT_DIR}/gh-issue-comment.sh"` で監査証跡コメントを投稿。1 行目に marker `<!-- wholework-event: type=run-fact-ac-match phase=run-fact-match issue=<N> ac=<index> verdict=satisfied -->` を置き、2 行目以降に evidence を人間可読で書く
+     - いずれかが失敗した場合は stderr に警告を出して exit 0 (fail-open — `/auto` を中断させない)
+   - `--dry-run` のときは L0 書き込みを一切行わず、解決した `action=` 行 (および advisory 行) のみ出力する
+   - 引数不正は exit 1、それ以外は exit 0
+
+4. `modules/run-fact-matching.md` を新規作成する (after 3) (→ acceptance criteria AC2, AC3, AC4)
+
+   - CLAUDE.md の "Standard Structure Template for Shared Modules" に従い Purpose / Input / Processing Steps / Output の 4 節構造とする
+   - **Input**: `AUTO_SESSION_ID` (呼び出し元 `/auto` が保持)、`AUTONOMY_TIER`
+   - **Processing Steps**:
+     1. `collect-run-facts.sh` を実行し `.tmp/run-facts-${AUTO_SESSION_ID}.json` に保存する
+     2. `scan-pending-ac.sh --facts .tmp/run-facts-${AUTO_SESSION_ID}.json` を実行し候補 AC 配列を得る。空配列なら以降をスキップし `Run-fact AC reconciliation: no candidates.` を出力して終了
+     3. **rubric 判定 (LLM、1 回のバッチ判定)**: 実行事実 JSON と候補 AC 配列を突き合わせ、各 AC に `satisfied` / `not_satisfied` / `ambiguous` を割り当てる
+     4. 各 AC について `apply-run-fact-match.sh` を呼び、返された `action=` に従って処理する
+     5. 集計行を出力する: `Run-fact AC reconciliation: <auto-checked> auto-checked, <advisory> advisory, <skipped> not satisfied (candidates: <N>).`
+   - **fail-safe 判定基準 (`ambiguous` を返さなければならないケース、exhaustive)**:
+     - 条件文が参照する事実が実行事実 JSON に存在しない (代表例: `/review` の depth `--full` / `--light`。`.tmp/auto-events.jsonl` の `phase` 値は `review` のみで depth を記録しない — 「Uncertainty」参照)
+     - 条件文が「〜が起きなかった」という不在主張であり、対応するシグナルが `anomalies` の観測対象イベント名 (exhaustive な 5 種) に含まれていない
+     - 条件文が複数の下位条件の連言であり、そのうち一部しか実行事実で裏付けられない
+     - 上記に当てはまらなくても判断に迷う場合は `ambiguous` を選ぶ (既定値)
+   - `satisfied` を返してよいのは、条件文の全下位条件が実行事実 JSON の値から直接読み取れる場合に限る
+   - marker 形式 `<!-- wholework-event: type=run-fact-ac-match phase=run-fact-match issue=<N> ac=<index> verdict=satisfied -->` を定義する。`phase=` が固定リテラルであること (workflow phase 名ではないこと) と、その理由が `modules/observation-trigger.md` の `phase=observation-trigger` と同じであることを明記する
+   - コメント蓄積が起きない理由を明記する: `auto-check` は同時にチェックボックスを立てるため当該 AC は次回スキャンで候補にならない。`advisory` はターミナル出力のみで L0 に書き込まない (#1026 で観測されたコメント蓄積の再発を構造的に防ぐ)
+
+5. `modules/autonomy-tier.md` に `### Tier × Run-Fact AC Match` 節を追加する (after 4) (→ acceptance criteria AC3)
+
+   - 挿入位置: `### Tier × External System Write (operate route)` 節の直後、`## \`.wholework.yml\` Schema` 節の直前
+   - Step 3 のゲート表と同じ内容を掲載し、L1 が path A (Advisory) セマンティクスの再利用であることを明記する
+   - `modules/run-fact-matching.md` への相互参照を張る
+   - 誤検出リスクを根拠として「曖昧時は tier を問わず advisory」を明記する (AC4 が要求する「ドキュメント側の明記」の一方)
+
+6. `skills/auto/SKILL.md` に呼び出しを配線する (after 4) (→ acceptance criteria AC1, AC2, AC3, AC4)
+
+   - frontmatter `allowed-tools` の `Bash(...)` リストに以下 3 つの literal エントリを追加する (ワイルドカードでは `scripts/validate-skill-syntax.py` の allowed-tools 突合を通らない):
+     - `${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*`
+     - `${CLAUDE_PLUGIN_ROOT}/scripts/scan-pending-ac.sh:*`
+     - `${CLAUDE_PLUGIN_ROOT}/scripts/apply-run-fact-match.sh:*`
+   - 挿入位置 1 (single-issue route): "Event-based observation scan (auto-run event, runs after Completion Report regardless of success/failure):" ブロックの L2/L3 dispatch 段落の直後、"L3 auto-retrospective (batch/XL routes only, ...)" ブロックの直前
+   - 挿入位置 2 (batch route): "Event-based observation scan (batch, best-effort):" ブロックの L2/L3 dispatch 段落の直後
+   - 追加する内容 (両箇所とも同一):
+     - 見出し行 `**Run-fact AC reconciliation (runs after the observation scan, best-effort):**`
+     - 直後の最初の段落で `Read \`${CLAUDE_PLUGIN_ROOT}/modules/run-fact-matching.md\` and follow the "Processing Steps" section.` と指示する (`modules/skill-dev-checks.md` の Read Instruction Placement Rule — Read 指示は見出し直後の最初の段落に置き、番号付きリストや表の内部に埋めない)
+     - スクリプト失敗時は警告のみ出して `/auto` を継続する旨を明記する
+   - `modules/run-fact-matching.md` には caller 条件分岐 (SPEC_DEPTH 等) を持たせないため、Caller Condition Propagation の追加記述は不要
+
+7. `tests/run-fact-matching.bats` を新規作成する (after 3, 6) (→ acceptance criteria AC5, AC6)
+
+   - **AC5 が要求する 3 経路**を `apply-run-fact-match.sh --dry-run` で検証する:
+     - 検出経路: `--verdict satisfied` かつ `AUTONOMY_TIER=L3` → stdout に `action=auto-check`
+     - 非検出経路 (negative case): `--verdict not_satisfied` かつ `AUTONOMY_TIER=L3` → stdout に `action=none`、`Recommend:` 行が出ないこと
+     - 候補提示フォールバック経路: `--verdict ambiguous` かつ `AUTONOMY_TIER=L3` → stdout に `action=advisory` と `Recommend:` 行
+   - 追加ケース: `--verdict satisfied` かつ `AUTONOMY_TIER=L1` → `action=advisory` (tier ゲート)、`--verdict` 不正値 → `action=advisory` かつ stderr に fail-safe 警告
+   - `collect-run-facts.sh`: `AUTO_EVENTS_LOG` に fixture JSONL を指す `--no-github` 実行で、`route` / `size` / `pr` / `phases` / `anomalies` / `fact_tokens` が期待どおりに出ること。イベントログ不在時に `issues: []` で exit 0 すること
+   - `scan-pending-ac.sh`: `gh` を PATH prepend でモックし、post-merge 節の `- [ ]` 行のみが拾われること、`verify-type` タグなしの行が `manual` になること、グローバル 1-based index が pre-merge 節のチェックボックスを含めて数えられていること、`--facts` 指定時に token 不一致の行が除外されること
+   - モック方針は `tests/resolve-preview-ac-fallback.bats` の PATH prepend パターンに従う。sibling スクリプト呼び出し (`get-config-value.sh` / `gh-issue-edit.sh` / `gh-issue-comment.sh`) は `export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` でモックディレクトリへ差し替え、`$MOCK_DIR` に 3 つのモックファイルを配置する
+   - `WHOLEWORK_CONFIG_PATH=/dev/null` を設定して `.wholework.yml` 依存を排除する
+
+8. `docs/structure.md` と `docs/ja/structure.md` を更新する (after 1, 2, 3, 4) (→ acceptance criteria AC1, AC2, AC3)
+
+   - `docs/structure.md` の `### Modules` の "Key modules" 箇条書きに `modules/run-fact-matching.md` の 1 行を追加する
+   - `docs/structure.md` の Scripts 一覧 (`scripts/observation-trigger.sh` / `scripts/opportunistic-search.sh` の近傍) に新規 3 スクリプトの 1 行説明を追加する
+   - `docs/ja/structure.md` の対応箇所 (L193-194 近傍および Modules 相当節) を日本語でミラーする (`docs/translation-workflow.md` の Sync Procedure に従い、code fence 数の一致も確認する)
+
+## Alternatives Considered
+
+Issue 本文に列挙された 3 案について、以下の理由で **案 B** を採用した。
+
+| 案 | 内容 | 判定 | 理由 |
+|---|---|---|---|
+| **A** | `/auto` Step 5 の observation scan を拡張し、`observation-trigger.sh` に `--context` 等で実行事実を渡して条件照合させる | 不採用 | (1) `observation-trigger.sh` は `opportunistic-search.sh` への純粋な pass-through + コメント投稿であり、条件照合ロジックを持たない (#1026 の Spec でも同じ理由で変更対象から外されている)。(2) `opportunistic-search.sh` の event モードは `verify-type: observation` で grep するため、manual AC 244 件を拾うには grep 条件そのものを書き換える必要があり、既存の `keyword=` / `config=` ゲートの意味論と衝突する。(3) event 名マッチ (false-positive 抑制) と実行事実照合 (false-negative 解消) は目的が相補的で、同一スクリプトに同居させると `/verify` dispatch の判断基準が二重化する |
+| **B** | 実行事実の構造化を独立スクリプトに切り出し、別スクリプトが pending AC と照合する | **採用** | (1) `scripts/resolve-preview-ac-fallback.sh` (#1035) / `scripts/check-pre-merge-ac.sh` の「決定論的判定をスクリプト化して bats で検証可能にする」前例に沿う。(2) AC5 が「検出 / 非検出 / 曖昧時フォールバックの 3 経路」のテストを要求しており、LLM 判定を挟む設計では判定前後を決定的スクリプトで挟まないと bats で検証できない。(3) `observation-trigger.sh` の責務を変えないため、#1118 (false-positive 側) と本 Issue (false-negative 側) を独立に進められる |
+| **C** | `/verify` Step 8b の manual 判定を実行事実ベースに拡張する | 不採用 | Issue 本文が自認するとおり manual AC はそもそも dispatch されないため、dispatch 契機を別途作る必要がある。契機を作る部分が結局案 B と同じ実装になり、`/verify` 側の拡張が上積みになるだけで正味の複雑度が増す。ただし将来 `/verify` が単体起動されたときにも実行事実を参照したくなった場合は、`modules/run-fact-matching.md` を `/verify` からも Read する形で後付けできる (module 化しておく利点) |
+
+**LLM 判定を挟まない全決定論的照合も検討したが不採用**とした。条件文は自然言語であり、Issue 本文も「機械的な完全一致は期待できない」と明記している。決定論的にできる部分 (事実収集・候補絞り込み・tier ゲート・反映) と、できない部分 (意味レベルの照合) を分離し、後者だけを LLM に委ねる構成とした。
+
+## Verification
+
+### Pre-merge
+
+- <!-- verify: rubric "/auto 実行の事実 (route / Size / 各 phase の結果 / PR 番号と状態 / events.jsonl のイベント列) を構造化データとして収集する仕組みが実装されている" --> 実行事実の構造化収集が実装されている
+- <!-- verify: rubric "phase/verify に滞留する Issue の pending AC (verify-type: manual / observation / opportunistic のいずれも対象) と実行事実を照合し、充足された AC を検出する仕組みが実装されている。manual AC が照合対象に含まれることが実装から確認できる" --> pending AC との照合機構が実装され、manual AC も対象に含まれる
+- <!-- verify: rubric "検出結果の反映が autonomy tier でゲートされている (L1 は候補提示のみ、L2/L3 で自動チェック)。modules/autonomy-tier.md に該当節が追加されているか既存節から参照されている" --> autonomy tier ゲートが実装されている
+- <!-- verify: rubric "誤検出を避けるための判定基準 (照合が曖昧な場合は自動チェックせず候補提示に倒す) が実装とドキュメントの双方に明記されている" --> 曖昧時は候補提示に倒す fail-safe が実装されている
+- <!-- verify: rubric "tests/ 配下に、実行事実が条件を満たす場合の検出・満たさない場合の非検出 (negative case)・照合が曖昧な場合の候補提示フォールバックの 3 経路を検証するテストが存在する" --> 3 経路を検証するテストが追加されている
+- <!-- verify: command "bats tests/" --> テストスイート全件が PASS する
+
+### Post-merge
+
+- `/auto` を 1 回完走させ、`phase/verify` 滞留 Issue のうち当該実行で充足された AC が検出される (自動チェックまたは候補提示) ことを観察する <!-- verify-type: observation event=auto-run -->
+
+## Tool Dependencies
+
+### Bash Command Patterns
+
+- `${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*` — 実行事実の収集 (`skills/auto/SKILL.md` の `allowed-tools` に追加が必要)
+- `${CLAUDE_PLUGIN_ROOT}/scripts/scan-pending-ac.sh:*` — pending AC の列挙と事前絞り込み (同上)
+- `${CLAUDE_PLUGIN_ROOT}/scripts/apply-run-fact-match.sh:*` — tier ゲートと反映 (同上)
+- `gh issue list:*` / `gh pr view:*` — 既に `skills/auto/SKILL.md` の `allowed-tools` に登録済み。新規スクリプト内部からの呼び出しであり追加不要
+- `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*` / `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*` / `${CLAUDE_PLUGIN_ROOT}/scripts/get-config-value.sh:*` / `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*` — 新規スクリプトが `$SCRIPT_DIR` 経由で内部的に呼ぶのみで、`/auto` の SKILL.md 本文からは直接呼ばないため `allowed-tools` への追加は不要
+
+### Built-in Tools
+
+- `Read` — `modules/run-fact-matching.md` の読み込み (登録済み)
+- `Bash` — 新規スクリプトの実行 (登録済み)
+
+### MCP Tools
+
+- none
+
+## Uncertainty
+
+- **`/review` の depth (`--full` / `--light`) が `.tmp/auto-events.jsonl` に記録されていない**: `scripts/run-review.sh` は `EMIT_PHASE_NAME="review"` を固定で設定し (L87)、depth をイベントに載せない。`modules/event-emission.md` の Wrapper Coverage Table でも `run-review.sh` の phase 値は `review` のみ
+  - **検証方法**: `grep -n "EMIT_PHASE_NAME" scripts/run-review.sh` および `jq -r 'select(.issue==1150) | .phase' .tmp/auto-events.jsonl` で確認済み (実測: `review` のみ、depth なし)
+  - **影響範囲**: Implementation Steps 4 の fail-safe 判定基準。#1097 型の条件 (「Size L の PR に `run-review.sh <PR> --full` を実行し…」) は `--full` を実行事実から確認できないため `ambiguous` に落ち、L3 でも自動チェックされず候補提示になる。これは fail-safe が意図どおり働いた結果であり、本 Issue のスコープでは仕様として受け入れる。depth をイベントに載せる拡張は `modules/event-emission.md` の変更を伴うため別 Issue とする
+
+- **`sub_start` イベントは single-issue route では発行されない**: Issue #1150 のイベント列を実測したところ `sub_start` が無く、`size` フィールドが取得できない (`sub_start` は `run-auto-sub.sh` 経由の batch / XL sub-issue 経路でのみ発行される)
+  - **検証方法**: `jq -r 'select(.issue==1150) | [.ts,.event,.phase//"",.pr//"",.size//""] | @tsv' .tmp/auto-events.jsonl` で確認済み
+  - **影響範囲**: Implementation Steps 1 の `size` 解決。`get-issue-size.sh <N>` へのフォールバックを必須とする (`--no-github` 時のみ空文字列を許容)。フォールバックが無いと single-issue route で `Size <SIZE>` トークンが常に欠落し、事前絞り込みの精度が落ちる
+
+- **`opportunistic-search.sh` の `--limit 50` が本機構の母集団に対して不足していること**: `phase/verify` かつ closed の Issue は実測 312 件で、既存の `opportunistic-search.sh` は先頭 50 件しか走査しない。本 Spec の `scan-pending-ac.sh` は自前の `--limit` (デフォルト 400) と上限到達時の stderr 警告を持つため本機構としては解消済みだが、既存の `opportunistic-search.sh` 側の silent cap は本 Issue のスコープ外として残る
+  - **検証方法**: `gh issue list --label "phase/verify" --state closed --json number --limit 300 --jq 'length'` → 300 (上限到達)、`--limit 400` → 312
+  - **影響範囲**: なし (本 Spec の実装には影響しない)。observation AC の取りこぼしという別の欠陥として `/verify` の Improvement Proposal 候補に記録する
+
+## Notes
+
+### Issue 本文と既存実装の食い違い
+
+- **内容**: Issue 本文の「何が欠けているか」節に「`observation-trigger.sh --event <name>` が Issue コメントを走査し、`verify-type: observation event=<name>` を持つ Issue を拾う」とあるが、実際に走査しているのは **Issue コメントではなく Issue body** である
+- **Issue 本文の引用**: 「`observation-trigger.sh --event <name>` が Issue コメントを走査し、`verify-type: observation event=<name>` を持つ Issue を拾う」
+- **実際の実装**: `scripts/opportunistic-search.sh` L135 が `gh issue view "$N" --json body -q .body` で **body** を取得し、L139 で `grep -E '^- \[ \]' | grep "verify-type: observation"` している。`observation-trigger.sh` が Issue **コメント**を読むのは冪等性ガードのマーカー確認 (L87-89) のみ
+- **自動解決 (非対話モード)**: 実装側を正とし、本 Spec は「Issue body の post-merge 節を走査する」設計とした。Issue 本文の記述は背景説明であり要件そのものではないため、Issue 本文の修正は行わない。ただしこの前提は設計の中核 (どこから AC を読むか) なので、`/code` 実装時に body 走査であることを再確認すること
+
+### 自動解決した曖昧点 (非対話モード)
+
+1. **対応方針 A / B / C の選択** → **案 B を採用**
+   - 根拠: 「Alternatives Considered」節に詳述。`resolve-preview-ac-fallback.sh` / `check-pre-merge-ac.sh` の前例、AC5 のテスト要件、`observation-trigger.sh` の責務保全の 3 点
+
+2. **照合対象 AC の母集団と絞り込み方法** → **fact token による決定的事前絞り込み + 上限 30 件**
+   - 根拠: 未チェック post-merge AC は実測 414 件あり、毎回の `/auto` 完走時に全件を rubric 判定するのは非現実的。`opportunistic-search.sh` の `keyword=` ゲート (#934) と同型の「決定的な事前フィルタ → LLM 判定」の 2 段構成を踏襲した。実測で 414 件 → 17 件まで絞れることを確認済み
+   - 汎用トークン `/auto` の除外も同じ実測に基づく (単独で 84 件ヒットし絞り込みが機能しない)
+   - 上限 30 は `.wholework.yml` のキーにせずスクリプト内定数とした。実測候補数が 17 件で上限に達しておらず、config キーを増やすと `modules/detect-config-markers.md` / `docs/guide/customization.md` / `docs/ja/guide/customization.md` の 3 ファイル同期義務が発生するため。上限到達が実際に観測された時点で config 化を起票する
+
+3. **`auto-check` 時の監査証跡の形式** → **`type=run-fact-ac-match` marker 付きコメントを 1 件投稿**
+   - 根拠: `modules/l0-surfaces.md` の Machine-Readable Event Marker 規約に沿う。チェックボックスを立てるため当該 AC は次回スキャンで候補にならず、#1026 で観測されたコメント無限蓄積は構造的に起きない
+   - Issue 本文の Auto-Resolved Ambiguity Points が禁じているのは **候補提示 (L1 tier) の Issue コメント化**であり、自動チェック時の監査証跡はこれに該当しない。候補提示側は `Recommend:` プレフィックス付きターミナル出力のみとする方針を維持する
+
+### 既存の類似ツールとの関係
+
+- `scripts/post_merge_check.sh` は manual AC を人間に P/F/S で対話的に問う **人間ループ**のツールであり、Issue 番号を明示的に受け取り、チェックボックス index も計算しない。本 Spec の自動検出経路とは目的が異なるため再利用せず、両者は併存させる
+
+### 実装上の注意
+
+- 3 スクリプトはいずれも bash 3.2+ 互換で書くこと (macOS system bash)。`mapfile` (bash 4+)、`${VAR,,}` (bash 4+) を使わず、小文字化は `tr '[:upper:]' '[:lower:]'` を使う
+- `scan-pending-ac.sh` / `apply-run-fact-match.sh` は `SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"` の既存イディオムを使い、sibling スクリプトを `$SCRIPT_DIR` 経由で呼ぶこと (bats のモック差し替えが効くようにするため)
+- 3 スクリプトいずれも `/auto` を中断させてはならない。`gh` の失敗・イベントログ不在・jq パースエラーはすべて fail-open (空結果 + exit 0) とし、引数不正のみ exit 1 とする
+- `modules/run-fact-matching.md` の列挙には `modules/skill-dev-checks.md` の Exhaustive/Example マーカー規約に従い `(exhaustive)` / `(examples)` を付けること
+- `skills/auto/SKILL.md` は `scripts/validate-skill-syntax.py` の制約を受ける。本文に半角感嘆符とトリプルバッククォートを含めないこと
+
+## Consumed Comments
+
+- login: `saito` / authorAssociation: `MEMBER` / trust tier: first-class / 要旨: `/issue 1157 --non-interactive` の Issue Retrospective。Triage 判定 (Type Feature / Size L / Value 5) の根拠、自動解決した曖昧点 2 件 (候補提示の掲示形式は `Recommend:` ターミナル出力慣行を踏襲 / 遡及適用は #1158 が担当し本 Issue は前向き検知に限定)、対応方針 A/B/C の確定を意図的に `/spec` へ委譲した設計判断、Background の事実主張検証済みの記録。sub-issue 分割評価は非対話モードのためスキップ済み / URL: https://github.com/saitoco/wholework/issues/1157#issuecomment-5183192598
