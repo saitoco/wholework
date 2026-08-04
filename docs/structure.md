@@ -144,7 +144,7 @@ Key modules:
 - `modules/steering-hint.md` — dynamic hint recommending `/doc init` when steering docs are absent
 - `modules/orchestration-fallbacks.md` — orchestration-level fallback pattern reference catalog (consumed by #319 tier 2, #316 recovery sub-agent, #318 learning loop)
 - `modules/domain-classifier.md` — improvement proposal Domain classification (composable, LLM-in-context)
-- `modules/retro-proposals.md` — Improvement Proposal collection and Issue creation (shared by /verify Step 13 and /auto Step 4a)
+- `modules/retro-proposals.md` — Improvement Proposal collection, Tier classification (with retro_proposal_classified event emission), and Issue creation (shared by /verify Step 16 and /auto Step 5)
 - `modules/filesystem-scope.md` — filesystem access scope constraints and approved patterns for skills/scripts
 - `modules/phase-state.md` — phase preconditions/success signatures and `reconcile-phase-state.sh` JSON v1 schema (SSoT)
 - `modules/skill-dev-doc-impact.md` — skill-development project Change Types for `/spec` and `/code` (via `doc-checker.md`)

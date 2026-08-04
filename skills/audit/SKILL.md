@@ -859,6 +859,7 @@ The `## Metrics` section (embedded in `docs/sessions/{session-id}-{date}/session
 6. **Verify Phase Residuals** — issues that entered verify but did not complete it in this session
 7. **Concurrent Sessions Detected** — events where another session committed to main during a phase
 8. **Improvement Candidates Surfaced** — anomaly-derived improvement candidates (Tier 3 recoveries, Tier 2 recoveries approaching or reaching recoveries-auto-fire.threshold, unknown patterns)
+9. **Retro Proposal Tier Breakdown** — Tier 1/2/3 counts and filter hit rate computed from retro_proposal_classified events
 
 Narrative content (what worked / limits / improvement candidates / conclusion) is owned by the rest of the L3 session retrospective `session.md`; the `## Metrics` section only covers the data layer.
 

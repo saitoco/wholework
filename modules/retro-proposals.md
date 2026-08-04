@@ -7,8 +7,8 @@ Shared module for collecting Improvement Proposals from Spec retrospective secti
 Extract `### Improvement Proposals` sections from all Spec retrospective sections (`## Verify Retrospective`, `## Code Retrospective`, `## Review Retrospective`, `## Spec Retrospective`, `## Auto Retrospective`, etc.), classify proposals, run duplicate and freshness checks, and create Issues with the `retro/verify` label.
 
 Called by:
-- `/verify` Step 13 (after verify retrospective is written to Spec)
-- `/auto` Step 4a step 6 (after Auto Retrospective commit+push)
+- `/verify` Step 16 (after verify retrospective is written to Spec)
+- `/auto` Step 5 L3 auto-retrospective (after Auto Retrospective commit+push)
 
 ## Input
 
@@ -35,21 +35,42 @@ Called by:
 
    | Tier | Judgment criteria | Action |
    |------|------------------|--------|
-   | **Tier 1**: Structural issue | Requires changes to multiple skills/modules OR 再発性 (high recurrence) OR broad impact scope | Issue creation (proceeds to step 7 onwards) |
+   | **Tier 1**: Structural issue | Positive-evidence gate — see below | Issue creation (proceeds to step 7 onwards) |
    | **Tier 2**: Convention | Single lesson but recurring; memory entry is sufficient | Output memory proposal to terminal only (no file auto-generation) |
    | **Tier 3**: One-time memo | One-time observation; low recurrence probability | Spec retrospective entry only (no Issue, no memory) |
 
+   **Tier 1 positive-evidence gate**: assign Tier 1 only when the proposal actively demonstrates at least one of the following 3 signals **(exhaustive)**. If none of the 3 signals can be actively demonstrated, do not assign Tier 1 — fall through to the classification below.
+
+   - **(a) Multi-file ripple**: the proposal names 2 or more files under `skills/`, `modules/`, `agents/`, or `scripts/` as change targets
+   - **(b) 再発性 (recurrence) demonstrated**: the same kind of proposal has already appeared in 2 or more distinct Spec retrospectives, or the proposal itself cites 2 or more prior Issue numbers as evidence. Mechanical confirmation: `grep -rl "{keyword}" $SPEC_PATH/ | wc -l` is 2 or more
+   - **(c) SSoT / shared-surface ripple**: the change target is a file whose frontmatter declares `ssot_for:`, or a shared module read by 2 or more skills
+
    **Mechanical heuristics (non-exclusive — assist LLM judgment)**:
-   - Contains "複数 skill", "複数 module", "再発性", "影響範囲" → lean toward Tier 1
+   - The presence of a keyword alone does not select Tier 1 — a keyword is only a cue to run the (a)/(b)/(c) evidence checks above; it does not substitute for actively demonstrating a signal.
+   - Contains "複数 skill", "複数 module", "再発性", "影響範囲" → run the (a)/(b)/(c) checks
    - Contains "convention", "パターン", "lesson" → lean toward Tier 2
    - Contains "今回のみ", "一回限り", "単発" → lean toward Tier 3
 
-   **Default**: When classification is difficult, assign Tier 1 (conservative setting to avoid false negatives).
+   **Default**: When classification is difficult, assign **Tier 2** (memory proposal only) rather than Tier 1.
+
+   Rationale: under the prior default, undecided proposals fell through toward Tier 1, and per the Issue #1159 root-cause analysis `retro/verify` grew to 84% of the open backlog while a 6-run `/verify` sample observed zero proposals landing in Tier 2 or 3 — the old bias toward Tier 1 was producing over-filing with no measurable false-negative benefit to show for it. Reversing the default toward Tier 2 is safe because the proposal text is not lost: it still lives on in the Spec retrospective, and the classification decision itself is now persisted (see **Tier classification persistence** below), so it remains auditable and can still be escalated by a human at any time.
 
    **Tier actions**:
    - **Tier 2**: For each proposal, output to terminal: `"Memory proposal: {proposal title} — {proposal content}"`. Exclude from Issue creation pipeline. Do not auto-generate memory files (manual review required to avoid memory pollution).
    - **Tier 3**: Output to terminal: `"Skipping (Tier 3 — one-time memo): {proposal title}"`. Exclude from Issue creation pipeline. The proposal text stays in the spec retrospective only.
    - **Tier 1**: Pass the proposal to step 7 (HAS_SKILL_PROPOSALS gate — existing logic unchanged).
+
+   **Tier classification persistence**: immediately after Tier classification is finalized for all proposals in this run, execute the following once per proposal:
+
+   ```bash
+   source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
+   restore_auto_session_pointer
+   EMIT_ISSUE_NUMBER=<numeric> emit_event "retro_proposal_classified" "tier=<1|2|3>" "title=<proposal title, first 80 chars>" "reason=<one-line classification rationale>" "action=<issue_created|memory_proposal|spec_only>"
+   ```
+
+   - **Numeric guard (required)**: if `NUMBER` is not a bare integer (e.g. the `/auto` L3 route's `BRIDGE_NUMBER="batch-<session-id>"`), pass `EMIT_ISSUE_NUMBER=0` instead. `emit_event()` writes `"issue":${_issue}` unquoted, so a non-numeric value produces a malformed JSON line that breaks `get-auto-session-report.sh`'s whole-log `jq -s` read.
+   - If `AUTO_EVENTS_LOG` is unset and cannot be restored via `restore_auto_session_pointer` (a standalone `/verify` run outside `/auto`), skip the emit for this proposal — same policy as the other non-wrapper emitters in `modules/event-emission.md`.
+   - Regardless of tier, output one terminal summary line covering all proposals classified in this run: `Tier classification: {n1} Tier 1 / {n2} Tier 2 / {n3} Tier 3 (filter hit rate {p}%)`. `p` is the floor of `(n2 + n3) / (n1 + n2 + n3) * 100`; use `0` when the total is 0.
 
 7. **HAS_SKILL_PROPOSALS gate**:
 
@@ -144,3 +165,5 @@ Called by:
 - "No improvement proposals found for issue #$NUMBER." if all proposals are N/A
 - "Skipping Issue creation due to duplicate: {title} (existing: #{number})" for duplicate proposals
 - "Skipping due to freshness check: {title} (may already be resolved in main)" for already-resolved proposals
+- A `retro_proposal_classified` event per proposal, emitted to `.tmp/auto-events.jsonl` when `AUTO_EVENTS_LOG` is set (directly or via `restore_auto_session_pointer`) — see **Tier classification persistence** in step 6
+- A terminal summary line: `Tier classification: {n1} Tier 1 / {n2} Tier 2 / {n3} Tier 3 (filter hit rate {p}%)`

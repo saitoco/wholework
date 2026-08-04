@@ -28,6 +28,21 @@ route_proposal() {
     fi
 }
 
+# Tier classification helper: mirrors retro-proposals.md Step 6 positive-evidence gate.
+# Args: multi_file_ripple(true|false) recurrence_demonstrated(true|false) ssot_ripple(true|false)
+# Returns "tier1" when at least one of the 3 signals (a)/(b)/(c) is demonstrated,
+# otherwise the reversed default "tier2" (rather than the former Tier 1 default).
+classify_tier() {
+    local multi_file="$1"
+    local recurrence="$2"
+    local ssot="$3"
+    if [ "$multi_file" = "true" ] || [ "$recurrence" = "true" ] || [ "$ssot" = "true" ]; then
+        echo "tier1"
+    else
+        echo "tier2"
+    fi
+}
+
 # Full routing action: calls gh issue create with appropriate flags,
 # outputs routing message for upstream case.
 # Args: upstream classification title body
@@ -133,4 +148,20 @@ teardown() {
     [ "$status" -eq 0 ]
     ! grep -q "/Users/" "$GH_CALLS_LOG"
     grep -q "<absolute-path>" "$GH_CALLS_LOG"
+}
+
+# --- Tier classification tests ---
+
+@test "tier classification: no signal demonstrated defaults to tier2 (not tier1)" {
+    result="$(classify_tier "false" "false" "false")"
+    [ "$result" = "tier2" ]
+}
+
+@test "tier classification: any of (a)/(b)/(c) demonstrated returns tier1" {
+    result_a="$(classify_tier "true" "false" "false")"
+    result_b="$(classify_tier "false" "true" "false")"
+    result_c="$(classify_tier "false" "false" "true")"
+    [ "$result_a" = "tier1" ]
+    [ "$result_b" = "tier1" ]
+    [ "$result_c" = "tier1" ]
 }

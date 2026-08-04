@@ -135,7 +135,7 @@ wholework/
 - `modules/steering-hint.md` — steering docs が無い場合に `/doc init` を促す動的ヒント
 - `modules/orchestration-fallbacks.md` — orchestration レベルの fallback パターン参照カタログ（#319 tier 2・#316 recovery sub-agent・#318 learning loop から参照）
 - `modules/domain-classifier.md` — 改善提案の Domain 分類（composable、LLM-in-context）
-- `modules/retro-proposals.md` — Improvement Proposal 収集と Issue 作成（/verify Step 13 と /auto Step 4a の共有モジュール）
+- `modules/retro-proposals.md` — Improvement Proposal 収集、Tier 判定（retro_proposal_classified イベント emit 付き）、Issue 作成（/verify Step 16 と /auto Step 5 の共有モジュール）
 - `modules/l0-surfaces.md` — L0 (GitHub) surface の SSoT と comment を一級入力として扱うポリシー
 - `modules/label-conventions.md` — ラベル namespace 規則とベア namespace 例外の SSoT
 - `modules/filesystem-scope.md` — スキル/スクリプトのファイルシステムアクセススコープ制約と推奨パターン

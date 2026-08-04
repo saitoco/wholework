@@ -60,6 +60,17 @@
 #   count=<n>                     occurrence count that exceeded threshold
 #   issue_number=<NNN>            GitHub Issue number created (0 if L1 advisory only)
 #
+# retro_proposal_classified: modules/retro-proposals.md Tier classification result for a single
+# improvement proposal, emitted right after Tier classification is finalized. Called from
+# /verify Step 16 and /auto Step 5 L3 auto-retrospective (see #1159).
+#   tier=<1|2|3>                  classification result
+#   title=<text>                  proposal title, truncated to 80 chars
+#   reason=<text>                 one-line classification rationale
+#   action=<issue_created|memory_proposal|spec_only>   downstream action taken for this tier
+#   Numeric EMIT_ISSUE_NUMBER guard: when NUMBER is not a bare integer (e.g. /auto L3's
+#   BRIDGE_NUMBER="batch-<session-id>"), callers must pass EMIT_ISSUE_NUMBER=0 — emit_event()
+#   writes "issue":${_issue} unquoted, so a non-numeric value would corrupt the JSON line.
+#
 # next_cycle_seeded: batch completion tail emitted next-cycle candidate issues
 #   candidate_count=<n>           total number of candidate issues emitted
 #   source_breakdown=<flat>       flat format: "audit/drift:N1,audit/fragility:N2"
