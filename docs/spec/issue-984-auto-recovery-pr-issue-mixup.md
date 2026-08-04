@@ -147,3 +147,30 @@ Issue 本文の調査メモの通り、`run_phase_with_recovery()` の呼び出�
 
 ### Acceptance criteria verification difficulty
 - 両 Pre-merge AC とも `rubric` verify command で明確に PASS 判定できた。UNCERTAIN や verify command の不備は無し。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Pre-merge AC 2 件 (rubric ×2) は実装完了時点で機械判定でき、8 回の再検証すべてで安定して PASS した。AC 文が「実装手段は問わない」と明示していたため、`_EXTRA_SELF_ISSUE` → `EMIT_ISSUE_NUMBER` という実装選択の変更に判定が影響されなかった点が良かった
+- 一方 Post-merge の observation AC は、**修正着地から約 4 週間・`/verify` 再実行 8 回を経て一度も評価可能な状態にならなかった**。観察対象が「自動経路 (recovery-sub-agent / fallback-catalog / wrapper-anomaly-detector) による review または merge phase の Tier 2/3 recovery 発火」であり、`docs/reports/orchestration-recoveries.md` 全 60 エントリの走査でも修正着地 (PR #991、2026-07-11 merge) 以降の該当発火はゼロ件だった (自動経路の最新は 2026-07-12 の code-pr phase)
+
+#### design
+- 実装方針 (`_EXTRA_SELF_ISSUE` の既存パターンに揃える) は Issue 起票時点の調査メモどおりに確定し、`/spec` で覆らなかった。GitHub API 呼び出しを追加しない最小修正という制約が最初から明確だったことが効いている
+
+#### code
+- 手戻りなし。Deviations from Design / Design Gaps / Rework すべて N/A
+
+#### review
+- review が検出した SHOULD 1 件 (ネストしたセッションでの `_EXTRA_SELF_ISSUE`/`EMIT_ISSUE_NUMBER` の環境変数漏れにより既存テスト 4 件が誤 Issue 番号宛てに記録される) は、CI のクリーン環境では顕在化しない自己ホスト特有の問題であり、review 段階で捕捉できた価値が高い
+
+#### merge
+- rebase で `## Auto Retrospective` (origin/main 側) と `## Code Retrospective` / `## Phase Handoff` (worktree 側) が競合したが、いずれも追記的セクションのため両方保持で解消。`gh pr merge --delete-branch` のローカルブランチ削除が親 worktree 使用中で失敗したが remote merge 自体は成功しており、影響は後片付けのみだった
+
+#### verify
+- 判定自体に問題はないが、**同一 SKIPPED 結果を 8 回生成し続けた**点が構造的な非効率。`event=auto-run` は「任意の `/auto` 完走」という広いイベントで、本 AC が要求する「自動経路の review/merge phase recovery 発火」という稀少な前提を表現できないため、発火のたびに dispatch されて必ず SKIPPED に終わる
+- 2026-08-04 の `/auto 1123` では review phase で Tier 2 (json-mode-silent-hang) が実際に発火したが、記録は親セッションによる手動書き込み (commit `7b401ea4`) で本 Issue のスコープ外。かつ `orchestration-recoveries.md` 側に当該 Tier 2 のエントリが作成されておらず、rubric が要求する「recoveries.md **および** Spec の両方」を満たさなかった。**自動経路の記録は 2 箇所に書くが、親セッション手動記録は Spec のみに留まる**という非対称は、rubric が両方の存在を前提にしている限り評価を難しくする
+
+### Improvement Proposals
+- N/A — 本 verify で観測した構造的課題はいずれも既存 Issue が対象としている: observation AC の実行文脈条件の宣言 (`event=` だけでは表現できない前提) は #1118、`phase/verify` 長期滞留 AC の retire 判断は `/audit stats --retention` の 30/60/90 日エスカレーション機構がカバーする (本 AC は 2026-07-11 から `phase/verify` 滞留のため、まもなく 30 日閾値に到達する)
