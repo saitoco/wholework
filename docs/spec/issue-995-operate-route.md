@@ -288,3 +288,32 @@ Size=L のため検出上限 5 件のうち、実質的なギャップは 1 件�
 - **Wrapper exit code**: 1
 - **Outcome**: success
 - **Recovery details**: see docs/reports/orchestration-recoveries.md
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Pre-merge AC 8 件 (rubric 6 / `section_contains` 1 / `command` 1) はすべて着地から 3.5 週間・7 回の再検証で安定して PASS した。特に AC 5 と AC 6 を「rubric による意味判定」と「`section_contains` による機械判定」に二重化した設計は、docs/product.md § Terms への追加という 1 つの要件に対して意味と形式の両面を押さえており、再現性が高い
+- `## Uncertainty` 節が narrative で「`skills/code/SKILL.md` と `docs/workflow.md` の両方に allowed-tools 制約を明記する」と解決したのに対し、拘束力を持つ `## Implementation Steps` 側は `docs/workflow.md` のみに限定していた。実装は Implementation Steps に従ったため PR の欠陥ではないが、**Spec 内部で narrative と binding checklist が食い違う**構造が残った
+
+#### design
+- operate route を「Size と直交する第 3 の route 値」として定義し、Size スケールを拡張しなかった判断は正しかった。`modules/size-workflow-table.md:86` がこの直交性を明示しているため、後続の `/auto` Step 3a や `/code` Step 0 が Size 判定と独立に operate を扱えている
+- autonomy tier ゲーティングを新しい tier 軸ではなく既存の path A (Advisory) セマンティクスの流用で実現した判断も、`modules/autonomy-tier.md:61` の 1 節追加で済んでおり、複雑度の増加を最小に抑えられた
+
+#### code
+- Tier 3 recovery (code-pr, 2026-07-12 06:18 UTC) が 1 回発火した。watchdog kill の反復でコミット・push・PR 作成の直前に中断されるパターンで、sub-agent が未コミット差分 (14 ファイル + 新規 `tests/operate-route.bats`) を確定させて PR を作成し復旧した。記録は `## Auto Retrospective` に既存 (SSoT)
+
+#### review
+- review が 2 件の tooling issue を検出した。うち `skills/review/workflow-guidance.md` の Workflow verify ステージが `parallel(...)` でラップされておらず偽陰性 (`totalFound: 0`) を返す不具合は、`capabilities.workflow: true` の全プロジェクトの `/review --full` に影響する重大なものだったが、PR #999 の変更対象外として記録に留められた。**本 verify 時点で main の L149 に `return parallel(finderResult.findings.map(...))` が存在し、解決済みであることを確認した**
+- review が「Improvement Proposal 候補として `/verify` 集約時に検討」と明記した 2 件が、`### Improvement Proposals` という見出しではなく散文中に書かれていたため、`modules/retro-proposals.md` の機械的な抽出 (`### Improvement Proposals` セクションのみを走査) の対象外になっていた
+
+#### merge
+- 特記事項なし
+
+#### verify
+- Post-merge の observation AC は、着地 (2026-07-12) から 3.5 週間・7 回の再検証で一度も評価可能にならなかった。直近 60 Issue (#1074–#1152) に `type=execution-log` マーカーが 0 件、`.tmp/auto-events.jsonl` 全 6805 行に `operate` が 0 件で、**operate route 自体が一度も発火していない**
+- 本リポジトリは skill / スクリプト / ドキュメントを実装対象とするツールリポジトリであり、Issue はすべてリポジトリ内ファイルの変更を伴う。operate route が想定する CMS 編集・インフラ操作型の Issue は構造的にほとんど発生しないため、`event=auto-run` を待ち続けても評価機会が訪れにくい
+
+### Improvement Proposals
+- `/spec` の Step 8 (Uncertainty) に、Uncertainty 節で解決した内容が `## Implementation Steps` へ過不足なく転記されているかのセルフチェックを追加する。本 Issue では Uncertainty が「`skills/code/SKILL.md` と `docs/workflow.md` の両方に明記する」と解決したのに Implementation Steps が `docs/workflow.md` のみを列挙しており、narrative (非拘束) と checklist (AC に紐づく拘束力あり) の間に不整合が残った。review-bug finder がこれを SHOULD として検出したが adversarial verification で「Spec の権威ある Implementation Steps に従っているため false positive」と判定され、Spec 側の不整合として着地している
