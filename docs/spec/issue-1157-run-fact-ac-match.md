@@ -374,3 +374,40 @@ Size L につき上限5件のうち、2件を自動解決 (残りは AC 文言�
 ## Consumed Comments
 
 - login: `saito` / authorAssociation: `MEMBER` / trust tier: first-class / 要旨: `/issue 1157 --non-interactive` の Issue Retrospective。Triage 判定 (Type Feature / Size L / Value 5) の根拠、自動解決した曖昧点 2 件 (候補提示の掲示形式は `Recommend:` ターミナル出力慣行を踏襲 / 遡及適用は #1158 が担当し本 Issue は前向き検知に限定)、対応方針 A/B/C の確定を意図的に `/spec` へ委譲した設計判断、Background の事実主張検証済みの記録。sub-issue 分割評価は非対話モードのためスキップ済み / URL: https://github.com/saitoco/wholework/issues/1157#issuecomment-5183192598
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Pre-merge AC 6 件はいずれも明確に判定できた。特に AC 2 が「manual AC が照合対象に含まれることが**実装から確認できる**」と検証手段まで指定していたため、実装側がヘッダコメント L32-38 に「manual / observation / opportunistic / auto をすべて候補に含め、除外しない (これが AC2 の要求を満たす方法である)」と明記する形で応答しており、rubric 判定が一意に定まった
+- 対応方針 A/B/C の確定を `/issue` から `/spec` へ意図的に委譲した判断が機能した。B (独立スクリプトへの切り出し) が採用され、`resolve-preview-ac-fallback.sh` (#1035) の「決定論的判定をスクリプト化して bats で検証可能にする」前例に沿った構成になっている
+
+#### design
+- Steering Docs sync を**先例に照らして「変更しない」と判断**した記録 (Code Retrospective の Design Gaps) が有用。構造的に同型の operate-route tier gate (#995) が `docs/guide/autonomy.md` / `docs/workflow.md` に露出していないことを確認したうえで、本 Issue でも露出させない選択をしている。「新しいドキュメント露出慣行を本 Issue が勝手に作らない」というスコープ規律
+
+#### code
+- 手戻り 2 件。いずれも**テストではなく手動 smoke test / 既存テストが捕捉**した:
+  - **jq のフィルタ引数再評価バグ**: `def phase_entry(events; p)` で bare パラメータを使うと、`p` は関数本体の参照地点の `.` に対して評価される。`map(select(.phase == p))` の中では配列の各要素に対して評価されてしまい、全 phase の status が `"started"` に潰れていた。`$` 付き (bound-value) パラメータへ切り替えて解消。**jq 一般の落とし穴であり本スクリプト固有ではない**
+  - **`scan-pending-ac.sh` の出力改行**: 累積変数を `jq '. += [...]'` で組み立てる際に `-c` を付け忘れ、module ヘッダが規定する単一行 JSON にならなかった。truncation テストの `grep '^\['` が失敗して発覚
+
+#### review
+- 特記事項なし。Pre-merge AC 6 件が全チェック済みだったため `check-pre-merge-ac.sh` の gate は override marker なしで通過、`mergeable=true reason=clean` で conflict 解消も不要だった
+
+#### merge
+- `worktree-code+issue-1157` のローカルブランチ削除が、無関係の既存 worktree (`review+pr-1160`) がチェックアウト中のため失敗。remote branch は削除成功。既存 worktree は本タスク以前から存在しスコープ外のため force 削除せず放置した判断は妥当
+
+#### verify
+- Post-merge の observation AC は未発火のため SKIPPED。本 Issue は `--batch 1157 1158 1159` の 1 件目として処理されており、`observation-trigger.sh --event auto-run` は Batch Completion Report 時点で走るため、発火は本 verify の直後になる
+- `scripts/apply-run-fact-match.sh` は本 verify 内で実行していない。`autonomy: L3` 下で `satisfied` verdict に対し**他 Issue のチェックボックスを自動更新する**ため、別 Issue の verify 実行中に副作用を出さない判断。パイプラインの前段 2 スクリプトは個別に実動作を確認済み
+- **残存 worktree 40 件を観測** (うち review/verify 系 9 件、`code+issue-385` など古いものを含む)。merge フェーズで顕在化した `review+pr-1160` はその 1 件にすぎない。`modules/worktree-lifecycle.md` の stale 判定指針 (「所有プロセスの終了を積極的に確認できない限り live conflict として扱い、迷ったら自動処理せず衝突を表面化させる」) に従い本 verify では削除していない。#1119 (異常終了フェーズの stale worktree 回収) の実証データ
+
+### Improvement Proposals
+
+`modules/retro-proposals.md` の三層判定を適用した結果、**Tier 1 (Issue 起票) に該当するものはなかった**。内訳:
+
+- **Tier 2 (convention — memory 提案)**: jq の `def` でフィルタ型パラメータを nested `map`/`select` 内から参照する場合は `$` 付きの bound-value パラメータを使う。bare パラメータは参照地点の `.` に対して再評価されるため、silent に誤った値で評価される。本 Issue で 1 件発生し、bats テストではなく手動 smoke test でのみ捕捉された類のバグ
+- **Tier 3 (one-time memo)**: `scan-pending-ac.sh` の jq 累積時の `-c` 付け忘れ。既存テストが捕捉済みで再発性は低い
+- **No action (既存 Issue が対象)**: 残存 worktree 40 件は #1119 のスコープ。本 verify の観測データは同 Issue の優先度判断材料として有効だが、新規起票は不要
+
+なお本セッションで起票した #1159 は「Tier 2/3 判定が実運用でゼロ件であり、判定結果も記録されない」ことを問題として扱っている。本 retrospective はその指摘を受けて意識的に Tier 2/3 を適用した最初の事例にあたる — ただし現状の実装では**この分類結果は terminal 出力にも残らず、本 Spec への手書き記録が唯一の痕跡**である点が、#1159 の主張 (判定の永続化が測定の前提) を裏付けている
