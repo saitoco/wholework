@@ -247,6 +247,32 @@ VERIFY_REOPEN_CYCLES=$(echo "$EVENTS_JSON" | jq '[.[] | select(.event == "verify
 # Backfilled phase_complete events
 BACKFILLED_COUNT=$(echo "$EVENTS_JSON" | jq '[.[] | select(.event == "phase_complete" and .backfilled == true)] | length' 2>/dev/null || echo 0)
 
+# Retro proposal Tier classification breakdown (retro_proposal_classified events, #1159)
+RETRO_TIER_COUNTS=$(echo "$EVENTS_JSON" | jq -r '
+  [.[] | select(.event == "retro_proposal_classified")] |
+  {
+    t1: ([.[] | select(.tier == "1")] | length),
+    t2: ([.[] | select(.tier == "2")] | length),
+    t3: ([.[] | select(.tier == "3")] | length)
+  } |
+  "\(.t1) / \(.t2) / \(.t3)"
+' 2>/dev/null || echo "0 / 0 / 0")
+
+RETRO_TIER_BREAKDOWN=$(echo "$EVENTS_JSON" | jq -r '
+  [.[] | select(.event == "retro_proposal_classified")] as $events |
+  if ($events | length) == 0 then "(none)"
+  else
+    {
+      t1: ([$events[] | select(.tier == "1")] | length),
+      t2: ([$events[] | select(.tier == "2")] | length),
+      t3: ([$events[] | select(.tier == "3")] | length)
+    } as $c |
+    ($c.t1 + $c.t2 + $c.t3) as $total |
+    (if $total == 0 then 0 else (($c.t2 + $c.t3) * 100 / $total | floor) end) as $hit_rate |
+    "- Tier 1: \($c.t1)\n- Tier 2: \($c.t2)\n- Tier 3: \($c.t3)\n\nFilter hit rate: \($hit_rate)% (\($c.t2)+\($c.t3)/\($total))"
+  end
+' 2>/dev/null || echo "(none)")
+
 # Verify phase residuals: issues currently carrying the phase/verify label (live lookup).
 # Populated below in the GitHub state lookups block. /verify now emits phase_start/phase_complete
 # (phase=="verify") events (see #902), but this live lookup independently captures the current
@@ -612,6 +638,7 @@ cat << REPORT_EOF
 | Parent session manual interventions | ${MANUAL_INTERVENTIONS} |
 | verify FAIL → reopen fix cycles | ${VERIFY_REOPEN_CYCLES} |
 | Backfilled phase_complete events | ${BACKFILLED_COUNT} |
+| Retro proposal tiers (1/2/3) | ${RETRO_TIER_COUNTS} |
 | Merge conflicts | 0 |
 
 ### Phase Activity Summary
@@ -661,4 +688,8 @@ ${CONCURRENT_SECTION}
 ### Improvement Candidates Surfaced
 
 ${IMPROVEMENT_CANDIDATES}
+
+### Retro Proposal Tier Breakdown
+
+${RETRO_TIER_BREAKDOWN}
 REPORT_EOF

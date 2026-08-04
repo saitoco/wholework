@@ -175,7 +175,11 @@ MOCK_EOF
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "### Verify Phase Residuals"
     echo "$output" | grep -q "#300"
-    ! echo "$output" | grep -qE "^\(none\)$"
+    # Scope the "(none)" degrade check to the Verify Phase Residuals section only —
+    # other sections (e.g. Retro Proposal Tier Breakdown) legitimately show "(none)"
+    # in this fixture, which has no retro_proposal_classified events.
+    residuals_section="$(echo "$output" | sed -n '/### Verify Phase Residuals/,/### Concurrent Sessions Detected/p')"
+    ! echo "$residuals_section" | grep -qE "^\(none\)$"
 }
 
 @test "Verify Phase Residuals: --no-github shows explicit non-detection note" {
@@ -187,4 +191,38 @@ FIXTURE_EOF
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "### Verify Phase Residuals"
     echo "$output" | grep -q -- "--no-github mode: cannot detect phase/verify residuals"
+}
+
+@test "Retro Proposal Tier Breakdown: mixed tier 1/2/3 events surface counts and hit rate" {
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"session-tiers","size":"S"}
+{"ts":"2026-06-14T10:01:00Z","issue":100,"event":"retro_proposal_classified","session_id":"session-tiers","tier":"1","title":"proposal A","reason":"multi-file ripple","action":"issue_created"}
+{"ts":"2026-06-14T10:02:00Z","issue":100,"event":"retro_proposal_classified","session_id":"session-tiers","tier":"2","title":"proposal B","reason":"single lesson","action":"memory_proposal"}
+{"ts":"2026-06-14T10:03:00Z","issue":100,"event":"retro_proposal_classified","session_id":"session-tiers","tier":"2","title":"proposal C","reason":"single lesson","action":"memory_proposal"}
+{"ts":"2026-06-14T10:04:00Z","issue":100,"event":"retro_proposal_classified","session_id":"session-tiers","tier":"3","title":"proposal D","reason":"one-time memo","action":"spec_only"}
+{"ts":"2026-06-14T10:05:00Z","issue":100,"event":"sub_complete","session_id":"session-tiers","exit_code":"0"}
+FIXTURE_EOF
+
+    run bash "$SCRIPT" "session-tiers" --metrics-only --no-github
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "### Retro Proposal Tier Breakdown"
+    echo "$output" | grep -q "Retro proposal tiers (1/2/3) | 1 / 2 / 1"
+    echo "$output" | grep -q "Filter hit rate: 75% (2+1/4)"
+}
+
+@test "Retro Proposal Tier Breakdown: no events degrades to 0/0/0 and (none)" {
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"session-notiers","size":"S"}
+{"ts":"2026-06-14T10:01:00Z","issue":100,"event":"sub_complete","session_id":"session-notiers","exit_code":"0"}
+FIXTURE_EOF
+
+    run bash "$SCRIPT" "session-notiers" --metrics-only --no-github
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "Retro proposal tiers (1/2/3) | 0 / 0 / 0"
+    echo "$output" | grep -q "### Retro Proposal Tier Breakdown"
+    # Scope the "(none)" degrade check to the Retro Proposal Tier Breakdown section only —
+    # an unscoped check would silently pass if a different section's degrade string were
+    # ever normalized to a bare "(none)" while this section actually broke.
+    breakdown_section="$(echo "$output" | sed -n '/### Retro Proposal Tier Breakdown/,$p')"
+    echo "$breakdown_section" | grep -qE "^\(none\)$"
 }
