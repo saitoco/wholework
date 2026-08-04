@@ -158,3 +158,31 @@ Steering Docs sync candidate grep (`grep -l "run-auto-sub.sh" docs/*.md docs/ja/
 - **Recovery type**: respawn
 - **Wrapper exit code**: unknown
 - **Outcome**: success
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Pre-merge AC 4 件 (rubric ×2 / `file_not_contains` ×1 / `command` ×1) は着地から 3 週間・6 回の再検証で安定して PASS した。特に AC 2 の `file_not_contains "scripts/run-auto-sub.sh" "### wrapper-retry-on-kill ("` は「旧形式が残っていないこと」という**不在の検証**を機械判定可能な形に落とし込めており、リファクタ系 Issue の AC 設計として再現価値が高い
+- Spec の `## Notes` が Steering Docs sync 不要・バックフィル不要の判断根拠を先回りして記録していたため、code phase で新たな曖昧点が発生しなかった (Code Retrospective の Design Gaps が N/A)
+
+#### design
+- 曖昧点 3 件 (Diagnosis 文言テンプレート / Recovery Applied の参照先 / Improvement Candidate の記入方法) をすべて同一ファイル内の先例関数 `_write_manual_recovery_to_recoveries_log()` (#1005 で新設) から推論して自動解決した判断は妥当だった。実装・レビューを通じて覆っていない。**同一ファイル内に構造の揃った先例関数が既にある場合、それを唯一の推論源に指定する**書き方は、非対話モードでの曖昧点解決の型として有効
+
+#### code
+- 手戻りなし。初回実装で `bats tests/run-auto-sub.bats tests/collect-recovery-candidates.bats` (当時 76 tests) が PASS
+
+#### review
+- review-light の 3 観点すべてで「Nothing to note」。CONSIDER 1 件 (`_write_wrapper_retry_recovery()` の `escalated (retry also killed)` 分岐に対するテストカバレッジ不足) のみが残り、任意対応として未着手のまま着地した。**本 verify 時点でも `tests/run-auto-sub.bats` に `escalated` の文字列は 0 件で、未カバーのまま**
+
+#### merge
+- mergeable=true (clean) で conflict 解消不要。特記事項なし
+
+#### verify
+- spec / review の 2 フェーズで manual recovery (respawn) が発生している (2026-07-15 09:52 / 09:53 UTC)。いずれも `## Auto Retrospective` に記録済み (SSoT)
+- Post-merge の observation AC は、着地 (PR #1021、2026-07-15T09:51:12Z merge) から 3 週間・6 回の再検証で一度も評価可能にならなかった。`docs/reports/orchestration-recoveries.md` 全体に `wrapper-retry-on-kill` の文字列が 0 件、`.tmp/auto-events.jsonl` にも retry-on-kill 系イベントが 0 件で、**recovery 自体が一度も発火していない**
+- 観察対象は「wrapper が early-kill window (`WHOLEWORK_RETRY_ON_KILL_MAX_SEC`) 内に kill される」という稀少事象だが、AC は `event=auto-run` (任意の `/auto` 完走) で dispatch される。この粒度差により、発火のたびに評価不能な SKIPPED を返す構造になっている — #984 / #995 と同一のパターンで、本セッションだけで 3 件連続して観測された
+
+### Improvement Proposals
+- `tests/run-auto-sub.bats` に `_write_wrapper_retry_recovery()` の `escalated (retry also killed)` 分岐 (`exit_code_arg != 0` の経路) を検証するテストを追加する。現状カバーされているのは `success` 分岐 (`retry-on-kill: wrapper-retry-on-kill recovery writes canonical H2 entry`) のみで、`escalated` 分岐は `/review` が CONSIDER として指摘した時点から本 verify (3 週間後) まで未カバーのまま。`### Outcome` に書かれる文字列が分岐によって変わるため、`orchestration-recoveries.md` のエントリ形式の一貫性を機械的に担保するには両分岐のカバーが必要
