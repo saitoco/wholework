@@ -152,3 +152,70 @@ Implementation Step 1 で追加する 3 シグナルのリストには **(exhaus
 3. B の永続化先 → Spec retrospective ではなく `.tmp/auto-events.jsonl` イベント
 4. hit rate 集計先 → `/audit stats` ではなく `scripts/get-auto-session-report.sh`
 5. D の深さ → positive-evidence gate 化に留め、機械判定スクリプトは新設しない
+
+## issue retrospective
+
+### Autonomous Auto-Resolve Log
+
+`/spec --non-interactive` のため `AskUserQuestion` が使えず、以下 5 点をモデル判断で自動解決した。
+
+- **A + B + D (軽量版) を採用し、C は不採用** — reason: A/B は Issue 本文の根本原因 1・2 に 1 対 1 で対応する最小の手当てであり、D は A のデフォルト反転が実効性を持つための前提 (Tier 1 基準が緩いままだと反転しても Tier 1 に流れ続ける)。C は `/verify` → 起票のフィードバックループ自体を断ち切る破壊的変更で、週次 consolidation の実行主体を新設する必要があり本 Issue の範囲を超える。
+  - Other candidates: A 単独 / B 単独 / A+B+C+D 全採用
+- **A の倒し先を Tier 3 ではなく Tier 2 とする** — reason: Tier 3 の定義「一回限り・再発可能性が低い」は提案に対する積極的な主張であり、判定困難な提案に既定で適用するのは不正確。Tier 2「単発の学びだが再発性あり。memory 記載で十分」が「構造的重要度が不明」の受け皿として意味的に整合し、#484 の保守的意図 (拾い漏れ回避) も terminal への memory 提案出力という形で残る。
+  - Other candidates: Tier 3 をデフォルトにする
+- **B の永続化先を `.tmp/auto-events.jsonl` (`retro_proposal_classified` イベント) とする** — reason: Spec retrospective への追記は `/verify` では worktree Exit (Step 13) 後の Step 16 に走るため main への追加 commit/push が必要になり、`/auto` L3 経路では書き込み先が `$SESSION_DIR` の bridge file に分岐して二重管理になる。既存の `scripts/emit-event.sh` はロック付き追記・session_id 付与・bats カバレッジが揃っており追加コストが最小。
+  - Other candidates: Spec の retrospective セクションへ追記 / 両方に記録
+- **hit rate 集計を `/audit stats` ではなく `scripts/get-auto-session-report.sh` に実装する** — reason: `/audit stats` は GitHub Issue メタデータを入力とする集計器で、`.tmp/auto-events.jsonl` を読む経路を持たない。`get-auto-session-report.sh` は既に session_id フィルタ + jq 集計の基盤と bats テストを持ち、`/audit auto-session` から消費される。AC は「独立したスクリプトでもよい」と明示している。
+  - Other candidates: `/audit stats` に Section を追加 / 新規スクリプトを作成
+- **D は positive-evidence gate 化に留め、機械判定スクリプトは作らない** — reason: 「再発性 = 同種提案が過去 N 件以上」を完全機械判定するには提案テキストの意味的クラスタリングが必要で、LLM 判定を別の LLM 判定に置き換えるだけになる。Tier 1 を「3 つの実証可能シグナル (exhaustive) のいずれかを積極的に示せる場合のみ」と定義し、各シグナルに機械的確認手順を添える方が費用対効果が高い。
+  - Other candidates: `scripts/classify-retro-proposal.sh` を新設して機械判定する
+
+### 備考
+
+- 本 Issue 自体が `retro/verify` 経由の起票であり抑制対象の一部だが、backlog の 84% を占める生成源そのものを扱うため起票価値が高いという Issue 本文の判断を追認した。
+- Issue body に `## 採用方針 (/spec で確定)` セクションを追加し、上記の採否と根拠を反映済み。
+
+## spec retrospective
+
+### Minor observations
+
+- `modules/retro-proposals.md` 冒頭の `Called by:` が `/verify` Step 13 / `/auto` Step 4a を指しているが、実際は Step 16 / Step 5 だった。`docs/structure.md` と `docs/ja/structure.md` の対応行も同じ古い番号を写している。同ファイルを触る本 Issue のついでに 3 箇所まとめて訂正する形にした (別 Issue に切り出すと 1 行の訂正が 3 ファイルに分散したまま残るため)。
+- `tests/retro-proposals.bats` は「module の prose 規則を bash ヘルパー関数として写す」方式で書かれている。prose と bash の二重管理になるが、LLM 実行される module に対して決定的テストを当てる唯一の既存パターンなので踏襲した。写し間違いが起きても module 側の挙動は変わらないため、テストは回帰検出ではなく規則の意図の固定として機能する。
+- `/audit stats` の Section 4 (Work Origin) は `retro/verify` ラベルを「retrospective」カテゴリとして既に集計しているため、post-merge AC の「起票レート低下の確認」には新規実装が不要だった。AC3 の hit rate 集計とは入力ソース (GitHub Issue vs auto-events.jsonl) も観測対象 (起票済み件数 vs フィルタで止めた件数) も異なる、という整理が設計上の分岐点になった。
+
+### Judgment rationale
+
+- **Tier 2 と Tier 3 のどちらをデフォルトにするか**が最も判断を要した点。Issue 本文はどちらでもよいとしていたが、Tier 3 の定義「一回限り・再発可能性が低い」は提案に対する積極的な主張である一方、Tier 2「単発の学びだが再発性あり」は「構造的重要度が判定できない」状態と意味的に近い。デフォルト = 判定できなかった場合の受け皿、という位置づけから Tier 2 を選んだ。この整理は Tier の定義文を読み比べて初めて出てきたもので、件数抑制の強さ (Tier 3 の方が terminal 出力すら減る) だけで選ぶと誤る。
+- **方針 D を「完全機械判定」ではなく「positive-evidence gate」に留めた**のは、「再発性 = 同種提案が過去 N 件以上」の判定に提案テキストの意味的クラスタリングが必要で、LLM 判定を別の LLM 判定に置き換えるだけになるため。代わりに Tier 1 の 3 シグナルそれぞれに機械的確認手順 (`grep -rl ... | wc -l` 等) を添える形にした。判定の主体は LLM のまま、入力を絞る方向の投資。
+- **方針 A 単独では効かない**と判断した点。Tier 1 の基準が「複数 skill/module OR 再発性 OR 影響範囲が広い」という緩い OR のままだと、デフォルトを反転しても提案は Tier 1 に流れ続ける。A と D はセットで初めて意味を持つ。Issue 本文は A/B/C/D を独立候補として並べていたが、実際には A→D の依存があった。
+
+### Uncertainty resolution
+
+- **`emit_event()` の JSON 破壊リスク**が設計中に判明した最大の落とし穴。`scripts/emit-event.sh` は `"issue":${_issue}` を引用符なしで出力する一方、`/auto` L3 経路の `BRIDGE_NUMBER` は `batch-<session-id>` という非数値になりうる。`get-auto-session-report.sh` は `jq -s` でログ全体を一括読みするため、1 行の破壊でレポート全体が空配列に degrade する。Implementation Step 4 に numeric ガードとして明記し、`## Notes` にも独立項目として残した。イベント emit を新規に追加する Issue では毎回確認すべき事項。
+- **`/auto` Step 5 のサブステップ順序**を確認した結果、`## Metrics` 生成 (sub-step 4) が retro-proposals 呼び出し (sub-step 6) より前であることが判明した。L3 レベルの分類は同じ session の `session.md` に載らない。各 Issue の `/verify` Step 16 分 (件数の大半) は正常に集計されるため許容し、既知の制約として `## Notes` に記録。解消には Step 5 のサブステップ順序変更が必要で AC の要件を超える。
+- **AC1 の `file_not_contains "modules/retro-proposals.md" "assign Tier 1 (conservative"`** は、デフォルト反転の根拠ブロックが旧デフォルト文を逐語引用すると偽陰性になる。Implementation Step 3 に「言い換えで説明する」制約を明記して回避した。ポリシー変更 Issue で `file_not_contains` を使う際は、変更理由を説明する新規テキストが検出対象文字列を再導入しないかを設計時に確認する必要がある。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 方針候補 A + B + D (軽量版) を採用、C は不採用。A の倒し先は Tier 2 (Tier 3 ではない)、B の永続化先は `.tmp/auto-events.jsonl` の `retro_proposal_classified` イベント (Spec retrospective ではない)、D は positive-evidence gate 化に留める。根拠は `## Notes` の採否テーブルを参照
+- hit rate 集計は `/audit stats` ではなく `scripts/get-auto-session-report.sh` を拡張する。`/audit stats` は GitHub Issue メタデータ集計器で `.tmp/auto-events.jsonl` を読む経路を持たないため
+- `modules/retro-proposals.md` への追加は Step 6 内のサブ節として行い、Step 7-11 を繰り下げない。`docs/workflow.md` line 302 が「Step 11 で `set-blocked-by.sh` を呼ぶ」と参照しており、繰り下げると同期対象が増えるため
+- AC4 (不採用方針の根拠記録) は spec フェーズ時点で本 Spec の `## Notes` と Issue body の `## 採用方針` に記録済み。code フェーズでの実装ステップは不要
+
+### Deferred Items
+
+- 方針 C (毎 run 起票の廃止 / consolidation 化) は不採用。A + B 着地後に起票レートが十分下がらなかった場合の次段として保留
+- `/auto` Step 5 のサブステップ順序変更 (`## Metrics` 生成を retro-proposals 呼び出しより後ろへ) は本 Issue では扱わない。L3 レベルの分類がその session の `session.md` に載らない非対称が残る
+- Tier 1 判定の完全機械判定スクリプト (`scripts/classify-retro-proposal.sh` 等) は新設しない
+
+### Notes for Next Phase
+
+- **必須**: Implementation Step 4 の numeric `EMIT_ISSUE_NUMBER` ガードを省略しないこと。非数値を渡すと `.tmp/auto-events.jsonl` に不正な JSON 行が混入し、`get-auto-session-report.sh` の `jq -s` がログ全体の読み取りに失敗してレポートが空になる
+- **必須**: Implementation Step 3 の根拠ブロックで旧デフォルト文 `assign Tier 1 (conservative setting to avoid false negatives)` を逐語引用しないこと。AC1 の `file_not_contains` が偽陰性になる
+- `modules/retro-proposals.md` の (b) シグナル見出しには `再発性` の語を残すこと。#484 由来の既存 verify command `grep "再発性" "modules/retro-proposals.md"` が壊れる
+- Implementation Step 3 の `**Default**` 行は `assign **Tier 2**` を literal で含めること。AC1 の `file_contains "modules/retro-proposals.md" "assign **Tier 2**"` が fixed-string 一致で検証する
+- `skills/audit/SKILL.md` への追記は `validate-skill-syntax.py` の MUST 制約 (半角感嘆符・小数点付き Step 番号・3 連バッククォート禁止) に抵触しないこと
+- `docs/structure.md` を変更するため `docs/ja/structure.md` の同期が必須 (`docs/translation-workflow.md` の sync 手順)
