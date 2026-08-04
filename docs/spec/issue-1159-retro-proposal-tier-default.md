@@ -209,14 +209,29 @@ Implementation Step 1 で追加する 3 シグナルのリストには **(exhaus
 
 - `tests/get-auto-session-report.bats` の既存テスト「Verify Phase Residuals: issue carrying live phase/verify label is detected」が、新設した `### Retro Proposal Tier Breakdown` セクションの `(none)` フォールバック行と衝突して FAIL した。既存テストの `! echo "$output" | grep -qE "^\(none\)$"` は出力全体を対象にしており、当該 fixture には `retro_proposal_classified` イベントがないため Tier Breakdown セクション側は正しく `(none)` に degrade する — Verify Phase Residuals セクション自体は `#300` を検出できており正常。テストのアサーションを `sed` で `### Verify Phase Residuals` から次見出しまでの範囲に絞るよう修正し、他セクションの `(none)` を誤検出しないようにした。新セクション追加時、既存テストの `(none)`/`0`/`N/A` 系グローバルアサーションが意図せず衝突しうる点は今後も要注意
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Implementation steps 1–10 were followed as specified (confirmed independently by both review-spec and review-bug agents; no MUST-level spec deviation found). However, the Spec's Implementation Step 5 ("`Called by:` リストと `## Output` 節を更新する") under-specified the update: it described the `/verify` Step 13→16 correction but did not call out that `skills/auto/SKILL.md` has **two** separate live call sites for `modules/retro-proposals.md` (Step 4a step 6 for the per-Issue route, and Step 5 step 6 for the L3 auto-retrospective route). The code phase substituted the Step 4a reference with the newly-added Step 5 reference instead of listing both, and the same substitution propagated to `modules/event-emission.md`, `docs/structure.md`, and `docs/ja/structure.md`. Root cause: when a Spec instructs a "correct this stale reference" edit, it should enumerate all known call sites up front (via a quick grep of the target module's callers) rather than describing the target state in prose only — a caller-count mismatch is easy to miss when the diff of a one-line list looks complete on its own.
+
+### Recurring issues
+
+- The missing `AUTO_EVENTS_LOG` guard on the new `retro_proposal_classified` emit snippet (`modules/retro-proposals.md` step 6) is an instance of a pattern this codebase already has an established, documented idiom for (`if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then ... fi`, used consistently across `skills/verify/SKILL.md`'s several emit sites). The Spec's Implementation Step 4 correctly specified the *policy* ("skip the emit when unset") but the code-fence *example* embedded in the module text omitted the guard that implements that policy — the prose bullet and the executable snippet drifted apart. This is a recurring risk whenever a Spec asks for a new non-wrapper `emit_event` call: the canonical guarded snippet should be copied verbatim from an existing emit site rather than re-derived, since prose-adjacent-to-code-fence drift is easy for both the implementer and a first-pass reviewer to miss (it took a targeted adversarial verification pass, not the initial finder pass alone, to fully confirm both the missing guard and its concrete failure mode).
+
+### Acceptance criteria verification difficulty
+
+- None. All 5 Pre-merge ACs resolved cleanly via mechanical `file_contains`/`file_not_contains`/`section_contains`/`grep` checks plus `rubric` semantic checks — zero UNCERTAIN results, no ambiguous verify command syntax. The `command "bats tests/"` AC ran via CI reference fallback (safe mode) against the `Run bats tests` CI job, which was SUCCESS. Two of the pre-merge ACs (AC1's `file_not_contains "assign Tier 1 (conservative"` and AC2's persistence checks) worked exactly as designed to prevent regressions — worth noting as a positive precedent for future policy-reversal Issues that add a `file_not_contains` guard against the literal old-policy text.
+- Adversarial verification (2-stage, Opus) was valuable here: of 6 review-bug findings surfaced by two independent finder agents, 3 were confirmed real (Called-by list gap, missing AUTO_EVENTS_LOG guard, unscoped test assertion) and 3 were correctly rejected as false positives after deeper investigation (the `action` field timing concern, the jq duplication concern, and the full-width-parentheses CLAUDE.md concern) — each rejection required actually reading downstream consumers or sibling file conventions, which a single-pass finder would not have done.
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- `modules/retro-proposals.md` Step 6 に Tier 1 positive-evidence gate (3 signals exhaustive) と Tier 2 デフォルト反転、根拠段落、**Tier classification persistence** サブ節を追加。Spec Implementation Step 1–5 の記載順をそのまま採用し、設計からの逸脱なし
-- `scripts/get-auto-session-report.sh` の Tier 集計は既存 `RECOVERY_COUNTS`/`RECOVERY_EVENTS` と同じ jq パターン (`select` → `group` → `2>/dev/null || echo <default>`) を踏襲し、bash 3.2+ 互換を維持した
-- Tier Breakdown の hit rate 計算 (`floor((n2+n3)/total*100)`) は jq 単体テストで検算済み (1/2/1 混在 fixture → 75%)
+- `--non-interactive` (fork context) では Workflow tool に re-invocation 保証がないため、`capabilities.workflow: true` かつ `REVIEW_DEPTH=full` でも `skills/review/workflow-guidance.md` の Pre-flight 判定に従い静的 Task fan-out (Steps 10.1–10.3) にフォールバックした
+- review-bug×2 (diff bug scan / security scan) の指摘6件全件を Opus adversarial verification (2-stage) にかけ、3件を確認・3件を false positive として棄却。確認された3件 (Called by リスト欠落 / AUTO_EVENTS_LOG ガード欠落 / test assertion unscoped) と review-spec 発の追加1件 (skills/auto/SKILL.md の Step 13 残存) を修正コミットで解消した
+- MUST issue はゼロ (Pre-merge AC 5件全PASS、CI全SUCCESS) だが、SHOULD/CONSIDER 5件はいずれも低リスクなドキュメント/テスト整合性修正のため本フェーズ内で解消した
 
 ### Deferred Items
 
@@ -226,6 +241,6 @@ Implementation Step 1 で追加する 3 シグナルのリストには **(exhaus
 
 ### Notes for Next Phase
 
-- Pre-merge AC 5件はすべて `[x]` 済み。post-merge AC (`/audit stats` での起票レート低下確認) は `/verify` post-merge フェーズで観測する observation AC
-- `tests/get-auto-session-report.bats` に新セクション追加時の "(none)" グローバルアサーション衝突パターンが今回発生した (上記 Rework 参照)。同ファイルへの追加セクションを伴う変更では、既存テストのスコープが新セクションを誤って拾っていないか確認すること
-- Full suite (`bats tests/`) 1380 件 PASS 済み (behavioral change 判定により実行)
+- Pre-merge AC 5件はすべて review フェーズで再検証し PASS 確認済み。post-merge AC (`/audit stats` での起票レート低下確認) は `/verify` post-merge フェーズで観測する observation AC
+- review フェーズで `modules/retro-proposals.md` の `Called by:` リストと AUTO_EVENTS_LOG ガードを修正したコミット (c38e64b3) を追加した。`/merge` 前に再度 CI が SUCCESS になることを確認すること (再プッシュ後の CI 未確認)
+- Full suite (`bats tests/`) は code フェーズで 1380 件 PASS 済み。review フェーズでは変更箇所に絞った `bats tests/get-auto-session-report.bats tests/retro-proposals.bats` (22/22 PASS) のみ再実行した — 軽量再チェックの対象範囲外
