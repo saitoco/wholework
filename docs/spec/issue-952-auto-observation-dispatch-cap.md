@@ -115,3 +115,31 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective コメント (typo 修正: Post-merge AC の `<!-- verify-type: opportunistic -->` が `<|--` という誤記になっていたのを修正。あわせて、実装アプローチ (a)-(d) のどれを採用するかは `docs/product.md` § "`/issue` (What) vs `/spec` (How) Responsibility Boundary" に従い `/issue` レベルでは解決せず `/spec` の設計判断に委ねる、という方針を明示。本 Spec の `## Notes` における採用アプローチ選定はこの方針に基づく) / https://github.com/saitoco/wholework/issues/952#issuecomment-5173461388
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A (Spec の Implementation Steps 1-5 を順序・内容ともにそのまま実装した)
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Notes に記録済みの採用アプローチ ((c) priority-based cap、`observation-trigger.sh` の既存 `sort -un` 順序を流用) をそのまま実装。追加のスクリプト変更は発生しなかった。
+- `docs/guide/customization.md` の Available Keys テーブルへは行のみ追加し、`.wholework.yml` サンプルブロックへのコメントアウト例は追加しなかった (`retro-proposals-upstream` / `next-cycle-seed.enabled` など、テーブルのみで yaml サンプルを持たない既存キーの前例に倣った)。
+- `skills/auto/SKILL.md` の変更で除去された文字列 (`for each number in ... other than $NUMBER` 等) について `tests/` 配下に残存する古いアサーションがないことを stale-test-check の手順で確認済み。
+
+### Deferred Items
+- Post-merge AC (`verify-type: opportunistic`): 次回 `/auto --batch` の event-based observation scan で dispatch 数が 10 件超になった際にキャップが発火し compute burn が回避されることの観察は、実運用発生を待つ必要があるため `/verify` 以降に委ねる。
+- `#897` review retrospective 由来の Resume mode (`BATCH_LIST`/`REMAINING` 再利用) の既知の CONSIDER 事項には、Spec の指示通り本 Issue では手を入れていない。
+
+### Notes for Next Phase
+- `skills/auto/SKILL.md` は複数の bats テストファイル (`tests/auto.bats` 等) から参照されているため behavioral change 判定により `bats tests/` フルスイートを実行し、1332 件全 PASS を確認済み。
+- Issue の pre-merge rubric AC 3件は本フェーズの判定で `[x]` 済み。`/review` は独立した観点で再検証すること。
+- `docs/ja/guide/customization.md` は本変更で追加した行のみ同期済み。ただし同ファイルには本 Issue と無関係な既存の未同期箇所 (`autonomy` 行の欠落等) があり、スコープ外として触れていない。
