@@ -197,3 +197,68 @@
 | saito | MEMBER | first-class | `/issue 1123 --non-interactive` のリファインメント記録。AC1 の適用条件を fork / Workflow まで拡張し、AC2 / AC3 に自 Issue Spec 残骸ケースを追加した旨。Background の各記述はコードベースと一致を確認済み (警告なし) | https://github.com/saitoco/wholework/issues/1123#issuecomment-5175675112 |
 
 cutoff (`phase/*` ラベルの最終付与時刻): `2026-08-04T06:58:48Z`。cutoff 以前の 3 件 (2026-07-31 ×2 / 2026-08-04 ×1) は上記コメントにより Issue 本文へ統合済みで、本 Spec では Root Cause と Notes の判断根拠として参照した。cross-phase marker (`verify-fail` / `preview-ac-unverified`) は 0 件。
+
+## issue retrospective
+
+`/issue 1123 --non-interactive` によるリファインメントを実施した。
+
+### 実施内容
+
+- **Step 5 (Background Factual Claim Verification)**: Background 内の `run-review.sh` / `scripts/check-verify-dirty.sh` (`other-session` 分類が `docs/sessions/` 配下のみを認識する記述) / `collect-recovery-candidates.sh` / `run-auto-sub.sh --write-manual-recovery` の各記述をコードベースと照合し、いずれも一致を確認 (警告なし)。
+- **Step 8/9 (Auto-Resolved Ambiguity Points / Issue Body 更新)**: 過去 3 件のコメント (2026-07-31 ×2, 2026-08-04) で既にユーザーが決定していた 2 点をAC本文へ統合した:
+  1. AC1 (Cause A 横断規約) の適用条件を「headless セッション」から「対話セッションでの直接実行以外の実行文脈全般 (headless / fork agent / Workflow ツール)」に広げた — 2026-08-04 コメント (#1142 由来、fork 実行サーフェスでの同型 silent no-op) が根拠。
+  2. AC2/AC3 (Cause B dirty guard) に「自 Issue の Spec 残骸 (Consumed Comments 追記等) は自 Issue帰属だが hard error にしない」という第三のケースを追加した — 2026-07-31 コメント (#1135 由来、leaf 自身の Spec 残骸が auto-retry を自爆させた実例) が根拠。
+  この2点は新規のユーザー対話ではなく、既存コメントの決定を Issue 本文 (AC の rubric テキスト) に反映する作業。
+- **Related 更新**: #1128 (Cause C, 4件目の発生元。原因は異なるが同一 symptom の頻度検出に関わる)、#1135、#1142 (上記2点の根拠コメントの元 Issue) を追記した。
+- **Step 10 (Title Drift Check)**: 本文の主目的・スコープに変化はなく (Cause A/B の記述強化のみ)、Title の変更は不要と判断。
+- **Step 11 (Blocked-by)**: `gh-check-blocking.sh` 実行結果、オープンなブロッカーなし (exit 0)。
+- **Step 12 (Scope Assessment)**: non-interactive モードのため sub-issue 分割判断をスキップ (High-Stakes Decision)。Size は既存の `L` を維持。
+
+### Non-Interactive Mode Note
+
+[non-interactive mode] Skipping high-stakes action: sub-issue splitting. To perform this action, run `/issue 1123` interactively.
+
+## spec retrospective
+
+### Minor observations
+
+- 前景実行を要求する注記が `modules/test-runner.md` / `skills/review/SKILL.md` / `skills/code/SKILL.md` の 3 箇所に、ほぼ同一の散文で重複していた。「LLM-native prose の重複は 2 Skill まで許容、3 つ目が consolidation の判断点」という既存の判断基準にちょうど到達しており、本 Issue の AC1 はその trigger と独立に発火した — 重複検知の仕組みがなくても、失敗の再発が同じ結論に導いた事例。
+- `scripts/check-verify-dirty.sh` の呼び出し元 5 箇所 (`run-spec.sh` / `run-code.sh` / `run-review.sh` / `run-merge.sh` / `run-auto-sub.sh`) は完全に同一の `case` ブロックを持つ。分類ロジックをスクリプト側で直せば 5 箇所とも一斉に効くため、caller 側改修案 (AC2 が許容していた選択肢) は採らなかった。
+- `docs/reports/orchestration-recoveries.md` は 1267 行あり、`--write-manual-recovery` 由来の定型文エントリが大半を占める。cause 欄を入れても既存エントリは遡及されないため、原因別の頻度検出が実際に効き始めるのは次回の記録からになる。
+
+### Judgment rationale
+
+- **Cause B の帰属判定根拠に自 Issue の Spec `## Changed Files` を採用した理由**: AC2 が「判定根拠が明記されている」ことを要求しているが、`docs/sessions/` のようなパスプレフィックスの許可リストを増やす方式では `scripts/foo.sh` に対する「自分に関係する」の定義が原理的に書けない。phase は worktree 内で作業するという構造的事実から、親リポ main の dirty file は「別セッションの作業」か「自セッションの wrapper による Spec 書き戻し」に限られると整理でき、前者を非ブロック・後者を専用分類にする設計が導けた。
+- **AC4 で H2 ヘッダの symptom-short を変えなかった理由**: グループキーをヘッダに埋め込む案は `_is_duplicate()` の正規表現・既存 4 エントリ・`tests/collect-recovery-candidates.bats` の全 fixture に波及する。`### Diagnosis` への `- cause:` 行追加は純粋な追記であり、cause 行のないエントリが従来キーのまま集計される後方互換が自然に得られる。
+- **Cause A の規約を新規モジュールにしなかった理由**: `modules/execution-context.md` が既に実行コンテキストの SSoT として存在し `docs/tech.md` / `docs/structure.md` から参照されている。新規モジュールは structure.md とその日本語ミラーのモジュール表・カウント更新を伴ううえ、実行コンテキストの SSoT が 2 分割される。
+
+### Uncertainty resolution
+
+- **`run-review.sh` / `run-merge.sh` が dirty guard に PR 番号を渡していた**: Issue 本文にも過去コメントにも記載がなく、コードベース調査で初めて判明した。Spec マニフェスト方式は Issue 番号をキーにするため、これを直さないと #1055 の実際の失敗箇所 (review フェーズ) が救済されないまま AC2 だけが満たされる形になっていた。両ファイルとも `gh-extract-issue-from-pr.sh` による解決を既に持ち、dirty guard より後ろにあるだけだったため、行の移動で解決できると確認して Implementation Step 4 に組み込んだ。
+- **既存テストが AC と正面から矛盾していた**: `tests/verify-dirty-detection.bats` の `"related spec dirty: exit 1 when related spec file (same issue) is dirty"` は「自 Issue の Spec は blocking」を仕様として固定しており、AC2 / AC3 の第 3 ケースと両立しない。Spec 段階で検出できたため、`/code` フェーズで「テストが落ちる」形の発見にならずに済んだ。意図的な破壊的更新として Implementation Step 5 と Notes に明記した。
+- **`_is_duplicate()` の 24h 重複抑止が cause を見ない点**: 同一 issue + phase で 24h 以内に別 cause が記録されると後発が抑止される。発生頻度が低く、含めるかどうかで Spec 本文が変わらないため実装時判断に委ね、Uncertainty に残した。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- Cause A の横断規約は新規モジュールではなく `modules/execution-context.md` への追記とする。適用条件は「headless」ではなく「再喚起保証のない実行文脈全般」で定義し、既存の前景実行注記 4 箇所からこの単一 SSoT を参照させる。
+- Cause B の帰属判定根拠は「自 Issue の Spec `## Changed Files` に列挙されたパス」とする。`self-spec` (自 Issue Spec 残骸) は非ブロック、`own-issue-scope` (Changed Files 記載) はブロック、`foreign-session` (それ以外) は非ブロック。
+- 修正は `scripts/check-verify-dirty.sh` の内部で行い、5 つの呼び出し元の `case` ブロックは変更しない (exit code 0/1/2 の意味を保つ)。
+- AC4 は H2 ヘッダを変えず、`### Diagnosis` の `- cause: <slug>` 行を `scripts/collect-recovery-candidates.sh` が読んでグループキー `<symptom>/<cause>` を合成する方式にする。
+- Spec 不在時・`## Changed Files` 節不在時は帰属判定不能として現行の全ブロック挙動にフォールバックする (既存テストの大半がこの経路で無変更のまま PASS する)。
+
+### Deferred Items
+
+- `_is_duplicate()` (`scripts/run-auto-sub.sh`) の 24h 重複抑止条件に cause を含めるかは実装時判断とした。含めない場合は現行挙動を維持する。
+- `docs/reports/orchestration-recoveries.md` の既存 4 エントリへの cause 行の遡及付与は行わない (append-only の履歴記録として扱う)。
+- Post-merge の 2 条件 (並行セッション dirty 下での `/auto` 完走、新規 `manual-recovery-review-rerun` エントリが増えないことの観察) は本 PR では検証しない。
+
+### Notes for Next Phase
+
+- `scripts/run-review.sh` L36 と `scripts/run-merge.sh` L27 は `check-verify-dirty.sh` に **PR 番号** を渡している。Issue 番号を解決する `_REVIEW_ISSUE` / `_MERGE_ISSUE` は同ファイルの L76 / L67 (dirty guard より後ろ) にある。この解決行を dirty guard の直前へ移動しないと AC2 の修正が review / merge フェーズに効かない。
+- `tests/verify-dirty-detection.bats` の `"related spec dirty: exit 1 when related spec file (same issue) is dirty"` は AC と矛盾するため exit 0 への更新が必須。他の既存テスト (Spec 不在で `scripts/foo.sh` が dirty → exit 1 など) はフォールバック経路により無変更で PASS するはず。
+- グループキーのセパレータに `/` を使うこと。`scripts/collect-recovery-candidates.sh` L89 / L106 が H2 ヘッダ末尾の括弧付きサフィックスを `sed 's/ ([^)]*) *$//'` で除去するため、`(cause: X)` 形式は衝突する。
+- SKILL.md 本文を編集する際は `scripts/validate-skill-syntax.py` の制約 (半角感嘆符・3 連バッククォート不可) に注意すること。
+- `tests/run-review.bats` はヘッダコメント L5 で `gh-extract-issue-from-pr.sh` のモックに言及しているが実体が存在しない。移動後の解決経路をカバーするためモック追加が必要。
