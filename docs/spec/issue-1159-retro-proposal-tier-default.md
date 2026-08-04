@@ -225,13 +225,13 @@ Implementation Step 1 で追加する 3 シグナルのリストには **(exhaus
 - Adversarial verification (2-stage, Opus) was valuable here: of 6 review-bug findings surfaced by two independent finder agents, 3 were confirmed real (Called-by list gap, missing AUTO_EVENTS_LOG guard, unscoped test assertion) and 3 were correctly rejected as false positives after deeper investigation (the `action` field timing concern, the jq duplication concern, and the full-width-parentheses CLAUDE.md concern) — each rejection required actually reading downstream consumers or sibling file conventions, which a single-pass finder would not have done.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- `--non-interactive` (fork context) では Workflow tool に re-invocation 保証がないため、`capabilities.workflow: true` かつ `REVIEW_DEPTH=full` でも `skills/review/workflow-guidance.md` の Pre-flight 判定に従い静的 Task fan-out (Steps 10.1–10.3) にフォールバックした
-- review-bug×2 (diff bug scan / security scan) の指摘6件全件を Opus adversarial verification (2-stage) にかけ、3件を確認・3件を false positive として棄却。確認された3件 (Called by リスト欠落 / AUTO_EVENTS_LOG ガード欠落 / test assertion unscoped) と review-spec 発の追加1件 (skills/auto/SKILL.md の Step 13 残存) を修正コミットで解消した
-- MUST issue はゼロ (Pre-merge AC 5件全PASS、CI全SUCCESS) だが、SHOULD/CONSIDER 5件はいずれも低リスクなドキュメント/テスト整合性修正のため本フェーズ内で解消した
+- 非対話モードで `/merge 1161` を実行。pre-merge AC ゲートは5件全て `[x]` で unchecked 0件のためブロッキングなしで通過し、`gh-pr-merge-status.sh` は `mergeable=true, reason=clean, ci_status=success, review_status=approved` を返したためコンフリクト解消フェーズ (Step 3) はスキップした
+- squash merge 実行後、ローカルブランチ `worktree-code+issue-1159` は別ワークツリー (`review+pr-1161`) が使用中で削除に失敗したが、squash merge 自体 (リモート) は成功済みのため、リモートブランチのみ `git push origin --delete` で個別に削除した
+- Phase Handoff の書き込み・commit は本フェーズの手順どおり worktree ローカルコピー (`.claude/worktrees/merge+pr-1161/`) に対して実施した
 
 ### Deferred Items
 
@@ -241,6 +241,6 @@ Implementation Step 1 で追加する 3 シグナルのリストには **(exhaus
 
 ### Notes for Next Phase
 
-- Pre-merge AC 5件はすべて review フェーズで再検証し PASS 確認済み。post-merge AC (`/audit stats` での起票レート低下確認) は `/verify` post-merge フェーズで観測する observation AC
-- review フェーズで `modules/retro-proposals.md` の `Called by:` リストと AUTO_EVENTS_LOG ガードを修正したコミット (c38e64b3) を追加した。`/merge` 前に再度 CI が SUCCESS になることを確認すること (再プッシュ後の CI 未確認)
-- Full suite (`bats tests/`) は code フェーズで 1380 件 PASS 済み。review フェーズでは変更箇所に絞った `bats tests/get-auto-session-report.bats tests/retro-proposals.bats` (22/22 PASS) のみ再実行した — 軽量再チェックの対象範囲外
+- post-merge AC (`/audit stats` での起票レート低下確認) は `/verify` の post-merge observation AC として実施すること。マージ直後は変化が観測できないため、複数回の `/auto` 実行後にチェックする想定
+- ワークツリー `.claude/worktrees/review+pr-1161` (branch: `worktree-code+issue-1159`) がマージ完了後も `locked` のまま残存している。review フェーズのセッションが正しく exit していない可能性があり、次回このリポジトリで作業する際にクリーンアップを検討すること (本フェーズのスコープ外のため未対応)
+- Issue #1159 は `closes #N` により squash merge 時に自動クローズされる想定 (base branch は `main`)。ラベル遷移とフォールバック検証はこの Phase Handoff commit の後続ステップで実施する
