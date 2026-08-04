@@ -165,6 +165,41 @@
 
 - saito / MEMBER / first-class / `/issue 995 --non-interactive` の Issue Retrospective。(1) `docs/product.md` § Terms への `Operate route` エントリ追加を Scope / AC に追加、(2)「実質空」の判定基準は #958 に既出のため追加対応不要、(3) autonomy tier ゲーティングは `/spec`・`/code` へ委譲、の 3 点を auto-resolve した記録。本 Spec では (1) を Changed Files / Implementation Step 9 に、(3) を Implementation Step 5 + Notes「autonomy tier ゲーティングの判断」に反映した。(2) は追加対応不要の判断をそのまま踏襲した。 / https://github.com/saitoco/wholework/issues/995#issuecomment-4949900094
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/995#issuecomment-4950346641
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-4950420157
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-4954481660
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-4961350878
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-4973946455
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-4980719512
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/995#issuecomment-4980909480
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-4988173110
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/995#issuecomment-4988190033
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5019751317
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5020098548
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/995#issuecomment-5020244848
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5033001192
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5041911922
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5053877177
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5053880910
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5059781641
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5112391223
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5112395569
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5113360821
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/995#issuecomment-5113753192
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5114562027
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5114567783
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5114573299
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5131474059
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/995#issuecomment-5131525074
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/995#issuecomment-5131615629
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5132999963
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5133752253
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5138805707
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5138891250
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5141402518
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5146655604
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5147236225
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=9 / https://github.com/saitoco/wholework/issues/995#issuecomment-5174321698
 ## Issue Retrospective
 
 `/issue 995 --non-interactive` で既存 Issue のリファインメントを実行した記録 (Issue コメントから転記)。
