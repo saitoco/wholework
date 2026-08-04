@@ -291,7 +291,10 @@ N/A — 手戻りは発生しなかった。
 
 #### verify
 - Nothing to note — Pre-merge AC 4 件はすべて自動検証で PASS、UNCERTAIN 0。scripts 切り出しにより rubric AC が bats テストで裏付け可能になったのは #1028 の Review Retrospective で指摘された課題への有効な対処。
+- **追記 (2026-08-05、`/auto 1150` からの observation 再検証)**: Post-merge の observation AC は、着地から約 2 週間・複数回の再検証を経ても評価可能にならなかった。原因は前提の不成立が 2 重であること — (1) 条件文が観察対象を「**downstream プロジェクト**の fix-cycle 事例」と定めており、upstream である本リポジトリからは構造的に観測できない、(2) 本リポジトリは `.wholework.yml` に `capabilities.pr-preview` が未設定 (`HAS_PR_PREVIEW_CAPABILITY=false`) のため `/issue` が `ac-tier: preview` AC を生成せず、直近 Issue 8 件 (#1055 / #1061 / #1069 / #1099 / #1113 / #1123 / #1135 / #1150) に `type=preview-ac-unverified` マーカーが 0 件。**retire または downstream 側での確認への移管が適切**
+- 同一セッション (`/auto 1150` の observation dispatch) で #984 / #995 / #1009 / 本 Issue の 4 件が連続して同じ理由 (前提不成立) で SKIPPED になった。`event=auto-run` (任意の `/auto` 完走) という広いイベント名が、実際には稀少または観測範囲外の前提を持つ AC を毎回 dispatch させている構造が、本セッションで定量的に確認できた
 
 ### Improvement Proposals
 
-- **Spec Notes での Steering Docs sync candidate 洗い出しに `grep -rn` cross-search を明示的手順化**: 2 サイクル連続で「同じ挙動変更を説明する複数箇所 (prose 箇条書き / 変数テーブル / config-reference table) の sync 漏れ」が発生 (#1028 → #1035)。Spec Notes で対象キー (例: `HAS_PR_PREVIEW_CAPABILITY`) を確定する際、`grep -rn "<key>" docs/` で全出現箇所を洗い出し、prose 箇条書き以外のテーブル・リファレンス系の記述も明示的に sync 対象へ include するステップを `skills/spec/SKILL.md` (または `modules/detect-config-markers.md` の Steering Docs sync candidate 節) に追記する。優先度は low-medium (review-spec が catch する safety net が既にあるため実害は最小限だが、review の負荷軽減効果あり)。
+- **Spec Notes での Steering Docs sync candidate 洗い出しに `grep -rn` cross-search を明示的手順化**: 2 サイクル連続で「同じ挙動変更を説明する複数箇所 (prose 箇条書き / 変数テーブル / config-reference table) の sync 漏れ」が発生 (#1028 → #1035)。Spec Notes で対象キー (例: `HAS_PR_PREVIEW_CAPABILITY`) を確定する際、`grep -rn "<key>" docs/` で全出現箇所を洗い出し、prose 箇条書き以外のテーブル・リファレンス系の記述も明示的に sync 対象へ include するステップを `skills/spec/SKILL.md` (または `modules/detect-config-markers.md` の Steering Docs sync candidate 節) に追記する。優先度は low-medium (review-spec が catch する safety net が既にあるため実害は最小限だが、review の負荷軽減効果あり)。**→ #1039 として起票済み**
+- N/A (追加提案なし) — 上記の「observation 対象が downstream = upstream から観測不能」という知見は、observation AC への実行文脈条件の宣言を扱う #1118 のスコープ内 (同 Issue は「リポジトリ構成に依存する前提」の例として #843 を既に列挙している)。`phase/verify` 長期滞留 AC の retire 判断は `/audit stats --retention` の 30/60/90 日エスカレーション機構が担うため、新規起票はしない
