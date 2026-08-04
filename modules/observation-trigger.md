@@ -82,7 +82,7 @@ In shell contexts where `/verify` cannot be spawned (e.g., inside `claude-watchd
 - Post a comment to the Issue noting the event was observed
 - Recommend the user re-run `/verify <number>` to update the checkbox
 
-## `scripts/observation-trigger.sh` (実装済み #656; stdout output added in #897)
+## `scripts/observation-trigger.sh` (実装済み #656; stdout output added in #897; idempotency guard added in #1099)
 
 A dedicated dispatch script (`scripts/observation-trigger.sh`) encapsulates the
 processing contract above, making emitter integration a one-liner:
@@ -92,11 +92,34 @@ processing contract above, making emitter integration a one-liner:
 ```
 
 The script calls `opportunistic-search.sh --event <name>`, and for each matched Issue
-posts a comment recommending the user re-run `/verify <N>` (comment-posting side effect;
-unconditional regardless of caller context). It also prints the matched Issue numbers
-(newline-separated, one per line; empty output when no matches) to stdout, so that
-callers with a dispatch mechanism can act on the result directly instead of relying on
-the human reading the comment.
+posts a comment recommending the user re-run `/verify <N>` (comment-posting side effect,
+subject to an idempotency guard: if a `type=observation-trigger` marker for the same
+`event=<name>` was already posted to that Issue within the last 24 hours, the comment is
+skipped). It also prints the matched Issue numbers (newline-separated, one per line;
+empty output when no matches) to stdout — skipped Issues are included in this list just
+like posted ones, so callers with a dispatch mechanism can act on the result directly
+instead of relying on the human reading the comment.
+
+### Idempotency guard marker format
+
+Each posted comment carries a machine-readable marker following
+`modules/l0-surfaces.md` § "Machine-Readable Event Marker" base fields (`type`/`phase`/`issue`),
+with `event` appended as an additional attribute (the same pattern used by
+`type=verify-fail`'s `deferral=true reason=...`):
+
+```
+<!-- wholework-event: type=observation-trigger phase=observation-trigger issue=<N> event=<name> -->
+```
+
+`phase=observation-trigger` is a fixed literal rather than a workflow phase name
+(`spec`/`code`/`review`/`merge`/`verify`): the script is invoked from multiple distinct
+phases (`/auto`, `/review`, `/verify`'s fix-cycle, `scripts/claude-watchdog.sh`) with no
+`--phase` argument and no reliable way to know the caller's actual phase, so the script
+uses its own identifier instead. All existing `wholework-event` marker consumers match on
+the `type=` prefix, not on `phase=` values, so this choice does not affect existing
+consumption logic. Before posting, the script checks for the latest such marker on the
+target Issue and skips the comment if its `createdAt` is less than 86400 seconds (24
+hours) old.
 
 **Who invokes `/verify` (since #897):** `observation-trigger.sh` itself never
 invokes `/verify` — it only posts the comment and prints the matched numbers. Whether
@@ -115,7 +138,8 @@ responsibility:
     see `modules/detect-config-markers.md`). `observation-trigger.sh`'s stdout is already
     ascending-sorted by Issue number (`sort -un`), so the cap naturally prioritizes the
     longest-waiting Issue first. Numbers beyond the cap are not lost: the notification comment
-    above is posted to every matched Issue unconditionally regardless of the cap, and because
+    above is posted to every matched Issue regardless of the cap (subject to the idempotency
+    guard described above — see "Idempotency guard marker format"), and because
     `opportunistic-search.sh` re-scans all unchecked `event=auto-run` observation ACs on every
     invocation with no already-notified state, deferred Issues are re-matched (and re-attempted,
     cap permitting) on the next `auto-run` event — a stateless, rolling form of deferred coverage.
