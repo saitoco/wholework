@@ -244,3 +244,39 @@ Implementation Step 1 で追加する 3 シグナルのリストには **(exhaus
 - post-merge AC (`/audit stats` での起票レート低下確認) は `/verify` の post-merge observation AC として実施すること。マージ直後は変化が観測できないため、複数回の `/auto` 実行後にチェックする想定
 - ワークツリー `.claude/worktrees/review+pr-1161` (branch: `worktree-code+issue-1159`) がマージ完了後も `locked` のまま残存している。review フェーズのセッションが正しく exit していない可能性があり、次回このリポジトリで作業する際にクリーンアップを検討すること (本フェーズのスコープ外のため未対応)
 - Issue #1159 は `closes #N` により squash merge 時に自動クローズされる想定 (base branch は `main`)。ラベル遷移とフォールバック検証はこの Phase Handoff commit の後続ステップで実施する
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Pre-merge AC 5 件はすべて UNCERTAIN ゼロで解決した。特筆すべきは **AC1 が `file_not_contains "assign Tier 1 (conservative"` という旧ポリシー文言そのものへの guard を持っていた**点。方針を反転させる Issue では「新ポリシーが入ったか」だけでなく「旧ポリシーが残っていないか」を対にして検証でき、将来の regression も同時に塞げる。**ポリシー反転系 Issue の AC 設計の先例として再利用価値がある**
+- 一方 Implementation Step 5 の「`Called by:` リストを更新する」指示が、`skills/auto/SKILL.md` に 2 箇所の live call site が存在する事実を列挙していなかった。code フェーズは片方を置換して済ませ、同じ置換が 3 ファイルへ伝播した (review-spec が SHOULD 検出・修正済み)
+
+#### design
+- 方針候補 A/B/C/D のうち **A (デフォルト反転) + B (永続化) + D 軽量版**を採用し、**C (毎 run 起票の廃止 / consolidation 化) を不採用**とした判断が Notes に採否表として記録されている。C の不採用理由「`/verify` → 起票のフィードバックループを断ち切ると提案が Spec に埋もれたまま誰も横断レビューしないリスク」は妥当で、かつ「A + B の効果測定後、起票レートが十分下がらなかった場合の次段として保留」と次の一手まで示している
+- **B が A の前提**という Issue 本文の指摘が設計に反映された。判定結果を永続化しなければ A の効果を測定できないため、同時着地させる構成になっている
+
+#### code
+- 手戻り 1 件: 新設した `### Retro Proposal Tier Breakdown` セクションの `(none)` フォールバック行が、既存テストの**出力全体を対象とした** `! echo "$output" | grep -qE "^\(none\)$"` アサーションと衝突。テスト側を `sed` でセクション範囲に絞る修正で解消。**新セクション追加時に既存テストの `(none)`/`0`/`N/A` 系グローバルアサーションが誤検出しうる**という一般的な注意点
+
+#### review
+- 2 段階の adversarial verification が有効に機能した。2 つの独立 finder agent が挙げた 6 件のうち **3 件が real (Called-by リスト欠落 / `AUTO_EVENTS_LOG` guard 欠落 / テストアサーションの非スコープ化)、3 件が false positive** と判定された。false positive 3 件の棄却には下流の consumer や姉妹ファイルの慣行を実際に読む必要があり、単一 pass の finder では到達できない深さだった
+- `AUTO_EVENTS_LOG` guard の欠落は、Spec の Implementation Step 4 が**ポリシー**(「未設定時は emit をスキップする」) を正しく指定していたのに、module 本文に埋め込んだ**コードフェンスの例**からガード実装が抜け落ちたもの。prose とコードフェンスの drift
+
+#### merge
+- `.claude/worktrees/review+pr-1161` (branch: `worktree-code+issue-1159`) が merge 完了後も `locked` のまま残存。review フェーズのセッションが正しく exit していない可能性。**本セッションの `/verify 1157` で観測した残存 worktree 40 件と同じクラスの事象**で、#1119 の実証データがまた 1 件増えた
+
+#### verify
+- Post-merge AC は未発火のため SKIPPED。加えて本条件は「変更後に `/auto` を**複数回**実行し、起票レートが月次で低下していること」を要求するため、**変更着地当日の単一セッションでは原理的に判定不可能**。実質的な評価は 2026-08 月末以降の `/audit stats` になる
+- **本 retrospective は新デフォルト (迷ったら Tier 2) を適用した最初の実運用事例**。`retro_proposal_classified` イベントを 2 件 emit し、`Tier classification: 0 Tier 1 / 1 Tier 2 / 1 Tier 3 (filter hit rate 100%)` を出力した。**新規起票ゼロ**で着地している
+
+### Improvement Proposals
+
+新デフォルト (判断が困難な場合は Tier 2) を適用した分類結果:
+
+- **Tier 2 (convention — memory 提案、`action=memory_proposal`)**: 新規の non-wrapper `emit_event` 呼び出しを追加する際は、既存 emit site から `if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then ... fi` ガードを含む canonical snippet を **verbatim コピー**する。prose でポリシーを述べるだけではコードフェンス側が drift する
+  - **Tier 1 に倒さなかった判断根拠**: review retrospective は「recurring risk whenever a Spec asks for a new non-wrapper `emit_event` call」と述べるが、これは**再発の予測**であって実観測は本 Issue の 1 件のみ。Tier 1 criterion の「再発性」は observed recurrence を指すと解釈し、予測段階では判断困難として新デフォルトの Tier 2 を適用した
+- **Tier 3 (one-time memo、`action=spec_only`)**: レポート出力に新セクションを追加する際、既存テストの出力全体を対象としたアサーション (`(none)` / `0` / `N/A` 等) と衝突しないか確認する。本件は既存テストが捕捉し同 PR 内で修正済みで再発性は低い
+- **No action (既存 Issue が対象)**: 「Spec が既存の参照/リストを更新する編集を指示する場合、呼び出し元を事前に grep で全件列挙する」は **#1039** のスコープ。ただし本件で **3 サイクル連続 (#1028 → #1035 → #1037 → #1159)** となり、かつ従来の「複数の記述形式」ではなく「複数の call site」という新しい失敗モードだったため、#1039 にデータポイントとしてコメントを追加した (https://github.com/saitoco/wholework/issues/1039#issuecomment-5185256257)
+- **No action (既存 Issue が対象)**: 残存 worktree (`review+pr-1161`) は **#1119** のスコープ。本セッションで通算 41 件目の観測
