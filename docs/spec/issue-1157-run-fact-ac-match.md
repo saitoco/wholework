@@ -352,26 +352,24 @@ Size L につき上限5件のうち、2件を自動解決 (残りは AC 文言�
 - **`scan-pending-ac.sh` output line-wrapping**: the accumulator variable for the candidate array was built via repeated `jq '. += [...]'` calls without `-c`, so the final output was pretty-printed across multiple lines instead of the single-line JSON the module header documents. Caught by `tests/run-fact-matching.bats`'s truncation test (a naive `grep '^\['` line-extraction failed). Fixed by adding `-c` to the accumulator's jq call.
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Implemented all 3 scripts exactly as decomposed in the Spec (案 B): `collect-run-facts.sh` / `scan-pending-ac.sh` / `apply-run-fact-match.sh`, with the LLM rubric judgment confined to `modules/run-fact-matching.md` Processing Step 3 only.
-- Documentation sync for the operate-route-adjacent Steering Docs (`docs/guide/autonomy.md`, `docs/workflow.md`) followed the existing precedent set by the "Tier × External System Write (operate route)" gate — neither doc surfaces that gate either, so neither was changed for this Issue's new gate.
-- Added a one-line cross-reference from `modules/observation-trigger.md`'s Notes to `modules/run-fact-matching.md`, per the Spec's own sync candidate suggestion — this is the one Steering Docs change made.
+- Pre-merge AC gate (`check-pre-merge-ac.sh`) resolved cleanly: all 6 pre-merge acceptance conditions were already checked, so the merge proceeded without an override marker.
+- `gh-pr-merge-status.sh` reported `mergeable=true reason=clean`, so no rebase/conflict-resolution path was taken; squash-merged directly via `gh pr merge --squash --delete-branch`.
+- Local branch deletion for `worktree-code+issue-1157` failed because another pre-existing worktree (`review+pr-1160`, unrelated to this merge) still has it checked out; the remote branch was deleted successfully by `gh pr merge`. Left that worktree untouched rather than force-removing it, since it predates this task and is out of scope.
 
 ### Deferred Items
 
-- `/review` の depth (`--full`/`--light`) をイベントログに記録する拡張は別 Issue（Spec 記載どおり、変更なし）
-- `scripts/opportunistic-search.sh` の `--limit 50` silent cap は本 Issue のスコープ外（Spec 記載どおり、変更なし）
-- 既存滞留 167 件への遡及バックフィルは #1158 が担当（Spec 記載どおり、変更なし）
-- Post-merge の observation AC (`/auto` を 1 回完走させて検出を観察する) は未チェックのまま — `/verify` フェーズでの観察対象
+- 未チェックの Deferred Items は変更なし (code フェーズの記載を継続): `/review` depth のイベントログ記録拡張、`opportunistic-search.sh --limit 50` の silent cap、既存滞留 167 件への遡及バックフィル (#1158 が担当) — いずれも本 Issue のスコープ外
+- Post-merge AC (observation, event=auto-run) は引き続き未チェック — `/verify` フェーズでの観察対象
 
 ### Notes for Next Phase
 
-- `/verify` はこの Issue の Post-merge AC (observation, event=auto-run) を、次回いずれかの `/auto` 完走で本機構自身が発火するかどうかで判定することになる。本 PR のマージそのものが `/auto` 経由でない場合、post-merge AC の充足には別途 `/auto` 実行が必要な点に注意
-- `collect-run-facts.sh` の jq `def` で filter 型パラメータ (`$` 無し) を使うと、呼び出し側の `.` ではなく参照箇所の `.` で再評価される (jq の既知の挙動)。Code Retrospective の Rework 節に詳細を記録した — 同モジュールへの将来の変更時に同じ罠を踏まないこと
-- 3 スクリプトはすべて fail-open (`gh` 失敗・イベントログ不在・jq エラーは空結果 + exit 0)、引数不正のみ exit 1。bats テスト 18 件で検証済み
+- `/verify` はこの Issue の Post-merge AC (observation, event=auto-run) を、次回いずれかの `/auto` 完走で本機構自身が発火するかどうかで判定することになる。本 PR のマージそのものが `/auto` 経由でない場合、post-merge AC の充足には別途 `/auto` 実行が必要な点に注意 (code フェーズからの引き継ぎを維持)
+- ローカルの `worktree-code+issue-1157` ブランチは `review+pr-1160` worktree 内に残存しているため、そちらの worktree が不要になった時点で削除すること (この merge 実行では対象外)
+- 3 スクリプトはすべて fail-open、bats テスト 18 件で検証済み — 変更なし
 
 ## Consumed Comments
 
