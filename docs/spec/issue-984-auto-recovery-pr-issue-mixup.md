@@ -6,6 +6,42 @@
   - 要旨: `/issue 984 --non-interactive` の Issue Retrospective (Auto-Resolve Log)。AC1 の verify command を実装手段非依存の outcome ベース表現に書き換えた理由、`run-auto-sub.sh` 調査で判明した `_EXTRA_SELF_ISSUE` 再利用方針を Purpose に追記した経緯、Manual recovery をスコープ外と明記した理由を記録。Issue 本文の Purpose / スコープ外の明記と同内容。
   - URL: https://github.com/saitoco/wholework/issues/984#issuecomment-4947428573
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/984#issuecomment-4948283079
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-4949705336
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-4950419992
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-4954481458
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-4961350507
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-4973946177
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-4980719312
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/984#issuecomment-4980896164
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-4988173019
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/984#issuecomment-4988188931
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5019751111
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5020098387
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/984#issuecomment-5020176374
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5033001024
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5041911805
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5053877080
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5053880816
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5059781425
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5112391126
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5112395479
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5113360706
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/984#issuecomment-5113618826
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5114561861
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5114567598
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5114573152
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5131473787
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/984#issuecomment-5131517592
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/984#issuecomment-5131611659
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5132999742
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5133752039
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5138805581
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5138891151
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5141402320
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5146655448
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5147236074
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=9 / https://github.com/saitoco/wholework/issues/984#issuecomment-5174321501
 ## Overview
 
 `run-auto-sub.sh` の Tier 2/3 recovery (自動発火経路) が `docs/reports/orchestration-recoveries.md` および Spec `## Auto Retrospective` に書き込む際、review/merge phase では issue 番号ではなく **PR 番号**を記録してしまうバグを修正する。
