@@ -279,6 +279,22 @@ No new comments since last phase.
 - `bats tests/` フルスイート (1341件) が PASS 済み。`/review` では behavioral change の影響範囲 (execution-context.md 参照元4ファイル、check-verify-dirty.sh 呼び出し元5スクリプト) が Spec の Changed Files と一致しているか確認すること。
 - Post-merge AC の検証には、並行セッションが dirty な状態で `/auto` を実際に走らせる必要がある。`/verify` 単体では再現が難しいため、実運用での観察 (`docs/reports/orchestration-recoveries.md` に新規 `manual-recovery-review-rerun` が増えないこと) が事実上の検証手段になる。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Code Retrospective は「`tests/run-review.bats` の `gh-extract-issue-from-pr.sh` モックは既に存在するので追加不要」と判断していたが、これは "モックが存在するか" と "モックが引数を検証するか" を混同していた。既存モックは無条件 `exit 0` で、Issue番号解決の並び替えという本PRの中心的な behavioral change を一切検証できない状態だった。Spec/Code Retrospective の「モックの有無」チェックだけでは、モックの実効性 (何を assert しているか) までは検証範囲に含まれないことが分かった。同種の見落としは `tests/run-merge.bats` にも同じ形で存在しており、1箇所の Spec 上の判断ミスが対称的な2ファイルに複製されていた。
+- AC4 (「頻度検出が原因を区別できる」) は、rubric 検証のスコープが `run-auto-sub.sh` / `collect-recovery-candidates.sh` / テストの3ファイルに限定されていたため技術的に PASS 判定されたが、唯一の呼び出し元 (`skills/auto/SKILL.md`) が新フラグを一切渡していないという end-to-end のギャップは rubric の対象外だった。Changed Files に列挙されたファイル集合だけを検証する rubric は、"実装されたが呼び出されない" 形の dormant feature を原理的に検出できない。
+
+### Recurring issues
+
+- `check-verify-dirty.sh` の own-issue-scope manifest 抽出 (`grep -oE '^- \`[^\`]+\`'`) は、Spec 自身のテンプレートで既に使われている2つの実在パターン (indented sub-bullet、`[label]` prefix bullet) を取りこぼす fail-open バグを持っていた。この PR が「Spec の記述形式を機械的に解釈する」機能を新設した際、Spec の記述に許容されている表記ゆれの幅を rubric や Implementation Steps のどちらも列挙していなかった — 自由記述の Markdown を新たにパースする機能を追加する際は、既存 Spec コーパスに対する网羅的なフォーマット調査を Implementation Steps に組み込むべきだった。
+- silent no-op (`2>/dev/null || true` によるエラー握り潰し) は本 Issue のタイトルそのものが示す通り再発型の障害パターンだが、今回追加された `--cause`/`--diagnosis` の実装自体が同種の silent no-op (改行によるheredoc構文エラー) を新たに持ち込んでいた。silent-no-op を修正する PR の中で、その修正コード自身が同じ抽象化 (sed エスケープ + heredoc 埋め込み) を再利用して同じ脆弱性クラスを再導入した — 「修正対象のパターンを新規コードに適用しない」ことをレビューの明示的なチェック観点に加える価値がある。
+
+### Acceptance criteria verification difficulty
+
+- Pre-merge rubric (4件) はいずれも「該当ファイルの変更が存在するか」を確認する形式で、変更の正しさ (ロジックが実際に意図通り動くか) までは判定していない。本レビューで見つかった MUST 5件のうち4件 (exit2到達性、manifest抽出、silent no-op、group-key衝突) は、rubric が PASS 判定した後のコードレビューでのみ発見された、実装済みコードの振る舞い上の欠陥だった。rubric ベースの Pre-merge AC 検証は「変更漏れ」の検出には有効だが、「変更されたロジックの正しさ」の検出は多観点コードレビュー (Step 10) に完全に依存しており、rubric 側の verify command をロジック検証まで拡張する余地は小さい (実行可能なテストで代替する方が費用対効果が高い)。
+
 ## Auto Retrospective
 
 ### Orchestration Anomalies
