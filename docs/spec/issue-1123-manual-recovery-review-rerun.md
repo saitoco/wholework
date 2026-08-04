@@ -262,3 +262,8 @@ cutoff (`phase/*` ラベルの最終付与時刻): `2026-08-04T06:58:48Z`。cuto
 - グループキーのセパレータに `/` を使うこと。`scripts/collect-recovery-candidates.sh` L89 / L106 が H2 ヘッダ末尾の括弧付きサフィックスを `sed 's/ ([^)]*) *$//'` で除去するため、`(cause: X)` 形式は衝突する。
 - SKILL.md 本文を編集する際は `scripts/validate-skill-syntax.py` の制約 (半角感嘆符・3 連バッククォート不可) に注意すること。
 - `tests/run-review.bats` はヘッダコメント L5 で `gh-extract-issue-from-pr.sh` のモックに言及しているが実体が存在しない。移動後の解決経路をカバーするためモック追加が必要。
+
+## Auto Retrospective
+
+### Orchestration Anomalies
+- **[json-mode-silent-hang]** review phase (PR #1149) の leaf セッションが 2600 秒無出力となり watchdog が SIGTERM で回収 (exit 143, 2026-08-04T08:58:31Z, `watchdog_kill` event 記録済み)。外部 kill ではない (Exit code trailer あり / detect-external-kill no-match)。Tier 2 が既知パターンとして検出し、カタログ手順 (retry once) を適用
