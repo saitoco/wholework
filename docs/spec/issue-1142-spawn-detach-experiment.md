@@ -116,3 +116,29 @@ No new comments since last phase. (cutoff: `phase/ready` 付与 2026-08-01T00:39
 - `/verify` は Post-merge AC (`H-a 確定時...`) を確認すること。現状は全仮説未決のため「該当なし」判定・手動チェックになる見込み (PR Verification (post-merge) 節と一致させること)
 - 一次証跡は `docs/sessions/64199-1785717064-2026-08-03/events.jsonl` と `docs/reports/external-kill-investigation.md` § 2026-08-03 Update — Arm 1 (control): 0 kills / 6 wrappers / 13 phase subprocesses (~3時間)
 - 今回発生した worktree 競合 (`main` の二重 checkout 不可によるブランチ削除失敗) は merge スキル運用上の既知の落とし穴として記録: 再発時は remote branch の明示削除 + `origin/main` への detached HEAD checkout で回避可能
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC の「H-a 確定時 / 非確定時」二分岐設計が機能した — 実験不再現という結果でも verify が迷わず「該当なし」分岐で完全クローズできた。実験系 Issue の AC はこの形 (結果条件付き分岐 + 未到達の逃げ道) を先例とすべき
+
+#### spec
+- phase 分割運用 (「/auto 一気通貫不可」の明記) が正しく機能し、code は Steps 1-2 で停止、実験は親セッション対話実行、review は実験結果追記後 — 設計どおりの進行
+
+#### code
+- 前回中断 (TaskStop) の resume を含めクリーン。中断帰属の誤記 (「外部 kill と推定」) は親セッションが訂正済み (95a97846)
+
+#### review
+- **notable (Auto Retrospective 未記録の手動介入)**: review fork agent が初回実行で「エージェントの完了通知を待機します」を宣言して停止 (Review Response Summary 未投稿・PR コメント 0 件の silent no-op 状態)。親セッションが reconcile-phase-state で観測し、SendMessage resume + 「テスト同期実行」規約の再提示で完遂させた。**#1123 Cause A (headless での background 完了通知待ち) と同型の失敗が fork 実行サーフェスでも発生する**ことの実証 — #1103 (Workflow の headless 非互換) と同族で、「非対話・非 fork-aware な実行文脈での通知依存待機の禁止」横断規約 (#1123 AC 1) のスコープに fork surface を含めるべき根拠。--write-manual-recovery の枠外 (wrapper 経由でないため) につき本節が一次記録
+- review agent が gh-pr-review.sh の own-PR REQUEST_CHANGES 422 に遭遇し COMMENT 降格で手動回避 — **open #1102 の再現実証** (improvement proposal は review retrospective に記録済み、新規起票なし)
+
+#### merge
+- rebase コンフリクト 1 件 (両側が同一 CI 修正を独立実装) を main 側採用で解消し、フルスイート 1332 tests 再実行後に merge — 手順どおり。worktree 競合の回避手順は Phase Handoff に記録済み
+
+#### verify
+- FAIL 0 / UNCERTAIN 0。bats 86/86 再確認 (spawn-detach 3 テスト含む)
+
+### Improvement Proposals
+- fork 実行サーフェスでの通知依存待機の禁止を #1123 の横断規約スコープに含める (新規起票なし — #1123 へのコメント接続で対応。fan-out 抑制方針と整合)
