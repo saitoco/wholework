@@ -220,5 +220,9 @@ FIXTURE_EOF
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "Retro proposal tiers (1/2/3) | 0 / 0 / 0"
     echo "$output" | grep -q "### Retro Proposal Tier Breakdown"
-    echo "$output" | grep -qE "^\(none\)$"
+    # Scope the "(none)" degrade check to the Retro Proposal Tier Breakdown section only —
+    # an unscoped check would silently pass if a different section's degrade string were
+    # ever normalized to a bare "(none)" while this section actually broke.
+    breakdown_section="$(echo "$output" | sed -n '/### Retro Proposal Tier Breakdown/,$p')"
+    echo "$breakdown_section" | grep -qE "^\(none\)$"
 }

@@ -8,7 +8,8 @@ Extract `### Improvement Proposals` sections from all Spec retrospective section
 
 Called by:
 - `/verify` Step 16 (after verify retrospective is written to Spec)
-- `/auto` Step 5 L3 auto-retrospective (after Auto Retrospective commit+push)
+- `/auto` Step 4a step 6 (after per-Issue Auto Retrospective commit+push)
+- `/auto` Step 5 L3 auto-retrospective step 6 (after batch/XL session-level Auto Retrospective commit+push)
 
 ## Input
 
@@ -65,16 +66,18 @@ Called by:
    ```bash
    source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
    restore_auto_session_pointer
-   EMIT_ISSUE_NUMBER=<numeric> emit_event "retro_proposal_classified" "tier=<1|2|3>" "title=<proposal title, first 80 chars>" "reason=<one-line classification rationale>" "action=<issue_created|memory_proposal|spec_only>"
+   if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+     EMIT_ISSUE_NUMBER=<numeric> emit_event "retro_proposal_classified" "tier=<1|2|3>" "title=<proposal title, first 80 chars>" "reason=<one-line classification rationale>" "action=<issue_created|memory_proposal|spec_only>"
+   fi
    ```
 
    - **Numeric guard (required)**: if `NUMBER` is not a bare integer (e.g. the `/auto` L3 route's `BRIDGE_NUMBER="batch-<session-id>"`), pass `EMIT_ISSUE_NUMBER=0` instead. `emit_event()` writes `"issue":${_issue}` unquoted, so a non-numeric value produces a malformed JSON line that breaks `get-auto-session-report.sh`'s whole-log `jq -s` read.
-   - If `AUTO_EVENTS_LOG` is unset and cannot be restored via `restore_auto_session_pointer` (a standalone `/verify` run outside `/auto`), skip the emit for this proposal — same policy as the other non-wrapper emitters in `modules/event-emission.md`.
+   - **`AUTO_EVENTS_LOG` guard (required)**: the `if` above skips the emit entirely when `AUTO_EVENTS_LOG` is unset and cannot be restored via `restore_auto_session_pointer` (a standalone `/verify` run outside `/auto`) — same policy as the other non-wrapper emitters in `modules/event-emission.md`. `emit_event()` itself does not skip on an unset `AUTO_EVENTS_LOG` (it falls back to a CWD-relative `.tmp/auto-events.jsonl`), so the guard must be applied by the caller.
    - Regardless of tier, output one terminal summary line covering all proposals classified in this run: `Tier classification: {n1} Tier 1 / {n2} Tier 2 / {n3} Tier 3 (filter hit rate {p}%)`. `p` is the floor of `(n2 + n3) / (n1 + n2 + n3) * 100`; use `0` when the total is 0.
 
 7. **HAS_SKILL_PROPOSALS gate**:
 
-   **Early gate — if `HAS_SKILL_PROPOSALS=false`**: skip classification. Treat all proposals as Code improvements and proceed directly to step 9 (duplicate check → freshness check → create Issues). No skill-infra classification, no skip-count log.
+   **Early gate — if `HAS_SKILL_PROPOSALS=false`**: skip the skill-infra (Domain) classification below — the step 6 Tier classification has already run and still applies. Treat all proposals as Code improvements and proceed directly to step 9 (duplicate check → freshness check → create Issues). No skill-infra classification, no skip-count log.
 
    **If `HAS_SKILL_PROPOSALS=true`**: classify each improvement proposal using the criteria from the Domain file for `/verify` (`.wholework/domains/verify/`). Load the Domain file by reading `${CLAUDE_PLUGIN_ROOT}/modules/domain-loader.md` and following the "Processing Steps" section with `SKILL_NAME=verify`. If no Domain file was loaded, treat all proposals as Code improvements.
 
