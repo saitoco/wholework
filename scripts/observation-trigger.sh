@@ -84,8 +84,8 @@ fi
 
 for N in $NUMBERS; do
     SKIP=false
-    MARKER_TS=$(gh issue view "$N" --json comments \
-        --jq '[.comments[] | select(.body | contains("<!-- wholework-event: type=observation-trigger phase=observation-trigger issue='"$N"' event='"$EVENT_NAME"' -->"))] | sort_by(.createdAt) | .[-1].createdAt // empty' \
+    MARKER_TS=$(MARKER_N="$N" MARKER_EVENT="$EVENT_NAME" gh issue view "$N" --json comments \
+        --jq '[.comments[] | select(.body | contains("<!-- wholework-event: type=observation-trigger phase=observation-trigger issue=" + env.MARKER_N + " event=" + env.MARKER_EVENT + " -->"))] | sort_by(.createdAt) | .[-1].createdAt // empty' \
         2>/dev/null || true)
     if [ -n "$MARKER_TS" ]; then
         if MARKER_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$MARKER_TS" "+%s" 2>/dev/null) || \

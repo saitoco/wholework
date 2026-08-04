@@ -158,3 +158,12 @@ teardown() {
     [ "$status" -eq 0 ]
     grep -q "type=observation-trigger phase=observation-trigger issue=42 event=watchdog-kill" "$BATS_TEST_TMPDIR/gh-calls.log"
 }
+
+@test "idempotency: unparseable marker timestamp fails open (does not skip comment)" {
+    export MOCK_EXISTING_MARKER_CREATED_AT="not-a-date"
+    export MOCK_SEARCH_OUTPUT='[{"number": 42, "condition": "watchdog-kill event is observed"}]'
+    run bash "$SCRIPT" --event watchdog-kill
+    [ "$status" -eq 0 ]
+    grep -q "issue comment 42" "$BATS_TEST_TMPDIR/gh-calls.log"
+    [ "$output" = "42" ]
+}

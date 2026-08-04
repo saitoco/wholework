@@ -121,6 +121,14 @@ consumption logic. Before posting, the script checks for the latest such marker 
 target Issue and skips the comment if its `createdAt` is less than 86400 seconds (24
 hours) old.
 
+**Concurrency limitation**: the guard's check-then-post is not atomic — it reads existing
+markers via `gh issue view`, then later posts a comment if none is found. If two
+invocations for the same `event`/Issue run truly concurrently, both can pass the marker
+check before either posts, so duplicate comments are still possible under that pattern.
+The guard fixes the sequential re-run case (the one observed in the reference incident,
+session `25766-1785288928`); it does not provide full mutual exclusion across concurrent
+callers.
+
 **Who invokes `/verify` (since #897):** `observation-trigger.sh` itself never
 invokes `/verify` — it only posts the comment and prints the matched numbers. Whether
 those numbers are turned into an actual `/verify` call is the calling emitter's
