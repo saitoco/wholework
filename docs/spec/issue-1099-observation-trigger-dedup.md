@@ -120,17 +120,30 @@
 ### Rework
 - N/A
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- N/A — 実装は Spec の Implementation Step 1 の bash スニペットをそのまま採用しており、構造的な乖離は見られなかった。ドキュメント更新 (`modules/observation-trigger.md`、`docs/guide/customization.md`、`docs/ja/guide/customization.md`) も Spec の Changed Files 指示と一致していた。
+
+### Recurring issues
+- `gh <cmd> --jq <expr>` は単一の expression 文字列のみを受け付け、jq CLI 本来の `--arg` オプションのようなフラグは渡せない (`unknown flag: --arg` で実機確認)。動的な値を安全に jq 式へ渡す場合は `env.VARNAME` (環境変数経由) を使う必要がある。今回は `scripts/observation-trigger.sh` の1箇所のみだったが、他スクリプトでも `gh --jq` に変数を文字列結合している箇所があれば同種の脆弱性 (jq 式破損によるフェイルオープン) が潜在する可能性がある。次回の `/audit fragility` や関連スクリプト変更時に確認候補としたい。
+
+### Acceptance criteria verification difficulty
+- N/A — rubric 4件・command 1件とも曖昧さなく自動判定できた。verify command (`bats tests/observation-trigger.bats`) は追加テストケース込みで問題なく実行できた。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec Implementation Step 1 の bash スニペットをそのまま採用し、`gh issue view --json comments --jq` によるマーカー検索 + BSD/GNU 両対応の `date` フォールバックで 24 時間ウィンドウ判定を実装した。
-- `tests/observation-trigger.bats` の `gh` モックをサブコマンド分岐 (`issue view` / `issue comment`) に拡張し、既存 11 ケースを無変更のまま新規 4 ケース (冪等性スキップ・ウィンドウ期限切れ・stdout hygiene・マーカー形式) を追加した。
-- Steering Docs sync candidate として Spec が指定した3ファイル (`modules/observation-trigger.md`、`docs/guide/customization.md`、`docs/ja/guide/customization.md`) の「unconditional」記述を更新し、`docs/structure.md` は Spec の判断通り更新不要とした。
+- SHOULD/CONSIDER 指摘 3件はすべて対応した: (1) 同時実行時の非アトミック性の限界を `modules/observation-trigger.md` にドキュメント化、(2) `gh issue view --jq` への `$N`/`$EVENT_NAME` 直接文字列結合を `env.MARKER_N`/`env.MARKER_EVENT` 経由に変更 (`--arg` は `gh --jq` では使えないことを実機確認済み)、(3) fail-open 分岐 (日時変換失敗時) を検証する bats ケースを追加。
+- Base Branch Conflict Pre-check: `git merge-base HEAD origin/main` が `origin/main` の HEAD と一致しており、`git merge-tree` の出力も空 — base ブランチとのコンフリクトなし。
+- 修正はいずれも挙動を変えない防御的変更 (ドキュメント追記・実装の堅牢化・テスト追加) のため、Step 13 の方針変更検出は該当なしと判断した。
 
 ### Deferred Items
-- Post-merge AC (`observation-trigger.sh --event auto-run` を連続2回実行して重複投稿されないことを手動確認) は未実施 — post-merge manual 検証のため `/verify` フェーズに委ねる。
+- Post-merge AC (`observation-trigger.sh --event auto-run` を連続2回実行して重複投稿されないことを手動確認) は引き続き未実施 — `/verify` フェーズに委ねる。
+- 真の同時実行 (複数プロセスが同一 event/Issue に対して同時に走るケース) に対する完全な排他制御 (ロックファイル等) は本 PR のスコープ外として見送り、`modules/observation-trigger.md` に限界を明記するに留めた。
 
 ### Notes for Next Phase
-- Pre-merge AC は rubric 4件 + `bats tests/observation-trigger.bats` (15/15 PASS) をすべて確認済み、Issue のチェックボックスも更新済み。
-- 24時間ウィンドウはスクリプト内固定定数 (`.wholework.yml` 化していない) — Spec Notes に理由を記載済み。
+- Fix commit (`d3351b79`) push 後、CI の再実行結果を `/merge` 前に確認すること。
+- Post-merge AC は `/verify` で manual 確認が必要 (`verify-type: manual`)。
+- 24時間ウィンドウはスクリプト内固定定数のまま — 変更なし。
