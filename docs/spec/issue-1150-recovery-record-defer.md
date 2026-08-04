@@ -245,23 +245,21 @@ Background セクションの `--write-manual-recovery` という事実主張は
 - **改善提案**: `gh-pr-review.sh` の `event=REQUEST_CHANGES` 送信が、self-hosted 単一アカウント運用の本リポジトリでは GitHub の HTTP 422 (self-`REQUEST_CHANGES` 拒否、`modules/phase-state.md:75` に既知の制約として記録済み) により構造的に失敗する。今回は MUST issue 存在時に `event=COMMENTED` へのフォールバックがなく、素朴に投稿すると単に失敗する (本 review では手動で `path: null` の MUST エントリを追加し忘れた際に発覚)。`gh-pr-review.sh` に self-review 422 を検知して `event=COMMENTED` + 本文冒頭への MUST 明示テキストへ自動フォールバックする処理を追加する Issue を起票すべき
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- CI FAILURE (`Forbidden Expressions check` ×2) は本 PR の diff に含まれない `docs/spec/issue-1123-manual-recovery-review-rerun.md:318` の廃止用語 (旧称: 'Design file' / 'Issue Spec'、`docs/product.md` § Terms 参照) が原因と判明。無関係な事前混入でも review skill のポリシー上 MUST として扱い、1 行修正で解消した
-- review-bug×2 の指摘 9 件を Opus 検証 sub-agent で 2 段階検証し、3 件 (emit_event 重複キー、flush 重複記録、reissue 時の Spec 重複) が CONFIRMED、6 件が REJECT (設計上許容済み、または低確度の懸念) と判定された
-- CONFIRMED のうち SHOULD 2 件 (emit_event 重複キー、flush 重複記録) と、tech.md/ja tech.md のドキュメント不整合 (SHOULD) を修正・push 済み。CONSIDER 3 件と Uncertainty 検証未実施の SHOULD 1 件は skip と判断 (実装変更を伴わない、または影響が限定的)
+- mergeable=true (clean, CI success, review approved) のため conflict 解消フローは不要で、squash merge をそのまま実行した
+- Phase Handoff (review→merge) の内容を確認のうえ merge phase の内容へローテーションした
 
 ### Deferred Items
 
 - `auto-stop-at` が `code` / `review` の場合の defer ファイル残留は本 Issue のスコープ外のまま (Spec Uncertainty 参照)。記録は失われないため許容する
 - `/verify` からの defer ファイル回収は不採用のまま。将来必要になった場合は別 Issue で扱う
-- Spec Uncertainty の検証方法 (`auto-stop-at: review` での bats/観察検証) は未実施のまま。`/verify` の post-merge 観察で対応することを推奨
 - reissue シナリオでの Spec 重複エントリ (CONSIDER, scripts/run-auto-sub.sh:568 / modules/orchestration-fallbacks.md:99) は未修正。影響は cosmetic だが、別 Issue での対応を検討
+- `gh-pr-review.sh` の self-review `REQUEST_CHANGES` 422 ギャップ (review retrospective 参照) は改善提案として別途起票を検討すること
 
 ### Notes for Next Phase
 
-- Post-merge AC (open PR 存在時の recovery が main と conflict しないことの観察) は `/verify` 側での対応
-- `gh-pr-review.sh` の self-review `REQUEST_CHANGES` 422 ギャップ (retrospective 参照) は改善提案として別途起票を検討すること
+- Post-merge AC (open PR 存在時の recovery が main と conflict しないことの観察) は `/verify` 側で確認すること
 - `_flush_deferred_recovery_records()` は commit 成功時点で defer ファイルを削除するよう修正済み (push 失敗時はローカル commit を保持し、次回 push リトライに委ねる)。`/verify` での観察時、この挙動変更を踏まえること
