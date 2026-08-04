@@ -9,8 +9,15 @@
 # matches carrying a `keyword=<text>` AC attribute against the file's content
 # (case-insensitive substring match). See modules/observation-trigger.md § Condition Check Gate.
 #
-# For each matched Issue, posts a comment recommending the user re-run /verify.
+# For each matched Issue, posts a comment recommending the user re-run /verify,
+# unless a `<!-- wholework-event: type=observation-trigger ... event=<name> -->`
+# marker for the same event was already posted to that Issue within the last
+# 24 hours (idempotency guard — skipped Issues are still included below).
 # Errors are non-fatal (2>/dev/null || true pattern throughout).
+#
+# stdout contract: matched Issue numbers only, one per line, ascending order
+# (numbers whose comment was skipped by the idempotency guard are still
+# included). No other output (e.g. comment URLs) is written to stdout.
 
 set -euo pipefail
 
@@ -76,7 +83,24 @@ if [ -z "$NUMBERS" ]; then
 fi
 
 for N in $NUMBERS; do
-    gh issue comment "$N" --body "observation event \`${EVENT_NAME}\` detected. Run \`/verify ${N}\` to verify the condition and update the checkbox." 2>/dev/null || true
+    SKIP=false
+    MARKER_TS=$(gh issue view "$N" --json comments \
+        --jq '[.comments[] | select(.body | contains("<!-- wholework-event: type=observation-trigger phase=observation-trigger issue='"$N"' event='"$EVENT_NAME"' -->"))] | sort_by(.createdAt) | .[-1].createdAt // empty' \
+        2>/dev/null || true)
+    if [ -n "$MARKER_TS" ]; then
+        if MARKER_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$MARKER_TS" "+%s" 2>/dev/null) || \
+           MARKER_EPOCH=$(date -d "$MARKER_TS" "+%s" 2>/dev/null); then
+            NOW_EPOCH=$(date +%s)
+            ELAPSED=$(( NOW_EPOCH - MARKER_EPOCH ))
+            if [ "$ELAPSED" -lt 86400 ]; then
+                SKIP=true
+            fi
+        fi
+    fi
+    if [ "$SKIP" = false ]; then
+        BODY=$(printf '<!-- wholework-event: type=observation-trigger phase=observation-trigger issue=%s event=%s -->\nobservation event `%s` detected. Run `/verify %s` to verify the condition and update the checkbox.' "$N" "$EVENT_NAME" "$EVENT_NAME" "$N")
+        gh issue comment "$N" --body "$BODY" >/dev/null 2>/dev/null || true
+    fi
 done
 
 echo "$NUMBERS"
