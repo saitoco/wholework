@@ -309,3 +309,23 @@ No new comments since last phase.
 - **Recovery type**: merge-rerun
 - **Wrapper exit code**: 1
 - **Outcome**: success
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue / spec
+- 観察 3 件 (headless ×2 トリガー / 自 Issue Spec 残骸 / fork surface) がコメント接続 → AC への反映まで一気通貫で機能した。「再喚起保証」という概念での一般化 (Opus spec) は #1097/#1103/#994 を単一規約に束ねる適切な抽象度だった
+
+#### code / review
+- review 初回は json-mode-silent-hang (watchdog kill 2600s) → カタログ retry で回復。retry 後の review は MUST 5 件 (exit2 到達性 / manifest 抽出 fail-open / silent no-op 再導入 / group-key 衝突 / dormant feature) を検出・解消しており、--full review の価値を実証
+
+#### merge
+- **notable: 3 連続失敗** — watchdog kill ×2 (json-mode-silent-hang) → notification-dependent-wait による silent no-op ×1 (本 Issue が禁止するクラスの実演。Auto Retrospective に記録済み)。親セッションの manual recovery (merge-rerun) で完遂
+- **notable (Auto Retrospective 未記録の観察): #890 系「recovery 記録が競合を生む」の再演** — 親セッションが Tier 2 検出結果を main の Spec に直接 commit/push した 2 コミットが、open PR #1149 の同一 Spec ファイル変更と本物の conflict を生成し、rebase + 手動解消 (Phase Handoff ローテーション考慮) + フルスイート再実行を要した。open PR が存在する Issue の recovery 記録を main に直接書くことは構造的に conflict を製造する。プロジェクト診断レポート (docs/reports/ja/project-structural-review-2026-07-31.md) の推奨 6「recovery 記録の main 直接 commit/push を廃止し .tmp/auto-events.jsonl への emit に一本化」が未起票のまま実害を再生産した形
+
+#### verify
+- FAIL 0。Post-merge manual は縮小検証 (foreign-session 分類の exit 0 実測) で機構レベル確認、e2e は次回並行運用で補完
+
+### Improvement Proposals
+- recovery 記録 (Tier 2/3 検出結果・manual recovery) の書き込み先を、open PR が存在する場合は main 直接 commit ではなく events emit + セッション末尾転記に変更する (#890/#1005/#1006 と本件で計 4 度目の conflict 実害。診断レポート推奨 6 の正式起票)
