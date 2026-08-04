@@ -77,6 +77,74 @@ FIXTURE_EOF
   echo "$output" | grep -E $'^target-symptom\t3$'
 }
 
+@test "cause grouping: same symptom with 2 distinct causes -> counted and grouped separately" {
+  cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
+## 2026-06-01 10:00 UTC: manual-recovery-review-rerun
+
+### Diagnosis
+- cause: dirty-guard
+- first dirty-guard occurrence
+
+## 2026-06-02 10:00 UTC: manual-recovery-review-rerun
+
+### Diagnosis
+- cause: dirty-guard
+- second dirty-guard occurrence
+
+## 2026-06-03 10:00 UTC: manual-recovery-review-rerun
+
+### Diagnosis
+- cause: workflow-wait
+- first workflow-wait occurrence
+
+## 2026-06-04 10:00 UTC: manual-recovery-review-rerun
+
+### Diagnosis
+- cause: workflow-wait
+- second workflow-wait occurrence
+
+FIXTURE_EOF
+
+  # threshold=2: each cause-specific group meets the threshold on its own.
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 2
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -E $'^manual-recovery-review-rerun/dirty-guard\t2$'
+  echo "$output" | grep -E $'^manual-recovery-review-rerun/workflow-wait\t2$'
+  # The plain (cause-less) symptom-short key never appears -- every entry in this fixture
+  # carries a cause line, so counts are never merged into the bare symptom-short.
+  ! echo "$output" | grep -E $'^manual-recovery-review-rerun\t'
+
+  # threshold=3: merged (4) would clear the bar, but each cause-specific group (2) does not --
+  # this proves cause-separation, not merging, is what determines inclusion.
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 3
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "cause grouping: entries without a cause line keep the plain symptom-short key (backward compat)" {
+  cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
+## 2026-06-01 10:00 UTC: manual-recovery-push-only
+
+### Diagnosis
+- Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: push-only)
+
+## 2026-06-02 10:00 UTC: manual-recovery-push-only
+
+### Diagnosis
+- Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: push-only)
+
+## 2026-06-03 10:00 UTC: manual-recovery-push-only
+
+### Diagnosis
+- Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: push-only)
+
+FIXTURE_EOF
+
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 3
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -E $'^manual-recovery-push-only\t3$'
+}
+
 @test "wrapper-retry-on-kill: H2 entries detected by frequency parser" {
   cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
 ## 2026-06-01 10:00 UTC: wrapper-retry-on-kill
