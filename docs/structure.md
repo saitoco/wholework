@@ -183,7 +183,7 @@ Key modules:
 - `scripts/gh-pr-review.sh` — post PR reviews
 
 **Project utilities:**
-- `scripts/collect-recovery-candidates.sh` — parse `docs/reports/orchestration-recoveries.md`; count symptom-short frequency; exclude filed entries; apply `--threshold K` filter; output `<symptom-short>\t<count>` candidates; accepts `--issues-json PATH` for duplicate detection
+- `scripts/collect-recovery-candidates.sh` — parse `docs/reports/orchestration-recoveries.md`; count group-key frequency (group-key is a bare symptom-short, or `symptom-short/cause-slug` when an entry's Diagnosis body has a `- cause:` line); exclude filed entries; apply `--threshold K` filter; output `<group-key>\t<count>` candidates; accepts `--issues-json PATH` for duplicate detection
 - `scripts/get-config-value.sh` — extract a configuration value from `.wholework.yml`
 - `scripts/handle-permission-mode-failure.sh` — diagnose `permission-mode: auto` failures and print remediation hint to stderr (heuristic: exit!=0 AND elapsed<=30s)
 - `scripts/get-verify-permission.sh` — extract permission value from a verify command handler file
@@ -236,7 +236,7 @@ Key modules:
 - `scripts/validate-permissions.sh` — validate skill directory ↔ name: field consistency
 - `scripts/validate-skill-syntax.py` — validate SKILL.md frontmatter and syntax
 - `scripts/check-file-overlap.sh` — detect file overlap between repos
-- `scripts/check-verify-dirty.sh` — session-aware dirty file classifier for /verify Step 1 (self-worktree / other-worktree / other-session / parent-main 4-way classification; outputs classify=... to stderr)
+- `scripts/check-verify-dirty.sh` — session-aware dirty file classifier for /verify Step 1 (self-worktree / other-worktree / other-session / self-spec / own-issue-scope / foreign-session 6-way classification; own-issue-scope vs. foreign-session is decided against the Issue's own Spec `## Changed Files` manifest; outputs classify=... to stderr)
 - `scripts/check-session-findings-disposition.sh` — detects `## Findings` bullets in an L3 `session.md` missing a canonical disposition tag; called warn-only from `skills/auto/SKILL.md` Step 5 right before the commit
 - `scripts/check-translation-sync.sh` — check translation sync status of docs/ja/* against docs/*
 - `scripts/check-forbidden-expressions.sh` — detect deprecated terms from docs/product.md § Terms
