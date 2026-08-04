@@ -5,6 +5,29 @@
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 内容: Issue Retrospective — Type=Bug・Size=L・Value=3 の判定根拠、テスト追加先を既存 `tests/review.bats` / `tests/verify.bats` の拡張とする auto-resolve 判断、および A 案 (counter-marker) / B 案 (常時投稿) の選択を `/spec` へ委譲する旨 / URL: https://github.com/saitoco/wholework/issues/1035#issuecomment-5034526511
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 内容: Issue Retrospective Addendum — `skills/issue/spec-test-guidelines.md` に従い AC4 (`github_check "gh pr checks" "Run bats tests"`) を Pre-merge に追加した経緯 / URL: https://github.com/saitoco/wholework/issues/1035#issuecomment-5034558094
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1035#issuecomment-5035339425
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1035` to verify the conditio / https://github.com/saitoco/wholework/issues/1035#issuecomment-5041912318
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1035` to verify the conditio / https://github.com/saitoco/wholework/issues/1035#issuecomment-5053877553
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1035` to verify the conditio / https://github.com/saitoco/wholework/issues/1035#issuecomment-5053881292
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1035` to verify the conditio / https://github.com/saitoco/wholework/issues/1035#issuecomment-5059782661
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1035` to verify the conditio / https://github.com/saitoco/wholework/issues/1035#issuecomment-5112391611
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1035` to verify the conditio / https://github.com/saitoco/wholework/issues/1035#issuecomment-5112396017
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1035` to verify the conditio / https://github.com/saitoco/wholework/issues/1035#issuecomment-5113361227
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1035#issuecomment-5113805525
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1035` to verify the conditio / https://github.com/saitoco/wholework/issues/1035#issuecomment-5114562701
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1035` to verify the conditio / https://github.com/saitoco/wholework/issues/1035#issuecomment-5114568469
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1035` to verify the conditio / https://github.com/saitoco/wholework/issues/1035#issuecomment-5114573970
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1035` to verify the conditio / https://github.com/saitoco/wholework/issues/1035#issuecomment-5131474908
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1035#issuecomment-5131560932
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1035#issuecomment-5131628701
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1035` to verify the conditio / https://github.com/saitoco/wholework/issues/1035#issuecomment-5133000576
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1035` to verify the conditio / https://github.com/saitoco/wholework/issues/1035#issuecomment-5133752624
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1035` to verify the conditio / https://github.com/saitoco/wholework/issues/1035#issuecomment-5138805946
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1035` to verify the conditio / https://github.com/saitoco/wholework/issues/1035#issuecomment-5138891462
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1035` to verify the conditio / https://github.com/saitoco/wholework/issues/1035#issuecomment-5141402925
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1035` to verify the conditio / https://github.com/saitoco/wholework/issues/1035#issuecomment-5146655964
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1035` to verify the conditio / https://github.com/saitoco/wholework/issues/1035#issuecomment-5147236533
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1035#issuecomment-5174322047
 ## Overview
 
 #1028 で導入した `<!-- wholework-event: type=preview-ac-unverified -->` マーカーは「未検証の preview AC が 1 件以上あるときだけ投稿する」設計になっている。このため fix-cycle で `/review` が再実行され preview AC が UNCERTAIN → PASS に変化しても、新しい状態を伝えるコメントが投稿されず、`/verify` は古いマーカーを「最新」として参照し続ける。
