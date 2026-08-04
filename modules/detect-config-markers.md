@@ -56,6 +56,7 @@ From the loaded content, search for each YAML key in the marker definition table
 | `verify-max-iterations` | `VERIFY_MAX_ITERATIONS` | Integer string (extract as-is; use `3` if ≤0, non-numeric, or >20) | `3` |
 | `auto-max-concurrent` | `AUTO_MAX_CONCURRENT` | Integer string (extract as-is; use `5` if ≤0 or non-numeric) | `5` |
 | `patch-lock-timeout` | `PATCH_LOCK_TIMEOUT_SECONDS` | Integer string (extract as-is; use `300` if ≤0 or non-numeric) | `300` (used by `scripts/worktree-merge-push.sh`) |
+| `observation-dispatch-threshold` | `OBSERVATION_DISPATCH_THRESHOLD` | Integer string (extract as-is; use `5` if ≤0 or non-numeric) | `5` |
 | `retro-proposals-upstream` | `RETRO_PROPOSALS_UPSTREAM` | String value (extract value as-is; upstream repository in `owner/repo` format) | `""` |
 | `verify-ignore-paths` | `VERIFY_IGNORE_PATHS` | Newline-separated glob pattern list | `""` |
 | `autonomy` | `AUTONOMY_TIER` | Tier string extracted as-is (`L1`/`L2`/`L3`) | `L1` |
@@ -86,6 +87,7 @@ Example: `capabilities.invoice-api: true` → `HAS_INVOICE_API_CAPABILITY=true`
 - `spec-path` and `steering-docs-path` are treated as path strings with quotes removed (same handling as `production-url`)
 - `watchdog-timeout-seconds` is treated as an integer: extract the numeric string; if the value is ≤0 or non-numeric, fall back to the default `1800` (see `scripts/watchdog-defaults.sh` `WATCHDOG_TIMEOUT_DEFAULT`) and log a warning
 - `verify-max-iterations` is treated as an integer: extract the numeric string; if the value is ≤0, non-numeric, or >20, fall back to the default `3` and log a warning
+- `observation-dispatch-threshold` is treated as an integer: extract the numeric string; if the value is ≤0 or non-numeric, fall back to the default `5`
 - `patch-lock-timeout` is treated as an integer: extract the numeric string; if the value is ≤0 or non-numeric, fall back to the default `300` (used by `scripts/worktree-merge-push.sh`)
 - `retro-proposals-upstream` is treated as a string (`owner/repo` format) with quotes removed (same handling as `production-url`)
 - `verify-ignore-paths` is written in block list format (`- pattern`), parsed the same way as `capabilities.mcp`. Each entry is a glob pattern. Supported: `dir/**` prefix match and simple bash globs (`*`, `?`, `[...]`); intermediate `**` (e.g. `a/**/b`) and negation (`!`) are not supported. If undefined or an empty list, `VERIFY_IGNORE_PATHS=""`
@@ -132,6 +134,7 @@ PERMISSION_MODE: string extracted from permission-mode (default: "auto")
 VERIFY_MAX_ITERATIONS: integer from verify-max-iterations (default: "3"; falls back to "3" if ≤0, non-numeric, or >20)
 AUTO_MAX_CONCURRENT: integer from auto-max-concurrent (default: "5"; falls back to "5" if ≤0 or non-numeric)
 PATCH_LOCK_TIMEOUT_SECONDS: integer from patch-lock-timeout (default: "300"; falls back to "300" if ≤0 or non-numeric)
+OBSERVATION_DISPATCH_THRESHOLD: integer from observation-dispatch-threshold (default: "5"; falls back to "5" if ≤0 or non-numeric)
 RETRO_PROPOSALS_UPSTREAM: upstream repository (owner/repo) from retro-proposals-upstream (default: "")
 VERIFY_IGNORE_PATHS: newline-separated glob pattern list from verify-ignore-paths (default: "")
 AUTONOMY_TIER: tier string from autonomy (default: "L1"; falls back to "L1" if unset or invalid)

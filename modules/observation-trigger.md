@@ -109,6 +109,19 @@ responsibility:
   Issue the current phase just processed). At `L1`, dispatch is skipped and the posted
   comment remains the only signal (advisory-only, matching the `L1` semantics in
   `modules/autonomy-tier.md`).
+  - **`/auto` dispatch cap (#952)**: `/auto`'s single-issue and batch Event-based observation
+    scan steps additionally cap active dispatch to the first `OBSERVATION_DISPATCH_THRESHOLD`
+    matched numbers per run (`observation-dispatch-threshold` in `.wholework.yml`, default `5`;
+    see `modules/detect-config-markers.md`). `observation-trigger.sh`'s stdout is already
+    ascending-sorted by Issue number (`sort -un`), so the cap naturally prioritizes the
+    longest-waiting Issue first. Numbers beyond the cap are not lost: the notification comment
+    above is posted to every matched Issue unconditionally regardless of the cap, and because
+    `opportunistic-search.sh` re-scans all unchecked `event=auto-run` observation ACs on every
+    invocation with no already-notified state, deferred Issues are re-matched (and re-attempted,
+    cap permitting) on the next `auto-run` event — a stateless, rolling form of deferred coverage.
+    `/review`'s Event-based observation scan (`event=pr-review-full`/`pr-review-light`) is not
+    capped: it is a structurally separate emitter/event population with no `--batch`-style volume
+    multiplier and no evidence of the same fan-out pattern.
 - **`scripts/claude-watchdog.sh`** (shell-only context, no `Skill` tool available) does
   not capture or act on stdout — its existing comment-posting-only fallback is
   unaffected by this change.
