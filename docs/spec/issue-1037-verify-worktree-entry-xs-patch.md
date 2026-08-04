@@ -124,6 +124,9 @@ Issue 本文の Proposal (A/B 案) のうち **A. 常に worktree 強制** を�
 
 #### verify
 - Nothing to note — Pre-merge AC 2 件は rubric で明確に PASS 判定。UNCERTAIN 0。
+- **追記 (2026-08-05、`/auto 1150` からの observation 再検証)**: Post-merge の observation AC は、条件文が観察対象を「batch mode かつ XS patch route」と限定する一方、トリガが `event=auto-run` (任意の `/auto` 完走) であるため、単一 Issue 実行のたびに dispatch されて SKIPPED を返す。本ディスパッチ元も `/auto 1150` (Size L / pr route / 非 batch) だった
+- **部分証拠**: 同セッションで observation dispatch により `/verify` を 6 回連続実行 (#1150 / #984 / #995 / #1009 / #1035 / 本 #1037) した結果、全件で Step 3 の worktree Entry が実行され、`append-consumed-comments-section.sh` の commit が worktree ブランチ側に着地し、L167-173 の「worktree 外実行」警告は一度も発火しなかった。A 案 (常時強制) と script 側の worktree 前提は逐次実行では整合動作しており、未確認なのは「batch mode 下での**並行**実行」と「XS patch route での適用」の 2 点に限られる
+- 同一セッションで #984 / #995 / #1009 / #1035 / 本 Issue の 5 件が連続して前提不成立または実行文脈不一致により SKIPPED になった。`event=auto-run` の粒度が実際の観察対象より広すぎることが、5 件横断で定量的に確認できた (#1118 のスコープ)
 
 ### Improvement Proposals
 
