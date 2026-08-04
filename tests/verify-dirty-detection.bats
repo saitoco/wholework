@@ -220,3 +220,68 @@ EOF
     [ "$status" -eq 0 ]
     [[ "$output" == *"classify=foreign-session"* ]]
 }
+
+@test "own-issue-scope: indented sub-bullet path under a parent bullet is captured" {
+    cd "$REPO_DIR"
+    cat > docs/spec/issue-123-my-spec.md <<'EOF'
+# Issue #123: example
+
+## Changed Files
+
+- Steering Docs sync candidates:
+  - `scripts/run-review.sh` / `docs/ja/run-review.md`
+  - `docs/tech.md`
+
+## Implementation Steps
+
+1. do the thing
+EOF
+    git add docs/spec/issue-123-my-spec.md && git commit -q -m "add spec"
+    make_dirty "scripts/run-review.sh"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"classify=own-issue-scope"* ]]
+}
+
+@test "own-issue-scope: bullet with a [label] prefix before the backtick path is captured" {
+    cd "$REPO_DIR"
+    cat > docs/spec/issue-123-my-spec.md <<'EOF'
+# Issue #123: example
+
+## Changed Files
+
+- [Steering Docs sync candidate] `docs/tech.md` / `docs/ja/tech.md`: description
+
+## Implementation Steps
+
+1. do the thing
+EOF
+    git add docs/spec/issue-123-my-spec.md && git commit -q -m "add spec"
+    make_dirty "docs/tech.md"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"classify=own-issue-scope"* ]]
+}
+
+@test "mixed: unrelated spec file + foreign-session file -> exit 0, not exit 2" {
+    cd "$REPO_DIR"
+    cat > docs/spec/issue-123-my-spec.md <<'EOF'
+# Issue #123: example
+
+## Changed Files
+
+- `scripts/run-review.sh`: some change
+
+## Implementation Steps
+
+1. do the thing
+EOF
+    git add docs/spec/issue-123-my-spec.md && git commit -q -m "add spec"
+    make_dirty "docs/spec/issue-999-unrelated.md"
+    make_dirty "scripts/foo.sh"
+    run bash "$REAL_SCRIPT" 123
+    # Must NOT be exit 2 (an unscoped `git stash` at exit 2 would also sweep up the
+    # foreign-session file, which is never printed to stdout) -- falls through to exit 0.
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"classify=foreign-session"* ]]
+}
