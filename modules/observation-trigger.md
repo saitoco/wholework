@@ -230,3 +230,4 @@ added to either script.
 - `opportunistic-search.sh` is the single source of truth for event-name validation (`KNOWN_EVENTS` list)
 - Adding a new event requires: (1) adding to `KNOWN_EVENTS` in `opportunistic-search.sh`, (2) adding a row to the emitter table in `modules/verify-classifier.md`, (3) wiring the emitter call in the relevant skill or script
 - The `fix-cycle` event is defined but has no emitter yet — see child Issue under #650
+- This mechanism only ever matches ACs by **event name** (`verify-type: observation event=<name>`); `manual`-tagged post-merge AC are never dispatched here at all. [`modules/run-fact-matching.md`](run-fact-matching.md) is the complementary mechanism: it reconciles a completed `/auto` run's structured facts against pending post-merge AC of every verify-type (including `manual`), catching conditions this event-name-only path structurally cannot reach

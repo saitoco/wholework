@@ -111,6 +111,7 @@ Key modules:
 - `modules/verify-patterns.md` — verify command pattern accuracy guidelines
 - `modules/verify-classifier.md` — post-merge condition verifiability classification
 - `modules/observation-trigger.md` — observation AC trigger mechanism design (caller interface, emitter lookup, and dispatch contract)
+- `modules/run-fact-matching.md` — run-fact AC reconciliation SSoT: structures a completed `/auto` run's facts and matches them against pending `phase/verify` post-merge AC (manual/observation/opportunistic/auto alike), gated by autonomy tier
 - `modules/verify-executor.md` — verify command translation and execution
 - `modules/worktree-lifecycle.md` — shared worktree Entry/Exit lifecycle for all skills
 - `modules/test-runner.md` — quality check execution and result analysis
@@ -201,6 +202,9 @@ Key modules:
 - `scripts/observation-trigger.sh` — dispatch observation-type ACs on event: calls `opportunistic-search.sh --event`, posts comment to each matched Issue recommending `/verify` re-run, and prints matched Issue numbers to stdout for caller dispatch
 - `scripts/opportunistic-search.sh` — opportunistic skill search and observation event scan
 - `scripts/post_merge_check.sh` — bundle and run post-merge manual (verify-type: manual) ACs for multiple Issues in one session; prompts P/F/S per AC; transitions to phase/done on all-PASS or reopens on FAIL
+- `scripts/collect-run-facts.sh` — structure a completed `/auto` run's facts (route, Size, phase outcomes, PR state, anomaly counts, fact tokens) as JSON from `.tmp/auto-events.jsonl`, for run-fact AC reconciliation (`modules/run-fact-matching.md`)
+- `scripts/scan-pending-ac.sh` — enumerate unchecked post-merge acceptance conditions across closed `phase/verify` Issues, optionally pre-filtered by `collect-run-facts.sh` fact tokens
+- `scripts/apply-run-fact-match.sh` — deterministic autonomy-tier gate for a run-fact AC match verdict (satisfied/not_satisfied/ambiguous): auto-checks the checkbox, prints an advisory `Recommend:` line, or does nothing
 - `scripts/triage-backlog-filter.sh` — filter backlog for triage
 
 **Process management:**

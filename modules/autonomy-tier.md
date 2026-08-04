@@ -70,6 +70,18 @@ Autonomy tier controls how far a skill may write GitHub state. For the exhaustiv
 
 **Rationale**: operate route collapses `/code`'s normal "propose (Implementation Steps) → gate (`/review`) → apply (`/merge`)" separation, because there is no PR and therefore no post-hoc diff review as a safety net. `phase/ready` (the pre-code gate) becomes the only checkpoint before an external system is written to. Defaulting unattended (L3-only) execution to on would be unsafe, so `L1` reuses the existing path A (Advisory) semantics from the [L2→L1 Path Catalog](#l2l1-path-catalog-exhaustive) above — no new tier axis is introduced.
 
+### Tier × Run-Fact AC Match
+
+`scripts/apply-run-fact-match.sh` (see [`modules/run-fact-matching.md`](run-fact-matching.md)) gates whether a detected run-fact match on a pending post-merge acceptance condition is applied automatically (checkbox checked + audit-trail comment) or only surfaced to a human:
+
+| verdict | L1 | L2 | L3 |
+|---|---|---|---|
+| `satisfied` | `advisory` | `auto-check` | `auto-check` |
+| `ambiguous` | `advisory` | `advisory` | `advisory` |
+| `not_satisfied` | `none` | `none` | `none` |
+
+`L1`'s `advisory` action reuses the same path A (Advisory) semantics as the operate-route table above: only a `Recommend:`-prefixed terminal print, never an Issue write. `ambiguous` maps to `advisory` regardless of tier — this is a fail-safe, not a tier gate: false-positive auto-checks (a checkbox marked satisfied for a condition the run did not actually satisfy) are harder to undo than a missed advisory print, so an unclear match must never reach `auto-check` at any tier.
+
 ## `.wholework.yml` Schema
 
 ```yaml
