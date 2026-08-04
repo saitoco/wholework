@@ -130,7 +130,7 @@ capabilities:
 | `permission-mode` | string | `"auto"` | `/auto` サブプロセスの permission mode。`auto` は `--permission-mode auto` を allow rules テンプレートと共に有効化（`docs/guide/auto-mode-template.json` 参照）; `bypass` は `--dangerously-skip-permissions` を使用（レガシー / オプトアウト）。 |
 | `verify-max-iterations` | integer | `3` | verify-reopen ループの最大試行回数。N 回 FAIL した時点で停止し、Issue を `phase/verify` に留めて人間の判断を促す。0 以下、20 超、または非数値の場合は `3` にフォールバック。 |
 | `auto-max-concurrent` | integer | `5` | XL 並列ルートで同時実行できる sub-issue の最大数。依存グラフの各レベルに適用。0 以下または非数値の場合は `5` にフォールバック。 |
-| `observation-dispatch-threshold` | integer | `5` | `/auto` の Event-based observation scan 実行 (single-issue route・batch route 双方、`event=auto-run` のみ) につき `/verify` を dispatch する Issue 数の上限。上限を超えた matched Issue は引き続きコメント通知される (`observation-trigger.sh` の既存の無条件挙動) が、次回の `auto-run` イベントスキャンで再評価される。0 以下または非数値の場合は `5` にフォールバック。 |
+| `observation-dispatch-threshold` | integer | `5` | `/auto` の Event-based observation scan 実行 (single-issue route・batch route 双方、`event=auto-run` のみ) につき `/verify` を dispatch する Issue 数の上限。上限を超えた matched Issue は引き続きコメント通知される (`observation-trigger.sh` の既存の挙動、ただし冪等性ガードの対象。`modules/observation-trigger.md` 参照) が、次回の `auto-run` イベントスキャンで再評価される。0 以下または非数値の場合は `5` にフォールバック。 |
 | `auto-retry-on-fail.enabled` | boolean | `false` | verify FAIL 時の自動 `/code` 再発火 + `/verify` リトライを有効化する（`autonomy: L2` または `L3` が必要）。`false` または autonomy が `L1` の場合はアドバイザリーガイダンスのみ出力。 |
 | `auto-retry-on-fail.max_iterations` | integer | `3` | 自動リトライの最大試行回数。上限到達後はユーザーに制御を戻す。0 以下または非数値の場合は `3` にフォールバック。 |
 | `auto-retry-on-fail.budget_tokens` | integer | `500000` | 自動リトライのトークン予算概算。初期実装は試行回数カウントのみ; トークン追跡は将来の改善項目。0 以下または非数値の場合は `500000` にフォールバック。 |

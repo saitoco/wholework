@@ -108,3 +108,42 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue 1099 --non-interactive` の Issue Retrospective — マーカー形式の `l0-surfaces.md` 基本フィールド準拠修正、および `gh issue comment` stdout URL 抑制の新規 AC 化について、非対話モードでの自動解決ログを記録したもの。内容は Issue 本文に既に反映済みで、Spec フェーズに対する新規の指示は含まれていない。(https://github.com/saitoco/wholework/issues/1099#issuecomment-5173969887)
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1–4 の bash 実装イメージ・ドキュメント修正内容をそのまま採用した。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- N/A — 実装は Spec の Implementation Step 1 の bash スニペットをそのまま採用しており、構造的な乖離は見られなかった。ドキュメント更新 (`modules/observation-trigger.md`、`docs/guide/customization.md`、`docs/ja/guide/customization.md`) も Spec の Changed Files 指示と一致していた。
+
+### Recurring issues
+- `gh <cmd> --jq <expr>` は単一の expression 文字列のみを受け付け、jq CLI 本来の `--arg` オプションのようなフラグは渡せない (`unknown flag: --arg` で実機確認)。動的な値を安全に jq 式へ渡す場合は `env.VARNAME` (環境変数経由) を使う必要がある。今回は `scripts/observation-trigger.sh` の1箇所のみだったが、他スクリプトでも `gh --jq` に変数を文字列結合している箇所があれば同種の脆弱性 (jq 式破損によるフェイルオープン) が潜在する可能性がある。次回の `/audit fragility` や関連スクリプト変更時に確認候補としたい。
+
+### Acceptance criteria verification difficulty
+- N/A — rubric 4件・command 1件とも曖昧さなく自動判定できた。verify command (`bats tests/observation-trigger.bats`) は追加テストケース込みで問題なく実行できた。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- SHOULD/CONSIDER 指摘 3件はすべて対応した: (1) 同時実行時の非アトミック性の限界を `modules/observation-trigger.md` にドキュメント化、(2) `gh issue view --jq` への `$N`/`$EVENT_NAME` 直接文字列結合を `env.MARKER_N`/`env.MARKER_EVENT` 経由に変更 (`--arg` は `gh --jq` では使えないことを実機確認済み)、(3) fail-open 分岐 (日時変換失敗時) を検証する bats ケースを追加。
+- Base Branch Conflict Pre-check: `git merge-base HEAD origin/main` が `origin/main` の HEAD と一致しており、`git merge-tree` の出力も空 — base ブランチとのコンフリクトなし。
+- 修正はいずれも挙動を変えない防御的変更 (ドキュメント追記・実装の堅牢化・テスト追加) のため、Step 13 の方針変更検出は該当なしと判断した。
+
+### Deferred Items
+- Post-merge AC (`observation-trigger.sh --event auto-run` を連続2回実行して重複投稿されないことを手動確認) は引き続き未実施 — `/verify` フェーズに委ねる。
+- 真の同時実行 (複数プロセスが同一 event/Issue に対して同時に走るケース) に対する完全な排他制御 (ロックファイル等) は本 PR のスコープ外として見送り、`modules/observation-trigger.md` に限界を明記するに留めた。
+
+### Notes for Next Phase
+- Fix commit (`d3351b79`) push 後、CI の再実行結果を `/merge` 前に確認すること。
+- Post-merge AC は `/verify` で manual 確認が必要 (`verify-type: manual`)。
+- 24時間ウィンドウはスクリプト内固定定数のまま — 変更なし。

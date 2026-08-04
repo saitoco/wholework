@@ -17,6 +17,14 @@ setup() {
     cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
 #!/bin/bash
 echo "gh called: $*" >> "$BATS_TEST_TMPDIR/gh-calls.log"
+if [ "$1" = "issue" ] && [ "$2" = "view" ]; then
+    echo "${MOCK_EXISTING_MARKER_CREATED_AT:-}"
+    exit 0
+fi
+if [ "$1" = "issue" ] && [ "$2" = "comment" ]; then
+    echo "https://github.com/mock/repo/issues/$3#issuecomment-999999"
+    exit 0
+fi
 exit 0
 MOCK_EOF
     chmod +x "$MOCK_DIR/gh"
@@ -114,4 +122,48 @@ teardown() {
     run bash "$SCRIPT" --event pr-review-light
     [ "$status" -eq 0 ]
     [ ! -f "$BATS_TEST_TMPDIR/gh-calls.log" ]
+}
+
+@test "idempotency: existing marker within 24h window skips comment" {
+    MARKER_TS=$(date -u -v-1H "+%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u -d "1 hour ago" "+%Y-%m-%dT%H:%M:%SZ")
+    export MOCK_EXISTING_MARKER_CREATED_AT="$MARKER_TS"
+    export MOCK_SEARCH_OUTPUT='[{"number": 42, "condition": "watchdog-kill event is observed"}]'
+    run bash "$SCRIPT" --event watchdog-kill
+    [ "$status" -eq 0 ]
+    ! grep -q "issue comment" "$BATS_TEST_TMPDIR/gh-calls.log"
+    [ "$output" = "42" ]
+}
+
+@test "idempotency: expired marker (25h) does not skip comment" {
+    MARKER_TS=$(date -u -v-25H "+%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u -d "25 hours ago" "+%Y-%m-%dT%H:%M:%SZ")
+    export MOCK_EXISTING_MARKER_CREATED_AT="$MARKER_TS"
+    export MOCK_SEARCH_OUTPUT='[{"number": 42, "condition": "watchdog-kill event is observed"}]'
+    run bash "$SCRIPT" --event watchdog-kill
+    [ "$status" -eq 0 ]
+    grep -q "issue comment 42" "$BATS_TEST_TMPDIR/gh-calls.log"
+    [ "$output" = "42" ]
+}
+
+@test "stdout hygiene: comment URL from gh issue comment does not leak to stdout" {
+    export MOCK_SEARCH_OUTPUT='[{"number": 42, "condition": "watchdog-kill event is observed"}]'
+    run bash "$SCRIPT" --event watchdog-kill
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"https://"* ]]
+    [ "$output" = "42" ]
+}
+
+@test "marker format: posted comment body carries the wholework-event marker" {
+    export MOCK_SEARCH_OUTPUT='[{"number": 42, "condition": "watchdog-kill event is observed"}]'
+    run bash "$SCRIPT" --event watchdog-kill
+    [ "$status" -eq 0 ]
+    grep -q "type=observation-trigger phase=observation-trigger issue=42 event=watchdog-kill" "$BATS_TEST_TMPDIR/gh-calls.log"
+}
+
+@test "idempotency: unparseable marker timestamp fails open (does not skip comment)" {
+    export MOCK_EXISTING_MARKER_CREATED_AT="not-a-date"
+    export MOCK_SEARCH_OUTPUT='[{"number": 42, "condition": "watchdog-kill event is observed"}]'
+    run bash "$SCRIPT" --event watchdog-kill
+    [ "$status" -eq 0 ]
+    grep -q "issue comment 42" "$BATS_TEST_TMPDIR/gh-calls.log"
+    [ "$output" = "42" ]
 }
