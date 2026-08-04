@@ -74,6 +74,36 @@ Steering Docs sync candidate grep (`grep -l "run-auto-sub.sh" docs/*.md docs/ja/
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 一行要約: `/issue 1009 --non-interactive` の Issue Retrospective コメント。Type=Bug, Size=M, Value=2 の判定根拠と、rubric AC への補助 `file_not_contains` 追加理由、Auto-Resolve Log (Diagnosis 文言・Recovery Applied 参照先・Improvement Candidate 記入方法の 3 点) を記録 / URL: https://github.com/saitoco/wholework/issues/1009#issuecomment-4978480709
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1009#issuecomment-4979278648
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-4980719690
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-4988173185
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1009#issuecomment-4988202433
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5019751432
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5020098705
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1009#issuecomment-5020274175
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5033001341
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5041912013
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5053877269
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5053881004
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5059781863
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5112391337
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5112395651
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5113360914
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1009#issuecomment-5113773921
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5114562215
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5114567960
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5114573496
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5131474281
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1009#issuecomment-5131533108
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1009#issuecomment-5131619899
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5133000191
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5133752452
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5138805838
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5138891352
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5141402685
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5146655778
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5147236394
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1009#issuecomment-5174321857
 ## Code Retrospective
 
 ### Deviations from Design
