@@ -142,30 +142,16 @@ Nothing to note. 同種の issue (severity MUST/SHOULD) の重複は観測され
 Nothing to note。3件の pre-merge rubric AC はいずれも Spec `## Notes` に採用アプローチ・不採用理由・config 変更判断が明記されており、UNCERTAIN 判定は発生しなかった。verify command の欠落や不正確さも見当たらない。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 3件の pre-merge rubric AC を code フェーズの判定から独立して再検証し、いずれも PASS と結論。Spec `## Notes` の採用アプローチ根拠が十分に具体的であったため UNCERTAIN 判定は発生しなかった。
-- `review-light` (light mode, 4 観点統合) が検出した CONSIDER 2件はいずれも修正せずスキップと判断した。理由: (1) yaml サンプル前例の選定は Code Retrospective に既に記録済みの判断であり明確な欠陥ではない、(2) ステータスメッセージの `$` プレフィックス省略は LLM 解釈のプロースであり実害が小さい。
+- Squash merge を conflict なしで実行 (`mergeable=true`, `reason=clean`, CI 全項目 SUCCESS, review approved のため Step 3 の Resolve Conflicts はスキップ)。
+- pre-merge AC ゲートは 3件全て `[x]` 済みで `unchecked_count=0` を確認、override なしで通過。
 
 ### Deferred Items
-- Post-merge AC (`verify-type: opportunistic`): 次回 `/auto --batch` の event-based observation scan で dispatch 数が 10 件超になった際にキャップが発火することの観察は、実運用発生を待つ必要があるため `/verify` 以降に委ねる (code フェーズの Deferred Items を引き継ぎ)。
+- Post-merge AC (`verify-type: opportunistic`): 次回 `/auto --batch` の event-based observation scan で dispatch 数が 10 件超になった際にキャップが発火し compute burn が回避されることの観察は、実運用発生を待つ必要があるため `/verify` 以降に委ねる (review フェーズの Deferred Items を引き継ぎ)。
 - CONSIDER 2件 (docs/guide/customization.md yaml サンプル前例、skills/auto/SKILL.md の `$` プレフィックス表記) は未修正のまま。将来同種の指摘が積み重なった場合のみ対応を検討。
 
 ### Notes for Next Phase
-- CI 全9項目 SUCCESS、base branch (`main`) との `git merge-tree` 競合なし。
-- `/merge 1147` を実行可能な状態。
-
-### Key Decisions
-- Spec の Notes に記録済みの採用アプローチ ((c) priority-based cap、`observation-trigger.sh` の既存 `sort -un` 順序を流用) をそのまま実装。追加のスクリプト変更は発生しなかった。
-- `docs/guide/customization.md` の Available Keys テーブルへは行のみ追加し、`.wholework.yml` サンプルブロックへのコメントアウト例は追加しなかった (`retro-proposals-upstream` / `next-cycle-seed.enabled` など、テーブルのみで yaml サンプルを持たない既存キーの前例に倣った)。
-- `skills/auto/SKILL.md` の変更で除去された文字列 (`for each number in ... other than $NUMBER` 等) について `tests/` 配下に残存する古いアサーションがないことを stale-test-check の手順で確認済み。
-
-### Deferred Items
-- Post-merge AC (`verify-type: opportunistic`): 次回 `/auto --batch` の event-based observation scan で dispatch 数が 10 件超になった際にキャップが発火し compute burn が回避されることの観察は、実運用発生を待つ必要があるため `/verify` 以降に委ねる。
-- `#897` review retrospective 由来の Resume mode (`BATCH_LIST`/`REMAINING` 再利用) の既知の CONSIDER 事項には、Spec の指示通り本 Issue では手を入れていない。
-
-### Notes for Next Phase
-- `skills/auto/SKILL.md` は複数の bats テストファイル (`tests/auto.bats` 等) から参照されているため behavioral change 判定により `bats tests/` フルスイートを実行し、1332 件全 PASS を確認済み。
-- Issue の pre-merge rubric AC 3件は本フェーズの判定で `[x]` 済み。`/review` は独立した観点で再検証すること。
-- `docs/ja/guide/customization.md` は本変更で追加した行のみ同期済み。ただし同ファイルには本 Issue と無関係な既存の未同期箇所 (`autonomy` 行の欠落等) があり、スコープ外として触れていない。
+- `/verify 952` で post-merge AC (opportunistic) の観察待ちとなる。実運用で dispatch 数が閾値超過する事例が発生した際に検証すること。
+- Issue #952 は `closes #952` により squash merge 時に自動クローズ済み (base branch は `main`)。
