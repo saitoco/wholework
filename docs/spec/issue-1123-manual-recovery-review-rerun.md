@@ -299,3 +299,5 @@ No new comments since last phase.
 
 ### Orchestration Anomalies
 - **[json-mode-silent-hang]** review phase (PR #1149) の leaf セッションが 2600 秒無出力となり watchdog が SIGTERM で回収 (exit 143, 2026-08-04T08:58:31Z, `watchdog_kill` event 記録済み)。外部 kill ではない (Exit code trailer あり / detect-external-kill no-match)。Tier 2 が既知パターンとして検出し、カタログ手順 (retry once) を適用
+- **[json-mode-silent-hang]** merge phase (PR #1149) も同型の watchdog kill (exit 143, 2026-08-04T09:54Z 頃)。カタログ手順 (retry once) を適用
+- **[notification-dependent-wait]** merge retry (exit 1): leaf セッションが「run-merge.sh をバックグラウンド実行して通知待ち」を宣言して exit 0 → silent no-op 検出。本 Issue が禁止する通知依存待機そのものの再演。親セッションが manual recovery (rebase conflict 解消 + 直接 merge) で完遂
