@@ -195,27 +195,37 @@ Implementation Step 1 で追加する 3 シグナルのリストには **(exhaus
 - **`/auto` Step 5 のサブステップ順序**を確認した結果、`## Metrics` 生成 (sub-step 4) が retro-proposals 呼び出し (sub-step 6) より前であることが判明した。L3 レベルの分類は同じ session の `session.md` に載らない。各 Issue の `/verify` Step 16 分 (件数の大半) は正常に集計されるため許容し、既知の制約として `## Notes` に記録。解消には Step 5 のサブステップ順序変更が必要で AC の要件を超える。
 - **AC1 の `file_not_contains "modules/retro-proposals.md" "assign Tier 1 (conservative"`** は、デフォルト反転の根拠ブロックが旧デフォルト文を逐語引用すると偽陰性になる。Implementation Step 3 に「言い換えで説明する」制約を明記して回避した。ポリシー変更 Issue で `file_not_contains` を使う際は、変更理由を説明する新規テキストが検出対象文字列を再導入しないかを設計時に確認する必要がある。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。Implementation Steps 1–10 を記載順に実装した
+
+### Design Gaps/Ambiguities
+
+- なし
+
+### Rework
+
+- `tests/get-auto-session-report.bats` の既存テスト「Verify Phase Residuals: issue carrying live phase/verify label is detected」が、新設した `### Retro Proposal Tier Breakdown` セクションの `(none)` フォールバック行と衝突して FAIL した。既存テストの `! echo "$output" | grep -qE "^\(none\)$"` は出力全体を対象にしており、当該 fixture には `retro_proposal_classified` イベントがないため Tier Breakdown セクション側は正しく `(none)` に degrade する — Verify Phase Residuals セクション自体は `#300` を検出できており正常。テストのアサーションを `sed` で `### Verify Phase Residuals` から次見出しまでの範囲に絞るよう修正し、他セクションの `(none)` を誤検出しないようにした。新セクション追加時、既存テストの `(none)`/`0`/`N/A` 系グローバルアサーションが意図せず衝突しうる点は今後も要注意
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 方針候補 A + B + D (軽量版) を採用、C は不採用。A の倒し先は Tier 2 (Tier 3 ではない)、B の永続化先は `.tmp/auto-events.jsonl` の `retro_proposal_classified` イベント (Spec retrospective ではない)、D は positive-evidence gate 化に留める。根拠は `## Notes` の採否テーブルを参照
-- hit rate 集計は `/audit stats` ではなく `scripts/get-auto-session-report.sh` を拡張する。`/audit stats` は GitHub Issue メタデータ集計器で `.tmp/auto-events.jsonl` を読む経路を持たないため
-- `modules/retro-proposals.md` への追加は Step 6 内のサブ節として行い、Step 7-11 を繰り下げない。`docs/workflow.md` line 302 が「Step 11 で `set-blocked-by.sh` を呼ぶ」と参照しており、繰り下げると同期対象が増えるため
-- AC4 (不採用方針の根拠記録) は spec フェーズ時点で本 Spec の `## Notes` と Issue body の `## 採用方針` に記録済み。code フェーズでの実装ステップは不要
+- `modules/retro-proposals.md` Step 6 に Tier 1 positive-evidence gate (3 signals exhaustive) と Tier 2 デフォルト反転、根拠段落、**Tier classification persistence** サブ節を追加。Spec Implementation Step 1–5 の記載順をそのまま採用し、設計からの逸脱なし
+- `scripts/get-auto-session-report.sh` の Tier 集計は既存 `RECOVERY_COUNTS`/`RECOVERY_EVENTS` と同じ jq パターン (`select` → `group` → `2>/dev/null || echo <default>`) を踏襲し、bash 3.2+ 互換を維持した
+- Tier Breakdown の hit rate 計算 (`floor((n2+n3)/total*100)`) は jq 単体テストで検算済み (1/2/1 混在 fixture → 75%)
 
 ### Deferred Items
 
-- 方針 C (毎 run 起票の廃止 / consolidation 化) は不採用。A + B 着地後に起票レートが十分下がらなかった場合の次段として保留
-- `/auto` Step 5 のサブステップ順序変更 (`## Metrics` 生成を retro-proposals 呼び出しより後ろへ) は本 Issue では扱わない。L3 レベルの分類がその session の `session.md` に載らない非対称が残る
-- Tier 1 判定の完全機械判定スクリプト (`scripts/classify-retro-proposal.sh` 等) は新設しない
+- 方針 C (毎 run 起票の廃止 / consolidation 化) は不採用のまま。A + B 着地後に起票レートが十分下がらなかった場合の次段として保留 (spec フェーズからの継続)
+- `/auto` Step 5 のサブステップ順序変更は本 Issue では扱わない (spec フェーズからの継続)
+- Tier 1 判定の完全機械判定スクリプトは新設しない (spec フェーズからの継続)
 
 ### Notes for Next Phase
 
-- **必須**: Implementation Step 4 の numeric `EMIT_ISSUE_NUMBER` ガードを省略しないこと。非数値を渡すと `.tmp/auto-events.jsonl` に不正な JSON 行が混入し、`get-auto-session-report.sh` の `jq -s` がログ全体の読み取りに失敗してレポートが空になる
-- **必須**: Implementation Step 3 の根拠ブロックで旧デフォルト文 `assign Tier 1 (conservative setting to avoid false negatives)` を逐語引用しないこと。AC1 の `file_not_contains` が偽陰性になる
-- `modules/retro-proposals.md` の (b) シグナル見出しには `再発性` の語を残すこと。#484 由来の既存 verify command `grep "再発性" "modules/retro-proposals.md"` が壊れる
-- Implementation Step 3 の `**Default**` 行は `assign **Tier 2**` を literal で含めること。AC1 の `file_contains "modules/retro-proposals.md" "assign **Tier 2**"` が fixed-string 一致で検証する
-- `skills/audit/SKILL.md` への追記は `validate-skill-syntax.py` の MUST 制約 (半角感嘆符・小数点付き Step 番号・3 連バッククォート禁止) に抵触しないこと
-- `docs/structure.md` を変更するため `docs/ja/structure.md` の同期が必須 (`docs/translation-workflow.md` の sync 手順)
+- Pre-merge AC 5件はすべて `[x]` 済み。post-merge AC (`/audit stats` での起票レート低下確認) は `/verify` post-merge フェーズで観測する observation AC
+- `tests/get-auto-session-report.bats` に新セクション追加時の "(none)" グローバルアサーション衝突パターンが今回発生した (上記 Rework 参照)。同ファイルへの追加セクションを伴う変更では、既存テストのスコープが新セクションを誤って拾っていないか確認すること
+- Full suite (`bats tests/`) 1380 件 PASS 済み (behavioral change 判定により実行)
