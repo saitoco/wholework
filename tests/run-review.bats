@@ -98,8 +98,9 @@ emit_event() { return 0; }
 _emit_comments_consumed() { :; }
 MOCK
 
-    cat > "$MOCK_DIR/check-verify-dirty.sh" <<'MOCK'
+    cat > "$MOCK_DIR/check-verify-dirty.sh" <<MOCK
 #!/bin/bash
+echo "\$1" >> "$MOCK_DIR/check-verify-dirty.args"
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/check-verify-dirty.sh"
@@ -236,6 +237,27 @@ teardown() {
     [ "$status" -eq 0 ]
 
     grep -q "PROMPT_CONTAINS_ARGUMENTS=ARGUMENTS: 123 --light --non-interactive" "$CLAUDE_CALL_LOG"
+}
+
+@test "success: check-verify-dirty.sh is called with the resolved Issue number, not the PR number" {
+    # Default gh-extract-issue-from-pr.sh mock (setup()) returns issue_number 99, distinct
+    # from the PR number 123 used below -- asserts the dirty guard classifies against the
+    # Issue's own Spec manifest, not the PR number (Issue #1123 behavioral change).
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [ "$(cat "$MOCK_DIR/check-verify-dirty.args")" = "99" ]
+}
+
+@test "success: check-verify-dirty.sh falls back to the PR number when Issue resolution fails" {
+    cat > "$MOCK_DIR/gh-extract-issue-from-pr.sh" <<'MOCK'
+#!/bin/bash
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/gh-extract-issue-from-pr.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [ "$(cat "$MOCK_DIR/check-verify-dirty.args")" = "123" ]
 }
 
 @test "success: --full flag is passed through to ARGUMENTS with --non-interactive" {
