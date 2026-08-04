@@ -169,14 +169,15 @@ _open_pr_for_issue() {
   printf '%s' "$pr_json" | jq -r '.[0].number // empty' 2>/dev/null || true
 }
 
-# --write-manual-recovery subcommand: write manual recovery record to sub-issue Spec.
-# Usage: run-auto-sub.sh --write-manual-recovery ISSUE [PHASE] [RECOVERY_TYPE] [EXIT_CODE]
+# _write_manual_recovery_to_spec ISSUE PHASE RECOVERY_TYPE EXIT_CODE [CAUSE]
+# Writes the manual recovery record to sub-issue Spec.
 # See modules/orchestration-fallbacks.md#manual-recovery-spec-write
 _write_manual_recovery_to_spec() {
   local issue="$1"
   local phase="${2:-unknown}"
   local recovery_type="${3:-unspecified}"
   local exit_code="${4:-unknown}"
+  local cause="${5:-}"
   _validate_recovery_args "$issue" "$phase" "$recovery_type" "${4:-}" || return 1
 
   # Skip if an open PR for this issue is already touching the same Spec file:
@@ -210,6 +211,9 @@ _write_manual_recovery_to_spec() {
   printf '%s\n' "- **Issue**: #${issue}, phase: ${phase}" >> "$spec_file"
   printf '%s\n' "- **Source**: parent session manual recovery" >> "$spec_file"
   printf '%s\n' "- **Recovery type**: ${recovery_type}" >> "$spec_file"
+  if [[ -n "$cause" ]]; then
+    printf '%s\n' "- **Cause**: ${cause}" >> "$spec_file"
+  fi
   printf '%s\n' "- **Wrapper exit code**: ${exit_code}" >> "$spec_file"
   printf '%s\n' "- **Outcome**: success" >> "$spec_file"
 
@@ -278,7 +282,7 @@ _find_known_recoveries_issue() {
   _search_recoveries_issue "$target" closed closedAt 1000
 }
 
-# _write_manual_recovery_to_recoveries_log ISSUE PHASE RECOVERY_TYPE [EXIT_CODE]
+# _write_manual_recovery_to_recoveries_log ISSUE PHASE RECOVERY_TYPE [EXIT_CODE] [CAUSE] [DIAGNOSIS]
 # Records a parent-session-driven manual recovery event to orchestration-recoveries.md,
 # in the canonical H2 entry format so scripts/collect-recovery-candidates.sh can pick it
 # up for frequency detection / recoveries-auto-fire (unlike the H3 wrapper-retry-on-kill
@@ -289,11 +293,21 @@ _find_known_recoveries_issue() {
 # call site (bash only registers a function once its definition line has executed).
 # Skips silently if the file does not exist (file not in repo → return 0).
 # See modules/orchestration-fallbacks.md#external-kill-parent-respawn
+#
+# CAUSE/DIAGNOSIS (Issue #1123): when CAUSE is supplied, the H2 header and _is_duplicate()
+# duplicate-detection regex are left unchanged (avoids touching the existing 4 recoveries-log
+# entries and tests/collect-recovery-candidates.bats fixtures) -- only the ### Diagnosis body
+# gains a machine-readable "- cause: <slug>" line, and the group key passed to
+# _find_known_recoveries_issue becomes "<symptom-short>/<cause>" so scripts/collect-recovery-
+# candidates.sh's cause-aware grouping (reads the "- cause:" line back out) can separate
+# same-symptom-different-cause events instead of merging them.
 _write_manual_recovery_to_recoveries_log() {
   local issue="$1"
   local phase="${2:-unknown}"
   local recovery_type="${3:-unspecified}"
   local exit_code="${4:-unknown}"
+  local cause="${5:-}"
+  local diagnosis="${6:-}"
   local _repo_root="$REPO_ROOT"
   local _recoveries_file="${_repo_root}/docs/reports/orchestration-recoveries.md"
   _pull_ff_only "$_repo_root"
@@ -301,14 +315,29 @@ _write_manual_recovery_to_recoveries_log() {
     return 0
   fi
   local _symptom_short="manual-recovery-${recovery_type}"
+  local _group_key="$_symptom_short"
+  if [[ -n "$cause" ]]; then
+    _group_key="${_symptom_short}/${cause}"
+  fi
   local _matched_issue
-  _matched_issue="$(_find_known_recoveries_issue "$_symptom_short")"
+  _matched_issue="$(_find_known_recoveries_issue "$_group_key")"
   local _improvement_candidate="未起票"
   if [[ -n "$_matched_issue" ]]; then
     _improvement_candidate="起票済み #${_matched_issue}"
   fi
   local _date
   _date=$(date -u '+%Y-%m-%d %H:%M UTC')
+  # Escape backslashes/double-quotes before embedding into the Python heredoc string literal
+  # below (cause/diagnosis may carry arbitrary text via --diagnosis TEXT).
+  local _cause_esc _diagnosis_esc
+  _cause_esc=$(printf '%s' "$cause" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
+  _diagnosis_esc=$(printf '%s' "$diagnosis" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
+  local _diagnosis_body
+  if [[ -n "$cause" ]]; then
+    _diagnosis_body="- cause: ${_cause_esc}\n${_diagnosis_esc:-Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: ${recovery_type})}\n"
+  else
+    _diagnosis_body="- Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: ${recovery_type})\n"
+  fi
   python3 << PYEOF 2>/dev/null || true
 import re
 from datetime import datetime, timezone, timedelta
@@ -324,7 +353,7 @@ entry = (
     "- Source: parent-session-manual-recovery\n"
     "- Wrapper: run-auto-sub.sh, exit code: ${exit_code}\n"
     "\n### Diagnosis\n"
-    "- Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: ${recovery_type})\n"
+    "${_diagnosis_body}"
     "\n### Recovery Applied\n"
     "- modules/orchestration-fallbacks.md#manual-recovery-spec-write\n"
     "\n### Outcome\n"
@@ -380,24 +409,51 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
 if [[ "${1:-}" == "--write-manual-recovery" ]]; then
   shift
   if [[ -z "${1:-}" ]]; then
-    echo "Error: --write-manual-recovery requires: ISSUE [PHASE] [RECOVERY_TYPE] [EXIT_CODE]" >&2
+    echo "Error: --write-manual-recovery requires: ISSUE [PHASE] [RECOVERY_TYPE] [EXIT_CODE] [--cause SLUG] [--diagnosis TEXT]" >&2
     exit 1
   fi
   _mr_issue="$1"
-  _mr_phase="${2:-unknown}"
-  _mr_recovery_type="${3:-unspecified}"
-  # Left un-defaulted (unlike _mr_phase/_mr_recovery_type above): passed through as-is to
+  shift
+  # Positional args (PHASE, RECOVERY_TYPE, EXIT_CODE) keep their original order/meaning
+  # regardless of where --cause/--diagnosis appear among the remaining arguments (Issue #1123).
+  _mr_phase="unknown"
+  _mr_recovery_type="unspecified"
+  # EXIT_CODE left un-defaulted (unlike PHASE/RECOVERY_TYPE above): passed through as-is to
   # _validate_recovery_args, which only applies its numeric-format check when non-empty.
   # Defaulting to the literal "unknown" here would make that check fail every time no
   # EXIT_CODE is supplied, since "unknown" does not match ^[0-9]+$.
-  _mr_exit_code="${4:-}"
+  _mr_exit_code=""
+  _mr_cause=""
+  _mr_diagnosis=""
+  _mr_pos_idx=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --cause)
+        _mr_cause="${2:-}"
+        shift 2
+        ;;
+      --diagnosis)
+        _mr_diagnosis="${2:-}"
+        shift 2
+        ;;
+      *)
+        case "$_mr_pos_idx" in
+          0) _mr_phase="$1" ;;
+          1) _mr_recovery_type="$1" ;;
+          2) _mr_exit_code="$1" ;;
+        esac
+        _mr_pos_idx=$((_mr_pos_idx + 1))
+        shift
+        ;;
+    esac
+  done
 
   source "$SCRIPT_DIR/emit-event.sh"
   restore_auto_session_pointer
   export EMIT_ISSUE_NUMBER="$_mr_issue"
 
-  _write_manual_recovery_to_spec "$_mr_issue" "$_mr_phase" "$_mr_recovery_type" "$_mr_exit_code"
-  _write_manual_recovery_to_recoveries_log "$_mr_issue" "$_mr_phase" "$_mr_recovery_type" "$_mr_exit_code"
+  _write_manual_recovery_to_spec "$_mr_issue" "$_mr_phase" "$_mr_recovery_type" "$_mr_exit_code" "$_mr_cause"
+  _write_manual_recovery_to_recoveries_log "$_mr_issue" "$_mr_phase" "$_mr_recovery_type" "$_mr_exit_code" "$_mr_cause" "$_mr_diagnosis"
   emit_event "manual_intervention" "recovery_target=${_mr_phase}" "wrapper_exit_code=${_mr_exit_code:-unknown}" "intervention_type=${_mr_recovery_type}"
   exit 0
 fi
