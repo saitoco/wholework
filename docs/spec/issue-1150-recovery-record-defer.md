@@ -263,3 +263,42 @@ Background セクションの `--write-manual-recovery` という事実主張は
 
 - Post-merge AC (open PR 存在時の recovery が main と conflict しないことの観察) は `/verify` 側で確認すること
 - `_flush_deferred_recovery_records()` は commit 成功時点で defer ファイルを削除するよう修正済み (push 失敗時はローカル commit を保持し、次回 push リトライに委ねる)。`/verify` での観察時、この挙動変更を踏まえること
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+
+- 受け入れ条件の粒度は適切だった。Pre-merge 3 件は rubric ×2 + `command "bats ..."` ×1 の構成で、実装完了時点で機械的に判定できた。Post-merge を observation type (`event=auto-run`) 1 件に絞った設計も、「conflict が起きないこと」という**不在の証明**を verify 時点で無理に判定させず、実際に recovery が発生する次回 `/auto` 実行まで判定を繰り延べる形になっており妥当
+- ただし条件 4 の観察対象は「open PR 存在時に recovery が発生した `/auto` 実行」であって `auto-run` イベント一般ではない。`event=auto-run` はイベント名として広く、recovery が起きなかった `/auto` 実行でも発火しうる。発火時に「観察対象の状況が実際に成立したか」を判定する余地が条件文の「期待される出力構造」に委ねられており、次回 `/verify` が UNCERTAIN ではなく SKIPPED を返せるかは条件文の読み取り次第になる
+
+#### design
+
+- (b) defer + flush の採用判断は、`run-auto-sub.sh` が冒頭で main worktree root へ `cd` する #1005 再発防止の不変条件を根拠に据えており、実装・レビューを通じて覆らなかった。(a) を選んでいた場合に想定されたブランチ切り替え起因の新規失敗モードは実際に導入されずに済んでいる
+- Spec の「テストの mock 設計に関する注意」節が `gh` mock の `--search` 分岐を先に追加する順序を事前に明記していたことが、code phase の手戻りゼロに直結した (Code Retrospective の Rework が N/A)。事前調査で発見した摩擦をそのまま実装順序の制約として Spec に書き下ろす形式は再現価値がある
+
+#### code
+
+- 手戻りなし。`bats tests/run-auto-sub.bats` 94/94 とフルスイート 1358/1358 が初回 PASS
+- `_defer_recovery_record` の引数が Spec 記載の 3 引数から実装で 4 引数 (`OPEN_PR` 追加) になった差分が `## Code Retrospective` の Deviations from Design に記録されず「N/A — 設計どおり」とされた点は、review retrospective が自己指摘済み。シグネチャ差分は要件充足のための正当な変更であっても Deviations に一行残す運用が望ましい
+
+#### review
+
+- review が検出した MUST 1 件 (CI failure) + SHOULD 3 件はいずれも本 verify 時点で再発しておらず、review の網は有効に機能した。特に `_flush_deferred_recovery_records` の「push 失敗時に defer ファイルを残すと次回 flush で重複追記される」指摘は、verify 側の rubric 判定では拾えない粒度であり、review 段階で潰せたことに価値がある
+- 一方で `gh-pr-review.sh` の `event=REQUEST_CHANGES` が self-hosted 単一アカウント運用では GitHub の HTTP 422 により構造的に失敗する問題が review 実行中に顕在化し、`event=COMMENTED` への手動フォールバックを要した。これは本 Issue の実装とは独立した skill インフラ側のギャップ
+
+#### merge
+
+- conflict なし。mergeable=true / CI success / review approved のまま squash merge が完了した
+- 本 Issue が解消しようとした「recovery 記録が open PR と conflict する」事象は、本 Issue 自身の実行中には発生しなかった (recovery が一度も起きなかったため)。したがって修正の有効性は今回の merge では実証されておらず、条件 4 の observation が実証の担い手として残っている
+
+#### verify
+
+- FAIL なし。Pre-merge 3 件 PASS、Post-merge 1 件 SKIPPED (未発火)
+- rubric 条件文が「main への直接 commit を回避する経路」という抽象度で書かれていたため、manual / Tier 2 / Tier 3 の 3 経路すべてを実装から個別に確認する必要があった。ガード地点が複数ある変更では、rubric に「3 経路すべて」と経路数を明示しておくと判定の網羅性が条件文自体で担保される
+
+### Improvement Proposals
+
+- `scripts/gh-pr-review.sh` に self-review 起因の HTTP 422 を検知して `event=REQUEST_CHANGES` → `event=COMMENTED` + 本文冒頭への MUST 明示テキストへ自動フォールバックする処理を追加する。self-hosted 単一アカウント運用のリポジトリでは MUST issue 検出時の review 投稿が構造的に失敗し、毎回手動フォールバックを要する (`modules/phase-state.md:75` に既知の制約として記録済みだが、コード側の対処がない)
+- observation type の AC 条件文に、イベント発火時の**観察対象成立判定**を条件文自身に埋め込む書式を検討する。本 Issue の条件 4 は `event=auto-run` という広いイベント名に対し「open PR 存在時に recovery が発生した場合」という前提条件を持つが、その前提が成立しなかった発火時に SKIPPED を返すべきか UNCERTAIN を返すべきかが条件文から一意に決まらない。`event=` に加えて前提条件を機械可読に書ける属性 (例: `precondition=`) の導入余地がある
