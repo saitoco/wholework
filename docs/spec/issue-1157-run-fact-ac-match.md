@@ -334,30 +334,44 @@ Size L につき上限5件のうち、2件を自動解決 (残りは AC 文言�
 - **`sub_start` イベントが single-issue route でも発行されるか** → 発行されない。#1150 のイベント列に `sub_start` が無く、`size` フィールドが取れない。`get-issue-size.sh` へのフォールバックを必須とする設計に修正した。これを見落とすと single-issue route で `Size <SIZE>` トークンが常に欠落し、事前絞り込みの精度が静かに劣化する類のバグになっていた
 - **全 pending AC を LLM に投げる負荷が現実的か** → 非現実的 (414 件)。決定的な事前絞り込みを挟むことで 17 件まで落ちることを実測で確認し、設計の要とした。`opportunistic-search.sh` の `keyword=` ゲート (#934) と `config=` ゲート (#1026) が同じ「決定的な事前フィルタ → LLM 判定」の 2 段構成であり、既存パターンの横展開として位置づけられる
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1–8 were followed as written; no reordering or omission occurred.
+
+### Design Gaps/Ambiguities
+
+- **Steering Docs sync candidates were resolved by precedent, not by new judgment**: for `docs/guide/autonomy.md` and `docs/workflow.md`, I checked whether the existing "operate route" external-system-write gate (`modules/autonomy-tier.md` § Tier × External System Write, added for #995) — a structurally identical independent-axis tier gate — is surfaced in either user-facing doc. It is not, in either file. I followed that precedent and left both files unchanged for the new Tier × Run-Fact AC Match gate as well, rather than introducing a new documentation-surfacing convention this Issue did not ask for.
+- **`modules/observation-trigger.md` cross-reference**: the Spec listed this as a sync candidate ("相補関係への相互参照 1 行の追加が候補"). I added one Notes-section line pointing to `modules/run-fact-matching.md`, since a reader of `observation-trigger.md` alone would otherwise have no way to discover that manual-tagged post-merge AC are handled by a different mechanism entirely.
+- **`apply-run-fact-match.sh --evidence` default value**: the Spec's Step 3 defines the `Recommend:` and audit-trail-comment formats but not what to print when `--evidence` is omitted. I chose the literal string `"no evidence provided"` — a judgment call not specified by the Spec, recorded here in case a future caller needs a different default (e.g. empty string, or omitting the parenthetical entirely).
+
+### Rework
+
+- **jq filter-argument re-evaluation bug in `collect-run-facts.sh`**: the first draft of the `phase_entry(events; p)` jq function used bare (non-`$`) parameters. jq evaluates a bare filter parameter's argument expression against whatever `.` is *at the point of reference inside the function body*, not against `.` at the call site — so `p` inside `map(select(.phase == p))` silently evaluated against each element of the mapped array instead of the phase name passed in, and every phase's `status` resolved to `"started"` regardless of whether a `phase_complete` event existed. Caught by the manual smoke test in Task #1 (expected `"complete"` for issue 1150's `code-pr`/`review`/`merge` phases, got `"started"` for all three). Fixed by switching to `$`-prefixed (bound-value) parameters throughout the module's jq functions. This is a general jq pitfall, not specific to this script — worth remembering for any future jq `def` with a filter-typed parameter referenced inside a nested `map`/`select`.
+- **`scan-pending-ac.sh` output line-wrapping**: the accumulator variable for the candidate array was built via repeated `jq '. += [...]'` calls without `-c`, so the final output was pretty-printed across multiple lines instead of the single-line JSON the module header documents. Caught by `tests/run-fact-matching.bats`'s truncation test (a naive `grep '^\['` line-extraction failed). Fixed by adding `-c` to the accumulator's jq call.
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 対応方針は案 B (独立スクリプト分離) を採用。`collect-run-facts.sh` / `scan-pending-ac.sh` / `apply-run-fact-match.sh` の 3 本に分け、LLM の rubric 判定を中央 1 段だけに閉じ込める。AC5 の 3 経路テスト要件がこの構造を要求している
-- pending AC の母集団 414 件に対し、実行事実から生成した fact token による決定的な事前絞り込みを挟む (実測 414 → 17 件)。汎用トークン `/auto` は絞り込みが機能しなくなるため意図的に除外する
-- 候補提示は `Recommend:` プレフィックス付きターミナル出力のみとし、Issue コメント化はしない。自動チェック時のみ `type=run-fact-ac-match` marker 付きコメントを 1 件投稿する (チェックボックスが立つため再スキャン対象にならず、#1026 型のコメント蓄積は起きない)
-- 上限 30 件は `.wholework.yml` のキーにせずスクリプト内定数とする。config キー追加は 3 ファイルの同期義務を生むため、上限到達の実績が出てから起票する
+- Implemented all 3 scripts exactly as decomposed in the Spec (案 B): `collect-run-facts.sh` / `scan-pending-ac.sh` / `apply-run-fact-match.sh`, with the LLM rubric judgment confined to `modules/run-fact-matching.md` Processing Step 3 only.
+- Documentation sync for the operate-route-adjacent Steering Docs (`docs/guide/autonomy.md`, `docs/workflow.md`) followed the existing precedent set by the "Tier × External System Write (operate route)" gate — neither doc surfaces that gate either, so neither was changed for this Issue's new gate.
+- Added a one-line cross-reference from `modules/observation-trigger.md`'s Notes to `modules/run-fact-matching.md`, per the Spec's own sync candidate suggestion — this is the one Steering Docs change made.
 
 ### Deferred Items
 
-- `/review` の depth (`--full`/`--light`) をイベントログに記録する拡張は別 Issue。本 Issue では #1097 型の条件が `ambiguous` → 候補提示に落ちることを仕様として受け入れる
-- `scripts/opportunistic-search.sh` の `--limit 50` silent cap (実際の母集団 312 件) は本 Issue のスコープ外。observation AC の取りこぼしとして独立に起票する候補
-- 既存滞留 167 件への遡及バックフィルは #1158 が担当。本 Issue は前向き検知のみ
-- `docs/workflow.md` / `docs/guide/autonomy.md` / `modules/observation-trigger.md` / `modules/l0-surfaces.md` への追記要否は Changed Files の Steering Docs sync candidate として `/code` に委ねた
+- `/review` の depth (`--full`/`--light`) をイベントログに記録する拡張は別 Issue（Spec 記載どおり、変更なし）
+- `scripts/opportunistic-search.sh` の `--limit 50` silent cap は本 Issue のスコープ外（Spec 記載どおり、変更なし）
+- 既存滞留 167 件への遡及バックフィルは #1158 が担当（Spec 記載どおり、変更なし）
+- Post-merge の observation AC (`/auto` を 1 回完走させて検出を観察する) は未チェックのまま — `/verify` フェーズでの観察対象
 
 ### Notes for Next Phase
 
-- Issue 本文の「`observation-trigger.sh` が Issue コメントを走査し」は誤り。実際は `opportunistic-search.sh` が Issue **body** を走査する。`scan-pending-ac.sh` は body の `### Post-merge` 節を読む設計であることを実装時に再確認すること
-- `verify-type` タグが無い post-merge の `- [ ]` 行は `manual` として扱うこと (`skills/verify/SKILL.md` Step 8b の既存規約)。実測 414 件中 244 件が manual であり、ここを落とすと AC2 を満たさない
-- チェックボックス index は body 全体の `^- \[[ xX]\]` を数えたグローバル 1-based (`gh-issue-edit.sh` / `check-pre-merge-ac.sh` と同一規約)。post-merge 節内でのローカル連番にしないこと
-- 3 スクリプトはすべて fail-open。`gh` 失敗・イベントログ不在・jq エラーは空結果 + exit 0 とし、`/auto` を中断させない。引数不正のみ exit 1
-- `skills/auto/SKILL.md` の `allowed-tools` には 3 スクリプトの literal エントリが必要 (ワイルドカードは `validate-skill-syntax.py` の突合を通らない)。本文に半角感嘆符とトリプルバッククォートを含めないこと
+- `/verify` はこの Issue の Post-merge AC (observation, event=auto-run) を、次回いずれかの `/auto` 完走で本機構自身が発火するかどうかで判定することになる。本 PR のマージそのものが `/auto` 経由でない場合、post-merge AC の充足には別途 `/auto` 実行が必要な点に注意
+- `collect-run-facts.sh` の jq `def` で filter 型パラメータ (`$` 無し) を使うと、呼び出し側の `.` ではなく参照箇所の `.` で再評価される (jq の既知の挙動)。Code Retrospective の Rework 節に詳細を記録した — 同モジュールへの将来の変更時に同じ罠を踏まないこと
+- 3 スクリプトはすべて fail-open (`gh` 失敗・イベントログ不在・jq エラーは空結果 + exit 0)、引数不正のみ exit 1。bats テスト 18 件で検証済み
 
 ## Consumed Comments
 
