@@ -132,18 +132,16 @@
 - N/A — rubric 4件・command 1件とも曖昧さなく自動判定できた。verify command (`bats tests/observation-trigger.bats`) は追加テストケース込みで問題なく実行できた。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- SHOULD/CONSIDER 指摘 3件はすべて対応した: (1) 同時実行時の非アトミック性の限界を `modules/observation-trigger.md` にドキュメント化、(2) `gh issue view --jq` への `$N`/`$EVENT_NAME` 直接文字列結合を `env.MARKER_N`/`env.MARKER_EVENT` 経由に変更 (`--arg` は `gh --jq` では使えないことを実機確認済み)、(3) fail-open 分岐 (日時変換失敗時) を検証する bats ケースを追加。
-- Base Branch Conflict Pre-check: `git merge-base HEAD origin/main` が `origin/main` の HEAD と一致しており、`git merge-tree` の出力も空 — base ブランチとのコンフリクトなし。
-- 修正はいずれも挙動を変えない防御的変更 (ドキュメント追記・実装の堅牢化・テスト追加) のため、Step 13 の方針変更検出は該当なしと判断した。
+- PR #1148 は `mergeStateStatus=CLEAN`・`mergeable=MERGEABLE` で競合なく squash merge した (コンフリクト解消不要)。
+- Pre-merge AC gate: `check-pre-merge-ac.sh 1099` で 5件全チェック済みを確認してからマージした。
 
 ### Deferred Items
 - Post-merge AC (`observation-trigger.sh --event auto-run` を連続2回実行して重複投稿されないことを手動確認) は引き続き未実施 — `/verify` フェーズに委ねる。
 - 真の同時実行 (複数プロセスが同一 event/Issue に対して同時に走るケース) に対する完全な排他制御 (ロックファイル等) は本 PR のスコープ外として見送り、`modules/observation-trigger.md` に限界を明記するに留めた。
 
 ### Notes for Next Phase
-- Fix commit (`d3351b79`) push 後、CI の再実行結果を `/merge` 前に確認すること。
 - Post-merge AC は `/verify` で manual 確認が必要 (`verify-type: manual`)。
 - 24時間ウィンドウはスクリプト内固定定数のまま — 変更なし。
