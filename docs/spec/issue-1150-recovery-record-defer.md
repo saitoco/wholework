@@ -156,3 +156,76 @@ Issue 本文 対応方針 3 の判断: 現状維持とする。同ファイル�
 cutoff: 2026-08-04T15:10:44Z (最新の `phase/*` ラベル付与時刻)
 
 - `saito` / `MEMBER` / first-class / `/issue 1150 --non-interactive` の Issue Retrospective。Triage 判断 (Type=Bug / Size=L / Value=4) と、既存 open PR ガードが記録を破棄する挙動である旨・(a) 案の #1005 型リスクという 2 点の自動解決ログを記録している。本 Spec の Root Cause の表と「方針選択」で両方に対応済み / https://github.com/saitoco/wholework/issues/1150#issuecomment-5181018281
+
+## issue retrospective
+
+`/issue 1150 --non-interactive` 実行時の retrospective (Issue コメントから転記)。
+
+### Triage
+
+- Type: Bug (繰り返し実害を伴う既知の欠陥として分類)
+- Size: L (対象ファイル `scripts/run-auto-sub.sh` / `tests/run-auto-sub.bats` / `skills/auto/SKILL.md` / `modules/orchestration-fallbacks.md` の 4 件見込み + スクリプトの分岐追加により Complexity 補正 +1)
+- Value: 4 (Impact=2: `scripts/run-auto-sub.sh` は `modules/orchestration-fallbacks.md` と `skills/auto/SKILL.md` から参照される共有コンポーネント。Alignment=5: Vision の「governance-and-verification harness を安全に運用する」に直結し、`docs/product.md` Non-Goals の「main への直接 commit/push」禁止の例外 (Spec ファイル) 自体の安全性を高める内容)
+- Priority: 検出キーワードなし (title/body に明示的な priority 表現なし) のためスキップ
+
+### Ambiguity 自動解決ログ (Auto-Resolve)
+
+非対話モードのため、コードベース調査で判明した以下 2 点を「要判断点」ではなく「事実確認」として本文に追記し、自動解決した。
+
+1. **既存ガードの不完全性**: `_write_manual_recovery_to_spec()` に commit `9dc07088` (#1123 / PR #1149) で追加済みの open PR 検出ガードは、対応方針の (a)(b) いずれでもなく「Spec への記録を stderr 警告のみで破棄する」第三の挙動になっていることをコード調査で確認した。
+2. **(a) 案の実装リスク**: 対応方針 (a)「PR ブランチ側の Spec に書く」は #1005 と同種の失敗モードを再導入するリスクがあるため、/spec での検討事項として明記した。
+
+### 判断根拠
+
+Background セクションの `--write-manual-recovery` という事実主張は `scripts/run-auto-sub.sh` 内の該当コードで裏付けを確認済み (advisory fact-check, 警告なし)。Steering Docs (`docs/product.md` / `docs/tech.md`) は Level 1 (full precision) で参照可能なため、Value スコアリングは Steering Docs ベースで実施した。
+
+## spec retrospective
+
+### Autonomous Auto-Resolve Log
+
+非対話モードのため、以下 3 点を `AskUserQuestion` なしで自動解決した。
+
+- **(b) defer + flush を採用** — reason: `run-auto-sub.sh` は冒頭 24-31 行で main worktree root を解決して `cd` する設計になっており、これ自体が #1005 の再発防止策。(a) はこの不変条件に逆行し、ブランチ切り替え・CI 再走・review 済み diff の汚染という副作用を伴う。(b) はブランチ切り替えを一切行わないため新規の失敗モードを導入しない
+  - 他の候補: (a) PR ブランチ側の Spec に書く
+- **defer 先を `.tmp/deferred-recovery-records-<issue>.md` (markdown) にする** — reason: Issue 本文は `.tmp/auto-events.jsonl` への一本化を示唆するが、`emit_event()` は値サニタイズで改行を除去する (`scripts/emit-event.sh` 106-111 行)。Tier 2 の記録本体は `apply-fallback.sh` が出力する複数行 markdown であり JSONL の 1 フィールドに収まらない。観測用の `recovery_record_deferred` イベントのみ JSONL へ emit する 2 系統分離で両立させた
+  - 他の候補: JSONL 単独 / Issue コメントへの退避
+- **flush の実行主体を `run-auto-sub.sh` 内に閉じる** — reason: `/verify` Step 12 から `.tmp/` を読む案は、構造診断が問題 B で指摘する「3-Tier recovery の SKILL.md prose と bash の二重実装」という既知の負債を 1 つ増やす。flush 呼び出しを `--write-manual-recovery` ディスパッチとメインフロー末尾の 2 箇所に置くことで、bash 層のみで完結させた
+  - 他の候補: `/verify` Step 12 での回収 / 定期バッチ (cron) での回収
+
+### Minor observations
+
+- Issue 本文の Background が引用していた「構造診断 推奨 6」は当該ドキュメントに存在しなかった (実在するのは問題 B の実害記録のみ)。Step 6 の「Issue body vs. 既存実装の矛盾検出」は既存コードとの照合を想定した手順だが、今回のように **Issue 本文が引用する既存ドキュメントの記述** が事実と食い違うケースも同じ検出網に掛かることが確認できた。Issue 本文と Spec Notes の両方で訂正済み
+- `tests/run-auto-sub.bats` の共通 `gh` mock が引数を見ずに `pr list` へ一律応答する設計のため、`_open_pr_for_issue()` のような「同じサブコマンドを別の意図で呼ぶ」関数を追加すると既存テストが意図せず巻き添えになる。今回は `--search` の有無で分岐させる方針で回避したが、mock の粒度が粗いこと自体は今後の同種変更でも摩擦になる
+
+### Judgment rationale
+
+- 構造診断 Phase 0 項目 2 の「補償層モラトリアム」(orchestration-fallbacks.md への新パターン追加凍結) に抵触しないよう、`modules/orchestration-fallbacks.md` へは新規 `## <pattern>` セクションを追加せず既存セクションの更新に留める制約を Spec に明記した。defer + flush は失敗クラスの除去であって新規リトライ機構ではない、という線引きで整合させている
+- `docs/reports/orchestration-recoveries.md` を転記方式に寄せない判断は、conflict 面の小ささに加えて `collect-recovery-candidates.sh` / `recoveries-auto-fire` が即時性に依存する点を根拠にした。転記遅延が閾値検出の遅延に直結するため、conflict リスクとのトレードオフで現状維持が優位
+
+### Uncertainty resolution
+
+- `auto-stop-at` が `code` / `review` の場合に defer ファイルが `.tmp/` に残留する経路は、設計時に解消しきれなかったため Uncertainty セクションに検証方法・影響範囲付きで残した。記録の消失ではなく反映の遅延であり、本 Issue の AC (main 直接 commit の回避) は満たすため、スコープ内での対処は行わない判断とした
+- Tier 2 の記録内容 (`apply-fallback.sh` の stdout) が `docs/reports/orchestration-recoveries.md` に二重記録されているかをコード調査で確認した結果、`apply-fallback.sh` は recoveries ログへ書かず Spec が唯一の永続記録先だった。この事実が「defer した記録を絶対に捨ててはいけない」という設計制約 (flush 失敗時に defer ファイルを保持する、Spec 未作成時も保持する) の根拠になっている
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- open PR 存在時の recovery 記録は (b) defer + flush 方式を採る。退避先は `.tmp/deferred-recovery-records-<issue>.md`、転記は `_flush_deferred_recovery_records()` が担う。(a) PR ブランチ書き込みは #1005 型の失敗モード再導入を避けるため不採用
+- `_open_pr_for_issue()` は変更しない。既存の検出ロジックを Tier 2 / Tier 3 経路にも再利用し、`_write_manual_recovery_to_spec()` では破棄の代わりに defer を呼ぶ
+- `modules/orchestration-fallbacks.md` には新規 `## <pattern>` セクションを追加しない (構造診断 Phase 0 の補償層モラトリアム遵守)。既存の `## manual-recovery-spec-write` と `## Operational Notes` 配下 3 小節の更新のみ
+- `docs/reports/orchestration-recoveries.md` は転記方式に寄せず現状維持
+
+### Deferred Items
+
+- `auto-stop-at` が `code` / `review` の場合の defer ファイル残留は本 Issue のスコープ外 (Uncertainty セクション参照)。記録は失われないため許容する
+- `/verify` からの defer ファイル回収は不採用。二重実装を増やさない判断のため、将来必要になった場合は別 Issue で扱う
+
+### Notes for Next Phase
+
+- 実装順序に依存関係がある: ステップ 7 (`tests/run-auto-sub.bats` の共通 `gh` mock に `pr list --search` → `[]` 分岐を追加) を **ステップ 8 より先に** 行うこと。これを飛ばすと既存の Tier 2 / Tier 3 直接書き込みテスト 6 件が defer 側に落ちて失敗する
+- `scripts/run-auto-sub.sh` は bash 3.2+ 互換を維持すること (`mapfile` / 連想配列は使用不可)
+- `_defer_recovery_record()` から `emit_event` を呼ぶ際は `command -v emit_event` で保護すること。Tier 2 / Tier 3 経路はメインフロー (emit-event.sh を source 済み) から呼ばれるが、テストの mock 環境では未定義になり得る
+- flush の commit / push 失敗時は defer ファイルを削除しないこと (記録消失の防止)。Spec が未作成の場合も同様に保持する
+- `docs/tech.md` を変更したら `docs/ja/tech.md` の対応箇所 (47 行) も同期すること (`docs/translation-workflow.md` の同期義務)
