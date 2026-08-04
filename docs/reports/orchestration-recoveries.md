@@ -31,6 +31,9 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - Log tail: "<last relevant log line>"
 
 ### Diagnosis
+- cause: <slug> (optional; short kebab-case root-cause label, e.g. `dirty-guard`. When
+  present, `/audit recoveries` groups this entry under `<symptom-short>/<cause-slug>`
+  instead of the bare `<symptom-short>`, separating occurrences by known root cause)
 - <observed state inspection result and root cause hypothesis>
 
 ### Recovery Applied
@@ -47,7 +50,8 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 
 | Field | Description |
 |-------|-------------|
-| `symptom-short` | Short identifier for the symptom pattern (kebab-case, used for frequency grouping) |
+| `symptom-short` | Short identifier for the symptom pattern (kebab-case). Frequency grouping key is `symptom-short`, or `symptom-short/cause-slug` when a `cause` line is present in `### Diagnosis` |
+| `cause` | Optional kebab-case root-cause slug in `### Diagnosis` (e.g. `dirty-guard`). Separates occurrences of the same symptom by known root cause during frequency grouping |
 | `Source` | Which mechanism detected and handled this recovery event |
 | `Outcome` | `success` = phase completed; `partial` = partial recovery; `failed` = stopped |
 | `Improvement Candidate` | `未起票` = not yet filed; `起票済み #NNN` = filed as Issue #NNN; `N/A` = no action needed |

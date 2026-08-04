@@ -30,8 +30,8 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh $NUMBER
 
 Handle by exit code:
 
-- **Exit 0 (clean)** → continue
-- **Exit 2 (all dirty files are unrelated spec files)** → the script printed the file paths to stdout: Present the following choice via AskUserQuestion — "Unrelated dirty files detected (e.g., `docs/spec/issue-N-*.md` for a different Issue). Stash and continue, or abort?"
+- **Exit 0 (clean, or all dirty files are non-blocking: self-worktree / other-worktree / other-session / self-spec / foreign-session, or unrelated spec files coexisting with a foreign-session file)** → continue
+- **Exit 2 (unrelated spec files are the ONLY non-blocking dirty files present — no foreign-session file is also dirty)** → the script printed the file paths to stdout: Present the following choice via AskUserQuestion — "Unrelated dirty files detected (e.g., `docs/spec/issue-N-*.md` for a different Issue). Stash and continue, or abort?"
   - "Stash and continue": run `git stash`, then continue
   - "Abort": stop and guide user to run `git stash` or `git commit`, then re-run `/verify $NUMBER`
 - **Exit 1 (dirty files listed in this Issue's own Spec `## Changed Files` manifest, or attribution undetermined)**: output error message and abort:

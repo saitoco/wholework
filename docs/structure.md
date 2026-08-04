@@ -121,7 +121,7 @@ Key modules:
 - `modules/doc-checker.md` — documentation consistency checker
 - `modules/doc-commit-push.md` — commit/push guide for /doc subcommand outputs
 - `modules/domain-loader.md` — bundled and project-local Domain file discovery and conditional loading
-- `modules/execution-context.md` — execution context (fork vs main) determination criteria and per-context constraints (verify command safe/full mode policy)
+- `modules/execution-context.md` — execution context (fork vs main) determination criteria and per-context constraints (verify command safe/full mode policy); also the cross-cutting SSoT for the "Re-invocation Guarantee and Notification-Dependent Waiting" rule (which execution surfaces must not end a turn to await a background-task notification)
 - `modules/skill-help.md` — shared `--help` output formatter for skills
 - `modules/skill-dev-checks.md` — cross-skill consistency validation
 - `modules/codebase-analysis.md` — codebase analysis for `/doc` deep mode
@@ -236,7 +236,7 @@ Key modules:
 - `scripts/validate-permissions.sh` — validate skill directory ↔ name: field consistency
 - `scripts/validate-skill-syntax.py` — validate SKILL.md frontmatter and syntax
 - `scripts/check-file-overlap.sh` — detect file overlap between repos
-- `scripts/check-verify-dirty.sh` — session-aware dirty file classifier for /verify Step 1 (self-worktree / other-worktree / other-session / self-spec / own-issue-scope / foreign-session 6-way classification; own-issue-scope vs. foreign-session is decided against the Issue's own Spec `## Changed Files` manifest; outputs classify=... to stderr)
+- `scripts/check-verify-dirty.sh` — session-aware dirty file classifier for /verify Step 1 (self-worktree / other-worktree / other-session / self-spec / own-issue-scope / foreign-session / parent-main (attribution-undetermined fallback) 7-way classification; own-issue-scope vs. foreign-session is decided against the Issue's own Spec `## Changed Files` manifest; outputs classify=... to stderr)
 - `scripts/check-session-findings-disposition.sh` — detects `## Findings` bullets in an L3 `session.md` missing a canonical disposition tag; called warn-only from `skills/auto/SKILL.md` Step 5 right before the commit
 - `scripts/check-translation-sync.sh` — check translation sync status of docs/ja/* against docs/*
 - `scripts/check-forbidden-expressions.sh` — detect deprecated terms from docs/product.md § Terms

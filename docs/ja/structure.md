@@ -114,7 +114,7 @@ wholework/
 - `modules/doc-checker.md` — ドキュメント一貫性チェッカー
 - `modules/doc-commit-push.md` — /doc サブコマンド出力の commit/push ガイド
 - `modules/domain-loader.md` — バンドルおよびプロジェクトローカル Domain ファイルの発見と条件付きロード
-- `modules/execution-context.md` — 実行コンテキスト (fork vs main) の判定基準と各コンテキストでの制約 (verify command の safe/full mode ポリシー)
+- `modules/execution-context.md` — 実行コンテキスト (fork vs main) の判定基準と各コンテキストでの制約 (verify command の safe/full mode ポリシー)。「Re-invocation Guarantee and Notification-Dependent Waiting」ルール (どの実行サーフェスがバックグラウンドタスクの通知待ちでターンを終えてはならないか) の横断 SSoT も兼ねる
 - `modules/skill-help.md` — スキル共通の `--help` 出力フォーマッタ
 - `modules/skill-dev-checks.md` — スキル横断の一貫性検証
 - `modules/codebase-analysis.md` — `/doc` deep モード用のコードベース分析
@@ -228,7 +228,7 @@ wholework/
 - `scripts/validate-permissions.sh` — skill ディレクトリと name: フィールドの一貫性を検証
 - `scripts/validate-skill-syntax.py` — SKILL.md frontmatter と構文を検証
 - `scripts/check-file-overlap.sh` — リポジトリ間のファイル重複検出
-- `scripts/check-verify-dirty.sh` — /verify Step 1 用 session-aware dirty file 分類スクリプト (self-worktree / other-worktree / other-session / self-spec / own-issue-scope / foreign-session の 6 分類; own-issue-scope と foreign-session の判定は自 Issue の Spec `## Changed Files` マニフェストを根拠とする; classify=... を stderr 出力)
+- `scripts/check-verify-dirty.sh` — /verify Step 1 用 session-aware dirty file 分類スクリプト (self-worktree / other-worktree / other-session / self-spec / own-issue-scope / foreign-session / parent-main (帰属未確定時のフォールバック) の 7 分類; own-issue-scope と foreign-session の判定は自 Issue の Spec `## Changed Files` マニフェストを根拠とする; classify=... を stderr 出力)
 - `scripts/check-session-findings-disposition.sh` — L3 `session.md` の `## Findings` から canonical disposition タグ欠落を検出；`skills/auto/SKILL.md` Step 5 の commit 直前に warn-only で呼び出される
 - `scripts/check-translation-sync.sh` — docs/ja/* と docs/* の翻訳同期状況を確認
 - `scripts/check-forbidden-expressions.sh` — docs/product.md § Terms の deprecated terms を検出
