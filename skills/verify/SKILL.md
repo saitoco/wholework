@@ -34,7 +34,7 @@ Handle by exit code:
 - **Exit 2 (all dirty files are unrelated spec files)** → the script printed the file paths to stdout: Present the following choice via AskUserQuestion — "Unrelated dirty files detected (e.g., `docs/spec/issue-N-*.md` for a different Issue). Stash and continue, or abort?"
   - "Stash and continue": run `git stash`, then continue
   - "Abort": stop and guide user to run `git stash` or `git commit`, then re-run `/verify $NUMBER`
-- **Exit 1 (related or non-spec dirty files present)**: output error message and abort:
+- **Exit 1 (dirty files listed in this Issue's own Spec `## Changed Files` manifest, or attribution undetermined)**: output error message and abort:
   "Error: Cannot run verify because there are uncommitted changes. Run `git stash` or `git commit`, then re-run `/verify $NUMBER`."
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="issue", ENTITY_NUMBER=$NUMBER, SKILL_NAME="verify".
@@ -896,18 +896,18 @@ Guard: if `docs/reports/orchestration-recoveries.md` does not exist, skip this s
    bash ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh docs/reports/orchestration-recoveries.md --threshold "$RECOVERIES_AUTO_FIRE_THRESHOLD" --issues-json .tmp/open-issues-$NUMBER.json
    ```
 
-3. If the output is empty: skip the rest of this step. For each `symptom-short<TAB>count` line in the output:
+3. If the output is empty: skip the rest of this step. For each `group-key<TAB>count` line in the output (`group-key` is either a bare symptom-short, e.g. `manual-recovery-review-rerun`, or `symptom-short/cause-slug`, e.g. `manual-recovery-review-rerun/dirty-guard`, when `collect-recovery-candidates.sh` found a `- cause:` line in the source entries — see Issue #1123):
    - If `AUTONOMY_TIER=L1` OR `RECOVERIES_AUTO_FIRE_ENABLED=false`:
-     Print: `Recommend: gh issue create --label "retro/recoveries" --title "recoveries: {symptom-short}" (count: {count})`
+     Print: `Recommend: gh issue create --label "retro/recoveries" --title "recoveries: {group-key}" (count: {count})`
    - If `AUTONOMY_TIER=L2` or `L3` AND `RECOVERIES_AUTO_FIRE_ENABLED=true`:
-     a. **Extract source entries**: Read `docs/reports/orchestration-recoveries.md` and collect all entries whose header matches `## YYYY-MM-DD HH:MM UTC: {symptom-short}`. For each entry, extract: date (from header), Issue number (from `Context` field), exit code (from `Context: Wrapper: ... exit code:` field), one-line diagnosis summary (first sentence of `Diagnosis` field), and log tail (from `Context: Log tail:` field).
-     b. **Cluster by cause**: Examine the diagnosis text and exit codes to group entries by their primary cause pattern. Common patterns include: "silent no-op (exit 0, no commit)", "watchdog kill (exit 143 / SIGTERM, timeout)", "test FAIL (exit 1, test error)". Name each cause group descriptively. If only one cause pattern exists, use a single group.
+     a. **Extract source entries**: Split `group-key` into `symptom-short` (the portion before the first `/`, or the whole string if there is no `/`) and `cause-slug` (the portion after, empty if there is no `/`). Read `docs/reports/orchestration-recoveries.md` and collect all entries whose header matches `## YYYY-MM-DD HH:MM UTC: {symptom-short}` (headers never carry a cause suffix — cause lives in the entry body). If `cause-slug` is non-empty, keep only entries whose body contains `- cause: {cause-slug}`; if `cause-slug` is empty, keep only entries whose body has no `- cause:` line at all (entries with a cause line belong to a different, cause-specific group-key and would otherwise be double-counted here). For each matched entry, extract: date (from header), Issue number (from `Context` field), exit code (from `Context: Wrapper: ... exit code:` field), one-line diagnosis summary (first sentence of `Diagnosis` field), and log tail (from `Context: Log tail:` field).
+     b. **Cluster by cause**: When `cause-slug` is non-empty, the entries collected in (a) are already pre-separated by cause (per Issue #1123's `collect-recovery-candidates.sh` grouping) — skip freeform clustering and use a single cause group named after `cause-slug`. Otherwise, examine the diagnosis text and exit codes to group entries by their primary cause pattern. Common patterns include: "silent no-op (exit 0, no commit)", "watchdog kill (exit 143 / SIGTERM, timeout)", "test FAIL (exit 1, test error)". Name each cause group descriptively. If only one cause pattern exists, use a single group.
      c. **Check label existence**: Run `gh label list --json name --jq '.[].name'` and check if `retro/recoveries` is present. If absent, output: `Warning: label "retro/recoveries" not found. Run scripts/setup-labels.sh to create labels before auto-filing.` Do NOT fall back to another label — use only `retro/recoveries`.
      d. **Build Issue body** using source table and cause groups:
         ```
         ## Background
 
-        Symptom `{symptom-short}` has been recorded {count} times in `docs/reports/orchestration-recoveries.md`,
+        Symptom `{group-key}` has been recorded {count} times in `docs/reports/orchestration-recoveries.md`,
         exceeding the configured threshold of `$RECOVERIES_AUTO_FIRE_THRESHOLD`.
 
         ### Source Entries
@@ -929,19 +929,19 @@ Guard: if `docs/reports/orchestration-recoveries.md` does not exist, skip this s
 
         ## Purpose
 
-        Identify and resolve the recurring causes behind `{symptom-short}` to prevent future recurrence.
+        Identify and resolve the recurring causes behind `{group-key}` to prevent future recurrence.
         Each distinct cause group may require a separate fix.
 
         ## Acceptance Criteria
 
         - [ ] Root cause(s) identified per cause group above <!-- verify: rubric "each cause group listed in this Issue has an identified root cause or documented mitigation plan" -->
-        - [ ] Fix or mitigation implemented and verified; no new `{symptom-short}` entries in `docs/reports/orchestration-recoveries.md` after the fix <!-- verify: rubric "orchestration-recoveries.md contains no '未起票' Improvement Candidate entries for {symptom-short} newer than this Issue's creation date" -->
+        - [ ] Fix or mitigation implemented and verified; no new `{group-key}` entries in `docs/reports/orchestration-recoveries.md` after the fix <!-- verify: rubric "orchestration-recoveries.md contains no '未起票' Improvement Candidate entries for {group-key} newer than this Issue's creation date" -->
         ```
-     e. Run `gh issue create --label "retro/recoveries" --title "recoveries: {symptom-short}" --body "{body}"` and capture the new issue number from the output URL.
+     e. Run `gh issue create --label "retro/recoveries" --title "recoveries: {group-key}" --body "{body}"` and capture the new issue number from the output URL.
      f. Emit the event:
         ```bash
         source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
-        EMIT_ISSUE_NUMBER=$NUMBER emit_event "recoveries_threshold_fire" "symptom={symptom-short}" "count={count}" "issue_number={new_issue_number}"
+        EMIT_ISSUE_NUMBER=$NUMBER emit_event "recoveries_threshold_fire" "symptom={group-key}" "count={count}" "issue_number={new_issue_number}"
         ```
 
 4. Cleanup:
