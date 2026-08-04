@@ -3,6 +3,29 @@
 ## Consumed Comments
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1037#issuecomment-5036351551
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1037` to verify the conditio / https://github.com/saitoco/wholework/issues/1037#issuecomment-5041912441
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1037` to verify the conditio / https://github.com/saitoco/wholework/issues/1037#issuecomment-5053877643
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1037` to verify the conditio / https://github.com/saitoco/wholework/issues/1037#issuecomment-5053881401
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1037` to verify the conditio / https://github.com/saitoco/wholework/issues/1037#issuecomment-5059782917
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1037` to verify the conditio / https://github.com/saitoco/wholework/issues/1037#issuecomment-5112391726
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1037` to verify the conditio / https://github.com/saitoco/wholework/issues/1037#issuecomment-5112396136
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1037` to verify the conditio / https://github.com/saitoco/wholework/issues/1037#issuecomment-5113361321
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1037#issuecomment-5113812061
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1037` to verify the conditio / https://github.com/saitoco/wholework/issues/1037#issuecomment-5114562875
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1037` to verify the conditio / https://github.com/saitoco/wholework/issues/1037#issuecomment-5114568678
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1037` to verify the conditio / https://github.com/saitoco/wholework/issues/1037#issuecomment-5114574145
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1037` to verify the conditio / https://github.com/saitoco/wholework/issues/1037#issuecomment-5131475201
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1037#issuecomment-5131571459
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1037#issuecomment-5131632765
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1037` to verify the conditio / https://github.com/saitoco/wholework/issues/1037#issuecomment-5133000774
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1037` to verify the conditio / https://github.com/saitoco/wholework/issues/1037#issuecomment-5133752830
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1037` to verify the conditio / https://github.com/saitoco/wholework/issues/1037#issuecomment-5138806081
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1037` to verify the conditio / https://github.com/saitoco/wholework/issues/1037#issuecomment-5138891571
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1037` to verify the conditio / https://github.com/saitoco/wholework/issues/1037#issuecomment-5141403126
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1037` to verify the conditio / https://github.com/saitoco/wholework/issues/1037#issuecomment-5146656128
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1037` to verify the conditio / https://github.com/saitoco/wholework/issues/1037#issuecomment-5147236679
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1037#issuecomment-5174322192
 ## Overview
 
 `/verify` skill の Step 3 (Worktree Entry) は Size や route (XS patch route か否か) に関わらず無条件で worktree を作成する手順として実装されているが、その「無条件性」自体が SKILL.md の文面上には明示されていない。この曖昧さが原因で、XS patch route Issue (#1031) の batch verify 実行時に worktree Entry が省略される drift が発生した (docs/sessions/91609-1784609460-2026-07-21/session.md § Findings に記録)。
