@@ -57,6 +57,35 @@ Inspect `ARGUMENTS` at skill start:
 | verify-executor mode | **full mode** — all verify command types execute, including `command` and `build_success`. |
 | Error handling | Use `AskUserQuestion` for ambiguities requiring user judgment. |
 
+## Re-invocation Guarantee and Notification-Dependent Waiting
+
+**Definition — re-invocation guarantee**: a background task's completion notification only reaches
+a session if the harness re-invokes that session to deliver it. Re-invocation is guaranteed **only
+for direct execution inside an interactive session** — a live user turn where the harness is known
+to call back.
+
+**Execution surfaces without this guarantee (exhaustive)**:
+- headless `claude -p` (the fork context described above — `run-*.sh`-launched processes)
+- a Skill launched as a forked execution (`Skill launched as forked execution`)
+- the Workflow tool's execution path
+- any sub-agent or background Bash process (`run_in_background: true`) started from inside any of
+  the above
+
+**MUST rule**: in these execution surfaces, do not end a turn by waiting on a mechanism that
+depends on a completion notification to resume — this includes `run_in_background: true`, the
+Workflow tool, and any Agent/Task dispatch that returns before the dispatched work completes.
+Execute synchronously in the foreground instead.
+
+**Rationale**: a notification that cannot be delivered does not make the phase merely late — it
+makes the phase permanently incomplete (a silent no-op), because nothing will ever re-invoke the
+session to observe the result.
+
+**Default when undetermined**: if direct interactive execution cannot be confirmed, assume no
+re-invocation guarantee and apply the MUST rule above.
+
+**Precedents**: #994 (`/code`'s bats run), #1097 (`/review`'s bats run), #1103 (the Workflow tool
+path), #1142 (a fork-executed `/review`).
+
 ## How to Reference
 
 In a skill's SKILL.md, reference this module at the step where context affects behavior:
@@ -72,8 +101,14 @@ section. The `verify` skill always runs in main context and does not need to che
 
 ## Callers
 
-Skills that explicitly read this module:
+Skills/modules that explicitly read this module:
 
-- none (SSoT reference — skills use the detection pattern described above without explicitly reading this file; referenced by `docs/tech.md` for the fork context policy)
+- Fork/main context detection pattern (top of this file): none (SSoT reference — skills use the
+  detection pattern described above without explicitly reading this file; referenced by
+  `docs/tech.md` for the fork context policy)
+- "Re-invocation Guarantee and Notification-Dependent Waiting" section: `modules/test-runner.md`
+  (Step 2 non-interactive Note), `skills/review/SKILL.md` (Non-Interactive Mode Behavior Foreground
+  bullet), `skills/review/workflow-guidance.md` (Pre-flight section), `skills/code/SKILL.md`
+  (Behavioral Change Detection foreground-execution note)
 
-Update this list when a skill begins reading `modules/execution-context.md` explicitly.
+Update this list when a skill or module begins reading `modules/execution-context.md` explicitly.

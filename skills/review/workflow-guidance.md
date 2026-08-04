@@ -42,6 +42,8 @@ Before running the Workflow pipeline (Processing Steps below), confirm that `who
 
 This check exists because `capabilities.workflow: true` alone does not guarantee the custom agentTypes are resolvable — see issue #882 Root Cause for the headless `--plugin-dir` failure mode this guards against, and issue #935 for the separate bare-name-vs-namespace mismatch this section now guards against.
 
+**The Workflow tool's own execution path has no re-invocation guarantee**: launching a Workflow run and ending the turn to await its completion notification is itself an instance of the notification-dependent waiting this file's caller (`/review`) must avoid — see `${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting" for the exhaustive list of affected execution surfaces and the MUST rule. The Processing Steps below must run the Workflow call synchronously (foreground) and consume its return value within the same turn, not by dispatching it and waiting for a later notification.
+
 ## Processing Steps (Workflow Path)
 
 When `HAS_WORKFLOW_CAPABILITY=true` and `REVIEW_DEPTH=full`, replace Steps 10.1–10.3 with the following:
