@@ -227,22 +227,41 @@ Background セクションの `--write-manual-recovery` という事実主張は
 
 - N/A — bats 実行は初回 (`tests/run-auto-sub.bats` 94/94、フルスイート `bats tests/` 1358/1358) で全件 PASS した。Spec の「テストの mock 設計に関する注意」節が事前に明記していた「`--search` 分岐を Tier2/Tier3 の直接書き込みテストより先に追加する」順序を守ったことが手戻りを防いだ
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- review-spec が Spec の Uncertainty 記載 (`auto-stop-at: code/review` 限定) より実際の残留リスク範囲が広いこと (親セッション手動 recovery 経路はメインフロー末尾の flush を経由しない) を指摘した。検証 sub-agent はこの経路自体は Spec 本文が「merge 前に `/auto` が中断した場合」として既にカバーしていると判定し REJECT したが、review-spec が指摘した「親セッション手動 recovery 経路」という具体的な発生源の記述は Spec に追記していない。次回同種の Spec では、Uncertainty セクションに列挙する発生源を網羅的に書き出す (抽象的な条件記述だけでなく具体的な経路名を挙げる) と、review 側の指摘と Spec 記述のすれ違いを防げる
+- `_defer_recovery_record` の引数が Spec 記載の 3 引数から実装で 4 引数 (`OPEN_PR` 追加) に変わった点が `## Code Retrospective` の Deviations from Design に記録されていなかった (「N/A — 設計どおり」と記載)。シグネチャ差分は「本文の要件を満たすための正当な変更」であっても Deviations に一言残す運用に倣うべきだった
+
+### Recurring issues
+
+- 「先に working tree に追記 → 後で commit/push を試みて失敗時のみロールバックしない」というパターンが、2 段階検証で 2 件 (`_flush_deferred_recovery_records` の push 失敗時の重複記録、および今回は REJECT された Tier2/Tier3 stub 非対称) 独立に指摘された。retry を伴う書き込み処理を新規実装する際は、「追記 → commit/push」の順序ではなく「commit 成功を冪等性の基準点にする」設計 (今回の修正: commit 成功時点で defer ファイルを削除) を最初から採用する方が手戻りが少ない
+- `emit_event` の kv 引数がイベントスキーマの予約フィールド (`issue`) と衝突する形で新規追加された。新しい `emit_event` 呼び出しを書く際は、`scripts/emit-event.sh` が付与する固定フィールド一覧 (`ts`/`issue`/`event`/`session_id`) を先に確認し、同名の kv 引数を渡さないことを習慣化すべき
+
+### Acceptance criteria verification difficulty
+
+- 3 件の Pre-merge AC (rubric ×2、`command "bats ..."` ×1) はいずれも安全に自動判定できた。rubric 条件文が「main への直接 commit を回避する経路」という抽象度で書かれていたため、実装の 3 経路 (manual/tier2/tier3) すべてを diff から拾って判定する必要があったが、diff 自体が該当箇所を明示していたため支障はなかった
+- **改善提案**: `gh-pr-review.sh` の `event=REQUEST_CHANGES` 送信が、self-hosted 単一アカウント運用の本リポジトリでは GitHub の HTTP 422 (self-`REQUEST_CHANGES` 拒否、`modules/phase-state.md:75` に既知の制約として記録済み) により構造的に失敗する。今回は MUST issue 存在時に `event=COMMENTED` へのフォールバックがなく、素朴に投稿すると単に失敗する (本 review では手動で `path: null` の MUST エントリを追加し忘れた際に発覚)。`gh-pr-review.sh` に self-review 422 を検知して `event=COMMENTED` + 本文冒頭への MUST 明示テキストへ自動フォールバックする処理を追加する Issue を起票すべき
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Spec の設計どおり (b) defer + flush 方式で実装した。`_deferred_recovery_records_file()` / `_defer_recovery_record()` / `_flush_deferred_recovery_records()` を `_open_pr_for_issue()` 直後に追加し、`_write_manual_recovery_to_spec()` / `_write_tier2_recovery_to_spec()` / `_write_tier3_recovery_to_spec()` の 3 経路すべてに open PR 判定 + defer を配線した
-- flush 呼び出しは Spec 指定どおり 2 箇所 (`--write-manual-recovery` ディスパッチの `_write_manual_recovery_to_spec` 呼び出し直前、メインフロー Size 分岐 `esac` 直後) に配線した
-- `tests/run-auto-sub.bats` の `pr list --search` → `[]` 分岐追加 (ステップ 7) をステップ 8 より先に実施したことで、既存 Tier2/Tier3 直接書き込みテスト 6 件を変更なしで通した
+- CI FAILURE (`Forbidden Expressions check` ×2) は本 PR の diff に含まれない `docs/spec/issue-1123-manual-recovery-review-rerun.md:318` の廃止用語 (旧称: 'Design file' / 'Issue Spec'、`docs/product.md` § Terms 参照) が原因と判明。無関係な事前混入でも review skill のポリシー上 MUST として扱い、1 行修正で解消した
+- review-bug×2 の指摘 9 件を Opus 検証 sub-agent で 2 段階検証し、3 件 (emit_event 重複キー、flush 重複記録、reissue 時の Spec 重複) が CONFIRMED、6 件が REJECT (設計上許容済み、または低確度の懸念) と判定された
+- CONFIRMED のうち SHOULD 2 件 (emit_event 重複キー、flush 重複記録) と、tech.md/ja tech.md のドキュメント不整合 (SHOULD) を修正・push 済み。CONSIDER 3 件と Uncertainty 検証未実施の SHOULD 1 件は skip と判断 (実装変更を伴わない、または影響が限定的)
 
 ### Deferred Items
 
 - `auto-stop-at` が `code` / `review` の場合の defer ファイル残留は本 Issue のスコープ外のまま (Spec Uncertainty 参照)。記録は失われないため許容する
 - `/verify` からの defer ファイル回収は不採用のまま。将来必要になった場合は別 Issue で扱う
+- Spec Uncertainty の検証方法 (`auto-stop-at: review` での bats/観察検証) は未実施のまま。`/verify` の post-merge 観察で対応することを推奨
+- reissue シナリオでの Spec 重複エントリ (CONSIDER, scripts/run-auto-sub.sh:568 / modules/orchestration-fallbacks.md:99) は未修正。影響は cosmetic だが、別 Issue での対応を検討
 
 ### Notes for Next Phase
 
-- `tests/run-auto-sub.bats` に defer/flush 用の新規テスト 4 件 (`tier2 recovery: defers ...`, `tier3 recovery: defers ...`, `manual recovery: flushes previously deferred records ...`, `main flow flushes previously deferred recovery records ...`) を追加し、既存 2 件 (`skips commit when an open PR exists` / `open PR skips spec write ...`) を defer アサーションへ更新した。review では defer ファイルのパス (`.tmp/deferred-recovery-records-<issue>.md`) と `recovery_record_deferred` イベントの `issue=`/`kind=`/`open_pr=` 属性が期待どおりか確認してほしい
-- `bats tests/run-auto-sub.bats` (94/94) と `bats tests/` フルスイート (1358/1358) の両方が初回で PASS 済み
 - Post-merge AC (open PR 存在時の recovery が main と conflict しないことの観察) は `/verify` 側での対応
+- `gh-pr-review.sh` の self-review `REQUEST_CHANGES` 422 ギャップ (retrospective 参照) は改善提案として別途起票を検討すること
+- `_flush_deferred_recovery_records()` は commit 成功時点で defer ファイルを削除するよう修正済み (push 失敗時はローカル commit を保持し、次回 push リトライに委ねる)。`/verify` での観察時、この挙動変更を踏まえること
