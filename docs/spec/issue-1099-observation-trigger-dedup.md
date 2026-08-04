@@ -108,3 +108,29 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class): `/issue 1099 --non-interactive` の Issue Retrospective — マーカー形式の `l0-surfaces.md` 基本フィールド準拠修正、および `gh issue comment` stdout URL 抑制の新規 AC 化について、非対話モードでの自動解決ログを記録したもの。内容は Issue 本文に既に反映済みで、Spec フェーズに対する新規の指示は含まれていない。(https://github.com/saitoco/wholework/issues/1099#issuecomment-5173969887)
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1–4 の bash 実装イメージ・ドキュメント修正内容をそのまま採用した。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Step 1 の bash スニペットをそのまま採用し、`gh issue view --json comments --jq` によるマーカー検索 + BSD/GNU 両対応の `date` フォールバックで 24 時間ウィンドウ判定を実装した。
+- `tests/observation-trigger.bats` の `gh` モックをサブコマンド分岐 (`issue view` / `issue comment`) に拡張し、既存 11 ケースを無変更のまま新規 4 ケース (冪等性スキップ・ウィンドウ期限切れ・stdout hygiene・マーカー形式) を追加した。
+- Steering Docs sync candidate として Spec が指定した3ファイル (`modules/observation-trigger.md`、`docs/guide/customization.md`、`docs/ja/guide/customization.md`) の「unconditional」記述を更新し、`docs/structure.md` は Spec の判断通り更新不要とした。
+
+### Deferred Items
+- Post-merge AC (`observation-trigger.sh --event auto-run` を連続2回実行して重複投稿されないことを手動確認) は未実施 — post-merge manual 検証のため `/verify` フェーズに委ねる。
+
+### Notes for Next Phase
+- Pre-merge AC は rubric 4件 + `bats tests/observation-trigger.bats` (15/15 PASS) をすべて確認済み、Issue のチェックボックスも更新済み。
+- 24時間ウィンドウはスクリプト内固定定数 (`.wholework.yml` 化していない) — Spec Notes に理由を記載済み。
