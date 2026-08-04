@@ -276,6 +276,89 @@ Issue 本文に列挙された 3 案について、以下の理由で **案 B** 
 - `modules/run-fact-matching.md` の列挙には `modules/skill-dev-checks.md` の Exhaustive/Example マーカー規約に従い `(exhaustive)` / `(examples)` を付けること
 - `skills/auto/SKILL.md` は `scripts/validate-skill-syntax.py` の制約を受ける。本文に半角感嘆符とトリプルバッククォートを含めないこと
 
+## issue retrospective
+
+`/issue 1157 --non-interactive` によるリファインメントを実施しました。
+
+### Triage (自動連鎖)
+
+- Title: 「解消する」→「解消」(noun-ending rule)
+- Type: Feature
+- Size: L (実行事実の構造化収集 + pending AC 照合 + autonomy tier ゲート + fail-safe + テスト3経路。複数モジュール/スキルに跨る新規アーキテクチャパターンのため Axis 2 で +1 調整)
+- Value: 5 (Impact=10: blocking=1 (#1158 が本 Issue に blocked-by)、mentions=9、shared_flag=+2 / Alignment=5: Vision の中核である post-merge 検証機構に直接該当。Level 1 精度 (`docs/product.md` Steering Documents 利用)
+- 重複候補: なし (#1158 / #1118 / #1156 は関連 Issue だが目的が異なると判定)
+- AC verify command 監査: 該当パターンなし (rubric ベースの AC のみ、grep 引数順・常時 PASS/FAIL・patch route 不整合・破壊的コマンドのいずれにも該当せず)
+
+### 曖昧性検出と自動解決
+
+Size L につき上限5件のうち、2件を自動解決 (残りは AC 文言自体が既に十分具体的で曖昧性なしと判定):
+
+1. **候補提示 (L1 tier) の掲示形式**: `modules/autonomy-tier.md` Path A および `triage`/`verify`/`auto` 各スキルで一貫する「`Recommend:` プレフィックス付きターミナル出力」慣行を踏襲する方針とした。既存パターンが複数箇所で反復されており、一意に推論可能なため自動解決 (Issue コメント化などの新形式は導入しない)。AC 文言は変更不要。
+2. **遡及適用範囲**: 本 Issue は前向き (prospective) 検知メカニズムに限定し、既存滞留 167 件への遡及バックフィルは #1158 が別途担う方針を明記。Post-merge AC の「1 回完走」要件および #1158 の Related 記載と整合することを確認済み。
+
+いずれも Issue body に `## Auto-Resolved Ambiguity Points` セクションとして記録した。
+
+### AC 分類・verify command 割当
+
+新規 Issue 作成時点 (retro/verify から自動起票) で既に Pre-merge/Post-merge の分類と rubric ベースの verify command が適切に割り当てられていたため、変更なし。`対応方針の候補 A/B/C` は `/issue` (What) と `/spec` (How) の責務境界に従い、意図的に `/spec` へ確定を委譲する設計のまま維持した (`docs/product.md` § spec-design-boundary 参照)。
+
+### Background 事実主張検証
+
+`observation-trigger.sh` / `reconcile-phase-state.sh` / `run-review.sh` / `/verify Step 8c` の実在をいずれも確認済み (advisory scan、ブロッキングなし)。
+
+### 依存関係
+
+明示的な `Blocked by #N` 記載なし。`gh-check-blocking.sh` の結果、設定すべき依存関係なし (exit 0)。
+
+### スキップした処理
+
+非対話モードのため sub-issue 分割評価 (Step 12) は High-Stakes Decision としてスキップ。分割が必要と判断される場合は `/issue 1157` を対話モードで再実行してください。
+
+## spec retrospective
+
+### Minor observations
+
+- `/issue` の Background 事実主張検証は「実在確認」(ファイル・関数が存在するか) までで、**主張内容の正確性**までは検証していなかった。実際 Issue 本文の「`observation-trigger.sh` が Issue コメントを走査し」は誤りで、走査対象は `opportunistic-search.sh` が読む Issue **body** だった。`/spec` Step 6 の conflict detection で初めて捕捉できた。advisory scan と conflict detection の粒度差が意図どおりに機能した事例として記録する
+- 既存の `scripts/opportunistic-search.sh` は `gh issue list --limit 50` で走査対象を打ち切っているが、`phase/verify` かつ closed の Issue は実測 312 件ある。observation AC の取りこぼしが構造的に発生している可能性があり、本 Issue のスコープ外だが独立した欠陥として `/verify` の Improvement Proposal 候補に相当する
+- `scripts/post_merge_check.sh` が manual AC の人間ループ処理として既に存在していた。`docs/stats/2026-08-05.md` の「manual 79 件が median 39 日滞留」という分析は、このツールの存在を踏まえると「ツールが無い」ではなく「起動する契機が無い」問題だったと読み直せる。本 Issue が作ろうとしているのはまさにその契機である
+
+### Judgment rationale
+
+- **案 B 採用の決め手は AC5 のテスト要件だった**。「検出 / 非検出 / 曖昧時フォールバックの 3 経路を bats で検証する」を満たすには、LLM 判定の前後を決定的スクリプトで挟む構造が必要になる。案 A (`observation-trigger.sh` 拡張) では判定ロジックが LLM プロンプト側に寄り、bats で経路を固定できない。AC が実装アーキテクチャを一意に決めた珍しいケース
+- **上限値を `.wholework.yml` の config キーにせずスクリプト内定数にした**。config キーを 1 つ増やすと `modules/detect-config-markers.md` / `docs/guide/customization.md` / `docs/ja/guide/customization.md` の 3 ファイル同期義務が発生する。実測候補数 17 件に対して上限 30 は余裕があり、到達実績が出てから起票する方が総コストが低いと判断した。`observation-dispatch-threshold` (#952) は実際に 17 件の dispatch が発生してから config 化された前例であり、同じ順序に従う
+- **fact token から汎用トークン `/auto` を除外する判断は実測に基づく**。414 件中 84 件が `/auto` を含み、含めると絞り込みが機能しない。設計判断を推測ではなく計測で決められたのは、`gh issue list --json number,body` が 1 回の API 呼び出しで全 body を取れると分かったため。当初は Issue ごとに `gh issue view` を回す前提で「重すぎる」と考えていたが、既存 `opportunistic-search.sh` の実装 (Issue ごとの `gh issue view` ループ) をそのまま踏襲しかけていた
+
+### Uncertainty resolution
+
+- **`/review` の depth が events.jsonl に記録されているか** → 記録されていない。`scripts/run-review.sh` L87 が `EMIT_PHASE_NAME="review"` を固定設定しており、`--full`/`--light` はイベントに載らない。実測 (`jq 'select(.issue==1150) | .phase'`) でも `review` のみ。結果として #1097 型の条件は `ambiguous` に落ちるが、これは fail-safe が意図どおり働いた状態であり、仕様として受け入れた。depth 記録の追加は `modules/event-emission.md` の契約変更を伴うため別 Issue とする
+- **`sub_start` イベントが single-issue route でも発行されるか** → 発行されない。#1150 のイベント列に `sub_start` が無く、`size` フィールドが取れない。`get-issue-size.sh` へのフォールバックを必須とする設計に修正した。これを見落とすと single-issue route で `Size <SIZE>` トークンが常に欠落し、事前絞り込みの精度が静かに劣化する類のバグになっていた
+- **全 pending AC を LLM に投げる負荷が現実的か** → 非現実的 (414 件)。決定的な事前絞り込みを挟むことで 17 件まで落ちることを実測で確認し、設計の要とした。`opportunistic-search.sh` の `keyword=` ゲート (#934) と `config=` ゲート (#1026) が同じ「決定的な事前フィルタ → LLM 判定」の 2 段構成であり、既存パターンの横展開として位置づけられる
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 対応方針は案 B (独立スクリプト分離) を採用。`collect-run-facts.sh` / `scan-pending-ac.sh` / `apply-run-fact-match.sh` の 3 本に分け、LLM の rubric 判定を中央 1 段だけに閉じ込める。AC5 の 3 経路テスト要件がこの構造を要求している
+- pending AC の母集団 414 件に対し、実行事実から生成した fact token による決定的な事前絞り込みを挟む (実測 414 → 17 件)。汎用トークン `/auto` は絞り込みが機能しなくなるため意図的に除外する
+- 候補提示は `Recommend:` プレフィックス付きターミナル出力のみとし、Issue コメント化はしない。自動チェック時のみ `type=run-fact-ac-match` marker 付きコメントを 1 件投稿する (チェックボックスが立つため再スキャン対象にならず、#1026 型のコメント蓄積は起きない)
+- 上限 30 件は `.wholework.yml` のキーにせずスクリプト内定数とする。config キー追加は 3 ファイルの同期義務を生むため、上限到達の実績が出てから起票する
+
+### Deferred Items
+
+- `/review` の depth (`--full`/`--light`) をイベントログに記録する拡張は別 Issue。本 Issue では #1097 型の条件が `ambiguous` → 候補提示に落ちることを仕様として受け入れる
+- `scripts/opportunistic-search.sh` の `--limit 50` silent cap (実際の母集団 312 件) は本 Issue のスコープ外。observation AC の取りこぼしとして独立に起票する候補
+- 既存滞留 167 件への遡及バックフィルは #1158 が担当。本 Issue は前向き検知のみ
+- `docs/workflow.md` / `docs/guide/autonomy.md` / `modules/observation-trigger.md` / `modules/l0-surfaces.md` への追記要否は Changed Files の Steering Docs sync candidate として `/code` に委ねた
+
+### Notes for Next Phase
+
+- Issue 本文の「`observation-trigger.sh` が Issue コメントを走査し」は誤り。実際は `opportunistic-search.sh` が Issue **body** を走査する。`scan-pending-ac.sh` は body の `### Post-merge` 節を読む設計であることを実装時に再確認すること
+- `verify-type` タグが無い post-merge の `- [ ]` 行は `manual` として扱うこと (`skills/verify/SKILL.md` Step 8b の既存規約)。実測 414 件中 244 件が manual であり、ここを落とすと AC2 を満たさない
+- チェックボックス index は body 全体の `^- \[[ xX]\]` を数えたグローバル 1-based (`gh-issue-edit.sh` / `check-pre-merge-ac.sh` と同一規約)。post-merge 節内でのローカル連番にしないこと
+- 3 スクリプトはすべて fail-open。`gh` 失敗・イベントログ不在・jq エラーは空結果 + exit 0 とし、`/auto` を中断させない。引数不正のみ exit 1
+- `skills/auto/SKILL.md` の `allowed-tools` には 3 スクリプトの literal エントリが必要 (ワイルドカードは `validate-skill-syntax.py` の突合を通らない)。本文に半角感嘆符とトリプルバッククォートを含めないこと
+
 ## Consumed Comments
 
 - login: `saito` / authorAssociation: `MEMBER` / trust tier: first-class / 要旨: `/issue 1157 --non-interactive` の Issue Retrospective。Triage 判定 (Type Feature / Size L / Value 5) の根拠、自動解決した曖昧点 2 件 (候補提示の掲示形式は `Recommend:` ターミナル出力慣行を踏襲 / 遡及適用は #1158 が担当し本 Issue は前向き検知に限定)、対応方針 A/B/C の確定を意図的に `/spec` へ委譲した設計判断、Background の事実主張検証済みの記録。sub-issue 分割評価は非対話モードのためスキップ済み / URL: https://github.com/saitoco/wholework/issues/1157#issuecomment-5183192598
