@@ -4,13 +4,24 @@
 # Usage: check-verify-dirty.sh <issue-number>
 #
 # Exit codes:
-#   0 — working directory is clean, or all dirty files are self-worktree / other-worktree / other-session
-#   1 — dirty files include related or non-spec parent-main files (hard-error abort)
+#   0 — working directory is clean, or all dirty files are self-worktree / other-worktree /
+#       other-session / self-spec / foreign-session
+#   1 — dirty files include own-issue-scope, or parent-main files with undetermined attribution
+#       (hard-error abort)
 #   2 — all remaining (parent-main) dirty files are unrelated spec files (docs/spec/issue-N-*.md, N != issue-number)
 #
-# Outputs classify=... lines to stderr for each dirty file (4-way classification:
-#   self-worktree, other-worktree, other-session, parent-main).
+# Outputs classify=... lines to stderr for each dirty file. Full classification set:
+#   self-worktree, other-worktree, other-session, self-spec, own-issue-scope, foreign-session,
+#   parent-main (fallback, attribution undetermined).
 # On exit 2, prints the unrelated spec file paths to stdout (one per line).
+#
+# "Files relevant to me" (own-issue-scope) = paths enumerated in this Issue's own Spec
+# (docs/spec/issue-<issue-number>-*.md) `## Changed Files` section. A dirty file matching that
+# Spec's own path (docs/spec/issue-<issue-number>-*.md itself) is classified self-spec and never
+# blocks — it can only be this session's own write-back (Consumed Comments / retrospective
+# append), never another session's work. When the Spec or its `## Changed Files` section is
+# missing, attribution cannot be determined; parent-main files fall back to the pre-#1123
+# behavior of blocking everything.
 
 set -euo pipefail
 
@@ -114,6 +125,33 @@ if [[ ${#parent_main_files[@]} -eq 0 ]]; then
 fi
 dirty_files=("${parent_main_files[@]}")
 
+# Build the own-issue-scope manifest: paths listed in this Issue's own Spec's
+# `## Changed Files` section. Path extraction uses awk (isolate the section) + grep
+# (pull backtick-quoted path tokens) — no associative arrays / mapfile (bash 3.2 compat).
+own_spec_file=""
+for f in docs/spec/issue-"${NUMBER}"-*.md; do
+  if [[ -f "$f" ]]; then
+    own_spec_file="$f"
+    break
+  fi
+done
+
+manifest_available=false
+changed_files_manifest=""
+if [[ -n "$own_spec_file" ]] && grep -q '^## Changed Files' "$own_spec_file" 2>/dev/null; then
+  manifest_available=true
+  changed_files_manifest="$(awk '/^## Changed Files/{flag=1; next} /^## /{flag=0} flag' "$own_spec_file" \
+    | grep -oE '^- `[^`]+`' | sed -E 's/^- `//; s/`$//' || true)"
+else
+  echo "Warning: attribution undetermined for issue #${NUMBER} (no Spec, or Spec has no '## Changed Files' section) — parent-main dirty files fall back to blocking" >&2
+fi
+
+_in_changed_files_manifest() {
+  local file="$1"
+  [[ -n "$changed_files_manifest" ]] || return 1
+  grep -qxF "$file" <<<"$changed_files_manifest"
+}
+
 # Classify each dirty file
 unrelated_spec_files=()
 has_other=false
@@ -125,9 +163,15 @@ for file in "${dirty_files[@]}"; do
     if [[ "$file_issue" != "$NUMBER" ]]; then
       unrelated_spec_files+=("$file")
     else
-      has_other=true
+      echo "[check-verify-dirty] classify=self-spec path=$file" >&2
     fi
+  elif [[ "$manifest_available" == "true" ]] && _in_changed_files_manifest "$file"; then
+    echo "[check-verify-dirty] classify=own-issue-scope path=$file" >&2
+    has_other=true
+  elif [[ "$manifest_available" == "true" ]]; then
+    echo "[check-verify-dirty] classify=foreign-session path=$file" >&2
   else
+    echo "[check-verify-dirty] classify=parent-main path=$file" >&2
     has_other=true
   fi
 done
@@ -136,8 +180,12 @@ if [[ "$has_other" == "true" ]]; then
   exit 1
 fi
 
-# All dirty files are unrelated spec files
+# All remaining dirty files are non-blocking: self-spec, foreign-session, and/or unrelated
+# spec files belonging to a different issue (M != NUMBER). Only the latter print to stdout.
 for f in "${unrelated_spec_files[@]}"; do
   echo "$f"
 done
-exit 2
+if [[ ${#unrelated_spec_files[@]} -gt 0 ]]; then
+  exit 2
+fi
+exit 0

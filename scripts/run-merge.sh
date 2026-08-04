@@ -21,10 +21,16 @@ if [[ -n "$MAIN_REPO_ROOT" ]]; then
   cd "$MAIN_REPO_ROOT"
   [[ -d "$SCRIPT_DIR" ]] || SCRIPT_DIR="$MAIN_REPO_ROOT/scripts"
 fi
+# Resolve the Issue number before the dirty guard so check-verify-dirty.sh can classify
+# parent-main dirty files against this Issue's own Spec (own-issue-scope manifest), not the
+# PR number.
+_MERGE_ISSUE=$("$SCRIPT_DIR/gh-extract-issue-from-pr.sh" "$PR_NUMBER" 2>/dev/null \
+  | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('issue_number',''))" 2>/dev/null || echo "")
+
 # Session isolation check: detect other-session dirty files (best-effort)
 if [[ -x "${SCRIPT_DIR}/check-verify-dirty.sh" ]]; then
   _dirty_exit=0
-  bash "${SCRIPT_DIR}/check-verify-dirty.sh" "${PR_NUMBER}" || _dirty_exit=$?
+  bash "${SCRIPT_DIR}/check-verify-dirty.sh" "${_MERGE_ISSUE:-$PR_NUMBER}" || _dirty_exit=$?
   case "${_dirty_exit}" in
     0) ;;
     1)
@@ -63,9 +69,6 @@ _maybe_emit_phase_complete() {
   fi
 }
 trap '_maybe_emit_phase_complete' EXIT
-
-_MERGE_ISSUE=$("$SCRIPT_DIR/gh-extract-issue-from-pr.sh" "$PR_NUMBER" 2>/dev/null \
-  | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('issue_number',''))" 2>/dev/null || echo "")
 
 _EMIT_PHASE_OWNED=""
 if [[ -z "${EMIT_PHASE_NAME:-}" ]]; then
