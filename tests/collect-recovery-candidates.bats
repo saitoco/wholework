@@ -145,6 +145,60 @@ FIXTURE_EOF
   echo "$output" | grep -E $'^manual-recovery-push-only\t3$'
 }
 
+@test "duplicate check: bare group-key not excluded by a cause-suffixed sibling issue title" {
+  cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
+## 2026-06-01 10:00 UTC: manual-recovery-review-rerun
+
+- Cause: first occurrence (no cause line)
+
+## 2026-06-02 10:00 UTC: manual-recovery-review-rerun
+
+- Cause: second occurrence (no cause line)
+
+## 2026-06-03 10:00 UTC: manual-recovery-review-rerun
+
+- Cause: third occurrence (no cause line)
+
+FIXTURE_EOF
+
+  ISSUES_JSON_FILE="$BATS_TEST_TMPDIR/issues.json"
+  cat > "$ISSUES_JSON_FILE" << 'JSON_EOF'
+[{"number": 999, "title": "recoveries: manual-recovery-review-rerun/dirty-guard"}]
+JSON_EOF
+
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 3 --issues-json "$ISSUES_JSON_FILE"
+  [ "$status" -eq 0 ]
+  # The bare group-key must still appear -- it must NOT be treated as a duplicate of
+  # the cause-suffixed sibling title just because it is a string prefix of it.
+  echo "$output" | grep -E $'^manual-recovery-review-rerun\t3$'
+}
+
+@test "duplicate check: bare group-key IS excluded by an exact-matching issue title" {
+  cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
+## 2026-06-01 10:00 UTC: manual-recovery-review-rerun
+
+- Cause: first occurrence
+
+## 2026-06-02 10:00 UTC: manual-recovery-review-rerun
+
+- Cause: second occurrence
+
+## 2026-06-03 10:00 UTC: manual-recovery-review-rerun
+
+- Cause: third occurrence
+
+FIXTURE_EOF
+
+  ISSUES_JSON_FILE="$BATS_TEST_TMPDIR/issues.json"
+  cat > "$ISSUES_JSON_FILE" << 'JSON_EOF'
+[{"number": 999, "title": "recoveries: manual-recovery-review-rerun"}]
+JSON_EOF
+
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 3 --issues-json "$ISSUES_JSON_FILE"
+  [ "$status" -eq 0 ]
+  ! echo "$output" | grep -qF "manual-recovery-review-rerun"
+}
+
 @test "wrapper-retry-on-kill: H2 entries detected by frequency parser" {
   cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
 ## 2026-06-01 10:00 UTC: wrapper-retry-on-kill

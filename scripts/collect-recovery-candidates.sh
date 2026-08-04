@@ -155,9 +155,13 @@ while IFS= read -r sym; do
     continue
   fi
 
-  # Skip if sym matches an open issue title (duplicate check)
+  # Skip if sym matches an open issue title (duplicate check).
+  # Exact match against "recoveries: <group-key>" -- not substring/"contains" -- so a
+  # bare group-key (e.g. "manual-recovery-review-rerun") is never treated as a duplicate
+  # of a cause-suffixed sibling title (e.g. "recoveries: manual-recovery-review-rerun/dirty-guard")
+  # just because it is a string prefix of it (Issue #1123 review finding).
   if [ -n "$ISSUE_TITLES" ]; then
-    if echo "$ISSUE_TITLES" | grep -qF "$sym"; then
+    if echo "$ISSUE_TITLES" | grep -qxF "recoveries: $sym"; then
       continue
     fi
   fi

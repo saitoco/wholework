@@ -233,13 +233,15 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
 }
 
 # Returns the "number" of the first issue in a `gh issue list --json number,title,<DATE_FIELD>`
-# result whose title contains TARGET as a substring, sorted by DATE_FIELD descending. Empty
+# result whose title exactly equals TARGET, sorted by DATE_FIELD descending. Empty
 # output on no match or any failure (gh error, empty/malformed JSON) -- never exits the script.
-# Uses the same substring ("contains") matching policy as
-# scripts/collect-recovery-candidates.sh's `grep -qF` duplicate check (applied locally in
-# Python here instead of `gh issue list --search`; see Spec Notes: the search backend's
-# tokenization of hyphenated symptom-shorts is not documented to preserve exact substring
-# matching, so a local contains filter is used for consistency with the existing dedup logic).
+# Uses exact-title matching (not substring/"contains") so a bare group-key TARGET (e.g.
+# "recoveries: manual-recovery-review-rerun") never accidentally matches a cause-suffixed
+# sibling title (e.g. "recoveries: manual-recovery-review-rerun/dirty-guard") or vice versa
+# -- see Issue #1123 review: a "contains" policy makes the bare key a string prefix of every
+# cause-specific key once cause-aware group-keys (<symptom-short>/<cause-slug>) exist, causing
+# the bare-key group to be silently and permanently treated as already-filed. Kept consistent
+# with scripts/collect-recovery-candidates.sh's duplicate check (also exact-match as of #1123).
 # Usage: _search_recoveries_issue TARGET STATE DATE_FIELD LIMIT
 _search_recoveries_issue() {
   local target="$1"
@@ -257,7 +259,7 @@ try:
     data = json.load(sys.stdin)
 except Exception:
     sys.exit(0)
-matches = [item for item in data if target in item.get('title', '')]
+matches = [item for item in data if item.get('title', '') == target]
 matches.sort(key=lambda item: item.get(date_field) or '', reverse=True)
 if matches:
     print(matches[0].get('number', ''))
@@ -266,7 +268,7 @@ if matches:
 
 # Resolves the known Issue number for a given symptom-short (e.g.
 # "manual-recovery-push-only") by matching `recoveries: <symptom-short>` against Issue
-# titles (contains match, see _search_recoveries_issue). Prefers an open Issue (most
+# titles (exact match, see _search_recoveries_issue). Prefers an open Issue (most
 # recently created); falls back to the most recently closed Issue if no open match exists.
 # Empty output if neither search matches.
 # Usage: _find_known_recoveries_issue SYMPTOM_SHORT
@@ -327,18 +329,16 @@ _write_manual_recovery_to_recoveries_log() {
   fi
   local _date
   _date=$(date -u '+%Y-%m-%d %H:%M UTC')
-  # Escape backslashes/double-quotes before embedding into the Python heredoc string literal
-  # below (cause/diagnosis may carry arbitrary text via --diagnosis TEXT).
-  local _cause_esc _diagnosis_esc
-  _cause_esc=$(printf '%s' "$cause" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
-  _diagnosis_esc=$(printf '%s' "$diagnosis" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
-  local _diagnosis_body
-  if [[ -n "$cause" ]]; then
-    _diagnosis_body="- cause: ${_cause_esc}\n${_diagnosis_esc:-Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: ${recovery_type})}\n"
-  else
-    _diagnosis_body="- Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: ${recovery_type})\n"
-  fi
-  python3 << PYEOF 2>/dev/null || true
+  # cause/diagnosis are passed to Python via environment variables (WW_CAUSE/WW_DIAGNOSIS)
+  # rather than interpolated into the heredoc's Python source text. Interpolation requires
+  # escaping every character with meaning inside a Python string literal; the previous
+  # backslash/double-quote-only sed escaping did not cover newlines, so a --diagnosis value
+  # containing a newline broke the embedded string literal with a SyntaxError that the
+  # `2>/dev/null || true` below silently discarded -- a silent no-op (Issue #1123 review
+  # finding). Environment variables carry arbitrary text (including newlines) verbatim with
+  # no source-text escaping needed.
+  WW_CAUSE="$cause" WW_DIAGNOSIS="$diagnosis" python3 << PYEOF 2>/dev/null || true
+import os
 import re
 from datetime import datetime, timezone, timedelta
 
@@ -346,6 +346,15 @@ fpath = "${_recoveries_file}"
 marker = "<!-- Log entries appear below, newest first. -->"
 symptom_short = "${_symptom_short}"
 context_line = "- Issue #${issue}, phase: ${phase}"
+
+_cause = os.environ.get("WW_CAUSE", "")
+_diagnosis = os.environ.get("WW_DIAGNOSIS", "")
+if _cause:
+    _diagnosis_text = _diagnosis or "Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: ${recovery_type})"
+    _diagnosis_body = "- cause: {}\n- {}\n".format(_cause, _diagnosis_text)
+else:
+    _diagnosis_body = "- Parent session recovered the phase outside the Tier 1/2/3 machinery (recovery type: ${recovery_type})\n"
+
 entry = (
     "\n## ${_date}: manual-recovery-${recovery_type}\n"
     "\n### Context\n"
@@ -353,7 +362,7 @@ entry = (
     "- Source: parent-session-manual-recovery\n"
     "- Wrapper: run-auto-sub.sh, exit code: ${exit_code}\n"
     "\n### Diagnosis\n"
-    "${_diagnosis_body}"
+    + _diagnosis_body +
     "\n### Recovery Applied\n"
     "- modules/orchestration-fallbacks.md#manual-recovery-spec-write\n"
     "\n### Outcome\n"
@@ -429,11 +438,13 @@ if [[ "${1:-}" == "--write-manual-recovery" ]]; then
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --cause)
-        _mr_cause="${2:-}"
+        [[ $# -ge 2 ]] || { echo "Error: --cause requires a value" >&2; exit 1; }
+        _mr_cause="$2"
         shift 2
         ;;
       --diagnosis)
-        _mr_diagnosis="${2:-}"
+        [[ $# -ge 2 ]] || { echo "Error: --diagnosis requires a value" >&2; exit 1; }
+        _mr_diagnosis="$2"
         shift 2
         ;;
       *)
