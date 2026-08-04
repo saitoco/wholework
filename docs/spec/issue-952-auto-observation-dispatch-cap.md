@@ -127,8 +127,34 @@
 ### Rework
 - N/A
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. `review-light` の Perspective 1 (Spec Deviation) 精査の結果、Spec Implementation Steps 1-5 と PR diff は行単位で一致しており、構造的な乖離は見つからなかった。
+
+### Recurring issues
+
+Nothing to note. 同種の issue (severity MUST/SHOULD) の重複は観測されなかった。CONSIDER 2件 (yaml サンプル前例の選定、ステータスメッセージの `$` プレフィックス慣例) はいずれも単発のスタイル上の指摘であり、過去の `/review` で繰り返し指摘されているパターンとは合致しない。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note。3件の pre-merge rubric AC はいずれも Spec `## Notes` に採用アプローチ・不採用理由・config 変更判断が明記されており、UNCERTAIN 判定は発生しなかった。verify command の欠落や不正確さも見当たらない。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
+
+### Key Decisions
+- 3件の pre-merge rubric AC を code フェーズの判定から独立して再検証し、いずれも PASS と結論。Spec `## Notes` の採用アプローチ根拠が十分に具体的であったため UNCERTAIN 判定は発生しなかった。
+- `review-light` (light mode, 4 観点統合) が検出した CONSIDER 2件はいずれも修正せずスキップと判断した。理由: (1) yaml サンプル前例の選定は Code Retrospective に既に記録済みの判断であり明確な欠陥ではない、(2) ステータスメッセージの `$` プレフィックス省略は LLM 解釈のプロースであり実害が小さい。
+
+### Deferred Items
+- Post-merge AC (`verify-type: opportunistic`): 次回 `/auto --batch` の event-based observation scan で dispatch 数が 10 件超になった際にキャップが発火することの観察は、実運用発生を待つ必要があるため `/verify` 以降に委ねる (code フェーズの Deferred Items を引き継ぎ)。
+- CONSIDER 2件 (docs/guide/customization.md yaml サンプル前例、skills/auto/SKILL.md の `$` プレフィックス表記) は未修正のまま。将来同種の指摘が積み重なった場合のみ対応を検討。
+
+### Notes for Next Phase
+- CI 全9項目 SUCCESS、base branch (`main`) との `git merge-tree` 競合なし。
+- `/merge 1147` を実行可能な状態。
 
 ### Key Decisions
 - Spec の Notes に記録済みの採用アプローチ ((c) priority-based cap、`observation-trigger.sh` の既存 `sort -un` 順序を流用) をそのまま実装。追加のスクリプト変更は発生しなかった。
