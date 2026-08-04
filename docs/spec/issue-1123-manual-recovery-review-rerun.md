@@ -1,0 +1,199 @@
+# Issue #1123: recoveries: manual-recovery-review-rerun
+
+## Overview
+
+`manual-recovery-review-rerun` が `docs/reports/orchestration-recoveries.md` に閾値 `3` を超えて記録された。復旧手順は 3 件とも同一 (親セッションが `Skill(wholework:review)` を直接実行) だが、そこに至る原因は 2 系統に分かれる。
+
+- **Cause A** (#1061, #1069): 再喚起保証のない実行文脈で「完了通知を待つ」を選び、ターンが silent no-op で終わる。個別トリガー (#1097 の bats バックグラウンド実行 / #1103 の Workflow ツール) ごとには起票済みだが、**機構自体を 1 箇所で禁止する横断規約がない**
+- **Cause B** (#1055): `scripts/check-verify-dirty.sh` の非ブロック分類が `docs/sessions/` 配下しか認識せず、並行セッションが `scripts/` や `tests/` を編集していると無関係な `/auto` の全フェーズが hard error でブロックされる
+
+あわせて、頻度検出が復旧手段 (recovery type) でグルーピングしているため原因の異なる事象が同一 symptom に合流する問題も対象に含める。
+
+## Reproduction Steps
+
+**Cause A** (#1069 / PR #1077):
+
+1. `.wholework.yml` に `capabilities.workflow: true` を設定する
+2. Size M/L の Issue に対し `/auto` を実行する (review は `--full` になる)
+3. `run-review.sh` が `claude -p` で `/review` を起動する
+4. `skills/review/SKILL.md` Step 10 が Workflow パスに入り、Workflow ツールを起動して完了通知を待つ姿勢でターンを終える
+5. exit 0 / PR コメント 0 件 / レビュー 0 件のまま `reconcile-phase-state` が `matches_expected:false` を返す
+
+**Cause B** (#1055):
+
+1. 別セッションが親リポジトリ main で `scripts/run-spec.sh` を編集し、未コミットのまま作業を継続する
+2. 無関係な Issue #1055 に対し `/auto` を実行する
+3. `run-review.sh` の dirty guard が `bash scripts/check-verify-dirty.sh <PR番号>` を呼ぶ
+4. `scripts/run-spec.sh` が `parent-main` に分類され exit 1 → `Error: parent main has uncommitted changes. Resolve before proceeding.` で **review を起動せずに終了**する
+
+**Cause B の派生形** (#1135):
+
+1. code phase が silent no-op で終わり auto-retry 1/3 が発火する
+2. retry 前処理の `check-verify-dirty.sh` が、leaf 自身が親リポの Spec に書いた Consumed Comments 追記 1 行 (`docs/spec/issue-1135-*.md`) を検出する
+3. 自 Issue の Spec は `has_other=true` 側に落ちるため exit 1 → auto-retry がブロックされ wrapper exit 1
+
+## Root Cause
+
+### Cause A: 規約の適用条件が個別トリガー単位で書かれている
+
+前景実行を要求する注記が 3 箇所に重複して存在し、いずれも適用条件を **headless `claude -p`** に限定している。
+
+| 箇所 | 由来 | 適用条件の記述 |
+|------|------|----------------|
+| `modules/test-runner.md` Step 2 の Note | #1097 | 「非対話モード (headless `claude -p`)」 |
+| `skills/review/SKILL.md` Non-Interactive Mode Behavior の Foreground 箇条 | #1097 | 「headless `claude -p` プロセス」 |
+| `skills/code/SKILL.md` Behavioral Change Detection | #994 | 「headless `claude -p` プロセス」 |
+
+真の失敗条件は「headless であること」ではなく **harness による再喚起 (re-invocation) が保証されないこと**である。#1142 では fork 実行された `/review` が同型の silent no-op を起こしており、#1103 では Workflow ツールが同じ機構で失敗している。適用条件を headless に限定した規約は、新しい実行サーフェスが増えるたびに抜け穴を作る。
+
+### Cause B: 「自分に関係するファイル」の定義が存在しない
+
+`scripts/check-verify-dirty.sh` L94-115 の分類は 4 分類 (`self-worktree` / `other-worktree` / `other-session` / `parent-main`) で、非ブロック側の判定根拠がすべて **パスプレフィックス** である。
+
+- `.claude/worktrees/` 配下 → worktree 由来と判定できる
+- `docs/sessions/*-*/` 配下 → 別セッションの作業ログと判定できる
+- それ以外 → すべて `parent-main` に落ちる
+
+しかし phase は worktree 内で作業するため、親リポ main の dirty file は構造的に「別セッションの作業」か「自セッションの wrapper による Spec 書き戻し」のいずれかである。`scripts/foo.sh` のような一般パスに対して帰属を判定する根拠がないため、前者が hard error になり、後者 (`docs/spec/issue-N-*.md`) は L128 の `has_other=true` に落ちて同じく hard error になる。
+
+### 頻度検出: グルーピング単位が復旧手段のみ
+
+`_write_manual_recovery_to_recoveries_log()` (`scripts/run-auto-sub.sh` L292-) は `### Diagnosis` に定型文 1 行しか書けず、`--write-manual-recovery ISSUE PHASE RECOVERY_TYPE [EXIT_CODE]` に原因を渡す引数がない。`scripts/collect-recovery-candidates.sh` は H2 ヘッダの symptom-short (`manual-recovery-${recovery_type}`) だけで集計するため、原因の異なる事象が 1 つの Issue に合流する。
+
+## Changed Files
+
+- `modules/execution-context.md`: 「Re-invocation Guarantee and Notification-Dependent Waiting」節を新規追加 (再喚起保証の定義 / 保証のない実行サーフェス一覧 (exhaustive) / MUST 規約 / 根拠 / 先行事例)。Callers 節を更新
+- `modules/test-runner.md`: Step 2 の非対話モード Note を、適用条件「headless `claude -p`」から「再喚起保証のない実行文脈全般」に一般化し、`modules/execution-context.md` の新節への参照を追加
+- `skills/review/SKILL.md`: Non-Interactive Mode Behavior の Foreground 箇条に同参照を追加 (#1097 の対象ファイル)。Step 1 相当の dirty guard 記述はこのファイルにないため他の変更なし
+- `skills/review/workflow-guidance.md`: Pre-flight 節に、Workflow ツール自体が再喚起保証のない実行文脈である旨と `modules/execution-context.md` の新節への参照を追加 (#1103 の対象ファイル)
+- `skills/code/SKILL.md`: Behavioral Change Detection の前景実行注記に同参照を追加 (#994 の先行事例。3 箇所の重複記述を単一 SSoT に束ねるため)
+- `scripts/check-verify-dirty.sh`: `parent-main` 分岐を細分化し `self-spec` / `own-issue-scope` / `foreign-session` の 3 分類を追加。帰属判定は自 Issue の Spec `## Changed Files` マニフェストを根拠とする。Spec 不在時は現行の全ブロック挙動にフォールバック — bash 3.2+ 互換 (連想配列・`mapfile` 不使用)
+- `scripts/run-review.sh`: `_REVIEW_ISSUE` の解決 (L76 付近の `gh-extract-issue-from-pr.sh` 呼び出し) を dirty guard ブロック (L34 付近) より前に移動し、`check-verify-dirty.sh` に `"${_REVIEW_ISSUE:-$PR_NUMBER}"` を渡す — bash 3.2+ 互換
+- `scripts/run-merge.sh`: `_MERGE_ISSUE` について同様の移動と引数差し替え (L67 付近 → L25 付近より前) — bash 3.2+ 互換
+- `scripts/run-auto-sub.sh`: `--write-manual-recovery` に `--cause SLUG` / `--diagnosis TEXT` オプションを追加。`_write_manual_recovery_to_recoveries_log()` は `### Diagnosis` に `- cause: <slug>` 行と自由記述行を出力し、`_find_known_recoveries_issue` にはグループキー (`symptom` または `symptom/cause`) を渡す。`_write_manual_recovery_to_spec()` にも `- **Cause**: <slug>` 行を追加。オプション未指定時は現行の定型文を維持 — bash 3.2+ 互換
+- `scripts/collect-recovery-candidates.sh`: エントリ本文の `- cause: <slug>` 行を読み、グループキーを `<symptom-short>/<cause-slug>` に合成する。cause 行がないエントリは従来どおり `<symptom-short>` のまま。出力形式 (`<key>\t<count>`) は不変 — bash 3.2+ 互換
+- `tests/verify-dirty-detection.bats`: 既存テスト `"related spec dirty: exit 1 when related spec file (same issue) is dirty"` を self-spec 非ブロック (exit 0) に更新。新規 3 ケース (並行セッション由来 / 自 Issue Changed Files 記載 / 自 Issue Spec 残骸) と Spec 不在フォールバックの回帰ケースを追加
+- `tests/collect-recovery-candidates.bats`: cause 付きエントリのグループ分離テストと、cause 行なしエントリの後方互換テストを追加
+- `tests/run-review.bats`: `$MOCK_DIR` に `gh-extract-issue-from-pr.sh` のモックを追加 (`WHOLEWORK_SCRIPT_DIR` モック追加チェック — 現在ヘッダコメント L5 に記載があるのにモック実体が存在せず、移動後の解決経路が未カバーになるため)
+- `skills/verify/SKILL.md`: Step 1 の exit 1 説明「related or non-spec dirty files present」を新分類に合わせて更新。recoveries-auto-fire 節 (Step の (b) Cluster by cause) に、グループキーが cause を含む場合は事前グルーピング済みである旨を追記
+- `docs/structure.md`: L239 `check-verify-dirty.sh` の分類説明 (4 分類 → 6 分類)、L186 `collect-recovery-candidates.sh` のグルーピング説明を更新
+- `docs/ja/structure.md`: L231 / L179 の対応箇所を同期 (`docs/translation-workflow.md` の Sync Procedure に従う)
+- `docs/workflow.md`: L121 の `--write-manual-recovery ISSUE PHASE respawn [EXIT_CODE]` シグネチャに `--cause` / `--diagnosis` を追記
+- `docs/ja/workflow.md`: L114 の対応箇所を同期
+- `docs/tech.md`: L56 の `--write-manual-recovery` 記述に cause 欄への言及を追加
+- `docs/ja/tech.md`: L47 の対応箇所を同期
+- `docs/reports/orchestration-recoveries.md`: [変更不要] 既存 4 エントリは append-only の履歴記録であり、cause 行の遡及付与は行わない (cause 行のないエントリは Step 7 で従来キーのまま集計される)
+- `docs/reports/external-kill-investigation.md`: [変更不要] `--write-manual-recovery` に言及するが、記述内容は本 Issue の変更で無効にならない履歴レポート (grep 確認済み)
+
+## Implementation Steps
+
+1. `modules/execution-context.md` に「Re-invocation Guarantee and Notification-Dependent Waiting」節を追加する (→ AC1)
+   - 再喚起保証の定義: バックグラウンドタスクの完了通知は harness が対話セッションを再喚起することで届く。再喚起が保証されるのは **対話セッションでの直接実行のみ**
+   - 保証のない実行サーフェス一覧 **(exhaustive)**: headless `claude -p` (`run-*.sh` 経由の fork context) / fork 実行された Skill (`Skill launched as forked execution`) / Workflow ツールのパス / それらの内部から起動されたサブエージェント・バックグラウンド Bash
+   - MUST 規約: これらの文脈では完了通知に依存する待機でターンを終えてはならない。`run_in_background: true`、Workflow ツール、完了前に返る Agent/Task ディスパッチのいずれも対象。前景で同期実行する
+   - 根拠: 通知が原理的に届かないため、フェーズは「遅延」ではなく「恒久的に未完了 (silent no-op)」になる
+   - 判定不能時の既定: 直接の対話実行だと確証できない場合は保証なし側に倒す
+   - 先行事例: #994 (`/code` の bats) / #1097 (`/review` の bats) / #1103 (Workflow ツール) / #1142 (fork 実行の `/review`)
+   - Callers 節に本節を読む skill/module を列挙する
+2. Step 1 の節を単一 SSoT として、既存の前景実行注記 4 箇所から参照する (after 1) (→ AC1)
+   - `modules/test-runner.md` Step 2 の Note: 適用条件を「再喚起保証のない実行文脈全般」に書き換え、`modules/execution-context.md` の新節を参照させる
+   - `skills/review/SKILL.md` の Foreground 箇条、`skills/review/workflow-guidance.md` の Pre-flight 節、`skills/code/SKILL.md` の Behavioral Change Detection 注記に同参照を追加する
+   - SKILL.md 本文には半角感嘆符と 3 連バッククォートを入れない (`scripts/validate-skill-syntax.py` 制約)
+3. `scripts/check-verify-dirty.sh` の `parent-main` 分岐 (現行 L99-115) を細分化する (→ AC2)
+   - `docs/spec/issue-${NUMBER}-*.md` に一致 → `self-spec` を stderr に出力し **非ブロック**。根拠: 親リポ main のこのパスは leaf 自身の書き戻し (Consumed Comments / Auto Retrospective 追記) 以外に発生源がない
+   - それ以外の parent-main ファイル → 自 Issue の Spec (`docs/spec/issue-${NUMBER}-*.md`) の `## Changed Files` 節からパストークンを抽出し、記載があれば `own-issue-scope` (**ブロック**、exit 1)、なければ `foreign-session` (**非ブロック**、警告のみ)
+   - 判定根拠をスクリプト冒頭コメントに明記する: 「自分に関係するファイル = 自 Issue の Spec が `## Changed Files` に列挙したパス」
+   - Spec が存在しない、または `## Changed Files` 節がない場合は帰属判定不能として現行挙動 (全 parent-main をブロック) にフォールバックし、理由を stderr に出す
+   - exit code の意味 (0 / 1 / 2) と `docs/spec/issue-M-*.md` (M != N) の exit 2 経路は不変に保つ
+   - パス抽出は `awk` + `grep` ベースで実装する (bash 3.2 に連想配列・`mapfile` がないため)
+4. `scripts/run-review.sh` / `scripts/run-merge.sh` で、PR 番号ではなく Issue 番号を dirty guard に渡す (parallel with 3) (→ AC2)
+   - 両ファイルとも `gh-extract-issue-from-pr.sh` による Issue 番号解決を既に持つが、dirty guard ブロックより **後ろ** にあるため、現状は PR 番号が渡っている
+   - 解決行 (`_REVIEW_ISSUE=` / `_MERGE_ISSUE=`) を dirty guard ブロックの直前へ移動し、`check-verify-dirty.sh` の引数を `"${_REVIEW_ISSUE:-$PR_NUMBER}"` / `"${_MERGE_ISSUE:-$PR_NUMBER}"` に差し替える
+   - 解決失敗時は従来どおり PR 番号にフォールバックする (Step 3 の Spec 不在フォールバックが働き、現行挙動になる)
+5. `tests/verify-dirty-detection.bats` を更新する (after 3, 4) (→ AC3)
+   - 既存テスト `"related spec dirty: exit 1 when related spec file (same issue) is dirty"` を self-spec 非ブロック (exit 0 / `classify=self-spec`) に更新する — 意図的な挙動変更
+   - 新規 (1) 並行セッション由来: 自 Issue Spec の `## Changed Files` に載っていない `scripts/foo.sh` が dirty → exit 0 / `classify=foreign-session`
+   - 新規 (2) negative case: 自 Issue Spec の `## Changed Files` に載っている `scripts/run-review.sh` が dirty → exit 1 / `classify=own-issue-scope`
+   - 新規 (3) 自 Issue Spec 残骸: `docs/spec/issue-123-foo.md` が dirty → exit 0 / `classify=self-spec`
+   - 回帰: Spec 不在で `scripts/foo.sh` が dirty → exit 1 (フォールバック維持。既存テスト L164 と同条件)
+   - `tests/run-review.bats` の `$MOCK_DIR` に `gh-extract-issue-from-pr.sh` モックを追加する
+6. `scripts/run-auto-sub.sh` の `--write-manual-recovery` に原因情報を渡せるようにする (parallel with 3, 4) (→ AC4)
+   - 引数解析を拡張し `--cause SLUG` と `--diagnosis TEXT` を受け取る。既存の位置引数 `ISSUE PHASE RECOVERY_TYPE [EXIT_CODE]` の順序と意味は変えない
+   - `_write_manual_recovery_to_recoveries_log()` の `### Diagnosis` 出力を、cause 指定時は `- cause: <slug>` 行 + 自由記述行に、未指定時は現行の定型文 1 行にする
+   - H2 ヘッダ (`## <date>: manual-recovery-<recovery_type>`) と `_is_duplicate()` の正規表現は変更しない (既存 4 エントリと `tests/collect-recovery-candidates.bats` の fixture への波及を避ける)
+   - `_find_known_recoveries_issue` に渡す値をグループキー (`symptom` または `symptom/cause`) にする
+   - `_write_manual_recovery_to_spec()` にも cause 指定時のみ `- **Cause**: <slug>` 行を追加する
+7. `scripts/collect-recovery-candidates.sh` のグルーピング単位を cause 対応にする (after 6) (→ AC4)
+   - エントリ本文 (H2 ヘッダ以降、次の H2 まで) を走査し `^- cause: (\S+)` を抽出する
+   - グループキーを `<symptom-short>/<cause-slug>` に合成する。cause 行がないエントリは `<symptom-short>` のまま
+   - `起票済み` 除外と `--issues-json` 重複チェックはグループキー単位で行う (原因が異なれば別 Issue として検出されるのが意図した挙動)
+   - 出力形式 `<key>\t<count>` と `--threshold` の意味は不変
+8. `tests/collect-recovery-candidates.bats` にテストを追加する (after 7) (→ AC4, AC5)
+   - 同一 symptom で cause が 2 種類のエントリ群を fixture にし、それぞれ別キーで集計されること (閾値未満なら出力されないこと) を検証する
+   - cause 行のないエントリのみの fixture で既存出力が変わらないこと (後方互換) を検証する
+   - 既存 5 テストが変更なしで PASS することを確認する
+9. `skills/verify/SKILL.md` を更新する (after 3, 7) (→ AC2, AC4)
+   - Step 1 の exit 1 説明を新分類 (自 Issue の Changed Files に載る dirty file、または帰属判定不能な dirty file) に合わせて更新する
+   - recoveries-auto-fire 節の (b) Cluster by cause に、グループキーが `/` 区切りで cause を含む場合はエントリが既に原因単位に分離済みである旨を追記する
+10. Steering Docs と `docs/ja/` ミラーを同期する (after 3, 6, 7) (→ AC2, AC4)
+    - `docs/structure.md` L239 / L186、`docs/workflow.md` L121、`docs/tech.md` L56 を更新する
+    - `docs/translation-workflow.md` の Sync Procedure に従い `docs/ja/structure.md` L231 / L179、`docs/ja/workflow.md` L114、`docs/ja/tech.md` L47 を同期する (code fence 数の一致確認を含む)
+
+## Verification
+
+### Pre-merge
+
+- <!-- verify: rubric "Cause A (再喚起保証のない実行文脈で完了通知に依存する待機を選ぶ) について、個別トリガーごとの対処 (#1097 の bats / #1103 の Workflow) を超えた横断的な規約が定義されている。具体的には、対話セッションでの直接実行以外の実行文脈 (headless の claude -p、fork agent、Workflow ツールなど、再喚起保証のない文脈全般) では完了通知に依存する待機を使わない旨が全 skill から参照される単一の箇所 (modules/ 配下) に記述され、#1097 / #1103 の対象ファイルからそこを参照する形になっている" --> Cause A に対する横断規約が単一箇所に定義され、既存 Issue の対象ファイルから参照されている
+- <!-- verify: rubric "Cause B について、scripts/check-verify-dirty.sh の other-session 分類が docs/sessions/ 配下以外にも拡張されている、または run-*.sh 側で自 Issue と無関係な dirty file を hard error にしない判定が実装されている。いずれの場合も、判定根拠 (どのファイルを自分に関係すると見なすか) が明記されている。加えて、自 Issue の Spec (docs/spec/issue-$N-*.md) に leaf 自身が残した残骸 (例: Consumed Comments 追記) は『自 Issue に関係する dirty file』ではあるが hard error にはしない、という自 Issue帰属内での区別も設計に含まれている" --> Cause B の dirty guard がセッション/Issue 帰属を考慮する形になっている
+- <!-- verify: rubric "tests/ 配下に、(1) 並行セッション由来の dirty file が存在する状況で対象フェーズがブロックされないことを検証するテスト、(2) 自 Issue に関係する dirty file (典型的には自 Issue とは無関係な変更) では従来どおりブロックされること (negative case) を検証するテスト、(3) 自 Issue の Spec 残骸 (Consumed Comments 追記など) ではブロックされないことを検証するテストの3種類が存在する" --> Cause B の positive / negative / 自 Issue Spec 残骸の3ケースのテストが追加されている
+- <!-- verify: rubric "docs/reports/orchestration-recoveries.md の Diagnosis 欄、または collect-recovery-candidates.sh のグルーピング単位が、復旧手段 (recovery type) だけでなく原因を区別できる形に改善されている。--write-manual-recovery が定型文しか書けない現状の制約への対処を含む" --> 頻度検出が原因を区別できるようになっている
+- <!-- verify: command "bats tests/collect-recovery-candidates.bats" --> `tests/collect-recovery-candidates.bats` が PASS する
+
+### Post-merge
+
+- 並行セッションが main に未コミット変更を持つ状態で `/auto` を実行し、フェーズがブロックされずに完走することを確認する
+- 新規の `manual-recovery-review-rerun` エントリが `docs/reports/orchestration-recoveries.md` に追加されないことを観察する
+
+## Tool Dependencies
+
+### Bash Command Patterns
+- なし (既存の `allowed-tools` で充足。新規 `scripts/*.sh` の追加はないため allowed-tools impact chain check はスキップ)
+
+### Built-in Tools
+- なし (`Read` / `Write` / `Edit` / `Grep` / `Glob` はいずれも登録済み)
+
+### MCP Tools
+- なし
+
+## Uncertainty
+
+- **`run-review.sh` / `run-merge.sh` が dirty guard に PR 番号を渡している**: Spec マニフェスト方式は Issue 番号をキーにするため、PR 番号のままでは #1055 の当該フェーズ (review) が救済されない
+  - **検証方法**: コード確認済み — `scripts/run-review.sh` L36 は `"${PR_NUMBER}"`、Issue 番号を解決する `_REVIEW_ISSUE` は L76 で dirty guard より後。`scripts/run-merge.sh` も同型 (L27 / L67)
+  - **影響範囲**: Implementation Step 4 として解決行の移動を組み込み済み。解決失敗時は PR 番号フォールバック → Step 3 の Spec 不在フォールバックにより現行挙動に縮退する
+- **`_is_duplicate()` の 24h 重複抑止が cause を見ない**: 同一 issue + phase で 24h 以内に別 cause の記録が来た場合、後発が抑止される
+  - **検証方法**: `scripts/run-auto-sub.sh` の `_is_duplicate()` 実装確認済み (symptom + `- Issue #N, phase: P` の context 行で照合)
+  - **影響範囲**: Implementation Step 6。cause を重複判定条件に含めるかは実装時判断とし、含めない場合は現行の抑止挙動を維持する (同一 issue/phase で 24h 以内に別原因が発生する頻度は低い)
+- **Spec の `## Changed Files` が不完全な場合の縮退**: Changed Files の記載漏れは本リポジトリで繰り返し観測されている (#771 / #770 / #775)。記載漏れのあるファイルが並行セッションで dirty のとき `foreign-session` と判定され、ブロックされずに進む
+  - **検証方法**: 設計上の縮退方向の確認のみ (実行時検証なし)
+  - **影響範囲**: Implementation Step 3。縮退方向は「ブロックしない」側であり、Cause B の是正目的と整合する。実害が出た場合は worktree マージ時のコンフリクト検出で捕捉される
+
+## Notes
+
+- **Cause A 規約の設置先** — 自動解決: 新規モジュールを作らず `modules/execution-context.md` に追記する。理由: 同ファイルは既に実行コンテキストの SSoT であり `docs/tech.md` / `docs/structure.md` から参照済み。新規モジュール作成は `docs/structure.md` と `docs/ja/structure.md` のモジュール表・カウント更新を伴い、実行コンテキストの SSoT が 2 分割される。他の候補 (`modules/test-runner.md` への集約) は、Workflow ツールがテスト実行と無関係なため適用範囲を表現できない
+- **Cause B の帰属判定根拠** — 自動解決: 自 Issue の Spec `## Changed Files` マニフェストを採用する。理由: AC2 が「判定根拠 (どのファイルを自分に関係すると見なすか) が明記されている」ことを要求しており、パスプレフィックスの許可リスト拡張方式では「自分に関係する」の定義そのものが書けない。全 parent-main を非ブロック化する案は AC3 の negative case を満たせない
+- **AC4 のグルーピングキー表現** — 自動解決: H2 ヘッダの symptom-short は変えず、`### Diagnosis` 内の `- cause: <slug>` 行を集計側で読み `<symptom-short>/<cause-slug>` に合成する。理由: H2 ヘッダ形式を変えると `_is_duplicate()` の正規表現・`docs/reports/orchestration-recoveries.md` の既存エントリ・`tests/collect-recovery-candidates.bats` の既存 fixture すべてに波及する。Diagnosis 行の追加は追記のみで後方互換
+- **既存テストの意図的な破壊的更新**: `tests/verify-dirty-detection.bats` の `"related spec dirty: exit 1 when related spec file (same issue) is dirty"` は「自 Issue の Spec は blocking」と規定しており、AC2 / AC3 の第 3 ケースと正面から矛盾する。Implementation Step 5 で exit 0 に更新する
+- **セパレータに `/` を用いる理由**: `scripts/collect-recovery-candidates.sh` L89 / L106 は H2 ヘッダ末尾の括弧付きサフィックス (`sed 's/ ([^)]*) *$//'`) を除去する。グループキーに `(cause: X)` 形式を使うとこの除去と衝突するため、括弧を含まない `/` 区切りにする
+- **`skills/verify/SKILL.md` の recoveries-auto-fire が生成する Issue タイトル**は `recoveries: {group-key}` であり、cause 付きキーでは `recoveries: manual-recovery-review-rerun/dirty-guard` になる。既存 Issue タイトル (`recoveries: manual-recovery-review-rerun`) との `grep -F` 部分一致は成立しないため、原因が異なる事象は新規 Issue として起票される — これが AC4 の意図した挙動である
+- **Steering Docs sync candidate**: `docs/structure.md` / `docs/ja/structure.md` は `check-verify-dirty.sh` の分類数と `collect-recovery-candidates.sh` のグルーピング説明を散文で持つ。`docs/workflow.md` / `docs/tech.md` とその `docs/ja/` ミラーは `--write-manual-recovery` のシグネチャを散文とコード片の双方で持つため、両形式を確認すること
+- **`.claude/` 配下のファイル変更はなし** — `git add -f` の注記は不要
+- **バージョン依存の新規外部パッケージ追加はなし** — 依存バージョン事前確認はスキップ
+- **クレデンシャル / セキュリティポリシー照合**: 本 Issue は秘匿情報の保管・CI シークレット・アクセス制御を扱わないためスキップ
+
+## Consumed Comments
+
+| login | authorAssociation | trust tier | 要旨 | URL |
+|-------|-------------------|-----------|------|-----|
+| saito | MEMBER | first-class | `/issue 1123 --non-interactive` のリファインメント記録。AC1 の適用条件を fork / Workflow まで拡張し、AC2 / AC3 に自 Issue Spec 残骸ケースを追加した旨。Background の各記述はコードベースと一致を確認済み (警告なし) | https://github.com/saitoco/wholework/issues/1123#issuecomment-5175675112 |
+
+cutoff (`phase/*` ラベルの最終付与時刻): `2026-08-04T06:58:48Z`。cutoff 以前の 3 件 (2026-07-31 ×2 / 2026-08-04 ×1) は上記コメントにより Issue 本文へ統合済みで、本 Spec では Root Cause と Notes の判断根拠として参照した。cross-phase marker (`verify-fail` / `preview-ac-unverified`) は 0 件。
