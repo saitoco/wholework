@@ -157,6 +157,12 @@ cutoff: 2026-08-04T15:10:44Z (最新の `phase/*` ラベル付与時刻)
 
 - `saito` / `MEMBER` / first-class / `/issue 1150 --non-interactive` の Issue Retrospective。Triage 判断 (Type=Bug / Size=L / Value=4) と、既存 open PR ガードが記録を破棄する挙動である旨・(a) 案の #1005 型リスクという 2 点の自動解決ログを記録している。本 Spec の Root Cause の表と「方針選択」で両方に対応済み / https://github.com/saitoco/wholework/issues/1150#issuecomment-5181018281
 
+### code phase
+
+cutoff: 2026-08-04T15:29:04Z (`phase/ready` ラベル付与時刻)
+
+No new comments since last phase.
+
 ## issue retrospective
 
 `/issue 1150 --non-interactive` 実行時の retrospective (Issue コメントから転記)。
@@ -207,25 +213,36 @@ Background セクションの `--write-manual-recovery` という事実主張は
 - `auto-stop-at` が `code` / `review` の場合に defer ファイルが `.tmp/` に残留する経路は、設計時に解消しきれなかったため Uncertainty セクションに検証方法・影響範囲付きで残した。記録の消失ではなく反映の遅延であり、本 Issue の AC (main 直接 commit の回避) は満たすため、スコープ内での対処は行わない判断とした
 - Tier 2 の記録内容 (`apply-fallback.sh` の stdout) が `docs/reports/orchestration-recoveries.md` に二重記録されているかをコード調査で確認した結果、`apply-fallback.sh` は recoveries ログへ書かず Spec が唯一の永続記録先だった。この事実が「defer した記録を絶対に捨ててはいけない」という設計制約 (flush 失敗時に defer ファイルを保持する、Spec 未作成時も保持する) の根拠になっている
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1〜9 を設計どおりの順序 (7 を 8 より先に) で実装した
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A — bats 実行は初回 (`tests/run-auto-sub.bats` 94/94、フルスイート `bats tests/` 1358/1358) で全件 PASS した。Spec の「テストの mock 設計に関する注意」節が事前に明記していた「`--search` 分岐を Tier2/Tier3 の直接書き込みテストより先に追加する」順序を守ったことが手戻りを防いだ
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- open PR 存在時の recovery 記録は (b) defer + flush 方式を採る。退避先は `.tmp/deferred-recovery-records-<issue>.md`、転記は `_flush_deferred_recovery_records()` が担う。(a) PR ブランチ書き込みは #1005 型の失敗モード再導入を避けるため不採用
-- `_open_pr_for_issue()` は変更しない。既存の検出ロジックを Tier 2 / Tier 3 経路にも再利用し、`_write_manual_recovery_to_spec()` では破棄の代わりに defer を呼ぶ
-- `modules/orchestration-fallbacks.md` には新規 `## <pattern>` セクションを追加しない (構造診断 Phase 0 の補償層モラトリアム遵守)。既存の `## manual-recovery-spec-write` と `## Operational Notes` 配下 3 小節の更新のみ
-- `docs/reports/orchestration-recoveries.md` は転記方式に寄せず現状維持
+- Spec の設計どおり (b) defer + flush 方式で実装した。`_deferred_recovery_records_file()` / `_defer_recovery_record()` / `_flush_deferred_recovery_records()` を `_open_pr_for_issue()` 直後に追加し、`_write_manual_recovery_to_spec()` / `_write_tier2_recovery_to_spec()` / `_write_tier3_recovery_to_spec()` の 3 経路すべてに open PR 判定 + defer を配線した
+- flush 呼び出しは Spec 指定どおり 2 箇所 (`--write-manual-recovery` ディスパッチの `_write_manual_recovery_to_spec` 呼び出し直前、メインフロー Size 分岐 `esac` 直後) に配線した
+- `tests/run-auto-sub.bats` の `pr list --search` → `[]` 分岐追加 (ステップ 7) をステップ 8 より先に実施したことで、既存 Tier2/Tier3 直接書き込みテスト 6 件を変更なしで通した
 
 ### Deferred Items
 
-- `auto-stop-at` が `code` / `review` の場合の defer ファイル残留は本 Issue のスコープ外 (Uncertainty セクション参照)。記録は失われないため許容する
-- `/verify` からの defer ファイル回収は不採用。二重実装を増やさない判断のため、将来必要になった場合は別 Issue で扱う
+- `auto-stop-at` が `code` / `review` の場合の defer ファイル残留は本 Issue のスコープ外のまま (Spec Uncertainty 参照)。記録は失われないため許容する
+- `/verify` からの defer ファイル回収は不採用のまま。将来必要になった場合は別 Issue で扱う
 
 ### Notes for Next Phase
 
-- 実装順序に依存関係がある: ステップ 7 (`tests/run-auto-sub.bats` の共通 `gh` mock に `pr list --search` → `[]` 分岐を追加) を **ステップ 8 より先に** 行うこと。これを飛ばすと既存の Tier 2 / Tier 3 直接書き込みテスト 6 件が defer 側に落ちて失敗する
-- `scripts/run-auto-sub.sh` は bash 3.2+ 互換を維持すること (`mapfile` / 連想配列は使用不可)
-- `_defer_recovery_record()` から `emit_event` を呼ぶ際は `command -v emit_event` で保護すること。Tier 2 / Tier 3 経路はメインフロー (emit-event.sh を source 済み) から呼ばれるが、テストの mock 環境では未定義になり得る
-- flush の commit / push 失敗時は defer ファイルを削除しないこと (記録消失の防止)。Spec が未作成の場合も同様に保持する
-- `docs/tech.md` を変更したら `docs/ja/tech.md` の対応箇所 (47 行) も同期すること (`docs/translation-workflow.md` の同期義務)
+- `tests/run-auto-sub.bats` に defer/flush 用の新規テスト 4 件 (`tier2 recovery: defers ...`, `tier3 recovery: defers ...`, `manual recovery: flushes previously deferred records ...`, `main flow flushes previously deferred recovery records ...`) を追加し、既存 2 件 (`skips commit when an open PR exists` / `open PR skips spec write ...`) を defer アサーションへ更新した。review では defer ファイルのパス (`.tmp/deferred-recovery-records-<issue>.md`) と `recovery_record_deferred` イベントの `issue=`/`kind=`/`open_pr=` 属性が期待どおりか確認してほしい
+- `bats tests/run-auto-sub.bats` (94/94) と `bats tests/` フルスイート (1358/1358) の両方が初回で PASS 済み
+- Post-merge AC (open PR 存在時の recovery が main と conflict しないことの観察) は `/verify` 側での対応
