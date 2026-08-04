@@ -197,7 +197,7 @@ _defer_recovery_record() {
   defer_file="$(_deferred_recovery_records_file "$issue")"
   cat "$record_file" >> "$defer_file"
   echo "[#${issue}] open PR #${open_pr} exists for issue #${issue}; deferred ${kind} recovery record to ${defer_file} instead of committing to main (avoids a self-induced merge conflict with PR #${open_pr}). Will be recorded to the Spec once PR #${open_pr} is no longer open." >&2
-  command -v emit_event >/dev/null 2>&1 && emit_event "recovery_record_deferred" "issue=${issue}" "kind=${kind}" "open_pr=${open_pr}"
+  command -v emit_event >/dev/null 2>&1 && emit_event "recovery_record_deferred" "kind=${kind}" "open_pr=${open_pr}"
   return 0
 }
 
@@ -249,12 +249,19 @@ _flush_deferred_recovery_records() {
     if git -C "$_repo_root" add "$spec_rel_path" \
        && git -C "$_repo_root" commit -s -m "Record deferred recovery records for issue #${issue}
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
-       && _push_with_retry "$_repo_root"; then
-      echo "[#${issue}] [recovery] deferred recovery records flushed to spec auto retrospective for issue #${issue}"
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"; then
+      # Remove the defer file as soon as the commit succeeds, not after push: the
+      # record is already durable in the local commit, so keeping the defer file
+      # around for a push-retry would re-append the same content on the next flush
+      # and duplicate the entry in the Spec (#1150 review).
       rm -f "$defer_file"
+      if _push_with_retry "$_repo_root"; then
+        echo "[#${issue}] [recovery] deferred recovery records flushed to spec auto retrospective for issue #${issue}"
+      else
+        echo "[#${issue}] WARNING: deferred recovery records committed locally but push failed for issue #${issue}; commit is retained and will be pushed by a later run" >&2
+      fi
     else
-      echo "[#${issue}] WARNING: could not commit/push deferred recovery records; keeping ${defer_file} for retry" >&2
+      echo "[#${issue}] WARNING: could not commit deferred recovery records; keeping ${defer_file} for retry" >&2
     fi
   fi
 }

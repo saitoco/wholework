@@ -2418,7 +2418,6 @@ MOCK
     grep -q "### Manual recovery (code)" "$BATS_TEST_TMPDIR/.tmp/deferred-recovery-records-42.md"
     grep -q "manual_intervention" "$EMIT_LOG"
     grep -q "recovery_record_deferred" "$EMIT_LOG"
-    grep -q "issue=42" "$EMIT_LOG"
     grep -q "kind=manual" "$EMIT_LOG"
     grep -q "open_pr=123" "$EMIT_LOG"
 }
