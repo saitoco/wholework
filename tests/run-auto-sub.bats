@@ -154,6 +154,12 @@ if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json"* ]]; then
     fi
     exit 0
 fi
+if [[ "$1" == "pr" && "$2" == "list" && "$*" == *"--search"* ]]; then
+    # _open_pr_for_issue()'s open-PR-guard query: no open PR by default so existing
+    # Tier 2/Tier 3 direct-write tests are unaffected by the #1150 defer guard.
+    echo "[]"
+    exit 0
+fi
 if [[ "$1" == "pr" && "$2" == "list" ]]; then
     echo '[{"headRefName":"worktree-code+issue-42","number":99}]'
     exit 0
@@ -1428,6 +1434,218 @@ MOCK
     grep -qE "commit.*Tier 3 recovery" "$GIT_LOG"
 }
 
+@test "run-auto-sub: tier2 recovery: defers to .tmp instead of writing to spec when an open PR exists (#1150)" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+    echo "# Issue #42: test spec" > "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    # Open PR exists for this issue: override the global gh mock's pr list --search default.
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" && "$*" == *"--search"* ]]; then
+    echo '[{"number":123}]'
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/apply-fallback.sh" <<'MOCK'
+#!/bin/bash
+printf '%s\n' \
+  "### Orchestration Anomalies" \
+  "- **[code-patch-silent-no-op]** Tier 2 fallback applied: result=recovered."
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/apply-fallback.sh"
+
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+#!/bin/bash
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    ! grep -q "Auto Retrospective" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    ! grep -qE "commit.*Tier 2 recovery" "$GIT_LOG"
+    grep -q "code-patch-silent-no-op" "$BATS_TEST_TMPDIR/.tmp/deferred-recovery-records-42.md"
+}
+
+@test "run-auto-sub: tier3 recovery: defers to .tmp instead of writing to spec when an open PR exists (#1150)" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+    echo "# Issue #42: test spec" > "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    # Open PR exists for this issue: override the global gh mock's pr list --search default.
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" && "$*" == *"--search"* ]]; then
+    echo '[{"number":123}]'
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/spawn-recovery-subagent.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$SPAWN_RECOVERY_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/spawn-recovery-subagent.sh"
+
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+#!/bin/bash
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    ! grep -q "Auto Retrospective" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    ! grep -qE "commit.*Tier 3 recovery" "$GIT_LOG"
+    grep -q "### Tier 3 recovery (code-patch)" "$BATS_TEST_TMPDIR/.tmp/deferred-recovery-records-42.md"
+}
+
+@test "run-auto-sub: manual recovery: flushes previously deferred records once the PR is no longer open (#1150)" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec" "$BATS_TEST_TMPDIR/.tmp"
+    echo "# Issue #42: test spec" > "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    printf '\n%s\n%s\n' "### Tier 2 recovery" "- **Outcome**: success" > "$BATS_TEST_TMPDIR/.tmp/deferred-recovery-records-42.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"status"* && "$*" == *"--porcelain"* && "$*" == *"issue-42"* ]]; then
+    echo " M docs/spec/issue-42-test.md"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    # No open PR for this issue: override the global gh mock's pr list default.
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" --write-manual-recovery 42 code push-only
+    [ "$status" -eq 0 ]
+    grep -q "### Tier 2 recovery" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    grep -qE "commit.*Record deferred recovery records for issue #42" "$GIT_LOG"
+    [ ! -f "$BATS_TEST_TMPDIR/.tmp/deferred-recovery-records-42.md" ]
+}
+
+@test "run-auto-sub: main flow flushes previously deferred recovery records once the PR is no longer open (#1150)" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec" "$BATS_TEST_TMPDIR/.tmp"
+    echo "# Issue #42: test spec" > "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    printf '\n%s\n%s\n' "### Tier 3 recovery (code-patch)" "- **Outcome**: success" > "$BATS_TEST_TMPDIR/.tmp/deferred-recovery-records-42.md"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"status"* && "$*" == *"--porcelain"* && "$*" == *"issue-42"* ]]; then
+    echo " M docs/spec/issue-42-test.md"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    # No open PR for this issue: override the global gh mock's pr list default.
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "[]"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -q "### Tier 3 recovery (code-patch)" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    [ ! -f "$BATS_TEST_TMPDIR/.tmp/deferred-recovery-records-42.md" ]
+}
+
 @test "run-auto-sub: tier2 recovery during review phase records real Issue number, not PR number (issue #984)" {
     export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
 
@@ -1739,7 +1957,7 @@ MOCK
     [ "$rebase_count" -eq 2 ]
 }
 
-@test "run-auto-sub: manual recovery: skips commit when an open PR exists for the issue" {
+@test "run-auto-sub: manual recovery: defers spec write (instead of discarding) when an open PR exists for the issue" {
     export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
     export GH_LOG="$BATS_TEST_TMPDIR/gh.log"
 
@@ -1771,9 +1989,10 @@ MOCK
     run bash "$SCRIPT" --write-manual-recovery 42 code push-only
     [ "$status" -eq 0 ]
     [[ "$output" == *"PR #123"* ]]
-    [[ "$output" == *"Retry"* ]]
+    [[ "$output" == *"deferred"* ]]
     ! grep -qE "commit.*manual recovery" "$GIT_LOG"
     ! grep -q "Auto Retrospective" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
+    grep -q "### Manual recovery (code)" "$BATS_TEST_TMPDIR/.tmp/deferred-recovery-records-42.md"
     grep -q -- "closes #42" "$GH_LOG"
     grep -q -- "--state open" "$GH_LOG"
 }
@@ -2152,7 +2371,7 @@ MOCK
     grep -q "recovery_target=code" "$EMIT_LOG"
 }
 
-@test "run-auto-sub: manual recovery: open PR skips spec write but still records recoveries log and event" {
+@test "run-auto-sub: manual recovery: open PR skips spec write but still records recoveries log, deferred record, and events" {
     export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
     export GH_LOG="$BATS_TEST_TMPDIR/gh.log"
     export EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
@@ -2196,7 +2415,11 @@ MOCK
     [ "$status" -eq 0 ]
     ! grep -q "Auto Retrospective" "$BATS_TEST_TMPDIR/docs/spec/issue-42-test.md"
     grep -q "manual-recovery-push-only" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md"
+    grep -q "### Manual recovery (code)" "$BATS_TEST_TMPDIR/.tmp/deferred-recovery-records-42.md"
     grep -q "manual_intervention" "$EMIT_LOG"
+    grep -q "recovery_record_deferred" "$EMIT_LOG"
+    grep -q "kind=manual" "$EMIT_LOG"
+    grep -q "open_pr=123" "$EMIT_LOG"
 }
 
 @test "run-auto-sub: tier2 recovery: commits when spec file is untracked" {

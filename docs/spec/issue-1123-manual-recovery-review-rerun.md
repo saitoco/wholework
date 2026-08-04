@@ -315,7 +315,7 @@ No new comments since last phase.
 ### Phase-by-Phase Review
 
 #### issue / spec
-- 観察 3 件 (headless ×2 トリガー / 自 Issue Spec 残骸 / fork surface) がコメント接続 → AC への反映まで一気通貫で機能した。「再喚起保証」という概念での一般化 (Opus spec) は #1097/#1103/#994 を単一規約に束ねる適切な抽象度だった
+- 観察 3 件 (headless ×2 トリガー / 自 Spec 残骸 / fork surface) がコメント接続 → AC への反映まで一気通貫で機能した。「再喚起保証」という概念での一般化 (Opus spec) は #1097/#1103/#994 を単一規約に束ねる適切な抽象度だった
 
 #### code / review
 - review 初回は json-mode-silent-hang (watchdog kill 2600s) → カタログ retry で回復。retry 後の review は MUST 5 件 (exit2 到達性 / manifest 抽出 fail-open / silent no-op 再導入 / group-key 衝突 / dormant feature) を検出・解消しており、--full review の価値を実証
