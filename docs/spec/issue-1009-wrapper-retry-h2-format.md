@@ -104,6 +104,8 @@ Steering Docs sync candidate grep (`grep -l "run-auto-sub.sh" docs/*.md docs/ja/
 - saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5146655778
 - saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 1009` to verify the conditio / https://github.com/saitoco/wholework/issues/1009#issuecomment-5147236394
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1009#issuecomment-5174321857
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1009#issuecomment-5182527036
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1009#issuecomment-5185270441
 ## Code Retrospective
 
 ### Deviations from Design
