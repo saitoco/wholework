@@ -85,20 +85,19 @@ No new comments since last phase.
 - N/A — no rework occurred.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Confirmed via `/review` Step 8 that all 5 Pre-merge AC (rubric ×3, `bats` command, `github_check`) PASS; checked the previously-unchecked `github_check "gh pr checks" "Run bats tests"` AC on Issue #1169.
-- Light-mode review-light agent (4 perspectives) found no issues; posted `COMMENT`-event PR review (no MUST issues, no fixes needed in Step 12).
-- Base branch conflict pre-check (`git merge-tree`) found no conflicting changes against `origin/main`.
+- Merged PR #1182 (squash) into `main` with no conflicts (mergeable=true, reason=clean; CI 9/9 SUCCESS, review approved) — no rebase/conflict resolution was needed.
+- Pre-merge AC gate re-checked at merge time: all 5 Pre-merge AC on Issue #1169 already `[x]`, so the gate passed without requiring an override.
 
 ### Deferred Items
 - Post-merge AC: re-run `scripts/opportunistic-search.sh --event auto-run` after merge and confirm the match count increased from the pre-change baseline of 12 (or that the limit-reached warning fires) — `verify-type: manual`, left for `/verify`.
 - GitHub Search API's 1000-result cap (noted in Spec "残存する制約") is not a concern at the current filtered population size (54–132) but would need reconsideration if `POPULATION_LIMIT` is ever raised toward 1000.
 
 ### Notes for Next Phase
-- All 5 Pre-merge AC are now checked `[x]` on Issue #1169; CI is all-green (9/9 SUCCESS). PR #1182 is ready for `/merge`.
-- No policy changes occurred during review, so no Acceptance Criteria text updates were needed.
+- Issue #1169 will auto-close on merge (`closes #1169`, base branch is `main`); label transition to `phase/verify` follows in Step 5.
+- `/verify` should focus on the single remaining Post-merge AC item above.
 
 ## review retrospective
 
