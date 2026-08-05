@@ -210,3 +210,42 @@ No new comments since last phase.
 - **Cause**: pre-merge-ac-command-unverifiable
 - **Wrapper exit code**: 1
 - **Outcome**: success
+
+> **注記 (verify フェーズで判明)**: 上記 2 エントリが本 Spec に記録されているのは、親セッションが merge 完了直後に `git pull` を行わずに `--write-manual-recovery` を実行し、**ディスク上にまだ残っていた旧版の `run-auto-sub.sh` が動いた**ためである。本 Issue の実装 (`9ba018e9`) は Spec 書き込み関数を完全に撤去しており、現行版で同じ呼び出しを行ってもこれらのエントリは生成されない (`grep -c "_recovery_to_spec" scripts/run-auto-sub.sh` = 0 で確認済み)。記録内容自体は正しいため削除せず残す。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Pre-merge AC 9 の verify command `command "bash scripts/check-translation-sync.sh"` が **常時 PASS** だった。同スクリプトは `--fail-if-outdated` を渡さない限り常に exit 0 を返す設計 (冒頭コメントに "Always exits 0 (informational only)" と明記) であり、翻訳の同期状態に関わらず PASS する。AC としての判別力がない
+- `/triage` の AC 監査 (`skills/triage/skill-dev-verify-audit.md`) は Pattern 2 で「常時 PASS な verify command」を扱うが、その定義は「検索文字列が既に main に存在する」ケースに限定されており、**スクリプトの exit code 設計に起因する常時 PASS は検出対象外**。同じ verify command は #1179 でも使われ、そちらでも空振りしていた
+- `command` 型の verify command を **pre-merge セクション**に置くと、`/review` は safe mode で実行しないため UNCERTAIN のまま未チェックで残り、`/merge` の pre-merge AC gate を構造的にブロックする。CI に対応 job がない `command` 型 AC は post-merge に置くか、CI job を用意するかの判断が起票時に必要
+
+#### spec
+- 決定事項 4 件が Spec に明記され、判断根拠が追跡可能。特に **当初の AC 5「`bash scripts/test-skills.sh` で skill 構文検証と bats スイートが PASS する」が実装と矛盾していた** (同スクリプトは `validate-skill-syntax.py` のみ実行し bats を起動しない) ことを spec フェーズで検出し、AC を分離したうえで Issue 本文も更新した対応は適切。実測 (直列 73 秒 / `--jobs 4` 48 秒 / 論理コア数 38 秒) をもとに `command` verify の 60 秒タイムアウトに収まる並列形式を選んだ判断も妥当
+- `_validate_recovery_args` の呼び出しが削除対象関数の内部にあり、dispatch へ移設しないと 6 テストが全滅する点を実装ステップに「必須」として明記していた。この事前検出により code フェーズでの手戻りが発生しなかった
+
+#### code
+- 実装は計画どおりで逸脱なし。削減規模は `scripts/run-auto-sub.sh` −329 行、`tests/run-auto-sub.bats` −1013 行 (合計 −1257 行 / +228 行)
+
+#### review
+- Tier 3 recovery が 1 回発火 (`action=retry`) して回復。CI 9/9 SUCCESS、MUST 0 件、SHOULD 3 件修正済み
+- AC 9 を UNCERTAIN として扱ったのは safe mode の設計どおりであり、結果的に正しい保守判断だった (常時 PASS な command を safe mode で実行していれば、検証していないのに PASS と記録するところだった)
+- **この review フェーズの Tier 3 recovery 記録処理で、`.tmp/deferred-recovery-records-1181.md` への退避が実際に発火した** — まさに本 Issue が撤去対象としている経路であり、撤去の必要性を実行時に自ら実証する形になった
+
+#### merge
+- pre-merge AC gate が AC 9 の未チェックを検出し、非対話モードのポリシーどおり merge をブロック (`decision=blocked` マーカー投稿)。バグではなく設計どおりの停止
+- `/merge` 自身が `check-translation-sync.sh` を実行し「本 PR の変更分は IN_SYNC、未同期は本件スコープ外の `docs/guide/*`」と正しく判断したうえで、チェックボックスが未チェックである以上は対話モードでの確認に委ねた。この判断の分離は妥当
+- 親セッションが PR ブランチ上で en/ja のコミット時刻一致を直接確認して AC 9 をチェックし、`run-merge.sh` を再実行して解消 (override ではなく条件成立の確認)
+
+#### verify
+- AC 8 の verify command `bats --jobs $(nproc 2>/dev/null || sysctl -n hw.logicalcpu) tests/run-auto-sub.bats` が、**worktree セッション内では worktree isolation guard にブロックされて実行できなかった** ("this command is too complex to verify that it stays inside the worktree")。コマンド置換を外して `bats --jobs 18` に分解する必要があった。`/verify` は Step 3 で必ず worktree に入る設計のため、コマンド置換を含む `command` 型 verify command は `/verify` 経由では常にこの制約を受ける
+- 同種の制約は #1141 に事例として追記済み (`emit_event` の `source` パターンがブロックされる件)
+
+### Improvement Proposals
+
+- N/A (新規起票なし)。検出した 3 点はいずれも既存 Issue の範囲として追記・記録で対応する:
+  - **常時 PASS な verify command の検出基準** → #1083 (AC 監査に常時 UNCERTAIN になる verify command の検出基準を追加) の対象範囲を「スクリプトの exit code 設計に起因する常時 PASS」へ広げる形で追記する
+  - **pre-merge AC に `command` 型を置いた場合の merge gate ブロック** → #1156 (解決不能な post-merge 条件による `phase/verify` 永久滞留) と同型の構造問題として、同 Issue に pre-merge 側の事例を追記する
+  - **worktree 内でのコマンド置換を含む verify command の実行不能** → #1141 に追記済み
