@@ -141,6 +141,41 @@ if [ -n "$FACTS_FILE" ] && [ ! -f "$FACTS_FILE" ]; then
     FACTS_FILE=""
 fi
 
+# resolve_run_facts: lazily resolve run facts JSON, once per process. Called on demand by
+# the first `when=`-tagged AC line encountered in the match loop below. Result is cached in
+# RUN_FACTS_JSON (empty string means the gate is disabled — fail-open).
+RUN_FACTS_RESOLVED=false
+RUN_FACTS_JSON=""
+
+resolve_run_facts() {
+    if [ "$RUN_FACTS_RESOLVED" = true ]; then
+        return
+    fi
+    RUN_FACTS_RESOLVED=true
+
+    local facts
+    if [ -n "$FACTS_FILE" ]; then
+        facts=$(cat "$FACTS_FILE" 2>/dev/null || true)
+    else
+        facts=$("${SCRIPT_DIR}/collect-run-facts.sh" 2>/dev/null || true)
+    fi
+
+    if [ -z "$facts" ]; then
+        echo "Warning: run facts unavailable, disabling when= condition check gate" >&2
+        return
+    fi
+    if ! echo "$facts" | jq -e . >/dev/null 2>&1; then
+        echo "Warning: run facts are not valid JSON, disabling when= condition check gate" >&2
+        return
+    fi
+    if echo "$facts" | jq -e '(.issues | length) == 0 and .mode == "unknown"' >/dev/null 2>&1; then
+        echo "Warning: run facts carry no run context (empty issues, mode=unknown), disabling when= condition check gate" >&2
+        return
+    fi
+
+    RUN_FACTS_JSON="$facts"
+}
+
 # 1. Fetch closed Issues with phase/verify label
 ISSUES_JSON=$(gh issue list --label "phase/verify" --state closed --json number --limit 50)
 ISSUE_NUMBERS=$(echo "$ISSUES_JSON" | jq -r '.[].number')
