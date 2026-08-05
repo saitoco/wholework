@@ -404,9 +404,25 @@ Size L につき上限5件のうち、2件を自動解決 (残りは AC 文言�
 - `scripts/apply-run-fact-match.sh` は本 verify 内で実行していない。`autonomy: L3` 下で `satisfied` verdict に対し**他 Issue のチェックボックスを自動更新する**ため、別 Issue の verify 実行中に副作用を出さない判断。パイプラインの前段 2 スクリプトは個別に実動作を確認済み
 - **残存 worktree 40 件を観測** (うち review/verify 系 9 件、`code+issue-385` など古いものを含む)。merge フェーズで顕在化した `review+pr-1160` はその 1 件にすぎない。`modules/worktree-lifecycle.md` の stale 判定指針 (「所有プロセスの終了を積極的に確認できない限り live conflict として扱い、迷ったら自動処理せず衝突を表面化させる」) に従い本 verify では削除していない。#1119 (異常終了フェーズの stale worktree 回収) の実証データ
 
+#### verify (再検証、2026-08-04 発火後)
+
+`auto-run` イベント発火 (2026-08-04T22:21:39Z) を受けて条件 7 を初評価した結果、**UNCERTAIN**。
+
+- **機構単体は 4 経路すべて動作確認できた**。Stage 1 (`collect-run-facts.sh`) が batch 3 件の実行事実を正しく構造化 (#1158 が Size XL でスキップされた事実も `route: unknown` / `pr: null` として反映)、Stage 2 (`scan-pending-ac.sh`) が 386 件の候補 AC を検出、Stage 3 (`apply-run-fact-match.sh --dry-run`) が `not_satisfied`→`none` / `ambiguous`→`advisory` / `satisfied`+L3→`auto-check` / `satisfied`+L1→`advisory` の全経路を設計どおりに返した
+- **しかし `/auto` 統合経路は一度も実行されていない**。`skills/auto/SKILL.md` の L751 (単一 Issue 経路) と L1205 (batch 経路) に Run-fact AC reconciliation ステップが追加されているが、**本 batch は #1157 着地前の SKILL.md (`37b13320`) を読み込んで開始しており**、`dbaff5c8` への更新は batch 実行中に起きた
+- **PASS にしなかった判断根拠**: 条件 7 の観察対象は**統合された挙動**であり、手動でパイプラインを走らせた結果はその代替にならない。本 Issue 自身が `modules/autonomy-tier.md` に記した設計原則「false-positive auto-check は advisory の見逃しより取り消しが難しいため、不明確な match は如何なる tier でも auto-check に到達してはならない」を、本 Issue 自身の AC 判定にも適用した
+- **構造的な発見**: 自己ホスト型リポジトリでは、**skill を変更する Issue の統合経路を同一セッション内で検証できない**。skill 自己更新の非伝播 (`docs/sessions/73536-1785868487-2026-08-04/session.md` § Skill Self-Update Propagation Note) により、変更後の skill が作用するのは次 session 以降になるため。これは #1157 に固有の問題ではなく、`skills/*/SKILL.md` を変更するすべての Issue の post-merge observation AC に共通する制約
+
 ### Improvement Proposals
 
-`modules/retro-proposals.md` の三層判定を適用した結果、**Tier 1 (Issue 起票) に該当するものはなかった**。内訳:
+**追記 (2026-08-04 再検証)**:
+
+- **Tier 1 (Issue 起票)**: 自己ホスト型リポジトリでは、`skills/*/SKILL.md` を変更する Issue の**統合経路を同一セッション内で検証できない**。skill 自己更新は次 session 以降にしか作用しないため、post-merge の observation AC が「変更後の skill が実際に動くこと」を要求している場合、その Issue を処理したセッションでは必ず評価不能になる。本 Issue の条件 7 がこの制約に直面した最初の明示的な事例。`/issue` が SKILL.md 変更を伴う Issue の post-merge AC を生成する際に、この制約を条件文へ織り込むか警告する仕組みが要る。**→ #1168 として起票済み**
+  - **Tier 1 とした判断根拠**: 影響範囲が `skills/*/SKILL.md` を変更するすべての Issue に及び (Tier 1 criterion「影響範囲が広い」)、かつ skill 自己更新の非伝播という**構造に起因するため再発が保証される** (同「再発性」)。#1159 で導入した新デフォルト (迷ったら Tier 2) は判断が困難な場合の fallback であり、本件は criterion に明確に該当するため適用外
+
+---
+
+以下は初回検証時 (2026-08-04、発火前) の分類。`modules/retro-proposals.md` の三層判定を適用した結果、**Tier 1 (Issue 起票) に該当するものはなかった**。内訳:
 
 - **Tier 2 (convention — memory 提案)**: jq の `def` でフィルタ型パラメータを nested `map`/`select` 内から参照する場合は `$` 付きの bound-value パラメータを使う。bare パラメータは参照地点の `.` に対して再評価されるため、silent に誤った値で評価される。本 Issue で 1 件発生し、bats テストではなく手動 smoke test でのみ捕捉された類のバグ
 - **Tier 3 (one-time memo)**: `scan-pending-ac.sh` の jq 累積時の `-c` 付け忘れ。既存テストが捕捉済みで再発性は低い
