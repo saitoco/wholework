@@ -42,6 +42,8 @@
 - saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5146655448
 - saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 984` to verify the condition / https://github.com/saitoco/wholework/issues/984#issuecomment-5147236074
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=9 / https://github.com/saitoco/wholework/issues/984#issuecomment-5174321501
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/984#issuecomment-5182244148
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=9 / https://github.com/saitoco/wholework/issues/984#issuecomment-5185270023
 ## Overview
 
 `run-auto-sub.sh` の Tier 2/3 recovery (自動発火経路) が `docs/reports/orchestration-recoveries.md` および Spec `## Auto Retrospective` に書き込む際、review/merge phase では issue 番号ではなく **PR 番号**を記録してしまうバグを修正する。
