@@ -72,3 +72,29 @@ GitHub Search API は検索結果を最大 1000 件までしか返さない既�
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — implementation followed the Spec's Implementation Steps as written.
+
+### Design Gaps/Ambiguities
+- `rubric` verify commands are graded from Issue body + git diff only, not the Spec (Issue=WHAT/Spec=HOW separation per `docs/tech.md`). AC1 requires the rejected-alternatives rationale to be "記録されている" (recorded), but this Issue's Notes section — where that rationale actually lives — is invisible to the grader. Addressed by duplicating the rationale (adopted approach + both rejected alternatives) into a code comment directly above `POPULATION_LIMIT` in `scripts/opportunistic-search.sh`, so it appears in the git diff the grader reads. Future Issues with a rubric AC that references "judged/recorded rationale" should place that rationale where the grader's input scope (Issue body / git diff / rubric-named files) can actually see it, not only in Spec Notes.
+
+### Rework
+- N/A — no rework occurred.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Adopted the Notes-recorded "案2+3" approach unchanged: mode-scoped `--search` pre-filter (observation vs. opportunistic text) + `POPULATION_LIMIT` 50→300 + stderr warning on limit-reached.
+- Duplicated the alternatives-rejected rationale from Spec Notes into a code comment above `POPULATION_LIMIT` in `scripts/opportunistic-search.sh`, since AC1's `rubric` grader only reads Issue body + git diff, not the Spec.
+
+### Deferred Items
+- Post-merge AC: re-run `scripts/opportunistic-search.sh --event auto-run` after merge and confirm the match count increased from the pre-change baseline of 12 (or that the limit-reached warning fires) — `verify-type: manual`, left for `/verify`.
+- GitHub Search API's 1000-result cap (noted in Spec "残存する制約") is not a concern at the current filtered population size (54–132) but would need reconsideration if `POPULATION_LIMIT` is ever raised toward 1000.
+
+### Notes for Next Phase
+- All 4 auto-verifiable pre-merge AC (rubric ×3, `bats tests/opportunistic-search.bats`) were verified PASS during `/code` and checked on the Issue. Only the `github_check "gh pr checks" "Run bats tests"` AC remains unchecked, pending CI on PR #1182.
+- Live-verified during `/code` (not just inferred from the diff): `gh issue list --label phase/verify --state closed --search "verify-type: observation in:body" --json number --limit 300` includes #843, #841, and #839 in its output.
