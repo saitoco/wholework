@@ -3,11 +3,16 @@
 # Dispatch observation-type ACs when a named event fires.
 #
 # Usage:
-#   scripts/observation-trigger.sh --event <event-name> [--dry-run] [--context-file <path>]
+#   scripts/observation-trigger.sh --event <event-name> [--dry-run] [--context-file <path>] [--facts-file <path>]
 #
 # --context-file is forwarded as-is to opportunistic-search.sh, which gates
 # matches carrying a `keyword=<text>` AC attribute against the file's content
 # (case-insensitive substring match). See modules/observation-trigger.md § Condition Check Gate.
+#
+# --facts-file is forwarded as-is to opportunistic-search.sh, which gates
+# matches carrying a `when=<axis>:<value>` AC attribute against /auto run facts
+# (route / mode / recovery-tier). See modules/observation-trigger.md § Condition
+# Check Gate (when=).
 #
 # For each matched Issue, posts a comment recommending the user re-run /verify,
 # unless a `<!-- wholework-event: type=observation-trigger ... event=<name> -->`
@@ -26,6 +31,7 @@ SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 EVENT_NAME=""
 DRY_RUN=false
 CONTEXT_FILE=""
+FACTS_FILE=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -49,9 +55,17 @@ while [ $# -gt 0 ]; do
             CONTEXT_FILE="$2"
             shift 2
             ;;
+        --facts-file)
+            if [ $# -lt 2 ]; then
+                echo "Error: --facts-file requires an argument" >&2
+                exit 1
+            fi
+            FACTS_FILE="$2"
+            shift 2
+            ;;
         *)
             echo "Error: Unknown argument: $1" >&2
-            echo "Usage: $0 --event <event-name> [--dry-run] [--context-file <path>]" >&2
+            echo "Usage: $0 --event <event-name> [--dry-run] [--context-file <path>] [--facts-file <path>]" >&2
             exit 1
             ;;
     esac
@@ -63,11 +77,14 @@ if [ -z "$EVENT_NAME" ]; then
     exit 1
 fi
 
+SEARCH_ARGS=(--event "$EVENT_NAME")
 if [ -n "$CONTEXT_FILE" ]; then
-    RESULTS=$("${SCRIPT_DIR}/opportunistic-search.sh" --event "$EVENT_NAME" --context-file "$CONTEXT_FILE" 2>/dev/null || true)
-else
-    RESULTS=$("${SCRIPT_DIR}/opportunistic-search.sh" --event "$EVENT_NAME" 2>/dev/null || true)
+    SEARCH_ARGS+=(--context-file "$CONTEXT_FILE")
 fi
+if [ -n "$FACTS_FILE" ]; then
+    SEARCH_ARGS+=(--facts-file "$FACTS_FILE")
+fi
+RESULTS=$("${SCRIPT_DIR}/opportunistic-search.sh" "${SEARCH_ARGS[@]}" 2>/dev/null || true)
 
 if [ -z "$RESULTS" ] || [ "$RESULTS" = "[]" ]; then
     exit 0
