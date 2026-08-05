@@ -67,6 +67,30 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+
+## 2026-08-05 15:44 UTC: review-tier3-recovery
+
+### Context
+- Issue #1181, phase: review
+- Source: recovery-sub-agent
+- Wrapper: run-review.sh, exit code: 1
+- Log tail: "Finished at: 2026-08-06 00:03:38"
+
+### Diagnosis
+- CI checks completed successfully, but the review agent was killed by a transient 'API Error: 529 Overloaded' after ~21 minutes of watchdog silence, before producing any review output. PR #1183 has no reviews or comments, confirming no partial review state to recover — a clean re-run of the review phase is safe.
+
+### Recovery Applied
+- action=retry
+- steps: none
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+---
+
 ## 2026-08-05 05:25 UTC: manual-recovery-review-rerun
 
 ### Context
