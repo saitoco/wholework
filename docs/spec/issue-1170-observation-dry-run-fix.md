@@ -64,16 +64,29 @@
 ### Rework
 - N/A — 各 Implementation Step は一度の Edit で完了し、手戻りは発生しなかった
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- N/A — 実装 (PR #1176 diff) は Spec の Implementation Steps 1〜5 と 1:1 で対応しており、構造的な逸脱は検出されなかった (review-light エージェントの Perspective 1 確認結果)
+
+### Recurring issues
+- N/A — review-light の4観点 (Spec乖離・エッジケース/堅牢性・セキュリティ/安全性・ドキュメント整合性) いずれも指摘なし。同種issueの再発パターンは見られなかった
+
+### Acceptance criteria verification difficulty
+- 6件の Pre-merge AC (rubric×4、command×1、github_check×1) は全て safe mode で自動判定可能だった。`command "bats tests/opportunistic-search.bats"` は safe mode では直接実行できないが、CI job `Run bats tests` への CI reference fallback で代替確認できた — verify command 設計として機能した
+- Spec Notes に記載の通り、本 Issue の Pre-merge 検証項目数 (6件) は light テンプレートの目安 (5件) をわずかに超えていたが、UNCERTAIN や verify command の不備は発生せず、実務上の支障はなかった
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `opportunistic-search.sh` の `--dry-run` フラグのパース自体 (`DRY_RUN=true` 代入) は CLI 後方互換のため残し、参照されない no-op フラグとした (Spec Implementation Step 1 の指示どおり)
-- Pre-merge AC のうち `github_check "gh pr checks" "Run bats tests"` は PR 作成前のため verify-executor 実行時点では UNCERTAIN — Issue チェックボックスは AC1〜5 のみ `[x]` 化し、AC6 は未チェックのまま残した (CI 完了後に `/review` または `/verify` で確認される想定)
+- Step 8 静的検証で Pre-merge AC 6件すべてを PASS 判定 (AC1〜5 は code フェーズで既に `[x]` 化済み、AC6 `github_check "gh pr checks" "Run bats tests"` は CI 完了後の本レビューで `[x]` 化)
+- Step 10.0 軽量統合レビュー (review-light エージェント) で4観点とも指摘なし。MUST/SHOULD/CONSIDER いずれもゼロ件のため Step 12 (issue resolution) は実施せず
+- Base branch conflict pre-check (`git merge-tree`) で `changed in both` ブロックなしを確認、base 側との衝突コンテキストは記録不要と判断
 
 ### Deferred Items
-- Post-merge AC (`observation-trigger.sh --event auto-run --dry-run` の実環境確認、`verify-type: manual`) は未実施 — `/verify` フェーズでの手動確認に委ねる
+- Post-merge AC (`observation-trigger.sh --event auto-run --dry-run` の実環境確認、`verify-type: manual`) は未実施 — `/verify` フェーズでの手動確認に委ねる (code フェーズからの引き継ぎを継続)
 
 ### Notes for Next Phase
-- CI (`Run bats tests` job) の結果を `/review` で確認すること。ローカルでは `bats tests/` フルスイート (1394件) 実行済みで全件 PASS 済み
-- PR #1176 の pre-merge 検証セクションに rubric 判定結果 (AC1〜4 PASS) を記載済み。CI PASS 後に AC6 のチェックボックスを更新すること
+- MUST issue なしのため `/merge 1176` にそのまま進行可能
+- Post-merge AC は手動確認 (`verify-type: manual`) のため、`/verify` 実行時に人手での実環境確認が必要
