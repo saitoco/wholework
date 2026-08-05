@@ -201,3 +201,12 @@ No new comments since last phase.
 - **Wrapper exit code**: 1
 - **Outcome**: success
 - **Recovery details**: see docs/reports/orchestration-recoveries.md
+
+### Manual recovery (merge)
+- **Date**: 2026-08-05 15:53 UTC
+- **Issue**: #1181, phase: merge
+- **Source**: parent session manual recovery
+- **Recovery type**: merge-rerun
+- **Cause**: pre-merge-ac-command-unverifiable
+- **Wrapper exit code**: 1
+- **Outcome**: success
