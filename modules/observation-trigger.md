@@ -225,10 +225,78 @@ added to either script.
 - Gate disabled (unconditional match) when: no `config=` attribute is present on the AC line.
 - Scope: `<key>` must be a flat kebab-case key or a single-level nested key in block format (e.g. `capabilities.workflow`), matching `get-config-value.sh`'s own constraint — inline hash format and keys with two or more dots are not supported. The comparison is boolean-only (`true`/`false`); enum-valued keys (e.g. `auto-stop-at`) are out of scope. Both are candidates for a `config=key:value` extension if a future Issue needs them.
 
+## Condition Check Gate (`when=`)
+
+Problem: many `event=<name>` conditions depend not just on the triggering action completing, but
+on the *execution context* of that run — which route `/auto` took, whether it ran in batch or
+single mode, or whether a recovery fired. Without a way to declare that dependency, the condition
+dispatches on every completion of the event regardless of context and resolves SKIPPED whenever
+the context doesn't match. The parent Issue #1118 measured this against 12 real observation ACs:
+7 of the 12 depend on run context (route / mode / recovery tier) that `event=` alone cannot
+express, and each SKIPPED dispatch still costs a full `/verify` round-trip.
+
+The gate adds an optional `when=<axis>:<value>` attribute to the observation AC tag. Multiple
+clauses may be comma-separated and are combined with AND:
+
+```
+<!-- verify-type: observation event=auto-run when=route:operate -->
+<!-- verify-type: observation event=auto-run when=mode:batch,recovery-tier:2 -->
+```
+
+**Declarable axes (exhaustive):**
+
+| Axis | Fact JSON field | Values |
+|------|------------------|--------|
+| `route` | per-issue `.issues[].route` | `pr` \| `patch` \| `operate` \| `unknown` |
+| `mode` | top-level `.mode` | `batch` \| `single` \| `unknown` |
+| `recovery-tier` | per-issue `.issues[].recovery_tiers` | `1` \| `2` \| `3` |
+
+`opportunistic-search.sh` matches `when=` clauses against the run facts JSON produced by
+`scripts/collect-run-facts.sh` (see `modules/run-fact-matching.md` § Fact JSON Fields for the
+full field definitions). It never collects its own execution context independently.
+
+**Arguments table addition (both scripts):**
+
+| Argument | Description |
+|----------|-------------|
+| `--facts-file <path>` | Optional. Path to a run facts JSON file (`collect-run-facts.sh` output) to match `when=` clauses against. If omitted, `opportunistic-search.sh` lazily calls `collect-run-facts.sh` with no arguments the first time a `when=`-tagged AC line is processed, and caches the result for the rest of the process. If the given path does not exist, a warning is printed to stderr and the gate falls back to lazy collection. `observation-trigger.sh` forwards this argument as-is to `opportunistic-search.sh`. |
+
+**Matching specification:**
+
+- Extraction: `when=<clauses>` is read from the AC line via `grep -oE 'when=[^ >]+'` (stops at the next space or `-->`), trailing dashes stripped — the same extraction pattern as `keyword=` and `config=`.
+- Clauses are split on `,` and every clause must resolve true for the gate to pass (AND, not OR).
+- Each clause is `<axis>:<value>`. Per axis: `route:<v>` checks `any(.issues[]?; .route == $v)`, `mode:<v>` checks `.mode == $v`, `recovery-tier:<v>` checks `any(.issues[]?; ((.recovery_tiers // []) | map(tostring)) | index($v) != null)` against the resolved run facts JSON.
+- Gate disabled (unconditional match) when: no `when=` attribute on the AC line.
+- Fail-open (unconditional match, with a stderr warning) when: run facts cannot be resolved (`collect-run-facts.sh` fails or the `--facts-file` path is unreadable), the facts JSON is not valid JSON, or the facts JSON carries no run context (`(.issues | length) == 0 and .mode == "unknown"`).
+- A malformed clause (no `:`, or an empty value) or an unknown axis is ignored (fail-open for that clause only, with a stderr warning) rather than excluding the AC — an unrecognized clause never counts as a failed AND term.
+- `when=` presumes `event=auto-run` — the run facts JSON describes an `/auto` execution, so declaring `when=` on an AC tagged with a different `event=` value has no meaningful facts to match against (the gate still evaluates mechanically, but the result is not a meaningful signal).
+- This is a distinct mechanism from `modules/verify-executor.md`'s verify command modifier `--when="shell condition"` (e.g. `<!-- verify: command "..." --when="which bats" -->`). That modifier gates a `verify:` command's execution on a shell condition; `when=<axis>:<value>` here is a `verify-type: observation` tag attribute that gates AC *dispatch* on `/auto` run context. They share a name by coincidence, occupy different positions in the AC comment syntax, and are evaluated by different code paths.
+
+## Conditions That Cannot Be Pre-Excluded
+
+Not every observation condition can be expressed as a `when=` clause, and this is expected rather
+than a gap to keep closing. Some conditions are inherently unobservable in advance:
+
+- **Probabilistic events** — e.g. #1113's jq parse error, which only occurs under specific,
+  non-deterministic input shapes. There is no run-context axis that predicts whether the error
+  will occur on a given run.
+- **Time-series comparisons** — e.g. #1159's condition, which compares behavior across multiple
+  runs over time rather than testing a single run's context.
+- **Recovery kinds not represented in the fact JSON** — e.g. #1009 / #1123, which require knowing
+  *which* recovery path fired, a granularity `collect-run-facts.sh`'s `recovery_tiers` (tier
+  number only) does not capture.
+
+For these, dispatching the AC on every `event=` firing and letting it resolve `SKIPPED` when the
+condition does not hold is the correct, expected behavior — not a defect to fix with a broader
+`when=` axis. Suppressing the resulting comment accumulation is the responsibility of #1099's
+idempotency guard (§ Idempotency guard marker format above), not the condition check gate. The
+gate's job is to filter out AC that are *knowably* inapplicable to a run's context before
+dispatch; conditions in this section are not knowable in advance by construction.
+
 ## Notes
 
 - `opportunistic-search.sh` is the single source of truth for event-name validation (`KNOWN_EVENTS` list)
 - Adding a new event requires: (1) adding to `KNOWN_EVENTS` in `opportunistic-search.sh`, (2) adding a row to the emitter table in `modules/verify-classifier.md`, (3) wiring the emitter call in the relevant skill or script
 - The `fix-cycle` event is defined but has no emitter yet — see child Issue under #650
 - This mechanism only ever matches ACs by **event name** (`verify-type: observation event=<name>`); `manual`-tagged post-merge AC are never dispatched here at all. [`modules/run-fact-matching.md`](run-fact-matching.md) is the complementary mechanism: it reconciles a completed `/auto` run's structured facts against pending post-merge AC of every verify-type (including `manual`), catching conditions this event-name-only path structurally cannot reach
-- Unlike § Condition Check Gate (`keyword=`) and § Condition Check Gate (`config=`) above, the `session=next` attribute (see `modules/verify-classifier.md` § observation Type: Event Values and Syntax) sits at the same tag position but is **not** a dispatch gate — it does not change which Issues `opportunistic-search.sh` matches. It is a declaration consumed downstream by `/issue` Step 4 and `/verify` Step 8c. This is intentional: the conversation session boundary that `session=next` describes cannot be machine-determined (measured on Issue #1157 and recorded in Issue #1168's comment thread — a different `AUTO_SESSION_ID` still runs on stale skill content within the same conversation session), so gating on it would make the AC permanently fail to dispatch instead of eventually resolving
+- Unlike § Condition Check Gate (`keyword=`), § Condition Check Gate (`config=`), and § Condition Check Gate (`when=`) above, the `session=next` attribute (see `modules/verify-classifier.md` § observation Type: Event Values and Syntax) sits at the same tag position but is **not** a dispatch gate — it does not change which Issues `opportunistic-search.sh` matches. It is a declaration consumed downstream by `/issue` Step 4 and `/verify` Step 8c. This is intentional: the conversation session boundary that `session=next` describes cannot be machine-determined (measured on Issue #1157 and recorded in Issue #1168's comment thread — a different `AUTO_SESSION_ID` still runs on stale skill content within the same conversation session), so gating on it would make the AC permanently fail to dispatch instead of eventually resolving
