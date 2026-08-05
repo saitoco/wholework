@@ -27,3 +27,8 @@ setup() {
 @test "issue skill Step 4 documents manual preview-tier AC tag convention" {
     grep -q 'ac-tier: preview --> <!-- verify-type: manual' "$PROJECT_ROOT/skills/issue/SKILL.md"
 }
+
+@test "issue skill Step 4 documents skill self-update propagation check" {
+    grep -q 'check-skill-change-observation-ac.sh' "$PROJECT_ROOT/skills/issue/SKILL.md"
+    grep -q 'session=next' "$PROJECT_ROOT/skills/issue/SKILL.md"
+}
