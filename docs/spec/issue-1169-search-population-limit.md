@@ -72,3 +72,41 @@ GitHub Search API は検索結果を最大 1000 件までしか返さない既�
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — implementation followed the Spec's Implementation Steps as written.
+
+### Design Gaps/Ambiguities
+- `rubric` verify commands are graded from Issue body + git diff only, not the Spec (Issue=WHAT/Spec=HOW separation per `docs/tech.md`). AC1 requires the rejected-alternatives rationale to be "記録されている" (recorded), but this Issue's Notes section — where that rationale actually lives — is invisible to the grader. Addressed by duplicating the rationale (adopted approach + both rejected alternatives) into a code comment directly above `POPULATION_LIMIT` in `scripts/opportunistic-search.sh`, so it appears in the git diff the grader reads. Future Issues with a rubric AC that references "judged/recorded rationale" should place that rationale where the grader's input scope (Issue body / git diff / rubric-named files) can actually see it, not only in Spec Notes.
+
+### Rework
+- N/A — no rework occurred.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Confirmed via `/review` Step 8 that all 5 Pre-merge AC (rubric ×3, `bats` command, `github_check`) PASS; checked the previously-unchecked `github_check "gh pr checks" "Run bats tests"` AC on Issue #1169.
+- Light-mode review-light agent (4 perspectives) found no issues; posted `COMMENT`-event PR review (no MUST issues, no fixes needed in Step 12).
+- Base branch conflict pre-check (`git merge-tree`) found no conflicting changes against `origin/main`.
+
+### Deferred Items
+- Post-merge AC: re-run `scripts/opportunistic-search.sh --event auto-run` after merge and confirm the match count increased from the pre-change baseline of 12 (or that the limit-reached warning fires) — `verify-type: manual`, left for `/verify`.
+- GitHub Search API's 1000-result cap (noted in Spec "残存する制約") is not a concern at the current filtered population size (54–132) but would need reconsideration if `POPULATION_LIMIT` is ever raised toward 1000.
+
+### Notes for Next Phase
+- All 5 Pre-merge AC are now checked `[x]` on Issue #1169; CI is all-green (9/9 SUCCESS). PR #1182 is ready for `/merge`.
+- No policy changes occurred during review, so no Acceptance Criteria text updates were needed.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Nothing to note — review-light confirmed the implementation matches the Spec's Implementation Steps 1-5 exactly (mode-scoped `SEARCH_TEXT`, `POPULATION_LIMIT=300`, stderr warning wording, bats test additions).
+
+### Recurring issues
+Nothing to note — review-light found no issues across all 4 perspectives (spec deviation, edge cases, security, documentation consistency), and Step 8 static AC verification found no FAIL among the 5 Pre-merge conditions.
+
+### Acceptance criteria verification difficulty
+Nothing to note, but worth recording why: AC1's `rubric` grader reads only the Issue body and git diff, not the Spec (Issue=WHAT / Spec=HOW separation), so a rationale recorded only in Spec Notes would have been invisible to the grader. The `/code` phase pre-empted this by duplicating the rejected-alternatives rationale into a code comment directly above `POPULATION_LIMIT` in `scripts/opportunistic-search.sh` (see Code Retrospective above), so the rationale appeared in the diff the grader reads and all 3 rubric AC passed cleanly with no UNCERTAIN. This pattern — duplicating Spec-only rationale into diff-visible code comments when a rubric AC references "recorded rationale" — worked as designed here and required no follow-up from `/review`.

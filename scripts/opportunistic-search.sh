@@ -177,7 +177,33 @@ resolve_run_facts() {
 }
 
 # 1. Fetch closed Issues with phase/verify label
-ISSUES_JSON=$(gh issue list --label "phase/verify" --state closed --json number --limit 50)
+#
+# Previously fetched via a fixed --limit 50 with no pre-filter, silently
+# truncating the population once phase/verify+closed Issues exceeded 50
+# (Issue #1169). Adopted approach: pre-filter the population by mode via
+# --search (observation vs. opportunistic AC text) + raise POPULATION_LIMIT
+# to 300 + warn on stderr if the limit is still reached.
+#
+# Alternatives considered and rejected:
+# - Full fetch (drop --limit entirely): rejected — the unfiltered population
+#   is 316 Issues (measured 2026-08-05), which would make the per-Issue
+#   `gh issue view` calls below scale linearly with total closed Issues, the
+#   exact scaling problem the mode pre-filter avoids (54-132 Issues per mode
+#   instead of 316).
+# - Connect to /audit stats --retention retire escalation: rejected —
+#   deciding which observation AC to retire is a separate concern from
+#   stopping the silent truncation, and is out of scope for this Issue.
+POPULATION_LIMIT=300
+if [ -n "$EVENT_NAME" ]; then
+    SEARCH_TEXT="verify-type: observation in:body"
+else
+    SEARCH_TEXT="verify-type: opportunistic in:body"
+fi
+ISSUES_JSON=$(gh issue list --label "phase/verify" --state closed --search "$SEARCH_TEXT" --json number --limit "$POPULATION_LIMIT")
+ISSUE_COUNT=$(echo "$ISSUES_JSON" | jq 'length')
+if [ "$ISSUE_COUNT" -ge "$POPULATION_LIMIT" ]; then
+    echo "Warning: population fetch reached --limit ${POPULATION_LIMIT}; results may be truncated. Consider raising POPULATION_LIMIT in scripts/opportunistic-search.sh or narrowing the --search filter." >&2
+fi
 ISSUE_NUMBERS=$(echo "$ISSUES_JSON" | jq -r '.[].number')
 
 if [ -z "$ISSUE_NUMBERS" ]; then

@@ -9,15 +9,16 @@ SCRIPT="$PROJECT_ROOT/scripts/opportunistic-search.sh"
 setup() {
     cd "$PROJECT_ROOT"
 
-    MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
+    export MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
     mkdir -p "$MOCK_DIR"
     export PATH="$MOCK_DIR:$PATH"
 
     # Default gh mock (can be overridden per test)
     cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
 #!/bin/bash
-# gh issue list --label "phase/verify" --state closed --json number --limit 50
+# gh issue list --label "phase/verify" --state closed --search "..." --json number --limit 300
 if [[ "$1" == "issue" && "$2" == "list" ]]; then
+    printf '%s\n' "$@" >> "$MOCK_DIR/gh-list-args.txt"
     echo "${MOCK_ISSUE_LIST:-[]}"
     exit 0
 fi
@@ -94,6 +95,27 @@ teardown() {
     run bash "$SCRIPT" /issue
     [ "$status" -eq 0 ]
     [ "$output" = "[]" ]
+}
+
+@test "population limit: reaching --limit emits a truncation warning on stderr" {
+    export MOCK_ISSUE_LIST="$(jq -n '[range(1;301) | {number: .}]')"
+    run bash "$SCRIPT" /issue
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"reached --limit 300"* ]]
+}
+
+@test "search filter: --event mode requests the observation search text" {
+    export MOCK_ISSUE_LIST="[]"
+    run bash "$SCRIPT" --event auto-run
+    [ "$status" -eq 0 ]
+    grep -q "verify-type: observation in:body" "$MOCK_DIR/gh-list-args.txt"
+}
+
+@test "search filter: skill mode requests the opportunistic search text" {
+    export MOCK_ISSUE_LIST="[]"
+    run bash "$SCRIPT" /issue
+    [ "$status" -eq 0 ]
+    grep -q "verify-type: opportunistic in:body" "$MOCK_DIR/gh-list-args.txt"
 }
 
 @test "success: issue with matching condition is returned" {
