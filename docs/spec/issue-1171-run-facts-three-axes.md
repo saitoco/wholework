@@ -200,20 +200,20 @@ No new comments since last phase.
 - Nothing to note — Pre-merge AC 7 件すべてが rubric / command / github_check で明確に PASS 判定でき、UNCERTAIN は 0 件だった。verify command の欠落や不正確さもなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- MUST 1件 (mode 定義の齟齬) + CONSIDER 4件を Step 12 で修正・commit・push 済み。CI 全件 SUCCESS (最終コミット `dc026f4e` 時点)
-- `skills/audit/SKILL.md` の CONSIDER 指摘 (pre-existing gap) は本 PR の diff に含まれないファイルのためスコープ外と判断し、修正せず PR コメントで記録するに留めた
-- self-review 422 制約により `event=REQUEST_CHANGES` を `event=COMMENT` に手動フォールバックし、line comments は個別 `gh api pulls/comments` で投稿した (review retrospective 参照)
+- Pre-merge AC gate: 7件全チェック済みを確認し、追加の override なしでゲートを通過した
+- `gh-pr-merge-status.sh` の判定は `mergeable=true` / `reason=clean` / CI success / review approved だったため、conflict resolution (Step 3) はスキップしスカッシュマージを直接実行した
+- スカッシュマージ後、worktree を `origin/main` に ff-only で追従させてから Phase Handoff を書き込んだ (main 上の Spec ファイルパスに対して操作)
 
 ### Deferred Items
 
-- Post-merge AC (operate route での `/auto` 完走確認) は引き続き `/verify` で検証する (spec Uncertainty / Phase Handoff 記載どおり、変更なし)
+- Post-merge AC (operate route での `/auto` 完走確認) は引き続き `/verify` で検証する (spec Uncertainty / review Phase Handoff 記載どおり、変更なし)
 - `--no-github` 実行時の operate 判別スキップ、イベント由来フォールバックの XL fan-out 誤判定は、いずれも spec Uncertainty 記載どおり本 Issue のスコープ外のまま
 
 ### Notes for Next Phase
 
-- `/merge 1177` を実行してよい。CI green、Pre-merge AC 全件チェック済み、MUST issue 修正済み
-- Post-merge AC は operate route の `/auto` を実際に完走させて `route: operate` / `fact_tokens` の `operate route` トークン / top-level `mode` の一致を確認する必要がある (`/verify` 側で実施)
+- `/verify 1171` で post-merge AC を検証する: operate route の `/auto` を実際に完走させ、`scripts/collect-run-facts.sh` の出力で `route: operate` / `fact_tokens` の `operate route` トークン / top-level `mode` の一致を確認する
+- `verify` は Phase Handoff を書き込まない最終フェーズ (Read のみ)
