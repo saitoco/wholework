@@ -127,6 +127,20 @@ teardown() {
     ! grep -q -- "--context-file" "$BATS_TEST_TMPDIR/search-calls.log"
 }
 
+@test "forwarding: --facts-file is forwarded to opportunistic-search.sh" {
+    export MOCK_SEARCH_OUTPUT="[]"
+    run bash "$SCRIPT" --event auto-run --facts-file "$BATS_TEST_TMPDIR/facts.json"
+    [ "$status" -eq 0 ]
+    grep -q -- "--facts-file $BATS_TEST_TMPDIR/facts.json" "$BATS_TEST_TMPDIR/search-calls.log"
+}
+
+@test "forwarding: no --facts-file means opportunistic-search.sh is called without it" {
+    export MOCK_SEARCH_OUTPUT="[]"
+    run bash "$SCRIPT" --event auto-run
+    [ "$status" -eq 0 ]
+    ! grep -q -- "--facts-file" "$BATS_TEST_TMPDIR/search-calls.log"
+}
+
 @test "resilience: opportunistic-search.sh error does not abort trigger" {
     export MOCK_SEARCH_EXIT=1
     export MOCK_SEARCH_OUTPUT=""

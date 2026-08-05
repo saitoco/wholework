@@ -31,6 +31,13 @@ fi
 exit 0
 MOCK_EOF
     chmod +x "$MOCK_DIR/gh"
+
+    # collect-run-facts.sh mock (used by when gate tests via WHOLEWORK_SCRIPT_DIR)
+    cat > "$MOCK_DIR/collect-run-facts.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "${MOCK_RUN_FACTS:-}"
+MOCK_EOF
+    chmod +x "$MOCK_DIR/collect-run-facts.sh"
 }
 
 teardown() {
@@ -287,6 +294,144 @@ teardown() {
     [ "$status" -eq 0 ]
     echo "$output" | jq -e 'length == 1' > /dev/null
     echo "$output" | jq -e '.[0].number == 602' > /dev/null
+}
+
+@test "when gate: run facts route matches includes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 700}]'
+    export MOCK_ISSUE_BODY_700='- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
+    export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":700,"route":"operate","recovery_tiers":[]}]}'
+    export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
+
+    run bash "$SCRIPT" --event auto-run
+    unset WHOLEWORK_SCRIPT_DIR
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 700' > /dev/null
+}
+
+@test "when gate: run facts route mismatch excludes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 701}]'
+    export MOCK_ISSUE_BODY_701='- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
+    export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":701,"route":"pr","recovery_tiers":[]}]}'
+    export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
+
+    run bash "$SCRIPT" --event auto-run
+    unset WHOLEWORK_SCRIPT_DIR
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
+}
+
+@test "when gate: AC without when= matches unconditionally" {
+    export MOCK_ISSUE_LIST='[{"number": 702}]'
+    export MOCK_ISSUE_BODY_702='- [ ] Next /auto auto-checks this condition <!-- verify-type: observation event=auto-run -->'
+    export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
+
+    run bash "$SCRIPT" --event auto-run
+    unset WHOLEWORK_SCRIPT_DIR
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 702' > /dev/null
+}
+
+@test "when gate: undeterminable run facts fail open with a warning" {
+    export MOCK_ISSUE_LIST='[{"number": 703}]'
+    export MOCK_ISSUE_BODY_703='- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
+    unset MOCK_RUN_FACTS
+    export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
+
+    run bash "$SCRIPT" --event auto-run 2>&1
+    unset WHOLEWORK_SCRIPT_DIR
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Warning:"*"run facts"* ]]
+    echo "$output" | grep -v "^Warning" | jq -e 'length == 1' > /dev/null
+    echo "$output" | grep -v "^Warning" | jq -e '.[0].number == 703' > /dev/null
+}
+
+@test "when gate: unknown axis fails open with a warning" {
+    export MOCK_ISSUE_LIST='[{"number": 704}]'
+    export MOCK_ISSUE_BODY_704='- [ ] pr-state observed <!-- verify-type: observation event=auto-run when=pr-state:open -->'
+    export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":704,"route":"pr","recovery_tiers":[]}]}'
+    export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
+
+    run bash "$SCRIPT" --event auto-run 2>&1
+    unset WHOLEWORK_SCRIPT_DIR
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Warning: unknown when= axis 'pr-state'"* ]]
+    echo "$output" | grep -v "^Warning" | jq -e 'length == 1' > /dev/null
+    echo "$output" | grep -v "^Warning" | jq -e '.[0].number == 704' > /dev/null
+}
+
+@test "when gate: comma-separated AND excludes when one clause fails" {
+    export MOCK_ISSUE_LIST='[{"number": 705}]'
+    export MOCK_ISSUE_BODY_705='- [ ] batch recovery observed <!-- verify-type: observation event=auto-run when=mode:batch,recovery-tier:2 -->'
+    export MOCK_RUN_FACTS='{"session_id":"s1","mode":"batch","issues":[{"number":705,"route":"pr","recovery_tiers":[1]}]}'
+    export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
+
+    run bash "$SCRIPT" --event auto-run
+    unset WHOLEWORK_SCRIPT_DIR
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
+}
+
+@test "when gate: --facts-file explicit designation bypasses collect-run-facts.sh" {
+    export MOCK_ISSUE_LIST='[{"number": 706}]'
+    export MOCK_ISSUE_BODY_706='- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
+    # MOCK_RUN_FACTS deliberately mismatches route:operate (facts.json below is the only source
+    # that matches). If --facts-file were silently ignored and collect-run-facts.sh's mock
+    # consulted instead, the result would be [] instead of a match on #706 — making this
+    # assertion decisive proof of bypass rather than just "a result was returned".
+    export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":706,"route":"pr","recovery_tiers":[]}]}'
+    export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
+    echo '{"session_id":"s1","mode":"single","issues":[{"number":706,"route":"operate","recovery_tiers":[]}]}' > "$BATS_TEST_TMPDIR/facts.json"
+
+    run bash "$SCRIPT" --event auto-run --facts-file "$BATS_TEST_TMPDIR/facts.json"
+    unset WHOLEWORK_SCRIPT_DIR
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 706' > /dev/null
+}
+
+@test "when gate: when= appearing in AC prose text (outside the tag) does not corrupt gate matching" {
+    export MOCK_ISSUE_LIST='[{"number": 707}]'
+    export MOCK_ISSUE_BODY_707='- [ ] AC text that quotes when=route:operate as an example <!-- verify-type: observation event=auto-run when=route:operate -->'
+    export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":707,"route":"operate","recovery_tiers":[]}]}'
+    export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
+
+    run bash "$SCRIPT" --event auto-run
+    unset WHOLEWORK_SCRIPT_DIR
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 707' > /dev/null
+}
+
+@test "when gate: glob metacharacters in a when= value are treated as a literal (no pathname expansion)" {
+    export MOCK_ISSUE_LIST='[{"number": 708}]'
+    export MOCK_ISSUE_BODY_708='- [ ] wildcard axis value observed <!-- verify-type: observation event=auto-run when=route:* -->'
+    export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":708,"route":"operate","recovery_tiers":[]}]}'
+    export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
+
+    run bash "$SCRIPT" --event auto-run 2>&1
+    unset WHOLEWORK_SCRIPT_DIR
+    [ "$status" -eq 0 ]
+    # A literal "*" never equals the facts' route value "operate", so the clause fails and the
+    # issue is excluded — it must NOT expand to the CWD's file list (which would emit multiple
+    # "malformed when= clause" warnings, one per matched filename).
+    [ "$(echo "$output" | grep -c "malformed when= clause")" -le 1 ]
+    [ "$(echo "$output" | grep -v "^Warning")" = "[]" ]
+}
+
+@test "when gate: mode resolved with empty issues fails open on the route axis instead of silently excluding" {
+    export MOCK_ISSUE_LIST='[{"number": 709}]'
+    export MOCK_ISSUE_BODY_709='- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
+    export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[]}'
+    export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
+
+    run bash "$SCRIPT" --event auto-run 2>&1
+    unset WHOLEWORK_SCRIPT_DIR
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Warning:"*"no per-issue context"* ]]
+    echo "$output" | grep -v "^Warning" | jq -e 'length == 1' > /dev/null
+    echo "$output" | grep -v "^Warning" | jq -e '.[0].number == 709' > /dev/null
 }
 
 @test "session=next declaration does not affect event= dispatch matching" {

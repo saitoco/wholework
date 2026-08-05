@@ -67,6 +67,21 @@ Gate (`config=`) for the resolution mechanics.
 keys with two or more dots are not supported, and the comparison is boolean-only (`true`/`false`);
 enum-valued keys (e.g. `auto-stop-at`) are out of scope for `config=`.
 
+**`when=<axis>:<value>` for `/auto` run-context-dependent observation conditions**: when the
+observation condition's text depends on the execution context of the `/auto` run that fires the
+event (route / mode / recovery tier), append one or more comma-separated `when=<axis>:<value>`
+clauses (combined with AND) to the tag:
+
+```
+<!-- verify-type: observation event=auto-run when=route:operate -->
+```
+
+If `when=` is omitted for a context-dependent condition, the AC matches unconditionally on every
+`event=` dispatch — including runs whose context does not satisfy the condition, so it resolves
+SKIPPED every time instead of ever reaching a real evaluation. Declarable axes, per-axis fact JSON
+fields, and fail-open semantics are documented in `modules/observation-trigger.md` § Condition
+Check Gate (`when=`).
+
 **`session=next` for skill self-update propagation**: wholework is self-hosted — the harness caches
 skill content per conversation session, not per `/auto` execution. When an Issue changes
 `skills/*/SKILL.md`, a post-merge observation condition that observes the changed skill's own

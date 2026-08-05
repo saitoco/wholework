@@ -54,6 +54,11 @@ JSON shape). Fields most relevant to Step 3's rubric judgment:
   issue, or `[]` if no recovery event fired. `anomalies.recovery` keeps its existing
   count-only semantics unchanged (additive, backward-compatible).
 
+This same fact JSON (top-level `mode`, per-issue `route` and `recovery_tiers`) is also consumed by
+`scripts/opportunistic-search.sh`'s `when=<axis>:<value>` condition check gate, which matches
+observation AC dispatch against a single run's context rather than reconciling post-merge AC after
+the fact — see `modules/observation-trigger.md` § Condition Check Gate (`when=`).
+
 ## Processing Steps
 
 1. Run `${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh` (with `--session

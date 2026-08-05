@@ -140,28 +140,56 @@ No new comments since last phase.
 - **設計時の不確実性「遅延収集時に session を解決できるか」**: `collect-run-facts.sh` の解決ラダー (`--session` > `AUTO_SESSION_ID` env > `.tmp/auto-session-current`) と `skills/auto/SKILL.md` Step 1 のポインタ書き込みを読み合わせ、`/auto` 実行中は必ず現在の session に解決されることを確認した。`AUTO_SESSION_ID` は wrapper 経由でしか export されないため、env だけに依存する設計にしなくて正解だった
 - **未解決のまま残した点**: `/review` の `pr-review-full` emitter や手動実行では `.tmp/auto-session-current` が直前の `/auto` session を指したままになりうる。`when=` は run facts が `/auto` 実行を記述する以上 `event=auto-run` 前提である旨をドキュメントに明記する対処にとどめ、機構的な強制 (event 名による gate の有効/無効切り替え) は入れないことにした。強制すると将来 `/auto` 以外の run facts が現れたときに再度剥がす必要が出るため
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1-9 を記載順にそのまま実装した。逸脱なし
+
+### Design Gaps/Ambiguities
+
+- N/A — Spec の各ステップが対象ファイル・挿入位置・jq パターンまで具体的に指定しており、実装中に解釈の余地が生じる箇所はなかった
+
+### Rework
+
+- N/A
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- 対応方針 B (`when=<axis>:<value>` 属性) を採用し、A (event 名の細分化) は組み合わせ爆発のため不採用。C (表現不能条件の明文化) は B の補完として併用採用した
-- 実行文脈は `scripts/collect-run-facts.sh` の出力をそのまま消費する。`--facts-file <path>` の明示指定を第一、引数なし遅延呼び出しを fallback とする二本立てで、`skills/auto/SKILL.md` の実行順序を変更せずに済ませる
-- 判定不能時・未知軸時は fail-open (無条件マッチ + stderr 警告)。#1055 の silent 常時除外の再生産を避けるため
-- 軸は `route` / `mode` / `recovery-tier` の 3 つに確定し、軸表を **(exhaustive)** で明示する。`pr-state` / `anomaly` は同じ jq パターンで後から足せる拡張余地として Notes に記録
-- Issue #995 の post-merge AC 1 行のみに `when=route:operate` を注釈する (Post-merge 条件の参照ケース)。既存 12 件の一括書き換えは行わない
+- ARGUMENTS に `--non-interactive` が含まれ fork context (再実行保証なし) と判定されたため、`.wholework.yml` の `capabilities.workflow: true` にもかかわらず Workflow path (10.1–10.3 差し替え) はスキップし、`skills/review/workflow-guidance.md` の Pre-flight 指示どおり static Task fan-out (`run_in_background: false`) を使用した
+- review-bug×2 (diff bug scan / security scan) が独立に同一根本原因 (`when=` 属性抽出のマルチライン衝突) を検出し、2 段階アドバーサリアル検証で 7 件中 6 件が PASS (問題確認) となった。MUST 相当の指摘はゼロだったが、SHOULD 判定の 3 件 (抽出のマルチライン衝突・glob 展開・contextless AND guard) は機能の correctness 根幹に関わるため Step 12 で修正した
+- CONSIDER 判定 5 件のうち 1 件 (validity check の `type == "object"` 厳格化) のみ SHOULD 群と合わせて修正し、残り 4 件 (doc 文言の曖昧さ・malformed clause テスト欠如・spec retrospective の記述精度) は PR サイズとのバランスで見送った
 
 ### Deferred Items
 
-- 既存 observation AC 11 件 (#995 を除く) への `when=` 注釈は本 Issue のスコープ外。運用の中で個別に判断する
-- `pr-state` 軸 / `anomaly` 軸の追加は必要が生じた時点で軸表に行を足す形で対応する
-- `/auto` 側で facts JSON を observation scan の前に生成し `--facts-file` で渡す最適化 (Alternatives Considered D) は将来の課題
-- `keyword=` / `config=` / `when=` の 3 ゲートに共通する属性抽出処理の関数切り出しは、4 つ目のゲートが現れた時点で検討する
+- `keyword=` / `config=` ゲートも `when=` と同じ「行全体から `grep -oE` で抽出」パターンを共有しており、理論上同じ脆弱性 (prose 内の属性名衝突) を持つ。本 PR では `when=` のみ修正し、既存 2 ゲートへの横展開は別 Issue に委ねる
+- `modules/observation-trigger.md:270` の `--facts-file` パス異常時の説明の軽微な不一致 (CONSIDER) は未修正
+- `tests/opportunistic-search.bats` の malformed clause (コロンなし/空値) テスト欠如 (CONSIDER) は未修正
+- `docs/spec/issue-1172-observation-when-gate.md` の Code Retrospective 「Deviations from Design」の記述精度 (CONSIDER) は未修正 — 本 review retrospective に記録した
+- `scripts/observation-trigger.sh:87` の stderr discard (本番経路での `when=` 警告不可視) は本 PR 以前からの既存動作と判定し対象外 (却下)
 
 ### Notes for Next Phase
 
-- `grep "when=" "modules/observation-trigger.md"` の Pre-merge AC は Implementation Step 5 で初めて成立する。Step 5 を飛ばすと AC 4 が FAIL する
-- `modules/verify-executor.md` の `--when="shell condition"` は別機構。実装中に混同しないこと。`scripts/validate-skill-syntax.py` の `--when=` 除去ロジック (L620 / L626) は `verify:` タグ側のみを扱うため本変更の影響を受けない
-- `tests/opportunistic-search.bats` は現状 `WHOLEWORK_SCRIPT_DIR` を設定していない。`when=` テストでは `$MOCK_DIR/collect-run-facts.sh` のモック追加と `export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` の設定が必要 (既存の `config=` テストは `WHOLEWORK_CONFIG_PATH` 経由で実スクリプトを使っている点に注意 — 設定方法が異なる)
-- `set -euo pipefail` 配下で jq の非ゼロ終了を扱うため、判定は `if ! ... ; then` 形式で受けること。`|| true` でエラーを握り潰すと fail-open と実エラーの区別がつかなくなる
-- `skills/code/SKILL.md` の `allowed-tools` には `gh issue edit:*` と `gh-issue-edit.sh:*` の双方が登録済みのため、Implementation Step 9 (#995 の body 更新) に frontmatter の変更は不要
+- Pre-merge AC 7 件全て PASS、Issue #1172 のチェックボックスは Post-merge 1 件を除き更新済み。CI は 9/9 SUCCESS
+- Step 12 の修正コミット (`e9a51a2b`) を push 済み。`bats tests/opportunistic-search.bats` 36/36 PASS、`bats tests/observation-trigger.bats` 19/19 PASS、`validate-skill-syntax.py` 0 error を再確認済み
+- MUST 指摘ゼロのため review は `COMMENT` (REQUEST_CHANGES ではない) で投稿済み。`/merge 1178` にそのまま進める
+- Post-merge 条件 (Issue #995 の operate route AC がマッチ集合から除外されることの確認) は `/verify` 側で扱う
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec Implementation Step 3 が「`grep -oE 'when=[^ >]+'` で値を抽出 (既存 2 ゲートと同一の抽出方式)」と明記しており、実装はこれをそのまま踏襲した。しかし review-bug×2 の検証で、この抽出パターンが AC の行全体 (HTML コメントタグ外の prose も含む) を対象にしているため、条件文が `when=...` という文字列を説明目的で引用すると `grep -o` の複数マッチが改行区切りで返り、カンマのみで分割するクローズパーサが破損することが判明した (本 PR で修正済み)。Spec 段階では「既存ゲートと同一パターンを踏襲する」ことが安全側の判断として書かれていたが、実際には `keyword=` / `config=` ゲートも同じ脆弱性を潜在的に持っている (本 Issue のスコープ外として今回は未修正)。既存パターンの踏襲は「実績があるから安全」とは限らないことを示す一例
+- Spec の Implementation Step 3 は「1 つでも不成立なら `continue` で除外」という記述だったが、Code フェーズでは意図的に early-break しない実装を選択した (Phase Handoff の Key Decisions に記録済み)。この逸脱は Code Retrospective の「Deviations from Design」に N/A と記載されていたが、実際には記録すべき逸脱だった (review-spec が指摘、Notes へ追記は見送り)
+
+### Recurring issues
+
+- review-bug の 2 エージェント (diff bug scan / security scan) が独立に同一の根本原因 (`when=` 属性抽出のマルチライン衝突) を異なる再現手順で検出し、2 段階検証でも揃って PASS 判定となった。並列 diff scan と security scan という異なる着眼点からの収束は、bash の unquoted 展開・`grep -o` の複数マッチという「見た目は動くが境界値で壊れる」クラスの bug に対して有効なシグナルだった
+- `keyword=` (#794) → `config=` (#1088) → `when=` (本 Issue) と 3 つ目の condition check gate が追加され、3 節とも同一の「行全体から属性を `grep -oE` で抽出」パターンを共有している。Spec の Notes は「4 つ目のゲートが現れた時点で共通ヘルパーへの切り出しを検討する」としているが、今回 3 つ目の時点で潜在バグが顕在化した。抽出パターンの共通化は「重複除去」ではなく「同じバグを 3 箇所に埋め込まない」という正当化も持つため、次に `keyword=` / `config=` のいずれかを触る Issue が出た時点で本 PR の修正 (HTML コメントタグ内への抽出範囲限定) を横展開する価値がある
+
+### Acceptance criteria verification difficulty
+
+- Pre-merge AC 7 件中 5 件が `rubric` (意味論的判断) で、実装の存在・ドキュメント化・テスト網羅性を検証した。これらは全て PASS だったが、rubric は「設計判断が記録されているか」「軸が文書化されているか」を検証するものであり、bash の unquoted 展開や `grep -o` の複数行マッチといったコードレベルの correctness bug は検出対象外だった。今回それらのバグは `/review` Step 10 の multi-perspective review (review-bug×2 + 2 段階アドバーサリアル検証) で初めて発見された。Feature タイプかつ bash ロジックが複雑な Issue では、rubric ベースの AC 設計だけでは correctness を担保できず、`--full` review の code-level bug detection が実質的な安全網として機能した
