@@ -77,16 +77,16 @@
 - Spec Notes に記載の通り、本 Issue の Pre-merge 検証項目数 (6件) は light テンプレートの目安 (5件) をわずかに超えていたが、UNCERTAIN や verify command の不備は発生せず、実務上の支障はなかった
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Step 8 静的検証で Pre-merge AC 6件すべてを PASS 判定 (AC1〜5 は code フェーズで既に `[x]` 化済み、AC6 `github_check "gh pr checks" "Run bats tests"` は CI 完了後の本レビューで `[x]` 化)
-- Step 10.0 軽量統合レビュー (review-light エージェント) で4観点とも指摘なし。MUST/SHOULD/CONSIDER いずれもゼロ件のため Step 12 (issue resolution) は実施せず
-- Base branch conflict pre-check (`git merge-tree`) で `changed in both` ブロックなしを確認、base 側との衝突コンテキストは記録不要と判断
+- Step 1 の pre-merge AC ゲートで Issue #1170 の Pre-merge AC 6件すべてが `[x]` 済みであることを確認し、ゲート通過
+- `gh-pr-merge-status.sh` の判定は `mergeable=true, reason=clean` (CI success, review approved) だったため、conflict resolution (Step 3) は実施せず Step 4 (Squash Merge) に直接進行
+- Squash merge を実行 (`gh pr merge 1176 --squash --delete-branch`)、`closes #1170` により Issue は自動クローズされる想定 (base branch = main)
 
 ### Deferred Items
-- Post-merge AC (`observation-trigger.sh --event auto-run --dry-run` の実環境確認、`verify-type: manual`) は未実施 — `/verify` フェーズでの手動確認に委ねる (code フェーズからの引き継ぎを継続)
+- Post-merge AC (`observation-trigger.sh --event auto-run --dry-run` の実環境確認、`verify-type: manual`) は未実施 — `/verify` フェーズでの手動確認に委ねる (review フェーズからの引き継ぎを継続)
 
 ### Notes for Next Phase
-- MUST issue なしのため `/merge 1176` にそのまま進行可能
-- Post-merge AC は手動確認 (`verify-type: manual`) のため、`/verify` 実行時に人手での実環境確認が必要
+- `/verify 1170` 実行時、Post-merge AC は手動確認 (`verify-type: manual`) のため人手での実環境確認が必要
+- Issue の自動クローズと `phase/verify` ラベル遷移を Step 5/6 で確認済み (下記完了レポート参照)
