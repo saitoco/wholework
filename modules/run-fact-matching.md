@@ -28,6 +28,32 @@ Processing Steps drive.
   (`autonomy` key in `.wholework.yml`, default `L1`); consumed by
   `apply-run-fact-match.sh`'s tier gate
 
+## Fact JSON Fields (matching-relevant)
+
+Full field definitions live in `scripts/collect-run-facts.sh`'s header comment (SSoT for the
+JSON shape). Fields most relevant to Step 3's rubric judgment:
+
+- Top-level `mode`: `batch` | `single` | `unknown` — whether `/auto` was invoked with
+  `--batch`, not how many Issues the run actually processed. Resolved from session metadata
+  declared by `/auto` first, with an event-based fallback second; `unknown` only when the
+  session has no events at all. See `collect-run-facts.sh`'s header comment for the full
+  resolution ladder. **Caveat**: the XL sub-issue fan-out path is not `--batch` and therefore
+  declares `single` even though it processes multiple Issues (`skills/auto/SKILL.md` Step 1).
+  For sessions with no `mode` declaration (e.g. a session started before this field existed),
+  the event-based fallback cannot distinguish an XL fan-out from a `--batch` run (`sub_start`
+  is emitted by `run-auto-sub.sh` on both paths) — treat a `mode`-dependent condition as
+  `ambiguous` rather than trusting `mode` alone when the session predates this field.
+- Per-issue `route`: `pr` | `patch` | `operate` | `unknown`. `operate` distinguishes the
+  diff-less operate route (`docs/tech.md` § operate route) from a regular patch-route commit
+  — both emit `code-patch` phase events, so `route` is the only fact-JSON signal that tells
+  them apart. **Caveat**: when `collect-run-facts.sh` is invoked with `--no-github` (used by
+  most hermetic bats execution; the operate-route tests instead run without `--no-github`
+  against a `gh` mock), the operate-route marker probe is skipped and `route` stays `patch`
+  even for an operate-route run.
+- Per-issue `recovery_tiers`: sorted unique array of recovery tiers (`1`/`2`/`3`) seen for the
+  issue, or `[]` if no recovery event fired. `anomalies.recovery` keeps its existing
+  count-only semantics unchanged (additive, backward-compatible).
+
 ## Processing Steps
 
 1. Run `${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh` (with `--session
@@ -52,11 +78,26 @@ Processing Steps drive.
      facts JSON's `phases` entries carry only a phase name (`review`), never a depth value,
      because `scripts/run-review.sh` sets a fixed `EMIT_PHASE_NAME="review"` regardless of
      depth (see `modules/event-emission.md` Wrapper Coverage Table; confirmed empirically —
-     `docs/spec/issue-1157-run-fact-ac-match.md` § Uncertainty).
+     `docs/spec/issue-1157-run-fact-ac-match.md` § Uncertainty). **This no longer applies to
+     conditions naming operate route, a specific recovery tier, or batch/single mode** — those
+     three axes are now directly readable from `route`, `recovery_tiers`, and top-level `mode`
+     respectively (see Fact JSON Fields above), so "no representation in the facts JSON" is not
+     a valid `ambiguous` reason for them. Exception: when the facts JSON's `route` is `patch`
+     and the condition specifically asserts operate route, still return `ambiguous` if the run
+     was collected with `--no-github` (operate detection is skipped in that mode — see the
+     `route` caveat above). Step 1 of this module's own Processing Steps never passes
+     `--no-github`, so in practice this exception does not apply to run-fact reconciliation —
+     `route: patch` is always a direct `not_satisfied` signal for operate-route claims here.
+     The exception exists for completeness against direct `collect-run-facts.sh` invocations
+     outside this module's pipeline (e.g. ad-hoc debugging), where `--no-github` may be passed.
    - The condition text asserts something did **not** happen, and the corresponding signal
      is not one of the five `anomalies` keys (`recovery` / `watchdog_kill` /
-     `manual_intervention` / `concurrent_commit_detected` / `code_retry_fire`) — there is no
-     general-purpose "nothing happened" fact to check absence-claims against.
+     `manual_intervention` / `concurrent_commit_detected` / `code_retry_fire`) **and not a
+     specific recovery tier** — a condition asserting "Tier N recovery did not fire" is
+     directly decidable from whether `N` is absent from `recovery_tiers`, so it is not subject
+     to this fail-safe branch. Absent a `recovery_tiers`-backed tier claim or one of the five
+     `anomalies` keys, there is no general-purpose "nothing happened" fact to check
+     absence-claims against.
    - The condition text is a conjunction of multiple sub-conditions and only some of them
      are backed by the facts JSON.
    - Any other case where the judgment is unclear — `ambiguous` is the default when in doubt,

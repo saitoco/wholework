@@ -14,27 +14,47 @@
 #   route). Omit for the batch route to collect facts for every Issue in the
 #   session.
 #
-# Output: single-line JSON {"session_id":"<id>","issues":[{...}, ...]} on
-#   stdout. When ${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl} does not exist,
-#   prints {"session_id":"<id>","issues":[]} and exits 0 (fail-open).
+# Output: single-line JSON {"session_id":"<id>","mode":"<batch|single|unknown>","issues":[{...}, ...]}
+#   on stdout. When ${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl} does not exist, or the session has
+#   no events, prints {"session_id":"<id>","mode":"unknown","issues":[]} and exits 0 (fail-open).
+#
+# mode (top-level): batch | single | unknown. Resolution ladder, evaluated against ALL session
+#   events *before* --issue narrowing (so mode does not depend on whether --issue was passed):
+#   (a) .tmp/auto-session-<session-id>.json's "mode" key, when "batch" or "single"
+#   (b) event fallback: >=2 distinct non-zero issue numbers with a sub_start event => "batch",
+#       else "single" (only reached when the session has at least one event)
+#   (c) "unknown" when the session has no events (events log absent, or session id not found)
 #
 # Per-issue fields:
-#   number      - issue number (int)
-#   size        - Size label (XS/S/M/L/XL), or "" if unresolved
-#                 (or when --no-github is set and no size event exists)
-#   route       - pr | patch | unknown (derived from code-pr / code-patch phase presence)
-#   pr          - PR number seen in this issue's events, or null
-#   pr_state    - `gh pr view <pr> --json state` result, or "" when unavailable
-#   phases      - [{"name":...,"status":"complete"|"started","backfilled":bool}]
-#   anomalies   - counts for the exhaustive event set: recovery, watchdog_kill,
-#                 manual_intervention, concurrent_commit_detected, code_retry_fire
-#   fact_tokens - token array for scan-pending-ac.sh's pre-filtering. Deliberately
-#                 excludes the generic "/auto" token: measured against 414 pending
-#                 post-merge AC (docs/spec/issue-1157-run-fact-ac-match.md § population),
-#                 "/auto" alone matched 84 of them and made the pre-filter a no-op.
+#   number         - issue number (int)
+#   size           - Size label (XS/S/M/L/XL), or "" if unresolved
+#                    (or when --no-github is set and no size event exists)
+#   route          - pr | patch | operate | unknown (derived from code-pr / code-patch phase
+#                    presence; code-patch is further probed for an operate-route marker comment
+#                    — see below. Skipped when --no-github is set, so route stays "patch" then)
+#   pr             - PR number seen in this issue's events, or null
+#   pr_state       - `gh pr view <pr> --json state` result, or "" when unavailable
+#   phases         - [{"name":...,"status":"complete"|"started","backfilled":bool}]
+#   anomalies      - counts for the exhaustive event set: recovery, watchdog_kill,
+#                    manual_intervention, concurrent_commit_detected, code_retry_fire
+#   recovery_tiers - sorted unique array of recovery event tiers (1/2/3) seen for this issue,
+#                    or [] if none. anomalies.recovery keeps its existing count-only semantics.
+#   fact_tokens    - token array for scan-pending-ac.sh's pre-filtering. Deliberately
+#                    excludes the generic "/auto" token: measured against 414 pending
+#                    post-merge AC (docs/spec/issue-1157-run-fact-ac-match.md § population),
+#                    "/auto" alone matched 84 of them and made the pre-filter a no-op. Also
+#                    excludes the generic "single" mode token for the same reason (Issue #1171).
 #
-# --no-github suppresses all `gh` calls (get-issue-size.sh fallback, `gh pr view`),
-# for hermetic bats execution.
+# operate route detection: when an issue's route resolves to "patch" (and --no-github is not
+#   set), probe the Issue's comments for a `type=execution-log` or `type=execution-plan`
+#   wholework-event marker (the same signature `reconcile-phase-state.sh`'s _operate_signal_ts()
+#   uses). If the marker's createdAt is newer than this issue's first event timestamp in this
+#   run (freshness gate — guards against a stale marker from a prior operate cycle mislabeling a
+#   later patch run), route is reported as "operate" instead of "patch".
+#
+# --no-github suppresses all `gh` calls (get-issue-size.sh fallback, `gh pr view`, the operate
+# marker probe), for hermetic bats execution. Under --no-github, operate route can never be
+# detected and route stays "patch" for diff-less runs.
 #
 # bash 3.2+ compatible (macOS system bash): no mapfile, no ${VAR,,}.
 
@@ -96,7 +116,7 @@ fi
 EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
 
 if [ ! -f "$EVENTS_LOG" ]; then
-  printf '{"session_id":"%s","issues":[]}\n' "$SESSION_ID"
+  printf '{"session_id":"%s","mode":"unknown","issues":[]}\n' "$SESSION_ID"
   exit 0
 fi
 
@@ -106,7 +126,7 @@ SESSION_EVENTS=$(jq -c --arg sid "$SESSION_ID" 'select(.session_id == $sid)' "$E
 }
 
 if [ -z "$SESSION_EVENTS" ]; then
-  printf '{"session_id":"%s","issues":[]}\n' "$SESSION_ID"
+  printf '{"session_id":"%s","mode":"unknown","issues":[]}\n' "$SESSION_ID"
   exit 0
 fi
 
@@ -117,6 +137,25 @@ ISSUE_NUMBERS=$(printf '%s\n' "$SESSION_EVENTS" | jq -r '.issue' 2>/dev/null | s
 
 if [ -n "$ISSUE_FILTER" ]; then
   ISSUE_NUMBERS=$(printf '%s\n' "$ISSUE_NUMBERS" | awk -v n="$ISSUE_FILTER" '$0 == n')
+fi
+
+# Session-level mode resolution ladder. Evaluated against $SESSION_EVENTS (all session events,
+# before the --issue narrowing above) so mode does not depend on whether --issue was passed.
+MODE=""
+SESSION_META_FILE=".tmp/auto-session-${SESSION_ID}.json"
+if [ -f "$SESSION_META_FILE" ]; then
+  META_MODE=$(jq -r '.mode // ""' "$SESSION_META_FILE" 2>/dev/null || true)
+  case "$META_MODE" in
+    batch|single) MODE="$META_MODE" ;;
+  esac
+fi
+if [ -z "$MODE" ]; then
+  BATCH_ISSUE_COUNT=$(printf '%s\n' "$SESSION_EVENTS" | jq -s '[.[] | select(.event == "sub_start" and .issue != 0) | .issue] | unique | length')
+  if [ "$BATCH_ISSUE_COUNT" -ge 2 ]; then
+    MODE="batch"
+  else
+    MODE="single"
+  fi
 fi
 
 JQ_PASS1='
@@ -141,6 +180,8 @@ def phase_entry($events; $p):
       elif ($events | map(select(.phase == "code-patch")) | length) > 0 then "patch"
       else "unknown" end
     ),
+    first_ts: ($events | map(.ts) | min),
+    recovery_tiers: ([$events[] | select(.event == "recovery") | .tier // empty | tonumber?] | unique),
     phases: ($phase_names | map(phase_entry($events; .))),
     anomalies: (
       ["recovery","watchdog_kill","manual_intervention","concurrent_commit_detected","code_retry_fire"]
@@ -156,11 +197,12 @@ def wrapper_for(p):
 {
   number: $n,
   size: $size,
-  route: $partial.route,
+  route: $route,
   pr: $partial.pr,
   pr_state: $pr_state,
   phases: $partial.phases,
-  anomalies: $partial.anomalies
+  anomalies: $partial.anomalies,
+  recovery_tiers: $partial.recovery_tiers
 }
 | . + {
     fact_tokens: (
@@ -170,6 +212,8 @@ def wrapper_for(p):
          | $names + ($names | map(wrapper_for(.)) | map(select(. != null))))
       + (if .pr != null then [("#" + (.pr | tostring))] else [] end)
       + (.anomalies | to_entries | map(select(.value >= 1) | .key))
+      + (.recovery_tiers | map("tier " + (. | tostring)))
+      + (if $mode == "batch" then ["batch"] else [] end)
     )
   }
 '
@@ -201,10 +245,29 @@ for N in $ISSUE_NUMBERS; do
     PR_STATE=$(gh pr view "$PR_NUMBER" --json state -q .state 2>/dev/null || true)
   fi
 
+  # Operate route probe: only meaningful when route is "patch" (operate route always emits
+  # code-patch phase events — see reconcile-phase-state.sh's identical assumption).
+  ROUTE=$(printf '%s' "$FACTS_PARTIAL" | jq -r '.route')
+  FIRST_TS=$(printf '%s' "$FACTS_PARTIAL" | jq -r '.first_ts')
+  if [ "$ROUTE" = "patch" ] && [ "$NO_GITHUB" = false ]; then
+    OPERATE_TS=$(gh issue view "$N" --json comments \
+      --jq "[.comments[] | select(.body | contains(\"<!-- wholework-event: type=execution-log phase=code issue=${N}\") or contains(\"<!-- wholework-event: type=execution-plan phase=code issue=${N}\")) | .createdAt] | sort | last // empty" \
+      2>/dev/null) || OPERATE_TS=""
+    case "$OPERATE_TS" in
+      [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T*) ;;
+      *) OPERATE_TS="" ;;
+    esac
+    if [ -n "$OPERATE_TS" ] && [ "$OPERATE_TS" \> "$FIRST_TS" ]; then
+      ROUTE="operate"
+    fi
+  fi
+
   ISSUE_FACT=$(jq -n \
     --argjson n "$N" \
     --arg size "$SIZE" \
+    --arg route "$ROUTE" \
     --arg pr_state "$PR_STATE" \
+    --arg mode "$MODE" \
     --argjson partial "$FACTS_PARTIAL" \
     "$JQ_PASS2") || {
     echo "Error: failed to assemble fact object for issue #${N}" >&2
@@ -217,4 +280,4 @@ for N in $ISSUE_NUMBERS; do
   }
 done
 
-jq -n --arg sid "$SESSION_ID" --argjson issues "$ISSUES_JSON" '{session_id: $sid, issues: $issues}' -c
+jq -n --arg sid "$SESSION_ID" --arg mode "$MODE" --argjson issues "$ISSUES_JSON" '{session_id: $sid, mode: $mode, issues: $issues}' -c

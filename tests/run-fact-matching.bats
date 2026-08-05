@@ -35,7 +35,18 @@ setup() {
     export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/nonexistent.jsonl"
     run bash "$COLLECT_SCRIPT" --session sess1 --no-github
     [ "$status" -eq 0 ]
-    [ "$output" = '{"session_id":"sess1","issues":[]}' ]
+    [ "$output" = '{"session_id":"sess1","mode":"unknown","issues":[]}' ]
+}
+
+@test "collect-run-facts: session id not found in existing events log yields mode unknown" {
+    EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
+    cat > "$EVENTS_FILE" <<'EOF'
+{"ts":"2026-08-05T00:00:00Z","issue":1600,"event":"phase_start","session_id":"other-session","phase":"code-pr"}
+EOF
+    export AUTO_EVENTS_LOG="$EVENTS_FILE"
+    run bash "$COLLECT_SCRIPT" --session sess1 --no-github
+    [ "$status" -eq 0 ]
+    [ "$output" = '{"session_id":"sess1","mode":"unknown","issues":[]}' ]
 }
 
 @test "collect-run-facts: route/pr/phases/anomalies/fact_tokens derived from fixture events" {
@@ -98,6 +109,172 @@ EOF
     [ "$size" = "M" ]
     route=$(echo "$output" | jq -r '.issues[0].route')
     [ "$route" = "patch" ]
+}
+
+@test "collect-run-facts: operate route detected via fresh execution-log marker comment" {
+    EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
+    cat > "$EVENTS_FILE" <<'EOF'
+{"ts":"2026-08-05T00:00:00Z","issue":800,"event":"phase_start","session_id":"sess1","phase":"code-patch"}
+{"ts":"2026-08-05T00:01:00Z","issue":800,"event":"phase_complete","session_id":"sess1","phase":"code-patch"}
+EOF
+    export AUTO_EVENTS_LOG="$EVENTS_FILE"
+
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo ""
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$4" == "--json" && "$5" == "comments" ]]; then
+  echo "2026-08-05T00:05:00Z"
+  exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "view" ]]; then
+  echo ""
+  exit 0
+fi
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$COLLECT_SCRIPT" --session sess1
+    [ "$status" -eq 0 ]
+    route=$(echo "$output" | jq -r '.issues[0].route')
+    [ "$route" = "operate" ]
+    tokens=$(echo "$output" | jq -r '.issues[0].fact_tokens | join(",")')
+    [[ "$tokens" == *"operate route"* ]]
+}
+
+@test "collect-run-facts: route stays patch when no execution marker comment exists" {
+    EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
+    cat > "$EVENTS_FILE" <<'EOF'
+{"ts":"2026-08-05T00:00:00Z","issue":801,"event":"phase_start","session_id":"sess1","phase":"code-patch"}
+{"ts":"2026-08-05T00:01:00Z","issue":801,"event":"phase_complete","session_id":"sess1","phase":"code-patch"}
+EOF
+    export AUTO_EVENTS_LOG="$EVENTS_FILE"
+
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo ""
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$4" == "--json" && "$5" == "comments" ]]; then
+  echo ""
+  exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "view" ]]; then
+  echo ""
+  exit 0
+fi
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$COLLECT_SCRIPT" --session sess1
+    [ "$status" -eq 0 ]
+    route=$(echo "$output" | jq -r '.issues[0].route')
+    [ "$route" = "patch" ]
+    tokens=$(echo "$output" | jq -r '.issues[0].fact_tokens | join(",")')
+    [[ "$tokens" != *"operate route"* ]]
+}
+
+@test "collect-run-facts: recovery_tiers captures tier values with tier N fact_tokens" {
+    EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
+    cat > "$EVENTS_FILE" <<'EOF'
+{"ts":"2026-08-05T00:00:00Z","issue":900,"event":"recovery","session_id":"sess1","phase":"code-patch","tier":"2"}
+{"ts":"2026-08-05T00:01:00Z","issue":900,"event":"recovery","session_id":"sess1","phase":"code-patch","tier":"3"}
+EOF
+    export AUTO_EVENTS_LOG="$EVENTS_FILE"
+    run bash "$COLLECT_SCRIPT" --session sess1 --no-github
+    [ "$status" -eq 0 ]
+    tiers=$(echo "$output" | jq -c '.issues[0].recovery_tiers')
+    [ "$tiers" = "[2,3]" ]
+    recovery_count=$(echo "$output" | jq -r '.issues[0].anomalies.recovery')
+    [ "$recovery_count" = "2" ]
+    tokens=$(echo "$output" | jq -r '.issues[0].fact_tokens | join(",")')
+    [[ "$tokens" == *"tier 2"* ]]
+    [[ "$tokens" == *"tier 3"* ]]
+}
+
+@test "collect-run-facts: recovery_tiers empty and no tier tokens when no recovery events" {
+    EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
+    cat > "$EVENTS_FILE" <<'EOF'
+{"ts":"2026-08-05T00:00:00Z","issue":901,"event":"phase_start","session_id":"sess1","phase":"code-patch"}
+EOF
+    export AUTO_EVENTS_LOG="$EVENTS_FILE"
+    run bash "$COLLECT_SCRIPT" --session sess1 --no-github
+    [ "$status" -eq 0 ]
+    tiers=$(echo "$output" | jq -c '.issues[0].recovery_tiers')
+    [ "$tiers" = "[]" ]
+    tokens=$(echo "$output" | jq -r '.issues[0].fact_tokens | join(",")')
+    [[ "$tokens" != *"tier "* ]]
+}
+
+@test "collect-run-facts: mode batch from session metadata declaration" {
+    EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
+    cat > "$EVENTS_FILE" <<'EOF'
+{"ts":"2026-08-05T00:00:00Z","issue":1000,"event":"phase_start","session_id":"sess1","phase":"spec"}
+EOF
+    export AUTO_EVENTS_LOG="$EVENTS_FILE"
+    mkdir -p .tmp
+    echo '{"mode":"batch"}' > ".tmp/auto-session-sess1.json"
+
+    run bash "$COLLECT_SCRIPT" --session sess1 --no-github
+    [ "$status" -eq 0 ]
+    mode=$(echo "$output" | jq -r '.mode')
+    [ "$mode" = "batch" ]
+    tokens=$(echo "$output" | jq -r '.issues[0].fact_tokens | join(",")')
+    [[ "$tokens" == *"batch"* ]]
+}
+
+@test "collect-run-facts: mode batch fallback from >=2 sub_start issues without metadata" {
+    EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
+    cat > "$EVENTS_FILE" <<'EOF'
+{"ts":"2026-08-05T00:00:00Z","issue":1100,"event":"sub_start","session_id":"sess1","size":"S"}
+{"ts":"2026-08-05T00:00:00Z","issue":1200,"event":"sub_start","session_id":"sess1","size":"S"}
+EOF
+    export AUTO_EVENTS_LOG="$EVENTS_FILE"
+
+    run bash "$COLLECT_SCRIPT" --session sess1 --no-github
+    [ "$status" -eq 0 ]
+    mode=$(echo "$output" | jq -r '.mode')
+    [ "$mode" = "batch" ]
+}
+
+@test "collect-run-facts: mode single when only one issue and no metadata" {
+    EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
+    cat > "$EVENTS_FILE" <<'EOF'
+{"ts":"2026-08-05T00:00:00Z","issue":1300,"event":"sub_start","session_id":"sess1","size":"S"}
+EOF
+    export AUTO_EVENTS_LOG="$EVENTS_FILE"
+
+    run bash "$COLLECT_SCRIPT" --session sess1 --no-github
+    [ "$status" -eq 0 ]
+    mode=$(echo "$output" | jq -r '.mode')
+    [ "$mode" = "single" ]
+    tokens=$(echo "$output" | jq -r '.issues[0].fact_tokens | join(",")')
+    [[ "$tokens" != *"batch"* ]]
+}
+
+@test "collect-run-facts: mode stays batch under --issue filter" {
+    EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
+    cat > "$EVENTS_FILE" <<'EOF'
+{"ts":"2026-08-05T00:00:00Z","issue":1400,"event":"sub_start","session_id":"sess1","size":"S"}
+{"ts":"2026-08-05T00:00:00Z","issue":1500,"event":"sub_start","session_id":"sess1","size":"S"}
+EOF
+    export AUTO_EVENTS_LOG="$EVENTS_FILE"
+
+    run bash "$COLLECT_SCRIPT" --session sess1 --issue 1400 --no-github
+    [ "$status" -eq 0 ]
+    mode=$(echo "$output" | jq -r '.mode')
+    [ "$mode" = "batch" ]
+    count=$(echo "$output" | jq '.issues | length')
+    [ "$count" = "1" ]
 }
 
 # ---------------------------------------------------------------------------

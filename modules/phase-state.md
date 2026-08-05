@@ -58,6 +58,8 @@ To close this gap, `_completion_code_patch()` in `scripts/reconcile-phase-state.
 
 **Known limitation**: if a reopen timestamp is unavailable and an Issue's Spec is rewritten from operate route to patch route without being reopened, a stale marker from the previous operate cycle can mask a genuine patch route silent no-op. This mirrors the same-shaped limitation already present in the `closes #N` fallback (unbounded grep when no reopen timestamp is available) and is accepted for the same reason — adding asymmetric freshness handling for only one signature would introduce a new class of failure mode.
 
+**Second consumer**: `scripts/collect-run-facts.sh` reuses the same marker query to label a `code-patch` run as `route: operate`, but with a session-scoped freshness gate (the run's first event timestamp) instead of the reopen timestamp — the two consumers answer different questions (phase completion vs. what happened in this `/auto` session). See `modules/run-fact-matching.md` § Fact JSON Fields.
+
 ### Stray PR Completion Signature
 
 Route misdetection (#979-series) can leave the `code-patch` phase's actual artifact as a pushed branch + open PR (a pr-route-shaped outcome) instead of the expected `closes #N` commit to `main`. Without a dedicated signature for this, `_completion_code_patch()` reports `matches_expected: false` even though the Issue's work is genuinely done, which causes `spawn-recovery-subagent.sh`'s `skip)` dispatch guard to reject a correct `action=skip` recovery recommendation (see #993).
