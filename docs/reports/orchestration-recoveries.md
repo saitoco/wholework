@@ -85,7 +85,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1175 (発生原因側: バックグラウンドテスト完了待ちによる silent no-op), #1174 (完了シグナル側: fallback Response Summary が未対応 MUST の merge 通過を許す)
 
 ## 2026-08-04 10:24 UTC: manual-recovery-merge-rerun
 
