@@ -25,16 +25,6 @@
 #                                  respawn | push-only | pr-create | review-rerun
 #                                  (the last four are --write-manual-recovery RECOVERY_TYPE values)
 #
-# recovery_record_deferred: a recovery record was stashed to .tmp/ instead of being
-# committed to main, because a PR was already open for the issue and writing directly
-# to main would self-induce a merge conflict with that PR's own Spec changes. Emitted
-# by run-auto-sub.sh _defer_recovery_record() (see #1150; the record is later flushed by
-# _flush_deferred_recovery_records() once the PR is no longer open). The affected issue
-# is the top-level `issue` field already set on every event via EMIT_ISSUE_NUMBER; no
-# separate issue= kv arg is passed here to avoid a duplicate JSON key.
-#   kind=<manual|tier2|tier3>     which recovery path deferred the record
-#   open_pr=<N>                   the open PR number that triggered the defer
-#
 # verify_reopen_cycle: /verify FAIL -> issue reopen fix cycle entered
 #   iteration=<n>                 verify iteration counter (from get-verify-iteration.sh)
 #   reopen_reason=<reason>        pre_merge_ac_fail | post_merge_observation_fail | manual_judgment

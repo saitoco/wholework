@@ -75,14 +75,6 @@ sys.exit(128 - rc if rc < 0 else rc)
 fi
 # --- End spawn detachment shim -------------------------------------------------
 
-# Returns true if spec_rel_path has any changes (modified or untracked).
-# Uses git status --porcelain so untracked files are detected (unlike git diff --quiet).
-_spec_has_changes() {
-  local repo_root="$1"
-  local spec_rel_path="$2"
-  git -C "$repo_root" status --porcelain "$spec_rel_path" 2>/dev/null | grep -q .
-}
-
 # Pushes HEAD to origin, retrying with fetch+rebase on non-fast-forward rejection.
 # Lock+push-only mode variant (no --from branch to rebase separately) of the push
 # retry loop in scripts/worktree-merge-push.sh.
@@ -159,186 +151,6 @@ _validate_recovery_args() {
   fi
 }
 
-# Returns the open PR number linked to an issue via "closes #N", or empty if none.
-# Follows the gh pr list --search "closes #N" detection pattern already used by
-# scripts/reconcile-phase-state.sh, scoped to --state open here.
-_open_pr_for_issue() {
-  local issue="$1"
-  local pr_json
-  pr_json=$(gh pr list --search "closes #${issue}" --state open --json number 2>/dev/null || true)
-  printf '%s' "$pr_json" | jq -r '.[0].number // empty' 2>/dev/null || true
-}
-
-# Returns the path to the deferred-recovery-records file for ISSUE.
-# See #1150: this file is the (b) defer + flush stash for recovery records that arrive
-# while an open PR would make a direct main commit self-conflict (see _defer_recovery_record).
-# Usage: _deferred_recovery_records_file ISSUE
-_deferred_recovery_records_file() {
-  local issue="$1"
-  printf '%s' "${REPO_ROOT}/.tmp/deferred-recovery-records-${issue}.md"
-}
-
-# Appends RECORD_FILE's content to the defer file for ISSUE instead of writing it to the
-# main-branch Spec, because OPEN_PR is already touching the same Spec file and a direct
-# main commit here would self-induce a merge conflict with it (#890/#1005/#1006/#1123).
-# KIND identifies the caller (manual|tier2|tier3) for the stderr message and the emitted
-# event only. The record is recovered later by _flush_deferred_recovery_records once
-# OPEN_PR is no longer open. Never discards the record (#1150 -- the prior behavior of
-# _write_manual_recovery_to_spec's open-PR guard discarded it with a warning only).
-# Usage: _defer_recovery_record ISSUE RECORD_FILE KIND OPEN_PR
-_defer_recovery_record() {
-  local issue="$1"
-  local record_file="$2"
-  local kind="$3"
-  local open_pr="$4"
-  local _repo_root="$REPO_ROOT"
-  mkdir -p "${_repo_root}/.tmp"
-  local defer_file
-  defer_file="$(_deferred_recovery_records_file "$issue")"
-  cat "$record_file" >> "$defer_file"
-  echo "[#${issue}] open PR #${open_pr} exists for issue #${issue}; deferred ${kind} recovery record to ${defer_file} instead of committing to main (avoids a self-induced merge conflict with PR #${open_pr}). Will be recorded to the Spec once PR #${open_pr} is no longer open." >&2
-  command -v emit_event >/dev/null 2>&1 && emit_event "recovery_record_deferred" "kind=${kind}" "open_pr=${open_pr}"
-  return 0
-}
-
-# Flushes ISSUE's deferred recovery records (see _defer_recovery_record) into the Spec's
-# Auto Retrospective once they are safe to write -- i.e. once no PR for ISSUE is open
-# anymore. Safe to call unconditionally at any point in the flow: no-op if nothing is
-# deferred, and no-op (leaving the defer file in place) if a PR is still open or the Spec
-# does not exist yet, so a record is never lost even if flush never gets a chance to fire
-# (see Spec Uncertainty: auto-stop-at code/review can leave the file at .tmp/ until a
-# later --write-manual-recovery call flushes it).
-# Usage: _flush_deferred_recovery_records ISSUE
-_flush_deferred_recovery_records() {
-  local issue="$1"
-  local _repo_root="$REPO_ROOT"
-  local defer_file
-  defer_file="$(_deferred_recovery_records_file "$issue")"
-
-  if [[ ! -s "$defer_file" ]]; then
-    return 0
-  fi
-
-  local open_pr
-  open_pr=$(_open_pr_for_issue "$issue")
-  if [[ -n "$open_pr" ]]; then
-    echo "[#${issue}] deferred recovery records for issue #${issue} still pending: PR #${open_pr} is still open." >&2
-    return 0
-  fi
-
-  _pull_ff_only "$_repo_root"
-
-  local spec_dir="$_repo_root/docs/spec"
-  local spec_file
-  spec_file=$(ls "$spec_dir/issue-${issue}-"*.md 2>/dev/null | head -1 || true)
-
-  if [[ -z "$spec_file" ]]; then
-    echo "[#${issue}] Spec not yet created for issue #${issue}; keeping deferred recovery records at ${defer_file} until it exists." >&2
-    return 0
-  fi
-
-  if ! grep -q "^## Auto Retrospective" "$spec_file" 2>/dev/null; then
-    printf '\n%s\n' "## Auto Retrospective" >> "$spec_file"
-  fi
-
-  cat "$defer_file" >> "$spec_file"
-
-  local spec_rel_path="${spec_file#$_repo_root/}"
-
-  if _spec_has_changes "$_repo_root" "$spec_rel_path"; then
-    if git -C "$_repo_root" add "$spec_rel_path" \
-       && git -C "$_repo_root" commit -s -m "Record deferred recovery records for issue #${issue}
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"; then
-      # Remove the defer file as soon as the commit succeeds, not after push: the
-      # record is already durable in the local commit, so keeping the defer file
-      # around for a push-retry would re-append the same content on the next flush
-      # and duplicate the entry in the Spec (#1150 review).
-      rm -f "$defer_file"
-      if _push_with_retry "$_repo_root"; then
-        echo "[#${issue}] [recovery] deferred recovery records flushed to spec auto retrospective for issue #${issue}"
-      else
-        echo "[#${issue}] WARNING: deferred recovery records committed locally but push failed for issue #${issue}; commit is retained and will be pushed by a later run" >&2
-      fi
-    else
-      echo "[#${issue}] WARNING: could not commit deferred recovery records; keeping ${defer_file} for retry" >&2
-    fi
-  fi
-}
-
-# _write_manual_recovery_to_spec ISSUE PHASE RECOVERY_TYPE EXIT_CODE [CAUSE]
-# Writes the manual recovery record to sub-issue Spec.
-# See modules/orchestration-fallbacks.md#manual-recovery-spec-write
-_write_manual_recovery_to_spec() {
-  local issue="$1"
-  local phase="${2:-unknown}"
-  local recovery_type="${3:-unspecified}"
-  local exit_code="${4:-unknown}"
-  local cause="${5:-}"
-  _validate_recovery_args "$issue" "$phase" "$recovery_type" "${4:-}" || return 1
-
-  local _repo_root="$REPO_ROOT"
-  mkdir -p "${_repo_root}/.tmp"
-  local record_file="${_repo_root}/.tmp/recovery-record-${issue}-${phase}.md"
-  local _date
-  _date=$(date -u '+%Y-%m-%d %H:%M UTC')
-  {
-    printf '\n%s\n' "### Manual recovery (${phase})"
-    printf '%s\n' "- **Date**: ${_date}"
-    printf '%s\n' "- **Issue**: #${issue}, phase: ${phase}"
-    printf '%s\n' "- **Source**: parent session manual recovery"
-    printf '%s\n' "- **Recovery type**: ${recovery_type}"
-    if [[ -n "$cause" ]]; then
-      printf '%s\n' "- **Cause**: ${cause}"
-    fi
-    printf '%s\n' "- **Wrapper exit code**: ${exit_code}"
-    printf '%s\n' "- **Outcome**: success"
-  } > "$record_file"
-
-  # Defer (instead of discarding, #1150) if an open PR for this issue is already touching
-  # the same Spec file: committing to main here would self-induce a merge conflict with
-  # that PR (#890).
-  local open_pr
-  open_pr=$(_open_pr_for_issue "$issue")
-  if [[ -n "$open_pr" ]]; then
-    _defer_recovery_record "$issue" "$record_file" "manual" "$open_pr"
-    rm -f "$record_file"
-    return 0
-  fi
-
-  _pull_ff_only "$_repo_root"
-  local spec_dir="$_repo_root/docs/spec"
-  local spec_file
-  spec_file=$(ls "$spec_dir/issue-${issue}-"*.md 2>/dev/null | head -1 || true)
-
-  if [[ -z "$spec_file" ]]; then
-    echo "[#${issue}] Spec not yet created for issue #${issue}; skipping spec-side manual recovery record (preserved via recoveries log + manual_intervention event; spec phase will fold this into the formal Spec once created)." >&2
-    rm -f "$record_file"
-    return 0
-  fi
-
-  if ! grep -q "^## Auto Retrospective" "$spec_file" 2>/dev/null; then
-    printf '\n%s\n' "## Auto Retrospective" >> "$spec_file"
-  fi
-
-  cat "$record_file" >> "$spec_file"
-  rm -f "$record_file"
-
-  local spec_rel_path="${spec_file#$_repo_root/}"
-
-  if _spec_has_changes "$_repo_root" "$spec_rel_path"; then
-    if git -C "$_repo_root" add "$spec_rel_path" \
-       && git -C "$_repo_root" commit -s -m "Record manual recovery in auto retrospective for issue #${issue}
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
-       && _push_with_retry "$_repo_root"; then
-      echo "[#${issue}] [recovery] spec auto retrospective updated for issue #${issue} (manual recovery)"
-    else
-      echo "[#${issue}] WARNING: could not commit/push manual recovery to spec; continuing" >&2
-    fi
-  fi
-}
-
 # Returns the "number" of the first issue in a `gh issue list --json number,title,<DATE_FIELD>`
 # result whose title exactly equals TARGET, sorted by DATE_FIELD descending. Empty
 # output on no match or any failure (gh error, empty/malformed JSON) -- never exits the script.
@@ -396,10 +208,10 @@ _find_known_recoveries_issue() {
 # in the canonical H2 entry format so scripts/collect-recovery-candidates.sh can pick it
 # up for frequency detection / recoveries-auto-fire (unlike the H3 wrapper-retry-on-kill
 # entries defined further below -- see #1005 spec Notes). Defined here, immediately
-# after _write_manual_recovery_to_spec, rather than grouped with the other
-# _write_*_recovery helpers further down: the --write-manual-recovery dispatch below
-# calls it before an early exit, so it must be defined earlier in the script than that
-# call site (bash only registers a function once its definition line has executed).
+# after _search_recoveries_issue / _find_known_recoveries_issue since it depends on them,
+# and before the --write-manual-recovery dispatch below which calls it before an early
+# exit, so it must be defined earlier in the script than that call site (bash only
+# registers a function once its definition line has executed).
 # Skips silently if the file does not exist (file not in repo → return 0).
 # See modules/orchestration-fallbacks.md#external-kill-parent-respawn
 #
@@ -566,15 +378,12 @@ if [[ "${1:-}" == "--write-manual-recovery" ]]; then
     esac
   done
 
+  _validate_recovery_args "$_mr_issue" "$_mr_phase" "$_mr_recovery_type" "$_mr_exit_code"
+
   source "$SCRIPT_DIR/emit-event.sh"
   restore_auto_session_pointer
   export EMIT_ISSUE_NUMBER="$_mr_issue"
 
-  # Flush any records deferred by an earlier open-PR guard hit before recording this new
-  # one -- the PR that blocked them may have merged since (#1150).
-  _flush_deferred_recovery_records "$_mr_issue"
-
-  _write_manual_recovery_to_spec "$_mr_issue" "$_mr_phase" "$_mr_recovery_type" "$_mr_exit_code" "$_mr_cause"
   _write_manual_recovery_to_recoveries_log "$_mr_issue" "$_mr_phase" "$_mr_recovery_type" "$_mr_exit_code" "$_mr_cause" "$_mr_diagnosis"
   emit_event "manual_intervention" "recovery_target=${_mr_phase}" "wrapper_exit_code=${_mr_exit_code:-unknown}" "intervention_type=${_mr_recovery_type}"
   exit 0
@@ -670,119 +479,6 @@ trap '_maybe_emit_phase_complete' EXIT
 
 # _emit_comments_consumed() is now defined in emit-event.sh (Issue #791).
 # Sourced via: source "$SCRIPT_DIR/emit-event.sh" above.
-
-_write_tier2_recovery_to_spec() {
-  local issue="$1"
-  local meta_file="$2"
-  _validate_recovery_args "$issue" || return 1
-  local _repo_root="$REPO_ROOT"
-
-  # Defer instead of writing to main if a PR is already open for this issue (#1150 --
-  # avoids self-inducing a merge conflict with that PR's own Spec changes, same as the
-  # manual recovery path).
-  local open_pr
-  open_pr=$(_open_pr_for_issue "$issue")
-  if [[ -n "$open_pr" ]]; then
-    _defer_recovery_record "$issue" "$meta_file" "tier2" "$open_pr"
-    return 0
-  fi
-
-  local spec_dir="$_repo_root/docs/spec"
-  local spec_file
-  spec_file=$(ls "$spec_dir/issue-${issue}-"*.md 2>/dev/null | head -1 || true)
-
-  if [[ -z "$spec_file" ]]; then
-    local title
-    title=$(gh issue view "$issue" --json title -q '.title' 2>/dev/null || echo "Issue #${issue}")
-    mkdir -p "$spec_dir"
-    spec_file="$spec_dir/issue-${issue}-recovery.md"
-    printf '%s\n' "# Issue #${issue}: ${title}" > "$spec_file"
-  fi
-
-  if ! grep -q "^## Auto Retrospective" "$spec_file" 2>/dev/null; then
-    printf '\n%s\n' "## Auto Retrospective" >> "$spec_file"
-  fi
-
-  cat "$meta_file" >> "$spec_file"
-
-  local spec_rel_path="${spec_file#$_repo_root/}"
-
-  if _spec_has_changes "$_repo_root" "$spec_rel_path"; then
-    if git -C "$_repo_root" add "$spec_rel_path" \
-       && git -C "$_repo_root" commit -s -m "Record Tier 2 recovery in auto retrospective for issue #${issue}
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
-       && _push_with_retry "$_repo_root"; then
-      echo "${LOG_PREFIX} [recovery] spec auto retrospective updated for issue #${issue}"
-    else
-      echo "${LOG_PREFIX} WARNING: could not commit/push Tier 2 recovery to spec; continuing" >&2
-    fi
-  fi
-}
-
-_write_tier3_recovery_to_spec() {
-  local issue="$1"
-  local phase="$2"
-  local exit_code="$3"
-  _validate_recovery_args "$issue" "$phase" || return 1
-  local _repo_root="$REPO_ROOT"
-
-  mkdir -p "${_repo_root}/.tmp"
-  local record_file="${_repo_root}/.tmp/recovery-record-${issue}-${phase}-tier3.md"
-  local _date
-  _date=$(date -u '+%Y-%m-%d %H:%M UTC')
-  {
-    printf '\n%s\n' "### Tier 3 recovery (${phase})"
-    printf '%s\n' "- **Date**: ${_date}"
-    printf '%s\n' "- **Issue**: #${issue}, phase: ${phase}"
-    printf '%s\n' "- **Source**: spawn-recovery-subagent.sh"
-    printf '%s\n' "- **Wrapper exit code**: ${exit_code}"
-    printf '%s\n' "- **Outcome**: success"
-    printf '%s\n' "- **Recovery details**: see docs/reports/orchestration-recoveries.md"
-  } > "$record_file"
-
-  # Defer instead of writing to main if a PR is already open for this issue (#1150).
-  local open_pr
-  open_pr=$(_open_pr_for_issue "$issue")
-  if [[ -n "$open_pr" ]]; then
-    _defer_recovery_record "$issue" "$record_file" "tier3" "$open_pr"
-    rm -f "$record_file"
-    return 0
-  fi
-
-  local spec_dir="$_repo_root/docs/spec"
-  local spec_file
-  spec_file=$(ls "$spec_dir/issue-${issue}-"*.md 2>/dev/null | head -1 || true)
-
-  if [[ -z "$spec_file" ]]; then
-    local title
-    title=$(gh issue view "$issue" --json title -q '.title' 2>/dev/null || echo "Issue #${issue}")
-    mkdir -p "$spec_dir"
-    spec_file="$spec_dir/issue-${issue}-recovery.md"
-    printf '%s\n' "# Issue #${issue}: ${title}" > "$spec_file"
-  fi
-
-  if ! grep -q "^## Auto Retrospective" "$spec_file" 2>/dev/null; then
-    printf '\n%s\n' "## Auto Retrospective" >> "$spec_file"
-  fi
-
-  cat "$record_file" >> "$spec_file"
-  rm -f "$record_file"
-
-  local spec_rel_path="${spec_file#$_repo_root/}"
-
-  if _spec_has_changes "$_repo_root" "$spec_rel_path"; then
-    if git -C "$_repo_root" add "$spec_rel_path" \
-       && git -C "$_repo_root" commit -s -m "Record Tier 3 recovery in auto retrospective for issue #${issue}
-
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" \
-       && _push_with_retry "$_repo_root"; then
-      echo "${LOG_PREFIX} [recovery] spec auto retrospective updated for issue #${issue} (tier3)"
-    else
-      echo "${LOG_PREFIX} WARNING: could not commit/push Tier 3 recovery to spec; continuing" >&2
-    fi
-  fi
-}
 
 # _write_wrapper_retry_recovery ISSUE PHASE EXIT_CODE [RUNNER_SCRIPT_NAME]
 # Records a wrapper-retry-on-kill recovery event to orchestration-recoveries.md, in the
@@ -1058,21 +754,15 @@ run_phase_with_recovery() {
 
   # Tier 2: fallback catalog (bash, cheap) — known pattern recovery
   # See modules/orchestration-fallbacks.md#code-patch-silent-no-op
-  local _fallback_meta_file=".tmp/fallback-meta-${issue}-${phase}.md"
   local _fallback_exit=0
   mkdir -p .tmp
-  "$SCRIPT_DIR/apply-fallback.sh" "$phase" "$issue" --log "$log_file" > "$_fallback_meta_file" 2>/dev/null || _fallback_exit=$?
+  "$SCRIPT_DIR/apply-fallback.sh" "$phase" "$issue" --log "$log_file" > /dev/null 2>/dev/null || _fallback_exit=$?
   if [[ $_fallback_exit -eq 0 ]]; then
     echo "${LOG_PREFIX} [recovery] tier2 fallback catalog: recovered"
-    if [[ -s "$_fallback_meta_file" ]]; then
-      _write_tier2_recovery_to_spec "$EMIT_ISSUE_NUMBER" "$_fallback_meta_file"
-    fi
-    rm -f "$_fallback_meta_file"
     emit_event "recovery" "phase=${phase}" "tier=2" "result=recovered"
     emit_event "phase_complete" "phase=${phase}"
     return 0
   fi
-  rm -f "$_fallback_meta_file"
 
   # Tier 3: recovery sub-agent via claude -p (expensive, unknown anomaly only)
   if "$SCRIPT_DIR/spawn-recovery-subagent.sh" "$phase" "$issue" --log "$log_file" --exit-code "$exit_code" --record-issue "$EMIT_ISSUE_NUMBER"; then
@@ -1090,7 +780,6 @@ run_phase_with_recovery() {
         echo "${LOG_PREFIX} WARNING: could not commit/push recovery log; /verify may detect dirty file" >&2
       fi
     fi
-    _write_tier3_recovery_to_spec "$EMIT_ISSUE_NUMBER" "$phase" "$exit_code"
     emit_event "recovery" "phase=${phase}" "tier=3" "result=recovered"
     emit_event "phase_complete" "phase=${phase}"
     return 0
@@ -1353,10 +1042,6 @@ case "$EFFECTIVE_SIZE" in
     exit 1
     ;;
 esac
-
-# Flush any recovery records deferred earlier in this run (or a prior run) now that this
-# sub-issue's own phases have completed and its PR may have merged (#1150).
-_flush_deferred_recovery_records "$SUB_NUMBER"
 
 echo "${LOG_PREFIX} ---"
 echo "${LOG_PREFIX} === run-auto-sub.sh: Completed sub-issue #${SUB_NUMBER} ==="
