@@ -156,23 +156,20 @@ No new comments since last phase.
 - なし (手戻りは発生しなかった)
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- MUST 指摘 0 件、SHOULD 3 件を修正 (skills/auto/SKILL.md の Tier2/Tier3 記録タイミングの自己矛盾解消、skills/verify/SKILL.md の判定基準へのリテラル明記、tests/run-auto-sub.bats への Tier2 #984 regression guard 復元)。CONSIDER 4 件は Skip と判断 (機能的な問題なし、または既存決定の再確認で十分)
-- Base branch conflict pre-check (`git merge-tree`) は `changed in both` 0 件で競合なしを確認済み
-- `--non-interactive` (headless `claude -p` = fork context) のため Workflow tool は使用せず、静的 Task fan-out (review-spec + review-bug×2、`run_in_background: false`) で実行した (`capabilities.workflow: true` だが再起動保証なしのため fallback)
+- pre-merge AC ゲートは 9 件すべて checked (`unchecked_count: 0`) を確認し、review フェーズが Deferred Items に残していた AC 9 の unchecked 懸念は解消済みと判定した
+- PR は `mergeable=true` / `reason=clean` (CI success, review approved) のため conflict 解消ステップは不要、Squash Merge を直接実行した
 
 ### Deferred Items
 
-- AC 9 (`bash scripts/check-translation-sync.sh`) は対応する CI job が無いため safe mode で UNCERTAIN のまま。Pre-merge checkbox は unchecked のまま残る — `/merge` 前に `/verify` (full mode) での再確認、または CI job 追加が必要
 - #1094 (Spec を記録先に追加する逆方向の提案) の close 判断は本 Issue のスコープ外のまま。`/verify` 以降の判断に委ねる
 - Tier 2 の bash 経路での recovery event 記録は #1098 の scope に委ねる (spec フェーズの決定を継承)
 
 ### Notes for Next Phase
 
-- 修正後の再チェック: `bats --jobs 18 tests/run-auto-sub.bats` 80/80 PASS、`python3 scripts/validate-skill-syntax.py skills/` 0 error (既知の無関係な warning 1 件のみ)。新規 MUST 指摘なし
 - Post-merge AC (external kill 発生後の recoveries.md 記録確認) は post-merge observation のため `/verify` で確認すること
 - `modules/orchestration-fallbacks.md` の 38 件の既存ログエントリが参照する `#manual-recovery-spec-write` アンカーは維持されている (改名なし)
 
