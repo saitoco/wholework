@@ -217,3 +217,32 @@ No new comments since last phase.
 
 - `/verify 1171` で post-merge AC を検証する: operate route の `/auto` を実際に完走させ、`scripts/collect-run-facts.sh` の出力で `route: operate` / `fact_tokens` の `operate route` トークン / top-level `mode` の一致を確認する
 - `verify` は Phase Handoff を書き込まない最終フェーズ (Read のみ)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC 設計は良好。Pre-merge 7 件すべてが rubric / command / github_check で明確に判定でき、UNCERTAIN は 0 件だった
+
+#### spec
+- `mode` の定義文が「処理した Issue 数」ベースで書かれ、実装の「`--batch` フラグが渡されたか」と食い違っていた件は review retrospective に記録済み。本 verify では実データで `mode: batch` が正しく返ることを確認し、定義と実装の一致を追認した
+
+#### code
+- N/A — Code Retrospective のとおり構造的 divergence なし
+
+#### review
+- 指摘 5 件中 3 件が「SSoT ドキュメントが実装に追従できていない」同型の問題だった件は review retrospective に記録済み
+- `gh-pr-review.sh` の self-review `REQUEST_CHANGES` 422 が再現し手動フォールバックで対応 (#1102 で追跡中、`modules/phase-state.md:77` に既知記録あり)
+
+#### merge
+- N/A — `mergeable=true, reason=clean` で conflict resolution 不要
+
+#### verify
+- **実装を自身のセッションの実データで検証できた**: 本 Issue を処理したセッション (`6722-1785907145`, `--batch`) の `.tmp/auto-events.jsonl` に対して `collect-run-facts.sh` を実行し、`mode: batch` / `route: pr` / `recovery_tiers: []` / `fact_tokens` への `batch` トークン追加をすべて実データ上で確認した。特に `mode` は、本セッションの metadata JSON が #1171 着地前に書かれ `mode` キーを持たないため、**イベント経由のフォールバック段が実際に機能した実証**になっている
+- **観察 1: worktree から実行すると無言で空結果になる**: `/verify` の worktree 内で `collect-run-facts.sh` を実行したところ `{"session_id":"...","mode":"unknown","issues":[]}` が返った。`.tmp/` は main repo 限定 (gitignored) で worktree には存在しないため、既定の `AUTO_EVENTS_LOG=.tmp/auto-events.jsonl` が解決できず fail-open したもの。`AUTO_EVENTS_LOG` に絶対パスを渡して正常な結果を得た。現状の唯一の呼び出し元 (`/auto` Step 5) は main repo から実行するため実害はないが、fail-open の出力が「候補ゼロ」と見分けられない点は、呼び出し元が増える #1172 (`when=` ゲートが `opportunistic-search.sh` から本スクリプトを消費する) の実装時に考慮が要る。CWD 依存の main-repo 限定パス問題という点では #1141 と同型
+- **観察 2: 並行セッションのイベント誤帰属を実データで確認**: 本セッションの fact JSON に #984 / #995 / #1009 など、本バッチが処理していない Issue が `phase: verify, complete` として 6 件含まれていた。これは別セッションの `/auto 1168` 完了時の observation dispatch による `/verify` が、セッション横断のポインタ `.tmp/auto-session-current` を経由して**本セッションの `session_id` を拾った**ためとみられる。#1075 (in-session `/verify` の event が並行セッションの session_id に誤帰属する) が記述する現象そのもので、新規の実測データにあたる
+
+### Improvement Proposals
+- N/A — 観察 1 は #1172 のスコープ内で扱うべき事項かつ #1141 と同型、観察 2 は #1075 が既に追跡しており、いずれも新規起票は不要
+
