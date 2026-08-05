@@ -67,6 +67,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-05 05:25 UTC: manual-recovery-review-rerun
+
+### Context
+- Issue #1168, phase: review
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 1
+
+### Diagnosis
+- cause: background-test-wait
+- run-review.sh exited as silent no-op twice while waiting on a backgrounded bats run; parent session applied the MUST/SHOULD fixes left uncommitted in the review worktree, then committed, pushed, and posted the Response Summary manually
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-08-04 10:24 UTC: manual-recovery-merge-rerun
 
 ### Context
