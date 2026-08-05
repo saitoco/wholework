@@ -164,26 +164,43 @@ No new comments since last phase.
 - **設計時の不確実性「mode を決定的に取れるか」**: `emit_event` の全 kv を洗い出した結果、batch/single を区別する既存イベントは存在しないことを確認した。`auto-checkpoint.sh write_batch` は List mode 専用で Count mode が通らないため bash 側の決定的フックにならない、という点まで確認したうえで session metadata 宣言方式を採った
 - **未解決のまま残した点**: イベント由来フォールバックが XL sub-issue fan-out を `batch` と誤判定する。`sub_start` は batch 経路と XL 経路の双方で `run-auto-sub.sh` から emit されるため、イベントだけでは区別する信号がない。宣言が第一優先なので新規 session では発生せず、宣言の無い過去 session に限る既知の劣化として Uncertainty 節に記録した
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — 実装は Spec の Implementation Steps 1-8 をそのままの順序・内容で実装した
+
+### Design Gaps/Ambiguities
+
+- N/A — Spec の設計判断 (marker コメント方式、加算的フィールド追加、2段ラダー) はいずれも実装時に迷いなく適用できた
+
+### Rework
+
+- N/A
+
+### Verification notes
+
+- 実装後 `bats tests/run-fact-matching.bats` を単体実行して 26/26 PASS を確認し、続けて `skills/auto/SKILL.md` の変更が behavioral change 検出 (テスト参照チェック) に該当したためフルスイート `bats tests/` を実行し 1402/1402 PASS を確認した
+- `scripts/validate-skill-syntax.py` と `scripts/check-forbidden-expressions.sh` はいずれも新規エラーなし (`skills/auto/SKILL.md` の既存 warning `unknown field: 'loop-paths-fallback'` は本 Issue の変更と無関係の既存項目)
+- `scripts/check-translation-sync.sh` で `docs/structure.md` / `docs/ja/structure.md` が IN_SYNC であることを確認した (他ファイルの MISSING_JA/OUTDATED は本 Issue のスコープ外の既存項目)
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- operate route の判別は marker コメント (`type=execution-log` / `type=execution-plan`) 参照方式。`reconcile-phase-state.sh` の `_operate_signal_ts()` と同一クエリを使い、freshness gate だけ session スコープ (この run の最初のイベント時刻) に読み替える
-- `route` は 4 値目 `operate` を追加する加算的変更。`recovery_tiers` も `anomalies.recovery` の件数を残したまま並置する。受け入れ条件 4 の後方互換要求を満たすため、既存フィールドの意味は一切変えない
-- `mode` は top-level フィールドで、session metadata 宣言 → イベント由来推定 → `unknown` の 3 段ラダー。判定は **`--issue` フィルタ適用前**の全 session イベントに対して行う (これが受け入れ条件 3 の中核)
-- `fact_tokens` に追加するのは `tier N` (各 tier) と `batch` (mode=batch のときのみ)。`operate route` は既存の `(.route + " route")` 式が自動生成する
+- Spec の Implementation Steps 1-8 を設計どおりの順序で実装。逸脱・設計判断の再検討は発生しなかった (`## Code Retrospective` 参照)
+- Pre-merge AC のうち rubric 系 5 件と `bats tests/run-fact-matching.bats` の command 系 1 件はこの phase 内でチェック済み。`github_check "gh pr checks" "Run bats tests"` は CI 実行後でないと確認できないため未チェックのまま残した
+- `skills/auto/SKILL.md` の変更が既存の behavioral change 検出条件 (直接対応テスト以外からの参照) に該当したため、`bats tests/run-fact-matching.bats` の単体実行に加えてフルスイート `bats tests/` (1402件) を実行して回帰がないことを確認した
 
 ### Deferred Items
 
-- `--no-github` 実行時は operate 判別をスキップし `route` は `patch` に留まる。bats の hermetic 実行は全て `--no-github` なので、operate テストだけ `gh` mock を使って非 `--no-github` で回す必要がある
-- イベント由来フォールバックによる XL fan-out の `batch` 誤判定は修正しない。`modules/run-fact-matching.md` に既知の劣化として記載するに留める
-- `modules/phase-state.md` の operate シグネチャを shared helper に切り出す案は本 Issue のスコープ外 (消費側が 3 つになった時点で再評価)
+- `--no-github` 実行時は operate 判別をスキップし `route` は `patch` に留まる (spec Uncertainty 記載どおり、設計上の既知の制約であり本 Issue では対応しない)
+- イベント由来フォールバックによる XL fan-out の `batch` 誤判定は修正しない (spec Uncertainty 記載どおり)
+- Post-merge AC (operate route での `/auto` 完走確認) は `/verify` で検証する
 
 ### Notes for Next Phase
 
-- `emit_event()` は kv 値をすべて文字列で書くため、`recovery` イベントの `tier` は `"2"` のような文字列。`recovery_tiers` を整数配列にするには `tonumber?` が必須で、`?` を落とすと破損値で jq 全体が失敗する
-- 既存テスト `collect-run-facts: missing events log yields empty issues array` は出力を完全一致で assert している。`mode` 追加で必ず落ちるので、実装と同時に `{"session_id":"sess1","mode":"unknown","issues":[]}` へ更新する
-- operate テストで `--no-github` を外すと `$SCRIPT_DIR/get-issue-size.sh` が呼ばれる。bats setup が `WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` を export しているため、`$MOCK_DIR/get-issue-size.sh` の mock 追加が必要
-- `skills/auto/SKILL.md` を触るので `scripts/validate-skill-syntax.py` の制約 (本文に半角感嘆符・triple backtick を書かない、frontmatter に YAML block scalar を使わない) に注意
-- `docs/structure.md` を変更するため `docs/ja/structure.md` を同一 PR で同期する (`docs/translation-workflow.md` の Sync Procedure)
+- `github_check "gh pr checks" "Run bats tests"` の Pre-merge AC は CI 結果待ちのため未チェック。`/review` で CI green を確認したうえでチェックすること
+- Post-merge AC は operate route の `/auto` を実際に完走させ、`route: operate` と `fact_tokens` の `operate route` トークンが出力されることを確認する必要がある (hermetic テストでは `--no-github` のため代替不可)
+- `docs/guide/index.md` (OUTDATED) と `docs/guide/autonomy.md` (MISSING_JA) の翻訳ギャップは `scripts/check-translation-sync.sh` で検出済みだが、本 Issue のスコープ外の既存項目 (本 Issue が変更した `docs/structure.md` とは無関係)
