@@ -205,13 +205,12 @@ AC1 は「`/issue` の AC 生成手順・`modules/verify-patterns.md`・`/verify
 - N/A
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Implementation Steps 1-8 を Spec 記載どおりの順序・挿入位置で実装した。設計からの逸脱なし
-- `check-skill-change-observation-ac.sh` の usage error ケースは Spec の「引数なし / 存在しないパス」を bats の別テストとして分割実装した (単一ケースの記述を 2 テストに展開しただけで、判定ロジックや exit code の仕様は変更していない)
-- Pre-merge AC 4 件 (rubric 3 件 + command 1 件) はすべて実装内容・Spec の既存記述と照合して PASS 判定し、Issue のチェックボックスを更新済み
+- PR #1173 は mergeable=true (clean, CI success, review approved) であったため、コンフリクト解消・追加テスト実行は不要でそのまま squash merge を実行した
+- pre-merge AC gate は 4 件全てチェック済みで `unchecked_count=0` を確認し、ゲート通過を確認した上でマージした
 
 ### Deferred Items
 
