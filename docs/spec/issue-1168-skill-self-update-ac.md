@@ -168,4 +168,46 @@ AC1 は「`/issue` の AC 生成手順・`modules/verify-patterns.md`・`/verify
 
 ### 自己適用
 
-本 Issue 自身が `skills/issue/SKILL.md` と `skills/verify/SKILL.md` を変更するため、post-merge observation AC には本 Spec で導入する `session=next` を自己適用した。Issue 本文の AC も同じ形に更新する。
+本 Issue 自身が `skills/issue/SKILL.md` と `skills/verify/SKILL.md` を変更するため、post-merge observation AC には本 Spec で導入する `session=next` を自己適用した。Issue 本文の AC も同じ形に更新済み。
+
+## spec retrospective
+
+### Minor observations
+
+- Issue のコメント (issuecomment-5186873804) は `phase/issue` ラベル付与時刻より 16 分早く投稿されており、`modules/l0-surfaces.md` の cutoff ルールでは consume 対象外になる。しかし内容は方針評価を反転させる一次データだった。cutoff は「前フェーズ以降の追加入力」を拾う設計だが、**同一フェーズ内で後から投稿された観測データ**を落とす経路がある。cross-phase marker exception (`type=verify-fail` / `type=preview-ac-unverified`) と同種の救済が、人手の一次データ追記コメントにも要りうる
+- `/issue` の AC 分類手順は「New Issue Creation → Step 4」に集約され、既存 Issue 精錬経路 (Step 7) はそこを参照する構造になっている。この参照関係のおかげで、AC 生成系のサブステップ追加は 1 箇所で両経路に効く。今回のように「どちらの経路にも効かせたい」変更では、Step 7 を触らないのが正しい
+
+### Judgment rationale
+
+- **方針決定の決め手はコメントの実測データだった** — Issue 本文だけを読むと C (セッション同一性を機械判定) と D (skill ハッシュを実行事実へ) が「精度が高い」候補に見える。しかし「skill キャッシュ境界が `/auto` 実行単位ではなく会話セッション単位」という実測により、両者が依拠する `AUTO_SESSION_ID` / `skill_versions` がいずれも検知漏れを持つことが確定した。Issue 本文の候補列挙をそのまま評価軸にしていたら誤った方針を選んでいた
+- **B を自然言語の言い回し規約ではなく HTML 属性 `session=next` に落とした** — Issue 本文の B は「『次回以降の』のように条件文に明示する規約」を想定していたが、AC3 が求める機械検証 (2 経路テスト) を自然言語パターンで実装すると日本語固定になり、Skills の language-agnostic 方針 (CLAUDE.md) に反する。既存の `keyword=` / `config=` と同じ属性形式に揃えることで、B の意図を保ちながら A の機械検出を成立させた
+- **`session=next` を dispatch gate にしない判断** — `keyword=` / `config=` は同じ属性位置にありながら `opportunistic-search.sh` のマッチを絞る gate である。同じ形をしていて挙動が違うのは混乱の元なので、`modules/observation-trigger.md` に「gate ではない」旨を明記する実装ステップを立てた。gate 化しない理由は、セッション境界が機械判定できない以上、gate が恒久的に false になり AC が永久に dispatch されなくなるため
+- **`modules/verify-patterns.md` を触らない判断** — AC1 が 3 つの記述先を「いずれか (または複数)」と許容していたため、eager-load コスト方針 (`docs/environment-adaptation.md`) を優先して 2 箇所に絞った。AC の許容幅が広い場合、プロジェクトの既存アーキテクチャ方針が実質的な選択基準になる
+
+### Uncertainty resolution
+
+- **`session=next` 追加が既存の observation dispatch を壊さないか** — `scripts/opportunistic-search.sh:139` の `grep "event=${EVENT_NAME}"` が部分一致であることをコード確認し、`event=auto-run session=next` でも既存マッチが維持されることを確定させた。属性の並び順にも依存しない
+- **SKIPPED へ倒すことの実効果** — `skills/verify/SKILL.md` Step 11 を読み、(a) 「PASS または SKIPPED のみ」と (d) 「UNCERTAIN あり」の差が「手動再検証の催促の有無」であることを確認した。Issue の close 判定は observation AC が unchecked のまま変わらないため、`phase/verify` 滞留件数そのものは減らない。Spec の Notes に「過大評価しないこと」として明記した
+- **`.claude/settings.json.template` への登録要否** — `Bash(${WHOLEWORK_ROOT}/scripts/*.sh *)` のワイルドカード行が既にあり、同種の `check-pre-merge-ac.sh` / `check-session-findings-disposition.sh` も個別登録されていないことを grep で確認し、変更不要と判定した (未検証の「変更不要」判定を避けるルールに従った)
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 方針 A + B を採用し、B は機械可読属性 `session=next` として実装する。C はセッション境界の機械判定を捨てて Step 8c の判定分岐のみ部分採用、D は不採用 (根拠は `## Notes` の表)
+- 制約の記述先は `/issue` Step 4 と `/verify` Step 8c の 2 箇所。`modules/verify-patterns.md` は eager-load コスト方針により対象外
+- `session=next` は dispatch gate にしない。`opportunistic-search.sh` は無変更
+
+### Deferred Items
+
+- #1157 の run-fact reconciliation への接続 (方針 D) は不採用。`session=next` が運用実績を持ってから再評価する
+- #1118 が扱う route / mode / recovery tier 依存の dispatch 抑止は本 Issue のスコープ外
+
+### Notes for Next Phase
+
+- `skills/issue/SKILL.md` に新スクリプト参照を追加するため、frontmatter `allowed-tools` への `${CLAUDE_PLUGIN_ROOT}/scripts/check-skill-change-observation-ac.sh:*` 追加を忘れないこと (`scripts/check-allowed-tools.sh` が検出する)
+- SKILL.md 本文の MUST 制約に注意: 半角 `!` 禁止 / Step 番号は整数のみ / 本文にトリプルバッククォートを直接置かない
+- 新スクリプトは bash 3.2+ 互換で書くこと (`mapfile` / 連想配列 / `${var^^}` 禁止 — macOS system bash で落ちる)
+- `docs/structure.md` を変更するため `docs/ja/structure.md` の翻訳同期が必須 (`docs/translation-workflow.md`)
+- Pre-merge AC 4 件のうち 3 件が `rubric` である。実装後に rubric の判定材料 (実装された手順文・テストの存在・不採用根拠の記載) が Spec と実ファイルの両方から読み取れる状態にしておくこと
