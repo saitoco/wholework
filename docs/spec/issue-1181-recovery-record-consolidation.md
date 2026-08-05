@@ -156,22 +156,41 @@ No new comments since last phase.
 - なし (手戻りは発生しなかった)
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Spec のテスト削除/更新リストに含まれていなかった 2 件 (`resolves the main worktree root...`、`open PR skips spec write...`) について、前者は Spec-write assertion のみ除去して worktree-root 解決の検証価値を残し、後者は撤去対象の仕組みそのものを検証していたため削除する判断をした
-- `_write_manual_recovery_to_recoveries_log()` 直前のコメントが削除済み `_write_manual_recovery_to_spec()` を参照していたため、依存関係の説明を `_search_recoveries_issue` / `_find_known_recoveries_issue` 基準に書き換えた
-- ドキュメント更新は Spec 記載の 6 ファイル (en/ja 込み) すべてに適用し、`orchestration-fallbacks.md` のアンカーは維持したまま Operational Notes 3 小節を「recoveries.md-only recording」の記述へ統一した
+- MUST 指摘 0 件、SHOULD 3 件を修正 (skills/auto/SKILL.md の Tier2/Tier3 記録タイミングの自己矛盾解消、skills/verify/SKILL.md の判定基準へのリテラル明記、tests/run-auto-sub.bats への Tier2 #984 regression guard 復元)。CONSIDER 4 件は Skip と判断 (機能的な問題なし、または既存決定の再確認で十分)
+- Base branch conflict pre-check (`git merge-tree`) は `changed in both` 0 件で競合なしを確認済み
+- `--non-interactive` (headless `claude -p` = fork context) のため Workflow tool は使用せず、静的 Task fan-out (review-spec + review-bug×2、`run_in_background: false`) で実行した (`capabilities.workflow: true` だが再起動保証なしのため fallback)
 
 ### Deferred Items
 
+- AC 9 (`bash scripts/check-translation-sync.sh`) は対応する CI job が無いため safe mode で UNCERTAIN のまま。Pre-merge checkbox は unchecked のまま残る — `/merge` 前に `/verify` (full mode) での再確認、または CI job 追加が必要
 - #1094 (Spec を記録先に追加する逆方向の提案) の close 判断は本 Issue のスコープ外のまま。`/verify` 以降の判断に委ねる
 - Tier 2 の bash 経路での recovery event 記録は #1098 の scope に委ねる (spec フェーズの決定を継承)
-- `scripts/test-skills.sh` が bats を実行しない件への恒久対処は本 Issue では扱わない (spec フェーズの決定を継承)
 
 ### Notes for Next Phase
 
+- 修正後の再チェック: `bats --jobs 18 tests/run-auto-sub.bats` 80/80 PASS、`python3 scripts/validate-skill-syntax.py skills/` 0 error (既知の無関係な warning 1 件のみ)。新規 MUST 指摘なし
 - Post-merge AC (external kill 発生後の recoveries.md 記録確認) は post-merge observation のため `/verify` で確認すること
-- 全 80 件の bats テストが PASS、`test-skills.sh` / `check-translation-sync.sh` も PASS 済み。`docs/spec/` 配下の既存ファイル (本 Spec を除く) は変更していない
 - `modules/orchestration-fallbacks.md` の 38 件の既存ログエントリが参照する `#manual-recovery-spec-write` アンカーは維持されている (改名なし)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec の Changed Files セクションが列挙した個別の参照文更新 2 件 (skills/verify/SKILL.md の関数名言及削除、modules/orchestration-fallbacks.md:548 付近の参照文更新) が実装で行われず、かつその判断が Code Retrospective に記録されていなかった。実装自体は妥当 (関数名の履歴的言及は old Spec エントリの追跡性に資する、548 行付近は記録先を明示していないため変更不要) だったが、Spec が明示した変更項目からの逸脱が記録されないまま review まで到達した。review-spec エージェントが両方を CONSIDER として検出し、Skip 判断とその理由を Response Summary に記録した。次回以降、Spec の Changed Files に列挙した項目のうち実装で見送ったものは、Code Retrospective の Deviations from Design に一言残す運用を徹底すると review 指摘を未然に防げる
+
+### Recurring issues
+
+- ドキュメント更新 (skills/auto/SKILL.md Source 1 note、skills/verify/SKILL.md 判定基準) の両方で「新記録先への文言更新はしたが、複数の記録経路 (Tier 2 と Tier 3、または新旧 SSoT) を 1 文にまとめた結果、タイミングや判定基準の具体性が失われる」という同型の問題が発生した。記録先の集約 (このような「N 箇所 → 1 箇所」のドキュメント更新) では、経路ごとに文を分けて記述する方が正確性を保ちやすいという教訓が得られた
+- テスト削除に伴う regression guard の巻き添え除去 (`tier2 recovery ... issue #984` テスト) は、Spec のテスト削除リストが「対象機能のテスト」単位で列挙されていたため、同じテストが別の regression (#984) も同時にカバーしていたことが見落とされた。Spec のテスト削除リストに「このテストが検証している全ての regression/Issue 番号」を明記する運用があれば、削除前に気づけた可能性がある
+
+### Acceptance criteria verification difficulty
+
+- AC 9 (`bash scripts/check-translation-sync.sh`) は CI に対応する job が存在せず、safe mode の `/review` では UNCERTAIN のまま Pre-merge checkbox が unchecked で残った。PR 本文には手動実行結果 (IN_SYNC) が記載されていたが、`/review` はそれを機械的に確認する手段を持たない。`check-translation-sync.sh` を CI に組み込むか、対応する `github_check` 経路を用意すれば、この AC も safe mode で自動 PASS 判定できるようになる (本 Issue のスコープ外、フォローアップ候補として記録のみ)
+
+### Improvement Proposals
+
+- N/A — 上記の観察はいずれも本 Issue の review フェーズ固有の軽微な教訓であり、独立した Issue 化が必要な規模ではないと判断した
