@@ -139,26 +139,39 @@ No new comments since last phase.
 - **`## Auto Retrospective` 概念ごと消える誤解のリスク**: 同セクションは親 `/auto` Step 4a と `modules/retro-proposals.md` も使う。撤去対象が run-auto-sub.sh の bash 経路のみであることを Overview と Notes の両方に明記して解決した
 - **`docs/workflow.md` の変更要否**: 当該箇所は記録先を明示していないため厳密には矛盾しないが、AC 6 が同ファイルを名指ししている。「記録先を明示する」加筆に留めることで、rubric の検証可能性と最小変更を両立させた
 
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の「削除する 12 件 + tier2-review-phase 1 件」のテストリストには含まれていなかった 2 件を追加で判断が必要になった。`tier2 recovery: writes Auto Retrospective to spec file` 系の削除リストには載っていなかったが、`manual recovery: resolves the main worktree root instead of a worktree-local toplevel` テストが Spec 書き込みの assertion (`grep -q "Manual recovery" "$MAIN_ROOT/docs/spec/..."`) を含んでいたため、その 1 行のみ削除して worktree-root 解決という本来のテスト価値 (recoveries.md への書き込みと `-C $MAIN_ROOT` の呼び出し) は維持した
+- 同様に `manual recovery: open PR skips spec write but still records recoveries log, deferred record, and events` テストも削除リストに含まれていなかったが、その assertion (`deferred-recovery-records-42.md` の存在、`recovery_record_deferred` イベント) が撤去対象の仕組みそのものを検証していたため削除した。残る価値 (open PR の有無に関わらず recoveries.md と `manual_intervention` イベントが記録される) は `manual recovery: appends canonical H2 entry to orchestration-recoveries.md` と `manual recovery: emits manual_intervention event with intervention_type` で既にカバーされている
+- `_write_manual_recovery_to_recoveries_log()` 直前のコメントが「`_write_manual_recovery_to_spec` の直後に定義」という削除済み関数への参照を含んでいたため、依存関係の説明を `_search_recoveries_issue` / `_find_known_recoveries_issue` を根拠にする記述へ書き換えた (実装ステップには明記されていなかった軽微な追随修正)
+
+### Design Gaps/Ambiguities
+
+- Spec の bats 削除/更新リストは網羅的だったが、Spec 書き込みを assertion の一部にのみ含むテスト (worktree-root 解決テストなど) は「削除」でも「更新」でもなく「該当行のみ除去」という第三の対応が必要だった。次回同様の Spec-write 撤去系 Issue では、削除/更新リストに加えて「assertion の一部にのみ関連する既存テスト」の扱いも明記すると実装判断のブレを減らせる
+
+### Rework
+
+- なし (手戻りは発生しなかった)
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 撤去対象を「run-auto-sub.sh の bash 経路による Spec 書き込み」に限定し、`## Auto Retrospective` セクションそのもの (親 `/auto` Step 4a / `modules/retro-proposals.md` が使用) は温存する
-- Tier 2 / Tier 3 の Spec 書き込みも撤去対象に含める。recoveries.md 側の記録経路が両者とも既存であることを確認済み
-- `modules/orchestration-fallbacks.md` のアンカー `#manual-recovery-spec-write` は改名せず本文のみ更新する (既存 38 ログエントリのリンク保護)
-- `--cause` / `--diagnosis` は存置 (#1179 の決着に従う)
-- bats の pre-merge AC を `bash scripts/test-skills.sh` から分離し、`bats --jobs $(nproc 2>/dev/null || sysctl -n hw.logicalcpu) tests/run-auto-sub.bats` を独立 AC 化した
+- Spec のテスト削除/更新リストに含まれていなかった 2 件 (`resolves the main worktree root...`、`open PR skips spec write...`) について、前者は Spec-write assertion のみ除去して worktree-root 解決の検証価値を残し、後者は撤去対象の仕組みそのものを検証していたため削除する判断をした
+- `_write_manual_recovery_to_recoveries_log()` 直前のコメントが削除済み `_write_manual_recovery_to_spec()` を参照していたため、依存関係の説明を `_search_recoveries_issue` / `_find_known_recoveries_issue` 基準に書き換えた
+- ドキュメント更新は Spec 記載の 6 ファイル (en/ja 込み) すべてに適用し、`orchestration-fallbacks.md` のアンカーは維持したまま Operational Notes 3 小節を「recoveries.md-only recording」の記述へ統一した
 
 ### Deferred Items
 
-- #1094 (Spec を記録先に追加する逆方向の提案、icebox) の close 判断は実装ステップに含めない。L0 操作であり本 Issue の AC 外
-- Tier 2 の bash 経路での recovery event 記録は #1098 の scope に委ねる
-- `scripts/test-skills.sh` が bats を実行しない件への恒久対処 (スクリプト側に bats を追加するか改名するか) は本 Issue では扱わない
+- #1094 (Spec を記録先に追加する逆方向の提案) の close 判断は本 Issue のスコープ外のまま。`/verify` 以降の判断に委ねる
+- Tier 2 の bash 経路での recovery event 記録は #1098 の scope に委ねる (spec フェーズの決定を継承)
+- `scripts/test-skills.sh` が bats を実行しない件への恒久対処は本 Issue では扱わない (spec フェーズの決定を継承)
 
 ### Notes for Next Phase
 
-- **最重要**: 実装ステップ 2 の `_validate_recovery_args` 移設を飛ばすと `validate: --write-manual-recovery rejects ...` 系 6 テストが全滅する。関数削除と同時に必ず実施すること
-- `docs/spec/` 配下の既存ファイル (本 Spec を除く) には一切変更を加えないこと。AC 5 が「過去の記録を破壊しない」を要求している
-- `docs/tech.md` / `docs/ja/tech.md`、`docs/workflow.md` / `docs/ja/workflow.md` は en/ja を同一コミットに含めること (`check-translation-sync.sh` はタイムスタンプ比較)
-- 更新対象 bats テストの recoveries.md フィクスチャには `<!-- Log entries appear below, newest first. -->` マーカー行が必須 (無いと Python 側の書き込みが無言でスキップされる)
+- Post-merge AC (external kill 発生後の recoveries.md 記録確認) は post-merge observation のため `/verify` で確認すること
+- 全 80 件の bats テストが PASS、`test-skills.sh` / `check-translation-sync.sh` も PASS 済み。`docs/spec/` 配下の既存ファイル (本 Spec を除く) は変更していない
+- `modules/orchestration-fallbacks.md` の 38 件の既存ログエントリが参照する `#manual-recovery-spec-write` アンカーは維持されている (改名なし)
