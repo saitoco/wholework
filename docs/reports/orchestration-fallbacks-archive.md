@@ -16,12 +16,13 @@ This file archives entries and patterns removed from `modules/orchestration-fall
 
 ## Archival Criterion
 
-An entry or pattern is archived here only when **both** axes are zero, per `modules/orchestration-fallbacks.md`'s `### Entry Retention Criterion` (Operational Notes):
+An entry or pattern is archived here only when **all three** axes are zero, per `modules/orchestration-fallbacks.md`'s `### Entry Retention Criterion` (Operational Notes):
 
 - **Axis A — firing history**: zero occurrences recorded in `docs/reports/orchestration-recoveries.md`
-- **Axis B — live reference**: no reference from outside `docs/spec/` / `docs/sessions/` (a script's pointer comment, a detector's `IMPROVEMENT_HINT`, a SKILL.md, a steering doc, or an implemented handler)
+- **Axis B — live reference**: no reference from outside `docs/spec/`, `docs/sessions/`, `tests/fixtures/` (synthetic test data), or this archive file itself (a script's pointer comment that guards implemented fallback logic — not a placeholder annotated `(not yet implemented)` with no handler — a detector's `IMPROVEMENT_HINT`, a SKILL.md, a steering doc, or an implemented handler)
+- **Axis C — procedure applicability**: the recovery procedure itself no longer applies to any scenario reachable in current code
 
-An entry with either axis non-zero stays in the live catalog, even with zero firings — a live reference means deleting it would break a working pointer or leave a procedure orphaned.
+An entry with any axis non-zero stays in the live catalog, even with zero firings — a live reference means deleting it would break a working pointer or leave a procedure orphaned, and a still-applicable procedure means the manual recovery steps remain usable even without an anchor pointer.
 
 ## Restoration Procedure
 
@@ -31,7 +32,7 @@ If the same symptom resurfaces after archival:
 2. Re-point any pointer comments (`# See modules/orchestration-fallbacks.md#<anchor>`) that were redirected to this archive file back to the restored live anchor
 3. Note the restoration in the triggering Issue's Spec retrospective, referencing this archive entry as prior art
 
-## Archived catalog entries
+**Archived catalog entries** — full 5-section structure preserved; the H2 anchors below mirror the live catalog's own H2-anchor / H3-subsection schema:
 
 ## gh-pr-list-head-glob
 
@@ -57,9 +58,9 @@ If the same symptom resurfaces after archival:
 - Cataloged here to prevent recurrence; the fix is already applied in affected scripts
 
 ### Archival Note
-- 退避理由: 発火実績ゼロ、live 参照元は `scripts/apply-fallback.sh` の未実装コメント (`not yet implemented`) のみで実装済みハンドラなし
-- 退避日: 2026-08-06
-- 退避 Issue: #1180
+- Reason for archival: zero firing history; the only live reference was an unimplemented-anchor pointer comment (`not yet implemented`) in `scripts/apply-fallback.sh`, with no corresponding handler
+- Archived on: 2026-08-06
+- Archival Issue: #1180
 
 ---
 
@@ -91,9 +92,9 @@ If the same symptom resurfaces after archival:
 - `scripts/wait-ci-checks.sh` already handles the wait logic; re-trigger is the missing piece
 
 ### Archival Note
-- 退避理由: 発火実績ゼロ、live 参照元なし (実装未着手のまま参照も存在しない)
-- 退避日: 2026-08-06
-- 退避 Issue: #1180
+- Reason for archival: zero firing history, no live reference (never implemented, and never referenced either)
+- Archived on: 2026-08-06
+- Archival Issue: #1180
 
 ---
 
@@ -101,21 +102,21 @@ If the same symptom resurfaces after archival:
 
 ### watchdog-kill
 
-- **trigger 文字列**: `watchdog: kill and state not reached`
-- **失効経緯**: この trigger 文字列を発行するスクリプトが現行コードに存在しない。現行の `scripts/claude-watchdog.sh` (`:78,98`) は `watchdog: no output for <N>s, killing process` を発行しており、文字列が一致しないため `scripts/detect-wrapper-anomaly.sh` の `watchdog-kill` 分岐は構造的に到達不能だった（退役前から実質的に不在）
-- **復帰時に使うべき現行シグナル**: `scripts/claude-watchdog.sh` が出す `watchdog: no output for <N>s, killing process`。汎用 watchdog kill (json mode 以外) の Tier 2 検出を復旧する場合は、この文字列に合わせて trigger を再実装すること
-- **退避理由**: 発火実績ゼロかつ trigger 文字列の live 発行元が存在しない (到達不能コード)
-- **退避日**: 2026-08-06
-- **退避 Issue**: #1180
+- **Trigger string**: `watchdog: kill and state not reached`
+- **How it went dead**: no script in current code emits this trigger string. The current `scripts/claude-watchdog.sh` (`:78,98`) emits `watchdog: no output for <N>s, killing process` instead, so the string never matched — the `watchdog-kill` branch in `scripts/detect-wrapper-anomaly.sh` was structurally unreachable well before retirement
+- **Current signal to use on restoration**: `scripts/claude-watchdog.sh`'s `watchdog: no output for <N>s, killing process`. To restore generic (non-json-mode) watchdog-kill Tier 2 detection, re-implement the trigger against this current string
+- **Reason for retirement**: zero firing history and no live emitter of the trigger string (unreachable code)
+- **Retired on**: 2026-08-06
+- **Retirement Issue**: #1180
 
 ---
 
 ### dirty-working-tree (detector pattern)
 
-- **trigger 文字列**: `VERIFY_FAILED` AND `uncommitted` の共起
-- **失効経緯**: AND 条件の `VERIFY_FAILED` を発行する `run-verify.sh` が #485 で削除されて以降、この文字列を発行する箇所がどこにも存在しない。#485 の retro で既知の dead pattern として言及済み
-- **復帰時に使うべき現行シグナル**: `skills/verify/SKILL.md` Step 1 / `scripts/check-verify-dirty.sh` が出す `Cannot run verify because there are uncommitted changes`
-- **注意**: これは検出器側パターンのみの退役であり、`modules/orchestration-fallbacks.md` の `## dirty-working-tree` カタログエントリ (手順そのもの) は現役のまま残置されている。手順は `check-verify-dirty.sh` 経由で今も有効なシナリオに対応するため
-- **退避理由**: 発火実績ゼロかつ trigger 文字列の live 発行元が存在しない (到達不能コード)
-- **退避日**: 2026-08-06
-- **退避 Issue**: #1180
+- **Trigger string**: co-occurrence of `VERIFY_FAILED` AND `uncommitted`
+- **How it went dead**: the AND condition's `VERIFY_FAILED` string has not been emitted by anything since `run-verify.sh` was removed in #485; already noted as a dead pattern in the #485 retrospective
+- **Current signal to use on restoration**: `/verify` outputs `Cannot run verify because there are uncommitted changes` (`skills/verify/SKILL.md` Step 1, triggered by `scripts/check-verify-dirty.sh` exit 1)
+- **Note**: only the detector-side pattern was retired here. The `## dirty-working-tree` catalog entry in `modules/orchestration-fallbacks.md` (the procedure itself) remains live, since the procedure still applies to a scenario surfaced directly via `check-verify-dirty.sh`
+- **Reason for retirement**: zero firing history and no live emitter of the trigger string (unreachable code)
+- **Retired on**: 2026-08-06
+- **Retirement Issue**: #1180
