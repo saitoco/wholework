@@ -375,6 +375,8 @@ Size L につき上限5件のうち、2件を自動解決 (残りは AC 文言�
 
 - login: `saito` / authorAssociation: `MEMBER` / trust tier: first-class / 要旨: `/issue 1157 --non-interactive` の Issue Retrospective。Triage 判定 (Type Feature / Size L / Value 5) の根拠、自動解決した曖昧点 2 件 (候補提示の掲示形式は `Recommend:` ターミナル出力慣行を踏襲 / 遡及適用は #1158 が担当し本 Issue は前向き検知に限定)、対応方針 A/B/C の確定を意図的に `/spec` へ委譲した設計判断、Background の事実主張検証済みの記録。sub-issue 分割評価は非対話モードのためスキップ済み / URL: https://github.com/saitoco/wholework/issues/1157#issuecomment-5183192598
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1157#issuecomment-5184331273
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1157#issuecomment-5185271809
 ## Verify Retrospective
 
 ### Phase-by-Phase Review
