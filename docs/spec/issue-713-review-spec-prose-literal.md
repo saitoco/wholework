@@ -60,6 +60,16 @@
 
 - saito / MEMBER / first-class / Issue Retrospective: 曖昧ポイント 3 件自動解決 (rubric 言語=英語, AC3 verify command を section_contains へ変更, AC1 大文字 L 統一) / [#issuecomment-4759304155](https://github.com/saitoco/wholework/issues/713#issuecomment-4759304155)
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/713#issuecomment-4759406320
+- saito / MEMBER / first-class / observation event `pr-review-full` detected. Run `/verify 713` to verify the con / https://github.com/saitoco/wholework/issues/713#issuecomment-4814581736
+- saito / MEMBER / first-class / observation event `pr-review-full` detected. Run `/verify 713` to verify the con / https://github.com/saitoco/wholework/issues/713#issuecomment-4817696717
+- saito / MEMBER / first-class / observation event `pr-review-full` detected. Run `/verify 713` to verify the con / https://github.com/saitoco/wholework/issues/713#issuecomment-4818506202
+- saito / MEMBER / first-class / observation event `pr-review-full` detected. Run `/verify 713` to verify the con / https://github.com/saitoco/wholework/issues/713#issuecomment-4818509202
+- saito / MEMBER / first-class / observation event `pr-review-full` detected. Run `/verify 713` to verify the con / https://github.com/saitoco/wholework/issues/713#issuecomment-4820673345
+- saito / MEMBER / first-class / observation event `pr-review-full` detected. Run `/verify 713` to verify the con / https://github.com/saitoco/wholework/issues/713#issuecomment-4824170936
+- saito / MEMBER / first-class / observation event `pr-review-full` detected. Run `/verify 713` to verify the con / https://github.com/saitoco/wholework/issues/713#issuecomment-4824657779
+- saito / MEMBER / first-class / observation event `pr-review-full` detected. Run `/verify 713` to verify the con / https://github.com/saitoco/wholework/issues/713#issuecomment-4826677685
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=7 / https://github.com/saitoco/wholework/issues/713#issuecomment-5193877332
 ## Notes
 
 **Auto-resolved ambiguity points (from Issue retrospective comment):**
