@@ -139,26 +139,58 @@ No new comments since last phase.
 - **`## Auto Retrospective` 概念ごと消える誤解のリスク**: 同セクションは親 `/auto` Step 4a と `modules/retro-proposals.md` も使う。撤去対象が run-auto-sub.sh の bash 経路のみであることを Overview と Notes の両方に明記して解決した
 - **`docs/workflow.md` の変更要否**: 当該箇所は記録先を明示していないため厳密には矛盾しないが、AC 6 が同ファイルを名指ししている。「記録先を明示する」加筆に留めることで、rubric の検証可能性と最小変更を両立させた
 
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の「削除する 12 件 + tier2-review-phase 1 件」のテストリストには含まれていなかった 2 件を追加で判断が必要になった。`tier2 recovery: writes Auto Retrospective to spec file` 系の削除リストには載っていなかったが、`manual recovery: resolves the main worktree root instead of a worktree-local toplevel` テストが Spec 書き込みの assertion (`grep -q "Manual recovery" "$MAIN_ROOT/docs/spec/..."`) を含んでいたため、その 1 行のみ削除して worktree-root 解決という本来のテスト価値 (recoveries.md への書き込みと `-C $MAIN_ROOT` の呼び出し) は維持した
+- 同様に `manual recovery: open PR skips spec write but still records recoveries log, deferred record, and events` テストも削除リストに含まれていなかったが、その assertion (`deferred-recovery-records-42.md` の存在、`recovery_record_deferred` イベント) が撤去対象の仕組みそのものを検証していたため削除した。残る価値 (open PR の有無に関わらず recoveries.md と `manual_intervention` イベントが記録される) は `manual recovery: appends canonical H2 entry to orchestration-recoveries.md` と `manual recovery: emits manual_intervention event with intervention_type` で既にカバーされている
+- `_write_manual_recovery_to_recoveries_log()` 直前のコメントが「`_write_manual_recovery_to_spec` の直後に定義」という削除済み関数への参照を含んでいたため、依存関係の説明を `_search_recoveries_issue` / `_find_known_recoveries_issue` を根拠にする記述へ書き換えた (実装ステップには明記されていなかった軽微な追随修正)
+
+### Design Gaps/Ambiguities
+
+- Spec の bats 削除/更新リストは網羅的だったが、Spec 書き込みを assertion の一部にのみ含むテスト (worktree-root 解決テストなど) は「削除」でも「更新」でもなく「該当行のみ除去」という第三の対応が必要だった。次回同様の Spec-write 撤去系 Issue では、削除/更新リストに加えて「assertion の一部にのみ関連する既存テスト」の扱いも明記すると実装判断のブレを減らせる
+
+### Rework
+
+- なし (手戻りは発生しなかった)
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- 撤去対象を「run-auto-sub.sh の bash 経路による Spec 書き込み」に限定し、`## Auto Retrospective` セクションそのもの (親 `/auto` Step 4a / `modules/retro-proposals.md` が使用) は温存する
-- Tier 2 / Tier 3 の Spec 書き込みも撤去対象に含める。recoveries.md 側の記録経路が両者とも既存であることを確認済み
-- `modules/orchestration-fallbacks.md` のアンカー `#manual-recovery-spec-write` は改名せず本文のみ更新する (既存 38 ログエントリのリンク保護)
-- `--cause` / `--diagnosis` は存置 (#1179 の決着に従う)
-- bats の pre-merge AC を `bash scripts/test-skills.sh` から分離し、`bats --jobs $(nproc 2>/dev/null || sysctl -n hw.logicalcpu) tests/run-auto-sub.bats` を独立 AC 化した
+- MUST 指摘 0 件、SHOULD 3 件を修正 (skills/auto/SKILL.md の Tier2/Tier3 記録タイミングの自己矛盾解消、skills/verify/SKILL.md の判定基準へのリテラル明記、tests/run-auto-sub.bats への Tier2 #984 regression guard 復元)。CONSIDER 4 件は Skip と判断 (機能的な問題なし、または既存決定の再確認で十分)
+- Base branch conflict pre-check (`git merge-tree`) は `changed in both` 0 件で競合なしを確認済み
+- `--non-interactive` (headless `claude -p` = fork context) のため Workflow tool は使用せず、静的 Task fan-out (review-spec + review-bug×2、`run_in_background: false`) で実行した (`capabilities.workflow: true` だが再起動保証なしのため fallback)
 
 ### Deferred Items
 
-- #1094 (Spec を記録先に追加する逆方向の提案、icebox) の close 判断は実装ステップに含めない。L0 操作であり本 Issue の AC 外
-- Tier 2 の bash 経路での recovery event 記録は #1098 の scope に委ねる
-- `scripts/test-skills.sh` が bats を実行しない件への恒久対処 (スクリプト側に bats を追加するか改名するか) は本 Issue では扱わない
+- AC 9 (`bash scripts/check-translation-sync.sh`) は対応する CI job が無いため safe mode で UNCERTAIN のまま。Pre-merge checkbox は unchecked のまま残る — `/merge` 前に `/verify` (full mode) での再確認、または CI job 追加が必要
+- #1094 (Spec を記録先に追加する逆方向の提案) の close 判断は本 Issue のスコープ外のまま。`/verify` 以降の判断に委ねる
+- Tier 2 の bash 経路での recovery event 記録は #1098 の scope に委ねる (spec フェーズの決定を継承)
 
 ### Notes for Next Phase
 
-- **最重要**: 実装ステップ 2 の `_validate_recovery_args` 移設を飛ばすと `validate: --write-manual-recovery rejects ...` 系 6 テストが全滅する。関数削除と同時に必ず実施すること
-- `docs/spec/` 配下の既存ファイル (本 Spec を除く) には一切変更を加えないこと。AC 5 が「過去の記録を破壊しない」を要求している
-- `docs/tech.md` / `docs/ja/tech.md`、`docs/workflow.md` / `docs/ja/workflow.md` は en/ja を同一コミットに含めること (`check-translation-sync.sh` はタイムスタンプ比較)
-- 更新対象 bats テストの recoveries.md フィクスチャには `<!-- Log entries appear below, newest first. -->` マーカー行が必須 (無いと Python 側の書き込みが無言でスキップされる)
+- 修正後の再チェック: `bats --jobs 18 tests/run-auto-sub.bats` 80/80 PASS、`python3 scripts/validate-skill-syntax.py skills/` 0 error (既知の無関係な warning 1 件のみ)。新規 MUST 指摘なし
+- Post-merge AC (external kill 発生後の recoveries.md 記録確認) は post-merge observation のため `/verify` で確認すること
+- `modules/orchestration-fallbacks.md` の 38 件の既存ログエントリが参照する `#manual-recovery-spec-write` アンカーは維持されている (改名なし)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec の Changed Files セクションが列挙した個別の参照文更新 2 件 (skills/verify/SKILL.md の関数名言及削除、modules/orchestration-fallbacks.md:548 付近の参照文更新) が実装で行われず、かつその判断が Code Retrospective に記録されていなかった。実装自体は妥当 (関数名の履歴的言及は old Spec エントリの追跡性に資する、548 行付近は記録先を明示していないため変更不要) だったが、Spec が明示した変更項目からの逸脱が記録されないまま review まで到達した。review-spec エージェントが両方を CONSIDER として検出し、Skip 判断とその理由を Response Summary に記録した。次回以降、Spec の Changed Files に列挙した項目のうち実装で見送ったものは、Code Retrospective の Deviations from Design に一言残す運用を徹底すると review 指摘を未然に防げる
+
+### Recurring issues
+
+- ドキュメント更新 (skills/auto/SKILL.md Source 1 note、skills/verify/SKILL.md 判定基準) の両方で「新記録先への文言更新はしたが、複数の記録経路 (Tier 2 と Tier 3、または新旧 SSoT) を 1 文にまとめた結果、タイミングや判定基準の具体性が失われる」という同型の問題が発生した。記録先の集約 (このような「N 箇所 → 1 箇所」のドキュメント更新) では、経路ごとに文を分けて記述する方が正確性を保ちやすいという教訓が得られた
+- テスト削除に伴う regression guard の巻き添え除去 (`tier2 recovery ... issue #984` テスト) は、Spec のテスト削除リストが「対象機能のテスト」単位で列挙されていたため、同じテストが別の regression (#984) も同時にカバーしていたことが見落とされた。Spec のテスト削除リストに「このテストが検証している全ての regression/Issue 番号」を明記する運用があれば、削除前に気づけた可能性がある
+
+### Acceptance criteria verification difficulty
+
+- AC 9 (`bash scripts/check-translation-sync.sh`) は CI に対応する job が存在せず、safe mode の `/review` では UNCERTAIN のまま Pre-merge checkbox が unchecked で残った。PR 本文には手動実行結果 (IN_SYNC) が記載されていたが、`/review` はそれを機械的に確認する手段を持たない。`check-translation-sync.sh` を CI に組み込むか、対応する `github_check` 経路を用意すれば、この AC も safe mode で自動 PASS 判定できるようになる (本 Issue のスコープ外、フォローアップ候補として記録のみ)
+
+### Improvement Proposals
+
+- N/A — 上記の観察はいずれも本 Issue の review フェーズ固有の軽微な教訓であり、独立した Issue 化が必要な規模ではないと判断した
