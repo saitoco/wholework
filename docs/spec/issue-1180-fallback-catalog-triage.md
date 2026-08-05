@@ -1,0 +1,165 @@
+# Issue #1180: orchestration-fallbacks: 発火実績ゼロの fallback catalog エントリを退避し Tier 2 の維持コストを削減
+
+## Consumed Comments
+
+No new comments since last phase.
+
+## Overview
+
+`modules/orchestration-fallbacks.md` (fallback catalog) と `scripts/detect-wrapper-anomaly.sh` (anomaly detector) のエントリ/パターンを発火実績と参照元で仕分け、恒常的な維持コストを持たないアーカイブへ退避する。
+
+Issue 本文の方針 3 (「手順書として参照されているエントリは削除対象から除外する」) を一般化した **2 軸判定** を採用する:
+
+- **軸 A — 発火実績**: `docs/reports/orchestration-recoveries.md` にそのエントリ/パターンが記録されているか
+- **軸 B — live 参照元**: `docs/spec/` `docs/sessions/` 以外 (script の pointer コメント、検出器の IMPROVEMENT_HINT、SKILL.md、steering docs、実装済みハンドラ) から参照されているか
+
+両軸ともゼロのものだけを退避する。検出器側は軸 B を「trigger 文字列を発行する live なスクリプト/ツールが存在するか」に読み替える (発行元が存在しないパターンは条件が構造的に真にならない = 到達不能コード)。
+
+判定結果: **catalog 19 エントリ中 2 件を退避** (17 件残置)、**検出器 12 パターン中 2 件を退役** (10 件残置)。
+
+## Inventory
+
+Issue AC 1 の根拠。集計日 2026-08-06。母集団は `docs/reports/orchestration-recoveries.md` の全 68 エントリ。
+
+計測範囲: 「発火実績」列は recoveries ログ本文中のアンカー/symptom-short 出現回数 (`rg -o` の実測値)。「live 参照元」列は `rg -n 'orchestration-fallbacks\.md#<anchor>'` から `docs/spec/**` `docs/sessions/**` を除外した実測値。
+
+### fallback catalog エントリ (19 件)
+
+| # | エントリ | 発火 | live 参照元 | 判定 |
+|---|---|---|---|---|
+| 1 | `ff-only-merge-fallback` | 2 | `scripts/worktree-merge-push.sh` x2 / `scripts/run-auto-sub.sh` / `scripts/apply-fallback.sh` / `modules/worktree-lifecycle.md` | 残置 |
+| 2 | `gh-pr-list-head-glob` | 0 | `scripts/apply-fallback.sh` (未実装アンカーのコメントのみ) | **退避** |
+| 3 | `ci-flake-retry` | 0 | なし | **退避** |
+| 4 | `dco-signoff-missing-autofix` | 0 | `scripts/apply-fallback.sh` (実装済みハンドラ) / `scripts/detect-wrapper-anomaly.sh` (`dco-missing`) | 残置 |
+| 5 | `conflict-marker-residual` | 0 | `scripts/worktree-merge-push.sh` (inline logic pointer) / `scripts/apply-fallback.sh` | 残置 |
+| 6 | `dirty-working-tree` | 0 | `scripts/detect-wrapper-anomaly.sh` (退役予定) → 手順自体は現役 (下記 Notes 参照) | 残置 (Symptom 修正) |
+| 7 | `reconciler-header-mismatch` | 0 | `scripts/detect-wrapper-anomaly.sh` | 残置 |
+| 8 | `review-completion-false-negative` | 0 | `scripts/detect-wrapper-anomaly.sh` | 残置 |
+| 9 | `code-completed-no-pr` | 0 | `scripts/detect-wrapper-anomaly.sh` | 残置 |
+| 10 | `mid-run-api-error` | 0 | `scripts/detect-wrapper-anomaly.sh` | 残置 |
+| 11 | `code-base-conflict` | 0 | `scripts/run-code.sh` x2 | 残置 |
+| 12 | `async-external-commit` | 0 | `scripts/reconcile-phase-state.sh` (built-in 4 段チェックの SSoT) | 残置 |
+| 13 | `json-mode-silent-hang` | 0 | `scripts/apply-fallback.sh` (実装済みハンドラ) / `scripts/detect-wrapper-anomaly.sh` | 残置 |
+| 14 | `baseline-failure` | 0 | `scripts/run-merge.sh` | 残置 |
+| 15 | `code-patch-silent-no-op` | 1 | `scripts/run-auto-sub.sh` / `scripts/apply-fallback.sh` (実装済みハンドラ) | 残置 |
+| 16 | `wrapper-retry-on-kill` | 0 | `scripts/run-auto-sub.sh` x3 / `scripts/run-code.sh` x2 / `scripts/run-spec.sh` / `scripts/run-issue.sh` / `scripts/retry-on-kill.sh` / `docs/reports/external-kill-investigation.md` | 残置 |
+| 17 | `external-kill-parent-respawn` | 0 (ただし recoveries ログの `manual-recovery-respawn` 22 件は本手順の実行結果) | `skills/auto/SKILL.md` / `scripts/run-auto-sub.sh` / `scripts/detect-external-kill.sh` / `docs/tech.md` / `docs/workflow.md` / `docs/structure.md` / `docs/ja/{tech,workflow,structure}.md` / `docs/reports/external-kill-investigation.md` x2 | 残置 |
+| 18 | `review-pending-not-failure` | 0 | `skills/auto/SKILL.md` / `scripts/run-review.sh` / `scripts/run-auto-sub.sh` / `scripts/detect-wrapper-anomaly.sh` / `docs/tech.md` / `docs/workflow.md` / `docs/ja/{tech,workflow}.md` | 残置 |
+| 19 | `manual-recovery-spec-write` | 39 (`### Recovery Applied` 行) | `skills/auto/SKILL.md` / `scripts/run-auto-sub.sh` / `docs/workflow.md` / `docs/ja/workflow.md` / `tests/run-auto-sub.bats` | 残置 |
+
+### detect-wrapper-anomaly.sh パターン (12 件)
+
+| # | パターン | 発火 | trigger 文字列の live 発行元 | 判定 |
+|---|---|---|---|---|
+| 1 | `pr-extraction-failure` | 0 | `scripts/run-auto-sub.sh:942,1021` (`Could not retrieve PR number`) | 残置 (アーカイブ参照を追記) |
+| 2 | `patch-lock-timeout` | 0 | `scripts/worktree-merge-push.sh:63` | 残置 |
+| 3 | `dco-missing` | 0 | 各 SKILL.md の sign-off ガード (`ERROR: missing sign-off`) | 残置 |
+| 4 | `code-completed-no-pr` | 0 | `scripts/reconcile-phase-state.sh` の JSON 出力 | 残置 |
+| 5 | `json-mode-silent-hang` | 0 | `scripts/claude-watchdog.sh:71` | 残置 |
+| 6 | `watchdog-kill` | 0 | **なし** — `watchdog: kill and state not reached` を発行するスクリプトが存在しない (現行の `claude-watchdog.sh:78,98` は `watchdog: no output for <N>s, killing process` を発行) | **退役** |
+| 7 | `dirty-working-tree` | 0 | **なし** — AND 条件の `VERIFY_FAILED` が `run-verify.sh` 削除 (#485) 以降どこからも発行されない | **退役** |
+| 8 | `reconciler-header-mismatch` | 0 | `scripts/reconcile-phase-state.sh` | 残置 |
+| 9 | `review-completion-false-negative` | 0 | `scripts/reconcile-phase-state.sh` | 残置 |
+| 10 | `mid-run-api-error` | 0 | Claude API エラー出力 | 残置 |
+| 11 | `preview-deployment-absent` | 0 | `scripts/run-review.sh:183,191` | 残置 |
+| 12 | `silent-no-op` | 9 | exit 0 + 成功フレーズ | 残置 |
+
+## Changed Files
+
+- `docs/reports/orchestration-fallbacks-archive.md`: 新規作成。退避した catalog 2 エントリと退役した検出器 2 パターンを収容
+- `modules/orchestration-fallbacks.md`: `## gh-pr-list-head-glob` / `## ci-flake-retry` の 2 エントリを削除。`## dirty-working-tree` の Symptom / Rationale から失効した `VERIFY_FAILED` + 検出器発行の記述を除去し現行シグナルに差し替え。`## code-completed-no-pr` と `## json-mode-silent-hang` の Rationale から `watchdog-kill` との優先順位記述を除去。`## Operational Notes` に `### Entry Retention Criterion` と `### Archived Entries` を追加
+- `scripts/detect-wrapper-anomaly.sh`: `watchdog-kill` と `dirty-working-tree` の elif ブロックを削除。`pr-extraction-failure` の `IMPROVEMENT_HINT` にアーカイブ参照を追記 — bash 3.2+ 互換
+- `scripts/apply-fallback.sh`: `detect_symptom_anchor()` 末尾の `# See modules/orchestration-fallbacks.md#gh-pr-list-head-glob (not yet implemented)` をアーカイブ参照に差し替え — bash 3.2+ 互換
+- `tests/detect-wrapper-anomaly.bats`: 退役 2 パターンのテスト計 4 件 (`watchdog kill: ...` 1 件、`dirty working tree: ...` 3 件) を削除。`PR extraction failure: ...` にアーカイブ参照のアサーションを追加
+- `tests/orchestration-fallbacks.bats`: アーカイブファイルの存在、退避 2 アンカーが live catalog に無いこと、アーカイブが両アンカーを保持していること、`Entry Retention Criterion` セクションの存在を検証するテストを追加
+- `docs/structure.md`: Key Files > Modules の `modules/orchestration-fallbacks.md` 行にアーカイブ (`docs/reports/orchestration-fallbacks-archive.md`) への参照を追記
+- `docs/ja/structure.md`: 上記の日本語ミラー (`docs/ja/structure.md:136`)
+- `docs/reports/orchestration-recoveries.md`: 変更なし (append-only の履歴ログ。過去エントリの `Recovery Applied` 行に残る退避済みアンカーは履歴記録として保持)
+- `tests/fixtures/orchestration-recoveries-sample.md`: 変更なし (`gh-pr-list-head-glob` は `collect-recovery-candidates` の頻度集計テスト用 group-key であり、カタログへの参照ではない — grep 確認済み)
+
+Steering Docs sync candidate (`grep -rn` による横断検索の結果):
+
+- `docs/structure.md:224` / `docs/ja/structure.md:216`: [Steering Docs sync candidate] `scripts/apply-fallback.sh` の説明にハンドラ名が列挙されている。本 Issue はハンドラを変更しないため更新不要の見込みだが、`/code` 側で内容を確認すること
+- `docs/structure.md:220` / `docs/ja/structure.md:212`: [Steering Docs sync candidate] `scripts/detect-wrapper-anomaly.sh` の説明。パターン数を記載していないため更新不要の見込みだが、要確認
+- `docs/tech.md:55` / `docs/ja/tech.md:46` / `docs/product.md:178` / `docs/ja/product.md:167`: [Steering Docs sync candidate] Tier 1/2/3 の構成説明。個別パターン名を列挙していないため更新不要の見込みだが、要確認
+
+## Implementation Steps
+
+1. `docs/reports/orchestration-fallbacks-archive.md` を新規作成する。frontmatter は `type: report` (`docs/reports/orchestration-recoveries.md` と同形式)。冒頭に (a) 本ファイルの役割、(b) 退避基準 (2 軸ゼロ)、(c) 復帰手順 (再発時に該当節を `modules/orchestration-fallbacks.md` へ戻し、参照元の pointer コメントを再指定する) を記述する。続けて `## Archived catalog entries` 配下に `gh-pr-list-head-glob` / `ci-flake-retry` を Symptom / Applicable Phases / Fallback Steps / Escalation / Rationale の 5 セクション構造のまま移設し、各エントリ末尾に「退避理由 / 退避日 / 退避 Issue #1180」を追記する。さらに `## Retired detector patterns` 配下に `watchdog-kill` / `dirty-working-tree` を、trigger 文字列・失効経緯・復帰時に使うべき現行シグナル (`watchdog-kill` → `scripts/claude-watchdog.sh` の `watchdog: no output for <N>s, killing process`、`dirty-working-tree` → `skills/verify/SKILL.md` Step 1 の `Cannot run verify because there are uncommitted changes`) 付きで記録する (→ 受け入れ条件 4)
+2. `modules/orchestration-fallbacks.md` から `## gh-pr-list-head-glob` と `## ci-flake-retry` の節を、直後の `---` 区切りごと削除する (→ 受け入れ条件 5, 6)
+3. `modules/orchestration-fallbacks.md` の `## Operational Notes` に `### Entry Retention Criterion` を追加する。内容は本 Spec の 2 軸判定 (発火実績 OR live 参照元のいずれかがあれば残置、両方ゼロならアーカイブへ退避) と、新規エントリ追加時に既存の「When a new fallback pattern is discovered」手順とセットで退役経路も存在することの明示。続けて `### Archived Entries` に退避済みアンカーの一覧を置く。**一覧の各行はインラインコード + 矢印形式 (例: バッククォート囲みの `ci-flake-retry` に続けて `— docs/reports/orchestration-fallbacks-archive.md` ) とし、H2 見出し形式 (`## <anchor>`) は使わない** — 受け入れ条件 5/6 の `file_not_contains` が誤検知するため (after 2) (→ 受け入れ条件 2, 3)
+4. `modules/orchestration-fallbacks.md` の失効記述を修正する (after 2): (a) `## dirty-working-tree` の Symptom から `VERIFY_FAILED` および「`scripts/detect-wrapper-anomaly.sh` emits pattern」の記述を除去し、現行シグナル (`skills/verify/SKILL.md` Step 1 / `scripts/check-verify-dirty.sh` が出す `Cannot run verify because there are uncommitted changes`) に差し替え、Rationale 末尾に「検出器側パターンは #1180 で退役 (アーカイブ参照)」を追記する。(b) `## code-completed-no-pr` の Rationale から `watchdog-kill` との first-match-wins 優先順位に関する 1 行を削除する。(c) `## json-mode-silent-hang` の Rationale の同種の記述から `watchdog-kill` への言及を削除する (→ 受け入れ条件 2)
+5. `scripts/detect-wrapper-anomaly.sh` から `watchdog-kill` (`elif grep -q "watchdog: kill and state not reached"` ブロック) と `dirty-working-tree` (`elif grep -q "VERIFY_FAILED" ... && grep -q "uncommitted"` ブロック) を削除する。削除後も elif チェーンの残る分岐順序 (`json-mode-silent-hang` → `reconciler-header-mismatch` → `review-completion-false-negative` → `mid-run-api-error` → `preview-deployment-absent` → `EXIT_CODE == 0`) が維持されることを確認する。あわせて `pr-extraction-failure` の `IMPROVEMENT_HINT` に `docs/reports/orchestration-fallbacks-archive.md` への参照を追記する (既存の `#311` 参照は残す) (→ 受け入れ条件 7)
+6. `scripts/apply-fallback.sh` の `detect_symptom_anchor()` 末尾コメント `# See modules/orchestration-fallbacks.md#gh-pr-list-head-glob (not yet implemented)` を `# gh-pr-list-head-glob: archived — see docs/reports/orchestration-fallbacks-archive.md (#1180)` に差し替える。`ff-only-merge-fallback` / `conflict-marker-residual` の 2 行はカタログに残置するため変更しない (after 2) (→ 受け入れ条件 2)
+7. `tests/detect-wrapper-anomaly.bats` を更新する (after 5): `watchdog kill: detects watchdog: kill and state not reached` (1 件) と `dirty working tree:` で始まる 3 件、計 4 件の `@test` を削除する。`PR extraction failure: detects Could not retrieve PR number` に、出力へアーカイブファイル名が含まれることのアサーションを 1 行追加する (既存の `#311` アサーションは残す) (→ 受け入れ条件 8)
+8. `tests/orchestration-fallbacks.bats` にテストを追加する (after 1, 2, 3): (a) `docs/reports/orchestration-fallbacks-archive.md` が存在する、(b) live catalog に `## ci-flake-retry` / `## gh-pr-list-head-glob` が無い、(c) アーカイブに両アンカーの H2 見出しと 5 必須セクションが存在する、(d) live catalog に `### Entry Retention Criterion` が存在する。既存の `>= 6` 閾値テストと「5 必須セクションの出現回数が一致する」テストは 19→17 エントリでも成立するため変更しない (→ 受け入れ条件 8)
+9. `docs/structure.md` の Key Files > Modules にある `modules/orchestration-fallbacks.md` の行末に、退避済みエントリのアーカイブ先 (`docs/reports/orchestration-fallbacks-archive.md`) への参照を追記する。あわせて `docs/ja/structure.md:136` の対応行に同内容の日本語ミラーを反映する (→ 受け入れ条件 2, 9)
+
+## Verification
+
+### Pre-merge
+
+- <!-- verify: rubric "各 fallback catalog エントリの発火実績と参照元の一覧が Spec に記録され、残置/退避の判断根拠が追跡できる" --> 発火実績と参照元の一覧が Spec に記録されている
+- <!-- verify: rubric "退避後も skills/auto/SKILL.md・docs/tech.md・docs/workflow.md・docs/structure.md およびそれらの docs/ja 翻訳から orchestration-fallbacks.md への参照リンクが壊れていない (退避したエントリへのアンカー参照が残っていない)" --> カタログへの参照リンクが壊れていない
+- <!-- verify: rubric "手順書として参照されているエントリ (external-kill-parent-respawn / manual-recovery-spec-write) の内容が、退避された場合も参照元から辿れる形で保持されている" --> 手順書用エントリの参照可能性が保たれている
+- <!-- verify: file_exists "docs/reports/orchestration-fallbacks-archive.md" --> 退避先アーカイブファイルが存在する
+- <!-- verify: file_not_contains "modules/orchestration-fallbacks.md" "## ci-flake-retry" --> `ci-flake-retry` エントリが live catalog から除去されている
+- <!-- verify: file_not_contains "modules/orchestration-fallbacks.md" "## gh-pr-list-head-glob" --> `gh-pr-list-head-glob` エントリが live catalog から除去されている
+- <!-- verify: file_not_contains "scripts/detect-wrapper-anomaly.sh" "watchdog: kill and state not reached" --> 到達不能な検出器パターンが除去されている
+- <!-- verify: command "bash scripts/test-skills.sh" --> skill 構文検証と bats スイートが PASS する
+- <!-- verify: command "bash scripts/check-translation-sync.sh" --> docs/ja 側の翻訳が同期している
+
+### Post-merge
+
+- 退避後の `/auto` 実行で Tier 2 が不在によるエラーを起こさず、未知パターンが Tier 3 へ正しく落ちることを観察する (verify-type: observation, event=auto-run)
+  - 期待される出力構造:
+    - `apply-fallback.sh` が未知アンカーで exit 1 を返し、`run-auto-sub.sh` が Tier 3 (`spawn-recovery-subagent.sh`) へ escalate する
+    - `detect-wrapper-anomaly.sh` が退役 2 パターンの入力に対して空出力 (exit 0) を返し、エラー終了しない
+
+## Tool Dependencies
+
+### Bash Command Patterns
+
+- なし (実装は Read / Write / Edit と既存の bats 実行のみ)
+
+### Built-in Tools
+
+- なし (`/code` の既存 allowed-tools で充足)
+
+### MCP Tools
+
+- なし
+
+## Notes
+
+### 判定基準を Issue 本文の前提から一般化した点
+
+Issue 本文は「17 エントリは発火実績ゼロ」を退避候補の規模として提示しているが、方針 3 の除外条件 (手順書として参照されているエントリ) を実測で当てると 17 件中 15 件が該当し、退避対象は 2 件に収束する。これは前提の誤りではなく、方針 3 の適用範囲が本文で例示された 2 件 (`external-kill-parent-respawn` / `manual-recovery-spec-write`) より広かったということ。Inventory セクションが AC 1 の「判断根拠が追跡できる」を満たす一次資料になる。
+
+### 検出器側の到達不能パターンは別性質の発見
+
+`watchdog-kill` と `dirty-working-tree` は「未発火」ではなく「条件が構造的に真にならない」。前者は `claude-watchdog.sh` の出力文字列が現行 (`watchdog: no output for <N>s, killing process`) と一致しておらず、後者は AND 条件の `VERIFY_FAILED` が `run-verify.sh` 削除 (#485) 以降どこからも発行されない。後者は `skills/spec/SKILL.md` の Feature deletion impact chain check セクションに「#485 retro で検出されたが除去されなかった dead pattern」として既に事例記載がある。
+
+### 汎用 watchdog kill の検出が現在不在という副次的発見
+
+`watchdog-kill` の退役により「json mode 以外の watchdog タイムアウト kill」に対する Tier 2 検出が明示的に不在となる (退役前も分岐が到達不能だったため実効的には既に不在)。これは本 Issue のスコープ (維持コスト削減) 外の欠陥であり、修復 (trigger 文字列を現行に合わせる) は別 Issue に委ねる。アーカイブファイルに復帰時に使うべき現行シグナルを記録することで、修復に必要な情報は失われない。spec retrospective にも記録し `/verify` の Improvement Proposal 集約に載せる。
+
+### 退避先を docs/reports/ にした理由
+
+`docs/translation-workflow.md` の Exclusions が `docs/reports/` を翻訳同期対象外とし、`modules/doc-checker.md` の Processing Steps 2 も `docs/reports/` を候補から除外している。退避後にアーカイブが恒常的な同期義務を生まないため、本 Issue の目的 (維持コスト削減) と整合する。`docs/reports/ja/` に一部レポートの翻訳が存在するが、translation-workflow.md 上の義務ではないため本 Issue では作成しない。
+
+### AC 5/6 の file_not_contains が誤検知しない条件
+
+`modules/orchestration-fallbacks.md` に追加する `### Archived Entries` 一覧が `## ci-flake-retry` / `## gh-pr-list-head-glob` という H2 見出し形式を含むと AC 5/6 が FAIL する。Implementation Step 3 でインラインコード + 矢印形式を明示指定している。
+
+### AC 9 (check-translation-sync.sh) の性質
+
+`scripts/check-translation-sync.sh` は `--fail-if-outdated` なしでは常に exit 0 を返す情報提供専用スクリプト。本 Spec 作成時点の baseline は `1 OUTDATED (docs/guide/index.md) / 1 MISSING_JA (docs/guide/autonomy.md)` で、いずれも本 Issue とは無関係な既存ギャップ。Implementation Step 9 の `docs/ja/structure.md` 更新を怠っても AC としては PASS してしまうため、`/code` および `/review` では出力表の `docs/structure.md` 行が `IN_SYNC` であることを目視確認すること。
+
+### tests/fixtures の gh-pr-list-head-glob は対象外
+
+`tests/fixtures/orchestration-recoveries-sample.md` に `gh-pr-list-head-glob` が 3 エントリ分の symptom-short として現れるが、これは `collect-recovery-candidates.sh` の頻度集計テスト用の合成データであり、カタログエントリへの参照ではない。変更すると `tests/collect-recovery-candidates.bats` の期待値が壊れるため対象外とする。
+
+### bats テストの閾値への影響
+
+`tests/orchestration-fallbacks.bats` の既存テストはすべて `>= 6` 閾値と「5 必須セクションの出現回数一致」で構成されており、エントリを丸ごと削除する限り 19→17 でも成立する (確認済み)。
