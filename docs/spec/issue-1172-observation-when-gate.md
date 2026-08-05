@@ -155,28 +155,22 @@ No new comments since last phase.
 - N/A
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- ARGUMENTS に `--non-interactive` が含まれ fork context (再実行保証なし) と判定されたため、`.wholework.yml` の `capabilities.workflow: true` にもかかわらず Workflow path (10.1–10.3 差し替え) はスキップし、`skills/review/workflow-guidance.md` の Pre-flight 指示どおり static Task fan-out (`run_in_background: false`) を使用した
-- review-bug×2 (diff bug scan / security scan) が独立に同一根本原因 (`when=` 属性抽出のマルチライン衝突) を検出し、2 段階アドバーサリアル検証で 7 件中 6 件が PASS (問題確認) となった。MUST 相当の指摘はゼロだったが、SHOULD 判定の 3 件 (抽出のマルチライン衝突・glob 展開・contextless AND guard) は機能の correctness 根幹に関わるため Step 12 で修正した
-- CONSIDER 判定 5 件のうち 1 件 (validity check の `type == "object"` 厳格化) のみ SHOULD 群と合わせて修正し、残り 4 件 (doc 文言の曖昧さ・malformed clause テスト欠如・spec retrospective の記述精度) は PR サイズとのバランスで見送った
+- `/merge 1178 --non-interactive` の pre-merge AC gate で 7 件全て `[x]` を確認し、追加の override 記録なしでそのまま squash merge を実行した
+- mergeable 判定は `reason=clean` (CI success, review approved) だったため conflict 解決フローは不要だった
 
 ### Deferred Items
 
-- `keyword=` / `config=` ゲートも `when=` と同じ「行全体から `grep -oE` で抽出」パターンを共有しており、理論上同じ脆弱性 (prose 内の属性名衝突) を持つ。本 PR では `when=` のみ修正し、既存 2 ゲートへの横展開は別 Issue に委ねる
-- `modules/observation-trigger.md:270` の `--facts-file` パス異常時の説明の軽微な不一致 (CONSIDER) は未修正
-- `tests/opportunistic-search.bats` の malformed clause (コロンなし/空値) テスト欠如 (CONSIDER) は未修正
-- `docs/spec/issue-1172-observation-when-gate.md` の Code Retrospective 「Deviations from Design」の記述精度 (CONSIDER) は未修正 — 本 review retrospective に記録した
-- `scripts/observation-trigger.sh:87` の stderr discard (本番経路での `when=` 警告不可視) は本 PR 以前からの既存動作と判定し対象外 (却下)
+- review フェーズで見送った 4 件 (CONSIDER 判定: doc 文言曖昧さ・malformed clause テスト欠如・spec retrospective 記述精度・`keyword=`/`config=` ゲートへの横展開) は本 PR スコープ外のまま。個別 Issue 化は未実施
+- `scripts/observation-trigger.sh:87` の stderr discard は既存動作として対象外のまま
 
 ### Notes for Next Phase
 
-- Pre-merge AC 7 件全て PASS、Issue #1172 のチェックボックスは Post-merge 1 件を除き更新済み。CI は 9/9 SUCCESS
-- Step 12 の修正コミット (`e9a51a2b`) を push 済み。`bats tests/opportunistic-search.bats` 36/36 PASS、`bats tests/observation-trigger.bats` 19/19 PASS、`validate-skill-syntax.py` 0 error を再確認済み
-- MUST 指摘ゼロのため review は `COMMENT` (REQUEST_CHANGES ではない) で投稿済み。`/merge 1178` にそのまま進める
-- Post-merge 条件 (Issue #995 の operate route AC がマッチ集合から除外されることの確認) は `/verify` 側で扱う
+- Post-merge 条件 (Issue #995 の operate route AC がマッチ集合から除外されることの確認) は `/verify` で `scripts/observation-trigger.sh --event auto-run --dry-run` を実行して確認すること
+- squash commit: `543e8712` (「Issue #1172: observation AC に when= 実行文脈ゲートを追加 (#1178)」)
 
 ## review retrospective
 
