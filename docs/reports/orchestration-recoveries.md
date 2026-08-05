@@ -67,6 +67,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-05 17:30 UTC: manual-recovery-merge-rerun
+
+### Context
+- Issue #1180, phase: merge
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 1
+
+### Diagnosis
+- cause: pre-merge-ac-command-unverifiable
+- pre-merge AC #9 の verify command が command 型のため /review の safe mode で実行されず未チェックのまま残り、/merge の pre-merge AC gate が非対話モードでブロック。#1181 と同一原因の 2 件目。親セッションが PR ブランチ上で en/ja のコミット時刻一致を直接確認して AC をチェックし run-merge.sh を再実行
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-08-05 15:53 UTC: manual-recovery-merge-rerun
 
 ### Context
