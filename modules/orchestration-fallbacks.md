@@ -137,7 +137,7 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 ## dirty-working-tree
 
 ### Symptom
-- `/verify` outputs `Cannot run verify because there are uncommitted changes` (`skills/verify/SKILL.md` Step 1 / `scripts/check-verify-dirty.sh`)
+- `/verify` outputs `Cannot run verify because there are uncommitted changes` (`skills/verify/SKILL.md` Step 1, triggered by `scripts/check-verify-dirty.sh` exit 1)
 
 ### Applicable Phases
 - verify
@@ -583,12 +583,13 @@ An entry-addition path exists alongside a retirement path (see Entry Retention C
 
 ### Entry Retention Criterion
 
-An entry is retained in this live catalog when **either** of the following axes is non-zero (OR, not AND):
+An entry is retained in this live catalog when **any** of the following axes is non-zero (OR, not AND):
 
 - **Axis A — firing history**: the entry's anchor or symptom is recorded at least once in `docs/reports/orchestration-recoveries.md`
-- **Axis B — live reference**: the entry is referenced from somewhere other than `docs/spec/` or `docs/sessions/` — a script's pointer comment (`# See modules/orchestration-fallbacks.md#<anchor>`), a detector's `IMPROVEMENT_HINT`, a SKILL.md, a steering doc, or an implemented handler
+- **Axis B — live reference**: the entry is referenced from somewhere other than `docs/spec/`, `docs/sessions/`, `tests/fixtures/` (synthetic test data), or `docs/reports/orchestration-fallbacks-archive.md` itself (an archive record is not a live reference) — a script's pointer comment that guards implemented fallback logic (`# See modules/orchestration-fallbacks.md#<anchor>`; a pointer comment explicitly annotated `(not yet implemented)` with no corresponding handler anywhere does not count), a detector's `IMPROVEMENT_HINT`, a SKILL.md, a steering doc, or an implemented handler
+- **Axis C — procedure applicability**: the recovery procedure itself still applies to a scenario reachable in current code, even when no anchor reference and no firing history exist (e.g. `dirty-working-tree` — `skills/verify/SKILL.md` Step 1 / `scripts/check-verify-dirty.sh` still surface the condition directly, even though the anchor's own detector-side pointer was retired)
 
-Only entries with **both** axes at zero are archived to `docs/reports/orchestration-fallbacks-archive.md` (see `### Archived Entries` below). Zero firing history alone is not sufficient grounds for archival — many entries in this catalog have never fired but remain referenced as the SSoT procedure for a live pointer comment, detector hint, or skill step; archiving those would break the reference.
+Only entries with **all three** axes at zero are archived to `docs/reports/orchestration-fallbacks-archive.md` (see `### Archived Entries` below). Zero firing history alone is not sufficient grounds for archival — many entries in this catalog have never fired but remain referenced as the SSoT procedure for a live pointer comment, detector hint, skill step, or still-applicable manual procedure; archiving those would break the reference.
 
 ### Archived Entries
 
