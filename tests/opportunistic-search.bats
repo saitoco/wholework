@@ -55,16 +55,31 @@ teardown() {
     [[ "$output" == *"Error"* ]]
 }
 
-@test "dry-run: outputs empty array and exits 0" {
+@test "dry-run: returns the same non-empty result as without --dry-run" {
+    export MOCK_ISSUE_LIST='[{"number": 700}]'
+    export MOCK_ISSUE_BODY_700='- [ ] /issue skill creates Issue after execution <!-- verify-type: opportunistic -->'
+
+    run bash "$SCRIPT" /issue
+    [ "$status" -eq 0 ]
+    without_dry_run="$output"
+
     run bash "$SCRIPT" /issue --dry-run
     [ "$status" -eq 0 ]
-    [ "$output" = "[]" ]
+    with_dry_run="$output"
+
+    [ "$with_dry_run" = "$without_dry_run" ]
+    echo "$with_dry_run" | jq -e 'length == 1' > /dev/null
+    echo "$with_dry_run" | jq -e '.[0].number == 700' > /dev/null
 }
 
 @test "dry-run: works with --dry-run before skill name" {
+    export MOCK_ISSUE_LIST='[{"number": 701}]'
+    export MOCK_ISSUE_BODY_701='- [ ] /spec skill creates file after execution <!-- verify-type: opportunistic -->'
+
     run bash "$SCRIPT" --dry-run /spec
     [ "$status" -eq 0 ]
-    [ "$output" = "[]" ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 701' > /dev/null
 }
 
 @test "success: no issues found returns empty array" {
@@ -157,10 +172,21 @@ teardown() {
     [ "$output" = "[]" ]
 }
 
-@test "event filter: --event with dry-run returns empty array" {
+@test "event filter: --event with dry-run returns the same non-empty result as without --dry-run" {
+    export MOCK_ISSUE_LIST='[{"number": 702}]'
+    export MOCK_ISSUE_BODY_702='- [ ] Next /review --full auto-checks this condition <!-- verify-type: observation event=pr-review-full -->'
+
+    run bash "$SCRIPT" --event pr-review-full
+    [ "$status" -eq 0 ]
+    without_dry_run="$output"
+
     run bash "$SCRIPT" --event pr-review-full --dry-run
     [ "$status" -eq 0 ]
-    [ "$output" = "[]" ]
+    with_dry_run="$output"
+
+    [ "$with_dry_run" = "$without_dry_run" ]
+    echo "$with_dry_run" | jq -e 'length == 1' > /dev/null
+    echo "$with_dry_run" | jq -e '.[0].number == 702' > /dev/null
 }
 
 @test "context gate: keyword found in context file includes the issue" {

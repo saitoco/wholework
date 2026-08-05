@@ -113,12 +113,6 @@ if [ -n "$CONTEXT_FILE" ] && [ ! -f "$CONTEXT_FILE" ]; then
     CONTEXT_FILE=""
 fi
 
-# dry-run mode: skip actual API calls and exit successfully
-if [ "$DRY_RUN" = true ]; then
-    echo "[]"
-    exit 0
-fi
-
 # 1. Fetch closed Issues with phase/verify label
 ISSUES_JSON=$(gh issue list --label "phase/verify" --state closed --json number --limit 50)
 ISSUE_NUMBERS=$(echo "$ISSUES_JSON" | jq -r '.[].number')

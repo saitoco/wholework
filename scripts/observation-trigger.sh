@@ -63,10 +63,6 @@ if [ -z "$EVENT_NAME" ]; then
     exit 1
 fi
 
-if [ "$DRY_RUN" = true ]; then
-    exit 0
-fi
-
 if [ -n "$CONTEXT_FILE" ]; then
     RESULTS=$("${SCRIPT_DIR}/opportunistic-search.sh" --event "$EVENT_NAME" --context-file "$CONTEXT_FILE" 2>/dev/null || true)
 else
@@ -97,7 +93,7 @@ for N in $NUMBERS; do
             fi
         fi
     fi
-    if [ "$SKIP" = false ]; then
+    if [ "$SKIP" = false ] && [ "$DRY_RUN" = false ]; then
         BODY=$(printf '<!-- wholework-event: type=observation-trigger phase=observation-trigger issue=%s event=%s -->\nobservation event `%s` detected. Run `/verify %s` to verify the condition and update the checkbox.' "$N" "$EVENT_NAME" "$EVENT_NAME" "$N")
         gh issue comment "$N" --body "$BODY" >/dev/null 2>/dev/null || true
     fi

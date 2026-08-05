@@ -48,3 +48,45 @@
 ## Consumed Comments
 
 前回フェーズ (triage → spec) 以降の新規コメントなし。Issue #1170 には現時点でコメントが1件も存在しない (cutoff: 直近の `phase/*` ラベル付与時刻 2026-08-05T03:03:25Z、および全件走査でも 0 件を確認)。
+
+### code フェーズ
+
+前回フェーズ (spec → code) 以降の新規コメントなし (cutoff: 直近の `phase/*` ラベル付与時刻 2026-08-05T05:33:30Z)。cross-phase marker (`type=verify-fail` / `type=preview-ac-unverified`) の全件走査でも該当なし。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜5 を Spec 記載順どおりに実装した。逸脱なし
+
+### Design Gaps/Ambiguities
+- N/A — Notes セクションで既に判断済みの論点 (別フラグ切り出し不要、冪等性マーカーチェックは dry-run でも維持) 以外に、実装中に新たな曖昧点は生じなかった
+
+### Rework
+- N/A — 各 Implementation Step は一度の Edit で完了し、手戻りは発生しなかった
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- N/A — 実装 (PR #1176 diff) は Spec の Implementation Steps 1〜5 と 1:1 で対応しており、構造的な逸脱は検出されなかった (review-light エージェントの Perspective 1 確認結果)
+
+### Recurring issues
+- N/A — review-light の4観点 (Spec乖離・エッジケース/堅牢性・セキュリティ/安全性・ドキュメント整合性) いずれも指摘なし。同種issueの再発パターンは見られなかった
+
+### Acceptance criteria verification difficulty
+- 6件の Pre-merge AC (rubric×4、command×1、github_check×1) は全て safe mode で自動判定可能だった。`command "bats tests/opportunistic-search.bats"` は safe mode では直接実行できないが、CI job `Run bats tests` への CI reference fallback で代替確認できた — verify command 設計として機能した
+- Spec Notes に記載の通り、本 Issue の Pre-merge 検証項目数 (6件) は light テンプレートの目安 (5件) をわずかに超えていたが、UNCERTAIN や verify command の不備は発生せず、実務上の支障はなかった
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Step 8 静的検証で Pre-merge AC 6件すべてを PASS 判定 (AC1〜5 は code フェーズで既に `[x]` 化済み、AC6 `github_check "gh pr checks" "Run bats tests"` は CI 完了後の本レビューで `[x]` 化)
+- Step 10.0 軽量統合レビュー (review-light エージェント) で4観点とも指摘なし。MUST/SHOULD/CONSIDER いずれもゼロ件のため Step 12 (issue resolution) は実施せず
+- Base branch conflict pre-check (`git merge-tree`) で `changed in both` ブロックなしを確認、base 側との衝突コンテキストは記録不要と判断
+
+### Deferred Items
+- Post-merge AC (`observation-trigger.sh --event auto-run --dry-run` の実環境確認、`verify-type: manual`) は未実施 — `/verify` フェーズでの手動確認に委ねる (code フェーズからの引き継ぎを継続)
+
+### Notes for Next Phase
+- MUST issue なしのため `/merge 1176` にそのまま進行可能
+- Post-merge AC は手動確認 (`verify-type: manual`) のため、`/verify` 実行時に人手での実環境確認が必要

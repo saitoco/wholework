@@ -27,7 +27,7 @@ Each emitter calls the following command when its event fires:
 | Argument | Description |
 |----------|-------------|
 | `--event <event-name>` | Required. The event name from the table in `modules/verify-classifier.md § observation Type` |
-| `--dry-run` | Optional. Skip API calls; return empty array (for testing) |
+| `--dry-run` | Optional. Search runs normally and API calls are not skipped (`opportunistic-search.sh` is originally read-only and has no side effect to suppress here). Accepted as an argument for CLI backward compatibility, but it is a no-op flag with no effect on behavior |
 | `--context-file <path>` | Optional. Gates matches carrying a `keyword=` AC attribute against this file's content. See § Condition Check Gate below |
 
 **Output (stdout):** JSON array
