@@ -60,6 +60,7 @@ Generate a session identifier and record it in a PGID-specific pointer file so s
    {
      "session_id": "<SESSION_ID>",
      "session_start": "<current UTC timestamp in ISO8601>",
+     "mode": "<batch|single>",
      "skill_versions": {
        "skills/auto/SKILL.md": "<SKILL_AUTO_HASH>",
        "skills/code/SKILL.md": "<SKILL_CODE_HASH>",
@@ -72,7 +73,7 @@ Generate a session identifier and record it in a PGID-specific pointer file so s
      }
    }
    ```
-   Substitute the actual `SESSION_ID`, current UTC timestamp, and skill hash values before writing.
+   Substitute the actual `SESSION_ID`, current UTC timestamp, and skill hash values before writing. `mode` is `batch` when ARGUMENTS contains `--batch`, otherwise `single` — this includes the XL sub-issue fan-out path, which is not `--batch` and therefore resolves to `single`.
 4. Set `AUTO_SESSION_ID="$SESSION_ID"` in the current Bash context (does not persist across separate Bash tool calls; sub-processes read from the pointer file instead):
    ```bash
    export AUTO_SESSION_ID="$SESSION_ID"
