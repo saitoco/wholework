@@ -184,25 +184,34 @@ Issue 本文は「17 エントリは発火実績ゼロ」を退避候補の規�
 - **`docs/reports/` 配下に新規ファイルを置くと翻訳同期が要るか**: `docs/translation-workflow.md` の Exclusions と `scripts/check-translation-sync.sh` の SOURCE_FILES 収集ロジック (`docs` maxdepth 1 と `docs/guide` のみ) の両方を確認し、不要と確定。これが退避先選定の決め手になった。
 - **`AC 9` の `check-translation-sync.sh` が実質的な検証になっているか**: スクリプトを読み、`--fail-if-outdated` なしでは常に exit 0 を返すことを確認。本 Spec 作成時点で既に 1 OUTDATED / 1 MISSING_JA の既存ギャップがあり、AC としては素通りする。verify command は Issue body の記述を verbatim で引き写す規約のため書き換えず、代わりに Notes に「`/code` / `/review` で出力表の `docs/structure.md` 行を目視確認する」という運用上の補いを明記した。
 
+## Code Retrospective
+
+### Deviations from Design
+- Implementation Step 1 says the two archived entries move "配下に" (under) `## Archived catalog entries`, which reads as nesting the anchors as H3. Instead they were kept as H2 headings (siblings following the `## Archived catalog entries` label, not its children), because Step 8's AC test description explicitly requires "アーカイブに両アンカーの H2 見出し" — literal H2 for the anchor names. Resolving the ambiguity toward the literal AC wording (H2) rather than the "配下に" nesting implication keeps the archive's per-entry structure identical to the live catalog's own H2-anchor / H3-subsection convention, which also made the bats test in Step 8 a straightforward structural mirror of the existing catalog schema tests.
+
+### Design Gaps/Ambiguities
+- The retired `dirty-working-tree` detector pattern and the still-live `dirty-working-tree` catalog entry share the same anchor name across two different files (archive vs. live catalog). The archive heading was written as `## dirty-working-tree (detector pattern)` to disambiguate it from a hypothetical future archival of the catalog entry itself; this qualifier is not prescribed by the Spec but avoids an anchor collision within the single archive file (the catalog entry itself was never archived, so no collision exists today, but the qualifier front-loads the disambiguation).
+
+### Rework
+- N/A — no repair cycles or backtracking occurred during implementation; the H2/H3 heading-level ambiguity above was resolved once at authoring time (Step 1/Step 8) before the first test run, not discovered via a failing test.
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 退避判定を「発火実績 OR live 参照元」の 2 軸ゼロ基準に固定した。Issue 本文が退避候補として列挙する 17 エントリのうち 15 件は script の pointer コメント / 検出器の IMPROVEMENT_HINT / SKILL.md / steering docs から参照されており、削除すると AC 2 (参照リンクが壊れていない) に自ら反する。
-- 退避先を `docs/reports/orchestration-fallbacks-archive.md` にした。`docs/reports/` は翻訳同期と doc-checker の両方で対象外のため、退避後の恒常コストがゼロになる。
-- 検出器の「縮約」を到達不能パターンの除去に限定した (`watchdog-kill` / `dirty-working-tree` の 2 件)。残る 10 パターンは trigger 文字列が現役のため退役するとデグレになる。
-- `dirty-working-tree` は catalog 残置 + 検出器退役という非対称な扱いにした。手順は現役、検出条件だけが失効している。
+- Archived-entry headings (`gh-pr-list-head-glob` / `ci-flake-retry` in the archive file) were written as H2 (`## <anchor>`), not H3, even though Implementation Step 1's "配下に移設" phrasing reads as nesting under `## Archived catalog entries`. Step 8's AC text explicitly requires "H2 見出し" for the archived anchors, and H2 also keeps the archive's per-entry structure a direct mirror of the live catalog's own H2-anchor/H3-subsection schema — the bats test added in `tests/orchestration-fallbacks.bats` checks for `^## gh-pr-list-head-glob` / `^## ci-flake-retry` literally.
+- `### Entry Retention Criterion` and `### Archived Entries` were added to `modules/orchestration-fallbacks.md`'s Operational Notes (Implementation Step 3) using inline-code + em-dash format for the Archived Entries list, per the Spec's explicit instruction, to avoid `## <anchor>`-style H2 headings that would false-positive the AC 5/6 `file_not_contains` checks.
+- All 9 pre-merge ACs were self-verified before PR creation (3 rubric ACs assessed manually against the Spec/implementation content, `file_exists`/`file_not_contains` x4 confirmed via grep, `command` x2 executed directly) and checked off on the Issue.
 
 ### Deferred Items
 
-- 汎用 watchdog kill (json mode 以外) の Tier 2 検出復旧 (`claude-watchdog.sh` の現行出力文字列にパターンを合わせる) は本 Issue のスコープ外。アーカイブに現行シグナルを記録して別 Issue に委ねる。
-- Issue 本文 Related の #1122 / #1105 / #1076 (カタログ・検出器へのエントリ追加提案) の要否判断は本 Issue のマージ後に行う。新設する Entry Retention Criterion がその判断基準になる。
-- `docs/reports/ja/` へのアーカイブ翻訳は作成しない (translation-workflow.md 上の義務がないため)。
+- Generic (non-json-mode) watchdog-kill Tier 2 detection recovery (aligning `detect-wrapper-anomaly.sh`'s trigger string to `claude-watchdog.sh`'s current `watchdog: no output for <N>s, killing process` output) remains out of scope; the archive file records the current signal for whoever picks this up.
+- Issue Related #1122 / #1105 / #1076 (proposed catalog/detector entry additions) — whether they're still needed given the new Entry Retention Criterion is a post-merge judgment call, unchanged from the spec-phase handoff.
+- No `docs/reports/ja/` translation was created for the archive file (no obligation under `docs/translation-workflow.md`).
 
 ### Notes for Next Phase
 
-- Implementation Step 3 の `### Archived Entries` 一覧は **H2 見出し形式 (`## <anchor>`) を使わないこと**。使うと AC 5/6 の `file_not_contains` が誤検知して FAIL する。
-- Implementation Step 5 で検出器の elif ブロックを 2 つ削るとき、残る分岐の first-match-wins 順序 (`json-mode-silent-hang` → `reconciler-header-mismatch` → `review-completion-false-negative` → `mid-run-api-error` → `preview-deployment-absent` → `EXIT_CODE == 0`) が保たれることを確認する。あわせて catalog 側の `code-completed-no-pr` / `json-mode-silent-hang` Rationale に残る `watchdog-kill` との優先順位記述 (Step 4b, 4c) を消し忘れないこと。
-- AC 9 (`check-translation-sync.sh`) は常に exit 0 なので `docs/ja/structure.md` の更新漏れを検出しない。出力表の `docs/structure.md` 行が `IN_SYNC` であることを目視確認すること。
-- `tests/fixtures/orchestration-recoveries-sample.md` の `gh-pr-list-head-glob` は触らないこと (頻度集計テストの合成データ。変更すると `tests/collect-recovery-candidates.bats` が壊れる)。
+- `/review` should independently re-verify the 3 rubric ACs (Inventory recorded, reference links unbroken, external-kill-parent-respawn/manual-recovery-spec-write still traceable) with adversarial judgment — the code-phase self-check above was not adversarial.
+- Full `bats tests/` (1405/1405) and `bats tests/orchestration-fallbacks.bats tests/detect-wrapper-anomaly.bats` (55/55) both passed; `bash scripts/test-skills.sh` and `bash scripts/check-translation-sync.sh` (docs/structure.md IN_SYNC; pre-existing unrelated gaps on docs/guide/index.md and docs/guide/autonomy.md) also passed — no outstanding local verification gaps going into review.
+- `tests/fixtures/orchestration-recoveries-sample.md`'s `gh-pr-list-head-glob` occurrences were left untouched (synthetic frequency-count fixture data for `tests/collect-recovery-candidates.bats`, not a catalog reference) — confirm this wasn't inadvertently touched if further edits land on this PR.
