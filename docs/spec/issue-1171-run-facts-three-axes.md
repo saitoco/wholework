@@ -145,3 +145,45 @@
 ## Consumed Comments
 
 No new comments since last phase.
+
+## spec retrospective
+
+### Minor observations
+
+- Issue 本文の「軸」表が既に `run-code.sh` の該当行番号 (L112-116) や `run-auto-sub.sh` の emit 行 (L1054 / L1071 / L1094) まで特定していたため、codebase investigation は事実確認だけで済んだ。三軸それぞれの「現状の潰れ方」を Issue 段階で行番号付きで書いておくと spec phase の探索コストがほぼゼロになる好例
+- `modules/phase-state.md` § "Operate Route Completion Signature" は `reconcile-phase-state.sh` 専用の記述として書かれているが、実質は「operate route を外形から判別する唯一の SSoT シグネチャ」である。本 Issue で 2 つ目の消費側 (`collect-run-facts.sh`) ができるため、将来 3 つ目が現れたら shared helper への切り出しを検討する余地がある
+
+### Judgment rationale
+
+- **operate 判別を `route == "patch"` のときだけ probe する設計にした理由**: `skills/auto/SKILL.md` L399 と `skills/code/SKILL.md` L84 の双方が「operate route は必ず `run-code.sh --patch` 経由」と明記している。`pr` / `unknown` のときに probe しても marker は原理的に見つからず、`gh` 呼び出しが純粋な無駄になる
+- **freshness gate に reopen timestamp ではなく「この run の最初のイベント時刻」を使った理由**: `reconcile-phase-state.sh` は「phase が完了したか」を判定するので reopen 基準が正しいが、`collect-run-facts.sh` は「この session の run で何が起きたか」を構造化する。session スコープに合わせるほうが意味論的に正しく、`get-last-reopen` の追加呼び出しも不要になる
+- **`single` を fact token 化しなかった理由**: #1157 が `/auto` token を除外した実測根拠 (414 件中 84 件にマッチして事前絞り込みが no-op 化) と同型の判断。`single` は汎用語すぎる。`batch` は語として十分に稀
+
+### Uncertainty resolution
+
+- **設計時の不確実性「mode を決定的に取れるか」**: `emit_event` の全 kv を洗い出した結果、batch/single を区別する既存イベントは存在しないことを確認した。`auto-checkpoint.sh write_batch` は List mode 専用で Count mode が通らないため bash 側の決定的フックにならない、という点まで確認したうえで session metadata 宣言方式を採った
+- **未解決のまま残した点**: イベント由来フォールバックが XL sub-issue fan-out を `batch` と誤判定する。`sub_start` は batch 経路と XL 経路の双方で `run-auto-sub.sh` から emit されるため、イベントだけでは区別する信号がない。宣言が第一優先なので新規 session では発生せず、宣言の無い過去 session に限る既知の劣化として Uncertainty 節に記録した
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- operate route の判別は marker コメント (`type=execution-log` / `type=execution-plan`) 参照方式。`reconcile-phase-state.sh` の `_operate_signal_ts()` と同一クエリを使い、freshness gate だけ session スコープ (この run の最初のイベント時刻) に読み替える
+- `route` は 4 値目 `operate` を追加する加算的変更。`recovery_tiers` も `anomalies.recovery` の件数を残したまま並置する。受け入れ条件 4 の後方互換要求を満たすため、既存フィールドの意味は一切変えない
+- `mode` は top-level フィールドで、session metadata 宣言 → イベント由来推定 → `unknown` の 3 段ラダー。判定は **`--issue` フィルタ適用前**の全 session イベントに対して行う (これが受け入れ条件 3 の中核)
+- `fact_tokens` に追加するのは `tier N` (各 tier) と `batch` (mode=batch のときのみ)。`operate route` は既存の `(.route + " route")` 式が自動生成する
+
+### Deferred Items
+
+- `--no-github` 実行時は operate 判別をスキップし `route` は `patch` に留まる。bats の hermetic 実行は全て `--no-github` なので、operate テストだけ `gh` mock を使って非 `--no-github` で回す必要がある
+- イベント由来フォールバックによる XL fan-out の `batch` 誤判定は修正しない。`modules/run-fact-matching.md` に既知の劣化として記載するに留める
+- `modules/phase-state.md` の operate シグネチャを shared helper に切り出す案は本 Issue のスコープ外 (消費側が 3 つになった時点で再評価)
+
+### Notes for Next Phase
+
+- `emit_event()` は kv 値をすべて文字列で書くため、`recovery` イベントの `tier` は `"2"` のような文字列。`recovery_tiers` を整数配列にするには `tonumber?` が必須で、`?` を落とすと破損値で jq 全体が失敗する
+- 既存テスト `collect-run-facts: missing events log yields empty issues array` は出力を完全一致で assert している。`mode` 追加で必ず落ちるので、実装と同時に `{"session_id":"sess1","mode":"unknown","issues":[]}` へ更新する
+- operate テストで `--no-github` を外すと `$SCRIPT_DIR/get-issue-size.sh` が呼ばれる。bats setup が `WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` を export しているため、`$MOCK_DIR/get-issue-size.sh` の mock 追加が必要
+- `skills/auto/SKILL.md` を触るので `scripts/validate-skill-syntax.py` の制約 (本文に半角感嘆符・triple backtick を書かない、frontmatter に YAML block scalar を使わない) に注意
+- `docs/structure.md` を変更するため `docs/ja/structure.md` を同一 PR で同期する (`docs/translation-workflow.md` の Sync Procedure)
