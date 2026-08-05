@@ -140,28 +140,40 @@ No new comments since last phase.
 - **設計時の不確実性「遅延収集時に session を解決できるか」**: `collect-run-facts.sh` の解決ラダー (`--session` > `AUTO_SESSION_ID` env > `.tmp/auto-session-current`) と `skills/auto/SKILL.md` Step 1 のポインタ書き込みを読み合わせ、`/auto` 実行中は必ず現在の session に解決されることを確認した。`AUTO_SESSION_ID` は wrapper 経由でしか export されないため、env だけに依存する設計にしなくて正解だった
 - **未解決のまま残した点**: `/review` の `pr-review-full` emitter や手動実行では `.tmp/auto-session-current` が直前の `/auto` session を指したままになりうる。`when=` は run facts が `/auto` 実行を記述する以上 `event=auto-run` 前提である旨をドキュメントに明記する対処にとどめ、機構的な強制 (event 名による gate の有効/無効切り替え) は入れないことにした。強制すると将来 `/auto` 以外の run facts が現れたときに再度剥がす必要が出るため
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1-9 を記載順にそのまま実装した。逸脱なし
+
+### Design Gaps/Ambiguities
+
+- N/A — Spec の各ステップが対象ファイル・挿入位置・jq パターンまで具体的に指定しており、実装中に解釈の余地が生じる箇所はなかった
+
+### Rework
+
+- N/A
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 対応方針 B (`when=<axis>:<value>` 属性) を採用し、A (event 名の細分化) は組み合わせ爆発のため不採用。C (表現不能条件の明文化) は B の補完として併用採用した
-- 実行文脈は `scripts/collect-run-facts.sh` の出力をそのまま消費する。`--facts-file <path>` の明示指定を第一、引数なし遅延呼び出しを fallback とする二本立てで、`skills/auto/SKILL.md` の実行順序を変更せずに済ませる
-- 判定不能時・未知軸時は fail-open (無条件マッチ + stderr 警告)。#1055 の silent 常時除外の再生産を避けるため
-- 軸は `route` / `mode` / `recovery-tier` の 3 つに確定し、軸表を **(exhaustive)** で明示する。`pr-state` / `anomaly` は同じ jq パターンで後から足せる拡張余地として Notes に記録
-- Issue #995 の post-merge AC 1 行のみに `when=route:operate` を注釈する (Post-merge 条件の参照ケース)。既存 12 件の一括書き換えは行わない
+- `when=` の comma-separated AND 評価は、1 つの節が不成立でも残りの節を評価し続ける実装にした (early-break しない)。不正な節・未知軸の警告を実行1回で全て出し切るため。挙動としては Spec の「fail-open」要件を満たしつつ、診断性を優先した実装判断
+- Step 9 (Behavioral Change Detection) で `modules/verify-classifier.md` への追記が `tests/verify-executor.bats` から参照されていることを検出し、`bats tests/opportunistic-search.bats` 単体ではなく `bats tests/` フルスイート (1412 件) を実行した。全件 PASS を確認済み
+- Pre-merge AC 7 件のうち、`github_check "gh pr checks" "Run bats tests"` (AC7) は PR 未作成の Step 10 時点では検証不能なため未チェックのまま残した。AC1–6 はすべて Step 10 で PASS 判定し Issue のチェックボックスを更新済み
+- Issue #995 の post-merge AC 更新 (Implementation Step 9) はリポジトリ外の変更のため、この Spec ファイルへの diff や commit には現れない
 
 ### Deferred Items
 
-- 既存 observation AC 11 件 (#995 を除く) への `when=` 注釈は本 Issue のスコープ外。運用の中で個別に判断する
+- 既存 observation AC 11 件 (#995 を除く) への `when=` 注釈は本 Issue のスコープ外のまま。運用の中で個別に判断する
 - `pr-state` 軸 / `anomaly` 軸の追加は必要が生じた時点で軸表に行を足す形で対応する
 - `/auto` 側で facts JSON を observation scan の前に生成し `--facts-file` で渡す最適化 (Alternatives Considered D) は将来の課題
 - `keyword=` / `config=` / `when=` の 3 ゲートに共通する属性抽出処理の関数切り出しは、4 つ目のゲートが現れた時点で検討する
+- AC7 (`github_check "gh pr checks" "Run bats tests"`) のチェックは CI 完了後、`/review` または `/verify` フェーズで行う
 
 ### Notes for Next Phase
 
-- `grep "when=" "modules/observation-trigger.md"` の Pre-merge AC は Implementation Step 5 で初めて成立する。Step 5 を飛ばすと AC 4 が FAIL する
-- `modules/verify-executor.md` の `--when="shell condition"` は別機構。実装中に混同しないこと。`scripts/validate-skill-syntax.py` の `--when=` 除去ロジック (L620 / L626) は `verify:` タグ側のみを扱うため本変更の影響を受けない
-- `tests/opportunistic-search.bats` は現状 `WHOLEWORK_SCRIPT_DIR` を設定していない。`when=` テストでは `$MOCK_DIR/collect-run-facts.sh` のモック追加と `export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` の設定が必要 (既存の `config=` テストは `WHOLEWORK_CONFIG_PATH` 経由で実スクリプトを使っている点に注意 — 設定方法が異なる)
-- `set -euo pipefail` 配下で jq の非ゼロ終了を扱うため、判定は `if ! ... ; then` 形式で受けること。`|| true` でエラーを握り潰すと fail-open と実エラーの区別がつかなくなる
-- `skills/code/SKILL.md` の `allowed-tools` には `gh issue edit:*` と `gh-issue-edit.sh:*` の双方が登録済みのため、Implementation Step 9 (#995 の body 更新) に frontmatter の変更は不要
+- AC7 は未チェックのまま。PR #1178 の CI (`gh pr checks`) が green になった時点でチェックすること
+- `bats tests/` フルスイート (1412 件) はこの Code フェーズ時点でローカル実行済み・全件 PASS。CI 側でも同じ結果になるはず — 差異が出た場合は環境依存 (bash バージョン等) を疑うこと
+- Issue #995 の post-merge AC 1 行を `when=route:operate` 付きに更新済み。この PR の post-merge 条件 (「次回 `/auto` 実行時に operate route の AC がマッチ集合から除外される」) を検証する際は #995 側の現在の AC 文言を直接参照すること
