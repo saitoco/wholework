@@ -57,7 +57,7 @@ IMPROVEMENT_HINT=""
 if grep -q "Could not retrieve PR number" "$LOG_FILE"; then
   PATTERN_NAME="pr-extraction-failure"
   ANOMALY_DESC="PR extraction failed in phase \`$PHASE\` (exit code $EXIT_CODE): \`Could not retrieve PR number\` detected in wrapper output. See #311 for root cause (gh pr list glob non-support)."
-  IMPROVEMENT_HINT="Use \`gh pr list --head\` with exact branch name match instead of glob patterns. Reference: #311."
+  IMPROVEMENT_HINT="Use \`gh pr list --head\` with exact branch name match instead of glob patterns. Reference: #311. The catalog entry for this fallback (\`gh-pr-list-head-glob\`) was archived — see docs/reports/orchestration-fallbacks-archive.md (#1180)."
 elif grep -q "Patch lock acquisition timeout" "$LOG_FILE"; then
   PATTERN_NAME="patch-lock-timeout"
   ANOMALY_DESC="Patch lock acquisition timed out in phase \`$PHASE\` (exit code $EXIT_CODE): \`Patch lock acquisition timeout\` detected. Another process may have held the lock or the previous run did not release it."
@@ -75,14 +75,6 @@ elif [[ "$EXIT_CODE" == "143" ]] && grep -q "still waiting (json mode)" "$LOG_FI
   PATTERN_NAME="json-mode-silent-hang"
   ANOMALY_DESC="json mode silent hang in phase \`$PHASE\` (exit code $EXIT_CODE): \`watchdog: still waiting (json mode)\` detected in wrapper output. The forked session did not produce any output after launching in json mode, and the watchdog terminated it with SIGTERM."
   IMPROVEMENT_HINT="Follow the recovery procedure at \`modules/orchestration-fallbacks.md#json-mode-silent-hang\`: retry the phase once via the corresponding run-*.sh script. Rationale: transient API delay or session init stall."
-elif grep -q "watchdog: kill and state not reached" "$LOG_FILE"; then
-  PATTERN_NAME="watchdog-kill"
-  ANOMALY_DESC="Watchdog killed the process in phase \`$PHASE\` (exit code $EXIT_CODE): \`watchdog: kill and state not reached\` detected. The phase did not complete within the timeout."
-  IMPROVEMENT_HINT="Increase \`watchdog-timeout-seconds\` in \`.wholework.yml\` or improve liveness signals (progress output) to prevent false-positive kills. Related: #308."
-elif grep -q "VERIFY_FAILED" "$LOG_FILE" && grep -q "uncommitted" "$LOG_FILE"; then
-  PATTERN_NAME="dirty-working-tree"
-  ANOMALY_DESC="Verify failed due to uncommitted changes in phase \`$PHASE\` (exit code $EXIT_CODE): \`VERIFY_FAILED\` and \`uncommitted\` detected in wrapper output. The verify skill cannot run when uncommitted changes are present in the working tree. Reference: #393."
-  IMPROVEMENT_HINT="Run \`git status\` to identify uncommitted files. If the files are unrelated to issue #$ISSUE_NUMBER, notify and retry via \`/verify $ISSUE_NUMBER\`. If the files are related to the issue (unexpected edits), abort and investigate before retrying. See \`modules/orchestration-fallbacks.md#dirty-working-tree\` for the full recovery procedure."
 elif grep -q '"matches_expected":false' "$LOG_FILE" && grep -q "Review Summary" "$LOG_FILE"; then
   PATTERN_NAME="reconciler-header-mismatch"
   ANOMALY_DESC="Reconciler detected header mismatch in phase \`$PHASE\` (exit code $EXIT_CODE): \`matches_expected:false\` and \`Review Summary\` pattern detected in wrapper output. The reconciler could not find \`## Review Response Summary\` in the PR comment, indicating a mismatch between the skill output header and the reconciler's expected pattern. Reference: #394."
