@@ -536,10 +536,23 @@ exit 0
 MOCK
     chmod +x "$MOCK_DIR/apply-fallback.sh"
 
+    # emit-event.sh override: log EMIT_ISSUE_NUMBER so the tier=2 recovery event
+    # can be asserted to carry the real Issue number, not the PR number (issue #984
+    # regression guard — the dedicated tier2-specific test for this was removed
+    # in #1181 since the Spec-write path it exercised no longer exists).
+    export EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+emit_event() { echo "phase=${EMIT_PHASE_NAME:-} issue=${EMIT_ISSUE_NUMBER:-} pr=${EMIT_PR_NUMBER:-<unset>} $*" >> "$EMIT_LOG"; }
+_emit_comments_consumed() { :; }
+restore_auto_session_pointer() { :; }
+MOCK
+
     run bash "$SCRIPT" 42
     [ "$status" -eq 0 ]
     [[ "$output" == *"tier2 fallback catalog"* ]]
     [ -f "$APPLY_FALLBACK_LOG" ]
+    grep -q "phase=code-pr issue=42 pr=<unset> recovery phase=code-pr tier=2" "$EMIT_LOG"
+    ! grep -q "issue=99" "$EMIT_LOG"
 }
 
 @test "run-auto-sub: phase exit nonzero + tier1+tier2 fail + tier3 spawn succeeds: recover" {
