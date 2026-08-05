@@ -48,3 +48,32 @@
 ## Consumed Comments
 
 前回フェーズ (triage → spec) 以降の新規コメントなし。Issue #1170 には現時点でコメントが1件も存在しない (cutoff: 直近の `phase/*` ラベル付与時刻 2026-08-05T03:03:25Z、および全件走査でも 0 件を確認)。
+
+### code フェーズ
+
+前回フェーズ (spec → code) 以降の新規コメントなし (cutoff: 直近の `phase/*` ラベル付与時刻 2026-08-05T05:33:30Z)。cross-phase marker (`type=verify-fail` / `type=preview-ac-unverified`) の全件走査でも該当なし。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜5 を Spec 記載順どおりに実装した。逸脱なし
+
+### Design Gaps/Ambiguities
+- N/A — Notes セクションで既に判断済みの論点 (別フラグ切り出し不要、冪等性マーカーチェックは dry-run でも維持) 以外に、実装中に新たな曖昧点は生じなかった
+
+### Rework
+- N/A — 各 Implementation Step は一度の Edit で完了し、手戻りは発生しなかった
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `opportunistic-search.sh` の `--dry-run` フラグのパース自体 (`DRY_RUN=true` 代入) は CLI 後方互換のため残し、参照されない no-op フラグとした (Spec Implementation Step 1 の指示どおり)
+- Pre-merge AC のうち `github_check "gh pr checks" "Run bats tests"` は PR 作成前のため verify-executor 実行時点では UNCERTAIN — Issue チェックボックスは AC1〜5 のみ `[x]` 化し、AC6 は未チェックのまま残した (CI 完了後に `/review` または `/verify` で確認される想定)
+
+### Deferred Items
+- Post-merge AC (`observation-trigger.sh --event auto-run --dry-run` の実環境確認、`verify-type: manual`) は未実施 — `/verify` フェーズでの手動確認に委ねる
+
+### Notes for Next Phase
+- CI (`Run bats tests` job) の結果を `/review` で確認すること。ローカルでは `bats tests/` フルスイート (1394件) 実行済みで全件 PASS 済み
+- PR #1176 の pre-merge 検証セクションに rubric 判定結果 (AC1〜4 PASS) を記載済み。CI PASS 後に AC6 のチェックボックスを更新すること
