@@ -216,3 +216,63 @@ The 2026-08-03 Redesign plan's item 3 would conclude, on 2 quiet weeks, that the
 1. **#1153** — record the parent-observed task-notification wording on the external-kill recovery path (Lead 2), so the harness-stop vs. external-signal discriminator accumulates across occurrences.
 2. **#1146** — apply the revised expiry criterion above at the ~2026-08-17 decision point; a quiet window no longer concludes "trigger removed upstream".
 3. **Upstream corroboration (optional, not yet filed)** — our 30+ occurrences with `wrapper_alive` checkpoint correlation and the 0/3-vs-0/3 detachment experiment would add macOS-side depth to #76974, whose kernel evidence is Linux-only. Deferred pending the #1153 notification-class data, which would make the report materially stronger.
+
+## 2026-08-05 Addendum (Arm 1 opportunistic window + concurrent-session hypothesis)
+
+This addendum records a second Arm 1 window run under #1146's opportunistic re-observation policy, and a hypothesis shift that reframes the experiment design.
+
+### Arm 1 window: 0 kills across 3 wrappers (~4.5 hours)
+
+Session `6722-1785907145`, `/auto --batch 1170 1171 1172` — started as `--batch` from session start (matching the July condition), main synced, no leftover wrapper processes at start.
+
+| Wrapper | Lifetime | Route / Size | Result |
+|---|---|---|---|
+| #1170 run-auto-sub | ~64 min | pr / M | exit 0, `Exit code:` trailer present |
+| #1171 run-auto-sub | ~112 min | pr / L | exit 0, trailer present |
+| #1172 run-auto-sub | ~96 min | pr / L | exit 0, trailer present |
+
+**0 kills.** All three exceed the 15–30 minute band that showed a 4/4 kill rate on 7/23. Combined with the 2026-08-03 Arm 1 (0 kills / 6 wrappers / ~3 hours), two consecutive Arm 1 windows have now failed to reproduce.
+
+One non-kill anomaly: #1170's spec phase hit a `ff-only-merge-fallback` twice when main advanced under it (a concurrent session's `/verify` commits). Recovered as designed — not an external kill.
+
+### Hypothesis shift: concurrent sessions
+
+Both 0-kill windows share a condition that was imposed for a different reason: **#1142's Spec requires "no concurrent sessions / no concurrent `/auto`" during the experiment (交絡排除)**, and Arm 1 inherits it. If concurrency is the trigger, **Arm 1 cannot reproduce by construction** — the control imposed to remove confounds removes the causal variable.
+
+Supporting observations (user-reported, 2026-08-05):
+
+- The kill-dense window (7/13–7/31) coincides with the period when the real projects **pds / tofas were active**. Both are separate repositories, so their sessions never appear in this repository's `docs/sessions/`.
+- The recent clean windows (8/4 session `73536`, 8/5 session `6722`) were run under **deliberate suppression of concurrent sessions** — fully confounded with the "a harness update removed the trigger" reading in the 2026-08-03 Update.
+- **Before 7/13, concurrent `/auto --batch` ran reliably.** This argues against concurrency alone and for a combination: *a harness-side change around 7/13 × concurrent execution*.
+
+### Session-overlap analysis (not decisive)
+
+Correlating `docs/sessions/*/events.jsonl` time spans with `manual_intervention` counts:
+
+| Kill-bearing session | Date | Kills | Overlapping session (this repo) |
+|---|---|---|---|
+| 33265 | 07-13 | 5 | none |
+| 12825 | 07-14 | 4 | none |
+| 32651 | 07-15 | 5 | none |
+| 89630 | 07-20 | 1 | none |
+| 5059 | 07-22〜23 | 2 | none |
+| 30985 | 07-23 | 3 | none |
+| 46196 | 07-29〜31 | 11 | 25766 |
+
+6 of 7 kill-bearing sessions had no overlapping session *in this repository*, and the 13 sessions that did overlap were all kill-free. **This does not refute the concurrency hypothesis** — the analysis cannot measure three things:
+
+1. **Sessions in other repositories (pds / tofas) are entirely invisible** — the largest blind spot, and precisely where the reported concurrency lived
+2. **Single-shot `/auto` leaves no session directory** — the L3 retrospective commits `docs/sessions/` only for batch/XL routes, so "no overlap" means "no overlapping *batch* session"
+3. **`manual_intervention` events only exist from #1005/#1014 onward (~7/13–15)** — earlier kills register as 0
+
+### Consequences
+
+- **Arm 4 (concurrent-session arm) added to #1146**: run two sessions with `/auto --batch` simultaneously (cross-repo is acceptable and closer to real operation) and compare the kill rate against the single-session arm; if it reproduces, re-run with `WHOLEWORK_SPAWN_DETACH=1` as Arm 4b, which doubles as the workaround validation. The host-reboot arm (Arm 2) moves behind Arm 4, since the concurrent condition looks more likely to reproduce.
+- **Expiry criterion revised again**: the 2026-08-03 Redesign plan's "2 quiet weeks → trigger removed" cannot hold while concurrency is deliberately suppressed. #1146 now requires Arm 4a to have run before an expiry conclusion is permitted.
+- **Operational impact is now explicit**: being unable to run `/auto` concurrently is a measurable productivity regression relative to pre-7/13 operation. #1146 was re-prioritized (`Priority: high`, Size M) and its scope now includes establishing a usable workaround, not only tracking the investigation.
+
+### Deferred instrumentation (not filed)
+
+A **`concurrency_snapshot` event** — sampling the number of live wholework wrappers via `ps` at session start and at each wrapper spawn — would make concurrency measurable **across repositories**, using only an added event in the existing `auto-events.jsonl` and giving the concurrency level at the moment of each kill directly (rather than by after-the-fact time-span correlation, which carries the three blind spots above). The existing `concurrent_commit_detected` event covers git-level contention, not session-level concurrency; this axis is unfilled. Deliberately not filed as an Issue (2026-08-05) to avoid backlog sprawl; recorded here and in project memory. Worth adding before Arm 4a so that arm's data carries concurrency levels from the start.
+
+Committing a session directory for single-shot `/auto` runs was considered and **rejected**: it would not close blind spot 1 (other repositories), while multiplying directory count and commit frequency for the most common invocation shape — which in turn worsens the `ff-only-merge-fallback` contention observed twice in this very session.
