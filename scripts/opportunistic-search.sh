@@ -226,6 +226,64 @@ for N in $ISSUE_NUMBERS; do
             fi
         fi
 
+        # when= condition check gate: skip lines whose when=<axis>:<value>[,<axis>:<value>...]
+        # clauses (AND) do not all match the current /auto run facts (route / mode /
+        # recovery-tier). No when= attribute means unconditional match (backward compatible).
+        # Facts unavailable/invalid/contextless (resolve_run_facts fail-open), and unknown axes
+        # or malformed clauses, are ignored rather than excluding the line.
+        WHEN_ATTR=$(echo "$line" | grep -oE 'when=[^ >]+' | sed -e 's/^when=//' -e 's/-*$//' || true)
+        if [ -n "$WHEN_ATTR" ]; then
+            resolve_run_facts
+            if [ -n "$RUN_FACTS_JSON" ]; then
+                WHEN_MATCH=true
+                OLD_IFS="$IFS"
+                IFS=','
+                for CLAUSE in $WHEN_ATTR; do
+                    IFS="$OLD_IFS"
+                    case "$CLAUSE" in
+                        *:*) ;;
+                        *)
+                            echo "Warning: malformed when= clause '${CLAUSE}' (missing ':'), ignoring" >&2
+                            IFS=','
+                            continue
+                            ;;
+                    esac
+                    WHEN_AXIS="${CLAUSE%%:*}"
+                    WHEN_VALUE="${CLAUSE#*:}"
+                    if [ -z "$WHEN_VALUE" ]; then
+                        echo "Warning: malformed when= clause '${CLAUSE}' (empty value), ignoring" >&2
+                        IFS=','
+                        continue
+                    fi
+                    case "$WHEN_AXIS" in
+                        route)
+                            if ! echo "$RUN_FACTS_JSON" | jq -e --arg v "$WHEN_VALUE" 'any(.issues[]?; .route == $v)' >/dev/null 2>&1; then
+                                WHEN_MATCH=false
+                            fi
+                            ;;
+                        mode)
+                            if ! echo "$RUN_FACTS_JSON" | jq -e --arg v "$WHEN_VALUE" '.mode == $v' >/dev/null 2>&1; then
+                                WHEN_MATCH=false
+                            fi
+                            ;;
+                        recovery-tier)
+                            if ! echo "$RUN_FACTS_JSON" | jq -e --arg v "$WHEN_VALUE" 'any(.issues[]?; ((.recovery_tiers // []) | map(tostring)) | index($v) != null)' >/dev/null 2>&1; then
+                                WHEN_MATCH=false
+                            fi
+                            ;;
+                        *)
+                            echo "Warning: unknown when= axis '${WHEN_AXIS}', ignoring clause" >&2
+                            ;;
+                    esac
+                    IFS=','
+                done
+                IFS="$OLD_IFS"
+                if [ "$WHEN_MATCH" = false ]; then
+                    continue
+                fi
+            fi
+        fi
+
         # Extract text with HTML comments and checkbox markup removed
         CONDITION=$(echo "$line" \
             | sed 's/^- \[ \] //' \
