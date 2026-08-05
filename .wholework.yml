@@ -9,7 +9,8 @@ verify-max-iterations: 3
 auto-retry-on-fail:
   enabled: true
   threshold: 3
+# #1179 により既定 opt-out。頻度確認は `bash scripts/collect-recovery-candidates.sh docs/reports/orchestration-recoveries.md --threshold 1`
 recoveries-auto-fire:
-  enabled: true
+  enabled: false
 capabilities:
   workflow: true
