@@ -200,6 +200,8 @@
 - saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5146655604
 - saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 995` to verify the condition / https://github.com/saitoco/wholework/issues/995#issuecomment-5147236225
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=9 / https://github.com/saitoco/wholework/issues/995#issuecomment-5174321698
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/995#issuecomment-5182467195
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=9 / https://github.com/saitoco/wholework/issues/995#issuecomment-5185270229
 ## Issue Retrospective
 
 `/issue 995 --non-interactive` で既存 Issue のリファインメントを実行した記録 (Issue コメントから転記)。
