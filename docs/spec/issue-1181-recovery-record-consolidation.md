@@ -191,3 +191,13 @@ No new comments since last phase.
 ### Improvement Proposals
 
 - N/A — 上記の観察はいずれも本 Issue の review フェーズ固有の軽微な教訓であり、独立した Issue 化が必要な規模ではないと判断した
+
+## Auto Retrospective
+
+### Tier 3 recovery (review)
+- **Date**: 2026-08-05 15:44 UTC
+- **Issue**: #1181, phase: review
+- **Source**: spawn-recovery-subagent.sh
+- **Wrapper exit code**: 1
+- **Outcome**: success
+- **Recovery details**: see docs/reports/orchestration-recoveries.md
