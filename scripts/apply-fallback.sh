@@ -63,7 +63,7 @@ detect_symptom_anchor() {
     echo "json-mode-silent-hang"
     return 0
   fi
-  # See modules/orchestration-fallbacks.md#gh-pr-list-head-glob (not yet implemented)
+  # gh-pr-list-head-glob: archived — see docs/reports/orchestration-fallbacks-archive.md (#1180)
   # See modules/orchestration-fallbacks.md#ff-only-merge-fallback (not yet implemented)
   # See modules/orchestration-fallbacks.md#conflict-marker-residual (not yet implemented)
   echo ""

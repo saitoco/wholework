@@ -75,60 +75,6 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ---
 
-## gh-pr-list-head-glob
-
-### Symptom
-- `gh pr list --head "*issue-N-*"` (glob pattern) returns no results even though matching PRs exist
-- `gh` CLI does not support glob/wildcard expansion in `--head`; the filter is applied as a literal string match
-
-### Applicable Phases
-- code (PR route — branch lookup)
-- merge
-
-### Fallback Steps
-1. Drop the `--head` glob filter and instead fetch all open PRs: `gh pr list --state open --json number,headRefName`
-2. Filter client-side with a substring match: `| jq '.[] | select(.headRefName | contains("issue-N"))'`
-3. Return the matched PR number(s) for downstream use
-
-### Escalation
-- If multiple PRs match the substring pattern, select the most recently created one (highest PR number) and log a warning
-- If no PR is found after client-side filtering, treat as "no PR exists" and proceed accordingly
-
-### Rationale
-- Fixed in #311: `gh pr list --head` does not support glob; client-side filtering is the canonical workaround
-- Cataloged here to prevent recurrence; the fix is already applied in affected scripts
-
----
-
-## ci-flake-retry
-
-### Symptom
-- A CI check fails with a transient error unrelated to the code change (e.g., network timeout, runner capacity issue, external service outage)
-- Typical signals: check name contains "flake" in the error message, or the same check passes on re-run without any code change
-
-### Applicable Phases
-- code (after PR creation — waiting for CI)
-- merge (pre-merge CI gate)
-
-### Fallback Steps
-1. Identify the failing check name via `gh pr checks <pr-num>`
-2. Confirm the failure is transient (no code change between runs, error message indicates infrastructure issue)
-3. Re-trigger the check: `gh run rerun <run-id> --failed` (requires appropriate permissions)
-4. Wait for the re-triggered run to complete: `scripts/wait-ci-checks.sh <pr-num>`
-5. If the re-triggered run passes, continue the normal workflow
-
-### Escalation
-- Maximum 1 automatic re-trigger attempt per CI run
-- If the check fails again after re-trigger, treat as a genuine failure and require human investigation before proceeding
-- Do not re-trigger checks that fail due to code-related errors (test failures, lint errors, syntax errors)
-
-### Rationale
-- CI flake is a known pattern in shared infrastructure; retrying once is a standard mitigation
-- Runtime integration (automatic re-trigger from `run-*.sh`) is deferred to a follow-up Issue; see #315 (catalog entry) for context
-- `scripts/wait-ci-checks.sh` already handles the wait logic; re-trigger is the missing piece
-
----
-
 ## dco-signoff-missing-autofix
 
 ### Symptom
@@ -191,8 +137,7 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 ## dirty-working-tree
 
 ### Symptom
-- `/verify` outputs `VERIFY_FAILED` and `Cannot run verify because there are uncommitted changes`
-- `scripts/detect-wrapper-anomaly.sh` emits pattern: `dirty-working-tree`
+- `/verify` outputs `Cannot run verify because there are uncommitted changes` (`skills/verify/SKILL.md` Step 1, triggered by `scripts/check-verify-dirty.sh` exit 1)
 
 ### Applicable Phases
 - verify
@@ -210,7 +155,7 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ### Rationale
 - First observed in Issue #393 retrospective: anomaly detector returned empty output because this pattern was not cataloged, blocking Tier 2 automatic recovery
-- `scripts/detect-wrapper-anomaly.sh` (pattern: `dirty-working-tree`) now detects the `VERIFY_FAILED` + `uncommitted` co-occurrence and emits this catalog anchor for Tier 2 lookup
+- The corresponding `scripts/detect-wrapper-anomaly.sh` detector pattern was retired in #1180 (structurally unreachable: the AND condition's `VERIFY_FAILED` string has not been emitted by anything since `run-verify.sh` was removed in #485). This procedure itself remains live — `skills/verify/SKILL.md` Step 1 / `scripts/check-verify-dirty.sh` still surface the dirty-tree condition directly, so the catalog entry stays in place with the Symptom updated to the current signal. See `docs/reports/orchestration-fallbacks-archive.md` for the retired detector pattern's archived trigger string and history
 
 ---
 
@@ -295,7 +240,6 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 - First observed in Issue #385: watchdog kill after all commits were complete but before `gh pr create` was executed; the parent session manually ran rebase + push + PR creation
 - `reconcile-phase-state.sh` `_completion_code_pr()` returns `matches_expected:false` only when the expected PR is absent (the sole mismatch case); combined with `"phase":"code-pr"` in the JSON output, this uniquely identifies the code-completed-no-pr scenario
 - `run-code.sh` now logs `reconcile-phase-state result:` (added in #415) so Tier 2 can detect this pattern from the wrapper log; prior to this change, `_reconcile_out` was silently discarded and Tier 2 would return empty output (unknown pattern)
-- The `code-completed-no-pr` check precedes `watchdog-kill` in the detector to win the first-match-wins priority, since both signatures can co-occur in the same log
 - Suppression on recovery (#981): if the same log later contains a `"matches_expected":true` line for phase code-pr (e.g. after `code_retry_fire`'s exec-based retry succeeds), the `code-completed-no-pr` condition is skipped entirely — the same reconcile-first-authority principle applied to `review-completion-false-negative` (#932), extended here to the code-pr phase
 
 ---
@@ -425,7 +369,6 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 ### Rationale
 - First observed in a downstream project: `run-code.sh` launched `claude -p` in json mode but received no output for 1800s (watchdog timeout), then was terminated with SIGTERM (exit 143); Tier 3 orchestration-recovery diagnosed as "transient API delay or session init stall" and issued action=retry, which succeeded
 - `scripts/claude-watchdog.sh` line 71 emits `watchdog: still waiting (json mode)` to stderr when no output is received in json mode; `run-*.sh` wrapper logs capture this
-- The AND condition (exit 143 AND `still waiting (json mode)` in log) uniquely identifies this pattern vs. the more generic `watchdog-kill` (which fires on any watchdog timeout); `json-mode-silent-hang` is placed before `watchdog-kill` in the detector to win first-match-wins priority
 - Cataloged in Issue #684 based on Tier 3 recovery success; retry once is the correct first response for transient stalls
 
 ---
@@ -635,6 +578,25 @@ When a new fallback pattern is discovered:
 1. Add an entry following the schema above (Symptom / Applicable Phases / Fallback Steps / Escalation / Rationale)
 2. Add a pointer comment in the affected script(s): `# See modules/orchestration-fallbacks.md#<anchor>`
 3. Reference the discovering Issue or retrospective in the Rationale section
+
+An entry-addition path exists alongside a retirement path (see Entry Retention Criterion below) — new patterns are added the same way an aging pattern with neither firing history nor a live reference is archived.
+
+### Entry Retention Criterion
+
+An entry is retained in this live catalog when **any** of the following axes is non-zero (OR, not AND):
+
+- **Axis A — firing history**: the entry's anchor or symptom is recorded at least once in `docs/reports/orchestration-recoveries.md`
+- **Axis B — live reference**: the entry is referenced from somewhere other than `docs/spec/`, `docs/sessions/`, `tests/fixtures/` (synthetic test data), or `docs/reports/orchestration-fallbacks-archive.md` itself (an archive record is not a live reference) — a script's pointer comment that guards implemented fallback logic (`# See modules/orchestration-fallbacks.md#<anchor>`; a pointer comment explicitly annotated `(not yet implemented)` with no corresponding handler anywhere does not count), a detector's `IMPROVEMENT_HINT`, a SKILL.md, a steering doc, or an implemented handler
+- **Axis C — procedure applicability**: the recovery procedure itself still applies to a scenario reachable in current code, even when no anchor reference and no firing history exist (e.g. `dirty-working-tree` — `skills/verify/SKILL.md` Step 1 / `scripts/check-verify-dirty.sh` still surface the condition directly, even though the anchor's own detector-side pointer was retired)
+
+Only entries with **all three** axes at zero are archived to `docs/reports/orchestration-fallbacks-archive.md` (see `### Archived Entries` below). Zero firing history alone is not sufficient grounds for archival — many entries in this catalog have never fired but remain referenced as the SSoT procedure for a live pointer comment, detector hint, skill step, or still-applicable manual procedure; archiving those would break the reference.
+
+### Archived Entries
+
+The following catalog anchors have been archived (both axes zero at time of archival) — full content preserved in `docs/reports/orchestration-fallbacks-archive.md`:
+
+- `ci-flake-retry` — docs/reports/orchestration-fallbacks-archive.md
+- `gh-pr-list-head-glob` — docs/reports/orchestration-fallbacks-archive.md
 
 ### Tier 2 bash path: recoveries.md-only recording
 

@@ -81,3 +81,36 @@ CATALOG="$PROJECT_ROOT/modules/orchestration-fallbacks.md"
 @test "orchestration-fallbacks: catalog references #319 (tier 2 consumer)" {
     grep -q '#319' "$CATALOG"
 }
+
+ARCHIVE="$PROJECT_ROOT/docs/reports/orchestration-fallbacks-archive.md"
+
+@test "orchestration-fallbacks: archive file exists" {
+    test -f "$ARCHIVE"
+}
+
+@test "orchestration-fallbacks: archived anchors are absent from live catalog" {
+    ! grep -q '^## ci-flake-retry' "$CATALOG"
+    ! grep -q '^## gh-pr-list-head-glob' "$CATALOG"
+}
+
+@test "orchestration-fallbacks: archive preserves both anchors as H2 headings with 5 required sections" {
+    grep -q '^## gh-pr-list-head-glob' "$ARCHIVE"
+    grep -q '^## ci-flake-retry' "$ARCHIVE"
+    # Each archived entry retains the same 5-section structure as the live catalog schema.
+    for anchor in "gh-pr-list-head-glob" "ci-flake-retry"; do
+        block=$(awk -v anchor="## $anchor" '
+            $0 == anchor { capture = 1; next }
+            capture && /^## / { capture = 0 }
+            capture { print }
+        ' "$ARCHIVE")
+        echo "$block" | grep -q '^### Symptom'
+        echo "$block" | grep -q '^### Applicable Phases'
+        echo "$block" | grep -q '^### Fallback Steps'
+        echo "$block" | grep -q '^### Escalation'
+        echo "$block" | grep -q '^### Rationale'
+    done
+}
+
+@test "orchestration-fallbacks: live catalog documents Entry Retention Criterion" {
+    grep -q '^### Entry Retention Criterion' "$CATALOG"
+}

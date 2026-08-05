@@ -184,25 +184,48 @@ Issue 本文は「17 エントリは発火実績ゼロ」を退避候補の規�
 - **`docs/reports/` 配下に新規ファイルを置くと翻訳同期が要るか**: `docs/translation-workflow.md` の Exclusions と `scripts/check-translation-sync.sh` の SOURCE_FILES 収集ロジック (`docs` maxdepth 1 と `docs/guide` のみ) の両方を確認し、不要と確定。これが退避先選定の決め手になった。
 - **`AC 9` の `check-translation-sync.sh` が実質的な検証になっているか**: スクリプトを読み、`--fail-if-outdated` なしでは常に exit 0 を返すことを確認。本 Spec 作成時点で既に 1 OUTDATED / 1 MISSING_JA の既存ギャップがあり、AC としては素通りする。verify command は Issue body の記述を verbatim で引き写す規約のため書き換えず、代わりに Notes に「`/code` / `/review` で出力表の `docs/structure.md` 行を目視確認する」という運用上の補いを明記した。
 
+## Code Retrospective
+
+### Deviations from Design
+- Implementation Step 1 says the two archived entries move "配下に" (under) `## Archived catalog entries`, which reads as nesting the anchors as H3. Instead they were kept as H2 headings (siblings following the `## Archived catalog entries` label, not its children), because Step 8's AC test description explicitly requires "アーカイブに両アンカーの H2 見出し" — literal H2 for the anchor names. Resolving the ambiguity toward the literal AC wording (H2) rather than the "配下に" nesting implication keeps the archive's per-entry structure identical to the live catalog's own H2-anchor / H3-subsection convention, which also made the bats test in Step 8 a straightforward structural mirror of the existing catalog schema tests.
+
+### Design Gaps/Ambiguities
+- The retired `dirty-working-tree` detector pattern and the still-live `dirty-working-tree` catalog entry share the same anchor name across two different files (archive vs. live catalog). The archive heading was written as `### dirty-working-tree (detector pattern)` to disambiguate it from a hypothetical future archival of the catalog entry itself; this qualifier is not prescribed by the Spec but avoids an anchor collision within the single archive file (the catalog entry itself was never archived, so no collision exists today, but the qualifier front-loads the disambiguation).
+
+### Rework
+- N/A — no repair cycles or backtracking occurred during implementation; the H2/H3 heading-level ambiguity above was resolved once at authoring time (Step 1/Step 8) before the first test run, not discovered via a failing test.
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- 退避判定を「発火実績 OR live 参照元」の 2 軸ゼロ基準に固定した。Issue 本文が退避候補として列挙する 17 エントリのうち 15 件は script の pointer コメント / 検出器の IMPROVEMENT_HINT / SKILL.md / steering docs から参照されており、削除すると AC 2 (参照リンクが壊れていない) に自ら反する。
-- 退避先を `docs/reports/orchestration-fallbacks-archive.md` にした。`docs/reports/` は翻訳同期と doc-checker の両方で対象外のため、退避後の恒常コストがゼロになる。
-- 検出器の「縮約」を到達不能パターンの除去に限定した (`watchdog-kill` / `dirty-working-tree` の 2 件)。残る 10 パターンは trigger 文字列が現役のため退役するとデグレになる。
-- `dirty-working-tree` は catalog 残置 + 検出器退役という非対称な扱いにした。手順は現役、検出条件だけが失効している。
+- Ran full-mode multi-perspective review (review-spec + review-bug×2) since ARGUMENTS carried `--full`; Base Branch Conflict Pre-check found zero conflicts (PR branch was already even with `origin/main`), and `HAS_WORKFLOW_CAPABILITY=true` was overridden to the static Task fan-out because ARGUMENTS carried `--non-interactive` (fork context — no re-invocation guarantee, per `modules/execution-context.md`), so all Agent calls ran with `run_in_background: false`.
+- Step 8's `command "bash scripts/check-translation-sync.sh"` AC has no corresponding CI job in `.github/workflows/test.yml`, so safe-mode CI-reference fallback returned UNCERTAIN; the Issue checkbox for that condition was left unchecked (`- [ ]`) rather than trusting the code-phase's self-reported local run, per the FAIL/UNCERTAIN checkbox-update rule.
+- No MUST issues were found (0 FAIL ACs, CI all-SUCCESS, 0 MUST from code review), so the PR Review posted as `COMMENT`, not `REQUEST_CHANGES`. 2 SHOULD + 5 CONSIDER issues were found by review-spec + review-bug×2 (after 2-stage Opus verification rejected 1 of 6 review-bug findings as a false positive); all but one (an optional/low-priority stale-example note in `skills/spec/SKILL.md`, outside this PR's diff) were fixed in Step 12 and pushed as 3 follow-up commits.
 
 ### Deferred Items
 
-- 汎用 watchdog kill (json mode 以外) の Tier 2 検出復旧 (`claude-watchdog.sh` の現行出力文字列にパターンを合わせる) は本 Issue のスコープ外。アーカイブに現行シグナルを記録して別 Issue に委ねる。
-- Issue 本文 Related の #1122 / #1105 / #1076 (カタログ・検出器へのエントリ追加提案) の要否判断は本 Issue のマージ後に行う。新設する Entry Retention Criterion がその判断基準になる。
-- `docs/reports/ja/` へのアーカイブ翻訳は作成しない (translation-workflow.md 上の義務がないため)。
+- Generic (non-json-mode) watchdog-kill Tier 2 detection recovery remains out of scope (unchanged from code-phase handoff); the archive file records the current signal for whoever picks this up.
+- Issue Related #1122 / #1105 / #1076 (proposed catalog/detector entry additions) — still a post-merge judgment call against the now-corrected Entry Retention Criterion, unchanged from the code-phase handoff (no corresponding AC to cross-reference; both remain open).
+- `skills/spec/SKILL.md:346`'s stale `#485`/`VERIFY_FAILED` example reference was left as-is (optional, low priority per the finding itself, and outside this PR's changed-files scope) — a future pass through that file could append a note that #1180 finally removed the pattern.
 
 ### Notes for Next Phase
 
-- Implementation Step 3 の `### Archived Entries` 一覧は **H2 見出し形式 (`## <anchor>`) を使わないこと**。使うと AC 5/6 の `file_not_contains` が誤検知して FAIL する。
-- Implementation Step 5 で検出器の elif ブロックを 2 つ削るとき、残る分岐の first-match-wins 順序 (`json-mode-silent-hang` → `reconciler-header-mismatch` → `review-completion-false-negative` → `mid-run-api-error` → `preview-deployment-absent` → `EXIT_CODE == 0`) が保たれることを確認する。あわせて catalog 側の `code-completed-no-pr` / `json-mode-silent-hang` Rationale に残る `watchdog-kill` との優先順位記述 (Step 4b, 4c) を消し忘れないこと。
-- AC 9 (`check-translation-sync.sh`) は常に exit 0 なので `docs/ja/structure.md` の更新漏れを検出しない。出力表の `docs/structure.md` 行が `IN_SYNC` であることを目視確認すること。
-- `tests/fixtures/orchestration-recoveries-sample.md` の `gh-pr-list-head-glob` は触らないこと (頻度集計テストの合成データ。変更すると `tests/collect-recovery-candidates.bats` が壊れる)。
+- `/merge` can proceed directly — no MUST issues remain, and the 3 follow-up fix commits (Axis B/C criterion, archive English translation + structure, retrospective H2/H3 correction) are already pushed to the PR branch and covered by a green re-run of `bats tests/orchestration-fallbacks.bats tests/detect-wrapper-anomaly.bats` (55/55) plus `check-forbidden-expressions.sh` / `check-translation-sync.sh` / `validate-skill-syntax.py`.
+- AC 9 (`check-translation-sync.sh`) will still read UNCERTAIN/unchecked going into `/merge` — this is expected and structural (no CI job exists for this command), not a regression; `/verify` (full mode, post-merge) is the phase that can actually execute it and flip the checkbox.
+- The Entry Retention Criterion in `modules/orchestration-fallbacks.md` and its mirror in `docs/reports/orchestration-fallbacks-archive.md` now carry 3 axes (A/B/C) instead of 2 — if a future Issue references "the 2-axis criterion" from this Issue's body/Spec text, that phrasing is now stale relative to the live document; not worth a retroactive edit to this Issue's own body, but worth knowing if #1122/#1105/#1076 quote the old 2-axis framing.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+The newly authored `### Entry Retention Criterion` (added in the code phase, not prescribed verbatim by the Spec) did not fully reproduce the retention decisions the same PR actually made: Axis B as written would have retained `gh-pr-list-head-glob` (it had a script pointer comment, which the criterion counted as a live reference, with no carve-out for a comment explicitly marked `(not yet implemented)` and backed by no handler), and neither axis explained why `dirty-working-tree` stayed live after its only reference (the detector branch) was removed in the same PR. This is a case where a governance/criterion document was written in the same PR that exercises it, but not validated against its own worked examples before being committed — three independent review agents (review-spec + both review-bug instances) converged on the same root gap independently, which is a strong signal it was a real, checkable omission rather than a stylistic nitpick. Fixed in review (Step 12): added the missing carve-out, an archive-file self-reference exclusion, and a new Axis C for procedure applicability, mirrored into both `modules/orchestration-fallbacks.md` and `docs/reports/orchestration-fallbacks-archive.md`.
+
+### Recurring issues
+
+Documentation-only PRs that add a brand-new `docs/reports/*.md` file are not covered by any automated CLAUDE.md language-convention check — `docs/reports/orchestration-fallbacks-archive.md` shipped to review with English body sections but Japanese `Archival Note` / `Retired detector patterns` sections, and a stray full-width-parentheses violation, both of which only surfaced via manual review reading. `scripts/check-forbidden-expressions.sh` and the CI `Forbidden Expressions check` job do not check language consistency or 約物 formatting, only a fixed deprecated-term list. This is not new to this PR — it is a structural gap (no automated check exists for this class of issue) rather than an implementation mistake specific to this PR — but it is the second consecutive fallback-catalog-adjacent PR in recent history to add a new `docs/reports/` file, so the absence of automated coverage is worth flagging for `/verify`'s retro-proposal aggregation to consider (e.g., extending `check-forbidden-expressions.sh` or a new lightweight checker to flag full-width parentheses in prose lines, or mixed-language sections within a single English-designated `docs/reports/*.md` file).
+
+### Acceptance criteria verification difficulty
+
+AC 9 (`command "bash scripts/check-translation-sync.sh"`) has no corresponding CI job (confirmed by reading `.github/workflows/test.yml` in full), so `/review`'s safe-mode CI-reference fallback can never resolve it — it will UNCERTAIN on every `/review` run regardless of the actual state of the translation sync, permanently leaving that Pre-merge checkbox unchecked until `/verify` (full mode) runs post-merge. The Spec's own Notes section already anticipated this ("AC 9 の `check-translation-sync.sh` が実質的な検証になっているか" — the script always exits 0 without `--fail-if-outdated`), so this is a known, accepted limitation rather than a new discovery, but it's worth reiterating for `/verify`'s retro-proposal aggregation: `command`-type Pre-merge ACs with no CI job counterpart are structurally unreviewable pre-merge under `/review`'s safe mode, and Issue authors should either add a CI job for such scripts or mark them as a different verify-type (e.g. `verify-type: manual` or an explicit post-merge check) if pre-merge blocking via `/review` is not actually intended.

@@ -35,6 +35,7 @@ setup() {
     [[ "$output" == *"### Orchestration Anomalies"* ]]
     [[ "$output" == *"### Improvement Proposals"* ]]
     [[ "$output" == *"#311"* ]]
+    [[ "$output" == *"orchestration-fallbacks-archive.md"* ]]
 }
 
 @test "patch lock timeout: detects Patch lock acquisition timeout" {
@@ -55,16 +56,6 @@ setup() {
     [[ "$output" == *"### Orchestration Anomalies"* ]]
     [[ "$output" == *"### Improvement Proposals"* ]]
     [[ "$output" == *"git commit -s"* ]]
-}
-
-@test "watchdog kill: detects watchdog: kill and state not reached" {
-    echo "watchdog: kill and state not reached after 1800s" > "$LOG_FILE"
-    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 143 --issue 308 --phase review
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"watchdog-kill"* ]]
-    [[ "$output" == *"### Orchestration Anomalies"* ]]
-    [[ "$output" == *"### Improvement Proposals"* ]]
-    [[ "$output" == *"#308"* ]]
 }
 
 @test "output includes phase and exit code in anomaly description" {
@@ -232,30 +223,6 @@ MOCK
     [ "$status" -eq 0 ]
     [[ "$output" == *"silent-no-op"* ]]
     [[ "$output" == *"### Orchestration Anomalies"* ]]
-}
-
-@test "dirty working tree: detects VERIFY_FAILED with uncommitted changes" {
-    printf "VERIFY_FAILED\nCannot run verify because there are uncommitted changes in the working tree.\n" > "$LOG_FILE"
-    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 393 --phase verify
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"dirty-working-tree"* ]]
-    [[ "$output" == *"#393"* ]]
-    [[ "$output" == *"### Orchestration Anomalies"* ]]
-    [[ "$output" == *"### Improvement Proposals"* ]]
-}
-
-@test "dirty working tree: no detection when only VERIFY_FAILED present" {
-    echo "VERIFY_FAILED" > "$LOG_FILE"
-    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 393 --phase verify
-    [ "$status" -eq 0 ]
-    [ -z "$output" ]
-}
-
-@test "dirty working tree: no detection when only uncommitted present" {
-    echo "Cannot run verify because there are uncommitted changes." > "$LOG_FILE"
-    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 393 --phase verify
-    [ "$status" -eq 0 ]
-    [ -z "$output" ]
 }
 
 @test "reconciler header mismatch: detects matches_expected false with Review Summary" {
