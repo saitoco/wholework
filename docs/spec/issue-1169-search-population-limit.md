@@ -109,3 +109,31 @@ Nothing to note — review-light found no issues across all 4 perspectives (spec
 
 ### Acceptance criteria verification difficulty
 Nothing to note, but worth recording why: AC1's `rubric` grader reads only the Issue body and git diff, not the Spec (Issue=WHAT / Spec=HOW separation), so a rationale recorded only in Spec Notes would have been invisible to the grader. The `/code` phase pre-empted this by duplicating the rejected-alternatives rationale into a code comment directly above `POPULATION_LIMIT` in `scripts/opportunistic-search.sh` (see Code Retrospective above), so the rationale appeared in the diff the grader reads and all 3 rubric AC passed cleanly with no UNCERTAIN. This pattern — duplicating Spec-only rationale into diff-visible code comments when a rubric AC references "recorded rationale" — worked as designed here and required no follow-up from `/review`.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC 設計は良好。特に条件 2 が「#843 / #841 / #839 が再びマッチ対象になる」と**具体的な Issue 番号**で書かれていたため、実測で一意に判定できた。抽象的な「母集団が広がる」ではなく検証可能な形になっていた
+
+#### spec
+- N/A — spec 側の記述と実装に乖離なし
+
+#### code
+- rubric grader が Spec を読まない (Issue=WHAT / Spec=HOW 分離) 点を先回りし、rejected-alternatives の根拠をコード コメントに複製した判断が有効に働いた件は review retrospective に記録済み
+
+#### review
+- N/A — 指摘なし
+
+#### merge
+- N/A
+
+#### verify
+- **母集団の盲点は想定より大きかった**。AC が名指ししていたのは 3 件 (#843 / #841 / #839) だが、実測ではマッチが 12 件 → **25 件**に増え、旧カットオフ (#861) より下から **#667 / #626 / #624 / #590 / #589 / #562 / #514 の 7 件**も新たに浮上した。合計 10 件が「未チェックの observation AC を持ちながら恒久的に発火しない」状態だったことになる
+- **二次的な影響 — dispatch 母集団が増える**: 新たに浮上した 7 件は古い Issue で、その observation AC には `when=` 注釈が付いていない (#1172 が「既存 AC の一括付与はスコープ外」としたため)。したがって実行文脈に関係なく無条件マッチし、L3 の observation dispatch 対象に入る。#1118 / #1172 が減らそうとしていた「観察不能な AC への無駄 dispatch」を、母集団拡大が押し戻す方向に働く。[この相互作用は #1163〜#1167 (滞留 manual/observation AC の再型付け) と #1162 (セッション内 verify 済みの除外) が扱う領域であり、新規起票は不要]
+- **worktree からの実行で `when=` ゲートが fail-open する**現象を再び確認 (#1170 / #1171 / #1172 に続き 4 回目)。本 verify では「12 件」のベースラインもゲート実装前の測定なので、条件が揃っており比較としては妥当だった。ただし測定条件を明示しないと誤読を招くため、Issue コメントに注記を入れた
+- **Arm 4a (外部 kill 調査) の並行条件下での実行**: 本 Issue は別セッションの `/auto --batch 1179 1181 1180` と並行して処理された。wrapper (`run-auto-sub.sh 1169`, 稼働約 46 分) は `Exit code: 0` トレーラ付きで正常終了し、**external kill は発生しなかった**
+
+### Improvement Proposals
+- N/A — 上記の観察はいずれも既存 Issue (#1163〜#1167 / #1162 / #1141) が追跡済み。Arm 4a の観測結果は `docs/reports/external-kill-investigation.md` と #1146 に集約する
