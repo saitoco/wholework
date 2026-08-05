@@ -73,11 +73,13 @@ _run_with_watchdog() {
       fi
       if (( unchanged_time > _max_unchanged_time )); then _max_unchanged_time=$unchanged_time; fi
       if [[ "$unchanged_time" -ge "$WATCHDOG_TIMEOUT" ]]; then
-        echo "" >&2
-        echo "watchdog: no output for ${WATCHDOG_TIMEOUT}s, killing process (pid=${cmd_pid})" >&2
-        _auto_emit_watchdog_kill "$cmd_pid" "$unchanged_time"
-        kill "$cmd_pid" 2>/dev/null
-        _watchdog_killed=true
+        if kill -0 "$cmd_pid" 2>/dev/null; then
+          echo "" >&2
+          echo "watchdog: no output for ${WATCHDOG_TIMEOUT}s, killing process (pid=${cmd_pid})" >&2
+          _auto_emit_watchdog_kill "$cmd_pid" "$unchanged_time"
+          kill "$cmd_pid" 2>/dev/null
+          _watchdog_killed=true
+        fi
         break
       fi
     else
@@ -91,11 +93,13 @@ _run_with_watchdog() {
           _next_heartbeat=$(( _next_heartbeat + WATCHDOG_HEARTBEAT_INTERVAL ))
         fi
         if [[ "$unchanged_time" -ge "$WATCHDOG_TIMEOUT" ]]; then
-          echo "" >&2
-          echo "watchdog: no output for ${WATCHDOG_TIMEOUT}s, killing process (pid=${cmd_pid})" >&2
-          _auto_emit_watchdog_kill "$cmd_pid" "$unchanged_time"
-          kill "$cmd_pid" 2>/dev/null
-          _watchdog_killed=true
+          if kill -0 "$cmd_pid" 2>/dev/null; then
+            echo "" >&2
+            echo "watchdog: no output for ${WATCHDOG_TIMEOUT}s, killing process (pid=${cmd_pid})" >&2
+            _auto_emit_watchdog_kill "$cmd_pid" "$unchanged_time"
+            kill "$cmd_pid" 2>/dev/null
+            _watchdog_killed=true
+          fi
           break
         fi
       else

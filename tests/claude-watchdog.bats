@@ -114,6 +114,23 @@ MOCK
 
     run env OUTPUT_FORMAT_JSON=1 WATCHDOG_TIMEOUT=10 bash "$SCRIPT" bash "$MOCK_DIR/cmd.sh"
     [ "$status" -eq 0 ]
+    [ -f "$AUTO_EVENTS_LOG" ]
+    ! grep -q '"event":"watchdog_kill"' "$AUTO_EVENTS_LOG"
+}
+
+@test "normal mode: process that exits normally during check interval does not emit false kill" {
+    cat > "$MOCK_DIR/cmd.sh" <<'MOCK'
+#!/bin/bash
+echo "output"
+sleep 0.5
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/cmd.sh"
+
+    run env WATCHDOG_TIMEOUT=3 bash "$SCRIPT" bash "$MOCK_DIR/cmd.sh"
+    [ "$status" -eq 0 ]
+    [ -f "$AUTO_EVENTS_LOG" ]
+    ! grep -q '"event":"watchdog_kill"' "$AUTO_EVENTS_LOG"
 }
 
 @test "OUTPUT_FORMAT_JSON=1: process that hangs past WATCHDOG_TIMEOUT is killed" {
