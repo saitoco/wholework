@@ -51,6 +51,37 @@ Issue 本文が挙げる 4 候補 (無効化 / 閾値引き上げ / group-key �
 
 **`docs/guide/customization.md` / `docs/ja/guide/customization.md` は変更しない:** 両ファイルは既に `recoveries-auto-fire.enabled` のデフォルトを `false`・opt-in と正しく記載しており (`docs/guide/customization.md` Available Keys 表)、本 Issue で内容が古くなるドリフトは発生しない。変更が必要なのは本リポジトリ自身の `.wholework.yml` の opt-in 設定のみ。
 
+## Autonomous Auto-Resolve Log
+
+- **`phase/ready` label absent at code phase start**: at the start of this `/code 1179 --patch --non-interactive` run, the Issue already carried `phase/code` (not `phase/ready`). A Spec already existed at `docs/spec/issue-1179-recoveries-auto-fire-disable.md` and matched the Issue's acceptance criteria, so auto-resolved by proceeding with execution using the existing Spec rather than aborting. No content gap was found — the label state reflects an already-advanced phase transition, not a missing Spec.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — implemented exactly as planned (4 Implementation Steps, no reordering or consolidation)
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Adopted policy 1 as scoped by the Spec: retracted `.wholework.yml`'s `recoveries-auto-fire.enabled: true` opt-in back to the distributed default (`false`), without touching `/verify` Step 15's branch logic itself.
+- Verified `skills/verify/SKILL.md` Step 15's existing branch description (`RECOVERIES_AUTO_FIRE_ENABLED=false` → print recommendation only, no auto-fire) already matches the post-change behavior, so no edit to that file was needed — confirmed via direct read rather than assumed.
+- Recorded frequency-visibility preservation explicitly in both `docs/tech.md` and `docs/ja/tech.md` (the exact `collect-recovery-candidates.sh --threshold 1` command), satisfying the Spec's rubric AC #2 without any code change to `collect-recovery-candidates.sh`.
+
+### Deferred Items
+- Policy 4 (exclude external-kill-cause group-keys from auto-fire eligibility) intentionally not implemented — Spec Notes judge it unnecessary once policy 1 makes auto-fire opt-out by default in this repository; left as a future follow-up for projects that re-opt-in.
+- #1152 (duplicate group-key re-filing suppression) left open per Spec Notes — this Issue removes the immediate practical impact in this repository but does not fix the underlying gap in `collect-recovery-candidates.sh` for other projects that opt in.
+
+### Notes for Next Phase
+- Post-merge AC is an `observation` type (`event=auto-run`) — `/verify` should not expect it to resolve immediately; it resolves only once a subsequent `/verify` run with `recoveries-auto-fire` active is observed to not auto-file.
+- All 4 pre-merge ACs (2 rubric, 2 command) were verified PASS during `/code` itself (patch route) and the Issue checkboxes were already updated — `/verify` re-confirmation is expected to be a formality here.
+
 ## Consumed Comments
 
 No new comments since last phase.
