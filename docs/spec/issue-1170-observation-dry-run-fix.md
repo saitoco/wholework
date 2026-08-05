@@ -90,3 +90,32 @@
 ### Notes for Next Phase
 - `/verify 1170` 実行時、Post-merge AC は手動確認 (`verify-type: manual`) のため人手での実環境確認が必要
 - Issue の自動クローズと `phase/verify` ラベル遷移を Step 5/6 で確認済み (下記完了レポート参照)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC 設計は妥当だった。Pre-merge 6 件 (rubric×4 / command×1 / github_check×1) は全て自動判定で PASS に到達し、UNCERTAIN はゼロ
+
+#### spec
+- **手動復旧が 1 件発生 (Auto Retrospective 未記録)**: worktree Exit 時に main が並行セッションにより 2 回分岐し、`modules/orchestration-fallbacks.md#ff-only-merge-fallback` の手順 (worktree 側 rebase → ff-only マージ) で復旧して push した。`--write-manual-recovery` は呼ばれておらず Spec に `## Auto Retrospective` セクションも存在しないため、本節が唯一の記録になっている
+- 復旧機構自体は設計どおり機能した。分岐の原因は並行セッション (#1168 の `/verify`) による main への push であり、機構の欠陥ではない
+
+#### code
+- N/A — Code Retrospective のとおり逸脱・手戻りなし。Implementation Steps 1〜5 を一度の Edit ずつで完了
+
+#### review
+- N/A — review-light の 4 観点いずれも指摘なし
+
+#### merge
+- N/A — `mergeable=true, reason=clean` で conflict resolution 不要、squash merge が一発で成立
+
+#### verify
+- **Post-merge AC の `verify-type: manual` は過剰に保守的だった**: 条件は「コマンドを実行し、対象 Issue に新規コメントが投稿されていないことを確認する」であり、コマンド実行とコメント timestamp 比較で機械的に判定できる。実際 Step 8b の Claude Executability Judgment は「実行可能」と判定し、そのまま PASS に到達した
+- この過剰保守は #1164 (区分 D2 = 実行シナリオ型 13 件を observation へ再型付け) が扱う類型そのものであり、新規の起票は不要
+- 本 Issue の成果 (`--dry-run` の副作用なし観測) は、その場で自身の検証手段として機能した。dry-run が 13 件を出力し、対象 Issue の最新コメントが全て実行前を指すことで「マッチ集合の観測」と「副作用なし」を同時に実証できた
+
+### Improvement Proposals
+- N/A — 上記の manual AC 過剰保守は #1164 のスコープに含まれ、spec フェーズの手動復旧は既存機構が設計どおり機能した結果であるため、新規の改善提案はなし
+
