@@ -144,3 +144,30 @@ No new comments since last phase.
 ### Notes for Next Phase
 - `bats tests/claude-watchdog.bats` は 3 回連続実行して安定 PASS を確認済みだが、タイミング依存テストである点に留意 (CI 環境の負荷次第で `sleep 0.5`/`WATCHDOG_TIMEOUT=3` の再調整が必要になる可能性がある)
 - `docs/reports/event-log-schema.md` は変更不要と判断済み (Spec Notes 参照)。`/verify` で再確認は不要
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC 2 が「exit status だけでなく `AUTO_EVENTS_LOG` の内容 (`watchdog_kill` の不在) を assert していること」と**検証手段まで明示**していた点が効いた。本 Issue の発端が「テスト名に反して欠陥が素通りした (exit status しか見ていなかった)」ことだったため、同じ穴を AC 設計で塞いでいる
+
+#### spec
+- Size が spec 後に **M → S** へ降格し patch route に切り替わった。当初 M と見積もったのは「CI/テスト変更は Size M 相当」の慣行によるが、実際の変更は `claude-watchdog.sh` と `tests/claude-watchdog.bats` の 2 ファイルに収まった。Post-spec Size refresh が正しく機能した例
+
+#### code
+- N/A — Code Retrospective のとおり
+
+#### review
+- patch route のため `/review` は実行されていない
+
+#### merge
+- patch route のため `/merge` は実行されていない (main 直コミット)
+
+#### verify
+- **observation AC は SKIPPED (未発火)**。条件文が「次回以降の `/auto` 実行で…」と将来形であり、修正自体が本セッションの code フェーズで着地しているため、直前のフェーズ群は修正前の `claude-watchdog.sh` で動いている。本セッションの `watchdog_kill` は 0 件だが、これを条件充足の証拠として扱うのは誤りであり SKIPPED が正しい判定
+- **タイミング依存テストの注意点が Phase Handoff に引き継がれている**: `bats tests/claude-watchdog.bats` は `sleep 0.5` / `WATCHDOG_TIMEOUT=3` に依存し、CI 環境の負荷次第で再調整が要る旨が記録済み。本 verify のローカル実行では exit 0 だったが、将来の flaky 化は監視対象
+- **Arm 4a (外部 kill 調査) の並行条件下での実行**: 本 Issue は別セッションの `/auto --batch 1179 1181 1180` と並行して処理された。wrapper (`run-issue.sh 1140` → `run-auto-sub.sh 1140`) はいずれも `Exit code: 0` トレーラ付きで正常終了し、**external kill は発生しなかった**。なお本セッションはホスト再起動 (2026-08-04 23:51 JST) の直後に実行されており、7 月の kill 条件 (長期 uptime × 並行) とは uptime の点で異なる
+
+### Improvement Proposals
+- N/A — Arm 4a の観測結果は `docs/reports/external-kill-investigation.md` と #1146 に集約する。タイミング依存テストの監視は Phase Handoff に記録済みで、現時点で新規起票は不要
