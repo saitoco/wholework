@@ -276,3 +276,48 @@ Correlating `docs/sessions/*/events.jsonl` time spans with `manual_intervention`
 A **`concurrency_snapshot` event** — sampling the number of live wholework wrappers via `ps` at session start and at each wrapper spawn — would make concurrency measurable **across repositories**, using only an added event in the existing `auto-events.jsonl` and giving the concurrency level at the moment of each kill directly (rather than by after-the-fact time-span correlation, which carries the three blind spots above). The existing `concurrent_commit_detected` event covers git-level contention, not session-level concurrency; this axis is unfilled. Deliberately not filed as an Issue (2026-08-05) to avoid backlog sprawl; recorded here and in project memory. Worth adding before Arm 4a so that arm's data carries concurrency levels from the start.
 
 Committing a session directory for single-shot `/auto` runs was considered and **rejected**: it would not close blind spot 1 (other repositories), while multiplying directory count and commit frequency for the most common invocation shape — which in turn worsens the `ff-only-merge-fallback` contention observed twice in this very session.
+
+## 2026-08-05 Update (Arm 4a executed — concurrent sessions, 0 kills, confounded by an unplanned host reboot)
+
+Arm 4a (the concurrent-session arm added to #1146 earlier the same day) was executed. It reproduced nothing — but the host was rebooted the previous night, which changes what the null result means.
+
+### Execution
+
+Session `65022-1785935372`, `/auto --batch 1169 1140`, run **deliberately concurrent** with a second session's `/auto --batch 1179 1181 1180` in the same repository. Concurrency was sampled with `ps` (the `concurrency_snapshot` instrumentation is still unimplemented) and recorded in the session metadata as `arm4a_concurrency_baseline`:
+
+- **At session start**: 3 concurrent wholework wrapper processes (other session's `run-auto-sub.sh 1179` + `run-spec.sh 1179`)
+- **Throughout**: the other session progressed #1179 → #1181, remaining active for the entire window
+- **At session end**: 7 concurrent processes (other session's `run-review.sh 1183` plus its bats subprocess tree)
+
+| Wrapper | Lifetime | Result |
+|---|---|---|
+| `run-auto-sub.sh 1169` | ~46 min | exit 0, `Exit code:` trailer present |
+| `run-issue.sh 1140` | ~5 min | exit 0, trailer present |
+| `run-auto-sub.sh 1140` | ~40 min | exit 0, trailer present |
+
+**0 external kills.** Kill determination used the wrapper-log trailer as primary evidence, not `manual_intervention` events — the prior session had shown those events can be misattributed across concurrent sessions (#1075).
+
+### The reboot confound
+
+The host was rebooted on **2026-08-04 23:51 JST** (`kern.boottime`), after more than a month of continuous uptime, forced by an unrelated application problem. Both of 2026-08-05's sessions therefore ran at ~24 hours of uptime.
+
+This means the reboot arm from the 2026-08-01 Addendum (Arm 2, testing the H-b' PID/PGID-reuse variant) was **executed unplanned, and before any reproduction baseline was established** — exactly the sequencing the Addendum warned against ("the reboot is itself one of the experiment's arms, not maintenance").
+
+### The 2×2 as it now stands
+
+|  | Long uptime | Freshly rebooted |
+|---|---|---|
+| **No concurrency** | 2026-08-03 Arm 1: 0 kills | 2026-08-05 session `6722`: 0 kills |
+| **Concurrent** | **2026-07-13〜31: kills (30+)** | 2026-08-05 session `65022` (Arm 4a): **0 kills** |
+
+Kills appear in exactly one cell — the one with **both** long uptime and concurrency. The remaining three cells are all 0. The data is therefore consistent with concurrency alone, uptime alone, or their conjunction; Arm 4a's null result rules out **concurrency alone being sufficient at low uptime**, which promotes the uptime axis (H-b') from "weakened" back to a live co-factor.
+
+### Consequences
+
+- **H-b' (host uptime / PID reuse) is no longer disfavored.** The 2026-08-05 Addendum weakened it on the grounds that the symptom crossed independent hosts; that reasoning stands for *hosts*, but says nothing about the uptime *within* this host, which is what Arm 4a now bears on.
+- **The July condition cannot currently be reproduced.** "Long uptime × concurrent" requires uptime to accumulate again. This is a passive wait, not a forcible experiment — the only lever is to avoid rebooting.
+- **If the reboot is what stopped it, that is an acceptable outcome.** A periodic reboot is a zero-code, zero-verification-cost workaround that preserves concurrent `/auto` entirely — strictly better than `WHOLEWORK_SPAWN_DETACH`, the foreground migration (#598), or suppressing concurrency. #1146's workaround ordering is revised accordingly.
+
+### Concurrency has a confirmed cost regardless of kills
+
+Even with 0 kills, the concurrent arm produced **1 `ff-only-merge-fallback`** (main advanced 2 commits under a verify worktree; recovered by rebasing the worktree branch) and **3 `concurrent_commit_detected`** events. The single-session arm earlier the same day produced 2 fallbacks under lighter concurrency. Git contention on `main` is a deterministic cost of parallel operation in this repository, independent of the kill question, and it scales with commit frequency — which is why committing session directories for single-shot runs was rejected above.
