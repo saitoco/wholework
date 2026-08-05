@@ -263,3 +263,14 @@ AC1 は「`/issue` の AC 生成手順・`modules/verify-patterns.md`・`/verify
 - `/review` がバックグラウンドで `bats tests/` を起動し完了通知を待つ形で turn を終えると、`claude -p` セッションがそこで終了して silent no-op になる。本 Issue では 2/2 の再現率で発生した (`review-completion-false-negative` として Tier 2 検出済み)。`run-review.sh` のプロンプト側で「テストはフォアグラウンドで実行し、turn を跨いで待たない」旨を明示するか、wrapper 側がバックグラウンドタスク待ちで終了した turn を検出して継続を促す仕組みが要る
 - `reconcile-phase-state.sh review --check-completion` が review worktree (`.claude/worktrees/review+pr-N`) の dirty 状態を確認していないため、「修正途中で中断」と「修正不要で完了」を区別できない。本 Issue では未コミットの修正が worktree に残っており、親セッションが手動で確認するまで検出されなかった。completion check に worktree dirty 判定を加えれば、Tier 1 の段階で「修正途中」を診断できる
 - Spec が `/issue` 実行時点で存在しないセクション (`## Changed Files` は Spec のセクション) や、その時点で未束縛の変数 (`$NUMBER`) をゲート条件・ファイルパスに使っていた。`/spec` の設計時に「このゲート条件は、それを評価するフェーズの実行時点で参照可能な情報だけで書かれているか」を確認する観点を追加すべき。本 Issue では MUST 指摘 2 件がいずれもこの一点に起因した
+
+## Auto Retrospective
+
+### Manual recovery (review)
+- **Date**: 2026-08-05 05:24 UTC
+- **Issue**: #1168, phase: review
+- **Source**: parent session manual recovery
+- **Recovery type**: review-rerun
+- **Cause**: background-test-wait
+- **Wrapper exit code**: 1
+- **Outcome**: success
