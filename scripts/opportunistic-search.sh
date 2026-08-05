@@ -4,7 +4,7 @@
 #
 # Usage:
 #   scripts/opportunistic-search.sh <skill-name> [--dry-run]
-#   scripts/opportunistic-search.sh --event <event-name> [--dry-run] [--context-file <path>]
+#   scripts/opportunistic-search.sh --event <event-name> [--dry-run] [--context-file <path>] [--facts-file <path>]
 #
 # Examples:
 #   scripts/opportunistic-search.sh /issue
@@ -12,6 +12,7 @@
 #   scripts/opportunistic-search.sh --event pr-review-full
 #   scripts/opportunistic-search.sh --event auto-run --dry-run
 #   scripts/opportunistic-search.sh --event pr-review-full --context-file /tmp/spec.md
+#   scripts/opportunistic-search.sh --event auto-run --facts-file .tmp/run-facts-session1.json
 #
 # --context-file gates event-mode matches: when a matched AC line carries a
 # `keyword=<text>` attribute and --context-file is given, the Issue is only
@@ -27,6 +28,17 @@
 # argument is needed — .wholework.yml is read directly from CWD. See
 # modules/observation-trigger.md § Condition Check Gate (config=).
 #
+# `when=<axis>:<value>` gates event-mode matches on /auto run context (route /
+# mode / recovery-tier): when a matched AC line carries a `when=` attribute,
+# the Issue is only included if the run facts JSON (scripts/collect-run-facts.sh
+# output) satisfies every comma-separated clause (AND). --facts-file <path>
+# supplies the facts JSON explicitly; when omitted, the facts are collected
+# lazily (once per process) by calling collect-run-facts.sh with no arguments.
+# Facts that are unavailable, invalid, or contextless resolve the gate to
+# unconditional match (fail-open). ACs without `when=` match unconditionally
+# (backward compatible). See modules/observation-trigger.md § Condition Check
+# Gate (when=).
+#
 # Output: JSON array [{"number": N, "condition": "condition text"}]
 #         Empty array [] when no matches found
 
@@ -39,6 +51,7 @@ SKILL_NAME=""
 EVENT_NAME=""
 DRY_RUN=false
 CONTEXT_FILE=""
+FACTS_FILE=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -60,6 +73,14 @@ while [ $# -gt 0 ]; do
                 exit 1
             fi
             CONTEXT_FILE="$2"
+            shift 2
+            ;;
+        --facts-file)
+            if [ $# -lt 2 ]; then
+                echo "Error: --facts-file requires an argument" >&2
+                exit 1
+            fi
+            FACTS_FILE="$2"
             shift 2
             ;;
         -*)
@@ -111,6 +132,13 @@ fi
 if [ -n "$CONTEXT_FILE" ] && [ ! -f "$CONTEXT_FILE" ]; then
     echo "Warning: --context-file '${CONTEXT_FILE}' not found, disabling condition check gate" >&2
     CONTEXT_FILE=""
+fi
+
+# --facts-file: if the path does not exist, clear it so resolve_run_facts() falls back to
+# lazy collection instead of reading a missing file.
+if [ -n "$FACTS_FILE" ] && [ ! -f "$FACTS_FILE" ]; then
+    echo "Warning: --facts-file '${FACTS_FILE}' not found, falling back to lazy run-facts collection" >&2
+    FACTS_FILE=""
 fi
 
 # 1. Fetch closed Issues with phase/verify label
