@@ -184,23 +184,36 @@ No new comments since last phase.
 - `scripts/validate-skill-syntax.py` と `scripts/check-forbidden-expressions.sh` はいずれも新規エラーなし (`skills/auto/SKILL.md` の既存 warning `unknown field: 'loop-paths-fallback'` は本 Issue の変更と無関係の既存項目)
 - `scripts/check-translation-sync.sh` で `docs/structure.md` / `docs/ja/structure.md` が IN_SYNC であることを確認した (他ファイルの MISSING_JA/OUTDATED は本 Issue のスコープ外の既存項目)
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec 自体と実装の間に構造的な divergence はなかった (Code Retrospective で確認済み)。ただし SSoT ドキュメント (`modules/run-fact-matching.md`) の記述と実装の意味論が食い違う事例が複数見つかった: `mode` フィールドの定義文が「処理した Issue 数」ベースで書かれていたが、実際の実装 (および同 PR が `skills/auto/SKILL.md` に追記した規則) は「`--batch` フラグが渡されたか」ベースだった。XL sub-issue fan-out が複数 Issue を処理しながら `mode: single` を返すという non-obvious な仕様のため、定義文を書く際に「処理した Issue 数」という直感的だが誤った表現を選びやすい。次回同種のフィールド追加時は、定義文を書いた直後に「この定義文だけを読んだ第三者が実装のエッジケースを正しく予測できるか」を自問する一手間が有効と考えられる。
+
+### Recurring issues
+
+- 今回の MUST/CONSIDER 指摘 5 件中 3 件 (`mode` 定義、route の `--no-github` caveat 文言、`phase-state.md` の第2消費側未反映) が「SSoT ドキュメントの記述が実装や同一 PR 内の別ファイルの変更に追従できていない」という同じ形の問題だった。1 PR 内で SSoT を更新しつつ実装も変更する場合、SSoT 側の記述は実装の「最終形」を見てから書く (実装より先にドキュメントを確定させない) ワークフローが有効かもしれない。
+- `scripts/gh-pr-review.sh` の self-review `REQUEST_CHANGES` 422 (単一アカウント自己ホスト運用の既知の構造的制約、`modules/phase-state.md:77` に記録済み、Issue #1102 で追跡中) が本レビューでも再現した。今回は `event=COMMENT` への手動フォールバック + line comments の個別 `gh api` 投稿で対応した。#1102 の解決 (script 側の自動フォールバック実装) が着地すれば、この種の手動対応は不要になる。
+
+### Acceptance criteria verification difficulty
+
+- Nothing to note — Pre-merge AC 7 件すべてが rubric / command / github_check で明確に PASS 判定でき、UNCERTAIN は 0 件だった。verify command の欠落や不正確さもなかった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Spec の Implementation Steps 1-8 を設計どおりの順序で実装。逸脱・設計判断の再検討は発生しなかった (`## Code Retrospective` 参照)
-- Pre-merge AC のうち rubric 系 5 件と `bats tests/run-fact-matching.bats` の command 系 1 件はこの phase 内でチェック済み。`github_check "gh pr checks" "Run bats tests"` は CI 実行後でないと確認できないため未チェックのまま残した
-- `skills/auto/SKILL.md` の変更が既存の behavioral change 検出条件 (直接対応テスト以外からの参照) に該当したため、`bats tests/run-fact-matching.bats` の単体実行に加えてフルスイート `bats tests/` (1402件) を実行して回帰がないことを確認した
+- MUST 1件 (mode 定義の齟齬) + CONSIDER 4件を Step 12 で修正・commit・push 済み。CI 全件 SUCCESS (最終コミット `dc026f4e` 時点)
+- `skills/audit/SKILL.md` の CONSIDER 指摘 (pre-existing gap) は本 PR の diff に含まれないファイルのためスコープ外と判断し、修正せず PR コメントで記録するに留めた
+- self-review 422 制約により `event=REQUEST_CHANGES` を `event=COMMENT` に手動フォールバックし、line comments は個別 `gh api pulls/comments` で投稿した (review retrospective 参照)
 
 ### Deferred Items
 
-- `--no-github` 実行時は operate 判別をスキップし `route` は `patch` に留まる (spec Uncertainty 記載どおり、設計上の既知の制約であり本 Issue では対応しない)
-- イベント由来フォールバックによる XL fan-out の `batch` 誤判定は修正しない (spec Uncertainty 記載どおり)
-- Post-merge AC (operate route での `/auto` 完走確認) は `/verify` で検証する
+- Post-merge AC (operate route での `/auto` 完走確認) は引き続き `/verify` で検証する (spec Uncertainty / Phase Handoff 記載どおり、変更なし)
+- `--no-github` 実行時の operate 判別スキップ、イベント由来フォールバックの XL fan-out 誤判定は、いずれも spec Uncertainty 記載どおり本 Issue のスコープ外のまま
 
 ### Notes for Next Phase
 
-- `github_check "gh pr checks" "Run bats tests"` の Pre-merge AC は CI 結果待ちのため未チェック。`/review` で CI green を確認したうえでチェックすること
-- Post-merge AC は operate route の `/auto` を実際に完走させ、`route: operate` と `fact_tokens` の `operate route` トークンが出力されることを確認する必要がある (hermetic テストでは `--no-github` のため代替不可)
-- `docs/guide/index.md` (OUTDATED) と `docs/guide/autonomy.md` (MISSING_JA) の翻訳ギャップは `scripts/check-translation-sync.sh` で検出済みだが、本 Issue のスコープ外の既存項目 (本 Issue が変更した `docs/structure.md` とは無関係)
+- `/merge 1177` を実行してよい。CI green、Pre-merge AC 全件チェック済み、MUST issue 修正済み
+- Post-merge AC は operate route の `/auto` を実際に完走させて `route: operate` / `fact_tokens` の `operate route` トークン / top-level `mode` の一致を確認する必要がある (`/verify` 側で実施)
