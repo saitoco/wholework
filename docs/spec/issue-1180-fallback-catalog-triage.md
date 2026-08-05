@@ -196,25 +196,23 @@ Issue 本文は「17 エントリは発火実績ゼロ」を退避候補の規�
 - N/A — no repair cycles or backtracking occurred during implementation; the H2/H3 heading-level ambiguity above was resolved once at authoring time (Step 1/Step 8) before the first test run, not discovered via a failing test.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Ran full-mode multi-perspective review (review-spec + review-bug×2) since ARGUMENTS carried `--full`; Base Branch Conflict Pre-check found zero conflicts (PR branch was already even with `origin/main`), and `HAS_WORKFLOW_CAPABILITY=true` was overridden to the static Task fan-out because ARGUMENTS carried `--non-interactive` (fork context — no re-invocation guarantee, per `modules/execution-context.md`), so all Agent calls ran with `run_in_background: false`.
-- Step 8's `command "bash scripts/check-translation-sync.sh"` AC has no corresponding CI job in `.github/workflows/test.yml`, so safe-mode CI-reference fallback returned UNCERTAIN; the Issue checkbox for that condition was left unchecked (`- [ ]`) rather than trusting the code-phase's self-reported local run, per the FAIL/UNCERTAIN checkbox-update rule.
-- No MUST issues were found (0 FAIL ACs, CI all-SUCCESS, 0 MUST from code review), so the PR Review posted as `COMMENT`, not `REQUEST_CHANGES`. 2 SHOULD + 5 CONSIDER issues were found by review-spec + review-bug×2 (after 2-stage Opus verification rejected 1 of 6 review-bug findings as a false positive); all but one (an optional/low-priority stale-example note in `skills/spec/SKILL.md`, outside this PR's diff) were fixed in Step 12 and pushed as 3 follow-up commits.
+- Merged via squash with `--non-interactive`; pre-merge AC gate (`check-pre-merge-ac.sh`) reported `unchecked_count=0` (9/9 checked), so no override marker was needed.
+- `gh-pr-merge-status.sh` returned `mergeable=true, reason=clean, ci_status=success, review_status=approved` — proceeded directly to squash merge without conflict resolution or worktree entry.
 
 ### Deferred Items
 
-- Generic (non-json-mode) watchdog-kill Tier 2 detection recovery remains out of scope (unchanged from code-phase handoff); the archive file records the current signal for whoever picks this up.
-- Issue Related #1122 / #1105 / #1076 (proposed catalog/detector entry additions) — still a post-merge judgment call against the now-corrected Entry Retention Criterion, unchanged from the code-phase handoff (no corresponding AC to cross-reference; both remain open).
-- `skills/spec/SKILL.md:346`'s stale `#485`/`VERIFY_FAILED` example reference was left as-is (optional, low priority per the finding itself, and outside this PR's changed-files scope) — a future pass through that file could append a note that #1180 finally removed the pattern.
+- AC 9 (`check-translation-sync.sh`) remains unchecked/UNCERTAIN as expected (no corresponding CI job) — `/verify` is the phase that can actually execute it and flip the checkbox.
+- Generic (non-json-mode) watchdog-kill Tier 2 detection recovery remains out of scope (unchanged from code/review-phase handoff).
+- Issue Related #1122 / #1105 / #1076 (proposed catalog/detector entry additions) — still a post-merge judgment call against the corrected Entry Retention Criterion (unchanged from prior handoffs).
 
 ### Notes for Next Phase
 
-- `/merge` can proceed directly — no MUST issues remain, and the 3 follow-up fix commits (Axis B/C criterion, archive English translation + structure, retrospective H2/H3 correction) are already pushed to the PR branch and covered by a green re-run of `bats tests/orchestration-fallbacks.bats tests/detect-wrapper-anomaly.bats` (55/55) plus `check-forbidden-expressions.sh` / `check-translation-sync.sh` / `validate-skill-syntax.py`.
-- AC 9 (`check-translation-sync.sh`) will still read UNCERTAIN/unchecked going into `/merge` — this is expected and structural (no CI job exists for this command), not a regression; `/verify` (full mode, post-merge) is the phase that can actually execute it and flip the checkbox.
-- The Entry Retention Criterion in `modules/orchestration-fallbacks.md` and its mirror in `docs/reports/orchestration-fallbacks-archive.md` now carry 3 axes (A/B/C) instead of 2 — if a future Issue references "the 2-axis criterion" from this Issue's body/Spec text, that phrasing is now stale relative to the live document; not worth a retroactive edit to this Issue's own body, but worth knowing if #1122/#1105/#1076 quote the old 2-axis framing.
+- `/verify` should run in full mode to execute `check-translation-sync.sh` and resolve AC 9.
+- The post-merge verification item from the PR body applies: confirm a subsequent `/auto` run with an unrecognized wrapper-anomaly pattern escalates cleanly to Tier 3 without erroring on the archived Tier 2 entries.
 
 ## review retrospective
 
