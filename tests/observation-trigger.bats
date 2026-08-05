@@ -60,11 +60,22 @@ teardown() {
     [[ "$output" == *"Unknown argument"* ]]
 }
 
-@test "dry-run: exits 0 without calling opportunistic-search.sh" {
+@test "dry-run: runs search and outputs matched issue numbers" {
+    export MOCK_SEARCH_OUTPUT='[{"number": 42, "condition": "watchdog-kill event is observed"}]'
     run bash "$SCRIPT" --event pr-review-full --dry-run
     [ "$status" -eq 0 ]
-    [ -z "$output" ]
-    [ ! -f "$BATS_TEST_TMPDIR/gh-calls.log" ]
+    grep -q "opportunistic-search.sh called" "$BATS_TEST_TMPDIR/search-calls.log"
+    [ "$output" = "42" ]
+}
+
+@test "dry-run: negative case - does not post an issue comment" {
+    export MOCK_SEARCH_OUTPUT='[{"number": 42, "condition": "watchdog-kill event is observed"}]'
+    run bash "$SCRIPT" --event pr-review-full --dry-run
+    [ "$status" -eq 0 ]
+    if [ -f "$BATS_TEST_TMPDIR/gh-calls.log" ]; then
+        ! grep -q "issue comment" "$BATS_TEST_TMPDIR/gh-calls.log"
+    fi
+    [ "$output" = "42" ]
 }
 
 @test "success: no matches exits silently without posting comments" {
