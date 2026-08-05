@@ -163,3 +163,46 @@ Issue 本文は「17 エントリは発火実績ゼロ」を退避候補の規�
 ### bats テストの閾値への影響
 
 `tests/orchestration-fallbacks.bats` の既存テストはすべて `>= 6` 閾値と「5 必須セクションの出現回数一致」で構成されており、エントリを丸ごと削除する限り 19→17 でも成立する (確認済み)。
+
+## spec retrospective
+
+### Minor observations
+
+- Issue 本文の「実装規模」表が引用するカタログ行数 (675 行) は #1181 のマージ後に 658 行へ縮んでおり、Issue 起票時のスナップショットのまま。数値そのものは判断に影響しないが、Issue 本文の実測値が起票時点で凍結される性質は `/verify` の再測定時に注意が要る。
+- `docs/reports/orchestration-recoveries.md` は Issue 起票時の 66 エントリから 68 エントリに増えている。本 Spec の Inventory は 2026-08-06 時点の 68 エントリで再集計した。
+- `manual-recovery-spec-write` のアンカーが recoveries ログに 39 回現れるのは、`run-auto-sub.sh --write-manual-recovery` が `### Recovery Applied` 行に固定文字列として書き込むため。Issue 本文の「recoveries ログに出現するのは 2 エントリのみ」という記述はこの自動出力を除外した集計であり、両者は矛盾しない。
+
+### Judgment rationale
+
+- Issue 方針 3 の除外条件 (「手順書として参照されているエントリ」) は本文で 2 件しか例示されていないが、条件そのものを実測で適用すると 17 件中 15 件が該当した。例示を候補リストと解釈せず条件として一般化したことが、退避対象を 2 件に絞る判断の分岐点。判断根拠が追える形 (Inventory テーブル) を Spec に残すことが AC 1 の要求そのものであり、規模の小ささは調査結果であって手抜きではない。
+- 検出器側の「縮約」を発火実績ではなく trigger 文字列の live 発行元の有無で判定した。発火実績ゼロを理由に退役すると、稀にしか起きないが起きたら検出したいパターン (例: `patch-lock-timeout`) まで落ちる。到達不能コードの除去なら検出能力は 1 ビットも失われない。
+- `dirty-working-tree` は catalog エントリと検出器パターンで判定が分かれた唯一のケース。検出器は到達不能だが、手順そのもの (dirty file を分類して cleanup し再実行) は `check-verify-dirty.sh` 経由で今も起きるシナリオに有効なため catalog 側は残置し Symptom だけ現行シグナルに更新する、という非対称な結論になった。
+
+### Uncertainty resolution
+
+- **カタログからエントリを削るとスキーマ検証 bats が壊れるか**: `tests/orchestration-fallbacks.bats` を読み、全テストが `>= 6` 閾値と 5 セクションの出現回数一致で構成されていることを確認。19→17 でも成立するため既存テストの変更は不要と判断した。
+- **`docs/reports/` 配下に新規ファイルを置くと翻訳同期が要るか**: `docs/translation-workflow.md` の Exclusions と `scripts/check-translation-sync.sh` の SOURCE_FILES 収集ロジック (`docs` maxdepth 1 と `docs/guide` のみ) の両方を確認し、不要と確定。これが退避先選定の決め手になった。
+- **`AC 9` の `check-translation-sync.sh` が実質的な検証になっているか**: スクリプトを読み、`--fail-if-outdated` なしでは常に exit 0 を返すことを確認。本 Spec 作成時点で既に 1 OUTDATED / 1 MISSING_JA の既存ギャップがあり、AC としては素通りする。verify command は Issue body の記述を verbatim で引き写す規約のため書き換えず、代わりに Notes に「`/code` / `/review` で出力表の `docs/structure.md` 行を目視確認する」という運用上の補いを明記した。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 退避判定を「発火実績 OR live 参照元」の 2 軸ゼロ基準に固定した。Issue 本文が退避候補として列挙する 17 エントリのうち 15 件は script の pointer コメント / 検出器の IMPROVEMENT_HINT / SKILL.md / steering docs から参照されており、削除すると AC 2 (参照リンクが壊れていない) に自ら反する。
+- 退避先を `docs/reports/orchestration-fallbacks-archive.md` にした。`docs/reports/` は翻訳同期と doc-checker の両方で対象外のため、退避後の恒常コストがゼロになる。
+- 検出器の「縮約」を到達不能パターンの除去に限定した (`watchdog-kill` / `dirty-working-tree` の 2 件)。残る 10 パターンは trigger 文字列が現役のため退役するとデグレになる。
+- `dirty-working-tree` は catalog 残置 + 検出器退役という非対称な扱いにした。手順は現役、検出条件だけが失効している。
+
+### Deferred Items
+
+- 汎用 watchdog kill (json mode 以外) の Tier 2 検出復旧 (`claude-watchdog.sh` の現行出力文字列にパターンを合わせる) は本 Issue のスコープ外。アーカイブに現行シグナルを記録して別 Issue に委ねる。
+- Issue 本文 Related の #1122 / #1105 / #1076 (カタログ・検出器へのエントリ追加提案) の要否判断は本 Issue のマージ後に行う。新設する Entry Retention Criterion がその判断基準になる。
+- `docs/reports/ja/` へのアーカイブ翻訳は作成しない (translation-workflow.md 上の義務がないため)。
+
+### Notes for Next Phase
+
+- Implementation Step 3 の `### Archived Entries` 一覧は **H2 見出し形式 (`## <anchor>`) を使わないこと**。使うと AC 5/6 の `file_not_contains` が誤検知して FAIL する。
+- Implementation Step 5 で検出器の elif ブロックを 2 つ削るとき、残る分岐の first-match-wins 順序 (`json-mode-silent-hang` → `reconciler-header-mismatch` → `review-completion-false-negative` → `mid-run-api-error` → `preview-deployment-absent` → `EXIT_CODE == 0`) が保たれることを確認する。あわせて catalog 側の `code-completed-no-pr` / `json-mode-silent-hang` Rationale に残る `watchdog-kill` との優先順位記述 (Step 4b, 4c) を消し忘れないこと。
+- AC 9 (`check-translation-sync.sh`) は常に exit 0 なので `docs/ja/structure.md` の更新漏れを検出しない。出力表の `docs/structure.md` 行が `IN_SYNC` であることを目視確認すること。
+- `tests/fixtures/orchestration-recoveries-sample.md` の `gh-pr-list-head-glob` は触らないこと (頻度集計テストの合成データ。変更すると `tests/collect-recovery-candidates.bats` が壊れる)。
