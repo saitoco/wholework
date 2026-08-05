@@ -120,3 +120,48 @@ Issue 本文の `## Notes` は「既存 12 件の AC 本文を一括で書き換
 ## Consumed Comments
 
 No new comments since last phase.
+
+## spec retrospective
+
+### Minor observations
+
+- 親 Issue #1118 の Background に「12 件の実マッチ + 依存対象の分類表」が既に載っていたため、軸の選定 (`route` / `mode` / `recovery-tier`) は Issue 段階のデータをそのまま採用でき、codebase investigation では fact JSON との対応付けだけで済んだ。sub-issue に分割するとき、母集団の実測表を親側に残しておくと子の spec phase が安価になる好例
+- `modules/observation-trigger.md` の gate 節は `keyword=` (#794) → `config=` (#1088) → 本 Issue の `when=` で 3 つ目になる。3 節とも「Problem → 属性例 → Matching specification」の同一構成で書かれており、4 つ目が現れたら共通の抽出ヘルパー (`grep -oE '<attr>=[^ >]+' | sed 's/-*$//'`) をスクリプト側の関数に切り出す余地がある。現時点では 3 箇所の重複で済んでおり、`project_skill_consolidation_trigger` と同種の「3 つ目が判断点」の状態にある
+- `--when="shell condition"` (verify command 修飾子、`modules/verify-executor.md`) という同名の既存機構が別のタグ位置に存在することは、Step 6 の grep で初めて判明した。Issue 本文は属性名を `when=` と指定していたため名前は動かせず、ドキュメント側で区別を明記する対処を選んだ。属性名を新設する Issue では、起票時点で `grep -rn '<attr>='` を掛けておくと衝突を事前に検出できる
+
+### Judgment rationale
+
+- **`--facts-file` と遅延収集の二本立てにした理由**: 現行 `/auto` は observation scan → run-fact reconciliation の順で facts JSON が scan 時点に存在しない。遅延収集だけなら SKILL.md を触らずに済む一方、`/auto` 側で 1 回に集約する将来の最適化経路も残したかった。`--facts-file` は `--context-file` と同型の 6 行程度の追加で済み、かつ bats テストを決定的に書ける副次効果がある
+- **軸を 3 つに絞った理由**: fact JSON には `pr_state` と `anomalies` も存在するが、実測 12 件のうち残る未カバー分 (#1150 / #1009 / #1123) はいずれも「recovery の種別」という fact JSON に存在しない粒度を要求する。軸を増やしても解決しないため、軸表を **(exhaustive)** として確定させ、拡張余地は Notes に明記する形にした
+- **fail-open を選んだ理由**: #1055 の silent 常時除外が本 Issue の Related に挙がっているとおり、gate の fail-closed は誤記 1 文字で AC を永久に dispatch 不能にする。`keyword=` ゲートの先例 (`--context-file` 不在でゲート無効化) と同方向であり、警告を stderr に出すことで沈黙も避けた
+
+### Uncertainty resolution
+
+- **設計時の不確実性「遅延収集時に session を解決できるか」**: `collect-run-facts.sh` の解決ラダー (`--session` > `AUTO_SESSION_ID` env > `.tmp/auto-session-current`) と `skills/auto/SKILL.md` Step 1 のポインタ書き込みを読み合わせ、`/auto` 実行中は必ず現在の session に解決されることを確認した。`AUTO_SESSION_ID` は wrapper 経由でしか export されないため、env だけに依存する設計にしなくて正解だった
+- **未解決のまま残した点**: `/review` の `pr-review-full` emitter や手動実行では `.tmp/auto-session-current` が直前の `/auto` session を指したままになりうる。`when=` は run facts が `/auto` 実行を記述する以上 `event=auto-run` 前提である旨をドキュメントに明記する対処にとどめ、機構的な強制 (event 名による gate の有効/無効切り替え) は入れないことにした。強制すると将来 `/auto` 以外の run facts が現れたときに再度剥がす必要が出るため
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 対応方針 B (`when=<axis>:<value>` 属性) を採用し、A (event 名の細分化) は組み合わせ爆発のため不採用。C (表現不能条件の明文化) は B の補完として併用採用した
+- 実行文脈は `scripts/collect-run-facts.sh` の出力をそのまま消費する。`--facts-file <path>` の明示指定を第一、引数なし遅延呼び出しを fallback とする二本立てで、`skills/auto/SKILL.md` の実行順序を変更せずに済ませる
+- 判定不能時・未知軸時は fail-open (無条件マッチ + stderr 警告)。#1055 の silent 常時除外の再生産を避けるため
+- 軸は `route` / `mode` / `recovery-tier` の 3 つに確定し、軸表を **(exhaustive)** で明示する。`pr-state` / `anomaly` は同じ jq パターンで後から足せる拡張余地として Notes に記録
+- Issue #995 の post-merge AC 1 行のみに `when=route:operate` を注釈する (Post-merge 条件の参照ケース)。既存 12 件の一括書き換えは行わない
+
+### Deferred Items
+
+- 既存 observation AC 11 件 (#995 を除く) への `when=` 注釈は本 Issue のスコープ外。運用の中で個別に判断する
+- `pr-state` 軸 / `anomaly` 軸の追加は必要が生じた時点で軸表に行を足す形で対応する
+- `/auto` 側で facts JSON を observation scan の前に生成し `--facts-file` で渡す最適化 (Alternatives Considered D) は将来の課題
+- `keyword=` / `config=` / `when=` の 3 ゲートに共通する属性抽出処理の関数切り出しは、4 つ目のゲートが現れた時点で検討する
+
+### Notes for Next Phase
+
+- `grep "when=" "modules/observation-trigger.md"` の Pre-merge AC は Implementation Step 5 で初めて成立する。Step 5 を飛ばすと AC 4 が FAIL する
+- `modules/verify-executor.md` の `--when="shell condition"` は別機構。実装中に混同しないこと。`scripts/validate-skill-syntax.py` の `--when=` 除去ロジック (L620 / L626) は `verify:` タグ側のみを扱うため本変更の影響を受けない
+- `tests/opportunistic-search.bats` は現状 `WHOLEWORK_SCRIPT_DIR` を設定していない。`when=` テストでは `$MOCK_DIR/collect-run-facts.sh` のモック追加と `export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` の設定が必要 (既存の `config=` テストは `WHOLEWORK_CONFIG_PATH` 経由で実スクリプトを使っている点に注意 — 設定方法が異なる)
+- `set -euo pipefail` 配下で jq の非ゼロ終了を扱うため、判定は `if ! ... ; then` 形式で受けること。`|| true` でエラーを握り潰すと fail-open と実エラーの区別がつかなくなる
+- `skills/code/SKILL.md` の `allowed-tools` には `gh issue edit:*` と `gh-issue-edit.sh:*` の双方が登録済みのため、Implementation Step 9 (#995 の body 更新) に frontmatter の変更は不要
