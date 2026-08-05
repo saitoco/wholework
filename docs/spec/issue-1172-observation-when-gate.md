@@ -187,3 +187,31 @@ No new comments since last phase.
 ### Acceptance criteria verification difficulty
 
 - Pre-merge AC 7 件中 5 件が `rubric` (意味論的判断) で、実装の存在・ドキュメント化・テスト網羅性を検証した。これらは全て PASS だったが、rubric は「設計判断が記録されているか」「軸が文書化されているか」を検証するものであり、bash の unquoted 展開や `grep -o` の複数行マッチといったコードレベルの correctness bug は検出対象外だった。今回それらのバグは `/review` Step 10 の multi-perspective review (review-bug×2 + 2 段階アドバーサリアル検証) で初めて発見された。Feature タイプかつ bash ロジックが複雑な Issue では、rubric ベースの AC 設計だけでは correctness を担保できず、`--full` review の code-level bug detection が実質的な安全網として機能した
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC 設計は良好。Post-merge AC が「pr route の `/auto` 完走後に dry-run を実行し #995 が除外されることを確認」という**実行文脈を明示した検証可能な形**で書かれていたため、本 verify がそのまま end-to-end 検証になった。observation ではなく manual にしたのも妥当 (発火待ちではなく即座に実行できる条件)
+
+#### spec
+- N/A — spec retrospective のとおり
+
+#### code
+- N/A — Code Retrospective のとおり
+
+#### review
+- rubric ベース AC では bash の correctness bug (unquoted 展開、`grep -o` の複数行マッチ) を検出できず、`--full` review が実質的な安全網になった件は review retrospective に記録済み。Size L → `--full` という route 設計が機能した実例
+
+#### merge
+- N/A
+
+#### verify
+- **3 sub-issue の設計意図どおりに合成が成立した**: #1170 が `--dry-run` を測定可能にし、#1171 が照合軸 (`route`/`mode`/`recovery_tiers`) を供給し、#1172 がそれを消費する — この連鎖を**同一セッション内で end-to-end に実測できた**。#995 の `when=route:operate` が pr route 実行時に除外され、マッチ集合が 14 件 → 13 件に減少
+- **`--facts-file` 未指定時の fail-open が CWD 依存で発火する**: `/verify` の worktree 内から素の `--dry-run` を実行すると、`collect-run-facts.sh` の lazy 呼び出しが `.tmp/auto-session-current` / `.tmp/auto-events.jsonl` を CWD 相対で解決できず fail-open し、**ゲートが無効化されて #995 が除外されなかった**。`--facts-file` を明示すると正しく除外される。実装上の欠陥ではなくドキュメント済みの fail-open 設計だが、呼び出し場所によって結果が変わる点は #1141 (worktree 実行内の main-repo 限定 Step) と同型。#1171 の Verify Retrospective に記録した観察と同じ根であり、`/auto` Step 5 以外の呼び出し元を増やす際の注意点として両方に残す
+- 親 #1118 の横断条件 (実行文脈によってマッチ集合が変化することの実証) は、本 verify の実測で片方向 (pr route での除外) が満たされた。もう片方向 (operate route 実行時に当該 AC が含まれる) は operate route の `/auto` 完走が必要で未実施
+
+### Improvement Proposals
+- N/A — fail-open の CWD 依存は #1141 と同型かつ #1171 でも記録済み、親 #1118 の残条件は #1118 自身で追跡されるため、新規起票は不要
+
