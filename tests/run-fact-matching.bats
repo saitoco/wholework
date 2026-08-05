@@ -38,6 +38,17 @@ setup() {
     [ "$output" = '{"session_id":"sess1","mode":"unknown","issues":[]}' ]
 }
 
+@test "collect-run-facts: session id not found in existing events log yields mode unknown" {
+    EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
+    cat > "$EVENTS_FILE" <<'EOF'
+{"ts":"2026-08-05T00:00:00Z","issue":1600,"event":"phase_start","session_id":"other-session","phase":"code-pr"}
+EOF
+    export AUTO_EVENTS_LOG="$EVENTS_FILE"
+    run bash "$COLLECT_SCRIPT" --session sess1 --no-github
+    [ "$status" -eq 0 ]
+    [ "$output" = '{"session_id":"sess1","mode":"unknown","issues":[]}' ]
+}
+
 @test "collect-run-facts: route/pr/phases/anomalies/fact_tokens derived from fixture events" {
     EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
     cat > "$EVENTS_FILE" <<'EOF'
