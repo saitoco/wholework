@@ -413,6 +413,7 @@ Based on the collected evidence:
 - Evidence contradicts the condition → **FAIL**
 - Evidence is insufficient or ambiguous → **UNCERTAIN**
 - The observed premise itself does not hold in this repository (e.g., a referenced `config=` key is unset/false, or a referenced directory/feature does not exist) → **SKIPPED** (record the reason in the Details column of the Step 9 `## Acceptance Test Results` comment)
+- The condition line carries `session=next` (see `modules/verify-classifier.md` § observation Type: Event Values and Syntax): check whether the evidence collected in step 2 shows the changed skill step actually ran in the observed `/auto` execution. Evidence that it ran → judge PASS/FAIL as above, same as any other observation condition. No evidence, or evidence is ambiguous, that it ran → **SKIPPED** (not UNCERTAIN), with Details column recorded as `skill self-update not yet propagated (session=next)`. This generalizes the "observed premise itself does not hold" SKIPPED case above: for a `session=next` condition, the premise that the current conversation session has the changed skill loaded does not hold until a session starting after the change landed begins. Judging UNCERTAIN here would prompt the Step 11 (d) manual re-verification nudge for a condition that structurally cannot resolve in this session — SKIPPED (Step 11 (a)) is the correct outcome instead
 
 **Post-Step 8 checkpoint: flip post-merge PASS checkboxes**
 

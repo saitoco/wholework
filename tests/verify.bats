@@ -103,3 +103,8 @@ step8c_section() {
     [ "$status" -eq 0 ]
     ! grep -q -F "Skip during normal \`/verify\` run" "$PROJECT_ROOT/modules/verify-executor.md"
 }
+
+@test "Step 8c: session=next resolves to SKIPPED instead of UNCERTAIN" {
+    step8c_section | grep -q -F "session=next"
+    step8c_section | grep -q -F "skill self-update not yet propagated (session=next)"
+}

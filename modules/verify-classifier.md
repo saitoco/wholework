@@ -67,6 +67,30 @@ Gate (`config=`) for the resolution mechanics.
 keys with two or more dots are not supported, and the comparison is boolean-only (`true`/`false`);
 enum-valued keys (e.g. `auto-stop-at`) are out of scope for `config=`.
 
+**`session=next` for skill self-update propagation**: wholework is self-hosted — the harness caches
+skill content per conversation session, not per `/auto` execution. When an Issue changes
+`skills/*/SKILL.md`, a post-merge observation condition that observes the changed skill's own
+behavior cannot be evaluated in the conversation session that processed that Issue, because the
+change lands on the base branch only after that session's skill content was already loaded. The
+condition only becomes evaluable once a conversation session that starts after the change has
+landed loads the updated skill. Append `session=next` to the tag to declare this:
+
+```
+<!-- verify-type: observation event=auto-run session=next -->
+```
+
+`session=next` is a declaration only — it does not gate `opportunistic-search.sh` dispatch (see
+`modules/observation-trigger.md` § Notes). Consumers (exhaustive):
+
+| Consumer | Role |
+|----------|------|
+| `/issue` Step 4 | Detects missing `session=next` on Issues that change `skills/*/SKILL.md` and warns (via `scripts/check-skill-change-observation-ac.sh`) |
+| `/verify` Step 8c | Resolves a fired `session=next` condition to `SKIPPED` (not `UNCERTAIN`) when there is no evidence the changed skill step actually ran in the observed `/auto` execution |
+| `scripts/opportunistic-search.sh` | Matches `event=` by substring — `session=next` does not change dispatch behavior |
+
+Background: `docs/sessions/73536-1785868487-2026-08-04/session.md` § Skill Self-Update Propagation
+Note documents a measured instance of this non-propagation (Issue #1157, condition 7).
+
 ### Tag Assignment Example
 
 ```markdown

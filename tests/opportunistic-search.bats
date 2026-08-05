@@ -263,6 +263,16 @@ teardown() {
     echo "$output" | jq -e '.[0].number == 602' > /dev/null
 }
 
+@test "session=next declaration does not affect event= dispatch matching" {
+    export MOCK_ISSUE_LIST='[{"number": 603}]'
+    export MOCK_ISSUE_BODY_603='- [ ] Next-session skill self-update observed <!-- verify-type: observation event=auto-run session=next -->'
+
+    run bash "$SCRIPT" --event auto-run
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 603' > /dev/null
+}
+
 @test "event filter: unknown event emits warning and falls back" {
     export MOCK_ISSUE_LIST='[{"number": 403}]'
     export MOCK_ISSUE_BODY_403='- [ ] /review skill creates review after execution <!-- verify-type: opportunistic -->'

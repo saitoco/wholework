@@ -190,24 +190,35 @@ AC1 は「`/issue` の AC 生成手順・`modules/verify-patterns.md`・`/verify
 - **SKIPPED へ倒すことの実効果** — `skills/verify/SKILL.md` Step 11 を読み、(a) 「PASS または SKIPPED のみ」と (d) 「UNCERTAIN あり」の差が「手動再検証の催促の有無」であることを確認した。Issue の close 判定は observation AC が unchecked のまま変わらないため、`phase/verify` 滞留件数そのものは減らない。Spec の Notes に「過大評価しないこと」として明記した
 - **`.claude/settings.json.template` への登録要否** — `Bash(${WHOLEWORK_ROOT}/scripts/*.sh *)` のワイルドカード行が既にあり、同種の `check-pre-merge-ac.sh` / `check-session-findings-disposition.sh` も個別登録されていないことを grep で確認し、変更不要と判定した (未検証の「変更不要」判定を避けるルールに従った)
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1-8 をすべて Spec 記載どおりの順序・挿入位置で実装した
+
+### Design Gaps/Ambiguities
+
+- N/A — Spec の判定ロジック・挿入位置・テストケースの記述が具体的で、実装時に解釈が割れる箇所はなかった
+
+### Rework
+
+- N/A
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 方針 A + B を採用し、B は機械可読属性 `session=next` として実装する。C はセッション境界の機械判定を捨てて Step 8c の判定分岐のみ部分採用、D は不採用 (根拠は `## Notes` の表)
-- 制約の記述先は `/issue` Step 4 と `/verify` Step 8c の 2 箇所。`modules/verify-patterns.md` は eager-load コスト方針により対象外
-- `session=next` は dispatch gate にしない。`opportunistic-search.sh` は無変更
+- Implementation Steps 1-8 を Spec 記載どおりの順序・挿入位置で実装した。設計からの逸脱なし
+- `check-skill-change-observation-ac.sh` の usage error ケースは Spec の「引数なし / 存在しないパス」を bats の別テストとして分割実装した (単一ケースの記述を 2 テストに展開しただけで、判定ロジックや exit code の仕様は変更していない)
+- Pre-merge AC 4 件 (rubric 3 件 + command 1 件) はすべて実装内容・Spec の既存記述と照合して PASS 判定し、Issue のチェックボックスを更新済み
 
 ### Deferred Items
 
-- #1157 の run-fact reconciliation への接続 (方針 D) は不採用。`session=next` が運用実績を持ってから再評価する
-- #1118 が扱う route / mode / recovery tier 依存の dispatch 抑止は本 Issue のスコープ外
+- #1157 の run-fact reconciliation への接続 (方針 D) は不採用のまま。`session=next` が運用実績を持ってから再評価する
+- #1118 が扱う route / mode / recovery tier 依存の dispatch 抑止は本 Issue のスコープ外のまま
 
 ### Notes for Next Phase
 
-- `skills/issue/SKILL.md` に新スクリプト参照を追加するため、frontmatter `allowed-tools` への `${CLAUDE_PLUGIN_ROOT}/scripts/check-skill-change-observation-ac.sh:*` 追加を忘れないこと (`scripts/check-allowed-tools.sh` が検出する)
-- SKILL.md 本文の MUST 制約に注意: 半角 `!` 禁止 / Step 番号は整数のみ / 本文にトリプルバッククォートを直接置かない
-- 新スクリプトは bash 3.2+ 互換で書くこと (`mapfile` / 連想配列 / `${var^^}` 禁止 — macOS system bash で落ちる)
-- `docs/structure.md` を変更するため `docs/ja/structure.md` の翻訳同期が必須 (`docs/translation-workflow.md`)
-- Pre-merge AC 4 件のうち 3 件が `rubric` である。実装後に rubric の判定材料 (実装された手順文・テストの存在・不採用根拠の記載) が Spec と実ファイルの両方から読み取れる状態にしておくこと
+- 本 Issue 自身が `skills/issue/SKILL.md` / `skills/verify/SKILL.md` を変更するため、post-merge observation AC には `session=next` を自己適用済み。次回 `/verify` 実行時、この AC が fire したら Step 8c の `session=next` 分岐 (このセッションで導入した変更後の Step 8c ロジック自身) が SKIPPED 判定を返すか確認すること — 自己適用のため一種の自己参照的な検証になる
+- `bats tests/` は全 1387 件 PASS 済み。behavioral change 検出により全件実行した (modules/verify-classifier.md が tests/verify-executor.bats から、skills/issue・verify/SKILL.md が複数のテストファイルから参照されているため)
