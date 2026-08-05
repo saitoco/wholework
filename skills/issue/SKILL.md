@@ -1,7 +1,7 @@
 ---
 name: issue
 description: Issue creation and refinement (`/issue "title"` or `/issue 123`). Creates new issues or refines/reformats existing ones. Use when creating issues, defining requirements, or standardizing issue content.
-allowed-tools: Bash(gh issue create:*, gh issue view:*, gh issue edit:*, gh issue close:*, gh issue list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*), Glob, Grep, Write, Read, WebFetch, ToolSearch, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
+allowed-tools: Bash(gh issue create:*, gh issue view:*, gh issue edit:*, gh issue close:*, gh issue list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-skill-change-observation-ac.sh:*), Glob, Grep, Write, Read, WebFetch, ToolSearch, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Issue Creation and Refinement
@@ -204,6 +204,22 @@ Always read `skills/issue/mcp-call-guidelines.md` and follow the "Declaration-fi
 **Assign verify-type tags to post-merge conditions:**
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md` and assign `<!-- verify-type: auto|opportunistic|manual -->` tags to each post-merge condition.
+
+**Skill self-update propagation check:**
+
+wholework is self-hosted: the harness caches skill content per conversation session, not per `/auto` execution. When this Issue's `## Changed Files` includes any `skills/*/SKILL.md`, and a post-merge condition is tagged `verify-type: observation`, that condition cannot be evaluated in the conversation session that processes this Issue — the changed skill only takes effect once a later conversation session, started after the change lands on the base branch, loads it. Declare this by appending `session=next` to the tag, per `modules/verify-classifier.md` § observation Type: Event Values and Syntax:
+
+```
+<!-- verify-type: observation event=auto-run session=next -->
+```
+
+To detect missing `session=next` mechanically, write the current Issue body to `.tmp/issue-body-$NUMBER.md` and run:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/check-skill-change-observation-ac.sh .tmp/issue-body-$NUMBER.md
+```
+
+Exit code 2 means one or more observation conditions are missing `session=next` — present the printed lines as a warning, append `session=next` to each, and update the Issue body. Exit code 1 is warn-only (usage error) — continue processing regardless.
 
 **Metadata-only implementation-type marker (auto-attach):**
 
