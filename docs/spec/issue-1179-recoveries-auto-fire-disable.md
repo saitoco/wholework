@@ -85,3 +85,30 @@ Issue 本文が挙げる 4 候補 (無効化 / 閾値引き上げ / group-key �
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 受入条件の post-merge observation AC (`recoveries-auto-fire` が動作する `/verify` 実行で recovery 由来の Issue が自動生成されないことを観察する) が、**実装の内容によって観察前提を失う構造**になっていた。本 Issue の実装は `recoveries-auto-fire.enabled` を `false` にするものであり、条件文が要求する「auto-fire が動作する `/verify` 実行」は本リポジトリでは以後発生しない。条件文を「Step 15 が実行され起票が発生しない」と読めば観察可能だが、この読み替えは AC 文面からは一意に定まらない
+- 起票時点でこの自己矛盾を検出するには、observation AC の前提 (`event=` が指す実行文脈) が実装後も成立するかを AC 監査時に確認する必要がある。#1118 / #1172 の `when=` 実行文脈ゲート、#1156 の解決不能 post-merge 条件検出がいずれも同型の課題を追跡しており、本件は新規の構造ではない
+
+#### spec
+- Issue 本文が挙げた 4 候補に対し、不採用理由が `## Notes` に個別に記録されており判断が追跡可能。方針 2 (閾値引き上げ) を「発生ペース次第で同じ状態に戻る」として構造的でないと退けた判断は、実測 (7 月の external kill 集中期に 52 件起票) と整合している
+- 方針 3 (group-key 細分化の撤回) を #1181 の `--cause`/`--diagnosis` フローとの依存関係を理由に不採用としたのは、Issue 間の依存を正しく読んだ判断
+
+#### code
+- 実装は Spec の 4 ステップ通りで逸脱なし。`skills/verify/SKILL.md` Step 15 の既存分岐が変更後の挙動と一致することを**直接読んで確認**し、不要な編集を避けた判断が Phase Handoff に記録されている
+- Size が spec フェーズ後に M → S へ再評価され、patch route に降格。Changed Files 3 件・低複雑度という実態と整合しており、`/triage` 時点の M 判定 (docs/ja 翻訳を含む 6 ファイル想定) より正確
+
+#### review / merge
+- patch route のため未実行 (該当なし)
+
+#### verify
+- pre-merge 4 条件はすべて PASS。うち rubric 2 件は実測を伴って確認した (`collect-recovery-candidates.sh --threshold 1` を実行し 10 件の group-key 出力を確認)
+- 本 `/verify` の Step 15 で、閾値 3 を超える group-key (`manual-recovery-review-rerun` = 3) が存在するにもかかわらず自動起票が発生しないことを実測。本 Issue の目的は達成されている
+
+### Improvement Proposals
+
+- N/A — observation AC の前提失効の課題は #1118 / #1172 / #1156 が既に追跡中であり、新規起票は行わない。本 retrospective への記録をもって既存 Issue の裏付け事例とする
