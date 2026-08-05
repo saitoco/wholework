@@ -221,3 +221,45 @@ AC1 は「`/issue` の AC 生成手順・`modules/verify-patterns.md`・`/verify
 
 - 本 Issue 自身が `skills/issue/SKILL.md` / `skills/verify/SKILL.md` を変更するため、post-merge observation AC には `session=next` を自己適用済み。次回 `/verify` 実行時、この AC が fire したら Step 8c の `session=next` 分岐 (このセッションで導入した変更後の Step 8c ロジック自身) が SKIPPED 判定を返すか確認すること — 自己適用のため一種の自己参照的な検証になる
 - `bats tests/` は全 1387 件 PASS 済み。behavioral change 検出により全件実行した (modules/verify-classifier.md が tests/verify-executor.bats から、skills/issue・verify/SKILL.md が複数のテストファイルから参照されているため)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- Size L / Type Task の判定と AC 4 件の verify command 割り当ては適切だった。AC1 が記述先を「いずれか (または複数)」と許容していたことが、`modules/verify-patterns.md` を触らない判断 (eager-load コスト回避) を可能にした。AC の許容幅を意図的に持たせる書き方が、実装時にアーキテクチャ方針を優先させる余地を作った好例
+
+#### spec
+
+- **MUST 指摘 2 件の起点はいずれも Spec 側だった**。Code Retrospective は "Deviations from Design: N/A" と記録しているが、これは正しい — 実装は Spec どおりで、Spec の記述自体に欠陥があった:
+  - ゲート条件を「Issue の `## Changed Files` に `skills/*/SKILL.md` が含まれる場合」と定義したが、`## Changed Files` は **Spec のセクション**であり `/issue` 実行時点では Spec 自体が存在しない。常に false になるゲートを書いていた
+  - 検査対象ファイルを `.tmp/issue-body-$NUMBER.md` と指定したが、New Issue Creation 経路の Step 4 時点では Issue 未作成で `$NUMBER` が未束縛
+- 共通する構造は「**そのフェーズの実行時点で参照可能な情報かを検証していない**」こと。Spec が別フェーズの成果物 (Spec のセクション、後のステップで束縛される変数) をゲート条件に使う場合、フェーズ順序との整合を明示的に確認する観点が要る
+
+#### code
+
+- 実装は Implementation Steps 1-8 を順序どおり遂行し、逸脱なし。Spec 由来の欠陥は code フェーズでは検出されなかったが、これは code の責務範囲を考えれば妥当 (Spec を疑う責務は review 側にある)
+
+#### review
+
+- **検出能力は有効に働いた**。`review-spec` + `review-bug`×2 の並列構成が MUST 2 件 / SHOULD 4 件 / CONSIDER 3 件を検出し、すべて実体のある欠陥だった。特に MUST 1 (常に false のゲート) は、見逃していれば機能が完全に無効なまま着地していた。adversarial 検証サブエージェントによる 1 件の REJECT も妥当な判断だった
+- **一方でフェーズ完走に 2 回連続で失敗した**。両実行とも「バックグラウンドの bats テスト完了を待ちます」で turn を終え、`claude -p` セッションがそこで終了 (silent no-op)。1 回目は指摘の投稿前、2 回目は指摘投稿後・Step 11 の修正コミット前に停止した
+- **2 回目の fallback が完了シグナルを立ててしまった**。`post-fallback-review-summary.sh` が `<!-- review-summary -->` 付きコメントを投稿した結果、`reconcile-phase-state.sh review --check-completion` が `matches_expected: true` を返し、`run-review.sh` は exit 0 で終了した。実際には MUST 2 件が未対応のままで、親セッションが PR コメントを直接読まなければ、未修正のまま `/merge` へ進んでいた
+- 未コミットの修正が review worktree に残っていたため作業自体は失われなかったが、その事実を orchestrator に伝えるシグナルは存在しなかった
+
+#### merge
+
+- CI 9/9 pass・pre-merge AC gate 4/4 チェック済みで、コンフリクトなく squash merge が完了。異常なし
+
+#### verify
+
+- 全 4 件の pre-merge AC が PASS、post-merge の observation AC は未発火のため SKIPPED。判定は設計どおり
+- **本 `/verify` 実行そのものが、この Issue の扱う非伝播現象の実測になった**。merge (`232f0837`) 後に同一会話セッション内で `/verify 1168` を起動したが、セッションに注入された `skills/verify/SKILL.md` Step 8c には `session=next` 分岐 (L416) が含まれていなかった (ディスク上の `main` には存在)。`AUTO_SESSION_ID` は同一 (`54459-1785897894`) であり、会話セッション自体が merge 前に開始しているため、方針 C の `AUTO_SESSION_ID` 比較でも方針 D の `skill_versions` 比較でも検知できない構造であることが再確認された。Spec `## Notes` の不採用判断と整合する
+
+### Improvement Proposals
+
+- `post-fallback-review-summary.sh` の fallback 投稿が review フェーズの完了シグナル (`<!-- review-summary -->` マーカー) を立ててしまい、未対応の MUST 指摘を持つ PR が `/merge` のゲートを通過しうる。本 Issue では `run-review.sh` が exit 0 で終了し `reconcile-phase-state.sh` も `matches_expected: true` を返したが、実際には MUST 2 件が未修正だった。fallback サマリは「review が自力で完了しなかった」ことを機械可読なマーカー (例: `<!-- wholework-event: type=review-incomplete -->`) で記録し、`/merge` の pre-merge ゲートまたは `/auto` の completion check がそれを検出して停止できるようにすべき
+- `/review` がバックグラウンドで `bats tests/` を起動し完了通知を待つ形で turn を終えると、`claude -p` セッションがそこで終了して silent no-op になる。本 Issue では 2/2 の再現率で発生した (`review-completion-false-negative` として Tier 2 検出済み)。`run-review.sh` のプロンプト側で「テストはフォアグラウンドで実行し、turn を跨いで待たない」旨を明示するか、wrapper 側がバックグラウンドタスク待ちで終了した turn を検出して継続を促す仕組みが要る
+- `reconcile-phase-state.sh review --check-completion` が review worktree (`.claude/worktrees/review+pr-N`) の dirty 状態を確認していないため、「修正途中で中断」と「修正不要で完了」を区別できない。本 Issue では未コミットの修正が worktree に残っており、親セッションが手動で確認するまで検出されなかった。completion check に worktree dirty 判定を加えれば、Tier 1 の段階で「修正途中」を診断できる
+- Spec が `/issue` 実行時点で存在しないセクション (`## Changed Files` は Spec のセクション) や、その時点で未束縛の変数 (`$NUMBER`) をゲート条件・ファイルパスに使っていた。`/spec` の設計時に「このゲート条件は、それを評価するフェーズの実行時点で参照可能な情報だけで書かれているか」を確認する観点を追加すべき。本 Issue では MUST 指摘 2 件がいずれもこの一点に起因した
