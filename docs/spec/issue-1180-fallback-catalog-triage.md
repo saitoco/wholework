@@ -227,3 +227,35 @@ Documentation-only PRs that add a brand-new `docs/reports/*.md` file are not cov
 ### Acceptance criteria verification difficulty
 
 AC 9 (`command "bash scripts/check-translation-sync.sh"`) has no corresponding CI job (confirmed by reading `.github/workflows/test.yml` in full), so `/review`'s safe-mode CI-reference fallback can never resolve it — it will UNCERTAIN on every `/review` run regardless of the actual state of the translation sync, permanently leaving that Pre-merge checkbox unchecked until `/verify` (full mode) runs post-merge. The Spec's own Notes section already anticipated this ("AC 9 の `check-translation-sync.sh` が実質的な検証になっているか" — the script always exits 0 without `--fail-if-outdated`), so this is a known, accepted limitation rather than a new discovery, but it's worth reiterating for `/verify`'s retro-proposal aggregation: `command`-type Pre-merge ACs with no CI job counterpart are structurally unreviewable pre-merge under `/review`'s safe mode, and Issue authors should either add a CI job for such scripts or mark them as a different verify-type (e.g. `verify-type: manual` or an explicit post-merge check) if pre-merge blocking via `/review` is not actually intended.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 起票時の分析が **軸 A (発火実績) のみ**で「19 エントリ中 17 件が発火実績ゼロ」としていたのに対し、spec が軸 B (live 参照元の有無) を追加した結果、実際の退避は 2 エントリに留まった。起票時点で「発火していない = 不要」と短絡していたことになる。手順書として参照されているエントリは発火実績がなくても機能しており、削除すると参照が壊れる — AC 3 に「手順書用エントリの参照可能性」を含めていたおかげで、この観点が spec に引き継がれた
+- Pre-merge AC 9 (`command "bash scripts/check-translation-sync.sh"`) が **対応 CI job を持たない `command` 型**であり、`/review` の safe mode では構造的に検証不能。結果として未チェックのまま merge gate をブロックした。同じ AC を使った #1179 / #1181 / #1180 の 3 件中 2 件で merge が止まっている
+
+#### spec
+- 2 軸 (発火実績 / live 参照元) での仕分け設計が適切。判定表に全 19 エントリの根拠と計測方法 (`rg -o` 実測値、`docs/spec/**` `docs/sessions/**` 除外) を残したため、後から判断を再検証できる
+- 検出器側の軸 B を「trigger 文字列の live 発行元が存在するか」に読み替えた点が的確。これにより `dirty-working-tree` の AND 条件にある `VERIFY_FAILED` が `run-verify.sh` 削除 (#485) 以降どこからも発行されない**到達不能コード**であることを発見した。`skills/spec/SKILL.md` に #485 retro の事例として記載されながら実コードから除去されていなかったもので、本 Issue で解消された
+- 副次的発見として「汎用 watchdog kill (json mode 以外) の Tier 2 検出が不在」を spec retrospective に記録。退役前から到達不能だったため実効的な変化はないが、修復は別 Issue の対象
+
+#### code
+- 実装は Spec の 9 ステップどおり。退避先 `docs/reports/orchestration-fallbacks-archive.md` を翻訳同期・doc-checker いずれの対象外パスに置いた設計により、アーカイブの恒常維持コストがゼロになっている
+
+#### review
+- AC 9 の構造問題を review 時点で正しく分析し、`/verify` の retro-proposal 集約へ明示的に委ねていた。review が「検出はしたが自分では解決できない構造問題」を下流へ正しくエスカレーションした好例
+- `docs/reports/*.md` を新規追加する documentation-only PR が CLAUDE.md の言語規約チェックの対象外である点も指摘。実際に本 PR のアーカイブファイルが英語本文に日本語セクション混在・全角括弧混入の状態で review に到達し、人手の読解でのみ検出された
+
+#### merge
+- pre-merge AC gate が AC 9 の未チェックを検出してブロック (#1181 と同一原因の 2 件目)。親セッションが PR ブランチ上で `docs/structure.md` / `docs/ja/structure.md` の同一コミットを確認して AC をチェックし、`run-merge.sh` 再実行で解消
+- merge 後の `--write-manual-recovery` は #1181 の実装 (Spec 書き込み撤去) 後の**初回のクリーンな実行**となり、Spec のコミットハッシュ・ファイルハッシュとも無変更、deferred stash ファイルも生成されず、記録先が `docs/reports/orchestration-recoveries.md` 1 ファイルのみであることを実測で確認した
+
+#### verify
+- pre-merge 9 件すべて PASS。うち rubric 3 件は退避エントリのアンカー参照を実地 grep して確認 (`tests/fixtures/` の 3 件はサンプルデータであり rubric が指定する参照元ではない)
+
+### Improvement Proposals
+
+- **`command` 型 Pre-merge AC に対応 CI job がない場合、`/review` の safe mode では構造的に検証不能となり、未チェックのまま `/merge` の pre-merge AC gate をブロックする**。本セッションで #1181 / #1180 の 2 件が同一原因で merge に失敗し、いずれも親セッションの手動介入 (実質検証 → チェックボックス更新 → merge 再実行) を要した。加えて `check-translation-sync.sh` のように `--fail-if-outdated` なしで常に exit 0 を返すスクリプトを `command` 型 AC に使うと、判別力のない「常時 PASS な verify command」にもなる (`/triage` の AC 監査 Pattern 2 は文字列存在ベースの常時 PASS のみを扱い、exit code 設計に起因するものは検出対象外)。`/issue` の AC 作成時点で「`command` 型 AC は対応 CI job があるか」「スクリプトが失敗時に非ゼロを返すか」を確認し、満たさない場合は post-merge へ回すか `verify-type: manual` にするガイドラインが必要
+- (記録のみ) `docs/reports/*.md` を新規追加する documentation-only PR は CLAUDE.md の言語規約チェックの対象外。`scripts/check-forbidden-expressions.sh` は固定の deprecated 用語リストのみを見ており、言語混在や約物違反は検出しない。本 PR で実際に混入が発生したが、既存 checker の拡張範囲であり本 Issue のスコープ外
