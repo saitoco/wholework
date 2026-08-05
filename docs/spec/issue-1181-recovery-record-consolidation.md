@@ -119,3 +119,46 @@ Tier 2 のみ bash 経路での recoveries.md 書き込みを持たないが、�
 ## Consumed Comments
 
 No new comments since last phase.
+
+## spec retrospective
+
+### Minor observations
+
+- `scripts/test-skills.sh` は名前に反して bats を実行しない (skill 構文検証のみ)。同スクリプトを「テスト一式が回る」前提で AC の verify command に置く記述が複数の Issue で再生産されうる。今回は AC 分離で個別対処したが、`test-skills.sh` 側に bats 実行を追加するか、名前を実態に合わせるかは別途判断の余地がある
+- `command` verify の 60 秒タイムアウトに対し `tests/run-auto-sub.bats` の直列実行が 73 秒。単一 bats ファイルが既にタイムアウト境界を超えている事実は、今後 bats を verify command に置く全 Issue に影響する。`modules/verify-executor.md` は `--jobs` の可搬形式を例示済みだが、Spec 側で実測してから書式を決めた判断は他 Issue でも踏襲する価値がある
+
+### Judgment rationale
+
+- **Tier 2 / Tier 3 の Spec 書き込みも撤去する判断**: Issue 本文は「同じ判断の対象とする」とだけ述べ結論を委ねていた。撤去して記録が欠落しないかを経路ごとに確認した結果、Tier 3 は `spawn-recovery-subagent.sh`、Tier 2 は親 `/auto` Step 4a Source 1 が recoveries.md へ書く経路を既に持つことを確認できたため撤去に踏み切った。Tier 2 だけは bash 経路での recoveries.md 書き込みを持たないが、これは本 Issue 以前からの状態で新たな欠落ではない
+- **アンカー `#manual-recovery-spec-write` を改名しない判断**: 名前が実態と乖離する不利益より、`orchestration-recoveries.md` の既存 38 エントリのリンクが壊れる不利益が大きい。過去ログの参照可能性を優先した
+- **`--cause` / `--diagnosis` の存置**: Issue 本文は #1179 の group-key 方針への依存として未決のまま残していたが、#1179 の Spec Notes に「撤去しない」と明示されており、Issue 本文だけを読むと再検討が必要に見える依存が既に解決済みだった。関連 Issue が closed の場合はその Spec の Notes まで読むと判断が確定する好例
+
+### Uncertainty resolution
+
+- **`_validate_recovery_args` の引数検証が失われるリスク**: `--write-manual-recovery` の不正引数検証は `_write_manual_recovery_to_spec()` 内の呼び出しが `set -e` 経由で担っており、`_write_manual_recovery_to_recoveries_log()` は検証を行わない。関数削除だけを行うと `validate: --write-manual-recovery rejects ...` 系 6 テストが全滅する。実装ステップ 2 に「必須」として明記して解決した
+- **`## Auto Retrospective` 概念ごと消える誤解のリスク**: 同セクションは親 `/auto` Step 4a と `modules/retro-proposals.md` も使う。撤去対象が run-auto-sub.sh の bash 経路のみであることを Overview と Notes の両方に明記して解決した
+- **`docs/workflow.md` の変更要否**: 当該箇所は記録先を明示していないため厳密には矛盾しないが、AC 6 が同ファイルを名指ししている。「記録先を明示する」加筆に留めることで、rubric の検証可能性と最小変更を両立させた
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 撤去対象を「run-auto-sub.sh の bash 経路による Spec 書き込み」に限定し、`## Auto Retrospective` セクションそのもの (親 `/auto` Step 4a / `modules/retro-proposals.md` が使用) は温存する
+- Tier 2 / Tier 3 の Spec 書き込みも撤去対象に含める。recoveries.md 側の記録経路が両者とも既存であることを確認済み
+- `modules/orchestration-fallbacks.md` のアンカー `#manual-recovery-spec-write` は改名せず本文のみ更新する (既存 38 ログエントリのリンク保護)
+- `--cause` / `--diagnosis` は存置 (#1179 の決着に従う)
+- bats の pre-merge AC を `bash scripts/test-skills.sh` から分離し、`bats --jobs $(nproc 2>/dev/null || sysctl -n hw.logicalcpu) tests/run-auto-sub.bats` を独立 AC 化した
+
+### Deferred Items
+
+- #1094 (Spec を記録先に追加する逆方向の提案、icebox) の close 判断は実装ステップに含めない。L0 操作であり本 Issue の AC 外
+- Tier 2 の bash 経路での recovery event 記録は #1098 の scope に委ねる
+- `scripts/test-skills.sh` が bats を実行しない件への恒久対処 (スクリプト側に bats を追加するか改名するか) は本 Issue では扱わない
+
+### Notes for Next Phase
+
+- **最重要**: 実装ステップ 2 の `_validate_recovery_args` 移設を飛ばすと `validate: --write-manual-recovery rejects ...` 系 6 テストが全滅する。関数削除と同時に必ず実施すること
+- `docs/spec/` 配下の既存ファイル (本 Spec を除く) には一切変更を加えないこと。AC 5 が「過去の記録を破壊しない」を要求している
+- `docs/tech.md` / `docs/ja/tech.md`、`docs/workflow.md` / `docs/ja/workflow.md` は en/ja を同一コミットに含めること (`check-translation-sync.sh` はタイムスタンプ比較)
+- 更新対象 bats テストの recoveries.md フィクスチャには `<!-- Log entries appear below, newest first. -->` マーカー行が必須 (無いと Python 側の書き込みが無言でスキップされる)
