@@ -9,6 +9,9 @@ verify-max-iterations: 3
 # #1163 系 (manual AC 再型付け) は 1 フェーズで 29 Issue 分の L0 変更を行うため、
 # code フェーズ既定 4680s (scripts/watchdog-defaults.sh) では不足しうる。
 watchdog-timeout-code-seconds: 7200
+# Size L の `/review --full` は fan-out (review-spec + review-bug x2) と 2 段階検証を
+# 直列に回すため、既定 2600s (scripts/watchdog-defaults.sh) では PR #1201 で kill された。
+watchdog-timeout-review-seconds: 5400
 auto-retry-on-fail:
   enabled: true
   threshold: 3
