@@ -72,3 +72,20 @@ No new comments since last phase.
 
 ### Notes for Next Phase
 - verify フェーズでは Post-merge AC (`verify-type: opportunistic`) のみが残っている — 次回 `ff-only-merge-fallback` 発生時に `Applicable Phases` から verify が認識できるかを確認する運用チェック
+
+## Issue Retrospective
+
+### Acceptance Criteria の変更理由
+
+- AC1 (`section_contains "modules/orchestration-fallbacks.md" "### Applicable Phases" "verify"`) の heading 引数から先頭の `###` を除去した。`section_contains` はファイル側の見出し行から `#`/空白を除去したうえで部分一致するため、引数側に `###` を残すと本文中のどの `### Applicable Phases` 見出しにも一致せず恒久的に UNCERTAIN になる (triage AC 監査で検出、`modules/verify-executor.md` § `section_contains` 仕様および `skills/triage/skill-dev-verify-audit.md` Pattern 6.1 準拠)。`modules/orchestration-fallbacks.md` には同名の `### Applicable Phases` 見出しが約 18 箇所あるが、`section_contains` は文書順で最初に一致した見出しを対象とするため、修正後も `ff-only-merge-fallback` エントリ (文書内で最初に出現) を正しく対象化できる。
+- AC2 (rubric: verify が確定的に true 側を通る理由の注記) に、機械的補助チェックとして `<!-- verify: section_contains "modules/orchestration-fallbacks.md" "Applicable Phases" "checkout" -->` を追加した。実装が加える注記文には Background で述べている `git checkout` の技術的根拠が含まれる見込みが高く、rubric 単独より判定精度が上がるため (`modules/verify-patterns.md` §9 の rubric + 補助チェック指針に準拠)。
+
+### 曖昧ポイント
+
+Background/Purpose/Proposal (Outline) が十分に具体的で、曖昧ポイントの抽出・自動解決は発生しなかった。
+
+### Type/Size/Value 判定根拠
+
+- Type: Task (ドキュメント記載漏れの修正、コード挙動変更なし)
+- Size: XS (`modules/orchestration-fallbacks.md` 1 ファイルの変更、ドキュメントのみ)
+- Value: 3 (Impact=2: `modules/orchestration-fallbacks.md` は複数 Skill から参照される共有モジュール、Alignment=3: verify/orchestration の正確性はプロジェクトの中核である governance-and-verification harness の Vision に直接関わる)
