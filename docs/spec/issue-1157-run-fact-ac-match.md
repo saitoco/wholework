@@ -377,6 +377,8 @@ Size L につき上限5件のうち、2件を自動解決 (残りは AC 文言�
 
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1157#issuecomment-5184331273
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1157#issuecomment-5185271809
+- saito / MEMBER / first-class / ## Acceptance Test Results (再検証: observation 発火後) / https://github.com/saitoco/wholework/issues/1157#issuecomment-5186317121
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1157#issuecomment-5195223616
 ## Verify Retrospective
 
 ### Phase-by-Phase Review
