@@ -98,3 +98,40 @@
 **Issue body factual claim 検証**: Background の記述 (New Issue Creation は機能する、Existing Issue Refinement は `triaged` の有無に関わらず機能しない/順序が逆転する) はいずれも `skills/issue/SKILL.md` の現況と照合し、一致を確認した。矛盾なし。
 
 **Steering Docs sync candidate 判定根拠**: `docs/environment-adaptation.md` / `docs/ja/environment-adaptation.md` の Domain Files 表にある `skill-dev-verify-audit.md` の行の「Skill」列は、`domain-loader` モジュールがバンドル Domain file を `${CLAUDE_PLUGIN_ROOT}/skills/{SKILL_NAME}/*.md` の Glob で発見する仕組み上のディレクトリ所有権 (`skills/triage/`) を表しており、個々の呼び出し元を網羅列挙するものではない (実際、`/triage` の SKILL.md 自身は `domain-loader.md` を読んでいないため、このバンドル機構は現状 unused — `docs/spec/issue-749-domain-frontmatter-fix.md` Notes 参照)。`/issue` からの新規参照は既存の「Read X and follow Y section」形式の手動参照であり (`/triage` の Bulk Execution Step 3 substep 7 も同形式)、動的ロード機構やこの表の分類ロジックに影響しないため、変更不要と判断した。
+
+## Autonomous Auto-Resolve Log
+
+- **`phase/ready` ラベル不在 (Step 3)**: `/code 1185` 実行時点のラベルは `triaged`, `phase/code`, `retro/verify` のみで `phase/ready` が不在だった。`reconcile-phase-state.sh code-pr 1185 --check-precondition` も `matches_expected: false` (診断: "does not have phase/ready label") を返した。ただし Spec (本ファイル) は既に存在し内容も完成しており、Issue タイムラインから `phase/ready` → `phase/code` の遷移が本セッション開始前 (2026-08-06T04:02:40Z) に既に発生していたことを確認した。ブランチ・PR は未作成だったため、Step 4 (ラベル遷移) のみ完了し Step 5 以降が未実施のまま中断されたセッションの再開と判断し、非対話モードの auto-resolve として Spec に基づき実装を続行した。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1〜4 を Spec の記述通りに適用した。追加の Steering Docs sync 判断も Spec Notes の既存結論と一致した。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+
+- Spec の Implementation Steps 1〜4 をそのまま適用 (Step 15 新設・New Issue Creation Step 8 への注記・`skill-dev-verify-audit.md` の Used-in 行と Pattern 4 検出箇所修正・`tests/issue.bats` へのテスト追加)。設計判断はすべて Spec Notes で既に確定していたため、実装時の追加判断は発生しなかった。
+- Behavioral Change Detection の結果、`skills/issue/SKILL.md` が `tests/xl-decomposition.bats` / `tests/run-issue.bats` からも参照されていたため、`bats tests/issue.bats` の narrow scope ではなく `bats tests/` full suite (1426 件) を実行し PASS を確認した。
+- `phase/ready` ラベルが実行開始時点で既に不在 (`phase/code` へ遷移済み) だったが、Spec が完成済みでブランチ/PR が未作成だったことから、Step 4 のみ完了して中断されたセッションの再開と判断し、非対話モード auto-resolve として続行した (詳細は Autonomous Auto-Resolve Log 参照)。
+
+### Deferred Items
+
+- Post-merge observation AC (`triaged` 済み Issue で Pattern 6 サブパターン 1 が指摘されることの観察、`session=next`) は本 PR のマージ後、新しいセッションでの `/issue N` 実行時に確認する。
+- `docs/workflow.md` / `docs/ja/workflow.md` の Step 10/11 off-by-one drift は Spec Notes の判断通り本 Issue のスコープ外として据え置いた。
+
+### Notes for Next Phase
+
+- `/review` は 2 件の rubric AC (Step 15 の無条件実行、両フローの順序一貫性) が Issue 本文の記述と実装内容に照らして妥当か再確認すること。
+- `/verify` は post-merge observation AC を次回セッションで評価する際、`skills/triage/skill-dev-verify-audit.md` Pattern 6 サブパターン 1 の指摘コメントが実際に投稿されるかを確認すること。
