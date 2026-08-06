@@ -88,3 +88,20 @@ exit 143 は watchdog による明示的 kill (`Exit code:` トレーラと `wra
 | #1186 | チェック済み AC 再検証のコスト実測 (2 ケースの対比 + 併発コスト) |
 | #1064 | spec フェーズの telemetry 欠落 + Opus 5/4.8 世代の wall-clock 実測 |
 | #1118 | AC 2 を manual → observation に再型付け |
+
+## Skill Self-Update Propagation Note
+
+Session 中に以下の skill が更新されました (本 session には未適用、次 session から反映):
+
+- `skills/auto/SKILL.md`: `9ba018e9` → `d65f6f83`
+- `skills/code/SKILL.md`: `9dc07088` → `7c6c0437`
+- `skills/spec/SKILL.md`: `7d5a855d` → `7c6c0437`
+- `skills/verify/SKILL.md`: `9ba018e9` → `7c6c0437`
+- `skills/review/SKILL.md`: (no change)
+- `skills/merge/SKILL.md`: `ff2776bd` → `e2636523`
+- `skills/issue/SKILL.md`: `232f0837` → `8e317b92`
+- `skills/audit/SKILL.md`: `dbaff5c8` → `4e7facbc`
+
+**この Note の前提が本 session で破れた。** 定型文は「本 session には未適用、次 session から反映」と述べるが、`skills/verify/SKILL.md` については **`/verify 1188` が実際に更新前の版を実行し、その結果 Step 2 の `git pull` が dirty tree で失敗した**。つまり「未適用」で済まず、更新済みであることを前提に AC を検証したために誤判定寸前まで至った。
+
+さらに **この check 自体がその状況を検出できない**。`CURRENT_HASH` を*ローカル* HEAD から取るため、`gh pr merge` が origin/main だけを進めてローカル main が追従していない間は「no change」と報告する。本 session では `/verify 1188` の復旧過程でたまたま `git pull` したため両者が一致し、結果的に差分が見えている。pull しなければ差分は最後まで不可視だった。詳細は Improvement Proposals を参照。
