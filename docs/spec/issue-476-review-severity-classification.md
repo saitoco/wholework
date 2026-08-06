@@ -9,6 +9,7 @@
 
 - saito / MEMBER / first-class / 前回 `/verify 476` (2026-08-06 re-run) 実行結果。Pre-merge 2 件 PASS、Post-merge observation (event=pr-review-light) は PR #1189 の diff に該当欠陥なしのため UNCERTAIN / https://github.com/saitoco/wholework/issues/476#issuecomment-5199963258
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5200100852
 ## 背景
 
 `/review` の MUST/SHOULD 分類基準に「対象実行環境で決定的に失敗する欠陥は MUST」というルールを明文化する。Spec フェーズなしで直接実装（Issue 本文から要件を読み取り）。
