@@ -301,8 +301,8 @@ _completion_code_patch() {
   # matches_expected. Base is origin/main fixed (matches this function's existing
   # decision, not parameterized). A single git rev-list --count call folds both a
   # missing branch (non-zero exit) and zero commits into worktree_commits_found=false,
-  # so no separate git rev-parse existence check is needed.
-  # See modules/phase-state.md#worktree-commits-found
+  # so no separate git rev-parse existence check is needed. See the actual.worktree_commits_found
+  # row in modules/phase-state.md's Field contract table for the full explanation.
   local worktree_commit_count
   worktree_commit_count=$(git rev-list --count "origin/main..worktree-code+issue-${ISSUE_NUMBER}" 2>/dev/null) || worktree_commit_count=0
   [[ "$worktree_commit_count" =~ ^[0-9]+$ ]] || worktree_commit_count=0
