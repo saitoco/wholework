@@ -342,7 +342,11 @@ if [[ $EXIT_CODE -eq 0 ]]; then
 fi
 
 # See modules/orchestration-fallbacks.md#code-base-conflict
-if [[ "$ROUTE_FLAG" == "--pr" && $EXIT_CODE -eq 0 && -n "$_PR_NUM" ]]; then
+# Keyed on -n "$_PR_NUM" alone (not ROUTE_FLAG): an observed open PR already means pr
+# route was taken, including the auto-detected case (Size auto-detection, `always-pr:
+# true`) that ROUTE_FLAG cannot see. Requiring ROUTE_FLAG == "--pr" here would silently
+# skip this conflict warning for auto-detected pr route (review #1201 finding).
+if [[ $EXIT_CODE -eq 0 && -n "$_PR_NUM" ]]; then
   _merge_status=$("$SCRIPT_DIR/gh-pr-merge-status.sh" "$_PR_NUM" 2>/dev/null || true)
   if echo "$_merge_status" | grep -q '"reason"[[:space:]]*:[[:space:]]*"conflicts"'; then
     echo "Warning: code phase completed but PR #${_PR_NUM} has conflicts with base." >&2
@@ -375,12 +379,18 @@ fi
 # Post-processor fallback: if LLM did not append ## Consumed Comments, do it now.
 # Compare post-count with pre-count; trigger fallback when count did not increase.
 # Skipped for pr route (detected via _PR_NUM above -- an open PR observed for the
-# worktree-code+issue-N branch -- rather than ROUTE_FLAG, since the route is often
+# worktree-code+issue-N branch -- rather than ROUTE_FLAG alone, since the route is often
 # resolved in-session with no --pr flag on the command line): the Spec lives on the
 # PR (worktree) branch there, which this main-repository post-exit point cannot
 # observe or safely write to. The pr route's safety net is instead the in-session
 # mandatory call in skills/code/SKILL.md Step 12.
-if [[ $EXIT_CODE -eq 0 && -z "$_PR_NUM" ]]; then
+# ROUTE_FLAG is kept as an additional (not replacement) suppressor: if
+# reconcile-phase-state.sh returns empty/failed output (e.g. a transient `gh pr list`
+# failure) on an EXPLICIT --pr run, _PR_NUM alone would be empty and this gate would
+# otherwise fire the fallback against the main-repository Spec copy -- reintroducing
+# the exact two-branch divergence #1058 removes. Keeping ROUTE_FLAG here only widens
+# the skip condition; it never narrows it (review #1201 finding).
+if [[ $EXIT_CODE -eq 0 && -z "$_PR_NUM" && "$ROUTE_FLAG" != "--pr" ]]; then
   _SPEC_FILE_POST=$(ls "${_REPO_ROOT}/$_SPEC_DIR/issue-${ISSUE_NUMBER}-"*.md 2>/dev/null | head -1 || true)
   _POST_COUNT=$(grep -c "^## Consumed Comments" "${_SPEC_FILE_POST:-/dev/null}" 2>/dev/null || true)
   _POST_COUNT="${_POST_COUNT:-0}"
