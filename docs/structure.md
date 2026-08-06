@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (74 files)
+├── scripts/             # Utility scripts used by skills and agents (75 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -200,6 +200,7 @@ Key modules:
 - `scripts/hook-rename-on-auto.sh` — UserPromptSubmit hook: auto-rename session title when prompt matches `/auto` pattern
 - `scripts/log-permission.sh` — log permission events (JSON output)
 - `scripts/observation-trigger.sh` — dispatch observation-type ACs on event: calls `opportunistic-search.sh --event`, posts comment to each matched Issue recommending `/verify` re-run, and prints matched Issue numbers to stdout for caller dispatch
+- `scripts/filter-session-verified-issues.sh` — filter observation scan candidate Issue numbers, excluding Issues with a `phase=verify` event already recorded for the current `/auto` session (fail-open)
 - `scripts/opportunistic-search.sh` — opportunistic skill search and observation event scan
 - `scripts/post_merge_check.sh` — bundle and run post-merge manual (verify-type: manual) ACs for multiple Issues in one session; prompts P/F/S per AC; transitions to phase/done on all-PASS or reopens on FAIL
 - `scripts/collect-run-facts.sh` — structure a completed `/auto` run's facts (route including the diff-less operate value, run mode, Size, phase outcomes, PR state, anomaly counts, recovery tiers, fact tokens) as JSON from `.tmp/auto-events.jsonl`, for run-fact AC reconciliation (`modules/run-fact-matching.md`)

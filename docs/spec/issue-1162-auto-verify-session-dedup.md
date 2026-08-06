@@ -60,3 +60,39 @@ Issue 本文の 4 候補のうち **候補 A ( セッション内 verify 済み�
 ### 括弧の表記
 
 本 Spec 内の日本語文中の括弧は半角 `()` を使用している ( ユーザーのグローバル規約に準拠 )。ただし `docs/ja/structure.md` は既存ファイル全体で全角 `（）` を一貫して使用しているため、Implementation Steps 5 での編集はその既存の表記規約に合わせる ( 全角を維持 )。
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A ( Implementation Steps 1–5 を設計通りに実装した。逸脱なし )
+
+### Design Gaps/Ambiguities
+
+- `scripts/filter-session-verified-issues.sh` の実装時、Spec 記載の `comm -23` による集合差分は数値の桁数が異なる Issue 番号 ( 例: `9` と `84` と `995` ) に対して意図通りに動作しないことが判明した。`comm` は入力がロケール上の辞書順にソートされていることを前提とするが、`sort -un` は数値順であり両者は一致しない ( 例: 辞書順では `"1035" < "84" < "9" < "995"` )。`comm` の代わりに `grep -Fxq` による行単位の集合差分ループに置き換えて実装した。Spec 自体は疑似コードとしての `jq | sort -un` 部分の記述であり、`comm` は Code フェーズでの実装選択だったため Spec の逸脱ではないが、同種の集合差分を扱う将来のスクリプトで同じ罠を踏まないよう記録する。
+
+### Rework
+
+N/A ( 上記の `comm` → `grep -Fxq` の置き換えは、シェル上でのテスト実行中に発見し実装段階で解決したため、コミット済みコードのやり直しは発生していない )
+
+## Phase Handoff
+
+<!-- phase: code -->
+
+### Key Decisions
+
+- 候補 A ( セッション内 verify 済みリストによる除外、一律除外 ) を Spec Notes の判断通り採用し、候補 B ( 状態変化があれば除外解除 ) は実装しなかった
+- 除外判定は `scripts/filter-session-verified-issues.sh` として独立スクリプト化し、`skills/auto/SKILL.md` の単一 Issue 経路・batch 経路の両方から呼び出す構成にした ( `observation-trigger.sh` 自体は変更しない設計境界を維持 )
+- 集合差分の実装は `comm -23` ではなく `grep -Fxq` によるループに変更した ( Design Gaps/Ambiguities 参照 ) — bash 3.2+ 互換かつ数値の桁数に依存しない正しい差分計算のため
+
+### Deferred Items
+
+- 候補 B ( 前回 verify 以降の状態変化があれば除外解除 ) は Spec Notes の判断により未実装。将来、除外による見逃しが実測された場合に再検討
+- 候補 C ( SKIPPED 理由の記録・参照 ) および候補 D ( oldest-first 順序見直し ) は Issue 本文・Spec Notes の判断によりスコープ外 ( 将来の別 Issue 候補 )
+- Post-merge AC ( `session=next` ) は `/auto` を 2 回以上実行する実セッションでの観察が必要。本 Code フェーズでは検証不可
+
+### Notes for Next Phase
+
+- `bats tests/` は全 1453 件 PASS 済み ( behavioral change 検出により `skills/auto/SKILL.md` の変更を理由にフルスイートを実行 )
+- Pre-merge AC 5 件は本 Code フェーズで検証し Issue 本文のチェックボックスを更新済み
+- `docs/tech.md` / `docs/guide/autonomy.md` / `docs/guide/index.md` の翻訳同期ギャップは本 Issue 由来ではない既存の未同期状態であり、本 PR のスコープ外として対応していない

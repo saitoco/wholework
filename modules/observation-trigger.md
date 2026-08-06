@@ -155,6 +155,18 @@ responsibility:
     `/review`'s Event-based observation scan (`event=pr-review-full`/`pr-review-light`) is not
     capped: it is a structurally separate emitter/event population with no `--batch`-style volume
     multiplier and no evidence of the same fan-out pattern.
+  - **`/auto` session-verified filter (#1162)**: before applying the dispatch cap above, `/auto`'s
+    single-issue and batch Event-based observation scan steps pipe `OBSERVATION_MATCHES` through
+    `scripts/filter-session-verified-issues.sh`, which excludes Issue numbers that already have a
+    `phase=verify` `phase_start`/`phase_complete` event recorded in `.tmp/auto-events.jsonl` for the
+    current `/auto` session (fail-open: passes candidates through unchanged if the session id or
+    events log cannot be resolved). This prevents the observation scan from re-dispatching `/verify`
+    against Issues already verified earlier in the same session with no state change since. The
+    filter is wired into `/auto`'s `skills/auto/SKILL.md` dispatch steps only — `observation-trigger.sh`
+    itself is unchanged and retains its stateless, rolling coverage contract described above (deferred
+    Issues are still re-matched on every `auto-run` event scan). `/review`'s Event-based observation
+    scan is out of scope for this filter: `/review` runs at most once per Issue, so the same-session
+    re-dispatch scenario this filter addresses does not arise there.
 - **`scripts/claude-watchdog.sh`** (shell-only context, no `Skill` tool available) does
   not capture or act on stdout — its existing comment-posting-only fallback is
   unaffected by this change.
