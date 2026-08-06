@@ -204,24 +204,45 @@ Edit / Write ツールは `.claude/` 配下を sensitive file として拒否す
 - `skills/auto/SKILL.md` と `skills/spec/SKILL.md` は複数のテストファイルから参照されているため (behavioral change detection)、`bats tests/get-blocked-by.bats` / `tests/auto-batch.bats` の直接テストに加えてフルスイート (`bats tests/`, 1476 件) を実行し、全件 PASS を確認した
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Spec 記載のとおり実装ステップ 1〜10 をすべて実施し、設計からの逸脱は発生しなかった
-- rubric AC 3 件は実装エージェント自身ではなく、独立した adversarial grader sub-agent に diff とファイル内容を読ませて判定させた (自己採点バイアスの排除)。3 件とも PASS
-- `skills/auto/SKILL.md` と `skills/spec/SKILL.md` が挙動変更検知の対象になったため、直接テスト (`get-blocked-by.bats` / `auto-batch.bats`) に加えてフルスイート `bats tests/` (1476 件) を実行し全件 PASS を確認
-- `tests/gh-graphql.bats` への `get-open-issues-blocked-by` テスト追加 (Spec で「Steering Docs sync candidate」として保留されていた項目) を実施 — 既存パターンを踏襲するコストが低く、カバレッジの一貫性を優先した
+- 6 件の Pre-merge AC (rubric×3、command×2、file_contains×1) をすべて PASS 判定した。rubric は diff の直接精査、command 2 件は CI job `Run bats tests` の SUCCESS による safe-mode fallback で判定
+- review-spec + review-bug×2 (Opus) の並列レビューと、review-bug 由来指摘 8 件の 2 段階検証 (verification sub-agent) を実施。1 件 (`get-blocked-by.sh` の存在しない Issue 判定) は実 API 検証の結果 false positive と判明し除外
+- MUST 2 件 (exit code 1 未処理) と、検証で確認された SHOULD 3 件 (`/spec` gate 回帰、`/triage` OPEN-only guard 消失、`/triage --limit` scope 不整合) を修正・push 済み。加えて Verification order の欠落ステップも review-spec 指摘に基づき補完
+- 残り SHOULD 4 件 / CONSIDER 4 件 (主にドキュメント完全性・スクリプトの軽微な robustness) は skip — 挙動には影響しないか、現状の呼び出し元では発現しないため
 
 ### Deferred Items
 
-- `docs/ja/structure.md` の `get-sub-issue-progress.sh` 欠落 (既存 drift) は本 Issue では修正しない
-- `/triage` の「解決済み blocked-by」に対する `remove-blocked-by` の自動実行は行わない (report のみ)。tier-aware な自動削除は将来の検討事項
-- `.claude/settings.json.template` に `set-blocked-by.sh` のエントリが無い既存の不整合は本 Issue では補わない (新規の `get-blocked-by.sh` のみ追加した)
+- `docs/workflow.md` / `docs/ja/workflow.md` の "Automatic relationship setting" テーブルへの `/auto --batch` 行追加 (SHOULD、doc-only)
+- `docs/workflow.md` の `### Scripts` 一覧への `get-open-issues-blocked-by` 独立行追加 (SHOULD、doc-only)
+- `skills/triage/SKILL.md:605` 付近の `remove-blocked-by` 手動アクションが node ID 解決を要求する UX gap (SHOULD) — `remove-blocked-by.sh` wrapper の新設が根本対応候補
+- `modules/autonomy-tier.md` の Tier × L0 Write Matrix への `/auto --batch` 無条件書き込みの例外注記 (SHOULD)
+- `scripts/get-blocked-by.sh` の `--limit` ページ境界超過、`scripts/gh-graphql.sh` の `blockedBy(first:50)` vs `first:100` 非対称、issue番号 `0` の受理と `--all`+位置引数の暗黙無視 (いずれも CONSIDER)
 - Post-merge AC (「GraphQL で blocked-by を設定し body にはテキストを書かない Issue を `/auto --batch` に含め、blocker が未完了の間 skip されることを観察する」) は次回 `/auto --batch` 実行時の観察待ち
 
 ### Notes for Next Phase
 
-- `/review` では PR #1211 の diff に加え、adversarial grader による rubric 判定根拠 (ファイル/行の引用) を参照すると二重チェックになる
-- `scripts/get-blocked-by.sh` は実 GraphQL API に対して動作確認済み (#1200 自身: blocker 0 件で空出力・exit 0。`--all`: 既知の `#1167 → #1157 (CLOSED)` 関係を取得)
+- `/merge` 前に、review で修正した 5 箇所 (`skills/auto/SKILL.md:1125`、`skills/triage/SKILL.md:239,241,581`、`skills/spec/SKILL.md:90` + `docs/workflow.md`/`docs/ja/workflow.md` の追随修正) が commit `029bee8e` としてブランチに積まれていることを確認すること
+- self-authored PR への `REQUEST_CHANGES` は GitHub API が拒否するため (`modules/phase-state.md:77`)、本 review は `COMMENTED` として投稿されている。`/merge` の pre-merge gate は `reviewDecision == APPROVED` に依存しない設計になっているはずなので、この状態で merge を妨げないことを前提としてよい
 - `/verify` の post-merge observation AC は `/auto --batch` の次回実行セッションで確認すること (`verify-type: observation event=auto-run session=next`)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- `skills/triage/SKILL.md` Step 2b の前置き文「Check dependency health for the issue set collected in Step 1」が、グラフ構築を `get-blocked-by.sh --all` (全 open Issue 対象) に切り替えた後も未更新のままだった。Spec の実装ステップはデータソースの変更のみを求めており、スコープの暗黙的な拡大は指示されていなかった (review 時に修正済み)
+- Step 2b の Verification order (1〜4) に、Notes が言及する「missing blocked-by relationships の tier-aware backfill」に対応するステップが無かった。旧実装では graph construction ステップ自体が body テキスト抽出を兼ねていたため気づかれにくい欠落だった (review 時に item 5 として追加)
+- `docs/workflow.md` の新設小節 `### Reading relationships` の挿入位置が、Spec が指定した「`### Automatic relationship setting` の後」ではなく「前」になっていた。挙動には影響しないが、Code Retrospective の「Deviations from Design」に記録されておらず、Spec と実体の乖離が review まで気づかれなかった
+
+### Recurring issues
+
+- Type=Task (「挙動を変えない」リファクタ) と宣言された PR で、review-bug 2 名 + review-spec の 3 エージェントが独立に **exit code 1 (エラー) 分岐の欠落** を検出した。`/auto` の batch gate と `/triage` の依存チェックの両方で同一パターンが再発しており、新しいスクリプトの exit code 契約を追加する際は、既存の全呼び出し元に対して契約の全分岐 (0/1/2) が網羅されているかを機械的にチェックする価値がありそうだ
+- 「`/spec` に到達する Issue は `/issue` または `/triage` を既に通過しており、いずれも materialize 済み」という設計上の安全性の主張が、`/triage` の autonomy tier 分岐 (L1 ではデフォルトで advisory print のみ) を見落としていた。同一 PR 内の別ファイルが持つ tier-aware な分岐を、正当化コメントを書く際に見落とすケースは他の Issue でも起こりうる。设計文書の安全性主張を書く際は、参照先の tier-aware ロジックを実際に読んで確認する習慣が有効
+- 全 3 rubric AC が PASS、bats フルスイート (1476件) も PASS していたにもかかわらず、上記のロジック回帰は AC 検証にも既存テストにも捕捉されなかった。rubric AC は「GraphQL を参照する実装になっているか」という高レベルの設計適合性は検証できるが、exit code の全分岐網羅性や tier 境界条件のような制御フローの端点は、既存のテストが対象外なら見逃される。この種の「配線は正しいが端点が甘い」regression は multi-perspective code review (review-bug の HIGH SIGNAL 検出 + adversarial verification) が最後の防衛線として機能した
+
+### Acceptance criteria verification difficulty
+
+- 特筆すべき困難はなかった。3 件の rubric AC は diff を直接読むことで明確に判定可能だった。2 件の `command "bats ..."` AC は safe mode の CI reference fallback (`Run bats tests` job の SUCCESS) で PASS 判定したが、このリポジトリでは bats 全ファイルが単一の CI job に集約されているため機能した。テストファイル単位で job が分離されている場合、fallback の粒度が粗く誤判定するリスクがある点は留意事項として記録しておく
+- プロセス上のメモ: `gh-pr-review.sh` への line-comments JSON で `severity` フィールドを付け忘れ、`HAS_MUST` 判定が `false` になり event が `COMMENTED` のまま投稿された。ただし self-authored PR に対する `REQUEST_CHANGES` は GitHub API が HTTP 422 で拒否する既知の制約 (`modules/phase-state.md:77`) のため、正しく `severity` を設定していても同じ `COMMENTED` 結果になっていた可能性が高く、実害はなかった。line-comments JSON を組み立てる際は `severity` フィールドを構造化データとして必ず含めること (body 内のテキスト装飾だけでは `HAS_MUST` 判定に反映されない)
