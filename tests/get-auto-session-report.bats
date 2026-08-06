@@ -226,3 +226,21 @@ FIXTURE_EOF
     breakdown_section="$(echo "$output" | sed -n '/### Retro Proposal Tier Breakdown/,$p')"
     echo "$breakdown_section" | grep -qE "^\(none\)$"
 }
+
+@test "Recovery Metrics: fired-based count includes failed results, success rate breakdown shown per tier" {
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"session-recovery-mix","size":"M"}
+{"ts":"2026-06-14T10:01:00Z","issue":100,"event":"recovery","session_id":"session-recovery-mix","phase":"code-pr","tier":"2","result":"recovered"}
+{"ts":"2026-06-14T10:02:00Z","issue":101,"event":"recovery","session_id":"session-recovery-mix","phase":"code-pr","tier":"2","result":"failed"}
+{"ts":"2026-06-14T10:03:00Z","issue":101,"event":"recovery","session_id":"session-recovery-mix","phase":"review","tier":"3","result":"recovered"}
+{"ts":"2026-06-14T10:04:00Z","issue":102,"event":"recovery","session_id":"session-recovery-mix","phase":"merge","tier":"3","result":"failed","action":"abort"}
+{"ts":"2026-06-14T10:05:00Z","issue":102,"event":"recovery","session_id":"session-recovery-mix","phase":"code-pr","tier":"3","result":"failed","action":"abort"}
+{"ts":"2026-06-14T10:06:00Z","issue":100,"event":"sub_complete","session_id":"session-recovery-mix","exit_code":"0"}
+FIXTURE_EOF
+
+    run bash "$SCRIPT" "session-recovery-mix" --metrics-only --no-github
+    [ "$status" -eq 0 ]
+    # Fired-based count: 2 tier-2 events + 3 tier-3 events, regardless of result
+    echo "$output" | grep -q "Tier 1/2/3 recoveries | 0 / 2 / 3"
+    echo "$output" | grep -q "Recovery success rate (tier) | T1: 0 recovered / 0 failed, T2: 1 recovered / 1 failed, T3: 1 recovered / 2 failed"
+}

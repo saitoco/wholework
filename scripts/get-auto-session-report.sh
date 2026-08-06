@@ -175,7 +175,7 @@ ISSUES_PROCESSED=$(echo "$EVENTS_JSON" | jq '
   [.[] | select(.issue != null and .issue > 0) | .issue] | unique | length
 ' 2>/dev/null || echo 0)
 
-# Recovery events by tier
+# Recovery events by tier (fired-based: counts every recovery attempt regardless of outcome)
 RECOVERY_COUNTS=$(echo "$EVENTS_JSON" | jq -r '
   [.[] | select(.event == "recovery")] |
   {
@@ -185,6 +185,18 @@ RECOVERY_COUNTS=$(echo "$EVENTS_JSON" | jq -r '
   } |
   "\(.t1) / \(.t2) / \(.t3)"
 ' 2>/dev/null || echo "0 / 0 / 0")
+
+# Per-tier recovered/failed breakdown (success rate), derived from the same fired-based
+# recovery events. A recovery event missing a result field (pre-#1098 records) counts
+# toward neither recovered nor failed.
+RECOVERY_BREAKDOWN=$(echo "$EVENTS_JSON" | jq -r '
+  [.[] | select(.event == "recovery")] as $r |
+  ["1","2","3"] | map(
+    . as $tier |
+    ($r | map(select(.tier == $tier))) as $tr |
+    "T\($tier): \([$tr[] | select(.result == "recovered")] | length) recovered / \([$tr[] | select(.result == "failed")] | length) failed"
+  ) | join(", ")
+' 2>/dev/null || echo "T1: 0 recovered / 0 failed, T2: 0 recovered / 0 failed, T3: 0 recovered / 0 failed")
 
 # Watchdog kills (R1 metric; degrade to 0 if not present)
 WATCHDOG_KILLS=$(echo "$EVENTS_JSON" | jq '[.[] | select(.event == "watchdog_kill")] | length' 2>/dev/null || echo 0)
@@ -630,6 +642,7 @@ cat << REPORT_EOF
 | phase/verify remaining | ${VERIFY_REMAINING} |
 | Throughput | ${THROUGHPUT} |
 | Tier 1/2/3 recoveries | ${RECOVERY_COUNTS} |
+| Recovery success rate (tier) | ${RECOVERY_BREAKDOWN} |
 | Watchdog kills | ${WATCHDOG_KILLS} |
 | Max silent window (any phase) | ${MAX_SILENT} |
 | Phase silent windows > threshold | ${PHASE_SILENT_BREAKDOWN} |

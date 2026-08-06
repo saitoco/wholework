@@ -764,6 +764,50 @@ MOCK
     grep -qE "commit.*Record Tier 3 recovery event" "$GIT_LOG"
 }
 
+@test "run-auto-sub: tier2 recovery: commits orchestration-recoveries.md when dirty" {
+    export GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$GIT_LOG"
+if [[ "$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$BATS_TEST_TMPDIR"
+    exit 0
+fi
+if [[ "$*" == *"diff"* && "$*" == *"orchestration-recoveries.md"* ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$RUN_CODE_LOG"
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    # tier2 succeeds (anchor matched, handler recovered)
+    cat > "$MOCK_DIR/apply-fallback.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$APPLY_FALLBACK_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/apply-fallback.sh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    grep -qE "commit.*Record Tier 2 recovery event" "$GIT_LOG"
+}
+
 @test "run-auto-sub: all tiers fail: propagate original exit code" {
     cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
 #!/bin/bash
@@ -774,6 +818,76 @@ MOCK
 
     run bash "$SCRIPT" 42
     [ "$status" -eq 2 ]
+}
+
+@test "run-auto-sub: all tiers fail: emits tier=3 result=failed with action from recovery plan" {
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$RUN_CODE_LOG"
+exit 2
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    # tier1 no match, tier2 no anchor match (default mock: exit 1), tier3 aborts
+    # leaving a recovery-plan JSON with action=abort behind (mirrors spawn-recovery-subagent.sh
+    # abort action, which does not clean up the plan file on failure).
+    cat > "$MOCK_DIR/spawn-recovery-subagent.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$SPAWN_RECOVERY_LOG"
+mkdir -p .tmp
+echo '{"action":"abort","rationale":"tier3 cannot recover this failure","steps":[]}' > ".tmp/recovery-plan-${2}-${1}.json"
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/spawn-recovery-subagent.sh"
+
+    export EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+emit_event() { echo "phase=${EMIT_PHASE_NAME:-} issue=${EMIT_ISSUE_NUMBER:-} $*" >> "$EMIT_LOG"; }
+_emit_comments_consumed() { :; }
+restore_auto_session_pointer() { :; }
+MOCK
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 2 ]
+    grep -q "phase=code-pr issue=42 recovery phase=code-pr tier=3 result=failed action=abort" "$EMIT_LOG"
+    ! grep -q "tier=3 result=recovered" "$EMIT_LOG"
+}
+
+@test "run-auto-sub: tier2 anchor matched but handler failed (_fallback_exit=2): emits tier=2 result=failed then falls through to tier3" {
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$RUN_CODE_LOG"
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    # tier1 no match, tier2 anchor matched but handler failed (_fallback_exit=2), tier3 recovers
+    cat > "$MOCK_DIR/apply-fallback.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$APPLY_FALLBACK_LOG"
+exit 2
+MOCK
+    chmod +x "$MOCK_DIR/apply-fallback.sh"
+
+    cat > "$MOCK_DIR/spawn-recovery-subagent.sh" <<'MOCK'
+#!/bin/bash
+echo "$@" >> "$SPAWN_RECOVERY_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/spawn-recovery-subagent.sh"
+
+    export EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    cat > "$MOCK_DIR/emit-event.sh" <<'MOCK'
+emit_event() { echo "phase=${EMIT_PHASE_NAME:-} issue=${EMIT_ISSUE_NUMBER:-} $*" >> "$EMIT_LOG"; }
+_emit_comments_consumed() { :; }
+restore_auto_session_pointer() { :; }
+MOCK
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"tier2 fallback catalog: anchor matched but handler failed"* ]]
+    grep -q "phase=code-pr issue=42 recovery phase=code-pr tier=2 result=failed" "$EMIT_LOG"
+    grep -q "phase=code-pr issue=42 recovery phase=code-pr tier=3 result=recovered" "$EMIT_LOG"
 }
 
 @test "Size XS: lock dir is NOT created by run-auto-sub wrapper" {

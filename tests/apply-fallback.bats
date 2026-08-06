@@ -102,7 +102,7 @@ MOCK
     chmod +x "$MOCK_DIR/git"
 
     run bash "$SCRIPT" code 42 --log "$LOG_FILE"
-    [ "$status" -ne 0 ]
+    [ "$status" -eq 2 ]
     [[ "$output" == *"refuses to amend on protected branch"* ]]
 }
 
@@ -121,7 +121,7 @@ MOCK
     chmod +x "$MOCK_DIR/git"
 
     run bash "$SCRIPT" code 42 --log "$LOG_FILE"
-    [ "$status" -ne 0 ]
+    [ "$status" -eq 2 ]
     [[ "$output" == *"refuses to amend on protected branch"* ]]
 }
 
@@ -190,7 +190,7 @@ MOCK
     chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
 
     run bash "$SCRIPT" code-patch 42 --log "$LOG_FILE"
-    [ "$status" -ne 0 ]
+    [ "$status" -eq 2 ]
     [[ "$output" != *"result=recovered"* ]]
 
     # The retry was still attempted before the completion check failed
@@ -260,4 +260,87 @@ MOCK
     [[ "$output" == *"Orchestration Anomalies"* ]]
     [[ "$output" == *"json-mode-silent-hang"* ]]
     [[ "$output" == *"result=recovered"* ]]
+}
+
+@test "apply-fallback: dco-signoff handler: git commit --amend fails: exits 2, not reported as recovered" {
+    LOG_FILE="$BATS_TEST_TMPDIR/test.log"
+    echo "ERROR: missing sign-off" > "$LOG_FILE"
+
+    cat > "$MOCK_DIR/git" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "rev-parse" && "$2" == "--abbrev-ref" ]]; then
+    echo "worktree-code+issue-42"
+    exit 0
+fi
+if [[ "$1" == "commit" && "$*" == *"--amend"* ]]; then
+    echo "commit failed" >&2
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" code 42 --log "$LOG_FILE"
+    [ "$status" -eq 2 ]
+    [[ "$output" != *"result=recovered"* ]]
+}
+
+@test "apply-fallback: json-mode-silent-hang handler: run-code.sh fails: exits 2, not reported as recovered" {
+    LOG_FILE="$BATS_TEST_TMPDIR/test.log"
+    echo "still waiting (json mode)" > "$LOG_FILE"
+
+    cat > "$MOCK_DIR/run-code.sh" <<'MOCK'
+#!/bin/bash
+exit 1
+MOCK
+    chmod +x "$MOCK_DIR/run-code.sh"
+
+    run bash "$SCRIPT" code-pr 42 --log "$LOG_FILE"
+    [ "$status" -eq 2 ]
+    [[ "$output" != *"result=recovered"* ]]
+}
+
+@test "write_recovery_entry: prepends entry after marker with --record-issue Issue number, not phase-local issue arg" {
+    LOG_FILE="$BATS_TEST_TMPDIR/test.log"
+    echo "ERROR: missing sign-off" > "$LOG_FILE"
+
+    mkdir -p "$BATS_TEST_TMPDIR/docs/reports"
+    cat > "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md" <<'REPORT_EOF'
+# Orchestration Recoveries
+
+<!-- Log entries appear below, newest first. -->
+
+## 2026-01-01 00:00 UTC: pre-existing-entry
+
+### Context
+- Issue #1, phase: code
+REPORT_EOF
+
+    # The positional <issue> arg (99) simulates a PR number in review/merge phases;
+    # --record-issue carries the real Issue number that should be written to the report.
+    run bash "$SCRIPT" code 99 --log "$LOG_FILE" --record-issue 555
+    [ "$status" -eq 0 ]
+
+    report_content="$(cat "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md")"
+    [[ "$report_content" == *"code-tier2-recovery"* ]]
+    [[ "$report_content" == *"- Issue #555, phase: code"* ]]
+    [[ "$report_content" != *"- Issue #99, phase: code"* ]]
+    [[ "$report_content" == *"- Source: fallback-catalog"* ]]
+    [[ "$report_content" == *"- N/A (resolved by known catalog)"* ]]
+
+    # New entry must be prepended (appear before the pre-existing entry)
+    new_entry_pos=$(grep -n "code-tier2-recovery" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md" | head -1 | cut -d: -f1)
+    old_entry_pos=$(grep -n "pre-existing-entry" "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md" | head -1 | cut -d: -f1)
+    [ "$new_entry_pos" -lt "$old_entry_pos" ]
+}
+
+@test "write_recovery_entry: gracefully skips when orchestration-recoveries.md does not exist" {
+    LOG_FILE="$BATS_TEST_TMPDIR/test.log"
+    echo "ERROR: missing sign-off" > "$LOG_FILE"
+
+    # No docs/reports/orchestration-recoveries.md created in $BATS_TEST_TMPDIR
+    run bash "$SCRIPT" code 42 --log "$LOG_FILE"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"result=recovered"* ]]
+    [ ! -e "$BATS_TEST_TMPDIR/docs/reports/orchestration-recoveries.md" ]
 }

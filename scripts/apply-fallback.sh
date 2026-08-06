@@ -2,8 +2,11 @@
 # apply-fallback.sh - Tier 2 bash projection of modules/orchestration-fallbacks.md
 # Detects known symptom anchors from wrapper logs and dispatches recovery handlers.
 #
-# Usage: apply-fallback.sh <phase> <issue> --log <log-file>
-# Exit 0 on successful recovery, exit 1 on unknown anchor or handler failure.
+# Usage: apply-fallback.sh <phase> <issue> --log <log-file> [--record-issue <issue>]
+# --record-issue overrides the Issue number written to orchestration-recoveries.md
+# (review/merge phases pass the real Issue number here while <issue> stays the PR
+# number used elsewhere in the phase).
+# Exit 0 on successful recovery, exit 1 on unknown anchor, exit 2 on anchor matched but handler failed.
 # Bash 3.2+ compatible.
 
 set -euo pipefail
@@ -16,6 +19,7 @@ ISSUE="${2:?Usage: apply-fallback.sh <phase> <issue> --log <log-file>}"
 shift 2
 
 LOG_FILE=""
+RECORD_ISSUE="$ISSUE"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -25,6 +29,10 @@ while [[ $# -gt 0 ]]; do
         exit 1
       fi
       LOG_FILE="$2"
+      shift 2
+      ;;
+    --record-issue)
+      RECORD_ISSUE="${2:-$ISSUE}"
       shift 2
       ;;
     *)
@@ -82,8 +90,8 @@ apply_dco_signoff_autofix() {
   fi
 
   echo "[apply-fallback] dco-signoff-missing-autofix: amending commit to add Signed-off-by" >&2
-  git commit --amend -s --no-edit >&2
-  git push --force-with-lease >&2
+  git commit --amend -s --no-edit >&2 || return 1
+  git push --force-with-lease >&2 || return 1
   echo "[apply-fallback] dco-signoff-missing-autofix: done" >&2
 }
 
@@ -124,21 +132,101 @@ apply_code_patch_silent_no_op_retry() {
 # Restricted to code-pr phase to limit blast radius; other phases handled separately.
 apply_json_mode_silent_hang_retry() {
   echo "[apply-fallback] json-mode-silent-hang: retrying run-code.sh --pr for issue $ISSUE" >&2
-  "$SCRIPT_DIR/run-code.sh" "$ISSUE" --pr >> "$LOG_FILE" 2>&1
+  "$SCRIPT_DIR/run-code.sh" "$ISSUE" --pr >> "$LOG_FILE" 2>&1 || return 1
   echo "[apply-fallback] json-mode-silent-hang: done" >&2
+}
+
+# --- Recovery entry writer ---
+# Prepends a recovery event entry to docs/reports/orchestration-recoveries.md.
+# Mirrors write_recovery_entry() in spawn-recovery-subagent.sh (Tier 3), but sourced
+# from the fallback catalog match rather than an LLM-generated plan.
+# Gracefully skips if the report file does not exist. Called only after a handler
+# succeeds (anchor + handler both matched); never called on exit 1/2.
+write_recovery_entry() {
+  local anchor="$1"
+  local action="$2"
+  local report_file
+  report_file="${REPO_ROOT}/docs/reports/orchestration-recoveries.md"
+  if [[ ! -f "$report_file" ]]; then
+    echo "[apply-fallback] orchestration-recoveries.md not found; skipping record" >&2
+    return 0
+  fi
+
+  local log_tail_line timestamp
+  log_tail_line=$(tail -1 "$LOG_FILE" 2>/dev/null || true)
+  timestamp=$(date -u '+%Y-%m-%d %H:%M UTC')
+
+  WRE_REPORT_FILE="$report_file" \
+  WRE_TIMESTAMP="$timestamp" \
+  WRE_PHASE="$PHASE" \
+  WRE_ISSUE="$RECORD_ISSUE" \
+  WRE_LOG_TAIL="$log_tail_line" \
+  WRE_ANCHOR="$anchor" \
+  WRE_ACTION="$action" \
+  python3 - <<'PYEOF' || return 0
+import os, sys
+
+report_file = os.environ['WRE_REPORT_FILE']
+timestamp = os.environ['WRE_TIMESTAMP']
+phase = os.environ['WRE_PHASE']
+issue = os.environ['WRE_ISSUE']
+log_tail = os.environ['WRE_LOG_TAIL']
+anchor = os.environ['WRE_ANCHOR']
+action = os.environ['WRE_ACTION']
+
+entry = (
+    f"## {timestamp}: {phase}-tier2-recovery\n\n"
+    f"### Context\n"
+    f"- Issue #{issue}, phase: {phase}\n"
+    f"- Source: fallback-catalog\n"
+    f"- Wrapper: run-{phase}.sh\n"
+    f"- Log tail: \"{log_tail}\"\n\n"
+    f"### Diagnosis\n"
+    f"- Symptom anchor `{anchor}` matched in wrapper log (modules/orchestration-fallbacks.md#{anchor})\n\n"
+    f"### Recovery Applied\n"
+    f"- action={action}\n\n"
+    f"### Outcome\n"
+    f"- success\n\n"
+    f"### Improvement Candidate\n"
+    f"- N/A (resolved by known catalog)\n\n"
+    "---\n\n"
+)
+
+with open(report_file, 'r', encoding='utf-8') as f:
+    content = f.read()
+
+marker = "<!-- Log entries appear below, newest first. -->"
+idx = content.find(marker)
+if idx == -1:
+    print(f"[apply-fallback] WARNING: marker not found in {report_file}", file=sys.stderr)
+    sys.exit(0)
+
+insert_pos = idx + len(marker)
+remaining = content[insert_pos:].lstrip('\n')
+new_content = content[:insert_pos] + "\n\n" + entry + remaining
+
+with open(report_file, 'w', encoding='utf-8') as f:
+    f.write(new_content)
+
+print(f"[apply-fallback] recovery entry written to {report_file}", file=sys.stderr)
+PYEOF
 }
 
 symptom_anchor=$(detect_symptom_anchor "$LOG_FILE")
 
 case "$symptom_anchor" in
   dco-signoff-missing-autofix)
-    apply_dco_signoff_autofix
-    printf '%s\n' \
-      "### Orchestration Anomalies" \
-      "- **[dco-signoff-missing-autofix]** Tier 2 fallback applied: phase=\`$PHASE\`, action=git-commit-amend-dco+force-push, result=recovered." \
-      "" \
-      "### Improvement Proposals" \
-      "- N/A (resolved by Tier 2 fallback catalog)"
+    if apply_dco_signoff_autofix; then
+      printf '%s\n' \
+        "### Orchestration Anomalies" \
+        "- **[dco-signoff-missing-autofix]** Tier 2 fallback applied: phase=\`$PHASE\`, action=git-commit-amend-dco+force-push, result=recovered." \
+        "" \
+        "### Improvement Proposals" \
+        "- N/A (resolved by Tier 2 fallback catalog)"
+      write_recovery_entry "dco-signoff-missing-autofix" "git-commit-amend-dco+force-push" || true
+    else
+      exit 2
+    fi
     ;;
   code-patch-silent-no-op)
     if apply_code_patch_silent_no_op_retry; then
@@ -148,18 +236,23 @@ case "$symptom_anchor" in
         "" \
         "### Improvement Proposals" \
         "- N/A (resolved by Tier 2 fallback catalog)"
+      write_recovery_entry "code-patch-silent-no-op" "run-code.sh-patch-retry" || true
     else
-      exit 1
+      exit 2
     fi
     ;;
   json-mode-silent-hang)
-    apply_json_mode_silent_hang_retry
-    printf '%s\n' \
-      "### Orchestration Anomalies" \
-      "- **[json-mode-silent-hang]** Tier 2 fallback applied: phase=\`$PHASE\`, action=run-code.sh-pr-retry, result=recovered." \
-      "" \
-      "### Improvement Proposals" \
-      "- N/A (resolved by Tier 2 fallback catalog)"
+    if apply_json_mode_silent_hang_retry; then
+      printf '%s\n' \
+        "### Orchestration Anomalies" \
+        "- **[json-mode-silent-hang]** Tier 2 fallback applied: phase=\`$PHASE\`, action=run-code.sh-pr-retry, result=recovered." \
+        "" \
+        "### Improvement Proposals" \
+        "- N/A (resolved by Tier 2 fallback catalog)"
+      write_recovery_entry "json-mode-silent-hang" "run-code.sh-pr-retry" || true
+    else
+      exit 2
+    fi
     ;;
   *)
     exit 1
