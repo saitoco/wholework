@@ -65,6 +65,32 @@ $ gh run view 30618554029 --log | grep -cE "[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]+Z 
 - **`grep -c` + `|| _failed=0` パターンは変更なし**: 前身 Issue #687 の Spec Notes が記録する通り、`grep -c` は count=0 でも exit 1 を返すため `|| echo 0` ではなく `|| _failed=0` を使う必要がある (`|| echo 0` だと stdout が二重になり算術エラーになる)。本 Issue はマッチパターンのみを変更し、このエラーハンドリング部分は踏襲する。
 - **Out of Scope の妥当性確認**: Issue 本文の Out of Scope が挙げる `_total` (TAP plan line `1..N`) のパースについて、実 CI ログで `_total=1319` が正しく取得できることを実測確認済み (Changed Files に含めない判断は妥当)。
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A — implementation followed Implementation Steps 1–3 exactly as written.
+
+### Design Gaps/Ambiguities
+- N/A — the Spec's Reproduction Steps and Root Cause analysis were precise enough that no gap surfaced during implementation. The pattern `(^|[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]+Z )not ok ` was re-verified against both the real CI log line (0 matches, as expected) and a synthetic true-failure line (1 match), confirming the Root Cause section's dual-anchor rationale.
+
+### Rework
+- N/A — single-pass implementation; both the local `bats tests/run-merge.bats` run and the full-suite `bats tests/` run (triggered by the behavioral-change detection in Step 9, since `tests/verify-dirty-detection.bats` also references `scripts/run-merge.sh`) passed on the first attempt (1460/1460).
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Changed only the `grep` match pattern in `scripts/run-merge.sh:214`, keeping the `grep -c ... || _failed=0` error-handling idiom untouched, per Spec Notes' explicit instruction not to regress the Issue #687 `|| _failed=0` fix.
+- Added the negative-case bats test immediately after the existing positive-case test (`tests/run-merge.bats`) reusing the same mock structure, so the two cases stay adjacent for future readers.
+
+### Deferred Items
+- Pre-merge AC #5 (`github_check` CI check) is UNCERTAIN at code-phase completion — the implementation commit has not been pushed to `origin/main` yet (patch route pushes at Worktree Exit). Re-verify after push.
+- Post-merge AC (observation: `/auto` pr route run confirming `failed=0` in `.tmp/auto-events.jsonl`) is out of scope for this phase by design (verify-type: observation).
+
+### Notes for Next Phase
+- No PR is created for this patch route — after Worktree Exit pushes to `main`, confirm CI (`test.yml`) is green on the resulting commit to resolve the UNCERTAIN AC #5.
+- Issue body Pre-merge AC #5 was already pre-corrected to the `gh run list --workflow=test.yml --commit=$(git rev-parse HEAD) ...` form before this phase started (see Spec Notes) — no further AC/verify-command sync was needed in this phase.
+
 ## Consumed Comments
 
 No new comments since last phase.
