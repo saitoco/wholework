@@ -118,20 +118,34 @@
 - N/A
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Spec の Implementation Steps 1〜4 をそのまま適用 (Step 15 新設・New Issue Creation Step 8 への注記・`skill-dev-verify-audit.md` の Used-in 行と Pattern 4 検出箇所修正・`tests/issue.bats` へのテスト追加)。設計判断はすべて Spec Notes で既に確定していたため、実装時の追加判断は発生しなかった。
-- Behavioral Change Detection の結果、`skills/issue/SKILL.md` が `tests/xl-decomposition.bats` / `tests/run-issue.bats` からも参照されていたため、`bats tests/issue.bats` の narrow scope ではなく `bats tests/` full suite (1426 件) を実行し PASS を確認した。
-- `phase/ready` ラベルが実行開始時点で既に不在 (`phase/code` へ遷移済み) だったが、Spec が完成済みでブランチ/PR が未作成だったことから、Step 4 のみ完了して中断されたセッションの再開と判断し、非対話モード auto-resolve として続行した (詳細は Autonomous Auto-Resolve Log 参照)。
+- 3件のPre-merge AC (rubric×2, command×1) を全て直接検証し PASS を確認 (Issue本文の既存チェックボックスと一致)。rubric AC は `skills/issue/SKILL.md` の実際の `### Step N` 見出し列挙で New Issue Creation (Step 4→Step 8) / Existing Issue Refinement (Step 7→Step 15) 双方の順序を確認した。
+- `--light` 指定によりREVIEW_DEPTH=lightで確定 (Issue Size照会は不要)。`SKIP_REVIEW_BUG` 未設定のため review-light の4観点を全て実行。
+- review-light が検出した documentation consistency の SHOULD 指摘 (`docs/tech.md:132` の "14-step" 記述が新設Step 15により陳腐化) を実際にファイルで検証した上でSHOULD修正として採用・修正した。同じ表現を含む `docs/reports/sonnet-5-effort-recalibration-issue.md` は分析当時の historical record と判断し据え置いた。
 
 ### Deferred Items
 
-- Post-merge observation AC (`triaged` 済み Issue で Pattern 6 サブパターン 1 が指摘されることの観察、`session=next`) は本 PR のマージ後、新しいセッションでの `/issue N` 実行時に確認する。
-- `docs/workflow.md` / `docs/ja/workflow.md` の Step 10/11 off-by-one drift は Spec Notes の判断通り本 Issue のスコープ外として据え置いた。
+- Post-merge observation AC (`triaged` 済み Issue で Pattern 6 サブパターン 1 が指摘されることの観察、`session=next`) は本PRマージ後、次回セッションの `/issue N` 実行時に評価する (code phase から引き継ぎ、未着手のまま)。
+- `docs/workflow.md` / `docs/ja/workflow.md` の Step 10/11 off-by-one drift は Spec Notes の判断通りスコープ外として据え置いた (code phase から引き継ぎ)。
 
 ### Notes for Next Phase
 
-- `/review` は 2 件の rubric AC (Step 15 の無条件実行、両フローの順序一貫性) が Issue 本文の記述と実装内容に照らして妥当か再確認すること。
-- `/verify` は post-merge observation AC を次回セッションで評価する際、`skills/triage/skill-dev-verify-audit.md` Pattern 6 サブパターン 1 の指摘コメントが実際に投稿されるかを確認すること。
+- `/merge` は MUST指摘0件・CI全SUCCESS (9/9) のため通常どおり進行可。
+- `/verify` は post-merge observation AC を次回セッションで評価する際、`skills/triage/skill-dev-verify-audit.md` Pattern 6 サブパターン 1 の指摘コメントが実際に投稿されるかを確認すること (code/review両phaseから引き継ぎ)。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — Spec の Implementation Steps 1〜4 と PR diff は完全に一致していた。Code Retrospective が記録した追加判断 (`phase/ready` 不在時の auto-resolve) もレビュー観点からは実装内容に影響しなかった。
+
+### Recurring issues
+
+Nothing to note — review-light の4観点 (spec deviation / edge cases / security / documentation consistency) のうち、指摘は documentation consistency の1件 (SHOULD) のみで、他セッションと共通する繰り返しパターンは見られなかった。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — 3件のPre-merge AC (rubric ×2, command ×1) はいずれも決定的に PASS 判定でき、UNCERTAIN はゼロだった。rubric AC の判定根拠は `skills/issue/SKILL.md` の実際の Step 番号列挙 (`grep -n "^### Step"`) で直接検証でき、verify command 自体の記述精度に問題はなかった。
