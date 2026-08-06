@@ -75,19 +75,18 @@
 - This `/code 1078` session itself reproduced the same ordering risk the Issue describes: `skills/code/SKILL.md` on `main` (pre-fix) still calls the Comment Consumption Procedure in Step 1, before Worktree Entry. Rather than execute the pre-fix instructions literally (which would have written `## Consumed Comments` against the main working tree before `EnterWorktree`, exactly the bug being fixed), this session delayed its own Comment Consumption Procedure call until after Worktree Entry — mirroring the precedent the `/spec 1078` session recorded in this Spec's Notes ("本セッション自身での実地確認"). No new comments were pending at that point, so no observable behavior difference resulted, but the ordering choice is recorded here in case a future session needs the same judgment call while this fix is in flight on a PR branch.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Confirmed both pre-merge verify commands (rubric on the ordering-conflict resolution; `grep "Comment Consumption" modules/worktree-lifecycle.md`) PASS against the PR branch content, not just local worktree state, per the code phase's handoff note.
-- Ran Step 10 as a 1-agent lightweight integrated review (`REVIEW_DEPTH=light`, `--light` explicitly passed) rather than the 2-group full fan-out; all 4 review-light perspectives (spec deviation, edge cases/robustness, security/safety, documentation consistency) returned no issues.
-- Confirmed exhaustiveness of the fix's scope: `skills/code/SKILL.md`, `skills/spec/SKILL.md`, and `skills/verify/SKILL.md` are the only three callers of the Comment Consumption Procedure repo-wide, and all three now share the same correct ordering (Entry before Consumption).
+- Pre-merge AC gate re-checked at merge time (`check-pre-merge-ac.sh 1078`): `unchecked_count=0` of 2 total — both pre-merge conditions were already checked, no override needed.
+- Review-incomplete-fallback check (`reconcile-phase-state.sh review 1078 --pr 1208 --check-completion`) returned no `review_incomplete_fallback` flag — review's own Step 14 completion was organic, not a fallback.
+- Squash-merged cleanly (`mergeable=true`, `reason=clean`, CI success, review approved) — no conflict resolution needed.
 
 ### Deferred Items
-- Post-merge AC (manual, unchanged from code phase's handoff): confirm via a live `/code`/`/spec` run on some future Issue that Comment Consumption content recorded post-Entry actually lands in the PR-branch-committed Spec. Still unresolved (`- [ ]` in the Issue body) as of this review.
+- Post-merge AC (manual, carried unchanged from code/review phases): confirm via a live `/code`/`/spec` run on some future Issue that Comment Consumption content recorded post-Entry actually lands in the PR-branch-committed Spec. Still unresolved (`- [ ]` in the Issue body) as of this merge.
 
 ### Notes for Next Phase
-- No MUST/SHOULD/CONSIDER issues were raised; `/merge` can proceed without a fix cycle.
-- The Post-merge AC above needs a live run of `/code` or `/spec` on some future Issue to close out — not something `/merge` itself can verify.
+- `/verify` should focus on the Post-merge AC above — it requires an actual `/code` or `/spec` run on a separate Issue to observe, not something derivable from this PR's diff alone.
 
 ## review retrospective
 
