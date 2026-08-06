@@ -25,6 +25,18 @@ step8c_section() {
     awk '/^#### Step 8c: /{found=1} (/^#### / || /^### /) && !/Step 8c: /{found=0} found{print}' "$SKILL_FILE"
 }
 
+# Extract the "### Step 6: Update Pre-merge Checkboxes (Immediate Lock-in)" section from SKILL.md.
+# The section ends at the next level-3 (### Step ) heading.
+step6_section() {
+    awk '/^### Step 6: /{found=1} /^### Step / && !/Step 6: /{found=0} found{print}' "$SKILL_FILE"
+}
+
+# Extract the "#### Step 8a: Auto-verify Post-merge Conditions with Hints" section from SKILL.md.
+# The section ends at the next heading (level-3 or level-4).
+step8a_section() {
+    awk '/^#### Step 8a: /{found=1} (/^#### / || /^### /) && !/Step 8a: /{found=0} found{print}' "$SKILL_FILE"
+}
+
 @test "Step 2 guard: detect-foreign-worktree.sh runs before base branch checkout" {
     guard_line=$(step2_section | grep -n -F "detect-foreign-worktree.sh" | head -1 | cut -d: -f1)
     checkout_line=$(step2_section | grep -n -F 'git checkout "${BASE_BRANCH}"' | head -1 | cut -d: -f1)
@@ -107,4 +119,27 @@ step8c_section() {
 @test "Step 8c: session=next resolves to SKIPPED instead of UNCERTAIN" {
     step8c_section | grep -q -F "session=next"
     step8c_section | grep -q -F "skill self-update not yet propagated (session=next)"
+}
+
+@test "Step 5 already-checked AC skip rule: checked pre-merge AC is excluded and recorded SKIPPED" {
+    step5_section | grep -q -F "Already-checked AC skip rule"
+    step5_section | grep -q -F "already checked; skipped by default"
+}
+
+@test "Step 5 already-checked AC skip rule: unchecked pre-merge AC is still processed as usual" {
+    step5_section | grep -q -F "Conditions still at \`- [ ]\` are processed as usual"
+}
+
+@test "Step 8a already-checked AC skip rule: checked post-merge+hint AC is excluded and recorded SKIPPED" {
+    step8a_section | grep -q -F "already checked; skipped by default"
+}
+
+@test "Step 8a already-checked AC skip rule: only unchecked post-merge+hint AC is auto-verified" {
+    step8a_section | grep -q -F "still \`- [ ]\` (unchecked)"
+}
+
+@test "Step 6 Re-runs description no longer re-verifies already-checked conditions" {
+    ! step6_section | grep -q -F "Re-verify even if already checked"
+    step6_section | grep -q -F "skipped by default"
+    step6_section | grep -q -F "Only conditions still at \`- [ ]\` are (re-)verified"
 }
