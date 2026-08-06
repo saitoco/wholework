@@ -111,6 +111,26 @@ No new comments since last phase.
 - pre-merge 4 条件はすべて PASS。うち rubric 2 件は実測を伴って確認した (`collect-recovery-candidates.sh --threshold 1` を実行し 10 件の group-key 出力を確認)
 - 本 `/verify` の Step 15 で、閾値 3 を超える group-key (`manual-recovery-review-rerun` = 3) が存在するにもかかわらず自動起票が発生しないことを実測。本 Issue の目的は達成されている
 
+##### observation AC の判定確定 (2 回目の `/verify`、2026-08-06 session `11623-1785995193`)
+
+1 回目 (上記) は AC 文面の曖昧さを理由にチェックを保留したが、2 回目で **PASS と確定**した。判定の根拠は解釈の確定と追加実測の 2 点。
+
+**解釈の確定**: 「`recoveries-auto-fire` が動作する `/verify` 実行」には 2 通りの読みがある。
+
+| 解釈 | 読み | 帰結 |
+|---|---|---|
+| A (1 回目に採った読み) | auto-fire が `enabled: true` で発火する `/verify` | 本 Issue の実装後は発生しない → **AC が自分自身を検証不能にする** |
+| B (2 回目に採った読み) | `recoveries-auto-fire` 機能 (Step 15) が実行される `/verify` | Step 15 は常に実行される → 観察可能 |
+
+解釈 A は「opt-out を実装したら opt-out の効果を観察できなくなる」という自己矛盾を生み、AC を無意味にする。AC を意味あるものとして読む解釈 B が正しい。1 回目の retrospective も「この読み替えなら観察可能」と認めており、実際 L112 で観察内容そのものを記録していた — 判定を保留したのは文面の一意性に対する慎重さであって、観察の不成立ではない。
+
+**追加実測**: 2026-08-06 のセッションで `/verify 1185` を 2 回実行し、いずれも Step 15 が閾値超過 2 件 (`review-tier3-recovery` / `manual-recovery-review-rerun`、各 3) を検出しながら Recommend 出力のみで終了した。前セッションの 5 回と合わせて **計 7 回**、閾値超過を検出しながら起票ゼロ。
+
+**独立の裏取り**: `gh issue list --label "retro/recoveries" --state all` は 4 件 (#1123 / #1014 / #799 / #727) を返すが、すべて本 Issue の着地 (2026-08-05) より前に作成されている。着地後の自動起票はゼロ。ターミナル出力に依存せず GitHub 側の状態から確認できる。
+
+- **副次的観察 (Pattern 2 該当の疑い)**: AC 4 の `command "bash scripts/check-translation-sync.sh"` は exit 0 で PASS 判定となったが、標準出力には `Summary: 2 OUTDATED, 1 MISSING_JA` が出ている。同スクリプトが drift 検出時に非ゼロを返さない設計であれば、この AC は `skills/triage/skill-dev-verify-audit.md` Pattern 2 (exit code 設計に起因する常時 PASS) に該当する。本 Issue の判定には影響しない (drift は本 Issue の変更と無関係の既存分) が、`command` 型 AC に同スクリプトを使う際の注意点。
+
 ### Improvement Proposals
 
-- N/A — observation AC の前提失効の課題は #1118 / #1172 / #1156 が既に追跡中であり、新規起票は行わない。本 retrospective への記録をもって既存 Issue の裏付け事例とする
+- N/A — observation AC の前提失効の課題は #1118 / #1172 / #1156 が既に追跡中であり、新規起票は行わない。本 retrospective への記録をもって既存 Issue の裏付け事例とする。2 回目の `/verify` で解釈 B により PASS 確定したことも、「AC 文面が実行文脈を一意に指定できていない」という同課題の実例として追記した
+- **Tier 2 (memory 候補、Issue 化せず)**: `scripts/check-translation-sync.sh` が drift 検出時も exit 0 を返す件は、同スクリプトを `command` 型 AC に使う全 Issue に波及しうる。ただし本 Issue で挙動を確認したのは 1 回のみで、スクリプトの exit code 設計が意図的か否かも未確認のため、起票せず観察事実の記録に留める
