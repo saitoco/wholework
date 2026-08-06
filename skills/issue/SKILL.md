@@ -337,6 +337,8 @@ If `triaged` is absent from labels: read `skills/triage/SKILL.md` and run the "S
 
 If `triaged` is present: skip this step.
 
+Note: `triaged` is always absent at this point — `docs/tech.md` Forbidden Expressions prohibits assigning `triaged` at Issue creation time (Step 6 above never sets it), so this chain always executes for a freshly created Issue. This keeps the AC classification (Step 4) → audit (triage's own Step 7, run inside this chain after its Step 6 Size determination) ordering consistent with Existing Issue Refinement's unconditional Step 15 audit.
+
 ### Step 9: Scope Assessment (sub-issue splitting)
 
 **(non-interactive mode: skip this entire step — sub-issue splitting is a High-Stakes Decision. Output: "[non-interactive mode] Skipping high-stakes action: sub-issue splitting. To perform this action, run `/issue {number}` interactively." then proceed to Step 10.)**
@@ -613,6 +615,16 @@ rm -f .tmp/issue-comment-$NUMBER.md
 ### Step 14: Opportunistic Verification
 
 If `opportunistic-verify: true` is set in `.wholework.yml`, read `${CLAUDE_PLUGIN_ROOT}/modules/opportunistic-verify.md` and follow "Processing Steps". Skill name: `/issue`. Skip if not set.
+
+### Step 15: AC Verify Command Integrity Audit
+
+Read `${CLAUDE_PLUGIN_ROOT}/skills/triage/skill-dev-verify-audit.md` for the verify command audit patterns and follow the "Processing Steps" section, applied to the Issue body as finalized by Step 9 (and by Step 12's redistribution, if sub-issue splitting occurred). Run this step unconditionally — regardless of whether the `triaged` label is present or absent. This closes the audit gap left by Step 2, which only runs when `triaged` is absent and, even then, only sees pre-refinement ACs (before this flow's own Step 7 authors the final ones).
+
+Skip this step if the Issue body contains no `<!-- verify: ... -->` patterns.
+
+**Pattern 4 Size/`ALWAYS_PR` sourcing in this context**: read Size with `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER` (same call as Step 6); `ALWAYS_PR` is retained from Step 4.
+
+Note: if Step 2's triage auto-chain already ran in this same session (`triaged` was absent at the start), its own Step 7 already audited the Issue body's pre-refinement ACs — this step's pass is independent and may post a second comment. The overlap is expected and non-blocking; the audit is non-destructive (comment-only).
 
 ---
 

@@ -37,3 +37,9 @@ setup() {
     grep -q 'check-ac-checkbox-format.sh' "$PROJECT_ROOT/skills/issue/SKILL.md"
     grep -q 'Checkbox format for Pre-merge / Post-merge condition lines' "$PROJECT_ROOT/skills/issue/SKILL.md"
 }
+
+@test "issue skill Existing Issue Refinement runs AC verify command audit regardless of triaged" {
+    grep -q 'AC Verify Command Integrity Audit' "$PROJECT_ROOT/skills/issue/SKILL.md"
+    grep -q 'skill-dev-verify-audit.md' "$PROJECT_ROOT/skills/issue/SKILL.md"
+    grep -q 'regardless of whether the .triaged. label is present or absent' "$PROJECT_ROOT/skills/issue/SKILL.md"
+}

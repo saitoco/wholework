@@ -6,7 +6,7 @@ skill: triage
 # AC Verify Command Integrity Audit
 
 This Domain file defines the verify command audit patterns for the `/triage` skill.
-Used in: Step 7 (Single Issue Execution) and Bulk Execution Step 3 substep 8.
+Used in: Step 7 (Single Issue Execution), Bulk Execution Step 3 substep 7, and `/issue` Existing Issue Refinement Step 15 (regardless of `triaged` label state).
 
 ## Purpose
 
@@ -101,8 +101,11 @@ The patch route commits directly to `main` without creating a PR. Therefore,
 
 Detection approach:
 - In Single Issue Execution: read the Size assigned in Step 6 (Size Assignment)
-- In Bulk Execution (Step 3 substep 8): read the `size` field from the Step 2 classification
+- In Bulk Execution (Step 3 substep 7): read the `size` field from the Step 2 classification
   JSON for the current issue
+- In `/issue` Existing Issue Refinement (Step 15): read Size via `get-issue-size.sh $NUMBER`
+  (same call as `/issue`'s own Step 6); `ALWAYS_PR` is retained from `/issue`'s Step 4
+  (Reference Steering Documents).
 - `ALWAYS_PR` is retained from `skills/triage/SKILL.md`'s "Configuration Detection" section
   (a common section that precedes both Single Issue Execution and Bulk Execution). When
   `ALWAYS_PR=true`, skip Pattern 4 entirely — `always-pr: true` promotes Size XS/S to pr route,
