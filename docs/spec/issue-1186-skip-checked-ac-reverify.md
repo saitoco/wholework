@@ -143,3 +143,27 @@ Issue 本文の「方針確定 (2026-08-06)」注記により対応方針は確�
 
 - **Tier 2 (convention — memory 提案)**: `append-consumed-comments-section.sh` の deterministic fallback が、通常の `/code` / `/verify` セッションが既に記録した `## Consumed Comments` 段落へ**重複して簡易形式で追記する**。本 Issue では姉妹コミット `aa416dfe` がこれを引き起こし、`/review` の Base Branch Conflict Pre-check が Spec ファイル自身の "changed in both" 競合として検出した (内容欠落はなく MUST 化は不要と判断された)。#1157 の Spec でも同じ重複が発生している (詳細形式 1 件 + 簡易形式 4 件の併存)。同一 Issue に対して fallback スクリプトと通常セッションが並行して同じ段落へ書き込みうる構造自体は他 Issue でも再発する
   - **Tier 2 とした判断根拠**: 実害は現時点で「Spec の可読性低下」と「conflict pre-check のノイズ」に留まり、内容欠落は発生していない。fallback は LLM がセクションを書き忘れた場合の安全網として機能しており、冪等性チェック (既に記録済みなら追記しない) を足せば済む単一箇所の修正。`modules/retro-proposals.md` の新デフォルト (判断が難しい場合は Tier 2) にも合致する
+
+## Auto Retrospective
+
+### Execution Summary
+
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| issue | — | SUCCESS | Size M 設定、`session=next` 補完、タイトル drift 補正 |
+| spec | pr | SUCCESS | |
+| code | pr | SUCCESS | PR #1190。**`code_retry_fire` 2 回 (`trigger_reason=silent_no_op`)** を経て成功 |
+| review | pr (`--light`) | SUCCESS | CONSIDER 1 件検出・修正、CI 全 SUCCESS |
+| merge | pr | SUCCESS | **watchdog kill されたが `Exit code: 0`、PR は実際に MERGED** |
+| verify | — | SUCCESS | 全 6 条件 SKIPPED |
+
+### Orchestration Anomalies
+
+- **`merge` フェーズが watchdog に kill されたにもかかわらず `Exit code: 0` で成功扱いになった**。`.tmp/auto-events.jsonl` に `{"ts":"2026-08-06T03:54:14Z","issue":1186,"event":"watchdog_kill","pr":1190,"phase":"merge","pid":"96898","silent_window_sec":"600","timeout_setting":"600"}` が記録されており、wrapper ログにも `watchdog: no output for 600s, killing process (pid=96898)` と `watchdog: retrying disabled; please re-run the skill manually` が残っている。それでもログ末尾は `Exit code: 0` で、`reconcile-phase-state.sh merge --check-completion` は `pr_state: MERGED` を返した。**merge 自体は kill 前に完了しており実害はなかった**が、「kill されたのに成功扱い」という状態は設計上の想定と異なる
+  - **#1140 の post-merge 条件に対する反証データ**: #1140 ac4 は「次回以降の `/auto` 実行で、正常終了したフェーズに対して `watchdog_kill` イベントが新規追加されていないことを確認する」を要求している。本 run では**正常終了した merge フェーズに対して watchdog_kill が新規追加された**。#1140 の `/verify` 時にこの実測データを参照すべき
+  - **#939 (watchdog silent window の実測と再校正) にも該当**: merge フェーズの既定 timeout は 600s (`WATCHDOG_TIMEOUT_MERGE_DEFAULT`)。CI 待ちを含む merge が 600s 無言になるのは異常ではなく、既定値が実測に対して短い可能性を示す
+- **`code` フェーズで `code_retry_fire` が 2 回発火した** (02:36:12 iteration=1、02:50:17 iteration=2、いずれも `trigger_reason=silent_no_op`)。最終的に PR #1190 が作成され completion check も通ったため実害はないが、silent no-op 検出とリトライが 2 回連続で必要だった点は #1117 / #1175 の扱う領域と重なる
+
+### Improvement Proposals
+
+- N/A — 上記 2 件はいずれも既存 Issue が追跡中 (#1140 / #939 / #1117 / #1175)。本 run の実測データは各 Issue の判断材料として有効だが、新規起票は不要
