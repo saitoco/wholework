@@ -188,20 +188,20 @@ Root Cause の 3 行目 (`run-auto-sub.sh:194-204`) は false negative の一因
 - UNCERTAIN 判定はゼロ。9 件の Pre-merge AC のうち rubric 6 件・section_contains 1 件・file_not_contains 1 件はいずれも diff から機械的に確認でき、残る `github_check` 1 件も CI 全 9 checks SUCCESS で PASS 判定できた。Spec Notes が自認する通り AC 数 (9) は light テンプレートの目安 (5) を超えているが、review 側の検証コストとしては rubric の記述が具体的だったため大きな負荷にはならなかった。verify command の過不足や不正確さは見当たらない。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 本ラウンドは新規実装ではなく、`/verify` FAIL (iteration 1、PR #1198 マージ後) が検出した degrade path のバグ修正。修正内容は「`起票済み` marker を選ぶ基準をスキャン順から `ENTRY_TS` 明示比較 (最大値) へ変える」1 点のみで、除外判定の意味論 (open/closed/degrade path の規則) 自体は変更していない。
-- `/verify` FAIL コメントが提示した最小再現 fixture (同一 group-key に `起票済み #9999` を持つ 3 entry、newest-first) をそのまま bats 回帰テストに採用し、あわせて「cutoff より新しい未 marked entry は引き続き計数される」ケースも追加した。既存 3 テストはいずれも単一 marked entry の fixture だったため本欠陥を検出できていなかった。
-- Issue 本文の AC 1 / AC 10 (Post-merge) は `/verify` FAIL コメント投稿時点で既に一般ケースを含む文言へ更新済みだったため、Spec の Verification 節と Implementation Step 1 をその文言に同期した。
+- `--light` 指定により review-light (1 エージェント統合レビュー、4 観点) を実施。MUST/SHOULD/CONSIDER いずれも0件で、修正コミットは発生していない。
+- Pre-merge AC 1 (前ラウンド `/verify` FAIL の対象) を、実装差分のレビューに加えて `bash scripts/collect-recovery-candidates.sh docs/reports/orchestration-recoveries.md --threshold 3` を実際に実行し、出力が空 (2 group-key の消滅) であることを実測して PASS 判定した。他 8 件の Pre-merge AC は本 PR で変更されていないファイルに対応するため、diff への影響なしと確認したうえで PASS を維持した。
+- Base Branch Conflict Pre-check で `changed in both` は 0 件 (`added in remote` / `merged` のみ) だったため、追加コンテキストなしで通常のレビューを実施した。
 
 ### Deferred Items
-- 境界秒精度 (closedAt 分単位切り詰め) と、同一 group-key が生涯で 2 回以上 `起票済み #N` された場合の rolling cutoff 非対応は、前ラウンドの Code Retrospective に記録済みで本ラウンドでも未着手。本 Issue のスコープ外として据え置く。
-- `## Phase Handoff` セクションが `review` / `merge` の 2 つ残存していた件 (前ラウンドの Verify Retrospective が指摘) は、本セクションへの書き込みで両方を 1 セクションに統合し解消済み。
+- 境界秒精度 (closedAt 分単位切り詰め) と group-key 複数回起票時の rolling cutoff 非対応は、Code Retrospective の Design Gaps に記録済みで本ラウンドでも未着手。本 Issue のスコープ外として据え置く。
+- #1191 (`/audit stats --retention` Section 10) は `--with-tracking` オプションの実消費側。review では未検証 (#1191 側の責務)。
 
 ### Notes for Next Phase
-- `/review 1207` では、`manual-recovery-respawn` (#1014 closed) と `code-pr-tier3-recovery` (#799 closed) が `--threshold 3` で候補から消えていることを実データで確認済み (本 Spec の Notes 相当の実測は PR 本文に記載)。rubric AC の判定はこの実測結果と、newest-first fixture の回帰テストを突き合わせて行うこと。
-- Post-merge observation AC は前ラウンドで一度 FAIL しているため、`/verify` 実行時は前回と同じ表面的な期待値確認 (2 group-key の列挙) に留めず、AC 文言どおり「出力全件について closed Issue との突き合わせ」を行うこと。
+- `/merge 1207` の前提条件はすべて満たされている (MUST issue ゼロ、CI 全通過、AC 1 を含む全 Pre-merge AC が PASS)。
+- Post-merge の observation AC (`/verify` Step 15 出力で、対応 Issue が closed の group-key が候補として一切現れないこと、かつ closedAt 後の再発は候補に現れ続けること) は次回 `/auto` セッションで確認すること。今回は AC 文言どおり「出力全件の突き合わせ」で判定し、特定 2 group-key の列挙に留めないこと。
 
 ## Verify Retrospective
 
@@ -238,3 +238,17 @@ Root Cause の 3 行目 (`run-auto-sub.sh:194-204`) は false negative の一因
 
 - **Tier 2 (memory 候補、Issue 化せず)**: `## Phase Handoff` の rotation が並行編集下で破れうる。本 Spec は review 版と merge 版の 2 セクションを保持したまま着地した。`modules/phase-handoff.md` の Rotation boundary detection は「次の `## ` heading まで」を置換範囲とするため、直後に別の `## Phase Handoff` がある場合でも仕様上は正しく置換できるはずで、実際に起きたのは 3-way merge によるセクション重複と考えられる。観測は 1 件のみ、かつ実害は「verify がどちらを読むか曖昧」に留まるため起票は見送る。同種の重複が再発したら phase-handoff 側に重複検出を入れる判断材料にする
 - **注目事項 (本 Issue のスコープ外、起票せず)**: 本 Issue の実装により **`manual-recovery-respawn` が 21 件**あることが初めて可視化された。#1014 (`recoveries: manual-recovery-respawn の再発原因を特定・解消`、CLOSED 2026-07-13) の着地後に積み上がった分であり、同 Issue の対応では再発が止まっていない。ただし根本原因は上流 `anthropics/claude-code` の external kill (`docs/reports/external-kill-investigation.md` および上流の未対応 Issue 3 件) であり、wholework 側の実装で解消できる性質ではないため新規起票はしない。#1191 (`/audit stats --retention` の recovery 頻度セクション) が着地すれば、この数字が定常的に可視化される
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 特になし。今回の PR は `/verify` FAIL (iteration 1) の指摘を受けた 1 点修正 (`起票済み` marker 選定基準をスキャン順から `ENTRY_TS` 明示比較へ変更) のみで、Spec の rubric 文言・ヘッダコメント・inline コメント・実装コードの 4 者が一貫して同じ規則 (最大 timestamp を採用) を記述しており、構造的な乖離は見られなかった。
+
+### Recurring issues
+
+- 特になし。review-light の 4 観点 (Spec 逸脱・エッジケース/堅牢性・セキュリティ・ドキュメント整合性) いずれも MUST/SHOULD/CONSIDER 0件。前ラウンド (`/review 1198`) で発見された SHOULD 1 件 (`--issues-json` の tab 区切り依存) は本ラウンドの diff に含まれておらず、再発なし。
+
+### Acceptance criteria verification difficulty
+
+- UNCERTAIN 判定はゼロ。9 件の Pre-merge AC のうち、今回のバグ修正対象である AC 1 (rubric) は文言が「entry 単位判定」「ファイル出現順の最後ではなく H2 ヘッダ日時が最大のもの」を明示しており、実装差分の確認に加えて `bash scripts/collect-recovery-candidates.sh docs/reports/orchestration-recoveries.md --threshold 3` を実行して出力が空になることを直接実測できたため、rubric の記述と実行可能な検証コマンドの両方が揃っている好例だった。残る8件は本 PR で変更されていないファイルに対応するため、diff への影響なしの確認のみで PASS 判定を維持した。verify command の過不足や不正確さは見当たらない。
