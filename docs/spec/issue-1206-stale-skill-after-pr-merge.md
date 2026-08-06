@@ -123,17 +123,7 @@ Issue 本文「Proposal (Outline)」節に既に記録済みのため、Spec 側
 - `scripts/run-merge.sh` は起動直後に `MAIN_REPO_ROOT` へ `cd` しており、以降スクリプトが CWD を変更する箇所は無いことを確認した (`claude -p` サブプロセス内の worktree 移動は親プロセスの CWD に影響しない)
 - `scripts/run-merge.sh` は現状 `git` を直接呼び出していないことを確認した (既存呼び出しは全て `gh`) — 今回追加する `git pull --ff-only` が最初の直接呼び出しであり、追加による既存動作への副作用はない
 
-## spec retrospective
+### 実装方針の理由
 
-### Minor observations
-
-- 関連する先行 Issue (#1168, #821, #1157) の Spec を読むことで、「skill 自己更新の非伝播」というテーマに複数の異なる原因 (ディスクレベルの git 同期遅れ = 本 Issue、会話セッション単位のキャッシュ = #1168) が存在することが分かった。Issue 本文の Related 節はこれらを横断的には接続していなかった (#1206 は #1168 を参照していない) — テーマが近い Issue 間の相互参照は、起票時点で見えている情報だけでは漏れることがある
-
-### Judgment rationale
-
-- AC2 (不採用根拠の記録) は Issue 本文に既に十分な記録があったため、Spec 側に新規の実装ステップを立てず、Notes での要約引用のみとした。AC の文言が「Spec **または** Issue」と選択を許容していたことが、この判断の根拠になった
-- Proposal C の実装位置は `skills/merge/SKILL.md` (LLM 実行、worktree 内で完結) ではなく `scripts/run-merge.sh` (bash wrapper) を選んだ。`/merge` 自身は自分の worktree (`merge/pr-$NUMBER`) 内で完結するため、親リポジトリの `main` を直接操作するには worktree 分離を越える必要がある。一方 `run-merge.sh` はサブプロセスの外側で `MAIN_REPO_ROOT` に居続けるため、追加の分離越えロジックなしに実装できる。既存の `_pull_ff_only()` (`scripts/run-auto-sub.sh`) も同じく bash wrapper 層に実装されており、パターンとして一貫する
-
-### Uncertainty resolution
-
-- **AC4 (「ローカル HEAD と origin で skill hash が異なる条件」のテスト方法)**: Step 8 のロジックは SKILL.md prose に埋め込まれた bash スニペットであり、直接ユニットテストできる独立スクリプトではない。`tests/pre-merge-check.bats` が使う bare origin + working repo の実 git fixture パターンを踏襲し、Step 1 で導入する 2 つの git コマンド (ローカル HEAD 比較 / origin 比較) が実際に異なる結果を返すことを実 git 操作で検証する形とした。SKILL.md prose のリファクタ (スクリプトへの抽出) は本 Issue のスコープを超えるため行わない
+- **Proposal C の実装位置**: `skills/merge/SKILL.md` (LLM 実行、自分の worktree `merge/pr-$NUMBER` 内で完結) ではなく `scripts/run-merge.sh` (bash wrapper) を選んだ。`/merge` 自身は worktree 内で完結するため、親リポジトリの `main` を直接操作するには worktree 分離を越える必要がある。一方 `run-merge.sh` は `claude -p` サブプロセスの外側で `MAIN_REPO_ROOT` に居続けるため、追加の分離越えロジックなしに実装できる。既存の `_pull_ff_only()` (`scripts/run-auto-sub.sh`) も同じく bash wrapper 層に実装されており、パターンとして一貫する
+- **AC4 のテスト方法**: Step 8 のロジックは SKILL.md prose に埋め込まれた bash スニペットであり、直接ユニットテストできる独立スクリプトではない。`tests/pre-merge-check.bats` が使う bare origin + working repo の実 git fixture パターンを踏襲し、Step 1 で導入する 2 つの git コマンド (ローカル HEAD 比較 / origin 比較) が実際に異なる結果を返すことを実 git 操作で検証する形とした。SKILL.md prose のリファクタ (スクリプトへの抽出) は本 Issue のスコープを超えるため行わない
