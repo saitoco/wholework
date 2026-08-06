@@ -93,3 +93,29 @@ N/A ( 上記の `comm` → `grep -Fxq` の置き換えは、シェル上での�
 
 - verify フェーズでは Post-merge AC ( 1 セッション内で `/auto` を 2 回以上実行し、2 回目の observation scan が 1 回目で verify 済みの Issue を dispatch しないことを観察 ) が `session=next` 指定のため、次回以降の `/auto` 実行セッションでの実観察が必要
 - レビュー完了後に review worktree を都度クリーンアップできていない運用ギャップが見つかった ( 本件は merge フェーズで応急対応済みだが、根本原因は未調査 )
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- `session=next` の欠落を `check-skill-change-observation-ac.sh` が exit 2 で検出し自動修正した。pre-merge AC が `skills/auto/SKILL.md` の変更を前提とするため必須の付与であり、機械チェックが正しく機能した
+
+#### spec
+- Size を M から L へ再評価 (Changed Files 6 件)。ROUTE は M/L いずれも `pr` のため経路変更はなく、review 深度のみ `--light` → `--full` に変わった
+- 実装方針は Issue 本文の候補 A〜D から A (一律除外) を採用。B/C/D の不採用理由を Spec Notes に記録しており、後続 Issue の判断材料として追跡可能
+
+#### code
+- **`comm -23` による集合差分が数値リストで破綻する罠を実装中に発見**。`comm` は入力がロケール辞書順であることを前提とするが `sort -un` は数値順で、桁数の異なる Issue 番号 (`9` / `84` / `995`) では一致しない。`grep -Fxq` による行単位ループへ置き換えて解決。Spec の疑似コード段階では表面化せず、シェル上のテスト実行で初めて顕在化した
+
+#### merge
+- **旧 review フェーズの残留 worktree (`review+pr-1204`) がローカルブランチ削除をブロックし、merge フェーズが worktree の unlock/remove とブランチ削除を追加実施した**。`docs/reports/orchestration-recoveries.md` には記録されていない (wrapper 失敗 → 親セッション復旧の形ではなく、skill 自身が中で解決したため)。open Issue #1119 (異常終了したフェーズが残す stale worktree を回収) が扱う症状の実例にあたる
+
+#### verify
+- pre-merge 5 件はすべて review/merge フェーズで確定済みのため SKIPPED。post-merge 1 件は observation 未発火 (`auto-run` の検出コメントなし) で SKIPPED
+- 本 Issue が追加した `scripts/filter-session-verified-issues.sh` は、この batch 自身が in-session verify イベント (#1197 / #1162) を持つため batch 完了時の observation scan で実際に効く見込みだが、`session=next` のとおり親セッションは変更前の `skills/auto/SKILL.md` を読み込んでいるため本 verify では観測できない
+
+### Improvement Proposals
+
+- (記録のみ / Tier 2 相当) **数値リストの集合差分に `comm` を使うと辞書順前提で破綻する**。`sort -un` の数値順と `comm` の辞書順前提が食い違うため、Issue 番号のような可変桁数の数値集合では誤った差分になる。今回は `grep -Fxq` の行単位ループで回避した。Spec の疑似コード段階では検出できず、シェル実行で初めて顕在化する類の罠であり、同種の集合差分を扱う将来のスクリプトで再発しうる。単発観測のため新規起票はせず、本 retrospective と `## Code Retrospective` の記録に留める
+- (既存 Issue の実例) merge フェーズが遭遇した残留 worktree によるブランチ削除ブロックは **#1119 (open)** が扱う症状。新規起票は不要だが、#1119 に実例が増えたことを記録する
