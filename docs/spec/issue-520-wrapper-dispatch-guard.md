@@ -245,6 +245,32 @@ run-merge.sh のリファクタリング（inline PR-state ガード → reconci
 
 - **テスト置き換え/リファクタ時の「削除テストのシナリオ網羅」チェックを review または spec のガイドラインに明文化する**: 本 Issue の review で、run-merge.sh のリファクタ（inline PR-state ガード → reconcile 統一）に伴い旧テスト「post-validation: exits 0 when gh pr view fails」が削除されたが、等価な新テスト（抽出失敗 + gh API 失敗 → false alarm なし）が抜け落ちていた（review が検出し run-merge.bats を追加して解消）。実装が正しくても、テストを置き換える際に「削除した（または書き換えた）テストが検証していたシナリオを新テストが全てカバーしているか」の網羅性確認が漏れるパターンは汎用的に再発しうる。review-bug perspective または spec の制約チェックリストに「テスト置き換え時は削除テストのカバーシナリオを新テストで全て担保する」旨を明記することで、レビュー検出に依存せず構造的に防止できる。
 
+### 追記 (2026-08-06, observation 解決時)
+
+post-merge observation 条件が `/auto --batch 1197 1162 1133 1102` (session `74631-1786005349`) の event-based observation scan 経由で dispatch され、**PASS** に解決した。
+
+#### 判定根拠
+
+本バッチが `claude -p` 経由で起動した code phase 5 回 (#1102 の auto-retry を含む) の起動バナーを機械的に突き合わせ、**5/5 で正しいスキル・正しい Issue 番号**を確認 (`grep -h -E "^=== run-[a-z]+\.sh: Starting" .tmp/wrapper-out-{1197,1162,1133,1102}-code-*.log`)。issue / spec フェーズも個別確認済み。mis-dispatch はゼロ。
+
+silent no-op 自体は 1 件発生したが (#1102 code phase, `code_retry_fire` / `trigger_reason: silent_no_op`)、原因は mis-dispatch ではなく、本 Issue が追加した exit-0 reconcile ガードが検出して auto-retry (1/3) で復旧した。**本 Issue の成果物が実運用で機能したことの実証**でもある。
+
+#### 発見: #994 のガードが着地後に破られた (再発)
+
+観察された silent no-op の原因を追ったところ、`/code` エージェントが `bats tests/` をバックグラウンドタスクとして起動し「完了通知を待つ」としてターンを終了していた (headless `claude -p` には次のターンが存在しない)。
+
+これは `skills/code/SKILL.md:353` が **既に明示的に禁じている**挙動である。
+
+> When `/code` itself is running in an execution surface without a re-invocation guarantee (`--non-interactive` mode, ...), run the above `bats tests/` override in the **foreground** (do not set `run_in_background: true`), with an explicit Bash `timeout` ... to avoid an infinite wait that silently exhausts `auto-retry-on-fail.max_iterations` (Issue #994).
+
+`scripts/run-code.sh:230` は `--non-interactive` を渡しているため適用条件を満たす。つまり #994 で追加されたガイダンスが着地済みにもかかわらず、同じ失敗モードが再発した。
+
+コスト: 1 回目の code phase が 21:35→22:00 (約 25 分) 空転し、`auto-retry-on-fail` の 3 回枠を 1 消費した。
+
+### 追加 Improvement Proposal (2026-08-06)
+
+- **`--non-interactive` 実行での background-task 完了通知待ちを、ガイダンス依存でなく構造的に防止する**: #994 が `skills/code/SKILL.md` に foreground 実行の指示を追加したが、#1102 の code phase (2026-08-06) で同じ失敗モードが再発した。現在の指示は Step 8 のテスト実行節の深いサブ項目にあり、かつ「追加のテストファイルが変更対象を参照している場合」という先行分岐の下にネストしているため、その分岐に入らない経路からは目に入りにくい。実行文脈 (`--non-interactive` / fork / Workflow) は `modules/execution-context.md` が既に定義しているので、(a) 指示を分岐に依存しない位置へ引き上げる、(b) `run-code.sh` 側で wrapper ログ末尾に完了通知待ちを示す文言を検出したら専用の診断を出す、のいずれかで構造的に補強できる。
+
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/520#issuecomment-4618328268
 - saito / MEMBER / first-class / <!-- escalation-level: 2 --> / https://github.com/saitoco/wholework/issues/520#issuecomment-5182939819
