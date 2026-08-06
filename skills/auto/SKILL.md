@@ -875,11 +875,12 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
      SKILL_VERSIONS=$(jq -r '.skill_versions // empty' ".tmp/auto-session-${AUTO_SESSION_ID}.json" 2>/dev/null)
      ```
      If the file is absent or `jq` fails (empty output), skip this sub-step entirely.
-   - For each of the 8 skills (auto/code/spec/verify/review/merge/issue/audit), compare the saved hash against the current `HEAD` hash:
+   - For each of the 8 skills (auto/code/spec/verify/review/merge/issue/audit), compare the saved hash against the current `origin/${BASE_BRANCH}` hash (`$BASE_BRANCH` is the session-wide variable resolved from `--base` in Step 0, defaulting to `main`):
      ```bash
+     git fetch origin "$BASE_BRANCH" 2>/dev/null || echo "Warning: git fetch origin ${BASE_BRANCH} failed; comparing against a possibly-stale origin ref" >&2
      for skill in auto code spec verify review merge issue audit; do
        START_HASH=$(echo "$SKILL_VERSIONS" | jq -r ".\"skills/${skill}/SKILL.md\" // \"\"" 2>/dev/null || echo "")
-       CURRENT_HASH=$(git log -1 --format=%H -- "skills/${skill}/SKILL.md" 2>/dev/null || echo "")
+       CURRENT_HASH=$(git log -1 --format=%H "origin/${BASE_BRANCH}" -- "skills/${skill}/SKILL.md" 2>/dev/null || echo "")
        if [ -n "$START_HASH" ] && [ -n "$CURRENT_HASH" ] && [ "$START_HASH" != "$CURRENT_HASH" ]; then
          CHANGED_SKILLS="${CHANGED_SKILLS:+$CHANGED_SKILLS }${skill}:${START_HASH}:${CURRENT_HASH}"
        fi
@@ -889,7 +890,7 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
      ```markdown
      ## Skill Self-Update Propagation Note
 
-     Session 中に以下の skill が更新されました (本 session には未適用、次 session から反映):
+     Session 中に以下の skill が origin 上で更新されました (比較対象: origin/${BASE_BRANCH})。ローカル main が追従できていない場合、本 session 内の以降の実行や次回セッションが更新前の版を使う可能性があります:
      - skills/auto/SKILL.md: <start-hash> → <current-hash>  (or "(no change)" when unchanged)
      - skills/code/SKILL.md: (no change)
      ...
