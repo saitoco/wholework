@@ -67,6 +67,30 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+
+## 2026-08-06 04:45 UTC: review-tier3-recovery
+
+### Context
+- Issue #1174, phase: review
+- Source: recovery-sub-agent
+- Wrapper: run-review.sh, exit code: 143
+- Log tail: "Finished at: 2026-08-06 13:33:33"
+
+### Diagnosis
+- run-review.sh completed CI wait successfully but then hung with no output for 2600s until the watchdog killed it (pid=31881); reconcile-phase-state confirms matches_expected=false because no Review Response Summary was posted to PR #1192. No partial artifact (comment, label transition) exists to salvage, so a clean re-run of the review phase is the safe recovery.
+
+### Recovery Applied
+- action=retry
+- steps: none
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+---
+
 ## 2026-08-05 17:30 UTC: manual-recovery-merge-rerun
 
 ### Context
