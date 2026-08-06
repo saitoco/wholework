@@ -736,7 +736,40 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the Exit s
 **patch route (merge-to-main pattern):**
 Follow "Exit: merge-to-main section". After push completes, transition the label (patch route skips `/merge`, so label transition happens here).
 
-**patch route (XS/S common)**: After push completes, transition to `phase/verify`:
+**patch route (XS/S common)**: After push completes, post an `## Implementation Complete` summary comment to the Issue, then transition to `phase/verify`.
+
+**Implementation Complete comment (patch route, before label transition):**
+
+Post this before running `gh-label-transition.sh $NUMBER verify` below, not after — the ordering is required, not incidental. `modules/l0-surfaces.md`'s Comment Consumption Procedure resolves each phase's cutoff to the most recent `phase/*` label assignment; `scripts/gh-issue-comment.sh` posts via `gh issue comment` under the executor's own token, so the comment's `authorAssociation` (`MEMBER` or similar) does not qualify for the bot-skip exception in the Trust Boundary table, and the comment is injected as first-class prompt-equivalent input by whichever phase consumes it next. Posting after the `verify` label transition would place this comment's `createdAt` after `/verify`'s own cutoff, so every `/verify` run on this Issue — including re-verify passes in a fix cycle — would re-consume it as new context, even though it only summarizes what the Spec's Code Retrospective and Phase Handoff already record. Posting before the transition keeps the comment older than `/verify`'s cutoff, matching the same before-transition ordering `/spec` already uses (Step 15 Issue comment → Step 16 label transition).
+
+Write the comment body to `.tmp/implementation-complete-$NUMBER.md` with the Write tool, then post:
+
+```bash
+mkdir -p .tmp
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $NUMBER .tmp/implementation-complete-$NUMBER.md
+rm -f .tmp/implementation-complete-$NUMBER.md
+```
+
+Comment template:
+
+```markdown
+## Implementation Complete
+
+**Route**: patch (direct commit to main)
+**Commit**: `{sha}` {commit subject}
+
+### Changes
+- `{path}` — {change summary}
+
+### Tests
+- {test command} — {result}
+
+### Change Tracking
+- {only when Step 10's verify command rewrite or Spec sync occurred during this run — omit the whole subsection when neither occurred}
+
+Spec: [{spec filename}]({blob URL})
+Next: `phase/verify`
+```
 
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER verify
