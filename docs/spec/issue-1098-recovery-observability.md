@@ -99,22 +99,21 @@
 - N/A — 各 Implementation Step は初回実装でテストが通過し、手戻りは発生しなかった。`write_recovery_entry()` の動作は bats フィクスチャに加えて `.tmp/` 配下に一時 git リポジトリを作り実際にファイルへ追記されることを手動確認した (テストへの組み込みはしていない使い捨て検証)
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- review-bug×2 が独立に同一の実測 (失敗する git/run-code.sh モックを用いた再現) で、code フェーズが「set -e の抑制を利用して exit 2 を捕捉する」と説明していた設計が実際には逆で、`if handler; then ... else exit 2; fi` が handler 関数本体全体の `set -e` を抑制し、内部コマンドの失敗が握り潰されて `else exit 2` に到達しなくなっていたことを確認した (MUST)。両ハンドラの内部コマンドに `|| return 1` を追加し、明示的な失敗伝播に修正した
-- `write_recovery_entry()` の `WRE_ISSUE` が `run_phase_with_recovery()` の第2位置引数 (review/merge フェーズでは PR 番号) をそのまま使っており、AC5 の skip 判定 grep が Issue 番号と一致しない不整合を確認した (MUST)。Tier 3 の `spawn-recovery-subagent.sh` と同型の `--record-issue` オプションを追加して解消
-- `gh-pr-review.sh` が単一アカウント運用で `422 Can not request changes on your own pull request` により投稿失敗 (既知、追跡中 #1102) したため、SKILL.md の fallback 規定どおり terminal 出力へフォールバックし、代わりに `gh pr comment` でレビュー内容と修正結果を PR コメントとして投稿した
-- SHOULD/CONSIDER も含めて全件 (計6件中5件を修正、1件は実測により false positive と判定し却下) 対応する判断とした。低リスクな bash スクリプト変更で修正コストが低く、`write_recovery_entry()` は本 Issue の中核関数でテストカバレッジの空白がそのまま残るリスクが高かったため
+- Pre-merge AC gate は Issue #1098 のチェックボックス 5件全てが `[x]` 済みであることを確認し、review-incomplete-fallback (フォールバック起点の review 完了扱い) も検出されなかったため、override マーカーなしで通常フローどおりマージした
+- PR に formal GitHub Review が存在しない点は review フェーズの Notes for Next Phase で事前共有されていたとおりで、`gh-pr-merge-status.sh` は `review_status: approved` / `ci_status: success` / `mergeable: true` を返しており、通常フローと同様に扱って問題なかった
+- コンフリクトなし (`mergeable=true`, `reason=clean`) だったため、Step 3 (Resolve Conflicts) は完全にスキップし、Squash Merge に直行した
 
 ### Deferred Items
-- Post-merge AC (Tier 3 abort の実地再現、Tier 2 発火の実地再現) は `/verify` フェーズで確認する
-- `docs/reports/orchestration-recoveries.md` への Tier 2 実記録が実際の `/auto` 実行で正しく機能するかは、pre-merge 時点ではモック環境でのみ検証済み
-- `apply-fallback.sh` の recovery entry に Tier 3 と同型の `- Wrapper: run-{phase}.sh, exit code: <N>` (exit code 部分) が欠落している件は CONSIDER 止まりとし、今回は見送った (優先度低、`--exit-code` 引数の追加配線が必要でコスト対効果が低いと判断)
+- Post-merge AC (Tier 3 abort の実地再現、Tier 2 発火の実地再現) は `/verify` フェーズで確認する (review フェーズからの引き継ぎ、未着手のまま継続)
+- `docs/reports/orchestration-recoveries.md` への Tier 2 実記録が実際の `/auto` 実行で正しく機能するかは、pre-merge 時点ではモック環境でのみ検証済み (review フェーズからの引き継ぎ、未着手のまま継続)
+- `apply-fallback.sh` の recovery entry に Tier 3 と同型の exit code 記録が欠落している件は、review フェーズで CONSIDER 止まりとして見送り済み。今回のマージでも対応なし
 
 ### Notes for Next Phase
-- merge フェーズでは、本 PR に GitHub Review (formal REQUEST_CHANGES/APPROVE) が存在しない点に注意。MUST 指摘は解決済みだが、その根拠は PR コメント (2件、review findings + response summary) にある。pre-merge AC gate は Issue 側のチェックボックスと `<!-- review-summary -->` マーカー付きコメントを見るため、この点では通常フローと同じはず
-- `apply-fallback.sh` に `--record-issue` オプションが追加されたため、この Issue 以降で同スクリプトを呼び出す他の変更がある場合は引数の互換性に注意
+- `/verify` フェーズでは、Deferred Items に記載の Tier 2/Tier 3 実地再現 (post-merge AC) を優先的に確認すること
+- `apply-fallback.sh` に `--record-issue` オプションが追加された点は review フェーズの指摘どおりで、他スクリプトからの呼び出し箇所に互換性の影響がないか `/verify` 側でも注意
 
 ## review retrospective
 
