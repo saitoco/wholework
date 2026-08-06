@@ -5,6 +5,10 @@
 - saito / MEMBER / first-class / 2026-06-14 時点の前回 `/verify 476` 実行結果 (Pre-merge 2 件 PASS、Post-merge observation は event 未発火で SKIPPED) / https://github.com/saitoco/wholework/issues/476#issuecomment-4703192688
 - saito / MEMBER / first-class / `/review --light` (PR #1189) 完了に伴い observation event `pr-review-light` が発火した旨の通知 / https://github.com/saitoco/wholework/issues/476#issuecomment-5199934979
 
+### verify フェーズ (2026-08-06 re-run #2, cutoff: 2026-06-14T21:50:38Z)
+
+- saito / MEMBER / first-class / 前回 `/verify 476` (2026-08-06 re-run) 実行結果。Pre-merge 2 件 PASS、Post-merge observation (event=pr-review-light) は PR #1189 の diff に該当欠陥なしのため UNCERTAIN / https://github.com/saitoco/wholework/issues/476#issuecomment-5199963258
+
 ## 背景
 
 `/review` の MUST/SHOULD 分類基準に「対象実行環境で決定的に失敗する欠陥は MUST」というルールを明文化する。Spec フェーズなしで直接実装（Issue 本文から要件を読み取り）。
@@ -81,4 +85,14 @@
 
 ### Improvement Proposals
 - 本 Issue の post-merge observation event (`event=pr-review-light`) は「`/review --light` が完了した」ことのみを検知し、レビュー対象 PR に決定的失敗パターンの欠陥が実在したかまでは絞り込んでいない。このため任意の `/review --light` 完了で event が発火し、対象 PR にたまたま該当欠陥がなければ `/verify` は UNCERTAIN 止まりになる — かつ fired 状態は Issue コメント全履歴から検出するため一度発火すると恒久的に「fired」のままとなり、以後の `/verify` 再実行でも同じ (証拠不十分な) fired 状態を毎回再評価することになる。observation-trigger の event 定義に「diff 内容が特定パターンにマッチする場合のみ発火」という絞り込み条件を持たせるか、この post-merge AC 自体を「該当欠陥を含む PR が review された際に限り評価する」形に見直すことを検討する価値がある
+
+## Verify Retrospective (2026-08-06 re-run #2)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 Issue の `/verify` は `/review --light` (PR #1190, Issue #1186) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は前回判定から内容変更なく再度 PASS。Post-merge observation は fired 状態を再確認したが、今回の発火元 PR #1190 の diff (`docs/spec/issue-1186-*.md`, `skills/verify/SKILL.md`, `tests/verify.bats`) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず、前回 (2026-08-06 re-run) と同じ UNCERTAIN 判定に帰着した。上記「re-run」で既に記録済みの Improvement Proposal (fired 状態の恒久化・観測条件の絞り込み不足) がまさに想定どおり再現した事例であり、新規の観測事項はない
+
+### Improvement Proposals
+- N/A (上記「re-run」の Improvement Proposals を参照。新規提案なし — 再発の実測として記録するに留める)
 
