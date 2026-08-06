@@ -249,3 +249,38 @@ teardown() {
     # Must resolve under the main repo root, never the linked worktree path.
     [[ "$output" != *"LOG=[${LINKED_WORKTREE}"* ]]
 }
+
+@test "restore_auto_session_pointer prefers the issue-scoped pointer over auto-session-current under concurrent sessions (Issue #1075)" {
+    mkdir -p "$BATS_TEST_TMPDIR/work4/.tmp"
+    echo "other-session" > "$BATS_TEST_TMPDIR/work4/.tmp/auto-session-current"
+    echo "issue-scoped-session" > "$BATS_TEST_TMPDIR/work4/.tmp/auto-session-issue-1075"
+    run bash -c "cd \"$BATS_TEST_TMPDIR/work4\" && unset AUTO_EVENTS_LOG AUTO_SESSION_ID && source \"$SCRIPT\" && restore_auto_session_pointer 1075 && echo \"SID=[\$AUTO_SESSION_ID] LOG=[\$AUTO_EVENTS_LOG]\""
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"SID=[issue-scoped-session]"* ]]
+    [[ "$output" == *"LOG=[.tmp/auto-events.jsonl]"* ]]
+}
+
+@test "restore_auto_session_pointer adopts a pre-set AUTO_SESSION_ID ahead of any pointer file and still derives AUTO_EVENTS_LOG (Issue #1075)" {
+    mkdir -p "$BATS_TEST_TMPDIR/work5/.tmp"
+    echo "issue-scoped-session" > "$BATS_TEST_TMPDIR/work5/.tmp/auto-session-issue-1075"
+    echo "current-session" > "$BATS_TEST_TMPDIR/work5/.tmp/auto-session-current"
+    run bash -c "cd \"$BATS_TEST_TMPDIR/work5\" && unset AUTO_EVENTS_LOG && export AUTO_SESSION_ID=env-session && source \"$SCRIPT\" && restore_auto_session_pointer 1075 && echo \"SID=[\$AUTO_SESSION_ID] LOG=[\$AUTO_EVENTS_LOG]\""
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"SID=[env-session]"* ]]
+    [[ "$output" == *"LOG=[.tmp/auto-events.jsonl]"* ]]
+}
+
+@test "persist_auto_session_pointer writes the issue-scoped pointer file (Issue #1075)" {
+    mkdir -p "$BATS_TEST_TMPDIR/work6"
+    run bash -c "cd \"$BATS_TEST_TMPDIR/work6\" && source \"$SCRIPT\" && persist_auto_session_pointer session-abc 1075 && cat .tmp/auto-session-issue-1075"
+    [ "$status" -eq 0 ]
+    [[ "$output" == "session-abc" ]]
+}
+
+@test "persist_auto_session_pointer deletes the issue-scoped pointer file when session id is empty (Issue #1075)" {
+    mkdir -p "$BATS_TEST_TMPDIR/work7/.tmp"
+    echo "stale-session" > "$BATS_TEST_TMPDIR/work7/.tmp/auto-session-issue-1075"
+    run bash -c "cd \"$BATS_TEST_TMPDIR/work7\" && source \"$SCRIPT\" && persist_auto_session_pointer '' 1075 && { test -f .tmp/auto-session-issue-1075 && echo EXISTS || echo GONE; }"
+    [ "$status" -eq 0 ]
+    [[ "$output" == "GONE" ]]
+}
