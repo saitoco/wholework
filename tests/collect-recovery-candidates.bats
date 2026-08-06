@@ -58,6 +58,71 @@ FIXTURE_EOF
   echo "$output" | grep -E $'^repeated-symptom\t1$'
 }
 
+@test "degrade path: multiple filed markers in newest-first order -- cutoff is the max timestamp, not the last one scanned" {
+  # Regression for the /verify #1152 FAIL (iteration 1): orchestration-recoveries.md is
+  # newest-first, so the entry seen LAST while scanning top-to-bottom is the OLDEST one.
+  # run-auto-sub.sh auto-stamps 起票済み on every new entry for a group-key once its
+  # Issue is known, so "all entries marked" is the common case, not the exception. If the
+  # degrade-path cutoff is picked by scan order instead of by comparing timestamps, it
+  # collapses to the oldest marked entry and every entry in the group counts as a false
+  # positive. All 3 entries carry the same 起票済み #9999 marker; the correct cutoff is
+  # 2026-08-10 (the max), so nothing is strictly after it and the group produces no output.
+  cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
+## 2026-08-10 00:00 UTC: probe-symptom
+
+- 起票済み #9999
+- Cause: newest occurrence
+
+## 2026-08-09 00:00 UTC: probe-symptom
+
+- 起票済み #9999
+- Cause: middle occurrence
+
+## 2026-08-08 00:00 UTC: probe-symptom
+
+- 起票済み #9999
+- Cause: oldest occurrence
+
+FIXTURE_EOF
+
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 1
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "degrade path: multiple filed markers in newest-first order -- a genuine unmarked recurrence newer than every marker is still counted" {
+  # Same newest-first / all-marked shape as the previous test, but with one additional
+  # unmarked entry newer than the latest marker (a real post-fix recurrence that has not
+  # yet been auto-stamped by run-auto-sub.sh). It sits at the top of the file since the log
+  # is newest-first. The correct cutoff (max marked timestamp = 2026-08-10) must exclude
+  # the 3 marked entries below it while still counting this one.
+  cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
+## 2026-08-11 00:00 UTC: probe-symptom
+
+- Cause: genuine recurrence after the fix (not yet auto-stamped)
+
+## 2026-08-10 00:00 UTC: probe-symptom
+
+- 起票済み #9999
+- Cause: newest pre-existing occurrence
+
+## 2026-08-09 00:00 UTC: probe-symptom
+
+- 起票済み #9999
+- Cause: middle occurrence
+
+## 2026-08-08 00:00 UTC: probe-symptom
+
+- 起票済み #9999
+- Cause: oldest occurrence
+
+FIXTURE_EOF
+
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 1
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -E $'^probe-symptom\t1$'
+}
+
 @test "entry-unit exclusion: closed issue -- entries after closedAt are counted" {
   cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
 ## 2026-06-01 10:00 UTC: post-close-recurrence

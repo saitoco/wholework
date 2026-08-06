@@ -14,7 +14,9 @@
 # Exclusion (Issue #1152): judged per entry, not per group-key, so a resolved symptom
 # and a genuine post-fix recurrence of the same group-key can be told apart.
 #   1. Resolve the group-key's corresponding Issue:
-#      - Prefer the "起票済み #N" marker on any entry in the group (latest occurrence wins).
+#      - Prefer the "起票済み #N" marker on any entry in the group (latest occurrence wins,
+#        determined by comparing entry timestamps -- NOT by file/scan order, since the
+#        recovery log is newest-first and a group-key can carry more than one filed marker).
 #      - Otherwise, look up --issues-json for a title exactly equal to "recoveries: <group-key>".
 #   2. If the resolved Issue's state (from --issues-json) is OPEN: exclude every entry in
 #      the group (the symptom is still being worked, so nothing new can be inferred yet).
@@ -240,12 +242,16 @@ for ((ki = 0; ki < ${#UNIQUE_KEYS[@]}; ki++)); do
   key="${UNIQUE_KEYS[$ki]}"
   resolved_number=""
   latest_filed_ts=""
-  # Entries are appended in file order (chronological), so the last filed marker seen
-  # while scanning is both the authoritative resolution and the latest filed timestamp.
+  # orchestration-recoveries.md is newest-first, so scan order does NOT match chronological
+  # order -- the entry seen last while scanning is the OLDEST one, not the latest. "latest
+  # occurrence wins" (see header comment) means the filed marker with the maximum entry
+  # timestamp, so this compares ENTRY_TS explicitly rather than trusting scan order.
   for ((i = 0; i < ${#ENTRY_KEY[@]}; i++)); do
     if [ "${ENTRY_KEY[$i]}" = "$key" ] && [ -n "${ENTRY_FILED[$i]}" ]; then
-      resolved_number="${ENTRY_FILED[$i]}"
-      latest_filed_ts="${ENTRY_TS[$i]}"
+      if [ -z "$latest_filed_ts" ] || [[ "${ENTRY_TS[$i]}" > "$latest_filed_ts" ]]; then
+        resolved_number="${ENTRY_FILED[$i]}"
+        latest_filed_ts="${ENTRY_TS[$i]}"
+      fi
     fi
   done
 
