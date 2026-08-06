@@ -151,17 +151,16 @@ Nothing to note — PR diff は Spec の Implementation Steps / Changed Files �
 AC3 (rubric "既存の未解決 3 件 (#734 / #735 / #1006) が処理されている、または修正しない判断とその理由が記録されている") の判定に、`rubric` verify command の grader 入力スコープ (`modules/verify-executor.md` により Issue 本文 + git diff + rubric text で明示的に named されたファイルのみ、Spec は対象外) だけでは根拠が不足していた。本 PR の diff は #734/#735/#1006 を一切変更しておらず、修正不要と判断した理由は Spec の Code Retrospective (grader スコープ外) にのみ記録されている。実際の判定は `/review` 実行者が `gh issue view` で #734/#735/#1006 の Post-merge 行を直接確認し、既にチェックボックス形式であることを確認する形で行った — これは grader の正規スコープを超えた追加調査であり、rubric grader 単体では UNCERTAIN になっていた可能性が高い。「他 Issue の外部状態確認」を要求する rubric 条件は、根拠を Spec ではなく Issue 本文または Issue コメントに明示的に記録するよう Issue 起票時に促すと、grader スコープ内で完結できる。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Base Branch Conflict Pre-check (`git merge-tree` 3-引数形式) を実行したが `changed in both` は検出されず (main 側が独立に触った `docs/spec/issue-1175-*.md` は本 PR ブランチ側は無変更のためクリーンマージ) 、conflict context ファイルは作成しなかった
-- REVIEW_DEPTH=light (`--light` 明示指定) のため Step 10.0 の 1 エージェント統合レビューのみ実行し、Workflow path (10.1–10.3 static fan-out や workflow-guidance.md の Workflow tool 経路) は評価対象外とした
-- AC3 の rubric 判定は Spec 記載の根拠だけでなく `gh issue view 734/735/1006` による実地確認を追加で行い PASS と判断した (grader 正規スコープ外の追加検証、詳細は review retrospective 参照)
+- pre-merge AC gate: 3 件すべて checked 済みのため gate 通過 (追加確認や override 記録は不要)
+- `gh-pr-merge-status.sh` は初回 `mergeable=UNKNOWN` を返したため 30 秒待機後リトライし、`mergeable=true, reason=clean` を確認してから squash merge を実行した
+- コンフリクトなし・CI green のため Step 3 (Resolve Conflicts) はスキップし、直接 Step 4 (Execute Squash Merge) に進んだ
 
 ### Deferred Items
-- CONSIDER 指摘 (awk セクション終端判定の簡略化) は対応不要と判断し未修正のまま — 姉妹スクリプト `check-pre-merge-ac.sh` 側の既存の弱点でもあるため、再発した場合は別 Issue で awk パターンの一括見直しを検討
 - Post-merge の observation AC (`session=next`) は今回未発火のため引き続き `/verify` フェーズでの評価待ち
 
 ### Notes for Next Phase
-- Pre-merge AC 3 件すべて PASS、CI 9 ジョブ SUCCESS、MUST/SHOULD なし (CONSIDER 1件のみ) — `/merge 1189` は追加のブロッカーなしで進行可能
+- squash merge 済み、リモートブランチ削除済み。Issue #1156 は `closes #1156` により自動クローズされる想定 (base branch = main)
 - Post-merge AC (observation, session=next) が唯一の未チェック項目。`/verify` 実行時に `session=next` の発火判定に従うこと
