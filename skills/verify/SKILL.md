@@ -196,6 +196,10 @@ For each `ac-tier: preview` AC in this Pre-merge section, using its own 1-based 
 
 If the same URL/UX verification is also needed against the production URL regardless of this fallback (e.g., to cover both a preview-time check and a standing production check), duplicate the AC in the `### Post-merge` section without the `<!-- ac-tier: preview -->` tag; `/verify` will then execute it against `PRODUCTION_URL` (resolved via `{{base_url}}` and the `production-url` key in `.wholework.yml`).
 
+**Already-checked AC skip rule (default; applies to every Pre-merge condition):**
+
+Any Pre-merge condition already at `- [x]` is excluded from verification and recorded as SKIPPED with the note "already checked; skipped by default" (its verify command, if any, is not re-executed). This is the default behavior for every re-run, not limited to `ac-tier: preview` conditions. Conditions still at `- [ ]` are processed as usual by the Verification priority steps below. Projects that need continuous re-checking after merge duplicate the AC in the `### Post-merge` section (see `## Notes`) — no opt-in re-verification flag is provided. This rule does not replace the pre-merge-preview AC skip rule above: for an `ac-tier: preview` condition already at `- [x]`, that rule's own SKIPPED note ("preview-tier AC; verified/checked at /review against preview URL") takes precedence — the two rules do not conflict, they converge on the same SKIPPED outcome via different notes for different reasons.
+
 **Patch route detection (run before verification):**
 
 If PR_NUMBER (from Step 2) is empty and any acceptance condition contains `github_check "gh pr checks"`, treat those conditions as UNCERTAIN with the following guidance:
@@ -308,7 +312,7 @@ Comma-separated multiple indices are supported. Use `--uncheck` to uncheck.
 - SKIPPED conditions → leave as `- [ ]` (not executed due to unmet environment conditions)
 - Cannot auto-verify → leave as `- [ ]` (deferred to user verification)
 - **Post-merge conditions (all types)** → do not update here; post-merge PASS conditions are updated at the end of Step 8
-- **Re-runs**: re-verify all conditions (idempotent). Re-verify even if already checked; report via comment if result changes
+- **Re-runs**: conditions already at `- [x]` are skipped by default per the already-checked AC skip rule in Step 5 (and, for post-merge + hint conditions, Step 8a) and recorded as SKIPPED — they are not re-verified. Only conditions still at `- [ ]` are (re-)verified on every run
 
 ### Step 7: Post-merge Briefing
 
@@ -337,7 +341,9 @@ Process post-merge ACs in two sub-steps, then flip checkboxes for PASS results.
 
 #### Step 8a: Auto-verify Post-merge Conditions with Hints
 
-For post-merge conditions that have `<!-- verify: ... -->` hints, apply the same verification logic as inner Steps 1–4 of Step 5 (CI failure detection, verify command execution via `verify-executor.md`, AI judgment fallback, cannot-auto-verify deferral). Record each result as PASS, FAIL, UNCERTAIN, or PENDING.
+For post-merge conditions that are still `- [ ]` (unchecked) and have `<!-- verify: ... -->` hints, apply the same verification logic as inner Steps 1–4 of Step 5 (CI failure detection, verify command execution via `verify-executor.md`, AI judgment fallback, cannot-auto-verify deferral). Record each result as PASS, FAIL, UNCERTAIN, or PENDING.
+
+Post-merge + hint conditions already at `- [x]` are subject to the same already-checked AC skip rule defined in Step 5: exclude from verification and record as SKIPPED with the note "already checked; skipped by default".
 
 #### Step 8b: Manual Post-merge Conditions
 
@@ -512,7 +518,7 @@ gh issue view "$NUMBER" --json state --jq '.state'
 
 Apply the following judgment based on the verification results (exhaustive):
 
-**(a) All auto-verification target conditions are PASS or SKIPPED (0 FAIL/UNCERTAIN among auto-verification targets; SKIPPED is ignored as environment conditions were unmet):**
+**(a) All auto-verification target conditions are PASS or SKIPPED (0 FAIL/UNCERTAIN among auto-verification targets; SKIPPED is ignored as environment conditions were unmet or the condition was already checked):**
 
 Emit `phase_complete` (phase=verify; only when `AUTO_EVENTS_LOG` is set; restore the pointer first):
 ```bash
@@ -974,3 +980,4 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 - Verification commands are read-only in principle (do not modify the environment)
 - Always wrap variables (`$NUMBER`, etc.) in double quotes
 - Always create and write temp files with the Write tool. Creating or writing temp files via Bash `cat`/`echo`/redirect (`>`) is prohibited (causes confirmation prompts)
+- Conditions already at `- [x]` are skipped by default (Step 5, Step 8a) and not re-verified on subsequent runs. Projects that need a condition to be continuously re-checked after merge should duplicate the same AC text as a separate condition in the `### Post-merge` section, rather than relying on re-verification of an already-checked condition
