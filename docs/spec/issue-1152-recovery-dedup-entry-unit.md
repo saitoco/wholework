@@ -209,3 +209,39 @@ Root Cause の 3 行目 (`run-auto-sub.sh:194-204`) は false negative の一因
 
 ### Notes for Next Phase
 - `/verify 1152` で post-merge の observation AC (`/verify` Step 15 出力で `manual-recovery-review-rerun` / `review-tier3-recovery` が候補から消えていること) を次回 `/auto` セッションで確認すること。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- 本 Issue は Icebox (`icebox:` prefix + 凍結) から解除され、タイトルも `collect-recovery-candidates: 除外判定を entry 単位化し誤検知と再発見落としを同時に解消` へリファインされた。当初の凍結時点では「close 済み group-key の重複起票を抑止」という誤検知側だけの問題として捉えられていたが、リファインで**再発見落とし (post-fix recurrence の取りこぼし)** が同じ根本原因の裏返しであることが特定され、両方を 1 つの Issue で扱う形に整理された。この統合が verify での「1 回の出力比較で両方を同時に実証できる」結果に直結している
+
+#### spec
+
+- 除外判定を group-key 単位から entry 単位へ移す設計により、`--issues-json` に渡すデータを open-only から all-state (`state` + `closedAt` 付き) へ変更する必要が生じ、`skills/verify/SKILL.md` Step 15 の呼び出し側もセットで変更対象に含めた。データ要件の変更が呼び出し元に波及することを spec 段階で捕捉できている
+
+#### code
+
+- Design Gaps として「境界秒精度 (closedAt の分単位切り詰め)」「同一 group-key が複数回起票された場合の rolling cutoff 非対応」を明示的にスコープ外として記録。いずれも本 Issue の主目的 (誤検知/取りこぼしの解消) には影響しない縁のケース
+
+#### review
+
+- review-light で MUST ゼロ、SHOULD 1 件 (`--issues-json` の区切り文字が tab 依存で脆い) を即座に修正してコミット
+- **Spec ファイルの "changed in both" を Base Branch Conflict Pre-check が検出**し、`git merge-file` による 3-way merge 検証をレビューエージェントに依頼してデータ損失なしを確認。並行セッション環境での Spec 競合を検出・検証する経路が機能した
+
+#### merge
+
+- pre-merge AC gate は 9 件全チェック済みで通過、`mergeable=true (clean)` によりコンフリクト解消をスキップして squash merge
+
+#### verify
+
+- **実装前後の出力比較が同一セッション内で取れた**という点で、本バッチで最も明快な検証になった。本日の `/verify 1185` / `1179` / `1156` の Step 15 では一貫して `review-tier3-recovery` (3) と `manual-recovery-review-rerun` (3) が出力されていたが、本 Issue 着地後の Step 15 では両方が消え、代わりに `manual-recovery-respawn` (21) と `code-pr-tier3-recovery` (6) が現れた。誤検知の解消 (前者の消滅) と再発見落としの解消 (後者の出現) が 1 回の比較で同時に確認できている
+- Pre-merge 9 件は機械的検証 (`section_contains` / `file_not_contains` / `github_check` / bats 14 件) と rubric の組み合わせで全 PASS。特に AC 4 の `section_contains "skills/verify/SKILL.md" "Step 15" "closedAt"` は heading 引数に `#` を含めておらず、#1083 の Pattern 6 サブパターン 1 を回避した書き方になっている
+- **`## Phase Handoff` セクションが 2 つ残存している** (`<!-- phase: review -->` と `<!-- phase: merge -->`)。`modules/phase-handoff.md` の仕様は「最新 1 phase のみ保持 (rotation)」であり、merge phase が書き込む際に review phase のセクションを置換すべきだった。review の Key Decisions に記録された Spec の "changed in both" 3-way merge が原因と推測される (並行編集の結果、両方のセクションが残った)。`/verify` の Phase Handoff Read Procedure は最新 1 件を前提とするため、どちらを読むかが曖昧になる
+
+### Improvement Proposals
+
+- **Tier 2 (memory 候補、Issue 化せず)**: `## Phase Handoff` の rotation が並行編集下で破れうる。本 Spec は review 版と merge 版の 2 セクションを保持したまま着地した。`modules/phase-handoff.md` の Rotation boundary detection は「次の `## ` heading まで」を置換範囲とするため、直後に別の `## Phase Handoff` がある場合でも仕様上は正しく置換できるはずで、実際に起きたのは 3-way merge によるセクション重複と考えられる。観測は 1 件のみ、かつ実害は「verify がどちらを読むか曖昧」に留まるため起票は見送る。同種の重複が再発したら phase-handoff 側に重複検出を入れる判断材料にする
+- **注目事項 (本 Issue のスコープ外、起票せず)**: 本 Issue の実装により **`manual-recovery-respawn` が 21 件**あることが初めて可視化された。#1014 (`recoveries: manual-recovery-respawn の再発原因を特定・解消`、CLOSED 2026-07-13) の着地後に積み上がった分であり、同 Issue の対応では再発が止まっていない。ただし根本原因は上流 `anthropics/claude-code` の external kill (`docs/reports/external-kill-investigation.md` および上流の未対応 Issue 3 件) であり、wholework 側の実装で解消できる性質ではないため新規起票はしない。#1191 (`/audit stats --retention` の recovery 頻度セクション) が着地すれば、この数字が定常的に可視化される
