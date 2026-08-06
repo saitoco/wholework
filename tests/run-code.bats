@@ -557,6 +557,28 @@ MOCK
     [ ! -f "$FALLBACK_LOG" ]
 }
 
+@test "pr route: _append_consumed_comments_section not called even when section absent (#1058)" {
+    # Same setup as the patch-route fallback test above (no ## Consumed Comments
+    # section before or after claude), but with --pr: the post-processor must stay
+    # gated off regardless of section state, since the Spec lives on the PR branch
+    # which this main-repository post-exit point cannot observe or safely write to.
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+    printf '%s\n' "# Issue #123: Test" > "$BATS_TEST_TMPDIR/docs/spec/issue-123-test.md"
+
+    FALLBACK_LOG="$BATS_TEST_TMPDIR/fallback.log"
+    export FALLBACK_LOG
+
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { return 0; }
+_emit_comments_consumed() { :; }
+_append_consumed_comments_section() { echo "CALLED \$*" >> "${FALLBACK_LOG}"; }
+MOCK
+
+    run bash "$SCRIPT" 123 --pr
+    [ "$status" -eq 0 ]
+    [ ! -f "$FALLBACK_LOG" ]
+}
+
 @test "AUTO_SESSION_ID resolves from .tmp/auto-session-current when PGID file absent (parent /auto path)" {
     # Issue #791 iteration B: adds .tmp/auto-session-current as a fallback in the
     # AUTO_SESSION_ID resolve chain. Note: as of PR #793 (Issue #770), SKILL.md writes
