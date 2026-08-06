@@ -42,6 +42,7 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 - code (patch route — `scripts/worktree-merge-push.sh`)
 - merge
 - auto (`run-auto-sub.sh`'s recovery-record push, 5 sites — lock+push-only mode variant, no `--from` branch)
+- verify — `skills/verify/SKILL.md` Step 2 runs `git checkout "$BASE_BRANCH"` in the main repository before Worktree Exit (Step 13), so unlike the other phases above (which enter step 2's true-side path only when `<base-branch>` happens to already be checked out in the shared directory), verify **deterministically** satisfies `current_branch == <base-branch>` on every run — it always exercises the true-side rebase fallback described in step 2, not just occasionally (see `docs/reports/orchestration-recoveries.md`'s `manual-recovery-worktree-rebase` entries, of which the majority observed to date are from the verify phase)
 
 ### Fallback Steps
 0. Immediately after `acquire_lock` (before the `--from` merge block): run `git fetch origin <base-branch>` as best-effort — failure emits a warning to stderr but does not abort. This ensures that subsequent ref-fetch and rebase steps reference an up-to-date `origin/<base-branch>` ref rather than a stale local snapshot.
@@ -85,6 +86,7 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 ### Applicable Phases
 - code (commit phase — missing `-s` on `git commit`)
 - merge (pre-merge DCO gate)
+- spec, review, verify — `skills/spec/SKILL.md`, `skills/review/SKILL.md`, and `skills/verify/SKILL.md` each carry the identical `git commit -s ... && git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }` guard on their retrospective/handoff commits; `scripts/detect-wrapper-anomaly.sh`'s `ERROR: missing sign-off` match is phase-agnostic, so the pattern fires identically regardless of which of these phases produced the log
 
 ### Fallback Steps
 1. Identify the commit(s) missing `Signed-off-by` via `git log --format="%H %s" | head -N`
@@ -414,6 +416,7 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ### Applicable Phases
 - code (patch route)
+- merge, review — the underlying `detect-wrapper-anomaly.sh` `silent-no-op` check (`EXIT_CODE == 0` branch) is phase-agnostic; the dedicated `_merge_pr_confirmed_merged` / `_review_confirmed_posted` live checks documented under "Exception Condition" below exist specifically to prevent this same pattern from false-firing on the merge and review phases, confirming both are reachable applicable phases, not just code (patch route)
 
 ### Fallback Steps
 1. Retry `run-code.sh <issue> --patch` once (skipped when `run-code.sh`'s built-in `auto-retry-on-fail` has already exhausted its retries, to avoid double-retry)
