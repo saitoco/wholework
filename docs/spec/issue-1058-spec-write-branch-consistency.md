@@ -255,22 +255,40 @@ Size は既に `L` (変更なし)。タイトルとの意味的乖離は検出�
 
 - The `-n` guard fix above was the only rework cycle: full-suite `bats tests/` surfaced the `tests/run-verify.bats` failure, root-caused to the missing guard, fixed, and the full suite re-run clean (1443/1443).
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- The code phase's own Code Retrospective claimed "Deviations from Design: None" while the implementation actually diverged from the Spec's Implementation Steps in three places (post-processor gate axis `ROUTE_FLAG`→`_PR_NUM`; safety-net call position moved from before to after the commit, ×2 SKILL.md sites). The divergence was real but was categorized as "not a design deviation" because it was framed as an in-scope refinement rather than a plan change — this is exactly the kind of self-assessment gap `skills/code/SKILL.md` Step 12 item 4's "update Spec Implementation Steps to match" rule exists to catch, and it was missed at code-phase time. Recommendation: when future review passes find a Spec/implementation mismatch that the Code Retrospective already claims doesn't exist, treat the Retrospective's own "Deviations: None" as a signal worth double-checking, not as evidence the search is unnecessary.
+- This PR is itself about eliminating a documentation/implementation split (Spec write-destination inconsistency), and `/review` found the PR's own newly-added documentation (the "Spec file write destination" exhaustive table, the "all in-session callers pass --no-push" claim) had internal self-contradictions on the same axis — new prose asserting completeness/consistency that wasn't actually complete/consistent. Worth naming as a category: "exhaustive-marker" tables and absolute claims ("all", "always") are exactly the phrasing that HIGH SIGNAL review should stress-test hardest, since they're falsified by a single missing case.
+
+### Recurring issues
+
+- Two independent review-bug agents (diff-scan and security-scan) both surfaced the `modules/worktree-lifecycle.md` exhaustive-table gap and the `scripts/run-code.sh:345` stale-`ROUTE_FLAG` inconsistency independently, from different angles — confirms the 2-lens review-bug fan-out has real recall value beyond a single pass, at least for this PR's size/shape.
+- `gh-pr-review.sh`'s `HAS_MUST` detection requires each line-comment JSON object to carry an explicit `"severity"` field (documented in the script's own header comment); a line-comments JSON built with severity only embedded in the comment body text (not as a JSON key) silently defaults to `EVENT="COMMENT"` with no error. This is an easy transcription mistake since the severity is *also* human-readable inside the body text, making the omission easy to miss. Separately, and independently of that mistake: the GitHub Pull Request Reviews API rejects `REQUEST_CHANGES` on your own PR (`422 Unprocessable Entity: "Review Can not request changes on your own pull request"`) — a hard platform constraint for any single-maintainer / self-hosted repo where the reviewer and PR author are the same GitHub account. `gh-pr-review.sh` has no handling for this case; a correctly-populated `severity` field would still have hit the same 422 and, per the script's current `|| { echo Error; exit 1; }` handling, aborted the entire review post (comments included) rather than degrading gracefully to `COMMENT`. Both points are worth an improvement proposal for `/verify` to aggregate: (1) `gh-pr-review.sh` should catch the self-review 422 specifically and retry with `event=COMMENT` instead of failing the whole post, and (2) the MUST-issue visibility that `REQUEST_CHANGES` provides needs a non-event-based fallback (e.g. a bolded banner in the review body) for the self-review case, since the event field cannot carry that signal here.
+
+### Acceptance criteria verification difficulty
+
+- Nothing to note. Both Pre-merge conditions used `rubric` verify commands with self-contained, unambiguous text; grading against the worktree's modified files was straightforward and did not surface any UNCERTAIN cases.
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Kept the Spec's designed approach (Candidate B, in-session mandatory `--no-push` calls) unchanged — no implementation-time deviation was needed.
-- Added a non-empty guard to the main-tree push-routing check in `append-consumed-comments-section.sh` (matching the existing defense-in-depth warning check's guard) after `tests/run-verify.bats` exposed the gap; this is a defensive-programming fix within Implementation Step 1's scope, not a design change.
+- Fixed all 10 review findings (1 MUST, 5 SHOULD, 4 CONSIDER) in-cycle rather than deferring SHOULD/CONSIDER items, since all 10 were defects in content this PR itself introduced (not pre-existing debt) and were individually small/low-risk.
+- Split fixes into 7 commits grouped by file/finding-cluster rather than one commit per finding, to keep the `Refs:` traceability rule satisfied without excessive commit churn.
+- Did not attempt to force `event=REQUEST_CHANGES` after discovering GitHub blocks it for self-authored PRs; the MUST issue's visibility relies on the review body text and this response summary instead. See "Recurring issues" above for the proposed tooling fix.
 
 ### Deferred Items
 
-- Same three items as the Spec Phase Handoff (unchanged from spec phase): worktree-session main-repository write audit spun out to a future Issue; `/verify`'s own `--no-push` adoption (residual `origin/worktree-verify+issue-*` branches) out of scope; patch-route pre/post count fallback mis-fire left unfixed (idempotent, harmless).
-- #1078 (SKILL.md step-order path) remains untouched, as scoped. See Design Gaps/Ambiguities above for a first-hand reproduction of the defect it will need to fix.
+- Same items as the code-phase Phase Handoff (now superseded by this rotation, so restated here): worktree-session main-repository write audit spun out to a future Issue; `/verify`'s own `--no-push` adoption (residual `origin/worktree-verify+issue-*` branches) out of scope; patch-route pre/post count fallback mis-fire left unfixed (idempotent, harmless); #1078 (SKILL.md step-order path) untouched, as scoped.
+- `skills/spec/SKILL.md` Step 14's `ENTERED_WORKTREE=false` branch still issues a bare `git push origin main` instead of routing through `worktree-merge-push.sh` — newly documented as a Known gap in `modules/worktree-lifecycle.md` during this review's MUST fix, but not itself fixed (pre-existing, out of #1058's scope).
+- `gh-pr-review.sh`'s missing `severity`-field validation and its lack of self-review-422 handling (see "Recurring issues" above) — not fixed here; flagged for `/verify`'s improvement-proposal aggregation.
 
 ### Notes for Next Phase
 
-- Pre-merge AC 1 and 2 are both checked (rubric PASS, judged in-session per `modules/verify-executor.md` full mode against the worktree's own modified files).
-- Post-merge AC (observation, `event=auto-run when=route:pr session=next`) is unresolved by design — it activates on the next pr-route `/code` run after this PR merges. `/verify` should treat it as SKIPPED (unfired) rather than attempt evaluation now.
-- Full `bats tests/` (1443 tests), `validate-skill-syntax.py`, `check-forbidden-expressions.sh`, and `check-allowed-tools.sh` all passed clean on the final commit.
-- A stray uncommitted edit was left in the main repository's working tree (see Design Gaps/Ambiguities) — reconciled after Worktree Exit; `/review` and `/merge` should see a clean main-repo status caused by this PR's own commits only.
+- Pre-merge AC 1 and 2 remain PASS (re-verified against the fix commits' final state; both rubric conditions still hold).
+- Post-merge AC (observation, `event=auto-run when=route:pr session=next`) is unchanged — still unfired, still SKIPPED by design.
+- Full `bats tests/` (1443 tests), `validate-skill-syntax.py`, `check-forbidden-expressions.sh`, and `check-allowed-tools.sh` all passed clean after the fix commits.
+- `/merge` should see 9/9 CI SUCCESS on the final commit (re-verified after push).
