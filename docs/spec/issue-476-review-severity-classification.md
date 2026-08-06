@@ -10,6 +10,10 @@
 - saito / MEMBER / first-class / 前回 `/verify 476` (2026-08-06 re-run) 実行結果。Pre-merge 2 件 PASS、Post-merge observation (event=pr-review-light) は PR #1189 の diff に該当欠陥なしのため UNCERTAIN / https://github.com/saitoco/wholework/issues/476#issuecomment-5199963258
 
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5200100852
+
+### verify フェーズ (2026-08-06 re-run #4, cutoff: 2026-06-14T21:50:38Z)
+
+- saito / MEMBER / first-class / 前回 `/verify 476` (2026-08-06 re-run #3) 実行結果。Pre-merge 2 件 SKIPPED (already checked)、Post-merge observation (event=pr-review-light) は PR #1193 の diff に該当欠陥なしのため UNCERTAIN。3回連続の再現により起票水準に達したと記録 / https://github.com/saitoco/wholework/issues/476#issuecomment-5200610461
 ## 背景
 
 `/review` の MUST/SHOULD 分類基準に「対象実行環境で決定的に失敗する欠陥は MUST」というルールを明文化する。Spec フェーズなしで直接実装（Issue 本文から要件を読み取り）。
@@ -106,4 +110,14 @@
 
 ### Improvement Proposals
 - 3回連続の再現により、「observation event の fired 状態が一度確定すると恒久化し、無関係な PR の `/review --light` 完了のたびに証拠不十分な UNCERTAIN 判定が繰り返される」問題は偶発ではなく構造的パターンと判断する。observation-trigger の event 定義に「diff 内容が特定パターン (CI/ワークフロー変更など) にマッチする場合のみ発火」という絞り込み条件を追加するか、この post-merge AC 自体を「該当欠陥を含む PR が review された際に限り評価する」形に見直すことを follow-up Issue として起票する価値がある水準に達した。判断は Step 16 (retro-proposals) に委ねる
+
+## Verify Retrospective (2026-08-06 re-run #4)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 Issue の `/verify` は `/review --light` (PR #1195, Issue #1076) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED (再検証なし)。Post-merge observation は fired 状態を再確認したが、今回の発火元 PR #1195 の diff (`scripts/worktree-merge-push.sh`, `modules/orchestration-fallbacks.md`, `docs/spec/issue-1076-*.md`, `tests/worktree-merge-push.bats` — git merge/rebase fallback ロジックの変更) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず、re-run〜re-run #3 と同じ UNCERTAIN 判定に帰着した。**4回連続**の再現であり、`event=pr-review-light` が診断対象の PR diff 内容を一切問わず発火する設計であることが確定的に裏付けられた
+
+### Improvement Proposals
+- 4回連続の再現 (re-run〜re-run #3 に続く4件目) を受け、re-run #3 で「起票水準に達した」と判定した follow-up Issue を本 `/verify` の Step 16 (retro-proposals) で実際に起票する。関連 Issue #1118 (`observation: observation AC に実行文脈条件を宣言し観察不能な dispatch を抑止`) は `event=auto-run` の route/mode/recovery-tier 系文脈フィルタを scope としており、本件が必要とする「レビュー対象 PR の diff 内容によるフィルタ」(CI/ワークフロー変更パターンの有無) とは軸が異なるため、#1118 では塞がらない — 別 Issue として起票する
 
