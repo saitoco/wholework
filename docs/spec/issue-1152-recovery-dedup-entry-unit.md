@@ -196,3 +196,16 @@ Root Cause の 3 行目 (`run-auto-sub.sh:194-204`) は false negative の一因
 ### Notes for Next Phase
 - `/merge 1198` の前提条件はすべて満たされている (MUST issue ゼロ、CI 全通過、AC 全 PASS)。
 - Post-merge の observation AC (`/verify` Step 15 出力で `manual-recovery-review-rerun` / `review-tier3-recovery` が候補から消えていること) は次回 `/auto` セッションで確認すること。
+
+## Phase Handoff
+<!-- phase: merge -->
+
+### Key Decisions
+- pre-merge AC ゲート (9件全チェック済み) と review-incomplete-fallback チェック (fallback 未発生) を確認し、ゲートを通過。
+- `gh-pr-merge-status.sh` で mergeable=true (clean) を確認したため、コンフリクト解消ステップはスキップし、そのままスクワッシュマージを実行した。
+
+### Deferred Items
+- なし。review フェーズからの Deferred Items (境界秒精度、group-key 複数回起票時の rolling cutoff、#1191 側の `--with-tracking` 消費検証) はそのまま持ち越し。
+
+### Notes for Next Phase
+- `/verify 1152` で post-merge の observation AC (`/verify` Step 15 出力で `manual-recovery-review-rerun` / `review-tier3-recovery` が候補から消えていること) を次回 `/auto` セッションで確認すること。
