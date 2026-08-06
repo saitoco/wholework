@@ -101,4 +101,65 @@ Post-merge の手動確認 AC は、実行主体 (`/review` からの `gh-pr-rev
 
 ### Notes for Next Phase
 - `/code` フェーズ開始時に `phase/ready` ラベルが不在だった (詳細は Notes > Auto-Resolve Log を参照)。Spec は既存のものを使用しており内容の欠落はない。
+  - **verify フェーズによる訂正 (2026-08-06)**: この記述は GitHub timeline と矛盾する。実測は下記 Verify Retrospective § verify を参照。
 - patch route のため `/review` は実行されない。push 後の CI (`test.yml`) 結果が AC5 の判定材料となる。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec (issue フェーズ由来 — 受入条件の品質)
+
+- `/issue` の AC Verify Command Integrity Audit が 2 件の欠陥 (AC2 の常時 PASS、AC5 の patch route × `gh pr checks` 不整合) を独立に検出し、バッチ投入前に人手で行った修正と結論が完全に一致した。監査ロジックが人手の判断を再現できていることの確認材料になる。
+- ただし監査は non-destructive (本文未編集 + コメント報告のみ) であるため、人手の事前修正がなければ欠陥 AC のまま `/spec` 以降に流れていた。Size S の非対話実行では「検出したが直さない」状態が次フェーズまで残る。
+
+#### design
+
+- 外部仕様 (`gh api` のエラー出力形式) を実測で確認し、先頭語の大文字小文字が不安定な可能性を踏まえて判定部分文字列から先頭語を除外する設計にしていた。この判断は実装・テストの両方でそのまま活き、手戻りゼロにつながっている。
+- `else` 分岐 (line comments なし) を対象外とする判断も、`EVENT="REQUEST_CHANGES"` の代入が `if [ -n "$LINE_COMMENTS_FILE" ]` ブロック内にしか存在しないことを verify で独立確認でき、正しかった。
+
+#### code
+
+- 手戻りゼロ。Implementation Steps 1–4 をそのまま実装し、bats 21 件が初回 PASS。
+- **Auto-Resolve Log に事実と異なる診断が記録された** — 下記 verify を参照。
+
+#### review
+
+- patch route (Size S) のため `/review` は実行されていない。
+
+#### merge
+
+- patch route のため `/merge` は実行されていない。orchestration recovery の記録も `docs/reports/orchestration-recoveries.md` に本 Issue 分ゼロで、フェーズ異常なく完走した。
+
+#### verify
+
+**1. AC5 の `$(git rev-parse HEAD)` は CI run の存在を保証しない (2 回目の観測)**
+
+AC5 の verify command は `gh run list --workflow=test.yml --commit=$(git rev-parse HEAD)` の形をとる。今回 PASS したが、成立は偶然に依存していた。
+
+- 実装コミット `a1bb7d68` には CI run が**存在しない** (`gh run list --commit=a1bb7d68...` が空)。GitHub Actions は push の先頭コミットにのみ run を作るため、run が付いたのは同一 push の末尾 `5aa41ecc` (retrospective コミット) だった。
+- `/verify` の worktree がたまたま `5aa41ecc` から分岐したため `git rev-parse HEAD` が run 付きコミットに解決し PASS した。並行セッションが main を進めた後に worktree を作っていれば、HEAD は run のないコミットに解決し、出力が空 → FAIL/UNCERTAIN になっていた。
+- 同じ脆弱性は #1133 の Verify Retrospective でも記録済みで、これが 2 回目の観測。
+
+**2. `/code` の Auto-Resolve Log に事実と異なる precondition 診断が記録された**
+
+Spec の Notes > Auto-Resolve Log および Phase Handoff > Notes for Next Phase に「`/code` フェーズ開始時点で `phase/ready` ラベルが不在だった (現ラベルは `phase/code` — 過去の `/code` 実行が worktree 未作成のまま中断したことを示唆するレジューム状態と判断)」と記録されている。これは GitHub timeline と矛盾する。
+
+実測 (`gh api repos/saitoco/wholework/issues/1102/timeline`):
+
+| 時刻 (UTC) | イベント |
+|---|---|
+| 12:32:09 | `phase/spec` → `phase/ready` (`/spec` 完了) |
+| 12:35:40 | `/code` 開始 (wrapper ログ) |
+| 12:37:17 | `phase/ready` → `phase/code` (`/code` 自身の遷移) |
+
+`phase/ready` は 12:32:09〜12:37:17 の全区間で存在しており、`/code` 開始から自身のラベル遷移までのどの瞬間でも present だった。また `phase/code` のラベル付けは timeline 全体で 12:37:17 の 1 回のみで、**過去に中断した `/code` 実行は存在しない** — レジューム状態という診断は事実無根。
+
+`skills/code/SKILL.md` の順序自体は正しい (Step 3 で `phase/ready` 確認 → precondition check → line 187 で `code` へ遷移)。したがって順序バグではなく、retrospective 執筆時点 (13:10 UTC、ラベルは既に `phase/code`) に観測した状態をフェーズ開始時点の状態として遡及的に記述した可能性が高い。
+
+実害は生じていない (「既存 Spec を破棄せず続行」という結論自体は正しかった) が、Spec は後続フェーズと cross-session audit が読む SSoT であり、存在しない実行履歴が書き込まれるのは誤誘導のリスクがある。
+
+### Improvement Proposals
+
+1. **`github_check "gh run list --commit=$(git rev-parse HEAD)"` パターンを patch route の推奨形から外す** — 実装コミットではなく push 末尾コミットにしか run が付かないため、`--commit=$(git rev-parse HEAD)` は「HEAD がたまたま push 末尾と一致するか」に依存する。`gh run list --workflow=test.yml --branch=main --limit=1` (最新 run を見る) か、Issue 番号でコミットを引いてから push 末尾を解決する形が頑健。`modules/verify-classifier.md` の patch route 置換例および `skills/issue/SKILL.md` の supported commands 記載が発生源。#1133 に続き 2 回目の観測。
+2. **フェーズ開始時点の状態を retrospective に書く際、執筆時点の再観測ではなく開始時に取得した値を使う** — `/code` が「開始時点で `phase/ready` 不在」と記録したが timeline と矛盾した。フェーズ開始時のラベル/状態は Step 3 で既に取得しているので、その値を保持して retrospective に渡す運用にすれば遡及的な再観測による齟齬を防げる。`modules/measurement-scope.md` の計測スコープ規約に「時点の明示」を追加する形が自然。
