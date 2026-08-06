@@ -251,8 +251,9 @@ is written, and both target the same working branch per `modules/worktree-lifecy
 "Spec file write destination" — the primary layer always does, and the secondary layer only
 fires where it can safely reach that branch:
 - **Primary (in-session, all phases):** `SKILL.md` for `/spec`, `/code`, and `/verify` each
-  contain an explicit `bash` call to `append-consumed-comments-section.sh` (`/spec` Step 13,
-  `/code` Step 12, `/verify` Step 4) after the LLM's comment consumption
+  contain an explicit `bash` call to `append-consumed-comments-section.sh` (`/spec` Step 12,
+  unconditionally so it also covers `SPEC_DEPTH=light` runs where Step 13 is skipped; `/code`
+  Step 12; `/verify` Step 4) after the LLM's comment consumption
   step, ensuring deterministic writeback regardless of prose execution. `/spec` and `/code`
   pass `--no-push` — the commit lands on the working branch and reaches base only through
   that phase's own Exit path (see the table in `worktree-lifecycle.md`).

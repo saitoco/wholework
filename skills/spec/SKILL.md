@@ -763,6 +763,20 @@ git commit -s -m "Add design for issue #$NUMBER"
 git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
 ```
 
+**Consumed Comments safety net (mandatory, after the commit above, all SPEC_DEPTH values)**: run
+```bash
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh $NUMBER spec --no-push
+```
+This is the in-session safety net for the `## Consumed Comments` section on the worktree
+branch (see `modules/worktree-lifecycle.md` § "Spec file write destination"). It runs here
+— unconditionally, unlike Step 13 below — so that it also fires for `SPEC_DEPTH=light` runs
+(Step 13 is skipped entirely when `SPEC_DEPTH=light`, so a call placed there would never run
+on that path). Running it after the commit above — rather than before — avoids the script's
+own commit (which fires whenever the Spec has an unstaged diff) sweeping the not-yet-committed
+title-drift edit into a commit titled "Add consumed comments fallback ..."; when it does fire
+here, it lands as its own separate commit instead. `--no-push` is required — base propagation
+happens via Step 14's `worktree-merge-push.sh`.
+
 ### Step 13: Spec Retrospective
 
 **SPEC_DEPTH=full only. Skip if SPEC_DEPTH=light.**
@@ -828,17 +842,9 @@ Reflect on the specification phase and present improvement suggestions to the us
    ```bash
    git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
    ```
-6. **Consumed Comments safety net (mandatory, after the commit above)**: run
-   ```bash
-   bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh $NUMBER spec --no-push
-   ```
-   This is the in-session safety net for the `## Consumed Comments` section on the worktree
-   branch (see `modules/worktree-lifecycle.md` § "Spec file write destination"). Running it
-   after the commit above — rather than before — avoids the script's own commit (which fires
-   whenever the Spec has an unstaged diff) sweeping the not-yet-committed retrospective/handoff
-   edits into a commit titled "Add consumed comments fallback ..."; when it does fire here, it
-   lands as its own separate commit instead. `--no-push` is required — base propagation happens
-   via Step 14's `worktree-merge-push.sh`.
+
+(The Consumed Comments safety net call runs unconditionally in Step 12, not here, so that it
+also covers `SPEC_DEPTH=light` runs where this step is skipped entirely.)
 
 ### Step 14: Worktree Exit (merge-to-main)
 
