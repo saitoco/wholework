@@ -211,7 +211,7 @@ if [[ $EXIT_CODE -eq 0 && -n "${AUTO_EVENTS_LOG:-}" ]]; then
   if [[ -n "$_run_id" ]]; then
     _log=$(gh run view "$_run_id" --log 2>/dev/null || true)
     _total=$(echo "$_log" | grep -oE "1\.\.[0-9]+" | grep -oE "[0-9]+$" | head -1 || echo 0)
-    _failed=$(echo "$_log" | grep -c "not ok ") || _failed=0
+    _failed=$(echo "$_log" | grep -cE "(^|[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]+Z )not ok ") || _failed=0
     if [[ "${_total:-0}" -gt 0 ]]; then
       _passed=$((_total - _failed))
       emit_event "test_result" "phase=merge" "framework=bats" "source=ci" "passed=${_passed}" "failed=${_failed}" "run_id=${_run_id}"

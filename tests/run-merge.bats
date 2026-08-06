@@ -504,6 +504,47 @@ MOCK
     grep -q "passed=2" "$EMIT_LOG"
 }
 
+@test "test_result: passing test description containing 'not ok' substring is not counted as a failure" {
+    EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
+MOCK
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "run" && "$2" == "list" && "$*" == *"--workflow=test.yml"* ]]; then
+  echo "99999"
+  exit 0
+fi
+if [[ "$1" == "run" && "$2" == "view" && "$*" == *"--log"* ]]; then
+  echo "1..1"
+  echo "ok 5 some test about not ok lines"
+  exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".headRefName"* ]]; then
+    echo "pr-feature-branch"
+  elif [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".state"* ]]; then
+    echo "MERGED"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    grep -q "source=ci" "$EMIT_LOG"
+    grep -q "failed=0" "$EMIT_LOG"
+    grep -q "passed=1" "$EMIT_LOG"
+}
+
 @test "test_result: SUCCESS run query uses PR branch with --status=success" {
     RUN_LIST_LOG="$BATS_TEST_TMPDIR/run-list-args.log"
 
