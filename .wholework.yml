@@ -6,6 +6,9 @@ autonomy: L3
 next-cycle-seed:
   enabled: true
 verify-max-iterations: 3
+# #1163 系 (manual AC 再型付け) は 1 フェーズで 29 Issue 分の L0 変更を行うため、
+# code フェーズ既定 4680s (scripts/watchdog-defaults.sh) では不足しうる。
+watchdog-timeout-code-seconds: 7200
 auto-retry-on-fail:
   enabled: true
   threshold: 3
