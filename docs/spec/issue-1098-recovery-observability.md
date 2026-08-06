@@ -83,3 +83,33 @@
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 2026-08-06 の issue retrospective コメント (`/issue` フェーズでの Background 拡張・AC 拡張・タイトル更新の記録)。内容は既に Issue 本文に統合済みのため、本 Spec への追加のアクションなし / https://github.com/saitoco/wholework/issues/1098#issuecomment-5200911003
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1〜4 を記載順のまま実装した。追加ハンドラ・追加ファイルの変更なし
+
+### Design Gaps/Ambiguities
+
+- Spec の Changed Files は `modules/orchestration-fallbacks.md` の書き換え対象を `### Tier 2 bash path` セクションのみ列挙していたが、直後の `### Tier 3 bash path` セクションが「成功パスのみ」を説明しており、本 Issue で追加した Tier 3 の失敗パス emit (`result=failed action=<action>`) を反映していなかった。Tier 2/Tier 3 の記述が非対称になるとドキュメントドリフトの温床になるため、Tier 3 側にも失敗パスの説明を 1 段落追加した (Changed Files に明記されていないスコープ微増だが、Root Cause で指摘されている「見出しと本文の矛盾」の再発防止に資すると判断)
+
+### Rework
+
+- N/A — 各 Implementation Step は初回実装でテストが通過し、手戻りは発生しなかった。`write_recovery_entry()` の動作は bats フィクスチャに加えて `.tmp/` 配下に一時 git リポジトリを作り実際にファイルへ追記されることを手動確認した (テストへの組み込みはしていない使い捨て検証)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Tier 2 の 3 ハンドラすべてを `if handler; then ...; else exit 2; fi` の形に統一し、`set -e` 環境下でも「anchor matched but handler failed」を確実に exit 2 として捕捉できるようにした (if 条件内の関数呼び出しは set -e の即時終了を抑制する bash の仕様を利用)
+- `apply-fallback.sh` に Tier 3 (`spawn-recovery-subagent.sh`) と同型の `write_recovery_entry()` を追加し、`run-auto-sub.sh` 側ではなく handler 側 (呼び出される側) で永続記録を書き込む設計にした。理由: 記録の粒度 (どのハンドラがどの anchor で成功したか) を最も詳しく知っているのは handler 自身であり、Tier 3 の既存設計とも対称になる
+- Tier 3 の失敗パス emit は `action=abort` に限定せず、`.tmp/recovery-plan-<issue>-<phase>.json` が残っていればその `action` を読み取り (無ければ `unknown`)、Tier 3 呼び出し後のあらゆる非ゼロ終了を一律 `result=failed` として emit する設計を採用した (Spec Notes に記載の判断を踏襲)
+
+### Deferred Items
+- Post-merge AC (Tier 3 abort の実地再現、Tier 2 発火の実地再現) は `/verify` フェーズで確認する。ローカルではモックによる bats テストのみ実施した
+- `docs/reports/orchestration-recoveries.md` への Tier 2 実記録が実際の `/auto` 実行で正しく機能するかは、pre-merge 時点ではモック環境でのみ検証済み
+
+### Notes for Next Phase
+- Review フェーズでは、`apply-fallback.sh` の `write_recovery_entry()` と `spawn-recovery-subagent.sh` の同名関数が別ファイルの別実装である点 (意図的な重複、共通化はスコープ外) を混同しないよう注意
+- `tests/apply-fallback.bats` の dco-signoff protected-branch テスト2件を `-ne 0` から `-eq 2` に変更した点は、既存アサーションの意味論変更 (「失敗した」→「anchor matched but handler failed」への精緻化) であり、後方互換性を壊す変更ではない
