@@ -56,9 +56,11 @@ false 側は rebase 対象に `origin/${BASE_BRANCH}` を使う (`git fetch . <f
 
 - saito (MEMBER, first-class, 2026-08-06T05:45:45Z): `/issue` フェーズの Issue Retrospective。Background の技術的主張がコードベースと一致していることの確認、rebase 対象 ref を `origin/${BASE_BRANCH}` とした Auto-Resolve 判断の理由、AC 分類・rubric-only 維持の判断、Size=M のため sub-issue splitting 対象外という Step 12 のスコープ判定を記録。内容は Issue 本文の Auto-Resolved Ambiguity Points に既に反映済み。 (https://github.com/saitoco/wholework/issues/1076#issuecomment-5200858512)
 - saito (MEMBER, first-class, 2026-08-06T05:49:22Z): 「spec への申し送り」— Issue 本文の Auto-Resolved Ambiguity Points が rebase 対象を両経路とも `origin/${BASE_BRANCH}` に統一した点について、true 側は ff 判定基準がローカル checkout の HEAD であるため `origin/${BASE_BRANCH}` では窓を塞ぎきれない (特に本スクリプト自身の in-place merge → push の間、ローカル base が origin より 1 コミット先行する窓) ことを指摘し、true 側限定でローカル `${BASE_BRANCH}` へ rebase する案 (A) を推奨。本 Spec はこの推奨を採用し、Issue 本文の Auto-Resolved Ambiguity Points を true 側について修正する (Notes 参照)。 (https://github.com/saitoco/wholework/issues/1076#issuecomment-5200883050)
+- saito (MEMBER, first-class, 2026-08-06T06:18:51Z, code フェーズで消費): 2026-08-06 に #1180/#1179 の `/verify` で本 Issue が扱う経路の FF 失敗が 2 件実測され、`docs/reports/orchestration-recoveries.md` に `manual-recovery-worktree-rebase` として記録済みであることを報告。根本原因・再発条件・手動復旧手順は本 Spec の Root Cause / Implementation Steps と一致しており、新たな要件変更はなし。実装への影響なし (追加の実測証跡として記録のみ)。 (https://github.com/saitoco/wholework/issues/1076#issuecomment-5201097457)
 
-- saito / MEMBER / first-class / ## 実測: 2026-08-06 に 2 セッションで再発、根本原因を特定 / https://github.com/saitoco/wholework/issues/1076#issuecomment-5201097457
-## Notes
+## Autonomous Auto-Resolve Log
+
+- **Step 3 (`phase/ready` label check)**: Issue #1076 のラベルは `phase/ready` ではなく既に `phase/code` (2026-08-06T06:10:35Z に遷移済み)。`reconcile-phase-state.sh code-pr 1076 --check-precondition` も `matches_expected: false` (`phase/ready` 不在) を報告した。しかし `docs/spec/issue-1076-worktree-merge-rebase-fallback.md` は既に `/spec` フェーズで完成済み (Implementation Steps・Verification・Notes まで記載) であり、ラベル不整合は前回セッションが Step 4 のラベル遷移まで実行して中断した状態と推定される。非対話モードの auto-resolve ポリシーに従い、既存 Spec を正として実装を継続する (Spec なしでの Issue 本文直読みにはフォールバックしない — 完成済み Spec が存在するため)。
 
 ### Auto-Resolved Ambiguity Points の修正 (true 側の rebase 対象 ref)
 
@@ -84,3 +86,48 @@ Issue 本文の `## Auto-Resolved Ambiguity Points` は、新たに追加する 
 ### 外部仕様確認のスキップ理由
 
 Implementation Steps で使う `git merge-base --is-ancestor` / `git -C <path> rebase <ref>` / `git merge --ff-only` はいずれも `scripts/worktree-merge-push.sh` の false 側で既に使用され、既存 bats テストで動作が検証済みのプリミティブである。true 側への適用は同じプリミティブを異なる ref・異なる条件分岐で再利用するのみで新規の外部仕様調査は不要と判断した (`skills/spec/external-spec.md` の適用対象だが、既存実装による実証で代替)。
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1-4 をそのまま実装した。共有関数名は Spec で明記されていなかったため `rebase_from_branch_onto(target_ref)` と命名した (Implementation Steps の意図した引数名「対象 ref」をそのまま反映)。
+
+### Design Gaps/Ambiguities
+- なし。
+
+### Rework
+- なし。既存の false 側ロジックをそのまま `rebase_from_branch_onto()` に切り出し、true/false 両呼び出し元は引数 (ローカル `$BASE_BRANCH` / `origin/${BASE_BRANCH}`) のみを差し替える形で 1 回で実装が収束した。既存 19 bats ケースと新規 2 ケースを合わせて 21 件が green (`bats tests/worktree-merge-push.bats`)。behavioral change detection (`modules/orchestration-fallbacks.md` を `tests/run-auto-sub.bats`/`tests/orchestration-fallbacks.bats` も参照) により `bats tests/` full suite (1432+ 件) も green を確認した。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Base Branch Conflict Pre-check (`git merge-tree`) が本 Issue の Spec ファイル自身に対する `changed in both` コンフリクトを検出。`origin/main` を PR ブランチへ merge し、重複する base 側の 1 行 (Consumed Comments に既出の内容) を破棄する形で解消した (MUST)
+- `modules/orchestration-fallbacks.md` の新規 Rationale 文言 (push retry loop が true 側の local base lag を解決済みと主張) を、実機検証 (force refspec でも checked-out branch への `git fetch .` は exit 128 で拒否される) に基づき訂正 (SHOULD)。push retry loop 自体のコード修正は本 PR のスコープ外 (#1076 以前から存在する既知のギャップとして文書化のみ)
+
+### Deferred Items
+- Post-merge AC (opportunistic): 並行セッションが base に commit している状況で `/verify` を実行し、Worktree Exit が手動介入なしに完了することの実地確認は post-merge に委ねる (code phase から継続)
+- push retry loop の true-side checked-out gap (`git fetch . "+<from>:<base>"` が exit 128 で拒否される) 自体の修正は未着手。起票は `/verify` 側の判断に委ねる (review retrospective の Improvement Candidate 参照)
+
+### Notes for Next Phase
+- PR ブランチは `/review` の Step 12 で `origin/main` を merge 済み (2 コミット: コンフリクト解消 + Rationale 訂正)。`/merge` 時点で改めて conflict が生じている場合は、その間に main が再度進んだ可能性がある
+- `/review` の PR Review は `COMMENT` イベントで投稿されている (self-review のため `REQUEST_CHANGES` は GitHub API が 422 で拒否) — MUST issue の有無は review body 本文と inline comment の文言で確認すること。branch protection が `REQUEST_CHANGES` の解消を要求する設定の場合は影響しうる
+- `bats tests/` full suite の実行時間は 10 分を超える場合がある (前回はバックグラウンド実行で完走)。今回の review 修正はドキュメントのみのため bats は再実行していない
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Issue 本文の Auto-Resolved Ambiguity Points (true 側 rebase 対象 ref = `origin/${BASE_BRANCH}`) と Phase Handoff / 実装 (ローカル `$BASE_BRANCH`) は一見矛盾するが、Spec の Consumed Comments に人間 (saito) による明示的な override 承認とその技術的根拠が記録されており、`modules/orchestration-fallbacks.md` の Rationale にも反映済みだった。意図的かつ文書化された設計判断であり、spec deviation としては扱わなかった。Issue 本文の Auto-Resolved Ambiguity Points 自体は当初案のまま残っており実装と食い違って見える — Spec 側で override が明記されていたからこそ `/review` が正しく判別できた。Issue 本文側も override 後の結論に更新しておくと、Spec を読まずに Issue だけを見た読者の誤解を防げる (今回は実害なし、次回以降 override 発生時の一般的な留意点として記録)。
+
+### Recurring issues
+
+Base Branch Conflict Pre-check (`git merge-tree`) が、この Issue 自身の Spec ファイル (`docs/spec/issue-1076-worktree-merge-rebase-fallback.md`) に対して実際のコンフリクトを検出した — 別セッションが `main` に「consumed comments fallback」コミット (`623c2371`) を同一箇所へ追加していたため。本 Issue の主題 (並行セッションによる base 分岐への対処) が、レビュー中の Spec ファイル自身にメタ的に再現した形。Pre-check が正しく機能し、`/review` の Step 12 で手動 merge + コンフリクト解消 (該当箇所は重複コメントログだったため安全に解消) を行った。Base Branch Conflict Pre-check の実効性を裏付ける実例として記録。
+
+### Acceptance criteria verification difficulty
+
+4件すべて rubric type で、safe mode (`always_allow`) のまま淀みなく PASS 判定できた。UNCERTAIN や verify command の不備はなし。
+
+### Improvement Candidate
+
+- `gh-pr-review.sh` が MUST issue 検出時に `event=REQUEST_CHANGES` で投稿を試みるが、レビュー実行アカウントと PR 作成者が同一 (本リポジトリのような single-account 運用) の場合、GitHub API が `422 Unprocessable Entity: "Review Can not request changes on your own pull request"` を返し失敗する。今回は line comments JSON に `severity` フィールドを付け忘れていたため偶然 `COMMENT` イベントとなり実害はなかったが、`severity` を正しく付与していれば同じ 422 に直面していた可能性が高い。self-review 制約下での `gh-pr-review.sh` の event 選択ロジック (MUST 検出時に `REQUEST_CHANGES` を試みて 403/422 なら `COMMENT` にフォールバックする、等) は改善余地がある。未起票 (`/verify` 側での起票判断に委ねる)。
