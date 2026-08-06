@@ -57,6 +57,7 @@ false 側は rebase 対象に `origin/${BASE_BRANCH}` を使う (`git fetch . <f
 - saito (MEMBER, first-class, 2026-08-06T05:45:45Z): `/issue` フェーズの Issue Retrospective。Background の技術的主張がコードベースと一致していることの確認、rebase 対象 ref を `origin/${BASE_BRANCH}` とした Auto-Resolve 判断の理由、AC 分類・rubric-only 維持の判断、Size=M のため sub-issue splitting 対象外という Step 12 のスコープ判定を記録。内容は Issue 本文の Auto-Resolved Ambiguity Points に既に反映済み。 (https://github.com/saitoco/wholework/issues/1076#issuecomment-5200858512)
 - saito (MEMBER, first-class, 2026-08-06T05:49:22Z): 「spec への申し送り」— Issue 本文の Auto-Resolved Ambiguity Points が rebase 対象を両経路とも `origin/${BASE_BRANCH}` に統一した点について、true 側は ff 判定基準がローカル checkout の HEAD であるため `origin/${BASE_BRANCH}` では窓を塞ぎきれない (特に本スクリプト自身の in-place merge → push の間、ローカル base が origin より 1 コミット先行する窓) ことを指摘し、true 側限定でローカル `${BASE_BRANCH}` へ rebase する案 (A) を推奨。本 Spec はこの推奨を採用し、Issue 本文の Auto-Resolved Ambiguity Points を true 側について修正する (Notes 参照)。 (https://github.com/saitoco/wholework/issues/1076#issuecomment-5200883050)
 
+- saito / MEMBER / first-class / ## 実測: 2026-08-06 に 2 セッションで再発、根本原因を特定 / https://github.com/saitoco/wholework/issues/1076#issuecomment-5201097457
 ## Notes
 
 ### Auto-Resolved Ambiguity Points の修正 (true 側の rebase 対象 ref)
