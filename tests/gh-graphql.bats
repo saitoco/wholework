@@ -107,6 +107,16 @@ teardown() {
     [[ "$api_call" == *"blockedBy"* ]]
 }
 
+@test "success: --query get-open-issues-blocked-by resolves named query" {
+    run bash "$SCRIPT" --query get-open-issues-blocked-by -F first=100
+    [ "$status" -eq 0 ]
+    grep -q "api graphql" "$GH_CALL_LOG"
+    local api_call
+    api_call=$(grep "api graphql" "$GH_CALL_LOG")
+    [[ "$api_call" == *"blockedBy"* ]]
+    [[ "$api_call" == *"pageInfo"* ]]
+}
+
 @test "success: --query remove-blocked-by resolves named query" {
     run bash "$SCRIPT" --query remove-blocked-by -F issueId=I_abc -F blockingId=I_xyz
     [ "$status" -eq 0 ]

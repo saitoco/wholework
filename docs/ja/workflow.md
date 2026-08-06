@@ -282,7 +282,11 @@ GitHub リポジトリ設定「Auto-close issues with merged linked pull request
 
 ## Blocked-by relationships
 
-GitHub native の blocked-by relationship (`addBlockedBy` mutation で設定) が Issue 依存関係状態の **SSoT** です。`Blocked by #N` という body テキストは人間向け補足に過ぎません。skill は GitHub relationship を正式なシグナルとして扱います。
+GitHub native の blocked-by relationship (`addBlockedBy` mutation で設定) が Issue 依存関係状態の **SSoT** です。`Blocked by #N` という body テキストは **入力ショートカット (書き込みトリガー)** です — 起票時にテキストを書くだけで relationship を設定できる手段ですが、判定 (gate・依存チェック・グラフ構築) は body テキストを直接読むことはなく、skill は常に GraphQL 経由で権威ある状態を解決します。
+
+### 読み取り経路
+
+すべての判定経路 (`/auto --batch` List mode gate、`/triage` Step 9 の単一 Issue 依存チェック、`/triage --backlog dependency` Step 2b のグラフ構築、`/spec` Step 4 のブロッキングチェック) は、GraphQL SSoT への単一の読み取り窓口である `scripts/get-blocked-by.sh` を経由します。`/auto` の batch gate はこれに加えて、読み取り直前に `gh-check-blocking.sh` を実行して body テキストのショートカットを先に GraphQL へ materialize します — これにより、blocker が body テキストにしか書かれていない Issue でも gate は従来以上に厳密であり続けます。`/spec` Step 4 は materialize 呼び出しを行わず読み取り専用のままです。`/spec` に到達する Issue は `/issue` または `/triage` を既に通過しており、いずれも書き込み時に materialize 済みだからです。
 
 ### 自動設定経路
 
@@ -307,6 +311,7 @@ GitHub native の blocked-by relationship (`addBlockedBy` mutation で設定) �
 
 - `scripts/gh-check-blocking.sh` — issue body の `Blocked by #N` パターンを検出して `addBlockedBy` mutation を呼び出す
 - `scripts/set-blocked-by.sh <issue> <blocker>` — 薄い wrapper: `get-issue-id` で node ID 解決後に `add-blocked-by` を呼び出す
+- `scripts/get-blocked-by.sh <issue> | --all` — 単一の読み取り窓口: 単一 Issue モードは `<blocker><TAB><state>` 行を返す (`OPEN` が 1 件でもあれば exit 2)。`--all` モードは `gh-graphql.sh --query get-open-issues-blocked-by` 経由で open Issue 全体の blocked-by グラフを `<issue><TAB><blocker><TAB><state>` の TSV で返す
 - `scripts/gh-graphql.sh --query add-blocked-by` — `addBlockedBy` mutation
 - `scripts/gh-graphql.sh --query remove-blocked-by` — `removeBlockedBy` mutation
 
