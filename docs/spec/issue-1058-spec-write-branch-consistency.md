@@ -287,3 +287,43 @@ Size は既に `L` (変更なし)。タイトルとの意味的乖離は検出�
 
 - Post-merge AC (observation, `event=auto-run when=route:pr session=next`) is unchanged — still unfired, still SKIPPED by design; `/verify` should leave it SKIPPED unless a pr route Issue has since run in this session.
 - Pre-merge AC 1 and 2 were both PASS at merge time (0 unchecked conditions per `check-pre-merge-ac.sh`).
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- triage の Auto-Resolve は案 A を「`/spec` が既に base へ直接コミットしている現状と一致する」ことを主根拠に推奨したが、この既存実装の認識自体が不正確だった (`ENTERED_WORKTREE=false` のときのみ直接 push であり、`run-spec.sh` 経由の主経路は既に `worktree-merge-push.sh` を通る = 案 B 側)。Auto-Resolve が「既存パターンとの整合」を根拠に使う場合、その既存パターンの記述精度が推奨方針の妥当性を直接左右する。
+- Post-merge 条件の `verify-type` を `manual` → `observation event=auto-run when=route:pr session=next` へ精緻化した判断は妥当だった。`session=next` の付与により、本 verify で「未発火のため SKIPPED」と正しく判定できた。
+
+#### spec
+
+- Issue コメントで指定した 2 軸 (並行セッション耐性 / patch route での実現コスト) の再評価により、triage の案 A 推奨を案 B へ覆した。特に評価軸 2 は triage が「変更範囲が広い」として退けた前提を実測で否定しており (patch route 向けの変更は in-session 呼び出し 1 行のみ)、未実測の前提に基づく却下を洗い直す指示が有効に機能した事例。
+- 副次的欠陥 (pr route の wrapper fallback がほぼ常に誤発火) を Spec 段階で特定できた。`#1186` の `aa416dfe` という既存コミットの正体が判明したことで、無効化の判断に実データの裏付けが付いた。
+
+#### code
+
+- code フェーズ自身が経路 (b) (`#1078` の対象、Comment Consumption が Worktree Entry より前) を踏み、main repository の Spec を直接編集した。本 Issue が扱う経路 (a) を修正するフェーズが、未修正の経路 (b) を同一実行内で実演した形。手動 revert で PR への影響は回避。
+- pr route ゲートを `ROUTE_FLAG == "--pr"` で実装したが、route は Size auto-detection や `always-pr: true` により in-session で解決されるため判定軸として不十分だった (review で MUST として検出)。CLI フラグは「呼び出し側が何を指定したか」であって「実際にどの route を通ったか」ではない、という区別が必要だった。
+
+#### review
+
+- watchdog kill (exit 143, silent 2600s) で中断。fan-out と指摘の修正まで完了していたがコミット前に死んだため、成果 11 ファイル分が worktree に未コミットで残留した。親セッションが関連 bats 63 件 (0 failures) で健全性を確認したうえでコミット・push し、`.wholework.yml` に `watchdog-timeout-review-seconds: 5400` を設定して再実行した。
+- 再実行の review が MUST 1 件を含む 10 件を検出。うち 1 件は 1 回目の kill 時点の修正内容 (親セッションがそのままコミットしたもの) に含まれていた穴 — `reconcile-phase-state.sh` が空出力を返したとき明示 `--pr` でも post-processor が誤発火する反転リスク — であり、再実行の review がこれを塞いだ。「中断成果をコミットしてから再実行する」回復パターンが、単なる時間節約ではなく品質面でも機能した。
+- `gh-pr-review.sh` に渡す JSON で `severity` フィールドを省いたため、MUST issue があるにもかかわらず `COMMENT` イベントで投稿された。加えて GitHub API の self-review 制約 (自分が作成した PR への `REQUEST_CHANGES` は 422) に未対応。
+
+#### merge
+
+- 特記なし。`mergeable=true` (reason=clean)、CI 9 件 SUCCESS、pre-merge AC gate 2/2 で squash merge。
+
+#### verify
+
+- 本セッションにロードされている `skills/verify/SKILL.md` が `#1186` 着地前のバージョンだった (セッション開始時のスナップショット、Step 5 に already-checked AC skip rule なし・Step 6 に旧文言 "Re-verify even if already checked" が残存)。リポジトリ上の実ファイル (L210) には当該ルールが存在するため、実ファイルを SSoT として適用した。`session=next` 属性 (`#1168`) が対象とする skill 自己更新の非伝播が、`/verify` 自身にも同じ形で発生した事例。
+- 適用の結果、pre-merge 2 件が SKIPPED となり、旧ルールなら発生していた rubric 2 件の再実行 (新規情報ゼロ) を回避した。`#1186` の効果が同一セッション内の 2 Issue 目でも継続して確認できた。
+
+### Improvement Proposals
+
+- `scripts/watchdog-defaults.sh` の `WATCHDOG_TIMEOUT_REVIEW_DEFAULT=2600` は Size L の `/review --full` に対して不足する (本 Issue で 3300s 超えて kill)。本セッションでは `.wholework.yml` に 5400s を設定して回避したが、既定値そのものの再調整を検討すべき。`WATCHDOG_TIMEOUT_CODE_DEFAULT=4680` に対し review が 2600s という比率は、fan-out + 2 段階検証 + 修正 + CI 待ちを直列に回す `--full` の実態と合っていない。
+- `modules/orchestration-fallbacks.md` の `review-completion-false-negative` / `reconciler-header-mismatch` は回復手順を「re-run `/review`」としているが、watchdog kill の場合は worktree に未コミットの成果が残っていることがある。「残留成果の有無を確認 → 関連テストで健全性を検証 → コミット・push してから再実行」という手順を追記すべき。本 Issue では成果を捨てずに済んだが、手順書どおりに再実行していれば 11 ファイル分の修正を失っていた。
+- `scripts/gh-pr-review.sh` の `severity` フィールド未指定時の挙動 (MUST があっても `COMMENT` で投稿される) と、GitHub API の self-review 422 制約への未対応。review retrospective に記録済み。
