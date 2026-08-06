@@ -17,6 +17,24 @@ if [[ -z "$ISSUE_NUMBER" || -z "$PHASE_NAME" ]]; then
   exit 0
 fi
 
+NO_PUSH=false
+if [[ $# -ge 2 ]]; then
+  shift 2
+elif [[ $# -eq 1 ]]; then
+  shift 1
+fi
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --no-push)
+      NO_PUSH=true
+      shift
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 _repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
@@ -173,16 +191,28 @@ if [[ -n "$_git_dir" && -n "$_git_common_dir" && "$_git_dir" == "$_git_common_di
   echo "append-consumed-comments-section.sh: WARNING — not running inside an isolated worktree (was skills/verify/SKILL.md Step 3 skipped?); commit/push below lands directly on the current branch" >&2
 fi
 
-# Commit and push (best-effort; failures do not block caller)
+# Commit (and push unless --no-push) — best-effort; failures do not block caller
 SPEC_REL="${SPEC_FILE#$_repo_root/}"
 if ! git -C "$_repo_root" diff --quiet "$SPEC_REL" 2>/dev/null; then
-  git -C "$_repo_root" add "$SPEC_REL" 2>/dev/null \
+  if git -C "$_repo_root" add "$SPEC_REL" 2>/dev/null \
     && git -C "$_repo_root" commit -s \
          -m "Add consumed comments fallback for issue #${ISSUE_NUMBER} (${PHASE_NAME} phase)
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" 2>/dev/null \
-    && git -C "$_repo_root" push origin HEAD 2>/dev/null \
-    || echo "append-consumed-comments-section.sh: WARNING — commit/push failed (best-effort)" >&2
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" 2>/dev/null; then
+    if [[ "$NO_PUSH" == "true" ]]; then
+      : # commit only, push is the caller's responsibility (in-session mandatory call path)
+    elif [[ "$_git_dir" == "$_git_common_dir" ]]; then
+      # Main tree: route through the locked merge-push script instead of a bare push.
+      _current_branch="$(git -C "$_repo_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
+      "$SCRIPT_DIR/worktree-merge-push.sh" --base "$_current_branch" 2>/dev/null \
+        || echo "append-consumed-comments-section.sh: WARNING — worktree-merge-push.sh failed (best-effort)" >&2
+    else
+      git -C "$_repo_root" push origin HEAD 2>/dev/null \
+        || echo "append-consumed-comments-section.sh: WARNING — push failed (best-effort)" >&2
+    fi
+  else
+    echo "append-consumed-comments-section.sh: WARNING — commit failed (best-effort)" >&2
+  fi
 fi
 
 exit 0
