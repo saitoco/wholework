@@ -164,3 +164,30 @@ AC3 (rubric "既存の未解決 3 件 (#734 / #735 / #1006) が処理されて�
 ### Notes for Next Phase
 - squash merge 済み、リモートブランチ削除済み。Issue #1156 は `closes #1156` により自動クローズされる想定 (base branch = main)
 - Post-merge AC (observation, session=next) が唯一の未チェック項目。`/verify` 実行時に `session=next` の発火判定に従うこと
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 起票時の AC2 は検出対象を「`verify-type` マーカーを含む行」に限定していたが、AC1 (規約明記) が Pre-merge / Post-merge 両方を対象としていたため**内部矛盾**していた。`/issue` の triage フェーズがこれを検出し、AC2 の対象を「`### Pre-merge` / `### Post-merge` 配下の条件行全般 (`verify:` マーカー行を含む)」へ拡大した。AC 間の整合性チェックが機能した好例
+- Post-merge の observation 条件に `session=next` が自動付与された (`check-skill-change-observation-ac.sh` による検出)。`skills/issue/SKILL.md` を変更する Issue であり、本セッションでは変更後の skill がロードされないため妥当
+
+#### spec
+- 実装先として `/triage` の Pattern 表 (`skills/triage/skill-dev-verify-audit.md`) ではなく **独立スクリプト + `/issue` Step 4 への直接組み込み**を選択した。この判断が結果的に #1185 (`triaged` 済み Issue で Pattern 表監査に到達しない構造) の影響を回避している。Pattern 表に載せていた場合、`triaged` 済み Issue では検出が働かなかった
+- 検出スクリプトを `verify:` / `verify-type:` マーカーの有無に依存しない設計にしたことで、マーカーを持たない条件行 (将来的な形式) も検出対象に含まれる
+
+#### code
+- 実装は `scripts/check-ac-checkbox-format.sh` (51 行) + `tests/check-ac-checkbox-format.bats` (140 行) + `skills/issue/SKILL.md` (14 行) + `docs/structure.md` (+ ja)。テストがスクリプト本体の約 2.7 倍あり、セクション境界・マーカー有無・usage error の各分岐が網羅されている
+- 既存の残存 3 件 (#734 / #735 / #1006) も実際に `- [ ]` 形式へ修正済み
+
+#### review / merge
+- `--review=light` で MUST 指摘ゼロ、CI 全 SUCCESS。**merge gate によるブロックなし**。本 batch の #1181 / #1180 が `command` 型 AC で 2 回止まったのに対し、本 Issue は AC が rubric のみだったため gate を素通りした。`command` 型 AC の有無が merge 成否を分ける実例が同一 batch 内で対照的に得られた
+
+#### verify
+- Pre-merge 3 件すべて PASS。AC2 は bats (10/10) に加えて**実データでの動作確認**を行った — `verify:` マーカー付き (Pre-merge) と `verify-type:` マーカー付き (Post-merge) の両方のプレーン箇条書きを検出し exit 2 を返すこと、セクション外は対象外であることを確認
+- 検証中に「実装が `/issue` の片方のフローからしか呼ばれないのでは」という #1185 と同型の懸念を持ったが、Existing Issue Refinement の Step 7 が New Issue Creation の Step 4 を明示的に参照しているため両フローで機能することを確認した
+
+### Improvement Proposals
+
+- N/A (新規起票なし)。本 Issue で扱った post-merge 側の形式強制と、#1083 (監査基準) / #1185 (監査経路) で AC 品質の 3 要素が揃った。#1185 は同一 batch の remaining に控えており、着地後に pre-merge AC gate によるブロックが再発するかを観測する (`merge gate は未対応` としてメモリに記録済み)
