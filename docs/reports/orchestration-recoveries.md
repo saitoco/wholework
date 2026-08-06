@@ -67,6 +67,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-06 08:26 UTC: manual-recovery-worktree-rebase
+
+### Context
+- Issue #1174, phase: verify
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 1
+
+### Diagnosis
+- cause: ff-only-merge-base-advanced
+- Worktree Exit hit the true-side (main checked out) path of worktree-merge-push.sh; git merge --ff-only failed because a concurrent session advanced local main from 17cf13e3 to 67205df7 while the verify worktree was alive. No rebase fallback existed on that path (#1076), so the script exited 1. Recovered by rebasing worktree-verify+issue-1174 onto main and retrying.
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-08-06 07:30 UTC: manual-recovery-worktree-rebase
 
 ### Context
