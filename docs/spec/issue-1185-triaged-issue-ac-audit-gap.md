@@ -4,6 +4,8 @@
 
 - saito (MEMBER, first-class): `/issue` の triage auto-chain 実行結果 (Issue Retrospective)。Type=Bug、Priority=unset、Size=M、Value=3、Auto-Resolved Ambiguity Points 2 件 (heading 引数の `#` 個数の例示修正、Post-merge AC への `session=next` 付与) を記録。いずれも Issue 本文に既に反映済みであり、本 Spec への追加要求は無し。https://github.com/saitoco/wholework/issues/1185#issuecomment-5200104534
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1185#issuecomment-5200713446
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1185#issuecomment-5200988644
 ## Overview
 
 `skills/issue/SKILL.md` の Existing Issue Refinement フローでは、AC verify command 監査 (`skills/triage/skill-dev-verify-audit.md` の Pattern 表) が Step 2 (triage auto-chain, `triaged` 不在時のみ実行) 経由でしか呼ばれない。このため (a) `triaged` 済み Issue (実運用でのほぼ全件) では監査が一切実行されず、(b) `triaged` 不在で Step 2 が実行される場合も AC 分類 (Step 7) より前に監査が走るため、そのセッションで新規 authoring された verify command は監査対象にならない。New Issue Creation フローはこの問題を持たない (Step 4 の AC 分類の後に Step 8 の triage auto-chain が常時実行されるため)。
