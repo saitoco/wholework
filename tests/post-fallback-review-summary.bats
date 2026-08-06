@@ -25,7 +25,7 @@ teardown() {
 #!/bin/bash
 echo "\$@" >> "$GH_CALL_LOG"
 if [[ "\$1" == "pr" && "\$2" == "view" ]]; then
-    echo '["Looks good to me, no concerns."]' | tr -d '[]"'
+    echo '[{"state":"COMMENTED","submittedAt":"2026-01-01T00:00:00Z","body":"Looks good to me, no concerns."}]'
     exit 0
 fi
 if [[ "\$1" == "pr" && "\$2" == "comment" ]]; then
@@ -47,7 +47,7 @@ MOCK
 #!/bin/bash
 echo "\$@" >> "$GH_CALL_LOG"
 if [[ "\$1" == "pr" && "\$2" == "view" ]]; then
-    echo "## Acceptance Criteria Verification Results"
+    echo '[{"state":"COMMENTED","submittedAt":"2026-01-01T00:00:00Z","body":"## Acceptance Criteria Verification Results"}]'
     exit 0
 fi
 if [[ "\$1" == "pr" && "\$2" == "comment" ]]; then
@@ -75,7 +75,7 @@ MOCK
 #!/bin/bash
 echo "\$@" >> "$GH_CALL_LOG"
 if [[ "\$1" == "pr" && "\$2" == "view" ]]; then
-    echo "## Acceptance Criteria Verification Results"
+    echo '[{"state":"COMMENTED","submittedAt":"2026-01-01T00:00:00Z","body":"## Acceptance Criteria Verification Results"}]'
     exit 0
 fi
 if [[ "\$1" == "pr" && "\$2" == "comment" ]]; then
@@ -88,4 +88,52 @@ MOCK
     run bash "$SCRIPT" 123
     [ "$status" -eq 1 ]
     [[ "$output" == *"failed to post fallback Review Response Summary"* ]]
+}
+
+@test "latest review is CHANGES_REQUESTED: exits 2 without posting (MUST unresolved guard)" {
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GH_CALL_LOG"
+if [[ "\$1" == "pr" && "\$2" == "view" ]]; then
+    echo '[{"state":"CHANGES_REQUESTED","submittedAt":"2026-01-01T00:00:00Z","body":"## Acceptance Criteria Verification Results\n\nMUST: fix X"}]'
+    exit 0
+fi
+if [[ "\$1" == "pr" && "\$2" == "comment" ]]; then
+    echo "ERROR: comment should not have been posted" >&2
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"CHANGES_REQUESTED"* ]]
+    ! grep -q "pr comment" "$GH_CALL_LOG"
+}
+
+@test "only latest review is judged: older CHANGES_REQUESTED, newer COMMENTED with AC results posts" {
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GH_CALL_LOG"
+if [[ "\$1" == "pr" && "\$2" == "view" ]]; then
+    echo '[{"state":"CHANGES_REQUESTED","submittedAt":"2026-01-01T00:00:00Z","body":"## Acceptance Criteria Verification Results\n\nMUST: fix X"},{"state":"COMMENTED","submittedAt":"2026-01-02T00:00:00Z","body":"## Acceptance Criteria Verification Results\n\nAll resolved."}]'
+    exit 0
+fi
+if [[ "\$1" == "pr" && "\$2" == "comment" ]]; then
+    for arg in "\$@"; do
+        if [[ "\$prev" == "--body" ]]; then
+            echo "\$arg" > "$GH_COMMENT_BODY_FILE"
+        fi
+        prev="\$arg"
+    done
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    grep -q "pr comment" "$GH_CALL_LOG"
 }
