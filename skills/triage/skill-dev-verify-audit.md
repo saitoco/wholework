@@ -77,6 +77,48 @@ Fix options:
 - スクリプトに失敗条件フラグ（`--fail-if-outdated` 等）を明示的に渡す
 - スクリプトの exit code 設計自体を、失敗時に非ゼロを返すよう修正する
 
+**`section_contains`/`section_not_contains` 型に起因する常時 PASS**:
+
+`section_contains` 型の verify command は、対象ファイルの main ブランチ時点で、指定 heading セクション内に検索文字列が既に存在する場合、実装前から常時 PASS になる。`section_not_contains` は逆に、対象文字列が既に不在の場合に常時 PASS になる。
+
+例: `<!-- verify: section_contains "modules/worktree-lifecycle.md" "Consumed Comments" "Comment Consumption" -->` — 先行 Issue の着地により "Comment Consumption" という語が既に該当セクションに存在していると、本 Issue の実装を待たず常時 PASS になる (実測: #1078)。
+
+Detection approach:
+- 対象ファイルを Read し、`modules/verify-executor.md` の `section_contains` 仕様通り (heading 行から次の同格以上見出しの直前まで、または EOF まで) にセクションを切り出す
+- 切り出したセクション本文に対して現状の `main` ブランチの内容のまま検索文字列を空撃ちする (grep 相当)。既に一致していれば `section_contains` の常時 PASS として検出する。`section_not_contains` は不一致 (文字列が既に不在) であれば常時 PASS として検出する
+
+Fix options:
+- main ブランチにまだ存在しない文字列を選ぶ、または実装後にのみ真になる heading/検索文字列へ変更する
+- `section_contains` ⇄ `section_not_contains` を実装意図と逆に選んでいないか確認し、必要なら切り替える
+
+**`github_check` 型に起因する常時 PASS**:
+
+`github_check` 型の verify command は、`gh_command` を現状の repository 状態に対して実行した結果が既に `expected_value` を含む場合、実装前から常時 PASS になる。特に `gh issue view`/`gh pr view` で Issue/PR の既存ラベルやタイトルの一部を検証している場合に起こりやすい。
+
+例: `<!-- verify: github_check "gh issue view $NUMBER --json labels" "triaged" -->` — Issue に triage 実行時点で既に `triaged` ラベルが付与されていれば、実装 0 行で常時 PASS になる。
+
+Detection approach:
+- safe mode の allowlist 対象コマンド (`gh issue view`/`gh pr view`/`gh pr checks`/`gh api` GET/`gh run view`) であれば、現状の repository 状態に対してそのまま `gh_command` を空撃ちで実行し、出力に `expected_value` が既に含まれるか確認する。既に含まれていれば常時 PASS として検出する
+- allowlist 外のコマンド (full mode 限定) は空撃ちせず、`gh_command` が参照する対象 (issue/PR 番号・フィールド) が実装前から存在しうるものかをレビューで判定する
+
+Fix options:
+- 実装後にのみ真になる状態を参照する `gh_command`/`expected_value` に変更する
+- post-merge の observation 型 AC へ移す
+
+**`rubric` 型に起因する常時 PASS**:
+
+`rubric` 型の verify command は、grader が現状の (実装前の) 状態を rubric text の条件に照らして既に満たしていると判定する場合、実装前から常時 PASS になる。既存の類似実装の説明文をそのまま rubric text に再利用すると特に起こりやすい (実測: 本 Issue 自身の起票時点の AC1 が、Pattern 6 の説明文を流用した結果、既存の Pattern 2 が該当すると解釈されかけた)。
+
+例: `<!-- verify: rubric "Pattern 6 と同じ構造で新規 Pattern が追加されている" -->` — Pattern 2 が既に同じ構造 (症状・検出手順・修復案) を備えているため、grader が Pattern 2 を該当と解釈すると常時 PASS になりうる。
+
+Detection approach:
+- audit を実行している LLM 自身が、rubric text の主張を現状のリポジトリ内容 (Grep/Read) に照らして空撃ちする — 「rubric text が要求する条件を、実装前の現状が既に満たしていないか」を判定する
+- 既存の類似実装が rubric text の主張範囲に含まれてしまわないか、Grep で類似の見出し・キーワードを検索して確認する
+
+Fix options:
+- 現状のリポジトリ内容 (diff で変更される具体的な範囲) を rubric text に明示的に含める
+- 既存の類似実装を rubric text 内で明示的に除外する文言を追加する
+
 ### Pattern 3: 常時 FAIL な verify command (Always-FAIL Command)
 
 Detect: A `file_contains` or `grep` verify command whose search string has already
