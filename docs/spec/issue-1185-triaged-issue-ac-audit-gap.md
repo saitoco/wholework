@@ -118,23 +118,21 @@
 - N/A
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- 3件のPre-merge AC (rubric×2, command×1) を全て直接検証し PASS を確認 (Issue本文の既存チェックボックスと一致)。rubric AC は `skills/issue/SKILL.md` の実際の `### Step N` 見出し列挙で New Issue Creation (Step 4→Step 8) / Existing Issue Refinement (Step 7→Step 15) 双方の順序を確認した。
-- `--light` 指定によりREVIEW_DEPTH=lightで確定 (Issue Size照会は不要)。`SKIP_REVIEW_BUG` 未設定のため review-light の4観点を全て実行。
-- review-light が検出した documentation consistency の SHOULD 指摘 (`docs/tech.md:132` の "14-step" 記述が新設Step 15により陳腐化) を実際にファイルで検証した上でSHOULD修正として採用・修正した。同じ表現を含む `docs/reports/sonnet-5-effort-recalibration-issue.md` は分析当時の historical record と判断し据え置いた。
+- Pre-merge AC gate (`check-pre-merge-ac.sh`) は3件全てチェック済みと判定し、review-incomplete-fallback チェックも `matches_expected: true` (organic Review Response Summary) だったため、ゲート通過は無条件で成立した。
+- mergeable=true (clean, CI success 9/9, review approved) を確認し、conflict resolution (Step 3) をスキップして直接 squash merge を実行した。
 
 ### Deferred Items
 
-- Post-merge observation AC (`triaged` 済み Issue で Pattern 6 サブパターン 1 が指摘されることの観察、`session=next`) は本PRマージ後、次回セッションの `/issue N` 実行時に評価する (code phase から引き継ぎ、未着手のまま)。
-- `docs/workflow.md` / `docs/ja/workflow.md` の Step 10/11 off-by-one drift は Spec Notes の判断通りスコープ外として据え置いた (code phase から引き継ぎ)。
+- Post-merge observation AC (`triaged` 済み Issue で Pattern 6 サブパターン 1 が指摘されることの観察、`session=next`) は次回セッションの `/issue N` 実行時に評価する (review phase から引き継ぎ、未着手のまま)。
+- `docs/workflow.md` / `docs/ja/workflow.md` の Step 10/11 off-by-one drift はスコープ外として据え置いた (review phase から引き継ぎ)。
 
 ### Notes for Next Phase
 
-- `/merge` は MUST指摘0件・CI全SUCCESS (9/9) のため通常どおり進行可。
-- `/verify` は post-merge observation AC を次回セッションで評価する際、`skills/triage/skill-dev-verify-audit.md` Pattern 6 サブパターン 1 の指摘コメントが実際に投稿されるかを確認すること (code/review両phaseから引き継ぎ)。
+- `/verify` は post-merge observation AC を次回セッションで評価する際、`skills/triage/skill-dev-verify-audit.md` Pattern 6 サブパターン 1 の指摘コメントが実際に投稿されるかを確認すること。
 
 ## review retrospective
 
