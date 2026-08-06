@@ -221,25 +221,45 @@ Issue 本文が記載していた行番号のうち、実ファイルとずれ�
 - **Issue 本文が `/code` に先送りしていた 2 件を設計時に解消**。(a) `collect-run-facts.sh` / `get-auto-session-report.sh` が未知イベント型を無視するか → 両スクリプトとも `select(.event == "<既知イベント名>")` のホワイトリスト方式であることを確認、過去 20 件の `next_cycle_seeded` は無害。(b) `.tmp/auto-session-*.json` の `"mode": "batch"` が実在するか → `skills/auto/SKILL.md` Step 1 の session metadata 書き込みで確認。どちらも Spec の Notes に検証済みとして記録し、`/code` が再調査しなくて済むようにした
 - **`docs/ja/guide/autonomy.md` の未作成は放置でよい**。`docs/guide/autonomy.md` の冒頭に JA へのリンクがあるが実ファイルは存在しない。`docs/translation-workflow.md` の同期義務は top-level `docs/*.md` に限定されており、`docs/guide/` 配下は対象外。本 Issue 以前からの状態であり、翻訳ファイル新規作成はスコープ外とした
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1-10 をすべて Spec の指示どおり (文脈による位置指定、置換文言、削除範囲) に実装した。挿入位置・削除範囲とも Spec の記述と実ファイルの前後見出しが一致しており、行番号のずれ (spec retrospective に記録済み) 以外の追加調整は不要だった。
+
+### Design Gaps/Ambiguities
+
+- N/A — 実装中に新たな設計判断を要する曖昧点は見つからなかった。
+
+### Rework
+
+- N/A
+
+### Minor observations
+
+- `docs/reports/external-kill-investigation.md` への注記は、Spec Notes の文面 (日本語) をそのまま挿入せず、ドキュメント本体の言語 (English) に合わせて英語で追記した。CLAUDE.md の Language Conventions は Spec 自体を日本語対象としているが、既存ドキュメント本体を編集する場合はその文書の言語に従うべきという判断
+- behavioral change detection (Step 9) が `skills/auto/SKILL.md` / `modules/autonomy-tier.md` / `.wholework.yml` など複数ファイルで direct-associated test 以外からの参照を検出したため `bats tests/` フルスイート (1480 件) を実行した。全件 PASS
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- `skills/auto/SKILL.md` の Next-cycle seed ブロックは「削除して 1 段落に置換」であり、条件分岐を残した縮小ではない。advisory 出力は tier / 設定フラグのいずれにも依存しない唯一の挙動に昇格させること (rubric AC 3 がこれを意味的に検証する)
-- Issue 本文の行番号は実ファイルとずれている箇所がある。Implementation Steps は前後の見出しで位置を指定してあるので、行番号ではなくそちらに従うこと
-- `skills/auto/SKILL.md` の `allowed-tools` は変更しない。`emit-event.sh:*` は本文参照がゼロになるが意図的に残す (根拠は Spec の `## Exclusions`)
-- `docs/guide/autonomy.md` の JA ミラーは新規作成しない (`docs/translation-workflow.md` の同期義務は top-level `docs/*.md` 限定)
+- Spec の Implementation Steps 1-10 を文脈指定 (前後の見出し) どおりに実装。行番号のずれは既に Spec が吸収済みで、追加の位置調整は不要だった
+- `skills/auto/SKILL.md` の Next-cycle seed ブロックは条件分岐なしの advisory 1 段落 (`Recommend: run /audit drift to identify next-cycle candidates`) に置換し、rubric AC (無条件昇格の意味的検証) で確認した
+- `docs/reports/external-kill-investigation.md` の代替判別手段の注記は、Spec Notes の日本語文面ではなくドキュメント本体の言語 (English) に合わせて英語で追記した (既存記述は書き換えず追記のみ)
+- behavioral change detection で `skills/auto/SKILL.md` / `modules/autonomy-tier.md` / `.wholework.yml` 等が direct-associated test 以外からも広く参照されていたため `bats tests/` フルスイート (1480 件) を実行し、全件 PASS を確認した
 
 ### Deferred Items
 
 - Post-merge の observation AC (`event=auto-run session=next`) は次回 `/auto --batch` 完走時の観察待ち。`.tmp/next-cycle.json` が生成されないこと・`next_cycle_seeded` が emit されないこと・`/audit drift` 推奨が出ることの 3 点を確認する
+- `github_check "gh pr checks"` 系の Pre-merge AC 2 件は PR 作成後の CI 結果待ち (`/review` フェーズで確認)
 - `.tmp/auto-events.jsonl` に残る過去 20 件の `next_cycle_seeded` は削除しない (読み取り側は未知イベント型を無視するため無害)
 - `docs/ja/guide/customization.md` の翻訳ドリフト (EN 側の `.wholework.yml` autonomy サンプルブロックと `autonomy` 設定行が JA ミラーに存在しない) は本 Issue 以前からの既知状態。本 Issue では解消しない
 
 ### Notes for Next Phase
 
-- `scripts/emit-event.sh` のコメントブロック削除では、前後のイベント (`retro_proposal_classified` / `verify_fail_marker_posted`) との区切り `#` 単独行が二重にも欠落にもならないよう確認すること
-- `modules/autonomy-tier.md` の E 列削除は、ヘッダ行・区切り行・L1/L2/L3 の 3 データ行の計 5 行すべてが対象。加えて L2 Assisted 行の Default use 文 (`Seed is automated; ...`) の書き換えを忘れないこと — この文はどの verify command キーワードにも一致しないため、AC 13 (`file_not_contains "Seed is automated"`) が唯一の検出手段
-- SKILL.md 編集時の `validate-skill-syntax.py` 制約: 半角感嘆符・triple backtick・YAML block scalar を新規導入しない
+- `/review` は PR #1216 の CI (`Run bats tests` / `Validate skill syntax`) の green を確認すること — Pre-merge AC 26 件のうち 24 件は `/code` で PASS 確認済み、残り 2 件が github_check
+- 11 ファイルの変更はすべて削除・置換のみで新規ロジック追加はない。差分レビューでは「削除範囲が Spec の指定と一致しているか」「経路 E 以外の記述への巻き添え削除がないか」を確認する観点が有効
+- Post-merge observation は次回 `/auto --batch` 完走を待つ必要があり、即時確認はできない
 - Size L / pr route のため CI verify command は `github_check "gh pr checks"` 形式で正しい (`always-pr` は未設定だが Size L はもともと pr route)
