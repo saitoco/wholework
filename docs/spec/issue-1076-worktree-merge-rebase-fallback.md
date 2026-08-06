@@ -56,8 +56,11 @@ false 側は rebase 対象に `origin/${BASE_BRANCH}` を使う (`git fetch . <f
 
 - saito (MEMBER, first-class, 2026-08-06T05:45:45Z): `/issue` フェーズの Issue Retrospective。Background の技術的主張がコードベースと一致していることの確認、rebase 対象 ref を `origin/${BASE_BRANCH}` とした Auto-Resolve 判断の理由、AC 分類・rubric-only 維持の判断、Size=M のため sub-issue splitting 対象外という Step 12 のスコープ判定を記録。内容は Issue 本文の Auto-Resolved Ambiguity Points に既に反映済み。 (https://github.com/saitoco/wholework/issues/1076#issuecomment-5200858512)
 - saito (MEMBER, first-class, 2026-08-06T05:49:22Z): 「spec への申し送り」— Issue 本文の Auto-Resolved Ambiguity Points が rebase 対象を両経路とも `origin/${BASE_BRANCH}` に統一した点について、true 側は ff 判定基準がローカル checkout の HEAD であるため `origin/${BASE_BRANCH}` では窓を塞ぎきれない (特に本スクリプト自身の in-place merge → push の間、ローカル base が origin より 1 コミット先行する窓) ことを指摘し、true 側限定でローカル `${BASE_BRANCH}` へ rebase する案 (A) を推奨。本 Spec はこの推奨を採用し、Issue 本文の Auto-Resolved Ambiguity Points を true 側について修正する (Notes 参照)。 (https://github.com/saitoco/wholework/issues/1076#issuecomment-5200883050)
+- saito (MEMBER, first-class, 2026-08-06T06:18:51Z, code フェーズで消費): 2026-08-06 に #1180/#1179 の `/verify` で本 Issue が扱う経路の FF 失敗が 2 件実測され、`docs/reports/orchestration-recoveries.md` に `manual-recovery-worktree-rebase` として記録済みであることを報告。根本原因・再発条件・手動復旧手順は本 Spec の Root Cause / Implementation Steps と一致しており、新たな要件変更はなし。実装への影響なし (追加の実測証跡として記録のみ)。 (https://github.com/saitoco/wholework/issues/1076#issuecomment-5201097457)
 
-## Notes
+## Autonomous Auto-Resolve Log
+
+- **Step 3 (`phase/ready` label check)**: Issue #1076 のラベルは `phase/ready` ではなく既に `phase/code` (2026-08-06T06:10:35Z に遷移済み)。`reconcile-phase-state.sh code-pr 1076 --check-precondition` も `matches_expected: false` (`phase/ready` 不在) を報告した。しかし `docs/spec/issue-1076-worktree-merge-rebase-fallback.md` は既に `/spec` フェーズで完成済み (Implementation Steps・Verification・Notes まで記載) であり、ラベル不整合は前回セッションが Step 4 のラベル遷移まで実行して中断した状態と推定される。非対話モードの auto-resolve ポリシーに従い、既存 Spec を正として実装を継続する (Spec なしでの Issue 本文直読みにはフォールバックしない — 完成済み Spec が存在するため)。
 
 ### Auto-Resolved Ambiguity Points の修正 (true 側の rebase 対象 ref)
 
@@ -83,3 +86,28 @@ Issue 本文の `## Auto-Resolved Ambiguity Points` は、新たに追加する 
 ### 外部仕様確認のスキップ理由
 
 Implementation Steps で使う `git merge-base --is-ancestor` / `git -C <path> rebase <ref>` / `git merge --ff-only` はいずれも `scripts/worktree-merge-push.sh` の false 側で既に使用され、既存 bats テストで動作が検証済みのプリミティブである。true 側への適用は同じプリミティブを異なる ref・異なる条件分岐で再利用するのみで新規の外部仕様調査は不要と判断した (`skills/spec/external-spec.md` の適用対象だが、既存実装による実証で代替)。
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1-4 をそのまま実装した。共有関数名は Spec で明記されていなかったため `rebase_from_branch_onto(target_ref)` と命名した (Implementation Steps の意図した引数名「対象 ref」をそのまま反映)。
+
+### Design Gaps/Ambiguities
+- なし。
+
+### Rework
+- なし。既存の false 側ロジックをそのまま `rebase_from_branch_onto()` に切り出し、true/false 両呼び出し元は引数 (ローカル `$BASE_BRANCH` / `origin/${BASE_BRANCH}`) のみを差し替える形で 1 回で実装が収束した。既存 19 bats ケースと新規 2 ケースを合わせて 21 件が green (`bats tests/worktree-merge-push.bats`)。behavioral change detection (`modules/orchestration-fallbacks.md` を `tests/run-auto-sub.bats`/`tests/orchestration-fallbacks.bats` も参照) により `bats tests/` full suite (1432+ 件) も green を確認した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- true 側の rebase 対象 ref はローカル `$BASE_BRANCH` を採用 (false 側の `origin/${BASE_BRANCH}` とは異なる) — 理由は本 Spec Notes および `modules/orchestration-fallbacks.md#ff-only-merge-fallback` Rationale (#1076 エントリ) に記録済み
+- false 側と重複するロジックを `rebase_from_branch_onto(target_ref)` という対象 ref を引数に取る共有関数に切り出した
+
+### Deferred Items
+- Post-merge AC (opportunistic): 並行セッションが base に commit している状況で `/verify` を実行し、Worktree Exit が手動介入なしに完了することの実地確認は post-merge に委ねる
+
+### Notes for Next Phase
+- `/review` は rubric 4件の pre-merge AC を安全モードでも実行可能 (`always_allow`) — 本 PR では既にすべて PASS 判定済み (Issue #1076 のチェックボックスを code フェーズで更新済み)
+- `bats tests/` full suite の実行時間は 10 分を超える場合がある (今回はバックグラウンド実行で完走) — `/review` 側で再実行する場合は同様の待ち時間を見込むこと
