@@ -162,3 +162,15 @@ Issue 提案の出力フォーマットに Failed カテゴリがあったが、
 ### Improvement Proposals
 - N/A
 
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/590#issuecomment-4700169062
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 590` to verify the condition / https://github.com/saitoco/wholework/issues/590#issuecomment-4756911005
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 590` to verify the condition / https://github.com/saitoco/wholework/issues/590#issuecomment-4768309087
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 590` to verify the condition / https://github.com/saitoco/wholework/issues/590#issuecomment-4806655444
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 590` to verify the condition / https://github.com/saitoco/wholework/issues/590#issuecomment-4814731463
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 590` to verify the condition / https://github.com/saitoco/wholework/issues/590#issuecomment-4816318808
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 590` to verify the condition / https://github.com/saitoco/wholework/issues/590#issuecomment-4817060724
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 590` to verify the condition / https://github.com/saitoco/wholework/issues/590#issuecomment-4818975155
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/590#issuecomment-5195217703
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/590#issuecomment-5202635879
