@@ -48,6 +48,7 @@ Cutoff: undetermined (Issue timeline に `phase/*` ラベル付与履歴なし�
 |-------|-------------|-----------|-----------------|-----|
 | saito | MEMBER | first-class | Issue 本文の前提 (Pattern 2 は常時 PASS 未カバー) が実装と矛盾していることを指摘。git history 上 Pattern 2 は初版から存在し `file_contains`/`grep`/`command` をカバー済みで、真のギャップは `section_contains`/`github_check`/`rubric` 型の未対応であると分析。「Pattern 7 新設」ではなく「Pattern 2 拡張」へのリスコープを推奨し、AC1 (rubric) の vacuous-PASS リスクと AC2 の見出しターゲット誤りを指摘 | https://github.com/saitoco/wholework/issues/1209#issuecomment-5205310124 |
 
+- saito / MEMBER / first-class / ## Autonomous Auto-Resolve Log (`/spec`, non-interactive) / https://github.com/saitoco/wholework/issues/1209#issuecomment-5206634526
 ## Notes
 
 **Issue body vs. existing implementation conflict (Step 6, 非対話モード自動解決)**:
