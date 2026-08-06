@@ -85,3 +85,38 @@
 ### Notes for Next Phase
 - `/verify` Step 15 は `collect-recovery-candidates.sh` を `--with-tracking` 無し (`--issues-json` のみ) で呼んでおり、本 Issue の3列目フォーマット変更の影響を受けない (Spec Notes「Issue 本文との差異」参照) — `/verify` 側の追加対応は不要
 - Post-merge observation AC の検証時は、`code-pr-tier3-recovery` (対応 Issue #799 CLOSED) が `/audit stats --retention` Section 10 の `Recurring after fix` 行、または個別リストの `tracked:#799:closed` 表示で他の tracked と区別されていることを確認する
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- 本 Issue は #1191 の verify retrospective から起票されたが、**起票根拠 (「#1014 close 後に 21 件再発」) が #1152 の cutoff バグによる過剰カウント**だった。訂正コメントで 3 案 (保留 / スコープ縮小 / close) を提示したところ、`/issue 1205` が **#1152 修正後の実データを自ら再実測**して `code-pr-tier3-recovery tracked:#799 (CLOSED)` が依然出力されることを確認し、「表示仕様の問題は post-fix でも実在する」という客観的根拠に基づいて「スコープ縮小して維持」を自律選択した。判断の質としては妥当
+- ただし **AC 5 (post-merge observation) の観察対象が失効していることは捉えなかった**。`manual-recovery-respawn` は #1152 修正後に (代替基準では) 候補から消えており、そのままでは恒久 SKIPPED になる状態だった。Related には現存事例 #799 を追記していたにもかかわらず、AC 本体は旧対象のまま残った。親セッションが spec 開始前に AC 5 を「対応 Issue が closed である group-key (実測時点の現存例: `code-pr-tier3-recovery` / #799)」へ書き換えて解消した
+
+#### spec
+
+- Issue が提示した対応方針候補 1 (スクリプト出力形式拡張) と候補 3 (Section 10 での区別表示) の**組み合わせ**を採用。候補 2 (表示側のみで解決) を採らなかったことで、`/verify` Step 15 側でも将来同じ判別ができる余地を残している
+- 調査で「`/verify` Step 15 は `--with-tracking` を使わない (2 列出力のみ消費)」ことを確認し、本変更の影響を受けないと Notes に記録。**Issue 本文の記述との差異を spec が検出して訂正した**形
+
+#### code
+
+- `skills/code/SKILL.md` Step 8 (「ステップ完了ごとに commit」) と Step 11 の patch route コミット規約 (`{prefix}: <summary> (closes #N)` の単一コミット) が矛盾しており、4 コミットに分割した後 push 前に `git reset --soft` で squash して規約に合わせた。過去の patch route 実行例 (#1102 / #1133) も単一コミットであることを確認した上での判断
+- state 解決不能時 (`--issues-json` 未指定) に plain `tracked:#N` へフォールバックする後方互換設計。これが verify 時の混乱の一因にもなったが (下記)、設計としては妥当
+
+#### review / merge
+
+- patch route のため未実行 (該当なし)
+
+#### verify
+
+- Pre-merge 4 件すべて PASS。`--issues-json` 付きで実行し `tracked:#1076:closed` / `tracked:#1014:closed` / `tracked:#799:closed` / `tracked:#910:closed` を実測確認した
+- **`--issues-json` の有無で挙動が変わる点に最初つまずいた**: 未指定で実行すると `tracked:#N` が出るため一瞬「実装漏れ」に見えたが、スクリプト L33-34 のコメントで後方互換フォールバックと確認できた。Phase Handoff の Notes が「Step 15 は `--with-tracking` を使わない」と書いていたことも判断材料になった
+- **この気づきが #1152 の AC 10 の矛盾を発見する契機になった**: `--issues-json` 付き = Step 15 の正規経路で `--threshold 3` を実行すると `manual-recovery-respawn` (17, `tracked:#1014:closed`) が出力される。#1014 closedAt (2026-07-14T19:25:51Z) より後の entry が実際に 17 件あることを検算で確認し、**これは正当な post-fix recurrence** と判定した。#1152 の AC 10 (「close 済みの対応 Issue が存在する group-key が候補として現れない」) は Purpose 後半「再発見落としの解消」と矛盾しており、AC 側の文言を修正 (#1152 は `phase/done` 維持)
+- **親セッションの検証手順の欠陥も判明した**: session `11623-1785995193` の `/verify 1152` は iteration 1 / iteration 2 とも `--issues-json` を渡さずに検証していた。iteration 2 で「閾値実行 → over-exclusion 確認 → closedAt 検算」の 3 段階手順を固定したにもかかわらず、**実行条件そのものの再現が抜けていた**。手順を固定しても、その手順が実際のコード経路と同じ入力を使っているかは別問題である
+
+### Improvement Proposals
+
+- **Tier 2 (memory 候補、Issue 化せず)**: `/verify` Step 15 の検証を親セッションが手動で再現する際、`--issues-json` を渡さないと cutoff 解決が代替基準 (H2 ヘッダ日時最大) に落ち、Step 15 の実際の挙動 (正規基準 = Issue の closedAt) と異なる結果になる。同じ誤りを #1152 の verify で 2 回繰り返した。`skills/verify/SKILL.md` Step 15 の記述に「手動再現時は `--issues-json` を必ず渡すこと (未指定だと cutoff 解決が代替基準に落ちる)」の注記を足せば防げるが、観測は本セッション内の 2 回のみで、かつ根本的には「検証手順を実装の実行条件と揃える」という一般則の一事例にすぎないため起票は見送る
+- **`skills/code/SKILL.md` の Step 8 / Step 11 のコミット粒度の矛盾 (code フェーズが記録)**: Step 8 は「ステップ完了ごとに commit」、Step 11 の patch route は単一コミット規約。本実装では squash で解消したが、毎回 code フェーズ側の判断に委ねられている。既存の patch route 実行例がすべて単一コミットである以上、Step 8 側に「patch route では Step 11 の単一コミット規約が優先される」旨の注記があると迷いがなくなる (起票せず — code フェーズの Design Gaps に記録済みで、実害は squash 1 回分の手間)
