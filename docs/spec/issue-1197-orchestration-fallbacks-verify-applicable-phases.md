@@ -48,3 +48,27 @@ Size XS のため事前調査を伴わず直接修正した。Spec 前提条件�
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Spec がなかったため、本 Spec は `/code` 内で新規作成した (Issue 本文の Proposal をそのまま Implementation Steps に落とし込んだため設計からの逸脱はない)
+
+### Design Gaps/Ambiguities
+- AC4 の「漏れがあれば修正されているか、漏れがない旨が Spec に記録されている」という文言は「Spec」への記録を要求しているが、Size XS の `/code` は Spec 前提条件チェック自体をスキップする (Spec 不要) ため、当初は Spec が存在しない状態だった。AC4 を機械的に満たすため、実装の一部として本 Spec ファイルを新規作成し `## Cross-Entry Audit (AC4)` セクションに記録する判断をした
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 他エントリの突き合わせ (AC4) で `dco-signoff-missing-autofix` (spec/review/verify 未列挙) と `code-patch-silent-no-op` (merge/review 未列挙) の2件の追加漏れを発見し、本 Issue の主目的 (ff-only-merge-fallback への verify 追加) と同一パターンのため合わせて修正した
+- `ff-only-merge-fallback` / `conflict-marker-residual` の Applicable Phases が列挙する `merge` については、現行の `/merge` 実装 (`scripts/worktree-merge-push.sh` を経由しない直接 `git push`) との整合性に疑義があるが、追加調査を要するため本 Issue のスコープ外とした (Spec の "対象外とした観察事項" 参照)
+
+### Deferred Items
+- `ff-only-merge-fallback` / `conflict-marker-residual` の `merge` 記載の妥当性再調査 (Spec の "対象外とした観察事項" に記録済み。着手する場合は新規 Issue 起票を推奨)
+
+### Notes for Next Phase
+- verify フェーズでは Post-merge AC (`verify-type: opportunistic`) のみが残っている — 次回 `ff-only-merge-fallback` 発生時に `Applicable Phases` から verify が認識できるかを確認する運用チェック
