@@ -205,7 +205,9 @@ MOCK
     run "$SCRIPT" 42 code --no-push
     [ "$status" -eq 0 ]
     grep -q "^## Consumed Comments" "$SPEC_FILE"
-    ! grep -q "push" "$REPO_ROOT/git.log"
+    [ -f "$REPO_ROOT/git.log" ]
+    run grep -q "push" "$REPO_ROOT/git.log"
+    [ "$status" -ne 0 ]
     [ ! -f "$REPO_ROOT/merge-push.log" ]
 }
 
