@@ -166,12 +166,15 @@
 
 #### verify
 
-- Section 10 の中核コマンド (`collect-recovery-candidates.sh --threshold 1 --with-tracking`) を実行し、**20 件の group-key が `<group-key>\t<count>\t<tracked:#N|untracked>` 形式で列挙**されることを確認。閾値 3 超過は `manual-recovery-respawn` (21, tracked:#1014) と `code-pr-tier3-recovery` (6, tracked:#799) の 2 件。本 Issue の Purpose (#1179 が閉じた自動起票の穴を可視化で埋める) が達成されている
+- Section 10 の中核コマンド (`collect-recovery-candidates.sh --threshold 1 --with-tracking`) を実行し、**group-key が `<group-key>\t<count>\t<tracked:#N|untracked>` 形式で列挙**されることを確認。本 Issue の Purpose (#1179 が閉じた自動起票の穴を可視化で埋める) が達成されている
+  - **(2026-08-06 訂正)** 検証当時に観測した「20 件の group-key、閾値 3 超過は `manual-recovery-respawn` (21) と `code-pr-tier3-recovery` (6)」という**数値は #1152 の実装バグによるもの**だった。同日中に #1152 が reopen され (cutoff となる `起票済み` entry をファイル出現順の最後 = 最古 で選んでいたバグ)、PR #1207 で修正された。修正後の実測では group-key は 16 件、**閾値 3 超過はゼロ**になっている。Section 10 が「出力形式どおりに列挙する」という本 AC の検証内容自体は修正の前後で変わらず成立するが、当時記録した個々の数値は無効
 - `/audit stats --retention` の全体実行は行っていない。Section 10 の手順が上記コマンド 1 本とその集計・表示であることを SKILL.md L504-508 で確認した上で、コマンド出力が期待形式で得られることを直接検証して PASS とした (この限定は Issue コメントにも明記)
 - **可視化によって初めて見えた低頻度 untracked group-key**: `manual-recovery-merge-rerun/pre-merge-ac-command-unverifiable` (2)、`manual-recovery-commit-push` (2)、`manual-recovery-push-only` / `push-and-pr` / `respawn-skip-code` (各 2) など。1 件目は 2026-08-06 の `/auto --batch 1179 1181 1180` で #1181 / #1180 が pre-merge AC gate にブロックされた事象に対応すると見られる。閾値未満のため Recommend には出ないが Section 10 では継続的に見える
 - **本バッチ全体の連鎖が閉じた**: #1179 (自動起票の opt-out) → #1191 (可視化で穴を埋める) → #1098 (Tier 2 の永続記録を復元して母数を正す) → #1152 (誤検知と再発見落としを解消して精度を上げる)。4 Issue が 1 つの観測系を成立させており、Section 10 の出力はその 4 件すべての成果が反映された状態になっている
 
 ### Improvement Proposals
 
-- **Section 10 の `tracked:#N` が対応 Issue の open/closed を区別しない**: `manual-recovery-respawn` は `tracked:#1014` と表示されるが #1014 は CLOSED (2026-07-13) であり、実態は「対応済みの Issue が close された後に 21 件再発している」状態。#1152 の entry 単位判定により**検出**はできるようになったが、**表示**は tracked/untracked の 2 値のままで「tracked だが再発中」が読み取れない。count の大きさで気づける範囲ではあるものの、`--with-tracking` の出力に対応 Issue の state を含めるか、Section 10 側で `tracked:#N (closed)` と表示すれば「解決済みのはずが再発している」group-key が一目で分かる。変更対象は `scripts/collect-recovery-candidates.sh` と `skills/audit/SKILL.md` の 2 ファイルで、同スクリプトは `/verify` Step 15 と `/audit` Section 10 の 2 経路から使われる共有サーフェス
+- ~~**Section 10 の `tracked:#N` が対応 Issue の open/closed を区別しない**: `manual-recovery-respawn` は `tracked:#1014` と表示されるが #1014 は CLOSED (2026-07-13) であり、実態は「対応済みの Issue が close された後に 21 件再発している」状態~~ **(2026-08-06 訂正: 起票根拠が無効)** — この提案は #1205 として起票したが、動機とした「21 件の再発」は #1152 の cutoff 選定バグの産物であり実際の再発件数ではなかった。#1152 の修正 (PR #1207) 後、`manual-recovery-respawn` は候補から消滅している (#1014 の closedAt より後の entry がゼロ)。
+  - **提案自体の妥当性**: 「`tracked:#N` が open/closed を区別しない」という表示仕様の指摘は #1152 のバグと独立して成立する。ただし修正後は closed 対応 Issue を持つ group-key でも closedAt 後の entry のみが計上される正しい挙動になっており、`tracked:#799` (2, closed) のように「tracked だが再発中」が出力に残るケースは依然として存在する。埋もれる対象が消えたわけではないが、当初想定していた 21 件規模の見落としリスクは解消された
+  - **#1205 の扱い**: 訂正コメントを投稿し、3 案 (#1152 修正着地まで保留 / スコープ縮小して維持 / close) を提示済み。推奨は保留とした
 - **Steering Doc sync candidate の抽出漏れ (review フェーズからの集約)**: 本 PR は `docs/structure.md` / `docs/tech.md` (+ `docs/ja/` 対訳) を同期したが、同じ Steering Document である `docs/product.md` は候補から漏れていた。`/audit` サブコマンドの出力仕様が変わる Issue では `docs/product.md` の用語集エントリも同期候補に含める余地がある
