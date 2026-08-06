@@ -109,19 +109,32 @@ No new comments since last phase.
 - Real-data smoke test (dry-run against this repository's own ~43 stale worktree entries) surfaced two additional validations beyond the bats suite: (1) the Spec's `merge+pr-1190` example (directory name suggests PR #1190, but the checked-out branch is actually `worktree-code+issue-1186`) was classified correctly by branch-name-priority logic; (2) the current session's own worktree (`code+issue-1119`, locked, Issue still OPEN) was correctly excluded before ever reaching the locked/HEAD-match guard, since the `not-done` completion check short-circuits first — confirming the primary completion-based filter (not just the concurrent-session guard) protects an in-progress session.
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Implemented all of Steps A–I (including the orphan-branch Step H) exactly as specified in the Spec's single-script design; no split into multiple scripts or wrapper-EXIT-trap alternative was introduced.
-- Used a single generic classify_name regex (`^.+\+(issue|pr)-([0-9]+)$`) instead of the Spec's two separate branch/detached-dir regexes — behaviorally identical, simpler implementation, not a functional deviation.
-- Added an extra `warned (gh lookup failed)` summary category beyond Step I's 7 listed categories, since Step D's own text requires this outcome to be tracked and reported, and folding it into `skipped (unrecognized)` would conflate two different failure modes.
+- Independently re-verified all 4 Pre-merge rubric ACs against the implementation and the bats suite rather than treating `/code`'s self-assessment as authoritative (per its own handoff note); all 4 confirmed PASS.
+- Fixed a SHOULD-severity bug found by `review-light` (Step G's `reclaimed (worktree+branch)` counter was not gated on `delete_branch_safe` success, unlike Step H's equivalent orphan-branch path) directly in `/review` Step 12, since it was small, well-isolated, and fully covered by a new regression bats test — not deferred to a follow-up Issue.
+- Left the `docs/structure.md` / `docs/ja/structure.md` `scripts/` file-count off-by-one (caused by a separately-merged parallel PR, #1211) unfixed: the correct post-merge value (77) cannot be verified from this PR's own branch content, so fixing it here would mean guessing rather than confirming.
 
 ### Deferred Items
-- Post-merge opportunistic AC (running the script for real across several sessions to confirm no re-accumulation) is left as documented — not something `/code` can satisfy pre-merge.
-- No `--apply` run was executed against this repository's real worktree/branch data during implementation (only dry-run smoke testing) — the actual cleanup of the ~71 stale entries observed in the dry-run (32 worktrees + 39 orphan branches) is left for a human or a follow-up `--apply` run, since deleting real branches/worktrees is outside this Issue's implementation scope and was not requested.
-- Two pre-existing, unrelated translation-sync gaps were surfaced by `scripts/check-translation-sync.sh` (`docs/guide/autonomy.md` MISSING_JA, `docs/guide/index.md` OUTDATED) — not touched, since neither file was changed by this Issue.
+- Post-merge opportunistic AC (confirm no re-accumulation of stale worktrees/branches after several sessions of real operation) remains open, unchanged from `/code`'s handoff.
+- `docs/structure.md` / `docs/ja/structure.md` `scripts/` count fast-follow (76 → 77) is deferred to a commit made once both this PR and #1211 have actually landed on `main`.
+- No `--apply` run was executed against this repository's real worktree/branch data during review either (only dry-run + bats); the ~71 real stale entries `/code` observed during its smoke test remain unreclaimed.
 
 ### Notes for Next Phase
-- The `set -e` + bare `[ cond ] && assignment`-as-last-statement pitfall (see Rework above) is worth a broader sweep across other bash 3.2-compatible scripts in this repo if a reviewer wants to proactively rule out latent instances elsewhere — out of scope for this Issue's review, noted here only as a possible follow-up angle.
-- All 4 pre-merge rubric ACs were self-assessed PASS directly against the implementation in Step 10; `/review` should independently confirm the rubric judgments rather than treating this as authoritative.
-- The dry-run smoke test output (32 worktree+branch pairs, 39 orphan branches, 6 uncommitted-changes warnings, 9 unrecognized/skipped) is a useful reference for `/review` to spot-check specific classification edge cases against real repository state without needing to re-run anything destructively.
+- `/merge` should proceed normally — no MUST issues block merge.
+- The `scripts/` count drift pattern (see review retrospective's "Recurring issues") may recur for any future PR pair that adds scripts in parallel; worth watching for in future reviews, not yet filed as its own Issue.
+- The `kind=issue` branch-deletion regression test added in this phase (`tests/reclaim-stale-worktrees.bats`) is a useful reference if a future change touches `delete_branch_safe` or the Step G/H reclaim-count gating again.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Nothing to note. The implementation followed the Spec's Steps A–I exactly; the two self-documented Code Retrospective deviations (single generic `classify_name` regex, extra `warned (gh lookup failed)` category) were independently confirmed behaviorally sound during review — the permissive regex still requires the `worktree-` prefix for real branches (per `modules/worktree-lifecycle.md`'s naming convention), so it is not a functional narrowing.
+
+### Recurring issues
+One implementation-level inconsistency was found and fixed: Step G (worktree-entry reclaim path) counted a worktree+branch pair as `reclaimed (worktree+branch)` regardless of whether the subsequent `delete_branch_safe` call actually succeeded, while Step H (orphan-branch path) correctly gated its own reclaim count on `delete_branch_safe`'s return value (`if delete_branch_safe ...; then count_reclaimed_orphan=...`). Two code paths calling the same helper function, only one of which checks its result, is a pattern worth watching for in future scripts with multiple reclaim/cleanup entry points — silently produces a misleading summary rather than a hard failure, so it would not have been caught by the bats suite's existing assertions (all of which used PR-kind branches with a working `-D` fallback) without a dedicated regression case for the `kind=issue` (no-fallback) scenario.
+
+Separately, the Base Branch Conflict Pre-check surfaced that `docs/structure.md` / `docs/ja/structure.md`'s manually-maintained `scripts/` file-count comment will read `76` immediately post-merge even though the true count will be `77`, because a separately-merged parallel PR (#1211) already added `scripts/get-blocked-by.sh` to `origin/main` without bumping the same counter (which is *already* stale there today — `origin/main` has 76 actual scripts but the doc still says 75). This is a structural risk: any two PRs developed in parallel that each add a new script will independently compute the counter from a stale baseline and one bump will get lost at merge time. Recorded here as a single observation, not filed as an Issue — left for `/verify` aggregation to judge whether this recurs often enough to warrant a structural fix (e.g. a CI check that recomputes the count from `find scripts -maxdepth 1 -type f | wc -l` instead of a manually-maintained comment).
+
+### Acceptance criteria verification difficulty
+Nothing to note. All 4 Pre-merge rubric ACs were written at a granularity directly verifiable against the implementation logic and the bats suite; no UNCERTAIN results or verify command inaccuracies were encountered. The `/code` Phase Handoff's self-assessment (all 4 PASS) held up under this independent `/review` re-verification.
