@@ -232,7 +232,7 @@ wholework/
 - `scripts/validate-permissions.sh` — skill ディレクトリと name: フィールドの一貫性を検証
 - `scripts/validate-skill-syntax.py` — SKILL.md frontmatter と構文を検証
 - `scripts/check-file-overlap.sh` — リポジトリ間のファイル重複検出
-- `scripts/check-verify-dirty.sh` — /verify Step 1 用 session-aware dirty file 分類スクリプト (self-worktree / other-worktree / other-session / self-spec / own-issue-scope / foreign-session / parent-main (帰属未確定時のフォールバック) の 7 分類; own-issue-scope と foreign-session の判定は自 Issue の Spec `## Changed Files` マニフェストを根拠とする; classify=... を stderr 出力)
+- `scripts/check-verify-dirty.sh` — /verify Step 1 用 session-aware dirty file 分類スクリプト (self-worktree / other-worktree / other-session / self-spec / own-issue-scope / foreign-session / parent-main (帰属未確定時のフォールバック) の 7 分類; own-issue-scope と foreign-session の判定は自 Issue の Spec `## Changed Files` マニフェストを根拠とする; unrelated spec ファイルの所有 Issue が OPEN かつ稼働中の `phase/*` ラベル (`phase/done` 除く) を持つ場合も `gh issue view` により foreign-session に再分類し、`gh` 失敗時は従来のブロッキング分類にフォールバックする; classify=... を stderr 出力)
 - `scripts/check-session-findings-disposition.sh` — L3 `session.md` の `## Findings` から canonical disposition タグ欠落を検出；`skills/auto/SKILL.md` Step 5 の commit 直前に warn-only で呼び出される
 - `scripts/check-skill-change-observation-ac.sh` — Issue 本文が `skills/*/SKILL.md` に言及する場合に、post-merge の `verify-type: observation` AC から `session=next` 未付与を検出；`skills/issue/SKILL.md` Step 4 から warn-only で呼び出される
 - `scripts/check-ac-checkbox-format.sh` — Issue 本文の `### Pre-merge` / `### Post-merge` セクション配下でチェックボックス形式でない条件行を検出；`skills/issue/SKILL.md` Step 4 から warn-only で呼び出される

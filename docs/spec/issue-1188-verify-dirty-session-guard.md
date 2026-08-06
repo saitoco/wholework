@@ -58,3 +58,53 @@
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: `/issue --non-interactive` によるリファインメント実施記録。Triage 結果 (Type=Bug, Size=M, Value=3)、AC 調整 (post-merge observation AC への `session=next` 追加、AC5 への新規テストファイル注記)、および稼働中セッション判定の主判定材料を `phase/*` ラベル軸とする Auto-Resolve 方針を記録。 / URL: https://github.com/saitoco/wholework/issues/1188#issuecomment-5201465090
+
+### code phase (cutoff: 2026-08-06T08:08:52Z)
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Implementation Step 1 describes a single `gh issue view "$M" --json state,labels` call, but `_check_issue_active()` in `scripts/check-verify-dirty.sh` was implemented as two sequential calls (`--json state` first, short-circuiting to `inactive` before the `--json labels` call when the Issue is already CLOSED). This matches the Notes' explicit direction to follow `scripts/reconcile-phase-state.sh`'s established two-call pattern, and avoids an unnecessary `gh` call for the common CLOSED case. Behavior is identical to the single-call reading; no Spec update needed.
+- `skills/verify/SKILL.md`'s `allowed-tools` frontmatter dropped `git pull:*` and gained `git fetch:*`: replacing the `git pull` command with `git fetch` + `git merge --ff-only` (Implementation Step 3) left `git pull:*` with no remaining executable-command reference in the file, so it was removed for consistency with `scripts/check-allowed-tools.sh`'s under-declaration check (which passed both before and after — the removal is a cleanliness choice, not one forced by the validator).
+
+### Design Gaps/Ambiguities
+
+- N/A — the Spec Notes had already resolved the two ambiguous points relevant to implementation (active-session criteria, `gh` failure fallback direction); no new gap surfaced during coding.
+
+### Rework
+
+- N/A — no backtracking occurred; all 23 `tests/verify-dirty-detection.bats` cases (20 pre-existing + 3 newly added by this Issue) and the full 1452-case suite passed on the first run after implementation.
+- Minor Spec Notes inaccuracy (not a Deviation, informational only): the Notes describe the pre-existing `tests/verify-dirty-detection.bats` as "18ケース"; the actual pre-change count, confirmed by running `bats` before adding new cases, was 20. Not corrected in Notes since it does not affect any Implementation Step or Acceptance Criteria.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. No new divergence surfaced during review beyond the two deviations the Code Retrospective already documented and justified (the `_check_issue_active()` two-call short-circuit and the `git pull:*` → `git fetch:*` allowed-tools swap); neither required a Spec update.
+
+### Recurring issues
+
+Nothing to note. This was the PR's first `/review` pass; findings were 1 SHOULD (missing `gh`-call-failure regression test) and 1 CONSIDER (AskUserQuestion prompt-text ordering vs. itemized list), no MUST. No repeated issue pattern across findings.
+
+### Acceptance criteria verification difficulty
+
+Nothing to note. All 5 Pre-merge AC resolved cleanly to PASS on the first pass — 3 `rubric` (semantic judgment), 1 `grep`, 1 `command` (via CI reference fallback in safe mode). No UNCERTAIN results and no verify command syntax/wording inaccuracies encountered.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Fixed both the SHOULD and CONSIDER findings from the `review-light` agent (not just MUST-severity), since no MUST issues existed and both fixes were low-risk, in-scope quality improvements: reordering the AskUserQuestion prompt text to match its itemized list, and adding a bats case for `_check_issue_active()`'s `gh`-call-failure fallback path.
+- Ran the Base Branch Conflict Pre-check (`git merge-tree`) against `origin/main`; found no `changed in both` blocks, so no base-conflict context was passed to the review agent.
+
+### Deferred Items
+- Post-merge observation AC (`session=next`) — still deferred to `/verify` per the Issue's own AC design; unchanged from the code-phase handoff.
+- None else.
+
+### Notes for Next Phase
+- `/merge` can proceed: CI is green (9/9 jobs SUCCESS) after the review-fix push, and no MUST issues remain.
+- `tests/verify-dirty-detection.bats` now has 24 cases (up from 23 noted in the code-phase handoff) due to the review-phase-added `gh`-failure regression test; if `/verify`'s AC5 command re-runs the suite, the new count is expected.
+- The post-merge observation AC still needs a real concurrent-session `/verify` run to produce evidence; a single isolated run will not exercise the foreign-session path.

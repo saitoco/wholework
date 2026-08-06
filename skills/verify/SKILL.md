@@ -3,7 +3,7 @@ name: verify
 description: Acceptance test. Automatically verifies post-merge acceptance conditions and updates Issue checkboxes (`/verify 123`). Use after `/merge`. Reopens Issue on FAIL to return to the fix cycle.
 model: sonnet
 loop-paths-used: [A]
-allowed-tools: Bash(git checkout:*, git pull:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-ac-fallback.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*, date:*, printf:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
+allowed-tools: Bash(git checkout:*, git fetch:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-ac-fallback.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*, date:*, printf:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
 ---
 
 # Acceptance Test
@@ -31,7 +31,8 @@ bash ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh $NUMBER
 Handle by exit code:
 
 - **Exit 0 (clean, or all dirty files are non-blocking: self-worktree / other-worktree / other-session / self-spec / foreign-session, or unrelated spec files coexisting with a foreign-session file)** → continue
-- **Exit 2 (unrelated spec files are the ONLY non-blocking dirty files present — no foreign-session file is also dirty)** → the script printed the file paths to stdout: Present the following choice via AskUserQuestion — "Unrelated dirty files detected (e.g., `docs/spec/issue-N-*.md` for a different Issue). Stash and continue, or abort?"
+- **Exit 2 (unrelated spec files are the ONLY non-blocking dirty files present — no foreign-session file is also dirty)** → the script printed the file paths to stdout: Present the following choice via AskUserQuestion — "Unrelated dirty files detected (e.g., `docs/spec/issue-N-*.md` for a different Issue). Continue without stashing (default), stash and continue, or abort?"
+  - "Continue without stashing" (default/recommended): the listed dirty files are outside this Issue's own scope, so leaving them in place does not affect this verify run — proceed without running `git stash`
   - "Stash and continue": run `git stash`, then continue
   - "Abort": stop and guide user to run `git stash` or `git commit`, then re-run `/verify $NUMBER`
 - **Exit 1 (dirty files listed in this Issue's own Spec `## Changed Files` manifest, or attribution undetermined)**: output error message and abort:
@@ -76,14 +77,14 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh "verify/issue-$NUMBER"
 
 **Worktree context branches (exhaustive):**
 
-- **`none`** (main repository root — normal case): proceed with base branch detection and the `git checkout`/`git pull` below as written.
-- **`own`** (already inside the `verify/issue-$NUMBER` worktree — re-entrant call): still run base branch detection (`BASE_BRANCH` is needed by Step 13's Worktree Exit), but skip the `git checkout`/`git pull` at the end of this Step — the main repository already has the base branch checked out, so checking it out again inside this worktree would fail with exit 128. Proceed to Step 3; the Entry section will record `ENTERED_WORKTREE=false`.
-- **`foreign <path>`** (inherited the caller's worktree): do not run `git checkout`/`git pull`. Instead:
+- **`none`** (main repository root — normal case): proceed with base branch detection and the `git checkout`/`git fetch`+`merge --ff-only` below as written.
+- **`own`** (already inside the `verify/issue-$NUMBER` worktree — re-entrant call): still run base branch detection (`BASE_BRANCH` is needed by Step 13's Worktree Exit), but skip the `git checkout`/`git fetch`+`merge --ff-only` at the end of this Step — the main repository already has the base branch checked out, so checking it out again inside this worktree would fail with exit 128. Proceed to Step 3; the Entry section will record `ENTERED_WORKTREE=false`.
+- **`foreign <path>`** (inherited the caller's worktree): do not run `git checkout`/`git fetch`+`merge --ff-only`. Instead:
   1. Output: `Warning: /verify was dispatched with the caller's worktree still active (<path>). Returning to the main repository root before base branch checkout.`
   2. Call `ExitWorktree(action: "keep")` to exit the caller's worktree session (leaves the caller's worktree and branch on disk; a no-op if no session is active).
   3. `cd <path>` (the path reported by the detection command above) to normalize CWD to the main repository root.
   4. Re-run `${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh "verify/issue-$NUMBER"`. If it still does not report `none`, output `Error: Failed to return to the main repository root from <path>. Complete the caller's Worktree Exit, then re-run /verify $NUMBER.` and abort — do not proceed to checkout.
-  5. Once it reports `none`, continue with base branch detection and the `git checkout`/`git pull` below as written.
+  5. Once it reports `none`, continue with base branch detection and the `git checkout`/`git fetch`+`merge --ff-only` below as written.
 
 If ARGUMENTS contains `--base {branch}`, use that as `BASE_BRANCH`. Otherwise, search for a merged PR linked to the Issue and fetch `baseRefName`:
 
@@ -117,9 +118,17 @@ Error: PR #$OPEN_PR is open but not yet merged.
 git checkout "${BASE_BRANCH}"
 ```
 
+`git pull` fails deterministically on a dirty working tree under a `pull.rebase` configuration (`error: cannot pull with rebase: You have unstaged changes.`) — a real state reachable from Step 1's "Continue without stashing" choice above, since that path leaves unrelated/foreign-session dirty files in place by design. Use a dirty-tree-tolerant `fetch` + `merge --ff-only` instead, which only touches files the incoming commits actually change:
+
 ```bash
-git pull origin "${BASE_BRANCH}"
+git fetch origin "${BASE_BRANCH}"
 ```
+
+```bash
+git merge --ff-only "origin/${BASE_BRANCH}"
+```
+
+If `git merge --ff-only` fails (the incoming commits touch a dirty file, or history has diverged), surface the git error output as-is and guide the user: "Error: Failed to fast-forward `${BASE_BRANCH}` — a dirty file conflicts with an incoming change, or history has diverged. Run `git stash` or `git commit` for the conflicting file(s), then re-run `/verify $NUMBER`."
 
 ### Step 3: Worktree Entry
 

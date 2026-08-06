@@ -27,6 +27,20 @@
 # append), never another session's work. When the Spec or its `## Changed Files` section is
 # missing, attribution cannot be determined; parent-main files fall back to the pre-#1123
 # behavior of blocking everything.
+#
+# Active-session reclassification for unrelated spec files (Issue #1188): a dirty
+# docs/spec/issue-M-*.md file (M != issue-number) is a candidate for the blocking exit-2
+# `unrelated_spec_files` bucket, but before it is added there this script checks whether Issue M
+# itself looks actively worked on — `gh issue view M --json state` / `--json labels` (same
+# two-call pattern as scripts/reconcile-phase-state.sh) — via `state == "OPEN"` AND a `phase/*`
+# label other than `phase/done`. When both hold, the file is reclassified `foreign-session`
+# (non-blocking, same bucket as the existing own-Spec-manifest-based foreign-session path) instead
+# of `unrelated_spec_files`, since it is most likely a concurrent session's live retrospective
+# write-back rather than an abandoned/stale file safe to stash. If the `gh` call itself fails
+# (no git remote, network error, etc.), a warning is printed to stderr and the file falls back to
+# the pre-#1188 `unrelated_spec_files` classification — active-session detection degrades to
+# "unknown", which is treated the same as "not active" (see Spec Notes for the fallback-direction
+# rationale).
 
 set -euo pipefail
 
@@ -164,6 +178,29 @@ _in_changed_files_manifest() {
   grep -qxF "$file" <<<"$changed_files_manifest"
 }
 
+# Active-session check for an unrelated spec file's owning Issue M (Issue #1188).
+# Echoes one of: active, inactive, error.
+#   active   — Issue M is OPEN and carries a phase/* label other than phase/done
+#   inactive — Issue M is CLOSED, or OPEN with no phase/* label (or only phase/done)
+#   error    — the `gh issue view` calls themselves failed (no remote, network, etc.);
+#              caller falls back to the pre-#1188 unrelated_spec_files classification
+_check_issue_active() {
+  local issue_num="$1" state labels label
+  state=$(gh issue view "$issue_num" --json state -q '.state' 2>/dev/null) || { echo "error"; return; }
+  if [[ "$state" != "OPEN" ]]; then
+    echo "inactive"
+    return
+  fi
+  labels=$(gh issue view "$issue_num" --json labels -q '.labels[].name' 2>/dev/null) || { echo "error"; return; }
+  while IFS= read -r label; do
+    if [[ "$label" == phase/* && "$label" != "phase/done" ]]; then
+      echo "active"
+      return
+    fi
+  done <<<"$labels"
+  echo "inactive"
+}
+
 # Classify each dirty file
 unrelated_spec_files=()
 has_other=false
@@ -174,7 +211,20 @@ for file in "${dirty_files[@]}"; do
   if [[ "$file" =~ $spec_regex ]]; then
     file_issue="${BASH_REMATCH[1]}"
     if [[ "$file_issue" != "$NUMBER" ]]; then
-      unrelated_spec_files+=("$file")
+      issue_status="$(_check_issue_active "$file_issue")"
+      case "$issue_status" in
+        active)
+          echo "[check-verify-dirty] classify=foreign-session path=$file" >&2
+          has_foreign=true
+          ;;
+        error)
+          echo "Warning: gh issue view failed for #$file_issue — falling back to unrelated_spec_files classification for $file" >&2
+          unrelated_spec_files+=("$file")
+          ;;
+        *)
+          unrelated_spec_files+=("$file")
+          ;;
+      esac
     else
       echo "[check-verify-dirty] classify=self-spec path=$file" >&2
     fi
