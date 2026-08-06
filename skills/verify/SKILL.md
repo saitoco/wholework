@@ -40,10 +40,15 @@ Handle by exit code:
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="issue", ENTITY_NUMBER=$NUMBER, SKILL_NAME="verify".
 
-Emit `phase_start` (phase=verify) immediately after the banner (only when `AUTO_EVENTS_LOG` is set; restore the pointer first so in-session `Skill()` invocations from `/auto` are not silently excluded — see `restore_auto_session_pointer()` in `modules/event-emission.md`):
+If ARGUMENTS contains `--session-id=<SID>`, extract `<SID>` (this is the in-band `AUTO_SESSION_ID` hand-off used when `/auto` dispatches this skill via in-session `Skill(skill="wholework:verify", ...)` — see `modules/event-emission.md` § `persist_auto_session_pointer()`). Otherwise the value is empty. Persist it to the issue-scoped pointer file so every subsequent `restore_auto_session_pointer` call in this run resolves to the correct session, and so a standalone `/verify` (no `--session-id`) self-heals any stale pointer left by a prior run:
 ```bash
 source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
-restore_auto_session_pointer
+persist_auto_session_pointer "<SID or empty>" "$NUMBER"
+```
+
+Emit `phase_start` (phase=verify) immediately after the banner (only when `AUTO_EVENTS_LOG` is set; restore the pointer first so in-session `Skill()` invocations from `/auto` are not silently excluded — see `restore_auto_session_pointer()` in `modules/event-emission.md`):
+```bash
+restore_auto_session_pointer $NUMBER
 if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
   EMIT_ISSUE_NUMBER=$NUMBER emit_event "phase_start" "phase=verify"
 fi
@@ -377,7 +382,7 @@ For each executable condition, ask:
 Immediately after receiving the user's response, emit `verify_user_confirm` (only when `AUTO_EVENTS_LOG` is set; restore the pointer first):
 ```bash
 source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
-restore_auto_session_pointer
+restore_auto_session_pointer $NUMBER
 if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
   EMIT_ISSUE_NUMBER=$NUMBER emit_event "verify_user_confirm" \
     "ac_index={N}" \
@@ -532,7 +537,7 @@ Apply the following judgment based on the verification results (exhaustive):
 Emit `phase_complete` (phase=verify; only when `AUTO_EVENTS_LOG` is set; restore the pointer first):
 ```bash
 source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
-restore_auto_session_pointer
+restore_auto_session_pointer $NUMBER
 if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
   EMIT_ISSUE_NUMBER=$NUMBER emit_event "phase_complete" "phase=verify"
 fi
@@ -596,7 +601,7 @@ If neither condition holds, `DEFERRAL_DETECTED=false` and `DEFERRAL_REASON` is u
     - Emit `verify_reopen_cycle` event (only when running inside `/auto` session — both `AUTO_EVENTS_LOG` and `AUTO_SESSION_ID` must be set; restore the pointer first):
       ```bash
       source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
-      restore_auto_session_pointer
+      restore_auto_session_pointer $NUMBER
       if [[ -n "${AUTO_EVENTS_LOG:-}" && -n "${AUTO_SESSION_ID:-}" ]]; then
         _ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
         printf '%s\n' "{\"ts\":\"${_ts}\",\"issue\":${NUMBER},\"event\":\"verify_reopen_cycle\",\"session_id\":\"${AUTO_SESSION_ID}\",\"iteration\":\"${NEXT_ITERATION}\",\"reopen_reason\":\"pre_merge_ac_fail\"}" >> "${AUTO_EVENTS_LOG}" 2>/dev/null || true
@@ -627,7 +632,7 @@ If neither condition holds, `DEFERRAL_DETECTED=false` and `DEFERRAL_REASON` is u
     - Emit `verify_fail_marker_posted` event (only when `AUTO_EVENTS_LOG` is set; restore the pointer first):
       ```bash
       source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
-      restore_auto_session_pointer
+      restore_auto_session_pointer $NUMBER
       if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
         EMIT_ISSUE_NUMBER=$NUMBER emit_event "verify_fail_marker_posted" \
           "iteration=${NEXT_ITERATION}" \
@@ -637,7 +642,7 @@ If neither condition holds, `DEFERRAL_DETECTED=false` and `DEFERRAL_REASON` is u
     - Emit `phase_complete` (phase=verify; only when `AUTO_EVENTS_LOG` is set; restore the pointer first):
       ```bash
       source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
-      restore_auto_session_pointer
+      restore_auto_session_pointer $NUMBER
       if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
         EMIT_ISSUE_NUMBER=$NUMBER emit_event "phase_complete" "phase=verify"
       fi
@@ -661,7 +666,7 @@ If neither condition holds, `DEFERRAL_DETECTED=false` and `DEFERRAL_REASON` is u
         a. Emit `verify_retry_fire` event (only when `AUTO_EVENTS_LOG` is set; restore the pointer first):
            ```bash
            source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
-           restore_auto_session_pointer
+           restore_auto_session_pointer $NUMBER
            if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
              EMIT_ISSUE_NUMBER=$NUMBER emit_event "verify_retry_fire" \
                "iteration=${NEXT_ITERATION}" \
@@ -727,7 +732,7 @@ If neither condition holds, `DEFERRAL_DETECTED=false` and `DEFERRAL_REASON` is u
     - Emit `verify_fail_marker_posted` event (only when `AUTO_EVENTS_LOG` is set; restore the pointer first):
       ```bash
       source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
-      restore_auto_session_pointer
+      restore_auto_session_pointer $NUMBER
       if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
         EMIT_ISSUE_NUMBER=$NUMBER emit_event "verify_fail_marker_posted" \
           "iteration=${NEXT_ITERATION}" \
@@ -737,7 +742,7 @@ If neither condition holds, `DEFERRAL_DETECTED=false` and `DEFERRAL_REASON` is u
     - Emit `phase_complete` (phase=verify; only when `AUTO_EVENTS_LOG` is set; restore the pointer first):
       ```bash
       source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
-      restore_auto_session_pointer
+      restore_auto_session_pointer $NUMBER
       if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
         EMIT_ISSUE_NUMBER=$NUMBER emit_event "phase_complete" "phase=verify"
       fi
@@ -757,7 +762,7 @@ If neither condition holds, `DEFERRAL_DETECTED=false` and `DEFERRAL_REASON` is u
 Emit `phase_complete` (phase=verify; only when `AUTO_EVENTS_LOG` is set; restore the pointer first):
 ```bash
 source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
-restore_auto_session_pointer
+restore_auto_session_pointer $NUMBER
 if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
   EMIT_ISSUE_NUMBER=$NUMBER emit_event "phase_complete" "phase=verify"
 fi
@@ -774,7 +779,7 @@ fi
 Emit `phase_complete` (phase=verify; only when `AUTO_EVENTS_LOG` is set; restore the pointer first):
 ```bash
 source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
-restore_auto_session_pointer
+restore_auto_session_pointer $NUMBER
 if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
   EMIT_ISSUE_NUMBER=$NUMBER emit_event "phase_complete" "phase=verify"
 fi
