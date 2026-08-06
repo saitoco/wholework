@@ -130,3 +130,44 @@
 ### Acceptance criteria verification difficulty
 
 - Step 8 の rubric 検証は 5 件全て決定的に PASS 判定できたが、その後の Step 10 コードレビューが AC1 の前提を揺るがす MUST バグ (exit 2 到達不能) を発見した。rubric は「コード構造が説明どおりに存在するか」を検証できても、`set -e` 抑制のような制御フローの深い正しさまでは検出できないことを示す実例。この種の bash 制御フローの正しさは、rubric ではなく実測ベースのコードレビュー (review-bug の HIGH SIGNAL 検出) が担う領域として機能していることを確認した
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- 本 Issue は 2026-08-06 の `/verify 1185` retrospective で発見された「Tier 2 recovery の永続記録喪失 (#1181 の回帰)」を、新規起票せず**スコープ拡大として取り込んだ**。retro-proposals では Tier 1 と分類されたが、同一領域 (Tier 2/3 recovery の可観測性) を扱う本 Issue が既に open だったため duplicate 判定でコメント追記に回した。`/issue 1098` がそのコメント 2 件を本文へ統合し、Purpose を 3 項目に拡張・Pre-merge AC を 3 → 5 件に増やした — L0 コメントを一級入力として扱う設計が意図どおり機能した事例
+- 同じ `/issue 1098` 実行で **#1185 の新設 Step 15 (AC 監査) が実運用初発火**し、Step 7 が authoring した `section_contains "skills/verify/SKILL.md" "### Step 12" "..."` の Pattern 6.1 違反 (heading 引数の先頭 `#`) を自己検出して rubric 単独へ修正した。#1185 の post-merge observation AC はこの観測をもって PASS 確定した
+
+#### spec
+
+- Changed Files が 11 件に達したことで Size を M → **L** に再評価し、review 深度も `--light` → `--full` へ自動で切り替わった。結果として review-bug×2 が動き、後述の MUST バグ検出につながっている。Size 再評価が実効的な品質差を生んだ実例
+- 調査の過程で `skills/auto/SKILL.md` の Source 1 ノートと `modules/orchestration-fallbacks.md` の見出しが「Tier 2 に bash path がない」前提のままだったことを発見し、スコープに含めた。Issue 本文には書かれていなかったドキュメントドリフトを spec が拾った
+
+#### code
+
+- Spec の Changed Files に明記されていなかった `modules/orchestration-fallbacks.md` の `### Tier 3 bash path` 節にも失敗パス説明を追加した (Code Retrospective に記録済み)。Tier 2 側だけ更新すると記述が非対称になり、まさに本 Issue の Root Cause である「見出しと本文の矛盾」を再生産するという判断で、スコープ微増を正当化している
+
+#### review
+
+- **rubric の限界を実証した回**。Step 8 の rubric 5 件は全て決定的に PASS したが、その後の review-bug が `if <function-call>; then ... else exit 2; fi` パターンで `set -e` が抑制され、ハンドラ関数内部の `git commit --amend` / `git push --force-with-lease` / `run-code.sh --pr` の失敗が握り潰されて `else` に到達できない MUST バグを検出した。rubric は「構造が説明どおり存在するか」は見られるが制御フローの正しさは見られない、という責務境界が実データで示された
+- review-bug×2 (diff bug scan / security scan) が独立に同一の根本原因へ到達した。プロンプトの焦点が異なるエージェントが同じ結論に至ったことで finding の信頼度が上がった
+
+#### merge
+
+- pre-merge AC gate は 5 件全てチェック済みで無条件通過。本バッチで gate ブロックが起きたのは #1181 / #1180 の 2 件のみで、#1083 の Pattern 6 追加以降に authoring された AC (#1185 / #1156 / #1098) はいずれもブロックなしで通っている
+
+#### verify
+
+- Pre-merge 5 件すべて PASS。特に本 Issue の中核である 2 点を実装で確認した:
+  - **Tier 2/3 の失敗パス emit** — Tier 2 は `_fallback_exit -eq 2` の anchor-matched-but-handler-failed 経路で `result=failed` (L776-779)、Tier 3 は `else` 節で recovery-plan から `action` を読み出して `result=failed action=<action>` を emit (L800-808)。本 Issue の残作業だった `action=abort` の欠落が解消された
+  - **Tier 2 の永続記録経路** — L759 で `apply-fallback.sh --record-issue` を渡し、L762-771 で dirty 検出 → commit → push。Tier 3 の既存経路と同型
+- Post-merge 2 件はいずれも `verify-type: manual` で「異常を意図的に再現する」ことが前提のため、Claude 実行不可と判断して未チェックのまま verification guide を提示した。`phase/verify` を維持
+- **本 Issue が新設した Step 12 判定ルールが、本 Issue 自身の未記録 recovery を検出した**: `/spec 1098` の Worktree Exit で main 分岐による FF 失敗が起き、worktree 内で手動 `git rebase origin/main` して復旧している (spec の完了報告に記録あり)。しかし `docs/reports/orchestration-recoveries.md` に `Issue #1098` のエントリはなく、本 Spec にも `## Auto Retrospective` セクションがない。更新後の Step 12 ルール (「orchestration-recoveries.md にも Spec にも記録がなければ notable content」) がこれを拾い、本 retrospective の skip を正しく阻止した — ルール自体の動作確認になっている
+- 同種の FF 失敗は本日 **4 件目** (#1180 / #1179 / #1152 / #1098)。うち #1152 の spec phase では `--write-manual-recovery` が呼ばれて記録されたが、#1098 の spec phase では呼ばれなかった。根本原因 (`worktree-merge-push.sh` の base-checkout 経路に rebase fallback がない) は #1076 で追跡中
+
+### Improvement Proposals
+
+- **Tier 2 (memory 候補、Issue 化せず)**: `/spec` の Worktree Exit で手動 rebase による復旧を行った際、`--write-manual-recovery` の呼び出しが実行者の判断に委ねられており一貫していない。同日の #1152 spec phase では記録され、#1098 spec phase では記録されなかった。手順自体は機能している (記録された事例がある) ため構造的欠陥とは言い切れず、LLM の判断ばらつきの問題。`modules/worktree-lifecycle.md` の Exit セクションに「FF 失敗を手動復旧したら `--write-manual-recovery` を呼ぶ」ことを明記すれば揃う見込みだが、観測が 1 件のみのため起票は見送る
+- FF 失敗そのものの根本原因は **#1076** で追跡中 (2026-08-06 に根本原因 `worktree-merge-push.sh` L88-95 の base-checkout 経路に rebase fallback がない点を特定してコメント追記済み、別セッションで spec 進行中)
