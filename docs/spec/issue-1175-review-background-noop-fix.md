@@ -178,3 +178,37 @@ Nothing to note — review-spec の Perspective 1 (Spec Deviation) 監査で構�
 ### Acceptance criteria verification difficulty
 
 Nothing to note — 4 件の Pre-merge 条件は `rubric` × 3 + `command "bats tests/"` × 1 の組み合わせで、いずれも UNCERTAIN なく PASS 判定に到達した。`command` 型は safe mode のため CI 参照フォールバック (`Run bats tests` ジョブの SUCCESS) で代替検証できた。verify command の記述・実行に起因する追加コストはなかった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Background の事実訂正 (`/issue` Step 5 の事実検証で候補 A が既に実装済みと判明) が方針選定に直接効いた。訂正がなければ `/spec` は「実装済みのものを実装する」方向に進みかねなかった。Auto-Resolve Log に訂正理由が残っており追跡可能
+- Post-merge observation への `session=next` 付与が `check-skill-change-observation-ac.sh` により機械検出された。本 Issue のように変更対象スキル自身の挙動を観察する条件では、この機械チェックが効いている
+
+#### spec
+- 候補 B の実装方式で **Issue 本文の示唆 (出力末尾の文言パターンマッチ) を採らず、構造化シグナル (`reconcile-phase-state.sh` の `matches_expected` + PR レビューの `state`) に置き換えた**判断が良い。ローカライズやフレーズのゆらぎに影響されない
+- 一方 Notes の「保証の範囲」がリトライ失敗リスクのみを論じ、`CHANGES_REQUESTED` の sticky 性・author 未フィルタ・token usage 上書きの 3 点を扱っていなかった。review が独立に全件検出しており、Spec 側の記述の抜けとして確定している
+
+#### code
+- 手戻りゼロ。Spec の bash 疑似コードが exit code 分岐とリトライ後の再チェックまで具体的だったため解釈の余地がなかった。`_run_claude_review_session()` への関数化も Spec が許容した範囲内
+
+#### review
+- **2 体の review-bug エージェントが独立探索から同一の SHOULD 級指摘に収斂**し、4 体の検証サブエージェントが全件 PASS と判定した。多視点レビューが機能した事例
+- 単一エージェントのみが検出した `LATEST_STATE` の author filter 欠如が、実は最も severity が高かった (**本 Issue が塞いだ「MUST 未解決を偽の recovered として報告する」バグを別経路で再導入しうる**)。収斂数と severity は相関しないことを示す観察
+- これら残存ギャップが Phase Handoff の Deferred Items に「別 Issue 化が未実施」と明記されたまま merge されている
+
+#### merge
+- Pre-merge AC ゲート unchecked_count=0、`mergeable=true reason=clean ci_status=success review_status=approved` で追加リトライなくスカッシュマージ。問題なし
+
+#### verify
+- **`check-verify-dirty.sh` が稼働中セッションの dirty ファイルを `parent-main` と誤分類した**。`docs/spec/issue-1156-post-merge-checkbox-format.md` は `run-auto-sub.sh 1156 --pr` が稼働中の別セッションのライブ成果物だったが foreign-session として認識されず、Skill 既定の「stash して続行」を選ぶと他セッションの作業を親リポジトリから取り上げる結果になった
+- **SKILL.md Step 2 の `git pull origin main` が exit-2 の「続行」経路と非整合**。stash せず続行を選ぶと、リポジトリが `pull.rebase` 設定下では `cannot pull with rebase: You have unstaged changes` で確実に失敗する。`git fetch` + `git merge --ff-only` への切り替えで回避したが、Skill 本文はこの分岐を想定していない
+- 本実行は **#1186 (チェック済み AC の再検証スキップ) が消す対象そのもの**だった。`[x]` 4 件を再検証して新規情報ゼロ、うち 1 件がフル bats スイート (1409 件)。唯一の未チェック条件は `session=next` により開始時点で SKIPPED 確定だった。実測は #1186 に記録済み
+- spec フェーズで `ff-only-merge-fallback` が発生し手動リベースを要した。原因は `worktree-merge-push.sh` の未実装経路で、#1076 に実測を追記済み
+
+### Improvement Proposals
+
+- **`LATEST_STATE` の author filter 欠如** — 姉妹 Issue #1174 (fallback Response Summary による review 完了誤判定と未対応 MUST 指摘の merge 通過を防ぐ) のスコープに直結するため、#1174 へ追記する
+- **`check-verify-dirty.sh` の稼働中セッション検出** / **SKILL.md Step 2 の pull 非整合** — 並行実行時の `/verify` 摩擦として関連 Issue を調査のうえ追記または起票する
