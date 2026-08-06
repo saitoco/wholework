@@ -109,3 +109,31 @@ N/A
 いずれも Issue 本文の Acceptance Criteria / Auto-Resolved Ambiguity Points セクションに反映済み。
 
 > 転記元: https://github.com/saitoco/wholework/issues/1083#issuecomment-5198831217 (`/auto` Step 4b、Size XS 降格後の転記)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- `/issue` が AC4 に追加した補助チェック `section_contains "skills/triage/skill-dev-verify-audit.md" "### Pattern 2" "exit code"` の heading 引数に先頭の `#` が含まれており、**恒久的に UNCERTAIN になる verify command** だった。Issue Retrospective には「実装前の main 上で対象文字列が Pattern 2 セクション内に存在しないことを確認済み。常時 PASS にはならない」と記録されており、**常時 PASS 側の検査は行われた一方で UNCERTAIN 側は検査されていなかった**。本 Issue が追加する Pattern 6 がまだ存在しない時点の判断なので、当時としては見落として自然である
+- AC1 の対象ファイル決め打ちを `/spec` 判断へ委譲した処理は適切。`docs/product.md` の `/issue` (What) / `/spec` (How) 境界に沿っており、コードベース上に 2 つの妥当な前例 (`/issue` 自己完結型監査と `/triage` Pattern 表) が実在することを確認したうえでの委譲だった
+
+#### spec
+- AC1 が委譲した対象ファイル選定について、`/triage` の Pattern 表 (`skills/triage/skill-dev-verify-audit.md`) を選択。Pattern 1〜5 と同じ構造 (Detect / 例 / 修復案 / Fix) で Pattern 6 を追加したため、AC2 が要求する「PASS 側と並列」が自然に満たされた
+- Size を S → XS へ再評価。実際の変更は 1 ファイル 61 行の追加のみで、判断は正確だった
+
+#### code
+- 実装は Spec どおりで逸脱なし。Pattern 6 の 5 サブパターンに加え、AC4 が要求する Pattern 2 の exit code 拡張も同時に実施 (`check-translation-sync.sh` の実例つき)
+- 変更は `skills/triage/skill-dev-verify-audit.md` の 1 ファイルのみ
+
+#### review / merge
+- patch route のため未実行 (該当なし)
+
+#### verify
+- **本 Issue の実装が、同じ Issue の AC に含まれていた欠陥を検出した**。AC5 が Pattern 6 サブパターン 1 (heading 引数に先頭の `#`) に該当し UNCERTAIN 判定。ユーザー指示により verify command を `"### Pattern 2"` → `"Pattern 2"` へ修正し、再評価で PASS を確認 (マッチ見出し `### Pattern 2: 常時 PASS な verify command (Always-PASS Command)`、セクション範囲 50〜79 行、`exit code` の存在を確認)。Pattern 6 の Detect 条件と修復案がいずれも実ケースで機能することの実地確認になった
+- 本 Issue は patch route (PR なし) だったため、`#1181` / `#1180` で 2 回発生した pre-merge AC gate による merge ブロックは起きなかった。同じ AC 品質の問題でも、route によって症状が出る場所が変わる (patch route では merge gate を通らないため、`/verify` まで検出が遅れる)
+- post-merge の manual 条件は、AC5 の修正により本 Issue 自身が検証材料ではなくなった。別 Issue で `###` heading を含む `section_contains` が現れた際に確認する必要がある
+
+### Improvement Proposals
+
+- N/A — 検出した欠陥 (AC5 の heading 引数) は本セッション内で直接修正済み。本 Issue の実装自体がこのクラスの欠陥を今後検出するため、追加の仕組みは不要
