@@ -99,17 +99,35 @@
 - N/A — 各 Implementation Step は初回実装でテストが通過し、手戻りは発生しなかった。`write_recovery_entry()` の動作は bats フィクスチャに加えて `.tmp/` 配下に一時 git リポジトリを作り実際にファイルへ追記されることを手動確認した (テストへの組み込みはしていない使い捨て検証)
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Tier 2 の 3 ハンドラすべてを `if handler; then ...; else exit 2; fi` の形に統一し、`set -e` 環境下でも「anchor matched but handler failed」を確実に exit 2 として捕捉できるようにした (if 条件内の関数呼び出しは set -e の即時終了を抑制する bash の仕様を利用)
-- `apply-fallback.sh` に Tier 3 (`spawn-recovery-subagent.sh`) と同型の `write_recovery_entry()` を追加し、`run-auto-sub.sh` 側ではなく handler 側 (呼び出される側) で永続記録を書き込む設計にした。理由: 記録の粒度 (どのハンドラがどの anchor で成功したか) を最も詳しく知っているのは handler 自身であり、Tier 3 の既存設計とも対称になる
-- Tier 3 の失敗パス emit は `action=abort` に限定せず、`.tmp/recovery-plan-<issue>-<phase>.json` が残っていればその `action` を読み取り (無ければ `unknown`)、Tier 3 呼び出し後のあらゆる非ゼロ終了を一律 `result=failed` として emit する設計を採用した (Spec Notes に記載の判断を踏襲)
+- review-bug×2 が独立に同一の実測 (失敗する git/run-code.sh モックを用いた再現) で、code フェーズが「set -e の抑制を利用して exit 2 を捕捉する」と説明していた設計が実際には逆で、`if handler; then ... else exit 2; fi` が handler 関数本体全体の `set -e` を抑制し、内部コマンドの失敗が握り潰されて `else exit 2` に到達しなくなっていたことを確認した (MUST)。両ハンドラの内部コマンドに `|| return 1` を追加し、明示的な失敗伝播に修正した
+- `write_recovery_entry()` の `WRE_ISSUE` が `run_phase_with_recovery()` の第2位置引数 (review/merge フェーズでは PR 番号) をそのまま使っており、AC5 の skip 判定 grep が Issue 番号と一致しない不整合を確認した (MUST)。Tier 3 の `spawn-recovery-subagent.sh` と同型の `--record-issue` オプションを追加して解消
+- `gh-pr-review.sh` が単一アカウント運用で `422 Can not request changes on your own pull request` により投稿失敗 (既知、追跡中 #1102) したため、SKILL.md の fallback 規定どおり terminal 出力へフォールバックし、代わりに `gh pr comment` でレビュー内容と修正結果を PR コメントとして投稿した
+- SHOULD/CONSIDER も含めて全件 (計6件中5件を修正、1件は実測により false positive と判定し却下) 対応する判断とした。低リスクな bash スクリプト変更で修正コストが低く、`write_recovery_entry()` は本 Issue の中核関数でテストカバレッジの空白がそのまま残るリスクが高かったため
 
 ### Deferred Items
-- Post-merge AC (Tier 3 abort の実地再現、Tier 2 発火の実地再現) は `/verify` フェーズで確認する。ローカルではモックによる bats テストのみ実施した
+- Post-merge AC (Tier 3 abort の実地再現、Tier 2 発火の実地再現) は `/verify` フェーズで確認する
 - `docs/reports/orchestration-recoveries.md` への Tier 2 実記録が実際の `/auto` 実行で正しく機能するかは、pre-merge 時点ではモック環境でのみ検証済み
+- `apply-fallback.sh` の recovery entry に Tier 3 と同型の `- Wrapper: run-{phase}.sh, exit code: <N>` (exit code 部分) が欠落している件は CONSIDER 止まりとし、今回は見送った (優先度低、`--exit-code` 引数の追加配線が必要でコスト対効果が低いと判断)
 
 ### Notes for Next Phase
-- Review フェーズでは、`apply-fallback.sh` の `write_recovery_entry()` と `spawn-recovery-subagent.sh` の同名関数が別ファイルの別実装である点 (意図的な重複、共通化はスコープ外) を混同しないよう注意
-- `tests/apply-fallback.bats` の dco-signoff protected-branch テスト2件を `-ne 0` から `-eq 2` に変更した点は、既存アサーションの意味論変更 (「失敗した」→「anchor matched but handler failed」への精緻化) であり、後方互換性を壊す変更ではない
+- merge フェーズでは、本 PR に GitHub Review (formal REQUEST_CHANGES/APPROVE) が存在しない点に注意。MUST 指摘は解決済みだが、その根拠は PR コメント (2件、review findings + response summary) にある。pre-merge AC gate は Issue 側のチェックボックスと `<!-- review-summary -->` マーカー付きコメントを見るため、この点では通常フローと同じはず
+- `apply-fallback.sh` に `--record-issue` オプションが追加されたため、この Issue 以降で同スクリプトを呼び出す他の変更がある場合は引数の互換性に注意
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- code フェーズの Phase Handoff Key Decisions が「if 条件内の関数呼び出しは set -e の即時終了を抑制する bash の仕様を利用」と明記していたが、これは実装意図の説明として **逆** だった。実際には、この仕様のせいで `apply_dco_signoff_autofix` / `apply_json_mode_silent_hang_retry` 内部の `git commit --amend` / `git push --force-with-lease` / `run-code.sh --pr` の失敗が握り潰され、`else exit 2` に到達できなくなっていた (`apply_code_patch_silent_no_op_retry` のみ明示的な `return 0`/`return 1` を持っていたため無事だった)。実装者自身が「set -e 抑制」という正しい bash セマンティクスに言及していながら、それが自分のコードに与える悪影響 (関数内部コマンドの失敗を検出できなくなる) を見落としていた点が特徴的 — セマンティクスの認知はあったが、影響範囲の推論が反転していた
+- 一般化できる教訓: `if <function-call>; then ... else <handle-failure>; fi` のパターンで `<function-call>` 内部が複数コマンドから成る場合、各コマンドの終了コードを明示的に (`|| return 1` 等で) チェックしない限り、関数の最後の文 (多くの場合 `echo`) の終了コードがそのまま `if` の判定に使われる。この形のハンドラ関数を新規に書く/レビューする際は、関数末尾が非チェック文で終わっていないか確認する価値がある
+
+### Recurring issues
+
+- review-bug×2 (diff bug scan / security scan) が、プロンプトの焦点は異なる (バグ検出 vs セキュリティ検出) にもかかわらず、独立に同一の実測手法 (失敗する git/run-code.sh モックでの再現) で同一の根本原因バグに到達した。2 エージェント独立検証によって finding の信頼度が大きく上がった実例
+- `scripts/gh-pr-review.sh` の単一アカウント自己 PR `REQUEST_CHANGES` 422 エラーに再度遭遇した。既存追跡 Issue #1102 (OPEN、triaged 済み) の再現インスタンスであり、新規起票は不要。SKILL.md の fallback 規定 (terminal 出力) どおり対応し、実務上の代替として `gh pr comment` で内容を PR へ残した
+
+### Acceptance criteria verification difficulty
+
+- Step 8 の rubric 検証は 5 件全て決定的に PASS 判定できたが、その後の Step 10 コードレビューが AC1 の前提を揺るがす MUST バグ (exit 2 到達不能) を発見した。rubric は「コード構造が説明どおりに存在するか」を検証できても、`set -e` 抑制のような制御フローの深い正しさまでは検出できないことを示す実例。この種の bash 制御フローの正しさは、rubric ではなく実測ベースのコードレビュー (review-bug の HIGH SIGNAL 検出) が担う領域として機能していることを確認した
