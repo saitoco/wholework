@@ -18,7 +18,7 @@ Spec ファイル (`docs/spec/issue-N-*.md`) への追記先が、実行主体�
 ## Changed Files
 
 - `scripts/append-consumed-comments-section.sh`: `--no-push` フラグ追加 (フラグ指定時は commit のみ行い push しない)。main tree で実行された場合の `git push origin HEAD` を `worktree-merge-push.sh --base "$(git rev-parse --abbrev-ref HEAD)"` によるロック付き push に置換 — bash 3.2+ 互換 (`mapfile` 等の bash 4+ 構文を導入しない)
-- `scripts/run-code.sh`: post-processor fallback ブロック (L367-374) を `ROUTE_FLAG != "--pr"` の場合のみ実行するようゲート。pr route では Spec の書き込み先が PR ブランチであり main repository からは観測も安全な書き込みもできないため — bash 3.2+ 互換
+- `scripts/run-code.sh`: post-processor fallback ブロック (L367-374) を、`reconcile-phase-state.sh` が観測した実際の open PR 番号 (`_PR_NUM`) が空の場合のみ実行するようゲート (実装時に `ROUTE_FLAG != "--pr"` から変更 — `ROUTE_FLAG` だけでは Size auto-detection 等による auto-detected pr route を判定できないため、review #1201 指摘)。pr route では Spec の書き込み先が PR ブランチであり main repository からは観測も安全な書き込みもできないため — bash 3.2+ 互換
 - `skills/code/SKILL.md`: Step 12 の `git add` 直前に `append-consumed-comments-section.sh $NUMBER code --no-push` の必須 bash 呼び出しを追加。frontmatter `allowed-tools` に `${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*` を追加 (現在は未登録)
 - `skills/spec/SKILL.md`: Step 13 の `git add` 直前に `append-consumed-comments-section.sh $NUMBER spec --no-push` の必須 bash 呼び出しを追加。frontmatter `allowed-tools` に同エントリを追加 (現在は未登録)
 - `modules/worktree-lifecycle.md`: Notes に「Spec file write destination」節を新設 — 「Spec ファイルはフェーズ自身の作業ブランチ (worktree ブランチ / PR ブランチ) 上でのみ編集し、base へは既存の Exit 経路 (`worktree-merge-push.sh` または PR merge) 経由でのみ反映する」という規約を明文化する。`## Consumed Comments` との相互作用にも言及する
@@ -31,9 +31,9 @@ Spec ファイル (`docs/spec/issue-N-*.md`) への追記先が、実行主体�
 ## Implementation Steps
 
 1. `scripts/append-consumed-comments-section.sh` に `--no-push` フラグを追加し、main tree 判定 (既存の `_git_dir == _git_common_dir` チェック) が真のときの push を `worktree-merge-push.sh --base "$(git -C "$_repo_root" rev-parse --abbrev-ref HEAD)"` に置き換える。失敗時は既存同様 best-effort 警告のみ (→ acceptance criteria 2)
-2. `scripts/run-code.sh` の post-processor fallback ブロックの条件を `if [[ $EXIT_CODE -eq 0 && "$ROUTE_FLAG" != "--pr" ]]; then` に変更し、pr route では wrapper が Spec を編集しないようにする。スキップ理由を同ブロックのコメントに記載する (→ acceptance criteria 2)
-3. `skills/code/SKILL.md` Step 12 の Steps 6 (`git add $SPEC_PATH/issue-$NUMBER-*.md` を含む commit ブロック) の直前に、`bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh $NUMBER code --no-push` の必須呼び出しを追加する。あわせて frontmatter の `allowed-tools` に該当エントリを追加する (after 1) (→ acceptance criteria 2)
-4. `skills/spec/SKILL.md` Step 13 の Steps 5 (Phase Handoff write) の直後・Steps 6 (commit) の直前に、`bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh $NUMBER spec --no-push` の必須呼び出しを追加する。あわせて frontmatter の `allowed-tools` に該当エントリを追加する (after 1, parallel with 3) (→ acceptance criteria 2)
+2. `scripts/run-code.sh` の post-processor fallback ブロックの条件を、`reconcile-phase-state.sh` が観測した open PR 番号 (`_PR_NUM`) が空かどうかで判定するよう変更し、pr route では wrapper が Spec を編集しないようにする。スキップ理由を同ブロックのコメントに記載する (実装時に判定軸を `ROUTE_FLAG` から `_PR_NUM` に変更 — review #1201 指摘。auto-detected pr route を `ROUTE_FLAG` だけでは判定できないため) (→ acceptance criteria 2)
+3. `skills/code/SKILL.md` Step 12 の retrospective commit ブロックの**直後**に、`bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh $NUMBER code --no-push` の必須呼び出しを追加する。あわせて frontmatter の `allowed-tools` に該当エントリを追加する (after 1) (→ acceptance criteria 2) (実装時に「commit の直前」から「commit の直後」に変更 — 直前に置くと、未コミットの retrospective / Phase Handoff 編集がスクリプト自身の commit に巻き込まれてしまうため)
+4. `skills/spec/SKILL.md` Step 13 の commit ブロックの**直後**に、`bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh $NUMBER spec --no-push` の必須呼び出しを追加する。あわせて frontmatter の `allowed-tools` に該当エントリを追加する (after 1, parallel with 3) (→ acceptance criteria 2) (実装時に「直前」から「直後」に変更 — 理由は 3 と同様)
 5. `modules/worktree-lifecycle.md` の `## Notes` に「Spec file write destination」節 (見出しレベル `###`) を追加し、Spec ファイルの書き込み先規約とフェーズ別の base 反映経路 (`/spec`・`/code` patch/operate・`/verify` は `worktree-merge-push.sh`、`/code` pr は PR merge) を表で明文化する。表には `**(exhaustive)**` マーカーを付す (`modules/skill-dev-checks.md` "Exhaustive/Example Markers") (→ acceptance criteria 1)
 6. `modules/l0-surfaces.md` の「Bash wrapper fallback (Issue #811)」節を、新しい 2 層構成 (in-session mandatory call が第一の安全網、wrapper post-processor は非 pr route の第二の安全網) に書き換え、Step 5 で追加した `worktree-lifecycle.md` の節を参照させる (after 5) (→ acceptance criteria 1)
 7. `tests/append-consumed-comments-section.bats` の `setup()` に `worktree-merge-push.sh` モックを追加し、`--no-push` 指定時に push されないテストと main tree 実行時に `worktree-merge-push.sh` が呼ばれるテストを追加する (after 1)
@@ -244,7 +244,7 @@ Size は既に `L` (変更なし)。タイトルとの意味的乖離は検出�
 
 ### Deviations from Design
 
-- None. Implementation Steps 1–9 were followed as written; no reordering, omission, or consolidation was needed.
+- The `-n` guard fix recorded under Design Gaps/Ambiguities below is the only *code-behavior* deviation from the original plan. Additionally, three *documentation* deviations were identified in `/review` (#1201) and corrected here: (1) Implementation Step 2 / Changed Files described `scripts/run-code.sh`'s post-processor gate as `ROUTE_FLAG != "--pr"`; the actual implementation gates on the observed open-PR number (`_PR_NUM`) instead, since `ROUTE_FLAG` alone cannot distinguish an auto-detected pr route (Size auto-detection, `always-pr: true`) from patch route. (2) Implementation Steps 3/4 described the `skills/code/SKILL.md` / `skills/spec/SKILL.md` safety-net calls as placed *before* the retrospective/handoff commit; the actual implementation places them *after*, to avoid the safety-net script's own commit sweeping up not-yet-committed retrospective/handoff edits. Both Changed Files and Implementation Steps above have been updated to match.
 
 ### Design Gaps/Ambiguities
 
