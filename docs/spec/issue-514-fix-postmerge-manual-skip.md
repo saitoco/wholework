@@ -112,6 +112,20 @@
 ### Improvement Proposals
 - N/A（本 Issue は Issue→Spec→Code→Review→Merge→Verify がスムーズに連鎖した好事例であり、改善提案を起こすほどの課題は検出されなかった）
 
+### 追記 (2026-08-06, observation 解決時)
+
+前回まで SKIPPED だった post-merge observation 条件が、`/auto --batch 1197 1162 1133 1102` (session `74631-1786005349`) の event-based observation scan 経由で dispatch され、**PASS** に解決した。
+
+#### 判定根拠
+
+本バッチで post-merge manual AC を持つ Issue は #1102 のみ。その Spec の Implementation Steps 1–4 がすべて実装済みであることを、実装コミット `a1bb7d68` の diff (`scripts/gh-pr-review.sh`) と `tests/gh-pr-review.bats` の 3 テストケース (positive 1 / negative 2) で個別に突き合わせて確認した。Code Retrospective の `### Deviations from Design` も `N/A` で一致。本 Issue が追加した 2 つのガードテキスト (`skills/code/SKILL.md:257`, `skills/spec/SKILL.md:674`) も main に現存。
+
+#### 判定の強度に関する留意 (verify フェーズの観察)
+
+この PASS は **positive case のみ**の確認である。#1102 の post-merge manual AC は「実装済みコードの実行時挙動を後から観察する」型であり、その AC 専用の Implementation Step を持たない。つまり本 Issue が防ごうとした元の再現パターン (「manual AC に紐づく専用 Step が存在し、code phase がそれをスキップする」) そのものは再現されておらず、「ガードが機能していることの積極的な反証がない」という水準にとどまる。
+
+observation 条件の文面が「post-merge manual AC を含む Issue」としか規定していないため、**判別力のない証拠でも PASS しうる**構造になっていた。observation AC には「どの実行文脈で観察すれば失敗モードを再現できるか」を条件文に含めるべきで、これは #1118 (observation AC に実行文脈条件を宣言し観察不能な dispatch を抑止) が扱う論点と隣接する。単発の観察のため本追記に留め、新規起票はしない。
+
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/514#issuecomment-4701081753
 - saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 514` to verify the condition / https://github.com/saitoco/wholework/issues/514#issuecomment-4756911117
