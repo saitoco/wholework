@@ -81,6 +81,24 @@ The writing discipline follows Fable 5 memory-surface guidance: one learning per
 ### Improvement Proposals
 - N/A
 
+### 追記 (2026-08-06, observation 評価時)
+
+post-merge observation 条件が `/auto --batch 1197 1162 1133 1102` (session `74631-1786005349`) の observation scan で dispatch され、**UNCERTAIN** と判定された。条件が 2 つの節に分かれており、前半のみ成立したため。
+
+#### 前半「後続フェーズに参照される」— 成立 (実測 3 件)
+
+1. **跨り Issue の Spec-as-memory が回帰を防いだ (#1133)**: `docs/spec/issue-1133-*.md:65` が「前身 Issue #687 の Spec Notes が記録する通り」として `grep -c ... || _failed=0` イディオムの維持を指示し、Code Retrospective (`:83`) が「per Spec Notes' explicit instruction not to regress the Issue #687 fix」と遵守を明記。#687 の Spec Notes → #1133 の Spec Notes → code 遵守 → retrospective 確認、の連鎖が完結している
+2. **retrospective 記述規律の遵守 (#1162)**: `docs/spec/issue-1162-*.md:120` が単発学びを「1 エントリ 1 学び」形式 + Tier 判断付きで記録 (本 Issue の受入条件 3/4 が求めた規律)
+3. **Phase Handoff の消費 (#1102)**: `### Deferred Items` 2 件を verify フェーズがそのまま引き継ぎ、AC5 は CI 確認で解決、manual AC は SKIP と判断
+
+#### 後半「重複/矛盾記述が減っている」— 判定不能
+
+比較基準が記録されておらず増減を確定できない。加えて同バッチ内に反例がある — #1102 の Spec で、GitHub timeline と矛盾する `phase/ready` 不在の主張が `## Notes` > `### Auto-Resolve Log` と `## Phase Handoff` > `### Notes for Next Phase` の 2 箇所に重複して書き込まれていた (verify で訂正注記を追記済み、同型の齟齬は #1112 で追跡中)。
+
+#### AC 設計上の所見
+
+「減っている」という比較節は測定可能なベースラインを伴わないため、PASS にも FAIL にも倒せず observation AC として恒久的に UNCERTAIN に留まる構造になっている。「後続フェーズが Spec retrospective を参照した形跡が Spec 内に残っている」のような**単一実行で判定可能な条件**への再型付けが妥当。observation AC の判別可能性という論点は #1118 が扱っており、単発観測のため新規起票はしない。
+
 ## Phase Handoff
 <!-- phase: code -->
 
