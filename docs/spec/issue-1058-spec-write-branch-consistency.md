@@ -172,3 +172,89 @@ Issue 本文 Related の「`scripts/append-consumed-comments-section.sh` (base �
 - saito / MEMBER / first-class / `## /spec への申し送り: 案 A / 案 B を並行耐性の軸で再評価すること` — 並行セッション耐性と patch route コストの 2 軸追加、棚卸しスコープの判断依頼 / https://github.com/saitoco/wholework/issues/1058#issuecomment-5201930509
 
 cutoff: 2026-08-06T07:00:47Z (`phase/issue` ラベル付与時刻)。cutoff 以前の issuecomment-5200989170 (2026-08-06T06:04:28Z) は Issue 本文 Background に既に反映済みのため、本フェーズの前提として参照した。
+
+## issue retrospective
+
+`--non-interactive` モードで既存 Issue の refinement を実行した。
+
+### 曖昧性の自動解決 (Auto-Resolve Log)
+
+- **検討候補 A/B/C のうち `/spec` への推奨方針**: 案 A (Spec は常に base ブランチ) を Auto-Resolved Ambiguity Points セクションに明記した。
+  - 理由: `/spec` は既に `ENTERED_WORKTREE=false` 時 `git push origin main` で base へ直接コミットする既存パターンがあり (`skills/spec/SKILL.md`)、`/code` pr route の Code Retrospective 追記のみが `git push origin HEAD` で worktree ブランチ (= PR ブランチ) 行きになっていることをコード上で確認した (`skills/code/SKILL.md` Step 12)。案 A は既存パターンとの整合性が高く、変更範囲が `/code` 側の 1 経路に閉じる。
+  - 他候補: 案 B は patch route との整合を新設する必要があり範囲が広い。案 C は根治的ではない。
+  - AC 自体は結果指向の rubric のまま変更していない — 実装手段の選択は `/spec` に委ねる。
+- **Post-merge 条件の verify-type**: `manual` → `observation event=auto-run when=route:pr session=next` に変更した。
+  - 理由: 条件文「次に pr route の Issue が実行された際にコンフリクトが発生しないことを確認する」は `modules/verify-classifier.md` の observation 分類基準 (event-driven な観測条件) に合致する。`when=route:pr` で `/auto` 実行時の route 軸に絞り込める (`modules/observation-trigger.md`)。本 Issue が `skills/code/SKILL.md` の変更を伴う可能性が高く、観測対象がその変更後の挙動そのものであるため `session=next` を付与した (`scripts/check-skill-change-observation-ac.sh` で warning なしを確認済み)。
+
+### 検証済みの事実確認 (Background Factual Claim Verification)
+
+Background の「`append-consumed-comments-section.sh` は main へ、`/code` の retrospective 追記は worktree へ書く」というクレームをコード上で確認し、事実と一致することを確認した。合わせて、2026-08-06 の追記コメントで特定された「問題は post-processor の呼び出し位置 (`scripts/run-code.sh` / `scripts/run-spec.sh` の subprocess exit 後)」という詳細を Background に短く反映した (フルコンテキストはコメントを参照する形を維持)。
+
+### スコープ拡張 (棚卸し) の扱い
+
+2026-08-06 のコメントで提案された「worktree セッション中の main repository 書き込み全般の棚卸し」は、コメント内で既に `/spec` での判断に委ねると明記されていたため、本 refinement では決定せず Related セクションに参照を追加するに留めた。
+
+### チェックスクリプト結果
+
+- `check-skill-change-observation-ac.sh`: exit 0 (警告なし)
+- `check-ac-checkbox-format.sh`: exit 0 (フォーマット違反なし)
+- `gh-check-blocking.sh`: exit 0 (未解決の blocked-by なし)
+
+### Size / タイトル
+
+Size は既に `L` (変更なし)。タイトルとの意味的乖離は検出されなかったため変更していない。
+
+## spec retrospective
+
+### Autonomous Auto-Resolve Log
+
+- **案 B (Spec は常にフェーズの作業ブランチ) を採用** — 理由: `/issue` triage は案 A を推奨したが、その判断軸には並行セッション耐性が含まれていなかった。`/verify` が Issue #1037 で既に案 B 側の規約に到達しており (`skills/verify/SKILL.md` L130 に明文化済み)、base への書き込みを `worktree-merge-push.sh` のロック機構に一本化できる。patch route の追加コストも実測すると in-session 呼び出し 1 行のみで、triage が想定した「変更範囲が広い」は成立しなかった。
+  - 他候補: 案 A (pr route の全実行が base への push を 1 回追加し、実測済みの ff-only 失敗事象を増やす)、案 C (コンフリクト確率を下げるのみで根治しない)
+- **棚卸しスコープは別 Issue へ切り出す** — 理由: 本 Issue の AC 2 件はいずれも Spec ファイルの書き込み先に限定されており、全 skill / script 横断の監査は AC の範囲外。監査は発見ごとに独立した修正へ発散する性質を持ち、本 Issue の変更着地前に並行させると衝突する。監査の方針にあたる規約は本 Issue の AC1 で明文化されるため、切り出し先は掃き出しに専念できる。
+  - 他候補: 本 Issue に含める (AC がカバーせず、Size L の見積もりも崩れる)
+- **pr route の wrapper fallback は「PR ブランチへ書き込む」ではなく「無効化」** — 理由: main repository から他ブランチへ書き戻す経路を新設すると、本 Issue が解消しようとしている書き込み先の分散を別の形で再導入する。一時 worktree の作成・削除も並行セッション下で新たな競合源になる。
+  - 他候補: wrapper が fetch + 一時 worktree 経由で PR ブランチへ push する
+- **新規呼び出し箇所には `--no-push` を指定** — 理由: `append-consumed-comments-section.sh` の `git push origin HEAD` により `origin/worktree-verify+issue-*` が 16 本残留している実測があり、`/spec` と `/code` patch route に無条件適用すると Issue 1 件あたり最大 2 本増える。base への反映は各フェーズの Exit 経路が担保するため push は不要。
+  - 他候補: 無条件に push する (残留ブランチが増える)、`/verify` も含めて一括で `--no-push` 化する (AC の範囲外の挙動変更)
+
+### Minor observations
+
+- `origin/worktree-verify+issue-*` が 16 本残留している (本リポジトリの `git branch -r` 実測、2026-08-06 時点、リモートブランチ計 60 本)。`/verify` の `append-consumed-comments-section.sh` 呼び出しが worktree ブランチを push するためで、本 Issue では `/verify` を変更対象外としたため解消しない。`--no-push` を `/verify` にも適用すれば解消できる独立した改善候補。
+- `run-code.sh` / `run-spec.sh` の pre/post カウント比較は `## Consumed Comments` の**見出し数**を数えているため、`/spec` フェーズで見出しが作られた後は増分が発生せず、patch route では毎回 fallback が発火する。スクリプトが URL 単位で冪等なため無害だが、実行ごとに `gh api` + `gh issue view` のコストが掛かっている。本 Issue の pr route ゲートはこの誤発火のうち pr route 分のみを解消する。
+- `docs/spec/issue-1069-html-check-css-combinator.md` の retrospective は「`append-consumed-comments-section.sh` の dedup ガードが見出し単位のため `/verify` の安全網が構造的に発火しない」と記録しているが、現行実装 (L106-165) は既存セクションへの URL 単位 dedup 追記に修正済みで、この記述は現行実装と乖離している。過去 Spec の retrospective を根拠に設計判断する際は実装との突き合わせが要る事例。
+
+### Judgment rationale
+
+- Issue 本文の Related は `append-consumed-comments-section.sh` を「base ブランチへ書き込み」と記していたが、スクリプト自体は `git rev-parse --show-toplevel` (L21) で CWD からリポジトリルートを解決する worktree 対応済み実装であり、base へ書くのは呼び出し位置の帰結である。この訂正は 2026-08-06 のコメントと Background に既に反映済みだったため、Issue 本文との未解決コンフリクトとしては扱わなかった。
+- Pre-merge AC 2 件はいずれも rubric のみで決定的な `file_contains` を伴わない。`modules/verify-patterns.md` §9 は決定的な併記を推奨するが、Issue コメントが「結果指向の rubric AC は変更不要」と明示していたため追加せず、Spec 側の Verification 項目本文で対象ファイルを具体化することで判定材料を補った。AC 件数の整合 (Issue 2 件 / Spec 2 件) も維持されている。
+- `/code` pr route の安全網を in-session 呼び出しに一本化することで、Issue #811 が wrapper に求めた「LLM のプロース実行に依存しない決定性」は pr route では失われる。`/verify` が同じトレードオフを受け入れている先例があること、および pr route の wrapper fallback が現状ほぼ常に誤発火していて安全網として機能していないことから、実質的な後退はないと判断した。
+
+### Uncertainty resolution
+
+- ISSUE_TYPE=Task のため Uncertainty セクションは省略した。設計時点で外部仕様への未検証依存はなく、`git worktree` / `git push` の挙動はいずれもローカル実測で確認できる既知仕様だった。
+- `worktree-merge-push.sh` の `--base` 既定値が `main` である点は、main tree では HEAD が base ブランチそのものであることを利用し `--base "$(git rev-parse --abbrev-ref HEAD)"` を渡すことで解決した。`append-consumed-comments-section.sh` に `--base` フラグを新設する必要はない。
+- `tests/append-consumed-comments-section.bats` は `WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` を設定済みのため、新たに呼ばれる `worktree-merge-push.sh` のモック追加が必須である点を Implementation Steps 7 に明記した。`$MOCK_DIR/git` モックが `rev-parse --git-dir` と `rev-parse --git-common-dir` に異なる値を返して worktree 内を模擬している (L47-54) ことも確認済み。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 案 B (Spec はフェーズ自身の作業ブランチで編集し、base へは Exit 経路経由でのみ反映) を採用。`/verify` が #1037 で確立済みの規約への整合であり、新規設計ではない
+- pr route では wrapper post-processor を無効化し、安全網は `skills/code/SKILL.md` Step 12 の in-session mandatory call に一本化する
+- 新規の in-session 呼び出しには `--no-push` を付ける。base への反映は各フェーズの Exit 経路 (`worktree-merge-push.sh` / PR merge) が担保する
+- 書き込み先規約の SSoT は `modules/worktree-lifecycle.md` に置き、`modules/l0-surfaces.md` からは参照させる (重複記述を作らない)
+
+### Deferred Items
+
+- worktree セッション中の main repository 書き込み全般の棚卸しは別 Issue へ切り出す。起票は `/verify` の Improvement Proposal 集約に委ねる
+- `/verify` の `append-consumed-comments-section.sh` 呼び出しへの `--no-push` 適用 (`origin/worktree-verify+issue-*` 16 本の残留解消) は AC の範囲外のため本 Issue では行わない
+- `run-*.sh` の pre/post カウント比較が見出し数ベースで patch route では常に誤発火する件は、冪等かつ無害のため本 Issue では修正しない
+
+### Notes for Next Phase
+
+- `skills/code/SKILL.md` と `skills/spec/SKILL.md` の `allowed-tools` への `${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*` 追加を忘れないこと。`scripts/check-allowed-tools.sh` が Step 8 で mismatch を検出して commit を止める
+- `tests/append-consumed-comments-section.bats` の `setup()` に `worktree-merge-push.sh` モックを追加しないと新テストが解決不能になる (`WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` のため)
+- `modules/worktree-lifecycle.md` に追加する表には `**(exhaustive)**` マーカーが必要 (`modules/skill-dev-checks.md`)
+- `docs/structure.md` を変更するため `docs/ja/structure.md` の同期が必須 (`docs/translation-workflow.md`)
+- 本 Issue は #1078 と対になっており、#1078 が扱う SKILL.md ステップ順序の経路には手を入れない
