@@ -256,6 +256,10 @@ AC 9 (`command "bash scripts/check-translation-sync.sh"`) has no corresponding C
 
 #### verify
 - pre-merge 9 件すべて PASS。うち rubric 3 件は退避エントリのアンカー参照を実地 grep して確認 (`tests/fixtures/` の 3 件はサンプルデータであり rubric が指定する参照元ではない)
+- post-merge の observation 条件 (`event=auto-run`) を 2026-08-06 の再 verify で PASS 判定。merge (2026-08-05T17:29:08Z) 以降の実測 `/auto` 実行 2 件が両方の期待出力構造を裏付けた — #1174 review phase (exit 143 watchdog kill → `tier=2` event なし → `tier=3` recovered)、#1185 code-pr phase (`still waiting (json mode)` → `tier=2` recovered)。加えて合成ログで `apply-fallback.sh` の exit 1 と `detect-wrapper-anomaly.sh` の退役 2 パターンに対する空出力 (exit 0) を直接再現した
+- 本条件の「期待される出力構造」がスクリプト名・exit code レベルまで具体化されていたため、observation 型でありながら判定が機械的に済んだ。observation AC は「観察する」だけの記述だと再 verify 時に何をもって PASS とするかが判断依存になるため、この粒度が良い基準になる
+- 退避したエントリの手順は `detect-wrapper-anomaly.sh` の `pr-extraction-failure` IMPROVEMENT_HINT からアーカイブへ辿れることを実行して確認 (AC 3 の趣旨が退避後も維持されている)
+- 副次的観察: #1185 の `tier=2` recovery (`result: recovered`) は `.tmp/auto-events.jsonl` にはあるが `docs/reports/orchestration-recoveries.md` には記録されていない。Tier 3 (#1174) は記録されている。この Tier 2 側の記録欠落は `docs/spec/issue-1185-triaged-issue-ac-audit-gap.md` の verify retrospective に既記録で、#1098 の管掌範囲
 
 ### Improvement Proposals
 
