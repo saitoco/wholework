@@ -10,6 +10,10 @@ cutoff (最新の `phase/*` ラベル付与時刻) は `2026-08-06T01:33:03Z`。
 
 上記コメントの内容は既に Issue 本文に反映済みであり、本 Spec の設計に対する追加の意思決定は不要だった。
 
+### code フェーズ (cutoff: 2026-08-06T02:06:32Z)
+
+No new comments since last phase.
+
 ## Overview
 
 `/issue` が生成する Post-merge 条件が、チェックボックス形式 (`- [ ]`) ではなくプレーン箇条書き (`- `) で書かれるケースが過去に 10 件発生した (2026-06-19〜07-13)。`verify-type` マーカーは正しく付与されるため条件文としては成立するが、チェックを入れる先のチェックボックス自体が存在しないため、`/verify` が PASS 判定してもその結果を記録できず、Issue は CLOSED のまま `phase/verify` に永久滞留する。`skills/issue/SKILL.md` の AC 生成規約にはチェックボックス形式を明示的に要求する記述がなく、これを機械的に強制するガードも存在しない。
@@ -92,6 +96,10 @@ cutoff (最新の `phase/*` ラベル付与時刻) は `2026-08-06T01:33:03Z`。
 
 - 次回 `/issue` で Post-merge 条件を含む Issue を起票した際、チェックボックス形式で生成されることを観察する <!-- verify-type: observation event=auto-run session=next -->
 
+## Autonomous Auto-Resolve Log
+
+- **`phase/ready` ラベル欠如の扱い**: `/code 1156 --pr --non-interactive` 実行時、Issue のラベルは `triaged` / `phase/code` / `audit/drift` で `phase/ready` が存在しなかった (`reconcile-phase-state.sh code-pr 1156 --check-precondition` は `matches_expected: false` を返した)。調査の結果、前回セッションが既に Step 1 (コメント消化, cutoff `2026-08-06T01:59:41Z`) と Step 4 (ラベル遷移 `phase/ready` → `phase/code`, cutoff `2026-08-06T02:06:32Z`) を実行済みで、その後 worktree を残さずに中断していたと判明した (docs/spec 側に未コミットの Step 1 記録のみが main の作業ツリーに残存)。Spec 自体は `/spec` により完備しているため、"Spec がない" ケース向けの auto-resolve ポリシー (Issue 本文から直接要件を読む) は適用せず、既存の完備した Spec を正として実装を継続した。
+
 ## Notes
 
 ### #1006 は変更不要 (grep/gh issue view で確認済み)
@@ -116,3 +124,30 @@ Issue 本文の対応方針候補 2 は「`/issue` の AC 監査ステップ、�
 ### #1168 との類似性
 
 本 Spec の設計 (新規 warn-only チェッカースクリプト + `/issue` Step 4 への組み込み + `allowed-tools` 更新 + `tests/issue.bats` content-assertion + `docs/structure.md`/`docs/ja/structure.md` 同期) は、直近の #1168 (`check-skill-change-observation-ac.sh` の追加) と同型である。#1168 の Verify Retrospective が指摘した MUST 不具合 (Spec 実行時点で未確定な `## Changed Files` をゲート条件にした、`$NUMBER` 未束縛のファイル名を使った) は本 Spec では該当しない — 新スクリプトの適用条件は Issue 本文テキストそのもの (`### Pre-merge` / `### Post-merge` 見出しの有無) であり Spec 由来の未確定情報に依存せず、ファイル名も既存の "Skill self-update propagation check" サブステップが使う固定ファイル名 `.tmp/issue-body-check.md` をそのまま再利用するため、`$NUMBER` 未束縛の問題も生じない。
+
+## Code Retrospective
+
+### Deviations from Design
+- Implementation Step 5 (#734 / #735 のチェックボックス形式修正) は、`/code` 実行時点で `check-ac-checkbox-format.sh` を両 Issue の本文に対して実行したところ既に exit 0 (チェックボックス形式) だったため、外部 GitHub 操作 (`gh-issue-edit.sh` での本文更新) は実行しなかった。原因は、本セッション開始前に一度中断した `/code 1156` の前回実行が、リポジトリファイル変更 (Step 1-4) に到達する前に Step 5 の外部操作のみを先に完了させていたためと判断した (Autonomous Auto-Resolve Log 参照)。受け入れ条件3 が要求する「修正されている」状態は満たされているため、実装ステップとしては完了扱いとする。
+
+### Design Gaps/Ambiguities
+- N/A — Spec の設計 (#1168 と同型のパターン踏襲) はそのまま実装でき、Root Cause / Changed Files / Implementation Steps に記載された前提と実装時の codebase 実態 (`skills/issue/SKILL.md` の該当挿入位置、`check-pre-merge-ac.sh` の awk セクション追跡方式) に齟齬はなかった。
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `scripts/check-ac-checkbox-format.sh` は `check-skill-change-observation-ac.sh` のヘッダコメント形式 (Usage / Exit codes) と `check-pre-merge-ac.sh` の awk セクション追跡パターンをそのまま踏襲し、bash 3.2+ 互換を維持した
+- `/issue` Step 4 への挿入位置は Spec 指定通り「BRE metacharacter detection in verify commands」ブロック直後、Step 5 直前とした
+- Step 7 (Existing Issue Refinement) 側は「Step 4 の手順に従う」という既存の委譲文言がそのまま Step 4 への追加をカバーするため、テキスト変更なし (#1168 と同型)
+
+### Deferred Items
+- Post-merge の observation AC (`session=next`、次回 `/issue` 実行での挙動観察) は本 Issue が `skills/issue/SKILL.md` を変更対象とするため、次回セッションでの観察が必要 — `/verify` フェーズで評価される想定
+- `docs/guide/index.md` の翻訳 OUTDATED および `docs/guide/autonomy.md` の MISSING_JA は `scripts/check-translation-sync.sh` で検出したが、本 Issue のスコープ外 (未変更ファイル) のため対応していない
+
+### Notes for Next Phase
+- `bats tests/` フルスイート (1420+ テスト) は green。`skills/issue/SKILL.md` は `tests/issue.bats` 以外に `tests/xl-decomposition.bats` / `tests/run-issue.bats` からも参照されているため、behavioral change 判定でフルスイート実行が必要だった
+- Pre-merge AC 3 件はすべて rubric 確認済みで Issue 本文のチェックボックスを更新済み (`- [x]`)。post-merge AC (observation) のみ未チェックのまま残している
