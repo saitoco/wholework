@@ -2,8 +2,11 @@
 # apply-fallback.sh - Tier 2 bash projection of modules/orchestration-fallbacks.md
 # Detects known symptom anchors from wrapper logs and dispatches recovery handlers.
 #
-# Usage: apply-fallback.sh <phase> <issue> --log <log-file>
-# Exit 0 on successful recovery, exit 1 on unknown anchor or handler failure.
+# Usage: apply-fallback.sh <phase> <issue> --log <log-file> [--record-issue <issue>]
+# --record-issue overrides the Issue number written to orchestration-recoveries.md
+# (review/merge phases pass the real Issue number here while <issue> stays the PR
+# number used elsewhere in the phase).
+# Exit 0 on successful recovery, exit 1 on unknown anchor, exit 2 on anchor matched but handler failed.
 # Bash 3.2+ compatible.
 
 set -euo pipefail
@@ -16,6 +19,7 @@ ISSUE="${2:?Usage: apply-fallback.sh <phase> <issue> --log <log-file>}"
 shift 2
 
 LOG_FILE=""
+RECORD_ISSUE="$ISSUE"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -25,6 +29,10 @@ while [[ $# -gt 0 ]]; do
         exit 1
       fi
       LOG_FILE="$2"
+      shift 2
+      ;;
+    --record-issue)
+      RECORD_ISSUE="${2:-$ISSUE}"
       shift 2
       ;;
     *)
@@ -82,8 +90,8 @@ apply_dco_signoff_autofix() {
   fi
 
   echo "[apply-fallback] dco-signoff-missing-autofix: amending commit to add Signed-off-by" >&2
-  git commit --amend -s --no-edit >&2
-  git push --force-with-lease >&2
+  git commit --amend -s --no-edit >&2 || return 1
+  git push --force-with-lease >&2 || return 1
   echo "[apply-fallback] dco-signoff-missing-autofix: done" >&2
 }
 
@@ -124,7 +132,7 @@ apply_code_patch_silent_no_op_retry() {
 # Restricted to code-pr phase to limit blast radius; other phases handled separately.
 apply_json_mode_silent_hang_retry() {
   echo "[apply-fallback] json-mode-silent-hang: retrying run-code.sh --pr for issue $ISSUE" >&2
-  "$SCRIPT_DIR/run-code.sh" "$ISSUE" --pr >> "$LOG_FILE" 2>&1
+  "$SCRIPT_DIR/run-code.sh" "$ISSUE" --pr >> "$LOG_FILE" 2>&1 || return 1
   echo "[apply-fallback] json-mode-silent-hang: done" >&2
 }
 
@@ -151,7 +159,7 @@ write_recovery_entry() {
   WRE_REPORT_FILE="$report_file" \
   WRE_TIMESTAMP="$timestamp" \
   WRE_PHASE="$PHASE" \
-  WRE_ISSUE="$ISSUE" \
+  WRE_ISSUE="$RECORD_ISSUE" \
   WRE_LOG_TAIL="$log_tail_line" \
   WRE_ANCHOR="$anchor" \
   WRE_ACTION="$action" \
@@ -180,7 +188,7 @@ entry = (
     f"### Outcome\n"
     f"- success\n\n"
     f"### Improvement Candidate\n"
-    f"- 未起票\n\n"
+    f"- N/A (resolved by known catalog)\n\n"
     "---\n\n"
 )
 
@@ -200,7 +208,7 @@ new_content = content[:insert_pos] + "\n\n" + entry + remaining
 with open(report_file, 'w', encoding='utf-8') as f:
     f.write(new_content)
 
-print(f"[apply-fallback] recovery entry written to {report_file}")
+print(f"[apply-fallback] recovery entry written to {report_file}", file=sys.stderr)
 PYEOF
 }
 

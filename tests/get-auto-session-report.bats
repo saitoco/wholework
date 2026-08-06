@@ -242,5 +242,5 @@ FIXTURE_EOF
     [ "$status" -eq 0 ]
     # Fired-based count: 2 tier-2 events + 3 tier-3 events, regardless of result
     echo "$output" | grep -q "Tier 1/2/3 recoveries | 0 / 2 / 3"
-    echo "$output" | grep -q "Recovery success rate (tier) | T1: 0 recovered / 0 failed | T2: 1 recovered / 1 failed | T3: 1 recovered / 2 failed"
+    echo "$output" | grep -q "Recovery success rate (tier) | T1: 0 recovered / 0 failed, T2: 1 recovered / 1 failed, T3: 1 recovered / 2 failed"
 }

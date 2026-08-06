@@ -756,7 +756,7 @@ run_phase_with_recovery() {
   # See modules/orchestration-fallbacks.md#code-patch-silent-no-op
   local _fallback_exit=0
   mkdir -p .tmp
-  "$SCRIPT_DIR/apply-fallback.sh" "$phase" "$issue" --log "$log_file" > /dev/null 2>/dev/null || _fallback_exit=$?
+  "$SCRIPT_DIR/apply-fallback.sh" "$phase" "$issue" --log "$log_file" --record-issue "$EMIT_ISSUE_NUMBER" > /dev/null 2>/dev/null || _fallback_exit=$?
   if [[ $_fallback_exit -eq 0 ]]; then
     echo "${LOG_PREFIX} [recovery] tier2 fallback catalog: recovered"
     local _repo_root="$REPO_ROOT"
