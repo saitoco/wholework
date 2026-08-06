@@ -14,6 +14,8 @@ cutoff (最新の `phase/*` ラベル付与時刻) は `2026-08-06T01:33:03Z`。
 
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1156#issuecomment-5200040643
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1156#issuecomment-5200238525
 ## Overview
 
 `/issue` が生成する Post-merge 条件が、チェックボックス形式 (`- [ ]`) ではなくプレーン箇条書き (`- `) で書かれるケースが過去に 10 件発生した (2026-06-19〜07-13)。`verify-type` マーカーは正しく付与されるため条件文としては成立するが、チェックを入れる先のチェックボックス自体が存在しないため、`/verify` が PASS 判定してもその結果を記録できず、Issue は CLOSED のまま `phase/verify` に永久滞留する。`skills/issue/SKILL.md` の AC 生成規約にはチェックボックス形式を明示的に要求する記述がなく、これを機械的に強制するガードも存在しない。
