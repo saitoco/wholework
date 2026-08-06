@@ -94,3 +94,34 @@ Issue 本文 (Background / Purpose / Acceptance Criteria) はこの判断に基�
 - patch route のため `/review`/`/merge` は経由しない。`/verify` は Post-merge の observation 型 AC (次の同一領域 Issue の `/issue` 実行時に空撃ち強化が観察されるか) のみが対象
 - テスト結果: `bats tests/` 全 1490 件 PASS、`validate-skill-syntax.py` 0 errors (既存の未関連 warning 1 件は本 Issue の変更に起因しない)、`check-forbidden-expressions.sh` PASS
 - Pre-merge AC 3 件はすべて実装時に自己検証済みで PASS (Issue チェックボックス更新済み)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- **起票時点の AC 2 件が両方とも実効性を欠いていた**。AC1 (rubric「Pattern 6 と同じ構造で新規 Pattern が追加されている」) は既存 Pattern 2 が同じ構造を備えているため grader が vacuous PASS を返しうる状態、AC2 (`section_contains ... "Pattern 7" ... "PASS"`) は存在しない見出しを参照して確実に FAIL する状態だった
+- 皮肉な構図として、**本 Issue が解決しようとした欠陥 (常時 PASS な verify command) を本 Issue 自身の AC が犯していた**。起票が retro-proposals 経由 (`retro/verify` ラベル) であり、起票時点では Pattern 表の現状を空撃ち確認していなかったことが原因
+
+#### spec
+- **`/spec` Step 6 の Issue body vs. 実装コンフリクト検出が機能し、スコープを自律的に修正した**。「Pattern 7 新設」→「Pattern 2 の検出対象を `section_contains`/`github_check`/`rubric` 型へ拡張」への変更は、`git log -- skills/triage/skill-dev-verify-audit.md` による独立検証 (Pattern 2 は初版 `782cd95c` から存在、Pattern 6 追加 `a9891ebf` 以降 Pattern 表への追加なし) に裏付けられており、verify 側で再検証しても一致した
+- 前提の誤りを検出したのは `/spec` が単独で気づいたのではなく、**#1185 が導入した triage AC 監査コメント (2026-08-06T13:34:02Z) が先に指摘していた**。`/spec` はそれを first-class input として consume して判断した。#1185 → #1209 の予防系連鎖が実運用で機能した 2 例目 (1 例目は本日の #1098)
+- Spec の Notes に「スコープ境界 (計測範囲: `modules/verify-executor.md` の変換テーブル全 27 行)」として、本 Issue 後のカバー率 (27 種別中 6 種別) と除外理由を明記している。スコープ縮小の判断根拠が数値で追えるのは良い
+
+#### code
+- Deviations / Design Gaps / Rework すべて N/A。Implementation Steps 1〜3 の記述が各サブパターンの Detect / 具体例 / Detection approach / Fix options を逐語で持っていたため、実装は Edit 1 回で完了した
+- **#1210 で追加した `## Implementation Complete` コメント投稿が本 Issue の code フェーズで初回発火した** (2026-08-06T15:43:22Z)。`phase/verify` label 付与 (15:43:29Z) の 7 秒前に投稿されており、#1210 の設計意図 (Comment Consumption cutoff より前に置く) どおりに動作している
+
+#### review
+- patch route のため `/review` なし
+
+#### merge
+- 特記事項なし
+
+#### verify
+- 本 Issue の主題が「実装前から無条件 PASS になる AC の検出」であるため、**AC 自身の非 vacuity を実装前の版に対して空撃ちで確認した** (`git show 493d90b6^:... | awk '/Pattern 2/,/Pattern 3/' | grep -c "github_check"` → 0)。verify 側でこの確認を行う手順は SKILL.md に規定されていないが、この種の Issue では有効な追加検証だった
+- **観測: observation AC の証拠が揃っていても event 未発火だと SKIPPED のまま滞留する**。#1210 の Post-merge AC (「次に patch route で `/code` が実行された Issue に `## Implementation Complete` が投稿され、`createdAt` が `phase/verify` 付与より前である」) は本 Issue の code フェーズで**事実として満たされた**が、#1210 側のコメント履歴に `` `auto-run` detected `` が存在しないため、`/verify 1210` は Step 8c の未発火パスで SKIPPED を返す。証拠の有無と event の発火が独立しているため、実質 PASS な条件が観測されないまま `phase/verify` に留まる。#1118 (observation AC の実行文脈条件宣言) が隣接する論点
+
+### Improvement Proposals
+- **retro-proposals 経由で起票される Issue の AC に、起票時点の空撃ちを入れるか** — 結論として**不要**と判断した。起票時点で空撃ちしても、本 Issue の Background が指摘するとおり「起票時点では正しかった AC が先行 Issue の着地で着手時点に無効化される」ため防ぎきれない。着手時点の監査 (#1185 が無条件実行にした `/issue` Step 15 → `/triage` Step 7) が正しい防御位置であり、本 Issue でも実際にそこで検出された。追加の起票は行わない
+- 「不在アサーション」型 (`file_not_contains`/`file_not_exists`/`dir_not_exists`) の常時 PASS 検出 — Spec の Notes (スコープ境界) と Phase Handoff の Deferred Items に既に記録済み。重複記録を避けるため独立起票は行わない (Tier 3)
