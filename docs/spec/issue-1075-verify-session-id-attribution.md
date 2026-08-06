@@ -183,3 +183,69 @@ Issue body に `## Out of Scope` セクションは存在せず、Pre-merge / Po
 **Issue body と既存実装の conflict**
 
 `/issue` フェーズの Issue Retrospective が Background の技術的主張 (探索順、Step 6 の pointer 再生成言及の欠如) を grep で検証済みと報告しており、本 Spec でも `scripts/emit-event.sh:161-174` と `skills/auto/SKILL.md` Step 1 / Step 6 を再確認した。conflict は検出されなかった。
+
+## issue retrospective
+
+**実行モード**: `--non-interactive` (自動解決ログはこのコメントに記録)
+
+### Background 事実確認
+
+Background の技術的主張 (`restore_auto_session_pointer()`、ポインタ探索順 `.tmp/auto-session-${PGID}` → `.tmp/auto-session-current`、`skills/auto/SKILL.md` Step 6 Manual recovery hand-off の pointer 再生成言及の欠如) をコードベースに対して grep で照合し、いずれも現状の実装と一致することを確認した。差分は見つからなかった。
+
+### 曖昧性検出と自動解決
+
+Size=L (検出上限 5件) で曖昧性検出を実施したが、この Issue は既に複数回の実測 (実測 1/2 + 追加観測 2件) を経て非常に密に検討されており、AC もあえて実装方式を確定させない柔軟な `rubric` ベースで書かれていたため、AC テキスト自体の変更が必要な曖昧性は見つからなかった。一方で、以下 2 点を判断として自動解決し、Issue body に「Auto-Resolved Ambiguity Points」セクションとして記録した:
+
+1. **対応方針 (案) のうち案 C (文書化のみ) は不採用と判定** — AC1 が「session_id が一致することを保証する仕組みが実装されている」ことを要求しており、既知の制約として文書化するだけでは AC を満たせないため。案 A/B/D のいずれか (または組み合わせ) を選ぶことになるが、具体的な選択は `/spec` (How) の責務として本 Issue では確定しない (`docs/product.md` § `/issue` vs `/spec` 責任境界を根拠とした判断)。
+2. **AC3 のサブコマンド呼び出しスコープの確認** — `skills/auto/SKILL.md` を grep 調査し、単発 Bash 呼び出しでポインタ再生成規律から外れる経路が現時点で `--write-manual-recovery` のみであることを確認した (他の `run-auto-sub.sh` 呼び出しは Step 1 のポインタ再生成規律に従うフェーズループ内で発生する)。AC3 の記述は現状のまま維持で問題ないと判断した。
+
+### AC 整合性チェック
+
+`check-skill-change-observation-ac.sh` / `check-ac-checkbox-format.sh` をいずれも issue body に対して実行し、observation タグの `session=next` 欠落・チェックボックス書式違反ともに検出なし (exit 0)。BRE メタ文字を含む `grep` verify command も存在しない。
+
+### AC 変更
+
+Pre-merge/Post-merge の AC 文言自体への変更は行っていない (既存の分類・verify command 割り当てが適切だったため)。
+
+## spec retrospective
+
+### Minor observations
+
+- `restore_auto_session_pointer()` の設計は 3 回の Issue (#902 → #1006 → 本 Issue) を経て拡張されてきたが、いずれも「呼び出し元を識別する情報が経路上に存在しない」という同じ根に触れていた。#902 は「wrapper 経由でないと env が届かない」、#1006 は「worktree 内では CWD 相対で届かない」、本 Issue は「PGID でも current でも呼び出し元を特定できない」で、いずれもポインタファイルの**探索方法**を直したが**キーの一意性**には触れていなかった
+- `/verify` の emit 箇所は現時点で 11 箇所あり、`source` + `restore_auto_session_pointer` + `if [[ -n AUTO_EVENTS_LOG ]]` の 3 行定型が全箇所に複製されている。今回 11 箇所すべてに引数を追加することになるが、将来この定型が 15 箇所を超えるようなら `modules/` への切り出し (「emit ブロックの標準形」モジュール) を検討する価値がある
+
+### Judgment rationale
+
+- **案 A 単独ではなく A + B のハイブリッドにした判断が本 Spec で最も重い決定だった**。案 A を単独採用すると `/verify` の 11 箇所すべてで LLM が session_id リテラルを引き回す必要があり、これは `skills/auto/SKILL.md` Step 1 の「run-*.sh 呼び出しの直前ごとに PGID ポインタを再生成せよ」という既存規律と同型の脆さを新設することになる。その規律が破れた結果が本 Issue の実測 2 だったので、同じ形の規律を増やす設計は選べないと判断した
+- **issue-scoped ポインタを PGID より前に置く順序変更**は、既存順序を保つ保守的な選択肢もあったが、in-session `/verify` では PGID が構造上ヒットしない (Issue body の Background が明示している) 以上、PGID を先に見る意味がない。加えて OS の PGID 再利用で他セッションの stale ポインタを拾う潜在ハザードもあるため、より特異なキーを先に置く方が正しいと判断した
+- **`auto-session-current` を廃止しなかった**のは blast radius の判断。`run-*.sh` 5 本 + `collect-run-facts.sh` + `filter-session-verified-issues.sh` が読んでおり、うち後者 2 本は emit 時の帰属ではなく「現在のセッション ID の解決」という別用途で使っている。用途が混在しているファイルを本 Issue のスコープで廃止するのは危険と判断し、最終フォールバックとして残した
+
+### Uncertainty resolution
+
+- **`Skill()` の `args` に追加フラグを載せて `/verify` に届くか** — `/verify` が既に `--base {branch}` を ARGUMENTS 経由で受け取っており、`docs/migration-notes.md` に `args="$NUMBER --base release/v1"` の対応表が残っていることを確認して解決した。新規の仕組みではなく既存パターンの踏襲になる
+- **既存 bats テストへの影響** — `tests/emit-event.bats` の既存 4 テストはいずれも `AUTO_SESSION_ID` を unset した状態で実行しているため、新設する「`AUTO_SESSION_ID` env 最優先」分岐に触れないことを実ファイルの読み取りで確認した。`tests/auto-batch.bats` L19-20 の `grep -q 'wholework:verify'` も部分一致のため `--session-id` 追加で壊れない
+- **stale な issue-scoped ポインタの扱い** — TTL/mtime 判定は解決ロジックを時刻依存にしテストを不安定化させるため採らず、`--session-id` の有無という決定的条件で書き込み/削除を分岐させる方式に落ち着けた。残存シナリオ (verify 到達前に `/auto` が異常終了) は既知の制約として Uncertainty セクションに記録した
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 案 A (`--session-id` の in-band 引き渡し) を権威ある出所、案 B (Issue 番号スコープのポインタ) をセッション内の運搬手段として組み合わせるハイブリッド構成を採用した。案 A 単独は 11 箇所での LLM 規律依存、案 B 単独は未知の `auto-session-current` 上書き経路への脆弱性がそれぞれ理由で不採用
+- `restore_auto_session_pointer()` の解決順序を 5 段 (exhaustive) にし、issue-scoped を PGID より**前**に置いた。in-session `/verify` では PGID が構造上ヒットせず、PGID 再利用による stale ポインタ誤読のハザードもあるため
+- `AUTO_SESSION_ID` が既に設定済みの場合にそれを最優先で採用する分岐を新設した。これは案 A の直接経路であると同時に、従来「`AUTO_SESSION_ID` は設定済みだがポインタが見つからないと `AUTO_EVENTS_LOG` が設定されず emit がスキップされる」という潜在バグの解消も兼ねる
+- `.tmp/auto-session-current` は廃止せず最終フォールバックとして維持する (読み手が 7 ファイルあり、うち 2 本は別用途で使っているため blast radius が過大)
+
+### Deferred Items
+
+- `/verify` の emit 定型 3 行の `modules/` 切り出しは今回は行わない (11 箇所では割に合わない。15 箇所を超えたら再検討)
+- `/auto` が verify 到達前に異常終了した場合の issue-scoped ポインタ残存は既知の制約として記録するに留め、TTL/mtime 判定は導入しない
+- `docs/migration-notes.md` / `docs/reports/external-kill-investigation.md` は履歴記録として除外推奨。`/code` が最終判断する
+
+### Notes for Next Phase
+
+- `scripts/emit-event.sh` は macOS system bash (3.2) 上で動くため `mapfile` / 連想配列 / `${var^^}` を使わないこと
+- `persist_auto_session_pointer()` の main repo root 解決は `restore_auto_session_pointer()` と同一の `git worktree list --porcelain | awk '/^worktree /{print $2; exit}'` idiom を使い、git repo 外では prefix が空になる既存挙動を維持すること
+- `skills/verify/SKILL.md` の `restore_auto_session_pointer` は 11 箇所ある。`verify_reopen_cycle` の printf 直書きブロック (Step 11 FAIL 分岐) も含まれるため、`EMIT_ISSUE_NUMBER` を持たないブロックを見落とさないこと
+- `skills/auto/SKILL.md` の `wholework:verify` dispatch は 6 箇所 (patch route / pr route / XL fan-out / Step 5 observation dispatch / `--batch` List mode / `--batch` Step 5 observation dispatch)。observation dispatch の 2 箇所は `$NUMBER` ではなく `$N` を使っている点に注意
+- `validate-skill-syntax.py` の既知制約 (本文中の半角感嘆符禁止、本文中のトリプルバックティック禁止) に抵触しないこと
