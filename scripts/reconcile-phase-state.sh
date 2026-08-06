@@ -294,6 +294,22 @@ _completion_code_patch() {
   fi
   actual_json="${actual_json%\}},\"stray_pr_signal\":false}"
 
+  # Worktree commits diagnostic signal: distinguish "not yet started" (state A) from
+  # "committed in worktree, push not yet complete" (state B) — both otherwise collapse
+  # to the same {"commits_found":false,...} observation, blocking Tier 1/2 diagnosis and
+  # code-patch-silent-no-op from telling them apart. Read-only; does not change
+  # matches_expected. Base is origin/main fixed (matches this function's existing
+  # decision, not parameterized). A single git rev-list --count call folds both a
+  # missing branch (non-zero exit) and zero commits into worktree_commits_found=false,
+  # so no separate git rev-parse existence check is needed.
+  # See modules/phase-state.md#worktree-commits-found
+  local worktree_commit_count
+  worktree_commit_count=$(git rev-list --count "origin/main..worktree-code+issue-${ISSUE_NUMBER}" 2>/dev/null) || worktree_commit_count=0
+  [[ "$worktree_commit_count" =~ ^[0-9]+$ ]] || worktree_commit_count=0
+  local worktree_commits_found=false
+  [[ "$worktree_commit_count" -gt 0 ]] && worktree_commits_found=true
+  actual_json="${actual_json%\}},\"worktree_commits_found\":${worktree_commits_found}}"
+
   # Fallback: check phase labels or issue state for async external commit areas.
   # See modules/orchestration-fallbacks.md#async-external-commit
   local labels state
