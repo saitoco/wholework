@@ -249,7 +249,7 @@ JSON_EOF
   [ -z "$output" ]
 }
 
-@test "--with-tracking: appends tracked:#N / untracked as a 3rd column; default output is unchanged" {
+@test "--with-tracking: appends tracked:#N:closed / untracked as a 3rd column; default output is unchanged" {
   cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
 ## 2026-06-01 10:00 UTC: tracked-symptom
 
@@ -284,7 +284,7 @@ JSON_EOF
 
   run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 3 --issues-json "$ISSUES_JSON_FILE" --with-tracking
   [ "$status" -eq 0 ]
-  echo "$output" | grep -E $'^tracked-symptom\t3\ttracked:#503$'
+  echo "$output" | grep -E $'^tracked-symptom\t3\ttracked:#503:closed$'
   echo "$output" | grep -E $'^untracked-symptom\t3\tuntracked$'
 
   # Default (no --with-tracking): output stays the 2-column <group-key>\t<count> format.
@@ -292,6 +292,28 @@ JSON_EOF
   [ "$status" -eq 0 ]
   echo "$output" | grep -E $'^tracked-symptom\t3$'
   echo "$output" | grep -E $'^untracked-symptom\t3$'
+}
+
+@test "--with-tracking: OPEN-state resolved Issue appends tracked:#N:open" {
+  cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
+## 2026-06-01 10:00 UTC: open-tracked-symptom
+
+- Cause: first
+
+- 起票済み #504
+
+FIXTURE_EOF
+
+  ISSUES_JSON_FILE="$BATS_TEST_TMPDIR/issues.json"
+  cat > "$ISSUES_JSON_FILE" << 'JSON_EOF'
+[{"number": 504, "title": "recoveries: open-tracked-symptom", "state": "OPEN", "closedAt": null}]
+JSON_EOF
+
+  # OPEN state forces exclude_all (count 0) -- use --threshold 0 to still surface the
+  # group-key and observe the tracked:#N:open suffix.
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 0 --issues-json "$ISSUES_JSON_FILE" --with-tracking
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -E $'^open-tracked-symptom\t0\ttracked:#504:open$'
 }
 
 @test "normal detection: count >= threshold and no exclusion -> appears in output" {

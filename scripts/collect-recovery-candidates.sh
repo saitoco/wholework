@@ -28,7 +28,10 @@
 #      If the group has no "起票済み" entry either, there is no basis to exclude anything --
 #      every entry in the group is counted.
 # This keeps the default output format unchanged; pass --with-tracking to append a 3rd
-# column (tracked:#N / untracked) for consumers that need to distinguish the two.
+# column (tracked:#N:open / tracked:#N:closed / untracked) for consumers that need to
+# distinguish the two -- the open/closed suffix reuses the resolved_state already computed
+# above for cutoff-mode selection (Issue #1205); a tracked entry whose state could not be
+# resolved (--issues-json not passed, or lookup failure) falls back to plain tracked:#N.
 #
 # Exclusion (Issue #1191): judged per entry, same as #1152 above. An entry whose
 # "### Improvement Candidate" body starts with "- N/A" (e.g. "N/A (resolved by known
@@ -312,7 +315,11 @@ for ((ki = 0; ki < ${#UNIQUE_KEYS[@]}; ki++)); do
   if [ "$count" -ge "$THRESHOLD" ]; then
     if [ "$WITH_TRACKING" -eq 1 ]; then
       if [ -n "$resolved_number" ]; then
-        printf '%s\t%d\ttracked:#%s\n' "$key" "$count" "$resolved_number"
+        case "$resolved_state" in
+          OPEN) printf '%s\t%d\ttracked:#%s:open\n' "$key" "$count" "$resolved_number" ;;
+          CLOSED) printf '%s\t%d\ttracked:#%s:closed\n' "$key" "$count" "$resolved_number" ;;
+          *) printf '%s\t%d\ttracked:#%s\n' "$key" "$count" "$resolved_number" ;;
+        esac
       else
         printf '%s\t%d\tuntracked\n' "$key" "$count"
       fi
