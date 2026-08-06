@@ -1444,6 +1444,81 @@ MOCK_EOF
     [[ "$output" == *'"stray_pr_signal":false'* ]]
 }
 
+@test "code-patch completion: worktree commits found - branch has commits ahead of origin/main (push incomplete) -> matches_expected false, worktree_commits_found true" {
+    cat > "$MOCK_DIR/gh-graphql.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "null"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
+
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json comments"* ]]; then echo ""; exit 0; fi
+if [[ "$*" == *"--json labels"* ]]; then echo "phase/code"; exit 0; fi
+if [[ "$*" == *"--json state"* ]]; then echo "OPEN"; exit 0; fi
+if [[ "$*" == *"-q length"* ]]; then echo "0"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+
+    # worktree branch has 1 commit ahead of origin/main — state B (committed,
+    # push not yet complete): no closes #N commit found, no stray PR, but the
+    # worktree branch itself is not empty.
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "log" ]]; then echo ""; exit 0; fi
+if [[ "$1" == "rev-list" ]]; then echo "1"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-patch 55 --check-completion --strict
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
+    [[ "$output" == *'"commits_found":false'* ]]
+    [[ "$output" == *'"worktree_commits_found":true'* ]]
+}
+
+@test "code-patch completion: worktree commits found - branch does not exist (true no-op) -> matches_expected false, worktree_commits_found false" {
+    cat > "$MOCK_DIR/gh-graphql.sh" << 'MOCK_EOF'
+#!/bin/bash
+echo "null"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh-graphql.sh"
+
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json comments"* ]]; then echo ""; exit 0; fi
+if [[ "$*" == *"--json labels"* ]]; then echo "phase/code"; exit 0; fi
+if [[ "$*" == *"--json state"* ]]; then echo "OPEN"; exit 0; fi
+if [[ "$*" == *"-q length"* ]]; then echo "0"; exit 0; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+
+    # worktree branch does not exist — state A (true no-op): git rev-list fails
+    # non-zero (fatal: unknown revision or path not in the working tree).
+    cat > "$MOCK_DIR/git" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "fetch" ]]; then exit 0; fi
+if [[ "$1" == "log" ]]; then echo ""; exit 0; fi
+if [[ "$1" == "rev-list" ]]; then echo "fatal: unknown revision or path not in the working tree." >&2; exit 128; fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/git"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" code-patch 55 --check-completion --strict
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
+    [[ "$output" == *'"commits_found":false'* ]]
+    [[ "$output" == *'"worktree_commits_found":false'* ]]
+}
+
 @test "code-patch precondition: Spec missing and Size != XS -> mismatch" {
     export MOCK_SPEC_PATH="$BATS_TEST_TMPDIR/empty-spec-patch"
     mkdir -p "$BATS_TEST_TMPDIR/empty-spec-patch"
