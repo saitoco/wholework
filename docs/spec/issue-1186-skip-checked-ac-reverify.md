@@ -112,3 +112,34 @@ Issue 本文の「方針確定 (2026-08-06)」注記により対応方針は確�
 ### Notes for Next Phase
 - `/merge` では通常の pre-merge AC gate に加え、`docs/spec/issue-1186-skip-checked-ac-reverify.md` の base 側競合 (Consumed Comments 段落の重複) が実際の `git merge`/squash merge で問題を起こさないか (fast-forward 前提が崩れていないか) を確認すること
 - `/verify` の次回実行 (session=next) で、post-merge observation AC が SKIPPED として正しく報告されるかを観察すること
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- `/issue` triage が 2 点の drift を自動補正した。(1) `check-skill-change-observation-ac.sh` が exit 2 で欠落を検出し post-merge 条件に `session=next` を補完、(2) タイトルの「pre-merge AC」限定表現を、本文の方針確定注記でスコープが拡張されていたことに合わせて「AC」全般へ更新。**起票時点で本文とタイトルの間に生じた drift を、実装が始まる前に triage が吸収した事例**
+
+#### spec
+- 調査でスキップ規則の追加箇所を Step 5 と Step 8a の 2 箇所に絞り込み、Step 8b/8c は既に unchecked のみを対象としているため変更対象外と判定した。この絞り込みが正確だったため実装に手戻りが発生していない
+- 既存の `ac-tier: preview` skip rule という前例と併存させる設計にしたことで、新しい概念を導入せずに済んでいる
+
+#### code
+- 手戻りゼロ。rubric 4 件と `bats tests/` がいずれも初回実装で PASS
+
+#### review
+- `/code` の Notes for Next Phase が「両 skip rule が矛盾なく併存しているか確認せよ」と明示的に依頼し、`/review` がまさにその点で CONSIDER 1 件を検出した。**Spec に書いた設計意図が実装ファイル本体まで転記されているかを次フェーズに申し送る運用が機能した好例**
+- `/review` Step 8 は pre-merge 5 条件を独立に再検証している。本 Issue が止めたのは `/verify` 側の再検証であり、merge 前ゲートである `/review` での検証は責務として妥当 — 二重になっていたのは `/verify` 側だったという整理が実行結果からも裏付けられた
+
+#### merge
+- 特記事項なし。base 側競合は内容欠落なしと判断され MUST 化されず、squash merge も問題なく完了
+
+#### verify
+- **本 Issue が導入したルールを、本 Issue 自身の verify が最初に適用した。** Pre-merge 5 件すべてが SKIPPED ("already checked; skipped by default") となり、`command "bats tests/"` の再実行 (1400+ テスト) が回避された。直前に同一セッションで実行した `/verify 1157` (旧ルール) は 6 件を全て再実行し、うち `bats tests/` 1405 件を含めて新規情報ゼロだった — 両者の対比が本 Issue の効果の実測値になっている
+- **skill 自己更新の非伝播が本 Issue でも発生した**。本 verify を実行したセッションにロードされていた `skills/verify/SKILL.md` は変更前の旧版 (Step 6 に `Re-verify even if already checked` が残る) だった。ただし `/issue` triage が `session=next` を自動補完していたため、post-merge 条件は次セッション評価として扱われ、#1157 の条件 7 が陥った「UNCERTAIN のまま永久滞留」の構造は回避されている。**#1168 が導入した仕組みが、#1157 と同型の状況で実際に機能した初めての事例**
+- 本実行では、ロード済み旧版ではなく main に着地した新ルール (`9ccba45d`) を直接読んで適用した。LLM-native prose skill の自己更新非伝播に対する実務上の回避策として機能したが、これは実行者が非伝播を認識していた場合にのみ成立する
+
+### Improvement Proposals
+
+- **Tier 2 (convention — memory 提案)**: `append-consumed-comments-section.sh` の deterministic fallback が、通常の `/code` / `/verify` セッションが既に記録した `## Consumed Comments` 段落へ**重複して簡易形式で追記する**。本 Issue では姉妹コミット `aa416dfe` がこれを引き起こし、`/review` の Base Branch Conflict Pre-check が Spec ファイル自身の "changed in both" 競合として検出した (内容欠落はなく MUST 化は不要と判断された)。#1157 の Spec でも同じ重複が発生している (詳細形式 1 件 + 簡易形式 4 件の併存)。同一 Issue に対して fallback スクリプトと通常セッションが並行して同じ段落へ書き込みうる構造自体は他 Issue でも再発する
+  - **Tier 2 とした判断根拠**: 実害は現時点で「Spec の可読性低下」と「conflict pre-check のノイズ」に留まり、内容欠落は発生していない。fallback は LLM がセクションを書き忘れた場合の安全網として機能しており、冪等性チェック (既に記録済みなら追記しない) を足せば済む単一箇所の修正。`modules/retro-proposals.md` の新デフォルト (判断が難しい場合は Tier 2) にも合致する
