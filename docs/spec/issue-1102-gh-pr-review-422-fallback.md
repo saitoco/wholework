@@ -76,3 +76,29 @@ Post-merge の手動確認 AC は、実行主体 (`/review` からの `gh-pr-rev
 ### フォールバック注記文の言語
 
 `scripts/gh-pr-review.sh` は配布物 (Wholework Plugin の一部として全ユーザーに配布される共有スクリプト) であり、既存のエラーメッセージ (`Error: file not found` 等) もすべて英語で書かれている。本 Issue で追加するフォールバック注記文もこの既存慣例を継承し英語で埋め込む (CLAUDE.md 言語規約表の "Source code: English" に整合)。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1–4 をそのまま実装した。`set -e` 対策の `if ! VAR=$(cmd)` イディオムも Spec 記載どおり適用。
+
+### Design Gaps/Ambiguities
+- N/A — Spec の判定条件 (422 かつ `request changes on your own pull request` 部分文字列、大文字小文字非依存) が実装をそのまま導けるレベルまで具体化されており、追加の曖昧点は見つからなかった。
+
+### Rework
+- N/A — bats テスト 3 件 (positive 1 / negative 2) は初回実装で `tests/gh-pr-review.bats` 全 21 件 PASS。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 422 フォールバック判定は `EVENT = "REQUEST_CHANGES"` かつ stderr が `422` と自己レビューメッセージ部分文字列の両方にマッチする場合のみに限定し、それ以外の失敗 (別理由の 422、非 422 全般) は既存どおり `exit 1` とした (fail-open を広げない、Spec Implementation Steps 2 のとおり)。
+- line comments なしパス (`else` 分岐) は `EVENT` が `REQUEST_CHANGES` になり得ないため変更対象外とし、既存の POST 呼び出しをそのまま残した。
+
+### Deferred Items
+- Post-merge の手動確認 AC (「MUST 指摘を含むレビューを自己 PR に実際に投稿」) は本フェーズでは未実施。実運用で MUST 指摘が出た次回の `/review` 実行時に自然に検証される。
+- AC5 (`github_check "gh run list ..."`) は本コミットの push 前であるため本フェーズでは未チェック。push 後の CI 結果を待って `/verify` フェーズで確認する。
+
+### Notes for Next Phase
+- `/code` フェーズ開始時に `phase/ready` ラベルが不在だった (詳細は Notes > Auto-Resolve Log を参照)。Spec は既存のものを使用しており内容の欠落はない。
+- patch route のため `/review` は実行されない。push 後の CI (`test.yml`) 結果が AC5 の判定材料となる。
