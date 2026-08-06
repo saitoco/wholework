@@ -28,7 +28,7 @@ Issue 本文の AC1 は対象ファイルの選定を `/spec` に委ねている
 - <!-- verify: rubric "追加された検出基準が、既存の『常時 PASS になる verify command』の監査基準と並列に (どちらも監査対象であることが分かる形で) 記述されている" --> PASS 側・UNCERTAIN 側が並列に記述されている
 - <!-- verify: rubric "command 型 verify command を Pre-merge AC に置く際の判定基準 (対応 CI job が存在するか、スクリプトが失敗時に非ゼロを返すか) が記述され、どちらも満たさない場合の代替 (post-merge へ移す / verify-type: manual にする) が示されている" --> `command` 型 AC の Pre-merge 配置基準が記述されている
 - <!-- verify: rubric "skills/triage/skill-dev-verify-audit.md の Pattern 2 (常時 PASS な verify command) が、スクリプトの exit code 設計に起因する常時 PASS (例: --fail-if-outdated なしで常に exit 0 を返す check-translation-sync.sh) も検出対象に含む形に拡張されている" --> Pattern 2 が exit code 設計に起因する常時 PASS を検出対象に含む
-- <!-- verify: section_contains "skills/triage/skill-dev-verify-audit.md" "### Pattern 2" "exit code" --> Pattern 2 セクション内に exit code 関連の記述がある
+- <!-- verify: section_contains "skills/triage/skill-dev-verify-audit.md" "Pattern 2" "exit code" --> Pattern 2 セクション内に exit code 関連の記述がある
 - <!-- verify: command "bats tests/issue.bats" --> `tests/issue.bats` が PASS する
 
 ### Post-merge
