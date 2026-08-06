@@ -272,23 +272,18 @@ Size は既に `L` (変更なし)。タイトルとの意味的乖離は検出�
 - Nothing to note. Both Pre-merge conditions used `rubric` verify commands with self-contained, unambiguous text; grading against the worktree's modified files was straightforward and did not surface any UNCERTAIN cases.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Fixed all 10 review findings (1 MUST, 5 SHOULD, 4 CONSIDER) in-cycle rather than deferring SHOULD/CONSIDER items, since all 10 were defects in content this PR itself introduced (not pre-existing debt) and were individually small/low-risk.
-- Split fixes into 7 commits grouped by file/finding-cluster rather than one commit per finding, to keep the `Refs:` traceability rule satisfied without excessive commit churn.
-- Did not attempt to force `event=REQUEST_CHANGES` after discovering GitHub blocks it for self-authored PRs; the MUST issue's visibility relies on the review body text and this response summary instead. See "Recurring issues" above for the proposed tooling fix.
+- Squash-merged PR #1201 to main after confirming `mergeable=true` (reason=clean, CI success, review approved) and the pre-merge AC gate reported 0 unchecked conditions — no conflict resolution or fallback logic was needed.
+- Label-transitioned Issue #1058 to `phase/verify` per Step 5, since `BASE_BRANCH=main` makes the Issue eligible for `closes #N` auto-close.
 
 ### Deferred Items
 
-- Same items as the code-phase Phase Handoff (now superseded by this rotation, so restated here): worktree-session main-repository write audit spun out to a future Issue; `/verify`'s own `--no-push` adoption (residual `origin/worktree-verify+issue-*` branches) out of scope; patch-route pre/post count fallback mis-fire left unfixed (idempotent, harmless); #1078 (SKILL.md step-order path) untouched, as scoped.
-- `skills/spec/SKILL.md` Step 14's `ENTERED_WORKTREE=false` branch still issues a bare `git push origin main` instead of routing through `worktree-merge-push.sh` — newly documented as a Known gap in `modules/worktree-lifecycle.md` during this review's MUST fix, but not itself fixed (pre-existing, out of #1058's scope).
-- `gh-pr-review.sh`'s missing `severity`-field validation and its lack of self-review-422 handling (see "Recurring issues" above) — not fixed here; flagged for `/verify`'s improvement-proposal aggregation.
+- Carried forward unchanged from the review-phase handoff (not addressed by merge, out of merge's scope): worktree-session main-repository write audit spun out to a future Issue; `/verify`'s own `--no-push` adoption (residual `origin/worktree-verify+issue-*` branches); patch-route pre/post count fallback mis-fire (idempotent, harmless); #1078 (SKILL.md step-order path); `skills/spec/SKILL.md` Step 14's `ENTERED_WORKTREE=false` bare `git push origin main` (documented as a known gap, not fixed); `gh-pr-review.sh`'s missing severity-field validation and self-review-422 handling.
 
 ### Notes for Next Phase
 
-- Pre-merge AC 1 and 2 remain PASS (re-verified against the fix commits' final state; both rubric conditions still hold).
-- Post-merge AC (observation, `event=auto-run when=route:pr session=next`) is unchanged — still unfired, still SKIPPED by design.
-- Full `bats tests/` (1443 tests), `validate-skill-syntax.py`, `check-forbidden-expressions.sh`, and `check-allowed-tools.sh` all passed clean after the fix commits.
-- `/merge` should see 9/9 CI SUCCESS on the final commit (re-verified after push).
+- Post-merge AC (observation, `event=auto-run when=route:pr session=next`) is unchanged — still unfired, still SKIPPED by design; `/verify` should leave it SKIPPED unless a pr route Issue has since run in this session.
+- Pre-merge AC 1 and 2 were both PASS at merge time (0 unchecked conditions per `check-pre-merge-ac.sh`).
