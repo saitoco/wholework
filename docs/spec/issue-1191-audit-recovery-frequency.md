@@ -95,3 +95,30 @@
 - **Section 10 の挿入位置**: Section 9 の閾値超過列挙文の直後、`#### Retire-Proposal Comment Posting` の直前とした。Section 8/9/10 の「表示のみ」の 3 セクションをまとめて配置し、verify/Icebox に限定されたエスカレーションベースのコメント投稿ロジック (Retire-Proposal Comment Posting) は変更しない。Issue の Purpose が「起票を復活させるわけではない」と明言しているため、Section 10 に同様のコメント投稿・Issue 起票の仕組みは追加しない。
 - **`N/A` 検出の正規表現**: `^\- N/A` という前方一致のみとし、後続文言は固定しない。理由は、実データ (`docs/reports/orchestration-recoveries.md`) に `N/A (resolved by known catalog)` (`apply-fallback.sh` の `write_recovery_entry()` が書き込む現行の固定文言) と `N/A (resolved by known catalog: silent-no-op pattern with auto-retry)` (トレイリング文言が異なる過去のエントリ) の 2 種が既に存在することを確認済みで、Issue 本文も「または同義の N/A 系文言」を許容しているため。
 - **他 Spec の記述との食い違い確認**: `docs/spec/issue-1185-triaged-issue-ac-audit-gap.md` (別 Issue の使い捨て Spec) に「#1181 により Tier 2 recovery の記録経路が失われ、`collect-recovery-candidates.sh` の閾値判定に Tier 2 が載らない」という記述がある。しかし現行の `scripts/apply-fallback.sh` を直接確認したところ、Tier 2 用の `write_recovery_entry()` (本 Issue が対象とする `N/A (resolved by known catalog)` を書き込む関数) は健在で、`dco-signoff-missing-autofix` / `code-patch-silent-no-op` / `json-mode-silent-hang` の各ハンドラから呼び出されている。上記の記述は古いか、`run-auto-sub.sh` 自身のインライン書き込み経路 (manual / wrapper-retry / Tier 3 のみ) に限定した指摘である可能性が高い。本 Issue のスコープでは追加調査しないが、次の読者向けに記録しておく。
+
+## Code Retrospective
+
+### Deviations from Design
+- Implementation Steps に明示されていなかった追加修正として、`skills/audit/SKILL.md` の frontmatter `allowed-tools` に `${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*` を追加した。Section 10 が本文中で同スクリプトを新規参照するため、`scripts/check-allowed-tools.sh skills/` の pre-commit check がこの欠落を検出した。allowed-tools の同期は SKILL.md 本文変更に伴う機械的な追従であり、設計判断の変更ではない。
+
+### Design Gaps/Ambiguities
+- N/A。Spec の Notes に記録済みの `N/A` 検出正規表現・Section 10 挿入位置・他 Spec との食い違いの3点で実装上の曖昧さは解消済みだった。
+
+### Rework
+- N/A。Implementation Steps の4ステップ (SKILL.md 変更、collect-recovery-candidates.sh 変更、bats テスト追加、既存テスト無変更確認) はいずれも Spec の記述通り一度で実装が完了し、手戻りは発生しなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps を逐語的に実装 (SKILL.md Section 10 追加 → collect-recovery-candidates.sh の N/A 除外 → bats テスト2件追加 → audit-retention.bats 無変更確認)。設計判断は Spec 段階で確定済みだったため、実装段階での新たな設計選択はなし
+- `check-allowed-tools.sh` が検出した allowed-tools 欠落 (collect-recovery-candidates.sh 未登録) をその場で修正しコミット。Spec に明記されていない機械的な追従だが、SKILL.md 本文が新規参照するスクリプトである以上必須
+- Pre-merge AC 6件 (rubric 4件 + bats command 2件) はすべて自己判定で PASS。rubric 4件は Section 10 の記述を Issue AC の文言と突き合わせて評価し、いずれも記述内容が AC の要求と一致することを確認した
+
+### Deferred Items
+- Post-merge AC (`/audit stats --retention` の実観察、`verify-type: observation event=auto-run session=next`) は未実行 — 次回 `/auto` 実行時に自動発火する設計のため、本フェーズではスコープ外
+
+### Notes for Next Phase
+- 全 1451 件の既存 bats テストスイートを実行し PASS を確認済み (behavioral change detection の対象ファイル `skills/audit/SKILL.md` / `scripts/collect-recovery-candidates.sh` は直接対応テストのみから参照されており、narrow scope 判定)
+- docs/structure.md・docs/tech.md および docs/ja/ 対訳を Spec Notes の sync candidate 指示に従って更新済み — レビュー時に追加のドキュメント差分は不要なはず
+- `scripts/collect-recovery-candidates.sh` の N/A 除外は `起票済み #N` パターンと対称な実装 (集計対象から entry を外す条件分岐の追加のみ) — 既存の open/closed cutoff ロジックとは独立した除外軸である点に注意
