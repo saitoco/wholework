@@ -226,26 +226,37 @@ Pre-merge/Post-merge の AC 文言自体への変更は行っていない (既�
 - **既存 bats テストへの影響** — `tests/emit-event.bats` の既存 4 テストはいずれも `AUTO_SESSION_ID` を unset した状態で実行しているため、新設する「`AUTO_SESSION_ID` env 最優先」分岐に触れないことを実ファイルの読み取りで確認した。`tests/auto-batch.bats` L19-20 の `grep -q 'wholework:verify'` も部分一致のため `--session-id` 追加で壊れない
 - **stale な issue-scoped ポインタの扱い** — TTL/mtime 判定は解決ロジックを時刻依存にしテストを不安定化させるため採らず、`--session-id` の有無という決定的条件で書き込み/削除を分岐させる方式に落ち着けた。残存シナリオ (verify 到達前に `/auto` が異常終了) は既知の制約として Uncertainty セクションに記録した
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1-10 は Spec の記述通りの順序・内容で実装した。5 段解決順序 (`AUTO_EVENTS_LOG` → `AUTO_SESSION_ID` → issue-scoped → PGID → current) も Spec Implementation Step 2 の記述と一致する。
+
+### Design Gaps/Ambiguities
+
+- N/A — Spec の Notes for Next Phase が既に「11 箇所の `restore_auto_session_pointer`」「6 箇所の `wholework:verify` dispatch (うち 2 箇所は `$N`)」を明示していたため、実装時に新たな曖昧点は発生しなかった。
+
+### Rework
+
+- `skills/verify/SKILL.md` Step 1 で、`persist_auto_session_pointer` 呼び出しと `phase_start` emit を別々の bash コードフェンスに分けて記述した際、後者のフェンスに `source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"` を書き忘れた。この codebase では SKILL.md 内の bash コードフェンスは互いに独立した Bash tool 呼び出しとして実行される規約であり (他の 10 箇所の `restore_auto_session_pointer` 呼び出しはすべて自分のフェンス内で `source` している)、単一の継続シェルセッションではないことを見落としていた。Step 10 の敵対的サブエージェントレビューで検出し、コミット前に修正した。教訓: SKILL.md の bash フェンスを追加・分割する際は、そのフェンス単体で必要な `source`/変数初期化が完結しているかを個別に確認する。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 案 A (`--session-id` の in-band 引き渡し) を権威ある出所、案 B (Issue 番号スコープのポインタ) をセッション内の運搬手段として組み合わせるハイブリッド構成を採用した。案 A 単独は 11 箇所での LLM 規律依存、案 B 単独は未知の `auto-session-current` 上書き経路への脆弱性がそれぞれ理由で不採用
-- `restore_auto_session_pointer()` の解決順序を 5 段 (exhaustive) にし、issue-scoped を PGID より**前**に置いた。in-session `/verify` では PGID が構造上ヒットせず、PGID 再利用による stale ポインタ誤読のハザードもあるため
-- `AUTO_SESSION_ID` が既に設定済みの場合にそれを最優先で採用する分岐を新設した。これは案 A の直接経路であると同時に、従来「`AUTO_SESSION_ID` は設定済みだがポインタが見つからないと `AUTO_EVENTS_LOG` が設定されず emit がスキップされる」という潜在バグの解消も兼ねる
-- `.tmp/auto-session-current` は廃止せず最終フォールバックとして維持する (読み手が 7 ファイルあり、うち 2 本は別用途で使っているため blast radius が過大)
+- Spec の Implementation Steps 1-10 を記載順どおりに実装した (案 A + 案 B のハイブリッド構成、および案 D の pointer 再生成)。逸脱なし
+- `restore_auto_session_pointer()` は `AUTO_SESSION_ID` が既設なら (issue-scoped/PGID/current のどのポインタファイルも読まずに) それを直接採用する。これは in-band 引き渡しの直接経路であると同時に、既設ポインタ不在時に `AUTO_EVENTS_LOG` が設定されず emit が黙って skip される旧バグの解消も兼ねる
+- 5 つの pre-merge rubric AC はすべて、実装者バイアスを避けるため独立したサブエージェントによる敵対的レビューで PASS 判定を得た上でチェック済みにした
 
 ### Deferred Items
 
-- `/verify` の emit 定型 3 行の `modules/` 切り出しは今回は行わない (11 箇所では割に合わない。15 箇所を超えたら再検討)
-- `/auto` が verify 到達前に異常終了した場合の issue-scoped ポインタ残存は既知の制約として記録するに留め、TTL/mtime 判定は導入しない
-- `docs/migration-notes.md` / `docs/reports/external-kill-investigation.md` は履歴記録として除外推奨。`/code` が最終判断する
+- Post-merge AC (並行 `/auto --batch` を実行して `.tmp/auto-events.jsonl` 上の `session_id` を実地確認する) は pre-merge では検証不能。`/verify` に委ねる
+- `/verify` の emit 定型 3 行の `modules/` 切り出しは Spec の判断通り見送り (11 箇所では割に合わない。15 箇所超で再検討)
+- `docs/migration-notes.md` / `docs/reports/external-kill-investigation.md` は Spec の「除外推奨」判断のとおり変更せず
 
 ### Notes for Next Phase
 
-- `scripts/emit-event.sh` は macOS system bash (3.2) 上で動くため `mapfile` / 連想配列 / `${var^^}` を使わないこと
-- `persist_auto_session_pointer()` の main repo root 解決は `restore_auto_session_pointer()` と同一の `git worktree list --porcelain | awk '/^worktree /{print $2; exit}'` idiom を使い、git repo 外では prefix が空になる既存挙動を維持すること
-- `skills/verify/SKILL.md` の `restore_auto_session_pointer` は 11 箇所ある。`verify_reopen_cycle` の printf 直書きブロック (Step 11 FAIL 分岐) も含まれるため、`EMIT_ISSUE_NUMBER` を持たないブロックを見落とさないこと
-- `skills/auto/SKILL.md` の `wholework:verify` dispatch は 6 箇所 (patch route / pr route / XL fan-out / Step 5 observation dispatch / `--batch` List mode / `--batch` Step 5 observation dispatch)。observation dispatch の 2 箇所は `$NUMBER` ではなく `$N` を使っている点に注意
-- `validate-skill-syntax.py` の既知制約 (本文中の半角感嘆符禁止、本文中のトリプルバックティック禁止) に抵触しないこと
+- `/review` は `skills/verify/SKILL.md` の 11 箇所すべてが `restore_auto_session_pointer $NUMBER` を渡していること、`skills/auto/SKILL.md` の 6 箇所すべてが `--session-id=<literal SESSION_ID value from step 1>` を持つことを再確認すると良い (実装時に grep で確認済みだが独立確認の価値がある)
+- full suite (`bats tests/`, 1494 件) は全 PASS。`scripts/emit-event.sh` / `skills/verify/SKILL.md` / `skills/auto/SKILL.md` が各々の direct counterpart 以外のテストからも参照されていたため behavioral-change override が発火した
+- Code Retrospective > Rework に記録した「SKILL.md の bash フェンスは独立した Bash tool 呼び出し」という規約は、今後 SKILL.md の emit ブロックを分割編集する際に再発しうる落とし穴として `/review` 時にも意識すること
