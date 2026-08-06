@@ -179,6 +179,7 @@ Key modules:
 - `scripts/gh-label-transition.sh` — phase label transitions
 - `scripts/gh-check-blocking.sh` — check blocking issue dependencies
 - `scripts/set-blocked-by.sh` — set GitHub blocked-by relationship by issue number (wrapper for `add-blocked-by` mutation)
+- `scripts/get-blocked-by.sh` — single read window for GitHub blocked-by relationships (single-issue mode, or `--all` for the full open-issue graph)
 - `scripts/gh-extract-issue-from-pr.sh` — extract linked issue from PR
 - `scripts/gh-pr-merge-status.sh` — check PR merge status
 - `scripts/gh-pr-review.sh` — post PR reviews

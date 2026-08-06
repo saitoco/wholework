@@ -2,7 +2,7 @@
 model: sonnet
 name: triage
 description: Issue triage. Automates title normalization, Type/Priority/Size/Value assignment (`/triage 123` for single issue + lightweight analysis, `/triage` for bulk execution, `/triage --backlog` for bulk processing + 4-perspective deep analysis).
-allowed-tools: Bash(gh:*, cat:*, echo:*, grep:*, jq:*, test:*, bash:*, printf:*, wc:*, head:*, tail:*, sed:*, awk:*, mkdir:*, rm:*, sleep:*, ${CLAUDE_PLUGIN_ROOT}/scripts/triage-backlog-filter.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*), Read, Write, Glob, Grep
+allowed-tools: Bash(gh:*, cat:*, echo:*, grep:*, jq:*, test:*, bash:*, printf:*, wc:*, head:*, tail:*, sed:*, awk:*, mkdir:*, rm:*, sleep:*, ${CLAUDE_PLUGIN_ROOT}/scripts/triage-backlog-filter.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh:*), Read, Write, Glob, Grep
 ---
 
 # Issue Triage
@@ -230,16 +230,15 @@ If stagnation patterns are detected, include in completion report. If none detec
 
 **Dependency blocked-by check:**
 
-Extract `Blocked by #N` patterns from the issue body and check the status of blocked-by issues:
+The GraphQL blocked-by relationship is the authoritative source for dependency status (see `docs/workflow.md` § Blocked-by relationships); the issue body's `Blocked by #N` text is only consulted to detect relationships that haven't been materialized into GraphQL yet.
 
-1. If no `Blocked by #N` text, skip
-2. If found, use already-retrieved data from Step 2 if the blocked-by issue is included. Otherwise, check status with `gh issue view N --json state,title`
-3. If the blocked-by issue is CLOSED: report as "resolved dependency (#N is CLOSED)"
-4. If the blocked-by issue is OPEN: check whether the GitHub blocked-by relationship is already set:
+1. Fetch the authoritative blocker list from GraphQL:
    ```bash
-   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query get-blocked-by -F num=$NUMBER --jq '.data.repository.issue.blockedBy.nodes[].number'
+   ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh $NUMBER
    ```
-   If N is not in the returned list, the relationship is missing. Apply tier-aware action:
+   Each output line is `<blocker-number><TAB><state>` (exit 0: no blockers or all `CLOSED`; exit 1: error — warn and skip the dependency check; exit 2: one or more `OPEN`).
+2. For each returned line: if `state` is `CLOSED`, report as "resolved dependency (#N is CLOSED)" (report only — no auto-correction, current behavior retained). If `state` is `OPEN`, report as "open dependency (#N is OPEN)".
+3. Extract `Blocked by #N` patterns from the issue body. For each `N` **not** present in the GraphQL blocker list from step 1, check `N`'s state (`gh issue view $N --json state`). If `N` is `CLOSED`, report as "resolved dependency (#N is CLOSED)" (no action — do not backfill a relationship pointing at a closed Issue). If `N` is `OPEN`, the relationship is missing; apply tier-aware action:
    - **L1** (default): print `Recommend: set blocked-by relationship: scripts/set-blocked-by.sh $NUMBER $N`
    - **L2 / L3**: call `${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh $NUMBER $N` to set the relationship
 
@@ -575,31 +574,36 @@ Since the practical range of raw scores varies by fallback level, adjust thresho
 
 Execute only when the `dependency` perspective is specified. Check dependency health for the issue set collected in Step 1.
 
-**Build dependency graph:**
+**Build dependency graph (GraphQL-sourced):**
 
-1. Extract `Blocked by #N` patterns (case-insensitive, e.g., `blocked by #123`, `Blocked by #456`) from each issue body using regex
-2. Build a graph with issue numbers as nodes and blocked-by as directed edges (N → M: issue N is blocked by issue M)
-3. Keep extracted dependencies in memory as a dictionary: `{ issue_num: [blocked_by_num, ...], ... }`
+1. Fetch the full open-issue blocked-by graph in one call. Use a **fixed** `--limit 100` here regardless of the user-facing `--limit $LIMIT` value — `triage-backlog-filter.sh` (Step 1) always scans the newest 100 open Issues internally before applying `--limit $LIMIT` as a post-filter `head` cut, so a fixed 100 keeps this graph covering at least the Step 1 issue set; passing `$LIMIT` straight through would under-cover Step 1's set whenever `$LIMIT` < 100 and the newest Issues happen to already be triaged:
+   ```bash
+   ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh --all --limit 100
+   ```
+   Each output line is `<issue><TAB><blocker><TAB><blocker_state>`.
+2. Build a graph with issue numbers as nodes and blocked-by as directed edges (N → M: issue N is blocked by issue M), keyed off this TSV output rather than issue-body text.
+3. Keep the relations in memory as a dictionary: `{ issue_num: [(blocked_by_num, blocked_by_state), ...], ... }`
 
 **Anomaly detection logic (3 types):**
 
 | Anomaly type | Definition | Detection method |
 |-------------|-----------|-----------------|
-| Circular dependency | Cycle in graph (A→B→C→A etc.) | Cycle detection via DFS |
-| Resolved blocked-by | Blocked-by target is CLOSED but dependency text remains | Check status with `gh issue view N --json state` |
-| Orphan dependency | Blocked-by target issue number doesn't exist in repo | `gh issue view N` returns an error |
+| Circular dependency | Cycle in graph (A→B→C→A etc.) | Cycle detection via DFS on the GraphQL-sourced graph (detection logic unchanged — only the input source changed) |
+| Resolved blocked-by | `blocker_state` is `CLOSED` in the GraphQL graph (a stale GraphQL relationship) | Directly readable from the `--all` TSV output — no additional `gh issue view` call needed |
+| Orphan dependency (body-text hygiene check) | Body text has `Blocked by #N` but `gh issue view N` errors (issue doesn't exist) | Since `addBlockedBy` requires an existing issue's node ID, a GraphQL relationship can never be orphaned — this check is redefined as body-text hygiene rather than a GraphQL graph anomaly |
 
 **Verification order:**
 
-1. **Graph construction**: Extract blocked-by relations from all issue bodies and build the graph
-2. **Circular dependency detection**: Run DFS on entire graph to detect cycles (Claude tracks logically)
-3. **Resolved blocked-by detection**: Use already-collected data for blocked-by targets in Step 1; check status with `gh issue view N --json state` for issues not in Step 1 data (closed)
-4. **Orphan dependency detection**: Run `gh issue view N --json state` for blocked-by targets not collected in Step 1; those that return errors (don't exist) are orphan dependencies
+1. **Graph construction**: Fetch the GraphQL graph via `get-blocked-by.sh --all --limit 100` and build the in-memory dependency dictionary
+2. **Circular dependency detection**: Run DFS on the GraphQL-sourced graph to detect cycles (Claude tracks logically)
+3. **Resolved blocked-by detection**: Filter the `--all` TSV output for lines where `blocker_state` is `CLOSED` — no additional API call needed
+4. **Orphan dependency detection (body-text hygiene)**: Extract `Blocked by #N` patterns from each issue body in the Step 1 set; for each `N`, run `gh issue view N --json state` — those that return an error (issue doesn't exist) are orphan dependencies
+5. **Missing relationship detection**: reuse the body-text `Blocked by #N` extraction from step 4; for each `N` not present as an edge in the GraphQL graph from step 1, apply the tier-aware action from Notes below
 
 **Notes (exhaustive):**
 - Display "no dependency anomalies" if none detected
-- For missing blocked-by relationships (body text present but GitHub native relationship not set): apply tier-aware action — read `.wholework.yml` to determine the autonomy tier (`autonomy:` key, default `L1`). **L1**: advisory print only (`Recommend: set blocked-by relationship: scripts/set-blocked-by.sh $ISSUE $BLOCKER`). **L2 / L3**: call `${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh $ISSUE $BLOCKER` to backfill the relationship.
-- For all other anomaly types (circular, resolved, orphan): output report and manual action guidance only (no auto-correction).
+- For missing blocked-by relationships (body text `Blocked by #N` present but `N` not in the GraphQL graph from step 1): apply tier-aware action — read `.wholework.yml` to determine the autonomy tier (`autonomy:` key, default `L1`). **L1**: advisory print only (`Recommend: set blocked-by relationship: scripts/set-blocked-by.sh $ISSUE $BLOCKER`). **L2 / L3**: call `${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh $ISSUE $BLOCKER` to backfill the relationship.
+- For all other anomaly types (circular, resolved, orphan): output report and manual action guidance only (no auto-correction). Resolved blocked-by's recommended manual action is `${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh --query remove-blocked-by` (not editing body text, since GraphQL is now the SSoT).
 
 After analysis, output the report in the Step 3 dependency format.
 
@@ -749,11 +753,11 @@ Total: 5 stagnation candidates
 - #123 → #456 → #789 → #123
   Action: Delete one of the blocked-by descriptions or merge the issues
 
-### Resolved Blocked-by (suggest removing dependency text)
+### Resolved Blocked-by (suggest removing stale GraphQL relationship)
 - #101 "issue-A" is blocked by #200 (CLOSED)
-  Action: Remove `Blocked by #200` from #101 body
+  Action: Remove the relationship with `scripts/gh-graphql.sh --query remove-blocked-by`
 
-### Orphan Dependency (suggest removing dependency text)
+### Orphan Dependency (body-text hygiene — suggest removing dependency text)
 - #102 "issue-B" is blocked by #999 (issue does not exist)
   Action: Remove `Blocked by #999` from #102 body
 
@@ -820,7 +824,7 @@ After each perspective's analysis is complete, always run the application flow. 
    - "Post N dependency analysis comments? (circular: X, resolved blocked-by: Y, orphan: Z)"
 2. After approval, post analysis comments to each anomalous issue (no auto-correction):
    - Comment format (circular): `Dependency analysis: circular dependency detected. Cycle: #123 → #456 → #789 → #123. Delete one of the blocked-by descriptions or merge the issues (no auto-correction)`
-   - Comment format (resolved blocked-by): `Dependency analysis: blocked-by target #200 is already CLOSED. Recommend removing Blocked by #200 from body (no auto-correction)`
+   - Comment format (resolved blocked-by): `Dependency analysis: blocked-by target #200 is already CLOSED. Recommend removing the stale GraphQL relationship with scripts/gh-graphql.sh --query remove-blocked-by (no auto-correction)`
    - Comment format (orphan): `Dependency analysis: blocked-by target #999 does not exist. Recommend removing Blocked by #999 from body (no auto-correction)`
    - Run `mkdir -p .tmp` first
    - Write comment body to `.tmp/triage-dependency-comment-$N.md` using the Write tool

@@ -34,7 +34,7 @@ The table below is **exhaustive** for Wholework's current scope. Add a row here 
 | PR body, review state | view | `/review`, `/merge` | read-mostly | yes |
 | Sub-issue graph | view (`subIssues` GraphQL) | `get-sub-issue-graph.sh` | read-only | yes |
 | `closes #N` magic | parse | `gh-extract-issue-from-pr.sh` | derived | yes |
-| Issue blocked-by relationships | add, remove | `set-blocked-by.sh`, `gh-check-blocking.sh`, `gh-graphql.sh` (`add-blocked-by`, `remove-blocked-by`) | mutable | yes |
+| Issue blocked-by relationships | add, remove, read | `set-blocked-by.sh`, `gh-check-blocking.sh`, `gh-graphql.sh` (`add-blocked-by`, `remove-blocked-by`), `get-blocked-by.sh` (read) | mutable | yes |
 
 Note: label namespace rules and bare-namespace exceptions (e.g., `triaged`) are defined in [`modules/label-conventions.md`](label-conventions.md).
 

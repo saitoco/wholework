@@ -39,6 +39,7 @@
       "Bash(scripts/gh-pr-merge-status.sh *)",
       "Bash(scripts/gh-pr-review.sh *)",
       "Bash(scripts/gh-check-blocking.sh *)",
+      "Bash(scripts/get-blocked-by.sh *)",
       "Bash(scripts/opportunistic-search.sh *)",
       "Bash(scripts/check-file-overlap.sh *)",
       "Bash(scripts/triage-backlog-filter.sh *)",

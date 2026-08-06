@@ -36,6 +36,16 @@ count_mode_section() {
     [ "$status" -eq 0 ]
 }
 
+@test "List mode section: get-blocked-by.sh referenced (GraphQL read window)" {
+    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'get-blocked-by.sh'"
+    [ "$status" -eq 0 ]
+}
+
+@test "List mode section: body grep read path removed" {
+    run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'json body'"
+    [ "$status" -ne 0 ]
+}
+
 @test "List mode section: phase/done gate condition present" {
     run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'phase/done'"
     [ "$status" -eq 0 ]

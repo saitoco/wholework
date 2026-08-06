@@ -3,7 +3,7 @@ name: auto
 description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues; `--batch N1 N2 ...` processes the explicitly listed Issues in order (assigns a BATCH_ID for parallel-safe checkpointing). `--resume N` resumes a single Issue (restores verify counter from checkpoint); `--batch --resume` resumes an interrupted batch using `list_active_batches` to identify the target session.
 loop-paths-used: [A, E]
 loop-paths-fallback: [A]
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-external-kill.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/filter-session-verified-issues.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-session-findings-disposition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/scan-pending-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/apply-run-fact-match.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-external-kill.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/filter-session-verified-issues.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-session-findings-disposition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/scan-pending-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/apply-run-fact-match.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Autonomous Execution
@@ -1114,16 +1114,21 @@ Process each Issue in `BATCH_LIST` in order:
 2. **If no `phase/*` labels**: run `${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh $NUMBER` (issue triage → Size setting → `phase/ready` assignment)
    - On failure: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
 3. call `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER`; retain the result as `$ISSUE_SIZE`; if `$ISSUE_SIZE` is XL: output a warning; call `${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh update_batch "$BATCH_ID" $NUMBER fail`; skip to the next Issue (do not abort the entire batch)
-4. **Blocked-by check**: Extract blocker numbers from the Issue body:
+4. **Blocked-by check**: materialize any body-text `Blocked by #N` shortcuts into GraphQL, then read the authoritative blocker list from GraphQL (GraphQL is the SSoT — see `docs/workflow.md` § Blocked-by relationships):
    ```
-   gh issue view $NUMBER --json body -q '.body' | grep -ioE "blocked by #[0-9]+" | grep -oE "[0-9]+"
+   ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh $NUMBER
    ```
-   - If no blockers found: skip to step 5
-   - For each blocker `$BLOCKER`:
+   (exit code 2 here just means an open blocker was detected in body text and materialized — not an error; only treat exit code 1 as an error, output a warning, and continue to the `get-blocked-by.sh` call below.)
+   ```
+   ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh $NUMBER
+   ```
+   - Exit 0 (no blockers, or all blockers `CLOSED`): gate released — skip to step 5
+   - Exit 1 (error, e.g. transient GraphQL failure): output a warning and treat as gate released (proceed to step 5) — same fail-open policy as the preceding `gh-check-blocking.sh` call
+   - Exit 2 (one or more `OPEN` blockers; each output line is `<BLOCKER><TAB><STATE>`): for each `OPEN` blocker `$BLOCKER`:
      ```
-     gh issue view $BLOCKER --json state,labels -q '{state: .state, phases: [.labels[].name | select(startswith("phase/"))]}'
+     gh issue view $BLOCKER --json labels -q '[.labels[].name | select(startswith("phase/"))]'
      ```
-     - If `state` is `"CLOSED"` or `phases` contains `"phase/done"`: gate released — continue to next blocker
+     - If `phase/done` is present: gate released — continue to next blocker
      - Otherwise: extract `$BLOCKER_PHASE` (first `phase/*` label of blocker, or `"OPEN"` if no `phase/*` label); output warning and skip `$NUMBER` (do NOT call `update_batch` — keeps `$NUMBER` in `remaining` for `/auto --batch --resume`):
        ```
        Warning: #$NUMBER blocked by #$BLOCKER which is $BLOCKER_PHASE (manual post-merge pending). Skipping #$NUMBER. After completing #$BLOCKER manually, resume with /auto --batch --resume.

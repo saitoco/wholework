@@ -172,6 +172,7 @@ wholework/
 - `scripts/gh-label-transition.sh` — フェーズラベル遷移
 - `scripts/gh-check-blocking.sh` — ブロッキング issue 依存関係チェック
 - `scripts/set-blocked-by.sh` — issue 番号で GitHub blocked-by relationship を設定する薄い wrapper (`add-blocked-by` mutation のラッパー)
+- `scripts/get-blocked-by.sh` — GitHub blocked-by relationship の単一読み取り窓口 (単一 Issue モード、または `--all` で open Issue 全体のグラフ)
 - `scripts/gh-extract-issue-from-pr.sh` — PR からリンク先 issue を抽出
 - `scripts/gh-pr-merge-status.sh` — PR のマージステータス確認
 - `scripts/gh-pr-review.sh` — PR レビュー投稿
