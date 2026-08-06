@@ -893,11 +893,11 @@ This step implements the `recoveries-auto-fire` feature. Controlled by `.wholewo
 
 Guard: if `docs/reports/orchestration-recoveries.md` does not exist, skip this step entirely.
 
-1. Write open-issues JSON to `.tmp/open-issues-$NUMBER.json` for dedup:
+1. Write all-state issues JSON to `.tmp/open-issues-$NUMBER.json` for entry-unit dedup (Issue #1152 — `collect-recovery-candidates.sh` needs `state` and `closedAt` to tell a resolved symptom from a genuine post-fix recurrence of the same group-key; an open-only list cannot distinguish the two):
    ```bash
-   gh issue list --state open --limit 200 --json number,title
+   gh issue list --state all --limit 1000 --json number,title,state,closedAt
    ```
-   Write the output to `.tmp/open-issues-$NUMBER.json` using the Write tool.
+   Write the output to `.tmp/open-issues-$NUMBER.json` using the Write tool. The filename is kept for backward compatibility even though the content is no longer open-only.
 
 2. Run:
    ```bash
