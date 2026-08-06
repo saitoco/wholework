@@ -127,7 +127,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1105 (Tier 2 に review 完了失敗パターンがなく Tier 3 が毎回 action=retry を出す構造)
 
 ---
 
@@ -191,7 +191,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1105 (Tier 2 に review 完了失敗パターンがなく Tier 3 が毎回 action=retry を出す構造)
 
 ---
 
@@ -270,7 +270,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1123 (closed — 本 entry は #1123 の Source Entries 3 件のうちの 1 件)
 
 ## 2026-07-31 03:08 UTC: manual-recovery-pr-create
 
@@ -327,7 +327,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1123 (closed — 本 entry は #1123 の Source Entries 3 件のうちの 1 件。Cause A として #1097 へ分岐)
 
 ## 2026-07-29 07:26 UTC: manual-recovery-push-only
 
@@ -384,7 +384,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1123 (closed — 本 entry は #1123 の Source Entries 3 件のうちの 1 件。Cause A として #1097 へ分岐)
 
 ## 2026-07-29 06:01 UTC: manual-recovery-respawn
 
@@ -961,7 +961,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1105 (Tier 2 に review 完了失敗パターンがなく Tier 3 が毎回 action=retry を出す構造)
 
 ---
 

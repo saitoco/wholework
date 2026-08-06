@@ -14,6 +14,8 @@ cutoff (最新の `phase/*` ラベル付与時刻) は `2026-08-06T01:33:03Z`。
 
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1156#issuecomment-5200040643
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1156#issuecomment-5200238525
 ## Overview
 
 `/issue` が生成する Post-merge 条件が、チェックボックス形式 (`- [ ]`) ではなくプレーン箇条書き (`- `) で書かれるケースが過去に 10 件発生した (2026-06-19〜07-13)。`verify-type` マーカーは正しく付与されるため条件文としては成立するが、チェックを入れる先のチェックボックス自体が存在しないため、`/verify` が PASS 判定してもその結果を記録できず、Issue は CLOSED のまま `phase/verify` に永久滞留する。`skills/issue/SKILL.md` の AC 生成規約にはチェックボックス形式を明示的に要求する記述がなく、これを機械的に強制するガードも存在しない。
@@ -188,6 +190,22 @@ AC3 (rubric "既存の未解決 3 件 (#734 / #735 / #1006) が処理されて�
 - Pre-merge 3 件すべて PASS。AC2 は bats (10/10) に加えて**実データでの動作確認**を行った — `verify:` マーカー付き (Pre-merge) と `verify-type:` マーカー付き (Post-merge) の両方のプレーン箇条書きを検出し exit 2 を返すこと、セクション外は対象外であることを確認
 - 検証中に「実装が `/issue` の片方のフローからしか呼ばれないのでは」という #1185 と同型の懸念を持ったが、Existing Issue Refinement の Step 7 が New Issue Creation の Step 4 を明示的に参照しているため両フローで機能することを確認した
 
+##### observation AC の判定確定 (2 回目の `/verify`、2026-08-06 session `11623-1785995193`)
+
+`auto-run` イベント発火 (2026-08-06T04:02:03Z) を受けて post-merge observation AC を評価し、**PASS** と確定した。本 Issue の着地 (同日 11:56 JST 頃) 以降に `/issue` が生成した Post-merge AC を両フローで確認した:
+
+| Issue | フロー | 生成された Post-merge AC | 形式 |
+|---|---|---|---|
+| #1191 | New Issue Creation | 1 件 (`observation event=auto-run`) | `- [ ]` |
+| #1098 | Existing Issue Refinement | 2 件 (`verify-type: manual`) | `- [ ]` |
+
+上記 `#### verify` で確認した「Step 7 が Step 4 を明示参照するため両フローで機能する」という設計上の判断が、実データでも裏付けられた形になっている。
+
+**因果の限界 (記録)**: 本 Issue 以前も大半の Issue は正しい形式で生成されており (問題は全体のうち 10 件)、今回の 2 件が正しかったこと自体は実装の効果を決定的には証明しない。加えて `/issue 1098` の Issue Retrospective には `check-ac-checkbox-format.sh` の実行痕跡が残っていない。**スクリプトが実際に違反を捕捉して exit 2 を返した実運用事例はまだ観測できていない** — 違反が生成されなければ捕捉も起きないため、これは実装が正しく働いている状態と区別がつかない。AC の文言は「チェックボックス形式で生成されることを観察する」であり形式の確認を求めているため PASS としたが、捕捉事例の観測は将来の偶発的な機会に委ねる (Tier 3: 単発の観察メモ、起票せず)。
+
+なお同種の「監査の実行痕跡が retrospective に残らない」問題は #1185 の verify retrospective でも記録されており、`/issue` の監査系ステップに共通する追跡性の弱さとして 2 件目の実例になる。
+
 ### Improvement Proposals
 
 - N/A (新規起票なし)。本 Issue で扱った post-merge 側の形式強制と、#1083 (監査基準) / #1185 (監査経路) で AC 品質の 3 要素が揃った。#1185 は同一 batch の remaining に控えており、着地後に pre-merge AC gate によるブロックが再発するかを観測する (`merge gate は未対応` としてメモリに記録済み)
+- (2026-08-06 追記) #1185 は着地・`phase/done` に到達済み。pre-merge AC gate によるブロックは #1185 / #1098 のいずれでも再発しなかった。gate 側への着手要否は引き続き観測を継続する
