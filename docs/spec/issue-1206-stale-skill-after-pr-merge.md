@@ -127,3 +127,34 @@ Issue 本文「Proposal (Outline)」節に既に記録済みのため、Spec 側
 
 - **Proposal C の実装位置**: `skills/merge/SKILL.md` (LLM 実行、自分の worktree `merge/pr-$NUMBER` 内で完結) ではなく `scripts/run-merge.sh` (bash wrapper) を選んだ。`/merge` 自身は worktree 内で完結するため、親リポジトリの `main` を直接操作するには worktree 分離を越える必要がある。一方 `run-merge.sh` は `claude -p` サブプロセスの外側で `MAIN_REPO_ROOT` に居続けるため、追加の分離越えロジックなしに実装できる。既存の `_pull_ff_only()` (`scripts/run-auto-sub.sh`) も同じく bash wrapper 層に実装されており、パターンとして一貫する
 - **AC4 のテスト方法**: Step 8 のロジックは SKILL.md prose に埋め込まれた bash スニペットであり、直接ユニットテストできる独立スクリプトではない。`tests/pre-merge-check.bats` が使う bare origin + working repo の実 git fixture パターンを踏襲し、Step 1 で導入する 2 つの git コマンド (ローカル HEAD 比較 / origin 比較) が実際に異なる結果を返すことを実 git 操作で検証する形とした。SKILL.md prose のリファクタ (スクリプトへの抽出) は本 Issue のスコープを超えるため行わない
+
+## Autonomous Auto-Resolve Log
+
+- **Step 3 (`phase/ready` label check)**: `/code 1206` 実行時点で Issue ラベルは `phase/code` であり `phase/ready` は不在だった。Issue タイムラインを確認したところ、`phase/ready` は一度付与された後 `phase/code` へ遷移済み (2026-08-06T15:31:55Z) — 本 Issue に対する `/code` の先行実行が Step 4 (ラベル遷移) まで進んだ後、worktree/branch を作成せずに中断していたと判明した (worktree 一覧・リモートブランチのいずれにも `code+issue-1206` 相当の痕跡なし)。Spec (`docs/spec/issue-1206-stale-skill-after-pr-merge.md`) は既に存在し内容も完成しているため、"Continue" を自動選択し Spec を使って実装を継続した。`reconcile-phase-state.sh --check-precondition code-pr 1206` の `matches_expected:false` も同じ `phase/ready` 不在が理由であり、Spec 欠如ではないことを確認した上で warn のみとして続行した。
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation Steps 1–4 を Spec の記述通りに実装した。
+
+### Design Gaps/Ambiguities
+- Spec の「実装確認済みの前提」節は「`scripts/run-merge.sh` は現状 `git` を直接呼び出していない」と記載しているが、実際には起動直後に `git worktree list --porcelain`という読み取り専用の呼び出しが既に存在していた (`MAIN_REPO_ROOT` 解決のため)。今回追加した `git pull --ff-only` は状態を変更する最初の呼び出しである、という主張自体は正しく実装への影響もなかったが、前提の文言はやや不正確だった。次回この Spec を参照する際は「`git` の読み取り専用呼び出しは既存、書き込みを伴う呼び出しは今回が最初」と読み替えること。
+
+### Rework
+- `tests/auto.bats` の新規テストで `git clone` 直後に `skills/x/SKILL.md` へ書き込めず失敗した。原因は bare origin の `HEAD` が `refs/heads/main` を指しておらず (`branch -M main` 後も symbolic-ref 未設定)、`git clone` が空のチェックアウトを作っていたため。`git -C "$origin_dir" symbolic-ref HEAD refs/heads/main` を push 後に追加して解消した。
+- `tests/run-merge.bats` の否定側テスト (`git pull --ff-only` が呼ばれないことの確認) で当初 `[ ! -f "$GIT_LOG" ]` を使ったが、`run-merge.sh` が既存の `git worktree list --porcelain` 呼び出しで `git` モックを起動するため常に失敗した。`grep -q "^pull --ff-only$" "$GIT_LOG"` の否定に変更して解消した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps 1–4 をそのまま実装 (skills/auto/SKILL.md の origin 比較化、scripts/run-merge.sh の post-merge sync、tests/auto.bats・tests/run-merge.bats へのテスト追加)。方針からの逸脱なし
+- 全 bats テストスイート (1493件) を behavioral change detection の判定に従って実行し、全件 PASS を確認済み
+
+### Deferred Items
+- Post-merge observation AC (`session=next`): 次回 skill を修正する Issue を pr route で完走させた後、同一セッション内でその skill を呼ぶ実行で stale な版が使われないか (または警告が出るか) を観察する。本 PR merge 後の別セッションで確認が必要
+
+### Notes for Next Phase
+- `/review` は Pre-merge rubric AC 4件 (AC1–4) を再検証すること。実装側では A (origin 比較) + C (post-merge sync) の両方が揃っている
+- Spec の「実装確認済みの前提」節にある「`run-merge.sh` は git を直接呼び出していない」という記述は不正確 (`git worktree list --porcelain` の既存呼び出しがある) — Code Retrospective の Design Gaps/Ambiguities に訂正を記録済み
+- 追加した `git pull --ff-only` は warn-only (fail-open) 設計。失敗しても `EXIT_CODE` は変更されないため、CI や `/review` 側で追加のエラーハンドリングは不要
