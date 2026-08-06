@@ -3,7 +3,7 @@ name: merge
 description: Squash-merge a PR and delete the remote branch (`/merge 88`). Use when merging review-approved, CI-passing PRs. Automatically attempts conflict resolution when conflicts occur.
 context: fork
 model: sonnet
-allowed-tools: Bash(gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, gh issue view:*, gh issue close:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-pre-merge-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*, mkdir:*, rm:*), Read, Edit, Write, Grep, Glob, EnterWorktree, ExitWorktree
+allowed-tools: Bash(gh pr merge:*, gh pr view:*, gh pr ready:*, gh issue edit:*, gh issue view:*, gh issue close:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-pr-merge-status.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-pre-merge-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/wait-ci-checks.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, git fetch:*, git checkout:*, git rebase:*, git add:*, git push:*, git branch:*, git diff:*, git pull:*, git reset:*, git merge:*, git worktree:*, mkdir:*, rm:*), Read, Edit, Write, Grep, Glob, EnterWorktree, ExitWorktree
 ---
 
 # Squash Merge
@@ -65,21 +65,30 @@ Key per-step behavior in non-interactive mode:
      ```bash
      ${CLAUDE_PLUGIN_ROOT}/scripts/check-pre-merge-ac.sh "$ISSUE_NUMBER"
      ```
-   - Branch on the JSON output (exhaustive):
-     - `resolved` is `false`: output `Warning: pre-merge AC state could not be resolved for issue #$ISSUE_NUMBER; proceeding (fail-open).` and proceed to item 3
-     - `unchecked_count` is `0`: output `[pre-merge-ac] All N pre-merge acceptance conditions are checked.` (`N` = `pre_merge_total`) and proceed to item 3
-     - `unchecked_count` is 1 or more:
+   - **Review-incomplete-fallback check** (in addition to the unchecked-AC check above): run
+     ```bash
+     ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh review "$ISSUE_NUMBER" --pr "$NUMBER" --check-completion
+     ```
+     and read `actual.review_incomplete_fallback` from the JSON output. `true` means the PR's review-summary completion signal originates from `post-fallback-review-summary.sh` (fallback), not from `/review`'s own organic Step 14 completion — an unresolved risk that MUST findings from the review that triggered the fallback remain unaddressed (see `modules/l0-surfaces.md` `type=review-incomplete`). Absent or `false` means no additional gate condition from this check.
+   - Branch on the combined result of `check-pre-merge-ac.sh`'s `unchecked_count` and the review-incomplete-fallback check above (exhaustive):
+     - `resolved` is `false` (from `check-pre-merge-ac.sh`): output `Warning: pre-merge AC state could not be resolved for issue #$ISSUE_NUMBER; proceeding (fail-open).` and proceed to item 3 (the review-incomplete-fallback check below still applies independently)
+     - `unchecked_count` is `0` AND `review_incomplete_fallback` is not `true`: output `[pre-merge-ac] All N pre-merge acceptance conditions are checked.` (`N` = `pre_merge_total`) and proceed to item 3
+     - `unchecked_count` is 1 or more, OR `review_incomplete_fallback` is `true` (either condition alone is sufficient to trigger this branch):
        - **Recorded decision check**: run
          ```bash
          gh issue view "$ISSUE_NUMBER" --json comments --jq '[.comments[] | select(.body | contains("<!-- wholework-event: type=pre-merge-ac-gate"))] | sort_by(.createdAt) | .[-1].body // empty'
          ```
-         and resolve **only the latest matching comment** (latest-wins — do not union `ac=` sets across multiple markers). If that marker has `decision=override` and its `ac=` index set is a superset of the current `unchecked_indices`, output `[pre-merge-ac] Proceeding under recorded override: <reason>` and proceed to item 3
-       - **Present and decide** (no valid recorded override found): output each unchecked pre-merge AC as `#<index> <text>`, one per line, then:
+         and resolve **only the latest matching comment** (latest-wins — do not union `ac=` sets across multiple markers). This marker clears the gate only when **both** of the following hold (each condition checked independently — a marker satisfying only one is insufficient, and the branch below re-presents only the unsatisfied condition):
+         - it has `decision=override`, and if `unchecked_count` is 1 or more, its `ac=` index set is a superset of the current `unchecked_indices`
+         - if `review_incomplete_fallback` is `true`, the marker also carries `fallback=true`
+
+         When both applicable conditions are satisfied, output `[pre-merge-ac] Proceeding under recorded override: <reason>` and proceed to item 3
+       - **Present and decide** (no valid recorded override found, or only a subset of the applicable conditions is covered): output each unchecked pre-merge AC as `#<index> <text>` (if any), and if `review_incomplete_fallback` is `true`, additionally output `Review completion for PR #$NUMBER is fallback-origin (type=review-incomplete) — MUST findings from the review that triggered the fallback may be unaddressed.`, then:
          - **Interactive mode**: use AskUserQuestion with options `Abort merge` (default), `Re-run /review to re-verify`, `Approve and merge anyway`
-           - `Approve and merge anyway`: ask the user for a one-line reason, post a `decision=override` marker (see Marker format below), then proceed to item 3
+           - `Approve and merge anyway`: ask the user for a one-line reason, post a `decision=override` marker with `fallback=true` when `review_incomplete_fallback` is `true` (see Marker format below), then proceed to item 3
            - either other option: stop processing — do not proceed to any subsequent step
-         - **Non-interactive mode**: do not merge. Post a `decision=blocked` marker (see Marker format below), output `Error: N unchecked pre-merge acceptance conditions on issue #$ISSUE_NUMBER. Merge blocked.`, and exit with non-zero
-   - **Marker format**: run `mkdir -p .tmp`, then write the comment body with the Write tool to `.tmp/pre-merge-ac-gate-$ISSUE_NUMBER.md`. First line: `<!-- wholework-event: type=pre-merge-ac-gate phase=merge issue=$ISSUE_NUMBER decision=blocked ac=<comma-separated 1-based indices> reason="<one-line reason>" -->` (use `decision=override` for the override case), followed by a human-readable list of the unchecked conditions. Post with:
+         - **Non-interactive mode**: do not merge. Post a `decision=blocked` marker (see Marker format below), output `Error: N unchecked pre-merge acceptance conditions on issue #$ISSUE_NUMBER.` and/or `Error: review completion for PR #$NUMBER is fallback-origin (unresolved review-incomplete).` as applicable, followed by `Merge blocked.`, and exit with non-zero
+   - **Marker format**: run `mkdir -p .tmp`, then write the comment body with the Write tool to `.tmp/pre-merge-ac-gate-$ISSUE_NUMBER.md`. First line: `<!-- wholework-event: type=pre-merge-ac-gate phase=merge issue=$ISSUE_NUMBER decision=blocked ac=<comma-separated 1-based indices> reason="<one-line reason>" -->` (use `decision=override` for the override case; append ` fallback=true` when the marker is also intended to clear a `review_incomplete_fallback` condition), followed by a human-readable list of the unchecked conditions (and, when applicable, the review-incomplete-fallback condition). Post with:
      ```bash
      ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh "$ISSUE_NUMBER" ".tmp/pre-merge-ac-gate-$ISSUE_NUMBER.md"
      rm -f ".tmp/pre-merge-ac-gate-$ISSUE_NUMBER.md"

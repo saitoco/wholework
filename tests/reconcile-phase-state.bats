@@ -367,6 +367,39 @@ MOCK_EOF
     [[ "$output" == *'"matches_expected":true'* ]]
 }
 
+@test "review completion: review-incomplete marker present -> review_incomplete_fallback true" {
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+echo "<!-- review-summary -->"
+echo "<!-- wholework-event: type=review-incomplete phase=review pr=10 -->"
+echo "## Review Response Summary"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" review 42 --pr 10 --check-completion --strict
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"matches_expected":true'* ]]
+    [[ "$output" == *'"review_incomplete_fallback":true'* ]]
+}
+
+@test "review completion: no review-incomplete marker -> review_incomplete_fallback absent" {
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+echo "## Review Response Summary"
+echo "All good"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" review 42 --pr 10 --check-completion --strict
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'"matches_expected":true'* ]]
+    [[ "$output" != *'review_incomplete_fallback'* ]]
+}
+
 @test "review completion: missing --pr flag -> exit 2" {
     run bash "$SCRIPT" review 42 --check-completion
     [ "$status" -eq 2 ]

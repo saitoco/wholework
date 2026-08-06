@@ -31,7 +31,13 @@ fi
 
 REVIEWS_JSON=$(gh pr view "$PR_NUMBER" --json reviews --jq '.reviews' 2>/dev/null) || REVIEWS_JSON="[]"
 
-LATEST_STATE=$(echo "$REVIEWS_JSON" | jq -r 'sort_by(.submittedAt) | last | .state // empty' 2>/dev/null) || LATEST_STATE=""
+ACTOR_LOGIN=$(gh api user -q '.login' 2>/dev/null) || ACTOR_LOGIN=""
+
+LATEST_STATE_JQ='sort_by(.submittedAt) | last | .state // empty'
+if [[ -n "$ACTOR_LOGIN" ]]; then
+    LATEST_STATE_JQ="[.[] | select(.author.login == \"${ACTOR_LOGIN}\")] | ${LATEST_STATE_JQ}"
+fi
+LATEST_STATE=$(echo "$REVIEWS_JSON" | jq -r "$LATEST_STATE_JQ" 2>/dev/null) || LATEST_STATE=""
 
 if [[ "$LATEST_STATE" == "CHANGES_REQUESTED" ]]; then
     echo "post-fallback-review-summary: latest PR review for #${PR_NUMBER} is CHANGES_REQUESTED (MUST issues outstanding); a fallback summary would falsely declare recovery. Skipping fallback post." >&2
@@ -46,6 +52,7 @@ if ! echo "$REVIEW_BODIES" | grep -q "Acceptance Criteria Verification Results";
 fi
 
 FALLBACK_BODY="<!-- review-summary -->
+<!-- wholework-event: type=review-incomplete phase=review pr=${PR_NUMBER} -->
 ## Review Response Summary
 
 This is an auto-generated fallback summary, posted by \`post-fallback-review-summary.sh\` after the review session exited without posting its own Response Summary (silent no-op). A prior review with Acceptance Criteria Verification Results was found for this PR.
