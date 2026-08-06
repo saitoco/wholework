@@ -415,7 +415,24 @@ Size L につき上限5件のうち、2件を自動解決 (残りは AC 文言�
 - **PASS にしなかった判断根拠**: 条件 7 の観察対象は**統合された挙動**であり、手動でパイプラインを走らせた結果はその代替にならない。本 Issue 自身が `modules/autonomy-tier.md` に記した設計原則「false-positive auto-check は advisory の見逃しより取り消しが難しいため、不明確な match は如何なる tier でも auto-check に到達してはならない」を、本 Issue 自身の AC 判定にも適用した
 - **構造的な発見**: 自己ホスト型リポジトリでは、**skill を変更する Issue の統合経路を同一セッション内で検証できない**。skill 自己更新の非伝播 (`docs/sessions/73536-1785868487-2026-08-04/session.md` § Skill Self-Update Propagation Note) により、変更後の skill が作用するのは次 session 以降になるため。これは #1157 に固有の問題ではなく、`skills/*/SKILL.md` を変更するすべての Issue の post-merge observation AC に共通する制約
 
+#### verify (再々検証、2026-08-05 発火後)
+
+`auto-run` イベントの再発火 (2026-08-05T17:41:20Z) を受けた条件 7 の 2 回目の評価。結果は再び **UNCERTAIN**、ただし理由が前回と入れ替わった。
+
+- **前回の UNCERTAIN 理由は解消済み**。2026-08-05 以降、#1157 着地 (08-04T20:22Z) より後に開始した `/auto` セッションが 5 件以上完走している (`6722-1785907145` / `56516-1785934632` / `65022-1785935372` / `38916-1785974328`)。いずれも更新後の `skills/auto/SKILL.md` (`dbaff5c8` 以降) を読み込んでいるはずで、skill 自己更新の非伝播はもはや障害ではない
+- **それでも統合経路の実行痕跡が 4 系統すべてでゼロ**。`.tmp/run-facts-<session>.json` (Processing Steps 1 の必須出力、`no candidates` 終了でも生成される) が 0 件、`type=run-fact-ac-match` marker コメントが 0 件、`.tmp/permission-log.txt` の `collect-run-facts.sh` / `scan-pending-ac.sh` 実行記録が 0 件、`docs/sessions/*/session.md` の `Run-fact AC reconciliation:` サマリー行が 0 件
+- **配線側の欠落ではない**。現行 main の `skills/auto/SKILL.md` は L752 (単一 Issue 経路) と L1206 (batch 経路) の双方に `modules/run-fact-matching.md` の読み込み指示を保持し、`allowed-tools` にも 3 スクリプトの literal エントリが登録されている
+- **UNCERTAIN とした判断根拠**: 「実行されたが候補ゼロだった」と「そもそも実行されなかった」を弁別する証拠がない。前者なら機構は設計どおりで条件 7 は次の機会に評価できるが、後者なら best-effort ステップの実行漏れという別問題になる。`modules/run-fact-matching.md` 自身の fail-safe 思想 (曖昧なら `satisfied` に倒さない) を AC 判定にも適用した
+- **観測手段そのものの欠落が二次的な問題**: `action=advisory` は `Recommend:` のターミナル出力のみ、`no candidates` も同様にターミナル出力のみで、いずれも L0 にも `.tmp/` にも痕跡を残さない。唯一の永続的痕跡は Step 1 が保存する `run-facts-<session>.json` だが、これも `/auto` が実際にステップへ到達した場合にしか生まれない。**「ステップが走って何も検出しなかった」と「ステップに到達しなかった」が事後に区別できない設計**であり、条件 7 のような observation AC を評価する側から見ると観測不能な構造になっている
+
 ### Improvement Proposals
+
+**追記 (2026-08-05 再々検証)**:
+
+- **Tier 1 (Issue 起票、ユーザー指摘)**: **チェック済み pre-merge AC の再検証が既定になっており、コストに見合っていない**。`skills/verify/SKILL.md` Step 6 の「Re-runs: re-verify all conditions (idempotent). Re-verify even if already checked」に従い、本再々検証では条件 1〜6 をすべて再実行した。うち条件 6 は `bats tests/` 1405 件で、実行に相応の時間とトークンを要したが、結果は merge 前の検証と同一で新規情報はゼロだった。pre-merge AC は (a) `/review` の pre-merge AC gate (`check-pre-merge-ac.sh`) を通過し、(b) merge 時点で `[x]` になっている以上、`/verify` の再実行は二重検証にあたる。`/verify` の責務を post-merge AC の評価に絞り、checked な pre-merge AC は既定でスキップ (再検証したい場合のみ明示フラグ) とするのが妥当。特に `command` 系 (テストスイート実行) は rubric 系と比べてコスト差が大きく、既定スキップの効果が大きい
+  - **判断根拠**: 影響範囲がすべての `/verify` 実行に及び (Tier 1 criterion「影響範囲が広い」)、`/auto` パイプラインでは Issue ごとに毎回発生するため再発性も構造的。ユーザーからの明示的な指摘でもある
+- **Tier 1 候補 (Step 16 で既存 Issue への追記可否を判定)**: `modules/*.md` を「Read して Processing Steps に従う」形で呼び出す **best-effort ステップは、配線が正しくても実行されないことがあり、しかも実行の有無が事後に判別できない**。本 Issue の Run-fact AC reconciliation は 5 セッション以上の `/auto` 完走を経て痕跡ゼロだったが、これが「未到達」なのか「到達して候補ゼロ」なのかを区別する手段が存在しない。少なくとも到達を記録する何か (event emission、あるいは `no candidates` 時も含めた `run-facts-<session>.json` の無条件生成) があれば、observation AC 側から評価可能になる
+  - **本 Issue のスコープ外とする根拠**: #1157 が実装したのは検出機構そのものであり、その機構が `/auto` から確実に呼ばれることの保証は `/auto` 側の実行保証の問題。#1117 (issue/spec フェーズの completion check による silent no-op 検出) と同型の課題であり、同 Issue への追記で扱える可能性が高い
 
 **追記 (2026-08-04 再検証)**:
 
