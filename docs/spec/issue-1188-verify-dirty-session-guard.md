@@ -62,3 +62,36 @@
 ### code phase (cutoff: 2026-08-06T08:08:52Z)
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Implementation Step 1 describes a single `gh issue view "$M" --json state,labels` call, but `_check_issue_active()` in `scripts/check-verify-dirty.sh` was implemented as two sequential calls (`--json state` first, short-circuiting to `inactive` before the `--json labels` call when the Issue is already CLOSED). This matches the Notes' explicit direction to follow `scripts/reconcile-phase-state.sh`'s established two-call pattern, and avoids an unnecessary `gh` call for the common CLOSED case. Behavior is identical to the single-call reading; no Spec update needed.
+- `skills/verify/SKILL.md`'s `allowed-tools` frontmatter dropped `git pull:*` and gained `git fetch:*`: replacing the `git pull` command with `git fetch` + `git merge --ff-only` (Implementation Step 3) left `git pull:*` with no remaining executable-command reference in the file, so it was removed for consistency with `scripts/check-allowed-tools.sh`'s under-declaration check (which passed both before and after — the removal is a cleanliness choice, not one forced by the validator).
+
+### Design Gaps/Ambiguities
+
+- N/A — the Spec Notes had already resolved the two ambiguous points relevant to implementation (active-session criteria, `gh` failure fallback direction); no new gap surfaced during coding.
+
+### Rework
+
+- N/A — no backtracking occurred; all 23 `tests/verify-dirty-detection.bats` cases (20 pre-existing + 3 newly added by this Issue) and the full 1452-case suite passed on the first run after implementation.
+- Minor Spec Notes inaccuracy (not a Deviation, informational only): the Notes describe the pre-existing `tests/verify-dirty-detection.bats` as "18ケース"; the actual pre-change count, confirmed by running `bats` before adding new cases, was 20. Not corrected in Notes since it does not affect any Implementation Step or Acceptance Criteria.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `_check_issue_active()` in `scripts/check-verify-dirty.sh` checks `state` first and short-circuits to `inactive` before calling `--json labels`, avoiding a wasted `gh` call for the common CLOSED case, while still following the Notes' directed two-call pattern (matching `scripts/reconcile-phase-state.sh`).
+- Step 1's new "Continue without stashing" choice was made the recommended/default option, since the whole point of AC2 is to give operators (interactive and, structurally, any future non-interactive AskUserQuestion auto-resolve) a safe non-destructive default when only unrelated-but-active-session spec files are dirty.
+- `git pull:*` was dropped and `git fetch:*` added to `skills/verify/SKILL.md`'s `allowed-tools`, since Implementation Step 3 removed the file's only `git pull` command invocation.
+
+### Deferred Items
+- Post-merge observation AC (`session=next`) — cannot be verified until a live `/verify` run under real concurrent-session conditions occurs; deferred to `/verify` per the Issue's own AC design.
+- None else — all Pre-merge AC (AC1–AC5) are implemented and checked off in this phase.
+
+### Notes for Next Phase
+- `/verify` should treat AC1/AC2/AC4 (rubric-type) as requiring a read of `scripts/check-verify-dirty.sh`'s `_check_issue_active()` function and `skills/verify/SKILL.md` Step 1's third AskUserQuestion option, respectively — both are implemented as described in the Spec's Implementation Steps.
+- The post-merge observation AC needs a real `/auto --batch` or concurrent-session run to produce evidence; a single isolated `/verify` run will not exercise the foreign-session path.
+- `tests/verify-dirty-detection.bats` now has 23 cases (up from 20); if `/verify`'s AC5 command re-runs the suite, the new count is expected.
