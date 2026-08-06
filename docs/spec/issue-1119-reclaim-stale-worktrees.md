@@ -95,3 +95,33 @@
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — implemented Steps A–I and the orphan-branch step (H) exactly as specified. `classify_name()` uses a single generic regex (`^.+\+(issue|pr)-([0-9]+)$`) for both the branch-name and detached-directory-basename forms instead of the Spec's two separate regexes (`^worktree-.+\+(issue|pr)-([0-9]+)$` for branches, unprefixed for detached dirs) — the single pattern matches both forms since a `worktree-`-prefixed branch name still satisfies the more permissive pattern, so behavior is identical; not recorded as a deviation requiring an Implementation Steps update.
+
+### Design Gaps/Ambiguities
+- Step D's "gh コマンドが失敗した場合... 状態不明として扱い... `warned (gh lookup failed)` として削除対象から除外する" wording implies a specific summary category, but Step I's exhaustive category list omits it. Added `warned (gh lookup failed)` as an additional summary category (alongside the 7 Step I lists it) rather than folding it into `skipped (unrecognized)`, since the two failure modes (unparseable name vs. unreachable gh state) have different remediation paths and conflating them would obscure which one occurred.
+
+### Rework
+- Initial implementation of `check_completion()`'s issue-kind branch used the shorthand `[ "$state" = "CLOSED" ] && COMPLETION_STATE="done"` as the last statement inside its `if [ "$kind" = "issue" ]; then ... fi` block. Under `set -euo pipefail`, when the branch name's condition is false, this pattern's exit status (1, from the failed `[ ]` test) becomes the function's own return status — and since the top-level `if [ "$kind" = "issue" ]` construct itself resolves to 0 regardless (bash's documented "if with no branch taken → exit 0" rule), the *function's* last-executed-command is actually the failed `[ ]` test, not the `if`. The caller (`check_completion "$kind" "$num"`, called as a bare top-level statement, not guarded by `if`/`||`) then propagates that non-zero status and `set -e` aborts the whole script silently (no error message, no trap) — reproduced live against this repository's real worktree/branch data (script exited at exactly the point where the first `OPEN` Issue was evaluated, right after `[ "$state" = "CLOSED" ]` returned false). Root cause isolated via a series of minimal `bash -c` repros (see below) rather than guesswork. Fixed by rewriting as an explicit `if [ "$state" = "CLOSED" ]; then COMPLETION_STATE="done"; fi` (an if-statement with no else and a false condition returns exit status 0, unlike the `&&` short-circuit form). Generalizable pitfall for future bash 3.2-compatible scripts under `set -e`: **a bare `[ cond ] && assignment` as the last statement of a function is unsafe** — if `cond` is false, the function's return status becomes 1 and kills the caller's script unless the call site explicitly guards it (`if`, `||`, etc.). Prefer an explicit `if`/`fi` (or append a trailing no-op like `|| true` immediately after, though the explicit `if` is clearer) whenever such a construct could be the last thing a function executes. Audited the rest of the script for the same shape (all other `&&` usages are inside `if`-conditions or `||`-guarded, which are safe) before considering the fix complete.
+- Real-data smoke test (dry-run against this repository's own ~43 stale worktree entries) surfaced two additional validations beyond the bats suite: (1) the Spec's `merge+pr-1190` example (directory name suggests PR #1190, but the checked-out branch is actually `worktree-code+issue-1186`) was classified correctly by branch-name-priority logic; (2) the current session's own worktree (`code+issue-1119`, locked, Issue still OPEN) was correctly excluded before ever reaching the locked/HEAD-match guard, since the `not-done` completion check short-circuits first — confirming the primary completion-based filter (not just the concurrent-session guard) protects an in-progress session.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Implemented all of Steps A–I (including the orphan-branch Step H) exactly as specified in the Spec's single-script design; no split into multiple scripts or wrapper-EXIT-trap alternative was introduced.
+- Used a single generic classify_name regex (`^.+\+(issue|pr)-([0-9]+)$`) instead of the Spec's two separate branch/detached-dir regexes — behaviorally identical, simpler implementation, not a functional deviation.
+- Added an extra `warned (gh lookup failed)` summary category beyond Step I's 7 listed categories, since Step D's own text requires this outcome to be tracked and reported, and folding it into `skipped (unrecognized)` would conflate two different failure modes.
+
+### Deferred Items
+- Post-merge opportunistic AC (running the script for real across several sessions to confirm no re-accumulation) is left as documented — not something `/code` can satisfy pre-merge.
+- No `--apply` run was executed against this repository's real worktree/branch data during implementation (only dry-run smoke testing) — the actual cleanup of the ~71 stale entries observed in the dry-run (32 worktrees + 39 orphan branches) is left for a human or a follow-up `--apply` run, since deleting real branches/worktrees is outside this Issue's implementation scope and was not requested.
+- Two pre-existing, unrelated translation-sync gaps were surfaced by `scripts/check-translation-sync.sh` (`docs/guide/autonomy.md` MISSING_JA, `docs/guide/index.md` OUTDATED) — not touched, since neither file was changed by this Issue.
+
+### Notes for Next Phase
+- The `set -e` + bare `[ cond ] && assignment`-as-last-statement pitfall (see Rework above) is worth a broader sweep across other bash 3.2-compatible scripts in this repo if a reviewer wants to proactively rule out latent instances elsewhere — out of scope for this Issue's review, noted here only as a possible follow-up angle.
+- All 4 pre-merge rubric ACs were self-assessed PASS directly against the implementation in Step 10; `/review` should independently confirm the rubric judgments rather than treating this as authoritative.
+- The dry-run smoke test output (32 worktree+branch pairs, 39 orphan branches, 6 uncommitted-changes warnings, 9 unrecognized/skipped) is a useful reference for `/review` to spot-check specific classification edge cases against real repository state without needing to re-run anything destructively.
