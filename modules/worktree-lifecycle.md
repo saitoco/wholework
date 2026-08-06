@@ -96,6 +96,17 @@ The calling skill exits the worktree with the following steps after completing p
 
 ## Notes
 
+### Broader stale worktree/branch reclaim (beyond the Entry section's same-name check)
+
+The Entry section's step 2 stale worktree check only looks for a worktree matching the *calling
+phase's own* `WORKTREE_NAME` — it cannot see stale worktrees or orphan branches left behind by a
+different phase/Issue whose session crashed or exited without reaching Worktree Exit. For a
+general inventory and reclaim of worktrees/branches whose corresponding Issue is CLOSED or PR is
+MERGED/CLOSED, use `scripts/reclaim-stale-worktrees.sh` (dry-run by default; `--apply` to perform
+deletion). It applies the same safety guards as this module's own lifecycle (concurrent-session
+exclusion, uncommitted-changes protection) plus safe squash-merge branch deletion. See
+`docs/spec/issue-1119-reclaim-stale-worktrees.md` for the full design.
+
 ### Editing `.claude/` files inside worktrees
 
 Files under `.claude/` are treated as **sensitive files** by Claude Code — Edit and Write tools are automatically rejected for these paths. When implementation requires editing `.claude/` files (e.g., `settings.json.template`, hook scripts), use Bash commands instead:
