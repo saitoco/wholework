@@ -4,6 +4,8 @@
 
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1180#issuecomment-5195139906
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1180#issuecomment-5195224905
 ## Overview
 
 `modules/orchestration-fallbacks.md` (fallback catalog) と `scripts/detect-wrapper-anomaly.sh` (anomaly detector) のエントリ/パターンを発火実績と参照元で仕分け、恒常的な維持コストを持たないアーカイブへ退避する。
