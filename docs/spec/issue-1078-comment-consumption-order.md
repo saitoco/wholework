@@ -59,3 +59,31 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue 1078` 実行時の Issue Retrospective — スコープを `/spec` にも拡大、AC2 の verify command 強化 (`"Consumed Comments"` → `"Comment Consumption"`)、post-merge チェックボックス書式修正の根拠を記録。現行 main で `/code`・`/spec` 双方が未解消であることも確認済み / https://github.com/saitoco/wholework/issues/1078#issuecomment-5204156551
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation Steps 1–4 were followed as written (paragraph relocation only, no Step number/heading changes; Notes point 1's "move-only, not full swap" rationale held up — the 5 existing Step 1/2 cross-references confirmed unaffected).
+
+### Design Gaps/Ambiguities
+- None found beyond what Notes already documents.
+
+### Rework
+- None.
+
+### Own-session precedent follow-through
+- This `/code 1078` session itself reproduced the same ordering risk the Issue describes: `skills/code/SKILL.md` on `main` (pre-fix) still calls the Comment Consumption Procedure in Step 1, before Worktree Entry. Rather than execute the pre-fix instructions literally (which would have written `## Consumed Comments` against the main working tree before `EnterWorktree`, exactly the bug being fixed), this session delayed its own Comment Consumption Procedure call until after Worktree Entry — mirroring the precedent the `/spec 1078` session recorded in this Spec's Notes ("本セッション自身での実地確認"). No new comments were pending at that point, so no observable behavior difference resulted, but the ordering choice is recorded here in case a future session needs the same judgment call while this fix is in flight on a PR branch.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Applied the "move-only" relocation exactly as Notes prescribed (paragraph relocation, no Step 1/Step 2 heading or numbering changes), confirmed after implementation that the 5 cross-references Notes identified remain accurate as-is.
+- Kept this `/code` session's own Comment Consumption Procedure call after Worktree Entry, not per the pre-fix Step 1 instruction still live on `main`, to avoid reproducing the Issue's bug within this very session (see Code Retrospective "Own-session precedent follow-through").
+
+### Deferred Items
+- Post-merge AC (manual): confirm via a live `/code`/`/spec` run on some future Issue that Comment Consumption content recorded post-Entry actually lands in the PR-branch-committed Spec (not verifiable pre-merge — no comments were pending during this session's own run to exercise the path end-to-end).
+
+### Notes for Next Phase
+- `/review` should confirm the grep/rubric verify commands both still PASS against the PR branch content (not just local worktree state) before merge.
+- No Spec Implementation Steps sync was needed (no deviations) — `/review` does not need to reconcile Spec vs. implementation beyond the standard diff check.
