@@ -18,6 +18,14 @@ cutoff: `2026-08-06T04:23:59Z` (`phase/issue` ラベル付与時刻、Issue time
 
 Cross-phase marker (`type=verify-fail` / `type=preview-ac-unverified`) の追加スキャン結果: 該当なし。
 
+### code phase (cutoff: `2026-08-06T04:50:47Z`, `phase/ready` ラベル付与時刻)
+
+`phase/ready` 付与以降の新規コメントなし。Cross-phase marker の追加スキャン結果も該当なし。
+
+## Autonomous Auto-Resolve Log
+
+- **`phase/ready` ラベル不在での続行**: `/code 1163 --pr --non-interactive` 開始時点で Issue のラベルは `phase/code` (label timeline 上、`phase/ready` は 2026-08-06T04:56:03Z に `phase/code` へ既に遷移済み)。`reconcile-phase-state.sh --check-precondition code-pr` も `matches_expected: false` を返した。Spec (`docs/spec/issue-1163-manual-ac-retype-a.md`) は spec retrospective・issue retrospective・Phase Handoff まで完備しており、コーディング未着手のまま前回セッションが label 遷移後に中断したレジューム状態と判断。Spec が存在するため「Spec なしで Issue 本文から要件を読む」対応は不要。warn のうえ Spec を正として続行した — reason: 非対話モードのポリシー (`--warn-only` 相当) は Spec 欠落時の縮退経路であり、本件は Spec 完備のため実質的にブロッカーではない。
+
 ## Changed Files
 
 - `docs/reports/manual-ac-retype-a.md`: 新規作成 — 区分 A 36 AC 行のマッピング表 (Issue 番号 / 条件文要約 / 付与 event または対象外 / 選定根拠)、対象外 7 行の理由、`opportunistic-search.sh` 実行による検証結果
