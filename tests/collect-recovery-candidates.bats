@@ -33,7 +33,10 @@ FIXTURE_EOF
   [ -z "$output" ]
 }
 
-@test "exclusion: filed improvement candidate mark -> symptom excluded from output" {
+@test "exclusion: filed improvement candidate mark -> only entries after the filed entry are counted" {
+  # No --issues-json is passed, so the degrade path applies: the group's own latest
+  # 起票済み entry timestamp (2026-06-02) becomes the cutoff. Entries at or before it
+  # (06-01, 06-02) are excluded; only the 06-03 entry -- filed after the fix -- is counted.
   cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
 ## 2026-06-01 10:00 UTC: repeated-symptom
 
@@ -52,7 +55,178 @@ FIXTURE_EOF
 
   run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 1
   [ "$status" -eq 0 ]
-  ! echo "$output" | grep -qF "repeated-symptom"
+  echo "$output" | grep -E $'^repeated-symptom\t1$'
+}
+
+@test "entry-unit exclusion: closed issue -- entries after closedAt are counted" {
+  cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
+## 2026-06-01 10:00 UTC: post-close-recurrence
+
+- Cause: occurrence before the fix (excluded)
+
+## 2026-06-05 10:00 UTC: post-close-recurrence
+
+- Cause: first recurrence after the fix
+
+## 2026-06-06 10:00 UTC: post-close-recurrence
+
+- Cause: second recurrence after the fix
+
+## 2026-06-07 10:00 UTC: post-close-recurrence
+
+- Cause: third recurrence after the fix
+
+FIXTURE_EOF
+
+  ISSUES_JSON_FILE="$BATS_TEST_TMPDIR/issues.json"
+  cat > "$ISSUES_JSON_FILE" << 'JSON_EOF'
+[{"number": 500, "title": "recoveries: post-close-recurrence", "state": "CLOSED", "closedAt": "2026-06-03T00:00:00Z"}]
+JSON_EOF
+
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 3 --issues-json "$ISSUES_JSON_FILE"
+  [ "$status" -eq 0 ]
+  # Only the 3 post-closedAt entries count -- the pre-closedAt entry is dropped, so the
+  # group clears the threshold on recurrence alone, not on the original occurrence.
+  echo "$output" | grep -E $'^post-close-recurrence\t3$'
+}
+
+@test "entry-unit exclusion: an entry auto-stamped with the filed marker by run-auto-sub.sh's closed-issue fallback is still counted when it falls after closedAt" {
+  # run-auto-sub.sh's _find_known_recoveries_issue() resolves closed issues too (open ->
+  # closed fallback), so a genuinely new post-fix entry can be auto-stamped 起票済み #N even
+  # though the symptom already recurred. The 起票済み marker must NOT by itself exclude the
+  # entry -- only its timestamp relative to closedAt decides that (Issue #1152 AC #2).
+  cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
+## 2026-06-01 10:00 UTC: stamped-recurrence
+
+- 起票済み #600
+- Cause: occurrence that triggered the original filing (excluded, before closedAt)
+
+## 2026-06-10 10:00 UTC: stamped-recurrence
+
+- 起票済み #600
+- Cause: first recurrence after the fix (auto-stamped by run-auto-sub.sh, but still new)
+
+## 2026-06-11 10:00 UTC: stamped-recurrence
+
+- 起票済み #600
+- Cause: second recurrence after the fix
+
+## 2026-06-12 10:00 UTC: stamped-recurrence
+
+- 起票済み #600
+- Cause: third recurrence after the fix
+
+FIXTURE_EOF
+
+  ISSUES_JSON_FILE="$BATS_TEST_TMPDIR/issues.json"
+  cat > "$ISSUES_JSON_FILE" << 'JSON_EOF'
+[{"number": 600, "title": "recoveries: stamped-recurrence", "state": "CLOSED", "closedAt": "2026-06-03T00:00:00Z"}]
+JSON_EOF
+
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 3 --issues-json "$ISSUES_JSON_FILE"
+  [ "$status" -eq 0 ]
+  # All 4 entries carry 起票済み #600, yet the 3 entries after closedAt are still counted --
+  # proving the cutoff, not the marker, drives exclusion.
+  echo "$output" | grep -E $'^stamped-recurrence\t3$'
+}
+
+@test "entry-unit exclusion: closed issue -- entries at or before closedAt are excluded" {
+  cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
+## 2026-06-01 10:00 UTC: pre-close-only
+
+- Cause: first occurrence
+
+## 2026-06-02 10:00 UTC: pre-close-only
+
+- Cause: second occurrence
+
+## 2026-06-03 10:00 UTC: pre-close-only
+
+- Cause: third occurrence
+
+FIXTURE_EOF
+
+  ISSUES_JSON_FILE="$BATS_TEST_TMPDIR/issues.json"
+  cat > "$ISSUES_JSON_FILE" << 'JSON_EOF'
+[{"number": 501, "title": "recoveries: pre-close-only", "state": "CLOSED", "closedAt": "2026-06-10T00:00:00Z"}]
+JSON_EOF
+
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 1 --issues-json "$ISSUES_JSON_FILE"
+  [ "$status" -eq 0 ]
+  # All 3 entries predate closedAt, so nothing clears even threshold=1 -- the resolved
+  # symptom does not resurface just because its fix Issue exists.
+  [ -z "$output" ]
+}
+
+@test "entry-unit exclusion: open issue -- every entry in the group is excluded" {
+  cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
+## 2026-06-01 10:00 UTC: open-issue-symptom
+
+- Cause: first occurrence
+
+## 2026-06-02 10:00 UTC: open-issue-symptom
+
+- Cause: second occurrence
+
+## 2026-06-03 10:00 UTC: open-issue-symptom
+
+- Cause: third occurrence
+
+FIXTURE_EOF
+
+  ISSUES_JSON_FILE="$BATS_TEST_TMPDIR/issues.json"
+  cat > "$ISSUES_JSON_FILE" << 'JSON_EOF'
+[{"number": 502, "title": "recoveries: open-issue-symptom", "state": "OPEN", "closedAt": ""}]
+JSON_EOF
+
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 1 --issues-json "$ISSUES_JSON_FILE"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "--with-tracking: appends tracked:#N / untracked as a 3rd column; default output is unchanged" {
+  cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
+## 2026-06-01 10:00 UTC: tracked-symptom
+
+- Cause: first
+
+## 2026-06-02 10:00 UTC: tracked-symptom
+
+- Cause: second
+
+## 2026-06-03 10:00 UTC: tracked-symptom
+
+- Cause: third
+
+## 2026-06-01 10:00 UTC: untracked-symptom
+
+- Cause: first
+
+## 2026-06-02 10:00 UTC: untracked-symptom
+
+- Cause: second
+
+## 2026-06-03 10:00 UTC: untracked-symptom
+
+- Cause: third
+
+FIXTURE_EOF
+
+  ISSUES_JSON_FILE="$BATS_TEST_TMPDIR/issues.json"
+  cat > "$ISSUES_JSON_FILE" << 'JSON_EOF'
+[{"number": 503, "title": "recoveries: tracked-symptom", "state": "CLOSED", "closedAt": "2026-05-01T00:00:00Z"}]
+JSON_EOF
+
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 3 --issues-json "$ISSUES_JSON_FILE" --with-tracking
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -E $'^tracked-symptom\t3\ttracked:#503$'
+  echo "$output" | grep -E $'^untracked-symptom\t3\tuntracked$'
+
+  # Default (no --with-tracking): output stays the 2-column <group-key>\t<count> format.
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 3 --issues-json "$ISSUES_JSON_FILE"
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -E $'^tracked-symptom\t3$'
+  echo "$output" | grep -E $'^untracked-symptom\t3$'
 }
 
 @test "normal detection: count >= threshold and no exclusion -> appears in output" {
@@ -163,7 +337,7 @@ FIXTURE_EOF
 
   ISSUES_JSON_FILE="$BATS_TEST_TMPDIR/issues.json"
   cat > "$ISSUES_JSON_FILE" << 'JSON_EOF'
-[{"number": 999, "title": "recoveries: manual-recovery-review-rerun/dirty-guard"}]
+[{"number": 999, "title": "recoveries: manual-recovery-review-rerun/dirty-guard", "state": "OPEN", "closedAt": ""}]
 JSON_EOF
 
   run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 3 --issues-json "$ISSUES_JSON_FILE"
@@ -191,7 +365,7 @@ FIXTURE_EOF
 
   ISSUES_JSON_FILE="$BATS_TEST_TMPDIR/issues.json"
   cat > "$ISSUES_JSON_FILE" << 'JSON_EOF'
-[{"number": 999, "title": "recoveries: manual-recovery-review-rerun"}]
+[{"number": 999, "title": "recoveries: manual-recovery-review-rerun", "state": "OPEN", "closedAt": ""}]
 JSON_EOF
 
   run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 3 --issues-json "$ISSUES_JSON_FILE"

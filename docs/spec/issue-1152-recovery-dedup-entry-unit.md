@@ -148,3 +148,51 @@ Root Cause の 3 行目 (`run-auto-sub.sh:194-204`) は false negative の一因
 - `EXCLUDED_LIST` の group-key 一括抑止: 合成 fixture (`.tmp/recoveries-probe.md`、4 entry) による実行結果
 - `_find_known_recoveries_issue` の closed 解決: `gh issue list --state closed --limit 1000` の全件から `title == "recoveries: manual-recovery-review-rerun"` を完全一致で抽出
 - 現在の `docs/reports/orchestration-recoveries.md`: `未起票` 23 件 / `起票済み` 43 件 (`grep -c`、2026-08-06 時点)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の `--issues-json が state/closedAt を持たない場合の代替基準` は「ファイル内で最も新しい起票済み entry の日時」とだけ記述しており、file-global か group-key scoped かが曖昧だった。group-key を跨いだ cross-contamination を避けるため **group-key scoped** (その group-key 自身の最新 `起票済み` entry) で実装した。Implementation Steps は更新不要 (Spec の記述自体は誤っていないため) だが、この解釈選択を明記する。
+- Implementation Step 4 が明示した更新対象は既存テスト `exclusion: filed improvement candidate mark` の 1 件のみだったが、同じく `--issues-json` に `state` を含まない旧形式フィクスチャを使っていた 2 件の `duplicate check` テストも新スキーマ (`state`/`closedAt` 前提) の下では意味が変わってしまうため、両方の `issues.json` フィクスチャに `"state": "OPEN"` を追加して意図 (「対応 Issue が存在すれば除外される」) を保った。旧コントラクトが暗黙に "open issues のみのリスト" だったことの明示化であり、テストの検証意図は変えていない。
+
+### Design Gaps/Ambiguities
+
+- 独立サブエージェントによるアドバーサリアルレビューで、AC の対象外の 2 点が見つかった (blocking ではないため据え置き):
+  - **境界の秒精度**: `closedAt` を 16 文字 (分単位) に切り詰めて比較するため、Issue close 直後・同一分内に記録された entry は `<=` 判定で除外側になる (取りこぼす可能性がある)。Spec Notes の「日付比較を文字列比較で行う理由」が明示的に受け入れているトレードオフであり、本 Issue のスコープ外。
+  - **group-key の複数回起票**: 同じ group-key が生涯で 2 回以上 `起票済み #N` された場合、現在の実装は「最後に検出した起票済みマーカーの Issue」のみを解決対象とし、直近の fix の closedAt のみを cutoff に使う。過去の fix ごとの rolling cutoff は考慮しない。Spec もこのケースを明示的に扱っていない (単一 Issue 解決を前提とした設計) ため、実装追随した。将来的に同一 group-key の再起票が頻発するようなら別 Issue で扱う。
+
+### Rework
+
+- なし (実装は Spec の設計通りに 1 パスで完了)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 構造的な乖離なし。review-light (Spec Deviation 観点) が Implementation Steps / rubric 文言と実装 (解決順序、OPEN/CLOSED 分岐、degrade path、`--with-tracking`、SKILL.md Step 15) を突き合わせ、すべて一致していることを確認した。Code Retrospective が明記した唯一の解釈選択 (degrade path の group-key scoped 化) も Spec の記述と矛盾しない追加情報として扱った。
+
+### Recurring issues
+
+- review-light が 1 件 SHOULD 指摘 (`scripts/collect-recovery-candidates.sh:104` — `--issues-json` の python→bash 受け渡しに `\t` 区切りを使っており、Issue title にリテラルタブが含まれると欠陥が生じる潜在バグ) を発見し、`\x1f` (unit separator) への変更で即時修正した。今後同種の「python3 出力を tab 区切りで bash に渡す」パターンを新規実装する際は、区切り文字にタイトル文字列と衝突しうる `\t` を避け `\x1f` を既定に据えるとよい (ワークフロー改善候補としては小粒すぎるため Issue 起票はしない)。
+- Base Branch Conflict Pre-check が `docs/spec/issue-1152-*.md` を "changed in both" として検出したが、`git merge-file` による 3-way merge 検証で無害 (重複領域なし) と確認できた。3 引数 `--trivial-merge` 形式が誤検知気味の "changed in both" を出すケースとして記録に値するが、今回は 1 件のみで頻度が低く、個別の改善提案は起票しない。
+
+### Acceptance criteria verification difficulty
+
+- UNCERTAIN 判定はゼロ。9 件の Pre-merge AC のうち rubric 6 件・section_contains 1 件・file_not_contains 1 件はいずれも diff から機械的に確認でき、残る `github_check` 1 件も CI 全 9 checks SUCCESS で PASS 判定できた。Spec Notes が自認する通り AC 数 (9) は light テンプレートの目安 (5) を超えているが、review 側の検証コストとしては rubric の記述が具体的だったため大きな負荷にはならなかった。verify command の過不足や不正確さは見当たらない。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- review-light (1 エージェント統合レビュー、4 観点) を採用し、MUST issue はゼロと確認。SHOULD issue 1 件 (`--issues-json` 区切り文字の tab 依存脆弱性) は即座に修正しコミット・push した。
+- Base Branch Conflict Pre-check で `docs/spec/issue-1152-*.md` の "changed in both" を検出したため、`git merge-file` による 3-way merge 検証を review-light に依頼し、データ損失なしを確認した。
+- 全 9 Pre-merge AC を PASS 判定し、Issue #1152 のチェックボックスを更新した (`github_check` 含む)。Step 13 のポリシー変更検出は該当なし (SHOULD 修正は純粋な堅牢性改善で AC に影響しない)。
+
+### Deferred Items
+- 境界秒精度 (closedAt 分単位切り詰め) と group-key 複数回起票時の rolling cutoff 非対応は、Code Retrospective の Design Gaps/Ambiguities に記録済みで review でも追加の指摘なし。本 Issue のスコープ外として据え置く。
+- #1191 (`/audit stats --retention` Section 10) は `--with-tracking` オプションの実消費側。review では未検証 (#1191 側の責務)。
+
+### Notes for Next Phase
+- `/merge 1198` の前提条件はすべて満たされている (MUST issue ゼロ、CI 全通過、AC 全 PASS)。
+- Post-merge の observation AC (`/verify` Step 15 出力で `manual-recovery-review-rerun` / `review-tier3-recovery` が候補から消えていること) は次回 `/auto` セッションで確認すること。
