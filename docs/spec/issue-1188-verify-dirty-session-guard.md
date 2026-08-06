@@ -94,17 +94,17 @@ Nothing to note. This was the PR's first `/review` pass; findings were 1 SHOULD 
 Nothing to note. All 5 Pre-merge AC resolved cleanly to PASS on the first pass — 3 `rubric` (semantic judgment), 1 `grep`, 1 `command` (via CI reference fallback in safe mode). No UNCERTAIN results and no verify command syntax/wording inaccuracies encountered.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Fixed both the SHOULD and CONSIDER findings from the `review-light` agent (not just MUST-severity), since no MUST issues existed and both fixes were low-risk, in-scope quality improvements: reordering the AskUserQuestion prompt text to match its itemized list, and adding a bats case for `_check_issue_active()`'s `gh`-call-failure fallback path.
-- Ran the Base Branch Conflict Pre-check (`git merge-tree`) against `origin/main`; found no `changed in both` blocks, so no base-conflict context was passed to the review agent.
+- Pre-merge AC gate resolved cleanly: all 5 pre-merge acceptance conditions were already checked (`unchecked_count=0`), so no override marker was needed.
+- Review-incomplete-fallback check confirmed the review completion was organic (`/review`'s own Step 14), not fallback-origin, so no additional gate condition applied.
+- Merged via squash (`gh pr merge 1199 --squash --delete-branch`); mergeable status was `clean` with CI `success` and review `approved`, so no conflict resolution was needed.
 
 ### Deferred Items
-- Post-merge observation AC (`session=next`) — still deferred to `/verify` per the Issue's own AC design; unchanged from the code-phase handoff.
+- Post-merge observation AC (`session=next`) — still deferred to `/verify`, unchanged from the review-phase handoff.
 - None else.
 
 ### Notes for Next Phase
-- `/merge` can proceed: CI is green (9/9 jobs SUCCESS) after the review-fix push, and no MUST issues remain.
-- `tests/verify-dirty-detection.bats` now has 24 cases (up from 23 noted in the code-phase handoff) due to the review-phase-added `gh`-failure regression test; if `/verify`'s AC5 command re-runs the suite, the new count is expected.
-- The post-merge observation AC still needs a real concurrent-session `/verify` run to produce evidence; a single isolated run will not exercise the foreign-session path.
+- `/verify` should confirm the post-merge observation AC by watching a `/verify` run under real concurrent-session conditions (a single isolated run will not exercise the `foreign-session` path).
+- `tests/verify-dirty-detection.bats` has 24 cases as of merge; if `/verify`'s AC5 command re-runs the suite, this is the expected count.
