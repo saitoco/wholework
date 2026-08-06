@@ -87,17 +87,28 @@ Issue 本文の「方針確定 (2026-08-06)」注記により対応方針は確�
 ### Rework
 - Nothing to note. Rubric verify command 4 件と `bats tests/` はいずれも初回実装で PASS した。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- `/code` の Notes for Next Phase は「Step 5 の already-checked AC skip rule 文言と Step 8a の追加文が既存の pre-merge-preview AC skip rule と矛盾なく併存しているかを確認すること」を明示的に依頼しており、`/review` (review-light agent) がまさにこの点を検証した結果、実装は機能的には矛盾していない (両ルールとも同じ SKIPPED 結果に収束する) が、Spec の Overview (13行目) に書かれていた「preview 規則を置き換えない設計」という優先関係の説明が SKILL.md 本文には転記されていなかった、という CONSIDER レベルのドキュメント明確性ギャップを検出した。Spec に書いた設計意図が実装ファイル本体まで一貫して伝播しているかを確認する Notes for Next Phase の運用が機能した好例。review 中に一文追記して解消済み
+
+### Recurring issues
+- Base Branch Conflict Pre-check (`git merge-tree`) が、本 Spec ファイル自身に対する base (main) 側との "changed in both" 競合を検出した。原因は、姉妹コミット (`aa416dfe Add consumed comments fallback for issue #1186 (code phase)`) が同一 Issue #1186 の同じ Consumed Comments 段落に、別セッションから低品質な fallback 形式で追記していたこと。本 PR ブランチ側は同じソースコメントをより完全な形式 (見出し付きサブセクション) で既に記録していたため内容欠落はなく MUST 化は不要と判断したが、同一 Issue に対して複数セッション (fallback 投稿スクリプトと通常の `/code` セッション) が並行して Spec の同じ段落へ書き込みうる構造自体は、他 Issue でも再発しうるパターンとして記録しておく
+
+### Acceptance criteria verification difficulty
+- Nothing to note. rubric 4 件・`command "bats tests/"` 1 件のいずれも曖昧さや verify command の不備なく PASS 判定できた。`command "bats tests/"` は safe mode のため CI 参照フォールバック (`Run bats tests` job SUCCESS) で判定した
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の投稿位置指定 (段落文脈) どおりに Step 5 / Step 8a / Step 6 / Step 11(a) / Notes を編集し、追加の設計判断は発生しなかった
-- `docs/workflow.md` / `docs/guide/customization.md` は Spec retrospective の判断 (更新不要) を `/code` 側でも再確認し、grep で "re-verif"/"already checked" 系の記述がないことを確認した上で変更なしとした
-- Pre-merge の 5 条件 (rubric 4 件 + `bats tests/`) は SKILL.md 本文の直接確認とフルスイート実行 (1414 件 PASS) により PASS と判定し、Issue チェックボックスを更新した
+- review-light agent (4観点統合) を実行し、CONSIDER 1件 (Step 5 の already-checked AC skip rule と既存 pre-merge-preview AC skip rule の優先関係が SKILL.md 本文で未明記) を検出・修正した。MUST/SHOULD はゼロ
+- Base Branch Conflict Pre-check で本 Spec ファイル自身の base 側競合を検出したが、内容欠落なしと判断し MUST 化しなかった (詳細は review retrospective 参照)
+- Pre-merge の 5 条件は Issue body で既に `[x]` だったが、`/review` Step 8 は `/code` の判定を独立に再検証し (rubric 4件を SKILL.md 本文の直接確認で、`command "bats tests/"` を CI 参照フォールバックで)、いずれも PASS を確認した
 
 ### Deferred Items
 - Post-merge の observation AC (`event=auto-run session=next`) は本セッション内では評価不能。次回 `/auto` 完了後の `/verify` 実行で SKIPPED 報告を観察する必要がある (未着手のまま持ち越し)
 
 ### Notes for Next Phase
-- `/review` では、Step 5 の already-checked AC skip rule 文言と Step 8a の追加文が既存の pre-merge-preview AC skip rule と矛盾なく併存しているかを確認すること
+- `/merge` では通常の pre-merge AC gate に加え、`docs/spec/issue-1186-skip-checked-ac-reverify.md` の base 側競合 (Consumed Comments 段落の重複) が実際の `git merge`/squash merge で問題を起こさないか (fast-forward 前提が崩れていないか) を確認すること
 - `/verify` の次回実行 (session=next) で、post-merge observation AC が SKIPPED として正しく報告されるかを観察すること
