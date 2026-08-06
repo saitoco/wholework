@@ -92,3 +92,6 @@
 - **既定を dry-run にした理由**: Issue 本文に「削除すると成果を失いかねなかった実例」が記録されているため、明示的な `--apply`無しでは一切削除しない設計とした。これは AC4 (未コミット変更の保護) とは独立した、ツール全体としての安全側デフォルトの選択。
 - **並行セッション除外の限界**: 「`locked` かつ現行 HEAD が main の現行 HEAD と一致」という判定は、Issue 本文が実測で確認した具体的な 1 パターンであり、並行セッション検出の完全な保証ではない (Issue 本文の AC 文言自体も「等」として例示に留めている)。より広く「所有プロセスが本当に終了したという積極的な証拠が無い限りは自動処理しない」という `modules/worktree-lifecycle.md` Entry step 2 の一般原則との整合は、まず主判定である「対応 Issue が CLOSED / 対応 PR が MERGED・CLOSED」で確保している — 稼働中の並行セッションが既に CLOSED/MERGED 済みの Issue/PR に対して worktree を保持し続けるケースは通常発生しない。
 - **bash 3.2 互換**: `scripts/reclaim-stale-worktrees.sh` は連想配列 (`declare -A`) や `mapfile`/`readarray` (いずれも bash 4+) を使わず、`while IFS= read -r line` によるレコード単位の逐次処理で実装すること (macOS システム bash 3.2 で動作させるため)。
+
+## Consumed Comments
+No new comments since last phase.
