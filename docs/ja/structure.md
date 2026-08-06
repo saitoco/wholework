@@ -162,7 +162,7 @@ wholework/
 **Phase banner:**
 - `scripts/phase-banner.sh` — run-*.sh スクリプトで `print_start_banner` / `print_end_banner` 関数を提供する source 可能なヘルパー
 - `scripts/emit-event.sh` — `.tmp/auto-events.jsonl` への構造化 JSONL イベント emission を提供する source 可能なヘルパー。non-wrapper emitter 向けにポインタファイルから `AUTO_SESSION_ID`/`AUTO_EVENTS_LOG` を復元する `restore_auto_session_pointer()` も提供; run-*.sh、claude-watchdog.sh、wait-ci-checks.sh が使用
-- `scripts/append-consumed-comments-section.sh` — post-processor フォールバック: LLM が Step 5 を silent skip した際に Spec へ `## Consumed Comments` を追記; run-spec.sh / run-code.sh (pre/post カウント比較) と verify SKILL.md (明示 bash call) が使用
+- `scripts/append-consumed-comments-section.sh` — フェーズ自身の作業ブランチ上で Spec へ `## Consumed Comments` を追記; `skills/spec/SKILL.md` / `skills/code/SKILL.md` / `skills/verify/SKILL.md` から in-session (必須、`--no-push` 付き) で呼び出される。加えて run-spec.sh / run-code.sh からの post-processor フォールバック (pre/post カウント比較) があるが、`/code` pr route ではゲートオフされる (#1058)
 - `scripts/hook-worktree-path-guard.sh` — PreToolUse hook: worktree session 中に parent-repo absolute path を file_path とする Edit/Write 呼び出しを block する (`modules/worktree-lifecycle.md § Edit/Write path conventions in worktree sessions` の structural enforcement)
 
 **GitHub API ユーティリティ:**
