@@ -99,15 +99,35 @@ Implementation Steps で使う `git merge-base --is-ancestor` / `git -C <path> r
 - なし。既存の false 側ロジックをそのまま `rebase_from_branch_onto()` に切り出し、true/false 両呼び出し元は引数 (ローカル `$BASE_BRANCH` / `origin/${BASE_BRANCH}`) のみを差し替える形で 1 回で実装が収束した。既存 19 bats ケースと新規 2 ケースを合わせて 21 件が green (`bats tests/worktree-merge-push.bats`)。behavioral change detection (`modules/orchestration-fallbacks.md` を `tests/run-auto-sub.bats`/`tests/orchestration-fallbacks.bats` も参照) により `bats tests/` full suite (1432+ 件) も green を確認した。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- true 側の rebase 対象 ref はローカル `$BASE_BRANCH` を採用 (false 側の `origin/${BASE_BRANCH}` とは異なる) — 理由は本 Spec Notes および `modules/orchestration-fallbacks.md#ff-only-merge-fallback` Rationale (#1076 エントリ) に記録済み
-- false 側と重複するロジックを `rebase_from_branch_onto(target_ref)` という対象 ref を引数に取る共有関数に切り出した
+- Base Branch Conflict Pre-check (`git merge-tree`) が本 Issue の Spec ファイル自身に対する `changed in both` コンフリクトを検出。`origin/main` を PR ブランチへ merge し、重複する base 側の 1 行 (Consumed Comments に既出の内容) を破棄する形で解消した (MUST)
+- `modules/orchestration-fallbacks.md` の新規 Rationale 文言 (push retry loop が true 側の local base lag を解決済みと主張) を、実機検証 (force refspec でも checked-out branch への `git fetch .` は exit 128 で拒否される) に基づき訂正 (SHOULD)。push retry loop 自体のコード修正は本 PR のスコープ外 (#1076 以前から存在する既知のギャップとして文書化のみ)
 
 ### Deferred Items
-- Post-merge AC (opportunistic): 並行セッションが base に commit している状況で `/verify` を実行し、Worktree Exit が手動介入なしに完了することの実地確認は post-merge に委ねる
+- Post-merge AC (opportunistic): 並行セッションが base に commit している状況で `/verify` を実行し、Worktree Exit が手動介入なしに完了することの実地確認は post-merge に委ねる (code phase から継続)
+- push retry loop の true-side checked-out gap (`git fetch . "+<from>:<base>"` が exit 128 で拒否される) 自体の修正は未着手。起票は `/verify` 側の判断に委ねる (review retrospective の Improvement Candidate 参照)
 
 ### Notes for Next Phase
-- `/review` は rubric 4件の pre-merge AC を安全モードでも実行可能 (`always_allow`) — 本 PR では既にすべて PASS 判定済み (Issue #1076 のチェックボックスを code フェーズで更新済み)
-- `bats tests/` full suite の実行時間は 10 分を超える場合がある (今回はバックグラウンド実行で完走) — `/review` 側で再実行する場合は同様の待ち時間を見込むこと
+- PR ブランチは `/review` の Step 12 で `origin/main` を merge 済み (2 コミット: コンフリクト解消 + Rationale 訂正)。`/merge` 時点で改めて conflict が生じている場合は、その間に main が再度進んだ可能性がある
+- `/review` の PR Review は `COMMENT` イベントで投稿されている (self-review のため `REQUEST_CHANGES` は GitHub API が 422 で拒否) — MUST issue の有無は review body 本文と inline comment の文言で確認すること。branch protection が `REQUEST_CHANGES` の解消を要求する設定の場合は影響しうる
+- `bats tests/` full suite の実行時間は 10 分を超える場合がある (前回はバックグラウンド実行で完走)。今回の review 修正はドキュメントのみのため bats は再実行していない
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Issue 本文の Auto-Resolved Ambiguity Points (true 側 rebase 対象 ref = `origin/${BASE_BRANCH}`) と Phase Handoff / 実装 (ローカル `$BASE_BRANCH`) は一見矛盾するが、Spec の Consumed Comments に人間 (saito) による明示的な override 承認とその技術的根拠が記録されており、`modules/orchestration-fallbacks.md` の Rationale にも反映済みだった。意図的かつ文書化された設計判断であり、spec deviation としては扱わなかった。Issue 本文の Auto-Resolved Ambiguity Points 自体は当初案のまま残っており実装と食い違って見える — Spec 側で override が明記されていたからこそ `/review` が正しく判別できた。Issue 本文側も override 後の結論に更新しておくと、Spec を読まずに Issue だけを見た読者の誤解を防げる (今回は実害なし、次回以降 override 発生時の一般的な留意点として記録)。
+
+### Recurring issues
+
+Base Branch Conflict Pre-check (`git merge-tree`) が、この Issue 自身の Spec ファイル (`docs/spec/issue-1076-worktree-merge-rebase-fallback.md`) に対して実際のコンフリクトを検出した — 別セッションが `main` に「consumed comments fallback」コミット (`623c2371`) を同一箇所へ追加していたため。本 Issue の主題 (並行セッションによる base 分岐への対処) が、レビュー中の Spec ファイル自身にメタ的に再現した形。Pre-check が正しく機能し、`/review` の Step 12 で手動 merge + コンフリクト解消 (該当箇所は重複コメントログだったため安全に解消) を行った。Base Branch Conflict Pre-check の実効性を裏付ける実例として記録。
+
+### Acceptance criteria verification difficulty
+
+4件すべて rubric type で、safe mode (`always_allow`) のまま淀みなく PASS 判定できた。UNCERTAIN や verify command の不備はなし。
+
+### Improvement Candidate
+
+- `gh-pr-review.sh` が MUST issue 検出時に `event=REQUEST_CHANGES` で投稿を試みるが、レビュー実行アカウントと PR 作成者が同一 (本リポジトリのような single-account 運用) の場合、GitHub API が `422 Unprocessable Entity: "Review Can not request changes on your own pull request"` を返し失敗する。今回は line comments JSON に `severity` フィールドを付け忘れていたため偶然 `COMMENT` イベントとなり実害はなかったが、`severity` を正しく付与していれば同じ 422 に直面していた可能性が高い。self-review 制約下での `gh-pr-review.sh` の event 選択ロジック (MUST 検出時に `REQUEST_CHANGES` を試みて 403/422 なら `COMMENT` にフォールバックする、等) は改善余地がある。未起票 (`/verify` 側での起票判断に委ねる)。
