@@ -182,7 +182,26 @@ Nothing to note — 3件のPre-merge AC (rubric ×2, command ×1) はいずれ�
 
 - code phase で Tier 2 recovery (`json-mode-silent-hang`) が 1 回発火し、`run-code.sh --pr` の自動 retry で復旧した (watchdog が json mode で 1140 秒沈黙 → 非ゼロ終了 → Tier 2 catalog が retry → 実装完了・PR #1193 作成)。人手介入はゼロ。#1180 で「発火実績あり」として catalog に残した 2 パターンのうち 1 つが実運用で機能した実測にあたる。
 - **`## Auto Retrospective` セクションが本 Spec に存在しない**: #1181 で `_write_tier2_recovery_to_spec()` が削除されたため、Tier 2 recovery が発生しても Spec には記録されず、記録先は `.tmp/auto-events.jsonl` の `recovery` イベント (`tier=2 result=recovered`) のみとなった。一方 `skills/verify/SKILL.md` Step 12 step 3 の skip 判定ルールは「Tier 2/3/Manual recovery が `## Auto Retrospective` に記録されていなければ notable content」と規定しており、#1181 の記録先変更に追随していない。結果として **Tier 2 recovery が起きる度に verify retrospective の skip が構造的に不可能になる** — #1179 / #1181 が目指した「retrospective の発散抑止」と逆方向に働く。
-- post-merge observation AC は `auto-run` イベント未発火のため SKIPPED。`session=next` 修飾子により、Step 15 が main に着地した後に開始される新規セッションでの `/issue N` 実行が評価の前提となる。本セッションでは構造的に評価できない (SKILL.md Step 8c の `session=next` 規定どおり UNCERTAIN ではなく SKIPPED として扱った)。
+- post-merge observation AC は 1 回目の `/verify` 時点では `auto-run` イベント未発火のため SKIPPED とした (SKILL.md Step 8c の `session=next` 規定どおり UNCERTAIN ではなく SKIPPED)。**2 回目の `/verify` (同一セッション `11623-1785995193`) で PASS に確定**した — 下記参照。
+
+##### observation AC の評価 (2 回目の `/verify`)
+
+同一バッチの次対象 #1098 (`triaged` 済み) を `run-auto-sub.sh` に投入する前段の `run-issue.sh 1098` で、AC の 4 条件がすべて成立した:
+
+| 条件 | 根拠 |
+|---|---|
+| `triaged` ラベル済み | 実行前ラベル `triaged`, `retro/verify` |
+| `section_contains` の heading 引数の先頭に `#` を含む AC を持つ | Step 7 が `section_contains "skills/verify/SKILL.md" "### Step 12" "..."` を authoring (#1098 の Issue Retrospective の Autonomous Auto-Resolve Log に記録) |
+| `/issue N` に通す | `run-issue.sh 1098` (exit 0)。読み込まれた `skills/issue/SKILL.md` は `8e317b92` = 本 Issue の実装コミット |
+| Pattern 6 サブパターン 1 が指摘される | 完了報告に「Step 15 監査での自己修正: `section_contains` heading 引数に `###` を誤って含めており (Pattern 6.1: 常時 UNCERTAIN)」と明記 |
+
+ターミナル出力に依存しない裏付けとして、#1098 の現行 Pre-merge AC 5 件目が `rubric` 単独であり Auto-Resolve Log が記録した `section_contains` が残っていないことを Issue body 側で確認した。
+
+**#1141 との対比が本 Issue の成果を最も明確に示す**: #1141 では `triaged` 済みのため Step 2 の auto-chain がスキップされ、同種の欠陥 (`"## Notes"`) がそのまま残り `/verify` 実行時に手動発見するまで恒久 UNCERTAIN だった。今回は同じ構造の欠陥が `/issue` の内部で自動修正された。
+
+`session=next` の運用も想定どおり機能した — `run-issue.sh` は新プロセスで最新の `skills/issue/SKILL.md` を読むため、Step 15 が main に着地した直後の同一会話セッション内でも評価できた。「新しい会話セッションを待つ」必要はなかった。
+
+- **副次的観察 (Tier 2 — memory 候補、Issue 化せず)**: Step 15 の監査結果は完了報告 (ターミナル出力) と AC の変化にしか残らず、**Issue Retrospective コメントには言及が 0 件**だった。#1141 の実測時に「Issue Retrospective コメント内の AC 監査への言及」を判定材料にしていた経緯を踏まえると、監査が走ったこと自体の追跡性には改善余地がある。ただし本 Issue の AC は「指摘されること」を求めており記録先は問うていないため PASS 判定には影響しない。
 
 ### Improvement Proposals
 
