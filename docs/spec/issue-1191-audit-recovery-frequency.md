@@ -108,20 +108,20 @@
 - N/A。Implementation Steps の4ステップ (SKILL.md 変更、collect-recovery-candidates.sh 変更、bats テスト追加、既存テスト無変更確認) はいずれも Spec の記述通り一度で実装が完了し、手戻りは発生しなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Pre-merge AC 6 件 (rubric 4 件 + bats command 2 件) を Step 8 で再検証し、全件 PASS を確認 (rubric は SKILL.md Section 10 の実記述と Issue AC 文言を突き合わせ、bats command 2 件は CI `Run bats tests` ジョブ成功による fallback で判定)
-- `review-light` エージェント (4 観点統合) が SHOULD 1 件 (`docs/product.md` の `--retention` 説明が Section 10 未反映) と CONSIDER 1 件 (`collect-recovery-candidates.sh` の N/A 判定が `### Improvement Candidate` サブセクションにスコープされていない) を検出
-- SHOULD は `docs/product.md` / `docs/ja/product.md` の該当行を Section 10 (recovery 候補頻度) を含む記述に更新して解消。CONSIDER は既存の `起票済み`/`cause:` 判定と対称なパターンで現行データでは問題が発現しないため見送り
+- Pre-merge AC 6 件は `check-pre-merge-ac.sh` により全件チェック済みと確認し、AskUserQuestion なしで squash merge を実行した (`--non-interactive` 経路)
+- `reconcile-phase-state.sh review --check-completion` で `review_incomplete_fallback` が立っていないことを確認し、review フェーズの完了が fallback 経由ではなく organic Step 14 完了であることを検証した
+- `gh-pr-merge-status.sh` の結果が `mergeable=true, reason=clean` だったため、conflict 解消 (Step 3) をスキップして直接 squash merge に進んだ
 
 ### Deferred Items
-- Post-merge AC (`/audit stats --retention` の実観察、`verify-type: observation event=auto-run session=next`) は未実行 — 次回 `/auto` 実行時に自動発火する設計のため、本フェーズではスコープ外 (code フェーズからの申し送りを継続)
-- CONSIDER 指摘 (`collect-recovery-candidates.sh:213` の N/A 判定スコープ限定) は見送り — 将来 Diagnosis/Context セクションに `- N/A` で始まる行が追加された場合に誤除外が起きうる点は残存
+- Post-merge AC (`/audit stats --retention` の実観察、`verify-type: observation event=auto-run session=next`) は未実行 — 次回 `/auto` 実行時に自動発火する設計のため、merge フェーズでも引き続きスコープ外
+- CONSIDER 指摘 (`collect-recovery-candidates.sh:213` の N/A 判定スコープ限定) は review フェーズで見送り済み、merge フェーズでの新規判断なし
 
 ### Notes for Next Phase
-- `docs/product.md` / `docs/ja/product.md` の修正コミットを追加済み (`Refs:` に本レビューの PR Review URL を記録)。`/merge` 前に追加の docs 差分確認は不要
-- Steering Doc sync candidate の抽出時、`docs/structure.md`/`docs/tech.md` だけでなく `docs/product.md` も候補に含める運用上の教訓が今回発生 (下記 review retrospective 参照)
+- `verify` フェーズは Post-merge AC の observation 項目 (`/audit stats --retention` の実行結果確認) を次回 `/auto` 実行時に確認すること
+- Issue #1191 の label transition (`phase/verify`) と Issue close は本フェーズの Step 5/6 で処理済み
 
 ## review retrospective
 
