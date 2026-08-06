@@ -234,35 +234,43 @@ ARGUMENTS: ${ARGUMENTS}"
 # See: https://github.com/anthropics/claude-code/issues/22362
 load_watchdog_timeout "$SCRIPT_DIR" "review"
 
-SECONDS=0
-set +e
-if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
-  TOKEN_USAGE_FILE=".tmp/token-usage-${PR_NUMBER}.json"
-  mkdir -p .tmp
-  ANTHROPIC_MODEL=sonnet \
-    WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
-    OUTPUT_FORMAT_JSON=1 \
-    env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
-      --model sonnet \
-      --effort high \
-      --output-format json \
-      --plugin-dir "$(dirname "$SCRIPT_DIR")" \
-      $PERMISSION_FLAG \
-      > "$TOKEN_USAGE_FILE"
-  EXIT_CODE=$?
-  jq -r '.result // empty' "$TOKEN_USAGE_FILE" 2>/dev/null || true
-else
-  ANTHROPIC_MODEL=sonnet \
-    WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
-    env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
-      --model sonnet \
-      --effort high \
-      --plugin-dir "$(dirname "$SCRIPT_DIR")" \
-      $PERMISSION_FLAG
-  EXIT_CODE=$?
-fi
-set -e
-"$SCRIPT_DIR/handle-permission-mode-failure.sh" "$EXIT_CODE" "$SECONDS" "$PERMISSION_MODE"
+# Runs one claude -p review session against the shared $PROMPT/$PERMISSION_FLAG
+# and sets EXIT_CODE. Factored out so the post-fallback continuation retry
+# below can re-run the identical session without duplicating the two
+# AUTO_EVENTS_LOG branches.
+_run_claude_review_session() {
+  SECONDS=0
+  set +e
+  if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+    TOKEN_USAGE_FILE=".tmp/token-usage-${PR_NUMBER}.json"
+    mkdir -p .tmp
+    ANTHROPIC_MODEL=sonnet \
+      WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
+      OUTPUT_FORMAT_JSON=1 \
+      env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
+        --model sonnet \
+        --effort high \
+        --output-format json \
+        --plugin-dir "$(dirname "$SCRIPT_DIR")" \
+        $PERMISSION_FLAG \
+        > "$TOKEN_USAGE_FILE"
+    EXIT_CODE=$?
+    jq -r '.result // empty' "$TOKEN_USAGE_FILE" 2>/dev/null || true
+  else
+    ANTHROPIC_MODEL=sonnet \
+      WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
+      env -u CLAUDECODE "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
+        --model sonnet \
+        --effort high \
+        --plugin-dir "$(dirname "$SCRIPT_DIR")" \
+        $PERMISSION_FLAG
+    EXIT_CODE=$?
+  fi
+  set -e
+  "$SCRIPT_DIR/handle-permission-mode-failure.sh" "$EXIT_CODE" "$SECONDS" "$PERMISSION_MODE"
+}
+
+_run_claude_review_session
 
 if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
   if [[ -n "$_REVIEW_ISSUE" ]]; then
@@ -275,7 +283,22 @@ if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
       fi
     elif echo "$_reconcile_out" | grep -q '"matches_expected":false'; then
       echo "Warning: claude exited 0 but review phase did not complete (silent no-op). reconcile: $_reconcile_out" >&2
-      if "$SCRIPT_DIR/post-fallback-review-summary.sh" "$PR_NUMBER"; then
+      set +e
+      "$SCRIPT_DIR/post-fallback-review-summary.sh" "$PR_NUMBER"
+      _fallback_exit=$?
+      set -e
+      if [[ $_fallback_exit -eq 2 ]]; then
+        echo "post-fallback-review-summary: latest review is CHANGES_REQUESTED (MUST issues outstanding); retrying the review session once instead of a fallback post." >&2
+        _run_claude_review_session
+        _recheck_out=$("$SCRIPT_DIR/reconcile-phase-state.sh" review "$_REVIEW_ISSUE" --pr "$PR_NUMBER" --check-completion 2>/dev/null) || true
+        if echo "$_recheck_out" | grep -q '"matches_expected":true'; then
+          echo "review retry: recovered after one continuation retry. recheck: $_recheck_out"
+          EXIT_CODE=0
+        else
+          echo "review retry: still does not match expected after one retry. recheck: $_recheck_out" >&2
+          EXIT_CODE=1
+        fi
+      elif [[ $_fallback_exit -eq 0 ]]; then
         _recheck_out=$("$SCRIPT_DIR/reconcile-phase-state.sh" review "$_REVIEW_ISSUE" --pr "$PR_NUMBER" --check-completion 2>/dev/null) || true
         if echo "$_recheck_out" | grep -q '"matches_expected":true'; then
           echo "post-fallback-review-summary: fallback Response Summary posted, review phase recovered. recheck: $_recheck_out"

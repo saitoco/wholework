@@ -615,6 +615,57 @@ MOCK
     [[ "$output" == *"fallback Response Summary posted"* ]]
 }
 
+@test "reconcile: post-fallback exit 2 (MUST unresolved) retries review session once and recovers to exit 0" {
+    RECONCILE_CALL_COUNT_FILE="$BATS_TEST_TMPDIR/reconcile_call_count"
+    echo 0 > "$RECONCILE_CALL_COUNT_FILE"
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<MOCK
+#!/bin/bash
+COUNT=\$(cat "$RECONCILE_CALL_COUNT_FILE")
+COUNT=\$((COUNT + 1))
+echo "\$COUNT" > "$RECONCILE_CALL_COUNT_FILE"
+if [[ "\$COUNT" -eq 1 ]]; then
+    echo '{"matches_expected":false,"phase":"review"}'
+else
+    echo '{"matches_expected":true,"phase":"review"}'
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    cat > "$MOCK_DIR/post-fallback-review-summary.sh" <<'MOCK'
+#!/bin/bash
+exit 2
+MOCK
+    chmod +x "$MOCK_DIR/post-fallback-review-summary.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"retrying the review session once"* ]]
+    [[ "$output" == *"recovered after one continuation retry"* ]]
+    [ "$(grep -c '^FLAG_P=1$' "$CLAUDE_CALL_LOG")" -eq 2 ]
+}
+
+@test "reconcile: post-fallback exit 2 (MUST unresolved) retries review session once and still fails" {
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"matches_expected":false,"phase":"review"}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    cat > "$MOCK_DIR/post-fallback-review-summary.sh" <<'MOCK'
+#!/bin/bash
+exit 2
+MOCK
+    chmod +x "$MOCK_DIR/post-fallback-review-summary.sh"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"retrying the review session once"* ]]
+    [[ "$output" == *"still does not match expected after one retry"* ]]
+    [ "$(grep -c '^FLAG_P=1$' "$CLAUDE_CALL_LOG")" -eq 2 ]
+}
+
 @test "reconcile: fallback post itself fails keeps exit 1" {
     cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
 #!/bin/bash

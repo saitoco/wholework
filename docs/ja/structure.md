@@ -215,7 +215,7 @@ wholework/
 - `scripts/validate-recovery-plan.sh` — orchestration-recovery sub-agent が出力する recovery plan JSON を検証（schema チェック + forbidden ops ガード）
 - `scripts/apply-fallback.sh` — `modules/orchestration-fallbacks.md` の Tier 2 bash projection。wrapper ログから既知の symptom anchor を検出し recovery handler を dispatch する（ハンドラ: dco-signoff-missing-autofix、code-patch-silent-no-op）
 - `scripts/spawn-recovery-subagent.sh` — `run-auto-sub.sh` が呼び出す Tier 3 recovery オーケストレーター。`claude -p` で `agents/orchestration-recovery` を spawn し、`validate-recovery-plan.sh` で plan を検証し、`WHOLEWORK_MAX_RECOVERY_SUBAGENTS` による mkdir-based スロットロックで並列性を制御し、成功時に `write_recovery_entry()` で `docs/reports/orchestration-recoveries.md` にエントリを記録する
-- `scripts/post-fallback-review-summary.sh` — `run-review.sh` が exit 0 + `matches_expected:false`（silent no-op）を検出した際に呼び出す。PR に "Acceptance Criteria Verification Results" を含む既存レビューが見つかった場合のみ `<!-- review-summary -->` マーカー付きのフォールバック Review Response Summary を投稿し、見つからない場合は投稿せず exit 1 を返す
+- `scripts/post-fallback-review-summary.sh` — `run-review.sh` が exit 0 + `matches_expected:false`（silent no-op）を検出した際に呼び出す。PR に "Acceptance Criteria Verification Results" を含む既存レビューが見つかり、かつ最新レビューの `state` が `CHANGES_REQUESTED` でない場合のみ `<!-- review-summary -->` マーカー付きのフォールバック Review Response Summary を投稿する。証跡が見つからない場合は exit 1、MUST 指摘が未解決 (最新レビューが `CHANGES_REQUESTED`) の場合は投稿せず exit 2 を返し `run-review.sh` がレビューセッションを1回だけ継続リトライする
 
 **Skill runners:**
 - `scripts/guard-prefix.sh` — 全 run-*.sh がソースする共有 GUARD_PREFIX 定義。自律実行向けのアーリーストップ防止とバウンダリリマインダーを含む

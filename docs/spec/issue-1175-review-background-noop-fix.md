@@ -130,3 +130,52 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective — Background の事実訂正 (候補 A 実装済み・実測で不十分) と Post-merge observation への `session=next` 付与が既に Issue 本文へ反映済みであることの確認。Size=M のため分割不要との判断も記載。本 Spec の調査・方針選定に新たな決定事項の追加はなし / https://github.com/saitoco/wholework/issues/1175#issuecomment-5199172397
+- `/code` フェーズ開始時の cutoff (最新 `phase/ready` ラベル付与時刻) 以降に新規コメントなし。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Spec の Implementation Steps 1・2 に記載された bash 疑似コードをほぼそのまま採用した。Step 2 で Spec が「関数化は実装の自由度に委ねる」としていた点について、`claude -p` 呼び出し (`AUTO_EVENTS_LOG` 有無の2分岐を含む) を `_run_claude_review_session()` 関数に切り出し、初回呼び出しと継続リトライの両方から呼ぶ形にした。これは Spec が許容していた選択肢の採用であり、設計からの逸脱ではない。
+
+### Design Gaps/Ambiguities
+- N/A — Spec の bash 疑似コードが exit code 分岐・リトライ後の再チェックロジックまで具体的に記述しており、実装時に解釈の余地があった箇所はなかった。
+
+### Rework
+- N/A — 各 Implementation Step は一発で bats テスト PASS に到達し、手戻りは発生しなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- MUST 指摘 0 件のため `event=COMMENT` で投稿 (`REQUEST_CHANGES` にはならなかった)。SHOULD 2 件・CONSIDER 2 件をインラインコメントとして、CONSIDER 3 件を General Comments として投稿し、いずれも自動修正せず著者判断のフィードバックとして残した。
+- Step 10 は fork context (`--non-interactive` あり、再起動保証なし) のため Workflow path をスキップし、静的 Task fan-out (review-spec + review-bug×2) を Agent ツール `run_in_background: false` で同期実行した。
+- review-bug 2 体が独立に収斂した `CHANGES_REQUESTED` sticky state の指摘、および 1 体のみが検出した author filter 欠如の指摘は、いずれも 4 体の独立検証サブエージェントで PASS (問題確認) と判定されたが、安全側に倒れる設計であり実害はない (または現行 `.wholework.yml` では未到達) ため MUST には格上げしなかった。
+
+### Deferred Items
+- Post-merge observation AC (`session=next`、次回 `/review --full` 実行での silent no-op 非発生観察) は本 PR のマージ後、次回セッションでの `/review --full` 実行を待って評価される (変更なし、code フェーズからの引き継ぎを維持)。
+- SHOULD 2 件 (`CHANGES_REQUESTED` sticky state の限定範囲を Spec に明記、`LATEST_STATE` の author filter 追加) と CONSIDER 3 件 (token usage 上書き、ドキュメント精度、docs/workflow.md・orchestration-fallbacks.md 更新) は本 PR で未着手のまま PR インラインコメント/General Comments として残されている。
+
+### Notes for Next Phase
+- `/merge 1187` を実行する前に、著者が SHOULD 指摘 (特に author filter 欠如) を別 Issue 化するかその場で修正するかを判断することを推奨する。
+- Post-merge の observation AC は次回の `/review --full` 実行で自然に検証される設計であり、`/verify` フェーズで能動的に発火させる必要はない。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — review-spec の Perspective 1 (Spec Deviation) 監査で構造的な逸脱は検出されなかった。Changed Files・Implementation Steps は PR 差分と完全一致し、`_run_claude_review_session()` への関数化も Spec が明示的に許容していた選択肢の範囲内だった。
+
+### Recurring issues
+
+2 体の review-bug エージェント (diff scan / security scan) が、互いに独立した探索でありながら同一の SHOULD 級指摘に収斂した:
+
+- `scripts/post-fallback-review-summary.sh:36` の `CHANGES_REQUESTED` が sticky な GitHub review state であり、Step 12 で MUST を修正しても Step 14 (`gh pr comment` のみ) では変化しないため、「Step 11 到達後に MUST が解決済みだが Step 14 のみ silent no-op」という最も軽微なケースでも常にフルリトライが発火する設計上の非効率
+- `scripts/run-review.sh:245` の継続リトライが `TOKEN_USAGE_FILE` を上書きし、初回セッションのトークン使用量が `run-auto-sub.sh` の `token_usage` イベントから欠落する
+
+いずれも 4 体の独立検証サブエージェント (general-purpose) で PASS (問題として確認) と判定された。加えて 1 体のエージェントのみが検出した `LATEST_STATE` の author filter 欠如 (外部レビュー連携有効時に第三者レビューが Claude 自身の `CHANGES_REQUESTED` を覆い隠しうる) も検証で PASS だった — 単一エージェントの検出だったが、これは本 Issue が塞ごうとした「MUST 未解決を偽の recovered として報告する」バグを別経路で再導入しうる、最も severity の高い残存ギャップだった。
+
+いずれも MUST には至らない (安全側に倒れる設計のため実害はないか、現行 `.wholework.yml` の設定では到達しない) が、Spec の Notes「保証の範囲」がリトライ失敗のリスクのみを議論し、これら 3 点 (state の非可逆性・author 未フィルタ・token usage 上書き) を扱っていなかった点は Spec 記述の抜けとして記録に値する。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — 4 件の Pre-merge 条件は `rubric` × 3 + `command "bats tests/"` × 1 の組み合わせで、いずれも UNCERTAIN なく PASS 判定に到達した。`command` 型は safe mode のため CI 参照フォールバック (`Run bats tests` ジョブの SUCCESS) で代替検証できた。verify command の記述・実行に起因する追加コストはなかった。
