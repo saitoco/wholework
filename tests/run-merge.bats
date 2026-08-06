@@ -252,6 +252,78 @@ MOCK
     [[ "$output" == *"CI check wait complete for PR #123"* ]]
 }
 
+@test "success: local main is synced with git pull --ff-only when the merged PR touched skills/" {
+    GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+    export GIT_LOG
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".state"* ]]; then
+    echo "MERGED"
+  elif [[ "$*" == *"--json files"* ]]; then
+    echo "skills/verify/SKILL.md"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GIT_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Merged PR touched skills/ — syncing local main..."* ]]
+    grep -q "^pull --ff-only$" "$GIT_LOG"
+}
+
+@test "success: git pull --ff-only is not called when the merged PR did not touch skills/" {
+    GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+    export GIT_LOG
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".state"* ]]; then
+    echo "MERGED"
+  elif [[ "$*" == *"--json files"* ]]; then
+    echo "docs/tech.md"
+  fi
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GIT_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"syncing local main"* ]]
+    ! grep -q "^pull --ff-only$" "$GIT_LOG"
+}
+
 @test "error: claude command fails with non-zero exit code" {
     cat > "$MOCK_DIR/claude" <<'MOCK'
 #!/bin/bash
