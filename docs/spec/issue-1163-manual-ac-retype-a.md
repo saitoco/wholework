@@ -231,13 +231,14 @@ Issue 本文の `## Auto-Resolved Ambiguity Points` セクションを参照。
 - なし。Spec の「再型付けマッピング」節の設計 (29 行再型付け / 7 行対象外) をそのまま `docs/reports/manual-ac-retype-a.md` へ転記し、想定通り完了した。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- `.tmp/retype-mapping.json` / `.tmp/retype-ac.py` を作成・実行せず、既に完了していた Issue 本文の再型付け状態を検証してそのまま採用した (上記 Deviations 参照)。再実行や差し戻しは不要。
-- `docs/reports/manual-ac-retype-a.md` を新規作成し、Spec の「再型付けマッピング」3 表と `## 検証` 節 (opportunistic-search.sh 実行結果) を記録した。Pre-merge AC 6 件は全て PASS 判定し Issue のチェックボックスを更新済み。
-- PR #1194 を作成 (`closes #1163`)。テスト `bats tests/` は 1430/1430 PASS、`validate-skill-syntax.py` は 0 error、`check-forbidden-expressions.sh` は exit 0。
+- Base Branch Conflict Pre-check (`git merge-tree`) は main 側の並行変更 (`.wholework.yml` / 他 Issue の Spec ファイル) を検出したが、いずれも `merged` (クリーンな自動マージ) で `changed in both` はゼロだったため、コンフリクトコンテキストは review-spec/review-bug へ渡していない。
+- fork context (`--non-interactive` あり、再呼出し保証なし) と判定し、`capabilities.workflow: true` が有効でも Workflow path を使わず静的 Task fan-out (review-spec + review-bug×2) を `Agent(run_in_background: false)` で実行した。`skills/review/workflow-guidance.md` の再呼出し保証チェックに従った判断。
+- Pre-merge AC 6 件 (rubric ×3, github_check ×3) を全て PASS 判定 (Issue チェックボックスは既に `[x]` のため更新不要)。CI 9 job 全て SUCCESS。MUST issue はゼロ。
+- review-spec + review-bug×2 の指摘 6 件 (SHOULD 3 / CONSIDER 3、うち review-bug 3 件は 2 段階検証で全て PASS) を全て修正した。低リスクな文書のみの PR で、修正コストが低く、report が今後の関連 Issue (#1164-#1167) の precedent として参照される想定だったため、SHOULD/CONSIDER を含め全件対応する判断とした。
 
 ### Deferred Items
 
@@ -249,6 +250,20 @@ Issue 本文の `## Auto-Resolved Ambiguity Points` セクションを参照。
 
 ### Notes for Next Phase
 
-- `/review` は Pre-merge AC が全て `rubric` であることを踏まえ、`docs/reports/manual-ac-retype-a.md` の内容と GitHub Issue 本文の実状態 (#869 #707 #704 など代表 Issue) の整合を優先的に確認すること。
-- 対象外 7 AC 行 (#719 条件1 / #708 条件1・2 / #704 / #501 / #500 / #479) が `manual` のまま維持されていることは commit 前に個別確認済み。`/review` でも再確認する場合は report の「対象外」表と突合すること。
-- baseline 比較の件数ずれ (Design Gaps/Ambiguities 参照) は AC2 の充足を妨げないが、`/verify` が post-merge AC を評価する際に母集団件数の単純比較ではなく個別 Issue 番号の含有確認を優先すること。
+- `/merge` は pre-merge AC gate が Pre-merge AC 6 件全てチェック済みであることを確認すればよく、追加の手動確認は不要。
+- review で修正した `docs/reports/manual-ac-retype-a.md` の `event` 列追加・fallback メカニズム記述修正は、後続の #1164-#1167 (区分 B/C/D/E 等の他 sub-issue) が同種の report を作成する際の precedent として参照される想定。同種の precedent 引用を書く場合は「引用対象の Issue が同一 PR で書き換えられていないか」の時制チェックを行うこと (review retrospective 参照)。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- report (`docs/reports/manual-ac-retype-a.md`) の 3 表は Spec の「再型付けマッピング」節を転記する設計だったが、Pre-merge AC1 のrubric文言 (「Issue 番号 / 元の条件文の要約 / 付与した event= 名または対象外 / 選定根拠」の 4 項目) に対し、実装は 3 列 + セクション見出しでの event 表現だった。rubric grader は文脈から意味的に PASS 判定したが、review-spec が「4 項目要求 vs 3 列実装」のギャップを CONSIDER として検出し、`event` 列を明示追加する修正を行った。rubric のような自然言語 AC は、意味的に等価な実装でも構造的な字面乖離が生じうる — rubric 文言が列挙形式 (「A / B / C / D」) を使う場合、実装側も同じ列挙構造で表現すると grader・人間読者の両方にとって監査しやすい。
+
+### Recurring issues
+
+- unknown-event fallback のメカニズム記述 (`observation-trigger.sh` 起因と誤記していた点) は、review-spec・review-bug (diff scan)・review-bug (security scan) の 3 エージェントが**独立に同じ根本原因を検出**した。3 系統からの収束検出は指摘の信頼度を裏付ける一方、report 内の同一パラグラフに複数の独立した事実誤認 (emitter 帰属 + precedent 引用の自己矛盾) が同居していたことを示している。次回同種の report 作成時は、「メカニズムを説明する一文」を書く際に実装ファイル (`scripts/*.sh`) を直接参照して裏取りする習慣が有効。
+- precedent 引用 (「過去に #869/#704/#700 で manual 維持と判断された」) が、引用対象の Issue 自身を**同一 PR で書き換えている**ケースでは、引用文が過去形として読めるよう明示的にスコープしないと自己矛盾が生じる。本件同様「このIssueが対象を書き換える」構造を持つ report では、precedent 引用の時制チェックを review チェックリストに加える価値がある。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — Pre-merge AC 6 件 (rubric ×3, github_check ×3) は全て決定的に PASS 判定でき、UNCERTAIN はゼロだった。
