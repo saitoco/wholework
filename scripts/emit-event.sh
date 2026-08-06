@@ -142,13 +142,60 @@ emit_event() {
   fi
 }
 
+# Persists AUTO_SESSION_ID to an issue-scoped pointer file so that later
+# restore_auto_session_pointer() calls in the same /verify run (each a
+# separate Bash tool call / PGID) can recover the caller's true session id
+# instead of falling back to the PGID-independent auto-session-current file,
+# which concurrent /auto sessions overwrite. Issue #1075.
+#   $1 = session id (empty => delete the pointer file so a standalone /verify
+#        self-heals a stale pointer left by a prior /auto session)
+#   $2 = issue number (empty => no-op; the pointer is only meaningful scoped
+#        to an issue)
+# Uses the same main-repo-root resolution idiom as restore_auto_session_pointer()
+# below. bash 3.2+ compatible.
+persist_auto_session_pointer() {
+  local _sid="$1"
+  local _issue="$2"
+  [[ -z "${_issue}" ]] && return 0
+  local _root
+  _root="$(git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}')"
+  local _prefix=""
+  [[ -n "${_root}" ]] && _prefix="${_root}/"
+  local _pointer_file="${_prefix}.tmp/auto-session-issue-${_issue}"
+  if [[ -z "${_sid}" ]]; then
+    rm -f "${_pointer_file}"
+    return 0
+  fi
+  mkdir -p "$(dirname "${_pointer_file}")"
+  printf '%s\n' "${_sid}" > "${_pointer_file}"
+}
+
 # Restores AUTO_SESSION_ID/AUTO_EVENTS_LOG from pointer files when the caller's
 # environment does not already have AUTO_EVENTS_LOG set. Issue #902 Fix Cycle —
 # /verify runs via in-session Skill() calls (e.g. /auto --batch List mode), so
 # each Bash tool call is a separate process group and does not inherit env vars
-# exported by a wrapper script. Priority: env var > PGID pointer file >
-# auto-session-current pointer file > no-op (standalone /verify stays
-# uninstrumented by design). bash 3.2+ compatible.
+# exported by a wrapper script.
+#
+# Resolution order (exhaustive), Issue #1075:
+#   1. AUTO_EVENTS_LOG already set             -> no-op, return 0 (existing behavior preserved)
+#   2. AUTO_SESSION_ID already set             -> adopt it directly (in-band hand-off, e.g.
+#                                                  --session-id parsed by the caller; also fixes
+#                                                  the prior bug where a pre-set AUTO_SESSION_ID
+#                                                  with no matching pointer file left
+#                                                  AUTO_EVENTS_LOG unset and silently skipped emits)
+#   3. optional $1 (issue number) is given and
+#      ${root}/.tmp/auto-session-issue-<N> exists -> adopt it (issue-scoped pointer, written by
+#                                                  persist_auto_session_pointer() above)
+#   4. ${root}/.tmp/auto-session-<PGID> exists -> adopt it
+#   5. ${root}/.tmp/auto-session-current exists -> adopt it (final fallback; does not
+#                                                  guarantee attribution accuracy under
+#                                                  concurrent /auto sessions)
+#   none of the above                          -> no-op (standalone /verify stays
+#                                                  uninstrumented by design)
+#
+# issue-scoped is checked before PGID because in-session /verify never has a matching PGID
+# pointer (each Bash tool call gets a fresh process group), and OS PGID reuse could otherwise
+# pick up a stale pointer left by an unrelated session.
 #
 # Issue #1006: pointer file lookup and AUTO_EVENTS_LOG must not be CWD-relative,
 # because /verify Step 11's FAIL-branch emits run after Worktree Entry (CWD =
@@ -157,16 +204,22 @@ emit_event() {
 # detect-foreign-worktree.sh / run-code.sh) and prefix both the pointer file
 # search and AUTO_EVENTS_LOG with it. Outside a git repo (e.g. bats tmpdir
 # fixtures), `git worktree list` fails and the prefix stays empty, preserving
-# the previous CWD-relative behavior.
+# the previous CWD-relative behavior. bash 3.2+ compatible.
 restore_auto_session_pointer() {
   [[ -n "${AUTO_EVENTS_LOG:-}" ]] && return 0
   local _root
   _root="$(git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}')"
   local _prefix=""
   [[ -n "${_root}" ]] && _prefix="${_root}/"
-  local _pgid; _pgid=$(ps -o pgid= -p $$ | tr -d ' ')
-  local _sid
-  _sid="$(cat "${_prefix}.tmp/auto-session-${_pgid}" 2>/dev/null || cat "${_prefix}.tmp/auto-session-current" 2>/dev/null || echo '')"
+  local _issue="${1:-}"
+  local _sid="${AUTO_SESSION_ID:-}"
+  if [[ -z "${_sid}" && -n "${_issue}" ]]; then
+    _sid="$(cat "${_prefix}.tmp/auto-session-issue-${_issue}" 2>/dev/null || echo '')"
+  fi
+  if [[ -z "${_sid}" ]]; then
+    local _pgid; _pgid=$(ps -o pgid= -p $$ | tr -d ' ')
+    _sid="$(cat "${_prefix}.tmp/auto-session-${_pgid}" 2>/dev/null || cat "${_prefix}.tmp/auto-session-current" 2>/dev/null || echo '')"
+  fi
   [[ -z "${_sid}" ]] && return 0
   AUTO_SESSION_ID="${AUTO_SESSION_ID:-$_sid}"
   AUTO_EVENTS_LOG="${_prefix}.tmp/auto-events.jsonl"
