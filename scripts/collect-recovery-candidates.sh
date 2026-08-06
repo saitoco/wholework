@@ -94,7 +94,10 @@ ISS_TITLE=()
 ISS_STATE=()
 ISS_CLOSEDAT=()
 if [ -n "$ISSUES_JSON" ] && [ -f "$ISSUES_JSON" ]; then
-  while IFS=$'\t' read -r iss_num iss_title iss_state iss_closedat; do
+  # Use \x1f (unit separator) rather than \t as the record delimiter -- an Issue title
+  # could in principle contain a literal tab, which would shift these fields and corrupt
+  # state/closedAt resolution for that Issue (Issue #1198 review finding).
+  while IFS=$'\x1f' read -r iss_num iss_title iss_state iss_closedat; do
     [ -z "$iss_num" ] && continue
     ISS_NUM+=("$iss_num")
     ISS_TITLE+=("$iss_title")
@@ -108,7 +111,7 @@ for item in data:
     title = item.get('title', '')
     state = item.get('state', '') or ''
     closed_at = item.get('closedAt') or ''
-    print(f'{number}\t{title}\t{state}\t{closed_at}')
+    print(f'{number}\x1f{title}\x1f{state}\x1f{closed_at}')
 " "$ISSUES_JSON" 2>/dev/null || true)
 fi
 
