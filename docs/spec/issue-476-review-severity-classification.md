@@ -97,3 +97,13 @@
 ### Improvement Proposals
 - N/A (上記「re-run」の Improvement Proposals を参照。新規提案なし — 再発の実測として記録するに留める)
 
+## Verify Retrospective (2026-08-06 re-run #3)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 Issue の `/verify` は `/review --light` (PR #1193, Issue #1185) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED (再検証なし)。Post-merge observation は fired 状態を再確認したが、今回の発火元 PR #1193 の diff (`docs/spec/issue-1185-*.md`, `skills/issue/SKILL.md`, `skills/triage/skill-dev-verify-audit.md`, `tests/issue.bats`, および review 中の SHOULD fix `docs/tech.md`) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず、re-run / re-run #2 と同じ UNCERTAIN 判定に帰着した。同一の Improvement Proposal (fired 状態の恒久化・観測条件の絞り込み不足) が3回連続で再現しており、単発の偶発事象ではなく構造的な観測条件の設計不足であることが実測で裏付けられた
+
+### Improvement Proposals
+- 3回連続の再現により、「observation event の fired 状態が一度確定すると恒久化し、無関係な PR の `/review --light` 完了のたびに証拠不十分な UNCERTAIN 判定が繰り返される」問題は偶発ではなく構造的パターンと判断する。observation-trigger の event 定義に「diff 内容が特定パターン (CI/ワークフロー変更など) にマッチする場合のみ発火」という絞り込み条件を追加するか、この post-merge AC 自体を「該当欠陥を含む PR が review された際に限り評価する」形に見直すことを follow-up Issue として起票する価値がある水準に達した。判断は Step 16 (retro-proposals) に委ねる
+
