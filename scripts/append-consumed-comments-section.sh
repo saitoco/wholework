@@ -2,7 +2,11 @@
 # append-consumed-comments-section.sh - Fallback: append ## Consumed Comments to Spec
 # when the LLM phase did not write it (post-processor pattern, Candidate B).
 #
-# Usage: append-consumed-comments-section.sh <ISSUE_NUMBER> <PHASE_NAME>
+# Usage: append-consumed-comments-section.sh <ISSUE_NUMBER> <PHASE_NAME> [--no-push]
+#
+# --no-push: commit only; skip the push/worktree-merge-push.sh step. The caller is
+# responsible for propagating the commit to base via its own Exit path (see
+# modules/worktree-lifecycle.md § "Spec file write destination").
 #
 # Best-effort: always exits 0. Failures are logged to stderr without blocking the caller.
 # Bash 3.2+ compatible.
@@ -199,8 +203,15 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" 2>/dev/null; then
       : # commit only, push is the caller's responsibility (in-session mandatory call path)
     elif [[ -n "$_git_dir" && -n "$_git_common_dir" && "$_git_dir" == "$_git_common_dir" ]]; then
       # Main tree: route through the locked merge-push script instead of a bare push.
+      # Bound the lock wait (default 300s) to a short timeout: this call site is reached
+      # from the bash-wrapper post-processor fallback (run-code.sh / run-spec.sh, after the
+      # phase's own claude subprocess has already exited), so a long silent stall here has no
+      # watchdog covering it. Let diagnostics (lock-wait / rebase-failure messages) reach the
+      # caller's log instead of suppressing them a second time on top of this script's own
+      # best-effort warning.
       _current_branch="$(git -C "$_repo_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
-      "$SCRIPT_DIR/worktree-merge-push.sh" --base "$_current_branch" 2>/dev/null \
+      WHOLEWORK_PATCH_LOCK_TIMEOUT="${WHOLEWORK_PATCH_LOCK_TIMEOUT:-30}" \
+        "$SCRIPT_DIR/worktree-merge-push.sh" --base "$_current_branch" \
         || echo "append-consumed-comments-section.sh: WARNING — worktree-merge-push.sh failed (best-effort)" >&2
     else
       git -C "$_repo_root" push origin HEAD 2>/dev/null \
