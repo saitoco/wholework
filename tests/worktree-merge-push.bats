@@ -162,6 +162,102 @@ MOCK
     ! grep -q "pull --rebase" "$GIT_LOG"
 }
 
+@test "--from with base checked out and diverged triggers true-side worktree rebase fallback" {
+    WORKTREE_PATH="$BATS_TEST_TMPDIR/fake-worktree"
+    mkdir -p "$WORKTREE_PATH"
+
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GIT_LOG"
+if [[ "\$1" == "rev-parse" && "\$2" == "--show-toplevel" ]]; then
+    echo "${BATS_TEST_TMPDIR}/test-repo"
+    exit 0
+fi
+if [[ "\$1" == "fetch" && "\$2" == "." ]]; then
+    exit 1
+fi
+if [[ "\$1" == "rev-parse" && "\$2" == "--abbrev-ref" ]]; then
+    echo "main"
+    exit 0
+fi
+if [[ "\$1" == "merge" ]]; then
+    COUNT_FILE="${BATS_TEST_TMPDIR}/merge_count"
+    count=0
+    [ -f "\$COUNT_FILE" ] && count=\$(cat "\$COUNT_FILE")
+    count=\$((count + 1))
+    echo "\$count" > "\$COUNT_FILE"
+    [ "\$count" -eq 1 ] && exit 1
+    exit 0
+fi
+if [[ "\$1" == "worktree" && "\$2" == "list" ]]; then
+    printf "worktree ${WORKTREE_PATH}\nbranch refs/heads/test-branch\n\n"
+    exit 0
+fi
+# git -C <path> rebase main
+if [[ "\$1" == "-C" && "\$3" == "rebase" ]]; then
+    exit 0
+fi
+# merge-base --is-ancestor: return 1 (not ancestor) so rebase runs
+if [[ "\$1" == "merge-base" && "\$2" == "--is-ancestor" ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"FF merge failed while main is checked out"* ]]
+    grep -q -- "-C ${WORKTREE_PATH} rebase main" "$GIT_LOG"
+    ! grep -q -- "-C ${WORKTREE_PATH} rebase origin/main" "$GIT_LOG"
+    merge_count=$(grep -c "merge test-branch --ff-only" "$GIT_LOG")
+    [ "$merge_count" -eq 2 ]
+    grep -q "push origin main" "$GIT_LOG"
+}
+
+@test "--from with base checked out, diverged, and rebase conflict aborts and exits non-zero" {
+    WORKTREE_PATH="$BATS_TEST_TMPDIR/fake-worktree"
+    mkdir -p "$WORKTREE_PATH"
+
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GIT_LOG"
+if [[ "\$1" == "rev-parse" && "\$2" == "--show-toplevel" ]]; then
+    echo "${BATS_TEST_TMPDIR}/test-repo"
+    exit 0
+fi
+if [[ "\$1" == "fetch" && "\$2" == "." ]]; then
+    exit 1
+fi
+if [[ "\$1" == "rev-parse" && "\$2" == "--abbrev-ref" ]]; then
+    echo "main"
+    exit 0
+fi
+if [[ "\$1" == "merge" ]]; then
+    exit 1
+fi
+if [[ "\$1" == "worktree" && "\$2" == "list" ]]; then
+    printf "worktree ${WORKTREE_PATH}\nbranch refs/heads/test-branch\n\n"
+    exit 0
+fi
+# git -C <path> rebase main fails (conflict)
+if [[ "\$1" == "-C" && "\$3" == "rebase" && "\$4" != "--abort" ]]; then
+    exit 1
+fi
+if [[ "\$1" == "merge-base" && "\$2" == "--is-ancestor" ]]; then
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Rebase of test-branch onto main failed with conflicts"* ]]
+    grep -q -- "-C ${WORKTREE_PATH} rebase --abort" "$GIT_LOG"
+    ! grep -q "push" "$GIT_LOG"
+}
+
 @test "--base targets non-main branch" {
     run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch --base release/v1"
     [ "$status" -eq 0 ]
