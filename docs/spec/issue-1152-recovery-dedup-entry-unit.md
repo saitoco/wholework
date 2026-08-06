@@ -230,14 +230,23 @@ Root Cause の 3 行目 (`run-auto-sub.sh:194-204`) は false negative の一因
 
 #### verify
 
-- **実装前後の出力比較が同一セッション内で取れた**という点で、本バッチで最も明快な検証になった。本日の `/verify 1185` / `1179` / `1156` の Step 15 では一貫して `review-tier3-recovery` (3) と `manual-recovery-review-rerun` (3) が出力されていたが、本 Issue 着地後の Step 15 では両方が消え、代わりに `manual-recovery-respawn` (21) と `code-pr-tier3-recovery` (6) が現れた。誤検知の解消 (前者の消滅) と再発見落としの解消 (後者の出現) が 1 回の比較で同時に確認できている
+- ~~**実装前後の出力比較が同一セッション内で取れた**点で最も明快な検証になった。... `manual-recovery-respawn` (21) と `code-pr-tier3-recovery` (6) が現れた。誤検知の解消と再発見落としの解消が 1 回の比較で同時に確認できている~~ **(iteration 2 で訂正: 誤判定)** — 実装前後で出力が変化したこと自体は事実だが、**新たに現れた 2 件はそもそも出力されるべきでなかった**。`manual-recovery-respawn` の対応 Issue #1014 と `code-pr-tier3-recovery` の #799 はいずれも CLOSED であり、AC 10 の条件「close 済みの対応 Issue が存在する group-key が候補として現れない」に違反していた。21 / 6 という数字は cutoff 選定バグの産物 (下記 iteration 2 参照)
 - Pre-merge 9 件は機械的検証 (`section_contains` / `file_not_contains` / `github_check` / bats 14 件) と rubric の組み合わせで全 PASS。特に AC 4 の `section_contains "skills/verify/SKILL.md" "Step 15" "closedAt"` は heading 引数に `#` を含めておらず、#1083 の Pattern 6 サブパターン 1 を回避した書き方になっている
-- **`## Phase Handoff` セクションが 2 つ残存している** (`<!-- phase: review -->` と `<!-- phase: merge -->`)。`modules/phase-handoff.md` の仕様は「最新 1 phase のみ保持 (rotation)」であり、merge phase が書き込む際に review phase のセクションを置換すべきだった。review の Key Decisions に記録された Spec の "changed in both" 3-way merge が原因と推測される (並行編集の結果、両方のセクションが残った)。`/verify` の Phase Handoff Read Procedure は最新 1 件を前提とするため、どちらを読むかが曖昧になる
+- ~~**`## Phase Handoff` セクションが 2 つ残存している**~~ **(iteration 2 で解消)** — `<!-- phase: review -->` と `<!-- phase: merge -->` の 2 セクションが残っていたが、PR #1207 (fix cycle) で 1 つに統合された。原因は review の Key Decisions が記録した Spec の "changed in both" 3-way merge と推測される
+
+#### verify (iteration 2 — fix cycle 後)
+
+- **iteration 1 の AC 10 判定は誤りだった。** `--threshold 3` の出力に現れた `manual-recovery-respawn` (21, tracked:#1014 CLOSED) と `code-pr-tier3-recovery` (6, tracked:#799 CLOSED) は AC 10 に明確に違反していたが PASS と判定した。`--with-tracking` で tracking 情報を取得しており、続く `/verify 1191` では「#1014 は CLOSED」と明記までしていながら、AC の文言と突き合わせていない。実装前後の出力変化が劇的だったため「誤検知の解消 + 再発見落としの解消」という自分の解釈に合わせて読み、**出力に現れた側の妥当性を検証しなかった**
+- **根本原因は別セッション (`74631-1786005349`) の `/verify` が特定した。** `orchestration-recoveries.md` が newest-first であるのに、cutoff となる `起票済み` entry を**ファイル出現順の最後 (= 最古)** で選ぶ実装だった。cutoff が最古に落ちるため「cutoff より後」がほぼ全件カウントされる。同セッションは最小再現 fixture を作り、3 件 (probe / `manual-recovery-respawn` / `code-pr-tier3-recovery`) すべてで「最古の起票済み entry を cutoff とする」仮説と実測値が一致することを検算している
+- **fix cycle での修正**: cutoff 解決を `ENTRY_TS` の明示比較 (最大値選択) に変更。FAIL コメントの判別 fixture が bats 回帰テスト 2 件としてそのまま実装された (test 4 = cutoff が max timestamp であること、test 5 = 全 marker より新しい unmarked な再発が計上され続けること)。test 5 が negative check として機能し、修正が再発検出を壊していないことを担保している
+- **iteration 2 の判定手順を固定した**: (1) Step 15 と同じ閾値 3 で実行 → 出力が空であることを確認、(2) `--threshold 1 --with-tracking` で全件取得し over-exclusion がないか確認、(3) 残った tracked の count を対応 Issue の closedAt と突き合わせて検算。検算結果は `manual-recovery-worktree-rebase/ff-only-merge-base-advanced` (#1076 closedAt 07:37:58Z → 後の entry は 08:26 の 1 件、出力 1) と `code-pr-tier3-recovery` (#799 closedAt 2026-06-27T22:23:54Z → 後の entry は 07-12 / 07-04 の 2 件、出力 2) の両方で一致。「除外しすぎ」でも「除外不足」でもないことを実データで確認した
+- iteration 1 で誤検知として出ていた group-key はすべて消滅または closedAt 後の分のみに減少: `manual-recovery-respawn` 21 → 消滅、`code-pr-tier3-recovery` 6 → 2、`manual-recovery-worktree-rebase/ff-only-...` 2 → 1、`review-tier3-recovery` / `manual-recovery-review-rerun` / `code-patch-tier3-recovery` は各 2 → 消滅
 
 ### Improvement Proposals
 
-- **Tier 2 (memory 候補、Issue 化せず)**: `## Phase Handoff` の rotation が並行編集下で破れうる。本 Spec は review 版と merge 版の 2 セクションを保持したまま着地した。`modules/phase-handoff.md` の Rotation boundary detection は「次の `## ` heading まで」を置換範囲とするため、直後に別の `## Phase Handoff` がある場合でも仕様上は正しく置換できるはずで、実際に起きたのは 3-way merge によるセクション重複と考えられる。観測は 1 件のみ、かつ実害は「verify がどちらを読むか曖昧」に留まるため起票は見送る。同種の重複が再発したら phase-handoff 側に重複検出を入れる判断材料にする
-- **注目事項 (本 Issue のスコープ外、起票せず)**: 本 Issue の実装により **`manual-recovery-respawn` が 21 件**あることが初めて可視化された。#1014 (`recoveries: manual-recovery-respawn の再発原因を特定・解消`、CLOSED 2026-07-13) の着地後に積み上がった分であり、同 Issue の対応では再発が止まっていない。ただし根本原因は上流 `anthropics/claude-code` の external kill (`docs/reports/external-kill-investigation.md` および上流の未対応 Issue 3 件) であり、wholework 側の実装で解消できる性質ではないため新規起票はしない。#1191 (`/audit stats --retention` の recovery 頻度セクション) が着地すれば、この数字が定常的に可視化される
+- ~~**Tier 2 (memory 候補)**: `## Phase Handoff` の rotation が並行編集下で破れうる~~ **(iteration 2 で解消済み)** — PR #1207 で 2 セクションが 1 つに統合された。再発したら phase-handoff 側に重複検出を入れる判断材料にする
+- ~~**注目事項**: `manual-recovery-respawn` が 21 件~~ **(iteration 2 で訂正: 誤り)** — 21 件は cutoff 選定バグの産物であり、実際の再発件数ではない。修正後は同 group-key は候補から消滅している (#1014 の closedAt 後の entry がゼロ)。この誤った数字を根拠に #1205 を起票したため、同 Issue に訂正コメントを投稿済み
+- **AC 例示が一般ケースを捕捉できていなかった (iteration 1 の FAIL を招いた要因)**: post-merge AC 10 の「期待される出力構造」が `manual-recovery-review-rerun` / `review-tier3-recovery` の 2 件のみを例示していたが、この 2 件は本 Issue 着地前に**手作業で** `起票済み` を付与したもので、いずれも「最新エントリのみ marked」という形だった。`run-auto-sub.sh` は entry 書き込み時に自動で `起票済み #N` を刻印するため、**対応 Issue が存在する group-key は時間とともに全件 marked になるのが常態**であり、例示していた 2 件のほうが例外的だった。AC に期待値を例示する際は、その例が一般ケースか例外かを意識する必要がある (起票せず — 本件は AC 文言の更新で解消済み)
 
 ## review retrospective
 
