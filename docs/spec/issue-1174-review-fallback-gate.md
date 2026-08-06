@@ -112,17 +112,15 @@ Issue 本文の候補 A (fallback 投稿に独立マーカーを付与する) �
 - `post-fallback-review-summary.sh` の author filter 回帰テストで、初回のモック実装が `gh api user -q '.login'` の `-q` 展開を再現せず生 JSON (`{"login":"self-actor"}`) をそのまま返していたため、`ACTOR_LOGIN` がその JSON 文字列全体になり `.author.login` と一致せずフィルタが機能しなかった (テスト失敗で発覚)。実際の `gh api ... -q` はサーバ側で jq フィルタ適用済みの平文を返すため、モックも `-q` 適用後の値 (`self-actor`) を直接 echo するよう修正して解消した。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 候補 A (fallback 投稿への独立マーカー付与) を Spec 通り採用し、`/merge` のみをゲート地点とした (`/auto` の completion check には重複させない)。
-- `review_incomplete_fallback` のクリアには `decision=override` かつ `fallback=true` を要求し、既存の `ac=` superset 条件とは独立に判定するようにした。両条件が別々に不足しうるため、`/merge` の再提示メッセージも条件ごとに出し分けている。
-- 既知の欠陥3件のうち author filter 欠如のみを本スコープで修正し、残り2件 (sticky CHANGES_REQUESTED による過剰リトライ、token usage 上書き) は Spec Notes に記録済みの通り見送った。
+- pre-merge AC ゲート (`check-pre-merge-ac.sh`) は5件全て checked 済みで unchecked_count=0 だったため、追加の override 判定は不要だった。
+- `gh pr merge --squash --delete-branch` の1回目実行はリモート削除後にローカルブランチ削除で失敗した (別セッションの `review+pr-1192` worktree が同ブランチをチェックアウト中だったため)。PR 自体は `state=MERGED` で正常に完了していたことを `gh pr view --json state,mergedAt,mergeCommit` で確認し、リモートブランチ `worktree-code+issue-1174` が残存していたことを `git ls-remote` で確認した上で `gh api -X DELETE .../git/refs/heads/...` により手動削除した。
 
 ### Deferred Items
-- sticky `CHANGES_REQUESTED` による過剰リトライ、および継続リトライによる token usage 上書きの2件は本 Issue のスコープ外。フォローアップ Issue 化は通常の retrospective/backlog プロセスに委ねる (Spec Notes 「既知の欠陥3件の対応方針」参照)。
-- `review_incomplete_fallback` の latest-wins 化 (現状は PR コメント履歴中の任意出現でブロックし続ける) は Spec Notes 「既知の制限」に記載の通り見送り。実運用で再ブロックが頻発する場合にフォローアップ Issue として再検討する。
+- コードフェーズから引き継いだ2件 (sticky `CHANGES_REQUESTED` による過剰リトライ、latest-wins 化見送り) は本フェーズでも変更なし。引き続き Spec Notes 記載の通りスコープ外。
 
 ### Notes for Next Phase
-- Post-merge AC は「次回 `/review` が silent no-op で終了し fallback サマリが投稿された際、`/merge` または `/auto` が review 未完了を検出して停止または警告することを観察する」という observation 型。`/verify` フェーズでは実際に fallback が発火するイベントを待つ必要があり、即時には確認できない可能性が高い。
-- `/review` (PR #1192 自体のレビュー) では、`skills/merge/SKILL.md` の新しいゲート条件文言が既存の Recorded decision check フローと整合しているか、特に「両条件のうち一方のみ満たすマーカーがある場合に該当条件のみ再提示する」分岐を重点的に確認するとよい。
+- Post-merge AC は observation 型 (「次回 `/review` が silent no-op で終了し fallback サマリが投稿された際、`/merge` または `/auto` が review 未完了を検出して停止または警告することを観察する」)。`/verify` では即時確認できない可能性が高く、該当イベントが発生するまで PENDING 扱いが妥当。
+- `review+pr-1192` worktree (ブランチ `worktree-code+issue-1174` を参照) が merge 完了後も残存している。verify フェーズ実行時に不要であれば `ExitWorktree`/`git worktree remove` でのクリーンアップを検討してよい。
