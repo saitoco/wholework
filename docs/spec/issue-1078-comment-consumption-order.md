@@ -98,3 +98,40 @@
 
 ### Acceptance criteria verification difficulty
 - Nothing to note. Both pre-merge conditions (`rubric` and `grep`) resolved deterministically to PASS with no UNCERTAIN — the AC2 verify command strengthening done at Issue creation time (`"Consumed Comments"` → `"Comment Consumption"`, recorded in Consumed Comments above) kept the grep condition meaningful rather than vacuously true.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- `/issue` の triage が AC2 の verify command を `grep "Consumed Comments"` から `grep "Comment Consumption"` へ強化した判断が決定的に効いた。#1058 が新設した "Spec file write destination" 節に "Consumed Comments" の語が既に含まれていたため、強化前の AC2 は**実装前から無条件 PASS になる状態** (vacuously true) だった。AC の実効性が先行 Issue の着地で失われるパターンで、同一領域を連続して扱う際は先行 Issue 着地後に既存 AC の verify command を再評価する必要があることを示している。
+- スコープを `/code` のみから `skills/spec/SKILL.md` にも拡大した判断も妥当だった。元の Purpose が「同様の Step 順序を持つ他スキル」を含んでいたため、Background の記述範囲に引きずられず Purpose に忠実に解釈した形。
+
+#### spec
+
+- `skills/verify/SKILL.md` が既に正しい順序 (Entry → Consumption) を持つことを先例として特定し、新規設計ではなく既存パターンへの整合として位置づけた。#1058 が `/verify` の `#1037` 由来の規約を先例に使ったのと同じ構造で、2 Issue 連続で「verify が先行して到達済みの規約に code/spec を合わせる」形になっている。
+- Step 番号・見出しを変えず該当段落のみを移動する方式により、`skills/code/SKILL.md` 内の既存クロスリファレンス 5 箇所への影響を回避した。skill ドキュメントの Step 番号が他所から参照される構造では、順序変更の実現手段として段落移動が番号変更より安全である。
+
+#### code
+
+- 実行セッション自身が修正前の Step 順序下にあることを認識し、Comment Consumption 呼び出しを Worktree Entry 後まで自主的に遅延させた。**#1058 の code フェーズは同じ位置で踏んで手動 revert が必要になった**のに対し、本 Issue では回避できている。差分は #1058 着地時に本 Issue へ投稿した申し送りコメント (一次情報として「#1058 の `/code` が経路 (b) を実演した」ことを明記) が Comment Consumption で読み込まれた点にあると考えられる。修正が in-flight な Issue では、先行 Issue の一次情報を申し送ることでセッション自身の踏み抜きを防げる。
+- 実装 rework なし。review 指摘 0 件。
+
+#### review
+
+- `--light` (review-light agent) で指摘 0 件。変更が段落移動 3 ファイル・56 行と小さく、Spec との対応も 1:1 だったため妥当な結果。#1058 (Size L, `--full`) が 10 件検出したのと対照的で、Size に応じた review depth の振り分けが機能している。
+
+#### merge
+
+- 特記なし。CI 9 件 SUCCESS、conflicts なし、pre-merge AC gate 2/2。
+
+#### verify
+
+- Post-merge の manual 条件を、字義上は満たされているにもかかわらず SKIP とした。`/spec` `/code` 両セッションとも**修正前の SKILL.md 下で LLM が自主的に順序を遅延させた**結果として条件文が満たされており、修正後の SKILL.md が動いた証拠にはなっていないため。verify-type は `manual` で `session=next` 属性を持たないが、判定の構造は `session=next` と同じ (skill 自己更新が当該セッションに伝播しない) だった。
+- この AC は本来 `<!-- verify-type: observation event=auto-run session=next -->` が適合する。`manual` のままでは再実行のたびに人間判断を求めることになり、`session=next` なら次セッション以降で自動評価される。
+
+### Improvement Proposals
+
+- skill 自身を変更する Issue の post-merge AC が `verify-type: manual` で起票されると、修正後 skill での実行証拠が揃うまで人間判断を繰り返し求めることになる。`/issue` の verify-type 分類時に「AC の観測対象が本 Issue の変更した skill の挙動そのもの」であれば `observation event=<name> session=next` を選ぶ、という判定を `modules/verify-classifier.md` に追記することを検討する。本 Issue の AC3 と #1058 の AC3 は同じ性質だが、前者は `manual`、後者は `observation ... session=next` に分かれた。
+- 先行 Issue が着地すると後続 Issue の既存 AC が vacuously true になりうる (本 Issue の AC2 が実例)。同一領域の連続 Issue では、着手時に既存 AC の verify command を先行 Issue の着地後の状態に対して空撃ちし、無条件 PASS になっていないか確認する手順を `/issue` または `/spec` に組み込むことを検討する。今回は triage が気づいたが、機構としては保証されていない。
