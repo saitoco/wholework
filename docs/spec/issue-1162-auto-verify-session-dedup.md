@@ -77,22 +77,19 @@ N/A ( 上記の `comm` → `grep -Fxq` の置き換えは、シェル上での�
 
 ## Phase Handoff
 
-<!-- phase: code -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- 候補 A ( セッション内 verify 済みリストによる除外、一律除外 ) を Spec Notes の判断通り採用し、候補 B ( 状態変化があれば除外解除 ) は実装しなかった
-- 除外判定は `scripts/filter-session-verified-issues.sh` として独立スクリプト化し、`skills/auto/SKILL.md` の単一 Issue 経路・batch 経路の両方から呼び出す構成にした ( `observation-trigger.sh` 自体は変更しない設計境界を維持 )
-- 集合差分の実装は `comm -23` ではなく `grep -Fxq` によるループに変更した ( Design Gaps/Ambiguities 参照 ) — bash 3.2+ 互換かつ数値の桁数に依存しない正しい差分計算のため
+- Pre-merge AC 5 件は全てチェック済みの状態でゲートを通過し、PR #1204 を squash merge した ( mergeable=true, ci_status=success, review_status=approved )
+- マージ実行時、旧 review フェーズの残留 worktree ( `review+pr-1204`、ブランチ `worktree-code+issue-1162` を占有 ) がローカルブランチ削除をブロックしたため、worktree の unlock/remove とローカル・リモートブランチの削除を追加で実施した
 
 ### Deferred Items
 
-- 候補 B ( 前回 verify 以降の状態変化があれば除外解除 ) は Spec Notes の判断により未実装。将来、除外による見逃しが実測された場合に再検討
-- 候補 C ( SKIPPED 理由の記録・参照 ) および候補 D ( oldest-first 順序見直し ) は Issue 本文・Spec Notes の判断によりスコープ外 ( 将来の別 Issue 候補 )
-- Post-merge AC ( `session=next` ) は `/auto` を 2 回以上実行する実セッションでの観察が必要。本 Code フェーズでは検証不可
+- 候補 B/C/D は Code フェーズの Deferred Items から変更なし ( 将来の別 Issue 候補 )
+- Post-merge AC ( `session=next` ) は `/auto` を 2 回以上実行する実セッションでの観察が必要。本 merge フェーズでは検証不可
 
 ### Notes for Next Phase
 
-- `bats tests/` は全 1453 件 PASS 済み ( behavioral change 検出により `skills/auto/SKILL.md` の変更を理由にフルスイートを実行 )
-- Pre-merge AC 5 件は本 Code フェーズで検証し Issue 本文のチェックボックスを更新済み
-- `docs/tech.md` / `docs/guide/autonomy.md` / `docs/guide/index.md` の翻訳同期ギャップは本 Issue 由来ではない既存の未同期状態であり、本 PR のスコープ外として対応していない
+- verify フェーズでは Post-merge AC ( 1 セッション内で `/auto` を 2 回以上実行し、2 回目の observation scan が 1 回目で verify 済みの Issue を dispatch しないことを観察 ) が `session=next` 指定のため、次回以降の `/auto` 実行セッションでの実観察が必要
+- レビュー完了後に review worktree を都度クリーンアップできていない運用ギャップが見つかった ( 本件は merge フェーズで応急対応済みだが、根本原因は未調査 )
