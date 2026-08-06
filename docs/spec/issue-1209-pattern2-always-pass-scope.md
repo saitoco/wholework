@@ -67,3 +67,30 @@ Cutoff: undetermined (Issue timeline に `phase/*` ラベル付与履歴なし�
 Issue 本文 (Background / Purpose / Acceptance Criteria) はこの判断に基づき更新済み。判断の詳細は Auto-Resolve Log として Issue コメントに投稿済み: https://github.com/saitoco/wholework/issues/1209#issuecomment-5206634526
 
 **スコープ境界 (計測範囲: `modules/verify-executor.md` の Verification Command 変換テーブル全 27 行)**: Pattern 2 は本 Issue の実装後、27 種別中 6 種別 (`file_contains`/`grep`/`command`/`section_contains`/`github_check`/`rubric`) をカバーする。残り 21 種別は本 Issue のスコープ外。特に `file_not_contains`/`file_not_exists`/`dir_not_exists` 等の「不在アサーション」型の常時 PASS (対象が実装前から既に存在しない場合に真になる) は、Pattern 2 が扱う「存在アサーション」型と対称的な別種のギャップであり、将来の Issue 候補になりうるが本 Issue には含めない。`http_status`/`mcp_call`/`browser_check` 等の外部・実行時状態依存型は、`main` ブランチという静的な空撃ち対象を持たないため同種の拡張になじまない。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜3 をそのまま実施。3 サブパターンは個別コミットではなく 1 回の Edit にまとめて追加したが、追加内容・構造 (太字ラベル見出し → Detect → 具体例 → Detection approach → Fix options) は Spec の記述と完全に一致する
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Pattern 2 に `section_contains`/`section_not_contains`・`github_check`・`rubric` の 3 サブパターンを、既存の `command` 型サブパターンと同じ構造 (太字ラベル見出し → Detect → 具体例 → Detection approach → Fix options) で追加した
+- 各サブパターンの Detection approach に、AC3 が要求する「現状のリポジトリに対する空撃ち」の具体的な実行方法 (grep/section 切り出し、gh_command 実行、grader による自己判定) を明記した
+
+### Deferred Items
+- 「不在アサーション」型 (`file_not_contains`/`file_not_exists`/`dir_not_exists` 等) の常時 PASS 検出は Spec Notes のスコープ境界により本 Issue から除外。将来の Issue 候補
+- `http_status`/`mcp_call`/`browser_check` 等の外部・実行時状態依存型も対象外 (静的な `main` ブランチ空撃ち対象を持たないため)
+
+### Notes for Next Phase
+- patch route のため `/review`/`/merge` は経由しない。`/verify` は Post-merge の observation 型 AC (次の同一領域 Issue の `/issue` 実行時に空撃ち強化が観察されるか) のみが対象
+- テスト結果: `bats tests/` 全 1490 件 PASS、`validate-skill-syntax.py` 0 errors (既存の未関連 warning 1 件は本 Issue の変更に起因しない)、`check-forbidden-expressions.sh` PASS
+- Pre-merge AC 3 件はすべて実装時に自己検証済みで PASS (Issue チェックボックス更新済み)
