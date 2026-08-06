@@ -138,3 +138,40 @@
 
 ### Improvement proposal candidates (aggregated at /verify)
 - Steering Doc sync candidate の抽出漏れ: 本 PR は `docs/structure.md`/`docs/tech.md` (+ `docs/ja/` 対訳) を正しく同期したが、同じ Steering Document である `docs/product.md` は候補から漏れていた。`/audit` サブコマンドの出力仕様が変わる Issue で、Steering Doc 同期チェックの対象に `docs/product.md` の用語集エントリを明示的に含める運用上の見直し余地がある。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- `/issue 1191` が着手前コメントを読み、**#1098 が書き込む `N/A (resolved by known catalog)` エントリを現行の `collect-recovery-candidates.sh` が除外できず、本 Issue が追加する Section 10 が着手直後から誤検知で埋まる**というリスクを捕捉した。さらに「#1152 の PR レビュー時に拾う」という当初の想定に対し、#1152 が既に CLOSED でその差分を含んでいないことをソースで確認し、除外規則の追加を本 Issue のスコープへ取り込んで Pre-merge AC を 2 件追加した。同一バッチ内で先行 Issue の着地内容を検証してスコープを補正した事例
+- 機械チェック 3 種 (checkbox format / observation `session=next` / AC 監査) がすべて通過。これは同バッチの #1156 (形式強制) と #1185 (監査経路) の実装が両方稼働していることの傍証にもなっている
+
+#### spec
+
+- Notes に「`N/A` 検出正規表現」「Section 10 の挿入位置」「他 Spec との食い違い」の 3 点を事前解決として記録しており、code フェーズで Design Gaps がゼロだった
+
+#### code
+
+- Implementation Steps に明示されていなかった `allowed-tools` への `collect-recovery-candidates.sh` 追加が必要になり、`scripts/check-allowed-tools.sh` の pre-commit check がこれを検出した。SKILL.md 本文が新規スクリプトを参照する際の機械的追従であり、設計判断の変更ではない。**Spec に書かれていない追従項目を機械チェックが拾った**good case
+
+#### review
+
+- SHOULD 1 件 + CONSIDER 1 件。CONSIDER (`N/A` 判定が `### Improvement Candidate` サブセクションにスコープされていない) について、**同スクリプトの既存判定 (`起票済み #N` / `cause:`) がもともと同じ非スコープ設計**であることを確認し「新規の弱点ではなくコードベースの既存方針の踏襲」と記録した上で見送っている。既存方針との整合を根拠に見送り判断をした点が明快
+
+#### merge
+
+- Pre-merge AC 6 件全チェック済みで gate 通過。`review_incomplete_fallback` が立っていないことも確認し、review 完了が fallback 経由でなく organic であることを検証している
+
+#### verify
+
+- Section 10 の中核コマンド (`collect-recovery-candidates.sh --threshold 1 --with-tracking`) を実行し、**20 件の group-key が `<group-key>\t<count>\t<tracked:#N|untracked>` 形式で列挙**されることを確認。閾値 3 超過は `manual-recovery-respawn` (21, tracked:#1014) と `code-pr-tier3-recovery` (6, tracked:#799) の 2 件。本 Issue の Purpose (#1179 が閉じた自動起票の穴を可視化で埋める) が達成されている
+- `/audit stats --retention` の全体実行は行っていない。Section 10 の手順が上記コマンド 1 本とその集計・表示であることを SKILL.md L504-508 で確認した上で、コマンド出力が期待形式で得られることを直接検証して PASS とした (この限定は Issue コメントにも明記)
+- **可視化によって初めて見えた低頻度 untracked group-key**: `manual-recovery-merge-rerun/pre-merge-ac-command-unverifiable` (2)、`manual-recovery-commit-push` (2)、`manual-recovery-push-only` / `push-and-pr` / `respawn-skip-code` (各 2) など。1 件目は 2026-08-06 の `/auto --batch 1179 1181 1180` で #1181 / #1180 が pre-merge AC gate にブロックされた事象に対応すると見られる。閾値未満のため Recommend には出ないが Section 10 では継続的に見える
+- **本バッチ全体の連鎖が閉じた**: #1179 (自動起票の opt-out) → #1191 (可視化で穴を埋める) → #1098 (Tier 2 の永続記録を復元して母数を正す) → #1152 (誤検知と再発見落としを解消して精度を上げる)。4 Issue が 1 つの観測系を成立させており、Section 10 の出力はその 4 件すべての成果が反映された状態になっている
+
+### Improvement Proposals
+
+- **Section 10 の `tracked:#N` が対応 Issue の open/closed を区別しない**: `manual-recovery-respawn` は `tracked:#1014` と表示されるが #1014 は CLOSED (2026-07-13) であり、実態は「対応済みの Issue が close された後に 21 件再発している」状態。#1152 の entry 単位判定により**検出**はできるようになったが、**表示**は tracked/untracked の 2 値のままで「tracked だが再発中」が読み取れない。count の大きさで気づける範囲ではあるものの、`--with-tracking` の出力に対応 Issue の state を含めるか、Section 10 側で `tracked:#N (closed)` と表示すれば「解決済みのはずが再発している」group-key が一目で分かる。変更対象は `scripts/collect-recovery-candidates.sh` と `skills/audit/SKILL.md` の 2 ファイルで、同スクリプトは `/verify` Step 15 と `/audit` Section 10 の 2 経路から使われる共有サーフェス
+- **Steering Doc sync candidate の抽出漏れ (review フェーズからの集約)**: 本 PR は `docs/structure.md` / `docs/tech.md` (+ `docs/ja/` 対訳) を同期したが、同じ Steering Document である `docs/product.md` は候補から漏れていた。`/audit` サブコマンドの出力仕様が変わる Issue では `docs/product.md` の用語集エントリも同期候補に含める余地がある
