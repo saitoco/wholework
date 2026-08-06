@@ -81,3 +81,40 @@ Issue 本文 Background の技術的主張 (`_completion_code_patch()` の実装
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue 1082 --non-interactive` の Issue Retrospective (Background 事実確認で技術的主張がコードベースと一致することを確認、曖昧点2件の自動解決 (フィールド命名・配置、diagnosis 文字列反映の要否) を記録、AC4 の rubric に `command "bats tests/reconcile-phase-state.bats"` の補完 verify command を追加) — https://github.com/saitoco/wholework/issues/1082#issuecomment-5206875528
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1-4 を Spec の記述通りに実施した。
+
+### Design Gaps/Ambiguities
+
+N/A — Spec の Notes セクションで主要な論点 (フィールド配置・命名、単一コマンドでの branch 不在/0コミット畳み込み、base 固定、diagnosis 反映見送り) が事前に解決済みで、実装時に新たな設計ギャップは発生しなかった。
+
+### Rework
+
+N/A
+
+## Autonomous Auto-Resolve Log
+
+- **Step 3 の `phase/ready` ラベル不在チェックで続行を選択** — reason: Issue #1082 のラベルは `phase/ready` ではなく `phase/code` だったが (直前の `/spec` 実行がラベルを `phase/code` へ遷移済みで、`/code` 自体が前回中断した痕跡ではないと確認: `git log --all` に `closes #1082` コミットなし、`gh pr list` に該当 PR なし、`.claude/worktrees/` に `code+issue-1082` の残存なし)、`docs/spec/issue-1082-worktree-commits-found-hint.md` が既に存在し内容も完備していたため、Spec を読み込んで実装を続行する判断は最も低リスクだった。
+  - Other candidates: 非対話モードでも処理を中断しユーザー判断を待つ (Spec が既に存在するため過度に保守的と判断し不採用)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `worktree_commits_found` は `actual` JSON ルート直下・`hint_` prefix なしで追加し、既存の兄弟フィールド (`commits_found`/`operate_signal`/`stray_pr_signal`) と命名パターンを揃えた。`matches_expected` の判定ロジックには一切手を入れていない。
+- 判定は `git rev-list --count origin/main..worktree-code+issue-N` 単体に一本化し、branch 不在 (非 0 exit) と 0 コミットの両方を `false` へ安全に畳み込んだ (`stray_pr_count` と同じ「失敗時 0 フォールバック + 数値正規表現ガード」パターンを適用)。
+- `modules/phase-state.md` の更新は Spec が明示したスコープ (Field contract 表への行追加のみ) に厳密に従い、`stray_pr_signal`/`operate_signal` にあるような独立した "Completion Signature" 見出しセクションは追加しなかった (Spec が要求していないため scope creep を避けた)。
+
+### Deferred Items
+- `diagnosis` 文字列への push 未完反映は Issue 本文で明示的に見送り済み (Spec Notes に記録) — 本 PR では対応していない。
+- `modules/orchestration-fallbacks.md` の `code-patch-silent-no-op` Rationale が本 Issue により部分的に古くなる点は Issue の Out of Scope により対応していない (フォローアップ Issue 化は Spec Notes が既に候補として記録済み、本フェーズでは新規起票していない)。
+- Post-merge AC (opportunistic 観察: 次回 patch route の中断時に「未着手」と区別できることの実地確認) は本 PR の作業では検証していない。
+
+### Notes for Next Phase
+- Pre-merge AC5 (`bats tests/reconcile-phase-state.bats`) に加えて、behavioral change detection の一環でフルスイート `bats tests/` (1492 tests) も実行し全 PASS を確認済み — 対象スクリプトを参照する他のテストファイルは `tests/reconcile-phase-state.bats` のみだった。
+- PR #1218 は `closes #1082` を本文に含む。CI 上のフルスイート結果もあわせて確認すること。
+- `docs/spec/issue-998-operate-completion-signature.md` / `docs/spec/issue-993-reconcile-code-patch-stray-pr.md` は同一関数への類似フィールド追加の先例であり、レビュー時の比較対象として参照可能。
