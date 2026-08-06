@@ -86,3 +86,26 @@ N/A
 ### Notes for Next Phase
 - `/review` では、Pattern 6 サブパターン 5 (`command` 型 AC の Pre-merge 配置判定基準) の記述が Issue 本文の「実測による補正」節 (#1179/#1181/#1180) の結論と整合しているかを確認する
 - `/verify` の post-merge AC は、実際に `###` heading を含む AC を持つ Issue を `/issue` に通して Pattern 6 サブパターン 1 が検出されることを確認する必要がある (manual verify-type)
+
+## Issue Retrospective
+
+`/issue 1083 --non-interactive` によるリファインメント結果。
+
+### 実施内容
+
+- Background の技術的主張 (`section_contains` の heading 部分一致仕様、`check-translation-sync.sh` の exit code 設計、`skill-dev-verify-audit.md` Pattern 2 の存在) を `grep` で照合し、いずれも実装と一致していることを確認 (Step 5、警告なし)
+- Size = S (既存トリアージ値を維持)、`triaged` ラベル既存のため Step 2 の triage 自動チェーンはスキップ
+- Pre-merge AC に補助チェック (`section_contains "skills/triage/skill-dev-verify-audit.md" "### Pattern 2" "exit code"`) を 1 件追加。実装前の main 上で対象文字列が Pattern 2 セクション内に存在しないことを確認済みのため常時 PASS にはならない (`modules/verify-patterns.md` §9 rubric + 補助チェックガイドラインに準拠)
+- タイトルドリフトチェック: 本文更新後も範囲・目的に変化なしと判定、タイトル変更なし
+- blocked-by 依存関係チェック: オープンなブロッカーなし
+- sub-issue 分割評価: Size S のため対象外 (非対話モードの High-Stakes skip 対象でもある)
+
+### Auto-Resolved Ambiguity Points (Issue 本文にも記録済み)
+
+1. **AC1 の対象ファイル決め打ちを撤回**: 当初 AC1 は「`skills/issue/SKILL.md` の AC verify command 監査」と対象ファイルを一意に指定していたが、`docs/product.md` § "`/issue` (What) vs `/spec` (How)" の境界ルール上、実装対象ファイルの選定は `/spec` の責務。コードベース調査の結果、`/issue` 自身の自己完結型監査 (BRE メタ文字検出セクションの前例) と `/triage` の Pattern 表 (`skill-dev-verify-audit.md`) の 2 つの既存パターンがどちらも妥当な置き場所として存在することを確認したため、rubric 文言を両方の可能性を許容する形に修正し、最終判断を `/spec` に委ねた。
+   - 判断根拠: 一方に決め打ちする根拠が `/issue` 時点のコードベース調査だけでは得られなかったため (least-risk かつ既存パターン両方と整合する選択)
+2. **AC4 に対象ファイルを明記**: 当初 AC4 は対象ファイル未指定だったが、Background で言及する既存 Pattern 2 は `skill-dev-verify-audit.md` にのみ定義されており候補が一意だったため (AC1 とは異なりファイル選定の曖昧性がない)、rubric に対象ファイルを明記し、機械的な補助チェック (`section_contains`) を追加した。
+
+いずれも Issue 本文の Acceptance Criteria / Auto-Resolved Ambiguity Points セクションに反映済み。
+
+> 転記元: https://github.com/saitoco/wholework/issues/1083#issuecomment-5198831217 (`/auto` Step 4b、Size XS 降格後の転記)
