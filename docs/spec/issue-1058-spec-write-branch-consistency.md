@@ -235,26 +235,37 @@ Size は既に `L` (変更なし)。タイトルとの意味的乖離は検出�
 - `worktree-merge-push.sh` の `--base` 既定値が `main` である点は、main tree では HEAD が base ブランチそのものであることを利用し `--base "$(git rev-parse --abbrev-ref HEAD)"` を渡すことで解決した。`append-consumed-comments-section.sh` に `--base` フラグを新設する必要はない。
 - `tests/append-consumed-comments-section.bats` は `WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` を設定済みのため、新たに呼ばれる `worktree-merge-push.sh` のモック追加が必須である点を Implementation Steps 7 に明記した。`$MOCK_DIR/git` モックが `rev-parse --git-dir` と `rev-parse --git-common-dir` に異なる値を返して worktree 内を模擬している (L47-54) ことも確認済み。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- None. Implementation Steps 1–9 were followed as written; no reordering, omission, or consolidation was needed.
+
+### Design Gaps/Ambiguities
+
+- `tests/run-verify.bats` was not listed in Changed Files but broke on first full-suite run: its `git` mock does not implement `rev-parse --git-dir`/`--git-common-dir` (both calls fall through to the default branch and return an empty string), and the new main-tree push-routing check in `append-consumed-comments-section.sh` originally compared `"$_git_dir" == "$_git_common_dir"` without the non-empty guard the adjacent defense-in-depth warning check already had — two empty strings compare equal, so it misclassified this fixture as "main tree" and called the (unmocked) `worktree-merge-push.sh` instead of `git push origin HEAD`. Fixed by adding the same `-n "$_git_dir" && -n "$_git_common_dir"` guard to the routing check (Implementation Step 1). The Spec's own Changed Files list scoped `tests/run-verify.bats` out because #1058 does not modify `/verify`'s call site, but a script-level behavior change still has to satisfy every existing caller's test fixture, not just the ones the Spec enumerates — the Step 9 Behavioral Change Detection full-suite override (triggered because `append-consumed-comments-section.sh` is referenced by more than its direct-counterpart test) is what caught this, confirming that override's value beyond narrow-scope test runs.
+- Executing this Issue's own `/code` run reproduced the sibling defect this Issue's Related section attributes to #1078: `skills/code/SKILL.md`'s Comment Consumption (Step 1) runs before Worktree Entry (Step 2), so writing the code-phase `## Consumed Comments` entry per that step order edited the main repository's Spec copy directly, before `EnterWorktree` was called. That edit never reached the worktree branch and was left as an uncommitted diff in the main repository, requiring manual reconciliation after Worktree Exit. This is out of scope for #1058 (which explicitly handles only the wrapper post-processor path, route (a), and defers the SKILL.md step-order path to #1078) but is recorded here as a concrete, first-hand reproduction for whoever picks up #1078.
+
+### Rework
+
+- The `-n` guard fix above was the only rework cycle: full-suite `bats tests/` surfaced the `tests/run-verify.bats` failure, root-caused to the missing guard, fixed, and the full suite re-run clean (1443/1443).
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 案 B (Spec はフェーズ自身の作業ブランチで編集し、base へは Exit 経路経由でのみ反映) を採用。`/verify` が #1037 で確立済みの規約への整合であり、新規設計ではない
-- pr route では wrapper post-processor を無効化し、安全網は `skills/code/SKILL.md` Step 12 の in-session mandatory call に一本化する
-- 新規の in-session 呼び出しには `--no-push` を付ける。base への反映は各フェーズの Exit 経路 (`worktree-merge-push.sh` / PR merge) が担保する
-- 書き込み先規約の SSoT は `modules/worktree-lifecycle.md` に置き、`modules/l0-surfaces.md` からは参照させる (重複記述を作らない)
+- Kept the Spec's designed approach (Candidate B, in-session mandatory `--no-push` calls) unchanged — no implementation-time deviation was needed.
+- Added a non-empty guard to the main-tree push-routing check in `append-consumed-comments-section.sh` (matching the existing defense-in-depth warning check's guard) after `tests/run-verify.bats` exposed the gap; this is a defensive-programming fix within Implementation Step 1's scope, not a design change.
 
 ### Deferred Items
 
-- worktree セッション中の main repository 書き込み全般の棚卸しは別 Issue へ切り出す。起票は `/verify` の Improvement Proposal 集約に委ねる
-- `/verify` の `append-consumed-comments-section.sh` 呼び出しへの `--no-push` 適用 (`origin/worktree-verify+issue-*` 16 本の残留解消) は AC の範囲外のため本 Issue では行わない
-- `run-*.sh` の pre/post カウント比較が見出し数ベースで patch route では常に誤発火する件は、冪等かつ無害のため本 Issue では修正しない
+- Same three items as the Spec Phase Handoff (unchanged from spec phase): worktree-session main-repository write audit spun out to a future Issue; `/verify`'s own `--no-push` adoption (residual `origin/worktree-verify+issue-*` branches) out of scope; patch-route pre/post count fallback mis-fire left unfixed (idempotent, harmless).
+- #1078 (SKILL.md step-order path) remains untouched, as scoped. See Design Gaps/Ambiguities above for a first-hand reproduction of the defect it will need to fix.
 
 ### Notes for Next Phase
 
-- `skills/code/SKILL.md` と `skills/spec/SKILL.md` の `allowed-tools` への `${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*` 追加を忘れないこと。`scripts/check-allowed-tools.sh` が Step 8 で mismatch を検出して commit を止める
-- `tests/append-consumed-comments-section.bats` の `setup()` に `worktree-merge-push.sh` モックを追加しないと新テストが解決不能になる (`WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` のため)
-- `modules/worktree-lifecycle.md` に追加する表には `**(exhaustive)**` マーカーが必要 (`modules/skill-dev-checks.md`)
-- `docs/structure.md` を変更するため `docs/ja/structure.md` の同期が必須 (`docs/translation-workflow.md`)
-- 本 Issue は #1078 と対になっており、#1078 が扱う SKILL.md ステップ順序の経路には手を入れない
+- Pre-merge AC 1 and 2 are both checked (rubric PASS, judged in-session per `modules/verify-executor.md` full mode against the worktree's own modified files).
+- Post-merge AC (observation, `event=auto-run when=route:pr session=next`) is unresolved by design — it activates on the next pr-route `/code` run after this PR merges. `/verify` should treat it as SKIPPED (unfired) rather than attempt evaluation now.
+- Full `bats tests/` (1443 tests), `validate-skill-syntax.py`, `check-forbidden-expressions.sh`, and `check-allowed-tools.sh` all passed clean on the final commit.
+- A stray uncommitted edit was left in the main repository's working tree (see Design Gaps/Ambiguities) — reconciled after Worktree Exit; `/review` and `/merge` should see a clean main-repo status caused by this PR's own commits only.
