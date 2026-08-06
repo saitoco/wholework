@@ -111,3 +111,9 @@
 
 ### Improvement Proposals
 - N/A（本 Issue は Issue→Spec→Code→Review→Merge→Verify がスムーズに連鎖した好事例であり、改善提案を起こすほどの課題は検出されなかった）
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/514#issuecomment-4701081753
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 514` to verify the condition / https://github.com/saitoco/wholework/issues/514#issuecomment-4756911117
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/514#issuecomment-5195216704
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/514#issuecomment-5202634940
