@@ -67,6 +67,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-06 06:16 UTC: manual-recovery-worktree-rebase
+
+### Context
+- Issue #1179, phase: verify
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: unknown
+
+### Diagnosis
+- cause: base-advanced-during-verify
+- Concurrent /verify 1180 in another session pushed to main while the 1179 verify worktree was active, leaving the worktree branch behind base; git rebase main onto the worktree branch resolved it and ff-merge succeeded on retry
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-08-06 06:15 UTC: manual-recovery-worktree-rebase
 
 ### Context
