@@ -198,7 +198,7 @@ If the same URL/UX verification is also needed against the production URL regard
 
 **Already-checked AC skip rule (default; applies to every Pre-merge condition):**
 
-Any Pre-merge condition already at `- [x]` is excluded from verification and recorded as SKIPPED with the note "already checked; skipped by default" (its verify command, if any, is not re-executed). This is the default behavior for every re-run, not limited to `ac-tier: preview` conditions. Conditions still at `- [ ]` are processed as usual by the Verification priority steps below. Projects that need continuous re-checking after merge duplicate the AC in the `### Post-merge` section (see `## Notes`) — no opt-in re-verification flag is provided.
+Any Pre-merge condition already at `- [x]` is excluded from verification and recorded as SKIPPED with the note "already checked; skipped by default" (its verify command, if any, is not re-executed). This is the default behavior for every re-run, not limited to `ac-tier: preview` conditions. Conditions still at `- [ ]` are processed as usual by the Verification priority steps below. Projects that need continuous re-checking after merge duplicate the AC in the `### Post-merge` section (see `## Notes`) — no opt-in re-verification flag is provided. This rule does not replace the pre-merge-preview AC skip rule above: for an `ac-tier: preview` condition already at `- [x]`, that rule's own SKIPPED note ("preview-tier AC; verified/checked at /review against preview URL") takes precedence — the two rules do not conflict, they converge on the same SKIPPED outcome via different notes for different reasons.
 
 **Patch route detection (run before verification):**
 
