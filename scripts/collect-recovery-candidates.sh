@@ -27,6 +27,14 @@
 #      every entry in the group is counted.
 # This keeps the default output format unchanged; pass --with-tracking to append a 3rd
 # column (tracked:#N / untracked) for consumers that need to distinguish the two.
+#
+# Exclusion (Issue #1191): judged per entry, same as #1152 above. An entry whose
+# "### Improvement Candidate" body starts with "- N/A" (e.g. "N/A (resolved by known
+# catalog)", or a trailing-wording variant such as "N/A (resolved by known catalog:
+# silent-no-op pattern with auto-retry)") is a Tier 2 fallback success that needs no
+# action, so it is dropped from the count entirely -- regardless of the #1152
+# open/closed/cutoff resolution above. The match is a `^- N/A` prefix, not a fixed full
+# string, since the trailing wording is not standardized across the existing entries.
 
 set -euo pipefail
 
@@ -157,10 +165,12 @@ _lookup_issue_by_title() {
 ENTRY_TS=()
 ENTRY_KEY=()
 ENTRY_FILED=()
+ENTRY_NA=()
 
 CURRENT_SYMPTOM=""
 CURRENT_CAUSE=""
 CURRENT_FILED=""
+CURRENT_NA=0
 CURRENT_TS=""
 HAS_PENDING_ENTRY=0
 
@@ -173,6 +183,7 @@ _flush_entry() {
   ENTRY_TS+=("$CURRENT_TS")
   ENTRY_KEY+=("$key")
   ENTRY_FILED+=("$CURRENT_FILED")
+  ENTRY_NA+=("$CURRENT_NA")
 }
 
 while IFS= read -r line; do
@@ -185,6 +196,7 @@ while IFS= read -r line; do
     CURRENT_TS="$(echo "$line" | sed -E 's/^## ([0-9]{4}-[0-9]{2}-[0-9]{2}) ([0-9]{2}:[0-9]{2}) UTC:.*/\1T\2/')"
     CURRENT_CAUSE=""
     CURRENT_FILED=""
+    CURRENT_NA=0
     HAS_PENDING_ENTRY=1
     continue
   fi
@@ -196,6 +208,10 @@ while IFS= read -r line; do
     # Detect "### Diagnosis" body's "- cause: <slug>" line (Issue #1123)
     if echo "$line" | grep -qE '^- cause: .+'; then
       CURRENT_CAUSE="${line#- cause: }"
+    fi
+    # Detect "Improvement Candidate" line starting with N/A (Issue #1191)
+    if echo "$line" | grep -qE '^\- N/A'; then
+      CURRENT_NA=1
     fi
   fi
 done < "$RECOVERY_FILE"
@@ -273,14 +289,16 @@ for ((ki = 0; ki < ${#UNIQUE_KEYS[@]}; ki++)); do
       ;;
     cutoff)
       for ((i = 0; i < ${#ENTRY_KEY[@]}; i++)); do
-        if [ "${ENTRY_KEY[$i]}" = "$key" ] && [[ "${ENTRY_TS[$i]}" > "$cutoff" ]]; then
+        if [ "${ENTRY_KEY[$i]}" = "$key" ] && [ "${ENTRY_NA[$i]}" -eq 0 ] && [[ "${ENTRY_TS[$i]}" > "$cutoff" ]]; then
           count=$((count + 1))
         fi
       done
       ;;
     count_all)
       for ((i = 0; i < ${#ENTRY_KEY[@]}; i++)); do
-        [ "${ENTRY_KEY[$i]}" = "$key" ] && count=$((count + 1))
+        if [ "${ENTRY_KEY[$i]}" = "$key" ] && [ "${ENTRY_NA[$i]}" -eq 0 ]; then
+          count=$((count + 1))
+        fi
       done
       ;;
   esac

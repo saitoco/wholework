@@ -95,3 +95,46 @@
 - **Section 10 の挿入位置**: Section 9 の閾値超過列挙文の直後、`#### Retire-Proposal Comment Posting` の直前とした。Section 8/9/10 の「表示のみ」の 3 セクションをまとめて配置し、verify/Icebox に限定されたエスカレーションベースのコメント投稿ロジック (Retire-Proposal Comment Posting) は変更しない。Issue の Purpose が「起票を復活させるわけではない」と明言しているため、Section 10 に同様のコメント投稿・Issue 起票の仕組みは追加しない。
 - **`N/A` 検出の正規表現**: `^\- N/A` という前方一致のみとし、後続文言は固定しない。理由は、実データ (`docs/reports/orchestration-recoveries.md`) に `N/A (resolved by known catalog)` (`apply-fallback.sh` の `write_recovery_entry()` が書き込む現行の固定文言) と `N/A (resolved by known catalog: silent-no-op pattern with auto-retry)` (トレイリング文言が異なる過去のエントリ) の 2 種が既に存在することを確認済みで、Issue 本文も「または同義の N/A 系文言」を許容しているため。
 - **他 Spec の記述との食い違い確認**: `docs/spec/issue-1185-triaged-issue-ac-audit-gap.md` (別 Issue の使い捨て Spec) に「#1181 により Tier 2 recovery の記録経路が失われ、`collect-recovery-candidates.sh` の閾値判定に Tier 2 が載らない」という記述がある。しかし現行の `scripts/apply-fallback.sh` を直接確認したところ、Tier 2 用の `write_recovery_entry()` (本 Issue が対象とする `N/A (resolved by known catalog)` を書き込む関数) は健在で、`dco-signoff-missing-autofix` / `code-patch-silent-no-op` / `json-mode-silent-hang` の各ハンドラから呼び出されている。上記の記述は古いか、`run-auto-sub.sh` 自身のインライン書き込み経路 (manual / wrapper-retry / Tier 3 のみ) に限定した指摘である可能性が高い。本 Issue のスコープでは追加調査しないが、次の読者向けに記録しておく。
+
+## Code Retrospective
+
+### Deviations from Design
+- Implementation Steps に明示されていなかった追加修正として、`skills/audit/SKILL.md` の frontmatter `allowed-tools` に `${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*` を追加した。Section 10 が本文中で同スクリプトを新規参照するため、`scripts/check-allowed-tools.sh skills/` の pre-commit check がこの欠落を検出した。allowed-tools の同期は SKILL.md 本文変更に伴う機械的な追従であり、設計判断の変更ではない。
+
+### Design Gaps/Ambiguities
+- N/A。Spec の Notes に記録済みの `N/A` 検出正規表現・Section 10 挿入位置・他 Spec との食い違いの3点で実装上の曖昧さは解消済みだった。
+
+### Rework
+- N/A。Implementation Steps の4ステップ (SKILL.md 変更、collect-recovery-candidates.sh 変更、bats テスト追加、既存テスト無変更確認) はいずれも Spec の記述通り一度で実装が完了し、手戻りは発生しなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Pre-merge AC 6 件 (rubric 4 件 + bats command 2 件) を Step 8 で再検証し、全件 PASS を確認 (rubric は SKILL.md Section 10 の実記述と Issue AC 文言を突き合わせ、bats command 2 件は CI `Run bats tests` ジョブ成功による fallback で判定)
+- `review-light` エージェント (4 観点統合) が SHOULD 1 件 (`docs/product.md` の `--retention` 説明が Section 10 未反映) と CONSIDER 1 件 (`collect-recovery-candidates.sh` の N/A 判定が `### Improvement Candidate` サブセクションにスコープされていない) を検出
+- SHOULD は `docs/product.md` / `docs/ja/product.md` の該当行を Section 10 (recovery 候補頻度) を含む記述に更新して解消。CONSIDER は既存の `起票済み`/`cause:` 判定と対称なパターンで現行データでは問題が発現しないため見送り
+
+### Deferred Items
+- Post-merge AC (`/audit stats --retention` の実観察、`verify-type: observation event=auto-run session=next`) は未実行 — 次回 `/auto` 実行時に自動発火する設計のため、本フェーズではスコープ外 (code フェーズからの申し送りを継続)
+- CONSIDER 指摘 (`collect-recovery-candidates.sh:213` の N/A 判定スコープ限定) は見送り — 将来 Diagnosis/Context セクションに `- N/A` で始まる行が追加された場合に誤除外が起きうる点は残存
+
+### Notes for Next Phase
+- `docs/product.md` / `docs/ja/product.md` の修正コミットを追加済み (`Refs:` に本レビューの PR Review URL を記録)。`/merge` 前に追加の docs 差分確認は不要
+- Steering Doc sync candidate の抽出時、`docs/structure.md`/`docs/tech.md` だけでなく `docs/product.md` も候補に含める運用上の教訓が今回発生 (下記 review retrospective 参照)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+特筆事項なし。`review-light` の Spec 乖離観点では問題は検出されず、Implementation Steps がほぼ逐語的に実装されていることを確認した。
+
+### Recurring issues
+特筆事項なし。今回検出した 2 件 (SHOULD 1 件、CONSIDER 1 件) はいずれも本 Issue 固有の指摘であり、過去の review フェーズで繰り返し検出されているパターンとの一致は確認できなかった。
+
+補足として、CONSIDER 指摘 (`collect-recovery-candidates.sh` の N/A 判定が `### Improvement Candidate` サブセクションにスコープされていない) は、同スクリプトの既存実装 (`起票済み #N`/`cause:` 判定) がもともと同じ非スコープ設計であることに起因する。新規に導入された弱点ではなく、コードベースの既存方針を踏襲した結果である点を記録しておく。
+
+### Acceptance criteria verification difficulty
+特筆事項なし。Pre-merge AC 6 件 (rubric 4 件 + bats command 2 件) はいずれも UNCERTAIN を経由せず確定的に判定できた — rubric 4 件は SKILL.md Section 10 の実記述と Issue AC 文言の突き合わせで PASS、bats command 2 件は CI `Run bats tests` ジョブ成功への fallback で PASS。verify command の記述・rubric 文言の精度に起因する追加調査は不要だった。
+
+### Improvement proposal candidates (aggregated at /verify)
+- Steering Doc sync candidate の抽出漏れ: 本 PR は `docs/structure.md`/`docs/tech.md` (+ `docs/ja/` 対訳) を正しく同期したが、同じ Steering Document である `docs/product.md` は候補から漏れていた。`/audit` サブコマンドの出力仕様が変わる Issue で、Steering Doc 同期チェックの対象に `docs/product.md` の用語集エントリを明示的に含める運用上の見直し余地がある。
