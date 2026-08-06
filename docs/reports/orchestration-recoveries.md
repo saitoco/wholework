@@ -85,7 +85,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1076 (closed 2026-08-06T07:37:58Z — worktree-merge-push.sh に base=current branch 経路の rebase fallback を追加)
 
 ## 2026-08-06 06:16 UTC: manual-recovery-worktree-rebase
 
@@ -105,7 +105,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1076 (closed 2026-08-06T07:37:58Z — worktree-merge-push.sh に base=current branch 経路の rebase fallback を追加)
 
 ## 2026-08-06 06:15 UTC: manual-recovery-worktree-rebase
 
@@ -125,7 +125,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 - success
 
 ### Improvement Candidate
-- 未起票
+- 起票済み #1076 (closed 2026-08-06T07:37:58Z — worktree-merge-push.sh に base=current branch 経路の rebase fallback を追加)
 
 
 ## 2026-08-06 04:45 UTC: review-tier3-recovery
