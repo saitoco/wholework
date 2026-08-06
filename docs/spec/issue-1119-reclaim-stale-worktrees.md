@@ -136,3 +136,40 @@ Separately, the Base Branch Conflict Pre-check surfaced that `docs/structure.md`
 
 ### Acceptance criteria verification difficulty
 Nothing to note. All 4 Pre-merge rubric ACs were written at a granularity directly verifiable against the implementation logic and the bats suite; no UNCERTAIN results or verify command inaccuracies were encountered. The `/code` Phase Handoff's self-assessment (all 4 PASS) held up under this independent `/review` re-verification.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- triage が Background に既存コメント 2 件の実測データを統合し、`/spec` がコメントを再参照せずに実装制約を把握できる状態にした。加えて AC を 2 件追加 (孤児ブランチの回収 + squash merge 済みブランチの `headRefOid` 安全削除判定、未コミット変更のある worktree の保護)。この 2 件は verify 時点で最も価値が高いことが判明した — dry-run で未コミット変更 6 件が実際に検出され、AC4 がなければ実装されず成果を失う経路が残っていた。**実測データを Issue コメントとして先に投入しておくと triage が AC を厚くする**という因果が観測できた事例。
+- 初回の `run-issue.sh` が出力 9 行 (開始バナーのみ) で終端バナーもなく終了した。Issue 側には `phase/issue` ラベルも Retrospective コメントも残っておらず、triage は実行されていなかった。再実行で正常完了。`docs/reports/external-kill-investigation.md` が扱う external kill と同型と見られる。
+
+#### spec
+
+- 新規スクリプト方式 (`scripts/reclaim-stale-worktrees.sh` を単体コマンドとして実装、既定 dry-run) を選んだ判断が妥当だった。wrapper の EXIT trap や Worktree Entry の孤児回収に埋め込む案と比べ、破壊的操作を明示的な `--apply` の背後に置ける点、および実データに対して安全に試せる点が大きい。実際この verify で dry-run を回して 3 安全策の動作を確認できた。
+- 設計段階でリポジトリの実データ (worktree 45 件中 43 件が stale、ディレクトリ名とチェックアウト中ブランチ名の不一致が複数) を確認し Root Cause に反映している。
+
+#### code
+
+- `set -e` 下の短絡評価バグを実データ smoke test で自力発見・修正した。`[ "$state" = "CLOSED" ] && COMPLETION_STATE="done"` を関数の最終文に置くと、条件が false のとき関数の戻り値が 1 になり、呼び出し元でスクリプト全体が無言終了する。bats テストだけでは通っていた可能性が高く、**実データに対する smoke test が単体テストを補完した**事例。
+- bats 9 ケースで AC1〜AC4 を実 git worktree に対してカバー。全 1475 件 PASS。
+
+#### review
+
+- `--light` で MUST 0 件、SHOULD 2 件。1 件修正、1 件は並行 PR #1211 起因の pre-existing drift (`docs/structure.md` のスクリプト数カウンタ off-by-one) として見送り。**並行 PR による docs カウンタの競合**は本セッションで複数回観測されている類のもので、単一 PR では正しい値を確定できないという判断は妥当。
+
+#### merge
+
+- 特記なし。CI 9 件 SUCCESS、conflicts なし。
+
+#### verify
+
+- Post-merge の opportunistic 条件 (「数セッション運用したのち蓄積していないことを確認」) は時間条件が未成立のため SKIPPED。代わりに merge 済みスクリプトを実データに対して dry-run し、3 安全策 (並行セッション除外 / 未コミット変更保護 / 命名規約外の保留) が機能することを確認して Issue コメントに記録した。**AC そのものは判定できないが、実装の実地動作は確認できる**というケースで、判定を偽装せずに материал を残す形が取れた。
+- dry-run が本 verify 自身の worktree (`verify+issue-1119`) を `locked + HEAD matches main` として除外した。回収スクリプトが自分を実行しているセッションを巻き込まないことが、実行中の実データで確認できた。
+
+### Improvement Proposals
+
+- `run-issue.sh` の external kill (出力 9 行、終端バナーなし、exit code 0 として報告) が本セッションで発生した。`scripts/retry-on-kill.sh` は 300s 未満の kill を wrapper レベルで再試行する機構だが、今回は再試行された形跡がない (ログに retry の記録がなく、Issue 側にも痕跡なし)。`run-issue.sh` が `retry-on-kill.sh` を source しているか、および開始直後 (数十秒) の kill が閾値判定に載るかを確認する価値がある。`docs/reports/external-kill-investigation.md` の追記対象。
+- 未コミット変更が残る worktree が実データで 6 件見つかった (`review+pr-1001` 6 files / `review+pr-1036` 2 files / `review+pr-1090` 4 files / `review+pr-1160` 8 files / `code+issue-485` 1 file / `patch+issue-33` 1 file)。本 Issue のスクリプトはこれらを警告するに留まるため、**回収されないまま残り続ける**。内容が救うべき成果か破棄してよいかを判定する手順 (関連 Issue/PR の状態と突き合わせ、テスト実行で健全性を確認、等) が別途要る。#1201 では同種の残留から MUST 級の修正が救出されている。
