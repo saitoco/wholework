@@ -183,27 +183,45 @@ Edit / Write ツールは `.claude/` 配下を sensitive file として拒否す
 - `blockedBy` が Issue リスト文脈 (`repository.issues.nodes[]`) でも取得できるかは設計時点で未確認だったため、実際に GraphQL を叩いて検証した (`#1167 → #1157 (CLOSED)` が返ることを確認)。結果として「CLOSED の blocker も `blockedBy` に残る」ことも判明し、これが「解決済み blocked-by」を GraphQL 側だけで検出できる根拠になった
 - `gh api graphql` が未指定の nullable 変数 (`$cursor:String`) を null として送るかは、`-F cursor=` に空文字を渡すと `after:""` になりエラーとなるリスクがあったため、1 ページ目は `-F cursor` を渡さない設計に倒した。実装フェーズで `--all` のページングテストにより確認されること
 
+## Code Retrospective
+
+### Deviations from Design
+
+- 実装ステップの順序どおりに進めたが、Spec の「Steering Docs sync candidate」として保留されていた `tests/gh-graphql.bats` への `get-open-issues-blocked-by` 名前付きクエリのテスト追加は、既存の他名前付きクエリ (`get-blocked-by` 等) と同じテストパターンを踏襲するコストが低かったため実施した。既存 10 件のテストに 1 件追加する形で、既存アサーションへの影響はない
+
+### Design Gaps/Ambiguities
+
+- N/A — Spec の分岐表 (「`scripts/get-blocked-by.sh` の分岐の挙動 (exhaustive)」) がそのままテストケース設計の1次ソースとして機能し、実装中に解釈の揺れは発生しなかった
+
+### Rework
+
+- N/A
+
+### Verification notes
+
+- 3 件の rubric AC は、実装エージェント自身による自己採点ではなく、diff の文脈を持たない独立した adversarial grader sub-agent に判定させた。3 件とも PASS で、根拠として引用されたファイル/行は実装と一致していた
+- `scripts/get-blocked-by.sh` を実際の GraphQL API に対して実行し、単一 Issue モード (#1200 自身、blocker 0 件で空出力・exit 0) と `--all` モード (`#1167 → #1157 (CLOSED)` の既知の関係を取得) の両方を確認した。後者は Spec の Uncertainty resolution に記録されていた実測値と完全に一致し、設計時点の検証が実装フェーズでも再現されることを確認できた
+- `skills/auto/SKILL.md` と `skills/spec/SKILL.md` は複数のテストファイルから参照されているため (behavioral change detection)、`bats tests/get-blocked-by.bats` / `tests/auto-batch.bats` の直接テストに加えてフルスイート (`bats tests/`, 1476 件) を実行し、全件 PASS を確認した
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- Issue 本文の候補 1 を採用 — 読み取りのみ GraphQL へ統一し、body の `Blocked by #N` は書き込みトリガーとして存続させる。`gh-check-blocking.sh` / `set-blocked-by.sh` / `modules/retro-proposals.md` の書き込み経路は一切変更しない
-- 判定側の読み取り窓口を `scripts/get-blocked-by.sh` 1 本に集約し、exit code 契約を `gh-check-blocking.sh` と同一 (0 = OPEN blocker なし / 1 = エラー / 2 = OPEN blocker あり) に揃えた
-- `--all` 一括モードを同スクリプトに持たせ、`/triage --backlog dependency` のグラフ構築を 1 回 (最大でも数回のページング) の GraphQL 呼び出しに抑える。`--all` は成功時つねに exit 0 (exit 2 のシグナルは単一 Issue モード限定)
-- `/auto` List mode gate では判定直前に `gh-check-blocking.sh` (非 `--dry-run`) を実行して body ショートカットを materialize する。これにより gate は現行より厳密になる
-- 孤児依存を「GraphQL グラフの異常」から「body テキストの衛生チェック」へ再定義した (GraphQL 関係は構造的に孤児になりえない)
+- Spec 記載のとおり実装ステップ 1〜10 をすべて実施し、設計からの逸脱は発生しなかった
+- rubric AC 3 件は実装エージェント自身ではなく、独立した adversarial grader sub-agent に diff とファイル内容を読ませて判定させた (自己採点バイアスの排除)。3 件とも PASS
+- `skills/auto/SKILL.md` と `skills/spec/SKILL.md` が挙動変更検知の対象になったため、直接テスト (`get-blocked-by.bats` / `auto-batch.bats`) に加えてフルスイート `bats tests/` (1476 件) を実行し全件 PASS を確認
+- `tests/gh-graphql.bats` への `get-open-issues-blocked-by` テスト追加 (Spec で「Steering Docs sync candidate」として保留されていた項目) を実施 — 既存パターンを踏襲するコストが低く、カバレッジの一貫性を優先した
 
 ### Deferred Items
 
 - `docs/ja/structure.md` の `get-sub-issue-progress.sh` 欠落 (既存 drift) は本 Issue では修正しない
 - `/triage` の「解決済み blocked-by」に対する `remove-blocked-by` の自動実行は行わない (report のみ)。tier-aware な自動削除は将来の検討事項
-- `.claude/settings.json.template` に `set-blocked-by.sh` のエントリが無い既存の不整合は本 Issue では補わない (新規の `get-blocked-by.sh` のみ追加する)
+- `.claude/settings.json.template` に `set-blocked-by.sh` のエントリが無い既存の不整合は本 Issue では補わない (新規の `get-blocked-by.sh` のみ追加した)
+- Post-merge AC (「GraphQL で blocked-by を設定し body にはテキストを書かない Issue を `/auto --batch` に含め、blocker が未完了の間 skip されることを観察する」) は次回 `/auto --batch` 実行時の観察待ち
 
 ### Notes for Next Phase
 
-- `tests/auto-batch.bats` の既存 10 件は List mode 書き換え後も PASS する必要がある。特に `blocked-by check present` (grep `blocked`) と `phase/done gate condition present` (grep `phase/done`) を壊さないこと。新規追加する 2 件は `grep -q 'get-blocked-by.sh'` (exit 0 期待) と `grep -q 'json body'` (exit **非** 0 期待) の形にすると引用符が入れ子にならず安全
-- `.claude/settings.json.template` は Edit / Write ツールが拒否する。`sed` または `python3` で編集すること。`.gitignore` に `!.claude/settings.json.template` の un-ignore があるため `git add -f` は不要
-- `scripts/get-blocked-by.sh` は bash 3.2+ 互換で書くこと (`mapfile` / 連想配列は使わない)。sibling script は `SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"` で解決する
-- `get-open-issues-blocked-by` の 1 ページ目は `-F cursor=` を**渡さない** (空文字を渡すと `after:""` となりエラーになりうる)。2 ページ目以降のみ `endCursor` を渡す
-- `docs/ja/workflow.md` の同期では「入力ショートカット」という日本語表記を必ず含めること (受け入れ条件 6 の `file_contains` パターン)
+- `/review` では PR #1211 の diff に加え、adversarial grader による rubric 判定根拠 (ファイル/行の引用) を参照すると二重チェックになる
+- `scripts/get-blocked-by.sh` は実 GraphQL API に対して動作確認済み (#1200 自身: blocker 0 件で空出力・exit 0。`--all`: 既知の `#1167 → #1157 (CLOSED)` 関係を取得)
+- `/verify` の post-merge observation AC は `/auto --batch` の次回実行セッションで確認すること (`verify-type: observation event=auto-run session=next`)
