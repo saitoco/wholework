@@ -171,21 +171,29 @@ Issue #1058 for the incident this rule generalizes from.
 | Phase | Working branch | Base propagation path |
 |-------|-----------------|------------------------|
 | `/spec` | worktree branch | `Exit: merge-to-main` → `worktree-merge-push.sh` |
+| `/spec`, worktree skipped (`ENTERED_WORKTREE=false`) | base branch, in the main repository | Should be `worktree-merge-push.sh` (lock+push only, no `--from`), matching the `/code` patch-route row below — see Known gap |
 | `/code` patch / operate route | worktree branch | `Exit: merge-to-main` → `worktree-merge-push.sh` |
 | `/code` patch route, worktree skipped (`ENTERED_WORKTREE=false`; XS interactive direct-launch only — see `skills/code/SKILL.md` Step 2) | base branch, in the main repository | `worktree-merge-push.sh` (lock+push only, no `--from` — see "When `ENTERED_WORKTREE=false`" above) |
 | `/code` pr route | worktree branch (= PR branch) | PR merge (`/merge`) |
 | `/verify` | worktree branch | `Exit: merge-to-main` → `worktree-merge-push.sh` |
 
-All in-session callers of `append-consumed-comments-section.sh` (see `modules/l0-surfaces.md`
-§ "Bash wrapper fallback") pass `--no-push`: the commit lands on the working branch shown
-above, and this table's propagation path — not a push issued by the script itself — carries it
-to base. `/code` pr route also passes `--no-push`; it differs only in *how* the commit reaches
-the remote — its own Step 12 pushes the worktree (= PR) branch directly afterward, since the PR
-branch has no `worktree-merge-push.sh` propagation path of its own.
+`/spec`'s and `/code`'s in-session call sites to `append-consumed-comments-section.sh` (see
+`modules/l0-surfaces.md` § "Bash wrapper fallback") pass `--no-push`: the commit lands on the
+working branch shown above, and this table's propagation path — not a push issued by the
+script itself — carries it to base. `/code` pr route also passes `--no-push`; it differs only
+in *how* the commit reaches the remote — its own Step 12 pushes the worktree (= PR) branch
+directly afterward, since the PR branch has no `worktree-merge-push.sh` propagation path of its
+own. `/verify`'s call site does not yet pass `--no-push` — see the Known gap below.
 
-**Known gap (not yet migrated):** `skills/verify/SKILL.md`'s call site still omits `--no-push`
-and pushes the worktree branch itself, which is the source of the residual
-`origin/worktree-verify+issue-*` branches. Out of scope for #1058; tracked as a deferred item.
+**Known gaps (not yet migrated):**
+- `skills/verify/SKILL.md`'s call site still omits `--no-push`
+  and pushes the worktree branch itself, which is the source of the residual
+  `origin/worktree-verify+issue-*` branches. Out of scope for #1058; tracked as a deferred item.
+- `skills/spec/SKILL.md` Step 14's `ENTERED_WORKTREE=false` branch still issues a bare
+  `git push origin main` rather than routing through `worktree-merge-push.sh` (lock+push only),
+  so this table's `/spec`, worktree-skipped row describes the intended propagation path, not the
+  current implementation. Pre-existing (not introduced by #1058) and out of its scope; tracked as
+  a deferred item.
 
 ### `source`-based shell function calls are blocked by the worktree isolation guard
 
