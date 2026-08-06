@@ -321,3 +321,58 @@ Kills appear in exactly one cell — the one with **both** long uptime and concu
 ### Concurrency has a confirmed cost regardless of kills
 
 Even with 0 kills, the concurrent arm produced **1 `ff-only-merge-fallback`** (main advanced 2 commits under a verify worktree; recovered by rebasing the worktree branch) and **3 `concurrent_commit_detected`** events. The single-session arm earlier the same day produced 2 fallbacks under lighter concurrency. Git contention on `main` is a deterministic cost of parallel operation in this repository, independent of the kill question, and it scales with commit frequency — which is why committing session directories for single-shot runs was rejected above.
+
+---
+
+## 2026-08-06 Update (Arm 4a extended — 8h at 2–4 concurrent wrappers, 0 kills, uptime 34→40h)
+
+Session `63129-1785977471` ran `/auto --batch 1175 1174 1076 1188` for **8h21m** (00:51–09:12 UTC) with 2–4 concurrent `claude -p` processes throughout. This is the longest sustained concurrent window measured to date and roughly triples Arm 4a's sample.
+
+### Result: 0 external kills
+
+12 `wrapper_exit` events (4 Issues × code-pr / review / merge). Exactly one was non-zero:
+
+| Issue | Phase | Exit | Classification |
+|---|---|---|---|
+| #1174 | review | **143** | **watchdog kill, not external** — `Exit code:` trailer present, `wrapper_exit` event present, explicit watchdog diagnosis (2600s silent after CI wait, pid=31881). Tier 3 sub-agent recovered via `action=retry` |
+
+All 11 others exited 0. The detection signature (143/unknown **+** missing trailer **+** missing `wrapper_exit`) was never satisfied.
+
+### Concurrency measured, not assumed
+
+| Time (JST) | Concurrent `claude -p` | Composition | load avg | uptime |
+|---|---|---|---|---|
+| 10:00 | 0 | other session between wrapper spawns | — | 1d 10h |
+| 10:10 | 4 | self 1 + foreign 1 | 2.69 | 1d 10h |
+| 11:35 | 4 | **three full bats suites simultaneously** | **5.19** | 1d 11h |
+| 11:56 | 3 | self 1 + foreign 2 | 3.13 | 1d 12h |
+| 15:56 | 4 | **self 2** + foreign 1 | 3.32 | 1d 16h |
+
+**New axis: intra-session parallelism.** At 15:56 two wrappers ran from the *same* `/auto` session (PGID 25686 — `run-auto-sub.sh 1076` and `run-issue.sh 1188`). Every prior Arm 4a sample was one-wrapper-per-session. No kills resulted.
+
+### The 2×2, updated
+
+|  | Long uptime | Freshly rebooted (≤ ~40h) |
+|---|---|---|
+| **No concurrency** | 2026-08-03 Arm 1: 0 kills | 2026-08-05 session `6722`: 0 kills |
+| **Concurrent** | **2026-07-13〜31: kills (30+)** | 2026-08-05 `65022`: 0 · **2026-08-06 `63129`: 0 (8h, 2–4 concurrent)** |
+
+The "freshly rebooted × concurrent" cell is now substantially reinforced. **Concurrency alone remains insufficient to reproduce the symptom at low uptime**, across ~10 hours of cumulative concurrent operation over two days.
+
+This does not confirm H-b'; it continues to be consistent with uptime being a necessary co-factor, and equally consistent with an upstream harness change between July and August. The distinguishing experiment is still a passive wait for uptime to accumulate — see #1146's watch item.
+
+### Concurrency cost, restated with a larger sample
+
+| Cost | Count |
+|---|---|
+| `concurrent_commit_detected` | **40** |
+| `ff-only-merge-fallback` (inline, self-recovered) | 1 |
+| **Parent-session manual recovery** (inline fallback hit the unimplemented true-side path) | **1** (#1174 verify) |
+
+The manual recovery is the one that matters: it required human-in-the-loop intervention mid-batch. Its root cause — `worktree-merge-push.sh`'s true-side (`current_branch == BASE_BRANCH`) branch lacking a rebase fallback — was **fixed within this same batch as #1076**. Two further same-day occurrences from other sessions (#1179, #1180 verify) are recorded in `docs/reports/orchestration-recoveries.md` as `manual-recovery-worktree-rebase`.
+
+Note the vocabulary distinction, which the earlier entries above blur: `ff-only-merge-fallback` is **inline logic inside `worktree-merge-push.sh`**, not a Tier 2 catalog handler (`scripts/apply-fallback.sh:75` marks it `not yet implemented`). When that inline logic succeeds, nothing is recorded. When it fails, recovery falls to whoever called it — a `run-*.sh` wrapper (→ Tier 1/2/3) or, for in-session `/verify` which has no wrapper, **the parent session** (→ `manual_intervention`). All four of today's `manual-recovery-worktree-rebase` entries are of the latter kind; three of them occurred in the `verify` phase.
+
+### Measurement caveat carried forward
+
+One `manual_intervention` event from this session (the #1174 recovery) was **misattributed to session `41961-1785999585`**: the `--write-manual-recovery` call did not regenerate its PGID pointer file first, so `restore_auto_session_pointer` read `.tmp/auto-session-current`, which a concurrent session had overwritten. This is #1075's known failure mode, and it means **`manual_intervention` counts remain unreliable for per-session attribution under concurrency** — the same caveat that applies to the July data. Counts of the *recoveries log* (`docs/reports/orchestration-recoveries.md`), which carries an explicit `- Issue #N, phase: P` Context line, are not affected.
