@@ -86,6 +86,8 @@ Issue 本文が挙げる 4 候補 (無効化 / 閾値引き上げ / group-key �
 
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1179#issuecomment-5192627139
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1179#issuecomment-5195224623
 ## Verify Retrospective
 
 ### Phase-by-Phase Review
