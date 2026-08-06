@@ -373,6 +373,55 @@ JSON_EOF
   ! echo "$output" | grep -qF "manual-recovery-review-rerun"
 }
 
+@test "N/A exclusion: group-key with only N/A entries (both wording variants) never appears, even at threshold 1" {
+  cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
+## 2026-06-01 10:00 UTC: na-only-symptom
+
+### Improvement Candidate
+- N/A (resolved by known catalog)
+
+## 2026-06-02 10:00 UTC: na-only-symptom
+
+### Improvement Candidate
+- N/A (resolved by known catalog: silent-no-op pattern with auto-retry)
+
+FIXTURE_EOF
+
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 1
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "N/A exclusion: group-key with mixed N/A and normal entries counts only the normal ones" {
+  cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
+## 2026-06-01 10:00 UTC: mixed-na-symptom
+
+### Improvement Candidate
+- N/A (resolved by known catalog)
+
+## 2026-06-02 10:00 UTC: mixed-na-symptom
+
+### Improvement Candidate
+- retro/verify #700 filed
+
+## 2026-06-03 10:00 UTC: mixed-na-symptom
+
+### Improvement Candidate
+- retro/verify #700 filed
+
+## 2026-06-04 10:00 UTC: mixed-na-symptom
+
+### Improvement Candidate
+- N/A (resolved by known catalog: silent-no-op pattern with auto-retry)
+
+FIXTURE_EOF
+
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 1
+  [ "$status" -eq 0 ]
+  # 4 entries total, 2 are N/A-only -- only the 2 normal entries are counted.
+  echo "$output" | grep -E $'^mixed-na-symptom\t2$'
+}
+
 @test "wrapper-retry-on-kill: H2 entries detected by frequency parser" {
   cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
 ## 2026-06-01 10:00 UTC: wrapper-retry-on-kill
