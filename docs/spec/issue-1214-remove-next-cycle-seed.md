@@ -170,3 +170,76 @@ Issue 本文が記載していた行番号のうち、実ファイルとずれ�
 ### 翻訳同期の範囲
 
 `docs/translation-workflow.md` の同期義務は top-level `docs/*.md` に限定される。本 Issue では `docs/tech.md` → `docs/ja/tech.md` がこれに該当する。`docs/guide/customization.md` は top-level ではないが JA ミラーが既に存在するため同期対象に含めた。`docs/guide/autonomy.md` は JA ミラーが未作成であり、新規作成は本 Issue のスコープ外とする。
+
+## issue retrospective
+
+`/issue 1214 --non-interactive` 実行時の記録 (Issue コメント 2 件から転記)。
+
+### Triage 結果
+- Type: Task (削除・責務移管系のリファクタリングのため)
+- Size: L (変更対象 10 ファイル。実質的なロジック変更は `skills/auto/SKILL.md` の 1 ファイルのみで、他は設定・ドキュメントの削除が中心のため、複雑度調整は増減が相殺され L のまま確定)
+- Value: 3 (Impact=2 [shared component: modules/ 配下の共有ファイルを変更 +2]、Alignment=4 [product.md Vision「governance-and-verification harness」への高い適合 — 1 か月半動作しなかった死んだ機能の撤去は harness の監査可能性を直接改善]、raw=6)
+- 重複候補: なし (#953 `--until` モードは近縁だが別スコープと判断)
+
+### Verify command 監査
+既存 AC の verify command に構文上の欠陥 (grep 引数順、常時 PASS/FAIL、checkbox format 等) は検出されなかった。`file_contains "skills/auto/SKILL.md" "Recommend: run /audit drift"` は現状の main でも既に文字列が存在するため単体では常時 PASS だが、これは「advisory 文言がリファクタ中に誤って削除されないことを検証する」意図的な回帰防止用チェックであり、隣接する rubric AC (無条件昇格の意味的検証) とセットで機能するため、欠陥としては扱わなかった。
+
+### 自動解決した曖昧点
+1. **`docs/tech.md` / `docs/ja/tech.md` の `#702, #703` フォローアップ言及** — 該当文を丸ごと削除。#702・#703 とも CLOSED 済みで、#703 は本 Issue の撤去対象そのもの。「フォローアップ Issue で追跡中」が事実と矛盾するため。他の選択肢 (Issue 番号を最新化して残す) は追跡すべき follow-up が実在しないため棄却
+2. **`modules/autonomy-tier.md` 除外注記の扱い** — 変更不要。D はマトリクス列のみ除外 (経路表には残存)、E は経路表の行ごと削除で状況が異なるため、注記を E に拡張する必要はない
+
+### AC 完全性の補強
+- `modules/autonomy-tier.md` の frontmatter 宣言例に対応する verify command を追加
+- `modules/detect-config-markers.md` は `NEXT_CYCLE_SEED_ENABLED` チェックだけでは YAML パース規則行を取りこぼすため、`next-cycle-seed` キー全体を対象とする verify command を追加
+
+### 削除系事前スキャン (追記)
+先の retrospective 投稿後に実施し忘れに気づき、追って `next-cycle-seed` / `next_cycle_seeded` / `next-cycle.json` / `Seed file emission` / `NEXT_CYCLE_SEED_ENABLED` を repo 全体で grep。当初の Changed Files に無かった `docs/guide/autonomy.md` を検出し追記した。その他のヒット (`docs/spec/issue-{701,703,704,772,854,1014}-*.md`、`docs/sessions/**/events.jsonl`) はすべて歴史的記録として編集対象外と確定。
+
+### その他
+- Dependency check: ブロッカーなし
+- Stale check: 停滞パターンなし
+- Sub-issue splitting: non-interactive モードのため skip
+
+## spec retrospective
+
+### Minor observations
+
+- 削除系事前スキャンのキーワード集合が複合語 (`next-cycle-seed` / `Seed file emission` / `NEXT_CYCLE_SEED_ENABLED` 等) のみで構成されていたため、機能の**素の名詞** (小文字 `seed`) を使った散文言及を 4 箇所取りこぼしていた。`/spec` の追加 grep で `docs/guide/autonomy.md:13,32` と `docs/guide/customization.md:73,147` を検出。削除系スキャンのキーワード集合には、識別子だけでなく機能を指す素の名詞を含めるべき
+- Issue 本文が引用していた行番号のうち 2 箇所が実ファイルとずれていた (`skills/auto/SKILL.md` の対象ブロック: 本文 L1210-1236 / 実際 L1215-1241、`modules/autonomy-tier.md` の除外注記: 本文 L48 / 実際 L49)。起票から `/spec` までの間に main が進んだことによるもので、Spec 側は行番号ではなく前後の見出し・文脈で位置指定した
+- `skills/auto/SKILL.md` frontmatter の `loop-paths-fallback: [A]` は `validate-skill-syntax.py` の `KNOWN_FIELDS` に含まれておらず、unknown field 警告を出し続けていた。本 Issue の削除でこの警告も解消される (副次的な効果であり Issue の目的ではない)
+
+### Judgment rationale
+
+- **マトリクスの列削除は、同じ行の自由記述セルも読む**。`modules/autonomy-tier.md` の Tier × 経路マトリクスから E 列を消すと、L2 Assisted 行の Default use 文「Seed is automated; cron requires a human to trigger.」が指示対象を失う。この文はどのスキャンキーワードにも一致しない (機能を名前ではなく意味で参照している) ため、grep ベースの影響調査だけでは構造的に検出できない。列・行の削除を伴う変更では、削除対象と同じ表内の自由記述セルを必ず目視すること
+- **撤去対象 Issue 番号の連鎖参照**。`modules/autonomy-tier.md` の L0 Layer Table が L2 層の drive mechanism を「Tail extension (#700/702/703)」と説明していた。#703 = 本 Issue の撤去対象そのものであり、撤去後は存在しない実装を実装例として挙げ続けることになる。機能撤去時は「その機能を実装した Issue 番号」も検索キーとして扱う価値がある
+- **`loop-paths-fallback` は削除**。経路 E が消えると `loop-paths-used` に残るのは A のみで、A は全 tier で常に許可される (`modules/autonomy-tier.md` 宣言規則) ため fallback が発火する条件が存在しなくなる。同じく `[A]` のみを宣言する `skills/verify/SKILL.md` が fallback 行を持たないことを確認し、既存の慣例に合わせた
+- **`allowed-tools` の `emit-event.sh:*` は残す**。本文からの参照はゼロになるが、`validate-skill-syntax.py` のチェックは body → allowed-tools の片方向 (過少宣言のみ検出) で、過剰宣言は CI を落とさない。実装を読んで確認した上で「無害かつ将来の再利用余地あり」として意図的に残す判断とし、Spec の `## Exclusions` に根拠ごと記録した
+
+### Uncertainty resolution
+
+- **`file_not_contains` の角括弧パターンは常時 PASS の罠**。Issue 起票時の AC `file_not_contains "modules/autonomy-tier.md" "loop-paths-used: [A, E]"` は、Grep 経由で評価される際 `[A, E]` が文字クラスとして解釈される。ripgrep で実検証したところ、このパターンは文字列 `loop-paths-used: [A, E]` に**マッチしない** (クラスは 1 文字ぶん、実文字は `[`) ため、変更前でも PASS してしまい削除を検証できない。メタ文字を含まない `"A, E"` に差し替えた。`/issue` の verify command 監査は grep 引数順・常時 PASS/FAIL・checkbox format を見ているが、「`file_contains` 系のパターンに正規表現メタ文字が含まれ、リテラル解釈と正規表現解釈で結果が変わる」クラスは検出対象外だった
+- **Issue 本文が `/code` に先送りしていた 2 件を設計時に解消**。(a) `collect-run-facts.sh` / `get-auto-session-report.sh` が未知イベント型を無視するか → 両スクリプトとも `select(.event == "<既知イベント名>")` のホワイトリスト方式であることを確認、過去 20 件の `next_cycle_seeded` は無害。(b) `.tmp/auto-session-*.json` の `"mode": "batch"` が実在するか → `skills/auto/SKILL.md` Step 1 の session metadata 書き込みで確認。どちらも Spec の Notes に検証済みとして記録し、`/code` が再調査しなくて済むようにした
+- **`docs/ja/guide/autonomy.md` の未作成は放置でよい**。`docs/guide/autonomy.md` の冒頭に JA へのリンクがあるが実ファイルは存在しない。`docs/translation-workflow.md` の同期義務は top-level `docs/*.md` に限定されており、`docs/guide/` 配下は対象外。本 Issue 以前からの状態であり、翻訳ファイル新規作成はスコープ外とした
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- `skills/auto/SKILL.md` の Next-cycle seed ブロックは「削除して 1 段落に置換」であり、条件分岐を残した縮小ではない。advisory 出力は tier / 設定フラグのいずれにも依存しない唯一の挙動に昇格させること (rubric AC 3 がこれを意味的に検証する)
+- Issue 本文の行番号は実ファイルとずれている箇所がある。Implementation Steps は前後の見出しで位置を指定してあるので、行番号ではなくそちらに従うこと
+- `skills/auto/SKILL.md` の `allowed-tools` は変更しない。`emit-event.sh:*` は本文参照がゼロになるが意図的に残す (根拠は Spec の `## Exclusions`)
+- `docs/guide/autonomy.md` の JA ミラーは新規作成しない (`docs/translation-workflow.md` の同期義務は top-level `docs/*.md` 限定)
+
+### Deferred Items
+
+- Post-merge の observation AC (`event=auto-run session=next`) は次回 `/auto --batch` 完走時の観察待ち。`.tmp/next-cycle.json` が生成されないこと・`next_cycle_seeded` が emit されないこと・`/audit drift` 推奨が出ることの 3 点を確認する
+- `.tmp/auto-events.jsonl` に残る過去 20 件の `next_cycle_seeded` は削除しない (読み取り側は未知イベント型を無視するため無害)
+- `docs/ja/guide/customization.md` の翻訳ドリフト (EN 側の `.wholework.yml` autonomy サンプルブロックと `autonomy` 設定行が JA ミラーに存在しない) は本 Issue 以前からの既知状態。本 Issue では解消しない
+
+### Notes for Next Phase
+
+- `scripts/emit-event.sh` のコメントブロック削除では、前後のイベント (`retro_proposal_classified` / `verify_fail_marker_posted`) との区切り `#` 単独行が二重にも欠落にもならないよう確認すること
+- `modules/autonomy-tier.md` の E 列削除は、ヘッダ行・区切り行・L1/L2/L3 の 3 データ行の計 5 行すべてが対象。加えて L2 Assisted 行の Default use 文 (`Seed is automated; ...`) の書き換えを忘れないこと — この文はどの verify command キーワードにも一致しないため、AC 13 (`file_not_contains "Seed is automated"`) が唯一の検出手段
+- SKILL.md 編集時の `validate-skill-syntax.py` 制約: 半角感嘆符・triple backtick・YAML block scalar を新規導入しない
+- Size L / pr route のため CI verify command は `github_check "gh pr checks"` 形式で正しい (`always-pr` は未設定だが Size L はもともと pr route)
