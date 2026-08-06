@@ -127,7 +127,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Entry
 
 **Worktree naming convention:** `verify/issue-$NUMBER`
 
-This step is always mandatory regardless of the Issue's Size or route (including XS/S patch route) — there is no condition under which it may be skipped. Skipping it causes Step 4's `append-consumed-comments-section.sh` to commit/push directly onto a branch outside the worktree, bypassing `worktree-merge-push.sh`'s locking mechanism and risking a race when multiple `/verify` runs execute concurrently (e.g. under `/auto --batch`) (Issue #1037).
+This step is always mandatory regardless of the Issue's Size or route (including XS/S patch route) — there is no condition under which it may be skipped. Skipping it causes Step 4's `append-consumed-comments-section.sh` to commit/push directly onto a branch outside the worktree — the wrong branch (Issue #1037; see `modules/worktree-lifecycle.md` § "Spec file write destination" for why this specific branch matters). As of #1058, that main-tree push is lock-mediated via `worktree-merge-push.sh`, so a bare-push race against concurrent `/verify` runs (e.g. under `/auto --batch`) is no longer the primary risk; the remaining reason this step is mandatory is branch-destination correctness — writing to the wrong branch still produces the two-sided Spec edit #1058 exists to prevent.
 
 Record the `ENTERED_WORKTREE` variable for use in subsequent steps.
 
