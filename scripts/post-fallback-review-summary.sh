@@ -10,6 +10,13 @@
 # this guard prevents a false "recovered" report when review never
 # actually progressed.
 #
+# Exit codes:
+#   0 - fallback summary posted (evidence found, latest review not CHANGES_REQUESTED)
+#   1 - no evidence of a completed review found; nothing posted
+#   2 - latest review is CHANGES_REQUESTED (MUST issues outstanding); posting a
+#       fallback summary would falsely declare recovery, so nothing is posted.
+#       run-review.sh retries the review session once instead.
+#
 # Usage:
 #   scripts/post-fallback-review-summary.sh <pr-number>
 
@@ -22,7 +29,16 @@ if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
     exit 1
 fi
 
-REVIEW_BODIES=$(gh pr view "$PR_NUMBER" --json reviews --jq '.reviews[].body' 2>/dev/null) || true
+REVIEWS_JSON=$(gh pr view "$PR_NUMBER" --json reviews --jq '.reviews' 2>/dev/null) || REVIEWS_JSON="[]"
+
+LATEST_STATE=$(echo "$REVIEWS_JSON" | jq -r 'sort_by(.submittedAt) | last | .state // empty' 2>/dev/null) || LATEST_STATE=""
+
+if [[ "$LATEST_STATE" == "CHANGES_REQUESTED" ]]; then
+    echo "post-fallback-review-summary: latest PR review for #${PR_NUMBER} is CHANGES_REQUESTED (MUST issues outstanding); a fallback summary would falsely declare recovery. Skipping fallback post." >&2
+    exit 2
+fi
+
+REVIEW_BODIES=$(echo "$REVIEWS_JSON" | jq -r '.[].body' 2>/dev/null) || true
 
 if ! echo "$REVIEW_BODIES" | grep -q "Acceptance Criteria Verification Results"; then
     echo "post-fallback-review-summary: no prior Review with Acceptance Criteria Verification Results found for PR #${PR_NUMBER}; skipping fallback post" >&2
