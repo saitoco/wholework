@@ -18,7 +18,7 @@ Spec ファイル (`docs/spec/issue-N-*.md`) への追記先が、実行主体�
 ## Changed Files
 
 - `scripts/append-consumed-comments-section.sh`: `--no-push` フラグ追加 (フラグ指定時は commit のみ行い push しない)。main tree で実行された場合の `git push origin HEAD` を `worktree-merge-push.sh --base "$(git rev-parse --abbrev-ref HEAD)"` によるロック付き push に置換 — bash 3.2+ 互換 (`mapfile` 等の bash 4+ 構文を導入しない)
-- `scripts/run-code.sh`: post-processor fallback ブロック (L367-374) を `ROUTE_FLAG != "--pr"` の場合のみ実行するようゲート。pr route では Spec の書き込み先が PR ブランチであり main repository からは観測も安全な書き込みもできないため — bash 3.2+ 互換
+- `scripts/run-code.sh`: post-processor fallback ブロック (L367-374) を、`reconcile-phase-state.sh` が観測した実際の open PR 番号 (`_PR_NUM`) が空の場合のみ実行するようゲート (実装時に `ROUTE_FLAG != "--pr"` から変更 — `ROUTE_FLAG` だけでは Size auto-detection 等による auto-detected pr route を判定できないため、review #1201 指摘)。pr route では Spec の書き込み先が PR ブランチであり main repository からは観測も安全な書き込みもできないため — bash 3.2+ 互換
 - `skills/code/SKILL.md`: Step 12 の `git add` 直前に `append-consumed-comments-section.sh $NUMBER code --no-push` の必須 bash 呼び出しを追加。frontmatter `allowed-tools` に `${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*` を追加 (現在は未登録)
 - `skills/spec/SKILL.md`: Step 13 の `git add` 直前に `append-consumed-comments-section.sh $NUMBER spec --no-push` の必須 bash 呼び出しを追加。frontmatter `allowed-tools` に同エントリを追加 (現在は未登録)
 - `modules/worktree-lifecycle.md`: Notes に「Spec file write destination」節を新設 — 「Spec ファイルはフェーズ自身の作業ブランチ (worktree ブランチ / PR ブランチ) 上でのみ編集し、base へは既存の Exit 経路 (`worktree-merge-push.sh` または PR merge) 経由でのみ反映する」という規約を明文化する。`## Consumed Comments` との相互作用にも言及する
@@ -31,9 +31,9 @@ Spec ファイル (`docs/spec/issue-N-*.md`) への追記先が、実行主体�
 ## Implementation Steps
 
 1. `scripts/append-consumed-comments-section.sh` に `--no-push` フラグを追加し、main tree 判定 (既存の `_git_dir == _git_common_dir` チェック) が真のときの push を `worktree-merge-push.sh --base "$(git -C "$_repo_root" rev-parse --abbrev-ref HEAD)"` に置き換える。失敗時は既存同様 best-effort 警告のみ (→ acceptance criteria 2)
-2. `scripts/run-code.sh` の post-processor fallback ブロックの条件を `if [[ $EXIT_CODE -eq 0 && "$ROUTE_FLAG" != "--pr" ]]; then` に変更し、pr route では wrapper が Spec を編集しないようにする。スキップ理由を同ブロックのコメントに記載する (→ acceptance criteria 2)
-3. `skills/code/SKILL.md` Step 12 の Steps 6 (`git add $SPEC_PATH/issue-$NUMBER-*.md` を含む commit ブロック) の直前に、`bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh $NUMBER code --no-push` の必須呼び出しを追加する。あわせて frontmatter の `allowed-tools` に該当エントリを追加する (after 1) (→ acceptance criteria 2)
-4. `skills/spec/SKILL.md` Step 13 の Steps 5 (Phase Handoff write) の直後・Steps 6 (commit) の直前に、`bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh $NUMBER spec --no-push` の必須呼び出しを追加する。あわせて frontmatter の `allowed-tools` に該当エントリを追加する (after 1, parallel with 3) (→ acceptance criteria 2)
+2. `scripts/run-code.sh` の post-processor fallback ブロックの条件を、`reconcile-phase-state.sh` が観測した open PR 番号 (`_PR_NUM`) が空かどうかで判定するよう変更し、pr route では wrapper が Spec を編集しないようにする。スキップ理由を同ブロックのコメントに記載する (実装時に判定軸を `ROUTE_FLAG` から `_PR_NUM` に変更 — review #1201 指摘。auto-detected pr route を `ROUTE_FLAG` だけでは判定できないため) (→ acceptance criteria 2)
+3. `skills/code/SKILL.md` Step 12 の retrospective commit ブロックの**直後**に、`bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh $NUMBER code --no-push` の必須呼び出しを追加する。あわせて frontmatter の `allowed-tools` に該当エントリを追加する (after 1) (→ acceptance criteria 2) (実装時に「commit の直前」から「commit の直後」に変更 — 直前に置くと、未コミットの retrospective / Phase Handoff 編集がスクリプト自身の commit に巻き込まれてしまうため)
+4. `skills/spec/SKILL.md` Step 13 の commit ブロックの**直後**に、`bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh $NUMBER spec --no-push` の必須呼び出しを追加する。あわせて frontmatter の `allowed-tools` に該当エントリを追加する (after 1, parallel with 3) (→ acceptance criteria 2) (実装時に「直前」から「直後」に変更 — 理由は 3 と同様)
 5. `modules/worktree-lifecycle.md` の `## Notes` に「Spec file write destination」節 (見出しレベル `###`) を追加し、Spec ファイルの書き込み先規約とフェーズ別の base 反映経路 (`/spec`・`/code` patch/operate・`/verify` は `worktree-merge-push.sh`、`/code` pr は PR merge) を表で明文化する。表には `**(exhaustive)**` マーカーを付す (`modules/skill-dev-checks.md` "Exhaustive/Example Markers") (→ acceptance criteria 1)
 6. `modules/l0-surfaces.md` の「Bash wrapper fallback (Issue #811)」節を、新しい 2 層構成 (in-session mandatory call が第一の安全網、wrapper post-processor は非 pr route の第二の安全網) に書き換え、Step 5 で追加した `worktree-lifecycle.md` の節を参照させる (after 5) (→ acceptance criteria 1)
 7. `tests/append-consumed-comments-section.bats` の `setup()` に `worktree-merge-push.sh` モックを追加し、`--no-push` 指定時に push されないテストと main tree 実行時に `worktree-merge-push.sh` が呼ばれるテストを追加する (after 1)
@@ -75,18 +75,23 @@ Spec ファイル (`docs/spec/issue-N-*.md`) への追記先が、実行主体�
 |---|---|---|
 | `--no-push` 指定あり | commit まで実行し push をスキップ。スキップした旨を stderr に出力しない (通常経路のため) | 0 |
 | `--no-push` なし かつ worktree 内 (`_git_dir != _git_common_dir`) | 従来どおり `git -C "$_repo_root" push origin HEAD` | 0 (push 失敗時も best-effort 警告のみで 0) |
-| `--no-push` なし かつ main tree (`_git_dir == _git_common_dir`) | 既存の defense-in-depth 警告を stderr に出力したうえで、`worktree-merge-push.sh --base "$(git -C "$_repo_root" rev-parse --abbrev-ref HEAD)"` を実行 | 0 (`worktree-merge-push.sh` が非 0 で終了しても best-effort 警告のみで 0) |
+| `--no-push` なし かつ main tree (`_git_dir == _git_common_dir`、いずれも非空) | 既存の defense-in-depth 警告を stderr に出力したうえで、`worktree-merge-push.sh --base "$(git -C "$_repo_root" rev-parse --abbrev-ref HEAD)"` を実行 | 0 (`worktree-merge-push.sh` が非 0 で終了しても best-effort 警告のみで 0) |
+| `--no-push` なし かつ `_git_dir` / `_git_common_dir` のいずれかが空 (git 解決失敗) | 非空ガード (`-n "$_git_dir" && -n "$_git_common_dir"`) が真にならないため main tree 分岐に入らず、従来どおり `git -C "$_repo_root" push origin HEAD` にフォールスルー | 0 (push 失敗時も best-effort 警告のみで 0) |
 | Spec ファイルに差分なし (`git diff --quiet` が真) | commit も push も実行しない | 0 |
+
+上記 4 分岐目 (非空ガード) は `tests/run-verify.bats` の既存 fixture が `rev-parse --git-dir`/`--git-common-dir` 未実装で両者が空文字を返すことで発覚した実装時のギャップ。Code Retrospective の Deviations from Design に記録済み。
 
 スクリプト全体の best-effort 契約 (常に exit 0) は既存どおり維持し、呼び出し側をブロックしない。
 
 **`scripts/run-code.sh` の post-processor 分岐 (exhaustive):**
 
+判定は `ROUTE_FLAG` (CLI フラグ) ではなく `_PR_NUM` (`reconcile-phase-state.sh` が `worktree-code+issue-N` ブランチに対して観測した実際の open PR 番号) を用いる。route は Size auto-detection や `always-pr: true` により in-session で解決されることがあり (`/code N --auto` は M/L Issue に対しフラグ無しで pr route を選ぶ)、`ROUTE_FLAG` だけでは実際に pr route を通ったかを判定できないため (review #1201 指摘、MUST として修正)。
+
 | 分岐条件 | 挙動 |
 |---|---|
 | `EXIT_CODE != 0` | 従来どおり post-processor をスキップ |
-| `EXIT_CODE == 0` かつ `ROUTE_FLAG == "--pr"` | **新規**: post-processor をスキップ。Spec の書き込み先は PR ブランチであり main repository からは観測も安全な書き込みもできないため。安全網は `skills/code/SKILL.md` Step 12 の in-session 呼び出しが担う |
-| `EXIT_CODE == 0` かつ `ROUTE_FLAG != "--pr"` (patch / operate / 未指定) | 従来どおり pre/post カウント比較を行い、増えていなければ `_append_consumed_comments_section` を実行 |
+| `EXIT_CODE == 0` かつ `_PR_NUM` が非空 (open PR が観測された = 実際に pr route を通った) | post-processor をスキップ。Spec の書き込み先は PR ブランチであり main repository からは観測も安全な書き込みもできないため。安全網は `skills/code/SKILL.md` Step 12 の in-session 呼び出しが担う |
+| `EXIT_CODE == 0` かつ `_PR_NUM` が空 (open PR 未観測 = patch / operate route) | 従来どおり pre/post カウント比較を行い、増えていなければ `_append_consumed_comments_section` を実行 |
 
 ### `validate-skill-syntax.py` の制約
 
@@ -235,26 +240,55 @@ Size は既に `L` (変更なし)。タイトルとの意味的乖離は検出�
 - `worktree-merge-push.sh` の `--base` 既定値が `main` である点は、main tree では HEAD が base ブランチそのものであることを利用し `--base "$(git rev-parse --abbrev-ref HEAD)"` を渡すことで解決した。`append-consumed-comments-section.sh` に `--base` フラグを新設する必要はない。
 - `tests/append-consumed-comments-section.bats` は `WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` を設定済みのため、新たに呼ばれる `worktree-merge-push.sh` のモック追加が必須である点を Implementation Steps 7 に明記した。`$MOCK_DIR/git` モックが `rev-parse --git-dir` と `rev-parse --git-common-dir` に異なる値を返して worktree 内を模擬している (L47-54) ことも確認済み。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- The `-n` guard fix recorded under Design Gaps/Ambiguities below is the only *code-behavior* deviation from the original plan. Additionally, three *documentation* deviations were identified in `/review` (#1201) and corrected here: (1) Implementation Step 2 / Changed Files described `scripts/run-code.sh`'s post-processor gate as `ROUTE_FLAG != "--pr"`; the actual implementation gates on the observed open-PR number (`_PR_NUM`) instead, since `ROUTE_FLAG` alone cannot distinguish an auto-detected pr route (Size auto-detection, `always-pr: true`) from patch route. (2) Implementation Steps 3/4 described the `skills/code/SKILL.md` / `skills/spec/SKILL.md` safety-net calls as placed *before* the retrospective/handoff commit; the actual implementation places them *after*, to avoid the safety-net script's own commit sweeping up not-yet-committed retrospective/handoff edits. Both Changed Files and Implementation Steps above have been updated to match.
+
+### Design Gaps/Ambiguities
+
+- `tests/run-verify.bats` was not listed in Changed Files but broke on first full-suite run: its `git` mock does not implement `rev-parse --git-dir`/`--git-common-dir` (both calls fall through to the default branch and return an empty string), and the new main-tree push-routing check in `append-consumed-comments-section.sh` originally compared `"$_git_dir" == "$_git_common_dir"` without the non-empty guard the adjacent defense-in-depth warning check already had — two empty strings compare equal, so it misclassified this fixture as "main tree" and called the (unmocked) `worktree-merge-push.sh` instead of `git push origin HEAD`. Fixed by adding the same `-n "$_git_dir" && -n "$_git_common_dir"` guard to the routing check (Implementation Step 1). The Spec's own Changed Files list scoped `tests/run-verify.bats` out because #1058 does not modify `/verify`'s call site, but a script-level behavior change still has to satisfy every existing caller's test fixture, not just the ones the Spec enumerates — the Step 9 Behavioral Change Detection full-suite override (triggered because `append-consumed-comments-section.sh` is referenced by more than its direct-counterpart test) is what caught this, confirming that override's value beyond narrow-scope test runs.
+- Executing this Issue's own `/code` run reproduced the sibling defect this Issue's Related section attributes to #1078: `skills/code/SKILL.md`'s Comment Consumption (Step 1) runs before Worktree Entry (Step 2), so writing the code-phase `## Consumed Comments` entry per that step order edited the main repository's Spec copy directly, before `EnterWorktree` was called. That edit never reached the worktree branch and was left as an uncommitted diff in the main repository, requiring manual reconciliation after Worktree Exit. This is out of scope for #1058 (which explicitly handles only the wrapper post-processor path, route (a), and defers the SKILL.md step-order path to #1078) but is recorded here as a concrete, first-hand reproduction for whoever picks up #1078.
+
+### Rework
+
+- The `-n` guard fix above was the only rework cycle: full-suite `bats tests/` surfaced the `tests/run-verify.bats` failure, root-caused to the missing guard, fixed, and the full suite re-run clean (1443/1443).
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- The code phase's own Code Retrospective claimed "Deviations from Design: None" while the implementation actually diverged from the Spec's Implementation Steps in three places (post-processor gate axis `ROUTE_FLAG`→`_PR_NUM`; safety-net call position moved from before to after the commit, ×2 SKILL.md sites). The divergence was real but was categorized as "not a design deviation" because it was framed as an in-scope refinement rather than a plan change — this is exactly the kind of self-assessment gap `skills/code/SKILL.md` Step 12 item 4's "update Spec Implementation Steps to match" rule exists to catch, and it was missed at code-phase time. Recommendation: when future review passes find a Spec/implementation mismatch that the Code Retrospective already claims doesn't exist, treat the Retrospective's own "Deviations: None" as a signal worth double-checking, not as evidence the search is unnecessary.
+- This PR is itself about eliminating a documentation/implementation split (Spec write-destination inconsistency), and `/review` found the PR's own newly-added documentation (the "Spec file write destination" exhaustive table, the "all in-session callers pass --no-push" claim) had internal self-contradictions on the same axis — new prose asserting completeness/consistency that wasn't actually complete/consistent. Worth naming as a category: "exhaustive-marker" tables and absolute claims ("all", "always") are exactly the phrasing that HIGH SIGNAL review should stress-test hardest, since they're falsified by a single missing case.
+
+### Recurring issues
+
+- Two independent review-bug agents (diff-scan and security-scan) both surfaced the `modules/worktree-lifecycle.md` exhaustive-table gap and the `scripts/run-code.sh:345` stale-`ROUTE_FLAG` inconsistency independently, from different angles — confirms the 2-lens review-bug fan-out has real recall value beyond a single pass, at least for this PR's size/shape.
+- `gh-pr-review.sh`'s `HAS_MUST` detection requires each line-comment JSON object to carry an explicit `"severity"` field (documented in the script's own header comment); a line-comments JSON built with severity only embedded in the comment body text (not as a JSON key) silently defaults to `EVENT="COMMENT"` with no error. This is an easy transcription mistake since the severity is *also* human-readable inside the body text, making the omission easy to miss. Separately, and independently of that mistake: the GitHub Pull Request Reviews API rejects `REQUEST_CHANGES` on your own PR (`422 Unprocessable Entity: "Review Can not request changes on your own pull request"`) — a hard platform constraint for any single-maintainer / self-hosted repo where the reviewer and PR author are the same GitHub account. `gh-pr-review.sh` has no handling for this case; a correctly-populated `severity` field would still have hit the same 422 and, per the script's current `|| { echo Error; exit 1; }` handling, aborted the entire review post (comments included) rather than degrading gracefully to `COMMENT`. Both points are worth an improvement proposal for `/verify` to aggregate: (1) `gh-pr-review.sh` should catch the self-review 422 specifically and retry with `event=COMMENT` instead of failing the whole post, and (2) the MUST-issue visibility that `REQUEST_CHANGES` provides needs a non-event-based fallback (e.g. a bolded banner in the review body) for the self-review case, since the event field cannot carry that signal here.
+
+### Acceptance criteria verification difficulty
+
+- Nothing to note. Both Pre-merge conditions used `rubric` verify commands with self-contained, unambiguous text; grading against the worktree's modified files was straightforward and did not surface any UNCERTAIN cases.
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- 案 B (Spec はフェーズ自身の作業ブランチで編集し、base へは Exit 経路経由でのみ反映) を採用。`/verify` が #1037 で確立済みの規約への整合であり、新規設計ではない
-- pr route では wrapper post-processor を無効化し、安全網は `skills/code/SKILL.md` Step 12 の in-session mandatory call に一本化する
-- 新規の in-session 呼び出しには `--no-push` を付ける。base への反映は各フェーズの Exit 経路 (`worktree-merge-push.sh` / PR merge) が担保する
-- 書き込み先規約の SSoT は `modules/worktree-lifecycle.md` に置き、`modules/l0-surfaces.md` からは参照させる (重複記述を作らない)
+- Fixed all 10 review findings (1 MUST, 5 SHOULD, 4 CONSIDER) in-cycle rather than deferring SHOULD/CONSIDER items, since all 10 were defects in content this PR itself introduced (not pre-existing debt) and were individually small/low-risk.
+- Split fixes into 7 commits grouped by file/finding-cluster rather than one commit per finding, to keep the `Refs:` traceability rule satisfied without excessive commit churn.
+- Did not attempt to force `event=REQUEST_CHANGES` after discovering GitHub blocks it for self-authored PRs; the MUST issue's visibility relies on the review body text and this response summary instead. See "Recurring issues" above for the proposed tooling fix.
 
 ### Deferred Items
 
-- worktree セッション中の main repository 書き込み全般の棚卸しは別 Issue へ切り出す。起票は `/verify` の Improvement Proposal 集約に委ねる
-- `/verify` の `append-consumed-comments-section.sh` 呼び出しへの `--no-push` 適用 (`origin/worktree-verify+issue-*` 16 本の残留解消) は AC の範囲外のため本 Issue では行わない
-- `run-*.sh` の pre/post カウント比較が見出し数ベースで patch route では常に誤発火する件は、冪等かつ無害のため本 Issue では修正しない
+- Same items as the code-phase Phase Handoff (now superseded by this rotation, so restated here): worktree-session main-repository write audit spun out to a future Issue; `/verify`'s own `--no-push` adoption (residual `origin/worktree-verify+issue-*` branches) out of scope; patch-route pre/post count fallback mis-fire left unfixed (idempotent, harmless); #1078 (SKILL.md step-order path) untouched, as scoped.
+- `skills/spec/SKILL.md` Step 14's `ENTERED_WORKTREE=false` branch still issues a bare `git push origin main` instead of routing through `worktree-merge-push.sh` — newly documented as a Known gap in `modules/worktree-lifecycle.md` during this review's MUST fix, but not itself fixed (pre-existing, out of #1058's scope).
+- `gh-pr-review.sh`'s missing `severity`-field validation and its lack of self-review-422 handling (see "Recurring issues" above) — not fixed here; flagged for `/verify`'s improvement-proposal aggregation.
 
 ### Notes for Next Phase
 
-- `skills/code/SKILL.md` と `skills/spec/SKILL.md` の `allowed-tools` への `${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*` 追加を忘れないこと。`scripts/check-allowed-tools.sh` が Step 8 で mismatch を検出して commit を止める
-- `tests/append-consumed-comments-section.bats` の `setup()` に `worktree-merge-push.sh` モックを追加しないと新テストが解決不能になる (`WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` のため)
-- `modules/worktree-lifecycle.md` に追加する表には `**(exhaustive)**` マーカーが必要 (`modules/skill-dev-checks.md`)
-- `docs/structure.md` を変更するため `docs/ja/structure.md` の同期が必須 (`docs/translation-workflow.md`)
-- 本 Issue は #1078 と対になっており、#1078 が扱う SKILL.md ステップ順序の経路には手を入れない
+- Pre-merge AC 1 and 2 remain PASS (re-verified against the fix commits' final state; both rubric conditions still hold).
+- Post-merge AC (observation, `event=auto-run when=route:pr session=next`) is unchanged — still unfired, still SKIPPED by design.
+- Full `bats tests/` (1443 tests), `validate-skill-syntax.py`, `check-forbidden-expressions.sh`, and `check-allowed-tools.sh` all passed clean after the fix commits.
+- `/merge` should see 9/9 CI SUCCESS on the final commit (re-verified after push).

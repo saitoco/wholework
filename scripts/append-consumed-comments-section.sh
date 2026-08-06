@@ -2,7 +2,11 @@
 # append-consumed-comments-section.sh - Fallback: append ## Consumed Comments to Spec
 # when the LLM phase did not write it (post-processor pattern, Candidate B).
 #
-# Usage: append-consumed-comments-section.sh <ISSUE_NUMBER> <PHASE_NAME>
+# Usage: append-consumed-comments-section.sh <ISSUE_NUMBER> <PHASE_NAME> [--no-push]
+#
+# --no-push: commit only; skip the push/worktree-merge-push.sh step. The caller is
+# responsible for propagating the commit to base via its own Exit path (see
+# modules/worktree-lifecycle.md § "Spec file write destination").
 #
 # Best-effort: always exits 0. Failures are logged to stderr without blocking the caller.
 # Bash 3.2+ compatible.
@@ -16,6 +20,20 @@ if [[ -z "$ISSUE_NUMBER" || -z "$PHASE_NAME" ]]; then
   echo "append-consumed-comments-section.sh: WARNING — skip (missing ISSUE_NUMBER or PHASE_NAME)" >&2
   exit 0
 fi
+
+NO_PUSH=false
+shift 2
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --no-push)
+      NO_PUSH=true
+      shift
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 _repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
@@ -173,16 +191,35 @@ if [[ -n "$_git_dir" && -n "$_git_common_dir" && "$_git_dir" == "$_git_common_di
   echo "append-consumed-comments-section.sh: WARNING — not running inside an isolated worktree (was skills/verify/SKILL.md Step 3 skipped?); commit/push below lands directly on the current branch" >&2
 fi
 
-# Commit and push (best-effort; failures do not block caller)
+# Commit (and push unless --no-push) — best-effort; failures do not block caller
 SPEC_REL="${SPEC_FILE#$_repo_root/}"
 if ! git -C "$_repo_root" diff --quiet "$SPEC_REL" 2>/dev/null; then
-  git -C "$_repo_root" add "$SPEC_REL" 2>/dev/null \
+  if git -C "$_repo_root" add "$SPEC_REL" 2>/dev/null \
     && git -C "$_repo_root" commit -s \
          -m "Add consumed comments fallback for issue #${ISSUE_NUMBER} (${PHASE_NAME} phase)
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" 2>/dev/null \
-    && git -C "$_repo_root" push origin HEAD 2>/dev/null \
-    || echo "append-consumed-comments-section.sh: WARNING — commit/push failed (best-effort)" >&2
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" 2>/dev/null; then
+    if [[ "$NO_PUSH" == "true" ]]; then
+      : # commit only, push is the caller's responsibility (in-session mandatory call path)
+    elif [[ -n "$_git_dir" && -n "$_git_common_dir" && "$_git_dir" == "$_git_common_dir" ]]; then
+      # Main tree: route through the locked merge-push script instead of a bare push.
+      # Bound the lock wait (default 300s) to a short timeout: this call site is reached
+      # from the bash-wrapper post-processor fallback (run-code.sh / run-spec.sh, after the
+      # phase's own claude subprocess has already exited), so a long silent stall here has no
+      # watchdog covering it. Let diagnostics (lock-wait / rebase-failure messages) reach the
+      # caller's log instead of suppressing them a second time on top of this script's own
+      # best-effort warning.
+      _current_branch="$(git -C "$_repo_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
+      WHOLEWORK_PATCH_LOCK_TIMEOUT="${WHOLEWORK_PATCH_LOCK_TIMEOUT:-30}" \
+        "$SCRIPT_DIR/worktree-merge-push.sh" --base "$_current_branch" \
+        || echo "append-consumed-comments-section.sh: WARNING — worktree-merge-push.sh failed (best-effort)" >&2
+    else
+      git -C "$_repo_root" push origin HEAD 2>/dev/null \
+        || echo "append-consumed-comments-section.sh: WARNING — push failed (best-effort)" >&2
+    fi
+  else
+    echo "append-consumed-comments-section.sh: WARNING — commit failed (best-effort)" >&2
+  fi
 fi
 
 exit 0

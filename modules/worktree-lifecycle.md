@@ -148,6 +148,53 @@ Steps that operate on version-controlled files do not need this round trip; thos
 
 While executing a Step against the main repository per the round trip above, the auto-mode classifier may reject `mv` targeting a gitignored path in the parent repository — observed both from inside the worktree and from the main repository root immediately after `ExitWorktree`. `cp` performing an in-place overwrite of the same target is not subject to the same rejection. Where a Step's natural implementation is "write to a temp file, then move it into place" (e.g. `jq ... > .new`), prefer `cp .new target` over `mv .new target` as the final write — this avoids the rejection without resorting to `--dangerously-skip-permissions` or other permission bypasses.
 
+### Spec file write destination
+
+All phases that append to a disposable Spec (`docs/spec/issue-N-*.md` — Consumed Comments,
+retrospectives, Phase Handoff) must write **only on that phase's own working branch** — the
+worktree branch it entered via the Entry section above (which is also the PR branch for
+`/code` pr route), or the base branch itself when the phase documented `ENTERED_WORKTREE=false`
+(see the table below). Never write the Spec directly against the base branch from an
+*undocumented* main-repository context, and never issue a standalone `git push` for it from
+outside the worktree — a lock-mediated main-tree write via `worktree-merge-push.sh` (this
+module's own Exit path, or the equivalent main-tree routing inside
+`append-consumed-comments-section.sh`) is the only base-branch write path this rule permits.
+
+This rule exists because a Spec file edited from two different branches in the same phase
+window — the phase's own worktree branch and, separately, the base branch via an
+out-of-worktree write — produces a two-sided edit to the same file that conflicts at merge
+time (`mergeStateStatus: DIRTY`), even though the actual implementation diff is untouched. See
+Issue #1058 for the incident this rule generalizes from.
+
+**Base propagation path per phase (exhaustive):**
+
+| Phase | Working branch | Base propagation path |
+|-------|-----------------|------------------------|
+| `/spec` | worktree branch | `Exit: merge-to-main` → `worktree-merge-push.sh` |
+| `/spec`, worktree skipped (`ENTERED_WORKTREE=false`) | base branch, in the main repository | Should be `worktree-merge-push.sh` (lock+push only, no `--from`), matching the `/code` patch-route row below — see Known gap |
+| `/code` patch / operate route | worktree branch | `Exit: merge-to-main` → `worktree-merge-push.sh` |
+| `/code` patch route, worktree skipped (`ENTERED_WORKTREE=false`; XS interactive direct-launch only — see `skills/code/SKILL.md` Step 2) | base branch, in the main repository | `worktree-merge-push.sh` (lock+push only, no `--from` — see "When `ENTERED_WORKTREE=false`" above) |
+| `/code` pr route | worktree branch (= PR branch) | PR merge (`/merge`) |
+| `/verify` | worktree branch | `Exit: merge-to-main` → `worktree-merge-push.sh` |
+
+`/spec`'s and `/code`'s in-session call sites to `append-consumed-comments-section.sh` (see
+`modules/l0-surfaces.md` § "Bash wrapper fallback") pass `--no-push`: the commit lands on the
+working branch shown above, and this table's propagation path — not a push issued by the
+script itself — carries it to base. `/code` pr route also passes `--no-push`; it differs only
+in *how* the commit reaches the remote — its own Step 12 pushes the worktree (= PR) branch
+directly afterward, since the PR branch has no `worktree-merge-push.sh` propagation path of its
+own. `/verify`'s call site does not yet pass `--no-push` — see the Known gap below.
+
+**Known gaps (not yet migrated):**
+- `skills/verify/SKILL.md`'s call site still omits `--no-push`
+  and pushes the worktree branch itself, which is the source of the residual
+  `origin/worktree-verify+issue-*` branches. Out of scope for #1058; tracked as a deferred item.
+- `skills/spec/SKILL.md` Step 14's `ENTERED_WORKTREE=false` branch still issues a bare
+  `git push origin main` rather than routing through `worktree-merge-push.sh` (lock+push only),
+  so this table's `/spec`, worktree-skipped row describes the intended propagation path, not the
+  current implementation. Pre-existing (not introduced by #1058) and out of its scope; tracked as
+  a deferred item.
+
 ### `source`-based shell function calls are blocked by the worktree isolation guard
 
 Shell helpers that must be invoked via `source` because they define a function rather than being directly executable (e.g. `emit-event.sh`'s `emit_event`) cannot run inside a worktree session: the worktree isolation guard cannot verify that a sourced command stays inside the worktree, and blocks it outright. There is no rewrite that avoids `source` for a function call, so this is a hard blocker for the duration of the worktree session.

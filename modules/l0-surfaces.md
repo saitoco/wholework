@@ -245,14 +245,26 @@ consumed comment:
 
 If no comments were consumed: write "No new comments since last phase."
 
-**Bash wrapper fallback (Issue #811):** This step is LLM-driven and may be silently skipped
-under context pressure or on fix-cycle paths. Two safety nets ensure the section is written:
-- `/spec` and `/code` phases (bash-wrapped via `run-spec.sh` / `run-code.sh`): a pre/post
-  `## Consumed Comments` count comparison triggers `append-consumed-comments-section.sh` as a
-  post-processor when the LLM did not write the section.
-- `/verify` phase (in-session): `SKILL.md` contains an explicit `bash` call to
-  `append-consumed-comments-section.sh` after the LLM's comment consumption step, ensuring
-  deterministic writeback regardless of prose execution.
+**Bash wrapper fallback (Issue #811, revised in #1058):** This step is LLM-driven and may be
+silently skipped under context pressure or on fix-cycle paths. Two layers ensure the section
+is written, and both target the same working branch per `modules/worktree-lifecycle.md` §
+"Spec file write destination" — the primary layer always does, and the secondary layer only
+fires where it can safely reach that branch:
+- **Primary (in-session, all phases):** `SKILL.md` for `/spec`, `/code`, and `/verify` each
+  contain an explicit `bash` call to `append-consumed-comments-section.sh` (`/spec` Step 12,
+  unconditionally so it also covers `SPEC_DEPTH=light` runs where Step 13 is skipped; `/code`
+  Step 12; `/verify` Step 4) after the LLM's comment consumption
+  step, ensuring deterministic writeback regardless of prose execution. `/spec` and `/code`
+  pass `--no-push` — the commit lands on the working branch and reaches base only through
+  that phase's own Exit path (see the table in `worktree-lifecycle.md`).
+- **Secondary (bash wrapper post-processor, non-pr routes only):** `run-spec.sh` / `run-code.sh`
+  additionally run a pre/post `## Consumed Comments` count comparison after the `claude`
+  subprocess exits, triggering `append-consumed-comments-section.sh` as a fallback when the
+  primary layer did not write the section. This runs from the main repository (the wrapper's
+  own CWD after the subprocess exits, not the worktree), so it is gated off for `/code` pr
+  route: the Spec there lives on the PR branch, which this post-exit point can neither observe
+  nor safely write to without reintroducing the two-branch divergence #1058 removed. For pr
+  route, the primary layer is the only safety net.
 
 **Step 6 — Emit event (handled by bash wrapper in auto mode; LLM skip):**
 
