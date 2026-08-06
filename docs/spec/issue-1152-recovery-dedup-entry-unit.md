@@ -147,3 +147,37 @@ Root Cause の 3 行目 (`run-auto-sub.sh:194-204`) は false negative の一因
 - `EXCLUDED_LIST` の group-key 一括抑止: 合成 fixture (`.tmp/recoveries-probe.md`、4 entry) による実行結果
 - `_find_known_recoveries_issue` の closed 解決: `gh issue list --state closed --limit 1000` の全件から `title == "recoveries: manual-recovery-review-rerun"` を完全一致で抽出
 - 現在の `docs/reports/orchestration-recoveries.md`: `未起票` 23 件 / `起票済み` 43 件 (`grep -c`、2026-08-06 時点)
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の `--issues-json が state/closedAt を持たない場合の代替基準` は「ファイル内で最も新しい起票済み entry の日時」とだけ記述しており、file-global か group-key scoped かが曖昧だった。group-key を跨いだ cross-contamination を避けるため **group-key scoped** (その group-key 自身の最新 `起票済み` entry) で実装した。Implementation Steps は更新不要 (Spec の記述自体は誤っていないため) だが、この解釈選択を明記する。
+- Implementation Step 4 が明示した更新対象は既存テスト `exclusion: filed improvement candidate mark` の 1 件のみだったが、同じく `--issues-json` に `state` を含まない旧形式フィクスチャを使っていた 2 件の `duplicate check` テストも新スキーマ (`state`/`closedAt` 前提) の下では意味が変わってしまうため、両方の `issues.json` フィクスチャに `"state": "OPEN"` を追加して意図 (「対応 Issue が存在すれば除外される」) を保った。旧コントラクトが暗黙に "open issues のみのリスト" だったことの明示化であり、テストの検証意図は変えていない。
+
+### Design Gaps/Ambiguities
+
+- 独立サブエージェントによるアドバーサリアルレビューで、AC の対象外の 2 点が見つかった (blocking ではないため据え置き):
+  - **境界の秒精度**: `closedAt` を 16 文字 (分単位) に切り詰めて比較するため、Issue close 直後・同一分内に記録された entry は `<=` 判定で除外側になる (取りこぼす可能性がある)。Spec Notes の「日付比較を文字列比較で行う理由」が明示的に受け入れているトレードオフであり、本 Issue のスコープ外。
+  - **group-key の複数回起票**: 同じ group-key が生涯で 2 回以上 `起票済み #N` された場合、現在の実装は「最後に検出した起票済みマーカーの Issue」のみを解決対象とし、直近の fix の closedAt のみを cutoff に使う。過去の fix ごとの rolling cutoff は考慮しない。Spec もこのケースを明示的に扱っていない (単一 Issue 解決を前提とした設計) ため、実装追随した。将来的に同一 group-key の再起票が頻発するようなら別 Issue で扱う。
+
+### Rework
+
+- なし (実装は Spec の設計通りに 1 パスで完了)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 除外判定を group-key 単位から entry 単位に変更し、`起票済み #N` (優先) → `--issues-json` タイトル完全一致の順で対応 Issue を解決、open なら全 entry 除外・closed なら `closedAt` 以前のみ除外という規則で実装した。
+- `--issues-json` に `state`/`closedAt` が無い場合の degrade path は、group-key 自身の最新 `起票済み` entry 日時を代替基準とした (file-global ではなく group-key scoped — Design Gaps 参照)。
+- 出力形式の後方互換性を優先し、`tracked:#N`/`untracked` は `--with-tracking` opt-in の 3 列目とした (Spec Notes の判断を踏襲)。
+- rubric 系 AC 6件は自己判定によるバイアスを避けるため、独立したサブエージェントにアドバーサリアルグレーディングさせて PASS を確認した。
+
+### Deferred Items
+- 境界秒精度 (closedAt 分単位切り詰め) と group-key 複数回起票時の rolling cutoff 非対応は、Design Gaps/Ambiguities に記録の上、本 Issue のスコープ外として据え置いた。再発頻度が高まれば別 Issue で扱う。
+- #1191 (`/audit stats --retention` Section 10) は `--with-tracking` オプションを消費する側の実装であり、本 Issue はフォーマット提供のみ。エンドツーエンドの実消費は #1191 側で検証される。
+
+### Notes for Next Phase
+- Post-merge の observation AC (`/verify` Step 15 出力に close 済み対応 Issue の group-key が再浮上しないこと) は次回 `/auto` セッションでの実行時に観察される。`manual-recovery-review-rerun` / `review-tier3-recovery` が候補から消えているかを確認すること。
+- PR #1198 の CI (`Run bats tests`) 結果が pre-merge AC の最終 1 件。フルスイート 1444 件はローカルで PASS 済みだが CI 環境差異があれば要確認。
