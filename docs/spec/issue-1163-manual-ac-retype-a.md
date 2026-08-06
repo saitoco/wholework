@@ -241,9 +241,10 @@ Issue 本文の `## Auto-Resolved Ambiguity Points` セクションを参照。
 
 ### Deferred Items
 
-- `modules/observation-trigger.md` § Notes の `fix-cycle` emitter 未実装という古い記述の修正 — 本 Issue のスコープ外、別途起票候補 (spec retrospective から引き継ぎ)。
+- `modules/observation-trigger.md` § Notes と `modules/verify-classifier.md` § observation Type Emitter table の両方に残る `fix-cycle` emitter 未実装という古い記述の修正 — 本 Issue のスコープ外、別途起票候補 (spec retrospective から引き継ぎ)。実装は `skills/verify/SKILL.md:584` (`/verify` FAIL → reopen 経路) で既に完了している。
 - 再型付け後の AC への `when=` 条件付与 — #1118 が担当。
-- #708 の 2 条件の bats テスト化 — 区分 C 相当として #1167 の領域。
+- #708 の 2 条件・#719 条件1 の bats テスト化 (故障注入型で 5 有効値のどの発火でも観測窓が開かない対象外行) — 区分 C 相当として #1167 の領域。
+- #501 / #500 / #479 (downstream 依存で upstream から観測不能な対象外行) — `docs/stats/2026-08-05.md` Section 10 が区分 B に対して定める retire または downstream への移管の判断先が未定。担当 Issue 番号は別途決定する。
 - Post-merge AC (`/audit stats --retention` での Manual waiting 件数減少確認) — merge 後に `/verify` が `observation event=auto-run` 経路で評価する。
 
 ### Notes for Next Phase
