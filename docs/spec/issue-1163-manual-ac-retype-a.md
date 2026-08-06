@@ -265,3 +265,38 @@ Issue 本文の `## Auto-Resolved Ambiguity Points` セクションを参照。
 ### Acceptance criteria verification difficulty
 
 Nothing to note — Pre-merge AC 6 件 (rubric ×3, github_check ×3) は全て決定的に PASS 判定でき、UNCERTAIN はゼロだった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- `/issue` triage が **event 名選定の制約**を先回りで明文化した。`event=` は `modules/verify-classifier.md` の 5 有効値のみが対象であり、34 件のうち相当数がいずれにも対応しないことを、対象サンプリングによって実装前に確認している。この制約が Background に入っていたため `/spec` が「全件を observation へ」という誤った前提から始まらずに済んだ
+
+#### spec
+- **対象外 7 AC 行を明示的に切り出した判断が本 Issue の質を決めた**。36 AC 行のうち再型付けは 29 行に留め、故障注入型 3 (#719-1 / #708-1 / #708-2)、`autonomy: L2` 前提 1 (#704 — 本リポジトリは L3 で前提不成立)、downstream 観測 3 (#501 / #500 / #479) を `manual` 維持とした。**「再型付けしても観測窓が開かない条件を無理に observation にしない」**という線引きであり、これがなければ #1158 が解こうとしている滞留を形だけ移し替える結果になっていた
+- Post-merge AC の文言を「34 件減少」→「再型付けした AC 行数分だけ減少」へ修正した点も重要。対象外分は減少しないため、旧文言のままなら確実に FAIL していた
+- Size L 維持 (ROUTE=pr) の判断根拠が明快だった — 「リポジトリ内変更は 1 ファイルで Axis 1 は XS 相当だが、実体は 29 Issue への一括 L0 変更であり patch route (review なし) は blast radius に見合わない」。Axis 1 (diff サイズ) ではなく blast radius で route を決めた事例
+
+#### code
+- 手戻りゼロ。長い silent window (1920s) の間に 29 Issue の書き換えが完了しており、レジューム検知で「既に完了している」と判断して残りの成果物 (`docs/reports/manual-ac-retype-a.md`) の作成に進んだ
+
+#### review
+- **`--full` review が実質的な指摘を 6 件出し、全て修正された**。特に価値が高かったのは **precedent 引用の自己矛盾** — #869/#700 を「manual 維持の先例」として引用していたが、その 2 件は本 Issue 自身が再型付けする対象だった。「この Issue が引用対象自身を書き換える」構造でのみ発生する論理矛盾であり、静的な整合性チェックでは捕まらない類の指摘
+- 他に `watchdog-kill` enum のカバレッジ記録漏れ、unknown-event fallback の発行元誤記 (`observation-trigger.sh` ではなく `opportunistic-search.sh`)、rubric AC1 の 4 項目要求に対する表構造の不一致、対象外 7 行中 4 行の follow-up 先未記録
+
+#### merge
+- 特記事項なし
+
+#### verify
+- **#1186 の already-checked AC skip rule が 3 回目の適用**。pre-merge 6 件が SKIPPED となり `bats tests/` 1430 件の再実行が発生しなかった。#1157 (2 回目) / #1186 (1 回目) と合わせ、ルールが安定して機能している
+- **並行セッション干渉の 3 件目を観測した**。Step 1 の `check-verify-dirty.sh` が exit 2 を返し、dirty の実体は #1076 (OPEN + `phase/code`) を処理中の別セッションが code フェーズで書いた `docs/spec/issue-1076-*.md` の 1 行追記だった。#1078 が指摘する経路 (`/code` Step 1 の Comment Consumption が Step 2 の Worktree Entry より前) の実例が、#1186 / #1163 の code フェーズに続いて 3 件目となる
+  - SKILL.md Step 1 の exit 2 分岐が提示する 2 択 (「Stash and continue」/「Abort」) は**放置された孤児ファイルを想定した設計**であり、進行中セッションの作業という状況を表現できていない。`check-verify-dirty.sh` の分類も `other-session` ではなく `parent-main` だった。`git stash` を選べば進行中セッションの未コミット作業を破壊するため、本実行では 2 択のいずれでもなく「触らず続行」を選んだ
+  - `git pull --ff-only` も同 dirty により失敗したが、`EnterWorktree` は `worktree.baseRef: fresh` で origin から分岐するため worktree の内容には影響しない (main と origin/main は同一 `6db5d383` だった)
+
+### Improvement Proposals
+
+- **No action (既存 Issue へ追記済み)**: 並行セッション干渉の 3 件目は #1078 (SKILL.md の順序) / #1058 (書き込み先の一貫性) が追跡中。両 Issue には 2026-08-06 のセッションで #1186 / #1163 の実測データと棚卸しスコープの拡張提案を追記済みのため、本 Issue からの新規起票は不要
+- **No action (同上)**: `check-verify-dirty.sh` の分類が「進行中セッションの作業」を `other-session` として扱えず、SKILL.md exit 2 の 2 択が実態に合わない点も、#1058 の棚卸しスコープ (worktree セッション中の main 書き込み全般の再評価) に含まれる。分類ロジック側の改善として同 Issue の `/spec` で扱われるべき
+- **Tier 3 (one-time memo)**: precedent 引用の時制チェック — 「この Issue が引用対象自身を書き換える」構造を持つ report では、precedent 引用が過去形として読めるようスコープを明示する必要がある。review retrospective に既に記録済みで、review が実際に検出できているため仕組み化は不要
+
