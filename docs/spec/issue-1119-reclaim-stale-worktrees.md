@@ -109,22 +109,20 @@ No new comments since last phase.
 - Real-data smoke test (dry-run against this repository's own ~43 stale worktree entries) surfaced two additional validations beyond the bats suite: (1) the Spec's `merge+pr-1190` example (directory name suggests PR #1190, but the checked-out branch is actually `worktree-code+issue-1186`) was classified correctly by branch-name-priority logic; (2) the current session's own worktree (`code+issue-1119`, locked, Issue still OPEN) was correctly excluded before ever reaching the locked/HEAD-match guard, since the `not-done` completion check short-circuits first — confirming the primary completion-based filter (not just the concurrent-session guard) protects an in-progress session.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Independently re-verified all 4 Pre-merge rubric ACs against the implementation and the bats suite rather than treating `/code`'s self-assessment as authoritative (per its own handoff note); all 4 confirmed PASS.
-- Fixed a SHOULD-severity bug found by `review-light` (Step G's `reclaimed (worktree+branch)` counter was not gated on `delete_branch_safe` success, unlike Step H's equivalent orphan-branch path) directly in `/review` Step 12, since it was small, well-isolated, and fully covered by a new regression bats test — not deferred to a follow-up Issue.
-- Left the `docs/structure.md` / `docs/ja/structure.md` `scripts/` file-count off-by-one (caused by a separately-merged parallel PR, #1211) unfixed: the correct post-merge value (77) cannot be verified from this PR's own branch content, so fixing it here would mean guessing rather than confirming.
+- Merged via standard squash merge — mergeable=true, CI green, review approved, all 4 pre-merge AC checkboxes already checked, so no conflict resolution or override marker was needed.
+- Did not attempt to fix the pre-existing `docs/structure.md` / `docs/ja/structure.md` `scripts/` file-count off-by-one during merge — it is a documentation-drift issue orthogonal to this PR's own diff and the correct post-merge value depends on #1211's landing order.
 
 ### Deferred Items
-- Post-merge opportunistic AC (confirm no re-accumulation of stale worktrees/branches after several sessions of real operation) remains open, unchanged from `/code`'s handoff.
-- `docs/structure.md` / `docs/ja/structure.md` `scripts/` count fast-follow (76 → 77) is deferred to a commit made once both this PR and #1211 have actually landed on `main`.
-- No `--apply` run was executed against this repository's real worktree/branch data during review either (only dry-run + bats); the ~71 real stale entries `/code` observed during its smoke test remain unreclaimed.
+- Post-merge opportunistic AC (confirm no re-accumulation of stale worktrees/branches after several sessions of real operation) remains open, carried forward unchanged from `/code`/`/review`'s handoffs.
+- `docs/structure.md` / `docs/ja/structure.md` `scripts/` count fast-follow (76 → 77) remains deferred, pending both this PR and #1211 being present on `main` (both now are, as of this merge).
+- No `--apply` run was executed against this repository's real worktree/branch data during spec/code/review; the real stale entries observed during `/code`'s smoke test remain unreclaimed until an operator runs `scripts/reclaim-stale-worktrees.sh --apply`.
 
 ### Notes for Next Phase
-- `/merge` should proceed normally — no MUST issues block merge.
-- The `scripts/` count drift pattern (see review retrospective's "Recurring issues") may recur for any future PR pair that adds scripts in parallel; worth watching for in future reviews, not yet filed as its own Issue.
-- The `kind=issue` branch-deletion regression test added in this phase (`tests/reclaim-stale-worktrees.bats`) is a useful reference if a future change touches `delete_branch_safe` or the Step G/H reclaim-count gating again.
+- `/verify` should check the post-merge opportunistic AC once several sessions of real operation have passed.
+- The `scripts/` count drift pattern (parallel PRs each adding a script without seeing the other's bump) may recur; consider whether it warrants a structural fix (e.g. a CI check recomputing the count) if it recurs again.
 
 ## review retrospective
 
