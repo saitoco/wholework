@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（69 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（74 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -235,6 +235,7 @@ wholework/
 - `scripts/check-verify-dirty.sh` — /verify Step 1 用 session-aware dirty file 分類スクリプト (self-worktree / other-worktree / other-session / self-spec / own-issue-scope / foreign-session / parent-main (帰属未確定時のフォールバック) の 7 分類; own-issue-scope と foreign-session の判定は自 Issue の Spec `## Changed Files` マニフェストを根拠とする; classify=... を stderr 出力)
 - `scripts/check-session-findings-disposition.sh` — L3 `session.md` の `## Findings` から canonical disposition タグ欠落を検出；`skills/auto/SKILL.md` Step 5 の commit 直前に warn-only で呼び出される
 - `scripts/check-skill-change-observation-ac.sh` — Issue 本文が `skills/*/SKILL.md` に言及する場合に、post-merge の `verify-type: observation` AC から `session=next` 未付与を検出；`skills/issue/SKILL.md` Step 4 から warn-only で呼び出される
+- `scripts/check-ac-checkbox-format.sh` — Issue 本文の `### Pre-merge` / `### Post-merge` セクション配下でチェックボックス形式でない条件行を検出；`skills/issue/SKILL.md` Step 4 から warn-only で呼び出される
 - `scripts/check-translation-sync.sh` — docs/ja/* と docs/* の翻訳同期状況を確認
 - `scripts/check-forbidden-expressions.sh` — docs/product.md § Terms の deprecated terms を検出
 - `scripts/setup-labels.sh` — ワークフロー用 GitHub ラベルを作成
