@@ -10,7 +10,7 @@ Wholework's **autonomy tier** controls how far skills may write GitHub state (L0
 
 ## Why it exists
 
-Wholework skills can write GitHub state (create labels, close issues, post comments) and fire follow-on loops through Claude Code primitives (`CronCreate`, `ScheduleWakeup`) or seed files. How much of this you want to happen automatically depends on your project's trust level, review culture, and tolerance for autonomous side effects.
+Wholework skills can write GitHub state (create labels, close issues, post comments) and fire follow-on loops through Claude Code primitives (`CronCreate`, `ScheduleWakeup`). How much of this you want to happen automatically depends on your project's trust level, review culture, and tolerance for autonomous side effects.
 
 The autonomy tier gives you a single dial to control all of this — without having to configure each skill individually.
 
@@ -29,7 +29,7 @@ Allowed L2→L1 paths: **A (Advisory only)**
 
 ### L2 Assisted
 
-Skills write GitHub state (same as current `/auto` and `/verify` behavior) and may emit seed files for the next cycle. **No automatic cron scheduling.**
+Skills write GitHub state (same as current `/auto` and `/verify` behavior). **No automatic cron scheduling.**
 
 Use L2 when:
 - You are running mid-scale modernization (the Wholework anchor case: $10K / 10 days / 50–100 PRs)
@@ -37,7 +37,7 @@ Use L2 when:
 - You are comfortable with Wholework closing Issues and transitioning labels automatically
 - You prefer to trigger recurring schedules manually (e.g., running `/auto --batch` yourself)
 
-Allowed L2→L1 paths: **A (Advisory), C (ScheduleWakeup in-loop), E (Seed file emission)**
+Allowed L2→L1 paths: **A (Advisory), C (ScheduleWakeup in-loop)**
 
 ### L3 Unattended
 
@@ -48,7 +48,7 @@ Use L3 when:
 - You want recurring tasks (drift detection, progress audits) to run without any human trigger
 - You accept that Wholework will modify GitHub state and register cron jobs autonomously
 
-Allowed L2→L1 paths: **A, B (CronCreate), C, E**
+Allowed L2→L1 paths: **A, B (CronCreate), C**
 
 ## Setting the tier
 
