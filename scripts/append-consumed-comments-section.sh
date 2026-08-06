@@ -201,7 +201,7 @@ if ! git -C "$_repo_root" diff --quiet "$SPEC_REL" 2>/dev/null; then
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>" 2>/dev/null; then
     if [[ "$NO_PUSH" == "true" ]]; then
       : # commit only, push is the caller's responsibility (in-session mandatory call path)
-    elif [[ "$_git_dir" == "$_git_common_dir" ]]; then
+    elif [[ -n "$_git_dir" && -n "$_git_common_dir" && "$_git_dir" == "$_git_common_dir" ]]; then
       # Main tree: route through the locked merge-push script instead of a bare push.
       _current_branch="$(git -C "$_repo_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
       "$SCRIPT_DIR/worktree-merge-push.sh" --base "$_current_branch" 2>/dev/null \
