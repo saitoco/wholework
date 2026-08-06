@@ -148,6 +148,39 @@ Steps that operate on version-controlled files do not need this round trip; thos
 
 While executing a Step against the main repository per the round trip above, the auto-mode classifier may reject `mv` targeting a gitignored path in the parent repository — observed both from inside the worktree and from the main repository root immediately after `ExitWorktree`. `cp` performing an in-place overwrite of the same target is not subject to the same rejection. Where a Step's natural implementation is "write to a temp file, then move it into place" (e.g. `jq ... > .new`), prefer `cp .new target` over `mv .new target` as the final write — this avoids the rejection without resorting to `--dangerously-skip-permissions` or other permission bypasses.
 
+### Spec file write destination
+
+All phases that append to a disposable Spec (`docs/spec/issue-N-*.md` — Consumed Comments,
+retrospectives, Phase Handoff) must write **only on that phase's own working branch** — the
+worktree branch it entered via the Entry section above (which is also the PR branch for
+`/code` pr route). Never write the Spec directly against the base branch from a main-repository
+context. Base propagation happens exclusively through this module's own Exit paths: `Exit:
+merge-to-main` (`worktree-merge-push.sh`) or a PR merge — never a standalone `git push` issued
+from outside the worktree.
+
+This rule exists because a Spec file edited from two different branches in the same phase
+window — the phase's own worktree branch and, separately, the base branch via an
+out-of-worktree write — produces a two-sided edit to the same file that conflicts at merge
+time (`mergeStateStatus: DIRTY`), even though the actual implementation diff is untouched. See
+Issue #1058 for the incident this rule generalizes from.
+
+**Base propagation path per phase (exhaustive):**
+
+| Phase | Working branch | Base propagation path |
+|-------|-----------------|------------------------|
+| `/spec` | worktree branch | `Exit: merge-to-main` → `worktree-merge-push.sh` |
+| `/code` patch / operate route | worktree branch | `Exit: merge-to-main` → `worktree-merge-push.sh` |
+| `/code` pr route | worktree branch (= PR branch) | PR merge (`/merge`) |
+| `/verify` | worktree branch | `Exit: merge-to-main` → `worktree-merge-push.sh` |
+
+Callers that append to `## Consumed Comments` (see `modules/l0-surfaces.md` § "Bash wrapper
+fallback") must pass `--no-push` to `append-consumed-comments-section.sh` when calling it
+in-session from inside the worktree: the commit lands on the working branch shown above, and
+this table's propagation path — not a push issued by the script itself — carries it to base.
+The one exception is `/code` pr route, where the phase's own Step 12 explicitly pushes the
+worktree branch afterward (the PR branch has no `worktree-merge-push.sh` propagation path of
+its own).
+
 ### `source`-based shell function calls are blocked by the worktree isolation guard
 
 Shell helpers that must be invoked via `source` because they define a function rather than being directly executable (e.g. `emit-event.sh`'s `emit_event`) cannot run inside a worktree session: the worktree isolation guard cannot verify that a sourced command stays inside the worktree, and blocks it outright. There is no rewrite that avoids `source` for a function call, so this is a hard blocker for the duration of the worktree session.
