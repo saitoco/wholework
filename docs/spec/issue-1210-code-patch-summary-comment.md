@@ -103,3 +103,29 @@ patch route の `/code` は現状、`closes #N` コミット以外に Issue タ�
 - **tests/code.bats は Changed Files に含めない**: `/issue` retrospective の判断を踏襲。同ファイルは SKILL.md の構造テストであり、本 Issue の pre-merge AC は `section_contains` で同等の構造検証を行っているため、bats アサーション追加は二重化になる
 - **依存関係 (#1208)**: `modules/l0-surfaces.md` の Comment Consumption Procedure は既に `skills/code/SKILL.md` の Worktree Entry (Step 2, `PHASE_NAME=code`, cutoff は直近の `phase/ready` label 付与時刻) に組み込み済みであることを確認した (#1208 実装済み)。本 Issue の「投稿位置は label transition の前」という設計判断は、この既存の cutoff 機構に対して有効
 - **Change Tracking トリガーの絞り込み**: コメントテンプレートのトリガーを Issue body の 3 条件 (Step 10 書き換え / Spec sync / AC 追記) から 2 条件に絞った。AC 追記の実体である「Auto-append acceptance conditions to Issue」は `**For pr route (branch + PR)**:` ブロック内限定で PR 作成イベントに紐づくため、patch route では構造上発火しない。Issue body の記述は pr route の既存文言をそのまま踏襲した一般化表現と判断し、Spec (How) の精度としてより正確な 2 条件に修正した。AC の `section_contains "Change Tracking"` は文字列存在のみを見るため、この絞り込みは AC 判定に影響しない
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Spec Implementation Steps 1・2 の置き換え後テキストをそのまま適用した。バッククォート 3 連のエスケープ (`\`\`\``) は Spec 内側のフェンスに包まれていたための表記であり、実ファイルへの反映時は通常のフェンスに戻すだけで内容の変更はなかった
+
+### Design Gaps/Ambiguities
+- **Pre-merge AC の `github_check` と Step 10/Step 11 の実行順序**: Issue AC #7 (`github_check "gh run list --workflow=test.yml --commit=$(git rev-parse HEAD) ..."`) は「その時点の HEAD に対する CI 結果」を見る verify command だが、`skills/code/SKILL.md` の Step 10 (verify command consistency check) は Step 11 (commit) より前に実行される。patch route では Step 11 の実装コミットがまだ存在しない時点で Step 10 を評価すると、無関係な直前コミットの CI 結果を参照してしまい、意図した検証にならない。今回は Step 10 の同ステップ内で他 6 件のローカル `section_contains`/`rubric` を先に確認・PASS させ、`github_check` 1 件のみ Step 11 のコミット・push 完了後に個別に再実行する運用で対処した。SKILL.md 自体にはこの時間的依存関係の扱いが明記されていない — 同種の commit-scoped `github_check` AC を持つ他の patch route Issue でも同じ判断が必要になるため、`modules/verify-executor.md` か `skills/code/SKILL.md` Step 10 に一般化した注記を追加する余地がある (今回は Spec 変更範囲外のため見送り)
+
+### Rework
+- N/A — 手戻りなし
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Steps 1・2 の置き換えテキストを逐語適用し、独自の言い回し変更は行わなかった (`### Change Tracking` トリガー絞り込みなど How レベルの判断は Spec 段階で既に確定済みのため)
+- `docs/ja/workflow.md` の対応段落を同時に翻訳・追記し、`docs/translation-workflow.md` の同期義務を本コミット内で満たした (コードフェンス数を英日で一致確認済み)
+- Pre-merge AC 7 件のうち 6 件 (ローカル `section_contains`/`rubric`) は commit 前に PASS 確認済み。`github_check` (AC #7) のみ commit-scoped のため commit・push 完了後に個別実行する運用とした
+
+### Deferred Items
+- なし
+
+### Notes for Next Phase
+- 本 Issue は `/code` patch route 自身に `## Implementation Complete` コメント投稿を追加する変更である。本セッション自体は着手時点でロードされた旧 `skills/code/SKILL.md` に従って実行しているため、このコミット自体は新しい Implementation Complete コメントを投稿しない (機能が有効化されるのは次回以降の patch route 実行から)。`/verify` は Post-merge AC (「次に patch route で `/code` が実行された Issue に `## Implementation Complete` コメントが投稿され...」`verify-type: observation event=auto-run session=next`) で次回実行を待つ形になる
+- Pre-merge AC #7 (`github_check`) は commit・push 後に別途確認し、PASS 後に Issue チェックボックスを更新する (Code Retrospective の Design Gaps/Ambiguities 参照)
