@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (75 files)
+├── scripts/             # Utility scripts used by skills and agents (76 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -219,6 +219,7 @@ Key modules:
 - `scripts/pre-merge-check.sh` — baseline diff classifier: runs a specified check on both base and head branches in ephemeral worktrees; classifies result as NEW_FAILURE (exit 2) / PRE_EXISTING / FIXED / CLEAN (exit 0) / env error (exit 1)
 - `scripts/worktree-merge-push.sh` — acquire short-lived patch lock; fetch-after-lock, checkout-less ref-fetch merge (`git fetch . <from>:<base>`) with is-ancestor rebase-skip, and push-retry loop (max 3) for parallel session race hardening
 - `scripts/detect-foreign-worktree.sh` — detect whether CWD is inside a foreign (different-owner) git worktree; used by `modules/worktree-lifecycle.md` Entry section, `skills/verify/SKILL.md` Step 2 (base branch checkout guard), and `skills/review/SKILL.md` Opportunistic Verification (worktree exit precondition)
+- `scripts/reclaim-stale-worktrees.sh` — inventory and reclaim stale worktrees and orphan branches for Issues/PRs that have already completed (CLOSED/MERGED); dry-run by default, `--apply` to perform deletion; concurrent-session guard (locked + HEAD matches main), uncommitted-changes guard, and safe squash-merge branch deletion (`git branch -d` fallback to `-D` only when the branch tip matches the MERGED PR's `headRefOid`)
 - `scripts/detect-wrapper-anomaly.sh` — detect known failure patterns in shell wrapper output and generate Auto Retrospective markdown fragments
 - `scripts/detect-external-kill.sh` — mechanically detect the `external-kill-parent-respawn` signature (exit code 137 alone, or exit code 143/unknown with both the wrapper log `Exit code: ` trailer and the `auto-events.jsonl` `wrapper_exit` event absent for the issue/phase); exit 0 = match, exit 1 = no-match (see `modules/orchestration-fallbacks.md#external-kill-parent-respawn`)
 - `scripts/test-failure-classify.sh` — classify test failure output into recovery categories (snapshot/mock/fixture/logic/infra); exit 0 = repairable, exit 1 = not repairable
