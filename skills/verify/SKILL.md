@@ -48,6 +48,7 @@ persist_auto_session_pointer "<SID or empty>" "$NUMBER"
 
 Emit `phase_start` (phase=verify) immediately after the banner (only when `AUTO_EVENTS_LOG` is set; restore the pointer first so in-session `Skill()` invocations from `/auto` are not silently excluded — see `restore_auto_session_pointer()` in `modules/event-emission.md`):
 ```bash
+source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
 restore_auto_session_pointer $NUMBER
 if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
   EMIT_ISSUE_NUMBER=$NUMBER emit_event "phase_start" "phase=verify"
