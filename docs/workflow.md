@@ -293,7 +293,7 @@ GitHub native blocked-by relationships (set via `addBlockedBy` mutation) are the
 
 ### Reading relationships
 
-All judgment paths (the `/auto --batch` List mode gate, `/triage` Step 9's single-Issue dependency check, `/triage --backlog dependency`'s Step 2b graph construction, and `/spec` Step 4's blocking check) read through `scripts/get-blocked-by.sh`, the single read window onto the GraphQL SSoT. `/auto`'s batch gate additionally runs `gh-check-blocking.sh` immediately before the read, to materialize any body-text shortcut into GraphQL first — this keeps the gate at least as strict as before, even for Issues where a blocker was only ever written as body text. `/spec` Step 4 stays read-only (no materialize call), since Issues reaching `/spec` have already passed through `/issue` or `/triage`, both of which materialize on write.
+All judgment paths (the `/auto --batch` List mode gate, `/triage` Step 9's single-Issue dependency check, `/triage --backlog dependency`'s Step 2b graph construction, and `/spec` Step 4's blocking check) read through `scripts/get-blocked-by.sh`, the single read window onto the GraphQL SSoT. `/auto`'s batch gate and `/spec` Step 4 both run `gh-check-blocking.sh` immediately before the read, to materialize any body-text shortcut into GraphQL first — this keeps the gate at least as strict as before, even for Issues where a blocker was only ever written as body text and `/triage` (at the default L1 autonomy tier) only printed an advisory recommendation rather than materializing it.
 
 ### Automatic relationship setting
 

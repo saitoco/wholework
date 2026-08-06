@@ -236,9 +236,9 @@ The GraphQL blocked-by relationship is the authoritative source for dependency s
    ```bash
    ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh $NUMBER
    ```
-   Each output line is `<blocker-number><TAB><state>` (exit 0: no blockers or all `CLOSED`; exit 2: one or more `OPEN`).
+   Each output line is `<blocker-number><TAB><state>` (exit 0: no blockers or all `CLOSED`; exit 1: error — warn and skip the dependency check; exit 2: one or more `OPEN`).
 2. For each returned line: if `state` is `CLOSED`, report as "resolved dependency (#N is CLOSED)" (report only — no auto-correction, current behavior retained). If `state` is `OPEN`, report as "open dependency (#N is OPEN)".
-3. Extract `Blocked by #N` patterns from the issue body. For each `N` **not** present in the GraphQL blocker list from step 1, the relationship is missing. Apply tier-aware action:
+3. Extract `Blocked by #N` patterns from the issue body. For each `N` **not** present in the GraphQL blocker list from step 1, check `N`'s state (`gh issue view $N --json state`). If `N` is `CLOSED`, report as "resolved dependency (#N is CLOSED)" (no action — do not backfill a relationship pointing at a closed Issue). If `N` is `OPEN`, the relationship is missing; apply tier-aware action:
    - **L1** (default): print `Recommend: set blocked-by relationship: scripts/set-blocked-by.sh $NUMBER $N`
    - **L2 / L3**: call `${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh $NUMBER $N` to set the relationship
 
@@ -576,9 +576,9 @@ Execute only when the `dependency` perspective is specified. Check dependency he
 
 **Build dependency graph (GraphQL-sourced):**
 
-1. Fetch the full open-issue blocked-by graph in one call:
+1. Fetch the full open-issue blocked-by graph in one call. Use a **fixed** `--limit 100` here regardless of the user-facing `--limit $LIMIT` value — `triage-backlog-filter.sh` (Step 1) always scans the newest 100 open Issues internally before applying `--limit $LIMIT` as a post-filter `head` cut, so a fixed 100 keeps this graph covering at least the Step 1 issue set; passing `$LIMIT` straight through would under-cover Step 1's set whenever `$LIMIT` < 100 and the newest Issues happen to already be triaged:
    ```bash
-   ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh --all --limit $LIMIT
+   ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh --all --limit 100
    ```
    Each output line is `<issue><TAB><blocker><TAB><blocker_state>`.
 2. Build a graph with issue numbers as nodes and blocked-by as directed edges (N → M: issue N is blocked by issue M), keyed off this TSV output rather than issue-body text.
@@ -594,10 +594,11 @@ Execute only when the `dependency` perspective is specified. Check dependency he
 
 **Verification order:**
 
-1. **Graph construction**: Fetch the GraphQL graph via `get-blocked-by.sh --all --limit $LIMIT` and build the in-memory dependency dictionary
+1. **Graph construction**: Fetch the GraphQL graph via `get-blocked-by.sh --all --limit 100` and build the in-memory dependency dictionary
 2. **Circular dependency detection**: Run DFS on the GraphQL-sourced graph to detect cycles (Claude tracks logically)
 3. **Resolved blocked-by detection**: Filter the `--all` TSV output for lines where `blocker_state` is `CLOSED` — no additional API call needed
 4. **Orphan dependency detection (body-text hygiene)**: Extract `Blocked by #N` patterns from each issue body in the Step 1 set; for each `N`, run `gh issue view N --json state` — those that return an error (issue doesn't exist) are orphan dependencies
+5. **Missing relationship detection**: reuse the body-text `Blocked by #N` extraction from step 4; for each `N` not present as an edge in the GraphQL graph from step 1, apply the tier-aware action from Notes below
 
 **Notes (exhaustive):**
 - Display "no dependency anomalies" if none detected

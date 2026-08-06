@@ -84,7 +84,13 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh $NUMBER spec
 
 ### Step 4: Blocked-by Detection
 
-Check whether the target Issue has unresolved blocked-by relationships (read-only — GraphQL is the SSoT, see `docs/workflow.md` § Blocked-by relationships):
+Check whether the target Issue has unresolved blocked-by relationships (GraphQL is the SSoT, see `docs/workflow.md` § Blocked-by relationships). Materialize any body-text `Blocked by #N` shortcuts into GraphQL first — Issues reaching `/spec` may have been triaged at autonomy tier L1 (the default), where `/triage` only prints an advisory recommendation and does not call `set-blocked-by.sh`, so a body-text-only blocker would otherwise be invisible to a GraphQL-only read:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh $NUMBER
+```
+
+(exit code 2 here just means an open blocker was detected in body text and materialized — not an error; only treat exit code 1 as an error, output a warning, and continue to the `get-blocked-by.sh` call below.)
 
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh $NUMBER

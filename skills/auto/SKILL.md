@@ -1123,6 +1123,7 @@ Process each Issue in `BATCH_LIST` in order:
    ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh $NUMBER
    ```
    - Exit 0 (no blockers, or all blockers `CLOSED`): gate released — skip to step 5
+   - Exit 1 (error, e.g. transient GraphQL failure): output a warning and treat as gate released (proceed to step 5) — same fail-open policy as the preceding `gh-check-blocking.sh` call
    - Exit 2 (one or more `OPEN` blockers; each output line is `<BLOCKER><TAB><STATE>`): for each `OPEN` blocker `$BLOCKER`:
      ```
      gh issue view $BLOCKER --json labels -q '[.labels[].name | select(startswith("phase/"))]'

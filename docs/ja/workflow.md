@@ -286,7 +286,7 @@ GitHub native の blocked-by relationship (`addBlockedBy` mutation で設定) �
 
 ### 読み取り経路
 
-すべての判定経路 (`/auto --batch` List mode gate、`/triage` Step 9 の単一 Issue 依存チェック、`/triage --backlog dependency` Step 2b のグラフ構築、`/spec` Step 4 のブロッキングチェック) は、GraphQL SSoT への単一の読み取り窓口である `scripts/get-blocked-by.sh` を経由します。`/auto` の batch gate はこれに加えて、読み取り直前に `gh-check-blocking.sh` を実行して body テキストのショートカットを先に GraphQL へ materialize します — これにより、blocker が body テキストにしか書かれていない Issue でも gate は従来以上に厳密であり続けます。`/spec` Step 4 は materialize 呼び出しを行わず読み取り専用のままです。`/spec` に到達する Issue は `/issue` または `/triage` を既に通過しており、いずれも書き込み時に materialize 済みだからです。
+すべての判定経路 (`/auto --batch` List mode gate、`/triage` Step 9 の単一 Issue 依存チェック、`/triage --backlog dependency` Step 2b のグラフ構築、`/spec` Step 4 のブロッキングチェック) は、GraphQL SSoT への単一の読み取り窓口である `scripts/get-blocked-by.sh` を経由します。`/auto` の batch gate と `/spec` Step 4 はいずれも、読み取り直前に `gh-check-blocking.sh` を実行して body テキストのショートカットを先に GraphQL へ materialize します — これにより、blocker が body テキストにしか書かれていない Issue (`/triage` がデフォルトの L1 tier では advisory print のみで materialize しないケースを含む) でも gate は従来以上に厳密であり続けます。
 
 ### 自動設定経路
 
