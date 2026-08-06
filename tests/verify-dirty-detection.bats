@@ -263,6 +263,75 @@ EOF
     [[ "$output" == *"classify=own-issue-scope"* ]]
 }
 
+@test "active-session unrelated spec: owning issue OPEN + phase/code -> exit 0, classify=foreign-session" {
+    cd "$REPO_DIR"
+    MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
+    mkdir -p "$MOCK_DIR"
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+for arg in "$@"; do
+  case "$arg" in
+    state) echo "OPEN"; exit 0 ;;
+    labels) echo "phase/code"; exit 0 ;;
+  esac
+done
+exit 1
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    make_dirty "docs/spec/issue-999-some-spec.md"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"classify=foreign-session"* ]]
+}
+
+@test "active-session unrelated spec: owning issue CLOSED -> exit 2 regression check" {
+    cd "$REPO_DIR"
+    MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
+    mkdir -p "$MOCK_DIR"
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+for arg in "$@"; do
+  case "$arg" in
+    state) echo "CLOSED"; exit 0 ;;
+    labels) echo "phase/done"; exit 0 ;;
+  esac
+done
+exit 1
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    make_dirty "docs/spec/issue-999-some-spec.md"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"docs/spec/issue-999-some-spec.md"* ]]
+}
+
+@test "active-session unrelated spec: owning issue OPEN + phase/done -> exit 2 regression check" {
+    cd "$REPO_DIR"
+    MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
+    mkdir -p "$MOCK_DIR"
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+for arg in "$@"; do
+  case "$arg" in
+    state) echo "OPEN"; exit 0 ;;
+    labels) echo "phase/done"; exit 0 ;;
+  esac
+done
+exit 1
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    make_dirty "docs/spec/issue-999-some-spec.md"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"docs/spec/issue-999-some-spec.md"* ]]
+}
+
 @test "mixed: unrelated spec file + foreign-session file -> exit 0, not exit 2" {
     cd "$REPO_DIR"
     cat > docs/spec/issue-123-my-spec.md <<'EOF'

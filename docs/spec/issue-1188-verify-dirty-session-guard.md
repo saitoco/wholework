@@ -58,3 +58,7 @@
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: `/issue --non-interactive` によるリファインメント実施記録。Triage 結果 (Type=Bug, Size=M, Value=3)、AC 調整 (post-merge observation AC への `session=next` 追加、AC5 への新規テストファイル注記)、および稼働中セッション判定の主判定材料を `phase/*` ラベル軸とする Auto-Resolve 方針を記録。 / URL: https://github.com/saitoco/wholework/issues/1188#issuecomment-5201465090
+
+### code phase (cutoff: 2026-08-06T08:08:52Z)
+
+No new comments since last phase.
