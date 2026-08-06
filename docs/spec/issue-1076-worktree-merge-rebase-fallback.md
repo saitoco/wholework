@@ -130,3 +130,35 @@ Base Branch Conflict Pre-check (`git merge-tree`) が、この Issue 自身の S
 ### Improvement Candidate
 
 - `gh-pr-review.sh` が MUST issue 検出時に `event=REQUEST_CHANGES` で投稿を試みるが、レビュー実行アカウントと PR 作成者が同一 (本リポジトリのような single-account 運用) の場合、GitHub API が `422 Unprocessable Entity: "Review Can not request changes on your own pull request"` を返し失敗する。今回は line comments JSON に `severity` フィールドを付け忘れていたため偶然 `COMMENT` イベントとなり実害はなかったが、`severity` を正しく付与していれば同じ 422 に直面していた可能性が高い。self-review 制約下での `gh-pr-review.sh` の event 選択ロジック (MUST 検出時に `REQUEST_CHANGES` を試みて 403/422 なら `COMMENT` にフォールバックする、等) は改善余地がある。未起票 (`/verify` 側での起票判断に委ねる)。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Auto-Resolve が rebase 対象を `origin/${BASE_BRANCH}` に解決したが、これは**誤り**だった。true 側の ff 判定基準がローカル checkout の HEAD である点を見落としており、人間からの申し送りコメント (spec 開始 27 秒前) で override された
+- 判断根拠として「既存 false 側実装との整合」を挙げた点は筋が通っていたが、**false 側と true 側で ff 判定の対象が異なる**という非対称性まで踏み込めていなかった。既存実装への整合は必要条件であって十分条件ではない
+- Issue 本文の `## Auto-Resolved Ambiguity Points` は override 後も当初案のまま残っており、実装と食い違って見える。review がこれを検出し「Issue 本文側も更新すべき」と指摘している (実害なし)
+
+#### spec
+- 人間の override を Consumed Comments に技術的根拠つきで記録し、`modules/orchestration-fallbacks.md` の Rationale にも反映した。**このおかげで `/review` が「Issue 本文と実装の食い違い」を spec deviation ではなく意図的な override と正しく判別できた**
+- ドキュメントに **閉じられていない既知のギャップ**まで明記した点が良い (push retry loop の checkout-less 設計が true 側実行中は exit 128 で拒否されるため、true 側実行中に着地した push race はリトライループで解決されない — 本 PR 以前からの問題)
+
+#### code
+- 共有関数 `rebase_from_branch_onto(target_ref)` に切り出し、true/false 側が異なる ref を渡す**理由をコード内コメントに残した**。設計判断の根拠がコードと同居しており、将来の読者が非対称性を「バグ」と誤読するのを防いでいる
+
+#### review
+- **Base Branch Conflict Pre-check (`git merge-tree`) が、この Issue 自身の Spec ファイルに対して実コンフリクトを検出した**。別セッションが同一箇所にコミットしていたためで、本 Issue の主題 (並行セッションによる base 分岐) がレビュー対象の Spec ファイル自身にメタ的に再現した。Pre-check の実効性を裏付ける実例
+- 4 件すべて rubric type で UNCERTAIN なく PASS 判定に到達
+
+#### merge
+- 特記なし。conflict 解消・追加リトライなし
+
+#### verify
+- Pre-merge 4 件すべて PASS。実装・テスト・ドキュメントの三点が揃っており、rubric の判定材料に不足はなかった
+- true 側の新規テストは false 側と対称に 2 件 (成功経路 / rebase コンフリクト経路) 追加されており、AC3 の「該当条件がテストで保護されている」を満たす
+
+### Improvement Proposals
+
+- **`gh-pr-review.sh` の self-review 422 フォールバック** — review retrospective が「未起票」として `/verify` に判断を委ねた項目。single-account 運用では MUST 検出時の `event=REQUEST_CHANGES` が `422 Unprocessable Entity` で失敗する。今回は `severity` フィールドの付け忘れで偶然 `COMMENT` になり実害を免れたが、正しく付与していれば失敗していた。`403`/`422` 時に `COMMENT` へフォールバックする対処が要る
+- **Issue 本文の Auto-Resolved Ambiguity Points を override 後の結論に更新する運用** — Spec を読まずに Issue だけを見る読者の誤解を防ぐ。今回は Spec 側に override が明記されていたため `/review` は正しく判別できたが、一般則としては Issue 本文も追従させるべき
