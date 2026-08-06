@@ -38,6 +38,7 @@ MOCK
 
     cat > "$MOCK_DIR/git" <<MOCK
 #!/bin/bash
+echo "\$*" >> "$REPO_ROOT/git.log"
 if [[ " \$* " == *" diff "* ]] && [[ " \$* " == *" --quiet "* ]]; then
     exit 1
 fi
@@ -56,6 +57,13 @@ fi
 exit 0
 MOCK
     chmod +x "$MOCK_DIR/git"
+
+    cat > "$MOCK_DIR/worktree-merge-push.sh" <<MOCK
+#!/bin/bash
+echo "CALLED \$*" >> "$REPO_ROOT/merge-push.log"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/worktree-merge-push.sh"
 }
 
 @test "no spec file: skips stub creation and exits 0" {
@@ -188,4 +196,52 @@ MOCK
     run "$SCRIPT" 42 code
     [[ "$output" == *"WARNING"* ]]
     [[ "$output" == *"worktree"* ]]
+}
+
+@test "--no-push flag: commits but does not push" {
+    SPEC_FILE="$BATS_TEST_TMPDIR/repo/docs/spec/issue-42-some-title.md"
+    printf '# Issue #42: some title\n\n## Overview\nSome content.\n' > "$SPEC_FILE"
+
+    run "$SCRIPT" 42 code --no-push
+    [ "$status" -eq 0 ]
+    grep -q "^## Consumed Comments" "$SPEC_FILE"
+    ! grep -q "push" "$REPO_ROOT/git.log"
+    [ ! -f "$REPO_ROOT/merge-push.log" ]
+}
+
+@test "main tree execution without --no-push: routes push through worktree-merge-push.sh" {
+    SPEC_FILE="$BATS_TEST_TMPDIR/repo/docs/spec/issue-42-some-title.md"
+    printf '# Issue #42: some title\n\n## Overview\nSome content.\n' > "$SPEC_FILE"
+
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$*" >> "$REPO_ROOT/git.log"
+if [[ " \$* " == *" diff "* ]] && [[ " \$* " == *" --quiet "* ]]; then
+    exit 1
+fi
+if [[ "\$*" == *"rev-parse --show-toplevel"* ]]; then
+    echo "$REPO_ROOT"
+    exit 0
+fi
+if [[ "\$*" == *"rev-parse --git-dir"* ]]; then
+    echo "$REPO_ROOT/.git"
+    exit 0
+fi
+if [[ "\$*" == *"rev-parse --git-common-dir"* ]]; then
+    echo "$REPO_ROOT/.git"
+    exit 0
+fi
+if [[ "\$*" == *"rev-parse --abbrev-ref HEAD"* ]]; then
+    echo "main"
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run "$SCRIPT" 42 code
+    [ "$status" -eq 0 ]
+    grep -q "^## Consumed Comments" "$SPEC_FILE"
+    grep -q "CALLED --base main" "$REPO_ROOT/merge-push.log"
+    ! grep -q "^push origin HEAD" "$REPO_ROOT/git.log"
 }
