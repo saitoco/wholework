@@ -4,6 +4,7 @@
 
 - saito / MEMBER / first-class / `/issue 1152` の Issue Retrospective — 方針確定 (方針 2)、スコープ拡大 (`起票済み` フィルタの group-key 一括抑止)、`#1191 blocked-by #1152` の設定理由 / https://github.com/saitoco/wholework/issues/1152#issuecomment-5201365514
 
+- saito / MEMBER / first-class / ## 実装セッションへの申し送り (Spec 作成後に着地した #1098 の影響) / https://github.com/saitoco/wholework/issues/1152#issuecomment-5202021801
 ## Overview
 
 `scripts/collect-recovery-candidates.sh` の除外判定を **group-key 単位から entry 単位**へ変え、対応 Issue の解決時点との日付比較で判定する。これにより「解決済み症状の再検出 (false positive)」と「対応 Issue close 後の再発の握り潰し (false negative)」を同時に解消する。
