@@ -1,0 +1,172 @@
+# Issue #1214: auto: next-cycle seed (経路 E) を撤去し次サイクル選定を audit session に一本化
+
+## Consumed Comments
+
+cutoff: `2026-08-06T14:27:00Z` (直近の `phase/issue` label 付与時刻)
+
+| login | authorAssociation | trust tier | intent | URL |
+|-------|-------------------|-----------|--------|-----|
+| saito | MEMBER | first-class | `/issue 1214 --non-interactive` の Issue Retrospective (Triage 結果・verify command 監査・自動解決 2 件・AC 補強 2 件) | https://github.com/saitoco/wholework/issues/1214#issuecomment-5206082995 |
+| saito | MEMBER | first-class | 削除系事前スキャンの追実施報告。`docs/guide/autonomy.md` の記載漏れ検出、`docs/spec/**` と `docs/sessions/**` は歴史的記録として編集対象外と確定 | https://github.com/saitoco/wholework/issues/1214#issuecomment-5206139243 |
+
+いずれも本 Spec の設計前提として取り込み済み。2 件目が確定させた「編集対象外 = 歴史的記録」の線引きは、本 Spec の `## Exclusions` にそのまま引き継いだ。
+
+## Overview
+
+`/auto --batch` 完了 tail の next-cycle seed (Loop Engineering 経路 E: Seed file emission、#703 実装) を撤去する。20 回発火して全回 `candidate_count=0`、かつ `.tmp/next-cycle.json` を読むコードがリポジトリ全体でゼロという「書き込み専用の死んだ機能」を、設定キー・イベントスキーマ・ガバナンス語彙 (経路 E) ごと削除する。
+
+バッチ側に残すのは path A の advisory 出力 1 行のみ。次サイクル候補の選定は独立した `/audit` session に責務移管し、バッチはそこへのポインタだけを出力する。
+
+## Changed Files
+
+### 実装・設定
+
+- `skills/auto/SKILL.md`:
+  - frontmatter `loop-paths-used: [A, E]` → `loop-paths-used: [A]`
+  - frontmatter `loop-paths-fallback: [A]` 行を削除 (E が消えると A は全 tier で常に許可されるため発火しえない死んだ宣言。`skills/verify/SKILL.md` が `loop-paths-used: [A]` のみで fallback 行を持たず、これが既存の慣例)
+  - `**Next-cycle seed (batch, best-effort):**` ブロック全体を削除し、無条件の advisory 出力 1 段落に置換。挿入位置は `**Run-fact AC reconciliation (runs after the observation scan, best-effort):**` ブロック直後・`**L3 auto-retrospective (batch route):**` 直前 (行番号ではなく前後の見出しで特定すること)
+  - `allowed-tools` は**変更しない** (下記 Exclusions 参照)
+- `.wholework.yml`: `next-cycle-seed:` ブロック (`next-cycle-seed:` + `  enabled: true` の 2 行) を削除
+- `scripts/emit-event.sh`: `# next_cycle_seeded: ...` スキーマコメントブロック (ヘッダ 1 行 + `candidate_count` / `source_breakdown` / `batch_session_id` の 3 フィールド行 + 直後の区切り `#` 行) を削除。bash 3.2+ 互換 — コメント削除のみで実行コードに変更なし
+- `modules/detect-config-markers.md`: (a) Marker Definition Table の `| next-cycle-seed.enabled | NEXT_CYCLE_SEED_ENABLED | ... |` 行、(b) YAML Parsing Rules の `- next-cycle-seed.* nested keys are interpreted under ...` 行、(c) Output Format コードフェンス内の `NEXT_CYCLE_SEED_ENABLED: ...` 行 — 計 3 箇所を削除
+
+### フレームワーク (経路 E 削除)
+
+- `modules/autonomy-tier.md`:
+  - L2→L1 Path Catalog から `| **E** | Seed file emission | ... |` 行を削除
+  - Tier × L2→L1 Path Matrix から `E` 列を削除 (ヘッダ行 `| Tier | A | B | C | E | Default use |`、区切り行、L1/L2/L3 の 3 データ行すべて)
+  - 同マトリクス L2 Assisted 行の Default use 文 `Mid-scale modernization (anchor case). Seed is automated; cron requires a human to trigger.` → `Mid-scale modernization (anchor case). The main workflow is automated; cron requires a human to trigger.`
+  - L0 Layer Table の L2 行 drive mechanism `Tail extension (#700/702/703)` → `Tail extension (#700/702)`
+  - Skill Frontmatter Declaration Rules のコード例 `loop-paths-used: [A, E]` → `loop-paths-used: [A]`
+  - 宣言規則本文 `list of path IDs the skill uses (\`A\`, \`B\`, \`C\`, \`E\`). D is omitted (not supported).` から `` `E` `` を除去
+  - マトリクス直後の除外注記 `Path D is excluded from the matrix because it is not supported.` は**変更しない** (D は経路表に残存しつつ列だけ除外、E は行ごと削除で状況が異なる)
+  - 両テーブル見出しの `(exhaustive)` マーカーは維持 (E 削除後も網羅性の主張は変わらない)
+
+### ドキュメント
+
+- `docs/guide/customization.md`: (a) 設定リファレンス表の `| next-cycle-seed.enabled | ... |` 行を削除、(b) `.wholework.yml` サンプルのコメント `# L1 = advisory only (safest), L2 = assisted (main workflow + seed), L3 = unattended (CronCreate allowed)` から `+ seed` を除去、(c) 設定リファレンス表 `autonomy` 行の `` `L2` Assisted (in-loop + seed) `` → `` `L2` Assisted (in-loop) ``
+- `docs/ja/guide/customization.md`: `| next-cycle-seed.enabled | ... |` 行を削除 (翻訳同期)。EN 側 (b)(c) に対応する記述は JA ミラーに存在しない (本 Issue 以前からの翻訳ドリフト) ため同期対象は 1 行のみ — grep 確認済み
+- `docs/tech.md`: Architecture Decisions の Autonomy tier 項 (1 段落) について、(a) 経路列挙 `(A Advisory / B CronCreate / C ScheduleWakeup / E Seed file emission)` → `(A Advisory / B CronCreate / C ScheduleWakeup)`、(b) 末尾文 `Remaining gating enforcement (#702, #703) is tracked in follow-up Issues.` を文ごと削除 (#702/#703 とも CLOSED 済みかつ #703 は本 Issue の撤去対象)
+- `docs/ja/tech.md`: 同項 (翻訳同期) について、(a) `（A Advisory / B CronCreate / C ScheduleWakeup / E Seed file emission）` → `（A Advisory / B CronCreate / C ScheduleWakeup）`、(b) 末尾の `残りのゲーティング実施（#702、#703）はフォローアップ Issue で追跡` を削除し、直前の `#700（...）で実装済み。` で段落を終える
+- `docs/guide/autonomy.md`: (a) L2 tier 節 `Allowed L2→L1 paths: **A (Advisory), C (ScheduleWakeup in-loop), E (Seed file emission)**` → `Allowed L2→L1 paths: **A (Advisory), C (ScheduleWakeup in-loop)**`、(b) L3 tier 節 `Allowed L2→L1 paths: **A, B (CronCreate), C, E**` → `Allowed L2→L1 paths: **A, B (CronCreate), C**`、(c) Why it exists 節の `... through Claude Code primitives (\`CronCreate\`, \`ScheduleWakeup\`) or seed files.` から `or seed files` を除去、(d) L2 tier 節 `Skills write GitHub state (same as current \`/auto\` and \`/verify\` behavior) and may emit seed files for the next cycle.` から `and may emit seed files for the next cycle` を除去。JA ミラー (`docs/ja/guide/autonomy.md`) は未作成であり、`docs/translation-workflow.md` の同期義務は top-level `docs/*.md` 限定のため新規作成しない
+- `docs/reports/external-kill-investigation.md`: 2026-07-15 Update 節の `#1006, #1007 — confirmed via the \`next_cycle_seeded\` event's \`batch_session_id\` field` 記述に、代替判別手段の注記を追加。注記内容は「`next_cycle_seeded` は #1214 で撤去済み。以降のバッチセッション判定には `.tmp/auto-session-<AUTO_SESSION_ID>.json` の `"mode": "batch"` フィールドを使う」。歴史的記録なので既存記述自体は書き換えず、注記の追加のみ
+
+### Steering Docs sync candidate
+
+- `docs/structure.md` / `docs/ja/structure.md`: [Steering Docs sync candidate] `scripts/emit-event.sh` の説明行あり。ただし記述は `emit_event()` / `restore_auto_session_pointer()` の役割と呼び出し元一覧のみで、個別イベント型のスキーマ列挙は無い。本 Issue の変更はコメント削除のみのため更新不要と判断 (grep 確認済み)。`/code` フェーズで最終判断すること
+- `modules/event-emission.md`: [Steering Docs sync candidate] イベント emission 契約の SSoT だが `next_cycle_seeded` への言及なし (repo 全体 grep で 0 件)。更新不要
+- `tests/emit-event.bats`: [Steering Docs sync candidate] `scripts/emit-event.sh` のテスト。`next_cycle_seeded` への言及なし (grep 確認済み)。コメント行削除のみのため更新不要
+- `docs/workflow.md` / `docs/ja/workflow.md`: [Steering Docs sync candidate] `autonomy:` tier への言及はあるが blocked-by の tier-aware action に限定され、経路 E / seed への言及なし (grep 確認済み)。更新不要
+
+## Exclusions
+
+削除系事前スキャン (`next-cycle-seed` / `next_cycle_seeded` / `next-cycle.json` / `Seed file emission` / `NEXT_CYCLE_SEED_ENABLED` + 追加の `seed` 単独キーワード) でヒットするが、意図的に変更しないもの。
+
+- `docs/spec/issue-701-*.md`, `issue-703-*.md`, `issue-704-*.md`, `issue-772-*.md`, `issue-854-*.md`, `issue-1014-*.md` — 実装当時 / 関連整理時の Spec (歴史的記録)
+- `docs/reports/loop-engineering-wholework-2026-06-18.md` / `docs/ja/reports/loop-engineering-wholework-2026-06-18.md` — 日付入りの設計レポート (経路 E の原設計)
+- `docs/sessions/**/events.jsonl` — 記録済み `next_cycle_seeded` イベント (実行履歴)
+- `skills/auto/SKILL.md` `allowed-tools` の `${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*` — 本文からの `emit-event.sh` 参照は削除ブロック内 1 箇所のみだが、`scripts/check-allowed-tools.sh` が呼ぶ `validate-skill-syntax.py` の検出方向は「本文で参照しているのに allowed-tools に無い」(過少宣言) のみで、過剰宣言は検出されない (実装確認済み: `validate-skill-syntax.py` は body 側の `${CLAUDE_PLUGIN_ROOT}/scripts/*.sh` を走査して allowed-tools 側に存在するかを見る片方向チェック)。無害かつ将来の再利用余地があるため残す
+- `skills/audit/SKILL.md` の `seeds of future problems` — 無関係な英単語 (fragility の severity 説明)
+
+## Implementation Steps
+
+1. `skills/auto/SKILL.md` の frontmatter を修正 — `loop-paths-used: [A, E]` を `loop-paths-used: [A]` に変更し、直後の `loop-paths-fallback: [A]` 行を削除する。`allowed-tools` は変更しない (→ acceptance criteria 4, 5)
+
+2. `skills/auto/SKILL.md` の Batch Completion Report 内 `**Next-cycle seed (batch, best-effort):**` ブロック (見出し行から `If any step in path E fails, ...` の段落まで) を削除し、同じ位置に無条件の advisory 段落を置く (parallel with 1)。挿入位置は Run-fact AC reconciliation ブロック直後・`**L3 auto-retrospective (batch route):**` 直前。置換後の本文は次の 2 要素とする (→ acceptance criteria 1, 2, 3):
+   - 見出し行: `**Next-cycle candidate handoff (batch):**`
+   - 本文 1 段落: `Recommend: run /audit drift to identify next-cycle candidates` をそのまま出力する旨と、autonomy tier / 設定フラグによる分岐を持たない唯一の挙動である旨、および次サイクル候補の選定責務が独立した `/audit` session にある旨
+   - 制約: 半角感嘆符・triple backtick・YAML block scalar を新規導入しないこと (`validate-skill-syntax.py`)。`AUTONOMY_TIER` / `NEXT_CYCLE_SEED_ENABLED` の読み込み記述と `modules/detect-config-markers.md` の Read 指示はブロックごと消えるため、この段落には残さない
+
+3. `.wholework.yml` から `next-cycle-seed:` ブロック 2 行を削除する (parallel with 1, 2) (→ acceptance criteria 6)
+
+4. `scripts/emit-event.sh` から `next_cycle_seeded` スキーマコメントブロックを削除する (parallel with 1, 2, 3)。前後のイベント (`retro_proposal_classified` / `verify_fail_marker_posted`) のコメントブロック区切り (`#` 単独行) が二重にも欠落にもならないよう確認すること (→ acceptance criteria 7)
+
+5. `modules/detect-config-markers.md` の 3 箇所 (Marker Definition Table 行 / YAML Parsing Rules 行 / Output Format 行) を削除する (parallel with 1-4) (→ acceptance criteria 8, 9)
+
+6. `modules/autonomy-tier.md` を修正する (parallel with 1-5) — Path Catalog の E 行削除、Tier × Path Matrix の E 列削除 (ヘッダ・区切り・3 データ行)、L2 Assisted 行 Default use 文の書き換え、L0 Layer Table の `#700/702/703` → `#700/702`、frontmatter 宣言例 `[A, E]` → `[A]`、宣言規則 path ID 列挙から `E` を除去。除外注記 (`Path D is excluded ...`) は変更しない (→ acceptance criteria 10, 11, 12, 13, 14)
+
+7. `docs/guide/customization.md` の 3 箇所 (`next-cycle-seed.enabled` 行削除 / `.wholework.yml` サンプルコメントの `+ seed` 除去 / `autonomy` 行の `+ seed` 除去) を修正し、続けて `docs/ja/guide/customization.md` の `next-cycle-seed.enabled` 行を削除する (after 5) (→ acceptance criteria 15, 16, 17)
+
+8. `docs/tech.md` の Autonomy tier 項 2 箇所 (経路列挙から `/ E Seed file emission` 除去 / 末尾 follow-up 文の削除) を修正し、続けて `docs/ja/tech.md` の対応 2 箇所を同期する (after 6) (→ acceptance criteria 18, 19, 20, 21)
+
+9. `docs/guide/autonomy.md` の 4 箇所 (L2 tier の Allowed paths / L3 tier の Allowed paths / Why it exists 節の `or seed files` / L2 tier 節の `and may emit seed files for the next cycle`) を修正する (after 6) (→ acceptance criteria 22, 23)
+
+10. `docs/reports/external-kill-investigation.md` の `next_cycle_seeded` を根拠に使う記述へ、代替判別手段 (`.tmp/auto-session-<AUTO_SESSION_ID>.json` の `"mode": "batch"`) の注記を追加する (after 4) (→ acceptance criteria 24)
+
+## Verification
+
+### Pre-merge
+
+- <!-- verify: file_not_contains "skills/auto/SKILL.md" "next-cycle.json" --> `skills/auto/SKILL.md` から next-cycle seed ブロックが削除されている
+- <!-- verify: file_contains "skills/auto/SKILL.md" "Recommend: run /audit drift" --> path A の advisory 出力は残っている
+- <!-- verify: rubric "skills/auto/SKILL.md の Batch Completion Report において、/audit drift を推奨する advisory 出力が autonomy tier や設定フラグによる条件分岐なしに常に実行される形になっている" --> advisory 出力が無条件の唯一の挙動になっている
+- <!-- verify: grep "loop-paths-used: \[A\]" "skills/auto/SKILL.md" --> `skills/auto/SKILL.md` の frontmatter が `loop-paths-used: [A]` になっている
+- <!-- verify: file_not_contains "skills/auto/SKILL.md" "loop-paths-fallback" --> `skills/auto/SKILL.md` の frontmatter から死んだ `loop-paths-fallback` 宣言が削除されている
+- <!-- verify: file_not_contains ".wholework.yml" "next-cycle-seed" --> `.wholework.yml` から `next-cycle-seed` 設定が削除されている
+- <!-- verify: file_not_contains "scripts/emit-event.sh" "next_cycle_seeded" --> `scripts/emit-event.sh` から `next_cycle_seeded` スキーマが削除されている
+- <!-- verify: file_not_contains "modules/detect-config-markers.md" "NEXT_CYCLE_SEED_ENABLED" --> `modules/detect-config-markers.md` から marker 定義が削除されている
+- <!-- verify: file_not_contains "modules/detect-config-markers.md" "next-cycle-seed" --> `modules/detect-config-markers.md` から YAML パース規則の記述も含めて `next-cycle-seed` キーへの言及が削除されている
+- <!-- verify: file_not_contains "modules/autonomy-tier.md" "Seed file emission" --> `modules/autonomy-tier.md` の経路表から経路 E が削除されている
+- <!-- verify: file_not_contains "modules/autonomy-tier.md" "A, E" --> frontmatter 宣言例が `[A]` に更新されている
+- <!-- verify: rubric "modules/autonomy-tier.md の Tier × L2→L1 Path Matrix から E 列が削除され、残る列が A / B / C のみになっている。また frontmatter 宣言規則の path ID 列挙からも E が除かれている" --> Tier × 経路マトリクスと宣言規則から経路 E が除かれている
+- <!-- verify: file_not_contains "modules/autonomy-tier.md" "Seed is automated" --> Tier × 経路マトリクスの L2 Assisted 行 Default use 文から seed 前提の記述が除かれている
+- <!-- verify: file_not_contains "modules/autonomy-tier.md" "#700/702/703" --> L0 Layer Table の drive mechanism から撤去済み #703 への言及が除かれている
+- <!-- verify: file_not_contains "docs/guide/customization.md" "next-cycle-seed" --> `docs/guide/customization.md` から設定行が削除されている
+- <!-- verify: file_not_contains "docs/guide/customization.md" "seed" --> `docs/guide/customization.md` の `.wholework.yml` サンプルコメントと `autonomy` 行からも seed 前提の記述が削除されている
+- <!-- verify: file_not_contains "docs/ja/guide/customization.md" "next-cycle-seed" --> `docs/ja/guide/customization.md` から設定行が削除されている (翻訳同期)
+- <!-- verify: file_not_contains "docs/tech.md" "Seed file emission" --> `docs/tech.md` の経路列挙から E が削除されている
+- <!-- verify: file_not_contains "docs/tech.md" "is tracked in follow-up Issues" --> `docs/tech.md` から #702/#703 フォローアップ言及の文が削除されている
+- <!-- verify: file_not_contains "docs/ja/tech.md" "Seed file emission" --> `docs/ja/tech.md` の経路列挙から E が削除されている (翻訳同期)
+- <!-- verify: file_not_contains "docs/ja/tech.md" "フォローアップ Issue で追跡" --> `docs/ja/tech.md` から #702/#703 フォローアップ言及の文が削除されている (翻訳同期)
+- <!-- verify: file_not_contains "docs/guide/autonomy.md" "Seed file emission" --> `docs/guide/autonomy.md` の L2/L3 tier 説明から経路 E への言及が削除されている
+- <!-- verify: file_not_contains "docs/guide/autonomy.md" "seed files" --> `docs/guide/autonomy.md` の散文から seed file 前提の記述が削除されている
+- <!-- verify: rubric "docs/reports/external-kill-investigation.md の next_cycle_seeded を根拠に使っている記述に、代替判別手段 (.tmp/auto-session-*.json の mode: batch) の注記が追加されている" --> external-kill 調査の判別手段に代替が注記されている
+- <!-- verify: github_check "gh pr checks" "Run bats tests" --> CI の bats テストが green
+- <!-- verify: github_check "gh pr checks" "Validate skill syntax" --> CI の skill 構文検証が green
+
+### Post-merge
+
+- 次回以降の `/auto --batch` 完走時に `.tmp/next-cycle.json` が生成されず、`next_cycle_seeded` イベントも emit されず、代わりに `/audit drift` の推奨が出力されることを観察する (`verify-type: observation event=auto-run session=next`)
+
+## Tool Dependencies
+
+実装は既存ファイルの編集のみで、新規ツール権限の追加は不要。
+
+### Bash Command Patterns
+- none (新規追加なし)
+
+### Built-in Tools
+- none (`Read` / `Edit` はいずれも `/code` の `allowed-tools` に登録済み)
+
+### MCP Tools
+- none
+
+## Notes
+
+### 設計前提の検証結果 (実装前に確認済み)
+
+- **過去イベントの後方互換**: `.tmp/auto-events.jsonl` に残る 20 件の `next_cycle_seeded` は削除しない。`scripts/collect-run-facts.sh` と `scripts/get-auto-session-report.sh` はいずれも `select(.event == "<既知イベント名>")` のホワイトリスト方式で、未知イベント型は一致しないだけで無視される (両スクリプトを grep 確認)。撤去後も読み取りは壊れない
+- **`"mode": "batch"` の実在確認**: `skills/auto/SKILL.md` Step 1 の session metadata 書き込みで `.tmp/auto-session-<SESSION_ID>.json` に `"mode": "<batch|single>"` が書かれることを確認済み。`external-kill-investigation.md` に注記する代替判別手段は有効
+- **過剰宣言は検出されない**: `scripts/check-allowed-tools.sh` → `validate-skill-syntax.py` のチェックは body → allowed-tools の片方向 (過少宣言のみ検出)。`emit-event.sh:*` エントリを残しても CI は落ちない
+
+### Issue 本文との差分 (本 Spec で確定させた事項)
+
+Issue 本文が記載していた行番号のうち、実ファイルとずれていたもの — `skills/auto/SKILL.md` の該当ブロックは本文記載の L1210-1236 ではなく L1215-1241、`modules/autonomy-tier.md` のマトリクスは L41-48 ではなく L43-47 (除外注記は L48 ではなく L49)。行番号は編集で動くため、Implementation Steps では前後の見出し・文脈で位置を指定している。実装時も行番号ではなく文脈で特定すること。
+
+### verify command に関する注意
+
+- AC 11 のパターンは Issue 起票時 `"loop-paths-used: [A, E]"` だったが、`file_not_contains` が Grep 経由で評価される際 `[A, E]` が文字クラスとして解釈され、変更前でもマッチせず常時 PASS になる欠陥があった (ripgrep で実検証)。メタ文字を含まない `"A, E"` に差し替え済み — 変更前は `[A, E]` にマッチして FAIL、変更後は `[A]` になり PASS で、削除検証として正しく機能する
+- AC 4 の `grep "loop-paths-used: \[A\]"` は ERE でのエスケープ済み角括弧 (リテラル一致) であり、BRE メタ文字 (`\|` `\(` `\)` `\+` `\?`) は含まれない。ERE 書き換えは不要
+- AC 16 `file_not_contains "docs/guide/customization.md" "seed"` は AC 15 (`next-cycle-seed`) を包含する広いパターンだが、両方を残す。AC 15 は削除対象の設定行を名指しで文書化する役割、AC 16 は散文 2 箇所を含むファイル全体の掃き出しを保証する役割で、意図が異なる
+- Pre-merge 検証項目は 26 件で、Spec Simplicity Rules の full 上限 (10 件) を超える。Issue 本文の Acceptance Criteria と verify command を verbatim 同期する規則が優先されるため意図的に維持した。項目数が多いのは削除対象ファイルが 11 個に分散しているためで、1 ファイル 1-2 件の機械的な削除検証に相当する
+
+### SKILL.md 編集時の validator 制約 (`validate-skill-syntax.py`)
+
+- 半角感嘆符を本文 (コードフェンス・インラインコード外) に導入しない
+- triple backtick を本文に導入しない
+- frontmatter に YAML block scalar (`|` / `>`) を導入しない
+- Step 番号は整数のみ (本 Issue の編集対象ブロックには番号付き Step が無いため実質影響なし)
+
+### 翻訳同期の範囲
+
+`docs/translation-workflow.md` の同期義務は top-level `docs/*.md` に限定される。本 Issue では `docs/tech.md` → `docs/ja/tech.md` がこれに該当する。`docs/guide/customization.md` は top-level ではないが JA ミラーが既に存在するため同期対象に含めた。`docs/guide/autonomy.md` は JA ミラーが未作成であり、新規作成は本 Issue のスコープ外とする。
