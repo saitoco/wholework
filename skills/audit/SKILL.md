@@ -469,7 +469,7 @@ If there are no Issues currently in `phase/verify`, display "No Issues currently
 
 **Skip this entire section when `--retention` is not specified.**
 
-When `--retention` is specified, append the following after Section 7.
+When `--retention` is specified, read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section. Retain `RECOVERIES_AUTO_FIRE_THRESHOLD` for use in Section 10 below. Then append the following after Section 7.
 
 #### Section 8: phase/verify Retention Metrics
 
@@ -498,6 +498,30 @@ Display the following table with threshold warnings:
 | Trigger fire candidates | N | > 0 | OK / NOTIFY |
 
 List trigger fire candidate Issues (if any) with Issue number, title, and the matched trigger text.
+
+#### Section 10: Recovery Candidate Frequency
+
+1. Run:
+   ```bash
+   ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh docs/reports/orchestration-recoveries.md --threshold 1 --with-tracking
+   ```
+   (`--threshold 1` returns every group-key with count >= 1 after entry-unit exclusion; filtering by `RECOVERIES_AUTO_FIRE_THRESHOLD` happens in this section, not in the script call. Entry-unit exclusion includes group-keys whose `### Improvement Candidate` entries are all `N/A` (resolved by known catalog, or synonymous N/A-family wording) — these are Tier 2 fallback successes that need no action, so the collector drops them before counting and they never surface here as Untracked threshold-exceeding.)
+2. If `docs/reports/orchestration-recoveries.md` does not exist, or the command produces no output: display "No recovery candidates found." and skip the rest of this section.
+3. From the output (`<group-key>\t<count>\t<tracked:#N|untracked>` per line), compute:
+   - **Recovery group-keys (total)**: total line count
+   - **Threshold-exceeding group-keys**: count of lines whose `<count>` >= `RECOVERIES_AUTO_FIRE_THRESHOLD`
+   - **Untracked threshold-exceeding**: of the above, count of lines whose 3rd column is `untracked`
+4. Display the table:
+
+| Metric | Value | Threshold | Status |
+|--------|-------|-----------|--------|
+| Recovery group-keys (total) | N | — | — |
+| Threshold-exceeding group-keys | N | > 0 | OK / NOTIFY |
+| Untracked threshold-exceeding | N | > 0 | OK / WARNING |
+
+5. List each threshold-exceeding group-key (if any) with its group-key, count, and tracked:#N / untracked status.
+
+This section is read-only display only — no comment posting or Issue creation (unlike Section 8/9's Retire-Proposal Comment Posting, which stays scoped to phase/verify and Icebox only; see Notes).
 
 #### Retire-Proposal Comment Posting
 
@@ -552,7 +576,7 @@ If `--no-save` is not specified:
    ```bash
    mkdir -p docs/stats
    ```
-3. Write report content to `docs/stats/YYYY-MM-DD.md` (overwrite if the file already exists for the same date). When `--retention` is specified, the Sections 8 and 9 retention output is included in the saved file.
+3. Write report content to `docs/stats/YYYY-MM-DD.md` (overwrite if the file already exists for the same date). When `--retention` is specified, the Sections 8, 9, and 10 retention output is included in the saved file.
 4. Display: "Report saved to docs/stats/YYYY-MM-DD.md"
 
 Then read `${CLAUDE_PLUGIN_ROOT}/modules/steering-hint.md` and follow the "Processing Steps" section.
