@@ -231,27 +231,25 @@ Issue 本文の `## Auto-Resolved Ambiguity Points` セクションを参照。
 - なし。Spec の「再型付けマッピング」節の設計 (29 行再型付け / 7 行対象外) をそのまま `docs/reports/manual-ac-retype-a.md` へ転記し、想定通り完了した。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Base Branch Conflict Pre-check (`git merge-tree`) は main 側の並行変更 (`.wholework.yml` / 他 Issue の Spec ファイル) を検出したが、いずれも `merged` (クリーンな自動マージ) で `changed in both` はゼロだったため、コンフリクトコンテキストは review-spec/review-bug へ渡していない。
-- fork context (`--non-interactive` あり、再呼出し保証なし) と判定し、`capabilities.workflow: true` が有効でも Workflow path を使わず静的 Task fan-out (review-spec + review-bug×2) を `Agent(run_in_background: false)` で実行した。`skills/review/workflow-guidance.md` の再呼出し保証チェックに従った判断。
-- Pre-merge AC 6 件 (rubric ×3, github_check ×3) を全て PASS 判定 (Issue チェックボックスは既に `[x]` のため更新不要)。CI 9 job 全て SUCCESS。MUST issue はゼロ。
-- review-spec + review-bug×2 の指摘 6 件 (SHOULD 3 / CONSIDER 3、うち review-bug 3 件は 2 段階検証で全て PASS) を全て修正した。低リスクな文書のみの PR で、修正コストが低く、report が今後の関連 Issue (#1164-#1167) の precedent として参照される想定だったため、SHOULD/CONSIDER を含め全件対応する判断とした。
+- Step 1 の pre-merge AC gate 再確認で `check-pre-merge-ac.sh` は `unchecked_count=0`、`reconcile-phase-state.sh review --check-completion` は review-incomplete-fallback 該当なしを返したため、AskUserQuestion 提示なしでそのまま Step 3 (マージ可否判定) へ進んだ。
+- `gh-pr-merge-status.sh` は `mergeable=true reason=clean ci_status=success review_status=approved` を返し、コンフリクトが存在しなかったため Step 3 (Resolve Conflicts) はスキップし Step 4 (squash merge) を直接実行した。
 
 ### Deferred Items
 
-- `modules/observation-trigger.md` § Notes と `modules/verify-classifier.md` § observation Type Emitter table の両方に残る `fix-cycle` emitter 未実装という古い記述の修正 — 本 Issue のスコープ外、別途起票候補 (spec retrospective から引き継ぎ)。実装は `skills/verify/SKILL.md:584` (`/verify` FAIL → reopen 経路) で既に完了している。
+- `modules/observation-trigger.md` § Notes と `modules/verify-classifier.md` § observation Type Emitter table に残る `fix-cycle` emitter 未実装という古い記述の修正 — 本 Issue のスコープ外、別途起票候補 (spec/review retrospective から引き継ぎ)。実装は `skills/verify/SKILL.md:584` で既に完了している。
 - 再型付け後の AC への `when=` 条件付与 — #1118 が担当。
-- #708 の 2 条件・#719 条件1 の bats テスト化 (故障注入型で 5 有効値のどの発火でも観測窓が開かない対象外行) — 区分 C 相当として #1167 の領域。
-- #501 / #500 / #479 (downstream 依存で upstream から観測不能な対象外行) — `docs/stats/2026-08-05.md` Section 10 が区分 B に対して定める retire または downstream への移管の判断先が未定。担当 Issue 番号は別途決定する。
-- Post-merge AC (`/audit stats --retention` での Manual waiting 件数減少確認) — merge 後に `/verify` が `observation event=auto-run` 経路で評価する。
+- #708 の 2 条件・#719 条件1 の bats テスト化 — 区分 C 相当として #1167 の領域。
+- #501 / #500 / #479 (downstream 依存で upstream から観測不能な対象外行) — retire または downstream への移管の判断先・担当 Issue 番号は未定。
+- Post-merge AC (`/audit stats --retention` での Manual waiting 件数減少確認) — `/verify` が `observation event=auto-run` 経路で評価する。
 
 ### Notes for Next Phase
 
-- `/merge` は pre-merge AC gate が Pre-merge AC 6 件全てチェック済みであることを確認すればよく、追加の手動確認は不要。
-- review で修正した `docs/reports/manual-ac-retype-a.md` の `event` 列追加・fallback メカニズム記述修正は、後続の #1164-#1167 (区分 B/C/D/E 等の他 sub-issue) が同種の report を作成する際の precedent として参照される想定。同種の precedent 引用を書く場合は「引用対象の Issue が同一 PR で書き換えられていないか」の時制チェックを行うこと (review retrospective 参照)。
+- `/verify` は Post-merge AC (`/audit stats --retention` での Manual waiting 件数減少確認) のみを評価すればよい。Pre-merge AC 6 件は merge フェーズで再確認済みで追加作業不要。
+- review で修正した `docs/reports/manual-ac-retype-a.md` の `event` 列・precedent 引用の時制チェックは、後続の #1164-#1167 が同種の report を作成する際の precedent として参照される想定 (review retrospective 参照)。
 
 ## review retrospective
 
