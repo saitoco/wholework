@@ -94,3 +94,32 @@ $ gh run view 30618554029 --log | grep -cE "[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]+Z 
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Issue 本文が起票時点で既に整備済み (Background に実測ログ・正規表現例、AC に verify command 込み) で、refinement は変更なし。曖昧点・AC 変更・方針決定がいずれもゼロだったため Issue Retrospective のスキップ条件が正しく成立した
+
+#### spec
+- **patch route × `gh pr checks` の不整合を spec フェーズが検出し、`gh run list` 形式へ自動修正した** (Size S = patch route、PR なし)。`skills/spec/SKILL.md` の Patch route verify command check が機能し、Spec と Issue 本文の双方に反映されている
+- Reproduction Steps と Root Cause が実 CI ログ (run 30618554029) ベースで具体的だったため、code フェーズで設計ギャップが 1 件も出なかった
+
+#### code
+- 単発実装で rework なし。`grep -c ... || _failed=0` の error-handling idiom (#687 の修正) を温存しつつ match pattern のみ変更しており、既存修正への回帰を避けている
+- Phase Handoff が AC 5 を「実装コミット未 push のため UNCERTAIN、push 後に再検証」と明示的に deferred item として引き継いでおり、verify 側で迷いなく解決できた
+
+#### verify
+- AC 5 (`github_check "gh run list --workflow=test.yml --commit=$(git rev-parse HEAD) ..."`) を実行し `success` で PASS。AC 1-4 は code フェーズで確定済みのため SKIPPED、post-merge AC 6 は observation 未発火で SKIPPED
+- **AC 5 の `$(git rev-parse HEAD)` は verify 実行時点で評価されるため、実装コミットではなく「その時点の main の先端」を検証する**。今回は HEAD が本 Issue 自身の code retrospective コミット (`07e14695`) で、かつ CI 完了済みだったため PASS したが、これは偶然に依存している
+
+### Improvement Proposals
+
+- **patch route の CI 検証 AC が `$(git rev-parse HEAD)` を使うため、並行セッション環境では無関係なコミットの CI を検証しうる**。`skills/issue/SKILL.md` / `skills/issue/spec-test-guidelines.md` / `modules/verify-classifier.md` が patch route の推奨形として提示している `github_check "gh run list --workflow=test.yml --commit=$(git rev-parse HEAD) --limit=1 ..."` は、コマンド文字列が verify 実行時に評価される。patch route は PR を持たないため実装コミットを指す安定した識別子がなく、HEAD に依存せざるを得ない構造になっている。
+
+  本リポジトリは並行セッション運用が常態 (本 verify 実行時も他に 2 セッションが main へ push 中) であり、code フェーズの push から verify 実行までの間に別セッションのコミットが main に載ると、AC は**そのコミットの CI** を検証する。今回は HEAD が本 Issue 自身の code retrospective コミットで CI も完了していたため PASS したが、成立は偶然による。
+
+  影響は双方向で、(a) 無関係なコミットの CI が失敗していれば false FAIL、(b) 実装に問題があっても後続の無関係なコミットの CI が通っていれば false PASS になる。特に (b) は AC の判別力を失わせる。
+
+  対処の方向としては、`closes #N` を含むコミット SHA を `git log --grep` で解決してから `--commit` に渡す形が考えられる (patch route の実装コミットは `closes #N` を含む規約があるため)。ただし retrospective コミット等が後続する点との整合は要検討。
