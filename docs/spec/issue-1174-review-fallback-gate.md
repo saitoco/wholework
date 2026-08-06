@@ -124,3 +124,35 @@ Issue 本文の候補 A (fallback 投稿に独立マーカーを付与する) �
 ### Notes for Next Phase
 - Post-merge AC は observation 型 (「次回 `/review` が silent no-op で終了し fallback サマリが投稿された際、`/merge` または `/auto` が review 未完了を検出して停止または警告することを観察する」)。`/verify` では即時確認できない可能性が高く、該当イベントが発生するまで PENDING 扱いが妥当。
 - `review+pr-1192` worktree (ブランチ `worktree-code+issue-1174` を参照) が merge 完了後も残存している。verify フェーズ実行時に不要であれば `ExitWorktree`/`git worktree remove` でのクリーンアップを検討してよい。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 姉妹 Issue #1175 の review が検出した残存ギャップ 3 件をコメントで入力したところ、issue フェーズが**コメントのまま残さず Issue body の「関連する既知の欠陥」節に統合し、対応する Pre-merge AC (AC3) を新設した**。L0 コメント消費が設計どおり機能した好例
+- その AC3 が「3 件それぞれについて本スコープで対応するか別 Issue に切り出すかの方針が Spec に明記されている」という形で、**判断の記録そのものを受入条件にした**点が効いた。結果として 1 件をスコープに取り込み 2 件を根拠つきで見送る判断が Spec に残った
+
+#### spec
+- ゲート地点を `/merge` のみに限定し `/auto` 側への複製を明示的に不採用とした判断が良い。「不可逆操作の直前で必要十分」という基準が明文化されている
+- `review_incomplete_fallback` の判定を「マーカーが**任意の時点で**出現するか」で行い latest-wins 解決を見送った点 (Notes) は、**一度 fallback が起きた PR では以後 organic に review が完了してもゲートが立ち続ける**ことを意味する。過剰ゲート側 (安全側) に倒れており見送り理由も記録されているが、再実行を伴う長い PR ライフサイクルでは摩擦になりうる
+
+#### code
+- author filter の回帰テストで、モックが `gh api user -q '.login'` の `-q` 展開を再現せず生 JSON を返していた不具合をテスト失敗で検出。**モックの忠実性がテストの有効性を左右する**典型例で、Code Retrospective に記録済み
+
+#### review
+- **review フェーズが 2 回とも失敗し、`## Review Retrospective` 節が Spec に存在しない**。1 回目は watchdog kill、2 回目は silent no-op で、いずれも Step 14 以降に到達しなかったため retrospective が書かれなかった。**本 Issue が対処している欠陥そのものが、本 Issue の review 記録を失わせた**
+- 結果として「review が何を検出したか」の一次記録は PR #1192 の `COMMENTED` レビュー本文のみに残る
+
+#### merge
+- `gh pr merge --squash --delete-branch` の 1 回目がローカルブランチ削除で失敗 (別セッションの `review+pr-1192` worktree が同ブランチを checkout 中)。PR 自体は `state=MERGED` で正常完了しており、リモートブランチを `gh api -X DELETE` で手動削除して解消。**並行セッションの worktree 保持がブランチ削除を阻害する**経路で、`ff-only-merge-fallback` とは別種の並行実行コスト
+
+#### verify
+- **Tier 3 recovery が Spec の `## Auto Retrospective` に記録されていない**ため、ここに記録する。review フェーズ 1 回目の `run-review.sh` が CI 待ち完了後に 2600s 無出力でハングし watchdog に kill された (exit 143、pid=31881)。Tier 3 サブエージェントが `action=retry` を選択し、リトライで回復。エントリは `docs/reports/orchestration-recoveries.md` (commit `aa619fba`) に記録済み
+- この exit 143 は **外部 kill ではない**。`Exit code:` トレーラと `wrapper_exit` イベントの両方が記録されており、`docs/reports/external-kill-investigation.md` の外部 kill シグネチャには該当しない
+- `check-verify-dirty.sh` の exit 2 を本セッション 2 回目に踏んだ (`docs/spec/issue-1163-manual-ac-retype-a.md`、稼働中セッションのライブ成果物)。#1188 として起票済み
+
+### Improvement Proposals
+
+- **見送った 2 件のフォローアップ Issue 化** — Spec Notes が「フォローアップ Issue 化を推奨」と明記している 2 件 (`CHANGES_REQUESTED` の sticky 性による過剰リトライ / 継続リトライによる token usage 上書き)。#1175 の review が検出してから本 Issue で明示的に見送られた経緯があり、記録が新鮮なうちに起票するのが適切
+- **`review_incomplete_fallback` の latest-wins 化** — 上記 spec 節のとおり、fallback 後に organic 完了してもゲートが立ち続ける。見送り理由 (既存 bats 群の大幅書き換えが必要) は妥当だが、摩擦が観測された時点で再評価する価値がある
