@@ -151,3 +151,59 @@ Edit / Write ツールは `.claude/` 配下を sensitive file として拒否す
 - `scripts/get-sub-issue-graph.sh` / `scripts/get-sub-issue-progress.sh` の `blockedBy` 利用: 既に GraphQL 基点であり変更不要
 - `docs/guide/xl-decomposition.md` の `blocked_by` YAML キー: decomposition ファイルの入力書式であり、判定経路ではない
 - `docs/ja/structure.md` に `get-sub-issue-progress.sh` の行が欠けている既存 drift: 本 Issue の変更対象外
+
+## issue retrospective
+
+`/spec --non-interactive` の Auto-Resolve Log (2026-08-06)。非対話モードのため `AskUserQuestion` を使わず、モデル判断で自動解決した項目を記録する。Issue コメントとしても投稿済み。
+
+### Auto-Resolve Log
+
+| # | 曖昧点 | 自動解決の内容 | 根拠 |
+|---|---|---|---|
+| 1 | 対応方針 (候補 1 / 2 / 3) の選択 | **候補 1** (読み取りを GraphQL に統一、body は入力ショートカットとして存続) を採用 | Issue 本文自身が「候補 1 が既存運用への影響が最小」と推奨。かつ `docs/workflow.md` L292 の既存宣言 (body = 補足) と整合する。候補 2 は既存 Issue body の残存テキスト処理と起票時 UX の代替設計を要し、本 Issue のスコープを超える |
+| 2 | `/triage` の孤児 blocked-by 検出の扱い | GraphQL 関係の異常ではなく **body テキストの衛生チェック**として再定義 | `addBlockedBy` mutation は実在 Issue の node ID を要求するため、GraphQL 関係が孤児になることは構造的にありえない |
+| 3 | body → GraphQL の materialize タイミング | `/auto` List mode gate では判定直前に `gh-check-blocking.sh` を実行して materialize する。`/spec` Step 4 は読み取り専用のまま | GraphQL のみを読むと「body にだけ blocker が書かれた Issue」で gate が現行より弱くなる。`/spec` は現行が `--dry-run` (書き込みなし) であり、到達時点で materialize 済みが前提 |
+
+## spec retrospective
+
+### Minor observations
+
+- `docs/workflow.md` が既に「GraphQL が SSoT」と宣言しているのに実装が body テキスト依存だった、というのは典型的な doc→code drift であり、`/audit drift` の検出対象になりえたはずのパターンである。`/audit drift` が SKILL.md 内の手続き記述と docs の宣言を突き合わせられていない可能性がある
+- 受け入れ条件 3 (「SSoT の所在がドキュメントに明記されている」) は、既存の `docs/workflow.md` L292 の記述だけで rubric grader が PASS を出しうる書き方だった。「既に満たされている AC」を検出する仕組みが `/issue` 側にあると、起票時点で AC をより差分に即した表現へ寄せられる
+- Issue 本文の参照構造テーブルに `skills/spec/SKILL.md` Step 4 が抜けていた。起票時の grep が `blocked by` の body 抽出パターンに寄っており、`gh-check-blocking.sh --dry-run` 経由の間接的な body 依存を拾えていなかった
+
+### Judgment rationale
+
+- 一括モード (`--all`) を新規スクリプトに含めるか迷ったが、`/triage --backlog dependency` が最大 100 Issue のグラフを構築する以上、Issue ごとの GraphQL 呼び出し (最大 100 回) は現実的でないと判断して含めた。実測で `repository.issues(states:OPEN,first:N){nodes{number blockedBy{...}}}` が 1 クエリで取得できることを確認済み
+- sibling script の解決方式は `SCRIPT_DIR` 一本に統一した。`gh-check-blocking.sh` の「PATH 先行 + SCRIPT_DIR フォールバック」は #7 でテストのモック方式に合わせた歴史的経緯によるもので、新規テストが MOCK_DIR パターンを使う以上、複雑な方式を踏襲する理由がない
+- exit code 契約を `gh-check-blocking.sh` と同一 (0 / 1 / 2) に揃えたことで、`/spec` Step 4 の差し替えがコードブロック 1 行の置換で済み、exit code 対応表を書き換えずに済んだ。既存契約に合わせる設計判断がそのまま差分の小ささに効いた
+
+### Uncertainty resolution
+
+- `blockedBy` が Issue リスト文脈 (`repository.issues.nodes[]`) でも取得できるかは設計時点で未確認だったため、実際に GraphQL を叩いて検証した (`#1167 → #1157 (CLOSED)` が返ることを確認)。結果として「CLOSED の blocker も `blockedBy` に残る」ことも判明し、これが「解決済み blocked-by」を GraphQL 側だけで検出できる根拠になった
+- `gh api graphql` が未指定の nullable 変数 (`$cursor:String`) を null として送るかは、`-F cursor=` に空文字を渡すと `after:""` になりエラーとなるリスクがあったため、1 ページ目は `-F cursor` を渡さない設計に倒した。実装フェーズで `--all` のページングテストにより確認されること
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- Issue 本文の候補 1 を採用 — 読み取りのみ GraphQL へ統一し、body の `Blocked by #N` は書き込みトリガーとして存続させる。`gh-check-blocking.sh` / `set-blocked-by.sh` / `modules/retro-proposals.md` の書き込み経路は一切変更しない
+- 判定側の読み取り窓口を `scripts/get-blocked-by.sh` 1 本に集約し、exit code 契約を `gh-check-blocking.sh` と同一 (0 = OPEN blocker なし / 1 = エラー / 2 = OPEN blocker あり) に揃えた
+- `--all` 一括モードを同スクリプトに持たせ、`/triage --backlog dependency` のグラフ構築を 1 回 (最大でも数回のページング) の GraphQL 呼び出しに抑える。`--all` は成功時つねに exit 0 (exit 2 のシグナルは単一 Issue モード限定)
+- `/auto` List mode gate では判定直前に `gh-check-blocking.sh` (非 `--dry-run`) を実行して body ショートカットを materialize する。これにより gate は現行より厳密になる
+- 孤児依存を「GraphQL グラフの異常」から「body テキストの衛生チェック」へ再定義した (GraphQL 関係は構造的に孤児になりえない)
+
+### Deferred Items
+
+- `docs/ja/structure.md` の `get-sub-issue-progress.sh` 欠落 (既存 drift) は本 Issue では修正しない
+- `/triage` の「解決済み blocked-by」に対する `remove-blocked-by` の自動実行は行わない (report のみ)。tier-aware な自動削除は将来の検討事項
+- `.claude/settings.json.template` に `set-blocked-by.sh` のエントリが無い既存の不整合は本 Issue では補わない (新規の `get-blocked-by.sh` のみ追加する)
+
+### Notes for Next Phase
+
+- `tests/auto-batch.bats` の既存 10 件は List mode 書き換え後も PASS する必要がある。特に `blocked-by check present` (grep `blocked`) と `phase/done gate condition present` (grep `phase/done`) を壊さないこと。新規追加する 2 件は `grep -q 'get-blocked-by.sh'` (exit 0 期待) と `grep -q 'json body'` (exit **非** 0 期待) の形にすると引用符が入れ子にならず安全
+- `.claude/settings.json.template` は Edit / Write ツールが拒否する。`sed` または `python3` で編集すること。`.gitignore` に `!.claude/settings.json.template` の un-ignore があるため `git add -f` は不要
+- `scripts/get-blocked-by.sh` は bash 3.2+ 互換で書くこと (`mapfile` / 連想配列は使わない)。sibling script は `SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"` で解決する
+- `get-open-issues-blocked-by` の 1 ページ目は `-F cursor=` を**渡さない** (空文字を渡すと `after:""` となりエラーになりうる)。2 ページ目以降のみ `endCursor` を渡す
+- `docs/ja/workflow.md` の同期では「入力ショートカット」という日本語表記を必ず含めること (受け入れ条件 6 の `file_contains` パターン)
