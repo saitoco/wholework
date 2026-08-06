@@ -5,6 +5,9 @@
 - saito / MEMBER / first-class / `/issue 1152` の Issue Retrospective — 方針確定 (方針 2)、スコープ拡大 (`起票済み` フィルタの group-key 一括抑止)、`#1191 blocked-by #1152` の設定理由 / https://github.com/saitoco/wholework/issues/1152#issuecomment-5201365514
 
 - saito / MEMBER / first-class / ## 実装セッションへの申し送り (Spec 作成後に着地した #1098 の影響) / https://github.com/saitoco/wholework/issues/1152#issuecomment-5202021801
+
+- saito / MEMBER / first-class / `/verify` FAIL (iteration 1/3) — cutoff となる `起票済み` entry の選び方がファイル出現順の最後 (= newest-first ファイルでは最古) になっている根本原因の特定、判別 fixture、修正の所在の提示。AC 1 / AC 10 を一般ケース (group-key 内の複数 entry が `起票済み` を持つ場合) を含む文言へ更新済み / https://github.com/saitoco/wholework/issues/1152#issuecomment-5203918716
+
 ## Overview
 
 `scripts/collect-recovery-candidates.sh` の除外判定を **group-key 単位から entry 単位**へ変え、対応 Issue の解決時点との日付比較で判定する。これにより「解決済み症状の再検出 (false positive)」と「対応 Issue close 後の再発の握り潰し (false negative)」を同時に解消する。
@@ -73,6 +76,7 @@ $ gh issue list --state closed --json number,title,closedAt --limit 1000 \
 1. `scripts/collect-recovery-candidates.sh` に entry 単位の除外判定と日付規則を実装する (→ 受入条件 1, 2)
    - entry のパース時に、`起票済み #N` の N と entry 日時 (H2 ヘッダの `YYYY-MM-DD HH:MM`) を entry ごとに保持する
    - group-key ごとに対応 Issue を解決する: いずれかの entry の `起票済み #N` を優先し、無ければ `--issues-json` 内で `recoveries: <group-key>` にタイトル完全一致する Issue を採る
+   - **「いずれかの entry」の選定は entry 日時 (H2 ヘッダ) の最大値で行う。`orchestration-recoveries.md` は newest-first のため、ファイル出現順 (= パース時のスキャン順) の最後は最古のエントリになる — スキャン順に頼ると誤って最古の marker を採用する (`/verify` FAIL iteration 1 で実測)。同じ規則は次の「degrade path」の代替基準にも適用する
    - 解決した Issue が `state=OPEN` → その group-key の全 entry を除外
    - `state=CLOSED` → entry 日時が `closedAt` 以前の entry のみ除外し、以降の entry は計数する
    - `--issues-json` が無い / `state`・`closedAt` を持たない場合の代替基準: ファイル内で最も新しい `起票済み` entry の日時以前の entry を除外し、以降を計数する (対応 Issue が解決できない場合の degrade。旧挙動へは戻さない)
@@ -95,7 +99,7 @@ $ gh issue list --state closed --json number,title,closedAt --limit 1000 \
 
 ### Pre-merge
 
-- <!-- verify: rubric "collect-recovery-candidates.sh の除外判定が entry 単位で行われている。各 entry の対応 Issue を『起票済み #N』の N から、無ければ recoveries: <group-key> のタイトル完全一致から解決し、Issue が open なら全 entry を除外、closed なら closedAt より古い entry のみを除外する。--issues-json が state/closedAt を持たない場合は、ファイル内の最新の起票済み entry の日時を代替基準として同じ entry 単位判定を行う" --> 除外判定が entry 単位の日付規則になっている
+- <!-- verify: rubric "collect-recovery-candidates.sh の除外判定が entry 単位で行われている。各 entry の対応 Issue を『起票済み #N』の N から、無ければ recoveries: <group-key> のタイトル完全一致から解決し、Issue が open なら全 entry を除外、closed なら closedAt より古い entry のみを除外する。--issues-json が state/closedAt を持たない場合は、ファイル内の起票済み entry のうち **H2 ヘッダ日時が最大のもの** を代替基準にする (ファイル出現順の最後ではない — orchestration-recoveries.md は newest-first のため出現順の最後は最古のエントリになる)。group-key 内の複数 entry が起票済みを持つ場合でも正しい cutoff が選ばれることが確認できる" --> 除外判定が entry 単位の日付規則になっている
 - <!-- verify: rubric "対応 Issue の closedAt より後に追記された entry は、run-auto-sub.sh の書き戻しにより 起票済み #N が付与されていても計数される。この再発検出の negative case が実装またはテストで確認できる" --> 対応 Issue close 後の再発が握り潰されない
 - <!-- verify: rubric "skills/verify/SKILL.md Step 15 が collect-recovery-candidates.sh に渡す --issues-json が、state と closedAt を含む全 state の Issue 一覧になっている" --> `/verify` Step 15 が state と closedAt を渡す
 - <!-- verify: section_contains "skills/verify/SKILL.md" "Step 15" "closedAt" --> Step 15 の記述に `closedAt` が含まれる
@@ -109,7 +113,8 @@ $ gh issue list --state closed --json number,title,closedAt --limit 1000 \
 
 - `/verify` 実行の Step 15 出力に、close 済みの対応 Issue が存在する group-key が候補として現れないことを観察する (`verify-type: observation event=auto-run session=next`)
   - 期待される出力構造:
-    - `manual-recovery-review-rerun` / `review-tier3-recovery` (いずれも対応 Issue あり) が `--threshold 3` の候補として出力されない
+    - **対応 Issue が closed である group-key が、閾値超過の候補として 1 件も出力されない**。特定の group-key の列挙ではなく、`collect-recovery-candidates.sh --threshold <N>` の出力全件について「その group-key に対応する closed Issue が存在するか」を突き合わせて確認すること
+    - 全 entry が `起票済み #N` を持つ group-key (`manual-recovery-respawn` / `code-pr-tier3-recovery` など、`run-auto-sub.sh` の auto-stamp により時間とともにこの状態になる) も除外対象に含まれる
     - 対応 Issue の `closedAt` より後に追記された entry を持つ group-key は、`起票済み #N` が付与されていても候補として出力される
     - 既定の出力形式が `<group-key>\t<count>` のままで、Step 15 手順 3 のパースが失敗しない
 
@@ -164,7 +169,8 @@ Root Cause の 3 行目 (`run-auto-sub.sh:194-204`) は false negative の一因
 
 ### Rework
 
-- なし (実装は Spec の設計通りに 1 パスで完了)
+- **`/verify` FAIL (iteration 1) による degrade path の cutoff 選定バグ修正**: 初回実装 (`fae7bab8`) の degrade path (および `resolved_number`/`latest_filed_ts` の解決全般) は、group-key 内の複数 `起票済み` entry のうち「パース時のスキャン順で最後に見たもの」を採用していた。この実装は entry 配列がファイル出現順に追加される前提のコメント (`Entries are appended in file order (chronological), so the last filed marker seen while scanning is both the authoritative resolution and the latest filed timestamp.`) に基づいていたが、`orchestration-recoveries.md` の実際の並びは **newest-first** であり、スキャン順の最後は最古のエントリだった。この結果、`run-auto-sub.sh` の auto-stamp によって group-key 内の全 entry が `起票済み` を持つに至った通常のケース (`manual-recovery-respawn` 22 件全件 marked など) で cutoff が最古の marker に落ち、対応 Issue が closed 済みにもかかわらず旧 entry がほぼ全件再カウントされる false positive が実測で確認された (`/verify` FAIL コメント参照)。原因のコメントが「最新 marker を使う」という**意図**自体は正しく書いていたため、レビュー時の文面確認だけでは検出できず、newest-first という実データの並び順を踏まえた実測でのみ顕在化した。修正は「スキャン順で上書き」から「`ENTRY_TS` を明示比較して最大値を採用」への変更のみで、Spec の設計 (degrade path の意味論) 自体は変更していない。
+- 上記修正に伴い、既存 3 テストのいずれも group-key 内の `起票済み` marker が単一という前提の fixture だったため検出できなかった。回帰テストとして「同一 group-key に複数 `起票済み` entry (newest-first)」のケースを 2 件追加した (cutoff が最大 timestamp になること / cutoff より新しい未 marked entry は引き続き計数されること)。
 
 ## review retrospective
 
@@ -182,33 +188,20 @@ Root Cause の 3 行目 (`run-auto-sub.sh:194-204`) は false negative の一因
 - UNCERTAIN 判定はゼロ。9 件の Pre-merge AC のうち rubric 6 件・section_contains 1 件・file_not_contains 1 件はいずれも diff から機械的に確認でき、残る `github_check` 1 件も CI 全 9 checks SUCCESS で PASS 判定できた。Spec Notes が自認する通り AC 数 (9) は light テンプレートの目安 (5) を超えているが、review 側の検証コストとしては rubric の記述が具体的だったため大きな負荷にはならなかった。verify command の過不足や不正確さは見当たらない。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: code -->
 
 ### Key Decisions
-- review-light (1 エージェント統合レビュー、4 観点) を採用し、MUST issue はゼロと確認。SHOULD issue 1 件 (`--issues-json` 区切り文字の tab 依存脆弱性) は即座に修正しコミット・push した。
-- Base Branch Conflict Pre-check で `docs/spec/issue-1152-*.md` の "changed in both" を検出したため、`git merge-file` による 3-way merge 検証を review-light に依頼し、データ損失なしを確認した。
-- 全 9 Pre-merge AC を PASS 判定し、Issue #1152 のチェックボックスを更新した (`github_check` 含む)。Step 13 のポリシー変更検出は該当なし (SHOULD 修正は純粋な堅牢性改善で AC に影響しない)。
+- 本ラウンドは新規実装ではなく、`/verify` FAIL (iteration 1、PR #1198 マージ後) が検出した degrade path のバグ修正。修正内容は「`起票済み` marker を選ぶ基準をスキャン順から `ENTRY_TS` 明示比較 (最大値) へ変える」1 点のみで、除外判定の意味論 (open/closed/degrade path の規則) 自体は変更していない。
+- `/verify` FAIL コメントが提示した最小再現 fixture (同一 group-key に `起票済み #9999` を持つ 3 entry、newest-first) をそのまま bats 回帰テストに採用し、あわせて「cutoff より新しい未 marked entry は引き続き計数される」ケースも追加した。既存 3 テストはいずれも単一 marked entry の fixture だったため本欠陥を検出できていなかった。
+- Issue 本文の AC 1 / AC 10 (Post-merge) は `/verify` FAIL コメント投稿時点で既に一般ケースを含む文言へ更新済みだったため、Spec の Verification 節と Implementation Step 1 をその文言に同期した。
 
 ### Deferred Items
-- 境界秒精度 (closedAt 分単位切り詰め) と group-key 複数回起票時の rolling cutoff 非対応は、Code Retrospective の Design Gaps/Ambiguities に記録済みで review でも追加の指摘なし。本 Issue のスコープ外として据え置く。
-- #1191 (`/audit stats --retention` Section 10) は `--with-tracking` オプションの実消費側。review では未検証 (#1191 側の責務)。
+- 境界秒精度 (closedAt 分単位切り詰め) と、同一 group-key が生涯で 2 回以上 `起票済み #N` された場合の rolling cutoff 非対応は、前ラウンドの Code Retrospective に記録済みで本ラウンドでも未着手。本 Issue のスコープ外として据え置く。
+- `## Phase Handoff` セクションが `review` / `merge` の 2 つ残存していた件 (前ラウンドの Verify Retrospective が指摘) は、本セクションへの書き込みで両方を 1 セクションに統合し解消済み。
 
 ### Notes for Next Phase
-- `/merge 1198` の前提条件はすべて満たされている (MUST issue ゼロ、CI 全通過、AC 全 PASS)。
-- Post-merge の observation AC (`/verify` Step 15 出力で `manual-recovery-review-rerun` / `review-tier3-recovery` が候補から消えていること) は次回 `/auto` セッションで確認すること。
-
-## Phase Handoff
-<!-- phase: merge -->
-
-### Key Decisions
-- pre-merge AC ゲート (9件全チェック済み) と review-incomplete-fallback チェック (fallback 未発生) を確認し、ゲートを通過。
-- `gh-pr-merge-status.sh` で mergeable=true (clean) を確認したため、コンフリクト解消ステップはスキップし、そのままスクワッシュマージを実行した。
-
-### Deferred Items
-- なし。review フェーズからの Deferred Items (境界秒精度、group-key 複数回起票時の rolling cutoff、#1191 側の `--with-tracking` 消費検証) はそのまま持ち越し。
-
-### Notes for Next Phase
-- `/verify 1152` で post-merge の observation AC (`/verify` Step 15 出力で `manual-recovery-review-rerun` / `review-tier3-recovery` が候補から消えていること) を次回 `/auto` セッションで確認すること。
+- `/review 1207` では、`manual-recovery-respawn` (#1014 closed) と `code-pr-tier3-recovery` (#799 closed) が `--threshold 3` で候補から消えていることを実データで確認済み (本 Spec の Notes 相当の実測は PR 本文に記載)。rubric AC の判定はこの実測結果と、newest-first fixture の回帰テストを突き合わせて行うこと。
+- Post-merge observation AC は前ラウンドで一度 FAIL しているため、`/verify` 実行時は前回と同じ表面的な期待値確認 (2 group-key の列挙) に留めず、AC 文言どおり「出力全件について closed Issue との突き合わせ」を行うこと。
 
 ## Verify Retrospective
 
