@@ -89,3 +89,24 @@ Background/Purpose/Proposal (Outline) が十分に具体的で、曖昧ポイン
 - Type: Task (ドキュメント記載漏れの修正、コード挙動変更なし)
 - Size: XS (`modules/orchestration-fallbacks.md` 1 ファイルの変更、ドキュメントのみ)
 - Value: 3 (Impact=2: `modules/orchestration-fallbacks.md` は複数 Skill から参照される共有モジュール、Alignment=3: verify/orchestration の正確性はプロジェクトの中核である governance-and-verification harness の Vision に直接関わる)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- triage の AC 監査が `skills/triage/skill-dev-verify-audit.md` **Pattern 6 サブパターン 1** を実際に発火させ、AC1 の `section_contains` heading 引数から先頭 `###` を自動除去した。#1083 で追加された「常時 UNCERTAIN な verify command」の検出基準が実地で機能したことの確認になる
+- 同時に AC2 へ `section_contains` の機械的補助チェックを追加しており、`modules/verify-patterns.md` §9 の rubric + 補助チェック指針も適用されている
+
+#### code
+- Size XS / patch 経路。実装は 1 ファイルのドキュメント追記で、手戻りなし
+
+#### verify
+- pre-merge 4 件はすべて code フェーズで確定済みのため SKIPPED。post-merge 1 件は `verify-type: opportunistic` で Step 8 の処理対象外
+- **`skills/verify/SKILL.md` Step 2 の PR 検出が誤マッチした**。本 Issue は patch 経路で PR を持たないが、`gh pr list --search "closes #1197"` が本文に `closes #1015` と書かれた PR #1018 を返した (全文検索のため)。手動で patch 経路と判定して処理した
+- **`restore_auto_session_pointer` が別セッションの ID を返した**。`.tmp/auto-session-current` が実行中に別セッション (`63129-1785977471`) に上書きされていたため、本 batch (`74631-1786005349`) の event が誤帰属するところだった。`AUTO_SESSION_ID` を明示 export して emit した。open Issue #1075 の live 再現
+- worktree isolation guard により `source scripts/emit-event.sh` 経由の emit が worktree 内で実行できず、`phase_complete` の emit を Worktree Exit 後へ繰り延べた (`modules/worktree-lifecycle.md` の既知制約どおり)
+
+### Improvement Proposals
+
+- **`skills/verify/SKILL.md` Step 2 の PR 検出が全文検索の誤マッチを排除していない**。`gh pr list --search "closes #N"` は GitHub の全文検索であり、本文に別 Issue 番号の `closes #M` を含む PR が `closes #N` の検索語にマッチしうる。実測 (2026-08-06、#1197): patch 経路で PR を持たない Issue に対し無関係な PR #1018 (`closes #1015`) が返った。本 Issue では `BASE_BRANCH` が両方 `main` で `github_check` 型 AC もなく実害はなかったが、Step 5 の **patch route detection は `PR_NUMBER` が空であることを判定条件にしている**ため、誤マッチで非空になると `github_check "gh pr checks"` 型 AC が UNCERTAIN 化されず、無関係な PR のチェック結果を参照する経路が開く。`gh-extract-issue-from-pr.sh` は既に PR body から `closes #N` を抽出する実装を持つため、検索結果を採用する前に「その PR が本当に当該 Issue を closes しているか」を突き合わせる検証を Step 2 に挟むのが最小の修正になる
