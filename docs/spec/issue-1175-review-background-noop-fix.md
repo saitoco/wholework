@@ -130,3 +130,31 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective — Background の事実訂正 (候補 A 実装済み・実測で不十分) と Post-merge observation への `session=next` 付与が既に Issue 本文へ反映済みであることの確認。Size=M のため分割不要との判断も記載。本 Spec の調査・方針選定に新たな決定事項の追加はなし / https://github.com/saitoco/wholework/issues/1175#issuecomment-5199172397
+- `/code` フェーズ開始時の cutoff (最新 `phase/ready` ラベル付与時刻) 以降に新規コメントなし。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Spec の Implementation Steps 1・2 に記載された bash 疑似コードをほぼそのまま採用した。Step 2 で Spec が「関数化は実装の自由度に委ねる」としていた点について、`claude -p` 呼び出し (`AUTO_EVENTS_LOG` 有無の2分岐を含む) を `_run_claude_review_session()` 関数に切り出し、初回呼び出しと継続リトライの両方から呼ぶ形にした。これは Spec が許容していた選択肢の採用であり、設計からの逸脱ではない。
+
+### Design Gaps/Ambiguities
+- N/A — Spec の bash 疑似コードが exit code 分岐・リトライ後の再チェックロジックまで具体的に記述しており、実装時に解釈の余地があった箇所はなかった。
+
+### Rework
+- N/A — 各 Implementation Step は一発で bats テスト PASS に到達し、手戻りは発生しなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec 通り候補 B (wrapper 側で MUST 未解決を検出し継続リトライ) を採用し、候補 A/C は Spec の Notes に記録済みの理由で不採用のまま維持した。
+- `post-fallback-review-summary.sh` の exit code を 0/1/2 の tri-state に拡張し、`run-review.sh` 側で明示的に分岐する形にした (Spec Step 2 のコード例通り)。
+- claude -p 呼び出しをローカル関数 `_run_claude_review_session()` に切り出し、初回実行と継続リトライで重複コードを避けた。
+
+### Deferred Items
+- Post-merge observation AC (`session=next`、次回 `/review --full` 実行での silent no-op 非発生観察) は本 PR のマージ後、次回セッションでの `/review --full` 実行を待って評価される。
+
+### Notes for Next Phase
+- `/review` はこの PR 自身の変更対象スキルではない (`run-review.sh` を変更する PR だが、`/review` 自体の実行はこの PR の外側で行われる) ため、本 PR のレビューは通常の `/review` フローで問題なく実行できる。
+- 変更ファイルは `scripts/post-fallback-review-summary.sh` / `scripts/run-review.sh` / 対応する2つの bats ファイル / `modules/orchestration-fallbacks.md` / `docs/structure.md` / `docs/ja/structure.md` の6ファイル。`bats tests/` フルスイート (1409件) は本 PR の変更を含めて全件 PASS 済み。
+- Post-merge の observation AC は次回の `/review --full` 実行で自然に検証される設計であり、`/verify` フェーズで能動的に発火させる必要はない。
