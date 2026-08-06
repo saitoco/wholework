@@ -181,10 +181,29 @@ if in_range_comments:
 print(json.dumps(payload))
 PYEOF
     )
-    echo "$REVIEW_PAYLOAD" | gh api "repos/$REPO/pulls/$PR_NUMBER/reviews" --method POST --input - || {
-        echo "Error: failed to post review for PR #$PR_NUMBER" >&2
-        exit 1
-    }
+    if ! API_STDERR=$(echo "$REVIEW_PAYLOAD" | gh api "repos/$REPO/pulls/$PR_NUMBER/reviews" --method POST --input - 2>&1 >/dev/null); then
+        # Self-review 422 fallback: GitHub rejects REQUEST_CHANGES on your own PR.
+        # Detect that specific case only (422 + self-review message) and retry as COMMENT.
+        if [ "$EVENT" = "REQUEST_CHANGES" ] && echo "$API_STDERR" | grep -q "422" \
+            && echo "$API_STDERR" | grep -qi "request changes on your own pull request"; then
+            FALLBACK_PAYLOAD=$(python3 - "$REVIEW_PAYLOAD" <<'PYEOF'
+import sys, json
+payload = json.loads(sys.argv[1])
+payload['event'] = 'COMMENT'
+note = "Note: posted as COMMENT instead of REQUEST_CHANGES — self-review (own pull request) is not allowed to request changes.\n\n"
+payload['body'] = note + payload['body']
+print(json.dumps(payload))
+PYEOF
+            )
+            echo "$FALLBACK_PAYLOAD" | gh api "repos/$REPO/pulls/$PR_NUMBER/reviews" --method POST --input - || {
+                echo "Error: failed to post fallback COMMENT review for PR #$PR_NUMBER" >&2
+                exit 1
+            }
+        else
+            echo "Error: failed to post review for PR #$PR_NUMBER" >&2
+            exit 1
+        fi
+    fi
 else
     # No line comments: post review body only
     REVIEW_PAYLOAD=$(python3 - "$REVIEW_BODY_FILE" "$EVENT" <<'PYEOF'

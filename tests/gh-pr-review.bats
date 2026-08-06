@@ -317,6 +317,138 @@ JSON
     [[ "$output" == *"failed to fetch PR diff"* ]]
 }
 
+# --- 422 self-review fallback cases ---
+
+@test "success: REQUEST_CHANGES 422 self-review error falls back to COMMENT" {
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+echo "ARGS: \$@" >> "$GH_CALL_LOG"
+if [ "\$1" = "repo" ] && [ "\$2" = "view" ]; then
+    echo "owner/repo"
+    exit 0
+fi
+if [ "\$1" = "pr" ] && [ "\$2" = "diff" ]; then
+    cat <<'DIFF'
+diff --git a/scripts/example.sh b/scripts/example.sh
+index 1111111..2222222 100644
+--- a/scripts/example.sh
++++ b/scripts/example.sh
+@@ -1,50 +1,50 @@
+DIFF
+    exit 0
+fi
+if [ "\$1" = "api" ]; then
+    COUNTER_FILE="$BATS_TEST_TMPDIR/api_call_count"
+    COUNT=0
+    [ -f "\$COUNTER_FILE" ] && COUNT=\$(cat "\$COUNTER_FILE")
+    COUNT=\$((COUNT + 1))
+    echo "\$COUNT" > "\$COUNTER_FILE"
+    if [ "\$COUNT" -eq 1 ]; then
+        echo "gh: Review can not request changes on your own pull request (HTTP 422)" >&2
+        exit 1
+    fi
+    if echo "\$@" | grep -q -- "--input"; then
+        cat > "$GH_API_STDIN"
+    fi
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    echo "review body text" > "$BATS_TEST_TMPDIR/review.md"
+    cat > "$BATS_TEST_TMPDIR/comments.json" <<'JSON'
+[
+  {"path": "scripts/example.sh", "line": 10, "body": "MUST fix this", "side": "RIGHT", "severity": "MUST"}
+]
+JSON
+    run bash "$SCRIPT" 159 "$BATS_TEST_TMPDIR/review.md" "$BATS_TEST_TMPDIR/comments.json"
+    [ "$status" -eq 0 ]
+    [ "$(cat "$BATS_TEST_TMPDIR/api_call_count")" -eq 2 ]
+    python3 -c "
+import json
+payload = json.load(open('$GH_API_STDIN'))
+assert payload['event'] == 'COMMENT', f'Expected COMMENT fallback, got {payload[\"event\"]}'
+assert 'COMMENT instead of REQUEST_CHANGES' in payload['body'], 'fallback note missing from body'
+"
+}
+
+@test "error: 422 without self-review message does not fall back" {
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+echo "ARGS: \$@" >> "$GH_CALL_LOG"
+if [ "\$1" = "repo" ] && [ "\$2" = "view" ]; then
+    echo "owner/repo"
+    exit 0
+fi
+if [ "\$1" = "pr" ] && [ "\$2" = "diff" ]; then
+    cat <<'DIFF'
+diff --git a/scripts/example.sh b/scripts/example.sh
+index 1111111..2222222 100644
+--- a/scripts/example.sh
++++ b/scripts/example.sh
+@@ -1,50 +1,50 @@
+DIFF
+    exit 0
+fi
+if [ "\$1" = "api" ]; then
+    echo "gh: Validation Failed (HTTP 422)" >&2
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    echo "review body text" > "$BATS_TEST_TMPDIR/review.md"
+    cat > "$BATS_TEST_TMPDIR/comments.json" <<'JSON'
+[
+  {"path": "scripts/example.sh", "line": 10, "body": "MUST fix this", "side": "RIGHT", "severity": "MUST"}
+]
+JSON
+    run bash "$SCRIPT" 159 "$BATS_TEST_TMPDIR/review.md" "$BATS_TEST_TMPDIR/comments.json"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"failed to post review"* ]]
+    [ "$(grep -c '^ARGS: api ' "$GH_CALL_LOG")" -eq 1 ]
+}
+
+@test "error: non-422 failure on REQUEST_CHANGES does not fall back" {
+    cat > "$MOCK_DIR/gh" <<MOCK
+#!/bin/bash
+echo "ARGS: \$@" >> "$GH_CALL_LOG"
+if [ "\$1" = "repo" ] && [ "\$2" = "view" ]; then
+    echo "owner/repo"
+    exit 0
+fi
+if [ "\$1" = "pr" ] && [ "\$2" = "diff" ]; then
+    cat <<'DIFF'
+diff --git a/scripts/example.sh b/scripts/example.sh
+index 1111111..2222222 100644
+--- a/scripts/example.sh
++++ b/scripts/example.sh
+@@ -1,50 +1,50 @@
+DIFF
+    exit 0
+fi
+if [ "\$1" = "api" ]; then
+    echo "gh: rate limit exceeded" >&2
+    exit 1
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    echo "review body text" > "$BATS_TEST_TMPDIR/review.md"
+    cat > "$BATS_TEST_TMPDIR/comments.json" <<'JSON'
+[
+  {"path": "scripts/example.sh", "line": 10, "body": "MUST fix this", "side": "RIGHT", "severity": "MUST"}
+]
+JSON
+    run bash "$SCRIPT" 159 "$BATS_TEST_TMPDIR/review.md" "$BATS_TEST_TMPDIR/comments.json"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"failed to post review"* ]]
+    [ "$(grep -c '^ARGS: api ' "$GH_CALL_LOG")" -eq 1 ]
+}
+
 @test "error: gh api POST failure exits with code 1 and Error message" {
     cat > "$MOCK_DIR/gh" <<MOCK
 #!/bin/bash

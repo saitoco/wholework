@@ -71,6 +71,8 @@ Post-merge の手動確認 AC は、実行主体 (`/review` からの `gh-pr-rev
 
 非対話モードでの曖昧ポイント自動解決は `/issue` フェーズ・`/spec` フェーズのいずれでも発生しなかった (対応方針が既に具体的で、要件レベルの曖昧ポイントが検出されなかったため)。
 
+`/code` フェーズ開始時点で `phase/ready` ラベルが不在だった (現ラベルは `phase/code` — 過去の `/code` 実行が worktree 未作成のまま中断したことを示唆するレジューム状態と判断)。`reconcile-phase-state.sh --check-precondition` の診断も「Spec 欠落」ではなく「`phase/ready` ラベル不在」のみを指摘しており、`spec_file` フィールドは本 Spec の存在を確認済みだった。既存 Spec は要件を十分具体的に記述しているため、非対話モードのポリシーに従い Spec を破棄せず続行することを自動解決とした。
+
 ### フォールバック注記文の言語
 
 `scripts/gh-pr-review.sh` は配布物 (Wholework Plugin の一部として全ユーザーに配布される共有スクリプト) であり、既存のエラーメッセージ (`Error: file not found` 等) もすべて英語で書かれている。本 Issue で追加するフォールバック注記文もこの既存慣例を継承し英語で埋め込む (CLAUDE.md 言語規約表の "Source code: English" に整合)。
