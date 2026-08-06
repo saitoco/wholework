@@ -216,26 +216,38 @@ Issue 本文の `## Auto-Resolved Ambiguity Points` セクションを参照。
 - **`#719` 条件2 の前提充足**: 「pre-existing FAILURE を別 Issue で解消後」という前提が現在成立しているかを `bash scripts/check-forbidden-expressions.sh` の実行 (exit 0) で確認し、`auto-run` への再型付けが妥当と判断した。前提未充足なら対象外にすべき条件だった。
 - **`#704` の `config=` 表現可能性**: `autonomy` は enum (`L1`/`L2`/`L3`) で、`config=` ゲートは boolean 専用 (`modules/observation-trigger.md` § Condition Check Gate (`config=`))。本リポジトリは `L3` のため条件の前提自体が成立せず、対象外が妥当と確認した。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- Implementation Steps 2〜5 (`.tmp/retype-mapping.json` 作成 → `.tmp/retype-ac.py` 作成 → dry-run 確認 → `--apply` 実行) を実行しなかった。`/code` 開始時点で `reconcile-phase-state.sh --check-precondition code-pr` が `phase/ready` ラベル不在 (label timeline 上、既に `phase/code` へ遷移済み) を報告し、対象 29 AC 行を個別に確認したところ、全件が GitHub Issue 本文側で既に `verify-type: observation event=<name>` へ再型付け済みだった。対象外 7 AC 行も個別確認し誤編集がないことを確認した。前回セッションが label 遷移後・コミット/PR作成前に中断したレジューム状態と判断し、実質的な追加作業は Step 1 (report file 作成) と Step 7〜9 (opportunistic-search.sh による検証・記録・cleanup) のみとした。Spec Implementation Steps は Deviations として本節に記録するのみとし、Step 2〜5 の記述自体は変更しない (次回同種の再型付け Issue で `.tmp/` ヘルパパターンを再利用する際の参照価値を残すため)。
+
+### Design Gaps/Ambiguities
+
+- Step 8 で baseline 比較を行ったところ、`opportunistic-search.sh --event auto-run` のマッチ件数は baseline 31 行 → 実測 59 行で、再型付けした 27 行の単純加算 (31+27=58) と 1 件ずれた。目視突合で対象 27 行の含有は個別確認済みのため AC2 の充足には影響しないが、母集団が本 Issue の作業以外の要因 (他 sub-issue の並行対応や `/auto` 実行由来の新規 AC) でも変動しうることが分かった。件数差分だけで再型付け完了を判定する設計は将来的に誤検知の余地がある — 個別 Issue 番号の含有確認を必須の一次情報とすべき (report ファイルの `## 検証` 節に既に反映済み)。
+
+### Rework
+
+- なし。Spec の「再型付けマッピング」節の設計 (29 行再型付け / 7 行対象外) をそのまま `docs/reports/manual-ac-retype-a.md` へ転記し、想定通り完了した。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 対象 34 Issue / 36 AC 行を全件精査し、`auto-run` 27 行・`fix-cycle` 2 行・対象外 7 行に確定した。マッピング表は Spec の「再型付けマッピング」節が SSoT で、`/code` はこれを `docs/reports/manual-ac-retype-a.md` へ転記する。
-- 親 #1158 の operate route 想定を pr route へ変更した (rubric grader が Issue コメントを読めないため)。`/code` は Step 0 の diff-less 判定で `Changed Files` に記録ファイルがあることを確認し、operate route と誤判定しないこと。
-- `event=` 以外のゲート属性 (`when=` / `keyword=` / `config=`) は付与しない。#1118 のスコープ。
-- 一括置換は `.tmp/` に置く使い捨ての python3 ヘルパで行い、dry-run → apply の 2 段階で実行する。`scripts/` には残さない。
+- `.tmp/retype-mapping.json` / `.tmp/retype-ac.py` を作成・実行せず、既に完了していた Issue 本文の再型付け状態を検証してそのまま採用した (上記 Deviations 参照)。再実行や差し戻しは不要。
+- `docs/reports/manual-ac-retype-a.md` を新規作成し、Spec の「再型付けマッピング」3 表と `## 検証` 節 (opportunistic-search.sh 実行結果) を記録した。Pre-merge AC 6 件は全て PASS 判定し Issue のチェックボックスを更新済み。
+- PR #1194 を作成 (`closes #1163`)。テスト `bats tests/` は 1430/1430 PASS、`validate-skill-syntax.py` は 0 error、`check-forbidden-expressions.sh` は exit 0。
 
 ### Deferred Items
 
-- `modules/observation-trigger.md` § Notes の `fix-cycle` emitter 未実装という古い記述の修正 — 本 Issue のスコープ外、別途起票候補。
-- `skills/code/SKILL.md` の `allowed-tools` への `observation-trigger.sh` 追加 — 本 Issue では `opportunistic-search.sh` で代替するため不要。
+- `modules/observation-trigger.md` § Notes の `fix-cycle` emitter 未実装という古い記述の修正 — 本 Issue のスコープ外、別途起票候補 (spec retrospective から引き継ぎ)。
 - 再型付け後の AC への `when=` 条件付与 — #1118 が担当。
 - #708 の 2 条件の bats テスト化 — 区分 C 相当として #1167 の領域。
+- Post-merge AC (`/audit stats --retention` での Manual waiting 件数減少確認) — merge 後に `/verify` が `observation event=auto-run` 経路で評価する。
 
 ### Notes for Next Phase
 
-- Issue 本文の AC 行を書き換える際は、`match` 文字列で特定した行が **ちょうど 1 行** であることを必ず検証すること。#869 と #704 と #700 は本文の retrospective 表の中にも `verify-type: manual` / `verify-type: observation` を含む行があるため、`- [ ]` で始まる AC 行だけを対象にする必要がある。
-- 対象外 7 AC 行 (#719 条件1 / #708 条件1・2 / #704 / #501 / #500 / #479) は絶対に編集しないこと。Pre-merge AC6 が #704 の `manual` 維持を機械確認する。
-- Step 7 のマッチ確認で対象 Issue が現れない場合、GitHub 検索インデックスの遅延の可能性が高い。本文が正しく置換されていることを `gh issue view` で先に確認し、時間を置いて再実行すること。
-- `opportunistic-search.sh --event auto-run` は母集団 60 Issue に対し `gh issue view` を逐次実行するため 2〜3 分かかる。タイムアウトを長めに取ること。
+- `/review` は Pre-merge AC が全て `rubric` であることを踏まえ、`docs/reports/manual-ac-retype-a.md` の内容と GitHub Issue 本文の実状態 (#869 #707 #704 など代表 Issue) の整合を優先的に確認すること。
+- 対象外 7 AC 行 (#719 条件1 / #708 条件1・2 / #704 / #501 / #500 / #479) が `manual` のまま維持されていることは commit 前に個別確認済み。`/review` でも再確認する場合は report の「対象外」表と突合すること。
+- baseline 比較の件数ずれ (Design Gaps/Ambiguities 参照) は AC2 の充足を妨げないが、`/verify` が post-merge AC を評価する際に母集団件数の単純比較ではなく個別 Issue 番号の含有確認を優先すること。
