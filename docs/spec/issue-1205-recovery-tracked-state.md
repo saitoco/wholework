@@ -57,6 +57,7 @@
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: `/issue` フェーズの自律判断記録 — Issue の扱い (保留/スコープ縮小/close の3択) について案2「スコープ縮小して維持」を採用した根拠 (#1152 修正確認、`tracked:#799` closed が --threshold 1 で依然出力されることの実測) を記載。Purpose・対応方針候補・AC 本体への変更は無し / URL: https://github.com/saitoco/wholework/issues/1205#issuecomment-5204827118
+- code phase (2026-08-06): No new comments since last phase (cutoff: most recent `phase/*` label assignment, 2026-08-06T13:04:19Z; also checked cross-phase `wholework-event: type=verify-fail` / `type=preview-ac-unverified` markers regardless of cutoff — none found).
 
 ## Code Retrospective
 
