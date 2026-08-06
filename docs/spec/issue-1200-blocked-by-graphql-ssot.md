@@ -246,3 +246,49 @@ Edit / Write ツールは `.claude/` 配下を sensitive file として拒否す
 
 - 特筆すべき困難はなかった。3 件の rubric AC は diff を直接読むことで明確に判定可能だった。2 件の `command "bats ..."` AC は safe mode の CI reference fallback (`Run bats tests` job の SUCCESS) で PASS 判定したが、このリポジトリでは bats 全ファイルが単一の CI job に集約されているため機能した。テストファイル単位で job が分離されている場合、fallback の粒度が粗く誤判定するリスクがある点は留意事項として記録しておく
 - プロセス上のメモ: `gh-pr-review.sh` への line-comments JSON で `severity` フィールドを付け忘れ、`HAS_MUST` 判定が `false` になり event が `COMMENTED` のまま投稿された。ただし self-authored PR に対する `REQUEST_CHANGES` は GitHub API が HTTP 422 で拒否する既知の制約 (`modules/phase-state.md:77`) のため、正しく `severity` を設定していても同じ `COMMENTED` 結果になっていた可能性が高く、実害はなかった。line-comments JSON を組み立てる際は `severity` フィールドを構造化データとして必ず含めること (body 内のテキスト装飾だけでは `HAS_MUST` 判定に反映されない)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Issue 本文の変更ゼロ。issue フェーズは Background の技術的主張 (5 skill / 6 箇所の参照構造) を実コードと突合して「記載どおり」と確認しただけで終わった。**起票時点の調査精度が高いと issue フェーズが検証に徹せる**ことを示す例
+- 3 つの対応方針候補を `/spec` へ意図的に委譲する構成が What/How 境界として機能し、曖昧点の追加検出はなし
+
+#### spec
+- **Spec の分岐表がそのままテスト設計の一次ソースになった**。`get-blocked-by.sh` の挙動を exhaustive な表で定義したため、code フェーズで解釈の揺れが発生せず Rework ゼロ
+- **Uncertainty resolution に実 API の実測値を記録していた**ことが効いた。code フェーズが同じ API を叩いて `#1167 → #1157 (CLOSED)` を再現し、設計時点の検証が実装時にも成立することを確認できた
+- body テキストを全廃せず「入力ショートカット (書き込みトリガー)」に再定義した設計判断が良い。既存の運用 (body に `Blocked by #N` と書く) を壊さずに判定経路だけを GraphQL に寄せられた
+- 副産物として `/triage` の orphan dependency 検出が「GraphQL グラフの異常」から「**body テキストの衛生チェック**」に再定義された。`addBlockedBy` が存在する Issue の node ID を要求する以上 GraphQL 関係は原理的に orphan になりえない、という導出
+
+#### code
+- **rubric AC を実装エージェント自身に自己採点させず、diff の文脈を持たない独立した adversarial grader sub-agent に判定させた**。自己採点バイアスを構造的に排除する手順として他 Issue にも転用価値がある
+- `skills/auto/SKILL.md` / `skills/spec/SKILL.md` が複数テストから参照される (behavioral change detection) ことを認識し、直接テスト 2 件に加えてフルスイート 1476 件を実行した判断も妥当
+
+#### review
+- review-bug 由来の指摘 8 件に 2 段階検証を適用し、**1 件を実 API 検証で false positive と判定して除外**した。静的解析だけなら MUST として残り、不要な修正を生んでいた
+- MUST 2 件 + 検証済み SHOULD 3 件を修正・push。残る SHOULD 4 / CONSIDER 4 は挙動に影響しないため skip し、Deferred Items に列挙済み
+
+#### merge
+- 3 分 41 秒で完了。conflict なし、追加リトライなし
+
+#### verify
+- Pre-merge 6 件すべて PASS、FAIL / UNCERTAIN ゼロ。加えて `get-blocked-by.sh` を実 API に対して実行し、単一 Issue モードと `--all` モード (TSV 3 列) の両方が動作することを確認した
+- **`/auto` 全 6 フェーズで recovery ゼロ・異常ゼロ**。並行度 8 (本日最高) の下で watchdog kill も外部 kill も発生しなかった
+
+### 前回の Improvement Candidate の訂正
+
+`/verify 1076` の Verify Retrospective に「未起票の Improvement Candidate」として記録した **`gh-pr-review.sh` の self-review 422 フォールバック**は、**既に実装済み**だった。
+
+```
+# scripts/gh-pr-review.sh:185-186
+# Self-review 422 fallback: GitHub rejects REQUEST_CHANGES on your own PR.
+# Detect that specific case only (422 + self-review message) and retry as COMMENT.
+```
+
+commit `a1bb7d68` (`closes #1102`) で着地している。#1076 の review が指摘した時点の情報に基づいて記録したものだが、起票前に実装を確認すべきだった。**起票を見送った判断自体は結果的に正しかった。**
+
+### Improvement Proposals
+
+- **CI reference fallback の粒度リスク (観察のみ、起票せず)** — `command "bats ..."` 型の AC は safe mode で CI job の SUCCESS を参照してフォールバック判定する。本リポジトリは bats 全ファイルが単一 CI job (`Run bats tests`) に集約されているため機能しているが、**テストファイル単位で job を分割した場合、特定ファイルが FAIL していても他 job の SUCCESS で PASS と誤判定しうる**。現状の CI 構成では発現しないため起票は見送り、CI job 分割を検討する時点での前提条件として記録する
+- **doc-only の Deferred Items が 4 件積み残った** — `docs/workflow.md` の "Automatic relationship setting" テーブルへの `/auto --batch` 行追加、`### Scripts` 一覧への `get-open-issues-blocked-by` 追加、`modules/autonomy-tier.md` への例外注記、`remove-blocked-by.sh` wrapper の新設。いずれも挙動に影響しないが、SSoT ドキュメントと実装の乖離として蓄積する性質のもの。次回 blocked-by 周辺を触る Issue でまとめて回収するのが効率的
