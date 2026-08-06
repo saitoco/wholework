@@ -18,6 +18,14 @@ cutoff: `2026-08-06T04:23:59Z` (`phase/issue` ラベル付与時刻、Issue time
 
 Cross-phase marker (`type=verify-fail` / `type=preview-ac-unverified`) の追加スキャン結果: 該当なし。
 
+### code phase (cutoff: `2026-08-06T04:50:47Z`, `phase/ready` ラベル付与時刻)
+
+`phase/ready` 付与以降の新規コメントなし。Cross-phase marker の追加スキャン結果も該当なし。
+
+## Autonomous Auto-Resolve Log
+
+- **`phase/ready` ラベル不在での続行**: `/code 1163 --pr --non-interactive` 開始時点で Issue のラベルは `phase/code` (label timeline 上、`phase/ready` は 2026-08-06T04:56:03Z に `phase/code` へ既に遷移済み)。`reconcile-phase-state.sh --check-precondition code-pr` も `matches_expected: false` を返した。Spec (`docs/spec/issue-1163-manual-ac-retype-a.md`) は spec retrospective・issue retrospective・Phase Handoff まで完備しており、コーディング未着手のまま前回セッションが label 遷移後に中断したレジューム状態と判断。Spec が存在するため「Spec なしで Issue 本文から要件を読む」対応は不要。warn のうえ Spec を正として続行した — reason: 非対話モードのポリシー (`--warn-only` 相当) は Spec 欠落時の縮退経路であり、本件は Spec 完備のため実質的にブロッカーではない。
+
 ## Changed Files
 
 - `docs/reports/manual-ac-retype-a.md`: 新規作成 — 区分 A 36 AC 行のマッピング表 (Issue 番号 / 条件文要約 / 付与 event または対象外 / 選定根拠)、対象外 7 行の理由、`opportunistic-search.sh` 実行による検証結果
@@ -208,26 +216,54 @@ Issue 本文の `## Auto-Resolved Ambiguity Points` セクションを参照。
 - **`#719` 条件2 の前提充足**: 「pre-existing FAILURE を別 Issue で解消後」という前提が現在成立しているかを `bash scripts/check-forbidden-expressions.sh` の実行 (exit 0) で確認し、`auto-run` への再型付けが妥当と判断した。前提未充足なら対象外にすべき条件だった。
 - **`#704` の `config=` 表現可能性**: `autonomy` は enum (`L1`/`L2`/`L3`) で、`config=` ゲートは boolean 専用 (`modules/observation-trigger.md` § Condition Check Gate (`config=`))。本リポジトリは `L3` のため条件の前提自体が成立せず、対象外が妥当と確認した。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- Implementation Steps 2〜5 (`.tmp/retype-mapping.json` 作成 → `.tmp/retype-ac.py` 作成 → dry-run 確認 → `--apply` 実行) を実行しなかった。`/code` 開始時点で `reconcile-phase-state.sh --check-precondition code-pr` が `phase/ready` ラベル不在 (label timeline 上、既に `phase/code` へ遷移済み) を報告し、対象 29 AC 行を個別に確認したところ、全件が GitHub Issue 本文側で既に `verify-type: observation event=<name>` へ再型付け済みだった。対象外 7 AC 行も個別確認し誤編集がないことを確認した。前回セッションが label 遷移後・コミット/PR作成前に中断したレジューム状態と判断し、実質的な追加作業は Step 1 (report file 作成) と Step 7〜9 (opportunistic-search.sh による検証・記録・cleanup) のみとした。Spec Implementation Steps は Deviations として本節に記録するのみとし、Step 2〜5 の記述自体は変更しない (次回同種の再型付け Issue で `.tmp/` ヘルパパターンを再利用する際の参照価値を残すため)。
+
+### Design Gaps/Ambiguities
+
+- Step 8 で baseline 比較を行ったところ、`opportunistic-search.sh --event auto-run` のマッチ件数は baseline 31 行 → 実測 59 行で、再型付けした 27 行の単純加算 (31+27=58) と 1 件ずれた。目視突合で対象 27 行の含有は個別確認済みのため AC2 の充足には影響しないが、母集団が本 Issue の作業以外の要因 (他 sub-issue の並行対応や `/auto` 実行由来の新規 AC) でも変動しうることが分かった。件数差分だけで再型付け完了を判定する設計は将来的に誤検知の余地がある — 個別 Issue 番号の含有確認を必須の一次情報とすべき (report ファイルの `## 検証` 節に既に反映済み)。
+
+### Rework
+
+- なし。Spec の「再型付けマッピング」節の設計 (29 行再型付け / 7 行対象外) をそのまま `docs/reports/manual-ac-retype-a.md` へ転記し、想定通り完了した。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- 対象 34 Issue / 36 AC 行を全件精査し、`auto-run` 27 行・`fix-cycle` 2 行・対象外 7 行に確定した。マッピング表は Spec の「再型付けマッピング」節が SSoT で、`/code` はこれを `docs/reports/manual-ac-retype-a.md` へ転記する。
-- 親 #1158 の operate route 想定を pr route へ変更した (rubric grader が Issue コメントを読めないため)。`/code` は Step 0 の diff-less 判定で `Changed Files` に記録ファイルがあることを確認し、operate route と誤判定しないこと。
-- `event=` 以外のゲート属性 (`when=` / `keyword=` / `config=`) は付与しない。#1118 のスコープ。
-- 一括置換は `.tmp/` に置く使い捨ての python3 ヘルパで行い、dry-run → apply の 2 段階で実行する。`scripts/` には残さない。
+- Base Branch Conflict Pre-check (`git merge-tree`) は main 側の並行変更 (`.wholework.yml` / 他 Issue の Spec ファイル) を検出したが、いずれも `merged` (クリーンな自動マージ) で `changed in both` はゼロだったため、コンフリクトコンテキストは review-spec/review-bug へ渡していない。
+- fork context (`--non-interactive` あり、再呼出し保証なし) と判定し、`capabilities.workflow: true` が有効でも Workflow path を使わず静的 Task fan-out (review-spec + review-bug×2) を `Agent(run_in_background: false)` で実行した。`skills/review/workflow-guidance.md` の再呼出し保証チェックに従った判断。
+- Pre-merge AC 6 件 (rubric ×3, github_check ×3) を全て PASS 判定 (Issue チェックボックスは既に `[x]` のため更新不要)。CI 9 job 全て SUCCESS。MUST issue はゼロ。
+- review-spec + review-bug×2 の指摘 6 件 (SHOULD 3 / CONSIDER 3、うち review-bug 3 件は 2 段階検証で全て PASS) を全て修正した。低リスクな文書のみの PR で、修正コストが低く、report が今後の関連 Issue (#1164-#1167) の precedent として参照される想定だったため、SHOULD/CONSIDER を含め全件対応する判断とした。
 
 ### Deferred Items
 
-- `modules/observation-trigger.md` § Notes の `fix-cycle` emitter 未実装という古い記述の修正 — 本 Issue のスコープ外、別途起票候補。
-- `skills/code/SKILL.md` の `allowed-tools` への `observation-trigger.sh` 追加 — 本 Issue では `opportunistic-search.sh` で代替するため不要。
+- `modules/observation-trigger.md` § Notes と `modules/verify-classifier.md` § observation Type Emitter table の両方に残る `fix-cycle` emitter 未実装という古い記述の修正 — 本 Issue のスコープ外、別途起票候補 (spec retrospective から引き継ぎ)。実装は `skills/verify/SKILL.md:584` (`/verify` FAIL → reopen 経路) で既に完了している。
 - 再型付け後の AC への `when=` 条件付与 — #1118 が担当。
-- #708 の 2 条件の bats テスト化 — 区分 C 相当として #1167 の領域。
+- #708 の 2 条件・#719 条件1 の bats テスト化 (故障注入型で 5 有効値のどの発火でも観測窓が開かない対象外行) — 区分 C 相当として #1167 の領域。
+- #501 / #500 / #479 (downstream 依存で upstream から観測不能な対象外行) — `docs/stats/2026-08-05.md` Section 10 が区分 B に対して定める retire または downstream への移管の判断先が未定。担当 Issue 番号は別途決定する。
+- Post-merge AC (`/audit stats --retention` での Manual waiting 件数減少確認) — merge 後に `/verify` が `observation event=auto-run` 経路で評価する。
 
 ### Notes for Next Phase
 
-- Issue 本文の AC 行を書き換える際は、`match` 文字列で特定した行が **ちょうど 1 行** であることを必ず検証すること。#869 と #704 と #700 は本文の retrospective 表の中にも `verify-type: manual` / `verify-type: observation` を含む行があるため、`- [ ]` で始まる AC 行だけを対象にする必要がある。
-- 対象外 7 AC 行 (#719 条件1 / #708 条件1・2 / #704 / #501 / #500 / #479) は絶対に編集しないこと。Pre-merge AC6 が #704 の `manual` 維持を機械確認する。
-- Step 7 のマッチ確認で対象 Issue が現れない場合、GitHub 検索インデックスの遅延の可能性が高い。本文が正しく置換されていることを `gh issue view` で先に確認し、時間を置いて再実行すること。
-- `opportunistic-search.sh --event auto-run` は母集団 60 Issue に対し `gh issue view` を逐次実行するため 2〜3 分かかる。タイムアウトを長めに取ること。
+- `/merge` は pre-merge AC gate が Pre-merge AC 6 件全てチェック済みであることを確認すればよく、追加の手動確認は不要。
+- review で修正した `docs/reports/manual-ac-retype-a.md` の `event` 列追加・fallback メカニズム記述修正は、後続の #1164-#1167 (区分 B/C/D/E 等の他 sub-issue) が同種の report を作成する際の precedent として参照される想定。同種の precedent 引用を書く場合は「引用対象の Issue が同一 PR で書き換えられていないか」の時制チェックを行うこと (review retrospective 参照)。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- report (`docs/reports/manual-ac-retype-a.md`) の 3 表は Spec の「再型付けマッピング」節を転記する設計だったが、Pre-merge AC1 のrubric文言 (「Issue 番号 / 元の条件文の要約 / 付与した event= 名または対象外 / 選定根拠」の 4 項目) に対し、実装は 3 列 + セクション見出しでの event 表現だった。rubric grader は文脈から意味的に PASS 判定したが、review-spec が「4 項目要求 vs 3 列実装」のギャップを CONSIDER として検出し、`event` 列を明示追加する修正を行った。rubric のような自然言語 AC は、意味的に等価な実装でも構造的な字面乖離が生じうる — rubric 文言が列挙形式 (「A / B / C / D」) を使う場合、実装側も同じ列挙構造で表現すると grader・人間読者の両方にとって監査しやすい。
+
+### Recurring issues
+
+- unknown-event fallback のメカニズム記述 (`observation-trigger.sh` 起因と誤記していた点) は、review-spec・review-bug (diff scan)・review-bug (security scan) の 3 エージェントが**独立に同じ根本原因を検出**した。3 系統からの収束検出は指摘の信頼度を裏付ける一方、report 内の同一パラグラフに複数の独立した事実誤認 (emitter 帰属 + precedent 引用の自己矛盾) が同居していたことを示している。次回同種の report 作成時は、「メカニズムを説明する一文」を書く際に実装ファイル (`scripts/*.sh`) を直接参照して裏取りする習慣が有効。
+- precedent 引用 (「過去に #869/#704/#700 で manual 維持と判断された」) が、引用対象の Issue 自身を**同一 PR で書き換えている**ケースでは、引用文が過去形として読めるよう明示的にスコープしないと自己矛盾が生じる。本件同様「このIssueが対象を書き換える」構造を持つ report では、precedent 引用の時制チェックを review チェックリストに加える価値がある。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — Pre-merge AC 6 件 (rubric ×3, github_check ×3) は全て決定的に PASS 判定でき、UNCERTAIN はゼロだった。
