@@ -108,17 +108,33 @@
 - N/A。Implementation Steps の4ステップ (SKILL.md 変更、collect-recovery-candidates.sh 変更、bats テスト追加、既存テスト無変更確認) はいずれも Spec の記述通り一度で実装が完了し、手戻りは発生しなかった。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の Implementation Steps を逐語的に実装 (SKILL.md Section 10 追加 → collect-recovery-candidates.sh の N/A 除外 → bats テスト2件追加 → audit-retention.bats 無変更確認)。設計判断は Spec 段階で確定済みだったため、実装段階での新たな設計選択はなし
-- `check-allowed-tools.sh` が検出した allowed-tools 欠落 (collect-recovery-candidates.sh 未登録) をその場で修正しコミット。Spec に明記されていない機械的な追従だが、SKILL.md 本文が新規参照するスクリプトである以上必須
-- Pre-merge AC 6件 (rubric 4件 + bats command 2件) はすべて自己判定で PASS。rubric 4件は Section 10 の記述を Issue AC の文言と突き合わせて評価し、いずれも記述内容が AC の要求と一致することを確認した
+- Pre-merge AC 6 件 (rubric 4 件 + bats command 2 件) を Step 8 で再検証し、全件 PASS を確認 (rubric は SKILL.md Section 10 の実記述と Issue AC 文言を突き合わせ、bats command 2 件は CI `Run bats tests` ジョブ成功による fallback で判定)
+- `review-light` エージェント (4 観点統合) が SHOULD 1 件 (`docs/product.md` の `--retention` 説明が Section 10 未反映) と CONSIDER 1 件 (`collect-recovery-candidates.sh` の N/A 判定が `### Improvement Candidate` サブセクションにスコープされていない) を検出
+- SHOULD は `docs/product.md` / `docs/ja/product.md` の該当行を Section 10 (recovery 候補頻度) を含む記述に更新して解消。CONSIDER は既存の `起票済み`/`cause:` 判定と対称なパターンで現行データでは問題が発現しないため見送り
 
 ### Deferred Items
-- Post-merge AC (`/audit stats --retention` の実観察、`verify-type: observation event=auto-run session=next`) は未実行 — 次回 `/auto` 実行時に自動発火する設計のため、本フェーズではスコープ外
+- Post-merge AC (`/audit stats --retention` の実観察、`verify-type: observation event=auto-run session=next`) は未実行 — 次回 `/auto` 実行時に自動発火する設計のため、本フェーズではスコープ外 (code フェーズからの申し送りを継続)
+- CONSIDER 指摘 (`collect-recovery-candidates.sh:213` の N/A 判定スコープ限定) は見送り — 将来 Diagnosis/Context セクションに `- N/A` で始まる行が追加された場合に誤除外が起きうる点は残存
 
 ### Notes for Next Phase
-- 全 1451 件の既存 bats テストスイートを実行し PASS を確認済み (behavioral change detection の対象ファイル `skills/audit/SKILL.md` / `scripts/collect-recovery-candidates.sh` は直接対応テストのみから参照されており、narrow scope 判定)
-- docs/structure.md・docs/tech.md および docs/ja/ 対訳を Spec Notes の sync candidate 指示に従って更新済み — レビュー時に追加のドキュメント差分は不要なはず
-- `scripts/collect-recovery-candidates.sh` の N/A 除外は `起票済み #N` パターンと対称な実装 (集計対象から entry を外す条件分岐の追加のみ) — 既存の open/closed cutoff ロジックとは独立した除外軸である点に注意
+- `docs/product.md` / `docs/ja/product.md` の修正コミットを追加済み (`Refs:` に本レビューの PR Review URL を記録)。`/merge` 前に追加の docs 差分確認は不要
+- Steering Doc sync candidate の抽出時、`docs/structure.md`/`docs/tech.md` だけでなく `docs/product.md` も候補に含める運用上の教訓が今回発生 (下記 review retrospective 参照)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+特筆事項なし。`review-light` の Spec 乖離観点では問題は検出されず、Implementation Steps がほぼ逐語的に実装されていることを確認した。
+
+### Recurring issues
+特筆事項なし。今回検出した 2 件 (SHOULD 1 件、CONSIDER 1 件) はいずれも本 Issue 固有の指摘であり、過去の review フェーズで繰り返し検出されているパターンとの一致は確認できなかった。
+
+補足として、CONSIDER 指摘 (`collect-recovery-candidates.sh` の N/A 判定が `### Improvement Candidate` サブセクションにスコープされていない) は、同スクリプトの既存実装 (`起票済み #N`/`cause:` 判定) がもともと同じ非スコープ設計であることに起因する。新規に導入された弱点ではなく、コードベースの既存方針を踏襲した結果である点を記録しておく。
+
+### Acceptance criteria verification difficulty
+特筆事項なし。Pre-merge AC 6 件 (rubric 4 件 + bats command 2 件) はいずれも UNCERTAIN を経由せず確定的に判定できた — rubric 4 件は SKILL.md Section 10 の実記述と Issue AC 文言の突き合わせで PASS、bats command 2 件は CI `Run bats tests` ジョブ成功への fallback で PASS。verify command の記述・rubric 文言の精度に起因する追加調査は不要だった。
+
+### Improvement proposal candidates (aggregated at /verify)
+- Steering Doc sync candidate の抽出漏れ: 本 PR は `docs/structure.md`/`docs/tech.md` (+ `docs/ja/` 対訳) を正しく同期したが、同じ Steering Document である `docs/product.md` は候補から漏れていた。`/audit` サブコマンドの出力仕様が変わる Issue で、Steering Doc 同期チェックの対象に `docs/product.md` の用語集エントリを明示的に含める運用上の見直し余地がある。
