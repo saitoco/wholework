@@ -147,3 +147,41 @@ Nothing to note — review-light の4観点 (spec deviation / edge cases / secur
 ### Acceptance criteria verification difficulty
 
 Nothing to note — 3件のPre-merge AC (rubric ×2, command ×1) はいずれも決定的に PASS 判定でき、UNCERTAIN はゼロだった。rubric AC の判定根拠は `skills/issue/SKILL.md` の実際の Step 番号列挙 (`grep -n "^### Step"`) で直接検証でき、verify command 自体の記述精度に問題はなかった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- Issue 本文の Background が New Issue Creation / Existing Issue Refinement の実行順序の非対称性を表形式で明示していたため、`/spec` の方針選択 (候補 1 + 候補 2 のハイブリッド) が迷いなく決まった。#1083 の Spec Notes が同じ非対称性を先に記録し「Size S の #1083 単独では扱わない」とスコープ外に置いていたことが、本 Issue の起票根拠としてそのまま機能した。
+- `/triage 1185` の実行時に **#1083 が追加した Pattern 6 が実運用で初発火**し、post-merge AC の 2 つの欠陥 (heading 引数の例示が `###` 限定になっていた点、`session=next` 修飾子の欠落) を検出・修正した。監査**基準**を扱う #1083 が、その**参照経路**を扱う本 Issue 自身の AC 品質を引き上げた形になっている。
+
+#### spec
+
+- 新設ステップを末尾 (Step 15) に配置する判断により、Step 10〜14 のリナンバリングと `docs/workflow.md` / `docs/ja/workflow.md` への波及を完全に回避した。Spec Notes 「新設ステップの配置」がこの根拠を明示していたため、code phase で配置の再検討が発生しなかった。
+- Spec が `docs/workflow.md` の既存 off-by-one (「Step 10 calls `gh-check-blocking.sh`」— 実際は Step 11) を "Out of scope として残した既存 drift" と明記していたため、review phase で documentation consistency の SHOULD 指摘が出た際にスコープ判断が即座にできた。
+
+#### code
+
+- `phase/ready` ラベル不在での auto-resolve が発生した (Autonomous Auto-Resolve Log に記録)。Spec が完成済みで、タイムライン上 `phase/ready` → `phase/code` の遷移が本セッション開始前 (2026-08-06T04:02:40Z) に確認できたため、中断セッションの再開と判断して続行した。判断根拠が Spec に残っているため verify 側での再検証が容易だった。
+- Opportunistic fix として `skill-dev-verify-audit.md` の「Bulk Execution Step 3 substep 8」→「substep 7」の off-by-one を 2 箇所修正した。この off-by-one は `docs/spec/issue-1061-honor-always-pr-in-route.md` の Spec Retrospective で既に指摘されスコープ外に置かれていたもので、同一行を編集する機会に解消された。
+
+#### review
+
+- review-light 4 観点のうち指摘は documentation consistency 1 件 (SHOULD) のみ。Pre-merge AC 3 件は全て決定的に判定でき UNCERTAIN ゼロだった。
+
+#### merge
+
+- pre-merge AC gate は無条件通過した (Pre-merge AC 3 件が全てチェック済み、review-incomplete-fallback チェックも `matches_expected: true`)。同日の `/auto --batch 1179 1181 1180` で 3 件中 2 件 (#1181 / #1180) が gate でブロックされ手動介入を要したのと対照的で、**#1083 の Pattern 6 追加後に authoring された AC が初めて gate をブロックせずに通った実測**となる。
+- ただし本 Issue の AC を実際に監査したのは `/triage` の Single Issue Execution Step 7 経路であり、本 Issue が是正した `/issue` Existing Issue Refinement 経路の監査 (新設 Step 15) はまだ一度も動いていない。Step 15 の実効性は post-merge observation AC (`event=auto-run session=next`) の評価を待つ。
+
+#### verify
+
+- code phase で Tier 2 recovery (`json-mode-silent-hang`) が 1 回発火し、`run-code.sh --pr` の自動 retry で復旧した (watchdog が json mode で 1140 秒沈黙 → 非ゼロ終了 → Tier 2 catalog が retry → 実装完了・PR #1193 作成)。人手介入はゼロ。#1180 で「発火実績あり」として catalog に残した 2 パターンのうち 1 つが実運用で機能した実測にあたる。
+- **`## Auto Retrospective` セクションが本 Spec に存在しない**: #1181 で `_write_tier2_recovery_to_spec()` が削除されたため、Tier 2 recovery が発生しても Spec には記録されず、記録先は `.tmp/auto-events.jsonl` の `recovery` イベント (`tier=2 result=recovered`) のみとなった。一方 `skills/verify/SKILL.md` Step 12 step 3 の skip 判定ルールは「Tier 2/3/Manual recovery が `## Auto Retrospective` に記録されていなければ notable content」と規定しており、#1181 の記録先変更に追随していない。結果として **Tier 2 recovery が起きる度に verify retrospective の skip が構造的に不可能になる** — #1179 / #1181 が目指した「retrospective の発散抑止」と逆方向に働く。
+- post-merge observation AC は `auto-run` イベント未発火のため SKIPPED。`session=next` 修飾子により、Step 15 が main に着地した後に開始される新規セッションでの `/issue N` 実行が評価の前提となる。本セッションでは構造的に評価できない (SKILL.md Step 8c の `session=next` 規定どおり UNCERTAIN ではなく SKIPPED として扱った)。
+
+### Improvement Proposals
+
+- `skills/verify/SKILL.md` Step 12 step 3 の Tier 2/3/Manual recovery skip 判定を、#1181 の記録先変更に追随させる。現行ルールは Spec の `## Auto Retrospective` を参照先としているが、#1181 以降 Tier 2 recovery はそこに書かれない。参照先を `.tmp/auto-events.jsonl` の `recovery` イベント (または `docs/reports/orchestration-recoveries.md`) に切り替えるか、「自動復旧して人手介入がなかった Tier 2 は notable content に数えない」と明示するかのいずれかで整合を取る。
