@@ -102,19 +102,33 @@ N/A
   - Other candidates: 非対話モードでも処理を中断しユーザー判断を待つ (Spec が既に存在するため過度に保守的と判断し不採用)
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `worktree_commits_found` は `actual` JSON ルート直下・`hint_` prefix なしで追加し、既存の兄弟フィールド (`commits_found`/`operate_signal`/`stray_pr_signal`) と命名パターンを揃えた。`matches_expected` の判定ロジックには一切手を入れていない。
-- 判定は `git rev-list --count origin/main..worktree-code+issue-N` 単体に一本化し、branch 不在 (非 0 exit) と 0 コミットの両方を `false` へ安全に畳み込んだ (`stray_pr_count` と同じ「失敗時 0 フォールバック + 数値正規表現ガード」パターンを適用)。
-- `modules/phase-state.md` の更新は Spec が明示したスコープ (Field contract 表への行追加のみ) に厳密に従い、`stray_pr_signal`/`operate_signal` にあるような独立した "Completion Signature" 見出しセクションは追加しなかった (Spec が要求していないため scope creep を避けた)。
+- `--light` モードで review-light agent (4 aspects) を実行し、SHOULD issue 1件 (`scripts/reconcile-phase-state.sh:301` の壊れたアンカー参照 `# See modules/phase-state.md#worktree-commits-found`) を検出、MUST issue はなし。
+- SHOULD issue は "See modules/phase-state.md#..." 参照行を削除し、Field contract 表への言及に置き換える形で修正した (代替案: `modules/phase-state.md` に見出しを追加してアンカーを解決させる、は Spec の明示的なスコープ判断 (独立見出しを追加しない) を維持するため不採用)。`matches_expected` の判定ロジックや `worktree_commits_found` フィールドの計算ロジック自体には一切手を入れていない。
+- Pre-merge AC 5件 (grep 1件・rubric 3件・command 1件) はすべて PASS、CI 9/9 SUCCESS を確認済み。
 
 ### Deferred Items
 - `diagnosis` 文字列への push 未完反映は Issue 本文で明示的に見送り済み (Spec Notes に記録) — 本 PR では対応していない。
-- `modules/orchestration-fallbacks.md` の `code-patch-silent-no-op` Rationale が本 Issue により部分的に古くなる点は Issue の Out of Scope により対応していない (フォローアップ Issue 化は Spec Notes が既に候補として記録済み、本フェーズでは新規起票していない)。
-- Post-merge AC (opportunistic 観察: 次回 patch route の中断時に「未着手」と区別できることの実地確認) は本 PR の作業では検証していない。
+- `modules/orchestration-fallbacks.md` の `code-patch-silent-no-op` Rationale が本 Issue により部分的に古くなる点は Issue の Out of Scope により対応していない。
+- Post-merge AC (opportunistic 観察: 次回 patch route の中断時に「未着手」と区別できることの実地確認) は引き続き未検証 — merge 後の opportunistic 観察に委ねる。
 
 ### Notes for Next Phase
-- Pre-merge AC5 (`bats tests/reconcile-phase-state.bats`) に加えて、behavioral change detection の一環でフルスイート `bats tests/` (1492 tests) も実行し全 PASS を確認済み — 対象スクリプトを参照する他のテストファイルは `tests/reconcile-phase-state.bats` のみだった。
-- PR #1218 は `closes #1082` を本文に含む。CI 上のフルスイート結果もあわせて確認すること。
-- `docs/spec/issue-998-operate-completion-signature.md` / `docs/spec/issue-993-reconcile-code-patch-stray-pr.md` は同一関数への類似フィールド追加の先例であり、レビュー時の比較対象として参照可能。
+- Fix commit (`37ca42f1`) は review フィードバック対応のみで機能変更なし。修正後に `bats tests/reconcile-phase-state.bats` (77/77 PASS) と `validate-skill-syntax.py skills/` (0 error) を再実行済み。
+- MUST issue なし、CI 9/9 SUCCESS のため `/merge 1218` を実行してよい。
+- `docs/spec/issue-998-operate-completion-signature.md` / `docs/spec/issue-993-reconcile-code-patch-stray-pr.md` は同一関数への類似フィールド追加の先例であり、比較対象として参照可能。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — 実装は Spec Implementation Steps 1-4 と完全に一致していた (review-light Perspective 1 で確認済み)。
+
+### Recurring issues
+
+1件: 兄弟フィールド (`operate_signal` / `stray_pr_signal`) が使っているコメント規約 `# See modules/phase-state.md#{anchor}` をそのまま踏襲したが、Spec Notes が「独立した Completion Signature 見出しセクションは追加しない」と明示的にスコープを絞ったため、新規フィールドではこの規約の前提 (参照先見出しの存在) が崩れ、実際には存在しない見出しへのダングリング参照になっていた (SHOULD として検出・修正済み)。既存パターンをそのまま踏襲する際、「踏襲元パターンが前提とする周辺要素 (見出しの存在など) がスコープ判断で欠落していないか」を implementation phase で確認するチェックが弱かった。`modules/phase-state.md` へのフィールド追加が今後も発生しうる領域では、コメント規約 (`# See ...` 参照) の要否を見出し追加の要否判断と一体で Spec に明記しておくと、同種の SHOULD 指摘を pre-merge 前に防げる可能性がある。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — 5 件の Pre-merge AC (grep 1件・rubric 3件・command 1件) はいずれも曖昧さなく自動判定できた。
