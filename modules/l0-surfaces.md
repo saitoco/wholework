@@ -117,6 +117,29 @@ that run, so the consumer's fallback set is empty. `/verify`'s pre-merge-preview
 `scripts/resolve-preview-ac-fallback.sh`, to decide whether an `ac-tier: preview` condition was
 actually verified at `/review` or must fall back to a post-merge check.
 
+**`type=review-incomplete`**: posted by `scripts/post-fallback-review-summary.sh` alongside the
+`<!-- review-summary -->` marker, whenever the fallback poster (not `/review`'s own Step 14) is
+the one publishing the Review Response Summary comment — i.e., `/review` exited via silent no-op
+before posting its own summary. Attributes: `pr=<N>` only (no `ac=`/`decision=`, since the
+fallback poster does not itself determine which acceptance conditions are unresolved). Meaning:
+the review-summary completion signal for this PR originates from a *fallback* recovery, not from
+`/review` actually completing its own Step 8 (MUST-fix) through Step 14 pipeline — any MUST
+findings from the review that triggered the fallback path may remain unaddressed. Example:
+```
+<!-- wholework-event: type=review-incomplete phase=review pr=42 -->
+## Review Response Summary
+
+This is an auto-generated fallback summary, posted by `post-fallback-review-summary.sh` after the review session exited without posting its own Response Summary (silent no-op). A prior review with Acceptance Criteria Verification Results was found for this PR.
+```
+**Trade-off**: `reconcile-phase-state.sh`'s `_completion_review()` treats this marker's presence in
+PR comment history as blocking *at any point of occurrence* — it does not perform latest-wins
+timestamp resolution the way `type=pre-merge-ac-gate`/`type=preview-ac-unverified` do (Issue
+comments/PR comments are append-only, so once fallback fires for a PR, this marker persists in the
+history even after a later, organic `/review` completion). Clearing this state requires an explicit
+`type=pre-merge-ac-gate` override marker carrying `fallback=true` (see below) — there is no
+automatic re-resolution. See `modules/phase-state.md` § review phase for the completion signature
+this feeds into, and Issue #1174 Notes for the accepted-limitation rationale.
+
 **`type=pre-merge-ac-gate`**: posted by `/merge` (Step 1's pre-merge AC gate) when one or more
 Pre-merge acceptance conditions are unchecked. Attributes: `decision=blocked` (non-interactive
 mode — merge did not proceed) or `decision=override` (an explicit human/AI decision to merge
@@ -124,7 +147,12 @@ anyway); `ac=` carries a comma-separated list of 1-based indices into the Issue 
 enumeration (same convention as `gh-issue-edit.sh --checkbox`, and as `check-pre-merge-ac.sh`'s
 `unchecked_indices` output) identifying the unchecked conditions at the time of posting;
 `reason="<one-line reason>"` records why (for `decision=blocked`, the automatic block reason; for
-`decision=override`, the human-supplied justification). Example:
+`decision=override`, the human-supplied justification). Optional attribute `fallback=true`: when
+present on a `decision=override` marker, records that the override also clears the `type=review-incomplete`
+condition (see above) for this PR/Issue — i.e., the human/AI reviewer explicitly confirmed the
+fallback-origin review completion is acceptable to merge despite. Without `fallback=true`, an
+override marker only clears unchecked pre-merge AC and does not clear a `review_incomplete_fallback`
+condition. Example:
 ```
 <!-- wholework-event: type=pre-merge-ac-gate phase=merge issue=42 decision=blocked ac=2,5 reason="2 unchecked pre-merge acceptance conditions" -->
 Merge blocked: 2 unchecked pre-merge acceptance conditions on issue #42.

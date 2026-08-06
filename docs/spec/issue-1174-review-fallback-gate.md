@@ -99,3 +99,30 @@ Issue 本文の候補 A (fallback 投稿に独立マーカーを付与する) �
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / intent: 姉妹 Issue #1175 (PR #1187) が検出した残存ギャップ3件を Background の「関連する既知の欠陥」セクションへ統合し、対応する Pre-merge AC を追加した旨の Issue Retrospective (`/issue` フェーズ由来)。内容は既に Issue body に反映済みのため、本 Spec は Issue body の現行内容をそのまま採用した。 / URL: https://github.com/saitoco/wholework/issues/1174#issuecomment-5199850290
+
+## Code Retrospective
+
+### Deviations from Design
+- Implementation Step 4 (`skills/merge/SKILL.md`) の記述は Spec 上は一文で要約されていたが、実装では「unchecked AC が1件以上」と「review_incomplete_fallback が true」をそれぞれ独立した条件として明示し、Recorded decision check がどちらの条件を満たしていないかを区別して再提示できる構造に書き下した。Spec の意図 (両方満たす場合のみクリア) は変えていないが、非対話モードのエラーメッセージも両条件を独立に出力できるよう分岐を追加している。
+
+### Design Gaps/Ambiguities
+- N/A (Spec の Notes 節に既知の欠陥3件・不採用候補の判断根拠が事前に記録されていたため、実装中に新たな設計判断を要する曖昧さは発生しなかった)
+
+### Rework
+- `post-fallback-review-summary.sh` の author filter 回帰テストで、初回のモック実装が `gh api user -q '.login'` の `-q` 展開を再現せず生 JSON (`{"login":"self-actor"}`) をそのまま返していたため、`ACTOR_LOGIN` がその JSON 文字列全体になり `.author.login` と一致せずフィルタが機能しなかった (テスト失敗で発覚)。実際の `gh api ... -q` はサーバ側で jq フィルタ適用済みの平文を返すため、モックも `-q` 適用後の値 (`self-actor`) を直接 echo するよう修正して解消した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 候補 A (fallback 投稿への独立マーカー付与) を Spec 通り採用し、`/merge` のみをゲート地点とした (`/auto` の completion check には重複させない)。
+- `review_incomplete_fallback` のクリアには `decision=override` かつ `fallback=true` を要求し、既存の `ac=` superset 条件とは独立に判定するようにした。両条件が別々に不足しうるため、`/merge` の再提示メッセージも条件ごとに出し分けている。
+- 既知の欠陥3件のうち author filter 欠如のみを本スコープで修正し、残り2件 (sticky CHANGES_REQUESTED による過剰リトライ、token usage 上書き) は Spec Notes に記録済みの通り見送った。
+
+### Deferred Items
+- sticky `CHANGES_REQUESTED` による過剰リトライ、および継続リトライによる token usage 上書きの2件は本 Issue のスコープ外。フォローアップ Issue 化は通常の retrospective/backlog プロセスに委ねる (Spec Notes 「既知の欠陥3件の対応方針」参照)。
+- `review_incomplete_fallback` の latest-wins 化 (現状は PR コメント履歴中の任意出現でブロックし続ける) は Spec Notes 「既知の制限」に記載の通り見送り。実運用で再ブロックが頻発する場合にフォローアップ Issue として再検討する。
+
+### Notes for Next Phase
+- Post-merge AC は「次回 `/review` が silent no-op で終了し fallback サマリが投稿された際、`/merge` または `/auto` が review 未完了を検出して停止または警告することを観察する」という observation 型。`/verify` フェーズでは実際に fallback が発火するイベントを待つ必要があり、即時には確認できない可能性が高い。
+- `/review` (PR #1192 自体のレビュー) では、`skills/merge/SKILL.md` の新しいゲート条件文言が既存の Recorded decision check フローと整合しているか、特に「両条件のうち一方のみ満たすマーカーがある場合に該当条件のみ再提示する」分岐を重点的に確認するとよい。
