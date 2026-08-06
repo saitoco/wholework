@@ -160,3 +160,74 @@ Issue 本文と `docs/stats/2026-08-05.md` Section 10 の「区分 A = 34 件」
 ### `modules/observation-trigger.md` の記述ずれ (スコープ外)
 
 同ファイル § Notes に「`fix-cycle` イベントは定義済みだが emitter が未実装」とあるが、`skills/verify/SKILL.md` は FAIL → reopen 経路で `observation-trigger.sh --event fix-cycle` を実際に呼んでいる (同ファイルの Emitter Lookup Table 側は「implemented in #656」と正しく記載されており、Notes だけが古い)。本 Issue の `fix-cycle` 割り当ての妥当性には影響しないが、ドキュメント側の矛盾として別途起票候補。
+
+## issue retrospective
+
+`/issue 1163 --non-interactive` による既存 Issue 精緻化を実行した。
+
+### 実施内容
+
+- **Background 補強**: `event=` に使用できるのは `modules/verify-classifier.md` の 5 有効値 (`pr-review-full`/`pr-review-light`/`auto-run`/`watchdog-kill`/`fix-cycle`) のみである制約を明記し、非該当条件は `manual`(対象外) 維持が正しい判断であることを過去の類似判断 (#869 条件6, #704 条件2, #700 条件A1) を根拠に追記した。対象 34 Issue を実サンプリングした結果、`auto-run` に対応付けられそうな条件 (#856 #852 #770 #769 等) がある一方、並列セッション観察系 (#861 #859)・downstream プロジェクト観察系 (#501 #500)・スクリプト変更時の regression 観察系 (#737 #736 #732 #731) など、5 値のいずれにも対応しない条件文も相当数含まれることを確認した。AC の文言自体は変更していない — AC1 (34件再型付け目標) と AC3 (対象外の記録) の既存設計がこの現実を吸収できる構造になっているため。
+- **Blocked by セクションの現況更新**: `#1157`・`#1170` がいずれも close 済みであることを `gh issue view` で確認し、「着地が前提」と読める旧文言を「解消済み」に更新した。Related セクションの該当行も合わせて更新。
+- **AC2 (--dry-run 確認) の実行可能性を再確認**: `#1170` の着地により `observation-trigger.sh --dry-run` / `opportunistic-search.sh --dry-run` が検索は実行しつつ副作用 (コメント投稿) のみ抑止する意図通りの挙動になっていることをスクリプト読解で確認した (以前は検索前に短絡していた)。
+
+### Auto-Resolve Log
+
+Issue 本文の `## Auto-Resolved Ambiguity Points` セクションを参照。
+
+### 機械チェック結果
+
+- `check-skill-change-observation-ac.sh`: exit 0 (該当なし — `skills/*/SKILL.md` への参照なし)
+- `check-ac-checkbox-format.sh`: exit 0 (フォーマット違反なし)
+- `gh-check-blocking.sh`: exit 0 (`#1157` は CLOSED のためスキップ、オープンなブロッカーなし)
+
+### スキップした処理
+
+- **Step 12 (サブ issue 分割スコープ評価)**: non-interactive モードのため High-Stakes Decision としてスキップ。Size L・単一区分 (34件) の scope であり分割候補にはそもそも該当しない。
+
+## spec retrospective
+
+### Minor observations
+
+- `modules/observation-trigger.md` § Notes の「`fix-cycle` は emitter 未実装」という記述が、同ファイルの Emitter Lookup Table (「implemented in #656」) および `skills/verify/SKILL.md` の実装と矛盾している。Notes 側だけが古い。本 Issue の設計には影響しないが、SSoT を謳うモジュール内部での不整合であり別途起票候補。
+- `opportunistic-search.sh` の母集団取得は `gh issue list --label phase/verify --state closed` で、対象 34 件はいずれもこの条件を満たすことを実測確認した (全件 CLOSED + `phase/verify`)。再型付けが母集団に効く前提が成立している。
+- 「区分 A = 34 件」は Issue 単位の数え方で、実際の `verify-type: manual` AC 行数は 36 行だった (#719 と #708 が各 2 行)。`docs/stats/2026-08-05.md` 側の分類は Issue 単位と AC 行単位を明示していない。他の sub-issue (#1164/#1165/#1166/#1167) でも同じずれが起きうる。
+
+### Judgment rationale
+
+- **`/issue` 時点の見込みを `/spec` の全件精査で覆した**: `/issue` のサンプリングは「並列セッション観察系」「スクリプト変更時の regression 観察系」を 5 有効値に非該当と見込んでいたが、いずれも観測窓が `/auto` 実行の内側にあり `auto-run` で拾える。`modules/observation-trigger.md` § "Conditions That Cannot Be Pre-Excluded" が「実行文脈で事前排除できない条件は dispatch → SKIPPED が正しい挙動」と明記しているため、文脈条件の有無は対象外判定の根拠にならない。結果として対象外は 12 AC 行の見込みから 7 AC 行へ縮小した。
+- **`event=` の選定規則を「観測窓を開く最も狭いイベント」ではなく「取りこぼさない最も広いイベント」に倒した**: `pr-review-full` は Size L の `--full` review でのみ発火するため、対象 Issue の Size が事前に読めない条件 (スクリプト変更・SSoT モジュール作成など) では取りこぼす。`/review` は `/auto` の内側で走るので `auto-run` が上位集合になる。dispatch 精度より観測機会の確実性を優先した。
+- **operate route を pr route へ切り替えた**: Pre-merge AC が全て `rubric` であり、`modules/verify-executor.md` の定義上 grader は Issue コメントも Spec ファイルも受け取らない。operate route では成果物が `## Execution Log` コメントにしか残らず AC が原理的に評価不能になるため、記録ファイル 1 本を追加する pr route を選択した。親 #1158 の「operate route 想定」からの意図的な逸脱であり、Spec Notes に理由を明記した。
+- **`keyword=` ゲートを見送った**: `auto-run` 発火経路 (`skills/auto/SKILL.md`) は `--context-file` を渡さないため、`auto-run` に `keyword=` を付けても不活性。`keyword=` を効かせるには `event=pr-review-full` へ倒す必要があり、それは上記の取りこぼし問題を招く。ゲート追加と event 選定はトレードオフ関係にある。
+- **Auto-Resolve Log の記録先**: `modules/ambiguity-detector.md` は `spec` フェーズの Auto-Resolve Log を issue retrospective コメントとして投稿する指定だが、Step 13 が同じコメントを Spec へ転記する設計のため循環になる。Issue 本文の `## Auto-Resolved Ambiguity Points` に追記済み (5 件) であり、本 Spec の Notes と本節にも判断根拠が残るため、追加のコメント投稿は行わなかった。
+
+### Uncertainty resolution
+
+- **AC2 の確認手段**: Issue 本文は `observation-trigger.sh --dry-run` を挙げるが、`skills/code/SKILL.md` の `allowed-tools` に同スクリプトは未登録だった (`opportunistic-search.sh` は登録済み)。`observation-trigger.sh` はマッチ判定を委譲する薄いラッパで独自処理はコメント投稿と stdout 整形のみのため、`opportunistic-search.sh --event <name>` の実行で等価かつ副作用なしに確認できると判断した。`allowed-tools` 追加はスコープ外。
+- **母集団増加の許容可否**: `opportunistic-search.sh --event auto-run` の現行マッチを実測 (31 AC 行) し、本 Issue で 27 行増えて約 2 倍になることを定量把握した。#1099 の idempotency guard (24h) と `observation-dispatch-threshold` (既定 5) が影響を抑えるため許容可能と判断。さらなる削減は #1118 / #1162 の担当。
+- **`#719` 条件2 の前提充足**: 「pre-existing FAILURE を別 Issue で解消後」という前提が現在成立しているかを `bash scripts/check-forbidden-expressions.sh` の実行 (exit 0) で確認し、`auto-run` への再型付けが妥当と判断した。前提未充足なら対象外にすべき条件だった。
+- **`#704` の `config=` 表現可能性**: `autonomy` は enum (`L1`/`L2`/`L3`) で、`config=` ゲートは boolean 専用 (`modules/observation-trigger.md` § Condition Check Gate (`config=`))。本リポジトリは `L3` のため条件の前提自体が成立せず、対象外が妥当と確認した。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 対象 34 Issue / 36 AC 行を全件精査し、`auto-run` 27 行・`fix-cycle` 2 行・対象外 7 行に確定した。マッピング表は Spec の「再型付けマッピング」節が SSoT で、`/code` はこれを `docs/reports/manual-ac-retype-a.md` へ転記する。
+- 親 #1158 の operate route 想定を pr route へ変更した (rubric grader が Issue コメントを読めないため)。`/code` は Step 0 の diff-less 判定で `Changed Files` に記録ファイルがあることを確認し、operate route と誤判定しないこと。
+- `event=` 以外のゲート属性 (`when=` / `keyword=` / `config=`) は付与しない。#1118 のスコープ。
+- 一括置換は `.tmp/` に置く使い捨ての python3 ヘルパで行い、dry-run → apply の 2 段階で実行する。`scripts/` には残さない。
+
+### Deferred Items
+
+- `modules/observation-trigger.md` § Notes の `fix-cycle` emitter 未実装という古い記述の修正 — 本 Issue のスコープ外、別途起票候補。
+- `skills/code/SKILL.md` の `allowed-tools` への `observation-trigger.sh` 追加 — 本 Issue では `opportunistic-search.sh` で代替するため不要。
+- 再型付け後の AC への `when=` 条件付与 — #1118 が担当。
+- #708 の 2 条件の bats テスト化 — 区分 C 相当として #1167 の領域。
+
+### Notes for Next Phase
+
+- Issue 本文の AC 行を書き換える際は、`match` 文字列で特定した行が **ちょうど 1 行** であることを必ず検証すること。#869 と #704 と #700 は本文の retrospective 表の中にも `verify-type: manual` / `verify-type: observation` を含む行があるため、`- [ ]` で始まる AC 行だけを対象にする必要がある。
+- 対象外 7 AC 行 (#719 条件1 / #708 条件1・2 / #704 / #501 / #500 / #479) は絶対に編集しないこと。Pre-merge AC6 が #704 の `manual` 維持を機械確認する。
+- Step 7 のマッチ確認で対象 Issue が現れない場合、GitHub 検索インデックスの遅延の可能性が高い。本文が正しく置換されていることを `gh issue view` で先に確認し、時間を置いて再実行すること。
+- `opportunistic-search.sh --event auto-run` は母集団 60 Issue に対し `gh issue view` を逐次実行するため 2〜3 分かかる。タイムアウトを長めに取ること。
