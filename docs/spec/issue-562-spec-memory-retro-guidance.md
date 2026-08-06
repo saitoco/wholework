@@ -97,3 +97,10 @@ The writing discipline follows Fable 5 memory-surface guidance: one learning per
 - All 5 pre-merge ACs verified PASS (section_contains, rubric ×4, github_check CI).
 - Changes are purely additive text insertions in two SKILL.md files — no logic, no scripts, no tests modified. Low regression risk.
 - The `link related entries` discipline rule is present in both additions even though the rubric did not check for it — verify should confirm the full discipline list matches the AC intent.
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/562#issuecomment-4695351782
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 562` to verify the condition / https://github.com/saitoco/wholework/issues/562#issuecomment-4756911079
+- saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 562` to verify the condition / https://github.com/saitoco/wholework/issues/562#issuecomment-4768309468
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/562#issuecomment-5195217035
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/562#issuecomment-5202635269
