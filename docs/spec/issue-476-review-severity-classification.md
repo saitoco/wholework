@@ -1,5 +1,10 @@
 # Issue #476: review: CI/ランナー環境で決定的に失敗する設定ミスを MUST に分類する基準を明文化
 
+## Consumed Comments
+
+- saito / MEMBER / first-class / 2026-06-14 時点の前回 `/verify 476` 実行結果 (Pre-merge 2 件 PASS、Post-merge observation は event 未発火で SKIPPED) / https://github.com/saitoco/wholework/issues/476#issuecomment-4703192688
+- saito / MEMBER / first-class / `/review --light` (PR #1189) 完了に伴い observation event `pr-review-light` が発火した旨の通知 / https://github.com/saitoco/wholework/issues/476#issuecomment-5199934979
+
 ## 背景
 
 `/review` の MUST/SHOULD 分類基準に「対象実行環境で決定的に失敗する欠陥は MUST」というルールを明文化する。Spec フェーズなしで直接実装（Issue 本文から要件を読み取り）。
@@ -66,4 +71,14 @@
 
 ### Improvement Proposals
 - N/A
+
+## Verify Retrospective (2026-08-06 re-run)
+
+### Phase-by-Phase Review
+
+#### verify
+- Post-merge observation (`verify-type: observation event=pr-review-light`) は `/review --light` (PR #1189, Issue #1156) 完了時に発火したことを確認した。ただし発火元 PR の diff (`skills/issue/SKILL.md`, `scripts/check-ac-checkbox-format.sh`, テスト, `docs/structure.md`) には CI ランナー環境で決定的に失敗する設定ミス自体が含まれておらず、review-light エージェントが実際に MUST 分類を行う場面が今回は発生しなかった。基準の存在 (Pre-merge 2 件 PASS) は裏付けられたが、「決定的失敗が実際に MUST 判定される」挙動そのものの実地確認はできず UNCERTAIN 判定とした
+
+### Improvement Proposals
+- 本 Issue の post-merge observation event (`event=pr-review-light`) は「`/review --light` が完了した」ことのみを検知し、レビュー対象 PR に決定的失敗パターンの欠陥が実在したかまでは絞り込んでいない。このため任意の `/review --light` 完了で event が発火し、対象 PR にたまたま該当欠陥がなければ `/verify` は UNCERTAIN 止まりになる — かつ fired 状態は Issue コメント全履歴から検出するため一度発火すると恒久的に「fired」のままとなり、以後の `/verify` 再実行でも同じ (証拠不十分な) fired 状態を毎回再評価することになる。observation-trigger の event 定義に「diff 内容が特定パターンにマッチする場合のみ発火」という絞り込み条件を持たせるか、この post-merge AC 自体を「該当欠陥を含む PR が review された際に限り評価する」形に見直すことを検討する価値がある
 
