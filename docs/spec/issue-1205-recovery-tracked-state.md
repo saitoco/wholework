@@ -57,3 +57,30 @@
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: `/issue` フェーズの自律判断記録 — Issue の扱い (保留/スコープ縮小/close の3択) について案2「スコープ縮小して維持」を採用した根拠 (#1152 修正確認、`tracked:#799` closed が --threshold 1 で依然出力されることの実測) を記載。Purpose・対応方針候補・AC 本体への変更は無し / URL: https://github.com/saitoco/wholework/issues/1205#issuecomment-5204827118
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A (Spec の Implementation Steps 5 件をそのまま実施)
+
+### Design Gaps/Ambiguities
+- `skills/code/SKILL.md` Step 8 は「ステップ完了ごとに commit」と指示するが、Step 11 の patch route コミット規約は `{prefix}: <summary> (closes #N)` 形式の単一コミットを前提としている (実際、過去の patch route 実行例 `a1bb7d68` #1102 / `d8556192` #1133 もいずれも実装差分を1コミットにまとめている)。本実装では当初 Step 8 の指示通り Implementation Step ごとに4コミットへ分割したが、Step 11 到達時に単一コミット規約と矛盾すると判明したため、push 前 (worktree ブランチはまだ origin 未 push) に `git reset --soft` で4コミットを1コミットに squash して規約に合わせた。
+
+### Rework
+- 上記の squash (4 コミット → 1 コミット、`fix: distinguish tracked Issue open/closed state in recovery frequency output (closes #1205)`) が該当。push 前のローカル操作のみで、実装内容自体への手戻りはなし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `--with-tracking` の3列目は、既に算出済みの `resolved_state` (`OPEN`/`CLOSED`) を使い `tracked:#N:open` / `tracked:#N:closed` を出力するよう拡張した。state が解決できない場合 (`--issues-json` 未指定など) は後方互換のため plain `tracked:#N` にフォールバックする
+- `skills/audit/SKILL.md` Section 10 に `Recurring after fix` メトリクス行を追加し、`tracked:#N:closed` かつ閾値超過の group-key 数を独立集計させることで、post-fix recurrence を「tracked = 対応中」から視覚的に区別した (Issue 本文の対応方針候補 1 + 3 の組み合わせを採用)
+- `docs/structure.md` / `docs/ja/structure.md` の `collect-recovery-candidates.sh` 説明を新フォーマットに同期した (Spec の「計測範囲」grep 調査でヒットしたのはこの2ファイルのみ)
+
+### Deferred Items
+- Post-merge AC (`/audit stats --retention` の観察確認, verify-type: observation event=auto-run session=next) は次回 auto-run セッションで検証される想定。現時点では未検証
+- None (その他)
+
+### Notes for Next Phase
+- `/verify` Step 15 は `collect-recovery-candidates.sh` を `--with-tracking` 無し (`--issues-json` のみ) で呼んでおり、本 Issue の3列目フォーマット変更の影響を受けない (Spec Notes「Issue 本文との差異」参照) — `/verify` 側の追加対応は不要
+- Post-merge observation AC の検証時は、`code-pr-tier3-recovery` (対応 Issue #799 CLOSED) が `/audit stats --retention` Section 10 の `Recurring after fix` 行、または個別リストの `tracked:#799:closed` 表示で他の tracked と区別されていることを確認する
