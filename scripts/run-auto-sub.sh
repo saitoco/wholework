@@ -759,9 +759,23 @@ run_phase_with_recovery() {
   "$SCRIPT_DIR/apply-fallback.sh" "$phase" "$issue" --log "$log_file" > /dev/null 2>/dev/null || _fallback_exit=$?
   if [[ $_fallback_exit -eq 0 ]]; then
     echo "${LOG_PREFIX} [recovery] tier2 fallback catalog: recovered"
+    local _repo_root="$REPO_ROOT"
+    if ! git -C "$_repo_root" diff --quiet "docs/reports/orchestration-recoveries.md" 2>/dev/null; then
+      if git -C "$_repo_root" add "docs/reports/orchestration-recoveries.md" \
+         && git -C "$_repo_root" commit -s -m "Record Tier 2 recovery event for issue #${EMIT_ISSUE_NUMBER} ${phase} phase" \
+         && _push_with_retry "$_repo_root"; then
+        echo "${LOG_PREFIX} [recovery] recovery log committed and pushed"
+      else
+        echo "${LOG_PREFIX} WARNING: could not commit/push recovery log; /verify may detect dirty file" >&2
+      fi
+    fi
     emit_event "recovery" "phase=${phase}" "tier=2" "result=recovered"
     emit_event "phase_complete" "phase=${phase}"
     return 0
+  fi
+  if [[ $_fallback_exit -eq 2 ]]; then
+    echo "${LOG_PREFIX} [recovery] tier2 fallback catalog: anchor matched but handler failed"
+    emit_event "recovery" "phase=${phase}" "tier=2" "result=failed"
   fi
 
   # Tier 3: recovery sub-agent via claude -p (expensive, unknown anomaly only)
@@ -783,6 +797,14 @@ run_phase_with_recovery() {
     emit_event "recovery" "phase=${phase}" "tier=3" "result=recovered"
     emit_event "phase_complete" "phase=${phase}"
     return 0
+  else
+    local _plan_file=".tmp/recovery-plan-${issue}-${phase}.json"
+    local _tier3_fail_action="unknown"
+    if [[ -f "$_plan_file" ]]; then
+      _tier3_fail_action=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('action','unknown'))" "$_plan_file" 2>/dev/null || echo "unknown")
+      rm -f "$_plan_file"
+    fi
+    emit_event "recovery" "phase=${phase}" "tier=3" "result=failed" "action=${_tier3_fail_action}"
   fi
 
   return $exit_code

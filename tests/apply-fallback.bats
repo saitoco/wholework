@@ -102,7 +102,7 @@ MOCK
     chmod +x "$MOCK_DIR/git"
 
     run bash "$SCRIPT" code 42 --log "$LOG_FILE"
-    [ "$status" -ne 0 ]
+    [ "$status" -eq 2 ]
     [[ "$output" == *"refuses to amend on protected branch"* ]]
 }
 
@@ -121,7 +121,7 @@ MOCK
     chmod +x "$MOCK_DIR/git"
 
     run bash "$SCRIPT" code 42 --log "$LOG_FILE"
-    [ "$status" -ne 0 ]
+    [ "$status" -eq 2 ]
     [[ "$output" == *"refuses to amend on protected branch"* ]]
 }
 
@@ -190,7 +190,7 @@ MOCK
     chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
 
     run bash "$SCRIPT" code-patch 42 --log "$LOG_FILE"
-    [ "$status" -ne 0 ]
+    [ "$status" -eq 2 ]
     [[ "$output" != *"result=recovered"* ]]
 
     # The retry was still attempted before the completion check failed
