@@ -16,6 +16,7 @@ Issue 本文の「方針確定 (2026-08-06)」注記により対応方針は確�
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / summary: トリアージ自動連鎖の Issue Retrospective。Type=Task・Size=M・Value=3 を確定、post-merge observation AC に `session=next` を追加、タイトルの "pre-merge" 限定表現を除去、ambiguity point 0 件、verify command 5 件を Pattern 1〜6 で監査済み (問題なし) / URL: https://github.com/saitoco/wholework/issues/1186#issuecomment-5199530052
 
+- saito / MEMBER / first-class / ## 追加実測: `/verify 1175` と `/verify 1118` (2026-08-06) / https://github.com/saitoco/wholework/issues/1186#issuecomment-5199747782
 ## Changed Files
 - `skills/verify/SKILL.md`: Step 5 に「already-checked AC skip rule」を追加 (pre-merge)、Step 8a の対象条件を unchecked に限定し同スキップ規則を適用 (post-merge + hint)、Step 6 の「Re-runs」箇条書きを新方針に合わせて書き換え、Step 11(a) の SKIPPED 括弧書きを整合、`## Notes` に Post-merge 重複記載による継続検証運用を追記 — bash 非対象 (Markdown skill 定義ファイル)
 - `tests/verify.bats`: already-checked AC skip rule (pre-merge / post-merge+hint) と unchecked AC が従来どおり検証されることを検証するテストを追加
