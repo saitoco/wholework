@@ -10,6 +10,10 @@ cutoff (最新の `phase/*` ラベル付与時刻) は `2026-08-06T01:33:03Z`。
 
 上記コメントの内容は既に Issue 本文に反映済みであり、本 Spec の設計に対する追加の意思決定は不要だった。
 
+### code フェーズ (cutoff: 2026-08-06T02:06:32Z)
+
+No new comments since last phase.
+
 ## Overview
 
 `/issue` が生成する Post-merge 条件が、チェックボックス形式 (`- [ ]`) ではなくプレーン箇条書き (`- `) で書かれるケースが過去に 10 件発生した (2026-06-19〜07-13)。`verify-type` マーカーは正しく付与されるため条件文としては成立するが、チェックを入れる先のチェックボックス自体が存在しないため、`/verify` が PASS 判定してもその結果を記録できず、Issue は CLOSED のまま `phase/verify` に永久滞留する。`skills/issue/SKILL.md` の AC 生成規約にはチェックボックス形式を明示的に要求する記述がなく、これを機械的に強制するガードも存在しない。
@@ -92,6 +96,10 @@ cutoff (最新の `phase/*` ラベル付与時刻) は `2026-08-06T01:33:03Z`。
 
 - 次回 `/issue` で Post-merge 条件を含む Issue を起票した際、チェックボックス形式で生成されることを観察する <!-- verify-type: observation event=auto-run session=next -->
 
+## Autonomous Auto-Resolve Log
+
+- **`phase/ready` ラベル欠如の扱い**: `/code 1156 --pr --non-interactive` 実行時、Issue のラベルは `triaged` / `phase/code` / `audit/drift` で `phase/ready` が存在しなかった (`reconcile-phase-state.sh code-pr 1156 --check-precondition` は `matches_expected: false` を返した)。調査の結果、前回セッションが既に Step 1 (コメント消化, cutoff `2026-08-06T01:59:41Z`) と Step 4 (ラベル遷移 `phase/ready` → `phase/code`, cutoff `2026-08-06T02:06:32Z`) を実行済みで、その後 worktree を残さずに中断していたと判明した (docs/spec 側に未コミットの Step 1 記録のみが main の作業ツリーに残存)。Spec 自体は `/spec` により完備しているため、"Spec がない" ケース向けの auto-resolve ポリシー (Issue 本文から直接要件を読む) は適用せず、既存の完備した Spec を正として実装を継続した。
+
 ## Notes
 
 ### #1006 は変更不要 (grep/gh issue view で確認済み)
@@ -116,3 +124,44 @@ Issue 本文の対応方針候補 2 は「`/issue` の AC 監査ステップ、�
 ### #1168 との類似性
 
 本 Spec の設計 (新規 warn-only チェッカースクリプト + `/issue` Step 4 への組み込み + `allowed-tools` 更新 + `tests/issue.bats` content-assertion + `docs/structure.md`/`docs/ja/structure.md` 同期) は、直近の #1168 (`check-skill-change-observation-ac.sh` の追加) と同型である。#1168 の Verify Retrospective が指摘した MUST 不具合 (Spec 実行時点で未確定な `## Changed Files` をゲート条件にした、`$NUMBER` 未束縛のファイル名を使った) は本 Spec では該当しない — 新スクリプトの適用条件は Issue 本文テキストそのもの (`### Pre-merge` / `### Post-merge` 見出しの有無) であり Spec 由来の未確定情報に依存せず、ファイル名も既存の "Skill self-update propagation check" サブステップが使う固定ファイル名 `.tmp/issue-body-check.md` をそのまま再利用するため、`$NUMBER` 未束縛の問題も生じない。
+
+## Code Retrospective
+
+### Deviations from Design
+- Implementation Step 5 (#734 / #735 のチェックボックス形式修正) は、`/code` 実行時点で `check-ac-checkbox-format.sh` を両 Issue の本文に対して実行したところ既に exit 0 (チェックボックス形式) だったため、外部 GitHub 操作 (`gh-issue-edit.sh` での本文更新) は実行しなかった。原因は、本セッション開始前に一度中断した `/code 1156` の前回実行が、リポジトリファイル変更 (Step 1-4) に到達する前に Step 5 の外部操作のみを先に完了させていたためと判断した (Autonomous Auto-Resolve Log 参照)。受け入れ条件3 が要求する「修正されている」状態は満たされているため、実装ステップとしては完了扱いとする。
+
+### Design Gaps/Ambiguities
+- N/A — Spec の設計 (#1168 と同型のパターン踏襲) はそのまま実装でき、Root Cause / Changed Files / Implementation Steps に記載された前提と実装時の codebase 実態 (`skills/issue/SKILL.md` の該当挿入位置、`check-pre-merge-ac.sh` の awk セクション追跡方式) に齟齬はなかった。
+
+### Rework
+- N/A
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — PR diff は Spec の Implementation Steps / Changed Files と完全に一致していた。AC1 (規約明記) / AC2 (機械検出) / AC3 (既存3件処理) の 3 条件はいずれも diff 上の対応箇所を直接特定でき、`review-light` エージェントによる Spec Deviation 観点でも issue なしと判定された。
+
+### Recurring issues
+
+`scripts/check-ac-checkbox-format.sh` の awk セクション終端判定 (`^## ` / `^### ` の完全一致のみ) が、深いサブ見出しやフェンスコードブロック内の見出し文字列を区別しない CONSIDER 級の指摘を受けた。これは同型の `check-pre-merge-ac.sh` の awk パターンに既に存在する簡略化であり、本 PR 固有の新規不具合ではない。#1168 (`check-skill-change-observation-ac.sh`) から続く「warn-only チェッカースクリプトを awk セクション追跡で実装する」パターンの共通の弱点として、将来同種スクリプトを追加する際は再確認が必要。
+
+### Acceptance criteria verification difficulty
+
+AC3 (rubric "既存の未解決 3 件 (#734 / #735 / #1006) が処理されている、または修正しない判断とその理由が記録されている") の判定に、`rubric` verify command の grader 入力スコープ (`modules/verify-executor.md` により Issue 本文 + git diff + rubric text で明示的に named されたファイルのみ、Spec は対象外) だけでは根拠が不足していた。本 PR の diff は #734/#735/#1006 を一切変更しておらず、修正不要と判断した理由は Spec の Code Retrospective (grader スコープ外) にのみ記録されている。実際の判定は `/review` 実行者が `gh issue view` で #734/#735/#1006 の Post-merge 行を直接確認し、既にチェックボックス形式であることを確認する形で行った — これは grader の正規スコープを超えた追加調査であり、rubric grader 単体では UNCERTAIN になっていた可能性が高い。「他 Issue の外部状態確認」を要求する rubric 条件は、根拠を Spec ではなく Issue 本文または Issue コメントに明示的に記録するよう Issue 起票時に促すと、grader スコープ内で完結できる。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Base Branch Conflict Pre-check (`git merge-tree` 3-引数形式) を実行したが `changed in both` は検出されず (main 側が独立に触った `docs/spec/issue-1175-*.md` は本 PR ブランチ側は無変更のためクリーンマージ) 、conflict context ファイルは作成しなかった
+- REVIEW_DEPTH=light (`--light` 明示指定) のため Step 10.0 の 1 エージェント統合レビューのみ実行し、Workflow path (10.1–10.3 static fan-out や workflow-guidance.md の Workflow tool 経路) は評価対象外とした
+- AC3 の rubric 判定は Spec 記載の根拠だけでなく `gh issue view 734/735/1006` による実地確認を追加で行い PASS と判断した (grader 正規スコープ外の追加検証、詳細は review retrospective 参照)
+
+### Deferred Items
+- CONSIDER 指摘 (awk セクション終端判定の簡略化) は対応不要と判断し未修正のまま — 姉妹スクリプト `check-pre-merge-ac.sh` 側の既存の弱点でもあるため、再発した場合は別 Issue で awk パターンの一括見直しを検討
+- Post-merge の observation AC (`session=next`) は今回未発火のため引き続き `/verify` フェーズでの評価待ち
+
+### Notes for Next Phase
+- Pre-merge AC 3 件すべて PASS、CI 9 ジョブ SUCCESS、MUST/SHOULD なし (CONSIDER 1件のみ) — `/merge 1189` は追加のブロッカーなしで進行可能
+- Post-merge AC (observation, session=next) が唯一の未チェック項目。`/verify` 実行時に `session=next` の発火判定に従うこと

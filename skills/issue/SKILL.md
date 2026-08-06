@@ -1,7 +1,7 @@
 ---
 name: issue
 description: Issue creation and refinement (`/issue "title"` or `/issue 123`). Creates new issues or refines/reformats existing ones. Use when creating issues, defining requirements, or standardizing issue content.
-allowed-tools: Bash(gh issue create:*, gh issue view:*, gh issue edit:*, gh issue close:*, gh issue list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-skill-change-observation-ac.sh:*), Glob, Grep, Write, Read, WebFetch, ToolSearch, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
+allowed-tools: Bash(gh issue create:*, gh issue view:*, gh issue edit:*, gh issue close:*, gh issue list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-skill-change-observation-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-ac-checkbox-format.sh:*), Glob, Grep, Write, Read, WebFetch, ToolSearch, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Issue Creation and Refinement
@@ -259,6 +259,18 @@ Warning: BRE metacharacter detected in verify command:
 Suggested ERE rewrite: grep "PATTERN_WITH_|" "path/to/file"
 Note: verify-executor uses ripgrep (ERE); \| in BRE means OR but is a literal | in ERE.
 ```
+
+**Checkbox format for Pre-merge / Post-merge condition lines:**
+
+Every condition line under `### Pre-merge (auto-verified)` / `### Post-merge` must start with `- [ ]` (or `- [x]` for an already-checked condition) — never a plain bullet (`- `). This applies to both sections and regardless of whether the line carries a `verify:` or `verify-type:` marker. Downstream processing (`/verify`, `scripts/check-pre-merge-ac.sh`, `/audit stats --retention`'s verify-type breakdown) parses condition lines with the `^- \[[ xX]\]` pattern; a plain-bullet condition is invisible to all of it. Once written to the Issue body in this form, the condition becomes permanently unresolvable — there is no checkbox to mark PASS on, so the Issue stays in `phase/verify` forever even after the underlying condition is satisfied (#1156).
+
+To detect a format violation mechanically, write the current Issue body to `.tmp/issue-body-check.md` (same fixed filename as the "Skill self-update propagation check" sub-step above) and run:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/check-ac-checkbox-format.sh .tmp/issue-body-check.md
+```
+
+Exit code 2 means one or more condition lines under `### Pre-merge` / `### Post-merge` are plain bullets — present the printed lines as a warning, insert `[ ] ` immediately after the bullet marker of each (`- ` → `- [ ] `), and update the Issue body. Exit code 1 is warn-only (usage error) — continue processing regardless. Delete the temp file afterward: `rm -f .tmp/issue-body-check.md`.
 
 ### Step 5: Clarification Questions
 

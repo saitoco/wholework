@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (69 files)
+├── scripts/             # Utility scripts used by skills and agents (74 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -243,6 +243,7 @@ Key modules:
 - `scripts/check-verify-dirty.sh` — session-aware dirty file classifier for /verify Step 1 (self-worktree / other-worktree / other-session / self-spec / own-issue-scope / foreign-session / parent-main (attribution-undetermined fallback) 7-way classification; own-issue-scope vs. foreign-session is decided against the Issue's own Spec `## Changed Files` manifest; outputs classify=... to stderr)
 - `scripts/check-session-findings-disposition.sh` — detects `## Findings` bullets in an L3 `session.md` missing a canonical disposition tag; called warn-only from `skills/auto/SKILL.md` Step 5 right before the commit
 - `scripts/check-skill-change-observation-ac.sh` — detects post-merge `verify-type: observation` ACs missing `session=next` when the Issue body references `skills/*/SKILL.md`; called warn-only from `skills/issue/SKILL.md` Step 4
+- `scripts/check-ac-checkbox-format.sh` — detects non-checkbox condition lines under `### Pre-merge` / `### Post-merge` sections of an Issue body; called warn-only from `skills/issue/SKILL.md` Step 4
 - `scripts/check-translation-sync.sh` — check translation sync status of docs/ja/* against docs/*
 - `scripts/check-forbidden-expressions.sh` — detect deprecated terms from docs/product.md § Terms
 - `scripts/setup-labels.sh` — create GitHub labels for workflow

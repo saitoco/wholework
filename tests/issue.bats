@@ -32,3 +32,8 @@ setup() {
     grep -q 'check-skill-change-observation-ac.sh' "$PROJECT_ROOT/skills/issue/SKILL.md"
     grep -q 'session=next' "$PROJECT_ROOT/skills/issue/SKILL.md"
 }
+
+@test "issue skill Step 4 documents checkbox format convention and detection script" {
+    grep -q 'check-ac-checkbox-format.sh' "$PROJECT_ROOT/skills/issue/SKILL.md"
+    grep -q 'Checkbox format for Pre-merge / Post-merge condition lines' "$PROJECT_ROOT/skills/issue/SKILL.md"
+}
