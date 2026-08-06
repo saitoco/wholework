@@ -449,3 +449,31 @@ Size L につき上限5件のうち、2件を自動解決 (残りは AC 文言�
 - **No action (既存 Issue が対象)**: 残存 worktree 40 件は #1119 のスコープ。本 verify の観測データは同 Issue の優先度判断材料として有効だが、新規起票は不要
 
 なお本セッションで起票した #1159 は「Tier 2/3 判定が実運用でゼロ件であり、判定結果も記録されない」ことを問題として扱っている。本 retrospective はその指摘を受けて意識的に Tier 2/3 を適用した最初の事例にあたる — ただし現状の実装では**この分類結果は terminal 出力にも残らず、本 Spec への手書き記録が唯一の痕跡**である点が、#1159 の主張 (判定の永続化が測定の前提) を裏付けている
+
+---
+
+## Verify Retrospective (再々々検証、2026-08-06 — 条件 7 PASS)
+
+### 結果
+
+`/auto 1186` (session `63702-1785981144`) の完走により Run-fact AC reconciliation が実際に実行され、**条件 7 が PASS**。本 Issue は `phase/done` へ遷移し完了した。3 回の `/verify` を要した。
+
+| 回 | 日時 | 条件 7 | 判定理由 |
+|---|---|---|---|
+| 1 | 2026-08-05T01:01Z | UNCERTAIN | skill 自己更新の非伝播により、本 Issue 着地前の `skills/auto/SKILL.md` (`37b13320`) を読み込んだ batch では統合経路が構造的に実行され得なかった |
+| 2 | 2026-08-06T02:0xZ | UNCERTAIN | 非伝播は解消したが、5 セッション以上の `/auto` 完走を経ても統合経路の実行痕跡が 4 系統すべてでゼロ。「実行されて候補ゼロ」と「未到達」を弁別できず |
+| 3 | 2026-08-06T04:1xZ | **PASS** | `/auto 1186` で統合経路が実行され、`run-facts-<session>.json` 生成・225→30 件の候補抽出・3 経路の verdict 処理・`Recommend:` 行出力がすべて実測された |
+
+### Phase-by-Phase Review (3 回目の verify で得られた知見)
+
+#### verify
+- **前回の「4 系統すべてゼロ」という観察の意味が確定した**。今回、統合経路が実行された結果 `.tmp/run-facts-63702-1785981144.json` が生成された。すなわち **Processing Steps が走れば痕跡は必ず残る**。前回の痕跡ゼロは「実行されて候補ゼロだった」ではなく「**そもそも到達していなかった**」ことを示していたと事後的に確定できる。前回 Improvement Proposals に「Tier 1 候補」として記録した「実行されたか未実行かが事後に区別できない」という指摘は、**run-facts JSON の有無という形で既に区別可能だった** — 提案の前提が誤っていたため取り下げる
+  - ただし `action=advisory` の `Recommend:` 行と `no candidates.` は依然ターミナル出力のみで永続化されない。「実行された上で候補ゼロ / 全件 advisory だった」ケースの詳細は run-facts JSON の存在からしか逆算できず、粒度は粗いままである。実害が観測されるまでは起票しない
+- **なぜ 2 回目で走らなかったのかは未解明のまま**。8/5 の 5 セッション以上の `/auto` 完走で一度も到達していない一方、本 session では到達した。差分として考えられるのは、本 session が `/auto` を対話セッション内で直接実行し、Completion Report 以降のステップを明示的に辿ったのに対し、8/5 の各セッションがどこで停止したかを事後に確認する手段がないこと。**LLM-native prose の best-effort ステップは、到達したことは run-facts JSON で確認できるが、到達しなかった場合にどこで止まったかは追跡できない**
+- **#1186 の already-checked AC skip rule が本 verify で効いた**。pre-merge 6 件がすべて SKIPPED となり、2 回目の verify で実行した `bats tests/` 1405 件が今回は走っていない。同一 Issue の連続する 2 回の verify で、旧ルール (全件再実行・新規情報ゼロ) と新ルール (全件スキップ) を直接比較できた形になっている
+- **fail-safe が実運用で 1 件の誤検出を防いだ**。#1123 ac7 は run facts の `manual_intervention=0` だけを見れば `satisfied` に見えたが、実際には「manual recovery が発生する機会がなかった」だけであり「#1123 の修正が効いた証拠」ではない。`modules/run-fact-matching.md` の「判断が不明確なら `ambiguous`、決して `satisfied` にしない」に従って `ambiguous` に倒した。**本 Issue が設計した fail-safe が、本 Issue 自身の完了判定を行う実行で実際に誤 auto-check を防いだ**
+
+### Improvement Proposals
+
+- **取り下げ**: 前回記録した「Tier 1 候補 — best-effort ステップの実行有無が事後判別できない」は、run-facts JSON の有無で区別可能であることが本検証で判明したため取り下げる (上記 verify 節参照)
+- **N/A (新規なし)**: 本検証で得られた他の観察 (merge フェーズの watchdog kill と `Exit code: 0` の併存) は `docs/spec/issue-1186-skip-checked-ac-reverify.md` の `## Auto Retrospective` に記録済みで、#1140 / #939 が追跡中
