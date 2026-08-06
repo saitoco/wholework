@@ -57,3 +57,32 @@ Issue 本文の Auto-Resolved Ambiguity Points は、`/issue` の自己完結型
 ### Pattern 番号の付番方針
 
 新規 Pattern は既存 Pattern 1–5 を維持したまま末尾に **Pattern 6** として追加する (Pattern 4/5 のリナンバーはしない)。理由: 過去の複数 Spec (`docs/spec/issue-1061-honor-always-pr-in-route.md` 等) が "Pattern 4" を patch route チェックとして番号で参照しており、リナンバーは無用な参照ズレを生む。
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1–3 の通りに実装した。
+
+### Design Gaps/Ambiguities
+
+N/A — Spec の Notes で AC1/AC4 の対象ファイル選定根拠が既に明記されており、実装時に新たな曖昧性は発生しなかった。
+
+### Rework
+
+N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Pattern 6 は既存 Pattern 1–5 を維持したまま末尾に追加し、Pattern 4/5 の番号は変更しなかった (Spec Notes の付番方針に従う)
+- Pattern 2 は新規 Pattern を起こさず、既存セクションに exit code 起因の常時 PASS 検出を追記する形で拡張した (AC4 が「Pattern 2 の拡張」を要求しているため)
+
+### Deferred Items
+- Existing Issue Refinement フローにおける triage 監査と AC 分類の実行順序の非対称性 (Spec Notes 記載) は本 Issue のスコープ外のまま
+- Post-merge AC (`###` heading を持つ AC を `/issue` に通し、監査が指摘・修正されることを確認) は未実行 — merge 後に `/verify` で対応
+
+### Notes for Next Phase
+- `/review` では、Pattern 6 サブパターン 5 (`command` 型 AC の Pre-merge 配置判定基準) の記述が Issue 本文の「実測による補正」節 (#1179/#1181/#1180) の結論と整合しているかを確認する
+- `/verify` の post-merge AC は、実際に `###` heading を含む AC を持つ Issue を `/issue` に通して Pattern 6 サブパターン 1 が検出されることを確認する必要がある (manual verify-type)
