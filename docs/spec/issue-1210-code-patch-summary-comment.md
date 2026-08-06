@@ -129,3 +129,33 @@ patch route の `/code` は現状、`closes #N` コミット以外に Issue タ�
 ### Notes for Next Phase
 - 本 Issue は `/code` patch route 自身に `## Implementation Complete` コメント投稿を追加する変更である。本セッション自体は着手時点でロードされた旧 `skills/code/SKILL.md` に従って実行しているため、このコミット自体は新しい Implementation Complete コメントを投稿しない (機能が有効化されるのは次回以降の patch route 実行から)。`/verify` は Post-merge AC (「次に patch route で `/code` が実行された Issue に `## Implementation Complete` コメントが投稿され...」`verify-type: observation event=auto-run session=next`) で次回実行を待つ形になる
 - Pre-merge AC #7 (`github_check`) は commit・push 後に別途確認し、PASS 後に Issue チェックボックスを更新する (Code Retrospective の Design Gaps/Ambiguities 参照)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- `/issue --non-interactive` が「常時 PASS になる verify command 3 件」を削除した判断は妥当だった。残った 7 件はいずれも実際に実装差分を判別しており、空振りした AC はゼロ
+
+#### spec
+- Spec の Implementation Steps が置き換え後テキストを逐語で持っていたため、code フェーズの Deviations が N/A で着地した。SKILL.md のような散文ファイルへの変更では、この「置き換え対象 + 置き換え後の全文」形式が手戻りを構造的に防いでいる
+- light depth の目安 (pre-merge 5 件以内) を 7 件で超過したが、これは `/issue` (What) が確定した AC を `/spec` (How) で間引かないという責務境界を優先した結果であり、Notes に理由が明記されていた。目安違反を「逸脱」ではなく「意識的な優先順位判断」として記録できている
+
+#### code
+- Code Retrospective の Design Gaps/Ambiguities が指摘した **commit-scoped `github_check` AC と Step 10/Step 11 の実行順序**は、verify 側でも同じ形で再現した。`$(git rev-parse HEAD)` は評価時点の HEAD を指すため、code フェーズ (Step 10、commit 前) では直前の無関係コミット、verify フェーズでは retrospective コミット (`599fb8a4`) を参照する — いずれも AC が意図した「実装コミット (`6a08557c`) の CI 結果」とは一致しない。今回 PASS したのは、このリポジトリの `test.yml` が `docs/spec/` のみの変更コミットでも起動し success を返すためで、AC の文言が正しかったからではない
+- この論点は #1212 (`verify-classifier: patch route の CI 検証 AC の run 参照形を是正し推奨形を SSoT に一本化`) のスコープと重なる。本 Issue 単体では追加対応せず、#1212 側で推奨形を確定させるのが妥当
+
+#### review
+- patch route のため `/review` なし。pre-merge AC 7 件のうち 6 件がローカル `section_contains`/`rubric` で、review 相当の構造検証を AC 自身が担った
+
+#### merge
+- 特記事項なし (patch route、`worktree-merge-push.sh` の rebase fallback が spec フェーズで 1 回自動発火したが Auto Retrospective 記録対象外の正常系)
+
+#### verify
+- **AC 8 (observation `session=next`) は本 Issue では構造的に発火しない**。本 Issue 自身が `/code` patch route に `## Implementation Complete` 投稿を追加する self-hosting 変更であり、code フェーズは変更前の SKILL.md をロードして実行された。Phase Handoff § Notes for Next Phase がこの制約を先回りして記録しており、verify 側は SKIPPED 判定 (Step 8c の未発火パス) で素直に着地できた
+- **`.tmp/auto-session-current` の session_id 汚染**: verify 開始時の `restore_auto_session_pointer` が、並行実行中の別 `/auto` セッション (`56317-1786026050`、single mode) が上書きした `auto-session-current` を読み、本 verify の `phase_start` イベントが誤った `session_id` で記録された。バッチ本体の `session_id` は `33233-1786023637`。これは #1075 (session_id 双方向誤帰属) の実例で、in-session `Skill()` 経由の `/verify` は PGID pointer を持たないため `auto-session-current` にしかフォールバックできず、並行セッション下では構造的に誤帰属する
+
+### Improvement Proposals
+- commit-scoped `github_check` AC (`--commit=$(git rev-parse HEAD)` 形) の評価タイミング依存を、`modules/verify-executor.md` か `skills/code/SKILL.md` Step 10 に注記する — ただし #1212 のスコープと重なるため、本 Issue からの独立起票は行わず #1212 側で扱う
+- `.tmp/auto-session-current` の並行セッション上書き問題 — 既存 #1075 の実例として追記済み。新規起票は不要
+
