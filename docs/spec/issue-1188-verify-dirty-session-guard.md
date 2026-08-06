@@ -108,3 +108,31 @@ Nothing to note. All 5 Pre-merge AC resolved cleanly to PASS on the first pass �
 ### Notes for Next Phase
 - `/verify` should confirm the post-merge observation AC by watching a `/verify` run under real concurrent-session conditions (a single isolated run will not exercise the `foreign-session` path).
 - `tests/verify-dirty-detection.bats` has 24 cases as of merge; if `/verify`'s AC5 command re-runs the suite, this is the expected count.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 起票時の AC5 が実在しないファイル (`tests/check-verify-dirty.bats`) を verify command に指定していたのを、issue フェーズが実ファイル名 (`tests/verify-dirty-detection.bats`) に修正し、注記まで残した。`/issue` の「Test file existence check」が機能した事例
+- 稼働中セッション判定の主判定材料を `ps` ではなく **`phase/*` ラベル軸**に倒す Auto-Resolve を行った。GitHub 状態を SSoT とする設計方針と整合し、プロセス表というホスト固有の観測に依存しない選択として妥当
+
+#### spec / code
+- `_check_issue_active()` は `state == "OPEN"` かつ `phase/done` 以外の `phase/*` ラベルという 2 条件で判定する。`gh` 呼び出し失敗時は `error` を返して **exit 2 にフォールバック (fail-closed)** する設計で、判定不能を「非稼働」と誤認しない
+
+#### review
+- 指摘は 1 SHOULD (gh 呼び出し失敗の回帰テスト欠落) + 1 CONSIDER のみで MUST なし。SHOULD は実装に反映され、テスト 23 (`gh call failure -> exit 2 fallback, not foreign-session`) として残った
+- **#1174 が導入した review-incomplete-fallback ゲートが merge フェーズで実際に動作した**。今回は organic 完了と判定されて追加条件なしという負のケースだが、ゲートが配線され実行されていることは確認できた (#1174 の post-merge AC が要求する「fallback 投稿時に検出して停止・警告」の正のケースではないため、あちらは未発火のまま)
+
+#### merge
+- 特記なし。`unchecked_count=0`、mergeable clean、CI success、review approved で squash merge
+
+#### verify
+- **ローカル main が origin/main より遅れていたため、古い `skills/verify/SKILL.md` が読み込まれた**。#1188 の修正 (`git pull` → `fetch` + `merge --ff-only`) は既に origin/main へ merge 済みだったが、プラグインはローカル作業ツリーから skill を読むため、**修正前の Step 2 が実行され `git pull` が dirty tree で失敗した**
+- その状態で AC を検証したところ `merge --ff-only` が 0 件・exit 2 の第 3 選択肢が不在と観測され、**AC74 / AC75 を FAIL と誤判定する寸前だった**。main を更新して再検証したところ `merge --ff-only` 7 件、第 3 選択肢「Continue without stashing (default/recommended)」が存在し、いずれも PASS
+- 皮肉な構図として、**更新後の SKILL.md L121 は今回踏んだ失敗そのもの** (「`git pull` fails deterministically on a dirty working tree under a `pull.rebase` configuration — a real state reachable from Step 1's "Continue without stashing" choice」) を既知の到達状態として明記していた。修正は正しかったが、古い版を実行していたために踏んだ
+- dirty ファイルは #1188 自身の spec に code フェーズが親リポジトリ側で追記した「No new comments since last phase」の 3 行だった (#1078 が扱う経路)。origin/main の版に完全に含まれる内容のため破棄して pull した
+
+### Improvement Proposals
+
+- **ローカル main の遅れが skill のバージョンを巻き戻す** — プラグインはローカル作業ツリーから `skills/*.md` を読むため、`run-auto-sub.sh` の merge フェーズが origin/main を進めてもローカル main が追従していなければ、**merge 済みの skill 修正が次の in-session 実行に反映されない**。今回は AC の誤判定寸前まで至った。`/verify` の Step 2 は base を最新化するが、それは skill 本文が読み込まれた**後**に走るため自己修復にならない。skill 読み込み前にローカル base を同期する経路、または skill バージョンと origin の乖離を検出する仕組みに検討余地がある
