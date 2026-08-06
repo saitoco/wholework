@@ -14,6 +14,8 @@
 ### verify フェーズ (2026-08-06 re-run #4, cutoff: 2026-06-14T21:50:38Z)
 
 - saito / MEMBER / first-class / 前回 `/verify 476` (2026-08-06 re-run #3) 実行結果。Pre-merge 2 件 SKIPPED (already checked)、Post-merge observation (event=pr-review-light) は PR #1193 の diff に該当欠陥なしのため UNCERTAIN。3回連続の再現により起票水準に達したと記録 / https://github.com/saitoco/wholework/issues/476#issuecomment-5200610461
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5201684724
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=4 / https://github.com/saitoco/wholework/issues/476#issuecomment-5210084188
 ## 背景
 
 `/review` の MUST/SHOULD 分類基準に「対象実行環境で決定的に失敗する欠陥は MUST」というルールを明文化する。Spec フェーズなしで直接実装（Issue 本文から要件を読み取り）。
