@@ -144,20 +144,19 @@
 - N/A — 各 Implementation Step は一発で bats テスト PASS に到達し、手戻りは発生しなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- MUST 指摘 0 件のため `event=COMMENT` で投稿 (`REQUEST_CHANGES` にはならなかった)。SHOULD 2 件・CONSIDER 2 件をインラインコメントとして、CONSIDER 3 件を General Comments として投稿し、いずれも自動修正せず著者判断のフィードバックとして残した。
-- Step 10 は fork context (`--non-interactive` あり、再起動保証なし) のため Workflow path をスキップし、静的 Task fan-out (review-spec + review-bug×2) を Agent ツール `run_in_background: false` で同期実行した。
-- review-bug 2 体が独立に収斂した `CHANGES_REQUESTED` sticky state の指摘、および 1 体のみが検出した author filter 欠如の指摘は、いずれも 4 体の独立検証サブエージェントで PASS (問題確認) と判定されたが、安全側に倒れる設計であり実害はない (または現行 `.wholework.yml` では未到達) ため MUST には格上げしなかった。
+- Pre-merge AC ゲート (`check-pre-merge-ac.sh 1175`) は 4 件全てチェック済みで unchecked_count=0、`gh-pr-merge-status.sh` は `mergeable=true reason=clean ci_status=success review_status=approved` だったため、conflict 解消・追加リトライなしで Step 4 のスカッシュマージへ直行した。
+- review フェーズで残されていた SHOULD 2 件・CONSIDER 3 件 (`CHANGES_REQUESTED` sticky state の限定範囲、`LATEST_STATE` の author filter 欠如、token usage 上書き 等) は、いずれも MUST 未満と判定済みでマージのブロッカーではないと判断し、本 merge フェーズでは対応しなかった。
 
 ### Deferred Items
-- Post-merge observation AC (`session=next`、次回 `/review --full` 実行での silent no-op 非発生観察) は本 PR のマージ後、次回セッションでの `/review --full` 実行を待って評価される (変更なし、code フェーズからの引き継ぎを維持)。
-- SHOULD 2 件 (`CHANGES_REQUESTED` sticky state の限定範囲を Spec に明記、`LATEST_STATE` の author filter 追加) と CONSIDER 3 件 (token usage 上書き、ドキュメント精度、docs/workflow.md・orchestration-fallbacks.md 更新) は本 PR で未着手のまま PR インラインコメント/General Comments として残されている。
+- Post-merge observation AC (`session=next`、次回 `/review --full` 実行での silent no-op 非発生観察) は引き続き未評価のまま — 次回セッションでの `/review --full` 実行時に評価される。
+- review フェーズで指摘された SHOULD 2 件・CONSIDER 3 件 (`CHANGES_REQUESTED` sticky state の限定範囲を Spec に明記、`LATEST_STATE` の author filter 追加、token usage 上書き、ドキュメント精度、docs/workflow.md・orchestration-fallbacks.md 更新) は別 Issue 化が未実施のまま残っている。
 
 ### Notes for Next Phase
-- `/merge 1187` を実行する前に、著者が SHOULD 指摘 (特に author filter 欠如) を別 Issue 化するかその場で修正するかを判断することを推奨する。
-- Post-merge の observation AC は次回の `/review --full` 実行で自然に検証される設計であり、`/verify` フェーズで能動的に発火させる必要はない。
+- `/verify 1175` 実行時、Post-merge observation AC は次回の `/review --full` 実行で自然に検証される設計であり、`/verify` フェーズで能動的に発火させる必要はない。
+- review フェーズで指摘された author filter 欠如 (severity 最高の残存ギャップ) は、別 Issue 化を検討する価値がある — 本 Issue #1175 のスコープでは対応していない。
 
 ## review retrospective
 
