@@ -16,7 +16,9 @@ Issue 本文の「方針確定 (2026-08-06)」注記により対応方針は確�
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / summary: トリアージ自動連鎖の Issue Retrospective。Type=Task・Size=M・Value=3 を確定、post-merge observation AC に `session=next` を追加、タイトルの "pre-merge" 限定表現を除去、ambiguity point 0 件、verify command 5 件を Pattern 1〜6 で監査済み (問題なし) / URL: https://github.com/saitoco/wholework/issues/1186#issuecomment-5199530052
 
-- saito / MEMBER / first-class / ## 追加実測: `/verify 1175` と `/verify 1118` (2026-08-06) / https://github.com/saitoco/wholework/issues/1186#issuecomment-5199747782
+### code フェーズ (cutoff: 2026-08-06T02:22:36Z)
+
+- login: saito / authorAssociation: MEMBER / trust tier: first-class / summary: 方針 A を裏づける追加実測 2 件 (`/verify 1175`: チェック済み 4 件が全て SKIPPED 相当・新規情報ゼロ、`/verify 1118`: チェック済み AC ゼロのため方針 A の影響を受けず未チェック AC の評価は損なわれない) と、フル bats スイート 3 本同時実行時の負荷観測 (load average 倍増) を記録。設計・実装方針への変更要求はなく、既存の Implementation Steps をそのまま実行すればよい / URL: https://github.com/saitoco/wholework/issues/1186#issuecomment-5199747782
 ## Changed Files
 - `skills/verify/SKILL.md`: Step 5 に「already-checked AC skip rule」を追加 (pre-merge)、Step 8a の対象条件を unchecked に限定し同スキップ規則を適用 (post-merge + hint)、Step 6 の「Re-runs」箇条書きを新方針に合わせて書き換え、Step 11(a) の SKIPPED 括弧書きを整合、`## Notes` に Post-merge 重複記載による継続検証運用を追記 — bash 非対象 (Markdown skill 定義ファイル)
 - `tests/verify.bats`: already-checked AC skip rule (pre-merge / post-merge+hint) と unchecked AC が従来どおり検証されることを検証するテストを追加
@@ -74,19 +76,28 @@ Issue 本文の「方針確定 (2026-08-06)」注記により対応方針は確�
 ### Uncertainty resolution
 - Nothing to note
 
+## Code Retrospective
+
+### Deviations from Design
+- Nothing to note. Implementation Steps 1〜4 は Spec に記載した挿入位置・文言のとおりに実装した。
+
+### Design Gaps/Ambiguities
+- Nothing to note. Spec の investigation (Step 5/8a への限定、Step 8b/8c 対象外の確認) がそのまま実装に反映された。
+
+### Rework
+- Nothing to note. Rubric verify command 4 件と `bats tests/` はいずれも初回実装で PASS した。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
-- スキップ規則の実装箇所を Step 5 (pre-merge) と Step 8a (post-merge+hint) の 2 箇所に限定した。Step 8b/8c は既に unchecked のみを対象にしており変更不要と判断した
-- 一般規則 (already-checked AC skip rule) と既存の `ac-tier: preview` 固有規則は併存させ、preview 規則を置き換えない設計とした (両者は矛盾せず、preview AC が `[x]` の場合は一般規則が適用されるだけ)
-- opt-in 再検証フラグは導入せず、継続検証は Post-merge セクションへの AC 重複記載で表現する方針を Notes に明記した (Issue 本文の確定方針どおり)
+- Spec の投稿位置指定 (段落文脈) どおりに Step 5 / Step 8a / Step 6 / Step 11(a) / Notes を編集し、追加の設計判断は発生しなかった
+- `docs/workflow.md` / `docs/guide/customization.md` は Spec retrospective の判断 (更新不要) を `/code` 側でも再確認し、grep で "re-verif"/"already checked" 系の記述がないことを確認した上で変更なしとした
+- Pre-merge の 5 条件 (rubric 4 件 + `bats tests/`) は SKILL.md 本文の直接確認とフルスイート実行 (1414 件 PASS) により PASS と判定し、Issue チェックボックスを更新した
 
 ### Deferred Items
-- Post-merge の observation AC (`event=auto-run session=next`) は本セッション内では評価不能。次回 `/auto` 完了後の `/verify` 実行で SKIPPED 報告を観察する必要がある
-- `docs/workflow.md` / `docs/guide/customization.md` は更新不要と判断したが、`/code` 実装時に SKILL.md の文言が固まった時点で念のため再確認が望ましい
+- Post-merge の observation AC (`event=auto-run session=next`) は本セッション内では評価不能。次回 `/auto` 完了後の `/verify` 実行で SKIPPED 報告を観察する必要がある (未着手のまま持ち越し)
 
 ### Notes for Next Phase
-- `/code` は Implementation Steps 1〜3 (SKILL.md 編集) と Step 4 (bats テスト追加) を、Spec に記載した挿入位置 (段落の文脈で指定、行番号ではない) に従って実装すること
-- `tests/verify.bats` に `step6_section`/`step8a_section` ヘルパーを追加する際、既存の `step5_section`/`step8c_section` の awk パターンに厳密に合わせること (見出しレベル `###` vs `####` の違いに注意)
-- 新規追加する文言 ("already checked; skipped by default" 等) は Pre-merge verify command (rubric) が期待する語彙と一致させ、SKILL.md 本文とテストで同一の exact phrase を使うこと
+- `/review` では、Step 5 の already-checked AC skip rule 文言と Step 8a の追加文が既存の pre-merge-preview AC skip rule と矛盾なく併存しているかを確認すること
+- `/verify` の次回実行 (session=next) で、post-merge observation AC が SKIPPED として正しく報告されるかを観察すること
