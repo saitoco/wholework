@@ -562,6 +562,9 @@ MOCK
     # section before or after claude), but with --pr: the post-processor must stay
     # gated off regardless of section state, since the Spec lives on the PR branch
     # which this main-repository post-exit point cannot observe or safely write to.
+    # The gate is keyed on an observed open PR (reconcile-phase-state.sh's
+    # actual.pr_number), not on ROUTE_FLAG alone (#1201 review finding), so the
+    # mock below returns a realistic code-pr completion payload with a PR number.
     mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
     printf '%s\n' "# Issue #123: Test" > "$BATS_TEST_TMPDIR/docs/spec/issue-123-test.md"
 
@@ -574,7 +577,44 @@ _emit_comments_consumed() { :; }
 _append_consumed_comments_section() { echo "CALLED \$*" >> "${FALLBACK_LOG}"; }
 MOCK
 
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"schema_version":"v1","phase":"code-pr","matches_expected":true,"actual":{"pr_state":"OPEN","pr_number":123},"diagnosis":"open PR found"}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
     run bash "$SCRIPT" 123 --pr
+    [ "$status" -eq 0 ]
+    [ ! -f "$FALLBACK_LOG" ]
+}
+
+@test "auto-detected pr route (no --pr flag, Size M/L in-session): _append_consumed_comments_section not called (#1201)" {
+    # Reproduces the MUST-severity gap found in #1201 review: /code N --auto without
+    # --patch invokes run-code.sh with no route flag, and Step 0 resolves pr route
+    # in-session via Size auto-detection. ROUTE_FLAG alone cannot distinguish this
+    # from patch route, so the post-processor must key on the observed open PR
+    # (reconcile-phase-state.sh's actual.pr_number) instead.
+    mkdir -p "$BATS_TEST_TMPDIR/docs/spec"
+    printf '%s\n' "# Issue #123: Test" > "$BATS_TEST_TMPDIR/docs/spec/issue-123-test.md"
+
+    FALLBACK_LOG="$BATS_TEST_TMPDIR/fallback.log"
+    export FALLBACK_LOG
+
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { return 0; }
+_emit_comments_consumed() { :; }
+_append_consumed_comments_section() { echo "CALLED \$*" >> "${FALLBACK_LOG}"; }
+MOCK
+
+    cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'
+#!/bin/bash
+echo '{"schema_version":"v1","phase":"code-pr","matches_expected":true,"actual":{"pr_state":"OPEN","pr_number":123},"diagnosis":"open PR found"}'
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/reconcile-phase-state.sh"
+
+    run bash "$SCRIPT" 123
     [ "$status" -eq 0 ]
     [ ! -f "$FALLBACK_LOG" ]
 }

@@ -243,5 +243,5 @@ MOCK
     [ "$status" -eq 0 ]
     grep -q "^## Consumed Comments" "$SPEC_FILE"
     grep -q "CALLED --base main" "$REPO_ROOT/merge-push.log"
-    ! grep -q "^push origin HEAD" "$REPO_ROOT/git.log"
+    ! grep -q "push origin HEAD" "$REPO_ROOT/git.log"
 }

@@ -252,7 +252,7 @@ is written, and both target the same working branch per `modules/worktree-lifecy
 fires where it can safely reach that branch:
 - **Primary (in-session, all phases):** `SKILL.md` for `/spec`, `/code`, and `/verify` each
   contain an explicit `bash` call to `append-consumed-comments-section.sh` (`/spec` Step 13,
-  `/code` Step 12, `/verify` Step in place before #1058) after the LLM's comment consumption
+  `/code` Step 12, `/verify` Step 4) after the LLM's comment consumption
   step, ensuring deterministic writeback regardless of prose execution. `/spec` and `/code`
   pass `--no-push` — the commit lands on the working branch and reaches base only through
   that phase's own Exit path (see the table in `worktree-lifecycle.md`).

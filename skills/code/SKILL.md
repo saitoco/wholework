@@ -663,17 +663,7 @@ If there are items under "Deviations from Design" (reordering of implementation 
    Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Write Procedure" section.
    Parameters: `SPEC_PATH`, `ISSUE_NUMBER=$NUMBER`, `PHASE_NAME=code`.
    The handoff is staged with the Spec in the same `git add` and committed together.
-6. **Consumed Comments safety net (mandatory, before commit)**: run
-   ```bash
-   bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh $NUMBER code --no-push
-   ```
-   This is the in-session safety net for the `## Consumed Comments` section on the worktree
-   branch (see `modules/worktree-lifecycle.md` § "Spec file write destination"). `--no-push`
-   is required — the pr route pushes this commit itself in step 7 below, and base propagation
-   for patch/operate route happens via Step 14's `worktree-merge-push.sh`. The bash wrapper
-   fallback (`scripts/run-code.sh`) no longer runs for pr route, so this call is the only
-   safety net on that path.
-7. Commit (push is done in Step 14 Worktree Exit):
+6. Commit (push is done in Step 14 Worktree Exit for patch/operate route; pr route pushes explicitly in item 8 below):
    ```bash
    git add $SPEC_PATH/issue-$NUMBER-*.md
    git commit -s -m "Add code retrospective for issue #$NUMBER
@@ -683,11 +673,24 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
    ```bash
    git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
    ```
-   - **For pr route**: also push from within the worktree (emit a progress line first so the watchdog resets its silence counter):
-     ```bash
-     echo "progress: Pushing branch to origin for issue #$NUMBER..."
-     git push origin HEAD
-     ```
+7. **Consumed Comments safety net (mandatory, after the retrospective commit above)**: run
+   ```bash
+   bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh $NUMBER code --no-push
+   ```
+   This is the in-session safety net for the `## Consumed Comments` section on the worktree
+   branch (see `modules/worktree-lifecycle.md` § "Spec file write destination"). Running it
+   after the retrospective commit — rather than before — avoids the script's own commit (which
+   fires whenever the Spec has an unstaged diff) sweeping the not-yet-committed retrospective
+   and Phase Handoff edits into a commit titled "Add consumed comments fallback ..."; when it
+   does fire here, it lands as its own separate commit instead. `--no-push` is required — the pr
+   route pushes in item 8 below, and base propagation for patch/operate route happens via Step
+   14's `worktree-merge-push.sh`. The bash wrapper fallback (`scripts/run-code.sh`) no longer
+   runs for pr route, so this call is the only safety net on that path.
+8. **For pr route**: also push from within the worktree (emit a progress line first so the watchdog resets its silence counter):
+   ```bash
+   echo "progress: Pushing branch to origin for issue #$NUMBER..."
+   git push origin HEAD
+   ```
 
 ### Step 13: Preview Build Verification (pr route only)
 

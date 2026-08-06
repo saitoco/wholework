@@ -18,11 +18,7 @@ if [[ -z "$ISSUE_NUMBER" || -z "$PHASE_NAME" ]]; then
 fi
 
 NO_PUSH=false
-if [[ $# -ge 2 ]]; then
-  shift 2
-elif [[ $# -eq 1 ]]; then
-  shift 1
-fi
+shift 2
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --no-push)

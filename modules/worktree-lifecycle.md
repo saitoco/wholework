@@ -153,10 +153,12 @@ While executing a Step against the main repository per the round trip above, the
 All phases that append to a disposable Spec (`docs/spec/issue-N-*.md` — Consumed Comments,
 retrospectives, Phase Handoff) must write **only on that phase's own working branch** — the
 worktree branch it entered via the Entry section above (which is also the PR branch for
-`/code` pr route). Never write the Spec directly against the base branch from a main-repository
-context. Base propagation happens exclusively through this module's own Exit paths: `Exit:
-merge-to-main` (`worktree-merge-push.sh`) or a PR merge — never a standalone `git push` issued
-from outside the worktree.
+`/code` pr route), or the base branch itself when the phase documented `ENTERED_WORKTREE=false`
+(see the table below). Never write the Spec directly against the base branch from an
+*undocumented* main-repository context, and never issue a standalone `git push` for it from
+outside the worktree — a lock-mediated main-tree write via `worktree-merge-push.sh` (this
+module's own Exit path, or the equivalent main-tree routing inside
+`append-consumed-comments-section.sh`) is the only base-branch write path this rule permits.
 
 This rule exists because a Spec file edited from two different branches in the same phase
 window — the phase's own worktree branch and, separately, the base branch via an
@@ -170,16 +172,20 @@ Issue #1058 for the incident this rule generalizes from.
 |-------|-----------------|------------------------|
 | `/spec` | worktree branch | `Exit: merge-to-main` → `worktree-merge-push.sh` |
 | `/code` patch / operate route | worktree branch | `Exit: merge-to-main` → `worktree-merge-push.sh` |
+| `/code` patch route, worktree skipped (`ENTERED_WORKTREE=false`; XS interactive direct-launch only — see `skills/code/SKILL.md` Step 2) | base branch, in the main repository | `worktree-merge-push.sh` (lock+push only, no `--from` — see "When `ENTERED_WORKTREE=false`" above) |
 | `/code` pr route | worktree branch (= PR branch) | PR merge (`/merge`) |
 | `/verify` | worktree branch | `Exit: merge-to-main` → `worktree-merge-push.sh` |
 
-Callers that append to `## Consumed Comments` (see `modules/l0-surfaces.md` § "Bash wrapper
-fallback") must pass `--no-push` to `append-consumed-comments-section.sh` when calling it
-in-session from inside the worktree: the commit lands on the working branch shown above, and
-this table's propagation path — not a push issued by the script itself — carries it to base.
-The one exception is `/code` pr route, where the phase's own Step 12 explicitly pushes the
-worktree branch afterward (the PR branch has no `worktree-merge-push.sh` propagation path of
-its own).
+All in-session callers of `append-consumed-comments-section.sh` (see `modules/l0-surfaces.md`
+§ "Bash wrapper fallback") pass `--no-push`: the commit lands on the working branch shown
+above, and this table's propagation path — not a push issued by the script itself — carries it
+to base. `/code` pr route also passes `--no-push`; it differs only in *how* the commit reaches
+the remote — its own Step 12 pushes the worktree (= PR) branch directly afterward, since the PR
+branch has no `worktree-merge-push.sh` propagation path of its own.
+
+**Known gap (not yet migrated):** `skills/verify/SKILL.md`'s call site still omits `--no-push`
+and pushes the worktree branch itself, which is the source of the residual
+`origin/worktree-verify+issue-*` branches. Out of scope for #1058; tracked as a deferred item.
 
 ### `source`-based shell function calls are blocked by the worktree isolation guard
 

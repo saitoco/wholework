@@ -820,14 +820,7 @@ Reflect on the specification phase and present improvement suggestions to the us
    Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-handoff.md` and follow the "Write Procedure" section.
    Parameters: `SPEC_PATH`, `ISSUE_NUMBER=$NUMBER`, `PHASE_NAME=spec`.
    Include the handoff write in the same commit (next step).
-5. **Consumed Comments safety net (mandatory, before commit)**: run
-   ```bash
-   bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh $NUMBER spec --no-push
-   ```
-   This is the in-session safety net for the `## Consumed Comments` section on the worktree
-   branch (see `modules/worktree-lifecycle.md` § "Spec file write destination"). `--no-push`
-   is required — base propagation happens via Step 14's `worktree-merge-push.sh`.
-6. Additional commit (push in Step 14 Worktree Exit):
+5. Additional commit (push in Step 14 Worktree Exit):
    ```bash
    git add $SPEC_PATH/issue-$NUMBER-short-title.md
    git commit -s -m "Add retrospective notes for issue #$NUMBER"
@@ -835,6 +828,17 @@ Reflect on the specification phase and present improvement suggestions to the us
    ```bash
    git log -1 --format='%B' | grep -q "^Signed-off-by:" || { echo "ERROR: missing sign-off"; exit 1; }
    ```
+6. **Consumed Comments safety net (mandatory, after the commit above)**: run
+   ```bash
+   bash ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh $NUMBER spec --no-push
+   ```
+   This is the in-session safety net for the `## Consumed Comments` section on the worktree
+   branch (see `modules/worktree-lifecycle.md` § "Spec file write destination"). Running it
+   after the commit above — rather than before — avoids the script's own commit (which fires
+   whenever the Spec has an unstaged diff) sweeping the not-yet-committed retrospective/handoff
+   edits into a commit titled "Add consumed comments fallback ..."; when it does fire here, it
+   lands as its own separate commit instead. `--no-push` is required — base propagation happens
+   via Step 14's `worktree-merge-push.sh`.
 
 ### Step 14: Worktree Exit (merge-to-main)
 

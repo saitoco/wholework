@@ -328,17 +328,27 @@ if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
   fi
 fi
 
+# Resolve the actually-taken route from reconcile-phase-state.sh's observed PR
+# existence rather than ROUTE_FLAG: the route is often decided in-session (Size
+# auto-detection for XS/S->patch, M/L->pr; or `always-pr: true` in .wholework.yml)
+# with no --pr flag on the command line, so ROUTE_FLAG alone cannot distinguish an
+# auto-detected pr route from patch route (Issue #1058 review finding).
+_PR_NUM=""
+if [[ $EXIT_CODE -eq 0 ]]; then
+  _PR_NUM=$(echo "${_reconcile_out:-}" | jq -r '.actual.pr_number // empty' 2>/dev/null || true)
+  if ! [[ "$_PR_NUM" =~ ^[0-9]+$ ]]; then
+    _PR_NUM=""
+  fi
+fi
+
 # See modules/orchestration-fallbacks.md#code-base-conflict
-if [[ "$ROUTE_FLAG" == "--pr" && $EXIT_CODE -eq 0 ]]; then
-  _PR_NUM=$(echo "$_reconcile_out" | jq -r '.actual.pr_number // empty' 2>/dev/null || true)
-  if [[ -n "$_PR_NUM" && "$_PR_NUM" =~ ^[0-9]+$ ]]; then
-    _merge_status=$("$SCRIPT_DIR/gh-pr-merge-status.sh" "$_PR_NUM" 2>/dev/null || true)
-    if echo "$_merge_status" | grep -q '"reason"[[:space:]]*:[[:space:]]*"conflicts"'; then
-      echo "Warning: code phase completed but PR #${_PR_NUM} has conflicts with base." >&2
-      echo "This is likely due to a concurrent merge on the base branch during code phase." >&2
-      echo "PR diff (merge-base based) shows only this Issue's changes correctly -- do not mistake this for contamination." >&2
-      echo "Recommended: resolve conflicts before /merge. See modules/orchestration-fallbacks.md#code-base-conflict for the recovery procedure." >&2
-    fi
+if [[ "$ROUTE_FLAG" == "--pr" && $EXIT_CODE -eq 0 && -n "$_PR_NUM" ]]; then
+  _merge_status=$("$SCRIPT_DIR/gh-pr-merge-status.sh" "$_PR_NUM" 2>/dev/null || true)
+  if echo "$_merge_status" | grep -q '"reason"[[:space:]]*:[[:space:]]*"conflicts"'; then
+    echo "Warning: code phase completed but PR #${_PR_NUM} has conflicts with base." >&2
+    echo "This is likely due to a concurrent merge on the base branch during code phase." >&2
+    echo "PR diff (merge-base based) shows only this Issue's changes correctly -- do not mistake this for contamination." >&2
+    echo "Recommended: resolve conflicts before /merge. See modules/orchestration-fallbacks.md#code-base-conflict for the recovery procedure." >&2
   fi
 fi
 
@@ -364,10 +374,13 @@ fi
 
 # Post-processor fallback: if LLM did not append ## Consumed Comments, do it now.
 # Compare post-count with pre-count; trigger fallback when count did not increase.
-# Skipped for pr route: the Spec lives on the PR (worktree) branch there, which this
-# main-repository post-exit point cannot observe or safely write to. The pr route's
-# safety net is instead the in-session mandatory call in skills/code/SKILL.md Step 12.
-if [[ $EXIT_CODE -eq 0 && "$ROUTE_FLAG" != "--pr" ]]; then
+# Skipped for pr route (detected via _PR_NUM above -- an open PR observed for the
+# worktree-code+issue-N branch -- rather than ROUTE_FLAG, since the route is often
+# resolved in-session with no --pr flag on the command line): the Spec lives on the
+# PR (worktree) branch there, which this main-repository post-exit point cannot
+# observe or safely write to. The pr route's safety net is instead the in-session
+# mandatory call in skills/code/SKILL.md Step 12.
+if [[ $EXIT_CODE -eq 0 && -z "$_PR_NUM" ]]; then
   _SPEC_FILE_POST=$(ls "${_REPO_ROOT}/$_SPEC_DIR/issue-${ISSUE_NUMBER}-"*.md 2>/dev/null | head -1 || true)
   _POST_COUNT=$(grep -c "^## Consumed Comments" "${_SPEC_FILE_POST:-/dev/null}" 2>/dev/null || true)
   _POST_COUNT="${_POST_COUNT:-0}"

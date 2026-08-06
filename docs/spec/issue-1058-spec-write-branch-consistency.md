@@ -75,18 +75,23 @@ Spec ファイル (`docs/spec/issue-N-*.md`) への追記先が、実行主体�
 |---|---|---|
 | `--no-push` 指定あり | commit まで実行し push をスキップ。スキップした旨を stderr に出力しない (通常経路のため) | 0 |
 | `--no-push` なし かつ worktree 内 (`_git_dir != _git_common_dir`) | 従来どおり `git -C "$_repo_root" push origin HEAD` | 0 (push 失敗時も best-effort 警告のみで 0) |
-| `--no-push` なし かつ main tree (`_git_dir == _git_common_dir`) | 既存の defense-in-depth 警告を stderr に出力したうえで、`worktree-merge-push.sh --base "$(git -C "$_repo_root" rev-parse --abbrev-ref HEAD)"` を実行 | 0 (`worktree-merge-push.sh` が非 0 で終了しても best-effort 警告のみで 0) |
+| `--no-push` なし かつ main tree (`_git_dir == _git_common_dir`、いずれも非空) | 既存の defense-in-depth 警告を stderr に出力したうえで、`worktree-merge-push.sh --base "$(git -C "$_repo_root" rev-parse --abbrev-ref HEAD)"` を実行 | 0 (`worktree-merge-push.sh` が非 0 で終了しても best-effort 警告のみで 0) |
+| `--no-push` なし かつ `_git_dir` / `_git_common_dir` のいずれかが空 (git 解決失敗) | 非空ガード (`-n "$_git_dir" && -n "$_git_common_dir"`) が真にならないため main tree 分岐に入らず、従来どおり `git -C "$_repo_root" push origin HEAD` にフォールスルー | 0 (push 失敗時も best-effort 警告のみで 0) |
 | Spec ファイルに差分なし (`git diff --quiet` が真) | commit も push も実行しない | 0 |
+
+上記 4 分岐目 (非空ガード) は `tests/run-verify.bats` の既存 fixture が `rev-parse --git-dir`/`--git-common-dir` 未実装で両者が空文字を返すことで発覚した実装時のギャップ。Code Retrospective の Deviations from Design に記録済み。
 
 スクリプト全体の best-effort 契約 (常に exit 0) は既存どおり維持し、呼び出し側をブロックしない。
 
 **`scripts/run-code.sh` の post-processor 分岐 (exhaustive):**
 
+判定は `ROUTE_FLAG` (CLI フラグ) ではなく `_PR_NUM` (`reconcile-phase-state.sh` が `worktree-code+issue-N` ブランチに対して観測した実際の open PR 番号) を用いる。route は Size auto-detection や `always-pr: true` により in-session で解決されることがあり (`/code N --auto` は M/L Issue に対しフラグ無しで pr route を選ぶ)、`ROUTE_FLAG` だけでは実際に pr route を通ったかを判定できないため (review #1201 指摘、MUST として修正)。
+
 | 分岐条件 | 挙動 |
 |---|---|
 | `EXIT_CODE != 0` | 従来どおり post-processor をスキップ |
-| `EXIT_CODE == 0` かつ `ROUTE_FLAG == "--pr"` | **新規**: post-processor をスキップ。Spec の書き込み先は PR ブランチであり main repository からは観測も安全な書き込みもできないため。安全網は `skills/code/SKILL.md` Step 12 の in-session 呼び出しが担う |
-| `EXIT_CODE == 0` かつ `ROUTE_FLAG != "--pr"` (patch / operate / 未指定) | 従来どおり pre/post カウント比較を行い、増えていなければ `_append_consumed_comments_section` を実行 |
+| `EXIT_CODE == 0` かつ `_PR_NUM` が非空 (open PR が観測された = 実際に pr route を通った) | post-processor をスキップ。Spec の書き込み先は PR ブランチであり main repository からは観測も安全な書き込みもできないため。安全網は `skills/code/SKILL.md` Step 12 の in-session 呼び出しが担う |
+| `EXIT_CODE == 0` かつ `_PR_NUM` が空 (open PR 未観測 = patch / operate route) | 従来どおり pre/post カウント比較を行い、増えていなければ `_append_consumed_comments_section` を実行 |
 
 ### `validate-skill-syntax.py` の制約
 
