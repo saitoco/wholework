@@ -332,6 +332,25 @@ MOCK_EOF
     [[ "$output" == *"docs/spec/issue-999-some-spec.md"* ]]
 }
 
+@test "active-session unrelated spec: gh call failure -> exit 2 fallback, not foreign-session" {
+    cd "$REPO_DIR"
+    MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
+    mkdir -p "$MOCK_DIR"
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+exit 1
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    make_dirty "docs/spec/issue-999-some-spec.md"
+    run bash "$REAL_SCRIPT" 123
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"docs/spec/issue-999-some-spec.md"* ]]
+    [[ "$output" != *"classify=foreign-session"* ]]
+    [[ "$output" == *"Warning: gh issue view failed"* ]]
+}
+
 @test "mixed: unrelated spec file + foreign-session file -> exit 0, not exit 2" {
     cd "$REPO_DIR"
     cat > docs/spec/issue-123-my-spec.md <<'EOF'
