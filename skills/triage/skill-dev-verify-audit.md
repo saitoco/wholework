@@ -63,6 +63,20 @@ Fix options:
 - Choose a string that will appear only after the change lands
 - Switch to `section_not_contains` or `file_not_contains` to assert removal instead
 
+**exit code 設計に起因する常時 PASS (`command` 型 AC)**:
+
+`command` 型の verify command は、対象スクリプトが明示的な失敗条件フラグ（例: `--fail-if-outdated`）を渡さない限り常に exit 0 を返す informational 専用の設計になっている場合、実装の正誤に関わらず常時 PASS になる。
+
+例: `<!-- verify: command "bash scripts/check-translation-sync.sh" --> ` — `check-translation-sync.sh` は `--fail-if-outdated` を渡さない限り常に exit 0 を返す (スクリプト冒頭に "Always exits 0 (informational only)" と明記されている)。
+
+Detection approach:
+- `command` 型 AC の対象スクリプトのソースを確認し、失敗時に非ゼロの exit code を返す設計かどうかを検証する
+- フラグなしでは常に exit 0 を返す設計の場合、常時 PASS として検出する
+
+Fix options:
+- スクリプトに失敗条件フラグ（`--fail-if-outdated` 等）を明示的に渡す
+- スクリプトの exit code 設計自体を、失敗時に非ゼロを返すよう修正する
+
 ### Pattern 3: 常時 FAIL な verify command (Always-FAIL Command)
 
 Detect: A `file_contains` or `grep` verify command whose search string has already
@@ -118,6 +132,53 @@ effects on Issues, PRs, or the filesystem.
 
 Fix: Remove the destructive command from the verify context and mark the AC line as
 `verify-type: manual` so a human performs the check instead.
+
+### Pattern 6: 常時 UNCERTAIN な verify command (Always-UNCERTAIN Command)
+
+Detect: 以下 5 つのサブパターンのいずれかに該当する verify command は、実装が正しくても
+判定不能 (UNCERTAIN) になる。
+
+1. **heading 引数に先頭の `#` を含める**: `section_contains`/`section_not_contains` の
+   heading 引数（第 2 引数）に見出し記号 `#`/`##`/`###` を含めている。
+   `modules/verify-executor.md` の `section_contains` 仕様は、見出し行から先頭の `#` と
+   空白を除去したうえで部分一致するため、`"### Step 1"` は `## Step 1` にも `### Step 1`
+   にもマッチせず「No heading matched」で恒久的に UNCERTAIN になる。
+   例: `<!-- verify: section_contains "path/to/file.md" "### Step 1" "text" -->`
+   修復案: heading 引数から先頭の `#` を除去する —
+   `<!-- verify: section_contains "path/to/file.md" "Step 1" "text" -->`
+
+2. **存在しないファイルパスを参照**: verify command が参照するファイルパスがリポジトリに
+   存在しない。
+   例: `<!-- verify: section_contains "modules/nonexistent.md" "Step 1" "text" -->`
+   修復案: 実装が生成する実際のファイルパスに修正する。
+
+3. **引数個数不足**: verify command 種別が要求する引数の個数が不足しており、構文エラーに
+   なる。
+   例: `<!-- verify: file_contains "path/to/file" -->` (text 引数欠落)
+   修復案: 欠落している引数を補う。
+
+4. **未定義のコマンド名**: `modules/verify-executor.md` が定義していない verify command
+   種別を使用している。
+   例: `<!-- verify: file_has "path" "text" -->`
+   修復案: `modules/verify-executor.md` が定義する既存の verify command 種別
+   (`grep`, `file_contains`, `section_contains`, `command`, `github_check`, `rubric` 等)
+   に置き換える。
+
+5. **対応する CI job のない safe mode 限定コマンドを Pre-merge に置く**: `command` 型
+   verify command を Pre-merge AC に配置しているが、`/review` の safe mode では任意コマ
+   ンド実行が許可されないため、対応する CI job の結果を参照する CI reference fallback に
+   頼ることになる。対応する CI job が存在しない場合、恒久的に UNCERTAIN になる。
+   例: `<!-- verify: command "bash scripts/some-custom-check.sh" -->` を Pre-merge に置く
+   が、`.github/workflows/` に対応する CI job がない。
+
+   `command` 型 AC を Pre-merge に置いてよい判定基準:
+   - (a) 対応する CI job が存在し、`/review` の CI reference fallback が解決できる
+   - (b) スクリプトが失敗時に非ゼロの exit code を返す設計である
+
+   どちらも満たさない場合は、Post-merge へ移すか `verify-type: manual` を付与する。
+
+Fix: 該当する verify command を上記の修復案に従って修正する。UNCERTAIN が解消できない
+場合は Post-merge へ移すか `verify-type: manual` を付与する。
 
 ## Non-Destructive Audit Behavior
 
