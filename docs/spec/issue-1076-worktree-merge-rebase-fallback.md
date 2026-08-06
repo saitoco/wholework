@@ -99,20 +99,19 @@ Implementation Steps で使う `git merge-base --is-ancestor` / `git -C <path> r
 - なし。既存の false 側ロジックをそのまま `rebase_from_branch_onto()` に切り出し、true/false 両呼び出し元は引数 (ローカル `$BASE_BRANCH` / `origin/${BASE_BRANCH}`) のみを差し替える形で 1 回で実装が収束した。既存 19 bats ケースと新規 2 ケースを合わせて 21 件が green (`bats tests/worktree-merge-push.bats`)。behavioral change detection (`modules/orchestration-fallbacks.md` を `tests/run-auto-sub.bats`/`tests/orchestration-fallbacks.bats` も参照) により `bats tests/` full suite (1432+ 件) も green を確認した。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Base Branch Conflict Pre-check (`git merge-tree`) が本 Issue の Spec ファイル自身に対する `changed in both` コンフリクトを検出。`origin/main` を PR ブランチへ merge し、重複する base 側の 1 行 (Consumed Comments に既出の内容) を破棄する形で解消した (MUST)
-- `modules/orchestration-fallbacks.md` の新規 Rationale 文言 (push retry loop が true 側の local base lag を解決済みと主張) を、実機検証 (force refspec でも checked-out branch への `git fetch .` は exit 128 で拒否される) に基づき訂正 (SHOULD)。push retry loop 自体のコード修正は本 PR のスコープ外 (#1076 以前から存在する既知のギャップとして文書化のみ)
+- 非対話モード (`--non-interactive`) で実行。pre-merge AC gate は 4件すべてチェック済み・review-incomplete-fallback も該当なしのため、追加の override マーカーなしでそのまま merge に進んだ
+- `gh pr merge --squash --delete-branch` で squash merge を実行 (mergeable=true, ci_status=success, review_status=approved を確認済み)
 
 ### Deferred Items
-- Post-merge AC (opportunistic): 並行セッションが base に commit している状況で `/verify` を実行し、Worktree Exit が手動介入なしに完了することの実地確認は post-merge に委ねる (code phase から継続)
-- push retry loop の true-side checked-out gap (`git fetch . "+<from>:<base>"` が exit 128 で拒否される) 自体の修正は未着手。起票は `/verify` 側の判断に委ねる (review retrospective の Improvement Candidate 参照)
+- Post-merge AC (opportunistic): 並行セッションが base に commit している状況で `/verify` を実行し、Worktree Exit が手動介入なしに完了することの実地確認は `/verify` に委ねる
+- push retry loop の true-side checked-out gap (`git fetch . "+<from>:<base>"` が exit 128 で拒否される) 自体の修正は未着手 (review retrospective の Improvement Candidate 参照、起票は `/verify` 側の判断に委ねる)
 
 ### Notes for Next Phase
-- PR ブランチは `/review` の Step 12 で `origin/main` を merge 済み (2 コミット: コンフリクト解消 + Rationale 訂正)。`/merge` 時点で改めて conflict が生じている場合は、その間に main が再度進んだ可能性がある
-- `/review` の PR Review は `COMMENT` イベントで投稿されている (self-review のため `REQUEST_CHANGES` は GitHub API が 422 で拒否) — MUST issue の有無は review body 本文と inline comment の文言で確認すること。branch protection が `REQUEST_CHANGES` の解消を要求する設定の場合は影響しうる
-- `bats tests/` full suite の実行時間は 10 分を超える場合がある (前回はバックグラウンド実行で完走)。今回の review 修正はドキュメントのみのため bats は再実行していない
+- `/verify` は Post-merge AC (opportunistic) の実地確認を行うこと (Deferred Items 参照)
+- review retrospective の Improvement Candidate (`gh-pr-review.sh` の self-review 時の 422 対応) は未起票のまま — `/verify` 側で起票判断が必要
 
 ## review retrospective
 
