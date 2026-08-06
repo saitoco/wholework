@@ -244,3 +244,8 @@ run-merge.sh のリファクタリング（inline PR-state ガード → reconci
 ### Improvement Proposals
 
 - **テスト置き換え/リファクタ時の「削除テストのシナリオ網羅」チェックを review または spec のガイドラインに明文化する**: 本 Issue の review で、run-merge.sh のリファクタ（inline PR-state ガード → reconcile 統一）に伴い旧テスト「post-validation: exits 0 when gh pr view fails」が削除されたが、等価な新テスト（抽出失敗 + gh API 失敗 → false alarm なし）が抜け落ちていた（review が検出し run-merge.bats を追加して解消）。実装が正しくても、テストを置き換える際に「削除した（または書き換えた）テストが検証していたシナリオを新テストが全てカバーしているか」の網羅性確認が漏れるパターンは汎用的に再発しうる。review-bug perspective または spec の制約チェックリストに「テスト置き換え時は削除テストのカバーシナリオを新テストで全て担保する」旨を明記することで、レビュー検出に依存せず構造的に防止できる。
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/520#issuecomment-4618328268
+- saito / MEMBER / first-class / <!-- escalation-level: 2 --> / https://github.com/saitoco/wholework/issues/520#issuecomment-5182939819
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/520#issuecomment-5200980491
