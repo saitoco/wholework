@@ -166,6 +166,15 @@ out-of-worktree write — produces a two-sided edit to the same file that confli
 time (`mergeStateStatus: DIRTY`), even though the actual implementation diff is untouched. See
 Issue #1058 for the incident this rule generalizes from.
 
+Because the Comment Consumption Procedure (`modules/l0-surfaces.md`) writes to the Spec's
+`## Consumed Comments` section, any phase that calls it must run this module's Entry section
+first — calling it before Entry would write against whatever branch the main repository
+happened to be on, not the phase's own working branch. `skills/verify/SKILL.md` already
+satisfies this ordering (Entry is Step 3, the Comment Consumption Procedure call is Step 4).
+`skills/code/SKILL.md` and `skills/spec/SKILL.md` were brought into alignment with this
+ordering in #1078, by moving each skill's Comment Consumption Procedure call to the end of its
+own Worktree Entry Step.
+
 **Base propagation path per phase (exhaustive):**
 
 | Phase | Working branch | Base propagation path |

@@ -110,10 +110,6 @@ gh issue view $NUMBER --json title,body
 
 Generate a short description from the title (e.g., "add-implement-skill").
 
-**Consume comments since the last phase (L0 input):**
-
-Read `${CLAUDE_PLUGIN_ROOT}/modules/l0-surfaces.md` and follow the "Comment Consumption Procedure" section with parameters: `ISSUE_NUMBER=$NUMBER`, `COMMENT_SCOPE=issue`, `PHASE_NAME=code`. The cutoff resolves to the most recent `phase/ready` label assignment. For resume runs (PR already exists), use `COMMENT_SCOPE=issue+pr`. Record results in the Spec's `## Consumed Comments` section.
-
 ### Step 2: Worktree Entry
 
 **Worktree skip for XS patch route (interactive direct-launch only):**
@@ -146,6 +142,10 @@ Record the `ENTERED_WORKTREE` variable for use in subsequent steps.
 **Edit/Write path conventions inside worktree (CWD-relative):**
 
 After entering the worktree, CWD switches to the worktree directory. When editing or creating files with Edit/Write tools, **verify CWD first** (check with `pwd`), and **use CWD-relative paths rather than absolute paths** (e.g., `~/.claude/` or `/Users/.../src/...`). Using absolute paths would edit the main repository, causing missed commits and conflicts.
+
+**Consume comments since the last phase (L0 input; run after Worktree Entry above — see `modules/worktree-lifecycle.md` § "Spec file write destination"):**
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/l0-surfaces.md` and follow the "Comment Consumption Procedure" section with parameters: `ISSUE_NUMBER=$NUMBER`, `COMMENT_SCOPE=issue`, `PHASE_NAME=code`. The cutoff resolves to the most recent `phase/ready` label assignment. For resume runs (PR already exists), use `COMMENT_SCOPE=issue+pr`. Record results in the Spec's `## Consumed Comments` section.
 
 ### Step 3: `phase/ready` Label Check
 

@@ -64,10 +64,6 @@ Run `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-type.sh $NUMBER` and store the resu
 
 `ISSUE_TYPE` is referenced in Step 10 template selection.
 
-**Consume comments since the last phase (L0 input):**
-
-Read `${CLAUDE_PLUGIN_ROOT}/modules/l0-surfaces.md` and follow the "Comment Consumption Procedure" section with parameters: `ISSUE_NUMBER=$NUMBER`, `COMMENT_SCOPE=issue`, `PHASE_NAME=spec`. The cutoff resolves to the most recent `phase/issue` label assignment. Record results in the Spec's `## Consumed Comments` section.
-
 ### Step 2: Worktree Entry
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Entry" section.
@@ -75,6 +71,10 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/worktree-lifecycle.md` and follow the "Entry
 **Worktree name convention:** `spec/issue-$NUMBER`
 
 Record `ENTERED_WORKTREE` for later use. The Entry section includes running `.claude/hooks/worktree-init.sh` if it exists.
+
+**Consume comments since the last phase (L0 input; run after Worktree Entry above — see `modules/worktree-lifecycle.md` § "Spec file write destination"):**
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/l0-surfaces.md` and follow the "Comment Consumption Procedure" section with parameters: `ISSUE_NUMBER=$NUMBER`, `COMMENT_SCOPE=issue`, `PHASE_NAME=spec`. The cutoff resolves to the most recent `phase/issue` label assignment. Record results in the Spec's `## Consumed Comments` section.
 
 ### Step 3: Label Transition (start)
 
