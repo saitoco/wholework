@@ -79,6 +79,34 @@ acquire_lock
 
 git fetch origin "$BASE_BRANCH" 2>&1 || echo "Warning: git fetch origin ${BASE_BRANCH} failed; continuing with local refs" >&2
 
+# See modules/orchestration-fallbacks.md#ff-only-merge-fallback
+# Shared by both the true-side (BASE_BRANCH checked out here) and false-side
+# (ref-to-ref fetch rejected due to divergence) recovery paths: ensure FROM_BRANCH
+# contains target_ref, rebasing FROM_BRANCH's worktree onto it when it does not.
+# target_ref differs by caller: true side passes the local $BASE_BRANCH (its ff
+# judgment is against the local checkout's HEAD); false side passes
+# "origin/${BASE_BRANCH}" (its ff judgment is against the ref-to-ref fetch target).
+# Exits the script directly on unrecoverable failure (no worktree found, or rebase
+# conflict) so callers do not need their own error handling.
+rebase_from_branch_onto() {
+  local target_ref="$1"
+  if git merge-base --is-ancestor "$target_ref" "$FROM_BRANCH" 2>/dev/null; then
+    echo "Branch ${FROM_BRANCH} is already on ${target_ref} (is-ancestor=true); skipping rebase" >&2
+    return 0
+  fi
+  local worktree_path
+  worktree_path=$(git worktree list --porcelain | awk -v b="refs/heads/${FROM_BRANCH}" '/^worktree /{p=$2} $0 == "branch " b {print p; exit}')
+  if [[ -z "$worktree_path" ]]; then
+    echo "Error: Cannot locate a worktree for ${FROM_BRANCH} to rebase without touching the shared directory's checkout. Resolve manually." >&2
+    exit 1
+  fi
+  if ! git -C "$worktree_path" rebase "$target_ref"; then
+    git -C "$worktree_path" rebase --abort 2>/dev/null || true
+    echo "Error: Rebase of ${FROM_BRANCH} onto ${target_ref} failed with conflicts. Resolve manually." >&2
+    exit 1
+  fi
+}
+
 if [[ -n "$FROM_BRANCH" ]]; then
   # See modules/orchestration-fallbacks.md#ff-only-merge-fallback
   # Primary path: a checkout-less ref-to-ref fetch. git itself refuses this when
@@ -90,26 +118,16 @@ if [[ -n "$FROM_BRANCH" ]]; then
     if [[ "$current_branch" == "$BASE_BRANCH" ]]; then
       echo "ref-fetch rejected because ${BASE_BRANCH} is checked out here; merging in place instead..." >&2
       if ! git merge "$FROM_BRANCH" --ff-only; then
-        echo "Error: FF merge failed even though ${BASE_BRANCH} is checked out locally. Resolve manually." >&2
-        exit 1
-      fi
-    else
-      echo "ref-fetch rejected; base may have diverged. Checking ancestry..." >&2
-      if git merge-base --is-ancestor "origin/${BASE_BRANCH}" "$FROM_BRANCH" 2>/dev/null; then
-        echo "Branch ${FROM_BRANCH} is already on origin/${BASE_BRANCH} (is-ancestor=true); skipping rebase" >&2
-      else
-        worktree_path=$(git worktree list --porcelain | awk -v b="refs/heads/${FROM_BRANCH}" '/^worktree /{p=$2} $0 == "branch " b {print p; exit}')
-        if [[ -n "$worktree_path" ]]; then
-          if ! git -C "$worktree_path" rebase "origin/${BASE_BRANCH}"; then
-            git -C "$worktree_path" rebase --abort 2>/dev/null || true
-            echo "Error: Rebase of ${FROM_BRANCH} onto origin/${BASE_BRANCH} failed with conflicts. Resolve manually." >&2
-            exit 1
-          fi
-        else
-          echo "Error: Cannot locate a worktree for ${FROM_BRANCH} to rebase without touching the shared directory's checkout. Resolve manually." >&2
+        echo "FF merge failed while ${BASE_BRANCH} is checked out; base may have diverged. Checking ancestry..." >&2
+        rebase_from_branch_onto "$BASE_BRANCH"
+        if ! git merge "$FROM_BRANCH" --ff-only; then
+          echo "Error: FF merge failed even though ${BASE_BRANCH} is checked out locally. Resolve manually." >&2
           exit 1
         fi
       fi
+    else
+      echo "ref-fetch rejected; base may have diverged. Checking ancestry..." >&2
+      rebase_from_branch_onto "origin/${BASE_BRANCH}"
       if ! git fetch . "${FROM_BRANCH}:${BASE_BRANCH}"; then
         echo "Error: ref-fetch of ${FROM_BRANCH} into ${BASE_BRANCH} still failed after rebase. Resolve manually." >&2
         exit 1
