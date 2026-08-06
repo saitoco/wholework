@@ -45,3 +45,47 @@ Issue 本文の「方針確定 (2026-08-06)」注記により対応方針は確�
 - `tests/run-fact-matching.bats` のフィクスチャは post-merge AC が `[x]` チェック済みの場合を run-fact matching スキャン対象外として既にモデル化している (`scan-pending-ac.sh` は unchecked のみ走査する別メカニズム)。本変更と矛盾しないことを確認済み。
 - Step 8b (manual) と Step 8c (observation) の post-merge 処理は「For each unchecked post-merge condition」として既に unchecked のみを対象にしているため、今回のスキップ規則は Step 5 (pre-merge) と Step 8a (post-merge + hint) の 2 箇所のギャップを埋めるだけでよい。
 - Issue 本文の記述と既存実装 (Step 5 の `ac-tier: preview` 前例、Step 6 の該当行) を照合したが、矛盾は検出されなかった。
+
+## issue retrospective
+
+**Triage (auto-chain)**: `triaged` ラベル未付与だったため triage を自動実行。Type=Task (precedent: #1163 と同系統の retro/verify 起票、既存動作の再分類・最適化に分類)、Priority=未検出、Size=M (SKILL.md 本体 + tests/ 追加分の見積り)、Value=3 (Impact=2: `skills/verify/SKILL.md` は複数 skill から参照される shared component、Alignment=4: product.md Vision の `/verify` post-merge 検証コスト最適化と直接合致)。重複候補・滞留・依存関係の異常は検出されませんでした。
+
+**AC 修正 (session=next 補完)**: Post-merge の observation 条件 `<!-- verify-type: observation event=auto-run -->` に `session=next` を追加しました。本 Issue の Background は `skills/verify/SKILL.md` を変更対象として参照しており、observation 条件は harness の skill キャッシュ特性上、この Issue を処理する会話セッション内では評価不能 (変更が着地した後に開始する次セッションでのみ判定可能) です。`scripts/check-skill-change-observation-ac.sh` による機械チェックで欠落を検出し (exit 2)、規約 (`modules/verify-classifier.md` § observation Type) に従って補完しました。
+
+**タイトル更新 (drift 補正)**: 旧題「verify: チェック済み **pre-merge** AC の再検証を既定でスキップし二重検証コストを削減」は、本文の「方針確定」注記でスコープが pre-merge / post-merge 問わずチェック済み AC 全般に拡張された結果、本文と乖離していました。新題「verify: チェック済み AC の再検証を既定でスキップし二重検証コストを削減」に更新し、"pre-merge" 限定の含みを除去しています。
+
+**ambiguity 判定**: Issue 本文には既に「方針確定 (2026-08-06)」注記で対応方針 A (一律スキップ)・明示フラグ不採用・既存の `ac-tier: preview` スキップ前例との整合が明記されており、新たな ambiguity point は検出されませんでした (Clarification Questions は 0 件)。
+
+**verify command 監査**: 5 件の `<!-- verify: ... -->` を Pattern 1〜6 で監査。`command "bats tests/"` は Pre-merge に配置されていますが、対応する CI job (`test.yml` の `Run bats tests`) が存在し、かつスクリプトが失敗時に非ゼロ exit を返す設計のため Pattern 6-5 (常時 UNCERTAIN) には該当しません。他の 4 件は `rubric` で問題なし。監査コメントの投稿は不要と判断しました (findings なし)。
+
+**Scope Assessment**: non-interactive モードのため sub-issue splitting 評価はスキップしました (Size M のため元々対象外)。
+
+## spec retrospective
+
+### Minor observations
+- Nothing to note
+
+### Judgment rationale
+- SPEC_DEPTH=light (Size M) のため Step 7 (Ambiguity Resolution) と Step 8 (Uncertainty) はスキップ。トリアージ retrospective で ambiguity point 0 件と既に確認されており、整合する。
+- Step 9 (UI Design Phase) は SPEC_DEPTH に関わらず実行対象だが、本 Issue は `/verify` skill 内部ロジックの変更でありインタラクティブ UI 要素を一切含まないため、Figma MCP の可用性確認を行わずに「UI design not needed」と判定してスキップした。Issue 内容から明白に非該当と判断できるケースであり、不要なツール呼び出しを避けた。
+- スキップ規則の実装箇所を Step 5 と Step 8a の 2 箇所に絞り込んだ判断根拠: Step 8b/8c は既に "For each unchecked post-merge condition" という文言で unchecked のみを対象にしていることをコード調査で確認済み。Step 4 の分類一覧 (pre-merge/post-merge+hint/no-hint/observation) 自体は変更せず、実際にループ処理を行う Step 5/8a 側にスキップ規則を追加する設計とした — Step 4 は「対象を分類する」役割にとどまり、「対象をどう処理するか」は各 Step の責務であるため。
+
+### Uncertainty resolution
+- Nothing to note
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- スキップ規則の実装箇所を Step 5 (pre-merge) と Step 8a (post-merge+hint) の 2 箇所に限定した。Step 8b/8c は既に unchecked のみを対象にしており変更不要と判断した
+- 一般規則 (already-checked AC skip rule) と既存の `ac-tier: preview` 固有規則は併存させ、preview 規則を置き換えない設計とした (両者は矛盾せず、preview AC が `[x]` の場合は一般規則が適用されるだけ)
+- opt-in 再検証フラグは導入せず、継続検証は Post-merge セクションへの AC 重複記載で表現する方針を Notes に明記した (Issue 本文の確定方針どおり)
+
+### Deferred Items
+- Post-merge の observation AC (`event=auto-run session=next`) は本セッション内では評価不能。次回 `/auto` 完了後の `/verify` 実行で SKIPPED 報告を観察する必要がある
+- `docs/workflow.md` / `docs/guide/customization.md` は更新不要と判断したが、`/code` 実装時に SKILL.md の文言が固まった時点で念のため再確認が望ましい
+
+### Notes for Next Phase
+- `/code` は Implementation Steps 1〜3 (SKILL.md 編集) と Step 4 (bats テスト追加) を、Spec に記載した挿入位置 (段落の文脈で指定、行番号ではない) に従って実装すること
+- `tests/verify.bats` に `step6_section`/`step8a_section` ヘルパーを追加する際、既存の `step5_section`/`step8c_section` の awk パターンに厳密に合わせること (見出しレベル `###` vs `####` の違いに注意)
+- 新規追加する文言 ("already checked; skipped by default" 等) は Pre-merge verify command (rubric) が期待する語彙と一致させ、SKILL.md 本文とテストで同一の exact phrase を使うこと
