@@ -123,3 +123,13 @@
 ### Improvement Proposals
 - 4回連続の再現 (re-run〜re-run #3 に続く4件目) を受け、re-run #3 で「起票水準に達した」と判定した follow-up Issue を本 `/verify` の Step 16 (retro-proposals) で起票する方針だったが、Tier 1 分類後の freshness check (`modules/retro-proposals.md` Step 10) で `modules/observation-trigger.md` § Condition Check Gate (`keyword=`) を確認したところ、Issue #794 が同種の問題 (`event=pr-review-full` の無条件発火) 向けに導入済みの軽量プリフィルタ機構 (`--context-file` の内容に対する `keyword=` 大文字小文字非区別部分一致) がそのまま適用可能と判明した。新規の絞り込み機構を実装する必要はなく、本 Issue 自身の post-merge AC に `keyword=workflow` を追加するだけで解決するため、**新規 Issue は起票せず**、本 Issue の AC を直接更新した (Auto-Resolved Ambiguity Points 参照)。関連 Issue #1118 は route/mode/recovery-tier 系の実行文脈フィルタが scope であり、今回発見した `keyword=` (diff/Spec 内容ベースのフィルタ) とは別軸で共存する — 参考のため記録は残すが対応不要
 
+## Verify Retrospective (2026-08-06 re-run #5)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1218、Issue #1082) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカーあり) したが、今回の発火元 PR #1218 の diff (`scripts/reconcile-phase-state.sh`, `modules/phase-state.md`, `tests/reconcile-phase-state.bats`, `docs/spec/issue-1082-*.md` — worktree の完了判定シグナル追加) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず UNCERTAIN 判定に帰着した。ここまでは re-run〜re-run #4 と同型の再現だが、本 re-run では新たな観測がある: re-run #4 で導入した `keyword=workflow` ゲートが、実際には Issue #1082 の Spec 本文中の "`docs/workflow.md`" というファイル名参照 (`docs/product.md` / `docs/tech.md` / `docs/workflow.md` / `docs/structure.md` を列挙した一文) に大文字小文字非区別で部分一致しただけで発火していたことを確認した。GitHub Actions ワークフローの内容とは無関係な誤発火であり、re-run #4 で「起票水準に達した問題を解決した」と判断した `keyword=` フィルタ自体が、ファイル名の部分文字列に反応する粗いマッチングであるという新しい構造的欠陥を持つことが判明した
+
+### Improvement Proposals
+- re-run #4 で追加した `keyword=workflow` ゲートは、`.github/workflows/` 配下のワークフロー内容ではなく「diff/Spec テキスト中に 'workflow' という文字列が (ファイル名の一部としてであっても) 出現するか」という表層一致でしか判定していない。本 Issue の Spec のようにドキュメントファイル名の列挙 (`docs/workflow.md`) に反応して誤発火するケースが実測で確認できたため、`keyword=` フィルタの設計そのもの (単純な部分文字列マッチ vs. ファイルパス変更を対象とした構造化マッチ、例えば `.github/workflows/*.yml` の変更有無を見る) を見直す価値があると考えられる。ただし本件は `keyword=workflow` 導入後の初回発生であり、re-run〜re-run #3 で適用した「3回連続再現で起票水準」の閾値には未到達 — Step 16 (retro-proposals) の Tier 1 分類・freshness check に判断を委ねる
+
