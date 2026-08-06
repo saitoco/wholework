@@ -364,7 +364,10 @@ fi
 
 # Post-processor fallback: if LLM did not append ## Consumed Comments, do it now.
 # Compare post-count with pre-count; trigger fallback when count did not increase.
-if [[ $EXIT_CODE -eq 0 ]]; then
+# Skipped for pr route: the Spec lives on the PR (worktree) branch there, which this
+# main-repository post-exit point cannot observe or safely write to. The pr route's
+# safety net is instead the in-session mandatory call in skills/code/SKILL.md Step 12.
+if [[ $EXIT_CODE -eq 0 && "$ROUTE_FLAG" != "--pr" ]]; then
   _SPEC_FILE_POST=$(ls "${_REPO_ROOT}/$_SPEC_DIR/issue-${ISSUE_NUMBER}-"*.md 2>/dev/null | head -1 || true)
   _POST_COUNT=$(grep -c "^## Consumed Comments" "${_SPEC_FILE_POST:-/dev/null}" 2>/dev/null || true)
   _POST_COUNT="${_POST_COUNT:-0}"
