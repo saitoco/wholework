@@ -59,3 +59,43 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue 1078` 実行時の Issue Retrospective — スコープを `/spec` にも拡大、AC2 の verify command 強化 (`"Consumed Comments"` → `"Comment Consumption"`)、post-merge チェックボックス書式修正の根拠を記録。現行 main で `/code`・`/spec` 双方が未解消であることも確認済み / https://github.com/saitoco/wholework/issues/1078#issuecomment-5204156551
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation Steps 1–4 were followed as written (paragraph relocation only, no Step number/heading changes; Notes point 1's "move-only, not full swap" rationale held up — the 5 existing Step 1/2 cross-references confirmed unaffected).
+
+### Design Gaps/Ambiguities
+- None found beyond what Notes already documents.
+
+### Rework
+- None.
+
+### Own-session precedent follow-through
+- This `/code 1078` session itself reproduced the same ordering risk the Issue describes: `skills/code/SKILL.md` on `main` (pre-fix) still calls the Comment Consumption Procedure in Step 1, before Worktree Entry. Rather than execute the pre-fix instructions literally (which would have written `## Consumed Comments` against the main working tree before `EnterWorktree`, exactly the bug being fixed), this session delayed its own Comment Consumption Procedure call until after Worktree Entry — mirroring the precedent the `/spec 1078` session recorded in this Spec's Notes ("本セッション自身での実地確認"). No new comments were pending at that point, so no observable behavior difference resulted, but the ordering choice is recorded here in case a future session needs the same judgment call while this fix is in flight on a PR branch.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Confirmed both pre-merge verify commands (rubric on the ordering-conflict resolution; `grep "Comment Consumption" modules/worktree-lifecycle.md`) PASS against the PR branch content, not just local worktree state, per the code phase's handoff note.
+- Ran Step 10 as a 1-agent lightweight integrated review (`REVIEW_DEPTH=light`, `--light` explicitly passed) rather than the 2-group full fan-out; all 4 review-light perspectives (spec deviation, edge cases/robustness, security/safety, documentation consistency) returned no issues.
+- Confirmed exhaustiveness of the fix's scope: `skills/code/SKILL.md`, `skills/spec/SKILL.md`, and `skills/verify/SKILL.md` are the only three callers of the Comment Consumption Procedure repo-wide, and all three now share the same correct ordering (Entry before Consumption).
+
+### Deferred Items
+- Post-merge AC (manual, unchanged from code phase's handoff): confirm via a live `/code`/`/spec` run on some future Issue that Comment Consumption content recorded post-Entry actually lands in the PR-branch-committed Spec. Still unresolved (`- [ ]` in the Issue body) as of this review.
+
+### Notes for Next Phase
+- No MUST/SHOULD/CONSIDER issues were raised; `/merge` can proceed without a fix cycle.
+- The Post-merge AC above needs a live run of `/code` or `/spec` on some future Issue to close out — not something `/merge` itself can verify.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note. Implementation Steps 1–4 were followed exactly (paragraph relocation only); re-verified independently during Step 8 (both pre-merge verify commands PASS) and by the Step 10 review-light agent (Spec deviation perspective: no issues).
+
+### Recurring issues
+- Nothing to note as an unresolved recurrence. This Issue is the deliberate second half of the two-path breakdown #1058 already documented (bash wrapper post-processor vs. SKILL.md Step ordering) — not a fresh instance of the same defect. Confirmed exhaustiveness: `grep -rl "Comment Consumption Procedure" skills/*/SKILL.md` returns exactly `skills/code/SKILL.md`, `skills/spec/SKILL.md` (both fixed by this PR), and `skills/verify/SKILL.md` (already correctly ordered, used as the precedent). No other skill caller exists, so no follow-up sweep Issue is needed for this specific pattern.
+
+### Acceptance criteria verification difficulty
+- Nothing to note. Both pre-merge conditions (`rubric` and `grep`) resolved deterministically to PASS with no UNCERTAIN — the AC2 verify command strengthening done at Issue creation time (`"Consumed Comments"` → `"Comment Consumption"`, recorded in Consumed Comments above) kept the grep condition meaningful rather than vacuously true.
