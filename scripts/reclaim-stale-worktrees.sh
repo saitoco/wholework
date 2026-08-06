@@ -40,6 +40,7 @@ MAIN_HEAD="$(git -C "$MAIN_ROOT" rev-parse HEAD)"
 
 count_pruned=0
 count_reclaimed_wt=0
+count_reclaimed_wt_only=0
 count_reclaimed_orphan=0
 count_excluded=0
 count_warned_uncommitted=0
@@ -49,6 +50,7 @@ count_skipped=0
 
 PRUNED_LIST=""
 RECLAIMED_WT_LIST=""
+RECLAIMED_WT_ONLY_LIST=""
 RECLAIMED_ORPHAN_LIST=""
 EXCLUDED_LIST=""
 WARNED_UNCOMMITTED_LIST=""
@@ -202,11 +204,14 @@ handle_worktree_entry() {
   fi
 
   if git worktree remove --force "$path" 2>/dev/null; then
-    count_reclaimed_wt=$((count_reclaimed_wt + 1))
-    RECLAIMED_WT_LIST="${RECLAIMED_WT_LIST}${path} (${branch:-detached}, ${kind} #${num})
+    if [ -n "$branch" ] && ! delete_branch_safe "$branch" "$kind" "$COMPLETION_HEAD_REF_OID"; then
+      count_reclaimed_wt_only=$((count_reclaimed_wt_only + 1))
+      RECLAIMED_WT_ONLY_LIST="${RECLAIMED_WT_ONLY_LIST}${path} (${branch}, ${kind} #${num}, branch retained)
 "
-    if [ -n "$branch" ]; then
-      delete_branch_safe "$branch" "$kind" "$COMPLETION_HEAD_REF_OID" || true
+    else
+      count_reclaimed_wt=$((count_reclaimed_wt + 1))
+      RECLAIMED_WT_LIST="${RECLAIMED_WT_LIST}${path} (${branch:-detached}, ${kind} #${num})
+"
     fi
   else
     count_skipped=$((count_skipped + 1))
@@ -349,6 +354,7 @@ print_section() {
 echo "=== reclaim-stale-worktrees summary ==="
 print_section "pruned" "$count_pruned" "$PRUNED_LIST"
 print_section "reclaimed (worktree+branch)" "$count_reclaimed_wt" "$RECLAIMED_WT_LIST"
+print_section "reclaimed (worktree only, branch retained)" "$count_reclaimed_wt_only" "$RECLAIMED_WT_ONLY_LIST"
 print_section "reclaimed (orphan branch only)" "$count_reclaimed_orphan" "$RECLAIMED_ORPHAN_LIST"
 print_section "excluded (concurrent-session-guard)" "$count_excluded" "$EXCLUDED_LIST"
 print_section "warned (uncommitted changes)" "$count_warned_uncommitted" "$WARNED_UNCOMMITTED_LIST"

@@ -145,6 +145,30 @@ mock_pr() {
     ! git -C "$MAIN_REPO" branch --list 'worktree-code+pr-1149' | grep -q "worktree-code+pr-1149"
 }
 
+@test "worktree removed but branch delete rejected (unmerged, no -D fallback for issue kind) is reported separately, not double-counted as reclaimed (worktree+branch)" {
+    mock_issue 5000 CLOSED
+    git -C "$MAIN_REPO" worktree add -q -b worktree-code+issue-5000 "$BATS_TEST_TMPDIR/wt5000"
+    (
+        cd "$BATS_TEST_TMPDIR/wt5000"
+        echo "unmerged change" >> file.txt
+        git add -A
+        git commit -q -m "unmerged commit"
+    )
+
+    # sanity: plain -d must fail (branch not fully merged into main); issue kind has no -D fallback
+    ! git -C "$MAIN_REPO" branch -d worktree-code+issue-5000 2>/dev/null
+
+    cd "$MAIN_REPO"
+    run "$SCRIPT" --apply
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"reclaimed (worktree only, branch retained): 1"* ]]
+    [[ "$output" == *"warned (branch tip diverges): 1"* ]]
+    [[ "$output" != *"reclaimed (worktree+branch): 1"* ]]
+
+    ! git -C "$MAIN_REPO" worktree list | grep -q "wt5000"
+    git -C "$MAIN_REPO" branch --list 'worktree-code+issue-5000' | grep -q "worktree-code+issue-5000"
+}
+
 @test "orphan branch (no worktree directory) is reclaimed via the same completion check (AC3)" {
     git -C "$MAIN_REPO" branch worktree-code+issue-2000
     mock_issue 2000 CLOSED
