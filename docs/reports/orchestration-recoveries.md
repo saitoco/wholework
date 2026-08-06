@@ -67,6 +67,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-06 06:15 UTC: manual-recovery-worktree-rebase
+
+### Context
+- Issue #1180, phase: verify
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 1
+
+### Diagnosis
+- cause: ff-only-merge-base-advanced
+- verify phase の Worktree Exit で worktree-merge-push.sh が exit 1。ref-fetch が main の checkout により拒否され step 2 の in-place git merge --ff-only に落ちたが、並行セッション (#1185 verify) が main を 2 コミット進めていたため FF 不可で abort。catalog の documented escalation どおり、親セッションが step 5 相当の git -C .claude/worktrees/verify+issue-1180 rebase origin/main を手動実行し、worktree-merge-push.sh を再実行して解消。conflict なし
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 
 ## 2026-08-06 04:45 UTC: review-tier3-recovery
 
