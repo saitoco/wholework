@@ -141,6 +141,26 @@ teardown() {
     ! grep -q -- "--facts-file" "$BATS_TEST_TMPDIR/search-calls.log"
 }
 
+@test "forwarding: --session is forwarded to opportunistic-search.sh" {
+    export MOCK_SEARCH_OUTPUT="[]"
+    run bash "$SCRIPT" --event auto-run --session "12345-1786000000"
+    [ "$status" -eq 0 ]
+    grep -q -- "--session 12345-1786000000" "$BATS_TEST_TMPDIR/search-calls.log"
+}
+
+@test "forwarding: no --session means opportunistic-search.sh is called without it" {
+    export MOCK_SEARCH_OUTPUT="[]"
+    run bash "$SCRIPT" --event auto-run
+    [ "$status" -eq 0 ]
+    ! grep -q -- "--session" "$BATS_TEST_TMPDIR/search-calls.log"
+}
+
+@test "error: --session without value" {
+    run bash "$SCRIPT" --event auto-run --session
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"--session requires an argument"* ]]
+}
+
 @test "resilience: opportunistic-search.sh error does not abort trigger" {
     export MOCK_SEARCH_EXIT=1
     export MOCK_SEARCH_OUTPUT=""

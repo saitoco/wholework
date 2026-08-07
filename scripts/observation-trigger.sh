@@ -3,7 +3,7 @@
 # Dispatch observation-type ACs when a named event fires.
 #
 # Usage:
-#   scripts/observation-trigger.sh --event <event-name> [--dry-run] [--context-file <path>] [--facts-file <path>]
+#   scripts/observation-trigger.sh --event <event-name> [--dry-run] [--context-file <path>] [--facts-file <path>] [--session <id>]
 #
 # --context-file is forwarded as-is to opportunistic-search.sh, which gates
 # matches carrying a `keyword=<text>` AC attribute against the file's content
@@ -12,6 +12,11 @@
 # --facts-file is forwarded as-is to opportunistic-search.sh, which gates
 # matches carrying a `when=<axis>:<value>` AC attribute against /auto run facts
 # (route / mode / recovery-tier). See modules/observation-trigger.md § Condition
+# Check Gate (when=).
+#
+# --session is forwarded as-is to opportunistic-search.sh, which resolves it to
+# the current /auto run's facts via collect-run-facts.sh --session <id> when
+# --facts-file is not also given. See modules/observation-trigger.md § Condition
 # Check Gate (when=).
 #
 # For each matched Issue, posts a comment recommending the user re-run /verify,
@@ -32,6 +37,7 @@ EVENT_NAME=""
 DRY_RUN=false
 CONTEXT_FILE=""
 FACTS_FILE=""
+SESSION_ID=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -63,9 +69,17 @@ while [ $# -gt 0 ]; do
             FACTS_FILE="$2"
             shift 2
             ;;
+        --session)
+            if [ $# -lt 2 ]; then
+                echo "Error: --session requires an argument" >&2
+                exit 1
+            fi
+            SESSION_ID="$2"
+            shift 2
+            ;;
         *)
             echo "Error: Unknown argument: $1" >&2
-            echo "Usage: $0 --event <event-name> [--dry-run] [--context-file <path>] [--facts-file <path>]" >&2
+            echo "Usage: $0 --event <event-name> [--dry-run] [--context-file <path>] [--facts-file <path>] [--session <id>]" >&2
             exit 1
             ;;
     esac
@@ -83,6 +97,9 @@ if [ -n "$CONTEXT_FILE" ]; then
 fi
 if [ -n "$FACTS_FILE" ]; then
     SEARCH_ARGS+=(--facts-file "$FACTS_FILE")
+fi
+if [ -n "$SESSION_ID" ]; then
+    SEARCH_ARGS+=(--session "$SESSION_ID")
 fi
 RESULTS=$("${SCRIPT_DIR}/opportunistic-search.sh" "${SEARCH_ARGS[@]}" 2>/dev/null || true)
 

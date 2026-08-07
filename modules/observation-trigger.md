@@ -30,6 +30,7 @@ Each emitter calls the following command when its event fires:
 | `--dry-run` | Optional. Search runs normally and API calls are not skipped (`opportunistic-search.sh` is originally read-only and has no side effect to suppress here). Accepted as an argument for CLI backward compatibility, but it is a no-op flag with no effect on behavior |
 | `--context-file <path>` | Optional. Gates matches carrying a `keyword=` AC attribute against this file's content. See § Condition Check Gate below |
 | `--facts-file <path>` | Optional. Gates matches carrying a `when=<axis>:<value>` AC attribute against `/auto` run facts JSON. See § Condition Check Gate (`when=`) below |
+| `--session <id>` | Optional. `/auto` session id to resolve run facts for a `when=<axis>:<value>` AC attribute, via `collect-run-facts.sh --session <id>`. Ignored when `--facts-file` is also given (that takes priority). See § Condition Check Gate (`when=`) below |
 
 **Output (stdout):** JSON array
 
@@ -272,7 +273,8 @@ full field definitions). It never collects its own execution context independent
 
 | Argument | Description |
 |----------|-------------|
-| `--facts-file <path>` | Optional. Path to a run facts JSON file (`collect-run-facts.sh` output) to match `when=` clauses against. If omitted, `opportunistic-search.sh` lazily calls `collect-run-facts.sh` with no arguments the first time a `when=`-tagged AC line is processed, and caches the result for the rest of the process. If the given path does not exist, a warning is printed to stderr and the gate falls back to lazy collection. `observation-trigger.sh` forwards this argument as-is to `opportunistic-search.sh`. |
+| `--facts-file <path>` | Optional. Path to a run facts JSON file (`collect-run-facts.sh` output) to match `when=` clauses against. If omitted and `--session <id>` is given, `opportunistic-search.sh` lazily calls `collect-run-facts.sh --session <id>` the first time a `when=`-tagged AC line is processed. If neither is given, it lazily calls `collect-run-facts.sh` with no arguments. Either lazy call's result is cached for the rest of the process. If the given `--facts-file` path does not exist, a warning is printed to stderr and the gate falls back to `--session` (or, absent that, no-argument) lazy collection. `observation-trigger.sh` forwards this argument as-is to `opportunistic-search.sh`. |
+| `--session <id>` | Optional. `/auto` session id passed to `collect-run-facts.sh --session <id>` when resolving `when=` clauses. Ignored when `--facts-file` is also given (that takes priority). When neither is given, `collect-run-facts.sh` falls back to its own `AUTO_SESSION_ID` env var → `.tmp/auto-session-current` pointer file → fail-open resolution ladder — this is the `--session`-unspecified backward-compatible path. `observation-trigger.sh` forwards this argument as-is to `opportunistic-search.sh`. |
 
 **Matching specification:**
 
