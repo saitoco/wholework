@@ -67,19 +67,31 @@
 - None.
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Fixed `_completion_issue()` exactly per the Spec's prescribed regex (`grep -qE '^phase/(issue|ready|code|review|merge|verify|done)$'`), matching `_completion_spec()`'s existing pattern style for consistency.
-- Ran the full `bats tests/` suite (not just the direct counterpart file) because `modules/phase-state.md` — one of the three changed files — is also referenced by `tests/operate-route.bats`, triggering the Behavioral Change Detection full-suite override. All 1500+ tests passed.
+- Ran `/review 1244 --light --non-interactive` (Size=M, `--light` explicit); Step 10 dispatched a single `review-light` agent covering all 4 aspects (Spec deviation, edge cases, security, documentation consistency) — no issues found.
+- Verified all 3 Pre-merge AC directly from the diff/CI rather than re-running commands: the `rubric` and `section_contains` conditions were confirmed against the PR diff, and the `command "bats tests/reconcile-phase-state.bats"` condition was confirmed via CI reference fallback (the "Run bats tests" CI job, which already SUCCEEDED) since Step 8 runs in safe mode.
+- Posted review as `COMMENT` (no MUST issues); all 9 CI checks were SUCCESS at review time.
 
 ### Deferred Items
-- The Post-merge AC (opportunistic, "confirm on a real triaged-but-not-phase/issue Issue that `matches_expected:false` is now detected") is left unchecked for `/verify` to confirm post-merge.
+- The Post-merge AC (opportunistic, "confirm on a real triaged-but-not-phase/issue Issue that `matches_expected:false` is now detected") remains unchecked, carried forward from the code phase handoff for `/verify` to confirm post-merge.
 
 ### Notes for Next Phase
-- No implementation deviations from the Spec — `/review` should find the diff matches Changed Files / Implementation Steps exactly.
-- This Issue's own label state (`phase/code` present without `phase/ready`) caused the `code-pr` precondition check to report `matches_expected:false` when probed during this `/code` run — this is expected given the Issue's history (see Autonomous Auto-Resolve Log) and not a new bug; no action needed from `/review`.
+- No MUST/SHOULD/CONSIDER issues were raised; `/merge 1244` can proceed once ready.
+- The Post-merge AC verification depends on finding a real triaged-but-not-`phase/issue` Issue in the wild — `/verify` should check whether such a case has occurred naturally rather than fabricating one.
 
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1117#issuecomment-5213109567
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Nothing to note. `review-light` confirmed the diff matches the Spec's Changed Files and Implementation Steps exactly, with no structural divergence.
+
+### Recurring issues
+Nothing to note. This was a narrowly-scoped, single-purpose bugfix (one regex signature change plus matching test/doc updates); no repeated issue patterns observed across the 4 review aspects.
+
+### Acceptance criteria verification difficulty
+Nothing to note. All 3 Pre-merge conditions carried well-formed verify commands (`rubric`, `section_contains`, `command`) and resolved cleanly — no UNCERTAIN classifications. The `command` condition resolved via CI reference fallback without ambiguity, since the CI job name ("Run bats tests") unambiguously corresponded to the target test file.
