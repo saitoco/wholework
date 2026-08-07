@@ -100,8 +100,10 @@ No new comments since last phase.
 - merge フェーズなし (PR 不在)。
 
 #### verify
-- Pre-merge 3 件はすべて `/code` 時点でチェック済みのため already-checked skip rule により SKIPPED。post-merge の observation AC (`event=auto-run`) は未発火のため SKIPPED。FAIL / UNCERTAIN は 0 件。
-- **operate route の Issue は `closes #N` コミットを持たないため CLOSE 契機が `/verify` の全 AC 充足のみになる**。本 Issue は observation AC が未発火である限り OPEN + `phase/verify` に留まり続ける。同一セッション内では `auto-run` イベントが `/auto` Step 5 の最後にしか発火しないため、operate route の sub-issue はその実行中に `phase/done` へ到達できない。親 #1158 の Spec が置く precondition gate (「sub-issue 全件が CLOSED または `phase/done`」) は、この構造上、operate route の sub-issue を含む限り同一セッション内では満たせない。この経路の欠落は #1241 (XL 親の集約成果物経路) のスコープに含まれる。
+- Pre-merge 3 件はすべて `/code` 時点でチェック済みのため already-checked skip rule により SKIPPED。post-merge の observation AC (`event=auto-run`) は 1 回目の verify では未発火で SKIPPED、2 回目で PASS 判定に到達し `phase/done` + close まで完了した。FAIL / UNCERTAIN は 0 件。
+- Spec が採った retire 方式 (AC 行は編集せず retire コメント + `phase/verify` → `phase/done` 遷移) が、observation AC の評価局面で設計どおり機能した。`skills/audit/SKILL.md` § Manual Waiting Count の母集団は `phase/verify` ラベル保持 Issue なので、ラベル遷移だけで 6 件が集計対象から外れる。AC 行の本文を編集する必要がなく、retire の判断根拠がそのまま Issue 本文に残る点も良い (#1165 の「`### Retired Post-merge Conditions` 見出しへ退避」方式と結果は同じだが、こちらのほうが編集量が少ない)。
+- **operate route + observation AC の組み合わせで deadlock が実在することを確認した**。operate route の Issue は `closes #N` コミットを持たないため CLOSE 契機が `/verify` の全 AC 充足のみになる。一方 `scripts/opportunistic-search.sh:202` の母集団は `--state closed` 固定なので、OPEN のままの本 Issue は `observation-trigger.sh --event auto-run` のマッチ集合 (本セッションでは 83 件) から構造的に除外され、`auto-run` の通知コメントが届かない。結果として「close されないと通知母集団に入らない → 通知が来ないと observation AC が評価されない → AC が評価されないと close されない」という閉路が成立する。本セッションでは親セッションがスキャナ欠陥の補正として同一形式の通知を手動投稿して打開したが、恒久対策は #1242 (母集団の closed 限定を解消) が担う。
+- 親 #1158 の Spec が置く precondition gate (「sub-issue 全件が CLOSED または `phase/done`」) は、上記 deadlock が解消されない限り operate route の sub-issue を含む XL では同一セッション内で満たせない。この経路の欠落は #1241 (XL 親の集約成果物経路) のスコープに含まれる。
 
 ### Improvement Proposals
-- N/A — 本 Issue から派生する構造的改善は既に #1240 (`run-auto-sub.sh` の operate route 非対応) および #1241 (XL 親の集約成果物経路の未定義) として起票済み。orchestration 異常の記録も `docs/reports/orchestration-recoveries.md` が SSoT として保持している。
+- N/A — 本 Issue から派生する構造的改善は既に #1240 (`run-auto-sub.sh` の operate route 非対応)、#1241 (XL 親の集約成果物経路の未定義)、#1242 (走査母集団の closed 限定 — 本 Issue の deadlock の真因) として起票済み。orchestration 異常の記録も `docs/reports/orchestration-recoveries.md` が SSoT として保持している。
