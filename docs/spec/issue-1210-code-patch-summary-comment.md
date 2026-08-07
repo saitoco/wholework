@@ -97,6 +97,8 @@ patch route の `/code` は現状、`closes #N` コミット以外に Issue タ�
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective — 投稿位置 (label transition 前)・Step 14 サブブロック配置 (Step 番号非繰り下げ)・`wholework-event` マーカー不要・bats テストを AC に含めない、の 4 点の自動解決根拠と、pr/operate route 対象外化・常時 PASS な verify command 3 件削除などの方針判断を記録 / https://github.com/saitoco/wholework/issues/1210#issuecomment-5205161524
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1210#issuecomment-5206335409
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1210#issuecomment-5212270445
 ## Notes
 
 - **Verification 件数について**: light depth の目安 (pre-merge 5 件以内) を pre-merge 7 件で超過している。Issue body の `## Acceptance Criteria > Pre-merge` (7 件) は `/issue --non-interactive` の自動解決で既に精査済み (常時 PASS になる 3 件の回帰ガードを削除した結果が 7 件) であり、「Verify command sync rule」により Spec は Issue body を verbatim で転記する — `/issue` (What) が確定した受入条件を `/spec` (How) 側で独自に間引かない、という責務境界 (`docs/product.md` § `/issue` vs `/spec` Responsibility Boundary) を優先した
