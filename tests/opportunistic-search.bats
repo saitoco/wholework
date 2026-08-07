@@ -36,6 +36,7 @@ MOCK_EOF
     # collect-run-facts.sh mock (used by when gate tests via WHOLEWORK_SCRIPT_DIR)
     cat > "$MOCK_DIR/collect-run-facts.sh" << 'MOCK_EOF'
 #!/bin/bash
+printf '%s\n' "$@" >> "$MOCK_DIR/collect-run-facts-args.txt"
 echo "${MOCK_RUN_FACTS:-}"
 MOCK_EOF
     chmod +x "$MOCK_DIR/collect-run-facts.sh"
@@ -432,6 +433,53 @@ teardown() {
     [ "$status" -eq 0 ]
     echo "$output" | jq -e 'length == 1' > /dev/null
     echo "$output" | jq -e '.[0].number == 706' > /dev/null
+}
+
+@test "when gate: --session is forwarded to collect-run-facts.sh --session" {
+    export MOCK_ISSUE_LIST='[{"number": 710}]'
+    export MOCK_ISSUE_BODY_710='- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
+    export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":710,"route":"operate","recovery_tiers":[]}]}'
+    export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
+
+    run bash "$SCRIPT" --event auto-run --session "12345-1786000000"
+    unset WHOLEWORK_SCRIPT_DIR
+    [ "$status" -eq 0 ]
+    grep -q -- "--session" "$MOCK_DIR/collect-run-facts-args.txt"
+    grep -q -- "12345-1786000000" "$MOCK_DIR/collect-run-facts-args.txt"
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 710' > /dev/null
+}
+
+@test "when gate: --facts-file takes priority over --session when both are given" {
+    export MOCK_ISSUE_LIST='[{"number": 711}]'
+    export MOCK_ISSUE_BODY_711='- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
+    # MOCK_RUN_FACTS deliberately mismatches route:operate — if --session were consulted
+    # instead of --facts-file, the result would be [] instead of a match on #711.
+    export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":711,"route":"pr","recovery_tiers":[]}]}'
+    export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
+    echo '{"session_id":"s1","mode":"single","issues":[{"number":711,"route":"operate","recovery_tiers":[]}]}' > "$BATS_TEST_TMPDIR/facts.json"
+
+    run bash "$SCRIPT" --event auto-run --facts-file "$BATS_TEST_TMPDIR/facts.json" --session "12345-1786000000"
+    unset WHOLEWORK_SCRIPT_DIR
+    [ "$status" -eq 0 ]
+    [ ! -f "$MOCK_DIR/collect-run-facts-args.txt" ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 711' > /dev/null
+}
+
+@test "when gate: no --session and no --facts-file calls collect-run-facts.sh with no arguments" {
+    export MOCK_ISSUE_LIST='[{"number": 712}]'
+    export MOCK_ISSUE_BODY_712='- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
+    export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":712,"route":"operate","recovery_tiers":[]}]}'
+    export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
+
+    run bash "$SCRIPT" --event auto-run
+    unset WHOLEWORK_SCRIPT_DIR
+    [ "$status" -eq 0 ]
+    [ -f "$MOCK_DIR/collect-run-facts-args.txt" ]
+    ! grep -q -- "--session\|--facts-file" "$MOCK_DIR/collect-run-facts-args.txt"
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 712' > /dev/null
 }
 
 @test "when gate: when= appearing in AC prose text (outside the tag) does not corrupt gate matching" {

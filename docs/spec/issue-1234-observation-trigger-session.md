@@ -48,3 +48,39 @@
 
 ## Consumed Comments
 - saito (MEMBER, first-class): triage フェーズの Issue Retrospective。タイトル正規化 (体言止め)、AC 8 の `github_check` 修正 (patch route 対応) と AC 4/5 の `section_contains` 修正 (見出し不一致・`--session-id` 部分文字列誤マッチの回避) を記録。両修正は現行の Issue 本文 AC に既に反映済みで、本 Spec の Verification はその反映後の内容を検証コマンド同期ルールに従い転写した — https://github.com/saitoco/wholework/issues/1234#issuecomment-5212780239
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — the `review-light` agent (Perspective 1: Spec Deviation) confirmed the PR diff matches this Spec's Implementation Steps closely: `--session <id>` propagates `observation-trigger.sh` → `opportunistic-search.sh` → `collect-run-facts.sh --session <id>` exactly as planned, `--facts-file` priority and no-argument backward compatibility are preserved, and both `skills/auto/SKILL.md` call sites received the literal `SESSION_ID` embedding.
+
+### Recurring issues
+
+Two independent tooling bugs surfaced while executing this review, both out of this PR's own scope but worth follow-up:
+
+- `scripts/gh-issue-edit.sh --checkbox <indices>` counts every `- [ ]`/`- [x]`-shaped line in the raw Issue body, including one quoted inside a fenced code block in the Background section (a verbatim quote of parent Issue #1118's own AC 2). This produced an off-by-one: `--checkbox 1,2,3,4,5,6,7 --check` marked the quoted decoy line instead of the real AC 7, requiring a manual `--uncheck`/`--check` correction pass. Any `/review` or `/verify` run against an Issue body that quotes another Issue's checklist in a code block is at risk of the same drift.
+- `scripts/gh-pr-review.sh`'s self-review 422 fallback (`grep -qi "request changes on your own pull request"` against captured `gh api` stderr) never triggers in practice: `gh api ... --method POST --input - 2>&1 >/dev/null` only captures `gh: Unprocessable Entity (HTTP 422)`, not the detailed JSON error body (`errors: ["Review Can not request changes on your own pull request"]`) that the grep pattern needs. Every `/review` run where the PR author and the authenticated `gh` account are the same user (a normal occurrence for solo-maintained repos) hits this silently-broken fallback and fails Step 11 outright unless manually worked around, as happened here.
+
+### Acceptance criteria verification difficulty
+
+AC 8 (`<!-- verify: github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion --jq '.[0].conclusion'" "success" -->`) could not be verified in `/review` safe mode: `github_check`'s safe-mode allowlist covers `gh run view` but not `gh run list`, so the condition returned UNCERTAIN regardless of actual CI state. Separately, the condition's target (the latest run on `main`, not on the PR branch) reads as an odd choice for a Pre-merge condition — worth a closer look at `/verify` time to confirm whether checking `main`'s CI post-merge was the intended semantics or a spec-authoring slip that should have targeted the PR branch instead (duplicating what Step 9's own CI status check already covers).
+
+The Base Branch Conflict Pre-check (Step 10) proved its value here: it flagged a real adjacency risk between this PR's `--session` hunks and `origin/main`'s Issue #1220 `resolve_filtered_context()` hunks in `scripts/opportunistic-search.sh`. The risk did not materialize (`git merge origin/main` auto-resolved cleanly with no conflict markers, confirmed by re-running both affected bats files), but treating the flag as a MUST and resolving it by actually merging and re-testing — rather than dismissing it as a false positive — is the correct default when the pre-check's adjacency heuristic cannot itself prove a real merge would be clean.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Ran Step 10 as a single `review-light` agent (light mode, all 4 aspects) since the linked Issue's Size is `M` and `--light` was explicitly requested; the Base Branch Conflict Pre-check context (4 flagged files) was appended to its prompt so the agent could judge merge-time risk directly rather than treating conflict detection as a separate pass
+- Classified AC 8 (`github_check "gh run list ..."`) as UNCERTAIN rather than executing it, since `gh run list` is not in `github_check`'s safe-mode allowlist (only `gh run view` is) — did not relax the allowlist to force a PASS
+- Resolved the sole MUST finding (merge-risk in `scripts/opportunistic-search.sh`, flagged by both the Base Branch Conflict Pre-check and the review agent) by actually merging `origin/main` into the PR branch and verifying both this PR's `--session` forwarding and `origin/main`'s Issue #1220 `resolve_filtered_context()` fix coexist, rather than leaving it as an unresolved warning for `/merge` to discover later
+- Posted the Step 11 review as a `COMMENT`-event fallback (matching `gh-pr-review.sh`'s own designed self-review-422 fallback body/format) after discovering the script's automatic fallback detection never fires — see `## review retrospective` § Recurring issues for the root cause
+
+### Deferred Items
+- AC 8 remains UNCERTAIN / unchecked (`- [ ]` in the Issue body) — `/verify` (full mode, `github_check` unrestricted) should re-evaluate it directly; also worth confirming whether checking `main`'s CI (vs. the PR branch's, already covered by Step 9) was the intended semantics
+- Two tooling bugs found during this review (`gh-issue-edit.sh --checkbox` off-by-one on fenced-code-block checkboxes; `gh-pr-review.sh`'s self-review 422 fallback never matching) are out of Issue #1234's scope and were not filed as follow-up Issues — recorded in `## review retrospective` for later triage
+
+### Notes for Next Phase
+- `/merge 1246` can proceed on the AC front — 7 of 8 Pre-merge conditions are `[x]`; AC 8 is the sole `[ ]` and will block `/merge` Step 1's pre-merge AC gate until resolved or explicitly re-verified
+- The PR branch was merged with `origin/main` during this review (commit `a4152e32`, pushed to `worktree-code+issue-1234`) specifically to eliminate the flagged base-branch conflict risk; CI re-ran and passed 9/9 on the merged commit — `/merge` should not need to redo any conflict resolution for this PR
