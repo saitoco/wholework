@@ -213,22 +213,22 @@ Issue 本文の事実主張はいずれもコードベースと一致するこ�
 - 検証段階で「到達不能な条件分岐」という指摘 (review-spec と review-bug の両方から独立に提起) が誤検知と判明した (`scripts/run-auto-sub.sh` → `spawn-recovery-subagent.sh` という XL/batch route の存在を見落としていた)。この route は本 Issue の diff に変更がなく PR diff だけでは見えないため、Adversarial verification 段階で `grep`/コードベース横断確認を行わなければ誤って MUST/SHOULD として確定していた可能性がある。2段階検証 (finder → verifier) の価値を裏付ける事例。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Step 8 の4 pre-merge AC (すべて rubric/command) は全て PASS と判定し、Issue チェックボックスは変更なし (既に `[x]` 済み)。
-- Step 10 は `capabilities.workflow: true` かつ fork context (`--non-interactive`、再呼び出し保証なし) のため Workflow path をスキップし、静的 Task fan-out (review-spec + review-bug×2、`run_in_background: false`) を採用した。
-- MUST issue は0件 (event=COMMENT)。SHOULD 6件のうち検証で確度の高かった6件すべてを Step 12 で修正 (allowed-tools 追加、PGID ポインタ再生成、再判定ループ明確化、Input 契約追加、verify-executor.md 重複解消、Per-Consumer Response 表への消費者追加)。CONSIDER 4件と SHOULD 1件 (docs/structure.md の verify command 追加提案) は見送り、PR コメントに理由を記録した。
+- pre-merge AC gate: `check-pre-merge-ac.sh` で4件全て `[x]` 済み (unchecked_count=0)、`reconcile-phase-state.sh --check-completion` で review completion は organic (review_incomplete_fallback なし) と確認。override marker は不要と判断。
+- `gh pr merge --squash --delete-branch` はワークツリー内では `main` が別ワークツリーで checkout 済みのため失敗 (`fatal: 'main' is already used by worktree`) — 主リポジトリディレクトリから再実行して解決。
+- squash merge 自体は成功したが、`--delete-branch` のローカルブランチ削除はワークツリー使用中のため失敗。リモートブランチ (`worktree-code+issue-1227`) は残存していたため `git push origin --delete` で手動削除。
 
 ### Deferred Items
 
-- `docs/structure.md`/`docs/ja/structure.md` の modules count 用 verify command を Issue #1227 の AC に追加する提案 (SHOULD) — Issue 本文編集が必要なため本 PR のスコープ外。フォローアップ Issue の要否は次フェーズ判断。
-- CONSIDER 4件 (cause slug 不一致、RECOVERY_TYPE `respawn` 誤用、fall-through 文のインデント曖昧性、signature #5/#7 の dwell threshold 欠如) は未対応。実害は限定的と判断したが、CI 障害が頻発する場合は再評価対象。
-- `docs/structure.md` の `tests/` count drift (95→実測112、本 Issue 対象外) は `/audit drift` に委譲。
+- `docs/structure.md`/`docs/ja/structure.md` の modules count 用 verify command を Issue #1227 の AC に追加する提案 (SHOULD、review phase から持ち越し) — 本 PR のスコープ外、フォローアップ Issue の要否は未判断のまま。
+- CONSIDER 4件 (cause slug 不一致、RECOVERY_TYPE `respawn` 誤用、fall-through 文のインデント曖昧性、signature #5/#7 の dwell threshold 欠如、review phase から持ち越し) は未対応のまま。
+- `docs/structure.md` の `tests/` count drift (95→実測112、本 Issue 対象外) は `/audit drift` に委譲 (review phase から持ち越し)。
 
 ### Notes for Next Phase
 
-- `/merge` 前に CI (全9ジョブ SUCCESS) と MUST issue (0件) の両方をクリアしている。
-- 修正コミット5件はいずれも `Refs:` で元のレビュー指摘 (PR inline comment または Review URL) を参照済み。
-- `bats --jobs 18 tests/` フル並列実行時の `tests/post_merge_check.bats` 間欠的 FAIL は本 PR の変更対象外の既知 flake (Code Retrospective 参照)。`/merge`/`/verify` が遭遇した場合はこの記録を参照してよい。
+- `/verify` 実行時、post-merge 検証項目「Tier 3 が `action=retry` を選ばず CI 障害として分類されることを観測で確認する (`session=next`)」が未検証のまま残っている。
+- `bats --jobs 18 tests/` フル並列実行時の `tests/post_merge_check.bats` 間欠的 FAIL は本 PR の変更対象外の既知 flake (Code Retrospective 参照)。`/verify` が遭遇した場合はこの記録を参照してよい。
+- squash merge 済み・リモートブランチ削除済み・Issue #1227 は `closes #1227` により自動クローズ見込み (`state=CLOSED` を Step 6 で確認予定)。
