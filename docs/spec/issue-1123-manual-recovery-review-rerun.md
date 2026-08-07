@@ -331,6 +331,11 @@ No new comments since last phase.
 
 #### verify
 - FAIL 0。Post-merge manual は縮小検証 (foreign-session 分類の exit 0 実測) で機構レベル確認、e2e は次回並行運用で補完
+- **(2026-08-07 追記 — post-merge observation AC は UNCERTAIN で継続)** `/auto 1158` (XL route、session `94570-1786069858`) の observation dispatch から再 verify した。fix 着地 (2026-08-04T10:24:23Z) 以降に同ヘッダのエントリが **3 件**追加されている: `background-test-wait` (#1168、2026-08-05)、`ci-infra-outage-during-ci-wait` (#1214、2026-08-07)、`ci-infra-outage-during-ci-wait` (#1206、2026-08-07)。
+- **一方 `collect-recovery-candidates.sh --threshold 1` は bare group-key `manual-recovery-review-rerun` を surfaced しない**。新規 3 件がすべて `- cause:` 行を持つため、本 Issue が導入した cause-aware grouping により cause 別 group-key へ分離されているため。`background-test-wait` の 1 件も既存の #1212 / #1213 系譜と dedup されている。
+- **条件文の単位が本 Issue 自身の変更によって多義化した**のが UNCERTAIN の理由。「エントリ単位」(ヘッダに cause suffix は付かないので 6 件すべて同一ヘッダ) では 3 件追加で条件は満たされず、「group-key 単位」(本 Issue が再定義した集計単位) では蓄積ゼロで満たされる。**集計単位を変更する Issue が、その単位を使った post-merge AC を自分に課すと、AC の意味が実装によって後から変わる**という構造的な落とし穴の実例。同種の Issue では AC 側に単位を明示すべき (「新規の bare group-key エントリ (cause 行を持たないもの)」等)。
+- 内訳としては、`ci-infra-outage-during-ci-wait` の 2 件は GitHub Actions のリポジトリ全体障害が原因で wholework 側の修正対象外。`background-test-wait` の 1 件は Cause A の系統だが、本 Issue の AC 1 は「横断規約を単一箇所に定義し既存 Issue から参照させる」ことであり個別トリガーの実修正は #1097 / #1103 に委ねる設計だった (真因の `modules/test-runner.md` 120s 固定 timeout は #1212 / #1213 で継続追跡中)。
+- **副次的に未起票候補を検出**: `manual-recovery-review-rerun/ci-infra-outage-during-ci-wait` (count 2)。`.wholework.yml` の `recoveries-auto-fire.enabled: false` (#1179 により既定 opt-out) のため自動起票されていない。
 
 ### Improvement Proposals
 - recovery 記録 (Tier 2/3 検出結果・manual recovery) の書き込み先を、open PR が存在する場合は main 直接 commit ではなく events emit + セッション末尾転記に変更する (#890/#1005/#1006 と本件で計 4 度目の conflict 実害。診断レポート推奨 6 の正式起票)
