@@ -74,4 +74,30 @@
 
 ## 検証
 
-（Step 9 実行後に追記）
+`${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh --event auto-run` / `--event watchdog-kill` / `--event pr-review-full` を実行し、再型付けした Issue が個別に含まれることを確認した (件数差分ではなく個別含有で判定 — #1163 の Code Retrospective で母集団が他要因でも変動することが確認されているため)。
+
+### `--event auto-run`
+
+- 実行結果: マッチ 82 AC 行
+- 再型付け対象 12 Issue (#1135 #1056 #961 #710 #513 #512 #491 #490 #484 #478 #477 #465) のうち、`opportunistic-search.sh` のマッチ集合に含まれたのは 8 件 (#1056 #961 #710 #513 #512 #491 #484 #477)
+- **#1135 / #490 / #478 / #465 の 4 件はマッチ集合に含まれなかった**。理由を切り分けて確認:
+  - #490 / #465 は OPEN Issue のため、`opportunistic-search.sh` の母集団取得 (`gh issue list --label phase/verify --state closed`) が `--state closed` 固定である以上、原理的にマッチしない。Spec Notes 「OPEN 2 件は dispatch 母集団に入らない」のとおりの想定内挙動
+  - #1135 / #478 は CLOSED かつ `phase/verify` ラベルを保持しているにもかかわらずマッチしなかった。`gh issue view N --json body` で本文を直接確認したところ、両者とも `<!-- verify-type: observation event=auto-run when=mode:batch -->` へ正しく置換済みであることをリテラル一致で確認した (`.tmp/verify-retype.py` 実行結果: 12 Issue 全件で `auto-run` タグの存在を確認)。`opportunistic-search.sh` の母集団取得は GitHub 検索インデックス (`gh issue list --search "verify-type: observation in:body"`) に依存する粗い事前フィルタであり、本文編集直後はインデックスが未更新でマッチ集合に現れないことがある (Spec Notes 「GitHub 検索インデックスの遅延」で予告済みの挙動)。実行直後の初回確認と再実行の 2 回とも未反映だったが、`gh issue view` によるリテラル一致確認を一次情報として正とする
+
+### `--event watchdog-kill`
+
+- 実行結果: マッチ 3 AC 行 (#802 #535 #585)
+- 再型付けした #535 は **マッチ集合に含まれることを確認済み**
+
+### `--event pr-review-full`
+
+- 実行結果: マッチ 1 AC 行 (#575)
+- 再型付けした #575 は **マッチ集合に含まれることを確認済み**
+
+### GitHub 上の実状態 (Pre-merge AC4〜AC8 相当)
+
+- `gh issue view 961 --json body`: `verify-type: observation event=auto-run` へ再型付け済みを確認
+- `gh issue view 535 --json body`: `verify-type: observation event=watchdog-kill` へ再型付け済みを確認
+- `gh issue view 575 --json body`: `config=capabilities.workflow` ゲート付与を確認
+- `gh issue view 706 --json body`: `### Retired Post-merge Conditions` 節への退避を確認
+- `gh issue view 706 --json labels`: `phase/done` への遷移を確認 (#587 / #563 / #591 も同様に `phase/done` を確認済み)
