@@ -685,7 +685,7 @@ If `scripts/validate-skill-syntax.py` exists, read `skills/review/skill-dev-rech
 After fixes, run a lightweight re-check focused on changed areas:
 - Light re-check (not full Step 7+9 re-run) focused on changed areas
 - Check for new issues
-- Re-run tests/validation
+- Re-run tests/validation — if this re-check selects a full-suite run, the `## Non-Interactive Mode Behavior` section's foreground execution constraint (no `run_in_background: true`, explicit `timeout`) applies here too; see `${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting"
 - If new MUST issues found in re-check, return to Step 12.2
 - **Retry limit**: 3 times total (initial review + 2 re-checks)
 

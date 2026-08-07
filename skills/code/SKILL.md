@@ -319,6 +319,8 @@ If `ROUTE=operate` (detected in Step 0), follow this subsection instead of the s
 
 **Operate route**: skip this entire Step 9 (no repository code changes to test) and proceed directly to Step 10.
 
+**Execution surface constraint (applies to every test command run in this Step — the full-suite override below or whatever `test-runner.md` delegates to):** when `/code` itself is running in an execution surface without a re-invocation guarantee (`--non-interactive` mode, a fork-executed Skill, the Workflow tool path — see `${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting" for the exhaustive list and rationale), run the test command in the **foreground** (do not set `run_in_background: true`), with an explicit Bash `timeout` covering the measured duration (e.g. `timeout: 600000`, the tool's 10-minute ceiling, for the full-suite override's ~407s measured duration), to avoid an infinite wait that silently exhausts `auto-retry-on-fail.max_iterations` (Issue #994). Interactive-mode behavior (background + await notification) is unchanged.
+
 #### Behavioral Change Detection
 
 Before delegating scope selection to test-runner, check whether this implementation includes behavioral changes. A behavioral change is a modification to an existing file that is referenced by tests beyond the file's directly-associated test (`modules/verify-patterns.md` §24).
@@ -349,8 +351,7 @@ If `tests/` does not exist (e.g., projects without a bats test suite), skip this
      ```bash
      bats tests/
      ```
-     (Same pre-check guard applies — `bats tests/` requires the directory to exist.)
-   - When `/code` itself is running in an execution surface without a re-invocation guarantee (`--non-interactive` mode, a fork-executed Skill, the Workflow tool path — see `${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting" for the exhaustive list and rationale), run the above `bats tests/` override in the **foreground** (do not set `run_in_background: true`), with an explicit Bash `timeout` covering the measured full-suite duration (approx. 407s — e.g. `timeout: 600000`, the tool's 10-minute ceiling; the default 120s ceiling is too short), to avoid an infinite wait that silently exhausts `auto-retry-on-fail.max_iterations` (Issue #994). Interactive-mode behavior (background + await notification) is unchanged.
+     (Same pre-check guard applies — `bats tests/` requires the directory to exist. See the execution surface constraint above for foreground/timeout requirements.)
    - Handle FAIL via Tier 0 structured recovery below. If PASS, continue with the remaining validations in this step.
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/test-runner.md` and follow the "Processing Steps" section to run tests.
