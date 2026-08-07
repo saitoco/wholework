@@ -16,6 +16,8 @@ cutoff: 未確定 — Issue timeline に `phase/*` ラベル付与イベント�
 
 結果: **コメントなし** (`gh issue view 1165 --json comments` が空配列)。Cross-phase marker (`type=verify-fail` / `type=preview-ac-unverified`) の追加スキャンも該当なし。
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1165#issuecomment-5213532595
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1165#issuecomment-5213691799
 ## Autonomous Auto-Resolve Log
 
 `/spec 1165 --non-interactive` で自動解決した曖昧点 3 件。詳細な却下候補は Issue 本文の `## Auto-Resolved Ambiguity Points` 節に記録済み。
