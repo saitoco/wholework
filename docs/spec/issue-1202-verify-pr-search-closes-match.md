@@ -58,3 +58,31 @@
 - **Steering Docs sync candidate check**: `gh-extract-issue-from-pr.sh` / `closes #N` を参照する `docs/structure.md`, `docs/ja/structure.md`, `modules/l0-surfaces.md`, `modules/verify-classifier.md` を確認したが、いずれもスクリプト自体やフィールドの汎用的な説明であり、Step 2 の判定条件を記述したものではないため、同期不要と判断した。
 - **`skills/review/SKILL.md` の類似パターンとの違い**: `skills/review/SKILL.md` (L61-64) も `gh-extract-issue-from-pr.sh` を呼ぶが、そこでは PR 番号が `/review` 呼び出し時点で既知 (`$NUMBER` = PR 番号) であり `gh pr list --search` を経由しない。本 Issue と同じ全文検索誤マッチのリスクがないため、変更対象に含めない。
 - 本 Issue はテスト対象が SKILL.md のプローズ (LLM 実行) であり、対応する bats テストファイルは存在しない (`tests/verify.bats` 等に Step 2 の PR 検索ロジックへの参照なし)。検証は Issue 本文で定義済みの `rubric` / `section_contains` verify command による。
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1・2 の記述通りに実装した (`CANDIDATE_PRS` 取得 → `gh-extract-issue-from-pr.sh` による `issue_number` 突き合わせループ)。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+### Autonomous Auto-Resolve Log
+- Step 3 の `phase/ready` ラベルチェック時点で、Issue には既に `phase/ready` が外れ `phase/code` が付与されていた (ラベル遷移タイムライン: `phase/ready` 付与と `phase/code` 付与が同一タイムスタンプ `2026-08-07T00:58:08Z`)。Spec (`docs/spec/issue-1202-verify-pr-search-closes-match.md`) 自体は完成済みで `reconcile-phase-state.sh --check-precondition` も `spec_file` を検出しており、Spec 欠如ではなく前回セッションの中断跡と判断。non-interactive ポリシー (Spec 欠如時の auto-resolve) の主旨 — 実装続行を妨げない — に沿って、そのまま実装を続行した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Steps 1・2 通り、`gh pr list --search` の結果を単一採用せず最大 10 件の候補に対して `gh-extract-issue-from-pr.sh` の `issue_number` 突き合わせを行うループに置き換えた。bash 3.2+ 互換のため配列/mapfile を使わず単純な `for`/`break` で実装。
+- OPEN PR 検索ブロック (`--state open`, L107 付近) は `/issue` フェーズの Issue Retrospective で確定済みのスコープ境界を踏襲し、変更対象に含めなかった。
+
+### Deferred Items
+- Post-merge AC (`verify-type: observation event=auto-run session=next`) — 次回の patch 経路 Issue での `/verify` 実行時に、Step 2 が無関係な PR を採用しないこと (`BASE_BRANCH=main` に解決され、`github_check "gh pr checks"` 型 AC が存在すれば UNCERTAIN 化されること) を実地観察する必要がある。
+
+### Notes for Next Phase
+- 本 Issue に対応する bats テストは存在しない (SKILL.md プローズが対象)。Pre-merge AC は `rubric` × 2 と `section_contains` × 1 で検証済み (すべて PASS)。
+- `/review` は `skills/verify/SKILL.md` の diff (Step 2 のみ) をレビュー対象とする。OPEN PR 検索ブロックには変更がないことを確認済み。
