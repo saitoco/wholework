@@ -65,18 +65,16 @@
 - No new comments since last phase.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Fixed a SHOULD-severity robustness gap found by `review-light`: `resolve_filtered_context()`'s `sed -E` command substitution (scripts/opportunistic-search.sh L167) had no `2>/dev/null || true` guard, unlike the sibling `resolve_run_facts()` function. Under `set -euo pipefail`, a `sed` read failure (e.g. TOCTOU between the L134 existence check and the later read) would abort the whole script instead of degrading the `keyword=` gate gracefully. Fixed to match the established sibling pattern.
-- All 3 pre-merge AC (2 rubric + 1 section_contains) independently re-verified PASS by `/review`'s own grader pass (not just carried over from `/code`'s self-assessment), per the code-phase handoff's note to run an independent pass.
+- Squash-merged PR #1258 with no conflicts (mergeable=clean, CI success, review approved); pre-merge AC gate confirmed all 3 conditions checked before merge.
 
 ### Deferred Items
 - None.
 
 ### Notes for Next Phase
-- Post-merge AC remains an `opportunistic` observation tied to a future `/review --light` run touching a `docs/workflow.md`-style path listing — no action needed now; `/merge` and eventual `/verify` should let it resolve naturally when that PR occurs.
-- No policy change occurred during review (the fix was error-handling robustness only), so Issue AC text and verify commands are unchanged from `/code` phase.
+- Post-merge AC remains an `opportunistic` observation tied to a future `/review --light` run touching a `docs/workflow.md`-style path listing — `/verify` should let it resolve naturally when that PR occurs, not force it now.
 
 ## review retrospective
 
