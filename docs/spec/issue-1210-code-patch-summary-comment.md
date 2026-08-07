@@ -161,3 +161,33 @@ patch route の `/code` は現状、`closes #N` コミット以外に Issue タ�
 - commit-scoped `github_check` AC (`--commit=$(git rev-parse HEAD)` 形) の評価タイミング依存を、`modules/verify-executor.md` か `skills/code/SKILL.md` Step 10 に注記する — ただし #1212 のスコープと重なるため、本 Issue からの独立起票は行わず #1212 側で扱う
 - `.tmp/auto-session-current` の並行セッション上書き問題 — 既存 #1075 の実例として追記済み。新規起票は不要
 
+## Verify Retrospective (iteration 2 — observation AC 充足)
+
+同一バッチ (`33233-1786023637`) 内で `event=auto-run` が発火し、AC 8 が PASS となって全条件が充足した。`phase/done` へ遷移。
+
+### AC 8 の充足経路
+
+本 Issue の post-merge AC は `verify-type: observation event=auto-run session=next` で、「次に patch route で `/code` が実行された Issue」を待つ条件だった。これが**同一バッチ内の次の Issue (#1209) で満たされた**のが特徴的。
+
+| 時刻 (UTC) | イベント |
+|---|---|
+| 14:37:10 | 本 Issue の実装コミット `6a08557c` が main に landed |
+| 15:19:09 | #1209 が `phase/code` へ — 変更後の SKILL.md をロード (`session=next` の前提充足) |
+| 15:43:22 | #1209 に `## Implementation Complete` 投稿 |
+| 15:43:29 | #1209 が `phase/verify` へ (7 秒後) |
+
+iteration 1 の時点で証拠はすべて揃っていたが、`observation-trigger.sh --event auto-run` が未発火だったため Step 8c の未発火パスで SKIPPED になっていた。バッチ完了時の observation scan で発火し、再 verify で PASS になった。
+
+**観測**: observation AC は「証拠の成立」と「event の発火」が独立している。バッチ内で条件が満たされるケースでは、バッチ完了時の observation scan まで判定が保留される。`/auto` List mode は `BATCH_LIST` に含まれる Issue を dispatch 対象から除外するため、**バッチ内で条件が揃った Issue は自動では再 verify されない** — 今回は親セッションが明示的に `/verify 1210` を再実行して拾った。#1118 (observation AC の実行文脈条件宣言) が隣接する論点。
+
+### AC 7 の形式的欠陥が実測で顕在化
+
+iteration 2 で AC 7 (`github_check "gh run list --workflow=test.yml --commit=$(git rev-parse HEAD) ..."`) を再実行したところ、`$(git rev-parse HEAD)` が `/verify` の worktree ブランチ上のローカル未 push コミット (`10e8f930`) に解決し、出力が空になった。
+
+iteration 1 では worktree HEAD がたまたま push 済みの `599fb8a4` に一致して PASS したが、iteration 2 では `append-consumed-comments-section.sh` が worktree にコミットを作ったため HEAD が変わり、同じ AC が評価不能になった。**同一 Issue の再 verify で結果が変わる**という形で欠陥 A/B が顕在化している。
+
+代替検証 (現行 main の完了済み run 3 件すべて success + iteration 1 での `599fb8a4` 直接確認) により PASS と判定した。#1212 が着地して推奨形が `--branch=main --limit=1` になったため、以後の Issue では同じ問題は起きない。
+
+### Improvement Proposals
+- observation AC がバッチ内で充足した場合の再 verify 経路 — `/auto` List mode の `BATCH_LIST` 除外により自動では拾われない。隣接する #1118 のスコープと重なるため独立起票は行わず、本節に記録するに留める (Tier 3)
+
