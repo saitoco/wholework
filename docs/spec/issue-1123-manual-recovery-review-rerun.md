@@ -202,6 +202,11 @@ cutoff (`phase/*` ラベルの最終付与時刻): `2026-08-04T06:58:48Z`。cuto
 
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1123#issuecomment-5180454873
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1123#issuecomment-5182197749
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1123#issuecomment-5195222461
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1123#issuecomment-5202642429
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1123#issuecomment-5212267499
 ## issue retrospective
 
 `/issue 1123 --non-interactive` によるリファインメントを実施した。
