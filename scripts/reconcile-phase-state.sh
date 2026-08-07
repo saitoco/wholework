@@ -134,10 +134,10 @@ _completion_issue() {
   labels_json=$(_labels_to_json_array "$labels")
   local actual_json="{\"labels\":${labels_json}}"
 
-  if echo "$labels" | grep -q "^triaged$"; then
-    _emit_result "true" "triaged label found on issue #${ISSUE_NUMBER}" "$actual_json"
+  if echo "$labels" | grep -qE '^phase/(issue|ready|code|review|merge|verify|done)$'; then
+    _emit_result "true" "issue #${ISSUE_NUMBER} has phase/issue or a later phase label" "$actual_json"
   else
-    _handle_mismatch "triaged label not found on issue #${ISSUE_NUMBER}" "$actual_json"
+    _handle_mismatch "issue #${ISSUE_NUMBER} has no phase/issue or later phase label" "$actual_json"
   fi
 }
 
