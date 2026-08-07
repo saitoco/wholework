@@ -16,3 +16,5 @@ No new comments since last phase.
 
 ### Improvement Proposals
 - N/A (resolved by Tier 2 fallback catalog)
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/961#issuecomment-4928969241
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=9 / https://github.com/saitoco/wholework/issues/961#issuecomment-5212265022
