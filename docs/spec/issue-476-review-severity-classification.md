@@ -161,3 +161,13 @@
 ### Improvement Proposals
 - `keyword=workflow` ゲートの誤発火が異なる発火元 Issue (#1082 → #1206 → #1164) にわたって**3件連続**で再現した。いずれも `docs/workflow.md` / `docs/translation-workflow.md` のような、GitHub Actions ワークフローとは無関係なファイルパス文字列への部分一致が原因であり、単純な部分文字列マッチ設計 (`modules/observation-trigger.md` § Condition Check Gate) の構造的欠陥であることが確定的に裏付けられた。re-run #3 で採用した「3回連続再現で起票水準」の閾値を満たしたため、Step 16 (retro-proposals) で follow-up Issue の起票を検討する。改善方向性の候補: `keyword=` を単純な部分文字列マッチから `.github/workflows/*.yml` 等の実際のファイルパス変更を対象とした構造化マッチへ置き換える、または `keyword=` に単語境界 (word boundary) を要求する
 
+## Verify Retrospective (2026-08-07 re-run #8)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1235、Issue #1108) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカーあり) したが、今回の発火元 PR #1235 の diff (`scripts/run-auto-sub.sh`, `skills/auto/SKILL.md`, `skills/issue/SKILL.md`, `tests/run-auto-sub.bats`, `docs/spec/issue-1108-*.md` — batch/XL 経路の spec dispatch を Size 判定込みで Step 3 と一致させる修正) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず UNCERTAIN 判定に帰着した。`keyword=workflow` ゲートの誤発火パターン (re-run #5: `docs/workflow.md`／Issue #1082、re-run #6: `docs/workflow.md`／Issue #1206、re-run #7: `docs/translation-workflow.md`／Issue #1164) が、本 Issue #1108 の Spec 内 `docs/workflow.md:52,113` というファイルパス参照への部分一致で**4件目**として再現した。follow-up Issue #1220 (`observation-trigger: keyword= フィルタのファイル名部分一致誤検知を解消`) が既に起票済み (OPEN) であることを確認したため、本 re-run では重複起票を行わない
+
+### Improvement Proposals
+- N/A — re-run #7 で「起票水準に達した」問題は follow-up Issue #1220 として既に起票済み (確認済み)。本 re-run はその後に発生した4件目の再現事例として記録するに留め、新規提案は行わない。Issue #1220 の解決後、本 post-merge observation AC が実際に「決定的失敗が MUST 判定される」挙動を実地確認できるかは引き続き未検証のまま — #1220 のクローズ後に改めて `/review --light` が CI/ワークフロー変更を含む PR で完了するタイミングで再評価される見込み
+
