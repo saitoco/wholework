@@ -111,21 +111,20 @@ No new comments since last phase.
 - N/A — Spec has no `## Smoke Test` section.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Ran `/review 1235 --light --non-interactive` (Size=M → `REVIEW_DEPTH=light`, matching the `--light` override). Base branch conflict pre-check (`git merge-tree`, 3-arg form) found 0 `changed in both` blocks — no conflict context passed to the review agent.
-- Re-verified all 5 pre-merge `rubric` AC independently in Step 8 (adversarial re-check, not just trusting the code phase's self-verification) — all 5 confirmed PASS with the same reasoning as the code phase's Phase Handoff.
-- Ran `review-light` (all 4 aspects: spec deviation, edge cases, security, documentation consistency) — found 1 CONSIDER-severity issue (cosmetic log-message ordering in `scripts/run-auto-sub.sh`'s new XS branch when `phase/ready` is also absent-vs-present), 0 MUST/SHOULD. Posted as an inline PR comment; not fixed (Claude's Step 12 judgment: cosmetic only, no functional impact, review agent itself offered "leave as-is" as an acceptable alternative).
-- CI: all 9 checks (DCO, Run bats tests ×2, Validate skill syntax ×2, Forbidden Expressions check ×2, macOS shell compatibility ×2) SUCCESS — no FAIL-blocking entries injected into the review.
+- Pre-merge AC gate (`check-pre-merge-ac.sh 1108`): all 5 pre-merge conditions checked (`unchecked_count=0`); `reconcile-phase-state.sh review 1108 --pr 1235 --check-completion` found no `review_incomplete_fallback` — gate cleared without needing an override marker.
+- `gh-pr-merge-status.sh 1235`: `mergeable=true`, `reason=clean`, CI SUCCESS, review APPROVED — no rebase/conflict resolution (Step 3) was needed.
+- Squash-merged via `gh pr merge 1235 --squash --delete-branch`; remote branch `worktree-code+issue-1108` deleted.
 
 ### Deferred Items
-- Post-merge AC ("`--batch` で XS Issue を処理し、spec 要否が規定どおりになること、および Step 4b が二重転記を起こさないことを確認する", `verify-type: opportunistic`) remains deferred to post-merge observation — unchanged from the code phase's handoff, still `- [ ]` in the Issue body (cross-referenced, not stale).
-- The CONSIDER-severity log-message-ordering issue in `scripts/run-auto-sub.sh:840` was left unfixed; if a future change touches this `elif` chain, consider reordering the `phase/ready`-absence check ahead of the `Size == XS` check so the log message always attributes the skip to its most direct cause.
+- Post-merge AC ("`--batch` で XS Issue を処理し、spec 要否が規定どおりになること、および Step 4b が二重転記を起こさないことを確認する", `verify-type: opportunistic`) remains deferred to post-merge observation — unchanged, still `- [ ]` in the Issue body.
+- The CONSIDER-severity log-message-ordering issue in `scripts/run-auto-sub.sh:840` (review phase finding) was left unfixed — no follow-up filed, informational only for future changes to that `elif` chain.
 
 ### Notes for Next Phase
-- No MUST issues — review posted as `COMMENT`, not `REQUEST_CHANGES`. `/merge 1235` can proceed directly.
-- No policy changes were made in this review pass (Step 12 made no implementation edits), so Step 13's Issue body / AC update was skipped — the Issue's AC text and verify commands are unchanged from the Spec's Verification section.
+- `/verify 1108` should confirm the post-merge opportunistic AC once a `--batch` run processes an XS Issue through the fixed dispatch logic.
+- No open MUST/SHOULD findings carried into merge; nothing else outstanding.
 
 ## review retrospective
 
