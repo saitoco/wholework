@@ -172,22 +172,20 @@
 - N/A
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Fixed the 1 MUST finding (`modules/opportunistic-verify.md` Step 3's `ac_index` computation referenced an Issue body never fetched in Step 1/2) and both SHOULD findings (dangling `## Notes` cross-reference; Japanese text in `modules/event-emission.md` violating CLAUDE.md's English-for-module-docs convention), plus 3 of 5 CONSIDER findings (Japanese text in `skills/audit/SKILL.md` / `scripts/emit-event.sh`; missing `--threshold` argument/numeric validation and hard-failing `jq` pipeline in `scripts/collect-opportunistic-retire-candidates.sh`) — all confirmed independently by 3 review agents and 8 verification passes before fixing
-- Used the static Task fan-out (Agent tool, `run_in_background: false`) instead of the Workflow-tool path for Step 10, despite `capabilities.workflow: true` being set: `skills/review/SKILL.md` has `context: fork` and ARGUMENTS carried `--non-interactive`, so `workflow-guidance.md`'s Pre-flight section correctly routed away from the Workflow tool (no re-invocation guarantee in this execution surface)
-- Ran the Base Branch Conflict Pre-check and confirmed via an actual test merge (`git merge --no-commit --no-ff origin/main`, aborted afterward) that all 4 `changed in both` files auto-resolve cleanly with both sides' content preserved — no MUST finding from that check
-- Left 2 CONSIDER findings unfixed as genuine scope-reduction decisions (not oversights): `ac_index`'s position-based grouping key drifting if Issue body checkboxes are edited (larger design change — condition-text hash — deferred as a follow-up), and 3 minor documentation-consistency nits (call sites not stating Issue/PR number explicitly, `docs/structure.md` missing an event-emission annotation, `skills/audit/SKILL.md` frontmatter description not extended) — all verified safe/cosmetic, not correctness gaps
+- Squash-merged PR #1252 to `main` via `gh pr merge --squash --delete-branch` after confirming `mergeable=true` (`reason=clean`, `ci_status=success`, `review_status=approved`) and all 6 pre-merge AC checkboxes already checked (`unchecked_count=0`) — no conflict resolution or review-incomplete fallback handling was needed
+- Ran in `--non-interactive` mode per the invocation; no AskUserQuestion prompts were needed since the mergeability check returned a clean state directly
 
 ### Deferred Items
-- Post-merge observation AC (`.tmp/auto-events.jsonl` に `opportunistic_verify_result` が記録され集計可能であることの確認) remains deferred to the next `/auto` run, per the Issue's own `session=next` verify-type — unchanged from the code phase's handoff, still unresolvable within `/review`
-- `scripts/collect-opportunistic-retire-candidates.sh`'s `ac_index` position-based grouping key risk (see Key Decisions above) is deferred as a possible follow-up Issue, not fixed in this PR
-- `gh-pr-review.sh`'s self-review 422 fallback detection is broken (see review retrospective below) — not fixed in this PR since it's out of scope for Issue #1236; flagged for retro-proposal aggregation in the next `/verify`
+- Post-merge observation AC (`.tmp/auto-events.jsonl` に `opportunistic_verify_result` が記録され集計可能であることの確認) remains deferred to the next `/auto` run, per the Issue's own `session=next` verify-type — unchanged from the review phase's handoff
+- `scripts/collect-opportunistic-retire-candidates.sh`'s `ac_index` position-based grouping key risk is deferred as a possible follow-up Issue, not addressed in this merge
+- `gh-pr-review.sh`'s self-review 422 fallback detection bug (found during review) remains unfixed — out of scope for Issue #1236, flagged for retro-proposal aggregation in the next `/verify`
 
 ### Notes for Next Phase
-- `/merge` should confirm the 3 fix commits (pushed after the initial review post) are included in the merge — CI re-ran green on all 9 jobs after the fixes
-- No AC/policy changes were made during fix work; Step 13 concluded no Issue body update is needed
+- `/verify` should confirm the Issue auto-closed and `phase/verify` label was applied (Step 5/6 of `/merge`)
+- No AC/policy changes were made during merge; the post-merge observation AC is the only remaining item to check in a future `/auto` run
 
 ## review retrospective
 
