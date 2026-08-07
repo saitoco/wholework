@@ -77,16 +77,31 @@
 ### Test Execution Note
 - `bats --jobs 18 tests/` によるフルスイート実行 (behavioral change 検出: `skills/review/SKILL.md` を `tests/review.bats` 以外に `tests/run-review.bats` も参照していたため発火) で `tests/post_merge_check.bats` の1テストが実行ごとに異なるケースで間欠的に FAIL した (`gh issue reopen called when FAIL input given` → 次回実行では `multiple issues: processed sequentially`)。単体実行 (`bats tests/post_merge_check.bats`) では10/10 安定して PASS し、本 Issue の変更対象ファイル (`scripts/opportunistic-search.sh` / `scripts/observation-trigger.sh` / `skills/review/SKILL.md` / `modules/observation-trigger.md`) とは無関係。既存 Issue #1255 (「並列 bats 実行下でのみ落ちる flaky を機械的に切り分ける」) が同種の事象を追跡対象としているため、重複 follow-up Issue は起票していない
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- 大きな乖離はなし。Implementation Steps 1-5 は Spec 記述どおりに実装され、Changed Files も Spec の列挙と一致した
+- 唯一の軽微なギャップ: Spec の Changed Files には `modules/observation-trigger.md` (変更対象スクリプトのコメントが直接参照するため発見) が含まれていたが、`modules/verify-classifier.md` (`when=` の AC 起票ガイダンス SSoT で、`/issue`/`/spec` から参照される) と `modules/run-fact-matching.md` (facts JSON 消費の説明文書) は Spec 調査時に発見されず、review-spec/review-bug 双方が独立に指摘した。`when=` のような複数ドキュメントに跨る概念変更では、変更対象ファイル自身の直接参照だけでなく「同じ概念 (`when=`) を説明する他ドキュメント」への横断 grep (`grep -rl "when="  modules/ docs/` 等) を Spec 調査段階で行う価値がある
+
+### Recurring issues
+- review-bug×2 (diff scan / security scan) が独立に同一指摘 (`scripts/opportunistic-search.sh:442` の `execution-context` 値未検証による無警告 fail-closed) を報告したが、アドバーサリアル検証で false positive と判定された (唯一の呼び出し元が main/fork の固定リテラルを渡す設計のため、不正値が実際には到達しない)。2エージェントが同じ箇所に着目したこと自体は「未検証の文字列比較」という表層パターンへの反応であり、実際の呼び出し元コンテキストを追わないと誤検知しやすい典型例。find/filter separation の設計 (finder は網羅重視、verifier が個別呼び出し元を確認して除外) が意図通り機能した事例として記録
+
+### Acceptance criteria verification difficulty
+- 2件の Pre-merge AC (rubric + grep) はいずれも明確に PASS/FAIL 判定可能で、UNCERTAIN や verify command の不備は発生しなかった
+- `ac-tier: preview` 系の AC は存在せず、preview 未検証マーカーの投稿判断も不要だった
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `execution-context` 軸は `route`/`mode`/`recovery-tier` と異なり facts JSON (`collect-run-facts.sh`) を経由せず、発火元スキルが `modules/execution-context.md` § Context Detection で直接判定した値を `--execution-context` 引数として渡す設計を採用 (Spec Notes に根拠記載済み)
-- `when=` 節評価ループを節単位 fail-open に再構成 (`resolve_run_facts` を各 axis の case アーム内に遅延呼び出し) — 既存3軸の観測結果は変わらないことを bats で確認済み
+- レビューで確認された review-bug×2 の重複指摘 (`--execution-context` 値未検証) はアドバーサリアル検証で false positive と判定し、修正対象から除外した (唯一の呼び出し元が固定リテラルを渡すため到達不能と確認)
+- SHOULD 1件 (`modules/verify-classifier.md` の when= 解説が /auto run 限定で execution-context 軸が発見不能) と、本 PR 自身が導入した内部矛盾に関する CONSIDER 2件 (`modules/observation-trigger.md` の facts collection 発火条件・stderr 警告可観測性) を修正しコミット・プッシュ済み
+- 差分外ファイル (`modules/verify-classifier.md` 等 4件) へのインラインコメントは GitHub API 制約で投稿できず、フォローアップの通常 PR コメントとして再投稿した
 
 ### Deferred Items
-- Issue #575 の既存 observation AC (`event=pr-review-full config=capabilities.workflow`) への `when=execution-context:main` retrofit はスコープ外。次回 `/verify 575` 実行時に手動追記を検討する余地がある (Spec Notes 参照)
-- `tests/post_merge_check.bats` の並列実行下 flaky は既存 Issue #1255 の追跡対象。本 Issue のスコープでは対応不要
+- Issue #575 の既存 observation AC (`event=pr-review-full config=capabilities.workflow`) への `when=execution-context:main` retrofit はスコープ外 (code フェーズから継続)
+- `tests/post_merge_check.bats` の並列実行下 flaky は既存 Issue #1255 の追跡対象 (code フェーズから継続)
+- CONSIDER 3件 (mixed-axis when= テストカバレッジ不足、Spec Notes の /verify 呼び出し元未記載、`modules/run-fact-matching.md` の facts JSON 説明の軽微な誤解可能性) は低リスクと判断し未対応のまま次フェーズへ
 
 ### Notes for Next Phase
 - Post-merge AC (`verify-type: observation event=pr-review-full session=next`) は `/review` が実際に fork context で `pr-review-full` を発火し、`when=execution-context:main` を持つ AC が UNCERTAIN/SKIPPED を繰り返さず適切に扱われることを次回セッションで観察する必要がある
