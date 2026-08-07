@@ -108,6 +108,9 @@
 
 #### verify
 - Pre-merge 全 3 件 PASS。Post-merge manual は 2 件とも `phase/verify` 維持で実際の `/verify` 実行と downstream 観察待ち。
+- **(2026-08-07 追記 — observation AC 決着)** `/auto 1158` (XL route、session `94570-1786069858`) の observation dispatch から再 verify し、post-merge の observation AC が PASS に到達して `phase/done` へ遷移した。判定根拠は `.tmp/auto-events.jsonl` の `retro_proposal_classified` イベント集計 (全期間 84 件): Tier 1 が 42 件 (うち `issue_created` 30 / `spec_only` 7 / `freshness_check_resolved` 2 / duplicate 系 3)、Tier 2 が 25 件 (全て `memory_proposal`)、Tier 3 が 17 件 (全て `spec_only`)。**3 層すべてに実績があり、`issue_created` は Tier 1 からのみ発生している**ことを機械的に確認できた。
+- 副次的な知見として、**Tier 1 判定が即 Issue 化を意味しないことも実測で確認できた** — Tier 1 の 42 件中 `issue_created` は 30 件で、残り 12 件は step 9 の duplicate check と step 10 の freshness check により抑止されている。三層判定の後段にもう一段のフィルタが効いており、backlog ノイズ削減の効果は Tier 分類単体より大きい。
+- **本 AC は `retro_proposal_classified` イベントという「後から機械集計できる永続記録」があったからこそ判定できた**。もし Tier 判定がターミナル出力のみで永続化されていなければ、この observation AC は発火しても評価不能 (UNCERTAIN) にしかならなかった。`modules/retro-proposals.md` step 6 の Tier classification persistence が、実装当時の意図 (監査可能性) を超えて observation AC の評価可能性そのものを支えている。
 
 ### Improvement Proposals
 - N/A (本 Issue 自体が Improvement Proposal メタフレームワークの改善のため、メタな再帰提案は割愛)
