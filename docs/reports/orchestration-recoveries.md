@@ -67,6 +67,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-07 02:13 UTC: manual-recovery-review-rerun
+
+### Context
+- Issue #1206, phase: review
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 1
+
+### Diagnosis
+- cause: ci-infra-outage-during-ci-wait
+- GitHub Actions repo-wide outage: Validate skill syntax failed at Set up job with 'Failed to resolve action download info. Error: Service Unavailable' and macOS shell compatibility stalled QUEUED; run-review.sh returned exit 2 (PENDING) and Tier 3 sub-agent chose action=retry but the retry also failed (result=failed) since the outage persisted. Parent session diagnosed via gh run view --log-failed, re-ran the failed CI jobs (9/9 green after rerun), then re-ran run-review.sh which completed exit 0 in 35m45s. No code change was required.
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-08-07 01:54 UTC: manual-recovery-manual-recovery-review-uncommitted-work
 
 ### Context
