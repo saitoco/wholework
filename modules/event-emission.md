@@ -96,8 +96,9 @@ now holds for `spec` / `issue` the same way it already did for `code-patch` / `c
 Emitted immediately after `wrapper_exit`, when the `.tmp/token-usage-<issue>.json` file produced
 by a `--output-format json` run exists. Written by `run-code.sh` / `run-review.sh` / `run-merge.sh`
 (via `run-auto-sub.sh`'s `run_phase_with_recovery()`) and by `run-spec.sh` / `run-issue.sh` directly
-for their own phase. Skipped when the file does not exist (e.g. `AUTO_EVENTS_LOG` was unset, so no
-`--output-format json` capture ran) or when `usage.input_tokens` is absent from it. Fields: `phase`,
+for their own phase. Skipped when the file does not exist (e.g. the wrapper was killed before the
+`--output-format json` capture completed, or a prior phase already consumed and removed it) or when
+`usage.input_tokens` is absent from it. Fields: `phase`,
 `model` (the `modelUsage` key with the largest `inputTokens + outputTokens`, or `unknown`),
 `input_tokens`, `output_tokens`, `cache_read_tokens`.
 
@@ -144,13 +145,19 @@ fi
 
 # ... run claude ...
 
+if [[ -n "${_EMIT_PHASE_OWNED:-}" ]]; then
+  emit_event "wrapper_exit" "phase=${EMIT_PHASE_NAME}" "exit_code=${EXIT_CODE}"
+  # ... token_usage emit from .tmp/token-usage-<issue>.json, then rm -f ...
+fi
+
 if [[ $EXIT_CODE -eq 0 && -n "${_EMIT_PHASE_OWNED:-}" ]]; then
   emit_event "phase_complete" "phase=${EMIT_PHASE_NAME}"
 fi
 ```
 
 When `EMIT_PHASE_NAME` is already set (wrapper called from `run-auto-sub.sh`), `_EMIT_PHASE_OWNED`
-stays empty and `phase_start` / `phase_complete` are not emitted — preventing double-emit.
+stays empty and `phase_start` / `phase_complete` are not emitted — and, in `run-spec.sh` /
+`run-issue.sh`, neither are `wrapper_exit` / `token_usage` (#1228) — preventing double-emit.
 
 ## Wrapper Coverage Table
 
