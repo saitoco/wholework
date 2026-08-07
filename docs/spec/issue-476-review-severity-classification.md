@@ -22,6 +22,8 @@
 - saito / MEMBER / first-class / 前回 `/verify 476` (2026-08-06 re-run #5) 実行結果。Pre-merge 2 件 SKIPPED (already checked)、Post-merge observation (event=pr-review-light) は PR #1218 (Issue #1082) の diff に該当欠陥なしのため UNCERTAIN。`keyword=workflow` ゲートがファイル名 `docs/workflow.md` の部分一致で誤発火した新規欠陥を発見 / https://github.com/saitoco/wholework/issues/476#issuecomment-5210100264
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=476 event=pr-review-light --> observation event 再発火通知 (`/review --light` PR #1217, Issue #1206 完了) / https://github.com/saitoco/wholework/issues/476#issuecomment-5210084188
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5210233540
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5212707587
 ## 背景
 
 `/review` の MUST/SHOULD 分類基準に「対象実行環境で決定的に失敗する欠陥は MUST」というルールを明文化する。Spec フェーズなしで直接実装（Issue 本文から要件を読み取り）。
