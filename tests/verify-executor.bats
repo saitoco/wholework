@@ -1,15 +1,20 @@
 #!/usr/bin/env bats
 
-# Tests for verify-executor.md branch-filter documentation.
-# Confirms that patch route github_check templates use --branch=main (not
-# --commit=$(git rev-parse HEAD), which always returns an empty result for the
-# implementation commit — see modules/verify-classifier.md § Patch Route CI
-# Verification Note).
+# Tests for the patch-route `github_check` branch-filter form documented in
+# modules/verify-classifier.md (SSoT) and propagated to skills/issue/SKILL.md,
+# skills/verify/SKILL.md, modules/verify-patterns.md, and
+# skills/issue/spec-test-guidelines.md. Confirms these templates use
+# --branch=main (not a literal --commit=<SHA>, which always returns an empty
+# result — see modules/verify-classifier.md § Patch Route CI Verification
+# Note), plus verify-executor.md html_check assertions.
 
 PROJECT_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 VERIFY_CLASSIFIER="$PROJECT_ROOT/modules/verify-classifier.md"
 SPEC_TEST_GUIDELINES="$PROJECT_ROOT/skills/issue/spec-test-guidelines.md"
 VERIFY_EXECUTOR="$PROJECT_ROOT/modules/verify-executor.md"
+VERIFY_PATTERNS="$PROJECT_ROOT/modules/verify-patterns.md"
+ISSUE_SKILL="$PROJECT_ROOT/skills/issue/SKILL.md"
+VERIFY_SKILL="$PROJECT_ROOT/skills/verify/SKILL.md"
 
 @test "verify-classifier: --branch=main filter is present in patch route template" {
     grep -q -- "--branch=main" "$VERIFY_CLASSIFIER"
@@ -26,6 +31,22 @@ VERIFY_EXECUTOR="$PROJECT_ROOT/modules/verify-executor.md"
 @test "spec-test-guidelines: both patch route template occurrences use --branch=main" {
     count=$(grep -c -- "--branch=main" "$SPEC_TEST_GUIDELINES")
     [ "$count" -ge 2 ]
+}
+
+@test "spec-test-guidelines: patch route templates do not use --commit=\$(git rev-parse HEAD)" {
+    ! grep -q -- '--commit=$(git rev-parse HEAD)' "$SPEC_TEST_GUIDELINES"
+}
+
+@test "verify-patterns: patch route --branch=main filter is present" {
+    grep -q -- "--branch=main" "$VERIFY_PATTERNS"
+}
+
+@test "issue-skill: --branch=main filter is present in patch route example" {
+    grep -q -- "--branch=main" "$ISSUE_SKILL"
+}
+
+@test "verify-skill: --branch=main filter is present in patch route example" {
+    grep -q -- "--branch=main" "$VERIFY_SKILL"
 }
 
 @test "verify-executor: html_check uses html-selector-match.py" {
