@@ -87,3 +87,41 @@ Completion Report は同一セッション内で Step 2 / Step 8 の triage auto
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: `/issue` フェーズの Issue Retrospective。Issue 本文への「追加観察 (`/issue` の XS 時ラベル付与の非決定性)」の折り込みが既に完了していること、対応方針 (案 A/B/C) の最終決定は `/spec` に委ねる判断であることを記録。タイトルは変更しないと判断した旨も記載。 / URL: https://github.com/saitoco/wholework/issues/1108#issuecomment-5212311203
+
+### code phase (cutoff: `2026-08-07T04:45:15Z`)
+
+No new comments since last phase.
+
+## Autonomous Auto-Resolve Log
+
+- Step 3 (`phase/ready` label check): label list is `triaged`, `phase/code`, `retro/verify` — `phase/ready` is absent because the Issue already advanced past it (timeline shows `phase/ready` at 04:41:22Z → `phase/code` at 04:45:15Z, no PR/branch/worktree existed prior to this run, indicating a prior `/code` invocation transitioned the label but did not complete implementation). Spec file `docs/spec/issue-1108-auto-spec-dispatch-xs-gate.md` was confirmed present and complete. Auto-resolved: proceed with implementation using the existing Spec.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — implementation followed the Spec's 4 Implementation Steps as written.
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+### Smoke Test
+- N/A — Spec has no `## Smoke Test` section.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Adopted the Spec's already-decided 案 A (fix `run-auto-sub.sh` to match `skills/auto/SKILL.md` Step 3) verbatim — no new design decisions were needed at code time.
+- All 4 Implementation Steps were carried out exactly as specified; no reordering, consolidation, or approach change occurred.
+- Judged all 5 pre-merge `rubric` AC as PASS during Step 10 self-verification (diff-based adversarial check against each condition text) and checked the corresponding Issue checkboxes before PR creation.
+
+### Deferred Items
+- Post-merge AC ("`--batch` で XS Issue を処理し、spec 要否が規定どおりになること、および Step 4b が二重転記を起こさないことを確認する", `verify-type: opportunistic`) is deferred to post-merge observation as designed — not actionable pre-merge.
+
+### Notes for Next Phase
+- This `/code` run resumed from a stale `phase/code` label with no prior PR/branch/worktree — the Issue timeline shows `phase/ready` → `phase/code` transitioned 4 minutes apart with nothing committed in between, indicating an earlier `/code` invocation was interrupted before creating a PR. This run treated it as a fresh start using the existing Spec; no residual state needed reconciling.
+- The diff touches `scripts/run-auto-sub.sh`, `skills/auto/SKILL.md`, and `skills/issue/SKILL.md` — all three are referenced by test files beyond their direct bats counterpart, so this triggered the Behavioral Change Detection override: `bats tests/` (full suite, 1508 tests) ran instead of the narrower auto-detected scope, all passing.
+- Spec Notes already established that `docs/workflow.md` and the two SSoT tables in `modules/size-workflow-table.md` need no edit (rule unchanged, only actual behavior corrected to match) — review does not need to re-litigate that scope call.
