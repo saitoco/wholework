@@ -16,6 +16,12 @@
 - saito / MEMBER / first-class / 前回 `/verify 476` (2026-08-06 re-run #3) 実行結果。Pre-merge 2 件 SKIPPED (already checked)、Post-merge observation (event=pr-review-light) は PR #1193 の diff に該当欠陥なしのため UNCERTAIN。3回連続の再現により起票水準に達したと記録 / https://github.com/saitoco/wholework/issues/476#issuecomment-5200610461
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5201684724
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=4 / https://github.com/saitoco/wholework/issues/476#issuecomment-5210084188
+
+### verify フェーズ (2026-08-06 re-run #6, cutoff: 2026-06-14T21:50:38Z)
+
+- saito / MEMBER / first-class / 前回 `/verify 476` (2026-08-06 re-run #5) 実行結果。Pre-merge 2 件 SKIPPED (already checked)、Post-merge observation (event=pr-review-light) は PR #1218 (Issue #1082) の diff に該当欠陥なしのため UNCERTAIN。`keyword=workflow` ゲートがファイル名 `docs/workflow.md` の部分一致で誤発火した新規欠陥を発見 / https://github.com/saitoco/wholework/issues/476#issuecomment-5210100264
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=476 event=pr-review-light --> observation event 再発火通知 (`/review --light` PR #1217, Issue #1206 完了) / https://github.com/saitoco/wholework/issues/476#issuecomment-5210084188
+
 ## 背景
 
 `/review` の MUST/SHOULD 分類基準に「対象実行環境で決定的に失敗する欠陥は MUST」というルールを明文化する。Spec フェーズなしで直接実装（Issue 本文から要件を読み取り）。
@@ -132,4 +138,14 @@
 
 ### Improvement Proposals
 - re-run #4 で追加した `keyword=workflow` ゲートは、`.github/workflows/` 配下のワークフロー内容ではなく「diff/Spec テキスト中に 'workflow' という文字列が (ファイル名の一部としてであっても) 出現するか」という表層一致でしか判定していない。本 Issue の Spec のようにドキュメントファイル名の列挙 (`docs/workflow.md`) に反応して誤発火するケースが実測で確認できたため、`keyword=` フィルタの設計そのもの (単純な部分文字列マッチ vs. ファイルパス変更を対象とした構造化マッチ、例えば `.github/workflows/*.yml` の変更有無を見る) を見直す価値があると考えられる。ただし本件は `keyword=workflow` 導入後の初回発生であり、re-run〜re-run #3 で適用した「3回連続再現で起票水準」の閾値には未到達 — Step 16 (retro-proposals) の Tier 1 分類・freshness check に判断を委ねる
+
+## Verify Retrospective (2026-08-06 re-run #6)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1217、Issue #1206) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカー計6件) したが、今回の発火元 PR #1217 の diff (`scripts/run-merge.sh`, `skills/auto/SKILL.md`, `tests/auto.bats`, `tests/run-merge.bats`, `docs/spec/issue-1206-*.md` — pr route merge 後のローカル main 未追従検出・防止) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず UNCERTAIN 判定に帰着した。re-run #5 で確認した `keyword=workflow` ゲートの誤発火パターン (Spec 内 `docs/workflow.md` ファイル名参照への部分一致) が、本 Issue #1206 の Spec でも同じ列挙文 ("`docs/tech.md` / `docs/workflow.md`") に反応して**2件目**として再現した。1件のみだった re-run #5 と異なり、異なる Issue (#1082 → #1206) の Spec で同一の誤発火経路 (steering document 列挙文脈での `docs/workflow.md` 言及) が再現したことで、この経路が偶発ではなく反復可能なパターンであることが裏付けられた
+
+### Improvement Proposals
+- re-run #5 で発見した `keyword=workflow` ゲートの誤発火が、本 re-run #6 で異なる発火元 Issue (#1082 → #1206) においても**同一の経路** (Spec の「steering document に該当記述なし」を確認する列挙文中の `docs/workflow.md` ファイル名言及) で再現した。2件はいずれも `docs/tech.md` / `docs/workflow.md` 等の steering document パス列挙という共通パターンから発生しており、単発の偶然ではなく `keyword=` の部分文字列マッチ設計に起因する構造的な誤検知経路である可能性が高い。re-run #3 で採用した「3回連続再現で起票水準」の閾値には未到達 (2/3) だが、発火元が異なる Issue にわたって再現している点は re-run #2〜#4 (同一 event の無条件発火という単一パターンの反復) より一段階進んだ証拠強度を持つ。次回同型の誤発火が確認された場合は、閾値を待たずに起票を検討する価値がある — Step 16 (retro-proposals) の Tier 1 分類・freshness check に判断を委ねる
 
