@@ -178,3 +178,68 @@ cutoff: `2026-08-07T07:29:33Z` (直近の `phase/*` label 付与時刻、Issue t
 | saito | MEMBER | first-class | `/issue 1228 --non-interactive` の Issue Retrospective。AC4/AC5 のテストファイル検証範囲拡張と AC6 の対象ファイル明示という 2 件の自動解決を報告し、案 i / 案 ii の方針選択は `/spec` に委ねたことを明記 | [#issuecomment-5213951164](https://github.com/saitoco/wholework/issues/1228#issuecomment-5213951164) |
 
 cutoff 以前のコメント 2 件 (`#issuecomment-5212048140` — AC6 対象範囲となるドキュメント不正確さの特定、`#issuecomment-5213033677` — #1108 着地後の案 i 制約 3 件の申し送り) は消費対象外だが、いずれも設計判断に直結するため参照した。前者は Changed Files の `modules/event-emission.md` / `docs/structure.md` に、後者は Root Cause の「案 i を採らない根拠」に反映済み。
+
+## issue retrospective
+
+`/issue 1228 --non-interactive` による既存 Issue 精査を実施した。`triaged` ラベルが既に付与済みのため triage 自動チェーン (Step 2) はスキップ、Background の事実主張 (`scripts/run-auto-sub.sh` の行番号・関数参照) は grep で照合し、内容面での不整合はなし (行番号のわずかなズレのみ、実装との対応関係は正確)。
+
+### 曖昧性の自動解決 (非対話モード)
+
+Size L のため検出上限 5 件のうち、実質的なギャップとして 2 件を検出しすべて自動解決した (詳細は Issue 本文の「Auto-Resolved Ambiguity Points」節を参照):
+
+1. **AC のテストファイル検証範囲の拡張** — AC3 は新規テストケースの追加先として `tests/auto-sub-observability.bats` に加え `tests/run-spec.bats` / `tests/run-issue.bats` も候補として明示していたが、AC4/AC5 の verify command はそのうち前者2ファイルしか PASS を検証していなかった。案 ii (`run-issue.sh`/`run-spec.sh` 側で直接 emit) を選んだ場合に検証が機能しない抜け穴があったため、`tests/run-spec.bats` / `tests/run-issue.bats` への `command "bats ..."` 検証を追加。方針選択 (案 i/ii) 自体は `/spec` に委譲したまま、どちらを選んでも AC が機能するようにした。
+2. **AC6 (ドキュメント一致性) の対象ファイル明示** — 本 Issue 自身の 2026-08-07T03:42:25Z コメントで既に `modules/event-emission.md` と `docs/structure.md:224` の2箇所が実装前提と食い違っていることが特定されていたが、旧 AC6 の rubric 文言「`docs/tech.md` または `modules/`」は `docs/structure.md` をカバーしていなかった。コメントで確定済みの2ファイルを rubric に明記した。`docs/ja/structure.md` (対訳) は翻訳出力物の verify command 対象外規約に従い除外。
+
+### 政策判断で維持した点
+
+- 「対応方針の候補」(案 i / 案 ii) の選択は Issue 本文の記載どおり `/spec` 時点の判断に委ねた。直近の retrospective コメント (#1108 着地後の申し送り) は判断材料を提供しているが、`/issue` 段階で先取りしなかった。
+- 削除系キーワードは検出されず、`## Scope` セクションの追加は不要と判断。
+
+### スキップした処理
+
+- Step 12 (Scope Assessment / sub-issue 分割): 非対話モードのため High-Stakes Decision としてスキップ。Size L のため元々分割閾値 (XL) 未満であり、対話モードでも分割不要と判定される可能性が高い。
+
+## spec retrospective
+
+### Minor observations
+
+- `/issue` が「案 i/ii の選択は `/spec` に委ねる」と明示的に判断保留したのは正しかった。判断に必要だった決定打 (`run-issue.sh` は `run-auto-sub.sh` から呼ばれない) はコードベース調査を経ないと出てこない事実であり、`/issue` の調査範囲では到達できなかった。
+- `modules/event-emission.md` の `### token_usage` はフィールド一覧に `cache_write_tokens` を挙げているが、`run-auto-sub.sh:650-654` は emit していない (emit するのは `model` / `input_tokens` / `output_tokens` / `cache_read_tokens`)。Issue 本文の retrospective コメントが特定した 2 件の不正確さに加えた 3 件目で、AC8 の rubric 文言 (「emit 元・emit 条件・対象 phase の記述」) には直接含まれないが同じ節にあるため Implementation Step 5 に含めた。
+- `docs/reports/event-log-schema.md` L58 の「`spec` phase is excluded as it is called directly」も同種の陳腐化記述だが、AC8 が対象ファイルを 2 件に絞り込んだ結果、rubric の検証対象外になっている。Changed Files に含めて sync candidate として明示することで silent omission を防いだ。
+
+### Judgment rationale
+
+- **案 ii の採用は「トレードオフ比較」ではなく「案 i の実現不能性」で決まった**。Issue 本文の候補表は両案を対等なトレードオフとして提示していたが、`run_phase_with_recovery()` が `run-auto-sub.sh` のローカル関数であり `run-issue.sh` がそこから呼ばれていない以上、案 i は AC1/AC2 の半分しか満たせない。Issue 起票時の枠組みが実装構造と一段ずれていた例として記録する。
+- **`emit-event.sh` への共有ヘルパ抽出を見送った判断根拠は「テスト mock の数」である**。`tests/*.bats` の `emit-event.sh` heredoc mock が 8 ファイル 54 箇所あり、うち 28 箇所が呼び出し経路に乗る。全 wrapper が `set -e` のため 1 箇所の追加漏れが即 abort になる。設計上は抽出が正しいが、変更サーフェスが機能本体を大きく上回る。同種の判断が再発した場合は「mock 定義箇所数」を先に数えることを定石にできる。
+- **`rm -f "$TOKEN_USAGE_FILE"` の追加は AC に書かれていない設計判断**。`.tmp/token-usage-<issue>.json` が spec と code で同一パスであるため、`run-code.sh` が早期 abort した場合に spec 由来の JSON が `phase=code-patch` として誤 emit されうる。本 Issue が取りに行っている実測 (#1064) をその汚染が直撃するため、AC 外だが必須と判断した。
+
+### Uncertainty resolution
+
+- **JSON モード化が `max_silent_window` の意味を壊す懸念は実測で否定された**。`claude-watchdog.sh` の JSON 分岐は `unchanged_time` をリセットしないため silent window が実行時間総量になる (既知、`docs/spec/issue-630-auto-event-log-metrics.md` L130)。しかし `phase_start`→`phase_complete` の実所要時間と `max_silent_window.max_sec` を突き合わせたところ、spec は 914s vs 900s (p50)、issue は 433s vs 420s (p50) と差が 1〜3% しかなく、**両 phase は非 JSON モードでも既に中間出力をほぼ出していない**ことが判明した。懸念は成立しない。
+- この実測は同時に、#939 が必要とする「spec の silent window 実測」の解釈が JSON モード化後も変わらないことを保証する。#939 に対する本 Issue の副作用はない。
+- **残った境界リスクは 1 件**: spec の実所要時間 max 1806s が `WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800` を既に超えており (`watchdog_kill` 2 件)、JSON モード化とは無関係に境界にある。本 Issue のスコープ外 (#939) として Uncertainty 節に残した。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- **案 ii (wrapper 側で直接 emit) を採用**。決定打は `run-issue.sh` が `run-auto-sub.sh` から呼ばれていない (`skills/auto/SKILL.md` が直接起動) こと。案 i では issue phase をカバーできず AC1/AC2 を満たせない。
+- **`--output-format json` キャプチャ分岐の追加を実装範囲に含めた**。`run-spec.sh` / `run-issue.sh` は `.tmp/token-usage-<issue>.json` を生成していないため、emit 追加だけでは `token_usage` が永久に発火しない。
+- **`wrapper_exit` の `exit_code` は reconcile 調整後の最終値を使う**。`run_phase_with_recovery()` が code phase について emit する値も `run-code.sh` の補正後の値であり、それとのパリティを取る。
+- **`_EMIT_PHASE_OWNED` ガードを両 emit に適用**。現状の実挙動は変わらないが、将来 spec が `run_phase_with_recovery()` 経由に移る場合の二重 emit を予防する。
+- **`emit-event.sh` への共有ヘルパ抽出は見送り**。テスト mock 28 箇所への追随コストが機能本体を上回るため。既存の `_maybe_emit_phase_complete()` 複製と同じ慣行に揃える。
+
+### Deferred Items
+
+- `emit-event.sh` への `emit_token_usage_from_file` 抽出 — follow-up 候補として Notes に記録。本 Issue では起票しない (改善提案は `/verify` フェーズで集約する規約に従う)。
+- `WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800` の再校正 — spec の実所要時間 max 1806s が既に境界を超えているが、#939 のスコープ。
+- `docs/reports/event-log-schema.md` の修正は AC8 の rubric 検証対象外 (AC8 は `modules/event-emission.md` と `docs/structure.md` の 2 件に限定)。Changed Files には含めたので `/code` で実施し、`/review` の doc consistency で担保する。
+
+### Notes for Next Phase
+
+- `scripts/run-code.sh:256-282` が JSON キャプチャ分岐の参照実装。`OUTPUT_FORMAT_JSON=1` は `env` 引数側、`--output-format json` は `claude` 引数側、リダイレクトは `run_with_retry_on_kill` 全体に掛ける — この 3 点をそのまま写すこと。
+- `run-spec.sh` / `run-issue.sh` の emit コードは **top-level スコープ**に置くため `local` は使えない (`run-auto-sub.sh:644` の逐語コピーは不可)。変数名は `_` 接頭辞で衝突回避する。
+- `tests/run-spec.bats` / `tests/run-issue.bats` の mock `claude` は標準出力に何も書かないため、既存テストでは `TOKEN_USAGE_FILE` が空になり `token_usage` emit はスキップされる (回帰しない)。`token_usage` を発火させるテストは mock `claude` に JSON を書かせる必要がある。フィクスチャ形状は `tests/run-auto-sub.bats:1080-1082` を流用。
+- `tests/*.bats` の mock 追加時は `ARGS_COUNT` を assert しているテストが存在しないことを確認済み。`--output-format json` の引数追加で既存テストは落ちない。
+- `scripts/run-auto-sub.sh` は変更しない。#1108 が追加した XS ゲート・skip ログ文言・`--opus` 受け渡しには一切触れないこと。
