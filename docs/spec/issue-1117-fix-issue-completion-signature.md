@@ -50,6 +50,36 @@
 - スコープ外 (Issue body で明示済み): `skills/auto/SKILL.md` Step 3 への reconcile 呼び出し追加、`run-issue.sh`/`run-spec.sh` の wrapper 機構そのものの新規実装、`skills/issue/SKILL.md` のラベル遷移ステップの位置変更。理由は Issue body 参照。
 - README.md / docs/workflow.md には `_completion_issue()` の具体的なラベル判定に関する記述がないため、Steering Docs sync candidate には該当しない (grep で確認済み)。
 
+## Autonomous Auto-Resolve Log
+
+- **Proceeded with implementation despite `phase/ready` being absent** — reason: `reconcile-phase-state.sh code-pr 1117 --check-precondition` reported `matches_expected:false` because the Issue's current label is `phase/code` (a later phase than `phase/ready`) rather than `phase/ready` itself, and the precondition check only matches the exact `phase/ready` string. The Spec (`docs/spec/issue-1117-fix-issue-completion-signature.md`) already existed and was fully fleshed out, indicating the `/spec` phase had genuinely completed before this run; the missing `phase/ready` label reflects a label-state artifact from a prior `/code` attempt on this Issue (no PR or remote branch existed), not a missing Spec. Proceeded using the existing Spec as authoritative.
+  - Other candidates: hard-abort and request `/spec 1117` be re-run (rejected — Spec content was already complete and directly usable; re-running `/spec` would have been redundant and wasted a session).
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation followed the Spec's Implementation Steps and Changed Files list exactly (`scripts/reconcile-phase-state.sh` `_completion_issue()`, `modules/phase-state.md` Phase Table, `tests/reconcile-phase-state.bats`).
+
+### Design Gaps/Ambiguities
+- The Spec did not anticipate that this Issue's own label state (`phase/code` present, `phase/ready` absent) would trip the `code-pr` precondition check performed by the very script this Issue modifies (`reconcile-phase-state.sh`). Not a defect in the Spec — the precondition check is a separate code path (`_precondition_code_pr()`) from the one being fixed (`_completion_issue()`); noted here only because it was a self-referential surprise worth recording. See Autonomous Auto-Resolve Log above.
+
+### Rework
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Fixed `_completion_issue()` exactly per the Spec's prescribed regex (`grep -qE '^phase/(issue|ready|code|review|merge|verify|done)$'`), matching `_completion_spec()`'s existing pattern style for consistency.
+- Ran the full `bats tests/` suite (not just the direct counterpart file) because `modules/phase-state.md` — one of the three changed files — is also referenced by `tests/operate-route.bats`, triggering the Behavioral Change Detection full-suite override. All 1500+ tests passed.
+
+### Deferred Items
+- The Post-merge AC (opportunistic, "confirm on a real triaged-but-not-phase/issue Issue that `matches_expected:false` is now detected") is left unchecked for `/verify` to confirm post-merge.
+
+### Notes for Next Phase
+- No implementation deviations from the Spec — `/review` should find the diff matches Changed Files / Implementation Steps exactly.
+- This Issue's own label state (`phase/code` present without `phase/ready`) caused the `code-pr` precondition check to report `matches_expected:false` when probed during this `/code` run — this is expected given the Issue's history (see Autonomous Auto-Resolve Log) and not a new bug; no action needed from `/review`.
+
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1117#issuecomment-5213109567
