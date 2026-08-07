@@ -110,3 +110,38 @@ Consumed Comments で提示された「79 件へ `when=` を併せて付与す�
 ### #1164〜#1167 の Issue 本文に残る古い "Blocked by #1157" 記述
 
 4 件とも本文に `## Blocked by #1157` セクションが残っているが、#1157 は 2026-08-04 に CLOSED (`stateReason: COMPLETED`) 済みで GraphQL 上のブロッキングは解消している (`gh-check-blocking.sh`/`get-blocked-by.sh` で確認済み、exit code は共に「オープンなブロッカーなし」を示す)。#1163 は `/issue --non-interactive` 実行時にこの記述を更新した (issue retrospective 参照)。他 4 件は各自の `/issue`/`/spec` 実行時に同様の更新が行われる想定であり、本 Issue の Spec からは編集しない (他 Issue の本文編集は本 Spec のスコープ外)。
+
+## spec retrospective
+
+### Minor observations
+
+- **XL 親 Issue が sub-issue 分割後も自身の Pre-merge AC (rubric) を保持するケースへの経路定義が `modules/size-workflow-table.md` に存在しない**: Size-to-Workflow Mapping Table は XL に「split guidance / Verify: —」を割り当て、Phase-Level Light/Full Mapping 表も patch/pr/operate の 3 列のみを持つ。しかし #1158 のように分割後も親自身が rubric 型の集約 AC を持つ場合、その AC を評価可能にするには親自身も (小さくとも) Changed Files と route を持つ必要があり、既存のテーブルはこのケースを想定していない。今回は Size を XL に維持しつつ明示 `--pr` フラグでルーティングする回避策を Notes に記録したが、同型の XL 分割 Issue が今後増えるなら `size-workflow-table.md` 側にこのパターンの記述を追加する価値がある (改善提案として記録するに留め、Issue 起票は `/verify` の集約フェーズに委ねる)
+- **#1164〜#1167 の Issue 本文に古い "Blocked by #1157" 記述が残存**: #1157 は着地済みだが、#1163 以外の 4 sub-issue の本文は未更新のまま。各自の `/issue`/`/spec` 実行時に自然に解消される見込みであり、本 Issue から先回りして編集する必要はないと判断した (詳細は本 Notes 節を参照)
+
+### Judgment rationale
+
+- **`modules/ambiguity-detector.md` の「Size downgrade from XL to L」を「XL からの任意の縮小」へ一般化して適用した**: 文言は特定的に「to L」だが、この制約の趣旨 (「sub-issue 分割要否の構造判断を無効化しない」) は縮小先が L であろうと XS/S/M であろうと同じリスクを持つ。文言の字面ではなく制約の趣旨に従い、Changed Files 数がどうであれ XL からのダウングレードは一律 skip する判断とした
+- **#1163 の「rubric AC は operate route では評価不能」という判断を親 Issue 自身にも一段上で適用した**: #1163 は自分自身 (sub-issue) の rubric AC のために記録ファイルを追加したが、親 #1158 も同型の rubric-only Pre-merge AC を持つことに Step 6 の投資調査で気づいた。「親は追跡専用で実装を持たない」という Issue 本文の額面通りの記述より、rubric grader の可視範囲という機械的制約を優先し、親にも Changed Files を持たせた
+
+### Uncertainty resolution
+
+- **Size=XL のまま `/code` を実行した場合に `modules/ambiguity-detector.md` の Hard-error abort 条件 (「Size is XL without sub-issue splitting」) に抵触しないか**: #1158 は GraphQL `subIssues` で 5 件の sub-issue が既に確認できるため、この hard-error 条件 (分割が存在しない場合) には該当しないと判断した。ただし `/code` 自身の実装がこの判定をどう行うかは未確認であり、次回 `/code 1158` 実行時に実際に確認されるべき残存確認事項として記録する
+- **Post-merge AC の文言をそのまま流用してよいか**: #1163/#1164 のように「N 件減少」という定量表現へ調整する必要があるか検討したが、#1158 自身の Post-merge AC は元々「79 件から減少していることを確認する」という定性的表現であり、5 sub-issue 全体の合計減少を指すため調整不要と判断し、Issue 本文のまま転記した
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- #1158 は 2026-08-05 に対応方針 A (sub-issue 分割) で既に分割済みであり、実体作業は #1163 (CLOSED) / #1164 / #1165 / #1166 / #1167 (いずれも OPEN、phase/issue 未到達) が担う。本 Spec は #1158 自身の残存スコープ (5 sub-issue 完了後の集約クローズアウト) のみを定義する
+- Pre-merge AC 5 件が全て `rubric` であるため、rubric grader の可視範囲 (Issue 本文・git diff・rubric 名指しファイルのみ) を確保する目的で `docs/reports/manual-ac-retype-summary.md` を Changed Files に追加した (#1163 の operate→pr route 転換と同じ論理を親 Issue に適用)
+- Size は XL を維持し、ダウングレードは実行しなかった (`modules/ambiguity-detector.md` の Non-Interactive Mode Handling が「Size downgrade from XL」を High-Stakes Decision として明示的に skip 対象としているため)
+
+### Deferred Items
+- Implementation Step 1 (precondition gate) — #1164/#1165/#1166/#1167 が全て `phase/done`/CLOSED に到達するまで Step 2 以降は実行不可。次回 `/code 1158` 実行時に gate から再開する
+- カテゴリ B (6件) の retire/downstream 移管判断 — #1166 自身の Acceptance Criteria が所有。本 Issue では判断せず集約レポートへの転記のみ行う
+- `size-workflow-table.md` に「XL 分割後も親が rubric 型集約 AC を持つ」パターンの経路定義が存在しない件 — spec retrospective に記録済み。Issue 起票は `/verify` の改善提案集約フェーズに委ねる
+
+### Notes for Next Phase
+- `/code 1158` 実行時は Size=XL のままだが、明示的に `--pr` フラグを使うこと (Size ベースの自動ルーティングは XL に対して patch/pr/operate のいずれの列も持たないため)
+- Implementation Step 1 の precondition gate で 1 件でも未完了なら、以降の Step を実行せず「blocked」として終了すること — 空ファイルや部分的な内容でレポートを作成しないこと
+- 集約レポート作成時は #1163 の実例 (`docs/reports/manual-ac-retype-a.md`) を構造の参考にすること (見出し構成: `## 対象・件数内訳` → `## 区分別処理結果` → `## 検証`)
