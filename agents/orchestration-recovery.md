@@ -25,6 +25,7 @@ The following information is passed from the caller via prompt:
 - **issue_labels**: Current labels on the Issue
 - **pr_number**: PR number if available (empty string if not yet created)
 - **branch**: Current branch name if available
+- **ci_failure_verdict**: verdict from the CI platform failure pre-check (`ci-infra` / `implementation` / `undetermined`), or empty string when the pre-check did not run
 
 ## Processing Steps
 
@@ -53,6 +54,7 @@ Cross-reference log tail and reconcile state to identify the anomaly:
 | Watchdog kill | Log contains "watchdog" or "timeout", partial state present | `recover` |
 | Unrecoverable | Conflicting state, merge conflict unresolved, authentication failure | `abort` |
 | Phase already done | reconcile `matches_expected: true` | `skip` |
+| CI platform outage | Input `ci_failure_verdict` is `ci-infra`, or CI has not reached a definite state | `abort` |
 
 Use minimal, conservative judgment: when in doubt, prefer `abort` over risky `recover` steps.
 

@@ -723,6 +723,7 @@ run_phase_with_recovery() {
   # state, not an anomaly. Retry after a delay, bounded, before falling
   # through to Tier 1/2/3 recovery. See
   # modules/orchestration-fallbacks.md#review-pending-not-failure
+  # CI-outage classification for this exit code 2: modules/ci-failure-classifier.md
   if [[ "$phase" == "review" ]] && [[ $exit_code -eq 2 ]]; then
     local _pending_retry_sec="${WHOLEWORK_REVIEW_PENDING_RETRY_SEC:-300}"
     local _pending_max_retries="${WHOLEWORK_REVIEW_PENDING_MAX_RETRIES:-2}"

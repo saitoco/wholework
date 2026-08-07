@@ -389,7 +389,7 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ### Fallback Steps
 1. Check current CI status with `gh pr checks <pr_number>` before retrying anything
-2. If the failure signature matches CI infrastructure outage (`steps: []`, `cancelled` + timeout, runner error, network error — see `skills/verify/SKILL.md` Step 5 "Verification priority" Step 1 for the classification table), re-run CI on the same SHA
+2. If the failure signature matches CI infrastructure outage (see `modules/ci-failure-classifier.md` for the classification table), re-run CI on the same SHA
 3. Once CI reaches a confirmed (non-pending) state, retry the phase
 
 ### Escalation

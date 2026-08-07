@@ -25,7 +25,7 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill definition (required)
 │       └── *.md         # Auxiliary phase/guideline files (optional)
-├── modules/             # Shared modules referenced by skills (41 files)
+├── modules/             # Shared modules referenced by skills (43 files)
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
@@ -143,6 +143,7 @@ Key modules:
 - `modules/phase-handoff.md` — phase-to-phase Phase Handoff summary read/write (cross-phase context carryover)
 - `modules/steering-hint.md` — dynamic hint recommending `/doc init` when steering docs are absent
 - `modules/orchestration-fallbacks.md` — orchestration-level fallback pattern reference catalog (consumed by #319 tier 2, #316 recovery sub-agent, #318 learning loop); entries retired for zero firing history and no live reference are archived to `docs/reports/orchestration-fallbacks-archive.md` (#1180)
+- `modules/ci-failure-classifier.md` — CI platform failure classification SSoT (signature table, 3-value verdict, per-consumer response)
 - `modules/domain-classifier.md` — improvement proposal Domain classification (composable, LLM-in-context)
 - `modules/retro-proposals.md` — Improvement Proposal collection, Tier classification (with retro_proposal_classified event emission), and Issue creation (shared by /verify Step 16, /auto Step 4a, and /auto Step 5)
 - `modules/filesystem-scope.md` — filesystem access scope constraints and approved patterns for skills/scripts

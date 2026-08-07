@@ -2,7 +2,7 @@
 name: auto
 description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues; `--batch N1 N2 ...` processes the explicitly listed Issues in order (assigns a BATCH_ID for parallel-safe checkpointing). `--resume N` resumes a single Issue (restores verify counter from checkpoint); `--batch --resume` resumes an interrupted batch using `list_active_batches` to identify the target session.
 loop-paths-used: [A]
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-external-kill.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/filter-session-verified-issues.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-session-findings-disposition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/scan-pending-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/apply-run-fact-match.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, gh run list:*, gh run view:*, gh pr checks:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-external-kill.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/filter-session-verified-issues.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-session-findings-disposition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/scan-pending-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/apply-run-fact-match.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Autonomous Execution
@@ -442,7 +442,10 @@ Full phase sequence:
 6. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh review $NUMBER --pr $PR_NUMBER --check-precondition --warn-only`
 7. Output `[2/4] review`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh $PR_NUMBER $REVIEW_DEPTH` via Bash with `run_in_background: true` (no external timeout — see Step 4 "Execution pattern") (REVIEW_DEPTH set in Step 2, refreshed by Step 3a if applicable); on success output `[2/4] review → done`
    - **stop-at check**: if `EFFECTIVE_STOP_AT == "review"`: output "Stopped at phase: review (auto-stop-at=review)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="review"`
-8. If review fails: check whether `run-review.sh` exited with code 2 (PENDING — CI/preview state not yet confirmed; see `${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh` header comment and `modules/orchestration-fallbacks.md#review-pending-not-failure`). If exit code is 2: sleep `${WHOLEWORK_REVIEW_PENDING_RETRY_SEC:-300}` seconds, then re-run item 7's `run-review.sh $PR_NUMBER $REVIEW_DEPTH` call, up to `${WHOLEWORK_REVIEW_PENDING_MAX_RETRIES:-2}` times. If a retry succeeds (exit 0), continue as in item 7. If the exit code is anything other than 2, or exit code 2 persists after the retry limit is reached, fall through to the completion check `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh review $NUMBER --pr $PR_NUMBER --check-completion` — if `matches_expected: true`, override to success; otherwise go to Step 6
+8. If review fails: check whether `run-review.sh` exited with code 2 (PENDING — CI/preview state not yet confirmed; see `${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh` header comment and `modules/orchestration-fallbacks.md#review-pending-not-failure`). If exit code is 2: first Read `${CLAUDE_PLUGIN_ROOT}/modules/ci-failure-classifier.md` and follow the "Processing Steps" section to obtain a verdict.
+    - **verdict = `ci-infra`**: do not sleep and retry. Instead follow the same wait → re-judge → stop path as Step 6's CI platform failure pre-check (do not repeat the retry loop below).
+    - **verdict = `implementation` or `undetermined`**: sleep `${WHOLEWORK_REVIEW_PENDING_RETRY_SEC:-300}` seconds, then re-run item 7's `run-review.sh $PR_NUMBER $REVIEW_DEPTH` call, up to `${WHOLEWORK_REVIEW_PENDING_MAX_RETRIES:-2}` times. If a retry succeeds (exit 0), continue as in item 7.
+    If the exit code is anything other than 2, or exit code 2 persists after the retry limit (or the CI-infra wait/stop path above) is reached, fall through to the completion check `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh review $NUMBER --pr $PR_NUMBER --check-completion` — if `matches_expected: true`, override to success; otherwise go to Step 6
 9. Precondition check: `${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh merge $NUMBER --pr $PR_NUMBER --check-precondition --warn-only`
 10. Output `[3/4] merge`, then run `${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh $PR_NUMBER` via Bash with `run_in_background: true` (no external timeout — see Step 4 "Execution pattern"); on success output `[3/4] merge → done`
     - **stop-at check**: if `EFFECTIVE_STOP_AT == "merge"`: output "Stopped at phase: merge (auto-stop-at=merge)" and proceed to Step 5 (Completion Report) with `STOPPED_AT="merge"`
@@ -946,6 +949,28 @@ Before entering the Tier 1/2/3 diagnosis flow below, check whether the failed ph
 
 ---
 
+#### CI platform failure pre-check (before Tier 1)
+
+Read `${CLAUDE_PLUGIN_ROOT}/modules/ci-failure-classifier.md` and follow the "Processing Steps" section to obtain a verdict before entering Tier 1/2/3 diagnosis.
+
+- **Applies only when**: the failed phase is one that waits on CI (`review`, `merge`) **and** the External kill pre-check above returned `no-match`. For any other phase, skip this pre-check entirely and proceed to Tier 1.
+- **When verdict = `ci-infra`**:
+  (a) Repeat up to `${WHOLEWORK_CI_OUTAGE_MAX_RECHECKS:-2}` times: wait `${WHOLEWORK_CI_OUTAGE_RECHECK_SEC:-600}` seconds, then re-run the classifier; stop repeating as soon as the re-judged verdict is no longer `ci-infra` (proceed to (b)).
+  (b) If the re-judged verdict is no longer `ci-infra`, re-run the failed phase's `run-*.sh` once with the same arguments, then return to the normal flow.
+  (c) If the re-judged verdict is still `ci-infra` after `${WHOLEWORK_CI_OUTAGE_MAX_RECHECKS:-2}` re-judgments, do not enter Tier 1/2/3 — stop, and include `cause: ci-infra-outage` in the Step 6 stop banner.
+  (d) When stopping per (c), record it the same way as the External kill pre-check's Recording step (regenerate the PGID pointer file in the same call, since it is not visible here):
+      ```bash
+      mkdir -p .tmp
+      PGID=$(ps -o pgid= -p $$ | tr -d ' ')
+      printf '%s\n' "<literal SESSION_ID value from step 1>" > ".tmp/auto-session-${PGID}"
+      bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery $NUMBER $PHASE respawn [EXIT_CODE] --cause ci-infra-outage-during-ci-wait
+      ```
+      If `EXIT_CODE` was not observed, omit the argument entirely — do not pass the string `unknown`.
+- **When verdict = `implementation` or `undetermined`**: do nothing — proceed to Tier 1 (existing behavior unchanged).
+- **Do not introduce a new Tier number**: like the External kill pre-check above, this pre-check sits outside the Tier 1/2/3 vocabulary.
+
+---
+
 #### Tier 1 (Observe): State Reconciliation
 
 Run the completion check for the failed phase:
@@ -996,6 +1021,7 @@ Spawn the orchestration-recovery sub-agent via Task to diagnose the unknown fail
    - `issue_labels`: output of `gh issue view $NUMBER --json labels -q '.labels[].name'`
    - `pr_number`: `$PR_NUMBER` if available, otherwise empty string
    - `branch`: current worktree branch if available
+   - `ci_failure_verdict`: the verdict returned by the CI platform failure pre-check above (`ci-infra`/`implementation`/`undetermined`), or empty string if the pre-check did not run
 
 2. Spawn the sub-agent:
    ```
