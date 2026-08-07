@@ -87,3 +87,34 @@
 ### Notes for Next Phase
 - 本 Issue に対応する bats テストは存在しない (SKILL.md プローズが対象)。Pre-merge AC は `rubric` × 2 と `section_contains` × 1 で検証済み (すべて PASS)。
 - `/review` は `skills/verify/SKILL.md` の diff (Step 2 のみ) をレビュー対象とする。OPEN PR 検索ブロックには変更がないことを確認済み。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Background に **#1197 の実測 (PR #1018 が実際には `closes #1015`)** が具体的に記録されており、これが実装本文にもそのまま根拠として引き継がれた。**起票時の実測が最終成果物まで到達した好例**
+- `#107` (数値部分一致の誤マッチを `closes #N` クエリで解消) との違い — 「クエリ文字列の改善では構造的に閉じない別経路」— も明記されており、同クラス 2 回目の発生であることが判断材料として機能した
+
+#### spec
+- post-spec で Size を M → S に降格し patch route に切り替えた判断は妥当。実変更は `skills/verify/SKILL.md` の 1 ファイル・14 挿入 7 削除に収まった
+- 上位 1 件でなく**最大 10 件を候補として扱う**設計が良い。全文検索のランキングは不安定で、正解が 1 位に来る保証がないため
+
+#### code
+- Rework ゼロ、設計からの逸脱なし。bash 3.2+ 互換のため配列/`mapfile` を使わず単純な `for`/`break` で実装した点も既存方針と整合
+- Auto-Resolve Log が `phase/ready` と `phase/code` の同一タイムスタンプ付与を「前回セッションの中断跡」と解釈しているが、実際には spec 完了直後に code が始まる**正常な遷移**である (本バッチの #1202 実行は 00:38 UTC 開始、当該タイムスタンプは 00:58 UTC で同一実行内)。続行という結論は正しかったが、診断はやや過剰だった
+
+#### review / merge
+- patch route のため該当なし
+
+#### verify
+- Pre-merge 3 件すべて PASS。実装記述が negative case (「候補ゼロを含め一致がなければ `PR_NUMBER` は空 = patch route」) を明示しており、AC3 の「実装またはテストで確認できる」を実装側で満たす
+- **本 Issue が直した経路を、本 verify 自身が実行している**。Step 2 の PR 検索は今回 patch route (PR なし) で走り、候補なし → `PR_NUMBER` 空 → `BASE_BRANCH=main` に解決された。修正後の挙動が実地で 1 回通ったことになるが、post-merge observation AC が求める「無関係な PR がマッチする状況での観察」ではないため、AC の判定材料には使えない
+
+### Improvement Proposals
+
+- **skill 本体が会話単位でキャッシュされ、会話中の skill 更新が反映されない (#1206 とは別機構)** — 本 verify に渡された `skills/verify/SKILL.md` のテキストは「**Re-runs**: re-verify all conditions (idempotent). Re-verify even if already checked」という**旧版**だったが、ディスク上のファイルは #1186 の「チェック済み AC スキップ」を既に持っている (L337 / L368、`tests/verify.bats` の 3 テストが保護)。#1186 は 2026-08-06 12:54 JST 着地、本会話で最初の `/verify` invocation は同日 10:30 頃 — **最初の一度だけ読み込まれた skill 本体が、以降の全 invocation で使い回されている**。harness の再呼び出し注記 (「the skill instructions were previously loaded」) がこれを示す。
+  - **#1206 の修正では救えない**。#1206 はローカル main の遅れ (ディスク上のファイルが古い) を扱うが、本件はディスク上のファイルが正しいまま、渡されるテキストだけが古い
+  - **実害**: #1186 着地後も本会話の `/verify` はチェック済み AC を毎回再検証し続けた (フル bats スイートの再実行を含む)。#1186 が削減しようとしたコストがそのまま残っていた
+  - 検出手段の候補: `/verify` 実行時に、渡された skill テキストの特徴的な一文とディスク上のファイルを照合する軽量チェック。あるいは会話をまたぐ長時間セッションでは skill を明示的に再読込する運用
+- **新経路を守るテストがない (観察のみ、起票せず)** — 本 Issue の変更は SKILL.md プローズのみで、`tests/verify.bats` に Step 2 突き合わせ経路のテストは追加されていない。同ファイルには既に SKILL.md の構造テストが 21 件あり (Step 2 guard / Step 5 / Step 8c)、同じパターンで保護できる。将来の編集でこの経路が静かに失われても現状どのテストも落ちない。Phase Handoff が「bats テストは存在しない」と意識的に記録しているため、次に Step 2 を触る Issue で回収するのが自然
