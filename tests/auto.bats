@@ -161,3 +161,56 @@ EOF
     [ "$status" -eq 0 ]
     [ "$output" = '{"recovery_tier2_3":2,"watchdog_kill":2,"concurrent_commit":1,"commit_event":0}' ]
 }
+
+# Tests for Skill Self-Update Propagation check comparing against origin (Issue #1206)
+# Uses a real git fixture (bare origin + working repo), same pattern as tests/pre-merge-check.bats.
+
+@test "origin comparison detects skill hash divergence that local HEAD comparison misses" {
+    local origin_dir="$BATS_TEST_TMPDIR/origin-auto.git"
+    local repo_dir="$BATS_TEST_TMPDIR/repo-auto"
+    local clone_dir="$BATS_TEST_TMPDIR/clone-auto"
+
+    git init --bare "$origin_dir" >/dev/null 2>&1
+
+    git init "$repo_dir" >/dev/null 2>&1
+    git -C "$repo_dir" config user.email "test@example.com"
+    git -C "$repo_dir" config user.name "Test"
+    git -C "$repo_dir" remote add origin "$origin_dir"
+
+    mkdir -p "$repo_dir/skills/x"
+    echo "commit A content" > "$repo_dir/skills/x/SKILL.md"
+    git -C "$repo_dir" add skills/x/SKILL.md
+    git -C "$repo_dir" commit -m "commit A" >/dev/null 2>&1
+    git -C "$repo_dir" branch -M main
+    git -C "$repo_dir" push origin main >/dev/null 2>&1
+    git -C "$origin_dir" symbolic-ref HEAD refs/heads/main
+    local commit_a
+    commit_a=$(git -C "$repo_dir" log -1 --format=%H -- skills/x/SKILL.md)
+
+    # A second clone advances origin with commit B without touching repo_dir's local HEAD —
+    # simulates a PR merged via `gh pr merge` while this working repo's main stays behind.
+    git clone "$origin_dir" "$clone_dir" >/dev/null 2>&1
+    git -C "$clone_dir" config user.email "test@example.com"
+    git -C "$clone_dir" config user.name "Test"
+    echo "commit B content" > "$clone_dir/skills/x/SKILL.md"
+    git -C "$clone_dir" add skills/x/SKILL.md
+    git -C "$clone_dir" commit -m "commit B" >/dev/null 2>&1
+    git -C "$clone_dir" push origin main >/dev/null 2>&1
+    local commit_b
+    commit_b=$(git -C "$clone_dir" log -1 --format=%H -- skills/x/SKILL.md)
+
+    [ "$commit_a" != "$commit_b" ]
+
+    git -C "$repo_dir" fetch origin main >/dev/null 2>&1
+
+    local local_head_hash
+    local_head_hash=$(git -C "$repo_dir" log -1 --format=%H -- skills/x/SKILL.md)
+    local origin_hash
+    origin_hash=$(git -C "$repo_dir" log -1 --format=%H origin/main -- skills/x/SKILL.md)
+
+    # Local HEAD comparison alone always reports commit A — a false "no change".
+    [ "$local_head_hash" = "$commit_a" ]
+    # Origin comparison correctly detects the divergent commit B.
+    [ "$origin_hash" = "$commit_b" ]
+    [ "$local_head_hash" != "$origin_hash" ]
+}
