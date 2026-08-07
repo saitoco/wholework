@@ -60,3 +60,43 @@
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective — Background の技術的主張をコードベースと照合し正確性を確認、Auto-Resolve Log (`ci-wait-silence-timeout` 命名確定、`--events` 配線 AC 追加) を記録 / https://github.com/saitoco/wholework/issues/1221#issuecomment-5214484722
 - saito / MEMBER / first-class / `/issue` Step 15 (AC Verify Command Integrity Audit) — 自己監査で Step 8/9 追加直後の AC が Pattern 6-1 (heading 引数に `#### ` を含む常時 UNCERTAIN) に該当すると検出し、Issue body を修復済み (現在の AC は修復後の形) / https://github.com/saitoco/wholework/issues/1221#issuecomment-5214534020
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-5 を Spec 記載順のまま実装。分岐イディオムも `detect-external-kill.sh` line 80-82 と同一のものを流用した
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- 本 Issue は `/auto` の code フェーズが 1 回目の試行でフルテストスイートのバックグラウンド実行によりサイレント no-op し (`code_retry_fire iteration 1`)、2 回目の試行 (本セッション) でリトライされたもの。1 回目の失敗は本 Issue の実装内容自体とは無関係で、直前にランディングした Issue #1213 の修正 (`bats --jobs <N> tests/` をフォアグラウンドで 10 分以内に収める) が本セッションの Step 9 に反映されておりリトライは正常完了した
+
+### Observed pre-existing test flakiness (unrelated to this Issue's scope)
+- `bats --jobs 18 tests/` の並列フルスイート実行で `tests/post_merge_check.bats` の `fail: gh issue reopen called when FAIL input given` が単発 FAIL した。同テストを単独実行 (`bats tests/post_merge_check.bats`) すると 10/10 PASS するため、`scripts/test-failure-classify.sh` の分類は `infra` (並列実行下のリソース競合と推定)。`scripts/post_merge_check.sh` / `tests/post_merge_check.bats` はいずれも本 Issue の変更対象外であり、原因調査・修正はスコープ外と判断した。CI (`.github/workflows/test.yml`) も `bats --jobs $(nproc) tests/` で実行するため、同じ並列条件下では低頻度で再現しうる — 再発・パターン化した場合は別 Issue として起票を検討
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `review-light` (light mode、4 側面統合) で issue 0 件と判定したため、Step 12 (修正作業) は実施せず Step 13 (方針変更検出) もスキップした
+- Pre-merge AC 7 件すべてを safe mode で PASS 判定 (grep x2 / section_contains x1 / rubric x2 / command x1 / CI フォールバック / github_check x1)。AC7 (`github_check "gh pr checks" "Run bats tests"`) は前フェーズで未チェックだったが、CI 9/9 green を確認しチェックボックスを更新した
+
+### Deferred Items
+- Post-merge AC (`verify-type: observation event=auto-run session=next`) は未発火のため引き続き未チェック — 次回 CI 待機由来の watchdog kill が実際に発生した際の観察を待つ (code フェーズからの申し送り事項を継続)
+
+### Notes for Next Phase
+- `/merge` フェーズでは MUST issue なし・CI green のため、通常の squash merge で進行できる想定
+- Post-merge AC の観察確定 (`event=auto-run`) は `/verify` フェーズの担当
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note — PR #1253 の diff (5 ファイル) は Spec の Implementation Steps 1-5 と厳密に一致していた (`--events` 引数名・挿入位置、`detect-external-kill.sh` の chained-grep イディオム踏襲、カタログエントリの配置、`skills/auto/SKILL.md` の引数順、bats 新規 3 ケース)。`review-light` エージェントが Spec 乖離 / エッジケース堅牢性 / セキュリティ / ドキュメント整合性の 4 側面すべてで issue 0 件と判定
+
+### Recurring issues
+- Nothing to note — 本レビューは MUST/SHOULD/CONSIDER いずれも 0 件
+
+### Acceptance criteria verification difficulty
+- Nothing significant to note。Pre-merge 7 件 (`grep` x2, `section_contains` x1, `rubric` x2, `command` x1, `github_check` x1) すべてが UNCERTAIN なしで PASS に到達した
+- `rubric "json-mode-silent-hang の判定条件が、ci_wait イベントが存在する場合に当該パターンへマッチしないよう絞り込まれている"` は、実装の if/else 分岐構造 (ci_wait 検出時のみ `ci-wait-silence-timeout` へ分岐し、それ以外は既存の `json-mode-silent-hang` にフォールバックする形) を直接言い当てており、コード確認 1 回で判定確定できた。rubric 文言がコード構造を正確に予見していた良い例として記録
