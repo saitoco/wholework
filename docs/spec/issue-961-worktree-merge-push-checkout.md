@@ -124,6 +124,9 @@
 
 #### verify
 - Pre-merge 3件 (rubric×2, file_not_contains×1) はいずれも UNCERTAIN なく一発 PASS。Post-merge の manual AC (複数セッション実地確認) は Claude 非実行のため未チェックのまま `phase/verify` を維持。verify command 自体の不整合は検出されなかった。
+- **(2026-08-07 追記 — post-merge AC 決着)** `/auto 1158` (XL route、sub-issue 4 本並列、wall-clock 6h9m、session `94570-1786069858`) の observation dispatch から再 verify し、post-merge AC が PASS に到達して `phase/done` へ遷移した。当該セッションは条件が要求する「複数セッションが同一リポジトリで同時に worktree 作業と直接作業を行う環境」そのもので、`/spec` merge-to-main 5 回・`/code --patch` (operate route) 1 回・`/verify` merge-to-main 10 回の計 16 回を実行。`concurrent_commit_detected` 69 件を検知し、実行中に他セッションの PR #1244 が origin/main へ着地している。
+- **checkout レス設計が 2 経路とも実際に発動した**: (1) `ref-fetch rejected because main is checked out here; merging in place instead` — 共有ディレクトリで main が checkout 済みのため ref-fetch が拒否されたが、他ブランチへの `git checkout` を行わずその場マージへフォールバックした。(2) `ref-fetch rejected; base may have diverged` → rebase → `Error: ref-fetch retry after push-rebase failed. Resolve manually.` — 並行セッションの着地で base が乖離した際、**エラーで安全に停止**し、他セッションのブランチを巻き込む操作は行われなかった。16 回の merge-to-main 後も稼働中セッションのブランチ (`worktree-code+issue-1234` / `worktree-code+issue-1239` / `worktree-code+issue-1227` / `worktree-merge+pr-1253`) は HEAD が保持されており、merge conflict も 0 件。
+- **上記 (2) の経路は本 Spec の Improvement Proposals 1 件目 (push-retry ループの checkout 依存) が指摘した箇所そのものが実際に踏まれた事例**でもある。ただし今回は「エラーで停止 → 親セッションが手動 rebase」で work loss なく収束しており、指摘どおり「共有ディレクトリの現在の checkout に暗黙依存」する構造は残っているが、被害には至っていない。
 
 ### Improvement Proposals
 
