@@ -138,3 +138,32 @@ Nothing to note — 同種の問題の再発は見られなかった。
 ### Acceptance criteria verification difficulty
 
 Pre-merge AC1・AC3 は rubric タイプで `docs/reports/manual-ac-retype-c-d1.md` を根拠資料として評価する構成だったが、Phase Handoff の「Notes for Next Phase」に評価対象ファイルの案内が明記されていたため判定に迷いはなかった。AC4 (`bats tests/`) はローカル実行で exit code 0・最終テスト `ok 1510`・`not ok` なしを確認、CI の `Run bats tests` ジョブ SUCCESS とも整合。PR 本文が「1509件」と記載しているのに対し実際のフルスイートは 1510 件だったが、この差は本 PR が新規に bats テストを2件追加したことによる数値の陳腐化であり、AC 判定への影響はない (verify command は件数を固定しない `bats tests/` のみを要求するため)。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Pre-merge AC を rubric 3 + `command "bats tests/"` 1 で構成した判断が有効だった。区分 C の本質 (故障注入シナリオのテスト化) は `bats tests/` の実行で機械判定でき、区分 D1 の「manual 維持の判断根拠」という意味論部分だけを rubric に委ねる分担になっていた。
+- Spec Notes で **#708 / #719 の 3 AC 行が区分 C 相当でありながら本 Issue のスコープ外である**ことを明示し、対応候補まで調査した上で「別途起票または追加スコープ」を推奨した。非対話モード・light depth の conflict detection ポリシー (Notes 記録のみ) に忠実で、かつ後続が拾えるだけの情報量を残した点が良い。
+
+#### design
+- 区分 D1 の 5 件を「manual のまま維持する」判断根拠を Issue 単位で書き下ろした設計により、rubric grader が `docs/reports/manual-ac-retype-c-d1.md` だけを読めば判定できる構造になっていた。
+
+#### code
+- レジューム状態 (前回試行が Issue 本文編集まで完了・bats テスト追加以降が未完了) を GitHub Timeline から特定し、Issue 編集を再実行せず残りの Step だけを完了させた判断は正しい。#1163 / #1164 / #1165 と同型のパターンが 4 本目の sub-issue でも再現している。
+- worktree のベースが実装完了時点で origin/main から 10 commit 遅れており、`git rebase origin/main` で解消した。並行セッションが多い環境での長時間 non-interactive 実行では、PR 作成直前に origin/main との乖離を確認する一手間が有効という知見が得られた。
+
+#### review
+- review-light agent (4 観点) が指摘なしで完了し、Spec と PR diff の乖離もゼロだった。`code-pr` フェーズで Tier 2 fallback catalog による自動 recovery が発生したが、`docs/reports/orchestration-recoveries.md` に記録済みで review 品質には影響していない。
+
+#### merge
+- pre-merge AC ゲート (4/4 チェック済み) と review-incomplete-fallback チェックの両方をクリアし、`mergeable=true, reason=clean` で確認なしのスカッシュマージ。`closes #1167` により Issue は自動 CLOSE 済み。
+
+#### verify
+- Pre-merge 4 件はすべて `/review` 時点で PASS 済みのため already-checked skip rule により SKIPPED。post-merge の observation AC (`event=auto-run`) は未発火のため SKIPPED。FAIL / UNCERTAIN は 0 件。
+- post-merge AC の文言が「#1066 / #1060 を個別に確認する。D1 の 5 件は意図して manual のまま維持するため減少数には含めない」と、除外対象まで明記されていた。他の sub-issue の「N 件減少」という数値ベースの表現より、observation 評価時の判定が明確になる書き方。
+
+### Improvement Proposals
+
+- **#708 (条件1・2) と #719 (条件1) の計 3 AC 行が #1158 の sub-issue 分割からこぼれ落ちている** — 姉妹 sub-issue #1163 (区分 A) の全件精査でこの 3 行が「故障注入型」= 区分 C 相当と判定され、#1163 の Phase Handoff が明示的に「#1167 の領域」と記録した。しかし #1167 自身の Issue 本文は区分 C として #1066 / #1060 のみを挙げており、この 3 行はどちらの sub-issue の Acceptance Criteria にも入っていない。結果として `phase/verify` に滞留し続ける — 親 #1158 が解消しようとしている状態そのものが、分割作業自体の副産物として新たに 3 行残る。`grep -rl "#708" docs/spec/` は 4 ファイルにヒットし、#1163 と #1167 の 2 つの独立した Spec retrospective が同じ欠落を記録している (再発性の機械的確認)。調査済みの対応候補: `#708` 条件1・2 は `tests/reconcile-phase-state.bats` が既存の決定的テスト対象、`#719` 条件1 は `tests/pre-merge-check.bats` に既に同一シナリオのテストが存在するため**追加実装なしで `auto` へ retype できる可能性が高い**。低コストで確実に滞留 3 件を減らせる。
