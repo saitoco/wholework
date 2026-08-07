@@ -67,19 +67,17 @@
 - None.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Ran `/review 1244 --light --non-interactive` (Size=M, `--light` explicit); Step 10 dispatched a single `review-light` agent covering all 4 aspects (Spec deviation, edge cases, security, documentation consistency) — no issues found.
-- Verified all 3 Pre-merge AC directly from the diff/CI rather than re-running commands: the `rubric` and `section_contains` conditions were confirmed against the PR diff, and the `command "bats tests/reconcile-phase-state.bats"` condition was confirmed via CI reference fallback (the "Run bats tests" CI job, which already SUCCEEDED) since Step 8 runs in safe mode.
-- Posted review as `COMMENT` (no MUST issues); all 9 CI checks were SUCCESS at review time.
+- Pre-merge AC gate: all 3 pre-merge acceptance conditions already checked on the Issue; `review_incomplete_fallback` check reported `matches_expected:true` (organic review completion, not fallback-origin) — proceeded without needing an override marker.
+- `gh-pr-merge-status.sh` reported `mergeable=true, reason=clean` after two `UNKNOWN` polling retries; no conflicts, squash-merged directly via `gh pr merge --squash --delete-branch`.
 
 ### Deferred Items
-- The Post-merge AC (opportunistic, "confirm on a real triaged-but-not-phase/issue Issue that `matches_expected:false` is now detected") remains unchecked, carried forward from the code phase handoff for `/verify` to confirm post-merge.
+- The Post-merge AC ("confirm on a real triaged-but-not-phase/issue Issue that `matches_expected:false` is now detected") remains unchecked, carried forward for `/verify` to confirm post-merge.
 
 ### Notes for Next Phase
-- No MUST/SHOULD/CONSIDER issues were raised; `/merge 1244` can proceed once ready.
-- The Post-merge AC verification depends on finding a real triaged-but-not-`phase/issue` Issue in the wild — `/verify` should check whether such a case has occurred naturally rather than fabricating one.
+- `/verify` should check whether a real triaged-but-not-`phase/issue` case has occurred naturally rather than fabricating one, per the Post-merge AC.
 
 ## Consumed Comments
 
