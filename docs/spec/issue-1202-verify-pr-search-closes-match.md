@@ -49,6 +49,7 @@
 
 - saito (MEMBER, first-class) — `/issue` フェーズの Issue Retrospective。「本 Issue のスコープは merged PR 検索 (L92, `--state merged`) に限定し、同じ Step 2 内の OPEN PR 検索 (L107, `--state open`) は対象外」という判断を明記。本 Spec もこの境界を踏襲し、OPEN PR 検索ブロックには一切変更を加えない。https://github.com/saitoco/wholework/issues/1202#issuecomment-5210412336
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1202#issuecomment-5210985885
 ## Notes
 
 - **設計判断 (候補を複数取得する方式を採用)**: Issue 本文の対応方針 (案) は「検索結果を候補として扱う」と複数形で記述している。先頭 1 件のみを検証し不一致なら即 patch 経路とする設計も検討したが、GitHub 検索の関連度順で正しい PR が先頭に来ない場合に false negative (実際は PR 経路の Issue を patch 経路と誤判定) を生みうるため不採用。最大 10 件という上限は、本リポジトリに `gh pr list --limit` を使う既存慣行がなく、`head -N` で件数を絞る既存パターン (`skills/auto/SKILL.md` の類似箇所参照) に倣った控えめな値。
