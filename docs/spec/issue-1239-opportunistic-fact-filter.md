@@ -123,3 +123,37 @@ Both findings share a root cause: this module's Step 1 (`--facts` resolution) wa
 ### Acceptance criteria verification difficulty
 
 Nothing to note. No UNCERTAIN results, no missing or inaccurate verify commands. The 4 `rubric` conditions (session-id-resolution documentation, `--context-file` propagation documentation, `keyword=` policy recording, numeric effect-measurement recording) all resolved cleanly against the PR diff and Spec content, including the AC8 numeric-comparison condition, whose Spec text needed to explain a small baseline drift (14→13, attributed to natural population change over 2 days) before presenting the actual `--facts`-filtered comparison (13→5) — the explanation was judged sufficient to satisfy "baseline is 14" without requiring a strict re-measurement against the exact original 14.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- `/issue` フェーズが AC の致命的な欠陥を検出・修正した: `file_contains "scripts/opportunistic-search.sh" "--facts"` は既存の `--facts-file <path>` オプションを部分文字列として拾うため、実装 0 行で常時 PASS していた。`--facts <path>` (末尾に空白 + `<path>`) へ変更して解消。**先行する `/triage` の AC 監査はこれを見逃していた** — triage の常時 PASS 検出は grep/file_contains の検索文字列を main に対して空撃ちする手順だが、この AC は「実装前でも PASS する」ことを検出できたはずで、監査の実効性に穴があった可能性がある
+- `## Purpose` に明記された「`--context-file` の穴を塞ぐ」副次対応を検証する AC が欠落していた点も検出し、rubric + file_contains のペアを追加した
+
+#### spec
+- **共有モジュールの呼び出し元 allowed-tools が Changed Files から漏れた**。`modules/opportunistic-verify.md` に `collect-run-facts.sh` 呼び出しを追加したことで、5 つの `skills/*/SKILL.md` の `allowed-tools` 更新が必要になったが、Spec の Changed Files には含まれていなかった
+- session id 解決方式を `#1234` の着地待ちにせず、既に同モジュールが使っている `restore_auto_session_pointer()` を先出しする方式で独立実装可能と判断したのは適切だった (blocked-by 化を回避)
+
+#### code
+- 上記 allowed-tools 5 件の追加が設計逸脱として発生。`scripts/validate-skill-syntax.py` のクロスファイル検証が機械的に捕捉した
+- それ以外の手戻りなし
+
+#### review
+- 2 回のレビューパスで、`modules/opportunistic-verify.md` の**同一の Step 1 セクション**に独立した SHOULD 指摘が 2 件着地した: (1) Bash リダイレクト vs Write ツールの不整合、(2) `restore_auto_session_pointer` と `collect-run-facts.sh` 呼び出しが別々の unfenced ステップとして提示され、#1224 が修正した session 誤帰属クラスを再導入しうる状態
+- 両者の根本原因は同一 — 新規 Step を、同ファイルの Step 3 が既に確立していた規約 (`.tmp/` 出力には Write ツール、session pointer 依存のコマンド列は単一の fenced block) に照らさず、prose から独立に構成したこと
+
+#### merge
+- `mergeable=true reason=clean`、未チェック AC 0/10、`review_incomplete_fallback` なし。conflict 解決も不要
+
+#### verify
+- Pre-merge 10 件は全て `[x]` 済みで already-checked rule により SKIPPED。post-merge observation 1 件は `auto-run` 未発火 + `session=next` で SKIPPED。FAIL/UNCERTAIN 0 件
+- **効果測定が代表 JSON ベースに留まる**点は Phase Handoff の Deferred Items にも記録済み。13→5 (61.5% 削減) は実 `/auto` セッション出力ではなく代表的な run-facts JSON による測定であり、実測は observation AC の発火待ち
+
+### Improvement Proposals
+
+- **共有モジュールへのスクリプト呼び出し追加時、呼び出し元 skill の `allowed-tools` 更新が Spec の Changed Files から系統的に漏れる**: 本 Issue で 5 ファイル (`skills/{code,issue,review,spec,verify}/SKILL.md`) が漏れ、**同一セッションの #1236 でも同型の漏れが 2 ファイル** (`skills/issue/SKILL.md` / `skills/review/SKILL.md` に `emit-event.sh`) 発生した。いずれも `/spec` 段階では検出されず、`scripts/validate-skill-syntax.py` のクロスファイル検証が code フェーズで初めて捕捉している。`modules/*.md` は複数 skill から "Read and follow" される共有面であり、**新しいスクリプト呼び出しの追加は常に全呼び出し元の `allowed-tools` 更新を伴う**という構造的性質がある。`/spec` に「変更対象が `modules/*.md` かつ新規スクリプト呼び出しを追加する場合、`grep -rl "modules/<name>\.md" skills/*/SKILL.md` で呼び出し元を洗い出し Changed Files に含める」チェックを入れれば機械的に防げる。#1236 の Code Retrospective と本 Issue の Code Retrospective の 2 件が独立に同じ再発防止策を提案している
+- **新規 Step を既存 Step の確立された規約に照らさず prose から構成すると、同一セクションに同種の指摘が反復する**: 本 PR では 2 回のレビューパスで同じ Step 1 に 2 件の SHOULD 指摘が着地した。モジュールに複数コマンドから成る新規 Step を追加する際は、同ファイル内で同じ形をした最も近い既存 Step (本件では Step 3) と提示形式を明示的に diff する運用が有効
+- **`/triage` の AC 監査が「既存オプションの部分文字列による常時 PASS」を検出できなかった**: `file_contains "scripts/opportunistic-search.sh" "--facts"` は既存の `--facts-file` にマッチするため実装前から PASS する欠陥だったが、triage の監査コメントには挙がらず `/issue` フェーズで初めて検出された。`skills/triage/skill-dev-verify-audit.md` Pattern 2 の検出手順は「main に対して空撃ちする」と定義されており、本来検出可能だったはず。監査の実行漏れか、検索文字列が短くオプション名の部分一致になるケースを想定していないかのいずれか
+
