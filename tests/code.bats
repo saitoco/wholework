@@ -82,3 +82,41 @@ behavioral_change_detection_section() {
     run behavioral_change_detection_section "$SKILL_FILE"
     [[ "$output" != *"run_in_background"* ]]
 }
+
+@test "Step 9 full-suite override uses the parallel bats form" {
+    run step9_section "$SKILL_FILE"
+    [[ "$output" == *"bats --jobs"* ]]
+}
+
+@test "Step 9 full-suite override keeps the portable nproc/sysctl job-count form" {
+    run step9_section "$SKILL_FILE"
+    [[ "$output" == *'nproc 2>/dev/null || sysctl -n hw.logicalcpu'* ]]
+}
+
+@test "Step 9 full-suite override does not invoke the serial whole-suite form" {
+    run step9_section "$SKILL_FILE"
+    # `bats tests/` alone would exceed the tool's 10-minute ceiling and be
+    # auto-backgrounded (Issue #1213). Only the --jobs form may appear as a
+    # runnable command; prose may still mention the directory. Match on
+    # trimmed line content rather than exact indentation so a Markdown
+    # reformat cannot silently defeat this negative assertion.
+    run bash -c 'printf "%s\n" "$1" | sed "s/^[[:space:]]*//" | grep -qx "bats tests/"' _ "$output"
+    [ "$status" -ne 0 ]
+}
+
+@test "Step 9 full-suite override resolves the job count as a separate literal step (no inline command substitution)" {
+    run step9_section "$SKILL_FILE"
+    [[ "$output" != *'bats --jobs $('* ]]
+    [[ "$output" == *"bats --jobs <N> tests/"* ]]
+}
+
+@test "Step 9 execution surface constraint states the tool timeout ceiling" {
+    run step9_section "$SKILL_FILE"
+    [[ "$output" == *"600000"* ]]
+    [[ "$output" == *"ceiling"* ]]
+}
+
+@test "Step 9 execution surface constraint states that exceeding the ceiling backgrounds the command" {
+    run step9_section "$SKILL_FILE"
+    [[ "$output" == *"moved to the background"* ]]
+}

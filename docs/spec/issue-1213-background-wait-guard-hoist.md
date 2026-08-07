@@ -71,6 +71,48 @@
 
 **関連する過去 Spec** (disposable、参照のみ): `docs/spec/issue-994-code-bats-foreground-guidance.md` (最初のガード追加), `docs/spec/issue-1097-review-headless-foreground.md` (review 側ガード追加), `docs/spec/issue-1123-manual-recovery-review-rerun.md` (SSoT 統合、内容のみ変更・位置は不変)。
 
+## Iteration 1 (fix cycle, 2026-08-07, PR #1247)
+
+### Trigger
+
+前サイクル (iteration 0, 本 Spec の Implementation Steps 1〜3) は着地・merge・verify PASS したが、約 2 時間後の `/auto 1234` code phase で同一の失敗モード (silent no-op) が 4 回連続再発し、`auto-retry-on-fail` 上限 (3/3) に到達した。`/verify` が post-merge observation AC 2 件のうち 1 件を FAIL 判定し、本 Issue を reopen した。
+
+### Root Cause (iteration 1)
+
+iteration 0 が追加したガード (「再呼び出し保証のない実行サーフェスでは foreground + 明示 `timeout` で実行する」) には暗黙の前提があった: **明示 `timeout` を指定すれば foreground 実行が保証される**、という前提である。しかし Bash tool の `timeout` パラメータには 600000ms (10 分) の上限があり、これを超えるコマンドは tool 側が自動的にバックグラウンドへ移行させる。iteration 0 で採用した `timeout: 600000` は実測 (`docs/reports/orchestration-recoveries.md` #1234 記録) で不十分だったことが判明した: serial `bats tests/` フルスイートの実測時間が 10 分の ceiling を超え、"foreground で起動したはずのコマンドが勝手にバックグラウンドへ移行する" 状態になり、エージェントが完了通知を待ってターンを終えた。
+
+### Changed Files (iteration 1)
+
+- `modules/test-runner.md`: Step 1 に並列 bats 実行 (`bats --jobs`) の推奨と job 数のリテラル解決手順、GNU `parallel` 不在時の sharded serial fallback を追加。Step 2 に caller 指定の `timeout` も 600000ms を超えられない旨を明記
+- `skills/code/SKILL.md`: Step 9 の実行サーフェス制約に "timeout だけでは foreground を保証しない" corollary を追加。Behavioral Change Detection のフルスイート override を並列形に変更し、job 数をリテラル値へ分解する二段階コマンドに置換 (worktree isolation guard がコマンド置換 `$(...)` を拒否するため)
+- `skills/review/SKILL.md`: Non-Interactive Mode Behavior に同じ corollary を追加。job 数解決も同じ二段階コマンドに統一
+- `modules/execution-context.md`: SSoT の MUST rule に tool ceiling corollary を追加し、Precedents に #1213/#1234 を追記 (review フェーズで検出された SSoT 未更新の是正)
+- `tests/code.bats`, `tests/review.bats`, `tests/test-runner.bats`: 上記変更を検証する構造テストを追加 (計 17 件)
+
+### Implementation Steps (iteration 1)
+
+1. `modules/test-runner.md` Step 1 に並列実行の推奨(job 数はリテラル値への分解を明記)と GNU `parallel` 不在時の sharded serial fallback を追加。Step 2 に 600000ms ceiling の明記を追加 (→ Issue AC: `section_contains "modules/test-runner.md" "Step 2" "600000"`)
+2. `skills/code/SKILL.md` Step 9 の実行サーフェス制約に ceiling corollary を追加し、Behavioral Change Detection のフルスイート override を `nproc`/`sysctl` の結果をリテラル値に分解する二段階コマンドへ置換 (→ Issue AC: `section_contains "Step 9" "bats --jobs"`, `section_not_contains "Step 9" "bats --jobs $("`)
+3. `skills/review/SKILL.md` の Non-Interactive Mode Behavior に同じ corollary と二段階コマンドを追加
+4. `modules/execution-context.md` の SSoT に corollary を追加し、3 つの consumer ファイルとの整合を取る
+5. `tests/code.bats` / `tests/review.bats` / `tests/test-runner.bats` に構造テストを追加 (→ Issue AC: `command "bats tests/code.bats tests/review.bats tests/test-runner.bats"`)
+
+### Verification (iteration 1)
+
+- `bats --jobs 18 tests/` — 1525 passed, 0 failed
+- `python3 scripts/validate-skill-syntax.py skills/code/SKILL.md skills/review/SKILL.md` — 0 errors, 0 warnings
+- `bash scripts/check-forbidden-expressions.sh` — 違反なし
+- worktree isolation guard の再現確認: `/review` セッション内で `echo $(echo test)` を実行し、コマンド置換が一律ブロックされることを直接確認 (`/code` も Step 2 で必ず worktree に入るため同じ制約を受ける)
+
+### review フェーズでの発見 (iteration 1)
+
+`/review` の Code Review (Step 10) が、iteration 1 の実装自体にも構造的な問題を発見した:
+- **MUST**: `bats --jobs $(nproc 2>/dev/null || sysctl -n hw.logicalcpu) tests/` に含まれる `$(...)` コマンド置換が、`/code`/`/review` が必ず入る worktree セッション内で worktree isolation guard に一律ブロックされる (実際に `/review` セッション内で再現確認)。job 数をリテラル値に分解する二段階コマンドへ修正した
+- **MUST**: 本サイクルの実装内容 (並列形・ceiling ルール) を検証する Pre-merge AC が Issue に存在しなかった (iteration 0 の AC がそのまま残っていた)。Issue #1213 に AC 4 件を追加し、Post-merge observation AC 2 件を「バックグラウンド移行なしに完了したことを観察する」という反証可能な形に書き換えた
+- **SHOULD**: GNU `parallel` 不在時の fallback (旧: 単純な serial `bats tests/` 再実行) が ceiling 超過を再現するリスクがあったため、sharded serial batches (test-file group 単位での分割実行) に変更した
+- **SHOULD**: `modules/execution-context.md` (SSoT) が未更新のまま 3 つの consumer ファイルに同じ corollary が重複していた (SSoT Reverse Reference antipattern) — SSoT を先に更新する形に是正した
+- **SHOULD**: `skills/code/SKILL.md` に記載していた実測テスト件数 ("1516 tests passing") が実際の値 (1525) と不一致だったため、具体的な件数を削除した
+
 ## Code Retrospective
 
 ### Deviations from Design
@@ -86,19 +128,21 @@ N/A — Implementation Steps 1〜3 を Spec の記述通りに実施した。
 N/A — 実装・テスト・verify いずれも一発で完了し、手戻りは発生しなかった。
 
 ## Phase Handoff
-<!-- phase: merge -->
+<!-- phase: review -->
 
 ### Key Decisions
-- pre-merge AC ゲートは unchecked_count=0 だったが `review_incomplete_fallback=true` (review が Step 12.2 に到達せず silent no-op で終了) だったため、記録済みの `decision=override fallback=true` マーカー (親セッションが diff 精査・フルスイート 1507 件 PASS 確認・push 済みの `3a382d81` を確認した内容) を検証のうえマージを続行した。
-- squash merge 実行時、`gh pr merge --delete-branch` が `worktree-code+issue-1213` ブランチの削除に失敗した (review フェーズの残置ワークツリー `review+pr-1225` が同ブランチを使用中だったため)。中身 (`3a382d81`) は既に PR へ push・マージ済みであることを確認したうえで、該当ワークツリーとローカルブランチを削除した。
+- Pre-merge AC 5 件 (iteration 0) は静的検証・CI とも全件 PASS だったが、本サイクル (iteration 1) の実装内容を検証する AC が存在しないことを MUST として扱い、`/merge` 前に Issue #1213 の AC を追加・書き換えた (Step 8 のスコープを超える判断だが、"merge/verify が実質的な変更を一度も検証しないまま通過する" リスクを優先し review フェーズで是正した)。
+- `bats --jobs $(nproc 2>/dev/null || sysctl -n hw.logicalcpu) tests/` が worktree isolation guard に一律ブロックされることを `/review` セッション内で直接再現確認したうえで MUST 認定し、job 数のリテラル値分解 (二段階コマンド) へ設計変更した。CI (worktree 外で実行) は元の `$(nproc)` 形式のままで問題ないため、CI ワークフロー自体は変更していない。
+- GNU `parallel` 不在時の fallback を、ceiling 超過を再現しうる単純な serial 全体再実行から sharded serial batches に変更した。
 
 ### Deferred Items
-- Post-merge observation AC (code phase / review phase の 2 件) は `verify-type: observation event=auto-run session=next` により次回以降の `/auto` 実行時に評価される。
-- review フェーズが Step 12.2 (コミット・push) 到達前に silent no-op で終了した事象は #1212 に続く連続 2 回目の再発。`docs/reports/orchestration-recoveries.md` への記録は override コメント内で言及済みだが、本 Issue の Verify フェーズで再度実測を確認すること。
+- Post-merge observation AC (code phase / review phase の 2 件、iteration 1 で文言を並列形基準に書き換え済み) は `verify-type: observation event=auto-run session=next` により次回以降の `/auto` 実行時に評価される。
+- 新規追加した Pre-merge AC 4 件 (iteration 1) は次回 `/verify 1213` 実行時に評価される。うち `command "bats tests/code.bats tests/review.bats tests/test-runner.bats"` は verify-executor 側の `command` timeout (60s 目安) 内に収まるか要確認 — 本 review セッションでは対象 3 ファイルのみで 2.8 秒程度だったため問題ない見込みだが、`/verify` 側で実測すること。
+- review retrospective (本セクションの直後) で記録した「worktree セッション内でのコマンド置換パターンの横断棚卸し」は本 Issue のスコープ外の提案として保留 (Tier 2 相当、起票は見送り)。
 
 ### Notes for Next Phase
-- `/verify` は post-merge observation AC 2 件 (code phase / review phase の背景実行ガード遵守確認) を次回 `/auto` 実行ログから評価すること。
-- squash merge 後の残置ワークツリー起因のブランチ削除失敗は、merge フェーズの完了report観点では無視して良い (merge 自体は成功、mergedAt/mergeCommit で確認済み)。
+- `/merge` は Pre-merge AC 9 件 (iteration 0 の 5 件 + iteration 1 の 4 件) の unchecked_count を確認すること。iteration 1 の 4 件は本 review セッションでは未チェックのまま残している (`/verify` 実行前のため)。
+- `/verify` は Post-merge observation AC 2 件 (書き換え後の文言: 並列形・バックグラウンド移行なしでの完了) を次回 `/auto` 実行ログから評価すること。旧文言 (foreground/timeout の形跡) を探しても本サイクルでは見つからない — 書き換え済みであることに注意。
 
 ## Verify Retrospective
 
@@ -131,3 +175,17 @@ N/A — 実装・テスト・verify いずれも一発で完了し、手戻り�
 ### Improvement Proposals
 - **pr route 側の Step 10 と `gh pr checks` AC の関係を SKILL.md に明文化する** — Code Retrospective の Design Gaps が指摘した内容。#1212 が patch route 側 (`branch-scoped CI AC exclusion`) を明文化した際の対称ケースであり、隣接する既存 Issue はない。ただし本セッションは締めに入るため、次サイクルの起票候補として本節に記録するに留める (Tier 2 相当)
 - `cause=background-notification-wait` の閾値到達監視 — 現在 2/3。次の 1 件で `recoveries-auto-fire` の起票候補になるが、`.wholework.yml` で `enabled: false` (#1179) のため自動起票はされず、`/verify` Step 15 が Recommend を出力する形になる。本 Issue の修正が有効なら 3 件目は発生しないはずで、**この閾値到達の有無自体が #1213 の実効性の指標**になる
+
+## review retrospective (iteration 1, PR #1247)
+
+### Spec vs. implementation divergence patterns
+
+`/verify` FAIL による reopen 後、`/code` が直接 fix cycle の実装に入り、`/spec` の再実行 (新しい `## Design Complete` コメント) が行われなかった。結果として、本 Spec の Implementation Steps / Pre-merge AC が iteration 0 (guard 配置修正) の内容のまま残り、iteration 1 が実際に実装した内容 (並列 bats 実行・timeout ceiling ルール) を検証する AC が 1 件も存在しない状態で PR が作成された。`/review` の Code Review (Step 10, review-spec 観点) がこの乖離を MUST として検出し、Step 12/13 で Issue AC・Spec の両方を修正したことで是正されたが、`/review` が拾わなければ merge・`/verify` はこの PR の実質的な変更を一度も検証しないまま通過していた可能性が高い。fix cycle (reopen 後の再実装) が Spec 更新を経ずに実装へ直行できる経路自体が、この種の AC カバレッジ欠落を構造的に許容している。
+
+### Recurring issues
+
+本 PR の実装自体 (`bats --jobs $(nproc 2>/dev/null || sysctl -n hw.logicalcpu) tests/`) が、worktree セッション内での `$(...)` コマンド置換ブロックという既知の制約 (`docs/spec/issue-1181-recovery-record-consolidation.md`、`docs/sessions/56516-1785934632-2026-08-05/session.md` で先例あり) に抵触していた。`/code`/`/review` は共に worktree に必ず入るため、SKILL.md や module ファイルが「エージェントが worktree セッション内で実行する」ことを想定した Bash コマンド例を書く際は、コマンド置換の使用を避けるか、少なくともこの制約への言及を伴うべきである。`modules/verify-executor.md` の `command "..."` 形式で使われる `$(nproc 2>/dev/null || sysctl -n hw.logicalcpu)` は verify-executor 経由の実行 (Bash tool 経由の直接実行ではない) なので影響を受けないが、SKILL.md 本文内でエージェントが直接実行することを想定した同型パターンは今後も同じ落とし穴になりうる。横断的な grep (`$(nproc` や `$(sysctl` など worktree セッション内で実行されうるコマンド置換パターン) による棚卸しは、次の類似 Issue が出た際の検討候補として記録する。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — Pre-merge AC 5 件 (iteration 0) は全て静的検証で PASS、CI も全件 SUCCESS だった。Step 12 で追加した iteration 1 の AC 4 件は `/verify` 実行時に評価される。

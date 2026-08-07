@@ -42,13 +42,35 @@ Execution order: **type check → lint → build → test**
 
    **Note**: If Vitest and npm test coexist (`vitest.config.ts` / `vitest.config.js` exists and `package.json` also has a `test` script), prioritize Vitest.
 
-   **Defensive guard for `bats tests/`**: The bats branch presupposes that the `tests/` directory exists at the project root. If a caller (e.g., `/code` Behavioral Change Detection) forces a full-suite execution via `bats tests/`, it must precede the invocation with `[ -d tests ]` — without the guard, `bats` would fail with an opaque "no such file" error. Auto-detection here is already implicitly guarded because the `.bats` glob returns empty when `tests/` is absent.
+   **Defensive guard for `bats tests/`**: The bats branch presupposes that the `tests/` directory exists at the project root. If a caller (e.g., `/code` Behavioral Change Detection) forces a full-suite execution, it must precede the invocation with `[ -d tests ]` — without the guard, `bats` would fail with an opaque "no such file" error. Auto-detection here is already implicitly guarded because the `.bats` glob returns empty when `tests/` is absent.
+
+   **Parallel execution for whole-suite bats runs**: whenever the resolved command is `bats tests/` — whether auto-detected above or forced by a caller (e.g. `/code` Behavioral Change Detection) — prefer the parallel form. Resolve the job count as a separate, literal step first — a `$(...)` command substitution inside the `bats` invocation itself is refused by this project's worktree isolation guard when the caller is running inside a worktree session (which `/code` and `/review` both always are):
+
+   ```bash
+   nproc 2>/dev/null || sysctl -n hw.logicalcpu
+   ```
+
+   Then substitute the printed value literally (not via `$(...)`) into the `bats` command:
+
+   ```bash
+   bats --jobs <N> tests/
+   ```
+
+   A serial whole-suite run can exceed the Bash tool's 10-minute ceiling, and a command that does is moved to the background automatically — in an execution surface without a re-invocation guarantee that turns into a silent no-op (Issue #1213). `nproc` is Linux-only; the `sysctl` fallback keeps the form portable to macOS.
+
+   **Fallback when `--jobs` is unavailable**: bats-core implements `--jobs` on top of GNU `parallel`. If the invocation fails with a message naming `parallel` (e.g. `Cannot execute "N" jobs without GNU parallel`), this is a tooling-availability gap, not a test failure — do not enter Tier 0 / test-failure recovery for it. Do not simply re-run the whole suite as one serial `bats tests/` — that is exactly the form that overruns the ceiling (Issue #1213). Instead, split the run into multiple smaller serial invocations that each stay well inside the ceiling (e.g. one `bats <dir>/*.bats` call per test-file group), and note in the phase output that the suite ran as sharded serial batches because GNU `parallel` was unavailable, so a subsequent ceiling overrun is attributable.
 
 ### Step 2: Test Execution
 
 1. Execute the test command in Bash. Default timeout: 120 seconds. If the caller specifies an
    explicit timeout (e.g. `/code` Step 9's execution surface constraint for full-suite runs), use
    the caller's value instead — a full bats suite exceeds the 120s default.
+
+   **The caller's timeout cannot exceed 600000 ms (10 minutes) — that is the Bash tool's ceiling.**
+   A command that runs past it is moved to the background automatically, so an explicit timeout
+   does not by itself keep the command in the foreground. Commands that risk approaching the
+   ceiling must be shortened instead (for a full bats suite: run it in parallel, see the Parallel
+   execution note in Step 1). See Issue #1213 for the incident this rule generalizes from.
 
 **Note (execution surfaces without a re-invocation guarantee)**: When the calling skill is running
 in an execution surface without a re-invocation guarantee (headless `claude -p` via
@@ -94,7 +116,7 @@ await notification) is unaffected by this constraint.
 - **Result**: PASS / FAIL / SKIP
 
 ### Test Results
-- **Command**: `bats tests/` / Test framework not detected
+- **Command**: `bats --jobs N tests/` / `bats <dir>/*.bats` (sharded serial fallback) / Test framework not detected
 - **Overall**: PASS / FAIL
 - **Passed**: N items
 - **Failed**: N items
