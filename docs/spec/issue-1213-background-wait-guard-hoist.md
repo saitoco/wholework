@@ -128,21 +128,20 @@ N/A — Implementation Steps 1〜3 を Spec の記述通りに実施した。
 N/A — 実装・テスト・verify いずれも一発で完了し、手戻りは発生しなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Pre-merge AC 5 件 (iteration 0) は静的検証・CI とも全件 PASS だったが、本サイクル (iteration 1) の実装内容を検証する AC が存在しないことを MUST として扱い、`/merge` 前に Issue #1213 の AC を追加・書き換えた (Step 8 のスコープを超える判断だが、"merge/verify が実質的な変更を一度も検証しないまま通過する" リスクを優先し review フェーズで是正した)。
-- `bats --jobs $(nproc 2>/dev/null || sysctl -n hw.logicalcpu) tests/` が worktree isolation guard に一律ブロックされることを `/review` セッション内で直接再現確認したうえで MUST 認定し、job 数のリテラル値分解 (二段階コマンド) へ設計変更した。CI (worktree 外で実行) は元の `$(nproc)` 形式のままで問題ないため、CI ワークフロー自体は変更していない。
-- GNU `parallel` 不在時の fallback を、ceiling 超過を再現しうる単純な serial 全体再実行から sharded serial batches に変更した。
+- Pre-merge AC gate (`check-pre-merge-ac.sh`) は unchecked_count=0 で全 9 件 (iteration 0 の 5 件 + iteration 1 の 4 件) チェック済みだったため、override マーカーなしで通常フローのまま squash merge を実行した。
+- `review_incomplete_fallback` チェックは `reconcile-phase-state.sh` の diagnosis が "Review Response Summary found" (organic completion) を示しており、fallback 起因ではないと判定した。
+- `mergeable=UNKNOWN` が 2 回連続したが `gh-pr-merge-status.sh` の内蔵リトライで `mergeable=true, reason=clean` に解決したため、追加対応は不要だった。
 
 ### Deferred Items
-- Post-merge observation AC (code phase / review phase の 2 件、iteration 1 で文言を並列形基準に書き換え済み) は `verify-type: observation event=auto-run session=next` により次回以降の `/auto` 実行時に評価される。
-- 新規追加した Pre-merge AC 4 件 (iteration 1) は次回 `/verify 1213` 実行時に評価される。うち `command "bats tests/code.bats tests/review.bats tests/test-runner.bats"` は verify-executor 側の `command` timeout (60s 目安) 内に収まるか要確認 — 本 review セッションでは対象 3 ファイルのみで 2.8 秒程度だったため問題ない見込みだが、`/verify` 側で実測すること。
-- review retrospective (本セクションの直後) で記録した「worktree セッション内でのコマンド置換パターンの横断棚卸し」は本 Issue のスコープ外の提案として保留 (Tier 2 相当、起票は見送り)。
+- Post-merge observation AC (code phase / review phase の 2 件) は `verify-type: observation event=auto-run session=next` により次回以降の `/auto` 実行時に評価される — `/verify` に引き継ぐ。
+- `cause=background-notification-wait` の閾値到達監視 (現在 2/3) — 本 Issue の修正が有効なら 3 件目は発生しないはずで、この閾値到達の有無自体が実効性の指標になる。`/verify` で観測を継続すること。
 
 ### Notes for Next Phase
-- `/merge` は Pre-merge AC 9 件 (iteration 0 の 5 件 + iteration 1 の 4 件) の unchecked_count を確認すること。iteration 1 の 4 件は本 review セッションでは未チェックのまま残している (`/verify` 実行前のため)。
-- `/verify` は Post-merge observation AC 2 件 (書き換え後の文言: 並列形・バックグラウンド移行なしでの完了) を次回 `/auto` 実行ログから評価すること。旧文言 (foreground/timeout の形跡) を探しても本サイクルでは見つからない — 書き換え済みであることに注意。
+- `/verify` は Post-merge observation AC 2 件 (並列形・バックグラウンド移行なしでの完了) を次回 `/auto` 実行ログから評価すること。
+- squash merge・remote branch 削除は正常完了 (`gh pr merge --squash --delete-branch` エラーなし)。
 
 ## Verify Retrospective
 
