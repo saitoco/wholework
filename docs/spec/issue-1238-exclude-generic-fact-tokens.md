@@ -60,3 +60,30 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1238#issuecomment-5218544266
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation followed the Spec's Implementation Steps 1-5 in order with no reordering, omission, or approach change.
+
+### Design Gaps/Ambiguities
+- None. The Spec's method selection (bare phase-name exclusion over token namespacing) and its rationale were fully specified in Notes, leaving no open design decision during implementation.
+
+### Rework
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Implemented exactly the bare-phase-name exclusion approach the Spec's Notes section already selected and justified — no new design decision was needed at code time.
+- Reconstructed representative fact_tokens JSON for both measurement routes from the token arrays quoted in the Issue body, since the raw `.tmp/auto-events.jsonl` events for both cited sessions were already rotated out (documented in Spec Notes before code started).
+- Measured old-vocabulary vs new-vocabulary filtering on the *same current* Issue population (422 for scan-pending-ac.sh, 13 for opportunistic-search.sh) rather than only reporting the new count against the stale baseline population, so the improvement is directly attributable to the vocabulary change and not to population drift.
+
+### Deferred Items
+- Post-merge observation AC (index 6, `verify-type: observation event=auto-run session=next`) is unresolved pending the next `/auto` completion — no action needed until then.
+- AC5 (`github_check "gh pr checks" "Run bats tests"`) is unresolved pending PR CI completion (PR #1268 just created) — `/review`/`/merge` will observe it.
+
+### Notes for Next Phase
+- All 4 evaluable pre-merge AC (rubric x3, bats command x1) were self-assessed PASS and checked on the Issue during `/code`; only the CI-dependent `github_check` AC remains open for `/review` to confirm once PR checks complete.
+- `docs/spec/issue-1239-opportunistic-fact-filter.md`'s representative-JSON measurement pattern was reused here — worth keeping as the standard approach whenever `.tmp/auto-events.jsonl` has rotated past a cited session's raw events.
