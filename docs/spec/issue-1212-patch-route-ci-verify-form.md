@@ -118,3 +118,37 @@ $ gh run list --workflow=test.yml --limit=8 --json conclusion,headBranch,event
 ### Notes for Next Phase
 - `/verify` should confirm the post-merge observation AC: the next patch-route Issue's `/verify` run should reference a CI run that includes the implementation commit (`head_sha`-based), not an unrelated prior run.
 - No other outstanding risks identified during merge.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- **AC4 自身が本 Issue の是正対象を体現していた**。起票時点の AC4 は `github_check "gh run list --branch=main ..."` (patch route 形式) だったが、本 Issue は pr route であり、PR の CI run は head branch (`worktree-code+issue-1212`) でトリガーされて `main` には紐づかない。`--branch=main` を指定すると無関係な `main` の run を参照する — まさに本 Issue が定義した欠陥 A そのもの
+- これを検出したのは #1185 が無条件実行にした Triage AC audit コメント。`/spec` がそれを consume して `gh pr checks` 形式へ修正した。本日 #1098・#1209 に続く 3 例目の予防系連鎖
+
+#### spec
+- コードベース調査で **欠陥 C (`--branch` フィルタ欠落)** を新規発見した。`.github/workflows/test.yml` がブランチ無制限トリガーのため、`--commit` を外すだけでは worktree ブランチや他 Issue の PR の run を拾う。起票時点の対応方針 (案) には含まれていなかった欠陥を、実装前の調査で捕捉できている
+- Changed Files を 4 箇所 → 7 ファイルへ拡大した判断も妥当。既存 bats テストが `--commit`/`git rev-parse HEAD` の存在を assert しており更新必須、`skills/issue/spec-test-guidelines.md` は同じ旧パターンを教える教育用サンプルだった
+- Size を M → L に再評価 (pr route は不変)
+
+#### code
+- Rework 1 件: `verify-classifier.md` の説明文が非推奨形 `--commit=$(git rev-parse HEAD)` を連続文字列として引用しており、新規追加した negative-assertion テストが SSoT ファイル自身の説明文に反応した。文言を分割して解消。**説明文と検証対象の区別**という、negative assertion を伴う AC 特有の落とし穴
+
+#### review
+- **`/review` が Step 12.2 (コミット・push) に到達せず silent no-op で終了した**。最終メッセージは「フルテストスイート `bats tests/` をバックグラウンドで実行中です。完了通知を待ってコミット・push (Step 12.2) に進みます」。`run-review.sh` は `claude -p --non-interactive` を使うため再呼び出し保証がなく、通知は永久に届かない
+- 指摘の**内容**自体は的確だった — MUST 1 件は実質的なバグ修正 (`skills/code/SKILL.md` Step 10 の CI AC 除外が checkbox-flip ループから除外しておらず、未検証条件が `[x]` になる漏れ)、SHOULD 5 件も全て正当 (特に「code フェーズが `--branch=main` を pr route の例にも一律適用していた」という指摘は、欠陥 C の対処が過剰適用になっていたことを捉えている)
+- **Spec に `## Review Retrospective` が存在しない** — review が Step 12 に到達しなかったため。verify 時点で review フェーズの内省が参照できない状態になっている
+
+#### merge
+- **merge gate が work loss を防いだ**。`reconcile-phase-state.sh` が `review_incomplete_fallback=true` を返し `run-merge.sh` がブロック。review worktree には 4 ファイルの未コミット修正が残っており、gate がなければ MUST 修正を欠いた PR がマージされていた
+- Tier 3 recovery sub-agent の判断も正しかった: `action=abort` / rationale「This is not an unexplained anomaly: run-merge.sh deliberately blocked the merge ... This requires a human/orchestrator judgment call, not a mechanical retry or recovery step」。機械的リトライで解けない事象を正しく識別している
+- 復旧は親セッションが手動で実施: diff 精査 → `bats tests/` フル実行 (1495 pass / 0 fail) → sign-off 付きコミット (`e878a321`) → push → `decision=override fallback=true` マーカー投稿 → `/merge` 再実行。`--write-manual-recovery` で `cause=background-notification-wait` として `docs/reports/orchestration-recoveries.md` に記録済み (`ee33c7fc`)
+
+#### verify
+- Pre-merge 4 件全 PASS。AC3 (4 箇所の形式一致) は review 修正で pr route 例から `--branch=main` を外したため一見不一致に見えるが、patch route 形式に限れば 4 箇所とも `--branch=main --limit=1` で一致し、pr route 例には route 別の注意書きが付いている。Background が問題視した `--commit` の有無の不一致は解消済みと判定した
+- **Spec の `## Auto Retrospective` に manual recovery が記録されていない**。`--write-manual-recovery` は `_write_manual_recovery_to_recoveries_log()` を呼んで `orchestration-recoveries.md` にのみ書き込む (#1181 の記録先変更後の挙動) が、`skills/verify/SKILL.md` Step 12 step 3 の skip 判定は依然として「`## Auto Retrospective` に Tier 2/3/Manual recovery の記録があるか」を機械的判定基準にしており、`_write_manual_recovery_to_spec()` が Spec に書く前提の記述が残っている。今回は notable content として本節に記録したが、判定基準と実際の記録先が乖離している
+
+### Improvement Proposals
+- `/review` silent no-op の根本原因 (再呼び出し保証のない実行サーフェスでの background task 完了通知待ち) と、`post-fallback-review-summary.sh` が worktree の未コミット変更を検出すべきという提案 — **#1213 にコメントとして記録済み** (方針 1 の `skills/review/SKILL.md` への拡大、方針 2 の `run-review.sh` への拡大、方針 3 の新規提案)。本 Issue からの独立起票は行わない
+- `skills/verify/SKILL.md` Step 12 step 3 の skip 判定基準と `--write-manual-recovery` の実際の記録先 (`orchestration-recoveries.md`) の乖離 — #1098 が Step 12 step 3 の別箇所 (`orchestration-recoveries.md` の `### Context` 参照) を #1181 に追随させているが、skip 判定の機械的基準 (`## Auto Retrospective` に Tier 2/3/Manual の記録があるか) は追随していない。既存 #1098 の範囲と隣接するため、独立起票せず本節に記録するに留める
