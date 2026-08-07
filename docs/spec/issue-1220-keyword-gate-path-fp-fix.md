@@ -47,7 +47,34 @@
 - **UI Design Phase**: 本 Issue はバックエンド/CLI スクリプトの内部マッチングロジック修正であり、インタラクティブ UI コンポーネントを含まないため、`skills/spec/figma-design-phase.md` の Auto-detection Criteria により「UI design not needed」と判定した (UI Design セクションは省略)
 - **`config=` / `when=` ゲートとの関係**: 同スクリプト内の `config=` ゲート (`.wholework.yml` キー解決) と `when=` ゲート (run facts JSON の enum 一致) は元々列挙値に対する構造化マッチであり、本 Issue の対象である自由テキスト部分文字列マッチ (`keyword=`) とは性質が異なる。今回の修正は `keyword=` ゲートのみを対象とし、他二つのゲートには変更を加えない
 
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation Steps 1-3 were followed as written (`resolve_filtered_context()` helper, `modules/observation-trigger.md` update, 2 new bats cases), with no reordering or omission.
+
+### Design Gaps/Ambiguities
+- None encountered. The Spec's Root Cause / Implementation Steps sections already resolved the word-boundary-match dead end and specified the exact `sed -E` pattern, so no new investigation was needed during implementation.
+
+### Rework
+- None.
+
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` フェーズの retrospective — 曖昧性検出なし、AC2 の verify command を rubric + 補助チェックパターンへ変更した経緯を記録 — https://github.com/saitoco/wholework/issues/1220#issuecomment-5215669688
 - saito / MEMBER / first-class / AC3 の verify command (`grep -i "keyword" ...`) が既存ドキュメント中に "keyword" が多数出現するため常時 PASS になるという監査指摘。代表語の差し替えまたは補助チェック削除を提案 — 本 Spec で `section_contains` + `token` へ差し替えて対応 (Notes 参照) — https://github.com/saitoco/wholework/issues/1220#issuecomment-5215691447
+- No new comments since last phase.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Adopted path-like token stripping (`sed -E 's#[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+##g'`) as the sole mitigation, per the Spec's Root Cause section — word-boundary match (`grep -qiw`) was already ruled out there (verified: `docs/workflow.md` still satisfies `\bworkflow\b` because `/` and `.` are non-word characters).
+- Followed the existing `resolve_run_facts()` lazy-cache pattern for the new `resolve_filtered_context()` helper, so the filtering cost is paid at most once per process even when multiple `keyword=`-tagged AC lines are evaluated in the same run.
+
+### Deferred Items
+- None — all 3 pre-merge AC (2 rubric + 1 section_contains) verified PASS in this phase; no item was pushed to a later phase.
+
+### Notes for Next Phase
+- The 2 new bats cases (`tests/opportunistic-search.bats`) cover both the negative case (keyword only inside a path-like token → excluded) and the positive/prose case (keyword in ordinary text → still included, guarding against over-stripping). Confirm both are exercised, not just the happy path.
+- AC1/AC2 are `rubric`-graded (semantic judgment); this phase's own PASS assessment is not a substitute for `/review`'s independent grader pass.
+- Post-merge AC is an `opportunistic` observation tied to a future `/review --light` run touching a `docs/workflow.md`-style path listing — no action needed now; it resolves naturally when that PR occurs.
