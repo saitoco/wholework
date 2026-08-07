@@ -245,16 +245,9 @@ Verification priority:
 
 #### Step 1: CI Infrastructure Failure Detection (only when referencing CI results)
 
-When referencing CI job results, determine whether the failure is infrastructure-caused (not from test code). The following patterns are considered **CI infrastructure failures**:
+When referencing CI job results, determine whether the failure is infrastructure-caused (not from test code). Read `${CLAUDE_PLUGIN_ROOT}/modules/ci-failure-classifier.md` and follow the "Processing Steps" section to obtain the verdict. That module is the SSoT for the classification signature table; the table is not restated here.
 
-| Pattern | Reasoning |
-|---------|---------|
-| steps is empty (`steps: []`) | Job terminated abnormally before starting. Test code was not executed |
-| Timeout (`cancelled` + execution time exceeded) | Forced termination due to infrastructure response delay |
-| Runner error (e.g., `The runner has received a shutdown signal`) | GitHub Actions runner anomaly |
-| Network error (e.g., `Unable to download`, `ECONNREFUSED`) | Dependency download failure |
-
-**Fall back to local tests** (when infrastructure failure is determined):
+**Fall back to local tests** (when the verdict is `ci-infra`):
 
 1. Ignore CI results; fetch local test commands from `command` verify commands and run them
 2. For acceptance conditions without `command` verify commands, fall back with AI judgment
