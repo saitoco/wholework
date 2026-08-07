@@ -1014,6 +1014,7 @@ Spawn the orchestration-recovery sub-agent via Task to diagnose the unknown fail
    - `issue_labels`: output of `gh issue view $NUMBER --json labels -q '.labels[].name'`
    - `pr_number`: `$PR_NUMBER` if available, otherwise empty string
    - `branch`: current worktree branch if available
+   - `ci_failure_verdict`: the verdict returned by the CI platform failure pre-check above (`ci-infra`/`implementation`/`undetermined`), or empty string if the pre-check did not run
 
 2. Spawn the sub-agent:
    ```
