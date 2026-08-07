@@ -60,6 +60,8 @@ Issue 単位 (79件) と AC 行単位 (87行) の件数は一致しない。`doc
 
 Issue 本文の post-merge AC 行自体は変更しないため、`phase/verify` の Manual waiting 集計には引き続き残るのが意図した挙動である。
 
+### C (bats テスト化 → auto 再型付け)
+
 区分 C (故障注入、2 Issue: #1066 #1060、#1167) は D1 とは異なり、故障注入シナリオの機械的な核 (`wait-ci-checks.sh` の早期 break パス、`check-pre-merge-ac.sh` の境界ケース) を固定 fixture の bats テストで再現できたため、`tests/wait-ci-checks.bats` / `tests/check-pre-merge-ac.bats` へのテスト追加を行い、両 Issue の post-merge AC を `verify-type: auto` (`<!-- verify: command "bats tests/..." -->`) へ再型付けした。retire ではなく、テストによる担保を根拠とした再型付け方式を採用している。
 
 ### D3 および対象外 (再型付けしなかった AC)
@@ -71,17 +73,19 @@ Issue 本文の post-merge AC 行自体は変更しないため、`phase/verify`
 | observation 再型付け | 16 | `event=auto-run` 14 / `event=watchdog-kill` 1 / `event=pr-review-full` 1 |
 | retire | 6 | `auto-stop-at` 未設定で前提不成立 (#783)、将来拡張未実装 (#706)、downstream 固有 XL Issue (#591)、比較基準が陳腐化 (#587)、前提条件自体が不成立 (#563)、downstream 主観評価 (#484条件2) |
 | manual 維持 | 0 | — |
-| 対象外 (編集しない/別扱い) | 2 | #591 の既チェック済み (`- [x]`) 行、#491 のコードフェンス内サンプル行 (AC ではない) |
+| 対象外 (編集しない/別扱い) | 2 (22 行の外数) | #591 の既チェック済み (`- [x]`) 行、#491 のコードフェンス内サンプル行 (AC ではない) |
+
+注: 上表の「対象 AC 行 22 行」は再型付け 16 + retire 6 の内訳であり、対象外 2 行は 22 にも 87 行合計にも含まれない (母集団の外側)。
 
 D3 は #1163 (区分 A) の「未知 event なら manual 維持」という原則から意図的に方針変更し、前提が原理的に成立しない条件をすべて retire に倒した (詳細: `docs/spec/issue-1165-manual-ac-retype-d3.md` Notes)。
 
-**移行対象外とした AC 全体のまとめ (AC5 対応)**: A/D2 由来の manual 維持 11 行 (前掲) と D3 の対象外 2 行 (実 AC ではない編集除外) が「再型付け・retire いずれも行わなかった」項目である。D1 の 5 行は「正当な manual 維持」として別枠 (前掲) で扱う。各項目の個別理由は上表および各 sub-issue の記録ファイル (`docs/reports/manual-ac-retype-a.md` / `manual-ac-retype-d2.md` / `manual-ac-retype-d3.md`) に Issue 単位で記録済み。
+**移行対象外とした AC 全体のまとめ (AC5 対応)**: A/D2 由来の manual 維持 11 行 (前掲) と D3 の対象外 2 行 (#591 は既チェック済みのため編集不要、#491 はコードフェンス内サンプルで AC ではない) が「再型付け・retire いずれも行わなかった」項目である。D1 の 5 行は「正当な manual 維持」として別枠 (前掲) で扱う。各項目の個別理由は上表および各 sub-issue の記録ファイル (`docs/reports/manual-ac-retype-a.md` / `manual-ac-retype-d2.md` / `manual-ac-retype-d3.md`) に Issue 単位で記録済み。
 
 ## 検証
 
-- 6 区分の Issue 数合計 (34+13+19+6+5+2=79) は `docs/stats/2026-08-05.md` Section 10 の分類件数 79 と一致することを確認した (差異なし)。
+- 6 区分の Issue 数合計 (34+13+19+6+5+2=79) は `docs/stats/2026-08-05.md` Section 10 の分類件数 79 と一致することを確認した (差異なし)。この 79 件は同レポート Section 10 が集計した 90 日窓の母集団に基づく。同 Section 11 が指摘するとおり全期間へ広げると対象は増えるため、本クローズアウトは「90 日窓内の 79 件」の完了を意味する。全期間の再棚卸しは別途判断とする。
 - AC 行数合計は 87 行 (Issue 単位の 79 件から、A/D2/D3 での複数行 Issue の存在により +8 のずれ)。
-- A/D2/D3 の再型付け後の AC は、それぞれの sub-issue で `opportunistic-search.sh --event <name> --dry-run` の実行によりマッチ対象になることを個別確認済み (各 `docs/reports/manual-ac-retype-*.md` 参照)。
+- A/D2 は `opportunistic-search.sh --event <name> --dry-run` で再型付け全行の含有を個別確認済み (各 `docs/reports/manual-ac-retype-a.md` / `manual-ac-retype-d2.md` 参照)。D3 は 16 行中 11〜12 行を同様に確認し、残る行はマッチ集合外だった: #1135 / #478 条件1・2 は `when=mode:batch` ゲートが `mode=single` セッションで設計どおり除外、#490 / #465 は OPEN のため `opportunistic-search.sh` が固定する `--state closed` 母集団に構造的に入らず、close されるまで dispatch されない (いずれも `gh issue view` のリテラル一致で再型付け済みを確認。詳細: `docs/reports/manual-ac-retype-d3.md` § 検証)。
 - B の 6 件は `gh issue view` でラベルが `phase/done` へ遷移済みであることを確認済み。
 - C の 2 件は追加した bats テストが実際に該当シナリオを検証することを確認済み。
 - D1 の 5 件は Issue 本文が未変更 (manual 維持) であることを確認済み。
@@ -93,3 +97,5 @@ D3 は #1163 (区分 A) の「未知 event なら manual 維持」という原�
 ## 移行後の効果測定 (Post-merge)
 
 移行完了後の `/audit stats --retention` で、`phase/verify` の Manual waiting 件数が移行前 (79 件) から減少していることを確認する (post-merge AC、`event=auto-run` 発火待ち)。
+
+なお、再型付け済みでも #490 / #465 (OPEN) は `--state closed` 固定の母集団に入らず当面 dispatch されない。また `when=mode:batch` ゲート付き行は batch 実行時のみ発火する。減少幅がこれらの分だけ想定より小さくなるのは想定内である。

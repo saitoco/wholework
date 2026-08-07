@@ -140,6 +140,7 @@ Consumed Comments で提示された「79 件へ `when=` を併せて付与す�
 
 ### Design Gaps/Ambiguities
 
+- spec retrospective の `### Uncertainty resolution` が次フェーズへ引き渡した残存確認事項 (「Size=XL のまま `/code` を実行した場合に `modules/ambiguity-detector.md` の Hard-error abort 条件 (「Size is XL without sub-issue splitting」) に抵触しないか」) は、本セッションで `run-code.sh 1158 --pr --non-interactive` が abort せず完走したことで抵触しないことを実測確認した。#1158 は GraphQL `subIssues` に 5 件の sub-issue (#1163〜#1167) が存在するため「分割なし XL」に該当せず、hard-error 条件の対象外だった。
 - Step 10 (verify command consistency) の rubric AC 5 件はいずれも Issue #1158 本文に特定ファイルを名指ししていないため、grader (本セッション自身) の入力スコープは Issue 本文 + git diff (集約レポート本体) のみだった。AC2 (「A + D2 が observation へ再型付けされている」) の実際の裏付け (Issue 本文の再型付け結果) はこの PR の diff に含まれず、`docs/reports/manual-ac-retype-a.md` / `manual-ac-retype-d2.md` (別 PR で追加済みの既存ファイル) にのみ存在する。rubric の可視範囲制約 (Spec Notes 前掲) は「集約レポートファイルを持たせれば解決する」という設計判断だったが、厳密には「rubric text で当該既存ファイルを名指しする」までは踏み込んでいない。今回は集約レポート自身に十分な要約(event= 内訳・マッチ確認結果の転記)を含めることで PASS 判定としたが、将来同種の親 Issue で rubric AC がより厳密な一次情報を要求する場合、rubric text 側で参照ファイルを明示する設計を検討する価値がある。
 - 区分 B (#1166) は operate route で処理されており、独自の記録ファイル (`docs/reports/manual-ac-retype-*.md`) を持たない。集約レポートでは #1166 の `## Execution Log` Issue コメントの内容を転記したが、他区分 (A/D2/D3/C/D1) が専用ファイルを持つのに対し B だけがコメントベースという非対称性がある。
 
