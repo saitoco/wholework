@@ -167,3 +167,29 @@ No new comments since last phase.
 
 - base branch は `main`。`closes #1164` により Issue は squash merge 後に自動 CLOSE される想定。
 - `/verify 1164` では Post-merge AC (observation event=auto-run) の評価を行うこと。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Pre-merge AC 3 件を全て `rubric` にした判断は妥当だった。対象 13 Issue の GitHub 実状態を `gh issue view` で照合するだけで機械的に判定でき、UNCERTAIN は発生しなかった。
+
+#### design
+- #1163 の precedent (report ファイル構造、`opportunistic-search.sh` 検証手順) をそのまま踏襲でき、設計上の曖昧さは生じなかった。
+
+#### code
+- Code Retrospective に記録の通り、Implementation Steps 2〜4 は既に前回セッションで完了済みでレジューム扱いとなった。`/code` 側が GitHub 実状態を個別確認してから差分だけ実行した判断は正しく、二重編集は発生していない。
+
+#### review
+- Pre-merge AC 3 件は `/review` 時に rubric で PASS 判定済みで、本 verify では already-checked skip rule により SKIPPED。`/review` の判定が verify 側で覆る事象はなかった。
+
+#### merge
+- `mergeable: true, reason: clean` で conflict なくスクワッシュマージ完了。pre-merge AC ゲートも `unchecked_count: 0` で通過。
+
+#### verify
+- Post-merge AC は `observation event=auto-run` 1 件のみで、本 verify 実行時点では `observation-trigger.sh` の通知コメントが未投稿のため未発火。SKIPPED (waiting for event) として `phase/verify` に留まる。これは observation AC の設計通りの挙動であり FAIL ではない。
+- 親 #1158 の分割 sub-issue 群で「前回セッションが Issue 本文編集・コメント投稿を完了した後、report file 作成前に中断」というレジュームパターンが #1163 に続き #1164 でも再現した (review retrospective にも記録)。#1165〜#1167 でも同型が起きうるが、`/code` 側の「GitHub 実状態を個別確認してから差分実行」で毎回正しく吸収できているため、構造的な欠陥ではなく sub-issue 系列固有の運用事象と判断する。
+
+### Improvement Proposals
+- N/A
