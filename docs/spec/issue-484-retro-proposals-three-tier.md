@@ -112,3 +112,7 @@
 ### Improvement Proposals
 - N/A (本 Issue 自体が Improvement Proposal メタフレームワークの改善のため、メタな再帰提案は割愛)
 
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/484#issuecomment-4702667802
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=4 / https://github.com/saitoco/wholework/issues/484#issuecomment-5212257688
