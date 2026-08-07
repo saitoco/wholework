@@ -195,13 +195,12 @@ teardown() {
     [[ "$output" == "false" ]]
 }
 
-@test "restore_auto_session_pointer restores AUTO_SESSION_ID/AUTO_EVENTS_LOG from auto-session-current (Issue #902)" {
+@test "restore_auto_session_pointer does not fall back to auto-session-current when no session-specific pointer resolves (Issue #1224, supersedes #902 fallback)" {
     mkdir -p "$BATS_TEST_TMPDIR/work1/.tmp"
     echo "test-session-123" > "$BATS_TEST_TMPDIR/work1/.tmp/auto-session-current"
-    run bash -c "cd \"$BATS_TEST_TMPDIR/work1\" && unset AUTO_EVENTS_LOG AUTO_SESSION_ID && source \"$SCRIPT\" && restore_auto_session_pointer && echo \"SID=[\$AUTO_SESSION_ID] LOG=[\$AUTO_EVENTS_LOG]\""
+    run bash -c "cd \"$BATS_TEST_TMPDIR/work1\" && unset AUTO_EVENTS_LOG AUTO_SESSION_ID && source \"$SCRIPT\" && restore_auto_session_pointer 9999 && echo \"SID=[\$AUTO_SESSION_ID] LOG=[\$AUTO_EVENTS_LOG]\""
     [ "$status" -eq 0 ]
-    [[ "$output" == *"SID=[test-session-123]"* ]]
-    [[ "$output" == *"LOG=[.tmp/auto-events.jsonl]"* ]]
+    [[ "$output" == "SID=[] LOG=[]" ]]
 }
 
 @test "restore_auto_session_pointer no-ops when no pointer file exists (Issue #902)" {
@@ -237,12 +236,12 @@ teardown() {
     MAIN_REPO="$(cd "$MAIN_REPO" && pwd -P)"
 
     mkdir -p "$MAIN_REPO/.tmp"
-    echo "worktree-session-456" > "$MAIN_REPO/.tmp/auto-session-current"
+    echo "worktree-session-456" > "$MAIN_REPO/.tmp/auto-session-issue-1006"
 
     LINKED_WORKTREE="$BATS_TEST_TMPDIR/linked_wt"
     git -C "$MAIN_REPO" worktree add -q -b worktree-code+issue-1006 "$LINKED_WORKTREE"
 
-    run bash -c "cd \"$LINKED_WORKTREE\" && unset AUTO_EVENTS_LOG AUTO_SESSION_ID && source \"$SCRIPT\" && restore_auto_session_pointer && echo \"SID=[\$AUTO_SESSION_ID] LOG=[\$AUTO_EVENTS_LOG]\""
+    run bash -c "cd \"$LINKED_WORKTREE\" && unset AUTO_EVENTS_LOG AUTO_SESSION_ID && source \"$SCRIPT\" && restore_auto_session_pointer 1006 && echo \"SID=[\$AUTO_SESSION_ID] LOG=[\$AUTO_EVENTS_LOG]\""
     [ "$status" -eq 0 ]
     [[ "$output" == *"SID=[worktree-session-456]"* ]]
     [[ "$output" == *"LOG=[${MAIN_REPO}/.tmp/auto-events.jsonl]"* ]]
