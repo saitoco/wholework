@@ -742,7 +742,7 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 
 **Event-based observation scan (auto-run event, runs after Completion Report regardless of success/failure):**
 
-Run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run` and capture stdout as `OBSERVATION_MATCHES` (newline-separated Issue numbers; may be empty).
+Run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run --session <literal SESSION_ID value from step 1>` and capture stdout as `OBSERVATION_MATCHES` (newline-separated Issue numbers; may be empty).
 
 If `OBSERVATION_MATCHES` is non-empty, read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to load `AUTONOMY_TIER` and `OBSERVATION_DISPATCH_THRESHOLD`, then apply tier-aware dispatch:
 - **L1**: skip dispatch (advisory-only — the comment already posted by `observation-trigger.sh` is the only action)
@@ -1212,7 +1212,7 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 
 **Event-based observation scan (batch, best-effort):**
 
-Run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run` and capture stdout as `OBSERVATION_MATCHES` (newline-separated Issue numbers; may be empty).
+Run `${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh --event auto-run --session <literal SESSION_ID value from step 1>` and capture stdout as `OBSERVATION_MATCHES` (newline-separated Issue numbers; may be empty).
 
 If `OBSERVATION_MATCHES` is non-empty, read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Processing Steps" section to load `AUTONOMY_TIER` and `OBSERVATION_DISPATCH_THRESHOLD`, then apply tier-aware dispatch:
 - **L1**: skip dispatch (advisory-only — the comment already posted by `observation-trigger.sh` is the only action)

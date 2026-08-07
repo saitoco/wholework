@@ -78,3 +78,57 @@ N/A — Spec の Auto-Resolved Ambiguity Points (issue リスト取得元・一�
 ### Notes for Next Phase
 - Pre-merge AC 4件はすべて `/code` 内で PASS 確認済み、Issue checkbox も `[x]` 済み
 - `bats tests/audit-retention.bats` は 16/16 PASS (既存15件 + 新規1件)。フルスイート (`bats tests/`) は Behavioral Change Detection の narrow-scope 判定によりスキップした (変更対象ファイルを参照する他テストファイルなし)
+
+## Issue Retrospective
+
+### 事実確認 (Background)
+
+Background で参照されているコード上の主張 (`skills/audit/SKILL.md:506` の呼び出し形、`collect-recovery-candidates.sh` L103-127 の `--issues-json` 依存、`skills/verify/SKILL.md:918-926` の先行実装) はすべてコードベースと突合し、正確であることを確認した。
+
+### 曖昧性の自動解決 (非対話モード)
+
+Size M (検出上限 3件) のうち 2 件を検出し、いずれも「既存パターンから一意に推論可能」かつ「AC テキスト自体は選択によって変化しない」ため自動解決した。Issue 本文の `## Auto-Resolved Ambiguity Points` セクションに記録済み。
+
+1. **Issue リストの取得元**: `/audit stats` Step 1 が既に取得済みの `--since`/`--limit` フィルタ付きリストを再利用せず、`skills/verify/SKILL.md` Step 15 と同一の独立した `gh issue list --state all --limit 1000 ...` を新規実行する方針とした。
+   - 理由: `docs/reports/orchestration-recoveries.md` の `tracked:#N` は Step 1 のデフォルト `--since 90日` / `--limit 500` の範囲外を参照しうる (実測差分表の `#799` など、古い Issue 番号が該当し得る)。AC2 の rubric 文言 (「Step 15 と同じ内容のリストを渡す形」) が既にこの選択を明示的に要求している。
+2. **一時ファイルのパス**: `/verify` Step 15 の `.tmp/open-issues-$NUMBER.json` は Issue 番号紐付けだが、Section 10 は特定 Issue に紐づかないプロジェクト全体集計のため `$NUMBER` を含まない命名が必要になる。具体的なファイル名は既存コードベースに規約が無く、AC テキストにも影響しないため `/spec`/`/code` フェーズの裁量とした。
+
+### Acceptance Criteria への変更
+
+変更なし。起票時点の AC は既に verify command 割り当て・チェックボックス形式・`observation session=next` タグとも要件を満たしており、機械チェック (`check-skill-change-observation-ac.sh` / `check-ac-checkbox-format.sh`) もいずれも問題なしを確認した。
+
+### その他
+
+- `tests/audit-retention.bats` は既存ファイルとして存在確認済み (AC3 の `command "bats tests/audit-retention.bats"` は有効な対象を指している)。
+- タイトルドリフトなし、blocked-by なし、sub-issue 分割は Size M のため非対象 (非対話モードのため高リスク判断としてもスキップ)。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Size M の曖昧性検出上限 3 件のうち 2 件を検出し、いずれも「既存パターンから一意に推論可能」かつ「AC テキストが選択によって変化しない」ことを根拠に自動解決した判断は妥当。特に issue リスト取得元の決定は、AC2 の rubric 文言 (「Step 15 と同じ内容のリストを渡す形」) が既に選択を要求していることを根拠にしており、AC を後付けで曲げていない
+- `tests/audit-retention.bats` の存在を起票時点で確認し、AC3 の `command` が有効な対象を指していることを検証している。存在しないテストファイルを指す AC (常時 FAIL) を未然に防いだ形
+
+#### spec
+- Size を M → XS へ再評価し、route を pr → patch へ demotion した。実際の変更は 2 ファイル・原因明確なバグ修正で、XS が妥当。triage 時点の M は Background の記述量に引きずられた過大評価だったと考えられる
+- Auto-Resolved Ambiguity Points が実装中に再検証を要する齟齬を生まなかった (Code Retrospective の Design Gaps が N/A)
+
+#### code
+- Deviations N/A、Design Gaps N/A。Implementation Steps 1-2 を記載順のまま実施
+- Rework 1 件: Step 8 の中間コミットと Step 11 の `closes #N` 必須チェックの衝突により `git commit --amend` を要した (下記 Improvement Proposals 参照)
+- `bats tests/audit-retention.bats` 16/16 PASS。フルスイートは Behavioral Change Detection の narrow-scope 判定でスキップ (変更対象ファイルを参照する他テストファイルなし) — 判定根拠が明示されており妥当
+
+#### review
+- patch route のため未実行 (N/A)
+
+#### merge
+- patch route のため未実行 (N/A)。orchestration recovery の発火なし
+
+#### verify
+- Pre-merge 4 件は already-checked skip rule で SKIPPED、Post-merge 1 件は `event=auto-run` 未発火で SKIPPED。FAIL / UNCERTAIN ゼロ
+- XS patch route のため `/auto` Step 4b に従い Issue Retrospective を本 Spec へ転記した (`4f97b856`)。`/spec` を経た XS でも Spec に `## Issue Retrospective` が自動では入らないため、Step 4b の転記は `/spec` 実行の有無に関わらず必要だった
+
+### Improvement Proposals
+
+- **`/code` Step 8 の中間コミットと Step 11 の `closes #N` 要件の衝突** — **既存 #1134 と重複のため新規起票せず、再発事実を #1134 へ追記した** ([issuecomment-5216819629](https://github.com/saitoco/wholework/issues/1134#issuecomment-5216819629))。#1134 は #1106 (2026-07-31) を初回実測として起票済み。本 Issue は 2 例目にあたり、新情報として (a) #1134 Background が想定する「Implementation Steps が 3 つ・複数ファイル群」より狭い条件 (Steps 2 つ・変更 2 ファイル) でも成立すること、(b) 2 回とも回避手段に `git commit --amend` が選ばれ、安全性 (未 push であること) の判断が毎回実行者の裁量に委ねられていること、を追記した

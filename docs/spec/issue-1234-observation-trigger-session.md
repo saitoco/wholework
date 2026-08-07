@@ -48,3 +48,116 @@
 
 ## Consumed Comments
 - saito (MEMBER, first-class): triage フェーズの Issue Retrospective。タイトル正規化 (体言止め)、AC 8 の `github_check` 修正 (patch route 対応) と AC 4/5 の `section_contains` 修正 (見出し不一致・`--session-id` 部分文字列誤マッチの回避) を記録。両修正は現行の Issue 本文 AC に既に反映済みで、本 Spec の Verification はその反映後の内容を検証コマンド同期ルールに従い転写した — https://github.com/saitoco/wholework/issues/1234#issuecomment-5212780239
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — the `review-light` agent (Perspective 1: Spec Deviation) confirmed the PR diff matches this Spec's Implementation Steps closely: `--session <id>` propagates `observation-trigger.sh` → `opportunistic-search.sh` → `collect-run-facts.sh --session <id>` exactly as planned, `--facts-file` priority and no-argument backward compatibility are preserved, and both `skills/auto/SKILL.md` call sites received the literal `SESSION_ID` embedding.
+
+### Recurring issues
+
+Two independent tooling bugs surfaced while executing this review, both out of this PR's own scope but worth follow-up:
+
+- `scripts/gh-issue-edit.sh --checkbox <indices>` counts every `- [ ]`/`- [x]`-shaped line in the raw Issue body, including one quoted inside a fenced code block in the Background section (a verbatim quote of parent Issue #1118's own AC 2). This produced an off-by-one: `--checkbox 1,2,3,4,5,6,7 --check` marked the quoted decoy line instead of the real AC 7, requiring a manual `--uncheck`/`--check` correction pass. Any `/review` or `/verify` run against an Issue body that quotes another Issue's checklist in a code block is at risk of the same drift.
+- `scripts/gh-pr-review.sh`'s self-review 422 fallback (`grep -qi "request changes on your own pull request"` against captured `gh api` stderr) never triggers in practice: `gh api ... --method POST --input - 2>&1 >/dev/null` only captures `gh: Unprocessable Entity (HTTP 422)`, not the detailed JSON error body (`errors: ["Review Can not request changes on your own pull request"]`) that the grep pattern needs. Every `/review` run where the PR author and the authenticated `gh` account are the same user (a normal occurrence for solo-maintained repos) hits this silently-broken fallback and fails Step 11 outright unless manually worked around, as happened here.
+
+### Acceptance criteria verification difficulty
+
+AC 8 (`<!-- verify: github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion --jq '.[0].conclusion'" "success" -->`) could not be verified in `/review` safe mode: `github_check`'s safe-mode allowlist covers `gh run view` but not `gh run list`, so the condition returned UNCERTAIN regardless of actual CI state. Separately, the condition's target (the latest run on `main`, not on the PR branch) reads as an odd choice for a Pre-merge condition — worth a closer look at `/verify` time to confirm whether checking `main`'s CI post-merge was the intended semantics or a spec-authoring slip that should have targeted the PR branch instead (duplicating what Step 9's own CI status check already covers).
+
+The Base Branch Conflict Pre-check (Step 10) proved its value here: it flagged a real adjacency risk between this PR's `--session` hunks and `origin/main`'s Issue #1220 `resolve_filtered_context()` hunks in `scripts/opportunistic-search.sh`. The risk did not materialize (`git merge origin/main` auto-resolved cleanly with no conflict markers, confirmed by re-running both affected bats files), but treating the flag as a MUST and resolving it by actually merging and re-testing — rather than dismissing it as a false positive — is the correct default when the pre-check's adjacency heuristic cannot itself prove a real merge would be clean.
+
+## Phase Handoff
+<!-- phase: merge -->
+
+### Key Decisions
+- Pre-merge AC gate (`check-pre-merge-ac.sh`) found all 8 conditions `[x]` at merge time — AC 8, left `[ ]`/UNCERTAIN at the end of the review phase, was resolved before this merge ran, so no override marker was needed
+- `gh pr merge --squash --delete-branch` succeeded but its local-branch deletion step failed because an unrelated active worktree (`.claude/worktrees/code+issue-1234`) still checked out `worktree-code+issue-1234`; resolved by deleting the remote branch directly (`git push origin --delete worktree-code+issue-1234`) and leaving the unrelated local worktree/branch untouched rather than force-removing another session's in-progress work
+- Squash commit `9004ae05` merged cleanly to `main`; no conflict resolution was needed at this phase
+
+### Deferred Items
+- The two tooling bugs recorded in `## review retrospective` § Recurring issues (`gh-issue-edit.sh --checkbox` fenced-code-block off-by-one; `gh-pr-review.sh` self-review 422 fallback never matching) remain unfiled — still worth triage as follow-up Issues
+- The local branch `worktree-code+issue-1234` and its worktree at `.claude/worktrees/code+issue-1234` were left in place (still in use by another session) even though the remote counterpart is now deleted — no action needed unless that session's work turns out to be stale
+
+### Notes for Next Phase
+- `/verify 1234` should confirm the post-merge observation condition (`verify-type: observation, event=auto-run, session=next`) — the next `/auto` run's observation scan should show `collect-run-facts.sh` resolving the correct `session_id` without a `run facts unavailable` fail-open warning
+- No conflict resolution, test re-runs, or manual AC overrides were needed during this merge — the PR was clean going in
+
+## Verify Retrospective
+
+Pre-merge 8 件全 PASS、Post-merge 1 件 SKIPPED (observation 未発火)。
+
+### 実装の機能は observation を待たずに確認できた
+
+AC 9 は `event=auto-run` 未発火のため SKIPPED だが、`--session` 伝播が実際に効くかは直接実行で確認した。
+
+```
+$ bash scripts/collect-run-facts.sh --session 3340-1786079730
+{"session_id":"3340-1786079730","mode":"unknown","issues":[]}
+```
+
+`session_id` が当該セッションの値で返っており、修正前の実測 (別セッションの facts / `run facts unavailable` fail-open) は解消されている。**observation AC は「実運用で効くこと」を待つ条件であり、「実装が正しいこと」は別途機械的に確認できる** — この 2 つを分けて記録しておくと、observation が長期 SKIPPED でも実装の妥当性は追跡できる。
+
+### `collect-run-facts.sh` の CWD 依存 (本 Issue のスコープ外)
+
+上記実行では `issues: []` / `mode: "unknown"` となり、`opportunistic-search.sh` が 3 番目のガード (`carry no run context`) でゲートを無効化した。原因は `/verify` の worktree CWD から実行したことで、`collect-run-facts.sh` は `.tmp/auto-events.jsonl` を CWD 相対で読むが worktree にはこのファイルが存在しない (gitignored)。
+
+親リポ CWD からは正しく `mode: "single"` と tokens が入る (本セッション前半で実測)。`/auto` の observation scan は親リポ CWD で走るため正規経路では影響しないが、worktree から呼ぶ経路が増えた場合の落とし穴になる。
+
+### AC 8 の semantics 問題 — review の指摘どおりだった
+
+review retrospective が「AC 8 の対象 (`main` の最新 run) は Pre-merge 条件として奇妙、`/verify` 時に確認を」と残していた。確認した結果、**指摘は正しい**。
+
+本 Issue は Size M の pr route なので検証したいのは PR #1246 自身の CI だが、AC 8 は `--branch=main` を指定して main の run を見ている。実測では両方 PASS だったため結果は一致したが、この AC は意図した対象を見ていない。
+
+原因は Size 再評価時に AC 形式が追随しなかったこと:
+
+| 時点 | Size | route | AC 8 の形式 |
+|---|---|---|---|
+| `/issue` triage | S | patch | `gh run list --branch=main` (patch route の SSoT 推奨形、#1212) |
+| `/spec` 再評価 | **M** | **pr** | patch route 形式のまま据え置き |
+
+pr route なら `gh pr checks` が適切で、その形式なら `/review` の safe mode でも判定できた (下記)。
+
+### `gh run list` が safe mode allowlist に含まれない
+
+`/review` は AC 8 を UNCERTAIN と判定した。`modules/verify-executor.md` の `github_check` safe mode allowlist は `gh issue view` / `gh pr view` / `gh pr checks` / `gh api` (GET) / `gh run view` の 5 つで、**`gh run list` が入っていない**。
+
+#1212 が patch route の推奨形を `gh run list --branch=main --limit=1` に一本化したが、この形は `/review` では常に UNCERTAIN になる。patch route の Issue は `/review` を経ないため実害は出にくいが、本 Issue のように Size 再評価で pr route へ移った Issue では review が判定不能になる。
+
+### merge gate が 2 度ブロックし、2 度とも実測で解消した
+
+| 回 | ブロック理由 | 解消 |
+|---|---|---|
+| 1 | AC 8 未チェック | `gh run list --branch=main` と `gh pr checks 1246` を両方実測 → 両方 PASS → checkbox 更新 |
+| 2 | AC 9 未チェック | index の off-by-one に気づき、真の CI AC (index 9) を更新 |
+
+いずれも override ではなく実測で通した。2 回目は下記の off-by-one が原因。
+
+### checkbox index の off-by-one を親セッションも踏んだ
+
+review retrospective が既に記録していた問題 (`gh-issue-edit.sh --checkbox` が fenced code block 内の checkbox も数える) を、親セッションも merge 時に踏んだ。Background に引用した親 Issue #1118 の AC 2 が index 1 を占め、Pre-merge AC が 2〜9 にずれていた。
+
+`--checkbox 8` を実行した際に「AC 8 をチェックしたのに gate は #9 が未チェックと言う」という食い違いが生じ、原因特定に merge 2 往復を要した。**gate のエラーメッセージが index しか出さない**ことも一因:
+
+```
+Error: 1 unchecked pre-merge acceptance conditions on issue #1234.
+```
+
+`/merge` SKILL の Step 1 は interactive mode の「Present and decide」で `#<index> <text>` を出力する規定があるので、非対話モードの `decision=blocked` パスでも同じ情報を出せば即座に特定できた。
+
+対応 Issue は **#1071** (`issue: fenced code block 内の checkbox を AC 列挙から除外`、OPEN) が既存。review が「remain unfiled」と記録していたが、実際には #1071 でカバーされている。
+
+### PR 検索の誤ヒット (#1202 の実例)
+
+`/verify` Step 2 の `gh pr list --search "closes #1234" --state merged` が 2 件返し、`.[0]` として**無関係な #1247 が採用された**。PR #1247 の本文に `/auto 1234` と `#1234` が含まれる (本 Issue の code phase 失敗を実測記載したため) ことで、全文検索が "closes" と "#1234" を別々にマッチさせている。
+
+今回は両 PR とも `base_ref: main` で実害なし。`scripts/gh-extract-issue-from-pr.sh` は `closes` を正しく解決するため、#1202 の対応方針 (検索結果を `closes` で突き合わせる) がそのまま解になる。
+
+### Improvement Proposals
+
+- **Size 再評価時に CI 検証 AC の形式が route に追随しない** — triage が patch route 形式で設定した AC が、spec の Size 再評価 (S → M) 後も据え置かれ、pr route なのに `main` の run を見る状態になった。あわせて **`gh run list` が `github_check` safe mode allowlist に含まれない**ため `/review` で判定不能になる。2 点セットで #1212 (patch route の形式、着地済み) / #1229 (Step 10 の評価タイミング、未着手) の隣接領域だが、いずれとも別軸。#1229 に着手する際に同時に扱えるため、独立起票せず本節に記録する (Tier 2)
+- **`collect-run-facts.sh` の CWD 依存** — `.tmp/auto-events.jsonl` を CWD 相対で読むため worktree から呼ぶと run context が空になる。正規経路では影響しないが、#1239 (opportunistic mode への `--facts` 導入) が worktree 内から facts を必要とする設計になった場合に顕在化しうる。#1239 の設計時に確認すべき制約として本節に記録する (Tier 3)
+- **checkbox index の off-by-one** — 既存 #1071 でカバー済み。ただし本セッションでは **gate のエラーメッセージに条件テキストがない**ことが原因特定を遅らせた (merge 2 往復)。#1071 に着手する際、`/merge` の非対話モード `decision=blocked` パスにも `#<index> <text>` を出力する改善を併せて検討すると効果が高い (Tier 3、#1071 へのコメントで補足済みとはしない — 本節の記録に留める)
+- **PR 検索の誤ヒット** — 既存 #1202 でカバー済み。実測ケースとして同 Issue にコメントで追記する
