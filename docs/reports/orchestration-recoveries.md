@@ -67,6 +67,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-07 04:11 UTC: manual-recovery-push-only
+
+### Context
+- Issue #1223, phase: code-patch
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 1
+
+### Diagnosis
+- cause: background-notification-wait
+- 3rd consecutive occurrence of the same failure mode, and the first since #1213's guard-hoist fix (38663cb3) landed. All 3 auto-retry attempts of run-code.sh ended their turn with a background-wait sentence ('bats tests/ のバックグラウンド完了を待ちます (ポーリングはせず、通知を待機)') instead of reaching the commit/push step; claude -p has no re-invocation guarantee, so the notification never arrived and reconcile-phase-state reported silent no-op each time. Retry 3 did produce the implementation and committed it to worktree-code+issue-1223 as 75bbb950 (worktree_commits_found=true), but never pushed to main. Tier 2 fallback anchor matched but its handler failed; the Tier 3 sub-agent's plan was rejected by validate-recovery-plan.sh because patch-route recovery legitimately requires 'git push origin main', which is on the forbidden-ops list — a structural blind spot for patch route. Parent session recovered manually: reviewed the 1-file diff against both pre-merge AC rubrics, cherry-picked 75bbb950 onto main as ab816d29, ran the 6 related bats files (127 pass / 0 fail), pushed, and force-removed the worktree left locked by the dead pid 55183.
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-08-07 03:55 UTC: manual-recovery-manual-recovery-review-uncommitted-work
 
 ### Context
