@@ -15,6 +15,7 @@
 - `modules/verify-patterns.md`: change — §10 (Opportunistic Post-Merge Conditions) に `keyword=` の既存 AC 一括付与スコープ外方針を追記
 - `tests/opportunistic-search.bats`: change — `--facts` トークンフィルタの新規テストケース追加 (`fact gate: ...` 命名規則)
 - `docs/structure.md`: [Steering Docs sync candidate] `scripts/opportunistic-search.sh` の説明 ("opportunistic skill search and observation event scan", line 206) が `--facts` 追加後も正確か確認。役割自体は変わらないため変更不要見込みだが `/code` で最終判断 (`docs/ja/structure.md` の対応行も同様)
+- `skills/code/SKILL.md`, `skills/issue/SKILL.md`, `skills/review/SKILL.md`, `skills/spec/SKILL.md`, `skills/verify/SKILL.md`: change — `modules/opportunistic-verify.md` Step 1 が新たに `collect-run-facts.sh` を呼ぶため、この 5 skill の `allowed-tools` に `${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*` を追加 (`scripts/validate-skill-syntax.py` のクロスファイル検証で検出。Code Retrospective 参照)
 
 ## Implementation Steps
 
@@ -77,3 +78,36 @@
 ## Consumed Comments
 
 - **saito** (MEMBER, first-class): Issue Retrospective。Auto-Resolved Ambiguity Points の根拠 (`--facts` 検索文字列を `--facts-file` との部分文字列衝突を避けて `--facts <path>` に変更した理由、`--context-file` 伝播検証 AC を追加した理由、session id 解決方式を設計時判断に据え置いた理由) を記録。Background の事実主張はコードベース実測で裏付け確認済みとのこと — 本 Spec の調査でも独立に同じ結論を確認した。https://github.com/saitoco/wholework/issues/1239#issuecomment-5216043099
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の `## Changed Files` に含まれていなかった 5 つの `skills/*/SKILL.md` (code/issue/review/spec/verify) の `allowed-tools` に `${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*` を追加した。原因: `modules/opportunistic-verify.md` Step 1 が新規に `collect-run-facts.sh` を呼ぶようになったため、`scripts/validate-skill-syntax.py` のクロスファイル検証 (呼び出し元 skill の allowed-tools に呼び出し先スクリプトが宣言されているかを確認) が 5 件のエラーを検出した。Spec 作成時にこのクロスファイル依存が見落とされていた — `modules/opportunistic-verify.md` は 5 skill から共有されるモジュールであるため、このモジュールに新しいスクリプト呼び出しを追加する変更は常に全呼び出し元の allowed-tools 更新を伴う。今後同様のモジュール変更を計画する際は、Spec 作成段階で `grep -rl "modules/<name>\.md" skills/*/SKILL.md` によって呼び出し元一覧を洗い出し、Changed Files に含めることを検討する。
+
+### Design Gaps/Ambiguities
+
+- N/A (Spec の Notes セクションで事前に解決済みの論点以外に新規の設計上の疑問点はなかった)
+
+### Rework
+
+- N/A (上記の allowed-tools 追加以外に手戻りは発生しなかった)
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Session id resolution reuses `restore_auto_session_pointer()`'s existing 3-tier fallback (no new `--session`-passing flag), per the Spec Notes' explicit decision to avoid a new cross-module interface
+- `--facts` uses fail-open semantics (warning + gate disable) on missing/unparseable input, matching `--context-file`/`--facts-file`'s existing convention rather than `scan-pending-ac.sh`'s hard-error convention — `opportunistic-search.sh` runs mid-skill-execution, where a hard error would break the calling skill's flow
+- Fact-token substring matching targets the condition text with HTML comments/checkbox markup stripped (not the raw AC line), mirroring `scan-pending-ac.sh`'s semantics for consistency across the two independent `--facts` implementations
+- The `keyword=` bulk-backfill scope-out policy was recorded in the existing `modules/verify-patterns.md` §10 rather than a new section, following the `#1172` precedent for `when=`
+
+### Deferred Items
+- Existing opportunistic/observation AC still lack `keyword=` attributes (8 of the Issue's own 14-candidate baseline measured `keyword=0`) — bulk backfill is explicitly out of scope; apply going forward on newly authored AC only (`modules/verify-patterns.md` §10)
+- The effect measurement (13→5, 61.5%) used a representative run-facts JSON, not a real `/auto` session's output, since this `/code` run executed standalone (no `AUTO_SESSION_ID`) — a real measurement will only be available once `modules/opportunistic-verify.md`'s new Step 1 has run inside an actual `/auto` session
+- `docs/structure.md`'s `opportunistic-search.sh` one-line description was reviewed and judged still accurate after `--facts` — no doc update made; revisit only if a future CLI surface change alters the script's high-level role
+
+### Notes for Next Phase
+- AC10 (`github_check "gh pr checks" "Run bats tests"`) is deliberately left unchecked pending CI — confirm CI passes before merge
+- The 5 `skills/*/SKILL.md` `allowed-tools` additions (`collect-run-facts.sh`) are read-only fact-collection calls with no side effects; confirm this doesn't introduce unexpected permission-prompt friction in practice
+- If a 6th skill starts reading `modules/opportunistic-verify.md` in the future, it will need the same `collect-run-facts.sh` allowed-tools entry — `scripts/validate-skill-syntax.py`'s cross-file check will catch this mechanically
