@@ -139,3 +139,49 @@ Nothing to note — no issue class repeated within this PR (the single CONSIDER 
 ### Acceptance criteria verification difficulty
 
 All 5 pre-merge conditions used `rubric` verify commands exclusively (no mechanical `file_contains`/`grep` supplementary checks). This worked cleanly here because the PR diff is small (5 files, ~76 net lines) and each AC maps to a clearly bounded code/doc change, but it's worth noting for future Issues in this area: AC1 ("XS Issue に対して同じ結論を出す") and AC5 ("`/issue` 側の XS 時ラベル付与の非決定性が解消されている") both describe *behavioral equivalence across two independent code paths* rather than a single-file property — a grader without git history access could plausibly miss that the "before" state (Bug 1 / Bug 2 in the Spec's Root Cause section) is what makes the "after" state meaningful. No actual grading difficulty was observed in this run, but a rubric text that briefly names the specific *prior* broken behavior (not just the desired end state) would make the grader's job more robust for this class of "make two paths agree" AC — no Issue filed for this, recording as an observation only per [[feedback_issue_filing_restraint]].
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- 2026-07-30 の追加コメント (`/issue` の XS 時ラベル付与の非決定性) が起票時点の本文に未反映だったため、非対話モードの自動解決ポリシーで Background/Purpose/対応方針/AC へ折り込んだ。スコープ拡張 (AC5 追加) が spec の Root Cause 分析 (Bug 2 = `get-issue-size.sh` のキャッシュ起因) につながっており、この折り込みがなければ AC5 は起票されなかった
+- 追加した AC に対して Step 15 の AC 監査が Pattern 2 (常時 PASS rubric) リスクを自己検出し、「Issue 自身の計画文ではなく実装後の挙動を対象にする」文言へ自己修正した。#1185 (triaged 済み Issue でも Step 15 を無条件実行) と #1209 (Pattern 2 の rubric 型への拡張) が同一実行内で連鎖して機能した実例
+
+#### spec
+
+- 案 A/B/C のうち案 A (実装を規定に合わせる) を採用。判断根拠を 4 点 (Purpose の基準点、単一 Issue 経路が既に規定どおり動いている実績、Step 4b の器は全経路で維持される、案 B は Impact 2 と逆行) で明文化しており、後続が判断を再現できる形になっている
+- AC2/AC3 を「検証のみで編集不要」と判断し、その根拠 (ルール自体は不変、3 箇所の SSoT は既に一致) を Notes に記録。実装 0 行の AC を PASS させる判断を明示的に正当化している点が、Pattern 2 の逆ケース (実装不要 AC) の扱いとして参考になる
+
+#### code
+
+- **`## Autonomous Auto-Resolve Log` の precondition 診断が事実と一致しない (#1112 と同型、3 回目の観測)**。Log は「`phase/ready` が不在なのは Issue が既に先へ進んでいるため」「先行する `/code` 実行がラベルを遷移させたが実装を完了しなかったレジューム状態」と記述したが、GitHub timeline の実測では `phase/ready` は 04:41:22Z〜04:45:15Z の全区間で present で、`phase/code` のラベル付与は timeline 全体で 1 回のみ。先行する中断実行は存在しない。`/code` が自身のラベル遷移後の状態を読み、それを先行実行の痕跡として遡及的に記述したもの。#1053 → #1102 (session `74631-1786005349`) に続く 3 回目
+- 実装自体は Spec の 4 Implementation Steps どおりで Deviations from Design は N/A。診断文の誤りは実装品質には影響していないが、Spec に残る記録としては誤った履歴を後続に渡す
+
+#### review
+
+- 5 件すべて `rubric` 型という AC 構成で機械的チェックを併用しなかったが、PR diff が小さく (5 ファイル / 純増 ~76 行) 各 AC が明確に境界づけられていたため grading は成立した。review retrospective 自身が「behavioral equivalence を問う AC は *prior* broken behavior を rubric text に明記した方が grader が堅牢になる」という観察を残しており、これは AC 作成側 (`/issue`) への申し送りとして有効
+- CONSIDER severity の log-message ordering 指摘 (`scripts/run-auto-sub.sh:840`) を未修正のまま merge。informational 扱いで follow-up 未起票
+
+#### merge
+
+- pre-merge AC gate (`check-pre-merge-ac.sh 1108`) が `unchecked_count=0` で通過し、`reconcile-phase-state.sh review --check-completion` も `review_incomplete_fallback` を検出せず、override marker なしで gate クリア。#1060/#1083 系の「未チェック AC で merge が止まる」摩擦は発生しなかった
+- `mergeable=true` / CI SUCCESS / review APPROVED で rebase・conflict 解決とも不要
+
+#### verify
+
+- **チェック済み AC スキップ規則 (#1186) が pre-merge 5 件すべてに適用され、rubric 5 件分の再グレーディングコストを回避した**。旧規則なら 5 件すべて再実行され、新規情報ゼロで grading コストのみ発生していた
+- post-merge AC6 (`verify-type: opportunistic`) は本セッションの batch (`--batch 1108 1117 1228 1064 1063 939`、Size M/M/L/M/M) が **XS Issue を含まない**ため前提が成立せず SKIPPED。AC の文言が「XS Issue を処理する `--batch`」という実行文脈を要求しているが `when=` ゲート相当の注釈を持たないため、XS を含まない batch でも dispatch 対象として浮上しうる (#1118 / #1172 が扱う領域)
+- Step 11 の `phase_complete` emit が worktree isolation guard にブロックされたため、`modules/worktree-lifecycle.md` の指示に従い Worktree Exit 後に実行した。session `56516-1785934632` と同型 (#1141 に事例記録済み)
+- **後続 Issue への影響**: 本 Issue が採用した案 A は `run-auto-sub.sh` の spec dispatch ブロックに `elif [[ "$SIZE" == "XS" ]]` を追加する形で、`run-spec.sh` の直接呼び出し (= `run_phase_with_recovery()` のバイパス) は維持している。同一ブロックを対象とする #1228 (spec / issue phase の `wrapper_exit` / `token_usage` emit 欠落解消) の案 i (`run_phase_with_recovery()` 経由への統一) は、本 Issue が追加した XS ゲートを保持したまま再構成する必要がある。#1228 にコメントで申し送る
+
+### Improvement Proposals
+
+N/A — 上記の観察はいずれも既存 Issue が追跡先を持つ、または本セッション内で申し送り済み:
+
+- code phase の precondition 診断の誤り (3 回目) → **#1112** に実測をコメント
+- 案 A 採用による #1228 案 i への影響 → **#1228** にコメントで申し送り
+- opportunistic AC の実行文脈条件の欠落 → **#1118 / #1172** が扱う領域、単発観測のため起票せず
+- rubric text に prior broken behavior を含める提案 → review retrospective が既に観察として記録済み ([[feedback_issue_filing_restraint]] に従い起票せず)
+- worktree guard による `source` ブロック → **#1141** に事例記録済み
