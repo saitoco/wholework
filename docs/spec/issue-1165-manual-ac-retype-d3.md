@@ -246,26 +246,25 @@ Size L 維持の根拠も #1163 と同じ — リポジトリ内変更は 1 フ�
 - Step 9 の `opportunistic-search.sh --event auto-run` 実行で #1135 / #478 が母集団にマッチしなかった。当初は GitHub 検索インデックスの遅延 (Spec Notes で予告済み) を原因と推測したが、`scripts/collect-run-facts.sh` がこのセッションで `mode: single` を返すこと、および #1135 / #478 の該当 AC 行がいずれも `when=mode:batch` ゲート付きであることを実測確認した結果、真因は `opportunistic-search.sh` の `when=` 条件ゲート (mode 軸) による設計どおりの除外と判明した。再実行 (2 回目) でも解消しなかったのはインデックス遅延ではなく確定的なゲート除外であることの証跡であり、`gh issue view --json body` によるリテラル一致確認を一次情報として採用した判断自体は変更していない。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Step 8 (Pre-merge AC 8 件: rubric 3 + github_check 5) はすべて PASS。CI 9 ジョブもすべて SUCCESS。Base Branch Conflict Pre-check (`git merge-tree`) でも `changed in both` は検出されず、main との競合なし。
-- `capabilities.workflow: true` が有効だが、本セッションは `--non-interactive` (fork context) で再呼び出し保証がないため、`workflow-guidance.md` の指示に従い Workflow パスをスキップし、静的 Task fan-out (review-spec + review-bug×2、foreground Agent 呼び出し) にフォールバックした。
-- review-bug×2 が独立して同一の根本原因誤帰属 (report:85 の「GitHub 検索インデックスの遅延」が実際は `when=mode:batch` ゲートによる設計どおりの除外) を実測検証で発見。2 段階検証 (general-purpose 検証エージェント 5 件) を経て MUST 3 / SHOULD 1 / CONSIDER 4 の計 8 件を line コメントとして投稿し、全件を修正・コミット・プッシュ済み (`c67e431d`)。
-- 修正は `docs/reports/manual-ac-retype-d3.md` と `docs/spec/issue-1165-manual-ac-retype-d3.md` の記述精度訂正のみで、GitHub 上の Issue 再型付け・retire・phase 遷移という Issue #1165 本来の成果物 (Pre-merge AC1-8 が検証する内容) には影響しない。
+- pre-merge AC ゲート (`check-pre-merge-ac.sh`) は 8/8 チェック済み、review-incomplete-fallback も検出なしで、追加確認や override marker なしにマージへ進んだ。
+- `gh-pr-merge-status.sh` の初回応答が `mergeable=UNKNOWN` (GitHub 側の計算待ち) だったため 30 秒待機後に自動リトライし、`mergeable=true, reason=clean` を得てからスカッシュマージした (`gh pr merge 1230 --squash --delete-branch`)。コンフリクト解消 (Step 3) は不要だった。
+- `git merge origin/main --ff-only` で main を取り込んだところ Spec ファイルは既に main 上にあった (PR に同梱済み) ため、フェーズハンドオフの追記のみで済んだ。
 
 ### Deferred Items
 
-- OPEN 2 件 (#490 / #465) の close 判断 — 各 Issue 自身の post-merge 充足に依存するため本 Issue のスコープ外 (spec からの引き継ぎ、未変化)。
-- `check-ac-checkbox-format.sh` を `/code` の `allowed-tools` へ追加すること — スコープ外 (spec からの引き継ぎ、未変化)。
-- 別途起票候補 3 件 (closed 限定母集団 / `config=key:value` 拡張 / セクション非依存走査) — spec retrospective § 別途起票候補 に記録済み。`/verify` の Improvement Proposals で扱う (spec からの引き継ぎ、未変化)。
+- OPEN 2 件 (#490 / #465) の close 判断 — spec からの引き継ぎ、未変化。
+- `check-ac-checkbox-format.sh` を `/code` の `allowed-tools` へ追加すること — spec からの引き継ぎ、未変化。
+- 別途起票候補 3 件 (closed 限定母集団 / `config=key:value` 拡張 / セクション非依存走査) — spec retrospective § 別途起票候補 に記録済み。`/verify` の Improvement Proposals で扱う。
 
 ### Notes for Next Phase
 
-- Issue #1165 自体の Post-merge AC (`/audit stats --retention` での Manual waiting 件数減少確認、`observation event=auto-run`) は post-merge のため `/merge` 後の `/verify` フェーズで扱う。
-- `opportunistic-search.sh --event auto-run` が #1135 / #478 をマッチ集合に含めないのは `when=mode:batch` ゲートによる設計どおりの確定的除外であり、`/verify` はこれを異常や遅延として扱わないこと (report / spec とも修正済み)。dispatch 確認が必要な場合は `--facts-file` に `mode: batch` を含む run facts を与えるか、実際の `/auto --batch` 実行時に確認すること。
-- `/merge 1230` 実行可能 (MUST issue は全件修正済み、CI 全件 SUCCESS、Pre-merge AC 全件 PASS)。
+- Issue #1165 自体の Post-merge AC (`/audit stats --retention` での Manual waiting 件数減少確認) を `/verify 1165` で確認すること。
+- `opportunistic-search.sh --event auto-run` が #1135 / #478 をマッチ集合に含めないのは `when=mode:batch` ゲートによる設計どおりの確定的除外であり、異常や遅延として扱わないこと (review フェーズで確認済み)。
+- ラベル遷移 (`gh-label-transition.sh 1165 verify`) はこの Phase Handoff コミット後に実行する。
 
 ## review retrospective
 
