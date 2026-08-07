@@ -145,3 +145,31 @@ Consumed Comments で提示された「79 件へ `when=` を併せて付与す�
 - `/code 1158` 実行時は Size=XL のままだが、明示的に `--pr` フラグを使うこと (Size ベースの自動ルーティングは XL に対して patch/pr/operate のいずれの列も持たないため)
 - Implementation Step 1 の precondition gate で 1 件でも未完了なら、以降の Step を実行せず「blocked」として終了すること — 空ファイルや部分的な内容でレポートを作成しないこと
 - 集約レポート作成時は #1163 の実例 (`docs/reports/manual-ac-retype-a.md`) を構造の参考にすること (見出し構成: `## 対象・件数内訳` → `## 区分別処理結果` → `## 検証`)
+
+## Auto Retrospective
+
+### Execution Summary
+
+| # | Title | Route | Result | Notes |
+|---|-------|--------|--------|-------|
+| #1164 | 区分 D2 (実行シナリオ型 13 件) を observation へ再型付け | pr (Size M) | SUCCESS | PR #1232 merged。異常なし |
+| #1165 | 区分 D3 (その他 19 件) を個別判断で再型付けまたは retire | pr (Size L, review --full) | SUCCESS | PR #1230 merged。異常なし |
+| #1166 | 区分 B (別 repo 6 件) を retire または downstream へ移管 | operate (Spec 由来) | SUCCESS (exit 1 / reconcile-override) | `run-auto-sub.sh` exit 1 だが `reconcile-phase-state.sh code-patch --check-completion` が `matches_expected: true`。親セッションが Tier 1 で success へ override |
+| #1167 | 区分 C (故障注入 2 件) の bats テスト化 + D1 (UI 目視 5 件) の manual 維持記録 | pr (Size M) | SUCCESS | Tier 2 fallback catalog により自動 recovery 後 PR #1237 merged |
+
+Level 1 のみ (4 件すべて独立、blocked-by #1157 は CLOSED 済み)。並列度 4 (`auto-max-concurrent` 既定 5 の範囲内)。
+
+### Parallel Execution Issues
+
+- **#1166: operate route が pr dispatch と噛み合わない** — `/spec 1166` は Changed Files が空・Implementation Steps が全て `gh` CLI 操作であることから `ROUTE=operate` と判定したが、`run-auto-sub.sh` は spec 後に再取得した Size (M) だけで route を決めるため `code-pr` を dispatch した。operate route は PR を作らないので `reconcile-phase-state.sh code-pr --check-completion` が `matches_expected: false` を返し、Tier 2 (anchor はマッチしたが handler 失敗) → Tier 3 (`action=skip` が `matches_expected != true` を理由に reject) と降りて exit 1。実際には `/code` 側の operate 分岐は正常に完走しており、`code-patch` の completion check は operate 実行ログマーカーを検出して `matches_expected: true` を返す。`docs/reports/orchestration-recoveries.md` に `cause=operate-route-pr-dispatch-mismatch` で記録済み。
+- **#1167: Tier 2 fallback catalog が自動 recovery** — code-pr フェーズで既知パターンにマッチし catalog 経由で復旧、PR #1237 作成まで自動継続。`apply-fallback.sh` 側が recovery ログを直接コミット済み (二重記録なし)。
+- 4 並列で worktree 競合・concurrent commit・push 競合は発生せず。
+
+### Orchestration Anomalies
+
+- **XL route に親 Issue の実装フェーズが存在しない** — `/auto` の XL route は「sub-issue 実行 → 親ラベル集約 → sub-issue verify → 親 close flow」で構成され、親自身の `/code` を回す経路を持たない。ところが #1158 の Spec は Pre-merge AC 5 件が全て `rubric` 型であるため、rubric grader の可視範囲を確保する目的で `docs/reports/manual-ac-retype-summary.md` を Changed Files に持つ (親が実装成果物を持つ)。この結果、XL route をそのまま流すと親の rubric AC は成果物不在のまま `/verify` に到達して FAIL する。本セッションでは親セッションが Step 4d の後・親 verify の前に `run-code.sh 1158 --pr` を手動挿入して回避した。
+
+### Improvement Proposals
+
+- **auto/run-auto-sub: sub-issue の route 判定が Spec 由来の operate route を honor しない** — `skills/auto/SKILL.md` の単一 Issue 経路には Step 3a「Operate route demotion」があり、spec 後に Spec の diff-less 判定で `ROUTE=operate` へ降格する。しかし `scripts/run-auto-sub.sh` の post-spec Size 再取得 (`INITIAL_SIZE` → `SIZE` 比較) は Size 軸しか見ておらず、同等の operate 判定を持たない。結果として operate route の sub-issue は必ず `code-pr` で dispatch され、completion check 失敗 → Tier 2/Tier 3 を空振りさせ exit 1 で終わる。本セッションの #1166 が実例 (機能的には成功しているのに wrapper は失敗扱い)。`run-auto-sub.sh` に Step 3a 相当の operate 判定を追加し、成立時は `code-patch` dispatch + `code-patch` completion check へ切り替える。バッチ/XL 経路で operate route Issue を扱う限り再発する構造的欠陥。
+- **size-workflow-table / auto: XL 分割後も親が集約成果物を持つパターンの経路定義が無い** — `modules/size-workflow-table.md` は XL を「sub-issue へ分割し親は追跡のみ」と定義するが、親が rubric 型の横断 AC を持つ場合、rubric grader は Issue コメントや Spec ファイルを参照できないため親自身が成果物ファイルを持たざるを得ない (#1163 が sub-issue レベルで同じ結論に到達し、#1158 の Spec がそれを親へ一段上げて適用した)。`/auto` の XL route はこの「親の実装フェーズ」を持たないため、Spec がそう設計しても自動実行経路から漏れる。XL route に「全 sub-issue 完了後、親 Spec の Changed Files が非空なら親の code フェーズを実行する」ステップを追加するか、`size-workflow-table.md` 側で親が成果物を持つことを禁じて sub-issue へ寄せるかの二択を決める。#1158 の spec retrospective でも Deferred Items として同じ欠落が記録されている。
