@@ -60,3 +60,32 @@
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective — Background の技術的主張をコードベースと照合し正確性を確認、Auto-Resolve Log (`ci-wait-silence-timeout` 命名確定、`--events` 配線 AC 追加) を記録 / https://github.com/saitoco/wholework/issues/1221#issuecomment-5214484722
 - saito / MEMBER / first-class / `/issue` Step 15 (AC Verify Command Integrity Audit) — 自己監査で Step 8/9 追加直後の AC が Pattern 6-1 (heading 引数に `#### ` を含む常時 UNCERTAIN) に該当すると検出し、Issue body を修復済み (現在の AC は修復後の形) / https://github.com/saitoco/wholework/issues/1221#issuecomment-5214534020
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-5 を Spec 記載順のまま実装。分岐イディオムも `detect-external-kill.sh` line 80-82 と同一のものを流用した
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- 本 Issue は `/auto` の code フェーズが 1 回目の試行でフルテストスイートのバックグラウンド実行によりサイレント no-op し (`code_retry_fire iteration 1`)、2 回目の試行 (本セッション) でリトライされたもの。1 回目の失敗は本 Issue の実装内容自体とは無関係で、直前にランディングした Issue #1213 の修正 (`bats --jobs <N> tests/` をフォアグラウンドで 10 分以内に収める) が本セッションの Step 9 に反映されておりリトライは正常完了した
+
+### Observed pre-existing test flakiness (unrelated to this Issue's scope)
+- `bats --jobs 18 tests/` の並列フルスイート実行で `tests/post_merge_check.bats` の `fail: gh issue reopen called when FAIL input given` が単発 FAIL した。同テストを単独実行 (`bats tests/post_merge_check.bats`) すると 10/10 PASS するため、`scripts/test-failure-classify.sh` の分類は `infra` (並列実行下のリソース競合と推定)。`scripts/post_merge_check.sh` / `tests/post_merge_check.bats` はいずれも本 Issue の変更対象外であり、原因調査・修正はスコープ外と判断した。CI (`.github/workflows/test.yml`) も `bats --jobs $(nproc) tests/` で実行するため、同じ並列条件下では低頻度で再現しうる — 再発・パターン化した場合は別 Issue として起票を検討
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `--events` の判定分岐は `detect-external-kill.sh` の chained-grep イディオムをそのまま踏襲し、既存コードとの一貫性を優先した
+- `ci-wait-silence-timeout` カタログエントリの Fallback Steps は `skills/verify/SKILL.md` Step 5 の CI インフラ障害判定表を参照する形にとどめ、判定ロジック自体は複製しなかった (SSoT 分散を避けるため)
+
+### Deferred Items
+- Post-merge AC (`verify-type: observation event=auto-run session=next`) — 次回 CI 待機由来の watchdog kill が実際に発生した際、`ci-wait-silence-timeout` として診断されることの観察が必要。次回 `/auto` セッションでの発火を待つ
+- `scripts/apply-fallback.sh` 側の `code-patch` フェーズ限定の独自 `json-mode-silent-hang` 判定は、本 Issue のスコープ外として Spec Notes に明記済み (将来 `code-pr` に類似の長時間待機が入った場合は別 Issue で再検討)
+
+### Notes for Next Phase
+- `tests/post_merge_check.bats` の並列実行下フリークな FAIL (上記 Rework 参照) は再現性が低く本 Issue の変更と無関係。review/verify フェーズで再度 FAIL が観測されても、まず単独再実行で切り分けること
+- AC7 (`github_check "gh pr checks" "Run bats tests"`) は PR 作成前のため未チェックのまま — CI green 確認後に `/review` または `/verify` でチェックされる想定
