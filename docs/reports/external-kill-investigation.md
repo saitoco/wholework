@@ -378,3 +378,48 @@ Note the vocabulary distinction, which the earlier entries above blur: `ff-only-
 ### Measurement caveat carried forward
 
 One `manual_intervention` event from this session (the #1174 recovery) was **misattributed to session `41961-1785999585`**: the `--write-manual-recovery` call did not regenerate its PGID pointer file first, so `restore_auto_session_pointer` read `.tmp/auto-session-current`, which a concurrent session had overwritten. This is #1075's known failure mode, and it means **`manual_intervention` counts remain unreliable for per-session attribution under concurrency** — the same caveat that applies to the July data. Counts of the *recoveries log* (`docs/reports/orchestration-recoveries.md`), which carries an explicit `- Issue #N, phase: P` Context line, are not affected.
+
+---
+
+## 2026-08-07 Update (Arm 4a continued — peak 8 concurrent, uptime to ~60h, still 0 external kills)
+
+Two further sessions ran after the 2026-08-06 update above: `/auto 1200` (single route, 12:05–14:00 UTC) and `/auto --batch 1206 1205 1202` (session `89790-1786027911`, 14:51–02:15 UTC, 11h23m). Both extend Arm 4a past every previously measured bound.
+
+### Result: still 0 external kills
+
+**`docs/reports/orchestration-recoveries.md` contains zero `manual-recovery-respawn` entries dated 2026-08-06 or 2026-08-07.** That symptom-short is the external-kill signature (`modules/orchestration-fallbacks.md#external-kill-parent-respawn`), so its complete absence across two days of heavy concurrent operation is a direct negative result, not an inference from event counts.
+
+Recovery entries that *did* accumulate on 8/6–8/7, by type:
+
+| Symptom-short | Count | Cause |
+|---|---|---|
+| `manual-recovery-worktree-rebase` | 4 | #1076's unimplemented true-side path (fixed 2026-08-07) |
+| `manual-recovery-review-rerun` | 2 | GitHub Actions outage (see below) |
+| `manual-recovery-review-uncommitted-work` | 1 | unrelated |
+| `review-tier3-recovery` | 1 | #1174 review hang |
+| **`manual-recovery-respawn`** | **0** | — |
+
+### New bounds reached
+
+| Axis | Previous max (this report) | Now |
+|---|---|---|
+| Concurrent `claude -p` | 4 | **8** (2026-08-06 21:14 JST, during `/auto 1200`'s spec phase; load avg 3.61) |
+| Host uptime under concurrency | ~40h | **~60h** (2 days 11:27 at 2026-08-07 11:19 JST) |
+| Continuous concurrent operation | 8h21m | 11h23m (session `89790`) |
+
+The "freshly rebooted × concurrent" cell of the 2×2 therefore now extends to roughly 60 hours of uptime with peak concurrency doubled, and remains at zero kills. The July condition (long uptime × concurrent) still has not been reproduced; uptime continues to accumulate passively toward it.
+
+### New confounder: an exit-143 watchdog kill can be caused by an external outage
+
+A repo-wide GitHub Actions outage on 2026-08-06 (jobs failing at `Set up job` with `Failed to resolve action download info. Error: Service Unavailable`, plus runs stalling in `queued`) produced two distinct recovery events:
+
+- **#1214 `/review`**: went silent inside `ci_wait` and was **watchdog-killed at 5400s (exit 143)**. Recorded as `manual-recovery-review-rerun` with `cause: ci-infra-outage-during-ci-wait`
+- **#1206 `/review`**: `run-review.sh` returned exit 2 (PENDING); Tier 3 fired `action=retry` and the retry also failed (`result=failed`) because the outage persisted. Parent session diagnosed via `gh run view --log-failed`, re-ran the CI jobs (9/9 green), then re-ran review successfully
+
+**The #1214 case matters for this investigation's classification work.** An exit 143 with a long silent window superficially resembles the SIGTERM-class variant discussed under F2/H-a, but here the root cause was entirely external to the harness — the wrapper was waiting on a CI service that had stopped responding. Any future analysis that groups exit-143 terminations must check whether a CI outage overlapped the silent window before attributing the kill to harness lifecycle behaviour. The `--cause` slug mechanism (#1123) is what makes this separable in `collect-recovery-candidates.sh`: `ci-infra-outage-during-ci-wait` groups apart from other causes of the same symptom.
+
+This does not affect the July sample (F1–F5), whose wrappers left no exit code at all and showed no CI-wait correlation. It is a caveat for **future** kill classification, not a reinterpretation of the existing data.
+
+### Concurrency cost, cumulative
+
+Across both sessions: 4 `concurrent_commit_detected` (session `89790`) plus the 40 from session `63129`. The `manual-recovery-worktree-rebase` class — the one requiring human intervention — was **closed by #1076 landing on 2026-08-07**; its post-fix recurrence is now tracked by #1076's own post-merge observation AC rather than by this report.
