@@ -65,16 +65,26 @@
 - No new comments since last phase.
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Adopted path-like token stripping (`sed -E 's#[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+##g'`) as the sole mitigation, per the Spec's Root Cause section — word-boundary match (`grep -qiw`) was already ruled out there (verified: `docs/workflow.md` still satisfies `\bworkflow\b` because `/` and `.` are non-word characters).
-- Followed the existing `resolve_run_facts()` lazy-cache pattern for the new `resolve_filtered_context()` helper, so the filtering cost is paid at most once per process even when multiple `keyword=`-tagged AC lines are evaluated in the same run.
+- Fixed a SHOULD-severity robustness gap found by `review-light`: `resolve_filtered_context()`'s `sed -E` command substitution (scripts/opportunistic-search.sh L167) had no `2>/dev/null || true` guard, unlike the sibling `resolve_run_facts()` function. Under `set -euo pipefail`, a `sed` read failure (e.g. TOCTOU between the L134 existence check and the later read) would abort the whole script instead of degrading the `keyword=` gate gracefully. Fixed to match the established sibling pattern.
+- All 3 pre-merge AC (2 rubric + 1 section_contains) independently re-verified PASS by `/review`'s own grader pass (not just carried over from `/code`'s self-assessment), per the code-phase handoff's note to run an independent pass.
 
 ### Deferred Items
-- None — all 3 pre-merge AC (2 rubric + 1 section_contains) verified PASS in this phase; no item was pushed to a later phase.
+- None.
 
 ### Notes for Next Phase
-- The 2 new bats cases (`tests/opportunistic-search.bats`) cover both the negative case (keyword only inside a path-like token → excluded) and the positive/prose case (keyword in ordinary text → still included, guarding against over-stripping). Confirm both are exercised, not just the happy path.
-- AC1/AC2 are `rubric`-graded (semantic judgment); this phase's own PASS assessment is not a substitute for `/review`'s independent grader pass.
-- Post-merge AC is an `opportunistic` observation tied to a future `/review --light` run touching a `docs/workflow.md`-style path listing — no action needed now; it resolves naturally when that PR occurs.
+- Post-merge AC remains an `opportunistic` observation tied to a future `/review --light` run touching a `docs/workflow.md`-style path listing — no action needed now; `/merge` and eventual `/verify` should let it resolve naturally when that PR occurs.
+- No policy change occurred during review (the fix was error-handling robustness only), so Issue AC text and verify commands are unchanged from `/code` phase.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note. Implementation matched the Spec's Root Cause / Implementation Steps exactly; no structural divergence between Spec and PR diff.
+
+### Recurring issues
+- Nothing to note as a workflow-level recurring pattern. One instance worth flagging for awareness (not a repeat pattern yet): the new `resolve_filtered_context()` helper was explicitly modeled after the sibling `resolve_run_facts()` lazy-cache pattern (per Implementation Steps 1 and the code-phase handoff), but omitted that sibling's `2>/dev/null || true` error guard on the actual read call. When a Spec/Step instructs "follow an existing pattern," the follow-up implementation should copy the *whole* pattern (including its defensive guards), not just its structural shape (lazy-cache flag + function signature).
+
+### Acceptance criteria verification difficulty
+- Nothing to note. All 3 pre-merge AC (2 `rubric`, 1 `section_contains`) resolved cleanly to PASS with no UNCERTAIN and no verify command inaccuracies.
