@@ -52,6 +52,8 @@
 No new comments since last phase.
 
 - saito / MEMBER / first-class / <!-- wholework-event: type=execution-log phase=code issue=1166 --> / https://github.com/saitoco/wholework/issues/1166#issuecomment-5211867474
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1166#issuecomment-5213569801
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1166#issuecomment-5213750237
 ## Code Retrospective
 
 ### Deviations from Design
