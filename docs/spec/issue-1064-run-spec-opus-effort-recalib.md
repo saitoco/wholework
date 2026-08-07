@@ -74,20 +74,21 @@
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: spec phase の telemetry 欠落の原因 (run-auto-sub.sh の spec dispatch が run_phase_with_recovery() をバイパス) を特定。silent window のみ取得可能と報告。本 Issue へのスコープ算入 (a) か別 Issue 分離+blocked-by (b) の判断を提起 — 結果的に #1228 として (b) の経路で解消済み。 / URL: https://github.com/saitoco/wholework/issues/1064#issuecomment-5211841755
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- REVIEW_DEPTH=light (`--light` 明示指定) で実行。review-light エージェント1体による4観点統合レビューで issue 0件、修正作業なしで完了とした
-- Pre-merge AC 6件を verify-executor safe mode で再検証 (`file_exists` x1、`file_contains` x1、`rubric` x5) し、全件 PASS を独自に確認。Issue 側の既存チェック状態 (`/code` フェーズで済み) と一致
-- ベースブランチ競合プリチェック (`git merge-tree`) で `changed in both` ブロック0件を確認 (他PRのマージ分がすべて `merged` ヘッダのクリーン自動マージ) — 競合コンテキストの記録は不要と判断
+- PR #1254 を squash merge (`--delete-branch`) で main に統合、`closes #1064` により Issue を auto-close 済み
+- pre-merge AC ゲート: `check-pre-merge-ac.sh` で 6 件全て `[x]` を確認、override 不要で通過
+- review-incomplete-fallback チェック: PR コメントに organic な Review Response Summary を確認、fallback 経路ではないため追加ゲート条件なし
 
 ### Deferred Items
 - 実 telemetry サンプル (`--opus` の `token_usage`) が蓄積するまでの再評価は将来Issueに委ねる。抽出時は `sub_start` イベントの dispatch 時点 `size=L` を使うこと (Spec の最終記録 Size ではない — #1175 の落とし穴に注意)
-- `docs/ja/tech.md` が `#1062` の Opus 5 関連ノート (effort calibration / default parent deferred / watch items) をまだ含んでいない、という pre-existing な翻訳同期ギャップは本 Issue のスコープ外のまま (Code Retrospective参照、review-light でも再確認済みで指摘なし)
+- `docs/ja/tech.md` が `#1062` の Opus 5 関連ノート (effort calibration / default parent deferred / watch items) をまだ含んでいない、という pre-existing な翻訳同期ギャップは本 Issue のスコープ外のまま
+- Post-merge 検証 (`/auto` を L size Issue に対して実行し `run-spec.sh --opus` が `xhigh` effort で起動することの確認) は opportunistic のため未実施 — `/verify` フェーズで対応
 
 ### Notes for Next Phase
-- MUST/SHOULD/CONSIDER いずれも0件のため `/merge` へそのまま進行可能。CI 5ジョブすべて SUCCESS
-- Post-merge AC (opportunistic, `/auto` を L size Issue に実行して `--opus` が `xhigh` で起動することを確認) は `/verify` でオープンのまま
+- `/verify` は Issue 本文の Post-merge 検証項目 1 件 (`--opus` 起動時の effort 確認) を確認すること
+- 判定は「維持」のためコード変更なし、`docs/tech.md` / `docs/ja/tech.md` の matrix 注記追加のみが変更内容
 
 ## review retrospective
 
