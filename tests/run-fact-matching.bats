@@ -81,6 +81,41 @@ EOF
     [[ "$tokens" != *"/auto"* ]]
 }
 
+@test "collect-run-facts: fact_tokens excludes bare phase names, keeps wrapper script tokens" {
+    EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
+    cat > "$EVENTS_FILE" <<'EOF'
+{"ts":"2026-08-05T00:00:00Z","issue":1600,"event":"phase_start","session_id":"sess1","phase":"review"}
+{"ts":"2026-08-05T00:01:00Z","issue":1600,"event":"phase_complete","session_id":"sess1","phase":"review"}
+{"ts":"2026-08-05T00:02:00Z","issue":1600,"event":"phase_start","session_id":"sess1","phase":"code-pr"}
+{"ts":"2026-08-05T00:03:00Z","issue":1600,"event":"phase_complete","session_id":"sess1","phase":"code-pr"}
+EOF
+    export AUTO_EVENTS_LOG="$EVENTS_FILE"
+    run bash "$COLLECT_SCRIPT" --session sess1 --no-github
+    [ "$status" -eq 0 ]
+
+    has_review=$(echo "$output" | jq '[.issues[0].fact_tokens[] | select(. == "review")] | length')
+    [ "$has_review" = "0" ]
+    has_code_pr=$(echo "$output" | jq '[.issues[0].fact_tokens[] | select(. == "code-pr")] | length')
+    [ "$has_code_pr" = "0" ]
+
+    tokens=$(echo "$output" | jq -r '.issues[0].fact_tokens | join(",")')
+    [[ "$tokens" == *"run-review.sh"* ]]
+    [[ "$tokens" == *"run-code.sh"* ]]
+}
+
+@test "collect-run-facts: verify phase contributes no fact_tokens entry (no wrapper script)" {
+    EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
+    cat > "$EVENTS_FILE" <<'EOF'
+{"ts":"2026-08-05T00:00:00Z","issue":1700,"event":"phase_start","session_id":"sess1","phase":"verify"}
+{"ts":"2026-08-05T00:01:00Z","issue":1700,"event":"phase_complete","session_id":"sess1","phase":"verify"}
+EOF
+    export AUTO_EVENTS_LOG="$EVENTS_FILE"
+    run bash "$COLLECT_SCRIPT" --session sess1 --no-github
+    [ "$status" -eq 0 ]
+    tokens=$(echo "$output" | jq -c '.issues[0].fact_tokens')
+    [[ "$tokens" != *"verify"* ]]
+}
+
 @test "collect-run-facts: --issue filters output to a single issue" {
     EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
     cat > "$EVENTS_FILE" <<'EOF'

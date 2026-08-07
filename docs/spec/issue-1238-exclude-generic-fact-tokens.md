@@ -32,6 +32,13 @@
 
 **Effect measurement (baseline)**: scan-pending-ac.sh 経路 418 件 → 186 件 (55.5% 除外, session `3340-1786079730`, 2026-08-07 計測, Issue #1238 本文記載)。opportunistic-search.sh 経路 13 件 → 13 件 (0% 除外, session `83694-1786088052`, 2026-08-07 計測, Issue #1238 本文記載)。Implementation Step 5 の実施後、`/code` はこの行の直下に実装後の件数・facts のソース (実セッション再実行 or 代表 JSON)・計測日を追記すること (AC3 の充足条件)。
 
+**Effect measurement (after implementation, 2026-08-08)**: `.tmp/auto-events.jsonl` に session `3340-1786079730` / `83694-1786088052` の生イベントは現存しない (Notes 記載のとおりローテーション済み) ため、両経路とも Issue 本文引用の fact_tokens 配列を新ロジックで手動再構成した代表 JSON (`--facts` 経由) で再測定した。母集団は測定時点 (2026-08-08) の現在の Issue 集合を使用したため、ベースライン計測時点 (2026-08-07) との間に自然な件数のドリフトがある — そのため同一母集団に対して旧語彙 (bare phase 名を含む、変更前の実装を手動再現) と新語彙 (本実装後の `fact_tokens`) を両方適用し、同一母集団内での差分として効果を確認した。
+
+- **scan-pending-ac.sh 経路**: 現在の母集団 422 件 (`--max-candidates 10000` で truncation なく計測。ベースライン計測時の 418 件から自然増)。session `3340-1786079730` の fact_tokens (`["Size S","issue","run-issue.sh","run-spec.sh","spec"]`) をそのまま (旧語彙として) 適用すると **185 件** (55.9% 除外) — ベースラインの 186 件とほぼ一致し、旧ロジックの再現性を確認。同じ token 配列から bare な `issue`/`spec` を除いた新語彙 (`["Size S","run-issue.sh","run-spec.sh"]`) を適用すると **2 件** (99.5% 除外) まで減少した。
+- **opportunistic-search.sh 経路**: 現在の `/verify` 母集団 13 件 (ベースラインと同数)。session `83694-1786088052` を模した batch route・Size M・issue→spec→code(pr)→review→merge→verify を経た代表的 fact_tokens について、旧語彙 (`["pr route","Size M","issue","spec","code-pr","review","merge","verify","run-issue.sh","run-spec.sh","run-code.sh","run-review.sh","run-merge.sh","batch"]`、bare `verify` を含む) を適用すると **13 件** (0% 除外) — ベースラインの 13→13 を再現。同じ token 配列から bare な phase 名 (`issue`/`spec`/`code-pr`/`review`/`merge`/`verify`) を除いた新語彙 (`["pr route","Size M","run-issue.sh","run-spec.sh","run-code.sh","run-review.sh","run-merge.sh","batch"]`) を適用すると **0 件** (100% 除外) まで減少した。`verify` phase は `wrapper_for()` マッピングを持たないため、新語彙では一切のトークンを生成しない (意図した挙動、Notes 参照)。
+
+両経路とも、同一母集団内の旧語彙比較で絞り込み効果の大幅な改善を確認した (scan-pending-ac.sh: 185→2、opportunistic-search.sh: 13→0)。facts のソース: 実行中の `/auto` セッションが存在しない単発実行環境のため、`collect-run-facts.sh` の出力形式に相当する代表的 JSON (`.tmp/facts-old-1238.json` / `.tmp/facts-new-1238.json` / `.tmp/facts-old-opp-1238.json` / `.tmp/facts-new-opp-1238.json`、いずれも `.tmp/` は gitignore 対象で本コミットには含まれない) を使用した。
+
 ### Post-merge
 
 - 次回以降の `/auto` 完走後の Run-fact AC reconciliation で、絞り込み後の候補件数が変更前より減少していることを観察する <!-- verify-type: observation event=auto-run session=next -->
@@ -53,3 +60,38 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1238#issuecomment-5218544266
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation followed the Spec's Implementation Steps 1-5 in order with no reordering, omission, or approach change.
+
+### Design Gaps/Ambiguities
+- None. The Spec's method selection (bare phase-name exclusion over token namespacing) and its rationale were fully specified in Notes, leaving no open design decision during implementation.
+
+### Rework
+- None.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- None. `/review` (light mode, `review-light` agent, 4 aspects) found the diff matches the Spec's Implementation Steps 1-5 exactly — no structural divergence.
+
+### Recurring issues
+- None. All 4 evaluable pre-merge AC (rubric x3, bats command x1) verified PASS with no re-check needed; no issue category repeated across this run.
+
+### Acceptance criteria verification difficulty
+- AC5 (`github_check "gh pr checks" "Run bats tests"`) was left unchecked at the end of `/code` because the PR's CI had not yet completed — this is expected/normal for a CI-dependent AC checked immediately after PR creation, not a verify command quality gap. `/review` confirmed all 9 CI jobs SUCCESS and updated the checkbox to `[x]`. No verify command changes needed.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Ran `--light` mode (1-agent `review-light` covering all 4 aspects) per ARGUMENTS; no findings surfaced, so no fix cycle was needed.
+- Updated Issue checkbox for AC5 (`github_check`) to `[x]` after confirming all 9 PR CI jobs are SUCCESS — this was the only AC left open by `/code` (deferred pending CI completion, as noted in the code-phase handoff).
+
+### Deferred Items
+- Post-merge observation AC (index 6, `verify-type: observation event=auto-run session=next`) remains unresolved pending the next `/auto` completion — unchanged from the code-phase handoff, no action needed until then.
+
+### Notes for Next Phase
+- All 5 Pre-merge AC are now PASS/`[x]`; only the Post-merge observation AC remains open. `/merge` can proceed directly.
