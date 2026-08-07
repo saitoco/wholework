@@ -59,6 +59,8 @@
 
 **Effect measurement (baseline)**: 14 件 (opportunistic mode, skill `/verify`。scope: `phase/verify` ラベル付き closed Issue のうち `verify-type: opportunistic` タグ + skill 名 `/verify` を含む Pre-merge/Post-merge 条件。session `33233-1786023637` で計測、Issue #1239 本文記載)。Implementation Step 5 の実施後、`/code` はこの行の直下に実装後の件数・facts のソース・計測日を追記すること (AC8 の充足条件)。
 
+**Effect measurement (after implementation, 2026-08-07)**: `scripts/opportunistic-search.sh /verify` (`--facts` なし) で同じ母集団を再計測したところ **13 件** (ベースライン計測時点 session `33233-1786023637` から2日経過し数件クローズ等で微減。14→13 は同一計測手法の自然変動であり、`--facts` 未指定時に絞り込みが効いていないこと自体はこの再計測で確認済み — 後述のバックワード互換性確認と同義)。同じ母集団に対して `--facts` を付与し、spec→code→review→merge を完了した pr route セッション (Size M) を想定した代表的な run-facts JSON (`fact_tokens: ["pr route","Size M","spec","code","review","merge","#1300"]`) で絞り込むと **5 件** (#1051, #1053, #231, #436, #781) まで減少した — **61.5% 除外 (13→5)**。facts のソース: 実行中の `/auto` セッションが存在しない単発実行環境のため、Implementation Step 5 の指示 (「実際または代表的な run-facts JSON」) に従い、実際の `collect-run-facts.sh` 出力形式に相当する代表的 JSON (`.tmp/facts-repr-1239.json`) を使用した。
+
 ### Post-merge
 
 - 次回以降の skill 完了時の opportunistic verification で、候補件数が変更前 (14 件) より減少していることを観察する <!-- verify-type: observation event=auto-run session=next -->

@@ -21,13 +21,29 @@ Skills that Read this file should execute opportunistic verification following t
 
 First check for the existence of `${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh` using a `-x` test. If the script does not exist (or is not executable), output "Warning: ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh not found. Skipping opportunistic verification." and skip all subsequent processing.
 
-If the script exists:
+If the script exists, resolve `--facts` and `--context-file` before calling it:
+
+**Resolve `--facts` (run-fact token pre-filter — narrows the opportunistic-mode candidate set without requiring AC-side attributes):**
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh <skill-name>
+source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
+restore_auto_session_pointer <calling skill's own Issue/PR number>
 ```
 
-- The script fetches closed Issues with the `phase/verify` label and filters by `verify-type: opportunistic` tag, skill name, and unchecked conditions
+Session id resolution reuses `restore_auto_session_pointer()`'s existing 3-tier fallback (`AUTO_SESSION_ID` env var → `.tmp/auto-session-issue-<N>` pointer file → `.tmp/auto-session-<pgid>` pointer file — see `scripts/emit-event.sh`); no new session-id-passing flag is introduced. The function is idempotent (`[[ -n "${AUTO_EVENTS_LOG:-}" ]] && return 0`), so calling it here and again in Step 3 below has no side effect.
+
+- **If `AUTO_SESSION_ID` resolved** (non-empty after the call above): run `${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh > .tmp/facts-${AUTO_SESSION_ID}.json` (no explicit `--session` — the `AUTO_SESSION_ID` env var just set above is picked up by `collect-run-facts.sh`'s own fallback ladder), then pass `--facts .tmp/facts-${AUTO_SESSION_ID}.json` to `opportunistic-search.sh` below.
+- **If `AUTO_SESSION_ID` did not resolve** (standalone run outside `/auto`, or the session id is otherwise unavailable): omit `--facts` — `opportunistic-search.sh` falls back to its existing unfiltered, backward-compatible behavior.
+
+**Resolve `--context-file` (`keyword=` gate — otherwise unreachable, since `opportunistic-search.sh`'s `keyword=` gate only activates when `--context-file` is supplied):**
+
+Write `.tmp/context-<calling skill's own Issue/PR number>.md` with the Write tool, containing the current Issue's body plus, if a Spec exists at `$SPEC_PATH/issue-<calling Issue number>-*.md`, that Spec's `## Changed Files` section — this is the text the `keyword=` gate matches against.
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh <skill-name> --context-file .tmp/context-<calling Issue number>.md [--facts .tmp/facts-${AUTO_SESSION_ID}.json]
+```
+
+- The script fetches closed Issues with the `phase/verify` label and filters by `verify-type: opportunistic` tag, skill name, unchecked conditions, and (when `--facts`/`--context-file` are given) the fact-token and `keyword=` gates
 - Output is JSON: `[{"number": N, "condition": "condition text"}]` (empty: `[]`)
 - **If output is `[]`**: Output "Opportunistic verification: 0 conditions found, skipping" and exit
 

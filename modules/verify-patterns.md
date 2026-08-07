@@ -384,6 +384,8 @@ If a post-merge condition can be verified mechanically — file existence, text 
 
 Omitting `verify-type: opportunistic` when a verify command is attached is correct — conditions with verify commands are classified as `auto` by default.
 
+**`keyword=` attribute — no bulk backfill onto existing AC**: `opportunistic-search.sh`'s `keyword=` gate (see its header comment) narrows `--context-file` matching for `verify-type: opportunistic`/`observation` conditions, but attaching `keyword=` to the large existing backlog of untagged AC is out of scope — apply it going forward on newly authored AC only, the same scope decision `#1172` made for the `when=` attribute (see `docs/spec/issue-1169-search-population-limit.md` line 134 for that precedent). `opportunistic-search.sh`'s `--facts` run-fact token filter (Issue #1239) narrows the same candidate set without requiring any AC-side attribute, so it is unaffected by this scope limitation.
+
 ### 11. Manual AC Quick Reference — Replace with automatable/rubric
 
 When an acceptance condition is tagged `<!-- verify-type: manual -->`, first check whether the *action itself* — not just its verification — can be executed automatically via an available MCP tool, CLI, or API. A condition often ends up as `manual` not because verification is inherently hard, but because no executor was ever considered for the action itself: the author assumed a human must perform the operation, when in fact a connected MCP tool (e.g., a headless CMS write tool, a ticketing API) could perform it directly. If such a tool exists, the condition no longer needs `verify-type: manual` at all — treat it as a normal auto-verified condition (e.g., executed and verified via `mcp_call`).
