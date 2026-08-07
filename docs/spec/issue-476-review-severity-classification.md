@@ -30,6 +30,7 @@
 ### verify フェーズ (2026-08-07 re-run #11, cutoff: 2026-06-14T21:50:38Z)
 
 - saito / MEMBER / first-class / 前回 `/verify 476` (2026-08-07 re-run #10) 実行結果。Pre-merge 2 件 SKIPPED (already checked)、Post-merge observation (event=pr-review-light) は PR #1244 (Issue #1117) の diff に該当欠陥なしのため UNCERTAIN。`keyword=workflow` ゲートの誤発火が10件目として再現 / https://github.com/saitoco/wholework/issues/476#issuecomment-5213746899
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5215472710
 ## 背景
 
 `/review` の MUST/SHOULD 分類基準に「対象実行環境で決定的に失敗する欠陥は MUST」というルールを明文化する。Spec フェーズなしで直接実装（Issue 本文から要件を読み取り）。
