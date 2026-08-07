@@ -67,6 +67,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-07 06:34 UTC: manual-recovery-reconcile-override
+
+### Context
+- Issue #1166, phase: code-pr
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 1
+
+### Diagnosis
+- cause: operate-route-pr-dispatch-mismatch
+- run-auto-sub.sh dispatched code-pr from Size M without honoring the Spec-derived operate route; operate produces no PR so the code-pr completion check failed, while code-patch --check-completion reports matches_expected:true via the operate execution-log marker.
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 
 ## 2026-08-07 05:51 UTC: code-pr-tier2-recovery
 
