@@ -30,3 +30,24 @@ TEST_RUNNER="$PROJECT_ROOT/modules/test-runner.md"
 @test "test-runner: FAIL condition is documented" {
     grep -q "FAIL" "$TEST_RUNNER"
 }
+
+@test "test-runner: parallel bats form is prescribed for whole-suite runs" {
+    grep -q -F "bats --jobs" "$TEST_RUNNER"
+}
+
+@test "test-runner: job count uses the portable nproc/sysctl form" {
+    grep -q -F 'nproc 2>/dev/null || sysctl -n hw.logicalcpu' "$TEST_RUNNER"
+}
+
+@test "test-runner: Step 2 states the 600000 ms tool timeout ceiling" {
+    grep -q -F "600000" "$TEST_RUNNER"
+}
+
+@test "test-runner: exceeding the ceiling is documented as auto-backgrounding" {
+    grep -q -F "moved to the background" "$TEST_RUNNER"
+}
+
+@test "test-runner: serial fallback is documented for missing GNU parallel" {
+    grep -q -F "parallel" "$TEST_RUNNER"
+    grep -q -F "serial" "$TEST_RUNNER"
+}
