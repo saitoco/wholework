@@ -135,6 +135,8 @@ Fable 5 was redeployed on 2026-07-01 after the 2026-06-13→2026-07-01 pause, ma
 bash scripts/run-spec.sh <N> --fable   # for 2-3 real backlog Issues without an existing Spec
 ```
 
+then extract `event=="max_silent_window" and phase=="spec" and issue==<N>` (and any `event=="watchdog_kill"`) from `.tmp/auto-events.jsonl` for each run, and append the results here as a follow-up dated subsection.
+
 ### 2026-08 re-measurement (Issue #939) — `--opus` proxy traffic
 
 **Date**: 2026-08-07
@@ -150,5 +152,3 @@ bash scripts/run-spec.sh <N> --fable   # for 2-3 real backlog Issues without an 
 (Two `phase=="spec"` `watchdog_kill` events exist elsewhere in the full log — issue #962, 2026-07-09, `size=="S"`; issue #1213, 2026-08-07, `size=="M"` — but neither carries `size=="L"`, so both fall outside this measurement's population and are excluded from the counts above.)
 
 Reproduction commands and the raw extraction pipeline are recorded in the Spec's Notes (`docs/spec/issue-939-fable-5-spec-watchdog-recalib.md` § measurement scope). See `docs/tech.md` § Watchdog timeout calibration for the resulting `WATCHDOG_TIMEOUT_SPEC_DEFAULT` judgment based on these numbers.
-
-then extract `event=="max_silent_window" and phase=="spec" and issue==<N>` (and any `event=="watchdog_kill"`) from `.tmp/auto-events.jsonl` for each run, and append the results here as a follow-up dated subsection.
