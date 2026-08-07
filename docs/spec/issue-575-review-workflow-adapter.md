@@ -250,3 +250,8 @@ verify command のカバレッジは良好だった（rubric×2、file_contains�
 - spec 段の Design Gaps/Ambiguities セクションに記載した実装時の知見（本 Issue では args 渡し形式）は、Done として閉じず、対応する **実装ステップ本文** に直接補記するルール化を `skills/spec/SKILL.md` または `spec-test-guidelines.md` に追加する（Review Retrospective より転記）。code フェーズで本文→ステップを順に読む際の漏れを構造的に防止
 - spike レポートの aspirational 表現（「N-vote adversarial verify」など）を Domain file / SKILL.md に転記する際、実装コードと文言が一致するかを review 段でチェックする観点を `skills/review/SKILL.md` または review-bug.md に明記する。今回は review で検出されたが、自動検出（grep ベースの transcription check）の余地がある
 - post-merge `verify-type: manual` 条件で「実環境変更が必要な確認（capability 設定 + 別プロジェクト実行など）」は、Issue クローズ後の追跡が散逸しやすい。`/verify` 完了時に未チェック manual 条件を別 Issue として起票する option（または `retro/verify` ラベルで自動収集する仕組み）を検討
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/575#issuecomment-4697918313
+- saito / MEMBER / first-class / ## Opportunistic Verification (during /review execution) / https://github.com/saitoco/wholework/issues/575#issuecomment-4702023375
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/575#issuecomment-5212596690
