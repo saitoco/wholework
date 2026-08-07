@@ -45,7 +45,7 @@ Emitted by `run-auto-sub.sh` after each phase completes, parsed from `TOKEN_USAG
 | `ts` | Yes | ISO 8601 UTC timestamp |
 | `issue` | Yes | Issue number |
 | `event` | Yes | `"token_usage"` |
-| `phase` | Yes | Phase name (`code`, `review`, `merge`, `spec`, `issue`) |
+| `phase` | Yes | Phase name (`code-patch`, `code-pr`, `review`, `merge`, `spec`, `issue`) |
 | `model` | Yes | Model identifier (e.g. `claude-sonnet-4-6`), extracted from the `modelUsage.<model-id>.*` keys of `TOKEN_USAGE_FILE` (the CLI's top-level `.model` key is always `null` and is not used) |
 | `input_tokens` | Yes | Input token count (string) |
 | `output_tokens` | Yes | Output token count (string) |
@@ -53,9 +53,9 @@ Emitted by `run-auto-sub.sh` after each phase completes, parsed from `TOKEN_USAG
 
 When `modelUsage` contains multiple keys (e.g. a sub-agent used a different model than the main session), the key with the largest `inputTokens + outputTokens` total is selected as the phase's representative `model`.
 
-**Emission point**: `run-auto-sub.sh` `run_phase_with_recovery()` for `code`/`review`/`merge`, or `run-spec.sh`/`run-issue.sh` directly for `spec`/`issue` (gated by `_EMIT_PHASE_OWNED`) — in both cases immediately after the `wrapper_exit` event, when `.tmp/token-usage-{issue}.json` exists.
+**Emission point**: `run-auto-sub.sh` `run_phase_with_recovery()` for `code-patch`/`code-pr`/`review`/`merge`, or `run-spec.sh`/`run-issue.sh` directly for `spec`/`issue` (gated by `_EMIT_PHASE_OWNED`) — in both cases immediately after the `wrapper_exit` event, when `.tmp/token-usage-{issue}.json` exists.
 
-**Scope**: all five phases — `code`, `review`, `merge` (invoked via `run_phase_with_recovery`), and `spec`, `issue` (emitted by their own wrapper directly, #1228).
+**Scope**: `code-patch`, `code-pr`, `review`, `merge` (invoked via `run_phase_with_recovery`), and `spec`, `issue` (emitted by their own wrapper directly, #1228). A standalone `run-code.sh` invocation emits `phase_start`/`phase_complete` with `phase=code` but never `token_usage`.
 
 ---
 
