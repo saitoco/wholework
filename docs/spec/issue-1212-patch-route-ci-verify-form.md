@@ -92,3 +92,29 @@ $ gh run list --workflow=test.yml --limit=8 --json conclusion,headBranch,event
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / intent: Triage AC audit — Issue 本文の AC4 verify command が pr route (Size M) にもかかわらず `gh run list --branch=main` 形式を使っており、本 Issue が是正対象とする欠陥 A をそのまま体現していると指摘。`gh pr checks "Run bats tests"` への修正を提案 / URL: https://github.com/saitoco/wholework/issues/1212#issuecomment-5205304798
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / intent: 欠陥 B の 3 例目実測 (#1210) の記録、および `skills/code/SKILL.md` Step 10 が実装コミット作成前に同じ commit-scoped AC を評価してしまう未文書化の問題を指摘。対応方針確定時にこの評価タイミングの扱いも SSoT に含めるかの判断を要請 / URL: https://github.com/saitoco/wholework/issues/1212#issuecomment-5206424811
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation Steps 1-4 were applied as specified.
+
+### Design Gaps/Ambiguities
+- None beyond what the Spec's Notes section already resolved (route selection, scope boundary).
+
+### Rework
+- The initial "why `--commit` is not used" explanation in `modules/verify-classifier.md` quoted the deprecated `--commit=$(git rev-parse HEAD)` form as one contiguous string. This tripped the new negative-assertion bats test (`! grep -q -- '--commit=$(git rev-parse HEAD)'`) against the SSoT file's own explanatory prose, not a live command. Reworded to separate the `git rev-parse HEAD` mention from the literal `--commit=` prefix so the explanation no longer contains the deprecated form as a contiguous substring.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Followed the Spec's already-decided policy (a) (`--branch=main --limit=1`, no `--commit`) verbatim — no new design decisions were needed at code time.
+- Limited scope to the 4 files the Issue named plus the 2 additional files the Spec scoped in (`tests/verify-executor.bats`, `skills/issue/spec-test-guidelines.md`); left the Spec's explicitly Deferred locations (`modules/verify-executor.md` job-level sub-form example, `skills/spec/SKILL.md` Step 10, `skills/triage/skill-dev-verify-audit.md` Pattern 4) untouched.
+
+### Deferred Items
+- AC4 (`github_check "gh pr checks" "Run bats tests"`) is unchecked — no PR existed yet when Step 10 evaluated it. It will resolve once CI runs on PR #1222.
+- The 3 locations the Spec's Notes section marked "Deferred" (see Spec Notes) still lack `--branch=main`; a follow-up Issue is recommended per the Spec but was not filed by this code run (no new out-of-scope remediation was discovered beyond what the Spec already recorded).
+
+### Notes for Next Phase
+- `/review` should confirm PR #1222's CI (test.yml `Run bats tests` job) passes before merge — AC4 depends on it.
+- No other outstanding risks identified during implementation.
