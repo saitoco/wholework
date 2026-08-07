@@ -67,13 +67,15 @@ Gate (`config=`) for the resolution mechanics.
 keys with two or more dots are not supported, and the comparison is boolean-only (`true`/`false`);
 enum-valued keys (e.g. `auto-stop-at`) are out of scope for `config=`.
 
-**`when=<axis>:<value>` for `/auto` run-context-dependent observation conditions**: when the
-observation condition's text depends on the execution context of the `/auto` run that fires the
-event (route / mode / recovery tier), append one or more comma-separated `when=<axis>:<value>`
-clauses (combined with AND) to the tag:
+**`when=<axis>:<value>` for context-dependent observation conditions**: when the observation
+condition's text depends on the `/auto` run context that fires the event (route / mode / recovery
+tier), or on the firing skill's own execution context (main / fork — e.g. an AC that only makes
+sense when `/review` ran as a direct interactive invocation rather than via `run-review.sh`),
+append one or more comma-separated `when=<axis>:<value>` clauses (combined with AND) to the tag:
 
 ```
 <!-- verify-type: observation event=auto-run when=route:operate -->
+<!-- verify-type: observation event=pr-review-full when=execution-context:main -->
 ```
 
 If `when=` is omitted for a context-dependent condition, the AC matches unconditionally on every
