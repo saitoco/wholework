@@ -67,6 +67,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-07 00:19 UTC: manual-recovery-review-rerun
+
+### Context
+- Issue #1214, phase: review
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 143
+
+### Diagnosis
+- cause: ci-infra-outage-during-ci-wait
+- GitHub Actions repo-wide outage stalled CI; /review went silent in ci_wait and was watchdog-killed at 5400s. Recovered by re-running CI on the same SHA (9/9 green) then retrying run-review.sh, which completed in 1200s.
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-08-06 08:26 UTC: manual-recovery-worktree-rebase
 
 ### Context
