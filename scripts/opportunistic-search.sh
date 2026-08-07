@@ -164,7 +164,7 @@ resolve_filtered_context() {
     FILTERED_CONTEXT_RESOLVED=true
 
     if [ -n "$CONTEXT_FILE" ]; then
-        FILTERED_CONTEXT=$(sed -E 's#[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+##g' "$CONTEXT_FILE")
+        FILTERED_CONTEXT=$(sed -E 's#[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+##g' "$CONTEXT_FILE" 2>/dev/null || true)
     fi
 }
 
