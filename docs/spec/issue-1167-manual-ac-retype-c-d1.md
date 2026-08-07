@@ -23,6 +23,8 @@ cutoff: 未確定 (`phase/*` ラベル付与の timeline イベントが存在�
 
 新規コメントなし (`gh issue view 1167 --json comments` の結果が空)。Cross-phase marker (`type=verify-fail` / `type=preview-ac-unverified`) の追加スキャン結果も該当なし。
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1167#issuecomment-5213587282
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1167#issuecomment-5213692052
 ## Changed Files
 
 - `tests/wait-ci-checks.bats`: 変更 — `bucket: "fail"` の check 1 件 (`pending` なし) をモックし、(a) ポーリングループが 1 回目の poll で即座に break すること (`sleep 60` に到達しない)、(b) `ci_result:` 行が `failed=1` を正しく報告することを検証するテストを追加。`skills/code/SKILL.md` Step 13 の fix loop Row 1 (`failed>0` → fix loop へ進む) が依存する決定的シグナルの回帰テスト (#1066 の故障注入シナリオの機械的な核)
