@@ -32,11 +32,15 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh <skill-name>
 
 ### 2. Cross-Reference with Current Execution Results (AI Retrospective)
 
-For each extracted condition, reflect on this skill's execution memory (output results, operations performed, observed facts) and judge by PASS/FAIL/SKIP criteria:
+For each extracted condition, first check whether it is observable within this execution's own scope, then judge by PASS/FAIL/SKIP criteria.
 
-- **PASS**: Confirmed during this execution that the condition is met
+**Observation scope check (before PASS/FAIL judgment)**: a condition is in scope only when its truth value is fully determined by what this skill execution itself performed or observed. Conditions that require repository-wide aggregation (e.g., "no stale worktrees accumulate repository-wide", "N occurrences across the repository") or state spanning multiple sessions are out of scope for a single execution — judge these **SKIP**, not PASS/FAIL, regardless of how this execution's own local work went.
+
+For in-scope conditions, reflect on this skill's execution memory (output results, operations performed, observed facts) and judge:
+
+- **PASS**: Confirmed during this execution that the condition is met. This execution's own local success (e.g., this session created and removed its own worktree) is not by itself evidence that a broader or repository-wide condition holds — do not read a partial, local success as PASS for the condition as a whole.
 - **FAIL**: Confirmed during this execution that the condition is not met
-- **SKIP**: Insufficient information for judgment (not the specific pattern of input, etc.)
+- **SKIP**: Insufficient information for judgment (not the specific pattern of input, out of this execution's observable scope per the check above, etc.)
 
 No additional log retention mechanism is needed. The AI retrospects on its memory of skill execution to make judgments.
 
