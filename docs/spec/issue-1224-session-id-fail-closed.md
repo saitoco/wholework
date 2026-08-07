@@ -77,3 +77,6 @@
 - **`run-auto-sub.sh:384` への影響なし**: `--write-manual-recovery` dispatch 内の `restore_auto_session_pointer` 呼び出し (issue 番号引数なし) は、`skills/auto/SKILL.md` Step 6 が同 dispatch の前に PGID ポインタを再生成する設計になっている (#1075 で導入済み) ため、本変更後も PGID ポインタ (残る 4 段目) で解決し、削除されるフォールバック段には到達しない
 - **`skills/auto/SKILL.md` Step 1 の記述は変更しない**: 同 Step は `.tmp/auto-session-current` を「PGID-matching / issue-scoped ポインタを持たない呼び出し元向けの最終フォールバック」として書き込む理由を説明しているが、この記述は wrapper script 自身の独自フォールバック (上記の通り維持) にとって引き続き正しいため、変更不要と判断した
 - **bats fixture 形式**: ポインタファイルは 1 行のプレーンテキスト (session id 文字列 1 個) であり、テストは `echo "<value>" > <path>` で `$BATS_TEST_TMPDIR` 配下に作成する既存の慣習に従う (新規追加ではなく既存 fixture パターンの流用)
+
+## Consumed Comments
+No new comments since last phase.
