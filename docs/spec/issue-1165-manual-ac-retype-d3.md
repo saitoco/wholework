@@ -199,3 +199,56 @@ Size L 維持の根拠も #1163 と同じ — リポジトリ内変更は 1 フ�
 ### 母集団の増加
 
 #1163 が 27 行を `auto-run` に追加した結果、`opportunistic-search.sh --event auto-run` のマッチは 59 AC 行 (2026-08-06 実測) になっている。本 Issue で `auto-run` に 14 行 (うち 3 行は `when=mode:batch` ゲート付き) が加わる。`modules/observation-trigger.md` § "Conditions That Cannot Be Pre-Excluded" が「文脈条件で事前排除できない条件が SKIPPED に解決するのは正しい挙動」と定めており、コメント蓄積は #1099 の idempotency guard (24h)、dispatch 回数は `observation-dispatch-threshold` (既定 5) が抑える。
+
+## spec retrospective
+
+### Minor observations
+
+- `opportunistic-search.sh` と `scan-pending-ac.sh` はどちらも母集団を `--state closed` に固定しているため、**OPEN + `phase/verify` の Issue はどちらの自動評価経路にも乗らない**。今回対象の #490 / #465 が該当し、両者とも一度も close されたことがない (timeline の `closed` イベント 0 件)。`docs/stats/2026-08-05.md` Section 7 も `phase/verify` 167 件の内訳を CLOSED 165 / OPEN 2 と記録しており、この 2 件は棚卸しの構造的な死角になっている。区分 A (#1163) は全件 CLOSED だったため露見しなかった。
+- `opportunistic-search.sh` は Issue 本文を**セクション非依存**で `^- \[ \]` に対して grep する一方、`scan-pending-ac.sh` は `### Post-merge` にスコープした awk を使う。#491 の `## 提案内容` 節にあるコードフェンス内サンプル行 (`- [ ] Trigger workflow once via ... <!-- verify-type: manual -->`) はこの差異を突く実例で、AC ではないのに `/audit stats` の Manual Waiting Count には計上される。走査のスコープが 2 系統に分かれていること自体が偽陽性の源。
+- #1163 の spec retrospective が「他の sub-issue でも Issue 単位 / AC 行単位のずれが起きうる」と予告したとおり、D3 でも 19 Issue = 22 AC 行のずれが再現した。予告が記録として機能した事例。
+- `verify-type: manual` の AC が Issue 本文の**表セル**や**通常の箇条書き**に現れるケース (#710 の変更履歴表、#591 の同様の表、#478 の Background 箇条書き) が 4 箇所あった。いずれも `- [ ]` で始まらないため機械走査には乗らないが、全件精査の際に AC と取り違えやすい。
+
+### Judgment rationale
+
+- **`manual` 維持をゼロにし、前提不成立の条件は retire に倒した**。#1163 は同型の状況 (#704 の `autonomy: L2` 前提が本リポジトリで不成立) を「対象外 = `manual` 維持」としたが、これは #1163 の scope に retire が含まれていなかったため。本 Issue は親 #1158 が D3 に対して明示的に retire を認めているので、「前提が原理的に成立しない条件を `manual` のまま滞留させる」より「取り下げて状態を正確にする」を選んだ。#1163 からの意図的な方針変更として Notes に明記した。
+- **retire の実行形態を「削除」でも「`- [x]` 化」でもなく「別見出しへの退避」にした**。`scripts/check-ac-checkbox-format.sh` の awk が `^### ` で `in_section` を解除する挙動に依存する設計で、#1156 が禁じた「`### Post-merge` 配下のプレーン箇条書き」を作らずに `- [ ]` アンカーから外せる。削除は判断根拠の消失、`- [x]` は未検証を検証済みと偽ることになる。この形態は本リポジトリに前例がないため、h3 見出しであることが必須という制約を Notes に明記した。
+- **`event` の選定で #1163 の「取りこぼさない最も広いイベント」原則を踏襲しつつ、2 件だけ例外を作った**。#535 は `watchdog-kill` の発火そのものが観測窓と一致し、#575 は条件文が `--full` review を明示している。この 2 件は狭いイベントのほうが正確で、かつ取りこぼしが構造的に起きない。残る 14 件は `auto-run` に倒した。
+- **`when=mode:batch` を 3 行にのみ付けた**。`when=` の宣言可能軸は route / mode / recovery-tier の 3 つで、#1135 / #478 の条件文が明示する `--batch` は `mode` 軸で表現できる。一方 #961 の「並列セッション環境」や #477 の「外部 API 統合 Spec」は 3 軸のいずれでも表現できないため付けていない — `modules/observation-trigger.md` § "Conditions That Cannot Be Pre-Excluded" が、こうした条件は dispatch → SKIPPED が正しい挙動と定めている。
+- **`config=capabilities.workflow` を実際に解決確認してから採用した**。`get-config-value.sh capabilities.workflow false` が `true` を返すことを実行確認済み。block 形式 1 階層ネストキーは #1055 でサポートされているが、`config=` は boolean 専用なので enum キー (#783 の `auto-stop-at`) には使えない — この非対称性が #783 を retire に倒す決め手になった。
+
+### Uncertainty resolution
+
+- **#1056 の前提 (pup 未インストール) が現在成立するか**: `command -v pup` を実行して不在を実測確認した。前提が成立するなら発火契機の欠如だけが滞留原因なので、`auto-run` で dispatch させれば `/verify` が実際に判定できる。もし pup が存在していれば故障注入型 (区分 C 相当) として #1167 へ回すべき条件だった。
+- **#706 の「将来拡張」チェックが実装済みか**: `skills/audit/SKILL.md` を grep して label namespace 整合性チェックが存在しないことを確認した。規約自体は `modules/label-conventions.md` に SSoT 化されているが、それを検査する `/audit drift` 側の実装はない。未実装が確定したので retire が妥当と判断した。
+- **#587 / #563 の Fable 5 前提の現況**: `docs/tech.md` を読み、(a) Fable 5 は 2026-07-01 に再デプロイ済み (#939 注記)、(b) ただし採用は opt-in only で既定モデル入替は行わない (line 115)、の 2 点を確認した。#587 は前提 (復帰) が発生済みだが比較基準の Opus 4.8 親構成が Sonnet 5 / Opus 5 のリリースで陳腐化しており再評価に価値がない、#563 は前提 (採用) がポリシー上成立しない、と理由を分けて retire した。
+- **`watchdog-kill` イベントが `/verify` を自動 dispatch するか**: `scripts/claude-watchdog.sh:138-140` を読み、shell context のため `observation-trigger.sh` の stdout を消費せずコメント投稿のみで終わることを確認した。#535 は通知までが自動化範囲になるが、発火契機が一切ない `manual` よりは前進と判断して採用した。
+
+### 別途起票候補 (本 Issue のスコープ外)
+
+- **`opportunistic-search.sh` / `scan-pending-ac.sh` の母集団が closed 限定で、OPEN + `phase/verify` の Issue を構造的に取りこぼす** — #490 / #465 が実例。
+- **`config=` ゲートの `config=key:value` 拡張** — `modules/observation-trigger.md` § Condition Check Gate (`config=`) 自身が候補として挙げている。#783 はこの拡張があれば retire ではなく再型付けできた。
+- **`opportunistic-search.sh` の本文走査がセクション非依存であること** — コードフェンス内のサンプル AC を実 AC と誤認しうる。#491 が実例。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 成果物は pr route で `docs/reports/manual-ac-retype-d3.md` を 1 本追加する。Pre-merge AC 8 件のうち 3 件が `rubric` で、grader には Issue 本文・git diff・rubric 本文で名指しされたファイルしか渡らないため、operate route (Issue 本文編集のみ) では評価不能になる (#1163 と同じ判断)。
+- 22 AC 行の振り分けは再型付け 16 / retire 6 / manual 維持 0。前提が原理的に成立しない 6 行は `manual` 維持ではなく retire に倒した (#1163 からの意図的な方針変更、根拠は Notes § `manual` 維持がゼロである理由)。
+- retire は AC 行の削除ではなく `### Retired Post-merge Conditions` (h3) への退避で行う。h4 では `check-ac-checkbox-format.sh` の `in_section` が解除されず形式違反になるため、見出しレベルは必須制約。
+- 再型付けはタグ置換のみなので `.tmp/` の python ヘルパで一括実行 (dry-run → apply)、retire は節の移動を伴うため 1 件ずつ手作業。
+
+### Deferred Items
+
+- OPEN 2 件 (#490 / #465) の close 判断 — 各 Issue 自身の post-merge 充足に依存するため本 Issue のスコープ外。再型付けのみ行う。
+- `check-ac-checkbox-format.sh` を `/code` の `allowed-tools` へ追加すること — スコープ外。Step 6 (d) は `python3` 同等判定または目視で代替する。
+- 別途起票候補 3 件 (closed 限定母集団 / `config=key:value` 拡張 / セクション非依存走査) — spec retrospective § 別途起票候補 に記録済み。`/verify` の Improvement Proposals で扱う。
+
+### Notes for Next Phase
+
+- Step 5 の一括置換で `match` 文字列が 2 行以上にマッチした Issue は必ず skip 警告を出し、`match` を修正して再実行すること。特に #710 と #478 は同一 Issue に 2 行あるため取り違えやすい。
+- Step 9 の検証は**件数差分で判定しないこと**。#1163 の Code Retrospective で母集団が他要因 (並行セッション / 新規 AC) でも変動することが実測されている。再型付けした Issue 番号の個別含有確認を一次情報とする。
+- GitHub 検索インデックスの遅延で、本文編集直後は `opportunistic-search.sh` の母集団に現れないことがある。マッチしない場合はまず `gh issue view N --json body` で本文の置換を確認し、時間を置いて再実行する。
+- #591 の `- [x]` 済み manual AC と #491 のコードフェンス内サンプル行は**性質が異なる** — 前者は編集不要、後者はインデント付与が必要。混同しないこと。
