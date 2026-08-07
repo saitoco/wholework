@@ -69,18 +69,17 @@ AC 8 (`<!-- verify: github_check "gh run list --workflow=test.yml --branch=main 
 The Base Branch Conflict Pre-check (Step 10) proved its value here: it flagged a real adjacency risk between this PR's `--session` hunks and `origin/main`'s Issue #1220 `resolve_filtered_context()` hunks in `scripts/opportunistic-search.sh`. The risk did not materialize (`git merge origin/main` auto-resolved cleanly with no conflict markers, confirmed by re-running both affected bats files), but treating the flag as a MUST and resolving it by actually merging and re-testing — rather than dismissing it as a false positive — is the correct default when the pre-check's adjacency heuristic cannot itself prove a real merge would be clean.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Ran Step 10 as a single `review-light` agent (light mode, all 4 aspects) since the linked Issue's Size is `M` and `--light` was explicitly requested; the Base Branch Conflict Pre-check context (4 flagged files) was appended to its prompt so the agent could judge merge-time risk directly rather than treating conflict detection as a separate pass
-- Classified AC 8 (`github_check "gh run list ..."`) as UNCERTAIN rather than executing it, since `gh run list` is not in `github_check`'s safe-mode allowlist (only `gh run view` is) — did not relax the allowlist to force a PASS
-- Resolved the sole MUST finding (merge-risk in `scripts/opportunistic-search.sh`, flagged by both the Base Branch Conflict Pre-check and the review agent) by actually merging `origin/main` into the PR branch and verifying both this PR's `--session` forwarding and `origin/main`'s Issue #1220 `resolve_filtered_context()` fix coexist, rather than leaving it as an unresolved warning for `/merge` to discover later
-- Posted the Step 11 review as a `COMMENT`-event fallback (matching `gh-pr-review.sh`'s own designed self-review-422 fallback body/format) after discovering the script's automatic fallback detection never fires — see `## review retrospective` § Recurring issues for the root cause
+- Pre-merge AC gate (`check-pre-merge-ac.sh`) found all 8 conditions `[x]` at merge time — AC 8, left `[ ]`/UNCERTAIN at the end of the review phase, was resolved before this merge ran, so no override marker was needed
+- `gh pr merge --squash --delete-branch` succeeded but its local-branch deletion step failed because an unrelated active worktree (`.claude/worktrees/code+issue-1234`) still checked out `worktree-code+issue-1234`; resolved by deleting the remote branch directly (`git push origin --delete worktree-code+issue-1234`) and leaving the unrelated local worktree/branch untouched rather than force-removing another session's in-progress work
+- Squash commit `9004ae05` merged cleanly to `main`; no conflict resolution was needed at this phase
 
 ### Deferred Items
-- AC 8 remains UNCERTAIN / unchecked (`- [ ]` in the Issue body) — `/verify` (full mode, `github_check` unrestricted) should re-evaluate it directly; also worth confirming whether checking `main`'s CI (vs. the PR branch's, already covered by Step 9) was the intended semantics
-- Two tooling bugs found during this review (`gh-issue-edit.sh --checkbox` off-by-one on fenced-code-block checkboxes; `gh-pr-review.sh`'s self-review 422 fallback never matching) are out of Issue #1234's scope and were not filed as follow-up Issues — recorded in `## review retrospective` for later triage
+- The two tooling bugs recorded in `## review retrospective` § Recurring issues (`gh-issue-edit.sh --checkbox` fenced-code-block off-by-one; `gh-pr-review.sh` self-review 422 fallback never matching) remain unfiled — still worth triage as follow-up Issues
+- The local branch `worktree-code+issue-1234` and its worktree at `.claude/worktrees/code+issue-1234` were left in place (still in use by another session) even though the remote counterpart is now deleted — no action needed unless that session's work turns out to be stale
 
 ### Notes for Next Phase
-- `/merge 1246` can proceed on the AC front — 7 of 8 Pre-merge conditions are `[x]`; AC 8 is the sole `[ ]` and will block `/merge` Step 1's pre-merge AC gate until resolved or explicitly re-verified
-- The PR branch was merged with `origin/main` during this review (commit `a4152e32`, pushed to `worktree-code+issue-1234`) specifically to eliminate the flagged base-branch conflict risk; CI re-ran and passed 9/9 on the merged commit — `/merge` should not need to redo any conflict resolution for this PR
+- `/verify 1234` should confirm the post-merge observation condition (`verify-type: observation, event=auto-run, session=next`) — the next `/auto` run's observation scan should show `collect-run-facts.sh` resolving the correct `session_id` without a `run facts unavailable` fail-open warning
+- No conflict resolution, test re-runs, or manual AC overrides were needed during this merge — the PR was clean going in
