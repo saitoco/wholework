@@ -70,7 +70,7 @@ verify-ignore-paths:
 permission-mode: auto
 
 # Autonomy tier: how far skills may write GitHub state and fire follow-on loops (default: L1)
-# L1 = advisory only (safest), L2 = assisted (main workflow + seed), L3 = unattended (CronCreate allowed)
+# L1 = advisory only (safest), L2 = assisted (main workflow), L3 = unattended (CronCreate allowed)
 # autonomy: L2
 
 # XL sub-issue parallel execution concurrency cap (default: 5)
@@ -144,14 +144,13 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `observation-dispatch-threshold` | integer | `5` | Maximum number of Issues to dispatch `/verify` for per `/auto` Event-based observation scan run (single-issue and batch routes; `event=auto-run` only). Matched Issues beyond the cap remain comment-notified (existing `observation-trigger.sh` behavior, subject to its idempotency guard — see `modules/observation-trigger.md`) and are re-evaluated on the next `auto-run` event scan. Values ≤0 or non-numeric fall back to `5`. |
 | `retro-proposals-upstream` | string | `""` | Upstream repository (`owner/repo`) for routing Skill infrastructure improvement proposals from `/verify` retrospectives. When set, such proposals are sanitized (regex strips absolute paths and downstream issue numbers; LLM removes business-context terms) and filed to this repository; downstream filing is skipped. Unset means downstream filing as before (backward-compatible). |
 | `verify-ignore-paths` | list | `[]` | Glob patterns (block list) of paths to exclude from dirty-file detection in `/verify`. Supported: `dir/**` prefix match (any file inside a directory), simple bash globs (`*`, `?`, `[...]`) for full-path match. Not supported: intermediate `**` (e.g. `a/**/b`) or negation patterns (`!`). Files matching any pattern are silently ignored and reported on stderr. Unset means no exclusions. |
-| `autonomy` | string | `L1` | Autonomy tier governing which L2→L1 loop-firing paths skills may use. `L1` Report (advisory only) / `L2` Assisted (in-loop + seed) / `L3` Unattended (full, including CronCreate). See [docs/guide/autonomy.md](autonomy.md). |
+| `autonomy` | string | `L1` | Autonomy tier governing which L2→L1 loop-firing paths skills may use. `L1` Report (advisory only) / `L2` Assisted (in-loop) / `L3` Unattended (full, including CronCreate). See [docs/guide/autonomy.md](autonomy.md). |
 | `auto-retry-on-fail.enabled` | boolean | `false` | Enable automatic `/code` re-fire + `/verify` retry on FAIL (requires `autonomy: L2` or `L3`). When `false` (or autonomy is `L1`), only advisory guidance is printed. |
 | `auto-retry-on-fail.max_iterations` | integer | `3` | Maximum number of auto-retry iterations before stopping and returning to the user. Values ≤0 or non-numeric fall back to `3`. |
 | `auto-retry-on-fail.budget_tokens` | integer | `500000` | Approximate token budget for auto-retry iterations. Initial implementation uses iteration count only; budget tracking is a future improvement. Values ≤0 or non-numeric fall back to `500000`. |
 | `auto-retry-on-fail.route_override` | string | `"auto"` | Route for auto-retry. `auto`: Size-based (XS/S → `--patch`; M/L → `--pr`; XL → skip/manual); `patch`: always `--patch`; `pr`: always `--pr`. |
 | `recoveries-auto-fire.enabled` | boolean | `false` | Auto-file improvement Issues when orchestration-recoveries.md symptom count exceeds threshold (requires `autonomy: L2` or `L3`). When `false` or autonomy is `L1`, prints a recommendation instead. |
 | `recoveries-auto-fire.threshold` | integer | `3` | Symptom occurrence count threshold for auto-filing. Values ≤0 or non-numeric fall back to `3`. |
-| `next-cycle-seed.enabled` | boolean | `false` | Enable next-cycle candidate seeding after batch completion. Emits `.tmp/next-cycle.json` with `audit/*` Issues created during the batch session (requires `autonomy: L2` or `L3`). When `false` or autonomy is `L1`, prints a recommendation instead. |
 | `always-pr` | boolean | `false` | Force pr route (branch + PR) regardless of Size. XS/S Issues that would normally commit directly to main are routed through a PR instead. When `--patch` is also specified, `--patch` is ignored (a warning is printed) and pr route is used. Orthogonal to `autonomy:` tier (controls pipeline route, not decision autonomy). |
 | `auto-stop-at` | string | `"verify"` | Declare the phase after which `/auto` should stop. Valid values: `spec`, `code`, `review`, `merge`, `verify`. Default `verify` runs the full pipeline. Use `review` for website projects where merge = publish and human gate before deploy is required. Per-invocation override: `--stop-at=<phase>`. Orthogonal to `autonomy:` tier. |
 

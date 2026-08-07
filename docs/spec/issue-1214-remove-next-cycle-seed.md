@@ -221,25 +221,58 @@ Issue 本文が記載していた行番号のうち、実ファイルとずれ�
 - **Issue 本文が `/code` に先送りしていた 2 件を設計時に解消**。(a) `collect-run-facts.sh` / `get-auto-session-report.sh` が未知イベント型を無視するか → 両スクリプトとも `select(.event == "<既知イベント名>")` のホワイトリスト方式であることを確認、過去 20 件の `next_cycle_seeded` は無害。(b) `.tmp/auto-session-*.json` の `"mode": "batch"` が実在するか → `skills/auto/SKILL.md` Step 1 の session metadata 書き込みで確認。どちらも Spec の Notes に検証済みとして記録し、`/code` が再調査しなくて済むようにした
 - **`docs/ja/guide/autonomy.md` の未作成は放置でよい**。`docs/guide/autonomy.md` の冒頭に JA へのリンクがあるが実ファイルは存在しない。`docs/translation-workflow.md` の同期義務は top-level `docs/*.md` に限定されており、`docs/guide/` 配下は対象外。本 Issue 以前からの状態であり、翻訳ファイル新規作成はスコープ外とした
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1-10 をすべて Spec の指示どおり (文脈による位置指定、置換文言、削除範囲) に実装した。挿入位置・削除範囲とも Spec の記述と実ファイルの前後見出しが一致しており、行番号のずれ (spec retrospective に記録済み) 以外の追加調整は不要だった。
+
+### Design Gaps/Ambiguities
+
+- N/A — 実装中に新たな設計判断を要する曖昧点は見つからなかった。
+
+### Rework
+
+- N/A
+
+### Minor observations
+
+- `docs/reports/external-kill-investigation.md` への注記は、Spec Notes の文面 (日本語) をそのまま挿入せず、ドキュメント本体の言語 (English) に合わせて英語で追記した。CLAUDE.md の Language Conventions は Spec 自体を日本語対象としているが、既存ドキュメント本体を編集する場合はその文書の言語に従うべきという判断
+- behavioral change detection (Step 9) が `skills/auto/SKILL.md` / `modules/autonomy-tier.md` / `.wholework.yml` など複数ファイルで direct-associated test 以外からの参照を検出したため `bats tests/` フルスイート (1480 件) を実行した。全件 PASS
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Nothing to note — Implementation Steps 1-10 と実ファイルの差分が完全に一致しており、Spec の指定範囲を超える巻き添え削除も、指定範囲の削除漏れも検出されなかった (review-spec / review-bug×2 いずれも Perspective 1 で確認)。
+
+### Recurring issues
+
+- 自己レビュー (PR 作成者と `/review` 実行者が同一) では GitHub API が `REQUEST_CHANGES` を許可しないため、MUST 指摘がある場合は `COMMENT` として投稿しゲートマーカーで代替する既存の挙動が今回も発生した (前セッションで `macOS shell compatibility` CI FAILURE を MUST として記録し、修正コミット後に CI green を確認済み)。これは `gh-pr-review.sh` の既知の設計であり、本 Issue 固有の問題ではない。
+- 本セッションは `--non-interactive` (fork context) で実行されたため、`capabilities.workflow: true` が設定されていても Workflow tool の re-invocation guarantee が確認できず、`skills/review/workflow-guidance.md` の Pre-flight 判定により静的 Task fan-out (Steps 10.1–10.3) にフォールバックした。これは想定どおりの分岐であり、workflow-guidance.md のガードが正しく機能した事例として記録する。
+
+### Acceptance criteria verification difficulty
+
+- Nothing to note — Pre-merge AC 26 件 (`file_contains`/`file_not_contains`/`grep`/`rubric`/`github_check` の組み合わせ) はすべて一意に PASS/FAIL を判定でき、UNCERTAIN は 0 件だった。rubric 系 3 件 (AC 3, 12, 24) も、Issue 本文の記述が具体的だったため意味的検証の曖昧さは生じなかった。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- `skills/auto/SKILL.md` の Next-cycle seed ブロックは「削除して 1 段落に置換」であり、条件分岐を残した縮小ではない。advisory 出力は tier / 設定フラグのいずれにも依存しない唯一の挙動に昇格させること (rubric AC 3 がこれを意味的に検証する)
-- Issue 本文の行番号は実ファイルとずれている箇所がある。Implementation Steps は前後の見出しで位置を指定してあるので、行番号ではなくそちらに従うこと
-- `skills/auto/SKILL.md` の `allowed-tools` は変更しない。`emit-event.sh:*` は本文参照がゼロになるが意図的に残す (根拠は Spec の `## Exclusions`)
-- `docs/guide/autonomy.md` の JA ミラーは新規作成しない (`docs/translation-workflow.md` の同期義務は top-level `docs/*.md` 限定)
+- Pre-merge AC 26 件を再検証し、全件 PASS を確認 (前回セッションで 24 件、今回のセッションで残り 2 件の `github_check` を再確認)。CI (`Run bats tests` / `Validate skill syntax` / `macOS shell compatibility`) はすべて green
+- `--non-interactive` (fork context) のため `capabilities.workflow: true` でも Workflow tool の re-invocation guarantee が確認できず、`skills/review/workflow-guidance.md` の Pre-flight 判定に従い静的 Task fan-out (review-spec + review-bug×2) にフォールバックした
+- review-spec / review-bug×2 の検出結果はすべて CONSIDER レベル (4 件、うち 1 件は 2 段階検証で REJECT) で MUST/SHOULD は 0 件。いずれも「本 Issue の Changed Files 範囲外」「先行する類似キー削除でも同様に省略されている前例あり」の理由で今回は見送り、CONSIDER のまま PR コメントに記録した
+- CONSIDER 指摘 4 件はいずれも本 PR のスコープ外 (別ファイルの追加変更が必要、または将来の改善提案) と判断し、スコープを広げない方針を優先した
 
 ### Deferred Items
 
 - Post-merge の observation AC (`event=auto-run session=next`) は次回 `/auto --batch` 完走時の観察待ち。`.tmp/next-cycle.json` が生成されないこと・`next_cycle_seeded` が emit されないこと・`/audit drift` 推奨が出ることの 3 点を確認する
+- CONSIDER 指摘 (`modules/autonomy-tier.md` の `loop-paths-fallback` ドキュメントと `validate-skill-syntax.py` の `KNOWN_FIELDS` 不一致、`docs/guide/customization.md` の Breaking Changes 未記録、`scripts/emit-event.sh` の retired event 未記録、`docs/reports/external-kill-investigation.md` の代替判別手段の拡充) は本 PR では対応せず、必要であれば別 Issue で扱う
 - `.tmp/auto-events.jsonl` に残る過去 20 件の `next_cycle_seeded` は削除しない (読み取り側は未知イベント型を無視するため無害)
 - `docs/ja/guide/customization.md` の翻訳ドリフト (EN 側の `.wholework.yml` autonomy サンプルブロックと `autonomy` 設定行が JA ミラーに存在しない) は本 Issue 以前からの既知状態。本 Issue では解消しない
 
 ### Notes for Next Phase
 
-- `scripts/emit-event.sh` のコメントブロック削除では、前後のイベント (`retro_proposal_classified` / `verify_fail_marker_posted`) との区切り `#` 単独行が二重にも欠落にもならないよう確認すること
-- `modules/autonomy-tier.md` の E 列削除は、ヘッダ行・区切り行・L1/L2/L3 の 3 データ行の計 5 行すべてが対象。加えて L2 Assisted 行の Default use 文 (`Seed is automated; ...`) の書き換えを忘れないこと — この文はどの verify command キーワードにも一致しないため、AC 13 (`file_not_contains "Seed is automated"`) が唯一の検出手段
-- SKILL.md 編集時の `validate-skill-syntax.py` 制約: 半角感嘆符・triple backtick・YAML block scalar を新規導入しない
-- Size L / pr route のため CI verify command は `github_check "gh pr checks"` 形式で正しい (`always-pr` は未設定だが Size L はもともと pr route)
+- `/merge` は MUST 指摘がないことを確認済みなのでそのまま進めてよい。Pre-merge AC 26 件は全て PASS 済み
+- Post-merge observation (`event=auto-run session=next`) は次回 `/auto --batch` 完走を待つ必要があり、即時確認はできない

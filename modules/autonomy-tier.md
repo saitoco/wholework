@@ -21,7 +21,7 @@ L1/L2/L3 loop state only has meaning when it is written back to L0 (public, mult
 |-------|---------------------|-----------------|-------------|
 | **L0: GitHub state** | Issues / Labels / PRs / blockedBy / `closes #N` | Event-driven (PR merge, label transition, comment, close) | Public, multi-actor, cross-query-capable |
 | **L1: Claude Code primitive** | Session memory | `/loop` / `/goal` / `ScheduleWakeup` | Volatile (session-scoped) |
-| **L2: Wholework skill internal** | Spec / retro / `auto-events.jsonl` | Tail extension (#700/702/703) | File-persistent |
+| **L2: Wholework skill internal** | Spec / retro / `auto-events.jsonl` | Tail extension (#700/702) | File-persistent |
 | **L3: OS / `CronCreate`** | Crontab / cron registry | OS scheduler | Environment-dependent |
 
 Wholework's XL Issue feature is itself an L0 loop: the parent Issue is the goal, sub-issues + `blockedBy` form the DAG, `phase/*` labels are the state machine, and the aggregation rules in `docs/workflow.md § XL Parent Issue Phase Management` provide the stop condition (all children in `phase/done` closes the parent).
@@ -36,15 +36,14 @@ Each row defines one firing path from a Wholework skill (L2) to a Claude Code pr
 | **B** | CronCreate | Skill registers a persistent schedule via `CronCreate`. | On `/auto 670` completion, register daily `/audit progress 670`. |
 | **C** | ScheduleWakeup | Inside a running `/loop`, skill dynamically controls the next wake-up time. | `/verify` UNCERTAIN (CI not yet complete) → schedule re-verify in N minutes. |
 | **D** | Detached subprocess | Skill launches `claude -p` detached. **Not supported in current scope** — reliability is low because the subprocess dies when the parent exits. | — |
-| **E** | Seed file emission | Skill writes `.tmp/next-cycle.json`; a separate L1 process reads it on the next wake. | `/auto --batch` next-cycle seed (#703). |
 
 ## Tier × L2→L1 Path Matrix (exhaustive)
 
-| Tier | A | B | C | E | Default use |
-|------|---|---|---|---|-------------|
-| **L1 Report** | ○ | × | × | × | Audit and drift detection only. Firing is delegated to the human. |
-| **L2 Assisted** | ○ | × | ○ (in-loop) | ○ | Mid-scale modernization (anchor case). Seed is automated; cron requires a human to trigger. |
-| **L3 Unattended** | ○ | ○ | ○ | ○ | Fully unattended. `CronCreate` allows self-rescheduling. |
+| Tier | A | B | C | Default use |
+|------|---|---|---|-------------|
+| **L1 Report** | ○ | × | × | Audit and drift detection only. Firing is delegated to the human. |
+| **L2 Assisted** | ○ | × | ○ (in-loop) | Mid-scale modernization (anchor case). The main workflow is automated; cron requires a human to trigger. |
+| **L3 Unattended** | ○ | ○ | ○ | Fully unattended. `CronCreate` allows self-rescheduling. |
 
 Path D is excluded from the matrix because it is not supported.
 
@@ -118,7 +117,7 @@ Skills declare which L2→L1 paths they use via YAML frontmatter:
 ```yaml
 ---
 name: auto
-loop-paths-used: [A, E]
+loop-paths-used: [A]
 ---
 ```
 
@@ -132,7 +131,7 @@ loop-paths-fallback: [A]   # downgrade to advisory when B is not allowed
 ```
 
 Rules:
-- `loop-paths-used`: list of path IDs the skill uses (`A`, `B`, `C`, `E`). D is omitted (not supported).
+- `loop-paths-used`: list of path IDs the skill uses (`A`, `B`, `C`). D is omitted (not supported).
 - `loop-paths-fallback`: optional list of path IDs to substitute when `loop-paths-used` paths are blocked. Must be a subset that is always allowed (A is always allowed in all tiers).
 - Skills with no `loop-paths-used` declaration are assumed to require no L2→L1 firing and are tier-neutral.
 
