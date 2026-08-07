@@ -1,0 +1,88 @@
+{"ts":"2026-08-06T14:52:49Z","issue":1206,"event":"phase_start","session_id":"89790-1786027911","phase":"issue"}
+{"ts":"2026-08-06T15:01:11Z","issue":1206,"event":"max_silent_window","session_id":"89790-1786027911","phase":"issue","max_sec":"490"}
+{"ts":"2026-08-06T15:01:13Z","issue":1206,"event":"phase_complete","session_id":"89790-1786027911","phase":"issue"}
+{"ts":"2026-08-06T15:01:33Z","issue":1206,"event":"sub_start","session_id":"89790-1786027911","size":"M"}
+{"ts":"2026-08-06T15:01:35Z","issue":1206,"event":"comments_consumed","session_id":"89790-1786027911","phase":"spec","count":"0","authors":"","trust_breakdown":"OWNER:0,MEMBER:0,COLLABORATOR:0,CONTRIBUTOR:0,NONE:0"}
+{"ts":"2026-08-06T15:01:35Z","issue":1206,"event":"phase_start","session_id":"89790-1786027911","phase":"spec"}
+{"ts":"2026-08-06T15:09:58Z","issue":1119,"event":"phase_start","session_id":"89790-1786027911","phase":"verify"}
+{"ts":"2026-08-06T15:14:16Z","issue":1119,"event":"phase_complete","session_id":"89790-1786027911","phase":"verify"}
+{"ts":"2026-08-06T15:18:38Z","issue":1119,"event":"retro_proposal_classified","session_id":"89790-1786027911","tier":"2","title":"retry-on-kill does not fire on exit-0 external kill in issue phase","reason":"observation data for existing #1146 Arm 1 re-observation","action":"memory_proposal"}
+{"ts":"2026-08-06T15:18:38Z","issue":1119,"event":"retro_proposal_classified","session_id":"89790-1786027911","tier":"2","title":"triage procedure for uncommitted changes left in stale worktrees","reason":"same class as iceboxed #1122 under compensation-layer moratorium","action":"memory_proposal"}
+{"ts":"2026-08-06T15:29:58Z","issue":1206,"event":"max_silent_window","session_id":"89790-1786027911","phase":"spec","max_sec":"1690"}
+{"ts":"2026-08-06T15:30:00Z","issue":1206,"event":"phase_complete","session_id":"89790-1786027911","phase":"spec"}
+{"ts":"2026-08-06T15:30:01Z","issue":1206,"event":"wrapper_alive","session_id":"89790-1786027911","checkpoint":"pre_phase_dispatch"}
+{"ts":"2026-08-06T15:30:02Z","issue":1206,"event":"comments_consumed","session_id":"89790-1786027911","phase":"code","count":"0","authors":"","trust_breakdown":"OWNER:0,MEMBER:0,COLLABORATOR:0,CONTRIBUTOR:0,NONE:0"}
+{"ts":"2026-08-06T15:30:02Z","issue":1206,"event":"phase_start","session_id":"89790-1786027911","phase":"code-pr"}
+{"ts":"2026-08-06T15:30:02Z","issue":1206,"event":"wrapper_alive","session_id":"89790-1786027911","checkpoint":"pre_subprocess","phase":"code-pr"}
+{"ts":"2026-08-06T15:30:06Z","issue":1206,"event":"comments_consumed","session_id":"89790-1786027911","phase":"code","count":"0","authors":"","trust_breakdown":"OWNER:0,MEMBER:0,COLLABORATOR:0,CONTRIBUTOR:0,NONE:0"}
+{"ts":"2026-08-06T15:40:16Z","issue":1206,"event":"max_silent_window","session_id":"89790-1786027911","phase":"code-pr","max_sec":"610"}
+{"ts":"2026-08-06T15:40:18Z","issue":1206,"event":"code_retry_fire","session_id":"89790-1786027911","iteration":"1","trigger_reason":"silent_no_op"}
+{"ts":"2026-08-06T15:40:21Z","issue":1206,"event":"comments_consumed","session_id":"89790-1786027911","phase":"code","count":"0","authors":"","trust_breakdown":"OWNER:0,MEMBER:0,COLLABORATOR:0,CONTRIBUTOR:0,NONE:0"}
+{"ts":"2026-08-06T16:19:43Z","issue":1206,"event":"max_silent_window","session_id":"89790-1786027911","phase":"code-pr","max_sec":"2360"}
+{"ts":"2026-08-06T16:19:47Z","issue":1206,"event":"wrapper_exit","session_id":"89790-1786027911","phase":"code-pr","exit_code":"0"}
+{"ts":"2026-08-06T16:19:47Z","issue":1206,"event":"token_usage","session_id":"89790-1786027911","phase":"code-pr","model":"claude-sonnet-5","input_tokens":"280","output_tokens":"51844","cache_read_tokens":"23541518"}
+{"ts":"2026-08-06T16:19:47Z","issue":1206,"event":"concurrent_commit_detected","session_id":"89790-1786027911","phase":"code-pr","commit_sha":"36b06e6db57fe3ff72c974843c911f919fc575f9","author":"Toshihiro Saito","since_phase_start_sec":"2985"}
+{"ts":"2026-08-06T16:19:47Z","issue":1206,"event":"concurrent_commit_detected","session_id":"89790-1786027911","phase":"code-pr","commit_sha":"1148276cc704fae451ec27d256d98b81093749f9","author":"Toshihiro Saito","since_phase_start_sec":"2985"}
+{"ts":"2026-08-06T16:19:47Z","issue":1206,"event":"concurrent_commit_detected","session_id":"89790-1786027911","phase":"code-pr","commit_sha":"493d90b6f6ad661ea0986f8aa7dcb43bf8fda2a0","author":"Toshihiro Saito","since_phase_start_sec":"2985"}
+{"ts":"2026-08-06T16:19:47Z","issue":1206,"event":"concurrent_commit_detected","session_id":"89790-1786027911","phase":"code-pr","commit_sha":"ab7deda281a4c9c346fdd9682f8f5446708ea89b","author":"Toshihiro Saito","since_phase_start_sec":"2985"}
+{"ts":"2026-08-06T16:19:47Z","issue":1206,"event":"phase_complete","session_id":"89790-1786027911","phase":"code-pr"}
+{"ts":"2026-08-06T16:19:47Z","issue":1206,"event":"wrapper_alive","session_id":"89790-1786027911","checkpoint":"post_code_pre_review"}
+{"ts":"2026-08-06T16:19:48Z","issue":1206,"event":"phase_start","session_id":"89790-1786027911","pr":1217,"phase":"review"}
+{"ts":"2026-08-06T16:19:48Z","issue":1206,"event":"wrapper_alive","session_id":"89790-1786027911","pr":1217,"checkpoint":"pre_subprocess","phase":"review"}
+{"ts":"2026-08-06T16:35:06Z","issue":1206,"event":"ci_wait","session_id":"89790-1786027911","pr":1217,"phase":"review","wait_sec":"917","checks_passed":"1","checks_failed":"8"}
+{"ts":"2026-08-06T16:48:48Z","issue":1206,"event":"max_silent_window","session_id":"89790-1786027911","pr":1217,"phase":"review","max_sec":"820"}
+{"ts":"2026-08-06T16:48:51Z","issue":1206,"event":"wrapper_exit","session_id":"89790-1786027911","pr":1217,"phase":"review","exit_code":"1"}
+{"ts":"2026-08-06T16:48:51Z","issue":1206,"event":"token_usage","session_id":"89790-1786027911","pr":1217,"phase":"review","model":"claude-sonnet-5","input_tokens":"64","output_tokens":"9574","cache_read_tokens":"3375459"}
+{"ts":"2026-08-06T16:49:11Z","issue":1206,"event":"max_silent_window","session_id":"89790-1786027911","pr":1217,"phase":"review","max_sec":"10"}
+{"ts":"2026-08-06T17:09:35Z","issue":1206,"event":"ci_wait","session_id":"89790-1786027911","pr":1217,"phase":"review","wait_sec":"1221","checks_passed":"4","checks_failed":"2"}
+{"ts":"2026-08-06T17:09:35Z","issue":1206,"event":"recovery","session_id":"89790-1786027911","pr":1217,"phase":"review","tier":"3","result":"failed","action":"retry"}
+{"ts":"2026-08-06T23:46:05Z","issue":1206,"event":"phase_start","session_id":"89790-1786027911","pr":1217,"phase":"review"}
+{"ts":"2026-08-06T23:46:07Z","issue":1206,"event":"ci_wait","session_id":"89790-1786027911","pr":1217,"phase":"review","wait_sec":"1","checks_passed":"9","checks_failed":"0"}
+{"ts":"2026-08-07T00:11:04Z","issue":476,"event":"phase_start","session_id":"89790-1786027911","pr":1217,"phase":"verify"}
+{"ts":"2026-08-07T00:19:27Z","issue":1214,"event":"manual_intervention","session_id":"89790-1786027911","recovery_target":"review","wrapper_exit_code":"143","intervention_type":"review-rerun"}
+{"ts":"2026-08-07T00:20:15Z","issue":476,"event":"retro_proposal_classified","session_id":"89790-1786027911","pr":1217,"tier":"1","title":"keyword= gate false-positives on filename substring match (docs/workflow.md)","reason":"SSoT/shared-surface ripple - observation-trigger.md read by 5 skills","action":"issue_created"}
+{"ts":"2026-08-07T00:21:49Z","issue":1206,"event":"max_silent_window","session_id":"89790-1786027911","pr":1217,"phase":"review","max_sec":"2140"}
+{"ts":"2026-08-07T00:21:51Z","issue":1206,"event":"phase_complete","session_id":"89790-1786027911","pr":1217,"phase":"review"}
+{"ts":"2026-08-07T00:22:25Z","issue":1206,"event":"phase_start","session_id":"89790-1786027911","pr":1217,"phase":"merge"}
+{"ts":"2026-08-07T00:22:27Z","issue":1206,"event":"ci_wait","session_id":"89790-1786027911","pr":1217,"phase":"merge","wait_sec":"1","checks_passed":"9","checks_failed":"0"}
+{"ts":"2026-08-07T00:23:04Z","issue":1206,"event":"ci_wait","session_id":"89790-1786027911","pr":1217,"phase":"merge","wait_sec":"1","checks_passed":"9","checks_failed":"0"}
+{"ts":"2026-08-07T00:25:59Z","issue":1206,"event":"max_silent_window","session_id":"89790-1786027911","pr":1217,"phase":"merge","max_sec":"170"}
+{"ts":"2026-08-07T00:26:05Z","issue":1206,"event":"test_result","session_id":"89790-1786027911","pr":1217,"phase":"merge","framework":"bats","source":"ci","passed":"1496","failed":"0","run_id":"31133510365"}
+{"ts":"2026-08-07T00:26:22Z","issue":1206,"event":"max_silent_window","session_id":"89790-1786027911","pr":1217,"phase":"merge","max_sec":"230"}
+{"ts":"2026-08-07T00:26:26Z","issue":1206,"event":"test_result","session_id":"89790-1786027911","pr":1217,"phase":"merge","framework":"bats","source":"ci","passed":"1496","failed":"0","run_id":"31133510365"}
+{"ts":"2026-08-07T00:26:26Z","issue":1206,"event":"phase_complete","session_id":"89790-1786027911","pr":1217,"phase":"merge"}
+{"ts":"2026-08-07T00:27:01Z","issue":1206,"event":"phase_start","session_id":"89790-1786027911","phase":"verify"}
+{"ts":"2026-08-07T00:30:39Z","issue":1206,"event":"phase_complete","session_id":"89790-1786027911","phase":"verify"}
+{"ts":"2026-08-07T00:31:24Z","issue":1202,"event":"phase_start","session_id":"89790-1786027911","phase":"issue"}
+{"ts":"2026-08-07T00:38:05Z","issue":1202,"event":"max_silent_window","session_id":"89790-1786027911","phase":"issue","max_sec":"390"}
+{"ts":"2026-08-07T00:38:07Z","issue":1202,"event":"phase_complete","session_id":"89790-1786027911","phase":"issue"}
+{"ts":"2026-08-07T00:38:26Z","issue":1202,"event":"sub_start","session_id":"89790-1786027911","size":"M"}
+{"ts":"2026-08-07T00:38:27Z","issue":1202,"event":"comments_consumed","session_id":"89790-1786027911","phase":"spec","count":"1","authors":"saito","trust_breakdown":"OWNER:0,MEMBER:1,COLLABORATOR:0,CONTRIBUTOR:0,NONE:0"}
+{"ts":"2026-08-07T00:38:28Z","issue":1202,"event":"phase_start","session_id":"89790-1786027911","phase":"spec"}
+{"ts":"2026-08-07T00:42:19Z","issue":1082,"event":"phase_start","session_id":"89790-1786027911","phase":"verify"}
+{"ts":"2026-08-07T00:45:10Z","issue":1082,"event":"phase_complete","session_id":"89790-1786027911","phase":"verify"}
+{"ts":"2026-08-07T00:49:15Z","issue":1082,"event":"retro_proposal_classified","session_id":"89790-1786027911","tier":"1","title":"opportunistic-verify: prevent false PASS on conditions unobservable within a single session","reason":"SSoT module read by 5 skills; concrete harm observed today (#129 false PASS to phase/done)","action":"issue_created"}
+{"ts":"2026-08-07T00:49:15Z","issue":1082,"event":"retro_proposal_classified","session_id":"89790-1786027911","tier":"2","title":"CI platform outage handling for review phase progression","reason":"orchestration-fallbacks.md new-pattern additions are frozen under compensation-layer moratorium (#1122)","action":"memory_proposal"}
+{"ts":"2026-08-07T00:49:41Z","issue":1075,"event":"phase_start","session_id":"89790-1786027911","phase":"verify"}
+{"ts":"2026-08-07T00:52:33Z","issue":1075,"event":"phase_complete","session_id":"89790-1786027911","phase":"verify"}
+{"ts":"2026-08-07T00:55:09Z","issue":1075,"event":"retro_proposal_classified","session_id":"89790-1786027911","tier":"1","title":"session_id misattribution when /auto session init is bypassed","reason":"measured 5 misattributed events this session; modules/event-emission.md is a shared module","action":"issue_created"}
+{"ts":"2026-08-07T00:55:09Z","issue":1075,"event":"retro_proposal_classified","session_id":"89790-1786027911","tier":"2","title":"stale .tmp/auto-session-* pointer accumulation","reason":"folded into the same Issue as a contributing factor","action":"memory_proposal"}
+{"ts":"2026-08-07T00:56:30Z","issue":1202,"event":"max_silent_window","session_id":"89790-1786027911","phase":"spec","max_sec":"1070"}
+{"ts":"2026-08-07T00:56:32Z","issue":1202,"event":"phase_complete","session_id":"89790-1786027911","phase":"spec"}
+{"ts":"2026-08-07T00:56:33Z","issue":1202,"event":"size_refresh","session_id":"89790-1786027911","from":"M","to":"S"}
+{"ts":"2026-08-07T00:56:33Z","issue":1202,"event":"wrapper_alive","session_id":"89790-1786027911","checkpoint":"pre_phase_dispatch"}
+{"ts":"2026-08-07T00:56:34Z","issue":1202,"event":"comments_consumed","session_id":"89790-1786027911","phase":"code","count":"0","authors":"","trust_breakdown":"OWNER:0,MEMBER:0,COLLABORATOR:0,CONTRIBUTOR:0,NONE:0"}
+{"ts":"2026-08-07T00:56:34Z","issue":1202,"event":"phase_start","session_id":"89790-1786027911","phase":"code-patch"}
+{"ts":"2026-08-07T00:56:34Z","issue":1202,"event":"wrapper_alive","session_id":"89790-1786027911","checkpoint":"pre_subprocess","phase":"code-patch"}
+{"ts":"2026-08-07T00:56:36Z","issue":1202,"event":"comments_consumed","session_id":"89790-1786027911","phase":"code","count":"0","authors":"","trust_breakdown":"OWNER:0,MEMBER:0,COLLABORATOR:0,CONTRIBUTOR:0,NONE:0"}
+{"ts":"2026-08-07T01:09:47Z","issue":1202,"event":"max_silent_window","session_id":"89790-1786027911","phase":"code-patch","max_sec":"790"}
+{"ts":"2026-08-07T01:09:52Z","issue":1202,"event":"code_retry_fire","session_id":"89790-1786027911","iteration":"1","trigger_reason":"silent_no_op"}
+{"ts":"2026-08-07T01:09:54Z","issue":1202,"event":"comments_consumed","session_id":"89790-1786027911","phase":"code","count":"0","authors":"","trust_breakdown":"OWNER:0,MEMBER:0,COLLABORATOR:0,CONTRIBUTOR:0,NONE:0"}
+{"ts":"2026-08-07T01:29:15Z","issue":1202,"event":"max_silent_window","session_id":"89790-1786027911","phase":"code-patch","max_sec":"1160"}
+{"ts":"2026-08-07T01:29:19Z","issue":1202,"event":"wrapper_exit","session_id":"89790-1786027911","phase":"code-patch","exit_code":"0"}
+{"ts":"2026-08-07T01:29:19Z","issue":1202,"event":"token_usage","session_id":"89790-1786027911","phase":"code-patch","model":"claude-sonnet-5","input_tokens":"7484","output_tokens":"30436","cache_read_tokens":"13245438"}
+{"ts":"2026-08-07T01:29:19Z","issue":1202,"event":"phase_complete","session_id":"89790-1786027911","phase":"code-patch"}
+{"ts":"2026-08-07T01:29:19Z","issue":1202,"event":"sub_complete","session_id":"89790-1786027911","exit_code":"0"}
+{"ts":"2026-08-07T01:29:59Z","issue":1202,"event":"phase_start","session_id":"89790-1786027911","phase":"verify"}
+{"ts":"2026-08-07T01:33:48Z","issue":1202,"event":"phase_complete","session_id":"89790-1786027911","phase":"verify"}
+{"ts":"2026-08-07T02:13:58Z","issue":1206,"event":"manual_intervention","session_id":"89790-1786027911","recovery_target":"review","wrapper_exit_code":"1","intervention_type":"review-rerun"}
