@@ -59,6 +59,57 @@ This same fact JSON (top-level `mode`, per-issue `route` and `recovery_tiers`) i
 observation AC dispatch against a single run's context rather than reconciling post-merge AC after
 the fact — see `modules/observation-trigger.md` § Condition Check Gate (`when=`).
 
+## fact_tokens Vocabulary and Matching Rule
+
+`fact_tokens` (per-issue array, built by `scripts/collect-run-facts.sh`'s `JQ_PASS2`) is the
+pre-filter vocabulary that `scan-pending-ac.sh --facts` and `opportunistic-search.sh --facts`
+match against pending AC condition text before this module's Step 3 rubric judgment runs.
+
+**Included token categories:**
+
+- Route: `"<route> route"` (e.g. `"pr route"`, `"patch route"`, `"operate route"`) — omitted
+  when route is `unknown`
+- Size: `"Size <label>"` (e.g. `"Size S"`, `"Size M"`) — omitted when the Issue's Size could
+  not be resolved
+- Phase-wrapper script name: the `wrapper_for()`-mapped script for each phase this issue's run
+  reached (e.g. `"run-issue.sh"`, `"run-spec.sh"`, `"run-code.sh"`, `"run-review.sh"`,
+  `"run-merge.sh"`) — see the "Excluded" list below for what this replaces
+- PR number: `"#<N>"`
+- Anomaly keys with count ≥ 1: `recovery`, `watchdog_kill`, `manual_intervention`,
+  `concurrent_commit_detected`, `code_retry_fire`
+- Recovery tier: `"tier <N>"` for each tier (`1`/`2`/`3`) seen in `recovery_tiers`
+- Batch mode: `"batch"`, only when the session's top-level `mode` is `batch`
+
+**Deliberately excluded (do not add these back):**
+
+- `"/auto"` — matched 84 of 414 measured pending post-merge AC on its own, making the
+  pre-filter a near no-op (`docs/spec/issue-1157-run-fact-ac-match.md` § population)
+- `"single"` (the non-batch mode value) — same reason, Issue #1171
+- Bare phase names (`issue`, `spec`, `code-pr`, `code-patch`, `review`, `merge`, `verify`) —
+  AC condition text almost always mentions the phase name in prose (e.g. "`/verify` を実行した
+  とき"), so a bare phase-name token matched nearly every candidate. This was measured most
+  starkly on the `opportunistic-search.sh` path, where the skill-name filter already narrows
+  candidates to a single phase before the fact-token gate runs: matching that same phase's bare
+  name token against the already-narrowed set passes 100% of candidates by construction (13→13,
+  session `83694-1786088052`). Removed in Issue #1238; the phase-wrapper script name (e.g.
+  `run-issue.sh`) remains as a strictly more specific replacement. `verify` has no
+  `wrapper_for()` mapping (`/verify` runs in-session, no `run-verify.sh` wrapper — see
+  `docs/tech.md` Fork context table), so a run that only reaches the verify phase contributes no
+  token for it at all after this change; this is intentional, not a gap, since the bare `verify`
+  token was the token responsible for the 13→13 result above.
+
+**Matching rule** (unchanged by Issue #1238): case-insensitive substring match — a candidate AC
+is retained when its condition text contains at least one `fact_tokens` entry as a substring
+(both sides lowercased before comparison; see `scripts/scan-pending-ac.sh`'s
+`FACT_TOKENS_LOWER` construction and `scripts/opportunistic-search.sh`'s equivalent gate).
+
+**Guidance for AC authors:** because matching is substring-based against this vocabulary, write
+post-merge AC condition text in terms of the specific, high-signal facts above (Size, route, PR
+number, a named anomaly, a recovery tier) rather than relying on a bare phase name to make a
+condition matchable — a bare phase name is no longer part of the vocabulary and will not narrow
+the pre-filter. Referencing the phase's wrapper script name (e.g. "`run-code.sh` 実行後") also
+works but is a less natural way to write AC prose than referencing the phase's concrete outcome.
+
 ## Processing Steps
 
 1. Run `${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh` (with `--session
