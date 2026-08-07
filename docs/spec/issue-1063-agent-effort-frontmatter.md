@@ -90,3 +90,33 @@ No new comments since last phase.
 
 ### Acceptance criteria verification difficulty
 - Nothing to note. All 8 pre-merge AC (6 `grep`, 2 `rubric`) resolved cleanly to PASS with no UNCERTAIN and no verify command inaccuracies.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue / spec
+
+- **「実装時判断とし、根拠を Spec に記録する」という形で判断を先送りした設計が機能した**。Overview が Sonnet sub-agent (`review-light` / `orchestration-recovery`) の対象化を実装時判断としたうえで、AC8 を「設定する**か否かの判断とその根拠**が記録されている」という形にしていたため、どちらに転んでも AC が成立し、かつ根拠の記録が強制される
+- 判断は起動経路の実コードを読んで下されており、両者で結論が分かれた点が本質的:
+  - `review-light` は `skills/review/SKILL.md` が `subagent_type="review-light"` として Task ツール経由で起動 → frontmatter が読まれる → 対象に含める
+  - `orchestration-recovery` は `scripts/spawn-recovery-subagent.sh:159` が `tail -n +"$((FRONTMATTER_END + 1))"` で frontmatter を除去し本文のみを独立した `claude -p --effort medium` に埋め込む → frontmatter が読まれない → 対象外
+- 「Sonnet かどうか」ではなく「frontmatter が起動経路上で読まれるかどうか」が実際の判断軸だった。Issue 起票時の枠組み (Sonnet/Opus の二分) より一段深い軸に到達している
+
+#### code / review / merge
+
+- 特記なし。Spec の Implementation Steps 1-5 どおりで Deviations なし。review も 4 観点すべてで再発パターンなし
+
+#### verify
+
+- **AC8 のスポットチェックで一度矛盾を疑い、確認して解消した**。`grep '^effort:' agents/*.md` の結果に `agents/review-light.md:effort: high` が含まれており、AC8 を「Sonnet sub-agent に設定**しない**理由が記録されている」と読むと矛盾になる。Spec Notes を読んで AC8 の実際の文言が「設定する**か否かの判断とその根拠**」であることを確認し、review-light を含める判断が明示的に記録されていることで解消した
+  - already-checked スキップ規則により AC8 は SKIPPED 扱いだが、**スポットチェックをせずに機械的にスキップしていれば矛盾の疑いに気づく機会もなかった**。逆に、疑いを持った時点で Spec を読まずに FAIL としていれば誤判定だった。session `11623-1785995193` の AC 10 誤 PASS (出力を解釈に合わせて読み、AC 文言と突き合わせなかった) の裏返しのケース — **AC 文言を正確に読むことが PASS/FAIL どちらの誤りも防ぐ**
+- post-merge AC9 は `/review --full` の実行を要求するが、`--full` は Size L のみ。本バッチで L だった #1228 の review は本 Issue 着地より前のため SKIPPED
+- **同一バッチの #1064 AC7 と構造が同一**: どちらも「Size L の Issue が着地後に `/auto` を通る」ことを待っており、残り 1 件 (#939) が Size M であるため同時に保留される。バッチ内で Size L の Issue を意図的に後ろに配置すれば両方が解決できた — **post-merge AC の充足条件が Size に依存する Issue 群は、バッチ順序の設計対象になりうる**という観察
+
+### Improvement Proposals
+
+N/A — 観察はいずれも記録のみで足りる:
+
+- 「frontmatter が起動経路上で読まれるか」という判断軸 → Spec Notes に根拠として記録済み。将来 sub-agent を追加する際の判断基準として有効
+- Size 依存の post-merge AC とバッチ順序の関係 → 本節に記録。#1118 / #1172 (observation AC の実行文脈条件) の隣接領域だが、opportunistic 型かつ単発観測のため起票せず
