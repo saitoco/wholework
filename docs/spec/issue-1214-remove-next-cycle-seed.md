@@ -240,26 +240,39 @@ Issue 本文が記載していた行番号のうち、実ファイルとずれ�
 - `docs/reports/external-kill-investigation.md` への注記は、Spec Notes の文面 (日本語) をそのまま挿入せず、ドキュメント本体の言語 (English) に合わせて英語で追記した。CLAUDE.md の Language Conventions は Spec 自体を日本語対象としているが、既存ドキュメント本体を編集する場合はその文書の言語に従うべきという判断
 - behavioral change detection (Step 9) が `skills/auto/SKILL.md` / `modules/autonomy-tier.md` / `.wholework.yml` など複数ファイルで direct-associated test 以外からの参照を検出したため `bats tests/` フルスイート (1480 件) を実行した。全件 PASS
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Nothing to note — Implementation Steps 1-10 と実ファイルの差分が完全に一致しており、Spec の指定範囲を超える巻き添え削除も、指定範囲の削除漏れも検出されなかった (review-spec / review-bug×2 いずれも Perspective 1 で確認)。
+
+### Recurring issues
+
+- 自己レビュー (PR 作成者と `/review` 実行者が同一) では GitHub API が `REQUEST_CHANGES` を許可しないため、MUST 指摘がある場合は `COMMENT` として投稿しゲートマーカーで代替する既存の挙動が今回も発生した (前セッションで `macOS shell compatibility` CI FAILURE を MUST として記録し、修正コミット後に CI green を確認済み)。これは `gh-pr-review.sh` の既知の設計であり、本 Issue 固有の問題ではない。
+- 本セッションは `--non-interactive` (fork context) で実行されたため、`capabilities.workflow: true` が設定されていても Workflow tool の re-invocation guarantee が確認できず、`skills/review/workflow-guidance.md` の Pre-flight 判定により静的 Task fan-out (Steps 10.1–10.3) にフォールバックした。これは想定どおりの分岐であり、workflow-guidance.md のガードが正しく機能した事例として記録する。
+
+### Acceptance criteria verification difficulty
+
+- Nothing to note — Pre-merge AC 26 件 (`file_contains`/`file_not_contains`/`grep`/`rubric`/`github_check` の組み合わせ) はすべて一意に PASS/FAIL を判定でき、UNCERTAIN は 0 件だった。rubric 系 3 件 (AC 3, 12, 24) も、Issue 本文の記述が具体的だったため意味的検証の曖昧さは生じなかった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Spec の Implementation Steps 1-10 を文脈指定 (前後の見出し) どおりに実装。行番号のずれは既に Spec が吸収済みで、追加の位置調整は不要だった
-- `skills/auto/SKILL.md` の Next-cycle seed ブロックは条件分岐なしの advisory 1 段落 (`Recommend: run /audit drift to identify next-cycle candidates`) に置換し、rubric AC (無条件昇格の意味的検証) で確認した
-- `docs/reports/external-kill-investigation.md` の代替判別手段の注記は、Spec Notes の日本語文面ではなくドキュメント本体の言語 (English) に合わせて英語で追記した (既存記述は書き換えず追記のみ)
-- behavioral change detection で `skills/auto/SKILL.md` / `modules/autonomy-tier.md` / `.wholework.yml` 等が direct-associated test 以外からも広く参照されていたため `bats tests/` フルスイート (1480 件) を実行し、全件 PASS を確認した
+- Pre-merge AC 26 件を再検証し、全件 PASS を確認 (前回セッションで 24 件、今回のセッションで残り 2 件の `github_check` を再確認)。CI (`Run bats tests` / `Validate skill syntax` / `macOS shell compatibility`) はすべて green
+- `--non-interactive` (fork context) のため `capabilities.workflow: true` でも Workflow tool の re-invocation guarantee が確認できず、`skills/review/workflow-guidance.md` の Pre-flight 判定に従い静的 Task fan-out (review-spec + review-bug×2) にフォールバックした
+- review-spec / review-bug×2 の検出結果はすべて CONSIDER レベル (4 件、うち 1 件は 2 段階検証で REJECT) で MUST/SHOULD は 0 件。いずれも「本 Issue の Changed Files 範囲外」「先行する類似キー削除でも同様に省略されている前例あり」の理由で今回は見送り、CONSIDER のまま PR コメントに記録した
+- CONSIDER 指摘 4 件はいずれも本 PR のスコープ外 (別ファイルの追加変更が必要、または将来の改善提案) と判断し、スコープを広げない方針を優先した
 
 ### Deferred Items
 
 - Post-merge の observation AC (`event=auto-run session=next`) は次回 `/auto --batch` 完走時の観察待ち。`.tmp/next-cycle.json` が生成されないこと・`next_cycle_seeded` が emit されないこと・`/audit drift` 推奨が出ることの 3 点を確認する
-- `github_check "gh pr checks"` 系の Pre-merge AC 2 件は PR 作成後の CI 結果待ち (`/review` フェーズで確認)
+- CONSIDER 指摘 (`modules/autonomy-tier.md` の `loop-paths-fallback` ドキュメントと `validate-skill-syntax.py` の `KNOWN_FIELDS` 不一致、`docs/guide/customization.md` の Breaking Changes 未記録、`scripts/emit-event.sh` の retired event 未記録、`docs/reports/external-kill-investigation.md` の代替判別手段の拡充) は本 PR では対応せず、必要であれば別 Issue で扱う
 - `.tmp/auto-events.jsonl` に残る過去 20 件の `next_cycle_seeded` は削除しない (読み取り側は未知イベント型を無視するため無害)
 - `docs/ja/guide/customization.md` の翻訳ドリフト (EN 側の `.wholework.yml` autonomy サンプルブロックと `autonomy` 設定行が JA ミラーに存在しない) は本 Issue 以前からの既知状態。本 Issue では解消しない
 
 ### Notes for Next Phase
 
-- `/review` は PR #1216 の CI (`Run bats tests` / `Validate skill syntax`) の green を確認すること — Pre-merge AC 26 件のうち 24 件は `/code` で PASS 確認済み、残り 2 件が github_check
-- 11 ファイルの変更はすべて削除・置換のみで新規ロジック追加はない。差分レビューでは「削除範囲が Spec の指定と一致しているか」「経路 E 以外の記述への巻き添え削除がないか」を確認する観点が有効
-- Post-merge observation は次回 `/auto --batch` 完走を待つ必要があり、即時確認はできない
-- Size L / pr route のため CI verify command は `github_check "gh pr checks"` 形式で正しい (`always-pr` は未設定だが Size L はもともと pr route)
+- `/merge` は MUST 指摘がないことを確認済みなのでそのまま進めてよい。Pre-merge AC 26 件は全て PASS 済み
+- Post-merge observation (`event=auto-run session=next`) は次回 `/auto --batch` 完走を待つ必要があり、即時確認はできない
