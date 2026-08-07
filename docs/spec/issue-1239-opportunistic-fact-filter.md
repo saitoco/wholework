@@ -94,20 +94,19 @@
 - N/A (上記の allowed-tools 追加以外に手戻りは発生しなかった)
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- All 10 Pre-merge acceptance conditions verified PASS against the PR branch (4 `file_contains`, 4 `rubric`, 1 `command` via CI reference fallback, 1 `github_check`) — no MUST issues, so the review posted as `COMMENT` rather than `REQUEST_CHANGES`
-- `git merge-tree` base-branch conflict pre-check found no `changed in both` blocks — no base-branch conflict context needed for the review agent
-- The 1 SHOULD finding from `review-light` (session-pointer/`collect-run-facts.sh` Bash-tool-call fencing ambiguity in `modules/opportunistic-verify.md` Step 1) was fixed in this phase rather than deferred, since it was a low-risk documentation clarification directly preventing a previously-fixed misattribution bug class (#1224) from being reintroduced
+- Pre-merge AC gate re-confirmed clean (`check-pre-merge-ac.sh`: 0 unchecked of 10) and `review_incomplete_fallback` was not set, so the merge proceeded without any override marker
+- `gh-pr-merge-status.sh` reported `mergeable=true reason=clean` — no rebase/conflict resolution was needed
 
 ### Deferred Items
-- Existing opportunistic/observation AC still lack `keyword=` attributes (unchanged from the code-phase handoff — bulk backfill remains out of scope; see `modules/verify-patterns.md` §10)
-- The effect measurement (13→5, 61.5%) still uses a representative run-facts JSON rather than a real `/auto` session's output — a real measurement is only available once `modules/opportunistic-verify.md`'s new Step 1 has actually run inside an `/auto` session (unchanged from code-phase handoff)
+- Existing opportunistic/observation AC still lack `keyword=` attributes (unchanged from code/review-phase handoffs — bulk backfill remains out of scope; see `modules/verify-patterns.md` §10)
+- The effect measurement (13→5, 61.5%) still uses a representative run-facts JSON rather than a real `/auto` session's output — a real measurement is only available once `modules/opportunistic-verify.md`'s new Step 1 has actually run inside an `/auto` session (unchanged from code/review-phase handoffs)
 
 ### Notes for Next Phase
-- `/merge` can proceed: CI all SUCCESS (`wait-ci-checks.sh`: 9/9 passed), no MUST issues, all Pre-merge AC checkboxes already `[x]`
-- The Post-merge observation condition (`event=auto-run session=next`) remains unchecked by design — it fires only after a real `/auto` session runs with the new Step 1 in place; `/verify` should not expect it to resolve immediately post-merge
+- `/verify` should expect the Post-merge observation condition (`event=auto-run session=next`) to remain unchecked until a real `/auto` session runs with the new Step 1 in place — this is by design, not a regression
+- No other post-merge risks identified; all Pre-merge AC and CI were green at merge time
 
 ## review retrospective
 
