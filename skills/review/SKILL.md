@@ -36,7 +36,7 @@ Key per-step behavior in non-interactive mode:
 - **Any AskUserQuestion during review comment resolution** (Steps 7.2, 7.4, 7.6): auto-resolve using model judgment (apply the fix that best matches the review comment intent); record the decision in the Auto-Resolve Log as an issue comment
 - **External review timeout waiting**: auto-resolve by proceeding without waiting (the review results may be incomplete; note this in the review summary)
 - **Unclear review comment intent**: auto-resolve by adopting the most conservative interpretation (e.g., add a comment rather than delete code)
-- **Foreground (前景) execution for test/build commands (including commands run by Step 10's review sub-agents)**: always run these in the foreground — do not set `run_in_background: true` and end the turn waiting for a completion notification. This applies to every execution surface without a re-invocation guarantee (headless `claude -p`, a fork-executed Skill, the Workflow tool path — see `${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting" for the exhaustive list and rationale). Interactive-mode behavior (background execution + await notification) is unaffected.
+- **Foreground (前景) execution for test/build commands (including commands run by Step 10's review sub-agents)**: always run these in the foreground — do not set `run_in_background: true` and end the turn waiting for a completion notification. This applies to every execution surface without a re-invocation guarantee (headless `claude -p`, a fork-executed Skill, the Workflow tool path — see `${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting" for the exhaustive list and rationale). Additionally, pass an explicit Bash `timeout` that covers the measured duration of the command (e.g. `timeout: 600000` for a full bats suite, whose measured duration is ~407s) — the tool's 120s default is too short. Interactive-mode behavior (background execution + await notification) is unaffected.
 
 ## Review-only Mode (--review-only)
 
@@ -685,7 +685,7 @@ If `scripts/validate-skill-syntax.py` exists, read `skills/review/skill-dev-rech
 After fixes, run a lightweight re-check focused on changed areas:
 - Light re-check (not full Step 7+9 re-run) focused on changed areas
 - Check for new issues
-- Re-run tests/validation
+- Re-run tests/validation — if this re-check selects a full-suite run, the `## Non-Interactive Mode Behavior` section's foreground execution constraint (no `run_in_background: true`, explicit `timeout`) applies here too; see `${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting"
 - If new MUST issues found in re-check, return to Step 12.2
 - **Retry limit**: 3 times total (initial review + 2 re-checks)
 

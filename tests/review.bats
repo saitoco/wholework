@@ -30,6 +30,12 @@ non_interactive_mode_behavior_section() {
     awk '/^## Non-Interactive Mode Behavior/{found=1} /^## Review-only Mode/{found=0} found{print}' "$SKILL_FILE"
 }
 
+# Extract the "### 12.3. Lightweight Re-check" section from SKILL.md.
+# The section ends at the next level-3 (### ) heading (### 12.4. Record Fix Results).
+step12_3_section() {
+    awk '/^### 12.3. Lightweight Re-check/{found=1} /^### 12.4/{found=0} found{print}' "$SKILL_FILE"
+}
+
 @test "Opportunistic Verification: DESIGN_FILE_PATH resolution present" {
     opportunistic_verification_section | grep -q "DESIGN_FILE_PATH"
 }
@@ -86,4 +92,12 @@ non_interactive_mode_behavior_section() {
 @test "Non-Interactive Mode Behavior: foreground execution required for test/build commands" {
     non_interactive_mode_behavior_section | grep -q "前景"
     non_interactive_mode_behavior_section | grep -q -F "run_in_background"
+}
+
+@test "Non-Interactive Mode Behavior: explicit timeout required alongside foreground execution" {
+    non_interactive_mode_behavior_section | grep -q -F "timeout"
+}
+
+@test "Step 12.3: foreground execution constraint reminder present for full-suite re-checks" {
+    step12_3_section | grep -q -F "foreground"
 }

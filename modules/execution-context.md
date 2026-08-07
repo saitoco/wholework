@@ -108,7 +108,8 @@ Skills/modules that explicitly read this module:
   `docs/tech.md` for the fork context policy)
 - "Re-invocation Guarantee and Notification-Dependent Waiting" section: `modules/test-runner.md`
   (Step 2 non-interactive Note), `skills/review/SKILL.md` (Non-Interactive Mode Behavior Foreground
-  bullet), `skills/review/workflow-guidance.md` (Pre-flight section), `skills/code/SKILL.md`
-  (Behavioral Change Detection foreground-execution note)
+  bullet; Step 12.3 Lightweight Re-check local reminder), `skills/review/workflow-guidance.md`
+  (Pre-flight section), `skills/code/SKILL.md` (Step 9 execution surface constraint, stated once
+  before the Behavioral Change Detection subsection)
 
 Update this list when a skill or module begins reading `modules/execution-context.md` explicitly.

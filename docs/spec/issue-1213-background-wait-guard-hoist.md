@@ -70,3 +70,35 @@
 **Related への追加候補** (Issue 本文更新時に反映): #1212 (review フェーズでの再発実測、本コメントの出典), #1053 (review 異常終了の下流影響という点で隣接)。
 
 **関連する過去 Spec** (disposable、参照のみ): `docs/spec/issue-994-code-bats-foreground-guidance.md` (最初のガード追加), `docs/spec/issue-1097-review-headless-foreground.md` (review 側ガード追加), `docs/spec/issue-1123-manual-recovery-review-rerun.md` (SSoT 統合、内容のみ変更・位置は不変)。
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1〜3 を Spec の記述通りに実施した。
+
+### Design Gaps/Ambiguities
+
+- Step 10 (Verify Command Consistency) の "Patch route branch-scoped CI AC exclusion" は patch route 限定の記載だが、pr route でも同じ構造的な問題が生じる: Step 10 は PR 作成 (Step 11) より前に実行されるため、AC4 (`github_check "gh pr checks" "Run bats tests"`) はこの時点では PR が存在せず判定不能 (UNCERTAIN) になる。今回は AC4 のチェックボックスのみ未チェックのまま残し (他 4 件は PASS で `[x]` 化)、CI 確認は `/review` に委ねた。SKILL.md にはこの pr route 側の扱いが明文化されていないため、次回同様のケースがあれば SKILL.md 側への追記を検討する価値がある。
+
+### Rework
+
+N/A — 実装・テスト・verify いずれも一発で完了し、手戻りは発生しなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 実行サーフェス制約の新規段落を Step 9 冒頭に無条件で配置した (Behavioral Change Detection 分岐の外)。Spec の Root Cause 分析 (#1123 の文言のみ修正では #1102 の再発を防げなかった) に基づき、内容だけでなく配置位置そのものを変更する方針を徹底した。
+- 旧ネスト位置のガード文は削除ではなく、`(See the execution surface constraint above for foreground/timeout requirements.)` という短い前方参照に置き換えた。`(Same pre-check guard applies — ...)` という既存の実務的な注記は残した。
+- review 側は新規サブセクションを追加せず、既存の `Re-run tests/validation` 箇条書きの末尾にワンラインのリマインダーを追記するに留めた。Spec が「実行判断地点直近のローカルなリマインダー」と明記していたため、最小限の変更にとどめた。
+
+### Deferred Items
+- AC4 (`github_check "gh pr checks" "Run bats tests"`) は Step 10 時点で PR #1225 が未作成だったため判定不能 (UNCERTAIN) だった。チェックボックスは未チェックのまま `/review`/`/merge` に委ねた。
+- Post-merge observation AC (code phase / review phase の 2 件) は `verify-type: observation event=auto-run session=next` により次回以降の `/auto` 実行時に評価される。
+- Design Gaps/Ambiguities に記録した pr route での Step 10 CI-AC タイミングギャップ (PR 作成前に github_check を評価できない構造的な問題) は本 Issue のスコープ外として対応せず、再発した場合に別 Issue で検討する。
+
+### Notes for Next Phase
+- `/review` は PR #1225 の CI (`Run bats tests` ジョブ) の pass を確認したうえで AC4 のチェックボックスを更新すること。
+- 実装手段のリファクタリングは発生していないため、AC4 の PR タイミング以外に verify command の陳腐化はない。
+- `bats tests/` フルスイート 1503 件は全て PASS (実行サーフェス制約に従い foreground + 明示 timeout で実行済み)。skill-dev validation、forbidden-expressions check もクリーン。
