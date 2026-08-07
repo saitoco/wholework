@@ -25,6 +25,14 @@
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5210233540
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5212707587
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5212862164
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5213280537
+
+### verify フェーズ (2026-08-07 re-run #11, cutoff: 2026-06-14T21:50:38Z)
+
+- saito / MEMBER / first-class / 前回 `/verify 476` (2026-08-07 re-run #10) 実行結果。Pre-merge 2 件 SKIPPED (already checked)、Post-merge observation (event=pr-review-light) は PR #1244 (Issue #1117) の diff に該当欠陥なしのため UNCERTAIN。`keyword=workflow` ゲートの誤発火が10件目として再現 / https://github.com/saitoco/wholework/issues/476#issuecomment-5213746899
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5215472710
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5215741886
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5216205088
 ## 背景
 
 `/review` の MUST/SHOULD 分類基準に「対象実行環境で決定的に失敗する欠陥は MUST」というルールを明文化する。Spec フェーズなしで直接実装（Issue 本文から要件を読み取り）。
@@ -181,4 +189,45 @@
 
 ### Improvement Proposals
 - N/A — re-run #7 で既に起票水準に達し follow-up Issue #1220 が対応済み。本 re-run はその後の9件目の再現事例として記録するに留める
+
+## Verify Retrospective (2026-08-07 re-run #10)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1244、Issue #1117) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカーあり) したが、今回の発火元 PR #1244 の diff (`scripts/reconcile-phase-state.sh`, `modules/phase-state.md`, `tests/reconcile-phase-state.bats`, `docs/spec/issue-1117-*.md` — `_completion_issue()` の成功シグネチャ修正) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず UNCERTAIN 判定に帰着した。`keyword=workflow` ゲートの誤発火パターンが、本 Issue #1117 の Spec 内 `docs/workflow.md` というファイルパス参照 (Steering Docs sync candidate 確認の一文) への部分一致で **10件目** として再現した。follow-up Issue #1220 が依然 OPEN であることを確認したため、本 re-run でも重複起票を行わない
+
+### Improvement Proposals
+- N/A — re-run #7 で既に起票水準に達し follow-up Issue #1220 が対応済み (未クローズ)。本 re-run はその後の10件目の再現事例として記録するに留める
+
+## Verify Retrospective (2026-08-07 re-run #11)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1253、Issue #1221) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカーあり) したが、今回の発火元 PR #1253 の diff (`scripts/detect-wrapper-anomaly.sh`, `modules/orchestration-fallbacks.md`, `skills/auto/SKILL.md`, `tests/detect-wrapper-anomaly.bats` — CI 待機由来の watchdog kill を独立パターンとして切り出す変更) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず UNCERTAIN 判定に帰着した。`keyword=workflow` ゲートの誤発火パターンが、本 Issue #1221 の Spec 内 `.github/workflows/test.yml` というファイルパス参照 (CI ジョブ名確認の一文) への部分一致で **11件目** として再現した。follow-up Issue #1220 が依然 OPEN であることを確認したため、本 re-run でも重複起票を行わない
+
+### Improvement Proposals
+- N/A — re-run #7 で既に起票水準に達し follow-up Issue #1220 が対応済み (未クローズ)。本 re-run はその後の11件目の再現事例として記録するに留める
+
+## Verify Retrospective (2026-08-07 re-run #12)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1254、Issue #1064) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカーあり) したが、今回の発火元 PR #1254 の diff (`docs/reports/opus-5-effort-recalibration-spec.md` 新規、`docs/tech.md`/`docs/ja/tech.md`/`docs/spec/issue-1064-*.md` 更新 — ドキュメントのみの変更) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず UNCERTAIN 判定に帰着した。`keyword=workflow` ゲートの誤発火パターンが、本 Issue #1064 の Spec 内 `docs/translation-workflow.md` というファイル名参照 (翻訳ミラー除外規約の一文) への部分一致で **12件目** として再現した。follow-up Issue #1220 が依然 OPEN であることを確認したため、本 re-run でも重複起票を行わない
+- worktree セッション中に `source` 経由の `emit-event.sh` 呼び出し (Step 11 の `phase_complete` イベント発行) が worktree isolation guard によりブロックされた。`modules/worktree-lifecycle.md` § "source-based shell function calls are blocked by the worktree isolation guard" に記載済みの既知制約どおり、自然な exit 境界 (Step 13 Worktree Exit) がまだ先だったため best-effort でスキップし、その旨を明示的に記録した
+
+### Improvement Proposals
+- N/A — re-run #7 で既に起票水準に達し follow-up Issue #1220 が対応済み (未クローズ)。本 re-run はその後の12件目の再現事例として記録するに留める
+
+## Verify Retrospective (2026-08-07 re-run #13)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1258、**Issue #1220 自身**) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカーあり) したが、今回の発火元 PR #1258 の diff (`scripts/opportunistic-search.sh`, `modules/observation-trigger.md`, `tests/opportunistic-search.bats` — `keyword=` ゲート自体のパス様トークン除外修正) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず UNCERTAIN 判定に帰着した。`keyword=workflow` ゲートの誤発火パターンが **13件目** として再現したが、今回は発火源が Issue #1220 自身の Spec (`docs/spec/issue-1220-keyword-gate-path-fp-fix.md`) であり、内容の大半がパス様トークン (`docs/workflow.md`, `.github/workflows/ci.yml`) であることに加え、`keyword=workflow` という**属性構文そのもの** (スラッシュを含まないため #1220 のパス様トークン除外の対象外) も一致要因に含まれる点で過去12件と異なる。follow-up Issue #1220 は本 PR #1258 でパス様トークン除外を実装済み (pre-merge AC 全3件 PASS、CI 全SUCCESS) だが、まだ main に merge されていないため、今回発火に使われた `opportunistic-search.sh`/`observation-trigger.sh` は main 上の旧実装 (修正前) のまま実行された
+
+### Improvement Proposals
+- 13件目の再現は、#1220 のパス様トークン除外だけでは解消しない新しい亜種 (`keyword=<value>` のような、スラッシュを含まない属性構文自体への一致) を示している。ただし本件は Issue #1220 自身の Spec という特殊事例 (#1220 が merge されれば当該 Spec ファイルが `--context-file` として再利用される機会は事実上ない) であり、一般的な PR で `keyword=workflow` という文字列がスラッシュなしで地の文に出現するケースは稀 (実際に過去12件はすべて `docs/*.md` 等のパス様トークンが原因だった)。#1220 merge 後、次回以降の `/review --light` でパス様トークン起因の誤発火 (13件中12件のパターン) が解消するかどうかが本 post-merge AC の主眼であり、この観測は #1220 の post-merge AC (`docs/workflow.md` 等の無関係パスのみを参照する PR での誤発火なし観察) 側で追跡する。新規 follow-up Issue の起票は不要と判断する
 

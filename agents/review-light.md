@@ -3,6 +3,7 @@ name: review-light
 description: Review: Lightweight Integrated (all 4 perspectives) — concisely cover spec deviation, edge cases, security, and documentation consistency in a single agent
 tools: Read, Glob, Grep, Bash(git log:*, git diff:*, git show:*)
 model: sonnet
+effort: high
 ---
 
 # Review: Lightweight Integrated (All 4 Perspectives)

@@ -81,12 +81,26 @@ with the real Issue number directly, never carry a `pr` field).
 
 ### wrapper_exit
 
-Emitted by `claude-watchdog.sh` on abnormal wrapper exit. Field: `exit_code`.
+Emitted by `run-auto-sub.sh`'s `run_phase_with_recovery()` for `code-patch` / `code-pr` / `review` /
+`merge`, and by `run-spec.sh` / `run-issue.sh` for their own `spec` / `issue` phase (gated by
+`_EMIT_PHASE_OWNED`, same guard as `phase_start`/`phase_complete` — see "`_EMIT_PHASE_OWNED`
+pattern" below). In both cases, emitted unconditionally on every `claude -p` subprocess exit
+(regardless of the exit code, after any reconcile-based correction). Field: `phase`, `exit_code`.
+An external kill that takes down the wrapper itself before this point still leaves `wrapper_exit`
+absent for the affected phase — this is the signature `detect-external-kill.sh` relies on, and it
+now holds for `spec` / `issue` the same way it already did for `code-patch` / `code-pr` / `review` /
+`merge`.
 
 ### token_usage
 
-Emitted after a successful `--output-format json` run. Fields: `input_tokens`, `output_tokens`,
-`cache_read_tokens`, `cache_write_tokens`, `phase`.
+Emitted immediately after `wrapper_exit`, when the `.tmp/token-usage-<issue>.json` file produced
+by a `--output-format json` run exists. Written by `run-code.sh` / `run-review.sh` / `run-merge.sh`
+(via `run-auto-sub.sh`'s `run_phase_with_recovery()`) and by `run-spec.sh` / `run-issue.sh` directly
+for their own phase. Skipped when the file does not exist (e.g. the wrapper was killed before the
+`--output-format json` capture completed, or a prior phase already consumed and removed it) or when
+`usage.input_tokens` is absent from it. Fields: `phase`,
+`model` (the `modelUsage` key with the largest `inputTokens + outputTokens`, or `unknown`),
+`input_tokens`, `output_tokens`, `cache_read_tokens`.
 
 ## Usage
 
@@ -131,20 +145,26 @@ fi
 
 # ... run claude ...
 
+if [[ -n "${_EMIT_PHASE_OWNED:-}" ]]; then
+  emit_event "wrapper_exit" "phase=${EMIT_PHASE_NAME}" "exit_code=${EXIT_CODE}"
+  # ... token_usage emit from .tmp/token-usage-<issue>.json, then rm -f ...
+fi
+
 if [[ $EXIT_CODE -eq 0 && -n "${_EMIT_PHASE_OWNED:-}" ]]; then
   emit_event "phase_complete" "phase=${EMIT_PHASE_NAME}"
 fi
 ```
 
 When `EMIT_PHASE_NAME` is already set (wrapper called from `run-auto-sub.sh`), `_EMIT_PHASE_OWNED`
-stays empty and `phase_start` / `phase_complete` are not emitted — preventing double-emit.
+stays empty and `phase_start` / `phase_complete` are not emitted — and, in `run-spec.sh` /
+`run-issue.sh`, neither are `wrapper_exit` / `token_usage` (#1228) — preventing double-emit.
 
 ## Wrapper Coverage Table
 
 | Wrapper | Phase value(s) emitted | Notes |
 |---------|------------------------|-------|
-| `run-issue.sh` | `issue` | Added in #769 |
-| `run-spec.sh` | `spec` | Added in #769 |
+| `run-issue.sh` | `issue` | Added in #769. Also emits `wrapper_exit`/`token_usage` for `phase=issue` (#1228) |
+| `run-spec.sh` | `spec` | Added in #769. Also emits `wrapper_exit`/`token_usage` for `phase=spec` (#1228) |
 | `run-code.sh` | `code-pr` \| `code-patch` \| `code` | Selects based on route flag |
 | `run-review.sh` | `review` | |
 | `run-merge.sh` | `merge` | |
@@ -154,7 +174,7 @@ stays empty and `phase_start` / `phase_complete` are not emitted — preventing 
 
 `skills/verify/SKILL.md` emits `phase_start`/`phase_complete` (phase=`verify`) inline — directly from the skill body, gated only on `AUTO_EVENTS_LOG` being set — rather than through a `run-*.sh` wrapper. This is intentional: `/verify` has no `run-verify.sh` wrapper (removed in #485 when `/verify` moved to in-session execution), so the `_EMIT_PHASE_OWNED` pattern above, which lives in wrapper scripts, does not apply. `phase_complete` fires at every terminal branch of Step 11 (PASS/SKIPPED, FAIL retry, FAIL max-iterations, PENDING, UNCERTAIN) — not only on full PASS — because reaching an AC verdict, not the verdict itself, is the phase's completion signal. The skill also emits `verify_user_confirm` (phase-specific event, not a lifecycle event) at Step 8b whenever the interactive-mode manual-AC `AskUserQuestion` receives a response.
 
-**`restore_auto_session_pointer()` (Issue #902 Fix Cycle, resolution order revised in #1075)**: `scripts/emit-event.sh` defines this helper to cover a gap specific to non-wrapper emitters. Wrapper scripts (`run-code.sh`, `run-review.sh`, `run-merge.sh`) export `AUTO_EVENTS_LOG`/`AUTO_SESSION_ID` before spawning the nested `claude -p` process, so every Bash tool call inside that nested session inherits them as OS environment variables. `/verify` has no wrapper — when invoked via an in-session `Skill()` call (e.g. `/auto --batch` List mode), it runs as a series of independent Bash tool calls in the parent session, each a new process group that does not inherit env vars set by a sibling call.
+**`restore_auto_session_pointer()` (Issue #902 Fix Cycle, resolution order revised in #1075, fail-closed in #1224)**: `scripts/emit-event.sh` defines this helper to cover a gap specific to non-wrapper emitters. Wrapper scripts (`run-code.sh`, `run-review.sh`, `run-merge.sh`) export `AUTO_EVENTS_LOG`/`AUTO_SESSION_ID` before spawning the nested `claude -p` process, so every Bash tool call inside that nested session inherits them as OS environment variables. `/verify` has no wrapper — when invoked via an in-session `Skill()` call (e.g. `/auto --batch` List mode), it runs as a series of independent Bash tool calls in the parent session, each a new process group that does not inherit env vars set by a sibling call.
 
 Every `AUTO_EVENTS_LOG`-gated emit site in `skills/verify/SKILL.md` calls `source emit-event.sh` + `restore_auto_session_pointer $NUMBER` immediately before the guard, which resolves `AUTO_SESSION_ID`/`AUTO_EVENTS_LOG` in this order (exhaustive):
 
@@ -162,18 +182,21 @@ Every `AUTO_EVENTS_LOG`-gated emit site in `skills/verify/SKILL.md` calls `sourc
 2. `AUTO_SESSION_ID` already set — adopt it directly. This is the in-band hand-off path (see `persist_auto_session_pointer()` / `--session-id` below) and also fixes a prior bug where a pre-set `AUTO_SESSION_ID` with no matching pointer file left `AUTO_EVENTS_LOG` unset and silently skipped the emit
 3. the optional issue-number argument is given and `.tmp/auto-session-issue-<N>` exists — adopt it
 4. `.tmp/auto-session-<PGID>` exists — adopt it
-5. `.tmp/auto-session-current` exists — adopt it (final fallback; under concurrent `/auto` sessions this file is a single PGID-independent global that any session may have last overwritten, so it does not guarantee attribution accuracy — see the Concurrent-session attribution problem below)
-6. none of the above — no-op, preserving the existing policy that standalone `/verify` runs (outside any `/auto` session) stay uninstrumented
+5. none of the above — no-op, fail-closed, preserving the existing policy that standalone `/verify` runs (outside any `/auto` session) stay uninstrumented. Issue #1224 removed a prior step 5 that fell back to `.tmp/auto-session-current` — see the Concurrent-session attribution problem below and "Manual Orchestration (Issue #1224)" below for why that fallback was removed rather than kept as a last resort
 
 issue-scoped (step 3) is checked before PGID (step 4) because in-session `/verify` never has a matching PGID pointer (each Bash tool call gets a fresh process group), and OS PGID reuse could otherwise pick up a stale pointer left by an unrelated session.
 
 **`persist_auto_session_pointer()` and `--session-id` in-band hand-off (Issue #1075)**: `scripts/emit-event.sh` also defines `persist_auto_session_pointer(session_id, issue_number)`, which writes `session_id` to the issue-scoped pointer file `.tmp/auto-session-issue-<issue_number>` (or deletes it when `session_id` is empty — a standalone `/verify`'s self-healing path for a stale pointer left by a prior `/auto` session that never reached verify). `/auto` passes its own `SESSION_ID` (recorded in Step 1) as `--session-id=<literal SESSION_ID>` in every `Skill(skill="wholework:verify", ...)` dispatch's `args`; `/verify` Step 1 parses that flag and calls `persist_auto_session_pointer` with it immediately after the phase banner, before the `phase_start` emit. This in-band hand-off is the authoritative path (resolution order step 2 above adopts it directly once set), and the issue-scoped pointer it writes is what carries that same value to all 11 `restore_auto_session_pointer $NUMBER` emit sites in `/verify` within the same run (each a separate Bash tool call / PGID, including the Step 1 `phase_start` emit that immediately follows the `persist_auto_session_pointer` call). Both together solve the concurrent-session attribution problem described next: the caller's own id travels with the call instead of being inferred from a shared file.
 
-**Concurrent-session attribution problem (Issue #1075, motivating the above)**: before this resolution order existed, in-session `/verify` always fell through to `.tmp/auto-session-current` (step 5) — the issue-scoped pointer, `AUTO_SESSION_ID`-already-set path, and `persist_auto_session_pointer()` itself did not exist — because PGID (step 4) never matches for `/verify`'s own Bash tool calls. Since `.tmp/auto-session-current` is a single PGID-independent global file that every `/auto` session's Step 1 unconditionally overwrites, two or more concurrent `/auto` sessions produced timing-dependent misattribution: whichever session wrote the file last "won" it for every other session's in-session `/verify` emits, observed in production for `phase_start`/`phase_complete` (2026-07-29), `retro_proposal_classified` (bidirectional, 2026-08-06), and `run-auto-sub.sh --write-manual-recovery`'s `manual_intervention` event (2026-08-05 — a second gap, since that subcommand's single Bash tool call also never regenerates the PGID pointer; see `skills/auto/SKILL.md` Step 6's pointer-regeneration instructions for the fix). `.tmp/auto-session-current` itself was not removed (see Notes below) — it remains step 5's last-resort fallback for callers that cannot supply an issue-scoped or in-band id.
+**Concurrent-session attribution problem (Issue #1075, motivating the above; resolved by removal in #1224)**: before this resolution order existed, in-session `/verify` always fell through to `.tmp/auto-session-current` (formerly step 5) — the issue-scoped pointer, `AUTO_SESSION_ID`-already-set path, and `persist_auto_session_pointer()` itself did not exist — because PGID (step 4) never matches for `/verify`'s own Bash tool calls. Since `.tmp/auto-session-current` is a single PGID-independent global file that every `/auto` session's Step 1 unconditionally overwrites, two or more concurrent `/auto` sessions produced timing-dependent misattribution: whichever session wrote the file last "won" it for every other session's in-session `/verify` emits, observed in production for `phase_start`/`phase_complete` (2026-07-29), `retro_proposal_classified` (bidirectional, 2026-08-06), and `run-auto-sub.sh --write-manual-recovery`'s `manual_intervention` event (2026-08-05 — a second gap, since that subcommand's single Bash tool call also never regenerates the PGID pointer; see `skills/auto/SKILL.md` Step 6's pointer-regeneration instructions for the fix). Issue #1224 removed this fallback step from `restore_auto_session_pointer()` entirely, rather than keeping it as a last resort: `.tmp/auto-session-current` is written only by `/auto` Step 1, so a caller that reaches this function without having gone through `/auto` Step 1 can never be the file's actual owner — the fallback was structurally guaranteed to misattribute, not merely inaccurate under some conditions. The file itself is unaffected by this change (see Notes below) — `/auto` Step 1 still writes it, and each `run-*.sh` wrapper's own inline fallback (independent of this function; see "Manual Orchestration (Issue #1224)" below) still reads it.
+
+**Manual Orchestration (Issue #1224)**: a parent session that calls `run-issue.sh` / `run-spec.sh` / `run-code.sh` / `run-review.sh` / `run-merge.sh` individually — rather than via `/auto`'s Step 1 session initialization — and then invokes `/verify` directly via `Skill(skill="wholework:verify", ...)`, never sets `AUTO_SESSION_ID`, never writes an issue-scoped pointer, and never has a PGID match for `/verify`'s own Bash tool calls (each gets a fresh process group). After the #1224 fail-closed change above, this means `/verify`'s in-session emits resolve to none of steps 1-4 and no-op at step 5: the resulting events carry no `session_id` and are excluded from session-scoped aggregation (e.g. `scripts/get-auto-session-report.sh`'s list mode, which already filters out empty `session_id`). This is accepted, by design, as the trade-off for fail-closed behavior — a caller that wants its manual-orchestration run instrumented has two options: export `AUTO_SESSION_ID` explicitly before invoking the wrapper scripts / `Skill()` calls, or call `persist_auto_session_pointer <session_id> <issue_number>` for the target Issue before running `/verify`, so that step 3 (issue-scoped pointer) resolves.
 
 **Worktree-CWD independence (Issue #1006)**: `/verify` Step 3 (Worktree Entry) switches CWD into its own `verify/issue-N` worktree before Step 11's FAIL-branch emits run, so a purely CWD-relative pointer lookup (`.tmp/auto-session-current`) silently fails there — `.tmp/` is gitignored and does not exist in a fresh worktree. `restore_auto_session_pointer()` resolves the main repository root via `git worktree list --porcelain` (the same idiom used by `scripts/detect-foreign-worktree.sh` and `scripts/run-code.sh`) and prefixes both the pointer file search (including the issue-scoped pointer added in #1075) and the resulting `AUTO_EVENTS_LOG` with that root, so the FAIL-branch events (`verify_reopen_cycle`, `verify_fail_marker_posted`, `verify_retry_fire`, and the branch's `phase_complete`) resolve correctly regardless of which worktree the caller's CWD is in. Outside a git repository (e.g. bats tmpdir fixtures), `git worktree list` fails and the prefix stays empty, preserving the prior CWD-relative fallback.
 
 **`retro_proposal_classified` (Issue #1159, issue-scoped resolution added in #1075)**: emitted by `modules/retro-proposals.md` — not a `run-*.sh` wrapper — right after Tier classification is finalized for each improvement proposal, from all three of its callers: `/verify` Step 16, `/auto` Step 4a step 6, and `/auto` Step 5 L3 auto-retrospective step 6. Like the other non-wrapper emitters above, it calls `source emit-event.sh` + `restore_auto_session_pointer` immediately before the `AUTO_EVENTS_LOG` guard, and skips the emit entirely when `AUTO_EVENTS_LOG` stays unset (no `/auto` session pointer to restore from). When `NUMBER` is a bare integer, it is passed to `restore_auto_session_pointer` so the issue-scoped pointer resolves ahead of PGID/current; because `retro-proposals.md` can also run with a non-numeric `NUMBER` (the `/auto` L3 route's `BRIDGE_NUMBER="batch-<session-id>"`), in that case it passes `EMIT_ISSUE_NUMBER=0` and calls `restore_auto_session_pointer` with no argument, to avoid corrupting the unquoted `"issue":${_issue}` field `emit_event()` writes. For that non-numeric-`NUMBER` case, the `/auto` parent-session callers (Step 4a step 6 / Step 5 L3 step 6) instead set `AUTO_SESSION_ID="<literal SESSION_ID>"` explicitly before calling `restore_auto_session_pointer` — resolution order step 2 above adopts it directly, which is the only reliable path when the issue-scoped pointer (step 3) is unavailable.
+
+**`opportunistic_verify_result` (Issue #1236)**: emitted by `modules/opportunistic-verify.md` — not a `run-*.sh` wrapper — one event per judged condition, immediately after that condition's PASS/FAIL/SKIP result is determined. Do not aggregate multiple conditions into a single event: this mirrors `retro_proposal_classified`'s 1-proposal-per-event granularity above, which the downstream `/audit` aggregation (`scripts/collect-opportunistic-retire-candidates.sh`) already assumes; aggregating would complicate that aggregation logic without solving the underlying event-count-growth concern. Like the other non-wrapper emitters above, it calls `source emit-event.sh` + `restore_auto_session_pointer` (passing the calling skill's own Issue number) immediately before the `AUTO_EVENTS_LOG` guard, and skips the emit when `AUTO_EVENTS_LOG` stays unset. `EMIT_ISSUE_NUMBER` carries the candidate Issue number being judged (not the calling skill's own Issue number) — this is the value that matters for retire-candidate aggregation (`/audit stats --retention` Section 11, `scripts/collect-opportunistic-retire-candidates.sh`).
 
 ## Backfill
 

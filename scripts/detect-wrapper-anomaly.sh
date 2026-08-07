@@ -2,7 +2,7 @@
 # detect-wrapper-anomaly.sh - Detect known failure patterns in shell wrapper output
 # and generate Auto Retrospective markdown fragments.
 #
-# Usage: detect-wrapper-anomaly.sh --log <path> --exit-code <N> --issue <N> --phase <name>
+# Usage: detect-wrapper-anomaly.sh --log <path> --exit-code <N> --issue <N> --phase <name> [--events <path>]
 #
 # Outputs markdown fragment to stdout when a known pattern is matched.
 # Outputs nothing (empty) when no pattern matches.
@@ -13,6 +13,7 @@ LOG_FILE=""
 EXIT_CODE=""
 ISSUE_NUMBER=""
 PHASE=""
+EVENTS_FILE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -32,6 +33,10 @@ while [[ $# -gt 0 ]]; do
       PHASE="${2:-}"
       shift 2
       ;;
+    --events)
+      EVENTS_FILE="${2:-}"
+      shift 2
+      ;;
     *)
       echo "Error: unknown argument: $1" >&2
       exit 1
@@ -40,7 +45,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$LOG_FILE" || -z "$EXIT_CODE" || -z "$ISSUE_NUMBER" || -z "$PHASE" ]]; then
-  echo "Usage: detect-wrapper-anomaly.sh --log <path> --exit-code <N> --issue <N> --phase <name>" >&2
+  echo "Usage: detect-wrapper-anomaly.sh --log <path> --exit-code <N> --issue <N> --phase <name> [--events <path>]" >&2
   exit 1
 fi
 
@@ -72,9 +77,17 @@ elif grep -q '"matches_expected":false' "$LOG_FILE" && grep -q '"phase":"code-pr
   ANOMALY_DESC="Watchdog killed the process in phase \`$PHASE\` (exit code $EXIT_CODE) after code-pr completed its commits but before PR creation: \`matches_expected:false\` and \`phase:code-pr\` detected in reconcile-phase-state output. The run-code.sh phase exited without creating a PR. Reference: #415."
   IMPROVEMENT_HINT="Follow the recovery procedure at \`modules/orchestration-fallbacks.md#code-completed-no-pr\`: checkout the worktree branch, rebase onto latest main, push the branch, and create the PR with \`gh pr create\`, then continue with \`/review\`."
 elif [[ "$EXIT_CODE" == "143" ]] && grep -q "still waiting (json mode)" "$LOG_FILE"; then
-  PATTERN_NAME="json-mode-silent-hang"
-  ANOMALY_DESC="json mode silent hang in phase \`$PHASE\` (exit code $EXIT_CODE): \`watchdog: still waiting (json mode)\` detected in wrapper output. The forked session did not produce any output after launching in json mode, and the watchdog terminated it with SIGTERM."
-  IMPROVEMENT_HINT="Follow the recovery procedure at \`modules/orchestration-fallbacks.md#json-mode-silent-hang\`: retry the phase once via the corresponding run-*.sh script. Rationale: transient API delay or session init stall."
+  if [[ -n "$EVENTS_FILE" && -f "$EVENTS_FILE" ]] && grep -E "\"issue\":${ISSUE_NUMBER}[,}]" "$EVENTS_FILE" 2>/dev/null \
+    | grep '"event":"ci_wait"' \
+    | grep -q "\"phase\":\"${PHASE}\""; then
+    PATTERN_NAME="ci-wait-silence-timeout"
+    ANOMALY_DESC="CI wait silence timeout in phase \`$PHASE\` (exit code $EXIT_CODE): \`watchdog: still waiting (json mode)\` detected in wrapper output, and a \`ci_wait\` event for this issue/phase is recorded in the events log. The silence is explained by CI wait, not a session init stall — the forked session was likely still alive and waiting on CI to reach a non-pending state."
+    IMPROVEMENT_HINT="Follow the recovery procedure at \`modules/orchestration-fallbacks.md#ci-wait-silence-timeout\`: confirm current CI status with \`gh pr checks\` before retrying. Do not retry blindly — if CI infrastructure is still down, an immediate retry re-enters the same \`ci_wait\` silence."
+  else
+    PATTERN_NAME="json-mode-silent-hang"
+    ANOMALY_DESC="json mode silent hang in phase \`$PHASE\` (exit code $EXIT_CODE): \`watchdog: still waiting (json mode)\` detected in wrapper output. The forked session did not produce any output after launching in json mode, and the watchdog terminated it with SIGTERM."
+    IMPROVEMENT_HINT="Follow the recovery procedure at \`modules/orchestration-fallbacks.md#json-mode-silent-hang\`: retry the phase once via the corresponding run-*.sh script. Rationale: transient API delay or session init stall."
+  fi
 elif grep -q '"matches_expected":false' "$LOG_FILE" && grep -q "Review Summary" "$LOG_FILE"; then
   PATTERN_NAME="reconciler-header-mismatch"
   ANOMALY_DESC="Reconciler detected header mismatch in phase \`$PHASE\` (exit code $EXIT_CODE): \`matches_expected:false\` and \`Review Summary\` pattern detected in wrapper output. The reconciler could not find \`## Review Response Summary\` in the PR comment, indicating a mismatch between the skill output header and the reconciler's expected pattern. Reference: #394."

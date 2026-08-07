@@ -61,6 +61,18 @@
 #   BRIDGE_NUMBER="batch-<session-id>"), callers must pass EMIT_ISSUE_NUMBER=0 — emit_event()
 #   writes "issue":${_issue} unquoted, so a non-numeric value would corrupt the JSON line.
 #
+# opportunistic_verify_result: emits modules/opportunistic-verify.md's judgment (PASS/FAIL/SKIP)
+# for one condition, right after that condition's result is determined in Step 2 (AI
+# Retrospective) (#1236). One event per condition, not aggregated — see
+# modules/event-emission.md's opportunistic_verify_result entry for the rationale.
+#   skill=<skill-name>            calling skill name, e.g. /spec, /review, /verify, /issue, /code
+#   result=<PASS|FAIL|SKIP>       this condition's judgment result
+#   ac_index=<n>                  1-based position within the candidate Issue body's full
+#                                  checkbox enumeration (pre-merge + post-merge), same
+#                                  global-index convention as gh-issue-edit.sh --checkbox
+#   EMIT_ISSUE_NUMBER carries the candidate Issue number being judged (may differ from the
+#   calling skill's own Issue number)
+#
 # verify_fail_marker_posted: /verify FAIL 時に machine-readable marker comment を Issue に append した
 #   iteration=<n>                 verify iteration counter (NEXT_ITERATION)
 #   failed_ac_count=<n>           number of FAIL conditions in auto-verification targets
@@ -171,7 +183,7 @@ persist_auto_session_pointer() {
 # each Bash tool call is a separate process group and does not inherit env vars
 # exported by a wrapper script.
 #
-# Resolution order (exhaustive), Issue #1075:
+# Resolution order (exhaustive), Issue #1075 (revised in #1224):
 #   1. AUTO_EVENTS_LOG already set             -> no-op, return 0 (existing behavior preserved)
 #   2. AUTO_SESSION_ID already set             -> adopt it directly (in-band hand-off, e.g.
 #                                                  --session-id parsed by the caller; also fixes
@@ -182,11 +194,20 @@ persist_auto_session_pointer() {
 #      ${root}/.tmp/auto-session-issue-<N> exists -> adopt it (issue-scoped pointer, written by
 #                                                  persist_auto_session_pointer() above)
 #   4. ${root}/.tmp/auto-session-<PGID> exists -> adopt it
-#   5. ${root}/.tmp/auto-session-current exists -> adopt it (final fallback; does not
-#                                                  guarantee attribution accuracy under
-#                                                  concurrent /auto sessions)
-#   none of the above                          -> no-op (standalone /verify stays
-#                                                  uninstrumented by design)
+#   5. none of the above                       -> no-op, fail-closed. Issue #1224: this
+#                                                  function previously fell back to
+#                                                  ${root}/.tmp/auto-session-current here, but
+#                                                  that file is written only by /auto Step 1, so
+#                                                  a caller that never ran /auto Step 1 cannot be
+#                                                  correctly identified by it — the fallback is
+#                                                  structurally guaranteed to attribute to a
+#                                                  different session (concurrent or stale), never
+#                                                  to the caller itself. Preferring session_id
+#                                                  loss over misattribution, this step now no-ops
+#                                                  (standalone /verify and other manual-
+#                                                  orchestration callers stay uninstrumented by
+#                                                  design; see modules/event-emission.md
+#                                                  "Manual Orchestration (Issue #1224)")
 #
 # issue-scoped is checked before PGID because in-session /verify never has a matching PGID
 # pointer (each Bash tool call gets a fresh process group), and OS PGID reuse could otherwise
@@ -213,7 +234,7 @@ restore_auto_session_pointer() {
   fi
   if [[ -z "${_sid}" ]]; then
     local _pgid; _pgid=$(ps -o pgid= -p $$ | tr -d ' ')
-    _sid="$(cat "${_prefix}.tmp/auto-session-${_pgid}" 2>/dev/null || cat "${_prefix}.tmp/auto-session-current" 2>/dev/null || echo '')"
+    _sid="$(cat "${_prefix}.tmp/auto-session-${_pgid}" 2>/dev/null || echo '')"
   fi
   [[ -z "${_sid}" ]] && return 0
   AUTO_SESSION_ID="${AUTO_SESSION_ID:-$_sid}"

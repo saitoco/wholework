@@ -245,15 +245,25 @@ verify command のカバレッジは良好だった（rubric×2、file_contains�
 - 自動検証 10/10 PASS、post-merge 2 件は manual / opportunistic として未チェック残存
 - AC11（capabilities.workflow=true 実走行検証）は実行プロジェクト = 検証対象プロジェクトという構造上の難しさがあり、別プロジェクトでの確認に持ち越し。`/verify` の post-merge manual AC が「実環境変更を要する確認」となる場合の追跡方法（別 Issue 化？ Spec retrospective での deferred 化？）が議論余地あり
 - **2026-08-07 再訪**: 本リポジトリ自身で `/review 1230 --full --non-interactive` を実行した際に `observation event=pr-review-full config=capabilities.workflow` が発火し、AC11 を再評価した。発火インスタンスが `--non-interactive` (fork context) だったため、`skills/review/workflow-guidance.md` の Pre-flight ガード (再呼び出し保証なし) により Workflow パスではなく静的 Task fan-out フォールバックへ意図的に分岐しており、「Workflow 経路で完走しトークン使用量が出力される」という条件自体は実証できなかった (UNCERTAIN のまま維持)。`/auto` 経由の `/review` は常に `run-review.sh` 経由の fork context であるため、通常運用の発火では AC11 が原理的に検証されない構造的ギャップが判明した。検証には対話セッションでの直接 `/review N --full` 実行 (main context) が必要
+- **2026-08-07 再々訪**: 同日中に `/review 1249 --full --non-interactive` でも同一の `observation event=pr-review-full` が再発火し、全く同じ構造的理由 (fork context → fallback) で UNCERTAIN が再確定した。1 日で 2 回連続の再発は、この AC が `/auto` 主導の通常運用下では実質的に検証不可能であることの実証的裏付けとなった。既存の Improvement Proposal (execution-context 軸の追加 or AC 条件文の限定) の優先度を上げる根拠として記録
+- **2026-08-07 三度目の訪問**: 同日中さらに `/review 1247 --full --non-interactive` の Event-based observation scan からも同一の `observation event=pr-review-full` を検出し、`/verify 575` を dispatch した。本 dispatch の評価も、全く同じ構造的理由 (fork context → `skills/review/workflow-guidance.md` Pre-flight ガードによる静的 Task fan-out フォールバック) で UNCERTAIN と判定した。加えて、本 dispatch を評価する直前に、ほぼ同時刻 (08:23:59Z) に別セッションが同一 Issue に対し同一結論の Acceptance Test Results コメントを投稿済みであることを確認した (並行実行環境での重複検証)。1 日で 3 回 (別セッションの重複含めれば実質 4 回) の再発は、AC11 が `/auto` 経由または `--non-interactive` 経由の `/review` 実行では構造的に検証不可能であることをさらに補強する。この Issue の Improvement Proposal (下記) の優先度を Tier 2 相当へ引き上げる根拠として記録
+- **2026-08-07 四度目の訪問**: 同日中さらに `/review 1250 --full --non-interactive` の Event-based observation scan からも同一の `observation event=pr-review-full` を検出し、`/verify 575` を dispatch した。結果は全く同一 (fork context → 静的 Task fan-out フォールバック → UNCERTAIN)。同日 4 回目の再現により、下記 Improvement Proposal を本 verify 実行の Step 16 で起票することとした (直前の再訪コメントが明記した「次回 `/verify` の Step 16 での起票判断」を消化) — 実際に #1233「observation-trigger: when= 条件ゲートに execution-context 軸を追加」として起票済み (2026-08-07T05:10:10Z)
+- **2026-08-07 五度目の訪問**: 同日中さらに `/review 1252 --full --non-interactive` の Event-based observation scan からも同一の `observation event=pr-review-full` を検出し、`/verify 575` を dispatch した。結果は全く同一 (fork context → 静的 Task fan-out フォールバック → UNCERTAIN)。1 日で 5 回目の再現。Improvement Proposal は既に #1233 として起票済みのため、本訪問では新規起票を行わない (retro-proposals の重複防止に委ねる) — #1233 の優先度を上げる追加の実証データとして記録するに留める
 
 ### Improvement Proposals
 
 - spec 段の Design Gaps/Ambiguities セクションに記載した実装時の知見（本 Issue では args 渡し形式）は、Done として閉じず、対応する **実装ステップ本文** に直接補記するルール化を `skills/spec/SKILL.md` または `spec-test-guidelines.md` に追加する（Review Retrospective より転記）。code フェーズで本文→ステップを順に読む際の漏れを構造的に防止
 - spike レポートの aspirational 表現（「N-vote adversarial verify」など）を Domain file / SKILL.md に転記する際、実装コードと文言が一致するかを review 段でチェックする観点を `skills/review/SKILL.md` または review-bug.md に明記する。今回は review で検出されたが、自動検出（grep ベースの transcription check）の余地がある
 - post-merge `verify-type: manual` 条件で「実環境変更が必要な確認（capability 設定 + 別プロジェクト実行など）」は、Issue クローズ後の追跡が散逸しやすい。`/verify` 完了時に未チェック manual 条件を別 Issue として起票する option（または `retro/verify` ラベルで自動収集する仕組み）を検討
-- AC11 (`observation event=pr-review-full config=capabilities.workflow`) は fork context の `/review` 実行では原理的に発火条件と実証条件が乖離する (`when=` 軸に "実行が main/fork のどちらか" を表現する手段がない)。`modules/observation-trigger.md` の `when=` 宣言可能軸への execution-context 軸追加、または AC 条件文自体を「main context での直接実行時に限る」旨に明記する改善を検討
+- **[#1233 として起票済み]** AC11 (`observation event=pr-review-full config=capabilities.workflow`) は fork context の `/review` 実行では原理的に発火条件と実証条件が乖離する (`when=` 軸に "実行が main/fork のどちらか" を表現する手段がない)。1 日で 5 回の同一結論再現により実証済み。`modules/observation-trigger.md` の `when=` 宣言可能軸への execution-context 軸追加、または AC 条件文自体を「main context での直接実行時に限る」旨に明記する改善を #1233 で追跡中
 
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/575#issuecomment-4697918313
 - saito / MEMBER / first-class / ## Opportunistic Verification (during /review execution) / https://github.com/saitoco/wholework/issues/575#issuecomment-4702023375
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/575#issuecomment-5212596690
+- saito / MEMBER / first-class / ## Acceptance Test Results (prior /verify run, same UNCERTAIN conclusion reached) / https://github.com/saitoco/wholework/issues/575#issuecomment-5212629354
+
+### Phase: verify (cutoff: 2026-06-13T07:49:09Z, latest phase/* label assignment on record)
+No new substantive comments since the prior /verify run above — this run's own trigger fire (`pr-review-full`, from `/review 1249 --full --non-interactive`) reproduces the identical structural situation (fork context → static fan-out fallback) already documented in the prior run's UNCERTAIN judgment.
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/575#issuecomment-5214485981
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/575#issuecomment-5214783341

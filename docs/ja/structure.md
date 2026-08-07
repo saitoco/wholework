@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（76 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（78 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -179,6 +179,7 @@ wholework/
 
 **プロジェクトユーティリティ:**
 - `scripts/collect-recovery-candidates.sh` — `docs/reports/orchestration-recoveries.md` を parse し group-key (素の symptom-short、または エントリの Diagnosis 本文に `- cause:` 行がある場合は `symptom-short/cause-slug`) の頻度を集計。各 entry を個別に判定し、対応 Issue の `closedAt` と比較して除外 (Issue が open ならその group-key の全 entry を除外、closed なら `closedAt` 以前の entry のみ除外し以降を計数。`--issues-json` に `state`/`closedAt` が無い場合は group 自身の最新 `起票済み #N` entry の日時を代替基準とする)。加えて `### Improvement Candidate` 本文が `- N/A` で始まる entry (対応不要な Tier 2 fallback 成功) も除外。`--threshold K` フィルタを適用し `<group-key>\t<count>` 形式で候補を出力 (`--with-tracking` で 3 列目に `tracked:#N:open`/`tracked:#N:closed`/`untracked` を付加 — open/closed の接尾辞は対応 Issue の解決済み state を反映し、state が解決できない場合は素の `tracked:#N` にフォールバックする)。`--issues-json PATH` で Issue 解決用の全 state issue 一覧 (`state`/`closedAt` 付き) を受け取り
+- `scripts/collect-opportunistic-retire-candidates.sh` — コミット済み `docs/sessions/*/events.jsonl` から `opportunistic_verify_result` イベントを集計。(issue, ac_index) 単位でグルーピングし、末尾から連続する判定がすべて `SKIP` である group (trailing-SKIP streak) を `/audit stats --retention` Section 11 向けに報告する
 - `scripts/get-config-value.sh` — `.wholework.yml` から設定値を抽出
 - `scripts/handle-permission-mode-failure.sh` — `permission-mode: auto` 失敗を診断し remediation hint を stderr に出力（heuristic: exit!=0 かつ elapsed<=30s）
 - `scripts/get-verify-permission.sh` — verify コマンドハンドラファイルから permission 値を抽出
@@ -213,7 +214,7 @@ wholework/
 - `scripts/detect-foreign-worktree.sh` — CWD が foreign (呼び出し元と異なる owner の) git worktree 内かどうかを判定する。`modules/worktree-lifecycle.md` の Entry section、`skills/verify/SKILL.md` Step 2 (base branch checkout guard)、`skills/review/SKILL.md` の Opportunistic Verification (worktree exit precondition) から使用される
 - `scripts/reclaim-stale-worktrees.sh` — 完了済み (CLOSED/MERGED) の Issue/PR に対応する stale worktree と孤児ブランチを棚卸し・回収する。既定は dry-run、`--apply` で削除を実行。並行セッション除外 (locked かつ HEAD が main と一致)、未コミット変更の保護、squash merge されたブランチの安全な削除 (`git branch -d` が拒否された場合、MERGED PR の `headRefOid` とブランチ tip が一致するときのみ `-D` にフォールバック) を備える
 - `scripts/detect-wrapper-anomaly.sh` — shell wrapper 出力の既知失敗パターンを検出し、Auto Retrospective の markdown 断片を生成
-- `scripts/detect-external-kill.sh` — `external-kill-parent-respawn` シグネチャ（exit code 137 単独、または exit code 143/unknown かつ wrapper ログの `Exit code: ` トレーラーと `auto-events.jsonl` の `wrapper_exit` イベントの両方が issue/phase について欠如）を機械的に判定する。exit 0 = match、exit 1 = no-match（`modules/orchestration-fallbacks.md#external-kill-parent-respawn` 参照）
+- `scripts/detect-external-kill.sh` — `external-kill-parent-respawn` シグネチャ（exit code 137 単独、または exit code 143/unknown かつ wrapper ログの `Exit code: ` トレーラーと `auto-events.jsonl` の `wrapper_exit` イベントの両方が issue/phase について欠如）を機械的に判定する。exit 0 = match、exit 1 = no-match（`modules/orchestration-fallbacks.md#external-kill-parent-respawn` 参照）。`wrapper_exit` 不在条件は `spec` / `issue` を含む全 phase で判別力を持つ — `run-spec.sh`/`run-issue.sh` は post-claude の emit ブロックに到達する終了 (= wrapper が phase を所有する場合、`_EMIT_PHASE_OWNED`) では毎回 `wrapper_exit` を emit するため (#1228)、これらの phase での不在は phase 全体の偽陽性ではなく external kill のシグナルとなる
 - `scripts/test-failure-classify.sh` — テスト失敗出力を回復カテゴリに分類（snapshot/mock/fixture/logic/infra）。exit 0 = 修復可、exit 1 = 修復不可
 - `scripts/validate-recovery-plan.sh` — orchestration-recovery sub-agent が出力する recovery plan JSON を検証（schema チェック + forbidden ops ガード）
 - `scripts/apply-fallback.sh` — `modules/orchestration-fallbacks.md` の Tier 2 bash projection。wrapper ログから既知の symptom anchor を検出し recovery handler を dispatch する（ハンドラ: dco-signoff-missing-autofix、code-patch-silent-no-op、json-mode-silent-hang）。ハンドラが失敗した場合は exit 2（anchor 不一致の exit 1 と区別）を返す。成功時は自前の `write_recovery_entry()` で `docs/reports/orchestration-recoveries.md` にエントリを記録する（`spawn-recovery-subagent.sh` の Tier 3 writer と同型）

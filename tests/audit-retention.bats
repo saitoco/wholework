@@ -3,6 +3,7 @@
 # Tests for scripts/compute-escalation-level.sh
 
 SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/compute-escalation-level.sh"
+RECOVERY_SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/collect-recovery-candidates.sh"
 
 # --- verify type ---
 
@@ -95,4 +96,37 @@ SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/compute-escal
 @test "non-numeric days exits with status 1" {
   run bash "$SCRIPT" verify abc
   [ "$status" -eq 1 ]
+}
+
+# --- Section 10: Recovery Candidate Frequency (--issues-json consumption) ---
+
+@test "Section 10 collector call: closed-tracked group-key surfaces as Recurring after fix" {
+  RECOVERY_FILE="$BATS_TEST_TMPDIR/recovery.md"
+  cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
+## 2026-06-01 10:00 UTC: manual-recovery-respawn
+
+- Cause: first
+
+## 2026-06-02 10:00 UTC: manual-recovery-respawn
+
+- Cause: second
+
+## 2026-06-03 10:00 UTC: manual-recovery-respawn
+
+- Cause: third
+
+FIXTURE_EOF
+
+  ISSUES_JSON_FILE="$BATS_TEST_TMPDIR/audit-recovery-issues.json"
+  cat > "$ISSUES_JSON_FILE" << 'JSON_EOF'
+[{"number": 1014, "title": "recoveries: manual-recovery-respawn", "state": "CLOSED", "closedAt": "2026-05-01T00:00:00Z"}]
+JSON_EOF
+
+  # Same invocation shape as skills/audit/SKILL.md Section 10 step 2:
+  # --threshold 1 --with-tracking --issues-json <all-state issues file>.
+  run bash "$RECOVERY_SCRIPT" "$RECOVERY_FILE" --threshold 1 --with-tracking --issues-json "$ISSUES_JSON_FILE"
+  [ "$status" -eq 0 ]
+  # 3rd column must be tracked:#1014:closed (not the degrade-path bare "tracked:#1014")
+  # so Section 10 step 4's "Recurring after fix" metric counts this group-key.
+  echo "$output" | grep -E $'^manual-recovery-respawn\t3\ttracked:#1014:closed$'
 }

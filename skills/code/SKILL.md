@@ -319,7 +319,14 @@ If `ROUTE=operate` (detected in Step 0), follow this subsection instead of the s
 
 **Operate route**: skip this entire Step 9 (no repository code changes to test) and proceed directly to Step 10.
 
-**Execution surface constraint (applies to every test command run in this Step — the full-suite override below or whatever `test-runner.md` delegates to):** when `/code` itself is running in an execution surface without a re-invocation guarantee (`--non-interactive` mode, a fork-executed Skill, the Workflow tool path — see `${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting" for the exhaustive list and rationale), run the test command in the **foreground** (do not set `run_in_background: true`), with an explicit Bash `timeout` covering the measured duration (e.g. `timeout: 600000`, the tool's 10-minute ceiling, for the full-suite override's ~407s measured duration), to avoid an infinite wait that silently exhausts `auto-retry-on-fail.max_iterations` (Issue #994). Interactive-mode behavior (background + await notification) is unchanged.
+**Execution surface constraint (applies to every test command run in this Step — the full-suite override below or whatever `test-runner.md` delegates to):** when `/code` itself is running in an execution surface without a re-invocation guarantee (`--non-interactive` mode, a fork-executed Skill, the Workflow tool path — see `${CLAUDE_PLUGIN_ROOT}/modules/execution-context.md` § "Re-invocation Guarantee and Notification-Dependent Waiting" for the exhaustive list and rationale), run the test command in the **foreground** (do not set `run_in_background: true`), with an explicit Bash `timeout` covering the measured duration, to avoid an infinite wait that silently exhausts `auto-retry-on-fail.max_iterations` (Issue #994). Interactive-mode behavior (background + await notification) is unchanged.
+
+**The timeout must fit inside the tool ceiling — an explicit `timeout` alone does not guarantee foreground execution.** `timeout: 600000` (10 minutes) is the Bash tool's maximum, and a command that runs past it is **moved to the background automatically**. From the agent's side this looks like "the command I launched in the foreground became a background task", and waiting on its completion notification reproduces the exact failure this constraint exists to prevent. Issue #1213 iteration 1 measured this: a serial `bats tests/` run exceeded 10 minutes and the code phase silently no-opped four times in a row, exhausting `auto-retry-on-fail` (3/3) and discarding the same implementation four times.
+
+Two rules follow:
+
+1. **Keep the command inside the ceiling.** For the full-suite override below, use the parallel form — it completes well inside 10 minutes where the serial form does not (measured 2026-08-07: the serial form exceeded the ceiling; the parallel form completed the full suite well inside it).
+2. **Never wait on a completion notification, even if the tool moves the command to the background anyway.** That is a failure to report, not a state to wait on. Report it and let the phase's completion check surface the mismatch — do not end the turn expecting to be re-invoked.
 
 #### Behavioral Change Detection
 
@@ -331,7 +338,7 @@ Before delegating scope selection to test-runner, check whether this implementat
 [ -d tests ] || { echo "skip: tests/ directory not present — behavioral change detection skipped"; }
 ```
 
-If `tests/` does not exist (e.g., projects without a bats test suite), skip this entire Behavioral Change Detection subsection — there are no tests to reference the modified file, and the full-suite override (`bats tests/`) cannot run. Proceed directly to `Read test-runner.md` below (which will return "Test framework not detected" if no test framework is configured at all).
+If `tests/` does not exist (e.g., projects without a bats test suite), skip this entire Behavioral Change Detection subsection — there are no tests to reference the modified file, and the full-suite override (`bats --jobs ...`) cannot run. Proceed directly to `Read test-runner.md` below (which will return "Test framework not detected" if no test framework is configured at all).
 
 **Detection (2 checks):**
 
@@ -347,12 +354,16 @@ If `tests/` does not exist (e.g., projects without a bats test suite), skip this
      ```
      (The pre-check above already confirmed `tests/` exists; without it, `grep -rl` would emit `No such file or directory` to stderr and exit non-zero.) A bare-filename match (e.g. `SKILL.md`) collides across every Skill's identically-named file and false-positives on unrelated tests; the full path match scopes the check to genuine references.
    - If the only matching test file is the direct counterpart of the modified file (e.g., `tests/run-code.bats` for `scripts/run-code.sh`), or there are no matches: narrow scope is acceptable — proceed to `Read test-runner.md`.
-   - If additional test files reference the modified file: behavioral change confirmed — override test-runner auto-detection scope and run the full suite:
+   - If additional test files reference the modified file: behavioral change confirmed — override test-runner auto-detection scope and run the full suite **in parallel**. Resolve the job count as a separate, literal step first — a `$(...)` command substitution inside the `bats` invocation itself is refused by this project's worktree isolation guard, which is always active here since `/code` always runs Step 9 from inside a worktree (Step 2):
      ```bash
-     bats tests/
+     nproc 2>/dev/null || sysctl -n hw.logicalcpu
      ```
-     (Same pre-check guard applies — `bats tests/` requires the directory to exist. See the execution surface constraint above for foreground/timeout requirements.)
-   - Handle FAIL via Tier 0 structured recovery below. If PASS, continue with the remaining validations in this step.
+     Then substitute the printed value literally (not via `$(...)`):
+     ```bash
+     bats --jobs <N> tests/
+     ```
+     (Same pre-check guard applies — the `tests/` directory must exist. `--jobs` is required, not optional: the serial form exceeds the Bash tool's 10-minute ceiling on this repository's suite and is auto-moved to the background, which is the failure mode described in the execution surface constraint above. `nproc` is Linux-only, so the `sysctl` fallback keeps the command portable to macOS — the same portable form `modules/verify-executor.md` uses for `command` verify commands. If the `--jobs` invocation itself fails naming `parallel` — a missing-GNU-`parallel` environment, not a test failure — follow `${CLAUDE_PLUGIN_ROOT}/modules/test-runner.md` § "Fallback when `--jobs` is unavailable" instead of routing into Tier 0 below.)
+   - Handle FAIL via Tier 0 structured recovery below (this applies to genuine test failures only — see the missing-`parallel` cross-reference above for the tooling-gap case). If PASS, continue with the remaining validations in this step.
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/test-runner.md` and follow the "Processing Steps" section to run tests.
 

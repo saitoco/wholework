@@ -35,7 +35,7 @@ Generate a session identifier and record it in a PGID-specific pointer file so s
 
 **Session boundary isolation design**: Each `/auto` session uses its process group ID (PGID) as part of the pointer file name (`.tmp/auto-session-${PGID}`). This prevents parallel `/auto` sessions from overwriting each other's pointer file — each session's sub-processes (run-auto-sub.sh, run-code.sh, run-review.sh, run-merge.sh) share the same PGID as their parent, so they naturally read the correct session_id without cross-session contamination.
 
-1. Generate `SESSION_ID` and create the PGID-specific pointer file. Also write the PGID-independent `.tmp/auto-session-current` pointer as the last-resort fallback for callers that have neither a PGID-matching nor an issue-scoped pointer — note that under concurrent `/auto` sessions this file does not guarantee attribution accuracy (Issue #1075), so in-session `Skill(skill="wholework:verify", ...)` dispatches use the `--session-id` in-band hand-off described below instead — see `restore_auto_session_pointer()` in `modules/event-emission.md`:
+1. Generate `SESSION_ID` and create the PGID-specific pointer file. Also write the PGID-independent `.tmp/auto-session-current` pointer, still read by each `run-*.sh` wrapper's own independent inline fallback for callers that have neither a PGID-matching nor an issue-scoped pointer — note that under concurrent `/auto` sessions this file does not guarantee attribution accuracy (Issue #1075), so in-session `Skill(skill="wholework:verify", ...)` dispatches use the `--session-id` in-band hand-off described below instead. `restore_auto_session_pointer()` in `modules/event-emission.md` no longer reads this file at all after Issue #1224 (removed as its last resolution step, to avoid attributing to a session that never wrote it):
    ```bash
    mkdir -p .tmp
    SESSION_ID="$$-$(date +%s)"
@@ -965,7 +965,7 @@ If `matches_expected: false`: proceed to Tier 2.
 Run the anomaly detector:
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh --log .tmp/wrapper-out-$NUMBER-$PHASE.log --exit-code $EXIT_CODE --issue $NUMBER --phase $PHASE
+${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh --log .tmp/wrapper-out-$NUMBER-$PHASE.log --events .tmp/auto-events.jsonl --exit-code $EXIT_CODE --issue $NUMBER --phase $PHASE
 ```
 
 If detector output is non-empty (known pattern matched):

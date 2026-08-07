@@ -187,9 +187,20 @@ The gate adds an optional `keyword=<text>` attribute to the observation AC tag:
 
 When the emitter also passes `--context-file <path>` (e.g., the Spec file for the review that
 just completed), `opportunistic-search.sh`/`observation-trigger.sh` only include Issues whose
-matched AC line carries a `keyword=` value found in that file's content (case-insensitive
-substring match via `grep -qi`). ACs without `keyword=`, or invocations without
-`--context-file`, match unconditionally — the existing behavior is preserved.
+matched AC line carries a `keyword=` value found in that file's content, with path-like tokens
+stripped first (case-insensitive substring match via `grep -qi`). ACs without `keyword=`, or
+invocations without `--context-file`, match unconditionally — the existing behavior is
+preserved.
+
+**Path-like token exclusion (Issue #1220)**: a naive full-content substring match false-positives
+when the keyword happens to appear only as a fragment of an unrelated file path — e.g.
+`keyword=workflow` matched `` `docs/workflow.md` `` in a Spec's file listing even though the Spec
+had nothing to do with GitHub Actions workflows (observed on PR #1218 / Issue #476's
+`event=pr-review-full keyword=workflow` AC). To avoid this, `opportunistic-search.sh` strips
+path-like tokens (a run of `[A-Za-z0-9._-]` characters containing at least one `/`, e.g.
+`docs/workflow.md`, `scripts/opportunistic-search.sh`) from the context file's content before
+matching. A word-boundary match (`grep -qiw`) does not fix this: `/` and `.` are non-word
+characters in regex, so `docs/workflow.md` already satisfies `\bworkflow\b`.
 
 **Arguments table addition (both scripts):**
 
@@ -200,7 +211,8 @@ substring match via `grep -qi`). ACs without `keyword=`, or invocations without
 **Matching specification:**
 
 - Extraction: `keyword=<value>` is read from the AC line via `grep -oE 'keyword=[^ >]+'` (stops at the next space or `-->`).
-- Comparison: case-insensitive substring match of `<value>` against `--context-file`'s full content (`grep -qi -- "$KEYWORD" "$CONTEXT_FILE"`).
+- Path-like token stripping: `--context-file`'s content is filtered once per process (cached) via `sed -E 's#[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+##g' "$CONTEXT_FILE"` before comparison.
+- Comparison: case-insensitive substring match of `<value>` against the filtered content (`echo "$FILTERED_CONTEXT" | grep -qi -- "$KEYWORD"`).
 - Gate disabled (unconditional match) when: no `keyword=` attribute on the AC line, no `--context-file` given, or the given path does not exist.
 - No semantic/LLM judgment is performed here — this is a lightweight pre-filter; the actual acceptance decision still belongs to `/verify`.
 

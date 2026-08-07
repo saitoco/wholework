@@ -52,6 +52,8 @@
 No new comments since last phase.
 
 - saito / MEMBER / first-class / <!-- wholework-event: type=execution-log phase=code issue=1166 --> / https://github.com/saitoco/wholework/issues/1166#issuecomment-5211867474
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1166#issuecomment-5213569801
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1166#issuecomment-5213750237
 ## Code Retrospective
 
 ### Deviations from Design
@@ -77,3 +79,31 @@ No new comments since last phase.
 ### Notes for Next Phase
 - This Issue has no implementation diff (operate route) — `/review`/`/merge` should expect an empty diff and treat the 6 Issue comments + label transitions + the Execution Log comment as the deliverable.
 - No PR exists for this Issue; the `--pr` flag passed to `/code` was overridden by operate-route detection (Spec's `## Changed Files` and `## Implementation Steps` both indicated external-tool-only operations).
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- `SPEC_DEPTH=light` (Size M) でも Issue body の前提の誤り (#1061 は「原理的に観測不能」ではなく `always-pr: true` の一時設定で自己完結再現可能) を調査で捕捉し、Notes に記録した上で別理由 (再現コストに見合う検証価値がない) で retire を選んだ。前提の誤りを黙って踏襲せず、判断根拠を差し替えた点が良い。
+
+#### design
+- Implementation Steps の rationale 表がそのまま各 Issue へのコメント本文として再利用でき、適応作業が不要だった。operate route の Spec としては理想的な粒度。
+
+#### code
+- Spec の Implementation Steps どおりに 6 件の retire コメント + `phase/verify` → `phase/done` 遷移を実行し、逸脱・手戻りなし。operate route では `/review` が検査できる git diff が存在しないため、`/code` 側で pre-merge の rubric 3 件を直接評価してチェックボックスを倒した判断は正しい。
+
+#### review
+- operate route のため `/review` フェーズは実行されていない (`run-auto-sub.sh` は Size M から `code-pr` を dispatch したが、`/code` の operate override により PR が作られず、`code-pr` の completion check が失敗して wrapper は exit 1 で終了した)。この orchestration 異常は `docs/reports/orchestration-recoveries.md` に `cause=operate-route-pr-dispatch-mismatch` として記録済みで、恒久対策は #1240 で扱う。
+
+#### merge
+- merge フェーズなし (PR 不在)。
+
+#### verify
+- Pre-merge 3 件はすべて `/code` 時点でチェック済みのため already-checked skip rule により SKIPPED。post-merge の observation AC (`event=auto-run`) は 1 回目の verify では未発火で SKIPPED、2 回目で PASS 判定に到達し `phase/done` + close まで完了した。FAIL / UNCERTAIN は 0 件。
+- Spec が採った retire 方式 (AC 行は編集せず retire コメント + `phase/verify` → `phase/done` 遷移) が、observation AC の評価局面で設計どおり機能した。`skills/audit/SKILL.md` § Manual Waiting Count の母集団は `phase/verify` ラベル保持 Issue なので、ラベル遷移だけで 6 件が集計対象から外れる。AC 行の本文を編集する必要がなく、retire の判断根拠がそのまま Issue 本文に残る点も良い (#1165 の「`### Retired Post-merge Conditions` 見出しへ退避」方式と結果は同じだが、こちらのほうが編集量が少ない)。
+- **operate route + observation AC の組み合わせで deadlock が実在することを確認した**。operate route の Issue は `closes #N` コミットを持たないため CLOSE 契機が `/verify` の全 AC 充足のみになる。一方 `scripts/opportunistic-search.sh:202` の母集団は `--state closed` 固定なので、OPEN のままの本 Issue は `observation-trigger.sh --event auto-run` のマッチ集合 (本セッションでは 83 件) から構造的に除外され、`auto-run` の通知コメントが届かない。結果として「close されないと通知母集団に入らない → 通知が来ないと observation AC が評価されない → AC が評価されないと close されない」という閉路が成立する。本セッションでは親セッションがスキャナ欠陥の補正として同一形式の通知を手動投稿して打開したが、恒久対策は #1242 (母集団の closed 限定を解消) が担う。
+- 親 #1158 の Spec が置く precondition gate (「sub-issue 全件が CLOSED または `phase/done`」) は、上記 deadlock が解消されない限り operate route の sub-issue を含む XL では同一セッション内で満たせない。この経路の欠落は #1241 (XL 親の集約成果物経路) のスコープに含まれる。
+
+### Improvement Proposals
+- N/A — 本 Issue から派生する構造的改善は既に #1240 (`run-auto-sub.sh` の operate route 非対応)、#1241 (XL 親の集約成果物経路の未定義)、#1242 (走査母集団の closed 限定 — 本 Issue の deadlock の真因) として起票済み。orchestration 異常の記録も `docs/reports/orchestration-recoveries.md` が SSoT として保持している。

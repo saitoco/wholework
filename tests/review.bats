@@ -101,3 +101,25 @@ step12_3_section() {
 @test "Step 12.3: foreground execution constraint reminder present for full-suite re-checks" {
     step12_3_section | grep -q -F "foreground"
 }
+
+@test "Non-Interactive Mode Behavior: timeout ceiling (600000) is stated" {
+    non_interactive_mode_behavior_section | grep -q -F "600000"
+}
+
+@test "Non-Interactive Mode Behavior: exceeding the ceiling backgrounds the command" {
+    non_interactive_mode_behavior_section | grep -q -F "moved to the background"
+}
+
+@test "Non-Interactive Mode Behavior: parallel bats form is prescribed for a whole suite" {
+    non_interactive_mode_behavior_section | grep -q -F "bats --jobs"
+}
+
+@test "Non-Interactive Mode Behavior: job count is resolved as a separate literal step, not inline command substitution" {
+    run non_interactive_mode_behavior_section
+    [[ "$output" != *'bats --jobs $('* ]]
+    [[ "$output" == *"bats --jobs <N> tests/"* ]]
+}
+
+@test "Step 12.3: parallel bats form is referenced for full-suite re-checks" {
+    step12_3_section | grep -q -F "bats --jobs"
+}

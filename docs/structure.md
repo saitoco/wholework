@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (76 files)
+├── scripts/             # Utility scripts used by skills and agents (78 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -186,6 +186,7 @@ Key modules:
 
 **Project utilities:**
 - `scripts/collect-recovery-candidates.sh` — parse `docs/reports/orchestration-recoveries.md`; count group-key frequency (group-key is a bare symptom-short, or `symptom-short/cause-slug` when an entry's Diagnosis body has a `- cause:` line); exclude entries individually by comparing each entry's timestamp against its resolved Issue's `closedAt` (open Issue: exclude all entries in the group; closed: exclude entries at or before `closedAt`, count entries after — falls back to the group's own latest `起票済み #N` entry timestamp as cutoff when `--issues-json` lacks `state`/`closedAt`); additionally excludes entries whose `### Improvement Candidate` body starts with `- N/A` (Tier 2 fallback successes needing no action); apply `--threshold K` filter; output `<group-key>\t<count>` candidates (add `--with-tracking` for a 3rd `tracked:#N:open`/`tracked:#N:closed`/`untracked` column — the open/closed suffix reflects the tracked Issue's resolved state, falling back to plain `tracked:#N` when the state could not be resolved); accepts `--issues-json PATH` (all-state issue list with `state`/`closedAt`) for Issue resolution
+- `scripts/collect-opportunistic-retire-candidates.sh` — aggregate `opportunistic_verify_result` events from committed `docs/sessions/*/events.jsonl`; group by (issue, ac_index) and report groups whose most recent consecutive judgments are all `SKIP` (trailing-SKIP streak), for `/audit stats --retention` Section 11
 - `scripts/get-config-value.sh` — extract a configuration value from `.wholework.yml`
 - `scripts/handle-permission-mode-failure.sh` — diagnose `permission-mode: auto` failures and print remediation hint to stderr (heuristic: exit!=0 AND elapsed<=30s)
 - `scripts/get-verify-permission.sh` — extract permission value from a verify command handler file
@@ -221,7 +222,7 @@ Key modules:
 - `scripts/detect-foreign-worktree.sh` — detect whether CWD is inside a foreign (different-owner) git worktree; used by `modules/worktree-lifecycle.md` Entry section, `skills/verify/SKILL.md` Step 2 (base branch checkout guard), and `skills/review/SKILL.md` Opportunistic Verification (worktree exit precondition)
 - `scripts/reclaim-stale-worktrees.sh` — inventory and reclaim stale worktrees and orphan branches for Issues/PRs that have already completed (CLOSED/MERGED); dry-run by default, `--apply` to perform deletion; concurrent-session guard (locked + HEAD matches main), uncommitted-changes guard, and safe squash-merge branch deletion (`git branch -d` fallback to `-D` only when the branch tip matches the MERGED PR's `headRefOid`)
 - `scripts/detect-wrapper-anomaly.sh` — detect known failure patterns in shell wrapper output and generate Auto Retrospective markdown fragments
-- `scripts/detect-external-kill.sh` — mechanically detect the `external-kill-parent-respawn` signature (exit code 137 alone, or exit code 143/unknown with both the wrapper log `Exit code: ` trailer and the `auto-events.jsonl` `wrapper_exit` event absent for the issue/phase); exit 0 = match, exit 1 = no-match (see `modules/orchestration-fallbacks.md#external-kill-parent-respawn`)
+- `scripts/detect-external-kill.sh` — mechanically detect the `external-kill-parent-respawn` signature (exit code 137 alone, or exit code 143/unknown with both the wrapper log `Exit code: ` trailer and the `auto-events.jsonl` `wrapper_exit` event absent for the issue/phase); exit 0 = match, exit 1 = no-match (see `modules/orchestration-fallbacks.md#external-kill-parent-respawn`). The `wrapper_exit`-absence condition now holds discriminating power for every phase, including `spec` and `issue` — `run-spec.sh`/`run-issue.sh` emit `wrapper_exit` on every exit that reaches the post-claude emit block, i.e. whenever the wrapper owns the phase (`_EMIT_PHASE_OWNED`, #1228), so its absence there is external-kill signal rather than a phase-wide false positive
 - `scripts/test-failure-classify.sh` — classify test failure output into recovery categories (snapshot/mock/fixture/logic/infra); exit 0 = repairable, exit 1 = not repairable
 - `scripts/validate-recovery-plan.sh` — validate recovery plan JSON from orchestration-recovery sub-agent (schema check + forbidden ops guard)
 - `scripts/apply-fallback.sh` — Tier 2 bash projection of `modules/orchestration-fallbacks.md`; detects known symptom anchors from wrapper logs and dispatches recovery handlers (handlers: dco-signoff-missing-autofix, code-patch-silent-no-op, json-mode-silent-hang), exiting 2 (anchor matched but handler failed, distinct from anchor-not-matched exit 1) on handler failure; records successful recoveries to `docs/reports/orchestration-recoveries.md` via its own `write_recovery_entry()`, mirroring `spawn-recovery-subagent.sh`'s Tier 3 writer

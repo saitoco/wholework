@@ -421,6 +421,36 @@ MOCK
     [[ "$output" != *"json-mode-silent-hang"* ]]
 }
 
+@test "ci wait silence: detects when ci_wait event matches issue and phase" {
+    echo "watchdog: still waiting (json mode), silent for 1800s (pid=99)" > "$LOG_FILE"
+    EVENTS_FILE="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    printf '{"ts":"2026-08-06T15:35:29Z","issue":684,"event":"ci_wait","session_id":"1","pr":100,"phase":"code","wait_sec":"600"}\n' > "$EVENTS_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --events "$EVENTS_FILE" --exit-code 143 --issue 684 --phase code
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"ci-wait-silence-timeout"* ]]
+    [[ "$output" != *"json-mode-silent-hang"* ]]
+    [[ "$output" == *"### Orchestration Anomalies"* ]]
+    [[ "$output" == *"### Improvement Proposals"* ]]
+}
+
+@test "ci wait silence: falls back to json-mode-silent-hang when ci_wait event is for a different phase" {
+    echo "watchdog: still waiting (json mode), silent for 1800s (pid=99)" > "$LOG_FILE"
+    EVENTS_FILE="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    printf '{"ts":"2026-08-06T15:35:29Z","issue":684,"event":"ci_wait","session_id":"1","pr":100,"phase":"review","wait_sec":"600"}\n' > "$EVENTS_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --events "$EVENTS_FILE" --exit-code 143 --issue 684 --phase code
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"json-mode-silent-hang"* ]]
+    [[ "$output" != *"ci-wait-silence-timeout"* ]]
+}
+
+@test "ci wait silence: falls back to json-mode-silent-hang when --events is omitted" {
+    echo "watchdog: still waiting (json mode), silent for 1800s (pid=99)" > "$LOG_FILE"
+    run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 143 --issue 684 --phase code
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"json-mode-silent-hang"* ]]
+    [[ "$output" != *"ci-wait-silence-timeout"* ]]
+}
+
 @test "review-completion-false-negative: detects matches_expected false with phase review" {
     printf '"matches_expected":false\n"phase":"review"\n' > "$LOG_FILE"
     run bash "$SCRIPT" --log "$LOG_FILE" --exit-code 1 --issue 547 --phase review

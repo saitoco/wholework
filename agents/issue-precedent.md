@@ -3,6 +3,7 @@ name: issue-precedent
 description: Precedent Investigation: extract learnings from similar Issue/Spec retrospectives (for L/XL Issue parallel investigation)
 tools: Read, Glob, Grep, SendMessage, Write
 model: opus
+effort: high
 ---
 
 # Precedent Investigation Agent

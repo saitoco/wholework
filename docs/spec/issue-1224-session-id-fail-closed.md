@@ -80,3 +80,64 @@
 
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1224#issuecomment-5212373223
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- The Spec's own Notes (line 78, "`skills/auto/SKILL.md` Step 1 の記述は変更しない") turned out to be based on an incomplete reading of that line's actual wording. The Spec's reasoning treated the line as describing the general "wrapper script's own independent fallback" concept, which does remain correct — but the line's literal text specifically names `restore_auto_session_pointer()` as the consumer of the `.tmp/auto-session-current` last-resort fallback, and that specific claim became false once this PR removed that function's read of the file. `review-light`'s documentation-consistency pass caught the gap between the Spec's stated conclusion and the line's literal content; the code phase's own reasoning did not re-verify the line's exact wording against the diff's actual effect on `restore_auto_session_pointer()`. Takeaway for future Specs: when a Notes entry justifies *not* changing a line by paraphrasing its meaning, double check the paraphrase against the line's literal wording — not just its intended concept — especially when the line names a specific function/symbol that the Implementation Steps are modifying.
+
+### Recurring issues
+
+- Nothing to note — this is the first Issue in recent sessions to remove a fallback step from `restore_auto_session_pointer()`'s resolution order.
+
+### Acceptance criteria verification difficulty
+
+- Nothing to note. All 4 Pre-merge ACs (3 `rubric` + 1 `command`) verified cleanly with no UNCERTAIN and no verify-command syntax issues. The `command "bats tests/emit-event.bats"` AC resolved via CI reference fallback (`Run bats tests` job SUCCESS) since `/review` runs in safe mode.
+
+## Phase Handoff
+<!-- phase: merge -->
+
+### Key Decisions
+- Pre-merge AC gate: all 4 pre-merge ACs already checked (`unchecked_count=0`) and no `review_incomplete_fallback` — proceeded without an override marker
+- `gh-pr-merge-status.sh` reported `mergeable=false, reason=ci_failing`; investigated CI directly rather than treating it as a genuine regression — the "Test" workflow ran twice for the identical commit (`7b5132c3`), with only one run failing on a single unrelated flaky test (`worktree-merge-push.bats`: "`--from with base-diverged and rebase conflict aborts and exits non-zero`"), while the parallel run of the same commit passed the same test. Recorded this as an Auto-Resolve Log comment on Issue #1224 and proceeded with the squash merge per non-interactive auto-resolve policy
+- Squash-merged and deleted the remote branch successfully; no rebase/conflict resolution was needed
+
+### Deferred Items
+- The Post-merge observation AC (`/auto` を経由しない wrapper 個別実行で `/verify` を走らせた際、event が他セッションの session_id を持たないことを確認する`, `event=auto-run session=next`) remains unverified — it requires a live post-merge manual-orchestration run and is out of scope for `/merge`
+- None else
+
+### Notes for Next Phase
+- `/verify` should watch for the Post-merge observation AC firing on the next manual-orchestration `/auto`-external run, per `event=auto-run session=next`
+- The flaky `tests/worktree-merge-push.bats` case observed during this merge (`--from with base-diverged and rebase conflict aborts and exits non-zero`) is unrelated to this Issue's change; no action taken here, but worth noting if it recurs
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- AC を rubric ベースの outcome 記述に留め、案 A/B/C の選定を `/spec` に委ねた判断が有効に働いた。実際に `/spec` が案 A+B を採用し C を不採用としたが、AC 側の変更は一切不要だった (`docs/tech.md` 「Do not embed implementation means in ACs」の実例)
+- Autonomous Auto-Resolve Log の 2 件目 (集計側互換性は `get-auto-session-report.sh` が既に空 session_id を除外済みのため追加 AC 不要) は、起票時点で調査により懸念を解消して AC 増殖を防いだ良い例
+
+#### spec
+- 案 C (`current` に鮮度判定) の不採用理由を「閾値の恣意性」と明示したのは妥当。Issue 本文の検討候補表の記述と整合している
+- 一方、Spec の Notes が `skills/auto/SKILL.md` Step 1 の記述を「変更しない」と結論づけた根拠は、当該行の**逐語的な文言ではなく意図の言い換え**に基づいていた。実際にはその行が `restore_auto_session_pointer()` を `current` フォールバックの消費者として名指ししており、本 PR がその読み取りを削除した時点で記述が偽になった。`/review` の documentation-consistency パスが検出 (Spec § review retrospective に記録済み)
+
+#### code
+- Tier 3 recovery が code-pr フェーズで発火し成功 (`docs/reports/orchestration-recoveries.md` L74 に記録済み、本節では重複記載しない)。pr route では `git push origin <branch>` が `validate-recovery-plan.sh` の禁止パターンに一致しないため、push + `gh pr create` の復旧案がそのまま通った
+- 同一バッチの #1223 (patch route) では同種の状態から Tier 3 が `git push origin main` を提案して棄却されており、**route による Tier 3 復旧可能性の非対称性**が同一セッション内で対照的に観測された。この非対称性は #1081 に追記済み
+
+#### review
+- Pre-merge AC 4 件 (rubric×3 + command×1) すべて UNCERTAIN なしで検証完了。`command "bats tests/emit-event.bats"` は `/review` が safe mode のため CI 参照フォールバック (`Run bats tests` job SUCCESS) で解決した
+- Spec の言い換えと逐語文言の乖離を検出できた点で、documentation-consistency パスが実効を持った
+
+#### merge
+- `gh-pr-merge-status.sh` が `mergeable=false, reason=ci_failing` を返したが、同一コミット `7b5132c3` に対する "Test" workflow の 2 回実行のうち片方のみが `tests/worktree-merge-push.bats` の 1 件で失敗し、もう片方は同じテストを通過していた。flaky と判定して squash merge を続行し、Auto-Resolve Log を Issue にコメント記録 (非対話 auto-resolve ポリシー準拠)
+
+#### verify
+- Pre-merge 4 件は `/review` で checked 済みのため already-checked skip rule により SKIPPED。Post-merge 1 件は `event=auto-run` 未発火のため SKIPPED。FAIL / UNCERTAIN ゼロ
+- 本 Issue の変更 (fail-closed 化) が着地した直後の実行にあたるが、本 `/verify` の event は `session_id: 16501-1786070314` (親 `/auto` の実 SESSION_ID) に正しく帰属した。`--session-id` in-band ハンドオフ経路が fail-closed 化の影響を受けていないことを確認。ただし Post-merge AC が問う「wrapper 個別実行の手動オーケストレーション形態」とは実行形態が異なるため、これは AC の PASS 根拠にはならない (観測スコープ外 — `modules/opportunistic-verify.md` の判定基準に従う)
+
+### Improvement Proposals
+
+- `tests/worktree-merge-push.bats` の `--from with base-diverged and rebase conflict aborts and exits non-zero` が flaky。同一コミットに対する 2 回の CI 実行で結果が分かれた (1 回目 FAIL / 2 回目 PASS)。現時点では 1 回の観測のみで再発性は未実証、かつ対象は単一テストファイルのため、起票せず watch item として記録に留める。再発した場合は rebase conflict 生成部分の非決定性 (一時ディレクトリ・タイムスタンプ・並行 lock 待ちのいずれか) を調査対象とする

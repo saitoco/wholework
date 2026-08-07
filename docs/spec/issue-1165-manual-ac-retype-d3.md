@@ -16,6 +16,8 @@ cutoff: 未確定 — Issue timeline に `phase/*` ラベル付与イベント�
 
 結果: **コメントなし** (`gh issue view 1165 --json comments` が空配列)。Cross-phase marker (`type=verify-fail` / `type=preview-ac-unverified`) の追加スキャンも該当なし。
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1165#issuecomment-5213532595
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1165#issuecomment-5213691799
 ## Autonomous Auto-Resolve Log
 
 `/spec 1165 --non-interactive` で自動解決した曖昧点 3 件。詳細な却下候補は Issue 本文の `## Auto-Resolved Ambiguity Points` 節に記録済み。
@@ -279,3 +281,35 @@ Spec 自身が § Notes で「GitHub 検索インデックスの遅延」とい�
 ### Acceptance criteria verification difficulty
 
 Issue #1165 の Pre-merge AC 8 件 (rubric 3 + github_check 5) はいずれも Step 8 で PASS と判定され、UNCERTAIN は発生しなかった。rubric によるマッピング表の網羅性・根拠記録の意味論的検証と、github_check による GitHub 実状態の直接確認が明確に役割分担しており、verify command の記述・分類に起因する曖昧さはなかった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Pre-merge AC を rubric 3 + `github_check` 5 に分担させた設計が有効だった。rubric はマッピング表の網羅性・判断根拠という意味論を、`github_check` は代表 Issue の GitHub 実状態というリテラル事実を扱い、役割が重ならなかった。
+- `### 別途起票候補 (本 Issue のスコープ外)` を spec retrospective に設けて 3 件を先送りした判断は妥当だが、この見出し名は `modules/retro-proposals.md` が走査する `### Improvement Proposals` と一致しないため、そのままでは Issue 起票パイプラインに乗らない。本 verify retrospective で `### Improvement Proposals` へ転記して回収した。
+
+#### design
+- retire の実行形態を「`### Retired Post-merge Conditions` 見出しへの退避」にした判断は、`check-ac-checkbox-format.sh` の awk が `^### ` で `in_section` を解除する実挙動に依存して設計されており、実装後も破綻していない。前例のない慣行を導入する際に依存先の実挙動を明記した点が良かった。
+
+#### code
+- 先行セッションが GitHub 側編集を完了済みでレジューム状態だった (#1163 / #1164 と同型)。二重適用を避けて検証スクリプトへ置き換えた判断は正しく、実データ突合により 16 再型付け行 + 6 retire 行 + 4 ラベル遷移すべてを確認できている。
+
+#### review
+- **誤診断の転記伝播が実害として顕在化した**: Spec が事前に用意した仮説 (「GitHub 検索インデックスの遅延」) を code フェーズが検証せず採用し、report / Code Retrospective / Phase Handoff の 3 箇所へ同一の誤診断を転記した。review フェーズの review-bug エージェント 2 系統が `collect-run-facts.sh` の実行結果と `when=` ゲートのコード読解から真因 (`when=mode:batch` による設計どおりの確定的除外) を特定し、3 箇所すべてを修正した。review が spec/code の見落としを実際に捕捉した好例。
+
+#### merge
+- `gh-pr-merge-status.sh` の初回応答が `mergeable=UNKNOWN` (GitHub 側の計算待ち) で、30 秒待機後の自動リトライで `clean` を得た。リトライ機構が想定どおり機能している。
+
+#### verify
+- Post-merge AC は `observation event=auto-run` 1 件のみ。1 回目の verify では未発火で SKIPPED だったが、同一 `/auto 1158` セッション内で `observation-trigger.sh --event auto-run` を実行して発火させた後、2 回目の verify で PASS 判定に到達し `phase/done` へ遷移した。FAIL / UNCERTAIN は 0 件。
+- Pre-merge 8 件はすべて `/review` 時点で PASS 済みのため already-checked skip rule により SKIPPED。verify 側で判定が覆る事象はなかった。
+- **本 Issue の spec retrospective が予告した「母集団 closed 限定」の欠陥が、evaluation 時に別の形で顕在化した**: baseline の 79 件は `docs/stats/2026-08-05.md` が 90 日窓 (created ≥ 2026-05-07、母集団 167 件) で計測した値であり、全期間スキャン (母集団 320 件) では 123 件という全く異なる数字になる。AC 文面に母集団定義がないため、素朴に再計測すると「減少どころか増加している」と誤判定しうる。同ドキュメント § 訂正 1 の予告 (「全期間へ広げた場合の対象件数は増える」) を辿って母集団を揃えたことで正しい比較 (79 → 18) に到達した。数値ベースの observation AC には母集団定義を条件文に含めるべき。
+- **Manual Waiting Count の計測に部分一致の偽陽性がある**: `skills/audit/SKILL.md` § Manual Waiting Count の定義は「未チェック `- [ ]` 行が `verify-type: manual` を**含む**」であり、AC の説明文中に `verify-type: manual` という文字列が現れるだけの行 (実際のタグは `observation`) も計上する。#1167 の post-merge AC がまさにこの形で、素朴な計測では 19 件 (実際は 18 件) になった。#1242 で扱う走査スコープの問題と同じ「文字列の substring 一致で AC を判定している」構造に由来する。
+
+### Improvement Proposals
+
+- **`opportunistic-search.sh` / `scan-pending-ac.sh` の母集団が `--state closed` 限定で、OPEN + `phase/verify` の Issue を構造的に取りこぼす** — 本 Issue の対象 #490 / #465 が実例で、両者とも一度も close されたことがない (timeline の `closed` イベント 0 件)。`docs/stats/2026-08-05.md` Section 7 も `phase/verify` 167 件の内訳を CLOSED 165 / OPEN 2 と記録しており、この 2 件はどちらの自動評価経路にも乗らず棚卸しの死角になっている。両スクリプトの母集団を `--state all` へ広げるか、OPEN + `phase/verify` を明示的に含める条件を追加する。区分 A (#1163) は全件 CLOSED だったため露見せず、D3 で初めて顕在化した。
+- **`config=` 条件ゲートが boolean 専用で enum キーを表現できない** — `modules/observation-trigger.md` § Condition Check Gate (`config=`) 自身が `config=key:value` 拡張を候補として挙げている。本 Issue では `auto-stop-at` (enum) をゲートに使えなかったことが #783 を再型付けではなく retire に倒す決め手になった。`config=key:value` 形式をサポートすれば、enum 設定キーに依存する observation AC を retire せずに済む。
+- **`opportunistic-search.sh` の Issue 本文走査がセクション非依存で、コードフェンス内のサンプル AC を実 AC と誤認する** — `scan-pending-ac.sh` は `### Post-merge` にスコープした awk を使うのに対し、`opportunistic-search.sh` はセクション非依存で `^- \[ \]` を grep する。#491 の `## 提案内容` 節にあるコードフェンス内サンプル行が実例で、AC ではないのに `/audit stats` の Manual Waiting Count に計上される。本 Issue では 2 スペースのインデントで無害化する対症処置を取ったが、走査スコープが 2 系統に分かれていること自体が偽陽性の源であり、`opportunistic-search.sh` 側を `### Post-merge` スコープへ揃えるのが本質的な修正。

@@ -283,6 +283,27 @@ teardown() {
     echo "$output" | jq -e '.[0].number == 505' > /dev/null
 }
 
+@test "context gate: keyword found only inside a path-like token excludes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 506}]'
+    export MOCK_ISSUE_BODY_506='- [ ] Verify workflow coverage <!-- verify-type: observation event=pr-review-full keyword=workflow -->'
+    echo "docs/workflow.md" > "$BATS_TEST_TMPDIR/context-path-only.md"
+
+    run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-path-only.md"
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
+}
+
+@test "context gate: keyword found in prose text still includes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 507}]'
+    export MOCK_ISSUE_BODY_507='- [ ] Verify workflow coverage <!-- verify-type: observation event=pr-review-full keyword=workflow -->'
+    echo "This PR changes the CI workflow configuration." > "$BATS_TEST_TMPDIR/context-prose.md"
+
+    run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-prose.md"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 507' > /dev/null
+}
+
 @test "config gate: enabled config key includes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 600}]'
     export MOCK_ISSUE_BODY_600='- [ ] Verify demotion is suppressed <!-- verify-type: observation event=auto-run config=some-flag -->'
