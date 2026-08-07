@@ -54,7 +54,48 @@
 - **Pre-merge 検証項目数について**: Issue 本文の Pre-merge 受入条件が 6 件であり、SKILL.md の light テンプレート目安 (5件) を 1 件超過するが、「Verify command sync rule」(Issue body を verbatim で転記) を優先し、そのまま維持した。
 - **関連**: `docs/reports/claude-opus-5-impact-strategy.md` (#1062, §3.2/§4.4/§8, 本 Issue の候補フレーミング元)、`docs/reports/sonnet-5-effort-recalibration-spec.md` (#922, C3, レポート構成の直接の前例)、Issue #217 (Opus 4.7 導入時に `xhigh` を設定、Sonnet パスは明示スコープ外)、Issue #1228 (spec/issue フェーズの telemetry 欠落を解消、本 Issue の前提条件)
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1–5 were followed as written; no reordering, omission, or approach change occurred.
+
+### Design Gaps/Ambiguities
+
+- `docs/ja/tech.md` was found to already be missing the three Opus 5-related prose notes that `#1062` added to `docs/tech.md` (**Opus 5 effort calibration**, **Opus 5 default parent evaluation — deferred**, **Opus 5 watch items**) — a pre-existing translation-sync gap from `#1062`, not introduced by this Issue. `bash scripts/check-translation-sync.sh` still reports `docs/tech.md` as `IN_SYNC` because the sync checker compares last-updated dates, not per-note content coverage, so it did not surface this gap. Not fixed here (out of scope for #1064's own Changed Files, and re-litigating #1062's own translation debt risks scope creep); recorded here rather than filed as a new Issue, since it is minor, non-blocking, and better tracked as a note for the next `docs/ja/tech.md` sync pass than as a standalone Issue.
+
+### Rework
+
+- N/A — no rework occurred.
+
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: spec フェーズの token telemetry が全期間で0件であることを指摘。wall-clock 代理指標 (Opus5世代 avg 16:22 vs Opus4.8世代 avg 13:22、ただし並行負荷と交絡) を提示。「L size Spec」≠「Opus 生成 Spec」の注意点 (#1175 で M→L 昇格の実例) を記録。 / URL: https://github.com/saitoco/wholework/issues/1064#issuecomment-5199646701
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: spec phase の telemetry 欠落の原因 (run-auto-sub.sh の spec dispatch が run_phase_with_recovery() をバイパス) を特定。silent window のみ取得可能と報告。本 Issue へのスコープ算入 (a) か別 Issue 分離+blocked-by (b) の判断を提起 — 結果的に #1228 として (b) の経路で解消済み。 / URL: https://github.com/saitoco/wholework/issues/1064#issuecomment-5211841755
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- REVIEW_DEPTH=light (`--light` 明示指定) で実行。review-light エージェント1体による4観点統合レビューで issue 0件、修正作業なしで完了とした
+- Pre-merge AC 6件を verify-executor safe mode で再検証 (`file_exists` x1、`file_contains` x1、`rubric` x5) し、全件 PASS を独自に確認。Issue 側の既存チェック状態 (`/code` フェーズで済み) と一致
+- ベースブランチ競合プリチェック (`git merge-tree`) で `changed in both` ブロック0件を確認 (他PRのマージ分がすべて `merged` ヘッダのクリーン自動マージ) — 競合コンテキストの記録は不要と判断
+
+### Deferred Items
+- 実 telemetry サンプル (`--opus` の `token_usage`) が蓄積するまでの再評価は将来Issueに委ねる。抽出時は `sub_start` イベントの dispatch 時点 `size=L` を使うこと (Spec の最終記録 Size ではない — #1175 の落とし穴に注意)
+- `docs/ja/tech.md` が `#1062` の Opus 5 関連ノート (effort calibration / default parent deferred / watch items) をまだ含んでいない、という pre-existing な翻訳同期ギャップは本 Issue のスコープ外のまま (Code Retrospective参照、review-light でも再確認済みで指摘なし)
+
+### Notes for Next Phase
+- MUST/SHOULD/CONSIDER いずれも0件のため `/merge` へそのまま進行可能。CI 5ジョブすべて SUCCESS
+- Post-merge AC (opportunistic, `/auto` を L size Issue に実行して `--opus` が `xhigh` で起動することを確認) は `/verify` でオープンのまま
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note — Changed Files (`docs/reports/opus-5-effort-recalibration-spec.md` 新規、`docs/tech.md`/`docs/ja/tech.md` 更新、`scripts/run-spec.sh`/`tests/run-spec.bats` 無変更) は Spec の記述と完全一致していた。review-light エージェントがレポート内の事実主張 (`run-spec.sh:15-17`、`run-auto-sub.sh:845`、matrix行、bats アサーション、翻訳除外規約) をすべてコードベースと照合し、いずれも正確と確認した
+
+### Recurring issues
+- Nothing to note — MUST/SHOULD/CONSIDER いずれも0件
+
+### Acceptance criteria verification difficulty
+- Nothing to note — Pre-merge 6件すべて (`file_exists` x1, `file_contains` x1, `rubric` x5 [うち1件は `file_contains` と併記]) が UNCERTAIN なしで PASS に到達した。ドキュメント/レポートのみの変更に対して `rubric` 検証が有効に機能した例
