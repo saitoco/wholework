@@ -17,7 +17,7 @@
 
 ## OPEN 2 件 (#490 / #465) は dispatch 母集団に入らない
 
-`scripts/opportunistic-search.sh` と `scripts/scan-pending-ac.sh` はいずれも `gh issue list --label phase/verify --state closed` で母集団を取る。#490 / #465 は一度も close されたことがない OPEN Issue のため、`observation` へ再型付けしても現時点では dispatch されない。両者とも Pre-merge AC は全件チェック済みで実装は着地しており、close されれば自然に母集団へ入る。close 判断は各 Issue 自身の post-merge 充足に依存するため本 Issue のスコープ外とし、事実としてここに明記する。
+`scripts/opportunistic-search.sh` は `gh issue list --label phase/verify --state closed --search "verify-type: observation in:body"` (line 202)、`scripts/scan-pending-ac.sh` は `--search` フィルタなしの `gh issue list --label phase/verify --state closed` (line 106) で母集団を取る。`--search` の有無は異なるが、いずれも `--state closed` 固定である点は共通。#490 / #465 は一度も close されたことがない OPEN Issue のため、`observation` へ再型付けしても現時点では dispatch されない。両者とも Pre-merge AC は全件チェック済みで実装は着地しており、close されれば自然に母集団へ入る。close 判断は各 Issue 自身の post-merge 充足に依存するため本 Issue のスコープ外とし、事実としてここに明記する。
 
 ## 再型付けマッピング (16 AC 行 / 14 Issue)
 
@@ -70,11 +70,11 @@
 | Issue | 行の性質 | 扱い |
 |---|---|---|
 | #591 | `- [x]` (チェック済み) の manual AC 「フル auto-decomposition の follow-up Issue が起票されている」 | **編集しない**。既にチェック済みのため Manual Waiting Count にも `opportunistic-search.sh` にもマッチしない |
-| #491 | `## 提案内容` 節のコードフェンス内サンプル行 `- [ ] Trigger workflow once via ... <!-- verify-type: manual -->` | **AC ではないため再型付けも retire もしない**。ただし `- [ ]` + `verify-type: manual` に機械マッチし `/audit stats` の Manual Waiting Count に計上されるため、2 スペースのインデントを付けて `^- \[ \]` アンカーから外す。テキスト本文と `verify-type` は変更しない |
+| #491 | `## 提案内容` 節のコードフェンス内サンプル行 `- [ ] Trigger workflow once via ... <!-- verify-type: manual -->` | **AC ではないため再型付けも retire もしない**。ただし `- [ ]` + `verify-type: manual` に機械マッチし `/audit stats` の Manual Waiting Count に計上されるため、2 スペースのインデントを付けて `scripts/opportunistic-search.sh` / `scripts/scan-pending-ac.sh` の `^- \[ \]` アンカーから外す。`skills/audit/SKILL.md` の Manual Waiting Count はアンカーなしの LLM プロース走査のため、この対処が同カウントから確実に除外することを保証するものではないが、実運用上は一致して振る舞う想定。テキスト本文と `verify-type` は変更しない |
 
 ## 検証
 
-`${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh --event auto-run` / `--event watchdog-kill` / `--event pr-review-full` を実行し、再型付けした Issue が個別に含まれることを確認した (件数差分ではなく個別含有で判定 — #1163 の Code Retrospective で母集団が他要因でも変動することが確認されているため)。
+`scripts/opportunistic-search.sh --event auto-run` / `--event watchdog-kill` / `--event pr-review-full` を実行し、再型付けした Issue が個別に含まれることを確認した (件数差分ではなく個別含有で判定 — #1163 の Code Retrospective で母集団が他要因でも変動することが確認されているため)。
 
 ### `--event auto-run`
 
@@ -82,7 +82,7 @@
 - 再型付け対象 12 Issue (#1135 #1056 #961 #710 #513 #512 #491 #490 #484 #478 #477 #465) のうち、`opportunistic-search.sh` のマッチ集合に含まれたのは 8 件 (#1056 #961 #710 #513 #512 #491 #484 #477)
 - **#1135 / #490 / #478 / #465 の 4 件はマッチ集合に含まれなかった**。理由を切り分けて確認:
   - #490 / #465 は OPEN Issue のため、`opportunistic-search.sh` の母集団取得 (`gh issue list --label phase/verify --state closed`) が `--state closed` 固定である以上、原理的にマッチしない。Spec Notes 「OPEN 2 件は dispatch 母集団に入らない」のとおりの想定内挙動
-  - #1135 / #478 は CLOSED かつ `phase/verify` ラベルを保持しているにもかかわらずマッチしなかった。`gh issue view N --json body` で本文を直接確認したところ、両者とも `<!-- verify-type: observation event=auto-run when=mode:batch -->` へ正しく置換済みであることをリテラル一致で確認した (`.tmp/verify-retype.py` 実行結果: 12 Issue 全件で `auto-run` タグの存在を確認)。`opportunistic-search.sh` の母集団取得は GitHub 検索インデックス (`gh issue list --search "verify-type: observation in:body"`) に依存する粗い事前フィルタであり、本文編集直後はインデックスが未更新でマッチ集合に現れないことがある (Spec Notes 「GitHub 検索インデックスの遅延」で予告済みの挙動)。実行直後の初回確認と再実行の 2 回とも未反映だったが、`gh issue view` によるリテラル一致確認を一次情報として正とする
+  - #1135 / #478 は CLOSED かつ `phase/verify` ラベルを保持しているにもかかわらずマッチしなかった。`gh issue view N --json body` で本文を直接確認したところ、両者とも `<!-- verify-type: observation event=auto-run when=mode:batch -->` へ正しく置換済みであることをリテラル一致で確認した (`.tmp/verify-retype.py` 実行結果: 12 Issue 全件で `auto-run` タグの存在を確認)。マッチしなかった原因は検索インデックスの遅延ではなく、`scripts/opportunistic-search.sh` の `when=` 条件ゲート (mode 軸) が `mode=single` のセッションで `when=mode:batch` 付き AC 行を設計どおり除外したこと。マッチしなかった 3 AC 行 (#1135 / #478 条件1 / #478 条件2) はレポート冒頭で `when=mode:batch` ゲート付きと記録した 3 行と完全一致しており、`scripts/collect-run-facts.sh` がこのセッションで `mode: single` を返すことも実測確認した。`mode=batch` の run facts を与えない限り常に除外されるため、`gh issue view` によるリテラル一致確認を一次情報として正とする
 
 ### `--event watchdog-kill`
 

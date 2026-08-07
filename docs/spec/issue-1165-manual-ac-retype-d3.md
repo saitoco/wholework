@@ -234,16 +234,16 @@ Size L 維持の根拠も #1163 と同じ — リポジトリ内変更は 1 フ�
 
 ### Deviations from Design
 
-- N/A — Implementation Steps 1-10 の実行順序・内容ともにそのまま実施した。
+- Step 2-6 (mapping JSON + 一括置換ヘルパの作成・実行、retire の手作業編集) は、先行する非対話セッションが GitHub 側編集を完了済みだったため未実行。二重適用を避けるため `.tmp/retype-d3-mapping.json` / `.tmp/retype-d3.py` の新規作成・実行はスキップし、代わりに `gh issue view` によるリテラル一致確認を行う検証スクリプト (`.tmp/verify-retype.py`) に置き換えた。Step 1 (report ファイル作成) および Step 7-10 (検証・コミット・PR 作成) は設計どおり実施した。詳細は下記 § Rework を参照。
 
 ### Design Gaps/Ambiguities
 
-- Step 3 (`phase/ready` ラベルチェック) で、本 Issue は `phase/ready` を経由せず既に `phase/code` だった。原因は先行する非対話セッションが Implementation Steps 1-8 (report ファイル作成前の段階まで含む GitHub 側編集) を完了させた後、ローカルの commit/push/PR 作成前に中断していたため。Spec は完備しており `reconcile-phase-state.sh --check-precondition` の `matches_expected: false` は「ラベルが期待状態と異なる」ことを示すのみで実装の欠落を意味しなかったため、非対話モードの auto-resolve 方針 (warn-only) に従って続行した。
+- `/code` SKILL Step 3 (`phase/ready` ラベルチェック) で、本 Issue は `phase/ready` を経由せず既に `phase/code` だった。原因は先行する非対話セッションが Spec の Implementation Steps 2-8 (report ファイル作成を除く GitHub 側編集) を完了させた後、ローカルの commit/push/PR 作成前に中断していたため。Spec は完備しており `reconcile-phase-state.sh --check-precondition` の `matches_expected: false` は「ラベルが期待状態と異なる」ことを示すのみで実装の欠落を意味しなかったため、非対話モードの auto-resolve 方針 (warn-only) に従って続行した。
 
 ### Rework
 
 - Step 2-3 (mapping JSON + 一括置換 python ヘルパ) と Step 6 (retire の手作業編集) は、実行前に対象 19 Issue 全件の本文・ラベルを `gh issue view` で確認した結果、先行セッションによってすでに完了済みであることが判明したため実行不要だった。二重適用を避けるため、`.tmp/retype-d3-mapping.json` / `.tmp/retype-d3.py` の新規作成・実行はスキップし、代わりに全 16 再型付け行 + 6 retire 行 + 4 ラベル遷移を個別に `gh issue view` でリテラル一致確認する検証スクリプト (`.tmp/verify-retype.py`) を書いて実データを突合した。Spec の Implementation Steps はそのまま (先行実行が失敗した場合の再実行パスとして有効なため変更なし)。
-- Step 9 の `opportunistic-search.sh --event auto-run` 実行で #1135 / #478 が母集団にマッチしなかった。GitHub 検索インデックスの遅延 (Spec Notes で予告済み) が原因と判断し、`gh issue view --json body` によるリテラル一致確認を一次情報として採用した。再実行(2回目)でも解消しなかったため、待機時間を延ばした再々実行は行わず、確認済みの実データを記録に採用した。
+- Step 9 の `opportunistic-search.sh --event auto-run` 実行で #1135 / #478 が母集団にマッチしなかった。当初は GitHub 検索インデックスの遅延 (Spec Notes で予告済み) を原因と推測したが、`scripts/collect-run-facts.sh` がこのセッションで `mode: single` を返すこと、および #1135 / #478 の該当 AC 行がいずれも `when=mode:batch` ゲート付きであることを実測確認した結果、真因は `opportunistic-search.sh` の `when=` 条件ゲート (mode 軸) による設計どおりの除外と判明した。再実行 (2 回目) でも解消しなかったのはインデックス遅延ではなく確定的なゲート除外であることの証跡であり、`gh issue view --json body` によるリテラル一致確認を一次情報として採用した判断自体は変更していない。
 
 ## Phase Handoff
 <!-- phase: code -->
@@ -262,5 +262,5 @@ Size L 維持の根拠も #1163 と同じ — リポジトリ内変更は 1 フ�
 
 ### Notes for Next Phase
 
-- `opportunistic-search.sh --event auto-run` は #1135 / #478 をマッチ集合に含めなかった (GitHub 検索インデックスの遅延、Spec Notes で予告済み)。`gh issue view --json body` によるリテラル一致確認は完了しているため、`/review` / `/verify` で再実行しても件数がすぐに一致しなくても異常ではない。
+- `opportunistic-search.sh --event auto-run` は #1135 / #478 をマッチ集合に含めない。これは検索インデックスの遅延ではなく、3 行とも `when=mode:batch` ゲート付きのため、`--batch` 以外のセッション (`collect-run-facts.sh` が `mode: single` を返す通常の `/code` / `/review` / `/verify` 実行) では `opportunistic-search.sh` の `when=` 条件ゲートが設計どおり除外する結果であり、時間を置いても解消しない。`gh issue view --json body` によるリテラル一致確認は完了しているため、`/review` / `/verify` はこの不一致を待機で解消しようとせず、リテラル一致確認済みの実データを正とすること。dispatch 確認が必要な場合は `--facts-file` に `mode: batch` を含む run facts を与えるか、実際の `/auto --batch` 実行時に確認すること。
 - Issue #1165 自体の Post-merge AC (`/audit stats --retention` での Manual waiting 件数減少確認) は post-merge のため `/verify` フェーズで扱う。
