@@ -145,16 +145,31 @@ Issue 本文「Proposal (Outline)」節に既に記録済みのため、Spec 側
 - `tests/run-merge.bats` の否定側テスト (`git pull --ff-only` が呼ばれないことの確認) で当初 `[ ! -f "$GIT_LOG" ]` を使ったが、`run-merge.sh` が既存の `git worktree list --porcelain` 呼び出しで `git` モックを起動するため常に失敗した。`grep -q "^pull --ff-only$" "$GIT_LOG"` の否定に変更して解消した。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の Implementation Steps 1–4 をそのまま実装 (skills/auto/SKILL.md の origin 比較化、scripts/run-merge.sh の post-merge sync、tests/auto.bats・tests/run-merge.bats へのテスト追加)。方針からの逸脱なし
-- 全 bats テストスイート (1493件) を behavioral change detection の判定に従って実行し、全件 PASS を確認済み
+- Pre-merge rubric AC 4件 (AC1–4) を Issue 本文 + diff のみから再検証し、全て PASS と判定 (Spec は grader 入力に含めない設計方針を踏襲)
+- CI 全9件 SUCCESS、ベースブランチとのコンフリクトなし (`git merge-tree` pre-check) を確認した上で `REVIEW_DEPTH=light` の 1 エージェント統合レビューを実施
+- review-light が指摘した SHOULD (`scripts/run-merge.sh` の `gh pr view --json files` 100件 truncation) は、本 Issue が実装する検出・防止機構そのものの信頼性に直結するため fix 対象と判断し、`gh api pulls/{pr}/files --paginate` に置き換えて修正・回帰テスト追加・push 済み
 
 ### Deferred Items
-- Post-merge observation AC (`session=next`): 次回 skill を修正する Issue を pr route で完走させた後、同一セッション内でその skill を呼ぶ実行で stale な版が使われないか (または警告が出るか) を観察する。本 PR merge 後の別セッションで確認が必要
+- Post-merge observation AC (`session=next`): 次回 skill を修正する Issue を pr route で完走させた後、同一セッション内でその skill を呼ぶ実行で stale な版が使われないか (または警告が出るか) を観察する。本 PR merge 後の別セッションで確認が必要 (Code フェーズからの引き継ぎを維持)
+- `gh pr view --json files` の 100件 truncation パターンは `skills/review/SKILL.md` 等の他呼び出し箇所にも既存 (review retrospective 参照)。今回のスコープでは修正せず、横断監査の要否は次回同種の truncation を踏んだ際に判断する
 
 ### Notes for Next Phase
-- `/review` は Pre-merge rubric AC 4件 (AC1–4) を再検証すること。実装側では A (origin 比較) + C (post-merge sync) の両方が揃っている
-- Spec の「実装確認済みの前提」節にある「`run-merge.sh` は git を直接呼び出していない」という記述は不正確 (`git worktree list --porcelain` の既存呼び出しがある) — Code Retrospective の Design Gaps/Ambiguities に訂正を記録済み
-- 追加した `git pull --ff-only` は warn-only (fail-open) 設計。失敗しても `EXIT_CODE` は変更されないため、CI や `/review` 側で追加のエラーハンドリングは不要
+- `/merge` はブロッキング MUST issue なし (COMMENT event で投稿済み) のため、そのまま進行可能
+- 追加修正コミット (`dac6722b`) は元の実装コミット群と同じ PR 内。`git pull --ff-only` は引き続き warn-only (fail-open) 設計のまま
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note。review-light の Perspective 1 判定通り、Implementation Steps 1–4 は Spec 記述と一致していた。
+
+### Recurring issues
+
+`gh pr view --json files -q '.files[].path'` は GraphQL の `files` connection をページングせず、100件で暗黙に打ち切られる。review-light の指摘によれば同じパターンが `skills/review/SKILL.md` (Step 6 の diff ファイル一覧取得) にも既存で存在する。今回は本 Issue が実装する検出・防止機構そのものの信頼性に直結する箇所 (`scripts/run-merge.sh` の skills/ 変更検出) だったため SHOULD として修正したが、他の呼び出し箇所は影響の性質が異なる (ファイル一覧の表示用途など) ため今回のスコープには含めていない。100件超のPRで `gh pr view --json files` を使っている箇所を横断的に洗い出す価値があるかもしれないが、頻度は低いと見て新規 Issue化は保留する。次に同種の truncation を踏んだ際に横断監査の起票を検討する。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note。Pre-merge AC 4件は全て `rubric` 形式で、Issue 本文と diff のみから明確に PASS 判定できた。UNCERTAIN や verify command の不備は発生しなかった。
