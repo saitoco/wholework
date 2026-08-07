@@ -96,16 +96,17 @@
 - Nothing to note. All 4 Pre-merge ACs (3 `rubric` + 1 `command`) verified cleanly with no UNCERTAIN and no verify-command syntax issues. The `command "bats tests/emit-event.bats"` AC resolved via CI reference fallback (`Run bats tests` job SUCCESS) since `/review` runs in safe mode.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Fixed the one SHOULD-severity finding (stale `restore_auto_session_pointer()` cross-reference in `skills/auto/SKILL.md:38`) directly in this phase rather than deferring, since it was a single-line, unambiguous prose correction with no code/test impact
-- Did not re-run the full `bats` suite after the fix, since the change touched only a Markdown documentation line with no bats coverage; `python3 scripts/validate-skill-syntax.py skills/` was re-run instead and passed clean
+- Pre-merge AC gate: all 4 pre-merge ACs already checked (`unchecked_count=0`) and no `review_incomplete_fallback` — proceeded without an override marker
+- `gh-pr-merge-status.sh` reported `mergeable=false, reason=ci_failing`; investigated CI directly rather than treating it as a genuine regression — the "Test" workflow ran twice for the identical commit (`7b5132c3`), with only one run failing on a single unrelated flaky test (`worktree-merge-push.bats`: "`--from with base-diverged and rebase conflict aborts and exits non-zero`"), while the parallel run of the same commit passed the same test. Recorded this as an Auto-Resolve Log comment on Issue #1224 and proceeded with the squash merge per non-interactive auto-resolve policy
+- Squash-merged and deleted the remote branch successfully; no rebase/conflict resolution was needed
 
 ### Deferred Items
-- The Post-merge observation AC (`/auto` を経由しない wrapper 個別実行で `/verify` を走らせた際、event が他セッションの session_id を持たないことを確認する`, `event=auto-run session=next`) remains unverified — it requires a live post-merge manual-orchestration run and is out of scope for `/review`
+- The Post-merge observation AC (`/auto` を経由しない wrapper 個別実行で `/verify` を走らせた際、event が他セッションの session_id を持たないことを確認する`, `event=auto-run session=next`) remains unverified — it requires a live post-merge manual-orchestration run and is out of scope for `/merge`
 - None else
 
 ### Notes for Next Phase
-- `/merge` can proceed without further review — no MUST issues, all Pre-merge ACs PASS, CI fully green (9/9 checks)
 - `/verify` should watch for the Post-merge observation AC firing on the next manual-orchestration `/auto`-external run, per `event=auto-run session=next`
+- The flaky `tests/worktree-merge-push.bats` case observed during this merge (`--from with base-diverged and rebase conflict aborts and exits non-zero`) is unrelated to this Issue's change; no action taken here, but worth noting if it recurs
