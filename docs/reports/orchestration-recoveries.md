@@ -67,6 +67,29 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+
+## 2026-08-07 05:51 UTC: code-pr-tier2-recovery
+
+### Context
+- Issue #1167, phase: code-pr
+- Source: fallback-catalog
+- Wrapper: run-code-pr.sh
+- Log tail: "Finished at: 2026-08-07 14:51:28"
+
+### Diagnosis
+- Symptom anchor `json-mode-silent-hang` matched in wrapper log (modules/orchestration-fallbacks.md#json-mode-silent-hang)
+
+### Recovery Applied
+- action=run-code.sh-pr-retry
+
+### Outcome
+- success
+
+### Improvement Candidate
+- N/A (resolved by known catalog)
+
+---
+
 ## 2026-08-07 04:11 UTC: manual-recovery-push-only
 
 ### Context
