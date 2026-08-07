@@ -22,9 +22,13 @@ WATCHDOG_TIMEOUT_DEFAULT=2700
 #     #903, docs/reports/sonnet-5-watchdog-recalibration.md): wall-clock samples
 #     recorded p95/max close to the prior 80% margin threshold under the Sonnet 5
 #     tokenizer (#878 measured 1.3-1.4x more tokens for equivalent content)
+#   - REVIEW_DEFAULT raised again 2600->5400 (#1201, 2026-08): Issue #1058 / PR
+#     #1201 hit a watchdog_kill at 2600, then completed with max_silent_window=
+#     4110s (76.1% of a 5400s override) on immediate retry — the same #903-style
+#     x1.3 factor applied to 4110s lands within the already-validated 5400s
 WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800
 WATCHDOG_TIMEOUT_CODE_DEFAULT=4680
-WATCHDOG_TIMEOUT_REVIEW_DEFAULT=2600
+WATCHDOG_TIMEOUT_REVIEW_DEFAULT=5400
 WATCHDOG_TIMEOUT_MERGE_DEFAULT=600
 WATCHDOG_TIMEOUT_ISSUE_DEFAULT=1200
 

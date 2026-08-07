@@ -132,3 +132,14 @@ MOCK
     [ "$status" -eq 0 ]
     [ "$output" = "4680" ]
 }
+
+@test "load_watchdog_timeout uses WATCHDOG_TIMEOUT_REVIEW_DEFAULT=5400 when phase is review" {
+    cat > "$MOCK_DIR/get-config-value.sh" <<'MOCK'
+#!/bin/bash
+echo ""
+MOCK
+    chmod +x "$MOCK_DIR/get-config-value.sh"
+    run bash -c "source '$SCRIPT_DIR/watchdog-defaults.sh'; load_watchdog_timeout '$MOCK_DIR' 'review' 2>/dev/null; echo \$WATCHDOG_TIMEOUT"
+    [ "$status" -eq 0 ]
+    [ "$output" = "5400" ]
+}

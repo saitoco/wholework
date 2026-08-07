@@ -102,6 +102,21 @@
 
 - なし (Implementation Steps 4・5 は Spec通り一度で完了)
 
+### 2026-08-07 cycle (Issue Retrospective による AC1/AC2 範囲拡大後の再実装)
+
+#### Deviations from Design
+
+- なし。2026-08-07 に更新された Spec (Overview / Changed Files / Implementation Steps 1〜5) の記述どおりに実装した。前回サイクルとの最大の違いは、前回サイクルが「新規 `--fable` 実行を見送り、実測データなしと記録する」判断だったのに対し、今回サイクルは Spec 自体が新規実行を要求しない代理指標 (`size=="L"` sub_start と `phase=="spec"` max_silent_window の join) を採用しており、コスト・副作用の懸念なしに実測を完了できた。
+
+#### Design Gaps/Ambiguities
+
+- Spec の Implementation Step 1 が事前に記載していた統計値 (N=20、min 660s / mean 978.5s / p95 1340s / max 1460s、post-Opus-5 部分集合 N=11 max 1340s) を `/code` が同じ抽出コマンドで再実行した結果、完全に一致した — Spec 作成時点から本実装時点までの間に新規の Size L spec 実行が発生していなかったことを意味する。再現コマンドの決定性が確認できた点は良好だが、次回以降この Issue 系統を再実行する際は新規サンプルが追加されている可能性が高く、統計値の再計算が必須になる。
+- 実測の過程で `phase=="spec"` の `watchdog_kill` が全ログ中に2件 (issue #962, size=="S"、2026-07-09; issue #1213, size=="M"、2026-08-07) 存在することを発見した。いずれも `size=="L"` (`--opus` 代理母集団) には含まれないため測定結果には影響しないが、`--opus`/`--fable` 以外の spec 実行でも `phase/spec` の watchdog kill 自体は発生し得ることを示す — 本 Issue のスコープ外だが、SPEC_DEFAULT 再校正を議論する際の背景情報として記録する。
+
+#### Rework
+
+- なし (Implementation Steps 1〜5 は現行 Spec のとおり一度で完了)
+
 ## review retrospective
 
 ### Spec vs. implementation divergence patterns
@@ -117,21 +132,37 @@
 
 - Nothing to note — 6件の Pre-merge AC (rubric×3、file_not_contains×1、file_contains×1、github_check×1) は全て UNCERTAIN なく PASS/FAIL に分類できた。2件の rubric FAIL は PR 本文が自己申告していた内容と完全に一致しており、grader 判定に曖昧さはなかった。
 
+### 2026-08-07 cycle (Issue Retrospective による AC1/AC2 範囲拡大後の再レビュー、PR #1262)
+
+#### Spec vs. implementation divergence patterns
+
+- Nothing to note — review-light の Spec Deviation 観点は issue なし。diff は Spec の Changed Files / Implementation Steps 1〜5、および全 Pre-merge AC (rubric×3、file_not_contains、file_contains、github_check) の対象と完全に一致した。`docs/tech.md`/`docs/ja/tech.md` の日英ミラーも文単位で整合していた。
+
+#### Recurring issues
+
+- Nothing to note — 今回検出された2件 (孤立文の Edge Case/Robustness 指摘、`.wholework.yml` override コメント陳腐化の Documentation Consistency 指摘) はいずれも単発で、前サイクルの review retrospective が指摘した「Spec 事前判断の覆り」パターンとは異なる種類。
+
+#### Acceptance criteria verification difficulty
+
+- Nothing to note — 7件の Pre-merge AC (rubric×3、file_not_contains×1、file_contains×2、github_check×1) は全て UNCERTAIN なく PASS に分類できた。rubric 3件はいずれも実装内容が Issue 本文の記述と一致しており、grader 判定に曖昧さはなかった。
+
 ## Phase Handoff
-<!-- phase: merge -->
+<!-- phase: review -->
 
 ### Key Decisions
-- PR #944 は mergeable=true / CI success / review approved の状態だったため、conflict resolution は不要で squash merge を直接実行した。
-- Merge phase での判断・分岐は発生せず、review フェーズが記録した2件の deferred AC (実測結果記録、SPEC_DEFAULT 再校正の実測根拠) の状態はそのまま引き継いだ。
+- Pre-merge AC 7件 (rubric×3, file_not_contains×1, file_contains×2, github_check×1) を PR #1262 ブランチに対して再検証し、全て PASS。MUST issue なし、CI 9/9 SUCCESS (`Run bats tests` 含む)。base branch (`main`) との `git merge-tree` コンフリクトスキャンも0件。
+- `REVIEW_DEPTH=light` (`--light` 指定 + Size=M) で review-light 1エージェントを起動し全4観点をカバー。SHOULD 1件 (`docs/reports/watchdog-recovery-strategy.md:154` の孤立文) と CONSIDER 1件 (`.wholework.yml` の REVIEW_DEFAULT override コメント陳腐化) を検出。
+- SHOULD issue は本 PR の変更ファイル内かつ低リスクの修正だったため即座に修正・コミット (54f66650) して push。CONSIDER issue は `.wholework.yml` が本 PR の変更対象外のため、General Comments への記録のみとしフォローアップに委ねた。
 
 ### Deferred Items
-- `run-spec.sh <N> --fable` の実測実行そのもの (2〜3件の backlog Issue)。ユーザーの明示認可が必要 — `/code` フェーズからの継続的な deferral。
-- 実測データに基づく `WATCHDOG_TIMEOUT_SPEC_DEFAULT` の引き上げ要否判定。
-- 上記実測が行われた場合の `tests/watchdog-defaults.bats` 74行目の期待値更新 (値変更時のみ)。
+- `.wholework.yml` の `watchdog-timeout-review-seconds: 5400` override コメントの陳腐化 (新デフォルト 5400 と同値になり no-op 化) — 別 Issue/フォローアップでの削除またはコメント更新が必要。
+- `run-spec.sh <N> --fable` の実測実行そのもの (2〜3件の backlog Issue)。ユーザーの明示認可が必要 — 前サイクルから継続する deferral。
+- `--fable` 実測が行われた場合の `WATCHDOG_TIMEOUT_SPEC_DEFAULT` 再判定 (今回は `--opus` 代理データのみで「据え置き」判定済みのため、優先度低の追加検証として残る)。
 
 ### Notes for Next Phase
-- `/verify` は Issue #939 のチェックボックスのうち、review フェーズで FAIL 判定済みの2件 (実測結果記録、SPEC_DEFAULT 再校正の実測根拠) が unchecked のままであることを踏まえて判定すること。
-- Post-merge AC (opportunistic observation) は次回 `--fable` spec 実行時に自動検証される想定。
+- Issue #939 の Pre-merge AC 7件は全て `[x]` のまま (今サイクルで再検証済み PASS)。post-merge の opportunistic observation 1件のみ未チェック。
+- `/merge 1262` はブロッカーなしで実行可能 (MUST issue 0、CI green、AC 7/7 PASS)。
+- Fix commit 54f66650 は `docs/reports/watchdog-recovery-strategy.md` の文章位置修正のみで、実装方針・AC 判定への影響なし。
 
 ## Verify Retrospective
 
