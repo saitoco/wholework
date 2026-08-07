@@ -783,7 +783,7 @@ Bad:
 
 Good:
 - [ ] <!-- verify: github_check "gh pr checks" "Run bats tests" --> All bats tests pass (PR route)
-- [ ] <!-- verify: github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> CI (test.yml) all jobs pass (patch route)
+- [ ] <!-- verify: github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> CI (test.yml) all jobs pass (patch route)
 
 Note: Size XS/S → patch route → `gh run list` form; Size M/L → PR route → `gh pr checks` form (details: `modules/verify-classifier.md`).
 
