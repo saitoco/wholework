@@ -179,6 +179,8 @@ cutoff: `2026-08-07T07:29:33Z` (直近の `phase/*` label 付与時刻、Issue t
 
 cutoff 以前のコメント 2 件 (`#issuecomment-5212048140` — AC6 対象範囲となるドキュメント不正確さの特定、`#issuecomment-5213033677` — #1108 着地後の案 i 制約 3 件の申し送り) は消費対象外だが、いずれも設計判断に直結するため参照した。前者は Changed Files の `modules/event-emission.md` / `docs/structure.md` に、後者は Root Cause の「案 i を採らない根拠」に反映済み。
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1228#issuecomment-5215077147
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1228#issuecomment-5218149199
 ## issue retrospective
 
 `/issue 1228 --non-interactive` による既存 Issue 精査を実施した。`triaged` ラベルが既に付与済みのため triage 自動チェーン (Step 2) はスキップ、Background の事実主張 (`scripts/run-auto-sub.sh` の行番号・関数参照) は grep で照合し、内容面での不整合はなし (行番号のわずかなズレのみ、実装との対応関係は正確)。
