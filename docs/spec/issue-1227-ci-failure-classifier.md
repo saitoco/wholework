@@ -232,3 +232,38 @@ Issue 本文の事実主張はいずれもコードベースと一致するこ�
 - `/verify` 実行時、post-merge 検証項目「Tier 3 が `action=retry` を選ばず CI 障害として分類されることを観測で確認する (`session=next`)」が未検証のまま残っている。
 - `bats --jobs 18 tests/` フル並列実行時の `tests/post_merge_check.bats` 間欠的 FAIL は本 PR の変更対象外の既知 flake (Code Retrospective 参照)。`/verify` が遭遇した場合はこの記録を参照してよい。
 - squash merge 済み・リモートブランチ削除済み・Issue #1227 は `closes #1227` により自動クローズ見込み (`state=CLOSED` を Step 6 で確認予定)。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 直前の triage AC audit が指摘した AC3 の「常時 PASS 懸念」に対し、`skills/auto/SKILL.md:445` の既存 PENDING リトライ機構 (#1115 の成果) を**明示的に除外する**文言へ具体化した。「新機能が既存機能と区別される」ことを AC 自身に書き込む形で、実装が既存機構の言い換えに退化するのを防いでいる
+- `check-skill-change-observation-ac.sh` の指摘で post-merge AC に `session=next` を付与。skill 自己更新を伴う Issue の観察条件として正しい
+
+#### spec
+- Changed Files 13 件で Axis 1 は XL 相当だったが、6 件が `docs/ja/` ミラーを含むドキュメント同期であり新規モジュール/pre-check も既存テンプレートの横展開である点を根拠に Axis 2 で 1 段階減じ、L を維持した。sub-issue 分割は単一機能のため不適とした判断も妥当
+- 調査段階で `modules/orchestration-fallbacks.md#ci-wait-silence-timeout` (#1221) が `skills/verify/SKILL.md` の**内部見出しを文字列参照している**脆さを発見し、実装ステップで新モジュールへ repoint した。同一バッチ内で着地した #1221 の成果物が、次の Issue の調査で改善対象として拾われた連鎖
+- 一方、Tool Dependencies の記述に誤りがあった (`gh run list` 等が `skills/verify/SKILL.md` の allowed-tools に「登録済み」と誤記) — review で検出・修正
+
+#### code
+- Deviations / Design Gaps / Rework いずれも N/A。実装ステップ 1〜10 を記載順のまま実施
+- 並列 flaky を観測 (下記 Improvement Proposals 参照)。AC4 対象の `tests/auto-recovery.bats` は単体・フル実行とも 5/5 PASS で安定
+
+#### review
+- **`--full` の 2 段階検証 (finder → verifier) が明確に価値を出した**。3 体の review エージェントが独立に `modules/verify-executor.md` § 3a の重複判定表を検出した — rubric grader は Issue 本文が名指しした `skills/verify/SKILL.md` のみを見る傾向があり、AC1 を PASS と判定していた。PR diff 全文と changed files 一覧を主体的に走査する診断フローでなければ見逃していた
+- 逆方向の価値も観測: 「到達不能な条件分岐」という指摘 (review-spec / review-bug の両方から独立提起) が、Adversarial verification 段階で `scripts/run-auto-sub.sh` → `spawn-recovery-subagent.sh` という XL/batch route の見落としと判明し誤検知として棄却された。収束的シグナルが必ずしも正しいとは限らないことを示す事例
+- `ci_failure_verdict` の呼び出し元と `agents/orchestration-recovery.md` の `## Input` 契約の非同期も検出・修正
+
+#### merge
+- `gh pr merge --squash --delete-branch` がワークツリー内で `fatal: 'main' is already used by worktree` により失敗 → 主リポジトリディレクトリから再実行して解決。`--delete-branch` のローカル削除も失敗したためリモートブランチを `git push origin --delete` で手動削除
+- `run-merge.sh` が merge 待機中に 600s 沈黙し watchdog kill (exit 143)。Tier 3 が `action=retry` を選び成功 (`docs/reports/orchestration-recoveries.md` に記録済み)。本 Issue が対象とする「CI 障害を retry してしまう」パターンではなく、正当な retry
+
+#### verify
+- Pre-merge 4 件は already-checked skip rule で SKIPPED、Post-merge 1 件は `event=auto-run` 未発火で SKIPPED。FAIL / UNCERTAIN ゼロ
+- review retrospective が「AC1 は rubric PASS だが Issue の意図は完全には満たされていなかった」と記録していたため、マージ後の実コードを実測確認した。`modules/verify-executor.md:353` と `skills/verify/SKILL.md:248` の双方が `modules/ci-failure-classifier.md` を SSoT として参照し `not restated here` と明記、`agents/orchestration-recovery.md:28` に `ci_failure_verdict` の入力契約と L57 の `CI platform outage → abort` 行も存在 — **いずれも review 内で修正済み**であり追加対応は不要と確認した。retrospective の記述は検出時点の状態を述べたものだった
+
+### Improvement Proposals
+
+- **並列 bats 実行下の flaky** — **既存 #1255 と重複のため新規起票せず、3 例目として追記した** ([issuecomment-5218799714](https://github.com/saitoco/wholework/issues/1255#issuecomment-5218799714))。新事実として (a) `tests/post_merge_check.bats` 内の **2 テスト** (`fail: gh issue reopen called when FAIL input given` / `multiple issues: processed sequentially`) が揃って落ちるためテスト個別ではなくファイル単位の setup/teardown・一時リソース競合が疑わしいこと、(b) 同一セッション内で複数回再現しており偶発事象ではないこと、を記録した
+- **merge フェーズの watchdog 既定 600s が merge 待機時間に対して短い可能性** — 起票せず watch item として記録。`.wholework.yml` は code (既定 4680s → 7200s) と review (既定 2600s → 5400s) を実測 kill を受けて引き上げているが、merge は既定 600s のまま。今回が merge フェーズ初の watchdog kill (`docs/reports/orchestration-recoveries.md` 内で `run-merge.sh, exit code: 143` は 1 件のみ) であり再発性は未実証。Tier 3 の `action=retry` で復旧しているため実害も出ていない。同種の kill が再発した場合は `watchdog-timeout-merge-seconds` の引き上げを検討する
