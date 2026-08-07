@@ -51,6 +51,7 @@
 ## Consumed Comments
 No new comments since last phase.
 
+- saito / MEMBER / first-class / <!-- wholework-event: type=execution-log phase=code issue=1166 --> / https://github.com/saitoco/wholework/issues/1166#issuecomment-5211867474
 ## Code Retrospective
 
 ### Deviations from Design
