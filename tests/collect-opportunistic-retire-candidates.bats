@@ -116,3 +116,30 @@ FIXTURE_EOF
   [ "$status" -eq 0 ]
   echo "$output" | grep -qE $'^600\t1\t/spec\t1\t1$'
 }
+
+@test "--threshold with no argument -> usage error, not unbound variable" {
+  mkdir -p "$SESSIONS_DIR"
+  run bash "$SCRIPT" "$SESSIONS_DIR" --threshold
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"--threshold requires an argument"* ]]
+}
+
+@test "--threshold non-numeric value -> usage error" {
+  mkdir -p "$SESSIONS_DIR"
+  run bash "$SCRIPT" "$SESSIONS_DIR" --threshold abc
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"--threshold must be a non-negative integer"* ]]
+}
+
+@test "malformed JSON line in one session file does not abort aggregation of other files" {
+  _write_events "session-good" << 'FIXTURE_EOF'
+{"ts":"2026-08-01T10:00:00Z","issue":700,"event":"opportunistic_verify_result","skill":"/spec","result":"SKIP","ac_index":"1"}
+FIXTURE_EOF
+  _write_events "session-bad" << 'FIXTURE_EOF'
+{"ts":"2026-08-01T10:00:00Z","issue":701,"event":"opportunistic_verify_result","skill":"/spec"
+FIXTURE_EOF
+
+  run bash "$SCRIPT" "$SESSIONS_DIR" --threshold 1
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -qE $'^700\t1\t/spec\t1\t1$'
+}

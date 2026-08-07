@@ -21,6 +21,10 @@ THRESHOLD=1
 while [ $# -gt 0 ]; do
   case "$1" in
     --threshold)
+      if [ $# -lt 2 ]; then
+        echo "Error: --threshold requires an argument" >&2
+        exit 1
+      fi
       THRESHOLD="$2"
       shift 2
       ;;
@@ -39,6 +43,13 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+case "$THRESHOLD" in
+  ''|*[!0-9]*)
+    echo "Error: --threshold must be a non-negative integer: $THRESHOLD" >&2
+    exit 1
+    ;;
+esac
+
 if [ ! -d "$SESSIONS_DIR" ]; then
   exit 0
 fi
@@ -52,7 +63,9 @@ if [ "${#EVENT_FILES[@]}" -eq 0 ]; then
   exit 0
 fi
 
-cat "${EVENT_FILES[@]}" | jq -rs --argjson threshold "$THRESHOLD" '
+for f in "${EVENT_FILES[@]}"; do
+  jq -c . "$f" 2>/dev/null || true
+done | jq -rs --argjson threshold "$THRESHOLD" '
   map(select(.event == "opportunistic_verify_result"))
   | group_by([.issue, .ac_index])
   | map(
