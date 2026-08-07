@@ -65,13 +65,14 @@ Called by:
 
    ```bash
    source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
-   restore_auto_session_pointer
+   restore_auto_session_pointer <NUMBER when numeric, otherwise omit the argument>
    if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
      EMIT_ISSUE_NUMBER=<numeric> emit_event "retro_proposal_classified" "tier=<1|2|3>" "title=<proposal title, first 80 chars>" "reason=<one-line classification rationale>" "action=<issue_created|memory_proposal|spec_only>"
    fi
    ```
 
-   - **Numeric guard (required)**: if `NUMBER` is not a bare integer (e.g. the `/auto` L3 route's `BRIDGE_NUMBER="batch-<session-id>"`), pass `EMIT_ISSUE_NUMBER=0` instead. `emit_event()` writes `"issue":${_issue}` unquoted, so a non-numeric value produces a malformed JSON line that breaks `get-auto-session-report.sh`'s whole-log `jq -s` read.
+   - **Numeric guard (required)**: if `NUMBER` is not a bare integer (e.g. the `/auto` L3 route's `BRIDGE_NUMBER="batch-<session-id>"`), pass `EMIT_ISSUE_NUMBER=0` instead, and call `restore_auto_session_pointer` with no argument (only a bare integer can resolve an issue-scoped pointer added in #1075 — a non-numeric value would silently fail to match any pointer file and fall through to the PGID/current fallbacks instead). When `NUMBER` is a bare integer, pass it to `restore_auto_session_pointer` so the issue-scoped pointer resolves ahead of the PGID/current fallbacks. `emit_event()` writes `"issue":${_issue}` unquoted, so a non-numeric value produces a malformed JSON line that breaks `get-auto-session-report.sh`'s whole-log `jq -s` read.
+   - **`/auto` parent-session callers (Step 4a step 6 / Step 5 L3 step 6)**: set `AUTO_SESSION_ID="<literal SESSION_ID>"` explicitly at the head of the emit block, before calling `restore_auto_session_pointer`, using the same literal `SESSION_ID` value recorded in `/auto` Step 1. `restore_auto_session_pointer` treats an already-set `AUTO_SESSION_ID` as authoritative (#1075) and adopts it directly, without needing to resolve any pointer file — the only reliable path for the L3 `BRIDGE_NUMBER="batch-<session-id>"` case above, since a non-numeric `NUMBER` cannot use the issue-scoped pointer and the PGID/current fallbacks are not guaranteed to hold the calling session's own id under concurrent `/auto` sessions.
    - **`AUTO_EVENTS_LOG` guard (required)**: the `if` above skips the emit entirely when `AUTO_EVENTS_LOG` is unset and cannot be restored via `restore_auto_session_pointer` (a standalone `/verify` run outside `/auto`) — same policy as the other non-wrapper emitters in `modules/event-emission.md`. `emit_event()` itself does not skip on an unset `AUTO_EVENTS_LOG` (it falls back to a CWD-relative `.tmp/auto-events.jsonl`), so the guard must be applied by the caller.
    - Regardless of tier, output one terminal summary line covering all proposals classified in this run: `Tier classification: {n1} Tier 1 / {n2} Tier 2 / {n3} Tier 3 (filter hit rate {p}%)`. `p` is the floor of `(n2 + n3) / (n1 + n2 + n3) * 100`; use `0` when the total is 0.
 

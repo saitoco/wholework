@@ -226,26 +226,52 @@ Pre-merge/Post-merge の AC 文言自体への変更は行っていない (既�
 - **既存 bats テストへの影響** — `tests/emit-event.bats` の既存 4 テストはいずれも `AUTO_SESSION_ID` を unset した状態で実行しているため、新設する「`AUTO_SESSION_ID` env 最優先」分岐に触れないことを実ファイルの読み取りで確認した。`tests/auto-batch.bats` L19-20 の `grep -q 'wholework:verify'` も部分一致のため `--session-id` 追加で壊れない
 - **stale な issue-scoped ポインタの扱い** — TTL/mtime 判定は解決ロジックを時刻依存にしテストを不安定化させるため採らず、`--session-id` の有無という決定的条件で書き込み/削除を分岐させる方式に落ち着けた。残存シナリオ (verify 到達前に `/auto` が異常終了) は既知の制約として Uncertainty セクションに記録した
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1-10 は Spec の記述通りの順序・内容で実装した。5 段解決順序 (`AUTO_EVENTS_LOG` → `AUTO_SESSION_ID` → issue-scoped → PGID → current) も Spec Implementation Step 2 の記述と一致する。
+
+### Design Gaps/Ambiguities
+
+- N/A — Spec の Notes for Next Phase が既に「11 箇所の `restore_auto_session_pointer`」「6 箇所の `wholework:verify` dispatch (うち 2 箇所は `$N`)」を明示していたため、実装時に新たな曖昧点は発生しなかった。
+
+### Rework
+
+- `skills/verify/SKILL.md` Step 1 で、`persist_auto_session_pointer` 呼び出しと `phase_start` emit を別々の bash コードフェンスに分けて記述した際、後者のフェンスに `source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"` を書き忘れた。この codebase では SKILL.md 内の bash コードフェンスは互いに独立した Bash tool 呼び出しとして実行される規約であり (他の 10 箇所の `restore_auto_session_pointer` 呼び出しはすべて自分のフェンス内で `source` している)、単一の継続シェルセッションではないことを見落としていた。Step 10 の敵対的サブエージェントレビューで検出し、コミット前に修正した。教訓: SKILL.md の bash フェンスを追加・分割する際は、そのフェンス単体で必要な `source`/変数初期化が完結しているかを個別に確認する。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- 案 A (`--session-id` の in-band 引き渡し) を権威ある出所、案 B (Issue 番号スコープのポインタ) をセッション内の運搬手段として組み合わせるハイブリッド構成を採用した。案 A 単独は 11 箇所での LLM 規律依存、案 B 単独は未知の `auto-session-current` 上書き経路への脆弱性がそれぞれ理由で不採用
-- `restore_auto_session_pointer()` の解決順序を 5 段 (exhaustive) にし、issue-scoped を PGID より**前**に置いた。in-session `/verify` では PGID が構造上ヒットせず、PGID 再利用による stale ポインタ誤読のハザードもあるため
-- `AUTO_SESSION_ID` が既に設定済みの場合にそれを最優先で採用する分岐を新設した。これは案 A の直接経路であると同時に、従来「`AUTO_SESSION_ID` は設定済みだがポインタが見つからないと `AUTO_EVENTS_LOG` が設定されず emit がスキップされる」という潜在バグの解消も兼ねる
-- `.tmp/auto-session-current` は廃止せず最終フォールバックとして維持する (読み手が 7 ファイルあり、うち 2 本は別用途で使っているため blast radius が過大)
+- `/review` はこのセッションが headless `--non-interactive` (再起動保証なし) であることを `modules/execution-context.md` で確認し、Workflow ツールパスを使わず静的 Task fan-out (review-spec + review-bug×2) にフォールバックした
+- review-bug が検出した 13 件 (重複統合後) のうち 10 件を敵対的検証サブエージェント (Opus) で検証。3 件 (SHOULD 1 件 + CONSIDER 2 件) が生存、7 件は REJECT (誤検知) と判定。review-spec の 4 件は検証なしで直接採用
+- 生存した SHOULD 2 件 (`skills/auto/SKILL.md:39` の stale な理由句、`modules/orchestration-fallbacks.md` のポインタ再生成欠落) と低リスクな CONSIDER 2 件 (ドキュメント精度) を修正してコミット (8186feb8)。残り 5 件の CONSIDER (Spec Deviation 2 件、ja/en sync 1 件、未検証 2 件) はコスト対効果が低いと判断しスキップ
 
 ### Deferred Items
 
-- `/verify` の emit 定型 3 行の `modules/` 切り出しは今回は行わない (11 箇所では割に合わない。15 箇所を超えたら再検討)
-- `/auto` が verify 到達前に異常終了した場合の issue-scoped ポインタ残存は既知の制約として記録するに留め、TTL/mtime 判定は導入しない
-- `docs/migration-notes.md` / `docs/reports/external-kill-investigation.md` は履歴記録として除外推奨。`/code` が最終判断する
+- `skills/verify/SKILL.md` の ARGUMENTS 冒頭説明への `--session-id` 追記 (spec deviation、実害小)
+- `scripts/run-auto-sub.sh:384` の `restore_auto_session_pointer` への `$_mr_issue` 引き渡し (多層防御としての改善余地。案D で経路自体は塞がれている)
+- `docs/ja/structure.md` の EN/JA 同期ギャップ (本 PR 以前から存在、`/doc sync` の対象と判断)
+- Post-merge AC (並行 `/auto --batch` を実行して `.tmp/auto-events.jsonl` 上の `session_id` を実地確認する) は pre-merge では検証不能。`/verify` に委ねる
 
 ### Notes for Next Phase
 
-- `scripts/emit-event.sh` は macOS system bash (3.2) 上で動くため `mapfile` / 連想配列 / `${var^^}` を使わないこと
-- `persist_auto_session_pointer()` の main repo root 解決は `restore_auto_session_pointer()` と同一の `git worktree list --porcelain | awk '/^worktree /{print $2; exit}'` idiom を使い、git repo 外では prefix が空になる既存挙動を維持すること
-- `skills/verify/SKILL.md` の `restore_auto_session_pointer` は 11 箇所ある。`verify_reopen_cycle` の printf 直書きブロック (Step 11 FAIL 分岐) も含まれるため、`EMIT_ISSUE_NUMBER` を持たないブロックを見落とさないこと
-- `skills/auto/SKILL.md` の `wholework:verify` dispatch は 6 箇所 (patch route / pr route / XL fan-out / Step 5 observation dispatch / `--batch` List mode / `--batch` Step 5 observation dispatch)。observation dispatch の 2 箇所は `$NUMBER` ではなく `$N` を使っている点に注意
-- `validate-skill-syntax.py` の既知制約 (本文中の半角感嘆符禁止、本文中のトリプルバックティック禁止) に抵触しないこと
+- `/merge` は追加コミット (8186feb8) 込みで CI 全パス (9/9 SUCCESS) を確認済み
+- Pre-merge rubric AC 5 件はすべて独立検証でも PASS 再確認済み。Issue 側は実装時点で既に `[x]` 済みのためチェックボックス更新は不要だった
+- review で修正した 2 件の SHOULD (`skills/auto/SKILL.md:39`、`modules/orchestration-fallbacks.md`) は誤帰属バグの再発防止に直結する内容のため、`/verify` の post-merge 実地確認時にも意識するとよい
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+1件: Spec Implementation Step 3 が要求した「`--session-id` を `/verify` の ARGUMENTS 冒頭説明にも追記する」が実装では省略されていた (CONSIDER, 実害は小さい — `modules/skill-help.md` は本文から `--` フラグを走査するため `/verify --help` には拾われる)。Code Retrospective の "Deviations from Design" は "N/A" と記録しており、この種の軽微な省略が Handoff に残らないパターンが見られた。Spec Implementation Step が「文書のX箇所に追記する」と粒度を明示した場合は、実装フェーズ側でその粒度までチェックリスト化すると見落としを防げる可能性がある。
+
+### Recurring issues
+
+2件が同型のパターン: 新しい authoritative なパス (issue-scoped ポインタ / `--session-id`) を導入した際、旧来のパスを推奨経路として説明していたプローズ (`skills/auto/SKILL.md:39` の `auto-session-current` 理由句、`modules/orchestration-fallbacks.md` の2箇所のカタログ記述) が、変更対象ファイルの一部でのみ更新され、他の言及箇所には反映されないまま残っていた (いずれも review で SHOULD として検出・修正済み)。これは本 PR 自身の Code Retrospective が記録した「SKILL.md の bash フェンスは独立した Bash tool 呼び出し」という見落としとは別種だが、「1つの変更が複数箇所に及ぶ説明を更新し切れない」という同じ根本原因 (grep による横断確認をしていない) を共有する。解決順序やポインタファイルの優先順位を変更する PR では、Spec の Changed Files セクションに直接の変更対象を明示するだけでなく、`grep -rn "<変更前のキーワード>"` で他の言及箇所を横断検索し矛盾がないか確認するステップを Spec Implementation Steps に加える価値がある。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — 5件の Pre-merge rubric AC はいずれも曖昧さなく判定できた。grader が Issue body + diff から明確に PASS/FAIL を判断可能な粒度で書かれていた。
