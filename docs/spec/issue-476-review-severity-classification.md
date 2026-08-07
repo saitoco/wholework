@@ -208,3 +208,14 @@
 ### Improvement Proposals
 - N/A — re-run #7 で既に起票水準に達し follow-up Issue #1220 が対応済み (未クローズ)。本 re-run はその後の11件目の再現事例として記録するに留める
 
+## Verify Retrospective (2026-08-07 re-run #12)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1254、Issue #1064) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカーあり) したが、今回の発火元 PR #1254 の diff (`docs/reports/opus-5-effort-recalibration-spec.md` 新規、`docs/tech.md`/`docs/ja/tech.md`/`docs/spec/issue-1064-*.md` 更新 — ドキュメントのみの変更) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず UNCERTAIN 判定に帰着した。`keyword=workflow` ゲートの誤発火パターンが、本 Issue #1064 の Spec 内 `docs/translation-workflow.md` というファイル名参照 (翻訳ミラー除外規約の一文) への部分一致で **12件目** として再現した。follow-up Issue #1220 が依然 OPEN であることを確認したため、本 re-run でも重複起票を行わない
+- worktree セッション中に `source` 経由の `emit-event.sh` 呼び出し (Step 11 の `phase_complete` イベント発行) が worktree isolation guard によりブロックされた。`modules/worktree-lifecycle.md` § "source-based shell function calls are blocked by the worktree isolation guard" に記載済みの既知制約どおり、自然な exit 境界 (Step 13 Worktree Exit) がまだ先だったため best-effort でスキップし、その旨を明示的に記録した
+
+### Improvement Proposals
+- N/A — re-run #7 で既に起票水準に達し follow-up Issue #1220 が対応済み (未クローズ)。本 re-run はその後の12件目の再現事例として記録するに留める
+
