@@ -83,8 +83,16 @@ session to observe the result.
 **Default when undetermined**: if direct interactive execution cannot be confirmed, assume no
 re-invocation guarantee and apply the MUST rule above.
 
+**Corollary — an explicit `timeout` does not by itself keep a command in the foreground**: the Bash
+tool's `timeout` ceiling is 600000 ms (10 minutes), and a command that runs past it is moved to the
+background automatically — from the caller's side indistinguishable from the notification-dependent
+wait the MUST rule above forbids. Commands that risk approaching the ceiling must be shortened
+instead (for a full bats suite: run it in parallel). If the tool backgrounds a command anyway,
+report it as a failure rather than waiting on its completion notification.
+
 **Precedents**: #994 (`/code`'s bats run), #1097 (`/review`'s bats run), #1103 (the Workflow tool
-path), #1142 (a fork-executed `/review`).
+path), #1142 (a fork-executed `/review`), #1213/#1234 (the tool-ceiling corollary — an explicit
+`timeout` alone was insufficient because the command itself exceeded the ceiling).
 
 ## How to Reference
 

@@ -48,6 +48,16 @@ TEST_RUNNER="$PROJECT_ROOT/modules/test-runner.md"
 }
 
 @test "test-runner: serial fallback is documented for missing GNU parallel" {
-    grep -q -F "parallel" "$TEST_RUNNER"
-    grep -q -F "serial" "$TEST_RUNNER"
+    grep -q -F "Fallback when \`--jobs\` is unavailable" "$TEST_RUNNER"
+    grep -q -F "not a test failure" "$TEST_RUNNER"
+}
+
+@test "test-runner: missing-parallel fallback shards rather than re-running one serial whole-suite command" {
+    grep -q -F "sharded serial batches" "$TEST_RUNNER"
+}
+
+@test "test-runner: job count is resolved as a separate literal step, not inline command substitution" {
+    run grep -F 'bats --jobs $(nproc' "$TEST_RUNNER"
+    [ "$status" -ne 0 ]
+    grep -q -F "bats --jobs <N> tests/" "$TEST_RUNNER"
 }

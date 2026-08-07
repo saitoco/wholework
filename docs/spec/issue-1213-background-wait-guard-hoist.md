@@ -71,6 +71,48 @@
 
 **関連する過去 Spec** (disposable、参照のみ): `docs/spec/issue-994-code-bats-foreground-guidance.md` (最初のガード追加), `docs/spec/issue-1097-review-headless-foreground.md` (review 側ガード追加), `docs/spec/issue-1123-manual-recovery-review-rerun.md` (SSoT 統合、内容のみ変更・位置は不変)。
 
+## Iteration 1 (fix cycle, 2026-08-07, PR #1247)
+
+### Trigger
+
+前サイクル (iteration 0, 本 Spec の Implementation Steps 1〜3) は着地・merge・verify PASS したが、約 2 時間後の `/auto 1234` code phase で同一の失敗モード (silent no-op) が 4 回連続再発し、`auto-retry-on-fail` 上限 (3/3) に到達した。`/verify` が post-merge observation AC 2 件のうち 1 件を FAIL 判定し、本 Issue を reopen した。
+
+### Root Cause (iteration 1)
+
+iteration 0 が追加したガード (「再呼び出し保証のない実行サーフェスでは foreground + 明示 `timeout` で実行する」) には暗黙の前提があった: **明示 `timeout` を指定すれば foreground 実行が保証される**、という前提である。しかし Bash tool の `timeout` パラメータには 600000ms (10 分) の上限があり、これを超えるコマンドは tool 側が自動的にバックグラウンドへ移行させる。iteration 0 で採用した `timeout: 600000` は実測 (`docs/reports/orchestration-recoveries.md` #1234 記録) で不十分だったことが判明した: serial `bats tests/` フルスイートの実測時間が 10 分の ceiling を超え、"foreground で起動したはずのコマンドが勝手にバックグラウンドへ移行する" 状態になり、エージェントが完了通知を待ってターンを終えた。
+
+### Changed Files (iteration 1)
+
+- `modules/test-runner.md`: Step 1 に並列 bats 実行 (`bats --jobs`) の推奨と job 数のリテラル解決手順、GNU `parallel` 不在時の sharded serial fallback を追加。Step 2 に caller 指定の `timeout` も 600000ms を超えられない旨を明記
+- `skills/code/SKILL.md`: Step 9 の実行サーフェス制約に "timeout だけでは foreground を保証しない" corollary を追加。Behavioral Change Detection のフルスイート override を並列形に変更し、job 数をリテラル値へ分解する二段階コマンドに置換 (worktree isolation guard がコマンド置換 `$(...)` を拒否するため)
+- `skills/review/SKILL.md`: Non-Interactive Mode Behavior に同じ corollary を追加。job 数解決も同じ二段階コマンドに統一
+- `modules/execution-context.md`: SSoT の MUST rule に tool ceiling corollary を追加し、Precedents に #1213/#1234 を追記 (review フェーズで検出された SSoT 未更新の是正)
+- `tests/code.bats`, `tests/review.bats`, `tests/test-runner.bats`: 上記変更を検証する構造テストを追加 (計 17 件)
+
+### Implementation Steps (iteration 1)
+
+1. `modules/test-runner.md` Step 1 に並列実行の推奨(job 数はリテラル値への分解を明記)と GNU `parallel` 不在時の sharded serial fallback を追加。Step 2 に 600000ms ceiling の明記を追加 (→ Issue AC: `section_contains "modules/test-runner.md" "Step 2" "600000"`)
+2. `skills/code/SKILL.md` Step 9 の実行サーフェス制約に ceiling corollary を追加し、Behavioral Change Detection のフルスイート override を `nproc`/`sysctl` の結果をリテラル値に分解する二段階コマンドへ置換 (→ Issue AC: `section_contains "Step 9" "bats --jobs"`, `section_not_contains "Step 9" "bats --jobs $("`)
+3. `skills/review/SKILL.md` の Non-Interactive Mode Behavior に同じ corollary と二段階コマンドを追加
+4. `modules/execution-context.md` の SSoT に corollary を追加し、3 つの consumer ファイルとの整合を取る
+5. `tests/code.bats` / `tests/review.bats` / `tests/test-runner.bats` に構造テストを追加 (→ Issue AC: `command "bats tests/code.bats tests/review.bats tests/test-runner.bats"`)
+
+### Verification (iteration 1)
+
+- `bats --jobs 18 tests/` — 1525 passed, 0 failed
+- `python3 scripts/validate-skill-syntax.py skills/code/SKILL.md skills/review/SKILL.md` — 0 errors, 0 warnings
+- `bash scripts/check-forbidden-expressions.sh` — 違反なし
+- worktree isolation guard の再現確認: `/review` セッション内で `echo $(echo test)` を実行し、コマンド置換が一律ブロックされることを直接確認 (`/code` も Step 2 で必ず worktree に入るため同じ制約を受ける)
+
+### review フェーズでの発見 (iteration 1)
+
+`/review` の Code Review (Step 10) が、iteration 1 の実装自体にも構造的な問題を発見した:
+- **MUST**: `bats --jobs $(nproc 2>/dev/null || sysctl -n hw.logicalcpu) tests/` に含まれる `$(...)` コマンド置換が、`/code`/`/review` が必ず入る worktree セッション内で worktree isolation guard に一律ブロックされる (実際に `/review` セッション内で再現確認)。job 数をリテラル値に分解する二段階コマンドへ修正した
+- **MUST**: 本サイクルの実装内容 (並列形・ceiling ルール) を検証する Pre-merge AC が Issue に存在しなかった (iteration 0 の AC がそのまま残っていた)。Issue #1213 に AC 4 件を追加し、Post-merge observation AC 2 件を「バックグラウンド移行なしに完了したことを観察する」という反証可能な形に書き換えた
+- **SHOULD**: GNU `parallel` 不在時の fallback (旧: 単純な serial `bats tests/` 再実行) が ceiling 超過を再現するリスクがあったため、sharded serial batches (test-file group 単位での分割実行) に変更した
+- **SHOULD**: `modules/execution-context.md` (SSoT) が未更新のまま 3 つの consumer ファイルに同じ corollary が重複していた (SSoT Reverse Reference antipattern) — SSoT を先に更新する形に是正した
+- **SHOULD**: `skills/code/SKILL.md` に記載していた実測テスト件数 ("1516 tests passing") が実際の値 (1525) と不一致だったため、具体的な件数を削除した
+
 ## Code Retrospective
 
 ### Deviations from Design
