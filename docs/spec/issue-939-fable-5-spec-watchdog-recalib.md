@@ -102,6 +102,21 @@
 
 - なし (Implementation Steps 4・5 は Spec通り一度で完了)
 
+### 2026-08-07 cycle (Issue Retrospective による AC1/AC2 範囲拡大後の再実装)
+
+#### Deviations from Design
+
+- なし。2026-08-07 に更新された Spec (Overview / Changed Files / Implementation Steps 1〜5) の記述どおりに実装した。前回サイクルとの最大の違いは、前回サイクルが「新規 `--fable` 実行を見送り、実測データなしと記録する」判断だったのに対し、今回サイクルは Spec 自体が新規実行を要求しない代理指標 (`size=="L"` sub_start と `phase=="spec"` max_silent_window の join) を採用しており、コスト・副作用の懸念なしに実測を完了できた。
+
+#### Design Gaps/Ambiguities
+
+- Spec の Implementation Step 1 が事前に記載していた統計値 (N=20、min 660s / mean 978.5s / p95 1340s / max 1460s、post-Opus-5 部分集合 N=11 max 1340s) を `/code` が同じ抽出コマンドで再実行した結果、完全に一致した — Spec 作成時点から本実装時点までの間に新規の Size L spec 実行が発生していなかったことを意味する。再現コマンドの決定性が確認できた点は良好だが、次回以降この Issue 系統を再実行する際は新規サンプルが追加されている可能性が高く、統計値の再計算が必須になる。
+- 実測の過程で `phase=="spec"` の `watchdog_kill` が全ログ中に2件 (issue #962, size=="S"、2026-07-09; issue #1213, size=="M"、2026-08-07) 存在することを発見した。いずれも `size=="L"` (`--opus` 代理母集団) には含まれないため測定結果には影響しないが、`--opus`/`--fable` 以外の spec 実行でも `phase/spec` の watchdog kill 自体は発生し得ることを示す — 本 Issue のスコープ外だが、SPEC_DEFAULT 再校正を議論する際の背景情報として記録する。
+
+#### Rework
+
+- なし (Implementation Steps 1〜5 は現行 Spec のとおり一度で完了)
+
 ## review retrospective
 
 ### Spec vs. implementation divergence patterns
@@ -118,20 +133,21 @@
 - Nothing to note — 6件の Pre-merge AC (rubric×3、file_not_contains×1、file_contains×1、github_check×1) は全て UNCERTAIN なく PASS/FAIL に分類できた。2件の rubric FAIL は PR 本文が自己申告していた内容と完全に一致しており、grader 判定に曖昧さはなかった。
 
 ## Phase Handoff
-<!-- phase: merge -->
+<!-- phase: code -->
 
 ### Key Decisions
-- PR #944 は mergeable=true / CI success / review approved の状態だったため、conflict resolution は不要で squash merge を直接実行した。
-- Merge phase での判断・分岐は発生せず、review フェーズが記録した2件の deferred AC (実測結果記録、SPEC_DEFAULT 再校正の実測根拠) の状態はそのまま引き継いだ。
+- 2026-08-07 の Issue Retrospective による AC1/AC2 範囲拡大 (`--fable` または `--opus`) を受け、`size=="L"` sub_start を `--opus` dispatch の代理指標として採用し、新規実行なしに実測 (N=20) を完了した。
+- `WATCHDOG_TIMEOUT_SPEC_DEFAULT` は据え置き (p95 74.4% < #903 の80%閾値)、`WATCHDOG_TIMEOUT_REVIEW_DEFAULT` は 2600→5400 に引き上げ (#1058/PR#1201 実測、既に本番検証済みの override 値と整合)。
+- `docs/reports/watchdog-recovery-strategy.md` の既存「2026-07 re-measurement」(`--fable` 実測ゼロ) は変更せず、新規「2026-08 re-measurement」(`--opus` 代理実測) を並置した — 2つの evidence source を統合せず別サブセクションとして残す判断。
 
 ### Deferred Items
-- `run-spec.sh <N> --fable` の実測実行そのもの (2〜3件の backlog Issue)。ユーザーの明示認可が必要 — `/code` フェーズからの継続的な deferral。
-- 実測データに基づく `WATCHDOG_TIMEOUT_SPEC_DEFAULT` の引き上げ要否判定。
-- 上記実測が行われた場合の `tests/watchdog-defaults.bats` 74行目の期待値更新 (値変更時のみ)。
+- `run-spec.sh <N> --fable` の実測実行そのもの (2〜3件の backlog Issue)。ユーザーの明示認可が必要 — 前サイクルから継続する deferral。
+- 上記 `--fable` 実測が行われた場合の `WATCHDOG_TIMEOUT_SPEC_DEFAULT` 再判定 (今回は `--opus` 代理データのみで「据え置き」判定済みのため、`--fable` 実測が優先度低の追加検証として残る)。
 
 ### Notes for Next Phase
-- `/verify` は Issue #939 のチェックボックスのうち、review フェーズで FAIL 判定済みの2件 (実測結果記録、SPEC_DEFAULT 再校正の実測根拠) が unchecked のままであることを踏まえて判定すること。
-- Post-merge AC (opportunistic observation) は次回 `--fable` spec 実行時に自動検証される想定。
+- Issue #939 の Pre-merge AC 7件は全て `[x]` (AC1〜3 は本サイクルで rubric PASS 判定として checked、AC4〜6 は前サイクル PR #944 で達成済み)。post-merge の opportunistic observation 1件のみ未チェック。
+- AC7 (`github_check "gh pr checks" "Run bats tests"`) は前サイクル PR #944 の CI 実行に基づき `[x]` のまま維持した — 本サイクルは `scripts/watchdog-defaults.sh` / `tests/watchdog-defaults.bats` を再度変更しているため、`/review` はこの PR 自身の CI が green であることを別途確認すること。
+- `docs/tech.md` の `#939` エントリは1つの bullet から2つの bullet (SPEC_DEFAULT 据え置き、REVIEW_DEFAULT 引き上げ) に分割された。今後この Issue に関する docs/tech.md 更新を行う際は両エントリを個別に参照すること。
 
 ## Verify Retrospective
 
