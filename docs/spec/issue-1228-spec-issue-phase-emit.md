@@ -233,19 +233,38 @@ Size L のため検出上限 5 件のうち、実質的なギャップとして 
 
 - N/A — 手戻りなし。テスト (`tests/run-spec.bats` / `tests/run-issue.bats` 各 3 ケース) は初回実装で全 PASS、既存 4 スイート (計 154 テスト) も無回帰で PASS した。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 実装は Spec の Implementation Steps 1-8 と Code Retrospective の記述通りで、コアロジックに構造的な乖離はなかった (`/review` の finder 3 エージェントも Spec Deviation の core-logic 指摘はゼロ)。唯一の Spec 起点の指摘は、Spec の `## Uncertainty` 節が挙げる残存リスク (`watchdog_kill` 増加時の再校正) を Issue の Post-merge AC が観測しないという AC カバレッジの手薄さで、これは実装の欠陥ではなく Issue 設計時点のスコープ判断 (#939 に委譲) の帰結。
+
+### Recurring issues
+
+- **同一事実の複数ドキュメント記述がずれる典型パターンが 3 箇所で発生**: `docs/reports/event-log-schema.md` の phase 列挙 (`code` vs `code-patch`/`code-pr`) が同一 PR 内で `modules/event-emission.md` の記述と食い違った、`modules/event-emission.md` 内の `_EMIT_PHASE_OWNED` 正準コード例が新規 emit ブロックを反映しないまま前方参照だけ追加された、`docs/structure.md`/`docs/ja/structure.md` の断定が SSoT (`modules/event-emission.md`) のスコープ限定を落としていた。3 件とも実害は軽微 (SHOULD/CONSIDER) だったが、「1 つの事実を N 箇所で記述し、N-1 箇所の更新を見落とす」という同型の失敗が同一 PR 内で 3 回起きたのは注目に値する。
+- **review-bug finder が「既存パターンの踏襲」を新規欠陥として検出し、adversarial verify で正しく棄却された事例が 3 件** (`AUTO_EVENTS_LOG` 常真ガード、stderr 混入、`rm -f` ガード配置)。finder の "coverage-first, no self-filtering" 設計 (`skills/review/workflow-guidance.md` Find/Filter Separation Contract) が意図通り機能し、`run-code.sh` からの参照実装踏襲を偽陽性として検証エージェントが正しく除外した。false positive filtering が有効に働いた好例として記録。
+
+### Acceptance criteria verification difficulty
+
+- UNCERTAIN はゼロ。rubric 4 件・command 4 件 (safe mode の CI 参照フォールバック経由) すべて PASS に判定できた。verify command の記述不備・欠落は見つからなかった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- **spec phase の Key Decisions (案 ii 採用、JSON キャプチャ分岐追加、reconcile 後 exit_code 使用、`_EMIT_PHASE_OWNED` ガード適用) をそのまま実装**。設計と実装の乖離はなかった。
+- **base branch conflict pre-check で `modules/event-emission.md` が "changed in both" と検出されたが、実 3-way merge (`git merge-tree --write-tree`) で無害と確認し MUST 化しなかった**。#1224 (main 側) と本 PR の編集領域が行レベルで重ならないことを 2 エージェント独立に実証。
+- **review-bug finder が挙げた 3 件 (常真ガード / stderr 混入 / rm -f 配置) は adversarial verify で REJECT**。いずれも `run-code.sh` の既存踏襲パターンか、著者の意図を反転させた誤読と判定。
+- **SHOULD/CONSIDER 4 件をドキュメント修正のみで Fix、残り 2 件 (retry-redirect 低確率リスク、Post-merge AC 拡張提案) は Skip**。前者はコード変更を伴う低確率エッジケースで本 Issue のスコープを超える、後者は Issue 拡張提案であり `/verify` での改善提案集約規約に従う。
 
 ### Deferred Items
 
-- `emit-event.sh` への `emit_token_usage_from_file` 抽出 — follow-up 候補として Notes に記録。本 Issue では起票しない (改善提案は `/verify` フェーズで集約する規約に従う)。
-- `WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800` の再校正 — spec の実所要時間 max 1806s が既に境界を超えているが、#939 のスコープ。
+- `emit-event.sh` への `emit_token_usage_from_file` 抽出 — spec phase から継続する follow-up 候補。本 Issue では起票しない。
+- `WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800` の再校正 — #939 のスコープ。
+- retry-after-kill 時の `TOKEN_USAGE_FILE` 二重書き込みリスク (`run-spec.sh:185` / `run-issue.sh:126`) — 低確率のエッジケースとして Skip。再発が観測された場合に別 Issue で対応。
+- Post-merge AC への `watchdog_kill` (`phase=spec`) 観測追加 — Spec の Uncertainty 節が示唆する残存リスクの追跡が Issue の AC に反映されていない。
 
 ### Notes for Next Phase
 
-- `/review` は `modules/event-emission.md` / `docs/structure.md` / `docs/ja/structure.md` / `docs/reports/event-log-schema.md` の 4 ファイルが実装後の実挙動と一致しているかを重点確認すること (AC8 の対象は前2者のみだが、後2者も spec retrospective で陳腐化が指摘されていたため同時修正済み)。
-- Post-merge AC (次の `/auto` 実行後の `.tmp/auto-events.jsonl` 集計) は `/verify` フェーズで観測すること。
+- `/merge` はこの PR の 8 AC 全 PASS・CI 全 SUCCESS・MUST issue ゼロを引き継いでよい。
+- `/verify` の Post-merge AC 確認時、`.tmp/auto-events.jsonl` の `wrapper_exit`/`token_usage` phase 内訳に `spec`/`issue` が現れることに加え、上記 Deferred Items (retry-redirect リスク、watchdog_kill 観測拡張) を改善提案として拾うかどうかの判断を行うこと。
