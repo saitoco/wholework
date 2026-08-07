@@ -4,7 +4,7 @@
 #
 # Usage:
 #   scripts/opportunistic-search.sh <skill-name> [--dry-run] [--facts <path>]
-#   scripts/opportunistic-search.sh --event <event-name> [--dry-run] [--context-file <path>] [--facts-file <path>] [--session <id>]
+#   scripts/opportunistic-search.sh --event <event-name> [--dry-run] [--context-file <path>] [--facts-file <path>] [--session <id>] [--execution-context <main|fork>]
 #
 # Examples:
 #   scripts/opportunistic-search.sh /issue
@@ -15,6 +15,7 @@
 #   scripts/opportunistic-search.sh --event pr-review-full --context-file /tmp/spec.md
 #   scripts/opportunistic-search.sh --event auto-run --facts-file .tmp/run-facts-session1.json
 #   scripts/opportunistic-search.sh --event auto-run --session 12345-1786000000
+#   scripts/opportunistic-search.sh --event pr-review-full --execution-context fork
 #
 # --context-file gates event-mode matches: when a matched AC line carries a
 # `keyword=<text>` attribute and --context-file is given, the Issue is only
@@ -33,18 +34,24 @@
 # modules/observation-trigger.md § Condition Check Gate (config=).
 #
 # `when=<axis>:<value>` gates event-mode matches on /auto run context (route /
-# mode / recovery-tier): when a matched AC line carries a `when=` attribute,
-# the Issue is only included if the run facts JSON (scripts/collect-run-facts.sh
-# output) satisfies every comma-separated clause (AND). --facts-file <path>
-# supplies the facts JSON explicitly; when omitted and --session <id> is given,
-# the facts are collected lazily (once per process) by calling
-# collect-run-facts.sh --session <id>; when neither is given, the facts are
-# collected lazily by calling collect-run-facts.sh with no arguments (existing
-# AUTO_SESSION_ID env var / .tmp/auto-session-current fallback ladder).
-# Facts that are unavailable, invalid, or contextless resolve the gate to
-# unconditional match (fail-open). ACs without `when=` match unconditionally
-# (backward compatible). See modules/observation-trigger.md § Condition Check
-# Gate (when=).
+# mode / recovery-tier) or on the firing skill's own execution context
+# (execution-context): when a matched AC line carries a `when=` attribute,
+# the Issue is only included if every comma-separated clause matches (AND).
+# route/mode/recovery-tier clauses are resolved from the run facts JSON
+# (scripts/collect-run-facts.sh output) -- --facts-file <path> supplies the
+# facts JSON explicitly; when omitted and --session <id> is given, the facts
+# are collected lazily (once per process) by calling collect-run-facts.sh
+# --session <id>; when neither is given, the facts are collected lazily by
+# calling collect-run-facts.sh with no arguments (existing AUTO_SESSION_ID env
+# var / .tmp/auto-session-current fallback ladder). Facts that are
+# unavailable, invalid, or contextless resolve that single clause to
+# unconditional match (fail-open) -- other clauses in the same when= attribute
+# are still evaluated. execution-context clauses are resolved directly from
+# --execution-context <main|fork> (no facts JSON involved); omitting
+# --execution-context resolves that clause to unconditional match (fail-open)
+# with a warning. ACs without `when=` match unconditionally (backward
+# compatible). See modules/observation-trigger.md § Condition Check Gate
+# (when=).
 #
 # --facts <path>: opportunistic mode (--event omitted) only. Pre-filters matches by
 # run-fact token substring: a matched AC line is only included if its condition text
@@ -72,6 +79,7 @@ CONTEXT_FILE=""
 FACTS_FILE=""
 FACTS_PATH=""
 SESSION_ARG=""
+EXECUTION_CONTEXT_ARG=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -117,6 +125,14 @@ while [ $# -gt 0 ]; do
                 exit 1
             fi
             SESSION_ARG="$2"
+            shift 2
+            ;;
+        --execution-context)
+            if [ $# -lt 2 ]; then
+                echo "Error: --execution-context requires an argument" >&2
+                exit 1
+            fi
+            EXECUTION_CONTEXT_ARG="$2"
             shift 2
             ;;
         -*)
@@ -356,10 +372,13 @@ for N in $ISSUE_NUMBERS; do
         fi
 
         # when= condition check gate: skip lines whose when=<axis>:<value>[,<axis>:<value>...]
-        # clauses (AND) do not all match the current /auto run facts (route / mode /
-        # recovery-tier). No when= attribute means unconditional match (backward compatible).
-        # Facts unavailable/invalid/contextless (resolve_run_facts fail-open), and unknown axes
-        # or malformed clauses, are ignored rather than excluding the line.
+        # clauses (AND) do not all match. route/mode/recovery-tier clauses are resolved
+        # against the current /auto run facts; execution-context clauses are resolved
+        # directly against --execution-context (no facts JSON). No when= attribute means
+        # unconditional match (backward compatible). Facts unavailable/invalid/contextless
+        # (resolve_run_facts fail-open), a missing --execution-context, unknown axes, and
+        # malformed clauses are all per-clause fail-open (that single clause is ignored
+        # rather than excluding the line).
         # Extraction is scoped to the HTML comment tag (not the whole line) and takes only the
         # last match: the AC's human-readable prose may itself quote "when=..." syntax (e.g. to
         # describe the attribute), and matching against the whole line would corrupt WHEN_ATTR
@@ -367,57 +386,75 @@ for N in $ISSUE_NUMBERS; do
         AC_TAG=$(echo "$line" | grep -oE '<!--.*-->' || true)
         WHEN_ATTR=$(echo "$AC_TAG" | grep -oE 'when=[^ >]+' | tail -n 1 | sed -e 's/^when=//' -e 's/-*$//' || true)
         if [ -n "$WHEN_ATTR" ]; then
-            resolve_run_facts
-            if [ -n "$RUN_FACTS_JSON" ]; then
-                WHEN_MATCH=true
-                # IFS=',' read -a splits on commas without word-splitting/globbing the result,
-                # unlike `for CLAUSE in $WHEN_ATTR` which would pathname-expand values
-                # containing *, ?, or [...] against files in the current working directory.
-                IFS=',' read -r -a WHEN_CLAUSES <<< "$WHEN_ATTR"
-                for CLAUSE in "${WHEN_CLAUSES[@]}"; do
-                    case "$CLAUSE" in
-                        *:*) ;;
-                        *)
-                            echo "Warning: malformed when= clause '${CLAUSE}' (missing ':'), ignoring" >&2
-                            continue
-                            ;;
-                    esac
-                    WHEN_AXIS="${CLAUSE%%:*}"
-                    WHEN_VALUE="${CLAUSE#*:}"
-                    if [ -z "$WHEN_VALUE" ]; then
-                        echo "Warning: malformed when= clause '${CLAUSE}' (empty value), ignoring" >&2
+            WHEN_MATCH=true
+            # IFS=',' read -a splits on commas without word-splitting/globbing the result,
+            # unlike `for CLAUSE in $WHEN_ATTR` which would pathname-expand values
+            # containing *, ?, or [...] against files in the current working directory.
+            IFS=',' read -r -a WHEN_CLAUSES <<< "$WHEN_ATTR"
+            for CLAUSE in "${WHEN_CLAUSES[@]}"; do
+                case "$CLAUSE" in
+                    *:*) ;;
+                    *)
+                        echo "Warning: malformed when= clause '${CLAUSE}' (missing ':'), ignoring" >&2
                         continue
-                    fi
-                    case "$WHEN_AXIS" in
-                        route)
-                            if echo "$RUN_FACTS_JSON" | jq -e '(.issues | length) == 0' >/dev/null 2>&1; then
-                                echo "Warning: run facts carry no per-issue context, ignoring when=route clause" >&2
-                            elif ! echo "$RUN_FACTS_JSON" | jq -e --arg v "$WHEN_VALUE" 'any(.issues[]?; .route == $v)' >/dev/null 2>&1; then
-                                WHEN_MATCH=false
-                            fi
-                            ;;
-                        mode)
-                            if echo "$RUN_FACTS_JSON" | jq -e '.mode == "unknown"' >/dev/null 2>&1; then
-                                echo "Warning: run facts carry no mode context, ignoring when=mode clause" >&2
-                            elif ! echo "$RUN_FACTS_JSON" | jq -e --arg v "$WHEN_VALUE" '.mode == $v' >/dev/null 2>&1; then
-                                WHEN_MATCH=false
-                            fi
-                            ;;
-                        recovery-tier)
-                            if echo "$RUN_FACTS_JSON" | jq -e '(.issues | length) == 0' >/dev/null 2>&1; then
-                                echo "Warning: run facts carry no per-issue context, ignoring when=recovery-tier clause" >&2
-                            elif ! echo "$RUN_FACTS_JSON" | jq -e --arg v "$WHEN_VALUE" 'any(.issues[]?; ((.recovery_tiers // []) | map(tostring)) | index($v) != null)' >/dev/null 2>&1; then
-                                WHEN_MATCH=false
-                            fi
-                            ;;
-                        *)
-                            echo "Warning: unknown when= axis '${WHEN_AXIS}', ignoring clause" >&2
-                            ;;
-                    esac
-                done
-                if [ "$WHEN_MATCH" = false ]; then
+                        ;;
+                esac
+                WHEN_AXIS="${CLAUSE%%:*}"
+                WHEN_VALUE="${CLAUSE#*:}"
+                if [ -z "$WHEN_VALUE" ]; then
+                    echo "Warning: malformed when= clause '${CLAUSE}' (empty value), ignoring" >&2
                     continue
                 fi
+                case "$WHEN_AXIS" in
+                    route)
+                        resolve_run_facts
+                        if [ -z "$RUN_FACTS_JSON" ]; then
+                            continue
+                        fi
+                        if echo "$RUN_FACTS_JSON" | jq -e '(.issues | length) == 0' >/dev/null 2>&1; then
+                            echo "Warning: run facts carry no per-issue context, ignoring when=route clause" >&2
+                        elif ! echo "$RUN_FACTS_JSON" | jq -e --arg v "$WHEN_VALUE" 'any(.issues[]?; .route == $v)' >/dev/null 2>&1; then
+                            WHEN_MATCH=false
+                        fi
+                        ;;
+                    mode)
+                        resolve_run_facts
+                        if [ -z "$RUN_FACTS_JSON" ]; then
+                            continue
+                        fi
+                        if echo "$RUN_FACTS_JSON" | jq -e '.mode == "unknown"' >/dev/null 2>&1; then
+                            echo "Warning: run facts carry no mode context, ignoring when=mode clause" >&2
+                        elif ! echo "$RUN_FACTS_JSON" | jq -e --arg v "$WHEN_VALUE" '.mode == $v' >/dev/null 2>&1; then
+                            WHEN_MATCH=false
+                        fi
+                        ;;
+                    recovery-tier)
+                        resolve_run_facts
+                        if [ -z "$RUN_FACTS_JSON" ]; then
+                            continue
+                        fi
+                        if echo "$RUN_FACTS_JSON" | jq -e '(.issues | length) == 0' >/dev/null 2>&1; then
+                            echo "Warning: run facts carry no per-issue context, ignoring when=recovery-tier clause" >&2
+                        elif ! echo "$RUN_FACTS_JSON" | jq -e --arg v "$WHEN_VALUE" 'any(.issues[]?; ((.recovery_tiers // []) | map(tostring)) | index($v) != null)' >/dev/null 2>&1; then
+                            WHEN_MATCH=false
+                        fi
+                        ;;
+                    execution-context)
+                        if [ -z "$EXECUTION_CONTEXT_ARG" ]; then
+                            echo "Warning: --execution-context not given, ignoring when=execution-context clause" >&2
+                            continue
+                        fi
+                        if [ "$EXECUTION_CONTEXT_ARG" != "$WHEN_VALUE" ]; then
+                            WHEN_MATCH=false
+                        fi
+                        ;;
+                    *)
+                        echo "Warning: unknown when= axis '${WHEN_AXIS}', ignoring clause" >&2
+                        ;;
+                esac
+            done
+            if [ "$WHEN_MATCH" = false ]; then
+                continue
             fi
         fi
 

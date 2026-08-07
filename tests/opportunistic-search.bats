@@ -525,6 +525,36 @@ teardown() {
     echo "$output" | grep -v "^Warning" | jq -e '.[0].number == 709' > /dev/null
 }
 
+@test "when gate: execution-context matches includes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 710}]'
+    export MOCK_ISSUE_BODY_710='- [ ] main context observed <!-- verify-type: observation event=pr-review-full when=execution-context:main -->'
+
+    run bash "$SCRIPT" --event pr-review-full --execution-context main
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 710' > /dev/null
+}
+
+@test "when gate: execution-context mismatch excludes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 711}]'
+    export MOCK_ISSUE_BODY_711='- [ ] main context observed <!-- verify-type: observation event=pr-review-full when=execution-context:main -->'
+
+    run bash "$SCRIPT" --event pr-review-full --execution-context fork
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
+}
+
+@test "when gate: execution-context clause without --execution-context flag fails open with a warning" {
+    export MOCK_ISSUE_LIST='[{"number": 712}]'
+    export MOCK_ISSUE_BODY_712='- [ ] main context observed <!-- verify-type: observation event=pr-review-full when=execution-context:main -->'
+
+    run bash "$SCRIPT" --event pr-review-full 2>&1
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Warning: --execution-context not given"* ]]
+    echo "$output" | grep -v "^Warning" | jq -e 'length == 1' > /dev/null
+    echo "$output" | grep -v "^Warning" | jq -e '.[0].number == 712' > /dev/null
+}
+
 @test "session=next declaration does not affect event= dispatch matching" {
     export MOCK_ISSUE_LIST='[{"number": 603}]'
     export MOCK_ISSUE_BODY_603='- [ ] Next-session skill self-update observed <!-- verify-type: observation event=auto-run session=next -->'

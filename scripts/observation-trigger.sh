@@ -3,7 +3,7 @@
 # Dispatch observation-type ACs when a named event fires.
 #
 # Usage:
-#   scripts/observation-trigger.sh --event <event-name> [--dry-run] [--context-file <path>] [--facts-file <path>] [--session <id>]
+#   scripts/observation-trigger.sh --event <event-name> [--dry-run] [--context-file <path>] [--facts-file <path>] [--session <id>] [--execution-context <main|fork>]
 #
 # --context-file is forwarded as-is to opportunistic-search.sh, which gates
 # matches carrying a `keyword=<text>` AC attribute against the file's content
@@ -18,6 +18,11 @@
 # the current /auto run's facts via collect-run-facts.sh --session <id> when
 # --facts-file is not also given. See modules/observation-trigger.md § Condition
 # Check Gate (when=).
+#
+# --execution-context is forwarded as-is to opportunistic-search.sh, which
+# gates matches carrying a `when=execution-context:<main|fork>` AC attribute
+# against this value directly (no facts JSON involved). See
+# modules/observation-trigger.md § Condition Check Gate (when=).
 #
 # For each matched Issue, posts a comment recommending the user re-run /verify,
 # unless a `<!-- wholework-event: type=observation-trigger ... event=<name> -->`
@@ -38,6 +43,7 @@ DRY_RUN=false
 CONTEXT_FILE=""
 FACTS_FILE=""
 SESSION_ID=""
+EXECUTION_CONTEXT=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -77,9 +83,17 @@ while [ $# -gt 0 ]; do
             SESSION_ID="$2"
             shift 2
             ;;
+        --execution-context)
+            if [ $# -lt 2 ]; then
+                echo "Error: --execution-context requires an argument" >&2
+                exit 1
+            fi
+            EXECUTION_CONTEXT="$2"
+            shift 2
+            ;;
         *)
             echo "Error: Unknown argument: $1" >&2
-            echo "Usage: $0 --event <event-name> [--dry-run] [--context-file <path>] [--facts-file <path>] [--session <id>]" >&2
+            echo "Usage: $0 --event <event-name> [--dry-run] [--context-file <path>] [--facts-file <path>] [--session <id>] [--execution-context <main|fork>]" >&2
             exit 1
             ;;
     esac
@@ -100,6 +114,9 @@ if [ -n "$FACTS_FILE" ]; then
 fi
 if [ -n "$SESSION_ID" ]; then
     SEARCH_ARGS+=(--session "$SESSION_ID")
+fi
+if [ -n "$EXECUTION_CONTEXT" ]; then
+    SEARCH_ARGS+=(--execution-context "$EXECUTION_CONTEXT")
 fi
 RESULTS=$("${SCRIPT_DIR}/opportunistic-search.sh" "${SEARCH_ARGS[@]}" 2>/dev/null || true)
 
