@@ -234,7 +234,7 @@ Example replacement:
 github_check "gh pr checks" "Run bats tests"
 
 # After (patch route compatible)
-github_check "gh run list --workflow=test.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success"
+github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion --jq '.[0].conclusion'" "success"
 ```
 
 **Note:** the `expected_value` must change from the job name to `"success"`. `gh run list` outputs run-level rows with no job name column — keeping the job name causes false FAIL even when CI is green. `gh pr checks` outputs a job-level table (job name + conclusion) so job names work there; `gh run list` outputs a run-level table (conclusion only) so `"success"` is the correct `expected_value`.

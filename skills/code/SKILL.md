@@ -420,7 +420,9 @@ After completing implementation — especially when a refactor changes the imple
 **Patch route verify command check:**
 
 If ROUTE is `patch` (resolved in Step 0, which already applies the ALWAYS_PR override and operate route detection — under `ALWAYS_PR=true` a Size XS/S Issue resolves to `pr` route here, not `patch`), before running verify-executor, scan the Issue body's `## Acceptance Criteria > Pre-merge` for `github_check "gh pr checks"` entries.
-- If found: output "Warning: patch route — `github_check "gh pr checks"` is incompatible. Auto-fixing to `github_check "gh run list"` form." and replace each with `github_check "gh run list"` form (add `--workflow=<filename>` if there are multiple workflow files under `.github/workflows/`). Update Issue body via `gh-issue-edit.sh`. Also update Spec verify commands (`$SPEC_PATH/issue-$NUMBER-*.md`) with the same fix.
+- If found: output "Warning: patch route — `github_check "gh pr checks"` is incompatible. Auto-fixing to `github_check "gh run list"` form." and replace each with the canonical `github_check "gh run list"` form from `${CLAUDE_PLUGIN_ROOT}/modules/verify-classifier.md` § "Patch Route CI Verification Note" (`--branch=main --limit=1`, `expected_value` = `"success"`; add `--workflow=<filename>` if there are multiple workflow files under `.github/workflows/`). Update Issue body via `gh-issue-edit.sh`. Also update Spec verify commands (`$SPEC_PATH/issue-$NUMBER-*.md`) with the same fix.
+
+**Patch route branch-scoped CI AC exclusion:** For patch route, Step 10 runs before Step 11's implementation commit exists. A branch-scoped `github_check "gh run list"` CI AC (the `modules/verify-classifier.md` § "Patch Route CI Verification Note" canonical form, `--branch=main --limit=1`) references the most recent run on `main`, which at this point in the skill still predates this Issue's own implementation — evaluating it here would check an unrelated prior commit's CI, not this Issue's. Exclude `github_check "gh run list"` pre-merge conditions from this Step's verify-executor full-mode pass; they are evaluated post-merge by `/verify`, once the implementation commit (or the retrospective commit pushed alongside it) actually has a run. **This exclusion does not check off the condition** — leave it as `- [ ]` (do not include it in the checkbox-flip loop of result branch 1 below, and do not count it toward "all PASS"); it is verified for real when `/verify` runs post-merge.
 
 **Resolving `{{base_url}}` to localhost**: If verify commands contain `{{base_url}}`, resolve it before passing to verify-executor:
 
@@ -434,7 +436,7 @@ Handle results as follows:
 1. If all PASS, complete this step and update checkboxes:
    - Pre-create directory with `mkdir -p .tmp`
    - Fetch current Issue body with `gh issue view $NUMBER --json body`
-   - For each pre-merge condition line with verify command, replace leading `- [ ]` with `- [x]` (preserve the rest of the line, verify command comments `<!-- verify: ... -->`, etc.)
+   - For each pre-merge condition line with verify command, replace leading `- [ ]` with `- [x]` (preserve the rest of the line, verify command comments `<!-- verify: ... -->`, etc.) — **except** conditions excluded from this Step's verify-executor pass per the "Patch route branch-scoped CI AC exclusion" note above; leave those as `- [ ]`
    - Write updated body to `.tmp/issue-body-$NUMBER.md` with Write tool
    - Update Issue body with `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh $NUMBER .tmp/issue-body-$NUMBER.md`
    - After update, delete temp file with `rm -f .tmp/issue-body-$NUMBER.md`

@@ -158,12 +158,16 @@ This note applies only when the Issue actually takes the patch route. When `.who
 Use the `github_check "gh run list"` form instead:
 
 ```
-github_check "gh run list --workflow=test.yml --commit=$(git rev-parse HEAD) --limit=1 --json conclusion --jq '.[0].conclusion'" "success"
+github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion --jq '.[0].conclusion'" "success"
 ```
 
 When `/verify` detects `github_check "gh pr checks"` in an acceptance condition for a patch-route Issue (PR_NUMBER is empty), it treats the condition as UNCERTAIN and recommends switching to the `gh run list` form.
 
 **Note:** When converting from `github_check "gh pr checks" "JOB_NAME"`, also replace the `expected_value` from the job name to `"success"`. `gh run list` outputs a run-level table (STATUS / conclusion / TITLE / WORKFLOW / ...) and does not include job names — specifying a job name as `expected_value` will never match and will always FAIL even when CI is green.
+
+**Why `--commit` is not used (run/commit correspondence via `head_sha`):** GitHub Actions creates a workflow run only for the commit at the *head* of a push (the run's `head_sha`) — not for every commit included in that push. Patch route sends `[implementation commit, retrospective commit]` in a single push, so the retrospective commit is always the push head and the only one with a `head_sha`-matched run; the implementation commit itself never has a run of its own. A form pinned to a literal fixed implementation-commit SHA (`--commit=<implementation commit SHA>`) therefore always returns an empty result and cannot be judged PASS/FAIL. The prior canonical form, which resolved `--commit=` via `git rev-parse HEAD`, is a distinct failure mode: it is evaluated at `/verify` execution time and resolves to whatever the base branch's HEAD is at that moment — typically the retrospective commit (the push head), which *does* have a `head_sha`-matched run — so it returns a non-empty but potentially unrelated commit's run, not an empty result. Neither form can verify this Issue's own implementation. Because the retrospective commit only touches the Spec file, the tree its run built is equivalent to the implementation's tree — referencing "the most recent run on the target branch" (`--branch=main --limit=1`, omitting `--commit`) is a valid substitute.
+
+**Residual risk (defect A is not fully eliminated):** Even with `--branch=main --limit=1`, there is no guarantee that "the most recent run on the branch at the time `/verify` executes" is the run produced by this Issue's own push — this repository runs concurrent sessions as a matter of course, and another session's push to `main` after this Issue's push would become the new "most recent" run. When the referenced run's result looks inconsistent with this Issue's own change (e.g., `cancelled`, or a `failure` on a job unrelated to the Issue's Changed Files), treat the condition as UNCERTAIN rather than a mechanical PASS/FAIL and recommend re-running `/verify` — the same operational stance as the CI Reference Fallback (#1126), applied here as guidance rather than an automated check.
 
 ## Output
 

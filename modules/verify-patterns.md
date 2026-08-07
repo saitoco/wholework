@@ -36,7 +36,7 @@ Skills that Read this file should design verify command patterns following these
 | Verifying regex implementation pattern strings with `grep` | Regex patterns (e.g., `Step [0-9]+\.[0-9]+`) will FAIL if implementation uses equivalent but different notation (e.g., `\d+\.\d+`) (occurred in #593) | Grep for the function name using the regex, not the pattern string itself. Function names are stable verification targets | ❌ `grep "Step [0-9]+\\.[0-9]+" "scripts/validate-skill-syntax.py"` → ✅ `grep "validate_decimal_steps" "scripts/validate-skill-syntax.py"` |
 | Using `section_contains` / `file_contains` for OR search | Both commands use fixed-string matching; `|` is treated as a literal character, not OR. Passing `"patA|patB"` searches for the exact string `"patA|patB"` — it does not match `patA` or `patB` individually (occurred in #72) | Split OR conditions into separate commands, one per pattern | ❌ `section_contains "f" "## H" "A|B"` → ✅ `section_contains "f" "## H" "A"` + `section_contains "f" "## H" "B"` (same for `file_contains`) |
 | Including shell quoting / variable references in `file_contains` / `section_contains` search strings for script invocations | When verifying a script call like `"$SCRIPT_DIR/get-config-value.sh" permission-mode auto`, specifying the search string with surrounding quotes or variable references (e.g., `get-config-value.sh permission-mode auto`) FAILs because `.sh` is followed by `"` in the actual code, breaking the fixed-string match (occurred in #385) | For script invocation patterns, use only the **argument substring** as the search string. This avoids false negatives from shell quoting differences (`"`, `'`) and variable reference variants (`$SCRIPT_DIR/`, `${CLAUDE_PLUGIN_ROOT}/`, bare path) | ❌ `file_contains "scripts/foo.sh" "get-config-value.sh permission-mode auto"` (FAIL when actual code is `"$SCRIPT_DIR/get-config-value.sh" permission-mode auto`) → ✅ `file_contains "scripts/foo.sh" "permission-mode auto"` (matches regardless of quoting/variable form) |
-| `node_modules`-dependent binary `command` verify fails inside worktree | `command` verify commands using `pnpm exec`, `npx`, or other `node_modules/.bin/` binaries (e.g., `pnpm exec astro check`, `npx tsc`) become UNCERTAIN/FAIL inside a worktree because `node_modules/` only exists in the parent repo — `git worktree add` does not copy or link it | Switch to `github_check` to reference CI results instead, or add a symlink step to `.claude/hooks/worktree-init.sh` (see `modules/worktree-lifecycle.md` Entry Section Step 4) | ❌ `command "pnpm exec astro check"` (FAIL inside worktree — `astro: command not found`) → ✅ `github_check "gh run list --workflow=ci.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success"` |
+| `node_modules`-dependent binary `command` verify fails inside worktree | `command` verify commands using `pnpm exec`, `npx`, or other `node_modules/.bin/` binaries (e.g., `pnpm exec astro check`, `npx tsc`) become UNCERTAIN/FAIL inside a worktree because `node_modules/` only exists in the parent repo — `git worktree add` does not copy or link it | Switch to `github_check` to reference CI results instead, or add a symlink step to `.claude/hooks/worktree-init.sh` (see `modules/worktree-lifecycle.md` Entry Section Step 4). Do not add `--branch=main` — a worktree's branch is the feature/PR/patch branch, not `main`; filtering to `--branch=main` would reference `main`'s run instead of the worktree branch's own run | ❌ `command "pnpm exec astro check"` (FAIL inside worktree — `astro: command not found`) → ✅ `github_check "gh run list --workflow=ci.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success"` |
 
 ### 2. Prefer `grep` Over `file_contains` for Text Presence Checks
 
@@ -177,6 +177,8 @@ Combine `file_contains` (config content existence) with `github_check "gh run li
 <!-- verify: github_check "gh run list --workflow=dco.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> CI run succeeded
 ```
 
+`.github/workflows/dco.yml` triggers on `pull_request` only, so this is a PR-route example — do not add `--branch=main` here (its runs are never associated with branch `main`). For a patch-route DCO-style check, see the `--branch=main` canonical form in `modules/verify-classifier.md` § "Patch Route CI Verification Note".
+
 **Role of each verify command:**
 
 | Command | Role | What it detects |
@@ -197,6 +199,8 @@ Preferred pattern 1 — specific workflow (scope limited to a single workflow fi
 ```
 <!-- verify: github_check "gh run list --workflow=<specific>.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success" -->
 ```
+
+**Do not add `--branch=main` here** — this is PR route, so CI runs are triggered on the PR's own head branch, not `main`; filtering to `--branch=main` would reference an unrelated `main` run instead of the PR's. (Contrast with the patch route canonical form in `modules/verify-classifier.md` § "Patch Route CI Verification Note", where `--branch=main` is correct because patch route commits land directly on `main`.)
 
 Preferred pattern 2 — direct test execution (scope limited to a single test file):
 
@@ -222,6 +226,8 @@ Use the job-level form to reference only the specific job that the AC is designe
 ```
 <!-- verify: github_check "gh run view $(gh run list --workflow=ci.yml --limit=1 --json databaseId --jq '.[0].databaseId') --json jobs --jq '.jobs[] | select(.name==\"Run bats tests\").conclusion'" "success" -->
 ```
+
+Same PR-route caveat as Preferred pattern 1 above: do not add `--branch=main` — this form is meant to resolve the PR's own most recent run.
 
 This form uses `gh run view` with `--json jobs` to extract the conclusion of a single named job. Because `gh run view` is in the `github_check` safe mode allowlist, this command executes in both safe and full modes. Unrelated job failures do not affect the result.
 
@@ -447,7 +453,7 @@ When a post-merge acceptance condition depends on a cron-scheduled workflow's ou
 
 **Recommended pre-verify flow for cron workflows:**
 1. After merge, run `workflow_dispatch` (with `dry_run: false`) to produce the expected output
-2. Verify the run succeeded: `gh run list --workflow=<name>.yml --limit=1`
+2. Verify the run succeeded: `gh run list --workflow=<name>.yml --branch=main --limit=1`
 3. Then run `/verify <issue-number>`
 
 **Background**: cron-dependent post-merge ACs fail immediately after merge because the scheduled job has not executed yet. Triggering `workflow_dispatch` simulates the first scheduled run and satisfies the pre-condition for all downstream verify commands. This pattern was confirmed in practice (see also Issue #490 for related guidance).
