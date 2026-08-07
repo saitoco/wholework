@@ -61,6 +61,18 @@
 #   BRIDGE_NUMBER="batch-<session-id>"), callers must pass EMIT_ISSUE_NUMBER=0 — emit_event()
 #   writes "issue":${_issue} unquoted, so a non-numeric value would corrupt the JSON line.
 #
+# opportunistic_verify_result: modules/opportunistic-verify.md の判定結果 (PASS/FAIL/SKIP) を
+# 条件 1 件ごとに emit する。Step 2 (AI Retrospective) で各条件の判定が確定した直後に emit される
+# (#1236)。1 件ずつ emit し集約しない — 理由は modules/opportunistic-verify.md 側のコメント、
+# および Issue #1236 の Spec Notes を参照。
+#   skill=<skill-name>            呼び出し元スキル名。例: /spec, /review, /verify, /issue, /code
+#   result=<PASS|FAIL|SKIP>       この条件の判定結果
+#   ac_index=<n>                  候補 Issue 本文の全チェックボックス列挙 (pre-merge + post-merge
+#                                  通し) における 1-based 位置。gh-issue-edit.sh --checkbox と同じ
+#                                  global-index 規約
+#   EMIT_ISSUE_NUMBER には判定対象の候補 Issue 番号が入る (呼び出し元スキル自身の Issue 番号では
+#   ない場合がある)
+#
 # verify_fail_marker_posted: /verify FAIL 時に machine-readable marker comment を Issue に append した
 #   iteration=<n>                 verify iteration counter (NEXT_ITERATION)
 #   failed_ac_count=<n>           number of FAIL conditions in auto-verification targets

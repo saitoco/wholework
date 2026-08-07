@@ -11,6 +11,7 @@ At each skill execution completion, extract `verify-type: opportunistic` conditi
 Information provided by the calling skill:
 
 - **Skill name**: Hardcoded by the calling skill in its SKILL.md (e.g., `/spec`, `/review`, `/verify`, `/issue`, `/code`)
+- **Calling Issue/PR number**: The Issue (or the Issue resolved from a PR) that the calling skill is currently processing. Taken from the calling skill's own context (`/spec`/`/code`/`/issue`/`/verify` use their own `$NUMBER`; `/review` uses the Issue number it already resolved from its PR) — used by Step 3 for session pointer resolution
 
 ## Processing Steps
 
@@ -44,7 +45,26 @@ For in-scope conditions, reflect on this skill's execution memory (output result
 
 No additional log retention mechanism is needed. The AI retrospects on its memory of skill execution to make judgments.
 
-### 3. Update Checkboxes
+### 3. Persist Judgment Results (Event Emission)
+
+Within Step 2's judgment loop, immediately after each condition's PASS/FAIL/SKIP result is determined — and before moving on to the next condition — emit one event per condition (do not aggregate; see Notes for the reason):
+
+```bash
+source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
+restore_auto_session_pointer <calling skill's own Issue/PR number>
+if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+  EMIT_ISSUE_NUMBER=<candidate Issue number N this condition belongs to> emit_event "opportunistic_verify_result" \
+    "skill=<calling skill name (e.g., /spec)>" \
+    "result=<PASS|FAIL|SKIP>" \
+    "ac_index=<1-based index>"
+fi
+```
+
+- **`AUTO_EVENTS_LOG` guard (required)**: skip the emit when `AUTO_EVENTS_LOG` is unset and `restore_auto_session_pointer` could not restore it either (e.g., a standalone run outside `/auto`) — the same policy as other non-wrapper emitters in `modules/event-emission.md`
+- **`ac_index`**: the 1-based position of this condition among the candidate Issue's full checkbox enumeration (pre-merge + post-merge, in order) — the same global-index convention used by `scripts/gh-issue-edit.sh --checkbox` and `scripts/check-pre-merge-ac.sh`. Determine it by counting `^- \[[ xX]\]` lines in the Issue body already fetched in Step 1/2
+- **`EMIT_ISSUE_NUMBER` and `restore_auto_session_pointer`'s target differ**: `restore_auto_session_pointer` takes the calling skill's own Issue/PR number (for session pointer resolution), while `EMIT_ISSUE_NUMBER` takes the candidate Issue number N being judged (recorded in the event's `issue` field, meaningful for downstream aggregation)
+
+### 4. Update Checkboxes
 
 For Issues with PASS conditions, execute the following:
 
@@ -74,7 +94,7 @@ For Issues with PASS conditions, execute the following:
 
 For FAIL: only report via comment (do not reopen; FAIL reopening is determined during explicit `/verify`)
 
-### 4. All Conditions PASS → Label Transition
+### 5. All Conditions PASS → Label Transition
 
 After updating checkboxes, confirm whether all post-merge conditions for the Issue (all conditions regardless of `verify-type` tag) are now checked (`- [x]`).
 
@@ -90,3 +110,4 @@ gh issue edit $N --remove-label "phase/verify" --add-label "phase/done"
 
 - Terminal output: Opportunistic verification summary (number of target Issues, judgment result for each condition)
 - GitHub Issue updates: Checkbox updates for PASS conditions + verification record comment + label transition (only when all conditions PASS)
+- `opportunistic_verify_result` event: one per judged condition, emitted when `AUTO_EVENTS_LOG` is set (Step 3)
