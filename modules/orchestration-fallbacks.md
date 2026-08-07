@@ -376,6 +376,33 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ---
 
+## ci-wait-silence-timeout
+
+### Symptom
+- `run-*.sh` exits with code 143 (watchdog SIGTERM)
+- Wrapper log contains: `watchdog: still waiting (json mode), silent for <N>s`
+- `.tmp/auto-events.jsonl` contains a `ci_wait` event for this issue/phase, recorded before the silence began
+- Typical cause: CI infrastructure is slow or down while the session is legitimately waiting on `wait-ci-checks.sh`, not a session init stall
+
+### Applicable Phases
+- Phases that wait on CI via `run-*.sh` (review, merge)
+
+### Fallback Steps
+1. Check current CI status with `gh pr checks <pr_number>` before retrying anything
+2. If the failure signature matches CI infrastructure outage (`steps: []`, `cancelled` + timeout, runner error, network error — see `skills/verify/SKILL.md` Step 5 "Verification priority" Step 1 for the classification table), re-run CI on the same SHA
+3. Once CI reaches a confirmed (non-pending) state, retry the phase
+
+### Escalation
+- If CI still does not reach a confirmed state after the re-run, or the failure signature does not match a known CI infrastructure outage, escalate to Tier 3
+- Do not retry the phase blindly before confirming CI status — retrying while CI infrastructure is still down re-enters the same `ci_wait` silence and burns another full watchdog window
+
+### Rationale
+- Distinguishes CI-wait-caused silence from `json-mode-silent-hang` above, which the two share an identical wrapper-log symptom (exit 143 + `still waiting (json mode)`) but different root causes and different correct recovery
+- Introduced in Issue #1221; real case in Issue #1214 / PR #1216 (2026-08-06): a GitHub Actions-wide outage held CI pending for the length of `watchdog-timeout-review-seconds` (5400s); the catalog's `json-mode-silent-hang` "retry once" instruction would have re-entered the same `ci_wait` wait and been killed again. The parent session instead confirmed CI status first, re-ran CI on the same SHA once green elsewhere, then retried — completing in 1200s
+- `wait-ci-checks.sh` already emits the `ci_wait` event on CI poll completion (`docs/reports/event-log-schema.md` §5); `detect-wrapper-anomaly.sh --events .tmp/auto-events.jsonl` reads it to separate this pattern from `json-mode-silent-hang`
+
+---
+
 ## baseline-failure
 
 ### Symptom

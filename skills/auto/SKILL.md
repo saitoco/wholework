@@ -965,7 +965,7 @@ If `matches_expected: false`: proceed to Tier 2.
 Run the anomaly detector:
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh --log .tmp/wrapper-out-$NUMBER-$PHASE.log --exit-code $EXIT_CODE --issue $NUMBER --phase $PHASE
+${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh --log .tmp/wrapper-out-$NUMBER-$PHASE.log --events .tmp/auto-events.jsonl --exit-code $EXIT_CODE --issue $NUMBER --phase $PHASE
 ```
 
 If detector output is non-empty (known pattern matched):
