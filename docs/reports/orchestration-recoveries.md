@@ -67,6 +67,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-07 03:55 UTC: manual-recovery-manual-recovery-review-uncommitted-work
+
+### Context
+- Issue #1213, phase: review
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 0
+
+### Diagnosis
+- cause: background-notification-wait
+- Second consecutive occurrence of the same failure mode, this time on the very Issue that fixes it. /review (PR #1225) ended its turn with 'バックグラウンドタスクの完了通知を待ちます。' before reaching Step 12.2 (commit/push); run-review.sh uses claude -p --non-interactive with no re-invocation guarantee, so the notification never arrived. 4 files of review fixes were left uncommitted in worktree review+pr-1225. post-fallback-review-summary.sh recovered the completion signal but not the work; run-merge.sh blocked on review_incomplete_fallback=true and the Tier 3 sub-agent returned action=abort. Parent session recovered manually: inspected the diff, ran the full suite (1507 pass / 0 fail), committed with sign-off and pushed as 3a382d81, posted a decision=override fallback=true gate marker, and re-ran run-merge.sh. Notably the review findings identified a deeper cause than the Issue's own scope: modules/test-runner.md Step 2 hardcoded a 120s timeout while a full bats suite measures ~407s, so the #994 foreground-execution guard was unenforceable on its own - that pressure is what pushed agents to run_in_background. The spec phase of this same Issue was also watchdog-killed at 1800s after posting Design Complete, with no work lost.
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-08-07 02:13 UTC: manual-recovery-review-rerun
 
 ### Context
