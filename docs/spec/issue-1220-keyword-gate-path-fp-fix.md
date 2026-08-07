@@ -86,3 +86,33 @@
 
 ### Acceptance criteria verification difficulty
 - Nothing to note. All 3 pre-merge AC (2 `rubric`, 1 `section_contains`) resolved cleanly to PASS with no UNCERTAIN and no verify command inaccuracies.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Step 15 の AC 監査が、`/issue` 自身が直前に追加した補助チェック `grep -i "keyword" ...` を Pattern 2 (常時 PASS) として検出した。`modules/observation-trigger.md` には "keyword" が多数出現するため、実装内容に関わらず PASS する — 検出は正しい
+- 検出後の対応は `skills/triage/skill-dev-verify-audit.md` § Non-Destructive Audit Behavior に従い**非破壊のコメント報告のみ**とし、Issue body は自動編集しなかった。規定通りの挙動
+
+#### spec
+- `/issue` が非破壊報告に留めた AC3 の不備を `/spec` が引き取り、`section_contains "modules/observation-trigger.md" "keyword=" "token"` へ差し替えた。「常時 PASS」から「実装後にのみ現れる `token` の存在確認」へ変わり、検証としての意味を回復している
+- Root Cause / Implementation Steps が word-boundary マッチの行き止まりを事前に潰し、採用する `sed -E` パターンまで確定させていたため、code フェーズでの追加調査ゼロ
+
+#### code
+- Deviations / Design Gaps / Rework いずれも None。Implementation Steps 1-3 を記載順のまま実装
+
+#### review
+- `resolve_filtered_context()` が兄弟実装 `resolve_run_facts()` の lazy-cache 構造は踏襲したものの `2>/dev/null || true` エラーガードを落としていた点を検出。マージ後のコード (`scripts/opportunistic-search.sh:167`) でガードの存在を確認済みで、review 内で修正されている
+- review retrospective の教訓「Spec が『既存パターンに倣え』と指示した場合、構造 (lazy-cache フラグ + シグネチャ) だけでなく防御ガードまで含めてパターン全体を写すこと」は妥当
+
+#### merge
+- conflict なし、CI success、review approved、pre-merge AC 3 件すべて checked。recovery 発火なしのクリーンな squash merge
+
+#### verify
+- Pre-merge 3 件は already-checked skip rule で SKIPPED、Post-merge 1 件は `verify-type: opportunistic` のため `/verify` の直接判定対象外として SKIPPED。FAIL / UNCERTAIN ゼロ
+- `/merge` の Phase Handoff が「`/verify` は今この条件を無理に確定させず、該当する PR が発生したときに自然に解決させるべき」と明示しており、その指示に従った。opportunistic 条件に対する phase 間の期待値の受け渡しが機能した例
+
+### Improvement Proposals
+
+- **Step 15 の AC 監査が自己生成 AC に対しても非破壊に留まるべきかが未定義**: 本バッチセッション内で `/issue` Step 15 が 2 回、**自分自身が同一実行内で書いた AC** の不備を検出したが、対応が分かれた — #1220 は規定通り非破壊報告のみ (`skills/triage/skill-dev-verify-audit.md` § Non-Destructive Audit Behavior: 「This audit is **non-destructive**: triage does NOT auto-edit the Issue body」、`skills/issue/SKILL.md` Step 15 も「the audit is non-destructive (comment-only)」と再掲)、#1221 は Issue body を即座に自動修正した (逸脱)。規定の根拠は「This avoids destructive behavior in cases where `/issue` may regenerate the AC」であり、**ユーザが書いた AC や後で再生成される AC を壊さないため**の配慮である。しかし Step 15 が監査するのは Step 9 (および Step 12) で `/issue` 自身が確定させた AC であり、この根拠がそのまま当てはまるとは限らない。実際 #1220 では既知の欠陥 AC がそのまま `/spec` に渡り、`/spec` が引き取って修復している。#1221 のように自動修正すれば 1 フェーズ早く閉じるが、規定違反であり挙動が非決定的になる。「自己生成 AC は自動修正可、外部由来 AC は非破壊」といった線引きを明示するか、現行どおり一律非破壊とした上で `/spec` への引き継ぎを正式な経路として文書化するか、いずれかに確定させる必要がある。対象は `skills/triage/skill-dev-verify-audit.md` (§ Non-Destructive Audit Behavior) と `skills/issue/SKILL.md` (Step 15) の 2 ファイルで、前者は `/issue` と `/triage` の両方が読む共有サーフェス
