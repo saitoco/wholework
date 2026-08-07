@@ -247,6 +247,12 @@ No new comments since last phase.
 - **観察 1: worktree から実行すると無言で空結果になる**: `/verify` の worktree 内で `collect-run-facts.sh` を実行したところ `{"session_id":"...","mode":"unknown","issues":[]}` が返った。`.tmp/` は main repo 限定 (gitignored) で worktree には存在しないため、既定の `AUTO_EVENTS_LOG=.tmp/auto-events.jsonl` が解決できず fail-open したもの。`AUTO_EVENTS_LOG` に絶対パスを渡して正常な結果を得た。現状の唯一の呼び出し元 (`/auto` Step 5) は main repo から実行するため実害はないが、fail-open の出力が「候補ゼロ」と見分けられない点は、呼び出し元が増える #1172 (`when=` ゲートが `opportunistic-search.sh` から本スクリプトを消費する) の実装時に考慮が要る。CWD 依存の main-repo 限定パス問題という点では #1141 と同型
 - **観察 2: 並行セッションのイベント誤帰属を実データで確認**: 本セッションの fact JSON に #984 / #995 / #1009 など、本バッチが処理していない Issue が `phase: verify, complete` として 6 件含まれていた。これは別セッションの `/auto 1168` 完了時の observation dispatch による `/verify` が、セッション横断のポインタ `.tmp/auto-session-current` を経由して**本セッションの `session_id` を拾った**ためとみられる。#1075 (in-session `/verify` の event が並行セッションの session_id に誤帰属する) が記述する現象そのもので、新規の実測データにあたる
 
+- **(2026-08-07 追記 — post-merge AC は UNCERTAIN で継続)** `/auto 1158` (XL route、session `94570-1786069858`) の observation dispatch から再 verify した。当該セッションは **operate route の `/auto` を実際に完走させた初のケース** (sub-issue #1166: Spec の Changed Files 空・Implementation Steps が全て `gh` CLI 操作、`/code` の operate 分岐が 6 件の retire を完了) だったが、`collect-run-facts.sh` の出力は `route: "pr"` で `operate` ではなかった。
+- **ただしこれは本実装の欠陥とは切り分けられない**: `scripts/collect-run-facts.sh:248-262` の operate probe は `ROUTE == "patch"` のときのみ発火する設計で、その前提 (「operate route always emits code-patch phase events」) はコード内コメントに明記されている。#1166 の phase events は `code-pr` であり、原因は `run-auto-sub.sh` が Spec 由来の operate route を honor せず Size M から `code-pr` を dispatch したこと (**#1240** として起票済み)。probe が発火しなかったのは probe の欠陥ではなく **probe に到達しなかった**ためで、実装ロジック自体は未検証のまま。よって FAIL ではなく UNCERTAIN と判定し `phase/verify` を維持した。
+- **3 軸のうち 2 軸は同じ実データで実証できた**: `recovery_tiers` は #1166 が `[2, 3]`、#1167 が `[2]` を正しく保持し、top-level `mode` も `single` を正しく宣言していた。operate route の 1 軸のみが切り分け不能。
+- **`route` は operate と patch を区別する唯一のシグナル**と `modules/run-fact-matching.md` が位置づけているため、この誤記録は run-fact マッチングの判定精度に直接影響する。実際に本セッションの run-fact AC reconciliation では、operate route を主張する条件に対して `route: pr` を根拠に判定することができなかった。#1240 の修正で自動的に解消される見込み。
+- **再検証条件**: (1) #1240 着地後に XL/batch 経由で再確認する、または (2) `run-auto-sub.sh` を経由しない単一 Issue の `/auto <operate-route-issue>` で確認する (`skills/auto/SKILL.md` Step 3a の Operate route demotion が働き `code-patch` が emit される)。
+
 ### Improvement Proposals
-- N/A — 観察 1 は #1172 のスコープ内で扱うべき事項かつ #1141 と同型、観察 2 は #1075 が既に追跡しており、いずれも新規起票は不要
+- N/A — 観察 1 は #1172 のスコープ内で扱うべき事項かつ #1141 と同型、観察 2 は #1075 が既に追跡しており、いずれも新規起票は不要。2026-08-07 に判明した operate route 未検出は #1240 (`run-auto-sub.sh` の operate route 非対応) が真因であり、そちらで解消される
 
