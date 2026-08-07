@@ -256,14 +256,13 @@ Issue 本文が記載していた行番号のうち、実ファイルとずれ�
 - Nothing to note — Pre-merge AC 26 件 (`file_contains`/`file_not_contains`/`grep`/`rubric`/`github_check` の組み合わせ) はすべて一意に PASS/FAIL を判定でき、UNCERTAIN は 0 件だった。rubric 系 3 件 (AC 3, 12, 24) も、Issue 本文の記述が具体的だったため意味的検証の曖昧さは生じなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Pre-merge AC 26 件を再検証し、全件 PASS を確認 (前回セッションで 24 件、今回のセッションで残り 2 件の `github_check` を再確認)。CI (`Run bats tests` / `Validate skill syntax` / `macOS shell compatibility`) はすべて green
-- `--non-interactive` (fork context) のため `capabilities.workflow: true` でも Workflow tool の re-invocation guarantee が確認できず、`skills/review/workflow-guidance.md` の Pre-flight 判定に従い静的 Task fan-out (review-spec + review-bug×2) にフォールバックした
-- review-spec / review-bug×2 の検出結果はすべて CONSIDER レベル (4 件、うち 1 件は 2 段階検証で REJECT) で MUST/SHOULD は 0 件。いずれも「本 Issue の Changed Files 範囲外」「先行する類似キー削除でも同様に省略されている前例あり」の理由で今回は見送り、CONSIDER のまま PR コメントに記録した
-- CONSIDER 指摘 4 件はいずれも本 PR のスコープ外 (別ファイルの追加変更が必要、または将来の改善提案) と判断し、スコープを広げない方針を優先した
+- Pre-merge AC ゲート (`check-pre-merge-ac.sh`) は `unchecked_count=0`、review-incomplete-fallback チェックも `matches_expected=true` (organic Step 14 完了) だったため、override マーカーなしでそのままマージ可と判断した
+- `gh-pr-merge-status.sh` の結果は `mergeable=true reason=clean ci_status=success review_status=approved` だったため、conflict 解消フローや CI 待機は不要だった
+- 非対話モード (`--non-interactive`) だが、ゲート条件がすべてクリアだったため auto-resolve 分岐(Non-Interactive Mode Behavior)を使う必要はなかった
 
 ### Deferred Items
 
@@ -274,5 +273,5 @@ Issue 本文が記載していた行番号のうち、実ファイルとずれ�
 
 ### Notes for Next Phase
 
-- `/merge` は MUST 指摘がないことを確認済みなのでそのまま進めてよい。Pre-merge AC 26 件は全て PASS 済み
-- Post-merge observation (`event=auto-run session=next`) は次回 `/auto --batch` 完走を待つ必要があり、即時確認はできない
+- `/verify` は Post-merge observation AC (`event=auto-run session=next`) の確認が主タスク。次回 `/auto --batch` 完走を待つ必要があり、即時確認はできない点に注意
+- Issue #1214 の base branch は `main` なので `closes #1214` により自動クローズされる見込み。Step 6 のフォールバック確認で state を再検証すること
