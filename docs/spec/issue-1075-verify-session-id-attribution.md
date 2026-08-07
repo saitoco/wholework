@@ -241,22 +241,37 @@ Pre-merge/Post-merge の AC 文言自体への変更は行っていない (既�
 - `skills/verify/SKILL.md` Step 1 で、`persist_auto_session_pointer` 呼び出しと `phase_start` emit を別々の bash コードフェンスに分けて記述した際、後者のフェンスに `source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"` を書き忘れた。この codebase では SKILL.md 内の bash コードフェンスは互いに独立した Bash tool 呼び出しとして実行される規約であり (他の 10 箇所の `restore_auto_session_pointer` 呼び出しはすべて自分のフェンス内で `source` している)、単一の継続シェルセッションではないことを見落としていた。Step 10 の敵対的サブエージェントレビューで検出し、コミット前に修正した。教訓: SKILL.md の bash フェンスを追加・分割する際は、そのフェンス単体で必要な `source`/変数初期化が完結しているかを個別に確認する。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Spec の Implementation Steps 1-10 を記載順どおりに実装した (案 A + 案 B のハイブリッド構成、および案 D の pointer 再生成)。逸脱なし
-- `restore_auto_session_pointer()` は `AUTO_SESSION_ID` が既設なら (issue-scoped/PGID/current のどのポインタファイルも読まずに) それを直接採用する。これは in-band 引き渡しの直接経路であると同時に、既設ポインタ不在時に `AUTO_EVENTS_LOG` が設定されず emit が黙って skip される旧バグの解消も兼ねる
-- 5 つの pre-merge rubric AC はすべて、実装者バイアスを避けるため独立したサブエージェントによる敵対的レビューで PASS 判定を得た上でチェック済みにした
+- `/review` はこのセッションが headless `--non-interactive` (再起動保証なし) であることを `modules/execution-context.md` で確認し、Workflow ツールパスを使わず静的 Task fan-out (review-spec + review-bug×2) にフォールバックした
+- review-bug が検出した 13 件 (重複統合後) のうち 10 件を敵対的検証サブエージェント (Opus) で検証。3 件 (SHOULD 1 件 + CONSIDER 2 件) が生存、7 件は REJECT (誤検知) と判定。review-spec の 4 件は検証なしで直接採用
+- 生存した SHOULD 2 件 (`skills/auto/SKILL.md:39` の stale な理由句、`modules/orchestration-fallbacks.md` のポインタ再生成欠落) と低リスクな CONSIDER 2 件 (ドキュメント精度) を修正してコミット (8186feb8)。残り 5 件の CONSIDER (Spec Deviation 2 件、ja/en sync 1 件、未検証 2 件) はコスト対効果が低いと判断しスキップ
 
 ### Deferred Items
 
+- `skills/verify/SKILL.md` の ARGUMENTS 冒頭説明への `--session-id` 追記 (spec deviation、実害小)
+- `scripts/run-auto-sub.sh:384` の `restore_auto_session_pointer` への `$_mr_issue` 引き渡し (多層防御としての改善余地。案D で経路自体は塞がれている)
+- `docs/ja/structure.md` の EN/JA 同期ギャップ (本 PR 以前から存在、`/doc sync` の対象と判断)
 - Post-merge AC (並行 `/auto --batch` を実行して `.tmp/auto-events.jsonl` 上の `session_id` を実地確認する) は pre-merge では検証不能。`/verify` に委ねる
-- `/verify` の emit 定型 3 行の `modules/` 切り出しは Spec の判断通り見送り (11 箇所では割に合わない。15 箇所超で再検討)
-- `docs/migration-notes.md` / `docs/reports/external-kill-investigation.md` は Spec の「除外推奨」判断のとおり変更せず
 
 ### Notes for Next Phase
 
-- `/review` は `skills/verify/SKILL.md` の 11 箇所すべてが `restore_auto_session_pointer $NUMBER` を渡していること、`skills/auto/SKILL.md` の 6 箇所すべてが `--session-id=<literal SESSION_ID value from step 1>` を持つことを再確認すると良い (実装時に grep で確認済みだが独立確認の価値がある)
-- full suite (`bats tests/`, 1494 件) は全 PASS。`scripts/emit-event.sh` / `skills/verify/SKILL.md` / `skills/auto/SKILL.md` が各々の direct counterpart 以外のテストからも参照されていたため behavioral-change override が発火した
-- Code Retrospective > Rework に記録した「SKILL.md の bash フェンスは独立した Bash tool 呼び出し」という規約は、今後 SKILL.md の emit ブロックを分割編集する際に再発しうる落とし穴として `/review` 時にも意識すること
+- `/merge` は追加コミット (8186feb8) 込みで CI 全パス (9/9 SUCCESS) を確認済み
+- Pre-merge rubric AC 5 件はすべて独立検証でも PASS 再確認済み。Issue 側は実装時点で既に `[x]` 済みのためチェックボックス更新は不要だった
+- review で修正した 2 件の SHOULD (`skills/auto/SKILL.md:39`、`modules/orchestration-fallbacks.md`) は誤帰属バグの再発防止に直結する内容のため、`/verify` の post-merge 実地確認時にも意識するとよい
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+1件: Spec Implementation Step 3 が要求した「`--session-id` を `/verify` の ARGUMENTS 冒頭説明にも追記する」が実装では省略されていた (CONSIDER, 実害は小さい — `modules/skill-help.md` は本文から `--` フラグを走査するため `/verify --help` には拾われる)。Code Retrospective の "Deviations from Design" は "N/A" と記録しており、この種の軽微な省略が Handoff に残らないパターンが見られた。Spec Implementation Step が「文書のX箇所に追記する」と粒度を明示した場合は、実装フェーズ側でその粒度までチェックリスト化すると見落としを防げる可能性がある。
+
+### Recurring issues
+
+2件が同型のパターン: 新しい authoritative なパス (issue-scoped ポインタ / `--session-id`) を導入した際、旧来のパスを推奨経路として説明していたプローズ (`skills/auto/SKILL.md:39` の `auto-session-current` 理由句、`modules/orchestration-fallbacks.md` の2箇所のカタログ記述) が、変更対象ファイルの一部でのみ更新され、他の言及箇所には反映されないまま残っていた (いずれも review で SHOULD として検出・修正済み)。これは本 PR 自身の Code Retrospective が記録した「SKILL.md の bash フェンスは独立した Bash tool 呼び出し」という見落としとは別種だが、「1つの変更が複数箇所に及ぶ説明を更新し切れない」という同じ根本原因 (grep による横断確認をしていない) を共有する。解決順序やポインタファイルの優先順位を変更する PR では、Spec の Changed Files セクションに直接の変更対象を明示するだけでなく、`grep -rn "<変更前のキーワード>"` で他の言及箇所を横断検索し矛盾がないか確認するステップを Spec Implementation Steps に加える価値がある。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — 5件の Pre-merge rubric AC はいずれも曖昧さなく判定できた。grader が Issue body + diff から明確に PASS/FAIL を判断可能な粒度で書かれていた。
