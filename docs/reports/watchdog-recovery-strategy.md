@@ -135,4 +135,20 @@ Fable 5 was redeployed on 2026-07-01 after the 2026-06-13→2026-07-01 pause, ma
 bash scripts/run-spec.sh <N> --fable   # for 2-3 real backlog Issues without an existing Spec
 ```
 
+### 2026-08 re-measurement (Issue #939) — `--opus` proxy traffic
+
+**Date**: 2026-08-07
+**Issue**: #939 (2026-08-07 Issue Retrospective widened AC1/AC2 evidence scope from `--fable`-only to `--fable` or `--opus`)
+
+`max_silent_window` events carry no `model` tag (see the constraint noted in the 2026-07 subsection above and in the Spec's Notes), so `--opus` real traffic is identified by proxy: `event=="sub_start" and size=="L"` joined with `event=="max_silent_window" and phase=="spec"` on `(issue, session_id)` — the same methodology as `docs/tech.md` `#1064`. `size=="L"` is a valid proxy because `/auto` automatically dispatches `--opus` for Size L spec phases. `--fable` itself has no analogous proxy (it is an explicit flag, not Size-driven), so the `--fable` real-traffic sample remains the single #560 data point recorded in the 2026-07 subsection above; this subsection adds the `--opus` population as the alternative evidence path the Issue Retrospective opened up.
+
+**Results (N=20, 2026-06-28–2026-08-07)**:
+- min 660s / mean 978.5s / p95 1340s (74.4% of 1800s) / max 1460s (81.1% of 1800s)
+- post-Opus-5 subset (≥2026-07-24, N=11): max 1340s (74.4% of 1800s)
+- `watchdog_kill` events with `phase=="spec"` within this `size=="L"` population: **0**
+
+(Two `phase=="spec"` `watchdog_kill` events exist elsewhere in the full log — issue #962, 2026-07-09, `size=="S"`; issue #1213, 2026-08-07, `size=="M"` — but neither carries `size=="L"`, so both fall outside this measurement's population and are excluded from the counts above.)
+
+Reproduction commands and the raw extraction pipeline are recorded in the Spec's Notes (`docs/spec/issue-939-fable-5-spec-watchdog-recalib.md` § measurement scope). See `docs/tech.md` § Watchdog timeout calibration for the resulting `WATCHDOG_TIMEOUT_SPEC_DEFAULT` judgment based on these numbers.
+
 then extract `event=="max_silent_window" and phase=="spec" and issue==<N>` (and any `event=="watchdog_kill"`) from `.tmp/auto-events.jsonl` for each run, and append the results here as a follow-up dated subsection.
