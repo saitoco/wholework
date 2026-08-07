@@ -161,6 +161,26 @@ teardown() {
     [[ "$output" == *"--session requires an argument"* ]]
 }
 
+@test "forwarding: --execution-context is forwarded to opportunistic-search.sh" {
+    export MOCK_SEARCH_OUTPUT="[]"
+    run bash "$SCRIPT" --event pr-review-full --execution-context fork
+    [ "$status" -eq 0 ]
+    grep -q -- "--execution-context fork" "$BATS_TEST_TMPDIR/search-calls.log"
+}
+
+@test "forwarding: no --execution-context means opportunistic-search.sh is called without it" {
+    export MOCK_SEARCH_OUTPUT="[]"
+    run bash "$SCRIPT" --event pr-review-full
+    [ "$status" -eq 0 ]
+    ! grep -q -- "--execution-context" "$BATS_TEST_TMPDIR/search-calls.log"
+}
+
+@test "error: --execution-context without value" {
+    run bash "$SCRIPT" --event auto-run --execution-context
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"--execution-context requires an argument"* ]]
+}
+
 @test "resilience: opportunistic-search.sh error does not abort trigger" {
     export MOCK_SEARCH_EXIT=1
     export MOCK_SEARCH_OUTPUT=""

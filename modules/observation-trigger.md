@@ -276,10 +276,16 @@ clauses may be comma-separated and are combined with AND:
 | `route` | per-issue `.issues[].route` | `pr` \| `patch` \| `operate` \| `unknown` |
 | `mode` | top-level `.mode` | `batch` \| `single` \| `unknown` |
 | `recovery-tier` | per-issue `.issues[].recovery_tiers` | `1` \| `2` \| `3` |
+| `execution-context` | N/A — not resolved from facts JSON; resolved directly from the `--execution-context` argument | `main` \| `fork` |
 
-`opportunistic-search.sh` matches `when=` clauses against the run facts JSON produced by
-`scripts/collect-run-facts.sh` (see `modules/run-fact-matching.md` § Fact JSON Fields for the
-full field definitions). It never collects its own execution context independently.
+`opportunistic-search.sh` matches `route`/`mode`/`recovery-tier` clauses against the run facts
+JSON produced by `scripts/collect-run-facts.sh` (see `modules/run-fact-matching.md` § Fact JSON
+Fields for the full field definitions) — it never collects its own execution context
+independently for these three axes. `execution-context` is different: it is a property of the
+individual firing skill's own invocation (main vs. fork context, per
+`modules/execution-context.md` § Context Detection), not a fact about the `/auto` run as a whole,
+so it is resolved directly from the `--execution-context` argument the firing skill passes —
+`collect-run-facts.sh` is not involved.
 
 **Arguments table addition (both scripts):**
 
@@ -287,16 +293,17 @@ full field definitions). It never collects its own execution context independent
 |----------|-------------|
 | `--facts-file <path>` | Optional. Path to a run facts JSON file (`collect-run-facts.sh` output) to match `when=` clauses against. If omitted and `--session <id>` is given, `opportunistic-search.sh` lazily calls `collect-run-facts.sh --session <id>` the first time a `when=`-tagged AC line is processed. If neither is given, it lazily calls `collect-run-facts.sh` with no arguments. Either lazy call's result is cached for the rest of the process. If the given `--facts-file` path does not exist, a warning is printed to stderr and the gate falls back to `--session` (or, absent that, no-argument) lazy collection. `observation-trigger.sh` forwards this argument as-is to `opportunistic-search.sh`. |
 | `--session <id>` | Optional. `/auto` session id passed to `collect-run-facts.sh --session <id>` when resolving `when=` clauses. Ignored when `--facts-file` is also given (that takes priority). When neither is given, `collect-run-facts.sh` falls back to its own `AUTO_SESSION_ID` env var → `.tmp/auto-session-current` pointer file → fail-open resolution ladder — this is the `--session`-unspecified backward-compatible path. `observation-trigger.sh` forwards this argument as-is to `opportunistic-search.sh`. |
+| `--execution-context <main\|fork>` | Optional. The firing skill's own execution context (per `modules/execution-context.md` § Context Detection), passed directly by the firing skill. Gates `when=execution-context:<value>` clauses via a direct string comparison — no facts JSON is consulted. `observation-trigger.sh` forwards this argument as-is to `opportunistic-search.sh`. |
 
 **Matching specification:**
 
 - Extraction: `when=<clauses>` is read from the AC line via `grep -oE 'when=[^ >]+'` (stops at the next space or `-->`), trailing dashes stripped — the same extraction pattern as `keyword=` and `config=`.
 - Clauses are split on `,` and every clause must resolve true for the gate to pass (AND, not OR).
-- Each clause is `<axis>:<value>`. Per axis: `route:<v>` checks `any(.issues[]?; .route == $v)`, `mode:<v>` checks `.mode == $v`, `recovery-tier:<v>` checks `any(.issues[]?; ((.recovery_tiers // []) | map(tostring)) | index($v) != null)` against the resolved run facts JSON.
+- Each clause is `<axis>:<value>`. Per axis: `route:<v>` checks `any(.issues[]?; .route == $v)`, `mode:<v>` checks `.mode == $v`, `recovery-tier:<v>` checks `any(.issues[]?; ((.recovery_tiers // []) | map(tostring)) | index($v) != null)` against the resolved run facts JSON; `execution-context:<v>` checks `<v>` against the `--execution-context` argument value via a direct string comparison (no facts JSON).
 - Gate disabled (unconditional match) when: no `when=` attribute on the AC line.
-- Fail-open (unconditional match, with a stderr warning) when: run facts cannot be resolved (`collect-run-facts.sh` fails or the `--facts-file` path is unreadable), the facts JSON is not valid JSON, or the facts JSON carries no run context (`(.issues | length) == 0 and .mode == "unknown"`).
+- Fail-open (unconditional match for that single clause, with a stderr warning) when: for `route`/`mode`/`recovery-tier` clauses, run facts cannot be resolved (`collect-run-facts.sh` fails or the `--facts-file` path is unreadable), the facts JSON is not valid JSON, or the facts JSON carries no run context (`(.issues | length) == 0 and .mode == "unknown"`); for an `execution-context` clause, `--execution-context` was not given. Other clauses in the same comma-separated `when=` attribute are still evaluated — this fail-open is per-clause, not per-AC.
 - A malformed clause (no `:`, or an empty value) or an unknown axis is ignored (fail-open for that clause only, with a stderr warning) rather than excluding the AC — an unrecognized clause never counts as a failed AND term.
-- `when=` presumes `event=auto-run` — the run facts JSON describes an `/auto` execution, so declaring `when=` on an AC tagged with a different `event=` value has no meaningful facts to match against (the gate still evaluates mechanically, but the result is not a meaningful signal).
+- `when=` presumes `event=auto-run` for the `route`/`mode`/`recovery-tier` axes only — the run facts JSON describes an `/auto` execution, so declaring one of those three axes on an AC tagged with a different `event=` value has no meaningful facts to match against (the gate still evaluates mechanically, but the result is not a meaningful signal). `execution-context` does not presume `event=auto-run`: it has meaning for any event whose firing skill can run in either main or fork context, e.g. `pr-review-full`/`pr-review-light`.
 - This is a distinct mechanism from `modules/verify-executor.md`'s verify command modifier `--when="shell condition"` (e.g. `<!-- verify: command "..." --when="which bats" -->`). That modifier gates a `verify:` command's execution on a shell condition; `when=<axis>:<value>` here is a `verify-type: observation` tag attribute that gates AC *dispatch* on `/auto` run context. They share a name by coincidence, occupy different positions in the AC comment syntax, and are evaluated by different code paths.
 
 ## Conditions That Cannot Be Pre-Excluded
