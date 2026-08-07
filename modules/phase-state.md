@@ -33,7 +33,7 @@ For precondition checks, `reconcile-phase-state.sh` verifies whether the require
 
 | Phase | Precondition | Success Signature (Completion) | Implementation Status |
 |-------|-------------|-------------------------------|----------------------|
-| issue | Issue exists and state != CLOSED | `triaged` label on issue | Implemented |
+| issue | Issue exists and state != CLOSED | `phase/(issue\|ready\|code\|review\|merge\|verify\|done)` label on issue | Implemented |
 | spec | `phase/issue` or `phase/spec` label on issue | `$SPEC_PATH/issue-N-*.md` exists AND `phase/(ready\|code\|review\|merge\|verify\|done)` label | Implemented |
 | code-patch | `phase/ready` label on issue, Spec exists OR Size=XS | `git log origin/main --after=<reopen_ts> --grep="closes #N"` returns ≥1 fresh commit (reopen timestamp obtained via `get-last-reopen`); falls back to `git log origin/main --grep="closes #N"` when reopen timestamp unavailable; OR an operate route completion marker comment is found (see "Operate Route Completion Signature" below); OR an open PR on the `worktree-code+issue-N` branch is found (see "Stray PR Completion Signature" below) | Precondition: `phase/ready` — Implemented; Spec exists OR Size=XS — Implemented (Spec exists OR Size=XS). Completion: Implemented |
 | code-pr | `phase/ready` label on issue, Spec exists OR Size=XS | Open PR on `worktree-code+issue-N` branch (#310 SSoT) | Precondition: `phase/ready` — Implemented; Spec exists OR Size=XS — Implemented (Spec exists OR Size=XS). Completion: Implemented |

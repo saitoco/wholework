@@ -50,6 +50,48 @@
 - スコープ外 (Issue body で明示済み): `skills/auto/SKILL.md` Step 3 への reconcile 呼び出し追加、`run-issue.sh`/`run-spec.sh` の wrapper 機構そのものの新規実装、`skills/issue/SKILL.md` のラベル遷移ステップの位置変更。理由は Issue body 参照。
 - README.md / docs/workflow.md には `_completion_issue()` の具体的なラベル判定に関する記述がないため、Steering Docs sync candidate には該当しない (grep で確認済み)。
 
+## Autonomous Auto-Resolve Log
+
+- **Proceeded with implementation despite `phase/ready` being absent** — reason: `reconcile-phase-state.sh code-pr 1117 --check-precondition` reported `matches_expected:false` because the Issue's current label is `phase/code` (a later phase than `phase/ready`) rather than `phase/ready` itself, and the precondition check only matches the exact `phase/ready` string. The Spec (`docs/spec/issue-1117-fix-issue-completion-signature.md`) already existed and was fully fleshed out, indicating the `/spec` phase had genuinely completed before this run; the missing `phase/ready` label reflects a label-state artifact from a prior `/code` attempt on this Issue (no PR or remote branch existed), not a missing Spec. Proceeded using the existing Spec as authoritative.
+  - Other candidates: hard-abort and request `/spec 1117` be re-run (rejected — Spec content was already complete and directly usable; re-running `/spec` would have been redundant and wasted a session).
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation followed the Spec's Implementation Steps and Changed Files list exactly (`scripts/reconcile-phase-state.sh` `_completion_issue()`, `modules/phase-state.md` Phase Table, `tests/reconcile-phase-state.bats`).
+
+### Design Gaps/Ambiguities
+- The Spec did not anticipate that this Issue's own label state (`phase/code` present, `phase/ready` absent) would trip the `code-pr` precondition check performed by the very script this Issue modifies (`reconcile-phase-state.sh`). Not a defect in the Spec — the precondition check is a separate code path (`_precondition_code_pr()`) from the one being fixed (`_completion_issue()`); noted here only because it was a self-referential surprise worth recording. See Autonomous Auto-Resolve Log above.
+
+### Rework
+- None.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Ran `/review 1244 --light --non-interactive` (Size=M, `--light` explicit); Step 10 dispatched a single `review-light` agent covering all 4 aspects (Spec deviation, edge cases, security, documentation consistency) — no issues found.
+- Verified all 3 Pre-merge AC directly from the diff/CI rather than re-running commands: the `rubric` and `section_contains` conditions were confirmed against the PR diff, and the `command "bats tests/reconcile-phase-state.bats"` condition was confirmed via CI reference fallback (the "Run bats tests" CI job, which already SUCCEEDED) since Step 8 runs in safe mode.
+- Posted review as `COMMENT` (no MUST issues); all 9 CI checks were SUCCESS at review time.
+
+### Deferred Items
+- The Post-merge AC (opportunistic, "confirm on a real triaged-but-not-phase/issue Issue that `matches_expected:false` is now detected") remains unchecked, carried forward from the code phase handoff for `/verify` to confirm post-merge.
+
+### Notes for Next Phase
+- No MUST/SHOULD/CONSIDER issues were raised; `/merge 1244` can proceed once ready.
+- The Post-merge AC verification depends on finding a real triaged-but-not-`phase/issue` Issue in the wild — `/verify` should check whether such a case has occurred naturally rather than fabricating one.
+
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1117#issuecomment-5213109567
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+Nothing to note. `review-light` confirmed the diff matches the Spec's Changed Files and Implementation Steps exactly, with no structural divergence.
+
+### Recurring issues
+Nothing to note. This was a narrowly-scoped, single-purpose bugfix (one regex signature change plus matching test/doc updates); no repeated issue patterns observed across the 4 review aspects.
+
+### Acceptance criteria verification difficulty
+Nothing to note. All 3 Pre-merge conditions carried well-formed verify commands (`rubric`, `section_contains`, `command`) and resolved cleanly — no UNCERTAIN classifications. The `command` condition resolved via CI reference fallback without ambiguity, since the CI job name ("Run bats tests") unambiguously corresponded to the target test file.

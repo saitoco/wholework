@@ -64,10 +64,10 @@ MOCK_EOF
 
 # --- issue completion ---
 
-@test "issue completion: triaged label present -> matches_expected true" {
+@test "issue completion: phase/issue label present -> matches_expected true" {
     cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
 #!/bin/bash
-echo "triaged"
+echo "phase/issue"
 echo "size/S"
 exit 0
 MOCK_EOF
@@ -80,10 +80,25 @@ MOCK_EOF
     [[ "$output" == *'"schema_version":"v1"'* ]]
 }
 
-@test "issue completion: triaged label absent -> mismatch (strict exit 1)" {
+@test "issue completion: no phase/issue or later label -> mismatch (strict exit 1)" {
     cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
 #!/bin/bash
 echo "size/S"
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" issue 42 --check-completion --strict
+    [ "$status" -eq 1 ]
+    [[ "$output" == *'"matches_expected":false'* ]]
+}
+
+@test "issue completion: triaged only, no phase/issue or later label -> mismatch (issue #1115 repro)" {
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+echo "triaged"
+echo "retro/verify"
 exit 0
 MOCK_EOF
     chmod +x "$MOCK_DIR/gh"
