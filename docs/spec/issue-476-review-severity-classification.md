@@ -231,3 +231,14 @@
 ### Improvement Proposals
 - 13件目の再現は、#1220 のパス様トークン除外だけでは解消しない新しい亜種 (`keyword=<value>` のような、スラッシュを含まない属性構文自体への一致) を示している。ただし本件は Issue #1220 自身の Spec という特殊事例 (#1220 が merge されれば当該 Spec ファイルが `--context-file` として再利用される機会は事実上ない) であり、一般的な PR で `keyword=workflow` という文字列がスラッシュなしで地の文に出現するケースは稀 (実際に過去12件はすべて `docs/*.md` 等のパス様トークンが原因だった)。#1220 merge 後、次回以降の `/review --light` でパス様トークン起因の誤発火 (13件中12件のパターン) が解消するかどうかが本 post-merge AC の主眼であり、この観測は #1220 の post-merge AC (`docs/workflow.md` 等の無関係パスのみを参照する PR での誤発火なし観察) 側で追跡する。新規 follow-up Issue の起票は不要と判断する
 
+## Verify Retrospective (2026-08-07 re-run #14)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1246、Issue #1234) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカーあり) したが、今回の発火元 PR #1246 の diff (`scripts/observation-trigger.sh`, `scripts/opportunistic-search.sh`, `modules/observation-trigger.md`, `skills/auto/SKILL.md`, テスト — `/auto` 実行文脈の session id 伝播) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず UNCERTAIN 判定に帰着した。follow-up Issue #1220 は本 re-run 実行時点で既に merge・クローズ済み (2026-08-07T11:09:30Z) であり、main 上の `scripts/opportunistic-search.sh` に `resolve_filtered_context()` が存在することも確認したが、今回の発火元は Issue #1234 の Spec 内 `github_check "gh run list --workflow=test.yml ..."` という**スラッシュを含まない CLI フラグ構文** (`--workflow=test.yml`) への部分一致であり、#1220 のパス様トークン除外 (`/` を含むトークンのみ対象) の対象外であることを `sed -E 's#[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+##g'` の手元実行で実測確認した
+- worktree セッション中に `source` 経由の `emit-event.sh` 呼び出し (Step 11 の `phase_complete` イベント発行) が worktree isolation guard によりブロックされた。re-run #12 で記録済みの既知制約 (`modules/worktree-lifecycle.md` § "source-based shell function calls are blocked by the worktree isolation guard") の再現であり、新規の異常ではない。自然な exit 境界 (Step 13 Worktree Exit) がまだ先だったため best-effort でスキップした
+
+### Improvement Proposals
+- re-run #13 は「スラッシュを含まない属性構文への一致 (`keyword=<value>` 自体) は Issue #1220 自身の Spec という特殊事例であり、一般的な PR で `keyword=workflow` がスラッシュなしで地の文に出現するケースは稀」と判断し、新規 follow-up Issue の起票を見送った。本 re-run #14 はその判断を覆す反証となる: 通常の (Issue #1220 と無関係な) Issue #1234 の Spec で、`gh run list --workflow=<file>.yml` という **`skills/verify/SKILL.md` の Patch route detection 節が推奨する標準パターン**への一致により、非スラッシュ亜種が**2件目**として再現した。この標準パターンは patch route (Size XS/S) の CI 確認 AC で `github_check "gh pr checks"` の代替として広く使われることが想定されており (`modules/verify-classifier.md` 記載の置換例そのもの)、re-run #13 が「稀」と判断した前提 (特殊事例限定) が成立しない可能性がある。#1220 のパス様トークン除外に加えて `keyword=` 値そのものへの単語境界マッチ (`grep -qiw` 相当、ただし `/`・`.` を単語境界とみなさない問題は #1220 の Background で既出) や、`keyword=` 一致を diff 内の実ファイルパス変更有無ベースの構造化マッチへ置き換える設計変更を検討する価値が高まったと判断する。Step 16 (retro-proposals) の Tier 1 分類・freshness check に判断を委ねるが、re-run #13 時点より起票の優先度は上がっている旨を明記する
+
