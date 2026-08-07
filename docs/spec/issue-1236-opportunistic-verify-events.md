@@ -159,3 +159,29 @@
 
 ## Consumed Comments
 - saito (MEMBER, first-class): `/issue --non-interactive` による Issue Refinement の Issue Retrospective。Background のコード参照 (`modules/opportunistic-verify.md` の判定フロー、`skills/verify/SKILL.md` Step 14、#1159 の `retro_proposal_classified` イベント) を grep で事実確認済みで正確だったこと、Size M (検出上限3) に対し曖昧ポイント2件 (イベント emit 粒度、retire 候補の閾値) を自動解決3条件 (既存パターンから一意推論可能・過去の類似判断が存在・AC 本文が選択に非依存) を満たすとして自動解決したこと、AC 構成・整合性チェック (checkbox format 等) は違反なしだったことを記録。本 Spec はこの自動解決結果 (1件ずつ emit、閾値固定値5) をそのまま設計に反映した — https://github.com/saitoco/wholework/issues/1236#issuecomment-5213997574
+
+## Code Retrospective
+
+### Deviations from Design
+- **`skills/issue/SKILL.md` / `skills/review/SKILL.md` の `allowed-tools` に `emit-event.sh` を追加した**: Spec Notes は「呼び出し元 5 スキルの SKILL.md は変更不要」と判定していたが、`scripts/validate-skill-syntax.py` の cross-file validation が `modules/opportunistic-verify.md` から新たに参照される `emit-event.sh` について、それを read する `/issue` と `/review` の `allowed-tools` に欠落があると実際に検出した (`/code`/`/spec`/`/verify` は既存の `retro_proposal_classified` 用途で既に `emit-event.sh:*` を持っていたため検出されなかった)。Spec の判定は「呼び出し元スキル自身の Issue/PR 番号の受け渡し記述」の要否についてのものであり、`allowed-tools` の要否は別軸の懸念だったため、Spec の判断自体は誤りではないが、スコープの見落としがあった。cross-file validation がこの見落としを機械的に捕捉した
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Implemented all 5 Implementation Steps in the Spec as written (emit-event insertion into `modules/opportunistic-verify.md` Step 3, `emit-event.sh`/`event-emission.md` schema docs, new `collect-opportunistic-retire-candidates.sh` + bats tests, `/audit` Section 11, `docs/structure.md`/`docs/ja/structure.md` sync) with no deviation from the algorithm or output format specified in the Spec
+- Added `emit-event.sh` to `allowed-tools` for `skills/issue/SKILL.md` and `skills/review/SKILL.md` (not in the Spec's Changed Files) after `validate-skill-syntax.py`'s cross-file validation flagged the gap — see Code Retrospective Deviations above
+- Ran the full `bats tests/` suite (not just the new file's direct test) because `scripts/emit-event.sh` is referenced by `tests/wait-ci-checks.bats` and `tests/claude-watchdog.bats` beyond its own direct test, per Step 9's Behavioral Change Detection rule — all 1520+ tests passed
+
+### Deferred Items
+- Post-merge observation AC (`.tmp/auto-events.jsonl` に `opportunistic_verify_result` が記録され集計可能であることの確認) is left for the next `/auto` run, per the Issue's own `session=next` verify-type — this is unresolvable within this `/code` run since it requires a fresh `/auto` session as evidence
+
+### Notes for Next Phase
+- `/review` should re-run `validate-skill-syntax.py`'s cross-file validation (already clean at commit time) if it touches `modules/opportunistic-verify.md` or the 5 calling skills again, since the allowed-tools requirement is easy to miss by inspection alone
+- The CI pre-merge AC (`github_check "gh pr checks" "Run bats tests"`) was left unchecked in the Issue body — it could not be evaluated in Step 10 (runs before the PR exists) and should be confirmed once CI completes on PR #1252
