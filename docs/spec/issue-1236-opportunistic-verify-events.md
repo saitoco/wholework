@@ -198,3 +198,38 @@
 ### Acceptance criteria verification difficulty
 - No difficulty in this PR's own 6 Pre-merge conditions (all cleanly PASS via `rubric`/`file_contains`/`github_check`) — the difficulty surfaced instead in Step 10 code review (see above), not Step 8 AC verification.
 - Incidentally discovered, unrelated to this Issue's own ACs: `scripts/gh-pr-review.sh`'s self-review 422 fallback detection is broken due to a redirection-order bug (`API_STDERR=$(... 2>&1 >/dev/null)` — GitHub's REQUEST_CHANGES-on-own-PR error detail is written to the API response body on **stdout**, not to `gh`'s own stderr, so the fallback's `grep -qi "request changes on your own pull request"` never matches against the captured `API_STDERR`, which only ever contains the generic `gh: Unprocessable Entity (HTTP 422)` line). This means `/review` posting a MUST-containing review on a self-authored PR (the common case for this project's fully-autonomous `/auto` runs) always hits the "Error: failed to post review" hard-fail path instead of the intended COMMENT fallback — confirmed by direct reproduction against PR #1252 in this session, and worked around manually by replicating the script's own fallback logic outside the script. This is a real, currently-live tooling defect outside Issue #1236's scope; flagged here for `/verify`'s retro-proposal aggregation rather than fixed inline.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- `/issue --non-interactive` が曖昧ポイント 2 件 (イベント emit 粒度 / retire 候補の閾値) を自動解決 3 条件を満たすとして解決し、その判断がそのまま Spec 設計に反映され、実装・レビュー・verify を通じて覆らなかった。Size M (検出上限 3) に対し 2 件という検出量も適切で、AC 本文が選択に非依存だったため自動解決の前提も成立していた
+- Background のコード参照 3 件がすべて grep で事実確認済みだったため、Spec フェーズが前提の再検証に時間を使わずに済んだ
+
+#### spec
+- Spec Notes が「呼び出し元 5 スキルの SKILL.md は変更不要」と判定したが、これは「Issue/PR 番号の受け渡し記述」の軸での判定であり、`allowed-tools` の軸を見落としていた。判定自体は誤りではないがスコープが不完全で、`scripts/validate-skill-syntax.py` の cross-file validation が機械的に捕捉した。共有モジュールが新規スクリプトを参照するようになる変更では、参照元スキルの `allowed-tools` も影響範囲に含める必要がある
+- `ac_index` の算出方法を Notes に明記していたが、その手順が参照するデータソース (候補 Issue 本文) が Step 1/2 で取得されていないという内部矛盾を含んでいた。これが本 PR 唯一の MUST 指摘になった
+
+#### code
+- 設計逸脱は `allowed-tools` 追加 1 件のみで、cross-file validation による機械的検出だったため手戻りコストは小さかった
+- Rework なし
+
+#### review
+- MUST 指摘 1 件 (`ac_index` のデータソース不在) を検出。これは Spec 段階の論理的不整合であり、6 件の Pre-merge AC のいずれも捕捉できなかった — `rubric` は「手順が存在すること」を確認できるが「手順が記述どおり実行可能であること」は確認しない構造的な死角
+- レビュー実行中に `scripts/gh-pr-review.sh` の self-review 422 fallback が redirection 順序バグで機能しないことを実測で発見。`/auto` の完全自律実行では PR 作成者と reviewer が同一になるため、MUST を含むレビュー投稿が常に hard-fail 経路に落ちる。今回は手動でフォールバックロジックを外部で再現して回避した
+
+#### merge
+- `mergeable=true` / `ci_status=success` / `review_status=approved` / 未チェック AC 0 件を確認した上での squash merge。conflict も review-incomplete fallback も発生せず
+
+#### verify
+- Pre-merge 6 件はすべて `/code` Step 10 / `/review` の時点で `[x]` 済みのため already-checked rule で SKIPPED。post-merge の observation 1 件は `event=auto-run` 未発火かつ `session=next` のため SKIPPED。FAIL/UNCERTAIN 0 件
+- `session=next` タグにより、本 Issue の成果 (emit 手順) が実際に動作するかは構造的に次セッション以降でしか確認できない。verify command 自体の不整合は検出されなかった
+
+### Improvement Proposals
+
+- **`scripts/gh-pr-review.sh` の self-review 422 fallback が redirection 順序バグで機能しない**: `API_STDERR=$(... 2>&1 >/dev/null)` としているが、GitHub の "Can not request changes on your own pull request" というエラー詳細は API レスポンスボディ (stdout) に書かれるため、`API_STDERR` には汎用の `gh: Unprocessable Entity (HTTP 422)` 行しか入らず、`grep -qi "request changes on your own pull request"` が永久にマッチしない。結果として COMMENT へのフォールバックが働かず「Error: failed to post review」で hard-fail する。`/auto` の完全自律実行では PR 作成者 = reviewer が常態のため、MUST 指摘を伴うレビューが構造的に必ず失敗する。PR #1252 で直接再現確認済み。本 Issue のスコープ外のため未修正
+- **`rubric` 型 AC が multi-step Processing Steps の内部データ依存性を検証できない**: 本 PR の唯一の MUST 指摘 (`ac_index` が Step 1/2 で取得されない Issue 本文を参照している) は、AC1/AC5 の `rubric` が「emit 手順が存在すること」「判断根拠が記録されていること」を確認したにもかかわらず素通りした。共有モジュールに逐次 Processing Steps を追加する Spec では、「各ステップが参照するデータソースが、その時点で実際に利用可能か」を主張する AC を別途立てる価値がある
+- **Spec Notes から英語指定ドキュメントへの転記で日本語が混入する再発パターン**: 本 PR 単体で `modules/event-emission.md` / `skills/audit/SKILL.md` / `scripts/emit-event.sh` の 3 ファイルに同型で発生。いずれも (CLAUDE.md 上は正しく日本語の) Spec Notes / Issue 本文の rationale をほぼ逐語で転記し、翻訳ステップを挟まなかったことが原因。`check-forbidden-expressions.sh` は言語をチェックしないため機械的検出もされない。`skills/review/skill-dev-recheck.md` の "Transcription Divergence Check" と近縁だが対象が異なるため、日本語混入専用の転記チェックを検討する余地がある
+- **`scripts/collect-opportunistic-retire-candidates.sh` の `ac_index` を grouping key に使う設計リスク**: `ac_index` は Issue 本文のチェックボックス位置に基づく 1-based index のため、Issue 本文が編集されて AC の順序や件数が変わると、同じ `ac_index` が別の AC を指すようになり trailing-SKIP-streak の集計が壊れる。merge フェーズの Deferred Items にも記録済み
+
