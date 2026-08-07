@@ -67,6 +67,30 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+
+## 2026-08-07 07:41 UTC: code-pr-tier3-recovery
+
+### Context
+- Issue #1224, phase: code-pr
+- Source: recovery-sub-agent
+- Wrapper: run-code-pr.sh, exit code: 1
+- Log tail: "Finished at: 2026-08-07 16:40:59"
+
+### Diagnosis
+- Reconcile and repeated retries agree the phase never completed, but the worktree branch worktree-code+issue-1224 already has 3 unpushed commits ahead of main implementing the fix (last: c9a4de2d) and no PR exists yet. Five silent no-op retries wasted ~90 minutes re-running /code instead of pushing the existing work, so recovery pushes the branch and creates the PR directly instead of retrying again.
+
+### Recovery Applied
+- action=recover
+- steps: 2 step(s)
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+---
+
 ## 2026-08-07 07:22 UTC: manual-recovery-manual-recovery-commit-push-pr
 
 ### Context
