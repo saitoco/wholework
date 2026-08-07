@@ -96,3 +96,40 @@
 
 ### Notes for Next Phase
 - `/verify` should confirm the Post-merge observation AC: next `/auto` completion should show the Run-fact AC reconciliation candidate count decreased vs. before this change.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- `/issue` フェーズが 3 件の ambiguity を自動解決し、いずれも実装まで覆らなかった。特に (1) 効果測定 AC への第二ベースライン (`opportunistic-search.sh` 経路 13→13) の追加と、(2) 存在しない `tests/collect-run-facts.bats` を参照していた AC を既存カバレッジファイル (`tests/run-fact-matching.bats` / `tests/opportunistic-search.bats`) 対象へ修正した点が効いた
+- (2) は `/triage` の AC 監査が「対象ファイル未存在」として指摘済みだった項目で、**triage のコメントが `/issue` フェーズに正しく引き継がれて解消された**。非破壊監査 → 後続フェーズでの修正という設計意図どおりの動作
+- (1) は `/verify 1239` で実測して Issue にコメント投稿した数値がそのまま AC に組み込まれたもので、前 Issue の verify 結果が次 Issue の AC 品質に直結した
+
+#### spec
+- 方式選択 (token 名前空間化ではなく bare phase 名の除外) とその理由が Notes で完全に指定されており、実装時に未決の設計判断が残らなかった (Code Retrospective の Design Gaps が None)
+- `verify` phase が `wrapper_for()` マッピングを持たないため新語彙では一切トークンを生成しない、という帰結を Notes で事前に明示していた。これが後述の再現率の論点を予見していた
+
+#### code
+- 設計逸脱なし、手戻りなし。Implementation Steps 1-5 を順序どおり実施
+
+#### review
+- `review-light` (4 aspects) で構造的な乖離なし、再指摘なし
+- AC5 (`github_check "gh pr checks"`) が `/code` 終了時点で未チェックだったのは、PR 作成直後で CI 未完了という CI 依存 AC の正常な挙動。`/review` が 9 ジョブすべて SUCCESS を確認して `[x]` 化した — verify command の品質問題ではない
+
+#### merge
+- `mergeable=true reason=clean` (UNKNOWN リトライ 1 回の後)。conflict 解決不要、squash merge + branch 削除
+
+#### verify
+- Pre-merge 5 件すべて `[x]` 済みで SKIPPED、post-merge observation 1 件は `auto-run` 未発火 + `session=next` で SKIPPED。FAIL/UNCERTAIN 0 件
+- **効果測定の結果**: 同一母集団での旧語彙 / 新語彙比較で `scan-pending-ac.sh` 経路 185→2 (99.5% 除外)、`opportunistic-search.sh` 経路 13→0 (100% 除外)
+
+### Improvement Proposals
+
+- **`opportunistic-search.sh` の `/verify` 経路が新語彙で 100% 除外 (13→0) になった点は、精度の改善であると同時に再現率 (recall) の観測余地を残す**: 本変更により `/verify` skill の opportunistic 候補は 0 件になった。除外された 13 件はいずれも過去の複数セッションで一貫して SKIP 判定されており (#1236 の実測: 6 回 × 14 件 = 84 判定で PASS 0 件)、除外自体は正しい挙動である。またユニットテストには true-positive ケース (`fact gate: token match in condition text includes the issue`) と verify 特例 (`collect-run-facts: verify phase contributes no fact_tokens entry`) の双方が存在し、機構レベルの検証は十分である。
+
+  ただし系レベルでは、`/verify` skill は `run-verify.sh` を持たないため新語彙で寄与するトークンが `Size *` / `pr route` / `run-*.sh` / `batch` のみに限られ、**`/verify` 向け opportunistic AC の condition text がこれらに言及しない限り構造的にマッチしない**。将来 `/verify` の opportunistic 機構で拾いたい AC が現れた場合、その AC は上記のいずれかのトークンを本文に含むよう書く必要がある。この制約は `modules/verify-patterns.md` の opportunistic AC 記法ガイドに反映する余地がある。
+
+  現時点では実際に取りこぼした true positive が観測されていないため起票は見送り、実例が出た時点での起票判断とする (2026-07-12 の session が #975 について採った「再発時に起票判断」と同じ扱い)。
+
+- **本変更は #1239 の post-merge observation AC を満たす見込み**: #1239 の「候補件数が変更前 (14 件) より減少していることを観察する」は、`/verify 1239` 時点では 13→13 で満たされなかったが、本変更後は 13→0 となるため次回 `/auto` 完走時に PASS 判定される見込み。#1238 → #1239 の依存が batch の実行順 (1239 が先、1238 が後) とは逆であったため、#1239 の AC は自身の merge 時点では検証不能だった。**同一 batch 内で後続 Issue が先行 Issue の post-merge AC の前提を満たす構成**は今後も起こりうるため、batch の順序決定時に post-merge AC の依存方向を考慮する余地がある (ただし本件では実害なし — observation AC は次回 `/auto` で自動再評価されるため)
