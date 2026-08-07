@@ -219,27 +219,33 @@ Size L のため検出上限 5 件のうち、実質的なギャップとして 
 - この実測は同時に、#939 が必要とする「spec の silent window 実測」の解釈が JSON モード化後も変わらないことを保証する。#939 に対する本 Issue の副作用はない。
 - **残った境界リスクは 1 件**: spec の実所要時間 max 1806s が `WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800` を既に超えており (`watchdog_kill` 2 件)、JSON モード化とは無関係に境界にある。本 Issue のスコープ外 (#939) として Uncertainty 節に残した。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1-8 をそのまま実装。`run-code.sh:256-282` の JSON キャプチャ分岐、top-level スコープでの `_` 接頭辞変数命名、`_EMIT_PHASE_OWNED` ガード適用のいずれも Notes for Next Phase の指示通り。
+
+### Design Gaps/Ambiguities
+
+- N/A — 実装時に新たな設計判断は発生しなかった。
+
+### Rework
+
+- N/A — 手戻りなし。テスト (`tests/run-spec.bats` / `tests/run-issue.bats` 各 3 ケース) は初回実装で全 PASS、既存 4 スイート (計 154 テスト) も無回帰で PASS した。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- **案 ii (wrapper 側で直接 emit) を採用**。決定打は `run-issue.sh` が `run-auto-sub.sh` から呼ばれていない (`skills/auto/SKILL.md` が直接起動) こと。案 i では issue phase をカバーできず AC1/AC2 を満たせない。
-- **`--output-format json` キャプチャ分岐の追加を実装範囲に含めた**。`run-spec.sh` / `run-issue.sh` は `.tmp/token-usage-<issue>.json` を生成していないため、emit 追加だけでは `token_usage` が永久に発火しない。
-- **`wrapper_exit` の `exit_code` は reconcile 調整後の最終値を使う**。`run_phase_with_recovery()` が code phase について emit する値も `run-code.sh` の補正後の値であり、それとのパリティを取る。
-- **`_EMIT_PHASE_OWNED` ガードを両 emit に適用**。現状の実挙動は変わらないが、将来 spec が `run_phase_with_recovery()` 経由に移る場合の二重 emit を予防する。
-- **`emit-event.sh` への共有ヘルパ抽出は見送り**。テスト mock 28 箇所への追随コストが機能本体を上回るため。既存の `_maybe_emit_phase_complete()` 複製と同じ慣行に揃える。
+- **spec phase の Key Decisions (案 ii 採用、JSON キャプチャ分岐追加、reconcile 後 exit_code 使用、`_EMIT_PHASE_OWNED` ガード適用) をそのまま実装**。設計と実装の乖離はなかった。
 
 ### Deferred Items
 
 - `emit-event.sh` への `emit_token_usage_from_file` 抽出 — follow-up 候補として Notes に記録。本 Issue では起票しない (改善提案は `/verify` フェーズで集約する規約に従う)。
 - `WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800` の再校正 — spec の実所要時間 max 1806s が既に境界を超えているが、#939 のスコープ。
-- `docs/reports/event-log-schema.md` の修正は AC8 の rubric 検証対象外 (AC8 は `modules/event-emission.md` と `docs/structure.md` の 2 件に限定)。Changed Files には含めたので `/code` で実施し、`/review` の doc consistency で担保する。
 
 ### Notes for Next Phase
 
-- `scripts/run-code.sh:256-282` が JSON キャプチャ分岐の参照実装。`OUTPUT_FORMAT_JSON=1` は `env` 引数側、`--output-format json` は `claude` 引数側、リダイレクトは `run_with_retry_on_kill` 全体に掛ける — この 3 点をそのまま写すこと。
-- `run-spec.sh` / `run-issue.sh` の emit コードは **top-level スコープ**に置くため `local` は使えない (`run-auto-sub.sh:644` の逐語コピーは不可)。変数名は `_` 接頭辞で衝突回避する。
-- `tests/run-spec.bats` / `tests/run-issue.bats` の mock `claude` は標準出力に何も書かないため、既存テストでは `TOKEN_USAGE_FILE` が空になり `token_usage` emit はスキップされる (回帰しない)。`token_usage` を発火させるテストは mock `claude` に JSON を書かせる必要がある。フィクスチャ形状は `tests/run-auto-sub.bats:1080-1082` を流用。
-- `tests/*.bats` の mock 追加時は `ARGS_COUNT` を assert しているテストが存在しないことを確認済み。`--output-format json` の引数追加で既存テストは落ちない。
-- `scripts/run-auto-sub.sh` は変更しない。#1108 が追加した XS ゲート・skip ログ文言・`--opus` 受け渡しには一切触れないこと。
+- `/review` は `modules/event-emission.md` / `docs/structure.md` / `docs/ja/structure.md` / `docs/reports/event-log-schema.md` の 4 ファイルが実装後の実挙動と一致しているかを重点確認すること (AC8 の対象は前2者のみだが、後2者も spec retrospective で陳腐化が指摘されていたため同時修正済み)。
+- Post-merge AC (次の `/auto` 実行後の `.tmp/auto-events.jsonl` 集計) は `/verify` フェーズで観測すること。
