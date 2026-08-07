@@ -26,6 +26,10 @@
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5212707587
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5212862164
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/476#issuecomment-5213280537
+
+### verify フェーズ (2026-08-07 re-run #11, cutoff: 2026-06-14T21:50:38Z)
+
+- saito / MEMBER / first-class / 前回 `/verify 476` (2026-08-07 re-run #10) 実行結果。Pre-merge 2 件 SKIPPED (already checked)、Post-merge observation (event=pr-review-light) は PR #1244 (Issue #1117) の diff に該当欠陥なしのため UNCERTAIN。`keyword=workflow` ゲートの誤発火が10件目として再現 / https://github.com/saitoco/wholework/issues/476#issuecomment-5213746899
 ## 背景
 
 `/review` の MUST/SHOULD 分類基準に「対象実行環境で決定的に失敗する欠陥は MUST」というルールを明文化する。Spec フェーズなしで直接実装（Issue 本文から要件を読み取り）。
@@ -192,4 +196,14 @@
 
 ### Improvement Proposals
 - N/A — re-run #7 で既に起票水準に達し follow-up Issue #1220 が対応済み (未クローズ)。本 re-run はその後の10件目の再現事例として記録するに留める
+
+## Verify Retrospective (2026-08-07 re-run #11)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1253、Issue #1221) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカーあり) したが、今回の発火元 PR #1253 の diff (`scripts/detect-wrapper-anomaly.sh`, `modules/orchestration-fallbacks.md`, `skills/auto/SKILL.md`, `tests/detect-wrapper-anomaly.bats` — CI 待機由来の watchdog kill を独立パターンとして切り出す変更) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず UNCERTAIN 判定に帰着した。`keyword=workflow` ゲートの誤発火パターンが、本 Issue #1221 の Spec 内 `.github/workflows/test.yml` というファイルパス参照 (CI ジョブ名確認の一文) への部分一致で **11件目** として再現した。follow-up Issue #1220 が依然 OPEN であることを確認したため、本 re-run でも重複起票を行わない
+
+### Improvement Proposals
+- N/A — re-run #7 で既に起票水準に達し follow-up Issue #1220 が対応済み (未クローズ)。本 re-run はその後の11件目の再現事例として記録するに留める
 
