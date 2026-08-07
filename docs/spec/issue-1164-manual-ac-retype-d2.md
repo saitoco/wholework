@@ -190,8 +190,10 @@ No new comments since last phase.
 - `mergeable: true, reason: clean` で conflict なくスクワッシュマージ完了。pre-merge AC ゲートも `unchecked_count: 0` で通過。
 
 #### verify
-- Post-merge AC は `observation event=auto-run` 1 件のみで、本 verify 実行時点では `observation-trigger.sh` の通知コメントが未投稿のため未発火。SKIPPED (waiting for event) として `phase/verify` に留まる。これは observation AC の設計通りの挙動であり FAIL ではない。
+- Post-merge AC は `observation event=auto-run` 1 件のみ。1 回目の verify 実行時点では `observation-trigger.sh` の通知コメントが未投稿のため未発火で SKIPPED だったが、同一 `/auto 1158` セッション内で `observation-trigger.sh --event auto-run` を実行して発火させた後、2 回目の verify で PASS 判定に到達し `phase/done` へ遷移した。
 - 親 #1158 の分割 sub-issue 群で「前回セッションが Issue 本文編集・コメント投稿を完了した後、report file 作成前に中断」というレジュームパターンが #1163 に続き #1164 でも再現した (review retrospective にも記録)。#1165〜#1167 でも同型が起きうるが、`/code` 側の「GitHub 実状態を個別確認してから差分実行」で毎回正しく吸収できているため、構造的な欠陥ではなく sub-issue 系列固有の運用事象と判断する。
+- **observation AC の baseline が母集団定義を伴わずに書かれていた**: 本 AC は「移行前 (79 件) から13 件減少」と絶対数で書かれていたが、baseline の 79 は `docs/stats/2026-08-05.md` が 90 日窓 (created ≥ 2026-05-07、母集団 167 件) で計測した値であり、全期間スキャン (母集団 320 件) では 123 件と全く異なる数字が出る。同ドキュメント § 訂正 1 が「Section 10 に記録した棚卸し方針 (manual AC 79 件の分類) も 90 日窓の母集団に基づくため、全期間へ広げた場合の対象件数は増える」と予告していたおかげで誤判定を回避できたが、AC 側に母集団定義が書かれていれば予告を辿る必要はなかった。数値ベースの observation AC には母集団定義を条件文に含めるべき。
+- 「13 件減少」という数値も、実際の再型付けが 11 Issue (12 AC 行) + 意図的除外 2 件だったため、Issue 単位では厳密に一致しない。全体の減少数 (61 件) が閾値を上回るため PASS としたが、AC の数値は triage 時点の見込みであり実行後の triage 結果とずれうる。
 
 ### Improvement Proposals
-- N/A
+- N/A — 上記の「observation AC の母集団定義」の論点は sub-issue #1165 由来の #1242 (走査母集団と走査スコープの不一致) と同じ計測基盤の問題であり、独立起票はしない。
