@@ -67,6 +67,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-07 01:54 UTC: manual-recovery-manual-recovery-review-uncommitted-work
+
+### Context
+- Issue #1212, phase: review
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 0
+
+### Diagnosis
+- cause: background-notification-wait
+- /review (PR #1222) ended its turn stating it was waiting for a backgrounded 'bats tests/' completion notification before proceeding to Step 12.2 (commit/push). run-review.sh runs claude -p --non-interactive, which has no re-invocation guarantee, so the notification never arrived and the phase became a silent no-op with 4 files of MUST/SHOULD fixes left uncommitted in worktree review+pr-1222. post-fallback-review-summary.sh posted a substitute Response Summary, which recovered the completion signal but not the work; reconcile-phase-state.sh flagged review_incomplete_fallback=true and run-merge.sh correctly blocked the merge (Tier 3 sub-agent returned action=abort, judging it a human decision rather than a mechanical retry). Parent session recovered manually: inspected the diff, ran the full suite (1495 pass / 0 fail), committed with sign-off and pushed as e878a321, posted a decision=override fallback=true gate marker, and re-ran run-merge.sh. Same failure mode as #1102 but in the review phase, where no built-in auto-retry exists; the #994 guard in skills/code/SKILL.md has no counterpart in skills/review/SKILL.md.
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-08-07 00:19 UTC: manual-recovery-review-rerun
 
 ### Context
