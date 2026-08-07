@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（76 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（78 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -179,6 +179,7 @@ wholework/
 
 **プロジェクトユーティリティ:**
 - `scripts/collect-recovery-candidates.sh` — `docs/reports/orchestration-recoveries.md` を parse し group-key (素の symptom-short、または エントリの Diagnosis 本文に `- cause:` 行がある場合は `symptom-short/cause-slug`) の頻度を集計。各 entry を個別に判定し、対応 Issue の `closedAt` と比較して除外 (Issue が open ならその group-key の全 entry を除外、closed なら `closedAt` 以前の entry のみ除外し以降を計数。`--issues-json` に `state`/`closedAt` が無い場合は group 自身の最新 `起票済み #N` entry の日時を代替基準とする)。加えて `### Improvement Candidate` 本文が `- N/A` で始まる entry (対応不要な Tier 2 fallback 成功) も除外。`--threshold K` フィルタを適用し `<group-key>\t<count>` 形式で候補を出力 (`--with-tracking` で 3 列目に `tracked:#N:open`/`tracked:#N:closed`/`untracked` を付加 — open/closed の接尾辞は対応 Issue の解決済み state を反映し、state が解決できない場合は素の `tracked:#N` にフォールバックする)。`--issues-json PATH` で Issue 解決用の全 state issue 一覧 (`state`/`closedAt` 付き) を受け取り
+- `scripts/collect-opportunistic-retire-candidates.sh` — コミット済み `docs/sessions/*/events.jsonl` から `opportunistic_verify_result` イベントを集計。(issue, ac_index) 単位でグルーピングし、末尾から連続する判定がすべて `SKIP` である group (trailing-SKIP streak) を `/audit stats --retention` Section 11 向けに報告する
 - `scripts/get-config-value.sh` — `.wholework.yml` から設定値を抽出
 - `scripts/handle-permission-mode-failure.sh` — `permission-mode: auto` 失敗を診断し remediation hint を stderr に出力（heuristic: exit!=0 かつ elapsed<=30s）
 - `scripts/get-verify-permission.sh` — verify コマンドハンドラファイルから permission 値を抽出

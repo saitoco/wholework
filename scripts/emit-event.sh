@@ -61,6 +61,18 @@
 #   BRIDGE_NUMBER="batch-<session-id>"), callers must pass EMIT_ISSUE_NUMBER=0 — emit_event()
 #   writes "issue":${_issue} unquoted, so a non-numeric value would corrupt the JSON line.
 #
+# opportunistic_verify_result: emits modules/opportunistic-verify.md's judgment (PASS/FAIL/SKIP)
+# for one condition, right after that condition's result is determined in Step 2 (AI
+# Retrospective) (#1236). One event per condition, not aggregated — see
+# modules/event-emission.md's opportunistic_verify_result entry for the rationale.
+#   skill=<skill-name>            calling skill name, e.g. /spec, /review, /verify, /issue, /code
+#   result=<PASS|FAIL|SKIP>       this condition's judgment result
+#   ac_index=<n>                  1-based position within the candidate Issue body's full
+#                                  checkbox enumeration (pre-merge + post-merge), same
+#                                  global-index convention as gh-issue-edit.sh --checkbox
+#   EMIT_ISSUE_NUMBER carries the candidate Issue number being judged (may differ from the
+#   calling skill's own Issue number)
+#
 # verify_fail_marker_posted: /verify FAIL 時に machine-readable marker comment を Issue に append した
 #   iteration=<n>                 verify iteration counter (NEXT_ITERATION)
 #   failed_ac_count=<n>           number of FAIL conditions in auto-verification targets

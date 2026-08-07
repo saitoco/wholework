@@ -159,3 +159,44 @@
 
 ## Consumed Comments
 - saito (MEMBER, first-class): `/issue --non-interactive` による Issue Refinement の Issue Retrospective。Background のコード参照 (`modules/opportunistic-verify.md` の判定フロー、`skills/verify/SKILL.md` Step 14、#1159 の `retro_proposal_classified` イベント) を grep で事実確認済みで正確だったこと、Size M (検出上限3) に対し曖昧ポイント2件 (イベント emit 粒度、retire 候補の閾値) を自動解決3条件 (既存パターンから一意推論可能・過去の類似判断が存在・AC 本文が選択に非依存) を満たすとして自動解決したこと、AC 構成・整合性チェック (checkbox format 等) は違反なしだったことを記録。本 Spec はこの自動解決結果 (1件ずつ emit、閾値固定値5) をそのまま設計に反映した — https://github.com/saitoco/wholework/issues/1236#issuecomment-5213997574
+
+## Code Retrospective
+
+### Deviations from Design
+- **`skills/issue/SKILL.md` / `skills/review/SKILL.md` の `allowed-tools` に `emit-event.sh` を追加した**: Spec Notes は「呼び出し元 5 スキルの SKILL.md は変更不要」と判定していたが、`scripts/validate-skill-syntax.py` の cross-file validation が `modules/opportunistic-verify.md` から新たに参照される `emit-event.sh` について、それを read する `/issue` と `/review` の `allowed-tools` に欠落があると実際に検出した (`/code`/`/spec`/`/verify` は既存の `retro_proposal_classified` 用途で既に `emit-event.sh:*` を持っていたため検出されなかった)。Spec の判定は「呼び出し元スキル自身の Issue/PR 番号の受け渡し記述」の要否についてのものであり、`allowed-tools` の要否は別軸の懸念だったため、Spec の判断自体は誤りではないが、スコープの見落としがあった。cross-file validation がこの見落としを機械的に捕捉した
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Fixed the 1 MUST finding (`modules/opportunistic-verify.md` Step 3's `ac_index` computation referenced an Issue body never fetched in Step 1/2) and both SHOULD findings (dangling `## Notes` cross-reference; Japanese text in `modules/event-emission.md` violating CLAUDE.md's English-for-module-docs convention), plus 3 of 5 CONSIDER findings (Japanese text in `skills/audit/SKILL.md` / `scripts/emit-event.sh`; missing `--threshold` argument/numeric validation and hard-failing `jq` pipeline in `scripts/collect-opportunistic-retire-candidates.sh`) — all confirmed independently by 3 review agents and 8 verification passes before fixing
+- Used the static Task fan-out (Agent tool, `run_in_background: false`) instead of the Workflow-tool path for Step 10, despite `capabilities.workflow: true` being set: `skills/review/SKILL.md` has `context: fork` and ARGUMENTS carried `--non-interactive`, so `workflow-guidance.md`'s Pre-flight section correctly routed away from the Workflow tool (no re-invocation guarantee in this execution surface)
+- Ran the Base Branch Conflict Pre-check and confirmed via an actual test merge (`git merge --no-commit --no-ff origin/main`, aborted afterward) that all 4 `changed in both` files auto-resolve cleanly with both sides' content preserved — no MUST finding from that check
+- Left 2 CONSIDER findings unfixed as genuine scope-reduction decisions (not oversights): `ac_index`'s position-based grouping key drifting if Issue body checkboxes are edited (larger design change — condition-text hash — deferred as a follow-up), and 3 minor documentation-consistency nits (call sites not stating Issue/PR number explicitly, `docs/structure.md` missing an event-emission annotation, `skills/audit/SKILL.md` frontmatter description not extended) — all verified safe/cosmetic, not correctness gaps
+
+### Deferred Items
+- Post-merge observation AC (`.tmp/auto-events.jsonl` に `opportunistic_verify_result` が記録され集計可能であることの確認) remains deferred to the next `/auto` run, per the Issue's own `session=next` verify-type — unchanged from the code phase's handoff, still unresolvable within `/review`
+- `scripts/collect-opportunistic-retire-candidates.sh`'s `ac_index` position-based grouping key risk (see Key Decisions above) is deferred as a possible follow-up Issue, not fixed in this PR
+- `gh-pr-review.sh`'s self-review 422 fallback detection is broken (see review retrospective below) — not fixed in this PR since it's out of scope for Issue #1236; flagged for retro-proposal aggregation in the next `/verify`
+
+### Notes for Next Phase
+- `/merge` should confirm the 3 fix commits (pushed after the initial review post) are included in the merge — CI re-ran green on all 9 jobs after the fixes
+- No AC/policy changes were made during fix work; Step 13 concluded no Issue body update is needed
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- The Spec-level defect that produced this PR's only MUST finding (`ac_index` computed from an Issue body never fetched in Step 1/2) was not caught by the Spec's own AC verify commands — the `rubric` checks for AC1/AC5 confirmed the *textual presence* of the emit procedure and its rationale, but none of the 6 Pre-merge conditions asserted the procedure's internal logical consistency (that every referenced data source is actually available at the point it's used). This is a structural blind spot for `rubric`-based verification of multi-step Processing Steps text: a rubric can confirm "a step exists that does X" without confirming "X is executable as written." No corrective action taken in this PR (out of scope), but future Specs for shared modules with sequential Processing Steps could benefit from an explicit AC asserting step-to-step data-dependency correctness, not just presence.
+
+### Recurring issues
+- Japanese text leaking into English-designated documentation (module docs, skill docs, source comments) recurred across 3 separate files in this single PR (`modules/event-emission.md`, `skills/audit/SKILL.md`, `scripts/emit-event.sh`), all following the same pattern: content was transcribed near-verbatim from the (correctly Japanese, per CLAUDE.md) Spec Notes/Issue body rationale into shipped English-designated artifacts, without a translation step. This is the second Issue in recent history where Spec-to-shipped-doc transcription introduced a language violation (cf. `skills/review/skill-dev-recheck.md`'s existing "Transcription Divergence Check" for spike-report aspirational-language drift, a related but distinct check). No corrective action taken in this PR; worth considering whether a similar transcription check could cover Japanese-in-English-designated-files specifically, since `check-forbidden-expressions.sh` does not check language.
+
+### Acceptance criteria verification difficulty
+- No difficulty in this PR's own 6 Pre-merge conditions (all cleanly PASS via `rubric`/`file_contains`/`github_check`) — the difficulty surfaced instead in Step 10 code review (see above), not Step 8 AC verification.
+- Incidentally discovered, unrelated to this Issue's own ACs: `scripts/gh-pr-review.sh`'s self-review 422 fallback detection is broken due to a redirection-order bug (`API_STDERR=$(... 2>&1 >/dev/null)` — GitHub's REQUEST_CHANGES-on-own-PR error detail is written to the API response body on **stdout**, not to `gh`'s own stderr, so the fallback's `grep -qi "request changes on your own pull request"` never matches against the captured `API_STDERR`, which only ever contains the generic `gh: Unprocessable Entity (HTTP 422)` line). This means `/review` posting a MUST-containing review on a self-authored PR (the common case for this project's fully-autonomous `/auto` runs) always hits the "Error: failed to post review" hard-fail path instead of the intended COMMENT fallback — confirmed by direct reproduction against PR #1252 in this session, and worked around manually by replicating the script's own fallback logic outside the script. This is a real, currently-live tooling defect outside Issue #1236's scope; flagged here for `/verify`'s retro-proposal aggregation rather than fixed inline.

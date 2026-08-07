@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (76 files)
+├── scripts/             # Utility scripts used by skills and agents (78 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -186,6 +186,7 @@ Key modules:
 
 **Project utilities:**
 - `scripts/collect-recovery-candidates.sh` — parse `docs/reports/orchestration-recoveries.md`; count group-key frequency (group-key is a bare symptom-short, or `symptom-short/cause-slug` when an entry's Diagnosis body has a `- cause:` line); exclude entries individually by comparing each entry's timestamp against its resolved Issue's `closedAt` (open Issue: exclude all entries in the group; closed: exclude entries at or before `closedAt`, count entries after — falls back to the group's own latest `起票済み #N` entry timestamp as cutoff when `--issues-json` lacks `state`/`closedAt`); additionally excludes entries whose `### Improvement Candidate` body starts with `- N/A` (Tier 2 fallback successes needing no action); apply `--threshold K` filter; output `<group-key>\t<count>` candidates (add `--with-tracking` for a 3rd `tracked:#N:open`/`tracked:#N:closed`/`untracked` column — the open/closed suffix reflects the tracked Issue's resolved state, falling back to plain `tracked:#N` when the state could not be resolved); accepts `--issues-json PATH` (all-state issue list with `state`/`closedAt`) for Issue resolution
+- `scripts/collect-opportunistic-retire-candidates.sh` — aggregate `opportunistic_verify_result` events from committed `docs/sessions/*/events.jsonl`; group by (issue, ac_index) and report groups whose most recent consecutive judgments are all `SKIP` (trailing-SKIP streak), for `/audit stats --retention` Section 11
 - `scripts/get-config-value.sh` — extract a configuration value from `.wholework.yml`
 - `scripts/handle-permission-mode-failure.sh` — diagnose `permission-mode: auto` failures and print remediation hint to stderr (heuristic: exit!=0 AND elapsed<=30s)
 - `scripts/get-verify-permission.sh` — extract permission value from a verify command handler file
