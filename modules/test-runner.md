@@ -46,7 +46,9 @@ Execution order: **type check → lint → build → test**
 
 ### Step 2: Test Execution
 
-1. Execute the test command in Bash (timeout: 120 seconds)
+1. Execute the test command in Bash. Default timeout: 120 seconds. If the caller specifies an
+   explicit timeout (e.g. `/code` Step 9's execution surface constraint for full-suite runs), use
+   the caller's value instead — a full bats suite exceeds the 120s default.
 
 **Note (execution surfaces without a re-invocation guarantee)**: When the calling skill is running
 in an execution surface without a re-invocation guarantee (headless `claude -p` via

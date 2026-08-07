@@ -61,3 +61,24 @@ step11_section() {
     run step11_section "$SKILL_FILE"
     [[ "$output" == *'missing #$NUMBER reference'* ]]
 }
+
+# Extract Step 9 section: from "### Step 9:" to the next "### " heading
+step9_section() {
+    awk '/^### Step 9:/{found=1} found && /^### / && !/^### Step 9:/{exit} found{print}' "$1"
+}
+
+# Extract Behavioral Change Detection subsection: from "#### Behavioral Change Detection"
+# to the next heading (any level)
+behavioral_change_detection_section() {
+    awk '/^#### Behavioral Change Detection/{found=1; next} found && /^#{1,4} /{exit} found{print}' "$1"
+}
+
+@test "Step 9 section states execution surface constraint (run_in_background) at a branch-independent position" {
+    run step9_section "$SKILL_FILE"
+    [[ "$output" == *"run_in_background"* ]]
+}
+
+@test "Behavioral Change Detection subsection does not restate the execution surface constraint" {
+    run behavioral_change_detection_section "$SKILL_FILE"
+    [[ "$output" != *"run_in_background"* ]]
+}
