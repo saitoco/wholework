@@ -151,12 +151,12 @@ No new comments since last phase.
 - Pre-merge AC 3 件はすべて `rubric` 形式で、対象 13 Issue の GitHub 実状態を個別に `gh issue view` で照合することで機械的かつ明確に PASS 判定できた。UNCERTAIN や verify command の不備は発生しなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Pre-merge rubric AC 3 件を、対象 13 Issue の GitHub 実状態 (`gh issue view` による個別照合) および #1106・#1097 の充足コメント、#507/#444 の対象外理由記録と突き合わせ、いずれも PASS と判定した。
-- REVIEW_DEPTH=light (Size M + `--light` 明示) のため review-light エージェント 1 体による全 4 観点統合レビューを実行し、MUST/SHOULD/CONSIDER いずれも検出されなかった。
+- pre-merge AC ゲート (`check-pre-merge-ac.sh`) は `unchecked_count: 0`、review-incomplete-fallback チェックも該当なしで、いずれもゲート通過。
+- `gh-pr-merge-status.sh` が `mergeable: true, reason: clean` を返したため、conflict 解消フローを経由せず直接スクワッシュマージを実行した。
 
 ### Deferred Items
 
@@ -165,20 +165,5 @@ No new comments since last phase.
 
 ### Notes for Next Phase
 
-- MUST issue が存在しないため `event=COMMENT` でレビュー投稿済み。`/merge 1232` に進んで問題ない。
-- CI 全 9 ジョブ SUCCESS 済み、base branch (`main`) との衝突 (`changed in both`) は検出されなかった。
-
-### Key Decisions
-
-- レジューム検知: 対象 13 Issue 全件の GitHub 上の実状態を個別確認し、11 Issue 12 AC 行が既に `observation event=auto-run` へ再型付け済み、#507/#444 が `manual` のまま誤編集なく維持されていることを確認した。前回セッションが Issue 本文編集完了後・report file 作成前に中断したレジューム状態と判断し、残作業 (`docs/reports/manual-ac-retype-d2.md` 作成 + `opportunistic-search.sh` 検証) のみを実施した。
-- Pre-merge rubric AC 3 件は report ファイル + 既存の Issue 側編集内容と照合し PASS と判定、Issue #1164 のチェックボックスを更新済み。
-
-### Deferred Items
-
-- Post-merge AC (`/audit stats --retention` での Manual waiting 件数減少確認) — `/verify` が `observation event=auto-run` 経路で評価する。
-- follow-up Issue #1231 (`run-code.bats` の auto-retry テスト 2 件の FAIL) — 本 Issue のスコープ外、別 Issue で対応。
-
-### Notes for Next Phase
-
-- `bats tests/` フルスイート (`--jobs 8`, 1507 件) で本 PR 由来ではない pre-existing FAIL 3 件 (`run-code.bats` ×2, `post_merge_check.bats` ×1 は並列実行時のみのフレーク) を確認済み。review で CI が同じ FAIL を検出しても、本 PR の diff (`docs/reports/manual-ac-retype-d2.md` の新規追加のみ) に起因するものではないことを踏まえて判断すること。
-- Pre-merge AC 3 件 (rubric ×3) は code phase で PASS 判定・チェック済み。review での再確認は不要 (#1163 と同型)。
+- base branch は `main`。`closes #1164` により Issue は squash merge 後に自動 CLOSE される想定。
+- `/verify 1164` では Post-merge AC (observation event=auto-run) の評価を行うこと。
