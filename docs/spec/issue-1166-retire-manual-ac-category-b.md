@@ -47,3 +47,6 @@
 - 対象 6 Issue はいずれも GitHub 上で CLOSED 済み (実装は main にマージ済み) だが `phase/verify` ラベルを保持している。`scripts/gh-label-transition.sh` はラベルのみを操作し Issue の open/closed 状態を変更しないため、本対応後も 6 件は CLOSED のまま `phase/done` ラベルに置き換わる。
 - 本 Issue 自体は Task 種別・Size M。`docs/stats/2026-08-05.md` Section 10 の分類および親 #1158 の記載により、対象 6 Issue への処理は operate route (リポジトリファイル変更なしの外部操作のみ) を想定している。
 - ドキュメント更新は不要と判断した: 本 Issue は既存の retire/operate route パターンを 6 件の具体的な Issue に適用する一回限りの運用作業であり、`docs/workflow.md` 等のワークフロー説明や Steering Documents に影響する変更 (新しい仕組みの導入、ディレクトリ構成変更など) を含まない (`modules/doc-checker.md` Impact Determination Criteria のいずれにも該当しない)。
+
+## Consumed Comments
+No new comments since last phase.
