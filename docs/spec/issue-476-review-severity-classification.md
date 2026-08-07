@@ -183,3 +183,13 @@
 ### Improvement Proposals
 - N/A — re-run #7 で既に起票水準に達し follow-up Issue #1220 が対応済み。本 re-run はその後の9件目の再現事例として記録するに留める
 
+## Verify Retrospective (2026-08-07 re-run #10)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1244、Issue #1117) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカーあり) したが、今回の発火元 PR #1244 の diff (`scripts/reconcile-phase-state.sh`, `modules/phase-state.md`, `tests/reconcile-phase-state.bats`, `docs/spec/issue-1117-*.md` — `_completion_issue()` の成功シグネチャ修正) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず UNCERTAIN 判定に帰着した。`keyword=workflow` ゲートの誤発火パターンが、本 Issue #1117 の Spec 内 `docs/workflow.md` というファイルパス参照 (Steering Docs sync candidate 確認の一文) への部分一致で **10件目** として再現した。follow-up Issue #1220 が依然 OPEN であることを確認したため、本 re-run でも重複起票を行わない
+
+### Improvement Proposals
+- N/A — re-run #7 で既に起票水準に達し follow-up Issue #1220 が対応済み (未クローズ)。本 re-run はその後の10件目の再現事例として記録するに留める
+
