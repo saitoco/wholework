@@ -111,18 +111,31 @@ Pre-merge AC1・AC3 は `rubric` タイプであり、`modules/verify-executor.m
 - N/A — 上記のベースドリフトは rebase 1 回で解消し、実装内容 (bats テスト・レポートファイル) への手戻りはなかった。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 区分 C 2 件は #1163 (区分 A) の前例に倣い、「retire (phase/done 遷移)」ではなく「verify command 付きの `verify-type: auto` へ再型付け」を採用した。post-merge AC の文言 (人間可読テキスト) は変更せず、機械可読 marker のみ追加している
-- #1066 は `scripts/wait-ci-checks.sh` の `_pending -eq 0` 早期 break パス、#1060 は `scripts/check-pre-merge-ac.sh` の Pre-merge/Post-merge 分離ロジックを、それぞれ故障注入シナリオの「決定的な核」として bats テスト化対象に選定した (実 preview 環境や実 merge 実行は要求しない)
-- rubric grader 可視範囲制約 (Spec ファイル非参照) のため、区分 C・D1 の詳細マッピング・根拠を `docs/reports/manual-ac-retype-c-d1.md` に記録し、Pre-merge AC1/AC3 (rubric タイプ) がこのファイルを評価できるようにした
+- REVIEW_DEPTH=light (`--light` 明示指定、Issue Size=M とも整合) のため 10.0 の軽量統合レビュー (review-light 1 agent) を実行し、10.1〜10.3 の fan-out レビューはスキップした
+- 新規 bats テスト2件の論理的健全性 (mock 挙動が実スクリプトの分岐と一致するか、常に真になる無意味なアサーションでないか) を dedicated agent で個別に追加検証し、review-light の指摘なしという結果を補強した
 
 ### Deferred Items
 - #708 (条件1・2) と #719 (条件1) の計 3 AC 行は、姉妹 sub-issue #1163 の Phase Handoff が「区分 C 相当」と指摘しているが、本 Issue のスコープ外として対応していない (Spec Notes 「#708 / #719 に残る故障注入型 manual AC」参照)。対応候補: `#708` は `tests/reconcile-phase-state.bats` の既存対象、`#719` 条件1 は `tests/pre-merge-check.bats` に既に同一シナリオのテストが存在するため追加実装なしで retype できる可能性が高い
 - Post-merge AC (`/audit stats --retention` での #1066 / #1060 個別確認) は本 PR merge 後の観測が前提であり、本フェーズでは未実施
 
 ### Notes for Next Phase
-- `/review` は Pre-merge AC1〜AC3 (rubric) の判定時、`docs/reports/manual-ac-retype-c-d1.md` の内容を評価対象に含めること — Spec ファイルは grader に渡らないため、この記録ファイルが唯一の詳細根拠
 - `/merge` 実行前に `#1066` / `#1060` の Issue 本文が既に `verify-type: auto` へ変更済みであることを確認済み (本 Issue の code フェーズ開始前、前回試行で適用済みだった) — 再度の Issue 編集は不要
+- MUST issue はゼロのため Step 12/13 はスキップ、`event=COMMENT` で review 完了。`/merge 1237` にそのまま進んでよい
 - `/verify` は post-merge AC の observation event (`event=auto-run`) に従い、次回 `/auto` 実行時の `/audit stats --retention` 結果を待って判定すること
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — Implementation Steps 1〜5 と PR diff (bats テスト2件・レポートファイル・Spec 追記) は完全に一致していた。review-light agent (Spec 乖離・エッジケース/堅牢性・セキュリティ・ドキュメント整合性の4観点) が指摘なしで完了。
+
+### Recurring issues
+
+Nothing to note — 同種の問題の再発は見られなかった。
+
+### Acceptance criteria verification difficulty
+
+Pre-merge AC1・AC3 は rubric タイプで `docs/reports/manual-ac-retype-c-d1.md` を根拠資料として評価する構成だったが、Phase Handoff の「Notes for Next Phase」に評価対象ファイルの案内が明記されていたため判定に迷いはなかった。AC4 (`bats tests/`) はローカル実行で exit code 0・最終テスト `ok 1510`・`not ok` なしを確認、CI の `Run bats tests` ジョブ SUCCESS とも整合。PR 本文が「1509件」と記載しているのに対し実際のフルスイートは 1510 件だったが、この差は本 PR が新規に bats テストを2件追加したことによる数値の陳腐化であり、AC 判定への影響はない (verify command は件数を固定しない `bats tests/` のみを要求するため)。
