@@ -6,6 +6,7 @@
 - saito / MEMBER / first-class / Issue Retrospective (2026-08-07、`/verify` 2回連続 FAIL 後の AC 見直し) — 曖昧点3件の自動解決ログ (① AC1/AC2 の実測エビデンス範囲を `--fable` 限定から `--fable` または `--opus` のいずれも許容に拡大、② REVIEW_DEFAULT 実測 (2026-08-06, #1058/PR#1201) の Issue 内 AC 化、③ Issue タイトルの scope 整合性更新)。本 Spec の Overview/Implementation Steps/Verification は全てこの AC 改訂を前提に再設計した。/ https://github.com/saitoco/wholework/issues/939#issuecomment-5216528644
 - saito / MEMBER / first-class / verify-fail marker (2026-07-05、iteration=1、cross-phase exception により cutoff 以前だが consume 対象) — `--fable` 未実行を理由とする AC1/AC2 FAIL の記録。内容は下記 `## Code Retrospective` / `## Verify Retrospective` に既に反映済みで、本 Spec で新規に対応すべきアクションはなし。/ https://github.com/saitoco/wholework/issues/939#issuecomment-4886569817
 
+- saito / MEMBER / first-class / <!-- wholework-event: type=verify-fail phase=verify issue=939 iteration=1 --> / https://github.com/saitoco/wholework/issues/939#issuecomment-4886569817
 ## Overview
 
 `scripts/watchdog-defaults.sh` の `WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800` は #556 (base 1800→2700) でも #903 (Sonnet 5 再校正、CODE/REVIEW のみ) でもスコープ外のまま据え置かれてきた。前回の本 Issue 実装サイクル (PR #944) は `--fable` の新規実測実行を非対話環境でのコスト・副作用への懸念から見送り、`docs/tech.md` / `docs/reports/watchdog-recovery-strategy.md` に「実測なし・deferred」を記録した結果、対応する2件の Pre-merge AC (AC1・AC2) が `/verify` で2回連続 FAIL した。
