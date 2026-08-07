@@ -72,3 +72,34 @@ Cutoff: `2026-08-07T02:40:06Z` (最新の `phase/*` ラベル付与イベント 
 - `modules/verify-classifier.md` は Issue 起票時点の条件テキストを `auto`/`opportunistic`/`observation`/`manual` に分類する基準 (別の関心事) であり、本 Issue が扱う「判定側 (retrospect 時) の基準」とは独立している。Related #1209 (常時 PASS な verify command の検出パターン追加) とも役割が異なる — 実害のクラスは同じだが、#1209 は verify command の記述側、本 Issue は判定側の基準を扱う
 
 **AC3 (常時 PASS 検出) の削除は Issue 側で既に解決済み**: Issue Retrospective コメント (Consumed Comments 参照) の通り、起票時点の Pre-merge AC3 (`<!-- verify: grep "SKIP" "modules/opportunistic-verify.md" -->`) は `/spec` 着手前に既に削除されている。`grep -c "SKIP" modules/opportunistic-verify.md` は本 Spec 作成時点の現行 main で 3 件ヒットしており (Background の PASS/FAIL/SKIP 定義に由来)、実装内容に関わらず常に PASS するため、`modules/verify-patterns.md` §9 の補完チェック運用ガイドに沿って正しく除外されている。本 Spec で追加の対応は不要。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 起票時点の Pre-merge AC3 (`grep "SKIP" modules/opportunistic-verify.md`) を `/issue` refinement が削除した判断は妥当。現行 main で既に 3 件ヒットするため実装内容に関わらず常時 PASS する verify command であり、`modules/verify-patterns.md` §9 の運用ガイドに合致する。残った AC1/AC2 の rubric は意味的条件を過不足なく記述しており、verify 時に PASS/FAIL の境界で迷う余地がなかった
+- 検討候補 A/B/C の採否を Issue 側で確定させず spec フェーズに委ねた設計は、Size S に対して適切な粒度だった
+
+#### spec
+- 採用案 (A+B)・不採用案 (C) の判断根拠が Notes に明記され、C の除外理由 (`modules/verify-classifier.md` との整合コストが Size S に対して過大) も Issue 本文の記述に根拠づけられている
+- Spec の Implementation Steps が置換後の全文をコードブロックで提示していたため、実装差分が Spec の提案ブロックと逐語一致した。設計と実装の乖離ゼロ
+
+#### code
+- `run-code.sh` の auto-retry 3 回すべてが silent no-op で終了。3 回とも「バックグラウンドで実行中の `bats tests/` の完了を待ちます (完了時に通知されます)」という文でターンを終了しており、`claude -p` には再呼び出し保証がないためそこでプロセスが終了した (`background-notification-wait`)
+- **ただしこれは #1213 の修正 (`38663cb3`, 13:00:19 着地) の退行ではない**。4 回の試行開始時刻は 11:59 / 12:24 / 12:38 / 12:52 で、いずれも修正着地前。全試行が修正前の `skills/code/SKILL.md` を読んで走っている。修正の有効性は次回以降の code フェーズで初めて観測可能
+- retry 3 は実装を完了し `worktree-code+issue-1223` に `75bbb950` として commit まで到達していた。`reconcile-phase-state.sh` も `worktree_commits_found: true` を返しており、「実装は存在するが main へ伝播していない」状態を検知できていた
+
+#### review
+- patch route のため未実行 (N/A)
+
+#### merge
+- patch route のため未実行 (N/A)
+
+#### verify
+- Pre-merge 2 条件とも初回で PASS。rubric の文言が実装差分と 1:1 対応していたため判定に曖昧さがなかった
+- Post-merge AC3 は `event=auto-run` 未発火のため SKIPPED。`session=next` 付きのため、発火しても skill 自己更新の伝播が確認できるまでは SKIPPED に倒れる想定
+
+### Improvement Proposals
+
+- **Tier 2/Tier 3 の patch route 復旧経路が `worktree_commits_found` を活用していない**: `reconcile-phase-state.sh code-patch --check-completion` は「worktree に commit はあるが origin/main には無い」状態を `worktree_commits_found: true` として正しく報告するが、この信号を消費する復旧経路が存在しない。(1) `modules/orchestration-fallbacks.md#code-patch-silent-no-op` の Fallback Steps は「`run-code.sh` を 1 回リトライ → 駄目なら Tier 3」のみで、worktree commit の main への伝播を試みない。(2) `agents/orchestration-recovery.md` は Step 3a (L61) で `code-pr` 専用に「commit はあるが push 未了」プローブを持ち `git push origin <branch>` を提案できるが、`code-patch` には同等のプローブがない。さらに L100 が main への直 push を禁止し、`scripts/validate-recovery-plan.sh` の `forbidden_cmd_patterns` (`push\s.*origin\s.*(main|master)`) がそれを機械的に強制するため、sub-agent は素の `git push origin main` を提案して棄却される — 実際に #1223 でこの経路をたどった。lock 経由の sanctioned な伝播手段である `scripts/worktree-merge-push.sh --from <branch>` は validator の禁止パターンに一致しないため復旧案として有効だが、agent prompt にその存在が記載されていない。対策として、`code-patch` 用の Step 3a 相当プローブを追加し、`worktree_commits_found: true` の場合は `worktree-merge-push.sh --from <branch>` を提案するよう agent prompt に明記する。あわせて `code-patch-silent-no-op` の Fallback Steps にも同経路を Tier 2 の段階で追加することを検討する
