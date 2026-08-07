@@ -172,3 +172,37 @@ Nothing to note。review-light の Perspective 1 判定通り、Implementation S
 ### Acceptance criteria verification difficulty
 
 Nothing to note。Pre-merge AC 4件は全て `rubric` 形式で、Issue 本文と diff のみから明確に PASS 判定できた。UNCERTAIN や verify command の不備は発生しなかった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 起票時の Proposal (A / B / C の 3 案 + 「A + C を推奨」) がそのまま採用され、issue フェーズは Background の事実確認に徹した。**Issue 側で選択肢と推奨を提示しておくと `/spec` の判断が速い**
+- ただし起票時の根本原因の記述は**不正確だった**。「`gh pr merge --squash` はリモートだけ進めるのでローカル main は追従しない」と書いたが、実際にはローカル main は並行セッションの操作 (`worktree-merge-push.sh` の in-place merge、他セッションの `_pull_ff_only`、`/verify` Step 2) によって**非決定的に**同期される。`/auto 1200` 実行中に reflog で発見し、spec 開始前にコメントで訂正した
+
+#### spec
+- 訂正コメントを取り込み、問題定義を「同期されない」から「**同期が非決定的**」に更新したうえで A + C を採用。C の推奨度が上がった理由 (単発 `/auto` 経路に同期ステップが皆無) も反映されている
+- 一方で「実装確認済みの前提」節が「`run-merge.sh` は現状 `git` を直接呼び出していない」と記載していたが、`git worktree list --porcelain` が既に存在した。実装への影響はなかったが、**この不正確な前提が code フェーズのテスト設計に波及した** (下記)
+
+#### code
+- Rework 2 件。いずれもテスト基盤側の問題で、実装ロジックの手戻りではない
+  - `git clone` が空チェックアウトを作った (bare origin の HEAD が `refs/heads/main` を指していなかった) → `symbolic-ref HEAD` の明示設定で解消
+  - **否定側テストが常に失敗した** — 「`git pull --ff-only` が呼ばれないこと」を `[ ! -f "$GIT_LOG" ]` で検証したが、`run-merge.sh` は起動直後に既存の `git worktree list --porcelain` を呼ぶため git モックのログが必ず生成される。`grep -q "^pull --ff-only$"` の否定に変更して解消。**spec の前提の不正確さが、そのままテストの誤設計として現れた事例**
+
+#### review
+- `gh pr view --json files` が GraphQL の files connection を 100 件で暗黙に打ち切る問題を検出し、**本 Issue の検出機構そのものの信頼性に直結する箇所**として SHOULD 修正 (paginated REST endpoint に変更)。さらに `run-merge.bats:331` で 100 件 cap 超えの境界をテストで保護した
+- 同じパターンが `skills/review/SKILL.md` にも既存だが、用途が異なる (表示目的) ためスコープ外とし、「次に同種の truncation を踏んだら横断監査を起票」と判断を記録
+
+#### merge
+- ローカルブランチ削除のみ失敗 (review worktree が `worktree-code+issue-1206` を使用中)。リモート反映には影響しないため続行
+
+#### verify
+- **CI インフラ障害で review が 1 度失敗した**。`run-review.sh` が exit 2 (PENDING) を返し `run-auto-sub.sh` が exit 1。CI ログを読むと `Validate skill syntax` が `Failed to resolve action download info. Error: Service Unavailable` で **Set up job 段階から失敗**しており、検証自体が実行されていなかった。同時刻にリポジトリ全体で 12 run 中 7 failure / 4 queued 停滞という GitHub Actions の広域障害だった
+- 復旧は **CI ジョブの再実行のみ**。コード修正・spec 見直しは一切不要で、再実行後は全 9 ジョブ pass。障害当時から `Run bats tests` は SUCCESS だったため、実質的な検証は最初から通っていた
+- 本 Issue が直した経路の実地確認として merge 直後にローカル main を確認したところ origin と一致していたが、**これは #1206 の修正が効いた証拠にはならない** — 並行セッションによる副次的同期でも同じ結果になるため。まさに訂正コメントで指摘した非決定性であり、確定的な検証は post-merge observation AC に委ねられる
+
+### Improvement Proposals
+
+- **`/auto` の Tier 1/2/3 が CI インフラ障害を分類できない** — 今回 Tier 1 (reconciler) は `matches_expected: false` と正しく報告したが、その原因が「実装が不完全」なのか「外部サービスの一時障害」なのかは判別できない。`skills/verify/SKILL.md` Step 5 には既に **CI Infrastructure Failure Detection** の判定表 (steps が空 / timeout / runner error / network error) が存在するが、これは `/verify` 内でのみ使われ、`run-review.sh` の exit 2 経路や `/auto` の recovery ラダーからは参照されない。結果として**親セッションが `gh run view --log-failed` を手で読んで初めて切り分けられた**。既存の判定表を `/auto` 側からも参照できるようにする (または Tier 2 のカタログエントリとして登録する) 余地がある
+- **spec の「実装確認済みの前提」の不正確さがテスト設計に波及した (観察のみ)** — 今回は実装への影響がなく Rework 1 件で済んだが、前提節はコードから機械的に検証できる主張を含むため、`/spec` 時点で `grep` 等による裏取りを促す価値があるかもしれない。単発事例のため起票は見送る
