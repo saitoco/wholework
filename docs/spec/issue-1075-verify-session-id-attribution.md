@@ -272,3 +272,38 @@ Pre-merge/Post-merge の AC 文言自体への変更は行っていない (既�
 ### Acceptance criteria verification difficulty
 
 Nothing to note — 5件の Pre-merge rubric AC はいずれも曖昧さなく判定できた。grader が Issue body + diff から明確に PASS/FAIL を判断可能な粒度で書かれていた。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- 曖昧性 2 件を自動解決し、いずれも AC テキストの変更は不要と判定した。案 C (文書化のみ) が AC1 の「実装されている」要件と矛盾するため不採用、という判定は Issue 本文の記述だけから導けており妥当。
+
+#### spec
+
+- `restore_auto_session_pointer()` の解決順序を 5 段 (exhaustive) に定義し直した設計が、verify 時点の診断に直接役立った。本 verify で観測された誤帰属について「どの段で解決されたか」を追跡でき、`current` ポインタへのフォールバックが原因だと特定できたのは、順序が明示的に列挙されていたため。
+
+#### code
+
+- 独立サブエージェントによる敵対的グレーディングで pre-merge AC 5 件を再確認する方式を取り、`skills/verify/SKILL.md` の `phase_start` emit ブロックに `source` 漏れが 1 件あることを実装中に発見・修正した。AC の自己申告 PASS を別視点で検証する運用が機能した例。
+
+#### review
+
+- `--full` で review-bug が 13 件検出し、敵対的検証で 3 件のみ生存 (7 件を誤検知として除外)。誤検知率が高い一方で、生存した指摘は SHOULD 2 件 (stale な pointer 説明、ポインタ再生成の記述欠落) といずれも実体のあるものだった。
+- review retrospective に「新しい authoritative パス導入時に旧説明が横断的に更新されない」という再発パターンが記録されている。本 Issue が解決順序を変更したことで、`skills/auto/SKILL.md` と `modules/orchestration-fallbacks.md` の旧説明が同時に stale 化した実例。
+
+#### merge
+
+- **GitHub Actions のインフラ障害により merge まで約 5 時間の停滞が発生した**。PR #1219 は作成時に workflow run が生成されず (`no checks reported`)、rerun / close-reopen / 空コミット push のいずれも新規 run をトリガーできない状態が続いた。復旧後は正常に CI が通り (bats 3m5s、macOS 5s と通常の実行時間)、merge まで完了。詳細と対処の記録は Issue #1082 の verify retrospective および #1050 のコメントを参照。
+
+#### verify
+
+- Post-merge の manual 条件を検証しようとした結果、**本セッションの実行形態が条件の前提を満たしていないことが判明**し SKIPPED とした。本セッションは `/auto --batch` を起動せず wrapper を個別に呼ぶ手動オーケストレーションで進めたため、`skills/auto/SKILL.md` Step 1 の session 初期化 (`SESSION_ID` 生成、`export AUTO_SESSION_ID`、`.tmp/auto-session-current` への書き込み) を経ていない。
+- その結果、本セッションの in-session `/verify` 5 件の event が `.tmp/auto-session-current` に残っていた**別セッションの ID** に帰属した (`63129-1785977471` → `16353-1786020170` → `89790-1786027911` と時系列で 3 回変化)。これは本 Issue の修正の失敗ではなく、`/auto` の session 初期化を経ない実行形態における既知の帰結。判定を偽装せず、検証手順を Issue コメントに残す形にした。
+
+### Improvement Proposals
+
+- **手動オーケストレーション時の session_id 帰属が保証されない**。親セッションが `run-*.sh` を個別に呼ぶ運用 (本セッションのような、フェーズごとに結果を確認しながら進める形) では、`/auto` Step 1 の session 初期化が走らないため、in-session `/verify` の event が `.tmp/auto-session-current` 経由で他セッションに誤帰属する。本 Issue が導入した issue-scoped ポインタは `/auto` が書き込む前提のため、この経路では機能しない。親セッションが手動で session 初期化する手順 (`SESSION_ID` 生成 + `current` / issue-scoped ポインタ書き込み) を `modules/event-emission.md` に記載するか、`/verify` 側で `AUTO_SESSION_ID` も `AUTO_EVENTS_LOG` も未設定の場合に `current` へフォールバックせず session_id を空にする (誤帰属より欠損を選ぶ) 判断が要る。後者は `modules/event-emission.md` の "fail-closed" 方針と整合する。
+- `.tmp/` にセッションポインタファイルが大量に蓄積している (`.tmp/auto-session-*` が多数)。`scripts/reclaim-stale-worktrees.sh` (#1119) が worktree を対象としたのと同様に、完了済みセッションのポインタファイルを回収する経路がない。`.tmp/auto-session-current` が古いセッションの ID を保持し続けることが上記の誤帰属を助長している面もある。
