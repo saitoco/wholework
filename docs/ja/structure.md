@@ -18,7 +18,7 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # スキル定義（必須）
 │       └── *.md         # 補助的な phase/ガイドラインファイル（任意）
-├── modules/             # スキルから参照される共有モジュール（41 ファイル）
+├── modules/             # スキルから参照される共有モジュール（43 ファイル）
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
@@ -134,6 +134,7 @@ wholework/
 - `modules/phase-handoff.md` — phase 間 Phase Handoff 要約の read/write（cross-phase context carryover）
 - `modules/steering-hint.md` — steering docs が無い場合に `/doc init` を促す動的ヒント
 - `modules/orchestration-fallbacks.md` — orchestration レベルの fallback パターン参照カタログ（#319 tier 2・#316 recovery sub-agent・#318 learning loop から参照）。発火実績ゼロかつ live 参照元なしで退役したエントリは `docs/reports/orchestration-fallbacks-archive.md` へ退避 (#1180)
+- `modules/ci-failure-classifier.md` — CI プラットフォーム障害判定の SSoT（判定シグネチャ表、3 値 verdict、消費側ごとの応答表）
 - `modules/domain-classifier.md` — 改善提案の Domain 分類（composable、LLM-in-context）
 - `modules/retro-proposals.md` — Improvement Proposal 収集、Tier 判定（retro_proposal_classified イベント emit 付き）、Issue 作成（/verify Step 16、/auto Step 4a、/auto Step 5 の共有モジュール）
 - `modules/l0-surfaces.md` — L0 (GitHub) surface の SSoT と comment を一級入力として扱うポリシー
