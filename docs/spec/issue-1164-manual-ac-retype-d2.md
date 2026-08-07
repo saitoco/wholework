@@ -136,8 +136,37 @@ No new comments since last phase.
 
 - `bats tests/` (1507 件) 実行で `run-code.bats` の `auto-retry: silent no-op + AUTO_RETRY_ENABLED=true fires retry` と `auto-retry: preflight stashes parent-main stray untracked file before retry re-invocation` の 2 件が単独実行でも一貫して FAIL することを発見した。両テストとも `reconcile-phase-state.sh` mock のカウンタが retry ループ内で意図通り増加していない (`auto-retry: max iterations reached (3/3)` に到達) ことが原因と推測される。本 Issue の diff は `docs/reports/manual-ac-retype-d2.md` の新規追加のみで `scripts/run-code.sh` やテスト自体には触れていないため、本 Issue のスコープ外の pre-existing な問題と判断し、follow-up Issue #1231 (`retro/code` ラベル) を起票した。また `post_merge_check.bats` の 1 件 (`gh issue reopen called when FAIL input given`) は `--jobs 8` 並列実行時のみ FAIL し、単独実行では PASS することを確認済み (並列実行時のフレーク、実害なし)。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- なし。本 PR は `docs/reports/manual-ac-retype-d2.md` の新規追加と Spec 側の retrospective/handoff 追記のみで、Spec の Implementation Steps からの逸脱はレジューム判断 (#1163 と同型) 以外になかった。
+
+### Recurring issues
+
+- 親 #1158 の分割 sub-issue 群で、「前回セッションが Issue 本文編集・コメント投稿完了後、report file 作成前に中断」というレジュームパターンが #1163 に続き #1164 でも再現した。同種の再型付け Issue が今後も残っている場合、同じ中断パターンが繰り返される可能性が高い。
+
+### Acceptance criteria verification difficulty
+
+- Pre-merge AC 3 件はすべて `rubric` 形式で、対象 13 Issue の GitHub 実状態を個別に `gh issue view` で照合することで機械的かつ明確に PASS 判定できた。UNCERTAIN や verify command の不備は発生しなかった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
+
+### Key Decisions
+
+- Pre-merge rubric AC 3 件を、対象 13 Issue の GitHub 実状態 (`gh issue view` による個別照合) および #1106・#1097 の充足コメント、#507/#444 の対象外理由記録と突き合わせ、いずれも PASS と判定した。
+- REVIEW_DEPTH=light (Size M + `--light` 明示) のため review-light エージェント 1 体による全 4 観点統合レビューを実行し、MUST/SHOULD/CONSIDER いずれも検出されなかった。
+
+### Deferred Items
+
+- Post-merge AC (`/audit stats --retention` での Manual waiting 件数減少確認) — `/verify` が `observation event=auto-run` 経路で評価する。
+- follow-up Issue #1231 (`run-code.bats` の auto-retry テスト 2 件の FAIL) — 本 Issue のスコープ外、別 Issue で対応。
+
+### Notes for Next Phase
+
+- MUST issue が存在しないため `event=COMMENT` でレビュー投稿済み。`/merge 1232` に進んで問題ない。
+- CI 全 9 ジョブ SUCCESS 済み、base branch (`main`) との衝突 (`changed in both`) は検出されなかった。
 
 ### Key Decisions
 
