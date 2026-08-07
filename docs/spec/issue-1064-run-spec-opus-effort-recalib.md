@@ -54,7 +54,37 @@
 - **Pre-merge 検証項目数について**: Issue 本文の Pre-merge 受入条件が 6 件であり、SKILL.md の light テンプレート目安 (5件) を 1 件超過するが、「Verify command sync rule」(Issue body を verbatim で転記) を優先し、そのまま維持した。
 - **関連**: `docs/reports/claude-opus-5-impact-strategy.md` (#1062, §3.2/§4.4/§8, 本 Issue の候補フレーミング元)、`docs/reports/sonnet-5-effort-recalibration-spec.md` (#922, C3, レポート構成の直接の前例)、Issue #217 (Opus 4.7 導入時に `xhigh` を設定、Sonnet パスは明示スコープ外)、Issue #1228 (spec/issue フェーズの telemetry 欠落を解消、本 Issue の前提条件)
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1–5 were followed as written; no reordering, omission, or approach change occurred.
+
+### Design Gaps/Ambiguities
+
+- `docs/ja/tech.md` was found to already be missing the three Opus 5-related prose notes that `#1062` added to `docs/tech.md` (**Opus 5 effort calibration**, **Opus 5 default parent evaluation — deferred**, **Opus 5 watch items**) — a pre-existing translation-sync gap from `#1062`, not introduced by this Issue. `bash scripts/check-translation-sync.sh` still reports `docs/tech.md` as `IN_SYNC` because the sync checker compares last-updated dates, not per-note content coverage, so it did not surface this gap. Not fixed here (out of scope for #1064's own Changed Files, and re-litigating #1062's own translation debt risks scope creep); recorded here rather than filed as a new Issue, since it is minor, non-blocking, and better tracked as a note for the next `docs/ja/tech.md` sync pass than as a standalone Issue.
+
+### Rework
+
+- N/A — no rework occurred.
+
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: spec フェーズの token telemetry が全期間で0件であることを指摘。wall-clock 代理指標 (Opus5世代 avg 16:22 vs Opus4.8世代 avg 13:22、ただし並行負荷と交絡) を提示。「L size Spec」≠「Opus 生成 Spec」の注意点 (#1175 で M→L 昇格の実例) を記録。 / URL: https://github.com/saitoco/wholework/issues/1064#issuecomment-5199646701
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: spec phase の telemetry 欠落の原因 (run-auto-sub.sh の spec dispatch が run_phase_with_recovery() をバイパス) を特定。silent window のみ取得可能と報告。本 Issue へのスコープ算入 (a) か別 Issue 分離+blocked-by (b) の判断を提起 — 結果的に #1228 として (b) の経路で解消済み。 / URL: https://github.com/saitoco/wholework/issues/1064#issuecomment-5211841755
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 判定は「`xhigh` を維持」。#922 (Sonnet パス) の構造的論拠 (単一 19 ステップ推論チェーン、sub-agent fan-out なし、エラーは code/review/merge の 3 フェーズに伝播) をそのまま Opus パスに適用し、加えて `--opus` が Size L (最も複雑な Issue の部分集合) 限定であることを downgrade に慎重になるべき追加根拠として明記した
+- Opus 5 の下方 sweep ガイダンスは (#922 の Opus 4.8 ノートと異なり) 実際にこのパスへ直接適用されるが、「sweep して確認せよ」という探索的推奨であり特定の下位 tier を支持する主張ではないため、根拠不足のまま default を変更しない、という理由付けを採用した
+- `--max` フラグの位置づけは「維持」に加えて「再確認 (reaffirmed)」— Opus 5 のより狭い "extremely difficult, latency-insensitive" という定義が、既存の opt-in・都度指定という運用実態とむしろ従来以上に整合すると判定した
+
+### Deferred Items
+- 実 telemetry サンプル (`--opus` の `token_usage`) が蓄積するまでの再評価は将来Issueに委ねる。抽出時は `sub_start` イベントの dispatch 時点 `size=L` を使うこと (Spec の最終記録 Size ではない — #1175 の落とし穴に注意)
+- `docs/ja/tech.md` が `#1062` の Opus 5 関連ノート (effort calibration / default parent deferred / watch items) をまだ含んでいない、という pre-existing な翻訳同期ギャップを発見したが本 Issue のスコープ外として起票せず記録に留めた (Code Retrospective参照)
+
+### Notes for Next Phase
+- Pre-merge AC 6件はすべて `/code` フェーズで検証・チェック済み (verify-executor full mode)。Post-merge AC (opportunistic, `/auto` を L size Issue に実行して `--opus` が `xhigh` で起動することを確認) は `/verify` でオープンのまま
+- 判定が「維持」のため `scripts/run-spec.sh` / `tests/run-spec.bats` / matrix テーブル本体 (Model/Effort 列) はいずれも無変更。レビューではこの「無変更が正しい実装」である点を誤って diff 不足と判断しないよう注意
