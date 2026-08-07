@@ -195,22 +195,40 @@ Issue 本文の事実主張はいずれもコードベースと一致するこ�
 
 - Behavioral Change Detection (Step 9) の条件に合致したため `bats --jobs 18 tests/` を複数回実行したところ、`tests/post_merge_check.bats` の2テスト (`fail: gh issue reopen called when FAIL input given` / `multiple issues: processed sequentially`) が間欠的に FAIL した。単体実行 (`bats tests/post_merge_check.bats`) では毎回 10/10 PASS し、当該テストファイルおよびテスト対象の `scripts/post_merge_check.sh` はいずれも本 Issue の diff に含まれていない。フル並列実行時のみ再現する resource contention 由来の既存 flake と判断し、本 Issue のスコープでは対応しなかった。AC4 の対象である `tests/auto-recovery.bats` は単体・フル実行のいずれでも 5/5 PASS で安定している。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec の Tool Dependencies (Bash Command Patterns) は「`gh run list:*`/`gh run view:*`/`gh pr checks:*` は `skills/auto/SKILL.md` の allowed-tools に未登録のため追加が必要」とだけ記述し、Built-in Tools 節では「`skills/verify/SKILL.md` の allowed-tools に登録済み」と誤って記載していた。実装フェーズはこの記述をそのまま信頼し、`skills/verify/SKILL.md` 側への追加を行わなかった。review でこのギャップ (SHOULD) が検出され修正した。**教訓**: 同一モジュールを複数消費者が参照する Issue では、Tool Dependencies の allowed-tools チェックを消費者ごとに独立して明記する (「登録済み」という記述は実ファイルの grep で都度検証し、Spec 記述をそのまま信用しない)。
+- SSoT モジュール化 (AC1) の意図は「単一の参照点、重複定義なし」だったが、実装は `skills/verify/SKILL.md` の inline 表のみを置換し、`modules/verify-executor.md` § 3a に同一の4パターン判定表が独立して残っていた。bats dedup guard (`tests/ci-failure-classifier.bats`) も `skills/verify/SKILL.md` のみを対象にしており、この重複を検出できなかった。rubric grader は Issue 本文の記述範囲 (「`skills/verify/SKILL.md` Step 5 と重複定義になっていない」) に忠実に判定したため AC1 は PASS したが、Issue の意図 (単一の参照点) は完全には満たされていなかった。**教訓**: 「SSoT 化」系の Issue では、対象モジュールへの参照元を `grep -rl` 等で網羅的に洗い出し、dedup guard のテスト対象ファイルリストを Issue 起票時点ではなく実装完了時点で確定させる。
+
+### Recurring issues
+
+- 新しいフィールド (`ci_failure_verdict`) をプロンプト経由で渡す変更が、呼び出し側 (`skills/auto/SKILL.md` の収集リスト・spawn 節) では追加されたが、受け取り側 (`agents/orchestration-recovery.md` の `## Input` 契約セクション) には反映されなかった。同種のギャップは review-bug/review-spec の両エージェントが独立に検出しており (収束的シグナル)、「呼び出し元の変更と契約定義側の変更が同期していない」という構造的パターン。**教訓**: sub-agent への新規入力フィールド追加は、呼び出し元と `## Input` 契約の両方を同一コミットで変更するチェックリスト項目として明示する価値がある。
+- 「同一イベントを2箇所で記録する」際の識別子 (cause slug: `ci-infra-outage` vs `ci-infra-outage-during-ci-wait`) が Spec 段階から不一致だった (`docs/spec/issue-1227-ci-failure-classifier.md:59` の記述をそのまま実装に転記)。CONSIDER として記録し今回は見送ったが、Spec レビュー段階でこの種の「同一概念に複数の表記」を検出する仕組みがあれば防げた。
+
+### Acceptance criteria verification difficulty
+
+- AC1〜AC3 はいずれも `rubric` 判定であり、静的な dedup guard (bats) が持つ「網羅性」を rubric grader 自身は持たない (grader は Issue 本文で明示された対象ファイルのみを見る傾向がある)。3体の review エージェント (review-spec, review-bug×2) が独立に `modules/verify-executor.md` の重複を検出できたのは、PR diff 全文と changed files 一覧を主体的に走査する診断フローだったため。rubric 単独では検出できなかった可能性が高い。
+- 検証段階で「到達不能な条件分岐」という指摘 (review-spec と review-bug の両方から独立に提起) が誤検知と判明した (`scripts/run-auto-sub.sh` → `spawn-recovery-subagent.sh` という XL/batch route の存在を見落としていた)。この route は本 Issue の diff に変更がなく PR diff だけでは見えないため、Adversarial verification 段階で `grep`/コードベース横断確認を行わなければ誤って MUST/SHOULD として確定していた可能性がある。2段階検証 (finder → verifier) の価値を裏付ける事例。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Spec の実装ステップ 1〜10 を順番どおりに実施し、逸脱なし。判定基準の SSoT は `modules/ci-failure-classifier.md` に一本化し、`skills/verify/SKILL.md` の inline 判定表は削除して参照に置換した。
-- `/auto` の CI 障害判定は Tier 1/2/3 の語彙の外側に置く pre-check として実装し、新しい Tier 番号は導入していない。
-- PR route (`--pr` 明示指定、Size L) で実施。ブランチ `worktree-code+issue-1227` から PR #1263 を作成した。
+- Step 8 の4 pre-merge AC (すべて rubric/command) は全て PASS と判定し、Issue チェックボックスは変更なし (既に `[x]` 済み)。
+- Step 10 は `capabilities.workflow: true` かつ fork context (`--non-interactive`、再呼び出し保証なし) のため Workflow path をスキップし、静的 Task fan-out (review-spec + review-bug×2、`run_in_background: false`) を採用した。
+- MUST issue は0件 (event=COMMENT)。SHOULD 6件のうち検証で確度の高かった6件すべてを Step 12 で修正 (allowed-tools 追加、PGID ポインタ再生成、再判定ループ明確化、Input 契約追加、verify-executor.md 重複解消、Per-Consumer Response 表への消費者追加)。CONSIDER 4件と SHOULD 1件 (docs/structure.md の verify command 追加提案) は見送り、PR コメントに理由を記録した。
 
 ### Deferred Items
 
-- XL sub-issue route (`scripts/run-auto-sub.sh`) には CI 障害判定ロジックを実装していない (pointer comment のみ、Spec Notes の設計判断どおり)。
-- Post-merge の observation AC (`event=auto-run session=next`) は次回の `/auto` 実行時に人が観測して判定する。
+- `docs/structure.md`/`docs/ja/structure.md` の modules count 用 verify command を Issue #1227 の AC に追加する提案 (SHOULD) — Issue 本文編集が必要なため本 PR のスコープ外。フォローアップ Issue の要否は次フェーズ判断。
+- CONSIDER 4件 (cause slug 不一致、RECOVERY_TYPE `respawn` 誤用、fall-through 文のインデント曖昧性、signature #5/#7 の dwell threshold 欠如) は未対応。実害は限定的と判断したが、CI 障害が頻発する場合は再評価対象。
+- `docs/structure.md` の `tests/` count drift (95→実測112、本 Issue 対象外) は `/audit drift` に委譲。
 
 ### Notes for Next Phase
 
-- `bats --jobs 18 tests/` フル並列実行時に `tests/post_merge_check.bats` の2テストが間欠的に FAIL する (本 Issue の変更対象外、単体実行では安定 PASS)。`/review`/`/verify` がこの2テストの failure を見た場合は既知の並列実行 flake として扱ってよい (詳細は Code Retrospective 参照)。
-- AC1〜AC3 は rubric 判定、AC4 (`bats tests/auto-recovery.bats`) は単体・フル実行いずれも安定して PASS することを確認済み。
-- Issue body のチェックボックスは pre-merge 4件すべて `[x]` 済み。post-merge の observation AC は未チェックのまま (`/verify` 対象外、次回 `/auto` 実行時の人間観測待ち)。
+- `/merge` 前に CI (全9ジョブ SUCCESS) と MUST issue (0件) の両方をクリアしている。
+- 修正コミット5件はいずれも `Refs:` で元のレビュー指摘 (PR inline comment または Review URL) を参照済み。
+- `bats --jobs 18 tests/` フル並列実行時の `tests/post_merge_check.bats` 間欠的 FAIL は本 PR の変更対象外の既知 flake (Code Retrospective 参照)。`/merge`/`/verify` が遭遇した場合はこの記録を参照してよい。
