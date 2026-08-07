@@ -47,7 +47,44 @@
 - **UI Design Phase**: 本 Issue はバックエンド/CLI スクリプトの内部マッチングロジック修正であり、インタラクティブ UI コンポーネントを含まないため、`skills/spec/figma-design-phase.md` の Auto-detection Criteria により「UI design not needed」と判定した (UI Design セクションは省略)
 - **`config=` / `when=` ゲートとの関係**: 同スクリプト内の `config=` ゲート (`.wholework.yml` キー解決) と `when=` ゲート (run facts JSON の enum 一致) は元々列挙値に対する構造化マッチであり、本 Issue の対象である自由テキスト部分文字列マッチ (`keyword=`) とは性質が異なる。今回の修正は `keyword=` ゲートのみを対象とし、他二つのゲートには変更を加えない
 
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation Steps 1-3 were followed as written (`resolve_filtered_context()` helper, `modules/observation-trigger.md` update, 2 new bats cases), with no reordering or omission.
+
+### Design Gaps/Ambiguities
+- None encountered. The Spec's Root Cause / Implementation Steps sections already resolved the word-boundary-match dead end and specified the exact `sed -E` pattern, so no new investigation was needed during implementation.
+
+### Rework
+- None.
+
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` フェーズの retrospective — 曖昧性検出なし、AC2 の verify command を rubric + 補助チェックパターンへ変更した経緯を記録 — https://github.com/saitoco/wholework/issues/1220#issuecomment-5215669688
 - saito / MEMBER / first-class / AC3 の verify command (`grep -i "keyword" ...`) が既存ドキュメント中に "keyword" が多数出現するため常時 PASS になるという監査指摘。代表語の差し替えまたは補助チェック削除を提案 — 本 Spec で `section_contains` + `token` へ差し替えて対応 (Notes 参照) — https://github.com/saitoco/wholework/issues/1220#issuecomment-5215691447
+- No new comments since last phase.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Fixed a SHOULD-severity robustness gap found by `review-light`: `resolve_filtered_context()`'s `sed -E` command substitution (scripts/opportunistic-search.sh L167) had no `2>/dev/null || true` guard, unlike the sibling `resolve_run_facts()` function. Under `set -euo pipefail`, a `sed` read failure (e.g. TOCTOU between the L134 existence check and the later read) would abort the whole script instead of degrading the `keyword=` gate gracefully. Fixed to match the established sibling pattern.
+- All 3 pre-merge AC (2 rubric + 1 section_contains) independently re-verified PASS by `/review`'s own grader pass (not just carried over from `/code`'s self-assessment), per the code-phase handoff's note to run an independent pass.
+
+### Deferred Items
+- None.
+
+### Notes for Next Phase
+- Post-merge AC remains an `opportunistic` observation tied to a future `/review --light` run touching a `docs/workflow.md`-style path listing — no action needed now; `/merge` and eventual `/verify` should let it resolve naturally when that PR occurs.
+- No policy change occurred during review (the fix was error-handling robustness only), so Issue AC text and verify commands are unchanged from `/code` phase.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note. Implementation matched the Spec's Root Cause / Implementation Steps exactly; no structural divergence between Spec and PR diff.
+
+### Recurring issues
+- Nothing to note as a workflow-level recurring pattern. One instance worth flagging for awareness (not a repeat pattern yet): the new `resolve_filtered_context()` helper was explicitly modeled after the sibling `resolve_run_facts()` lazy-cache pattern (per Implementation Steps 1 and the code-phase handoff), but omitted that sibling's `2>/dev/null || true` error guard on the actual read call. When a Spec/Step instructs "follow an existing pattern," the follow-up implementation should copy the *whole* pattern (including its defensive guards), not just its structural shape (lazy-cache flag + function signature).
+
+### Acceptance criteria verification difficulty
+- Nothing to note. All 3 pre-merge AC (2 `rubric`, 1 `section_contains`) resolved cleanly to PASS with no UNCERTAIN and no verify command inaccuracies.
