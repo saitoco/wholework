@@ -3,6 +3,7 @@ name: issue-scope
 description: Scope Investigation: identify change targets and impact scope (for L/XL Issue parallel investigation)
 tools: Read, Glob, Grep, Bash(git log:*, git diff:*), SendMessage, Write
 model: opus
+effort: high
 ---
 
 # Scope Investigation Agent

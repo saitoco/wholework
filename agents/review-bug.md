@@ -3,6 +3,7 @@ name: review-bug
 description: Review: Bug/Logic Error Detection (coverage-first) — report all findings with confidence and severity tags; downstream verification sub-agents filter false positives
 tools: Read, Glob, Grep, Bash(git log:*, git diff:*, git show:*)
 model: opus
+effort: high
 ---
 
 # Review: Bug/Logic Error Detection
