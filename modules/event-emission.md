@@ -81,12 +81,25 @@ with the real Issue number directly, never carry a `pr` field).
 
 ### wrapper_exit
 
-Emitted by `claude-watchdog.sh` on abnormal wrapper exit. Field: `exit_code`.
+Emitted by `run-auto-sub.sh`'s `run_phase_with_recovery()` for `code-patch` / `code-pr` / `review` /
+`merge`, and by `run-spec.sh` / `run-issue.sh` for their own `spec` / `issue` phase (gated by
+`_EMIT_PHASE_OWNED`, same guard as `phase_start`/`phase_complete` — see "`_EMIT_PHASE_OWNED`
+pattern" below). In both cases, emitted unconditionally on every `claude -p` subprocess exit
+(regardless of the exit code, after any reconcile-based correction). Field: `phase`, `exit_code`.
+An external kill that takes down the wrapper itself before this point still leaves `wrapper_exit`
+absent for the affected phase — this is the signature `detect-external-kill.sh` relies on, and it
+now holds for `spec` / `issue` the same way it already did for `code-patch` / `code-pr` / `review` /
+`merge`.
 
 ### token_usage
 
-Emitted after a successful `--output-format json` run. Fields: `input_tokens`, `output_tokens`,
-`cache_read_tokens`, `cache_write_tokens`, `phase`.
+Emitted immediately after `wrapper_exit`, when the `.tmp/token-usage-<issue>.json` file produced
+by a `--output-format json` run exists. Written by `run-code.sh` / `run-review.sh` / `run-merge.sh`
+(via `run-auto-sub.sh`'s `run_phase_with_recovery()`) and by `run-spec.sh` / `run-issue.sh` directly
+for their own phase. Skipped when the file does not exist (e.g. `AUTO_EVENTS_LOG` was unset, so no
+`--output-format json` capture ran) or when `usage.input_tokens` is absent from it. Fields: `phase`,
+`model` (the `modelUsage` key with the largest `inputTokens + outputTokens`, or `unknown`),
+`input_tokens`, `output_tokens`, `cache_read_tokens`.
 
 ## Usage
 
@@ -143,8 +156,8 @@ stays empty and `phase_start` / `phase_complete` are not emitted — preventing 
 
 | Wrapper | Phase value(s) emitted | Notes |
 |---------|------------------------|-------|
-| `run-issue.sh` | `issue` | Added in #769 |
-| `run-spec.sh` | `spec` | Added in #769 |
+| `run-issue.sh` | `issue` | Added in #769. Also emits `wrapper_exit`/`token_usage` for `phase=issue` (#1228) |
+| `run-spec.sh` | `spec` | Added in #769. Also emits `wrapper_exit`/`token_usage` for `phase=spec` (#1228) |
 | `run-code.sh` | `code-pr` \| `code-patch` \| `code` | Selects based on route flag |
 | `run-review.sh` | `review` | |
 | `run-merge.sh` | `merge` | |

@@ -110,15 +110,33 @@ load_watchdog_timeout "$SCRIPT_DIR" "issue"
 
 SECONDS=0
 set +e
-# See modules/orchestration-fallbacks.md#wrapper-retry-on-kill
-run_with_retry_on_kill env -u CLAUDECODE ANTHROPIC_MODEL=sonnet \
-  WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
-  "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
-    --model sonnet \
-    --effort high \
-    --plugin-dir "$(dirname "$SCRIPT_DIR")" \
-    $PERMISSION_FLAG
-EXIT_CODE=$?
+if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+  TOKEN_USAGE_FILE=".tmp/token-usage-${ISSUE_NUMBER}.json"
+  mkdir -p .tmp
+  # See modules/orchestration-fallbacks.md#wrapper-retry-on-kill
+  run_with_retry_on_kill env -u CLAUDECODE ANTHROPIC_MODEL=sonnet \
+    WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
+    OUTPUT_FORMAT_JSON=1 \
+    "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
+      --model sonnet \
+      --effort high \
+      --output-format json \
+      --plugin-dir "$(dirname "$SCRIPT_DIR")" \
+      $PERMISSION_FLAG \
+      > "$TOKEN_USAGE_FILE"
+  EXIT_CODE=$?
+  jq -r '.result // empty' "$TOKEN_USAGE_FILE" 2>/dev/null || true
+else
+  # See modules/orchestration-fallbacks.md#wrapper-retry-on-kill
+  run_with_retry_on_kill env -u CLAUDECODE ANTHROPIC_MODEL=sonnet \
+    WATCHDOG_TIMEOUT="$WATCHDOG_TIMEOUT" \
+    "$SCRIPT_DIR/claude-watchdog.sh" claude -p "$PROMPT" \
+      --model sonnet \
+      --effort high \
+      --plugin-dir "$(dirname "$SCRIPT_DIR")" \
+      $PERMISSION_FLAG
+  EXIT_CODE=$?
+fi
 set -e
 "$SCRIPT_DIR/handle-permission-mode-failure.sh" "$EXIT_CODE" "$SECONDS" "$PERMISSION_MODE"
 
@@ -131,6 +149,26 @@ if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
   elif echo "$_reconcile_out" | grep -q '"matches_expected":false'; then
     echo "Warning: claude exited 0 but issue phase did not complete (silent no-op). reconcile: $_reconcile_out" >&2
     EXIT_CODE=1
+  fi
+fi
+
+if [[ -n "${_EMIT_PHASE_OWNED:-}" ]]; then
+  emit_event "wrapper_exit" "phase=${EMIT_PHASE_NAME}" "exit_code=${EXIT_CODE}"
+
+  _TOKEN_USAGE_FILE=".tmp/token-usage-${ISSUE_NUMBER}.json"
+  if [[ -f "$_TOKEN_USAGE_FILE" ]]; then
+    _model=$(jq -r '.modelUsage // {} | to_entries | if length == 0 then empty else (max_by(.value.inputTokens + .value.outputTokens) | .key) end' "$_TOKEN_USAGE_FILE" 2>/dev/null || true)
+    _input=$(jq -r '.usage.input_tokens // empty' "$_TOKEN_USAGE_FILE" 2>/dev/null || true)
+    _output=$(jq -r '.usage.output_tokens // empty' "$_TOKEN_USAGE_FILE" 2>/dev/null || true)
+    _cache_read=$(jq -r '.usage.cache_read_input_tokens // empty' "$_TOKEN_USAGE_FILE" 2>/dev/null || true)
+    if [[ -n "$_input" ]]; then
+      emit_event "token_usage" "phase=${EMIT_PHASE_NAME}" \
+        "model=${_model:-unknown}" \
+        "input_tokens=${_input}" \
+        "output_tokens=${_output:-0}" \
+        "cache_read_tokens=${_cache_read:-0}"
+    fi
+    rm -f "$_TOKEN_USAGE_FILE"
   fi
 fi
 
