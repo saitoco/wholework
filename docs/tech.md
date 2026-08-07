@@ -243,6 +243,8 @@ In gradual migration, there is a period where deprecated terms remain in the sam
 | `WHOLEWORK_PREVIEW_TIMEOUT_SEC` | `600` | Maximum wait time in seconds for `scripts/run-review.sh`'s PR preview deployment poll (`capabilities.pr-preview: true` projects only). Shared upper bound for both branches: the GitHub Deployments API poll (checks the PR branch's latest deployment `state`) when `PREVIEW_URL` is unset, and the `PREVIEW_URL` fast path's HTTP reachability poll when it is set. If neither confirms readiness within the timeout, `run-review.sh` exits `PENDING` (exit code 2) without launching the review session. |
 | `WHOLEWORK_REVIEW_PENDING_RETRY_SEC` | `300` | Sleep duration in seconds before retrying the review phase after `run-review.sh` exits `PENDING` (exit code 2). Consumed by `run_phase_with_recovery()` in `scripts/run-auto-sub.sh` and `skills/auto/SKILL.md` pr route item 8. See `modules/orchestration-fallbacks.md#review-pending-not-failure`. |
 | `WHOLEWORK_REVIEW_PENDING_MAX_RETRIES` | `2` | Maximum number of bounded retries after `run-review.sh` exits `PENDING` (exit code 2), before falling through to the normal Tier 1/2/3 recovery path. Same consumers as `WHOLEWORK_REVIEW_PENDING_RETRY_SEC`. |
+| `WHOLEWORK_CI_OUTAGE_RECHECK_SEC` | `600` | Wait duration in seconds before re-judging a `ci-infra` verdict from `modules/ci-failure-classifier.md`. Consumed by `skills/auto/SKILL.md` Step 6's CI platform failure pre-check. |
+| `WHOLEWORK_CI_OUTAGE_MAX_RECHECKS` | `2` | Maximum number of re-judgments of a `ci-infra` verdict before `skills/auto/SKILL.md` Step 6's CI platform failure pre-check stops instead of entering Tier 1/2/3. Same consumer as `WHOLEWORK_CI_OUTAGE_RECHECK_SEC`. |
 
 ### Capability Flags
 

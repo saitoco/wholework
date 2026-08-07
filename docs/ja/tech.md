@@ -224,6 +224,8 @@ Issue 本文の "Scope" または "Acceptance Criteria" セクションに以下
 | `WHOLEWORK_PREVIEW_TIMEOUT_SEC` | `600` | `scripts/run-review.sh` の PR preview デプロイ待機ポーリングの最大待機秒数 (`capabilities.pr-preview: true` のプロジェクトのみ)。`PREVIEW_URL` 未設定時の GitHub Deployments API ポーリング (PR ブランチの最新デプロイ `state` を確認) と、`PREVIEW_URL` 設定時の fast path による HTTP 到達性ポーリングの双方に共通する上限。いずれも稼働が確認できない場合、`run-review.sh` は review セッションを起動せずに `PENDING` (exit code 2) で終了する。 |
 | `WHOLEWORK_REVIEW_PENDING_RETRY_SEC` | `300` | `run-review.sh` が `PENDING` (exit code 2) で終了した後、review フェーズを再試行するまでの sleep 秒数。`scripts/run-auto-sub.sh` の `run_phase_with_recovery()` と `skills/auto/SKILL.md` pr route item 8 が参照する。`modules/orchestration-fallbacks.md#review-pending-not-failure` を参照。 |
 | `WHOLEWORK_REVIEW_PENDING_MAX_RETRIES` | `2` | `run-review.sh` が `PENDING` (exit code 2) で終了した後、通常の Tier 1/2/3 リカバリ経路にフォールスルーするまでの上限再試行回数。参照元は `WHOLEWORK_REVIEW_PENDING_RETRY_SEC` と同じ。 |
+| `WHOLEWORK_CI_OUTAGE_RECHECK_SEC` | `600` | `modules/ci-failure-classifier.md` の verdict が `ci-infra` のときに再判定するまでの待機秒数。`skills/auto/SKILL.md` Step 6 の CI platform failure pre-check が参照する。 |
+| `WHOLEWORK_CI_OUTAGE_MAX_RECHECKS` | `2` | `ci-infra` verdict の再判定を Tier 1/2/3 に入らず停止するまでの最大回数。参照元は `WHOLEWORK_CI_OUTAGE_RECHECK_SEC` と同じ (`skills/auto/SKILL.md` Step 6 の CI platform failure pre-check)。 |
 
 ### Capability フラグ
 
