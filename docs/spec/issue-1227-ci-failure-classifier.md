@@ -177,25 +177,40 @@ Issue 本文の事実主張はいずれもコードベースと一致するこ�
 - Tier 3 sub-agent が `action=abort` を返せるかは実装確認が必要な点だった。`scripts/validate-recovery-plan.sh:41` の `valid_actions = {"retry", "skip", "recover", "abort"}` を読み、`abort` が既に有効値であることを確認したためスクリプト側の変更は不要と確定した。
 - `.claude/settings.json.template` の `permissions.allow` に生の `gh` サブコマンドを追加する必要があるかは不明だったが、実ファイルを読んだところ `scripts/*` パターンのみを列挙する方針であることが判明し、更新不要と確定した。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — 実装ステップ 1〜10 は Spec の記述どおりの順序・内容で実施した。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
+### Test Execution Note
+
+- Behavioral Change Detection (Step 9) の条件に合致したため `bats --jobs 18 tests/` を複数回実行したところ、`tests/post_merge_check.bats` の2テスト (`fail: gh issue reopen called when FAIL input given` / `multiple issues: processed sequentially`) が間欠的に FAIL した。単体実行 (`bats tests/post_merge_check.bats`) では毎回 10/10 PASS し、当該テストファイルおよびテスト対象の `scripts/post_merge_check.sh` はいずれも本 Issue の diff に含まれていない。フル並列実行時のみ再現する resource contention 由来の既存 flake と判断し、本 Issue のスコープでは対応しなかった。AC4 の対象である `tests/auto-recovery.bats` は単体・フル実行のいずれでも 5/5 PASS で安定している。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 判定基準の SSoT は新規 `modules/ci-failure-classifier.md` に置き、`skills/verify/SKILL.md` Step 5 の inline 判定表は削除して Read-and-follow 参照に置換する。AC1 の「重複定義になっていない」を満たすため、表を 2 箇所に残す実装は不可。
-- `/auto` の CI 障害判定は Tier 1 の**前**の pre-check として実装し、新しい Tier 番号を導入しない。`skills/auto/SKILL.md:935` の External kill pre-check と同じ位置・同じ形式を踏襲する。
-- `modules/orchestration-fallbacks.md` に新規カタログエントリは追加しない (#1122 モラトリアム)。既存 `ci-wait-silence-timeout` の cross-reference を新モジュールへ repoint するのみ。
-- bash 側 (`scripts/run-auto-sub.sh`) は pointer comment 1 行のみ。判定ロジックの bash 実装は本 Issue のスコープ外。
+- Spec の実装ステップ 1〜10 を順番どおりに実施し、逸脱なし。判定基準の SSoT は `modules/ci-failure-classifier.md` に一本化し、`skills/verify/SKILL.md` の inline 判定表は削除して参照に置換した。
+- `/auto` の CI 障害判定は Tier 1/2/3 の語彙の外側に置く pre-check として実装し、新しい Tier 番号は導入していない。
+- PR route (`--pr` 明示指定、Size L) で実施。ブランチ `worktree-code+issue-1227` から PR #1263 を作成した。
 
 ### Deferred Items
 
-- XL sub-issue route (`scripts/run-auto-sub.sh` の `run_phase_with_recovery()`) には CI 障害判定を実装しない。bash 側での機械判定が必要になった場合は別 Issue で扱う。
-- Post-merge の observation AC (`event=auto-run session=next`) は次回の `/auto` 実行時に人が観測して判定する。実装フェーズでチェックを試みない。
+- XL sub-issue route (`scripts/run-auto-sub.sh`) には CI 障害判定ロジックを実装していない (pointer comment のみ、Spec Notes の設計判断どおり)。
+- Post-merge の observation AC (`event=auto-run session=next`) は次回の `/auto` 実行時に人が観測して判定する。
 
 ### Notes for Next Phase
 
-- `skills/auto/SKILL.md` の frontmatter `allowed-tools` への `gh run list:*` / `gh run view:*` / `gh pr checks:*` 追加を忘れないこと。実装ステップ 4 の pre-check がこれらを使う。`scripts/check-allowed-tools.sh` が中間コミット前に検出する想定だが、Spec の Tool Dependencies にも明記済み。
-- `docs/structure.md` の `modules/` カウントは 41 → **43** (実測 42 + 新規 1)。42 と書くと誤り。`docs/ja/structure.md` は全角括弧の日本語書式 `（43 ファイル）` を維持すること。
-- `skills/auto/SKILL.md` は body に半角 `!` を含められない (`validate-skill-syntax.py` の MUST 制約)。pre-check の記述文で使わないこと。
-- `docs/ja/{workflow,tech,structure}.md` の 3 ファイルはいずれも英語版と同時に更新する必要がある (`docs/translation-workflow.md` の同期義務対象)。
-- AC1 の dedup は実装ステップ 2 (inline 表削除) と実装ステップ 10(c) (bats dedup ガード) の両方で担保する設計。片方だけでは rubric grader が「重複定義が残っている」と判定しうる。
+- `bats --jobs 18 tests/` フル並列実行時に `tests/post_merge_check.bats` の2テストが間欠的に FAIL する (本 Issue の変更対象外、単体実行では安定 PASS)。`/review`/`/verify` がこの2テストの failure を見た場合は既知の並列実行 flake として扱ってよい (詳細は Code Retrospective 参照)。
+- AC1〜AC3 は rubric 判定、AC4 (`bats tests/auto-recovery.bats`) は単体・フル実行いずれも安定して PASS することを確認済み。
+- Issue body のチェックボックスは pre-merge 4件すべて `[x]` 済み。post-merge の observation AC は未チェックのまま (`/verify` 対象外、次回 `/auto` 実行時の人間観測待ち)。
