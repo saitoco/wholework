@@ -84,14 +84,15 @@
 - AC5 (`github_check "gh pr checks" "Run bats tests"`) was left unchecked at the end of `/code` because the PR's CI had not yet completed — this is expected/normal for a CI-dependent AC checked immediately after PR creation, not a verify command quality gap. `/review` confirmed all 9 CI jobs SUCCESS and updated the checkbox to `[x]`. No verify command changes needed.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Ran `--light` mode (1-agent `review-light` covering all 4 aspects) per ARGUMENTS; no findings surfaced, so no fix cycle was needed.
-- Updated Issue checkbox for AC5 (`github_check`) to `[x]` after confirming all 9 PR CI jobs are SUCCESS — this was the only AC left open by `/code` (deferred pending CI completion, as noted in the code-phase handoff).
+- Pre-merge AC gate: all 5 pre-merge conditions were already `[x]`; no override needed, merge proceeded directly.
+- `gh-pr-merge-status.sh` returned `mergeable=true reason=clean` on the first check (after one UNKNOWN retry) — no conflict resolution was required.
+- Squash-merged PR #1268 with `--delete-branch`; branch `worktree-code+issue-1238` removed.
 
 ### Deferred Items
-- Post-merge observation AC (index 6, `verify-type: observation event=auto-run session=next`) remains unresolved pending the next `/auto` completion — unchanged from the code-phase handoff, no action needed until then.
+- Post-merge observation AC (index 6, `verify-type: observation event=auto-run session=next`) remains unresolved pending the next `/auto` completion — unchanged from the review-phase handoff, no action needed until then.
 
 ### Notes for Next Phase
-- All 5 Pre-merge AC are now PASS/`[x]`; only the Post-merge observation AC remains open. `/merge` can proceed directly.
+- `/verify` should confirm the Post-merge observation AC: next `/auto` completion should show the Run-fact AC reconciliation candidate count decreased vs. before this change.
