@@ -74,17 +74,28 @@
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: spec phase の telemetry 欠落の原因 (run-auto-sub.sh の spec dispatch が run_phase_with_recovery() をバイパス) を特定。silent window のみ取得可能と報告。本 Issue へのスコープ算入 (a) か別 Issue 分離+blocked-by (b) の判断を提起 — 結果的に #1228 として (b) の経路で解消済み。 / URL: https://github.com/saitoco/wholework/issues/1064#issuecomment-5211841755
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 判定は「`xhigh` を維持」。#922 (Sonnet パス) の構造的論拠 (単一 19 ステップ推論チェーン、sub-agent fan-out なし、エラーは code/review/merge の 3 フェーズに伝播) をそのまま Opus パスに適用し、加えて `--opus` が Size L (最も複雑な Issue の部分集合) 限定であることを downgrade に慎重になるべき追加根拠として明記した
-- Opus 5 の下方 sweep ガイダンスは (#922 の Opus 4.8 ノートと異なり) 実際にこのパスへ直接適用されるが、「sweep して確認せよ」という探索的推奨であり特定の下位 tier を支持する主張ではないため、根拠不足のまま default を変更しない、という理由付けを採用した
-- `--max` フラグの位置づけは「維持」に加えて「再確認 (reaffirmed)」— Opus 5 のより狭い "extremely difficult, latency-insensitive" という定義が、既存の opt-in・都度指定という運用実態とむしろ従来以上に整合すると判定した
+- REVIEW_DEPTH=light (`--light` 明示指定) で実行。review-light エージェント1体による4観点統合レビューで issue 0件、修正作業なしで完了とした
+- Pre-merge AC 6件を verify-executor safe mode で再検証 (`file_exists` x1、`file_contains` x1、`rubric` x5) し、全件 PASS を独自に確認。Issue 側の既存チェック状態 (`/code` フェーズで済み) と一致
+- ベースブランチ競合プリチェック (`git merge-tree`) で `changed in both` ブロック0件を確認 (他PRのマージ分がすべて `merged` ヘッダのクリーン自動マージ) — 競合コンテキストの記録は不要と判断
 
 ### Deferred Items
 - 実 telemetry サンプル (`--opus` の `token_usage`) が蓄積するまでの再評価は将来Issueに委ねる。抽出時は `sub_start` イベントの dispatch 時点 `size=L` を使うこと (Spec の最終記録 Size ではない — #1175 の落とし穴に注意)
-- `docs/ja/tech.md` が `#1062` の Opus 5 関連ノート (effort calibration / default parent deferred / watch items) をまだ含んでいない、という pre-existing な翻訳同期ギャップを発見したが本 Issue のスコープ外として起票せず記録に留めた (Code Retrospective参照)
+- `docs/ja/tech.md` が `#1062` の Opus 5 関連ノート (effort calibration / default parent deferred / watch items) をまだ含んでいない、という pre-existing な翻訳同期ギャップは本 Issue のスコープ外のまま (Code Retrospective参照、review-light でも再確認済みで指摘なし)
 
 ### Notes for Next Phase
-- Pre-merge AC 6件はすべて `/code` フェーズで検証・チェック済み (verify-executor full mode)。Post-merge AC (opportunistic, `/auto` を L size Issue に実行して `--opus` が `xhigh` で起動することを確認) は `/verify` でオープンのまま
-- 判定が「維持」のため `scripts/run-spec.sh` / `tests/run-spec.bats` / matrix テーブル本体 (Model/Effort 列) はいずれも無変更。レビューではこの「無変更が正しい実装」である点を誤って diff 不足と判断しないよう注意
+- MUST/SHOULD/CONSIDER いずれも0件のため `/merge` へそのまま進行可能。CI 5ジョブすべて SUCCESS
+- Post-merge AC (opportunistic, `/auto` を L size Issue に実行して `--opus` が `xhigh` で起動することを確認) は `/verify` でオープンのまま
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note — Changed Files (`docs/reports/opus-5-effort-recalibration-spec.md` 新規、`docs/tech.md`/`docs/ja/tech.md` 更新、`scripts/run-spec.sh`/`tests/run-spec.bats` 無変更) は Spec の記述と完全一致していた。review-light エージェントがレポート内の事実主張 (`run-spec.sh:15-17`、`run-auto-sub.sh:845`、matrix行、bats アサーション、翻訳除外規約) をすべてコードベースと照合し、いずれも正確と確認した
+
+### Recurring issues
+- Nothing to note — MUST/SHOULD/CONSIDER いずれも0件
+
+### Acceptance criteria verification difficulty
+- Nothing to note — Pre-merge 6件すべて (`file_exists` x1, `file_contains` x1, `rubric` x5 [うち1件は `file_contains` と併記]) が UNCERTAIN なしで PASS に到達した。ドキュメント/レポートのみの変更に対して `rubric` 検証が有効に機能した例
