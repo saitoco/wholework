@@ -44,6 +44,13 @@
 #                    post-merge AC (docs/spec/issue-1157-run-fact-ac-match.md § population),
 #                    "/auto" alone matched 84 of them and made the pre-filter a no-op. Also
 #                    excludes the generic "single" mode token for the same reason (Issue #1171).
+#                    Also excludes bare phase-name tokens (e.g. "issue", "spec", "code-pr",
+#                    "code-patch", "review", "merge", "verify"): AC condition text almost always
+#                    mentions these phase names in prose, so a bare phase-name token matched
+#                    nearly every candidate and made the pre-filter a near no-op (Issue #1238).
+#                    Only the wrapper_for()-mapped script name (e.g. "run-issue.sh") is kept per
+#                    phase; "verify" has no wrapper script (see modules/run-fact-matching.md) and
+#                    so contributes no token at all after this change.
 #
 # operate route detection: when an issue's route resolves to "patch" (and --no-github is not
 #   set), probe the Issue's comments for a `type=execution-log` or `type=execution-plan`
@@ -209,7 +216,7 @@ def wrapper_for(p):
       (if .route != "unknown" then [(.route + " route")] else [] end)
       + (if .size != "" then [("Size " + .size)] else [] end)
       + ((.phases | map(.name)) as $names
-         | $names + ($names | map(wrapper_for(.)) | map(select(. != null))))
+         | ($names | map(wrapper_for(.)) | map(select(. != null))))
       + (if .pr != null then [("#" + (.pr | tostring))] else [] end)
       + (.anomalies | to_entries | map(select(.value >= 1) | .key))
       + (.recovery_tiers | map("tier " + (. | tostring)))
