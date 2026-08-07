@@ -241,26 +241,23 @@ Pre-merge/Post-merge の AC 文言自体への変更は行っていない (既�
 - `skills/verify/SKILL.md` Step 1 で、`persist_auto_session_pointer` 呼び出しと `phase_start` emit を別々の bash コードフェンスに分けて記述した際、後者のフェンスに `source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"` を書き忘れた。この codebase では SKILL.md 内の bash コードフェンスは互いに独立した Bash tool 呼び出しとして実行される規約であり (他の 10 箇所の `restore_auto_session_pointer` 呼び出しはすべて自分のフェンス内で `source` している)、単一の継続シェルセッションではないことを見落としていた。Step 10 の敵対的サブエージェントレビューで検出し、コミット前に修正した。教訓: SKILL.md の bash フェンスを追加・分割する際は、そのフェンス単体で必要な `source`/変数初期化が完結しているかを個別に確認する。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- `/review` はこのセッションが headless `--non-interactive` (再起動保証なし) であることを `modules/execution-context.md` で確認し、Workflow ツールパスを使わず静的 Task fan-out (review-spec + review-bug×2) にフォールバックした
-- review-bug が検出した 13 件 (重複統合後) のうち 10 件を敵対的検証サブエージェント (Opus) で検証。3 件 (SHOULD 1 件 + CONSIDER 2 件) が生存、7 件は REJECT (誤検知) と判定。review-spec の 4 件は検証なしで直接採用
-- 生存した SHOULD 2 件 (`skills/auto/SKILL.md:39` の stale な理由句、`modules/orchestration-fallbacks.md` のポインタ再生成欠落) と低リスクな CONSIDER 2 件 (ドキュメント精度) を修正してコミット (8186feb8)。残り 5 件の CONSIDER (Spec Deviation 2 件、ja/en sync 1 件、未検証 2 件) はコスト対効果が低いと判断しスキップ
+- mergeable=true (clean/CI success/approved) だったため、Rebase/Conflict 解消フローは発動せずそのまま squash merge を実行した
+- Pre-merge AC ゲート (`check-pre-merge-ac.sh`) は 5/5 チェック済みで再確認、review completion も fallback 起因ではないことを `reconcile-phase-state.sh` で確認した上でマージした
 
 ### Deferred Items
 
-- `skills/verify/SKILL.md` の ARGUMENTS 冒頭説明への `--session-id` 追記 (spec deviation、実害小)
+- Post-merge AC (並行 `/auto --batch` を実行して `.tmp/auto-events.jsonl` 上の `session_id` を実地確認する) は pre-merge では検証不能。`/verify` に委ねる
 - `scripts/run-auto-sub.sh:384` の `restore_auto_session_pointer` への `$_mr_issue` 引き渡し (多層防御としての改善余地。案D で経路自体は塞がれている)
 - `docs/ja/structure.md` の EN/JA 同期ギャップ (本 PR 以前から存在、`/doc sync` の対象と判断)
-- Post-merge AC (並行 `/auto --batch` を実行して `.tmp/auto-events.jsonl` 上の `session_id` を実地確認する) は pre-merge では検証不能。`/verify` に委ねる
 
 ### Notes for Next Phase
 
-- `/merge` は追加コミット (8186feb8) 込みで CI 全パス (9/9 SUCCESS) を確認済み
-- Pre-merge rubric AC 5 件はすべて独立検証でも PASS 再確認済み。Issue 側は実装時点で既に `[x]` 済みのためチェックボックス更新は不要だった
-- review で修正した 2 件の SHOULD (`skills/auto/SKILL.md:39`、`modules/orchestration-fallbacks.md`) は誤帰属バグの再発防止に直結する内容のため、`/verify` の post-merge 実地確認時にも意識するとよい
+- `/verify` の post-merge 実地確認では、並行 `/auto --batch` 実行時に `.tmp/auto-events.jsonl` の `session_id` が issue-scoped ポインタ経由で正しく解決されているかを確認すること
+- review で修正した 2 件の SHOULD (`skills/auto/SKILL.md:39`、`modules/orchestration-fallbacks.md`) は誤帰属バグの再発防止に直結する内容のため、post-merge 実地確認時にも意識するとよい
 
 ## review retrospective
 
