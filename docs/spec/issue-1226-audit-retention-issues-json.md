@@ -50,3 +50,31 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective ── Background の技術的主張はコードベースと突合し正確、曖昧性2件は既に Issue本文に自動解決記録済み (issue リスト取得元・一時ファイル命名)、AC変更なし、`tests/audit-retention.bats` の存在確認済み、タイトルドリフト・blocked-by・sub-issue分割いずれも該当なし ── https://github.com/saitoco/wholework/issues/1226#issuecomment-5216387034
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1〜2 を Spec 記載どおりの順序・内容で実施した。
+
+### Design Gaps/Ambiguities
+
+N/A — Spec の Auto-Resolved Ambiguity Points (issue リスト取得元・一時ファイル命名) は実装中に再検証が必要になる齟齬なく、そのまま採用できた。
+
+### Rework
+
+- patch route の Step 8 (「各手順完了後にコミット」) に従って手順1・2をそれぞれ中間コミットしたところ、Step 11 の `closes #$NUMBER` 必須チェック (最新コミットの subject に `#N` が含まれること) を満たさなかった。中間コミットの subject には Issue 番号を含めない設計だったため、Step 11 到達時点で working tree が既にクリーンで新規コミット対象が無く、`git commit --amend` で最新コミットの message のみ書き換えて対応した (このブランチは未 push・未 merge のローカル専用コミットのため amend は安全)。原因: Step 8 の中間コミット手順と Step 11 の「最新コミット subject に #N 必須」チェックの間に、中間コミット群の扱いに関する明示的な接続規定が SKILL.md に無い。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Section 10 の呼び出し形を `skills/verify/SKILL.md` Step 15 と完全一致させた (`gh issue list --state all --limit 1000 --json number,title,state,closedAt` → `.tmp/audit-recovery-issues.json` → `--issues-json`)。Spec Notes の指示どおり、`/audit stats` Step 1 の `--since`/`--limit` フィルタ付きリストは再利用していない
+- `tests/audit-retention.bats` に `RECOVERY_SCRIPT` 変数を追加し、`tests/collect-recovery-candidates.bats` の `--with-tracking` テストと同じインライン heredoc フィクスチャパターンを踏襲した新規 `@test` を追加した。Issue Background 実測差分の `manual-recovery-respawn` / `#1014` 事例をそのままフィクスチャに使用
+
+### Deferred Items
+- Post-merge AC (`/audit stats --retention` を実行し Section 10 の `:closed` サフィックスと `Recurring after fix >= 1` を確認する) は `verify-type: observation event=auto-run session=next` のため `/verify` フェーズで確認する
+
+### Notes for Next Phase
+- Pre-merge AC 4件はすべて `/code` 内で PASS 確認済み、Issue checkbox も `[x]` 済み
+- `bats tests/audit-retention.bats` は 16/16 PASS (既存15件 + 新規1件)。フルスイート (`bats tests/`) は Behavioral Change Detection の narrow-scope 判定によりスキップした (変更対象ファイルを参照する他テストファイルなし)
