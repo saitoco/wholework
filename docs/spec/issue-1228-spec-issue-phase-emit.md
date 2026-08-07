@@ -267,3 +267,47 @@ Size L のため検出上限 5 件のうち、実質的なギャップとして 
 
 - `/verify` の Post-merge AC 確認時、`.tmp/auto-events.jsonl` の `wrapper_exit`/`token_usage` phase 内訳に `spec`/`issue` が現れることを確認すること。
 - 上記 Deferred Items (retry-redirect リスク、watchdog_kill 観測拡張) を改善提案として拾うかどうかの判断も `/verify` フェーズで行うこと。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- Background の事実主張 (`scripts/run-auto-sub.sh` の emit 箇所) を grep で照合し正確と確認。#1117 が同じバッチで「起票時点から誤っていた前提」を検出したのと対照的に、本 Issue は前提が正確だった (起票時に実測のイベント phase 内訳を添えていたため)
+- 曖昧性 2 件を自動解決: (1) AC のテスト検証範囲を `tests/run-spec.bats` / `tests/run-issue.bats` へ拡張し、**方針 (案 i / 案 ii) が未決のまま両案に耐える AC** にした、(2) AC8 のドキュメント対象を `modules/event-emission.md` / `docs/structure.md` に明示
+- (2) は triage 時に投稿した note コメント (既存記述の不正確さの指摘) が Comment Consumption 経由で AC に反映された結果。**起票 → triage コメント → issue phase の AC 具体化**という L0 経由の伝播が機能した
+
+#### spec
+
+- **案 ii (wrapper 側で直接 emit) を採用**。`run-auto-sub.sh` の spec dispatch チェーンは無変更で、#1108 が同じバッチの 1 番目で追加した Size XS ゲート (L839-840) と `--opus` 受け渡し (L846) を保持した
+- triage コメントで申し送った案 i の 3 制約 (XS ゲート保持 / bats が assert するログ文言 / `--opus` 受け渡し) は、案 ii の選択によりいずれも回避された。同一バッチ内の先行 Issue の成果を壊さない方針選択ができている
+- 代償として `emit-event.sh` への `emit_token_usage_from_file` 抽出が Deferred Items に残った (`run-spec.sh` と `run-issue.sh` に同型コードが重複)。案 i なら発生しなかったコストであり、方針選択のトレードオフとして記録に残っている
+
+#### code / review / merge
+
+- pre-merge AC 8/8 チェック済み・`review_incomplete_fallback` なしで gate 通過、`mergeable=clean` で squash merge。conflict 解消フロー不要
+- merge 後に `origin/main` へ fast-forward してから Phase Handoff を書き込む既定手順に従っており、#1058 が防ごうとした「Spec の両側編集」は発生していない
+
+#### verify
+
+- **#1186 のスキップ規則の効果が本 Issue で最大化した**。pre-merge 8 件のうち 4 件が `command "bats ..."` 型 (`auto-sub-observability` / `run-auto-sub` / `run-spec` / `run-issue`) だったため、旧規則なら bats 4 スイートを再実行していた
+- post-merge AC9 は `observation event=auto-run session=next` で `auto-run` 未発火のため SKIPPED。ただし**本バッチ内に評価条件が揃う**: 実装をローカル main に取り込み済み (`git fetch` + `merge --ff-only`)、後続の #1064 / #1063 が新版 `run-spec.sh` で spec phase を通り、バッチ末尾の observation scan (tier L3) が `/verify 1228` を自動 dispatch する
+- **`session=next` の解釈を実運用で適用した**: `run-*.sh` は新プロセスでディスクから読み直すため会話セッションを跨ぐ必要はない ([[project_triage_audit_gap]] で確定した解釈)。本バッチでは merge 直後に fetch + `merge --ff-only` を明示的に挟むことでこの要件を満たしている
+
+#### Deferred Items の扱い判断 (Notes for Next Phase の指示に対する回答)
+
+| Deferred Item | 判断 |
+|---|---|
+| `emit_token_usage_from_file` の抽出 | **起票せず**。案 ii の既知の代償で重複は 2 箇所に限定。3 箇所目の消費者が現れた時点が抽出の判断点 ([[project_skill_consolidation_trigger]] の基準を適用) |
+| `WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800` の再校正 | **#939 のスコープ**。本バッチの 6 番目として処理予定であり、本 Issue が spec phase の `token_usage` / `wrapper_exit` を emit させたことで #939 が要求する実測が初めて取得可能になる |
+| retry-after-kill 時の `TOKEN_USAGE_FILE` 二重書き込み | **起票せず**。低確率のエッジケースとして Spec に記録済み。再発観測時に別 Issue |
+| post-merge AC への `watchdog_kill (phase=spec)` 観測追加 | **起票せず、観察として記録**。指摘自体は妥当だが、`watchdog_kill` は本 Issue の変更対象外 (既に emit されている) であり、観測したいのは「spec phase の kill 時に `wrapper_exit` が残るか」という新しい問い。#939 が spec phase の watchdog を扱うため、そちらで観測軸として拾うのが自然 |
+
+### Improvement Proposals
+
+N/A — 上記の観察はいずれも既存 Issue のスコープ内、または記録のみで足りる:
+
+- spec phase の watchdog / silent window の実測と `watchdog_kill (phase=spec)` の観測 → **#939** (本バッチ 6 番目)
+- `emit_token_usage_from_file` の重複 → 3 箇所目が現れた時点で判断 ([[project_skill_consolidation_trigger]])
+- `TOKEN_USAGE_FILE` 二重書き込み → 再発観測時に起票
