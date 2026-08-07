@@ -501,18 +501,23 @@ List trigger fire candidate Issues (if any) with Issue number, title, and the ma
 
 #### Section 10: Recovery Candidate Frequency
 
-1. Run:
+1. Write an all-state issues JSON file for entry-unit dedup (same all-state list `skills/verify/SKILL.md` Step 15 writes for its own `collect-recovery-candidates.sh` call — `collect-recovery-candidates.sh` needs `state` and `closedAt` to tell a resolved symptom from a genuine post-fix recurrence of the same group-key; an open-only list cannot distinguish the two):
    ```bash
-   ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh docs/reports/orchestration-recoveries.md --threshold 1 --with-tracking
+   gh issue list --state all --limit 1000 --json number,title,state,closedAt
+   ```
+   Write the output to `.tmp/audit-recovery-issues.json` using the Write tool. (Unlike `/verify` Step 15's per-Issue `.tmp/open-issues-$NUMBER.json`, this file has no `$NUMBER` suffix — `/audit stats` is a project-wide aggregation, not scoped to a single Issue.)
+2. Run:
+   ```bash
+   ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh docs/reports/orchestration-recoveries.md --threshold 1 --with-tracking --issues-json .tmp/audit-recovery-issues.json
    ```
    (`--threshold 1` returns every group-key with count >= 1 after entry-unit exclusion; filtering by `RECOVERIES_AUTO_FIRE_THRESHOLD` happens in this section, not in the script call. Entry-unit exclusion includes group-keys whose `### Improvement Candidate` entries are all `N/A` (resolved by known catalog, or synonymous N/A-family wording) — these are Tier 2 fallback successes that need no action, so the collector drops them before counting and they never surface here as Untracked threshold-exceeding.)
-2. If `docs/reports/orchestration-recoveries.md` does not exist, or the command produces no output: display "No recovery candidates found." and skip the rest of this section.
-3. From the output (`<group-key>\t<count>\t<tracked:#N:open|tracked:#N:closed|tracked:#N|untracked>` per line — the 3rd column carries an `:open`/`:closed` suffix when the tracked Issue's state was resolved, and falls back to plain `tracked:#N` when it could not be), compute:
+3. If `docs/reports/orchestration-recoveries.md` does not exist, or the command produces no output: display "No recovery candidates found." and skip the rest of this section.
+4. From the output (`<group-key>\t<count>\t<tracked:#N:open|tracked:#N:closed|tracked:#N|untracked>` per line — the 3rd column carries an `:open`/`:closed` suffix when the tracked Issue's state was resolved, and falls back to plain `tracked:#N` when it could not be), compute:
    - **Recovery group-keys (total)**: total line count
    - **Threshold-exceeding group-keys**: count of lines whose `<count>` >= `RECOVERIES_AUTO_FIRE_THRESHOLD`
    - **Untracked threshold-exceeding**: of the above, count of lines whose 3rd column is `untracked`
    - **Recurring after fix**: of the above, count of lines whose 3rd column is `tracked:#N:closed` (the tracked Issue is already closed, yet the entry still recurred past the fix — the state most warranting attention, since it looks like an ordinary "tracked" entry unless the open/closed suffix is checked)
-4. Display the table:
+5. Display the table:
 
 | Metric | Value | Threshold | Status |
 |--------|-------|-----------|--------|
@@ -521,7 +526,7 @@ List trigger fire candidate Issues (if any) with Issue number, title, and the ma
 | Untracked threshold-exceeding | N | > 0 | OK / WARNING |
 | Recurring after fix | N | > 0 | OK / WARNING |
 
-5. List each threshold-exceeding group-key (if any) with its group-key, count, and tracked:#N:open / tracked:#N:closed / tracked:#N / untracked status.
+6. List each threshold-exceeding group-key (if any) with its group-key, count, and tracked:#N:open / tracked:#N:closed / tracked:#N / untracked status.
 
 This section is read-only display only — no comment posting or Issue creation (unlike Section 8/9's Retire-Proposal Comment Posting, which stays scoped to phase/verify and Icebox only; see Notes).
 
