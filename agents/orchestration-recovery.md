@@ -25,6 +25,7 @@ The following information is passed from the caller via prompt:
 - **issue_labels**: Current labels on the Issue
 - **pr_number**: PR number if available (empty string if not yet created)
 - **branch**: Current branch name if available
+- **ci_failure_verdict**: verdict from the CI platform failure pre-check (`ci-infra` / `implementation` / `undetermined`), or empty string when the pre-check did not run
 
 ## Processing Steps
 
