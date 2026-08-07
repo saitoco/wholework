@@ -163,8 +163,8 @@ Pre-merge AC1・AC3 は rubric タイプで `docs/reports/manual-ac-retype-c-d1.
 - pre-merge AC ゲート (4/4 チェック済み) と review-incomplete-fallback チェックの両方をクリアし、`mergeable=true, reason=clean` で確認なしのスカッシュマージ。`closes #1167` により Issue は自動 CLOSE 済み。
 
 #### verify
-- Pre-merge 4 件はすべて `/review` 時点で PASS 済みのため already-checked skip rule により SKIPPED。post-merge の observation AC (`event=auto-run`) は未発火のため SKIPPED。FAIL / UNCERTAIN は 0 件。
-- post-merge AC の文言が「#1066 / #1060 を個別に確認する。D1 の 5 件は意図して manual のまま維持するため減少数には含めない」と、除外対象まで明記されていた。他の sub-issue の「N 件減少」という数値ベースの表現より、observation 評価時の判定が明確になる書き方。
+- Pre-merge 4 件はすべて `/review` 時点で PASS 済みのため already-checked skip rule により SKIPPED。post-merge の observation AC (`event=auto-run`) は 1 回目の verify では未発火で SKIPPED だったが、同一 `/auto 1158` セッション内で `observation-trigger.sh --event auto-run` を実行して発火させた後、2 回目の verify で PASS 判定に到達し `phase/done` へ遷移した。FAIL / UNCERTAIN は 0 件。
+- **post-merge AC を Issue 単位の個別確認として書いた設計が、実際の評価局面で他の sub-issue より明確に優位だった**。#1164 / #1165 / #1166 は「Manual waiting 件数が移行前 (79 件) から N 件減少」という集計値ベースだったため、評価時に baseline 79 の母集団定義 (90 日窓・created ≥ 2026-05-07) を `docs/stats/2026-08-05.md` § 訂正 1 から掘り起こして再現する必要があった (全期間スキャンでは 123 件となり誤判定しうる)。一方本 AC は `#1066` / `#1060` の本文を直接照合するだけで判定でき、母集団定義に依存しない。さらに「D1 の 5 件は意図して manual のまま維持するため減少数には含めない」と除外対象まで明記していたため、残存が正常か異常かの判断も一意だった。**observation AC は集計値の増減ではなく、対象エンティティの個別状態で書くほうが評価可能性が高い**。
 
 ### Improvement Proposals
 
