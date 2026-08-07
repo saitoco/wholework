@@ -192,3 +192,50 @@
 - **/verify SKILL に「documented deferral」escape hatch を追加**: 現行 SKILL は tier-gated auto-retry の発火条件を tier + config + iteration count のみで判定しており、FAIL の性質 (実装バグ vs 意図的 deferral) を区別していない。documented deferral の場合、`/code` 再実行は同じ deferral を反復するだけで compute を浪費する。改善案: (a) FAIL marker comment に `deferral=true` marker を追加し、`/verify` が検出したら auto-retry を skip する、または (b) Spec の Verification section に `<!-- known-deferral: reason=... -->` を認める形式を導入し、`/verify` がこれを検出したら FAIL 扱いだが auto-retry を skip する。この提案は #593-#599 (Icebox) の "escape hatch pattern" 系列と関連する。
 - **AC 設計時の "実測依存 rubric" ガイドライン追加**: 本 Issue のように AC が「実測データの存在」を条件とする場合、`/issue` フェーズで「実測が実施されない場合の deferral protocol」も同時に定義することを推奨するガイドラインを `modules/verify-patterns.md` に追加すべき。現状は AC 完全達成のみが verify PASS 基準となるため、意図的 deferral が structural に不整合を生じる。
 
+## Verify Retrospective (iteration 3 — PASS)
+
+### 構造的デッドロックの解消経路
+
+過去 2 サイクルの FAIL は「AC が `--fable` 実行の実測を要求するが、`docs/tech.md` の『無認可の試行実行で証拠を捏造しない』方針により実測が得られない」という構造的衝突だった。本サイクルはこれを **2 つの改善提案のどちらでもない第 3 の経路**で解いた:
+
+| 経路 | 状態 |
+|---|---|
+| 提案 1: `/verify` に documented deferral escape hatch | **実装済み** (#947 として着地、verify SKILL Step 11(b) の `DEFERRAL_DETECTED` 判定)。本サイクルは FAIL しなかったため発火せず、#947 の post-merge AC は依然未観測 |
+| 提案 2: `modules/verify-patterns.md` に「実測依存 rubric」ガイドライン追加 | 未着手 |
+| **実際に効いた経路: AC の実測範囲拡張** | `/issue` refinement が AC1/AC2 を `--fable` 限定から **`--fable` または `--opus`** へ拡張。同一バッチの #1228 (Size L → `run-spec.sh --opus`) が通常の backlog 消化の副産物として証拠を供給した |
+
+**専用の試行実行を一切行わずに解決した**点が重要である。提案 1/2 はいずれも「実測が得られない前提」で verify 側の判定を緩める方向だったが、実際には**証拠源を広げる方が上位の解決**だった。`--fable` に限定していた根拠 (#556 が Fable 5 を対象にしていた) が現在のモデル世代では不要になっていたことが、2 サイクルの FAIL を経て初めて検討対象になった。
+
+### Phase-by-Phase Review
+
+#### issue
+
+- 蓄積コメント 3 件 (2026-07-10 実測 / 2026-07-29 Opus 5 提案 / 2026-08-06 REVIEW_DEFAULT 実測) を踏まえて AC を改訂し、デッドロックを解消した。**FAIL を 2 回経た Issue が、蓄積されたコメントを入力として自力で AC を再設計した**形
+- REVIEW_DEFAULT 再校正の AC を新規追加 (2026-08-06 コメントの明示指示に基づく consolidation)。タイトルも scope 拡大に合わせて更新
+
+#### spec / code / review
+
+- 特記なし。`WATCHDOG_TIMEOUT_REVIEW_DEFAULT` を 2600 → 5400 に引き上げ (`.wholework.yml` の project override として既に運用されていた値を配布デフォルトへ昇格)、`WATCHDOG_TIMEOUT_SPEC_DEFAULT` は 1800 で据え置き
+
+#### merge
+
+- **external kill を受けて respawn で復旧した**。merge phase 開始 (13:07:44Z) の約 6 秒後に最終出力、その約 3 分後に停止。merge phase の watchdog 閾値 600s に到達していないため watchdog kill ではない
+- `detect-external-kill.sh` が `external-kill` シグネチャを機械的に確認 (開始バナーあり / 終端バナーなし / `Exit code:` トレーラなし / `wrapper_exit` イベントなし)
+- respawn (`run-merge.sh 1262`) は 6 分 54 秒で完走し CI bats 1560/0。`manual-recovery-respawn` / `cause: external-kill-during-merge` として記録済み (commit `0411a569`)
+- **#1146 にとって新規条件の観測**: uptime 約 70h (報告書の記録上限 ~60h 超) × 並行 (load avg 4.52)、phase=merge (既存記録は code / review / issue)。詳細は #1146 に追記
+
+#### verify
+
+- post-merge AC8 を **PASS** と判定。#1228 の `--opus` spec 実行が max silent window 900s (閾値 1800s、余裕 50%) で `Exit code: 0` 完走、本セッションの `watchdog_kill` は 0 件
+- **タイミングが判定に影響しない根拠を明示した**: 本 Issue が変更したのは REVIEW_DEFAULT のみで SPEC_DEFAULT は据え置きのため、AC8 が対象とする spec phase の閾値は着地前後で同一。同一バッチの #1064 AC7 / #1063 AC9 が「判定後の effort」「`/review --full` 実行」という時点・経路の限定を持つため SKIPPED としたのと、意図的に判定を分けた
+- **AC8 の判別力は弱い**: SPEC_DEFAULT が据え置きなので、成功した `--opus` spec 実行があれば着地前後どちらでも PASS する。ただし本 AC の目的は「引き上げ不要という判定の妥当性を実運用で確認する」ことであり、据え置き判定に対する観測としては妥当な設計
+
+### Improvement Proposals
+
+N/A — 既存の追跡先があるか、記録のみで足りる:
+
+- external kill (uptime ~70h × 並行 × phase=merge) → **#1146** に観測データとして追記
+- harness-stop と external-signal の判別 (通知文言 `status=killed` / "was stopped") → **#1153** が扱う領域。本件の文言を実例として同 Issue に追記
+- 提案 2 (「実測依存 rubric」ガイドライン) → 本サイクルで**別経路 (証拠源の拡張) が上位解と判明した**ため、提案自体の優先度は下がった。起票せず本節に記録
+- #947 の post-merge AC (documented deferral での auto-retry skip) → 本サイクルは FAIL しなかったため未観測のまま。#947 側の observation AC が引き続き待機
+
