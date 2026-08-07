@@ -245,6 +245,7 @@ verify command のカバレッジは良好だった（rubric×2、file_contains�
 - 自動検証 10/10 PASS、post-merge 2 件は manual / opportunistic として未チェック残存
 - AC11（capabilities.workflow=true 実走行検証）は実行プロジェクト = 検証対象プロジェクトという構造上の難しさがあり、別プロジェクトでの確認に持ち越し。`/verify` の post-merge manual AC が「実環境変更を要する確認」となる場合の追跡方法（別 Issue 化？ Spec retrospective での deferred 化？）が議論余地あり
 - **2026-08-07 再訪**: 本リポジトリ自身で `/review 1230 --full --non-interactive` を実行した際に `observation event=pr-review-full config=capabilities.workflow` が発火し、AC11 を再評価した。発火インスタンスが `--non-interactive` (fork context) だったため、`skills/review/workflow-guidance.md` の Pre-flight ガード (再呼び出し保証なし) により Workflow パスではなく静的 Task fan-out フォールバックへ意図的に分岐しており、「Workflow 経路で完走しトークン使用量が出力される」という条件自体は実証できなかった (UNCERTAIN のまま維持)。`/auto` 経由の `/review` は常に `run-review.sh` 経由の fork context であるため、通常運用の発火では AC11 が原理的に検証されない構造的ギャップが判明した。検証には対話セッションでの直接 `/review N --full` 実行 (main context) が必要
+- **2026-08-07 再々訪**: 同日中に `/review 1249 --full --non-interactive` でも同一の `observation event=pr-review-full` が再発火し、全く同じ構造的理由 (fork context → fallback) で UNCERTAIN が再確定した。1 日で 2 回連続の再発は、この AC が `/auto` 主導の通常運用下では実質的に検証不可能であることの実証的裏付けとなった。既存の Improvement Proposal (execution-context 軸の追加 or AC 条件文の限定) の優先度を上げる根拠として記録
 
 ### Improvement Proposals
 
@@ -257,3 +258,7 @@ verify command のカバレッジは良好だった（rubric×2、file_contains�
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/575#issuecomment-4697918313
 - saito / MEMBER / first-class / ## Opportunistic Verification (during /review execution) / https://github.com/saitoco/wholework/issues/575#issuecomment-4702023375
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/575#issuecomment-5212596690
+- saito / MEMBER / first-class / ## Acceptance Test Results (prior /verify run, same UNCERTAIN conclusion reached) / https://github.com/saitoco/wholework/issues/575#issuecomment-5212629354
+
+### Phase: verify (cutoff: 2026-06-13T07:49:09Z, latest phase/* label assignment on record)
+No new substantive comments since the prior /verify run above — this run's own trigger fire (`pr-review-full`, from `/review 1249 --full --non-interactive`) reproduces the identical structural situation (fork context → static fan-out fallback) already documented in the prior run's UNCERTAIN judgment.
