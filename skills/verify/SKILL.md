@@ -92,20 +92,27 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh "verify/issue-$NUMBER"
   4. Re-run `${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh "verify/issue-$NUMBER"`. If it still does not report `none`, output `Error: Failed to return to the main repository root from <path>. Complete the caller's Worktree Exit, then re-run /verify $NUMBER.` and abort — do not proceed to checkout.
   5. Once it reports `none`, continue with base branch detection and the `git checkout`/`git fetch`+`merge --ff-only` below as written.
 
-If ARGUMENTS contains `--base {branch}`, use that as `BASE_BRANCH`. Otherwise, search for a merged PR linked to the Issue and fetch `baseRefName`:
+If ARGUMENTS contains `--base {branch}`, use that as `BASE_BRANCH`. Otherwise, search for a merged PR linked to the Issue. `gh pr list --search` is GitHub's full-text search — the search term `closes #$ISSUE_NUMBER` is not a structured filter, so an unrelated PR can rank first (observed 2026-08-06 on #1197: the search returned PR #1018, whose body actually reads `closes #1015`). Fetch up to 10 candidates and verify each one's actual `closes #N` reference before adopting it as `PR_NUMBER`:
 
 ```bash
-PR_NUMBER=$(gh pr list --search "closes #$ISSUE_NUMBER" --state merged --json number --jq ".[0].number")
+CANDIDATE_PRS=$(gh pr list --search "closes #$ISSUE_NUMBER" --state merged --json number --jq '.[].number' | head -10)
 ```
-
-If PR number is found:
 
 ```bash
-EXTRACT_RESULT=$(${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh "$PR_NUMBER")
-BASE_BRANCH=$(echo "$EXTRACT_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('base_ref','main'))")
+PR_NUMBER=""
+BASE_BRANCH=""
+for candidate in $CANDIDATE_PRS; do
+  EXTRACT_RESULT=$(${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh "$candidate")
+  CANDIDATE_ISSUE=$(echo "$EXTRACT_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('issue_number',''))")
+  if [ "$CANDIDATE_ISSUE" = "$ISSUE_NUMBER" ]; then
+    PR_NUMBER="$candidate"
+    BASE_BRANCH=$(echo "$EXTRACT_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('base_ref','main'))")
+    break
+  fi
+done
 ```
 
-Default to `BASE_BRANCH=main` if no PR is found or base branch cannot be fetched.
+If no candidate's `issue_number` matches `$ISSUE_NUMBER` (including when there are zero candidates), `PR_NUMBER` stays empty — the Issue is treated as patch route, same as if no PR were found at all. Default to `BASE_BRANCH=main` if no PR is found or base branch cannot be fetched.
 
 If `--base` is not specified and `PR_NUMBER` is empty, search for an OPEN PR before checking out:
 
