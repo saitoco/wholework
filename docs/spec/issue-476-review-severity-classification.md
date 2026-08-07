@@ -149,3 +149,13 @@
 ### Improvement Proposals
 - re-run #5 で発見した `keyword=workflow` ゲートの誤発火が、本 re-run #6 で異なる発火元 Issue (#1082 → #1206) においても**同一の経路** (Spec の「steering document に該当記述なし」を確認する列挙文中の `docs/workflow.md` ファイル名言及) で再現した。2件はいずれも `docs/tech.md` / `docs/workflow.md` 等の steering document パス列挙という共通パターンから発生しており、単発の偶然ではなく `keyword=` の部分文字列マッチ設計に起因する構造的な誤検知経路である可能性が高い。re-run #3 で採用した「3回連続再現で起票水準」の閾値には未到達 (2/3) だが、発火元が異なる Issue にわたって再現している点は re-run #2〜#4 (同一 event の無条件発火という単一パターンの反復) より一段階進んだ証拠強度を持つ。次回同型の誤発火が確認された場合は、閾値を待たずに起票を検討する価値がある — Step 16 (retro-proposals) の Tier 1 分類・freshness check に判断を委ねる
 
+## Verify Retrospective (2026-08-06 re-run #7)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1232、Issue #1164) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカーあり) したが、今回の発火元 PR #1232 の diff (`docs/reports/manual-ac-retype-d2.md` 新規追加、`docs/spec/issue-1164-*.md` retrospective/handoff 追記のみ — ドキュメントのみの変更) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず UNCERTAIN 判定に帰着した。`keyword=workflow` ゲートの誤発火パターン (re-run #5: `docs/workflow.md`／Issue #1082、re-run #6: `docs/workflow.md`／Issue #1206) が、本 Issue #1164 の Spec 内 `docs/translation-workflow.md` というファイル名参照への部分一致で**3件目**として再現した。re-run #6 で「次回同型の誤発火が確認された場合は、閾値を待たずに起票を検討する価値がある」とした条件に該当する
+
+### Improvement Proposals
+- `keyword=workflow` ゲートの誤発火が異なる発火元 Issue (#1082 → #1206 → #1164) にわたって**3件連続**で再現した。いずれも `docs/workflow.md` / `docs/translation-workflow.md` のような、GitHub Actions ワークフローとは無関係なファイルパス文字列への部分一致が原因であり、単純な部分文字列マッチ設計 (`modules/observation-trigger.md` § Condition Check Gate) の構造的欠陥であることが確定的に裏付けられた。re-run #3 で採用した「3回連続再現で起票水準」の閾値を満たしたため、Step 16 (retro-proposals) で follow-up Issue の起票を検討する。改善方向性の候補: `keyword=` を単純な部分文字列マッチから `.github/workflows/*.yml` 等の実際のファイルパス変更を対象とした構造化マッチへ置き換える、または `keyword=` に単語境界 (word boundary) を要求する
+
