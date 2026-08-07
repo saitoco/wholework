@@ -219,27 +219,52 @@ Size L のため検出上限 5 件のうち、実質的なギャップとして 
 - この実測は同時に、#939 が必要とする「spec の silent window 実測」の解釈が JSON モード化後も変わらないことを保証する。#939 に対する本 Issue の副作用はない。
 - **残った境界リスクは 1 件**: spec の実所要時間 max 1806s が `WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800` を既に超えており (`watchdog_kill` 2 件)、JSON モード化とは無関係に境界にある。本 Issue のスコープ外 (#939) として Uncertainty 節に残した。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1-8 をそのまま実装。`run-code.sh:256-282` の JSON キャプチャ分岐、top-level スコープでの `_` 接頭辞変数命名、`_EMIT_PHASE_OWNED` ガード適用のいずれも Notes for Next Phase の指示通り。
+
+### Design Gaps/Ambiguities
+
+- N/A — 実装時に新たな設計判断は発生しなかった。
+
+### Rework
+
+- N/A — 手戻りなし。テスト (`tests/run-spec.bats` / `tests/run-issue.bats` 各 3 ケース) は初回実装で全 PASS、既存 4 スイート (計 154 テスト) も無回帰で PASS した。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 実装は Spec の Implementation Steps 1-8 と Code Retrospective の記述通りで、コアロジックに構造的な乖離はなかった (`/review` の finder 3 エージェントも Spec Deviation の core-logic 指摘はゼロ)。唯一の Spec 起点の指摘は、Spec の `## Uncertainty` 節が挙げる残存リスク (`watchdog_kill` 増加時の再校正) を Issue の Post-merge AC が観測しないという AC カバレッジの手薄さで、これは実装の欠陥ではなく Issue 設計時点のスコープ判断 (#939 に委譲) の帰結。
+
+### Recurring issues
+
+- **同一事実の複数ドキュメント記述がずれる典型パターンが 3 箇所で発生**: `docs/reports/event-log-schema.md` の phase 列挙 (`code` vs `code-patch`/`code-pr`) が同一 PR 内で `modules/event-emission.md` の記述と食い違った、`modules/event-emission.md` 内の `_EMIT_PHASE_OWNED` 正準コード例が新規 emit ブロックを反映しないまま前方参照だけ追加された、`docs/structure.md`/`docs/ja/structure.md` の断定が SSoT (`modules/event-emission.md`) のスコープ限定を落としていた。3 件とも実害は軽微 (SHOULD/CONSIDER) だったが、「1 つの事実を N 箇所で記述し、N-1 箇所の更新を見落とす」という同型の失敗が同一 PR 内で 3 回起きたのは注目に値する。
+- **review-bug finder が「既存パターンの踏襲」を新規欠陥として検出し、adversarial verify で正しく棄却された事例が 3 件** (`AUTO_EVENTS_LOG` 常真ガード、stderr 混入、`rm -f` ガード配置)。finder の "coverage-first, no self-filtering" 設計 (`skills/review/workflow-guidance.md` Find/Filter Separation Contract) が意図通り機能し、`run-code.sh` からの参照実装踏襲を偽陽性として検証エージェントが正しく除外した。false positive filtering が有効に働いた好例として記録。
+
+### Acceptance criteria verification difficulty
+
+- UNCERTAIN はゼロ。rubric 4 件・command 4 件 (safe mode の CI 参照フォールバック経由) すべて PASS に判定できた。verify command の記述不備・欠落は見つからなかった。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- **案 ii (wrapper 側で直接 emit) を採用**。決定打は `run-issue.sh` が `run-auto-sub.sh` から呼ばれていない (`skills/auto/SKILL.md` が直接起動) こと。案 i では issue phase をカバーできず AC1/AC2 を満たせない。
-- **`--output-format json` キャプチャ分岐の追加を実装範囲に含めた**。`run-spec.sh` / `run-issue.sh` は `.tmp/token-usage-<issue>.json` を生成していないため、emit 追加だけでは `token_usage` が永久に発火しない。
-- **`wrapper_exit` の `exit_code` は reconcile 調整後の最終値を使う**。`run_phase_with_recovery()` が code phase について emit する値も `run-code.sh` の補正後の値であり、それとのパリティを取る。
-- **`_EMIT_PHASE_OWNED` ガードを両 emit に適用**。現状の実挙動は変わらないが、将来 spec が `run_phase_with_recovery()` 経由に移る場合の二重 emit を予防する。
-- **`emit-event.sh` への共有ヘルパ抽出は見送り**。テスト mock 28 箇所への追随コストが機能本体を上回るため。既存の `_maybe_emit_phase_complete()` 複製と同じ慣行に揃える。
+- **base branch conflict pre-check で `modules/event-emission.md` が "changed in both" と検出されたが、実 3-way merge (`git merge-tree --write-tree`) で無害と確認し MUST 化しなかった**。#1224 (main 側) と本 PR の編集領域が行レベルで重ならないことを 2 エージェント独立に実証。
+- **review-bug finder が挙げた 3 件 (常真ガード / stderr 混入 / rm -f 配置) は adversarial verify で REJECT**。いずれも `run-code.sh` の既存踏襲パターンか、著者の意図を反転させた誤読と判定。
+- **SHOULD/CONSIDER 4 件をドキュメント修正のみで Fix、残り 2 件 (retry-redirect 低確率リスク、Post-merge AC 拡張提案) は Skip**。前者はコード変更を伴う低確率エッジケースで本 Issue のスコープを超える、後者は Issue 拡張提案であり `/verify` での改善提案集約規約に従う。
 
 ### Deferred Items
 
-- `emit-event.sh` への `emit_token_usage_from_file` 抽出 — follow-up 候補として Notes に記録。本 Issue では起票しない (改善提案は `/verify` フェーズで集約する規約に従う)。
-- `WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800` の再校正 — spec の実所要時間 max 1806s が既に境界を超えているが、#939 のスコープ。
-- `docs/reports/event-log-schema.md` の修正は AC8 の rubric 検証対象外 (AC8 は `modules/event-emission.md` と `docs/structure.md` の 2 件に限定)。Changed Files には含めたので `/code` で実施し、`/review` の doc consistency で担保する。
+- `emit-event.sh` への `emit_token_usage_from_file` 抽出 — spec phase から継続する follow-up 候補。本 Issue では起票しない。
+- `WATCHDOG_TIMEOUT_SPEC_DEFAULT=1800` の再校正 — #939 のスコープ。
+- retry-after-kill 時の `TOKEN_USAGE_FILE` 二重書き込みリスク (`run-spec.sh:185` / `run-issue.sh:126`) — 低確率のエッジケースとして Skip。再発が観測された場合に別 Issue で対応。
+- Post-merge AC への `watchdog_kill` (`phase=spec`) 観測追加 — Spec の Uncertainty 節が示唆する残存リスクの追跡が Issue の AC に反映されていない。
 
 ### Notes for Next Phase
 
-- `scripts/run-code.sh:256-282` が JSON キャプチャ分岐の参照実装。`OUTPUT_FORMAT_JSON=1` は `env` 引数側、`--output-format json` は `claude` 引数側、リダイレクトは `run_with_retry_on_kill` 全体に掛ける — この 3 点をそのまま写すこと。
-- `run-spec.sh` / `run-issue.sh` の emit コードは **top-level スコープ**に置くため `local` は使えない (`run-auto-sub.sh:644` の逐語コピーは不可)。変数名は `_` 接頭辞で衝突回避する。
-- `tests/run-spec.bats` / `tests/run-issue.bats` の mock `claude` は標準出力に何も書かないため、既存テストでは `TOKEN_USAGE_FILE` が空になり `token_usage` emit はスキップされる (回帰しない)。`token_usage` を発火させるテストは mock `claude` に JSON を書かせる必要がある。フィクスチャ形状は `tests/run-auto-sub.bats:1080-1082` を流用。
-- `tests/*.bats` の mock 追加時は `ARGS_COUNT` を assert しているテストが存在しないことを確認済み。`--output-format json` の引数追加で既存テストは落ちない。
-- `scripts/run-auto-sub.sh` は変更しない。#1108 が追加した XS ゲート・skip ログ文言・`--opus` 受け渡しには一切触れないこと。
+- `/merge` はこの PR の 8 AC 全 PASS・CI 全 SUCCESS・MUST issue ゼロを引き継いでよい。
+- `/verify` の Post-merge AC 確認時、`.tmp/auto-events.jsonl` の `wrapper_exit`/`token_usage` phase 内訳に `spec`/`issue` が現れることに加え、上記 Deferred Items (retry-redirect リスク、watchdog_kill 観測拡張) を改善提案として拾うかどうかの判断を行うこと。

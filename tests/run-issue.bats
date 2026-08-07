@@ -317,6 +317,53 @@ MOCK
     grep -q "phase_complete" "$EMIT_LOG"
 }
 
+@test "emit: wrapper_exit emitted with phase=issue and exit_code=0" {
+    EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
+MOCK
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    grep -q "wrapper_exit phase=issue exit_code=0" "$EMIT_LOG"
+}
+
+@test "emit: wrapper_exit not emitted when EMIT_PHASE_NAME is pre-set (no double emit)" {
+    EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
+MOCK
+    export EMIT_PHASE_NAME="issue"
+    run bash "$SCRIPT" 123
+    unset EMIT_PHASE_NAME
+    [ "$status" -eq 0 ]
+    ! grep -q "wrapper_exit" "$EMIT_LOG"
+    ! grep -q "token_usage" "$EMIT_LOG"
+}
+
+@test "emit: token_usage emitted with phase=issue and model= when TOKEN_USAGE_FILE is produced" {
+    export AUTO_EVENTS_LOG="$BATS_TEST_TMPDIR/auto-events.jsonl"
+    EMIT_LOG="$BATS_TEST_TMPDIR/emit.log"
+    cat > "$MOCK_DIR/emit-event.sh" <<MOCK
+emit_event() { echo "\$@" >> "${EMIT_LOG}"; }
+MOCK
+
+    # Real CLI output shape: top-level "model" is always null; the actual
+    # model ID lives under modelUsage.<id>.*
+    cat > "$MOCK_DIR/claude" <<'MOCK'
+#!/bin/bash
+cat <<'JSON'
+{"result":"done","model":null,"usage":{"input_tokens":100,"output_tokens":50,"cache_read_input_tokens":20},"modelUsage":{"claude-sonnet-5":{"inputTokens":100,"outputTokens":50}}}
+JSON
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/claude"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    grep -q "token_usage phase=issue model=claude-sonnet-5 input_tokens=100 output_tokens=50 cache_read_tokens=20" "$EMIT_LOG"
+    [ ! -f ".tmp/token-usage-123.json" ]
+}
+
 @test "retry-on-kill: retry-success - killed once then succeeds, wrapper exits 0" {
     COUNTER_FILE="$BATS_TEST_TMPDIR/call_counter"
     echo "0" > "$COUNTER_FILE"
