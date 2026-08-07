@@ -211,3 +211,36 @@ Level 1 のみ (4 件すべて独立、blocked-by #1157 は CLOSED 済み)。並
 ### Acceptance criteria verification difficulty
 
 - Pre-merge AC 5 件はすべて `rubric` 型で、grader (本セッション) の入力スコープは Issue 本文 + 本 PR の git diff (集約レポート本体) のみだった。AC2 (「A + D2 が observation へ再型付けされ…マッチ対象になることが確認できる」) の一次証拠 (Issue 本文の実際の再型付け結果、`opportunistic-search.sh --dry-run` の実行結果) は、operate route による GitHub Issue 編集という性質上、原理的にこの PR の diff には現れない。集約レポート自身が十分な要約 (数値内訳・確認手法の記述) を含めることで rubric grader は PASS と判定できたが、記述の「正確さ」までは rubric の役割を超えるため review phase での finder 発見に依存した。将来同種の XL 親 Issue で rubric AC を書く際は、rubric text 側で「参照する sub-issue 記録ファイルを明示する」設計 (Code Retrospective で既に提案済み) に加え、集約レポート本体には一次資料の例外・境界ケースまで正確に転記する規律が必要である。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- 「#1158 は追跡専用で実装を持たない」という Issue 本文の額面通りの記述より、rubric grader の可視範囲という機械的制約を優先し、親にも Changed Files (集約レポート) を持たせた判断が結果的に正しかった。この成果物がなければ Pre-merge の rubric AC 5 件は評価不能だった。
+- Implementation Step 1 を「sub-issue 全件が CLOSED または `phase/done`」という precondition gate としたのも妥当だった。本セッションでは 4 sub-issue の verify を先に完走させて gate を開けてから code フェーズへ進んでおり、gate が実際に順序制約として機能した。
+- 一方 `/spec` は `/auto` の XL route に親の code フェーズが存在しないことを検知できていない。Spec は「次回 `/code 1158` 実行時に gate から再開する」と書いたが、`/auto` の XL route はその `/code` を呼ばないため、Spec の想定する実行主体が存在しなかった (→ #1241)。
+
+#### design
+- 集約レポートの見出し構成 (`## 対象・件数内訳` → `## 区分別処理結果` → `## 検証`) を #1163 の実例から踏襲した判断が有効だった。区分別に sub-issue の一次資料へ辿れる構造になっている。
+- Issue 単位 (79) と AC 行単位 (87) のずれを表に両方載せた設計も、evaluation 時に「なぜ 79 件ちょうど減らないのか」を説明する根拠として機能した。
+
+#### code
+- `run-code.sh 1158 --pr` は Size=XL のまま abort せず完走した。`modules/ambiguity-detector.md` の hard-error 条件「Size is XL without sub-issue splitting」は GraphQL `subIssues` に 5 件があるため非該当、という spec retrospective の残存確認事項が実測で解消された。
+- Code Retrospective が「rubric AC2 の一次証拠は原理的にこの PR の diff に現れない」という制約を自己申告していた点が良い。review phase の finder がその抽象的懸念を「line 84 の一括マッチ確認 claim が一次資料と食い違う」という具体的な不正確さまで落とし込めたのは、この自己申告が探索の起点になったため。
+
+#### review
+- review-spec + review-bug×2 の 3 finder が独立に同じ 2 箇所を指摘し、adversarial verify で 3/4 が CONFIRMED。fan-out レビューの corroboration が機能した好例。MUST 0 / SHOULD 3 / CONSIDER 4 を全修正。
+- **rubric AC の PASS 判定と記述の正確さが別問題である**ことが実証された。rubric grader は「集約レポートに十分な要約があるか」までは判定できるが、「その数値が一次資料と一致するか」は判定範囲外で、review finder に依存した。
+
+#### merge
+- `gh-pr-merge-status.sh` が初回 `UNKNOWN` → 30 秒待機後 `clean` へ解決。pre-merge AC gate (unchecked_count=0) と review-incomplete-fallback チェック (organic completion) の双方を通過し、override マーカーなしでマージ。CI 9/9 SUCCESS。
+
+#### verify
+- Pre-merge 5 件は already-checked skip rule により SKIPPED。post-merge の observation AC は、`observation-trigger.sh --event auto-run` の初回実行時 (07:05) には #1158 がまだ OPEN (PR マージ前) で母集団に入っておらず未発火だったが、マージ後に再実行することで正規の母集団に入り発火 → PASS 判定に到達した。FAIL / UNCERTAIN は 0 件。
+- **XL 親の verify では「observation-trigger を親のマージ後に再実行する」ステップが必要**という運用知見が得られた。`/auto` の XL route は observation scan を Step 5 (全フェーズ完了後) に 1 回だけ実行するため、親自身の PR マージがその scan より後に来る構成では親の observation AC が永久に未発火になる。本セッションでは親セッションが手動で再実行して解消した。
+- **数値ベースの observation AC は母集団定義を条件文に含めるべき**という知見が #1164 / #1165 / #1158 の 3 件で繰り返し確認された。baseline 79 は 90 日窓 (created ≥ 2026-05-07、母集団 167 件) の値であり、全期間スキャン (母集団 320 件) では 123 件と全く異なる。`docs/stats/2026-08-05.md` § 訂正 1 の予告を辿って母集団を揃えて初めて正しい比較 (79 → 18) に到達した。対照的に #1167 の AC は対象 Issue の個別状態で書かれており、母集団定義に依存せず一意に判定できた。
+
+### Improvement Proposals
+
+- **AC が「評価者が判定に必要とする情報」を AC 自身に含めていない — rubric の参照ファイル明示と、数値 AC の母集団定義** — 本セッションで同じクラスの欠陥が 2 形態・4 Issue にわたって現れた。(1) **rubric の可視範囲**: `modules/verify-executor.md:85` の仕様どおり grader の入力は「Issue 本文 + git diff + rubric text が明示的に名指ししたファイル」に限られるが、#1158 の rubric AC 5 件はどれもファイルを名指ししておらず、一次証拠 (sub-issue の記録ファイル、operate route による Issue 本文編集結果) が grader から不可視だった。(2) **数値 AC の母集団定義**: #1164 / #1165 / #1158 の observation AC が「移行前 (79 件) から減少」と絶対数のみを書いており、baseline の母集団定義 (90 日窓 / created ≥ 2026-05-07 / 167 件) は `docs/stats/2026-08-05.md` § 訂正 1 を辿らないと復元できなかった。全期間スキャンだと 123 件となり「増加している」と誤判定しうる。対照的に #1167 の AC は対象 Issue を個別に名指ししており、母集団定義なしで一意に判定できた。`modules/verify-executor.md` には既に「Security-sensitive validator rubric guidelines」「Exit code verification pattern in rubric text」という同型のガイドライン節があり、そこに (1) の規約を追加する前例がある。(2) は observation AC の記法として `modules/verify-classifier.md` 側で扱う。
