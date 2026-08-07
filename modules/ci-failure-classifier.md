@@ -47,3 +47,5 @@ Each cell is a one-line summary of the response and its own reference; consumer 
 | `skills/auto/SKILL.md` Step 6 CI platform failure pre-check | Do not enter Tier 1/2/3 — wait, re-judge, stop if unresolved (no retry) | Proceed to Tier 1 as normal |
 | `skills/auto/SKILL.md` pr route item 8 (`run-review.sh` exit 2) | Abandon the PENDING retry loop and classify as a CI failure | Apply the existing PENDING retry mechanism (#1115) unchanged |
 | `agents/orchestration-recovery.md` (Tier 3) | `action=abort` (never `retry`) | Follow the existing anomaly pattern table |
+| `modules/verify-executor.md` § 3a (`command` hint CI reference fallback) | Ignore CI result, execute the `command` hint locally (procedure documented in that section) | UNCERTAIN (CI job failed) |
+| `modules/orchestration-fallbacks.md#ci-wait-silence-timeout` | Re-run CI on the same SHA, then retry the phase once CI reaches a confirmed state (this is a bounded, single re-run — not the unbounded retry the other rows above rule out) | Escalate per the entry's own Escalation section |
