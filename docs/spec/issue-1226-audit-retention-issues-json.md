@@ -78,3 +78,26 @@ N/A — Spec の Auto-Resolved Ambiguity Points (issue リスト取得元・一�
 ### Notes for Next Phase
 - Pre-merge AC 4件はすべて `/code` 内で PASS 確認済み、Issue checkbox も `[x]` 済み
 - `bats tests/audit-retention.bats` は 16/16 PASS (既存15件 + 新規1件)。フルスイート (`bats tests/`) は Behavioral Change Detection の narrow-scope 判定によりスキップした (変更対象ファイルを参照する他テストファイルなし)
+
+## Issue Retrospective
+
+### 事実確認 (Background)
+
+Background で参照されているコード上の主張 (`skills/audit/SKILL.md:506` の呼び出し形、`collect-recovery-candidates.sh` L103-127 の `--issues-json` 依存、`skills/verify/SKILL.md:918-926` の先行実装) はすべてコードベースと突合し、正確であることを確認した。
+
+### 曖昧性の自動解決 (非対話モード)
+
+Size M (検出上限 3件) のうち 2 件を検出し、いずれも「既存パターンから一意に推論可能」かつ「AC テキスト自体は選択によって変化しない」ため自動解決した。Issue 本文の `## Auto-Resolved Ambiguity Points` セクションに記録済み。
+
+1. **Issue リストの取得元**: `/audit stats` Step 1 が既に取得済みの `--since`/`--limit` フィルタ付きリストを再利用せず、`skills/verify/SKILL.md` Step 15 と同一の独立した `gh issue list --state all --limit 1000 ...` を新規実行する方針とした。
+   - 理由: `docs/reports/orchestration-recoveries.md` の `tracked:#N` は Step 1 のデフォルト `--since 90日` / `--limit 500` の範囲外を参照しうる (実測差分表の `#799` など、古い Issue 番号が該当し得る)。AC2 の rubric 文言 (「Step 15 と同じ内容のリストを渡す形」) が既にこの選択を明示的に要求している。
+2. **一時ファイルのパス**: `/verify` Step 15 の `.tmp/open-issues-$NUMBER.json` は Issue 番号紐付けだが、Section 10 は特定 Issue に紐づかないプロジェクト全体集計のため `$NUMBER` を含まない命名が必要になる。具体的なファイル名は既存コードベースに規約が無く、AC テキストにも影響しないため `/spec`/`/code` フェーズの裁量とした。
+
+### Acceptance Criteria への変更
+
+変更なし。起票時点の AC は既に verify command 割り当て・チェックボックス形式・`observation session=next` タグとも要件を満たしており、機械チェック (`check-skill-change-observation-ac.sh` / `check-ac-checkbox-format.sh`) もいずれも問題なしを確認した。
+
+### その他
+
+- `tests/audit-retention.bats` は既存ファイルとして存在確認済み (AC3 の `command "bats tests/audit-retention.bats"` は有効な対象を指している)。
+- タイトルドリフトなし、blocked-by なし、sub-issue 分割は Size M のため非対象 (非対話モードのため高リスク判断としてもスキップ)。
