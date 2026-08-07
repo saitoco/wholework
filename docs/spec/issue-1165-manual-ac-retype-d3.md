@@ -230,25 +230,37 @@ Size L 維持の根拠も #1163 と同じ — リポジトリ内変更は 1 フ�
 - **`config=` ゲートの `config=key:value` 拡張** — `modules/observation-trigger.md` § Condition Check Gate (`config=`) 自身が候補として挙げている。#783 はこの拡張があれば retire ではなく再型付けできた。
 - **`opportunistic-search.sh` の本文走査がセクション非依存であること** — コードフェンス内のサンプル AC を実 AC と誤認しうる。#491 が実例。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1-10 の実行順序・内容ともにそのまま実施した。
+
+### Design Gaps/Ambiguities
+
+- Step 3 (`phase/ready` ラベルチェック) で、本 Issue は `phase/ready` を経由せず既に `phase/code` だった。原因は先行する非対話セッションが Implementation Steps 1-8 (report ファイル作成前の段階まで含む GitHub 側編集) を完了させた後、ローカルの commit/push/PR 作成前に中断していたため。Spec は完備しており `reconcile-phase-state.sh --check-precondition` の `matches_expected: false` は「ラベルが期待状態と異なる」ことを示すのみで実装の欠落を意味しなかったため、非対話モードの auto-resolve 方針 (warn-only) に従って続行した。
+
+### Rework
+
+- Step 2-3 (mapping JSON + 一括置換 python ヘルパ) と Step 6 (retire の手作業編集) は、実行前に対象 19 Issue 全件の本文・ラベルを `gh issue view` で確認した結果、先行セッションによってすでに完了済みであることが判明したため実行不要だった。二重適用を避けるため、`.tmp/retype-d3-mapping.json` / `.tmp/retype-d3.py` の新規作成・実行はスキップし、代わりに全 16 再型付け行 + 6 retire 行 + 4 ラベル遷移を個別に `gh issue view` でリテラル一致確認する検証スクリプト (`.tmp/verify-retype.py`) を書いて実データを突合した。Spec の Implementation Steps はそのまま (先行実行が失敗した場合の再実行パスとして有効なため変更なし)。
+- Step 9 の `opportunistic-search.sh --event auto-run` 実行で #1135 / #478 が母集団にマッチしなかった。GitHub 検索インデックスの遅延 (Spec Notes で予告済み) が原因と判断し、`gh issue view --json body` によるリテラル一致確認を一次情報として採用した。再実行(2回目)でも解消しなかったため、待機時間を延ばした再々実行は行わず、確認済みの実データを記録に採用した。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 成果物は pr route で `docs/reports/manual-ac-retype-d3.md` を 1 本追加する。Pre-merge AC 8 件のうち 3 件が `rubric` で、grader には Issue 本文・git diff・rubric 本文で名指しされたファイルしか渡らないため、operate route (Issue 本文編集のみ) では評価不能になる (#1163 と同じ判断)。
-- 22 AC 行の振り分けは再型付け 16 / retire 6 / manual 維持 0。前提が原理的に成立しない 6 行は `manual` 維持ではなく retire に倒した (#1163 からの意図的な方針変更、根拠は Notes § `manual` 維持がゼロである理由)。
-- retire は AC 行の削除ではなく `### Retired Post-merge Conditions` (h3) への退避で行う。h4 では `check-ac-checkbox-format.sh` の `in_section` が解除されず形式違反になるため、見出しレベルは必須制約。
-- 再型付けはタグ置換のみなので `.tmp/` の python ヘルパで一括実行 (dry-run → apply)、retire は節の移動を伴うため 1 件ずつ手作業。
+- GitHub 側の編集 (16 AC 行の再型付け、6 AC 行の retire、4 Issue の `phase/done` 遷移、#491 のインデント無害化) は全件、実行前の `gh issue view` 確認で既に完了済みと判明した。二重適用リスクを避けるため `.tmp/retype-d3.py` などの一括置換ヘルパは新規作成・実行せず、実データの個別確認スクリプト (`.tmp/verify-retype.py`) で置換済み内容をリテラル一致確認する方式に切り替えた。
+- ローカル成果物 (`docs/reports/manual-ac-retype-d3.md`) は本セッションで新規作成し、Spec の「再型付けマッピング」「retire マッピング」「対象外」の各表をそのまま転記、`## 検証` 節に実測結果を追記した。
+- Issue #1165 自身の Pre-merge AC 8 件 (rubric 3 + github_check 5) は全件 PASS と判定し、Issue 本文のチェックボックスを更新した。
 
 ### Deferred Items
 
-- OPEN 2 件 (#490 / #465) の close 判断 — 各 Issue 自身の post-merge 充足に依存するため本 Issue のスコープ外。再型付けのみ行う。
-- `check-ac-checkbox-format.sh` を `/code` の `allowed-tools` へ追加すること — スコープ外。Step 6 (d) は `python3` 同等判定または目視で代替する。
-- 別途起票候補 3 件 (closed 限定母集団 / `config=key:value` 拡張 / セクション非依存走査) — spec retrospective § 別途起票候補 に記録済み。`/verify` の Improvement Proposals で扱う。
+- OPEN 2 件 (#490 / #465) の close 判断 — 各 Issue 自身の post-merge 充足に依存するため本 Issue のスコープ外 (spec からの引き継ぎ、未変化)。
+- `check-ac-checkbox-format.sh` を `/code` の `allowed-tools` へ追加すること — スコープ外 (spec からの引き継ぎ、未変化)。
+- 別途起票候補 3 件 (closed 限定母集団 / `config=key:value` 拡張 / セクション非依存走査) — spec retrospective § 別途起票候補 に記録済み。`/verify` の Improvement Proposals で扱う (spec からの引き継ぎ、未変化)。
 
 ### Notes for Next Phase
 
-- Step 5 の一括置換で `match` 文字列が 2 行以上にマッチした Issue は必ず skip 警告を出し、`match` を修正して再実行すること。特に #710 と #478 は同一 Issue に 2 行あるため取り違えやすい。
-- Step 9 の検証は**件数差分で判定しないこと**。#1163 の Code Retrospective で母集団が他要因 (並行セッション / 新規 AC) でも変動することが実測されている。再型付けした Issue 番号の個別含有確認を一次情報とする。
-- GitHub 検索インデックスの遅延で、本文編集直後は `opportunistic-search.sh` の母集団に現れないことがある。マッチしない場合はまず `gh issue view N --json body` で本文の置換を確認し、時間を置いて再実行する。
-- #591 の `- [x]` 済み manual AC と #491 のコードフェンス内サンプル行は**性質が異なる** — 前者は編集不要、後者はインデント付与が必要。混同しないこと。
+- `opportunistic-search.sh --event auto-run` は #1135 / #478 をマッチ集合に含めなかった (GitHub 検索インデックスの遅延、Spec Notes で予告済み)。`gh issue view --json body` によるリテラル一致確認は完了しているため、`/review` / `/verify` で再実行しても件数がすぐに一致しなくても異常ではない。
+- Issue #1165 自体の Post-merge AC (`/audit stats --retention` での Manual waiting 件数減少確認) は post-merge のため `/verify` フェーズで扱う。
