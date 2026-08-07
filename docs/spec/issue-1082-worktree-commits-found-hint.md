@@ -102,22 +102,20 @@ N/A
   - Other candidates: 非対話モードでも処理を中断しユーザー判断を待つ (Spec が既に存在するため過度に保守的と判断し不採用)
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `--light` モードで review-light agent (4 aspects) を実行し、SHOULD issue 1件 (`scripts/reconcile-phase-state.sh:301` の壊れたアンカー参照 `# See modules/phase-state.md#worktree-commits-found`) を検出、MUST issue はなし。
-- SHOULD issue は "See modules/phase-state.md#..." 参照行を削除し、Field contract 表への言及に置き換える形で修正した (代替案: `modules/phase-state.md` に見出しを追加してアンカーを解決させる、は Spec の明示的なスコープ判断 (独立見出しを追加しない) を維持するため不採用)。`matches_expected` の判定ロジックや `worktree_commits_found` フィールドの計算ロジック自体には一切手を入れていない。
-- Pre-merge AC 5件 (grep 1件・rubric 3件・command 1件) はすべて PASS、CI 9/9 SUCCESS を確認済み。
+- Pre-merge AC gate は 5/5 checked (unchecked_count=0)、review-incomplete-fallback も検出されなかったため、追加確認なしで Step 1 の mergeability チェックへ進んだ。
+- `gh pr merge 1218 --squash --delete-branch` で squash merge を実行、リモートブランチは削除済み。コンフリクトは発生しなかった。
 
 ### Deferred Items
-- `diagnosis` 文字列への push 未完反映は Issue 本文で明示的に見送り済み (Spec Notes に記録) — 本 PR では対応していない。
-- `modules/orchestration-fallbacks.md` の `code-patch-silent-no-op` Rationale が本 Issue により部分的に古くなる点は Issue の Out of Scope により対応していない。
-- Post-merge AC (opportunistic 観察: 次回 patch route の中断時に「未着手」と区別できることの実地確認) は引き続き未検証 — merge 後の opportunistic 観察に委ねる。
+- `diagnosis` 文字列への push 未完反映は Issue 本文で明示的に見送り済み — 引き続き未対応。
+- `modules/orchestration-fallbacks.md` の `code-patch-silent-no-op` Rationale が本 Issue により部分的に古くなる点は Out of Scope のまま未対応。
+- Post-merge AC (opportunistic 観察: 次回 patch route の中断時に「未着手」と区別できることの実地確認) は未検証のまま。
 
 ### Notes for Next Phase
-- Fix commit (`37ca42f1`) は review フィードバック対応のみで機能変更なし。修正後に `bats tests/reconcile-phase-state.bats` (77/77 PASS) と `validate-skill-syntax.py skills/` (0 error) を再実行済み。
-- MUST issue なし、CI 9/9 SUCCESS のため `/merge 1218` を実行してよい。
-- `docs/spec/issue-998-operate-completion-signature.md` / `docs/spec/issue-993-reconcile-code-patch-stray-pr.md` は同一関数への類似フィールド追加の先例であり、比較対象として参照可能。
+- `/verify 1082` は Post-merge AC (opportunistic) の観察のみが対象。他の Pre-merge AC はすべて merge 前に確認済み。
+- Issue #1082 は `closes #1082` により squash merge で自動クローズされる見込み (base branch は main)。
 
 ## review retrospective
 
