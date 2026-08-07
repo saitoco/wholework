@@ -63,20 +63,19 @@
 - `bats --jobs 18 tests/` の並列実行で `tests/post_merge_check.bats` の2ケース (`fail: gh issue reopen called when FAIL input given` / `multiple issues: processed sequentially`) が FAIL したが、同ファイル単体の直列実行では全 PASS。本 Issue の変更範囲外 (agents/*.md, docs/tech.md) であり、並列実行時のテスト間リソース競合によるフレークと判断し、再実装は行わなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `--light` モードで review-light エージェントによる4観点統合レビューを実施。MUST issue はゼロ、SHOULD issue 1件 (`docs/tech.md:130` の `#921` recalibration note が本PRの frontmatter 追加と矛盾する記述のまま残存)。
-- SHOULD issue は低リスクなドキュメント修正のため即時対応。`docs/tech.md` / `docs/ja/tech.md` の該当箇所を「#1063 で実装済み」に更新し、Follow-up 未実装という誤った記述を解消。
-- Pre-merge AC 8件 (grep 6件 + rubric 2件) はすべて PASS。CI は全9ジョブ SUCCESS。ベースブランチとのコンフリクトなし。
+- Pre-merge AC ゲート (8件) は unchecked 0 件、review-incomplete-fallback も検出されず、追加確認なしで `gh pr merge --squash --delete-branch` を実行した。
+- コンフリクトなし・CI 全SUCCESS・approved 済みのため conflict resolution フローは不要だった。
 
 ### Deferred Items
-- effort 値そのもののチューニング (Opus 5 指針に基づく down-sweep) — 本 Issue のスコープ外、後続 Issue に委ねる (Issue Out of Scope に明記済み)。
-- Post-merge AC: `/review --full` 実行による `review-bug`/`review-spec` の frontmatter effort 起動確認 — opportunistic 検証待ち。
+- Post-merge AC: `/review --full` 実行による `review-bug`/`review-spec` の frontmatter effort 起動確認 — opportunistic 検証待ち (verify phase に引き継ぎ)。
+- effort 値そのもののチューニング (Opus 5 指針に基づく down-sweep) — 本 Issue のスコープ外、後続 Issue に委ねる。
 
 ### Notes for Next Phase
-- `/merge 1259` で問題なくマージ可能な状態。Pre-merge AC・CI・レビューいずれもブロッカーなし。
-- `docs/tech.md` の他の同期ギャップ (`docs/guide/autonomy.md` 未作成、`docs/guide/index.md` 更新遅延) は本PRと無関係の既存事象であり対応不要。
+- `closes #1063` により Issue は自動クローズ済みのはず。`phase/verify` ラベルへの遷移を確認すること。
+- Post-merge AC の opportunistic 検証 (`/review --full` の実起動確認) を verify phase で扱う。
 
 ## Consumed Comments
 No new comments since last phase.
