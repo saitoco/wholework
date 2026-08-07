@@ -163,6 +163,11 @@ cutoff: 2026-08-04T15:29:04Z (`phase/ready` ラベル付与時刻)
 
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1150#issuecomment-5182119146
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1150#issuecomment-5182198198
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1150#issuecomment-5195223355
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1150#issuecomment-5202643322
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1150#issuecomment-5212268038
 ## issue retrospective
 
 `/issue 1150 --non-interactive` 実行時の retrospective (Issue コメントから転記)。
