@@ -144,3 +144,58 @@ Issue 本文の事実主張はいずれもコードベースと一致するこ�
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective — 非対話モードでの Auto-Resolve Log (AC3 の rubric text を既存 PENDING リトライ機構を明示的に除外する形へ具体化、Post-merge observation AC に `session=next` を付与)。AC1/AC2 の rubric と AC4 は修正不要と確認済み / https://github.com/saitoco/wholework/issues/1227#issuecomment-5216881303
+
+## issue retrospective
+
+**Non-interactive mode**: `--non-interactive` で実行。ambiguity 検出では Issue レベルで判断が必要な新規の曖昧ポイントは見つからず (Background の事実主張はすべてコードベースと一致確認済み、AC1/AC2 の実装先ファイル選択は `/issue` (What) と `/spec` (How) の責務境界に従い `/spec` に委譲するのが適切と判断)、以下 2 件は監査コメント/機械チェックに基づく一意に解決可能な修正として自動適用した。
+
+### Auto-Resolve Log
+
+- **AC3 の rubric text を具体化** — reason: 直前の triage AC audit コメント (2026-08-07) が Pattern 2 (常時 PASS 懸念) を指摘。`skills/auto/SKILL.md:445` に既存の PENDING リトライ機構 (#1115 の成果) が既にあり、grader がこれを「exit 2 経路の扱いが記述されている」と解釈すると実装 0 行で PASS しうるため、コメントが提示した修復案をそのまま採用し、既存機構を明示的に除外した rubric text に変更した。
+  - Other candidates: 修復せず現状維持 (Pattern 2 の懸念を残したまま) — 却下。監査コメントが具体的な修復案を提示済みで、他に妥当な選択肢がない。
+- **Post-merge の observation AC に `session=next` を付与** — reason: `scripts/check-skill-change-observation-ac.sh` が exit 2 (要対応) を検出。Issue body が `skills/verify/SKILL.md` / `skills/auto/SKILL.md` を参照しており、この Issue 自体がそれらの SKILL.md を変更対象とする可能性が高いため、self-update propagation (wholework 自己ホスティングによりスキル内容は会話セッション単位でキャッシュされる) の対象になる。
+  - Other candidates: なし — 機械チェックが検出した必須修正で選択の余地はない。
+
+修正なしで問題なしと確認した項目: AC1・AC2 の rubric (audit コメントで「常時 PASS ではない」と確認済み)、AC4 (`tests/auto-recovery.bats` は既存ファイルで Pattern 6.5 を満たす)。
+
+## spec retrospective
+
+### Minor observations
+
+- Issue 本文は「判定表は `/verify` 内でのみ使われる」と述べているが、実際には `modules/orchestration-fallbacks.md#ci-wait-silence-timeout` (#1221 で追加) が既に `skills/verify/SKILL.md` Step 5 の内部見出しを文字列参照している。「参照されていない」のではなく「SKILL.md の内部見出しへの脆い文字列参照に依存している」が正確な現状であり、これは本 Issue が解こうとしている問題の実例そのものだった。Issue 本文の主張は方向として正しく、修正ではなく Spec の Notes に補足として記録した。
+- `docs/structure.md` の `modules/` カウントは実測 42 に対し 41 と記載されており、本 Issue 着手前から 1 件のドリフトがあった。新規モジュール追加のたびにカウント更新が必要な設計上、この種のドリフトは再発しやすい。`/audit drift` が拾う想定だが、実測値との突合を Spec 段階で行ったことで是正機会になった。
+- `skills/auto/SKILL.md` の `allowed-tools` に `gh run list:*` / `gh run view:*` / `gh pr checks:*` がいずれも未登録だった。CI 状態を観測する pre-check を `/auto` に追加する以上これらは必須であり、skill-dev-constraints の「New gh command patterns in allowed-tools」(#75) に該当する。判定ロジックの設計に気を取られると見落としやすい種類の依存。
+
+### Judgment rationale
+
+- AC1 の「単一の参照点」を新規 `modules/` モジュールとして実装する判断は、AC 文言が 2 案 (モジュール / 参照リンク) を許容していたため曖昧ポイントだった。既存 SSoT モジュール群 (`l0-surfaces.md`, `phase-state.md`, `verify-classifier.md`) の規約と、`orchestration-fallbacks.md:392` が示す「SKILL.md 内部見出しへの参照は脆い」という実例の 2 点で一意に決まると判断し、非対話モードの auto-resolve として確定した。
+- AC3 を bash (`scripts/run-auto-sub.sh`) にも実装するかは判断が割れうる点だった。#1122 の補償層モラトリアムと、`ci-wait-silence-timeout` が prose のみで `apply-fallback.sh` ハンドラを持たない前例の 2 点から、prose 主体 + pointer comment に留めた。XL sub-issue route の bash 側は判定を持たないままになるが、これは意図的な範囲限定として Notes に明記した。
+- 新規環境変数 2 件 (`WHOLEWORK_CI_OUTAGE_RECHECK_SEC` / `WHOLEWORK_CI_OUTAGE_MAX_RECHECKS`) を導入し、固定値埋め込みを選ばなかった。実測された障害が約 5 時間継続しており待機間隔が運用上の調整対象になるため。代償として `docs/tech.md` + `docs/ja/tech.md` の環境変数表 2 ファイルが Changed Files に加わる。
+
+### Uncertainty resolution
+
+- Tier 3 sub-agent が `action=abort` を返せるかは実装確認が必要な点だった。`scripts/validate-recovery-plan.sh:41` の `valid_actions = {"retry", "skip", "recover", "abort"}` を読み、`abort` が既に有効値であることを確認したためスクリプト側の変更は不要と確定した。
+- `.claude/settings.json.template` の `permissions.allow` に生の `gh` サブコマンドを追加する必要があるかは不明だったが、実ファイルを読んだところ `scripts/*` パターンのみを列挙する方針であることが判明し、更新不要と確定した。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 判定基準の SSoT は新規 `modules/ci-failure-classifier.md` に置き、`skills/verify/SKILL.md` Step 5 の inline 判定表は削除して Read-and-follow 参照に置換する。AC1 の「重複定義になっていない」を満たすため、表を 2 箇所に残す実装は不可。
+- `/auto` の CI 障害判定は Tier 1 の**前**の pre-check として実装し、新しい Tier 番号を導入しない。`skills/auto/SKILL.md:935` の External kill pre-check と同じ位置・同じ形式を踏襲する。
+- `modules/orchestration-fallbacks.md` に新規カタログエントリは追加しない (#1122 モラトリアム)。既存 `ci-wait-silence-timeout` の cross-reference を新モジュールへ repoint するのみ。
+- bash 側 (`scripts/run-auto-sub.sh`) は pointer comment 1 行のみ。判定ロジックの bash 実装は本 Issue のスコープ外。
+
+### Deferred Items
+
+- XL sub-issue route (`scripts/run-auto-sub.sh` の `run_phase_with_recovery()`) には CI 障害判定を実装しない。bash 側での機械判定が必要になった場合は別 Issue で扱う。
+- Post-merge の observation AC (`event=auto-run session=next`) は次回の `/auto` 実行時に人が観測して判定する。実装フェーズでチェックを試みない。
+
+### Notes for Next Phase
+
+- `skills/auto/SKILL.md` の frontmatter `allowed-tools` への `gh run list:*` / `gh run view:*` / `gh pr checks:*` 追加を忘れないこと。実装ステップ 4 の pre-check がこれらを使う。`scripts/check-allowed-tools.sh` が中間コミット前に検出する想定だが、Spec の Tool Dependencies にも明記済み。
+- `docs/structure.md` の `modules/` カウントは 41 → **43** (実測 42 + 新規 1)。42 と書くと誤り。`docs/ja/structure.md` は全角括弧の日本語書式 `（43 ファイル）` を維持すること。
+- `skills/auto/SKILL.md` は body に半角 `!` を含められない (`validate-skill-syntax.py` の MUST 制約)。pre-check の記述文で使わないこと。
+- `docs/ja/{workflow,tech,structure}.md` の 3 ファイルはいずれも英語版と同時に更新する必要がある (`docs/translation-workflow.md` の同期義務対象)。
+- AC1 の dedup は実装ステップ 2 (inline 表削除) と実装ステップ 10(c) (bats dedup ガード) の両方で担保する設計。片方だけでは rubric grader が「重複定義が残っている」と判定しうる。
