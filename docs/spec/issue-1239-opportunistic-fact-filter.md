@@ -15,6 +15,7 @@
 - `modules/verify-patterns.md`: change — §10 (Opportunistic Post-Merge Conditions) に `keyword=` の既存 AC 一括付与スコープ外方針を追記
 - `tests/opportunistic-search.bats`: change — `--facts` トークンフィルタの新規テストケース追加 (`fact gate: ...` 命名規則)
 - `docs/structure.md`: [Steering Docs sync candidate] `scripts/opportunistic-search.sh` の説明 ("opportunistic skill search and observation event scan", line 206) が `--facts` 追加後も正確か確認。役割自体は変わらないため変更不要見込みだが `/code` で最終判断 (`docs/ja/structure.md` の対応行も同様)
+- `skills/code/SKILL.md`, `skills/issue/SKILL.md`, `skills/review/SKILL.md`, `skills/spec/SKILL.md`, `skills/verify/SKILL.md`: change — `modules/opportunistic-verify.md` Step 1 が新たに `collect-run-facts.sh` を呼ぶため、この 5 skill の `allowed-tools` に `${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*` を追加 (`scripts/validate-skill-syntax.py` のクロスファイル検証で検出。Code Retrospective 参照)
 
 ## Implementation Steps
 
@@ -59,6 +60,8 @@
 
 **Effect measurement (baseline)**: 14 件 (opportunistic mode, skill `/verify`。scope: `phase/verify` ラベル付き closed Issue のうち `verify-type: opportunistic` タグ + skill 名 `/verify` を含む Pre-merge/Post-merge 条件。session `33233-1786023637` で計測、Issue #1239 本文記載)。Implementation Step 5 の実施後、`/code` はこの行の直下に実装後の件数・facts のソース・計測日を追記すること (AC8 の充足条件)。
 
+**Effect measurement (after implementation, 2026-08-07)**: `scripts/opportunistic-search.sh /verify` (`--facts` なし) で同じ母集団を再計測したところ **13 件** (ベースライン計測時点 session `33233-1786023637` から2日経過し数件クローズ等で微減。14→13 は同一計測手法の自然変動であり、`--facts` 未指定時に絞り込みが効いていないこと自体はこの再計測で確認済み — 後述のバックワード互換性確認と同義)。同じ母集団に対して `--facts` を付与し、spec→code→review→merge を完了した pr route セッション (Size M) を想定した代表的な run-facts JSON (`fact_tokens: ["pr route","Size M","spec","code","review","merge","#1300"]`) で絞り込むと **5 件** (#1051, #1053, #231, #436, #781) まで減少した — **61.5% 除外 (13→5)**。facts のソース: 実行中の `/auto` セッションが存在しない単発実行環境のため、Implementation Step 5 の指示 (「実際または代表的な run-facts JSON」) に従い、実際の `collect-run-facts.sh` 出力形式に相当する代表的 JSON (`.tmp/facts-repr-1239.json`) を使用した。
+
 ### Post-merge
 
 - 次回以降の skill 完了時の opportunistic verification で、候補件数が変更前 (14 件) より減少していることを観察する <!-- verify-type: observation event=auto-run session=next -->
@@ -75,3 +78,49 @@
 ## Consumed Comments
 
 - **saito** (MEMBER, first-class): Issue Retrospective。Auto-Resolved Ambiguity Points の根拠 (`--facts` 検索文字列を `--facts-file` との部分文字列衝突を避けて `--facts <path>` に変更した理由、`--context-file` 伝播検証 AC を追加した理由、session id 解決方式を設計時判断に据え置いた理由) を記録。Background の事実主張はコードベース実測で裏付け確認済みとのこと — 本 Spec の調査でも独立に同じ結論を確認した。https://github.com/saitoco/wholework/issues/1239#issuecomment-5216043099
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Spec の `## Changed Files` に含まれていなかった 5 つの `skills/*/SKILL.md` (code/issue/review/spec/verify) の `allowed-tools` に `${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*` を追加した。原因: `modules/opportunistic-verify.md` Step 1 が新規に `collect-run-facts.sh` を呼ぶようになったため、`scripts/validate-skill-syntax.py` のクロスファイル検証 (呼び出し元 skill の allowed-tools に呼び出し先スクリプトが宣言されているかを確認) が 5 件のエラーを検出した。Spec 作成時にこのクロスファイル依存が見落とされていた — `modules/opportunistic-verify.md` は 5 skill から共有されるモジュールであるため、このモジュールに新しいスクリプト呼び出しを追加する変更は常に全呼び出し元の allowed-tools 更新を伴う。今後同様のモジュール変更を計画する際は、Spec 作成段階で `grep -rl "modules/<name>\.md" skills/*/SKILL.md` によって呼び出し元一覧を洗い出し、Changed Files に含めることを検討する。
+
+### Design Gaps/Ambiguities
+
+- N/A (Spec の Notes セクションで事前に解決済みの論点以外に新規の設計上の疑問点はなかった)
+
+### Rework
+
+- N/A (上記の allowed-tools 追加以外に手戻りは発生しなかった)
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- All 10 Pre-merge acceptance conditions verified PASS against the PR branch (4 `file_contains`, 4 `rubric`, 1 `command` via CI reference fallback, 1 `github_check`) — no MUST issues, so the review posted as `COMMENT` rather than `REQUEST_CHANGES`
+- `git merge-tree` base-branch conflict pre-check found no `changed in both` blocks — no base-branch conflict context needed for the review agent
+- The 1 SHOULD finding from `review-light` (session-pointer/`collect-run-facts.sh` Bash-tool-call fencing ambiguity in `modules/opportunistic-verify.md` Step 1) was fixed in this phase rather than deferred, since it was a low-risk documentation clarification directly preventing a previously-fixed misattribution bug class (#1224) from being reintroduced
+
+### Deferred Items
+- Existing opportunistic/observation AC still lack `keyword=` attributes (unchanged from the code-phase handoff — bulk backfill remains out of scope; see `modules/verify-patterns.md` §10)
+- The effect measurement (13→5, 61.5%) still uses a representative run-facts JSON rather than a real `/auto` session's output — a real measurement is only available once `modules/opportunistic-verify.md`'s new Step 1 has actually run inside an `/auto` session (unchanged from code-phase handoff)
+
+### Notes for Next Phase
+- `/merge` can proceed: CI all SUCCESS (`wait-ci-checks.sh`: 9/9 passed), no MUST issues, all Pre-merge AC checkboxes already `[x]`
+- The Post-merge observation condition (`event=auto-run session=next`) remains unchecked by design — it fires only after a real `/auto` session runs with the new Step 1 in place; `/verify` should not expect it to resolve immediately post-merge
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. All 10 Pre-merge acceptance conditions (4 `file_contains`, 4 `rubric`, 1 `command`, 1 `github_check`) verified PASS against the implementation as merged into the PR branch, with no structural divergence between the Spec's Implementation Steps and the actual diff beyond the already-self-disclosed `allowed-tools` addition (recorded in the Spec's own Code Retrospective).
+
+### Recurring issues
+
+Two independent SHOULD-severity findings landed in the same small `modules/opportunistic-verify.md` Step 1 section across this PR's two review passes: an earlier pass (12:56Z, prior to this `/review` invocation) found a Bash-redirect-vs-Write-tool inconsistency (already fixed in commit `acd4cfb0` before this review ran); this pass's `review-light` agent found a second, independent issue — `restore_auto_session_pointer` and the subsequent `collect-run-facts.sh` call were presented as separate, unfenced steps, which could reintroduce the exact session-misattribution class Issue #1224 fixed if an executing agent splits them into separate Bash tool calls (fixed in this pass, combining them into one fenced block per Step 3's existing pattern).
+
+Both findings share a root cause: this module's Step 1 (`--facts` resolution) was newly added prose describing a multi-command procedure, and did not follow the two conventions this same file's Step 3 already established (Write tool for `.tmp/` output, single fenced Bash block for session-pointer-dependent command sequences). When a new Step is modeled after prose description rather than copying an existing Step's established fencing/tooling pattern, both issues recur. Worth flagging for future module edits that add new multi-command procedures near existing ones with established conventions: explicitly diff the new Step's presentation against the nearest existing Step with the same shape (here, Step 3) rather than composing it independently.
+
+### Acceptance criteria verification difficulty
+
+Nothing to note. No UNCERTAIN results, no missing or inaccurate verify commands. The 4 `rubric` conditions (session-id-resolution documentation, `--context-file` propagation documentation, `keyword=` policy recording, numeric effect-measurement recording) all resolved cleanly against the PR diff and Spec content, including the AC8 numeric-comparison condition, whose Spec text needed to explain a small baseline drift (14→13, attributed to natural population change over 2 days) before presenting the actual `--facts`-filtered comparison (13→5) — the explanation was judged sufficient to satisfy "baseline is 14" without requiring a strict re-measurement against the exact original 14.

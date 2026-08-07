@@ -548,3 +548,56 @@ teardown() {
     echo "$output" | grep -v "^Warning" | jq -e 'length == 1' > /dev/null
     echo "$output" | grep -v "^Warning" | jq -e '.[0].number == 403' > /dev/null
 }
+
+@test "fact gate: token match in condition text includes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 800}]'
+    export MOCK_ISSUE_BODY_800='- [ ] /verify skill checks pr route candidates <!-- verify-type: opportunistic -->'
+    echo '{"session_id":"s1","issues":[{"number":1,"fact_tokens":["pr route"]}]}' > "$BATS_TEST_TMPDIR/facts.json"
+
+    run bash "$SCRIPT" /verify --facts "$BATS_TEST_TMPDIR/facts.json"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 800' > /dev/null
+}
+
+@test "fact gate: token mismatch excludes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 801}]'
+    export MOCK_ISSUE_BODY_801='- [ ] /verify skill checks unrelated candidates <!-- verify-type: opportunistic -->'
+    echo '{"session_id":"s1","issues":[{"number":1,"fact_tokens":["pr route"]}]}' > "$BATS_TEST_TMPDIR/facts.json"
+
+    run bash "$SCRIPT" /verify --facts "$BATS_TEST_TMPDIR/facts.json"
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
+}
+
+@test "fact gate: --facts omitted matches unconditionally (backward compatible)" {
+    export MOCK_ISSUE_LIST='[{"number": 802}]'
+    export MOCK_ISSUE_BODY_802='- [ ] /verify skill checks unrelated candidates <!-- verify-type: opportunistic -->'
+
+    run bash "$SCRIPT" /verify
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 802' > /dev/null
+}
+
+@test "fact gate: nonexistent --facts path disables gate with a warning" {
+    export MOCK_ISSUE_LIST='[{"number": 803}]'
+    export MOCK_ISSUE_BODY_803='- [ ] /verify skill checks unrelated candidates <!-- verify-type: opportunistic -->'
+
+    run bash "$SCRIPT" /verify --facts "$BATS_TEST_TMPDIR/nonexistent-facts.json" 2>&1
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Warning:"*"--facts"*"not found"* ]]
+    echo "$output" | grep -v "^Warning" | jq -e 'length == 1' > /dev/null
+    echo "$output" | grep -v "^Warning" | jq -e '.[0].number == 803' > /dev/null
+}
+
+@test "fact gate: ignored in event mode (--event) -- --facts-file/when= remain the only event-mode gates" {
+    export MOCK_ISSUE_LIST='[{"number": 804}]'
+    export MOCK_ISSUE_BODY_804='- [ ] pr route observed <!-- verify-type: observation event=auto-run -->'
+    echo '{"session_id":"s1","issues":[{"number":1,"fact_tokens":["token-not-in-condition"]}]}' > "$BATS_TEST_TMPDIR/facts.json"
+
+    run bash "$SCRIPT" --event auto-run --facts "$BATS_TEST_TMPDIR/facts.json"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 804' > /dev/null
+}

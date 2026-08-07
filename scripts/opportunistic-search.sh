@@ -3,12 +3,13 @@
 # Issue search helper script for opportunistic verification
 #
 # Usage:
-#   scripts/opportunistic-search.sh <skill-name> [--dry-run]
+#   scripts/opportunistic-search.sh <skill-name> [--dry-run] [--facts <path>]
 #   scripts/opportunistic-search.sh --event <event-name> [--dry-run] [--context-file <path>] [--facts-file <path>] [--session <id>]
 #
 # Examples:
 #   scripts/opportunistic-search.sh /issue
 #   scripts/opportunistic-search.sh /spec --dry-run
+#   scripts/opportunistic-search.sh /verify --facts .tmp/facts-session1.json
 #   scripts/opportunistic-search.sh --event pr-review-full
 #   scripts/opportunistic-search.sh --event auto-run --dry-run
 #   scripts/opportunistic-search.sh --event pr-review-full --context-file /tmp/spec.md
@@ -45,6 +46,17 @@
 # (backward compatible). See modules/observation-trigger.md § Condition Check
 # Gate (when=).
 #
+# --facts <path>: opportunistic mode (--event omitted) only. Pre-filters matches by
+# run-fact token substring: a matched AC line is only included if its condition text
+# (lowercased, HTML comments and checkbox markup stripped) contains at least one token
+# from --facts <path>'s collect-run-facts.sh JSON (unioned fact_tokens across all
+# issues, same matching logic as scripts/scan-pending-ac.sh's --facts). No AC-side
+# attribute is required. Ignored in event mode (--event) -- event mode uses
+# --facts-file/when= instead. When --facts <path> is omitted, missing, or unparseable,
+# a warning is printed and the gate is disabled (fail-open), the same convention as
+# --context-file/--facts-file above. Distinct from --facts-file <path>, which gates
+# event-mode when=<axis>:<value> clauses against structured run-facts fields.
+#
 # Output: JSON array [{"number": N, "condition": "condition text"}]
 #         Empty array [] when no matches found
 
@@ -58,6 +70,7 @@ EVENT_NAME=""
 DRY_RUN=false
 CONTEXT_FILE=""
 FACTS_FILE=""
+FACTS_PATH=""
 SESSION_ARG=""
 
 while [ $# -gt 0 ]; do
@@ -88,6 +101,14 @@ while [ $# -gt 0 ]; do
                 exit 1
             fi
             FACTS_FILE="$2"
+            shift 2
+            ;;
+        --facts)
+            if [ $# -lt 2 ]; then
+                echo "Error: --facts requires an argument" >&2
+                exit 1
+            fi
+            FACTS_PATH="$2"
             shift 2
             ;;
         --session)
@@ -154,6 +175,22 @@ fi
 if [ -n "$FACTS_FILE" ] && [ ! -f "$FACTS_FILE" ]; then
     echo "Warning: --facts-file '${FACTS_FILE}' not found, falling back to lazy run-facts collection" >&2
     FACTS_FILE=""
+fi
+
+# --facts <path>: resolve the union of fact_tokens (lowercased) from the given
+# collect-run-facts.sh JSON, same logic as scripts/scan-pending-ac.sh's --facts. Missing
+# path or parse failure disables the gate with a warning (fail-open), matching the
+# --context-file/--facts-file convention above rather than scan-pending-ac.sh's hard error.
+FACT_TOKENS_LOWER=""
+if [ -n "$FACTS_PATH" ]; then
+    if [ ! -f "$FACTS_PATH" ]; then
+        echo "Warning: --facts '${FACTS_PATH}' not found, disabling fact-token filter gate" >&2
+    else
+        FACT_TOKENS_LOWER=$(jq -r '[.issues[].fact_tokens[]?] | unique | .[]' "$FACTS_PATH" 2>/dev/null | tr '[:upper:]' '[:lower:]') || {
+            echo "Warning: failed to parse --facts file '${FACTS_PATH}', disabling fact-token filter gate" >&2
+            FACT_TOKENS_LOWER=""
+        }
+    fi
 fi
 
 # resolve_run_facts: lazily resolve run facts JSON, once per process. Called on demand by
@@ -267,6 +304,33 @@ for N in $ISSUE_NUMBERS; do
 
     # Convert each matched line to a JSON entry
     while IFS= read -r line; do
+        # Extract text with HTML comments and checkbox markup removed
+        CONDITION=$(echo "$line" \
+            | sed 's/^- \[ \] //' \
+            | sed 's/ *<!--.*-->//g')
+
+        # Fact-token filter gate (opportunistic mode only, --event unset): skip lines
+        # whose lowercased CONDITION does not contain any --facts token as a substring.
+        # No --facts / empty FACT_TOKENS_LOWER means unconditional match (backward
+        # compatible). Not applied in event mode -- event mode uses --facts-file/when=
+        # instead. See scripts/scan-pending-ac.sh for the same matching approach.
+        if [ -z "$EVENT_NAME" ] && [ -n "$FACT_TOKENS_LOWER" ]; then
+            CONDITION_LOWER=$(echo "$CONDITION" | tr '[:upper:]' '[:lower:]')
+            FACT_MATCHED=false
+            while IFS= read -r tok; do
+                [ -z "$tok" ] && continue
+                case "$CONDITION_LOWER" in
+                    *"$tok"*)
+                        FACT_MATCHED=true
+                        break
+                        ;;
+                esac
+            done <<< "$FACT_TOKENS_LOWER"
+            if [ "$FACT_MATCHED" = false ]; then
+                continue
+            fi
+        fi
+
         # Condition check gate: skip lines whose keyword= attribute does not
         # appear in CONTEXT_FILE once path-like tokens (e.g. docs/workflow.md) are
         # stripped out. No keyword= attribute or no --context-file means unconditional
@@ -357,10 +421,6 @@ for N in $ISSUE_NUMBERS; do
             fi
         fi
 
-        # Extract text with HTML comments and checkbox markup removed
-        CONDITION=$(echo "$line" \
-            | sed 's/^- \[ \] //' \
-            | sed 's/ *<!--.*-->//g')
         RESULTS=$(echo "$RESULTS" | jq --argjson n "$N" --arg c "$CONDITION" '. += [{"number": $n, "condition": $c}]')
     done <<< "$MATCHED"
 done
