@@ -93,14 +93,14 @@
 | run-code.sh | code | Sonnet | high | 実装には徹底した推論が必要 |
 | run-review.sh | review | Sonnet | high | orchestrator は dispatch 以外にも実質的な推論作業を行う — Step 7.2/7.4/7.6 は外部レビューのフィードバックを解釈して fix コミットを作成しており、run-code.sh 自身の実装推論と同種の作業である |
 | run-merge.sh | merge | Sonnet | low | 機械的なマージ操作、推論は最小限でよい |
-| issue-scope | issue（L/XL のみ） | Opus | — | `/issue` Step 11a で L/XL 並列調査向けに呼び出される。スコープ特定精度はサブ issue 境界判断に直結 |
-| issue-risk | issue（L/XL のみ） | Opus | — | `/issue` Step 11a で L/XL 並列調査向けに呼び出される。リスク評価精度が受入条件品質を高める |
-| issue-precedent | issue（L/XL のみ） | Opus | — | `/issue` Step 11a で L/XL 並列調査向けに呼び出される。前例抽出が受入条件品質を高める |
-| review-bug | review | Opus | — | バグ検出は最高精度が必要（サブエージェント、effort は親から継承） |
-| review-spec | review | Opus | — | Spec 逸脱は高精度が必要（サブエージェント、effort は親から継承） |
-| review-light | review | Sonnet | — | 軽量統合レビュー（サブエージェント、effort は親から継承） |
-| orchestration-recovery | auto（リカバリ） | Sonnet | — | Bash Tier 1–2 が失敗したとき `spawn-recovery-subagent.sh` が起動する Tier 3 リカバリ診断エージェント。フェーズ状態を分析し最小リカバリプランを JSON で生成 |
-| frontend-visual-review | verify（visual-diff） | Opus | — | 3 パネル比較画像からビジュアルギャップを列挙。`visual_diff` verify コマンド向けに `modules/visual-diff-adapter.md` が起動 |
+| issue-scope | issue（L/XL のみ） | Opus | high | `/issue` Step 11a で L/XL 並列調査向けに呼び出される。スコープ特定精度はサブ issue 境界判断に直結。`run-issue.sh` 自身の `--effort high` に合わせ、agent frontmatter に `effort: high` を設定 (#1063) — sub-agent の effort をオーケストレーターセッションから分離 |
+| issue-risk | issue（L/XL のみ） | Opus | high | `/issue` Step 11a で L/XL 並列調査向けに呼び出される。リスク評価精度が受入条件品質を高める。`run-issue.sh` 自身の `--effort high` に合わせ、agent frontmatter に `effort: high` を設定 (#1063) — sub-agent の effort をオーケストレーターセッションから分離 |
+| issue-precedent | issue（L/XL のみ） | Opus | high | `/issue` Step 11a で L/XL 並列調査向けに呼び出される。前例抽出が受入条件品質を高める。`run-issue.sh` 自身の `--effort high` に合わせ、agent frontmatter に `effort: high` を設定 (#1063) — sub-agent の effort をオーケストレーターセッションから分離 |
+| review-bug | review | Opus | high | バグ検出は最高精度が必要。`run-review.sh` 自身の `--effort high` に合わせ、agent frontmatter に `effort: high` を設定 (#1063) — sub-agent の effort をオーケストレーターセッションから分離 |
+| review-spec | review | Opus | high | Spec 逸脱は高精度が必要。`run-review.sh` 自身の `--effort high` に合わせ、agent frontmatter に `effort: high` を設定 (#1063) — sub-agent の effort をオーケストレーターセッションから分離 |
+| review-light | review | Sonnet | high | 軽量統合レビュー。`run-review.sh` 自身の `--effort high` に合わせ、agent frontmatter に `effort: high` を設定 (#1063) — sub-agent の effort をオーケストレーターセッションから分離 |
+| orchestration-recovery | auto（リカバリ） | Sonnet | — | Bash Tier 1–2 が失敗したとき `spawn-recovery-subagent.sh` が起動する Tier 3 リカバリ診断エージェント。フェーズ状態を分析し最小リカバリプランを JSON で生成。#1063 の `effort:` frontmatter 導入の対象外 — `spawn-recovery-subagent.sh` はこのエージェントを Task ツールの sub-agent として起動せず、frontmatter を除去した本文のみを独立した `claude -p ... --effort medium` プロセスへ渡すため、`effort:` frontmatter を設定しても読み込まれない。effort の明示はスクリプト側の `--effort medium` フラグで既に達成済み |
+| frontend-visual-review | verify（visual-diff） | Opus | high | 3 パネル比較画像からビジュアルギャップを列挙。`visual_diff` verify コマンド向けに `modules/visual-diff-adapter.md` が起動。`run-*.sh` ラッパーを経由せず呼び出し元セッションのコンテキストで実行されるため、従来は実効 effort が不定だった。Opus 5 が推奨する intelligence-sensitive タスクの最低値に基づき、agent frontmatter に `effort: high` を設定 (#1063) |
 | triage（skill） | triage | Sonnet | — | メタデータ付与、Sonnet で十分。インライン実行（`run-*.sh` ラッパーなし）— `/auto` が未ラベル issue に triage を連鎖させる場合も含む — のため effort は設定しない |
 | auto（skill） | orchestration | Sonnet | — | 親オーケストレーター、ユーザーの Claude Code セッションでインライン実行（`run-*.sh` ラッパーなし）。各子フェーズはフェーズ固有の effort で `run-*.sh` 経由で実行される。スキルレベルでは effort を設定しない |
 | audit（skill） | audit | Sonnet | — | drift 検出 (`drift`)・脆弱性解析 (`fragility`)・プロジェクト健全性統計 (`stats`)・XL サブ Issue 進捗 (`progress`)・/auto セッションレトロスペクティブ (`auto-session`); Sonnet で十分。インライン実行 (`run-*.sh` ラッパーなし) のため effort は設定しない |
