@@ -111,6 +111,28 @@
 - **#1158 の sub-issue 分割から区分 C 相当の 3 AC 行 (#708 条件1・2 / #719 条件1) がこぼれ落ちた** — 親 Issue が解消しようとしている滞留が、分割作業自体の副産物として新たに残った。
 - **AC が「評価者が判定に必要とする情報」を AC 自身に含めていない** — rubric の参照ファイル明示と、数値 AC の母集団定義の 2 形態。
 
+## Observation Dispatch 結果 (Step 5、ユーザー要請により追加実行)
+
+当初はスキップしたが、「XL を auto で実行するパスは実測が少ないので今回確認できる AC が残っているはず」というユーザー指摘を受けて実行した。
+
+**選抜方法の逸脱 (意図的)**: `skills/auto/SKILL.md` Step 5 は「昇順 (最も古い滞留から) 先頭 `OBSERVATION_DISPATCH_THRESHOLD` 件」と定めるが、昇順先頭 5 件 (#446 / #477 / #478 / #484 / #486) のうち本セッションが判定できるのは #484 のみで、残り 4 件は前提不成立 (`/issue` 未実行 / 外部 API 統合 Spec なし / `when=mode:batch` に対し本セッションは `single` / 削除系 PR なし) により SKIPPED になる見込みだった。ユーザーの意図は「本 XL 実行の事実で答えられる AC を回収する」ことであるため、86 候補の条件文を精査して**本セッションの事実で判定可能なもの**を 5 件選抜した。
+
+| # | 条件 | 結果 | 根拠 |
+|---|---|---|---|
+| #484 | `/verify` で Improvement Proposals が3層分類され Tier 1 のみ Issue 化 | **PASS** → `phase/done` | `retro_proposal_classified` 全期間 84 件: T1 42 (`issue_created` 30) / T2 25 (全 `memory_proposal`) / T3 17 (全 `spec_only`)。`issue_created` は Tier 1 のみ |
+| #759 | Tier 2/3 自動回復が発生した Issue の `/verify` で新基準の判断が一意 | **PASS** → `phase/done` | #1166 (T2+T3+manual) / #1167 (T2) の 2 ケースで同一の機械的判定 (`orchestration-recoveries.md` の grep) → 重複記録ゼロ |
+| #961 | 並列セッション環境で merge-to-main が他セッションのブランチに影響しない | **PASS** → `phase/done` | 16 回の merge-to-main (spec 5 / operate 1 / verify 10)、concurrent_commit 69 件、他セッションのブランチ HEAD 保持を確認。checkout レス fallback が 2 経路とも実発動 |
+| #1171 | operate route の run-facts で route が patch と区別される | **UNCERTAIN** → `phase/verify` 維持 | #1166 が operate 完走したが `route: pr`。probe は `ROUTE=="patch"` 時のみ発火し、#1240 により入力が `code-pr` だったため未到達。実装ロジックを切り分けられない |
+| #1123 | 新規 `manual-recovery-review-rerun` エントリが追加されない | **UNCERTAIN** → `phase/verify` 維持 | エントリ単位では fix 後 3 件追加 / group-key 単位では bare key の蓄積ゼロ。条件の単位が #1123 自身の grouping 変更で多義化 |
+
+**PASS 3 件が `phase/done` へ到達**し、滞留が 3 件減少した。UNCERTAIN 2 件はいずれも「証拠は確定的だが判定を一意にできない」ケースで、Issue コメントに再検証条件を明記した。
+
+**deferred**: threshold 5 のため、同じく判定可能と判断した #761 (Tier 2 の Spec 記録 — #1181 で機構が変更され前提が無効化された可能性) / #822 (manual recovery の Spec 自動追記 — 同上) / #1213 (`bats --jobs` 並列実行の観察) は次回 auto-run scan へ送った。残り 81 件も同様。
+
+**副次的に検出した未起票候補**: `manual-recovery-review-rerun/ci-infra-outage-during-ci-wait` (count 2)。CI インフラ障害中の `ci_wait` で `/review` が watchdog kill または PENDING exit 2 に至るパターン。`recoveries-auto-fire.enabled: false` (#1179) のため自動起票されていない。
+
+**この dispatch から得られた最大の知見**: 昇順 (滞留順) の機械的選抜は、実行文脈が特殊な session (XL route など) では空振り率が高い。observation AC の dispatch は「古い順」より「今回の実行事実で答えられる順」で選ぶほうが回収効率が高く、その判定には run-fact JSON が表現できる軸 (route / mode / recovery_tiers) だけでは足りず条件文の意味解釈が要る。
+
 ## Filed Issues
 
 - #1240
