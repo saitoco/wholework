@@ -51,5 +51,43 @@
 - **Pre-merge verification item count について**: 8 件で `$STEERING_DOCS_PATH/tech.md` の Spec Simplicity Rules が定める light 上限 (5 件) を超えるが、「Verify command sync rule」により Issue 本文の Pre-merge acceptance criteria (8 件) を改変せず逐語コピーした結果である。`/verify` はこれらをインデックスで個別にチェックするため、統合による件数圧縮は行わなかった。
 - **`recoveries-auto-fire: enabled: false`** (`.wholework.yml`) — 本 Issue と直接の関係はないが、`orchestration-recovery` 調査中に確認した現在の設定として記録する。
 
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation followed Implementation Steps 1–5 as written, in the same order.
+
+### Design Gaps/Ambiguities
+- `docs/tech.md` の Behavioral Change Detection (Step 9) は、`tests/run-merge.bats` / `tests/verify-dirty-detection.bats` がフィクスチャの例示パスとして文字列 `"docs/tech.md"` を含んでいるだけで — 実際に本 Issue で変更した matrix 表の内容とは無関係 — フルスイート実行に倒れた。フルパスマッチによる誤検知に近いが、仕組み上意図された保守的挙動であり Spec 変更は不要と判断した。
+
+### Rework
+- `bats --jobs 18 tests/` の並列実行で `tests/post_merge_check.bats` の2ケース (`fail: gh issue reopen called when FAIL input given` / `multiple issues: processed sequentially`) が FAIL したが、同ファイル単体の直列実行では全 PASS。本 Issue の変更範囲外 (agents/*.md, docs/tech.md) であり、並列実行時のテスト間リソース競合によるフレークと判断し、再実装は行わなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `--light` モードで review-light エージェントによる4観点統合レビューを実施。MUST issue はゼロ、SHOULD issue 1件 (`docs/tech.md:130` の `#921` recalibration note が本PRの frontmatter 追加と矛盾する記述のまま残存)。
+- SHOULD issue は低リスクなドキュメント修正のため即時対応。`docs/tech.md` / `docs/ja/tech.md` の該当箇所を「#1063 で実装済み」に更新し、Follow-up 未実装という誤った記述を解消。
+- Pre-merge AC 8件 (grep 6件 + rubric 2件) はすべて PASS。CI は全9ジョブ SUCCESS。ベースブランチとのコンフリクトなし。
+
+### Deferred Items
+- effort 値そのもののチューニング (Opus 5 指針に基づく down-sweep) — 本 Issue のスコープ外、後続 Issue に委ねる (Issue Out of Scope に明記済み)。
+- Post-merge AC: `/review --full` 実行による `review-bug`/`review-spec` の frontmatter effort 起動確認 — opportunistic 検証待ち。
+
+### Notes for Next Phase
+- `/merge 1259` で問題なくマージ可能な状態。Pre-merge AC・CI・レビューいずれもブロッカーなし。
+- `docs/tech.md` の他の同期ギャップ (`docs/guide/autonomy.md` 未作成、`docs/guide/index.md` 更新遅延) は本PRと無関係の既存事象であり対応不要。
+
 ## Consumed Comments
 No new comments since last phase.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note. Implementation matched the Spec's Implementation Steps 1–5 exactly; the `orchestration-recovery` exclusion and `review-light` inclusion rationale in Spec Notes correctly reflected the actual code paths (`scripts/spawn-recovery-subagent.sh`, `skills/review/SKILL.md`).
+
+### Recurring issues
+- One instance worth flagging: when a frontmatter/config value is added to `agents/*.md` and referenced by a `docs/tech.md` matrix table row, other prose in the same file that predates the change (here, the `#921` recalibration note at line 130, which described the *absence* of the frontmatter as a "Follow-up not implemented here") can go stale even though it isn't the row being edited. The Spec's Implementation Steps enumerated the matrix table row edit but not this adjacent prose reference — a `grep -rn "agents/review-bug.md\|agents/review-spec.md" docs/tech.md` style self-consistency check before finalizing a doc-only PR would have caught it pre-merge.
+
+### Acceptance criteria verification difficulty
+- Nothing to note. All 8 pre-merge AC (6 `grep`, 2 `rubric`) resolved cleanly to PASS with no UNCERTAIN and no verify command inaccuracies.

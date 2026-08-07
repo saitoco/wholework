@@ -3,6 +3,7 @@ name: frontend-visual-review
 description: Compare 3-panel comparison images (Before / After / Diff highlight) and enumerate visual gaps as structured JSON
 tools: Read
 model: opus
+effort: high
 ---
 
 # Frontend Visual Review Agent

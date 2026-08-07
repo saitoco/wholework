@@ -3,6 +3,7 @@ name: issue-risk
 description: Risk Investigation: assess test impact, verify command effects, and breaking change potential (for L/XL Issue parallel investigation)
 tools: Read, Glob, Grep, SendMessage, Write
 model: opus
+effort: high
 ---
 
 # Risk Investigation Agent

@@ -3,6 +3,7 @@ name: review-spec
 description: Review: Spec/Documentation — verify spec deviation and documentation consistency
 tools: Read, Glob, Grep, Bash(git log:*, git diff:*, git show:*)
 model: opus
+effort: high
 ---
 
 # Review: Spec/Documentation
