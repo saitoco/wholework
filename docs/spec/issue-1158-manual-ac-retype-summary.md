@@ -149,18 +149,21 @@ Consumed Comments で提示された「79 件へ `when=` を併せて付与す�
 - なし。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Pre-merge AC 5 件 (すべて `rubric`) を独立 grader として再評価し、全件 PASS を確認 (Issue 側は既に `[x]`、更新不要)。AC2 の一次証拠が本 PR の diff に現れない点は Code Retrospective の自己申告どおりで、review でも同じ制約を確認した
-- capabilities.workflow: true だが ARGUMENTS に `--non-interactive` があるため fork context (再起動保証なし) と判定し、Workflow パスではなく static Task fan-out (review-spec + review-bug×2) を `run_in_background: false` の foreground 実行で運用した
-- review-spec + review-bug×2 (3 finder) が独立に発見した指摘を統合・重複排除した結果、MUST 0 件 / SHOULD 3 件 / CONSIDER 4 件。SHOULD 3 件はいずれもドキュメントの記述精度 (一括表現の過大主張、テーブル合計不一致、Spec 申し送り事項の未消化) で、adversarial verify で 3/4 件 CONFIRMED、CLAUDE.md 言語規約の指摘 1 件は前例と整合するため REJECT (false positive) と判定した
-- MUST 0 件のため merge blocking はなし。SHOULD/CONSIDER 計 7 件はすべて低リスクなドキュメント修正であり、この phase 内で修正・コミット・プッシュまで完了させた (次フェーズへ持ち越さない判断)
+- pre-merge AC gate は `check-pre-merge-ac.sh` で unchecked_count=0、review-incomplete-fallback チェックも `matches_expected: true` (fallback ではなく organic completion) だったため、override マーカーなしでそのままマージへ進んだ
+- mergeable status は初回 `UNKNOWN` から30秒待機後に `clean` (CI success, review approved) へ解決し、conflict resolution は不要だった
+- squash merge により Issue #1158 は `closes #1158` で自動クローズされる想定 (BASE_BRANCH=main)
 
 ### Deferred Items
 - Post-merge AC (`/audit stats --retention` での Manual waiting 件数減少確認、`event=auto-run`) — `/verify` が observation 経路で評価する
-- rubric AC の可視範囲制約 (rubric text で参照ファイルを明示する設計) — Code Retrospective・review retrospective 双方で記録済みだが、本 Issue のスコープ外として対応せず
-- `run-auto-sub.sh` の operate route 判定欠落 (#1166 の再発防止) — Auto Retrospective に既存の Improvement Proposal あり、Issue 化は `/verify` の改善提案集約フェーズに委ねる
+- rubric AC の可視範囲制約 (rubric text で参照ファイルを明示する設計) — 本 Issue のスコープ外として対応せず
+- `run-auto-sub.sh` の operate route 判定欠落 (#1166 の再発防止) — Issue 化は `/verify` の改善提案集約フェーズに委ねる
+
+### Notes for Next Phase
+- `/verify 1158` 実行時は Post-merge AC (`/audit stats --retention` の Manual waiting 減少確認) が唯一の残存確認事項
+- rubric AC の可視範囲制約は将来の類似親 Issue で再発しうる設計上の gap として記録済み、`/verify` の改善提案集約フェーズで Issue 化を検討
 
 ### Notes for Next Phase
 - 本 PR マージ後、`/merge` → `/verify` の通常フローに進む。Post-merge AC は `event=auto-run` の発火を待つ observation 型のため、`/verify` 初回実行時は SKIPPED (waiting for event) となる想定
