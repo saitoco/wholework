@@ -189,3 +189,51 @@ N/A — 実装・テスト・verify いずれも一発で完了し、手戻り�
 ### Acceptance criteria verification difficulty
 
 Nothing to note — Pre-merge AC 5 件 (iteration 0) は全て静的検証で PASS、CI も全件 SUCCESS だった。Step 12 で追加した iteration 1 の AC 4 件は `/verify` 実行時に評価される。
+
+## Verify Retrospective (iteration 1 — fix cycle 後)
+
+Pre-merge 9 件全 PASS、Post-merge 2 件 SKIPPED (`session=next` 未伝播)。iteration 1 で追加した AC 6〜9 も全て PASS。
+
+### iteration 0 のガードがなぜ失敗を防げなかったか
+
+iteration 0 は「前景実行 + 明示 `timeout`」を要求したが、**`timeout: 600000` は Bash tool の上限値**であり、超過したコマンドは tool が自動的にバックグラウンドへ移行させる。つまりガードは失敗を**防がず先送りしていた**。
+
+`/auto 1234` の code phase での実測 (2026-08-07 14:46–16:14 JST):
+
+| 項目 | 実測 |
+|---|---|
+| silent no-op | **4 回連続** |
+| auto-retry | **3/3 上限到達** |
+| 空転 | 約 88 分 |
+| 同一実装の書き直し | 4 回 (各試行が前回の worktree を stale として削除) |
+
+3 回目のログが決定的だった: 「10分のタイムアウトを超えたためバックグラウンドに移行しました。完了通知を待って Step 9 以降を継続します。」
+
+**設計上の教訓**: 「ガードを分岐非依存な位置に置く」(iteration 0 の主眼) だけでは不十分で、**そのガードが物理的に守れる指示になっているか**の検証が要る。iteration 0 の Verify Retrospective は「前景実行のガードだけでは不十分だった (120s 固定 timeout がフルスイートを打ち切る)」と一段深い原因を捉えていたが、その修正 (`timeout: 600000` の明示) が **上限値そのものであること**を見落としていた。制約値を指示に書くときは、その値が上限か否かを確認する必要がある。
+
+### iteration 1 の対処が 4 層になった理由
+
+| 層 | 内容 | 役割 |
+|---|---|---|
+| 1 | ceiling ルールの明文化 | なぜ timeout だけでは不十分かを SKILL.md に残す |
+| 2 | 並列実行への切り替え (`bats --jobs`) | 主対策 — 上限を超えなければ分岐自体が発生しない |
+| 3 | 「バックグラウンド移行されたら待たずに失敗として報告」 | 第二の防御 — 層 2 が効かない環境での最後の砦 |
+| 4 | `--jobs` 不在時の分割実行フォールバック | 層 2 の前提 (GNU parallel) が崩れた場合の退避 |
+
+層 3 が重要。iteration 0 の失敗は「前景で起動したはずが勝手にバックグラウンドになった」状況でエージェントが待機したことなので、**移行が起きた後の行動**を規定しないと同じ穴が残る。
+
+### `/review` が捉えた 2 つの MUST
+
+- **コマンド置換 `$(...)` が worktree セッション内でブロックされる** — 親セッションも本日実際に遭遇 (`too complex to verify that it stays inside the worktree`)。review が再現確認のうえリテラル分解へ修正した。SKILL.md 本文に「エージェントが worktree 内で直接実行する Bash 例」を書く際の一般的な落とし穴で、`modules/verify-executor.md` の `command "..."` 形式 (verify-executor 経由なので影響なし) と混同しやすい
+- **fix cycle の実装を検証する Pre-merge AC が存在しなかった** — reopen 後の Issue body は iteration 0 の AC しか持たず、iteration 1 の実装 (並列化・ceiling 明記・構造テスト) を検証する条件がなかった。review が AC 4 件を追加し、Post-merge observation AC 2 件を「foreground 実行の形跡」から「並列形で起動され、バックグラウンド移行なしに完了」へ**反証可能な文言に書き換えた**
+
+後者は fix cycle 一般の構造的ギャップ。`/verify` FAIL → reopen → `/code` の経路では、Issue body の AC が iteration 0 のまま据え置かれるため、新しい実装の検証条件が自動では追加されない。今回は `/review` が気づいたが、機構としては保証されていない。
+
+### merge gate が 3 例目として機能した
+
+`/merge` が「未チェック pre-merge AC 4 件 (#6〜#9)」でブロックした。これは #1212/#1213 iteration 0 の override ケース (review が作業を残したまま終了) とは性質が異なり、**実際に AC を検証すれば解決する**ケースだった。親セッションが 4 件を検証して checkbox を更新し、merge を再実行して通過している。gate が「AC を追加したが検証しなかった」という抜けを正しく捕捉した。
+
+### Improvement Proposals
+
+- **fix cycle で Issue body の AC が iteration 0 のまま据え置かれる構造的ギャップ** — `/verify` FAIL → reopen → `/code` の経路で、新しい実装を検証する Pre-merge AC が自動では追加されない。今回は `/review` が MUST として指摘して 4 件追加したが、機構としては保証がない。`/code` の fix-cycle 経路 (`skills/auto/SKILL.md` Step 2a で検出される状態) に「iteration N の実装を検証する AC を Issue body へ追加する」ステップを設ける余地がある。ただし既存 Issue (#1096「新規追加する検証系テストの assert が実装前に FAIL することを確認させる」、#1125「パーサ系変更への negative/edge case 実測ステップの定型化」) と検証設計という点で隣接するため、独立起票せず本節に記録するに留める (Tier 2)
+- **制約値を指示に書く際、その値が上限か否かを確認する** — iteration 0 が `timeout: 600000` を「実測 ~407s をカバーする値」として書いたが、実際は tool の上限値であり超過時の挙動 (自動バックグラウンド移行) が指示の前提を壊していた。同種のパターン (tool/API の上限値をそのまま指示に埋め込む) は他にもありうるが、現時点で具体的な再発候補が特定できていないため、横断棚卸しは次に類似事例が出た時点で判断する (Tier 3)
