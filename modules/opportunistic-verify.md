@@ -47,7 +47,9 @@ No additional log retention mechanism is needed. The AI retrospects on its memor
 
 ### 3. Persist Judgment Results (Event Emission)
 
-Within Step 2's judgment loop, immediately after each condition's PASS/FAIL/SKIP result is determined — and before moving on to the next condition — emit one event per condition (do not aggregate; see Notes for the reason):
+Before emitting events for a candidate Issue's conditions, fetch that Issue's body once: `gh issue view <N> --json body -q .body`. Neither Step 1 (`opportunistic-search.sh`'s output is only `[{"number": N, "condition": "condition text"}]`, no body) nor Step 2 (pure AI retrospective over execution memory) provides it — this fetch is required for `ac_index` below.
+
+Within Step 2's judgment loop, immediately after each condition's PASS/FAIL/SKIP result is determined — and before moving on to the next condition — emit one event per condition (do not aggregate — see `modules/event-emission.md`'s `opportunistic_verify_result` entry for the rationale):
 
 ```bash
 source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
@@ -61,7 +63,7 @@ fi
 ```
 
 - **`AUTO_EVENTS_LOG` guard (required)**: skip the emit when `AUTO_EVENTS_LOG` is unset and `restore_auto_session_pointer` could not restore it either (e.g., a standalone run outside `/auto`) — the same policy as other non-wrapper emitters in `modules/event-emission.md`
-- **`ac_index`**: the 1-based position of this condition among the candidate Issue's full checkbox enumeration (pre-merge + post-merge, in order) — the same global-index convention used by `scripts/gh-issue-edit.sh --checkbox` and `scripts/check-pre-merge-ac.sh`. Determine it by counting `^- \[[ xX]\]` lines in the Issue body already fetched in Step 1/2
+- **`ac_index`**: the 1-based position of this condition among the candidate Issue's full checkbox enumeration (pre-merge + post-merge, in order) — the same global-index convention used by `scripts/gh-issue-edit.sh --checkbox` and `scripts/check-pre-merge-ac.sh`. Determine it by counting `^- \[[ xX]\]` lines in the Issue body fetched above
 - **`EMIT_ISSUE_NUMBER` and `restore_auto_session_pointer`'s target differ**: `restore_auto_session_pointer` takes the calling skill's own Issue/PR number (for session pointer resolution), while `EMIT_ISSUE_NUMBER` takes the candidate Issue number N being judged (recorded in the event's `issue` field, meaningful for downstream aggregation)
 
 ### 4. Update Checkboxes
