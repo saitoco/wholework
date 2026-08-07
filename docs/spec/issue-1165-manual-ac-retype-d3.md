@@ -246,13 +246,14 @@ Size L 維持の根拠も #1163 と同じ — リポジトリ内変更は 1 フ�
 - Step 9 の `opportunistic-search.sh --event auto-run` 実行で #1135 / #478 が母集団にマッチしなかった。当初は GitHub 検索インデックスの遅延 (Spec Notes で予告済み) を原因と推測したが、`scripts/collect-run-facts.sh` がこのセッションで `mode: single` を返すこと、および #1135 / #478 の該当 AC 行がいずれも `when=mode:batch` ゲート付きであることを実測確認した結果、真因は `opportunistic-search.sh` の `when=` 条件ゲート (mode 軸) による設計どおりの除外と判明した。再実行 (2 回目) でも解消しなかったのはインデックス遅延ではなく確定的なゲート除外であることの証跡であり、`gh issue view --json body` によるリテラル一致確認を一次情報として採用した判断自体は変更していない。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- GitHub 側の編集 (16 AC 行の再型付け、6 AC 行の retire、4 Issue の `phase/done` 遷移、#491 のインデント無害化) は全件、実行前の `gh issue view` 確認で既に完了済みと判明した。二重適用リスクを避けるため `.tmp/retype-d3.py` などの一括置換ヘルパは新規作成・実行せず、実データの個別確認スクリプト (`.tmp/verify-retype.py`) で置換済み内容をリテラル一致確認する方式に切り替えた。
-- ローカル成果物 (`docs/reports/manual-ac-retype-d3.md`) は本セッションで新規作成し、Spec の「再型付けマッピング」「retire マッピング」「対象外」の各表をそのまま転記、`## 検証` 節に実測結果を追記した。
-- Issue #1165 自身の Pre-merge AC 8 件 (rubric 3 + github_check 5) は全件 PASS と判定し、Issue 本文のチェックボックスを更新した。
+- Step 8 (Pre-merge AC 8 件: rubric 3 + github_check 5) はすべて PASS。CI 9 ジョブもすべて SUCCESS。Base Branch Conflict Pre-check (`git merge-tree`) でも `changed in both` は検出されず、main との競合なし。
+- `capabilities.workflow: true` が有効だが、本セッションは `--non-interactive` (fork context) で再呼び出し保証がないため、`workflow-guidance.md` の指示に従い Workflow パスをスキップし、静的 Task fan-out (review-spec + review-bug×2、foreground Agent 呼び出し) にフォールバックした。
+- review-bug×2 が独立して同一の根本原因誤帰属 (report:85 の「GitHub 検索インデックスの遅延」が実際は `when=mode:batch` ゲートによる設計どおりの除外) を実測検証で発見。2 段階検証 (general-purpose 検証エージェント 5 件) を経て MUST 3 / SHOULD 1 / CONSIDER 4 の計 8 件を line コメントとして投稿し、全件を修正・コミット・プッシュ済み (`c67e431d`)。
+- 修正は `docs/reports/manual-ac-retype-d3.md` と `docs/spec/issue-1165-manual-ac-retype-d3.md` の記述精度訂正のみで、GitHub 上の Issue 再型付け・retire・phase 遷移という Issue #1165 本来の成果物 (Pre-merge AC1-8 が検証する内容) には影響しない。
 
 ### Deferred Items
 
@@ -262,5 +263,20 @@ Size L 維持の根拠も #1163 と同じ — リポジトリ内変更は 1 フ�
 
 ### Notes for Next Phase
 
-- `opportunistic-search.sh --event auto-run` は #1135 / #478 をマッチ集合に含めない。これは検索インデックスの遅延ではなく、3 行とも `when=mode:batch` ゲート付きのため、`--batch` 以外のセッション (`collect-run-facts.sh` が `mode: single` を返す通常の `/code` / `/review` / `/verify` 実行) では `opportunistic-search.sh` の `when=` 条件ゲートが設計どおり除外する結果であり、時間を置いても解消しない。`gh issue view --json body` によるリテラル一致確認は完了しているため、`/review` / `/verify` はこの不一致を待機で解消しようとせず、リテラル一致確認済みの実データを正とすること。dispatch 確認が必要な場合は `--facts-file` に `mode: batch` を含む run facts を与えるか、実際の `/auto --batch` 実行時に確認すること。
-- Issue #1165 自体の Post-merge AC (`/audit stats --retention` での Manual waiting 件数減少確認) は post-merge のため `/verify` フェーズで扱う。
+- Issue #1165 自体の Post-merge AC (`/audit stats --retention` での Manual waiting 件数減少確認、`observation event=auto-run`) は post-merge のため `/merge` 後の `/verify` フェーズで扱う。
+- `opportunistic-search.sh --event auto-run` が #1135 / #478 をマッチ集合に含めないのは `when=mode:batch` ゲートによる設計どおりの確定的除外であり、`/verify` はこれを異常や遅延として扱わないこと (report / spec とも修正済み)。dispatch 確認が必要な場合は `--facts-file` に `mode: batch` を含む run facts を与えるか、実際の `/auto --batch` 実行時に確認すること。
+- `/merge 1230` 実行可能 (MUST issue は全件修正済み、CI 全件 SUCCESS、Pre-merge AC 全件 PASS)。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Spec 自身が § Notes で「GitHub 検索インデックスの遅延」という仮説を code フェーズ以前に予告していたため、code フェーズで実際にマッチ不一致が発生した際、この予告済み仮説へパターンマッチして採用し、実際の除外機構 (`opportunistic-search.sh` の `when=mode:batch` 条件ゲート) を検証しないまま Report / Code Retrospective (Rework) / Phase Handoff (Notes for Next Phase) の 3 箇所へ同一の誤診断を転記した。review フェーズで 2 系統の review-bug エージェントが `scripts/collect-run-facts.sh` の実行結果と `when=` ゲートのコード読解によって誤りを検出し、3 箇所すべてを修正した。Spec が事前に用意した仮説は、実際に発生した不一致の原因を検証済みとみなす根拠にはならない、という教訓が得られた。
+
+### Recurring issues
+
+同一の誤診断が 1 箇所ではなく report / spec 内の 2 箇所 (Rework、Notes for Next Phase) に転記され、計 3 箇所で修正が必要になった。「先行文書 (report) の記述をそのまま後続文書 (retrospective, handoff) へ転記する」構成では、誤りが 1 箇所に留まらず伝播することが実例として確認できた。record-then-propagate 型の成果物では、転記元を修正した際に転記先も連動して修正されているか確認する工程が有効と考えられる。
+
+### Acceptance criteria verification difficulty
+
+Issue #1165 の Pre-merge AC 8 件 (rubric 3 + github_check 5) はいずれも Step 8 で PASS と判定され、UNCERTAIN は発生しなかった。rubric によるマッピング表の網羅性・根拠記録の意味論的検証と、github_check による GitHub 実状態の直接確認が明確に役割分担しており、verify command の記述・分類に起因する曖昧さはなかった。
