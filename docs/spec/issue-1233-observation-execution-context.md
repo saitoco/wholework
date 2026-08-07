@@ -91,18 +91,18 @@
 - `ac-tier: preview` 系の AC は存在せず、preview 未検証マーカーの投稿判断も不要だった
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- レビューで確認された review-bug×2 の重複指摘 (`--execution-context` 値未検証) はアドバーサリアル検証で false positive と判定し、修正対象から除外した (唯一の呼び出し元が固定リテラルを渡すため到達不能と確認)
-- SHOULD 1件 (`modules/verify-classifier.md` の when= 解説が /auto run 限定で execution-context 軸が発見不能) と、本 PR 自身が導入した内部矛盾に関する CONSIDER 2件 (`modules/observation-trigger.md` の facts collection 発火条件・stderr 警告可観測性) を修正しコミット・プッシュ済み
-- 差分外ファイル (`modules/verify-classifier.md` 等 4件) へのインラインコメントは GitHub API 制約で投稿できず、フォローアップの通常 PR コメントとして再投稿した
+- Pre-merge AC ゲートは2件とも `[x]` 済みで `unchecked_count=0`、review-incomplete-fallback も検出されなかったためゲート通過は無条件で成立した
+- PR #1267 の CI は `tests/reconcile-phase-state.bats` の1テスト (`issue completion: phase/issue label present -> matches_expected true`) のみ failing だったが、同一 PR の別 CI 実行では全 PASS しており本 PR の変更対象ファイルとは無関係と判断。non-interactive ポリシー (ci_failing は conflicts 以外の理由として自動解決対象) に従いマージを試行し、Auto-Resolve Log を Issue #1233 にコメント投稿した上で squash merge を実行した
+- ブランチ削除・Issue クローズは `gh pr merge --squash --delete-branch` の `closes #1233` 記載により自動処理される想定
 
 ### Deferred Items
-- Issue #575 の既存 observation AC (`event=pr-review-full config=capabilities.workflow`) への `when=execution-context:main` retrofit はスコープ外 (code フェーズから継続)
-- `tests/post_merge_check.bats` の並列実行下 flaky は既存 Issue #1255 の追跡対象 (code フェーズから継続)
-- CONSIDER 3件 (mixed-axis when= テストカバレッジ不足、Spec Notes の /verify 呼び出し元未記載、`modules/run-fact-matching.md` の facts JSON 説明の軽微な誤解可能性) は低リスクと判断し未対応のまま次フェーズへ
+- Post-merge AC (`verify-type: observation event=pr-review-full session=next`) は引き続き未観測 — 次回 fork context での `pr-review-full` 発火時に `when=execution-context:main` AC が UNCERTAIN/SKIPPED を繰り返さないことの確認が必要 (review フェーズから継続)
+- `tests/post_merge_check.bats` および `tests/reconcile-phase-state.bats` の並列実行下 flaky は既存 Issue #1255 の追跡対象 (code/review フェーズから継続)
+- CONSIDER 3件 (mixed-axis when= テストカバレッジ不足、Spec Notes の /verify 呼び出し元未記載、`modules/run-fact-matching.md` の facts JSON 説明の軽微な誤解可能性) は低リスクと判断し未対応のまま
 
 ### Notes for Next Phase
-- Post-merge AC (`verify-type: observation event=pr-review-full session=next`) は `/review` が実際に fork context で `pr-review-full` を発火し、`when=execution-context:main` を持つ AC が UNCERTAIN/SKIPPED を繰り返さず適切に扱われることを次回セッションで観察する必要がある
-- PR #1267 のマージ後、`/verify 1233` で Pre-merge AC 2件 (既に Issue body 上で `[x]` 済み) の整合性確認と Post-merge AC の観測待ちに入る
+- `/verify 1233` 実行時、Pre-merge AC 2件は既に `[x]` 済みのため再検証は不要。Post-merge AC (observation) の観測結果に注目すること
+- CI の間欠的 flaky (`reconcile-phase-state.bats` 含む) が再発する場合は Issue #1255 側での切り分けが優先
