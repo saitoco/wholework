@@ -67,6 +67,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-07 07:22 UTC: manual-recovery-manual-recovery-commit-push-pr
+
+### Context
+- Issue #1234, phase: code-pr
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: 1
+
+### Diagnosis
+- cause: background-notification-wait
+- run-code.sh --pr silent no-op x4, exhausting auto-retry (3/3). Same failure mode as #1102/#1212/#1213 but recurring AFTER #1213 landed. The third attempt's log is decisive: 'bats tests/ フルスイートを実行中です。10分のタイムアウトを超えたためバックグラウンドに移行しました。完了通知を待って Step 9 以降を継続します。' #1213 mandates foreground execution with an explicit timeout of 600000ms, but 600000ms IS the Bash tool ceiling - once a full suite exceeds it the tool auto-moves the command to the background, and the agent then waits on a notification that never arrives in a claude -p surface. So an explicit timeout does not guarantee foreground execution; it only defers the same failure. Implementation was complete (6 files matching the Spec Changed Files) but uncommitted in worktree code+issue-1234 when the retry budget ran out. Parent session recovered manually: inspected the diff, ran the suite in PARALLEL (bats --jobs 18) which completed well inside the window with 1516 passed / 0 failed, committed with sign-off as 21429b96, pushed, and created PR #1246. Parallelisation is the candidate fix - the serial suite exceeds 10 minutes on this machine while CI runs it in 2-3 minutes.
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 ## 2026-08-07 06:34 UTC: manual-recovery-reconcile-override
 
 ### Context
