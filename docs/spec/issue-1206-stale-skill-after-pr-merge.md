@@ -145,20 +145,19 @@ Issue 本文「Proposal (Outline)」節に既に記録済みのため、Spec 側
 - `tests/run-merge.bats` の否定側テスト (`git pull --ff-only` が呼ばれないことの確認) で当初 `[ ! -f "$GIT_LOG" ]` を使ったが、`run-merge.sh` が既存の `git worktree list --porcelain` 呼び出しで `git` モックを起動するため常に失敗した。`grep -q "^pull --ff-only$" "$GIT_LOG"` の否定に変更して解消した。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Pre-merge rubric AC 4件 (AC1–4) を Issue 本文 + diff のみから再検証し、全て PASS と判定 (Spec は grader 入力に含めない設計方針を踏襲)
-- CI 全9件 SUCCESS、ベースブランチとのコンフリクトなし (`git merge-tree` pre-check) を確認した上で `REVIEW_DEPTH=light` の 1 エージェント統合レビューを実施
-- review-light が指摘した SHOULD (`scripts/run-merge.sh` の `gh pr view --json files` 100件 truncation) は、本 Issue が実装する検出・防止機構そのものの信頼性に直結するため fix 対象と判断し、`gh api pulls/{pr}/files --paginate` に置き換えて修正・回帰テスト追加・push 済み
+- Pre-merge AC ゲートは 4/4 checked、review-incomplete-fallback も未検出のため override 不要でそのまま squash merge を実行
+- `gh pr merge --squash --delete-branch` はリモートブランチ削除まで成功。ローカルブランチ削除のみ `worktree-code+issue-1206` を review worktree が使用中のため失敗したが、リモート反映には影響しないため無視して続行
 
 ### Deferred Items
-- Post-merge observation AC (`session=next`): 次回 skill を修正する Issue を pr route で完走させた後、同一セッション内でその skill を呼ぶ実行で stale な版が使われないか (または警告が出るか) を観察する。本 PR merge 後の別セッションで確認が必要 (Code フェーズからの引き継ぎを維持)
-- `gh pr view --json files` の 100件 truncation パターンは `skills/review/SKILL.md` 等の他呼び出し箇所にも既存 (review retrospective 参照)。今回のスコープでは修正せず、横断監査の要否は次回同種の truncation を踏んだ際に判断する
+- Post-merge observation AC (`session=next`): 次回 skill を修正する Issue を pr route で完走させた後、同一セッション内でその skill を呼ぶ実行で stale な版が使われないか (または警告が出るか) を観察する (review フェーズからの引き継ぎを維持)
+- `gh pr view --json files` の 100件 truncation パターンは他呼び出し箇所にも既存。今回のスコープ外のまま据え置き (review retrospective 参照)
 
 ### Notes for Next Phase
-- `/merge` はブロッキング MUST issue なし (COMMENT event で投稿済み) のため、そのまま進行可能
-- 追加修正コミット (`dac6722b`) は元の実装コミット群と同じ PR 内。`git pull --ff-only` は引き続き warn-only (fail-open) 設計のまま
+- `/verify` は post-merge AC (`session=next` observation) を次回セッションで確認すること
+- worktree `code+issue-1206` / `review+pr-1217` 等の残存有無は本 skill のスコープ外 (merge worktree の exit のみ担当)
 
 ## review retrospective
 
