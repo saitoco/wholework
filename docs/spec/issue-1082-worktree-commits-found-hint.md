@@ -130,3 +130,40 @@ Nothing to note — 実装は Spec Implementation Steps 1-4 と完全に一致�
 ### Acceptance criteria verification difficulty
 
 Nothing to note — 5 件の Pre-merge AC (grep 1件・rubric 3件・command 1件) はいずれも曖昧さなく自動判定できた。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- triage が AC4 (bats テスト追加の rubric) に `command "bats tests/reconcile-phase-state.bats"` を機械的安全網として追加した判断が効いた。rubric 単独では「テストが追加されている」ことしか見ないが、command 併記により「追加されたテストが実際に通る」ことまで確定的に検証される。`modules/verify-patterns.md` §9 の推奨 (rubric に決定的コマンドを併記) が実際に機能した例。
+
+#### spec
+
+- 同一関数への類似フィールド追加という先例 (#993 の `stray_pr_signal`、#998 の `operate_signal`) に挿入位置・mock 方式・数値ガードのパターンを揃えた判断が、実装 rework ゼロにつながった。既存パターンの踏襲が明示的に設計方針として書かれていると、code フェーズの裁量が減って安定する。
+- `matches_expected` の判定を変えず診断フィールドの追加に限定するスコープ設定により、既存の完了判定ロジックへの回帰リスクを構造的に排除している。AC3 がそれを明示的に守らせた。
+
+#### code
+
+- 実装 rework なし。Pre-merge AC 5 件すべて PASS、bats 1492 件 PASS。
+
+#### review
+
+- `--light` で SHOULD 1 件 (壊れたアンカー参照) を検出・修正。MUST なし。
+- 副次的に Issue #1220 が起票された (`keyword=workflow` ゲートがファイル名の部分一致で誤発火する構造的欠陥、Tier 1 判定)。event-based observation scan から #476 の `/verify` を自動 dispatch した過程での発見であり、observation scan が本来の観測対象とは別の欠陥を掘り当てた形。
+- **Opportunistic Verification で誤判定が 1 件発生した**。#129 の条件「残留 worktree が蓄積せず、再試行時に競合しない」を PASS と判定し `phase/done` へ遷移させたが、実測では worktree が 47 件残留しており条件は満たされていなかった。親セッションが検出して uncheck・`phase/verify` へ差し戻し、訂正コメントを投稿済み。
+
+#### merge
+
+- CI インフラ障害 (後述) からの復旧後に実行。squash merge、conflicts なし。
+
+#### verify
+
+- Post-merge の opportunistic 条件を PASS 判定できた。本来は「次回 patch route の code phase が push 未完で中断したケース」の観察を待つ条件だが、リポジトリに残留していた `worktree-code+issue-485` (base に対し 8 コミット先行、push 未完) がまさにそのケースであり、merge 済みの completion check を実行して `commits_found: false` / `worktree_commits_found: true` の分離を実データで確認した。**過去の中断結果が残っていたことが、新機能の即時検証を可能にした**。
+- #1119 の verify では同種の opportunistic 条件を SKIPPED にした (「数セッション運用したのち」という時間条件が明示的だったため)。条件文が時間経過そのものを要求するか、観測可能な状態を要求するかで扱いが分かれる。
+
+### Improvement Proposals
+
+- **GitHub Actions のインフラ障害で本 Issue の review が 2 回スキップされた**。`macOS shell compatibility` job が 1h17m / 1h31m でタイムアウト fail、`gh run cancel` は HTTP 502、rerun / PR close-reopen / 空コミット push のいずれも新規 run を生成しない状態が約 5 時間続いた。`run-review.sh` は CI が confirmed state に達しないと exit 2 で review セッションをスキップする設計のため、この間フェーズを進められなかった。`modules/orchestration-fallbacks.md` に「CI プラットフォーム側の障害で confirmed state に到達しない」ケースの扱い (待機の判断基準、ローカル検証済みの場合の扱い) を記録する価値がある。`skills/verify/SKILL.md` の CI Infrastructure Failure Detection は verify 内の AC 判定用であり、review フェーズの進行判断には適用されない。
+- **Opportunistic Verification の判定範囲が条件によっては広すぎる**。#129 の「残留 worktree が蓄積せず」はリポジトリ全体の状態を問う条件だが、`/review` セッションは自分の worktree を 1 つ作って 1 つ消しただけで PASS と判定した。`modules/opportunistic-verify.md` の判定基準 (「skill 実行の記憶を retrospect して判断」) は、条件がセッション単位で観測可能な範囲に収まっている前提に立っている。セッション単独では観測できない条件 (リポジトリ全体の集計、複数セッションにまたがる状態) を SKIP に倒す判定基準の追加を検討する。
