@@ -132,22 +132,37 @@
 
 - Nothing to note — 6件の Pre-merge AC (rubric×3、file_not_contains×1、file_contains×1、github_check×1) は全て UNCERTAIN なく PASS/FAIL に分類できた。2件の rubric FAIL は PR 本文が自己申告していた内容と完全に一致しており、grader 判定に曖昧さはなかった。
 
+### 2026-08-07 cycle (Issue Retrospective による AC1/AC2 範囲拡大後の再レビュー、PR #1262)
+
+#### Spec vs. implementation divergence patterns
+
+- Nothing to note — review-light の Spec Deviation 観点は issue なし。diff は Spec の Changed Files / Implementation Steps 1〜5、および全 Pre-merge AC (rubric×3、file_not_contains、file_contains、github_check) の対象と完全に一致した。`docs/tech.md`/`docs/ja/tech.md` の日英ミラーも文単位で整合していた。
+
+#### Recurring issues
+
+- Nothing to note — 今回検出された2件 (孤立文の Edge Case/Robustness 指摘、`.wholework.yml` override コメント陳腐化の Documentation Consistency 指摘) はいずれも単発で、前サイクルの review retrospective が指摘した「Spec 事前判断の覆り」パターンとは異なる種類。
+
+#### Acceptance criteria verification difficulty
+
+- Nothing to note — 7件の Pre-merge AC (rubric×3、file_not_contains×1、file_contains×2、github_check×1) は全て UNCERTAIN なく PASS に分類できた。rubric 3件はいずれも実装内容が Issue 本文の記述と一致しており、grader 判定に曖昧さはなかった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- 2026-08-07 の Issue Retrospective による AC1/AC2 範囲拡大 (`--fable` または `--opus`) を受け、`size=="L"` sub_start を `--opus` dispatch の代理指標として採用し、新規実行なしに実測 (N=20) を完了した。
-- `WATCHDOG_TIMEOUT_SPEC_DEFAULT` は据え置き (p95 74.4% < #903 の80%閾値)、`WATCHDOG_TIMEOUT_REVIEW_DEFAULT` は 2600→5400 に引き上げ (#1058/PR#1201 実測、既に本番検証済みの override 値と整合)。
-- `docs/reports/watchdog-recovery-strategy.md` の既存「2026-07 re-measurement」(`--fable` 実測ゼロ) は変更せず、新規「2026-08 re-measurement」(`--opus` 代理実測) を並置した — 2つの evidence source を統合せず別サブセクションとして残す判断。
+- Pre-merge AC 7件 (rubric×3, file_not_contains×1, file_contains×2, github_check×1) を PR #1262 ブランチに対して再検証し、全て PASS。MUST issue なし、CI 9/9 SUCCESS (`Run bats tests` 含む)。base branch (`main`) との `git merge-tree` コンフリクトスキャンも0件。
+- `REVIEW_DEPTH=light` (`--light` 指定 + Size=M) で review-light 1エージェントを起動し全4観点をカバー。SHOULD 1件 (`docs/reports/watchdog-recovery-strategy.md:154` の孤立文) と CONSIDER 1件 (`.wholework.yml` の REVIEW_DEFAULT override コメント陳腐化) を検出。
+- SHOULD issue は本 PR の変更ファイル内かつ低リスクの修正だったため即座に修正・コミット (54f66650) して push。CONSIDER issue は `.wholework.yml` が本 PR の変更対象外のため、General Comments への記録のみとしフォローアップに委ねた。
 
 ### Deferred Items
+- `.wholework.yml` の `watchdog-timeout-review-seconds: 5400` override コメントの陳腐化 (新デフォルト 5400 と同値になり no-op 化) — 別 Issue/フォローアップでの削除またはコメント更新が必要。
 - `run-spec.sh <N> --fable` の実測実行そのもの (2〜3件の backlog Issue)。ユーザーの明示認可が必要 — 前サイクルから継続する deferral。
-- 上記 `--fable` 実測が行われた場合の `WATCHDOG_TIMEOUT_SPEC_DEFAULT` 再判定 (今回は `--opus` 代理データのみで「据え置き」判定済みのため、`--fable` 実測が優先度低の追加検証として残る)。
+- `--fable` 実測が行われた場合の `WATCHDOG_TIMEOUT_SPEC_DEFAULT` 再判定 (今回は `--opus` 代理データのみで「据え置き」判定済みのため、優先度低の追加検証として残る)。
 
 ### Notes for Next Phase
-- Issue #939 の Pre-merge AC 7件は全て `[x]` (AC1〜3 は本サイクルで rubric PASS 判定として checked、AC4〜6 は前サイクル PR #944 で達成済み)。post-merge の opportunistic observation 1件のみ未チェック。
-- AC7 (`github_check "gh pr checks" "Run bats tests"`) は前サイクル PR #944 の CI 実行に基づき `[x]` のまま維持した — 本サイクルは `scripts/watchdog-defaults.sh` / `tests/watchdog-defaults.bats` を再度変更しているため、`/review` はこの PR 自身の CI が green であることを別途確認すること。
-- `docs/tech.md` の `#939` エントリは1つの bullet から2つの bullet (SPEC_DEFAULT 据え置き、REVIEW_DEFAULT 引き上げ) に分割された。今後この Issue に関する docs/tech.md 更新を行う際は両エントリを個別に参照すること。
+- Issue #939 の Pre-merge AC 7件は全て `[x]` のまま (今サイクルで再検証済み PASS)。post-merge の opportunistic observation 1件のみ未チェック。
+- `/merge 1262` はブロッカーなしで実行可能 (MUST issue 0、CI green、AC 7/7 PASS)。
+- Fix commit 54f66650 は `docs/reports/watchdog-recovery-strategy.md` の文章位置修正のみで、実装方針・AC 判定への影響なし。
 
 ## Verify Retrospective
 
