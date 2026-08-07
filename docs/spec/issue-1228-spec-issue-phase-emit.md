@@ -249,13 +249,12 @@ Size L のため検出上限 5 件のうち、実質的なギャップとして 
 - UNCERTAIN はゼロ。rubric 4 件・command 4 件 (safe mode の CI 参照フォールバック経由) すべて PASS に判定できた。verify command の記述不備・欠落は見つからなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- **base branch conflict pre-check で `modules/event-emission.md` が "changed in both" と検出されたが、実 3-way merge (`git merge-tree --write-tree`) で無害と確認し MUST 化しなかった**。#1224 (main 側) と本 PR の編集領域が行レベルで重ならないことを 2 エージェント独立に実証。
-- **review-bug finder が挙げた 3 件 (常真ガード / stderr 混入 / rm -f 配置) は adversarial verify で REJECT**。いずれも `run-code.sh` の既存踏襲パターンか、著者の意図を反転させた誤読と判定。
-- **SHOULD/CONSIDER 4 件をドキュメント修正のみで Fix、残り 2 件 (retry-redirect 低確率リスク、Post-merge AC 拡張提案) は Skip**。前者はコード変更を伴う低確率エッジケースで本 Issue のスコープを超える、後者は Issue 拡張提案であり `/verify` での改善提案集約規約に従う。
+- **PR #1250 は pre-merge AC 8/8 チェック済み・review-incomplete-fallback なしを確認したうえで、conflict なし (mergeable=clean) のため squash merge をそのまま実行**。conflict 解消フローは不要だった。
+- **`gh pr merge --squash --delete-branch` 実行後、`origin/main` に fast-forward してから Phase Handoff を書き込み**。squash commit 後の main を正として Spec を更新する既定手順に従った。
 
 ### Deferred Items
 
@@ -266,5 +265,5 @@ Size L のため検出上限 5 件のうち、実質的なギャップとして 
 
 ### Notes for Next Phase
 
-- `/merge` はこの PR の 8 AC 全 PASS・CI 全 SUCCESS・MUST issue ゼロを引き継いでよい。
-- `/verify` の Post-merge AC 確認時、`.tmp/auto-events.jsonl` の `wrapper_exit`/`token_usage` phase 内訳に `spec`/`issue` が現れることに加え、上記 Deferred Items (retry-redirect リスク、watchdog_kill 観測拡張) を改善提案として拾うかどうかの判断を行うこと。
+- `/verify` の Post-merge AC 確認時、`.tmp/auto-events.jsonl` の `wrapper_exit`/`token_usage` phase 内訳に `spec`/`issue` が現れることを確認すること。
+- 上記 Deferred Items (retry-redirect リスク、watchdog_kill 観測拡張) を改善提案として拾うかどうかの判断も `/verify` フェーズで行うこと。
