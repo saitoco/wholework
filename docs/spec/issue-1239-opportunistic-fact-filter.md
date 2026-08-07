@@ -94,20 +94,33 @@
 - N/A (上記の allowed-tools 追加以外に手戻りは発生しなかった)
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Session id resolution reuses `restore_auto_session_pointer()`'s existing 3-tier fallback (no new `--session`-passing flag), per the Spec Notes' explicit decision to avoid a new cross-module interface
-- `--facts` uses fail-open semantics (warning + gate disable) on missing/unparseable input, matching `--context-file`/`--facts-file`'s existing convention rather than `scan-pending-ac.sh`'s hard-error convention — `opportunistic-search.sh` runs mid-skill-execution, where a hard error would break the calling skill's flow
-- Fact-token substring matching targets the condition text with HTML comments/checkbox markup stripped (not the raw AC line), mirroring `scan-pending-ac.sh`'s semantics for consistency across the two independent `--facts` implementations
-- The `keyword=` bulk-backfill scope-out policy was recorded in the existing `modules/verify-patterns.md` §10 rather than a new section, following the `#1172` precedent for `when=`
+- All 10 Pre-merge acceptance conditions verified PASS against the PR branch (4 `file_contains`, 4 `rubric`, 1 `command` via CI reference fallback, 1 `github_check`) — no MUST issues, so the review posted as `COMMENT` rather than `REQUEST_CHANGES`
+- `git merge-tree` base-branch conflict pre-check found no `changed in both` blocks — no base-branch conflict context needed for the review agent
+- The 1 SHOULD finding from `review-light` (session-pointer/`collect-run-facts.sh` Bash-tool-call fencing ambiguity in `modules/opportunistic-verify.md` Step 1) was fixed in this phase rather than deferred, since it was a low-risk documentation clarification directly preventing a previously-fixed misattribution bug class (#1224) from being reintroduced
 
 ### Deferred Items
-- Existing opportunistic/observation AC still lack `keyword=` attributes (8 of the Issue's own 14-candidate baseline measured `keyword=0`) — bulk backfill is explicitly out of scope; apply going forward on newly authored AC only (`modules/verify-patterns.md` §10)
-- The effect measurement (13→5, 61.5%) used a representative run-facts JSON, not a real `/auto` session's output, since this `/code` run executed standalone (no `AUTO_SESSION_ID`) — a real measurement will only be available once `modules/opportunistic-verify.md`'s new Step 1 has run inside an actual `/auto` session
-- `docs/structure.md`'s `opportunistic-search.sh` one-line description was reviewed and judged still accurate after `--facts` — no doc update made; revisit only if a future CLI surface change alters the script's high-level role
+- Existing opportunistic/observation AC still lack `keyword=` attributes (unchanged from the code-phase handoff — bulk backfill remains out of scope; see `modules/verify-patterns.md` §10)
+- The effect measurement (13→5, 61.5%) still uses a representative run-facts JSON rather than a real `/auto` session's output — a real measurement is only available once `modules/opportunistic-verify.md`'s new Step 1 has actually run inside an `/auto` session (unchanged from code-phase handoff)
 
 ### Notes for Next Phase
-- AC10 (`github_check "gh pr checks" "Run bats tests"`) is deliberately left unchecked pending CI — confirm CI passes before merge
-- The 5 `skills/*/SKILL.md` `allowed-tools` additions (`collect-run-facts.sh`) are read-only fact-collection calls with no side effects; confirm this doesn't introduce unexpected permission-prompt friction in practice
-- If a 6th skill starts reading `modules/opportunistic-verify.md` in the future, it will need the same `collect-run-facts.sh` allowed-tools entry — `scripts/validate-skill-syntax.py`'s cross-file check will catch this mechanically
+- `/merge` can proceed: CI all SUCCESS (`wait-ci-checks.sh`: 9/9 passed), no MUST issues, all Pre-merge AC checkboxes already `[x]`
+- The Post-merge observation condition (`event=auto-run session=next`) remains unchecked by design — it fires only after a real `/auto` session runs with the new Step 1 in place; `/verify` should not expect it to resolve immediately post-merge
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. All 10 Pre-merge acceptance conditions (4 `file_contains`, 4 `rubric`, 1 `command`, 1 `github_check`) verified PASS against the implementation as merged into the PR branch, with no structural divergence between the Spec's Implementation Steps and the actual diff beyond the already-self-disclosed `allowed-tools` addition (recorded in the Spec's own Code Retrospective).
+
+### Recurring issues
+
+Two independent SHOULD-severity findings landed in the same small `modules/opportunistic-verify.md` Step 1 section across this PR's two review passes: an earlier pass (12:56Z, prior to this `/review` invocation) found a Bash-redirect-vs-Write-tool inconsistency (already fixed in commit `acd4cfb0` before this review ran); this pass's `review-light` agent found a second, independent issue — `restore_auto_session_pointer` and the subsequent `collect-run-facts.sh` call were presented as separate, unfenced steps, which could reintroduce the exact session-misattribution class Issue #1224 fixed if an executing agent splits them into separate Bash tool calls (fixed in this pass, combining them into one fenced block per Step 3's existing pattern).
+
+Both findings share a root cause: this module's Step 1 (`--facts` resolution) was newly added prose describing a multi-command procedure, and did not follow the two conventions this same file's Step 3 already established (Write tool for `.tmp/` output, single fenced Bash block for session-pointer-dependent command sequences). When a new Step is modeled after prose description rather than copying an existing Step's established fencing/tooling pattern, both issues recur. Worth flagging for future module edits that add new multi-command procedures near existing ones with established conventions: explicitly diff the new Step's presentation against the nearest existing Step with the same shape (here, Step 3) rather than composing it independently.
+
+### Acceptance criteria verification difficulty
+
+Nothing to note. No UNCERTAIN results, no missing or inaccurate verify commands. The 4 `rubric` conditions (session-id-resolution documentation, `--context-file` propagation documentation, `keyword=` policy recording, numeric effect-measurement recording) all resolved cleanly against the PR diff and Spec content, including the AC8 numeric-comparison condition, whose Spec text needed to explain a small baseline drift (14→13, attributed to natural population change over 2 days) before presenting the actual `--facts`-filtered comparison (13→5) — the explanation was judged sufficient to satisfy "baseline is 14" without requiring a strict re-measurement against the exact original 14.
