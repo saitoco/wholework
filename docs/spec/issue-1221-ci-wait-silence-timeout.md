@@ -76,18 +76,17 @@
 - `bats --jobs 18 tests/` の並列フルスイート実行で `tests/post_merge_check.bats` の `fail: gh issue reopen called when FAIL input given` が単発 FAIL した。同テストを単独実行 (`bats tests/post_merge_check.bats`) すると 10/10 PASS するため、`scripts/test-failure-classify.sh` の分類は `infra` (並列実行下のリソース競合と推定)。`scripts/post_merge_check.sh` / `tests/post_merge_check.bats` はいずれも本 Issue の変更対象外であり、原因調査・修正はスコープ外と判断した。CI (`.github/workflows/test.yml`) も `bats --jobs $(nproc) tests/` で実行するため、同じ並列条件下では低頻度で再現しうる — 再発・パターン化した場合は別 Issue として起票を検討
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `review-light` (light mode、4 側面統合) で issue 0 件と判定したため、Step 12 (修正作業) は実施せず Step 13 (方針変更検出) もスキップした
-- Pre-merge AC 7 件すべてを safe mode で PASS 判定 (grep x2 / section_contains x1 / rubric x2 / command x1 / CI フォールバック / github_check x1)。AC7 (`github_check "gh pr checks" "Run bats tests"`) は前フェーズで未チェックだったが、CI 9/9 green を確認しチェックボックスを更新した
+- Pre-merge AC ゲート (`check-pre-merge-ac.sh`) で unchecked_count=0 を確認し、review-incomplete-fallback チェックも該当なしのため、通常の squash merge (`gh pr merge --squash --delete-branch`) で進行した
+- CI green (mergeable=clean, ci_status=success, review_status=approved) を確認した上でマージを実行した
 
 ### Deferred Items
-- Post-merge AC (`verify-type: observation event=auto-run session=next`) は未発火のため引き続き未チェック — 次回 CI 待機由来の watchdog kill が実際に発生した際の観察を待つ (code フェーズからの申し送り事項を継続)
+- Post-merge AC (`verify-type: observation event=auto-run session=next`) は未発火のため引き続き未チェック — 次回 CI 待機由来の watchdog kill が実際に発生した際の観察を待つ
 
 ### Notes for Next Phase
-- `/merge` フェーズでは MUST issue なし・CI green のため、通常の squash merge で進行できる想定
-- Post-merge AC の観察確定 (`event=auto-run`) は `/verify` フェーズの担当
+- `/verify` フェーズでは Post-merge AC の観察確定 (`event=auto-run`) を担当する
 
 ## review retrospective
 
