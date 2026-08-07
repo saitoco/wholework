@@ -402,3 +402,33 @@ MOCK
     [ "$status" -eq 0 ]
     [[ "$output" =~ ^[0-9]+$ ]]
 }
+
+@test "failed check with no pending breaks on first poll without sleeping (issue #1167)" {
+    # A single check with bucket=fail and no pending checks must trip the
+    # _pending -eq 0 early-break path (script:71-73) on the very first poll,
+    # never reaching the sleep 60 fallback at the bottom of the loop.
+    SLEEP_CALL_LOG="$BATS_TEST_TMPDIR/sleep_calls.log"
+    export SLEEP_CALL_LOG
+
+    cat > "$MOCK_DIR/sleep" <<'MOCK'
+#!/bin/bash
+echo "sleep called: $@" >> "$SLEEP_CALL_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/sleep"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "checks" ]]; then
+    echo '[{"name":"Deploy preview","state":"FAILURE","bucket":"fail"}]'
+    exit 0
+fi
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 88
+    [ "$status" -eq 0 ]
+    [ ! -f "$SLEEP_CALL_LOG" ]
+    [[ "$output" == *"ci_result: total=1 passed=0 failed=1 pending=0 cancelled=0 zero_checks=false"* ]]
+}

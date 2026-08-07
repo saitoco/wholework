@@ -91,6 +91,30 @@ BODY
     [[ "$(echo "$result" | jq -r '.unchecked_indices')" != *"4"* ]]
 }
 
+@test "(b2) pre-merge 3 items with exactly 1 unchecked excludes post-merge unchecked (issue #1167)" {
+    make_gh_mock_body <<'BODY'
+## Acceptance Criteria
+
+### Pre-merge (auto-verified)
+
+- [x] pre item one
+- [x] pre item two
+- [ ] pre item three
+
+### Post-merge
+
+- [ ] post item
+BODY
+    run bash "$SCRIPT" "123"
+    [ "$status" -eq 0 ]
+    result="$output"
+    [ "$(echo "$result" | jq -r '.pre_merge_total')" = "3" ]
+    [ "$(echo "$result" | jq -r '.unchecked_count')" = "1" ]
+    [ "$(echo "$result" | jq -r '.unchecked_indices')" = "3" ]
+    # index 4 (post item) must not appear in unchecked_indices
+    [[ "$(echo "$result" | jq -r '.unchecked_indices')" != *"4"* ]]
+}
+
 @test "(c) no Pre-merge heading returns pre_merge_total 0" {
     make_gh_mock_body <<'BODY'
 ## Acceptance Criteria
