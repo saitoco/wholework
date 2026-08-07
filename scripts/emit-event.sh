@@ -61,17 +61,17 @@
 #   BRIDGE_NUMBER="batch-<session-id>"), callers must pass EMIT_ISSUE_NUMBER=0 — emit_event()
 #   writes "issue":${_issue} unquoted, so a non-numeric value would corrupt the JSON line.
 #
-# opportunistic_verify_result: modules/opportunistic-verify.md の判定結果 (PASS/FAIL/SKIP) を
-# 条件 1 件ごとに emit する。Step 2 (AI Retrospective) で各条件の判定が確定した直後に emit される
-# (#1236)。1 件ずつ emit し集約しない — 理由は modules/opportunistic-verify.md 側のコメント、
-# および Issue #1236 の Spec Notes を参照。
-#   skill=<skill-name>            呼び出し元スキル名。例: /spec, /review, /verify, /issue, /code
-#   result=<PASS|FAIL|SKIP>       この条件の判定結果
-#   ac_index=<n>                  候補 Issue 本文の全チェックボックス列挙 (pre-merge + post-merge
-#                                  通し) における 1-based 位置。gh-issue-edit.sh --checkbox と同じ
-#                                  global-index 規約
-#   EMIT_ISSUE_NUMBER には判定対象の候補 Issue 番号が入る (呼び出し元スキル自身の Issue 番号では
-#   ない場合がある)
+# opportunistic_verify_result: emits modules/opportunistic-verify.md's judgment (PASS/FAIL/SKIP)
+# for one condition, right after that condition's result is determined in Step 2 (AI
+# Retrospective) (#1236). One event per condition, not aggregated — see
+# modules/event-emission.md's opportunistic_verify_result entry for the rationale.
+#   skill=<skill-name>            calling skill name, e.g. /spec, /review, /verify, /issue, /code
+#   result=<PASS|FAIL|SKIP>       this condition's judgment result
+#   ac_index=<n>                  1-based position within the candidate Issue body's full
+#                                  checkbox enumeration (pre-merge + post-merge), same
+#                                  global-index convention as gh-issue-edit.sh --checkbox
+#   EMIT_ISSUE_NUMBER carries the candidate Issue number being judged (may differ from the
+#   calling skill's own Issue number)
 #
 # verify_fail_marker_posted: /verify FAIL 時に machine-readable marker comment を Issue に append した
 #   iteration=<n>                 verify iteration counter (NEXT_ITERATION)

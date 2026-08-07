@@ -533,19 +533,19 @@ Aggregate `opportunistic_verify_result` events (emitted by `modules/opportunisti
    ```bash
    ${CLAUDE_PLUGIN_ROOT}/scripts/collect-opportunistic-retire-candidates.sh docs/sessions --threshold 5
    ```
-   (閾値は固定値 5 — `.wholework.yml` では設定不可。理由: 本リポジトリの既存の retention 閾値 (Section 8/9 の phase/verify dwell 30/60/90 日、Icebox dwell 90/180 日) も固定値運用の実績があり、`opportunistic_verify_result` の実データがまだ蓄積されていない段階で設定項目を増やす必要は薄いため。実データが蓄積した段階で `.wholework.yml` 設定可能化を再検討する)
-2. `docs/sessions/` が存在しない、またはコマンドが出力なしの場合: "No opportunistic verify retire candidates found." と表示しこのセクションの残りをスキップする
-3. 出力 (`<issue>\t<ac_index>\t<skill>\t<trailing_skip_count>\t<total_observations>` 1行1候補) から次を算出する:
-   - **Retire candidate count**: 出力行数の合計
-4. 次の表を表示する:
+   (Threshold is a fixed value of 5 — not configurable via `.wholework.yml`. Reason: this repository's existing retention thresholds (Section 8/9's phase/verify dwell 30/60/90 days, Icebox dwell 90/180 days) are also operated as fixed values, and adding a config item before real `opportunistic_verify_result` data has accumulated is premature. Revisit making it configurable via `.wholework.yml` once real data has built up.)
+2. If `docs/sessions/` does not exist, or the command produces no output: display "No opportunistic verify retire candidates found." and skip the rest of this section
+3. From the output (`<issue>\t<ac_index>\t<skill>\t<trailing_skip_count>\t<total_observations>`, one candidate per line), compute:
+   - **Retire candidate count**: total number of output lines
+4. Display the following table:
 
    | Metric | Value | Threshold | Status |
    |--------|-------|-----------|--------|
    | Opportunistic verify retire candidates (>= 5 consecutive SKIP) | N | > 0 | OK / NOTIFY |
 
-5. retire candidate が1件以上あれば、各候補を Issue 番号・`ac_index`・skill・trailing SKIP streak 件数・総観測件数とともに列挙する
+5. If one or more retire candidates exist, list each with its Issue number, `ac_index`, skill, trailing SKIP streak count, and total observation count
 
-This section is read-only display only — no comment posting or Issue creation (Section 10 と同じスコープ制限。実際の AC retire・再型付けの判断は人手、または #1158/#1165 系のフォローアップ Issue に委ねる)。
+This section is read-only display only — no comment posting or Issue creation (same scope restriction as Section 10; the actual decision to retire or re-type an AC is left to a human, or to a follow-up Issue in the #1158/#1165 series).
 
 #### Retire-Proposal Comment Posting
 
