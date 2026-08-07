@@ -26,6 +26,10 @@ Cross-phase marker (`type=verify-fail` / `type=preview-ac-unverified`) の追加
 
 コメントが提起した「`when=` を 79 件へ併せて付与するか」という論点は、姉妹 sub-issue #1163 が既に裁定済み (`when=` は付与せず #1118 に委ねる。後述 Notes 参照) であり、他の sub-issue もこの前例を踏襲する想定のため、本 Issue で新たに判断し直す必要はない。
 
+### Code phase (cutoff: `2026-08-07T07:26:00Z`, `phase/code` ラベル付与時刻)
+
+No new comments since last phase. Cross-phase marker (`type=verify-fail` / `type=preview-ac-unverified`) の追加スキャン結果: 該当なし。
+
 ## Autonomous Auto-Resolve Log
 
 (non-interactive mode; Step 6 の Issue 本文 vs 実装状態の conflict detection、および Step 7 の ambiguity resolution)
@@ -128,23 +132,36 @@ Consumed Comments で提示された「79 件へ `when=` を併せて付与す�
 - **Size=XL のまま `/code` を実行した場合に `modules/ambiguity-detector.md` の Hard-error abort 条件 (「Size is XL without sub-issue splitting」) に抵触しないか**: #1158 は GraphQL `subIssues` で 5 件の sub-issue が既に確認できるため、この hard-error 条件 (分割が存在しない場合) には該当しないと判断した。ただし `/code` 自身の実装がこの判定をどう行うかは未確認であり、次回 `/code 1158` 実行時に実際に確認されるべき残存確認事項として記録する
 - **Post-merge AC の文言をそのまま流用してよいか**: #1163/#1164 のように「N 件減少」という定量表現へ調整する必要があるか検討したが、#1158 自身の Post-merge AC は元々「79 件から減少していることを確認する」という定性的表現であり、5 sub-issue 全体の合計減少を指すため調整不要と判断し、Issue 本文のまま転記した
 
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。Spec の Implementation Steps (precondition gate → 集約レポート作成 → 検証) をそのまま実行した。Auto Retrospective 節が示唆する「親セッションが手動挿入した `run-code.sh 1158 --pr`」の想定どおり、`--pr --non-interactive` 引数での実行だった。
+
+### Design Gaps/Ambiguities
+
+- Step 10 (verify command consistency) の rubric AC 5 件はいずれも Issue #1158 本文に特定ファイルを名指ししていないため、grader (本セッション自身) の入力スコープは Issue 本文 + git diff (集約レポート本体) のみだった。AC2 (「A + D2 が observation へ再型付けされている」) の実際の裏付け (Issue 本文の再型付け結果) はこの PR の diff に含まれず、`docs/reports/manual-ac-retype-a.md` / `manual-ac-retype-d2.md` (別 PR で追加済みの既存ファイル) にのみ存在する。rubric の可視範囲制約 (Spec Notes 前掲) は「集約レポートファイルを持たせれば解決する」という設計判断だったが、厳密には「rubric text で当該既存ファイルを名指しする」までは踏み込んでいない。今回は集約レポート自身に十分な要約(event= 内訳・マッチ確認結果の転記)を含めることで PASS 判定としたが、将来同種の親 Issue で rubric AC がより厳密な一次情報を要求する場合、rubric text 側で参照ファイルを明示する設計を検討する価値がある。
+- 区分 B (#1166) は operate route で処理されており、独自の記録ファイル (`docs/reports/manual-ac-retype-*.md`) を持たない。集約レポートでは #1166 の `## Execution Log` Issue コメントの内容を転記したが、他区分 (A/D2/D3/C/D1) が専用ファイルを持つのに対し B だけがコメントベースという非対称性がある。
+
+### Rework
+
+- なし。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
-- #1158 は 2026-08-05 に対応方針 A (sub-issue 分割) で既に分割済みであり、実体作業は #1163 (CLOSED) / #1164 / #1165 / #1166 / #1167 (いずれも OPEN、phase/issue 未到達) が担う。本 Spec は #1158 自身の残存スコープ (5 sub-issue 完了後の集約クローズアウト) のみを定義する
-- Pre-merge AC 5 件が全て `rubric` であるため、rubric grader の可視範囲 (Issue 本文・git diff・rubric 名指しファイルのみ) を確保する目的で `docs/reports/manual-ac-retype-summary.md` を Changed Files に追加した (#1163 の operate→pr route 転換と同じ論理を親 Issue に適用)
-- Size は XL を維持し、ダウングレードは実行しなかった (`modules/ambiguity-detector.md` の Non-Interactive Mode Handling が「Size downgrade from XL」を High-Stakes Decision として明示的に skip 対象としているため)
+- Precondition gate (#1164/#1165/#1166/#1167 が全件 `phase/done`/CLOSED) を再確認し充足を確認した上で、`docs/reports/manual-ac-retype-summary.md` を作成した (Spec Implementation Steps 1〜4 をそのまま実行)
+- Pre-merge AC 5 件 (すべて `rubric`) は、集約レポートの git diff + Issue 本文を入力として grader (本セッション自身) が評価し、全件 PASS と判定してチェックボックスを更新した
+- 区分別処理結果は各 sub-issue の記録ファイル (`docs/reports/manual-ac-retype-a.md` / `-d2.md` / `-d3.md` / `-c-d1.md`) および #1166 の `## Execution Log` コメントから転記・要約する方式を採用し、単純なリンク集ではなく実数値 (件数・event= 内訳・retire 理由) を集約レポート本体に含めた
 
 ### Deferred Items
-- Implementation Step 1 (precondition gate) — #1164/#1165/#1166/#1167 が全て `phase/done`/CLOSED に到達するまで Step 2 以降は実行不可。次回 `/code 1158` 実行時に gate から再開する
-- カテゴリ B (6件) の retire/downstream 移管判断 — #1166 自身の Acceptance Criteria が所有。本 Issue では判断せず集約レポートへの転記のみ行う
-- `size-workflow-table.md` に「XL 分割後も親が rubric 型集約 AC を持つ」パターンの経路定義が存在しない件 — spec retrospective に記録済み。Issue 起票は `/verify` の改善提案集約フェーズに委ねる
+- Post-merge AC (`/audit stats --retention` での Manual waiting 件数減少確認、`event=auto-run`) — `/verify` が observation 経路で評価する
+- Code Retrospective に記録した rubric AC の可視範囲制約 (別 PR で追加済みの sub-issue 記録ファイルを rubric text が名指ししていない件) — 将来の改善検討事項として記録のみ、本 Issue のスコープ外
 
 ### Notes for Next Phase
-- `/code 1158` 実行時は Size=XL のままだが、明示的に `--pr` フラグを使うこと (Size ベースの自動ルーティングは XL に対して patch/pr/operate のいずれの列も持たないため)
-- Implementation Step 1 の precondition gate で 1 件でも未完了なら、以降の Step を実行せず「blocked」として終了すること — 空ファイルや部分的な内容でレポートを作成しないこと
-- 集約レポート作成時は #1163 の実例 (`docs/reports/manual-ac-retype-a.md`) を構造の参考にすること (見出し構成: `## 対象・件数内訳` → `## 区分別処理結果` → `## 検証`)
+- 本 PR マージ後、`/review` → `/merge` → `/verify` の通常フローに進む。Post-merge AC は `event=auto-run` の発火を待つ observation 型のため、`/verify` 初回実行時は SKIPPED (waiting for event) となる想定
+- 親 Issue #1158 自身の実装はこれで完了。5 sub-issue + 本集約レポートの全体像は `docs/reports/manual-ac-retype-summary.md` を参照すること
 
 ## Auto Retrospective
 
