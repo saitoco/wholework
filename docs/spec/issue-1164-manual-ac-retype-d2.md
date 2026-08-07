@@ -113,3 +113,43 @@
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Autonomous Auto-Resolve Log
+
+- **`phase/ready` ラベル不在での続行**: `/code 1164 --pr --non-interactive` 開始時点で Issue のラベルは `phase/code` (label timeline 上、`phase/ready` は既に `phase/code` へ遷移済み)。`reconcile-phase-state.sh --check-precondition code-pr` も `matches_expected: false` を返した。Spec (本ファイル) は spec retrospective まで完備しており、コーディング未着手のまま前回セッションが label 遷移後に中断したレジューム状態と判断した。Spec が存在するため「Spec なしで Issue 本文から要件を読む」対応は不要 — reason: 非対話モードのポリシー (auto-resolve) は Spec 欠落時の縮退経路であり、本件は Spec 完備のため実質的にブロッカーではない。#1163 の Code Retrospective と同型の判断。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Implementation Steps 2〜4 (`.tmp/retype-mapping-d2.json` 作成 → `.tmp/retype-ac-d2.py` 作成・dry-run・`--apply` 実行、#1164 自身の「Blocked by #1157」文言更新、#1106/#1097 への既充足コメント投稿) を実行しなかった。`/code` 開始時点で対象 13 Issue 全件の GitHub 上の実状態を個別確認したところ、11 Issue 12 AC 行はすべて `verify-type: observation event=auto-run` へ再型付け済み、対象外の #507 (3 行) / #444 (1 行) は `verify-type: manual` のまま誤編集なく維持されていた。#1106・#1097 への既充足コメントも投稿済み、#1164 自身の「Blocked by #1157」セクションも「解消済み」へ更新済みだった。前回セッションが Issue 本文編集・コメント投稿を完了した後、report file 作成前に中断したレジューム状態と判断し、実質的な追加作業は Implementation Step 1 (report file 作成) と Step 5 (`opportunistic-search.sh` による検証・記録) のみとした。#1163 の Code Retrospective と全く同型の状況が区分 D2 でも再現した — 親 #1158 の分割 sub-issue 群で同種のレジュームパターンが繰り返されている。Spec Implementation Steps の記述自体は変更しない (次回同種の再型付け Issue で `.tmp/` ヘルパパターンを再利用する際の参照価値を残すため)。
+
+### Design Gaps/Ambiguities
+
+- なし。#1163 の precedent (report ファイル構造、`opportunistic-search.sh` 検証手順) をそのまま踏襲でき、設計上の曖昧さは生じなかった。
+
+### Rework
+
+- なし。
+
+### Unrelated pre-existing test failures discovered
+
+- `bats tests/` (1507 件) 実行で `run-code.bats` の `auto-retry: silent no-op + AUTO_RETRY_ENABLED=true fires retry` と `auto-retry: preflight stashes parent-main stray untracked file before retry re-invocation` の 2 件が単独実行でも一貫して FAIL することを発見した。両テストとも `reconcile-phase-state.sh` mock のカウンタが retry ループ内で意図通り増加していない (`auto-retry: max iterations reached (3/3)` に到達) ことが原因と推測される。本 Issue の diff は `docs/reports/manual-ac-retype-d2.md` の新規追加のみで `scripts/run-code.sh` やテスト自体には触れていないため、本 Issue のスコープ外の pre-existing な問題と判断し、follow-up Issue #1231 (`retro/code` ラベル) を起票した。また `post_merge_check.bats` の 1 件 (`gh issue reopen called when FAIL input given`) は `--jobs 8` 並列実行時のみ FAIL し、単独実行では PASS することを確認済み (並列実行時のフレーク、実害なし)。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+
+- レジューム検知: 対象 13 Issue 全件の GitHub 上の実状態を個別確認し、11 Issue 12 AC 行が既に `observation event=auto-run` へ再型付け済み、#507/#444 が `manual` のまま誤編集なく維持されていることを確認した。前回セッションが Issue 本文編集完了後・report file 作成前に中断したレジューム状態と判断し、残作業 (`docs/reports/manual-ac-retype-d2.md` 作成 + `opportunistic-search.sh` 検証) のみを実施した。
+- Pre-merge rubric AC 3 件は report ファイル + 既存の Issue 側編集内容と照合し PASS と判定、Issue #1164 のチェックボックスを更新済み。
+
+### Deferred Items
+
+- Post-merge AC (`/audit stats --retention` での Manual waiting 件数減少確認) — `/verify` が `observation event=auto-run` 経路で評価する。
+- follow-up Issue #1231 (`run-code.bats` の auto-retry テスト 2 件の FAIL) — 本 Issue のスコープ外、別 Issue で対応。
+
+### Notes for Next Phase
+
+- `bats tests/` フルスイート (`--jobs 8`, 1507 件) で本 PR 由来ではない pre-existing FAIL 3 件 (`run-code.bats` ×2, `post_merge_check.bats` ×1 は並列実行時のみのフレーク) を確認済み。review で CI が同じ FAIL を検出しても、本 PR の diff (`docs/reports/manual-ac-retype-d2.md` の新規追加のみ) に起因するものではないことを踏まえて判断すること。
+- Pre-merge AC 3 件 (rubric ×3) は code phase で PASS 判定・チェック済み。review での再確認は不要 (#1163 と同型)。
