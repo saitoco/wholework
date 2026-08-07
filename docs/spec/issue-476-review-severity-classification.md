@@ -172,3 +172,13 @@
 ### Improvement Proposals
 - N/A — re-run #7 で「起票水準に達した」問題は follow-up Issue #1220 として既に起票済み (確認済み)。本 re-run はその後に発生した4件目の再現事例として記録するに留め、新規提案は行わない。Issue #1220 の解決後、本 post-merge observation AC が実際に「決定的失敗が MUST 判定される」挙動を実地確認できるかは引き続き未検証のまま — #1220 のクローズ後に改めて `/review --light` が CI/ワークフロー変更を含む PR で完了するタイミングで再評価される見込み
 
+## Verify Retrospective (2026-08-07 re-run #9)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1237、Issue #1167) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカーあり) したが、今回の発火元 PR #1237 の diff (`docs/reports/manual-ac-retype-c-d1.md`, `docs/spec/issue-1167-manual-ac-retype-c-d1.md`, `tests/wait-ci-checks.bats`, `tests/check-pre-merge-ac.bats` — manual AC 区分 C の bats テスト化) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず UNCERTAIN 判定に帰着した。`keyword=workflow` ゲートの誤発火パターンが、本 Issue #1167 の Spec 内 `docs/translation-workflow.md` / `modules/size-workflow-table.md` というファイルパス参照への部分一致で **9件目** として再現した。follow-up Issue #1220 が既に起票済み (OPEN) であることを確認したため、本 re-run でも重複起票を行わない
+
+### Improvement Proposals
+- N/A — re-run #7 で既に起票水準に達し follow-up Issue #1220 が対応済み。本 re-run はその後の9件目の再現事例として記録するに留める
+
