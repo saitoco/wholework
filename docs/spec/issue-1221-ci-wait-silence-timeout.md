@@ -99,3 +99,32 @@
 ### Acceptance criteria verification difficulty
 - Nothing significant to note。Pre-merge 7 件 (`grep` x2, `section_contains` x1, `rubric` x2, `command` x1, `github_check` x1) すべてが UNCERTAIN なしで PASS に到達した
 - `rubric "json-mode-silent-hang の判定条件が、ci_wait イベントが存在する場合に当該パターンへマッチしないよう絞り込まれている"` は、実装の if/else 分岐構造 (ci_wait 検出時のみ `ci-wait-silence-timeout` へ分岐し、それ以外は既存の `json-mode-silent-hang` にフォールバックする形) を直接言い当てており、コード確認 1 回で判定確定できた。rubric 文言がコード構造を正確に予見していた良い例として記録
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- `/issue` が元 AC の**配線ギャップ**を自力で検出・補完した点が本 Issue 最大の収穫。元 AC は `detect-wrapper-anomaly.sh` 自体が `--events` を受け取れることのみを検証しており、実際に発火する呼び出し元 (`skills/auto/SKILL.md` Tier 2) がそのフラグを渡すことは未検証だった。`detect-external-kill.sh` の既存配線を前例として `section_contains` AC を追加した判断は、「スクリプト単体は直ったが呼び出し元が未配線で実効ゼロ」という失敗モードを事前に潰している
+- Step 15 の AC 監査が、自分が直前に追加した AC 自体の不備 (`section_contains` の heading 引数に `####` を含め Pattern 6-1「常時 UNCERTAIN」に該当) を検出して即修復した。自己生成 AC も監査対象に含める設計が機能した実例
+
+#### spec
+- SPEC_DEPTH=light で十分だった。`detect-external-kill.sh` に同型の先行実装があったため、設計は「既存イディオムの踏襲先を特定する」ことにほぼ帰着した
+- Implementation Steps 1-5 と PR #1253 の 5 ファイル diff が厳密に一致し、Code Retrospective の Deviations も N/A
+
+#### code
+- 1 回目の試行がフルテストスイートのバックグラウンド実行で silent no-op (`code_retry_fire iteration 1`)、2 回目で正常完了。**#1213 の修正 (`bats --jobs <N> tests/` をフォアグラウンドで完了させる) が実際に効いた初のケース**。同一バッチの #1223 は #1213 着地前の試行だったため 3 回とも失敗しており、着地前後で挙動が分かれたことが対照的に確認できた
+
+#### review
+- `review-light` が 4 側面すべてで issue 0 件。MUST/SHOULD/CONSIDER いずれもゼロで、Spec と実装の一致度がそのまま反映された
+
+#### merge
+- Pre-merge AC 7 件すべて checked、`review_incomplete_fallback` 該当なし、CI green。オーバーライドマーカーなしの通常 squash merge で完了。recovery 発火なし
+
+#### verify
+- Pre-merge 7 件は already-checked skip rule で SKIPPED、Post-merge 1 件は `event=auto-run` 未発火で SKIPPED。FAIL / UNCERTAIN ゼロ
+- Post-merge 条件は「実際に CI 待機中の watchdog kill が発生する」という外部事象待ちで、`session=next` も付いている。イベント駆動の観察条件として妥当な設計だが、発火頻度が低いため長期滞留が見込まれる
+
+### Improvement Proposals
+
+- **並列 bats 実行下の flakiness を検知・追跡する仕組みがない**: 本バッチセッション内だけで 2 件の並列実行由来 flaky が独立に観測された — #1221 の `tests/post_merge_check.bats` (`fail: gh issue reopen called when FAIL input given`、`bats --jobs 18` で単発 FAIL・単独実行では 10/10 PASS)、#1224 の `tests/worktree-merge-push.bats` (`--from with base-diverged and rebase conflict aborts and exits non-zero`、同一コミット `7b5132c3` に対する 2 回の CI 実行で結果が分裂)。`docs/spec/` を横断すると並列実行 flaky への言及は 5 spec (#1037 / #1056 / #829 / #1164 / #1221)、`flaky` 全体では 12 spec に及ぶ。過去の対処 (#1136 `emit` 系環境変数の隔離、#251 `PATCH_LOCK` の per-test 化) はいずれも個別テストの分離バグを CLOSED にしたもので、「並列実行下でのみ落ちるテスト」を継続的に検知・分類する常設の仕組みは存在しない。実害は CI green 判定の揺らぎに直結する — `.github/workflows/test.yml:29` は `bats --jobs $(nproc) tests/` で実行するため、`github_check` 系 AC と `/merge` の CI ゲートが低頻度で偽陰性を出す。実際に #1224 の `/merge` は `mergeable=false, reason=ci_failing` を受けて flaky と判定し auto-resolve で通す判断を要した。対策候補として (a) `scripts/test-failure-classify.sh` の `infra` 分類に「並列実行時のみ FAIL・単独実行で PASS」を判定する再実行ステップを持たせる、(b) CI で FAIL したテストのみを単独再実行して切り分ける job を追加する、(c) 並列 flaky の観測を `docs/reports/` に累積し閾値検出する (`collect-recovery-candidates.sh` と同型) のいずれか、または組み合わせ
