@@ -955,13 +955,17 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/ci-failure-classifier.md` and follow the "Pr
 
 - **Applies only when**: the failed phase is one that waits on CI (`review`, `merge`) **and** the External kill pre-check above returned `no-match`. For any other phase, skip this pre-check entirely and proceed to Tier 1.
 - **When verdict = `ci-infra`**:
-  (a) Wait `${WHOLEWORK_CI_OUTAGE_RECHECK_SEC:-600}` seconds, then re-run the classifier.
+  (a) Repeat up to `${WHOLEWORK_CI_OUTAGE_MAX_RECHECKS:-2}` times: wait `${WHOLEWORK_CI_OUTAGE_RECHECK_SEC:-600}` seconds, then re-run the classifier; stop repeating as soon as the re-judged verdict is no longer `ci-infra` (proceed to (b)).
   (b) If the re-judged verdict is no longer `ci-infra`, re-run the failed phase's `run-*.sh` once with the same arguments, then return to the normal flow.
   (c) If the re-judged verdict is still `ci-infra` after `${WHOLEWORK_CI_OUTAGE_MAX_RECHECKS:-2}` re-judgments, do not enter Tier 1/2/3 — stop, and include `cause: ci-infra-outage` in the Step 6 stop banner.
   (d) When stopping per (c), record it the same way as the External kill pre-check's Recording step (regenerate the PGID pointer file in the same call, since it is not visible here):
       ```bash
+      mkdir -p .tmp
+      PGID=$(ps -o pgid= -p $$ | tr -d ' ')
+      printf '%s\n' "<literal SESSION_ID value from step 1>" > ".tmp/auto-session-${PGID}"
       bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery $NUMBER $PHASE respawn [EXIT_CODE] --cause ci-infra-outage-during-ci-wait
       ```
+      If `EXIT_CODE` was not observed, omit the argument entirely — do not pass the string `unknown`.
 - **When verdict = `implementation` or `undetermined`**: do nothing — proceed to Tier 1 (existing behavior unchanged).
 - **Do not introduce a new Tier number**: like the External kill pre-check above, this pre-check sits outside the Tier 1/2/3 vocabulary.
 
