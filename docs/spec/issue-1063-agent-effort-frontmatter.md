@@ -50,3 +50,6 @@
 - **`effort:` frontmatter の公式仕様確認**: `https://code.claude.com/docs/en/sub-agents` (2026-08-07 WebFetch 確認) の Supported frontmatter fields 表に `effort` フィールドが記載されている — "Effort level when this subagent is active. Overrides the session effort level. Default: inherits from session. Options: `low`, `medium`, `high`, `xhigh`, `max`" — Issue 本文および `docs/tech.md` (#921 記載) の前提と一致することを確認した。
 - **Pre-merge verification item count について**: 8 件で `$STEERING_DOCS_PATH/tech.md` の Spec Simplicity Rules が定める light 上限 (5 件) を超えるが、「Verify command sync rule」により Issue 本文の Pre-merge acceptance criteria (8 件) を改変せず逐語コピーした結果である。`/verify` はこれらをインデックスで個別にチェックするため、統合による件数圧縮は行わなかった。
 - **`recoveries-auto-fire: enabled: false`** (`.wholework.yml`) — 本 Issue と直接の関係はないが、`orchestration-recovery` 調査中に確認した現在の設定として記録する。
+
+## Consumed Comments
+No new comments since last phase.
