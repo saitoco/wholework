@@ -62,3 +62,32 @@
 ## Consumed Comments
 - saito (MEMBER, first-class): Issue Retrospective (triage フェーズ)。Background の事実確認2件が実装と一致することを確認 (警告なし)。Post-merge AC の `verify-type: observation event=pr-review-full` に `session=next` を追記 (`modules/observation-trigger.md` が `/auto`/`/review`/`/verify` の3 skill から参照される共有モジュールであるため、skill self-update propagation rule に該当) — https://github.com/saitoco/wholework/issues/1233#issuecomment-5218237672
 - saito (MEMBER, first-class): Triage AC audit (非破壊警告)。AC2 の verify command (`grep "when=" "modules/observation-trigger.md"`) が既存3軸の記述により実装前から常時 PASS してしまう Pattern 2 に該当することを指摘。修復案として実装後にのみ真になる具体的な文字列への変更を提案し、語句の確定を `/spec`/`/code` フェーズに委ねた。本 Spec の Notes と Verification で `execution-context` への修正として反映済み — https://github.com/saitoco/wholework/issues/1233#issuecomment-5218270335
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-5 をそのまま実装。when= 節評価ループの再構成 (`resolve_run_facts` を case アーム内へ遅延、execution-context アーム新設) も Spec 記述どおりの構造で反映した
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+### Test Execution Note
+- `bats --jobs 18 tests/` によるフルスイート実行 (behavioral change 検出: `skills/review/SKILL.md` を `tests/review.bats` 以外に `tests/run-review.bats` も参照していたため発火) で `tests/post_merge_check.bats` の1テストが実行ごとに異なるケースで間欠的に FAIL した (`gh issue reopen called when FAIL input given` → 次回実行では `multiple issues: processed sequentially`)。単体実行 (`bats tests/post_merge_check.bats`) では10/10 安定して PASS し、本 Issue の変更対象ファイル (`scripts/opportunistic-search.sh` / `scripts/observation-trigger.sh` / `skills/review/SKILL.md` / `modules/observation-trigger.md`) とは無関係。既存 Issue #1255 (「並列 bats 実行下でのみ落ちる flaky を機械的に切り分ける」) が同種の事象を追跡対象としているため、重複 follow-up Issue は起票していない
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `execution-context` 軸は `route`/`mode`/`recovery-tier` と異なり facts JSON (`collect-run-facts.sh`) を経由せず、発火元スキルが `modules/execution-context.md` § Context Detection で直接判定した値を `--execution-context` 引数として渡す設計を採用 (Spec Notes に根拠記載済み)
+- `when=` 節評価ループを節単位 fail-open に再構成 (`resolve_run_facts` を各 axis の case アーム内に遅延呼び出し) — 既存3軸の観測結果は変わらないことを bats で確認済み
+
+### Deferred Items
+- Issue #575 の既存 observation AC (`event=pr-review-full config=capabilities.workflow`) への `when=execution-context:main` retrofit はスコープ外。次回 `/verify 575` 実行時に手動追記を検討する余地がある (Spec Notes 参照)
+- `tests/post_merge_check.bats` の並列実行下 flaky は既存 Issue #1255 の追跡対象。本 Issue のスコープでは対応不要
+
+### Notes for Next Phase
+- Post-merge AC (`verify-type: observation event=pr-review-full session=next`) は `/review` が実際に fork context で `pr-review-full` を発火し、`when=execution-context:main` を持つ AC が UNCERTAIN/SKIPPED を繰り返さず適切に扱われることを次回セッションで観察する必要がある
+- PR #1267 のマージ後、`/verify 1233` で Pre-merge AC 2件 (既に Issue body 上で `[x]` 済み) の整合性確認と Post-merge AC の観測待ちに入る
