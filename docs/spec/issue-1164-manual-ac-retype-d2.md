@@ -114,6 +114,8 @@
 ## Consumed Comments
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1164#issuecomment-5213482066
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1164#issuecomment-5213691524
 ## Autonomous Auto-Resolve Log
 
 - **`phase/ready` ラベル不在での続行**: `/code 1164 --pr --non-interactive` 開始時点で Issue のラベルは `phase/code` (label timeline 上、`phase/ready` は既に `phase/code` へ遷移済み)。`reconcile-phase-state.sh --check-precondition code-pr` も `matches_expected: false` を返した。Spec (本ファイル) は spec retrospective まで完備しており、コーディング未着手のまま前回セッションが label 遷移後に中断したレジューム状態と判断した。Spec が存在するため「Spec なしで Issue 本文から要件を読む」対応は不要 — reason: 非対話モードのポリシー (auto-resolve) は Spec 欠落時の縮退経路であり、本件は Spec 完備のため実質的にブロッカーではない。#1163 の Code Retrospective と同型の判断。
