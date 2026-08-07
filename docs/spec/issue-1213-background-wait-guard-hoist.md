@@ -99,3 +99,35 @@ N/A — 実装・テスト・verify いずれも一発で完了し、手戻り�
 ### Notes for Next Phase
 - `/verify` は post-merge observation AC 2 件 (code phase / review phase の背景実行ガード遵守確認) を次回 `/auto` 実行ログから評価すること。
 - squash merge 後の残置ワークツリー起因のブランチ削除失敗は、merge フェーズの完了report観点では無視して良い (merge 自体は成功、mergedAt/mergeCommit で確認済み)。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 起票時点のスコープは `skills/code/SKILL.md` / `run-code.sh` に限定されていたが、#1212 の review フェーズ実測をコメントとして投稿した結果、`/spec` がこれを consume して **code / review 両方**へ拡大した。AC も 3 件 → 5 件、Post-merge も 1 件 → 2 件 (code phase / review phase) に増えている。L0 (Issue コメント) 経由でスコープが拡張された良い事例
+
+#### spec
+- watchdog kill (1800s 無出力) が発生したが実害なし。`## Design Complete` コメント (02:27:09Z) は kill (11:32 JST) より前に投稿済みで、Spec 作成・push・Size 再評価 (M → L) はすべて完了していた。**作業完了後にターンを終える直前で kill された**形
+
+#### code
+- Deviations / Rework とも N/A。Implementation Steps 1〜3 を逐語適用
+- Design Gaps で **pr route 側の Step 10 問題**を指摘している: Step 10 (Verify Command Consistency) は PR 作成 (Step 11) より前に実行されるため、`github_check "gh pr checks"` 形式の AC は判定不能 (UNCERTAIN) になる。#1212 で明文化したのは patch route 側 (`branch-scoped CI AC exclusion`) のみで、pr route 側は未記載。今回は AC4 のチェックボックスを未チェックのまま残して `/review` に委ねる運用で回避した
+
+#### review
+- **本 Issue が修正対象としている失敗モードそのものが、本 Issue の review フェーズで発生した**。最終出力は「バックグラウンドタスクの完了通知を待ちます。」。#1212 に続く連続 2 回目
+- ただし review の**指摘内容は極めて有用**だった。code フェーズはガードを分岐非依存な位置へ引き上げたが、review はさらにその下の「なぜガードがあっても守られなかったか」を特定している — `modules/test-runner.md` Step 2 が `timeout: 120 seconds` を固定値で指示しており、フルスイート (実測 ~407s) は**前景で回しても 120 秒で打ち切られる**。つまり #994 が追加した「前景で実行せよ」というガードは、それ単体では物理的に守れない指示だった。この制約こそがエージェントを `run_in_background: true` へ逃がす圧力になっていた
+- この修正 (`test-runner.md` の caller-supplied timeout、`skills/review/SKILL.md` の明示 timeout 要件、bats テスト 4 件) が失われていたら、ガードを引き上げても同じ失敗が続いていた可能性が高い
+
+#### merge
+- merge gate (`review_incomplete_fallback=true`) がブロックし、**work loss を防いだ 2 例目**。Tier 3 sub-agent も `action=abort` で人間判断を求める正しい挙動
+- 親セッションが手動復旧: diff 精査 → `bats tests/` 1507 件 PASS → sign-off 付き commit (`3a382d81`) → push → `decision=override fallback=true` マーカー → merge 再実行。`--write-manual-recovery` で `cause=background-notification-wait` として記録済み
+- squash merge 時に残置ワークツリー (`review+pr-1225`) がブランチを保持していたため `--delete-branch` が失敗したが、merge フェーズ自身が worktree/branch を cleanup して解決している
+
+#### verify
+- Pre-merge 5 件全 PASS。AC3 (`section_not_contains`) は「旧位置から除去されたこと」を検証する negative assertion で、実際に切り出したセクションの `grep -c` が 0 であることを独立に確認した。**ガードの移動を伴う Issue では positive (新位置に存在) と negative (旧位置に不在) を対で置くのが有効**という良い設計例
+- `cause=background-notification-wait` の manual recovery が本日 2 件 (#1212, #1213) 記録された。`recoveries-auto-fire.threshold` は 3 なので、次に 1 件出れば閾値到達で起票候補になる
+
+### Improvement Proposals
+- **pr route 側の Step 10 と `gh pr checks` AC の関係を SKILL.md に明文化する** — Code Retrospective の Design Gaps が指摘した内容。#1212 が patch route 側 (`branch-scoped CI AC exclusion`) を明文化した際の対称ケースであり、隣接する既存 Issue はない。ただし本セッションは締めに入るため、次サイクルの起票候補として本節に記録するに留める (Tier 2 相当)
+- `cause=background-notification-wait` の閾値到達監視 — 現在 2/3。次の 1 件で `recoveries-auto-fire` の起票候補になるが、`.wholework.yml` で `enabled: false` (#1179) のため自動起票はされず、`/verify` Step 15 が Recommend を出力する形になる。本 Issue の修正が有効なら 3 件目は発生しないはずで、**この閾値到達の有無自体が #1213 の実効性の指標**になる
