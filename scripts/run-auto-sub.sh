@@ -829,9 +829,15 @@ emit_event "sub_start" "size=${SIZE}"
 # phase/merge, phase/verify, and phase/done — phase/ready is removed once /code starts
 # and is not restored on this path, so without this check every one of those states
 # would redundantly re-dispatch run-spec.sh on a resumed run (issue #977).
+# Also skip when Size is XS: skills/auto/SKILL.md Step 3 (single-issue route) treats
+# spec as not required for XS, and this batch/XL route must reach the same conclusion
+# for the same Size (issue #1108) — otherwise a `phase/issue` (no `phase/ready`) XS
+# issue would dispatch run-spec.sh here despite the single-issue route skipping it.
 LABELS=$(gh issue view "$SUB_NUMBER" --json labels -q '.labels[].name' 2>/dev/null || true)
 if echo "$LABELS" | grep -qE "phase/(code|review|merge|verify|done)"; then
   echo "${LOG_PREFIX} spec phase: skipping dispatch for issue #${SUB_NUMBER} (phase/code, phase/review, phase/merge, phase/verify, or phase/done label present; spec already completed)"
+elif [[ "$SIZE" == "XS" ]]; then
+  echo "${LOG_PREFIX} spec phase: skipping dispatch for issue #${SUB_NUMBER} (Size XS; spec not required per skills/auto/SKILL.md Step 3)"
 elif ! echo "$LABELS" | grep -q "phase/ready"; then
   echo "${LOG_PREFIX} --- spec phase: issue #${SUB_NUMBER} ---"
   # Bash-side comments_consumed emit for spec phase. (Issue #705)

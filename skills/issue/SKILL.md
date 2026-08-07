@@ -811,7 +811,7 @@ When an AC describes a behavioral or semantic outcome rather than specific text,
 
 ## Completion Report
 
-After opportunistic verification, get Size with `get-issue-size.sh $NUMBER`.
+After opportunistic verification, get Size with `get-issue-size.sh --no-cache $NUMBER` (avoids a stale cached read immediately after Step 2/Step 8's triage auto-chain sets Size via GraphQL mutation — see `scripts/get-issue-size.sh`'s own `--no-cache` usage note).
 
 **For XL issues (after sub-issue splitting)**: list sub-issues with unresolved "Needs Refinement" points and recommend running `/issue N` for each. Do not list sub-issues without needs-refinement points.
 

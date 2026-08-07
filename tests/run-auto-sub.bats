@@ -454,6 +454,36 @@ MOCK
     [ -f "$RUN_SPEC_LOG" ]
 }
 
+@test "Size XS + phase/ready absent: run-spec.sh is NOT called (issue #1108)" {
+    cat > "$MOCK_DIR/get-issue-size.sh" <<'MOCK'
+#!/bin/bash
+echo "XS"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/get-issue-size.sh"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "issue" && "$2" == "view" && "$*" == *"--json labels"* ]]; then
+    echo "triaged"
+    echo "phase/issue"
+    exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo '[{"headRefName":"worktree-code+issue-42","number":99}]'
+    exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run bash "$SCRIPT" 42
+    [ "$status" -eq 0 ]
+    [ ! -f "$RUN_SPEC_LOG" ]
+    [[ "$output" == *"skipping dispatch for issue #42 (Size XS; spec not required per skills/auto/SKILL.md Step 3)"* ]]
+}
+
 @test "--base flag propagates to run-code.sh for Size M; verify is NOT called by run-auto-sub.sh (deferred to parent /auto)" {
     run bash "$SCRIPT" 42 --base release/v1
     [ "$status" -eq 0 ]

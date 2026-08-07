@@ -87,3 +87,56 @@ Completion Report は同一セッション内で Step 2 / Step 8 の triage auto
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: `/issue` フェーズの Issue Retrospective。Issue 本文への「追加観察 (`/issue` の XS 時ラベル付与の非決定性)」の折り込みが既に完了していること、対応方針 (案 A/B/C) の最終決定は `/spec` に委ねる判断であることを記録。タイトルは変更しないと判断した旨も記載。 / URL: https://github.com/saitoco/wholework/issues/1108#issuecomment-5212311203
+
+### code phase (cutoff: `2026-08-07T04:45:15Z`)
+
+No new comments since last phase.
+
+## Autonomous Auto-Resolve Log
+
+- Step 3 (`phase/ready` label check): label list is `triaged`, `phase/code`, `retro/verify` — `phase/ready` is absent because the Issue already advanced past it (timeline shows `phase/ready` at 04:41:22Z → `phase/code` at 04:45:15Z, no PR/branch/worktree existed prior to this run, indicating a prior `/code` invocation transitioned the label but did not complete implementation). Spec file `docs/spec/issue-1108-auto-spec-dispatch-xs-gate.md` was confirmed present and complete. Auto-resolved: proceed with implementation using the existing Spec.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — implementation followed the Spec's 4 Implementation Steps as written.
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+### Smoke Test
+- N/A — Spec has no `## Smoke Test` section.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Ran `/review 1235 --light --non-interactive` (Size=M → `REVIEW_DEPTH=light`, matching the `--light` override). Base branch conflict pre-check (`git merge-tree`, 3-arg form) found 0 `changed in both` blocks — no conflict context passed to the review agent.
+- Re-verified all 5 pre-merge `rubric` AC independently in Step 8 (adversarial re-check, not just trusting the code phase's self-verification) — all 5 confirmed PASS with the same reasoning as the code phase's Phase Handoff.
+- Ran `review-light` (all 4 aspects: spec deviation, edge cases, security, documentation consistency) — found 1 CONSIDER-severity issue (cosmetic log-message ordering in `scripts/run-auto-sub.sh`'s new XS branch when `phase/ready` is also absent-vs-present), 0 MUST/SHOULD. Posted as an inline PR comment; not fixed (Claude's Step 12 judgment: cosmetic only, no functional impact, review agent itself offered "leave as-is" as an acceptable alternative).
+- CI: all 9 checks (DCO, Run bats tests ×2, Validate skill syntax ×2, Forbidden Expressions check ×2, macOS shell compatibility ×2) SUCCESS — no FAIL-blocking entries injected into the review.
+
+### Deferred Items
+- Post-merge AC ("`--batch` で XS Issue を処理し、spec 要否が規定どおりになること、および Step 4b が二重転記を起こさないことを確認する", `verify-type: opportunistic`) remains deferred to post-merge observation — unchanged from the code phase's handoff, still `- [ ]` in the Issue body (cross-referenced, not stale).
+- The CONSIDER-severity log-message-ordering issue in `scripts/run-auto-sub.sh:840` was left unfixed; if a future change touches this `elif` chain, consider reordering the `phase/ready`-absence check ahead of the `Size == XS` check so the log message always attributes the skip to its most direct cause.
+
+### Notes for Next Phase
+- No MUST issues — review posted as `COMMENT`, not `REQUEST_CHANGES`. `/merge 1235` can proceed directly.
+- No policy changes were made in this review pass (Step 12 made no implementation edits), so Step 13's Issue body / AC update was skipped — the Issue's AC text and verify commands are unchanged from the Spec's Verification section.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — implementation matched the Spec's 4 Implementation Steps exactly, confirmed both by the code phase's own retrospective (Deviations from Design: N/A) and by this review's independent Step 8/10 re-check.
+
+### Recurring issues
+
+Nothing to note — no issue class repeated within this PR (the single CONSIDER finding was a standalone cosmetic observation, not a pattern across multiple files/branches).
+
+### Acceptance criteria verification difficulty
+
+All 5 pre-merge conditions used `rubric` verify commands exclusively (no mechanical `file_contains`/`grep` supplementary checks). This worked cleanly here because the PR diff is small (5 files, ~76 net lines) and each AC maps to a clearly bounded code/doc change, but it's worth noting for future Issues in this area: AC1 ("XS Issue に対して同じ結論を出す") and AC5 ("`/issue` 側の XS 時ラベル付与の非決定性が解消されている") both describe *behavioral equivalence across two independent code paths* rather than a single-file property — a grader without git history access could plausibly miss that the "before" state (Bug 1 / Bug 2 in the Spec's Root Cause section) is what makes the "after" state meaningful. No actual grading difficulty was observed in this run, but a rubric text that briefly names the specific *prior* broken behavior (not just the desired end state) would make the grader's job more robust for this class of "make two paths agree" AC — no Issue filed for this, recording as an observation only per [[feedback_issue_filing_restraint]].

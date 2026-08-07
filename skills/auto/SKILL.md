@@ -323,7 +323,7 @@ Before running any phase, initialize `VERIFY_ITERATION_COUNT`:
 
 ---
 
-**XL route: sub-issue dependency graph with parallel execution (`run-auto-sub.sh` checks each sub-issue's `phase/ready` and auto-runs spec if not set):**
+**XL route: sub-issue dependency graph with parallel execution (`run-auto-sub.sh` checks each sub-issue's `phase/ready` and Size, auto-running spec only when `phase/ready` is absent and Size is not XS (mirrors Step 3)):**
 
 `run-auto-sub.sh` independently loads `ALWAYS_PR` from `.wholework.yml` (via `get-config-value.sh always-pr false`) and applies the same patch→pr promotion logic as Step 2 above when determining each sub-issue's Size-based route — so `always-pr: true` is honored consistently for both the single-Issue path and the XL sub-issue path.
 
