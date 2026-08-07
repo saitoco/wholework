@@ -105,16 +105,16 @@ $ gh run list --workflow=test.yml --limit=8 --json conclusion,headBranch,event
 - The initial "why `--commit` is not used" explanation in `modules/verify-classifier.md` quoted the deprecated `--commit=$(git rev-parse HEAD)` form as one contiguous string. This tripped the new negative-assertion bats test (`! grep -q -- '--commit=$(git rev-parse HEAD)'`) against the SSoT file's own explanatory prose, not a live command. Reworded to separate the `git rev-parse HEAD` mention from the literal `--commit=` prefix so the explanation no longer contains the deprecated form as a contiguous substring.
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Followed the Spec's already-decided policy (a) (`--branch=main --limit=1`, no `--commit`) verbatim — no new design decisions were needed at code time.
-- Limited scope to the 4 files the Issue named plus the 2 additional files the Spec scoped in (`tests/verify-executor.bats`, `skills/issue/spec-test-guidelines.md`); left the Spec's explicitly Deferred locations (`modules/verify-executor.md` job-level sub-form example, `skills/spec/SKILL.md` Step 10, `skills/triage/skill-dev-verify-audit.md` Pattern 4) untouched.
+- Merged under a recorded pre-merge-ac-gate override (`decision=override`, `fallback=true`) — `/review`'s Step 12.2 (commit/push) ended in a silent no-op after MUST/SHOULD findings were applied but left uncommitted; a parent session verified the diff, ran the full suite (1495 pass), and committed/pushed as `e878a321` before merge proceeded.
+- Squash-merged PR #1222 into `main` as `9a8b3c55`; all 4 pre-merge ACs were checked at gate time.
 
 ### Deferred Items
-- AC4 (`github_check "gh pr checks" "Run bats tests"`) is unchecked — no PR existed yet when Step 10 evaluated it. It will resolve once CI runs on PR #1222.
-- The 3 locations the Spec's Notes section marked "Deferred" (see Spec Notes) still lack `--branch=main`; a follow-up Issue is recommended per the Spec but was not filed by this code run (no new out-of-scope remediation was discovered beyond what the Spec already recorded).
+- The 3 locations the Spec's Notes section marked "Deferred" (`modules/verify-executor.md` job-level sub-form, `skills/spec/SKILL.md` Step 10, `skills/triage/skill-dev-verify-audit.md` Pattern 4) still lack `--branch=main`; no follow-up Issue was filed by this run.
+- Root cause of the review-phase silent no-op (background test-run notification never arriving) is tracked separately in Issue #1213, not in this Issue's scope.
 
 ### Notes for Next Phase
-- `/review` should confirm PR #1222's CI (test.yml `Run bats tests` job) passes before merge — AC4 depends on it.
-- No other outstanding risks identified during implementation.
+- `/verify` should confirm the post-merge observation AC: the next patch-route Issue's `/verify` run should reference a CI run that includes the implementation commit (`head_sha`-based), not an unrelated prior run.
+- No other outstanding risks identified during merge.
