@@ -79,4 +79,4 @@
 - **bats fixture 形式**: ポインタファイルは 1 行のプレーンテキスト (session id 文字列 1 個) であり、テストは `echo "<value>" > <path>` で `$BATS_TEST_TMPDIR` 配下に作成する既存の慣習に従う (新規追加ではなく既存 fixture パターンの流用)
 
 ## Consumed Comments
-No new comments since last phase.
+- saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1224#issuecomment-5212373223
