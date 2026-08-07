@@ -11,6 +11,14 @@
 
 ## Consumed Comments
 
+### code phase
+
+cutoff: 2026-08-07T03:25:23Z (`phase/code` ラベル付与の timeline イベント)。
+
+新規コメントなし (cutoff 以前の 1 件のみ存在)。Cross-phase marker (`type=verify-fail` / `type=preview-ac-unverified`) の追加スキャン結果も該当なし。
+
+### spec phase
+
 cutoff: 未確定 (`phase/*` ラベル付与の timeline イベントが存在せず、`.tmp/auto-events.jsonl` にも本 Issue の `phase_start` イベントが見つからなかったため、フォールバック B によりベストエフォートで全コメントを対象としたが、該当コメント自体が 0 件だった)。
 
 新規コメントなし (`gh issue view 1167 --json comments` の結果が空)。Cross-phase marker (`type=verify-fail` / `type=preview-ac-unverified`) の追加スキャン結果も該当なし。
@@ -86,3 +94,48 @@ Pre-merge AC1・AC3 は `rubric` タイプであり、`modules/verify-executor.m
 - `#719` 条件1: `pre-merge-check.sh` の新規 FAILURE 判定 (`NEW_FAILURE: base PASS / head FAIL exits 2`) を検証するもので、**`tests/pre-merge-check.bats` に既に同一シナリオのテストが存在する** (`grep -n "NEW_FAILURE" tests/pre-merge-check.bats`で確認済み) — 追加実装なしで AC を `auto` へ retype できる可能性が高い
 
 ただし、この 3 件は #1158 の sub-issue 分割時点の Issue 番号割り当て (#1163 に含まれる 34 件、#1167 に割り当てられた 7 件) のいずれにも本 Issue の Acceptance Criteria として明記されておらず、非対話モード・light depth での conflict detection ポリシー (`skills/spec/SKILL.md` Step 6: 「note in Spec's Notes section only」) に従い、本 Spec の Implementation Steps・Changed Files には含めない。対応が必要な場合は別途 Issue 起票または #1167 の追加スコープとして扱うことを推奨する。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1〜5 は Spec 記載どおりに実施した。
+
+### Design Gaps/Ambiguities
+
+- 実行開始時点で本 Issue のラベルが既に `phase/ready` を経由せず `phase/code` になっており、`reconcile-phase-state.sh --check-precondition code-pr` が `phase/ready` 欠如を警告した。GitHub Timeline を確認したところ、Implementation Step 5 の Issue 本文編集 (`#1066` / `#1060` の verify-type 再型付けと `#1167` 自身の post-merge AC 文言修正) は既にリモートへ適用済みだった一方、bats テスト追加・レポートファイル作成・commit/push/PR はまだ行われていない状態だった — 中断された前回試行 (watchdog kill 等) の痕跡と判断し、Issue 編集を再実行せず Implementation Step 1〜4 のみを完了させる形で処理を継続した。GitHub Issue 編集はローカル worktree のコミット状態と独立して永続化されるため、再開時にどこまで完了しているかを個別に確認する必要がある。
+- Worktree 作成時のベース (`origin/main` の session 開始時点スナップショット) が、実装完了時には origin/main から 10 commit 遅れていた (並行セッションによる別 Issue のマージが session 中に進行したため)。`git diff origin/main HEAD` で無関係な削除差分 (他 Issue の Spec/レポートファイル) が大量に出たため、push 前に `git rebase origin/main` を実施して解消した。長時間の non-interactive 実行では、PR 作成直前に origin/main との乖離を確認する一手間が有効。
+
+### Rework
+
+- N/A — 上記のベースドリフトは rebase 1 回で解消し、実装内容 (bats テスト・レポートファイル) への手戻りはなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- REVIEW_DEPTH=light (`--light` 明示指定、Issue Size=M とも整合) のため 10.0 の軽量統合レビュー (review-light 1 agent) を実行し、10.1〜10.3 の fan-out レビューはスキップした
+- 新規 bats テスト2件の論理的健全性 (mock 挙動が実スクリプトの分岐と一致するか、常に真になる無意味なアサーションでないか) を dedicated agent で個別に追加検証し、review-light の指摘なしという結果を補強した
+
+### Deferred Items
+- #708 (条件1・2) と #719 (条件1) の計 3 AC 行は、姉妹 sub-issue #1163 の Phase Handoff が「区分 C 相当」と指摘しているが、本 Issue のスコープ外として対応していない (Spec Notes 「#708 / #719 に残る故障注入型 manual AC」参照)。対応候補: `#708` は `tests/reconcile-phase-state.bats` の既存対象、`#719` 条件1 は `tests/pre-merge-check.bats` に既に同一シナリオのテストが存在するため追加実装なしで retype できる可能性が高い
+- Post-merge AC (`/audit stats --retention` での #1066 / #1060 個別確認) は本 PR merge 後の観測が前提であり、本フェーズでは未実施
+
+### Notes for Next Phase
+- `/merge` 実行前に `#1066` / `#1060` の Issue 本文が既に `verify-type: auto` へ変更済みであることを確認済み (本 Issue の code フェーズ開始前、前回試行で適用済みだった) — 再度の Issue 編集は不要
+- MUST issue はゼロのため Step 12/13 はスキップ、`event=COMMENT` で review 完了。`/merge 1237` にそのまま進んでよい
+- `/verify` は post-merge AC の observation event (`event=auto-run`) に従い、次回 `/auto` 実行時の `/audit stats --retention` 結果を待って判定すること
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — Implementation Steps 1〜5 と PR diff (bats テスト2件・レポートファイル・Spec 追記) は完全に一致していた。review-light agent (Spec 乖離・エッジケース/堅牢性・セキュリティ・ドキュメント整合性の4観点) が指摘なしで完了。
+
+### Recurring issues
+
+Nothing to note — 同種の問題の再発は見られなかった。
+
+### Acceptance criteria verification difficulty
+
+Pre-merge AC1・AC3 は rubric タイプで `docs/reports/manual-ac-retype-c-d1.md` を根拠資料として評価する構成だったが、Phase Handoff の「Notes for Next Phase」に評価対象ファイルの案内が明記されていたため判定に迷いはなかった。AC4 (`bats tests/`) はローカル実行で exit code 0・最終テスト `ok 1510`・`not ok` なしを確認、CI の `Run bats tests` ジョブ SUCCESS とも整合。PR 本文が「1509件」と記載しているのに対し実際のフルスイートは 1510 件だったが、この差は本 PR が新規に bats テストを2件追加したことによる数値の陳腐化であり、AC 判定への影響はない (verify command は件数を固定しない `bats tests/` のみを要求するため)。
