@@ -275,3 +275,64 @@ Issue 本文が記載していた行番号のうち、実ファイルとずれ�
 
 - `/verify` は Post-merge observation AC (`event=auto-run session=next`) の確認が主タスク。次回 `/auto --batch` 完走を待つ必要があり、即時確認はできない点に注意
 - Issue #1214 の base branch は `main` なので `closes #1214` により自動クローズされる見込み。Step 6 のフォールバック確認で state を再検証すること
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- **削除系事前スキャンが親セッションの調査漏れを検出した**。起票時の調査は `next-cycle-seed` / `next_cycle_seeded` / `NEXT_CYCLE_SEED` をキーワードに grep したが、`docs/guide/autonomy.md:40` の `E (Seed file emission)` はどのキーワードにも当たらず漏れていた。`/issue` の削除系キーワード全列挙スキャンがこれを拾い、`## Scope` セクションを新設して編集対象/対象外を明示した
+- Size は L と判定 (親セッションの事前見積りは M)。削除面が 15 ファイルに及ぶことを踏まえれば L が妥当だった
+
+#### spec
+
+- **キーワード検索では原理的に到達できない削除対象を 4 群追加した**。特に `modules/autonomy-tier.md` のマトリクス L2 行 `Seed is automated; cron requires a human to trigger` は、機能を名前ではなく**意味**で参照しているため、いかなるキーワード grep にもかからない。他に `docs/guide/autonomy.md:13,32` / `docs/guide/customization.md:73,147` の散文、L0 Layer Table の `Tail extension (#700/702/703)` (Issue 番号参照)、`skills/auto/SKILL.md` の `loop-paths-fallback: [A]` (E 消滅後に発火しえない死んだ宣言)
+- **verify command の常時 PASS 欠陥を 1 件修正した**。親セッションが起票時に書いた `file_not_contains "modules/autonomy-tier.md" "loop-paths-used: [A, E]"` は、Grep 評価時に `[A, E]` が文字クラスとして解釈され変更前でもマッチせず常時 PASS だった。ripgrep で実証のうえメタ文字を含まない `"A, E"` に差し替え。#1209 が扱う「常時 PASS」類型の実例
+- 起票時に「実装時に確認すること」として先送りした 2 件 (読み取り側の未知イベント耐性、`mode: batch` の実在) を設計フェーズで先に確認しており、`/code` に不確実性を持ち越さなかった
+- Pre-merge AC を 21 → 26 件に拡張し、Issue 本文と Spec の verbatim 一致を確認している
+
+#### code
+
+- 手戻りゼロ。11 ファイルを一括変更し、Pre-merge verify command 26 件中 24 件を full mode で実行して全 PASS、`bats tests/` 1480 件全 PASS で PR 作成まで到達した
+
+#### review
+
+- MUST 指摘 1 件は CI インフラ障害 (`macOS shell compatibility` の `Service Unavailable`) で、review 自身が「本 PR の変更内容とは無関係」と正しく判定しつつ「既知フレーキー/無関係ジョブの例外規定が未整備」のため MUST として記録した。判定も推奨対応 (re-run) も正しく、実際に同一 SHA の再実行で 9/9 green になった
+- review-bug の検出 1 件は adversarial verification で REJECT され、誤検出が下流に漏れなかった
+
+#### merge
+
+- CI 9/9 pass、pre-merge AC ゲート 26 件全 PASS で squash merge。コンフリクトなし
+
+#### verify
+
+- Pre-merge 26 件は merge ゲートで確定済みのため SKIPPED。Post-merge observation AC 1 件は `auto-run` 未発火 (通知コメント 0 件) かつ `session=next` の前提未成立で SKIPPED
+- **review フェーズが watchdog kill され、親セッションが手動復旧した** (`docs/reports/orchestration-recoveries.md` に `manual-recovery-review-rerun` / cause `ci-infra-outage-during-ci-wait` として記録済み)。詳細は下記
+
+### review watchdog kill の詳細と Tier 2 誤診断
+
+| 時刻 (UTC) | 事象 |
+|---|---|
+| 15:32:23 | review phase 開始 |
+| 15:35:29 | `ci_wait` — CI 待機に入り stdout が沈黙 |
+| 15:46:29 | AC 検証結果レビュー投稿 |
+| 15:48:32 | MUST gate レビュー投稿 |
+| 16:13 | 修正コミット `42e337d9` push → 新規 CI トリガ |
+| 17:05:34 | `watchdog_kill` (沈黙 5400s) |
+
+真因は **GitHub Actions のリポジトリ全体障害**。実測で `Test` run が 55 分以上 queued のまま滞留し、完了した run も `Set up job` 失敗または `steps: []` + `cancelled` だった。他 PR の run も同時刻帯に同様に失敗しており、本 PR 固有ではない。
+
+**Tier 2 の `detect-wrapper-anomaly.sh` は `json-mode-silent-hang` と誤診断した。** 判定は wrapper ログに `watchdog: still waiting (json mode)` が含まれるかの単純 grep (`scripts/detect-wrapper-anomaly.sh:75`) だが、この文字列は沈黙の理由を問わず全 watchdog 行に含まれる。パターンの説明文が主張する「The forked session did not produce any output after launching in json mode」は事実に反する — セッションはレビュー 2 件を投稿しコミットを push しており、明確に稼働していた。
+
+親セッションはカタログの「1 回リトライ」指示に**そのまま従わず**、先に CI を同一 SHA で再実行して 9/9 green を確認してから review を再起動した。結果、再実行は silent window 1200s で exit 0 完了 (前回 5400s で kill)。カタログ指示のまま即リトライしていれば、CI 障害が続く中で再び `ci_wait` に入り 90 分を空費していた。
+
+`watchdog-timeout-review-seconds: 5400` の設定値自体は妥当で、同じ設定のまま再実行は 1200s で収まっている。
+
+### 副次的な観測: #1102 の post-merge manual AC が実運用で充足
+
+本 PR のレビュー投稿 (15:48:32Z) が、Issue #1102 の 422 フォールバックの**初の実運用発火**となった。レビュー本文冒頭が `scripts/gh-pr-review.sh` の固定注記文と完全一致し、MUST 指摘を含む自己 PR レビューが手動介入なしで `COMMENT` として投稿された。#1102 は本セッション中に `phase/done` へ遷移済み (詳細は #1102 のコメント参照)。
+
+### Improvement Proposals
+
+- **`detect-wrapper-anomaly.sh` の `json-mode-silent-hang` 判定が、沈黙の理由を区別できず CI 待機由来の沈黙を誤診断する**: 判定条件は wrapper ログに `watchdog: still waiting (json mode)` が含まれるかの単純 grep (`scripts/detect-wrapper-anomaly.sh:75`) だが、この文字列は watchdog が出力する全行に含まれるため、沈黙の理由 (セッション初期化ストール / CI 待機 / 長時間の内部処理) を一切区別しない。本 Issue の review フェーズでは、セッションが稼働中 (レビュー 2 件投稿 + コミット push 済み) にもかかわらず `json-mode-silent-hang` と判定され、カタログが指示する「1 回リトライ」は外部 CI 障害が継続する状況では無効だった。区別に使える信号は実行時に揃っている — `.tmp/auto-events.jsonl` の `ci_wait` イベント (本件では 15:35:29Z に emit)、wrapper ログ中の `Waiting for CI checks on PR ... (timeout: ...)` 行、PR への review 投稿の有無。現在の検出器は wrapper ログと exit code のみを入力とし、イベントログを参照しない (`grep -n "ci_wait" scripts/detect-wrapper-anomaly.sh` は空)。`modules/orchestration-fallbacks.md` にも `ci_wait` 由来の沈黙を扱うエントリがない。検出器に events ログを渡して `ci_wait` 後の沈黙を別パターン (例: `ci-wait-silence-timeout`) として切り出し、リトライではなく CI 状態の確認を先行させる復旧手順を与えるべき。
