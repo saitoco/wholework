@@ -27,6 +27,7 @@
 
 **cutoff 解決の注記**: 両コメントの `createdAt` は本フェーズの cutoff (`.tmp/auto-events.jsonl` の `phase_start` イベント、Fallback A) より前だが、この cutoff は本ラン自身が起動直前に記録した自己参照的な値であり (`phase/*` ラベル履歴が存在しない初回フェーズのため)、機械的に適用すると両コメントを排除してしまう。同じ wrapper が記録した `comments_consumed` イベント (count=2, trust_breakdown MEMBER:2) が実際の全コメント数と一致していることから、両コメントを consumed 済みとして扱った。
 
+- saito / MEMBER / first-class / <!-- wholework-event: type=verify-fail phase=verify issue=1213 iteration=1 --> / https://github.com/saitoco/wholework/issues/1213#issuecomment-5213905136
 ## Changed Files
 
 - `skills/code/SKILL.md`: Step 9 の実行サーフェス制約を、Behavioral Change Detection 分岐内 (旧位置: check 2 の `bats tests/` コードフェンス直後) から、Step 9 冒頭 (`**Operate route**: ...` 行の直後、Behavioral Change Detection 見出しより前) の分岐非依存な位置へ移動。旧位置の記述は "See the execution surface constraint above" 形の短い参照へ置換 (`run_in_background` という語自体は旧位置から除去)
