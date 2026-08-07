@@ -80,3 +80,32 @@
 
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1224#issuecomment-5212373223
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- The Spec's own Notes (line 78, "`skills/auto/SKILL.md` Step 1 の記述は変更しない") turned out to be based on an incomplete reading of that line's actual wording. The Spec's reasoning treated the line as describing the general "wrapper script's own independent fallback" concept, which does remain correct — but the line's literal text specifically names `restore_auto_session_pointer()` as the consumer of the `.tmp/auto-session-current` last-resort fallback, and that specific claim became false once this PR removed that function's read of the file. `review-light`'s documentation-consistency pass caught the gap between the Spec's stated conclusion and the line's literal content; the code phase's own reasoning did not re-verify the line's exact wording against the diff's actual effect on `restore_auto_session_pointer()`. Takeaway for future Specs: when a Notes entry justifies *not* changing a line by paraphrasing its meaning, double check the paraphrase against the line's literal wording — not just its intended concept — especially when the line names a specific function/symbol that the Implementation Steps are modifying.
+
+### Recurring issues
+
+- Nothing to note — this is the first Issue in recent sessions to remove a fallback step from `restore_auto_session_pointer()`'s resolution order.
+
+### Acceptance criteria verification difficulty
+
+- Nothing to note. All 4 Pre-merge ACs (3 `rubric` + 1 `command`) verified cleanly with no UNCERTAIN and no verify-command syntax issues. The `command "bats tests/emit-event.bats"` AC resolved via CI reference fallback (`Run bats tests` job SUCCESS) since `/review` runs in safe mode.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Fixed the one SHOULD-severity finding (stale `restore_auto_session_pointer()` cross-reference in `skills/auto/SKILL.md:38`) directly in this phase rather than deferring, since it was a single-line, unambiguous prose correction with no code/test impact
+- Did not re-run the full `bats` suite after the fix, since the change touched only a Markdown documentation line with no bats coverage; `python3 scripts/validate-skill-syntax.py skills/` was re-run instead and passed clean
+
+### Deferred Items
+- The Post-merge observation AC (`/auto` を経由しない wrapper 個別実行で `/verify` を走らせた際、event が他セッションの session_id を持たないことを確認する`, `event=auto-run session=next`) remains unverified — it requires a live post-merge manual-orchestration run and is out of scope for `/review`
+- None else
+
+### Notes for Next Phase
+- `/merge` can proceed without further review — no MUST issues, all Pre-merge ACs PASS, CI fully green (9/9 checks)
+- `/verify` should watch for the Post-merge observation AC firing on the next manual-orchestration `/auto`-external run, per `event=auto-run session=next`
