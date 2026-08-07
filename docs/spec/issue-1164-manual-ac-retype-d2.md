@@ -110,3 +110,6 @@
 
 - **#515 の「頻度改善」をどう観測可能にするか** — 専用の計測基盤 (emit_event 等) が存在しないことを `could not be parsed`/`parse_fail` のキーワード grep で確認した。`auto-run` を付与しつつ、判定自体は `/verify` 実行時の定性的な LLM 判断に委ねる設計としたが、これは #1164 の他の 11 行 (状態の有無を機械的に確認できる) より曖昧さが残る。将来 `/verify` がこの条件を繰り返し SKIPPED/UNCERTAIN で返す場合は、統計的な計測を Post-merge AC に追加する形で #515 自身の follow-up として扱うべきであり、本 Issue のスコープでは event 付与に留める
 - **#446 の「サンプル Issue」という限定的な文言をどう解釈するか** — 文言通りに「意図的に作成したサンプル Issue でのみ発火する」と読むと故障注入型 (区分 C 相当) に近くなるが、#446 が追加した adapter pattern survey ステップは `/issue` Step 4・`/spec` Step 6 の prerequisite check として恒久的に組み込まれており、新規 verify command を提案する任意の実 Issue で自然に発火する。本 Spec 作成自体がこのステップを経由したことも傍証とした。「サンプル」は導入時の検証手段の説明であり、恒久運用時の発火条件を限定する意図ではないと判断した
+
+## Consumed Comments
+No new comments since last phase.
