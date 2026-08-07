@@ -51,5 +51,32 @@
 - **Pre-merge verification item count について**: 8 件で `$STEERING_DOCS_PATH/tech.md` の Spec Simplicity Rules が定める light 上限 (5 件) を超えるが、「Verify command sync rule」により Issue 本文の Pre-merge acceptance criteria (8 件) を改変せず逐語コピーした結果である。`/verify` はこれらをインデックスで個別にチェックするため、統合による件数圧縮は行わなかった。
 - **`recoveries-auto-fire: enabled: false`** (`.wholework.yml`) — 本 Issue と直接の関係はないが、`orchestration-recovery` 調査中に確認した現在の設定として記録する。
 
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation followed Implementation Steps 1–5 as written, in the same order.
+
+### Design Gaps/Ambiguities
+- `docs/tech.md` の Behavioral Change Detection (Step 9) は、`tests/run-merge.bats` / `tests/verify-dirty-detection.bats` がフィクスチャの例示パスとして文字列 `"docs/tech.md"` を含んでいるだけで — 実際に本 Issue で変更した matrix 表の内容とは無関係 — フルスイート実行に倒れた。フルパスマッチによる誤検知に近いが、仕組み上意図された保守的挙動であり Spec 変更は不要と判断した。
+
+### Rework
+- `bats --jobs 18 tests/` の並列実行で `tests/post_merge_check.bats` の2ケース (`fail: gh issue reopen called when FAIL input given` / `multiple issues: processed sequentially`) が FAIL したが、同ファイル単体の直列実行では全 PASS。本 Issue の変更範囲外 (agents/*.md, docs/tech.md) であり、並列実行時のテスト間リソース競合によるフレークと判断し、再実装は行わなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 6 Opus sub-agent + review-light (計7エージェント) の frontmatter に `effort: high` を追加。実効値は現状維持 (`run-review.sh`/`run-issue.sh` の `--effort high` に合わせる)、`frontend-visual-review` のみ Opus 5 指針に基づき新規に `high` を明示。
+- `orchestration-recovery` は対象外。`spawn-recovery-subagent.sh` が frontmatter を除去した本文のみを独立 `claude -p --effort medium` プロセスへ渡すため、frontmatter は無効。既にスクリプト側フラグで effort 分離済み。
+- `docs/tech.md` / `docs/ja/tech.md` の matrix 表を更新 (Effort 列 `—`→`high`、Rationale から「effort inherited from parent」相当の記述を除去)。
+
+### Deferred Items
+- effort 値そのもののチューニング (Opus 5 指針に基づく down-sweep) — 本 Issue のスコープ外、後続 Issue に委ねる (Issue Out of Scope に明記済み)。
+- Post-merge AC: `/review --full` 実行による `review-bug`/`review-spec` の frontmatter effort 起動確認 — opportunistic 検証待ち。
+
+### Notes for Next Phase
+- Pre-merge の 8 件 AC (grep 6件 + rubric 2件) はすべて実装時点で PASS 確認済み。Issue 本文のチェックボックスも `/code` 内で更新済み。
+- `docs/ja/tech.md` は `docs/translation-workflow.md` の Sync Procedure に従い同期済み (`check-translation-sync.sh` で IN_SYNC 確認)。
+
 ## Consumed Comments
 No new comments since last phase.
