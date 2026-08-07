@@ -308,3 +308,39 @@ Background セクションの `--write-manual-recovery` という事実主張は
 - `scripts/gh-pr-review.sh` に self-review 起因の HTTP 422 を検知して `event=REQUEST_CHANGES` → `event=COMMENTED` + 本文冒頭への MUST 明示テキストへ自動フォールバックする処理を追加する。self-hosted 単一アカウント運用のリポジトリでは MUST issue 検出時の review 投稿が構造的に失敗し、毎回手動フォールバックを要する (`modules/phase-state.md:75` に既知の制約として記録済みだが、コード側の対処がない)
 - observation type の AC 条件文に、イベント発火時の**観察対象成立判定**を条件文自身に埋め込む書式を検討する。本 Issue の条件 4 は `event=auto-run` という広いイベント名に対し「open PR 存在時に recovery が発生した場合」という前提条件を持つが、その前提が成立しなかった発火時に SKIPPED を返すべきか UNCERTAIN を返すべきかが条件文から一意に決まらない。`event=` に加えて前提条件を機械可読に書ける属性 (例: `precondition=`) の導入余地がある
 - `scripts/collect-recovery-candidates.sh` の重複起票判定を、open Issue に加えて **closed Issue** も対象にする (または起票済み Issue の close 時刻より新しい entry のみを計数する)。本 Issue の `/verify` Step 15 で `manual-recovery-review-rerun` が閾値 3 で再検出されたが、source entry 3 件 (#1055 / #1061 / #1069、最新 2026-07-31 03:08 UTC) はすべて対応 Issue #1123 (同名タイトル、2026-07-31 03:15 UTC 起票 → 2026-08-04 closed) の起票契機となった occurrence そのものであり、修正後の新規発生はゼロだった。現状は `--issues-json` に open Issue しか渡らないため、解決済み症状が `orchestration-recoveries.md` に残り続ける限り毎回の `/verify` で閾値超過として再発火し、L2/L3 では重複 Issue が自動生成される
+
+## Verify Retrospective (iteration 2 — observation dispatch)
+
+session `33233-1786023637` の observation scan (`--event auto-run`) で発火したため再実行した。
+
+### AC 4 の前提が後続 Issue により失効していた
+
+Post-merge AC 4 が「期待される出力構造」として挙げた 3 点のうち、1 (defer 実行の stderr ログ) と 2 (`Record deferred recovery records for issue #N` コミット) が参照する `_defer_recovery_record()` / `_flush_deferred_recovery_records()` は、**本 Issue の実装 (`37b13320`) の翌日に着地した #1181 (`9ba018e9`, PR #1183) で削除されている**。
+
+#1181 のコミットメッセージ:
+
+> Remove the Spec-write functions (manual/Tier 2/Tier 3) and the defer/flush stash entirely; recovery records now live solely in `docs/reports/orchestration-recoveries.md` and the `manual_intervention` event.
+
+`grep -rn "Record deferred recovery records" scripts/ skills/ modules/` は出力なし。`skills/verify/SKILL.md` Step 8c の「The observed premise itself does not hold in this repository」に該当するため SKIPPED と判定した。
+
+### Purpose 自体は #1181 の別解で達成され、本セッションで 2 回実測できた
+
+本 Issue の Purpose (「open PR 存在時の recovery 記録が main と conflict を製造する問題の解消」) は、#1181 が **conflict を生む経路 (Spec への書き込み) 自体を廃止する**という上位互換の解決で達成している。`docs/reports/orchestration-recoveries.md` は PR ブランチが触らないファイルなので構造的に conflict しない。
+
+session `33233-1786023637` で open PR 存在下の manual recovery が 2 回発生し、いずれも conflict なしで完了した:
+
+| Issue | open PR | recovery 記録 | 後続 merge |
+|---|---|---|---|
+| #1212 | PR #1222 (OPEN) | `[main ee33c7fc]` | `9a8b3c55` (conflict 解消なし) |
+| #1213 | PR #1225 (OPEN) | `[main 9587d04d]` | `1acef89c` (conflict 解消なし) |
+
+iteration 1 の merge retrospective が「recovery が一度も起きなかったため修正の有効性は実証されていない」と記録していた点は、**別実装 (#1181) によってではあるが今回実証された**。
+
+### iteration 1 の Improvement Proposal を補強する実例
+
+iteration 1 が挙げた提案「observation type の AC 条件文に、イベント発火時の**観察対象成立判定**を条件文自身に埋め込む書式 (`precondition=` 属性) を検討する」は、今回の事例でさらに補強される。今回問題になったのは「前提条件が成立しなかった」ではなく **「観察対象の実装が後続 Issue で消滅した」** — `precondition=` があっても捕捉できない別種の失効である。
+
+AC が参照する実装が後続 Issue で置き換えられると、observation AC は構造的に永久 SKIPPED になり Issue が `phase/verify` に無期限滞留する。これは #1127 (`audit: Issue 本文に書かれた前提条件の失効検出`) が扱う領域。
+
+### Improvement Proposals
+- **後続 Issue による observation AC の失効を検出する** — 本 Issue の AC 4 のように、AC が名指しする実装 (関数名・コミットメッセージ文字列・ファイルパス) が後続 Issue で削除されると、AC は永久 SKIPPED になり Issue が `phase/verify` に滞留し続ける。既存 #1127 (`audit: Issue 本文に書かれた前提条件の失効検出`) のスコープと重なるため独立起票は行わず、本節に記録するに留める (Tier 3)。#1127 に着手する際は本事例 (#1150 AC 4 ← #1181) を実測ケースとして参照できる
