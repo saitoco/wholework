@@ -149,20 +149,22 @@ Consumed Comments で提示された「79 件へ `when=` を併せて付与す�
 - なし。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Precondition gate (#1164/#1165/#1166/#1167 が全件 `phase/done`/CLOSED) を再確認し充足を確認した上で、`docs/reports/manual-ac-retype-summary.md` を作成した (Spec Implementation Steps 1〜4 をそのまま実行)
-- Pre-merge AC 5 件 (すべて `rubric`) は、集約レポートの git diff + Issue 本文を入力として grader (本セッション自身) が評価し、全件 PASS と判定してチェックボックスを更新した
-- 区分別処理結果は各 sub-issue の記録ファイル (`docs/reports/manual-ac-retype-a.md` / `-d2.md` / `-d3.md` / `-c-d1.md`) および #1166 の `## Execution Log` コメントから転記・要約する方式を採用し、単純なリンク集ではなく実数値 (件数・event= 内訳・retire 理由) を集約レポート本体に含めた
+- Pre-merge AC 5 件 (すべて `rubric`) を独立 grader として再評価し、全件 PASS を確認 (Issue 側は既に `[x]`、更新不要)。AC2 の一次証拠が本 PR の diff に現れない点は Code Retrospective の自己申告どおりで、review でも同じ制約を確認した
+- capabilities.workflow: true だが ARGUMENTS に `--non-interactive` があるため fork context (再起動保証なし) と判定し、Workflow パスではなく static Task fan-out (review-spec + review-bug×2) を `run_in_background: false` の foreground 実行で運用した
+- review-spec + review-bug×2 (3 finder) が独立に発見した指摘を統合・重複排除した結果、MUST 0 件 / SHOULD 3 件 / CONSIDER 4 件。SHOULD 3 件はいずれもドキュメントの記述精度 (一括表現の過大主張、テーブル合計不一致、Spec 申し送り事項の未消化) で、adversarial verify で 3/4 件 CONFIRMED、CLAUDE.md 言語規約の指摘 1 件は前例と整合するため REJECT (false positive) と判定した
+- MUST 0 件のため merge blocking はなし。SHOULD/CONSIDER 計 7 件はすべて低リスクなドキュメント修正であり、この phase 内で修正・コミット・プッシュまで完了させた (次フェーズへ持ち越さない判断)
 
 ### Deferred Items
 - Post-merge AC (`/audit stats --retention` での Manual waiting 件数減少確認、`event=auto-run`) — `/verify` が observation 経路で評価する
-- Code Retrospective に記録した rubric AC の可視範囲制約 (別 PR で追加済みの sub-issue 記録ファイルを rubric text が名指ししていない件) — 将来の改善検討事項として記録のみ、本 Issue のスコープ外
+- rubric AC の可視範囲制約 (rubric text で参照ファイルを明示する設計) — Code Retrospective・review retrospective 双方で記録済みだが、本 Issue のスコープ外として対応せず
+- `run-auto-sub.sh` の operate route 判定欠落 (#1166 の再発防止) — Auto Retrospective に既存の Improvement Proposal あり、Issue 化は `/verify` の改善提案集約フェーズに委ねる
 
 ### Notes for Next Phase
-- 本 PR マージ後、`/review` → `/merge` → `/verify` の通常フローに進む。Post-merge AC は `event=auto-run` の発火を待つ observation 型のため、`/verify` 初回実行時は SKIPPED (waiting for event) となる想定
-- 親 Issue #1158 自身の実装はこれで完了。5 sub-issue + 本集約レポートの全体像は `docs/reports/manual-ac-retype-summary.md` を参照すること
+- 本 PR マージ後、`/merge` → `/verify` の通常フローに進む。Post-merge AC は `event=auto-run` の発火を待つ observation 型のため、`/verify` 初回実行時は SKIPPED (waiting for event) となる想定
+- 親 Issue #1158 自身の実装はこれで完了。5 sub-issue + 本集約レポートの全体像は `docs/reports/manual-ac-retype-summary.md` を参照すること (review phase での修正後、記述精度が向上している)
 
 ## Auto Retrospective
 
@@ -191,3 +193,18 @@ Level 1 のみ (4 件すべて独立、blocked-by #1157 は CLOSED 済み)。並
 
 - **auto/run-auto-sub: sub-issue の route 判定が Spec 由来の operate route を honor しない** — `skills/auto/SKILL.md` の単一 Issue 経路には Step 3a「Operate route demotion」があり、spec 後に Spec の diff-less 判定で `ROUTE=operate` へ降格する。しかし `scripts/run-auto-sub.sh` の post-spec Size 再取得 (`INITIAL_SIZE` → `SIZE` 比較) は Size 軸しか見ておらず、同等の operate 判定を持たない。結果として operate route の sub-issue は必ず `code-pr` で dispatch され、completion check 失敗 → Tier 2/Tier 3 を空振りさせ exit 1 で終わる。本セッションの #1166 が実例 (機能的には成功しているのに wrapper は失敗扱い)。`run-auto-sub.sh` に Step 3a 相当の operate 判定を追加し、成立時は `code-patch` dispatch + `code-patch` completion check へ切り替える。バッチ/XL 経路で operate route Issue を扱う限り再発する構造的欠陥。
 - **size-workflow-table / auto: XL 分割後も親が集約成果物を持つパターンの経路定義が無い** — `modules/size-workflow-table.md` は XL を「sub-issue へ分割し親は追跡のみ」と定義するが、親が rubric 型の横断 AC を持つ場合、rubric grader は Issue コメントや Spec ファイルを参照できないため親自身が成果物ファイルを持たざるを得ない (#1163 が sub-issue レベルで同じ結論に到達し、#1158 の Spec がそれを親へ一段上げて適用した)。`/auto` の XL route はこの「親の実装フェーズ」を持たないため、Spec がそう設計しても自動実行経路から漏れる。XL route に「全 sub-issue 完了後、親 Spec の Changed Files が非空なら親の code フェーズを実行する」ステップを追加するか、`size-workflow-table.md` 側で親が成果物を持つことを禁じて sub-issue へ寄せるかの二択を決める。#1158 の spec retrospective でも Deferred Items として同じ欠落が記録されている。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Code phase の Design Gaps/Ambiguities が既に自己申告していた「rubric AC2 の裏付け (再型付け結果) が本 PR の diff に含まれず、別 PR で追加済みの sub-issue 記録ファイルにのみ存在する」というギャップは、review-spec / review-bug 双方の finder が独立に同じ line 84 の「A/D2/D3 の再型付け後の AC は…個別確認済み」という一括表現を「一次資料 (`manual-ac-retype-d3.md`) の実測 (D3 の 4〜5 行がマッチ集合外) と食い違う」として具体的に指摘する形で顕在化した。Code phase の自己申告は「rubric の可視範囲制約」という抽象レベルの懸念だったが、review phase で「具体的にどの数字が不正確か」まで特定できた。集約クローズアウト PR (親 Issue が sub-issue の作業を要約するだけで実装成果物を持たない、または持っていても一次情報は別 PR にある) では、rubric AC の PASS 判定と実際の記述精度は別問題であることを示す事例。
+
+### Recurring issues
+
+- review-spec と review-bug×2 (計 3 finder) が独立に同じ 2 箇所 (line 84 の一括マッチ確認claim、D3 テーブルの AC行数列 24 vs 22) を指摘した。finder 間の corroboration が強く、adversarial verify で 3/4 件が PASS (confirmed) となったことと整合する。fan-out レビューが同一箇所を複数角度から捕捉できることを示す好例。
+- 「カウント対象の母集団に含まれる行」と「対象外 (母集団の外側)」を同じテーブル列に並べ、除外の理由を注記しないパターンが D3 テーブルで発生した。この一次資料 (`docs/reports/manual-ac-retype-d3.md`) 自体が同じ構造を持っていた (bug-diff agent が指摘: 「Note this same structure exists in the source `manual-ac-retype-d3.md` lines 8-12」)。集約時に単純転記するとテーブル設計上のわかりにくさも一緒に転写される。今後同種の集計テーブルを書く際は、「対象外」行を独立させるか合計行を明示する設計を最初から採用するとよい。
+
+### Acceptance criteria verification difficulty
+
+- Pre-merge AC 5 件はすべて `rubric` 型で、grader (本セッション) の入力スコープは Issue 本文 + 本 PR の git diff (集約レポート本体) のみだった。AC2 (「A + D2 が observation へ再型付けされ…マッチ対象になることが確認できる」) の一次証拠 (Issue 本文の実際の再型付け結果、`opportunistic-search.sh --dry-run` の実行結果) は、operate route による GitHub Issue 編集という性質上、原理的にこの PR の diff には現れない。集約レポート自身が十分な要約 (数値内訳・確認手法の記述) を含めることで rubric grader は PASS と判定できたが、記述の「正確さ」までは rubric の役割を超えるため review phase での finder 発見に依存した。将来同種の XL 親 Issue で rubric AC を書く際は、rubric text 側で「参照する sub-issue 記録ファイルを明示する」設計 (Code Retrospective で既に提案済み) に加え、集約レポート本体には一次資料の例外・境界ケースまで正確に転記する規律が必要である。
