@@ -86,19 +86,16 @@ N/A — Implementation Steps 1〜3 を Spec の記述通りに実施した。
 N/A — 実装・テスト・verify いずれも一発で完了し、手戻りは発生しなかった。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 実行サーフェス制約の新規段落を Step 9 冒頭に無条件で配置した (Behavioral Change Detection 分岐の外)。Spec の Root Cause 分析 (#1123 の文言のみ修正では #1102 の再発を防げなかった) に基づき、内容だけでなく配置位置そのものを変更する方針を徹底した。
-- 旧ネスト位置のガード文は削除ではなく、`(See the execution surface constraint above for foreground/timeout requirements.)` という短い前方参照に置き換えた。`(Same pre-check guard applies — ...)` という既存の実務的な注記は残した。
-- review 側は新規サブセクションを追加せず、既存の `Re-run tests/validation` 箇条書きの末尾にワンラインのリマインダーを追記するに留めた。Spec が「実行判断地点直近のローカルなリマインダー」と明記していたため、最小限の変更にとどめた。
+- pre-merge AC ゲートは unchecked_count=0 だったが `review_incomplete_fallback=true` (review が Step 12.2 に到達せず silent no-op で終了) だったため、記録済みの `decision=override fallback=true` マーカー (親セッションが diff 精査・フルスイート 1507 件 PASS 確認・push 済みの `3a382d81` を確認した内容) を検証のうえマージを続行した。
+- squash merge 実行時、`gh pr merge --delete-branch` が `worktree-code+issue-1213` ブランチの削除に失敗した (review フェーズの残置ワークツリー `review+pr-1225` が同ブランチを使用中だったため)。中身 (`3a382d81`) は既に PR へ push・マージ済みであることを確認したうえで、該当ワークツリーとローカルブランチを削除した。
 
 ### Deferred Items
-- AC4 (`github_check "gh pr checks" "Run bats tests"`) は Step 10 時点で PR #1225 が未作成だったため判定不能 (UNCERTAIN) だった。チェックボックスは未チェックのまま `/review`/`/merge` に委ねた。
 - Post-merge observation AC (code phase / review phase の 2 件) は `verify-type: observation event=auto-run session=next` により次回以降の `/auto` 実行時に評価される。
-- Design Gaps/Ambiguities に記録した pr route での Step 10 CI-AC タイミングギャップ (PR 作成前に github_check を評価できない構造的な問題) は本 Issue のスコープ外として対応せず、再発した場合に別 Issue で検討する。
+- review フェーズが Step 12.2 (コミット・push) 到達前に silent no-op で終了した事象は #1212 に続く連続 2 回目の再発。`docs/reports/orchestration-recoveries.md` への記録は override コメント内で言及済みだが、本 Issue の Verify フェーズで再度実測を確認すること。
 
 ### Notes for Next Phase
-- `/review` は PR #1225 の CI (`Run bats tests` ジョブ) の pass を確認したうえで AC4 のチェックボックスを更新すること。
-- 実装手段のリファクタリングは発生していないため、AC4 の PR タイミング以外に verify command の陳腐化はない。
-- `bats tests/` フルスイート 1503 件は全て PASS (実行サーフェス制約に従い foreground + 明示 timeout で実行済み)。skill-dev validation、forbidden-expressions check もクリーン。
+- `/verify` は post-merge observation AC 2 件 (code phase / review phase の背景実行ガード遵守確認) を次回 `/auto` 実行ログから評価すること。
+- squash merge 後の残置ワークツリー起因のブランチ削除失敗は、merge フェーズの完了report観点では無視して良い (merge 自体は成功、mergedAt/mergeCommit で確認済み)。
