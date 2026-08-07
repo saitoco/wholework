@@ -303,8 +303,10 @@ Issue #1165 の Pre-merge AC 8 件 (rubric 3 + github_check 5) はいずれも S
 - `gh-pr-merge-status.sh` の初回応答が `mergeable=UNKNOWN` (GitHub 側の計算待ち) で、30 秒待機後の自動リトライで `clean` を得た。リトライ機構が想定どおり機能している。
 
 #### verify
-- Post-merge AC は `observation event=auto-run` 1 件のみ。本 verify 実行時点では未発火のため SKIPPED。FAIL / UNCERTAIN は 0 件。
+- Post-merge AC は `observation event=auto-run` 1 件のみ。1 回目の verify では未発火で SKIPPED だったが、同一 `/auto 1158` セッション内で `observation-trigger.sh --event auto-run` を実行して発火させた後、2 回目の verify で PASS 判定に到達し `phase/done` へ遷移した。FAIL / UNCERTAIN は 0 件。
 - Pre-merge 8 件はすべて `/review` 時点で PASS 済みのため already-checked skip rule により SKIPPED。verify 側で判定が覆る事象はなかった。
+- **本 Issue の spec retrospective が予告した「母集団 closed 限定」の欠陥が、evaluation 時に別の形で顕在化した**: baseline の 79 件は `docs/stats/2026-08-05.md` が 90 日窓 (created ≥ 2026-05-07、母集団 167 件) で計測した値であり、全期間スキャン (母集団 320 件) では 123 件という全く異なる数字になる。AC 文面に母集団定義がないため、素朴に再計測すると「減少どころか増加している」と誤判定しうる。同ドキュメント § 訂正 1 の予告 (「全期間へ広げた場合の対象件数は増える」) を辿って母集団を揃えたことで正しい比較 (79 → 18) に到達した。数値ベースの observation AC には母集団定義を条件文に含めるべき。
+- **Manual Waiting Count の計測に部分一致の偽陽性がある**: `skills/audit/SKILL.md` § Manual Waiting Count の定義は「未チェック `- [ ]` 行が `verify-type: manual` を**含む**」であり、AC の説明文中に `verify-type: manual` という文字列が現れるだけの行 (実際のタグは `observation`) も計上する。#1167 の post-merge AC がまさにこの形で、素朴な計測では 19 件 (実際は 18 件) になった。#1242 で扱う走査スコープの問題と同じ「文字列の substring 一致で AC を判定している」構造に由来する。
 
 ### Improvement Proposals
 
