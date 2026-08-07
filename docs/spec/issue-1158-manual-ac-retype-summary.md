@@ -190,7 +190,13 @@ Level 1 のみ (4 件すべて独立、blocked-by #1157 は CLOSED 済み)。並
 
 ### Orchestration Anomalies
 
-- **XL route に親 Issue の実装フェーズが存在しない** — `/auto` の XL route は「sub-issue 実行 → 親ラベル集約 → sub-issue verify → 親 close flow」で構成され、親自身の `/code` を回す経路を持たない。ところが #1158 の Spec は Pre-merge AC 5 件が全て `rubric` 型であるため、rubric grader の可視範囲を確保する目的で `docs/reports/manual-ac-retype-summary.md` を Changed Files に持つ (親が実装成果物を持つ)。この結果、XL route をそのまま流すと親の rubric AC は成果物不在のまま `/verify` に到達して FAIL する。本セッションでは親セッションが Step 4d の後・親 verify の前に `run-code.sh 1158 --pr` を手動挿入して回避した。
+- **XL route に親 Issue の実装フェーズが存在しない** — `/auto` の XL route は「sub-issue 実行 → 親ラベル集約 → sub-issue verify → 親 close flow」で構成され、親自身の `/code` を回す経路を持たない。ところが #1158 の Spec は Pre-merge AC 5 件が全て `rubric` 型であるため、rubric grader の可視範囲を確保する目的で `docs/reports/manual-ac-retype-summary.md` を Changed Files に持つ (親が実装成果物を持つ)。この結果、XL route をそのまま流すと親の rubric AC は成果物不在のまま `/verify` に到達して FAIL する。本セッションでは親セッションが Step 4d の後・親 verify の前に `run-code.sh 1158 --pr` → `run-review.sh 1249 --full` → `run-merge.sh 1249` → `/verify 1158` を手動挿入して pr route 相当を完走させた (PR #1249、CI 9/9 SUCCESS、MUST 0)。恒久対策は #1241。
+- **operate route + observation AC で close deadlock が成立した (#1166)** — operate route の Issue は `closes #N` コミットを持たないため CLOSE 契機が `/verify` の全 AC 充足のみになる。一方 `scripts/opportunistic-search.sh:202` の母集団は `--state closed` 固定なので、OPEN のままの #1166 は `observation-trigger.sh --event auto-run` のマッチ集合 (83 件) から構造的に除外され、通知が届かない。「close されないと通知母集団に入らない → 通知が来ないと observation AC が評価されない → AC が評価されないと close されない」という閉路。親セッションがスキャナ欠陥の補正として同一形式の通知を経緯付きで手動投稿して打開した。恒久対策は #1242。
+- **XL 親の observation AC は親 PR マージ後に observation-trigger の再実行を要する** — `/auto` の XL route は observation scan を Step 5 (全フェーズ完了後) に 1 回だけ実行する。しかし親自身の PR マージがその scan より後に来る構成では、scan 時点で親はまだ OPEN (母集団外) のため親の observation AC が永久に未発火になる。本セッションでは親マージ後に `observation-trigger.sh --event auto-run` を再実行して解消した (24h 冪等性ガードにより既通知の 83 件はスキップされ、#1158 のみ新規通知)。
+
+### Orchestration Deviations (意図的)
+
+- **sub-issue verify を Step 4a より前に前倒しし、observation-trigger を Step 5 より前に実行した** — 親 Spec の precondition gate (「sub-issue 全件が CLOSED または `phase/done`」) を開けるために必要だった。skill の規定順序 (Step 4 → 4a → 4d → 4c → 5) では、observation AC 未発火のまま sub-issue が `phase/verify` に留まり gate が永久に開かない。ユーザー確認の上で「observation を発火させて完走を狙う」方針を選択した。
 
 ### Improvement Proposals
 
