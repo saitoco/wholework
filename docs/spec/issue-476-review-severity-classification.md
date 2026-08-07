@@ -221,3 +221,13 @@
 ### Improvement Proposals
 - N/A — re-run #7 で既に起票水準に達し follow-up Issue #1220 が対応済み (未クローズ)。本 re-run はその後の12件目の再現事例として記録するに留める
 
+## Verify Retrospective (2026-08-07 re-run #13)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1258、**Issue #1220 自身**) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカーあり) したが、今回の発火元 PR #1258 の diff (`scripts/opportunistic-search.sh`, `modules/observation-trigger.md`, `tests/opportunistic-search.bats` — `keyword=` ゲート自体のパス様トークン除外修正) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず UNCERTAIN 判定に帰着した。`keyword=workflow` ゲートの誤発火パターンが **13件目** として再現したが、今回は発火源が Issue #1220 自身の Spec (`docs/spec/issue-1220-keyword-gate-path-fp-fix.md`) であり、内容の大半がパス様トークン (`docs/workflow.md`, `.github/workflows/ci.yml`) であることに加え、`keyword=workflow` という**属性構文そのもの** (スラッシュを含まないため #1220 のパス様トークン除外の対象外) も一致要因に含まれる点で過去12件と異なる。follow-up Issue #1220 は本 PR #1258 でパス様トークン除外を実装済み (pre-merge AC 全3件 PASS、CI 全SUCCESS) だが、まだ main に merge されていないため、今回発火に使われた `opportunistic-search.sh`/`observation-trigger.sh` は main 上の旧実装 (修正前) のまま実行された
+
+### Improvement Proposals
+- 13件目の再現は、#1220 のパス様トークン除外だけでは解消しない新しい亜種 (`keyword=<value>` のような、スラッシュを含まない属性構文自体への一致) を示している。ただし本件は Issue #1220 自身の Spec という特殊事例 (#1220 が merge されれば当該 Spec ファイルが `--context-file` として再利用される機会は事実上ない) であり、一般的な PR で `keyword=workflow` という文字列がスラッシュなしで地の文に出現するケースは稀 (実際に過去12件はすべて `docs/*.md` 等のパス様トークンが原因だった)。#1220 merge 後、次回以降の `/review --light` でパス様トークン起因の誤発火 (13件中12件のパターン) が解消するかどうかが本 post-merge AC の主眼であり、この観測は #1220 の post-merge AC (`docs/workflow.md` 等の無関係パスのみを参照する PR での誤発火なし観察) 側で追跡する。新規 follow-up Issue の起票は不要と判断する
+
