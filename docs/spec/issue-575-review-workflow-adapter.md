@@ -244,12 +244,14 @@ verify command のカバレッジは良好だった（rubric×2、file_contains�
 #### verify
 - 自動検証 10/10 PASS、post-merge 2 件は manual / opportunistic として未チェック残存
 - AC11（capabilities.workflow=true 実走行検証）は実行プロジェクト = 検証対象プロジェクトという構造上の難しさがあり、別プロジェクトでの確認に持ち越し。`/verify` の post-merge manual AC が「実環境変更を要する確認」となる場合の追跡方法（別 Issue 化？ Spec retrospective での deferred 化？）が議論余地あり
+- **2026-08-07 再訪**: 本リポジトリ自身で `/review 1230 --full --non-interactive` を実行した際に `observation event=pr-review-full config=capabilities.workflow` が発火し、AC11 を再評価した。発火インスタンスが `--non-interactive` (fork context) だったため、`skills/review/workflow-guidance.md` の Pre-flight ガード (再呼び出し保証なし) により Workflow パスではなく静的 Task fan-out フォールバックへ意図的に分岐しており、「Workflow 経路で完走しトークン使用量が出力される」という条件自体は実証できなかった (UNCERTAIN のまま維持)。`/auto` 経由の `/review` は常に `run-review.sh` 経由の fork context であるため、通常運用の発火では AC11 が原理的に検証されない構造的ギャップが判明した。検証には対話セッションでの直接 `/review N --full` 実行 (main context) が必要
 
 ### Improvement Proposals
 
 - spec 段の Design Gaps/Ambiguities セクションに記載した実装時の知見（本 Issue では args 渡し形式）は、Done として閉じず、対応する **実装ステップ本文** に直接補記するルール化を `skills/spec/SKILL.md` または `spec-test-guidelines.md` に追加する（Review Retrospective より転記）。code フェーズで本文→ステップを順に読む際の漏れを構造的に防止
 - spike レポートの aspirational 表現（「N-vote adversarial verify」など）を Domain file / SKILL.md に転記する際、実装コードと文言が一致するかを review 段でチェックする観点を `skills/review/SKILL.md` または review-bug.md に明記する。今回は review で検出されたが、自動検出（grep ベースの transcription check）の余地がある
 - post-merge `verify-type: manual` 条件で「実環境変更が必要な確認（capability 設定 + 別プロジェクト実行など）」は、Issue クローズ後の追跡が散逸しやすい。`/verify` 完了時に未チェック manual 条件を別 Issue として起票する option（または `retro/verify` ラベルで自動収集する仕組み）を検討
+- AC11 (`observation event=pr-review-full config=capabilities.workflow`) は fork context の `/review` 実行では原理的に発火条件と実証条件が乖離する (`when=` 軸に "実行が main/fork のどちらか" を表現する手段がない)。`modules/observation-trigger.md` の `when=` 宣言可能軸への execution-context 軸追加、または AC 条件文自体を「main context での直接実行時に限る」旨に明記する改善を検討
 
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/575#issuecomment-4697918313
