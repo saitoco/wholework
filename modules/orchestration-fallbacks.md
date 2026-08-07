@@ -545,8 +545,11 @@ See also: `#async-external-commit` (reconcile-first authority — `matches_expec
 - code, review, merge (XL sub-issue parent session manual recovery); also the `external-kill-parent-respawn` pattern above
 
 ### Fallback Steps
-1. After the manual recovery action completes successfully, run:
+1. After the manual recovery action completes successfully, run — this call is itself a standalone Bash tool call subject to the same pointer file regeneration discipline as `/auto` Step 1's `run-*.sh` calls (the PGID pointer from an earlier Bash call is not visible here), so regenerate it in the same call before invoking the subcommand (Issue #1075):
    ```bash
+   mkdir -p .tmp
+   PGID=$(ps -o pgid= -p $$ | tr -d ' ')
+   printf '%s\n' "<literal SESSION_ID value from /auto Step 1>" > ".tmp/auto-session-${PGID}"
    bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE RECOVERY_TYPE [EXIT_CODE] [--cause SLUG] [--diagnosis TEXT]
    ```
    where `RECOVERY_TYPE` is a short string describing the action taken (e.g., `push-only`, `pr-create`, `review-rerun`, `respawn`) and `EXIT_CODE` is the original wrapper exit code — if it could not be observed, omit the argument entirely rather than passing the string `unknown`; `_validate_recovery_args` only accepts a numeric exit code and rejects any non-numeric value. `--cause SLUG` (short kebab-case root-cause label) and `--diagnosis TEXT` (optional one-line free-text explanation) are optional; pass them when the root cause is already known so `docs/reports/orchestration-recoveries.md` and `collect-recovery-candidates.sh` group this occurrence by cause rather than by symptom alone — omit both when the cause is not yet known
@@ -610,9 +613,12 @@ When `apply-fallback.sh` matches a known symptom anchor but the handler itself f
 
 ### Manual path: recoveries.md + manual_intervention event
 
-When the parent session performs a manual recovery (e.g., `worktree-merge-push.sh` re-run, `gh pr create` manual call, or `run-*.sh` re-execution), there is no automatic bash path to write the recovery record. The operator must explicitly call:
+When the parent session performs a manual recovery (e.g., `worktree-merge-push.sh` re-run, `gh pr create` manual call, or `run-*.sh` re-execution), there is no automatic bash path to write the recovery record. The operator must explicitly call — this is itself a standalone Bash tool call subject to the same pointer file regeneration discipline as `/auto` Step 1's `run-*.sh` calls (the PGID pointer from an earlier Bash call is not visible here), so regenerate it in the same call before invoking the subcommand (Issue #1075):
 
 ```bash
+mkdir -p .tmp
+PGID=$(ps -o pgid= -p $$ | tr -d ' ')
+printf '%s\n' "<literal SESSION_ID value from /auto Step 1>" > ".tmp/auto-session-${PGID}"
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh --write-manual-recovery ISSUE PHASE RECOVERY_TYPE [EXIT_CODE] [--cause SLUG] [--diagnosis TEXT]
 ```
 
