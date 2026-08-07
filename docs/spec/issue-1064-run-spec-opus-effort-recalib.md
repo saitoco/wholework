@@ -100,3 +100,32 @@
 
 ### Acceptance criteria verification difficulty
 - Nothing to note — Pre-merge 6件すべて (`file_exists` x1, `file_contains` x1, `rubric` x5 [うち1件は `file_contains` と併記]) が UNCERTAIN なしで PASS に到達した。ドキュメント/レポートのみの変更に対して `rubric` 検証が有効に機能した例
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue / spec
+
+- 「維持」verdict を出すこと自体を成果物とする Issue として設計が一貫していた。`docs/reports/opus-5-effort-recalibration-spec.md` に判定と根拠を残し、コード変更ゼロを AC6 で明示的に許容する形 (「変更しなかった場合はテスト変更が不要である旨がレポートに明記されている」) にしたため、実装 0 行が AC 違反にならない
+- **再評価トリガーを時間ではなく証拠の蓄積で定義した**点が良い設計。「`--opus` の `token_usage`/wall-clock サンプルが `.tmp/auto-events.jsonl` に蓄積したら見直す (#1228 で unblock、現在ゼロ)」という形で、本 Issue 着地時点の証拠不足を明示しつつ将来の判断条件を機械的に確認できる形にしている
+- サンプル抽出時の落とし穴 (`sub_start` の dispatch 時点 `size=L` を使う。Spec の最終記録 Size ではない — #1175 の教訓) を Deferred Items に残しており、将来の再評価者が同じ罠を踏まない
+
+#### code / review / merge
+
+- 特記なし。ドキュメント/レポートのみの変更で conflict なし、pre-merge AC 6/6 チェック済みで gate 通過
+
+#### verify
+
+- **post-merge AC7 を SKIPPED と判定した**。AC 文言「L size の Issue に対して `/auto` を実行し、`run-spec.sh --opus` が**判定後の** effort で起動することを確認する」に対し、収集できた実測 (#1228 Size L の `Model: opus` / `Effort: xhigh`、2026-08-07 16:41 JST) が verdict 着地 (PR #1254 merge、19:25 JST) より前だったため
+- post-merge のソース状態 (`scripts/run-spec.sh:17` の `EFFORT="xhigh"`) と組み合わせれば実質的には満たされているとも読めるが、AC 文言との突き合わせを優先した。session `11623-1785995193` の AC 10 が「出力の変化を解釈に合わせて読み、AC の文言と突き合わせずに誤 PASS した」事例であり、同じ失敗モードを回避する判断
+- **AC7 は判別力が弱い**: verdict が「維持」でコード変更ゼロのため、判定の前後で同一の結果を返す — 実装 0 行でも PASS しうる (`skills/triage/skill-dev-verify-audit.md` Pattern 2 の系)。「維持」verdict を出す Issue の post-merge AC は、判定そのものが観測可能な形 (例: レポートの再評価トリガー条件の充足確認) にする方が実効的
+- **再評価トリガーの状態が本バッチで一部前進した**: #1228 が同一バッチの 3 番目で着地し、spec phase の `wrapper_exit` / `token_usage` が実際に emit されるようになった (本 Issue 自身の spec phase が最初のサンプル: `model=claude-sonnet-5`, `output_tokens=76663`, `cache_read_tokens=22762362`)。ただし**これは Sonnet パス (Size M) のサンプルであり、レポートが必要とする `--opus` (Size L) サンプルは依然ゼロ**。トリガー発火には AC7 と同一条件 (Size L の `/auto` 通過) が必要
+
+### Improvement Proposals
+
+N/A — 観察はいずれも既存の追跡先があるか、記録のみで足りる:
+
+- 「維持」verdict の post-merge AC の判別力 → 本節に記録。#1209 (Pattern 2 の対象拡張) が扱う領域の隣接ケースだが、`rubric`/`command` 型ではなく「観測対象の選び方」の問題であり、単発観測のため起票せず
+- `--opus` サンプル蓄積の再評価トリガー → レポート内に機械的に確認できる形で記録済み。Size L Issue が `/auto` を通った時点で AC7 と同時に再評価可能
+- `docs/ja/tech.md` の #1062 Opus 5 ノート未同期 → pre-existing な翻訳同期ギャップとして Deferred Items に記録済み、本 Issue のスコープ外
