@@ -202,7 +202,10 @@ if [[ $EXIT_CODE -eq 143 || $EXIT_CODE -eq 0 ]]; then
 fi
 
 if [[ $EXIT_CODE -eq 0 ]]; then
-  _pr_files=$(gh pr view "$PR_NUMBER" --json files -q '.files[].path' 2>/dev/null || true)
+  # gh pr view --json files truncates at 100 entries (no pagination); use the
+  # paginated REST endpoint (supports up to 3000 files) so skills/ changes in
+  # large PRs are not silently missed.
+  _pr_files=$(gh api "repos/{owner}/{repo}/pulls/${PR_NUMBER}/files" --paginate --jq '.[].filename' 2>/dev/null || true)
   if echo "$_pr_files" | grep -q '^skills/'; then
     echo "Merged PR touched skills/ — syncing local main..." >&2
     if ! git pull --ff-only; then

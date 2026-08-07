@@ -265,9 +265,11 @@ if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
     echo "https://github.com/test/repo/pull/88"
   elif [[ "$*" == *"-q"* && "$*" == *".state"* ]]; then
     echo "MERGED"
-  elif [[ "$*" == *"--json files"* ]]; then
-    echo "skills/verify/SKILL.md"
   fi
+  exit 0
+fi
+if [[ "$1" == "api" && "$*" == *"pulls/123/files"* ]]; then
+  echo "skills/verify/SKILL.md"
   exit 0
 fi
 echo ""
@@ -301,9 +303,11 @@ if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
     echo "https://github.com/test/repo/pull/88"
   elif [[ "$*" == *"-q"* && "$*" == *".state"* ]]; then
     echo "MERGED"
-  elif [[ "$*" == *"--json files"* ]]; then
-    echo "docs/tech.md"
   fi
+  exit 0
+fi
+if [[ "$1" == "api" && "$*" == *"pulls/123/files"* ]]; then
+  echo "docs/tech.md"
   exit 0
 fi
 echo ""
@@ -322,6 +326,49 @@ MOCK
     [ "$status" -eq 0 ]
     [[ "$output" != *"syncing local main"* ]]
     ! grep -q "^pull --ff-only$" "$GIT_LOG"
+}
+
+@test "success: local main is synced via the paginated files endpoint when a skills/ path falls past the 100-file gh pr view --json files cap" {
+    GIT_LOG="$BATS_TEST_TMPDIR/git.log"
+    export GIT_LOG
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "view" && "$*" == *"--json"* ]]; then
+  if [[ "$*" == *"-q"* && "$*" == *".title"* ]]; then
+    echo "test PR title"
+  elif [[ "$*" == *"-q"* && "$*" == *".url"* ]]; then
+    echo "https://github.com/test/repo/pull/88"
+  elif [[ "$*" == *"-q"* && "$*" == *".state"* ]]; then
+    echo "MERGED"
+  fi
+  exit 0
+fi
+if [[ "$1" == "api" && "$*" == *"pulls/123/files"* ]]; then
+  # Simulate a PR with more than the 100-entry cap of the non-paginated
+  # `gh pr view --json files` call, with the skills/ path past entry #100.
+  for i in $(seq 1 104); do
+    echo "docs/file-${i}.md"
+  done
+  echo "skills/verify/SKILL.md"
+  exit 0
+fi
+echo ""
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    cat > "$MOCK_DIR/git" <<MOCK
+#!/bin/bash
+echo "\$@" >> "$GIT_LOG"
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/git"
+
+    run bash "$SCRIPT" 123
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Merged PR touched skills/ — syncing local main..."* ]]
+    grep -q "^pull --ff-only$" "$GIT_LOG"
 }
 
 @test "error: claude command fails with non-zero exit code" {
