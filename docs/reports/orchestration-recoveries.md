@@ -67,6 +67,30 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+
+## 2026-08-07 15:11 UTC: merge-tier3-recovery
+
+### Context
+- Issue #1227, phase: merge
+- Source: recovery-sub-agent
+- Wrapper: run-merge.sh, exit code: 143
+- Log tail: "Finished at: 2026-08-08 00:07:19"
+
+### Diagnosis
+- run-merge.sh completed CI checks and the forbidden-expressions check successfully, then hung silently for 600s during the merge wait step until the watchdog killed it (exit 143). No error or conflicting state is indicated in the log, and reconcile_snapshot is empty so partial-completion state cannot be confirmed; a stalled but otherwise clean merge wait is best resolved by re-running the phase.
+
+### Recovery Applied
+- action=retry
+- steps: none
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
+---
+
 ## 2026-08-07 14:06 UTC: manual-recovery-respawn
 
 ### Context
