@@ -67,6 +67,26 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-07 14:06 UTC: manual-recovery-respawn
+
+### Context
+- Issue #939, phase: merge
+- Source: parent-session-manual-recovery
+- Wrapper: run-auto-sub.sh, exit code: unknown
+
+### Diagnosis
+- cause: external-kill-during-merge
+- merge phase killed ~3min after last output (watchdog threshold 600s not reached); detect-external-kill.sh matched signature; uptime 70h under concurrency; task notification wording: status=killed 'was stopped'
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#manual-recovery-spec-write
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 
 ## 2026-08-07 07:41 UTC: code-pr-tier3-recovery
 
