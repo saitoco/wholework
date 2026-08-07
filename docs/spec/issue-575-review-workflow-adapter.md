@@ -250,6 +250,7 @@ verify command のカバレッジは良好だった（rubric×2、file_contains�
 - **2026-08-07 四度目の訪問**: 同日中さらに `/review 1250 --full --non-interactive` の Event-based observation scan からも同一の `observation event=pr-review-full` を検出し、`/verify 575` を dispatch した。結果は全く同一 (fork context → 静的 Task fan-out フォールバック → UNCERTAIN)。同日 4 回目の再現により、下記 Improvement Proposal を本 verify 実行の Step 16 で起票することとした (直前の再訪コメントが明記した「次回 `/verify` の Step 16 での起票判断」を消化) — 実際に #1233「observation-trigger: when= 条件ゲートに execution-context 軸を追加」として起票済み (2026-08-07T05:10:10Z)
 - **2026-08-07 五度目の訪問**: 同日中さらに `/review 1252 --full --non-interactive` の Event-based observation scan からも同一の `observation event=pr-review-full` を検出し、`/verify 575` を dispatch した。結果は全く同一 (fork context → 静的 Task fan-out フォールバック → UNCERTAIN)。1 日で 5 回目の再現。Improvement Proposal は既に #1233 として起票済みのため、本訪問では新規起票を行わない (retro-proposals の重複防止に委ねる) — #1233 の優先度を上げる追加の実証データとして記録するに留める
 - **2026-08-07 六度目の訪問**: 同日中さらに `/review 1263 --full --non-interactive` の Event-based observation scan からも同一の `observation event=pr-review-full` を検出し、`/verify 575` を dispatch した。結果は全く同一 (fork context → `skills/review/workflow-guidance.md` Pre-flight ガードによる静的 Task fan-out フォールバック → 未確証)。1 日で 6 回目の再現。#1233 は現時点で `phase/code` (対応実装中) であることを確認したため、本訪問でも新規起票は行わない
+- **2026-08-08 七度目の訪問**: `/review 1267 --full --non-interactive` (#1233 自身の修正実装 PR) の Event-based observation scan から同一の `observation event=pr-review-full` を検出し、`/verify 575` を dispatch した。判定は全く同一 (fork context → 静的 Task fan-out フォールバック → 未確証、SKIPPED)。転機: 今回の発火元 PR #1267 は #1233 (execution-context 軸追加) 自身の実装であり、`/review 1267` 内で SHOULD 1件・CONSIDER 2件を修正済み、CI green、マージ待ちの状態まで到達した。マージ後は本条件付き AC に `when=execution-context:main` を付与するか、AC 条件文を main context 限定と明記する運用に切り替えることで、この 7 回連続の同一構造再現サイクルが解消される見込み。新規 Improvement Proposal の起票は不要 (#1233 が既にこの根本原因を追跡中)
 
 ### Improvement Proposals
 
@@ -268,3 +269,9 @@ verify command のカバレッジは良好だった（rubric×2、file_contains�
 No new substantive comments since the prior /verify run above — this run's own trigger fire (`pr-review-full`, from `/review 1249 --full --non-interactive`) reproduces the identical structural situation (fork context → static fan-out fallback) already documented in the prior run's UNCERTAIN judgment.
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/575#issuecomment-5214485981
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/575#issuecomment-5214783341
+- saito / MEMBER / first-class / ## Acceptance Test Results (5th visit, /review 1252) / https://github.com/saitoco/wholework/issues/575#issuecomment-5214935163
+- saito / MEMBER / first-class / ## Acceptance Test Results (6th visit, /review 1263) / https://github.com/saitoco/wholework/issues/575#issuecomment-5215726193
+- saito / MEMBER / first-class / ## Acceptance Test Results (6th visit result posted) / https://github.com/saitoco/wholework/issues/575#issuecomment-5218525371
+
+### Phase: verify (7th visit — dispatched from `/review 1267 --full --non-interactive`)
+No new substantive comments beyond the above. This run's trigger fire reproduces the identical structural situation once more. Notable difference: the firing PR (#1267) is itself Issue #1233's own fix implementation, now in `/review` with fixes applied — see Verify Retrospective below.
