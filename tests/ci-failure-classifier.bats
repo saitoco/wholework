@@ -7,6 +7,7 @@
 PROJECT_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 CLASSIFIER="$PROJECT_ROOT/modules/ci-failure-classifier.md"
 VERIFY_SKILL="$PROJECT_ROOT/skills/verify/SKILL.md"
+VERIFY_EXECUTOR="$PROJECT_ROOT/modules/verify-executor.md"
 
 @test "ci-failure-classifier: module has the 4 standard sections" {
     grep -q "## Purpose" "$CLASSIFIER"
@@ -28,4 +29,9 @@ VERIFY_SKILL="$PROJECT_ROOT/skills/verify/SKILL.md"
 @test "ci-failure-classifier: verify SKILL.md does not duplicate the signature table" {
     ! grep -q "The runner has received a shutdown signal" "$VERIFY_SKILL"
     grep -q "modules/ci-failure-classifier.md" "$VERIFY_SKILL"
+}
+
+@test "ci-failure-classifier: verify-executor.md does not duplicate the signature table" {
+    ! grep -q "The runner has received a shutdown signal" "$VERIFY_EXECUTOR"
+    grep -q "modules/ci-failure-classifier.md" "$VERIFY_EXECUTOR"
 }

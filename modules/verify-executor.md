@@ -350,16 +350,9 @@ When processing `command` hints in safe mode with a PR number provided:
 
 3a. **CI infrastructure failure determination** (for FAILURE jobs):
 
-Get detailed job information via `gh api` and check for the following patterns:
+Get detailed job information via `gh api` and determine the verdict per `${CLAUDE_PLUGIN_ROOT}/modules/ci-failure-classifier.md`'s "Processing Steps" section (SSoT for the classification signature table; not restated here).
 
-| Pattern | How to Check |
-|---------|-------------|
-| Empty steps (`steps: []`) | `steps` field is an empty array |
-| Timeout (`cancelled` + execution time exceeded) | `conclusion: cancelled` and `started_at` to `completed_at` is close to the time limit |
-| Runner error (`The runner has received a shutdown signal`, etc.) | Runner error recorded in job logs or `steps[].name` |
-| Network error (`Unable to download`, `ECONNREFUSED`, etc.) | Dependency download failure recorded in job logs |
-
-- **Determined to be infrastructure-caused**: Ignore CI result and execute the `command` hint locally
+- **Determined to be infrastructure-caused** (verdict `ci-infra`): Ignore CI result and execute the `command` hint locally
   - Local execution succeeds → **PASS** (detail: "Alternative verification via local test due to CI infrastructure failure")
   - Local execution fails → **FAIL** (test code itself has a problem)
   - No `command` hint exists → **UNCERTAIN** (detail: "CI infrastructure failure detected but no corresponding command hint")
