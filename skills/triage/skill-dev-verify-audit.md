@@ -251,7 +251,7 @@ Issue body — both audited AC self-generated within the same `/issue` execution
 defective 自己生成 AC is fixed only once a downstream phase picks up the audit comment.
 This works without any new mechanism: the Comment Consumption Procedure
 (`modules/l0-surfaces.md`) already treats Issue comments as first-class context for
-whichever phase runs next — `/spec` for Size M/L/XL, or `/code` directly for Size XS
+whichever phase runs next — `/spec` for Size S/M/L/XL, or `/code` directly for Size XS
 (whose patch route skips `/spec`). Either phase reads the comment as prompt-equivalent
 input and applies the suggested fix as part of its own work.
 
