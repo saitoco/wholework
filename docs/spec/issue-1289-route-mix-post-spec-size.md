@@ -68,3 +68,40 @@ Acceptance criteria 3 (`operate` route・`xl`・フェーズ未達 Issue の 3 �
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective — non-interactive 自動解決ログ (Auto-Resolve Log) の記録。内容は既に Issue 本文の「対応方針 (案)」「Auto-Resolved Ambiguity Points」に反映済みのため、本 Spec への追加指示なし / https://github.com/saitoco/wholework/issues/1289#issuecomment-5228135341
+- 本 `/code` 実行時点で新規コメントなし (cutoff: 直近の `phase/*` ラベル付与時刻 2026-08-08T21:33:24Z)。
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1–3 をそのまま実装した。Implementation Step 2 は 1 件の `@test` 追加を指示していたが、`xl` / `unknown` バケットの分離挙動も個別に固定化する価値があると判断し、2 件目の `@test` (XL sub_start + phase 未到達 Issue の組み合わせ) を追加した。これはアプローチの変更ではなくカバレッジの補強であり、Implementation Steps 自体の更新は不要と判断した。
+
+### Design Gaps/Ambiguities
+- `/code` 開始時点で Issue #1289 のラベルが `phase/ready` を経ずに既に `phase/code` へ遷移済みだった (`reconcile-phase-state.sh --check-precondition` が `matches_expected: false` を報告)。Spec ファイルは存在し内容も完成していたため、前回の `/code` 試行が Step 4 のラベル遷移まで進んだ後に PR 作成前で中断したものと推測される。SKILL.md Step 3 の non-interactive auto-resolve 方針 (`warn-only` で継続) に従い、Spec を正として実装を続行した。
+
+### Rework
+- なし。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Ran `REVIEW_DEPTH=light` (1-agent `review-light`, all 4 aspects) per Issue Size; no Workflow-path fan-out.
+- All 5 Pre-merge ACs re-verified independently via verify-executor semantics (2 rubric, 2 grep, 1 command) — all PASS; posted review as `COMMENT` (no MUST issues).
+
+### Deferred Items
+- The Post-merge observation AC (`verify-type: observation session=next`) remains unchecked, unchanged from the code phase's handoff — still waiting for the next patch/pr-mixed `/auto --batch` run.
+
+### Notes for Next Phase
+- No MUST/SHOULD/CONSIDER issues were raised in review; `/merge 1299` can proceed directly.
+- `bats tests/get-auto-session-report.bats` confirmed 15/15 PASS locally in addition to CI (11/11 checks SUCCESS) — no residual verification risk for `/merge`.
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+Nothing to note. review-light's Spec-deviation aspect found the implementation followed Implementation Steps 1–3 exactly, including the one documented deviation (an extra `@test` for coverage, already captured in the Code Retrospective) which was not a design divergence.
+
+### Recurring Issues
+Nothing to note. No issue types repeated across this PR's review; 0 findings across all 4 review-light aspects.
+
+### Acceptance Criteria Verification Difficulty
+Nothing to note. All 5 Pre-merge ACs had well-formed verify commands (2 `rubric`, 2 `grep`, 1 `command`) and none required UNCERTAIN fallback or AI-judgment guessing.

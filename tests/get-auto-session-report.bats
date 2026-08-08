@@ -261,3 +261,37 @@ FIXTURE_EOF
     echo "$output" | grep -q "Tier 1/2/3 recoveries | 0 / 2 / 3"
     echo "$output" | grep -q "Recovery success rate (tier) | T1: 0 recovered / 0 failed, T2: 1 recovered / 1 failed, T3: 1 recovered / 2 failed"
 }
+
+@test "Route mix: reports the executed code-patch/code-pr phase route, not the pre-spec sub_start size" {
+    # Models session 23043-1786197225 (2026-08-09): #1256 is sub_start'd at Size M but
+    # /spec demotes it to XS and it runs code-patch; #1266 is sub_start'd at Size S and
+    # runs code-patch; #1279 is sub_start'd at Size M and runs code-pr as expected. A
+    # naive sub_start-size read would report "patch: 1, pr: 2"; the executed-phase read
+    # must report "patch: 2, pr: 1".
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-08-08T14:00:17Z","issue":1256,"event":"sub_start","session_id":"session-routemix","size":"M"}
+{"ts":"2026-08-08T14:10:00Z","issue":1256,"event":"phase_start","session_id":"session-routemix","phase":"code-patch"}
+{"ts":"2026-08-08T14:20:00Z","issue":1256,"event":"phase_complete","session_id":"session-routemix","phase":"code-patch"}
+{"ts":"2026-08-08T14:46:59Z","issue":1266,"event":"sub_start","session_id":"session-routemix","size":"S"}
+{"ts":"2026-08-08T14:50:00Z","issue":1266,"event":"phase_start","session_id":"session-routemix","phase":"code-patch"}
+{"ts":"2026-08-08T14:55:00Z","issue":1266,"event":"phase_complete","session_id":"session-routemix","phase":"code-patch"}
+{"ts":"2026-08-08T16:07:42Z","issue":1279,"event":"sub_start","session_id":"session-routemix","size":"M"}
+{"ts":"2026-08-08T16:10:00Z","issue":1279,"event":"phase_start","session_id":"session-routemix","phase":"code-pr"}
+{"ts":"2026-08-08T16:20:00Z","issue":1279,"event":"phase_complete","session_id":"session-routemix","phase":"code-pr"}
+FIXTURE_EOF
+
+    run bash "$SCRIPT" "session-routemix" --metrics-only --no-github
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "Route mix.*patch: 2, pr: 1, xl: 0, unknown: 0"
+}
+
+@test "Route mix: XL sub_start and phase-less processed Issue are bucketed separately" {
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-08-08T17:00:00Z","issue":1300,"event":"sub_start","session_id":"session-routemix-xl","size":"XL"}
+{"ts":"2026-08-08T18:00:00Z","issue":1301,"event":"sub_start","session_id":"session-routemix-xl","size":"S"}
+FIXTURE_EOF
+
+    run bash "$SCRIPT" "session-routemix-xl" --metrics-only --no-github
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "Route mix.*patch: 0, pr: 0, xl: 1, unknown: 1"
+}
