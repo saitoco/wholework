@@ -224,7 +224,7 @@ write_recovery_entry() {
   log_tail_line=$(tail -1 "$LOG_FILE" 2>/dev/null || true)
   rationale=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('rationale','(none)'))" "$PLAN_FILE" 2>/dev/null || echo "(none)")
   cause=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('cause',''))" "$PLAN_FILE" 2>/dev/null || echo "")
-  if [[ -z "$cause" ]] || [[ ! "$cause" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+  if [[ -z "$cause" ]] || [[ ${#cause} -gt 40 ]] || [[ ! "$cause" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
     cause="unclassified"
   fi
   steps_count=$(python3 -c "import json,sys; print(len(json.load(open(sys.argv[1])).get('steps',[])))" "$PLAN_FILE" 2>/dev/null || echo "0")
