@@ -75,6 +75,7 @@
 
 - saito / MEMBER / first-class / Issue Retrospective (issue フェーズ) — 「検討候補」節の案 A/B 選択は `/issue` vs `/spec` の責務境界に従い意図的に `/spec` へ委譲済みで追加解決なし、Post-merge observation AC に `session=next` 追加済み、Triage 結果 (Type: Task, Size: M, Value: 3) を記録。本 Spec の設計判断に対する追加の制約や変更なし / https://github.com/saitoco/wholework/issues/1288#issuecomment-5228136766
 
+- saito / MEMBER / first-class / ## Change Tracking (by /code) / https://github.com/saitoco/wholework/issues/1288#issuecomment-5228318817
 ## Code Retrospective
 
 ### Deviations from Design
