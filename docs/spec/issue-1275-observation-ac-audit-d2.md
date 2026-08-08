@@ -77,21 +77,19 @@
 - Step 9 のテスト実行で、docs のみの新規ファイル追加 (既存ファイル変更なし) にもかかわらず Behavioral Change Detection の「新規ファイルのみ追加なら narrow scope で可」の判定を先に確認せず `bats --jobs 18 tests/` のフルスイートを先行実行してしまい、10 分の Bash ツール上限を超えてバックグラウンドへ移行した。`modules/execution-context.md` の「通知待ちでターンを終えない」原則に従い通知を待たずに進行し、`scripts/check-forbidden-expressions.sh` (対象ファイルに関連する軽量チェック) の実行に切り替えて Step 9 を完了させた。次回同種の docs-only 変更では、フルスイート起動前に Behavioral Change Detection の「新規ファイルのみ」判定を先に確認すること
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Pre-merge AC 6 件すべてを PASS 判定した。うち D=0 に関する 2 件 (#1166 方式 retire / `phase/done` 遷移) は「該当なしのため vacuously satisfied」として PASS とした
-- レポート `docs/reports/observation-ac-audit-d2.md` の記載内容 (対象 6 Issue の `verify-type: manual` 書き換え、対象 6 Issue が `phase/verify` 維持) を `gh issue view` で個別に GitHub 実状態と突合し、一致を確認した
-- review-light エージェント (4 観点統合) で MUST/SHOULD/CONSIDER 相当の指摘は 0 件。修正作業 (Step 12) は発生しなかった
-- CI 全 11 ジョブ SUCCESS、base branch とのコンフリクトなし (`git merge-tree` 0 件) を確認した
+- Pre-merge AC 6 件すべてが PASS 判定済みであることを `check-pre-merge-ac.sh` (`unchecked_count: 0`) で再確認し、squash merge を実行した
+- review フェーズが残した review-incomplete-fallback は検出されず (`reconcile-phase-state.sh` で fallback ではなく organic completion と確認)、CI・review いずれも clean な状態でマージした
 
 ### Deferred Items
 - `docs/reports/observation-ac-audit-d2.md` の分類結果 (A 5 / B 0 / C 0 / D 0 / E 7) の集約レポート (`observation-ac-audit-summary.md`) への統合は親 #1270 の責務として本 Issue のスコープ外のまま
 - #1275 の実査で採用した A/E 境界の判定軸は #1270 や #1251 に明文化されていない。他 sub-issue (#1274/#1276) や将来の同種実査が異なる粒度で判断する可能性があり、必要なら親 #1270 側で軸の明文化を検討する余地がある
 
 ### Notes for Next Phase
-- `/merge` 実行時、対象 6 Issue (#1031 #954 #515 #511 #486 #446) の本文編集は PR マージとは独立して既に GitHub 上に反映済みである — リポジトリファイルの diff は `docs/reports/observation-ac-audit-d2.md` の追加 1 件のみだが、実質的な変更はそれら 6 Issue の本文にも及んでいる点に留意
-- `docs/reports/observation-ac-audit-d2.md` の「検証」節に記載の通り、dry-run 前後比較で対象外の #861 / #769 / #859 も変動していた (他セッションの並行活動によるものと推定)。`/review` で再実行した dry-run でも同様の変動 (75→74) を確認済みであり、本 PR の変更によるものではない
+- 対象 6 Issue (#1031 #954 #515 #511 #486 #446) の本文編集は PR マージとは独立して既に GitHub 上に反映済み — `/verify` 実行時はレポート `docs/reports/observation-ac-audit-d2.md` の記載と GitHub 実状態の一致を前提としてよい
+- `docs/reports/observation-ac-audit-d2.md` の「検証」節に記載の通り、dry-run 前後比較で対象外の #861 / #769 / #859 も変動していた (他セッションの並行活動によるものと推定)。本 PR の変更によるものではない
 
 ## review retrospective
 
