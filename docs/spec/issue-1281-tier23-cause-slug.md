@@ -177,22 +177,20 @@ Changed Files に新規 `scripts/*.sh` は含まれず、`modules/*.md` の変�
 - 一方で AC6「cause 分離がテストで保護されている」は verify command が「テストが追加されている」ことのみを機械的に確認するため、テストの実効性 (アサーションが実際に検出力を持つか) までは rubric でも検出できなかった。この種の「テストの存在は確認できるが実効性は確認できない」ギャップは、rubric の文言に「アサーションが実際に regression を検出できる形になっていること」を明示すれば軽減できる可能性がある。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Step 8 の Pre-merge 6条件はすべて PASS (Issue側で既に `[x]` 済みだったものを再検証し確認)。CI 9件も全SUCCESS
-- Step 10 は `.wholework.yml` の `capabilities.workflow: true` により Workflow パスの対象だったが、`--non-interactive` (fork context, 再実行保証なし) のため `workflow-guidance.md` の指示に従い静的 Task fan-out (review-spec + review-bug×2) にフォールバック
-- review-bug×2 が独立に検出した4件の指摘 (うち2件は両エージェントで完全に重複) を Opus 検証サブエージェントで全件 PASS (問題確認) と判定。review-spec の7件は無検証で直接統合 (仕様どおり)
-- SHOULD 5件・CONSIDER 4件のうち7件を修正しコミット (7コミット、各コミットに元の指摘への `Refs:` リンクを付与)。`scripts/validate-recovery-plan.sh` の hard-fail 挙動変更と `agents/orchestration-recovery.md` の例示 slug 差し替えの2件は、PR自身が追加した固定テストとの衝突、および主観的判断が必要という理由でスキップし SHOULD/CONSIDER として記録に留めた
+- pre-merge AC ゲート (6件) は unchecked_count=0、review-incomplete-fallback も未検出でクリアしたため override マーカーなしで直接マージに進んだ
+- gh-pr-merge-status.sh が mergeable=true (reason=clean, CI success, review approved) を返したため、コンフリクト解消ステップ (Step 3) は不要だった
+- `gh pr merge --squash --delete-branch` でスカッシュマージを実行 (base=main のため Issue #1281 は `closes #1281` により自動クローズ見込み)
 
 ### Deferred Items
 
 - `scripts/validate-recovery-plan.sh` の cause 不正値ハードフェイル問題 (SHOULD、PR #1290 review コメント参照) — validator のセマンティクスを緩めるか、`spawn-recovery-subagent.sh` 側で validate 呼び出し前に正規化するかは著者判断の follow-up に委ねる
 - `agents/orchestration-recovery.md` の2件目JSON例のcause値 `dirty-guard` が根本原因命名規約と噛み合わない点 (CONSIDER) — 例示slugの差し替えは主観的判断のため見送り
-- Post-merge AC (Tier 2/3 recovery 発火時のログ観察、`session=next`) は code フェーズの Deferred Items を引き継ぎ、review フェーズでは新規の変更なし
+- Post-merge AC (Tier 2/3 recovery 発火時のログ観察、`session=next`) は code/review フェーズの Deferred Items を引き継ぎ、merge フェーズでは新規の変更なし
 
 ### Notes for Next Phase
 
-- `/merge` 実行前に、本 review フェーズで追加した7件の修正コミットがCI green であることを確認すること (ローカルで bats 72/72 PASS, validate-skill-syntax PASS, forbidden-expressions PASS を確認済みだが、push後のCI結果は未観測)
-- Post-merge AC の観察対象は code フェーズの Notes for Next Phase を参照 (Tier 3 recovery 発火時の `docs/reports/orchestration-recoveries.md` エントリと `collect-recovery-candidates.sh --with-tracking` の group-key 分離)
+- `/verify` は Post-merge AC (`docs/reports/orchestration-recoveries.md` への cause slug 記録、`collect-recovery-candidates.sh --with-tracking` での cause 別分離) を次回 Tier 2/3 recovery 発火時に観察すること (`session=next`)
