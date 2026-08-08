@@ -14,6 +14,26 @@ cutoff: `2026-08-08T14:14:57Z` (Issue timeline の最新 `phase/*` ラベル付�
 
 - saito / MEMBER / first-class / `## Issue Retrospective` — `/issue 1276 --non-interactive` の Auto-Resolve Log。「担当範囲」表の対象 Issue を 19 件 → 14 件へ修正した経緯 (本 Spec は 14 件を前提として踏襲) / https://github.com/saitoco/wholework/issues/1276#issuecomment-5226501399
 
+## issue retrospective
+
+### Auto-Resolve Log (non-interactive mode)
+
+- **「担当範囲」表の「対象 Issue」を 19 件 → 14 件へ修正** — 理由: 一次資料 `docs/reports/manual-ac-retype-d3.md` の「対象・件数内訳」に記載された `19 件` は区分 D3 全体 (由来 #1165) の母集団数であり、本 sub-issue が担当する「16 AC 行」に絞ると、同資料「再型付けマッピング (16 AC 行 / 14 Issue)」の見出しどおり一意な Issue 数は 14 件 (#1135 #1056 #961 #710 #513 #512 #491 #490 #484 #478 #477 #465 #535 #575)。19 件は既に #1165 方式で retire 済みの 6 AC 行 (本 sub-issue のスコープ外) を含む値であり、担当範囲の記述としては不正確だったため修正した。
+  - Other candidates: 19 件のまま維持 (一次資料の総数表記に合わせる) — 却下。本 sub-issue が実際に扱う Issue 母集団と乖離し、実査対象の混乱を招くため
+  - AC 本文・verify command は数値に依存していないため、この修正による影響なし
+
+### Triage 結果 (自動チェーン)
+
+- Type: Task
+- Priority: 未検出
+- Size: L (`#1165` 系列の類似規模 sub-issue #1274 (L) と同水準。加えて `watchdog-kill`/`pr-review-full` の event 固有判定が必要な複雑性を考慮)
+- Value: 3 (Impact=1: 親 #1270 からの言及のみ / Alignment=5: Vision の verification harness 中核機能に直結)
+- AC verify command audit: 問題なし (grep 引数順・常時 PASS/FAIL・checkbox format など全パターン該当なし)
+
+### High-Stakes Decision Skip
+
+- 非対話モードのため、Scope Assessment (sub-issue 分割検討) をスキップ。Size L で分割が必要かどうかの判断は対話モードで `/issue 1276` を再実行して確認可能。
+
 ## Autonomous Auto-Resolve Log
 
 `/spec 1276 --non-interactive` で自動解決した曖昧点 3 件。
@@ -169,3 +189,49 @@ Issue 本文の「担当範囲」表は 16 AC 行を実査対象とするが、�
 ### ドキュメント更新の要否
 
 `modules/doc-checker.md` の Impact Determination Criteria のいずれにも該当しない。本 Issue は既存の retire / 再型付けパターンを 16 の具体的な AC 行に適用する一回限りの運用作業であり、新しい仕組みの導入もディレクトリ構成変更も含まない。`docs/workflow.md` / README / Steering Documents の更新は不要。
+
+## spec retrospective
+
+### Minor observations
+
+- 一次資料 (`docs/reports/manual-ac-retype-d3.md`) の前提が、それを書いた後にマージされた別 Issue (#1242) によって失効していた。レポート形式の一次資料は Issue 本文と違って更新の契機を持たないため、参照する側が実装を実測して裏を取る必要がある。今回は `scripts/opportunistic-search.sh` の該当行を直接読んで `--state all` を確認した。
+- 実査対象 16 行のうち 3 行が既に PASS 済みだった。Issue 起票時 (2026-08-08) と spec 実行時 (2026-08-09) の間に observation dispatch が実際に動いた結果であり、この種の「実行中に母集団が動く」Issue では起票時点のスナップショットを鵜呑みにできない。
+- #478 の `### Pre-merge` に `github_check ... --commit=$(git rev-parse HEAD)` という既知欠陥形の未チェック AC が残っていた。本 sub-issue のスコープ外だが、retire/差し戻しで post-merge がゼロになっても Issue が閉じない要因になるため記録ファイルに注記する方針とした。
+
+### Judgment rationale
+
+- **A と E の分かれ目を「指定 event の発火が、条件文の要求する観測対象をその run 自身の中に生成するか」に統一した**。親 #1270 の基準文 (A =「指定 event の発火時に…判定できる」/ E =「event の発火では観測窓が開かない」) をそのまま 16 行へ適用しようとすると、「Claude が過去の成果物を横断検索すれば大抵は判定できる」ため境界が溶ける。生成するか否かに一本化したことで、内容的性質を要求する 6 行 (#1056 / #710×2 / #513 / #512 / #477) が機械的に E へ落ちた。
+- **`when=mode:batch` ゲート付きの #478 2 行を A に残した理由**は、blocked Issue の有無が確率的である点は `modules/observation-trigger.md` § Conditions That Cannot Be Pre-Excluded が「dispatch して SKIPPED になるのが正しい挙動」と明記しているため。空振り率の高さは retire の理由にならない。
+- **#490 / #491 を D と判断した根拠を「本リポジトリに cron スケジュールワークフローが存在しない」という実測に置いた**。`.github/workflows/` 3 件に `schedule:` が無いことを確認している。親が定義する D の 3 条件のうち「downstream 依存で原理的に観測不能」に該当する。#1166 が #508 に適用した「wholework 自体はそのようなドメインの Issue を持たない」と同型の判断。
+- **分類 E に条件文の書き換えを併用した**。親の E の処理は記録のみを求めるが、差し戻し先の `/verify` Step 8b が読むのは条件文であって記録ファイルではない。母集団を欠いたまま戻すと滞留先が observation から manual へ移るだけになる。上記 [Minor observations] の「3 行が既に PASS 済み」と合わせて、型を移すこと自体は目的ではないという親の問題意識に沿う。
+
+### Uncertainty resolution
+
+- **`when=execution-context:main` (#575) が観測窓を過度に狭めていないか**: `skills/review/workflow-guidance.md` を読み、re-invocation guarantee の無い実行面 (headless `claude -p` / fork 実行) では Workflow 経路自体が走らず static Task fan-out へフォールバックすると定められていることを確認した。条件文が要求する「Workflow 経路で完走」は main context でしか成立しないため、ゲートは正しい。A のまま維持した。
+- **#535 (`event=watchdog-kill`) の判定根拠が実在するか**: `docs/reports/orchestration-recoveries.md` に、#535 マージ後の 2026-07-02 エントリ (Issue #875) で Tier 3 が `run_command` ベースの復旧 plan を validate 通過・適用成功させた記録があることを確認した。ただし当該 kill は外部 Bash-tool timeout であり内部 watchdog kill ではないため、`event=watchdog-kill` の発火実績としては数えない旨も記録した。
+- **#1056 の前提 (`pup` 不在) が現在も成立するか**: `command -v pup` で不在を再確認した (2026-08-09)。E の判定手順が `/verify` 実行時にそのまま使える。
+- **`check-ac-checkbox-format.sh` が `/code` から実行できるか**: `skills/code/SKILL.md` の `allowed-tools` に含まれないことを実測確認した。プロジェクトの `.claude/settings.json` 側の許可で通る見込みだが、拒否時は #1165 と同じく `python3` 相当判定へフォールバックする方針を Tool Dependencies に明記し、`skills/code/SKILL.md` の変更はスコープ外とした。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 16 AC 行の分類 (A 7 / B 1 / C 0 / D 2 / E 6) は Spec 側で確定済み。`/code` は「実査結果: 16 AC 行の分類」節をそのまま `docs/reports/observation-ac-audit-d3.md` の記録内容として転記すればよく、分類のやり直しは不要。
+- retire は #1166 方式 (AC 行を編集せず retire コメント + `phase/done` 遷移)。#1165 の `### Retired Post-merge Conditions` 退避方式は採らない。
+- 分類 E の 6 行のうち #513 / #512 / #477 の 3 行のみ、タグ差し替えと同じ編集で条件文も書き換える。残り 3 行 (#1056 / #710 条件1 / #710 条件2) はタグ差し替えのみ。
+- #490 は retire 後に `phase/done` 遷移に加えて close する (`gh api -X PATCH ... -f state=closed`)。`gh issue close` は `allowed-tools` に無いが `gh api:*` はある。
+
+### Deferred Items
+
+- #478 の `### Pre-merge` に残る `github_check ... --commit=$(git rev-parse HEAD)` 形の未チェック AC は本 Issue のスコープ外。記録ファイルへの注記のみ行い、修正はしない。
+- `skills/code/SKILL.md` の `allowed-tools` への `check-ac-checkbox-format.sh` 追加は行わない (拒否時は python3 フォールバック)。
+- 分類結果の親 #1270 集約レポート (`docs/reports/observation-ac-audit-summary.md`) への統合は親側の担当。本 Issue では記録ファイルの作成までを行う。
+- 既に `- [x]` / `phase/done` の 3 行 (#1135 / #961 / #484 条件1) は記録のみで、GitHub 側の操作は一切行わない。
+
+### Notes for Next Phase
+
+- 対象 Issue の状態は spec 実行時 (2026-08-09) のスナップショット。`/code` 着手時に再度 `gh issue view` で各 AC 行の checkbox 状態を確認すること — observation dispatch が並行して動いており、E/B 対象行が先に PASS 済みになっている可能性がある。その場合は編集せず記録ファイルに事実を追記する。
+- Issue 本文の書き戻しは `.tmp/issue-body-<N>.md` 経由 (`gh-issue-edit.sh <N> <file>`)。対象行以外を壊さないよう、置換は当該 AC 行の HTML コメントと条件文に限定すること。
+- `opportunistic-search.sh --event auto-run --dry-run` は母集団 120 Issue に対し 1 Issue ずつ `gh issue view` を回すため数分かかる。step 7 の確認は件数差分ではなく Issue 番号の個別含有で判定する。
+- 本 Issue はリポジトリ内変更が記録ファイル 1 件のみで、大半が GitHub 上の外部操作。`/review` が検査できる diff が小さいため、外部操作の結果は記録ファイルの `## 実施記録` 節に残すこと。
