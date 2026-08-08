@@ -226,24 +226,37 @@ N/A — Spec の Implementation Steps を順序どおり実行した。分類 (A
 
 N/A
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note。review-spec 観点の Perspective 1 (Spec Deviation) はゼロ件で、Spec の Implementation Steps・Changed Files・Key Decisions のすべてが実装 (`docs/reports/observation-ac-audit-d3.md` の内容と 8 Issue への外部操作) と一致していた。
+
+### Recurring issues
+
+review-bug×2 と review-spec が共通して検出した 2 件 (`.tmp/auto-checkpoint-*.json` という実在しないパス、`workflow-guidance.md § Completion Report Addition` という実在しない節名) はいずれも「実装コードから正確な文字列を grep で確認せず記憶・推測で転記した」ことが原因の同型パターンである。しかもこの 2 件は Spec 本文 (`docs/spec/issue-1276-observation-ac-audit-d3.md:69,121`、本 PR の diff 外) からそのまま転記されたもので、Spec フェーズで発生した誤りが code フェーズでの転記を経て観測可能な形 (`/review` が検出できる diff) に現れた。観測対象が「将来 `/verify` が参照する判定根拠」であるレポート特有のリスクとして、パス・セクション名などの具体的な参照を書く際は Read/Grep で実在確認してから記述する、という手順を今後の同種 Issue (実査記録・監査レポート作成) のガイドとして持っておく価値がある。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note。Pre-merge AC 7 件 (rubric 6 + file_exists 1) はすべて safe mode で PASS 判定でき、UNCERTAIN は 0 件だった。verify command 自体の記述にも問題はなかった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Spec の分類結果 (A 7 / B 1 / C 0 / D 2 / E 6) をそのまま `docs/reports/observation-ac-audit-d3.md` へ転記し、再判定は行わなかった。
-- 分類 E 6 行 / 分類 B 1 行の Issue 本文書き戻しは `.tmp/issue-body-<N>.md` 経由 (`gh-issue-edit.sh`) で行い、対象 AC 行の HTML コメントと条件文のみを置換した。
-- 分類 D の 2 Issue (#491 / #490) は #1166 方式で retire コメント投稿 + `phase/done` 遷移。#490 はさらに `gh api -X PATCH ... -f state=closed` で close した。
-- `check-ac-checkbox-format.sh` は権限拒否なく実行できた (python3 フォールバックは不要だった)。
+- Step 10 は `--non-interactive` (fork context, re-invocation guarantee なし) のため `capabilities.workflow: true` でも Workflow tool 経路を使わず、`skills/review/workflow-guidance.md` の指示どおり静的 Task fan-out (review-spec + review-bug×2) へフォールバックした。Agent tool を `run_in_background: false` で同一メッセージ内に並列発行した。
+- Step 10 で検出された 6 件 (SHOULD 2 / CONSIDER 4) はすべて `docs/reports/observation-ac-audit-d3.md` 内の参照誤り・表現曖昧性で、MUST は 0 件だった。2 段階検証で全件 PASS (問題確認) と判定されたため、6 件とも修正して commit・push した。
+- Base Branch Conflict Pre-check は `changed in both` 0 件でコンフリクトなし。
 
 ### Deferred Items
 
-- #478 の `### Pre-merge` に残る `github_check ... --commit=$(git rev-parse HEAD)` 形の未チェック AC は本 Issue のスコープ外のまま。記録ファイルへの注記のみ。
-- 分類結果の親 #1270 集約レポート (`docs/reports/observation-ac-audit-summary.md`) への統合は親側の担当。
-- 既に `- [x]` / `phase/done` の 3 行 (#1135 / #961 / #484 条件1) は記録のみで、GitHub 側の操作は行っていない。
+- #478 の `### Pre-merge` に残る `github_check ... --commit=$(git rev-parse HEAD)` 形の未チェック AC は本 Issue のスコープ外のまま (code フェーズから継続)。
+- 分類結果の親 #1270 集約レポート (`docs/reports/observation-ac-audit-summary.md`) への統合は親側の担当 (code フェーズから継続)。
+- `docs/spec/issue-1276-observation-ac-audit-d3.md:69,121` に残る同型の参照誤り (Spec 側、本 PR の diff 外) は修正していない — 本 Issue のスコープは `docs/reports/observation-ac-audit-d3.md` の記録内容であり、Spec 自体の事後訂正は対象外と判断した。
 
 ### Notes for Next Phase
 
-- `/review` は diff がレポートファイル 1 件のみで小さいが、外部操作 (8 Issue の本文編集・コメント投稿・ラベル遷移・1 件の close) の結果は `docs/reports/observation-ac-audit-d3.md` の `## 実施記録` 節と本 Retrospective に記録済み。
-- Pre-merge AC 7 件は本 phase で rubric/file_exists 判定により全件 PASS・チェック済み。`/merge` の pre-merge AC gate は素通りする見込み。
-- 着手時の Issue 状態再確認では spec フェーズからの drift はなかった (Design Gaps/Ambiguities 参照)。
+- `/merge 1295` 実行時、Pre-merge AC 7 件は全件チェック済みのため pre-merge AC gate は素通りする見込み。
+- レビュー修正 commit (`c8a9ae2c`) は PR ブランチへ直接 push 済み。追加の re-review は不要 (MUST 0 件、review-only モードではない通常フロー)。
+- Post-merge AC はこの Issue にはない (効果測定は親 #1270 に集約)。
