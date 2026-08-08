@@ -59,3 +59,32 @@ B 案の既知の穴 (Issue 本文): 「Size XS の patch route では `/spec` �
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` Existing Issue Refinement の Issue Retrospective — AC1 への補助チェック追加理由、Ambiguity Detection の結果 (該当なし、案 A/B/C の決定は `/spec` に意図的に委譲)、事実確認結果、Title drift なし、Blocked-by なしを記録 / https://github.com/saitoco/wholework/issues/1260#issuecomment-5225317179
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1・2 をそのまま実施した (段落の挿入位置・内容とも Spec の指定通り)。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- 実装のやり直しは発生していない。参考記録として: `skills/issue/SKILL.md` が複数テストファイル (`tests/verify-executor.bats` 等、直接対応する `tests/issue.bats` 以外) から参照されているため Behavioral Change Detection が発火し、`bats --jobs 18 tests/` のフルスイート実行が必要になった。実行結果、`tests/post_merge_check.bats` の `fail: gh issue reopen called when FAIL input given` が 1 件 FAIL したが、同ファイル単体実行では PASS することを確認済み。`test-failure-classify.sh` の分類は `infra` (並列実行時のリソース競合によるフレークで、テストコード側の修復対象ではない)。本 Issue の変更 (`skills/issue/SKILL.md` Step 15, `skills/triage/skill-dev-verify-audit.md`) とは無関係と判断し、pr route の既定方針通り CI 側の検知に委ねて未修正のまま継続した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Steps 1・2 をそのまま実施し、`skill-dev-verify-audit.md` § Non-Destructive Audit Behavior に自己生成 AC の扱い (非破壊を維持) と根拠、「Repair handoff for self-generated AC」段落を追加。`skills/issue/SKILL.md` Step 15 に整合段落を挿入した。
+- Pre-merge AC 4件 (rubric x3, section_contains x1) はいずれも実装内容そのままで PASS と判定し、Issue body のチェックボックスを更新した。
+
+### Deferred Items
+- Post-merge AC (`次回 /issue Step 15 が自己生成 AC の不備を検出した際、定めた方針どおりの挙動になることを観察する`, observation type) は次回発火まで未検証のまま。
+- `tests/post_merge_check.bats` の並列実行時フレーク (`fail: gh issue reopen called when FAIL input given`) は本 Issue の変更と無関係と判断し未修正。継続的に発生する場合は別途調査 Issue が必要。
+
+### Notes for Next Phase
+- `/review` は Pre-merge AC 4件が既に `[x]` 済みであることを踏まえ、rubric 判定の妥当性を独立に再確認すること。
+- `/merge` は上記の `tests/post_merge_check.bats` フレークが CI 上でも再現するかを確認し、再現する場合は無関係な既存問題として扱ってよい (本 Issue の diff は `skills/issue/SKILL.md` と `skills/triage/skill-dev-verify-audit.md` のみ)。
