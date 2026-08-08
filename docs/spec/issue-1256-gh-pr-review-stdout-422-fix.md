@@ -41,7 +41,7 @@ GitHub がこのケースで返す判別可能なエラー文言 ("...can not re
 - <!-- verify: rubric "scripts/gh-pr-review.sh の reviews POST 呼び出しに 2>&1 >/dev/null の順序が残っていない" --> `2>&1 >/dev/null` 形式が該当箇所から除去されている
 - <!-- verify: rubric "変更後の捕捉変数について、gh api 成功時の挙動が壊れていないことがコード上またはテストで確認できる" --> 成功パスで捕捉変数の内容に依存する箇所がないこと、または依存箇所が新しい捕捉内容に合わせて更新されていることが確認されている
 - <!-- verify: command "bats tests/gh-pr-review.bats" --> `tests/gh-pr-review.bats` に、self-review 422 のレスポンスボディを模したケースでフォールバックが COMMENT として発火することを検証するテストが追加されている
-- <!-- verify: github_check "gh pr checks" "Run bats tests" --> CI (bats テスト) が PR で pass する
+- <!-- verify: github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion --jq '.[0].conclusion'" "success" --> CI (bats テスト) が PR で pass する
 
 ### Post-merge
 
@@ -59,3 +59,30 @@ GitHub がこのケースで返す判別可能なエラー文言 ("...can not re
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-5 were followed as written; no reordering, omission, or approach change.
+
+### Design Gaps/Ambiguities
+- Issue Pre-merge AC #5 used `github_check "gh pr checks" "Run bats tests"`, which is incompatible with patch route (no PR exists on this route). Auto-fixed to the canonical `github_check "gh run list --workflow=test.yml --branch=main --limit=1 --json conclusion --jq '.[0].conclusion'" "success"` form per `modules/verify-classifier.md` § "Patch Route CI Verification Note", and synced to both the Issue body and this Spec's Verification section. This gap was not called out in the Spec's own Notes section — worth flagging in future Spec review for patch-route Issues that the CI AC form should be pre-validated against route.
+
+### Rework
+- N/A — no rework occurred.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Renamed `API_STDERR` to `API_OUT` and removed `>/dev/null` so the reviews POST call captures combined stdout+stderr; both discriminator `grep` checks (422 code, self-review message) now match against this capture.
+- Fixed the existing `success: REQUEST_CHANGES 422 self-review error falls back to COMMENT` bats test's mock rather than adding a new test — the existing test already targeted this exact scenario, and its mock was the inaccurate part (it put the discriminator text on stderr; real `gh api` puts it in the stdout response body).
+- Left the no-line-comments (`else`) branch of `gh-pr-review.sh` without a self-review 422 fallback, per Spec Notes — out of scope for this Issue.
+
+### Deferred Items
+- Post-merge observation AC (next `/auto` `/review` run with a MUST finding on a self-authored PR should show the COMMENT fallback actually firing) — cannot be verified pre-merge.
+- None else.
+
+### Notes for Next Phase
+- All 4 pre-merge rubric/command AC are checked `[x]`; the CI AC (`github_check "gh run list" ...`) is intentionally left `[ ]` — patch route has no PR-scoped run yet at code-phase time, `/verify` evaluates it post-merge.
+- `/verify` should confirm the `gh run list --workflow=test.yml --branch=main --limit=1` run picked up by this Issue's push (implementation + retrospective commits) actually reflects `Run bats tests` success, not an unrelated concurrent session's run — see the Residual risk note in `modules/verify-classifier.md` § Patch Route CI Verification Note.
