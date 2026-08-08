@@ -106,3 +106,42 @@
 ### Notes for Next Phase
 - `/verify 1233` 実行時、Pre-merge AC 2件は既に `[x]` 済みのため再検証は不要。Post-merge AC (observation) の観測結果に注目すること
 - CI の間欠的 flaky (`reconcile-phase-state.bats` 含む) が再発する場合は Issue #1255 側での切り分けが優先
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+
+- triage の AC audit コメント (AC2 の `grep "when="` が実装前から常時 PASS する Pattern 2) を確実に引き継ぎ、`grep "execution-context"` へ修正したうえで Issue 本文にも同期した。指摘の受け渡しが機能した事例
+- 一方で Post-merge AC3 については、Notes で「#575 のリトロフィットはスコープ外」と明示的に認識しながら、AC3 の文面 (「次回 fork context で発火した observation AC が誤って UNCERTAIN/SKIPPED を繰り返さず適切に扱われることを観察する」) をその依存を織り込んだ形に調整しなかった。結果として AC3 は本 Issue の実装が完了しても構造的に PASS しえない状態で残った。スコープ外判断そのものは妥当だが、スコープ外にした前提に AC が依存していることを検出する手当てがない
+
+#### design
+
+- execution-context を facts JSON 経由にせず発火元スキルから直接渡す判断は、`/review` の発火呼び出しが `--session`/`--facts-file` を渡していないという実装事実と、`/auto` 経由の `/review` が常に fork という構造的事実の双方に裏付けられており妥当だった
+- `when=` 節評価ループの gate 全体 fail-open → 節単位 fail-open への再構成も、新軸が facts JSON に依存しないという性質から必然的に要求される変更として正しく導出されている
+
+#### code
+
+- Deviations from Design は N/A。Implementation Steps 1-5 がそのまま実装された
+- フルスイート並列実行下でのみ `tests/post_merge_check.bats` が間欠 FAIL。単体では安定 PASS、変更対象と無関係で、既存 Issue #1255 の追跡範囲内として重複起票を回避した判断は適切
+
+#### review
+
+- review-bug×2 が独立に同一箇所 (`opportunistic-search.sh:442` の execution-context 値未検証) を指摘したが、adversarial 検証で false positive と判定された。finder は網羅重視・verifier が呼び出し元を追って除外という find/filter separation が意図どおり機能した
+- Changed Files の横断ギャップ (`modules/verify-classifier.md` / `modules/run-fact-matching.md` が Spec 調査時に未発見) を review-spec/review-bug 双方が独立に検出。`when=` のような複数ドキュメントに跨る概念変更では、変更対象ファイル自身の直接参照だけを辿るのでは不足する
+
+#### merge
+
+- CI で `tests/reconcile-phase-state.bats` の 1 件のみ failing だったが、同一 PR の別実行では全 PASS しており flaky と判断、non-interactive ポリシーに従って Auto-Resolve Log を投稿のうえ続行した。判断過程が Issue コメントに残っており追跡可能
+- pre-merge AC ゲートは `unchecked_count=0` で無条件通過。同一セッション内の直前 2 件 (#1234 / #1213) がいずれもゲートで往復したのと対照的で、`/code` フェーズが Pre-merge AC の checkbox を実際に更新していたことが効いた
+
+#### verify
+
+- Post-merge AC3 は `event=pr-review-full` 未発火のため SKIPPED。ただし発火しても PASS しえない構造 (#575 の AC に `when=execution-context:main` が未適用) を検出し、Issue コメントに記録した
+- これは Issue #1118 の AC 2 と同型の再発である。#1118 では「observation として型付けした AC が、母集団の `--state closed` 固定により永久に評価不能」だった。今回は「observation AC の観測前提が、スコープ外とした別 Issue の変更に依存する」形で、経路は違うが「機構を作った Issue 自身の AC が、機構の適用を待つ」という構造は同じ
+
+### Improvement Proposals
+
+- **機構追加 Issue の observation AC が適用先のリトロフィットに依存する問題**: 新しい宣言手段 (`when=` の軸、`config=` のキー等) を追加する Issue で、その手段の効果を観測する Post-merge AC を立てる場合、手段の適用対象となる既存 Issue のリトロフィットが同一 Issue のスコープに含まれていないと AC は構造的に PASS しえない。対処の方向は 2 つ: (a) リトロフィットを同 Issue のスコープに含める、(b) AC を observation ではなく manual に型付けし、リトロフィット実施を人間の判断点として明示する。#1118 の AC 2 が最終的に (b) で決着した前例がある
+- **直近の実務的解消**: #575 の observation AC に `when=execution-context:main` を追記すれば、fork context 実行での無条件 dispatch が止まり、本 Issue の AC3 も観測可能になる。`/verify 575` の 8 回目 SKIPPED を待たずに実施できる
