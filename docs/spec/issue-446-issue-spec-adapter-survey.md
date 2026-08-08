@@ -122,6 +122,21 @@
 ### Improvement Proposals
 - N/A
 
+### 2026-08-09 re-run (observation 条件の評価)
+
+上記の記録は post-merge 2 条件が `verify-type: manual` だった時点のもの。その後 observation (`event=auto-run`) へ再型付けされ、`/auto --batch 1280 1282 1283 1281` (session `97764-1786198856`) の end-of-batch observation scan で初めて発火し評価対象になった。
+
+#### verify (再実行分)
+
+- 条件 5/6 はいずれも **SKIPPED**。`auto-run` は発火したが、観察対象のシナリオが本 run で発生していない
+- 両 step はソース上いずれも条件付き — `skills/issue/SKILL.md:55` は "only when proposing a new verify command type"、`skills/spec/SKILL.md:205` は "Skip if all Issue body verify commands use built-in command types"
+- 観察した run の `/issue` 4 件 (#1280 #1282 #1283 #1281) / `/spec` 2 件 (#1283 #1281) が扱った verify command はすべて built-in type (`rubric` / `grep` / `command` / `section_contains`)。ガードが正しく「該当なし」と判定し step 本体は未実行
+- ガードの評価自体は機能している証拠がある (#1283 の `/issue` は `command` type verify command を実測で監査し、恒久 FAIL になる欠陥を検出・修正した)。ただし条件が問う「step 本体が機能すること」は未検証
+
+#### Improvement Proposals (再実行分)
+
+- **観察 AC のイベント粒度と観察対象シナリオの頻度が乖離している** — 本 Issue の条件 5/6 は `event=auto-run` で発火するが、実際に評価可能になるのは「新しい verify command type を提案する Issue が `/issue` / `/spec` を通過した run」に限られる。両者の頻度差により、`auto-run` のたびに再マッチしては同じ SKIPPED に着地する状態が続く (#446 は 2026-05 起票以来 `phase/verify` に滞留し、end-of-batch scan の 86 件マッチのうち最古)。観察 AC を書く際は (a) 観察対象が発生する条件をイベント名で表現できるか、(b) 静的検証で代替できる部分と runtime 検証が要る部分を分離できるか、を検討する規約が要る。本 Issue では AC1-3 (step の存在・参照先の正しさ) が静的に充足済みで、runtime 検証が要るのは step 本体の挙動のみだった
+
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/446#issuecomment-4418928161
 - saito / MEMBER / first-class / <!-- escalation-level: 2 --> / https://github.com/saitoco/wholework/issues/446#issuecomment-5182936188
