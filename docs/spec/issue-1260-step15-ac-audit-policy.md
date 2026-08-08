@@ -89,16 +89,15 @@ Nothing to note — MUST issue は 0 件。SHOULD issue が 1 件 (`skills/triag
 Nothing to note — rubric 3件・section_contains 1件とも安全モードで確定的に PASS 判定でき、UNCERTAIN は 0 件だった。verify command の記述・対象ファイル指定に不備はなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Pre-merge AC 4件を独立に再検証し、いずれも PASS と再確認した (Issue body のチェックボックスは `/code` により既に `[x]` 済みで変更不要)。
-- `skills/triage/skill-dev-verify-audit.md:254` の Size 列挙から Size S が欠落している SHOULD issue を検出し、修正・commit・push 済み。
+- pre-merge AC ゲート (`check-pre-merge-ac.sh`) で Issue #1260 の pre-merge AC 4件全てチェック済みを確認し、review-incomplete-fallback も検出されなかったため、追加確認なしでスカッシュマージを実行した。
+- `gh-pr-merge-status.sh` の判定は `mergeable=true reason=clean` で、コンフリクト解消・テスト再実行は不要だった。
 
 ### Deferred Items
-- Post-merge AC (`次回 /issue Step 15 が自己生成 AC の不備を検出した際、定めた方針どおりの挙動になることを観察する`, observation type) は次回発火まで未検証のまま。
-- `tests/post_merge_check.bats` の並列実行時フレーク (`fail: gh issue reopen called when FAIL input given`) は本 Issue の変更と無関係と判断し未修正のまま。CI では今回全ジョブ SUCCESS だったため再現しなかった。継続的に発生する場合は別途調査 Issue が必要。
+- Post-merge AC (`次回 /issue Step 15 が自己生成 AC の不備を検出した際、定めた方針どおりの挙動になることを観察する`, observation type) は次回発火まで未検証のまま — `/verify` に引き継ぐ。
+- `tests/post_merge_check.bats` の並列実行時フレークは review フェーズで無関係と判断済みのため、`/merge` 側でも追加対応なし。
 
 ### Notes for Next Phase
-- `/merge` は MUST issue 0件・CI 全 SUCCESS のためそのまま進めてよい。
-- `tests/post_merge_check.bats` のフレークは本 Issue の diff (`skills/issue/SKILL.md`, `skills/triage/skill-dev-verify-audit.md`) と無関係であり、`/merge` 側での追加対応は不要。
+- `/verify` は Post-merge AC の observation 項目のみが対象。次回 `/issue` Step 15 の自己生成 AC 検出イベントが発生するまでは PASS/FAIL 判定不能な観察待ち状態である点に留意。
