@@ -86,3 +86,30 @@ tests/audit-auto-session.bats:46,103 / tests/get-auto-session-report.bats:71,199
 | login | authorAssociation | trust tier | intent | URL |
 |---|---|---|---|---|
 | saito | MEMBER | first-class | Issue Retrospective (triage auto-chain): Type=Task, Size=S に確定。AC3 の記録先を「Spec/Issue コメント」→ `docs/reports/bats-negation-assertion-audit.md` に変更した理由 (rubric grader は Spec ファイルと Issue コメントのどちらも読めないため) を記録。Issue 本文にも同内容が反映済み | https://github.com/saitoco/wholework/issues/1292#issuecomment-5228437961 |
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜4 を Spec の記載順どおりに実施した。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A — Spec フェーズの棚卸し (対象9件・安全12件の分類) がそのまま実装の書き換え対象と一致しており、実装時の再調査・やり直しは発生しなかった。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec 記載の棚卸し結果 (9件書き換え対象・12件安全) をそのまま採用し、実装時の再グレップでも同じ21件・同じ分類であることを確認してから書き換えた。
+- `tests/collect-recovery-candidates.bats:376` のみ既存に `-q` フラグが無かったため、Spec の指示どおり `:604-605` の前例に合わせて `-q` を追加した。他8件は既存の grep フラグ・パターン文字列を変更していない。
+- `bats --jobs 18 tests/` (全1639件) を実行し PASS を確認。既存9件の書き換え後もアサーションの前提条件 (見つかるべきパターンが実際に見つかる/見つからないべきパターンが見つからない) が現状のコードで成立していることを検証した。
+
+### Deferred Items
+- Post-merge AC (次回 bats テストを追加する Issue での観察) は `/verify` 以降の運用に委ねる。
+- `skills/issue/spec-test-guidelines.md` への同内容の追記は Issue 本文 Notes の判断どおり見送った (`modules/test-runner.md` 1箇所で到達範囲は足りるとの Spec の判断を踏襲)。
+
+### Notes for Next Phase
+- 5件の pre-merge AC はすべて `/code` 内で PASS 確認済み (rubric 2件・grep 1件・file_exists 1件・command 1件)。Issue のチェックボックスも `[x]` に更新済み。
+- 変更ファイルは `modules/test-runner.md`、`docs/reports/bats-negation-assertion-audit.md` (新規)、および6件の `tests/*.bats` のみ。SKILL.md やスクリプトへの変更はない。
