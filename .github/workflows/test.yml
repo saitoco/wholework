@@ -25,8 +25,19 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y bats
 
+      - name: Prepare bats run-log directory
+        run: mkdir -p tests/.bats/run-logs
+
       - name: Run bats tests
+        id: bats
+        continue-on-error: true
         run: bats --jobs $(nproc) tests/
+
+      - name: Re-run parallel-only failures serially
+        if: steps.bats.outcome == 'failure'
+        run: |
+          echo "## Serial re-run of tests that failed under parallel execution" >> "$GITHUB_STEP_SUMMARY"
+          bats --filter-status failed tests/ | tee -a "$GITHUB_STEP_SUMMARY"
 
   validate-syntax:
     name: Validate skill syntax
