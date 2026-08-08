@@ -148,3 +148,16 @@
 
 - **機構追加 Issue の observation AC が適用先のリトロフィットに依存する問題**: 新しい宣言手段 (`when=` の軸、`config=` のキー等) を追加する Issue で、その手段の効果を観測する Post-merge AC を立てる場合、手段の適用対象となる既存 Issue のリトロフィットが同一 Issue のスコープに含まれていないと AC は構造的に PASS しえない。対処の方向は 2 つ: (a) リトロフィットを同 Issue のスコープに含める、(b) AC を observation ではなく manual に型付けし、リトロフィット実施を人間の判断点として明示する。#1118 の AC 2 が最終的に (b) で決着した前例がある
 - **直近の実務的解消**: #575 の observation AC に `when=execution-context:main` を追記すれば、fork context 実行での無条件 dispatch が止まり、本 Issue の AC3 も観測可能になる。`/verify 575` の 8 回目 SKIPPED を待たずに実施できる
+
+## Verify Retrospective (session=next follow-up, 2026-08-09)
+
+### Phase-by-Phase Review
+
+#### verify
+
+- 上記「直近の実務的解消」が実施された後、`/review 1284 --full --non-interactive` (fork context) の Event-based observation scan が `event=pr-review-full` を発火させ、本 Issue の Post-merge AC3 (`session=next`) を評価する機会が実際に発生した。`OBSERVATION_MATCHES` は #1233 のみで #575 (`when=execution-context:main` 付き AC) は含まれず、#575 の該当 AC は未チェックのまま — fork context 発火時に正しく除外されることを実行時に直接確認できた。AC3 を PASS 判定しチェックを更新した
+- 前回の Verify Retrospective が記録した Improvement Proposal (「直近の実務的解消」) は、Issue コメント上で人手 (もしくは別セッション) により実施され、今回の観測で実際に機能することが裏付けられた。observation AC が「機構を作った Issue 自身の AC が、機構の適用を待つ」構造だったケースが、リトロフィット実施後に構造的 PASS 不能状態を脱した実例として記録する
+
+### Improvement Proposals
+
+- N/A — 前回記載の2件はいずれも解消済み (#575 のリトロフィットは実施され、機構自体は本追記時点で正常動作を確認)。新規の改善提案なし
