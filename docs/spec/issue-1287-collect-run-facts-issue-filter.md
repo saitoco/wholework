@@ -59,3 +59,31 @@
 - **`.issue` の型**: `scripts/emit-event.sh` が `"issue":${_issue}` という unquoted 数値として emit するため (`emit_event()` 実装、124 行目)、`.issue > 0` の数値比較は #1279 のパターンと同様に安全に成立する。
 - **スコープ確認 (Steering Docs sync candidate check)**: `grep -rn "jq -r '\.issue'" scripts/ modules/` で確認した結果、同型の未フィルタ `.issue` 列挙パターンは本 Issue が対象とする `scripts/collect-run-facts.sh:140` の 1 箇所のみで、他に対応漏れは存在しない。また `collect-run-facts.sh` を参照する現行ドキュメント (`docs/structure.md` / `docs/ja/structure.md` の役割説明行、`modules/run-fact-matching.md` / `modules/opportunistic-verify.md` / `modules/observation-trigger.md` / `modules/phase-state.md` の呼び出し規約説明) はいずれも `--session`/`--no-github` 等の I/O 契約や出力 JSON スキーマを記述するのみで、`issues[]` に含まれる Issue 番号の内部フィルタ条件には言及していないため、変更不要と判断した。
 - **SPEC_DEPTH=light (Size S) のため Step 7 (Ambiguity Resolution) / Step 8 (Uncertainty Identification) はスキップ。** Issue 本文の Auto-Resolved Ambiguity Points (`/issue` フェーズで非対話モードにより自動解決済み) を実装方針として採用した (詳細は Consumed Comments の Issue Retrospective コメント参照)。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。Implementation Steps 1・2 とも Spec 記載の置換内容・フィクスチャ設計をそのまま適用した。
+
+### Design Gaps/Ambiguities
+
+- なし。
+
+### Rework
+
+- `tests/run-fact-matching.bats` の既存テスト「recovery_tiers captures tier values with tier N fact_tokens」(旧: 900 番 Issue に `recovery` イベントのみを与えるフィクスチャ) が、フィルタ変更後に FAIL した。原因は当該フィクスチャが `sub_start`/`phase_*` を一切含まず、新しい許可リストフィルタで Issue #900 自体が `ISSUE_NUMBERS` から除外されたため。実運用では `recovery` イベントは必ず稼働中の phase 内で発生する (`phase_start` を伴わない `recovery` 単体は起こらない) ため、フィクスチャが非現実的な形だったと判断し、`phase_start` イベントを 1 件追加してフィクスチャを実態に合わせた (テストが検証する内容自体は変更していない)。Tier 0 分類は `logic` (fixture 個別ケースとして機械分類されなかった) だったため、Step 9 通常の 1 回リペア枠内で対応した。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Step 1 の jq フィルタをそのまま採用 (`select(.issue != null and .issue > 0 and (.event == "sub_start" or (.event | startswith("phase_")))) | .issue`) — #1279 の `get-auto-session-report.sh` と完全に同一の許可リスト条件。
+- AC3 (`github_check "gh run list" ...`) は patch route branch-scoped CI AC exclusion ルールに従い未チェックのまま残した。post-merge の `/verify` で評価される。
+
+### Deferred Items
+- AC3 の CI green 確認は `/verify` 実行時まで持ち越し。
+
+### Notes for Next Phase
+- `/verify` 実行時、`gh run list --branch=main --limit=1` がこの Issue の実装コミット (または合わせて push される retrospective コミット) の run を指していることを確認すること。
+- `tests/run-fact-matching.bats` の「recovery_tiers」テストフィクスチャを変更済み (`phase_start` 追加) — 今後同ファイルに新規テストを追加する際は、`ISSUE_NUMBERS` の許可リストフィルタ (`sub_start` / `phase_*` のみ) を満たすイベントを含めること。
