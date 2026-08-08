@@ -70,6 +70,23 @@ jobs:
       - name: Check for forbidden expressions
         run: bash scripts/check-forbidden-expressions.sh
 
+  language-convention:
+    name: Language Convention check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check language convention
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git diff "origin/${{ github.base_ref }}...HEAD" -- skills/ modules/ scripts/ | python3 scripts/check-language-convention.py
+          else
+            git diff "HEAD^..HEAD" -- skills/ modules/ scripts/ | python3 scripts/check-language-convention.py
+          fi
+
   macos-shell:
     name: macOS shell compatibility
     runs-on: macos-latest

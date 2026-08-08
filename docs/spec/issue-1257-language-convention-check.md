@@ -93,3 +93,46 @@ Implementation Steps 3 に記載の通り、`tests/check-language-convention.bat
 | login | authorAssociation | trust tier | 内容概要 | URL |
 |-------|-------------------|-----------|---------|-----|
 | saito | MEMBER | first-class | Issue Retrospective: Background 事実確認 (訂正なし)、AC2 を「選択した実装成果物への記載」に明確化した Auto-Resolve Log、post-merge observation AC への `session=next` 付与根拠、案 A/B 選択判断は `/spec` フェーズへの委譲を確認 | https://github.com/saitoco/wholework/issues/1257#issuecomment-5227226402 |
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation Steps 1–5 were followed as written.
+
+### Design Gaps/Ambiguities
+- None. Spec's false-positive exclusion logic (fence / inline code / double-quoted string) and its docstring documentation requirement (AC2) were unambiguous and required no interpretation during implementation.
+
+### Rework
+- None.
+
+### Notes
+- `tests/check-language-convention.bats` covers 6 cases (Spec's 3 minimum plus a double-quoted-string false positive, a no-CJK-content case, and a removed-line (`-` prefix) exclusion case) — purely additive coverage, not a deviation from the Spec's Implementation Steps 3 minimum.
+- Behavioral Change Detection (`/code` Step 9) triggered a full parallel bats run (`bats --jobs 18 tests/`, 1626/1626 PASS) instead of narrow scope, because `tests/visual-diff-adapter.bats` references `.github/workflows/test.yml` in a comment (documenting where its Node runtime setup comes from) — an incidental match unrelated to the new `language-convention` job actually added, but the mechanical path-grep check does not distinguish comment references from behavioral dependencies.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- No implementation-vs-Spec divergence, but a Spec-level algorithm gap was found: Implementation Steps 1 described fence tracking as counting `` ``` `` occurrences among "追加行" (added lines) only, and `check-language-convention.py` implemented exactly that literal wording. The resulting bug — editing a single line inside an already-existing fenced block (fence delimiters themselves unchanged, hence appearing only as diff context lines) was misclassified as outside the fence — reproduced directly against the script's own docstring example (`skills/verify/SKILL.md`'s `Print advisory` template). The root cause traces to the Spec's algorithm description, not to an implementation shortcut; the Spec itself under-specified how to handle unchanged/context state when the check's *subject* is a diff but its *correctness target* is the resulting file's structure.
+
+### Recurring issues
+- Nothing to note. This is the first Issue in this area (post-#975/#1236 line of fixes) to reach `/review` with a script-level correctness bug; no repeat-of-known-pattern signal.
+
+### Acceptance criteria verification difficulty
+- Nothing to note. All 4 Pre-merge AC are `rubric`-type; each graded cleanly to PASS by both `/code`'s and `/review`'s independent grader passes, with no UNCERTAIN results. The bats suite (converted to 7 cases after the review fix) gave a fast, reliable local reproduction/verification loop for the one MUST finding.
+
+### Improvement proposal (recorded here only; not filed as an Issue per `/verify`-aggregation convention)
+- When a Spec's Implementation Steps describe a diff-scanning algorithm whose correctness target is *post-diff file state* (e.g. "is this added line inside a fence/block/scope in the final file"), the Spec should explicitly call out whether unchanged context lines must also be tracked — not just added lines — to avoid this exact class of bug recurring in future diff-scanning script specs.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Re-verified all 4 Pre-merge rubric AC independently (not trusting `/code`'s self-graded PASS state at face value), per the prior phase's own handoff note flagging AC2 as most prone to Spec-only satisfaction drift — confirmed all 4 as genuinely PASS against the implementation artifacts.
+- Found and fixed one MUST-severity bug via the review-light agent (Edge Case/Robustness perspective): fence-tracking state only considered added lines, causing false positives when editing inside a pre-existing fenced block. Fixed by also scanning unchanged context lines for fence markers (without checking them for violations), and added a regression bats case.
+
+### Deferred Items
+- Post-merge observation AC (`session=next`, `event=auto-run`) remains unchecked, unchanged from the `/code` phase's assessment — still cannot self-verify within this PR.
+
+### Notes for Next Phase
+- `/merge` can proceed: all 4 Pre-merge AC are PASS, CI is green (11/11, including `Language Convention check` on both the original and fix commits), and the one MUST review finding has been fixed, committed (`Refs:` link to the inline PR comment), and pushed.
+- No policy/AC-text change resulted from the Step 12 fix — the fix corrects the implementation's fence-tracking algorithm to match the AC's/docstring's own stated behavior; it does not change what the AC or verify commands assert.

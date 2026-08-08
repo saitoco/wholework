@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（79 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（81 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -31,11 +31,11 @@ wholework/
 │   │   ├── feature_request.yml  # 機能リクエスト用 Issue Form
 │   │   └── config.yml           # 空白（テンプレートなし）issue を無効化
 │   └── workflows/
-│       ├── test.yml             # CI: bats テスト、スキル構文検証、禁止表現チェック、macOS シェル互換性テスト
+│       ├── test.yml             # CI: bats テスト、スキル構文検証、禁止表現チェック、言語規約チェック、macOS シェル互換性テスト
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用 decomposition YAML サンプル
-├── tests/               # スクリプトの Bats テストファイル（114 ファイル）
+├── tests/               # スクリプトの Bats テストファイル（116 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents
@@ -245,6 +245,7 @@ wholework/
 - `scripts/check-ac-checkbox-format.sh` — Issue 本文の `### Pre-merge` / `### Post-merge` セクション配下でチェックボックス形式でない条件行を検出；`skills/issue/SKILL.md` Step 4 から warn-only で呼び出される
 - `scripts/check-translation-sync.sh` — docs/ja/* と docs/* の翻訳同期状況を確認
 - `scripts/check-forbidden-expressions.sh` — docs/product.md § Terms の deprecated terms を検出
+- `scripts/check-language-convention.py` — unified diff から英語指定パス (skills/, modules/, scripts/) への CJK 文字混入を検出；`language-convention` CI job から呼び出される
 - `scripts/setup-labels.sh` — ワークフロー用 GitHub ラベルを作成
 - `scripts/compute-escalation-level.sh` — phase/verify または Icebox 滞留期間のエスカレーションレベルを計算；`/audit stats --retention` の retire 提案コメントルーティングに使用
 - `scripts/test-skills.sh` — 全スキルテスト実行
@@ -252,7 +253,7 @@ wholework/
 
 ### CI ワークフロー
 
-- `.github/workflows/test.yml` — push/PR 時に bats テスト (`bats --filter-status failed` で並列実行時のみの失敗を非並列再実行し、本物の失敗と切り分ける)、`validate-skill-syntax.py`、禁止表現チェック、macOS シェル互換性テストを実行
+- `.github/workflows/test.yml` — push/PR 時に bats テスト (`bats --filter-status failed` で並列実行時のみの失敗を非並列再実行し、本物の失敗と切り分ける)、`validate-skill-syntax.py`、禁止表現チェック、言語規約チェック、macOS シェル互換性テストを実行
 - `.github/workflows/dco.yml` — 全 PR コミットに対して DCO `Signed-off-by:` を必須化
 - `.github/workflows/kanban-automation.yml` — `phase/*` ラベルイベントで issue をプロジェクトボードのカラムへ自動移動
 
