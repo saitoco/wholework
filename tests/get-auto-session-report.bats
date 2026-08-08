@@ -54,6 +54,23 @@ FIXTURE_EOF
     echo "$output" | grep -q "Issues processed | 2"
 }
 
+@test "Issues processed: opportunistic_verify_result candidate Issues are excluded from enumeration" {
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-08-08T10:00:00Z","issue":100,"event":"sub_start","session_id":"session-candidate","size":"S"}
+{"ts":"2026-08-08T10:01:00Z","issue":100,"event":"phase_start","session_id":"session-candidate","phase":"code-patch"}
+{"ts":"2026-08-08T10:05:00Z","issue":100,"event":"phase_complete","session_id":"session-candidate","phase":"code-patch"}
+{"ts":"2026-08-08T10:05:01Z","issue":100,"event":"sub_complete","session_id":"session-candidate","exit_code":"0"}
+{"ts":"2026-08-08T10:10:00Z","issue":501,"event":"opportunistic_verify_result","session_id":"session-candidate","skill":"/spec","result":"PASS","ac_index":"1"}
+{"ts":"2026-08-08T10:10:01Z","issue":502,"event":"opportunistic_verify_result","session_id":"session-candidate","skill":"/spec","result":"SKIP","ac_index":"2"}
+FIXTURE_EOF
+
+    run bash "$SCRIPT" "session-candidate" --metrics-only --no-github
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "Issues processed | 1"
+    ! echo "$output" | grep -q "| #501 |"
+    ! echo "$output" | grep -q "| #502 |"
+}
+
 @test "--since list mode: lists distinct session_ids from event log" {
     cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
 {"ts":"2026-06-14T10:00:00Z","issue":100,"event":"sub_start","session_id":"session-X","size":"S"}

@@ -138,6 +138,14 @@ fi
 
 EVENT_COUNT=$(echo "$EVENTS_JSON" | jq 'length' 2>/dev/null || echo 0)
 
+# Issues counted here must show an event that indicates actual phase execution
+# (sub_start = batch/XL dispatch start, phase_start/phase_complete = phase ran).
+# opportunistic_verify_result's `issue` field records a *candidate* Issue being
+# judged for pending AC, not one this session processed — excluded by this filter.
+PROCESSED_ISSUES_JSON=$(echo "$EVENTS_JSON" | jq -c '
+  [.[] | select(.issue != null and .issue > 0 and (.event == "sub_start" or (.event | startswith("phase_")))) | .issue] | unique
+' 2>/dev/null || echo "[]")
+
 # Compute session metrics using jq
 SESSION_START=$(echo "$EVENTS_JSON" | jq -r 'if length == 0 then "N/A" else sort_by(.ts) | first | .ts end' 2>/dev/null || echo "N/A")
 SESSION_END=$(echo "$EVENTS_JSON" | jq -r 'if length == 0 then "N/A" else sort_by(.ts) | last | .ts end' 2>/dev/null || echo "N/A")
@@ -170,10 +178,8 @@ ROUTE_MIX=$(echo "$EVENTS_JSON" | jq -r '
   "patch: \(.patch), pr: \(.pr), xl: \(.xl)"
 ' 2>/dev/null || echo "N/A")
 
-# Issues processed (distinct issue numbers)
-ISSUES_PROCESSED=$(echo "$EVENTS_JSON" | jq '
-  [.[] | select(.issue != null and .issue > 0) | .issue] | unique | length
-' 2>/dev/null || echo 0)
+# Issues processed (distinct issue numbers with an event indicating actual phase execution)
+ISSUES_PROCESSED=$(echo "$PROCESSED_ISSUES_JSON" | jq 'length' 2>/dev/null || echo 0)
 
 # Recovery events by tier (fired-based: counts every recovery attempt regardless of outcome)
 RECOVERY_COUNTS=$(echo "$EVENTS_JSON" | jq -r '
@@ -307,7 +313,7 @@ if [[ -z "$PHASE_ACTIVITY_TABLE" ]]; then
 fi
 
 # Sub-Issue Completion Timeline — per-issue with Route, Phase breakdown, PR, Recovery, Notes
-ISSUE_NUMS_FOR_TABLE=$(echo "$EVENTS_JSON" | jq -r '[.[] | select(.issue != null and .issue > 0) | .issue] | unique | .[]' 2>/dev/null || true)
+ISSUE_NUMS_FOR_TABLE=$(echo "$PROCESSED_ISSUES_JSON" | jq -r '.[]' 2>/dev/null || true)
 COMPLETION_TIMELINE_TABLE=""
 for _num in $ISSUE_NUMS_FOR_TABLE; do
   _issue_events=$(echo "$EVENTS_JSON" | jq --argjson n "$_num" '[.[] | select(.issue == $n)]' 2>/dev/null || echo "[]")
@@ -499,8 +505,8 @@ fi
 FULLY_CLOSED=0
 VERIFY_REMAINING=0
 if [[ "$NO_GITHUB" == "false" ]]; then
-  # Extract distinct issue numbers
-  ISSUE_NUMS=$(echo "$EVENTS_JSON" | jq -r '[.[] | select(.issue != null and .issue > 0) | .issue] | unique | .[]' 2>/dev/null || true)
+  # Extract distinct issue numbers (processed only — see PROCESSED_ISSUES_JSON above)
+  ISSUE_NUMS=$(echo "$PROCESSED_ISSUES_JSON" | jq -r '.[]' 2>/dev/null || true)
   for _num in $ISSUE_NUMS; do
     _labels=$(gh issue view "$_num" --json labels -q '.labels[].name' 2>/dev/null || true)
     if echo "$_labels" | grep -q "phase/done"; then

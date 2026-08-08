@@ -85,3 +85,52 @@
 - **Pre-merge AC4 の verify command 具体化**: Triage AC audit コメント (Consumed Comments 参照) の指摘通り、既存の `command "bats tests/get-auto-session-report.bats"` は新規テスト追加前の main で既に exit 0 のため、実装を忘れても PASS してしまう常時 PASS リスクがある。Implementation Step 2 で確定したテスト名から一意な部分文字列 `candidate Issues are excluded` を抽出し、`bats --filter` で新規テストのみを対象にした verify command に置き換えた。CI 側の全件実行は Pre-merge AC5 (`github_check "gh pr checks" "Run bats tests"`) が別途担保する。
 - **Out of Scope — `scripts/collect-run-facts.sh` の同型汚染 (follow-up 推奨)**: `scripts/collect-run-facts.sh` 140 行目の `ISSUE_NUMBERS=$(... | jq -r '.issue' ...)` にも本 Issue と同型の「全 distinct `.issue` を無差別に集計する」パターンが存在する。session `91762-1786112233` (2026-08-08) の retrospective で「Issues processed: 58」(実処理 3 件) という同種の汚染が実際に観測されている (`docs/sessions/91762-1786112233-2026-08-08/session.md` 参照)。本 Issue の Title/Background/Purpose はいずれも `get-auto-session-report.sh` のみを対象としており、`collect-run-facts.sh` への対応は `/issue` フェーズで確定した要件の範囲外 (`/spec` は要件を追加・変更しない — `docs/product.md` § `/issue` (What) vs `/spec` (How) Responsibility Boundary) と判断し、本 Spec では変更しない。別 Issue での対応を推奨する。
 - **SPEC_DEPTH=light (Size M) のため Step 7 (Ambiguity Resolution) / Step 8 (Uncertainty Identification) はスキップ。** Issue 本文の Auto-Resolved Ambiguity Points (`/issue` フェーズで非対話モードにより自動解決済み) を実装方針として採用した (詳細は Consumed Comments の Issue Retrospective コメント参照)。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1〜4 を設計通りに実施した。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
+### Follow-up
+
+- Notes の「Out of Scope — `scripts/collect-run-facts.sh` の同型汚染」を受け、follow-up Issue #1287 を起票した (重複なしを `gh issue list` で確認済み)。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Pre-merge AC5 (`github_check "gh pr checks" "Run bats tests"`) を CI 全9件 SUCCESS (`gh pr checks` 相当) の確認により PASS 判定し、Issue チェックボックスを `[x]` に更新した。これで Pre-merge AC1〜5 は全てチェック済みとなった。
+- ローカルで `bats --filter 'candidate Issues are excluded' tests/get-auto-session-report.bats` を実行し PASS を再確認した (AC4 の裏付け)。
+- Base Branch Conflict Pre-check (`git merge-tree`) を実施し、mainとのコンフリクトなしを確認した。REVIEW_DEPTH=light (Size M) のため review-light エージェント1体による4観点統合レビューを実施し、指摘は0件だった。MUST issue がないため `event=COMMENT` でレビューを投稿した。
+
+### Deferred Items
+- `scripts/collect-run-facts.sh` の同型汚染 follow-up Issue #1287 は本 PR のスコープ外のまま (code phase から引き継ぎ、変更なし)。
+- Post-merge AC (`session=next` の観察 AC) は次回 `/auto --batch` 完走後の L3 retrospective で確認される (変更なし)。
+
+### Notes for Next Phase
+- Pre-merge AC1〜5 は全てチェック済み (`[x]`)。`/merge` は追加の AC 確認なしで進行可能。
+- Post-merge AC (observation, `session=next`) は次回の `/auto --batch` 実行を待つ必要がある。`/verify` でこの観察結果を確認すること。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Nothing to note — Implementation Steps 1〜4 は Spec の記述通りに実施されており、`PROCESSED_ISSUES_JSON` 共通変数の導入方法・3箇所の置き換え箇所とも Spec と実装で乖離はなかった。
+
+### Recurring issues
+
+- Nothing to note — review-light エージェントによる4観点 (Spec 逸脱・エッジケース堅牢性・セキュリティ・ドキュメント整合性) チェックで指摘は0件だった。
+
+### Acceptance criteria verification difficulty
+
+- Pre-merge AC5 (`github_check "gh pr checks" "Run bats tests"`) は `/code` フェーズ完了時点では PR 未作成のため判定不能で未チェックのまま引き継がれていたが、本フェーズで CI 全9件 SUCCESS を確認しチェック済みに更新した。これは Phase Handoff の想定通りの引き継ぎであり、AC 記述自体に問題はなかった。
+- rubric 系 AC (AC1〜3) は Spec Notes 節の記述と実装コメントを直接参照するだけで PASS 判定でき、UNCERTAIN や verify command の構文エラーは発生しなかった。
