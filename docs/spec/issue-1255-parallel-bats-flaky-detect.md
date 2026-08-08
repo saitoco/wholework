@@ -92,3 +92,33 @@
 ### Acceptance criteria verification difficulty
 
 - Nothing to note — both Pre-merge `rubric` conditions were verifiable with high confidence directly against the PR diff and the Spec's `## Notes` section; no ambiguity in interpreting the AC text.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 本 Issue は同一バッチの #1221 verify で起票され、その後 #1227 verify で 3 例目が追記された。triage 時にはその追記内容 (「ファイル単位で落ちるため setup/teardown・一時リソース競合が疑わしい」) が「検討候補」節に取り込まれており、**observation → 起票 → 追記 → triage への反映**という連鎖が機能した
+- AC は「切り分ける経路が実装されている」という outcome 記述に留め、案 A/B/C の選定を `/spec` に委ねた。結果として `/spec` は案 B を選び、AC 変更は不要だった
+
+#### spec
+- 案 B (CI に切り分け job を追加) を採用し、独自スクリプトではなく **bats-core ネイティブの `--filter-status failed`** で実装する設計に落とした。案 A (`test-failure-classify.sh` に再実行判定を追加) が持つ「分類スクリプトが実行副作用を持つ」トレードオフを回避している
+- `continue-on-error` の GitHub Actions 上の挙動と bats バージョン互換性を実機・公式ドキュメントで検証した上で設計している
+
+#### code
+- 実装は `.github/workflows/test.yml` の 3 ステップ (run-log ディレクトリ準備 / `continue-on-error` 付き並列実行 / `if: steps.bats.outcome == 'failure'` の直列再実行)。並列 FAIL + 直列 PASS → job 成功、両方 FAIL → job 失敗、という分岐がステップの終了コードだけで成立している
+
+#### review
+- Pre-merge 2 件とも UNCERTAIN なしで PASS
+- **`silent-no-op` anomaly が誤検知として発火した** (下記 Improvement Proposals 参照)。merge はブロックされず実害なし
+
+#### merge
+- PR #1269 を squash merge。conflict なし、recovery 発火なし
+
+#### verify
+- Pre-merge 2 件は already-checked skip rule で SKIPPED、Post-merge 1 件は `event=auto-run` 未発火で SKIPPED。FAIL / UNCERTAIN ゼロ
+- `gh pr list --search "closes #1255"` が無関係な PR #1267 (実体は `closes #1233`) も候補に返したが、Step 2 の exact-match 検証 (#1197 対策) が正しく #1269 を選択した。フルテキスト検索の順位に依存しない設計が機能した実例
+
+### Improvement Proposals
+
+- **review フェーズの `silent-no-op` 誤検知と、フェーズ非対応の IMPROVEMENT_HINT** — **既存 #1105 と重複のため新規起票せず、実測を追記した** ([issuecomment-5225298084](https://github.com/saitoco/wholework/issues/1105#issuecomment-5225298084))。(a) `/review` は `Acceptance Criteria Verification Results` を含む Review を `07:56:44Z` に投稿済みで、run 終了 (`08:15:52Z`) 時点で `_review_confirmed_posted` の抑止条件は揃っていた — 抑止が効かなかった直接原因は証跡から確定できない (設計上は `gh` 一過性失敗で fail-safe fallthrough する経路がある)。(b) 併せて確認できた別の欠陥として、`scripts/detect-wrapper-anomaly.sh` の `silent-no-op` 分岐の `IMPROVEMENT_HINT` が code フェーズ専用文面で固定されており、review フェーズでは `$ISSUE_NUMBER` に PR 番号が入るため `Re-run \`run-code.sh 1269\` to retry the code phase` という**スクリプト名も番号種別も誤った案内**を出力する。#1105 のパターン分離対応では hint 文面のフェーズ別分岐も必要
