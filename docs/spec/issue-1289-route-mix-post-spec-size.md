@@ -82,18 +82,26 @@ Acceptance criteria 3 (`operate` route・`xl`・フェーズ未達 Issue の 3 �
 - なし。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Grouped session events by `.issue` and derived `patch`/`pr` from `code-patch`/`code-pr` phase presence rather than the pre-spec `sub_start` size, mirroring `collect-run-facts.sh`'s reference implementation per the Spec's design.
-- Kept `xl` derivation unchanged (`sub_start` size == "XL") since XL parent Issues never reach a `code-pr`/`code-patch` phase of their own.
-- Added a new `unknown` bucket for processed Issues that reach neither `code-pr` nor `code-patch`, matching `collect-run-facts.sh`'s "unknown" precedent rather than folding them into `patch`.
+- Ran `REVIEW_DEPTH=light` (1-agent `review-light`, all 4 aspects) per Issue Size; no Workflow-path fan-out.
+- All 5 Pre-merge ACs re-verified independently via verify-executor semantics (2 rubric, 2 grep, 1 command) — all PASS; posted review as `COMMENT` (no MUST issues).
 
 ### Deferred Items
-- The post-merge observation AC (patch/pr-mixed `/auto --batch` run confirming Route mix matches reality) is deferred to the next such run per its `verify-type: observation session=next` marker — left unchecked.
-- `operate` route has no dedicated bucket (implicitly folded into `patch`, since operate route also emits `code-patch` phase events) — this was an explicit Auto-Resolved Ambiguity Point from `/issue`, not revisited in this phase.
+- The Post-merge observation AC (`verify-type: observation session=next`) remains unchecked, unchanged from the code phase's handoff — still waiting for the next patch/pr-mixed `/auto --batch` run.
 
 ### Notes for Next Phase
-- Historical `docs/sessions/*/session.md` Metrics text (disposable session logs) still shows the old 3-field `patch/pr/xl` format without `unknown` — no update needed there; they are point-in-time snapshots, not living documentation.
-- The full bats suite (1639 tests) was run and passed because `tests/audit-auto-session.bats` also references `scripts/get-auto-session-report.sh`, triggering the Behavioral Change Detection full-suite override — `/review` can treat this as already confirmed pre-merge rather than re-running it.
-- The Issue's own Notes section explicitly deferred adding a `github_check "gh pr checks"` pre-merge CI AC (Size wasn't finalized at Issue-creation time); this PR is on the pr route, so `/review`/`/verify` may add one if desired, but it was not authored here per that deferral.
+- No MUST/SHOULD/CONSIDER issues were raised in review; `/merge 1299` can proceed directly.
+- `bats tests/get-auto-session-report.bats` confirmed 15/15 PASS locally in addition to CI (11/11 checks SUCCESS) — no residual verification risk for `/merge`.
+
+## Review Retrospective
+
+### Spec vs. Implementation Divergence Patterns
+Nothing to note. review-light's Spec-deviation aspect found the implementation followed Implementation Steps 1–3 exactly, including the one documented deviation (an extra `@test` for coverage, already captured in the Code Retrospective) which was not a design divergence.
+
+### Recurring Issues
+Nothing to note. No issue types repeated across this PR's review; 0 findings across all 4 review-light aspects.
+
+### Acceptance Criteria Verification Difficulty
+Nothing to note. All 5 Pre-merge ACs had well-formed verify commands (2 `rubric`, 2 `grep`, 1 `command`) and none required UNCERTAIN fallback or AI-judgment guessing.
