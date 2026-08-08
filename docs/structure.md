@@ -29,7 +29,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
-├── scripts/             # Utility scripts used by skills and agents (79 files)
+├── scripts/             # Utility scripts used by skills and agents (81 files)
 │   ├── git-hooks/       # Git hook scripts (commit-msg DCO enforcement)
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -38,11 +38,11 @@ wholework/
 │   │   ├── feature_request.yml  # Feature request Issue Form
 │   │   └── config.yml           # Disables blank (templateless) issues
 │   └── workflows/
-│       ├── test.yml             # CI: bats tests, skill syntax validation, forbidden expressions check, and macOS shell compatibility test
+│       ├── test.yml             # CI: bats tests, skill syntax validation, forbidden expressions check, language convention check, and macOS shell compatibility test
 │       └── kanban-automation.yml # Auto-move issues on GitHub Projects board
 ├── examples/            # Example files for Wholework features
 │   └── decomposition/   # Decomposition YAML samples for /issue --from-decomposition-file
-├── tests/               # Bats test files for scripts (114 files)
+├── tests/               # Bats test files for scripts (116 files)
 │   ├── <script-name>.bats
 │   └── fixtures/        # Test fixture files
 ├── docs/                # Documentation and steering documents
@@ -253,6 +253,7 @@ Key modules:
 - `scripts/check-ac-checkbox-format.sh` — detects non-checkbox condition lines under `### Pre-merge` / `### Post-merge` sections of an Issue body; called warn-only from `skills/issue/SKILL.md` Step 4
 - `scripts/check-translation-sync.sh` — check translation sync status of docs/ja/* against docs/*
 - `scripts/check-forbidden-expressions.sh` — detect deprecated terms from docs/product.md § Terms
+- `scripts/check-language-convention.py` — detect CJK characters transcribed into English-only paths (skills/, modules/, scripts/) from a unified diff; run by the `language-convention` CI job
 - `scripts/setup-labels.sh` — create GitHub labels for workflow
 - `scripts/compute-escalation-level.sh` — compute escalation level for phase/verify or Icebox dwell time; used by `/audit stats --retention` for retire-proposal comment routing
 - `scripts/test-skills.sh` — run all skill tests
@@ -260,7 +261,7 @@ Key modules:
 
 ### CI Workflows
 
-- `.github/workflows/test.yml` — runs bats tests (with a serial re-run of parallel-only failures via `bats --filter-status failed` to distinguish flaky failures from genuine ones), `validate-skill-syntax.py`, forbidden expressions check, and macOS shell compatibility test on push/PR
+- `.github/workflows/test.yml` — runs bats tests (with a serial re-run of parallel-only failures via `bats --filter-status failed` to distinguish flaky failures from genuine ones), `validate-skill-syntax.py`, forbidden expressions check, language convention check, and macOS shell compatibility test on push/PR
 - `.github/workflows/dco.yml` — enforces DCO `Signed-off-by:` on all pull request commits
 - `.github/workflows/kanban-automation.yml` — auto-moves issues to project board columns on `phase/*` label events
 
