@@ -125,4 +125,16 @@ No new comments since last phase.
 
 ### Improvement Proposals
 
+### Addendum: post-merge observation の判定 (re-verify, session `23043-1786197225`)
+
+初回 verify 時点では `auto-run` 未発火のため SKIPPED としていた post-merge 条件を、同一セッションの `/auto --batch` 完走後に再評価して **PASS** と判定した。
+
+条件が求めた「自己 PR で MUST 指摘が発生した際の COMMENT フォールバック発火」は、同一 batch の **#1257 / PR #1291** で成立した。証拠: review body 先頭に `scripts/gh-pr-review.sh` のフォールバック分岐が生成する固有の注記 (`Note: posted as COMMENT instead of REQUEST_CHANGES — ...`) が付与され、`MUST: 1` かつ author/reviewer とも同一アカウント、review state は `COMMENTED`、review→merge が hard-fail せず完走している。
+
+修正前は判別文言がレスポンスボディ (stdout) 側にあり `2>&1 >/dev/null` で捨てられていたため、この注記が付くこと自体がありえなかった。フォールバックの発火が、`API_OUT=$(... 2>&1)` への変更が stdout を捕捉していることの直接の証拠になる。
+
+本セッションの先行 2 件は条件を満たさなかった — #1266 は patch route で `/review` が実行されず、#1279 (PR #1286) は MUST 0 件で `REQUEST_CHANGES` が試行されなかった。#1102 が「修正が一度も発火しないまま close された」経緯を踏まえると、本 Issue は**実発火まで確認したうえで close された**点で先行事例と異なる。
+
+全受入条件がチェック済みとなり `phase/done` へ遷移した。
+
 - **route 依存の verify command が Size 再評価で非互換になりうる (Tier 2 — 記録のみ)**: `github_check "gh pr checks"` と `gh run list` の使い分けは route に依存するが、AC 監査は `/issue` Step 15 で、route を決める Size 再評価は `/spec` で行われる。今回は `/spec` が M → XS へ降格した結果 AC #5 が非互換になり、`/code` が検出・自動修正した。`modules/verify-classifier.md` の正準形記述という補償が効いており実害ゼロだったため単独起票は見送る。Size 降格由来の AC 非互換が `/code` の自動修正を素通りする、あるいは `/code` を経ない経路で顕在化した場合は Tier 1 へ引き上げる
