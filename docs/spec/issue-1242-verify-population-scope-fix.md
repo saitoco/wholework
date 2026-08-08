@@ -105,16 +105,16 @@
 - `scripts/opportunistic-search.sh` は `tests/observation-trigger.bats` / `tests/verify.bats` からも、`scripts/scan-pending-ac.sh` は `tests/run-fact-matching.bats` からも参照されていたため、挙動変化検出により `bats --jobs 18 tests/` (1581 件) を実行した。`tests/post_merge_check.bats` の 1 件 (`fail: gh issue reopen called when FAIL input given`) が並列実行時のみ FAIL したが、単独再実行 (`bats tests/post_merge_check.bats`) では 10/10 PASS しており、本 Issue の変更が触れていない `post_merge_check.sh`/`.bats` に起因する並列実行時の共有リソース競合 (フレーク) と判断した。`tests/run-fact-matching.bats` (scan-pending-ac.sh の Post-merge スコープ・`--facts`・gh 失敗時挙動をカバー) は単独実行で 29/29 PASS、`tests/opportunistic-search.bats`/`tests/scan-pending-ac.bats` (AC6 の対象) は単独実行でそれぞれ 54/54・2/2 PASS。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `--state closed` → `--state all` は両スクリプトとも 1 箇所のみの変更で完結。`opportunistic-search.sh` の Post-merge スコープ化は `scan-pending-ac.sh:125-153` の awk 境界ロジックをそのまま踏襲し、新規スコープ機構は発明しなかった (Spec の判断を踏襲)。
-- `tests/opportunistic-search.bats` の既存 46 件の `MOCK_ISSUE_BODY_*` フィクスチャ全件に `## Post-merge\n` を機械的に前置 (python3 の正規表現置換で一括変換)。Spec は「40 件」と見積もっていたが実数は 46 件だった — フィクスチャ数の見積もりズレは実装に影響しない (全件一律適用の方針は変わらないため)。
+- Pre-merge AC 1-6 は全てチェック済みで、review-incomplete-fallback 条件も検出されなかったため、非対話モードでオーバーライドマーカーを発行せず通常経路で squash merge を実行した。
+- `gh pr merge --squash --delete-branch` により Issue #1242 は `closes #1242` で自動クローズされる想定 (base branch は main)。
 
 ### Deferred Items
 - Post-merge の post-merge AC (`次回 /audit stats --retention で #490/#465 が走査対象に含まれ、#491 の偽陽性が消えていることを確認する`, verify-type: observation event=auto-run) は未チェックのまま — 次回 `/audit stats --retention` 実行時に観測で確認する。
 - `tests/post_merge_check.bats` の並列実行時フレーク (`fail: gh issue reopen called when FAIL input given`) は本 Issue のスコープ外 (触れていないファイル) のため未対応。再発頻度が高いようなら別 Issue 化を検討。
 
 ### Notes for Next Phase
-- Pre-merge AC 1-6 は全て `/code` フェーズ内で PASS 判定しチェック済み。`/review` は AC の再検証と診断的コードレビューを行う想定。
-- `bats tests/opportunistic-search.bats tests/scan-pending-ac.bats` はどちらも単独実行で全件 PASS 済み (54/54, 2/2)。CI 実行時も同じ結果になるはず。
+- `/verify` は Post-merge AC (observation event=auto-run) の確認が主目的。次回 `/audit stats --retention` 実行結果を待って判定すること。
+- ラベル遷移 (`phase/verify`) と Issue クローズ状態を Step 6 のフォールバックで検証済みであることを前提にしてよい。
