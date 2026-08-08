@@ -68,3 +68,32 @@ Acceptance criteria 3 (`operate` route・`xl`・フェーズ未達 Issue の 3 �
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` フェーズの Issue Retrospective — non-interactive 自動解決ログ (Auto-Resolve Log) の記録。内容は既に Issue 本文の「対応方針 (案)」「Auto-Resolved Ambiguity Points」に反映済みのため、本 Spec への追加指示なし / https://github.com/saitoco/wholework/issues/1289#issuecomment-5228135341
+- 本 `/code` 実行時点で新規コメントなし (cutoff: 直近の `phase/*` ラベル付与時刻 2026-08-08T21:33:24Z)。
+
+## Code Retrospective
+
+### Deviations from Design
+- なし。Implementation Steps 1–3 をそのまま実装した。Implementation Step 2 は 1 件の `@test` 追加を指示していたが、`xl` / `unknown` バケットの分離挙動も個別に固定化する価値があると判断し、2 件目の `@test` (XL sub_start + phase 未到達 Issue の組み合わせ) を追加した。これはアプローチの変更ではなくカバレッジの補強であり、Implementation Steps 自体の更新は不要と判断した。
+
+### Design Gaps/Ambiguities
+- `/code` 開始時点で Issue #1289 のラベルが `phase/ready` を経ずに既に `phase/code` へ遷移済みだった (`reconcile-phase-state.sh --check-precondition` が `matches_expected: false` を報告)。Spec ファイルは存在し内容も完成していたため、前回の `/code` 試行が Step 4 のラベル遷移まで進んだ後に PR 作成前で中断したものと推測される。SKILL.md Step 3 の non-interactive auto-resolve 方針 (`warn-only` で継続) に従い、Spec を正として実装を続行した。
+
+### Rework
+- なし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Grouped session events by `.issue` and derived `patch`/`pr` from `code-patch`/`code-pr` phase presence rather than the pre-spec `sub_start` size, mirroring `collect-run-facts.sh`'s reference implementation per the Spec's design.
+- Kept `xl` derivation unchanged (`sub_start` size == "XL") since XL parent Issues never reach a `code-pr`/`code-patch` phase of their own.
+- Added a new `unknown` bucket for processed Issues that reach neither `code-pr` nor `code-patch`, matching `collect-run-facts.sh`'s "unknown" precedent rather than folding them into `patch`.
+
+### Deferred Items
+- The post-merge observation AC (patch/pr-mixed `/auto --batch` run confirming Route mix matches reality) is deferred to the next such run per its `verify-type: observation session=next` marker — left unchecked.
+- `operate` route has no dedicated bucket (implicitly folded into `patch`, since operate route also emits `code-patch` phase events) — this was an explicit Auto-Resolved Ambiguity Point from `/issue`, not revisited in this phase.
+
+### Notes for Next Phase
+- Historical `docs/sessions/*/session.md` Metrics text (disposable session logs) still shows the old 3-field `patch/pr/xl` format without `unknown` — no update needed there; they are point-in-time snapshots, not living documentation.
+- The full bats suite (1639 tests) was run and passed because `tests/audit-auto-session.bats` also references `scripts/get-auto-session-report.sh`, triggering the Behavioral Change Detection full-suite override — `/review` can treat this as already confirmed pre-merge rather than re-running it.
+- The Issue's own Notes section explicitly deferred adding a `github_check "gh pr checks"` pre-merge CI AC (Size wasn't finalized at Issue-creation time); this PR is on the pr route, so `/review`/`/verify` may add one if desired, but it was not authored here per that deferral.
