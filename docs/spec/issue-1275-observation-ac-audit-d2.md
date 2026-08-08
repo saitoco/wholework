@@ -59,3 +59,51 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / triage フェーズの Issue Retrospective (Size=M の判断根拠、Background 表の対象 Issue 件数 13→11 修正の auto-resolve 記録、AC/Post-merge への変更なし) / https://github.com/saitoco/wholework/issues/1275#issuecomment-5226504642
+
+## Code Retrospective
+
+### Deviations from Design
+
+- なし。Implementation Steps に記載された手順 (1 行ずつ実査 → D は #1166 方式で retire → B/C は条件文書き換え → E は `manual` へ差し戻し → 記録ファイル作成) をそのまま実行した。分類結果が D 0 件・B/C 0 件・E 7 件・A 5 件になったこと自体は Spec が事前に決めていた配分ではなく実査の結果であり、手順からの逸脱ではない
+
+### Design Gaps/Ambiguities
+
+- **A と E の境界線が親 Issue #1270 の判定基準には明示されていなかった**: 親の「D と E の切り分け」表は D (event 判定不可・`/verify` 判定不可) と E (event 判定不可・`/verify` 判定可) の区別のみを定義しており、A (event 判定可) と E (event 判定不可) を分ける基準は「指定 event の発火時に…判定できる」という定性的な記述に留まっていた。実査では「条件が要求する前提が本リポジトリの通常運用で一定の頻度・既知パターンとして発生し、かつその発生を裏付ける機械可読な証跡 (`auto-events.jsonl`・PR コメント・`reconcile-phase-state.sh` 診断出力等) が存在するか」を実務上の判定軸として採用した (例: #1106/#1097/#529 は既存実例あり → A、#446/#486/#511 は内容依存の前提が成立したことを示す機械可読な証跡が構造的に存在しない → E)。この軸は #1270 や #1251 (AC 記述規約) に明文化されていないため、後続の分類作業 (他 sub-issue や将来の同種実査) で異なる粒度の判断がなされる可能性がある。判定軸そのものを `docs/reports/observation-ac-audit-d2.md` の各 E 項目に「差し戻し理由」として記録することで、後続実査者が同じ軸を参照できるようにした
+- **#1031/#954 (`/issue` Step 12a 関連) は「非対話モードでの構造的 skip」という #1164 の再型付け時点での既知の留意点が、D2 実査時点で改めて D/E 判定の決め手になった**: `docs/reports/manual-ac-retype-d2.md` は再型付け時点で既にこの留意点を記録していたが、「対象外にはせず `auto-run` を付与する」という判断だった。今回の実査で `ListAgents` 等の対話モード限定の確認手段が存在することから D ではなく E と判定した。将来的に `/issue` の非対話モード制約が変わった場合はこの判定も再検討が必要
+
+### Rework
+
+- なし。分類 → 実行 → 記録ファイル作成の一連の作業を手戻りなく完了した
+- Step 9 のテスト実行で、docs のみの新規ファイル追加 (既存ファイル変更なし) にもかかわらず Behavioral Change Detection の「新規ファイルのみ追加なら narrow scope で可」の判定を先に確認せず `bats --jobs 18 tests/` のフルスイートを先行実行してしまい、10 分の Bash ツール上限を超えてバックグラウンドへ移行した。`modules/execution-context.md` の「通知待ちでターンを終えない」原則に従い通知を待たずに進行し、`scripts/check-forbidden-expressions.sh` (対象ファイルに関連する軽量チェック) の実行に切り替えて Step 9 を完了させた。次回同種の docs-only 変更では、フルスイート起動前に Behavioral Change Detection の「新規ファイルのみ」判定を先に確認すること
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Pre-merge AC 6 件すべてを PASS 判定した。うち D=0 に関する 2 件 (#1166 方式 retire / `phase/done` 遷移) は「該当なしのため vacuously satisfied」として PASS とした
+- レポート `docs/reports/observation-ac-audit-d2.md` の記載内容 (対象 6 Issue の `verify-type: manual` 書き換え、対象 6 Issue が `phase/verify` 維持) を `gh issue view` で個別に GitHub 実状態と突合し、一致を確認した
+- review-light エージェント (4 観点統合) で MUST/SHOULD/CONSIDER 相当の指摘は 0 件。修正作業 (Step 12) は発生しなかった
+- CI 全 11 ジョブ SUCCESS、base branch とのコンフリクトなし (`git merge-tree` 0 件) を確認した
+
+### Deferred Items
+- `docs/reports/observation-ac-audit-d2.md` の分類結果 (A 5 / B 0 / C 0 / D 0 / E 7) の集約レポート (`observation-ac-audit-summary.md`) への統合は親 #1270 の責務として本 Issue のスコープ外のまま
+- #1275 の実査で採用した A/E 境界の判定軸は #1270 や #1251 に明文化されていない。他 sub-issue (#1274/#1276) や将来の同種実査が異なる粒度で判断する可能性があり、必要なら親 #1270 側で軸の明文化を検討する余地がある
+
+### Notes for Next Phase
+- `/merge` 実行時、対象 6 Issue (#1031 #954 #515 #511 #486 #446) の本文編集は PR マージとは独立して既に GitHub 上に反映済みである — リポジトリファイルの diff は `docs/reports/observation-ac-audit-d2.md` の追加 1 件のみだが、実質的な変更はそれら 6 Issue の本文にも及んでいる点に留意
+- `docs/reports/observation-ac-audit-d2.md` の「検証」節に記載の通り、dry-run 前後比較で対象外の #861 / #769 / #859 も変動していた (他セッションの並行活動によるものと推定)。`/review` で再実行した dry-run でも同様の変動 (75→74) を確認済みであり、本 PR の変更によるものではない
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+なし。Implementation Steps の手順とレポート内容 (`docs/reports/observation-ac-audit-d2.md`) は一致しており、review-light の 4 観点チェックでも spec 逸脱の指摘はなかった。
+
+### Recurring issues
+
+なし。review-bug 相当の指摘は 0 件で、他 PR と共通する再発パターンは観測されなかった。
+
+### Acceptance criteria verification difficulty
+
+- 6 件の Pre-merge 条件のうち 5 件が `rubric` 型であり、いずれも「レポートファイルへの記載」だけでなく「対象 6 Issue (#1031 #954 #515 #511 #486 #446) の GitHub 本文が実際に書き換わっているか」という、リポジトリ diff からは見えない外部状態の確認を要した。今回は `/review` 側で該当 Issue 本文を個別に `gh issue view` で突合し、レポートの記載内容と実際の GitHub 状態が一致することを確認した。verify command 自体には Issue 本文の書き換え結果を検証する仕組みがなく、rubric の目視確認に依存している点は、この種の「レポート作成 + 外部 Issue 編集」を伴う Issue 全般に共通する構造であり、verify command の記述を強化する余地があるとすれば「対象 Issue 本文に指定 marker が存在すること」を機械的にチェックする verify command 型 (例: 複数 Issue の `<!-- verify-type: ... -->` 一括確認) の追加が考えられるが、今回のスコープ外として記録に留める。
+- 分類 D=0 だった条件 (Pre-merge 4/5) は「該当なしのため vacuously satisfied」という判定になった。条件文自体は「D 分類の AC 行が...」という前提付きの書き方であり、D=0 の場合にどう判定すべきかは条件文から自明ではなかった。今回は「レポートに D=0 の旨が明記されていること」を根拠に PASS としたが、こうした「件数 0 なら自動的に満たされる」条件は #1251 (AC 記述規約) 側で明示的な扱い方 (例: 該当なしの場合の判定ルール) を定義する余地がある。
