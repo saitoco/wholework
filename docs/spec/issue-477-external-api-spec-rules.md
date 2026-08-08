@@ -122,3 +122,8 @@ Background: downstream project post-merge bugs caused by underdocumented actual 
 ### Improvement Proposals
 - N/A
 
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/477#issuecomment-4703139300
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=4 / https://github.com/saitoco/wholework/issues/477#issuecomment-5212257341
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=4 / https://github.com/saitoco/wholework/issues/477#issuecomment-5225312597
