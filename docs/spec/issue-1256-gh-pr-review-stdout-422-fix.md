@@ -86,3 +86,40 @@ No new comments since last phase.
 ### Notes for Next Phase
 - All 4 pre-merge rubric/command AC are checked `[x]`; the CI AC (`github_check "gh run list" ...`) is intentionally left `[ ]` — patch route has no PR-scoped run yet at code-phase time, `/verify` evaluates it post-merge.
 - `/verify` should confirm the `gh run list --workflow=test.yml --branch=main --limit=1` run picked up by this Issue's push (implementation + retrospective commits) actually reflects `Run bats tests` success, not an unrelated concurrent session's run — see the Residual risk note in `modules/verify-classifier.md` § Patch Route CI Verification Note.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- Issue 本文が根本原因 (リダイレクト評価順序)・修正方針・AC を具体的に記述しており、`/issue` は本文変更不要と判断した。以降のフェーズで要件の解釈揺れは発生しておらず、この判断は妥当だった
+- 一方 Pre-merge AC #5 の `github_check` は `gh pr checks` 形式で書かれていた。`/issue` 実行時点の Size は M (pr route) のためこの形式は正しく、Step 15 の AC 監査 (Pattern 4: patch route × `gh pr checks`) も問題なしと判定している。非互換になったのは後続フェーズでの Size 降格の結果であり、`/issue` 時点の判定に誤りはない
+
+#### spec
+
+- Changed Files 2 件・root cause 明確な bug fix と判定し Size を M → XS へ降格 (Projects Size フィールドの read-back 確認済み)。pr route を通していれば review→merge の 2 フェーズが冗長だったため、この降格自体は妥当
+- 降格が AC #5 の route 依存性に波及する点は Spec の Notes に記録されなかった。結果として検出は `/code` フェーズまでずれ込んでいる
+
+#### code
+
+- Implementation Steps 1-5 を逸脱なく実行、rework ゼロ
+- AC #5 の patch route 非互換を検出し、`modules/verify-classifier.md` § "Patch Route CI Verification Note" の正準形へ自動修正のうえ Issue 本文と Spec の双方へ同期した。フェーズ間の補償が実際に機能した事例
+- 既存の `success: REQUEST_CHANGES 422 self-review error falls back to COMMENT` テストのモックが判別文言を stderr 側に置く不正確な作りだったことを発見し、新規テストを並列追加せず既存テストの修正で AC4 を満たした。このモックの不正確さは #1102 の修正が「テスト緑のまま一度も発火しない」状態で main に残存した直接の原因でもあり、症状ではなく原因側を潰している
+
+#### review
+
+- patch route のため `/review` フェーズは実行されていない
+
+#### merge
+
+- patch route の直コミット。コンフリクト・CI 失敗なし
+
+#### verify
+
+- Pre-merge 4 件は `/code` フェーズで既に `[x]`、CI の 1 件のみを実測して PASS。CI run (`31261875018`) の headSha は `b5a2ca18` で本 Issue 自身の commit であり、Phase Handoff が求めた「無関係な並行セッションの run を拾っていないこと」の確認要件を満たしている
+- 本 Issue は自己 PR への `REQUEST_CHANGES` 422 フォールバックを修正するものだが、patch route で着地したため修正コードは本 Issue 自身の workflow では一度も実行されていない。実発火の確認は post-merge の observation 条件 (`event=auto-run`) に依存する。#1102 が「修正が一度も発火しないまま close された」経緯を踏まえると、この observation が評価されるまでは同じ失敗形が再現していないと断言できない
+
+### Improvement Proposals
+
+- **route 依存の verify command が Size 再評価で非互換になりうる (Tier 2 — 記録のみ)**: `github_check "gh pr checks"` と `gh run list` の使い分けは route に依存するが、AC 監査は `/issue` Step 15 で、route を決める Size 再評価は `/spec` で行われる。今回は `/spec` が M → XS へ降格した結果 AC #5 が非互換になり、`/code` が検出・自動修正した。`modules/verify-classifier.md` の正準形記述という補償が効いており実害ゼロだったため単独起票は見送る。Size 降格由来の AC 非互換が `/code` の自動修正を素通りする、あるいは `/code` を経ない経路で顕在化した場合は Tier 1 へ引き上げる
