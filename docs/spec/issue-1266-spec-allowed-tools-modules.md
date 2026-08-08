@@ -96,7 +96,8 @@
 #### code
 
 - Implementation Steps の「wildcard 不可の注記を共通化」と「Case 1 を内容変更なしで維持」が文字通りには両立しないため、Case 2 側から Case 1 step 4 を参照する形で解決した。設計逸脱として正しく記録されている
-- rework ゼロ
+- Code Retrospective は `### Rework` を `N/A` と記録しているが、これは code フェーズ内部から見た視点であり、**オーケストレーション層では code フェーズが 2 回走っている**。`.tmp/auto-events.jsonl` に `{"ts":"2026-08-08T15:18:25Z","issue":1266,"event":"code_retry_fire","iteration":"1","trigger_reason":"silent_no_op"}` が記録されており、1 回目の試行が silent no-op と判定されてリトライで着地した。code フェーズ開始 (15:04:31Z) からリトライ発火まで約 14 分を消費している。リトライは fresh context で起動するため、2 回目の実行が書く Code Retrospective は 1 回目の失敗を構造的に観測できない
+- 同フェーズ中に `concurrent_commit_detected` が 5 件記録されたが、いずれも他セッションの commit (#1278 系の PR merge 等) であり本 Issue の実装とは無関係
 - **Design Gaps/Ambiguities の事実主張に誤りがあった** (下記 verify を参照)
 
 #### review
@@ -119,3 +120,5 @@
 
 - **`/code` Step 3 の precondition mismatch が診断可能な形で伝わっていない (Tier 2 — 記録のみ)**: `reconcile-phase-state.sh` は 2 分岐を区別できる message を返しているにもかかわらず、Code Retrospective はラベル起因と誤帰属し「原因未調査」で残した。結果としてラベルタイムラインの読み違えという二次的な誤りも生じている。スクリプト側の出力は既に十分で、`skills/code/SKILL.md` Step 3 も `matches_expected: false` を「Spec missing」と正しく説明しているため、修正すべきコード上の欠陥は特定できない。単独起票は見送る
 - **`/code` の worktree が `/spec` の push 直後に Spec を見られない時間窓がありうる (Tier 2 — 記録のみ)**: 上記の分岐 2 発火は、fresh worktree の base ref と Spec push の伝播タイミングに起因する可能性がある。今回は non-interactive の warn-and-continue により実害ゼロで、Spec も実装時点では読めていた。ただしこの経路が成立する場合、`/code` が Spec なしで「Issue 本文から要件を読む」degraded モードへ静かに落ちるリスクを含む。機構は本 verify では未確定のため、確定的な証拠 (同型の再発、または worktree base ref の実測) が得られた時点で Tier 1 へ引き上げる
+
+- **`code_retry_fire` がどの SSoT にも到達せず、Code Retrospective からも構造的に不可視 (Tier 2 — 記録のみ)**: 本 Issue の code フェーズは silent no-op によるリトライで 2 回走ったが、この事実は (1) Spec の Code Retrospective (`### Rework: N/A`)、(2) `docs/reports/orchestration-recoveries.md` (`Issue #1266` の grep ヒット 0) のいずれにも記録されていない。唯一の記録は `.tmp/auto-events.jsonl` の `code_retry_fire` イベントのみで、これは gitignore 対象のため永続的な監査記録にならない。リトライは fresh context で起動するので、2 回目が書く Code Retrospective が 1 回目の失敗を観測できないのは構造的な帰結であり、code フェーズ側の記述漏れではない。なお #869 の post-merge observation AC (「次回 silent no-op が観測された session で `code_retry_fire` イベントが `.tmp/auto-events.jsonl` に記録される」) は本イベントで満たされうる — 同 AC は `observation event=auto-run` のため `/verify` の opportunistic scan の対象外で、次回 `auto-run` 発火時に評価される。単独起票は見送るが、`code_retry_fire` の耐久記録先を持たせる提案が再度出た場合は #1279 (Metrics 汚染) と同じ「測定 SSoT の欠落」系統として Tier 1 を検討する
