@@ -5,16 +5,21 @@ Language convention check script
 Detects CJK (Japanese) characters accidentally transcribed into English-only
 documents (skills/**/*.md, modules/*.md, scripts/*) from a unified diff.
 
-Reads a unified diff (`git diff` format) from stdin and scans only added
-(`+`-prefixed) lines. The caller is expected to pass a diff already scoped to
-the target paths (e.g. `git diff -- skills/ modules/ scripts/`); this script
-does not filter by path itself.
+Reads a unified diff (`git diff` format) from stdin and checks added
+(`+`-prefixed) lines for violations. Context lines (unchanged, space-prefixed)
+are also scanned for fence markers — but not for violations — so fence state
+stays correct when a diff edits content inside an already-existing fenced
+block without touching the fence delimiters themselves. The caller is
+expected to pass a diff already scoped to the target paths (e.g.
+`git diff -- skills/ modules/ scripts/`); this script does not filter by path
+itself.
 
 False positives are excluded for three legitimate CJK usages, per CLAUDE.md's
 "Skill output (terminal): Japanese" convention:
   (i)   Fenced code blocks containing terminal output templates (e.g. the
         `Print advisory` template block in skills/verify/SKILL.md) — added
-        lines between a ``` fence-open and fence-close are skipped entirely.
+        lines whose enclosing fence (tracked across both added and unchanged
+        context lines) is open are skipped entirely.
   (ii)  Inline code spans (`...`) containing Japanese keywords used as data
         values rather than prose (e.g. the domain classification table's
         `デザイン` entries in skills/audit/SKILL.md) — the content of inline
@@ -53,13 +58,23 @@ def find_violations(diff_text):
         if line.startswith("---"):
             continue
 
-        if not line.startswith("+"):
+        if line.startswith("-"):
             continue
 
-        content = line[1:]
+        if line.startswith("+"):
+            content = line[1:]
+            is_added = True
+        elif line.startswith(" "):
+            content = line[1:]
+            is_added = False
+        else:
+            continue
 
         if FENCE_PATTERN.match(content):
             fence_count += 1
+            continue
+
+        if not is_added:
             continue
 
         if fence_count % 2 == 1:

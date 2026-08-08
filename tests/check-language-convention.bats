@@ -32,3 +32,8 @@ SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)/scripts/check-languag
   run bash -c "printf -- '+++ b/modules/example.md\n@@ -1,1 +0,0 @@\n-転記した内容の rationale をそのまま英語ドキュメントに追加する。\n' | python3 '$SCRIPT'"
   [ "$status" -eq 0 ]
 }
+
+@test "false positive: edit inside a pre-existing fenced block (fence markers unchanged) exits 0" {
+  run bash -c "printf '+++ b/skills/verify/SKILL.md\n@@ -10,7 +10,7 @@\n \`\`\`\n existing english line\n-old english line\n+新しい日本語の行\n \`\`\`\n other line\n' | python3 '$SCRIPT'"
+  [ "$status" -eq 0 ]
+}
