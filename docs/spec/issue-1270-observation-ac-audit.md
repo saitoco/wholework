@@ -31,3 +31,6 @@ XL route のため実装は 3 本の sub-issue が担当した。本ファイル
 
 - **observation waiting の 20 行減少のうち、純減は 5 行 (25%) のみ**で、15 行 (75%) は `manual` への型間移動だった。#1158 は「manual には発火契機がない」という前提で 57 行を observation へ移したが、本実査で 15 行が `manual` へ戻された。移動の方向自体が逆だった行が一定数あったことになる
 - **E のうち capability 待ちは 0 行**だった。3 本の sub-issue が独立に「`.wholework.yml` の capability 不足が理由の差し戻しは無い」と結論している。装備待ちのケースは observation ではなく `manual` バケツ側に存在すると見られ、#1278 の実測がその母集団を扱う
+
+## Consumed Comments
+No new comments since last phase.
