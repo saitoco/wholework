@@ -59,3 +59,29 @@
 
 ## Consumed Comments
 - saito / MEMBER / first-class / Issue Retrospective — AC2 の verify command を awk ベースの frontmatter 判定に修正済み (environment-adaptation.md 内の fenced code block 由来の誤検出を回避)。Post-merge observation AC に `session=next` 追加済み。追加で解決すべき曖昧性なし / https://github.com/saitoco/wholework/issues/1283#issuecomment-5226925420
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A (Implementation Steps 1-4 を Spec 記載どおりに実施。案の採否は既に Spec Notes に記録済みのため追加記録なし)
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Implemented exactly per Spec Implementation Steps 1-3 (frontmatter removal + 3-location Document Traversal exclusion addition); no deviation from the adopted 案 B recorded in Notes
+- Step 4 (recording the adoption decision) was already satisfied by the Spec's existing `## Notes` § 案の採否, written during the spec phase — no additional recording needed in code phase
+
+### Deferred Items
+- Post-merge observation AC (`session=next`): confirm on next `/doc sync --deep` run that `visual-reproduction-methodology` SSoT resolves singularly to `docs/visual-reproduction.md`
+- Scope-out items already recorded in Spec Notes § スコープ外としたもの (translate-phase.md output-check, audit/SKILL.md duplication refactor) — not re-litigated here
+
+### Notes for Next Phase
+- All 3 pre-merge AC verified PASS locally (rubric AC1/AC3 self-judged adversarially against file content and Spec Notes; AC2 command executed directly) — Issue checkboxes already updated to `[x]`
+- Full bats suite (`bats --jobs 18 tests/`) passed; 2 initial failures in `tests/post_merge_check.bats` were confirmed parallel-only flakiness (per docs/tech.md's documented pattern) and cleared on serial re-run
