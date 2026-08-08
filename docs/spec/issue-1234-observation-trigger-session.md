@@ -49,6 +49,9 @@
 ## Consumed Comments
 - saito (MEMBER, first-class): triage フェーズの Issue Retrospective。タイトル正規化 (体言止め)、AC 8 の `github_check` 修正 (patch route 対応) と AC 4/5 の `section_contains` 修正 (見出し不一致・`--session-id` 部分文字列誤マッチの回避) を記録。両修正は現行の Issue 本文 AC に既に反映済みで、本 Spec の Verification はその反映後の内容を検証コマンド同期ルールに従い転写した — https://github.com/saitoco/wholework/issues/1234#issuecomment-5212780239
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1234#issuecomment-5217219839
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1234#issuecomment-5218149479
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1234#issuecomment-5225319823
 ## review retrospective
 
 ### Spec vs. implementation divergence patterns
