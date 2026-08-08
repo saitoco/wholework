@@ -64,20 +64,20 @@
 - N/A — no rework occurred; implementation, local verification, and AC checks completed without needing to revise the approach.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `REVIEW_DEPTH=light` (explicit `--light` flag) — ran the 1-agent `review-light` integrated review instead of the 2-group fan-out, covering all 4 aspects (spec divergence, edge cases, security, documentation consistency) in a single pass.
-- Both Pre-merge `rubric` acceptance conditions were independently re-evaluated against the PR diff and Spec `## Notes` and judged PASS, confirming the pre-existing `[x]` checkbox state.
-- No fixes were required — `review-light` found zero issues, and CI (9/9 jobs) was already green before this review ran.
+- Pre-merge AC gate: both Pre-merge `rubric` conditions were already checked (`unchecked_count=0`); no override marker needed.
+- `review_incomplete_fallback` check: PR #1269's review-summary completion was organic (Review Response Summary found, not fallback-origin), so no additional gate condition applied.
+- `gh-pr-merge-status.sh` reported `mergeable=true reason=clean ci_status=success review_status=approved` — proceeded directly to squash merge with no conflict resolution needed.
 
 ### Deferred Items
-- Post-merge AC (observation, `event=auto-run session=next`) remains unverified until the next real CI run surfaces a parallel-only failure — unchanged from the code-phase handoff.
-- File-level attribution and Option C (cumulative threshold detection) remain deferred per the Spec's Notes — not in scope for this review.
+- Post-merge AC (observation, `event=auto-run session=next`) remains unverified until the next real CI run surfaces a parallel-only failure — unchanged from the code/review-phase handoffs.
+- File-level attribution and Option C (cumulative threshold detection) remain deferred per the Spec's Notes — not in scope for this merge.
 
 ### Notes for Next Phase
-- `/merge 1269` can proceed directly — no MUST/SHOULD/CONSIDER issues, CI green, both Pre-merge AC PASS.
-- The Post-merge observation AC will only resolve once a real CI run exhibits a parallel-only failure; `/verify` should expect SKIPPED until that event fires, per `verify-executor.md`'s `observation` verify-type handling.
+- `/verify 1255` should expect SKIPPED for the Post-merge observation AC until a real CI run exhibits a parallel-only failure, per `verify-executor.md`'s `observation` verify-type handling.
+- No manual follow-up required — Issue auto-close via `closes #1255` and `phase/verify` label transition are expected to apply automatically since `BASE_BRANCH=main`.
 
 ## review retrospective
 
