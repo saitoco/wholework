@@ -77,6 +77,14 @@
 #   iteration=<n>                 verify iteration counter (NEXT_ITERATION)
 #   failed_ac_count=<n>           number of FAIL conditions in auto-verification targets
 #
+# verify_executability: /verify Step 8b が manual post-merge AC の Claude 実行可否を判定した
+#   (AskUserQuestion の呼び出し有無やその応答とは独立に、判定ごとに 1 件 emit する)
+#   ac_index=<n>                  acceptance condition index (1-based) that was judged
+#   executable=<true|false>       Claude executability judgment result
+#   reason=<slug or empty>        non-executable reason slug (see modules/l0-surfaces.md
+#                                  § Machine-Readable Event Marker, type=verify-executability);
+#                                  empty when executable=true
+#
 # verify_user_confirm: /verify interactive mode で manual AC の AskUserQuestion に回答した
 #   ac_index=<n>                  acceptance condition index (1-based) the question was asked for
 #   response=<response>           Claude Execute | Manual Verification (Show Guide) | SKIP
