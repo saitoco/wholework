@@ -85,3 +85,33 @@
 ### Notes for Next Phase
 - All 3 pre-merge AC verified PASS locally (rubric AC1/AC3 self-judged adversarially against file content and Spec Notes; AC2 command executed directly) — Issue checkboxes already updated to `[x]`
 - Full bats suite (`bats --jobs 18 tests/`) passed; 2 initial failures in `tests/post_merge_check.bats` were confirmed parallel-only flakiness (per docs/tech.md's documented pattern) and cleared on serial re-run
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 起票時に付けた AC2 の verify command (`grep -rl '^type: ' docs/ja/`) が欠陥を持っていた。`docs/ja/environment-adaptation.md` の fenced code block 内サンプル (`type: domain`) を frontmatter と誤検出するため、frontmatter 除去後も恒久 FAIL になる状態だった。triage フェーズがこれを実測で再現し、先頭行のみを判定する `awk 'FNR==1 && /^---$/'` ベースに置き換えている
+- 起票時の「実装前に FAIL することを確認した」という検証は、`modules/verify-patterns.md` §9 が戒める「常時 PASS」側は塞いだが「常時 FAIL」側は塞げていなかった。pre-fix FAIL の確認だけでは不十分で、**修正を模した状態で PASS するかの確認**が対になって初めて §9 の趣旨を満たす
+
+#### spec
+- Issue 本文の想定 (対象 1 ファイル + 再発防止 1 箇所) に対し、調査で対象が 3 箇所に拡大した。Issue 本文が挙げた実害「`/audit` の Project Documents 収集にも翻訳ファイルが混入する」を実際に止めるには `skills/doc/SKILL.md` だけでは不十分という判断は正しい
+- 案 A/B の採否判断を Issue 本文が明示的に `/spec` へ委譲していたため、Spec Notes に採用理由・不採用理由・実装箇所の判断根拠が揃って記録された。委譲先を Issue 本文で名指ししたことが機能している
+
+#### code
+- Implementation Steps 1-4 を逸脱なく実施。rework なし、fixup/amend なし
+- ローカル全スイートで `tests/post_merge_check.bats` の並列限定 flake を 2 件踏み、直列再実行で解消。#1282 が `docs/tech.md` に文書化したパターンがそのまま再現・適用された初の実例
+
+#### review
+- patch route のため `/review` フェーズなし
+
+#### merge
+- patch route のため `/merge` フェーズなし。main 直コミット (7c85d8bf)、コンフリクトなし
+
+#### verify
+- pre-merge 3 件はすべて code フェーズで検証済みのため SKIPPED。observation 1 件は `auto-run` 未発火のため SKIPPED
+- FAIL / UNCERTAIN ゼロ
+
+### Improvement Proposals
+
+- **`type: project` 収集の除外パターンが 3 箇所に重複定義されている** — `skills/doc/SKILL.md` の Document Traversal (common procedure)、`skills/audit/SKILL.md` の drift サブコマンド、同 fragility サブコマンドが、共通モジュール参照ではなく同一の除外リストを独立コピーで持つ。本 Issue は 1 項目の追加のために 3 箇所を同時編集する必要があり、次に除外項目が増えたときも同じコストと同期漏れリスクが発生する。共通モジュール (`modules/` 配下) への切り出しと 3 箇所からの参照化を検討する。Spec Notes § スコープ外としたもの に観察事項として記録済み
