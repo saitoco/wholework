@@ -16,21 +16,25 @@
 
 | event | 発火元 | `--session` 渡し | `when=route/mode/recovery-tier` | `when=execution-context` | `config=<key>` | `keyword=<text>` |
 |---|---|---|---|---|---|---|
-| `auto-run` | `skills/auto/SKILL.md` の Post-completion event scan | あり | 有効 (run facts から解決) | 有効 | 有効 (`.wholework.yml` を直接参照、session 不問) | **無効** (`--context-file` を渡さない) |
-| `fix-cycle` | `skills/verify/SKILL.md` の FAIL→reopen 経路 | **なし** | **fail-open (無条件マッチと同義)** | 有効 (発火 skill 自身の `--execution-context` 引数から解決) | 有効 | **無効** (`--context-file` を渡さない) |
+| `auto-run` | `skills/auto/SKILL.md` の Post-completion event scan | あり | 有効 (run facts から解決) | **無効** (fail-open, `--execution-context` を渡さない) | 有効 (`.wholework.yml` を直接参照、session 不問) | **無効** (`--context-file` を渡さない) |
+| `fix-cycle` | `skills/verify/SKILL.md` の FAIL→reopen 経路 | **なし** | **fail-open (無条件マッチと同義)** | **無効** (fail-open, `--execution-context` を渡さない) | 有効 | **無効** (`--context-file` を渡さない) |
 
-したがって、分類 B の条件文書き換えで付与してよいゲート属性は **`when=` と `config=` の 2 つのみ**であり (`fix-cycle` では `when=route/mode/recovery-tier` は実質無意味)、`keyword=` はいずれの経路でも付与しても不活性となる。本実査ではこの制約に従い、#769 (`event=auto-run`) にのみ `when=mode:batch` を追加した (batch 実行が条件の必須前提のため)。
+**訂正 (`/review` #1297 指摘)**: 当初 `when=execution-context` を両行とも「有効」と記載していたが誤りだった。`--execution-context` を渡すのは `skills/review/SKILL.md` の `pr-review-full`/`pr-review-light` 経路のみで、`auto-run` (`skills/auto/SKILL.md:751,1245`) / `fix-cycle` (`skills/verify/SKILL.md:625`) はどちらも渡さない。`scripts/opportunistic-search.sh:457-459` は未指定時に `Warning: --execution-context not given, ignoring when=execution-context clause` を出し無条件マッチとして扱う (fail-open)。
+
+したがって、分類 B の条件文書き換えで付与してよいゲート属性は **`when=route/mode/recovery-tier` (`auto-run` のみ有効) と `config=` の 2 つ**であり (`fix-cycle` では `when=route/mode/recovery-tier` も実質無意味)、`when=execution-context` と `keyword=` はいずれの経路でも付与しても不活性となる。本実査ではこの制約に従い、#769 (`event=auto-run`) にのみ `when=mode:batch` を追加した (batch 実行が条件の必須前提のため)。
 
 ## 分類サマリ
 
 | 分類 | 件数 | 内訳 |
 |---|---|---|
-| **A** (判定可能、維持) | **19** | 既 PASS 3 (#869 #759 #520) + 実査で維持 16 (#1045 #856 #852 #822 #807 #806 #804 #778 #770 #765 #761 #760 #758 #755 #724 #719) |
+| **A** (判定可能、維持) | **17** | 既 PASS 3 (#869 #759 #520) + 実査で維持 14 (#1045 #856 #852 #807 #806 #804 #778 #770 #765 #760 #758 #755 #724 #719) |
 | **B** (条件文書き換えで判定可能) | **7** | #769 #737 #736 #732 #731 #707 #700 |
 | **C** (event 差し替え) | **0** | 該当なし |
-| **D** (判定不能・retire) | **1** | #762 |
+| **D** (判定不能・retire) | **3** | #762 #761 #822 |
 | **E** (`manual` へ差し戻し) | **2** | #861 #859 |
 | **合計** | **29** | — |
+
+**訂正 (`/review` #1297 指摘)**: 当初 A に分類した #761 / #822 は、判断根拠として引用した Spec 自動追記機構 (`_write_tier2_recovery_to_spec()` / `_write_manual_recovery_to_spec()`) が Issue #1181 で既に削除されていることが判明したため D (retire) へ再分類した。詳細は各行の記載および分類 D: retire 実施記録を参照。
 
 ## 実査表
 
@@ -39,12 +43,12 @@
 | #869 | silent no-op 観測時に `code_retry_fire` が記録される | auto-run | A (既 PASS) | 2026-08-09 時点で `- [x]` 済み。`/auto` 実行内で実証済み |
 | #759 | Tier 2/3 自動回復発生 Issue の `/verify` で新基準判断が一意 | auto-run | A (既 PASS) | 2026-08-09 時点で `- [x]` 済み、`phase/done` |
 | #520 | skill mis-dispatch 由来の silent no-op が観察されない | auto-run | A (既 PASS) | 2026-08-09 時点で `- [x]` 済み、`phase/done` |
-| #1045 | 次回 external kill 発生時に control-flow/subprocess kill を `.tmp/auto-events.jsonl` の `wrapper_alive` イベントとの時刻差分から判別 | auto-run | A | `.tmp/auto-events.jsonl` は Step 8c の評価対象 (「関連 session_id の .tmp/auto-events.jsonl イベント、ファイルが現存する場合」)。`run-auto-sub.sh` は `wrapper_alive` を 6 箇所で emit しており、kill 発生時にファイルが現存すれば時刻差分計算が可能。ファイル不在時の SKIPPED は正常挙動 |
+| #1045 | 次回 external kill 発生時に control-flow/subprocess kill を `.tmp/auto-events.jsonl` の `wrapper_alive` イベントとの時刻差分から判別 | auto-run | A | `.tmp/auto-events.jsonl` は Step 8c の評価対象 (「関連 session_id の .tmp/auto-events.jsonl イベント、ファイルが現存する場合」)。`run-auto-sub.sh` は `wrapper_alive` を 4 箇所 (627/882/968/1047 行) で emit しており、kill 発生時にファイルが現存すれば時刻差分計算が可能。ファイル不在時の SKIPPED は正常挙動 |
 | #861 | 並列セッション環境で phase 開始時に他セッション由来 dirty が warning 表示される | auto-run→**manual** | **E** | `run-*.sh` 全 5 種の dirty-check 分岐 (`run-spec.sh` / `run-code.sh` / `run-review.sh` / `run-merge.sh` / `run-auto-sub.sh`) を確認したところ、other-session 検出時の warning は `echo ... >&2` のみで `emit_event` も git-tracked ファイルへの記録も行わない。ターミナル出力が消えると後から異なるセッションが遡って確認できる痕跡が残らない。`/verify` 実行時に Claude が意図的に別 worktree/session 由来の dirty ファイルを構築して `check-verify-dirty.sh` を実行すれば直接確認できるため E |
-| #859 | 並列セッション環境で他セッションの作業ファイルと自セッションの作業中ファイルを区別して判定 | auto-run→**manual** | **E** | `check-verify-dirty.sh` の `classify=self-worktree/other-worktree/other-session/parent-main` 出力は呼び出し単位の stderr のみで永続化されない。#861 と同根の理由で E。`/verify` 実行時に 4 パターンのダミーファイルを構築し `check-verify-dirty.sh` を直接実行すれば判定可能 |
+| #859 | 並列セッション環境で他セッションの作業ファイルと自セッションの作業中ファイルを区別して判定 | auto-run→**manual** | **E** | `check-verify-dirty.sh` の `classify=self-worktree/other-worktree/other-session/parent-main` 出力は呼び出し単位の stderr のみで永続化されない。#861 と同根の理由で E。`/verify` 実行時に other-session/parent-main の 2 パターンのダミーファイルを構築し `check-verify-dirty.sh` を直接実行すれば判定可能 (self-worktree/other-worktree は `.claude/*` が gitignore されており同スクリプトでは再現不能、詳細は分類 E: 差し戻し記録を参照) |
 | #856 | merge なし reopen Issue に `/auto $N` 実行時、fix-cycle と誤判定されず通常の issue/spec phase に進む | auto-run | A | reopen 状況は GitHub timeline (`ClosedEvent` → `ReopenedEvent`、間に `MergedEvent` なし) から確定可能。誤判定の有無は reopen 後の Spec 生成・phase ラベル遷移という git-committed な証跡から判定できる |
 | #852 | reopen 後の Issue に `/auto $N` 実行時、code phase が正しく実行される | auto-run | A | `reconcile-phase-state.sh` の `_completion_code_patch` (`reopen_ts != null` gate) の挙動は、reopen 後の commit/PR 有無という永続的な git/GitHub 履歴から確認可能。fix-cycle は日常的に発生するため機会も豊富 |
-| #822 | manual recovery 発生時、対象 sub-issue の Spec に `## Auto Retrospective` が自動追記される | auto-run | A | 追記対象は git-committed な Spec ファイル自身。`docs/reports/orchestration-recoveries.md` の "parent session manual recovery" エントリと突合すれば判定可能 (#882 #893 等の先例あり) |
+| #822 | manual recovery 発生時、対象 sub-issue の Spec に `## Auto Retrospective` が自動追記される | auto-run | **D (retire)** | 当初 A としたが、追記機構 `_write_manual_recovery_to_spec()` は #1181 で削除済み (`modules/orchestration-fallbacks.md`: "The Spec write, its open-PR guard, and the defer/flush mechanism were removed; recovery records now live solely in `docs/reports/orchestration-recoveries.md` and the `manual_intervention` event")。引用した先例 #882/#893 はいずれも #1181 以前の記録で、現行実装では Spec への自動追記が発生しないため原理的に判定不能。#762 と同型のため D へ再分類 |
 | #807 | batch session で run-*.sh kill 発生時、wrapper レベル自動 retry が `docs/reports/orchestration-recoveries.md` に記録される | auto-run | A | 条件文が自身の証跡先を名指ししている。`run-auto-sub.sh` の `_write_wrapper_retry_recovery` が同ファイルへ commit することを確認済み |
 | #806 | run-auto-sub.sh kill 発生時、`/auto --resume N` で manual recovery 不要に正常完走 | auto-run | A | #1045 と同型。`.tmp/auto-events.jsonl` の phase_start/phase_complete 系列 (中断→resume 後の完了) に加え、`orchestration-recoveries.md` に manual recovery エントリが存在しないことの両方から確認可能 |
 | #804 | migration/rename/削除を伴う Issue の `/spec` で Changed Files に symbol grep 結果が反映 | auto-run | A | `skills/spec/SKILL.md` の 3 段階 symbol-grep 手順 (#771 #770 #775 の先例参照) を確認済み。生成される Spec の `## Changed Files` は git-committed な永続的成果物 |
@@ -53,7 +57,7 @@
 | #769 | batch 実行後の `/audit auto-session --full` で Per-Issue Durations table が実処理 Issue 数と一致 (乖離率 < 10%) | auto-run | **B** | #875 (commit `78116b16`) でスタンドアロンのデータ層レポートが廃止され `session.md` の `## Metrics` に統合済み。「Per-Issue Durations table」という名称は現行の `### Sub-Issue Completion Timeline` に一致せず Form 1 (参照ファイル名指し) を満たさない。条件文を現行実装に合わせて書き換え、`when=mode:batch` を追加した |
 | #765 | PR で正当な `per-Issue Spec` 等の記述が commit に含まれた際、Forbidden Expressions check が PASS | auto-run | A | `check-forbidden-expressions.sh` の hyphen/backtick 隣接除外ロジックと `tests/check-forbidden-expressions.bats` の拡張を確認済み。CI 実行結果 (`gh pr checks`) は GitHub state として Step 8c の評価対象 |
 | #762 | batch/XL session で両レポート生成時、データ層レポート末尾に L3 retrospective への See also リンクが出力 | auto-run | **D (retire)** | #875 (commit `78116b16`) によりスタンドアロンのデータ層レポート自体が廃止されたため、リンクを張る対象が存在しない。原理的に判定不能 |
-| #761 | Tier 2 fallback catalog 適用 Issue の Spec に `## Auto Retrospective` の anomaly エントリが含まれる | auto-run | A | `run-auto-sub.sh` の `_write_tier2_recovery_to_spec` を確認済み。`docs/reports/orchestration-recoveries.md` は 13 件の Tier 2 発生を記録しており、頻度も十分 |
+| #761 | Tier 2 fallback catalog 適用 Issue の Spec に `## Auto Retrospective` の anomaly エントリが含まれる | auto-run | **D (retire)** | 当初 A としたが、判断根拠に引用した `_write_tier2_recovery_to_spec()` は #1181 で削除済みで現在リポジトリに存在しない (`modules/orchestration-fallbacks.md`: "Tier 2/Tier 3's parallel Spec-write functions ... were removed")。現行の Tier 2 リカバリは `docs/reports/orchestration-recoveries.md` へのみ記録し Spec へは追記しないため、AC が要求する Spec 追記は原理的に発生しない。#762 と同型のため D へ再分類 |
 | #760 | batch session で Tier 2 リカバリ発生時、`/audit auto-session <id>` レポートの Improvement Candidates Surfaced に symptom 表示 | auto-run | A | `get-auto-session-report.sh` の Tier 2 表面化ロジック (`recoveries-auto-fire.threshold` 参照、`IMPROVEMENT_CANDIDATES` 出力) と `### Improvement Candidates Surfaced` セクションが #875 後も現存することを確認済み |
 | #758 | 新 SSoT モジュール作成時、新 checklist が実行され review phase で SSoT 乖離 SHOULD が出ない | auto-run | A | `skills/code/SKILL.md` の SSoT Module Cross-Check (Reference consistency / "How to Reference" accuracy) を確認済み。新規 SSoT モジュール作成有無と review コメント履歴は repo/GitHub state から判定可能 |
 | #755 | 新 skill 作成時、`execution-context.md` を参照して context check が標準化される | auto-run | A | `modules/execution-context.md` は既に複数 skill から参照されており (`skills/code/SKILL.md` 等)、新規 skill の SKILL.md に同参照が含まれるかは repo state で確認可能 |
@@ -75,30 +79,33 @@
 - `bash scripts/opportunistic-search.sh --event auto-run --dry-run` (2026-08-09 実行、母集団 77 Issue、実行時に `run facts carry no run context (empty issues, mode=unknown), disabling when= condition check gate` の警告により `when=mode:batch` は fail-open — 単体 dry-run では意図通りマッチする): 変更した #769 / #737 / #736 / #732 / #731 の **5 件すべてが個別にマッチ集合へ含まれることを確認**
 - `bash scripts/opportunistic-search.sh --event fix-cycle --dry-run` (2026-08-09 実行、母集団 5 Issue): 変更した #707 / #700 の **2 件すべてが個別にマッチ集合へ含まれることを確認**
 
-意図的にマッチ集合から外した行はない (`when=mode:batch` を付与した #769 も、実 `/auto --batch` 実行時の `--session`/`--facts-file` 経由では `mode:batch` の facts が解決されるため、batch 実行時にのみマッチする設計どおりに機能する見込み)。
+**訂正 (`/review` #1297 指摘)**: 意図的にマッチ集合から外した行が 1 件ある。#769 に付与した `when=mode:batch` は、実 `/auto --batch` 実行時の `--session`/`--facts-file` 経由で `mode:batch` の facts が解決される場合にのみマッチし、`mode=single` (通常の単発 `/auto`) 実行時は意図的に dispatch 対象から除外される。dry-run 時にマッチしたのは run facts が未解決で `when=` gate が fail-open した結果であり、ゲートが有効化された状態での挙動確認ではない点に注意。
 
 ## 分類 D: retire 実施記録
 
 | Issue | retire 理由 (要約) | コメント URL | 本文非編集の確認 | 遷移後ラベル |
 |---|---|---|---|---|
 | #762 | データ層レポート (`docs/reports/auto-session-*.md`) は #875 で廃止済みであり、リンク先そのものが存在しないため原理的に判定不能 | https://github.com/saitoco/wholework/issues/762#issuecomment-5228250155 | 確認済み — `### Post-merge` 節の該当 AC 行は編集せずそのまま残した (`- [ ]` のまま) | `phase/verify` → `phase/done` (retire 後に他の未チェック post-merge 条件が残らないことを確認したうえで遷移) |
+| #761 | Spec 自動追記機構 `_write_tier2_recovery_to_spec()` は #1181 で削除済みであり、追記対象が存在しないため原理的に判定不能 (`/review` #1297 指摘によりA→D訂正) | https://github.com/saitoco/wholework/issues/761#issuecomment-5228445199 | 確認済み — `### Post-merge` 節の該当 AC 行は編集せずそのまま残した (`- [ ]` のまま) | `phase/verify` → `phase/done` (retire 後に他の未チェック post-merge 条件が残らないことを確認したうえで遷移) |
+| #822 | Spec 自動追記機構 `_write_manual_recovery_to_spec()` は #1181 で削除済みであり、追記対象が存在しないため原理的に判定不能 (`/review` #1297 指摘によりA→D訂正) | https://github.com/saitoco/wholework/issues/822#issuecomment-5228445705 | 確認済み — `### Post-merge` 節の該当 AC 行は編集せずそのまま残した (`- [ ]` のまま) | `phase/verify` → `phase/done` (retire 後に他の未チェック post-merge 条件が残らないことを確認したうえで遷移) |
+
+いずれの retire 対象行も本文非編集方針のため該当 AC 行は `- [ ]` のまま残る。「未チェック条件がゼロになった」は retire 対象行を除いた Post-merge 条件について判定しており、#1166 方式の運用上の解釈である。
 
 ## 分類 E: 差し戻し記録
 
 | Issue | 差し戻し理由 | `/verify` 実行時の判定手順 | capability |
 |---|---|---|---|
-| #861 | dirty-check の other-session warning は `echo ... >&2` のみで永続化されず、`auto-run` 発火時に別セッションが遡って確認できる証跡がない | `/verify` 実行時に、別 issue 番号の worktree パス (例: `.claude/worktrees/code+issue-999999/dummy.txt`) や `docs/sessions/<foreign-id>-*/dummy.md` にダミーファイルを作成し、`bash scripts/run-spec.sh <test-issue>` または直接 `bash scripts/check-verify-dirty.sh <issue番号>` を実行して `classify=other-worktree`/`classify=other-session` と warning 文言 (フェーズは中断されない) を確認する。確認後はダミーファイルを削除する | 装備待ちではない (即判定可能、ただし `/verify` 実行時に Claude が能動的に構築する必要がある) |
-| #859 | `check-verify-dirty.sh` の `classify=` 出力は呼び出し単位の stderr のみで永続化されない。#861 と同根 | `/verify` 実行時に 4 パターン (self-worktree / 他 worktree / 他セッション `docs/sessions/` / parent-main) のダミーファイルをそれぞれ作成し `bash scripts/check-verify-dirty.sh <自 issue 番号>` を実行、各パターンで正しい `classify=` 値が出力され、self-worktree のみブロックされず他は warning のみであることを確認する。確認後はダミーファイルを削除する | 装備待ちではない (即判定可能、ただし `/verify` 実行時に Claude が能動的に構築する必要がある) |
+| #861 | dirty-check の other-session warning は `echo ... >&2` のみで永続化されず、`auto-run` 発火時に別セッションが遡って確認できる証跡がない | `/verify` 実行時に `docs/sessions/<foreign-id>-*/dummy.md` (other-session パターン) にダミーファイルを作成し、`bash scripts/check-verify-dirty.sh <issue番号>` を実行して `classify=other-session` と warning 文言 (フェーズは中断されない) を確認する。確認後はダミーファイルを削除する | 装備待ちではない (即判定可能、ただし `/verify` 実行時に Claude が能動的に構築する必要がある) |
+| #859 | `check-verify-dirty.sh` の `classify=` 出力は呼び出し単位の stderr のみで永続化されない。#861 と同根 | `/verify` 実行時に other-session (`docs/sessions/<foreign-id>-*/dummy.md`) および parent-main の 2 パターンのダミーファイルを作成し `bash scripts/check-verify-dirty.sh <自 issue 番号>` を実行、各パターンで正しい `classify=` 値が出力されることを確認する。確認後はダミーファイルを削除する | 装備待ちではない (即判定可能、ただし `/verify` 実行時に Claude が能動的に構築する必要がある) |
+
+**訂正 (`/review` #1297 指摘)**: 当初の手順は self-worktree/other-worktree パターンで `.claude/worktrees/...` 配下にダミーファイルを作成するとしていたが、`.claude/*` は `.gitignore` で無視されており (`git check-ignore` で確認)、`check-verify-dirty.sh` は `git status --short --untracked-files=all` (`--ignored` なし) でファイル一覧を作るため gitignore されたファイルは検出されない。self-worktree/other-worktree の2パターンはこの方法では再現できないため、手順を other-session/parent-main の2パターンに限定した。
 
 いずれも `.wholework.yml` の capability 不足によるものではなく、「`auto-run` の受動的な発火待ちでは証跡が残らないが、`/verify` 実行時に Claude が能動的にシナリオを構築すれば判定できる」という理由による差し戻しのため、`capability=<key>` の対象はゼロ件。
 
 ## 親 #1270 への引き継ぎ
 
-- **D/E 内訳**: D (retire) 1 件 (#762)、E (`manual` へ差し戻し) 2 件 (#861 #859)。observation waiting の減少 3 件のうち、**純減は 1 件 (#762 の retire)**、**型間移動 (observation → manual) は 2 件 (#861 #859)** であり、型間移動分は `manual` waiting の増加として現れる (純減とは区別が必要)。
+- **D/E 内訳**: D (retire) 3 件 (#762 #761 #822)、E (`manual` へ差し戻し) 2 件 (#861 #859)。observation waiting の減少 5 件のうち、**純減は 3 件 (#762 #761 #822 の retire)**、**型間移動 (observation → manual) は 2 件 (#861 #859)** であり、型間移動分は `manual` waiting の増加として現れる (純減とは区別が必要)。
 - **E の「即判定可能」と「装備待ち」の分離**: 差し戻した E 2 件はいずれも `.wholework.yml` capability 不足が理由ではなく「即判定可能 (ただし `/verify` 実行時に Claude が能動的にシナリオを構築する必要がある)」に分類される。装備待ち (`capability=<key>`) の E は **0 件**。
 - B 7 件は event を維持したまま条件文のみ書き換えたため、observation waiting の総数には影響しない (退避・型間移動のいずれにも該当しない)。
-- A 19 件 (既 PASS 3 件を含む) はそのまま観察継続。
-
-## Consumed Comments
-
-cutoff は本 Spec 側 (`docs/spec/issue-1274-observation-ac-audit-a.md`) の `## Consumed Comments` 節を参照。
+- A 17 件 (既 PASS 3 件を含む) はそのまま観察継続。
+- **訂正 (`/review` #1297 指摘)**: 当初 D は #762 の 1 件のみだったが、判断根拠の事実誤りが見つかった #761 / #822 を A から D へ再分類したため、D は 3 件、A は 19 件から 17 件に変更となった。
