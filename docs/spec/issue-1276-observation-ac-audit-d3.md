@@ -212,26 +212,38 @@ Issue 本文の「担当範囲」表は 16 AC 行を実査対象とするが、�
 - **#1056 の前提 (`pup` 不在) が現在も成立するか**: `command -v pup` で不在を再確認した (2026-08-09)。E の判定手順が `/verify` 実行時にそのまま使える。
 - **`check-ac-checkbox-format.sh` が `/code` から実行できるか**: `skills/code/SKILL.md` の `allowed-tools` に含まれないことを実測確認した。プロジェクトの `.claude/settings.json` 側の許可で通る見込みだが、拒否時は #1165 と同じく `python3` 相当判定へフォールバックする方針を Tool Dependencies に明記し、`skills/code/SKILL.md` の変更はスコープ外とした。
 
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Spec の Implementation Steps を順序どおり実行した。分類 (A 7 / B 1 / C 0 / D 2 / E 6) の再判定も行っていない。
+
+### Design Gaps/Ambiguities
+
+- Spec Notes for Next Phase の指示どおり、着手時に対象 8 Issue (#1056 / #710 / #513 / #512 / #477 / #465 / #491 / #490) の state・labels を再確認したが、spec フェーズ (2026-08-09) からの drift はなかった (全件 `phase/verify` のまま、E/B 対象行が先に PASS 済みになっている事象は発生しなかった)。observation dispatch の並行進行を懸念した Spec の注意書きは今回は顕在化しなかったが、再確認の手順自体は有効だったため次回以降も踏襲する。
+
+### Rework
+
+N/A
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 16 AC 行の分類 (A 7 / B 1 / C 0 / D 2 / E 6) は Spec 側で確定済み。`/code` は「実査結果: 16 AC 行の分類」節をそのまま `docs/reports/observation-ac-audit-d3.md` の記録内容として転記すればよく、分類のやり直しは不要。
-- retire は #1166 方式 (AC 行を編集せず retire コメント + `phase/done` 遷移)。#1165 の `### Retired Post-merge Conditions` 退避方式は採らない。
-- 分類 E の 6 行のうち #513 / #512 / #477 の 3 行のみ、タグ差し替えと同じ編集で条件文も書き換える。残り 3 行 (#1056 / #710 条件1 / #710 条件2) はタグ差し替えのみ。
-- #490 は retire 後に `phase/done` 遷移に加えて close する (`gh api -X PATCH ... -f state=closed`)。`gh issue close` は `allowed-tools` に無いが `gh api:*` はある。
+- Spec の分類結果 (A 7 / B 1 / C 0 / D 2 / E 6) をそのまま `docs/reports/observation-ac-audit-d3.md` へ転記し、再判定は行わなかった。
+- 分類 E 6 行 / 分類 B 1 行の Issue 本文書き戻しは `.tmp/issue-body-<N>.md` 経由 (`gh-issue-edit.sh`) で行い、対象 AC 行の HTML コメントと条件文のみを置換した。
+- 分類 D の 2 Issue (#491 / #490) は #1166 方式で retire コメント投稿 + `phase/done` 遷移。#490 はさらに `gh api -X PATCH ... -f state=closed` で close した。
+- `check-ac-checkbox-format.sh` は権限拒否なく実行できた (python3 フォールバックは不要だった)。
 
 ### Deferred Items
 
-- #478 の `### Pre-merge` に残る `github_check ... --commit=$(git rev-parse HEAD)` 形の未チェック AC は本 Issue のスコープ外。記録ファイルへの注記のみ行い、修正はしない。
-- `skills/code/SKILL.md` の `allowed-tools` への `check-ac-checkbox-format.sh` 追加は行わない (拒否時は python3 フォールバック)。
-- 分類結果の親 #1270 集約レポート (`docs/reports/observation-ac-audit-summary.md`) への統合は親側の担当。本 Issue では記録ファイルの作成までを行う。
-- 既に `- [x]` / `phase/done` の 3 行 (#1135 / #961 / #484 条件1) は記録のみで、GitHub 側の操作は一切行わない。
+- #478 の `### Pre-merge` に残る `github_check ... --commit=$(git rev-parse HEAD)` 形の未チェック AC は本 Issue のスコープ外のまま。記録ファイルへの注記のみ。
+- 分類結果の親 #1270 集約レポート (`docs/reports/observation-ac-audit-summary.md`) への統合は親側の担当。
+- 既に `- [x]` / `phase/done` の 3 行 (#1135 / #961 / #484 条件1) は記録のみで、GitHub 側の操作は行っていない。
 
 ### Notes for Next Phase
 
-- 対象 Issue の状態は spec 実行時 (2026-08-09) のスナップショット。`/code` 着手時に再度 `gh issue view` で各 AC 行の checkbox 状態を確認すること — observation dispatch が並行して動いており、E/B 対象行が先に PASS 済みになっている可能性がある。その場合は編集せず記録ファイルに事実を追記する。
-- Issue 本文の書き戻しは `.tmp/issue-body-<N>.md` 経由 (`gh-issue-edit.sh <N> <file>`)。対象行以外を壊さないよう、置換は当該 AC 行の HTML コメントと条件文に限定すること。
-- `opportunistic-search.sh --event auto-run --dry-run` は母集団 120 Issue に対し 1 Issue ずつ `gh issue view` を回すため数分かかる。step 7 の確認は件数差分ではなく Issue 番号の個別含有で判定する。
-- 本 Issue はリポジトリ内変更が記録ファイル 1 件のみで、大半が GitHub 上の外部操作。`/review` が検査できる diff が小さいため、外部操作の結果は記録ファイルの `## 実施記録` 節に残すこと。
+- `/review` は diff がレポートファイル 1 件のみで小さいが、外部操作 (8 Issue の本文編集・コメント投稿・ラベル遷移・1 件の close) の結果は `docs/reports/observation-ac-audit-d3.md` の `## 実施記録` 節と本 Retrospective に記録済み。
+- Pre-merge AC 7 件は本 phase で rubric/file_exists 判定により全件 PASS・チェック済み。`/merge` の pre-merge AC gate は素通りする見込み。
+- 着手時の Issue 状態再確認では spec フェーズからの drift はなかった (Design Gaps/Ambiguities 参照)。
