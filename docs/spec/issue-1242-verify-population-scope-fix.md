@@ -79,3 +79,42 @@
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: `/issue` フェーズの Issue Retrospective コメント。AC1/AC2 の verify command を `grep -n` から `file_not_contains` に、AC3 を rubric+file_contains 併記に、AC5 を `command "bats ..."` に修正した経緯と、Background 節の行番号引用 (`:291`, `:311`/`:314`) のドリフト修正を記録。本 Spec の Background/Root Cause の行番号・Implementation Steps はこの修正後の内容と整合させた。 / URL: https://github.com/saitoco/wholework/issues/1242#issuecomment-5225061949
+
+- saito / MEMBER / first-class / ## 申し送り: `modules/observation-trigger.md` の母集団記述 (#1264 統合分) / https://github.com/saitoco/wholework/issues/1242#issuecomment-5225205678
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1-5 を Spec の記載順どおりに実施した。
+
+### Design Gaps/Ambiguities
+
+- `tests/opportunistic-search.bats` の新規テスト「gh issue list is called with --state all」を書く際、既存の `gh-list-args.txt` モックは `printf '%s\n' "$@"` で引数を 1 行 1 要素で書き出す形式であることに気づかず、当初 `grep -q -- "--state all"` (1 行に 2 語) で書いて FAIL した。`tr '\n' ' '` で結合してから部分文字列マッチする形に修正して解消。Spec にはこのモック形式の詳細まで書かれていなかったため、実装時に発見した挙動。
+- 新規追加した「post-merge scope: サンプル行除外」テストの最初のドラフトは、Post-merge セクション内に検証対象と無関係な `- [x]` (チェック済み) 行を置いていたため、Post-merge スコープ化の効果とは無関係に (チェック済みという別の理由で) FAIL を再現できてしまっていた。スコープ化の効果だけを切り出して検証するよう、Post-merge セクション内は非マッチの説明文のみにして再構成した。
+
+### Rework
+
+- 上記 2 点のテスト設計の手戻り以外、大きな手戻りはなし。
+
+### Smoke Test
+
+- Spec に `## Smoke Test` セクションが存在しないため未実施 (`skills/code/SKILL.md` Step 11 の条件どおりスキップ)。
+
+### Full Suite Run (Behavioral Change Detection)
+
+- `scripts/opportunistic-search.sh` は `tests/observation-trigger.bats` / `tests/verify.bats` からも、`scripts/scan-pending-ac.sh` は `tests/run-fact-matching.bats` からも参照されていたため、挙動変化検出により `bats --jobs 18 tests/` (1581 件) を実行した。`tests/post_merge_check.bats` の 1 件 (`fail: gh issue reopen called when FAIL input given`) が並列実行時のみ FAIL したが、単独再実行 (`bats tests/post_merge_check.bats`) では 10/10 PASS しており、本 Issue の変更が触れていない `post_merge_check.sh`/`.bats` に起因する並列実行時の共有リソース競合 (フレーク) と判断した。`tests/run-fact-matching.bats` (scan-pending-ac.sh の Post-merge スコープ・`--facts`・gh 失敗時挙動をカバー) は単独実行で 29/29 PASS、`tests/opportunistic-search.bats`/`tests/scan-pending-ac.bats` (AC6 の対象) は単独実行でそれぞれ 54/54・2/2 PASS。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `--state closed` → `--state all` は両スクリプトとも 1 箇所のみの変更で完結。`opportunistic-search.sh` の Post-merge スコープ化は `scan-pending-ac.sh:125-153` の awk 境界ロジックをそのまま踏襲し、新規スコープ機構は発明しなかった (Spec の判断を踏襲)。
+- `tests/opportunistic-search.bats` の既存 46 件の `MOCK_ISSUE_BODY_*` フィクスチャ全件に `## Post-merge\n` を機械的に前置 (python3 の正規表現置換で一括変換)。Spec は「40 件」と見積もっていたが実数は 46 件だった — フィクスチャ数の見積もりズレは実装に影響しない (全件一律適用の方針は変わらないため)。
+
+### Deferred Items
+- Post-merge の post-merge AC (`次回 /audit stats --retention で #490/#465 が走査対象に含まれ、#491 の偽陽性が消えていることを確認する`, verify-type: observation event=auto-run) は未チェックのまま — 次回 `/audit stats --retention` 実行時に観測で確認する。
+- `tests/post_merge_check.bats` の並列実行時フレーク (`fail: gh issue reopen called when FAIL input given`) は本 Issue のスコープ外 (触れていないファイル) のため未対応。再発頻度が高いようなら別 Issue 化を検討。
+
+### Notes for Next Phase
+- Pre-merge AC 1-6 は全て `/code` フェーズ内で PASS 判定しチェック済み。`/review` は AC の再検証と診断的コードレビューを行う想定。
+- `bats tests/opportunistic-search.bats tests/scan-pending-ac.bats` はどちらも単独実行で全件 PASS 済み (54/54, 2/2)。CI 実行時も同じ結果になるはず。

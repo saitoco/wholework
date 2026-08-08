@@ -66,7 +66,8 @@ teardown() {
 
 @test "dry-run: returns the same non-empty result as without --dry-run" {
     export MOCK_ISSUE_LIST='[{"number": 700}]'
-    export MOCK_ISSUE_BODY_700='- [ ] /issue skill creates Issue after execution <!-- verify-type: opportunistic -->'
+    export MOCK_ISSUE_BODY_700='## Post-merge
+- [ ] /issue skill creates Issue after execution <!-- verify-type: opportunistic -->'
 
     run bash "$SCRIPT" /issue
     [ "$status" -eq 0 ]
@@ -83,7 +84,8 @@ teardown() {
 
 @test "dry-run: works with --dry-run before skill name" {
     export MOCK_ISSUE_LIST='[{"number": 701}]'
-    export MOCK_ISSUE_BODY_701='- [ ] /spec skill creates file after execution <!-- verify-type: opportunistic -->'
+    export MOCK_ISSUE_BODY_701='## Post-merge
+- [ ] /spec skill creates file after execution <!-- verify-type: opportunistic -->'
 
     run bash "$SCRIPT" --dry-run /spec
     [ "$status" -eq 0 ]
@@ -121,7 +123,8 @@ teardown() {
 
 @test "success: issue with matching condition is returned" {
     export MOCK_ISSUE_LIST='[{"number": 100}]'
-    export MOCK_ISSUE_BODY_100='- [ ] /issue skill creates Issue after execution <!-- verify-type: opportunistic -->'
+    export MOCK_ISSUE_BODY_100='## Post-merge
+- [ ] /issue skill creates Issue after execution <!-- verify-type: opportunistic -->'
 
     run bash "$SCRIPT" /issue
     [ "$status" -eq 0 ]
@@ -133,7 +136,8 @@ teardown() {
 
 @test "filter: checked condition is excluded" {
     export MOCK_ISSUE_LIST='[{"number": 101}]'
-    export MOCK_ISSUE_BODY_101='- [x] /issue skill creates Issue after execution <!-- verify-type: opportunistic -->'
+    export MOCK_ISSUE_BODY_101='## Post-merge
+- [x] /issue skill creates Issue after execution <!-- verify-type: opportunistic -->'
 
     run bash "$SCRIPT" /issue
     [ "$status" -eq 0 ]
@@ -142,7 +146,8 @@ teardown() {
 
 @test "filter: skill name mismatch is excluded" {
     export MOCK_ISSUE_LIST='[{"number": 102}]'
-    export MOCK_ISSUE_BODY_102='- [ ] /spec skill creates Spec after execution <!-- verify-type: opportunistic -->'
+    export MOCK_ISSUE_BODY_102='## Post-merge
+- [ ] /spec skill creates Spec after execution <!-- verify-type: opportunistic -->'
 
     run bash "$SCRIPT" /issue
     [ "$status" -eq 0 ]
@@ -151,8 +156,10 @@ teardown() {
 
 @test "success: multiple conditions from multiple issues" {
     export MOCK_ISSUE_LIST='[{"number": 200},{"number": 201}]'
-    export MOCK_ISSUE_BODY_200='- [ ] /spec skill creates file after execution <!-- verify-type: opportunistic -->'
-    export MOCK_ISSUE_BODY_201='- [ ] /spec skill creates file after execution <!-- verify-type: opportunistic -->
+    export MOCK_ISSUE_BODY_200='## Post-merge
+- [ ] /spec skill creates file after execution <!-- verify-type: opportunistic -->'
+    export MOCK_ISSUE_BODY_201='## Post-merge
+- [ ] /spec skill creates file after execution <!-- verify-type: opportunistic -->
 - [x] /spec skill updates list after execution <!-- verify-type: opportunistic -->'
 
     run bash "$SCRIPT" /spec
@@ -163,7 +170,8 @@ teardown() {
 
 @test "output: condition text strips checkbox markup and HTML comments" {
     export MOCK_ISSUE_LIST='[{"number": 300}]'
-    export MOCK_ISSUE_BODY_300='- [ ] /code skill can be verified after execution <!-- verify-type: opportunistic -->'
+    export MOCK_ISSUE_BODY_300='## Post-merge
+- [ ] /code skill can be verified after execution <!-- verify-type: opportunistic -->'
 
     run bash "$SCRIPT" /code
     [ "$status" -eq 0 ]
@@ -175,7 +183,8 @@ teardown() {
 
 @test "event filter: --event matches observation conditions with matching event" {
     export MOCK_ISSUE_LIST='[{"number": 400}]'
-    export MOCK_ISSUE_BODY_400='- [ ] Next /review --full auto-checks this condition <!-- verify-type: observation event=pr-review-full -->'
+    export MOCK_ISSUE_BODY_400='## Post-merge
+- [ ] Next /review --full auto-checks this condition <!-- verify-type: observation event=pr-review-full -->'
 
     run bash "$SCRIPT" --event pr-review-full
     [ "$status" -eq 0 ]
@@ -186,7 +195,8 @@ teardown() {
 
 @test "event filter: --event excludes opportunistic conditions" {
     export MOCK_ISSUE_LIST='[{"number": 401}]'
-    export MOCK_ISSUE_BODY_401='- [ ] /review skill creates review after execution <!-- verify-type: opportunistic -->'
+    export MOCK_ISSUE_BODY_401='## Post-merge
+- [ ] /review skill creates review after execution <!-- verify-type: opportunistic -->'
 
     run bash "$SCRIPT" --event pr-review-full
     [ "$status" -eq 0 ]
@@ -195,7 +205,8 @@ teardown() {
 
 @test "event filter: --event excludes non-matching event name" {
     export MOCK_ISSUE_LIST='[{"number": 402}]'
-    export MOCK_ISSUE_BODY_402='- [ ] Next /auto auto-checks this condition <!-- verify-type: observation event=auto-run -->'
+    export MOCK_ISSUE_BODY_402='## Post-merge
+- [ ] Next /auto auto-checks this condition <!-- verify-type: observation event=auto-run -->'
 
     run bash "$SCRIPT" --event pr-review-full
     [ "$status" -eq 0 ]
@@ -204,7 +215,8 @@ teardown() {
 
 @test "event filter: --event with dry-run returns the same non-empty result as without --dry-run" {
     export MOCK_ISSUE_LIST='[{"number": 702}]'
-    export MOCK_ISSUE_BODY_702='- [ ] Next /review --full auto-checks this condition <!-- verify-type: observation event=pr-review-full -->'
+    export MOCK_ISSUE_BODY_702='## Post-merge
+- [ ] Next /review --full auto-checks this condition <!-- verify-type: observation event=pr-review-full -->'
 
     run bash "$SCRIPT" --event pr-review-full
     [ "$status" -eq 0 ]
@@ -221,7 +233,8 @@ teardown() {
 
 @test "context gate: keyword found in context file includes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 500}]'
-    export MOCK_ISSUE_BODY_500='- [ ] Verify enum coverage <!-- verify-type: observation event=pr-review-full keyword=enum -->'
+    export MOCK_ISSUE_BODY_500='## Post-merge
+- [ ] Verify enum coverage <!-- verify-type: observation event=pr-review-full keyword=enum -->'
     echo "This spec defines an enum for status codes." > "$BATS_TEST_TMPDIR/context-has-enum.md"
 
     run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-has-enum.md"
@@ -232,7 +245,8 @@ teardown() {
 
 @test "context gate: keyword absent from context file excludes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 501}]'
-    export MOCK_ISSUE_BODY_501='- [ ] Verify enum coverage <!-- verify-type: observation event=pr-review-full keyword=enum -->'
+    export MOCK_ISSUE_BODY_501='## Post-merge
+- [ ] Verify enum coverage <!-- verify-type: observation event=pr-review-full keyword=enum -->'
     echo "This spec covers formatting only." > "$BATS_TEST_TMPDIR/context-no-enum.md"
 
     run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-no-enum.md"
@@ -242,7 +256,8 @@ teardown() {
 
 @test "context gate: AC without keyword= matches unconditionally even with --context-file" {
     export MOCK_ISSUE_LIST='[{"number": 502}]'
-    export MOCK_ISSUE_BODY_502='- [ ] Next /review --full auto-checks this condition <!-- verify-type: observation event=pr-review-full -->'
+    export MOCK_ISSUE_BODY_502='## Post-merge
+- [ ] Next /review --full auto-checks this condition <!-- verify-type: observation event=pr-review-full -->'
     echo "Irrelevant content." > "$BATS_TEST_TMPDIR/context-any.md"
 
     run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-any.md"
@@ -253,7 +268,8 @@ teardown() {
 
 @test "context gate: keyword= present but no --context-file matches unconditionally" {
     export MOCK_ISSUE_LIST='[{"number": 503}]'
-    export MOCK_ISSUE_BODY_503='- [ ] Verify enum coverage <!-- verify-type: observation event=pr-review-full keyword=enum -->'
+    export MOCK_ISSUE_BODY_503='## Post-merge
+- [ ] Verify enum coverage <!-- verify-type: observation event=pr-review-full keyword=enum -->'
 
     run bash "$SCRIPT" --event pr-review-full
     [ "$status" -eq 0 ]
@@ -263,7 +279,8 @@ teardown() {
 
 @test "context gate: nonexistent --context-file path disables gate with a warning" {
     export MOCK_ISSUE_LIST='[{"number": 504}]'
-    export MOCK_ISSUE_BODY_504='- [ ] Verify enum coverage <!-- verify-type: observation event=pr-review-full keyword=enum -->'
+    export MOCK_ISSUE_BODY_504='## Post-merge
+- [ ] Verify enum coverage <!-- verify-type: observation event=pr-review-full keyword=enum -->'
 
     run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/does-not-exist.md" 2>&1
     [ "$status" -eq 0 ]
@@ -274,7 +291,8 @@ teardown() {
 
 @test "context gate: keyword= with no space before --> is extracted without trailing dashes" {
     export MOCK_ISSUE_LIST='[{"number": 505}]'
-    export MOCK_ISSUE_BODY_505='- [ ] Verify enum coverage <!-- verify-type: observation event=pr-review-full keyword=enum--> '
+    export MOCK_ISSUE_BODY_505='## Post-merge
+- [ ] Verify enum coverage <!-- verify-type: observation event=pr-review-full keyword=enum--> '
     echo "This spec defines an enum for status codes." > "$BATS_TEST_TMPDIR/context-has-enum-2.md"
 
     run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-has-enum-2.md"
@@ -285,7 +303,8 @@ teardown() {
 
 @test "context gate: keyword found only inside a path-like token excludes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 506}]'
-    export MOCK_ISSUE_BODY_506='- [ ] Verify workflow coverage <!-- verify-type: observation event=pr-review-full keyword=workflow -->'
+    export MOCK_ISSUE_BODY_506='## Post-merge
+- [ ] Verify workflow coverage <!-- verify-type: observation event=pr-review-full keyword=workflow -->'
     echo "docs/workflow.md" > "$BATS_TEST_TMPDIR/context-path-only.md"
 
     run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-path-only.md"
@@ -295,7 +314,8 @@ teardown() {
 
 @test "context gate: keyword found in prose text still includes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 507}]'
-    export MOCK_ISSUE_BODY_507='- [ ] Verify workflow coverage <!-- verify-type: observation event=pr-review-full keyword=workflow -->'
+    export MOCK_ISSUE_BODY_507='## Post-merge
+- [ ] Verify workflow coverage <!-- verify-type: observation event=pr-review-full keyword=workflow -->'
     echo "This PR changes the CI workflow configuration." > "$BATS_TEST_TMPDIR/context-prose.md"
 
     run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-prose.md"
@@ -306,7 +326,8 @@ teardown() {
 
 @test "config gate: enabled config key includes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 600}]'
-    export MOCK_ISSUE_BODY_600='- [ ] Verify demotion is suppressed <!-- verify-type: observation event=auto-run config=some-flag -->'
+    export MOCK_ISSUE_BODY_600='## Post-merge
+- [ ] Verify demotion is suppressed <!-- verify-type: observation event=auto-run config=some-flag -->'
     echo "some-flag: true" > "$BATS_TEST_TMPDIR/config-enabled.yml"
     export WHOLEWORK_CONFIG_PATH="$BATS_TEST_TMPDIR/config-enabled.yml"
 
@@ -319,7 +340,8 @@ teardown() {
 
 @test "config gate: disabled config key excludes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 601}]'
-    export MOCK_ISSUE_BODY_601='- [ ] Verify demotion is suppressed <!-- verify-type: observation event=auto-run config=some-flag -->'
+    export MOCK_ISSUE_BODY_601='## Post-merge
+- [ ] Verify demotion is suppressed <!-- verify-type: observation event=auto-run config=some-flag -->'
     export WHOLEWORK_CONFIG_PATH=/dev/null
 
     run bash "$SCRIPT" --event auto-run
@@ -330,7 +352,8 @@ teardown() {
 
 @test "config gate: AC without config= matches unconditionally" {
     export MOCK_ISSUE_LIST='[{"number": 602}]'
-    export MOCK_ISSUE_BODY_602='- [ ] Verify demotion is suppressed <!-- verify-type: observation event=auto-run -->'
+    export MOCK_ISSUE_BODY_602='## Post-merge
+- [ ] Verify demotion is suppressed <!-- verify-type: observation event=auto-run -->'
     export WHOLEWORK_CONFIG_PATH=/dev/null
 
     run bash "$SCRIPT" --event auto-run
@@ -342,7 +365,8 @@ teardown() {
 
 @test "when gate: run facts route matches includes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 700}]'
-    export MOCK_ISSUE_BODY_700='- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
+    export MOCK_ISSUE_BODY_700='## Post-merge
+- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
     export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":700,"route":"operate","recovery_tiers":[]}]}'
     export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
 
@@ -355,7 +379,8 @@ teardown() {
 
 @test "when gate: run facts route mismatch excludes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 701}]'
-    export MOCK_ISSUE_BODY_701='- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
+    export MOCK_ISSUE_BODY_701='## Post-merge
+- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
     export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":701,"route":"pr","recovery_tiers":[]}]}'
     export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
 
@@ -367,7 +392,8 @@ teardown() {
 
 @test "when gate: AC without when= matches unconditionally" {
     export MOCK_ISSUE_LIST='[{"number": 702}]'
-    export MOCK_ISSUE_BODY_702='- [ ] Next /auto auto-checks this condition <!-- verify-type: observation event=auto-run -->'
+    export MOCK_ISSUE_BODY_702='## Post-merge
+- [ ] Next /auto auto-checks this condition <!-- verify-type: observation event=auto-run -->'
     export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
 
     run bash "$SCRIPT" --event auto-run
@@ -379,7 +405,8 @@ teardown() {
 
 @test "when gate: undeterminable run facts fail open with a warning" {
     export MOCK_ISSUE_LIST='[{"number": 703}]'
-    export MOCK_ISSUE_BODY_703='- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
+    export MOCK_ISSUE_BODY_703='## Post-merge
+- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
     unset MOCK_RUN_FACTS
     export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
 
@@ -393,7 +420,8 @@ teardown() {
 
 @test "when gate: unknown axis fails open with a warning" {
     export MOCK_ISSUE_LIST='[{"number": 704}]'
-    export MOCK_ISSUE_BODY_704='- [ ] pr-state observed <!-- verify-type: observation event=auto-run when=pr-state:open -->'
+    export MOCK_ISSUE_BODY_704='## Post-merge
+- [ ] pr-state observed <!-- verify-type: observation event=auto-run when=pr-state:open -->'
     export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":704,"route":"pr","recovery_tiers":[]}]}'
     export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
 
@@ -407,7 +435,8 @@ teardown() {
 
 @test "when gate: comma-separated AND excludes when one clause fails" {
     export MOCK_ISSUE_LIST='[{"number": 705}]'
-    export MOCK_ISSUE_BODY_705='- [ ] batch recovery observed <!-- verify-type: observation event=auto-run when=mode:batch,recovery-tier:2 -->'
+    export MOCK_ISSUE_BODY_705='## Post-merge
+- [ ] batch recovery observed <!-- verify-type: observation event=auto-run when=mode:batch,recovery-tier:2 -->'
     export MOCK_RUN_FACTS='{"session_id":"s1","mode":"batch","issues":[{"number":705,"route":"pr","recovery_tiers":[1]}]}'
     export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
 
@@ -419,7 +448,8 @@ teardown() {
 
 @test "when gate: --facts-file explicit designation bypasses collect-run-facts.sh" {
     export MOCK_ISSUE_LIST='[{"number": 706}]'
-    export MOCK_ISSUE_BODY_706='- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
+    export MOCK_ISSUE_BODY_706='## Post-merge
+- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
     # MOCK_RUN_FACTS deliberately mismatches route:operate (facts.json below is the only source
     # that matches). If --facts-file were silently ignored and collect-run-facts.sh's mock
     # consulted instead, the result would be [] instead of a match on #706 — making this
@@ -437,7 +467,8 @@ teardown() {
 
 @test "when gate: --session is forwarded to collect-run-facts.sh --session" {
     export MOCK_ISSUE_LIST='[{"number": 710}]'
-    export MOCK_ISSUE_BODY_710='- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
+    export MOCK_ISSUE_BODY_710='## Post-merge
+- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
     export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":710,"route":"operate","recovery_tiers":[]}]}'
     export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
 
@@ -452,7 +483,8 @@ teardown() {
 
 @test "when gate: --facts-file takes priority over --session when both are given" {
     export MOCK_ISSUE_LIST='[{"number": 711}]'
-    export MOCK_ISSUE_BODY_711='- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
+    export MOCK_ISSUE_BODY_711='## Post-merge
+- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
     # MOCK_RUN_FACTS deliberately mismatches route:operate — if --session were consulted
     # instead of --facts-file, the result would be [] instead of a match on #711.
     export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":711,"route":"pr","recovery_tiers":[]}]}'
@@ -469,7 +501,8 @@ teardown() {
 
 @test "when gate: no --session and no --facts-file calls collect-run-facts.sh with no arguments" {
     export MOCK_ISSUE_LIST='[{"number": 712}]'
-    export MOCK_ISSUE_BODY_712='- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
+    export MOCK_ISSUE_BODY_712='## Post-merge
+- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
     export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":712,"route":"operate","recovery_tiers":[]}]}'
     export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
 
@@ -484,7 +517,8 @@ teardown() {
 
 @test "when gate: when= appearing in AC prose text (outside the tag) does not corrupt gate matching" {
     export MOCK_ISSUE_LIST='[{"number": 707}]'
-    export MOCK_ISSUE_BODY_707='- [ ] AC text that quotes when=route:operate as an example <!-- verify-type: observation event=auto-run when=route:operate -->'
+    export MOCK_ISSUE_BODY_707='## Post-merge
+- [ ] AC text that quotes when=route:operate as an example <!-- verify-type: observation event=auto-run when=route:operate -->'
     export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":707,"route":"operate","recovery_tiers":[]}]}'
     export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
 
@@ -497,7 +531,8 @@ teardown() {
 
 @test "when gate: glob metacharacters in a when= value are treated as a literal (no pathname expansion)" {
     export MOCK_ISSUE_LIST='[{"number": 708}]'
-    export MOCK_ISSUE_BODY_708='- [ ] wildcard axis value observed <!-- verify-type: observation event=auto-run when=route:* -->'
+    export MOCK_ISSUE_BODY_708='## Post-merge
+- [ ] wildcard axis value observed <!-- verify-type: observation event=auto-run when=route:* -->'
     export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[{"number":708,"route":"operate","recovery_tiers":[]}]}'
     export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
 
@@ -513,7 +548,8 @@ teardown() {
 
 @test "when gate: mode resolved with empty issues fails open on the route axis instead of silently excluding" {
     export MOCK_ISSUE_LIST='[{"number": 709}]'
-    export MOCK_ISSUE_BODY_709='- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
+    export MOCK_ISSUE_BODY_709='## Post-merge
+- [ ] operate route observed <!-- verify-type: observation event=auto-run when=route:operate -->'
     export MOCK_RUN_FACTS='{"session_id":"s1","mode":"single","issues":[]}'
     export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
 
@@ -527,7 +563,8 @@ teardown() {
 
 @test "when gate: execution-context matches includes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 710}]'
-    export MOCK_ISSUE_BODY_710='- [ ] main context observed <!-- verify-type: observation event=pr-review-full when=execution-context:main -->'
+    export MOCK_ISSUE_BODY_710='## Post-merge
+- [ ] main context observed <!-- verify-type: observation event=pr-review-full when=execution-context:main -->'
 
     run bash "$SCRIPT" --event pr-review-full --execution-context main
     [ "$status" -eq 0 ]
@@ -537,7 +574,8 @@ teardown() {
 
 @test "when gate: execution-context mismatch excludes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 711}]'
-    export MOCK_ISSUE_BODY_711='- [ ] main context observed <!-- verify-type: observation event=pr-review-full when=execution-context:main -->'
+    export MOCK_ISSUE_BODY_711='## Post-merge
+- [ ] main context observed <!-- verify-type: observation event=pr-review-full when=execution-context:main -->'
 
     run bash "$SCRIPT" --event pr-review-full --execution-context fork
     [ "$status" -eq 0 ]
@@ -546,7 +584,8 @@ teardown() {
 
 @test "when gate: execution-context clause without --execution-context flag fails open with a warning" {
     export MOCK_ISSUE_LIST='[{"number": 712}]'
-    export MOCK_ISSUE_BODY_712='- [ ] main context observed <!-- verify-type: observation event=pr-review-full when=execution-context:main -->'
+    export MOCK_ISSUE_BODY_712='## Post-merge
+- [ ] main context observed <!-- verify-type: observation event=pr-review-full when=execution-context:main -->'
 
     run bash "$SCRIPT" --event pr-review-full 2>&1
     [ "$status" -eq 0 ]
@@ -557,7 +596,8 @@ teardown() {
 
 @test "session=next declaration does not affect event= dispatch matching" {
     export MOCK_ISSUE_LIST='[{"number": 603}]'
-    export MOCK_ISSUE_BODY_603='- [ ] Next-session skill self-update observed <!-- verify-type: observation event=auto-run session=next -->'
+    export MOCK_ISSUE_BODY_603='## Post-merge
+- [ ] Next-session skill self-update observed <!-- verify-type: observation event=auto-run session=next -->'
 
     run bash "$SCRIPT" --event auto-run
     [ "$status" -eq 0 ]
@@ -567,7 +607,8 @@ teardown() {
 
 @test "event filter: unknown event emits warning and falls back" {
     export MOCK_ISSUE_LIST='[{"number": 403}]'
-    export MOCK_ISSUE_BODY_403='- [ ] /review skill creates review after execution <!-- verify-type: opportunistic -->'
+    export MOCK_ISSUE_BODY_403='## Post-merge
+- [ ] /review skill creates review after execution <!-- verify-type: opportunistic -->'
 
     # Merge stderr into stdout so the warning is captured in $output
     run bash "$SCRIPT" --event unknown-event-xyz /review 2>&1
@@ -581,7 +622,8 @@ teardown() {
 
 @test "fact gate: token match in condition text includes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 800}]'
-    export MOCK_ISSUE_BODY_800='- [ ] /verify skill checks pr route candidates <!-- verify-type: opportunistic -->'
+    export MOCK_ISSUE_BODY_800='## Post-merge
+- [ ] /verify skill checks pr route candidates <!-- verify-type: opportunistic -->'
     echo '{"session_id":"s1","issues":[{"number":1,"fact_tokens":["pr route"]}]}' > "$BATS_TEST_TMPDIR/facts.json"
 
     run bash "$SCRIPT" /verify --facts "$BATS_TEST_TMPDIR/facts.json"
@@ -592,7 +634,8 @@ teardown() {
 
 @test "fact gate: token mismatch excludes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 801}]'
-    export MOCK_ISSUE_BODY_801='- [ ] /verify skill checks unrelated candidates <!-- verify-type: opportunistic -->'
+    export MOCK_ISSUE_BODY_801='## Post-merge
+- [ ] /verify skill checks unrelated candidates <!-- verify-type: opportunistic -->'
     echo '{"session_id":"s1","issues":[{"number":1,"fact_tokens":["pr route"]}]}' > "$BATS_TEST_TMPDIR/facts.json"
 
     run bash "$SCRIPT" /verify --facts "$BATS_TEST_TMPDIR/facts.json"
@@ -602,7 +645,8 @@ teardown() {
 
 @test "fact gate: --facts omitted matches unconditionally (backward compatible)" {
     export MOCK_ISSUE_LIST='[{"number": 802}]'
-    export MOCK_ISSUE_BODY_802='- [ ] /verify skill checks unrelated candidates <!-- verify-type: opportunistic -->'
+    export MOCK_ISSUE_BODY_802='## Post-merge
+- [ ] /verify skill checks unrelated candidates <!-- verify-type: opportunistic -->'
 
     run bash "$SCRIPT" /verify
     [ "$status" -eq 0 ]
@@ -612,7 +656,8 @@ teardown() {
 
 @test "fact gate: nonexistent --facts path disables gate with a warning" {
     export MOCK_ISSUE_LIST='[{"number": 803}]'
-    export MOCK_ISSUE_BODY_803='- [ ] /verify skill checks unrelated candidates <!-- verify-type: opportunistic -->'
+    export MOCK_ISSUE_BODY_803='## Post-merge
+- [ ] /verify skill checks unrelated candidates <!-- verify-type: opportunistic -->'
 
     run bash "$SCRIPT" /verify --facts "$BATS_TEST_TMPDIR/nonexistent-facts.json" 2>&1
     [ "$status" -eq 0 ]
@@ -623,11 +668,37 @@ teardown() {
 
 @test "fact gate: ignored in event mode (--event) -- --facts-file/when= remain the only event-mode gates" {
     export MOCK_ISSUE_LIST='[{"number": 804}]'
-    export MOCK_ISSUE_BODY_804='- [ ] pr route observed <!-- verify-type: observation event=auto-run -->'
+    export MOCK_ISSUE_BODY_804='## Post-merge
+- [ ] pr route observed <!-- verify-type: observation event=auto-run -->'
     echo '{"session_id":"s1","issues":[{"number":1,"fact_tokens":["token-not-in-condition"]}]}' > "$BATS_TEST_TMPDIR/facts.json"
 
     run bash "$SCRIPT" --event auto-run --facts "$BATS_TEST_TMPDIR/facts.json"
     [ "$status" -eq 0 ]
     echo "$output" | jq -e 'length == 1' > /dev/null
     echo "$output" | jq -e '.[0].number == 804' > /dev/null
+}
+
+@test "population: gh issue list is called with --state all, not --state closed (issue #1242)" {
+    export MOCK_ISSUE_LIST="[]"
+    run bash "$SCRIPT" /issue
+    [ "$status" -eq 0 ]
+    args_joined="$(tr '\n' ' ' < "$MOCK_DIR/gh-list-args.txt")"
+    [[ "$args_joined" == *"--state all"* ]]
+    [[ "$args_joined" != *"--state closed"* ]]
+}
+
+@test "post-merge scope: a sample condition line outside the Post-merge section is excluded (issue #1242)" {
+    export MOCK_ISSUE_LIST='[{"number": 900}]'
+    export MOCK_ISSUE_BODY_900='## Some Other Section
+
+```
+- [ ] /issue skill creates Issue after execution (example only) <!-- verify-type: opportunistic -->
+```
+
+## Post-merge
+No pending conditions.'
+
+    run bash "$SCRIPT" /issue
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
 }

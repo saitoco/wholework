@@ -207,7 +207,7 @@ Key modules:
 - `scripts/opportunistic-search.sh` — opportunistic skill search and observation event scan
 - `scripts/post_merge_check.sh` — bundle and run post-merge manual (verify-type: manual) ACs for multiple Issues in one session; prompts P/F/S per AC; transitions to phase/done on all-PASS or reopens on FAIL
 - `scripts/collect-run-facts.sh` — structure a completed `/auto` run's facts (route including the diff-less operate value, run mode, Size, phase outcomes, PR state, anomaly counts, recovery tiers, fact tokens) as JSON from `.tmp/auto-events.jsonl`, for run-fact AC reconciliation (`modules/run-fact-matching.md`)
-- `scripts/scan-pending-ac.sh` — enumerate unchecked post-merge acceptance conditions across closed `phase/verify` Issues, optionally pre-filtered by `collect-run-facts.sh` fact tokens
+- `scripts/scan-pending-ac.sh` — enumerate unchecked post-merge acceptance conditions across `phase/verify` Issues (all states), optionally pre-filtered by `collect-run-facts.sh` fact tokens
 - `scripts/apply-run-fact-match.sh` — deterministic autonomy-tier gate for a run-fact AC match verdict (satisfied/not_satisfied/ambiguous): auto-checks the checkbox, prints an advisory `Recommend:` line, or does nothing
 - `scripts/triage-backlog-filter.sh` — filter backlog for triage
 
