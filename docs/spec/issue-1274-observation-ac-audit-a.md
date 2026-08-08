@@ -109,3 +109,4 @@ Implementation Steps 8 個・Pre-merge 検証 5 項目で、いずれも SPEC_DE
 cutoff: `2026-08-08T14:13:15Z` (直近の `phase/*` ラベル付与時刻)。cutoff 以降のコメント 1 件を消費した。cross-phase marker 例外 (`type=verify-fail` / `type=preview-ac-unverified`) の追加スキャンでは該当なし。
 
 - saito / MEMBER / first-class / `/issue 1274 --non-interactive` の Issue Retrospective — 曖昧性の自動解決 1 点 (実行前提の明記) の記録。内容は Issue 本文の `## Auto-Resolved Ambiguity Points` に反映済みで、本 Spec の「実行前提は充足済み」判断の根拠として消費した / https://github.com/saitoco/wholework/issues/1274#issuecomment-5226494380
+- saito / MEMBER / first-class / ## Autonomous Auto-Resolve Log / https://github.com/saitoco/wholework/issues/1274#issuecomment-5228146102
