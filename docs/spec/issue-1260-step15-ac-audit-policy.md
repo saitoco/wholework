@@ -101,3 +101,35 @@ Nothing to note — rubric 3件・section_contains 1件とも安全モードで�
 
 ### Notes for Next Phase
 - `/verify` は Post-merge AC の observation 項目のみが対象。次回 `/issue` Step 15 の自己生成 AC 検出イベントが発生するまでは PASS/FAIL 判定不能な観察待ち状態である点に留意。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- rubric AC1 に対する補助 `section_contains` チェック (対象キーワード「自己生成」) を `modules/verify-patterns.md` §9 のガイドラインに従って追加した。同一バッチの #1220 では補助 `grep` が「常時 PASS」に該当して `/spec` での差し替えを要したが、今回は実装後にのみ出現する語を選んでおり同じ轍を踏んでいない
+- 検討候補 A/B/C の選定は意図的に `/spec` へ委譲する設計として Issue 側で解消せず、ambiguity なしと判定した
+
+#### spec
+- **案 B (一律非破壊) を採用**。起票時には見えていなかった論点 — 「同一実行内で自己生成された」という境界の定義が `/triage` Step 2 の auto-chain 経由では曖昧になる (ユーザ視点では連続した 1 操作だが skill 視点では 2 つの独立した invocation) — を根拠に、案 A (自己生成のみ自動修正許可) を退けている。判断を曖昧な境界に依存させると、このルールが防ごうとしている非決定性そのものを再導入するという論理は妥当
+- 起票時に指摘した案 B の穴 (「Size XS は `/spec` をスキップするため引き取り手がいない」) も解決済み。`modules/l0-surfaces.md` の Comment Consumption Procedure により、XS の patch route では `/code` が audit コメントを一級入力として直接読むため、新規機構なしで引き継ぎが成立する
+- 起票の根拠となった観測 (#1220 は非破壊・#1221 は自動修正) が `skills/triage/skill-dev-verify-audit.md:246-248` に観測事実として記録され、規約の存在理由が追跡可能になった
+
+#### code
+- Deviations / Design Gaps / Rework いずれも N/A
+- Behavioral Change Detection が発火し `bats --jobs 18 tests/` のフルスイート実行が必要になった (`skills/issue/SKILL.md` が `tests/issue.bats` 以外の複数テストファイルから参照されているため)
+
+#### review
+- Pre-merge AC 4 件を独立再検証し全て PASS を再確認。MUST 0 件
+- SHOULD 1 件を検出・修正: `skills/triage/skill-dev-verify-audit.md:254` の Size 列挙が Size S を欠落していた。「Size グループを個別列挙する記述は将来のルーティング変更で陳腐化しやすい」という教訓に対し、同 Spec の Notes にある一般化表現 (「次フェーズ (`/spec` または Size XS の場合は `/code`)」) と平仄を取る方針で、1 箇所のみのため起票不要と判断したのは妥当
+
+#### merge
+- pre-merge AC ゲートで 4 件チェック済み・`review_incomplete_fallback` なしを確認し、追加確認なしで squash merge。conflict・recovery ともになし
+
+#### verify
+- Pre-merge 4 件は already-checked skip rule で SKIPPED、Post-merge 1 件は `event=auto-run` 未発火で SKIPPED。FAIL / UNCERTAIN ゼロ
+- 本 Issue はバッチ内で起票 → triage → 実装 → 着地まで一周した 2 件目 (#1255 に次ぐ)。起票時の懸念 (XS 経路の穴) が Spec で明示的に解消されており、**起票時の記述が設計判断の入力として実際に機能した**ことが確認できる
+
+### Improvement Proposals
+
+- **#1255 の切り分け経路が local フルスイート実行をカバーしていない** — **既存 #1255 に追記済み、新規起票せず** ([issuecomment-5225536051](https://github.com/saitoco/wholework/issues/1255#issuecomment-5225536051))。本 Issue の code フェーズで `tests/post_merge_check.bats` の flake が本バッチ 4 例目として再現したが、#1255 (PR #1269) の変更は `.github/workflows/test.yml` + `.gitignore` のみで、`/code` が Behavioral Change Detection で実行する local の `bats --jobs <N> tests/` (`modules/test-runner.md:56` / `skills/code/SKILL.md:363`) には `--filter-status failed` 相当の切り分けがない。#1260 ではエージェントが単体再実行で自力確認し `infra` 分類の上で continue しており判断自体は正しいが、CI 側で機械化したのと同じ作業を手動反復している状態。#1255 の Post-merge AC は CI スコープのため AC 違反ではなく、対応するなら `modules/test-runner.md` のフルスイート手順に同じイディオムを追加する別軸として扱うのが妥当
