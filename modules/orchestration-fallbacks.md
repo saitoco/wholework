@@ -638,6 +638,8 @@ When `run-auto-sub.sh` runs the Tier 2 path (`apply-fallback.sh` succeeds), the 
 
 When `apply-fallback.sh` matches a known symptom anchor but the handler itself fails (`exit 2`, distinct from the anchor-not-matched `exit 1`), `run_phase_with_recovery()` emits `recovery tier=2 result=failed` before falling through to Tier 3 — no `orchestration-recoveries.md` entry is written for this case, since `write_recovery_entry()` is only called from a handler's success branch.
 
+As of #1281, `write_recovery_entry()` writes the matched symptom anchor as the entry's `### Diagnosis` leading `- cause: <slug>` line. This groups Tier 2 entries by anchor for `collect-recovery-candidates.sh`'s frequency counting, though Tier 2 entries are excluded from that counting regardless, per the `#1191` `Improvement Candidate: N/A` exclusion rule (`scripts/collect-recovery-candidates.sh`).
+
 ### Manual path: recoveries.md + manual_intervention event
 
 When the parent session performs a manual recovery (e.g., `worktree-merge-push.sh` re-run, `gh pr create` manual call, or `run-*.sh` re-execution), there is no automatic bash path to write the recovery record. The operator must explicitly call — this is itself a standalone Bash tool call subject to the same pointer file regeneration discipline as `/auto` Step 1's `run-*.sh` calls (the PGID pointer from an earlier Bash call is not visible here), so regenerate it in the same call before invoking the subcommand (Issue #1075):
@@ -658,3 +660,5 @@ See also: `modules/orchestration-fallbacks.md#manual-recovery-spec-write`
 When `run-auto-sub.sh` runs the Tier 3 path (`spawn-recovery-subagent.sh` succeeds), the recovery record is written to `docs/reports/orchestration-recoveries.md`; the bash block in `run_phase_with_recovery()` commits and pushes that file immediately. As of #1181, `run-auto-sub.sh` no longer additionally writes a per-Issue Spec-side paper trail (`_write_tier3_recovery_to_spec()` was removed) — `docs/reports/orchestration-recoveries.md` is the sole recording path for Tier 3, same as Tier 2.
 
 When `spawn-recovery-subagent.sh` itself fails (any non-zero exit reached after the Tier 3 call — `action=abort`, an invalid recovery plan, or a `claude -p` failure), `run_phase_with_recovery()` emits `recovery tier=3 result=failed action=<action>` (reading `action` from the leftover `.tmp/recovery-plan-<issue>-<phase>.json` when present, `unknown` otherwise) before propagating the original exit code. No `orchestration-recoveries.md` entry is written for this case — `write_recovery_entry()` inside `spawn-recovery-subagent.sh` is only called from the `retry`/`skip`/`recover` success branches, never from `abort`.
+
+As of #1281, `write_recovery_entry()` writes the recovery plan's `cause` field as the entry's `### Diagnosis` leading `- cause: <slug>` line, normalizing a missing, non-string, or non-kebab-case value to `unclassified`.
