@@ -199,7 +199,7 @@ wholework/
 - `scripts/opportunistic-search.sh` — opportunistic スキル検索と observation イベントスキャン
 - `scripts/post_merge_check.sh` — 複数 Issue の post-merge 手動 AC（verify-type: manual）を 1 セッションでバンドル実行; AC ごとに P/F/S を対話入力; 全 PASS で phase/done 遷移、FAIL で reopen
 - `scripts/collect-run-facts.sh` — 完走した `/auto` 実行の事実 (diff-less な operate 値を含む route・実行 mode・Size・各 phase の結果・PR 状態・anomaly 件数・recovery tier・fact token) を `.tmp/auto-events.jsonl` から JSON に構造化する。run-fact AC 照合 (`modules/run-fact-matching.md`) の入力
-- `scripts/scan-pending-ac.sh` — `phase/verify` の closed Issue から未チェックの post-merge AC を列挙し、`collect-run-facts.sh` の fact token で事前絞り込みする
+- `scripts/scan-pending-ac.sh` — `phase/verify` の Issue (全 state) から未チェックの post-merge AC を列挙し、`collect-run-facts.sh` の fact token で事前絞り込みする
 - `scripts/apply-run-fact-match.sh` — run-fact AC 照合の verdict (satisfied/not_satisfied/ambiguous) に対する決定的な autonomy tier ゲート: チェックボックスの自動チェック、`Recommend:` 候補提示、または無処理のいずれかを実行
 - `scripts/triage-backlog-filter.sh` — triage 向けバックログフィルタ
 

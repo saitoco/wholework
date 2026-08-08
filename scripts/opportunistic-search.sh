@@ -265,7 +265,9 @@ resolve_run_facts() {
     RUN_FACTS_JSON="$facts"
 }
 
-# 1. Fetch closed Issues with phase/verify label
+# 1. Fetch Issues with phase/verify label (all states — OPEN Issues that stay
+#    in phase/verify are structurally excluded from this pipeline otherwise;
+#    Issue #1242)
 #
 # Previously fetched via a fixed --limit 50 with no pre-filter, silently
 # truncating the population once phase/verify+closed Issues exceeded 50
@@ -288,7 +290,7 @@ if [ -n "$EVENT_NAME" ]; then
 else
     SEARCH_TEXT="verify-type: opportunistic in:body"
 fi
-ISSUES_JSON=$(gh issue list --label "phase/verify" --state closed --search "$SEARCH_TEXT" --json number --limit "$POPULATION_LIMIT")
+ISSUES_JSON=$(gh issue list --label "phase/verify" --state all --search "$SEARCH_TEXT" --json number --limit "$POPULATION_LIMIT")
 ISSUE_COUNT=$(echo "$ISSUES_JSON" | jq 'length')
 if [ "$ISSUE_COUNT" -ge "$POPULATION_LIMIT" ]; then
     echo "Warning: population fetch reached --limit ${POPULATION_LIMIT}; results may be truncated. Consider raising POPULATION_LIMIT in scripts/opportunistic-search.sh or narrowing the --search filter." >&2
@@ -300,18 +302,30 @@ if [ -z "$ISSUE_NUMBERS" ]; then
     exit 0
 fi
 
+# Post-merge section scope: extract only lines between a `### Post-merge` /
+# `## Post-merge` heading and the next `## ` / `### ` heading, mirroring
+# scan-pending-ac.sh's own boundary logic. This keeps sample `- [ ]` lines
+# outside the Post-merge section (e.g. inside a code fence in an unrelated
+# section) from being misread as real acceptance conditions (Issue #1242).
+POST_MERGE_AWK='
+  /^### Post-merge/ || /^## Post-merge/ { in_section = 1; next }
+  /^## / || /^### / { in_section = 0; next }
+  { if (in_section) print }
+'
+
 # 2. Fetch each Issue body and filter
 RESULTS="[]"
 
 for N in $ISSUE_NUMBERS; do
     BODY=$(gh issue view "$N" --json body -q .body)
+    SCOPED_BODY=$(printf '%s\n' "$BODY" | awk "$POST_MERGE_AWK")
 
     if [ -n "$EVENT_NAME" ]; then
         # Event mode: match verify-type: observation with the specified event name
-        MATCHED=$(echo "$BODY" | grep -E '^- \[ \]' | grep "verify-type: observation" | grep "event=${EVENT_NAME}" || true)
+        MATCHED=$(echo "$SCOPED_BODY" | grep -E '^- \[ \]' | grep "verify-type: observation" | grep "event=${EVENT_NAME}" || true)
     else
         # Opportunistic mode: match verify-type: opportunistic with skill name
-        MATCHED=$(echo "$BODY" | grep -E '^- \[ \]' | grep "verify-type: opportunistic" | grep -F "$SKILL_NAME" || true)
+        MATCHED=$(echo "$SCOPED_BODY" | grep -E '^- \[ \]' | grep "verify-type: opportunistic" | grep -F "$SKILL_NAME" || true)
     fi
 
     if [ -z "$MATCHED" ]; then

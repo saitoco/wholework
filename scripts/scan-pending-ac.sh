@@ -103,7 +103,7 @@ if [ -n "$FACTS_PATH" ]; then
   }
 fi
 
-ISSUES_JSON=$(gh issue list --label "phase/verify" --state closed --json number,body --limit "$LIMIT" 2>/dev/null) || {
+ISSUES_JSON=$(gh issue list --label "phase/verify" --state all --json number,body --limit "$LIMIT" 2>/dev/null) || {
   echo "[]"
   exit 0
 }
