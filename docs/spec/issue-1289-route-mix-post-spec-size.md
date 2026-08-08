@@ -82,18 +82,17 @@ Acceptance criteria 3 (`operate` route・`xl`・フェーズ未達 Issue の 3 �
 - なし。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Ran `REVIEW_DEPTH=light` (1-agent `review-light`, all 4 aspects) per Issue Size; no Workflow-path fan-out.
-- All 5 Pre-merge ACs re-verified independently via verify-executor semantics (2 rubric, 2 grep, 1 command) — all PASS; posted review as `COMMENT` (no MUST issues).
+- No conflicts on `gh-pr-merge-status.sh` (mergeable=clean, CI success, review approved); squash-merged PR #1299 directly without rebase/conflict-resolution steps.
+- Pre-merge AC gate confirmed all 5 conditions checked (`unchecked_count: 0`) and review-incomplete-fallback absent before merging.
 
 ### Deferred Items
-- The Post-merge observation AC (`verify-type: observation session=next`) remains unchecked, unchanged from the code phase's handoff — still waiting for the next patch/pr-mixed `/auto --batch` run.
+- The Post-merge observation AC (`verify-type: observation session=next`) remains unchecked — still waiting for the next patch/pr-mixed `/auto --batch` run; `/verify` should check for a qualifying session.
 
 ### Notes for Next Phase
-- No MUST/SHOULD/CONSIDER issues were raised in review; `/merge 1299` can proceed directly.
-- `bats tests/get-auto-session-report.bats` confirmed 15/15 PASS locally in addition to CI (11/11 checks SUCCESS) — no residual verification risk for `/merge`.
+- `closes #1289` will auto-close the Issue on merge to `main`; `/verify` should confirm Issue state and then verify the Post-merge observation AC once a qualifying `/auto --batch` session exists.
 
 ## Review Retrospective
 
