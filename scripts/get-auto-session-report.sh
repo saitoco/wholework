@@ -167,15 +167,27 @@ if [[ "$SESSION_START" != "N/A" && "$SESSION_END" != "N/A" ]]; then
   fi
 fi
 
-# Route mix: count patch (XS/S) vs pr (M/L) from sub_start events
+# Route mix: derive patch/pr/xl/unknown per processed Issue from the actually-executed
+# code-pr / code-patch phase events (post-spec Size reality), not the pre-spec sub_start
+# size — mirrors collect-run-facts.sh's per-issue route derivation. xl is still derived
+# from sub_start size == "XL" (XL parents never reach a code-pr/code-patch phase of their
+# own). Issues with neither phase event fall into unknown, matching collect-run-facts.sh's
+# "unknown" precedent for unresolved route.
 ROUTE_MIX=$(echo "$EVENTS_JSON" | jq -r '
-  [.[] | select(.event == "sub_start")] |
-  {
-    patch: ([.[] | select(.size == "XS" or .size == "S")] | length),
-    pr:    ([.[] | select(.size == "M" or .size == "L")] | length),
-    xl:    ([.[] | select(.size == "XL")] | length)
-  } |
-  "patch: \(.patch), pr: \(.pr), xl: \(.xl)"
+  [.[] | select(.issue != null and .issue > 0 and (.event == "sub_start" or (.event | startswith("phase_"))))]
+  | group_by(.issue)
+  | map({
+      is_xl: (map(select(.event == "sub_start" and .size == "XL")) | length > 0),
+      has_pr: (map(select(.phase == "code-pr")) | length > 0),
+      has_patch: (map(select(.phase == "code-patch")) | length > 0)
+    })
+  | {
+      xl:      (map(select(.is_xl)) | length),
+      pr:      (map(select(.is_xl | not) | select(.has_pr)) | length),
+      patch:   (map(select(.is_xl | not) | select((.has_pr | not) and .has_patch)) | length),
+      unknown: (map(select(.is_xl | not) | select((.has_pr | not) and (.has_patch | not))) | length)
+    } |
+  "patch: \(.patch), pr: \(.pr), xl: \(.xl), unknown: \(.unknown)"
 ' 2>/dev/null || echo "N/A")
 
 # Issues processed (distinct issue numbers with an event indicating actual phase execution)
