@@ -34,3 +34,39 @@ XL route のため実装は 3 本の sub-issue が担当した。本ファイル
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- 親の Notes「実行順序の制約」は明快で、baseline を fan-out 前に取る必要性が正しく記述されていた。にもかかわらず `/auto` の XL route がその順序を実行できないため、親セッションの手作業に依存した。**AC の記述品質ではなく実行経路側の欠落**である。
+- Pre-merge AC 1 の分母・分子の定義が内部矛盾していた (下記 verify 節)。`/issue` triage の AC 監査は「常時 PASS」パターンを検出するが、この種の「定義が構造的に充足不能」なパターンは検出対象外である。
+
+#### spec
+
+- 親 Spec は存在しなかった (XL route は親の spec フェーズを持たない)。本ファイルは Step 4a で新規作成したもの。
+
+#### code
+
+- 親の実装 (baseline 計測・集約レポート統合) は `/code` を経ず親セッションが直接実施した。XL route に親の実装フェーズが無いため。
+
+#### review
+
+- 親側の成果物は `/review` を経ていない。sub-issue 側では 3 本とも `/review` が実質的な検出をしており、特に #1274 で分類 A → D の再分類 2 件を引き出している。
+
+#### merge
+
+- 親には PR が無い。sub-issue 3 本が並列で main を進めたため `concurrent_commit_detected` が 26 件検出されたが、全件ハンドリング済み。
+
+#### verify
+
+- Pre-merge 4 件が PASS、1 件が UNCERTAIN。Post-merge 3 件は `auto-run` 未発火のため SKIPPED。
+- **UNCERTAIN の内容**: AC 1 は分母を「1 回の dispatch で候補に挙がった observation AC 行数」(= 85)、分子を「そのうち SKIPPED を返した行数」と定義するが、`observation-dispatch-threshold` (既定 5) により 1 回の実行で SKIPPED/PASS が確定するのは最大 5 行であり、**分母 85 に対する分子は構造上 5 が上限**になる。率として意味をなさないため分子を記録していない。FAIL ではなく UNCERTAIN としたのは、実装側に修正すべきものが無く、FAIL 判定に伴う reopen と `phase/*` ラベル削除が状態を失うだけで問題を解決しないため。同じ「率」を使う Post-merge 8 も同じ不整合を抱えているので、AC 1 だけの修正では片手落ちになる。
+
+### Improvement Proposals
+
+- **監査・実査レポートに書く具体的な参照 (関数名・ファイルパス・節名・設定キー) は、記述前に `grep` / `Read` で実在確認する工程を Implementation Steps に明示すべき**。3 本の sub-issue のうち **2 本で同型の欠陥が独立に発生**した。#1274 は分類 A の判定根拠に #1181 で削除済みの関数 (`_write_tier2_recovery_to_spec()` / `_write_manual_recovery_to_spec()`) を引用しており `/review` が D へ再分類させた。#1276 は Spec 本文に実在しないパス (`.tmp/auto-checkpoint-*.json`) と実在しない節名を書き、レポートへ転記されてから `/review` が検出した。いずれも「実装コードから正確な文字列を確認せず記憶・推測で転記した」ことが原因である。#1274 は同じセッション内で #762 の参照先消滅を正しく検出していたため、パターンを知らなかったのではなく**適用にムラがあった**。この種のレポートは「将来 `/verify` が参照する判定根拠」になるため、誤った参照は後続の判定を誤らせる。並列 sub-agent へ実査を委任する構成では、既存ドキュメントの記述の存在だけで判断が確定しやすい点も要因と見られる。
+- **AC の verify 定義が構造的に充足不能なパターンを `/issue` triage の AC 監査が検出できない**。本 Issue の Pre-merge AC 1 は分母と分子の定義が 1 回の dispatch では両立せず、実装をどう進めても充足できなかった。triage の AC 監査は「実装前から真になる」常時 PASS パターンを検出するが、「定義自体が矛盾している」パターンは対象外である。#1278 の verify retrospective でも同種の指摘 (「常時 UNCERTAIN」になる verify command を監査が通過した) を **#1251 へ追記済み**であり、本件も同じ系統。**#1251 のスコープ内**として追記するのが適切で、新規起票はしない。
+- **`/auto` の XL route に親 Issue の実装フェーズが存在しない**。既存 **#1241** が扱っており、本セッションの観測 (2 例目、かつ fan-out **前**の親作業を要する新しい型) は **#1241 へコメントで追記済み**。新規起票はしない。
