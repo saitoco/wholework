@@ -19,6 +19,10 @@ Issue 本文の「方針確定 (2026-08-06)」注記により対応方針は確�
 ### code フェーズ (cutoff: 2026-08-06T02:22:36Z)
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / summary: 方針 A を裏づける追加実測 2 件 (`/verify 1175`: チェック済み 4 件が全て SKIPPED 相当・新規情報ゼロ、`/verify 1118`: チェック済み AC ゼロのため方針 A の影響を受けず未チェック AC の評価は損なわれない) と、フル bats スイート 3 本同時実行時の負荷観測 (load average 倍増) を記録。設計・実装方針への変更要求はなく、既存の Implementation Steps をそのまま実行すればよい / URL: https://github.com/saitoco/wholework/issues/1186#issuecomment-5199747782
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1186#issuecomment-5200208061
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1186#issuecomment-5200239298
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1186#issuecomment-5212269382
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1186#issuecomment-5225318736
 ## Changed Files
 - `skills/verify/SKILL.md`: Step 5 に「already-checked AC skip rule」を追加 (pre-merge)、Step 8a の対象条件を unchecked に限定し同スキップ規則を適用 (post-merge + hint)、Step 6 の「Re-runs」箇条書きを新方針に合わせて書き換え、Step 11(a) の SKIPPED 括弧書きを整合、`## Notes` に Post-merge 重複記載による継続検証運用を追記 — bash 非対象 (Markdown skill 定義ファイル)
 - `tests/verify.bats`: already-checked AC skip rule (pre-merge / post-merge+hint) と unchecked AC が従来どおり検証されることを検証するテストを追加
