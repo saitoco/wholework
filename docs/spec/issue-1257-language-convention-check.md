@@ -136,3 +136,41 @@ Implementation Steps 3 に記載の通り、`tests/check-language-convention.bat
 ### Notes for Next Phase
 - `/verify` should treat the post-merge observation AC as the sole remaining item; all pre-merge AC are already PASS and require no re-check.
 - No policy/AC-text change occurred during merge.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- AC2 を「Spec のみへの記載は不可」と明示し、`docs/tech.md` の Distributable-first improvement principle を根拠として rubric に組み込んだ判断が効いた。Spec は配布対象外であるため、切り分け基準がスクリプトの docstring 側に落ちることが実装時点で確定していた
+- AC4 を「機械的チェックを選択した場合に限り」と条件付きにしており、案 A (レビュー観点のみ) を選んだ場合に常時 FAIL にならない構造になっていた。案の選択が未確定な段階の AC として適切
+
+#### spec
+
+- 案 A/B の比較・却下理由・`agents/*.md` を対象外とする範囲判断・bats の入力形式まで Notes に記録されており、判断の追跡可能性が高い
+- 一方で **Implementation Steps 1 の走査アルゴリズム記述に欠陥があった**。フェンス追跡を「追加行のみで ` ``` ` の出現をカウントする」と記述したため、既存フェンス内の 1 行を編集した場合 (フェンス区切り自体は変更されず context 行としてしか現れない) にフェンス外と誤判定される。実装はこの記述に忠実に従っており、逸脱ではなく Spec 側の under-specification である
+
+#### code
+
+- Implementation Steps 1〜5 を逸脱なく実施、rework ゼロ
+- bats を Spec の最低 3 ケースから 6 ケースへ拡張 (追加分は加算的カバレッジ)
+- Behavioral Change Detection が `tests/visual-diff-adapter.bats` のコメント内 `.github/workflows/test.yml` 参照に反応して全件並列実行 (1626/1626 PASS) にエスカレートした。機械的な path-grep がコメント参照と挙動依存を区別できないことによる過剰発火だが、実害は実行時間のみ
+
+#### review
+
+- **MUST 指摘 1 件で上記の Spec 由来アルゴリズム欠陥を捕捉した**。指摘はスクリプト自身の docstring 例 (`skills/verify/SKILL.md` の `Print advisory` テンプレート) に対して直接再現しており、根拠が具体的。修正後に bats はケース 7 (既存フェンス内編集) を含む 7 件へ拡張された。パーサ系変更に対する review の実効性が示された事例
+- **#1256 で修正した自己 PR 422 フォールバックが、本 PR で初めて実発火した**。MUST 指摘があったため `EVENT=REQUEST_CHANGES` が選択され、自己 PR に対する GitHub の 422 応答をフォールバックが捕捉して COMMENT へ切り替えている (review body 先頭に `Note: posted as COMMENT instead of REQUEST_CHANGES ...` が付与)。修正前は判別文言がレスポンスボディ (stdout) 側にあり捨てられていたため hard-fail していた経路であり、本 PR は #1256 の post-merge observation 条件そのものに該当する。証拠は #1256 のコメントに記録済み
+
+#### merge
+
+- `mergeable=true` / `reason=clean` / CI green / review approved を確認し squash merge。Pre-merge AC gate は `unchecked_count=0`、review completion は organic (fallback 由来ではない)。コンフリクトなし
+
+#### verify
+
+- Pre-merge 4 件は既チェックのため既定どおり skip、post-merge の observation 1 件は `auto-run` 未発火で SKIPPED。FAIL・UNCERTAIN ゼロ
+- 実体をスポット確認した: `scripts/check-language-convention.py` は存在・実行可能、bats 7 件すべて PASS。呼び出し元は `.github/workflows/test.yml:85,87` のみで `skills/` / `modules/` からの参照はゼロのため、`allowed-tools` への追加が不要な構成であることも確認した (#1266 で拡張した allowed-tools impact chain check の Case 1 は新規 `scripts/*.sh` を対象とするが、本 Issue の新規スクリプトは `.py` かつ CI 専用のため対象外で正しい)
+
+### Improvement Proposals
+
+- **diff 走査アルゴリズムの Spec 記述で context 行の扱いを明示する規約 (Tier 2 — 記録のみ)**: `/review` retrospective が記録した提案を引き継ぐ。Spec の Implementation Steps が diff を走査するアルゴリズムを記述する際、その正しさの判定対象が「diff 適用後のファイル状態」である場合 (フェンス内か・スコープ内か等)、追加行だけでなく変更なしの context 行も追跡する必要があるかを明示すべき。本 Issue はまさにこの欠落で MUST 指摘 1 件を生んだ。Tier 1 に上げなかった根拠: 変更対象は `skills/spec/SKILL.md` 単一で multi-file ripple なし、`/review` retrospective 自身が「This is the first Issue in this area ... no repeat-of-known-pattern signal」と再発性を明示的に否定している。関連する既存 open Issue として #1125 (`review`: パーサ系変更への negative/edge case 実測ステップの定型化) があるが、あちらは `/review` フェーズ、本提案は `/spec` フェーズを対象とするため追記ではなく独立の記録とした。同型が `/spec` 側で再発した場合は Tier 1 へ引き上げる
