@@ -106,3 +106,37 @@
 
 - 6 件の Pre-merge 条件のうち 5 件が `rubric` 型であり、いずれも「レポートファイルへの記載」だけでなく「対象 6 Issue (#1031 #954 #515 #511 #486 #446) の GitHub 本文が実際に書き換わっているか」という、リポジトリ diff からは見えない外部状態の確認を要した。今回は `/review` 側で該当 Issue 本文を個別に `gh issue view` で突合し、レポートの記載内容と実際の GitHub 状態が一致することを確認した。verify command 自体には Issue 本文の書き換え結果を検証する仕組みがなく、rubric の目視確認に依存している点は、この種の「レポート作成 + 外部 Issue 編集」を伴う Issue 全般に共通する構造であり、verify command の記述を強化する余地があるとすれば「対象 Issue 本文に指定 marker が存在すること」を機械的にチェックする verify command 型 (例: 複数 Issue の `<!-- verify-type: ... -->` 一括確認) の追加が考えられるが、今回のスコープ外として記録に留める。
 - 分類 D=0 だった条件 (Pre-merge 4/5) は「該当なしのため vacuously satisfied」という判定になった。条件文自体は「D 分類の AC 行が...」という前提付きの書き方であり、D=0 の場合にどう判定すべきかは条件文から自明ではなかった。今回は「レポートに D=0 の旨が明記されていること」を根拠に PASS としたが、こうした「件数 0 なら自動的に満たされる」条件は #1251 (AC 記述規約) 側で明示的な扱い方 (例: 該当なしの場合の判定ルール) を定義する余地がある。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- 親 #1270 の「実行順序の制約」(baseline 計測が着手の前提) が本文へ反映されなかった。3 本の sub-issue の triage が並列実行されたため、反映されたのは #1274 のみ。親セッションが後から手作業で追記している。
+
+#### spec
+
+- Implementation Steps とレポート内容は一致しており、逸脱なし。
+
+#### code
+
+- Spec 逸脱なし。担当 12 行のうち D が 0 件、E が 7 件という偏りが出たが、これは #1164 由来の母集団の性質 (統計的トレンド判断・非対話モードの構造的制約に由来する条件が多い) によるもので実装上の問題ではない。
+
+#### review
+
+- review-light の 4 観点でいずれも指摘 0 件。
+- rubric 型 AC 5 件について、レポートの記載だけでなく対象 6 Issue (#1031 / #954 / #515 / #511 / #486 / #446) の GitHub 本文を `gh issue view` で個別に突合しており、形式的な PASS にしていない。
+
+#### merge
+
+- PR #1296。merge フェーズで `run-merge.sh` が early-kill window 内に exit 0 で終了し、`retry-on-kill.sh` が自動再試行して成功した。`docs/reports/orchestration-recoveries.md` (2026-08-08 22:08 UTC) に記録済みのため、本 retrospective では重複記録しない。
+
+#### verify
+
+- Pre-merge 6 件はすべて `- [x]` 済みのため already-checked skip rule により SKIPPED。post-merge 条件は無し。FAIL / UNCERTAIN ゼロ。
+
+### Improvement Proposals
+
+- **rubric 型 AC が「外部 Issue 本文の書き換え」を機械的に検証できない**。本 Issue の Pre-merge 6 件中 5 件が rubric 型で、いずれも「レポートファイルへの記載」に加えて「対象 Issue の GitHub 本文が実際に書き換わっているか」というリポジトリ diff から見えない外部状態の確認を要した。今回は `/review` が `gh issue view` で個別に突合して担保したが、verify command 自体には対象 Issue 本文の状態を検証する型が無く、rubric の目視確認に依存している。「レポート作成 + 外部 Issue 編集」を伴う Issue に共通する構造であり、複数 Issue の marker 有無を一括確認する verify command 型 (例: `issues_contain "<!-- verify-type: manual -->" #1031,#954,...`) の追加余地がある。**本セッションは同型の sub-issue を 3 本走らせているため、起票判断は 3 本の所見が出揃う親 #1270 の verify にまとめる** (単独起票すると同じ提案が 3 件立つ)。
+- **「件数 0 なら自動的に満たされる」条件の判定ルールが未定義**。分類 D=0 だったため Pre-merge 4/5 が vacuously satisfied となったが、「D 分類の AC 行が...」という前提付きの条件文から D=0 時の判定は自明でなかった。今回は「レポートに D=0 の旨が明記されていること」を根拠に PASS としている。**#1251 (AC 記述規約) のスコープ内**であり、新規起票ではなく #1251 への追記が適切。
