@@ -47,6 +47,23 @@ SCRIPT="$PROJECT_ROOT/scripts/validate-recovery-plan.sh"
   [ "$status" -ne 0 ]
 }
 
+@test "cause: 40-char slug (length boundary) -> exit 0" {
+  slug=$(printf 'a%.0s' {1..40})
+  run bash "$SCRIPT" <<< "{\"action\":\"skip\",\"cause\":\"$slug\",\"rationale\":\"nothing to do\",\"steps\":[]}"
+  [ "$status" -eq 0 ]
+}
+
+@test "cause: 41-char slug exceeds length cap -> exit 1" {
+  slug=$(printf 'a%.0s' {1..41})
+  run bash "$SCRIPT" <<< "{\"action\":\"skip\",\"cause\":\"$slug\",\"rationale\":\"nothing to do\",\"steps\":[]}"
+  [ "$status" -ne 0 ]
+}
+
+@test "cause: non-string value -> exit 1" {
+  run bash "$SCRIPT" <<< '{"action":"skip","cause":123,"rationale":"nothing to do","steps":[]}'
+  [ "$status" -ne 0 ]
+}
+
 @test "cause: key absent -> exit 0 (backward compatible)" {
   run bash "$SCRIPT" <<< '{"action":"skip","rationale":"nothing to do","steps":[]}'
   [ "$status" -eq 0 ]
