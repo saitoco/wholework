@@ -60,6 +60,9 @@ GitHub がこのケースで返す判別可能なエラー文言 ("...can not re
 
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1256#issuecomment-5226562801
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1256#issuecomment-5226962836
+- saito / MEMBER / first-class / ## Post-merge observation の証拠を観測しました (PR #1291) / https://github.com/saitoco/wholework/issues/1256#issuecomment-5227663647
 ## Code Retrospective
 
 ### Deviations from Design
