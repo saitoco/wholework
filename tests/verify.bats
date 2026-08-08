@@ -151,7 +151,7 @@ step9_section() {
 }
 
 @test "Step 6 Re-runs description no longer re-verifies already-checked conditions" {
-    ! step6_section | grep -q -F "Re-verify even if already checked"
+    if step6_section | grep -q -F "Re-verify even if already checked"; then false; fi
     step6_section | grep -q -F "skipped by default"
     step6_section | grep -q -F "Only conditions still at \`- [ ]\` are (re-)verified"
 }

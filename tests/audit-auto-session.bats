@@ -63,7 +63,7 @@ FIXTURE_EOF
     # Issue 300 (abc-222) should appear, issue 200 (abc-111) should NOT
     echo "$output" | grep -q "300"
     # Issue 200 belongs to abc-111 and must not be counted
-    ! echo "$output" | grep -q "Issues processed | 2"
+    if echo "$output" | grep -q "Issues processed | 2"; then false; fi
     # Exactly 1 issue processed (from abc-222)
     echo "$output" | grep -q "Issues processed | 1"
 }

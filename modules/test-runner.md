@@ -134,3 +134,27 @@ await notification) is unaffected by this constraint.
   ```
 - Likely cause: brief analysis of error content
 ```
+
+## Notes
+
+### bats Negation Assertion Pitfall
+
+**Problem**: Writing a negation assertion as `! cmd | grep -q pattern` and placing it as a
+**non-final statement** inside a bats `@test` function silently defeats the assertion under
+`set -e`. Per POSIX/bash semantics, the exit status of a pipeline prefixed with `!` is always
+excluded from triggering `set -e`'s automatic termination, regardless of whether the underlying
+command failed or succeeded. When the pattern is found (the condition the assertion exists to
+catch), the negated command's non-zero-turned-zero status does not stop execution — subsequent
+statements keep running, and the test reports PASS even though the regression it was meant to
+detect actually occurred.
+
+**Correct form**: Wrap the check as `if cmd | grep -q pattern; then false; fi`. This runs an
+explicit (non-negated) `false` in the branch where the pattern is found, which reliably triggers
+`set -e` and fails the test.
+
+**Exception (safe case)**: A `! cmd | grep -q pattern` negation is safe when it is the **true
+final statement** of the `@test` function — bats evaluates the function's own return value
+directly, without going through an intervening `set -e` non-final-statement context. Compare
+`tests/collect-recovery-candidates.bats:604-605` (non-final statement — was defective and has
+been fixed to the `if ...; then false; fi` form) against `tests/collect-recovery-candidates.bats:611`
+(true final statement of its `@test` function — unmodified and safe).

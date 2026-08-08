@@ -36,7 +36,7 @@ FIXTURE_EOF
 
     run bash -c "printf '984\n1009\n1035\n1037\n' | \"$SCRIPT\""
     [ "$status" -eq 0 ]
-    ! echo "$output" | grep -qx "984"
+    if echo "$output" | grep -qx "984"; then false; fi
     echo "$output" | grep -qx "1009"
     echo "$output" | grep -qx "1035"
     echo "$output" | grep -qx "1037"

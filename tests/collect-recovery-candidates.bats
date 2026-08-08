@@ -373,7 +373,7 @@ FIXTURE_EOF
   echo "$output" | grep -E $'^manual-recovery-review-rerun/workflow-wait\t2$'
   # The plain (cause-less) symptom-short key never appears -- every entry in this fixture
   # carries a cause line, so counts are never merged into the bare symptom-short.
-  ! echo "$output" | grep -E $'^manual-recovery-review-rerun\t'
+  if echo "$output" | grep -qE $'^manual-recovery-review-rerun\t'; then false; fi
 
   # threshold=3: merged (4) would clear the bar, but each cause-specific group (2) does not --
   # this proves cause-separation, not merging, is what determines inclusion.
