@@ -124,15 +124,15 @@ Implementation Steps 3 に記載の通り、`tests/check-language-convention.bat
 - When a Spec's Implementation Steps describe a diff-scanning algorithm whose correctness target is *post-diff file state* (e.g. "is this added line inside a fence/block/scope in the final file"), the Spec should explicitly call out whether unchanged context lines must also be tracked — not just added lines — to avoid this exact class of bug recurring in future diff-scanning script specs.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Re-verified all 4 Pre-merge rubric AC independently (not trusting `/code`'s self-graded PASS state at face value), per the prior phase's own handoff note flagging AC2 as most prone to Spec-only satisfaction drift — confirmed all 4 as genuinely PASS against the implementation artifacts.
-- Found and fixed one MUST-severity bug via the review-light agent (Edge Case/Robustness perspective): fence-tracking state only considered added lines, causing false positives when editing inside a pre-existing fenced block. Fixed by also scanning unchanged context lines for fence markers (without checking them for violations), and added a regression bats case.
+- Squash-merged PR #1291 with no conflicts (`mergeable=true`, `reason=clean`, CI green, review approved) — no rebase/conflict-resolution steps were needed.
+- Pre-merge AC gate: all 4 pre-merge Acceptance Criteria confirmed checked (`unchecked_count=0`) and review completion was organic (not fallback-origin) — merge proceeded without an override marker.
 
 ### Deferred Items
-- Post-merge observation AC (`session=next`, `event=auto-run`) remains unchecked, unchanged from the `/code` phase's assessment — still cannot self-verify within this PR.
+- Post-merge observation AC (`session=next`, `event=auto-run`) remains unchecked — carried over unchanged from `/code` and `/review`; requires a future session to observe whether language-mixing is caught/prevented in a subsequent transcription-style PR.
 
 ### Notes for Next Phase
-- `/merge` can proceed: all 4 Pre-merge AC are PASS, CI is green (11/11, including `Language Convention check` on both the original and fix commits), and the one MUST review finding has been fixed, committed (`Refs:` link to the inline PR comment), and pushed.
-- No policy/AC-text change resulted from the Step 12 fix — the fix corrects the implementation's fence-tracking algorithm to match the AC's/docstring's own stated behavior; it does not change what the AC or verify commands assert.
+- `/verify` should treat the post-merge observation AC as the sole remaining item; all pre-merge AC are already PASS and require no re-check.
+- No policy/AC-text change occurred during merge.
