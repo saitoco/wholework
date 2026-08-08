@@ -93,3 +93,32 @@ Implementation Steps 3 に記載の通り、`tests/check-language-convention.bat
 | login | authorAssociation | trust tier | 内容概要 | URL |
 |-------|-------------------|-----------|---------|-----|
 | saito | MEMBER | first-class | Issue Retrospective: Background 事実確認 (訂正なし)、AC2 を「選択した実装成果物への記載」に明確化した Auto-Resolve Log、post-merge observation AC への `session=next` 付与根拠、案 A/B 選択判断は `/spec` フェーズへの委譲を確認 | https://github.com/saitoco/wholework/issues/1257#issuecomment-5227226402 |
+
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation Steps 1–5 were followed as written.
+
+### Design Gaps/Ambiguities
+- None. Spec's false-positive exclusion logic (fence / inline code / double-quoted string) and its docstring documentation requirement (AC2) were unambiguous and required no interpretation during implementation.
+
+### Rework
+- None.
+
+### Notes
+- `tests/check-language-convention.bats` covers 6 cases (Spec's 3 minimum plus a double-quoted-string false positive, a no-CJK-content case, and a removed-line (`-` prefix) exclusion case) — purely additive coverage, not a deviation from the Spec's Implementation Steps 3 minimum.
+- Behavioral Change Detection (`/code` Step 9) triggered a full parallel bats run (`bats --jobs 18 tests/`, 1626/1626 PASS) instead of narrow scope, because `tests/visual-diff-adapter.bats` references `.github/workflows/test.yml` in a comment (documenting where its Node runtime setup comes from) — an incidental match unrelated to the new `language-convention` job actually added, but the mechanical path-grep check does not distinguish comment references from behavioral dependencies.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Followed Spec's 案 B (script-based CJK diff check) exactly; no implementation-time deviation from the Spec's chosen approach.
+- `check-language-convention.py` uses Python stdlib only (`re`, `sys`), matching the Spec's dependency constraint.
+
+### Deferred Items
+- Post-merge observation AC (`session=next`, `event=auto-run`) is intentionally left unchecked — it verifies itself against a future PR that transcribes Spec Notes rationale into an English-only doc, which cannot happen within this PR.
+
+### Notes for Next Phase
+- All 4 pre-merge AC are `rubric`-type and were graded PASS during `/code` (this session), with checkboxes already updated on the Issue. `/review` should independently re-verify the AC2 docstring-in-implementation-artifact requirement, since it is the AC most prone to Spec-only satisfaction drift.
+- CI job `language-convention` runs on `push` (this PR's own commits) and `pull_request` — confirm the job appears green in PR checks before merge.
