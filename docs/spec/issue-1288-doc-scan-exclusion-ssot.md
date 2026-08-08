@@ -91,19 +91,19 @@
 - Step 9 のフル bats スイート実行 (`bats --jobs 18 tests/`) が 600 秒の Bash ツール上限を超え、バックグラウンドへ自動移行された。`skills/code/SKILL.md` Step 9 の明示的な方針 (「完了通知を待たない」) に従い、通知を待たずに Step 10 以降へ進行した。ローカルでの追加検証 (`validate-skill-syntax.py`、`check-forbidden-expressions.sh`、`check-translation-sync.sh`) は個別に実行し全て PASS を確認済み。バックグラウンド移行したフルスイートは Step 12 実施時点で完了通知が届き、1637 件全て PASS (exit code 0) だったことを事後確認した。CI (`.github/workflows/test.yml`) でも同じ結果が再確認される想定。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Step 8 の5件の Pre-merge AC を独自に再検証し、いずれも PASS を確認 (Issue チェックボックスは code フェーズで既に `[x]` 済みだったため更新不要)
-- Base Branch Conflict Pre-check (`git merge-tree`) で main との `changed in both` 競合なしを確認
-- REVIEW_DEPTH=light (`--light` 明示指定) のため review-light エージェント1体による4観点統合レビューを実施し、MUST/SHOULD/CONSIDER いずれも0件
+- pre-merge AC ゲート: 5件すべてチェック済み、review-incomplete-fallback なしを確認し squash merge を実行
+- `gh pr merge --squash --delete-branch` で正常にマージ・リモートブランチ削除完了
+- Base branch は main のため Issue #1288 は `closes #1288` により自動クローズされる想定
 
 ### Deferred Items
-- Post-merge observation AC (`session=next`): 次回 `/audit drift` または `/doc sync` 実行時に `docs/{lang}/` 配下の翻訳ファイルが Project Documents 収集に混入しないことを観察する。`/verify` フェーズで未着手のまま引き継ぐ
+- Post-merge observation AC (`session=next`): 次回 `/audit drift` または `/doc sync` 実行時に `docs/{lang}/` 配下の翻訳ファイルが Project Documents 収集に混入しないことを観察する。`/verify` フェーズで引き続き未着手
 
 ### Notes for Next Phase
-- CI は全11ジョブ SUCCESS (DCO / bats / validate-skill-syntax / forbidden-expressions / language-convention / macOS shell compatibility、各×2)
-- 修正コミットなし (指摘事項0件のため Step 12 は未実施)。`/merge 1298` へ進行可能
+- `/verify 1288` で Post-merge observation AC の観察を実施すること
+- マージ時点で新規コンフリクトなし、テスト再実行不要 (CI で既に全SUCCESS確認済み)
 
 ## review retrospective
 
