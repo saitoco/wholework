@@ -204,3 +204,36 @@ Type=Task、Size=L と判定した。同一由来 (#1158 再型付け) の先行
 
 - Pre-merge AC 1 (rubric) は「A について正しい判定根拠が記載されているか」という意味的検証を要求しており、機械的な file_exists/grep では代替できない。実際の検証では 29 行中の主要な A 判定について `grep -rn` で関数の実在確認、`gh issue view` での GitHub 実状態突合、`opportunistic-search.sh --dry-run` の再実行など、10 件以上のコマンド実行を要した。verify command 自体 (`rubric "..."`) は過不足なく機能しており、記述の不備は見られなかった。
 - UNCERTAIN は発生しなかった。5 件の Pre-merge AC はいずれも rubric/file_exists で PASS/FAIL が一意に決まり、判定不能なケースはなかった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- triage が親 #1270 の「実行順序の制約」(baseline 計測が sub-issue 着手の前提) を本文へ反映した唯一の sub-issue だった。#1275 / #1276 には入らなかったため、親セッションが後から手作業で揃えている。同じ親を持つ sub-issue 群に親由来の制約を反映する際、反映の有無が sub-issue ごとに揺れる。
+
+#### spec
+
+- Implementation Steps は具体的で、実装中に新たな「What」レベルの曖昧点は発生していない。ただし Step 3 (実査) が並列 sub-agent への委任だったことが、後述の判断根拠の裏取り不足につながっている。
+
+#### code
+
+- 実装は Spec の意図の範囲内。`modules/phase-handoff.md` の rotation 規約違反 (旧 spec phase の `### Notes for Next Phase` が残存し二重化) が 1 件あったが、Edit 手順に起因する機械的なミスで内容の乖離ではない。
+
+#### review
+
+- **`/review` が本 Issue の中核的な欠陥を検出した**。分類 A としていた #761 / #822 について、判定根拠に引用した Spec 自動追記関数 (`_write_tier2_recovery_to_spec()` / `_write_manual_recovery_to_spec()`) が **#1181 で既に削除済み**であることを突き止め、D (retire) へ再分類させている。集約結果の D が 3 行になったのはこの再分類を含む。
+- rubric 型 AC の意味的検証に対して、`grep -rn` での関数実在確認・`gh issue view` での GitHub 実状態突合・`opportunistic-search.sh --dry-run` の再実行など 10 件以上のコマンド実行で裏取りしており、rubric を形式的に通していない。
+
+#### merge
+
+- PR #1297。並行する #1295 / #1296 の着地と重なり `concurrent_commit_detected` が review フェーズで 12 件検出されたが、いずれもハンドリング済みで conflict には至っていない。
+
+#### verify
+
+- Pre-merge 5 件はすべて `- [x]` 済みのため already-checked skip rule により SKIPPED。post-merge 条件は無し (効果測定は親 #1270 に集約)。FAIL / UNCERTAIN ゼロ。
+
+### Improvement Proposals
+
+- **分類・監査作業では、判断根拠に登場する識別子 (関数名・スクリプト名・設定キー) を毎回実在確認する工程を明示すべき**。本 Issue は「後発の実装変更で観測対象が消滅した AC を検出する」ことが目的だったが、**その成果物であるレポート自身に同型の欠陥が 2 件混入した** (#761 / #822 が #1181 で削除済みの関数を判定根拠に引用)。同じセッション内で #762 (#875 由来の参照先消滅) は正しく検出できていたため、パターンを知らなかったのではなく**適用にムラがあった**。同様のムラは gate 属性の有効性判定にも現れており、`keyword=` は「発火元が引数を渡さないため不活性」と正しく結論しながら、隣接する `when=execution-context` には同じ検証を適用していなかった。並列 sub-agent へ実査を委任すると、担当エージェントが既存ドキュメントの記述の存在だけで判断を確定させやすい。実査系 Issue の Implementation Steps に「A 判定の根拠に現れる識別子は `grep -rn` で実在を確認する」を明記するのが対処。convention レベルの lesson であり、特定ファイルへの変更を伴わないため Tier 2 (memory proposal) が妥当。
