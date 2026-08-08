@@ -16,6 +16,7 @@ fi
 python3 - <<'PYEOF' "$JSON_INPUT"
 import sys
 import json
+import re
 
 raw = sys.argv[1]
 
@@ -71,6 +72,17 @@ else:
             for pattern in forbidden_cmd_patterns:
                 if _re.search(pattern, cmd_value):
                     errors.append(f"steps[{i}] run_command contains forbidden pattern in cmd='{step.get('cmd')}'")
+
+# optional cause slug
+if "cause" in plan:
+    cause_value = plan["cause"]
+    if not isinstance(cause_value, str):
+        errors.append("'cause' must be a string")
+    else:
+        if not re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", cause_value):
+            errors.append(f"'cause' must be a kebab-case slug (^[a-z0-9]+(-[a-z0-9]+)*$); got '{cause_value}'")
+        if len(cause_value) > 40:
+            errors.append(f"'cause' exceeds 40 characters (length {len(cause_value)})")
 
 if errors:
     for e in errors:

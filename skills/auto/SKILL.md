@@ -571,7 +571,9 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
 
    **Source 1 note — XL route only**: As of #1181, `run-auto-sub.sh` no longer writes a per-Issue Spec Auto Retrospective entry for Tier 2 or Tier 3 recovery. Tier 3 records directly into `docs/reports/orchestration-recoveries.md` at recovery time via `spawn-recovery-subagent.sh`'s `write_recovery_entry()` — do not append a duplicate entry here for Tier 3. As of #1098, Tier 2 also records directly into `docs/reports/orchestration-recoveries.md` at recovery time via `apply-fallback.sh`'s own `write_recovery_entry()` (bash-path, mirroring Tier 3) — do not append a duplicate entry here for Tier 2 either. This Source 1 append now applies only to recovery events that reach neither bash-path writer (e.g. a manually-observed anomaly the parent session recorded by hand).
 
-   **Source 2 detection — single-Issue parent session only**: Check if `TIER3_RECOVERY_PHASE` is set (retained in Step 6 after Tier 3 succeeds). If set, use retained `TIER3_RECOVERY_*` variables to build the entry and prepend it. For batch/XL routes, `spawn-recovery-subagent.sh` writes directly to `orchestration-recoveries.md`, so Source 2 here covers only single-Issue parent sessions (M/L/patch). `run-auto-sub.sh` commits and pushes `docs/reports/orchestration-recoveries.md` immediately after Tier 3 success to prevent dirty-file conflicts at `/verify` invocation (see #677).
+   **Source 2 detection — single-Issue parent session only**: Check if `TIER3_RECOVERY_PHASE` is set (retained in Step 6 after Tier 3 succeeds). If set, use retained `TIER3_RECOVERY_*` variables to build the entry and prepend it. Write `TIER3_RECOVERY_CAUSE` as the `### Diagnosis` block's leading `- cause: <slug>` line. For batch/XL routes, `spawn-recovery-subagent.sh` writes directly to `orchestration-recoveries.md`, so Source 2 here covers only single-Issue parent sessions (M/L/patch). `run-auto-sub.sh` commits and pushes `docs/reports/orchestration-recoveries.md` immediately after Tier 3 success to prevent dirty-file conflicts at `/verify` invocation (see #677).
+
+   **Source 1/3 cause value**: the `- cause: <slug>` line in the Entry format below is optional per `docs/reports/orchestration-recoveries.md`'s Field Definitions. For Source 1 and Source 3 (no `TIER3_RECOVERY_CAUSE` available), write a kebab-case root-cause slug reusing an existing one from the log when the root cause is known, write `unclassified` when it is not, or omit the line entirely — never leave the literal `<slug>` placeholder.
 
    For each applicable source, prepend a new entry block to `docs/reports/orchestration-recoveries.md` (after the header comment line `<!-- Log entries appear below, newest first. -->`). Use the Write/Edit tool. Entry format:
 
@@ -585,6 +587,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
    - Log tail: "<last relevant log line>"
 
    ### Diagnosis
+   - cause: <slug>
    - <observed state and root cause>
 
    ### Recovery Applied
@@ -1035,7 +1038,7 @@ Spawn the orchestration-recovery sub-agent via Task to diagnose the unknown fail
    ```bash
    ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh .tmp/recovery-plan-$NUMBER-$PHASE.json
    ```
-   - Validation checks: JSON parseable, required keys (`action`, `rationale`, `steps`) present, `action` in `{retry, skip, recover, abort}`, `steps` length ≤ 5, no forbidden ops (`force_push`, `reset_hard`, `close_issue`, `merge_pr`, `direct_push_main`)
+   - Validation checks: JSON parseable, required keys (`action`, `rationale`, `steps`) present, `action` in `{retry, skip, recover, abort}`, `steps` length ≤ 5, no forbidden ops (`force_push`, `reset_hard`, `close_issue`, `merge_pr`, `direct_push_main`); the optional key `cause`, when present, is validated as a kebab-case slug (`^[a-z0-9]+(-[a-z0-9]+)*$`, 40 characters or fewer) — its absence is not a validation failure
    - If validation fails (exit non-zero): fall back to stop-and-report (see below)
 
 5. **Act on recovery plan**:
@@ -1049,6 +1052,7 @@ Spawn the orchestration-recovery sub-agent via Task to diagnose the unknown fail
    - `TIER3_RECOVERY_PHASE=$PHASE`
    - `TIER3_RECOVERY_ACTION=$action` (the action that succeeded)
    - `TIER3_RECOVERY_RATIONALE`: `rationale` field from the recovery plan JSON
+   - `TIER3_RECOVERY_CAUSE`: `cause` field from the recovery plan JSON (`unclassified` when missing or invalid)
    - `TIER3_RECOVERY_STEPS_COUNT`: number of steps in the plan (0 for retry/skip)
    - `TIER3_RECOVERY_EXIT_CODE=$EXIT_CODE`
    - `TIER3_RECOVERY_LOG_TAIL`: last line of `.tmp/wrapper-out-$NUMBER-$PHASE.log`

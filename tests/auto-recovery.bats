@@ -143,6 +143,24 @@ MOCK
     ! grep -q "recovery-sub-agent" "$REPORT_FILE"
 }
 
+@test "auto-recovery: plan with cause writes '- cause: <slug>' to report" {
+    make_claude_mock '{"action":"retry","cause":"background-notification-wait","rationale":"transient failure","steps":[]}'
+    cd "$BATS_TEST_TMPDIR"
+
+    run bash "$SCRIPT" code 42 --log "$LOG_FILE"
+    [ "$status" -eq 0 ]
+    grep -q -- "- cause: background-notification-wait" "$REPORT_FILE"
+}
+
+@test "auto-recovery: plan without cause writes '- cause: unclassified' to report" {
+    make_claude_mock '{"action":"retry","rationale":"transient failure","steps":[]}'
+    cd "$BATS_TEST_TMPDIR"
+
+    run bash "$SCRIPT" code 42 --log "$LOG_FILE"
+    [ "$status" -eq 0 ]
+    grep -q -- "- cause: unclassified" "$REPORT_FILE"
+}
+
 @test "auto-recovery: missing report file skips write gracefully" {
     make_claude_mock '{"action":"skip","rationale":"already done","steps":[]}'
     cat > "$MOCK_DIR/reconcile-phase-state.sh" <<'MOCK'

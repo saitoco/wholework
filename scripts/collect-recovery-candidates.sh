@@ -5,11 +5,13 @@
 #
 # group-key (Issue #1123): normally the H2 header's symptom-short (e.g.
 # "manual-recovery-review-rerun"). When an entry's "### Diagnosis" body has a
-# "- cause: <slug>" line (written by run-auto-sub.sh --write-manual-recovery --cause),
+# "- cause: <slug>" line (written by run-auto-sub.sh --write-manual-recovery --cause,
+# by apply-fallback.sh's Tier 2 writer, and by spawn-recovery-subagent.sh's Tier 3
+# writer -- see docs/reports/orchestration-recoveries.md Field Definitions, Issue #1281),
 # the group key becomes "<symptom-short>/<cause-slug>" instead, so that same-symptom
 # events with a different root cause are counted (and duplicate-checked) separately
-# rather than merged. Entries without a cause line keep the plain symptom-short key
-# (backward compatible with the existing 4 recoveries-log entries).
+# rather than merged. Entries without a cause line (pre-#1281 entries) keep the plain
+# symptom-short key.
 #
 # Exclusion (Issue #1152): judged per entry, not per group-key, so a resolved symptom
 # and a genuine post-fix recurrence of the same group-key can be told apart.

@@ -326,6 +326,7 @@ REPORT_EOF
     [[ "$report_content" == *"- Issue #555, phase: code"* ]]
     [[ "$report_content" != *"- Issue #99, phase: code"* ]]
     [[ "$report_content" == *"- Source: fallback-catalog"* ]]
+    [[ "$report_content" == *"- cause: dco-signoff-missing-autofix"* ]]
     [[ "$report_content" == *"- N/A (resolved by known catalog)"* ]]
 
     # New entry must be prepended (appear before the pre-existing entry)

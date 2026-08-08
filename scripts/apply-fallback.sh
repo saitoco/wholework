@@ -182,6 +182,7 @@ entry = (
     f"- Wrapper: run-{phase}.sh\n"
     f"- Log tail: \"{log_tail}\"\n\n"
     f"### Diagnosis\n"
+    f"- cause: {anchor}\n"
     f"- Symptom anchor `{anchor}` matched in wrapper log (modules/orchestration-fallbacks.md#{anchor})\n\n"
     f"### Recovery Applied\n"
     f"- action={action}\n\n"

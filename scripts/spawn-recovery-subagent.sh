@@ -220,9 +220,13 @@ write_recovery_entry() {
     return 0
   fi
 
-  local log_tail_line rationale steps_count steps_summary timestamp
+  local log_tail_line rationale cause steps_count steps_summary timestamp
   log_tail_line=$(tail -1 "$LOG_FILE" 2>/dev/null || true)
   rationale=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('rationale','(none)'))" "$PLAN_FILE" 2>/dev/null || echo "(none)")
+  cause=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('cause',''))" "$PLAN_FILE" 2>/dev/null || echo "")
+  if [[ -z "$cause" ]] || [[ ${#cause} -gt 40 ]] || [[ ! "$cause" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+    cause="unclassified"
+  fi
   steps_count=$(python3 -c "import json,sys; print(len(json.load(open(sys.argv[1])).get('steps',[])))" "$PLAN_FILE" 2>/dev/null || echo "0")
   timestamp=$(date -u '+%Y-%m-%d %H:%M UTC')
 
@@ -239,6 +243,7 @@ write_recovery_entry() {
   WRE_EXIT_CODE="$EXIT_CODE_PARAM" \
   WRE_LOG_TAIL="$log_tail_line" \
   WRE_RATIONALE="$rationale" \
+  WRE_CAUSE="$cause" \
   WRE_STEPS_SUMMARY="$steps_summary" \
   WRE_ACTION="$action" \
   python3 - <<'PYEOF' || return 0
@@ -251,6 +256,7 @@ issue = os.environ['WRE_ISSUE']
 exit_code = os.environ['WRE_EXIT_CODE']
 log_tail = os.environ['WRE_LOG_TAIL']
 rationale = os.environ['WRE_RATIONALE']
+cause = os.environ['WRE_CAUSE']
 steps_summary = os.environ['WRE_STEPS_SUMMARY']
 action = os.environ['WRE_ACTION']
 
@@ -262,6 +268,7 @@ entry = (
     f"- Wrapper: run-{phase}.sh, exit code: {exit_code}\n"
     f"- Log tail: \"{log_tail}\"\n\n"
     f"### Diagnosis\n"
+    f"- cause: {cause}\n"
     f"- {rationale}\n\n"
     f"### Recovery Applied\n"
     f"- action={action}\n"

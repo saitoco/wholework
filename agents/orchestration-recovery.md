@@ -77,6 +77,7 @@ Output a single JSON object (no markdown fences, no surrounding text) with exact
 ```json
 {
   "action": "<retry|skip|recover|abort>",
+  "cause": "<kebab-case root-cause slug>",
   "rationale": "<one or two sentences explaining the diagnosis and chosen action>",
   "steps": [
     { "op": "run_command", "cmd": "<shell command to execute>" }
@@ -102,6 +103,9 @@ Output a single JSON object (no markdown fences, no surrounding text) with exact
 - Do not include commands that force-push, push directly to main/master, reset hard, close issues, or merge PRs
 - If the appropriate action is `retry` or `skip`, `steps` must be an empty array `[]`
 - If the appropriate action is `abort`, `steps` must be an empty array `[]`
+- `cause` is a kebab-case slug (`^[a-z0-9]+(-[a-z0-9]+)*$`, 40 characters or fewer) naming the **root cause**, not the symptom
+- If the same root cause has occurred before, reuse the existing slug from `docs/reports/orchestration-recoveries.md` (e.g. `background-notification-wait`, `external-kill-during-merge`, `ff-only-merge-base-advanced`, `ci-infra-outage-during-ci-wait`) instead of coining a new one
+- If the root cause cannot be determined, return `unclassified`
 
 **Watchdog-kill-before-PR recovery example (commit→push feature branch→`gh pr create`):**
 
@@ -110,6 +114,7 @@ When the log shows a watchdog kill after implementation was complete but before 
 ```json
 {
   "action": "recover",
+  "cause": "background-notification-wait",
   "rationale": "Watchdog killed run-code.sh after implementation but before commit or PR creation. Recovering by committing uncommitted changes, pushing the feature branch, and creating the PR.",
   "steps": [
     { "op": "run_command", "cmd": "git add -A && git commit -s -m 'feat: implement issue #N (closes #N)\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>'" },
@@ -128,6 +133,7 @@ When the reported blocking symptom is unrelated to the worktree branch itself (e
 ```json
 {
   "action": "recover",
+  "cause": "dirty-guard",
   "rationale": "main has an unrelated dirty-tree blocker (uncommitted L0 log entry) which must be cleared, but worktree-code+issue-N already has unpushed implementation commits and no PR exists yet. Resolving only the dirty tree would leave code-pr phase incomplete, so this plan also pushes the branch and creates the PR.",
   "steps": [
     { "op": "run_command", "cmd": "<step(s) resolving the originally-reported symptom, e.g. committing the unrelated dirty-tree file via the phase's own automated commit path>" },
