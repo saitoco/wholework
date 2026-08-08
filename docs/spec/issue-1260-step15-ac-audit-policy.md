@@ -74,17 +74,31 @@ B 案の既知の穴 (Issue 本文): 「Size XS の patch route では `/spec` �
 
 - 実装のやり直しは発生していない。参考記録として: `skills/issue/SKILL.md` が複数テストファイル (`tests/verify-executor.bats` 等、直接対応する `tests/issue.bats` 以外) から参照されているため Behavioral Change Detection が発火し、`bats --jobs 18 tests/` のフルスイート実行が必要になった。実行結果、`tests/post_merge_check.bats` の `fail: gh issue reopen called when FAIL input given` が 1 件 FAIL したが、同ファイル単体実行では PASS することを確認済み。`test-failure-classify.sh` の分類は `infra` (並列実行時のリソース競合によるフレークで、テストコード側の修復対象ではない)。本 Issue の変更 (`skills/issue/SKILL.md` Step 15, `skills/triage/skill-dev-verify-audit.md`) とは無関係と判断し、pr route の既定方針通り CI 側の検知に委ねて未修正のまま継続した。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — Implementation Steps 1・2 は Spec の指定通りに実施されており、`/review` の独立再検証 (rubric x3, section_contains x1) でも Pre-merge AC 4件全て PASS を再確認した。`/code` の Phase Handoff で依頼された「rubric 判定の妥当性の独立再確認」も完了している。
+
+### Recurring issues
+
+Nothing to note — MUST issue は 0 件。SHOULD issue が 1 件 (`skills/triage/skill-dev-verify-audit.md:254` の Size 列挙が Size S を欠落) 見つかり、修正・push 済み。同種の「Size グループを個別列挙する記述は将来のルーティング変更で陳腐化しやすい」という教訓は、同じ Spec の Notes に既にある一般化した表現 (「次フェーズ (`/spec` または Size XS の場合は `/code`)」) と平仄を取ることで再発を避けられる — 今回は 1 箇所のみで規模化した Issue 起票は不要と判断。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — rubric 3件・section_contains 1件とも安全モードで確定的に PASS 判定でき、UNCERTAIN は 0 件だった。verify command の記述・対象ファイル指定に不備はなかった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec Implementation Steps 1・2 をそのまま実施し、`skill-dev-verify-audit.md` § Non-Destructive Audit Behavior に自己生成 AC の扱い (非破壊を維持) と根拠、「Repair handoff for self-generated AC」段落を追加。`skills/issue/SKILL.md` Step 15 に整合段落を挿入した。
-- Pre-merge AC 4件 (rubric x3, section_contains x1) はいずれも実装内容そのままで PASS と判定し、Issue body のチェックボックスを更新した。
+- Pre-merge AC 4件を独立に再検証し、いずれも PASS と再確認した (Issue body のチェックボックスは `/code` により既に `[x]` 済みで変更不要)。
+- `skills/triage/skill-dev-verify-audit.md:254` の Size 列挙から Size S が欠落している SHOULD issue を検出し、修正・commit・push 済み。
 
 ### Deferred Items
 - Post-merge AC (`次回 /issue Step 15 が自己生成 AC の不備を検出した際、定めた方針どおりの挙動になることを観察する`, observation type) は次回発火まで未検証のまま。
-- `tests/post_merge_check.bats` の並列実行時フレーク (`fail: gh issue reopen called when FAIL input given`) は本 Issue の変更と無関係と判断し未修正。継続的に発生する場合は別途調査 Issue が必要。
+- `tests/post_merge_check.bats` の並列実行時フレーク (`fail: gh issue reopen called when FAIL input given`) は本 Issue の変更と無関係と判断し未修正のまま。CI では今回全ジョブ SUCCESS だったため再現しなかった。継続的に発生する場合は別途調査 Issue が必要。
 
 ### Notes for Next Phase
-- `/review` は Pre-merge AC 4件が既に `[x]` 済みであることを踏まえ、rubric 判定の妥当性を独立に再確認すること。
-- `/merge` は上記の `tests/post_merge_check.bats` フレークが CI 上でも再現するかを確認し、再現する場合は無関係な既存問題として扱ってよい (本 Issue の diff は `skills/issue/SKILL.md` と `skills/triage/skill-dev-verify-audit.md` のみ)。
+- `/merge` は MUST issue 0件・CI 全 SUCCESS のためそのまま進めてよい。
+- `tests/post_merge_check.bats` のフレークは本 Issue の diff (`skills/issue/SKILL.md`, `skills/triage/skill-dev-verify-audit.md`) と無関係であり、`/merge` 側での追加対応は不要。
