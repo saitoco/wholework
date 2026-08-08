@@ -20,7 +20,7 @@ Issue #1276 (親 #1270 の sub-issue) の実査記録。#1165 が `verify-type: 
 | #961 | `auto-run` | **既に `- [x]` / `phase/done`**。同上 |
 | #484 条件1 | `auto-run` | **既に `- [x]` / `phase/done`**。同上 (同 Issue の条件2 は #1165 が `### Retired Post-merge Conditions` へ退避済みで本 sub-issue の対象外) |
 | #478 条件1 | `auto-run when=mode:batch` | batch run 自身が観測対象。`when=mode:batch` ゲートが batch 実行に絞り込んだうえで、その run の wrapper ログのスキップ警告メッセージで判定できる。blocked Issue を含まない batch では SKIPPED になるが、これは `modules/observation-trigger.md` § Conditions That Cannot Be Pre-Excluded のとおり設計どおりの挙動 |
-| #478 条件2 | `auto-run when=mode:batch` | 同上。checkpoint JSON (`.tmp/auto-checkpoint-*.json`) の `remaining` 配列がスキップされた Issue 番号を保持しているかで判定できる |
+| #478 条件2 | `auto-run when=mode:batch` | 同上。checkpoint JSON (`.tmp/auto-batch-state.json` / `.tmp/auto-batch-state-<BATCH_ID>.json`) の `remaining` 配列がスキップされた Issue 番号を保持しているかで判定できる |
 | #535 | `watchdog-kill` | 「event 固有の観測窓」参照 |
 | #575 | `pr-review-full config=capabilities.workflow when=execution-context:main` | 「event 固有の観測窓」参照 |
 
@@ -50,9 +50,9 @@ Issue #1276 (親 #1270 の sub-issue) の実査記録。#1165 が `verify-type: 
 | Issue / 条件 | 差し戻し理由 | `/verify` 実行時の判定手順 | 条件文の書き換え |
 |---|---|---|---|
 | #1056 | `auto-run` の発火は「`pup` 未インストール環境で `html_check` を含む AC が実行された」ことを保証しない | 本リポジトリで `command -v pup` が不在を返すことを確認 (2026-08-09 実測: 不在) したうえで、`html_check` verify command を 1 件実際に実行し、UNCERTAIN ではなく PASS/FAIL が返ることを確かめる | なし (条件文は具体的) |
-| #710 条件1 | `auto-run` の発火は `/issue` phase が走ったことしか示さず、`Blocked by #N` を body に持つ Issue が起票されたかは保証しない | body に `Blocked by #N` を含む既存 Issue を 1 件選び、`scripts/get-blocked-by.sh <N>` / `gh-graphql.sh` の `blockedByIssues` クエリで relationship が設定済みかを確認する | なし (条件文は具体的) |
+| #710 条件1 | `auto-run` の発火は `/issue` phase が走ったことしか示さず、`Blocked by #N` を body に持つ Issue が起票されたかは保証しない | AC 文が要求するとおり、body に `Blocked by #N` を含む試験 Issue を `/issue` で新規に起票し、`scripts/get-blocked-by.sh <N>` / `gh-graphql.sh` の `blockedByIssues` クエリで relationship が設定されることを確認する (#710 自身が追加した新規作成時の自動 backfill を実際に発火させて検証する — 既存 Issue の確認では条件2 と同じ検証になってしまう) | なし (条件文は具体的) |
 | #710 条件2 | 同上。`/triage` に対応する有効 event 名も存在しない | body-only `Blocked by #N` を持つ既存 Issue に対し `scripts/gh-check-blocking.sh <N>` を実行し、GraphQL 側へ backfill されることを確認する | なし (条件文は具体的) |
-| #513 | 「次の同種 Issue」は内容的性質であり `event=` でも `when=` 3 軸でも表現できない | #513 のマージ (2026-06-09) 以降に作成された Issue のうち間接反映 AC を含むものを `gh issue list` + 本文検索で列挙し、post-merge manual または verify command 型に分類されているかを確認する | あり — 母集団 (「#513 マージ以降に作成された Issue のうち間接反映 AC を含むもの」) を条件文に明記 |
+| #513 | 「次の同種 Issue」は内容的性質であり `event=` でも `when=` の run-context 3 軸 (`route`/`mode`/`recovery-tier`) でも表現できない | #513 のマージ (2026-06-09) 以降に作成された Issue のうち間接反映 AC を含むものを `gh issue list` + 本文検索で列挙し、post-merge manual または verify command 型に分類されているかを確認する | あり — 母集団 (「#513 マージ以降に作成された Issue のうち間接反映 AC を含むもの」) を条件文に明記 |
 | #512 | 「次のユースケース」は内容的性質であり事前排除できない | #512 のマージ (2026-06-09) 以降に作成された `docs/spec/*.md` のうち距離ルールを定義するものを grep で列挙し、「A 以上かつ B 以下」表記が使われているかを確認する | あり — 母集団 (「#512 マージ以降に作成された `docs/spec/*.md` のうち距離ルールを定義するもの」) を条件文に明記 |
 | #477 | 親 #1270 が名指しした実例。「外部 API 統合 Spec」という Spec の内容的性質は event で表現できない (親 Issue の表がそのまま該当) | #477 のマージ (2026-06-14) 以降に作成された `docs/spec/*.md` のうち外部 API を呼ぶ実装を含むものを grep で列挙し、実レスポンスフォーマットと異常コード対処方針が明記されているかを確認する | あり — 母集団 (「#477 マージ以降に作成された `docs/spec/*.md` のうち外部 API 統合を含むもの」) を条件文に明記 |
 
@@ -72,7 +72,7 @@ Issue #1276 (親 #1270 の sub-issue) の実査記録。#1165 が `verify-type: 
 - 観測窓: `/review --full` の完了時。`auto-run` が `/auto` パイプライン全体の完走で開くのに対し、こちらは review フェーズ単体で開く
 - 2 段のゲートが掛かる。`config=capabilities.workflow` は本リポジトリで `true` (`.wholework.yml` の `capabilities: workflow: true`) のため通過する。`when=execution-context:main` は `/review` が main context (ユーザーの直接実行) で走った run にのみ通す
 - `execution-context:main` ゲートは正しい。`skills/review/workflow-guidance.md` は「re-invocation guarantee が無い実行面 (headless `claude -p`、fork 実行された Skill) では Workflow tool を起動せず static Task fan-out へフォールバックする」と定めており、`/auto` 経由の `/review` (= `run-review.sh` の fork context) では Workflow 経路自体が走らない。つまり条件文が要求する「Workflow 経路で完走」は main context でしか成立しない
-- 判定根拠: `/review` Step 14 の完了レポートに `skills/review/workflow-guidance.md` § Completion Report Addition が定める `Workflow mode (capabilities.workflow: true):` 見出しと概算トークン使用量が出力されているか
+- 判定根拠: `/review` Step 14 の完了レポートに `skills/review/workflow-guidance.md` § Cost Transparency が定める `Workflow mode (capabilities.workflow: true):` 見出しと概算トークン使用量が出力されているか
 
 ## #477 の処理
 
@@ -110,11 +110,11 @@ Issue #1276 (親 #1270 の sub-issue) の実査記録。#1165 が `verify-type: 
 - **#491**: retire 決定コメントを投稿した (https://github.com/saitoco/wholework/issues/491#issuecomment-5228218405)。Issue 本文の `### Post-merge` 節は編集していない。ラベルを `phase/verify` → `phase/done` へ遷移させた。CLOSED のまま。
 - **#490**: retire 決定コメントを投稿した (https://github.com/saitoco/wholework/issues/490#issuecomment-5228218581)。Issue 本文の `### Post-merge` 節は編集していない。ラベルを `phase/verify` → `phase/done` へ遷移させたうえで、`gh api -X PATCH .../issues/490 -f state=closed` により OPEN → CLOSED へ遷移させた (`state_reason: completed` を確認)。
 
-いずれも retire により未チェック post-merge 条件がゼロになったため `phase/done` 遷移が GitHub 上の実状態 (ラベル・close) と一致している。
+いずれも AC 行は `- [ ]` のまま (#1166 方式で本文を編集しない) だが、`phase/done` 遷移により `opportunistic-search.sh` / `scan-pending-ac.sh` の母集団 (`--label phase/verify`) から外れ、待ち条件は実質ゼロになった。この `phase/done` 遷移が GitHub 上の実状態 (ラベル・close) と一致している。
 
 ### opportunistic-search dry-run 確認 (Implementation Step 7)
 
-`scripts/opportunistic-search.sh --event auto-run --dry-run` を実行し (母集団 120 Issue)、以下を Issue 番号単位で確認した:
+`scripts/opportunistic-search.sh --event auto-run --dry-run` を実行し (検索母集団 120 Issue。`gh issue list` 段階の値であり、親 #1270 baseline の dispatch 候補 82 Issue / 85 AC 行とは計測段階が異なる)、以下を Issue 番号単位で確認した:
 
 - **分類 B の #465**: マッチ集合に含まれることを確認した (書き換え後の条件文「`/auto` 実行で silent no-op (exit 0 だが実装なし) が `reconcile-phase-state.sh --check-completion` により検出され 3-tier recovery へ流れた事例が、`docs/reports/orchestration-recoveries.md` に 1 件以上記録されている」がそのまま出力に現れている)。
 - **分類 E の 5 Issue (#1056 / #710 / #513 / #512 / #477)**: いずれもマッチ集合から意図的に外れていることを確認した (`verify-type: manual` への差し戻しにより observation dispatch の母集団から除外された)。
