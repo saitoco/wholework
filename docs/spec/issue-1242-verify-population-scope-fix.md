@@ -117,4 +117,38 @@
 
 ### Notes for Next Phase
 - `/verify` は Post-merge AC (observation event=auto-run) の確認が主目的。次回 `/audit stats --retention` 実行結果を待って判定すること。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- `/triage` が常時 PASS として指摘した 3 件の `grep -n` 形式 AC を、`/issue` フェーズが `file_not_contains` / `file_contains` / `rubric` / `command "bats ..."` へ適切に再設計した。**非破壊監査 (triage がコメント投稿のみ) → 後続フェーズで修正**という設計意図どおりの連携が機能した
+- Background 節の行番号引用のドリフト (`:202`→`:291`、`:222`/`:225`→`:311`/`:314`) も修正された。これは**同一 batch 内で先行した #1239 が同じ `opportunistic-search.sh` を変更したことによるドリフト**であり、batch 順序の副作用を `/issue` フェーズが吸収した形になる
+
+#### spec
+- AC5 (dispatch 数への影響評価) に対し、実測値 (OPEN 2 件 / CLOSED 323 件 / ALL 325 件) を Notes に記録して裏付けた。「最大 2 件増、閾値 5 の範囲内」という具体的な数値で追加抑制策不要と結論しており、rubric 型 AC に対する応答として適切
+- スコープ外判断 (migration-notes.md は歴史的記録、`tests/observation-trigger.bats` はモック全置換で影響なし等) を根拠付きで列挙しており、`/code` 段階での再調査を不要にした
+
+#### code
+- 設計逸脱なし。ただしテスト設計で 2 件の手戻りが発生:
+  1. `gh-list-args.txt` モックが `printf '%s\n' "$@"` で 1 行 1 引数を書く形式だったため、`grep -q -- "--state all"` (1 行 2 語想定) が FAIL。`tr '\n' ' '` で結合する形に修正
+  2. Post-merge スコープ化の効果を検証するテストの初稿が、Post-merge セクション内に `- [x]` (チェック済み) 行を置いていたため、スコープ化とは無関係な理由 (チェック済み) で FAIL が再現できてしまっていた。効果だけを切り出すよう再構成
+- いずれも Spec に書かれていなかったフィクスチャ/モックの実装詳細に起因する
+
+#### review
+- 構造的な乖離なし
+
+#### merge
+- Pre-merge AC 6/6 チェック済み、`review_incomplete_fallback` なし。オーバーライドマーカー不要で通常経路の squash merge
+
+#### verify
+- Pre-merge 6 件すべて `[x]` 済みで SKIPPED、post-merge observation 1 件は `auto-run` 未発火で SKIPPED。FAIL/UNCERTAIN 0 件
+- 本 Issue が解消した死角 (OPEN + `phase/verify` の構造的除外) の実測対象は #490 / #465 の 2 件であり、Issue 本文の主張と実測が一致した
+
+### Improvement Proposals
+
+- **共有フィクスチャ/モックの入出力形式が Spec に記述されず、テスト設計の手戻りを生んだ**: `tests/opportunistic-search.bats` の `gh-list-args.txt` モックが「1 行 1 引数」形式であることは Spec の Implementation Steps に書かれておらず、実装時に FAIL して初めて判明した。既存テストファイルへテストを追記する Issue では、Spec 作成段階で「追記先ファイルが使っている既存モックの入出力形式」を Notes に 1 行控えるだけで防げる。ただし本件は手戻り 1 コミット以内に収まっており、単発観察のため起票は見送る (同型の手戻りが別 Issue でも観測された時点で起票判断)
+
+- **`tests/post_merge_check.bats` の並列実行フレークは #1255 が既にカバー済み**: 本 Issue の Full Suite Run (`bats --jobs 18`, 1581 件) でも `fail: gh issue reopen called when FAIL input given` が並列時のみ FAIL し単独では 10/10 PASS した。同一フレークは `docs/spec/` 配下の **7 件の Spec** (#1227 / #1233 / #1063 / #1221 / #1164 / #1255 / 本 Issue) に記録されている。ただし **#1255「tests: 並列 bats 実行下でのみ落ちる flaky を機械的に切り分ける」が 2026-08-08 に着地済み** (現在 `phase/verify`) であり、切り分け機構の提供という形で対応済みのため、本 Issue からの追加起票は行わない。なお #1255 着地後の本実行でもフレーク自体は再現しているため、#1255 が提供するのは検出・分類であってフレークの解消ではない点に留意 (解消が必要なら #1255 の post-merge 観察を経て別途判断)
 - ラベル遷移 (`phase/verify`) と Issue クローズ状態を Step 6 のフォールバックで検証済みであることを前提にしてよい。
