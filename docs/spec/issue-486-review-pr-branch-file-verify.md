@@ -130,3 +130,8 @@
 ### Improvement Proposals
 - See Auto Retrospective Improvement Proposals (silent no-op pattern 観測連発)。
 
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/486#issuecomment-4702587455
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=4 / https://github.com/saitoco/wholework/issues/486#issuecomment-5212257858
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=4 / https://github.com/saitoco/wholework/issues/486#issuecomment-5225312766
