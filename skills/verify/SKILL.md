@@ -3,7 +3,7 @@ name: verify
 description: Acceptance test. Automatically verifies post-merge acceptance conditions and updates Issue checkboxes (`/verify 123`). Use after `/merge`. Reopens Issue on FAIL to return to the fix cycle.
 model: sonnet
 loop-paths-used: [A]
-allowed-tools: Bash(git checkout:*, git fetch:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh run list:*, gh run view:*, gh pr checks:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-ac-fallback.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*, date:*, printf:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
+allowed-tools: Bash(git checkout:*, git fetch:*, git status:*, git stash:*, git add:*, git commit:*, git push:*, git merge:*, git worktree:*, git branch:*, gh issue view:*, gh issue edit:*, gh issue list:*, gh issue close:*, gh issue reopen:*, gh issue create:*, gh pr list:*, gh run list:*, gh run view:*, gh pr checks:*, gh label list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-extract-issue-from-pr.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-verify-iteration.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-preview-ac-fallback.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/verify-executability-marker.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/worktree-merge-push.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-foreign-worktree.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-verify-dirty.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-recovery-candidates.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*, wc:*, diff:*, test:*, git log:*, git diff:*, npm:*, node:*, make:*, gh pr view:*, gh api:*, date:*, printf:*), Read, Write, Edit, Glob, Grep, ToolSearch, EnterWorktree, ExitWorktree, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_close
 ---
 
 # Acceptance Test
@@ -371,6 +371,27 @@ Evaluate whether Claude can directly execute the verification based on the condi
 - **Executable examples**: `curl` URL reachability check, `gh` command result judgment, file/directory existence check (`test -f`, `test -d`), `git log`/`git status` result inspection, process listing (`ps`, `pgrep`), observation whose default behavior is statically determined from source code (e.g., `grep` for hardcoded default path, constant, or variable assignment — confirms expected behavior without waiting for future execution)
 - **Non-executable examples**: browser visual inspection, user action observation in production environment, UI/UX evaluation, external service dashboard confirmation
 
+**1b. Record the judgment (both branches)**
+
+For every condition judged in step 1, immediately record `(ac_index, executable, reason, capability)` into `EXECUTABILITY_RECORDS` — a list carried forward to Step 9 — before proceeding to 2a/2b. `ac_index` uses the same 1-based index convention as `gh-issue-edit.sh --checkbox`, counted across the Issue body's full Acceptance Criteria enumeration.
+
+- `executable=true`: no `reason`/`capability` needed.
+- `executable=false`: choose `reason` from the vocabulary defined in `${CLAUDE_PLUGIN_ROOT}/modules/l0-surfaces.md` § Machine-Readable Event Marker (`type=verify-executability`) — the vocabulary is not duplicated here. If the sole obstacle is an unset project capability (e.g. `HAS_BROWSER_CAPABILITY` / `HAS_VISUAL_DIFF_CAPABILITY`, fetched via `detect-config-markers.md` in Step 4, evaluating to false), use `reason=capability-unavailable` with `capability=capabilities.<key>` naming the `.wholework.yml` key. Otherwise pick the closest match from the vocabulary; use `reason=other` with `detail=` only when none of the other reasons fit.
+
+This recording step is independent of whether `AskUserQuestion` is invoked in 2a and of its response — `/auto --batch`'s verify run executes Claude-executable conditions without confirmation, bypassing `AskUserQuestion` entirely, so recording at judgment time rather than at response time is the only way that path's judgments get captured at all.
+
+Immediately emit `verify_executability` (only when `AUTO_EVENTS_LOG` is set; restore the pointer first — same structure as the `verify_user_confirm` emit below):
+```bash
+source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
+restore_auto_session_pointer $NUMBER
+if [[ -n "${AUTO_EVENTS_LOG:-}" ]]; then
+  EMIT_ISSUE_NUMBER=$NUMBER emit_event "verify_executability" \
+    "ac_index={N}" \
+    "executable={true|false}" \
+    "reason={slug or empty}"
+fi
+```
+
 **2a. If executable: present per-condition AskUserQuestion**
 
 For each executable condition, ask:
@@ -450,9 +471,14 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh "$NUMBER" --checkbox <post-merge-
 
 Do not include checkbox format in the comment body. Do not duplicate Issue body checkboxes in the comment — the Issue body is the SSoT; checkboxes added to comments are not persisted when the comment is updated.
 
+**Executability marker lines (when Step 8b recorded judgments):** If `EXECUTABILITY_RECORDS` (built in Step 8b) is non-empty, generate one marker line per record by running `${CLAUDE_PLUGIN_ROOT}/scripts/verify-executability-marker.sh format $NUMBER <ac_index> <executable> [reason] [capability=<key>|detail=<text>]` for each entry, and place all resulting lines at the very top of the comment body, before the `## Acceptance Test Results` heading. If `EXECUTABILITY_RECORDS` is empty (no manual post-merge condition was judged in this run), add no marker lines. Do not post these markers as a separate comment — they are embedded in this Step's single existing comment, per `modules/l0-surfaces.md` § Machine-Readable Event Marker (`type=verify-executability`).
+
 Use the following format for the comment body:
 
 ```
+<!-- wholework-event: type=verify-executability phase=verify issue=<N> ac=<index> executable=<true|false> [reason=<slug>] [capability=<key>] [detail="<text>"] -->
+(one marker line per EXECUTABILITY_RECORDS entry — omit this block entirely when EXECUTABILITY_RECORDS is empty)
+
 ## Acceptance Test Results
 
 ### Auto Verification
