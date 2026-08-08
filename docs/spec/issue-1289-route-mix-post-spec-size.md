@@ -104,3 +104,42 @@ Nothing to note. No issue types repeated across this PR's review; 0 findings acr
 
 ### Acceptance Criteria Verification Difficulty
 Nothing to note. All 5 Pre-merge ACs had well-formed verify commands (2 `rubric`, 2 `grep`, 1 `command`) and none required UNCERTAIN fallback or AI-judgment guessing.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- 本 Issue は `/verify 1279` が起票したもので、起票時に verify command のベースラインを実測してから AC を書いた (`grep "code-patch" scripts/get-auto-session-report.sh` = 0 件、`grep "Route mix" tests/get-auto-session-report.bats` = 0 件)。`/issue` Step 15 の AC 監査は「問題なし」と報告しており、常時 PASS の混入は起きていない
+- 回帰保護目的の `command "bats tests/get-auto-session-report.bats"` は AC 本文で「単独では常時 PASS のため上記の新規テスト追加 AC と組で機能する」と明示した。#1294 で提案した除外条件 (回帰保護のみを主張する AC は検出対象外) と整合する書き方になっている
+- Background に列挙した 3 つの判断点 (`operate` route の扱い / `xl` の導出 / フェーズ未達 Issue の計上) は非対話モードで auto-resolve され、Issue 本文に「Auto-Resolved Ambiguity Points」として反映された
+- post-merge AC への `session=next` 付与は、Background が SKILL.md を参照していたことによるスコープゲートの検出結果。ただし本 Issue の変更対象は `scripts/get-auto-session-report.sh` であり、skill 自己更新の伝播待ちは本来不要 (実際、マージ後の main に対して即座に効果を実測できている)。機械的ゲートが保守側に倒れた例
+
+#### spec
+
+- 3 つの判断点それぞれに採用方式と理由を記録 (AC3 の要求)。特にフェーズ未達 Issue を `patch` へ寄せず独立した `unknown` 列として計上する方式を選んだ判断は、#476 のような in-session `/verify` dispatch のみの Issue を route 集計に混ぜないという点で妥当
+
+#### code
+
+- `scripts/get-auto-session-report.sh` 28 行・`tests/get-auto-session-report.bats` 34 行の変更で完結。rework ゼロ
+
+#### review
+
+- review-light の 4 観点すべてで指摘 0 件。MUST 指摘がなかったため `REQUEST_CHANGES` は試行されておらず、#1256 の自己 PR 422 フォールバックはこの PR では発火していない (本セッションでの発火は #1257 / PR #1291 の 1 回のみ)
+
+#### merge
+
+- コンフリクト・CI 失敗なし
+
+#### verify
+
+- Pre-merge 5 件は既チェックのため既定どおり skip、post-merge の observation 1 件は `auto-run` 未発火で SKIPPED。FAIL・UNCERTAIN ゼロ
+- **post-merge 条件が求める観察を、検出元セッション自身で実測できた**。本セッション (`23043-1786197225`) は patch route 3 件・pr route 3 件が混在する `/auto --batch` であり、条件の対象そのものである。修正後の `Route mix` は `patch: 3, pr: 3, xl: 0, unknown: 1` を報告し、`code-patch` / `code-pr` phase イベントの実績 (patch: #1256/#1266/#1287、pr: #1257/#1279/#1289) と完全一致した
+- 旧ロジックは `sub_start` の size (M,S,M,M,S,M) から `patch: 2, pr: 4` を導出していたはずで、差分は **#1256** — `/spec` が M → XS へ降格し patch route で着地したにもかかわらず pr として集計されていた、本 Issue の起票理由そのものの事例が解消されている
+- `unknown: 1` は #476 (`phase_*` のみを持ち `code-*` に到達していない Issue) で、Spec が採用した独立列方式が意図通り機能している
+- 証拠は Issue コメントに記録済み。`auto-run` 発火後の自動評価時に参照される
+
+### Improvement Proposals
+
+- N/A
