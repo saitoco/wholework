@@ -74,3 +74,31 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective (issue フェーズ) — 「検討候補」節の案 A/B 選択は `/issue` vs `/spec` の責務境界に従い意図的に `/spec` へ委譲済みで追加解決なし、Post-merge observation AC に `session=next` 追加済み、Triage 結果 (Type: Task, Size: M, Value: 3) を記録。本 Spec の設計判断に対する追加の制約や変更なし / https://github.com/saitoco/wholework/issues/1288#issuecomment-5228136766
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A (Implementation Steps 1-5 を計画通り実施)
+
+### Design Gaps/Ambiguities
+- Issue 本文の Pre-merge AC が Spec の Verification 節より1件少なかった (`docs/structure.md`/`docs/ja/structure.md` のモジュール数コメント確認コマンドが Issue 側に未反映)。`/code` Step 11 の Auto-append 手順で Issue 本文に追加し、Change Tracking コメントで記録した。原因は `/issue` フェーズ時点では Spec がまだ存在せず、この AC 項目は `/spec` フェーズで初めて具体化されたため — フェーズ間の自然な情報成熟であり、設計上の欠陥ではない。
+
+### Rework
+- N/A
+
+### Tooling Note
+- Step 9 のフル bats スイート実行 (`bats --jobs 18 tests/`) が 600 秒の Bash ツール上限を超え、バックグラウンドへ自動移行された。`skills/code/SKILL.md` Step 9 の明示的な方針 (「完了通知を待たない」) に従い、通知を待たずに Step 10 以降へ進行した。ローカルでの追加検証 (`validate-skill-syntax.py`、`check-forbidden-expressions.sh`、`check-translation-sync.sh`) は個別に実行し全て PASS を確認済み。バックグラウンド移行したフルスイートは Step 12 実施時点で完了通知が届き、1637 件全て PASS (exit code 0) だったことを事後確認した。CI (`.github/workflows/test.yml`) でも同じ結果が再確認される想定。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 除外パターンの正本文言は `skills/doc/SKILL.md` 側 (括弧注釈付き) を採用し、`skills/audit/SKILL.md` 側の無注釈版を置き換えた (Spec Notes の判断を踏襲)
+- `modules/doc-scan-exclusions.md` の Callers 節フォーマットは `modules/worktree-lifecycle.md` の既存パターンに倣った (Skill/Path/Context の3列)
+
+### Deferred Items
+- Post-merge observation AC (`session=next`): 次回 `/audit drift` または `/doc sync` 実行時に `docs/{lang}/` 配下の翻訳ファイルが Project Documents 収集に混入しないことを観察する。`/verify` フェーズで未着手のまま引き継ぐ
+
+### Notes for Next Phase
+- Pre-merge AC は5件 (Issue 本文には元々4件のみ存在、`/code` が5件目を auto-append 済み) — 全て verify-executor full mode で PASS 済み、Issue のチェックボックスも `[x]` 済み
+- フル bats スイート (1637件) は今回のコミット後に PASS 確認済み。CI でも同じ結果が出るはずだが、`/review`/`/merge` フェーズで CI 結果を再確認すること
