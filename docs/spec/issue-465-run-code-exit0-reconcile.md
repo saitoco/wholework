@@ -107,6 +107,20 @@ Note: All three steps are already implemented in #520 (PR #525). The `/code` pha
 ### Improvement Proposals
 - See Auto Retrospective (silent no-op false-positive pattern, #490 と共通)
 
+### 2026-08-09 re-run (observation 条件の評価)
+
+`/auto --batch 1280 1282 1283 1281` (session `97764-1786198856`) の end-of-batch observation scan で `event=auto-run` が発火し、post-merge 条件が初めて評価対象になった。
+
+#### verify (再実行分)
+
+- 条件 6 は **UNCERTAIN**。条件文が 2 つの主張の連言 (「自動検出され」+「3-tier recovery へ流れる」) で、前半のみ実証された
+- **前半は実運用で確証**: #1280 の code-patch フェーズで `code_retry_fire` (`trigger_reason=silent_no_op`, 2026-08-08T15:01:56Z) が発火。このイベントは `scripts/run-code.sh:299-311` の分岐からのみ emit されるため、exit 0 の `claude` に対し `--check-completion` が走り `matches_expected:false` を検出したことの直接証拠になる。本 Issue が実装した経路そのもの
+- **後半は未観測**: 同 session に recovery / tier / manual_intervention 系イベントはゼロ。#1280 はリトライ 1 回目で着地した (`wrapper_exit exit_code=0` @ 15:19:22)
+- フォールバック経路自体は健在 (`run-code.sh:326` の `EXIT_CODE=1`、`run-auto-sub.sh:747-791` の Tier 1/2/3)。実行されなかっただけ
+
+#### Improvement Proposals (再実行分)
+
+- **後段機構の追加により、先行 Issue の observation 条件が到達不能になるパターン** — 本 Issue の起票時 (2026-05) には `auto-retry-on-fail` の in-phase retry 層が存在せず、silent no-op 検出 → `EXIT_CODE=1` → 3-tier が唯一の経路だった。その後 retry 層が**前段に**挿入された結果、`autonomy: L3` + `auto-retry-on-fail.enabled: true` の構成では条件文後半が通常到達しなくなった。observation 条件は「実装当時の制御フロー」を前提に書かれるため、後から前段に層が挿入されると silent に評価不能化する。この失効は AC 側にも変更履歴にも痕跡が残らない点が問題。新機構が既存経路の前段に入る変更 (`/spec` や `/code`) の際に、`phase/verify` 滞留中の Issue の observation 条件への影響を確認する step があると検知できる。ただし本提案は変更対象が単一 skill に絞れず、`/verify` 側の実査 (#1270 系) で個別に拾う運用でも吸収できるため Tier 2 とし、起票せずここに記録する
 
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/465#issuecomment-4703427504
