@@ -51,7 +51,7 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 | Field | Description |
 |-------|-------------|
 | `symptom-short` | Short identifier for the symptom pattern (kebab-case). Frequency grouping key is `symptom-short`, or `symptom-short/cause-slug` when a `cause` line is present in `### Diagnosis` |
-| `cause` | Optional kebab-case root-cause slug in `### Diagnosis` (e.g. `dirty-guard`). Separates occurrences of the same symptom by known root cause during frequency grouping. Written by three paths: Tier 2 (`apply-fallback.sh`, value is the matched symptom anchor), Tier 3 (`spawn-recovery-subagent.sh`, value is the recovery plan's `cause` field, `unclassified` when missing/invalid), and manual recovery (`run-auto-sub.sh --write-manual-recovery --cause`) |
+| `cause` | Kebab-case root-cause slug in `### Diagnosis` (e.g. `dirty-guard`). Optional at read time — pre-#1281 entries lack it. Separates occurrences of the same symptom by known root cause during frequency grouping. Always written by Tier 2 (`apply-fallback.sh`, value is the matched symptom anchor) and Tier 3 (`spawn-recovery-subagent.sh`, value is the recovery plan's `cause` field, `unclassified` when missing/invalid); optional for manual recovery (`run-auto-sub.sh --write-manual-recovery --cause`) |
 | `Source` | Which mechanism detected and handled this recovery event |
 | `Outcome` | `success` = phase completed; `partial` = partial recovery; `failed` = stopped |
 | `Improvement Candidate` | `未起票` = not yet filed; `起票済み #NNN` = filed as Issue #NNN; `N/A` = no action needed |
