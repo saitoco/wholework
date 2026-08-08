@@ -10,7 +10,9 @@
 #   verify-executability-marker.sh resolve <issue>
 #
 # Exit codes: 0 on success. `format` returns 1 on invalid/missing arguments.
-# `resolve` fails open (empty output, exit 0) when no marker exists or `gh` fails.
+# `resolve` returns 0 with empty output when no marker exists; it returns 2
+# (distinct from "no marker") when `gh` itself fails, so callers can tell
+# "unevaluated" apart from "could not be determined this run".
 set -uo pipefail
 
 SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
@@ -97,6 +99,14 @@ cmd_format() {
     echo "Error: reason=other requires detail=<text>" >&2
     return 1
   fi
+  if [ -n "$capability" ]; then
+    case "$capability" in
+      *'"'*|*'-->'*|*' '*)
+        echo 'Error: capability must not contain a space, double quote, or "-->"' >&2
+        return 1
+        ;;
+    esac
+  fi
   if [ -n "$detail" ]; then
     case "$detail" in
       *'"'*|*'-->'*)
@@ -137,9 +147,12 @@ cmd_resolve() {
   fi
 
   local body
-  body="$(gh issue view "$issue" --json comments \
+  if ! body="$(gh issue view "$issue" --json comments \
     --jq '[.comments[] | select(.body | contains("<!-- wholework-event: type=verify-executability"))] | sort_by(.createdAt) | .[-1].body // empty' \
-    2>/dev/null || true)"
+    2>/dev/null)"; then
+    echo "Error: gh issue view failed for issue $issue (network/auth/rate-limit) — result is unknown, not \"no marker\"" >&2
+    return 2
+  fi
 
   if [ -z "$body" ]; then
     return 0

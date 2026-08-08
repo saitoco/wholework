@@ -368,7 +368,7 @@ Scan each Issue currently labeled `phase/verify` (closed state) for unchecked (`
 
 For each of the `N` Issues:
 
-1. Run `${CLAUDE_PLUGIN_ROOT}/scripts/verify-executability-marker.sh resolve <issue>` to get the latest snapshot of recorded judgments (TSV: `ac_index`, `executable`, `reason`, `capability`; empty output means no judgment has ever been recorded for this Issue).
+1. Run `${CLAUDE_PLUGIN_ROOT}/scripts/verify-executability-marker.sh resolve <issue>` to get the latest snapshot of recorded judgments (TSV: `ac_index`, `executable`, `reason`, `capability`). Check the exit code before interpreting empty output: **exit 0 with empty output** means no judgment has ever been recorded for this Issue; **exit 2** means `gh` itself failed (network/auth/rate-limit) and the result is undetermined this run — not the same as "no judgment." Track exit-2 Issues separately as `N0` (undetermined) and skip them from the priority-order assignment in step 4 below.
 2. Identify the 1-based indices of this Issue's currently-unchecked `verify-type: manual` post-merge conditions (same enumeration convention as `gh-issue-edit.sh --checkbox`).
 3. Cross-reference the two: for each unchecked manual AC index, look up whether it appears in the resolved snapshot and, if so, with which `executable`/`reason`.
 4. Assign the Issue to exactly one bucket, evaluated in this priority order — first match wins, so `N1 + N2 + N3 + N4 = N` always holds:
@@ -377,7 +377,7 @@ For each of the `N` Issues:
    - **N1 (unevaluated)**: not N4 or N3, and the Issue has at least one unchecked manual AC with no entry in the resolved snapshot (no judgment has ever been recorded for it).
    - **N2 (executable)**: none of the above — every unchecked manual AC for this Issue is recorded with `executable=true`. These are expected to resolve automatically at the Issue's next `/verify` pass.
 
-Report all four counts alongside `N`. N1 (unevaluated) must never be folded into N4 (human queue) — an AC with no recorded judgment is not known to require a human, only unmeasured.
+Report all four counts alongside `N`, plus `N0` (undetermined — `gh` failed for this Issue this run) if non-zero. N1 (unevaluated) must never be folded into N4 (human queue) — an AC with no recorded judgment is not known to require a human, only unmeasured. Likewise, `N0` must never be folded into N1 — a `gh` failure means the judgment status could not be checked this run, not that no judgment was ever recorded; folding it into N1 would silently deflate N4 whenever `gh` errors coincide with genuinely human-required Issues.
 
 #### 30-Day Threshold Violations
 
@@ -508,9 +508,10 @@ Manual waiting: N total
   - Executable (expected to resolve at next /verify): N2
   - Capability-unavailable (resolvable by enabling a capability): N3
   - Human queue (browser / external-service / production-action / subjective / other): N4
+  - Undetermined (gh error this run; not counted above): N0  (omit this line when N0 is 0)
 ```
 
-The `> 5` WARNING threshold applies to N4 (human queue) only — the total (`N`) row has no threshold, since it mixes buckets whose urgency differs by an order of magnitude. Do not let N1 (unevaluated) inflate N4: an unevaluated AC has no confirmed judgment either way.
+The `> 5` WARNING threshold applies to N4 (human queue) only — the total (`N`) row has no threshold, since it mixes buckets whose urgency differs by an order of magnitude. Do not let N1 (unevaluated) inflate N4: an unevaluated AC has no confirmed judgment either way. Do not let N0 (undetermined) inflate N1 either: a `gh` failure is a measurement gap, not a confirmed absence of judgment — report it as its own line so a spike in `N0` reads as an API/rate-limit problem to investigate, not as a shift in the human queue.
 
 List 30-day threshold violation Issues (if any) with Issue number, title, and dwell days.
 

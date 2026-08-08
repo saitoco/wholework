@@ -58,6 +58,17 @@ setup() {
     [ "$status" -eq 1 ]
 }
 
+@test "format: capability containing a space, double quote, or --> is rejected" {
+    run "$SCRIPT" format 42 5 false browser-required capability='evil --> injected'
+    [ "$status" -eq 1 ]
+
+    run "$SCRIPT" format 42 5 false browser-required capability='has "quote"'
+    [ "$status" -eq 1 ]
+
+    run "$SCRIPT" format 42 5 false browser-required capability='has space'
+    [ "$status" -eq 1 ]
+}
+
 @test "format: executable=false with no reason exits 1" {
     run "$SCRIPT" format 42 5 false
     [ "$status" -eq 1 ]
@@ -135,7 +146,7 @@ MOCK_EOF
     [ "$output" = "" ]
 }
 
-@test "resolve: gh failure fails open with empty output, exit 0" {
+@test "resolve: gh failure exits 2, distinct from no-marker" {
     cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
 #!/bin/bash
 exit 1
@@ -143,8 +154,7 @@ MOCK_EOF
     chmod +x "$MOCK_DIR/gh"
 
     run "$SCRIPT" resolve 42
-    [ "$status" -eq 0 ]
-    [ "$output" = "" ]
+    [ "$status" -eq 2 ]
 }
 
 @test "resolve: non-numeric argument exits 1" {
