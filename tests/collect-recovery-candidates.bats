@@ -601,8 +601,8 @@ FIXTURE_EOF
   run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 2
   [ "$status" -eq 0 ]
   echo "$output" | grep -E $'^code-pr-tier3-recovery/background-notification-wait\t2$'
-  ! echo "$output" | grep -E $'^code-pr-tier3-recovery\t'
-  ! echo "$output" | grep -E $'^code-pr-tier2-recovery'
+  if echo "$output" | grep -qE $'^code-pr-tier3-recovery\t'; then false; fi
+  if echo "$output" | grep -qE $'^code-pr-tier2-recovery'; then false; fi
 
   # threshold=1: the single dirty-guard occurrence now clears the bar too.
   run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 1
