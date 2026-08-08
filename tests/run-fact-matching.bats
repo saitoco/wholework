@@ -221,7 +221,8 @@ MOCK
 @test "collect-run-facts: recovery_tiers captures tier values with tier N fact_tokens" {
     EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
     cat > "$EVENTS_FILE" <<'EOF'
-{"ts":"2026-08-05T00:00:00Z","issue":900,"event":"recovery","session_id":"sess1","phase":"code-patch","tier":"2"}
+{"ts":"2026-08-05T00:00:00Z","issue":900,"event":"phase_start","session_id":"sess1","phase":"code-patch"}
+{"ts":"2026-08-05T00:00:30Z","issue":900,"event":"recovery","session_id":"sess1","phase":"code-patch","tier":"2"}
 {"ts":"2026-08-05T00:01:00Z","issue":900,"event":"recovery","session_id":"sess1","phase":"code-patch","tier":"3"}
 EOF
     export AUTO_EVENTS_LOG="$EVENTS_FILE"
@@ -310,6 +311,23 @@ EOF
     [ "$mode" = "batch" ]
     count=$(echo "$output" | jq '.issues | length')
     [ "$count" = "1" ]
+}
+
+@test "collect-run-facts: opportunistic_verify_result-only candidate issue excluded from issues[]" {
+    EVENTS_FILE="$BATS_TEST_TMPDIR/events.jsonl"
+    cat > "$EVENTS_FILE" <<'EOF'
+{"ts":"2026-08-08T00:00:00Z","issue":100,"event":"sub_start","session_id":"sess1","size":"S"}
+{"ts":"2026-08-08T00:01:00Z","issue":100,"event":"phase_start","session_id":"sess1","phase":"code-patch"}
+{"ts":"2026-08-08T00:02:00Z","issue":100,"event":"phase_complete","session_id":"sess1","phase":"code-patch"}
+{"ts":"2026-08-08T00:03:00Z","issue":501,"event":"opportunistic_verify_result","session_id":"sess1","skill":"/spec","result":"PASS","ac_index":2}
+EOF
+    export AUTO_EVENTS_LOG="$EVENTS_FILE"
+    run bash "$COLLECT_SCRIPT" --session sess1 --no-github
+    [ "$status" -eq 0 ]
+    count=$(echo "$output" | jq '.issues | length')
+    [ "$count" = "1" ]
+    number=$(echo "$output" | jq -r '.issues[0].number')
+    [ "$number" = "100" ]
 }
 
 # ---------------------------------------------------------------------------

@@ -137,7 +137,11 @@ if [ -z "$SESSION_EVENTS" ]; then
   exit 0
 fi
 
-ISSUE_NUMBERS=$(printf '%s\n' "$SESSION_EVENTS" | jq -r '.issue' 2>/dev/null | sort -n -u) || {
+# Issues counted here must show an event that indicates actual phase execution
+# (sub_start = batch/XL dispatch start, phase_start/phase_complete = phase ran).
+# opportunistic_verify_result's `issue` field records a *candidate* Issue being
+# judged for pending AC, not one this session processed — excluded by this filter.
+ISSUE_NUMBERS=$(printf '%s\n' "$SESSION_EVENTS" | jq -r 'select(.issue != null and .issue > 0 and (.event == "sub_start" or (.event | startswith("phase_")))) | .issue' 2>/dev/null | sort -n -u) || {
   echo "Error: failed to enumerate issue numbers from session events" >&2
   exit 1
 }
