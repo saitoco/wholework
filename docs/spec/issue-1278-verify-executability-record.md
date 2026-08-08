@@ -169,11 +169,69 @@ Issue 本文の前提記述と既存実装を突き合わせた結果、齟齬�
 - `.wholework.yml` に `capabilities.browser` / `capabilities.visual-diff` はいずれも未設定 (`capabilities:` 配下は `workflow: true` のみ)
 - `skills/audit/SKILL.md` § Manual Waiting Count は単一の Issue 件数のみを算出し、Section 8 の閾値 5 はその総数に対して適用されている
 
-### Consumed Comments
+## Consumed Comments
+
+spec phase (2026-08-08): cutoff = 2026-08-08T13:24:18Z (直近の `phase/*` ラベル付与時刻)。1 件を消費した。
 
 | login | authorAssociation | trust tier | 意図の要約 | URL |
 |---|---|---|---|---|
 | saito | MEMBER | first-class | `/issue` フェーズの retrospective。AC verify command の常時 PASS 欠陥 2 件 (`Manual Waiting Count` grep / `ls tests/`) を非破壊で報告し、後続 `/spec` での修正を委任。Issue 本文への `session=next` 付与 (2 件) は既に適用済み。曖昧点の新規検出なし、サブ Issue 分割不要と判断 | https://github.com/saitoco/wholework/issues/1278#issuecomment-5226306395 |
 
-## Consumed Comments
-No new comments since last phase.
+## issue retrospective
+
+**トリアージ**: Type=Feature、Size=L (verify/audit/l0-surfaces の複数スキル/モジュールにまたがる変更のため複雑度 +1)、Value=5 (Impact=6: #1270/#1274/#1275/#1276 から言及 + 複数スキル共有フラグ、Alignment=4: product.md Vision「governance-and-verification harness」「Autonomy-tiered governance」との高い整合性)。重複候補なし (#1072・#1273 は関連するが別スコープの問題を扱っており重複ではないと判断)。
+
+**AC verify command 監査 (非破壊、コメント投稿済み)**: 2件の常時 PASS 系欠陥を検出した。
+- `<!-- verify: grep -n "Manual Waiting Count" skills/audit/SKILL.md -->` — この文字列は既存の Manual Waiting Count 機能として main に既に存在するため、実装前から常時 PASS になる。
+- `<!-- verify: ls tests/ -->` — `tests/` ディレクトリは既に多数のファイルを含むため、新規テストケース追加の有無に関わらず常時 PASS になり検証シグナルを提供しない。
+
+Issue 本文の自動編集は行わず (Self-generated AC への非破壊方針)、後続フェーズ (`/spec`) がコメントを消費して修正する想定。
+
+**Issue 本文の機械的修正 (1件)**: Post-merge の observation AC 2件に `session=next` が欠落していた。本 Issue は `skills/verify/SKILL.md` / `skills/audit/SKILL.md` という skill ファイルの変更を対象としており、`scripts/check-skill-change-observation-ac.sh` が exit 2 (欠落検出) を返したため、両 AC に `session=next` を追記した。
+
+**曖昧性検出**: 新たな「What」レベルの曖昧点は検出されなかった。本 Issue はマーカー形式・reason 語彙・metric 内訳のフォーマットまで既に具体的に定義済みであり (Issue 本文が retro proposal として詳細な設計議論を経て起票されているため)、ファイル配置などの「How」に属する判断は `/spec` に委ねるのが適切と判断した。
+
+**サブ Issue 分割**: Size L だが単一機能 (記録機構の追加とその消費側の 1 metric 拡張) であり、分割は不要と判断。非対話モードのため分割評価そのものをスキップした (High-Stakes Decision)。
+
+## spec retrospective
+
+### Minor observations
+
+- `/issue` が「非破壊方針」で verify command 欠陥を報告 → `/spec` が修正、という受け渡しは今回機能した。ただし修正の実行者が Issue 本文 (L0) を書き換える点は変わらないので、「非破壊」なのは `/issue` フェーズの振る舞いであってパイプライン全体ではない。この分業が意図どおりかは、同じ受け渡しがもう数回発生した時点で見直す価値がある。
+- `scripts/post_merge_check.sh` は `verify-type: manual` AC を評価する第 2 の経路として存在するが、本 Issue の記録機構には接続されない。この経路を通った判定は metric に現れないため、内訳の母数が実際の判定回数より小さくなりうる。Spec Notes に記録済み。
+
+### Judgment rationale
+
+- latest-wins の粒度を「コメント単位」にした最大の根拠は既存 2 マーカーとの規約一致だが、決め手になったのは **metric が「現在未チェックの manual AC」しか数えない**という消費側の性質である。この性質があるため、コメント単位で古い記録を丸ごと捨てても情報が失われない。消費側が「過去に一度でも human-required と判定された AC」を数える設計だったなら、同じ選択は誤りになる。
+- 内訳の単位を Issue 件数のまま据え置いたのは、WARNING 閾値 5 が Issue 件数基準で設定されているため。単位変更と内訳導入を同時に行うと、閾値超過の意味が変わったのか母数が変わったのかを事後に切り分けられなくなる。
+- `reason=other` を human queue (N4) 側に数えたのは、Issue 本文の語彙表が `other` を「上記のいずれでもない」と定義しており「装備で解ける」保証がないため。過小報告 (人間キューを実際より少なく見せる) より過大報告を選んだ。
+
+### Uncertainty resolution
+
+- `/verify` は Step 3 で worktree に入るため、Step 8b の `source emit-event.sh` は worktree isolation guard にブロックされうる。これは新規制約ではなく既存の `verify_user_confirm` emit と同じ条件下にある。Issue 本文が jsonl イベントを「補助」、Step 9 のマーカーを「SSoT」と位置づけていたため設計は成立するが、**この位置づけがなければ記録機構ごと worktree 制約で無効化されていた**。マーカーを SSoT にした判断は結果的にこの制約への保険として働いている。
+- 「マーカー生成」を bats で検証するという AC8 の要求が、生成をスクリプト化する決め手になった。LLM prose での生成を選ぶと AC8 が構造的に充足不能になる — AC の検証可能性が実装形態を決めた事例。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- マーカー生成と解決を 1 スクリプト 2 サブコマンド (`scripts/verify-executability-marker.sh format|resolve`) に集約した。生成側を prose に残すと AC8 (bats で 3 ケース検証) が充足不能になるため。
+- latest-wins はコメント単位で解決する。既存 `preview-ac-unverified` / `pre-merge-ac-gate` と同一規約であり、metric が現在未チェックの AC しか数えないため情報損失がない。
+- Manual waiting の単位は Issue 件数のまま維持し、優先順位 N4 > N3 > N1 > N2 で 1 Issue を 1 区分へ排他割当する。既存 WARNING 閾値 5 の意味を保存するため。
+- `reason=other` は human queue (N4) に含める。「装備で解ける」保証がないため安全側に倒した。
+- Issue 本文の verify command 2 件 (`Manual Waiting Count` grep / `ls tests/`) を常時 PASS 欠陥として修正済み。Spec 側は修正後の値を verbatim コピーしている。
+
+### Deferred Items
+
+- `scripts/post_merge_check.sh` (manual AC を評価する第 2 の経路) は記録機構に接続しない。本 Issue のスコープ外として Notes に記録済み。
+- `manual` → `deferred` 改名と `requires=` 属性の導入は Issue 本文で明示的に保留されている。本 Issue の実測データが出るまで着手しない。
+- `docs/workflow.md` と `scripts/collect-verify-retention-stats.sh` は Steering Docs sync candidate として Changed Files に挙げたが、いずれも変更不要の見込み。`/code` が本文を読んで最終判断する。
+
+### Notes for Next Phase
+
+- `skills/verify/SKILL.md` / `skills/audit/SKILL.md` を編集する際は `scripts/validate-skill-syntax.py` の MUST 制約 (本文中の半角 `!` 禁止、Step 番号の小数禁止、`command` verify command のリポジトリ相対パス) に注意すること。
+- 新規スクリプトは `skills/verify/SKILL.md` と `skills/audit/SKILL.md` の **両方**の `allowed-tools` に literal 追加が必要。ワイルドカードで賄っている既存エントリは存在しない。
+- `resolve` サブコマンドは gh 失敗時 fail-open (空出力 + exit 0)。`set -e` を付けると fail-open が壊れるため `set -uo pipefail` にとどめること。
+- `tests/verify-executability-marker.bats` の gh モックは `--jq` を解釈しない。`sort_by(.createdAt) | .[-1]` による最新 1 件への絞り込みは gh 側の責務として、モックは絞り込み済みの本文を返す (`tests/resolve-preview-ac-fallback.bats` と同じ前提)。
+- `tests/verify.bats` に追加する構造テストは、既存の `step8a_section()` / `step8c_section()` と同じ awk 抽出パターンに揃えること。
