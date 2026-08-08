@@ -156,12 +156,13 @@ Type=Task、Size=L と判定した。同一由来 (#1158 再型付け) の先行
 ### Deviations from Design
 
 - 26 行の個別実査 (Implementation Steps 3) を、3 系統の並列調査 sub-agent (各 8〜9 Issue 担当) に委任した。Spec は「実査は `/code` の Step 3 が行う」とだけ記し実行方法は指定していなかったが、1 セッションで 26 Issue を GitHub API 呼び出しつき逐次調査するとコンテキストとレイテンシの両方が圧迫されるため、判断基準 (A/B/C/D/E の定義、gate 有効性表、Step 8c の証拠収集手順) を各エージェントへ明示的に渡した上で並列調査させ、結果は本セッションが最終判断として統合した。
-- 分類 B とした #769 の条件文書き換えに、調査 sub-agent の提案(条件文の書き換えのみ)に加えて `when=mode:batch` ゲートを追加した。#769 は batch 実行が必須前提の条件であり、`when=` は分類 B で付与してよい 2 属性の一つ (Step 2 の制約表) に含まれるため、本 Issue のスコープ内の合理的な追加拡張と判断した。Spec Implementation Steps 4 自体は変更しない (ゲート追加は「B の書き換え」に内包される作業と位置づけたため)。
+- 分類 B とした #769 の条件文書き換えに、調査 sub-agent の提案 (条件文の書き換えのみ) に加えて `when=mode:batch` ゲートを追加した。#769 は batch 実行が必須前提の条件であり、`when=` は分類 B で付与してよい 2 属性の一つ (Step 2 の制約表) に含まれるため、本 Issue のスコープ内の合理的な追加拡張と判断した。Spec Implementation Steps 4 自体は変更しない (ゲート追加は「B の書き換え」に内包される作業と位置づけたため)。
 
 ### Design Gaps/Ambiguities
 
 - 分類 D (#762) と分類 B (#769) は、いずれも #875 (`docs/reports/auto-session-*.md` の廃止、`session.md` `## Metrics` への統合) という #1163 の再型付け後に発生したアーキテクチャ変更が原因だった。#1163 の機械的なキーワード分類はこの後発の構造変更を予見できず、結果として「再型付け時点では妥当だった event 割り当てが、後の実装変更で意味を失う」というパターンが 2 件見つかった。今後同種の observation AC 実査を行う際は、対象条件文が参照するレポート構造・ファイル名が現行実装と一致しているかを機械的に (grep 等で) 確認する工程を先に挟むと、同じ齟齬をより早く検出できる可能性がある。
 - Step 9 (テスト実行) で `bats --jobs 18 tests/` を実行したところ Bash ツールの 10 分上限を超えバックグラウンドへ移行した。これは `modules/test-runner.md` / Issue #1213 が明記する既知の失敗モードだが、本 Issue の diff はスクリプト/skill を一切変更しておらず (新規 `docs/reports/*.md` 1 本の追加のみ)、Step 9 冒頭の Behavioral Change Detection も「新規ファイルのみ追加 → narrow scope で可、本サブセクションはスキップして test-runner.md へ」と判定していた。にもかかわらず `test-runner.md` の Step 1 自動検出は変更ファイルの種別を見ずプロジェクト全体のテストフレームワーク (`bats tests/`) を機械的に選択するため、docs-only diff でもフルスイート実行が発生した。実行結果を待たずに `## Execution surface constraint` の指示 (バックグラウンド移行を「報告すべき失敗」として扱い、通知を待たない) に従って後続ステップへ進んだ。`test-runner.md` 側に「リポジトリ内のスクリプト/skill ファイルが 1 件も変更されていない場合はテスト実行自体をスキップしてよい」という narrow-scope 分岐を追加する余地がある (本 Issue のスコープ外、follow-up 候補として記録)。
+- Spec Handoff (spec phase, 旧 `### Notes for Next Phase`) は「`modules/observation-trigger.md` § "Conditions That Cannot Be Pre-Excluded" を根拠に SKIPPED のまま分類を保留せず、各行を D/E のどちらかに振り切ること」と明示していたが、実際の判断 (#724 および B へ書き換えた #737/#736/#732/#731 の条件文自体) は「判定基準は確定しているが発火機会が来るまで SKIPPED のまま据え置く」という第三の運用 (A/B のまま SKIPPED 許容) を採用した。理由: これらの条件は観測対象そのものが原理的に成立しないわけではなく (D の要件を満たさない)、`/verify` 実行時に Claude が能動的に操作すれば判定できるわけでもない (E の要件も満たさない) —単に発火機会がまだ来ていないだけであり、`modules/observation-trigger.md` が「事前排除できない条件は毎回 dispatch して SKIPPED を返すのが正しい挙動」と位置づけるケースに該当するため、D/E への強制振り分けよりも A/B 維持の方が実態に即すると判断した (`/review` #1297 のレビュー指摘を受けて Design Gaps/Ambiguities に追記)。
 
 ### Rework
 
@@ -172,11 +173,11 @@ Type=Task、Size=L と判定した。同一由来 (#1158 再型付け) の先行
 
 ### Key Decisions
 
-- 最終分類は **A 19 (既 PASS 3 含む) / B 7 / C 0 / D 1 (#762) / E 2 (#861 #859)**。合計 29 で母集団と一致。
+- 最終分類は **A 17 (既 PASS 3 含む) / B 7 / C 0 / D 3 (#762 #761 #822) / E 2 (#861 #859)**。合計 29 で母集団と一致。
 - B の 7 行 (#769 #737 #736 #732 #731 #707 #700) は event を維持したまま条件文のみ書き換えた。#769 のみ `when=mode:batch` を追加 (batch 実行が必須前提のため、Step 2 の制約表が許す 2 属性の一つ)。
-- D は #762 の 1 件のみ。#875 (`docs/reports/auto-session-*.md` 廃止・`session.md` `## Metrics` へ統合) によりリンク先の「データ層レポート」自体が存在しなくなったため原理的に判定不能と確定し、#1166 方式で retire (コメント投稿 + `phase/done` 遷移)。
-- E は #861 #859 の 2 件。いずれも dirty-check の other-session 警告が `echo ... >&2` のみで永続化されないため `auto-run` の受動的発火では証跡が残らないが、`/verify` 実行時に Claude が能動的にダミーファイルを構築すれば判定可能と判断し `manual` へ差し戻した。capability 待ちの E は 0 件。
-- 分類 B/C 変更後のマッチ集合再確認 (Step 6) は event ごとに 1 回のみ実行 (`--event auto-run --dry-run` 母集団 77、`--event fix-cycle --dry-run` 母集団 5)。変更した 7 行すべてが個別に含有していることを確認済み。
+- D は #762 #761 #822 の 3 件。#762 は #875 (`docs/reports/auto-session-*.md` 廃止・`session.md` `## Metrics` へ統合)、#761/#822 は #1181 (`_write_tier2_recovery_to_spec()` / `_write_manual_recovery_to_spec()` の削除) により、いずれも参照先の機構が存在しなくなったため原理的に判定不能と確定し、#1166 方式で retire (コメント投稿 + `phase/done` 遷移)。#761/#822 は `/review` #1297 のレビューで当初の A 分類が事実誤りと判明し D へ訂正した。
+- E は #861 #859 の 2 件。いずれも dirty-check の other-session 警告が `echo ... >&2` のみで永続化されないため `auto-run` の受動的発火では証跡が残らないが、`/verify` 実行時に Claude が能動的にダミーファイルを構築すれば判定可能と判断し `manual` へ差し戻した。capability 待ちの E は 0 件。`/verify` 実行時の検証手順は other-session/parent-main の2パターンに限定する (`.claude/*` が gitignore されているため self-worktree/other-worktree パターンは `check-verify-dirty.sh` で再現不能、`/review` #1297 のレビュー指摘により訂正)。
+- 分類 B/C 変更後のマッチ集合再確認 (Step 6) は event ごとに 1 回のみ実行 (`--event auto-run --dry-run` 母集団 77、`--event fix-cycle --dry-run` 母集団 5)。変更した 7 行すべてが個別に含有していることを確認済み (#769 の `when=mode:batch` は dry-run では facts 未解決による fail-open でマッチしたものであり、`mode=single` 実行時は意図的に除外される)。
 
 ### Deferred Items
 
@@ -189,11 +190,4 @@ Type=Task、Size=L と判定した。同一由来 (#1158 再型付け) の先行
 - `docs/reports/observation-ac-audit-a.md` が本 Issue の全成果物。Pre-merge AC 5 件はすべてこのファイルと #762 の GitHub 実状態から検証可能。
 - Post-merge AC はゼロ (効果測定は親 #1270 に集約)。`/verify` は Pre-merge 5 件のみを評価する。
 - Step 9 の全 bats スイート並列実行が Bash ツールの 10 分上限を超えバックグラウンド移行した (#1213 の既知失敗モード)。本 diff はスクリプト/skill を変更しておらず新規 report ファイル追加のみのため、通知を待たず後続ステップを進めた。`/review` 実行時に CI (`gh pr checks`) の結果で最終確認されることを想定。
-
-### Notes for Next Phase
-
-- Step 6 の `opportunistic-search.sh --event <name> --dry-run` は母集団 100 件強を `gh issue view` で 1 件ずつ回すため 1 回あたり数分かかる。event ごとに 1 回だけ実行し、結果を保存して個別突合に使うこと。
-- Step 1 の再スキャン結果が本 Spec の記録 (既 PASS 3 行) と食い違う可能性がある (実査までにさらに消化が進みうる)。Spec の数字ではなく再スキャン結果を正とし、差分を記録ファイルに書くこと。
-- 分類 B/C/E は Issue 本文を編集する。編集は該当 AC 行のみに限定し、チェックボックス形式 (`- [ ] `) を壊さないこと。分類 D は本文を一切編集しない (Pre-merge AC 3 が非編集を明示的に検証する)。
-- `modules/observation-trigger.md` § "Conditions That Cannot Be Pre-Excluded" と本 Issue の目的は方針が逆向き。同節を根拠に「SKIPPED のままでよい」と判断して分類を保留しないこと — 各行を D / E のどちらかに振り切る。
-- E の記録では「今すぐ `/verify` で判定できる」と「装備待ち」を必ず区別し、後者には `capability=<key>` を併記する (親 #1270 の Pre-merge AC 5 と #1278 の `capability-unavailable` 区分への引き継ぎに必要)。
+- `/review` #1297 のレビューで #761/#822 の A→D 再分類、`when=execution-context` ゲート表の訂正、E 分類の検証手順訂正など複数の事実誤りが見つかった。`/merge` 前に `docs/reports/observation-ac-audit-a.md` の最終版と本 Issue の分類サマリ (A17/B7/C0/D3/E2) が一致していることを確認すること。
