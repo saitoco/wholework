@@ -17,3 +17,6 @@
 
 - Background の事実主張 (`.github/workflows/test.yml` の並列/直列切り分け構成) は `.github/workflows/test.yml:28-40` の実装と一致していることを確認済み (警告なし)。
 - `docs/tech.md` の Testing Strategy セクション記載も Background の引用内容と一致していることを確認済み。
+
+## Consumed Comments
+No new comments since last phase.
