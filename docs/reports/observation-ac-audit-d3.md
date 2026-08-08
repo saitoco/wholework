@@ -84,4 +84,39 @@ Issue #1276 (親 #1270 の sub-issue) の実査記録。#1165 が `verify-type: 
 
 ## 実施記録
 
-<!-- Implementation Step 8 で追記 -->
+### 分類 E (6 行 / 5 Issue) の書き戻し
+
+`#1056` / `#710` (条件1・条件2) / `#513` / `#512` / `#477` の 6 AC 行について、`<!-- verify-type: observation event=auto-run -->` を `<!-- verify-type: manual -->` へ置換した。`#513` / `#512` / `#477` の 3 行は条件文も母集団定義を含む形に書き換えた (`#1056` / `#710` 条件1・条件2 の 3 行は条件文が既に具体的なためタグ差し替えのみ)。書き戻しは `.tmp/issue-body-<N>.md` 経由 (`gh-issue-edit.sh`) で行い、対象 AC 行の HTML コメントと条件文のみを置換し、他の記述は変更していない。
+
+### 分類 B (1 行) の書き戻し
+
+`#465` の post-merge 条件文を、`docs/reports/orchestration-recoveries.md` への記録件数 (1 件以上) を判定根拠として明記する形に書き換えた。`event=auto-run` タグは維持した。
+
+### checkbox 形式検証 (Implementation Step 4)
+
+書き戻した 6 Issue 分の `.tmp/issue-body-<N>.md` (削除前) に対し `scripts/check-ac-checkbox-format.sh` を実行し、全件 `exit=0` (形式違反なし) を確認した。権限拒否は発生しなかったため python3 フォールバックは使用していない。
+
+| Issue | 結果 |
+|---|---|
+| #1056 | exit=0 |
+| #710 | exit=0 |
+| #513 | exit=0 |
+| #512 | exit=0 |
+| #477 | exit=0 |
+| #465 | exit=0 |
+
+### 分類 D (2 行) の retire (Implementation Step 5, 6)
+
+- **#491**: retire 決定コメントを投稿した (https://github.com/saitoco/wholework/issues/491#issuecomment-5228218405)。Issue 本文の `### Post-merge` 節は編集していない。ラベルを `phase/verify` → `phase/done` へ遷移させた。CLOSED のまま。
+- **#490**: retire 決定コメントを投稿した (https://github.com/saitoco/wholework/issues/490#issuecomment-5228218581)。Issue 本文の `### Post-merge` 節は編集していない。ラベルを `phase/verify` → `phase/done` へ遷移させたうえで、`gh api -X PATCH .../issues/490 -f state=closed` により OPEN → CLOSED へ遷移させた (`state_reason: completed` を確認)。
+
+いずれも retire により未チェック post-merge 条件がゼロになったため `phase/done` 遷移が GitHub 上の実状態 (ラベル・close) と一致している。
+
+### opportunistic-search dry-run 確認 (Implementation Step 7)
+
+`scripts/opportunistic-search.sh --event auto-run --dry-run` を実行し (母集団 120 Issue)、以下を Issue 番号単位で確認した:
+
+- **分類 B の #465**: マッチ集合に含まれることを確認した (書き換え後の条件文「`/auto` 実行で silent no-op (exit 0 だが実装なし) が `reconcile-phase-state.sh --check-completion` により検出され 3-tier recovery へ流れた事例が、`docs/reports/orchestration-recoveries.md` に 1 件以上記録されている」がそのまま出力に現れている)。
+- **分類 E の 5 Issue (#1056 / #710 / #513 / #512 / #477)**: いずれもマッチ集合から意図的に外れていることを確認した (`verify-type: manual` への差し戻しにより observation dispatch の母集団から除外された)。
+
+件数差分ではなく個別含有で判定した (#1163 Code Retrospective の指摘に従う)。
