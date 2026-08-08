@@ -258,7 +258,7 @@ Key modules:
 
 ### CI Workflows
 
-- `.github/workflows/test.yml` — runs bats tests, `validate-skill-syntax.py`, forbidden expressions check, and macOS shell compatibility test on push/PR
+- `.github/workflows/test.yml` — runs bats tests (with a serial re-run of parallel-only failures via `bats --filter-status failed` to distinguish flaky failures from genuine ones), `validate-skill-syntax.py`, forbidden expressions check, and macOS shell compatibility test on push/PR
 - `.github/workflows/dco.yml` — enforces DCO `Signed-off-by:` on all pull request commits
 - `.github/workflows/kanban-automation.yml` — auto-moves issues to project board columns on `phase/*` label events
 
