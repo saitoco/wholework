@@ -2,9 +2,12 @@
 
 ## Consumed Comments
 
-No new comments since last phase.
+消費対象 (cutoff = 直近の `phase/*` ラベル付与時刻 `2026-08-08T17:10:50Z`) には新規コメントなし。cross-phase marker (`type=verify-fail` / `type=preview-ac-unverified`) の追加スキャンも 0 件。
 
-- saito / MEMBER / first-class / ## Spec Retrospective / https://github.com/saitoco/wholework/issues/1281#issuecomment-5227270507
+以下は本 spec フェーズ自身が投稿したコメントで、safety net (`append-consumed-comments-section.sh`) が事後に検出して追記したもの。入力として消費したコメントではない。
+
+- saito / MEMBER / first-class / 本フェーズの Auto-Resolve Log (Spec Retrospective) / https://github.com/saitoco/wholework/issues/1281#issuecomment-5227270507
+
 ## Overview
 
 `docs/reports/orchestration-recoveries.md` への 3 つの記録経路のうち、Tier 2 (`scripts/apply-fallback.sh`) と Tier 3 (`scripts/spawn-recovery-subagent.sh`) が `### Diagnosis` ブロックに `- cause: <slug>` 行を書いていない。`scripts/collect-recovery-candidates.sh` はこの行を読んで group-key を `<symptom-short>/<cause-slug>` に切り替えるため、行がないエントリは近因が異なっても素の `<symptom-short>` に束ねられる。
@@ -123,3 +126,44 @@ Changed Files に新規 `scripts/*.sh` は含まれず、`modules/*.md` の変�
 - `grep "cause:" "scripts/apply-fallback.sh"` — 現状 0 件 (ファイル中の唯一の `cause` 出現は `scripts/apply-fallback.sh:100` のコメント `# Safe because reconcile confirms...` で、`cause` の直後がコロンではないため不一致)。Implementation Step 3 で導入される文字列であり、変更検知として機能する
 - `command "bats tests/collect-recovery-candidates.bats"` — 対象ファイルは実在 (549 行、19 @test)
 - rubric 4 件はいずれも実装後の状態を意味レベルで判定するもので、数値リテラル・定数名・閾値を含まないため `file_contains` の併記は不要
+
+## spec retrospective
+
+### Minor observations
+
+- `write_recovery_entry()` は Tier 2 / Tier 3 / manual recovery の 3 経路に同名で独立実装されており、共通のエントリ書式を 3 箇所が個別に組み立てている。本 Issue で `- cause:` 行を 2 箇所に足すことで書式の重複は 3 箇所すべてに広がる。将来この書式にさらにフィールドが増える場合は、`modules/` へのエントリ生成の共通化が consolidation の判断点になる (今回は 2 箇所の追記で済むため共通化はしない)
+- `agents/orchestration-recovery.md` の出力契約はコードから参照される JSON schema でありながら、機械可読なスキーマファイルではなく散文の中のコードフェンスとして存在する。契約変更時に呼び出し元 2 系統 (`spawn-recovery-subagent.sh` / `skills/auto/SKILL.md`) を人手で追う必要があり、#1227 (`ci_failure_verdict` の追加) でも同じ追跡が発生していた。本 Issue の受入条件 4 が「呼び出し元と契約定義の双方が同一コミットで更新されていること」を明示しているのはこの構造への対処
+
+### Judgment rationale
+
+- Issue 本文 Notes が「Tier 2 と Tier 3 を同一 Issue で扱うか分割するか」を明示的に `/spec` へ委譲していた。受入条件 1-6 が両 Tier をまたぐ 1 セットとして書かれている以上、分割は受入条件の再編を伴う。実変更量 (Tier 2 は 1 行、Tier 3 は契約 + writer + validator + 呼び出し元 2 系統) を合算しても Size L 内に収まると判断し、分割しない方を採った
+- 受入条件 4 が `cause` の必須／任意を実装判断に委ねていたため、`validate-recovery-plan.sh` の失敗時挙動 (復旧を諦めて stop-and-report) を基準に判断した。復旧経路の安全ゲートがメタデータ 1 個の欠落で復旧可能な障害を復旧不能に変えるのは目的と手段が逆転する。契約文 (agent) では必須、validator では present-only 検証、という非対称構成に落とした
+
+### Uncertainty resolution
+
+- **Tier 2 エントリの N/A 除外との相互作用**: 設計中に Issue 本文の前提と実装の食い違いを検出した。Tier 2 のエントリは Improvement Candidate が常に `- N/A (resolved by known catalog)` であり、#1191 の除外規則により頻度カウントから完全に外れている。`bash scripts/collect-recovery-candidates.sh docs/reports/orchestration-recoveries.md --threshold 1 --with-tracking` を実行し、ログ中に 1 件存在する `code-pr-tier2-recovery` が出力に現れないこと (対して `code-pr-tier3-recovery 3 tracked:#799` は現れること) を実測で確定させた。Tier 2 側の実装は受入条件どおり行うが、その価値は「今日の頻度シグナルの分離」ではなく記録品質と前方互換性である旨を Notes に明記し、Implementation Step 9 のテストで相互作用そのものを固定する方針とした
+- **`- cause:` 行の検出範囲**: `collect-recovery-candidates.sh` の検出が `### Diagnosis` セクションにスコープされているか不明だったが、パーサ (`:208-221`) を読み、エントリ内の任意の行に対する `^- cause: .+` のベアマッチであることを確認した。配置は書式規約として `### Diagnosis` 先頭に揃える方針で確定
+- **validator を任意キー化しても既存テストが通るか**: `tests/validate-recovery-plan.bats` の 6 フィクスチャがすべて 3 キー構成であることを読んで確認済み。必須キーリストを変更しない限り既存テストは無改変で green
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- Tier 2 と Tier 3 を 1 つの PR で扱う。Issue 本文 Notes が `/spec` に委譲した判断で、受入条件 1-6 が両 Tier をまたぐ 1 セットとして書かれているため分割しない
+- `cause` は `validate-recovery-plan.sh` では任意キー (present-only 検証)、`agents/orchestration-recovery.md` の契約文では必須指示、という非対称構成。validator の検証失敗が「復旧を諦めて stop-and-report」を意味するため、メタデータ欠落で復旧を止めない
+- `cause` が欠落・不正な場合 Tier 3 writer は sentinel `unclassified` を必ず書く。行を省略すると素の `<symptom-short>` に落ち、「cause を出せなかった」と「#1281 以前のエントリ」が区別できなくなる
+- Tier 2 の cause 値はマッチ済み symptom anchor をそのまま使う。`detect_symptom_anchor()` が返す 3 リテラルはいずれも kebab-case 保証済みのため追加サニタイズは不要
+
+### Deferred Items
+
+- 既存エントリへの遡及的な cause 付与 (Issue 本文 Notes でスコープ外と明記)
+- Tier 3 の agent が返す slug が既存 vocabulary を実際に再利用するかの検証は post-merge 観察に委ねる。単発 group-key が増える傾向が見えた場合は、agent プロンプトへ既出 slug 一覧を動的注入する後続 Issue を検討 (Spec の Uncertainty 節)
+- `write_recovery_entry()` 3 経路のエントリ生成共通化 (今回は 2 箇所の追記で足りるため実施しない)
+
+### Notes for Next Phase
+
+- `scripts/validate-recovery-plan.sh` の `re` は既存の `import re as _re` がステップ検証ブロック内のローカルスコープにある。`cause` 検証で使うにはファイル冒頭にトップレベル `import re` を追加すること
+- `tests/validate-recovery-plan.bats` の既存 6 フィクスチャは 3 キー構成のまま触らない。必須キーリスト `("action", "rationale", "steps")` を変更すると既存テストが落ちる
+- Implementation Step 9 のテストは Tier 2 の group-key が **出力されないこと** も assert する。これは #1191 の N/A 除外との相互作用を意図的に固定するもので、バグではない (Spec の Notes「実装との矛盾」参照)
+- `tests/collect-recovery-candidates.bats` に `file_contains` 系の verify command を追加する場合、`@test` 名は既存ファイルの実際の命名 (`grep "@test" tests/collect-recovery-candidates.bats`) を確認してから部分文字列を採ること
