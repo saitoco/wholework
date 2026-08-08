@@ -85,3 +85,37 @@
 - **Pre-merge AC4 の verify command 具体化**: Triage AC audit コメント (Consumed Comments 参照) の指摘通り、既存の `command "bats tests/get-auto-session-report.bats"` は新規テスト追加前の main で既に exit 0 のため、実装を忘れても PASS してしまう常時 PASS リスクがある。Implementation Step 2 で確定したテスト名から一意な部分文字列 `candidate Issues are excluded` を抽出し、`bats --filter` で新規テストのみを対象にした verify command に置き換えた。CI 側の全件実行は Pre-merge AC5 (`github_check "gh pr checks" "Run bats tests"`) が別途担保する。
 - **Out of Scope — `scripts/collect-run-facts.sh` の同型汚染 (follow-up 推奨)**: `scripts/collect-run-facts.sh` 140 行目の `ISSUE_NUMBERS=$(... | jq -r '.issue' ...)` にも本 Issue と同型の「全 distinct `.issue` を無差別に集計する」パターンが存在する。session `91762-1786112233` (2026-08-08) の retrospective で「Issues processed: 58」(実処理 3 件) という同種の汚染が実際に観測されている (`docs/sessions/91762-1786112233-2026-08-08/session.md` 参照)。本 Issue の Title/Background/Purpose はいずれも `get-auto-session-report.sh` のみを対象としており、`collect-run-facts.sh` への対応は `/issue` フェーズで確定した要件の範囲外 (`/spec` は要件を追加・変更しない — `docs/product.md` § `/issue` (What) vs `/spec` (How) Responsibility Boundary) と判断し、本 Spec では変更しない。別 Issue での対応を推奨する。
 - **SPEC_DEPTH=light (Size M) のため Step 7 (Ambiguity Resolution) / Step 8 (Uncertainty Identification) はスキップ。** Issue 本文の Auto-Resolved Ambiguity Points (`/issue` フェーズで非対話モードにより自動解決済み) を実装方針として採用した (詳細は Consumed Comments の Issue Retrospective コメント参照)。
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1〜4 を設計通りに実施した。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
+### Follow-up
+
+- Notes の「Out of Scope — `scripts/collect-run-facts.sh` の同型汚染」を受け、follow-up Issue #1287 を起票した (重複なしを `gh issue list` で確認済み)。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Steps 1〜4 をそのまま実施 (逸脱なし)。`PROCESSED_ISSUES_JSON` 共通変数を導入し、`ISSUES_PROCESSED` / `ISSUE_NUMS_FOR_TABLE` / `ISSUE_NUMS` の 3 箇所すべてをそこから導出する形に統一した。
+- Pre-merge AC4 の verify command はすでに Issue 本文・Spec とも `bats --filter 'candidate Issues are excluded' tests/get-auto-session-report.bats` に確定済みだったため、Step 10 での追加変更は不要だった。
+- behavioral change detection (`tests/audit-auto-session.bats` が `get-auto-session-report.sh` を参照) により全 bats スイートを `--jobs 18` で並列実行し、1620 件全 PASS を確認した。
+
+### Deferred Items
+- `scripts/collect-run-facts.sh` の同型汚染 (Spec Notes の Out of Scope 項目) を follow-up Issue #1287 として起票済み。本 PR のスコープには含めていない。
+- Post-merge AC (`session=next` の観察 AC) は次回 `/auto --batch` 完走後の L3 retrospective で確認される。
+
+### Notes for Next Phase
+- Pre-merge AC1〜4 は `/code` 内でチェック済み (`[x]`)。AC5 (`github_check "gh pr checks"`) は PR 作成前で判定不能だったため未チェックのまま — `/review`/CI で確認すること。
+- Post-merge AC (observation, `session=next`) は次回の `/auto --batch` 実行を待つ必要がある。今すぐ検証可能な項目ではない。
