@@ -37,6 +37,18 @@ step8a_section() {
     awk '/^#### Step 8a: /{found=1} (/^#### / || /^### /) && !/Step 8a: /{found=0} found{print}' "$SKILL_FILE"
 }
 
+# Extract the "#### Step 8b: Manual Post-merge Conditions" section from SKILL.md.
+# The section ends at the next heading (level-3 or level-4).
+step8b_section() {
+    awk '/^#### Step 8b: /{found=1} (/^#### / || /^### /) && !/Step 8b: /{found=0} found{print}' "$SKILL_FILE"
+}
+
+# Extract the "### Step 9: Post Comment on Issue" section from SKILL.md.
+# The section ends at the next level-3 (### Step ) heading.
+step9_section() {
+    awk '/^### Step 9: /{found=1} /^### Step / && !/Step 9: /{found=0} found{print}' "$SKILL_FILE"
+}
+
 @test "Step 2 guard: detect-foreign-worktree.sh runs before base branch checkout" {
     guard_line=$(step2_section | grep -n -F "detect-foreign-worktree.sh" | head -1 | cut -d: -f1)
     checkout_line=$(step2_section | grep -n -F 'git checkout "${BASE_BRANCH}"' | head -1 | cut -d: -f1)
@@ -142,4 +154,29 @@ step8a_section() {
     ! step6_section | grep -q -F "Re-verify even if already checked"
     step6_section | grep -q -F "skipped by default"
     step6_section | grep -q -F "Only conditions still at \`- [ ]\` are (re-)verified"
+}
+
+@test "Step 8b: records executability judgment via verify-executability-marker.sh vocabulary" {
+    step8b_section | grep -q -F "verify-executability"
+}
+
+@test "Step 8b: emits verify_executability event" {
+    step8b_section | grep -q -F "verify_executability"
+}
+
+@test "Step 8b: judgment recording (1b) precedes the 2a AskUserQuestion branch" {
+    record_line=$(step8b_section | grep -n -F "1b. Record the judgment" | head -1 | cut -d: -f1)
+    branch_line=$(step8b_section | grep -n -F "2a. If executable" | head -1 | cut -d: -f1)
+    [ -n "$record_line" ]
+    [ -n "$branch_line" ]
+    [ "$record_line" -lt "$branch_line" ]
+}
+
+@test "Step 8b: recording happens in both branches, independent of AskUserQuestion" {
+    step8b_section | grep -q -F "independent of whether \`AskUserQuestion\` is invoked"
+}
+
+@test "Step 9: embeds executability markers via verify-executability-marker.sh, no new comment" {
+    step9_section | grep -q -F "verify-executability-marker.sh"
+    step9_section | grep -q -F "Do not post these markers as a separate comment"
 }
