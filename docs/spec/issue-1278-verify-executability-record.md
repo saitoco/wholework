@@ -264,3 +264,41 @@ Issue 本文の自動編集は行わず (Self-generated AC への非破壊方針
 ### Acceptance criteria verification difficulty
 
 - 9件の Pre-merge AC (grep 6 / rubric 3 相当を含む) はいずれも `/review` Step 8 で明確に PASS 判定でき、UNCERTAIN や verify command の構文エラーは発生しなかった。command 系 AC (`bats tests/verify-executability-marker.bats`, `bats tests/`) は safe mode のため直接実行せず CI 参照フォールバックで判定したが、CI が全ジョブ SUCCESS だったため問題なく解決した。AC の書き方 (grep パターン・rubric 文言) は明確で、検証コストは低かった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- triage の AC 監査が常時 PASS 系欠陥 2 件 (`grep "Manual Waiting Count"` / `ls tests/`) を正しく検出し、非破壊方針でコメント投稿に留めた。`/spec` がそれを消費して実装後にのみ真になる形へ差し替えており、L0 のコメント受け渡しが設計どおり機能した。
+- 一方、後述の AC9 (`command "bats tests/"`) は監査を通過した。この監査は「常時 PASS」パターンのみを対象としており、「常時 UNCERTAIN」パターンを検出しない。
+
+#### spec
+
+- Step 8b の記録を 2a/2b の分岐**前**に置く判断が的確だった。`/auto --batch` の verify は `AskUserQuestion` を経ないため、応答時点で記録する現行の `verify_user_confirm` 方式ではその経路の判定が丸ごと欠落する。本 Issue の目的が「Manual waiting の reason 別内訳」である以上、その欠落は metric の穴に直結する。
+- `capability` 属性のサニタイズ漏れは Spec 起因だった。`detail` のみを検証対象として明記し、「HTML コメント内に埋め込む自由入力値は一律に同じ注意を要する」という原則を書かなかったことが根本原因 (review retrospective に詳細)。
+
+#### code
+
+- 全 Step が一回の実装パスで完了、rework ゼロ。
+- Steering Docs sync candidate 2 件を実際に本文確認した上で「変更不要」と確定させており、見込みで済ませていない。
+
+#### review
+
+- 3 エージェントが独立に同一の脆弱性 (`capability` 属性の `-->` インジェクション) を、それぞれ異なる着眼点から検出。multi-perspective review の収束が実際に機能した事例。
+- AC9 を CI 参照フォールバックで解決した判断は妥当 (CI は bats を実行するため)。
+
+#### merge
+
+- CI 9 件全通過、conflict なし。`mergeable=UNKNOWN` から 30 秒待機で `clean` へ解決し、conflict フローには入らなかった。
+
+#### verify
+
+- **`session=next` の設計意図が期せずして実証された**。本 Issue は `skills/verify/SKILL.md` を変更したが、`/verify` は wrapper を持たず会話セッション単位で skill 本文がキャッシュされるため、本実行は merge 前の Step 8b を走らせた。実測でも確認済み (ディスク上の `SKILL.md` は `verify-executability` を 4 箇所持つが、実行中の手順には 0 箇所)。post-merge observation AC 2 件が SKIPPED になったのは正しい挙動であり、`session=next` 属性がなければ UNCERTAIN と誤判定され Step 11 (d) の手動再検証を促していた。
+- Pre-merge 9 件はすべて `- [x]` 済みのため already-checked skip rule により SKIPPED。追加確認として `bats tests/` を serial 実行し test 1619 まで到達・捕捉範囲に失敗なしを確認したが、出力を末尾のみ捕捉したため serial 実行単独では全件 0 failure を証明しない。AC の主たる根拠は CI である。
+
+### Improvement Proposals
+
+- **AC の verify command に「executor のタイムアウト内に完了できるか」という制約が規約化されていない**。本 Issue の AC9 (`<!-- verify: command "bats tests/" -->`) は `modules/verify-executor.md` の `command` verify-type が 60 秒でタイムアウトする一方、`bats tests/` の serial 実行は 1600 件超で 10 分の Bash tool ceiling も超える。結果としてこの AC は自動 verify-executor 経由では**恒常的に判定不能** (常時 UNCERTAIN) になり、実質的に CI 参照フォールバックか手動並列実行でしか解決できない。`/issue` triage の AC 監査は「常時 PASS」パターン (実装前から真になる verify command) を検出するが、この「常時 UNCERTAIN」パターンは検出対象外であり、実際に本 Issue で監査を通過した。**#1251 (AC 記述規約) に追記すべき**: 長時間実行コマンドを verify command に書く場合は CI 参照形式 (`github_check "gh run list ..."`) を使う、もしくは対象を絞ったファイル単位の `bats tests/<file>.bats` にする。既存 Issue のスコープ内なので新規起票ではなく #1251 への追記が適切。
+- **`tests/post_merge_check.bats` の 2 ケースが `bats --jobs <N>` 並列実行時のみ FAIL する** (単体 serial では 10/10 PASS)。code phase が検出し、本 verify でも `main` 上で serial 10/10 PASS を再確認した。本 Issue が触れていないファイルであり既存の flaky。テスト間の状態分離の問題と見られる。観測は現時点で 1 セッション内に限られるため、再発を確認してから起票を判断する (Tier 3: spec 記録のみ)。
