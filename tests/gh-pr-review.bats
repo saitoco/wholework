@@ -344,7 +344,8 @@ if [ "\$1" = "api" ]; then
     COUNT=\$((COUNT + 1))
     echo "\$COUNT" > "\$COUNTER_FILE"
     if [ "\$COUNT" -eq 1 ]; then
-        echo "gh: Review can not request changes on your own pull request (HTTP 422)" >&2
+        echo '{"message":"Review cannot request changes on your own pull request","documentation_url":"https://docs.github.com/rest/pulls/reviews"}'
+        echo "gh: Unprocessable Entity (HTTP 422)" >&2
         exit 1
     fi
     if echo "\$@" | grep -q -- "--input"; then

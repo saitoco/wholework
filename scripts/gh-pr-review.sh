@@ -181,11 +181,11 @@ if in_range_comments:
 print(json.dumps(payload))
 PYEOF
     )
-    if ! API_STDERR=$(echo "$REVIEW_PAYLOAD" | gh api "repos/$REPO/pulls/$PR_NUMBER/reviews" --method POST --input - 2>&1 >/dev/null); then
+    if ! API_OUT=$(echo "$REVIEW_PAYLOAD" | gh api "repos/$REPO/pulls/$PR_NUMBER/reviews" --method POST --input - 2>&1); then
         # Self-review 422 fallback: GitHub rejects REQUEST_CHANGES on your own PR.
         # Detect that specific case only (422 + self-review message) and retry as COMMENT.
-        if [ "$EVENT" = "REQUEST_CHANGES" ] && echo "$API_STDERR" | grep -q "422" \
-            && echo "$API_STDERR" | grep -qi "request changes on your own pull request"; then
+        if [ "$EVENT" = "REQUEST_CHANGES" ] && echo "$API_OUT" | grep -q "422" \
+            && echo "$API_OUT" | grep -qi "request changes on your own pull request"; then
             FALLBACK_PAYLOAD=$(python3 - "$REVIEW_PAYLOAD" <<'PYEOF'
 import sys, json
 payload = json.loads(sys.argv[1])
