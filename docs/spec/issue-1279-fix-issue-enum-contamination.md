@@ -105,20 +105,20 @@
 - Notes の「Out of Scope — `scripts/collect-run-facts.sh` の同型汚染」を受け、follow-up Issue #1287 を起票した (重複なしを `gh issue list` で確認済み)。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Pre-merge AC5 (`github_check "gh pr checks" "Run bats tests"`) を CI 全9件 SUCCESS (`gh pr checks` 相当) の確認により PASS 判定し、Issue チェックボックスを `[x]` に更新した。これで Pre-merge AC1〜5 は全てチェック済みとなった。
-- ローカルで `bats --filter 'candidate Issues are excluded' tests/get-auto-session-report.bats` を実行し PASS を再確認した (AC4 の裏付け)。
-- Base Branch Conflict Pre-check (`git merge-tree`) を実施し、mainとのコンフリクトなしを確認した。REVIEW_DEPTH=light (Size M) のため review-light エージェント1体による4観点統合レビューを実施し、指摘は0件だった。MUST issue がないため `event=COMMENT` でレビューを投稿した。
+- Pre-merge AC gate 確認で unchecked_count=0 (Pre-merge AC1〜5 全てチェック済み) を確認し、追加のユーザー確認なしでマージを進行した。
+- review-incomplete-fallback チェックでは organic completion (fallback 経由ではない) を確認した。
+- `gh pr merge 1286 --squash --delete-branch` で Squash Merge を実行し、リモートブランチを削除した。
 
 ### Deferred Items
-- `scripts/collect-run-facts.sh` の同型汚染 follow-up Issue #1287 は本 PR のスコープ外のまま (code phase から引き継ぎ、変更なし)。
+- `scripts/collect-run-facts.sh` の同型汚染 follow-up Issue #1287 は本 PR のスコープ外のまま (review phase から引き継ぎ、変更なし)。
 - Post-merge AC (`session=next` の観察 AC) は次回 `/auto --batch` 完走後の L3 retrospective で確認される (変更なし)。
 
 ### Notes for Next Phase
-- Pre-merge AC1〜5 は全てチェック済み (`[x]`)。`/merge` は追加の AC 確認なしで進行可能。
-- Post-merge AC (observation, `session=next`) は次回の `/auto --batch` 実行を待つ必要がある。`/verify` でこの観察結果を確認すること。
+- `/verify` は Post-merge AC (observation, `session=next`) を次回の `/auto --batch` 実行後に確認すること。現時点では確認不能なため保留のままで良い。
+- Issue #1279 はマージにより auto-close 見込み (base branch は main)。
 
 ## review retrospective
 
