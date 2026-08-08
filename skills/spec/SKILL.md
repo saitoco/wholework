@@ -571,14 +571,27 @@ When Changed Files includes shell scripts (`scripts/*.sh`, hook scripts, etc.), 
 
 #### allowed-tools impact chain check
 
-When Changed Files includes new `scripts/*.sh` files (especially `run-*.sh` patterns — scripts called directly by Skills during execution), perform an allowed-tools impact chain check:
+When Changed Files includes new `scripts/*.sh` files (especially `run-*.sh` patterns — scripts called directly by Skills during execution), **or** Changed Files includes `modules/*.md` files, perform an allowed-tools impact chain check.
+
+**Case 1 — new `scripts/*.sh` files:**
 
 1. Extract new `scripts/*.sh` filenames from the Spec's "Changed Files" section
 2. For each new script, grep `skills/*/SKILL.md` frontmatter `allowed-tools` for the literal entry `${CLAUDE_PLUGIN_ROOT}/scripts/<script-name>:*`
 3. If a SKILL.md calls the new script but lacks the explicit entry, record the gap in the Spec's Notes section: "`skills/<skill>/SKILL.md` の `allowed-tools` に `${CLAUDE_PLUGIN_ROOT}/scripts/<new-script>:*` の追加が必要"
 4. Wildcard claims (`*.sh`) are not acceptable — use literal match against the actual `allowed-tools` value; a wildcard covering `scripts/*.sh` is not present in any existing SKILL.md allowed-tools pattern
 
-**Skip** if no new `scripts/*.sh` files are being added.
+**Case 2 — `modules/*.md` changes:**
+
+`modules/*.md` files are shared "Read and follow" surfaces read by multiple Skills — adding a single new script call inside a module requires an `allowed-tools` update in every SKILL.md that reads that module, not just in the module itself.
+
+1. **Lightweight gate**: check whether the changed/added content of the modified module references any `scripts/*.sh` path (a string-existence check, not a judgment about whether the author intended to add a new call — see the Spec Notes rationale this check exists to avoid reintroducing). If it does not, no new script call was introduced by this change — skip the remaining sub-steps for this module
+2. If the gate matches, enumerate the module's readers (the calling SKILL.md files): `grep -rl "modules/<name>\.md" skills/*/SKILL.md`
+3. For each reader, grep its frontmatter `allowed-tools` for the literal entry `${CLAUDE_PLUGIN_ROOT}/scripts/<script-name>:*` (same wildcard rule as Case 1 step 4 applies here — no `*.sh` wildcard credit)
+4. If a reader calls the new script (via the module) but lacks the explicit entry, record the gap in the same form as Case 1: "`skills/<skill>/SKILL.md` の `allowed-tools` に `${CLAUDE_PLUGIN_ROOT}/scripts/<new-script>:*` の追加が必要" — either add the reader's SKILL.md to Changed Files, or record it in Notes
+
+*Background: #1236 and #1239 each added a new `scripts/*.sh` call inside `modules/opportunistic-verify.md` and missed `allowed-tools` updates in 2 and 5 reader SKILL.md files respectively — neither was caught until the code phase, since this check previously fired only on new `scripts/*.sh` files.*
+
+**Skip** if Changed Files includes neither new `scripts/*.sh` files nor `modules/*.md` files.
 
 **"No change needed" pre-verification rule:**
 
