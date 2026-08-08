@@ -624,6 +624,8 @@ Skip this step if the Issue body contains no `<!-- verify: ... -->` patterns.
 
 **Pattern 4 Size/`ALWAYS_PR` sourcing in this context**: read Size with `${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh $NUMBER` (same call as Step 6); `ALWAYS_PR` is retained from Step 4.
 
+Most AC audited by this step originate from this same execution's Step 9 (Issue body reflection) or Step 12 (sub-issue redistribution) — i.e. self-generated AC. Per `skill-dev-verify-audit.md` § Non-Destructive Audit Behavior, self-generated AC receive the same non-destructive treatment as externally-authored AC: this step never auto-edits the Issue body, even for a small, unambiguous defect. Findings are posted as a comment only; the next phase (`/spec`, or `/code` directly for Size XS) picks them up via the Comment Consumption Procedure.
+
 Note: if Step 2's triage auto-chain already ran in this same session (`triaged` was absent at the start), its own Step 7 already audited the Issue body's pre-refinement ACs — this step's pass is independent and may post a second comment. The overlap is expected and non-blocking; the audit is non-destructive (comment-only).
 
 ---

@@ -59,3 +59,46 @@ B 案の既知の穴 (Issue 本文): 「Size XS の patch route では `/spec` �
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue` Existing Issue Refinement の Issue Retrospective — AC1 への補助チェック追加理由、Ambiguity Detection の結果 (該当なし、案 A/B/C の決定は `/spec` に意図的に委譲)、事実確認結果、Title drift なし、Blocked-by なしを記録 / https://github.com/saitoco/wholework/issues/1260#issuecomment-5225317179
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1・2 をそのまま実施した (段落の挿入位置・内容とも Spec の指定通り)。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- 実装のやり直しは発生していない。参考記録として: `skills/issue/SKILL.md` が複数テストファイル (`tests/verify-executor.bats` 等、直接対応する `tests/issue.bats` 以外) から参照されているため Behavioral Change Detection が発火し、`bats --jobs 18 tests/` のフルスイート実行が必要になった。実行結果、`tests/post_merge_check.bats` の `fail: gh issue reopen called when FAIL input given` が 1 件 FAIL したが、同ファイル単体実行では PASS することを確認済み。`test-failure-classify.sh` の分類は `infra` (並列実行時のリソース競合によるフレークで、テストコード側の修復対象ではない)。本 Issue の変更 (`skills/issue/SKILL.md` Step 15, `skills/triage/skill-dev-verify-audit.md`) とは無関係と判断し、pr route の既定方針通り CI 側の検知に委ねて未修正のまま継続した。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — Implementation Steps 1・2 は Spec の指定通りに実施されており、`/review` の独立再検証 (rubric x3, section_contains x1) でも Pre-merge AC 4件全て PASS を再確認した。`/code` の Phase Handoff で依頼された「rubric 判定の妥当性の独立再確認」も完了している。
+
+### Recurring issues
+
+Nothing to note — MUST issue は 0 件。SHOULD issue が 1 件 (`skills/triage/skill-dev-verify-audit.md:254` の Size 列挙が Size S を欠落) 見つかり、修正・push 済み。同種の「Size グループを個別列挙する記述は将来のルーティング変更で陳腐化しやすい」という教訓は、同じ Spec の Notes に既にある一般化した表現 (「次フェーズ (`/spec` または Size XS の場合は `/code`)」) と平仄を取ることで再発を避けられる — 今回は 1 箇所のみで規模化した Issue 起票は不要と判断。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — rubric 3件・section_contains 1件とも安全モードで確定的に PASS 判定でき、UNCERTAIN は 0 件だった。verify command の記述・対象ファイル指定に不備はなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Pre-merge AC 4件を独立に再検証し、いずれも PASS と再確認した (Issue body のチェックボックスは `/code` により既に `[x]` 済みで変更不要)。
+- `skills/triage/skill-dev-verify-audit.md:254` の Size 列挙から Size S が欠落している SHOULD issue を検出し、修正・commit・push 済み。
+
+### Deferred Items
+- Post-merge AC (`次回 /issue Step 15 が自己生成 AC の不備を検出した際、定めた方針どおりの挙動になることを観察する`, observation type) は次回発火まで未検証のまま。
+- `tests/post_merge_check.bats` の並列実行時フレーク (`fail: gh issue reopen called when FAIL input given`) は本 Issue の変更と無関係と判断し未修正のまま。CI では今回全ジョブ SUCCESS だったため再現しなかった。継続的に発生する場合は別途調査 Issue が必要。
+
+### Notes for Next Phase
+- `/merge` は MUST issue 0件・CI 全 SUCCESS のためそのまま進めてよい。
+- `tests/post_merge_check.bats` のフレークは本 Issue の diff (`skills/issue/SKILL.md`, `skills/triage/skill-dev-verify-audit.md`) と無関係であり、`/merge` 側での追加対応は不要。

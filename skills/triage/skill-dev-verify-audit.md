@@ -233,6 +233,28 @@ When problems are detected, triage posts a comment to the Issue with the finding
 suggested fixes. The user then decides whether and how to update the Issue body.
 This avoids destructive behavior in cases where `/issue` may regenerate the AC.
 
+**Self-generated AC (自己生成 AC)**: this non-destructive policy applies unconditionally
+even when the audited AC was authored within the same execution that runs this audit —
+e.g. AC produced by `/issue` Existing Issue Refinement's own Step 7 classification,
+Step 9 Issue body reflection, or Step 12 sub-issue redistribution. The audit does not
+distinguish 自己生成 AC from externally-authored AC and does not auto-edit the Issue body
+for either. This determinism is deliberate: defining a boundary for "authored within the
+same execution" is ambiguous when `/triage` Step 2's auto-chain invokes `/issue` — from a
+user's perspective this is a single continuous operation, but from the skill's perspective
+it spans two separate invocations. Making the audit's judgment depend on that ambiguous
+boundary would reintroduce non-deterministic behavior into the very check this rule exists
+to prevent. Observed divergence before this rule was made explicit: Issue #1220 followed
+the non-destructive default (comment-only), while Issue #1221 deviated by auto-editing the
+Issue body — both audited AC self-generated within the same `/issue` execution.
+
+**Repair handoff for self-generated AC**: because the Issue body is never auto-edited, a
+defective 自己生成 AC is fixed only once a downstream phase picks up the audit comment.
+This works without any new mechanism: the Comment Consumption Procedure
+(`modules/l0-surfaces.md`) already treats Issue comments as first-class context for
+whichever phase runs next — `/spec` for Size S/M/L/XL, or `/code` directly for Size XS
+(whose patch route skips `/spec`). Either phase reads the comment as prompt-equivalent
+input and applies the suggested fix as part of its own work.
+
 **Post the audit comment** only when at least one pattern match is found.
 If no patterns match, skip without posting.
 
