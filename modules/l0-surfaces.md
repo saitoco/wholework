@@ -174,6 +174,58 @@ multiple markers. The gate only treats a resolved marker as authorizing merge wh
 via `gh issue view` within the same phase (not through the Comment Consumption Procedure), no
 change to the Cross-phase marker exception in Processing Steps is needed for this marker type.
 
+**`type=verify-executability`**: posted by `/verify` (Step 9) as part of the `## Acceptance Test
+Results` comment it already posts for this Issue — no dedicated comment is posted for this marker
+type. One marker line is emitted per unchecked `verify-type: manual` post-merge AC that Step 8b
+judged in this run, placed at the top of the comment body (before the `## Acceptance Test Results`
+heading). Attributes: `ac=<1-based index>` (into the Issue body's full AC enumeration, same
+convention as `gh-issue-edit.sh --checkbox`); `executable=<true|false>`; `reason=<slug>` present
+only when `executable=false`; `capability=<key>` present only when `reason=capability-unavailable`;
+`detail="<one-line text>"` present only when `reason=other`. Generation and resolution are
+delegated to `scripts/verify-executability-marker.sh` (`format` and `resolve` subcommands
+respectively) rather than authored as free-form prose — see that script for argument validation.
+
+Reason vocabulary (exhaustive, 6 values):
+
+| slug | Meaning |
+|------|---------|
+| `browser-required` | requires visual/manual confirmation of a rendered page in a browser |
+| `external-service-required` | requires checking an external service's dashboard |
+| `production-action-required` | requires observing a user action in the production environment |
+| `subjective-judgment` | requires subjective UI/UX evaluation |
+| `capability-unavailable` | the only obstacle is a project capability not currently enabled (`capability=<key>` names the `.wholework.yml` key, e.g. `capabilities.browser`) |
+| `other` | none of the above (`detail="<one-line text>"` explains why) |
+
+`capability-unavailable` is not a human-required classification — it means Claude **could**
+execute the AC if the named capability were enabled in `.wholework.yml`. Metrics must keep this
+reason in its own bucket, distinct from the genuinely human-required reasons
+(`browser-required` / `external-service-required` / `production-action-required` /
+`subjective-judgment` / `other`), so that capability investment decisions can be read directly off
+the metric.
+
+Example:
+```
+<!-- wholework-event: type=verify-executability phase=verify issue=42 ac=3 executable=true -->
+<!-- wholework-event: type=verify-executability phase=verify issue=42 ac=5 executable=false reason=browser-required -->
+<!-- wholework-event: type=verify-executability phase=verify issue=42 ac=7 executable=false reason=capability-unavailable capability=capabilities.browser -->
+## Acceptance Test Results
+...
+```
+
+Issue comments are append-only (see the L0 Surface SSoT table above), so consumers must always
+resolve **only the single comment with the greatest `createdAt` timestamp among
+`type=verify-executability` markers for this Issue (latest-wins)** — an earlier marker's full set
+of AC judgments is superseded in full by a later one, never merged with it. Resolution is at
+comment granularity, not per-AC: the latest `/verify` run's comment is a complete snapshot of
+every manual AC that was unchecked (and therefore judged) as of that run, so discarding earlier
+comments in full does not lose information about the currently-unchecked AC set. An unchecked
+`verify-type: manual` AC with no `ac=` entry in the latest snapshot has no recorded judgment
+(unevaluated) — treat it as its own category, never folded into the human-required bucket.
+Resolution is delegated to `scripts/verify-executability-marker.sh resolve <issue>`. As with
+`type=pre-merge-ac-gate`, the consumer (`/audit`) resolves this marker directly via `gh issue
+view` rather than through the Comment Consumption Procedure, so no change to the Cross-phase
+marker exception in Processing Steps is needed for this marker type either.
+
 When consuming comments (see Processing Steps), a comment containing `<!-- wholework-event:`
 in its body from a bot actor is treated as a Wholework-authored structured comment and consumed (bot exception above).
 
