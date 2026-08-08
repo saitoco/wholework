@@ -1,9 +1,3 @@
----
-type: project
-ssot_for:
-  - visual-reproduction-methodology
----
-
 [English](../visual-reproduction.md) | 日本語
 
 # UI 再現案件 Methodology
