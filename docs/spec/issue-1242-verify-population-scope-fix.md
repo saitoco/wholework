@@ -80,6 +80,7 @@
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 概要: `/issue` フェーズの Issue Retrospective コメント。AC1/AC2 の verify command を `grep -n` から `file_not_contains` に、AC3 を rubric+file_contains 併記に、AC5 を `command "bats ..."` に修正した経緯と、Background 節の行番号引用 (`:291`, `:311`/`:314`) のドリフト修正を記録。本 Spec の Background/Root Cause の行番号・Implementation Steps はこの修正後の内容と整合させた。 / URL: https://github.com/saitoco/wholework/issues/1242#issuecomment-5225061949
 
+- saito / MEMBER / first-class / ## 申し送り: `modules/observation-trigger.md` の母集団記述 (#1264 統合分) / https://github.com/saitoco/wholework/issues/1242#issuecomment-5225205678
 ## Code Retrospective
 
 ### Deviations from Design
