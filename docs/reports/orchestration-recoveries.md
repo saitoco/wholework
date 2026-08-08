@@ -67,6 +67,25 @@ This file records cross-Issue recovery events, fallback applications, and diagno
 ---
 
 <!-- Log entries appear below, newest first. -->
+## 2026-08-08 22:08 UTC: wrapper-retry-on-kill
+
+### Context
+- Issue #1275, phase: merge
+- Source: retry-on-kill.sh
+- Wrapper: run-merge.sh, exit code: 0
+
+### Diagnosis
+- wrapper (run-merge.sh) が early-kill window (WHOLEWORK_RETRY_ON_KILL_MAX_SEC) 内に exit code 0 で終了し、retry-on-kill.sh が自動再試行した
+
+### Recovery Applied
+- modules/orchestration-fallbacks.md#wrapper-retry-on-kill
+
+### Outcome
+- success
+
+### Improvement Candidate
+- 未起票
+
 
 ## 2026-08-07 15:11 UTC: merge-tier3-recovery
 
