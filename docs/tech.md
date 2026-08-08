@@ -176,9 +176,21 @@ This rule prevents drift between label references in code and the SSoT definitio
 
 | Tool | Purpose | When |
 |------|---------|------|
-| **bats** (Bash Automated Testing System) | Unit tests for shell scripts | Pre-merge (via `command` verify command) |
+| **bats** (Bash Automated Testing System) | Unit tests for shell scripts | Pre-merge (via `command` verify command), and CI (`.github/workflows/test.yml`) |
 | **validate-skill-syntax.py** | SKILL.md syntax validation (half-width `!` detection, frontmatter validation) | Pre-merge |
 | **Verify commands** (`<!-- verify: ... -->`) | Mechanical verification of acceptance criteria (file existence, text content, command execution) | At `/verify` skill execution |
+
+### CI bats Parallel/Serial Split (`.github/workflows/test.yml`)
+
+CI runs the full bats suite in parallel (`bats --jobs $(nproc) tests/`) for speed. Some tests are flaky only under parallel execution — observed independently in #1221 / #1224 / #1227 / #1260, mostly in `tests/post_merge_check.bats`. To separate that parallel-only flakiness from genuine failures, the parallel step runs with `continue-on-error: true`, and whenever its outcome is `failure`, a follow-up step re-runs only the failed tests serially (`bats --filter-status failed tests/`), appending its output to `$GITHUB_STEP_SUMMARY`:
+
+| Parallel run | Serial re-run | Job result | Meaning |
+|---|---|---|---|
+| PASS | (not run) | Success | Normal |
+| FAIL | PASS | Success | Parallel-only flaky — re-run result recorded in `$GITHUB_STEP_SUMMARY` |
+| FAIL | FAIL | Failure | Genuine failure |
+
+`continue-on-error: true` on the parallel step keeps its result from directly failing the job; a genuine failure is instead surfaced by the serial re-run step's non-zero exit. A green CI job can therefore still have hit parallel-only flakiness — check `$GITHUB_STEP_SUMMARY` for a "Serial re-run" section to confirm.
 
 ### BATS Mocking Convention
 
