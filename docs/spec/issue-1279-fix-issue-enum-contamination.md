@@ -134,3 +134,43 @@
 
 - Pre-merge AC5 (`github_check "gh pr checks" "Run bats tests"`) は `/code` フェーズ完了時点では PR 未作成のため判定不能で未チェックのまま引き継がれていたが、本フェーズで CI 全9件 SUCCESS を確認しチェック済みに更新した。これは Phase Handoff の想定通りの引き継ぎであり、AC 記述自体に問題はなかった。
 - rubric 系 AC (AC1〜3) は Spec Notes 節の記述と実装コメントを直接参照するだけで PASS 判定でき、UNCERTAIN や verify command の構文エラーは発生しなかった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- Background の事実主張がすべてコードベース照合で裏付けられており、`/spec` 以降で前提の訂正が発生しなかった
+- AC 監査で `command "bats tests/get-auto-session-report.bats"` の常時 PASS リスクを検出したが、**コメント投稿のみで本文は修正しなかった**。同一セッションの #1266 では `/issue` Step 7 が AC を実際に書き換えており、同じ検出に対する処置が Issue 間で分かれている。今回は `/spec` が Notes に記録したうえで本文も同期修正したため実害はなかったが、`/issue` が修正まで行うか指摘に留めるかの基準は明文化されていない
+
+#### spec
+
+- 許可リスト方式の採用理由、`sub_start` ∪ `phase_*` の union 採用と #575 の扱い、#1007 との修正レイヤーの違いを、いずれも AC が要求する形で Notes に記録した。判断の追跡可能性が高い
+- triage / `/issue` 双方が指摘した AC4 の常時 PASS を、実装確定後のテスト名から一意な部分文字列を抽出して `bats --filter` 形式へ具体化した。指摘 → 修正の連鎖が Issue 本文まで届いている
+- `scripts/collect-run-facts.sh` の同型汚染を副次的に発見し、`/issue` フェーズで確定した要件の範囲外として Notes に記録するに留めた。`/spec` が要件を追加しない責務境界を守った判断
+
+#### code
+
+- Implementation Steps 1〜4 を逸脱なく実施、rework ゼロ
+- Notes の Out of Scope を受けて follow-up Issue #1287 を起票し、重複がないことを `gh issue list` で確認している
+
+#### review
+
+- review-light の 4 観点すべてで指摘 0 件 (MUST: 0 / SHOULD: 0 / CONSIDER: 0)。指摘がなかったため `REQUEST_CHANGES` 自体が試行されず、#1256 で修正した自己 PR 422 フォールバックは本 PR でも発火していない。#1256 の post-merge observation 条件は引き続き未検証
+
+#### merge
+
+- Pre-merge AC gate で unchecked_count=0 を確認、review-incomplete-fallback チェックで organic completion を確認したうえで squash merge。コンフリクト・CI 失敗なし
+
+#### verify
+
+- Pre-merge 5 件は既チェックのため既定どおり skip、post-merge の observation 1 件は `auto-run` 未発火で SKIPPED。FAIL・UNCERTAIN ゼロ
+- triage で AC4 の常時 PASS を指摘した経緯があるため、skip では効果を確認できない点を補うべく実データで検証した。本セッション (`23043-1786197225`) の生 distinct issue は 6 件 (`783 1064 1108 1256 1266 1279`)、うち処理実績イベントを持つのは 3 件 (`1256 1266 1279`) で、修正後のレポートは `Issues processed: 3` を返した。**修正が実データで機能していることを確認**した。#783 / #1064 / #1108 は本セッションの opportunistic verification で候補判定された Issue であり、汚染の再現でもある
+- **同スクリプトに同系統の未修正欠陥を発見した** (下記 Improvement Proposals)
+
+### Improvement Proposals
+
+- **`get-auto-session-report.sh` の `Route mix` が post-spec の Size 再評価を反映しない (Tier 1 — 起票)**: `:170-179` は route を `sub_start` イベントの `size` フィールドから導出しているが、`sub_start` は sub-issue 開始時点の記録であり `/spec` の post-spec Size 再評価より前の値である。本セッションの実測では #1256 が `sub_start` で `size: "M"` のまま記録され、`/spec` が M → XS へ降格して patch route で着地したにもかかわらず pr として集計された (報告値 `patch: 1, pr: 2` / 実態 `patch: 2, pr: 1`)。`scripts/collect-run-facts.sh:185` は同じ route を `code-pr` / `code-patch` phase イベントの有無から導出しており (実際 #1256 を `route: "patch"` と報告)、参照実装が同一リポジトリ内に存在する。Tier 1 の根拠は positive-evidence gate (c): `get-auto-session-report.sh` は `skills/auto/SKILL.md` Step 5 の L3 retrospective と `skills/audit/SKILL.md` の `/audit auto-session` という 2 つの skill が消費する測定 SSoT であり、本 Issue 自身の Background がその二重消費経路を明記している。既存 open Issue に該当なし (#1240 は route *選択*側で別系統、#875 は CLOSED) を確認済み
+
+- **AC 常時 PASS を検出した `/issue` の処置が Issue 間で一貫しない (Tier 2 — 記録のみ)**: 同一セッション内で、#1266 では `/issue` Step 7 が AC を実際に書き換えたのに対し、本 Issue では指摘コメントの投稿のみで本文は変更されなかった。本 Issue では `/spec` が後段で修正したため実害ゼロだが、`/spec` を持たない経路 (XS patch route 等) では指摘が消化されないまま verify に到達しうる。単独の起票は見送るが、同型が再発した場合は `/issue` の AC 監査の処置基準として Tier 1 を検討する
