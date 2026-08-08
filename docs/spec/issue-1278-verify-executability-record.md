@@ -232,25 +232,23 @@ Issue 本文の自動編集は行わず (Self-generated AC への非破壊方針
 - AC9 (`command "bats tests/"`) は `verify-executor.md` の `command` verify-type が 60 秒でタイムアウトする一方、`bats tests/` (serial) は 1600 件超のテストで 10 分の Bash tool ceiling を超えて background へ移行した。この AC は Issue 本文からの verbatim コピーであり `/spec` の常時 PASS 監査でも欠陥と判定されなかったため書き換えなかったが、自動 verify-executor では恒常的に UNCERTAIN 判定になる可能性が高い。手動 (`bats --jobs <N> tests/` などの並列実行) での確認が実質的な検証手段になる。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- MUST 相当の指摘はゼロだったため `event=COMMENT` でレビューを投稿した。SHOULD 判定2件 (`capability` 属性の `-->` インジェクション、`resolve` の `gh` 失敗 fail-open が未評価と区別できない問題) は adversarial verification (2エージェント×2段階検証) で具体的な再現手順とともに確認されたため、スコープの小さい修正として着地させた。
-- CONSIDER 判定5件 (capability/detail 排他性未検証・extract_attr 非アンカー match・Step 9 の format 非0終了時ガイダンス欠如・コードフェンス内注釈行混在・audit SKILL.md description 未更新) は、いずれも adversarial verification で「現行の属性語彙では実害が表面化しない」または「対話実行のため自己修正されやすい」と判定されたため、PR の修正スコープを最小化する方針で見送った。
-- AC9 (`bats tests/` 全件PASS) は safe mode の command verify-type につき直接実行せず、CI 参照フォールバック (`Run bats tests` ジョブ SUCCESS) で PASS 判定した。ローカルでのフルスイート実行はシステム負荷により2度とも Bash tool の10分 ceiling を超えて background 移行したため、`/code` retrospective が既に指摘していたリスクが本フェーズでも顕在化した形。
+- Pre-merge AC 9件は全てチェック済み、review-incomplete-fallback も検出されなかったため gate は無条件で通過し、squash merge をそのまま実行した。
+- `gh-pr-merge-status.sh` の初回応答は `mergeable=UNKNOWN` (attempt 1) で30秒待機後に `mergeable=true, reason=clean` へ解決したため、conflict 解決フローには入らなかった。
 
 ### Deferred Items
 
-- CONSIDER 判定5件は follow-up Issue を起票せず、review retrospective とレビューコメントに記録するに留めた。将来同種の指摘が再発する場合は起票を検討する。
+- CONSIDER 判定5件 (review phase から引き継ぎ、変更なし): follow-up Issue 未起票のまま review retrospective に記録するに留めている。
 - `scripts/post_merge_check.sh` の記録機構未接続、`manual` → `deferred` 改名/`requires=` 属性導入は Issue 本文で明示的に保留 (code phase から引き継ぎ、変更なし)。
 - Post-merge AC (observation type, `session=next`) 2件は未評価のまま。次回 `/auto` 実行時の観測に依存 (変更なし)。
 
 ### Notes for Next Phase
 
-- `/merge` は本フェーズで追加された修正コミット (`Address review feedback: sanitize capability attribute, distinguish gh failure from unevaluated`) を含めた CI 結果を確認すること。
-- `bats --jobs <N> tests/` のフルスイート実行は、他セッションとの同時実行時にシステム負荷で10分 ceiling を超えうる。ローカルで再現できない場合は CI の結果を優先すること。
-- `resolve` サブコマンドの `gh` 失敗時の返り値が `exit 0` (マーカーなし) から `exit 2` (未確定) に変更された。`skills/audit/SKILL.md` の Manual Waiting Count はこれに対応する `N0` 区分を追加済みだが、他に `verify-executability-marker.sh resolve` を呼び出す箇所が将来追加される場合はこの exit code 契約変更を踏まえること。
+- `/verify` は post-merge AC 2件 (`session=next` observation) の評価を担当する。`/audit stats --retention` の Manual waiting reason 別内訳が実測できる状態になっているか確認すること。
+- `resolve` サブコマンドの `gh` 失敗時の返り値契約変更 (`exit 0` → `exit 2`) は review phase から引き継ぎ、変更なし。将来 `verify-executability-marker.sh resolve` の呼び出し箇所が増える場合は踏まえること。
 
 ## review retrospective
 
