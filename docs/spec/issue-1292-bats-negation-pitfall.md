@@ -113,19 +113,16 @@ tests/audit-auto-session.bats:46,103 / tests/get-auto-session-report.bats:71,199
 UNCERTAIN は発生しなかった。5件の Pre-merge AC (rubric 2件・grep 1件・file_exists 1件・command 1件) はいずれも判定に迷いなく PASS 確定できた。`command "bats tests/"` は `bats --jobs 18 tests/` で1639件全件 PASS を確認しており、非対話モードでの並列実行 (foreground, timeout 590000ms) も問題なく機能した。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `/review --light` (REVIEW_DEPTH=light, `.wholework.yml` に copilot-review/claude-code-review/coderabbit-review 設定なしのため Step 7 全体スキップ) で review-light エージェントを1体起動し、4観点を統合レビューした。
-- review-light が検出した SHOULD 1件 (監査の検索スコープが pipe 無し `! grep` 形式を捕捉していない) は、既存9件と同じ規模の追加調査・修正 (76件の生候補) を要するため本 PR のスコープには含めず、`docs/reports/bats-negation-assertion-audit.md` の Out of Scope 節に件数・具体例を明記するに留めた。
-- MUST 指摘・CI FAILURE ともに無し。Review は `COMMENT` イベントで投稿された。
+- `/merge 1303 --non-interactive` を実行。pre-merge AC ゲート (5件全 checked)、review-incomplete-fallback チェック (fallback 検出なし) ともにクリアしており、追加の override マーカーは不要と判断した。
+- `gh-pr-merge-status.sh` が `mergeable=true, reason=clean` を返したため、Step 3 (Resolve Conflicts) はスキップし、squash merge を直接実行した。
 
 ### Deferred Items
-- Post-merge AC (次回 bats テストを追加する Issue での観察) は `/verify` 以降の運用に委ねる。
-- `skills/issue/spec-test-guidelines.md` への同内容の追記は Issue 本文 Notes の判断どおり見送った (`modules/test-runner.md` 1箇所で到達範囲は足りるとの Spec の判断を踏襲)。
-- pipe 無し `! grep -q pattern file` 形式の追加棚卸し・修正 (76件の生候補、review retrospective の Recurring issues に記録) は本 Issue のスコープ外 — `/verify` での Improvement Proposal 起票を推奨。
+- Post-merge AC (次回 bats テストを追加する Issue での観察) は `/verify` に委ねる。
+- pipe 無し `! grep -q pattern file` 形式の追加棚卸し・修正 (76件の生候補) は本 Issue のスコープ外 — `/verify` での Improvement Proposal 起票を推奨 (review retrospective に記録済み)。
 
 ### Notes for Next Phase
-- Pre-merge AC 5件はすべて `/review` 内で PASS 再確認済み (rubric 2件・grep 1件・file_exists 1件・command 1件、UNCERTAIN 0件)。Issue のチェックボックスは既に `[x]` 済みのため変更なし。
-- 変更ファイルは `modules/test-runner.md`、`docs/reports/bats-negation-assertion-audit.md` (新規 + review 対応の追記)、および6件の `tests/*.bats` のみ。SKILL.md やスクリプトへの変更はない。
-- CI 全11ジョブ SUCCESS。`/merge 1303` を実行してよい状態。
+- squash merge 完了、リモートブランチ削除済み。CI 全ジョブ SUCCESS。
+- `/verify 1292` で post-merge AC の観察を行うこと。
