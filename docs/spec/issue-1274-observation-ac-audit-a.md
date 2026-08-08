@@ -110,3 +110,69 @@ cutoff: `2026-08-08T14:13:15Z` (直近の `phase/*` ラベル付与時刻)。cut
 
 - saito / MEMBER / first-class / `/issue 1274 --non-interactive` の Issue Retrospective — 曖昧性の自動解決 1 点 (実行前提の明記) の記録。内容は Issue 本文の `## Auto-Resolved Ambiguity Points` に反映済みで、本 Spec の「実行前提は充足済み」判断の根拠として消費した / https://github.com/saitoco/wholework/issues/1274#issuecomment-5226494380
 - saito / MEMBER / first-class / ## Autonomous Auto-Resolve Log / https://github.com/saitoco/wholework/issues/1274#issuecomment-5228146102
+
+## issue retrospective
+
+`/issue 1274 --non-interactive` の実行記録 (Issue コメントから転記: https://github.com/saitoco/wholework/issues/1274#issuecomment-5226494380)。
+
+### 曖昧性の自動解決 (1 点)
+
+**実行前提の明記**: 親 #1270 の Notes「実行順序の制約」節は baseline 計測 (`docs/reports/observation-ac-audit-summary.md`) が 3 sub-issue の着手前に完了していることを要求しているが、本 Issue の本文には未反映だった。Background に「実行前提」小節を追加し、着手前に baseline 記録の存在確認を行うよう明記した。
+
+- 理由: この確認なしに分類 D の retire を進めると、親の Post-merge AC 2 が比較する SKIPPED 率の母集団が汚染される (親 Notes に明記された既知リスク)。
+- 他候補: `blocked_by #1270` の GraphQL 関係を設定する案も検討したが、採用しなかった。#1270 は sub-issue 完了を待って閉じる親トラッキング Issue のため、issue-closure ベースの `blocked_by` を設定すると循環依存 (#1274 は #1270 の完了待ち、#1270 は #1274 の完了待ち) になる。
+
+### AC / verify command
+
+Pre-merge 5 行の verify command (rubric 4 / file_exists 1) を Triage AC 監査パターン (常時 PASS/FAIL/UNCERTAIN、grep 引数順、patch route 不整合、破壊的コマンド) に照らして確認したが、該当なし。変更なし。
+
+### Size / Type
+
+Type=Task、Size=L と判定した。同一由来 (#1158 再型付け) の先行 sub-issue #1163 (36 行→L) / #1165 (22 行→L) との比較、および並行する #1275 (12 行→M) / #1276 (16 行→M) との対比から、29 行 / 34 Issue の本 Issue は L 相当と判断した。
+
+## spec retrospective
+
+### Minor observations
+
+- Issue 本文の「対象 Issue 34 件」は #1163 の全体スコープ由来で、実査対象の 29 AC 行が載る Issue は 29 件だった。`/issue` の Size 判定根拠 (上記 issue retrospective の「Size / Type」節) もこの 34 を引用している。件数自体は Size 判定を左右しないが、由来 sub-issue の集計値をそのまま sub-issue 本文へ転記する際に「AC 行の母集団」と「元 sub-issue の全体スコープ」が混ざりやすい。
+- `docs/reports/observation-ac-audit-summary.md` の baseline (2026-08-08) は母集団 85 AC 行 / 82 Issue を記録しているが、分子 (SKIPPED 率) の測定プロトコルは「#1270 の実装フェーズで確定させる」と保留になっている。本 sub-issue は分類作業のみで分子には触れないため実害はないが、親の Post-merge AC 3 (SKIPPED 率が baseline を下回る) の判定可能性は依然として未解決のままである。
+- 実査対象 29 行のうち 3 行 (#869 / #759 / #520) が `/spec` 時点で既に PASS 済みだった。#1163 の再型付けから 3 日で 10% が自然消化しており、「observation dispatch 機構は機能している」という親 #1270 の観測を裏づける独立したデータ点になる。
+
+### Judgment rationale
+
+- **既 PASS 3 行を分類 A に含める判断**: Pre-merge AC 1 が「29 AC 行すべて」の記載を要求するため母集団を 26 行へ縮められない。かつ「実際に PASS した」ことは「指定 event の発火時に判定できた」ことの直接的な実証なので、分類 A の判断根拠として他の A 行より強い。分類体系に「既解決」枠を新設する案は、親 #1270 の集計表が A/B/C/D/E の 5 区分で固定されているため採らなかった。
+- **分類 B で `keyword=` を使わない判断**: `modules/observation-trigger.md` は `keyword=` を「event 名を細分化せずに空振りを減らす軽量な代替」と位置づけるが、gate が有効化されるのは `--context-file` が渡されたときだけで、その経路は `modules/opportunistic-verify.md` の opportunistic モードに限られる。observation の event 経路 (`auto-run` / `fix-cycle`) はどちらも渡さないため、付与しても無条件マッチのままになる。モジュールの記述だけを読んで採用すると空振りが減ったと誤認するため、呼び出し側 (`skills/auto/SKILL.md` / `skills/verify/SKILL.md`) の実引数まで確認して判断した。
+- **`allowed-tools` を広げない判断**: `check-ac-checkbox-format.sh` は `/code` の `allowed-tools` に未登録だが、本 Issue は既存 AC の実査が目的であり SKILL.md 変更はスコープ外。#1165 が同じ制約下で python3 等価判定を採った先例に合わせた。SKILL.md を変更すると Steering Docs sync candidate check が発火して Changed Files が膨らみ、実査という主眼がぼやける。
+
+### Uncertainty resolution
+
+- **`/spec` 時点で解決**: 「baseline 計測が完了しているか」は `docs/reports/observation-ac-audit-summary.md` の存在確認で解決した (2026-08-08 計測分あり)。着手をブロックする要因はない。
+- **`/spec` 時点で解決**: 「`when=` でどの前提を宣言できるか」は `modules/observation-trigger.md` § Condition Check Gate (`when=`) の宣言可能軸 4 つ (`route` / `mode` / `recovery-tier` / `execution-context`) が網羅と明記されており確定した。「並列セッション」「reopen 済み Issue」「削除系 PR」は軸として存在しないため、該当 AC (#861 / #859 / #856 / #852) は `when=` では救えず D / E の切り分けに委ねる。
+- **`/code` へ持ち越し**: 各 AC 行の A/B/C/D/E 分類そのもの。29 行それぞれについて `/verify` 実行時に Claude が実際に操作・確認できるか (E) / 条件が原理的に成立しないか (D) を個別判断する必要があり、Spec 段階では判断基準と情報源の確定までに留めた。
+- **`/code` へ持ち越し**: `modules/observation-trigger.md` § "Conditions That Cannot Be Pre-Excluded" は「毎回 dispatch して SKIPPED で返すのが正しい挙動」と位置づけるが、本 Issue の目的 (dispatch 枠の空振り解消) はそれと逆向きである。この方針衝突は Notes に記録済みで、各行の D / E 判定で個別に解消する。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 対象は **29 AC 行 / 29 Issue** (Issue 本文の「34 件」は #1163 の全体スコープ由来)。うち 3 行 (#869 / #759 / #520) は既に PASS 済みで分類 A として記録のみ、処理対象は 26 行。
+- 分類 B で付与してよい gate 属性は `when=` と `config=` の 2 つのみ。`keyword=` は `auto-run` / `fix-cycle` の dispatch 経路が `--context-file` を渡さないため無効。
+- retire (分類 D) は **#1166 方式** — Issue 本文の `### Post-merge` は編集せず、retire コメント投稿 + `phase/verify` → `phase/done` 遷移の 2 手のみ。`phase/done` 遷移は未チェック条件がゼロになった Issue に限る。
+- route は **pr** (Size L)。`docs/reports/observation-ac-audit-a.md` を新規作成するため operate route の 2 条件を満たさない。#1166 が operate route だったからといって踏襲しないこと。
+- 形式検証は `bash scripts/check-ac-checkbox-format.sh .tmp/issue-body-<N>.md` を第一手段とし、`allowed-tools` 制約で実行できない場合のみ python3 等価判定へフォールバック (SKILL.md の `allowed-tools` は変更しない)。
+
+### Deferred Items
+
+- 各 AC 行の A/B/C/D/E 分類そのもの — Spec は判断基準と情報源の確定までで、1 行ずつの判定は `/code` の Step 3 が行う。
+- 3 sub-issue の記録ファイルを `docs/reports/observation-ac-audit-summary.md` へ統合する作業は親 #1270 の Pre-merge AC 3 の担当。本 Issue で先回りしないこと。
+- 親 #1270 の Post-merge AC 3 が要求する SKIPPED 率の分子測定プロトコルは baseline レポート上で未確定のまま。本 Issue のスコープ外。
+- Post-merge AC はゼロ (効果測定は親に集約)。`/verify` は Pre-merge 5 件のみを評価する。
+
+### Notes for Next Phase
+
+- Step 6 の `opportunistic-search.sh --event <name> --dry-run` は母集団 100 件強を `gh issue view` で 1 件ずつ回すため 1 回あたり数分かかる。event ごとに 1 回だけ実行し、結果を保存して個別突合に使うこと。
+- Step 1 の再スキャン結果が本 Spec の記録 (既 PASS 3 行) と食い違う可能性がある (実査までにさらに消化が進みうる)。Spec の数字ではなく再スキャン結果を正とし、差分を記録ファイルに書くこと。
+- 分類 B/C/E は Issue 本文を編集する。編集は該当 AC 行のみに限定し、チェックボックス形式 (`- [ ] `) を壊さないこと。分類 D は本文を一切編集しない (Pre-merge AC 3 が非編集を明示的に検証する)。
+- `modules/observation-trigger.md` § "Conditions That Cannot Be Pre-Excluded" と本 Issue の目的は方針が逆向き。同節を根拠に「SKIPPED のままでよい」と判断して分類を保留しないこと — 各行を D / E のどちらかに振り切る。
+- E の記録では「今すぐ `/verify` で判定できる」と「装備待ち」を必ず区別し、後者には `capability=<key>` を併記する (親 #1270 の Pre-merge AC 5 と #1278 の `capability-unavailable` 区分への引き継ぎに必要)。
