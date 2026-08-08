@@ -29,7 +29,7 @@ FIXTURE_EOF
     echo "$output" | grep -q "^## Metrics"
     echo "$output" | grep -q "Issues processed | 1"
     echo "$output" | grep -q "#100"
-    ! echo "$output" | grep -q "| #200 |"
+    if echo "$output" | grep -q "| #200 |"; then false; fi
     # Required subsections
     echo "$output" | grep -q "### Summary"
     echo "$output" | grep -q "### Phase Activity Summary"
@@ -67,7 +67,7 @@ FIXTURE_EOF
     run bash "$SCRIPT" "session-candidate" --metrics-only --no-github
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "Issues processed | 1"
-    ! echo "$output" | grep -q "| #501 |"
+    if echo "$output" | grep -q "| #501 |"; then false; fi
     ! echo "$output" | grep -q "| #502 |"
 }
 

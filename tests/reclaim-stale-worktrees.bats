@@ -87,7 +87,7 @@ mock_pr() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"reclaimed (worktree+branch): 1"* ]]
 
-    ! git -C "$MAIN_REPO" worktree list | grep -q "wt1006"
+    if git -C "$MAIN_REPO" worktree list | grep -q "wt1006"; then false; fi
     ! git -C "$MAIN_REPO" branch --list 'worktree-code+issue-1006' | grep -q "worktree-code+issue-1006"
 }
 
@@ -141,7 +141,7 @@ mock_pr() {
     [[ "$output" == *"reclaimed (worktree+branch): 1"* ]]
     [[ "$output" == *"warned (branch tip diverges): 0"* ]]
 
-    ! git -C "$MAIN_REPO" worktree list | grep -q "wt1149"
+    if git -C "$MAIN_REPO" worktree list | grep -q "wt1149"; then false; fi
     ! git -C "$MAIN_REPO" branch --list 'worktree-code+pr-1149' | grep -q "worktree-code+pr-1149"
 }
 
@@ -165,7 +165,7 @@ mock_pr() {
     [[ "$output" == *"warned (branch tip diverges): 1"* ]]
     [[ "$output" != *"reclaimed (worktree+branch): 1"* ]]
 
-    ! git -C "$MAIN_REPO" worktree list | grep -q "wt5000"
+    if git -C "$MAIN_REPO" worktree list | grep -q "wt5000"; then false; fi
     git -C "$MAIN_REPO" branch --list 'worktree-code+issue-5000' | grep -q "worktree-code+issue-5000"
 }
 
