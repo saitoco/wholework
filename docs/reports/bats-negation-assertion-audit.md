@@ -83,10 +83,24 @@ applies, and no rewrite is needed.
 
 ## Out of Scope
 
-Bare `!` negations without a `| grep` pipeline (e.g. `tests/reclaim-stale-worktrees.bats:136,159`
-`! git branch -d ... 2>/dev/null`) can be subject to the same `set -e` exception rule, but Issue
-#1292 explicitly scopes its target pattern to `! ... | grep` form. These are noted for reference
-only and are not covered by this audit's remediation.
+Two related patterns are subject to the same `set -e` non-final-statement exception rule
+documented in `modules/test-runner.md`, but Issue #1292 explicitly scopes its target pattern to
+the `! cmd | grep -q ...` piped form, so neither is covered by this audit's search command or
+remediation:
+
+- **Bare `!` negations without any `grep`** (e.g. `tests/reclaim-stale-worktrees.bats:136,159`
+  `! git branch -d ... 2>/dev/null`).
+- **`! grep -q pattern file` without a pipe** (grep reading a file directly, rather than via a
+  piped `echo`/command output). A broader scan (`grep -rnE '^\s*!\s*.*grep' tests/*.bats | grep
+  -vE '\|\s*grep'`) found 76 candidate lines across roughly 30 files as of this audit (2026-08-09)
+  that share the identical exit-status-excluded-from-`set -e` mechanism but were not counted or
+  classified here — this figure is a raw grep count, not a per-line final/non-final
+  classification, so the actual defective subset is unconfirmed. Examples observed to be
+  non-final (and therefore currently detection-power-zero) during a spot check include
+  `tests/run-code.bats:470`, `tests/run-issue.bats:306`, and `tests/gh-graphql.bats:69`.
+
+Both categories are noted here for reference only; scoping and remediation are left to a
+follow-up Issue rather than this one.
 
 ## Remediation Record
 
