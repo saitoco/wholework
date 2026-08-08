@@ -15,6 +15,9 @@ node_modules/
 .claude/*
 !.claude/settings.json.template
 
+# bats run history (required by `--filter-status`)
+tests/.bats/
+
 # OS files
 .DS_Store
 

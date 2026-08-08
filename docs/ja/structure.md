@@ -250,7 +250,7 @@ wholework/
 
 ### CI ワークフロー
 
-- `.github/workflows/test.yml` — push/PR 時に bats テスト、`validate-skill-syntax.py`、禁止表現チェック、macOS シェル互換性テストを実行
+- `.github/workflows/test.yml` — push/PR 時に bats テスト (`bats --filter-status failed` で並列実行時のみの失敗を非並列再実行し、本物の失敗と切り分ける)、`validate-skill-syntax.py`、禁止表現チェック、macOS シェル互換性テストを実行
 - `.github/workflows/dco.yml` — 全 PR コミットに対して DCO `Signed-off-by:` を必須化
 - `.github/workflows/kanban-automation.yml` — `phase/*` ラベルイベントで issue をプロジェクトボードのカラムへ自動移動
 

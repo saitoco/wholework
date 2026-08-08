@@ -47,3 +47,48 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1255#issuecomment-5218891812
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1–4 followed the Spec as written. `mkdir -p tests/.bats/run-logs` was placed as a prior independent step ("Prepare bats run-log directory"), the "その前段の独立ステップ" option the Spec explicitly allowed as an alternative to embedding it in the "Run bats tests" step's own `run:` block.
+
+### Design Gaps/Ambiguities
+
+- **Local reproduction confirmed the Spec's premise**: running `bats --jobs 18 tests/` locally (3 times) reproduced `tests/post_merge_check.bats` failing intermittently under parallel load (`fail: gh issue reopen called when FAIL input given`, and on one run also `multiple issues: processed sequentially`), while the same file always passed 10/10 serially. This is a pre-existing flake unrelated to this Issue's changed files, and matches the exact class of failure the Issue's Background section documents (#1221 observation) — confirming the mechanism this PR adds is exercising a real, currently-occurring condition rather than a hypothetical one.
+- **`--filter-status failed` run-log is cumulative across invocations, not reset per `bats <dir>` call**: local testing showed that re-running `bats --filter-status failed tests/` against a `tests/.bats/run-logs/` directory that had accumulated history from several prior full-suite invocations reran far more tests (120) than the 1–2 that failed in the immediately preceding run — because the log retains status across all runs since the directory was created, not just the last one. This is not a defect in the implementation: in CI, each job starts from a fresh checkout, so `tests/.bats/run-logs/` never carries state across job runs and the re-run step only ever reflects the single preceding "Run bats tests" step. Recorded here since it could otherwise surprise an engineer manually reproducing CI behavior locally against a reused `tests/.bats/` directory.
+
+### Rework
+
+- N/A — no rework occurred; implementation, local verification, and AC checks completed without needing to revise the approach.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `REVIEW_DEPTH=light` (explicit `--light` flag) — ran the 1-agent `review-light` integrated review instead of the 2-group fan-out, covering all 4 aspects (spec divergence, edge cases, security, documentation consistency) in a single pass.
+- Both Pre-merge `rubric` acceptance conditions were independently re-evaluated against the PR diff and Spec `## Notes` and judged PASS, confirming the pre-existing `[x]` checkbox state.
+- No fixes were required — `review-light` found zero issues, and CI (9/9 jobs) was already green before this review ran.
+
+### Deferred Items
+- Post-merge AC (observation, `event=auto-run session=next`) remains unverified until the next real CI run surfaces a parallel-only failure — unchanged from the code-phase handoff.
+- File-level attribution and Option C (cumulative threshold detection) remain deferred per the Spec's Notes — not in scope for this review.
+
+### Notes for Next Phase
+- `/merge 1269` can proceed directly — no MUST/SHOULD/CONSIDER issues, CI green, both Pre-merge AC PASS.
+- The Post-merge observation AC will only resolve once a real CI run exhibits a parallel-only failure; `/verify` should expect SKIPPED until that event fires, per `verify-executor.md`'s `observation` verify-type handling.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Nothing to note — the implementation followed the Spec's Implementation Steps exactly (`id: bats` + `continue-on-error: true` + conditional serial re-run step), and the Code Retrospective already recorded the only two design-relevant observations (local flake reproduction, cumulative `--filter-status` log behavior).
+
+### Recurring issues
+
+- Nothing to note — no issues were raised in Step 8 (both Pre-merge rubric conditions PASS) or Step 10 (review-light found no issues across all 4 aspects).
+
+### Acceptance criteria verification difficulty
+
+- Nothing to note — both Pre-merge `rubric` conditions were verifiable with high confidence directly against the PR diff and the Spec's `## Notes` section; no ambiguity in interpreting the AC text.
