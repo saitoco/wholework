@@ -60,6 +60,7 @@
 
 - saito / MEMBER / first-class / triage フェーズの Issue Retrospective (Size=M の判断根拠、Background 表の対象 Issue 件数 13→11 修正の auto-resolve 記録、AC/Post-merge への変更なし) / https://github.com/saitoco/wholework/issues/1275#issuecomment-5226504642
 
+- saito / MEMBER / first-class / <!-- wholework-event: type=auto-resolve-log phase=merge issue=1275 pr=1296 decis / https://github.com/saitoco/wholework/issues/1275#issuecomment-5228422133
 ## Code Retrospective
 
 ### Deviations from Design
