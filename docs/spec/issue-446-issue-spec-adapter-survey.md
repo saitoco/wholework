@@ -121,3 +121,9 @@
 
 ### Improvement Proposals
 - N/A
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/446#issuecomment-4418928161
+- saito / MEMBER / first-class / <!-- escalation-level: 2 --> / https://github.com/saitoco/wholework/issues/446#issuecomment-5182936188
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=4 / https://github.com/saitoco/wholework/issues/446#issuecomment-5212257185
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=4 / https://github.com/saitoco/wholework/issues/446#issuecomment-5225312457
