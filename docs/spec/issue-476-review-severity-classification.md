@@ -242,3 +242,14 @@
 ### Improvement Proposals
 - re-run #13 は「スラッシュを含まない属性構文への一致 (`keyword=<value>` 自体) は Issue #1220 自身の Spec という特殊事例であり、一般的な PR で `keyword=workflow` がスラッシュなしで地の文に出現するケースは稀」と判断し、新規 follow-up Issue の起票を見送った。本 re-run #14 はその判断を覆す反証となる: 通常の (Issue #1220 と無関係な) Issue #1234 の Spec で、`gh run list --workflow=<file>.yml` という **`skills/verify/SKILL.md` の Patch route detection 節が推奨する標準パターン**への一致により、非スラッシュ亜種が**2件目**として再現した。この標準パターンは patch route (Size XS/S) の CI 確認 AC で `github_check "gh pr checks"` の代替として広く使われることが想定されており (`modules/verify-classifier.md` 記載の置換例そのもの)、re-run #13 が「稀」と判断した前提 (特殊事例限定) が成立しない可能性がある。#1220 のパス様トークン除外に加えて `keyword=` 値そのものへの単語境界マッチ (`grep -qiw` 相当、ただし `/`・`.` を単語境界とみなさない問題は #1220 の Background で既出) や、`keyword=` 一致を diff 内の実ファイルパス変更有無ベースの構造化マッチへ置き換える設計変更を検討する価値が高まったと判断する。Step 16 (retro-proposals) の Tier 1 分類・freshness check に判断を委ねるが、re-run #13 時点より起票の優先度は上がっている旨を明記する
 
+## Verify Retrospective (2026-08-08 re-run #15)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1291、Issue #1257) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカーあり) した。今回は re-run #1〜#14 と異なる質の発火だった点が特筆に値する: 発火元 PR #1291 は `.github/workflows/test.yml` に新規 CI job `language-convention` を実際に追加する変更であり、`keyword=workflow` ゲートが**サブストリングの偶然一致ではなく、真にワークフローファイルへの変更を含む PR** で発火した初のケース (re-run #1〜#14 はすべて `docs/translation-workflow.md` 等のファイル名部分一致、または `--workflow=test.yml` のような CLI フラグ構文への部分一致だった)。しかし当該 PR の workflow 変更自体は `actions/checkout@v4` + 標準的な `run:` ステップの追加のみで、Issue #476 が対象とする「CI/ランナー環境で決定的に失敗する設定ミス」(root 所有パスへの非 sudo 書き込み・存在しない action バージョン参照・必須 secret 未設定等) は含まれていなかった。同 PR のレビューでは別カテゴリの MUST (`scripts/check-language-convention.py` のフェンス検出ロジックのバグ) を検出・修正済みだが、これはアプリケーションロジックの欠陥であり CI 設定ミスではないため、本 AC が検証対象とする挙動には該当しない。基準の存在は再確認できたが、「決定的失敗が実際に MUST 判定される」挙動そのものの実地確認は今回 (re-run #15) も得られず UNCERTAIN 判定を維持する
+- worktree セッション中に `source` 経由の `emit-event.sh` 呼び出し (Step 11 の `phase_complete` イベント発行) が worktree isolation guard によりブロックされた。re-run #12/#14 で記録済みの既知制約の再現であり、新規の異常ではない。Step 13 Worktree Exit 後に再試行する
+
+### Improvement Proposals
+- re-run #15 は「`keyword=workflow` ゲートが真にワークフローファイル変更を含む PR で発火しても、Issue #476 が求める『決定的失敗』シナリオ自体が稀にしか発生しない」ことを示す新しいデータ点である。この観測は #1220 (パス様トークン除外) や re-run #14 が提起した単語境界マッチ改善とは別軸の課題を示唆する: `keyword=` ゲートの真陽性 (実際にワークフローファイルを触る PR での発火) であっても、Issue #476 の post-merge AC が求める「決定的失敗の実例」に遭遇する確率は低く、この observation ベースの AC 設計そのものが長期間 PASS/FAIL に到達しにくい構造的な問題を抱えている可能性がある。15 回の re-run すべてが UNCERTAIN のまま Issue が `phase/verify` に留まり続けている状態は、`/verify` の再実行コストと `phase/verify` 滞留期間の観点からも看過しにくくなってきている。Step 16 (retro-proposals) の freshness check に判断を委ねるが、observation AC 自体の設計 (例: 一定回数 UNCERTAIN が続いた場合に人手確認へフォールバックする仕組み) を再検討する価値が高まったと判断する
+
