@@ -259,3 +259,38 @@ Nothing to note。Pre-merge AC 7 件 (rubric 6 + file_exists 1) はすべて saf
 
 - Post-merge AC はこの Issue にはない (効果測定は親 #1270 に集約)。`/verify 1276` は Issue 状態遷移の確認が主。
 - BASE_BRANCH は `main` のため `closes #1276` により Issue は自動クローズされる見込み。ラベル遷移 (`phase/verify`) は Step 5 で実行する。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- 親 #1270 の「実行順序の制約」(baseline 計測が着手の前提) が本文へ反映されなかった。3 本の triage が並列実行されたため反映は #1274 のみで、親セッションが後から手作業で追記している。
+
+#### spec
+
+- **Spec 本文に実在しない参照が 2 件混入していた** (`.tmp/auto-checkpoint-*.json` というパス、`workflow-guidance.md § Completion Report Addition` という節名)。code フェーズがこれをレポートへ転記したことで `/review` の diff に現れ、そこで初めて検出された。Spec 段階で `grep` による実在確認をしていれば防げた。
+- 一方で `#1242` (commit `5bf85f5f` / PR #1272) の着地により「OPEN 2 件 (#490 / #465) は dispatch 母集団に入らない」という一次資料の前提が失効していることを正しく検出し、母集団前提を訂正している。後発変更による前提失効の検出は機能していた。
+
+#### code
+
+- Spec の Implementation Steps・Changed Files・Key Decisions がすべて実装と一致。逸脱なし。
+- Spec 由来の誤った参照 2 件をそのまま転記した点のみが問題で、code フェーズ自身の判断ミスではない。
+
+#### review
+
+- review-bug ×2 と review-spec の 3 エージェントが共通して上記 2 件を検出。multi-perspective review の収束が機能した。
+- Pre-merge AC 7 件 (rubric 6 + file_exists 1) はすべて safe mode で PASS 判定でき UNCERTAIN 0 件。
+
+#### merge
+
+- PR #1295。並行する #1296 / #1297 と重なり merge フェーズで `concurrent_commit_detected` が 2 件検出されたが、いずれもハンドリング済み。
+
+#### verify
+
+- Pre-merge 7 件はすべて `- [x]` 済みのため already-checked skip rule により SKIPPED。post-merge 条件は無し。FAIL / UNCERTAIN ゼロ。
+
+### Improvement Proposals
+
+- **監査・実査レポートに書く具体的な参照 (関数名・ファイルパス・節名・設定キー) は、記述前に `grep` / `Read` で実在確認する工程を明示すべき**。本 Issue では Spec 本文に実在しない参照が 2 件混入し、レポートへ転記されてから `/review` で検出された。原因は「実装コードから正確な文字列を確認せず記憶・推測で転記した」ことである。**同じ根本原因が姉妹 sub-issue #1274 でも独立に発生している** — あちらは分類 A の判定根拠に #1181 で削除済みの関数を引用しており、`/review` が D へ再分類させた。3 本の sub-issue のうち 2 本で同型の欠陥が出たことになる。この種のレポートは「将来 `/verify` が参照する判定根拠」になるため、誤った参照が入ると後続の判定を誤らせる。**起票は親 #1270 の verify で 2 例をまとめて扱う** (単独起票すると同じ提案が 2 件立つ)。
