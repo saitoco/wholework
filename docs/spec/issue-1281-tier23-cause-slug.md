@@ -4,6 +4,7 @@
 
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Spec Retrospective / https://github.com/saitoco/wholework/issues/1281#issuecomment-5227270507
 ## Overview
 
 `docs/reports/orchestration-recoveries.md` への 3 つの記録経路のうち、Tier 2 (`scripts/apply-fallback.sh`) と Tier 3 (`scripts/spawn-recovery-subagent.sh`) が `### Diagnosis` ブロックに `- cause: <slug>` 行を書いていない。`scripts/collect-recovery-candidates.sh` はこの行を読んで group-key を `<symptom-short>/<cause-slug>` に切り替えるため、行がないエントリは近因が異なっても素の `<symptom-short>` に束ねられる。
