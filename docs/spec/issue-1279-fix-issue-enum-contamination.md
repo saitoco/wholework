@@ -105,17 +105,32 @@
 - Notes の「Out of Scope — `scripts/collect-run-facts.sh` の同型汚染」を受け、follow-up Issue #1287 を起票した (重複なしを `gh issue list` で確認済み)。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec Implementation Steps 1〜4 をそのまま実施 (逸脱なし)。`PROCESSED_ISSUES_JSON` 共通変数を導入し、`ISSUES_PROCESSED` / `ISSUE_NUMS_FOR_TABLE` / `ISSUE_NUMS` の 3 箇所すべてをそこから導出する形に統一した。
-- Pre-merge AC4 の verify command はすでに Issue 本文・Spec とも `bats --filter 'candidate Issues are excluded' tests/get-auto-session-report.bats` に確定済みだったため、Step 10 での追加変更は不要だった。
-- behavioral change detection (`tests/audit-auto-session.bats` が `get-auto-session-report.sh` を参照) により全 bats スイートを `--jobs 18` で並列実行し、1620 件全 PASS を確認した。
+- Pre-merge AC5 (`github_check "gh pr checks" "Run bats tests"`) を CI 全9件 SUCCESS (`gh pr checks` 相当) の確認により PASS 判定し、Issue チェックボックスを `[x]` に更新した。これで Pre-merge AC1〜5 は全てチェック済みとなった。
+- ローカルで `bats --filter 'candidate Issues are excluded' tests/get-auto-session-report.bats` を実行し PASS を再確認した (AC4 の裏付け)。
+- Base Branch Conflict Pre-check (`git merge-tree`) を実施し、mainとのコンフリクトなしを確認した。REVIEW_DEPTH=light (Size M) のため review-light エージェント1体による4観点統合レビューを実施し、指摘は0件だった。MUST issue がないため `event=COMMENT` でレビューを投稿した。
 
 ### Deferred Items
-- `scripts/collect-run-facts.sh` の同型汚染 (Spec Notes の Out of Scope 項目) を follow-up Issue #1287 として起票済み。本 PR のスコープには含めていない。
-- Post-merge AC (`session=next` の観察 AC) は次回 `/auto --batch` 完走後の L3 retrospective で確認される。
+- `scripts/collect-run-facts.sh` の同型汚染 follow-up Issue #1287 は本 PR のスコープ外のまま (code phase から引き継ぎ、変更なし)。
+- Post-merge AC (`session=next` の観察 AC) は次回 `/auto --batch` 完走後の L3 retrospective で確認される (変更なし)。
 
 ### Notes for Next Phase
-- Pre-merge AC1〜4 は `/code` 内でチェック済み (`[x]`)。AC5 (`github_check "gh pr checks"`) は PR 作成前で判定不能だったため未チェックのまま — `/review`/CI で確認すること。
-- Post-merge AC (observation, `session=next`) は次回の `/auto --batch` 実行を待つ必要がある。今すぐ検証可能な項目ではない。
+- Pre-merge AC1〜5 は全てチェック済み (`[x]`)。`/merge` は追加の AC 確認なしで進行可能。
+- Post-merge AC (observation, `session=next`) は次回の `/auto --batch` 実行を待つ必要がある。`/verify` でこの観察結果を確認すること。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Nothing to note — Implementation Steps 1〜4 は Spec の記述通りに実施されており、`PROCESSED_ISSUES_JSON` 共通変数の導入方法・3箇所の置き換え箇所とも Spec と実装で乖離はなかった。
+
+### Recurring issues
+
+- Nothing to note — review-light エージェントによる4観点 (Spec 逸脱・エッジケース堅牢性・セキュリティ・ドキュメント整合性) チェックで指摘は0件だった。
+
+### Acceptance criteria verification difficulty
+
+- Pre-merge AC5 (`github_check "gh pr checks" "Run bats tests"`) は `/code` フェーズ完了時点では PR 未作成のため判定不能で未チェックのまま引き継がれていたが、本フェーズで CI 全9件 SUCCESS を確認しチェック済みに更新した。これは Phase Handoff の想定通りの引き継ぎであり、AC 記述自体に問題はなかった。
+- rubric 系 AC (AC1〜3) は Spec Notes 節の記述と実装コメントを直接参照するだけで PASS 判定でき、UNCERTAIN や verify command の構文エラーは発生しなかった。
