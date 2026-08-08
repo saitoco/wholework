@@ -63,6 +63,9 @@
 - saito (MEMBER, first-class): Issue Retrospective (triage フェーズ)。Background の事実確認2件が実装と一致することを確認 (警告なし)。Post-merge AC の `verify-type: observation event=pr-review-full` に `session=next` を追記 (`modules/observation-trigger.md` が `/auto`/`/review`/`/verify` の3 skill から参照される共有モジュールであるため、skill self-update propagation rule に該当) — https://github.com/saitoco/wholework/issues/1233#issuecomment-5218237672
 - saito (MEMBER, first-class): Triage AC audit (非破壊警告)。AC2 の verify command (`grep "when=" "modules/observation-trigger.md"`) が既存3軸の記述により実装前から常時 PASS してしまう Pattern 2 に該当することを指摘。修復案として実装後にのみ真になる具体的な文字列への変更を提案し、語句の確定を `/spec`/`/code` フェーズに委ねた。本 Spec の Notes と Verification で `execution-context` への修正として反映済み — https://github.com/saitoco/wholework/issues/1233#issuecomment-5218270335
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1233#issuecomment-5225059563
+- saito / MEMBER / first-class / ## AC3 の観測前提を整備した (2026-08-08) / https://github.com/saitoco/wholework/issues/1233#issuecomment-5225154002
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1233#issuecomment-5226790654
 ## Code Retrospective
 
 ### Deviations from Design
