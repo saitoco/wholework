@@ -11,6 +11,9 @@ cutoff: `2026-08-06T14:27:00Z` (直近の `phase/issue` label 付与時刻)
 
 いずれも本 Spec の設計前提として取り込み済み。2 件目が確定させた「編集対象外 = 歴史的記録」の線引きは、本 Spec の `## Exclusions` にそのまま引き継いだ。
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1214#issuecomment-5210262007
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1214#issuecomment-5212270888
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1214#issuecomment-5225319358
 ## Overview
 
 `/auto --batch` 完了 tail の next-cycle seed (Loop Engineering 経路 E: Seed file emission、#703 実装) を撤去する。20 回発火して全回 `candidate_count=0`、かつ `.tmp/next-cycle.json` を読むコードがリポジトリ全体でゼロという「書き込み専用の死んだ機能」を、設定キー・イベントスキーマ・ガバナンス語彙 (経路 E) ごと削除する。
