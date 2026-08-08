@@ -573,6 +573,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/modules/detect-config-markers.md` and follow the "Pr
 
    **Source 2 detection — single-Issue parent session only**: Check if `TIER3_RECOVERY_PHASE` is set (retained in Step 6 after Tier 3 succeeds). If set, use retained `TIER3_RECOVERY_*` variables to build the entry and prepend it. Write `TIER3_RECOVERY_CAUSE` as the `### Diagnosis` block's leading `- cause: <slug>` line. For batch/XL routes, `spawn-recovery-subagent.sh` writes directly to `orchestration-recoveries.md`, so Source 2 here covers only single-Issue parent sessions (M/L/patch). `run-auto-sub.sh` commits and pushes `docs/reports/orchestration-recoveries.md` immediately after Tier 3 success to prevent dirty-file conflicts at `/verify` invocation (see #677).
 
+   **Source 1/3 cause value**: the `- cause: <slug>` line in the Entry format below is optional per `docs/reports/orchestration-recoveries.md`'s Field Definitions. For Source 1 and Source 3 (no `TIER3_RECOVERY_CAUSE` available), write a kebab-case root-cause slug reusing an existing one from the log when the root cause is known, write `unclassified` when it is not, or omit the line entirely — never leave the literal `<slug>` placeholder.
+
    For each applicable source, prepend a new entry block to `docs/reports/orchestration-recoveries.md` (after the header comment line `<!-- Log entries appear below, newest first. -->`). Use the Write/Edit tool. Entry format:
 
    ```markdown
