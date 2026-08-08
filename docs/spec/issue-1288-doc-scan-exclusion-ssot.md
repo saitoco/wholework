@@ -74,3 +74,47 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective (issue フェーズ) — 「検討候補」節の案 A/B 選択は `/issue` vs `/spec` の責務境界に従い意図的に `/spec` へ委譲済みで追加解決なし、Post-merge observation AC に `session=next` 追加済み、Triage 結果 (Type: Task, Size: M, Value: 3) を記録。本 Spec の設計判断に対する追加の制約や変更なし / https://github.com/saitoco/wholework/issues/1288#issuecomment-5228136766
+
+- saito / MEMBER / first-class / ## Change Tracking (by /code) / https://github.com/saitoco/wholework/issues/1288#issuecomment-5228318817
+## Code Retrospective
+
+### Deviations from Design
+- N/A (Implementation Steps 1-5 を計画通り実施)
+
+### Design Gaps/Ambiguities
+- Issue 本文の Pre-merge AC が Spec の Verification 節より1件少なかった (`docs/structure.md`/`docs/ja/structure.md` のモジュール数コメント確認コマンドが Issue 側に未反映)。`/code` Step 11 の Auto-append 手順で Issue 本文に追加し、Change Tracking コメントで記録した。原因は `/issue` フェーズ時点では Spec がまだ存在せず、この AC 項目は `/spec` フェーズで初めて具体化されたため — フェーズ間の自然な情報成熟であり、設計上の欠陥ではない。
+
+### Rework
+- N/A
+
+### Tooling Note
+- Step 9 のフル bats スイート実行 (`bats --jobs 18 tests/`) が 600 秒の Bash ツール上限を超え、バックグラウンドへ自動移行された。`skills/code/SKILL.md` Step 9 の明示的な方針 (「完了通知を待たない」) に従い、通知を待たずに Step 10 以降へ進行した。ローカルでの追加検証 (`validate-skill-syntax.py`、`check-forbidden-expressions.sh`、`check-translation-sync.sh`) は個別に実行し全て PASS を確認済み。バックグラウンド移行したフルスイートは Step 12 実施時点で完了通知が届き、1637 件全て PASS (exit code 0) だったことを事後確認した。CI (`.github/workflows/test.yml`) でも同じ結果が再確認される想定。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Step 8 の5件の Pre-merge AC を独自に再検証し、いずれも PASS を確認 (Issue チェックボックスは code フェーズで既に `[x]` 済みだったため更新不要)
+- Base Branch Conflict Pre-check (`git merge-tree`) で main との `changed in both` 競合なしを確認
+- REVIEW_DEPTH=light (`--light` 明示指定) のため review-light エージェント1体による4観点統合レビューを実施し、MUST/SHOULD/CONSIDER いずれも0件
+
+### Deferred Items
+- Post-merge observation AC (`session=next`): 次回 `/audit drift` または `/doc sync` 実行時に `docs/{lang}/` 配下の翻訳ファイルが Project Documents 収集に混入しないことを観察する。`/verify` フェーズで未着手のまま引き継ぐ
+
+### Notes for Next Phase
+- CI は全11ジョブ SUCCESS (DCO / bats / validate-skill-syntax / forbidden-expressions / language-convention / macOS shell compatibility、各×2)
+- 修正コミットなし (指摘事項0件のため Step 12 は未実施)。`/merge 1298` へ進行可能
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note. Implementation Steps 1-5 は Spec 通りに実施されており、Step 8 の AC 検証 (5件全て PASS) でも乖離は検出されなかった。
+
+### Recurring issues
+
+Nothing to note. review-light エージェントによる4観点レビューで指摘事項は0件だった。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note. 5件全ての verify command (command × 2, rubric × 3) がいずれも曖昧さなく機械的/半機械的に判定でき、UNCERTAIN は発生しなかった。

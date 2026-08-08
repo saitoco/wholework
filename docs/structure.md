@@ -25,7 +25,7 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # Skill definition (required)
 │       └── *.md         # Auxiliary phase/guideline files (optional)
-├── modules/             # Shared modules referenced by skills (43 files)
+├── modules/             # Shared modules referenced by skills (44 files)
 │   └── <module-name>.md
 ├── agents/              # Agent definitions (8 files)
 │   └── <agent-name>.md
@@ -120,6 +120,7 @@ Key modules:
 - `modules/adapter-resolver.md` — 3-layer adapter resolution (project-local → user-global → bundled)
 - `modules/opportunistic-verify.md` — opportunistic verification at skill completion
 - `modules/doc-checker.md` — documentation consistency checker
+- `modules/doc-scan-exclusions.md` — SSoT for frontmatter-based document scan exclusion patterns (shared by `/doc` and `/audit`)
 - `modules/doc-commit-push.md` — commit/push guide for /doc subcommand outputs
 - `modules/domain-loader.md` — bundled and project-local Domain file discovery and conditional loading
 - `modules/execution-context.md` — execution context (fork vs main) determination criteria and per-context constraints (verify command safe/full mode policy); also the cross-cutting SSoT for the "Re-invocation Guarantee and Notification-Dependent Waiting" rule (which execution surfaces must not end a turn to await a background-task notification)

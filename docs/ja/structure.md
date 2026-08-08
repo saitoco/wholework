@@ -18,7 +18,7 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # スキル定義（必須）
 │       └── *.md         # 補助的な phase/ガイドラインファイル（任意）
-├── modules/             # スキルから参照される共有モジュール（43 ファイル）
+├── modules/             # スキルから参照される共有モジュール（44 ファイル）
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
@@ -113,6 +113,7 @@ wholework/
 - `modules/adapter-resolver.md` — 3 層 adapter 解決（プロジェクトローカル → ユーザーグローバル → バンドル）
 - `modules/opportunistic-verify.md` — スキル完了時の opportunistic 検証
 - `modules/doc-checker.md` — ドキュメント一貫性チェッカー
+- `modules/doc-scan-exclusions.md` — frontmatter ベースのドキュメント走査除外パターンの SSoT (`/doc` と `/audit` で共有)
 - `modules/doc-commit-push.md` — /doc サブコマンド出力の commit/push ガイド
 - `modules/domain-loader.md` — バンドルおよびプロジェクトローカル Domain ファイルの発見と条件付きロード
 - `modules/execution-context.md` — 実行コンテキスト (fork vs main) の判定基準と各コンテキストでの制約 (verify command の safe/full mode ポリシー)。「Re-invocation Guarantee and Notification-Dependent Waiting」ルール (どの実行サーフェスがバックグラウンドタスクの通知待ちでターンを終えてはならないか) の横断 SSoT も兼ねる
