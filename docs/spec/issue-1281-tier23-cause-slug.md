@@ -159,24 +159,40 @@ Changed Files に新規 `scripts/*.sh` は含まれず、`modules/*.md` の変�
 ### Test Execution Notes
 - Behavioral change detection (既存ファイル `docs/reports/orchestration-recoveries.md` を直接対応テスト以外からも複数 bats ファイルが参照) によりフルスイート並列実行 (`bats --jobs 18 tests/`) が必要と判定された。2 回実行し、いずれも `tests/post_merge_check.bats` の `fail: gh issue reopen called when FAIL input given` (1〜2 回目とも FAIL) が並列実行時のみ FAIL した (直列実行では 2 回とも 10/10 全 PASS)。本 Issue の変更対象ファイルとは無関係。同一テスト名の並列時 flake は既存 Issue #1231 の Background に既述のため、新規 follow-up Issue は起票せず (実質重複)。本 Issue に関連する `tests/collect-recovery-candidates.bats` / `tests/validate-recovery-plan.bats` / `tests/apply-fallback.bats` / `tests/auto-recovery.bats` / `tests/spawn-recovery-subagent.bats` / `tests/orchestration-recovery.bats` を直列実行し、追加した @test を含む全件 PASS を個別に確認した。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec と実装の構造的な乖離はなし (review-spec agent が Changed Files 10件 + Spec 自身の計 11件がPR変更ファイル一覧と完全一致、Implementation Steps 1-9 の対応も確認済み)。
+- ただし Spec 自体に内部矛盾が1件見つかった: `scripts/validate-recovery-plan.sh` の cause 検証 (Implementation Step 1) は不正値を hard error とする一方、Implementation Step 4 は「空 / キー欠落 / 正規表現に不一致」をすべて `unclassified` に正規化する意図を書いている。実装は両方の指示をそのまま実装した結果、validator が先にゲートするため Step 4 の「不正値→unclassified」分岐が制御フロー上到達不能になった (2件のレビューエージェントが独立に検出、検証で PASS 確認)。/review では validator のセマンティクス変更は本PR自身が追加した固定テスト (`cause: malformed value -> exit 1`) と衝突するため見送り、SHOULD として記録するに留めた。
+
+### Recurring issues
+
+- 「バリデーションを先にゲートする」設計と「不正値も緩やかにフォールバックする」設計が同一 Spec 内で両方指示されるパターンは、今回が初出ではなく一般化できる懸念点。今後 validation + fallback の仕様を書く際は、検証と正規化の実行順序 (正規化してから検証するのか、検証してダメなら丸ごと失敗させるのか) を明示することが望ましい。
+- `!` で否定した grep アサーションが bats の `set -e` 下で非最終文だと無効化される、という bash 特有の落とし穴が今回のPR自身の新規追加コードで再現した (2件のレビューエージェントが独立検出、検証で bash 挙動を実地確認)。同種のパターンが将来また作り込まれる可能性があるため、`if echo ... | grep -qE ...; then false; fi` 形式を bats 記述の標準パターンとして周知する価値がある。
+
+### Acceptance criteria verification difficulty
+
+- Pre-merge の6条件はすべて rubric / grep / command (CI 参照フォールバック) で明確に PASS 判定でき、UNCERTAIN や verify command の不備はなかった。
+- 一方で AC6「cause 分離がテストで保護されている」は verify command が「テストが追加されている」ことのみを機械的に確認するため、テストの実効性 (アサーションが実際に検出力を持つか) までは rubric でも検出できなかった。この種の「テストの存在は確認できるが実効性は確認できない」ギャップは、rubric の文言に「アサーションが実際に regression を検出できる形になっていること」を明示すれば軽減できる可能性がある。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Implementation Steps 1-9 を Spec記載どおりの順序で実装し、逸脱なし
-- `agents/orchestration-recovery.md` の 2 件目の JSON 例 (Issue #917 由来) の cause 値には、Spec のガイダンス (既出 slug を再利用) に従い `docs/reports/orchestration-recoveries.md` に既に例示されている `dirty-guard` を採用
-- Behavioral change detection の判定に従いフルスイート並列実行 (`bats --jobs 18 tests/`) を実施。並列時のみ `tests/post_merge_check.bats` の 1 テストが flake したが、変更対象ファイルとは無関係かつ既存 Issue #1231 の Background に同一事象の記載があったため、新規 follow-up Issue は起票せず記録のみとした
+- Step 8 の Pre-merge 6条件はすべて PASS (Issue側で既に `[x]` 済みだったものを再検証し確認)。CI 9件も全SUCCESS
+- Step 10 は `.wholework.yml` の `capabilities.workflow: true` により Workflow パスの対象だったが、`--non-interactive` (fork context, 再実行保証なし) のため `workflow-guidance.md` の指示に従い静的 Task fan-out (review-spec + review-bug×2) にフォールバック
+- review-bug×2 が独立に検出した4件の指摘 (うち2件は両エージェントで完全に重複) を Opus 検証サブエージェントで全件 PASS (問題確認) と判定。review-spec の7件は無検証で直接統合 (仕様どおり)
+- SHOULD 5件・CONSIDER 4件のうち7件を修正しコミット (7コミット、各コミットに元の指摘への `Refs:` リンクを付与)。`scripts/validate-recovery-plan.sh` の hard-fail 挙動変更と `agents/orchestration-recovery.md` の例示 slug 差し替えの2件は、PR自身が追加した固定テストとの衝突、および主観的判断が必要という理由でスキップし SHOULD/CONSIDER として記録に留めた
 
 ### Deferred Items
 
-- 既存エントリへの遡及的な cause 付与 (Issue 本文 Notes でスコープ外と明記、実装でも対応せず)
-- Tier 3 の agent が返す slug が既存 vocabulary を実際に再利用するかの検証は post-merge 観察に委ねる (`session=next`)。単発 group-key が増える傾向が見えた場合は、agent プロンプトへ既出 slug 一覧を動的注入する後続 Issue を検討
-- `write_recovery_entry()` 3 経路のエントリ生成共通化は未実施 (今回は 2 箇所の追記で足りるため)
-- `tests/post_merge_check.bats` の並列実行時 flake の根本原因調査は本 Issue のスコープ外。既存 Issue #1231 が同一事象を Background に記載済み
+- `scripts/validate-recovery-plan.sh` の cause 不正値ハードフェイル問題 (SHOULD、PR #1290 review コメント参照) — validator のセマンティクスを緩めるか、`spawn-recovery-subagent.sh` 側で validate 呼び出し前に正規化するかは著者判断の follow-up に委ねる
+- `agents/orchestration-recovery.md` の2件目JSON例のcause値 `dirty-guard` が根本原因命名規約と噛み合わない点 (CONSIDER) — 例示slugの差し替えは主観的判断のため見送り
+- Post-merge AC (Tier 2/3 recovery 発火時のログ観察、`session=next`) は code フェーズの Deferred Items を引き継ぎ、review フェーズでは新規の変更なし
 
 ### Notes for Next Phase
 
-- Post-merge AC は `/verify` で次回 Tier 2/3 recovery 発火時の `docs/reports/orchestration-recoveries.md` エントリを観察する。Tier 2 は #1191 の N/A 除外により頻度カウント対象外のため、観察対象は実質 Tier 3 発火時のみ
-- `collect-recovery-candidates.sh --with-tracking` の出力で cause 別 group-key 分離が機能しているかを確認すること
-- `bats --jobs N tests/` を実行する場合、`tests/post_merge_check.bats` の 1 テストが並列実行時のみ flake することがある (直列実行では毎回 PASS)。無関係な FAIL として無視して構わない
+- `/merge` 実行前に、本 review フェーズで追加した7件の修正コミットがCI green であることを確認すること (ローカルで bats 72/72 PASS, validate-skill-syntax PASS, forbidden-expressions PASS を確認済みだが、push後のCI結果は未観測)
+- Post-merge AC の観察対象は code フェーズの Notes for Next Phase を参照 (Tier 3 recovery 発火時の `docs/reports/orchestration-recoveries.md` エントリと `collect-recovery-candidates.sh --with-tracking` の group-key 分離)
