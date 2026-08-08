@@ -126,3 +126,34 @@ UNCERTAIN は発生しなかった。5件の Pre-merge AC (rubric 2件・grep 1�
 ### Notes for Next Phase
 - squash merge 完了、リモートブランチ削除済み。CI 全ジョブ SUCCESS。
 - `/verify 1292` で post-merge AC の観察を行うこと。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 起票時点の根拠は「#1281 自身の新規テストコードで 1 件踏んだ」ことのみで、Tier 1 の evidence gate は再発性ではなく共有サーフェス ripple (`modules/test-runner.md` を `/code` `/review` `/verify` の 3 skill が読む) で満たしていた。**棚卸しにより再発性が事後的に裏付けられた** — 既存 `tests/*.bats` に 9 件の defective が実在した
+- triage が AC3 の verify command 欠陥を捕捉した。元の rubric は記録先を「Spec または Issue コメント」としていたが、`modules/verify-executor.md` が定める rubric grader の入力スコープ (Issue 本文・git diff・rubric text 内で明示的に名指ししたファイル) にはどちらも含まれず、恒久 UNCERTAIN/FAIL になる構成だった。`docs/reports/bats-negation-assertion-audit.md` を明示参照する形へ修正され、`file_exists` の補助 AC も追加された。本セッションで triage が verify command 欠陥を捕捉したのは #1283 の AC2 に続き 2 例目
+
+#### spec
+- Size が S → M へ上方修正され route が patch → pr へ再計画された (Step 3a Post-Spec Size Refresh)。棚卸し対象が 21 件・修正対象 9 件と判明し、実変更が 9 ファイルに及んだため妥当な判断
+- Spec フェーズの棚卸し (defective 9 / safe 12 の分類) がそのまま実装の書き換え対象と一致し、code フェーズでの再調査・rework はゼロだった
+
+#### code
+- Implementation Steps 1〜4 を逸脱なく実施、rework なし
+- `bats --jobs 18 tests/` で 1639 件全 PASS を foreground (timeout 590000ms) で確認。並列実行の flake も発生しなかった
+
+#### review
+- **`/review --light` が監査のスコープ漏れを検出した**。監査の検索コマンド `grep -rnE '^\s*!\s*.*\|\s*grep' tests/*.bats` は `! cmd | grep ...` の **pipe 形式のみ**を対象にしているが、根本原因 (`!` の終了ステータスが `set -e` の自動終了対象から外れる) は pipe の有無と無関係に成立する。Perspective 1/2 が独立に pipe 無し形式を検出し、`tests/run-code.bats:470` `tests/run-issue.bats:306` `tests/gh-graphql.bats:69` 等で実際に非最終文 = 検出力ゼロであることを確認した
+- Issue 本文が対象を pipe 形式に明示スコープしていたため、本 Issue では監査レポートの `## Out of Scope` 節への明記に留め、分類・修正は行っていない。review retrospective と merge Phase Handoff の双方が `/verify` での起票を明示的に推奨している
+
+#### merge
+- pre-merge AC ゲート 5 件全 checked、`review_incomplete_fallback` 未検出で override マーカーなしに squash merge。`mergeable=true (clean)` でコンフリクト解消不要
+
+#### verify
+- pre-merge 5 件はすべて merge 前に検証済みで SKIPPED、observation 1 件は未発火で SKIPPED。FAIL / UNCERTAIN ゼロ
+- 上記 review 指摘を実測で再確認した: 非 pipe 形式の生候補は **76 件** (`grep -rnE '^\s*!\s*.*grep' tests/*.bats | grep -vE '\|\s*grep'`)、`tests/run-code.bats:470` は直後に `! grep -q "phase_complete" ...` が続く非最終文で defective 確定 (471 行目は最終文なので safe)
+
+### Improvement Proposals
+
+- **pipe を伴わない `! grep -q pattern file` 形式の否定アサーションを棚卸し・修正する** — #1292 が明文化した根本原因 (`!` の終了ステータスが `set -e` の自動終了対象外) は pipe の有無に依存しないが、#1292 の棚卸しは Issue 本文のスコープ規定により pipe 形式 21 件のみを対象とした。非 pipe 形式は生候補 76 件が未分類のまま残っており、うち `tests/run-code.bats:470` `tests/run-issue.bats:306` `tests/gh-graphql.bats:69` は非最終文 = 検出力ゼロであることを実測確認済み。#1292 と同じ判定基準 (非最終文なら defective) で分類し、defective を `if cmd; then false; fi` 形式へ書き換える。`docs/reports/bats-negation-assertion-audit.md` の `## Out of Scope` 節が対象パターンと件数を既に記録しているため、それを起点にできる
