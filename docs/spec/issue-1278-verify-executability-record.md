@@ -232,21 +232,37 @@ Issue 本文の自動編集は行わず (Self-generated AC への非破壊方針
 - AC9 (`command "bats tests/"`) は `verify-executor.md` の `command` verify-type が 60 秒でタイムアウトする一方、`bats tests/` (serial) は 1600 件超のテストで 10 分の Bash tool ceiling を超えて background へ移行した。この AC は Issue 本文からの verbatim コピーであり `/spec` の常時 PASS 監査でも欠陥と判定されなかったため書き換えなかったが、自動 verify-executor では恒常的に UNCERTAIN 判定になる可能性が高い。手動 (`bats --jobs <N> tests/` などの並列実行) での確認が実質的な検証手段になる。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- コミットは Spec の Implementation Step 境界 (1スクリプト新規/2マーカー定義/3-5 verify SKILL/6 emit-event/7 audit SKILL/8-9 bats/10 structure.md) に沿って 8 個に分割した。PR レビューで変更意図を Step 単位で追える。
-- Step 10 (AC consistency check) のフル `verify-executor.md` 呼び出しは行わず、grep 系 AC は直接実行、rubric 系 AC は自己の実装内容と照合する形で代替した。9 個の Pre-merge AC のうち 8 個 (grep 6 件 + command 1 件 `verify-executability-marker.bats`) を直接確認済み。残る 1 件 (`command "bats tests/"`, AC9) は自動実行が構造的に困難なため、Pre-merge チェックボックスは未更新のまま残した (「all PASS」条件を満たさないため一括フリップを見送り)。
+- MUST 相当の指摘はゼロだったため `event=COMMENT` でレビューを投稿した。SHOULD 判定2件 (`capability` 属性の `-->` インジェクション、`resolve` の `gh` 失敗 fail-open が未評価と区別できない問題) は adversarial verification (2エージェント×2段階検証) で具体的な再現手順とともに確認されたため、スコープの小さい修正として着地させた。
+- CONSIDER 判定5件 (capability/detail 排他性未検証・extract_attr 非アンカー match・Step 9 の format 非0終了時ガイダンス欠如・コードフェンス内注釈行混在・audit SKILL.md description 未更新) は、いずれも adversarial verification で「現行の属性語彙では実害が表面化しない」または「対話実行のため自己修正されやすい」と判定されたため、PR の修正スコープを最小化する方針で見送った。
+- AC9 (`bats tests/` 全件PASS) は safe mode の command verify-type につき直接実行せず、CI 参照フォールバック (`Run bats tests` ジョブ SUCCESS) で PASS 判定した。ローカルでのフルスイート実行はシステム負荷により2度とも Bash tool の10分 ceiling を超えて background 移行したため、`/code` retrospective が既に指摘していたリスクが本フェーズでも顕在化した形。
 
 ### Deferred Items
 
-- `scripts/post_merge_check.sh` (manual AC を評価する第 2 の経路) は記録機構に接続しない。本 Issue のスコープ外として Notes に記録済み (spec phase から引き継ぎ、変更なし)。
-- `manual` → `deferred` 改名と `requires=` 属性の導入は Issue 本文で明示的に保留されている。本 Issue の実測データが出るまで着手しない (spec phase から引き継ぎ、変更なし)。
-- Pre-merge AC9 (`bats tests/` 全件 PASS) のチェックボックスは未チェックのまま。`/review`/`/verify` で改めて確認が必要。
+- CONSIDER 判定5件は follow-up Issue を起票せず、review retrospective とレビューコメントに記録するに留めた。将来同種の指摘が再発する場合は起票を検討する。
+- `scripts/post_merge_check.sh` の記録機構未接続、`manual` → `deferred` 改名/`requires=` 属性導入は Issue 本文で明示的に保留 (code phase から引き継ぎ、変更なし)。
+- Post-merge AC (observation type, `session=next`) 2件は未評価のまま。次回 `/auto` 実行時の観測に依存 (変更なし)。
 
 ### Notes for Next Phase
 
-- `bats --jobs <N> tests/` で `tests/post_merge_check.bats` が2件 flaky FAIL することがあるが、本 PR の変更とは無関係 (単体 serial 実行では 10/10 PASS)。CI や `/review` でこの2件が再現しても、本 PR の diff を疑う前にまず単体実行で切り分けること。
-- AC9 の `command "bats tests/"` は 60 秒の `command` verify-type タイムアウトおよび 10 分の Bash tool ceiling の両方を超えうる。`/review`/`/verify` でこの AC を評価する際は UNCERTAIN 判定を想定し、必要なら `bats --jobs <N> tests/` による代替確認を行うこと。
-- `EXECUTABILITY_RECORDS` は Step 8b で判定した内容を Step 9 まで保持するリスト変数であり、Spec Implementation Step 3/4 で導入した新しい概念。既存の `HAS_BROWSER_CAPABILITY` 等の一過性フラグと違い、Step 8b の各条件ループ内で蓄積されていく点に注意。
+- `/merge` は本フェーズで追加された修正コミット (`Address review feedback: sanitize capability attribute, distinguish gh failure from unevaluated`) を含めた CI 結果を確認すること。
+- `bats --jobs <N> tests/` のフルスイート実行は、他セッションとの同時実行時にシステム負荷で10分 ceiling を超えうる。ローカルで再現できない場合は CI の結果を優先すること。
+- `resolve` サブコマンドの `gh` 失敗時の返り値が `exit 0` (マーカーなし) から `exit 2` (未確定) に変更された。`skills/audit/SKILL.md` の Manual Waiting Count はこれに対応する `N0` 区分を追加済みだが、他に `verify-executability-marker.sh resolve` を呼び出す箇所が将来追加される場合はこの exit code 契約変更を踏まえること。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec Implementation Step 1 は `detail` 属性のみをサニタイズ対象として明記しており (`"` / `-->` の拒否)、`capability` 属性は同じ危険性 (LLM が `.wholework.yml` キー名から自由に組み立てる値であり、Issue 著者が固定した定数ではない) を持つにもかかわらず検証対象から漏れていた。実装は Spec の記述どおりに作られており Spec 逸脱ではないが、Spec 自身が「マーカー行に埋め込む自由入力値は全て同じ注意を要する」という設計原則を明示していなかったことが根本原因。review-spec / review-bug (diff scan) / review-bug (security scan) の3エージェントが独立に同じ欠落を検出しており、単一属性への場当たり的な検証ではなく「HTML コメント内に埋め込む自由入力属性は一律にサニタイズする」という設計原則を Spec の Alternatives/Notes に明記すべきだった。
+
+### Recurring issues
+
+- 3エージェント (review-spec, review-bug×2) が同一の脆弱性 (capability 属性の `-->` インジェクションによる HTML コメント早期終端) を、それぞれ異なる着眼点 (仕様对比・diff bug scan・security scan) から独立に検出し、adversarial verification でも生きた指摘として確認された。マルチパースペクティブレビューの収束が実際に機能した事例。
+- 同じく3エージェントが `gh` 失敗時の fail-open が「未評価」と区別できない問題を検出。fail-open 設計自体は `resolve-preview-ac-fallback.sh` の既存パターンを踏襲した意図的な選択だったが、その消費側 (`skills/audit/SKILL.md`) の解釈規則にまで一貫させる検討が Spec 段階で漏れていた。fail-open ヘルパーを新設する際は「呼び出し側が『対象なし』と『取得失敗』を区別できるか」を Spec のチェック項目に加える価値がある。
+
+### Acceptance criteria verification difficulty
+
+- 9件の Pre-merge AC (grep 6 / rubric 3 相当を含む) はいずれも `/review` Step 8 で明確に PASS 判定でき、UNCERTAIN や verify command の構文エラーは発生しなかった。command 系 AC (`bats tests/verify-executability-marker.bats`, `bats tests/`) は safe mode のため直接実行せず CI 参照フォールバックで判定したが、CI が全ジョブ SUCCESS だったため問題なく解決した。AC の書き方 (grep パターン・rubric 文言) は明確で、検証コストは低かった。
