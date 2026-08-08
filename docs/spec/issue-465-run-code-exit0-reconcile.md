@@ -107,3 +107,7 @@ Note: All three steps are already implemented in #520 (PR #525). The `/code` pha
 ### Improvement Proposals
 - See Auto Retrospective (silent no-op false-positive pattern, #490 と共通)
 
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/465#issuecomment-4703427504
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=4 / https://github.com/saitoco/wholework/issues/465#issuecomment-5225312519
