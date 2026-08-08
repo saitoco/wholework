@@ -126,6 +126,27 @@
 ### Improvement Proposals
 - N/A
 
+### 2026-08-09 re-run (observation 条件の評価 + AC5 の再判定)
+
+`/auto --batch 1280 1282 1283 1281` (session `97764-1786198856`) の end-of-batch observation scan で `event=auto-run` が発火。post-merge 2 条件に加え、未チェックのまま残っていた pre-merge AC5 も再評価した。
+
+#### verify (再実行分)
+
+- **AC5 の前回判定 (PENDING、「CI 完了後再 verify が望ましい」) は誤診だった**。この verify command は CI の完了を待っても解決しない
+  ```
+  github_check "gh run list --workflow=test.yml --commit=$(git rev-parse HEAD) --limit=1 --json conclusion --jq '.[0].conclusion'" "success"
+  ```
+  - **原因 1**: `$(git rev-parse HEAD)` が verify 実行時に評価される。`/verify` は `verify/issue-478` worktree 内で走るため HEAD は未 push のローカルコミット (`da7b01cf`) で、CI run が存在しない
+  - **原因 2**: 実装コミット `359a4a1a` にも run がない。`test.yml` は `on: push` トリガーで、GitHub Actions は push の **head SHA に対してのみ** run を作る。patch route は `worktree-merge-push.sh` が複数コミットをまとめて push するため、中間コミットは run を持たない
+  - すなわち patch route では**実装内容にかかわらず PASS しえない**構成であり、`modules/verify-patterns.md` §9 が戒める常時 FAIL 側の形に該当する
+- FAIL ではなく UNCERTAIN と判定した。AC1-4 (`section_contains` 3 件 + syntax validation) で実装は検証済みで、CI 実態も green (`01b84816` / `e642794d` とも success)。ここで FAIL を出すと Step 11(b) により reopen + L3 auto-retry で `run-code.sh` が自動再実行されるが、修正すべき実装が存在しないため有害な動作になる
+- 推奨修正は `--commit=$(git rev-parse HEAD)` → `--branch=main` (`modules/verify-classifier.md` が patch route 向けに案内している形)
+- 条件 6/7 は `when=mode:batch` ゲートを通過したが (本 run は mode=batch)、観察対象の状況が未発生のため SKIPPED。blocked-by ゲートは 4 件すべてで実行されたものの**いずれも exit 0 (ブロッカーなし)** でスキップ分岐を通っておらず、`--resume` も未使用
+
+#### Improvement Proposals (再実行分)
+
+- **[Tier 2 / Spec 記録のみ] `github_check` で `--commit=$(git rev-parse HEAD)` を使うと patch route で常時 FAIL になる** — 理由は上記 2 点。`modules/verify-patterns.md` §9 の具体例、または `modules/verify-classifier.md` の patch route ガイダンスに「`--commit=` ではなく `--branch=<base>` を使う。patch route の実装コミットは multi-commit push の中間コミットになるため run を持たない」を追記する余地がある。ただし (1) 実測できた事例は本 Issue の 1 件のみで open Issue に同型パターンは 0 件、(2) `verify-patterns:` 系の未着手 open Issue が既に 4 件 (#1132 #1087 #1084 #490) 積み上がっている、の 2 点から起票せずここに記録する。同型が 2 例目として観測された時点で起票を再検討する
+- **前回 verify の PENDING 誤判定** — 「値が空 → CI 実行中 → PENDING」という判定は、`gh run list` が空を返す原因を区別していなかった。空の理由は (a) run が実行中で `conclusion` が null、(b) 指定 SHA に run が存在しない、の 2 通りあり、(b) は待っても解決しない。上記の記載追加を行う際は、この区別も併せて記述すると診断精度が上がる
 
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/478#issuecomment-4703000955
