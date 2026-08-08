@@ -98,18 +98,34 @@ tests/audit-auto-session.bats:46,103 / tests/get-auto-session-report.bats:71,199
 ### Rework
 - N/A — Spec フェーズの棚卸し (対象9件・安全12件の分類) がそのまま実装の書き換え対象と一致しており、実装時の再調査・やり直しは発生しなかった。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+乖離なし。Implementation Steps 1〜4 の記述と実装内容 (`modules/test-runner.md` の Notes セクション、`docs/reports/bats-negation-assertion-audit.md`、6件の `tests/*.bats` 書き換え) は一致していた。Pre-merge AC 5件はいずれも `/code` 内で PASS 確認済みで、`/review --light` の safe mode 再検証でも同じ結果 (rubric 2件・grep 1件・file_exists 1件・command 1件、全PASS) となった。
+
+### Recurring issues
+
+`docs/reports/bats-negation-assertion-audit.md` の検索コマンド (`grep -rnE '^\s*!\s*.*\|\s*grep' tests/*.bats`) は `! cmd | grep ...` の **pipe 形式のみ**を対象にしているが、`set -e` 下で `!` の終了ステータスが無効化されるという根本原因は pipe の有無に関係なく成立する。review-light の Perspective 1/2 が独立に、pipe を伴わない `! grep -q pattern file` 形式の非最終文アサーションを別途検出した (`grep -rnE '^\s*!\s*.*grep' tests/*.bats | grep -vE '\|\s*grep'` で76件の生候補、`tests/run-code.bats:470` `tests/run-issue.bats:306` `tests/gh-graphql.bats:69` 等で実際に非最終文=検出力ゼロであることを確認)。Issue #1292 の本文は対象パターンを `! cmd | grep -q ...` の pipe 形式に明示的にスコープしていたため、本 Issue の対応としては監査レポートの Out of Scope 節に当該パターンの存在と件数を明記するに留めた (実際の分類・修正は行っていない)。76件という規模は独立の棚卸し・修正作業に値するため、Improvement Proposal として `/verify` での起票検討を推奨する。
+
+### Acceptance criteria verification difficulty
+
+UNCERTAIN は発生しなかった。5件の Pre-merge AC (rubric 2件・grep 1件・file_exists 1件・command 1件) はいずれも判定に迷いなく PASS 確定できた。`command "bats tests/"` は `bats --jobs 18 tests/` で1639件全件 PASS を確認しており、非対話モードでの並列実行 (foreground, timeout 590000ms) も問題なく機能した。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec 記載の棚卸し結果 (9件書き換え対象・12件安全) をそのまま採用し、実装時の再グレップでも同じ21件・同じ分類であることを確認してから書き換えた。
-- `tests/collect-recovery-candidates.bats:376` のみ既存に `-q` フラグが無かったため、Spec の指示どおり `:604-605` の前例に合わせて `-q` を追加した。他8件は既存の grep フラグ・パターン文字列を変更していない。
-- `bats --jobs 18 tests/` (全1639件) を実行し PASS を確認。既存9件の書き換え後もアサーションの前提条件 (見つかるべきパターンが実際に見つかる/見つからないべきパターンが見つからない) が現状のコードで成立していることを検証した。
+- `/review --light` (REVIEW_DEPTH=light, `.wholework.yml` に copilot-review/claude-code-review/coderabbit-review 設定なしのため Step 7 全体スキップ) で review-light エージェントを1体起動し、4観点を統合レビューした。
+- review-light が検出した SHOULD 1件 (監査の検索スコープが pipe 無し `! grep` 形式を捕捉していない) は、既存9件と同じ規模の追加調査・修正 (76件の生候補) を要するため本 PR のスコープには含めず、`docs/reports/bats-negation-assertion-audit.md` の Out of Scope 節に件数・具体例を明記するに留めた。
+- MUST 指摘・CI FAILURE ともに無し。Review は `COMMENT` イベントで投稿された。
 
 ### Deferred Items
 - Post-merge AC (次回 bats テストを追加する Issue での観察) は `/verify` 以降の運用に委ねる。
 - `skills/issue/spec-test-guidelines.md` への同内容の追記は Issue 本文 Notes の判断どおり見送った (`modules/test-runner.md` 1箇所で到達範囲は足りるとの Spec の判断を踏襲)。
+- pipe 無し `! grep -q pattern file` 形式の追加棚卸し・修正 (76件の生候補、review retrospective の Recurring issues に記録) は本 Issue のスコープ外 — `/verify` での Improvement Proposal 起票を推奨。
 
 ### Notes for Next Phase
-- 5件の pre-merge AC はすべて `/code` 内で PASS 確認済み (rubric 2件・grep 1件・file_exists 1件・command 1件)。Issue のチェックボックスも `[x]` に更新済み。
-- 変更ファイルは `modules/test-runner.md`、`docs/reports/bats-negation-assertion-audit.md` (新規)、および6件の `tests/*.bats` のみ。SKILL.md やスクリプトへの変更はない。
+- Pre-merge AC 5件はすべて `/review` 内で PASS 再確認済み (rubric 2件・grep 1件・file_exists 1件・command 1件、UNCERTAIN 0件)。Issue のチェックボックスは既に `[x]` 済みのため変更なし。
+- 変更ファイルは `modules/test-runner.md`、`docs/reports/bats-negation-assertion-audit.md` (新規 + review 対応の追記)、および6件の `tests/*.bats` のみ。SKILL.md やスクリプトへの変更はない。
+- CI 全11ジョブ SUCCESS。`/merge 1303` を実行してよい状態。
