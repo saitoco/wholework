@@ -169,25 +169,42 @@ Type=Task、Size=L と判定した。同一由来 (#1158 再型付け) の先行
 - なし。分類・Issue 編集・retire・レポート作成のいずれも手戻りなく完了した。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- 最終分類は **A 17 (既 PASS 3 含む) / B 7 / C 0 / D 3 (#762 #761 #822) / E 2 (#861 #859)**。合計 29 で母集団と一致。
-- B の 7 行 (#769 #737 #736 #732 #731 #707 #700) は event を維持したまま条件文のみ書き換えた。#769 のみ `when=mode:batch` を追加 (batch 実行が必須前提のため、Step 2 の制約表が許す 2 属性の一つ)。
-- D は #762 #761 #822 の 3 件。#762 は #875 (`docs/reports/auto-session-*.md` 廃止・`session.md` `## Metrics` へ統合)、#761/#822 は #1181 (`_write_tier2_recovery_to_spec()` / `_write_manual_recovery_to_spec()` の削除) により、いずれも参照先の機構が存在しなくなったため原理的に判定不能と確定し、#1166 方式で retire (コメント投稿 + `phase/done` 遷移)。#761/#822 は `/review` #1297 のレビューで当初の A 分類が事実誤りと判明し D へ訂正した。
-- E は #861 #859 の 2 件。いずれも dirty-check の other-session 警告が `echo ... >&2` のみで永続化されないため `auto-run` の受動的発火では証跡が残らないが、`/verify` 実行時に Claude が能動的にダミーファイルを構築すれば判定可能と判断し `manual` へ差し戻した。capability 待ちの E は 0 件。`/verify` 実行時の検証手順は other-session/parent-main の2パターンに限定する (`.claude/*` が gitignore されているため self-worktree/other-worktree パターンは `check-verify-dirty.sh` で再現不能、`/review` #1297 のレビュー指摘により訂正)。
-- 分類 B/C 変更後のマッチ集合再確認 (Step 6) は event ごとに 1 回のみ実行 (`--event auto-run --dry-run` 母集団 77、`--event fix-cycle --dry-run` 母集団 5)。変更した 7 行すべてが個別に含有していることを確認済み (#769 の `when=mode:batch` は dry-run では facts 未解決による fail-open でマッチしたものであり、`mode=single` 実行時は意図的に除外される)。
+- レビューで #761 / #822 の A 分類が事実誤り (Issue #1181 で削除済みの Spec 自動追記関数を判定根拠に引用) と判明し、D (retire) へ再分類。#1166 方式で retire コメントを投稿し `phase/verify` → `phase/done` へ遷移させた。最終分類は **A 17 (既 PASS 3 含む) / B 7 / C 0 / D 3 (#762 #761 #822) / E 2 (#861 #859)**。
+- `when=execution-context` ゲート表の誤り (両 event で「有効」と誤記載していたが実際は fail-open) を訂正し、分類 B で付与してよい gate 属性の結論を「`when=route/mode/recovery-tier` (auto-run のみ) + `config=`」へ修正。
+- E 分類 (#861/#859) の `/verify` 実行時検証手順を、gitignore 制約により再現不能な self-worktree/other-worktree パターンを除外し、other-session/parent-main の2パターンへ限定。
+- `modules/phase-handoff.md` の rotation 規約違反 (旧 spec phase の `### Notes for Next Phase` が削除されず二重化) を修正 — 本ブロックへの完全置換で解消。
+- Issue #1274 本文の Acceptance Criteria (条件文・verify command) 自体は変更していない。D 件数の 1→3 拡大は分類判断の訂正であり、AC の対象範囲や合否基準は変わらないため Step 13 の Issue 本文更新 (Change Tracking) は不要と判断した。
 
 ### Deferred Items
 
 - 3 sub-issue (#1274/#1275/#1276) の記録ファイルを `docs/reports/observation-ac-audit-summary.md` へ統合する作業は親 #1270 の担当。本 Issue で先回りしていない。
 - 親 #1270 の Post-merge AC 3 が要求する SKIPPED 率の分子測定プロトコルは baseline レポート上で未確定のまま。本 Issue のスコープ外。
 - `test-runner.md` の narrow-scope 分岐 (リポジトリ内スクリプト/skill 未変更時のフルスイート実行スキップ) の追加は本 Issue のスコープ外。Code Retrospective の Design Gaps/Ambiguities に follow-up 候補として記録済み。
+- review retrospective「Recurring issues」で記録した「A 分類の判断根拠に登場する関数名を毎回 grep で実在確認する」提案は、本 Issue のスコープ外の workflow 改善候補。
 
 ### Notes for Next Phase
 
-- `docs/reports/observation-ac-audit-a.md` が本 Issue の全成果物。Pre-merge AC 5 件はすべてこのファイルと #762 の GitHub 実状態から検証可能。
-- Post-merge AC はゼロ (効果測定は親 #1270 に集約)。`/verify` は Pre-merge 5 件のみを評価する。
-- Step 9 の全 bats スイート並列実行が Bash ツールの 10 分上限を超えバックグラウンド移行した (#1213 の既知失敗モード)。本 diff はスクリプト/skill を変更しておらず新規 report ファイル追加のみのため、通知を待たず後続ステップを進めた。`/review` 実行時に CI (`gh pr checks`) の結果で最終確認されることを想定。
-- `/review` #1297 のレビューで #761/#822 の A→D 再分類、`when=execution-context` ゲート表の訂正、E 分類の検証手順訂正など複数の事実誤りが見つかった。`/merge` 前に `docs/reports/observation-ac-audit-a.md` の最終版と本 Issue の分類サマリ (A17/B7/C0/D3/E2) が一致していることを確認すること。
+- `docs/reports/observation-ac-audit-a.md` が本 Issue の全成果物 (レビュー後の最終版)。Pre-merge AC 5 件はすべて PASS 済み (Issue #1274 のチェックボックスを参照)。
+- Post-merge AC はゼロ (効果測定は親 #1270 に集約)。`/verify` は実行不要。
+- `/merge` 実行前に追加確認は不要 — CI 全 11 チェック SUCCESS、fix commit 2 本 (report/spec) をプッシュ済み、レビュー応答サマリを PR コメントとして投稿済み。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- 大きな構造的乖離はなかった。Code Retrospective が事前に記録した逸脱 (並列 sub-agent への実査委任、#769 への `when=mode:batch` 追加) はいずれも Spec の意図の範囲内で、review で新たな乖離は見つからなかった。
+- 唯一の process-level 乖離は `modules/phase-handoff.md` の rotation 規約違反 (旧 spec phase の `### Notes for Next Phase` が code phase の新セクション追加後も削除されず二重化) であり、これは Spec の内容そのものの乖離ではなく、Edit 手順 (既存 `## Phase Handoff` ブロック全体を置換すべきところを部分置換した) に起因する機械的なミスだった。
+
+### Recurring issues
+
+- 本 Issue 自身の主目的 (「後発の実装変更で観測対象が消滅した AC を検出する」) と全く同型の欠陥が、成果物であるレポート自身の中に 2 件 (#761 / #822) 混入していた。いずれも Issue #1181 で削除済みの Spec 自動追記関数 (`_write_tier2_recovery_to_spec()` / `_write_manual_recovery_to_spec()`) を判定根拠として引用しており、#762 (#875 由来) で検出できた「後発アーキテクチャ変更による参照先消滅」パターンを、同じセッション内で #761/#822 (#1181 由来) には適用し損ねていた。実査 Step 3 が並列 sub-agent 委任だったため、担当エージェントが個々の判断根拠を grep 等で裏取りする代わりに既存ドキュメント (`docs/reports/orchestration-recoveries.md` の記述) の存在だけで A と判断した可能性がある。今後同種の実査では、A 分類の判断根拠に登場する関数名・スクリプト名を毎回 `grep -rn` で実在確認する工程を Step 3 に明示すると、この再演を防げる可能性がある。
+- gate 属性 (`when=execution-context`) の有効性判定でも、`keyword=` については正しく「発火元が引数を渡さないため不活性」と結論しながら、同じ検証を `when=execution-context` には適用していなかった。同一表内の隣接列で検証の厳密さにムラがあったという点で、上記と同根の「一部の確認だけ徹底し、残りは推測で済ませる」傾向が見られる。
+
+### Acceptance criteria verification difficulty
+
+- Pre-merge AC 1 (rubric) は「A について正しい判定根拠が記載されているか」という意味的検証を要求しており、機械的な file_exists/grep では代替できない。実際の検証では 29 行中の主要な A 判定について `grep -rn` で関数の実在確認、`gh issue view` での GitHub 実状態突合、`opportunistic-search.sh --dry-run` の再実行など、10 件以上のコマンド実行を要した。verify command 自体 (`rubric "..."`) は過不足なく機能しており、記述の不備は見られなかった。
+- UNCERTAIN は発生しなかった。5 件の Pre-merge AC はいずれも rubric/file_exists で PASS/FAIL が一意に決まり、判定不能なケースはなかった。
