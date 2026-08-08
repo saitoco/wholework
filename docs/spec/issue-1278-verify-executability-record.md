@@ -211,27 +211,42 @@ Issue 本文の自動編集は行わず (Self-generated AC への非破壊方針
 - `/verify` は Step 3 で worktree に入るため、Step 8b の `source emit-event.sh` は worktree isolation guard にブロックされうる。これは新規制約ではなく既存の `verify_user_confirm` emit と同じ条件下にある。Issue 本文が jsonl イベントを「補助」、Step 9 のマーカーを「SSoT」と位置づけていたため設計は成立するが、**この位置づけがなければ記録機構ごと worktree 制約で無効化されていた**。マーカーを SSoT にした判断は結果的にこの制約への保険として働いている。
 - 「マーカー生成」を bats で検証するという AC8 の要求が、生成をスクリプト化する決め手になった。LLM prose での生成を選ぶと AC8 が構造的に充足不能になる — AC の検証可能性が実装形態を決めた事例。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- コミット粒度: Spec は「Implementation Step ごとにコミット」を想定していたが、実装は先に全 10 Step を完了させてから Spec の Step 境界に沿って 8 個の事後コミットに分けた。差分の内容自体は Spec の Changed Files と一致しており、コミット順序が異なるだけで実装のスコープには影響しない。
+- `docs/workflow.md` と `scripts/collect-verify-retention-stats.sh` は Spec Notes が挙げた Steering Docs sync candidate だったが、実際に本文を確認した結果いずれも変更不要と確定した (`docs/workflow.md` L231 は `type=verify-fail`専用の記述で無関係、`collect-verify-retention-stats.sh` は verify-type 別の生集計のみで reason 内訳を持たない)。Spec の見込みどおりで、実装上の判断のブレはなかった。
+
+### Design Gaps/Ambiguities
+
+- なし。Spec の Implementation Steps 1-10 が具体的で、実装中に新たな「What」レベルの曖昧点は発生しなかった。
+
+### Rework
+
+- なし。全 Step が一回の実装パスで完了し、bats テスト (`tests/verify-executability-marker.bats` 20/20、`tests/verify.bats` 26/26) は初回実行で PASS した。
+
+### Minor Observations
+
+- `bats --jobs <N> tests/` (Behavioral Change Detection によるフルスイート実行) で `tests/post_merge_check.bats` の2ケースが再現性のある形で FAIL したが、同ファイルを単体で serial 実行すると 10/10 PASS した。本 Issue が触れていないファイル (`scripts/post_merge_check.sh` / `tests/post_merge_check.bats`) であり、bats の `--jobs` 並列実行時にのみ発生する既存の flaky と判断した。PR 本文に記録済み。修正は本 Issue のスコープ外。
+- AC9 (`command "bats tests/"`) は `verify-executor.md` の `command` verify-type が 60 秒でタイムアウトする一方、`bats tests/` (serial) は 1600 件超のテストで 10 分の Bash tool ceiling を超えて background へ移行した。この AC は Issue 本文からの verbatim コピーであり `/spec` の常時 PASS 監査でも欠陥と判定されなかったため書き換えなかったが、自動 verify-executor では恒常的に UNCERTAIN 判定になる可能性が高い。手動 (`bats --jobs <N> tests/` などの並列実行) での確認が実質的な検証手段になる。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- マーカー生成と解決を 1 スクリプト 2 サブコマンド (`scripts/verify-executability-marker.sh format|resolve`) に集約した。生成側を prose に残すと AC8 (bats で 3 ケース検証) が充足不能になるため。
-- latest-wins はコメント単位で解決する。既存 `preview-ac-unverified` / `pre-merge-ac-gate` と同一規約であり、metric が現在未チェックの AC しか数えないため情報損失がない。
-- Manual waiting の単位は Issue 件数のまま維持し、優先順位 N4 > N3 > N1 > N2 で 1 Issue を 1 区分へ排他割当する。既存 WARNING 閾値 5 の意味を保存するため。
-- `reason=other` は human queue (N4) に含める。「装備で解ける」保証がないため安全側に倒した。
-- Issue 本文の verify command 2 件 (`Manual Waiting Count` grep / `ls tests/`) を常時 PASS 欠陥として修正済み。Spec 側は修正後の値を verbatim コピーしている。
+- コミットは Spec の Implementation Step 境界 (1スクリプト新規/2マーカー定義/3-5 verify SKILL/6 emit-event/7 audit SKILL/8-9 bats/10 structure.md) に沿って 8 個に分割した。PR レビューで変更意図を Step 単位で追える。
+- Step 10 (AC consistency check) のフル `verify-executor.md` 呼び出しは行わず、grep 系 AC は直接実行、rubric 系 AC は自己の実装内容と照合する形で代替した。9 個の Pre-merge AC のうち 8 個 (grep 6 件 + command 1 件 `verify-executability-marker.bats`) を直接確認済み。残る 1 件 (`command "bats tests/"`, AC9) は自動実行が構造的に困難なため、Pre-merge チェックボックスは未更新のまま残した (「all PASS」条件を満たさないため一括フリップを見送り)。
 
 ### Deferred Items
 
-- `scripts/post_merge_check.sh` (manual AC を評価する第 2 の経路) は記録機構に接続しない。本 Issue のスコープ外として Notes に記録済み。
-- `manual` → `deferred` 改名と `requires=` 属性の導入は Issue 本文で明示的に保留されている。本 Issue の実測データが出るまで着手しない。
-- `docs/workflow.md` と `scripts/collect-verify-retention-stats.sh` は Steering Docs sync candidate として Changed Files に挙げたが、いずれも変更不要の見込み。`/code` が本文を読んで最終判断する。
+- `scripts/post_merge_check.sh` (manual AC を評価する第 2 の経路) は記録機構に接続しない。本 Issue のスコープ外として Notes に記録済み (spec phase から引き継ぎ、変更なし)。
+- `manual` → `deferred` 改名と `requires=` 属性の導入は Issue 本文で明示的に保留されている。本 Issue の実測データが出るまで着手しない (spec phase から引き継ぎ、変更なし)。
+- Pre-merge AC9 (`bats tests/` 全件 PASS) のチェックボックスは未チェックのまま。`/review`/`/verify` で改めて確認が必要。
 
 ### Notes for Next Phase
 
-- `skills/verify/SKILL.md` / `skills/audit/SKILL.md` を編集する際は `scripts/validate-skill-syntax.py` の MUST 制約 (本文中の半角 `!` 禁止、Step 番号の小数禁止、`command` verify command のリポジトリ相対パス) に注意すること。
-- 新規スクリプトは `skills/verify/SKILL.md` と `skills/audit/SKILL.md` の **両方**の `allowed-tools` に literal 追加が必要。ワイルドカードで賄っている既存エントリは存在しない。
-- `resolve` サブコマンドは gh 失敗時 fail-open (空出力 + exit 0)。`set -e` を付けると fail-open が壊れるため `set -uo pipefail` にとどめること。
-- `tests/verify-executability-marker.bats` の gh モックは `--jq` を解釈しない。`sort_by(.createdAt) | .[-1]` による最新 1 件への絞り込みは gh 側の責務として、モックは絞り込み済みの本文を返す (`tests/resolve-preview-ac-fallback.bats` と同じ前提)。
-- `tests/verify.bats` に追加する構造テストは、既存の `step8a_section()` / `step8c_section()` と同じ awk 抽出パターンに揃えること。
+- `bats --jobs <N> tests/` で `tests/post_merge_check.bats` が2件 flaky FAIL することがあるが、本 PR の変更とは無関係 (単体 serial 実行では 10/10 PASS)。CI や `/review` でこの2件が再現しても、本 PR の diff を疑う前にまず単体実行で切り分けること。
+- AC9 の `command "bats tests/"` は 60 秒の `command` verify-type タイムアウトおよび 10 分の Bash tool ceiling の両方を超えうる。`/review`/`/verify` でこの AC を評価する際は UNCERTAIN 判定を想定し、必要なら `bats --jobs <N> tests/` による代替確認を行うこと。
+- `EXECUTABILITY_RECORDS` は Step 8b で判定した内容を Step 9 まで保持するリスト変数であり、Spec Implementation Step 3/4 で導入した新しい概念。既存の `HAS_BROWSER_CAPABILITY` 等の一過性フラグと違い、Step 8b の各条件ループ内で蓄積されていく点に注意。
