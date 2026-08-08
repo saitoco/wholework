@@ -169,28 +169,24 @@ Type=Task、Size=L と判定した。同一由来 (#1158 再型付け) の先行
 - なし。分類・Issue 編集・retire・レポート作成のいずれも手戻りなく完了した。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- レビューで #761 / #822 の A 分類が事実誤り (Issue #1181 で削除済みの Spec 自動追記関数を判定根拠に引用) と判明し、D (retire) へ再分類。#1166 方式で retire コメントを投稿し `phase/verify` → `phase/done` へ遷移させた。最終分類は **A 17 (既 PASS 3 含む) / B 7 / C 0 / D 3 (#762 #761 #822) / E 2 (#861 #859)**。
-- `when=execution-context` ゲート表の誤り (両 event で「有効」と誤記載していたが実際は fail-open) を訂正し、分類 B で付与してよい gate 属性の結論を「`when=route/mode/recovery-tier` (auto-run のみ) + `config=`」へ修正。
-- E 分類 (#861/#859) の `/verify` 実行時検証手順を、gitignore 制約により再現不能な self-worktree/other-worktree パターンを除外し、other-session/parent-main の2パターンへ限定。
-- `modules/phase-handoff.md` の rotation 規約違反 (旧 spec phase の `### Notes for Next Phase` が削除されず二重化) を修正 — 本ブロックへの完全置換で解消。
-- Issue #1274 本文の Acceptance Criteria (条件文・verify command) 自体は変更していない。D 件数の 1→3 拡大は分類判断の訂正であり、AC の対象範囲や合否基準は変わらないため Step 13 の Issue 本文更新 (Change Tracking) は不要と判断した。
+- PR #1297 は mergeable=true / CI SUCCESS / review approved で、conflict 解消や AskUserQuestion を要さず squash merge をそのまま実行した。
+- pre-merge AC gate は `unchecked_count=0`、review-incomplete-fallback チェックも `matches_expected=true` で条件文なし — override マーカー投稿は不要だった。
+- Issue #1274 は `closes #1274` により squash merge と同時に自動クローズされる想定 (base branch は `main`)。
 
 ### Deferred Items
 
-- 3 sub-issue (#1274/#1275/#1276) の記録ファイルを `docs/reports/observation-ac-audit-summary.md` へ統合する作業は親 #1270 の担当。本 Issue で先回りしていない。
+- 3 sub-issue (#1274/#1275/#1276) の記録ファイルを `docs/reports/observation-ac-audit-summary.md` へ統合する作業は親 #1270 の担当。
 - 親 #1270 の Post-merge AC 3 が要求する SKIPPED 率の分子測定プロトコルは baseline レポート上で未確定のまま。本 Issue のスコープ外。
-- `test-runner.md` の narrow-scope 分岐 (リポジトリ内スクリプト/skill 未変更時のフルスイート実行スキップ) の追加は本 Issue のスコープ外。Code Retrospective の Design Gaps/Ambiguities に follow-up 候補として記録済み。
-- review retrospective「Recurring issues」で記録した「A 分類の判断根拠に登場する関数名を毎回 grep で実在確認する」提案は、本 Issue のスコープ外の workflow 改善候補。
+- `test-runner.md` の narrow-scope 分岐追加、および A 分類根拠の grep 裏取り工程化は review retrospective 記載の workflow 改善候補として未着手。
 
 ### Notes for Next Phase
 
-- `docs/reports/observation-ac-audit-a.md` が本 Issue の全成果物 (レビュー後の最終版)。Pre-merge AC 5 件はすべて PASS 済み (Issue #1274 のチェックボックスを参照)。
-- Post-merge AC はゼロ (効果測定は親 #1270 に集約)。`/verify` は実行不要。
-- `/merge` 実行前に追加確認は不要 — CI 全 11 チェック SUCCESS、fix commit 2 本 (report/spec) をプッシュ済み、レビュー応答サマリを PR コメントとして投稿済み。
+- Post-merge AC はゼロ (効果測定は親 #1270 に集約)。`/verify` の実行は不要。
+- Step 6 (Verify Issue State) で Issue #1274 が `state=CLOSED` かつ `phase/verify` ラベル付与済みであることを確認すること。
 
 ## review retrospective
 
