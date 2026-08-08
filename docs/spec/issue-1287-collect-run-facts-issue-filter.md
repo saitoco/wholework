@@ -87,3 +87,40 @@
 ### Notes for Next Phase
 - `/verify` 実行時、`gh run list --branch=main --limit=1` がこの Issue の実装コミット (または合わせて push される retrospective コミット) の run を指していることを確認すること。
 - `tests/run-fact-matching.bats` の「recovery_tiers」テストフィクスチャを変更済み (`phase_start` 追加) — 今後同ファイルに新規テストを追加する際は、`ISSUE_NUMBERS` の許可リストフィルタ (`sub_start` / `phase_*` のみ) を満たすイベントを含めること。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- `/code` が起票した Issue を triage auto-chain 経由で正規化し、Size S・Type Bug・Value 4 を設定。CI 検証 AC に patch route 用の `gh run list` 形式を選んでおり、同一 batch の #1256 で顕在化した route 依存の教訓が正しく適用されている
+- 一方 **AC2 の verify command `command "bats tests/run-fact-matching.bats"` は常時 PASS だった**。同ファイルは変更前から存在し (実装コミット `757c1934` の差分は 19 追加 1 削除の modification)、実装前の main で CI が green だったため、新規テストケースを 1 件も追加しなくても exit 0 になる。Step 15 の監査は「問題なし」と報告した
+
+#### spec
+
+- Root Cause を #1279 と同型と特定し、許可リスト方式をそのまま踏襲。Changed Files 2 件で範囲が明確
+
+#### code
+
+- Implementation Steps を逸脱なく実施、rework ゼロ。`scripts/collect-run-facts.sh` 6 行・`tests/run-fact-matching.bats` 20 行の変更で完結
+
+#### review
+
+- patch route のため `/review` フェーズは実行されていない
+
+#### merge
+
+- patch route の直コミット。コンフリクト・CI 失敗なし
+
+#### verify
+
+- Pre-merge 2 件は既チェックのため skip、CI の 1 件は実測して PASS (run `31275255719` / headSha `8c07c056` = 本 Issue 自身の commit)。post-merge 条件なし。全 AC チェック済みのため `phase/done` へ遷移
+- **修正の効果を実データで確認した**: 本 Issue が扱う汚染は、まさにこの `/auto --batch` セッション (`23043-1786197225`) の実行中に観測されていたもので、`/verify 1256` 時点の `collect-run-facts.sh` 出力には `phases` が空配列の #783 / #1064 / #1108 が混入していた (いずれも本セッションの opportunistic verification で候補判定されただけの Issue)。修正後の列挙は `476 1256 1257 1266 1279 1287` で、`sub_start` ∪ `phase_*` を持つ Issue 集合と完全一致し、3 件が除外されたことを個別にも確認した
+- `#476` は `phase_*` のみを持つ Issue (#1257 の review フェーズ中に in-session `/verify` として dispatch された) であり、#1279 の Spec が記録した設計判断 (`phase_*` のみを持つ Issue も計上する) と一致する挙動
+
+### Improvement Proposals
+
+- **`skill-dev-verify-audit.md` Pattern 2 に「既存のグリーンなテストスイートを走らせるだけの `command` 型 AC」のサブパターンが欠けている (Tier 1 — 起票)**: 現行 Pattern 2 の `command` 型サブパターンは「対象スクリプトが informational 専用で失敗条件フラグなしに常に exit 0 を返す設計」というケースのみを扱う (`:66-78`)。しかし `command "bats <既存ファイル>"` のように、AC 本文が「新規テストケースが追加されている」ことを主張しているのに verify command は変更前から green な既存スイートを走らせるだけ、という形は被覆されていない。本セッション内で 3 件観測した — #1273 (`ls tests/`)、#1279 (`command "bats tests/get-auto-session-report.bats"`)、#1287 (`command "bats tests/run-fact-matching.bats"`)。うち #1279 は `/issue` が独立に気づいて指摘したが、これはパターン文書の要求を超えた判断であり再現性がない。検出は機械的に可能: `command` 型 AC を実装前の main に対して実行し、既に exit 0 かつ AC 本文が新規カバレッジの追加を主張している場合に flag する。Tier 1 の根拠は positive-evidence gate の (b) と (c) — (b) 同型が本セッションだけで 3 件、(c) `skills/triage/skill-dev-verify-audit.md` は `/triage` Step 7 と `/issue` Step 15 の 2 skill が読む共有面
+
+- **#1279 に記録した Tier 2 提案「AC 常時 PASS を検出した `/issue` の処置が Issue 間で一貫しない」は把握が不正確だった (訂正)**: #1287 の調査により、#1279 と #1287 の差は `/issue` の実行のばらつきではなく、監査パターン文書の被覆範囲の問題であることが判明した。#1287 で `/issue` が「問題なし」と報告したのは、当該形が Pattern 2 のどのサブパターンにも該当しないためで、実行ミスではない。上記の Tier 1 提案がこの系統の正しい対処にあたる
