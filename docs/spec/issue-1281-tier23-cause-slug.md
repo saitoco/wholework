@@ -194,3 +194,37 @@ Changed Files に新規 `scripts/*.sh` は含まれず、`modules/*.md` の変�
 ### Notes for Next Phase
 
 - `/verify` は Post-merge AC (`docs/reports/orchestration-recoveries.md` への cause slug 記録、`collect-recovery-candidates.sh --with-tracking` での cause 別分離) を次回 Tier 2/3 recovery 発火時に観察すること (`session=next`)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 受入条件 4 が `cause` の必須/任意を明示的に「実装判断」として `/spec` に委譲し、Notes が Tier 2/3 の分割可否も委譲していた。委譲先を条件文の中で名指しした結果、`/spec` の Judgment rationale に判断根拠が揃って残った (#1283 と同じパターンが機能)
+- 受入条件 6「cause 分離がテストで保護されている」は「テストが追加されている」ことしか機械確認できず、アサーションの検出力までは rubric でも判定できなかった (review retrospective の指摘)。この観察は既存 Issue #1251 (AC に評価者が必要とする情報を含める規約) と同一スコープのため、そちらへの追記で処理する
+
+#### spec
+- Issue 本文の前提と実装の食い違いを設計中に検出し、実測で確定させた。Tier 2 のエントリは Improvement Candidate が常に `- N/A (resolved by known catalog)` であり #1191 の除外規則で頻度カウントから外れるため、**Tier 2 側の実装には今日の頻度シグナル分離の実効がない**。`collect-recovery-candidates.sh --threshold 1 --with-tracking` の出力に `code-pr-tier2-recovery` が現れず `code-pr-tier3-recovery 3 tracked:#799` は現れることを確認済み。この整理を Notes と Issue post-merge 条件の sub-bullet に反映しており、受入条件を満たしつつ価値の所在を誤認させない形になった
+- 一方で Spec 自身に内部矛盾が 1 件残った (下記 code / review 参照)。validator のハードフェイルと writer 側の緩やかなフォールバックを同一 Spec 内で両方指示したもの
+
+#### code
+- Implementation Steps 1-9 を逸脱なく実装、rework なし
+- Spec の内部矛盾がそのまま実装に写り、`validate-recovery-plan.sh` が先にゲートするため Step 4 の「不正値 → `unclassified`」分岐が制御フロー上到達不能になった
+- 並列実行時のみ `tests/post_merge_check.bats` が FAIL する既知 flake を 2 回とも踏み、直列実行で全 PASS を個別確認。既存 Issue #1231 と実質重複のため新規起票せずと判断しており、起票抑制の判断として妥当
+
+#### review
+- `/review --full` が 2 系統の欠陥を**いずれも 2 体の独立エージェントが検出**して機能した: (1) Spec 内部矛盾に起因する到達不能分岐、(2) `!` で否定した grep アサーションが bats の `set -e` 下で非最終文だと無効化される bash 挙動。後者は本 PR 自身が新規追加したテストコードに作り込まれており、review がなければ検出力ゼロのアサーションがそのまま着地していた
+- (1) は validator のセマンティクス変更が本 PR 自身の固定テスト (`cause: malformed value -> exit 1`) と衝突するため SHOULD 記録に留めた。判断は妥当
+
+#### merge
+- pre-merge AC ゲート unchecked_count=0、`review_incomplete_fallback` 未検出で override マーカーなしに直接マージ。`mergeable=true (clean)` でコンフリクト解消不要。squash マージで `closes #1281` により Issue 自動クローズ
+
+#### verify
+- pre-merge 6 件はすべて merge 前に検証済みで SKIPPED、observation 1 件は未発火で SKIPPED。FAIL / UNCERTAIN ゼロ
+- Phase Handoff § Deferred Items の 2 件 (validator ハードフェイル [SHOULD]、例示 slug [CONSIDER]) は受入条件の対象外であり、documented deferral 判定を要する FAIL は発生していない
+
+### Improvement Proposals
+
+- **bats で否定アサーションを書く際の `set -e` 落とし穴を標準パターンとして明文化する** — `! echo ... | grep -q ...` 形式は bats の `set -e` 下で非最終文に置くと無効化され、検出力ゼロのアサーションになる。本 PR 自身の新規テストコードで実際に作り込まれ、`/review --full` の 2 体のエージェントが独立検出して初めて発覚した。`if echo ... | grep -qE ...; then false; fi` 形式を正しいパターンとして `modules/test-runner.md` (3 skill が読む共有モジュール) に記載し、既存テストの `! ... | grep` 形式を機械的に洗い出せる状態にする
+- **[Tier 2 / memory 保持] Spec で validation と normalization を両方指示する際は実行順序を明示する** — 「検証してダメなら丸ごと失敗させる」と「不正値も緩やかに正規化する」を同一 Spec 内で指示すると、実装が両方に従った結果どちらかが到達不能になる。本 Issue で実際に発生した (`validate-recovery-plan.sh` が先にゲートし Step 4 の正規化分岐が到達不能)。変更対象は `skills/spec/SKILL.md` 単一で Tier 1 の evidence gate を満たさないため起票せず
+- **[Tier 3 / Spec 記録のみ] `write_recovery_entry()` の書式重複が 3 経路に拡大** — Tier 2 / Tier 3 / manual recovery の 3 経路が同名の独立実装でエントリ書式を組み立てており、本 Issue の `- cause:` 追加で重複が 3 箇所すべてに及んだ。spec retrospective が「将来この書式にさらにフィールドが増える場合が consolidation の判断点」と明示的な発火条件を記録済みで、その条件は未達。先回りの起票はしない
