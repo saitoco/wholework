@@ -145,25 +145,38 @@ Changed Files に新規 `scripts/*.sh` は含まれず、`modules/*.md` の変�
 - **`- cause:` 行の検出範囲**: `collect-recovery-candidates.sh` の検出が `### Diagnosis` セクションにスコープされているか不明だったが、パーサ (`:208-221`) を読み、エントリ内の任意の行に対する `^- cause: .+` のベアマッチであることを確認した。配置は書式規約として `### Diagnosis` 先頭に揃える方針で確定
 - **validator を任意キー化しても既存テストが通るか**: `tests/validate-recovery-plan.bats` の 6 フィクスチャがすべて 3 キー構成であることを読んで確認済み。必須キーリストを変更しない限り既存テストは無改変で green
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-9 を Spec記載どおりの順序・内容で実装した。
+
+### Design Gaps/Ambiguities
+- `agents/orchestration-recovery.md` の 2 件目の JSON 例 (Dirty-tree-cleanup-plus-PR-creation, Issue #917) は Spec が cause slug の具体値まで指定していなかった。Constraints の「既出 slug を再利用する」方針に従い、`docs/reports/orchestration-recoveries.md` の Field Definitions で既に例示されている `dirty-guard` を採用した。
+
+### Rework
+- N/A — 手戻りは発生しなかった。
+
+### Test Execution Notes
+- Behavioral change detection (既存ファイル `docs/reports/orchestration-recoveries.md` を直接対応テスト以外からも複数 bats ファイルが参照) によりフルスイート並列実行 (`bats --jobs 18 tests/`) が必要と判定された。2 回実行し、いずれも `tests/post_merge_check.bats` の `fail: gh issue reopen called when FAIL input given` (1〜2 回目とも FAIL) が並列実行時のみ FAIL した (直列実行では 2 回とも 10/10 全 PASS)。本 Issue の変更対象ファイルとは無関係。同一テスト名の並列時 flake は既存 Issue #1231 の Background に既述のため、新規 follow-up Issue は起票せず (実質重複)。本 Issue に関連する `tests/collect-recovery-candidates.bats` / `tests/validate-recovery-plan.bats` / `tests/apply-fallback.bats` / `tests/auto-recovery.bats` / `tests/spawn-recovery-subagent.bats` / `tests/orchestration-recovery.bats` を直列実行し、追加した @test を含む全件 PASS を個別に確認した。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- Tier 2 と Tier 3 を 1 つの PR で扱う。Issue 本文 Notes が `/spec` に委譲した判断で、受入条件 1-6 が両 Tier をまたぐ 1 セットとして書かれているため分割しない
-- `cause` は `validate-recovery-plan.sh` では任意キー (present-only 検証)、`agents/orchestration-recovery.md` の契約文では必須指示、という非対称構成。validator の検証失敗が「復旧を諦めて stop-and-report」を意味するため、メタデータ欠落で復旧を止めない
-- `cause` が欠落・不正な場合 Tier 3 writer は sentinel `unclassified` を必ず書く。行を省略すると素の `<symptom-short>` に落ち、「cause を出せなかった」と「#1281 以前のエントリ」が区別できなくなる
-- Tier 2 の cause 値はマッチ済み symptom anchor をそのまま使う。`detect_symptom_anchor()` が返す 3 リテラルはいずれも kebab-case 保証済みのため追加サニタイズは不要
+- Implementation Steps 1-9 を Spec記載どおりの順序で実装し、逸脱なし
+- `agents/orchestration-recovery.md` の 2 件目の JSON 例 (Issue #917 由来) の cause 値には、Spec のガイダンス (既出 slug を再利用) に従い `docs/reports/orchestration-recoveries.md` に既に例示されている `dirty-guard` を採用
+- Behavioral change detection の判定に従いフルスイート並列実行 (`bats --jobs 18 tests/`) を実施。並列時のみ `tests/post_merge_check.bats` の 1 テストが flake したが、変更対象ファイルとは無関係かつ既存 Issue #1231 の Background に同一事象の記載があったため、新規 follow-up Issue は起票せず記録のみとした
 
 ### Deferred Items
 
-- 既存エントリへの遡及的な cause 付与 (Issue 本文 Notes でスコープ外と明記)
-- Tier 3 の agent が返す slug が既存 vocabulary を実際に再利用するかの検証は post-merge 観察に委ねる。単発 group-key が増える傾向が見えた場合は、agent プロンプトへ既出 slug 一覧を動的注入する後続 Issue を検討 (Spec の Uncertainty 節)
-- `write_recovery_entry()` 3 経路のエントリ生成共通化 (今回は 2 箇所の追記で足りるため実施しない)
+- 既存エントリへの遡及的な cause 付与 (Issue 本文 Notes でスコープ外と明記、実装でも対応せず)
+- Tier 3 の agent が返す slug が既存 vocabulary を実際に再利用するかの検証は post-merge 観察に委ねる (`session=next`)。単発 group-key が増える傾向が見えた場合は、agent プロンプトへ既出 slug 一覧を動的注入する後続 Issue を検討
+- `write_recovery_entry()` 3 経路のエントリ生成共通化は未実施 (今回は 2 箇所の追記で足りるため)
+- `tests/post_merge_check.bats` の並列実行時 flake の根本原因調査は本 Issue のスコープ外。既存 Issue #1231 が同一事象を Background に記載済み
 
 ### Notes for Next Phase
 
-- `scripts/validate-recovery-plan.sh` の `re` は既存の `import re as _re` がステップ検証ブロック内のローカルスコープにある。`cause` 検証で使うにはファイル冒頭にトップレベル `import re` を追加すること
-- `tests/validate-recovery-plan.bats` の既存 6 フィクスチャは 3 キー構成のまま触らない。必須キーリスト `("action", "rationale", "steps")` を変更すると既存テストが落ちる
-- Implementation Step 9 のテストは Tier 2 の group-key が **出力されないこと** も assert する。これは #1191 の N/A 除外との相互作用を意図的に固定するもので、バグではない (Spec の Notes「実装との矛盾」参照)
-- `tests/collect-recovery-candidates.bats` に `file_contains` 系の verify command を追加する場合、`@test` 名は既存ファイルの実際の命名 (`grep "@test" tests/collect-recovery-candidates.bats`) を確認してから部分文字列を採ること
+- Post-merge AC は `/verify` で次回 Tier 2/3 recovery 発火時の `docs/reports/orchestration-recoveries.md` エントリを観察する。Tier 2 は #1191 の N/A 除外により頻度カウント対象外のため、観察対象は実質 Tier 3 発火時のみ
+- `collect-recovery-candidates.sh --with-tracking` の出力で cause 別 group-key 分離が機能しているかを確認すること
+- `bats --jobs N tests/` を実行する場合、`tests/post_merge_check.bats` の 1 テストが並列実行時のみ flake することがある (直列実行では毎回 PASS)。無関係な FAIL として無視して構わない
