@@ -241,22 +241,21 @@ review-bug×2 と review-spec が共通して検出した 2 件 (`.tmp/auto-chec
 Nothing to note。Pre-merge AC 7 件 (rubric 6 + file_exists 1) はすべて safe mode で PASS 判定でき、UNCERTAIN は 0 件だった。verify command 自体の記述にも問題はなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Step 10 は `--non-interactive` (fork context, re-invocation guarantee なし) のため `capabilities.workflow: true` でも Workflow tool 経路を使わず、`skills/review/workflow-guidance.md` の指示どおり静的 Task fan-out (review-spec + review-bug×2) へフォールバックした。Agent tool を `run_in_background: false` で同一メッセージ内に並列発行した。
-- Step 10 で検出された 6 件 (SHOULD 2 / CONSIDER 4) はすべて `docs/reports/observation-ac-audit-d3.md` 内の参照誤り・表現曖昧性で、MUST は 0 件だった。2 段階検証で全件 PASS (問題確認) と判定されたため、6 件とも修正して commit・push した。
-- Base Branch Conflict Pre-check は `changed in both` 0 件でコンフリクトなし。
+- Pre-merge AC gate は Pre-merge 7 件全チェック済み・`review_incomplete_fallback` 非該当のため素通りし、`/merge 1295 --non-interactive` を通常フローでそのまま実行した。
+- `gh-pr-merge-status.sh` は初回 `mergeable=UNKNOWN` を2回リトライ後 `mergeable=true, reason=clean` に解決。コンフリクト解消 (Step 3) は不要だった。
+- Squash merge (`gh pr merge --squash --delete-branch`) を実行し、リモートブランチも削除済み。
 
 ### Deferred Items
 
-- #478 の `### Pre-merge` に残る `github_check ... --commit=$(git rev-parse HEAD)` 形の未チェック AC は本 Issue のスコープ外のまま (code フェーズから継続)。
-- 分類結果の親 #1270 集約レポート (`docs/reports/observation-ac-audit-summary.md`) への統合は親側の担当 (code フェーズから継続)。
-- `docs/spec/issue-1276-observation-ac-audit-d3.md:69,121` に残る同型の参照誤り (Spec 側、本 PR の diff 外) は修正していない — 本 Issue のスコープは `docs/reports/observation-ac-audit-d3.md` の記録内容であり、Spec 自体の事後訂正は対象外と判断した。
+- #478 の `### Pre-merge` に残る `github_check ... --commit=$(git rev-parse HEAD)` 形の未チェック AC は本 Issue のスコープ外のまま (code/review フェーズから継続)。
+- 分類結果の親 #1270 集約レポート (`docs/reports/observation-ac-audit-summary.md`) への統合は親側の担当 (code/review フェーズから継続)。
+- `docs/spec/issue-1276-observation-ac-audit-d3.md:69,121` に残る同型の参照誤り (Spec 側、本 PR の diff 外) は未修正のまま (review フェーズから継続)。
 
 ### Notes for Next Phase
 
-- `/merge 1295` 実行時、Pre-merge AC 7 件は全件チェック済みのため pre-merge AC gate は素通りする見込み。
-- レビュー修正 commit (`c8a9ae2c`) は PR ブランチへ直接 push 済み。追加の re-review は不要 (MUST 0 件、review-only モードではない通常フロー)。
-- Post-merge AC はこの Issue にはない (効果測定は親 #1270 に集約)。
+- Post-merge AC はこの Issue にはない (効果測定は親 #1270 に集約)。`/verify 1276` は Issue 状態遷移の確認が主。
+- BASE_BRANCH は `main` のため `closes #1276` により Issue は自動クローズされる見込み。ラベル遷移 (`phase/verify`) は Step 5 で実行する。
