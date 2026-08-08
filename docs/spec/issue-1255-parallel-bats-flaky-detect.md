@@ -47,3 +47,36 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ## Issue Retrospective / https://github.com/saitoco/wholework/issues/1255#issuecomment-5218891812
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1–4 followed the Spec as written. `mkdir -p tests/.bats/run-logs` was placed as a prior independent step ("Prepare bats run-log directory"), the "その前段の独立ステップ" option the Spec explicitly allowed as an alternative to embedding it in the "Run bats tests" step's own `run:` block.
+
+### Design Gaps/Ambiguities
+
+- **Local reproduction confirmed the Spec's premise**: running `bats --jobs 18 tests/` locally (3 times) reproduced `tests/post_merge_check.bats` failing intermittently under parallel load (`fail: gh issue reopen called when FAIL input given`, and on one run also `multiple issues: processed sequentially`), while the same file always passed 10/10 serially. This is a pre-existing flake unrelated to this Issue's changed files, and matches the exact class of failure the Issue's Background section documents (#1221 observation) — confirming the mechanism this PR adds is exercising a real, currently-occurring condition rather than a hypothetical one.
+- **`--filter-status failed` run-log is cumulative across invocations, not reset per `bats <dir>` call**: local testing showed that re-running `bats --filter-status failed tests/` against a `tests/.bats/run-logs/` directory that had accumulated history from several prior full-suite invocations reran far more tests (120) than the 1–2 that failed in the immediately preceding run — because the log retains status across all runs since the directory was created, not just the last one. This is not a defect in the implementation: in CI, each job starts from a fresh checkout, so `tests/.bats/run-logs/` never carries state across job runs and the re-run step only ever reflects the single preceding "Run bats tests" step. Recorded here since it could otherwise surprise an engineer manually reproducing CI behavior locally against a reused `tests/.bats/` directory.
+
+### Rework
+
+- N/A — no rework occurred; implementation, local verification, and AC checks completed without needing to revise the approach.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Implemented option B exactly as designed in the Spec: `.github/workflows/test.yml`'s `bats` job gets `id: bats` + `continue-on-error: true` on the existing "Run bats tests" step, plus a new `if: steps.bats.outcome == 'failure'` step that re-runs `bats --filter-status failed tests/` serially and writes to `$GITHUB_STEP_SUMMARY`.
+- `mkdir -p tests/.bats/run-logs` was added as its own prior step ("Prepare bats run-log directory") rather than inlined into the "Run bats tests" step's `run:` block — both were Spec-sanctioned options; the standalone step keeps each step single-purpose.
+- No new script was introduced (per the Spec's rejection of option A) — the entire mechanism lives in the CI workflow YAML.
+
+### Deferred Items
+- File-level attribution (vs. test-level) was explicitly scoped out by the Spec's Notes as a follow-up if test-level granularity proves insufficient — not implemented here.
+- Option C (cumulative `docs/reports/` threshold detection) was explicitly deferred as an orthogonal, independently-addable follow-up per the Spec's Notes.
+- Post-merge AC (observation, session=next) is unverified until the next real CI run surfaces a parallel-only failure.
+
+### Notes for Next Phase
+- Local testing reproduced `tests/post_merge_check.bats` failing intermittently under `bats --jobs 18 tests/` (2 of 3 local runs), always passing serially — this is a pre-existing flake unrelated to this PR's changed files, not something introduced by this change. If CI shows the same file flaking on this PR, that is expected background noise, not a regression to chase down in review.
+- The new "Re-run parallel-only failures serially" step only fires (`if: steps.bats.outcome == 'failure'`) when the parallel run has at least one failure; on a fully green parallel run it is skipped entirely, so no added CI time in the common case.
+- `tests/.bats/` is now gitignored; if a contributor tests the CI logic locally by running the same `bats --jobs N tests/` command repeatedly against a reused `tests/.bats/` directory, `--filter-status failed` will replay cumulative history across all those runs, not just the last one — harmless in real CI (fresh checkout every job) but worth knowing when reproducing locally.
