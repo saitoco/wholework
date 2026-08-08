@@ -547,3 +547,66 @@ FIXTURE_EOF
   [ "$status" -eq 0 ]
   echo "$output" | grep -E $'^wrapper-retry-on-kill\t3$'
 }
+
+@test "Tier 2/Tier 3 cause separation: Tier 3 group-keys split by cause, Tier 2 excluded by N/A regardless" {
+  cat > "$RECOVERY_FILE" << 'FIXTURE_EOF'
+## 2026-06-01 10:00 UTC: code-pr-tier3-recovery
+
+### Diagnosis
+- cause: background-notification-wait
+- first background-notification-wait occurrence
+
+### Improvement Candidate
+- 未起票
+
+## 2026-06-02 10:00 UTC: code-pr-tier3-recovery
+
+### Diagnosis
+- cause: background-notification-wait
+- second background-notification-wait occurrence
+
+### Improvement Candidate
+- 未起票
+
+## 2026-06-03 10:00 UTC: code-pr-tier3-recovery
+
+### Diagnosis
+- cause: dirty-guard
+- first dirty-guard occurrence
+
+### Improvement Candidate
+- 未起票
+
+## 2026-06-04 10:00 UTC: code-pr-tier2-recovery
+
+### Diagnosis
+- cause: json-mode-silent-hang
+
+### Improvement Candidate
+- N/A (resolved by known catalog)
+
+## 2026-06-05 10:00 UTC: code-pr-tier2-recovery
+
+### Diagnosis
+- cause: json-mode-silent-hang
+
+### Improvement Candidate
+- N/A (resolved by known catalog)
+
+FIXTURE_EOF
+
+  # threshold=2: the background-notification-wait cause group clears the bar; the bare
+  # symptom-short never appears (every entry carries a cause line); Tier 2 is excluded by
+  # the #1191 N/A rule regardless of cause grouping.
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 2
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -E $'^code-pr-tier3-recovery/background-notification-wait\t2$'
+  ! echo "$output" | grep -E $'^code-pr-tier3-recovery\t'
+  ! echo "$output" | grep -E $'^code-pr-tier2-recovery'
+
+  # threshold=1: the single dirty-guard occurrence now clears the bar too.
+  run bash "$SCRIPT" "$RECOVERY_FILE" --threshold 1
+  [ "$status" -eq 0 ]
+  echo "$output" | grep -E $'^code-pr-tier3-recovery/dirty-guard\t1$'
+  ! echo "$output" | grep -E $'^code-pr-tier2-recovery'
+}

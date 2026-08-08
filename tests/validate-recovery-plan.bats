@@ -36,3 +36,18 @@ SCRIPT="$PROJECT_ROOT/scripts/validate-recovery-plan.sh"
   run bash "$SCRIPT" <<< 'not-valid-json'
   [ "$status" -ne 0 ]
 }
+
+@test "cause: valid kebab-case slug -> exit 0" {
+  run bash "$SCRIPT" <<< '{"action":"skip","cause":"dirty-guard","rationale":"nothing to do","steps":[]}'
+  [ "$status" -eq 0 ]
+}
+
+@test "cause: malformed value (uppercase, spaces) -> exit 1" {
+  run bash "$SCRIPT" <<< '{"action":"skip","cause":"Dirty Guard","rationale":"nothing to do","steps":[]}'
+  [ "$status" -ne 0 ]
+}
+
+@test "cause: key absent -> exit 0 (backward compatible)" {
+  run bash "$SCRIPT" <<< '{"action":"skip","rationale":"nothing to do","steps":[]}'
+  [ "$status" -eq 0 ]
+}
