@@ -62,3 +62,29 @@
 
 - saito (MEMBER, first-class) — `/issue 1293 --non-interactive` の Issue Retrospective。Auto-Resolve Log (単語境界マッチが機能しない実機検証結果) を記録。AC 変更なし。https://github.com/saitoco/wholework/issues/1293#issuecomment-5230670606
 - saito (MEMBER, first-class) — Triage AC audit: Pre-merge AC3 の verify command `command "bats tests/opportunistic-search.bats"` が新規カバレッジなしでも常時 PASS するリスクを指摘。`bats --filter` への差し替えを推奨 (本 Spec の Notes・Implementation Step 3 で対応済み)。https://github.com/saitoco/wholework/issues/1293#issuecomment-5230697853
+- `/code 1293 --non-interactive` (code フェーズ): cutoff (`phase/code` ラベル付与時刻 2026-08-09T09:13:45Z) 以降の新規コメントなし。
+
+## Code Retrospective
+
+### Deviations from Design
+- None — Spec の Implementation Steps 1〜3 をそのまま実装した (resolve_filtered_context() への sed -E 式追加とコメント3箇所の更新、observation-trigger.md への段落追加、tests/opportunistic-search.bats への2件のテスト追加)。
+
+### Design Gaps/Ambiguities
+- None — Root Cause 節が却下代替案・採用方針を明確に記録していたため、実装方針で迷う点はなかった。
+
+### Rework
+- None.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps をそのまま実装。`resolve_filtered_context()` に2つ目の `sed -E` 式 (`--[A-Za-z0-9-]+=[A-Za-z0-9._-]+`) を追加し、パス様トークン除去と同じキャッシュ済み1回のフィルタリングパスで CLI フラグ構文も除去する構成にした。
+- Behavioral Change Detection がヒット (`tests/check-known-events-firing.bats` が `scripts/opportunistic-search.sh` を直接対応テスト外で参照) したため、`bats --jobs 18 tests/` でフルスイート (1654件) を実行し全件 PASS を確認した。
+
+### Deferred Items
+- Post-merge AC (`event=pr-review-light session=next` の観測) は本 PR の対象外。次回以降 Issue #476 の `/verify` dispatch 時に自然発火を待つ。
+
+### Notes for Next Phase
+- Pre-merge AC 3件は本フェーズ内で verify-executor full mode により PASS 確認済み、Issue #1293 のチェックボックスも更新済み。
+- 追加した2件の bats テスト名には `CLI flag token` という一意な部分文字列を含めてあるため、`bats --filter 'CLI flag token' tests/opportunistic-search.bats` が引き続き有効。
