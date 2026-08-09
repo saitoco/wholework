@@ -100,3 +100,41 @@
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 内容: `/issue 1300` (non-interactive) 実行時の Autonomous Auto-Resolve Log — AC5 のテスト範囲を降格方向のみから昇格・降格の両方向へ拡張、AC2 の verify command を `case` 文の直接マッピング検出へ変更、Post-merge observation AC に `session=next` を追加。いずれも現在の Issue 本文に既に反映済みであり、本 Spec 作成時点で追加対応は不要と判断した。 / URL: https://github.com/saitoco/wholework/issues/1300#issuecomment-5230385022
+
+## Code Retrospective
+
+### Deviations from Design
+N/A — Implementation Steps 1〜5 を Spec の記述通りに実装した。
+
+### Design Gaps/Ambiguities
+- 全 bats スイート (`bats --jobs 18 tests/`) の1回目実行で `tests/post_merge_check.bats` の `fail: gh issue reopen called when FAIL input given` が1件 FAIL したが、単体実行および2回目の並列実行では PASS した。本 Issue の変更対象 (`scripts/get-auto-session-report.sh` / `tests/get-auto-session-report.bats`) とは無関係な並列実行時フレークであり、既存 Issue #1308 (`tests/post_merge_check.bats: bats --jobs 並列実行時に 2 件 FAIL するフレークを解消`) で追跡済みのため、本 Issue では追加の Follow-up Issue 起票は行わなかった。
+
+### Rework
+N/A — 手戻りなし。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+N/A — review-light (spec deviation 観点) で乖離なし。`_route` 導出 (`ROUTE_MIX` と同じ `has_pr`/`has_patch` パターン) と `PR` 列の検証付き解決 (`skills/verify/SKILL.md` Step 2 と同方式) はいずれも Spec Implementation Steps の記述通りに実装されていた。
+
+### Recurring issues
+N/A — 同種の issue の複数発生はなし。MUST/SHOULD issue はゼロ、CONSIDER 2件 (コメント欠如・API呼び出し量) はいずれも軽微な提案であり修正は見送った。
+
+### Acceptance criteria verification difficulty
+N/A — 6件の Pre-merge AC (rubric ×3, file_not_contains ×1, grep ×1, command ×1) は全て UNCERTAIN なく機械的に PASS 判定できた。`bats --jobs 18 tests/get-auto-session-report.bats` は 17/17 PASS。verify command の記述と実装の対応も明確だった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- `--light` 指定により lightweight integrated review (review-light 1 エージェント、全4観点) を実行し、fan-out レビューは行わなかった。
+- MUST/SHOULD issue が存在しないため `event=COMMENT` でレビューを投稿し、`/merge` への進行をブロックしなかった。
+- CONSIDER 2件 (コメント欠如の可読性提案、候補PR検証ループのAPI呼び出し量) はインラインコメントとして記録した上で、いずれも既存パターンに沿った軽微な提案のため修正を見送った。
+
+### Deferred Items
+- CONSIDER: `_has_pr`/`_has_patch` 判定に `ROUTE_MIX` ブロックと同様の説明コメントを追加する提案 (scripts/get-auto-session-report.sh:349) — 任意の可読性向上、修正は見送り。
+- CONSIDER: 候補PR検証ループの API 呼び出し量 (scripts/get-auto-session-report.sh:372) — `skills/verify/SKILL.md` Step 2 と同一パターンのため新規の欠陥ではない。
+
+### Notes for Next Phase
+- `/merge 1311` で問題なく進行可能 (MUST issue ゼロ、CI 全11件 SUCCESS、Pre-merge AC 6件 PASS)。
+- Post-merge AC (`verify-type: observation event=auto-run session=next`) は次回 `/auto --batch` 完走後に `/verify` で確認する。

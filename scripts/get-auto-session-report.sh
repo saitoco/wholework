@@ -339,11 +339,15 @@ for _num in $ISSUE_NUMS_FOR_TABLE; do
     end
   ' 2>/dev/null || echo "?")
   _size=$(echo "$_issue_events" | jq -r '[.[] | select(.event == "sub_start") | .size] | first // "?"' 2>/dev/null || echo "?")
-  case "$_size" in
-    XS|S) _route="patch" ;;
-    M|L)  _route="pr" ;;
-    *)    _route="?" ;;
-  esac
+  _has_pr=$(echo "$_issue_events" | jq -r '[.[] | select(.phase == "code-pr")] | length > 0' 2>/dev/null || echo "false")
+  _has_patch=$(echo "$_issue_events" | jq -r '[.[] | select(.phase == "code-patch")] | length > 0' 2>/dev/null || echo "false")
+  if [[ "$_has_pr" == "true" ]]; then
+    _route="pr"
+  elif [[ "$_has_patch" == "true" ]]; then
+    _route="patch"
+  else
+    _route="?"
+  fi
   # Phase breakdown: per-phase duration joined by →
   _phase_breakdown=$(echo "$_issue_events" | jq -r '
     [.[] | select(.event == "phase_start" or .event == "phase_complete")] |
@@ -365,8 +369,14 @@ for _num in $ISSUE_NUMS_FOR_TABLE; do
   # PR lookup
   _pr_col="—"
   if [[ "$NO_GITHUB" == "false" ]]; then
-    _pr_num=$(gh pr list --search "closes #${_num}" --state all --json number --jq '.[0].number // empty' 2>/dev/null || true)
-    [[ -n "$_pr_num" ]] && _pr_col="#${_pr_num}"
+    _candidate_prs=$(gh pr list --search "closes #${_num}" --state all --json number --jq '.[].number' 2>/dev/null | head -10 || true)
+    for _candidate in $_candidate_prs; do
+      _candidate_issue=$("$SCRIPT_DIR/gh-extract-issue-from-pr.sh" "$_candidate" 2>/dev/null | jq -r '.issue_number // empty' 2>/dev/null || true)
+      if [[ "$_candidate_issue" == "$_num" ]]; then
+        _pr_col="#${_candidate}"
+        break
+      fi
+    done
   fi
   # Recovery events for this issue
   _t1_n=$(echo "$_issue_events" | jq '[.[] | select(.event == "recovery" and .tier == "1")] | length' 2>/dev/null || echo 0)
