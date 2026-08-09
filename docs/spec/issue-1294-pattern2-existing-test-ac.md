@@ -4,6 +4,9 @@
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 内容: `/issue 1294 --non-interactive` の Issue Retrospective — 曖昧性検出 0 件 (Auto-Resolve 対象なし)、AC 本文・verify command・verify-type タグは無変更、Step 15 (AC Verify Command Integrity Audit) を本文に対して実行し Pattern 1〜6 いずれにも非該当 (rubric 2 件・grep 2 件とも実装前の main では未充足で常時 PASS ではない) と確認。本文への変更は Related セクションへの #1251 相互参照追加のみ (AC・verify command には影響なし)。 / URL: https://github.com/saitoco/wholework/issues/1294#issuecomment-5230153044
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1294#issuecomment-5230359433
+- saito / MEMBER / first-class / ## Post-merge observation の証拠を観測しました (#1293 の `/issue` フェーズ) / https://github.com/saitoco/wholework/issues/1294#issuecomment-5230704983
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1294#issuecomment-5230976953
 ## Overview
 
 `skills/triage/skill-dev-verify-audit.md` の Pattern 2 (常時 PASS な verify command) に、既存のグリーンなテストスイートを走らせるだけの `command` 型 AC を検出する新規サブパターンを追加する。現行の `command` 型サブパターン (`:66-78`) は「対象スクリプトが informational 専用設計で常に exit 0 を返す」ケースのみを扱っており、「AC 本文が新規テストケース・新規カバレッジの追加を主張しているが、verify command は変更前から green な既存スイートを走らせるだけ」という形は被覆されていない。同一セッション内で #1273 / #1279 / #1287 の 3 件が実測されており、うち #1287 は検出漏れとなった (`/verify 1287` の Verify Retrospective が本 Issue の起票元)。
