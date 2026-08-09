@@ -87,15 +87,14 @@
 - Nothing to note — Pre-merge AC 3件はすべて自動判定 (rubric 2件 PASS、command 1件は CI 参照フォールバック経由で PASS) で UNCERTAIN なく完結した。verify command / rubric 文言のいずれも過不足なく機能した。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Issue Size=M と `--light` 明示指定が整合していたため REVIEW_DEPTH=light を確定し、review-light エージェント1体による4観点統合レビューを実行した。
-- Base Branch Conflict Pre-check (`git merge-tree`) でベースブランチとのコンフリクト (`changed in both`) なしを確認済み。
+- pre-merge AC ゲート (`check-pre-merge-ac.sh`) は unchecked_count=0 で通過、review-incomplete-fallback チェックも該当なしのため、コンフリクトなしで直接 squash merge を実行した。
+- `gh-pr-merge-status.sh` の mergeable=true (reason=clean, CI success, review approved) を確認済みで、リベース・コンフリクト解決フローは不要だった。
 
 ### Deferred Items
-- Post-merge AC (`event=pr-review-light session=next`) は引き続き次回以降の Issue #476 `/verify` dispatch 時の自然発火待ち。review フェーズでは検証不能 (設計通り継続)。
+- Post-merge AC (`event=pr-review-light session=next`) は引き続き次回以降の Issue #476 `/verify` dispatch 時の自然発火待ち。merge フェーズでは検証不能 (設計通り継続)。
 
 ### Notes for Next Phase
-- MUST issue は0件のため、追加修正なしで `/merge 1314` に進んでよい。
-- CI全11件 SUCCESS、Pre-merge AC3件全て PASS 済み (Issueチェックボックスは code フェーズで既に更新済みのため、review フェーズでの追加更新はなし)。
+- `/verify 1293` で post-merge 観測条件の成立を待つのみ。pre-merge AC 3件は全て PASS 済みでチェックボックス更新は完了している。
