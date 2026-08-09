@@ -324,6 +324,29 @@ teardown() {
     echo "$output" | jq -e '.[0].number == 507' > /dev/null
 }
 
+@test "context gate: keyword found only inside a CLI flag token excludes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 508}]'
+    export MOCK_ISSUE_BODY_508='## Post-merge
+- [ ] Verify workflow coverage <!-- verify-type: observation event=pr-review-full keyword=workflow -->'
+    echo "gh run list --workflow=test.yml" > "$BATS_TEST_TMPDIR/context-cli-flag-only.md"
+
+    run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-cli-flag-only.md"
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
+}
+
+@test "context gate: keyword found in prose text alongside a CLI flag token still includes the issue" {
+    export MOCK_ISSUE_LIST='[{"number": 509}]'
+    export MOCK_ISSUE_BODY_509='## Post-merge
+- [ ] Verify workflow coverage <!-- verify-type: observation event=pr-review-full keyword=workflow -->'
+    printf 'gh run list --workflow=test.yml\nThis PR changes the CI workflow configuration.\n' > "$BATS_TEST_TMPDIR/context-cli-flag-and-prose.md"
+
+    run bash "$SCRIPT" --event pr-review-full --context-file "$BATS_TEST_TMPDIR/context-cli-flag-and-prose.md"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 509' > /dev/null
+}
+
 @test "config gate: enabled config key includes the issue" {
     export MOCK_ISSUE_LIST='[{"number": 600}]'
     export MOCK_ISSUE_BODY_600='## Post-merge
