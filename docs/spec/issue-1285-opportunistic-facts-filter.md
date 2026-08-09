@@ -66,6 +66,35 @@
 - **(b) 空集合時フォールバックについて**: Issue 本文の対応方針 (b) は、(a) の並べ替え設計を採用したことで構造的に不要になった。並べ替えは常に全候補を出力に残すため (上限キャップを超えない限り)、「フィルタ結果が 0 件になる」状況自体が発生しない
 - **`--context-file` (`keyword=` ゲート) の切り分け**: #400 の実際の Post-merge AC 行を確認したところ `keyword=` 属性を持たないため、`--context-file` ゲートは無条件マッチであり実測の 13→0 に寄与していない。Issue 本文に切り分け結果を追記済み (Notes 参照)
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜4 を Spec の記載順どおりに実施した (`FACTS_CANDIDATE_LIMIT=30` 定数の追加、facts ゲートの除外→並べ替え+キャップ変更、`opportunistic-verify.md` の契約説明更新、bats テストのリネーム+新規追加)
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
 ## Consumed Comments
 
 - saito (MEMBER, first-class): Triage AC audit — Pre-merge AC2 (`grep -n "facts" scripts/opportunistic-search.sh` の引数形式不正 + 常時 PASS) と AC3 (`command "bats tests/opportunistic-search.bats"` が直後の AC4 と同一コマンドで区別不能 + 常時 PASS) を指摘し、実装方針確定後の `/spec` での具体化を推奨。本 Spec 作成時に Issue 本文の該当 2 件を修正して対応 (Notes 参照)。https://github.com/saitoco/wholework/issues/1285#issuecomment-5229038068
+- (code phase) No new comments since last phase.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Step 1 の設計どおり、facts ゲートの `continue` (除外) を除去し、各候補に `_fact_matched` を付与した上でループ完了後に一括で並べ替え+キャップする方式を採用した (逐次除外より、jq の安定ソート非保証を追加順インデックス `_idx` で明示的に補う設計のほうが Spec の要求 (相対順序の保証) に忠実だったため)
+- `FACTS_CANDIDATE_LIMIT=30` は新規測定値ではなく `scan-pending-ac.sh` の `MAX_CANDIDATES` 既定値を踏襲 (Spec Notes 参照)
+- truncation メッセージは `scan-pending-ac.sh` の `Note: truncated ...` 形式を踏襲し、非サイレントな stderr 出力とした
+
+### Deferred Items
+- Post-merge observation AC (`session=next` の `/verify` で opportunistic 候補が 0 件になった場合、真に候補なしであることを確認) は未着手 — 次回以降の `/verify` 実行で評価される
+- `scripts/scan-pending-ac.sh` の同型パターン (Spec Notes に記載のスコープ外項目) は本 Issue のスコープ外のまま。別途 Issue化を検討する余地あり
+
+### Notes for Next Phase
+- Pre-merge AC 4件は全て verify command 実行で PASS 済み、Issue body のチェックボックスも更新済み
+- Spec からの実装乖離なし (Deviations from Design は N/A)
+- `bats tests/opportunistic-search.bats` は全 55 件 PASS (新規テスト2件を含む)
