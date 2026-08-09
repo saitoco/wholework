@@ -111,3 +111,35 @@
 
 - saito (MEMBER, first-class): `/issue 1251 --non-interactive` の Issue Retrospective — refinement で実施した grep verify command 構文修正 (4 件、`\|` → `|` 等) と Post-merge AC への `session=next` 追加を記録。AC5/AC6 の verify command が弱い (常時 PASS しうる) ことは Step 15 の audit に委譲する旨の記載あり。https://github.com/saitoco/wholework/issues/1251#issuecomment-5228748367
 - saito (MEMBER, first-class): AC Verify Command Integrity Audit — Pre-merge AC1/AC5/AC6 の verify command が Pattern 2 (常時 PASS) に該当すると指摘し、`/spec` での修正を明示的に要請。本 Spec 作成時に Issue 本文を修正して対応 (Notes 参照)。https://github.com/saitoco/wholework/issues/1251#issuecomment-5228767594
+
+### code フェーズ (2026-08-09)
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- Implementation Steps 1-3 は Spec の指示どおり個別に commit した (Step 8 の "Commit after each step completes" に従い、3 commit に分割)。この結果、`/code` Step 11 が定義する「単一の実装 commit に `(closes #N)` を含める」形にはならず、closes 参照は Step 12 の retrospective commit のメッセージに委ねた (Step 11 時点で working tree が既に clean だったため、Step 11 独自の commit を新設する代わりに次の commit で要件を満たした)。Implementation Steps 自体の内容・順序に変更はない。
+
+### Design Gaps/Ambiguities
+
+- N/A
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps 1-3 (verify-executor.md / verify-classifier.md / skills/issue/SKILL.md への追記) をそのまま逐語的に実装した。Spec 本文が挿入位置・見出し・全文をあらかじめ確定していたため、実装判断の余地はほぼなかった
+- Pre-merge AC 8 件はすべて実装内容と grep/rubric で PASS 確認済み。うち rubric 型 4 件 (AC2/AC4/AC7/AC8) は実装者自身の判定で PASS とし、Issue チェックボックスを更新した
+
+### Deferred Items
+- None
+
+### Notes for Next Phase
+- `/verify` は Post-merge AC (`verify-type: observation event=pr-review-full session=next`) の評価を担当する。次回 rubric 型 AC を含む Issue で `/review`/`/verify` が実際にファイル明示ガイドラインを活用できるかは、当面 SKIPPED のまま観測を継続する
+- Issue #1251 は patch route (BASE_BRANCH=main) のため、closes #1251 は Step 12 の retrospective commit に含めて main へ push する。auto-close のタイミングは Deviations from Design を参照
