@@ -184,3 +184,11 @@ No new comments since last phase.
   `pr-review-full` / `pr-review-light` を発火させる呼び出しは `scripts/` `skills/` `modules/` のいずれにも存在しない (`grep -rn "observation-trigger.sh" scripts/ skills/ modules/` で確認)。想定される発火元は `/review` フェーズだが、`skills/review/SKILL.md` に該当する呼び出しがない。
 
   影響範囲は本 Issue 単独ではなく、**当該 2 イベントを observation AC に指定している Issue が計 11 件**存在する (#1293 #1251 #1233 #1010 #1000 #930 #794 #713 #583 #575 #555)。いずれも `/verify` を何度再実行しても「waiting for event」の SKIPPED から動かず、`phase/verify` に滞留し続ける。`modules/verify-classifier.md` が本 Issue で追加した「どの event が発火したとき何を根拠に PASS 判定できるかを条件文に書く」規約は、**event 名に対応する発火実装の存在確認**までは求めていないため、この欠陥を検出できない。
+
+  → 本提案は #1305 として起票済み (label: `triaged`, `retro/verify`)。
+
+### Re-run Addendum (2026-08-09, event `pr-review-full` fired)
+
+本 Issue の post-merge AC (条件 9) は `/review PR #1309` (Issue #1304) の Event-based observation scan から `event=pr-review-full` が発火し、`/verify 1251` の再実行 (`/review` の L3 autonomy tier dispatch 経由) で PASS 判定・チェック済みとなった。
+
+**#1305 の前提を覆す実測**: 上記 Improvement Proposal は「`pr-review-full`/`pr-review-light` を発火させる呼び出しが `scripts/` `skills/` `modules/` のいずれにも存在しない」ことを根拠にしていたが、今回の発火実績と `grep -n "observation-trigger.sh --event pr-review" skills/review/SKILL.md` (`skills/review/SKILL.md:903-904` にヒット) により、当該呼び出しは現に存在し機能することを確認した。`git log -S "observation-trigger.sh --event pr-review-full" -- skills/review/SKILL.md` によれば、この呼び出し自体は Issue #656 (PR #671) の時点から存在する。起票時点 (本 Issue の前回 `/verify` 実行時) の `grep` 実測が実態と乖離していた可能性がある — 検索範囲の取り違え、または一時的な作業ツリー状態が原因と推測されるが特定はしていない。#1305 は着手前にこの前提を再実測する価値がある (本 retrospective への記録に留め、#1305 への直接コメントや状態変更は本 `/verify` の作業範囲外として行わない)。
