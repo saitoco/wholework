@@ -98,3 +98,41 @@
 
 ### Notes for Next Phase
 - `/verify 1293` で post-merge 観測条件の成立を待つのみ。pre-merge AC 3件は全て PASS 済みでチェックボックス更新は完了している。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- **Issue タイトルが示唆する方式を実測で反証した**: 起票時のタイトルは「単語境界マッチに改善」だったが、`/issue` フェーズが `echo "--workflow=test.yml" | grep -qiw "workflow"` を実機で実行して一致することを確認し、単語境界マッチでは対象ケースが解消しないことを示した。`-` と `=` がいずれも非単語文字であるため境界条件を満たしてしまうという理由も、#1220 の Spec が既に指摘していた点として引用されている。これを `## Auto-Resolved Ambiguity Points` として Issue 本文に追記し、`/spec` が非解決策を実装するのを未然に防いだ
+- **AC1/AC2 が outcome-based (rubric ベース) だったため、方式が変わっても AC の書き換えが不要だった**。#1220 と同じ方針で書かれていたことが効いている。タイトルが特定方式を示唆していても AC が手段を固定していなければ設計の再検討が阻害されない、という事例
+- **Step 15 の AC 監査が AC3 の常時 PASS を検出した**: 当初 `command "bats tests/opportunistic-search.bats"` は既存 56 テストのみで常時 PASS だった。指摘は #1279/#1287 を同型例として引用しており、同一 batch で直前に着地した #1294 のサブパターンが機能した結果である
+
+#### spec
+
+- `/issue` の反証を受けて方式 (a) — #1220 のパス様トークン除去を CLI フラグ構文へ拡張 (`sed -E 's#--[A-Za-z0-9-]+=[A-Za-z0-9._-]+##g'`) — を採用。既存の除去パイプラインへの追加で完結しており、#1220 との一貫性が保たれている
+- AC3 の常時 PASS 指摘を `bats --filter 'CLI flag token' tests/opportunistic-search.bats` へ絞り込んで解消した。これは #1294 が Pattern 2 の Fix options に記載した手段そのもの
+
+#### code
+
+- `modules/observation-trigger.md` 13 行・`scripts/opportunistic-search.sh` 33 行・`tests/opportunistic-search.bats` 23 行。rework ゼロ
+- `modules/*.md` を変更しているが、追加行に含まれる `opportunistic-search.sh` への言及は既存の散文参照であり新規スクリプト呼び出しの追加ではない。したがって #1266 が拡張した allowed-tools impact chain check の Case 2 の前提 (新規呼び出しの追加) は成立せず、#1266 の post-merge 観察対象にも該当しない
+
+#### review
+
+- review-light の 4 観点すべてで指摘 0 件 (MUST: 0 / SHOULD: 0)。MUST 指摘がなかったため `REQUEST_CHANGES` は試行されず、#1256 の自己 PR 422 フォールバックは本 PR では発火していない
+
+#### merge
+
+- PR #1314 を squash merge。コンフリクト・CI 失敗なし
+
+#### verify
+
+- Pre-merge 3 件は既チェックのため skip、post-merge の observation 1 件は `pr-review-light` 未発火で SKIPPED。FAIL・UNCERTAIN ゼロ
+- 実体を確認した: `bats --filter 'CLI flag token'` は実テスト 2 件にマッチし両方 PASS。うち 1 件は「CLI フラグと並んで散文にも keyword が出現する場合は除外しない」という偽陰性保護で、除去が効きすぎないことを担保している
+- 誤検知の解消を直接検証した: `--workflow=test.yml` を除去処理に通すと keyword `workflow` の出現が 0 になる
+
+### Improvement Proposals
+
+- N/A — 本実行から新たに派生する構造的な改善点は検出されなかった。`/issue` による方式反証・AC 監査の常時 PASS 検出・`/spec` による `--filter` 絞り込みは、いずれも既存の機構 (#1220 の outcome-based AC 方針、#1294 の Pattern 2 サブパターン) が意図どおり機能した結果である
