@@ -278,3 +278,47 @@ Nothing to note — Implementation Steps 1–6 通り、defective インベン�
 
 AC3 (`command "test $(grep -c '^\s*! grep -q \"phase_start\"' tests/run-code.bats) -eq 0"`) は `/review` の safe mode で UNCERTAIN となった。AC5 (`command "bats tests/"`) が `/code` Code Retrospective で特定した「`command` 型の 60 秒固定タイムアウトが全件スイート実行系 AC を検証不能にする」問題 (follow-up #1310) とは異なる、もう一つの `command` 型の構造的弱点: AC3 はタイムアウトとは無関係な軽量・決定的なテキストレベルのチェック (grep 件数比較) だが、`command` 型は safe mode で一律 CI reference fallback 頼みとなり、defective なアサーション自体が「検出力ゼロ」(パターンが残っていても CI は SUCCESS のまま) であるためこの AC は原理的に CI 参照でも判定不能だった。実装は diff 確認で充足を独立確認できたが、機構上 UNCERTAIN が確定的に残る。`modules/verify-patterns.md` §9 の "hard-pattern を使うべき条件" (実装が含む正確な文字列を書ける場合) に該当するため、本来 `file_not_contains "tests/run-code.bats" "! grep -q \"phase_start\""` のような safe-mode 対応 (`always_allow`) の verify type で表現できた可能性がある。follow-up #1310 のスコープ (command 型のタイムアウト構造) とは別に、「`command` 型が実は hard-pattern で代替可能なケースを spec 作成時に見分ける」観点を `modules/verify-patterns.md` §9 に追記する価値があるかもしれない (Issue 化は次の `/verify` の集約判断に委ねる)。
 - `docs/reports/` は `docs/translation-workflow.md` § Exclusions により ja ミラー対象外。監査レポート更新時に `docs/ja/reports/` は作成していない。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- 起票時に「裸の `!` 否定を本 Issue のスコープに含めるかは `/spec` の判断に委ねる」としたうえで「件数と性質が異なる (意図的に失敗を許容している箇所が混ざる可能性) ため、分けたほうが妥当かもしれません」と付記した。**この懸念は実測で否定された** — 該当は 2 件のみで、2 件とも `# sanity: plain -d must fail` という明示的アサーションの直後にあり「意図的に失敗を許容している箇所」ではなく、いずれも非最終文で同一判定基準の defective だった。実測に基づかない推測を Notes に残したことで `/spec` が調査対象として拾えた形だが、推測の確度は明示すべきだった
+- triage が AC1 (`section_contains "Out of Scope" "pipe"`) の常時 PASS 欠陥を検出した。本セッション 4 例目の verify command 欠陥検出
+
+#### spec
+- **AC1 修復の第一候補が同じ欠陥の作り込みになるところを回避した**。修復案の針文字列が原文で 2 行に折り返されており、行指向マッチで永久に不一致 = 常時 FAIL になる構成だった。単一行に収まる針へ変更している
+- **#1292 がスコープを pipe 形式に限定した直接原因**を `modules/test-runner.md` の例示が pipe 前提だった点に特定し、pipe 非依存性の明記を AC7 として追加。同種のスコープ漏れの再発防止が AC に組み込まれた
+- 対象を 76 → 78 件、defective を 26 + 2 = 28 件へ確定。#1292 の 9 件と合わせ、`tests/*.bats` 全体で **99 件中 37 件が defective** だったことになる
+- 実装リスク (検出力ゼロだったアサーションが有効化され `bats tests/` が新たに RED になりうる) を引き渡し、「元の `!` 形式へ戻すことを禁じ真因側を修正する」手順を Implementation Step 6 に明記した
+
+#### code
+- Implementation Steps 1-6 を逸脱なく実施、rework ゼロ。defective インベントリ 28 件を diff で全件突合し完全一致を確認
+- `command` 型 AC5 (`bats tests/`) の検証中に「`command` 型の 60 秒固定タイムアウトが全件スイート実行系 AC を構造的に検証不能にする」問題を特定し follow-up #1310 を起票
+
+#### review
+- `/review --full` は Spec/実装の構造的乖離 0 件。指摘は SHOULD/CONSIDER 級のドキュメント一貫性 4 件で、いずれも `docs/reports/bats-negation-assertion-audit.md` を #1292/#1304 の 2 Issue にまたがって累積更新する構成に起因した
+- AC3 が safe mode で UNCERTAIN 確定になる構造を特定し、`/verify` の集約判断に委ねた (下記 Improvement Proposals で処理)
+
+#### merge
+- **merge フェーズが 1 度失敗し、親セッションが手動復旧した (下記 Manual recovery)**
+
+#### verify
+- pre-merge 7 件はすべて merge 前に検証済みで SKIPPED、observation 1 件は `auto-run` 未発火で SKIPPED。FAIL / UNCERTAIN ゼロ
+
+### Manual recovery (parent session)
+
+`docs/reports/orchestration-recoveries.md` に本 Issue のエントリが存在しないため、`skills/verify/SKILL.md` Step 12 の規定に従いここに記録する。
+
+- **症状**: `run-auto-sub.sh` が merge フェーズで exit 1。Tier 3 recovery が `[spawn-recovery] action=abort: tier3 cannot recover this failure` を出力し復旧不能と判定
+- **観測した状態**: PR #1309 は OPEN、CI 全 job SUCCESS (DCO / bats / skill syntax / forbidden expressions / language convention / macOS shell compat)、しかし `mergeable: UNKNOWN` / `mergeStateStatus: UNKNOWN`
+- **診断**: GitHub のマージ可能性計算は非同期であり、`UNKNOWN` は計算未完了を示す一過性の状態。実装・コンフリクト・CI いずれにも問題なし
+- **復旧手順**: 5 秒待って `gh pr view 1309 --json mergeable,mergeStateStatus` を再クエリ → `MERGEABLE` / `CLEAN` に解決。`run-merge.sh 1309` を単体で再実行し PR #1309 を MERGED、Issue を `phase/verify` へ遷移させた
+- **所要**: 親セッションの介入 1 回 (再クエリ + merge 再実行)。Tier 1/2/3 いずれも発火せず、`manual_intervention` イベントも emit されていない (#875 の既知構造ギャップ)
+- **付随事象**: 復旧後、ローカル main が origin と ahead 2 / behind 2 で分岐していた。ahead 側は並行セッションの #1294 作業 (未 push) で、`git pull --rebase` により保全したうえで解消した
+
+### Improvement Proposals
+
+- **[Tier 2 / 既存 Issue へ追記] `command` 型が safe mode で原理的に判定不能になるケースの見分け方** — `/review` retrospective が `/verify` の集約判断に委ねた項目。AC3 はタイムアウトとは無関係な軽量・決定的チェックだが、`command` 型は safe mode で一律 CI reference fallback となり、検証対象の defective アサーションが「検出力ゼロ」であるため CI 参照でも原理的に判定できず UNCERTAIN が確定的に残った。`modules/verify-patterns.md` §9 の hard-pattern 条件に該当し `file_not_contains` (`always_allow`) で代替可能だった。**同系統の `command` 型構造的弱点を扱う既存 Issue #1310 が存在するため新規起票せず追記で処理** (issuecomment-5230338531)。#1310 のスコープはタイムアウト機構、本観察は safe mode fallback 機構と原因は異なるが、AC 型選択ガイドとして同じ場所に着地させるのが自然と判断した
+- **[Tier 3 / Spec 記録のみ] 監査レポートの Issue 横断累積が記法統一の認知負荷を生む** — `docs/reports/bats-negation-assertion-audit.md` を #1292/#1304 の 2 Issue で累積更新する構成が、SHOULD/CONSIDER 級のドキュメント一貫性指摘を 4 件誘発した (Correct form 例の pipe 偏り、集計表の時点混在表現、"heading only" 記述と実内容の不一致、旧セクションの Issue 番号欠落)。個々は軽微で今回は SHOULD 1 件のみ修正。`/review` retrospective が「次に同レポートへ追記する Issue が出た場合、既存セクションとの記法整合を Spec フェーズのチェックリストに加える」という再発防止案を記録済み。3 例目が出た時点で起票を検討する
