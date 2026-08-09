@@ -91,3 +91,42 @@ No new comments since last phase.
 
 ### Notes for Next Phase
 - No PR exists for this patch-route Issue — `/verify` should confirm the 3 pre-merge AC (already checked in the Issue body during this phase) and the single `verify-type: manual` post-merge AC remains open until a future `KNOWN_EVENTS` addition PR actually exercises the new script.
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- **起票時の中核的事実主張が誤っていた**。「`pr-review-full` / `pr-review-light` に発火経路が存在しない」としたが、実際には `skills/review/SKILL.md:903-904` に存在する (#1233 で追加済み)
+- **誤認の原因**: 調査時に `grep -rn "observation-trigger.sh" scripts/ skills/ modules/ | grep -v ... | head -8` と出力を切り詰めていた。呼び出し箇所は全 28 件あり、review SKILL.md の該当行は先頭 8 件に含まれていなかった。**網羅性が結論を左右する調査 (「存在しない」という否定的結論) で出力を truncate した**のが直接原因
+- あわせて「observation AC 11 件が永久 SKIPPED」という実害報告も過大だった。triage が 11 件を個別再確認したところ 9 件は既に `phase/done`、1 件も `phase/done`、#1293 は `phase/verify` に滞留すらしておらず、報告した実害の大部分は解消済みだった
+- **triage が実測でこれを捕捉し Issue を全面書き直しした**。スコープは「発火経路の新規実装」から「`KNOWN_EVENTS` 発火経路チェックがコメント行・usage 文字列に誤マッチする実バグの修正」へ縮小、Size も L → S へ変更された。残った欠陥は実在するため Issue 自体は有効
+- triage は Step 15 の AC 監査で Pattern 6 (対応 CI job のない Pre-merge `command` AC) を 1 件検出したが、非破壊方針でコメント指摘に留めた (本セッション 4 例目の「`/issue` は指摘のみ」パターン)
+
+#### spec
+- Size S のため patch route。triage が縮小したスコープをそのまま実装計画に落とし込み、逸脱なし
+- **私が手作業で誤った判定を機械化する形の実装になった**。`scripts/check-known-events-firing.sh` は `KNOWN_EVENTS` の各イベント名について、コメント行・usage 文字列を除外したうえで実際の発火呼び出しの有無を判定する。同種の誤認が再発しない状態になった
+
+#### code
+- Implementation Steps を逸脱なく実施、rework ゼロ
+
+#### review / merge
+- patch route のため `/review` `/merge` フェーズなし
+
+#### verify
+- pre-merge 3 件は code フェーズで検証済みのため SKIPPED、post-merge 1 件は `verify-type: manual` で本実行に検証対象が存在しないため未チェックのまま。FAIL / UNCERTAIN ゼロ
+- 参考として AC2 を post-merge 状態で実測: `bash scripts/check-known-events-firing.sh` が **exit 0** を返し、全イベントに発火経路があることを機械的に確認した
+
+### Manual recovery (parent session)
+
+`docs/reports/orchestration-recoveries.md` に本 Issue のエントリが存在しないため、`skills/verify/SKILL.md` Step 12 の規定に従いここに記録する。
+
+- **症状**: `run-issue.sh` が exit 1。reconcile が `{"phase":"issue","matches_expected":false,"actual":{"labels":["triaged","retro/verify"]},"diagnosis":"issue #1305 has no phase/issue or later phase label"}` を出力し silent no-op と判定
+- **観測した状態**: triage のリファインメント作業自体は**完了していた** — Issue 本文の全面書き直し、タイトル更新、Size L → S 変更 (project field read-back 確認済み)、Issue Retrospective コメント投稿、opportunistic verification 15 件の SKIP 記録、Step 15 AC 監査コメント投稿。欠けていたのは `phase/*` ラベルの付与のみ
+- **診断**: 作業内容は正常完了しており、ラベル遷移の 1 ステップだけが漏れた状態。`run-issue.sh` の再実行は Issue Retrospective コメントの二重投稿を招くため不適切と判断
+- **復旧手順**: `gh-label-transition.sh 1305 issue` で `phase/issue` を付与し、`run-auto-sub.sh 1305` を継続実行。spec → code (patch) が正常完走した
+- **所要**: 親セッションの介入 1 回 (ラベル付与)。Tier 1/2/3 いずれも発火せず、`manual_intervention` イベントも emit されていない (#875 の既知構造ギャップ)
+
+### Improvement Proposals
+
+- **[Tier 3 / Spec 記録のみ] 「存在しない」という否定的結論を出す調査で出力を truncate しない** — 本 Issue の誤起票の直接原因。`head -N` や `| head` を付けた grep 結果から「該当なし」を結論すると、N 件目以降にある実在の該当を見落とす。網羅性が結論を左右する調査では、先に `wc -l` で件数を確認するか truncate せずに全件を見る必要がある。今回は triage が実測で捕捉したため実害は「誤った Issue を 1 件起票し triage が書き直した」コストに留まったが、triage を経由しない経路 (例えば retrospective の Findings に直接書く) では誤りがそのまま定着しうる。個別の Issue 化ではなく調査手法の自戒として記録する
