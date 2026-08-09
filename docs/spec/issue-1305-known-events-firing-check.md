@@ -66,3 +66,28 @@
 
 ## Consumed Comments
 No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — implemented exactly per the four Implementation Steps (script, bats test, docs/structure.md + docs/ja/structure.md sync, modules/observation-trigger.md Notes addition).
+
+### Design Gaps/Ambiguities
+- N/A — no gaps found during implementation.
+
+### Rework
+- N/A — no rework occurred.
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Implemented `scripts/check-known-events-firing.sh` following the Spec's algorithm exactly: extract `KNOWN_EVENTS` from `scripts/opportunistic-search.sh`, grep for `--event <name>` under `scripts/ skills/ modules/`, exclude lines that are shell comments (leading `#`) or contain `echo`/`printf` as a word, and report any event with zero remaining matches as missing (exit 1) vs. all-present (exit 0).
+- Verified via bats (8 cases) that the false-positive exclusion actually works: an event mentioned only in a comment line or only in an echo/printf usage string is correctly reported as missing, while an event with a real call site is correctly detected even alongside comment/usage noise for the same name.
+- Ran the script against the current `main` state and confirmed exit 0 — all 5 production `KNOWN_EVENTS` entries (`pr-review-full`, `pr-review-light`, `auto-run`, `watchdog-kill`, `fix-cycle`) have real firing sites, consistent with the Issue's corrected Background finding.
+
+### Deferred Items
+- None from this phase — the Issue's own Post-merge AC (`verify-type: manual`) already defers CI wiring to a future new-event-addition PR, and the Spec's Notes already record the pre-existing `modules/verify-classifier.md:40` staleness and this repository's structural limitation (documentation prose mentioning `--event <name>` counts as a real call site) as explicitly out of scope.
+
+### Notes for Next Phase
+- No PR exists for this patch-route Issue — `/verify` should confirm the 3 pre-merge AC (already checked in the Issue body during this phase) and the single `verify-type: manual` post-merge AC remains open until a future `KNOWN_EVENTS` addition PR actually exercises the new script.
