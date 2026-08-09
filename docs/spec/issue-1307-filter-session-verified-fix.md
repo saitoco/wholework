@@ -74,18 +74,18 @@
 - N/A
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- review-light (light mode、4 aspects 統合) を実行し、review-spec/review-bug の fan-out は行わなかった (Issue Size=M、`--light` 明示指定)。
-- CONSIDER 1件 (fail-open 警告メッセージが `--session` を列挙していない) を検出し、`collect-run-facts.sh` の同等メッセージ表記に揃える形でその場で修正した。
+- pre-merge AC gate (`check-pre-merge-ac.sh`) は unchecked_count=0 で PASS、review-incomplete-fallback チェックも matches_expected=true (organic completion) のため、確認なしでマージを実行した。
+- mergeable=true (reason=clean, CI success, review approved) のため conflict resolution (Step 3) はスキップし、直接 squash merge した。
 
 ### Deferred Items
-- Post-merge AC (`event=auto-run session=next`) は次回 `/auto --batch` 実行時に `/verify` が観測する。review フェーズでは検証不能 (設計通り、code フェーズからの申し送り事項を継続)。
+- Post-merge AC (`event=auto-run session=next`) は次回 `/auto --batch` 実行時に `/verify` が観測する。merge フェーズでは検証不能 (設計通り継続)。
 
 ### Notes for Next Phase
-- Pre-merge AC 4件は全て PASS (grep 1件・rubric 2件・CI 参照フォールバック経由の command 1件)。MUST issue なし、CI 全11件 SUCCESS。`/merge 1313` を実行可能。
-- CONSIDER 修正コミット (`scripts/filter-session-verified-issues.sh:55` の警告メッセージ) を追加済み。`/merge` 前に再度 CI が通ることを確認すること。
+- squash merge 完了、リモートブランチ削除済み。Issue #1307 は `closes #1307` により auto-close 対象 (base=main)。
+- `/verify` フェーズでは Post-merge AC の observation イベント (次回 `/auto --batch` end-of-batch scan) の確認を行うこと。
 
 ## review retrospective
 
