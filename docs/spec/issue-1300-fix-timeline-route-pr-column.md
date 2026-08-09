@@ -112,18 +112,29 @@ N/A — Implementation Steps 1〜5 を Spec の記述通りに実装した。
 ### Rework
 N/A — 手戻りなし。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+N/A — review-light (spec deviation 観点) で乖離なし。`_route` 導出 (`ROUTE_MIX` と同じ `has_pr`/`has_patch` パターン) と `PR` 列の検証付き解決 (`skills/verify/SKILL.md` Step 2 と同方式) はいずれも Spec Implementation Steps の記述通りに実装されていた。
+
+### Recurring issues
+N/A — 同種の issue の複数発生はなし。MUST/SHOULD issue はゼロ、CONSIDER 2件 (コメント欠如・API呼び出し量) はいずれも軽微な提案であり修正は見送った。
+
+### Acceptance criteria verification difficulty
+N/A — 6件の Pre-merge AC (rubric ×3, file_not_contains ×1, grep ×1, command ×1) は全て UNCERTAIN なく機械的に PASS 判定できた。`bats --jobs 18 tests/get-auto-session-report.bats` は 17/17 PASS。verify command の記述と実装の対応も明確だった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `_route` 導出は `ROUTE_MIX` (#1289) と同じ `has_pr`/`has_patch` 判定パターンを Timeline 行生成ループ内に直接インライン展開した (共通関数への抽出はスコープ外、Spec Implementation Step 1 の指示通り)。
-- `PR` 列は `skills/verify/SKILL.md` Step 2 と同じ「候補を最大10件取得 → `gh-extract-issue-from-pr.sh` で実 `closes` 参照を検証 → 一致した最初の候補を採用」方式を採用し、JSON パースは python3 ではなく既存の jq 依存に揃えた。
-- `_size` 表示列 (Timeline 行の `M/`, `S/` 部分) は Spec の判断通り `sub_start.size` のまま変更していない (post-spec 確定値への統一はスコープ外)。
+- `--light` 指定により lightweight integrated review (review-light 1 エージェント、全4観点) を実行し、fan-out レビューは行わなかった。
+- MUST/SHOULD issue が存在しないため `event=COMMENT` でレビューを投稿し、`/merge` への進行をブロックしなかった。
+- CONSIDER 2件 (コメント欠如の可読性提案、候補PR検証ループのAPI呼び出し量) はインラインコメントとして記録した上で、いずれも既存パターンに沿った軽微な提案のため修正を見送った。
 
 ### Deferred Items
-- `_size` 表示自体を post-spec の確定 Size に揃える対応 (Spec Notes に明記のスコープ外事項)。
-- 全 bats スイート並列実行時の `tests/post_merge_check.bats` フレーク — 既存 Issue #1308 で追跡済み、本 Issue からの追加対応なし。
+- CONSIDER: `_has_pr`/`_has_patch` 判定に `ROUTE_MIX` ブロックと同様の説明コメントを追加する提案 (scripts/get-auto-session-report.sh:349) — 任意の可読性向上、修正は見送り。
+- CONSIDER: 候補PR検証ループの API 呼び出し量 (scripts/get-auto-session-report.sh:372) — `skills/verify/SKILL.md` Step 2 と同一パターンのため新規の欠陥ではない。
 
 ### Notes for Next Phase
-- Post-merge AC は `verify-type: observation event=auto-run session=next` — 次回 `/auto --batch` 完走後の L3 retrospective で Timeline 表と Route mix の整合、PR 列の正確性を確認する。
-- `tests/get-auto-session-report.bats` の新規2テストは `NO_GITHUB` の有無を使い分けている (PR列テストは `gh` PATH モックが必要なため `--no-github` なし、route テストは `--no-github` で十分)。
+- `/merge 1311` で問題なく進行可能 (MUST issue ゼロ、CI 全11件 SUCCESS、Pre-merge AC 6件 PASS)。
+- Post-merge AC (`verify-type: observation event=auto-run session=next`) は次回 `/auto --batch` 完走後に `/verify` で確認する。
