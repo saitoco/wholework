@@ -108,6 +108,27 @@ landed loads the updated skill. Append `session=next` to the tag to declare this
 Background: `docs/sessions/73536-1785868487-2026-08-04/session.md` § Skill Self-Update Propagation
 Note documents a measured instance of this non-propagation (Issue #1157, condition 7).
 
+### observation Type: Population Definition for Numeric Conditions
+
+When an observation condition's evidence is a count or aggregate (e.g., "the number of X has decreased since a baseline of N"), state the population the count is measured against directly in the condition text — the scan scope (label filter, date range, open/closed state) the number was computed from. Without an explicit population, a later re-measurement under a different scope can produce a materially different number, and even invert the PASS/FAIL verdict for the same underlying change (observed in Issues #1164/#1165/#1158: a baseline of 79 measured within a 90-day window read as an increase to 123 when re-measured all-time, but as a decrease to 18 within that same 90-day window).
+
+**Trade-off — aggregate count vs. individual entity state**: an aggregate count is compact but re-scopable, so its PASS/FAIL verdict depends on a population definition living outside the condition unless the condition states one explicitly. An individual-entity condition (e.g., "confirm Issue #1066 and #1060 are no longer counted; Issues #1059/#709/#548/#442/#441 remain intentionally and are not counted toward the decrease") has nothing to re-scope — it is verifiable as written, with no population definition needed (Issue #1167). **Prefer the individual-entity form** when the set of relevant entities is small and enumerable.
+
+**When an aggregate count cannot be avoided**: state the population explicitly in the condition text itself (label filter, date range, open/closed state) — do not rely on a value recorded elsewhere (e.g., a linked report's own baseline note) to supply it implicitly.
+
+### observation Type: Firing Likelihood Check (before assignment)
+
+Before assigning `verify-type: observation`, confirm the condition text can state two things: which `event=<name>` firing is expected to supply evidence, and what evidence — once that event fires — is sufficient to judge PASS or FAIL. Write both directly into the condition text; do not leave them implicit.
+
+If the condition cannot state the second part — there is no describable evidence a firing of the chosen event would produce, only a hope that a relevant firing eventually occurs — do not assign `observation`. A condition that cannot state its own resolution path either accumulates SKIPPED notifications indefinitely (the event never fires in a way relevant to the condition) or, worse, is judged against evidence the verifier cannot actually observe.
+
+**Alternatives, in order of preference:**
+1. **Resolve now**: if the underlying fact is already knowable at merge time, verify it directly (a pre-merge condition, or an `auto`-type post-merge condition with its own verify command) instead of deferring it to a future event.
+2. **Fall back to `auto`**: if a concrete, mechanically-checkable verify command exists for the condition once the relevant state exists, attach it and classify as `verify-type: auto` instead of `observation`.
+3. **Drop the condition**: if the condition does not correspond to a resolvable gate at all, remove it from the Issue rather than leaving an unresolvable placeholder in `phase/verify`.
+
+**Examples that fail the firing likelihood check** (cannot state evidence-on-fire): a condition assuming a specific downstream skill runs on a particular future `/auto` invocation (no guarantee it does), a condition awaiting "the next PR of a specific shape" (no guarantee the observation window sees one before it closes), a condition awaiting "the next Spec that touches a certain topic" (a Spec's subject matter is not itself an event `opportunistic-search.sh` can dispatch on).
+
 ### Tag Assignment Example
 
 ```markdown
