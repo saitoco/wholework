@@ -75,16 +75,27 @@
 ### Rework
 - None.
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note — review-light (4観点統合) の判定で Spec と PR diff の間に構造的な乖離は見られなかった。Implementation Steps 1〜3 通りの実装。
+
+### Recurring issues
+- Nothing to note — MUST/SHOULD/CONSIDER の指摘は0件。同種の指摘の繰り返しパターンは見られなかった。
+
+### Acceptance criteria verification difficulty
+- Nothing to note — Pre-merge AC 3件はすべて自動判定 (rubric 2件 PASS、command 1件は CI 参照フォールバック経由で PASS) で UNCERTAIN なく完結した。verify command / rubric 文言のいずれも過不足なく機能した。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec の Implementation Steps をそのまま実装。`resolve_filtered_context()` に2つ目の `sed -E` 式 (`--[A-Za-z0-9-]+=[A-Za-z0-9._-]+`) を追加し、パス様トークン除去と同じキャッシュ済み1回のフィルタリングパスで CLI フラグ構文も除去する構成にした。
-- Behavioral Change Detection がヒット (`tests/check-known-events-firing.bats` が `scripts/opportunistic-search.sh` を直接対応テスト外で参照) したため、`bats --jobs 18 tests/` でフルスイート (1654件) を実行し全件 PASS を確認した。
+- Issue Size=M と `--light` 明示指定が整合していたため REVIEW_DEPTH=light を確定し、review-light エージェント1体による4観点統合レビューを実行した。
+- Base Branch Conflict Pre-check (`git merge-tree`) でベースブランチとのコンフリクト (`changed in both`) なしを確認済み。
 
 ### Deferred Items
-- Post-merge AC (`event=pr-review-light session=next` の観測) は本 PR の対象外。次回以降 Issue #476 の `/verify` dispatch 時に自然発火を待つ。
+- Post-merge AC (`event=pr-review-light session=next`) は引き続き次回以降の Issue #476 `/verify` dispatch 時の自然発火待ち。review フェーズでは検証不能 (設計通り継続)。
 
 ### Notes for Next Phase
-- Pre-merge AC 3件は本フェーズ内で verify-executor full mode により PASS 確認済み、Issue #1293 のチェックボックスも更新済み。
-- 追加した2件の bats テスト名には `CLI flag token` という一意な部分文字列を含めてあるため、`bats --filter 'CLI flag token' tests/opportunistic-search.bats` が引き続き有効。
+- MUST issue は0件のため、追加修正なしで `/merge 1314` に進んでよい。
+- CI全11件 SUCCESS、Pre-merge AC3件全て PASS 済み (Issueチェックボックスは code フェーズで既に更新済みのため、review フェーズでの追加更新はなし)。
