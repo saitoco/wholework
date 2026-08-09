@@ -61,3 +61,28 @@
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 内容: `/issue 1307 --non-interactive` (Existing Issue Refinement) の Issue Retrospective。AC1 の verify command を `grep "session" ...` (常時 PASS 欠陥) から `grep -- "--session" ...` (実装後にのみ HIT) へ修正した経緯、Post-merge AC に `session=next` を追加した経緯 (skills/auto/SKILL.md 変更を含むため) を記録。Background の技術的主張は確認済みで修正不要、との申し送りも含む。/ URL: https://github.com/saitoco/wholework/issues/1307#issuecomment-5230556404
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-4 をそのままの順序・内容で実装した。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Steps の記述通り、`collect-run-facts.sh` の `SESSION_ARG` 変数命名・引数パースパターンをそのまま踏襲した。独自の解決順や変数名を導入しなかったため、レビュー時の差分は最小。
+- `skills/auto/SKILL.md` の変更が `tests/auto*.bats` 等 8 ファイル以上から参照されていたため、Step 9 の Behavioral Change Detection に従いフルスイート (`bats --jobs 18 tests/`, 1653件) を実行した。単体テスト (`tests/filter-session-verified-issues.bats`) のみでは検出できない波及影響がないことを確認済み。
+
+### Deferred Items
+- Post-merge AC (`event=auto-run session=next`) は次回 `/auto --batch` 実行時に `/verify` が観測する。今回のセッションでは検証不能 (設計通り)。
+
+### Notes for Next Phase
+- Pre-merge AC 4件は全て PASS 済みでチェック済み。`/review` では追加の rubric 判定は不要と見込まれるが、`skills/auto/SKILL.md` の 2 箇所の文言 (--session 追加位置) を diff で確認すると早い。
+- フルスイート実行は `bats --jobs 18 tests/` で完走 (10分の Bash tool ceiling 内)。ローカル環境で再実行する場合も同じ `--jobs` オプションを使うこと (serial 実行は ceiling を超える可能性がある)。
