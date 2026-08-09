@@ -62,3 +62,40 @@
 
 - saito (MEMBER, first-class) — `/issue 1293 --non-interactive` の Issue Retrospective。Auto-Resolve Log (単語境界マッチが機能しない実機検証結果) を記録。AC 変更なし。https://github.com/saitoco/wholework/issues/1293#issuecomment-5230670606
 - saito (MEMBER, first-class) — Triage AC audit: Pre-merge AC3 の verify command `command "bats tests/opportunistic-search.bats"` が新規カバレッジなしでも常時 PASS するリスクを指摘。`bats --filter` への差し替えを推奨 (本 Spec の Notes・Implementation Step 3 で対応済み)。https://github.com/saitoco/wholework/issues/1293#issuecomment-5230697853
+- `/code 1293 --non-interactive` (code フェーズ): cutoff (`phase/code` ラベル付与時刻 2026-08-09T09:13:45Z) 以降の新規コメントなし。
+
+## Code Retrospective
+
+### Deviations from Design
+- None — Spec の Implementation Steps 1〜3 をそのまま実装した (resolve_filtered_context() への sed -E 式追加とコメント3箇所の更新、observation-trigger.md への段落追加、tests/opportunistic-search.bats への2件のテスト追加)。
+
+### Design Gaps/Ambiguities
+- None — Root Cause 節が却下代替案・採用方針を明確に記録していたため、実装方針で迷う点はなかった。
+
+### Rework
+- None.
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note — review-light (4観点統合) の判定で Spec と PR diff の間に構造的な乖離は見られなかった。Implementation Steps 1〜3 通りの実装。
+
+### Recurring issues
+- Nothing to note — MUST/SHOULD/CONSIDER の指摘は0件。同種の指摘の繰り返しパターンは見られなかった。
+
+### Acceptance criteria verification difficulty
+- Nothing to note — Pre-merge AC 3件はすべて自動判定 (rubric 2件 PASS、command 1件は CI 参照フォールバック経由で PASS) で UNCERTAIN なく完結した。verify command / rubric 文言のいずれも過不足なく機能した。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Issue Size=M と `--light` 明示指定が整合していたため REVIEW_DEPTH=light を確定し、review-light エージェント1体による4観点統合レビューを実行した。
+- Base Branch Conflict Pre-check (`git merge-tree`) でベースブランチとのコンフリクト (`changed in both`) なしを確認済み。
+
+### Deferred Items
+- Post-merge AC (`event=pr-review-light session=next`) は引き続き次回以降の Issue #476 `/verify` dispatch 時の自然発火待ち。review フェーズでは検証不能 (設計通り継続)。
+
+### Notes for Next Phase
+- MUST issue は0件のため、追加修正なしで `/merge 1314` に進んでよい。
+- CI全11件 SUCCESS、Pre-merge AC3件全て PASS 済み (Issueチェックボックスは code フェーズで既に更新済みのため、review フェーズでの追加更新はなし)。
