@@ -83,18 +83,32 @@
 - (code phase) No new comments since last phase.
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec Implementation Step 1 の設計どおり、facts ゲートの `continue` (除外) を除去し、各候補に `_fact_matched` を付与した上でループ完了後に一括で並べ替え+キャップする方式を採用した (逐次除外より、jq の安定ソート非保証を追加順インデックス `_idx` で明示的に補う設計のほうが Spec の要求 (相対順序の保証) に忠実だったため)
-- `FACTS_CANDIDATE_LIMIT=30` は新規測定値ではなく `scan-pending-ac.sh` の `MAX_CANDIDATES` 既定値を踏襲 (Spec Notes 参照)
-- truncation メッセージは `scan-pending-ac.sh` の `Note: truncated ...` 形式を踏襲し、非サイレントな stderr 出力とした
+- レビューで SHOULD 相当の指摘 (`scripts/opportunistic-search.sh:500` の `FACTS_CANDIDATE_LIMIT` 再順序化+キャップ処理が `EVENT_NAME` でガードされておらず、`--event`+`--facts` 同時指定時にヘッダーコメントの「Ignored in event mode」契約に反し得る) を確認・修正した。364行目の既存一致判定と同じ `[ -z "$EVENT_NAME" ]` ガードを追加し、契約とコードを一致させた
+- 修正の妥当性検証のため、35候補のイベントモード母集団で `FACTS_CANDIDATE_LIMIT` (30) を超えてもトランケートされないことを確認する回帰テストを追加した
+- Pre-merge AC 4件は全て PASS と判定 (rubric による `opportunistic-verify.md` の記述確認、grep による `FACTS_CANDIDATE_LIMIT` 実装確認、CI job `Run bats tests` SUCCESS を根拠とした safe mode でのコマンドヒント2件の代替検証)
 
 ### Deferred Items
-- Post-merge observation AC (`session=next` の `/verify` で opportunistic 候補が 0 件になった場合、真に候補なしであることを確認) は未着手 — 次回以降の `/verify` 実行で評価される
-- `scripts/scan-pending-ac.sh` の同型パターン (Spec Notes に記載のスコープ外項目) は本 Issue のスコープ外のまま。別途 Issue化を検討する余地あり
+- Post-merge observation AC (`session=next` の `/verify` で opportunistic 候補が 0 件になった場合、真に候補なしであることを確認) は未着手のまま — 次回以降の `/verify` 実行で評価される (code フェーズから変更なし)
+- `scripts/scan-pending-ac.sh` の同型パターン (Spec Notes に記載のスコープ外項目) は本 Issue のスコープ外のまま (code フェーズから変更なし)
 
 ### Notes for Next Phase
-- Pre-merge AC 4件は全て verify command 実行で PASS 済み、Issue body のチェックボックスも更新済み
-- Spec からの実装乖離なし (Deviations from Design は N/A)
-- `bats tests/opportunistic-search.bats` は全 55 件 PASS (新規テスト2件を含む)
+- レビューは `COMMENT` (MUST issue 0件) で投稿。SHOULD issue 1件はレビューフェーズ内で修正・commit・push 済み (commit a8b70ee9)
+- 修正後の再検証: `python3 scripts/validate-skill-syntax.py skills/` 0 error/warning、`bats tests/opportunistic-search.bats` 全56件 PASS (新規1件を含む)
+- 修正は防御的ガード追加のみで AC/Spec の意味に変更はない (Step 13 ポリシー変更チェックはスキップ)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Spec と PR diff の間に構造的な乖離はなかった。Implementation Steps 1〜4 の記載順どおりに実装されており、Code Retrospective の "Deviations from Design: N/A" は妥当だった。
+
+### Recurring issues
+
+review-light エージェントが検出した SHOULD issue (`FACTS_CANDIDATE_LIMIT` 再順序化+キャップ処理の `EVENT_NAME` ガード漏れ) は、本 PR 自身が新規に導入したコードの中で、既存の類似ガード (364行目の一致判定) と新規追加箇所 (500行目のキャップ処理) の間で防御条件が非対称になったパターン。同一 PR 内で「同じ条件を複数箇所でガードする必要がある変更」を行う際、一箇所にガードを追加してもう一箇所に追加し忘れるのは再発しうる。今回は現状の呼び出し元では到達不能な潜在バグだったため実害は限定的だが、ヘッダーコメント (ドキュメント) の記述と実装が食い違う形で顕在化した点は、ドキュメント記述をレビューの検証観点として使う (review-spec の documentation consistency perspective) ことの有効性を示す一例。
+
+### Acceptance criteria verification difficulty
+
+4件の Pre-merge AC はいずれも verify command が明確で、機械判定 (rubric / grep / CI job 参照によるコマンドヒント代替検証) で PASS/FAIL を一意に判定できた。UNCERTAIN は発生しなかった。`command` 系 AC 2件 (bats 個別テスト実行・全体実行) は safe mode では直接実行できず CI job `Run bats tests` への参照フォールバックで代替したが、CI ジョブがテストスイート全体を実行する構成であることが前提になっており、AC が指す個別テスト名までは CI ジョブ名からは判別できない (ジョブが SUCCESS であることから包含関係で類推している)。今回は問題にならなかったが、個別テストの粒度で PASS/FAIL を判別する必要がある AC には、コマンドヒントに `-f` フィルタを含める設計自体は妥当だった。
