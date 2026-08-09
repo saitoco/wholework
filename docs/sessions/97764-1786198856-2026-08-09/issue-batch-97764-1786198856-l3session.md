@@ -8,4 +8,4 @@ Bridge file for `modules/retro-proposals.md` interface compatibility (batch rout
 
 N/A
 
-(All findings in `session.md` are tagged `[Resolved directly: ...]` or `[No action: ...]` — handled via addenda to existing Issues (#1251 #1270 #1279 #1285), Spec records, or accepted as spec-conformant behaviour. The two Issues filed during this session (#1288, #1292) came from per-Issue `/verify` retrospectives and are tracked in those Issues' own Spec files.)
+(All findings in `session.md` are tagged `[Filed: #N]` or `[No action: ...]`. The three filed findings — #1304, #1305, #1307 — were created by the per-Issue `/verify` retrospectives during the session and are tracked in those Issues' own Spec files. The remaining findings were handled via addenda to existing Issues (#1251 #1270 #1279 #1285 #1289 #1300), Spec records, or accepted as spec-conformant behaviour.)
