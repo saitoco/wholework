@@ -74,15 +74,26 @@
 - N/A
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Spec Implementation Steps の記述通り、`collect-run-facts.sh` の `SESSION_ARG` 変数命名・引数パースパターンをそのまま踏襲した。独自の解決順や変数名を導入しなかったため、レビュー時の差分は最小。
-- `skills/auto/SKILL.md` の変更が `tests/auto*.bats` 等 8 ファイル以上から参照されていたため、Step 9 の Behavioral Change Detection に従いフルスイート (`bats --jobs 18 tests/`, 1653件) を実行した。単体テスト (`tests/filter-session-verified-issues.bats`) のみでは検出できない波及影響がないことを確認済み。
+- review-light (light mode、4 aspects 統合) を実行し、review-spec/review-bug の fan-out は行わなかった (Issue Size=M、`--light` 明示指定)。
+- CONSIDER 1件 (fail-open 警告メッセージが `--session` を列挙していない) を検出し、`collect-run-facts.sh` の同等メッセージ表記に揃える形でその場で修正した。
 
 ### Deferred Items
-- Post-merge AC (`event=auto-run session=next`) は次回 `/auto --batch` 実行時に `/verify` が観測する。今回のセッションでは検証不能 (設計通り)。
+- Post-merge AC (`event=auto-run session=next`) は次回 `/auto --batch` 実行時に `/verify` が観測する。review フェーズでは検証不能 (設計通り、code フェーズからの申し送り事項を継続)。
 
 ### Notes for Next Phase
-- Pre-merge AC 4件は全て PASS 済みでチェック済み。`/review` では追加の rubric 判定は不要と見込まれるが、`skills/auto/SKILL.md` の 2 箇所の文言 (--session 追加位置) を diff で確認すると早い。
-- フルスイート実行は `bats --jobs 18 tests/` で完走 (10分の Bash tool ceiling 内)。ローカル環境で再実行する場合も同じ `--jobs` オプションを使うこと (serial 実行は ceiling を超える可能性がある)。
+- Pre-merge AC 4件は全て PASS (grep 1件・rubric 2件・CI 参照フォールバック経由の command 1件)。MUST issue なし、CI 全11件 SUCCESS。`/merge 1313` を実行可能。
+- CONSIDER 修正コミット (`scripts/filter-session-verified-issues.sh:55` の警告メッセージ) を追加済み。`/merge` 前に再度 CI が通ることを確認すること。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note — Implementation Steps 1-4 通りの実装で、Spec と PR diff の間に構造的な乖離はなかった。
+
+### Recurring issues
+- Nothing to note — review-light (4 aspects 統合) で検出された指摘は CONSIDER 1件のみ (fail-open 警告メッセージが `--session` を列挙していない、ドキュメント一貫性の観点)。同種の指摘の繰り返しパターンは見られなかった。
+
+### Acceptance criteria verification difficulty
+- Nothing to note — Pre-merge AC 4件はすべて自動判定 (grep 1件 PASS、rubric 2件 PASS、CI 参照フォールバック経由の command 1件 PASS) で UNCERTAIN なく完結した。verify command / rubric 文言のいずれも過不足なく機能した。
