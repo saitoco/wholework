@@ -495,9 +495,11 @@ done
 # ahead of unmatched ones (stable within each group via the original array index as the
 # secondary sort key -- jq's sort_by is not guaranteed stable), then apply
 # FACTS_CANDIDATE_LIMIT as a population-size safety valve. Skipped entirely when --facts
-# was not given (FACT_TOKENS_LOWER empty): the pre-#1285 unlimited, unordered output is
-# preserved unchanged in that case.
-if [ -n "$FACT_TOKENS_LOWER" ]; then
+# was not given (FACT_TOKENS_LOWER empty) or in event mode: the pre-#1285 unlimited,
+# unordered output is preserved unchanged in that case. Same [ -z "$EVENT_NAME" ] guard as
+# the matching logic above (line ~364), so --facts is fully ignored in event mode as
+# documented -- both the ordering and the candidate cap.
+if [ -z "$EVENT_NAME" ] && [ -n "$FACT_TOKENS_LOWER" ]; then
     TOTAL_COUNT=$(echo "$RESULTS" | jq 'length')
     RESULTS=$(echo "$RESULTS" | jq -c \
         --argjson limit "$FACTS_CANDIDATE_LIMIT" \

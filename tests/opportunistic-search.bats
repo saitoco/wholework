@@ -696,6 +696,23 @@ teardown() {
     echo "$output" | jq -e '.[0].number == 804' > /dev/null
 }
 
+@test "fact gate: FACTS_CANDIDATE_LIMIT cap is also ignored in event mode (no truncation above the limit)" {
+    ISSUE_LIST="[]"
+    for i in $(seq 1 35); do
+        NUM=$((900 + i))
+        ISSUE_LIST=$(echo "$ISSUE_LIST" | jq --argjson n "$NUM" '. + [{"number": $n}]')
+        export "MOCK_ISSUE_BODY_${NUM}=## Post-merge
+- [ ] observed candidate ${NUM} <!-- verify-type: observation event=auto-run -->"
+    done
+    export MOCK_ISSUE_LIST="$ISSUE_LIST"
+    echo '{"session_id":"s1","issues":[{"number":1,"fact_tokens":["token-not-in-condition"]}]}' > "$BATS_TEST_TMPDIR/facts.json"
+
+    run bash "$SCRIPT" --event auto-run --facts "$BATS_TEST_TMPDIR/facts.json"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 35' > /dev/null
+    [[ "$output" != *"Note: truncated"* ]]
+}
+
 @test "population: gh issue list is called with --state all, not --state closed (issue #1242)" {
     export MOCK_ISSUE_LIST="[]"
     run bash "$SCRIPT" /issue
