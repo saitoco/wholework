@@ -74,3 +74,41 @@ N/A
 ### Notes for Next Phase
 - テスト実行時に `tests/post_merge_check.bats` で 1 件の一過性 FAIL を観測したが、単独実行・2 回目のフルスイート実行ではいずれも PASS しており、本 Issue の変更とは無関係な並列実行時の flake と判断済み。`/review`/`/verify` で再現した場合はこの記録を参照。
 - 実装は `skills/triage/skill-dev-verify-audit.md` のプローズ追加のみで、対応する bats テストファイルは存在しない (Spec Notes 「テストファイル非該当」参照)。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- Step 15 の AC 監査は所見なし (Pattern 1〜6 いずれにも非該当)。本 Issue の AC は起票時にベースラインを実測してから書いたため (`grep "既存テストファイル"` = 0 件、`grep -- "--filter"` = 0 件)、判別可能な形になっていた
+- 既存コメントで重複候補として挙がっていた **#1251** への相互参照を Related に追加。#1251 は「rubric の参照ファイル・数値 AC の母集団定義を AC に含める規約」を扱う Issue で、本 Issue (`command` 型の常時 PASS 検出) とは対象が異なる。重複ではなく隣接として処理された判断は妥当
+
+#### spec
+
+- AC が要求した検出条件・除外条件・Fix options・根拠の記録をすべて満たす形でサブパターンを設計。プローズ追加のみで対応する bats テストが存在しないことを Notes に明記し、テスト追加 AC を立てない判断を残した
+- patch route 用に `github_check "gh run list ..."` 形式の CI AC を追加 (起票時は route 未確定のため意図的に含めなかったもの)
+
+#### code
+
+- `skills/triage/skill-dev-verify-audit.md` のプローズ追加のみ。rework ゼロ
+- Step 9 のテスト実行で `tests/post_merge_check.bats` に一過性 FAIL を観測したが、単独実行と 2 回目のフルスイートで PASS を確認し並列実行フレークと判断。#1301 の code フェーズでも同一ファイルの並列フレークが観測されており (#1308 で追跡中)、本セッションで 2 件目
+
+#### review
+
+- patch route のため `/review` フェーズは実行されていない
+
+#### merge
+
+- patch route の直コミット。コンフリクト・CI 失敗なし
+
+#### verify
+
+- Pre-merge 4 件は既チェックのため skip、CI の 1 件は実測して PASS。post-merge の observation 1 件は `auto-run` 未発火で SKIPPED。FAIL・UNCERTAIN ゼロ
+- CI run の同一性を確認した: `--limit=1` が返した run (headSha `92130e95`) は並行セッション (#1304) の commit だが main は線形で本 Issue の実装 `7ffc4c07` を含み、本 Issue 自身の commit (`02476619`) の run も独立に green だった
+- 追加されたサブパターンの実体を確認した (`:80-96`)。検出手順 (a)-(c) に加え、除外条件 (d) が「既存スイート全体を走らせる回帰保護 AC 自体は正当であり禁止しない」と明記されている。Fix options 3 件、根拠として #1279 (検出成功) と **#1287 (検出漏れ)** の両方を引用。検出漏れ側の実例が文書内に残ることで、本 Issue の根拠が「実行者の注意深さのばらつき」ではなく「パターン文書の被覆漏れ」であることが後から追える
+- **本 Issue の主張を裏づける追加事例が同一セッションで発生した**: 起票直後に処理した #1301 の AC (これも `/verify` の L3 retrospective が起草) にも `/issue` Step 15 が常時 PASS を 1 件検出している。always-PASS を 7 件指摘した直後の起票に同じ欠陥クラスが混入しており、根因が個々の実行者の注意深さでないことの実例として #1301 の Verify Retrospective にも記録済み
+
+### Improvement Proposals
+
+- N/A — 本 Issue が対処した被覆漏れ以外に、本実行から新たに派生する構造的な改善点は検出されなかった。`tests/post_merge_check.bats` の並列実行フレークは #1308 が既に追跡している
