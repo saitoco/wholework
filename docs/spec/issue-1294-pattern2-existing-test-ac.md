@@ -44,3 +44,33 @@
 - **SPEC_DEPTH=light (Size S) のため Step 7 (Ambiguity Resolution) / Step 8 (Uncertainty Identification) はスキップ。** `/issue` フェーズの Issue Retrospective (Consumed Comments 参照) が既に曖昧性検出 0 件・AC 監査クリーンと報告しており、本 Spec はその結果をそのまま踏襲する。
 - **UI Design Phase 非該当**: 本 Issue はドキュメント (Domain file) の記述追加のみであり、UI 要素は一切含まない (`skills/spec/figma-design-phase.md` の適用除外条件に合致)。
 - **テストファイル非該当**: `skill-dev-verify-audit.md` は LLM が読む prose 形式の Domain file であり、対応する bats テストファイルは存在しない (`tests/` 配下に該当ファイルなし)。挙動の検証は Post-merge の observation AC (次回 `/triage`/`/issue` 実行時の実観測) が担う。
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Spec の Implementation Steps 通り、Pattern 2 の「exit code 設計に起因する常時 PASS」サブパターン直後・`section_contains`/`section_not_contains` 型サブパターン直前に新規サブパターンを挿入した。
+
+### Design Gaps/Ambiguities
+
+N/A
+
+### Rework
+
+- 実装コミット自体に手戻りはない。テストフェーズで `bats --jobs 18 tests/` の 1 回目実行時に `tests/post_merge_check.bats` の `fail: gh issue reopen called when FAIL input given` が 1 件 FAIL したが、`bats tests/post_merge_check.bats` の単独実行および 2 回目のフルスイート並列実行ではいずれも PASS した。本 Issue の変更対象 (`skills/triage/skill-dev-verify-audit.md`) とは無関係なファイルであり、`--jobs` 並列実行時の一時的な競合 (flake) と判断し、実装への手戻りは発生していない。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- 新規サブパターンは既存の「exit code 設計に起因する常時 PASS (`command` 型 AC)」サブパターンの直後・`section_contains`/`section_not_contains` 型サブパターンの直前に挿入した (Spec Notes の判断根拠を踏襲)。
+- 判別語「既存テストファイル」と Fix options 内の `bats --filter` は Issue 本文の AC 文言・grep 対象と完全一致させ、grep 型 AC (2, 4) を確実に PASS させる形にした。
+- Pre-merge AC 5 件のうち CI AC (`gh run list --workflow=test.yml ...`) は patch route の branch-scoped CI AC 除外規則により未チェックのまま残した (`/verify` が post-merge で評価)。
+
+### Deferred Items
+- CI (test.yml) green の確認 — `/verify` が post-merge で評価する (Issue 本文 Pre-merge AC 5 件目、現状 `- [ ]`)。
+- Post-merge observation AC (次回 `/triage`/`/issue` が `command "bats <既存ファイル>"` 形式の AC を処理した際の実観測) — 次回セッションでの自然発生を待つ。
+
+### Notes for Next Phase
+- テスト実行時に `tests/post_merge_check.bats` で 1 件の一過性 FAIL を観測したが、単独実行・2 回目のフルスイート実行ではいずれも PASS しており、本 Issue の変更とは無関係な並列実行時の flake と判断済み。`/review`/`/verify` で再現した場合はこの記録を参照。
+- 実装は `skills/triage/skill-dev-verify-audit.md` のプローズ追加のみで、対応する bats テストファイルは存在しない (Spec Notes 「テストファイル非該当」参照)。
