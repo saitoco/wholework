@@ -27,11 +27,11 @@ VERIFY_EXECUTOR="$PROJECT_ROOT/modules/verify-executor.md"
 }
 
 @test "ci-failure-classifier: verify SKILL.md does not duplicate the signature table" {
-    ! grep -q "The runner has received a shutdown signal" "$VERIFY_SKILL"
+    if grep -q "The runner has received a shutdown signal" "$VERIFY_SKILL"; then false; fi
     grep -q "modules/ci-failure-classifier.md" "$VERIFY_SKILL"
 }
 
 @test "ci-failure-classifier: verify-executor.md does not duplicate the signature table" {
-    ! grep -q "The runner has received a shutdown signal" "$VERIFY_EXECUTOR"
+    if grep -q "The runner has received a shutdown signal" "$VERIFY_EXECUTOR"; then false; fi
     grep -q "modules/ci-failure-classifier.md" "$VERIFY_EXECUTOR"
 }

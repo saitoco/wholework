@@ -303,7 +303,7 @@ MOCK
     run bash "$SCRIPT" 123
     unset EMIT_PHASE_NAME
     [ "$status" -eq 0 ]
-    ! grep -q "phase_start" "$EMIT_LOG"
+    if grep -q "phase_start" "$EMIT_LOG"; then false; fi
     ! grep -q "phase_complete" "$EMIT_LOG"
 }
 
@@ -336,7 +336,7 @@ MOCK
     run bash "$SCRIPT" 123
     unset EMIT_PHASE_NAME
     [ "$status" -eq 0 ]
-    ! grep -q "wrapper_exit" "$EMIT_LOG"
+    if grep -q "wrapper_exit" "$EMIT_LOG"; then false; fi
     ! grep -q "token_usage" "$EMIT_LOG"
 }
 

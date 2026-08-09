@@ -510,7 +510,7 @@ teardown() {
     unset WHOLEWORK_SCRIPT_DIR
     [ "$status" -eq 0 ]
     [ -f "$MOCK_DIR/collect-run-facts-args.txt" ]
-    ! grep -q -- "--session\|--facts-file" "$MOCK_DIR/collect-run-facts-args.txt"
+    if grep -q -- "--session\|--facts-file" "$MOCK_DIR/collect-run-facts-args.txt"; then false; fi
     echo "$output" | jq -e 'length == 1' > /dev/null
     echo "$output" | jq -e '.[0].number == 712' > /dev/null
 }

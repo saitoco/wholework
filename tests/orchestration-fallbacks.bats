@@ -89,7 +89,7 @@ ARCHIVE="$PROJECT_ROOT/docs/reports/orchestration-fallbacks-archive.md"
 }
 
 @test "orchestration-fallbacks: archived anchors are absent from live catalog" {
-    ! grep -q '^## ci-flake-retry' "$CATALOG"
+    if grep -q '^## ci-flake-retry' "$CATALOG"; then false; fi
     ! grep -q '^## gh-pr-list-head-glob' "$CATALOG"
 }
 

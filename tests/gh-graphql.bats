@@ -66,7 +66,7 @@ teardown() {
         -F owner=myowner -F repo=myrepo
     [ "$status" -eq 0 ]
     # gh repo view should NOT have been called
-    ! grep -q "repo view" "$GH_CALL_LOG"
+    if grep -q "repo view" "$GH_CALL_LOG"; then false; fi
     # explicit owner/repo should be used
     grep -q "api graphql.*-F owner=myowner" "$GH_CALL_LOG"
     grep -q "api graphql.*-F repo=myrepo" "$GH_CALL_LOG"
@@ -237,9 +237,9 @@ cache_teardown() {
     run bash "$SCRIPT" --cache 'query{viewer{login}}'
     [ "$status" -eq 0 ]
     # gh api graphql should NOT have been called
-    ! grep -q "api graphql" "$GH_CALL_LOG"
+    if grep -q "api graphql" "$GH_CALL_LOG"; then false; fi
     # gh repo view should NOT have been called (repo-info cached)
-    ! grep -q "repo view" "$GH_CALL_LOG"
+    if grep -q "repo view" "$GH_CALL_LOG"; then false; fi
     cache_teardown
 }
 
@@ -283,7 +283,7 @@ cache_teardown() {
     run bash "$SCRIPT" --cache 'query{viewer{login}}'
     [ "$status" -eq 0 ]
     # gh repo view should NOT have been called (repo-info still cached)
-    ! grep -q "repo view" "$GH_CALL_LOG"
+    if grep -q "repo view" "$GH_CALL_LOG"; then false; fi
     # gh api graphql SHOULD have been called (query cache was deleted)
     grep -q "api graphql" "$GH_CALL_LOG"
     cache_teardown
@@ -330,6 +330,6 @@ MOCK
     # Should return filtered result
     [[ "$output" == *"ok"* ]]
     # API should not have been called
-    ! grep -q "api graphql" "$GH_CALL_LOG"
+    if grep -q "api graphql" "$GH_CALL_LOG"; then false; fi
     cache_teardown
 }
