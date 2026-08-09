@@ -135,3 +135,39 @@ N/A — 6件の Pre-merge AC (rubric ×3, file_not_contains ×1, grep ×1, comma
 
 ### Notes for Next Phase
 - Post-merge AC (`verify-type: observation event=auto-run session=next`) は次回 `/auto --batch` 完走後に `/verify 1300` で確認する。Timeline 表の `Size/Route` 列と `Route mix` の集計、`PR` 列と実 PR の一致を観察すること。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- **同一 batch で直前に着地した #1294 の Pattern 2 サブパターンが実際に機能した**: Step 15 の監査が「全 6 件の Pre-merge AC が意図通り機能することを main ブランチに対する空撃ちで確認」と報告している。これは #1294 が追加した検出手順 (b) そのもので、かつ回帰保護と明示した `command "bats tests/get-auto-session-report.bats"` AC は除外条件 (d) により正しく指摘されていない (コメント投稿なし)。追加したパターンが誤検出も検出漏れも起こさずに動作した最初の実例
+- **起票側 (`/verify 1289` の L3 retrospective) の想定漏れを 1 件補正した**: 起票時の AC5 は「post-spec で Size が**降格**した Issue」のフィクスチャのみを要求していたが、フォローアップの実測で #1251 (M→S 降格) と **#1292 (S→M 昇格)** の双方で Timeline 行が誤 route を報告することが判明し、AC5 を「昇格・降格の両方向」へ拡張した。私が観測した実例 (#1256 の M→XS 降格) が降格側だけだったため、起票時のスコープが片側に偏っていた
+- AC2 の verify command を jq クエリ文字列マッチから、実際に route 判定を行っている `case "$_size" in ... esac` ブロックの検出へ精緻化 (偽陰性リスクの低減)
+
+#### spec
+
+- 根本原因の異なる 2 欠陥 (値のスナップショット時点の取り違え / 全文検索結果の無検証採用) を 1 Issue で扱う構成を維持しつつ、それぞれに独立した AC とテストを設計した
+
+#### code
+
+- `scripts/get-auto-session-report.sh` 24 行・`tests/get-auto-session-report.bats` 62 行の変更。rework ゼロ
+
+#### review
+
+- review-light の 4 観点すべてで指摘 0 件 (MUST: 0 / SHOULD: 0)。MUST 指摘がなかったため `REQUEST_CHANGES` は試行されず、#1256 の自己 PR 422 フォールバックは本 PR では発火していない
+
+#### merge
+
+- PR #1311 を squash merge。コンフリクト・CI 失敗なし
+
+#### verify
+
+- Pre-merge 6 件は既チェックのため skip、post-merge の observation 1 件は `auto-run` 未発火で SKIPPED。FAIL・UNCERTAIN ゼロ
+- **修正の効果を実データで確認した**: 本セッションの Timeline 表は #1294 = `S/patch` / PR `—`、#1300 = `M/pr` / PR `#1311`、#1301 = `S/patch` / PR `—` を報告し、3 行すべてが実態と一致した。前セッション (`23043-1786197225`) では 7 行中 3 行の PR 列が誤りだった
+- **同表で別系統の欠陥を発見した** (下記 Improvement Proposals)
+
+### Improvement Proposals
+
+- **レポートの silent-window 警告閾値が `.wholework.yml` の phase timeout override を読まない (Tier 1 — 起票)**: `scripts/get-auto-session-report.sh:26` は `SILENT_THRESHOLD_SPEC=$(( ${WATCHDOG_TIMEOUT_SPEC_DEFAULT:-1800} - SILENT_MARGIN ))` のように `scripts/watchdog-defaults.sh` のグローバル既定値から警告閾値を計算しており、`.wholework.yml` の project override を解決していない。実際の watchdog は `run-*.sh` が `load_watchdog_timeout()` 経由で config を読むため、**警告基準と実 kill 基準が乖離する**。本セッションの Timeline は #1301 の spec 行に `Silent 1310s phase=spec (within 600s of watchdog limit)` を出したが、#1301 が設定した `watchdog-timeout-spec-seconds: 2340` に対する余裕は 1030s ある。この repo は code (7200s / 既定 4680s) も override しており同じ乖離が生じる。Tier 1 の根拠は (b) 本セッション内で同一スクリプトの測定精度欠陥として #1279 / #1289 / #1300 に続く 4 件目であること、(c) 同スクリプトが `skills/auto/SKILL.md` Step 5 と `skills/audit/SKILL.md` の 2 skill が消費する測定 SSoT であること。加えて **#1301 の post-merge AC (「`within 600s of watchdog limit` の警告が spec 行に出ない」ことの観察) は本修正なしには恒久的に達成不能**であり、既存 Issue の検証可能性を直接ブロックしている
