@@ -295,3 +295,65 @@ FIXTURE_EOF
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "Route mix.*patch: 0, pr: 0, xl: 1, unknown: 1"
 }
+
+@test "Timeline PR column: unrelated closes-reference candidate is rejected, column shows —" {
+    # Models the real miss-hit observed in session 23043-1786197225: `gh pr list --search
+    # "closes #1266"` returned PR #1090, but #1090 actually closes #1061 (an unrelated Issue).
+    # The verified-closes-reference resolution must reject the candidate and keep the — default.
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-08-08T14:46:59Z","issue":1266,"event":"sub_start","session_id":"session-prcheck","size":"S"}
+{"ts":"2026-08-08T14:50:00Z","issue":1266,"event":"phase_start","session_id":"session-prcheck","phase":"code-patch"}
+{"ts":"2026-08-08T14:55:00Z","issue":1266,"event":"phase_complete","session_id":"session-prcheck","phase":"code-patch"}
+FIXTURE_EOF
+
+    MOCK_DIR="$BATS_TEST_TMPDIR/mocks"
+    mkdir -p "$MOCK_DIR"
+    cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$1" == "pr" && "$2" == "list" ]]; then
+    echo "1090"
+    exit 0
+fi
+if [[ "$1" == "pr" && "$2" == "view" ]]; then
+    echo '{"body":"closes #1061","title":"Issue #1061: unrelated fix","baseRefName":"main"}'
+    exit 0
+fi
+if [[ "$1" == "issue" && "$2" == "view" ]]; then
+    if [[ "$*" == *"body,title"* ]]; then
+        echo '{"body":"","title":"#1266"}'
+    else
+        echo ""
+    fi
+    exit 0
+fi
+exit 0
+MOCK_EOF
+    chmod +x "$MOCK_DIR/gh"
+    export PATH="$MOCK_DIR:$PATH"
+
+    run bash "$SCRIPT" "session-prcheck" --metrics-only
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "| #1266 | S/patch |"
+    row="$(echo "$output" | grep "| #1266 |")"
+    if [[ "$row" == *"#1090"* ]]; then false; fi
+    [[ "$row" == *"| — |"* ]]
+}
+
+@test "Timeline route: Size downgrade and upgrade fixtures report executed-phase route in the row" {
+    # Real-world downgrade/upgrade route mismatches (session 97764-1786198856):
+    # #1251 sub_start'd at Size M but /spec demoted it to S and it ran code-patch;
+    # #1292 sub_start'd at Size S but /spec promoted it to M and it ran code-pr.
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"ts":"2026-08-09T10:00:00Z","issue":1251,"event":"sub_start","session_id":"session-sizeflip","size":"M"}
+{"ts":"2026-08-09T10:05:00Z","issue":1251,"event":"phase_start","session_id":"session-sizeflip","phase":"code-patch"}
+{"ts":"2026-08-09T10:28:00Z","issue":1251,"event":"phase_complete","session_id":"session-sizeflip","phase":"code-patch"}
+{"ts":"2026-08-09T11:00:00Z","issue":1292,"event":"sub_start","session_id":"session-sizeflip","size":"S"}
+{"ts":"2026-08-09T11:05:00Z","issue":1292,"event":"phase_start","session_id":"session-sizeflip","phase":"code-pr"}
+{"ts":"2026-08-09T11:23:00Z","issue":1292,"event":"phase_complete","session_id":"session-sizeflip","phase":"code-pr"}
+FIXTURE_EOF
+
+    run bash "$SCRIPT" "session-sizeflip" --metrics-only --no-github
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "| #1251 | M/patch |"
+    echo "$output" | grep -q "| #1292 | S/pr |"
+}
