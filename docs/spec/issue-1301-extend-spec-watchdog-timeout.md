@@ -91,3 +91,40 @@ N/A
 ### Notes for Next Phase
 - Step 9 のフル並列テストで `tests/post_merge_check.bats` が FAIL したが、本 Issue の変更とは無関係の既知の並列実行フレーク (#1308 で追跡済み) であることを確認済み。`/review`/`/verify` で再度この FAIL を見ても本 Issue の regression として扱わないこと
 - Pre-merge AC 2 件は grep / rubric とも PASS 済みでチェック済み。Post-merge AC 1 件は `/verify` フェーズで扱う
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- **Step 15 の AC 監査が、起票側 (`/verify 1289` の L3 retrospective) が書いた AC の不備 2 件を検出した**。うち AC4 (`load_watchdog_timeout()` の解決経路で読まれることの確認) の常時 PASS 指摘は正確 — 同関数は任意の phase key を汎用的に解決する設計のため、AC1 が満たされた時点で自動的に真になり独立した検証シグナルを持たない
+- もう 1 件 (AC3 の rubric が「Spec に記載されている」ことを根拠にしており、`modules/verify-executor.md` の grader 入力仕様上 Spec ファイルが渡らないという指摘) は、**仕様上は正しいが実測とは食い違う**。同型の rubric は本セッションで 3 件先行しており (#1279 AC2 / #1279 AC3 / #1289 AC3)、いずれも PASS 判定されている。Spec ファイルは同一ブランチ上のコミットとして git diff に含まれるため、実際には grader が参照できていたと考えられる。指摘としては保守側に倒れた形
+
+#### spec
+
+- 監査コメントの 2 件をいずれも解消した。AC3 は判断の記録先を Spec から `.wholework.yml` のコメントへ移して AC2 の rubric に統合 (config は git diff に確実に含まれるため grader 入力として堅牢)、AC4 は削除。Pre-merge AC は 4 件 → 2 件に整理され、両方とも判別可能な形になった
+- 採用値 2340s の導出が定量的: 既定 1800s に #903 の再較正パスと同じ ×1.3 係数を適用し、直近実測 1790s に対して 76.5% (再較正トリガー閾値 80% 未満) を確認している
+- global default ではなく project override に留めた判断も、実測数 (本 repo 2 セッション vs #903 の code n=10 / review n=9) と先例 (PR #1201 override → #939 で global 昇格) の 2 軸で根拠づけられている
+
+#### code
+
+- `.wholework.yml` 1 ファイルの変更で完結。Step 9 のフル並列テストで `tests/post_merge_check.bats` が FAIL したが、本 Issue と無関係の既知の並列実行フレーク (#1308 で追跡) と確認済み
+
+#### review
+
+- patch route のため `/review` フェーズは実行されていない
+
+#### merge
+
+- patch route の直コミット。コンフリクト・CI 失敗なし
+
+#### verify
+
+- Pre-merge 2 件は既チェックのため skip、post-merge の observation 1 件は `auto-run` 未発火で SKIPPED。FAIL・UNCERTAIN ゼロ
+- 本 Issue 自身の spec フェーズは変更着地前 (既定 1800s) に走っているため観察対象外。同一 batch の後続 3 件 (#1294 / #1300 / #1293) の spec フェーズが 2340s 下で実行されるため、batch 完走時の `auto-run` 発火後にその実測で評価できる
+
+### Improvement Proposals
+
+- **AC 監査の「常時 PASS」検出が起票者自身の AC にも適用され機能した (Tier 3 — 記録のみ)**: 本 Issue の AC は `/verify 1289` の L3 retrospective が起草したもので、同セッションでは他 Issue の always-PASS を 7 件指摘していた。それにもかかわらず自らの起票に同じ欠陥クラス (AC4 の常時 PASS) を混入させている。これは #1294 が主張する「根因は実行者の注意深さではなく `skills/triage/skill-dev-verify-audit.md` Pattern 2 の被覆漏れ」という見立てを補強する実例である。#1294 で対処済みのため単独の起票は不要
+- **rubric の grader 入力範囲に関する監査指摘は保守側に倒れうる (Tier 3 — 記録のみ)**: 「Spec に記載されている」型の rubric を恒久 UNCERTAIN/FAIL リスクとする指摘は、`modules/verify-executor.md` の記述上は正しいが、Spec ファイルが同一ブランチの git diff に含まれるため実際には grader が参照できる (本セッションの #1279 AC2/AC3、#1289 AC3 がいずれも PASS)。指摘に従った `/spec` の修正 (記録先を config コメントへ移動) は結果的により堅牢だが、同型の指摘が頻発して不要な AC 書き換えを誘発する場合は `verify-executor.md` の grader 入力記述に「対象ファイルが diff に含まれる場合」の但し書きを足す判断がありうる。現時点では 1 件のため記録に留める
