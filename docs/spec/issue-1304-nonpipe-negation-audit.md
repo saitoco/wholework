@@ -230,23 +230,40 @@ Implementation Step 1 の対象。`->` の右は当該行の直後に続く文 (
 - **`section_not_contains` は見出し不一致で UNCERTAIN を返す**という仕様を踏まえ、「両カテゴリが解消済みなら `## Out of Scope` 節ごと削除する」案を棄却した。見出しを残して本文のみ書き換える制約を Implementation Step 5 に明記済み。
 - **書き換えが潜在的失敗を露出させるリスク**は Spec フェーズでは解消できない (被検証ファイルが実行時生成の `$EMIT_LOG` 等のため静的判定不可)。#1292 は 9 件の書き換え後も全件 PASS だったが 28 件では保証がないため、Implementation Step 6 に「元の `!` 形式へ戻すことを禁じ、真因側を修正するか前提誤りとして訂正し `## Remediation Record` に記録する」という対処手順を明記して `/code` へ引き渡した。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Implementation Steps 1–6 were followed as written; the defective inventory (26 entries) and bare-negation set (2 entries) from the Spec's Notes were used verbatim with no re-classification.
+
+### Design Gaps/Ambiguities
+
+- **AC5's verify command (`command "bats tests/"`) cannot complete within `modules/verify-executor.md`'s fixed 60-second `command` timeout for a suite this size.** Measured: `bats --jobs 18 tests/` (parallel, 1642 tests) completes in well under 2 minutes; `bats tests/` (serial, the literal form AC5 specifies) did not finish even within the Bash tool's 600-second ceiling and was auto-backgrounded. This means AC5 will return UNCERTAIN via verify-executor at both `/code` Step 10 and `/verify`, regardless of implementation correctness — a systemic gap in the `command` verify type for large-suite full-run assertions, not something introduced by this Issue. Filed as follow-up #1310 (not fixed here — redesigning verify-executor's timeout model is out of this Issue's scope). Step 10 checked AC1–4, 6, 7 (all PASS) and left AC5 unchecked with this UNCERTAIN classification recorded.
+- The Spec's Implementation Step 6 anticipated that *rewritten* assertions might expose a previously-hidden real defect (detection-power-zero → activated). In practice, none of the 28 rewritten assertions failed. The only 2 FAILs surfaced by the full-suite run were in `tests/post_merge_check.bats` — a file untouched by this Issue — and were confirmed (via serial re-run, isolated `--jobs` re-run, and a re-run against unmodified `main`) to be a pre-existing flake specific to parallel execution, unrelated to any of this Issue's 28 rewrites. Filed as follow-up #1308.
+
+### Rework
+
+- N/A — no rework was required; all 28 rewrites were 1-line replacements (per Spec Notes) except the pre-identified `tests/observation-trigger.bats:76` structural exception, which matched the Spec's prescribed 3-line form exactly on first attempt.
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 非 pipe + grep 形式 76 件を Spec フェーズで機械分類し、**defective 26 / safe 50** を確定した。`/code` は再分類せず Notes § defective インベントリ (26 件) をそのまま実装対象として使うこと。safe 50 件は AC4 により変更禁止。
-- Issue 本文が委任していた「裸の `!` 否定」は実測 2 件・両方 defective であったため本 Issue に編入した (合計 28 件)。これにより `tests/*.bats` の先頭 `!` 否定 90 件が全件棚卸し済みになる。
-- AC1 の常時 PASS 欠陥を `section_not_contains ... "Both categories are noted here for reference only"` へ差し替え、AC6 (`26 defective`) と AC7 (`regardless of whether a pipe is present`) を新設した。3 件とも実装が書く逐語文字列に依存するため、Implementation Steps 3 と 5 の文字列指定を逐語で守ること。
+- 28 件の書き換えは Spec の defective インベントリ (26 件) と個別対応 (`tests/observation-trigger.bats:76`) をそのまま踏襲し、再分類は行わなかった。safe 62 件 (piped 12 + non-piped 50) はすべて未変更。
+- `docs/reports/bats-negation-assertion-audit.md` に `## Non-Piped Form Audit (Issue #1304)` / `## Bare Negation Audit (Issue #1304)` を新設し、`## Out of Scope` は見出しを残したまま「両カテゴリとも解消済み」の記述に書き換えた。`## Remediation Record` に #1304 分をファイル別の行番号一覧として追記済み。
+- AC5 (`command "bats tests/"`) は Step 10 で PASS/FAIL 判定できず UNCERTAIN のまま未チェックとした。実測で `bats --jobs 18 tests/` は完走 (1640/1642 PASS) するが、AC5 が指定するシリアル形は `verify-executor.md` の 60 秒タイムアウトは疎か Bash ツールの 600 秒上限すら超過する。実装の正しさとは無関係な検証機構側の制約と判断し、follow-up #1310 に切り出した。
 
 ### Deferred Items
 
-- `scripts/check-forbidden-expressions.sh` への機械的検出パターン追加は本 Issue のスコープ外 (Notes § スコープ外に記録)。必要と判断されれば `/verify` の Improvement Proposal として起票。
+- follow-up #1308: `tests/post_merge_check.bats` が `bats --jobs` 並列実行時のみ FAIL するフレーク (未変更の main でも再現、本 Issue の変更とは無関係)。
+- follow-up #1310: `command` verify type の 60 秒固定タイムアウトが、`bats tests/` のような全件スイート実行系 AC を構造的に検証不能にしている問題。
+- `scripts/check-forbidden-expressions.sh` への機械的検出パターン追加は Spec Notes § スコープ外の通り本 Issue のスコープ外のまま。
 - Post-merge AC (次回 bats テストを追加/変更する Issue での観察) は `/verify` に委ねる。
 
 ### Notes for Next Phase
 
-- **28 件はすべて 1 行 → 1 行の置換で行数が変わらない**ため、Notes のインベントリに記載した行番号は書き換え中もずれない。唯一の例外は `tests/observation-trigger.bats:76` (`if ... fi` 内) で、Notes § 個別対応に 3 行構造を保つ書き換え形を明示してある。
-- **`bats --jobs <N> tests/` が新たに RED になる可能性がある**。これは検出力ゼロだったアサーションが有効化された結果であり、元の `!` 形式へ戻す対処は禁止 (Implementation Step 6)。
-- `modules/test-runner.md` への追記は散文のみで `scripts/*.sh` を参照しないため、reader SKILL.md の `allowed-tools` 更新は不要。CI 側でも `scripts/validate-skill-syntax.py` の `validate_modules_scripts_in_allowed_tools()` が裏取りする。
-- `docs/reports/` は `docs/translation-workflow.md` § Exclusions により ja ミラー対象外。監査レポート更新時に `docs/ja/reports/` を作らないこと。
+- Pre-merge AC 7 件中 6 件 (AC1–4, 6, 7) は Step 10 でチェック済み。AC5 のみ UNCERTAIN で未チェック — `/review`/`/verify` で再度同じ理由 (verify-executor の 60 秒タイムアウト) で UNCERTAIN になる見込みであり、これは実装の不備ではない。実質的な確認は `bats --jobs 18 tests/` (1640/1642 PASS) で完了している。
+- `bats --jobs 18 tests/` の残 2 件 FAIL (`tests/post_merge_check.bats:132,181`) は follow-up #1308 で追跡中の無関係な既存フレーク。本 PR のマージ判断に影響しない。
+- `modules/test-runner.md` への追記は散文のみで `scripts/*.sh` を参照しないため、reader SKILL.md の `allowed-tools` 更新は不要 (Spec フェーズの判断どおり)。
+- `docs/reports/` は `docs/translation-workflow.md` § Exclusions により ja ミラー対象外。監査レポート更新時に `docs/ja/reports/` は作成していない。
