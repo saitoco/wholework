@@ -61,3 +61,39 @@
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 内容: `/issue 1307 --non-interactive` (Existing Issue Refinement) の Issue Retrospective。AC1 の verify command を `grep "session" ...` (常時 PASS 欠陥) から `grep -- "--session" ...` (実装後にのみ HIT) へ修正した経緯、Post-merge AC に `session=next` を追加した経緯 (skills/auto/SKILL.md 変更を含むため) を記録。Background の技術的主張は確認済みで修正不要、との申し送りも含む。/ URL: https://github.com/saitoco/wholework/issues/1307#issuecomment-5230556404
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-4 をそのままの順序・内容で実装した。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- review-light (light mode、4 aspects 統合) を実行し、review-spec/review-bug の fan-out は行わなかった (Issue Size=M、`--light` 明示指定)。
+- CONSIDER 1件 (fail-open 警告メッセージが `--session` を列挙していない) を検出し、`collect-run-facts.sh` の同等メッセージ表記に揃える形でその場で修正した。
+
+### Deferred Items
+- Post-merge AC (`event=auto-run session=next`) は次回 `/auto --batch` 実行時に `/verify` が観測する。review フェーズでは検証不能 (設計通り、code フェーズからの申し送り事項を継続)。
+
+### Notes for Next Phase
+- Pre-merge AC 4件は全て PASS (grep 1件・rubric 2件・CI 参照フォールバック経由の command 1件)。MUST issue なし、CI 全11件 SUCCESS。`/merge 1313` を実行可能。
+- CONSIDER 修正コミット (`scripts/filter-session-verified-issues.sh:55` の警告メッセージ) を追加済み。`/merge` 前に再度 CI が通ることを確認すること。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note — Implementation Steps 1-4 通りの実装で、Spec と PR diff の間に構造的な乖離はなかった。
+
+### Recurring issues
+- Nothing to note — review-light (4 aspects 統合) で検出された指摘は CONSIDER 1件のみ (fail-open 警告メッセージが `--session` を列挙していない、ドキュメント一貫性の観点)。同種の指摘の繰り返しパターンは見られなかった。
+
+### Acceptance criteria verification difficulty
+- Nothing to note — Pre-merge AC 4件はすべて自動判定 (grep 1件 PASS、rubric 2件 PASS、CI 参照フォールバック経由の command 1件 PASS) で UNCERTAIN なく完結した。verify command / rubric 文言のいずれも過不足なく機能した。

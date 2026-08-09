@@ -6,10 +6,10 @@
 # earlier in the same session.
 #
 # Usage:
-#   <candidates, one issue number per line> | scripts/filter-session-verified-issues.sh
+#   <candidates, one issue number per line> | scripts/filter-session-verified-issues.sh [--session <id>]
 #
-# Session resolution order: AUTO_SESSION_ID env var > .tmp/auto-session-current
-#   pointer file. Events log: ${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}.
+# Session resolution order: --session <id> > AUTO_SESSION_ID env var >
+#   .tmp/auto-session-current pointer file. Events log: ${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}.
 #
 # Fail-open: if the session id cannot be resolved, or the events log does not
 # exist, all candidates are passed through unchanged (with a warning on
@@ -20,7 +20,29 @@
 
 set -euo pipefail
 
-SESSION_ID="${AUTO_SESSION_ID:-}"
+SESSION_ARG=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --session)
+            if [ $# -lt 2 ]; then
+                echo "Error: --session requires an argument" >&2
+                exit 1
+            fi
+            SESSION_ARG="$2"
+            shift 2
+            ;;
+        *)
+            echo "Error: unknown option: $1" >&2
+            exit 1
+            ;;
+    esac
+done
+
+SESSION_ID="$SESSION_ARG"
+if [ -z "$SESSION_ID" ]; then
+    SESSION_ID="${AUTO_SESSION_ID:-}"
+fi
 if [ -z "$SESSION_ID" ]; then
     SESSION_ID="$(cat .tmp/auto-session-current 2>/dev/null || true)"
 fi
@@ -30,7 +52,7 @@ EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
 CANDIDATES="$(cat)"
 
 if [ -z "$SESSION_ID" ]; then
-    echo "Warning: filter-session-verified-issues.sh: could not resolve session id (AUTO_SESSION_ID / .tmp/auto-session-current both empty) — passing candidates through unfiltered" >&2
+    echo "Warning: filter-session-verified-issues.sh: could not resolve session id (--session / AUTO_SESSION_ID / .tmp/auto-session-current all empty) — passing candidates through unfiltered" >&2
     printf '%s\n' "$CANDIDATES" | grep -v '^[[:space:]]*$' || true
     exit 0
 fi
