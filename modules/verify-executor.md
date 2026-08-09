@@ -183,6 +183,19 @@ rubric "script.sh exits 0 on valid input: bats test uses run bash script.sh and 
 
 The implicit assertion pattern (`bash "$SCRIPT" ...` without `run`) relies on bats `set -e` behavior and can yield UNCERTAIN judgment from the grader. By naming `run bash "$SCRIPT" ...` + `[ "$status" -eq 0 ]` explicitly in the rubric text, the grader can detect bats tests that lack an explicit status assertion.
 
+**Primary evidence outside git diff / Issue body:**
+When the primary evidence for an acceptance condition is not visible in either of the grader's two default inputs (`git diff`, Issue body — see "Grader input scope" above), explicitly name the file(s) carrying that evidence in the rubric text. Files explicitly named in "text" are the only way to extend the grader's input scope beyond those two defaults; a rubric that omits the file name gives the grader no path to the actual evidence.
+
+Motivation: Two patterns recur where primary evidence lives outside both defaults. **Operate route**: an Issue whose only artifact is a GitHub Issue body edit — the edit is never a commit, so it never appears in `git diff`. **XL parent aggregation**: a parent Issue's acceptance condition whose evidence is a sub-issue's own record file, landed in a separate PR the grader never reads. A rubric that does not name the file leaves the grader unable to reach primary evidence in either case — a PASS verdict in that state confirms only that an aggregate summary in the Issue body looks right, not that the summary matches the primary record it summarizes (gap identified in Issue #1158's `/verify` retrospective).
+
+**Guideline**: Name the specific file path(s) that carry the primary evidence directly in the rubric text. Example:
+
+```
+rubric "docs/reports/manual-ac-retype-summary.md's counts match the per-sub-issue record files docs/reports/manual-ac-retype-a.md and manual-ac-retype-d2.md"
+```
+
+Naming the file(s) directs the grader's input scope to the actual evidence instead of leaving it to infer correctness from an aggregate summary alone.
+
 **Slash (`/`) notation in rubric condition text:**
 When listing multiple sub-cases with `/` (slash), the intent is ambiguous — it may mean an OR condition (two independent triggers) or an example enumeration (sub-patterns under one condition). Always make the interpretation explicit so grader judgment is consistent.
 
