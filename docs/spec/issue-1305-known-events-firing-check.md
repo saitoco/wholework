@@ -63,3 +63,6 @@
 - **`modules/verify-classifier.md:40` の `fix-cycle` 行の記述陳腐化 (スコープ外)**: 同ファイルの emitter 列は `fix-cycle` を「Not yet implemented」としているが、実際には `skills/verify/SKILL.md:625` で既に発火している。本 Issue のスコープ外のため対応しない。将来の `/audit drift` または別 Issue での検出に委ねる。
 - **CI ワイヤリングは対象外**: Post-merge AC は `verify-type: manual` であり、将来の新規イベント追加 PR での手動実行を期待する運用。`.github/workflows/test.yml` への自動実行組み込みは Issue のスコープに含まれないため行わない (`check-forbidden-expressions.sh` のような常時稼働 linter とは性質が異なる)。
 - **SHOULD-level 追加の採用理由**: `docs/structure.md`/`docs/ja/structure.md`/`modules/observation-trigger.md` の更新は Issue 本文の明示 AC (3件) には含まれないが、(a) `docs/structure.md` のファイル数・Key Files 更新は既存の maintenance rule で「同じ change 内での更新」が明記されている、(b) `docs/ja/structure.md` は `docs/translation-workflow.md` の同期義務、(c) `modules/observation-trigger.md` の Notes 追記は Post-merge AC (今後の新規イベント追加 PR での本スクリプト利用) を実務上発見可能にするために必要、の3点から採用した。Issue の Auto-Resolved Ambiguity Points は「単一スクリプト + bats テストの追加のみ」とスコープを絞っているが、これは「11件の再型付けや `/review` 変更を含めない」という意図であり、ドキュメント整合性の維持まで排除する意図ではないと判断した。
+
+## Consumed Comments
+No new comments since last phase.
