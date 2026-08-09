@@ -61,3 +61,7 @@ TEST_RUNNER="$PROJECT_ROOT/modules/test-runner.md"
     [ "$status" -ne 0 ]
     grep -q -F "bats --jobs <N> tests/" "$TEST_RUNNER"
 }
+
+@test "test-runner: negation pitfall is documented as pipe-independent" {
+    grep -q -F "regardless of whether a pipe is present" "$TEST_RUNNER"
+}

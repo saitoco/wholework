@@ -133,7 +133,7 @@ mock_pr() {
     mock_pr 1149 MERGED "$tip_sha"
 
     # sanity: plain -d must fail (branch not fully merged into main)
-    ! git -C "$MAIN_REPO" branch -d worktree-code+pr-1149 2>/dev/null
+    if git -C "$MAIN_REPO" branch -d worktree-code+pr-1149 2>/dev/null; then false; fi
 
     cd "$MAIN_REPO"
     run "$SCRIPT" --apply
@@ -156,7 +156,7 @@ mock_pr() {
     )
 
     # sanity: plain -d must fail (branch not fully merged into main); issue kind has no -D fallback
-    ! git -C "$MAIN_REPO" branch -d worktree-code+issue-5000 2>/dev/null
+    if git -C "$MAIN_REPO" branch -d worktree-code+issue-5000 2>/dev/null; then false; fi
 
     cd "$MAIN_REPO"
     run "$SCRIPT" --apply

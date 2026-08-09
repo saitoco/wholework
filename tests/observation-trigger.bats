@@ -72,8 +72,8 @@ teardown() {
     export MOCK_SEARCH_OUTPUT='[{"number": 42, "condition": "watchdog-kill event is observed"}]'
     run bash "$SCRIPT" --event pr-review-full --dry-run
     [ "$status" -eq 0 ]
-    if [ -f "$BATS_TEST_TMPDIR/gh-calls.log" ]; then
-        ! grep -q "issue comment" "$BATS_TEST_TMPDIR/gh-calls.log"
+    if [ -f "$BATS_TEST_TMPDIR/gh-calls.log" ] && grep -q "issue comment" "$BATS_TEST_TMPDIR/gh-calls.log"; then
+        false
     fi
     [ "$output" = "42" ]
 }
@@ -195,7 +195,7 @@ teardown() {
     export MOCK_SEARCH_OUTPUT='[{"number": 42, "condition": "watchdog-kill event is observed"}]'
     run bash "$SCRIPT" --event watchdog-kill
     [ "$status" -eq 0 ]
-    ! grep -q "issue comment" "$BATS_TEST_TMPDIR/gh-calls.log"
+    if grep -q "issue comment" "$BATS_TEST_TMPDIR/gh-calls.log"; then false; fi
     [ "$output" = "42" ]
 }
 

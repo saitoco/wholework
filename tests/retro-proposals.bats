@@ -146,7 +146,7 @@ teardown() {
     body="Fix /Users/dev/wholework/modules/retro-proposals.md"
     run perform_routing "owner/repo" "skill-infra" "Fix module" "$body"
     [ "$status" -eq 0 ]
-    ! grep -q "/Users/" "$GH_CALLS_LOG"
+    if grep -q "/Users/" "$GH_CALLS_LOG"; then false; fi
     grep -q "<absolute-path>" "$GH_CALLS_LOG"
 }
 

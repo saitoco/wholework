@@ -209,7 +209,7 @@ MOCK
     [ "$status" -eq 0 ]
     [[ "$output" == *"FF merge failed while main is checked out"* ]]
     grep -q -- "-C ${WORKTREE_PATH} rebase main" "$GIT_LOG"
-    ! grep -q -- "-C ${WORKTREE_PATH} rebase origin/main" "$GIT_LOG"
+    if grep -q -- "-C ${WORKTREE_PATH} rebase origin/main" "$GIT_LOG"; then false; fi
     merge_count=$(grep -c "merge test-branch --ff-only" "$GIT_LOG")
     [ "$merge_count" -eq 2 ]
     grep -q "push origin main" "$GIT_LOG"
@@ -310,7 +310,7 @@ MOCK
     grep -q "worktree list --porcelain" "$GIT_LOG"
     grep -q -- "-C ${WORKTREE_PATH} rebase origin/main" "$GIT_LOG"
     grep -q "push origin main" "$GIT_LOG"
-    ! grep -q "merge test-branch --ff-only" "$GIT_LOG"
+    if grep -q "merge test-branch --ff-only" "$GIT_LOG"; then false; fi
     fetch_count=$(grep -c "fetch . test-branch:main" "$GIT_LOG")
     [ "$fetch_count" -eq 2 ]
 }
@@ -384,8 +384,8 @@ MOCK
     run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch"
     [ "$status" -ne 0 ]
     [[ "$output" == *"Cannot locate a worktree"* ]]
-    ! grep -q "merge test-branch --ff-only" "$GIT_LOG"
-    ! grep -qE "^rebase " "$GIT_LOG"
+    if grep -q "merge test-branch --ff-only" "$GIT_LOG"; then false; fi
+    if grep -qE "^rebase " "$GIT_LOG"; then false; fi
     ! grep -q "push" "$GIT_LOG"
 }
 
@@ -462,7 +462,7 @@ MOCK
     run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch"
     [ "$status" -eq 0 ]
     grep -q -- "-C ${WORKTREE_PATH} rebase origin/main" "$GIT_LOG"
-    ! grep -qE "^rebase origin/main" "$GIT_LOG"
+    if grep -qE "^rebase origin/main" "$GIT_LOG"; then false; fi
     grep -q -- "fetch . +test-branch:main" "$GIT_LOG"
 }
 
@@ -620,8 +620,8 @@ MOCK
     run bash -c "cd '$BATS_TEST_TMPDIR/test-repo' && bash '$SCRIPT' --from test-branch"
     [ "$status" -eq 0 ]
     [[ "$output" == *"is-ancestor=true"* ]]
-    ! grep -q "rebase origin/main" "$GIT_LOG"
-    ! grep -qE "\-C .+ rebase" "$GIT_LOG"
+    if grep -q "rebase origin/main" "$GIT_LOG"; then false; fi
+    if grep -qE "\-C .+ rebase" "$GIT_LOG"; then false; fi
     grep -q "push origin main" "$GIT_LOG"
     fetch_count=$(grep -c "fetch . test-branch:main" "$GIT_LOG")
     [ "$fetch_count" -eq 2 ]

@@ -467,7 +467,7 @@ MOCK
     run bash "$SCRIPT" 123 --pr
     unset EMIT_PHASE_NAME
     [ "$status" -eq 0 ]
-    ! grep -q "phase_start" "$EMIT_LOG"
+    if grep -q "phase_start" "$EMIT_LOG"; then false; fi
     ! grep -q "phase_complete" "$EMIT_LOG"
 }
 
