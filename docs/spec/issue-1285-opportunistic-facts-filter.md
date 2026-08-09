@@ -111,3 +111,42 @@ review-light エージェントが検出した SHOULD issue (`FACTS_CANDIDATE_LI
 ### Acceptance criteria verification difficulty
 
 4件の Pre-merge AC はいずれも verify command が明確で、機械判定 (rubric / grep / CI job 参照によるコマンドヒント代替検証) で PASS/FAIL を一意に判定できた。UNCERTAIN は発生しなかった。`command` 系 AC 2件 (bats 個別テスト実行・全体実行) は safe mode では直接実行できず CI job `Run bats tests` への参照フォールバックで代替したが、CI ジョブがテストスイート全体を実行する構成であることが前提になっており、AC が指す個別テスト名までは CI ジョブ名からは判別できない (ジョブが SUCCESS であることから包含関係で類推している)。今回は問題にならなかったが、個別テストの粒度で PASS/FAIL を判別する必要がある AC には、コマンドヒントに `-f` フィルタを含める設計自体は妥当だった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- **triage が AC2/AC3 の常時 PASS 欠陥を検出したが、非破壊方針のため Issue 本文は編集せずコメント指摘に留めた**。AC2 は `grep "facts"` (既存実装に多数出現するため常時 PASS)、AC3 は `bats tests/opportunistic-search.bats` (新規テスト未追加でも 54/54 PASS) だった
+- これは #1279 の verify retrospective が Tier 2 として記録した「AC 常時 PASS を検出した `/issue` の処置が Issue 間で一貫しない」の **3 例目**にあたる (#1266 は本文を書き換え、#1279 と本 Issue は指摘のみ)
+
+#### spec
+- **triage のコメント指摘を `/spec` が実際に取り込んで修復した**。AC2 は `grep "FACTS_CANDIDATE_LIMIT"` (本 PR が新規導入するシンボル) へ、AC3 は `bats ... -f 'matched candidates ordered before unmatched'` (新規テスト名への絞り込み) へ具体化されている。#1279 の retrospective が指摘した「`/spec` を持つ経路では後段で修復されるため実害ゼロ」の実例が成立した
+- Size は M のまま変化なし (本セッションで唯一 Size 再評価が発生しなかった Issue)
+
+#### code
+- Implementation Steps 1〜4 を逸脱なく実施、rework ゼロ
+
+#### review
+- review-light が本 PR 自身の新規コードに `EVENT_NAME` ガード漏れ (SHOULD) を検出。既存の一致判定 (364 行目) と新規キャップ処理 (500 行目) で防御条件が非対称になったパターンで、現状の呼び出し元からは到達不能な潜在バグ
+- ヘッダーコメント (ドキュメント) の記述と実装の食い違いとして顕在化しており、documentation consistency perspective が機能した事例
+
+#### merge
+- pre-merge AC ゲート 4 件全 checked、`review_incomplete_fallback` 未検出で squash merge。コンフリクト・CI 失敗なし
+
+#### verify
+- pre-merge 4 件はすべて merge 前に検証済みで SKIPPED、observation 1 件は `auto-run` 未発火かつ `session=next` のため SKIPPED。FAIL / UNCERTAIN ゼロ
+- **修正効果を本セッション内で実測できた** (条件 5 の判定には使用せず、参考記録):
+
+  | 呼び出し形式 | 修正前 (本セッションの 9 回) | 修正後 |
+  |---|---|---|
+  | ゲートなし | 13 | 13 |
+  | `--facts` のみ | — | 13 |
+  | `--context-file` のみ | — | 13 |
+  | **両方併用** (本セッションで使用) | **0** | **13** |
+
+  本セッションの `/verify` Step 14 は `opportunistic-search.sh /verify --context-file ... --facts ...` を 9 回実行し全て `[]` を返したが、これは「真に候補なし」ではなく **fact トークン不一致による除外**だった。本 Issue の Background が指摘した実測ケース (候補 13 件が 0 件になる) が、本セッション中に 9 回再現していたことになる
+
+### Improvement Proposals
+
+- N/A — 本 run で新規に検出した構造的欠陥はない。`/issue` の AC 常時 PASS 処置の不一致 (3 例目) は #1279 の Spec に Tier 2 として記録済みで、本 Issue では `/spec` が修復したため実害ゼロ。同型が `/spec` を経由しない経路 (XS patch route) で発生した場合に起票を検討する
