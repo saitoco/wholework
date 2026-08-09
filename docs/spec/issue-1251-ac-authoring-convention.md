@@ -143,3 +143,44 @@ No new comments since last phase.
 ### Notes for Next Phase
 - `/verify` は Post-merge AC (`verify-type: observation event=pr-review-full session=next`) の評価を担当する。次回 rubric 型 AC を含む Issue で `/review`/`/verify` が実際にファイル明示ガイドラインを活用できるかは、当面 SKIPPED のまま観測を継続する
 - Issue #1251 は patch route (BASE_BRANCH=main) のため、closes #1251 は Step 12 の retrospective commit に含めて main へ push する。auto-close のタイミングは Deviations from Design を参照
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- Pre-merge AC 8 件がいずれも「規約テキストが追加されたこと」を検証する形 (grep 4 件 + rubric 4 件) で、規約が**実際に機能するか**は post-merge の observation 1 件に集約されている。規約追加系 Issue の典型的な構造
+
+#### spec
+- Implementation Steps が挿入位置・見出し・全文をあらかじめ確定していたため、code フェーズに実装判断の余地がほぼなかった。Size は M → S へ下方修正され patch route へ再計画された (Step 3a Post-Spec Size Refresh) — 本セッションで 4 例目の Size 再評価、かつ初の**下方**修正
+- 逐語的な Spec は rework ゼロを実現した一方、`/code` が独自の判断を挟む余地もないため、Spec 段階の誤りがそのまま着地するリスクと表裏
+
+#### code
+- Implementation Steps 1-3 を Spec 指示どおり 3 commit に分割した結果、`/code` Step 11 が定義する「単一の実装 commit に `(closes #N)` を含める」形にならず、closes 参照が Step 12 の retrospective commit に委ねられた。Step 11 時点で working tree が clean だったため空 commit を新設せず次 commit で要件を満たす判断で、実害なし
+- rework ゼロ、逸脱は上記 commit 分割のみ
+
+#### review
+- patch route のため `/review` フェーズなし
+
+#### merge
+- patch route のため `/merge` フェーズなし。main 直コミット、コンフリクトなし
+
+#### verify
+- pre-merge 8 件は code フェーズで検証済みのため SKIPPED、observation 1 件は `event=pr-review-full` 未発火のため SKIPPED。FAIL / UNCERTAIN ゼロ
+- **本 Issue が追加した規約は、本セッション内で実測 2 回機能した** (条件 9 が問う内容とは別側面のため PASS 判定には使えない):
+  - #1283 AC2 — `grep -rl '^type: ' docs/ja/` が fenced code block 内サンプルを frontmatter と誤検出し恒久 FAIL になる構成を triage が捕捉、`awk` ベースへ置換
+  - #1292 AC3 — rubric が記録先を「Spec または Issue コメント」としていたが、`modules/verify-executor.md` が定める grader 入力スコープ (Issue 本文・git diff・rubric text で明示的に名指ししたファイル) にはどちらも含まれず恒久 UNCERTAIN/FAIL になる構成を triage が捕捉。`docs/reports/bats-negation-assertion-audit.md` を明示参照する形へ修正。**本 Issue が追加した「一次証拠が git diff / Issue 本文の外にある場合は rubric text で当該ファイルを明示的に名指しする」規約がそのまま適用されたケース**
+
+### Improvement Proposals
+
+- **[Tier 1 / 起票] `pr-review-full` / `pr-review-light` は `KNOWN_EVENTS` に登録されているが発火経路が存在せず、指定した observation AC が永久 SKIPPED になる** — 本 Issue の条件 9 を評価する過程で実測確認した。`scripts/observation-trigger.sh:163` の `KNOWN_EVENTS="pr-review-full pr-review-light auto-run watchdog-kill fix-cycle"` は 5 種を認めているが、`observation-trigger.sh` を実際に呼ぶ箇所は 3 つしかなく、発火するのは 3 種のみ:
+
+  | 呼び出し元 | 発火する event |
+  |---|---|
+  | `scripts/claude-watchdog.sh:140` | `watchdog-kill` |
+  | `skills/verify/SKILL.md:625` | `fix-cycle` |
+  | `skills/auto/SKILL.md:751` | `auto-run` |
+
+  `pr-review-full` / `pr-review-light` を発火させる呼び出しは `scripts/` `skills/` `modules/` のいずれにも存在しない (`grep -rn "observation-trigger.sh" scripts/ skills/ modules/` で確認)。想定される発火元は `/review` フェーズだが、`skills/review/SKILL.md` に該当する呼び出しがない。
+
+  影響範囲は本 Issue 単独ではなく、**当該 2 イベントを observation AC に指定している Issue が計 11 件**存在する (#1293 #1251 #1233 #1010 #1000 #930 #794 #713 #583 #575 #555)。いずれも `/verify` を何度再実行しても「waiting for event」の SKIPPED から動かず、`phase/verify` に滞留し続ける。`modules/verify-classifier.md` が本 Issue で追加した「どの event が発火したとき何を根拠に PASS 判定できるかを条件文に書く」規約は、**event 名に対応する発火実装の存在確認**までは求めていないため、この欠陥を検出できない。
