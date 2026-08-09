@@ -53,16 +53,23 @@
 # compatible). See modules/observation-trigger.md § Condition Check Gate
 # (when=).
 #
-# --facts <path>: opportunistic mode (--event omitted) only. Pre-filters matches by
-# run-fact token substring: a matched AC line is only included if its condition text
-# (lowercased, HTML comments and checkbox markup stripped) contains at least one token
-# from --facts <path>'s collect-run-facts.sh JSON (unioned fact_tokens across all
-# issues, same matching logic as scripts/scan-pending-ac.sh's --facts). No AC-side
+# --facts <path>: opportunistic mode (--event omitted) only. Reorders matches by
+# run-fact token relevance instead of excluding them: a matched AC line whose condition
+# text (lowercased, HTML comments and checkbox markup stripped) contains at least one
+# token from --facts <path>'s collect-run-facts.sh JSON (unioned fact_tokens across all
+# issues, same matching logic as scripts/scan-pending-ac.sh's --facts) is placed ahead of
+# non-matching lines in the output; a token mismatch is never, by itself, a reason to drop
+# a candidate that could otherwise be judged this run (Issue #1285). Relative order within
+# each priority group (matched vs. unmatched) follows original discovery order. No AC-side
 # attribute is required. Ignored in event mode (--event) -- event mode uses
 # --facts-file/when= instead. When --facts <path> is omitted, missing, or unparseable,
 # a warning is printed and the gate is disabled (fail-open), the same convention as
 # --context-file/--facts-file above. Distinct from --facts-file <path>, which gates
 # event-mode when=<axis>:<value> clauses against structured run-facts fields.
+#
+# When --facts <path> is given and valid, the full reordered candidate set is additionally
+# capped at FACTS_CANDIDATE_LIMIT entries (a population-size safety valve, unrelated to
+# token matching) -- see FACTS_CANDIDATE_LIMIT below.
 #
 # Output: JSON array [{"number": N, "condition": "condition text"}]
 #         Empty array [] when no matches found
@@ -192,6 +199,12 @@ if [ -n "$FACTS_FILE" ] && [ ! -f "$FACTS_FILE" ]; then
     echo "Warning: --facts-file '${FACTS_FILE}' not found, falling back to lazy run-facts collection" >&2
     FACTS_FILE=""
 fi
+
+# FACTS_CANDIDATE_LIMIT: population-size safety valve applied only when --facts is given
+# and valid (FACT_TOKENS_LOWER non-empty), after reordering. Value (30) follows the
+# existing precedent set by scan-pending-ac.sh's MAX_CANDIDATES default rather than a new
+# measurement -- see docs/spec/issue-1285-opportunistic-facts-filter.md Notes.
+FACTS_CANDIDATE_LIMIT=30
 
 # --facts <path>: resolve the union of fact_tokens (lowercased) from the given
 # collect-run-facts.sh JSON, same logic as scripts/scan-pending-ac.sh's --facts. Missing
@@ -339,11 +352,15 @@ for N in $ISSUE_NUMBERS; do
             | sed 's/^- \[ \] //' \
             | sed 's/ *<!--.*-->//g')
 
-        # Fact-token filter gate (opportunistic mode only, --event unset): skip lines
-        # whose lowercased CONDITION does not contain any --facts token as a substring.
-        # No --facts / empty FACT_TOKENS_LOWER means unconditional match (backward
-        # compatible). Not applied in event mode -- event mode uses --facts-file/when=
-        # instead. See scripts/scan-pending-ac.sh for the same matching approach.
+        # Fact-token relevance tag (opportunistic mode only, --event unset): a line whose
+        # lowercased CONDITION contains at least one --facts token as a substring is tagged
+        # matched, and placed ahead of unmatched lines in the post-loop reorder below --
+        # never excluded solely for the mismatch (Issue #1285: token mismatch is not
+        # evidence the candidate is unjudgeable this run). No --facts / empty
+        # FACT_TOKENS_LOWER, or event mode, means every line is treated as matched (the
+        # reorder below is then a no-op). See scripts/scan-pending-ac.sh for the same
+        # substring-matching approach (used there as a hard filter, not a reorder).
+        FACT_MATCHED=true
         if [ -z "$EVENT_NAME" ] && [ -n "$FACT_TOKENS_LOWER" ]; then
             CONDITION_LOWER=$(echo "$CONDITION" | tr '[:upper:]' '[:lower:]')
             FACT_MATCHED=false
@@ -356,9 +373,6 @@ for N in $ISSUE_NUMBERS; do
                         ;;
                 esac
             done <<< "$FACT_TOKENS_LOWER"
-            if [ "$FACT_MATCHED" = false ]; then
-                continue
-            fi
         fi
 
         # Condition check gate: skip lines whose keyword= attribute does not
@@ -472,8 +486,35 @@ for N in $ISSUE_NUMBERS; do
             fi
         fi
 
-        RESULTS=$(echo "$RESULTS" | jq --argjson n "$N" --arg c "$CONDITION" '. += [{"number": $n, "condition": $c}]')
+        RESULTS=$(echo "$RESULTS" | jq --argjson n "$N" --arg c "$CONDITION" --argjson m "$FACT_MATCHED" \
+            '. += [{"number": $n, "condition": $c, "_fact_matched": $m}]')
     done <<< "$MATCHED"
 done
+
+# Reorder-not-exclude: when --facts was given and valid, move fact-matched candidates
+# ahead of unmatched ones (stable within each group via the original array index as the
+# secondary sort key -- jq's sort_by is not guaranteed stable), then apply
+# FACTS_CANDIDATE_LIMIT as a population-size safety valve. Skipped entirely when --facts
+# was not given (FACT_TOKENS_LOWER empty) or in event mode: the pre-#1285 unlimited,
+# unordered output is preserved unchanged in that case. Same [ -z "$EVENT_NAME" ] guard as
+# the matching logic above (line ~364), so --facts is fully ignored in event mode as
+# documented -- both the ordering and the candidate cap.
+if [ -z "$EVENT_NAME" ] && [ -n "$FACT_TOKENS_LOWER" ]; then
+    TOTAL_COUNT=$(echo "$RESULTS" | jq 'length')
+    RESULTS=$(echo "$RESULTS" | jq -c \
+        --argjson limit "$FACTS_CANDIDATE_LIMIT" \
+        'to_entries
+         | map(.value + {_idx: .key})
+         | sort_by([(if ._fact_matched then 0 else 1 end), ._idx])
+         | .[0:$limit]
+         | map(del(._fact_matched, ._idx))')
+    KEPT_COUNT=$(echo "$RESULTS" | jq 'length')
+    TRUNCATED_COUNT=$((TOTAL_COUNT - KEPT_COUNT))
+    if [ "$TRUNCATED_COUNT" -gt 0 ]; then
+        echo "Note: truncated ${TRUNCATED_COUNT} candidate AC(s) to ${FACTS_CANDIDATE_LIMIT}; deferred to the next run." >&2
+    fi
+else
+    RESULTS=$(echo "$RESULTS" | jq -c 'map(del(._fact_matched))')
+fi
 
 echo "$RESULTS"

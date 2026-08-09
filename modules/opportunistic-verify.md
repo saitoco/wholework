@@ -23,7 +23,10 @@ First check for the existence of `${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-se
 
 If the script exists, resolve `--facts` and `--context-file` before calling it:
 
-**Resolve `--facts` (run-fact token pre-filter — narrows the opportunistic-mode candidate set without requiring AC-side attributes):**
+**Resolve `--facts` (run-fact token relevance ordering — reorders the opportunistic-mode candidate set by run-fact relevance without requiring AC-side attributes; matched candidates are prioritized, but unmatched candidates are never dropped solely for lacking a token match):**
+
+- **Ordering, not exclusion**: a candidate whose condition text does not contain any `--facts` token is still included in `opportunistic-search.sh`'s output — it is placed after token-matched candidates, never dropped for the mismatch alone (Issue #1285).
+- **Separate safety valve**: `opportunistic-search.sh` additionally caps the reordered set at a fixed candidate-count limit (`FACTS_CANDIDATE_LIMIT`, applied only when `--facts` is given and valid). This is a population-size safeguard unrelated to token matching, and it prints a non-silent `Note: truncated ...` warning to stderr when it actually drops candidates — token mismatch by itself never triggers this warning.
 
 ```bash
 source "${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh"
@@ -46,7 +49,7 @@ Write `.tmp/context-<calling skill's own Issue/PR number>.md` with the Write too
 ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh <skill-name> --context-file .tmp/context-<calling Issue number>.md [--facts .tmp/facts-${AUTO_SESSION_ID}.json]
 ```
 
-- The script fetches closed Issues with the `phase/verify` label and filters by `verify-type: opportunistic` tag, skill name, unchecked conditions, and (when `--facts`/`--context-file` are given) the fact-token and `keyword=` gates
+- The script fetches closed Issues with the `phase/verify` label and filters by `verify-type: opportunistic` tag, skill name, and unchecked conditions; when `--context-file` is given, the `keyword=` gate additionally excludes non-matching candidates; when `--facts` is given, matched candidates are reordered ahead of unmatched ones (never excluded for the mismatch alone) and the reordered set is capped at `FACTS_CANDIDATE_LIMIT`
 - Output is JSON: `[{"number": N, "condition": "condition text"}]` (empty: `[]`)
 - **If output is `[]`**: Output "Opportunistic verification: 0 conditions found, skipping" and exit
 

@@ -632,7 +632,7 @@ teardown() {
     echo "$output" | jq -e '.[0].number == 800' > /dev/null
 }
 
-@test "fact gate: token mismatch excludes the issue" {
+@test "fact gate: token mismatch is deprioritized, not excluded" {
     export MOCK_ISSUE_LIST='[{"number": 801}]'
     export MOCK_ISSUE_BODY_801='## Post-merge
 - [ ] /verify skill checks unrelated candidates <!-- verify-type: opportunistic -->'
@@ -640,7 +640,25 @@ teardown() {
 
     run bash "$SCRIPT" /verify --facts "$BATS_TEST_TMPDIR/facts.json"
     [ "$status" -eq 0 ]
-    [ "$output" = "[]" ]
+    echo "$output" | jq -e 'length == 1' > /dev/null
+    echo "$output" | jq -e '.[0].number == 801' > /dev/null
+}
+
+@test "fact gate: matched candidates ordered before unmatched, none dropped" {
+    export MOCK_ISSUE_LIST='[{"number": 900}, {"number": 901}]'
+    export MOCK_ISSUE_BODY_900='## Post-merge
+- [ ] /verify skill checks unrelated candidates <!-- verify-type: opportunistic -->'
+    export MOCK_ISSUE_BODY_901='## Post-merge
+- [ ] /verify skill checks pr route candidates <!-- verify-type: opportunistic -->'
+    echo '{"session_id":"s1","issues":[{"number":1,"fact_tokens":["pr route"]}]}' > "$BATS_TEST_TMPDIR/facts.json"
+
+    run bash "$SCRIPT" /verify --facts "$BATS_TEST_TMPDIR/facts.json"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 2' > /dev/null
+    # #900 was discovered first (list order) but is token-unmatched; #901 is token-matched
+    # and must be moved ahead of it despite discovery order (reorder-not-exclude contract).
+    echo "$output" | jq -e '.[0].number == 901' > /dev/null
+    echo "$output" | jq -e '.[1].number == 900' > /dev/null
 }
 
 @test "fact gate: --facts omitted matches unconditionally (backward compatible)" {
@@ -676,6 +694,23 @@ teardown() {
     [ "$status" -eq 0 ]
     echo "$output" | jq -e 'length == 1' > /dev/null
     echo "$output" | jq -e '.[0].number == 804' > /dev/null
+}
+
+@test "fact gate: FACTS_CANDIDATE_LIMIT cap is also ignored in event mode (no truncation above the limit)" {
+    ISSUE_LIST="[]"
+    for i in $(seq 1 35); do
+        NUM=$((900 + i))
+        ISSUE_LIST=$(echo "$ISSUE_LIST" | jq --argjson n "$NUM" '. + [{"number": $n}]')
+        export "MOCK_ISSUE_BODY_${NUM}=## Post-merge
+- [ ] observed candidate ${NUM} <!-- verify-type: observation event=auto-run -->"
+    done
+    export MOCK_ISSUE_LIST="$ISSUE_LIST"
+    echo '{"session_id":"s1","issues":[{"number":1,"fact_tokens":["token-not-in-condition"]}]}' > "$BATS_TEST_TMPDIR/facts.json"
+
+    run bash "$SCRIPT" --event auto-run --facts "$BATS_TEST_TMPDIR/facts.json"
+    [ "$status" -eq 0 ]
+    echo "$output" | jq -e 'length == 35' > /dev/null
+    [[ "$output" != *"Note: truncated"* ]]
 }
 
 @test "population: gh issue list is called with --state all, not --state closed (issue #1242)" {

@@ -66,6 +66,49 @@
 - **(b) 空集合時フォールバックについて**: Issue 本文の対応方針 (b) は、(a) の並べ替え設計を採用したことで構造的に不要になった。並べ替えは常に全候補を出力に残すため (上限キャップを超えない限り)、「フィルタ結果が 0 件になる」状況自体が発生しない
 - **`--context-file` (`keyword=` ゲート) の切り分け**: #400 の実際の Post-merge AC 行を確認したところ `keyword=` 属性を持たないため、`--context-file` ゲートは無条件マッチであり実測の 13→0 に寄与していない。Issue 本文に切り分け結果を追記済み (Notes 参照)
 
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜4 を Spec の記載順どおりに実施した (`FACTS_CANDIDATE_LIMIT=30` 定数の追加、facts ゲートの除外→並べ替え+キャップ変更、`opportunistic-verify.md` の契約説明更新、bats テストのリネーム+新規追加)
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
 ## Consumed Comments
 
 - saito (MEMBER, first-class): Triage AC audit — Pre-merge AC2 (`grep -n "facts" scripts/opportunistic-search.sh` の引数形式不正 + 常時 PASS) と AC3 (`command "bats tests/opportunistic-search.bats"` が直後の AC4 と同一コマンドで区別不能 + 常時 PASS) を指摘し、実装方針確定後の `/spec` での具体化を推奨。本 Spec 作成時に Issue 本文の該当 2 件を修正して対応 (Notes 参照)。https://github.com/saitoco/wholework/issues/1285#issuecomment-5229038068
+- (code phase) No new comments since last phase.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- レビューで SHOULD 相当の指摘 (`scripts/opportunistic-search.sh:500` の `FACTS_CANDIDATE_LIMIT` 再順序化+キャップ処理が `EVENT_NAME` でガードされておらず、`--event`+`--facts` 同時指定時にヘッダーコメントの「Ignored in event mode」契約に反し得る) を確認・修正した。364行目の既存一致判定と同じ `[ -z "$EVENT_NAME" ]` ガードを追加し、契約とコードを一致させた
+- 修正の妥当性検証のため、35候補のイベントモード母集団で `FACTS_CANDIDATE_LIMIT` (30) を超えてもトランケートされないことを確認する回帰テストを追加した
+- Pre-merge AC 4件は全て PASS と判定 (rubric による `opportunistic-verify.md` の記述確認、grep による `FACTS_CANDIDATE_LIMIT` 実装確認、CI job `Run bats tests` SUCCESS を根拠とした safe mode でのコマンドヒント2件の代替検証)
+
+### Deferred Items
+- Post-merge observation AC (`session=next` の `/verify` で opportunistic 候補が 0 件になった場合、真に候補なしであることを確認) は未着手のまま — 次回以降の `/verify` 実行で評価される (code フェーズから変更なし)
+- `scripts/scan-pending-ac.sh` の同型パターン (Spec Notes に記載のスコープ外項目) は本 Issue のスコープ外のまま (code フェーズから変更なし)
+
+### Notes for Next Phase
+- レビューは `COMMENT` (MUST issue 0件) で投稿。SHOULD issue 1件はレビューフェーズ内で修正・commit・push 済み (commit a8b70ee9)
+- 修正後の再検証: `python3 scripts/validate-skill-syntax.py skills/` 0 error/warning、`bats tests/opportunistic-search.bats` 全56件 PASS (新規1件を含む)
+- 修正は防御的ガード追加のみで AC/Spec の意味に変更はない (Step 13 ポリシー変更チェックはスキップ)
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Spec と PR diff の間に構造的な乖離はなかった。Implementation Steps 1〜4 の記載順どおりに実装されており、Code Retrospective の "Deviations from Design: N/A" は妥当だった。
+
+### Recurring issues
+
+review-light エージェントが検出した SHOULD issue (`FACTS_CANDIDATE_LIMIT` 再順序化+キャップ処理の `EVENT_NAME` ガード漏れ) は、本 PR 自身が新規に導入したコードの中で、既存の類似ガード (364行目の一致判定) と新規追加箇所 (500行目のキャップ処理) の間で防御条件が非対称になったパターン。同一 PR 内で「同じ条件を複数箇所でガードする必要がある変更」を行う際、一箇所にガードを追加してもう一箇所に追加し忘れるのは再発しうる。今回は現状の呼び出し元では到達不能な潜在バグだったため実害は限定的だが、ヘッダーコメント (ドキュメント) の記述と実装が食い違う形で顕在化した点は、ドキュメント記述をレビューの検証観点として使う (review-spec の documentation consistency perspective) ことの有効性を示す一例。
+
+### Acceptance criteria verification difficulty
+
+4件の Pre-merge AC はいずれも verify command が明確で、機械判定 (rubric / grep / CI job 参照によるコマンドヒント代替検証) で PASS/FAIL を一意に判定できた。UNCERTAIN は発生しなかった。`command` 系 AC 2件 (bats 個別テスト実行・全体実行) は safe mode では直接実行できず CI job `Run bats tests` への参照フォールバックで代替したが、CI ジョブがテストスイート全体を実行する構成であることが前提になっており、AC が指す個別テスト名までは CI ジョブ名からは判別できない (ジョブが SUCCESS であることから包含関係で類推している)。今回は問題にならなかったが、個別テストの粒度で PASS/FAIL を判別する必要がある AC には、コマンドヒントに `-f` フィルタを含める設計自体は妥当だった。
