@@ -177,3 +177,25 @@
 - **`get-auto-session-report.sh` の `Route mix` が post-spec の Size 再評価を反映しない (Tier 1 — 起票)**: `:170-179` は route を `sub_start` イベントの `size` フィールドから導出しているが、`sub_start` は sub-issue 開始時点の記録であり `/spec` の post-spec Size 再評価より前の値である。本セッションの実測では #1256 が `sub_start` で `size: "M"` のまま記録され、`/spec` が M → XS へ降格して patch route で着地したにもかかわらず pr として集計された (報告値 `patch: 1, pr: 2` / 実態 `patch: 2, pr: 1`)。`scripts/collect-run-facts.sh:185` は同じ route を `code-pr` / `code-patch` phase イベントの有無から導出しており (実際 #1256 を `route: "patch"` と報告)、参照実装が同一リポジトリ内に存在する。Tier 1 の根拠は positive-evidence gate (c): `get-auto-session-report.sh` は `skills/auto/SKILL.md` Step 5 の L3 retrospective と `skills/audit/SKILL.md` の `/audit auto-session` という 2 つの skill が消費する測定 SSoT であり、本 Issue 自身の Background がその二重消費経路を明記している。既存 open Issue に該当なし (#1240 は route *選択*側で別系統、#875 は CLOSED) を確認済み
 
 - **AC 常時 PASS を検出した `/issue` の処置が Issue 間で一貫しない (Tier 2 — 記録のみ)**: 同一セッション内で、#1266 では `/issue` Step 7 が AC を実際に書き換えたのに対し、本 Issue では指摘コメントの投稿のみで本文は変更されなかった。本 Issue では `/spec` が後段で修正したため実害ゼロだが、`/spec` を持たない経路 (XS patch route 等) では指摘が消化されないまま verify に到達しうる。単独の起票は見送るが、同型が再発した場合は `/issue` の AC 監査の処置基準として Tier 1 を検討する
+
+### 2026-08-09 re-run (observation 条件の評価 → PASS)
+
+session `97764-1786198856` (`/auto --batch 1280 1282 1283 1281` + 追加 batch) の end-of-batch observation scan で `auto-run` が発火し、post-merge 条件を **PASS** と判定した。上記の初回 verify (session `23043-1786197225`) 時点では未発火で SKIPPED だった。
+
+#### verify (再実行分)
+
+- **`Issues processed: 9` が実処理 9 件と完全一致**。内訳は batch 本体 4 件 (#1280 #1282 #1283 #1281) + end-of-batch observation dispatch 5 件 (#446 #465 #477 #478 #486)。`Sub-Issue Completion Timeline` にもこの 9 件のみが並ぶ
+- **汚染の除去も確認**。同セッションの `collect-run-facts.sh` 出力には opportunistic verification 候補の #783 / #1064 / #1108 (いずれも `phases: []`) が含まれるが、`get-auto-session-report.sh` の出力にはこの 3 件が現れない。両者の差分が本 Issue の修正効果そのもの (`collect-run-facts.sh` 側は follow-up #1287 のスコープ)
+- **`session=next` の扱い**: 本 Issue の変更対象は skill 本文ではなく bash script (`scripts/get-auto-session-report.sh`) であり、script は起動ごとにディスクから読まれるため会話セッションのキャッシュ対象外。修正コミット `465709a7` は 2026-08-08T17:03:37Z に着地し pull 済み、L3 retrospective 生成 (同日 19:24Z 頃) で実行された。実行版に許可リスト実装が存在することも `:146` で確認済み
+- 修正前の前セッション `91762-1786112233` は実処理 3 件に対し 58 を報告していた。3/3 (初回 verify) → 9/9 (本 run) と、規模の異なる 2 セッションで一致を確認できている
+
+#### Improvement Proposals の追跡 (再実行分)
+
+- 初回 verify が Tier 1 として挙げた「`Route mix` が post-spec Size 再評価を反映しない」は **#1289 として起票済み**。本セッションで**追加の実測 2 例**が得られたため #1289 へ追記した:
+
+  | Issue | `sub_start` の `size` | 実際の着地 route | 誤集計の向き |
+  |---|---|---|---|
+  | #1292 | `S` (→ patch と集計) | **pr** (PR #1303) | pr を patch に誤計上 |
+  | #1251 | `M` (→ pr と集計) | **patch** (main 直コミット) | patch を pr に誤計上 |
+
+  いずれも `/spec` の Step 3a Post-Spec Size Refresh による再評価で、#1256 の 1 例と合わせて計 3 例。**双方向 (昇格・降格) で誤集計が起きる**ことが確認できた点が新しい
