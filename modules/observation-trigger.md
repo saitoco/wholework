@@ -202,6 +202,17 @@ path-like tokens (a run of `[A-Za-z0-9._-]` characters containing at least one `
 matching. A word-boundary match (`grep -qiw`) does not fix this: `/` and `.` are non-word
 characters in regex, so `docs/workflow.md` already satisfies `\bworkflow\b`.
 
+**CLI-flag-like token exclusion (Issue #1293)**: the same failure mode recurs for tokens that
+contain no `/` and therefore survive path-like token stripping — e.g. `keyword=workflow` matched
+`` `--workflow=test.yml` `` inside a `github_check "gh run list --workflow=test.yml ..."` verify
+command embedded in a Spec (observed on Issue #476's `event=pr-review-light keyword=workflow` AC,
+re-run #14). A word-boundary match does not fix this either, for the same underlying reason as
+the path-like case: `-` and `=` are also non-word characters in regex, so `--workflow=test.yml`
+already satisfies `\bworkflow\b` (verified with `echo "--workflow=test.yml" | grep -qiw
+"workflow"`, which matches). To avoid this, `opportunistic-search.sh` additionally strips
+CLI-flag-like tokens (`--<flag-name>=<value>`, e.g. `--workflow=test.yml`) from the context
+file's content, in the same cached filtering pass as the path-like token stripping above.
+
 **Arguments table addition (both scripts):**
 
 | Argument | Description |
@@ -211,7 +222,7 @@ characters in regex, so `docs/workflow.md` already satisfies `\bworkflow\b`.
 **Matching specification:**
 
 - Extraction: `keyword=<value>` is read from the AC line via `grep -oE 'keyword=[^ >]+'` (stops at the next space or `-->`).
-- Path-like token stripping: `--context-file`'s content is filtered once per process (cached) via `sed -E 's#[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+##g' "$CONTEXT_FILE"` before comparison.
+- Path-like and CLI-flag-like token stripping: `--context-file`'s content is filtered once per process (cached) via `sed -E -e 's#[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+##g' -e 's#--[A-Za-z0-9-]+=[A-Za-z0-9._-]+##g' "$CONTEXT_FILE"` before comparison.
 - Comparison: case-insensitive substring match of `<value>` against the filtered content (`echo "$FILTERED_CONTEXT" | grep -qi -- "$KEYWORD"`).
 - Gate disabled (unconditional match) when: no `keyword=` attribute on the AC line, no `--context-file` given, or the given path does not exist.
 - No semantic/LLM judgment is performed here — this is a lightweight pre-filter; the actual acceptance decision still belongs to `/verify`.

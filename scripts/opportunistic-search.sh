@@ -20,9 +20,10 @@
 # --context-file gates event-mode matches: when a matched AC line carries a
 # `keyword=<text>` attribute and --context-file is given, the Issue is only
 # included if the context file contains that keyword (case-insensitive) after
-# path-like tokens (e.g. docs/workflow.md) are stripped from the context file's
-# content. ACs without `keyword=`, or runs without --context-file, match
-# unconditionally (backward compatible). See modules/observation-trigger.md §
+# path-like tokens (e.g. docs/workflow.md) and CLI-flag-like tokens (e.g.
+# --workflow=test.yml) are stripped from the context file's content. ACs
+# without `keyword=`, or runs without --context-file, match unconditionally
+# (backward compatible). See modules/observation-trigger.md §
 # Condition Check Gate (keyword=).
 #
 # `config=<key>` gates event-mode matches on .wholework.yml validity: when a
@@ -228,11 +229,12 @@ fi
 RUN_FACTS_RESOLVED=false
 RUN_FACTS_JSON=""
 
-# resolve_filtered_context: lazily strip path-like tokens (e.g. docs/workflow.md) from
-# CONTEXT_FILE, once per process. Called on demand by the first keyword=-tagged AC line
-# encountered in the match loop below. Result is cached in FILTERED_CONTEXT (empty when
-# CONTEXT_FILE is unset). This prevents a keyword= value from matching only because it
-# appears as a fragment of an unrelated file path (Issue #1220).
+# resolve_filtered_context: lazily strip path-like tokens (e.g. docs/workflow.md) and
+# CLI-flag-like tokens (e.g. --workflow=test.yml) from CONTEXT_FILE, once per process.
+# Called on demand by the first keyword=-tagged AC line encountered in the match loop
+# below. Result is cached in FILTERED_CONTEXT (empty when CONTEXT_FILE is unset). This
+# prevents a keyword= value from matching only because it appears as a fragment of an
+# unrelated file path (Issue #1220) or CLI flag construct (Issue #1293).
 FILTERED_CONTEXT_RESOLVED=false
 FILTERED_CONTEXT=""
 
@@ -243,7 +245,10 @@ resolve_filtered_context() {
     FILTERED_CONTEXT_RESOLVED=true
 
     if [ -n "$CONTEXT_FILE" ]; then
-        FILTERED_CONTEXT=$(sed -E 's#[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+##g' "$CONTEXT_FILE" 2>/dev/null || true)
+        FILTERED_CONTEXT=$(sed -E \
+            -e 's#[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+##g' \
+            -e 's#--[A-Za-z0-9-]+=[A-Za-z0-9._-]+##g' \
+            "$CONTEXT_FILE" 2>/dev/null || true)
     fi
 }
 
@@ -376,10 +381,12 @@ for N in $ISSUE_NUMBERS; do
         fi
 
         # Condition check gate: skip lines whose keyword= attribute does not
-        # appear in CONTEXT_FILE once path-like tokens (e.g. docs/workflow.md) are
-        # stripped out. No keyword= attribute or no --context-file means unconditional
-        # match (backward compatible). See modules/observation-trigger.md § Condition
-        # Check Gate (keyword=) — Path-like token exclusion (Issue #1220).
+        # appear in CONTEXT_FILE once path-like tokens (e.g. docs/workflow.md) and
+        # CLI-flag-like tokens (e.g. --workflow=test.yml) are stripped out. No
+        # keyword= attribute or no --context-file means unconditional match
+        # (backward compatible). See modules/observation-trigger.md § Condition
+        # Check Gate (keyword=) — Path-like token exclusion (Issue #1220) and
+        # CLI-flag-like token exclusion (Issue #1293).
         KEYWORD=$(echo "$line" | grep -oE 'keyword=[^ >]+' | sed -e 's/^keyword=//' -e 's/-*$//' || true)
         if [ -n "$KEYWORD" ] && [ -n "$CONTEXT_FILE" ]; then
             resolve_filtered_context
