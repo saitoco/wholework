@@ -158,3 +158,18 @@ directly, without going through an intervening `set -e` non-final-statement cont
 `tests/collect-recovery-candidates.bats:604-605` (non-final statement — was defective and has
 been fixed to the `if ...; then false; fi` form) against `tests/collect-recovery-candidates.bats:611`
 (true final statement of its `@test` function — unmodified and safe).
+
+#### Scope — the pipe is irrelevant
+
+The same defect holds **regardless of whether a pipe is present**. A negation that reads a file
+directly, with no pipe at all — `! grep -q pattern file` — excludes its exit status from `set -e`
+by the exact same POSIX/bash rule as the piped form (`!` strips the `set -e` trigger from
+whatever command or pipeline it prefixes). A bare `!` in front of any other command (e.g.
+`! git branch -d some-branch 2>/dev/null`) is subject to the identical rule.
+
+Classification therefore never depends on the surface form (piped vs. non-piped vs. bare).
+It depends only on whether the negated line is the **true final statement** of its `@test`
+function — the same criterion as the Exception above. Treat `! cmd`, `! cmd | grep -q pattern`,
+and `! grep -q pattern file` as one and the same pitfall when auditing or writing assertions.
+See `docs/reports/bats-negation-assertion-audit.md` for the full inventory across all surface
+forms.
