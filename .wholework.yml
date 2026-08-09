@@ -10,6 +10,15 @@ watchdog-timeout-code-seconds: 7200
 # Size L の `/review --full` は fan-out (review-spec + review-bug x2) と 2 段階検証を
 # 直列に回すため、既定 2600s (scripts/watchdog-defaults.sh) では PR #1201 で kill された。
 watchdog-timeout-review-seconds: 5400
+# 2 セッション連続 (2026-08-08, 2026-08-09) の実測で spec フェーズの閾値超過 5 回・kill 1 回・
+# 最小余裕 10 秒を記録 (直近クリーンサンプルは 1690s / 1790s、既定 1800s に対する余裕 10-110s)。
+# 採用値 2340s は既定 1800s に #903 の再較正パスと同じ ×1.3 係数を適用したもの
+# (1790/2340 = 76.5% で再較正トリガー閾値 80% 未満)。global default
+# (scripts/watchdog-defaults.sh の WATCHDOG_TIMEOUT_SPEC_DEFAULT) ではなく project override に
+# 留めたのは、実測が本 repo の 2 セッション分のみで #903 (code: n=10, review: n=9) より少ないため。
+# review フェーズの先例 (PR #1201 override → #939 で global default 昇格) と同じ段階に相当し、
+# 再発が続けば別 Issue で global default への昇格を検討する (詳細: docs/tech.md #939 段落)。
+watchdog-timeout-spec-seconds: 2340
 auto-retry-on-fail:
   enabled: true
   threshold: 3
