@@ -246,26 +246,22 @@ Implementation Step 1 の対象。`->` の右は当該行の直後に続く文 (
 - N/A — no rework was required; all 28 rewrites were 1-line replacements (per Spec Notes) except the pre-identified `tests/observation-trigger.bats:76` structural exception, which matched the Spec's prescribed 3-line form exactly on first attempt.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
 
-- Step 8 (safe mode) は AC1, 2, 4, 6, 7 を PASS、AC3 (`command` grep 件数チェック) を UNCERTAIN と判定した。AC3 は CI job との対応付けができず (defective なアサーションは検出力ゼロのため CI success では判定不可)、diff 直接確認で実装充足は独立確認済みだが、safe mode の `command` 型制約によりチェックボックスは `[ ]` のまま据え置いた。AC5 (`bats tests/`) は CI job `Run bats tests` (SUCCESS) を参照し PASS と判定、`[x]` に更新した (`/code` 時点の UNCERTAIN から反転)。
-- Step 10 の review-spec 指摘 5 件 (SHOULD 1 / CONSIDER 4) はすべて MUST 未満。review-bug 指摘 3 件は 2 段階アドバーサリアル検証で全件 REJECT (偽陽性)。MUST 相当の指摘がゼロだったため `event=COMMENT` で投稿。
-- SHOULD 1 件 (`modules/test-runner.md:151` の Correct form 例が pipe 形式のみだった点) のみ Step 12 で修正し、CONSIDER 4 件は今回はスキップ (スコープを絞り、体裁上の指摘に留めた)。
-- `capabilities.workflow: true` が有効だが、`--non-interactive` かつ Workflow ツール自体が再起動保証のない実行サーフェスであるため `skills/review/workflow-guidance.md` の指示通り Workflow path をスキップし、静的 Task fan-out (Agent tool, `run_in_background: false`) にフォールバックした。
+- pre-merge AC ゲートは 7/7 チェック済み (`check-pre-merge-ac.sh` unchecked_count=0) のため、override マーカーなしでゲートを通過した。
+- PR #1309 は `mergeable=true, reason=clean, ci_status=success, review_status=approved` を確認の上、squash merge + delete-branch を実行した。
 
 ### Deferred Items
 
 - follow-up #1308: `tests/post_merge_check.bats` の並列実行時フレーク (本 Issue の変更とは無関係、引き続き未対応)。
 - follow-up #1310: `command` verify type の 60 秒固定タイムアウトによる全件スイート実行系 AC の構造的検証不能問題。
-- AC3 の `command` 型 safe-mode 制約 (タイムアウトとは別の、CI 参照不能パターン) は本 review retrospective に記録。Issue 化は次の `/verify` の集約判断に委ねる。
 - CONSIDER 級のドキュメント一貫性指摘 3 件 (`docs/reports/bats-negation-assertion-audit.md:48,247,253`) は未対応のまま。
 
 ### Notes for Next Phase
 
-- `/merge` 前提: MUST issue なし、CI 全 11 job SUCCESS (修正コミット後も再確認済み)、Pre-merge AC は 6/7 が `[x]`、AC3 のみ `[ ]` (UNCERTAIN、実装充足は確認済み)。
-- `/verify` (post-merge) で AC3 を full mode 再検証すれば PASS になる見込み (grep 件数は diff 確認で 0 件と判明済み)。
+- `/verify` (post-merge) で AC3 を full mode 再検証すれば PASS になる見込み (grep 件数は diff 確認で 0 件と判明済み。`/review` 時点では safe-mode の `command` 型制約により `[ ]` のまま据え置かれていた)。
 - Post-merge 観察条件 (次回 bats テストを追加/変更する Issue での否定アサーション形式の観察) は `/verify` に委ねる。
 
 ## review retrospective
