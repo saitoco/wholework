@@ -112,6 +112,20 @@ N/A
 - 追加されたサブパターンの実体を確認した (`:80-96`)。検出手順 (a)-(c) に加え、除外条件 (d) が「既存スイート全体を走らせる回帰保護 AC 自体は正当であり禁止しない」と明記されている。Fix options 3 件、根拠として #1279 (検出成功) と **#1287 (検出漏れ)** の両方を引用。検出漏れ側の実例が文書内に残ることで、本 Issue の根拠が「実行者の注意深さのばらつき」ではなく「パターン文書の被覆漏れ」であることが後から追える
 - **本 Issue の主張を裏づける追加事例が同一セッションで発生した**: 起票直後に処理した #1301 の AC (これも `/verify` の L3 retrospective が起草) にも `/issue` Step 15 が常時 PASS を 1 件検出している。always-PASS を 7 件指摘した直後の起票に同じ欠陥クラスが混入しており、根因が個々の実行者の注意深さでないことの実例として #1301 の Verify Retrospective にも記録済み
 
+### Addendum: post-merge observation の判定 (re-verify, session `92769-1786252094`)
+
+初回 verify 時点では `auto-run` 未発火のため SKIPPED としていた post-merge 条件を、同一 batch 完走後に再評価して **PASS** と判定した。
+
+条件が求めた「次に `command "bats <既存ファイル>"` 形式の AC を持つ Issue を `/triage` または `/issue` が処理した際、当該 AC が常時 PASS として指摘される」は、同一 batch の **#1293** で成立した。#1293 AC3 (`command "bats tests/opportunistic-search.bats"`、既存 56 ケース) が `/issue` Step 15 で指摘されている。
+
+本 Issue の変更が実際に読まれたことは、指摘コメントが本 Issue の追加要素を 3 つとも使っている点から確認できる — (1) サブパターン名「既存テストファイルの実行に起因する常時 PASS」(`:80` の見出し)、(2) 同型例 `#1279` / `#1287` (`:84` の追記、変更前には存在しない)、(3) 「実装前の `main` ブランチ上で空撃ち」という Detection approach (b) の手順。
+
+**除外条件 (d) も同一 batch 内で機能した**: #1293 の 1 件前に処理した #1300 では、回帰保護と明示された `command "bats tests/get-auto-session-report.bats"` が指摘されなかった。検出 (#1293) と非検出 (#1300) の両方が意図どおりに動作しており、誤検出・検出漏れのいずれも起きていない。
+
+**指摘は解消まで至った**: `/spec 1293` が AC3 を `bats --filter 'CLI flag token' ...` へ絞り込み (本 Issue が Fix options 第 1 項に記載した手段)、`/verify 1293` でこの filter が実テスト 2 件にマッチし両方 PASS することを実測した。検出 → 指摘 → 修正 → 検証の連鎖が同一 batch 内で閉じた。
+
+全受入条件がチェック済みとなり `phase/done` へ遷移した。
+
 ### Improvement Proposals
 
 - N/A — 本 Issue が対処した被覆漏れ以外に、本実行から新たに派生する構造的な改善点は検出されなかった。`tests/post_merge_check.bats` の並列実行フレークは #1308 が既に追跡している
