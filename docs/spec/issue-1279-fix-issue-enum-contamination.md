@@ -5,6 +5,9 @@
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 内容: `/issue 1279 --non-interactive` の Issue Retrospective — Auto-Resolve Log (post-merge observation AC への `session=next` 付与理由、許可リスト方式・in-session `/verify` dispatch の扱いは AC テキストが選択肢に依存しないため Issue 本文の追加変更なしと判定した根拠)。本 Spec の設計方針 (許可リスト方式・`sub_start`/`phase_*` の union 採用) は同ログの判断を踏襲する。 / URL: https://github.com/saitoco/wholework/issues/1279#issuecomment-5226906958
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 内容: Triage AC audit — Pre-merge AC4 の `<!-- verify: command "bats tests/get-auto-session-report.bats" -->` が常時 PASS リスクを持つ (新規テスト追加前の main ブランチで既に exit 0) との指摘。`--filter` によるテスト名の具体化を推奨。本 Spec でテスト名確定後に反映する (Implementation Step 4 で Issue 本文 AC4 も同期更新)。 / URL: https://github.com/saitoco/wholework/issues/1279#issuecomment-5226918680
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1279#issuecomment-5227156497
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1279#issuecomment-5227646477
+- saito / MEMBER / first-class / 本 Issue の post-merge observation AC (「次回 `/auto --batch` 完走後の L3 retrospective で / https://github.com/saitoco/wholework/issues/1279#issuecomment-5227739752
 ## Overview
 
 `scripts/get-auto-session-report.sh` は `.tmp/auto-events.jsonl` から `/auto` セッションの Metrics を生成する際、「セッション内で登場した distinct `.issue`」を無差別に「処理済み Issue」として集計している。#1236 で `modules/opportunistic-verify.md` Step 3 に `opportunistic_verify_result` イベントの emit が追加され、その `issue` フィールドには「判定対象の候補 Issue 番号」(`EMIT_ISSUE_NUMBER`、実際にこのセッションが処理した Issue ではない) が入るようになったため、候補 Issue が処理済み Issue として混入するようになった。本 Issue は Issue 列挙の母集団を「処理を示すイベント種別 (`sub_start` / `phase_*`)」に限定し、この混入を解消する。
