@@ -57,3 +57,19 @@ FIXTURE_EOF
     echo "$output" | grep -qx "984"
     echo "$output" | grep -qx "995"
 }
+
+@test "--session overrides a pointer file overwritten by a concurrent session" {
+    cat > "$AUTO_EVENTS_LOG" << 'FIXTURE_EOF'
+{"issue":984,"event":"phase_start","session_id":"session-A","phase":"verify"}
+{"issue":995,"event":"phase_start","session_id":"session-B-concurrent","phase":"verify"}
+FIXTURE_EOF
+
+    unset AUTO_SESSION_ID
+    mkdir -p .tmp
+    printf 'session-B-concurrent\n' > .tmp/auto-session-current
+
+    run bash -c "printf '984\n995\n' | \"$SCRIPT\" --session session-A"
+    [ "$status" -eq 0 ]
+    if echo "$output" | grep -qx "984"; then false; fi
+    echo "$output" | grep -qx "995"
+}
