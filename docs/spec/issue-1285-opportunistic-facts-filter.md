@@ -83,21 +83,20 @@
 - (code phase) No new comments since last phase.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- レビューで SHOULD 相当の指摘 (`scripts/opportunistic-search.sh:500` の `FACTS_CANDIDATE_LIMIT` 再順序化+キャップ処理が `EVENT_NAME` でガードされておらず、`--event`+`--facts` 同時指定時にヘッダーコメントの「Ignored in event mode」契約に反し得る) を確認・修正した。364行目の既存一致判定と同じ `[ -z "$EVENT_NAME" ]` ガードを追加し、契約とコードを一致させた
-- 修正の妥当性検証のため、35候補のイベントモード母集団で `FACTS_CANDIDATE_LIMIT` (30) を超えてもトランケートされないことを確認する回帰テストを追加した
-- Pre-merge AC 4件は全て PASS と判定 (rubric による `opportunistic-verify.md` の記述確認、grep による `FACTS_CANDIDATE_LIMIT` 実装確認、CI job `Run bats tests` SUCCESS を根拠とした safe mode でのコマンドヒント2件の代替検証)
+- pre-merge AC ゲートは4件全チェック済みで解決 (unchecked_count=0) のため、承認確認なしでマージを進めた
+- review-incomplete-fallback チェック (`reconcile-phase-state.sh review`) は matches_expected=true で、review フェーズ由来の正規の完了シグナルであることを確認した
+- Squash merge (`gh pr merge --squash --delete-branch`) を実行、base=main のため `closes #1285` により Issue は自動クローズされる想定
 
 ### Deferred Items
-- Post-merge observation AC (`session=next` の `/verify` で opportunistic 候補が 0 件になった場合、真に候補なしであることを確認) は未着手のまま — 次回以降の `/verify` 実行で評価される (code フェーズから変更なし)
-- `scripts/scan-pending-ac.sh` の同型パターン (Spec Notes に記載のスコープ外項目) は本 Issue のスコープ外のまま (code フェーズから変更なし)
+- Post-merge observation AC (`session=next` の `/verify` で opportunistic 候補が 0 件になった場合、真に候補なしであることを確認) は未着手のまま — 次回以降の `/verify` 実行で評価される (review フェーズから変更なし)
+- `scripts/scan-pending-ac.sh` の同型パターン (Spec Notes に記載のスコープ外項目) は本 Issue のスコープ外のまま (review フェーズから変更なし)
 
 ### Notes for Next Phase
-- レビューは `COMMENT` (MUST issue 0件) で投稿。SHOULD issue 1件はレビューフェーズ内で修正・commit・push 済み (commit a8b70ee9)
-- 修正後の再検証: `python3 scripts/validate-skill-syntax.py skills/` 0 error/warning、`bats tests/opportunistic-search.bats` 全56件 PASS (新規1件を含む)
-- 修正は防御的ガード追加のみで AC/Spec の意味に変更はない (Step 13 ポリシー変更チェックはスキップ)
+- `/verify` は Step 6 の Issue 状態確認 (state=CLOSED かつ phase/verify ラベル) を通じて自動クローズが実際に成立したかをフォールバック確認する
+- 上記 Post-merge observation AC の評価が `/verify` の主な作業になる
 
 ## review retrospective
 
