@@ -209,3 +209,44 @@ Implementation Step 1 の対象。`->` の右は当該行の直後に続く文 (
 ### スコープ外 (follow-up 候補、本 Issue では起票しない)
 
 `scripts/check-forbidden-expressions.sh` に「非最終文の `!` 否定アサーション」検出パターンを追加すれば機械的な再発防止になるが、本 Issue の AC は棚卸しと解消に限定されており、post-merge AC も観察ベースである。検出器の追加は独立した設計判断を要するため本 Issue には含めない。
+
+## spec retrospective
+
+### Minor observations
+
+- #1292 の監査レポート `## Out of Scope` は非 pipe 形式を「76 candidate lines across roughly 30 files」と記録していたが、実測のファイル数は 21 だった。生 grep の件数 (76) は正確だったのに対し、ファイル数だけが目視推定のまま「roughly」付きで残っていた。Out of Scope のような「次の Issue への申し送り」に数値を書く場合、後続の Spec がそれを見積もり根拠にするため、推定値なら推定であることを明示するか一度実測しておくほうが安全。
+- 分類ヒューリスティックのブロック終端検出で、「桁 0 の `}` のうち最初のもの」を `@test` ブロックの終端とみなす素朴な実装は誤りになりうる。`tests/*.bats` の 92 ファイルで `@test` 出現数と桁 0 の `}` 出現数が一致しておらず、原因はヒアドキュメント内のモックスクリプト本体と `setup()`/`teardown()` 関数だった。正しくは「直前の `@test` 行から次の `@test` 行までの範囲内で最後に現れる桁 0 の `}`」を取る。今回は素朴版と堅牢版の双方で 26/50 の同一結果が得られたため実害はなかったが、一致したこと自体が分類の妥当性の根拠になっている。
+- `run` + `[ "$status" -ne 0 ]` 形式 (`tests/test-runner.bats:60-61` など) は本落とし穴の影響を受けない。`!` を使わずに終了ステータスを変数経由で検査するため、`set -e` の除外規則に触れない。棚卸し対象の判定時にこの形式を defective と誤認しないよう、検索コマンドが先頭 `!` に限定されていることが効いている。
+
+### Judgment rationale
+
+- **Issue 本文による `/spec` へのスコープ判断委任が機能した**。「裸の `!` 否定を含めるかは `/spec` の判断に委ねます。件数と性質が異なる (意図的に失敗を許容している箇所が混ざる可能性) ため、分けたほうが妥当かもしれません」という書き方が、委任と同時に「何を測れば判断できるか (件数・意図的許容の有無)」を指定していたため、実測 2 件・両方とも明示的アサーションという結果から機械的に「分割しない」を導けた。委任だけで判断軸を書かない形だと `/spec` 側で判断軸の設計からやり直しになる。
+- **triage AC audit → `/spec` コメント消費のチェーンが 3 例目として機能した** (#1283 AC2、#1292 AC3 に続く)。`/issue` が Issue 本文を非破壊のままコメントで指摘し、`/spec` が消費して修復する分業が、Issue 本文の自動編集による情報喪失なしに欠陥を解消している。
+- **AC7 (`modules/test-runner.md` の一般化) を範囲内と判断した根拠**は、コード側 28 件の修正が一度きりであるのに対し SSoT の記述が pipe 前提のままだと同じスコープ誤りが再発する点。実際 #1292 → #1304 はまさにその再発であり、Issue の Purpose 文も `modules/test-runner.md` を名指ししている。スコープ拡大ではなく Purpose の充足条件と整理した。
+
+### Uncertainty resolution
+
+- **`section_not_contains` の針文字列が複数行にまたがるリスク**: AC1 の修復候補として最初に検討した `left to a follow-up Issue rather than this one` は、レポート原文では 2 行に折り返されていた。行指向マッチでは永久に不一致 = 常時 PASS となり、修復したはずの AC1 に同じ欠陥を作り込むところだった。単一行に収まる `Both categories are noted here for reference only` に差し替えて解決。`section_not_contains` / `file_not_contains` の針を選ぶときは、原文での改行位置まで確認する必要がある。
+- **`section_not_contains` は見出し不一致で UNCERTAIN を返す**という仕様を踏まえ、「両カテゴリが解消済みなら `## Out of Scope` 節ごと削除する」案を棄却した。見出しを残して本文のみ書き換える制約を Implementation Step 5 に明記済み。
+- **書き換えが潜在的失敗を露出させるリスク**は Spec フェーズでは解消できない (被検証ファイルが実行時生成の `$EMIT_LOG` 等のため静的判定不可)。#1292 は 9 件の書き換え後も全件 PASS だったが 28 件では保証がないため、Implementation Step 6 に「元の `!` 形式へ戻すことを禁じ、真因側を修正するか前提誤りとして訂正し `## Remediation Record` に記録する」という対処手順を明記して `/code` へ引き渡した。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 非 pipe + grep 形式 76 件を Spec フェーズで機械分類し、**defective 26 / safe 50** を確定した。`/code` は再分類せず Notes § defective インベントリ (26 件) をそのまま実装対象として使うこと。safe 50 件は AC4 により変更禁止。
+- Issue 本文が委任していた「裸の `!` 否定」は実測 2 件・両方 defective であったため本 Issue に編入した (合計 28 件)。これにより `tests/*.bats` の先頭 `!` 否定 90 件が全件棚卸し済みになる。
+- AC1 の常時 PASS 欠陥を `section_not_contains ... "Both categories are noted here for reference only"` へ差し替え、AC6 (`26 defective`) と AC7 (`regardless of whether a pipe is present`) を新設した。3 件とも実装が書く逐語文字列に依存するため、Implementation Steps 3 と 5 の文字列指定を逐語で守ること。
+
+### Deferred Items
+
+- `scripts/check-forbidden-expressions.sh` への機械的検出パターン追加は本 Issue のスコープ外 (Notes § スコープ外に記録)。必要と判断されれば `/verify` の Improvement Proposal として起票。
+- Post-merge AC (次回 bats テストを追加/変更する Issue での観察) は `/verify` に委ねる。
+
+### Notes for Next Phase
+
+- **28 件はすべて 1 行 → 1 行の置換で行数が変わらない**ため、Notes のインベントリに記載した行番号は書き換え中もずれない。唯一の例外は `tests/observation-trigger.bats:76` (`if ... fi` 内) で、Notes § 個別対応に 3 行構造を保つ書き換え形を明示してある。
+- **`bats --jobs <N> tests/` が新たに RED になる可能性がある**。これは検出力ゼロだったアサーションが有効化された結果であり、元の `!` 形式へ戻す対処は禁止 (Implementation Step 6)。
+- `modules/test-runner.md` への追記は散文のみで `scripts/*.sh` を参照しないため、reader SKILL.md の `allowed-tools` 更新は不要。CI 側でも `scripts/validate-skill-syntax.py` の `validate_modules_scripts_in_allowed_tools()` が裏取りする。
+- `docs/reports/` は `docs/translation-workflow.md` § Exclusions により ja ミラー対象外。監査レポート更新時に `docs/ja/reports/` を作らないこと。
