@@ -77,6 +77,23 @@ Fix options:
 - スクリプトに失敗条件フラグ（`--fail-if-outdated` 等）を明示的に渡す
 - スクリプトの exit code 設計自体を、失敗時に非ゼロを返すよう修正する
 
+**既存テストファイルの実行に起因する常時 PASS (`command` 型 AC)**:
+
+`command` 型の verify command の対象が既存テストファイル/スイートであり、かつ AC 本文が新規テストケース・新規カバレッジの追加を主張している場合、実装前の `main` で対象コマンドが既に exit 0 を返すなら、新規テストを 1 件も追加しなくても常時 PASS になる。
+
+例: `#1279` (`command "bats tests/get-auto-session-report.bats"` が「新規テストケース追加」を主張していたが、実装前の main でも既存 12 ケースが全 PASS していたため常時 PASS だった。`/issue` Step 15 が検出し、`bats --filter '<新規テスト名>' <file>` へ絞り込むことで解消した) と `#1287` (同型の常時 PASS を `/issue` Step 15 が「問題なし」と誤判定し、検出漏れとなった) を参照。
+
+Detection approach:
+- (a) `command` 型 AC の対象が新規追加ファイルではなく既存テストファイル/スイートか確認する
+- (b) 実装前の `main` ブランチの状態で対象コマンドを空撃ちする
+- (c) 空撃ちが既に exit 0 を返し、かつ AC 本文が新規テストケース・新規カバレッジの追加を主張している場合、常時 PASS として検出する
+- (d) AC 本文が回帰保護のみを主張しており新規カバレッジの追加を主張していない場合は、検出対象外とする (既存スイート全体を走らせる回帰保護 AC 自体は正当であり禁止しない)
+
+Fix options:
+- `bats --filter '<新規テスト名の一意な部分文字列>' <file>` の形へ絞り込む (`#1279` で採用)
+- 新規テストのフィクスチャや識別子を対象とした `grep` 型 AC を別途併記し、既存スイート実行は回帰保護 AC として役割を分ける
+- テストファイル自体が新規追加なら `command "bats <新規ファイル>"` は判別可能なため変更不要
+
 **`section_contains`/`section_not_contains` 型に起因する常時 PASS**:
 
 `section_contains` 型の verify command は、対象ファイルの main ブランチ時点で、指定 heading セクション内に検索文字列が既に存在する場合、実装前から常時 PASS になる。`section_not_contains` は逆に、対象文字列が既に不在の場合に常時 PASS になる。
