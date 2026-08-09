@@ -256,3 +256,14 @@
 ### Improvement Proposals
 - re-run #15 は「`keyword=workflow` ゲートが真にワークフローファイル変更を含む PR で発火しても、Issue #476 が求める『決定的失敗』シナリオ自体が稀にしか発生しない」ことを示す新しいデータ点である。この観測は #1220 (パス様トークン除外) や re-run #14 が提起した単語境界マッチ改善とは別軸の課題を示唆する: `keyword=` ゲートの真陽性 (実際にワークフローファイルを触る PR での発火) であっても、Issue #476 の post-merge AC が求める「決定的失敗の実例」に遭遇する確率は低く、この observation ベースの AC 設計そのものが長期間 PASS/FAIL に到達しにくい構造的な問題を抱えている可能性がある。15 回の re-run すべてが UNCERTAIN のまま Issue が `phase/verify` に留まり続けている状態は、`/verify` の再実行コストと `phase/verify` 滞留期間の観点からも看過しにくくなってきている。Step 16 (retro-proposals) の freshness check に判断を委ねるが、observation AC 自体の設計 (例: 一定回数 UNCERTAIN が続いた場合に人手確認へフォールバックする仕組み) を再検討する価値が高まったと判断する
 
+## Verify Retrospective (2026-08-09 re-run #16)
+
+### Phase-by-Phase Review
+
+#### verify
+- 本 `/verify` は `/review --light` (PR #1314、Issue #1293) の Event-based observation scan から dispatch された再実行。Pre-merge 2 件は既に `[x]` 済みのため already-checked skip rule により SKIPPED。Post-merge observation は fired 状態を再確認 (`pr-review-light` detected マーカーあり) したが、今回の発火元 PR #1314 の diff (`docs/spec/issue-1293-*.md`, `modules/observation-trigger.md`, `scripts/opportunistic-search.sh`, `tests/opportunistic-search.bats` — `keyword=` ゲート自体への CLI フラグ構文誤マッチ対策の追加) にも CI/ランナー環境で決定的に失敗する設定ミスは含まれておらず UNCERTAIN 判定に帰着した。特筆すべき点として、本 PR #1314 は `keyword=workflow` ゲートの誤マッチ抑制メカニズムそのものを実装する Issue #1293 の PR であり、この observation AC が長年苦しんできた誤発火系統 (re-run #5〜#14 の path-like トークン・CLI フラグ構文への部分一致) を修正する変更である点で皮肉な巡り合わせだが、#1293 が merge されて main 上の `opportunistic-search.sh` が更新されたとしても、本 AC が求める「決定的失敗が実際に MUST 判定される」実例には直接寄与しない (#1293 のスコープは誤検知抑制メカニズムそのものであり、Issue #476 が求めるシナリオとは別軸)。基準の存在 (Pre-merge 2 件 PASS 済み) は再確認できたが、16回連続で UNCERTAIN 判定を維持する
+- worktree セッション中に `source` 経由の `emit-event.sh` 呼び出し (Step 11 の `phase_complete` イベント発行) が worktree isolation guard によりブロックされた。re-run #12/#14/#15 で記録済みの既知制約の再現であり、新規の異常ではない。Step 13 Worktree Exit 後に再試行する
+
+### Improvement Proposals
+- 16 回連続で UNCERTAIN のまま Issue #476 が `phase/verify` に留まり続けている。re-run #15 が指摘した「observation ベースの AC 設計が長期間 PASS/FAIL に到達しにくい構造的問題」は本 re-run でさらに裏付けられた — 皮肉にも、この誤発火の直接的な原因系統 (`keyword=` ゲートの部分一致誤検知) を修正する PR #1293/#1314 自身が発火元となったことで、「誤発火の原因を直そうとする作業自体が誤発火の材料になる」という構造的な自己参照ループが可視化された。Step 16 (retro-proposals) の freshness check に判断を委ねるが、16 回という回数は re-run #15 時点よりさらに一段深刻であり、observation AC 自体の設計見直し (一定回数 UNCERTAIN が続いた場合の人手確認フォールバック等) の優先度が上がったと判断する
+
