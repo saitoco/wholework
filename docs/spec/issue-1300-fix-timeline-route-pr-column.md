@@ -124,17 +124,14 @@ N/A — 同種の issue の複数発生はなし。MUST/SHOULD issue はゼロ�
 N/A — 6件の Pre-merge AC (rubric ×3, file_not_contains ×1, grep ×1, command ×1) は全て UNCERTAIN なく機械的に PASS 判定できた。`bats --jobs 18 tests/get-auto-session-report.bats` は 17/17 PASS。verify command の記述と実装の対応も明確だった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `--light` 指定により lightweight integrated review (review-light 1 エージェント、全4観点) を実行し、fan-out レビューは行わなかった。
-- MUST/SHOULD issue が存在しないため `event=COMMENT` でレビューを投稿し、`/merge` への進行をブロックしなかった。
-- CONSIDER 2件 (コメント欠如の可読性提案、候補PR検証ループのAPI呼び出し量) はインラインコメントとして記録した上で、いずれも既存パターンに沿った軽微な提案のため修正を見送った。
+- Pre-merge AC 6件は全て checked 済み、review-incomplete-fallback も該当なしのため、pre-merge AC ゲートは通常経路 (override 不要) で通過した。
+- `gh pr merge --squash --delete-branch` で squash merge を実行し、`closes #1300` により Issue を自動クローズさせた (BASE_BRANCH=main のため手動 close 不要)。
 
 ### Deferred Items
-- CONSIDER: `_has_pr`/`_has_patch` 判定に `ROUTE_MIX` ブロックと同様の説明コメントを追加する提案 (scripts/get-auto-session-report.sh:349) — 任意の可読性向上、修正は見送り。
-- CONSIDER: 候補PR検証ループの API 呼び出し量 (scripts/get-auto-session-report.sh:372) — `skills/verify/SKILL.md` Step 2 と同一パターンのため新規の欠陥ではない。
+- CONSIDER 2件 (コメント欠如の可読性提案、候補PR検証ループのAPI呼び出し量) は review フェーズで修正見送り済み — 再掲不要。
 
 ### Notes for Next Phase
-- `/merge 1311` で問題なく進行可能 (MUST issue ゼロ、CI 全11件 SUCCESS、Pre-merge AC 6件 PASS)。
-- Post-merge AC (`verify-type: observation event=auto-run session=next`) は次回 `/auto --batch` 完走後に `/verify` で確認する。
+- Post-merge AC (`verify-type: observation event=auto-run session=next`) は次回 `/auto --batch` 完走後に `/verify 1300` で確認する。Timeline 表の `Size/Route` 列と `Route mix` の集計、`PR` 列と実 PR の一致を観察すること。
