@@ -59,3 +59,35 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / ⚠️ `/issue` AC audit (Step 15): verify command に問題があります / https://github.com/saitoco/wholework/issues/1301#issuecomment-5229911809
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+N/A — Implementation Steps 1・2 は Spec の記述通りに実施した。
+
+### Design Gaps/Ambiguities
+
+- Step 9 のフル並列テストスイート (`bats --jobs 18 tests/`) で `tests/post_merge_check.bats` の `fail: gh issue reopen called when FAIL input given` が FAIL した。本 Issue の変更 (`.wholework.yml` / `docs/tech.md`) を `git stash` して素の状態で同じ並列実行を再現したところ同一の FAIL (むしろ 2 件) が再現し、単独実行 (`bats tests/post_merge_check.bats`) では毎回 PASS したことから、本 Issue の変更に起因しない既存の並列実行時テスト分離不全と判断した。既に **#1308** として同一事象が起票済みだったため追加の Follow-up Issue は起票せず、この Spec に確認過程を記録するに留めた。
+
+### Rework
+
+N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `.wholework.yml` に `watchdog-timeout-spec-seconds: 2340` を Spec 記載通りに追加し、既存の code/review エントリと同じ形式・同じ場所に揃えた
+- コメントは AC2 の rubric 要求 (実測根拠 + project override 対 global default の判断理由) を単一コメント内に統合して記載した
+- `docs/tech.md` / `docs/ja/tech.md` の #939 spec 段落末尾にフォローアップ注記を追記し、既存の追記型履歴パターンを踏襲した
+
+### Deferred Items
+- Post-merge AC (次回以降の `/auto` セッションで spec フェーズの silent window に十分な余裕があることの観察) は post-merge のため未実施
+- `scripts/watchdog-defaults.sh` のグローバル既定値昇格は Spec Notes の通り、再発が続いた場合に別 Issue で検討する
+
+### Notes for Next Phase
+- Step 9 のフル並列テストで `tests/post_merge_check.bats` が FAIL したが、本 Issue の変更とは無関係の既知の並列実行フレーク (#1308 で追跡済み) であることを確認済み。`/review`/`/verify` で再度この FAIL を見ても本 Issue の regression として扱わないこと
+- Pre-merge AC 2 件は grep / rubric とも PASS 済みでチェック済み。Post-merge AC 1 件は `/verify` フェーズで扱う
