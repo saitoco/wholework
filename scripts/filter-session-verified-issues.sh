@@ -52,7 +52,7 @@ EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
 CANDIDATES="$(cat)"
 
 if [ -z "$SESSION_ID" ]; then
-    echo "Warning: filter-session-verified-issues.sh: could not resolve session id (AUTO_SESSION_ID / .tmp/auto-session-current both empty) — passing candidates through unfiltered" >&2
+    echo "Warning: filter-session-verified-issues.sh: could not resolve session id (--session / AUTO_SESSION_ID / .tmp/auto-session-current all empty) — passing candidates through unfiltered" >&2
     printf '%s\n' "$CANDIDATES" | grep -v '^[[:space:]]*$' || true
     exit 0
 fi
