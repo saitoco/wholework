@@ -100,3 +100,30 @@
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 内容: `/issue 1300` (non-interactive) 実行時の Autonomous Auto-Resolve Log — AC5 のテスト範囲を降格方向のみから昇格・降格の両方向へ拡張、AC2 の verify command を `case` 文の直接マッピング検出へ変更、Post-merge observation AC に `session=next` を追加。いずれも現在の Issue 本文に既に反映済みであり、本 Spec 作成時点で追加対応は不要と判断した。 / URL: https://github.com/saitoco/wholework/issues/1300#issuecomment-5230385022
+
+## Code Retrospective
+
+### Deviations from Design
+N/A — Implementation Steps 1〜5 を Spec の記述通りに実装した。
+
+### Design Gaps/Ambiguities
+- 全 bats スイート (`bats --jobs 18 tests/`) の1回目実行で `tests/post_merge_check.bats` の `fail: gh issue reopen called when FAIL input given` が1件 FAIL したが、単体実行および2回目の並列実行では PASS した。本 Issue の変更対象 (`scripts/get-auto-session-report.sh` / `tests/get-auto-session-report.bats`) とは無関係な並列実行時フレークであり、既存 Issue #1308 (`tests/post_merge_check.bats: bats --jobs 並列実行時に 2 件 FAIL するフレークを解消`) で追跡済みのため、本 Issue では追加の Follow-up Issue 起票は行わなかった。
+
+### Rework
+N/A — 手戻りなし。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- `_route` 導出は `ROUTE_MIX` (#1289) と同じ `has_pr`/`has_patch` 判定パターンを Timeline 行生成ループ内に直接インライン展開した (共通関数への抽出はスコープ外、Spec Implementation Step 1 の指示通り)。
+- `PR` 列は `skills/verify/SKILL.md` Step 2 と同じ「候補を最大10件取得 → `gh-extract-issue-from-pr.sh` で実 `closes` 参照を検証 → 一致した最初の候補を採用」方式を採用し、JSON パースは python3 ではなく既存の jq 依存に揃えた。
+- `_size` 表示列 (Timeline 行の `M/`, `S/` 部分) は Spec の判断通り `sub_start.size` のまま変更していない (post-spec 確定値への統一はスコープ外)。
+
+### Deferred Items
+- `_size` 表示自体を post-spec の確定 Size に揃える対応 (Spec Notes に明記のスコープ外事項)。
+- 全 bats スイート並列実行時の `tests/post_merge_check.bats` フレーク — 既存 Issue #1308 で追跡済み、本 Issue からの追加対応なし。
+
+### Notes for Next Phase
+- Post-merge AC は `verify-type: observation event=auto-run session=next` — 次回 `/auto --batch` 完走後の L3 retrospective で Timeline 表と Route mix の整合、PR 列の正確性を確認する。
+- `tests/get-auto-session-report.bats` の新規2テストは `NO_GITHUB` の有無を使い分けている (PR列テストは `gh` PATH モックが必要なため `--no-github` なし、route テストは `--no-github` で十分)。
