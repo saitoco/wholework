@@ -126,3 +126,28 @@
 ### Notes for Next Phase
 - `/verify 1322` で post-merge AC (observation, session=next) を確認すること
 - `tests/post_merge_check.bats` の並列実行時フレークは本 PR の変更と無関係の既知フレーク
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Issue triage 時に曖昧ポイント (1 Issue に複数テーマが該当する場合の扱い→複数許容) を自動解決し、根拠を Issue 本文に記録。triage AC audit で AC4 の `section_contains` verify command のバグ (heading 引数に `####` が混入し恒久的 UNCERTAIN になる問題) を検出し、Spec 作成時に Issue 本文側を修正済み。Pre-merge AC 7 件はいずれも一発 PASS しており、verify command の記述精度・AC カバレッジは良好だった
+
+#### design
+- `docs/spec/issue-1322-triage-theme-labels.md` の Changed Files に、新規 label namespace (`theme/*`) 追加時の同期対象である `modules/label-conventions.md` が含まれていなかった。review フェーズで SHOULD として検出・修正され実害はなかったが、Spec 立案時点でのチェック漏れだった (下記 Improvement Proposals 参照)
+
+#### code
+- Implementation Steps 1–5 を計画通り実施し、rework なし。`docs/tech.md` の編集により behavioral change 検知でフルスイート並列実行が追加実施され、`tests/post_merge_check.bats` の 1 件が並列実行時のみ FAIL したが単体実行では PASS したため、本 Issue の変更とは無関係な既存フレークと判断 (review/merge でも再発なし)
+
+#### review
+- MUST 0 件、SHOULD 1 件 (`modules/label-conventions.md` 同期漏れ、修正済み)、CONSIDER 2 件 (1 件修正・1 件スキップ)。review が設計時の見落としを実際に捕捉しており、有効に機能した
+
+#### merge
+- PR #1331 は mergeable=true (CI success, review approved) のため conflict resolution フローはスキップ。pre-merge AC gate は 7/7 checked で無条件通過し、問題は発生しなかった
+
+#### verify
+- Pre-merge AC 7 件はすでに `- [x]` 済みのため再検証せず SKIPPED (already-checked AC skip rule)。Post-merge の observation AC (`event=auto-run session=next`) は本 verify 実行時点で未発火のため SKIPPED — `phase/verify` ラベルを維持し、次回 `/auto` 実行時の event 発火を待つ
+
+### Improvement Proposals
+- 新規 `theme/*` のような label namespace を追加する Issue では、`/spec` の Changed Files 検討時に `modules/label-conventions.md` の同期要否を機械的なチェックリスト項目として含めることが望ましい (本 Issue の review retrospective で指摘された見落としパターン)
