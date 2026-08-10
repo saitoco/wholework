@@ -82,17 +82,28 @@
 ### Rework
 - N/A — 初回実装でフルスイート bats テスト (1710/1710) が一発 PASS し、手戻りは発生しなかった。
 
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note — Spec の対応方針と実装 (5 ステップ) は完全に一致していた。Code Retrospective の Design Gaps/Ambiguities で言及されていた「`$?` による失敗判定」は、記述どおりの二重ガードとしては機能しておらず (直前の代入文の終了コードを参照していた)、review フェーズで検出・修正した。Spec の記述自体は「gh 失敗時は従来パターンへフォールバックする」という意図のみで実装詳細までは規定していなかったため、Spec divergence ではなく実装バグとして扱った。
+
+### Recurring issues
+- Nothing to note。
+
+### Acceptance criteria verification difficulty
+- Nothing to note — 7 件の Pre-merge AC (rubric×4, grep×2, github_check×1) はいずれも diff から明確に判定可能で UNCERTAIN は発生しなかった。`ac-tier: preview` 条件も存在しなかった。
+
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `review-completion-false-negative` 分岐内で `gh pr view --json comments,reviews` によるライブチェックを行い、コメント/レビューともに 0 件のときのみ新パターン `review-silent-no-op` に振り分けた。`gh`/`jq` の失敗時 (非ゼロ終了 or 空出力) は件数が `"0"` と一致しないため、自動的に従来の `review-completion-false-negative` にフォールバックする設計とした。
-- `_phase_retry_hint(phase, number)` を新設し、`silent-no-op` / `review-silent-no-op` の両方の `IMPROVEMENT_HINT` から共通利用することで、review/merge フェーズでの誤案内 (#1255/PR#1269) を同時に解消した。
+- review-light agent (light mode, 4 perspectives 統合) による 1 エージェントレビューで SHOULD 1 件を検出・修正した。`$?` が `gh pr view` ではなく直後の代入文の終了コードを参照する bash の落とし穴で、意図された「gh 失敗時のフォールバック」の exit-code 側ガードが事実上無効化されていた。`_review_gh_status` に明示的に保存する形に修正し、mock で non-zero exit + non-empty stdout を返す回帰テストを追加して修正を検証した。
+- 修正後にフルスイート bats (`--jobs 18 tests/`) を再実行し 1711/1711 PASS を確認 (新規追加した回帰テスト 1 件を含む)。
 
 ### Deferred Items
 - Post-merge AC (`verify-type: manual`): review が silent no-op で終了した実例に対して検出を実行し `review-silent-no-op` として報告されることの確認は未実施 (merge 後に手動確認が必要)。
-- `_review_confirmed_posted` 抑止が発火しなかった未解決事象 (#1255/PR#1269 実測) は本 Issue のスコープ外。証跡不足のため未着手 — 再発時に別途調査 Issue を起票する方針 (Issue 本文の Autonomous Auto-Resolve Log に記録済み)。
+- `_review_confirmed_posted` 抑止が発火しなかった未解決事象 (#1255/PR#1269 実測) は本 Issue のスコープ外のまま。再発時に別途調査 Issue を起票する方針。
 
 ### Notes for Next Phase
-- `github_check "gh pr checks" "Run bats tests"` AC は Step 10 実行時点 (PR 作成前) では UNCERTAIN。PR #1340 の CI 結果が出た後に確認すること。
-- `modules/orchestration-fallbacks.md` の変更が `tests/run-auto-sub.bats` からも参照されている (behavioral change) ため、フルスイート bats (1710 tests, `--jobs 18`) を実行済み。全 PASS。
+- `/merge 1340` 実行時、Pre-merge AC 7 件はすべて `- [x]` 済み。Post-merge AC (manual) の手動確認は merge 後に別途実施すること。
+- review フェーズで追加した修正コミット (`801f6d36`) は PR ブランチに push 済み。push 後の CI (全 11 チェック SUCCESS) も確認済み。
