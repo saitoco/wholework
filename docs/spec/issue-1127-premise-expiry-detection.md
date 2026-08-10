@@ -220,3 +220,75 @@ Issue 本文 Background の技術的主張をコードベースに対して照�
 ## Consumed Comments
 
 - `saito` / `MEMBER` / first-class — `/issue` フェーズの Issue Retrospective。Background の技術的主張がコードベース grep で裏付けられたこと、非対話モードで自動解決した 2 点 (判断根拠の記録場所、post-merge AC のスコープ解釈)、および方式選定 A/B/C の採否を意図的に `/spec` に委ねたことを伝達している。本 Spec は方式選定を `## Alternatives Considered` で確定させ、判断根拠の記録先については `## Notes` 第 1 節のとおり Spec ではなく実装ファイルへ修正した — https://github.com/saitoco/wholework/issues/1127#issuecomment-5245146709
+
+## issue retrospective
+
+### Background 事実確認 (advisory)
+
+Background 内の技術的主張 (`scripts/get-config-value.sh` の存在、`scripts/opportunistic-search.sh` の `config=` ゲートが `get-config-value.sh` を呼び出す実装) はコードベース grep で裏付けが取れた。両スクリプトとも実在し、`opportunistic-search.sh:403` で `get-config-value.sh` を呼び出している。Background の記述は正確。
+
+### 曖昧性の自動解決 (Non-Interactive Mode)
+
+非対話モード (`--non-interactive`) のため、以下 2 点を自動解決した (Issue 本文 `## Auto-Resolved Ambiguity Points` に転記済み)。
+
+1. **判断根拠の記録場所** — AC1 の rubric が要求する「採用方式と他案を採らなかった判断根拠」の記録先は本文で未指定だった。既存パターン (Spec-first: 判断根拠は Spec の Retrospective に蓄積、例: #921/#922/#923) から一意に推測可能であり、AC テキスト自体は記録先に依存せず判定可能なため、`/spec` が作成する Spec の Retrospective/Design セクションに記録される前提とし、本文は変更しなかった。
+   - 他候補: 専用の `docs/reports/*.md` レポートを新規作成する案も検討したが、本 Issue は「機能実装」であり `docs/reports/` は主に測定・影響分析レポート向けの慣習であるため採用しなかった。
+2. **Post-merge AC の実行結果の扱い** — 「#1055 と同型の前提失効が他にも存在するかを確認する」は「確認する (investigate)」であり「起票する (file)」ではないと解釈した。設計案・調査結果は起票より Issue 追記/コメントを優先する既存の運用方針と整合させた。新規の前提失効を発見した場合の追加起票要否は、発見時に個別判断する運用とする。
+
+### 方式選定 (A/B/C) について
+
+Background に記載の対応方針 A (`/audit` への観点追加) / B (機械可読マーカー) / C (`/issue` 側予防) の採否は、Issue/Spec の責務境界 (`docs/product.md` § `/issue` (What) vs `/spec` (How)) に従い意図的に `/spec` の判断に委ねた。`/issue` フェーズでの解決対象ではないため、自動解決の対象外とした。
+
+### 機械チェック結果
+
+- `check-skill-change-observation-ac.sh`: exit 0 (session=next 欠落なし)
+- `check-ac-checkbox-format.sh`: exit 0 (チェックボックス形式違反なし)
+- `gh-check-blocking.sh`: exit 0 (オープンなブロッカーなし)
+
+## spec retrospective
+
+### Minor observations
+
+- `docs/translation-workflow.md` § When to Sync は同期義務を「top-level `docs/*.md`」と記述しているが、実装の `scripts/check-translation-sync.sh` は `docs/guide/*.md` も対象にしている。本 Spec は実装側に合わせたが、ドキュメント記述の更新は別 Issue 相当 (本 Spec `## Notes` 末尾に記録済み)。
+- `docs/structure.md` の `scripts/` ファイル数コメント `(84 files)` は `scripts/` 直下のファイル数を数えており、`scripts/git-hooks/` 配下は含まない。実測 (`ls -1 scripts/ | grep -v git-hooks | wc -l` = 84、`scripts/git-hooks/` = 1) で確認した。`find scripts -type f` の 85 と取り違えると数え方の drift を生む。
+- `/audit` の `allowed-tools` に登録されている `compute-escalation-level.sh` / `collect-recovery-candidates.sh` / `collect-opportunistic-retire-candidates.sh` は `.claude/settings.json.template` に不在。新規スクリプト追加時に settings.json.template を触る必要はないことの根拠として記録する。
+
+### Judgment rationale
+
+- **AC1 の判断根拠の記録先を Issue Retrospective の想定から変更した**。Issue Retrospective は「Spec の Retrospective に蓄積」という既存パターンから記録先を推測していたが、`modules/verify-executor.md` の `rubric` 行が grader 入力を「Issue body / git diff / text 中で名指しされたファイル」と定めており Spec は渡らない。さらに `/spec` の Spec は base ブランチへ直接マージされ PR diff にも含まれない。この 2 つを突き合わせると、Spec 単独の記録は rubric AC からは構造的に不可視になる。実装ファイル (`skills/audit/SKILL.md` の Design Rationale ブロック、`scripts/check-premise-expiry.sh` のヘッダコメント) を authoritative な記録先とし、Spec はその控えとした。
+- **A 単独案を AC3 で棄却した**。AC3 が「negative case と positive case の両方を bats で検証する」ことを要求しているため、非決定的な LLM 判断だけでは AC を満たせない。逆に言えば AC3 の存在自体が「決定的なスクリプト層が必要」という設計制約を Issue 側から与えていた。AC の文面から実装アーキテクチャの下限が決まる例として記録する。
+- **`drift` サブ観点ではなく独立サブコマンドを選んだ決め手は出力アクションの差**。入力 (open Issue 本文) は drift の Step 1 が duplicate check 用に既に取得しており、その意味では drift への統合のほうが安価だった。しかし drift の Step 4/5 は「新規 Issue を起票するか」という単一判断に収束する構造で、「前提を書いた既存 Issue にコメントする」という別種の L0 write を同居させると tier ゲートの適用範囲が不明瞭になる。入力の共有よりも判断軸の分離を優先した。
+- **前提式の演算子に shell test 形式 (`-eq` 等) を選んだ**。Issue 本文の例は `== 0` だったが、`>` を含む演算子は HTML コメント内の属性抽出パターン (`grep -oE 'config=[^ >]+'`、`scripts/opportunistic-search.sh`) と将来衝突する。Issue 本文の例示は「のような形で」という提案であり文法の固定契約ではないため、`/spec` の裁量で変更した。
+- **前提式の SSoT をモジュールではなくスクリプトヘッダに置いた**。消費者が 2 スキル (`/audit`, `/issue`) で `modules/` 抽出基準の境界上にあったため、`scripts/get-config-value.sh` のヘッダ内 "Supported/Unsupported Input Shapes" が `modules/detect-config-markers.md` から SSoT として参照されている先例に倣った。文法の実装体と仕様記述を同一ファイルに置くと乖離しにくい。
+
+### Uncertainty resolution
+
+- **`git grep` は存在しないパススペックでもエラーを出さず exit 1 (ゼロマッチと同一) を返す**。実測で確認した。この挙動は「パスのタイプミス → マッチ 0 件 → 前提成立」という silent false negative を生む。#1055 が「0 件だから実害なし」で滞留したのと構造的に同じ失敗モードを、検出機構自身が再生産しかねなかった。対策として `grep_count` 評価前の全パス `test -e` 検証を必須の fail-open 分岐として Spec に明記した。
+- **`git init` + `git add` のみ (commit なし) で `git grep` が動作する**ことを一時ディレクトリで実測確認した。bats テストで `git config user.name` / `user.email` の設定が不要になり、hermetic なフィクスチャ構築が単純化する。
+- **CI ジョブ名 `Run bats tests`** が `.github/workflows/test.yml` line 9 に実在することを確認した。受入条件 4 の `github_check` はそのまま有効。
+- **未解決のまま残した不確実性**: `/audit premise` Layer 2 (LLM 判断による marker 化候補抽出) が実際の open Issue 群に対して有用な結果を返すかは、マージ前に検証する手段がない。post-merge 受入条件がこの確認を担う。Layer 1 (決定的) はこの不確実性から独立しているため、pre-merge 受入条件 1-4 の成否には影響しない。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- 対応方針 B (premise マーカー + `scripts/check-premise-expiry.sh`) を基盤、A (`/audit premise` サブコマンド) を検出面、C (`/issue` Step 4 ガイダンス) を予防として **3 案すべて採用**した。A 単独では AC3 の bats 要件を満たせず、B 単独では検出ループが閉じず、C 単独では既存 Issue の失効を検出できないため。
+- **方式選定の根拠と検出範囲/限界は Spec ではなく実装ファイルに書く**。AC1/AC2 の `rubric` grader には Spec が渡らないため (`modules/verify-executor.md`)、根拠は `skills/audit/SKILL.md` の Design Rationale ブロック、範囲/限界は `scripts/check-premise-expiry.sh` のヘッダコメントに置く。**これを Spec だけに書くと AC1/AC2 が FAIL する**。
+- `premise` は `drift` のサブ観点ではなく**独立サブコマンド**とし、引数なし `/audit` の統合実行 (drift + fragility) には含めない。出力アクション (既存 Issue へのコメント vs 新規起票) と L0 write の tier ゲート適用範囲が異なるため。
+- 検索エンジンは `git grep -F` (固定文字列・追跡ファイルのみ)。`modules/filesystem-scope.md` の Approved Patterns に従い、`modules/verify-executor.md` が記録する ERE/BRE 取り違えを式レベルで排除する。
+- 前提式の演算子は shell test 形式 (`-eq` / `-ne` / `-lt` / `-le` / `-gt` / `-ge` の 6 種)。`>` を HTML コメント内に持ち込まないため。
+
+### Deferred Items
+
+- `/audit premise` Layer 2 (LLM 判断) の実効性検証は post-merge 受入条件に委ねた。マージ前に検証する手段がない。
+- `docs/translation-workflow.md` の同期対象範囲の記述 (`docs/guide/*.md` が実装では対象だが文書では未記載) の是正は本 Issue のスコープ外。
+- 既存 open Issue への premise マーカーの遡及付与は行わない。post-merge の調査で marker 化候補が挙がった場合の起票要否は発見時の個別判断 (Issue Retrospective で確定済み)。
+
+### Notes for Next Phase
+
+- **`git grep` は存在しないパススペックでもエラーを出さず exit 1 を返す** (実測確認済み)。`grep_count` の評価前に全パスの `test -e` 検証を入れないと、パスのタイプミスが「マッチ 0 件 = 前提成立」として silent に誤判定される。実装ステップ 1 の fail-open 分岐は省略不可。
+- bats テストは `$BATS_TEST_TMPDIR` に `git init -q` + `git add` した使い捨てリポジトリで hermetic に組む。commit は不要 (実測確認済み) なので `git config user.*` の設定は要らない。
+- `docs/structure.md` のファイル数コメントは `scripts/` 直下のみを数える規約 (`scripts/git-hooks/` は含まない)。84→85、`tests/` は 120→121。
+- `skills/audit/SKILL.md` は h2 = サブコマンド、h3 = `Step N:` の階層。新セクションは `## fragility Subcommand` と `## progress Subcommand` のあいだに挿入し、既存の見出しレベルにそろえる。`validate-skill-syntax.py` の制約 (半角感嘆符禁止・frontmatter の YAML block scalar 不可・本文中の 3 連バッククォート禁止) に注意する。
+- `modules/detect-config-markers.md` の Read 指示は `### Step 1` 見出し直後の第 1 段落に置く (`modules/skill-dev-checks.md` § Read Instruction Placement Rule)。リストやテーブル内に埋め込まない。
