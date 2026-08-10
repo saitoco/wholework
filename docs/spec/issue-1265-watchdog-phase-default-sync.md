@@ -101,3 +101,29 @@ code (1800 vs 4680)、review (2000 vs 5400)、issue (600 vs 1200) の 3 phase �
 ### Notes for Next Phase
 - `/verify` は Pre-merge AC 4 番目 (`github_check`) のみが未チェック。push 後の CI run (test.yml) の conclusion=success を確認してチェックを入れること
 - 全 1695 bats テストが本コミット時点で PASS 済み (behavioral change 検出により `--jobs 18` でフルスイート実行)
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+- triage が 2 件の実行不能 AC を是正した点が有効に働いた。(1) 存在しない `tests/detect-config-markers.bats` を参照して常時 FAIL になる AC を Size S 相当の CI 全体成否チェックへ差し替え、(2) Firing Likelihood Check を満たさない Post-merge observation AC を削除。いずれも放置すれば `/verify` で恒久的に FAIL または SKIPPED のまま滞留する AC だった。
+
+#### spec
+- 対応方針 A/B/C のうち案 B (SSoT 参照形) を採用した判断が Purpose (「以後の乖離を防ぐ参照形にする」) と整合している。案 A (値のみ修正) では `watchdog-defaults.sh` の次回変更で再乖離する。
+- Issue 本文の grep パターンが `modules/detect-config-markers.md` のみを対象としていたため見落とされていた `docs/guide/customization.md` (+ 対訳) の同種乖離を、コードベース調査で追加発見し Changed Files に取り込んだ。Issue 起票時の調査範囲の穴を spec フェーズが埋めた形。
+
+#### code
+- Spec の Implementation Steps をそのまま実施し design deviation なし。
+- `github_check "gh run list ..."` を patch route の branch-scoped CI exclusion に従い未チェックのまま `/verify` に委譲した判断は正しい。commit 前に評価すると実装反映前の main run を参照して誤 PASS になる。
+
+#### review / merge
+- patch route のため該当なし。
+
+#### verify
+- 未チェックだった AC 4 (CI) のみを実行し PASS。verify command の返り値 (`success`) だけでなく対象 run の `headSha` (`28a99f28`) を照合し、本 Issue の実装コミット `ecb49dc2` を含む main に対する run であることを確認した上で PASS と判定した。`--limit=1` の直近 run 参照は対象コミットの検証を伴わないと誤 PASS しうるため、この照合は必要な追加確認だった。
+- Spec Notes 記載のスコープ外事項 (グローバルキーの残存 drift) を実測で確認し、改善提案として下記に記録した。
+
+### Improvement Proposals
+
+- **`modules/detect-config-markers.md` のグローバルキー `watchdog-timeout-seconds` のフォールバック値記載 (3 箇所) を SSoT 参照形に統一する**: line 49 (Marker Definition Table) / line 87 (YAML Parsing Rules) / line 125 (Output Format) がフォールバック値を `1800` と記載しているが、実装 (`scripts/watchdog-defaults.sh:4` `WATCHDOG_TIMEOUT_DEFAULT`) は `2700` (#556 で 1800 → 2700 に引き上げ済み)。3 箇所とも `(see scripts/watchdog-defaults.sh WATCHDOG_TIMEOUT_DEFAULT)` と SSoT を参照する体裁を取りながら値が食い違っており、参照形の体裁が値の正しさを担保していない状態にある。本 Issue が 5 phase 別キーに適用した SSoT 参照形への書き換え (数値を書かない形) をそのまま適用して解消できる。`docs/guide/customization.md` 側のグローバルキー記載は既に `2700` で正しいため、対象は `modules/detect-config-markers.md` のみ。
