@@ -168,3 +168,57 @@ themes:
 ### `WHOLEWORK_SCRIPT_DIR` モック追加チェック
 
 `tests/setup-labels.bats` は `export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` を設定しているが、本 Issue で新規スクリプトを追加しないため `$MOCK_DIR` への新規モックファイル追加は不要。
+
+## issue retrospective
+
+### 判断根拠
+
+- **theme label カタログの二層構造の確認**: `/triage` Step 6a の分類ロジック (`gh label list` による動的取得 + description マッチング) は既にプロジェクト非依存だが、ラベルの種を実際に作成する `scripts/setup-labels.sh` が wholework 自身のドッグフーディング用5テーマをハードコードしていた。この Issue はラベル seeding のみを config 駆動化し、分類ロジックには手を入れない。
+
+### Q&A での主要ポリシー決定
+
+- **`.wholework.yml` の `themes:` が未定義の場合の挙動**: 「wholework 自身の5テーマを既定値としてフォールバック作成する」案と「`themes:` 未定義なら theme label を一切作成しない」案を提示し、後者を採用。理由: 既定フォールバックを残すと、他プロジェクトが `setup-labels.sh` を実行した際に wholework 自身のドッグフーディング用テーマ (observability, ac-quality 等) が意図せず混入してしまうため。この決定に伴い、wholework 自身の既存5テーマは本リポジトリ自身の `.wholework.yml` に `themes:` として明示移行する (特別扱いせず、他プロジェクトと同じ経路を使う)。
+
+### Acceptance Criteria について
+
+新規起票のため「変更」はないが、上記ポリシー決定を反映して AC5/AC6 (wholework 自身の5テーマ移行、`setup-labels.sh` のハードコード削除) を Pre-merge に含めている。
+
+## spec retrospective
+
+### Minor observations
+
+- `tests/setup-labels.bats` の既存アサーションはスクリプト本体から件数を導出する (`count_always_labels()`) 設計になっており、ラベル追加に自動追従する。しかし「実行時の CWD にある `.wholework.yml`」という新しい外部入力が加わると、この自動追従は逆に破綻方向に働く (リポジトリ自身の設定を読んで件数がずれる)。設定ファイルを読むスクリプトのテストでは、件数の自動導出より先に入力の固定 (`WHOLEWORK_CONFIG_PATH`) を設計する必要がある。
+- `docs/product.md` の Theme-driven backlog consumption 項に「theme カタログの実体は GitHub label 側を SSoT とし、本ドキュメントには記述しない」という設計判断が明文化されていた。この一文は Issue 本文・`setup-labels.sh` のどちらからも参照されておらず、`theme/` の全文 grep で初めて発見された。SSoT の所在を宣言する記述は、対象の実装を変える Issue から機械的にはたどれない。
+
+### Judgment rationale
+
+- Issue 本文は `themes:` を「name + description のリスト」と表現していたが、YAML 形状の決定を明示的に `/spec` に委譲していた。`.wholework.yml` の既存セクション (`capabilities:` / `auto-retry-on-fail:` / `recoveries-auto-fire:`) がすべて block mapping であり list-of-mappings の先例がないこと、および block mapping なら `get-config-value.sh` の section-scan ループと同型のパーサで済むことを根拠に、本文の字面より既存構造との一貫性を優先した。委譲が明示されている場合、本文の例示表現は制約ではなく出発点として扱う。
+- `themes:` パーサを `scripts/get-config-value.sh` に汎用機能として追加せず、`setup-labels.sh` 内のローカル実装に留めた。`get-config-value.sh` は「単一キー → 単一値」の契約をヘッダの Supported/Unsupported Input Shapes 表で SSoT 化しており、キー列挙はその契約の外側にある。消費者が1箇所であることと、`scripts/check-verify-dirty.sh` が `verify-ignore-paths` で同じくローカルパーサを採っている先例が決め手になった。2箇所目の消費者が現れた時点が共通化の判断点になる。
+
+### Uncertainty resolution
+
+- 設計段階で残っていた「bash 3.2 でこのパーサが動くか」「description 中の `:` / em dash / `/` が欠落しないか」「インデントされたコメント行・空行・非インデント行境界を正しく扱えるか」の3点は、`/spec` 中にプロトタイプを書いて macOS システム bash (3.2.57) で実機検証し、すべて解消した。Uncertainty 節に「検証方法」を書いて `/code` に渡すより、`/spec` の中で20行のプロトタイプを回すほうが安く確実だった — パーサのように入出力が閉じている設計要素では、この前倒しが有効。
+- 実機検証で `set -euo pipefail` 下の空配列展開 (`"${THEME_LABELS[@]+"${THEME_LABELS[@]}"}"`) が必須であることが判明した。これはプロトタイプを書かなければ `/code` 段階で `unbound variable` として初めて顕在化していた種類の制約で、Implementation Step 4 に明示的に書き込んだ。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- `themes:` の YAML 形状は block mapping (`{theme-name}: {description}`) を採用。list-of-mappings は `.wholework.yml` に先例がなく、専用のエントリ境界フラッシュ処理が必要になるため不採用。
+- theme label の色は `setup-labels.sh` 側の定数 `006B75` で固定し、config では指定させない。`modules/label-conventions.md` の namespace 単位の色一貫性を優先。
+- 設定ファイル解決は `CONFIG_FILE="${WHOLEWORK_CONFIG_PATH:-.wholework.yml}"` とし、`scripts/get-config-value.sh` と同一規則に揃える。`WHOLEWORK_CONFIG_PATH` 対応はテストの決定性確保に必須。
+- パーサは `setup-labels.sh` 内のローカル実装とし、`get-config-value.sh` への汎用化は行わない (`scripts/check-verify-dirty.sh` の `verify-ignore-paths` と同じ方針)。
+
+### Deferred Items
+
+- theme ごとの色指定 (config で `color` を持たせる) は本 Issue のスコープ外。必要になれば mapping 値をハッシュに拡張する余地を残してある。
+- description 中の ` #` 以降が inline コメントとして除去される制限は、`get-config-value.sh` の sed チェーン踏襲による既知の制限として許容。既存5テーマに該当なし。
+
+### Notes for Next Phase
+
+- **Implementation Step 5 を飛ばさないこと**: `tests/setup-labels.bats` の `setup()` に `export WHOLEWORK_CONFIG_PATH=/dev/null` を入れないと、リポジトリ自身の `.wholework.yml` の5テーマを読んで `count_label_creates` が `count_always_labels` を 5 超過し、既存テスト (`env=full`, `env=none`, `--force`, `--no-fallback`, `output:`) が一斉に落ちる。
+- 作成ループは `for entry in "${THEME_LABELS[@]+"${THEME_LABELS[@]}"}"` の形が必須。`set -euo pipefail` 下の bash 3.2 は空配列を unset 扱いにするため、素の `"${THEME_LABELS[@]}"` では `themes:` 未定義時に `unbound variable` で落ちる。
+- ドキュメント側の変更は英語版と `docs/ja/` ミラーが対になっている (`customization.md` / `tech.md` / `product.md` の3組)。`scripts/check-translation-sync.sh` は `docs/*.md` と `docs/guide/*.md` を同期対象に含むため、片側だけの更新は OUTDATED として検出される。
+- `docs/tech.md` の Label Groups 表は Always の件数 (22) を明示しているため、`ALWAYS_LABELS` から5件削除したら 17 に更新する必要がある。日本語ミラー `docs/ja/tech.md:137` にも同じ表がある。
+- Changed Files のうち `modules/label-conventions.md` を "Read and follow" する SKILL.md は0件のため、`allowed-tools` の追加は不要 (`/spec` で確認済み)。
