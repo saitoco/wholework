@@ -238,11 +238,17 @@ Input: `ISSUE_NUMBER`, `COMMENT_SCOPE`, `PHASE_NAME`.
 **Pre-pipeline comment coverage:** Comments posted before an Issue enters the pipeline (i.e.,
 before any `phase/*` label has ever been assigned) are the responsibility of `/issue`'s Existing
 Issue Refinement flow — it is the only phase that calls this procedure before `phase/issue` is
-assigned. With no `phase/*` label yet on the timeline, Step 1's cutoff resolution below falls
-through to Fallback B (cutoff empty — consume all comments), so `/issue` naturally picks up every
-comment posted before the pipeline began. `/spec`, `/code`, and `/verify` cannot cover this
-window: by the time each of them runs, a `phase/*` label has already been assigned, so their
-cutoff necessarily excludes anything predating it.
+assigned. With no `phase/*` label yet on the timeline, Step 1's cutoff resolution below explicitly
+skips Fallback A and resolves directly to Fallback B (cutoff empty — consume all comments), so
+`/issue` naturally picks up every comment posted before the pipeline began. This explicit skip is
+required, not incidental: under `/auto` dispatch (the primary path this coverage targets), the
+wrapper script running this very phase (`run-issue.sh`) emits its own `phase_start` event for this
+Issue *before* invoking the Claude subprocess that executes this procedure — if Fallback A were
+consulted here, it would find that just-emitted, self-referential event and resolve cutoff to
+essentially "now", excluding every comment posted before the pipeline began (the opposite of the
+intended coverage). `/spec`, `/code`, and `/verify` cannot cover this window: by the time each of
+them runs, a `phase/*` label has already been assigned, so their cutoff necessarily excludes
+anything predating it.
 
 **Step 1 — Determine the cutoff timestamp (fallback ladder):**
 
@@ -253,11 +259,21 @@ gh api "repos/{owner}/{repo}/issues/$ISSUE_NUMBER/timeline" --paginate \
 ```
 (`{owner}` and `{repo}` are expanded automatically by `gh`.)
 
-Fallback A: if the timeline is empty or the command fails, read the latest `phase_start` event
-`ts` for this Issue from `.tmp/auto-events.jsonl`.
+- If the command succeeds and returns a non-empty timestamp: use it as cutoff.
+- If the command succeeds but returns empty (no `phase/*` label has ever been assigned to this
+  Issue): skip Fallback A and go directly to Fallback B — see "Pre-pipeline comment coverage"
+  above for why consulting Fallback A here would be actively wrong, not merely unnecessary.
+- If the command itself fails (non-zero exit, API error, network failure): proceed to Fallback A.
 
-Fallback B: if neither source is available, set cutoff to empty (consume all comments as
-best-effort) and note "cutoff undetermined" in the Consumed Comments record.
+Fallback A: only when the Primary command failed to execute (not merely returned empty), read the
+latest `phase_start` event `ts` for this Issue from `.tmp/auto-events.jsonl`.
+
+Fallback B: if neither source is available (Primary returned empty, or Primary failed and
+Fallback A also found nothing), set cutoff to empty (consume all comments as best-effort) and
+note "cutoff undetermined" in the Consumed Comments record. The deterministic bash fallback
+(`append-consumed-comments-section.sh`, used by `/spec`/`/code`/`/merge`/`/verify`) implements
+only Primary and Fallback B — it has no Fallback A — so this ladder's Fallback A branch applies
+to the LLM-driven procedure only.
 
 **Step 2 — Fetch comments:**
 
@@ -311,7 +327,7 @@ silently skipped under context pressure or on fix-cycle paths. Two layers ensure
 is written, and both target the same working branch per `modules/worktree-lifecycle.md` §
 "Spec file write destination" — the primary layer always does, and the secondary layer only
 fires where it can safely reach that branch:
-- **Primary (in-session, all phases):** `SKILL.md` for `/spec`, `/code`, and `/verify` each
+- **Primary (in-session; all phases that write to a Spec):** `SKILL.md` for `/spec`, `/code`, and `/verify` each
   contain an explicit `bash` call to `append-consumed-comments-section.sh` (`/spec` Step 12,
   unconditionally so it also covers `SPEC_DEPTH=light` runs where Step 13 is skipped; `/code`
   Step 12; `/verify` Step 4) after the LLM's comment consumption
@@ -327,7 +343,10 @@ fires where it can safely reach that branch:
   --delete-branch`, earlier in the same Step) and the worktree fast-forwarded to `origin/main`
   — by the time the call runs, the working branch's content is `main`, not the (now-gone) PR
   branch. `/merge` passes `--no-push` and rides the same push as its Step 4 Phase Handoff
-  commit (`git push origin HEAD:main`).
+  commit (`git push origin HEAD:main`). `/issue` has no Primary layer: no Spec exists at that
+  point in the pipeline, so its Consumed Comments record lives in the Step 13 Issue
+  Retrospective comment instead (see `skills/issue/SKILL.md` Step 13) and has no deterministic
+  bash writeback — the LLM step is the only layer for `/issue`.
 - **Secondary (bash wrapper post-processor, non-pr routes only):** `run-spec.sh` / `run-code.sh`
   additionally run a pre/post `## Consumed Comments` count comparison after the `claude`
   subprocess exits, triggering `append-consumed-comments-section.sh` as a fallback when the
