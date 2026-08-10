@@ -44,6 +44,13 @@
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=9 / https://github.com/saitoco/wholework/issues/984#issuecomment-5174321501
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/984#issuecomment-5182244148
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=9 / https://github.com/saitoco/wholework/issues/984#issuecomment-5185270023
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/984#issuecomment-5187924505
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=9 / https://github.com/saitoco/wholework/issues/984#issuecomment-5195220460
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=9 / https://github.com/saitoco/wholework/issues/984#issuecomment-5202640304
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=9 / https://github.com/saitoco/wholework/issues/984#issuecomment-5212265209
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=9 / https://github.com/saitoco/wholework/issues/984#issuecomment-5225316620
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=9 / https://github.com/saitoco/wholework/issues/984#issuecomment-5229259707
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=9 / https://github.com/saitoco/wholework/issues/984#issuecomment-5235403095
 ## Overview
 
 `run-auto-sub.sh` の Tier 2/3 recovery (自動発火経路) が `docs/reports/orchestration-recoveries.md` および Spec `## Auto Retrospective` に書き込む際、review/merge phase では issue 番号ではなく **PR 番号**を記録してしまうバグを修正する。
