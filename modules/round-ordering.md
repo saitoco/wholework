@@ -37,8 +37,8 @@ This module does not replace the existing blocked-by gate (List mode step 4) —
 
 ### Signal 3 (semantic, LLM judgment)
 
-4. For each singleton cluster from step 3, read the Issue body of every other Issue still in
-   `ROUND_LIST` (`gh issue view $NUMBER --json body`) and look for:
+4. For each singleton cluster from step 3, read the Issue body of the singleton itself and of
+   every other Issue still in `ROUND_LIST` (`gh issue view $NUMBER --json body`) and look for:
    - shared file/script/module names mentioned in both bodies (e.g. both reference
      `scripts/foo.sh` or `modules/bar.md`)
    - explicit cross-references (e.g. "See #N", "Related: #N", "depends on #N")
