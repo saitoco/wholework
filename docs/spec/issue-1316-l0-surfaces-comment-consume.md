@@ -182,24 +182,24 @@ Size=XL だが non-interactive モードのため sub-issue 分割評価 (Step 1
 - `modules/l0-surfaces.md`'s Bash wrapper fallback description (Primary and Secondary bullets) was rewritten during the SSoT Module Cross-Check, after `skills/review/SKILL.md` and `skills/merge/SKILL.md` were implemented, to replace the design-time phrasing with wording verified against the actual call-site mechanics (see Design Gaps/Ambiguities above).
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Fixed 1 MUST bug (Fallback A in the cutoff ladder resolving to a self-referential `phase_start` timestamp under `/auto` dispatch, defeating pre-pipeline comment coverage) and 6 SHOULD / 4 CONSIDER findings surfaced by the review-spec + review-bug×2 fan-out; 1 low-confidence CONSIDER (checkout-failure edge case in `skills/review/SKILL.md`) was left unfixed.
-- All fixes were scoped to correcting the existing implementation and documentation against the Issue's already-stated acceptance criteria — no acceptance condition text or verify command changed, so Step 13's Policy Change Detection found nothing to propagate to the Issue body.
-- Grouped the fixes into 4 commits by topic (MUST cutoff-ladder fix; `/merge` guard fixes; SSoT doc updates; Spec self-corrections) rather than one commit per finding, since several findings shared the same file/section.
+- Squash-merged PR #1324 cleanly (`mergeable=true`, `reason=clean`, CI success, review approved) — no rebase or conflict resolution was required.
+- Pre-merge AC gate: all 8 pre-merge acceptance conditions were already checked (`unchecked_count: 0`), and the review-incomplete-fallback check found an organic (non-fallback) review completion, so the gate cleared without an override marker.
+- No new decisions were made in this phase beyond executing the documented merge procedure; substantive design decisions were finalized in the code/review phases (see above).
 
 ### Deferred Items
 - 案 B (read watermark) は、案 A のフェーズラベル境界単位のカバレッジで実運用上不十分と判明した場合の follow-up として保留 (spec phase から継続)
-- `/issue`/`/review`/`/merge` への `_emit_comments_consumed()` 配線 (`comments_consumed` イベント発火) は、`EMIT_ISSUE_NUMBER` のスコープ調査が別途必要なため見送り (spec phase から継続、review で `/issue` も対象に追加)
+- `/issue`/`/review`/`/merge` への `_emit_comments_consumed()` 配線 (`comments_consumed` イベント発火) は、`EMIT_ISSUE_NUMBER` のスコープ調査が別途必要なため見送り (spec/review phase から継続)
 - `docs/workflow.md` の `phase/merge` ラベル記述と実装の乖離 (pre-existing) は本 Issue のスコープ外として記録のみ (spec phase から継続)
-- Post-merge observation AC (`event=auto-run session=next`) は次に `/auto` に入る Issue でのみ検証可能。今回のセッションでは未検証。
-- `skills/review/SKILL.md`'s Step 2 comment consumption push has no guard for `git checkout "$headRefName"` failure (CONSIDER, low confidence) — deferred rather than expanding this PR's scope; same class of gap already tracked for `/verify` in `worktree-lifecycle.md` Known gaps.
+- `skills/review/SKILL.md`'s Step 2 comment consumption push has no guard for `git checkout "$headRefName"` failure (CONSIDER, low confidence) — deferred (review phase から継続)
+- Post-merge observation AC (`event=auto-run session=next`) は次に `/auto` に入る Issue でのみ検証可能 — verify phase ではまだ検証不能、次の `/auto` 実行を待つ。
 
 ### Notes for Next Phase
-- `tests/post_merge_check.bats` の 2 件は本変更と無関係な既知の並列実行時 flake (`docs/tech.md` § CI bats Parallel/Serial Split、#1221/#1224/#1227/#1260)。単体実行で PASS を確認済み。CI で再現しても本 PR の regression として扱わないこと。
-- Issue #1316 は着手時点で `phase/ready` ラベルが既に `phase/code` に遷移済みだった (経緯不明、Spec は完全な形で存在) — `/verify` 実行時にラベル遷移履歴の異常として気づく可能性があるが、Spec に基づいた正規の実装であることを Autonomous Auto-Resolve Log (Code Phase) に記録済み。
-- `/merge` 実行時は本 review で修正した substep 4 のガード変更 (staged diff だけでなく `origin/main..HEAD` の未 push コミットも確認) が実際に機能することを、squash-merge 後のログで確認するとよい。
+- `tests/post_merge_check.bats` の 2 件は本変更と無関係な既知の並列実行時 flake (`docs/tech.md` § CI bats Parallel/Serial Split、#1221/#1224/#1227/#1260)。CI で再現しても本 PR の regression として扱わないこと。
+- Issue #1316 は着手時点で `phase/ready` ラベルが既に `phase/code` に遷移済みだった経緯不明の状態だったが、Spec に基づいた正規の実装であることを Autonomous Auto-Resolve Log (Code Phase) に記録済み — `/verify` で異常として扱わないこと。
+- Pre-merge の AC 検証はすべて手順書レビュー (grep/rubric) 止まりであり、`/auto` の実際の呼び出し連鎖下での動作確認は Post-merge observation AC (次回 `/auto` 実行) に委ねられている。`/verify` はこの observation AC をまだ確定させられない点に留意。
 
 ## review retrospective
 
