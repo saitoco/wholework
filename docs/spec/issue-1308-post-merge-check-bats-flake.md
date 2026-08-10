@@ -68,3 +68,32 @@ macOS (BSD) の `mktemp(1)` は man page に明記されている通り、**末�
 ## Consumed Comments
 
 - saito / MEMBER / first-class / `/issue 1308 --non-interactive` による refinement 完了後の Issue Retrospective コメント。Background への非決定性記録の明文化、Pre-merge AC のループ実行化、Post-merge observation AC 新設、Related Issues セクション新設などの反映内容の要約 (内容はすでに Issue 本文に反映済みで、本 Spec の設計に影響する新規情報はなし) / https://github.com/saitoco/wholework/issues/1308#issuecomment-5241844509
+- code フェーズ (`phase/ready` ラベル付与以降): No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — Spec の Implementation Steps 1〜5 をそのままの順序・内容で実装した。
+
+### Design Gaps/Ambiguities
+
+- Step 8 (実装) の中で Spec Implementation Step 5 のローカル検証 (`--jobs 4`/`--jobs 18` を各 5 回連続実行) を先に済ませてから中間コミットしたため、Step 11 の「`git add <changed files>` → 規定フォーマットでコミット」に到達した時点で未コミットの差分が残っていなかった。規定フォーマット (`{prefix} <summary> (closes #N)`) は #996 の `concurrent_commit_detected` 誤検知防止と GitHub 自動クローズの両方にとって必須のため、既存コミットのメッセージのみを `git commit --amend` で訂正した (差分は変更せず、未 push のローカルコミットであることを確認した上で実施)。Step 8 で先にコミットする場合、その時点で規定フォーマットを直接使うほうが amend を避けられる。
+
+### Rework
+
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Root Cause / Changed Files / Implementation Steps をそのまま採用し、`scripts/post_merge_check.sh` の 4 箇所の `mktemp /tmp/<prefix>-XXXXXX.<拡張子>` を run-scoped な `mktemp -d` ディレクトリ配下の固定ファイル名に置換した。
+- コミット前に Spec Implementation Step 5 が指定するローカル検証 (`bats --jobs 4`/`--jobs 18` を各 5 回連続実行) を実施し、Pre-merge AC の verify command そのものを事前実行して両方 PASS を確認した。
+
+### Deferred Items
+- Post-merge AC (次回 `/auto` 実行時の CI Serial re-run セクション非出現の確認) は `verify-type: observation` のため本フェーズでは未実施 — `/verify` フェーズに委譲。
+
+### Notes for Next Phase
+- `/verify` は Post-merge AC を CI 実行時の `$GITHUB_STEP_SUMMARY` 観測で判定する (`docs/tech.md` § CI bats Parallel/Serial Split の Serial re-run セクションが出現しないことを確認)。
+- Pre-merge AC 2件は本フェーズで `[x]` 済み。
