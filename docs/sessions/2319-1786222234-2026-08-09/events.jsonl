@@ -1,0 +1,149 @@
+{"ts":"2026-08-08T20:50:59Z","issue":1276,"event":"sub_start","session_id":"2319-1786222234","size":"L"}
+{"ts":"2026-08-08T20:50:59Z","issue":1275,"event":"sub_start","session_id":"2319-1786222234","size":"M"}
+{"ts":"2026-08-08T20:51:00Z","issue":1274,"event":"sub_start","session_id":"2319-1786222234","size":"L"}
+{"ts":"2026-08-08T20:51:00Z","issue":1276,"event":"comments_consumed","session_id":"2319-1786222234","phase":"spec","count":"1","authors":"saito","trust_breakdown":"OWNER:0,MEMBER:1,COLLABORATOR:0,CONTRIBUTOR:0,NONE:0"}
+{"ts":"2026-08-08T20:51:00Z","issue":1275,"event":"comments_consumed","session_id":"2319-1786222234","phase":"spec","count":"1","authors":"saito","trust_breakdown":"OWNER:0,MEMBER:1,COLLABORATOR:0,CONTRIBUTOR:0,NONE:0"}
+{"ts":"2026-08-08T20:51:01Z","issue":1276,"event":"phase_start","session_id":"2319-1786222234","phase":"spec"}
+{"ts":"2026-08-08T20:51:01Z","issue":1275,"event":"phase_start","session_id":"2319-1786222234","phase":"spec"}
+{"ts":"2026-08-08T20:51:01Z","issue":1274,"event":"comments_consumed","session_id":"2319-1786222234","phase":"spec","count":"1","authors":"saito","trust_breakdown":"OWNER:0,MEMBER:1,COLLABORATOR:0,CONTRIBUTOR:0,NONE:0"}
+{"ts":"2026-08-08T20:51:02Z","issue":1274,"event":"phase_start","session_id":"2319-1786222234","phase":"spec"}
+{"ts":"2026-08-08T21:08:24Z","issue":1274,"event":"max_silent_window","session_id":"2319-1786222234","phase":"spec","max_sec":"1040"}
+{"ts":"2026-08-08T21:08:26Z","issue":1274,"event":"wrapper_exit","session_id":"2319-1786222234","phase":"spec","exit_code":"0"}
+{"ts":"2026-08-08T21:08:26Z","issue":1274,"event":"token_usage","session_id":"2319-1786222234","phase":"spec","model":"claude-opus-5","input_tokens":"655","output_tokens":"53588","cache_read_tokens":"13727353"}
+{"ts":"2026-08-08T21:08:26Z","issue":1274,"event":"phase_complete","session_id":"2319-1786222234","phase":"spec"}
+{"ts":"2026-08-08T21:08:27Z","issue":1274,"event":"wrapper_alive","session_id":"2319-1786222234","checkpoint":"pre_phase_dispatch"}
+{"ts":"2026-08-08T21:08:28Z","issue":1274,"event":"comments_consumed","session_id":"2319-1786222234","phase":"code","count":"0","authors":"","trust_breakdown":"OWNER:0,MEMBER:0,COLLABORATOR:0,CONTRIBUTOR:0,NONE:0"}
+{"ts":"2026-08-08T21:08:28Z","issue":1274,"event":"phase_start","session_id":"2319-1786222234","phase":"code-pr"}
+{"ts":"2026-08-08T21:08:28Z","issue":1274,"event":"wrapper_alive","session_id":"2319-1786222234","checkpoint":"pre_subprocess","phase":"code-pr"}
+{"ts":"2026-08-08T21:08:31Z","issue":1274,"event":"comments_consumed","session_id":"2319-1786222234","phase":"code","count":"0","authors":"","trust_breakdown":"OWNER:0,MEMBER:0,COLLABORATOR:0,CONTRIBUTOR:0,NONE:0"}
+{"ts":"2026-08-08T21:11:23Z","issue":1276,"event":"max_silent_window","session_id":"2319-1786222234","phase":"spec","max_sec":"1220"}
+{"ts":"2026-08-08T21:11:25Z","issue":1276,"event":"wrapper_exit","session_id":"2319-1786222234","phase":"spec","exit_code":"0"}
+{"ts":"2026-08-08T21:11:25Z","issue":1276,"event":"token_usage","session_id":"2319-1786222234","phase":"spec","model":"claude-opus-5","input_tokens":"2319","output_tokens":"73677","cache_read_tokens":"14640676"}
+{"ts":"2026-08-08T21:11:25Z","issue":1276,"event":"phase_complete","session_id":"2319-1786222234","phase":"spec"}
+{"ts":"2026-08-08T21:11:26Z","issue":1276,"event":"wrapper_alive","session_id":"2319-1786222234","checkpoint":"pre_phase_dispatch"}
+{"ts":"2026-08-08T21:11:27Z","issue":1276,"event":"comments_consumed","session_id":"2319-1786222234","phase":"code","count":"0","authors":"","trust_breakdown":"OWNER:0,MEMBER:0,COLLABORATOR:0,CONTRIBUTOR:0,NONE:0"}
+{"ts":"2026-08-08T21:11:27Z","issue":1276,"event":"phase_start","session_id":"2319-1786222234","phase":"code-pr"}
+{"ts":"2026-08-08T21:11:27Z","issue":1276,"event":"wrapper_alive","session_id":"2319-1786222234","checkpoint":"pre_subprocess","phase":"code-pr"}
+{"ts":"2026-08-08T21:11:30Z","issue":1276,"event":"comments_consumed","session_id":"2319-1786222234","phase":"code","count":"0","authors":"","trust_breakdown":"OWNER:0,MEMBER:0,COLLABORATOR:0,CONTRIBUTOR:0,NONE:0"}
+{"ts":"2026-08-08T21:13:04Z","issue":1275,"event":"max_silent_window","session_id":"2319-1786222234","phase":"spec","max_sec":"1320"}
+{"ts":"2026-08-08T21:13:05Z","issue":1275,"event":"wrapper_exit","session_id":"2319-1786222234","phase":"spec","exit_code":"0"}
+{"ts":"2026-08-08T21:13:05Z","issue":1275,"event":"token_usage","session_id":"2319-1786222234","phase":"spec","model":"claude-sonnet-5","input_tokens":"288","output_tokens":"83832","cache_read_tokens":"31310462"}
+{"ts":"2026-08-08T21:13:05Z","issue":1275,"event":"phase_complete","session_id":"2319-1786222234","phase":"spec"}
+{"ts":"2026-08-08T21:13:06Z","issue":1275,"event":"wrapper_alive","session_id":"2319-1786222234","checkpoint":"pre_phase_dispatch"}
+{"ts":"2026-08-08T21:13:08Z","issue":1275,"event":"comments_consumed","session_id":"2319-1786222234","phase":"code","count":"0","authors":"","trust_breakdown":"OWNER:0,MEMBER:0,COLLABORATOR:0,CONTRIBUTOR:0,NONE:0"}
+{"ts":"2026-08-08T21:13:08Z","issue":1275,"event":"phase_start","session_id":"2319-1786222234","phase":"code-pr"}
+{"ts":"2026-08-08T21:13:08Z","issue":1275,"event":"wrapper_alive","session_id":"2319-1786222234","checkpoint":"pre_subprocess","phase":"code-pr"}
+{"ts":"2026-08-08T21:13:11Z","issue":1275,"event":"comments_consumed","session_id":"2319-1786222234","phase":"code","count":"0","authors":"","trust_breakdown":"OWNER:0,MEMBER:0,COLLABORATOR:0,CONTRIBUTOR:0,NONE:0"}
+{"ts":"2026-08-08T21:30:21Z","issue":1276,"event":"max_silent_window","session_id":"2319-1786222234","phase":"code-pr","max_sec":"1130"}
+{"ts":"2026-08-08T21:30:25Z","issue":1276,"event":"wrapper_exit","session_id":"2319-1786222234","phase":"code-pr","exit_code":"0"}
+{"ts":"2026-08-08T21:30:25Z","issue":1276,"event":"token_usage","session_id":"2319-1786222234","phase":"code-pr","model":"claude-sonnet-5","input_tokens":"196","output_tokens":"53669","cache_read_tokens":"18604964"}
+{"ts":"2026-08-08T21:30:25Z","issue":1276,"event":"concurrent_commit_detected","session_id":"2319-1786222234","phase":"code-pr","commit_sha":"14541ab3848675a28e3f581721c492d46017c3a2","author":"Toshihiro Saito","since_phase_start_sec":"1138"}
+{"ts":"2026-08-08T21:30:25Z","issue":1276,"event":"concurrent_commit_detected","session_id":"2319-1786222234","phase":"code-pr","commit_sha":"fcc07ee89f70844702c877f85cc75cc088d5b6de","author":"Toshihiro Saito","since_phase_start_sec":"1138"}
+{"ts":"2026-08-08T21:30:25Z","issue":1276,"event":"phase_complete","session_id":"2319-1786222234","phase":"code-pr"}
+{"ts":"2026-08-08T21:30:25Z","issue":1276,"event":"wrapper_alive","session_id":"2319-1786222234","checkpoint":"post_code_pre_review"}
+{"ts":"2026-08-08T21:30:26Z","issue":1276,"event":"phase_start","session_id":"2319-1786222234","pr":1295,"phase":"review"}
+{"ts":"2026-08-08T21:30:26Z","issue":1276,"event":"wrapper_alive","session_id":"2319-1786222234","pr":1295,"checkpoint":"pre_subprocess","phase":"review"}
+{"ts":"2026-08-08T21:34:32Z","issue":1276,"event":"ci_wait","session_id":"2319-1786222234","pr":1295,"phase":"review","wait_sec":"245","checks_passed":"11","checks_failed":"0"}
+{"ts":"2026-08-08T21:43:03Z","issue":783,"event":"opportunistic_verify_result","session_id":"2319-1786222234","skill":"/code","result":"SKIP","ac_index":"11"}
+{"ts":"2026-08-08T21:43:33Z","issue":1275,"event":"max_silent_window","session_id":"2319-1786222234","phase":"code-pr","max_sec":"1820"}
+{"ts":"2026-08-08T21:43:36Z","issue":1275,"event":"wrapper_exit","session_id":"2319-1786222234","phase":"code-pr","exit_code":"0"}
+{"ts":"2026-08-08T21:43:36Z","issue":1275,"event":"token_usage","session_id":"2319-1786222234","phase":"code-pr","model":"claude-sonnet-5","input_tokens":"196","output_tokens":"69732","cache_read_tokens":"20729546"}
+{"ts":"2026-08-08T21:43:36Z","issue":1275,"event":"concurrent_commit_detected","session_id":"2319-1786222234","phase":"code-pr","commit_sha":"14541ab3848675a28e3f581721c492d46017c3a2","author":"Toshihiro Saito","since_phase_start_sec":"1828"}
+{"ts":"2026-08-08T21:43:36Z","issue":1275,"event":"concurrent_commit_detected","session_id":"2319-1786222234","phase":"code-pr","commit_sha":"fcc07ee89f70844702c877f85cc75cc088d5b6de","author":"Toshihiro Saito","since_phase_start_sec":"1828"}
+{"ts":"2026-08-08T21:43:36Z","issue":1275,"event":"phase_complete","session_id":"2319-1786222234","phase":"code-pr"}
+{"ts":"2026-08-08T21:43:36Z","issue":1275,"event":"wrapper_alive","session_id":"2319-1786222234","checkpoint":"post_code_pre_review"}
+{"ts":"2026-08-08T21:43:37Z","issue":1275,"event":"phase_start","session_id":"2319-1786222234","pr":1296,"phase":"review"}
+{"ts":"2026-08-08T21:43:37Z","issue":1275,"event":"wrapper_alive","session_id":"2319-1786222234","pr":1296,"checkpoint":"pre_subprocess","phase":"review"}
+{"ts":"2026-08-08T21:44:03Z","issue":1274,"event":"max_silent_window","session_id":"2319-1786222234","phase":"code-pr","max_sec":"2130"}
+{"ts":"2026-08-08T21:44:06Z","issue":1274,"event":"wrapper_exit","session_id":"2319-1786222234","phase":"code-pr","exit_code":"0"}
+{"ts":"2026-08-08T21:44:06Z","issue":1274,"event":"token_usage","session_id":"2319-1786222234","phase":"code-pr","model":"claude-sonnet-5","input_tokens":"6","output_tokens":"713","cache_read_tokens":"586970"}
+{"ts":"2026-08-08T21:44:06Z","issue":1274,"event":"concurrent_commit_detected","session_id":"2319-1786222234","phase":"code-pr","commit_sha":"14541ab3848675a28e3f581721c492d46017c3a2","author":"Toshihiro Saito","since_phase_start_sec":"2138"}
+{"ts":"2026-08-08T21:44:06Z","issue":1274,"event":"concurrent_commit_detected","session_id":"2319-1786222234","phase":"code-pr","commit_sha":"fcc07ee89f70844702c877f85cc75cc088d5b6de","author":"Toshihiro Saito","since_phase_start_sec":"2138"}
+{"ts":"2026-08-08T21:44:06Z","issue":1274,"event":"phase_complete","session_id":"2319-1786222234","phase":"code-pr"}
+{"ts":"2026-08-08T21:44:07Z","issue":1274,"event":"wrapper_alive","session_id":"2319-1786222234","checkpoint":"post_code_pre_review"}
+{"ts":"2026-08-08T21:44:07Z","issue":1274,"event":"phase_start","session_id":"2319-1786222234","pr":1297,"phase":"review"}
+{"ts":"2026-08-08T21:44:07Z","issue":1274,"event":"wrapper_alive","session_id":"2319-1786222234","pr":1297,"checkpoint":"pre_subprocess","phase":"review"}
+{"ts":"2026-08-08T21:44:40Z","issue":1275,"event":"ci_wait","session_id":"2319-1786222234","pr":1296,"phase":"review","wait_sec":"62","checks_passed":"11","checks_failed":"0"}
+{"ts":"2026-08-08T21:47:12Z","issue":1274,"event":"ci_wait","session_id":"2319-1786222234","pr":1297,"phase":"review","wait_sec":"184","checks_passed":"11","checks_failed":"0"}
+{"ts":"2026-08-08T21:55:53Z","issue":1276,"event":"max_silent_window","session_id":"2319-1786222234","pr":1295,"phase":"review","max_sec":"1280"}
+{"ts":"2026-08-08T21:55:55Z","issue":1276,"event":"wrapper_exit","session_id":"2319-1786222234","pr":1295,"phase":"review","exit_code":"0"}
+{"ts":"2026-08-08T21:55:55Z","issue":1276,"event":"token_usage","session_id":"2319-1786222234","pr":1295,"phase":"review","model":"claude-sonnet-5","input_tokens":"6061","output_tokens":"56816","cache_read_tokens":"17820813"}
+{"ts":"2026-08-08T21:55:56Z","issue":1276,"event":"phase_complete","session_id":"2319-1786222234","pr":1295,"phase":"review"}
+{"ts":"2026-08-08T21:55:56Z","issue":1276,"event":"phase_start","session_id":"2319-1786222234","pr":1295,"phase":"merge"}
+{"ts":"2026-08-08T21:55:56Z","issue":1276,"event":"wrapper_alive","session_id":"2319-1786222234","pr":1295,"checkpoint":"pre_subprocess","phase":"merge"}
+{"ts":"2026-08-08T21:55:59Z","issue":1276,"event":"ci_wait","session_id":"2319-1786222234","pr":1295,"phase":"merge","wait_sec":"1","checks_passed":"11","checks_failed":"0"}
+{"ts":"2026-08-08T21:59:41Z","issue":1275,"event":"max_silent_window","session_id":"2319-1786222234","pr":1296,"phase":"review","max_sec":"900"}
+{"ts":"2026-08-08T21:59:43Z","issue":1275,"event":"wrapper_exit","session_id":"2319-1786222234","pr":1296,"phase":"review","exit_code":"0"}
+{"ts":"2026-08-08T21:59:43Z","issue":1275,"event":"token_usage","session_id":"2319-1786222234","pr":1296,"phase":"review","model":"claude-sonnet-5","input_tokens":"70","output_tokens":"15638","cache_read_tokens":"5059889"}
+{"ts":"2026-08-08T21:59:43Z","issue":1275,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1296,"phase":"review","commit_sha":"e504895aaa69df42c0e1faaccd70218fc6833066","author":"Toshihiro Saito","since_phase_start_sec":"966"}
+{"ts":"2026-08-08T21:59:43Z","issue":1275,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1296,"phase":"review","commit_sha":"e8dc95841e0543e4960c6ef065e79bc43bc5f2e9","author":"Toshihiro Saito","since_phase_start_sec":"966"}
+{"ts":"2026-08-08T21:59:43Z","issue":1275,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1296,"phase":"review","commit_sha":"f3ad5a3cf0aefa119d1569f6799338e8868250ff","author":"Toshihiro Saito","since_phase_start_sec":"966"}
+{"ts":"2026-08-08T21:59:43Z","issue":1275,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1296,"phase":"review","commit_sha":"3c753db60927ca9b2668e569cccf9259f2d72e0b","author":"Toshihiro Saito","since_phase_start_sec":"966"}
+{"ts":"2026-08-08T21:59:44Z","issue":1275,"event":"phase_complete","session_id":"2319-1786222234","pr":1296,"phase":"review"}
+{"ts":"2026-08-08T21:59:44Z","issue":1275,"event":"phase_start","session_id":"2319-1786222234","pr":1296,"phase":"merge"}
+{"ts":"2026-08-08T21:59:44Z","issue":1275,"event":"wrapper_alive","session_id":"2319-1786222234","pr":1296,"checkpoint":"pre_subprocess","phase":"merge"}
+{"ts":"2026-08-08T21:59:46Z","issue":1275,"event":"ci_wait","session_id":"2319-1786222234","pr":1296,"phase":"merge","wait_sec":"1","checks_passed":"11","checks_failed":"0"}
+{"ts":"2026-08-08T22:00:04Z","issue":1276,"event":"max_silent_window","session_id":"2319-1786222234","pr":1295,"phase":"merge","max_sec":"240"}
+{"ts":"2026-08-08T22:00:10Z","issue":1275,"event":"ci_wait","session_id":"2319-1786222234","pr":1296,"phase":"merge","wait_sec":"1","checks_passed":"11","checks_failed":"0"}
+{"ts":"2026-08-08T22:00:11Z","issue":1276,"event":"test_result","session_id":"2319-1786222234","pr":1295,"phase":"merge","framework":"bats","source":"ci","passed":"1636","failed":"1","run_id":"31280334421"}
+{"ts":"2026-08-08T22:00:11Z","issue":1276,"event":"wrapper_exit","session_id":"2319-1786222234","pr":1295,"phase":"merge","exit_code":"0"}
+{"ts":"2026-08-08T22:00:11Z","issue":1276,"event":"token_usage","session_id":"2319-1786222234","pr":1295,"phase":"merge","model":"claude-sonnet-5","input_tokens":"66","output_tokens":"6407","cache_read_tokens":"2734666"}
+{"ts":"2026-08-08T22:00:11Z","issue":1276,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1295,"phase":"merge","commit_sha":"f3ad5a3cf0aefa119d1569f6799338e8868250ff","author":"Toshihiro Saito","since_phase_start_sec":"255"}
+{"ts":"2026-08-08T22:00:11Z","issue":1276,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1295,"phase":"merge","commit_sha":"3c753db60927ca9b2668e569cccf9259f2d72e0b","author":"Toshihiro Saito","since_phase_start_sec":"255"}
+{"ts":"2026-08-08T22:00:11Z","issue":1276,"event":"phase_complete","session_id":"2319-1786222234","pr":1295,"phase":"merge"}
+{"ts":"2026-08-08T22:00:11Z","issue":1276,"event":"sub_complete","session_id":"2319-1786222234","pr":1295,"exit_code":"0"}
+{"ts":"2026-08-08T22:00:26Z","issue":1275,"event":"ci_wait","session_id":"2319-1786222234","pr":1296,"phase":"merge","wait_sec":"1","checks_passed":"11","checks_failed":"0"}
+{"ts":"2026-08-08T22:02:31Z","issue":1275,"event":"ci_wait","session_id":"2319-1786222234","pr":1296,"phase":"merge","wait_sec":"1","checks_passed":"11","checks_failed":"0"}
+{"ts":"2026-08-08T22:02:50Z","issue":1275,"event":"ci_wait","session_id":"2319-1786222234","pr":1296,"phase":"merge","wait_sec":"1","checks_passed":"11","checks_failed":"0"}
+{"ts":"2026-08-08T22:02:56Z","issue":1275,"event":"ci_wait","session_id":"2319-1786222234","pr":1296,"phase":"merge","wait_sec":"1","checks_passed":"11","checks_failed":"0"}
+{"ts":"2026-08-08T22:03:01Z","issue":1275,"event":"max_silent_window","session_id":"2319-1786222234","pr":1296,"phase":"merge","max_sec":"190"}
+{"ts":"2026-08-08T22:03:12Z","issue":1275,"event":"max_silent_window","session_id":"2319-1786222234","pr":1296,"phase":"merge","max_sec":"40"}
+{"ts":"2026-08-08T22:03:16Z","issue":1275,"event":"max_silent_window","session_id":"2319-1786222234","pr":1296,"phase":"merge","max_sec":"180"}
+{"ts":"2026-08-08T22:03:20Z","issue":1275,"event":"test_result","session_id":"2319-1786222234","pr":1296,"phase":"merge","framework":"bats","source":"ci","passed":"1637","failed":"0","run_id":"31280512903"}
+{"ts":"2026-08-08T22:08:22Z","issue":1275,"event":"max_silent_window","session_id":"2319-1786222234","pr":1296,"phase":"merge","max_sec":"330"}
+{"ts":"2026-08-08T22:08:28Z","issue":1275,"event":"test_result","session_id":"2319-1786222234","pr":1296,"phase":"merge","framework":"bats","source":"ci","passed":"1637","failed":"0","run_id":"31280512903"}
+{"ts":"2026-08-08T22:08:36Z","issue":1275,"event":"wrapper_exit","session_id":"2319-1786222234","pr":1296,"phase":"merge","exit_code":"0"}
+{"ts":"2026-08-08T22:08:36Z","issue":1275,"event":"token_usage","session_id":"2319-1786222234","pr":1296,"phase":"merge","model":"claude-sonnet-5","input_tokens":"54","output_tokens":"6421","cache_read_tokens":"1979122"}
+{"ts":"2026-08-08T22:08:36Z","issue":1275,"event":"phase_complete","session_id":"2319-1786222234","pr":1296,"phase":"merge"}
+{"ts":"2026-08-08T22:08:36Z","issue":1275,"event":"sub_complete","session_id":"2319-1786222234","pr":1296,"exit_code":"0"}
+{"ts":"2026-08-08T22:32:45Z","issue":1274,"event":"max_silent_window","session_id":"2319-1786222234","pr":1297,"phase":"review","max_sec":"2730"}
+{"ts":"2026-08-08T22:32:47Z","issue":1274,"event":"wrapper_exit","session_id":"2319-1786222234","pr":1297,"phase":"review","exit_code":"0"}
+{"ts":"2026-08-08T22:32:47Z","issue":1274,"event":"token_usage","session_id":"2319-1786222234","pr":1297,"phase":"review","model":"claude-sonnet-5","input_tokens":"372","output_tokens":"99301","cache_read_tokens":"42901673"}
+{"ts":"2026-08-08T22:32:47Z","issue":1274,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1297,"phase":"review","commit_sha":"7b48e9ee00664569d4ae57489bf57c9a4070f2cc","author":"Toshihiro Saito","since_phase_start_sec":"2920"}
+{"ts":"2026-08-08T22:32:48Z","issue":1274,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1297,"phase":"review","commit_sha":"7868cce8c3c4b38f4be723324f154af11ac0962a","author":"Toshihiro Saito","since_phase_start_sec":"2920"}
+{"ts":"2026-08-08T22:32:48Z","issue":1274,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1297,"phase":"review","commit_sha":"1b12dafd20834e186b764fd1135552646196b7dd","author":"Toshihiro Saito","since_phase_start_sec":"2920"}
+{"ts":"2026-08-08T22:32:48Z","issue":1274,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1297,"phase":"review","commit_sha":"5c5b70fac7ee7da07d8b3ab24b132bd33201bafb","author":"Toshihiro Saito","since_phase_start_sec":"2920"}
+{"ts":"2026-08-08T22:32:48Z","issue":1274,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1297,"phase":"review","commit_sha":"f975cc9c8f21136facc5aff51633d32ecc644f3a","author":"Toshihiro Saito","since_phase_start_sec":"2920"}
+{"ts":"2026-08-08T22:32:48Z","issue":1274,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1297,"phase":"review","commit_sha":"c99be2d2252498f64afb546d19f65403534e0b55","author":"Toshihiro Saito","since_phase_start_sec":"2920"}
+{"ts":"2026-08-08T22:32:48Z","issue":1274,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1297,"phase":"review","commit_sha":"aadb138925b741508cf1dd4a1303d8b7f2a5a370","author":"Toshihiro Saito","since_phase_start_sec":"2920"}
+{"ts":"2026-08-08T22:32:48Z","issue":1274,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1297,"phase":"review","commit_sha":"f44ed45eb328407397f3cabb6719af57e35d8284","author":"Toshihiro Saito","since_phase_start_sec":"2920"}
+{"ts":"2026-08-08T22:32:48Z","issue":1274,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1297,"phase":"review","commit_sha":"edaf899734c524df6704bafb25605feb6bdf4c12","author":"Toshihiro Saito","since_phase_start_sec":"2920"}
+{"ts":"2026-08-08T22:32:48Z","issue":1274,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1297,"phase":"review","commit_sha":"e504895aaa69df42c0e1faaccd70218fc6833066","author":"Toshihiro Saito","since_phase_start_sec":"2920"}
+{"ts":"2026-08-08T22:32:48Z","issue":1274,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1297,"phase":"review","commit_sha":"e8dc95841e0543e4960c6ef065e79bc43bc5f2e9","author":"Toshihiro Saito","since_phase_start_sec":"2920"}
+{"ts":"2026-08-08T22:32:48Z","issue":1274,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1297,"phase":"review","commit_sha":"f3ad5a3cf0aefa119d1569f6799338e8868250ff","author":"Toshihiro Saito","since_phase_start_sec":"2920"}
+{"ts":"2026-08-08T22:32:48Z","issue":1274,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1297,"phase":"review","commit_sha":"3c753db60927ca9b2668e569cccf9259f2d72e0b","author":"Toshihiro Saito","since_phase_start_sec":"2920"}
+{"ts":"2026-08-08T22:32:48Z","issue":1274,"event":"phase_complete","session_id":"2319-1786222234","pr":1297,"phase":"review"}
+{"ts":"2026-08-08T22:32:48Z","issue":1274,"event":"phase_start","session_id":"2319-1786222234","pr":1297,"phase":"merge"}
+{"ts":"2026-08-08T22:32:48Z","issue":1274,"event":"wrapper_alive","session_id":"2319-1786222234","pr":1297,"checkpoint":"pre_subprocess","phase":"merge"}
+{"ts":"2026-08-08T22:32:51Z","issue":1274,"event":"ci_wait","session_id":"2319-1786222234","pr":1297,"phase":"merge","wait_sec":"1","checks_passed":"11","checks_failed":"0"}
+{"ts":"2026-08-08T22:35:16Z","issue":1274,"event":"max_silent_window","session_id":"2319-1786222234","pr":1297,"phase":"merge","max_sec":"140"}
+{"ts":"2026-08-08T22:35:23Z","issue":1274,"event":"test_result","session_id":"2319-1786222234","pr":1297,"phase":"merge","framework":"bats","source":"ci","passed":"1639","failed":"0","run_id":"31281739282"}
+{"ts":"2026-08-08T22:35:23Z","issue":1274,"event":"wrapper_exit","session_id":"2319-1786222234","pr":1297,"phase":"merge","exit_code":"0"}
+{"ts":"2026-08-08T22:35:23Z","issue":1274,"event":"token_usage","session_id":"2319-1786222234","pr":1297,"phase":"merge","model":"claude-sonnet-5","input_tokens":"56","output_tokens":"4941","cache_read_tokens":"2307935"}
+{"ts":"2026-08-08T22:35:23Z","issue":1274,"event":"concurrent_commit_detected","session_id":"2319-1786222234","pr":1297,"phase":"merge","commit_sha":"bdc6084587520beb071149c0758284bd1147c68f","author":"Toshihiro Saito","since_phase_start_sec":"155"}
+{"ts":"2026-08-08T22:35:24Z","issue":1274,"event":"phase_complete","session_id":"2319-1786222234","pr":1297,"phase":"merge"}
+{"ts":"2026-08-08T22:35:24Z","issue":1274,"event":"sub_complete","session_id":"2319-1786222234","pr":1297,"exit_code":"0"}
+{"ts":"2026-08-08T22:40:25Z","issue":1270,"event":"retro_proposal_classified","session_id":"2319-1786222234","tier":"1","title":"/auto の XL route に親 Issue の実装フェーズが存在しない","reason":"再発性 2 例目 (#1158/#1270) だが既存 #1241 と重複、証拠を追記","action":"spec_only"}
+{"ts":"2026-08-08T22:40:25Z","issue":1270,"event":"retro_proposal_classified","session_id":"2319-1786222234","tier":"3","title":"/issue triage が sub-issue 間で実行前提の注記を揃えない","reason":"単発観測、再発未確認","action":"spec_only"}
+{"ts":"2026-08-08T22:40:43Z","issue":1274,"event":"phase_start","session_id":"2319-1786222234","phase":"verify"}
+{"ts":"2026-08-08T22:43:01Z","issue":1274,"event":"phase_complete","session_id":"2319-1786222234","phase":"verify"}
+{"ts":"2026-08-08T22:43:01Z","issue":1274,"event":"retro_proposal_classified","session_id":"2319-1786222234","tier":"2","title":"分類・監査作業では判断根拠の識別子を毎回実在確認する","reason":"convention レベルの lesson、特定ファイルへの変更を伴わない","action":"memory_proposal"}
+{"ts":"2026-08-08T22:43:20Z","issue":1275,"event":"phase_start","session_id":"2319-1786222234","phase":"verify"}
+{"ts":"2026-08-08T22:45:02Z","issue":1275,"event":"phase_complete","session_id":"2319-1786222234","phase":"verify"}
+{"ts":"2026-08-08T22:45:17Z","issue":1276,"event":"phase_start","session_id":"2319-1786222234","phase":"verify"}
+{"ts":"2026-08-08T22:46:53Z","issue":1276,"event":"phase_complete","session_id":"2319-1786222234","phase":"verify"}
+{"ts":"2026-08-08T22:47:13Z","issue":1270,"event":"phase_start","session_id":"2319-1786222234","phase":"verify"}
+{"ts":"2026-08-08T22:50:09Z","issue":1270,"event":"phase_complete","session_id":"2319-1786222234","phase":"verify"}
+{"ts":"2026-08-08T22:52:25Z","issue":1270,"event":"retro_proposal_classified","session_id":"2319-1786222234","tier":"1","title":"監査・実査レポートの判断根拠に現れる識別子を実在確認する工程を定着させる","reason":"3 sub-issue 中 2 本で独立に発生 (再発性) かつ spec/review の複数面に波及","action":"issue_created"}
+{"ts":"2026-08-08T22:52:25Z","issue":1270,"event":"retro_proposal_classified","session_id":"2319-1786222234","tier":"1","title":"充足不能な AC 定義を triage の AC 監査が検出できない","reason":"既存 #1251 のスコープ内、追記で対応","action":"spec_only"}
+{"ts":"2026-08-08T22:52:25Z","issue":1270,"event":"retro_proposal_classified","session_id":"2319-1786222234","tier":"1","title":"件数 0 の AC の判定ルールが未定義","reason":"既存 #1251 のスコープ内、追記で対応","action":"spec_only"}
