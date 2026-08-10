@@ -128,6 +128,22 @@ N/A
 - Pre-merge 2 件は既チェックのため skip、post-merge の observation 1 件は `auto-run` 未発火で SKIPPED。FAIL・UNCERTAIN ゼロ
 - 本 Issue 自身の spec フェーズは変更着地前 (既定 1800s) に走っているため観察対象外。同一 batch の後続 3 件 (#1294 / #1300 / #1293) の spec フェーズが 2340s 下で実行されるため、batch 完走時の `auto-run` 発火後にその実測で評価できる
 
+### Addendum: post-merge observation の判定 (re-verify, session `28254-1786325164`)
+
+初回 verify では `auto-run` 未発火のため SKIPPED、その後 session `92769-1786252094` では警告閾値が `.wholework.yml` の override を読まない欠陥により**判定不能**だった post-merge 条件を、当該欠陥の修正 (#1312) 着地後に再評価して **PASS** と判定した。
+
+判定材料は session `28254-1786325164` (#1312 を処理した `/auto` 実行) の実測:
+
+- spec の max silent window = **1420s**
+- 閾値 = `watchdog-timeout-spec-seconds (2340) - SILENT_MARGIN (600)` = **1740s**
+- 余裕 320s。`within 600s of watchdog limit` の警告は spec 行に出ていない (出ているのは override を持たない `issue` phase の 620s のみ)
+
+同じ 1420s の沈黙は、本 Issue が 2340s を設定する前の閾値 (`1800 - 600 = 1200s`) では警告対象だった。設定値が実際に at-risk 判定へ反映され、watchdog kill も 0 件である。
+
+判定不能期間中は `#1301 blocked-by #1312` を GraphQL で設定し、将来の `/verify` が FAIL と誤判定して fix-cycle を発火させないよう Issue コメントに申し送りを記録していた。#1312 着地により blocker は CLOSED となり、関係は自動的に解消されている。
+
+全受入条件がチェック済みとなり `phase/done` へ遷移した。
+
 ### Improvement Proposals
 
 - **AC 監査の「常時 PASS」検出が起票者自身の AC にも適用され機能した (Tier 3 — 記録のみ)**: 本 Issue の AC は `/verify 1289` の L3 retrospective が起草したもので、同セッションでは他 Issue の always-PASS を 7 件指摘していた。それにもかかわらず自らの起票に同じ欠陥クラス (AC4 の常時 PASS) を混入させている。これは #1294 が主張する「根因は実行者の注意深さではなく `skills/triage/skill-dev-verify-audit.md` Pattern 2 の被覆漏れ」という見立てを補強する実例である。#1294 で対処済みのため単独の起票は不要
