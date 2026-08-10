@@ -85,3 +85,21 @@
 ### Notes for Next Phase
 - Pre-merge rubric AC 1/2 は `/code` Step 10 で PASS 判定済み (根拠: §28 追加)。Issue チェックボックスは `[x]` に更新済み。
 - `tests/post_merge_check.bats` の並列限定フレーク (`multiple issues: processed sequentially`) は本 Issue の変更と無関係。Issue #1308 が既存追跡中のため、`/review`/`/verify` で再発を見ても本 Issue の regression と誤認しないこと。
+
+## Issue Retrospective
+
+### Acceptance Criteria の再分類
+
+Pre-merge (auto-verified) セクションに置かれていた AC「上記いずれかの対応方針が設計され、`command "bats tests/"` 相当の AC が UNCERTAIN に終わらず妥当な形で検証可能になっている」(`verify-type: manual`, verify command なし) を Post-merge セクションへ移動した。
+
+**理由**: `modules/verify-classifier.md` の Purpose は「post-merge セクションの各条件に対する検証可能性タイプの分類基準」であり、`verify-type` タグは Post-merge 条件に付与するもの。本 AC は verify command を持たない manual 判定であり、かつ判定内容が「新しい verify 機構が実際にコマンドを実行して UNCERTAIN に終わらないこと」という **Command execution verification** (`/issue` Step 4 の分類表で Post-merge に区分される種別) に該当するため、Pre-merge (auto-verified) セクションの趣旨 (自動検証可能な条件) と整合しない。`capabilities.pr-preview` は本リポジトリで未設定 (`HAS_PR_PREVIEW_CAPABILITY=false`) のため、pre-merge-preview の manual サブケースにも該当しない。
+
+あわせて `verify-type` タグの位置を、他の Post-merge 条件と同様に条件文末尾に統一した (`modules/verify-classifier.md` § Output: 「行末の改行の半角スペース1つ前に配置」)。
+
+### Ambiguity Detection
+
+Purpose セクションの「以下のいずれか (または組み合わせ) の対応を検討する」は複数解釈の余地があるが、`docs/product.md` § `/issue` (What) vs `/spec` (How) Responsibility Boundary により実装方針の選定は `/spec` の責務であるため、`/issue` 側でこれ以上具体化しない判断とした (Auto-Resolve: 現状維持)。Post-merge AC の「妥当な形で」という表現も同様の理由で、`verify-type: manual` による人間判断に委ねる設計を維持した。
+
+### 機械チェック結果
+
+`check-ac-checkbox-format.sh` / `check-skill-change-observation-ac.sh` はいずれも exit 0 (問題なし)。BRE メタ文字を含む `grep` verify command は本 Issue に存在しない。
