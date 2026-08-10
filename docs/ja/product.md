@@ -70,6 +70,7 @@ Wholework が機能するための必須依存は以下のみです:
 - **ワークフロー最適化（3軸）**: Model 選択、Adaptive Thinking（`--effort`）、Advisor 戦略の 3 軸を調整し、品質・速度・コストのバランスを取る。フェーズ別マトリクス（`docs/tech.md` Architecture Decisions, `ssot_for: model-effort-matrix`）は新しいモデルや利用データが得られるたびに再調整する
 - **コンテキスト分離を一級制約として扱う**: 実行フェーズのスキルは fork コンテキストに保ち、Spec をフェーズ横断のメモリとして維持することで、新しいスキルが過去フェーズのコンテキスト腐敗を引き継がずに合成できる状態を守る
 - **対象プロジェクト種別の拡大**: アプリケーション/Web 開発を越えて、「Issue → spec → 成果物 → レビュー」のフローが当てはまるあらゆる GitHub プロジェクト（ドキュメント/コンテンツ、データ/リサーチ、インフラ/IaC、OSS 運用、ビジネス/企画など）へ一般化する
+- **テーマ駆動での Backlog 消化**: Issue に `theme/*` label (`/triage` が付与) を持たせることで、Value/Priority 順だけに頼らず、関連する backlog Issue をまとめて選定・消化できるようにする。未分類の Issue には無理に label を付与しない (全件網羅は要求しない)。テーマの実体は GitHub の label 側を SSoT とし、本ドキュメントには記述しない (GitHub state とドキュメントの二重管理を避けるため)。
 
 <!-- ## Success Metrics (Optional)
 
@@ -162,7 +163,7 @@ Anthropic の Managed Agents + Outcomes は隣接する Outcome rubric ループ
 | Domain file | スキルから marker 検出、ファイル存在確認、ディレクトリスキャンによって条件付きで読み込まれる補助 Markdown。SKILL.md のコアを補い、環境やプロジェクト固有のロジックを加えつつコアを軽量に保つ。プロジェクトローカルのカスタマイズは `.wholework/domains/{skill}/` で対応 | スキル開発 | Domain file |
 | Drift | ドキュメント化された仕様（Steering Documents や Spec）と実際のコード実装とのあいだの意味的乖離。`/audit drift` で検出 | /audit Skill | ドリフト |
 | Fork context | メインの対話に影響を与えないスキル実行モード | Claude Code | fork コンテキスト |
-| Issue triage | Type/Priority/Size/Value をメインワークフロー開始前にアサインする初期評価フェーズ。`/triage` スキルとして実装されており、Issue に `phase/*` ラベルがない場合は `/auto` が自動的に triage を連鎖させる | /triage, /auto | Issue triage |
+| Issue triage | Type/Priority/Size/Value/Theme をメインワークフロー開始前にアサインする初期評価フェーズ。`/triage` スキルとして実装されており、Issue に `phase/*` ラベルがない場合は `/auto` が自動的に triage を連鎖させる | /triage, /auto | Issue triage |
 | Non-interactive mode | `run-*.sh` 経由で `claude -p --dangerously-skip-permissions` から呼び出されるスキル実行モード。`AskUserQuestion` が使えないため、意思決定点で 3-tier ポリシー（auto-resolve / skip / hard-error）を適用する。`ARGUMENTS` 内の `--non-interactive` で判定される | run-*.sh、/auto | 非対話モード |
 | Orchestration recovery | `/auto` オーケストレーション失敗に対する 3 段階復旧メカニズム: (1) `reconcile-phase-state.sh` による完了確認、(2) `apply-fallback.sh` による既知パターン復旧、(3) `spawn-recovery-subagent.sh` による Tier 3 サブエージェント診断 | /auto, orchestration | オーケストレーション復旧 |
 | Operate route | git diff を伴わない操作型 Issue (CMS 編集・インフラ操作など) のワークフロー経路。commit や Pull Request を作成せず外部の MCP/CLI/API 操作を直接実行し、git diff の代わりに `## Execution Log` Issue コメントを記録する。Spec から機械的に判定され、Size とは直交する軸である (`## Changed Files` が空 + Implementation Steps が外部操作のみ) | 開発ワークフロー | Operate 経路 |

@@ -10,7 +10,7 @@
 #   --no-fallback   Skip environment detection; only create always-group labels
 #
 # Label groups:
-#   Always-group (17 labels): phase/*, triaged, retro/verify, retro/code, retro/recoveries, audit/drift, audit/fragility, audit/auto, stale-verify
+#   Always-group (21 labels): phase/*, triaged, retro/verify, retro/code, retro/recoveries, audit/drift, audit/fragility, audit/auto, stale-verify, theme/*
 #   Fallback-group (17 labels): type/*, priority/*, size/*, value/*
 #     Created when corresponding GitHub feature (Issue Types / Projects field) is unavailable.
 #     Use --no-fallback to skip environment detection and omit this group entirely.
@@ -40,7 +40,7 @@ done
 
 # Always-group labels: created unconditionally on every run
 # Format: "name|color(without #)|description"
-# Count: 17 labels
+# Count: 21 labels
 ALWAYS_LABELS=(
     "phase/issue|1B4F8A|Issue phase"
     "phase/spec|1B4F8A|Spec phase"
@@ -59,6 +59,10 @@ ALWAYS_LABELS=(
     "audit/fragility|E4E669|Audit: structural fragility detected"
     "audit/auto|D93F0B|Audit: auto-session improvement candidate"
     "stale-verify|EDEDED|Stale verification — phase/verify not observed in 60+ days"
+    "theme/observability|006B75|Theme: observability — detection without persistence, logging gaps"
+    "theme/ac-quality|006B75|Theme: acceptance criteria / verify command quality"
+    "theme/concurrency|006B75|Theme: concurrent session conflicts, session_id misattribution"
+    "theme/verify-backlog|006B75|Theme: post-merge verify backlog accumulation"
 )
 
 # Fallback-group labels: created when GitHub feature is unavailable

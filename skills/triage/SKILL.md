@@ -1,7 +1,7 @@
 ---
 model: sonnet
 name: triage
-description: Issue triage. Automates title normalization, Type/Priority/Size/Value assignment (`/triage 123` for single issue + lightweight analysis, `/triage` for bulk execution, `/triage --backlog` for bulk processing + 4-perspective deep analysis).
+description: Issue triage. Automates title normalization, Type/Priority/Size/Value/Theme assignment (`/triage 123` for single issue + lightweight analysis, `/triage` for bulk execution, `/triage --backlog` for bulk processing + 4-perspective deep analysis).
 allowed-tools: Bash(gh:*, cat:*, echo:*, grep:*, jq:*, test:*, bash:*, printf:*, wc:*, head:*, tail:*, sed:*, awk:*, mkdir:*, rm:*, sleep:*, ${CLAUDE_PLUGIN_ROOT}/scripts/triage-backlog-filter.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh:*), Read, Write, Glob, Grep
 ---
 
@@ -141,6 +141,24 @@ Detect priority information from the title or body. Skip without warning if neit
 Read `${CLAUDE_PLUGIN_ROOT}/modules/size-workflow-table.md` and follow the "Processing Steps" section's Size determination flow (2-axis + CI dependency check) to determine Size. Store the determined value as `DETERMINED_SIZE`. The actual GraphQL update is performed in Step 8.
 
 Estimate the scope of change from the issue body's acceptance conditions and technical notes. Determine in 5 levels: XS/S/M/L/XL.
+
+### Step 6a: Theme Determination
+
+Fetch the current `theme/*` label catalog:
+
+```bash
+gh label list --limit 200 --json name,description --jq '.[] | select(.name | startswith("theme/"))'
+```
+
+Compare each label's `description` against the Issue title/body using AI judgment — the `description` field doubles as the classification criterion (see `scripts/setup-labels.sh`). Multiple themes may apply to a single Issue (do not force a single choice); if none apply, leave the Issue unclassified (0 labels) rather than forcing a match. Store the result as `DETERMINED_THEMES` (a list of zero or more `theme/*` label names).
+
+For each determined theme, apply the label:
+
+```bash
+gh issue edit $NUMBER --add-label "$THEME"
+```
+
+(`$THEME` is one element of `DETERMINED_THEMES`, already prefixed with `theme/`)
 
 ### Step 7: AC Verify Command Integrity Audit
 
@@ -323,6 +341,9 @@ Based on all issue information retrieved in Step 1, Claude directly classifies a
 - Size estimation (XS / S / M / L / XL)
 - Priority detection (urgent / high / medium / low / null)
 - Value score calculation (1–5, normalized from Impact + Alignment)
+- Theme determination (0 or more `theme/*` labels; catalog fetch and judgment policy same as Step 6a)
+
+**Fetch the `theme/*` label catalog once for the whole batch** (same `gh label list` command as Step 6a), analogous to loading Steering Documents once below — do not re-fetch per issue.
 
 **Load Steering Documents once at the start of Phase 2 (fallback level determination):**
 
@@ -362,6 +383,7 @@ Reuse all open issues data already retrieved in Step 1 to calculate Impact (no a
     "size": "M",
     "priority": "high",
     "value": 4,
+    "theme": ["theme/observability"],
     "duplicate_candidates": [123]
   }
 ]
@@ -375,6 +397,7 @@ Reuse all open issues data already retrieved in Step 1 to calculate Impact (no a
 | `size` | string | ✓ | `"XS"` / `"S"` / `"M"` / `"L"` / `"XL"` |
 | `priority` | string \| null | ✓ | `"urgent"` / `"high"` / `"medium"` / `"low"` / `null` (not detected) |
 | `value` | number | ✓ | `1`–`5` (normalized from Impact + Alignment) |
+| `theme` | string[] | ✓ | 0 or more `theme/*` label names. Empty array `[]` when unclassified. Multiple values allowed |
 | `duplicate_candidates` | number[] | ✓ | List of duplicate candidate issue numbers (empty array `[]` if none) |
 
 **Duplicate detection in bulk execution (done in Step 2):**
@@ -392,13 +415,14 @@ for each issue in Step 2 results:
   3. Set Size + Value (batch): use `--query add-project-item` to add the issue to the project, then use `--query update-issue-fields-batch` to update Size and Value in one call. Use the project/field/option IDs fetched at the start of Step 3. Label fallback (`size/N` and `value/N`) on GraphQL failure. Skip Value if Value field does not exist. Queries: `add-project-item`, `update-issue-fields-batch`
   4. Set Priority: only if priority is not null, use `--query update-field-value` for Priority (field/option IDs from the start-of-Step-3 fetch). Skip without warning if null. Label fallback (`priority/N`) on GraphQL failure. Queries: `update-field-value`
   5. Add triaged label: gh issue edit $NUMBER --add-label "triaged"
-  6. Duplicate comment: if duplicate_candidates is non-empty, report via issue comment (**do not auto-close**)
+  6. Add theme labels: for each element in theme[], gh issue edit $NUMBER --add-label "<theme>" (skip if theme[] is empty)
+  7. Duplicate comment: if duplicate_candidates is non-empty, report via issue comment (**do not auto-close**)
      - Comment format example: `⚠️ Possible duplicate: similar to #123 "test-runner: Add Vitest detection"`
      - Run mkdir -p .tmp to create the directory in advance
      - Write comment body to `.tmp/triage-duplicate-comment-$NUMBER.md` using the Write tool
      - Post: `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh $NUMBER .tmp/triage-duplicate-comment-$NUMBER.md`
      - Delete: `rm -f .tmp/triage-duplicate-comment-$NUMBER.md`
-  7. AC verify command audit: if the issue body contains `<!-- verify: ... -->` patterns,
+  8. AC verify command audit: if the issue body contains `<!-- verify: ... -->` patterns,
      read ${CLAUDE_PLUGIN_ROOT}/skills/triage/skill-dev-verify-audit.md and follow the
      "Processing Steps" section. Post audit comment if issues are found (non-destructive).
 ```
