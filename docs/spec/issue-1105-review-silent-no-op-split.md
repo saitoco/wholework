@@ -62,3 +62,6 @@
 - **bash 3.2 互換**: `_phase_retry_hint()` は `case`/`[[ ]]`/local 変数のみ使用し、`mapfile` 等の bash 4+ 専用構文は使用しない (macOS 標準 bash 対応)
 - **BRE メタ文字チェック**: 本 Spec の `grep` verify command 2件はいずれも `\|`/`\(`/`\)`/`\+`/`\?` を含まないため、ERE 書き換えは不要
 - **patch route チェック対象外**: Size M のため pr route (PR が実在)。`github_check "gh pr checks"` はそのまま有効
+
+## Consumed Comments
+No new comments since last phase.
