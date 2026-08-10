@@ -61,3 +61,28 @@
 ## Consumed Comments
 
 - saito (MEMBER, first-class) — 2026-08-10T18:29:03Z — `/issue` フェーズの Issue Retrospective コメント。Background の事実記述 (行指向パース実装、キー文字種制限) をコードベースと照合し一致を確認 (警告なし)。Post-merge AC の文言を Option A 前提から approach-agnostic な表現へ自動解決した経緯を記録。Pre-merge AC / verify command は Size M (PR route) の規約に適合しており変更不要と判断、との記載。本 Spec の設計判断に対する新たな指示は含まれない。 https://github.com/saitoco/wholework/issues/1124#issuecomment-5244328957
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps を上から順に実施し、逸脱なし
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の設計判断 (対応方針案 A 採用、パーサ書き換え・fail-closed 化は不採用) をそのまま実装。ヘッダーコメント表を単一 SSoT とし、`--help` と `modules/detect-config-markers.md` の両方をそこへの pointer に簡略化する構成で実装した
+- 新規 negative case テスト 2 件は Spec Step 4 の指定どおり、実際に nested path が存在するにもかかわらず default が返ることを確認する形にした (2 階層ドットキー・inline hash format)
+
+### Deferred Items
+- Spec Notes に記録済みの 2 件のスコープ外事項 (`get-auto-session-report.sh` の awk 実装、inline hash format のベアセクションキー照会) は本 Issue のスコープ外のまま据え置き。将来の cleanup 候補として Spec に記録済み
+
+### Notes for Next Phase
+- `modules/verify-classifier.md` (L65-66) と `modules/observation-trigger.md` (L263) の Steering Docs sync candidate は、既に「`get-config-value.sh` own constraint に一致」という pointer 形式のため、新表との内容不整合なしと確認済み (変更不要)
+- Pre-merge AC 1-3 (rubric×2 + bats command) はこの phase 内で PASS 済みとしてチェック済み。AC4 (`github_check "gh pr checks"`) は PR 作成前に評価したため UNCERTAIN のまま未チェック — `/review`/`/merge`/CI で解決される
