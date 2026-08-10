@@ -33,7 +33,11 @@ XL route のため実装は 3 本の sub-issue が担当した。本ファイル
 - **E のうち capability 待ちは 0 行**だった。3 本の sub-issue が独立に「`.wholework.yml` の capability 不足が理由の差し戻しは無い」と結論している。装備待ちのケースは observation ではなく `manual` バケツ側に存在すると見られ、#1278 の実測がその母集団を扱う
 
 ## Consumed Comments
-No new comments since last phase.
+
+- saito / MEMBER / first-class / 前回 `/verify 1270` の Acceptance Test Results (Pre-merge AC1 UNCERTAIN、Post-merge 3件 SKIPPED=未発火) / https://github.com/saitoco/wholework/issues/1270#issuecomment-5228569610
+- saito / MEMBER / first-class / observation event `auto-run` 発火 (1回目、2026-08-09T01:55:37Z) — `/verify 1270` 実行依頼 / https://github.com/saitoco/wholework/issues/1270#issuecomment-5229262441
+- saito / MEMBER / first-class / Pre-merge AC 1 の UNCERTAIN 解消 (baseline 単位を「率」から「候補母集団の実数」へ変更、AC1/Post-merge AC8 双方を修正) / https://github.com/saitoco/wholework/issues/1270#issuecomment-5229448151
+- saito / MEMBER / first-class / observation event `auto-run` 発火 (2回目、2026-08-10T03:02:58Z) — `/verify 1270` 実行依頼 / https://github.com/saitoco/wholework/issues/1270#issuecomment-5235407991
 
 ## Verify Retrospective
 
@@ -70,3 +74,17 @@ No new comments since last phase.
 - **監査・実査レポートに書く具体的な参照 (関数名・ファイルパス・節名・設定キー) は、記述前に `grep` / `Read` で実在確認する工程を Implementation Steps に明示すべき**。3 本の sub-issue のうち **2 本で同型の欠陥が独立に発生**した。#1274 は分類 A の判定根拠に #1181 で削除済みの関数 (`_write_tier2_recovery_to_spec()` / `_write_manual_recovery_to_spec()`) を引用しており `/review` が D へ再分類させた。#1276 は Spec 本文に実在しないパス (`.tmp/auto-checkpoint-*.json`) と実在しない節名を書き、レポートへ転記されてから `/review` が検出した。いずれも「実装コードから正確な文字列を確認せず記憶・推測で転記した」ことが原因である。#1274 は同じセッション内で #762 の参照先消滅を正しく検出していたため、パターンを知らなかったのではなく**適用にムラがあった**。この種のレポートは「将来 `/verify` が参照する判定根拠」になるため、誤った参照は後続の判定を誤らせる。並列 sub-agent へ実査を委任する構成では、既存ドキュメントの記述の存在だけで判断が確定しやすい点も要因と見られる。
 - **AC の verify 定義が構造的に充足不能なパターンを `/issue` triage の AC 監査が検出できない**。本 Issue の Pre-merge AC 1 は分母と分子の定義が 1 回の dispatch では両立せず、実装をどう進めても充足できなかった。triage の AC 監査は「実装前から真になる」常時 PASS パターンを検出するが、「定義自体が矛盾している」パターンは対象外である。#1278 の verify retrospective でも同種の指摘 (「常時 UNCERTAIN」になる verify command を監査が通過した) を **#1251 へ追記済み**であり、本件も同じ系統。**#1251 のスコープ内**として追記するのが適切で、新規起票はしない。
 - **`/auto` の XL route に親 Issue の実装フェーズが存在しない**。既存 **#1241** が扱っており、本セッションの観測 (2 例目、かつ fan-out **前**の親作業を要する新しい型) は **#1241 へコメントで追記済み**。新規起票はしない。
+
+### Re-run (2026-08-10) — Post-merge AC 解決
+
+前回 `/verify` (2026-08-08T22:49) 時点では Post-merge 3 件とも `auto-run` 未発火で SKIPPED だった。以降、`auto-run` イベントが 2 回発火 (2026-08-09T01:55 / 2026-08-10T03:02) し、本再実行で 3 件とも PASS と判定できた。
+
+- **Post-merge 6**: observation waiting 90 Issue (baseline 107 から -17)
+- **Post-merge 7**: observation -17 / manual +14 が集約レポートの D5+E15=20 の見立てと方向・概算規模で一致 (Issue 単位集計のため AC 行単位の 20/15 とは厳密一致しない)
+- **Post-merge 8**: 候補母集団 71 Issue / 74 AC 行 (baseline 82 Issue / 85 AC 行を下回る)
+
+3 件とも `session=next` 付きだったが、実際には skill 挙動観測ではなくリポジトリ/GitHub 状態の数値観測だったため、`skills/verify/SKILL.md` Step 8c の `session=next` 既定 (skill self-update propagation 待ちとして SKIPPED) をそのまま適用せず、「変更 (D/E処理・集約レポート) が本セッション開始前に着地済みか」で判定した。詳細は Improvement Proposals を参照。
+
+#### Improvement Proposals (追加分)
+
+- **`session=next` の Step 8c 既定判定が、skill 挙動観測以外の observation 条件には合わない**。`modules/verify-classifier.md` は `session=next` を「変更した skill 自身の挙動を新セッションで観察する」用途に限定して定義しているが、`skills/verify/SKILL.md` Step 8c の判定手順は「evidence が the changed skill step actually ran in the observed `/auto` execution を示すか」という skill 挙動判定の文言を、`session=next` を持つ条件全般に一律適用する書き方になっている。本 Issue の Post-merge 3 件は skill ファイル変更ではなく GitHub 状態の数値観測であり、この文言をそのまま適用すると本来評価可能な条件まで機械的に SKIPPED になってしまう。今回は Claude の判断で「対象の変更が本セッション開始前に着地済みか」に読み替えて評価したが、この読み替えが正しい一般化かは Step 8c 本文からは自明でない。`session=next` を持つ条件が (a) skill 挙動観測型か (b) 非skill挙動 (数値・状態) 観測型かで Step 8c の判定分岐を明示的に分けるか、あるいは `/issue` 側で非skill挙動条件に `session=next` を付けないよう誘導するかの整理が必要。単発観測のため、再発 (次に `session=next` を持つ数値観測型 AC が発生した回) を確認してから起票を判断する。
