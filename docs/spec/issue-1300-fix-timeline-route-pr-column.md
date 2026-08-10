@@ -101,6 +101,10 @@
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 内容: `/issue 1300` (non-interactive) 実行時の Autonomous Auto-Resolve Log — AC5 のテスト範囲を降格方向のみから昇格・降格の両方向へ拡張、AC2 の verify command を `case` 文の直接マッピング検出へ変更、Post-merge observation AC に `session=next` を追加。いずれも現在の Issue 本文に既に反映済みであり、本 Spec 作成時点で追加対応は不要と判断した。 / URL: https://github.com/saitoco/wholework/issues/1300#issuecomment-5230385022
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1300#issuecomment-5230642241
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1300#issuecomment-5230977097
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1300#issuecomment-5235409179
+- saito / MEMBER / first-class / ## 実測 (session `16210-1786327272`, `/auto --batch 1130 1318`, 2026-08-10) / https://github.com/saitoco/wholework/issues/1300#issuecomment-5235765971
 ## Code Retrospective
 
 ### Deviations from Design
