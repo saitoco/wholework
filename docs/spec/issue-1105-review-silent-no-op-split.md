@@ -94,16 +94,16 @@
 - Nothing to note — 7 件の Pre-merge AC (rubric×4, grep×2, github_check×1) はいずれも diff から明確に判定可能で UNCERTAIN は発生しなかった。`ac-tier: preview` 条件も存在しなかった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- review-light agent (light mode, 4 perspectives 統合) による 1 エージェントレビューで SHOULD 1 件を検出・修正した。`$?` が `gh pr view` ではなく直後の代入文の終了コードを参照する bash の落とし穴で、意図された「gh 失敗時のフォールバック」の exit-code 側ガードが事実上無効化されていた。`_review_gh_status` に明示的に保存する形に修正し、mock で non-zero exit + non-empty stdout を返す回帰テストを追加して修正を検証した。
-- 修正後にフルスイート bats (`--jobs 18 tests/`) を再実行し 1711/1711 PASS を確認 (新規追加した回帰テスト 1 件を含む)。
+- Pre-merge AC gate: `check-pre-merge-ac.sh` で 7/7 チェック済み、review-incomplete-fallback チェックも `matches_expected:true` を確認したため、追加確認なしで squash merge を実行した。
+- `gh pr merge 1340 --squash --delete-branch` を実行し、`main` へ squash merge した (コミット `b2b2ad53`)。
 
 ### Deferred Items
-- Post-merge AC (`verify-type: manual`): review が silent no-op で終了した実例に対して検出を実行し `review-silent-no-op` として報告されることの確認は未実施 (merge 後に手動確認が必要)。
+- Post-merge AC (`verify-type: manual`): review が silent no-op で終了した実例に対して検出を実行し `review-silent-no-op` として報告されることの確認は未実施 ( `/verify` フェーズで実施予定)。
 - `_review_confirmed_posted` 抑止が発火しなかった未解決事象 (#1255/PR#1269 実測) は本 Issue のスコープ外のまま。再発時に別途調査 Issue を起票する方針。
 
 ### Notes for Next Phase
-- `/merge 1340` 実行時、Pre-merge AC 7 件はすべて `- [x]` 済み。Post-merge AC (manual) の手動確認は merge 後に別途実施すること。
-- review フェーズで追加した修正コミット (`801f6d36`) は PR ブランチに push 済み。push 後の CI (全 11 チェック SUCCESS) も確認済み。
+- `/verify 1105` 実行時、Post-merge AC (manual) の手動確認を実施すること。
+- base branch は `main` のため、`closes #1105` により Issue は merge 時に自動クローズされる見込み。
