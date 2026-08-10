@@ -180,3 +180,41 @@ No new comments since last phase.
 
 ### Acceptance criteria verification difficulty
 - Nothing to note. Pre-merge AC 5件 (rubric×2, grep×2, command×1) すべてが UNCERTAIN なく PASS に解決した。rubric 条件は Spec の Notes セクションに理由が明記されていたため grader 判定が容易だった。command 条件は CI 参照フォールバックで PASS 判定でき、verify command 自体の不備は見られなかった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### issue
+
+- **起票者 (`/verify 1300` の retrospective) が書いた AC4 の verify command に BRE メタ文字の欠陥があり、Step 15 の監査が検出・修正した**。`grep "load_watchdog_timeout\|watchdog-timeout-spec-seconds"` の `\|` は BRE では交替を意味せずリテラル扱いになるため、実装が正しくても一致しない (#638 と同型)。`\|` → `|` へ修正された
+- 「対応方針 (案)」内の判断点 2 件をいずれも auto-resolve した — フォールバック挙動は `load_watchdog_timeout()` の既存挙動を踏襲、過去レポートとの非互換は閾値依存の既存集計が存在しないことを調査で確認し注記不要と判断。Issue 本文に `## Auto-Resolved Ambiguity Points` として記録
+
+#### spec
+
+- **コードベース調査で、修正が既存テストを壊すことを事前に特定した**。`tests/audit-auto-session.bats` の silent-window テストは、閾値がこの repo 自身の `.wholework.yml` override (`watchdog-timeout-spec-seconds: 2340`) を解決するようになると FAIL する — hermetic なはずのテストが実 config に結合していた。AC5 の対象を `tests/get-auto-session-report.bats` 単独から両ファイルへ拡張し、Spec にも反映した
+- 異常系 (`watchdog-defaults.sh` が sourced されない場合) を `-1` センチネルで at-risk 判定自体を無効化する設計とした。stale な既定値を再導入しない方針は #939 の教訓を踏襲したもの
+
+#### code
+
+- `scripts/get-auto-session-report.sh` 18 行・`tests/get-auto-session-report.bats` 37 行・`tests/audit-auto-session.bats` 1 行。rework ゼロ
+
+#### review
+
+- review-light の 4 観点すべてで指摘 0 件 (MUST: 0 / SHOULD: 0 / CONSIDER: 0)。MUST 指摘がなかったため `REQUEST_CHANGES` は試行されず、#1256 の自己 PR 422 フォールバックは本 PR では発火していない
+
+#### merge
+
+- PR #1319 を squash merge。コンフリクト・CI 失敗なし
+
+#### verify
+
+- Pre-merge 5 件は既チェックのため skip、post-merge の observation 1 件を **PASS** 判定。FAIL・UNCERTAIN ゼロ
+- **修正の効果を本セッション自身の実測で確認した**: spec の max silent window 1420s に対し、新閾値 `2340 - 600 = 1740s` では警告なし、旧閾値 `1800 - 600 = 1200s` なら発火していた。同じ沈黙が修正前後で判定を分ける、直接的な before/after になっている
+- **機構が無効化されていないことも同時に確認した**: override を持たない `issue` phase では 620s > 600s で警告が正しく発火している。閾値の解決経路のみが変わり、at-risk 判定そのものは維持されている
+- AC 本文は「`/auto --batch` の完走後」と batch mode を指定しているが、本判定は single mode の実行データによる。`SILENT_THRESHOLD_*` の算出と比較は mode で分岐しない同一コードパスであるため実質は満たされていると判断し PASS とした。この差分は Issue コメントにも明記した
+- 副次的観察: Timeline 表の `Size/Route` が `?/pr` となる。route は #1300 の修正で `code-pr` イベントから正しく導出されるが、Size は `sub_start` 由来のままで single mode では emit されないため `?` になる。#1300 の AC は route 列が対象であり、これは回帰ではなく single mode 固有の既存挙動
+
+### Improvement Proposals
+
+- **同一の verify command 欠陥クラスが、起草者を変えても再現し続けている (Tier 2 — 記録のみ)**: 本セッション系列で `/verify` の retrospective が起草した AC には、#1301 の常時 PASS、#1301 の rubric grader 入力、そして本 Issue の BRE メタ文字と、3 件連続で verify command の欠陥が混入し、いずれも後段の `/issue` Step 15 が検出した。個々の欠陥はすでに検出機構が存在するか (#1294 で追加した Pattern 2 サブパターン、#638 の BRE パターン)、既存 Issue が受け皿を持つ (#1251) ため新規の構造的欠陥は特定できない。むしろ「起票時点で verify command を空撃ち検証する機構が起票側 (`/verify` の retro-proposals 経路) には存在せず、`/issue` フェーズまで検証が遅延する」という非対称性が根にある可能性がある。ただし現状は `/issue` が確実に捕捉できており実害が出ていないため、単独の起票は見送る。`/issue` を経由しない経路 (XS patch route など) で同型の欠陥が verify まで到達した場合に Tier 1 を検討する
