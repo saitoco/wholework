@@ -68,8 +68,11 @@ From the loaded content, search for each YAML key in the marker definition table
 | `recoveries-auto-fire.threshold` | `RECOVERIES_AUTO_FIRE_THRESHOLD` | Integer string (extract as-is; use `3` if ≤0 or non-numeric) | `3` |
 | `always-pr` | `ALWAYS_PR` | `true` | `false` |
 | `auto-stop-at` | `AUTO_STOP_AT` | String value as-is | `"verify"` |
+| `themes` | (none — read directly by `scripts/setup-labels.sh`, not by any skill) | Block mapping of `{name}: {description}` | `{}` (no `theme/*` labels created) |
 
 Note: `capabilities.pr-preview` is listed as an explicit row (rather than relying on Dynamic Capability Mapping alone) because it has dedicated classification logic in `/issue` Step 4 (pre-merge-preview AC tier).
+
+Note: `themes` is parsed by `scripts/setup-labels.sh`'s own standalone parser, not by this module's LLM-driven interpretation or by `scripts/get-config-value.sh` — it produces no detection variable for skills to consume. See [`docs/guide/customization.md`](../docs/guide/customization.md) for the supported shape and known parse limitations.
 
 **Dynamic Capability Mapping:**
 
