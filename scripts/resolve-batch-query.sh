@@ -94,13 +94,23 @@ fi
 
 # (a) Fetch candidate Issues
 ISSUES_JSON=""
-if ! ISSUES_JSON=$(gh issue list --state open --json number,labels --limit "$LIMIT" 2>&1); then
-    echo "resolve-batch-query: gh issue list failed: $ISSUES_JSON" >&2
+if ! ISSUES_JSON=$(gh issue list --state open --json number,labels --limit "$LIMIT" 2>/dev/null); then
+    echo "resolve-batch-query: gh issue list failed" >&2
     exit 2
+fi
+
+ISSUES_COUNT=$(printf '%s' "$ISSUES_JSON" | jq 'length' 2>/dev/null || echo -1)
+if [ "$ISSUES_COUNT" -eq "$LIMIT" ] 2>/dev/null; then
+    echo "resolve-batch-query: warning: candidate set truncated at --limit $LIMIT; results may be incomplete" >&2
 fi
 
 # (b) Filter by label (bash case glob, not [[ ... ]] — bash 3.2 compatible)
 LABEL_FILTERED=""
+LABEL_TSV=""
+if ! LABEL_TSV=$(printf '%s' "$ISSUES_JSON" | jq -r '.[] | [(.number|tostring), ([.labels[].name] | join(","))] | @tsv'); then
+    echo "resolve-batch-query: failed to parse gh issue list output" >&2
+    exit 2
+fi
 while IFS=$'\t' read -r num labels_csv; do
     [ -z "$num" ] && continue
     MATCHED=false
@@ -118,7 +128,7 @@ while IFS=$'\t' read -r num labels_csv; do
     if [ "$MATCHED" = true ]; then
         LABEL_FILTERED="$LABEL_FILTERED $num"
     fi
-done <<< "$(printf '%s' "$ISSUES_JSON" | jq -r '.[] | [(.number|tostring), ([.labels[].name] | join(","))] | @tsv')"
+done <<< "$LABEL_TSV"
 
 # (c) Filter by status (only when a status: clause was given — no GraphQL call otherwise)
 STATUS_FILTERED=""
