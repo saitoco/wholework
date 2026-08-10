@@ -105,6 +105,13 @@ capabilities:
 # (orthogonal to autonomy: tier — controls pipeline reach, not decision autonomy)
 # always-pr: true           # Force pr route regardless of Size (XS/S also get branch + PR)
 # auto-stop-at: review      # Stop /auto after review phase; run /merge manually
+
+# Project-specific theme label catalog for /triage classification (block mapping: name: description)
+# Unset means no theme/* labels are created by scripts/setup-labels.sh at all — there is no
+# default/fallback catalog. Color is fixed at 006B75 (not configurable per theme).
+# themes:
+#   checkout: "Theme: checkout flow"
+#   payments: "Theme: payments and billing"
 ```
 
 All keys are optional. If `.wholework.yml` does not exist, all settings use their defaults.
@@ -153,6 +160,7 @@ This table is the **single source of truth (SSoT)** for all `.wholework.yml` con
 | `recoveries-auto-fire.threshold` | integer | `3` | Symptom occurrence count threshold for auto-filing. Values ≤0 or non-numeric fall back to `3`. |
 | `always-pr` | boolean | `false` | Force pr route (branch + PR) regardless of Size. XS/S Issues that would normally commit directly to main are routed through a PR instead. When `--patch` is also specified, `--patch` is ignored (a warning is printed) and pr route is used. Orthogonal to `autonomy:` tier (controls pipeline route, not decision autonomy). |
 | `auto-stop-at` | string | `"verify"` | Declare the phase after which `/auto` should stop. Valid values: `spec`, `code`, `review`, `merge`, `verify`. Default `verify` runs the full pipeline. Use `review` for website projects where merge = publish and human gate before deploy is required. Per-invocation override: `--stop-at=<phase>`. Orthogonal to `autonomy:` tier. |
+| `themes` | block mapping | `{}` | Project-specific `theme/*` label catalog (`{name}: {description}`) consumed by `scripts/setup-labels.sh`. Unset means no `theme/*` labels are created at all — there is no default/fallback catalog (wholework's own dogfooding themes live in this repository's own `.wholework.yml`, not as a built-in default). Color is fixed at `006B75` for all theme labels; not configurable per theme. `/triage` Step 6a's classification logic reads the resulting `theme/*` labels dynamically via `gh label list` and is unaffected by this key directly. Supported name characters: `A-Z a-z 0-9 . _ -`; other characters are silently skipped. Everything from ` #` onward is stripped from a description, even inside a quoted scalar — avoid `#` in theme descriptions. Theme names must not collide with other top-level `.wholework.yml` config key names (e.g. `autonomy`, `permission-mode`) — `scripts/get-config-value.sh`'s flat-key lookup would otherwise return the theme's description instead of that key's intended value. |
 
 For the full reference including implementation details and YAML parsing rules, see [`modules/detect-config-markers.md`](../../modules/detect-config-markers.md).
 

@@ -136,13 +136,14 @@ SSoT note: Model values in run-*.sh use CLI aliases (sonnet/opus); update this t
 
 ## Wholework Label Management
 
-`scripts/setup-labels.sh` is the **single source of truth (SSoT)** for all labels managed by Wholework. All label names, colors, and descriptions are defined there.
+`scripts/setup-labels.sh` is the **single source of truth (SSoT)** for all labels managed by Wholework. All label names, colors, and descriptions are defined there — with one exception: `theme/*` labels are project-dependent and defined in each project's own `.wholework.yml` under the `themes:` key (see `docs/guide/customization.md`), not hardcoded in `setup-labels.sh`. `setup-labels.sh` only supplies the fixed color (`006B75`) and the parsing/creation logic.
 
 ### Label Groups
 
 | Group | Count | Labels | Creation condition |
 |-------|-------|--------|-------------------|
-| Always | 22 | `phase/*` (9), `triaged`, `retro/verify`, `retro/code`, `retro/recoveries`, `audit/drift`, `audit/fragility`, `audit/auto`, `stale-verify`, `theme/*` (5) | Always created |
+| Always | 17 | `phase/*` (9), `triaged`, `retro/verify`, `retro/code`, `retro/recoveries`, `audit/drift`, `audit/fragility`, `audit/auto`, `stale-verify` | Always created |
+| Theme | project-dependent | `theme/*` | Created from the `themes:` block mapping in `.wholework.yml` (`docs/guide/customization.md`); unset means none are created — no default/fallback catalog |
 | Fallback | 17 | `type/*` (3), `priority/*` (4), `size/*` (5), `value/*` (5) | Created when corresponding GitHub feature is unavailable (see below) |
 
 ### Auto-bootstrap
@@ -171,6 +172,8 @@ When adding, changing, or removing labels anywhere in Wholework (skills, scripts
 - **Removing a label reference**: remove the entry from `setup-labels.sh`.
 
 This rule prevents drift between label references in code and the SSoT definition. Future `/audit drift` detection will use the set of label references in the codebase vs. the set defined in `setup-labels.sh` to flag inconsistencies.
+
+**Exception**: `theme/*` labels are not subject to this rule — they are project-dependent and declared per-project in `.wholework.yml`'s `themes:` key (see `docs/guide/customization.md`) rather than hardcoded in `setup-labels.sh`. Adding, renaming, or removing a `theme/*` label only requires editing the relevant project's `.wholework.yml`.
 
 ## Testing Strategy
 

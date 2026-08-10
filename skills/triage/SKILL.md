@@ -150,7 +150,7 @@ Fetch the current `theme/*` label catalog:
 gh label list --limit 200 --json name,description --jq '.[] | select(.name | startswith("theme/"))'
 ```
 
-Compare each label's `description` against the Issue title/body using AI judgment — the `description` field doubles as the classification criterion (see `scripts/setup-labels.sh`). Multiple themes may apply to a single Issue (do not force a single choice); if none apply, leave the Issue unclassified (0 labels) rather than forcing a match. Store the result as `DETERMINED_THEMES` (a list of zero or more `theme/*` label names).
+Compare each label's `description` against the Issue title/body using AI judgment — the `description` field doubles as the classification criterion (label catalog is project-dependent, sourced from the `themes:` key in `.wholework.yml`; see `docs/guide/customization.md`). Multiple themes may apply to a single Issue (do not force a single choice); if none apply, leave the Issue unclassified (0 labels) rather than forcing a match. Store the result as `DETERMINED_THEMES` (a list of zero or more `theme/*` label names).
 
 For each determined theme, apply the label:
 

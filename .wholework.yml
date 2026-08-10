@@ -27,3 +27,9 @@ recoveries-auto-fire:
   enabled: false
 capabilities:
   workflow: true
+themes:
+  observability: "Theme: observability — detection without persistence, logging gaps"
+  ac-quality: "Theme: acceptance criteria / verify command quality"
+  concurrency: "Theme: concurrent session conflicts, session_id misattribution"
+  verify-backlog: "Theme: post-merge verify backlog accumulation"
+  batch-orchestration: "Theme: batch/until orchestration — backlog resolution, round ordering, safety valves"

@@ -13,6 +13,11 @@ setup() {
     export PATH="$MOCK_DIR:$PATH"
     export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"
 
+    # Prevent tests from reading this repository's own .wholework.yml (which
+    # defines `themes:`) when run from the repo root — themes tests below
+    # override this explicitly.
+    export WHOLEWORK_CONFIG_PATH=/dev/null
+
     GH_CALL_LOG="$BATS_TEST_TMPDIR/gh_calls.log"
     export GH_CALL_LOG
 
@@ -301,6 +306,88 @@ MOCK
 
     run bash "$SCRIPT"
     [ "$status" -ne 0 ]
+}
+
+# --- themes: (project-dependent theme label catalog) ---
+
+@test "themes: config-driven theme labels created from .wholework.yml" {
+    CONFIG_FILE="$BATS_TEST_TMPDIR/.wholework.yml"
+    cat > "$CONFIG_FILE" <<'EOF'
+themes:
+  checkout: "Theme: checkout flow"
+  payments: "Theme: payments and billing"
+EOF
+    export WHOLEWORK_CONFIG_PATH="$CONFIG_FILE"
+
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    [ "$(count_label_creates)" -eq "$(( $(count_always_labels) + 2 ))" ]
+    label_created "theme/checkout"
+    label_created "theme/payments"
+    grep -q "description Theme: checkout flow" "$GH_CALL_LOG"
+    grep -q "description Theme: payments and billing" "$GH_CALL_LOG"
+}
+
+@test "themes: no theme labels created when themes key is absent" {
+    CONFIG_FILE="$BATS_TEST_TMPDIR/.wholework.yml"
+    cat > "$CONFIG_FILE" <<'EOF'
+capabilities:
+  workflow: true
+EOF
+    export WHOLEWORK_CONFIG_PATH="$CONFIG_FILE"
+
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    [ "$(count_label_creates)" -eq "$(count_always_labels)" ]
+    run grep "label create theme/" "$GH_CALL_LOG"
+    [ "$status" -ne 0 ]
+}
+
+@test "themes: no theme labels created when themes block is empty" {
+    CONFIG_FILE="$BATS_TEST_TMPDIR/.wholework.yml"
+    cat > "$CONFIG_FILE" <<'EOF'
+themes:
+capabilities:
+  workflow: true
+EOF
+    export WHOLEWORK_CONFIG_PATH="$CONFIG_FILE"
+
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    [ "$(count_label_creates)" -eq "$(count_always_labels)" ]
+    run grep "label create theme/" "$GH_CALL_LOG"
+    [ "$status" -ne 0 ]
+}
+
+@test "themes: theme labels still created with --no-fallback" {
+    CONFIG_FILE="$BATS_TEST_TMPDIR/.wholework.yml"
+    cat > "$CONFIG_FILE" <<'EOF'
+themes:
+  checkout: "Theme: checkout flow"
+EOF
+    export WHOLEWORK_CONFIG_PATH="$CONFIG_FILE"
+
+    run bash "$SCRIPT" --no-fallback
+    [ "$status" -eq 0 ]
+    [ "$(count_label_creates)" -eq "$(( $(count_always_labels) + 1 ))" ]
+    label_created "theme/checkout"
+}
+
+@test "themes: column-0 comment inside themes block does not drop subsequent entries" {
+    CONFIG_FILE="$BATS_TEST_TMPDIR/.wholework.yml"
+    cat > "$CONFIG_FILE" <<'EOF'
+themes:
+  checkout: "Theme: checkout flow"
+# a column-0 comment inside the themes block
+  payments: "Theme: payments and billing"
+EOF
+    export WHOLEWORK_CONFIG_PATH="$CONFIG_FILE"
+
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    [ "$(count_label_creates)" -eq "$(( $(count_always_labels) + 2 ))" ]
+    label_created "theme/checkout"
+    label_created "theme/payments"
 }
 
 # --- Correct colors ---

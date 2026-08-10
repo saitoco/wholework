@@ -7,10 +7,13 @@
 #
 # Options:
 #   --force         Overwrite existing labels (default: skip labels that already exist)
-#   --no-fallback   Skip environment detection; only create always-group labels
+#   --no-fallback   Skip environment detection; create always-group and theme-group labels only
 #
 # Label groups:
-#   Always-group (22 labels): phase/*, triaged, retro/verify, retro/code, retro/recoveries, audit/drift, audit/fragility, audit/auto, stale-verify, theme/*
+#   Always-group (17 labels): phase/*, triaged, retro/verify, retro/code, retro/recoveries, audit/drift, audit/fragility, audit/auto, stale-verify
+#   Theme-group (project-dependent): theme/*
+#     Created from the `themes:` key in .wholework.yml (block mapping of name: description).
+#     Not created at all when `themes:` is undefined — there is no default/fallback theme catalog.
 #   Fallback-group (17 labels): type/*, priority/*, size/*, value/*
 #     Created when corresponding GitHub feature (Issue Types / Projects field) is unavailable.
 #     Use --no-fallback to skip environment detection and omit this group entirely.
@@ -40,7 +43,7 @@ done
 
 # Always-group labels: created unconditionally on every run
 # Format: "name|color(without #)|description"
-# Count: 22 labels
+# Count: 17 labels
 ALWAYS_LABELS=(
     "phase/issue|1B4F8A|Issue phase"
     "phase/spec|1B4F8A|Spec phase"
@@ -59,11 +62,6 @@ ALWAYS_LABELS=(
     "audit/fragility|E4E669|Audit: structural fragility detected"
     "audit/auto|D93F0B|Audit: auto-session improvement candidate"
     "stale-verify|EDEDED|Stale verification — phase/verify not observed in 60+ days"
-    "theme/observability|006B75|Theme: observability — detection without persistence, logging gaps"
-    "theme/ac-quality|006B75|Theme: acceptance criteria / verify command quality"
-    "theme/concurrency|006B75|Theme: concurrent session conflicts, session_id misattribution"
-    "theme/verify-backlog|006B75|Theme: post-merge verify backlog accumulation"
-    "theme/batch-orchestration|006B75|Theme: batch/until orchestration — backlog resolution, round ordering, safety valves"
 )
 
 # Fallback-group labels: created when GitHub feature is unavailable
@@ -92,6 +90,51 @@ FALLBACK_LABELS=(
     "value/4|BFD4F2|Value: 4"
     "value/5|BFD4F2|Value: 5"
 )
+
+# Theme-group labels: parsed from the `themes:` block mapping in .wholework.yml
+# (name: description, one per line). Undefined `themes:` -> no theme labels at all.
+# Same config-file resolution rule as scripts/get-config-value.sh.
+THEME_COLOR="006B75"
+CONFIG_FILE="${WHOLEWORK_CONFIG_PATH:-.wholework.yml}"
+
+THEME_LABELS=()
+if [ -f "$CONFIG_FILE" ]; then
+    IN_THEMES=false
+    while IFS= read -r line || [ -n "$line" ]; do
+        # Column-0 comment lines never close the themes: block (matches the
+        # documented "comment lines are ignored" rule and get-config-value.sh's
+        # own comment handling).
+        case "$line" in
+            \#*) continue ;;
+        esac
+
+        if [ "$IN_THEMES" = "true" ]; then
+            case "$line" in
+                "")
+                    continue
+                    ;;
+                [[:space:]]*)
+                    if echo "$line" | grep -qE "^[[:space:]]+[A-Za-z0-9._-]+[[:space:]]*:"; then
+                        name=$(echo "$line" | sed -E "s/^[[:space:]]+([A-Za-z0-9._-]+)[[:space:]]*:.*$/\1/")
+                        desc=$(echo "$line" | sed -E "s/^[[:space:]]+[A-Za-z0-9._-]+[[:space:]]*:[[:space:]]*//" | sed -E "s/[[:space:]]+#.*$//" | sed -E "s/[[:space:]]*$//" | sed -E "s/^['\"]|['\"]$//" | sed -E "s/^['\"]|['\"]$//")
+                        THEME_LABELS+=("theme/${name}|${THEME_COLOR}|${desc}")
+                    elif ! echo "$line" | grep -qE "^[[:space:]]+#"; then
+                        echo "Warning: skipping unparsable themes entry: $line" >&2
+                    fi
+                    ;;
+                *)
+                    IN_THEMES=false
+                    ;;
+            esac
+        fi
+
+        if [ "$IN_THEMES" = "false" ]; then
+            if echo "$line" | grep -qE "^themes[[:space:]]*:[[:space:]]*(#.*)?$"; then
+                IN_THEMES=true
+            fi
+        fi
+    done < "$CONFIG_FILE"
+fi
 
 # Detect whether GitHub Issue Types feature is available
 # Returns 0 (true) if Issue Types are configured, 1 (false) otherwise
@@ -143,6 +186,13 @@ CREATED_COUNT=0
 
 # Always-group: create unconditionally
 for entry in "${ALWAYS_LABELS[@]}"; do
+    IFS='|' read -r name color description <<< "$entry"
+    create_label "$name" "$color" "$description"
+    CREATED_COUNT=$(( CREATED_COUNT + 1 ))
+done
+
+# Theme-group: create from .wholework.yml `themes:` (empty when undefined)
+for entry in "${THEME_LABELS[@]+"${THEME_LABELS[@]}"}"; do
     IFS='|' read -r name color description <<< "$entry"
     create_label "$name" "$color" "$description"
     CREATED_COUNT=$(( CREATED_COUNT + 1 ))
