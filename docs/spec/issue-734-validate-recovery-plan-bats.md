@@ -8,6 +8,7 @@
 
 - saito / MEMBER / first-class / Issue Retrospective: auto-resolved 2 ambiguity points — (1) AC 2 verify commands split into 5 individual `file_contains`, (2) forbidden op scope limited to `op` field only / https://github.com/saitoco/wholework/issues/734#issuecomment-4759960920
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/734#issuecomment-4760009559
 ## Changed Files
 
 - `tests/validate-recovery-plan.bats`: new file — 6 @test cases covering all 5 safety checks (valid plan / missing required key / invalid action enum / forbidden op / steps limit exceeded / invalid JSON) — bash 3.2+ compatible (pure bats, no bash 4+ features)
