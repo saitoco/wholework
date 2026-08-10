@@ -485,13 +485,15 @@ Per the 2026-08-01 Addendum's ordering — reproduce on the long-uptime host, *t
 |---|---|---|
 | `kern.boottime` | `{ sec = 1785855106 }` (2026-08-04 14:51Z) | `{ sec = 1786337343 }` (**2026-08-10 04:49Z** = 13:49 JST) |
 | Host uptime at session start | 131.6h | **~0.25h** |
-| Concurrent `/auto` sessions | 4 | 3 — `7106-1786338170` (05:02:56Z), `10253-1786338239` (05:04:06Z), `13432-1786338309` (05:05:18Z) |
+| Concurrent `/auto` sessions | 4 | 4 — `7106-1786338170` (05:02:56Z), `10253-1786338239` (05:04:06Z), `13432-1786338309` (05:05:18Z), `54184-1786342112` (06:08:38Z) |
 | Route | all `mode: "single"` | all `mode: "single"` |
 | Workload | backlog issues (#1310/#1312/#1316/#1130 …) | backlog issues (#1318/#1322 …) |
 
 The reboot was deliberate and followed the reproduction, so — unlike the unplanned 2026-08-04 reboot that confounded Arm 4a — the baseline was not destroyed by it. `concurrency_snapshot` instrumentation was considered and deliberately skipped, to avoid delaying the arm while the post-reboot uptime is still near zero; concurrency is therefore being recorded by `ps` plus `.tmp/auto-session-*.json` as before.
 
-**Session count is one short of the baseline's 4.** Matching it would require a fourth `/auto` session; as run, the arm is at 3/4 of the baseline concurrency with the same route and comparable phase mix.
+**Concurrency matches the baseline.** A fourth session (`54184-1786342112`) joined at 06:08:38Z, ~1h20m into the post-reboot window. All four run `mode: "single"`, as did all four on the baseline side — **the two arms differ in host uptime and in no other measured variable**, which is what the Addendum's "identical control workload" asks for.
+
+That both sides are single-route is worth stating plainly, because it inverts an assumption this report carried from July. The batch route was never the discriminator; it correlated with kills only because `--batch` was how spawn volume and concurrency were being generated at the time. Four concurrent single-route sessions produce the same conditions, and the 2026-08-10 baseline reproduced a kill under exactly that shape.
 
 ### What a null result would and would not license
 
