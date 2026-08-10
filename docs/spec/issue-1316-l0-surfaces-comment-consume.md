@@ -243,3 +243,19 @@ Size=XL だが non-interactive モードのため sub-issue 分割評価 (Step 1
 
 ### Improvement Proposals
 - review retrospective の Recurring issues が指摘する「Bash wrapper fallback スクリプトの呼び出し元列挙」が `modules/l0-surfaces.md`・`docs/structure.md`・`modules/worktree-lifecycle.md` の 3 箇所に独立して存在する重複構造。単一の SSoT (`modules/l0-surfaces.md` 自身) に一本化し、他 2 箇所はリンクのみにする設計変更を検討する価値がある。本 Issue では個々の記述更新に留めた。
+
+## Auto Retrospective
+
+### Execution Summary
+| Phase | Route | Result | Notes |
+|-------|-------|--------|-------|
+| code  | pr    | SUCCESS (manual respawn after external kill) | run-code.sh #1316 --pr の 1 回目の実行がプロセスグループの外部強制終了 (external kill) で中断。再実行 (同一コマンド) が stale worktree/branch を自動クリーンアップし正常完了、PR #1324 作成 |
+| review | pr   | SUCCESS | `--full`、CI 11/11 SUCCESS、review response 11 resolved / 1 skipped |
+| merge | pr    | SUCCESS | squash merge クリーン (mergeable=true, CI success, review approved)、conflict なし |
+| verify | -    | SUCCESS | Pre-merge AC 7 件は `/review` 時点で既にチェック済み (再検証スキップ)。Post-merge observation AC 1 件は未発火のため `phase/verify` のまま保留 |
+
+### Orchestration Anomalies
+- code phase (`code-pr`): `run-code.sh 1316 --pr` の wrapper プロセスグループが実行開始から約 5 分でシステムから外部強制終了された (`.tmp/wrapper-out-1316-code-pr.log` に `Exit code:` / `Finished at:` トレーラーが存在しない)。`scripts/detect-external-kill.sh` が `external-kill` シグネチャを確認し、Tier 1/2/3 診断には入らず (skills/auto/SKILL.md の External kill pre-check に従い) 同一コマンド `run-code.sh 1316 --pr` を直接再実行した。再実行は worktree に残っていたコミット済み進捗 (`a0e3116c`) を stale と判定して破棄し、最初から実装をやり直して正常完了した。`docs/reports/orchestration-recoveries.md` に `run-auto-sub.sh --write-manual-recovery 1316 code-pr respawn --cause external-kill` で記録済み。
+
+### Improvement Proposals
+- N/A — 本症状 (`manual-recovery-respawn`) は repo 全体で既に 17 件蓄積し `recoveries-auto-fire.threshold` (3) を超過しているが、`.wholework.yml` の `recoveries-auto-fire.enabled: false` により自動起票対象外。`/verify` Step 15 の Recovery Candidates Tail Check が `gh issue create --label "retro/recoveries" --title "recoveries: manual-recovery-respawn"` を推奨コマンドとして提示済みのため、本セクションでは重複記録しない。
