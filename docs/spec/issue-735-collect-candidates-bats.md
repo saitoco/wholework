@@ -66,6 +66,7 @@
 
 - saito (MEMBER, first-class) — issue retrospective: AP1/AP2/AP3 の auto-resolve 結果を記録。`file_contains "@test"` は存在確認として適切、`audit-recoveries.bats` は integration coverage として残し新規 direct unit test を作成する方針を確認 — https://github.com/saitoco/wholework/issues/735#issuecomment-4759879388
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/735#issuecomment-4759946196
 ## Notes
 
 - AP1 (verify command の数量保証): AC2 の `file_contains "@test"` は 1 件でも PASS。「4 件以上」は実装ガイダンス。AC3 の bats 実行 green で品質補完。`command "grep -c '@test'"` は safe mode で UNCERTAIN になるため不採用。
