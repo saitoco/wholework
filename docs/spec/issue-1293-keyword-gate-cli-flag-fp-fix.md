@@ -63,6 +63,8 @@
 - saito (MEMBER, first-class) — `/issue 1293 --non-interactive` の Issue Retrospective。Auto-Resolve Log (単語境界マッチが機能しない実機検証結果) を記録。AC 変更なし。https://github.com/saitoco/wholework/issues/1293#issuecomment-5230670606
 - saito (MEMBER, first-class) — Triage AC audit: Pre-merge AC3 の verify command `command "bats tests/opportunistic-search.bats"` が新規カバレッジなしでも常時 PASS するリスクを指摘。`bats --filter` への差し替えを推奨 (本 Spec の Notes・Implementation Step 3 で対応済み)。https://github.com/saitoco/wholework/issues/1293#issuecomment-5230697853
 - `/code 1293 --non-interactive` (code フェーズ): cutoff (`phase/code` ラベル付与時刻 2026-08-09T09:13:45Z) 以降の新規コメントなし。
+- saito / MEMBER / first-class / ## Acceptance Test Results (前回 `/verify 1293` の Acceptance Test Results コメント。Pre-merge 1 は already checked のため SKIPPED) / https://github.com/saitoco/wholework/issues/1293#issuecomment-5230957437
+- saito / MEMBER / first-class / observation-trigger phase=observation-trigger issue=1293 event=pr-review-light 検出通知 (本 `/verify` dispatch のトリガー) / https://github.com/saitoco/wholework/issues/1293#issuecomment-5235284697
 
 ## Code Retrospective
 
@@ -129,10 +131,12 @@
 
 #### verify
 
-- Pre-merge 3 件は既チェックのため skip、post-merge の observation 1 件は `pr-review-light` 未発火で SKIPPED。FAIL・UNCERTAIN ゼロ
+- 初回 `/verify 1293`: Pre-merge 3 件は既チェックのため skip、post-merge の observation 1 件は `pr-review-light` 未発火で SKIPPED。FAIL・UNCERTAIN ゼロ
 - 実体を確認した: `bats --filter 'CLI flag token'` は実テスト 2 件にマッチし両方 PASS。うち 1 件は「CLI フラグと並んで散文にも keyword が出現する場合は除外しない」という偽陰性保護で、除去が効きすぎないことを担保している
 - 誤検知の解消を直接検証した: `--workflow=test.yml` を除去処理に通すと keyword `workflow` の出現が 0 になる
+- **再実行 (`/review` #1319 の Event-based observation scan から dispatch)**: `pr-review-light` イベントが発火し (`/review` PR #1319 実行時の observation-trigger 経由)、post-merge observation AC を評価。合成コンテキストによる実機検証で PASS と判定: `--workflow=test.yml` を含むコンテキストでは Issue #476 の `keyword=workflow` ゲートが正しく誤発火せず、一方で通常のプレーンな "workflow" という語では正しく発火すること (false negative なし) を両方確認した。全条件確定 (SKIPPED×3, PASS×1) により `phase/done` へ遷移
 
 ### Improvement Proposals
 
-- N/A — 本実行から新たに派生する構造的な改善点は検出されなかった。`/issue` による方式反証・AC 監査の常時 PASS 検出・`/spec` による `--filter` 絞り込みは、いずれも既存の機構 (#1220 の outcome-based AC 方針、#1294 の Pattern 2 サブパターン) が意図どおり機能した結果である
+- N/A — 初回実行時点では、`/issue` による方式反証・AC 監査の常時 PASS 検出・`/spec` による `--filter` 絞り込みは、いずれも既存の機構 (#1220 の outcome-based AC 方針、#1294 の Pattern 2 サブパターン) が意図どおり機能した結果であり、新たな構造的改善点はなかった。
+- **再実行時の気づき (構造的改善点として起票を検討する価値あり)**: `skills/verify/SKILL.md` Step 8c の evidence collection (`/auto` 実行ログ、`.tmp/auto-events.jsonl`、`opportunistic-search.sh --event` の read-only 再実行、`.wholework.yml`/ディレクトリ構成の確認) には、「keyword= ゲート付き observation 条件を実際に発火させる合成コンテキストを author して直接実証する」という手段が含まれていない。今回はこの手段がなければ `pr-review-light` の発火自体は確認できても、Issue #476 側の `keyword=workflow` ゲートが実際に CLI フラグ構文を正しく除外するかどうかは間接的にしか判断できなかった (発火した観測イベントの元コンテキストが偶然 CLI フラグ構文を含んでいなかったため)。keyword=/config=/when= ゲート付き observation 条件全般に対し、「ゲート条件を意図的に満たす/満たさない最小合成コンテキストを構築して実行し、期待通りの発火/非発火を確認する」という evidence collection 手段を Step 8c に追記する Issue を起票する価値があると判断する。
