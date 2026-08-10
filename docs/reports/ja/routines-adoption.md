@@ -2,6 +2,8 @@
 
 # Routines 採用計画
 
+> **追わないことを決定** — 2026-08-10 判断。Wholework はローカル実行に限定する方針を維持するため、Claude Code のクラウドホスト型 Routines は方向性から外れる。本文は検討した方向性・Tier ロードマップ・PoC の学びの記録として保持する。同時に `docs/` から `docs/reports/` へ移動し Project Document 用の frontmatter を除去したため、`/doc sync` および `/audit drift` の収集対象ではなくなった。以下の未解決の疑問は記載のまま残しており、追跡はしない。
+
 Claude Code の Routines 機能を wholework に取り込むための長期イニシアチブドキュメント。方向性、未解決の疑問、Tier ロードマップ、PoC の学びをセッションを跨いで蓄積します。
 
 参考: https://claude.com/blog/introducing-routines-in-claude-code

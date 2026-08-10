@@ -46,13 +46,12 @@ wholework/
 │   ├── migration-notes.md # 移行 issue ごとのインターフェース変更記録（project）
 │   ├── environment-adaptation.md # 環境適応アーキテクチャ（4 層）（project）
 │   ├── versioning.md    # リリース versioning ポリシー（project）
-│   ├── routines-adoption.md # Routines 採用ロードマップと PoC 知見（project）
 │   ├── translation-workflow.md # docs/ja/ ミラー同期ルールと手順（project）
 │   ├── visual-reproduction.md  # UI 再現案件 methodology guide（project）
 │   ├── guide/           # ユーザー向けマニュアル（index、quick-start、workflow、customization、troubleshooting、adapter-guide、figma-best-practices、scripting、xl-decomposition、autonomy）（project）
 │   ├── {lang}/          # /doc translate {lang} が生成する言語別翻訳（docs/{lang}/）
 │   ├── spec/            # Issue 仕様
-│   ├── reports/         # 最適化・監査レポート
+│   ├── reports/         # 最適化・監査レポート（routines-adoption.md を含む — 追わない方針、記録として保持）
 │   ├── stats/           # プロジェクト健全性診断レポート（/audit stats が生成、YYYY-MM-DD.md）
 │   └── sessions/        # セッション関連の自動生成物
 │         {SID}-{DATE}/  # L3 セッションレトロスペクティブ（/auto Step 5 L3 トリガーが生成、notable な batch/XL のみ）

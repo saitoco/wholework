@@ -1,14 +1,8 @@
----
-type: project
-ssot_for:
-  - routines-adoption
-  - tier-roadmap
-  - open-questions
----
-
 English | [日本語](ja/routines-adoption.md)
 
 # Routines Adoption
+
+> **Not pursued** — decided 2026-08-10. Wholework deliberately stays local-execution-only, so Claude Code's cloud-hosted Routines fall outside its direction. This document is retained as a record of the direction explored, the tier roadmap, and the PoC learnings. It was moved from `docs/` to `docs/reports/` and its Project Document frontmatter removed at the same time, so it is no longer collected by `/doc sync` or `/audit drift`. The Open Questions below are left as written and are not tracked.
 
 Long-term initiative document for adopting Claude Code's Routines feature into wholework. Captures direction, open questions, tier roadmap, and PoC learnings as they accumulate across sessions.
 
