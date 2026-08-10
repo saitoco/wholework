@@ -172,6 +172,7 @@ Detects gaps between documentation and implementation and automatically opens fi
 /audit fragility       # structural fragility (missing tests, convention violations)
 /audit                 # both perspectives
 /audit stats           # project health diagnostic report (throughput, backlog health)
+/audit premise         # re-evaluate premise markers in open issues
 ```
 
 Run periodically — for example, after a sprint or milestone — to keep docs, tests, and conventions aligned with the codebase.

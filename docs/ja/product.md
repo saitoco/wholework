@@ -149,7 +149,7 @@ Anthropic の Managed Agents + Outcomes は隣接する Outcome rubric ループ
 | 用語 | 定義 | コンテキスト | 日本語訳 |
 |------|------------|---------|---------|
 | `/auto` | `claude -p` を介して非対話的に spec→code→review→merge→verify を連鎖させるオーケストレータースキル。`phase/*` ラベルが未設定の場合は issue triage から自動開始、`phase/ready` が無い場合は `/spec` を自動実行。`--batch N` はバックログから N 個の XS/S Issue を処理、XL Issue は独立サブ issue を並列実行（worktree 分離）する。`--base {branch}` でリリースブランチを対象にする。旧称: 'Dispatch' | 開発ワークフロー | `/auto` |
-| `/audit` | プロジェクト健全性検出のための複合スキル。サブコマンド: `/audit drift` (ドキュメント ↔ コードドリフト、Issue 自動生成)、`/audit fragility` (構造的脆弱性検出)、`/audit stats` (Issue スループット / 構成 / First-try 成功率集計、`--retention` でフェーズ/verify 滞留・Icebox 滞留・recovery 候補頻度のメトリクスを追加)、`/audit progress` (XL サブ Issue 進捗スナップショット)、`/audit auto-session` (`.tmp/auto-events.jsonl` からのデータレイヤーレポートまたはフォールバック生成)。 | /audit Skill | `/audit` |
+| `/audit` | プロジェクト健全性検出のための複合スキル。サブコマンド: `/audit drift` (ドキュメント ↔ コードドリフト、Issue 自動生成)、`/audit fragility` (構造的脆弱性検出)、`/audit stats` (Issue スループット / 構成 / First-try 成功率集計、`--retention` でフェーズ/verify 滞留・Icebox 滞留・recovery 候補頻度のメトリクスを追加)、`/audit progress` (XL サブ Issue 進捗スナップショット)、`/audit auto-session` (`.tmp/auto-events.jsonl` からのデータレイヤーレポートまたはフォールバック生成)、`/audit premise` (open Issue 本文の `premise:` マーカーを現在のコードベースに対して再評価し、失効した Issue にコメントする)。 | /audit Skill | `/audit` |
 | AC | 「Acceptance Criteria」の略称（インデックス参照時は個別の「Acceptance condition」の略、例: `AC1`, `AC2`）。Issue Retrospective、スキル出力、レビューコメントでの簡略表記として使用 | /issue, /spec, /review, /verify | AC |
 | Acceptance condition | Issue の受入条件内の、検証可能な単一要件項目。チェックリストの 1 行として現れ、通常 verify command と対になる | /issue, /verify | 受入条件項目 |
 | Acceptance criteria | Issue の受入条件の完全な集合。Issue 本文の `## Acceptance Criteria` 配下に定義される。L1 の集合としての L2 個別受入条件群 | /issue, /verify | 受入条件 |
@@ -171,6 +171,7 @@ Anthropic の Managed Agents + Outcomes は隣接する Outcome rubric ループ
 | Phase Handoff | `modules/phase-handoff.md` に実装されたフェーズ横断の構造化サマリー機構。各フェーズは終了前に Handoff を書き込み、次フェーズが開始時に読み込む。次ステップの作業コンテキスト（AC 確認結果、スコープ注記、残存リスクなど）を伝達する。実行履歴を記録する Retrospective とは異なる概念。主に code → review → merge → verify のパスで使用 | /code、/merge、/review、/verify | Phase Handoff |
 | Phase label | Issue の現在のワークフローステージを示す `phase/*` GitHub ラベル（例: `phase/issue`、`phase/spec`、`phase/ready`、`phase/code`） | 開発ワークフロー | フェーズラベル |
 | PR route | M/L サイズ Issue のワークフロー経路。マージ前にコードレビュー用の Pull Request を作成する | 開発ワークフロー | PR 経路 |
+| Premise marker | Issue 本文の記述がコードベースの現在状態に依存することを宣言する `<!-- premise: ... -->` 形式の HTML コメントマーカー。`/audit premise` が現在のコードベースに対して再評価し失効を検出する | /issue, /audit | 前提マーカー |
 | Project Documents | プロジェクトのワークフローや運用手順ドキュメント。`docs/` 配下に保存 | /doc Skill | Project Documents |
 | Retrospective | 各スキル実行後に Spec に追記されるセクション。そのフェーズの観察、判断、不確実性の解消を記録する。ワークフローフェーズ横断の実行履歴を蓄積する | 開発ワークフロー | レトロスペクティブ |
 | Shared module | `modules/*.md` に保存され、複数スキルから "Read and follow" パターンで参照される手順ドキュメント。旧称: "shared procedure document" | スキル開発 | 共有モジュール |

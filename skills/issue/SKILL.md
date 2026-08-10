@@ -278,6 +278,20 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/check-ac-checkbox-format.sh .tmp/issue-body-check.
 
 Exit code 2 means one or more condition lines under `### Pre-merge` / `### Post-merge` are plain bullets — present the printed lines as a warning, insert `[ ] ` immediately after the bullet marker of each (`- ` → `- [ ] `), and update the Issue body. Exit code 1 is warn-only (usage error) — continue processing regardless. Delete the temp file afterward: `rm -f .tmp/issue-body-check.md`.
 
+**Premise marker for codebase-state-dependent statements:**
+
+When the Issue body states a fact that depends on the codebase's *current* state (e.g., "no actual harm at present," "zero matching locations found," "only one caller currently exists"), such a statement can silently go stale as the codebase changes — the Issue keeps reading as low-priority even after the underlying condition it relied on no longer holds. Tag that line with a `<!-- premise: <expr> -->` marker so `/audit premise` can re-evaluate it later against the current codebase. The supported expression grammar and its limits are the SSoT in the header comment of `scripts/check-premise-expiry.sh` (3 expression types: `grep_count "<pattern>" "<paths>" <op> <N>`, `file_exists "<path>"`, `file_not_exists "<path>"`). Example:
+
+```
+<!-- premise: grep_count "get-config-value.sh" "scripts/ skills/ modules/" -eq 0 -->
+```
+
+(This is the actual premise that expired in #1055 — as of this writing it matches many more than 0 locations, so evaluating it now would immediately report `EXPIRED`. It illustrates the marker syntax, not a premise that currently holds.)
+
+If the statement cannot be reduced to one of the 3 expression types (e.g., a qualitative judgment like "this design choice depends on future direction X"), skip the marker and instead write out, in prose, what implementation change would make the statement stop being true — `/audit premise`'s Layer 2 (LLM judgment) surfaces unmarked codebase-state-dependent prose as a marker-conversion candidate, but it cannot determine expiry for it on its own.
+
+Place the marker in a prose section (`## Background`, `## Purpose`, etc.), never on an Acceptance Criteria checkbox line — the existing AC parsers key off the checkbox line shape for `verify:` / `verify-type:` attributes, and co-locating a different marker type there risks future attribute-extraction conflicts.
+
 ### Step 5: Clarification Questions
 
 If ambiguity points were found, process them as follows.

@@ -268,27 +268,57 @@ Background に記載の対応方針 A (`/audit` への観点追加) / B (機械�
 - **CI ジョブ名 `Run bats tests`** が `.github/workflows/test.yml` line 9 に実在することを確認した。受入条件 4 の `github_check` はそのまま有効。
 - **未解決のまま残した不確実性**: `/audit premise` Layer 2 (LLM 判断による marker 化候補抽出) が実際の open Issue 群に対して有用な結果を返すかは、マージ前に検証する手段がない。post-merge 受入条件がこの確認を担う。Layer 1 (決定的) はこの不確実性から独立しているため、pre-merge 受入条件 1-4 の成否には影響しない。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — 実装ステップ 1〜9 は Spec の記述通りに実施した。順序・内容ともに変更なし。
+
+### Design Gaps/Ambiguities
+
+- **`skills/issue/SKILL.md` への premise マーカーガイダンス追加が `validate-skill-syntax.py` の allowed-tools 一貫性チェックに抵触することを Spec は想定していなかった**。Spec 実装ステップ 5 は「スクリプト呼び出しを伴わない LLM 判断のみのガイダンスであるため allowed-tools は変更しない」としていたが、ガイダンス文中で `${CLAUDE_PLUGIN_ROOT}/scripts/check-premise-expiry.sh` という完全参照形式を書いた時点で、validator の `validate_body_scripts_in_allowed_tools()` (本文中の `${CLAUDE_PLUGIN_ROOT}/scripts/*.sh` パターンを機械的に検出し allowed-tools 登録の有無を問う静的チェック、呼び出しか単なる参照かを区別しない) がエラーを出した。対応: ガイダンス文中の参照を `${CLAUDE_PLUGIN_ROOT}/` プレフィックスなしの `scripts/check-premise-expiry.sh` 表記に変更し、allowed-tools は Spec の判断通り無変更のまま validator を通過させた。他の Skill が同種の「呼び出しを伴わない SSoT 参照」を本文に書く際も、`${CLAUDE_PLUGIN_ROOT}/scripts/` の完全形は避けるべき一般的な注意点として記録する。
+
+### Rework
+
+- N/A — 上記のガイダンス文言修正以外に手戻りは発生しなかった。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- 対応方針 B (premise マーカー + `scripts/check-premise-expiry.sh`) を基盤、A (`/audit premise` サブコマンド) を検出面、C (`/issue` Step 4 ガイダンス) を予防として **3 案すべて採用**した。A 単独では AC3 の bats 要件を満たせず、B 単独では検出ループが閉じず、C 単独では既存 Issue の失効を検出できないため。
-- **方式選定の根拠と検出範囲/限界は Spec ではなく実装ファイルに書く**。AC1/AC2 の `rubric` grader には Spec が渡らないため (`modules/verify-executor.md`)、根拠は `skills/audit/SKILL.md` の Design Rationale ブロック、範囲/限界は `scripts/check-premise-expiry.sh` のヘッダコメントに置く。**これを Spec だけに書くと AC1/AC2 が FAIL する**。
-- `premise` は `drift` のサブ観点ではなく**独立サブコマンド**とし、引数なし `/audit` の統合実行 (drift + fragility) には含めない。出力アクション (既存 Issue へのコメント vs 新規起票) と L0 write の tier ゲート適用範囲が異なるため。
-- 検索エンジンは `git grep -F` (固定文字列・追跡ファイルのみ)。`modules/filesystem-scope.md` の Approved Patterns に従い、`modules/verify-executor.md` が記録する ERE/BRE 取り違えを式レベルで排除する。
-- 前提式の演算子は shell test 形式 (`-eq` / `-ne` / `-lt` / `-le` / `-gt` / `-ge` の 6 種)。`>` を HTML コメント内に持ち込まないため。
+- Non-interactive fork context 判定 (execution-context.md) により Workflow path はスキップし、静的 Task fan-out (review-spec + review-bug×2) を Agent ツール (`run_in_background: false`) で実行した。
+- review-bug 由来 10 件の finding を2段階検証にかけ、2件のみ生存 (`scripts/check-premise-expiry.sh:105` 空 paths、`:117` マーカー抽出近似マッチ消失)。残り8件は「呼び出し元がパスを自身で生成するため到達不能」「手前のガードが同じ fail-open 結果に先に到達」「既存の `--limit 100` 慣行と同型」「ja ミラー全体で全角括弧が支配的な既存慣行」等の理由で false positive として棄却した。
+- review-spec が検出した `skills/audit/SKILL.md:842` (Step 2 の exit 0 処理が Step 3 の `HOLDS`/`UNEVALUABLE` を生成できない) は review-bug の diff-scan エージェントも独立に同一箇所を検出しており、2 観点のクロスバリデーションにより MUST として採用した。
+- MUST 1件・SHOULD 3件・CONSIDER 3件、計7件すべてを修正した。CONSIDER も含め全件修正した理由: いずれも修正コストが低く (数行の diff)、放置すると `/audit premise` の fail-open 契約が部分的に空文化する (MUST/一部SHOULD) か、ガイダンス例が初回実行で必ず EXPIRED を出す (CONSIDER 1件) など、実利用時に混乱を招く実質的なギャップだったため。
 
 ### Deferred Items
 
-- `/audit premise` Layer 2 (LLM 判断) の実効性検証は post-merge 受入条件に委ねた。マージ前に検証する手段がない。
-- `docs/translation-workflow.md` の同期対象範囲の記述 (`docs/guide/*.md` が実装では対象だが文書では未記載) の是正は本 Issue のスコープ外。
-- 既存 open Issue への premise マーカーの遡及付与は行わない。post-merge の調査で marker 化候補が挙がった場合の起票要否は発見時の個別判断 (Issue Retrospective で確定済み)。
+- `/audit premise` Layer 2 (LLM 判断) の実効性検証は post-merge 受入条件に委ねた。マージ前に検証する手段がない (spec retrospective から継続)。
+- `docs/translation-workflow.md` の同期対象範囲の記述の是正は本 Issue のスコープ外 (spec retrospective から継続)。
+- 既存 open Issue への premise マーカーの遡及付与は行わない。post-merge の調査で marker 化候補が挙がった場合の起票要否は発見時の個別判断 (spec retrospective から継続)。
+- 棄却した8件のうち `scripts/check-premise-expiry.sh:161` (git grep exit status 未検査、out-of-repo path で fatal collapse) は「ドキュメント外の使用法でのみ到達」と判定して見送ったが、`git grep` の終了コードを一切検査しない設計自体は将来別の呼び出しパターンで顕在化しうる。再発した場合は個別 Issue で再検討する。
 
 ### Notes for Next Phase
 
-- **`git grep` は存在しないパススペックでもエラーを出さず exit 1 を返す** (実測確認済み)。`grep_count` の評価前に全パスの `test -e` 検証を入れないと、パスのタイプミスが「マッチ 0 件 = 前提成立」として silent に誤判定される。実装ステップ 1 の fail-open 分岐は省略不可。
-- bats テストは `$BATS_TEST_TMPDIR` に `git init -q` + `git add` した使い捨てリポジトリで hermetic に組む。commit は不要 (実測確認済み) なので `git config user.*` の設定は要らない。
-- `docs/structure.md` のファイル数コメントは `scripts/` 直下のみを数える規約 (`scripts/git-hooks/` は含まない)。84→85、`tests/` は 120→121。
-- `skills/audit/SKILL.md` は h2 = サブコマンド、h3 = `Step N:` の階層。新セクションは `## fragility Subcommand` と `## progress Subcommand` のあいだに挿入し、既存の見出しレベルにそろえる。`validate-skill-syntax.py` の制約 (半角感嘆符禁止・frontmatter の YAML block scalar 不可・本文中の 3 連バッククォート禁止) に注意する。
-- `modules/detect-config-markers.md` の Read 指示は `### Step 1` 見出し直後の第 1 段落に置く (`modules/skill-dev-checks.md` § Read Instruction Placement Rule)。リストやテーブル内に埋め込まない。
+- `/merge` 前提: 全11 CI ジョブ SUCCESS (修正後の再プッシュ分含む)、pre-merge AC 4件すべて PASS でチェック済み。
+- Full bats suite (`bats --jobs 18 tests/`) は review フェーズの修正後に 1728/1728 で全 pass (1725 既存 + review で追加した回帰テスト3件)。
+- `docs/tech.md` の model-effort-matrix (SSoT) に `premise` サブコマンドを追加した — 同種の列挙を追加する際は `docs/product.md`/`docs/workflow.md`/`docs/guide/workflow.md` だけでなく `docs/tech.md` も確認対象に含めること (今回は review フェーズで検出・修正)。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Spec (`## Changed Files` 列挙) と PR diff の構造的な乖離はなかった — 13ファイル全件が Spec 記載と一致していた。一方で、Spec 記載の Changed Files には含まれていなかったが本来同期対象だった `docs/tech.md` の model-effort-matrix 列挙漏れを review フェーズで検出・修正した。原因は Spec 作成時の Steering Docs sync 調査が `docs/product.md`/`docs/workflow.md`/`docs/guide/workflow.md` の3系統列挙のみを対象とし、`docs/tech.md` の model-effort-matrix という4つ目の同種列挙サイトを見落としたこと。`/audit` サブコマンドのような「複数箇所に列挙が重複する」パターンを Spec 段階で洗い出す際は、grep で `audit (skill)` や `/audit ` のような列挙キーワードをリポジトリ全体から探索し、同種列挙サイトを網羅的に確認するべきだった。
+
+より構造的な観点では、`skills/audit/SKILL.md` Step 2 (Premise Evaluation) の exit-0 処理が Step 3 (Results Output) の `HOLDS`/`UNEVALUABLE` を生成できないという MUST 級の欠落は、Spec の実装ステップ記述自体には現れていなかった (Spec は「Layer 1 (deterministic)... 現在のコードベースに対して再評価する」という抽象度で記述しており、exit code ごとの Step 3 テーブルへの反映指示までは踏み込んでいなかった)。SKILL.md という「LLM 実行主体の prose」を新規作成する Issue では、スクリプトの exit code / stderr 出力と、それを消費する後続 Step の出力フォーマット (今回は Result enum 4値) との対応関係を Spec 段階で明示的に対応表化しておくと、この種のギャップを実装フェーズより前に検出できた可能性がある。
+
+### Recurring issues
+
+review-bug の diff-scan・security-scan の2エージェントが独立に、`scripts/check-premise-expiry.sh` の同じ2つの根本原因 (空 `<paths>` の受理、マーカー抽出正規表現の近似マッチ消失) にたどり着いた。これは「fail-open を謳うスクリプトが、fail-open 経路自体に到達する前に入力を静かに取りこぼす」という同型のバグパターンで、ヘッダコメントが明記する設計意図 (「UNEVALUABLE で silent false negative を防ぐ」) の実装漏れが2箇所で再発した形。fail-open メカニズムを持つスクリプトを実装する際は、「fail-open 分岐に到達する前の入力検証・正規表現マッチ自体が意図せず入力を弾いていないか」を単体で確認する observation は、今後同種のスクリプト (`<!-- verify: ... -->` のような他のマーカーパーサ) を実装する際にも再利用できる。
+
+2段階検証で8/10件が棄却された内訳を見ると、「唯一の呼び出し元がパスを自身で生成するため到達不能」(2件)・「手前のガードが同じ fail-open 結果に先に到達」(1件)・「既存コードの慣行と同型で本 PR が新規に持ち込んだものではない」(3件)・「CI で検査されない静的解析ツールの所感」(1件)・「LLM 実行主体の prose では失敗が可視化されるため杞憂」(1件) という5パターンに分かれた。特に「既存慣行と同型」の3件 (`--limit 100`、コメント本文の tmp パス省略、ja ミラーの全角括弧) は、review-bug が新規追加コードの周辺だけを見て「本 PR が持ち込んだ欠陥」と誤認した false positive であり、検証エージェントが `git show main:<path>` で既存コードとの diff を確認して初めて棄却できた。この種の false positive は、review-bug のプロンプトに「変更箇所が既存コードの慣行を踏襲しているだけでないか、`git show main:<path>` で確認する」という明示的な指示を追加すれば一次生成の段階で減らせる可能性がある。
+
+### Acceptance criteria verification difficulty
+
+4件の Pre-merge AC (rubric×3、github_check×1) はいずれも UNCERTAIN なく PASS 判定できた。rubric 対象ファイル (`scripts/check-premise-expiry.sh` ヘッダコメント、`skills/audit/SKILL.md` Design Rationale ブロック) が rubric 条件文が要求する内容をそのまま指し示せる場所に集約されていたため、grader の判定が容易だった — rubric 文を書く際に「判断根拠は `/spec` が作成する Spec に記録される」という Auto-Resolved Ambiguity Points の想定に反し、実際には `skills/audit/SKILL.md` 本体に Design Rationale ブロックとして記録された点は、AC のテキスト自体が記録先を問わない書き方だったため実害はなかった。verify command / rubric の記述に特筆すべき問題はなかった。

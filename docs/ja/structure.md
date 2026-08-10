@@ -22,7 +22,7 @@ wholework/
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（84 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（85 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -35,7 +35,7 @@ wholework/
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用 decomposition YAML サンプル
-├── tests/               # スクリプトの Bats テストファイル（120 ファイル）
+├── tests/               # スクリプトの Bats テストファイル（121 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents
@@ -246,6 +246,7 @@ wholework/
 - `scripts/check-session-findings-disposition.sh` — L3 `session.md` の `## Findings` から canonical disposition タグ欠落を検出；`skills/auto/SKILL.md` Step 5 の commit 直前に warn-only で呼び出される
 - `scripts/check-skill-change-observation-ac.sh` — Issue 本文が `skills/*/SKILL.md` に言及する場合に、post-merge の `verify-type: observation` AC から `session=next` 未付与を検出；`skills/issue/SKILL.md` Step 4 から warn-only で呼び出される
 - `scripts/check-ac-checkbox-format.sh` — Issue 本文の `### Pre-merge` / `### Post-merge` セクション配下でチェックボックス形式でない条件行を検出；`skills/issue/SKILL.md` Step 4 から warn-only で呼び出される
+- `scripts/check-premise-expiry.sh` — Issue 本文の `<!-- premise: ... -->` マーカー（`grep_count`/`file_exists`/`file_not_exists`）を現在の作業ツリーに対して再評価する。失効時は exit 2 + `EXPIRED:` を stdout に出力、それ以外は exit 0（fail-open の `UNEVALUABLE:` は stderr のみで exit code に影響しない）；`/audit premise` Step 2 Layer 1 から呼び出される
 - `scripts/check-translation-sync.sh` — docs/ja/* と docs/* の翻訳同期状況を確認
 - `scripts/check-forbidden-expressions.sh` — docs/product.md § Terms の deprecated terms を検出
 - `scripts/check-known-events-firing.sh` — `scripts/opportunistic-search.sh` の `KNOWN_EVENTS` 各エントリに実際の `--event <name>` 呼び出し箇所 (コメント行・echo/printf usage 文字列を除外) があるか検証
