@@ -1,4 +1,6 @@
-# Issue #1213: code: 再呼び出し保証のない実行サーフェスでの background task 完了通知待ちを構造的に防止 (#994 の再発)
+# Issue #1213: auto: 再呼び出し保証のない実行サーフェスでの background task 完了通知待ちを全 phase で構造的に防止
+
+> **現在の作業対象は iteration 2 (2026-08-10)。** 実装内容は下部の `## Iteration 2 (fix cycle, 2026-08-10)` 節を参照すること。本ファイル冒頭の `## Overview` / `## Changed Files` / `## Implementation Steps` は iteration 0 (2026-08-07) の記録であり、履歴として保持している。`## Verification` のみは全 iteration 分を統合した現行リスト (Issue 本文の Acceptance Criteria と 1:1) に更新済み。
 
 ## Overview
 
@@ -28,6 +30,14 @@
 **cutoff 解決の注記**: 両コメントの `createdAt` は本フェーズの cutoff (`.tmp/auto-events.jsonl` の `phase_start` イベント、Fallback A) より前だが、この cutoff は本ラン自身が起動直前に記録した自己参照的な値であり (`phase/*` ラベル履歴が存在しない初回フェーズのため)、機械的に適用すると両コメントを排除してしまう。同じ wrapper が記録した `comments_consumed` イベント (count=2, trust_breakdown MEMBER:2) が実際の全コメント数と一致していることから、両コメントを consumed 済みとして扱った。
 
 - saito / MEMBER / first-class / <!-- wholework-event: type=verify-fail phase=verify issue=1213 iteration=1 --> / https://github.com/saitoco/wholework/issues/1213#issuecomment-5213905136
+
+**iteration 2 の spec フェーズで consume したコメント** (cutoff: `2026-08-10T04:18:35Z` — 直近の `phase/*` ラベル付与時刻, Primary で解決):
+
+- saito / MEMBER / first-class / Issue Retrospective — スコープを wrapper 側一括担保へ転換した判断根拠 (`/spec` はフルスイート実行の指示自体を持たない、`test-runner.md` / `execution-context.md` の読み手が限定的、という 3 つの調査事実)、ユーザー確認で決定した 2 点 (全 phase を wrapper 側で担保 / `run-spec.sh` の auto-retry 欠如は #1329 へ切り出し)、AC を outcome-based に保ち手段を固定しない方針、系譜 4 世代の整理 / https://github.com/saitoco/wholework/issues/1213#issuecomment-5235850418
+- saito / MEMBER / first-class / Triage AC audit — iteration 2 の 3 件目 rubric AC が Pattern 2 (常時 PASS リスク) に該当。要求 3 要素のうち「方式を選んだ理由」「4 世代の経緯」が Issue 本文に既出のため、実装が進まなくても grader が PASS しうる。修復案 2 種を提示 / https://github.com/saitoco/wholework/issues/1213#issuecomment-5235867942
+
+両コメントとも本フェーズで反映済み: 前者は Iteration 2 の設計方針そのもの、後者は Issue 本文の AC 修正 (rubric の判定対象を `modules/execution-context.md` に限定 + `section_contains` の機械的裏取りを追加) として適用した。
+
 ## Changed Files
 
 - `skills/code/SKILL.md`: Step 9 の実行サーフェス制約を、Behavioral Change Detection 分岐内 (旧位置: check 2 の `bats tests/` コードフェンス直後) から、Step 9 冒頭 (`**Operate route**: ...` 行の直後、Behavioral Change Detection 見出しより前) の分岐非依存な位置へ移動。旧位置の記述は "See the execution surface constraint above" 形の短い参照へ置換 (`run_in_background` という語自体は旧位置から除去)
@@ -42,18 +52,30 @@
 
 ## Verification
 
+全 iteration 分を統合した現行リスト。Issue 本文の `## Acceptance Criteria` と 1:1 で対応する (Pre-merge 14 件 / Post-merge 3 件)。
+
 ### Pre-merge
 
-- <!-- verify: rubric "skills/code/SKILL.md において、再呼び出し保証のない実行サーフェス (--non-interactive / fork / Workflow) での background task 完了通知待ちを禁じる指示が、フルスイート実行の先行分岐に依存しない位置に配置されている" --> 実行サーフェス制約の指示が分岐非依存な位置に配置されている
-- <!-- verify: section_contains "skills/code/SKILL.md" "Step 9" "run_in_background" --> `skills/code/SKILL.md` の Step 9 冒頭 (分岐非依存な位置) に `run_in_background` の扱いが明記されている
-- <!-- verify: section_not_contains "skills/code/SKILL.md" "Behavioral Change Detection" "run_in_background" --> 旧ネスト位置 (Behavioral Change Detection 分岐内) から実行サーフェス制約の記述 (`run_in_background`) が除去されている
+- <!-- verify: rubric "skills/code/SKILL.md において、再呼び出し保証のない実行サーフェス (--non-interactive / fork / Workflow) での background task 完了通知待ちを禁じる指示が、フルスイート実行の先行分岐に依存しない位置に配置されている" --> (iteration 0) 実行サーフェス制約の指示が分岐非依存な位置に配置されている
+- <!-- verify: section_contains "skills/code/SKILL.md" "Step 9" "run_in_background" --> (iteration 0) `skills/code/SKILL.md` の Step 9 冒頭 (分岐非依存な位置) に `run_in_background` の扱いが明記されている
+- <!-- verify: section_not_contains "skills/code/SKILL.md" "Behavioral Change Detection" "run_in_background" --> (iteration 0) 旧ネスト位置 (Behavioral Change Detection 分岐内) から実行サーフェス制約の記述 (`run_in_background`) が除去されている
 - <!-- verify: github_check "gh pr checks" "Run bats tests" --> CI (bats テスト) が PR で pass する
-- <!-- verify: section_contains "skills/review/SKILL.md" "12.3" "foreground" --> `skills/review/SKILL.md` の Step 12.3 (Lightweight Re-check) に実行サーフェス制約 (foreground 実行) への言及が追加されている
+- <!-- verify: section_contains "skills/review/SKILL.md" "12.3" "foreground" --> (iteration 0) `skills/review/SKILL.md` の Step 12.3 (Lightweight Re-check) に実行サーフェス制約 (foreground 実行) への言及が追加されている
+- <!-- verify: section_contains "skills/code/SKILL.md" "Step 9" "bats --jobs" --> (iteration 1) Step 9 のフルスイート override が並列形 (`bats --jobs`) を指定している
+- <!-- verify: section_not_contains "skills/code/SKILL.md" "Step 9" "bats --jobs $(" --> (iteration 1) Step 9 のフルスイート override がコマンド置換 (`$(...)`) を含まない (worktree isolation guard 回避のため、job 数はリテラル値へ分解する)
+- <!-- verify: section_contains "modules/test-runner.md" "Step 2" "600000" --> (iteration 1) `modules/test-runner.md` Step 2 が Bash tool の timeout ceiling (600000ms) を明記している
+- <!-- verify: command "bats tests/code.bats tests/review.bats tests/test-runner.bats" --> (iteration 1) 追加した構造テスト (14 件) が pass する
+- <!-- verify: rubric "再呼び出し保証のない実行サーフェスでの background task 完了通知待ちを禁じる制約が、個々の SKILL.md 本文への記述に依存しない経路で担保されている。少なくとも issue / spec / code / review / merge の 5 phase に制約が届くことが、実装または文書から確認できる" --> (iteration 2) 制約が SKILL.md 本文非依存の経路で全 phase に届く
+- <!-- verify: rubric "skills/spec/SKILL.md がフルスイート実行の指示を持たないにもかかわらず spec phase で本事象が発生した事実を踏まえ、SKILL.md に該当指示を持たない phase でも制約が有効となる理由が、実装または文書で説明されている" --> (iteration 2) 指示を持たない phase でも有効である理由が説明されている
+- <!-- verify: rubric "modules/execution-context.md に、本 iteration が実装した制約注入の方式 (注入箇所のファイルパスと、prompt へ前置される仕組み) と適用範囲 (どの phase に届くか)、およびその方式を選んだ理由 (phase 単位の SKILL.md 本文追記が取りこぼしを繰り返した経緯) が追記されている。Issue 本文ではなく実装成果物側の記述で判定すること" --> (iteration 2) 採用方式とその選択理由が実装成果物 (`modules/execution-context.md`) に記録されている
+- <!-- verify: section_contains "modules/execution-context.md" "Wrapper-Level Constraint Injection" "guard-prefix.sh" --> (iteration 2) 上記 rubric の機械的裏取り — 注入箇所を説明する節が `modules/execution-context.md` に存在する
+- <!-- verify: command "bats tests/run-spec.bats tests/run-issue.bats tests/run-merge.bats tests/run-code.bats tests/run-review.bats" --> (iteration 2) wrapper 群の bats スイート 5 本が回帰していない (回帰保護のみを目的とする AC — 新規カバレッジの主張は前 3 項が担う)
 
 ### Post-merge
 
-- 次回以降の `/auto` の code phase ログで、Behavioral Change Detection がフルスイート実行を選択した場合に foreground 実行 (または明示 `timeout`) が行われた形跡が残ることを観察する <!-- verify-type: observation event=auto-run session=next -->
-- 次回以降の `/auto` の review phase ログで、Step 12.3 がフルスイート実行を選択した場合に foreground 実行 (または明示 `timeout`) が行われた形跡が残ることを観察する <!-- verify-type: observation event=auto-run session=next -->
+- 次回以降の `/auto` の code phase ログで、フルスイート実行が並列形 (`bats --jobs`) で起動され、バックグラウンド移行なしに完了していることを観察する <!-- verify-type: observation event=auto-run session=next -->
+- 次回以降の `/auto` の review phase ログで、フルスイート実行が並列形 (`bats --jobs`) で起動され、バックグラウンド移行なしに完了していることを観察する <!-- verify-type: observation event=auto-run session=next -->
+- 次回以降の `/auto` の spec phase で、フルスイート実行またはバックグラウンドタスク待ちが発生した場合に silent no-op にならないことを観察する <!-- verify-type: observation event=auto-run session=next -->
 
 ## Notes
 
@@ -113,6 +135,103 @@ iteration 0 が追加したガード (「再呼び出し保証のない実行サ
 - **SHOULD**: GNU `parallel` 不在時の fallback (旧: 単純な serial `bats tests/` 再実行) が ceiling 超過を再現するリスクがあったため、sharded serial batches (test-file group 単位での分割実行) に変更した
 - **SHOULD**: `modules/execution-context.md` (SSoT) が未更新のまま 3 つの consumer ファイルに同じ corollary が重複していた (SSoT Reverse Reference antipattern) — SSoT を先に更新する形に是正した
 - **SHOULD**: `skills/code/SKILL.md` に記載していた実測テスト件数 ("1516 tests passing") が実際の値 (1525) と不一致だったため、具体的な件数を削除した
+
+## Iteration 2 (fix cycle, 2026-08-10)
+
+### Overview (iteration 2)
+
+iteration 0/1 が採った「制約文を `skills/*/SKILL.md` の適切な位置に置く」というアプローチは、**その SKILL.md にフルスイート実行の指示がある phase にしか届かない**。2026-08-10 に `/spec` phase (#1130) で同一の失敗モードが再発し、`skills/spec/SKILL.md` にはフルスイート実行の指示が存在しないこと (= エージェントの自発的判断で実行していたこと) が確認された。
+
+本 iteration は、制約の担保層を SKILL.md 本文から **`claude -p` を起動する wrapper 層** へ移す。`scripts/guard-prefix.sh` の `GUARD_PREFIX` は 5 本の wrapper (`run-issue.sh` / `run-spec.sh` / `run-code.sh` / `run-review.sh` / `run-merge.sh`) すべてが source し、それぞれの `PROMPT` の**先頭**に前置される既存の共有文字列である。ここに制約を 1 箇所追記すれば、SKILL.md に指示を持たない phase を含む全 5 phase に届く。
+
+### Root Cause (iteration 2)
+
+これまでの 3 世代はいずれも「制約文の配置」を変えていたが、**配置を変えても届かない phase が存在する**ことが今回判明した。
+
+| 事実 | 確認コマンド | 結果 |
+|---|---|---|
+| `modules/test-runner.md` を読む skill | `grep -ln "modules/test-runner.md" skills/*/SKILL.md` | code / review / verify の 3 つのみ |
+| `modules/execution-context.md` を参照する skill | `grep -ln "execution-context.md" skills/*/SKILL.md` | code / review の 2 つのみ |
+| `skills/spec/SKILL.md` のフルスイート実行指示 | 同ファイルの `bats` 言及を全件確認 | すべて「Spec に何を書くか」の規約。実行指示は 0 件 |
+
+いずれも Issue 本文の記載どおりで、実装との矛盾はなかった (Step 6 の conflict detection: 検出なし)。
+
+`/spec` は指示がないままエージェントの自発的判断でフルスイートを実行し、バックグラウンド待ちに入った。**指示を持たない phase には、本文をどこに置いても制約は届かない。** 同じ理由で `issue` / `merge` も潜在的に同じ穴を持つ。
+
+### Changed Files (iteration 2)
+
+- `scripts/guard-prefix.sh`: `GUARD_PREFIX` に background task 完了通知待ちを禁じる段落を 1 つ追加 (既存 3 段落の 2 段落目「autonomous mode」の直後に挿入)。bash 3.2+ 互換 (文字列代入のみ、新規構文なし)。**実装上の必須制約**: `GUARD_PREFIX` は二重引用符で囲まれた bash 文字列のため、追記テキストにバッククォート・`$`・二重引用符・バックスラッシュを含めてはならない (バッククォートと `$(` はコマンド置換として評価され、`"` は文字列を途中で閉じる)。コード片の引用はバッククォートなしの素の表記で書く
+- `modules/execution-context.md`: 「Re-invocation Guarantee and Notification-Dependent Waiting」節に `### Wrapper-Level Constraint Injection` サブ節を新設 — 注入箇所 (`scripts/guard-prefix.sh`)・注入の仕組み (5 wrapper の `PROMPT` 先頭に前置)・適用範囲 (issue / spec / code / review / merge の 5 phase、exhaustive)・SKILL.md に指示を持たない phase でも有効な理由・phase 単位の本文追記が 4 世代にわたり取りこぼした経緯を記載。あわせて同ファイル末尾の `## Callers` リストに `scripts/guard-prefix.sh` の行を追加
+- `tests/run-spec.bats`: `claude` mock の prompt スキャンに新制約の検出を追加し、`@test` を 1 件追加
+- `tests/run-issue.bats`: 同上
+- `tests/run-merge.bats`: 同上
+- `tests/run-code.bats`: 同上
+- `tests/run-review.bats`: 同上
+- `docs/structure.md`: `scripts/guard-prefix.sh` の説明行 (「Skill runners:」直下) に background-wait 制約の担保を追記
+- `docs/ja/structure.md`: [Steering Docs sync candidate] 上記 `docs/structure.md` の変更に対応する日本語ミラーを同期 (`docs/translation-workflow.md` の Sync Procedure に従う)
+
+`modules/orchestration-fallbacks.md:500` も `guard-prefix.sh` に言及するが、sourceable helper パターンの例示としての言及であり内容変更は不要 (grep で確認済み)。
+
+### Implementation Steps (iteration 2)
+
+1. `scripts/guard-prefix.sh` の `GUARD_PREFIX` に、background task 完了通知待ちを禁じる段落を追加する (→ AC10, AC11)。挿入位置は既存 2 段落目 (`You are running in autonomous mode ...` で始まる段落) の直後、3 段落目 (`Boundary: ...`) の前。段落は次の要素を含む: (a) このプロセスには再呼び出し保証がなく完了通知は届かないという事実、(b) `run_in_background: true` / Workflow / 完了前に返る Agent・Task ディスパッチの完了待ちでターンを終えてはならないという MUST、(c) foreground で同期実行し同一ターン内で結果を消費すること、(d) Bash tool の 600000 ms timeout ceiling を超えるコマンドは自動的にバックグラウンドへ移行するため、コマンド側を短縮すること (bats 全スイートなら並列実行)、(e) それでもバックグラウンド移行された場合は完了通知を待たず失敗として報告すること、(f) 詳細は `modules/execution-context.md` の該当節を参照する旨。**バッククォート・`$`・二重引用符・バックスラッシュを一切使わない素のテキストで書く** (Changed Files の必須制約を参照)
+2. `modules/execution-context.md` の「Re-invocation Guarantee and Notification-Dependent Waiting」節に `### Wrapper-Level Constraint Injection` サブ節を新設する (after 1) (→ AC11, AC12, AC13)。記載内容は Changed Files のとおり。適用範囲の列挙には **(exhaustive)** マーカーを付す (`modules/skill-dev-checks.md` § Exhaustive/Example Markers)
+3. `modules/execution-context.md` 末尾の `## Callers` リストに `scripts/guard-prefix.sh` の行を追加する (after 2)。既存の「"Re-invocation Guarantee and Notification-Dependent Waiting" section:」の箇条書きに追記する形とし、「wrapper 経由で全 phase の prompt に前置される」旨を明記する
+4. `tests/run-spec.bats` / `tests/run-issue.bats` / `tests/run-merge.bats` / `tests/run-code.bats` / `tests/run-review.bats` の 5 本すべてで、既存の `claude` mock 内にある prompt スキャンブロック (`if echo "$arg" | grep -q 'IMPORTANT - HEADLESS SKILL EXECUTION'; then ... PROMPT_HAS_GUARD=1 ...`) の直後に、新制約を検出する分岐を追加し `PROMPT_HAS_BG_GUARD=1` を `$CLAUDE_CALL_LOG` へ書き出す (after 1) (→ AC14)。検出キーワードは `GUARD_PREFIX` 側にしか現れない語句を選ぶこと (各 bats の SKILL.md モックは数行のスタブなので衝突しないが、将来の誤検出を避けるため実装時に `grep` で一意性を確認する)。あわせて各ファイルの既存 `@test "guard: prompt contains HEADLESS SKILL EXECUTION guard text"` の直後に `@test` を 1 件追加し、`grep -q "PROMPT_HAS_BG_GUARD=1" "$CLAUDE_CALL_LOG"` を assert する。呼び出し形式は各ファイルの既存 guard テストと同一 (`run bash "$SCRIPT" 123` → `[ "$status" -eq 0 ]`)。5 本とも `setup()` で実体 `scripts/guard-prefix.sh` を `$MOCK_DIR` へ `cp` 済みのため、テストは出荷される文字列そのものを検証する
+5. `docs/structure.md` の `scripts/guard-prefix.sh` 行を更新する (after 1) — 現行「includes anti-early-stop and boundary reminders for autonomous execution」に、再呼び出し保証のない実行サーフェスでの background 完了通知待ち禁止を全 phase へ配る役割を追記する
+6. `docs/ja/structure.md` の対応行を同期する (after 5)。`docs/translation-workflow.md` の Sync Procedure に従い、日本語で記述する
+
+### Alternatives Considered (iteration 2)
+
+| 案 | 内容 | 不採用の理由 |
+|---|---|---|
+| `--append-system-prompt` フラグを各 wrapper に追加 | `claude -p` の起動引数として制約を渡す | 注入点が 5 箇所に分散し、`guard-prefix.sh` という既存の集約点を使わない分だけ保守面で劣る。既存の bats mock (prompt を検査する形) も作り直しになる |
+| 新規 module (`modules/background-wait-guard.md`) を作り全 SKILL.md から読ませる | 「Read and follow」パターンで共有 | **本 Issue が修正しようとしている失敗そのもの** — SKILL.md 本文への記述に依存するため、読む指示を持たない phase には届かない。4 世代目の繰り返しになる |
+| 環境変数 (`WHOLEWORK_NO_REINVOCATION=1`) を wrapper が export し、SKILL.md 側で分岐 | 実行文脈の機械的な伝達 | 分岐を書くのは SKILL.md 本文なので上と同じ穴。加えて `--non-interactive` が既に同じ情報を運んでいるため冗長 |
+| 既存の SKILL.md 側ガード (code Step 9 / review Step 12.3 / test-runner.md) を削除して wrapper 注入へ一本化 | 重複の排除 | iteration 0/1 の Pre-merge AC 4 件 (`section_contains` / `section_not_contains`) が当該記述の存在を検証しており、削除すると回帰する。役割分担も異なる — wrapper 注入は phase 横断の backstop、SKILL.md 側は実行判断地点直近の具体的な手順 (並列 `bats --jobs` の書き方など)。両方残す |
+
+### Tool Dependencies (iteration 2)
+
+#### Bash Command Patterns
+none — 実装は既存ファイルの編集のみ。検証に使う `bats` / `grep` は既存の `allowed-tools` で足りる
+
+#### Built-in Tools
+none — `Read` / `Edit` / `Grep` はいずれも `/code` の既存 `allowed-tools` に含まれる
+
+#### MCP Tools
+none
+
+### Uncertainty (iteration 2)
+
+- **`section_contains` が参照する見出しは実装で新設されるもの**: AC13 の `section_contains "modules/execution-context.md" "Wrapper-Level Constraint Injection" "guard-prefix.sh"` は、Implementation Step 2 が新設する `### Wrapper-Level Constraint Injection` 見出しに依存する。Spec 作成時点では同ファイルに当該見出しは存在しない (`grep -n "Wrapper-Level" modules/execution-context.md` が 0 件であることを確認済み)。
+  - **検証方法**: Step 2 完了後に `section_contains` を実行し PASS することを確認する。`section_contains` の heading 引数は部分一致なので、見出しレベル (`###`) は判定に影響しない
+  - **影響範囲**: Implementation Step 2。見出し文字列を変更する場合は Issue 本文の AC13 も同時に更新すること
+- **`GUARD_PREFIX` への追記が bash 文字列として安全であること**: 二重引用符文字列内でのバッククォート・`$`・`"` の混入はコマンド置換または文字列の早期終端を引き起こす。
+  - **検証方法**: 実装後に `bash -n scripts/guard-prefix.sh` (構文チェック) と、`source scripts/guard-prefix.sh && printf '%s' "$GUARD_PREFIX" | grep -c "re-invocation"` で意図どおりの文字列が入っていることを確認する。5 本の bats テストが実体の `guard-prefix.sh` を source するため、CI でも間接的に担保される
+  - **影響範囲**: Implementation Step 1
+
+### Notes (iteration 2)
+
+**Autonomous Auto-Resolve Log** (非対話モードのため `AskUserQuestion` 不可。`modules/ambiguity-detector.md` の three-tier policy に従い auto-resolve):
+
+- **注入方式に `scripts/guard-prefix.sh` の拡張を採用** — 理由: 5 本の wrapper がすでに source し `PROMPT` 先頭へ前置する集約点が実在するため、1 ファイルの変更で 5 phase に届く。既存パターンとの一貫性 (heuristic「既存のコードベースパターンに沿う選択肢を優先」) と最小変更 (heuristic「安全ならより単純な方」) の両方を満たす。
+  - Other candidates: `--append-system-prompt` フラグ追加 / 新規 module + 全 SKILL.md からの Read / 環境変数 + SKILL.md 分岐 (いずれも Alternatives Considered 参照)
+- **既存の SKILL.md 側ガードは削除せず維持** — 理由: iteration 0/1 の Pre-merge AC 4 件が当該記述の存在を検証しており、削除は回帰になる。副作用が最小の選択肢 (heuristic「下流の副作用が最も少ない選択肢を優先」)。
+  - Other candidates: wrapper 注入へ一本化して SKILL.md 側を削除
+- **Triage AC audit コメントの修復案は「記録先を実装成果物側に限定する」案を採用** — 理由: 監査が指摘した常時 PASS リスク (rubric が要求する 3 要素のうち 2 要素が Issue 本文に既出) を、判定対象を `modules/execution-context.md` に限定することで解消できる。監査コメントが併記を推奨していた `section_contains` による機械的裏取りも AC として追加した (Pre-merge AC 13 件目 → 14 件へ)。
+  - Other candidates: 「実装の実体のみを問う形へ絞る」案 (`rubric "制約注入を実装した箇所 ... が特定でき ..."`) — 実装箇所の特定は git diff から grader が読めるが、「方式を選んだ理由」の記録要件が落ちるため不採用
+- **AC14 (`command "bats ..."`) の対象ファイルを 3 本から 5 本へ拡張** — 理由: 本 iteration は `tests/run-code.bats` / `tests/run-review.bats` も変更するため、元の 3 本のままでは変更したテストが AC で回らない。AC の目的 (回帰保護) は変えていない。
+
+**allowed-tools impact chain check**: Changed Files に `modules/*.md` (`modules/execution-context.md`) を含むため Case 2 のゲートを実行した。追記内容は `scripts/guard-prefix.sh` というパスを含むが、これは「wrapper がこのファイルを source する」という説明であって、skill に新しいスクリプト呼び出しを指示するものではない。読み手 (`grep -rl "modules/execution-context.md" skills/*/SKILL.md` → `skills/code/SKILL.md`, `skills/review/SKILL.md`) のいずれも `guard-prefix.sh` を実行しないため、`allowed-tools` の追加は不要。新規 `scripts/*.sh` の追加もないため Case 1 は非該当。
+
+**`scripts/check-forbidden-expressions.sh` のスキャン対象外**: 同スクリプトの `SCAN_DIRS` は `skills/ modules/ agents/ tests/ docs/` であり `scripts/` を含まない。`scripts/guard-prefix.sh` への追記は禁止表現スキャンの対象外だが、`modules/execution-context.md` と `docs/structure.md` への追記は対象になる。
+
+**本 iteration のスコープ外 (別 Issue)**:
+- `run-spec.sh` の `auto-retry-on-fail` 欠如 → #1329 (復旧機構であり予防ではないため、本 Issue の除外規定に該当)
+- Tier 2 detector の signature 追加 → #1323 (検出側)
+- wrapper 以外の `claude -p` 起動経路 (`scripts/spawn-recovery-subagent.sh` の Tier 3 recovery sub-agent、`scripts/run-auto-sub.sh:782`) は phase 実行ではなく recovery agent の起動であり、AC が列挙する 5 phase に含まれない。同種の制約が必要かは別途判断する
+
+**wrapper を持たない skill について**: `/verify` / `/triage` / `/audit` / `/doc` / `/auto` は `run-*.sh` を持たず常に main context (対話セッション内) で実行される。main context には再呼び出し保証があるため MUST rule の適用対象外であり、wrapper 層での注入が「全 phase をカバーする」という主張と矛盾しない。この点も `### Wrapper-Level Constraint Injection` に明記する。
 
 ## Code Retrospective
 
