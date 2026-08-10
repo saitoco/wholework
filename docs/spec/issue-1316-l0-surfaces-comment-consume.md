@@ -110,3 +110,68 @@ none
 ### Issue 本文への反映について
 
 案 A/B/C の採否は実装方式 (How) の判断であり、Issue の受入条件・要求 (What) を変更するものではないため、Issue 本文の更新 (`gh-issue-edit.sh`) は行わない。
+
+## issue retrospective
+
+### Triage (auto-chain)
+
+- Type: Feature (Issue Types API)
+- Size: XL (Axis 1: ファイル数見積り ~6-8 [skills/review/SKILL.md, skills/merge/SKILL.md, skills/issue/SKILL.md, modules/l0-surfaces.md, tests/*.bats, Spec] は L 下限。Axis 2: 「複数 skill (issue/review/merge) 横断」の複雑度要因により +1 段階し XL へ)
+- Value: 3 (Impact=2: shared_flag [modules/ + 複数 skill 横断]。Alignment=4: product.md Vision「governance-and-verification harness」との強い整合。raw=6 → Level 1 正規化表で Value 3)
+- Priority: 未検出 (本文・タイトルに明示的な優先度キーワードなし)
+- Verify command 監査 (Pattern 1-6): 該当なし。AC1/AC2 の `grep` は main 上で 0 件 (常時 FAIL でなく正しく実装前 FAIL / 実装後 PASS として機能する)。AC3 は起票時点で Pattern 2 (常時 PASS) を自覚的に回避しレポート済み (Notes 参照)
+- 重複候補: なし (`gh search issues "1316"` で他 Issue からの言及なし)
+- 依存関係: なし (`Blocked by` パターン本文になし、GraphQL blocked-by も未設定)
+
+### Ambiguity Auto-Resolve (non-interactive mode)
+
+Post-merge observation AC の対象範囲について、以下の判断で自動解決した:
+
+- **判断**: 欠落窓 2 (review/merge 期間) 用の post-merge observation AC は追加しない。欠落窓 1 (パイプライン開始前) のみを observation で確認する現状の AC 構成を維持
+- **理由**: 欠落窓 2 は Pre-merge の bats テスト (AC7) で機構自体の回帰保護を既に得ている。`observation` 型 AC は次に自然発生するイベントで検証されることが前提 (`modules/verify-classifier.md` § Firing Likelihood Check) だが、欠落窓 2 の発火条件 (review/merge 期間中に人間がマーカー無しコメントを投稿する) は次の `/auto` 実行で確実に起こるとは言えない。欠落窓 1 の observation (次に `/auto` に入る Issue へのコメント投稿という、ほぼ毎回発生するイベント) ほど自然発火性が高くないため
+- 他の選択肢: 欠落窓 2 用の observation AC を追加する (発火が保証できないため不採用)
+
+### 軽微な整形
+
+- `### Pre-merge` → `### Pre-merge (auto-verified)` へ見出しを標準フォーマットに正規化 (`skills/review/SKILL.md` の "Pre-merge (auto-verified)" 優先ロジックと一致させるため)
+
+### Scope Assessment
+
+Size=XL だが non-interactive モードのため sub-issue 分割評価 (Step 12) はスキップした。対応方針 (案 A/B/C) が `/spec` に委ねられている点、および複数 skill 横断の変更規模を踏まえると、インタラクティブモードでの `/issue 1316` 再実行による分割評価を推奨する。
+
+## spec retrospective
+
+### Minor observations
+
+- `/issue` の Existing Issue Refinement Step 1 は本 Issue着手前から `gh issue view $NUMBER --json comments` で全コメントを無条件フェッチしており、Issue 本文の調査表「`/issue` の consume: なし」という記述は実態としては不正確だった。本当の欠落は trust boundary 分類と Consumed Comments 記録の欠如であり、「コメントを一切読んでいない」わけではなかった。この区別は Implementation Step 2 の設計 (Step 1 の置換対象を正確に絞る) に直結した。
+- `docs/workflow.md` の Label Transition Map に `phase/merge` という、`skills/merge/SKILL.md` が実際には一度も付与しない架空のラベル記述を発見した (本 Issue と無関係な pre-existing drift)。`/merge` の Comment Consumption 呼び出し時点の最新 `phase/*` を確定させる過程で気づいた。修正は Spec の Notes § Out of Scope に記録し、本 Issue では対応しない。
+
+### Judgment rationale
+
+- 案 A のみを採用し案 B (read watermark) を見送った判断根拠: 全 8 件の Pre-merge AC が漏れなく案 A の具体的挙動 (呼び出しの有無・順序・記録先) に対して書かれており、案 B は現状正しく動作している `/spec`/`/code`/`/verify` の cutoff 解決メカニズムまで再設計する必要がある。ACs が要求する範囲を超えるリスクを取る理由がなかった。
+- `/merge` の呼び出し位置は当初「他フェーズと同様に Step 1-2 相当の早い段階」を想定していたが、`skills/merge/SKILL.md` Step 4 を実際に読み `gh pr merge --squash --delete-branch` が Step 4 冒頭で即座に実行されること (PR ブランチの削除が Phase Handoff write より先) を確認し、post-squash configuration に変更した。コードを読まずに「他フェーズと同じパターンで」と決め打ちしていたら、squash 後に消滅するブランチへコミットするだけの実装になっていた可能性がある。
+- `/review` の bash fallback で `--no-push` を外した判断は、Step 3 の XS/S early exit 分岐が `## Retrospective`/`## Worktree Exit` という番号なしセクション (`skip Steps 7-14` の対象外に見えるが、`next-action-guide.md` 呼び出しで実質的にスキル終了するように読める) を経由しない可能性を検討した結果。既存の `--no-push` 慣例をそのまま踏襲すると、この edge case でコミットが未 push のまま worktree に取り残されるリスクがあった。
+
+### Uncertainty resolution
+
+- Step 13 の skip condition に「Consumed Comments が 0 件でないこと」を追加したことで、他に特筆すべき内容が皆無でも retrospective コメントが投稿されるケースが生じる。これがノイズになるか有用なシグナルになるかは、本 Issue の Post-merge observation AC が最初の実例を提供する。追加の検証手段は設けず、実運用の観察に委ねた (Spec 本体の Uncertainty セクション参照)。
+- `_emit_comments_consumed()` を `/review`/`/merge` にも配線すべきか検討したが、`run-auto-sub.sh` → `run-review.sh`/`run-merge.sh` の呼び出し連鎖における `EMIT_ISSUE_NUMBER` の実際のスコープを確認しきれず (どの呼び出し経路で変数が継承されるか、追加調査が必要)、本 Issue の AC が要求しない拡張のためにスコープを広げるのは非効率と判断し、Out of Scope とした。
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+- 案 A (全 6 フェーズで Comment Consumption Procedure 呼び出しを必須化) を採用し、案 B (read watermark)・案 C (marker 例外拡大) は不採用とした — 理由は Spec 本体の Alternatives Considered を参照
+- `/merge` の呼び出しは Step 4 (post-squash) に配置 — Step 1-2 相当の早期配置では squash-merge によるブランチ削除でコミットが消失する、または early push が Step 1 の mergeability 判定を無効化するリスクがあった
+- `/review` の bash fallback (`append-consumed-comments-section.sh`) は `--no-push` を付けない — `/spec`/`/code`/`/verify` の慣例と異なるが、Step 3 の XS/S early exit 分岐が後続の無条件 push に到達しない可能性への対策
+- `/issue` の Consumed Comments 記録先は Step 13 の Issue Retrospective コメント内 `### Consumed Comments` サブセクション — この時点で Spec が存在しないため
+
+### Deferred Items
+- 案 B (read watermark) は、案 A のフェーズラベル境界単位のカバレッジで実運用上不十分と判明した場合の follow-up として保留
+- `/review`/`/merge` への `_emit_comments_consumed()` 配線 (`comments_consumed` イベント発火) は、`EMIT_ISSUE_NUMBER` のスコープ調査が別途必要なため見送り
+- `docs/workflow.md` の `phase/merge` ラベル記述と実装の乖離 (pre-existing) は本 Issue のスコープ外として記録のみ
+
+### Notes for Next Phase
+- 3 つの SKILL.md (issue/review/merge) の挿入位置はそれぞれ理由が異なる (issue: ラベル遷移より前 / review: Worktree Entry 直後・無条件 / merge: post-squash) ため、Implementation Steps 2-4 の配置指示を「他フェーズと同様に早い段階に置けばよい」と単純化せず、記載された位置と根拠に忠実に実装すること
+- `tests/append-consumed-comments-section.bats` への追加テスト (AC7, AC8) はスクリプト自体の機能変更を伴わない回帰確認テストであり、スクリプト本体 (`append-consumed-comments-section.sh`) への機能変更は不要
+- `skills/review/SKILL.md` と `skills/merge/SKILL.md` の `allowed-tools` frontmatter に `${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*` の追加が必須 (現状どちらにも存在しないことを確認済み)
