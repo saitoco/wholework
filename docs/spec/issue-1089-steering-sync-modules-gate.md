@@ -55,3 +55,30 @@
 
 - saito / MEMBER / first-class / Issue Retrospective — #1109 実例の Background 統合、Proposal C の追加、Out of Scope 改訂の経緯説明 / https://github.com/saitoco/wholework/issues/1089#issuecomment-5242671687
 - saito / MEMBER / first-class / Triage AC audit — Pre-merge acceptance criteria 2番目の verify command (`grep "modules/" ...`) が常時 PASS パターンである指摘と修復案。本 Spec で修復適用済み ( Implementation Step 5 ) / https://github.com/saitoco/wholework/issues/1089#issuecomment-5242715411
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜4 は Spec 通りに実施した。Step 5 (Issue AC 2番目の verify command 修正) は Spec 作成と同一セッションで既に Issue body に反映済みだったため、`/code` 側での追加作業は不要だった。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- ゲート拡張は Proposal A (ゲート条件ヘッダ・本文・Skip 条件に `modules/` を追加) を採用し、cross-search 検索対象ディレクトリへの `modules/` 追加 (Proposal C) を A/B の選択と独立の必須変更として実施した (Spec Notes 参照)
+- Pre-merge AC 5件すべてを手動で PASS 判定し Issue の checkbox を更新した (`file_contains`/`rubric` 検証を `/code` 内で実施、実行結果は全 PASS)
+- `tests/spec.bats` に2件の content-assertion test を追加し、ゲート条件文言 (`SKILL.md, \`modules/\`, or \`scripts/\``) と cross-search 検索対象 (`docs/ tests/ scripts/ modules/`) の両方をガード
+
+### Deferred Items
+- Post-merge observation AC (`session=next`): 次回 `modules/*.md` のみを変更する Issue の `/spec` 実行時に、拡張後のゲートが発火し `modules/` 配下のファイルを含む候補が Changed Files に登録されることを観察する。`/verify` フェーズで評価される
+
+### Notes for Next Phase
+- `/review` では `tests/spec.bats` の新規2テストと `SKILL.md` の gate 見出し・本文段落・Skip 条件・cross-search step2・step3 カテゴリ別チェック・Tag/enum sweep の「Differs from adjacent checks」説明文の6箇所が整合していることを確認するとよい
+- Steering Docs (`docs/tech.md`, `docs/structure.md`, `docs/workflow.md`, `docs/guide/*.md`) への sync は不要と判断済み (`grep -rn "Steering Docs sync candidate check|sync candidate"` が0件、Spec Notes に記録)
+- フルテストスイート (`bats --jobs 18 tests/`) は 1697 件全て PASS (behavioral change 検出により `tests/spec.bats` 以外のテストファイルも含めてフルスコープ実行)
