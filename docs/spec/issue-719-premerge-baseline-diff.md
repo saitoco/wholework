@@ -265,3 +265,11 @@ Spec の Implementation Step 5 は `tests/pre-merge-check.bats` のシナリオ�
 
 ### Improvement Proposals
 - **bats test の空 commit エラー pattern を spec-test-guidelines に記録**: PRE_EXISTING / CLEAN テストで base と head が同一コンテンツになる場合、`git commit` が空コミット失敗する。marker file 追加で回避可能だが、Spec 段階で test fixture 設計時に予防できる。`modules/spec-test-guidelines.md` (or equiv) に「base/head 比較テストでは branch-specific marker file を追加する」パターンを記載する。code rework 1 件を未然に防ぐ効果あり
+
+### 追記 (2026-08-10, /auto #953 セッションからの再評価)
+
+`/auto` の event-based observation scan により再度 dispatch された。前回 (2026-06-20 merge 直後) 以来、初めての実質的な再評価となった (間の 5 回の observation-trigger fire は未処理のまま埋もれていた)。
+
+**条件9 に前進あり**: `scripts/check-forbidden-expressions.sh` を実行し exit 0 (クリーン) を確認。Issue #710 の Forbidden Expressions pre-existing FAILURE は解消済みと判断できる (baseline が FAIL → PASS に移行)。ただし `pre-merge-check.sh` 自体の PR ベース baseline diff 動作確認には至っていない (OPEN PR が存在しないため) — UNCERTAIN のまま。次回いずれかの PR で `/merge` が実行された際に CLEAN 判定 (exit 0) が返ることの確認が残っている。
+
+条件8 (dogfood テスト) は引き続き別途 PR 作成が必要で変化なし。
