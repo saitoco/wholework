@@ -7,7 +7,7 @@
 #
 # Options:
 #   --force         Overwrite existing labels (default: skip labels that already exist)
-#   --no-fallback   Skip environment detection; only create always-group labels
+#   --no-fallback   Skip environment detection; create always-group and theme-group labels only
 #
 # Label groups:
 #   Always-group (17 labels): phase/*, triaged, retro/verify, retro/code, retro/recoveries, audit/drift, audit/fragility, audit/auto, stale-verify
@@ -101,6 +101,13 @@ THEME_LABELS=()
 if [ -f "$CONFIG_FILE" ]; then
     IN_THEMES=false
     while IFS= read -r line || [ -n "$line" ]; do
+        # Column-0 comment lines never close the themes: block (matches the
+        # documented "comment lines are ignored" rule and get-config-value.sh's
+        # own comment handling).
+        case "$line" in
+            \#*) continue ;;
+        esac
+
         if [ "$IN_THEMES" = "true" ]; then
             case "$line" in
                 "")
@@ -111,6 +118,8 @@ if [ -f "$CONFIG_FILE" ]; then
                         name=$(echo "$line" | sed -E "s/^[[:space:]]+([A-Za-z0-9._-]+)[[:space:]]*:.*$/\1/")
                         desc=$(echo "$line" | sed -E "s/^[[:space:]]+[A-Za-z0-9._-]+[[:space:]]*:[[:space:]]*//" | sed -E "s/[[:space:]]+#.*$//" | sed -E "s/[[:space:]]*$//" | sed -E "s/^['\"]|['\"]$//" | sed -E "s/^['\"]|['\"]$//")
                         THEME_LABELS+=("theme/${name}|${THEME_COLOR}|${desc}")
+                    elif ! echo "$line" | grep -qE "^[[:space:]]+#"; then
+                        echo "Warning: skipping unparsable themes entry: $line" >&2
                     fi
                     ;;
                 *)
