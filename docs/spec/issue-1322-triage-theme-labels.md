@@ -74,3 +74,29 @@
 
 - login: saito / authorAssociation: MEMBER / trust: first-class / `/issue 1322 --non-interactive` によるリファインメント実行記録 (曖昧ポイント自動解決の根拠: 複数テーマ許容、AC への section_contains 補助チェック追加、機械チェック結果は全て問題なし) / https://github.com/saitoco/wholework/issues/1322#issuecomment-5236132378
 - login: saito / authorAssociation: MEMBER / trust: first-class / Triage AC audit — AC4 の `section_contains` verify command のバグ指摘 (heading 引数の `####` が恒久的 UNCERTAIN を招く)。本 Spec 作成時に Issue 本文へ修正を適用済み / https://github.com/saitoco/wholework/issues/1322#issuecomment-5236162342
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1–5 を計画通りに実施した
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A — ただし Step 9 の behavioral change detection で `docs/tech.md` が `tests/run-merge.bats` / `tests/verify-dirty-detection.bats` から参照されている (直接対応テストなし) ことを検知し、フルスイート並列実行 (`bats --jobs 18 tests/`) を追加実施した。`tests/post_merge_check.bats` の1件 (`fail: gh issue reopen called when FAIL input given`) が並列実行時のみ FAIL したが、単体実行では PASS したため並列実行時のフレークと判断し、本 Issue の変更 (`scripts/setup-labels.sh` / `skills/triage/SKILL.md` / docs) との関連はない
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Implementation Steps 1–5 を Spec 通りに実施 (`scripts/setup-labels.sh` の 4 label 追加、`skills/triage/SKILL.md` の 3 経路統合、`docs/product.md`/`docs/tech.md` とその日本語ミラーの更新)
+- Pre-merge AC 7 件すべてを verify-executor full mode で実行し PASS を確認、Issue 側チェックボックスを更新済み
+
+### Deferred Items
+- Post-merge AC (`/triage` が次回実行された Issue に `theme/*` label が付与されることの確認) は `session=next` の observation として未実施のまま。次回 `/verify` または `/triage` 実行時に検証される
+- 検討したが採らない案 (`docs/roadmap.md` 新設、Projects Theme field、XL parent Issue 化) は Spec Notes に既出、フォローアップ不要
+
+### Notes for Next Phase
+- `docs/tech.md` を編集したことで `tests/run-merge.bats` / `tests/verify-dirty-detection.bats` がフルスイート実行対象に入った。`tests/post_merge_check.bats` の1件が並列実行下でのみ FAIL したが単体では PASS (フレーク、本 Issue の変更とは無関係) — review/merge フェーズで再発した場合は無関係な既存フレークとして扱ってよい
+- `docs/structure.md` および `docs/guide/autonomy.md` / `docs/guide/index.md` の `docs/ja/` 未同期は本 Issue 着手前からの既存ギャップで、本 Issue のスコープ外
