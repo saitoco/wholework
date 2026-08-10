@@ -62,6 +62,10 @@
 
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1301#issuecomment-5230130101
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1301#issuecomment-5230977219
+- saito / MEMBER / first-class / ## post-merge observation は現時点で判定不能です (#1312 待ち) / https://github.com/saitoco/wholework/issues/1301#issuecomment-5230990058
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1301#issuecomment-5235409300
 ## Code Retrospective
 
 ### Deviations from Design
