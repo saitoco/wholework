@@ -268,27 +268,37 @@ Background に記載の対応方針 A (`/audit` への観点追加) / B (機械�
 - **CI ジョブ名 `Run bats tests`** が `.github/workflows/test.yml` line 9 に実在することを確認した。受入条件 4 の `github_check` はそのまま有効。
 - **未解決のまま残した不確実性**: `/audit premise` Layer 2 (LLM 判断による marker 化候補抽出) が実際の open Issue 群に対して有用な結果を返すかは、マージ前に検証する手段がない。post-merge 受入条件がこの確認を担う。Layer 1 (決定的) はこの不確実性から独立しているため、pre-merge 受入条件 1-4 の成否には影響しない。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- N/A — 実装ステップ 1〜9 は Spec の記述通りに実施した。順序・内容ともに変更なし。
+
+### Design Gaps/Ambiguities
+
+- **`skills/issue/SKILL.md` への premise マーカーガイダンス追加が `validate-skill-syntax.py` の allowed-tools 一貫性チェックに抵触することを Spec は想定していなかった**。Spec 実装ステップ 5 は「スクリプト呼び出しを伴わない LLM 判断のみのガイダンスであるため allowed-tools は変更しない」としていたが、ガイダンス文中で `${CLAUDE_PLUGIN_ROOT}/scripts/check-premise-expiry.sh` という完全参照形式を書いた時点で、validator の `validate_body_scripts_in_allowed_tools()` (本文中の `${CLAUDE_PLUGIN_ROOT}/scripts/*.sh` パターンを機械的に検出し allowed-tools 登録の有無を問う静的チェック、呼び出しか単なる参照かを区別しない) がエラーを出した。対応: ガイダンス文中の参照を `${CLAUDE_PLUGIN_ROOT}/` プレフィックスなしの `scripts/check-premise-expiry.sh` 表記に変更し、allowed-tools は Spec の判断通り無変更のまま validator を通過させた。他の Skill が同種の「呼び出しを伴わない SSoT 参照」を本文に書く際も、`${CLAUDE_PLUGIN_ROOT}/scripts/` の完全形は避けるべき一般的な注意点として記録する。
+
+### Rework
+
+- N/A — 上記のガイダンス文言修正以外に手戻りは発生しなかった。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- 対応方針 B (premise マーカー + `scripts/check-premise-expiry.sh`) を基盤、A (`/audit premise` サブコマンド) を検出面、C (`/issue` Step 4 ガイダンス) を予防として **3 案すべて採用**した。A 単独では AC3 の bats 要件を満たせず、B 単独では検出ループが閉じず、C 単独では既存 Issue の失効を検出できないため。
-- **方式選定の根拠と検出範囲/限界は Spec ではなく実装ファイルに書く**。AC1/AC2 の `rubric` grader には Spec が渡らないため (`modules/verify-executor.md`)、根拠は `skills/audit/SKILL.md` の Design Rationale ブロック、範囲/限界は `scripts/check-premise-expiry.sh` のヘッダコメントに置く。**これを Spec だけに書くと AC1/AC2 が FAIL する**。
-- `premise` は `drift` のサブ観点ではなく**独立サブコマンド**とし、引数なし `/audit` の統合実行 (drift + fragility) には含めない。出力アクション (既存 Issue へのコメント vs 新規起票) と L0 write の tier ゲート適用範囲が異なるため。
-- 検索エンジンは `git grep -F` (固定文字列・追跡ファイルのみ)。`modules/filesystem-scope.md` の Approved Patterns に従い、`modules/verify-executor.md` が記録する ERE/BRE 取り違えを式レベルで排除する。
-- 前提式の演算子は shell test 形式 (`-eq` / `-ne` / `-lt` / `-le` / `-gt` / `-ge` の 6 種)。`>` を HTML コメント内に持ち込まないため。
+- Spec 実装ステップ 1〜9 をそのまま実施し、逸脱はなかった。3 式型 (`grep_count`/`file_exists`/`file_not_exists`)・6 種 shell test 演算子・fail-open 分岐 (git work tree 外 / path not found / unsupported / malformed) はすべて Spec の記述通りに実装した。
+- `skills/issue/SKILL.md` の premise マーカーガイダンスは、本文中で `scripts/check-premise-expiry.sh` を `${CLAUDE_PLUGIN_ROOT}/` プレフィックスなしで参照する形にした。`${CLAUDE_PLUGIN_ROOT}/scripts/*.sh` の完全形で書くと `validate-skill-syntax.py` の allowed-tools 一貫性チェックが「呼び出しを伴わない SSoT 参照」であっても機械的にエラーを出すため。allowed-tools 自体は Spec の判断通り無変更。
+- pre-merge AC1〜3 (rubric 3 件) は PR 作成前に自己採点して手動でチェック済みにした。AC4 (`github_check "gh pr checks" "Run bats tests"`) は CI 実行前のため未チェックのまま — `/review` または `/verify` が CI green を確認した時点でチェックする想定 (pr route の通常運用と同じ)。
 
 ### Deferred Items
 
-- `/audit premise` Layer 2 (LLM 判断) の実効性検証は post-merge 受入条件に委ねた。マージ前に検証する手段がない。
-- `docs/translation-workflow.md` の同期対象範囲の記述 (`docs/guide/*.md` が実装では対象だが文書では未記載) の是正は本 Issue のスコープ外。
-- 既存 open Issue への premise マーカーの遡及付与は行わない。post-merge の調査で marker 化候補が挙がった場合の起票要否は発見時の個別判断 (Issue Retrospective で確定済み)。
+- `/audit premise` Layer 2 (LLM 判断) の実効性検証は post-merge 受入条件に委ねた。マージ前に検証する手段がない (spec retrospective から継続)。
+- `docs/translation-workflow.md` の同期対象範囲の記述の是正は本 Issue のスコープ外 (spec retrospective から継続)。
+- 既存 open Issue への premise マーカーの遡及付与は行わない。post-merge の調査で marker 化候補が挙がった場合の起票要否は発見時の個別判断 (spec retrospective から継続)。
 
 ### Notes for Next Phase
 
-- **`git grep` は存在しないパススペックでもエラーを出さず exit 1 を返す** (実測確認済み)。`grep_count` の評価前に全パスの `test -e` 検証を入れないと、パスのタイプミスが「マッチ 0 件 = 前提成立」として silent に誤判定される。実装ステップ 1 の fail-open 分岐は省略不可。
-- bats テストは `$BATS_TEST_TMPDIR` に `git init -q` + `git add` した使い捨てリポジトリで hermetic に組む。commit は不要 (実測確認済み) なので `git config user.*` の設定は要らない。
-- `docs/structure.md` のファイル数コメントは `scripts/` 直下のみを数える規約 (`scripts/git-hooks/` は含まない)。84→85、`tests/` は 120→121。
-- `skills/audit/SKILL.md` は h2 = サブコマンド、h3 = `Step N:` の階層。新セクションは `## fragility Subcommand` と `## progress Subcommand` のあいだに挿入し、既存の見出しレベルにそろえる。`validate-skill-syntax.py` の制約 (半角感嘆符禁止・frontmatter の YAML block scalar 不可・本文中の 3 連バッククォート禁止) に注意する。
-- `modules/detect-config-markers.md` の Read 指示は `### Step 1` 見出し直後の第 1 段落に置く (`modules/skill-dev-checks.md` § Read Instruction Placement Rule)。リストやテーブル内に埋め込まない。
+- Full bats suite (`bats --jobs 18 tests/`, 1725 tests) は commit 時点で全 pass。`tests/check-premise-expiry.bats` の 12 テストも個別 pass 済み。
+- `skills/audit/SKILL.md` / `skills/issue/SKILL.md` の変更は `git grep -l` で他の bats テストから参照されていた (`tests/audit-retention.bats`, `tests/check-language-convention.bats`, `tests/verify-executor.bats`, `tests/xl-decomposition.bats`, `tests/issue.bats`, `tests/run-issue.bats`) ため、Behavioral Change Detection により full suite 実行が必須になった。narrow scope では検出漏れが起きていた可能性がある。
+- AC4 (CI) は `/review` または `/verify` フェーズでのチェック待ち。PR #1343 の CI green を確認してからチェックすること。
