@@ -90,3 +90,22 @@ setup() {
 - `docs/ja/` 翻訳同期チェック: 変更対象がいずれも `docs/` 配下ではなく `skills/`・`tests/` のため非該当
 - `modules/skill-dev-doc-impact.md` の Change Type (Skill 追加/変更/削除、Module 追加/変更/削除、Script 追加/変更/削除) と照合した結果いずれにも該当しない (`/spec` 自身の内部手順追加であり、スキル一覧・外部インターフェースに変化がないため) — README.md / docs/workflow.md / CLAUDE.md の同期は不要と判断
 - Rename-type Issue grep check: Issue title/body に "rename" 系の文字列を含まないため非該当
+
+## Code Retrospective
+
+N/A — Implementation Steps のアンカーテキスト指定・挿入ブロック・`tests/spec.bats` の内容とも Spec 記載どおりに反映され、逸脱・設計ギャップ・手戻りはなし。Pre-merge verify command 4 件・`bats --jobs 18 tests/` フルスイート (1695 tests) とも初回実行で PASS。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec の Implementation Steps をそのまま実装 (アンカーテキスト "Section number cross-references" 直後 / "`.claude/` files and `git add -f`" 直前への挿入、`tests/issue.bats` と同一パターンの `tests/spec.bats` 新規作成) — 設計判断は `/spec` フェーズで完了済みのため、`/code` では逸脱なし
+- 既存テストが `skills/spec/SKILL.md` の複数箇所を参照していたため behavioral change 判定が成立し、`bats --jobs 18 tests/` でフルスイートを実行 (narrow scope ではなく全 1695 tests を対象)
+
+### Deferred Items
+- Post-merge AC (`verify-type: manual`): 意味論拡張 Issue を実際に 1 件 `/spec` へ通し、Changed Files/Notes に検索条件を含む影響評価が記録されることの確認は post-merge 観測待ち
+- None (other than above)
+
+### Notes for Next Phase
+- `/verify` は post-merge AC の実地確認 (意味論拡張 Issue を 1 件 `/spec` に通す) を行う際、本 Issue 自身を対象候補にしないこと (本 Issue は「手順追加」であり「既存タグ/enum の意味論拡張」ではない)
+- Pre-merge verify command 4 件は本フェーズで PASS 済み・チェックボックス更新済み。再検証は不要
