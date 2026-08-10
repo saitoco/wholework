@@ -145,6 +145,8 @@
 
 - `saito` / `MEMBER` / first-class / `/issue 1060 --non-interactive` の Issue Retrospective。Triage 結果 (Type=Feature, Size=M→L, Value=4)、Background 事実確認 (3 主張とも codebase と一致)、AC verify command の監査結果、あいまいさの自動解決 3 件 (ゲート挙動は「提示 + 明示的承認がなければ中断」、対応方針は B-1 軸 + B-2 補助、UNCERTAIN のまま merge する場合はコメントに理由を記録) を報告。本 Spec の設計はこの 3 件の自動解決方針を前提として引き継いでいる。 / https://github.com/saitoco/wholework/issues/1060#issuecomment-5112496825
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1060#issuecomment-5113464751
+- saito / MEMBER / first-class / ## downstream での実測データ (post-merge AC は**未検証**) / https://github.com/saitoco/wholework/issues/1060#issuecomment-5125097830
 ## Issue Retrospective
 
 `--non-interactive` モードで実行 (`/issue 1060 --non-interactive`)。
