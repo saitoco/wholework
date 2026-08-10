@@ -178,13 +178,18 @@ time (`mergeStateStatus: DIRTY`), even though the actual implementation diff is 
 Issue #1058 for the incident this rule generalizes from.
 
 Because the Comment Consumption Procedure (`modules/l0-surfaces.md`) writes to the Spec's
-`## Consumed Comments` section, any phase that calls it must run this module's Entry section
-first — calling it before Entry would write against whatever branch the main repository
-happened to be on, not the phase's own working branch. `skills/verify/SKILL.md` already
-satisfies this ordering (Entry is Step 3, the Comment Consumption Procedure call is Step 4).
-`skills/code/SKILL.md` and `skills/spec/SKILL.md` were brought into alignment with this
-ordering in #1078, by moving each skill's Comment Consumption Procedure call to the end of its
-own Worktree Entry Step.
+`## Consumed Comments` section, any phase whose Consumed Comments destination is the Spec file
+must run this module's Entry section first — calling it before Entry would write against
+whatever branch the main repository happened to be on, not the phase's own working branch.
+`skills/verify/SKILL.md` already satisfies this ordering (Entry is Step 3, the Comment
+Consumption Procedure call is Step 4). `skills/code/SKILL.md` and `skills/spec/SKILL.md` were
+brought into alignment with this ordering in #1078, by moving each skill's Comment Consumption
+Procedure call to the end of its own Worktree Entry Step. `skills/review/SKILL.md` and
+`skills/merge/SKILL.md` follow the same rule, each calling it inside (`/review`) or after
+(`/merge`) their own Entry section. `/issue`'s Existing Issue Refinement flow is the one
+exception: it calls the procedure before any Spec exists, so its Consumed Comments record lives
+in the Step 13 Issue Retrospective comment instead (see `skills/issue/SKILL.md` Step 13) — it has
+no Spec write and therefore no worktree requirement.
 
 **Base propagation path per phase (exhaustive):**
 
@@ -196,6 +201,8 @@ own Worktree Entry Step.
 | `/code` patch route, worktree skipped (`ENTERED_WORKTREE=false`; XS interactive direct-launch only — see `skills/code/SKILL.md` Step 2) | base branch, in the main repository | `worktree-merge-push.sh` (lock+push only, no `--from` — see "When `ENTERED_WORKTREE=false`" above) |
 | `/code` pr route | worktree branch (= PR branch) | PR merge (`/merge`) |
 | `/verify` | worktree branch | `Exit: merge-to-main` → `worktree-merge-push.sh` |
+| `/review` | worktree branch (= PR branch) | script's own push (no `--no-push`) → PR merge (`/merge`) |
+| `/merge` | worktree branch, fast-forwarded to `origin/main` after squash merge | Step 4 substep 4's `git push origin HEAD:main` |
 
 `/spec`'s and `/code`'s in-session call sites to `append-consumed-comments-section.sh` (see
 `modules/l0-surfaces.md` § "Bash wrapper fallback") pass `--no-push`: the commit lands on the
@@ -203,7 +210,11 @@ working branch shown above, and this table's propagation path — not a push iss
 script itself — carries it to base. `/code` pr route also passes `--no-push`; it differs only
 in *how* the commit reaches the remote — its own Step 12 pushes the worktree (= PR) branch
 directly afterward, since the PR branch has no `worktree-merge-push.sh` propagation path of its
-own. `/verify`'s call site does not yet pass `--no-push` — see the Known gap below.
+own. `/merge` also passes `--no-push`, riding the same push as its own Step 4 Phase Handoff
+commit. `/review` omits `--no-push` and pushes immediately — this is an intentional design
+choice, not the same gap as `/verify`'s below: `/review`'s Size XS/S early-exit branch can end
+the skill before reaching the later unconditional `## Retrospective` push, so deferring the push
+there is not safe. `/verify`'s call site does not yet pass `--no-push` — see the Known gap below.
 
 **Known gaps (not yet migrated):**
 - `skills/verify/SKILL.md`'s call site still omits `--no-push`
