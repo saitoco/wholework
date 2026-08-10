@@ -105,20 +105,18 @@
 - Behavioral Change Detection の結果、`modules/orchestration-fallbacks.md` と `skills/verify/SKILL.md` を追加参照するテストファイルが直接対応ファイル以外に存在したため `bats --jobs 18 tests/` でフルスイートを実行した。`tests/post_merge_check.bats` の 2 件 (`fail: gh issue reopen called when FAIL input given` / `multiple issues: processed sequentially`) が並列実行時のみ FAIL したが、変更前のコード (`git stash` で本 Issue の diff を除去した状態) でも同じ 2 件が `bats --jobs 18 tests/post_merge_check.bats` で同様に FAIL し、単体実行では両状態とも PASS することを確認した — 本 Issue の変更とは無関係な既存の並列実行時 flaky test であり、既に Issue #1308 (open) がこの解消を追跡している。本 PR に関連するテスト (`tests/run-auto-sub.bats`, `tests/orchestration-fallbacks.bats`) は単体実行・フルスイート実行のいずれでも PASS した
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- 独立した 2 回の review-light 実行 (foreground) がいずれも `skills/verify/SKILL.md:866` の同一 bullet に指摘を出したため、両方を 1 コミットに統合して修正した (`_validate_recovery_args` の入力形式制約の明記 + standalone `/verify` での `emit_event` no-op caveat)
-- MUST issue はゼロ (AC 4件全 PASS、CI 全 SUCCESS) だったため `event=REQUEST_CHANGES` にはならず `COMMENT` として投稿
-- Base Branch Conflict Pre-check で `docs/tech.md`/`docs/ja/tech.md` [SSoT] が `changed in both` と報告されたが、実際は非重複行範囲 (無関係な in-flight PR のラベル数変更) で conflict marker ゼロ件だったため、追加対応は不要と判断した
+- Pre-merge AC gate は `unchecked_count=0` かつ `review_incomplete_fallback` 非該当 (`reconcile-phase-state.sh --check-completion` が organic な Review Response Summary を検出) だったため、override マーカーなしでそのまま squash merge を実行した
+- `mergeable=true`/`reason=clean` だったため Step 3 (Resolve Conflicts) は不要 — 直接 Step 4 (Execute Squash Merge) に進行した
 
 ### Deferred Items
-- Post-merge observation AC (次に手動復旧が発生した session での event 数一致確認) は `/verify` 実行時まで未検証のまま (変更なし、`/code` からの引き継ぎを維持)
+- Post-merge observation AC (次に手動復旧が発生した session での `manual_intervention` event 数一致確認) は引き続き未検証 (変更なし、`/verify` へ引き継ぐ)
 - `tests/post_merge_check.bats` の並列実行 flaky test 解消は Issue #1308 に委譲 (本 Issue のスコープ外、変更なし)
 
 ### Notes for Next Phase
-- `/merge` は本 PR に MUST issue が残っていないこと、CI 全 SUCCESS であることを確認済みなのでそのまま進行してよい
-- Post-merge の observation AC は `/verify` 実行まで未検証のため、`/verify` 側で改めて確認すること
+- `/verify` は Post-merge observation AC (`verify-type: observation event=auto-run session=next`) をそのまま未確定として扱ってよい — 次回の手動復旧発生を待つ性質の AC のため、今回の `/verify` 実行で確定させる必要はない
 
 ## review retrospective
 
