@@ -17,6 +17,8 @@
 
 - saito / MEMBER / first-class / Issue Retrospective (トリアージ結果・曖昧性自動解決ログ・スコープ評価、sub-issue 分割は non-interactive のため未実施と明記) / https://github.com/saitoco/wholework/issues/1316#issuecomment-5235007944
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1316#issuecomment-5235655271
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1316#issuecomment-5235677312
 ## Changed Files
 
 - `modules/l0-surfaces.md`: Comment Consumption Procedure に `/issue` の欠落窓 1 責任を明記し、Bash wrapper fallback § Primary/Secondary の記述を `/review`・`/merge` を含む形に拡張
