@@ -152,3 +152,50 @@ review-light エージェントが検出した SHOULD issue (`FACTS_CANDIDATE_LI
 ### Improvement Proposals
 
 - N/A — 本 run で新規に検出した構造的欠陥はない。`/issue` の AC 常時 PASS 処置の不一致 (3 例目) は #1279 の Spec に Tier 2 として記録済みで、本 Issue では `/spec` が修復したため実害ゼロ。同型が `/spec` を経由しない経路 (XS patch route) で発生した場合に起票を検討する
+
+### Re-run (2026-08-10, standalone `/verify 1285`)
+
+`auto-run` が前 run の 7 分後 (2026-08-09T01:55:42Z) に発火したため、observation 条件 5 を判定するための再実行。
+
+#### verify — 条件 5 は PASS で決着
+
+`session=next` の充足判定: 本 Issue の変更対象は `modules/opportunistic-verify.md` と `scripts/opportunistic-search.sh` のみで、SKILL.md 本文を含まない。前者は skill が実行時に Read で読み込み、後者は毎回ディスクから起動されるため、会話セッション単位のキャッシュ対象外である。したがって「新セッションを待つ」必要はなく、修正後の挙動が本 run 内で観測できた時点で `session=next` は充足する。
+
+判定に用いた対照実験 (母集団は `phase/verify` の closed Issue、`--dry-run`):
+
+| 条件 | 件数 | 出力順 |
+|---|---|---|
+| A. ゲートなし | 13 | `1051, 1053, 588, 947, 781, 64, 375, 436, 365, 400, 419, 231, 124` |
+| B. `--facts` (トークンが 1 件も一致しない) | 13 | A と同一 |
+| C. `--facts` (一部一致) | 13 | `1051, 588, 947, 1053, ...` — 一致分が前方へ |
+| D. `--facts` に存在しないパス | 13 | fail-open 警告あり |
+
+B のトークン集合は本 run 時点の `collect-run-facts.sh` 実出力 (`["run-issue.sh","batch"]`) をそのまま使用した。修正前ならこれは 13 → 0 を生む典型入力であり、修正後は全件保持された。C は再順序化が実際に作動していること (ゲートが黙って無効化されているのではないこと) を示す。
+
+#### Tier 3 — `skills/verify/SKILL.md:104` の for ループが zsh で機能しない (本 run で実発生)
+
+Step 2 の PR 候補検証ループ:
+
+```bash
+for candidate in $CANDIDATE_PRS; do
+```
+
+zsh は非引用符パラメータ展開で単語分割を行わないため (`ZSH_VERSION=5.9`, `BASH_VERSION` 未定義を実測確認)、`CANDIDATE_PRS` が複数行のとき**ループが 1 回だけ回り、全行を連結した文字列が `gh-extract-issue-from-pr.sh` に渡って `Error: PR number must be a positive integer` で失敗**する。結果 `PR_NUMBER` は空のまま残り、pr route の Issue が patch route として扱われる。
+
+本 run で実際に発生した。`gh pr list --search "closes #1285" --state merged` は #1111 (実体は `closes #1107`) と #1306 (正) の 2 件を返し、ループは両方の検証に失敗した。手動で分割して再実行し #1306 を特定している。
+
+影響 (候補が 2 件以上返るときのみ発現):
+
+- Step 5 の patch route 検出により `github_check "gh pr checks"` 系 AC が誤って UNCERTAIN になる
+- Step 5 の `reconcile-phase-state.sh review --pr "$PR_NUMBER"` に空値が渡る
+- `BASE_BRANCH` が PR の実 base ではなく既定の `main` にフォールバックする
+
+皮肉なことに、このループは #1197 で観測された「全文検索が無関係な PR を先頭に返す」問題への対策として導入されたもので、対策コード自体が対象環境で動いていなかった。#891 (`emit-event.sh` の `source` 呼び出しを zsh 互換に修正) と同型の再発であり、SKILL.md 内の bash 前提スニペットが zsh で実行される経路の 2 例目にあたる。
+
+`grep -rnE 'for [a-zA-Z_]+ in [$]' skills/ modules/ agents/` の結果、単語分割に依存する for ループは本 1 箇所のみ。
+
+#### observation — standalone `/verify` では run-fact が並行セッションに帰属しうる
+
+`persist_auto_session_pointer "" 1285` は空 SID では issue-scoped pointer を作らないため、本 run では `AUTO_SESSION_ID` が解決しない。`modules/opportunistic-verify.md` Step 1 の規定どおり Step 14 は `--facts` を省略して走る (実害なし)。
+
+ただし証拠収集のために `collect-run-facts.sh` を素で叩いたところ、`.tmp/auto-session-current` 経由で**並行実行中の別セッション `40422-1786325686` (#1316) の run-fact** が返った。#1307 が `filter-session-verified-issues.sh` に `--session` 明示を入れたのと同じ誤帰属経路が `collect-run-facts.sh` にも残っている。skill 規定の呼び出し (`restore_auto_session_pointer` → `--session "$AUTO_SESSION_ID"`) を経由する限り到達しないため、本 run では実害なし。
