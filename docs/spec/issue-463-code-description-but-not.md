@@ -93,3 +93,6 @@
 ### Improvement Proposals
 - N/A
 
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/463#issuecomment-4703497457
