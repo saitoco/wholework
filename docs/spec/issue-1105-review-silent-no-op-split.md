@@ -70,3 +70,40 @@
 | saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective コメント。IMPROVEMENT_HINT のフェーズ別修正を本 Issue のスコープに含めた判断根拠、および `_review_confirmed_posted` 抑止が発火しなかった未解決事象をスコープ外とした判断根拠を記録。内容は Issue 本文の `## Autonomous Auto-Resolve Log` に既に反映済みで、本 Spec に追加のアクションは不要。 | https://github.com/saitoco/wholework/issues/1105#issuecomment-5243312954 |
 
 (このセクションは `append-consumed-comments-section.sh` の安全網が `phase/spec` ラベル付与後のカットオフで再計算し "No new comments" と書いた内容を、`/spec` Step 2 のコメント消化手続き (`phase/issue` ラベル時点カットオフ) の実測に基づき修正したもの)
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1〜5 を Spec の記述順どおりに実装した。関数名・分岐条件・カタログエントリの節構成・テストケースの内容もすべて Spec の記述と一致している。
+
+### Design Gaps/Ambiguities
+- `gh pr view "$ISSUE_NUMBER" --json comments,reviews` の失敗判定を `$? -eq 0` (終了コード) と `-n "$_review_pr_json"` (出力の非空) の両方でガードした。Spec の対応方針には「`gh` の失敗時は従来パターンへフォールバックする」としか書かれておらず、"失敗" の定義 (非ゼロ終了 vs 空出力) までは明示されていなかったため、両方をガードすることでより保守的な fail-safe とした。
+
+### Rework
+- N/A — 初回実装でフルスイート bats テスト (1710/1710) が一発 PASS し、手戻りは発生しなかった。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- Nothing to note — Spec の対応方針と実装 (5 ステップ) は完全に一致していた。Code Retrospective の Design Gaps/Ambiguities で言及されていた「`$?` による失敗判定」は、記述どおりの二重ガードとしては機能しておらず (直前の代入文の終了コードを参照していた)、review フェーズで検出・修正した。Spec の記述自体は「gh 失敗時は従来パターンへフォールバックする」という意図のみで実装詳細までは規定していなかったため、Spec divergence ではなく実装バグとして扱った。
+
+### Recurring issues
+- Nothing to note。
+
+### Acceptance criteria verification difficulty
+- Nothing to note — 7 件の Pre-merge AC (rubric×4, grep×2, github_check×1) はいずれも diff から明確に判定可能で UNCERTAIN は発生しなかった。`ac-tier: preview` 条件も存在しなかった。
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- review-light agent (light mode, 4 perspectives 統合) による 1 エージェントレビューで SHOULD 1 件を検出・修正した。`$?` が `gh pr view` ではなく直後の代入文の終了コードを参照する bash の落とし穴で、意図された「gh 失敗時のフォールバック」の exit-code 側ガードが事実上無効化されていた。`_review_gh_status` に明示的に保存する形に修正し、mock で non-zero exit + non-empty stdout を返す回帰テストを追加して修正を検証した。
+- 修正後にフルスイート bats (`--jobs 18 tests/`) を再実行し 1711/1711 PASS を確認 (新規追加した回帰テスト 1 件を含む)。
+
+### Deferred Items
+- Post-merge AC (`verify-type: manual`): review が silent no-op で終了した実例に対して検出を実行し `review-silent-no-op` として報告されることの確認は未実施 (merge 後に手動確認が必要)。
+- `_review_confirmed_posted` 抑止が発火しなかった未解決事象 (#1255/PR#1269 実測) は本 Issue のスコープ外のまま。再発時に別途調査 Issue を起票する方針。
+
+### Notes for Next Phase
+- `/merge 1340` 実行時、Pre-merge AC 7 件はすべて `- [x]` 済み。Post-merge AC (manual) の手動確認は merge 後に別途実施すること。
+- review フェーズで追加した修正コミット (`801f6d36`) は PR ブランチに push 済み。push 後の CI (全 11 チェック SUCCESS) も確認済み。

@@ -54,6 +54,28 @@ if [[ ! -f "$LOG_FILE" ]]; then
   exit 1
 fi
 
+# _phase_retry_hint: returns a one-line re-run instruction tailored to the phase,
+# since review/merge phases receive a PR number in $number while code phases
+# receive an Issue number (see scripts/run-auto-sub.sh run_phase_with_recovery()).
+_phase_retry_hint() {
+  local phase="$1"
+  local number="$2"
+  case "$phase" in
+    review)
+      echo "Re-run \`run-review.sh $number\` to retry the review phase (argument is a PR number)."
+      ;;
+    merge)
+      echo "Re-run \`run-merge.sh $number\` to retry the merge phase (argument is a PR number)."
+      ;;
+    code*)
+      echo "Re-run \`run-code.sh $number\` to retry the code phase (argument is an Issue number)."
+      ;;
+    *)
+      echo "Re-run the \`$phase\` phase manually (number: $number)."
+      ;;
+  esac
+}
+
 PATTERN_NAME=""
 ANOMALY_DESC=""
 IMPROVEMENT_HINT=""
@@ -94,9 +116,23 @@ elif grep -q '"matches_expected":false' "$LOG_FILE" && grep -q "Review Summary" 
   IMPROVEMENT_HINT="Check whether \`run-review.sh\` or the review skill changed the header format of the PR comment. The reconciler expects \`## Review Response Summary\` as defined in \`modules/phase-state.md\`. See \`modules/orchestration-fallbacks.md#reconciler-header-mismatch\` for the full recovery procedure."
 elif grep -q '"matches_expected":false' "$LOG_FILE" && grep -q '"phase":"review"' "$LOG_FILE" && ! grep -q '"matches_expected":true' "$LOG_FILE"; then
   # reconcile-first authority: a later matches_expected:true in the same log (post-fallback-review-summary.sh recovery) suppresses this anomaly
-  PATTERN_NAME="review-completion-false-negative"
-  ANOMALY_DESC="Review phase completion false-negative in phase \`$PHASE\` (exit code $EXIT_CODE): \`matches_expected:false\` and \`phase:review\` detected in reconciler output, but no existing fallback header (## Review Response Summary / ## レビュー回答サマリ) was found in wrapper log. Likely caused by LLM omitting the \`<!-- review-summary -->\` marker and using a non-standard heading. Reference: #547."
-  IMPROVEMENT_HINT="Follow the recovery procedure at \`modules/orchestration-fallbacks.md#review-completion-false-negative\`: re-run reconcile, check PR comments for summary, add \`<!-- review-summary -->\` marker if present, or re-run /review if absent."
+  _review_pr_json=$(gh pr view "$ISSUE_NUMBER" --json comments,reviews 2>/dev/null)
+  _review_gh_status=$?
+  _review_comment_count=""
+  _review_review_count=""
+  if [[ $_review_gh_status -eq 0 && -n "$_review_pr_json" ]]; then
+    _review_comment_count=$(echo "$_review_pr_json" | jq -r '.comments | length' 2>/dev/null)
+    _review_review_count=$(echo "$_review_pr_json" | jq -r '.reviews | length' 2>/dev/null)
+  fi
+  if [[ "$_review_comment_count" == "0" && "$_review_review_count" == "0" ]]; then
+    PATTERN_NAME="review-silent-no-op"
+    ANOMALY_DESC="Review phase silent no-op in phase \`$PHASE\` (exit code $EXIT_CODE): \`matches_expected:false\` and \`phase:review\` detected in reconciler output, and \`gh pr view\` confirms zero PR comments and zero reviews. The forked review session likely exited without posting any output. Reference: #1105."
+    IMPROVEMENT_HINT="Follow the recovery procedure at \`modules/orchestration-fallbacks.md#review-silent-no-op\`: $(_phase_retry_hint "$PHASE" "$ISSUE_NUMBER")"
+  else
+    PATTERN_NAME="review-completion-false-negative"
+    ANOMALY_DESC="Review phase completion false-negative in phase \`$PHASE\` (exit code $EXIT_CODE): \`matches_expected:false\` and \`phase:review\` detected in reconciler output, but no existing fallback header (## Review Response Summary / ## レビュー回答サマリ) was found in wrapper log. Likely caused by LLM omitting the \`<!-- review-summary -->\` marker and using a non-standard heading. Reference: #547."
+    IMPROVEMENT_HINT="Follow the recovery procedure at \`modules/orchestration-fallbacks.md#review-completion-false-negative\`: re-run reconcile, check PR comments for summary, add \`<!-- review-summary -->\` marker if present, or re-run /review if absent."
+  fi
 elif grep -qiE "APIConnectionError|Request timed out|overloaded_error|529.*[Oo]verload" "$LOG_FILE"; then
   PATTERN_NAME="mid-run-api-error"
   ANOMALY_DESC="API connection error in phase \`$PHASE\` (exit code $EXIT_CODE): API connection/overload pattern detected in wrapper output. The forked session terminated mid-run before phase completion."
@@ -139,7 +175,7 @@ elif [[ "$EXIT_CODE" == "0" ]]; then
       if [[ "$_found_on_origin" == "false" ]]; then
         PATTERN_NAME="silent-no-op"
         ANOMALY_DESC="LLM reported success in phase \`$PHASE\` (exit code 0) but no commit for #$ISSUE_NUMBER found in recent git log. Possible silent no-op: output indicated completion but no code was committed. Reference: #365."
-        IMPROVEMENT_HINT="Re-run \`run-code.sh $ISSUE_NUMBER\` to retry the code phase. If a second run also fails to produce a commit, escalate to manual implementation. See Issue #365 for a known case of this pattern."
+        IMPROVEMENT_HINT="$(_phase_retry_hint "$PHASE" "$ISSUE_NUMBER") If a second run also fails to produce a commit, escalate to manual implementation. See Issue #365 for a known case of this pattern."
       fi
     fi
   fi
