@@ -122,6 +122,15 @@ Note: All three steps are already implemented in #520 (PR #525). The `/code` pha
 
 - **後段機構の追加により、先行 Issue の observation 条件が到達不能になるパターン** — 本 Issue の起票時 (2026-05) には `auto-retry-on-fail` の in-phase retry 層が存在せず、silent no-op 検出 → `EXIT_CODE=1` → 3-tier が唯一の経路だった。その後 retry 層が**前段に**挿入された結果、`autonomy: L3` + `auto-retry-on-fail.enabled: true` の構成では条件文後半が通常到達しなくなった。observation 条件は「実装当時の制御フロー」を前提に書かれるため、後から前段に層が挿入されると silent に評価不能化する。この失効は AC 側にも変更履歴にも痕跡が残らない点が問題。新機構が既存経路の前段に入る変更 (`/spec` や `/code`) の際に、`phase/verify` 滞留中の Issue の observation 条件への影響を確認する step があると検知できる。ただし本提案は変更対象が単一 skill に絞れず、`/verify` 側の実査 (#1270 系) で個別に拾う運用でも吸収できるため Tier 2 とし、起票せずここに記録する
 
+### 2026-08-10 re-run (条件6 確定 PASS)
+
+`/auto 1322` の end-of-run observation scan で再度 `event=auto-run` が発火し、前回 UNCERTAIN だった条件 6 を再評価した。
+
+#### verify (再々実行分)
+
+- 条件 6 は **PASS** に確定。前回 (2026-08-09) は `code_retry_fire` イベント (前半のみ) を根拠に UNCERTAIN としたが、今回は `docs/reports/orchestration-recoveries.md` を直接 grep し、`run-code.sh:300` の exit-0 分岐にのみ現れる固有ログ文言 (`"claude exited 0 but ... phase did not complete (silent no-op). reconcile: ..."`) に一致するエントリを 3 件 (#490 / #507 / #902、いずれも Tier 2/3 recovery として記録済み) 確認した。この文言はイベントログではなく recovery エントリ本文の直接引用であり、「検出され」「3-tier recovery へ流れた」の両方を単一証跡でカバーできる
+- 教訓: event ログ (`code_retry_fire` 等) の有無だけで判定するより、`orchestration-recoveries.md` 本文を機構固有のログ文言で grep する方が、連言条件 (2 つの主張) を 1 回の検索で実証できるケースがある。同種の「実装当時の制御フロー前提」観測条件で再評価する際の一般的な有効打として記録
+
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/465#issuecomment-4703427504
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=4 / https://github.com/saitoco/wholework/issues/465#issuecomment-5225312519
