@@ -423,3 +423,87 @@ This does not affect the July sample (F1–F5), whose wrappers left no exit code
 ### Concurrency cost, cumulative
 
 Across both sessions: 4 `concurrent_commit_detected` (session `89790`) plus the 40 from session `63129`. The `manual-recovery-worktree-rebase` class — the one requiring human intervention — was **closed by #1076 landing on 2026-08-07**; its post-fix recurrence is now tracked by #1076's own post-merge observation AC rather than by this report.
+
+## 2026-08-10 Update (reproduced at ~132h uptime — Arm 2 baseline established; the reboot arm is now running)
+
+The July condition finally recurred. On 2026-08-10 at 02:29Z an external kill hit the `code-pr` phase of #1316, ending the 0-kill streak that had run since 2026-07-31. This is the first reproduction under passive observation, and it satisfies the standby condition that #1146's Purpose item 2 placed on Arms 2 and 3.
+
+### The occurrence
+
+| Variable | Value |
+|---|---|
+| Time | 2026-08-10 02:29:23Z (`phase_start`) → 02:35:50Z (respawn) |
+| Issue / phase | #1316, `code-pr` |
+| Host uptime | **131.6h** (~5.5 days; `kern.boottime` = `{ sec = 1785855106 }` = 2026-08-04 14:51Z) |
+| Concurrent `/auto` sessions | **4** (see correction below) |
+| Concurrent wrapper processes | 7 (`ps`, measured at 03:00Z) |
+| Time to kill | ~5 min elapsed |
+| Recovery | respawn `run-code.sh 1316 --pr`, 1 attempt, success; #1316 went on to complete and close at 03:52Z |
+
+The event trace carries the F1/F2 signature exactly. The preceding `spec` phase emitted its full four-event completion set (`phase_complete` / `token_usage` / `wrapper_exit` / trailer), whereas the first `code-pr` dispatch emitted **none** of them before disappearing — the process did not survive long enough to run its own EXIT trap. No `code_retry_fire` was logged, so this was not `run-code.sh`'s `auto-retry-on-fail` self-retry but a parent-session respawn.
+
+**A primary record exists**, which the July sample never had. `docs/reports/orchestration-recoveries.md` (2026-08-10 03:51 UTC, `manual-recovery-respawn`) states `cause: external-kill` with the diagnosis "code phase wrapper process group was SIGKILLed externally at ~5min elapsed, before its own EXIT trap could print a completion marker". The classification is the executor's own, not an after-the-fact inference from event gaps.
+
+### Dispatch denominator
+
+`.tmp/auto-events.jsonl` over the baseline window (2026-08-10 00:00–04:30Z) gives the rate a denominator, which no earlier section of this report has been able to supply:
+
+| Session | `phase_start` count |
+|---|---|
+| `28254-1786325164` | 8 |
+| `40422-1786325686` | 10 |
+| `1497-1786326732` | 6 |
+| `16210-1786327272` | 6 |
+| **Total** | **30** (28 unique dispatches after subtracting 2 respawns) |
+
+**1 external kill / 28 dispatches ≈ 3.6%.** This is the same order of magnitude as upstream [#76974](https://github.com/anthropics/claude-code/issues/76974)'s measured 1.45% per background dispatch over 28.5k dispatches. With n=1 the local interval is very wide (roughly 0.1%–18% at 95%), so the agreement is a consistency check, not an independent estimate.
+
+The other `manual_intervention` in the same window (#1130 `spec`, 02:30:43Z, `wrapper_exit` = 1) is the `background-notification-wait` lineage (#994 → #1102 → #1212/#1213), not an external kill, and is excluded from the numerator.
+
+### Correction: the concurrency was 4 sessions, not 3
+
+The first #1146 comment on this occurrence recorded 3 concurrent sessions. The event log shows **4** — `16210-1786327272` (running #1130 through issue/spec/code-patch/verify) was missed because the `ps` snapshot was taken at 03:00Z, after that session had moved between phases. All four ran `mode: "single"`, i.e. the `/auto N` single-issue route rather than `--batch`.
+
+Two things follow. First, **the July `--batch` exclusivity does not hold**: this reproduction occurred with four concurrent *single-route* sessions and no `--batch` anywhere. What the sessions have in common with July is spawn volume and concurrency, not the batch route. Second, this is a concrete instance of the measurement blind spot recorded in the 2026-08-05 Addendum — a point-in-time `ps` reading undercounts sessions that are between wrapper spawns, and the single route leaves no session directory to reconcile against afterwards.
+
+### The 2×2, with the missing cell now filled
+
+|  | Long uptime | Freshly rebooted |
+|---|---|---|
+| **No concurrency** | 2026-08-03 Arm 1: 0 kills | 2026-08-05 session `6722`: 0 kills |
+| **Concurrent** | 2026-07-13〜31: 30+ kills · **2026-08-10: 1 kill / 28 dispatches (uptime 131.6h)** | 2026-08-05〜07 Arm 4a: 0 kills (peak concurrency 8, uptime to ~60h, 20h+ cumulative) |
+
+Every kill on record still falls in the "long uptime × concurrent" cell, and the other three cells remain at zero. The 2026-08-06/08-07 updates pushed concurrency to 8 without a kill while uptime was ~60h; this occurrence produced a kill at **lower concurrency (4 sessions / 7 wrappers) and more than twice the uptime**. Concurrency alone does not explain the split — uptime remains a live co-factor, and **H-b' (host uptime / PID reuse) is the hypothesis this reproduction speaks to**.
+
+**The 14-day threshold in #1146's AC 5 is too strict.** It was set as a proxy for July's "over a month" uptime, but reproduction occurred at 5.5 days. The AC should be relaxed to that measured figure rather than kept at a threshold the phenomenon has already undercut.
+
+### Arm 2 is executing
+
+Per the 2026-08-01 Addendum's ordering — reproduce on the long-uptime host, *then* reboot and re-run the identical control workload, and only then proceed to the detach arm — the reboot arm started immediately after this reproduction.
+
+| | Baseline (kill) | Arm 2 (running) |
+|---|---|---|
+| `kern.boottime` | `{ sec = 1785855106 }` (2026-08-04 14:51Z) | `{ sec = 1786337343 }` (**2026-08-10 04:49Z** = 13:49 JST) |
+| Host uptime at session start | 131.6h | **~0.25h** |
+| Concurrent `/auto` sessions | 4 | 3 — `7106-1786338170` (05:02:56Z), `10253-1786338239` (05:04:06Z), `13432-1786338309` (05:05:18Z) |
+| Route | all `mode: "single"` | all `mode: "single"` |
+| Workload | backlog issues (#1310/#1312/#1316/#1130 …) | backlog issues (#1318/#1322 …) |
+
+The reboot was deliberate and followed the reproduction, so — unlike the unplanned 2026-08-04 reboot that confounded Arm 4a — the baseline was not destroyed by it. `concurrency_snapshot` instrumentation was considered and deliberately skipped, to avoid delaying the arm while the post-reboot uptime is still near zero; concurrency is therefore being recorded by `ps` plus `.tmp/auto-session-*.json` as before.
+
+**Session count is one short of the baseline's 4.** Matching it would require a fourth `/auto` session; as run, the arm is at 3/4 of the baseline concurrency with the same route and comparable phase mix.
+
+### What a null result would and would not license
+
+If Arm 2 returns 0 kills, that is **not** by itself evidence that the reboot removed the trigger, for two reasons.
+
+1. **The cell is already well populated.** "Freshly rebooted × concurrent" was measured across 2026-08-05〜07 at peak concurrency 8 and 20h+ of cumulative operation, all at 0 kills. Arm 2's marginal contribution is the *close coupling* — same host, same workload shape, same week, with the reboot as the only deliberately changed variable — not the cell itself.
+2. **The dispatch count has to be large enough to matter.** At the baseline rate of 3.6%/dispatch, observing 0 kills is unsurprising in a short run: `(1 − 0.036)^n < 0.05` requires **n ≈ 82 dispatches** before a null result is significant at the 5% level. Against upstream's 1.45% the requirement is ~205. The baseline window produced 28 dispatches in about 3 hours, so **~9 hours of equivalent concurrent operation** is the rough target for a 0-kill result to carry weight. Anything shorter should be recorded as "no kill observed in N dispatches", with N stated.
+
+If a kill *does* recur post-reboot, H-b' is falsified in its uptime form and H-a (harness lifecycle, uptime-independent) is strengthened; the detach arm (Arm 3 / `WHOLEWORK_SPAWN_DETACH=1`) then becomes the next step per the Addendum ordering.
+
+### Consequence: the expiry criterion is moot
+
+#1146's Purpose item 3 — conclude "trigger removed by environment change" if no external kill is observed — **has lost its premise**, as has the 2026-09-07 backstop and the three-trigger revision built on top of it. A kill was observed under passive observation with a primary record. The investigation now proceeds on evidence rather than on an expiry clock, and the compensation-layer slimming decision (#1070/#1081/#1093/#1119) plus the #598 re-evaluation stay blocked on the Arm 2/3 outcome rather than being unblocked by expiry.
+
+The recovery itself worked: respawn succeeded on the first attempt and #1316 completed end-to-end. The compensation layer's "relaunch always works" property (~11/11 upstream, and every local occurrence to date) holds at 12/12.
