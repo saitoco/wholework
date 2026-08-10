@@ -38,6 +38,10 @@
 
 両コメントとも本フェーズで反映済み: 前者は Iteration 2 の設計方針そのもの、後者は Issue 本文の AC 修正 (rubric の判定対象を `modules/execution-context.md` に限定 + `section_contains` の機械的裏取りを追加) として適用した。
 
+**iteration 2 の review フェーズで consume したコメント** (cutoff: `2026-08-10T05:26:04Z` — 直近の `phase/*` ラベル付与時刻, Primary で解決, COMMENT_SCOPE=issue+pr):
+
+No new comments since last phase. Cross-phase marker exception scan (`type=verify-fail` / `type=preview-ac-unverified`) は line 32 の iteration-1 verify-fail marker のみを検出したが、これは spec フェーズで既に consumed 済み (上記) のため再掲しない。PR #1332 のコメントも 0 件。
+
 ## Changed Files
 
 - `skills/code/SKILL.md`: Step 9 の実行サーフェス制約を、Behavioral Change Detection 分岐内 (旧位置: check 2 の `bats tests/` コードフェンス直後) から、Step 9 冒頭 (`**Operate route**: ...` 行の直後、Behavioral Change Detection 見出しより前) の分岐非依存な位置へ移動。旧位置の記述は "See the execution surface constraint above" 形の短い参照へ置換 (`run_in_background` という語自体は旧位置から除去)
