@@ -200,25 +200,34 @@ themes:
 - 設計段階で残っていた「bash 3.2 でこのパーサが動くか」「description 中の `:` / em dash / `/` が欠落しないか」「インデントされたコメント行・空行・非インデント行境界を正しく扱えるか」の3点は、`/spec` 中にプロトタイプを書いて macOS システム bash (3.2.57) で実機検証し、すべて解消した。Uncertainty 節に「検証方法」を書いて `/code` に渡すより、`/spec` の中で20行のプロトタイプを回すほうが安く確実だった — パーサのように入出力が閉じている設計要素では、この前倒しが有効。
 - 実機検証で `set -euo pipefail` 下の空配列展開 (`"${THEME_LABELS[@]+"${THEME_LABELS[@]}"}"`) が必須であることが判明した。これはプロトタイプを書かなければ `/code` 段階で `unbound variable` として初めて顕在化していた種類の制約で、Implementation Step 4 に明示的に書き込んだ。
 
+## Code Retrospective
+
+### Deviations from Design
+
+なし。Implementation Steps 1-10 を Spec の指示どおりの順序・配置 (パーサは `FALLBACK_LABELS` 定義直後、`detect_issue_types()` 直前 / 作成ループは Always-group ループ直後、Fallback-group ブロック直前) で実装した。
+
+### Design Gaps/Ambiguities
+
+- 行動変化検知 (behavioral change detection) が `.wholework.yml` を「他テストが広く参照する既存ファイル」と判定し、フルテストスイート (1715件) の実行をトリガーした。実際には `.wholework.yml` を参照する既存テストの大半 (`run-spec.bats` 等) は `WHOLEWORK_CONFIG_PATH` のパス文字列としての言及であり、本 Issue の `themes:` 追加による挙動変化とは無関係だった。パス文字列ベースの参照検知は、設定ファイルパスのように汎用的に言及されるファイルに対して過検知気味になる。今回は誤検知でも実害はなかった (フルスイートは1715件全 PASS)ため、検知ロジック自体の変更は提案しない。
+
+### Rework
+
+なし。テスト・手動スモークテスト (themes あり2件・themes なし・実データ5テーマ) がいずれも初回実装で成功した。
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
 
-- `themes:` の YAML 形状は block mapping (`{theme-name}: {description}`) を採用。list-of-mappings は `.wholework.yml` に先例がなく、専用のエントリ境界フラッシュ処理が必要になるため不採用。
-- theme label の色は `setup-labels.sh` 側の定数 `006B75` で固定し、config では指定させない。`modules/label-conventions.md` の namespace 単位の色一貫性を優先。
-- 設定ファイル解決は `CONFIG_FILE="${WHOLEWORK_CONFIG_PATH:-.wholework.yml}"` とし、`scripts/get-config-value.sh` と同一規則に揃える。`WHOLEWORK_CONFIG_PATH` 対応はテストの決定性確保に必須。
-- パーサは `setup-labels.sh` 内のローカル実装とし、`get-config-value.sh` への汎用化は行わない (`scripts/check-verify-dirty.sh` の `verify-ignore-paths` と同じ方針)。
+- Spec の Implementation Steps 1-10 をそのままの順序・配置で実装した (逸脱なし)。パーサ配置・作成ループ配置・`WHOLEWORK_CONFIG_PATH` 対応・空配列展開の form はいずれも Spec 記載どおり。
+- 全7件の Pre-merge AC を `/code` 内で機械チェック (`file_contains` / `grep` / `file_not_contains` / `command`) + rubric 相当の判断で PASS 判定し、Issue 本文のチェックボックスを更新済み。
 
 ### Deferred Items
 
-- theme ごとの色指定 (config で `color` を持たせる) は本 Issue のスコープ外。必要になれば mapping 値をハッシュに拡張する余地を残してある。
-- description 中の ` #` 以降が inline コメントとして除去される制限は、`get-config-value.sh` の sed チェーン踏襲による既知の制限として許容。既存5テーマに該当なし。
+- None (本 Issue のスコープはすべて Implementation Steps に含まれ、完了している)。
 
 ### Notes for Next Phase
 
-- **Implementation Step 5 を飛ばさないこと**: `tests/setup-labels.bats` の `setup()` に `export WHOLEWORK_CONFIG_PATH=/dev/null` を入れないと、リポジトリ自身の `.wholework.yml` の5テーマを読んで `count_label_creates` が `count_always_labels` を 5 超過し、既存テスト (`env=full`, `env=none`, `--force`, `--no-fallback`, `output:`) が一斉に落ちる。
-- 作成ループは `for entry in "${THEME_LABELS[@]+"${THEME_LABELS[@]}"}"` の形が必須。`set -euo pipefail` 下の bash 3.2 は空配列を unset 扱いにするため、素の `"${THEME_LABELS[@]}"` では `themes:` 未定義時に `unbound variable` で落ちる。
-- ドキュメント側の変更は英語版と `docs/ja/` ミラーが対になっている (`customization.md` / `tech.md` / `product.md` の3組)。`scripts/check-translation-sync.sh` は `docs/*.md` と `docs/guide/*.md` を同期対象に含むため、片側だけの更新は OUTDATED として検出される。
-- `docs/tech.md` の Label Groups 表は Always の件数 (22) を明示しているため、`ALWAYS_LABELS` から5件削除したら 17 に更新する必要がある。日本語ミラー `docs/ja/tech.md:137` にも同じ表がある。
-- Changed Files のうち `modules/label-conventions.md` を "Read and follow" する SKILL.md は0件のため、`allowed-tools` の追加は不要 (`/spec` で確認済み)。
+- `bats tests/setup-labels.bats` 全22件 (既存20件 + 新規2件) が pass。実データの `.wholework.yml`(5テーマ) でも手動スモークテストし、`theme/observability` 等が正しく色 `006B75` ・description 付きで作成されることを確認済み。
+- behavioral change detection が `.wholework.yml` / `docs/tech.md` を参照する既存テストの存在により発火し、bats フルスイート (1715件、`--jobs 18`) を実行して全 PASS を確認済み。`/review` で再度フルスイートを回す場合も同じ結果になるはず。
+- ドキュメント同期は英語/`docs/ja/` の3ペア (`customization.md` / `tech.md` / `product.md`) + `modules/label-conventions.md` + `skills/triage/SKILL.md` の計8ファイルすべて更新済み。`scripts/check-translation-sync.sh` による OUTDATED 検出は想定していない。
