@@ -82,6 +82,8 @@
 - saito (MEMBER, first-class): Triage AC audit — Pre-merge AC2 (`grep -n "facts" scripts/opportunistic-search.sh` の引数形式不正 + 常時 PASS) と AC3 (`command "bats tests/opportunistic-search.bats"` が直後の AC4 と同一コマンドで区別不能 + 常時 PASS) を指摘し、実装方針確定後の `/spec` での具体化を推奨。本 Spec 作成時に Issue 本文の該当 2 件を修正して対応 (Notes 参照)。https://github.com/saitoco/wholework/issues/1285#issuecomment-5229038068
 - (code phase) No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1285#issuecomment-5229241590
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=1 / https://github.com/saitoco/wholework/issues/1285#issuecomment-5229262678
 ## Phase Handoff
 <!-- phase: merge -->
 
