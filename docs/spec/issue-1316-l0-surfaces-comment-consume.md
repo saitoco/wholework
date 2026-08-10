@@ -165,21 +165,35 @@ Size=XL だが non-interactive モードのため sub-issue 分割評価 (Step 1
 - Step 13 の skip condition に「Consumed Comments が 0 件でないこと」を追加したことで、他に特筆すべき内容が皆無でも retrospective コメントが投稿されるケースが生じる。これがノイズになるか有用なシグナルになるかは、本 Issue の Post-merge observation AC が最初の実例を提供する。追加の検証手段は設けず、実運用の観察に委ねた (Spec 本体の Uncertainty セクション参照)。
 - `_emit_comments_consumed()` を `/review`/`/merge` にも配線すべきか検討したが、`run-auto-sub.sh` → `run-review.sh`/`run-merge.sh` の呼び出し連鎖における `EMIT_ISSUE_NUMBER` の実際のスコープを確認しきれず (どの呼び出し経路で変数が継承されるか、追加調査が必要)、本 Issue の AC が要求しない拡張のためにスコープを広げるのは非効率と判断し、Out of Scope とした。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- None. Implementation followed the Spec's Implementation Steps as written, including the two decisions already reasoned through in the spec retrospective (`/merge`'s post-squash call placement; `/review`'s bash fallback omitting `--no-push`).
+
+### Design Gaps/Ambiguities
+
+- The Spec's Implementation Step 1 description of the Bash wrapper fallback extension ("`/review`(Step 2 末尾、`--no-push` なし)・`/merge`(Step 4 の既存 Phase Handoff write サブセクション内、`--no-push` あり) を追加する") did not specify the exact wording for *why* `/merge`'s fallback call runs against `main` rather than the PR branch. My first draft of `modules/l0-surfaces.md` claimed both `/review` and `/merge` call `append-consumed-comments-section.sh` "against the PR branch their Spec already lives on" — this is wrong for `/merge`: by the time its call runs (after `gh pr merge --squash --delete-branch` and the subsequent `git merge origin/main --ff-only`), the worktree's content is `main`, not the (now-deleted) PR branch. Caught and fixed during the SSoT Module Cross-Check (`skills/code/SKILL.md` Step 8) by re-reading `skills/merge/SKILL.md` Step 4's actual sequencing before finalizing the module prose.
+- Similarly, the Secondary (bash wrapper post-processor) bullet initially stated `/review`/`/merge` are "excluded... for the same reason as `/code` pr route", implying an explicit gating condition analogous to `run-code.sh`'s `ROUTE_FLAG != "--pr"` check. Verified via `grep` that `run-review.sh`/`run-merge.sh` contain no reference to `append-consumed-comments-section.sh` at all — there is no Secondary layer to gate off in the first place, not merely a gated-off one. Revised the wording to state this directly rather than imply a parallel mechanism that does not exist.
+
+### Rework
+
+- `modules/l0-surfaces.md`'s Bash wrapper fallback description (Primary and Secondary bullets) was rewritten during the SSoT Module Cross-Check, after `skills/review/SKILL.md` and `skills/merge/SKILL.md` were implemented, to replace the design-time phrasing with wording verified against the actual call-site mechanics (see Design Gaps/Ambiguities above).
+
 ## Phase Handoff
-<!-- phase: spec -->
+<!-- phase: code -->
 
 ### Key Decisions
-- 案 A (全 6 フェーズで Comment Consumption Procedure 呼び出しを必須化) を採用し、案 B (read watermark)・案 C (marker 例外拡大) は不採用とした — 理由は Spec 本体の Alternatives Considered を参照
-- `/merge` の呼び出しは Step 4 (post-squash) に配置 — Step 1-2 相当の早期配置では squash-merge によるブランチ削除でコミットが消失する、または early push が Step 1 の mergeability 判定を無効化するリスクがあった
-- `/review` の bash fallback (`append-consumed-comments-section.sh`) は `--no-push` を付けない — `/spec`/`/code`/`/verify` の慣例と異なるが、Step 3 の XS/S early exit 分岐が後続の無条件 push に到達しない可能性への対策
-- `/issue` の Consumed Comments 記録先は Step 13 の Issue Retrospective コメント内 `### Consumed Comments` サブセクション — この時点で Spec が存在しないため
+- Implemented all three SKILL.md call sites exactly as the Spec positioned them, per its own "Notes for Next Phase" warning against simplifying to "same early-stage pattern everywhere": `/issue` before the `phase/issue` label transition, `/review` unconditionally at the end of Worktree Entry, `/merge` post-squash inside Phase Handoff write.
+- All 8 Pre-merge acceptance conditions verified PASS (2 `grep`, 6 `rubric`, evaluated adversarially per `verify-executor.md` semantics) and checked off on the Issue via Step 10.
+- `modules/l0-surfaces.md`'s Bash wrapper fallback prose was corrected during the SSoT Module Cross-Check to match `/merge`'s actual post-squash mechanics (working branch is `main`, not the deleted PR branch, by the time its call runs) — see Code Retrospective.
 
 ### Deferred Items
-- 案 B (read watermark) は、案 A のフェーズラベル境界単位のカバレッジで実運用上不十分と判明した場合の follow-up として保留
-- `/review`/`/merge` への `_emit_comments_consumed()` 配線 (`comments_consumed` イベント発火) は、`EMIT_ISSUE_NUMBER` のスコープ調査が別途必要なため見送り
-- `docs/workflow.md` の `phase/merge` ラベル記述と実装の乖離 (pre-existing) は本 Issue のスコープ外として記録のみ
+- 案 B (read watermark) は、案 A のフェーズラベル境界単位のカバレッジで実運用上不十分と判明した場合の follow-up として保留 (spec phase から継続)
+- `/review`/`/merge` への `_emit_comments_consumed()` 配線 (`comments_consumed` イベント発火) は、`EMIT_ISSUE_NUMBER` のスコープ調査が別途必要なため見送り (spec phase から継続)
+- `docs/workflow.md` の `phase/merge` ラベル記述と実装の乖離 (pre-existing) は本 Issue のスコープ外として記録のみ (spec phase から継続)
+- Post-merge observation AC (`event=auto-run session=next`) は次に `/auto` に入る Issue でのみ検証可能。今回のセッションでは未検証。
 
 ### Notes for Next Phase
-- 3 つの SKILL.md (issue/review/merge) の挿入位置はそれぞれ理由が異なる (issue: ラベル遷移より前 / review: Worktree Entry 直後・無条件 / merge: post-squash) ため、Implementation Steps 2-4 の配置指示を「他フェーズと同様に早い段階に置けばよい」と単純化せず、記載された位置と根拠に忠実に実装すること
-- `tests/append-consumed-comments-section.bats` への追加テスト (AC7, AC8) はスクリプト自体の機能変更を伴わない回帰確認テストであり、スクリプト本体 (`append-consumed-comments-section.sh`) への機能変更は不要
-- `skills/review/SKILL.md` と `skills/merge/SKILL.md` の `allowed-tools` frontmatter に `${CLAUDE_PLUGIN_ROOT}/scripts/append-consumed-comments-section.sh:*` の追加が必須 (現状どちらにも存在しないことを確認済み)
+- `tests/post_merge_check.bats` の 2 件は本変更と無関係な既知の並列実行時 flake (`docs/tech.md` § CI bats Parallel/Serial Split、#1221/#1224/#1227/#1260)。単体実行で PASS を確認済み。CI で再現しても本 PR の regression として扱わないこと。
+- Issue #1316 は着手時点で `phase/ready` ラベルが既に `phase/code` に遷移済みだった (経緯不明、Spec は完全な形で存在) — `/verify` 実行時にラベル遷移履歴の異常として気づく可能性があるが、Spec に基づいた正規の実装であることを Autonomous Auto-Resolve Log (Code Phase) に記録済み。
