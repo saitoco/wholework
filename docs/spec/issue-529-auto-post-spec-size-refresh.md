@@ -110,6 +110,15 @@
 ### Improvement Proposals
 - （低優先）Step 4 の review 深度選択（line 220）が Step 3a で再判定した値ではなく Size から再導出している。Step 3a の refresh 済み値を明示参照する形にすると、将来 Step 2 の stale Size に起因する回帰を構造的に防げる。LLM ナラティブ上は Step 3a が Step 4 直前で Size を更新するため現状でも正しく流れるため、優先度は低い。
 
+### 2026-08-10 re-run (条件4 確定 PASS)
+
+`/auto 1322` の end-of-run observation scan で `event=auto-run` が発火し、60 日間 `phase/verify` に滞留していた条件 4 (実運用確認) を再評価した。
+
+#### verify (再実行分)
+
+- 条件 4 は **PASS** に確定。複数の L3 session retrospective (`docs/sessions/*/session.md`) で "Post-spec Size refresh" の実発火を確認: `63129-1785977471-2026-08-06` (#1174/#1175 いずれも M→L)、`89790-1786027911-2026-08-07` (#1202: M→S)、`65022-1785935372-2026-08-05` (#1140: M→S)、`16210-1786327272-2026-08-10` (#1130: M→S)
+- M→L のケース (#1174/#1175) では 4/4 完走・review phase (wrapper exit 0/143) が実行されており、Step 3a の決定的ロジック (Size→REVIEW_DEPTH テーブル) により review 深度が `--full` で実行されたことが導ける。event ログ単体ではなく session retrospective の Metrics 表という機械生成された実測記録を根拠にできたため、UNCERTAIN を経ずに一発 PASS 判定できた
+
 ## Consumed Comments
 - saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/529#issuecomment-4628091724
 - saito / MEMBER / first-class / <!-- escalation-level: 2 --> / https://github.com/saitoco/wholework/issues/529#issuecomment-5182941369
