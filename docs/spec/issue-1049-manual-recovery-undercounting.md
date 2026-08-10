@@ -105,17 +105,28 @@
 - Behavioral Change Detection の結果、`modules/orchestration-fallbacks.md` と `skills/verify/SKILL.md` を追加参照するテストファイルが直接対応ファイル以外に存在したため `bats --jobs 18 tests/` でフルスイートを実行した。`tests/post_merge_check.bats` の 2 件 (`fail: gh issue reopen called when FAIL input given` / `multiple issues: processed sequentially`) が並列実行時のみ FAIL したが、変更前のコード (`git stash` で本 Issue の diff を除去した状態) でも同じ 2 件が `bats --jobs 18 tests/post_merge_check.bats` で同様に FAIL し、単体実行では両状態とも PASS することを確認した — 本 Issue の変更とは無関係な既存の並列実行時 flaky test であり、既に Issue #1308 (open) がこの解消を追跡している。本 PR に関連するテスト (`tests/run-auto-sub.bats`, `tests/orchestration-fallbacks.bats`) は単体実行・フルスイート実行のいずれでも PASS した
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `skills/verify/SKILL.md` Step 12 の Tier 2/3 と Manual recovery の bullet を分離し、Manual recovery のみに `--write-manual-recovery` backfill 呼び出しを追加した (Tier 2/3 は自動復旧経路のため今回のスコープ外)
-- Steering Docs sync candidate (`docs/tech.md`/`docs/workflow.md` および ja mirror) は「追記する」を選択し、既存段落へ 1 文追記する形で反映した (新規段落の追加ではなく既存記述の拡張)
-- `skills/auto/SKILL.md` の real-time hand-off 文言自体は変更しない Spec Notes の判断を踏襲した — 変更対象は `/verify` Step 12 のみ
+- 独立した 2 回の review-light 実行 (foreground) がいずれも `skills/verify/SKILL.md:866` の同一 bullet に指摘を出したため、両方を 1 コミットに統合して修正した (`_validate_recovery_args` の入力形式制約の明記 + standalone `/verify` での `emit_event` no-op caveat)
+- MUST issue はゼロ (AC 4件全 PASS、CI 全 SUCCESS) だったため `event=REQUEST_CHANGES` にはならず `COMMENT` として投稿
+- Base Branch Conflict Pre-check で `docs/tech.md`/`docs/ja/tech.md` [SSoT] が `changed in both` と報告されたが、実際は非重複行範囲 (無関係な in-flight PR のラベル数変更) で conflict marker ゼロ件だったため、追加対応は不要と判断した
 
 ### Deferred Items
-- Post-merge observation AC (次に手動復旧が発生した session での event 数一致確認) は `/verify` 実行時まで未検証のまま
-- `tests/post_merge_check.bats` の並列実行 flaky test 解消は Issue #1308 に委譲 (本 Issue のスコープ外)
+- Post-merge observation AC (次に手動復旧が発生した session での event 数一致確認) は `/verify` 実行時まで未検証のまま (変更なし、`/code` からの引き継ぎを維持)
+- `tests/post_merge_check.bats` の並列実行 flaky test 解消は Issue #1308 に委譲 (本 Issue のスコープ外、変更なし)
 
 ### Notes for Next Phase
-- `/review` は `skills/verify/SKILL.md` の allowed-tools 追加 (`run-auto-sub.sh`) が意図通りか、Step 12 の新 bullet の文言が Tier 2/3 の既存規定と矛盾しないかを確認すること
-- `docs/tech.md`/`docs/workflow.md` と ja mirror の追記文が英日で対応していることは code fence 数一致で simple check 済みだが、内容面の翻訳精度は未レビュー
+- `/merge` は本 PR に MUST issue が残っていないこと、CI 全 SUCCESS であることを確認済みなのでそのまま進行してよい
+- Post-merge の observation AC は `/verify` 実行まで未検証のため、`/verify` 側で改めて確認すること
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- 乖離なし。review-light エージェントが Spec の Implementation Steps 1〜3 / Changed Files と diff を突き合わせ、全項目が一致することを確認した。
+
+### Recurring issues
+- `skills/verify/SKILL.md:866` の新 bullet に対し、独立した 2 回のレビュー観点 (`_validate_recovery_args` の入力形式制約、`emit_event` の session pointer 依存による no-op) がいずれも「新規追加した指示文が、呼び出し先スクリプトの前提条件・失敗モードを書ききれていない」という同型のギャップを指摘した。新しい bash script 呼び出しを SKILL.md の自然言語手順に組み込む際は、呼び出し先の引数バリデーション規則 (`_validate_recovery_args` の正規表現等) と、呼び出し先が持つ暗黙の前提条件 (session pointer の解決可否等) の両方を、追加する bullet 自体に明記するかどうかを都度確認する価値がある。単発の Issue で汎用ルール化するには時期尚早だが、今後同種の指摘が別 PR でも出た場合は review checklist 化を検討する。
+
+### Acceptance criteria verification difficulty
+- 困難なし。4件の Pre-merge AC (rubric) はいずれも Spec の `## Root Cause` セクションと直接対応しており、機械的に PASS 判定できた。bats テスト AC も `bats --filter` で一意に実行・確認可能だった。
