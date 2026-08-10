@@ -100,17 +100,30 @@ N/A — 4件の受入条件はいずれも Pre-merge で機械検証可能なた
 No new comments since last phase.
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- `scripts/compute-round-order.sh` は Spec 通り機械的データ取得と ROI 計算のみに責務を絞り、prefix クラスタリング・意味的クラスタリング・グループ順序決定 (cluster-first) は `modules/round-ordering.md` 側の LLM 手順として実装した (bash 3.2 に連想配列がないため)。
-- `gh-graphql.sh` が `jq` に `-r` を渡さない制約に対応するため、`--jq` フィルタは JSON オブジェクトを返す形にとどめ、呼び出し元でローカルに `jq -r` を再適用して TSV 化する 2 段階構成を採用した (詳細は Code Retrospective 参照)。
-- Until mode step 6 への並び替えステップ挿入位置は、Spec Notes の解釈 (Issue 本文のステップ番号は #1334 のステップ繰り下げにより既にずれている) に従い、「`ROUND_LIST` 記録直後・`write_batch` 呼び出し直前」とした。
+- Pre-merge AC 4件は全て `<!-- verify: rubric ... -->` + `<!-- verify: file_contains/section_contains ... -->` の組み合わせで PASS 判定した。rubric grader には `modules/round-ordering.md`/`skills/auto/SKILL.md` の該当箇所を読ませ、機械的チェックと併用して意味的妥当性も確認した。
+- review-light エージェントが `modules/round-ordering.md:227` と報告した行番号は実際のファイル (121行) を超える誤りだったため、実行前に `grep -n` で実行行 (40行目) に修正してから line comment を投稿した。エージェント出力の行番号はそのまま信用せず、投稿前に実在性を確認すること。
+- SHOULD (テストカバレッジ欠如) と CONSIDER (ドキュメント文言の曖昧さ) はいずれも軽量・低リスクな修正だったため、MUST ではないが Step 12 で修正した (`tests/compute-round-order.bats` に label-fallback / title-fallback の2テスト追加、`modules/round-ordering.md` Signal 3 step 4 の文言修正)。
 
 ### Deferred Items
-- AC4 (実運用確認手順) は「手順が module に文書化されていること」の確認に留め、実際の `--until` 実行による効果測定は行っていない (Spec Notes の auto-resolve 解釈どおり、Size M のスコープ外)。
-- `modules/round-ordering.md` の「Confirming real-world effectiveness」手順に基づく実運用検証は次回以降の `--until` 実行時に行う想定 (新規 event 発火の仕組みが必要になった場合は別 Issue で起票)。
+- AC4 (実運用確認手順) は「手順が module に文書化されていること」の確認に留まっており、実際の `--until` 実行による効果測定は次回以降の実運用時に行う想定 (code フェーズの Phase Handoff から継続、review フェーズでも変更なし)。
 
 ### Notes for Next Phase
-- `tests/` ファイル数の実測ベースラインが Spec 記載 (118) と異なり 119 だったため、`docs/structure.md` のコメントは 119→120 とした。今後同種の Spec で `docs/structure.md` のファイル数コメントを扱う際は、実装直前に `git ls-files` で実測してから差分を決めること。
 - `modules/round-ordering.md` の Signal 3 (意味的関係判断) は `ROUND_LIST` 内の Issue body のみを読む設計であり、ラウンド外の Issue とのクラスタリングは意図的にスコープ外としている。将来この制約を緩和する提案が出た場合は、この設計判断を踏まえて検討すること。
+- `scripts/compute-round-order.sh` のラベルフォールバック (`size/*`/`value/*`) とタイトルフォールバック (`gh issue view --json title`) 経路は review フェーズで追加したテストでカバーされた。今後この script に変更を加える際は `tests/compute-round-order.bats` の8ケース (特に新規2ケース) を維持すること。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note。review-light (Spec 観点) は「Spec と実装の乖離なし」と判定した。`compute-round-order.sh` の呼び出し規約・`size_rank`/`value_num` neutral fallback・ROI 計算式・`cluster-first`/`Relationship to the blocked-by gate`/`Confirming real-world effectiveness` の各見出しはすべて Spec/AC の pre-merge verify anchor と一致していた。
+
+### Recurring issues
+
+review-light エージェントが報告した `modules/round-ordering.md` の該当行番号 (227) が実ファイルの総行数 (121行) を超えており誤りだった。過去のレビューでも同種の「エージェント報告行番号が不正確」というケースが起こり得るため、line comment を投稿する前に `grep -n`/`wc -l` で行番号の実在性を機械的に確認するステップを常に踏むこと (今回は Step 11 投稿前に本セッションで確認・修正済み)。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note。Pre-merge AC 4件はいずれも `rubric` + `file_contains`/`section_contains` の組み合わせで機械的・意味的の両面から一意に PASS 判定でき、UNCERTAIN は発生しなかった。verify command の anchor 文字列 (`cluster-first`, `Relationship to the blocked-by gate`, `Confirming real-world effectiveness`) は実装の見出しと完全一致しており、verify command 自体の精度に問題はなかった。
