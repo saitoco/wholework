@@ -101,3 +101,30 @@
 ### Notes for Next Phase
 - `docs/tech.md` を編集したことで `tests/run-merge.bats` / `tests/verify-dirty-detection.bats` がフルスイート実行対象に入った。`tests/post_merge_check.bats` の1件が並列実行下でのみ FAIL したが単体では PASS (フレーク、本 Issue の変更とは無関係) — review/merge フェーズで再発した場合は無関係な既存フレークとして扱ってよい
 - `docs/structure.md` および `docs/guide/autonomy.md` / `docs/guide/index.md` の `docs/ja/` 未同期は本 Issue 着手前からの既存ギャップで、本 Issue のスコープ外
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+- `docs/spec/issue-1322-triage-theme-labels.md` の Changed Files には `modules/label-conventions.md` が含まれていなかったが、実装は `scripts/setup-labels.sh` に新規 namespace `theme/*` を追加していた。`modules/label-conventions.md` はラベル namespace の SSoT であり「新規 namespace 追加時は本ファイルと `scripts/setup-labels.sh` を同時更新」と明記しているにもかかわらず、Spec 立案時にこの同期要件が見落とされていた (review で SHOULD として検出・修正済み)。新規 label namespace を追加する Issue は、今後 Spec の Changed Files 検討時に `modules/label-conventions.md` を機械的にチェックリストへ含めることが望ましい
+
+### Recurring issues
+- 特筆事項なし — 今回検出した3件 (SHOULD 1・CONSIDER 2) は異なるカテゴリで、同一パターンの反復ではない
+
+### Acceptance criteria verification difficulty
+- 特筆事項なし — Pre-merge AC 7件すべてが verify command (`file_contains`/`rubric`/`section_contains`/`command`) により UNCERTAIN なくクリーンに PASS した。verify command の記述精度が高く、/code フェーズでの事前検証と一致していた
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Step 8 (safe mode) で Pre-merge AC 7件すべてを再検証し、`/code` フェーズの結果と一致する全件 PASS を確認
+- `REVIEW_DEPTH=light` (`--light` 指定、Size=M とも一致) のため review-light エージェント1体で4観点統合レビューを実施
+- SHOULD 1件 (label-conventions.md 同期漏れ) と CONSIDER 1件 (placeholder 不整合) を修正、CONSIDER 1件 (失敗時フォールバック未記載) はスコープ外としてスキップ
+
+### Deferred Items
+- Post-merge AC (`/triage` が次回実行された Issue に `theme/*` label が付与されることの確認) は引き続き `session=next` の observation として未実施 (`/code` フェーズから継続)
+- CONSIDER: Step 6a の `gh label list` 失敗時フォールバック未記載は対応見送り。将来 `/triage` 実行時に実際の失敗が観測されれば別途 Issue 化を検討
+
+### Notes for Next Phase
+- `/merge 1331` 実行可能 (MUST issue なし、CI 全件 SUCCESS、Pre-merge AC 全件 PASS)
+- `tests/post_merge_check.bats` の並列実行時フレーク (Code Retrospective に記録済み) は本 PR の変更と無関係、`/merge`/`/verify` で再発時は既知フレークとして扱う
