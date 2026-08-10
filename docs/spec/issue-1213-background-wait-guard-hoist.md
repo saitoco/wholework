@@ -450,3 +450,33 @@ N/A — 実装は Spec の Implementation Steps をそのまま適用し、手�
 ### Acceptance criteria verification difficulty
 
 - Pre-merge AC 14 件はすべて機械的な verify command (rubric 3 件含む) で判定でき、UNCERTAIN や verify command 自体の不備は 0 件だった。rubric AC (10-12) は "実装または文書から確認できる" という抽象的な文言だが、`modules/execution-context.md` に判定対象を明示的に限定していたため、grader (今回は `/review` 自身による直接検証) が一次証跡 (grep, git log, git show) に容易にアクセスでき、判定コストは低かった。Triage AC audit のフィードバックで rubric の判定対象を明示化する運用が、この iteration でも効果を発揮した形。
+
+## Verify Retrospective (iteration 2)
+
+### Phase-by-Phase Review
+
+#### issue
+- 2026-08-10 の reopen コメントが明示的に警告した「Step 2a fix-cycle fast-path で `/code` へ直行すると新スコープが未設計のまま実装に入る」リスクは、reopen コメント自体が推奨した `/issue 1213` の再実行によって既に解消済みだった状態で `/auto 1213` が起動された。本 verify セッションを含む今回の `/auto` 実行では、Issue コメント履歴 (reopen コメント、3例目実測コメント、Issue Retrospective コメント) を精査した上で Step 2a の機械的トリガーを意図的にオーバーライドし、Step 3 の通常フロー (`phase/issue` → `/spec`) に進んだ。これは L0 (Issue コメント) が機械的な label 状態判定より優先されるべき場面の実例であり、fix cycle の構造的ギャップ (iteration 1 の Verify Retrospective が指摘した「Issue body の AC が旧 iteration のまま据え置かれる」問題) が iteration 2 でも再度顕在化しかけたが、L0 コメントの直接読解によって回避された。
+
+#### spec
+- watchdog kill・rework とも発生せず、約15分で設計完了。Consumed Comments (Triage AC audit 指摘) を反映した AC 修正、Verification 節の全 iteration 統合更新も計画通り完了した。
+
+#### code
+- Deviations / Rework とも N/A (Code Retrospective 参照)。設計上の注目点として、本セッション自身が `bats tests/run-{code,issue,merge,spec,review}.bats` (192件) の実行中に他セッションとの CPU 競合により Bash tool の 600000ms ceiling を複数回超過したが、`/code` 自身が単一継続対話として完了通知を正常に受け取ったため silent no-op には至らなかった、という meta-observation が記録されている。これは本 Issue が構造的に対処しようとしている失敗モードを、皮肉にも本 Issue 自身の実装セッションが実地で経験した事例であり、`--jobs` 分割実行や UNCERTAIN リトライなど追加防御の必要性を裏付ける実測になっている。
+
+#### review
+- review-bug×2 が同一の 2 件 (相対パス参照懸念、skill 除外文言の緊張) を独立に検出したが adversarial verification の結果は割れた (1 件 REJECT、1 件 PASS) — 「2 エージェント一致」だけでは real/false 判別に使えないことの実例。
+- より重要な発見: `scripts/guard-prefix.sh` の新規段落が明示 `timeout` を欠いており、本 Issue の初代 (#994) が対象とした失敗モードを部分的に再導入しかけていた。review がこれを MUST として検出・修正した。**guidance を層間で移設する際は移設元の要素を 1 対 1 でチェックリスト化する**という教訓は、本 Issue の系譜全体 (#994→#1175→#1213 iteration 0/1→iteration 2) に共通する再発パターンの核心を突いている。
+- 修正確認のための `bats --jobs 8` 実行 (192/192 PASS) 自体は成功したが、Phase Handoff は「同一 bats コマンドを誤って連続実行した際に 300s タイムアウトでバックグラウンド移行を一度経験し、単一呼び出しでの再実行により回避した」とも記録している。silent no-op には至らず review phase 全体は正常完了したが、AC16 の文言 (「バックグラウンド移行なしに完了」) を厳密には満たさない、判定上の曖昧さを残した。
+
+#### merge
+- `run-merge.sh` が「merge completed but phase label still at phase/review. Auto-transitioning to phase/verify.」という自己修復ログを出力した。これは merge 完了後に label 状態が期待値 (`phase/review`) からずれていたことを wrapper 自身が検知し、`phase/verify` へ自動遷移させた事例であり、本 Issue が目指す「散文ガイダンス依存ではなく構造的な防止」という Purpose と同じ方向性の、label 状態管理における自己修復動作の実例として記録に値する。
+
+#### verify
+- AC16 (review phase 観察) の判定に、AC 文言の字面 ("バックグラウンド移行なしに完了") と Issue の Purpose ("silent no-op の構造的防止") との間の緊張が生じた。review phase では一時的なバックグラウンド移行が発生しつつも同一ターン内で復旧し silent no-op には至らなかった — この "recover された transient occurrence" を PASS と見るか FAIL と見るかは AC の書き方に依存する。今回は UNCERTAIN として保留し、Issue を `phase/verify` に留めて次回以降の再評価に委ねた。
+- AC17 (spec phase 観察) は、本 `/auto` セッションの spec phase 自体が iteration 2 の `guard-prefix.sh` 変更がマージされる前 (main に未反映の状態) で実行されたため、修正後の guard を伴う spec phase 実行の証跡が存在せず SKIPPED とした。次回以降の `/auto` (spec phase を含むもの) で初めて評価可能になる。
+- Pre-merge AC 14 件は全て既チェック済みで再検証をスキップした (already-checked skip rule)。iteration 0/1/2 を通じて Pre-merge AC が FAIL した回数は 0 (iteration 1 は post-merge observation AC の FAIL で reopen された経緯であり、Pre-merge 自体は毎回 PASS している)。
+
+### Improvement Proposals
+- **observation AC の文言設計: 「バックグラウンド移行なしに完了」ではなく「silent no-op に陥らないこと」を直接問う形にすべきではないか** — AC16 の判定で発生した曖昧さ (transient かつ recover された背景移行を PASS とみなせるか) は、AC が「手段 (背景移行の有無)」を問う形になっていることに起因する。本 Issue の Purpose は「silent no-op を構造的に防止する」ことであり、AC もこの結果 (turn が完了通知待ちで終わらないこと) を直接問う文言に書き換えれば、recover 済みの transient occurrence を素直に PASS 判定できる。次に同種の post-merge observation AC を書く際の教訓として記録する (Tier 3 相当 — 本 Issue 自身の残 AC (16, 17) の再評価には影響しない設計論点のため独立起票はせず、次に類似 AC を設計する際の参考として本節に残す)。
+- `cause=background-notification-wait` の閾値到達監視 — iteration 2 の実行 (spec/code/review/merge 全フェーズ) を通じて新規の `background-notification-wait` recovery は発生しなかった (review phase の 300s incident は同一ターン内で自己回復しており `docs/reports/orchestration-recoveries.md` への記録対象ではない)。カウンタは 2/3 のまま据え置き。本 Issue の修正 (wrapper 層一括注入) が有効であることを示唆する追加の間接証拠だが、`recoveries-auto-fire` の起票基準には未到達。
