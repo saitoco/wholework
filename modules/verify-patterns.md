@@ -879,27 +879,32 @@ A change is a "behavioral change" when it modifies an existing file (script, fun
 
 **Scope trade-off:**
 
-| Scope | Command example | Speed | Coverage |
+| Scope | Logical test scope | Speed | Coverage |
 |-------|----------------|-------|----------|
 | Narrow (per-file) | `bats tests/run-code.bats` | Fast | New/modified file's own tests only |
-| Full suite | `bats tests/` | Slower | Includes regression detection for cross-file test coupling |
+| Full suite | All tests (`bats tests/` equivalent) | Slower | Includes regression detection for cross-file test coupling |
 
 Use narrow scope only when the implementation is purely additive (new files, no changes to existing files). For all behavioral changes, prefer full suite.
 
+**`command` type's 60-second timeout cannot cover a full-suite run**: `modules/verify-executor.md` § Timeout Coverage Audit fixes the `command` verify type's execution timeout at 60s. A full test suite (this repository: 1642 bats tests as of #1310) structurally exceeds that window regardless of parallelism — even `bats --jobs <N> tests/` in parallel is not guaranteed to finish inside 60s as the suite grows, and true serial execution can exceed even the calling Bash tool's own 600s ceiling. A full-suite verify command must therefore reference **CI results** instead of a direct `command` invocation, via `github_check` (`modules/verify-executor.md` § "github_check: Job-Level Conclusion Sub-Form" for a specific job like the bats job below, or the workflow-level form for a single-job workflow) — CI's own timeout is independent of `verify-executor.md`'s 60s budget.
+
 **Recommended scope by test framework:**
 
-| Framework | Recommended command |
-|-----------|---------------------|
-| bats | `bats tests/` |
-| pytest | `pytest` |
-| Node.js (pnpm) | `pnpm test` |
-| Node.js (npm) | `npm test` |
+| Framework | Narrow scope (direct `command`) | Full suite (CI reference) |
+|-----------|---------------------|---------------------|
+| bats | `command "bats tests/run-code.bats"` | `github_check "gh run view $(gh run list --workflow=test.yml --limit=1 --json databaseId --jq '.[0].databaseId') --json jobs --jq '.jobs[] \| select(.name==\"Run bats tests\").conclusion'" "success"` (this repository's `.github/workflows/test.yml` bats job) |
+| pytest | `command "pytest tests/test_foo.py"` | `github_check "gh run list --workflow=<file>.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success"` (workflow-level, if the workflow runs only pytest) |
+| Node.js (pnpm) | `command "pnpm test -- foo.test.ts"` | `github_check "gh run list --workflow=<file>.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success"` |
+| Node.js (npm) | `command "npm test -- foo.test.js"` | `github_check "gh run list --workflow=<file>.yml --limit=1 --json conclusion --jq '.[0].conclusion'" "success"` |
 
-**Decision procedure (3 steps):**
+For the pr route, use the job-level (or workflow-level) form as-is — the run belongs to the PR branch. For the patch route (direct commit to `main`, no PR), add `--branch=main` to the underlying `gh run list`/`gh run view` lookup per `modules/verify-classifier.md` § "Patch Route CI Verification Note", since there is no PR to scope the run to.
+
+**Decision procedure (4 steps):**
 
 1. Identify which existing files are modified in the implementation
 2. Check whether any existing test references those files beyond the file's direct test counterpart (grep/search the test directory)
-3. If cross-file coupling found → use full test suite as the verify command; otherwise narrow scope is acceptable
+3. If cross-file coupling found → full suite is required; otherwise narrow scope is acceptable
+4. If full suite is required, use the CI reference (`github_check`) form above — do not write a direct `command "<full-suite-cmd>"` invocation; it will structurally time out per the 60-second constraint noted above
 
 **Real example (Issue #819):**
 
@@ -907,7 +912,7 @@ Use narrow scope only when the implementation is purely additive (new files, no 
 - Narrow verify command used: `bats tests/run-code.bats tests/append-consumed-comments-section.bats`
 - Missed: `tests/run-verify.bats` contained a "spec absent" test that relied on `run-code.sh`'s prior behavior
 - Consequence: regression was not caught at verify-time; CI detected the failure after merge
-- Correct verify command: `bats tests/` (full suite)
+- Correct verify command: `github_check "gh run view $(gh run list --workflow=test.yml --limit=1 --json databaseId --jq '.[0].databaseId') --json jobs --jq '.jobs[] | select(.name==\"Run bats tests\").conclusion'" "success"` (full suite via CI reference, not a direct `command "bats tests/"` invocation)
 
 ### 25. Measurement-Dependent Rubric AC — Deferral Protocol Guideline
 
@@ -1005,6 +1010,16 @@ When an Issue's `## Changed Files` includes a large number of asset files (rule 
 # After — acquisition delegated to a shell command; LLM output stays free of asset bytes
 - Implementation Step: "Fetch icon set from https://example.com/icons-v2.tar.gz (MIT license) and extract to icons/ via `curl -L <url> | tar -xz -C icons/`"
 ```
+
+### 28. Count-Dependent Conditional Acceptance Criteria — Default Judgment for Zero-Count Case
+
+An acceptance condition that is worded as a conditional over some count or classification — "all N items are...", "rows of classification X are..." — has an implicit branch when the applicable count turns out to be zero: no item exists to satisfy or violate the condition. Left unstated, this branch is left to the judge's discretion at verify time, and the same zero-count situation can be judged PASS or FAIL depending on who evaluates it.
+
+**Default judgment**: when the applicable count is confirmed to be zero, judge the condition **PASS**, provided the deliverable explicitly states that the count is zero (e.g., a report line reading "N = 0" or "no rows matched classification X"). If a different judgment is required for a specific AC, state that override explicitly in the condition's own wording — do not rely on the default silently applying.
+
+**Relationship to §26 (Absence-Verifying Acceptance Conditions)**: §26 and this section address two different points in the same lifecycle. §26 is an **authoring-time** convention — it asks whether a reported "0" is genuine or a vacuous artifact of the scan never running or the population being empty from the start (i.e., is this 0 trustworthy?). This section is a **judgment-time** default rule — once a 0 is confirmed genuine (§26's concern is satisfied), how should the verifier judge a condition that was phrased as a claim over that population? The two are complementary: §26 guards against a false zero being accepted at face value; this section supplies the missing judgment rule for a zero already confirmed true.
+
+**Real example (Issue #1275)**: Pre-merge AC 4/5 were conditional statements of the form "classification D rows have been retired per the #1166 method, and ... Issues with no remaining unchecked conditions transition to `phase/done`". At verify time, classification D turned out to have **zero** rows. Because the AC's conditional wording did not state what to judge when D = 0, the verifier used discretion, judging both AC as "vacuously satisfied" on the basis that the report explicitly documented D = 0. This Issue (#1310) generalizes that ad hoc call into the default rule stated above, so future zero-count conditionals do not each require a fresh discretionary judgment.
 
 ## Output
 
