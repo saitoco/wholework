@@ -189,3 +189,73 @@ cutoff 前の 2026-08-10T02:42:26Z コメント (テーマ駆動 Backlog 消化�
 - **read-then-write の jq guard**: 本 Spec の実装は既存 JSON を読み書きしない (`auto-checkpoint.sh` に委譲) ため、jq failure guard の追加は不要
 - **bats self-reference 除外**: `resolve-batch-query.sh` は検出系スクリプトではなく、`tests/resolve-batch-query.bats` を走査対象にしないため self-reference 除外は不要
 - **`WHOLEWORK_SCRIPT_DIR` mock**: `tests/run-auto-sub.bats` は `export WHOLEWORK_SCRIPT_DIR="$MOCK_DIR"` を設定するが、`resolve-batch-query.sh` は `run-auto-sub.sh` から呼ばれず親セッション (`skills/auto/SKILL.md`) からのみ呼ばれるため、`$MOCK_DIR` への mock 追加は不要
+
+## issue retrospective
+
+(`/issue 953 --non-interactive` のコメントから転記: https://github.com/saitoco/wholework/issues/953#issuecomment-5236558615)
+
+### 実施内容 (非対話モード, `/issue 953 --non-interactive`)
+
+Step 1 のコメント消費手続きで、2026-08-10 の MEMBER コメント (1件、first-class) を検出。このコメントは「テーマ駆動での Backlog 消化」というユースケースが実運用要望として具体化したことを報告し、`--max-rounds` の既定値レンジ (3〜5) と #1322 (`theme/*` label 導入) との関係を提示していた。これを Issue 本文の Background / Proposal / Related に統合した。
+
+### Auto-Resolve 判断 (非対話モード三層ポリシー適用)
+
+Size=L のため検出上限5件のうち、以下3件を auto-resolve した (いずれも High-Stakes Decision に該当せず、既存コードパターン・実測データから一意に推定可能と判断):
+
+1. **`--max-rounds` 既定値を 3 に確定** — コメントが示したレンジ (3〜5) のうち、暴走防止の観点で least-risk な下限値を採用。2026-08-08 セッション (発散: 7件処理 vs 新規8件供給) と 2026-08-09 セッション (3 batch連鎖で2段収束) の実測を根拠として明記。`/spec` 側での調整余地も残した。
+2. **クエリ形式に label 単独指定 (status 句省略) を許容** — #1322 のコメント例 `"label:theme/observability"` が status 句を含まないため、既存の「label + status 必須」という記述のままでは #1322 のユースケースと矛盾する。status 句を optional として明確化した。
+3. **`--checkin-per-round` の名称を確定** — 「仮称」表記を削除。他に代替案が提示されておらず、コメントでも同名がそのまま使われていたため。Acceptance Criteria のテキストには影響しない変更。
+
+### Acceptance Criteria の変更
+
+Pre-merge / Post-merge の内容自体は変更していない (rubric ベースの4件 + opportunistic の1件を維持)。変更したのは Background / Proposal / Related セクションのみ — 具体的な `--max-rounds` の値、クエリ文法の柔軟性、#1322 との関係を明記し、`/spec` フェーズでの実装判断の土台を明確にした。
+
+### 政策決定
+
+- #1322 との **blocked-by は設定しない** — 両 Issue のコメントが揃って「独立着地可能」と述べているため (`gh-check-blocking.sh` も blocked-by 対象なしと判定し exit 0)。
+- Priority は GitHub Projects 側で既に `high` に更新済みであることを確認 (コメントが言及した low→high の変更は本セッション開始前に反映済み)。
+- Size は L のまま据え置き (`/spec` の判断で分割要否を再評価する前提は Background に既述の通り)。
+
+## spec retrospective
+
+### Minor observations
+
+- `modules/skill-help.md` を検証対象に指定した受入条件が `/issue` フェーズで生成されていた。全 10 skill が Read する汎用フォーマッタに 1 skill 固有の flag を要求する形で、「その AC の検証対象ファイルは単一 skill 固有の内容を置く場所か」を確認する観点が AC 生成時に無かった
+- `skills/auto/SKILL.md` Step 1 の `--batch` 検出は「`--batch` の後に numeric token が 0 個」のケースが未定義のまま残っていた。`--batch --resume` は明示分岐で救われていたが、`--batch` 直後に新フラグを置く設計は同じ穴を踏みやすい
+
+### Judgment rationale
+
+- 収束保証 (処理済み Issue のラウンド跨ぎ除外) は Issue 本文に一切書かれていなかったが、これが無いと「0 件になるまで繰り返す」という中心的な受入条件が構造的に成立しない (label 単独クエリでは完了済み Issue が毎ラウンド再ヒットする)。仕様の欠落ではなく前提の暗黙化と判断し、Issue 本文の Proposal に明示追記したうえで Spec に落とした
+- 安全弁を `--max-rounds` 単独とした判断は、Issue が「いずれか (両方でも可)」を許容していることに加え、ラウンド数が処理件数と 1:1 で対応し運用者が挙動を予測しやすい点を重視した。wall-clock は初期値の実測根拠が無い
+- クエリ解決のスクリプト分離は Spec の独自判断ではなく、Issue 本文の「LLM が毎回自然言語から再解釈するのではなく機械的に評価できる形にする」を実装レベルに翻訳した結果。ここを prose に留めるとラウンド間で抽出条件がぶれ、収束判定自体が信頼できなくなる
+
+### Uncertainty resolution
+
+- project board の Status field 値は設計時に `gh api graphql` で Issue #1328 に対して実測し、`Backlog` が返ることを確認した。`status:Backlog` の照合仕様を推測で書かずに済んだ
+- 空白を含む Status option (`In progress` 等) は初期実装で非対応 (パースエラー) と決め、検証方法込みで Uncertainty セクションに残した。実装フェーズで仕様追加を迫られうる箇所を先に可視化している
+- `.claude/settings.json.template` への新規スクリプト登録要否は、同格の 4 スクリプト (`auto-checkpoint.sh` / `scan-pending-ac.sh` / `observation-trigger.sh` / `collect-run-facts.sh`) が全て未登録であることを grep で確認して「不要」と確定した。未確認のまま「変更不要」と書かない規則 (#749) に従った
+
+## Phase Handoff
+<!-- phase: spec -->
+
+### Key Decisions
+
+- クエリ解決を新規スクリプト `scripts/resolve-batch-query.sh` に分離した — Issue 本文の「機械的に評価できる形にする」要求の実装形であり、prose 実装は不採用
+- ラウンド跨ぎ状態は既存 `auto-checkpoint.sh write_batch` の `COMPLETED` / `FAILED` 引数で保持し、セッション全体で単一 `BATCH_ID` を使う。新規 subcommand も seed file (#1214 で撤去済み) も作らない
+- 安全弁は `--max-rounds` (既定 3、opt-out 不可) のみ。wall-clock 上限は見送り
+- 受入条件の検証対象を `modules/skill-help.md` → `docs/workflow.md` に付け替え、`file_contains "skills/auto/SKILL.md" "--max-rounds"` と `command "bats tests/resolve-batch-query.bats"` を追加した (Issue 本文も更新済み、Pre-merge は 6 件)
+
+### Deferred Items
+
+- wall-clock 上限の安全弁は実装しない (運用実績を見てから別 Issue で検討)
+- `--batch --resume` は until ループを再開しない — 中断ラウンドの `remaining` を List mode として処理して終了する。仕様として `docs/workflow.md` に明記するのみで実装上の特別扱いはしない
+- 空白を含む `status:` 値 (`In progress` 等) は非対応 (exit 1 のパースエラー)
+- `docs/product.md` / `docs/ja/product.md` / `docs/guide/autonomy.md` は Steering Docs sync candidate 止まり — `/code` が個別に読んで採否を判断する
+
+### Notes for Next Phase
+
+- `--until` 分岐は Step 1 の numeric token 収集分岐より**前**に置くこと。後ろに置くと `--batch` 直後に数値が無いため Count / List どちらにも該当しない未定義状態に落ちる
+- `resolve-batch-query.sh` は bash 3.2 互換必須 (macOS system bash)。`mapfile` / 連想配列 / `${var,,}` を使わず、label の glob 一致は `case "$name" in $LABEL_PATTERN)` で行う
+- `--until` の値は空白を含むため記述例・実装ともに常にダブルクォートで扱う (#1318 と同種の単語分割事故を避ける)
+- `docs/structure.md` / `docs/ja/structure.md` のファイル数は scripts 82 → 83、tests 117 → 118 (いずれも本 Spec 作成時に実測)
+- `tests/auto-batch.bats` の awk 抽出は `/^### / && !/<name>/` で次セクションを打ち切るため、`### Until mode` を List mode と Resume mode の間に挿入しても既存 12 テストは壊れない
