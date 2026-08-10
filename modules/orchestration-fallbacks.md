@@ -216,6 +216,32 @@ Recovery procedure for a named pattern, consumed by the calling skill or used as
 
 ---
 
+## review-silent-no-op
+
+### Symptom
+- `run-review.sh` exits with non-zero and the wrapper log contains `"matches_expected":false` and `"phase":"review"`, and `gh pr view <PR> --json comments,reviews` confirms the PR has zero comments and zero reviews
+- `scripts/detect-wrapper-anomaly.sh` emits pattern: `review-silent-no-op`
+- Likely cause: the forked review session exited (e.g. hit a watchdog silence timeout or a content-filter trigger) before posting any PR comment or review — a genuine no-op, not a marker/heading formatting issue
+
+### Applicable Phases
+- review
+
+### Fallback Steps
+1. Confirm the no-op with `gh pr view <N> --json comments,reviews`: both `comments` and `reviews` should be empty arrays
+2. Re-run `/review <N>` (or `run-review.sh <N>`) to retry the review phase from scratch — there is no partial output to recover or merge
+3. If a second run also produces zero comments/reviews, check the wrapper log for a watchdog silence kill or an API/content-filter error before retrying a third time; escalate to manual review if the same no-op recurs
+4. After a successful retry, re-run `reconcile-phase-state.sh review --pr <N>` to confirm `matches_expected:true`
+
+### Escalation
+- Recovery sub-agent (#316) can be invoked when repeated retries all produce zero comments/reviews with no diagnosable cause in the wrapper log
+
+### Rationale
+- First observed as a mis-classification during Issue #1069 (PR #1077): a genuine silent no-op (zero PR comments/reviews) was reported as `review-completion-false-negative`, which prompted Tier 2 to suggest a marker-addition recovery step that did not apply — the PR had no summary comment to add a marker to
+- Split from `review-completion-false-negative` in #1105: both conditions share the same `matches_expected:false` + `phase:review` reconciler signature, but their recovery differs — `review-completion-false-negative` recovers by locating and marking an existing (but unmarked) summary comment, while `review-silent-no-op` has no comment to recover and instead requires a fresh retry. `scripts/detect-wrapper-anomaly.sh` distinguishes the two via a live `gh pr view --json comments,reviews` count check: both counts `0` routes to `review-silent-no-op`; any other count (or a `gh`/`jq` failure) falls back to `review-completion-false-negative`, preserving prior behavior as a fail-safe
+- IMPROVEMENT_HINT for this pattern is generated via `_phase_retry_hint()`, which also fixed a companion defect (#1255 / PR #1269) where `silent-no-op`-family hints hardcoded `run-code.sh $ISSUE_NUMBER` regardless of phase — for `review`/`merge` phases the wrapper's `$ISSUE_NUMBER` argument actually holds a PR number (see `scripts/run-auto-sub.sh` `run_phase_with_recovery()`), so the old hint named both the wrong script and the wrong number kind
+
+---
+
 ## code-completed-no-pr
 
 ### Symptom
