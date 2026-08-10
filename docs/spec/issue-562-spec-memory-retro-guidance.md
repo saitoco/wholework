@@ -122,3 +122,8 @@ post-merge observation 条件が `/auto --batch 1197 1162 1133 1102` (session `7
 - saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 562` to verify the condition / https://github.com/saitoco/wholework/issues/562#issuecomment-4768309468
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/562#issuecomment-5195217035
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/562#issuecomment-5202635269
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/562#issuecomment-5205429473
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/562#issuecomment-5212258953
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/562#issuecomment-5225313513
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/562#issuecomment-5229257342
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/562#issuecomment-5235399348
