@@ -28,7 +28,11 @@
 #     elsewhere in the codebase, and with the marker's own closing `-->`).
 #   - `<N>` is a non-negative integer.
 #   - `<paths>` is a single quoted, space-separated list of one or more paths
-#     (e.g. "scripts/ skills/ modules/").
+#     (e.g. "scripts/ skills/ modules/"). An empty `<paths>` string is rejected as a
+#     malformed expression (fail-open UNEVALUABLE) rather than silently widening the
+#     search to the entire repository.
+#   - The marker prefix (`<!--` through `premise:`) tolerates any amount of whitespace
+#     (including none, e.g. `<!--premise:`) before the `premise:` keyword.
 #
 # Exit codes and output (exhaustive):
 #
@@ -57,7 +61,14 @@
 #   - Unsupported expression type (command name is none of the 3 above) — reason:
 #     "unsupported expression"
 #   - Malformed expression (command name recognized but arguments do not parse — wrong
-#     operator, non-numeric N, unbalanced quotes) — reason: "malformed expression"
+#     operator, non-numeric N, unbalanced quotes, or an empty `<paths>` field) — reason:
+#     "malformed expression"
+#   - A `<!-- premise:` occurrence that never resolves to a fully-matched marker (most
+#     commonly: the expression contains a bare `>`, which breaks the `-->` closing match) —
+#     reason: "marker-shaped comment did not fully match; likely contains a bare '>' or is
+#     not closed with --> on the same line". `expr` in this one case is the fixed literal
+#     `(unparsed premise marker)` rather than the expression text, since the text could not
+#     be reliably extracted.
 #
 # There is no timeout condition: the script has no external I/O, only local `git grep` /
 # `test`, so it inherits whatever timeout the caller (e.g. verify-executor's `command` type,
@@ -102,7 +113,7 @@ fi
 IS_GIT_WORKTREE=true
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || IS_GIT_WORKTREE=false
 
-GREP_COUNT_RE='^grep_count[[:space:]]+"([^"]*)"[[:space:]]+"([^"]*)"[[:space:]]+(-eq|-ne|-lt|-le|-gt|-ge)[[:space:]]+([0-9]+)$'
+GREP_COUNT_RE='^grep_count[[:space:]]+"([^"]*)"[[:space:]]+"([^"]+)"[[:space:]]+(-eq|-ne|-lt|-le|-gt|-ge)[[:space:]]+([0-9]+)$'
 FILE_EXISTS_RE='^file_exists[[:space:]]+"([^"]*)"$'
 FILE_NOT_EXISTS_RE='^file_not_exists[[:space:]]+"([^"]*)"$'
 
@@ -114,7 +125,22 @@ emit_unevaluable() {
   echo "UNEVALUABLE: $1 (reason: $2)" >&2
 }
 
-MARKER_LINES=$(grep -oE '<!-- premise:[^>]*-->' "$BODY_FILE" 2>/dev/null || true)
+MARKER_LINES=$(grep -oE '<!--[[:space:]]*premise:[^>]*-->' "$BODY_FILE" 2>/dev/null || true)
+
+# Fail-open detection for marker-shaped comments that did not fully match above (most
+# commonly: the expression contains a bare '>', which breaks the `-->` closing match) —
+# without this, such markers vanish silently instead of surfacing as UNEVALUABLE, which is
+# the exact silent-false-negative mode the UNEVALUABLE mechanism elsewhere in this script
+# exists to prevent. Occurrence-counted (not line-counted) so multiple markers on one line
+# do not undercount.
+CANDIDATE_COUNT="$(grep -oE '<!--[[:space:]]*premise:' "$BODY_FILE" 2>/dev/null | wc -l | tr -d ' ')"
+MATCHED_COUNT="0"
+if [ -n "$MARKER_LINES" ]; then
+  MATCHED_COUNT="$(printf '%s\n' "$MARKER_LINES" | wc -l | tr -d ' ')"
+fi
+if [ "$CANDIDATE_COUNT" -gt "$MATCHED_COUNT" ]; then
+  emit_unevaluable "(unparsed premise marker)" "marker-shaped comment did not fully match; likely contains a bare '>' or is not closed with --> on the same line"
+fi
 
 if [ -z "$MARKER_LINES" ]; then
   exit 0
@@ -123,7 +149,7 @@ fi
 while IFS= read -r marker_line; do
   [ -z "$marker_line" ] && continue
 
-  expr="${marker_line#<!-- premise:}"
+  expr="${marker_line#<!--*premise:}"
   expr="${expr%-->}"
   # trim leading/trailing whitespace
   expr="$(printf '%s' "$expr" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"

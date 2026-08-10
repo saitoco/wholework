@@ -111,3 +111,26 @@ No premise markers here.'
     [ "$(printf '%s\n' "$output" | grep -c '^EXPIRED:')" -eq 1 ]
     [[ "$output" == *"EXPIRED: grep_count \"token\" \"sub/\" -eq 0 (actual: 1)"* ]]
 }
+
+@test "fail-open: empty paths in grep_count -> exit 0, UNEVALUABLE as malformed, not a repo-wide scan" {
+    write_body '<!-- premise: grep_count "token" "" -eq 0 -->'
+    run --separate-stderr "$SCRIPT" body.md
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+    [[ "$stderr" == *"UNEVALUABLE: grep_count \"token\" \"\" -eq 0 (reason: malformed expression)"* ]]
+}
+
+@test "marker prefix tolerates no space after <!-- -> still parsed" {
+    write_body '<!--premise: file_exists "sub/nope.txt" -->'
+    run "$SCRIPT" body.md
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"EXPIRED: file_exists \"sub/nope.txt\" (actual: not found)"* ]]
+}
+
+@test "fail-open: marker-shaped comment with bare '>' does not fully match -> exit 0, UNEVALUABLE, not silently dropped" {
+    write_body '<!-- premise: grep_count "a>b" "sub/" -eq 0 -->'
+    run --separate-stderr "$SCRIPT" body.md
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+    [[ "$stderr" == *"UNEVALUABLE: (unparsed premise marker) (reason: marker-shaped comment did not fully match"* ]]
+}
