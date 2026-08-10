@@ -54,3 +54,6 @@
 - **AC4 の section_contains 対応**: `skills/verify/SKILL.md` に「Issue Reopen Judgment」セクション見出しが存在することを確認（現状は `When Issue is CLOSED` / `When Issue is OPEN` のサブ見出しのみ）。verify command が通るよう親見出しとして `### Issue Reopen Judgment` の追加が必要
 - **AC5 のリテラル「CI 完了後」**: 日本語リテラル。英語版 SKILL.md 本文に日本語混入は許容される（既存 `verify/SKILL.md` には日本語完了メッセージが多数存在。line 493 の「Issue #$NUMBER has been reopened」などと整合性を保つ）
 - **Simplicity rule**: light 上限 5 ステップ / 5 pre-merge に対し、ステップ 3 件は OK。pre-merge は 6 件で 1 件超過だが Issue body の AC と 1:1 対応を優先して全量コピー
+
+## Consumed Comments
+No new comments since last phase.
