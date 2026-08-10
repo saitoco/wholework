@@ -86,3 +86,28 @@ Issue 本文自身の調査用 grep (`grep -rnE 'for [a-zA-Z_]+ in [$]' skills/ 
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective: 追加確認不要と判断 (検査範囲は Issue 本文 Notes で既に /spec へ委譲済み)、Type=Bug/Size=M/Value=3 設定、post-merge AC に session=next 追加 / https://github.com/saitoco/wholework/issues/1318#issuecomment-5235678768
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-3 を Spec の記述通りに実施した。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Steps 1-3 をそのまま実装 (for-loop → while/read への書き換え、validate-skill-syntax.py への `unquoted_word_split` 検査追加、bats テスト 3 件追加)。設計からの逸脱なし
+- `scripts/validate-skill-syntax.py` `skills/` 全体・`skills/verify/SKILL.md` 単体の両方でバリデータを実行し、新規検査が既存リポジトリ内で 0 error であることを確認 (現状の該当箇所は今回書き換えた 1 箇所のみという Spec の事前調査結果と一致)
+
+### Deferred Items
+- Post-merge AC (`merged PR 候補が 2 件以上返る Issue の /verify 実行で PR_NUMBER が正しく解決されることを確認`, `verify-type: observation event=auto-run session=next`) は次回の `/auto` 実行セッションで検証される
+
+### Notes for Next Phase
+- `bats --jobs 18 tests/` フルスイート実行で `tests/post_merge_check.bats` の 2 テストが並列実行時のみ FAIL したが、単独実行では PASS を確認済み。`docs/tech.md` § Testing Strategy に既知の並列実行時フレークとして記載済み (#1221/#1224/#1227/#1260) であり、本 PR の変更とは無関係
+- `/review` では `skills/verify/SKILL.md` の diff (for → while/read の書き換え) が意図通り zsh 互換になっているか、また `scripts/validate-skill-syntax.py` の新規正規表現が配列展開・コマンド置換・引用符付き形式を誤検出しないか (Spec Notes 記載の適用範囲判断) を重点的に確認するとよい
