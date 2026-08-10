@@ -1,7 +1,7 @@
 ---
 name: issue
 description: Issue creation and refinement (`/issue "title"` or `/issue 123`). Creates new issues or refines/reformats existing ones. Use when creating issues, defining requirements, or standardizing issue content.
-allowed-tools: Bash(gh issue create:*, gh issue view:*, gh issue edit:*, gh issue close:*, gh issue list:*, gh label create:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-skill-change-observation-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-ac-checkbox-format.sh:*), Glob, Grep, Write, Read, WebFetch, ToolSearch, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
+allowed-tools: Bash(gh issue create:*, gh issue view:*, gh issue edit:*, gh issue close:*, gh issue list:*, gh label create:*, gh api:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/opportunistic-search.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-skill-change-observation-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-ac-checkbox-format.sh:*), Glob, Grep, Write, Read, WebFetch, ToolSearch, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Issue Creation and Refinement
@@ -429,10 +429,11 @@ If `opportunistic-verify: true` is set in `.wholework.yml`, read `${CLAUDE_PLUGI
 
 ```bash
 gh issue view $NUMBER --json body,title,labels
-gh issue view $NUMBER --json comments
 ```
 
 Read `${CLAUDE_PLUGIN_ROOT}/modules/phase-banner.md` and display the start banner with ENTITY_TYPE="issue", ENTITY_NUMBER=$NUMBER, SKILL_NAME="issue".
+
+**Comment consumption (must run before Step 3's `phase/issue` label transition):** Read `${CLAUDE_PLUGIN_ROOT}/modules/l0-surfaces.md` and follow the "Comment Consumption Procedure" section with parameters: `ISSUE_NUMBER=$NUMBER`, `COMMENT_SCOPE=issue`, `PHASE_NAME=issue`. This replaces a raw, unclassified `gh issue view $NUMBER --json comments` fetch — the procedure applies the Trust Boundary classification and records the consumed set for Step 13. This call must execute here, before Step 3 assigns `phase/issue`: at this point in the flow no `phase/*` label has ever been assigned to the Issue, so the procedure's Step 1 cutoff resolution falls through to Fallback B (cutoff empty — consume all comments), picking up everything posted before the pipeline began (see `modules/l0-surfaces.md` § "Pre-pipeline comment coverage"). Running it after Step 3 would resolve the cutoff to `phase/issue`'s own assignment timestamp, dropping comments posted immediately before this run — the same reasoning `/code`'s `phase/ready`→`phase/code` transition ordering already follows. No count cap or summarization is applied to this initial consume — the call fetches every comment on the Issue unconditionally, consistent with the raw fetch it replaces and with every other phase's Comment Consumption Procedure call, all of which are similarly unbounded; comment volume is negligible against a 1M-token context.
 
 Detect embedded links in body and comments; fetch GitHub-hosted attachments via WebFetch or Read. Use attachment content and all comments as context for subsequent steps.
 
@@ -604,10 +605,11 @@ Run the standard sub-issue creation flow (New Issue Creation Step 9, procedures 
 - Zero ambiguity auto-resolutions were made
 - Zero acceptance criteria changes were made
 - No surprising policy decisions were made
+- Zero comments were consumed by Step 1's Comment Consumption Procedure
 
 When skipping: output `retrospective skipped: no notable content` to terminal and proceed to the next step without posting a comment.
 
-When NOT skipping: post a retrospective comment covering: judgment rationale for ambiguity resolution, key policy decisions from Q&A, and reasons for acceptance criteria changes.
+When NOT skipping: post a retrospective comment covering: judgment rationale for ambiguity resolution, key policy decisions from Q&A, and reasons for acceptance criteria changes. Include a `### Consumed Comments` subsection recording the comments consumed by Step 1 — one entry per comment (`login / authorAssociation / trust tier / one-line intent summary / comment URL`, the same format as `modules/l0-surfaces.md` Step 5), or "No new comments since last phase." if none. This subsection is `/issue`'s Consumed Comments record — no Spec exists yet at this point in the pipeline (`/spec` creates it), so the retrospective comment is the only per-run artifact available to record it in.
 
 The comment body must use `## Issue Retrospective` as the top-level heading (canonical key used by `/auto` Step 4b and `/verify`).
 

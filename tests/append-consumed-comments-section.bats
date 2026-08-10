@@ -211,6 +211,54 @@ MOCK
     [ ! -f "$REPO_ROOT/merge-push.log" ]
 }
 
+@test "no phase labels ever assigned: cutoff resolves empty and pre-pipeline comments are consumed" {
+    SPEC_FILE="$BATS_TEST_TMPDIR/repo/docs/spec/issue-42-some-title.md"
+    printf '# Issue #42: some title\n\n## Overview\nSome content.\n' > "$SPEC_FILE"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "api" ]]; then
+    echo ""
+    exit 0
+fi
+cat <<'JSON'
+[{"author":{"login":"alice"},"authorAssociation":"MEMBER","url":"https://github.com/org/repo/issues/42#issuecomment-9","body":"pre-pipeline suggestion","createdAt":"2026-07-01T00:00:00Z"}]
+JSON
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run "$SCRIPT" 42 issue
+    [ "$status" -eq 0 ]
+    grep -q "issuecomment-9" "$SPEC_FILE"
+}
+
+@test "comment posted after the most recent phase label: consumed against that cutoff, earlier comment excluded" {
+    SPEC_FILE="$BATS_TEST_TMPDIR/repo/docs/spec/issue-42-some-title.md"
+    printf '# Issue #42: some title\n\n## Overview\nSome content.\n' > "$SPEC_FILE"
+
+    cat > "$MOCK_DIR/gh" <<'MOCK'
+#!/bin/bash
+if [[ "$1" == "api" ]]; then
+    echo "2026-08-05T00:00:00Z"
+    exit 0
+fi
+cat <<'JSON'
+[
+  {"author":{"login":"alice"},"authorAssociation":"MEMBER","url":"https://github.com/org/repo/issues/42#issuecomment-10","body":"before the label","createdAt":"2026-08-04T00:00:00Z"},
+  {"author":{"login":"bob"},"authorAssociation":"MEMBER","url":"https://github.com/org/repo/issues/42#issuecomment-11","body":"during review/merge window","createdAt":"2026-08-06T00:00:00Z"}
+]
+JSON
+exit 0
+MOCK
+    chmod +x "$MOCK_DIR/gh"
+
+    run "$SCRIPT" 42 merge
+    [ "$status" -eq 0 ]
+    grep -q "issuecomment-11" "$SPEC_FILE"
+    ! grep -q "issuecomment-10" "$SPEC_FILE"
+}
+
 @test "main tree execution without --no-push: routes push through worktree-merge-push.sh" {
     SPEC_FILE="$BATS_TEST_TMPDIR/repo/docs/spec/issue-42-some-title.md"
     printf '# Issue #42: some title\n\n## Overview\nSome content.\n' > "$SPEC_FILE"

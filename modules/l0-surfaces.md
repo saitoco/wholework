@@ -235,6 +235,15 @@ in its body from a bot actor is treated as a Wholework-authored structured comme
 
 Input: `ISSUE_NUMBER`, `COMMENT_SCOPE`, `PHASE_NAME`.
 
+**Pre-pipeline comment coverage:** Comments posted before an Issue enters the pipeline (i.e.,
+before any `phase/*` label has ever been assigned) are the responsibility of `/issue`'s Existing
+Issue Refinement flow — it is the only phase that calls this procedure before `phase/issue` is
+assigned. With no `phase/*` label yet on the timeline, Step 1's cutoff resolution below falls
+through to Fallback B (cutoff empty — consume all comments), so `/issue` naturally picks up every
+comment posted before the pipeline began. `/spec`, `/code`, and `/verify` cannot cover this
+window: by the time each of them runs, a `phase/*` label has already been assigned, so their
+cutoff necessarily excludes anything predating it.
+
 **Step 1 — Determine the cutoff timestamp (fallback ladder):**
 
 Primary: fetch the timestamp of the most recent `phase/*` label assignment from the Issue timeline:
@@ -308,7 +317,17 @@ fires where it can safely reach that branch:
   Step 12; `/verify` Step 4) after the LLM's comment consumption
   step, ensuring deterministic writeback regardless of prose execution. `/spec` and `/code`
   pass `--no-push` — the commit lands on the working branch and reaches base only through
-  that phase's own Exit path (see the table in `worktree-lifecycle.md`).
+  that phase's own Exit path (see the table in `worktree-lifecycle.md`). `/review` (Step 2,
+  end of Worktree Entry) also calls `append-consumed-comments-section.sh`, against the PR
+  branch its Spec lives on throughout the phase. `/review` omits `--no-push` and pushes
+  immediately — its Size XS/S early-exit branch can end the skill before reaching the
+  unconditional `## Retrospective` push, so deferring the push there is not safe. `/merge`
+  (Step 4, inside the existing Phase Handoff write subsection) also calls the script, but only
+  after the PR branch has already been squash-merged and deleted (`gh pr merge --squash
+  --delete-branch`, earlier in the same Step) and the worktree fast-forwarded to `origin/main`
+  — by the time the call runs, the working branch's content is `main`, not the (now-gone) PR
+  branch. `/merge` passes `--no-push` and rides the same push as its Step 4 Phase Handoff
+  commit (`git push origin HEAD:main`).
 - **Secondary (bash wrapper post-processor, non-pr routes only):** `run-spec.sh` / `run-code.sh`
   additionally run a pre/post `## Consumed Comments` count comparison after the `claude`
   subprocess exits, triggering `append-consumed-comments-section.sh` as a fallback when the
@@ -316,7 +335,13 @@ fires where it can safely reach that branch:
   own CWD after the subprocess exits, not the worktree), so it is gated off for `/code` pr
   route: the Spec there lives on the PR branch, which this post-exit point can neither observe
   nor safely write to without reintroducing the two-branch divergence #1058 removed. For pr
-  route, the primary layer is the only safety net.
+  route, the primary layer is the only safety net. `/review` and `/merge` have no Secondary
+  layer at all — `run-review.sh` and `run-merge.sh` do not implement this post-processor, for
+  the same reachability reason `/code` pr route is gated off from it: at the time the primary
+  layer's call runs, each phase's Spec lives on a branch (the PR branch for `/review`;
+  `origin/main`, reached via the worktree's own fast-forward, for `/merge`) that the wrapper's
+  post-exit main-repository CWD can neither observe nor safely write to. For `/review`/`/merge`,
+  as for `/code` pr route, the primary layer is the only safety net.
 
 **Step 6 — Emit event (handled by bash wrapper in auto mode; LLM skip):**
 

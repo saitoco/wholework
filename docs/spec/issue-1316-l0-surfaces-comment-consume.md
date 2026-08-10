@@ -1,5 +1,12 @@
 # Issue #1316: l0-surfaces: 各フェーズ冒頭でのコメント consume を必須化しパイプライン前後の欠落窓を解消
 
+## Autonomous Auto-Resolve Log
+
+### Code Phase
+
+- **Step 3 `phase/ready` ラベルチェック: ラベル不在 (`phase/code` に遷移済み) だが Spec 存在のため続行** — reason: `gh issue view 1316 --json labels` で確認すると `phase/ready` は既に `phase/code` へ遷移済みで、`reconcile-phase-state.sh code-pr 1316 --check-precondition` も `matches_expected: false` (診断: `phase/ready` ラベル不在) を返した。ただし Spec (`docs/spec/issue-1316-l0-surfaces-comment-consume.md`) は既に完全な形で存在し、Implementation Steps・Verification まで記載済みであるため、Spec 不在を前提とした「Issue 本文から要件を読み取る」フォールバックは不要と判断し、既存 Spec に基づいて実装を続行した。
+  - Other candidates: 中断して `/spec 1316` の再実行を促す — 却下。Spec は既に spec phase の内容を満たしており、再実行は不要な手戻りになる。
+
 ## Overview
 
 `modules/l0-surfaces.md` の Comment Consumption Procedure は `/spec`・`/code`・`/verify` の 3 フェーズでしか呼ばれておらず、`/issue`・`/review`・`/merge` は Issue コメントを構造的に consume しない。結果として (1) Issue がパイプラインに入る前に投稿されたコメント (欠落窓 1 — #1251 で実測: 3 件の提案が `phase/done` まで一度も読まれなかった) と、(2) review/merge 期間中に投稿された通常コメント (欠落窓 2) が失われる。
@@ -9,6 +16,7 @@
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective (トリアージ結果・曖昧性自動解決ログ・スコープ評価、sub-issue 分割は non-interactive のため未実施と明記) / https://github.com/saitoco/wholework/issues/1316#issuecomment-5235007944
+- No new comments since last phase.
 
 ## Changed Files
 
