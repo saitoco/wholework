@@ -182,19 +182,38 @@ Size=XL だが non-interactive モードのため sub-issue 分割評価 (Step 1
 - `modules/l0-surfaces.md`'s Bash wrapper fallback description (Primary and Secondary bullets) was rewritten during the SSoT Module Cross-Check, after `skills/review/SKILL.md` and `skills/merge/SKILL.md` were implemented, to replace the design-time phrasing with wording verified against the actual call-site mechanics (see Design Gaps/Ambiguities above).
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
-- Implemented all three SKILL.md call sites exactly as the Spec positioned them, per its own "Notes for Next Phase" warning against simplifying to "same early-stage pattern everywhere": `/issue` before the `phase/issue` label transition, `/review` unconditionally at the end of Worktree Entry, `/merge` post-squash inside Phase Handoff write.
-- All 8 Pre-merge acceptance conditions verified PASS (2 `grep`, 6 `rubric`, evaluated adversarially per `verify-executor.md` semantics) and checked off on the Issue via Step 10.
-- `modules/l0-surfaces.md`'s Bash wrapper fallback prose was corrected during the SSoT Module Cross-Check to match `/merge`'s actual post-squash mechanics (working branch is `main`, not the deleted PR branch, by the time its call runs) — see Code Retrospective.
+- Fixed 1 MUST bug (Fallback A in the cutoff ladder resolving to a self-referential `phase_start` timestamp under `/auto` dispatch, defeating pre-pipeline comment coverage) and 6 SHOULD / 4 CONSIDER findings surfaced by the review-spec + review-bug×2 fan-out; 1 low-confidence CONSIDER (checkout-failure edge case in `skills/review/SKILL.md`) was left unfixed.
+- All fixes were scoped to correcting the existing implementation and documentation against the Issue's already-stated acceptance criteria — no acceptance condition text or verify command changed, so Step 13's Policy Change Detection found nothing to propagate to the Issue body.
+- Grouped the fixes into 4 commits by topic (MUST cutoff-ladder fix; `/merge` guard fixes; SSoT doc updates; Spec self-corrections) rather than one commit per finding, since several findings shared the same file/section.
 
 ### Deferred Items
 - 案 B (read watermark) は、案 A のフェーズラベル境界単位のカバレッジで実運用上不十分と判明した場合の follow-up として保留 (spec phase から継続)
-- `/review`/`/merge` への `_emit_comments_consumed()` 配線 (`comments_consumed` イベント発火) は、`EMIT_ISSUE_NUMBER` のスコープ調査が別途必要なため見送り (spec phase から継続)
+- `/issue`/`/review`/`/merge` への `_emit_comments_consumed()` 配線 (`comments_consumed` イベント発火) は、`EMIT_ISSUE_NUMBER` のスコープ調査が別途必要なため見送り (spec phase から継続、review で `/issue` も対象に追加)
 - `docs/workflow.md` の `phase/merge` ラベル記述と実装の乖離 (pre-existing) は本 Issue のスコープ外として記録のみ (spec phase から継続)
 - Post-merge observation AC (`event=auto-run session=next`) は次に `/auto` に入る Issue でのみ検証可能。今回のセッションでは未検証。
+- `skills/review/SKILL.md`'s Step 2 comment consumption push has no guard for `git checkout "$headRefName"` failure (CONSIDER, low confidence) — deferred rather than expanding this PR's scope; same class of gap already tracked for `/verify` in `worktree-lifecycle.md` Known gaps.
 
 ### Notes for Next Phase
 - `tests/post_merge_check.bats` の 2 件は本変更と無関係な既知の並列実行時 flake (`docs/tech.md` § CI bats Parallel/Serial Split、#1221/#1224/#1227/#1260)。単体実行で PASS を確認済み。CI で再現しても本 PR の regression として扱わないこと。
 - Issue #1316 は着手時点で `phase/ready` ラベルが既に `phase/code` に遷移済みだった (経緯不明、Spec は完全な形で存在) — `/verify` 実行時にラベル遷移履歴の異常として気づく可能性があるが、Spec に基づいた正規の実装であることを Autonomous Auto-Resolve Log (Code Phase) に記録済み。
+- `/merge` 実行時は本 review で修正した substep 4 のガード変更 (staged diff だけでなく `origin/main..HEAD` の未 push コミットも確認) が実際に機能することを、squash-merge 後のログで確認するとよい。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+- Spec の Implementation Step 1 は「`/issue` 実行時点ではまだ `phase/*` ラベルが一切付与されていないため、Step 1 の cutoff 解決は Fallback B に自然に到達する」という高レベルの意図までは正しく記述していたが、`modules/l0-surfaces.md` の cutoff ラダーに Fallback A (`.tmp/auto-events.jsonl` の `phase_start` 参照) が Primary と Fallback B の間に既に存在することへの言及がなかった。code フェーズの SSoT Module Cross-Check (Spec の Design Gaps/Ambiguities に記録済み) は 2 件の記述誤り (`/merge` の対象ブランチ、Secondary layer の有無) を捕捉したが、この Fallback A の抜けは捕捉されなかった。`/auto` → `run-issue.sh` が `claude` サブプロセス起動前に自身の `phase_start` を emit するという、呼び出し元スクリプト側の実装詳細まで遡らないと気づけない類の齟齬であり、Spec レベルの記述レビューだけでは検出困難だった。
+- 教訓: 複数のフォールバック段を持つロジックを新しい呼び出しパターン (今回は「これまで到達しなかった cutoff 未確定状態」) に晒す変更では、Spec 記述時点で全フォールバック段を明示的に列挙し、各段が新しい呼び出しパターン下でどう解決されるかを個別にトレースする方が良い。「最終的に到達するはずの段」だけを結論として書くと、中間段の副作用を見落とす。
+
+### Recurring issues
+
+- 「Bash wrapper fallback スクリプトの呼び出し元列挙」が `modules/l0-surfaces.md` 自身・`docs/structure.md`・`modules/worktree-lifecycle.md` の 3 箇所に独立して存在し、本 PR は 1 箇所目 (呼び出し元である `modules/l0-surfaces.md`) のみを更新して残り 2 箇所を更新し忘れた。同種の欠落が Review で 3 件独立に検出された。SSoT が 1 箇所に定まっておらず、実質的な重複記述が複数箇所に散在している構造そのものが再発の温床になっている。
+  - 教訓: 呼び出し元一覧のような「新しい呼び出し追加のたびに更新が要る列挙」は、可能であれば単一の SSoT (例えば `modules/l0-surfaces.md` の Bash wrapper fallback セクション) に一本化し、`docs/structure.md`・`worktree-lifecycle.md` 側は具体的な列挙を持たずそこへのリンクのみにする設計変更を検討する価値がある。今回は個々の記述を更新するに留めた。
+
+### Acceptance criteria verification difficulty
+
+- Step 8 の Pre-merge AC (2 grep + 6 rubric) は全件 PASS だったが、いずれも「手順書に説明が書かれているか」を問う AC であり、「その手順が `/auto` 実際の呼び出し連鎖の下で意図通りに動作するか」を問う AC は存在しなかった。本 PR の MUST バグ (Fallback A が pre-pipeline coverage を潰す) は rubric ベースの AC では原理的に検出できない種類の欠陥であり、Step 10 のコードレベル bug review (特に review-bug の 2 エージェント中 1 エージェントのみが検出、もう 1 エージェントは同じ箇所を low confidence の CONSIDER と評価) で初めて捕捉された。
+  - 教訓: 「ドキュメント/手順が存在するか」を検証する rubric AC と、「実際の実行パスで意図通りに動くか」を検証する AC (可能であれば `command` 型で `.tmp/auto-events.jsonl` を使ったシミュレーションを組む、または最低限「主要な呼び出し経路を明示的にトレースしたことを rubric text に含める」) を分けて設計する余地がある。本 Issue のような L0 配線変更では、後者が特に価値が高い。
