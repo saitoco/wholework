@@ -123,6 +123,10 @@
 - Post-merge AC4 (`gh run list --workflow=test.yml --limit=1`) は構造的問題: `--limit=1` は最新の任意 commit を取るため、並行する他 Issue (#600) の in_progress run と当たり「PENDING/UNCERTAIN」になる。実装 commit (3dec8ac8) の test.yml run は `success` を確認できたため AI 判定で PASS と判定。
 - Post-merge AC5 は `verify-type: observation event=auto-run`。次回 /auto 実行時の opportunistic-search で自動再評価される設計のため deferred。
 
+### 追記 (2026-08-10, /auto #1318 セッションからの再評価 — AC5 PASS 確定)
+
+Post-merge AC5 (「merge→verify ラベル遷移漏れが発生した場合、wrapper が自動補正し stderr に warning を出すことを観察」) が本セッションで PASS 確定した。本 `/auto` セッション自身 (session `10253-1786338239`) の Issue #1318 (PR #1330) merge フェーズで、まさに本 Issue が実装した検出・補正ロジックが発火した — `run-merge.sh` が `phase/review` 滞留を検知し `Warning: merge completed but phase label still at phase/review. Auto-transitioning to phase/verify.` を出力、`gh-label-transition.sh 1318 verify` で自動補正した。`scripts/run-merge.sh:186-188` の実装と出力メッセージが完全一致することを確認済み。全 5 AC が PASS/SKIPPED となり `phase/done` へ遷移した。
+
 ### Improvement Proposals
 
 - **`github_check "gh run list ..."` テンプレートの commit 絞り込み**: `--commit=$(git rev-parse HEAD)` を組み込んだ form を `modules/verify-classifier.md` および `skills/issue/spec-test-guidelines.md` の AC writing guide に標準として追加すべき。並行 /auto セッション環境で `--limit=1` 単独は安定しない。本セッションだけで複数回観測されたパターン。
