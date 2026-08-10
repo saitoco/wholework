@@ -16,6 +16,11 @@ count_mode_section() {
     awk '/^### Count mode/{found=1} /^### / && !/Count mode/{found=0} found{print}' "$SKILL_FILE"
 }
 
+# Extract the "### Until mode (--batch --until <query>)" section from SKILL.md
+until_mode_section() {
+    awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' "$SKILL_FILE"
+}
+
 @test "List mode section: wholework:verify Skill invocation present" {
     run bash -c "awk '/^### List mode/{found=1} /^### / && !/List mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'wholework:verify'"
     [ "$status" -eq 0 ]
@@ -74,4 +79,49 @@ count_mode_section() {
 @test "Count mode section: Issue Retrospective Transcription reference present" {
     run bash -c "awk '/^### Count mode/{found=1} /^### / && !/Count mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'Step 4b'"
     [ "$status" -eq 0 ]
+}
+
+@test "Until mode section: resolve-batch-query.sh referenced" {
+    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'resolve-batch-query.sh'"
+    [ "$status" -eq 0 ]
+}
+
+@test "Until mode section: --max-rounds default of 3 documented" {
+    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'default.*\`3\`'"
+    [ "$status" -eq 0 ]
+}
+
+@test "Until mode section: write_batch reused" {
+    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'write_batch'"
+    [ "$status" -eq 0 ]
+}
+
+@test "Until mode section: delete_batch reused" {
+    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'delete_batch'"
+    [ "$status" -eq 0 ]
+}
+
+@test "Until mode section: PROCESSED exclusion across rounds described" {
+    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'PROCESSED'"
+    [ "$status" -eq 0 ]
+}
+
+@test "Until mode section: --checkin-per-round ignored in non-interactive mode" {
+    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -q -- '--checkin-per-round ignored in non-interactive mode'"
+    [ "$status" -eq 0 ]
+}
+
+@test "Until mode section: List mode reused for per-round Issue processing" {
+    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -q 'List mode'"
+    [ "$status" -eq 0 ]
+}
+
+@test "Until mode section is inserted between List mode and Resume mode" {
+    run bash -c "grep -n '^### List mode\|^### Until mode\|^### Resume mode' '$SKILL_FILE'"
+    [ "$status" -eq 0 ]
+    list_line=$(echo "$output" | grep '### List mode' | cut -d: -f1)
+    until_line=$(echo "$output" | grep '### Until mode' | cut -d: -f1)
+    resume_line=$(echo "$output" | grep '### Resume mode' | cut -d: -f1)
+    [ "$list_line" -lt "$until_line" ]
+    [ "$until_line" -lt "$resume_line" ]
 }
