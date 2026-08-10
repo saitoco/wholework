@@ -839,7 +839,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/check-premise-expiry.sh .tmp/premise-body-<N>.md
 ```
 
 - exit 2: record each `EXPIRED:` stdout line against this Issue
-- exit 0: premises hold (or all UNEVALUABLE) — no action
+- exit 0: no expired premise. If stderr carries `UNEVALUABLE: <expr> (reason: ...)` lines, record each as an `UNEVALUABLE` row (with the reason in Detail); otherwise record the Issue's premises as `HOLDS`
 - exit 1: usage error — output a warning and skip this Issue
 
 Delete the temp file after processing each Issue (`rm -f .tmp/premise-body-<N>.md`).
@@ -866,7 +866,7 @@ Display a table:
 - **`AUTONOMY_TIER=L1`**: no L0 write. Print advisory lines instead: `Recommend: comment on #N — premise expired: <expr> (actual: <value>)`
 - **`AUTONOMY_TIER=L2` or `L3`**: for each Issue with at least one `EXPIRED` line, post a comment via `${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-comment.sh`.
 
-**Duplicate prevention**: before posting, fetch `gh issue view <N> --json comments` and check for an existing comment containing `<!-- premise-expired: <expr> -->` for that exact expression. Skip posting for that expression if found.
+**Duplicate prevention**: before posting, fetch `gh issue view <N> --json comments` and check for an existing comment containing `<!-- premise-expired: {expr} -->` for that exact expression. Skip posting for that expression if found.
 
 Comment body (write with the Write tool, then post):
 
