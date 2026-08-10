@@ -1,8 +1,8 @@
 ---
 name: auto
-description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues; `--batch N1 N2 ...` processes the explicitly listed Issues in order (assigns a BATCH_ID for parallel-safe checkpointing). `--resume N` resumes a single Issue (restores verify counter from checkpoint); `--batch --resume` resumes an interrupted batch using `list_active_batches` to identify the target session.
+description: Autonomous execution (`/auto 123`). Runs spec (when needed)→code→review→merge→verify in sequence. XL Issues use sub-issue dependency graph with parallel execution. Size auto-detection with `--patch`/`--pr` and `--review=light`/`--review=full` overrides. Issues without `phase/*` labels start from issue triage. `--batch N` processes N backlog XS/S Issues; `--batch N1 N2 ...` processes the explicitly listed Issues in order (assigns a BATCH_ID for parallel-safe checkpointing). `--resume N` resumes a single Issue (restores verify counter from checkpoint); `--batch --resume` resumes an interrupted batch using `list_active_batches` to identify the target session. `--batch --until <query>` runs a condition-driven loop (resolve a `label:`/`status:` query → process results as List mode → re-resolve → repeat until 0 Issues match or `--max-rounds` (default 3) is reached).
 loop-paths-used: [A]
-allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, gh run list:*, gh run view:*, gh pr checks:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-external-kill.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/filter-session-verified-issues.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-session-findings-disposition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/scan-pending-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/apply-run-fact-match.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
+allowed-tools: Bash(${CLAUDE_PLUGIN_ROOT}/scripts/get-issue-size.sh:*, gh issue view:*, gh issue list:*, gh issue close:*, gh issue comment:*, gh issue create:*, gh pr list:*, gh run list:*, gh run view:*, gh pr checks:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-code.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-review.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-merge.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-sub-issue-graph.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-auto-sub.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-spec.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/run-issue.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-label-transition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-wrapper-anomaly.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/detect-external-kill.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/reconcile-phase-state.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/validate-recovery-plan.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-batch-query.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/observation-trigger.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/filter-session-verified-issues.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-issue-edit.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/set-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-blocked-by.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-check-blocking.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/emit-event.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/get-auto-session-report.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/gh-graphql.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/check-session-findings-disposition.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/collect-run-facts.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/scan-pending-ac.sh:*, ${CLAUDE_PLUGIN_ROOT}/scripts/apply-run-fact-match.sh:*), Read, Edit, Glob, Grep, Write, Skill, Task, TaskCreate, TaskUpdate, TaskList, TaskGet
 ---
 
 # Autonomous Execution
@@ -98,6 +98,9 @@ If ARGUMENTS contains `--resume` but NOT `--batch`: record `RESUME_MODE=true` an
 If `--batch` flag is present:
 
 - If `--resume` is present AND no numeric tokens follow `--batch` (i.e., `ARGUMENTS = "--batch --resume"` or similar with no numbers after `--batch`): record `RESUME_BATCH=true` and branch to `### Resume mode (--batch --resume)` in the "Batch Mode (--batch)" section (**skip Steps 2–6**)
+- Else if `--until` follows `--batch`: record the quoted token immediately after `--until` as `UNTIL_QUERY` and branch to `### Until mode (--batch --until <query>)` in the "Batch Mode (--batch)" section (**skip Steps 2–6**). This branch must be checked before the numeric-token collection branch below — `--batch --until "..."` has no numeric token directly after `--batch`, so checking numeric collection first would leave it matching neither Count nor List mode. Also extract, anywhere in ARGUMENTS:
+  - `--max-rounds <N>`: record as `MAX_ROUNDS`. If not specified, default to `3`. If the value is non-numeric or ≤0, output a warning and fall back to `3`.
+  - `--checkin-per-round`: record `CHECKIN_PER_ROUND=true` if present, else `false` (default).
 - Else: collect all consecutive numeric tokens following `--batch`, stopping at any non-numeric token or ARGUMENTS end.
   - If exactly 1 numeric token collected (e.g., `ARGUMENTS = "--batch 5"`): record `BATCH_SIZE = 5` (Count mode) and branch to `### Count mode (--batch N)` in the "Batch Mode (--batch)" section (**skip Steps 2–6**)
   - If 2 or more numeric tokens collected (e.g., `ARGUMENTS = "--batch 123 124 125"`): record `BATCH_LIST = [123, 124, 125]` (List mode) and branch to `### List mode (--batch N1 N2 ...)` in the "Batch Mode (--batch)" section (**skip Steps 2–6**)
@@ -1096,9 +1099,10 @@ Then read `${CLAUDE_PLUGIN_ROOT}/modules/next-action-guide.md` and follow the "P
 
 When `--batch` is detected in Step 1, process Issues sequentially (skip Steps 2–6).
 
-Two modes:
+Three modes:
 - **Count mode** (`--batch N`): selects the N most recent XS/S Issues from the backlog
 - **List mode** (`--batch N1 N2 ...`): processes the explicitly listed Issues in the user-specified order (任意の Issue 番号を空白区切りで指定)
+- **Until mode** (`--batch --until <query>`): condition-driven loop — resolves a `label:`/`status:` query, processes the results as List mode, re-resolves, and repeats until the query returns 0 Issues or `--max-rounds` is reached
 
 ### Count mode (--batch N)
 
@@ -1193,6 +1197,35 @@ After all Issues are processed, delete the batch checkpoint:
 ```
 ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_batch "$BATCH_ID"
 ```
+
+### Until mode (--batch --until <query>)
+
+Entered from Step 1 when `--until` follows `--batch`, with `UNTIL_QUERY`, `MAX_ROUNDS` (default `3`), and `CHECKIN_PER_ROUND` (default `false`) already extracted.
+
+Condition-driven loop: resolve the query → process the results as List mode → re-resolve the query → repeat until it returns 0 Issues (converged) or `MAX_ROUNDS` is reached. The round loop is the only new mechanism here — per-Issue processing within a round reuses `### List mode (--batch N1 N2 ...)` verbatim (triage → size gate → blocked-by gate → `run-auto-sub.sh` → verify orchestration → `update_batch`), and convergence bookkeeping reuses the existing `auto-checkpoint.sh` `write_batch`/`delete_batch` checkpoint (`COMPLETED`/`FAILED` accumulate across rounds) — no new subcommand and no seed file are introduced.
+
+**Safety valve**: `--max-rounds` defaults to `3` and cannot be disabled (opt-out is not supported) — Until mode always terminates after at most `MAX_ROUNDS` rounds even if the query keeps matching new Issues every round.
+
+1. Generate `BATCH_ID="${PPID}-$(date +%s)"`. Initialize `ROUND=0`, `PROCESSED=""`, `COMPLETED=""`, `FAILED=""`, `ALL_TARGETS=""`.
+2. Increment `ROUND` by 1. If `ROUND > MAX_ROUNDS`: output "Until mode: max-rounds ($MAX_ROUNDS) reached; stopping." and go to step 7.
+3. Run:
+   ```
+   ${CLAUDE_PLUGIN_ROOT}/scripts/resolve-batch-query.sh --query "$UNTIL_QUERY" --exclude "$PROCESSED"
+   ```
+   - Exit 1 (parse error — the query itself is malformed): abort Until mode entirely (no `delete_batch` call needed if `write_batch` was never reached — see step 5).
+   - Exit 2 (`gh` failure): if `ROUND == 1`, abort Until mode; if `ROUND >= 2`, output a warning and treat as converged (go to step 7).
+4. If the output is empty: output "Until mode: query returned 0 issues at round $ROUND; converged." and go to step 7.
+5. Record the output as `ROUND_LIST`. Run:
+   ```
+   ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh write_batch "$BATCH_ID" "$ROUND_LIST" "$COMPLETED" "$FAILED"
+   ```
+   (this call also serves as List mode's own checkpoint initialization — do not call `write_batch` a second time). Add `ROUND_LIST` to `ALL_TARGETS`, then process each Issue in `ROUND_LIST` by applying `### List mode (--batch N1 N2 ...)` steps 1–7 unchanged. Whenever `update_batch ... complete` or `... fail` is called for an Issue number, add that number to `COMPLETED`/`FAILED` and to `PROCESSED`. An Issue skipped by the blocked-by gate (step 4 of List mode) is **not** added to `PROCESSED` — its blocker may clear within this same session, so it should be re-evaluated on the next round.
+6. If `CHECKIN_PER_ROUND` is `true` AND ARGUMENTS does **not** contain `--non-interactive`: use AskUserQuestion to confirm proceeding to the next round; any answer other than "continue" goes to step 7. If ARGUMENTS contains `--non-interactive`, output "Warning: --checkin-per-round ignored in non-interactive mode." and proceed without asking. In both cases (confirmed continue, or non-interactive skip), go back to step 2.
+7. Run:
+   ```
+   ${CLAUDE_PLUGIN_ROOT}/scripts/auto-checkpoint.sh delete_batch "$BATCH_ID"
+   ```
+   Treat `BATCH_LIST` as `ALL_TARGETS` (the union of every round's targets) and proceed to `### Batch Completion Report` and everything after it (Batch Completion Report → observation scan → run-fact AC reconciliation → next-cycle handoff → L3 auto-retrospective) exactly as List mode does.
 
 ### Resume mode (--batch --resume)
 
