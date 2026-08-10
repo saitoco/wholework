@@ -86,3 +86,46 @@ Issue 本文自身の調査用 grep (`grep -rnE 'for [a-zA-Z_]+ in [$]' skills/ 
 ## Consumed Comments
 
 - saito / MEMBER / first-class / Issue Retrospective: 追加確認不要と判断 (検査範囲は Issue 本文 Notes で既に /spec へ委譲済み)、Type=Bug/Size=M/Value=3 設定、post-merge AC に session=next 追加 / https://github.com/saitoco/wholework/issues/1318#issuecomment-5235678768
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Implementation Steps 1-3 を Spec の記述通りに実施した。
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Size=M かつ `--light` 指定のため軽量統合レビュー (review-light、全 4 観点を 1 エージェントで実施) を採用。review-spec + review-bug×2 の並列レビューは実行していない
+- Pre-merge AC 3 件は verify command (rubric 1 件、grep 2 件) で全て機械的に PASS 判定。Issue 側は既に `[x]` 済みだったため checkbox 更新は不要と判断
+- CONSIDER レベルの指摘 1 件 (`scripts/validate-skill-syntax.py:63` の非引用符配列展開誤検出リスク) は現状発生していない潜在的ギャップのため、修正を見送り (skip) と判断。PR インラインコメントとして記録済み
+
+### Deferred Items
+- Post-merge AC (`merged PR 候補が 2 件以上返る Issue の /verify 実行で PR_NUMBER が正しく解決されることを確認`, `verify-type: observation event=auto-run session=next`) は次回の `/auto` 実行セッションで検証される (code フェーズから継続、未着手)
+- `scripts/validate-skill-syntax.py` の `UNQUOTED_WORD_SPLIT_FOR_PATTERN` が非引用符の配列展開 (`for x in ${arr[@]}`) を誤検出しうる件は、現状 `skills/`/`modules/` に該当箇所がないため本 PR のスコープ外として見送り。将来正当な配列展開の for ループが追加された際に顕在化する可能性がある
+
+### Notes for Next Phase
+- `/merge 1330` を実行してよい。MUST issue なし、CI 全件 SUCCESS (11/11)
+- 上記の配列展開誤検出ギャップは、再発した場合にフォローアップ Issue 化を検討すること
+- `bats --jobs 18 tests/` フルスイート実行で `tests/post_merge_check.bats` の 2 テストが並列実行時のみ FAIL したが、単独実行では PASS を確認済み。`docs/tech.md` § Testing Strategy に既知の並列実行時フレークとして記載済み (#1221/#1224/#1227/#1260) であり、本 PR の変更とは無関係
+- `/review` では `skills/verify/SKILL.md` の diff (for → while/read の書き換え) が意図通り zsh 互換になっているか、また `scripts/validate-skill-syntax.py` の新規正規表現が配列展開・コマンド置換・引用符付き形式を誤検出しないか (Spec Notes 記載の適用範囲判断) を重点的に確認するとよい
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note — review-light の Spec Deviation 観点で diff は Spec Implementation Steps 1-3 と完全一致していることを確認済み。
+
+### Recurring issues
+
+Nothing to note — MUST/SHOULD レベルの指摘なし。CONSIDER 1 件 (`scripts/validate-skill-syntax.py:63`、非引用符の配列展開 `for x in ${arr[@]}` が誤検出されうる潜在的ギャップ) のみで、他の観点との重複や同種指摘の繰り返しはなかった。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note — Pre-merge AC 3 件はいずれも verify command (rubric 1 件・grep 2 件) で機械的に PASS 判定でき、UNCERTAIN や verify command の不備は発生しなかった。Issue 本文の Notes に記載された「verify command 設計意図」(`unquoted_word_split` という新規シンボル名を採用し常時 PASS 欠陥を回避する判断) が功を奏し、AC2/AC3 の grep 検証は一意にヒットした。

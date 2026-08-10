@@ -57,6 +57,11 @@ FORBIDDEN_BASH_PATTERNS = [
 # Pattern to extract bash code blocks
 BASH_CODEBLOCK_PATTERN = re.compile(r'```bash\s*\n(.*?)```', re.DOTALL)
 
+# Pattern to detect `for VAR in $SCALAR` / `for VAR in ${SCALAR}` loops that rely on
+# unquoted scalar word-splitting (works in bash, silently becomes a single-iteration
+# loop in zsh). Command substitution, quoted forms, and array expansions do not match.
+UNQUOTED_WORD_SPLIT_FOR_PATTERN = re.compile(r'\bfor\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+in\s+\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?(?![A-Za-z0-9_])')
+
 # Pattern to extract all code fences (any language)
 ALL_CODEBLOCK_PATTERN = re.compile(r'```[^\n]*\n.*?```', re.DOTALL)
 
@@ -240,6 +245,10 @@ def validate_skill(file_path: Path) -> Tuple[List[str], List[str]]:
     bash_errors = validate_bash_safety(content)
     errors.extend(bash_errors)
 
+    # Validate unquoted-scalar word-split for-loops in bash code blocks
+    word_split_errors = validate_unquoted_word_split_loops(content)
+    errors.extend(word_split_errors)
+
     # Validate consistency between allowed-tools and scripts/
     scripts_dir = file_path.parent.parent.parent / 'scripts'
     tool_errors = validate_allowed_tools_scripts(frontmatter, scripts_dir)
@@ -313,6 +322,42 @@ def validate_bash_safety(content: str) -> List[str]:
                         continue
                     line_num = block_start_line + line_offset
                     errors.append(f"line {line_num}: forbidden pattern detected — {message}")
+
+    return errors
+
+
+def validate_unquoted_word_split_loops(content: str) -> List[str]:
+    """
+    Validates that bash code blocks do not contain `for VAR in $SCALAR` /
+    `for VAR in ${SCALAR}` loops that rely on unquoted scalar word-splitting.
+    This works in bash but silently reduces to a single iteration in zsh (see #1318).
+    Comment lines (starting with #) are skipped.
+
+    Returns:
+        List of error messages
+    """
+    errors: List[str] = []
+
+    for block_match in BASH_CODEBLOCK_PATTERN.finditer(content):
+        block_content = block_match.group(1)
+        block_start_line = content[:block_match.start()].count('\n') + 2  # line after ```bash
+
+        for line_offset, line in enumerate(block_content.split('\n')):
+            stripped_line = line.strip()
+
+            if stripped_line.startswith('#'):
+                continue
+
+            match = UNQUOTED_WORD_SPLIT_FOR_PATTERN.search(line)
+            if match:
+                loop_var, source_var = match.group(1), match.group(2)
+                line_num = block_start_line + line_offset
+                errors.append(
+                    f"line {line_num}: unquoted_word_split — `for {loop_var} in "
+                    f"${source_var}` relies on unquoted scalar word-splitting, which "
+                    f"bash performs but zsh does not (silently reduces to one iteration). "
+                    f"Rewrite as `while IFS= read -r {loop_var}; do ... done <<< \"${source_var}\"`."
+                )
 
     return errors
 
@@ -924,6 +969,26 @@ def main() -> None:
         for error in modules_errors:
             print(f"  ❌ Error: {error}")
             total_errors += 1
+
+    # Validate unquoted-scalar word-split for-loops in modules/*.md (skills/*/SKILL.md
+    # is already covered per-file above via validate_skill())
+    if modules_dir.is_dir():
+        for module_file in sorted(modules_dir.glob('*.md')):
+            try:
+                module_content = module_file.read_text(encoding='utf-8')
+            except OSError:
+                continue
+            module_word_split_errors = validate_unquoted_word_split_loops(module_content)
+            if module_word_split_errors:
+                try:
+                    module_relative_path = module_file.relative_to(Path.cwd())
+                except ValueError:
+                    module_relative_path = module_file
+                print(f"📄 {module_relative_path}")
+                for error in module_word_split_errors:
+                    print(f"  ❌ Error: {error}")
+                    total_errors += 1
+                print()
 
     print(f"\nResult: {total_errors} error(s), {total_warnings} warning(s)")
 
