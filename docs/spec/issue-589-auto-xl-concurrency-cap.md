@@ -167,3 +167,8 @@ XL 親 Issue の sub-issue を `run-auto-sub.sh` で並列実行する際、現�
 - saito / MEMBER / first-class / observation event `auto-run` detected. Run `/verify 589` to verify the condition / https://github.com/saitoco/wholework/issues/589#issuecomment-4818975232
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/589#issuecomment-5195217378
 - saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/589#issuecomment-5202635511
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/589#issuecomment-5205456802
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/589#issuecomment-5212259117
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/589#issuecomment-5225313594
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/589#issuecomment-5229257431
+- saito / MEMBER / first-class / <!-- wholework-event: type=observation-trigger phase=observation-trigger issue=5 / https://github.com/saitoco/wholework/issues/589#issuecomment-5235399496
