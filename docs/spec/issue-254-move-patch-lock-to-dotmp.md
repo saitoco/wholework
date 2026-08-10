@@ -89,3 +89,6 @@ PATCH_LOCK_DIR の初期設計が Non-Goals（`.tmp/` 使用方針）策定前�
 
 ### Improvement Proposals
 - N/A
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/254#issuecomment-4274804820
