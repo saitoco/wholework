@@ -67,6 +67,37 @@ code (1800 vs 4680)、review (2000 vs 5400)、issue (600 vs 1200) の 3 phase �
 - **スコープ外の追加乖離 (本 Issue では未対応)**: 調査中に `modules/detect-config-markers.md` 内の 3 箇所 (Marker Definition Table の `watchdog-timeout-seconds` 行 / YAML Parsing Rules / Output Format) で、グローバルキー `watchdog-timeout-seconds` (`WATCHDOG_TIMEOUT_SECONDS`) のフォールバック値が `1800` と記載されているが、実装 (`scripts/watchdog-defaults.sh` の `WATCHDOG_TIMEOUT_DEFAULT`) は `2700` (#556 で 1800→2700 に引き上げ済み) であり、同種の乖離が存在することを確認した。本 Issue の Purpose/AC は「phase default」(spec/code/review/merge/issue の 5 phase 別キー) に明示的にスコープされており、この「global default」(phase 未指定時のフォールバック) は対象外のため本 Issue では修正しない。別途対応を検討されたい。
 - **`docs/ja/` 対訳確認 (AC3 に対応)**: `docs/ja/` 配下に `modules/detect-config-markers.md` の対訳ファイルは存在しない (`find docs/ja -iname "*detect-config-markers*"` で確認済み、ヒットなし)。`docs/translation-workflow.md` の Sync Procedure は対象を「top-level `docs/*.md` files」に限定しており `modules/` 配下は対象外であるため、対訳が存在しないのは仕様どおりであり追加対応は不要。
 
+## Code Retrospective
+
+### Deviations from Design
+- None. Implementation followed the 3 Changed Files / 4 Implementation Steps exactly as specified.
+
+### Design Gaps/Ambiguities
+- N/A
+
+### Rework
+- N/A
+
+### Notes
+- Issue #1265 の本文には Spec の Verification (5 件) のうち `docs/guide/customization.md`/`docs/ja/guide/customization.md` 分 (5 件目) が未反映だったため、`/code` Step 11 の Auto-append 手順で Issue 本文にも追記した。Spec 側は既に Notes で記録済みのため Spec 本体への追加変更は不要だった。
+- Pre-merge AC の `github_check "gh run list ..."` はブランチスコープ CI チェックのため、patch route の commit 前に評価すると本 Issue 実装より前の `main` 上の run を参照してしまう。`/code` の "Patch route branch-scoped CI AC exclusion" に従い未チェックのまま残し、`/verify` 側での post-merge 検証に委ねた。
+
 ## Consumed Comments
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class / 要旨: Issue Retrospective — 対応方針の判断根拠 (Pre-merge AC 差し替え理由、Post-merge AC 削除理由) の記録 (Issue 本文の `## Auto-Resolved Ambiguity Points` に既に反映済みの内容で、Spec 設計への新規影響なし) / URL: https://github.com/saitoco/wholework/issues/1265#issuecomment-5242581998
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Steps 1–4 をそのまま実施 (SSoT 参照形への書き換え、customization.md 英日 4 箇所ずつの値修正)
+- Issue 本文の Pre-merge AC が Spec の Verification (5 件) より 1 件少なかったため、Step 11 の Auto-append 手順で `docs/guide/customization.md` 分の AC を Issue 本文に追記した
+- 5 件中 4 件を PASS 確認しチェック済みに更新。`github_check "gh run list ..."` は patch route の branch-scoped CI exclusion に従い未チェックのまま維持
+
+### Deferred Items
+- `github_check` AC の post-merge 検証は `/verify` に委譲 (patch route の commit 前は main の直近 run が本 Issue の実装を反映していないため)
+- Spec Notes に記載のスコープ外事項 (`watchdog-timeout-seconds` グローバルキーの `1800` vs `2700` 乖離) は本 Issue の対象外。別 Issue での対応が必要
+
+### Notes for Next Phase
+- `/verify` は Pre-merge AC 4 番目 (`github_check`) のみが未チェック。push 後の CI run (test.yml) の conclusion=success を確認してチェックを入れること
+- 全 1695 bats テストが本コミット時点で PASS 済み (behavioral change 検出により `--jobs 18` でフルスイート実行)
