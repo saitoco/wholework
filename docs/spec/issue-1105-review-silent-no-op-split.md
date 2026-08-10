@@ -64,4 +64,9 @@
 - **patch route チェック対象外**: Size M のため pr route (PR が実在)。`github_check "gh pr checks"` はそのまま有効
 
 ## Consumed Comments
-No new comments since last phase.
+
+| login | authorAssociation | trust tier | 内容の要約 | URL |
+|-------|-------------------|-----------|-----------|-----|
+| saito | MEMBER | first-class | `/issue` フェーズの Issue Retrospective コメント。IMPROVEMENT_HINT のフェーズ別修正を本 Issue のスコープに含めた判断根拠、および `_review_confirmed_posted` 抑止が発火しなかった未解決事象をスコープ外とした判断根拠を記録。内容は Issue 本文の `## Autonomous Auto-Resolve Log` に既に反映済みで、本 Spec に追加のアクションは不要。 | https://github.com/saitoco/wholework/issues/1105#issuecomment-5243312954 |
+
+(このセクションは `append-consumed-comments-section.sh` の安全網が `phase/spec` ラベル付与後のカットオフで再計算し "No new comments" と書いた内容を、`/spec` Step 2 のコメント消化手続き (`phase/issue` ラベル時点カットオフ) の実測に基づき修正したもの)
