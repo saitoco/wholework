@@ -99,3 +99,32 @@
 
 - login: saito / authorAssociation: MEMBER / trust tier: first-class — Issue Retrospective (`/issue` Existing Issue Refinement, 2026-08-10T13:48:28Z): AC を Pre-merge 3 件 (rubric + 機械的補助チェック) に再構成したこと、および Proposal の A/B 実装方式選択は `/issue` (What) と `/spec` (How) の責務境界に照らして `/spec` の判断事項として Issue 側で確定させなかったことを記録。本 Spec の Option A (bulk `/triage`) 採用判断はこの委譲を受けたもの。https://github.com/saitoco/wholework/issues/1334#issuecomment-5241168319
 - login: saito / authorAssociation: MEMBER / trust tier: first-class — Triage AC audit (2026-08-10T13:54:23Z): Issue 本文の Pre-merge AC 3 件すべてに verify command の不具合を検出 (AC1: `section_contains` heading 引数の `###` 残存、AC2: `grep "bulk|scoped"` の無関係な既存一致、AC3: 既存テスト全 PASS 済みによる保証不足) し、次フェーズでの反映を依頼。本 Spec 作成時に Issue 本文を更新して反映した (詳細な空撃ち検証record は Notes 参照)。https://github.com/saitoco/wholework/issues/1334#issuecomment-5241233384
+
+### code phase (cutoff: phase/ready 付与時刻 2026-08-10T14:19:09Z)
+
+No new comments since last phase.
+
+## Code Retrospective
+
+### Deviations from Design
+- N/A — Spec の Implementation Steps 1〜3 に記載された全文置き換え・テスト追加・ドキュメント追記をそのまま実装した。ステップの並び替えや省略・統合は発生していない。
+
+### Design Gaps/Ambiguities
+- N/A — Spec の Notes に verify command の空撃ち検証記録が既に詳細に残されており、実装フェーズで新たに発見した設計上の曖昧さはなかった。
+
+### Rework
+- N/A — 実装は 1 パスで完了し、テスト失敗による手戻りは発生しなかった (`bats --jobs 18 tests/` 全 1690 件 PASS)。
+
+## Phase Handoff
+<!-- phase: code -->
+
+### Key Decisions
+- Spec Implementation Step 1 の置き換え全文をそのまま採用し、ステップ番号参照 ("step 5's delegation" → "step 6's delegation" 等) も Spec 記載どおりに更新した。地の文中の "List mode step 7" と新 step 6 内の "steps 1–7 unchanged" は List mode 自身の内部ステップ番号参照であり Until mode 側の番号ではないため変更していない (Spec の指示どおり)
+- `skills/auto/SKILL.md` が複数のテストファイル (auto-xl-concurrency.bats, auto.bats, check-file-overlap.bats, run-auto-sub.bats, auto-completion-report.bats, operate-route.bats, check-skill-change-observation-ac.bats 等) から参照されている behavioral change と判定し、`bats --jobs 18 tests/` で全 1690 テストを実行した (直接対応する auto-batch.bats のみへのスコープ限定は不採用)
+
+### Deferred Items
+- N/A — Issue #1334 の Pre-merge AC 3 件はすべて実装・検証済みでチェック済み。Post-merge AC はなし
+
+### Notes for Next Phase
+- PR #1337 は 3 件の Pre-merge AC すべてが自動検証済み (mechanical チェックはすべて PASS、rubric は目視確認済み)。`/review` では rubric 判定の再確認と Spec 本文の妥当性確認を中心に見てもらうと良い
+- Until mode セクションの新ステップ番号 (1〜8) は Spec 本文にも転記済みで齟齬はない
