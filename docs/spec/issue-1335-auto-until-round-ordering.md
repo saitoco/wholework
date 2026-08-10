@@ -126,3 +126,28 @@ review-light エージェントが報告した `modules/round-ordering.md` の�
 ### Acceptance criteria verification difficulty
 
 Nothing to note。Pre-merge AC 4件はいずれも `rubric` + `file_contains`/`section_contains` の組み合わせで機械的・意味的の両面から一意に PASS 判定でき、UNCERTAIN は発生しなかった。verify command の anchor 文字列 (`cluster-first`, `Relationship to the blocked-by gate`, `Confirming real-world effectiveness`) は実装の見出しと完全一致しており、verify command 自体の精度に問題はなかった。
+
+## Verify Retrospective
+
+### Phase-by-Phase Review
+
+#### spec
+- Pre-merge AC 4件はいずれも `rubric` + `file_contains`/`section_contains` の組み合わせで機械的・意味的の両面から一意に PASS 判定でき、AC の曖昧さや検証困難な条件はなかった (review retrospective の「Acceptance criteria verification difficulty」を参照)。
+
+#### design
+- Spec Implementation Step 1 は `gh-graphql.sh` の一括取得方式を指定していたが、TSV 化の具体的な実装粒度 (`--jq` の出力がダブルクォート囲み・エスケープされた `\t` になり `IFS=$'\t' read` が機能しない点) までは規定していなかった。実装フェーズで JSON 経由の2段階構成に設計を補完したが、GraphQL 往復は1回のまま維持され Spec の制約自体は満たされた — 軽微な設計粒度の不足であり、大きな手戻りには至らなかった。
+
+#### code
+- N/A — Rework なし。`docs/structure.md` のファイル数コメントはベースライン実測 (`git ls-files tests/*.bats | wc -l`) に基づき正しく調整された。
+
+#### review
+- review-light エージェントが `modules/round-ordering.md` への line comment で報告した行番号 (227) が実ファイルの総行数 (121) を超えており誤りだった。本セッションでは投稿前に手動で `grep -n`/`wc -l` により実在性を確認し修正済みだが、review retrospective の「Recurring issues」が指摘するとおり、同種の誤りが将来のレビューでも構造的に再発しうる。
+
+#### merge
+- N/A — pre-merge AC gate (unchecked_count=0)・review-incomplete-fallback チェックとも問題なく、`mergeable=true` (clean) を確認したうえでそのまま squash merge した。
+
+#### verify
+- Pre-merge AC 4件は全て merge 前に review-light が確認済みで既に `[x]` 済みだったため、already-checked AC skip rule により SKIPPED として記録 (FAIL/UNCERTAIN はゼロ)。Post-merge AC がないため追加の post-merge 確認は発生しなかった。
+
+### Improvement Proposals
+- review エージェント (review-light を含む) が PR に line comment を投稿する前に、報告する行番号の実在性を `grep -n`/`wc -l` 等で機械的に確認するステップを review スキルのプロセスに組み込む。本 Issue (#1335) では `modules/round-ordering.md` への line comment で行番号 227 (実ファイル総行数121) という不正確な報告が発生し、投稿前にこのセッション内で手動で気付いて修正した — 機械的な事前チェックがなければ誤った行番号のまま投稿されていた可能性がある。
