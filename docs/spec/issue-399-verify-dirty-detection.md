@@ -55,3 +55,6 @@
 
 ### Improvement Proposals
 - 今後同様のシナリオ検証が必要な条件には `command "bats tests/..."` 形式の verify command を付与することで自動検証に昇格できる。opportunistic 条件を bats テストでカバーすることを検討する（別 Issue として起票可）。
+
+## Consumed Comments
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/399#issuecomment-4376200370
