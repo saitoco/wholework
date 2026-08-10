@@ -67,6 +67,7 @@
 ## Consumed Comments
 No new comments since last phase.
 
+- saito / MEMBER / first-class / ## Acceptance Test Results / https://github.com/saitoco/wholework/issues/1305#issuecomment-5230527159
 ## Code Retrospective
 
 ### Deviations from Design
