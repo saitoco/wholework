@@ -23,10 +23,20 @@ SCRIPT_DIR="${WHOLEWORK_SCRIPT_DIR:-$(cd "$(dirname "$0")" && pwd)}"
 [[ -f "$SCRIPT_DIR/emit-event.sh" ]] && source "$SCRIPT_DIR/emit-event.sh" || true
 [[ -f "$SCRIPT_DIR/watchdog-defaults.sh" ]] && source "$SCRIPT_DIR/watchdog-defaults.sh" || true
 SILENT_MARGIN=600
-SILENT_THRESHOLD_SPEC=$(( ${WATCHDOG_TIMEOUT_SPEC_DEFAULT:-1800} - SILENT_MARGIN ))
-SILENT_THRESHOLD_CODE=$(( ${WATCHDOG_TIMEOUT_CODE_DEFAULT:-1800} - SILENT_MARGIN ))
-SILENT_THRESHOLD_REVIEW=$(( ${WATCHDOG_TIMEOUT_REVIEW_DEFAULT:-2000} - SILENT_MARGIN ))
-SILENT_THRESHOLD_ISSUE=$(( ${WATCHDOG_TIMEOUT_ISSUE_DEFAULT:-1200} - SILENT_MARGIN ))
+if command -v load_watchdog_timeout >/dev/null 2>&1; then
+  load_watchdog_timeout "$SCRIPT_DIR" "spec";   SILENT_THRESHOLD_SPEC=$(( WATCHDOG_TIMEOUT - SILENT_MARGIN ))
+  load_watchdog_timeout "$SCRIPT_DIR" "code";   SILENT_THRESHOLD_CODE=$(( WATCHDOG_TIMEOUT - SILENT_MARGIN ))
+  load_watchdog_timeout "$SCRIPT_DIR" "review"; SILENT_THRESHOLD_REVIEW=$(( WATCHDOG_TIMEOUT - SILENT_MARGIN ))
+  load_watchdog_timeout "$SCRIPT_DIR" "issue";  SILENT_THRESHOLD_ISSUE=$(( WATCHDOG_TIMEOUT - SILENT_MARGIN ))
+else
+  # watchdog-defaults.sh was not sourced (missing sibling script; guarded at the line above).
+  # Disable the at-risk breakdown via the same "$at_risk_limit > 0" sentinel already used
+  # to exclude the merge phase, instead of duplicating stale default constants.
+  SILENT_THRESHOLD_SPEC=-1
+  SILENT_THRESHOLD_CODE=-1
+  SILENT_THRESHOLD_REVIEW=-1
+  SILENT_THRESHOLD_ISSUE=-1
+fi
 AUTO_EVENTS_LOG="${AUTO_EVENTS_LOG:-.tmp/auto-events.jsonl}"
 
 SESSION_ID=""
