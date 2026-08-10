@@ -18,11 +18,11 @@ wholework/
 │   └── <skill-name>/
 │       ├── SKILL.md     # スキル定義（必須）
 │       └── *.md         # 補助的な phase/ガイドラインファイル（任意）
-├── modules/             # スキルから参照される共有モジュール（44 ファイル）
+├── modules/             # スキルから参照される共有モジュール（45 ファイル）
 │   └── <module-name>.md
 ├── agents/              # エージェント定義（8 ファイル）
 │   └── <agent-name>.md
-├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（83 ファイル）
+├── scripts/             # スキルとエージェントが使用するユーティリティスクリプト（84 ファイル）
 │   ├── git-hooks/       # Git フックスクリプト（commit-msg DCO 強制）
 │   └── <script-name>.{sh,py}
 ├── .github/
@@ -35,7 +35,7 @@ wholework/
 │       └── kanban-automation.yml # GitHub Projects ボードでの自動 issue 移動
 ├── examples/            # Wholework 機能のサンプルファイル
 │   └── decomposition/   # /issue --from-decomposition-file 用 decomposition YAML サンプル
-├── tests/               # スクリプトの Bats テストファイル（118 ファイル）
+├── tests/               # スクリプトの Bats テストファイル（120 ファイル）
 │   ├── <script-name>.bats
 │   └── fixtures/        # テスト用フィクスチャファイル
 ├── docs/                # ドキュメントと steering documents
@@ -144,6 +144,7 @@ wholework/
 - `modules/skill-dev-doc-impact.md` — skill 開発プロジェクト向けの `/spec` および `/code` 用 Change Types（`doc-checker.md` 経由）
 - `modules/autonomy-tier.md` — autonomy tier（L2→L1 経路許可）SSoT: tier × 経路マトリクス、Tier × L0 書き込みマトリクス、skill frontmatter 宣言ルール
 - `modules/event-emission.md` — event emission contract SSoT (phase event スキーマ、_EMIT_PHASE_OWNED パターン、run-*.sh ラッパーカバレッジ表)
+- `modules/round-ordering.md` — `/auto --batch --until` の Round `ROUND_LIST` 並び替え (ROI + title prefix クラスタリング + 意味的関係判断、cluster-first の組み合わせ)
 
 ### Agents
 
@@ -188,6 +189,7 @@ wholework/
 - `scripts/get-issue-size.sh` — issue サイズラベル取得
 - `scripts/get-issue-type.sh` — issue タイプラベル取得
 - `scripts/get-issue-priority.sh` — issue priority フィールド取得
+- `scripts/compute-round-order.sh` — `ROUND_LIST` 内の各 issue の title/Size/Value を取得 (issue あたり `gh-graphql.sh` 1 回のラウンドトリップ、`size/*`/`value/*` ラベルフォールバック) し ROI (Value/Size) を計算。`modules/round-ordering.md` から利用
 - `scripts/get-sub-issue-graph.sh` — サブ issue 依存グラフ構築
 - `scripts/get-auto-session-report.sh` — `.tmp/auto-events.jsonl` から session_id でフィルタし、`/auto` セッション retrospective の `## Metrics` markdown 小節（`--metrics-only`）を出力（`session.md` への埋め込みおよび `/audit auto-session` 用）
 - `scripts/get-verify-iteration.sh` — Issue コメントから `<!-- verify-iteration: N -->` マーカーの最大値を読み取る

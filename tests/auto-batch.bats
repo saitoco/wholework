@@ -116,6 +116,16 @@ until_mode_section() {
     [ "$status" -eq 0 ]
 }
 
+@test "Until mode section: round-ordering.md referenced between ROUND_LIST recording and write_batch" {
+    run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -n 'Record the output as .ROUND_LIST.\|round-ordering.md\|auto-checkpoint.sh write_batch'"
+    [ "$status" -eq 0 ]
+    record_line=$(echo "$output" | grep 'Record the output' | head -1 | cut -d: -f1)
+    ordering_line=$(echo "$output" | grep 'round-ordering.md' | head -1 | cut -d: -f1)
+    write_batch_line=$(echo "$output" | grep 'auto-checkpoint.sh write_batch' | head -1 | cut -d: -f1)
+    [ "$record_line" -le "$ordering_line" ]
+    [ "$ordering_line" -lt "$write_batch_line" ]
+}
+
 @test "Until mode section: triage insertion between step 2 and step 3" {
     run bash -c "awk '/^### Until mode/{found=1} /^### / && !/Until mode/{found=0} found{print}' '$SKILL_FILE' | grep -n 'wholework:triage\|resolve-batch-query.sh --query'"
     [ "$status" -eq 0 ]

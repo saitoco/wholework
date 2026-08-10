@@ -11,7 +11,7 @@
 - `modules/round-ordering.md`: new file — 3 シグナルの組み合わせ手順、blocked-by gate との関係、実運用確認手順を定義する shared module
 - `skills/auto/SKILL.md`: Until mode step 6 に並び替えステップを挿入し、`allowed-tools` に `compute-round-order.sh` を追加 (bash compat: n/a — Markdown skill file)
 - `tests/auto-batch.bats`: Until mode セクション向けの新規 `@test` を追加 (bash compat: bats 1.13.0 で動作確認済み — #1334 と同じ awk 抽出パターンを再利用)
-- `docs/structure.md`: Directory Layout のファイル数コメント更新 (`modules/` 44→45、`scripts/` 83→84、`tests/` 118→119) と Key Files への新規エントリ追加 [Steering Docs sync candidate — 本 Issue で直接対応]
+- `docs/structure.md`: Directory Layout のファイル数コメント更新 (`modules/` 44→45、`scripts/` 83→84、`tests/` 119→120 — 実装時点の実測ベースラインに合わせ Spec 記載の118→119から補正、Code Retrospective参照) と Key Files への新規エントリ追加 [Steering Docs sync candidate — 本 Issue で直接対応]
 - `docs/workflow.md`: `--batch --until <query>` の説明段落に並び替えステップの記述を追加 [Steering Docs sync candidate — 本 Issue で直接対応]
 
 ## Implementation Steps
@@ -20,7 +20,7 @@
 
    呼び出し規約: `compute-round-order.sh "$ROUND_LIST"` — 空白区切りの issue 番号を 1 引数として受け取り (`auto-checkpoint.sh write_batch` と同じ引数規約)、`for num in $1` で反復する。
 
-   各 issue について、`get-issue-size.sh` の Project field 取得パターン (GraphQL 優先 → `size/*`/`value/*` label フォールバック) を踏襲しつつ、`get-issue-size.sh` の `GQL_QUERY` に `title` フィールドを追加した 1 種類のクエリを使い、1 issue あたり 1 回の `gh-graphql.sh` 呼び出しで `title`/Size/Value をまとめて取得する (`get-issue-value.sh` に相当するスクリプトは既存に存在しない — Notes 参照)。
+   各 issue について、`get-issue-size.sh` の Project field 取得パターン (GraphQL 優先 → `size/*`/`value/*` label フォールバック) を踏襲しつつ、`get-issue-size.sh` の `GQL_QUERY` に `title` フィールドを追加した 1 種類のクエリを使い、1 issue あたり 1 回の `gh-graphql.sh` 呼び出しで `title`/Size/Value をまとめて取得する (`get-issue-value.sh` に相当するスクリプトは既存に存在しない — Notes 参照)。`gh-graphql.sh` は `jq` に `-r` を渡さないため、`--jq` フィルタは JSON オブジェクト (`{title, size, value}`) を返す形にとどめ、取得後に呼び出し元でローカルに `jq -r '... | @tsv'` を再適用してタブ区切りに変換する (Code Retrospective参照。GraphQL 往復自体は 1 issue あたり 1 回のまま)。
 
    `size_rank` (XS=1, S=2, M=3, L=4, XL=5。未設定/取得失敗時は中立値 3) と `value_num` (1–5。未設定/取得失敗時は中立値 3) から `roi = value_num / size_rank` を awk で計算し (小数第2位まで)、`number<TAB>size<TAB>value<TAB>roi<TAB>title` を入力順のまま 1 行ずつ標準出力する。クラスタリング・並び替えは行わない (責務は module 側 — Notes 参照)。bash 3.2+ 互換 (連想配列不使用)。
 
@@ -47,7 +47,7 @@
 
 5. ドキュメント同期 (parallel with 4) (→ SHOULD)。
 
-   - `docs/structure.md`: Directory Layout の `modules/` (44→45 files)・`scripts/` (83→84 files)・`tests/` (118→119 files) コメントを更新し、Key Files の Modules 一覧に `modules/round-ordering.md` を、Scripts の Project utilities 一覧に `scripts/compute-round-order.sh` を追加する。
+   - `docs/structure.md`: Directory Layout の `modules/` (44→45 files)・`scripts/` (83→84 files)・`tests/` (119→120 files — 実測ベースライン補正、Code Retrospective参照) コメントを更新し、Key Files の Modules 一覧に `modules/round-ordering.md` を、Scripts の Project utilities 一覧に `scripts/compute-round-order.sh` を追加する。
    - `docs/workflow.md`: `--batch --until <query>` の説明段落内、"Each round resolves the query via `scripts/resolve-batch-query.sh`" の直後に、並び替えステップ (`modules/round-ordering.md` 参照) への言及を追加する。
 
 ## Verification
@@ -81,6 +81,49 @@ N/A — 4件の受入条件はいずれも Pre-merge で機械検証可能なた
 
 - **AC4 の解釈 (auto-resolve)**: Issue 本文の AC4「実運用でこの並び替えが意図通り機能する... ことを確認する手順が定義されている」は文言どおり「手順が定義されていること」を要求しており、「実運用で実際に確認済みであること」までは要求していないと解釈した。実運用での実際の効果測定には新規の event 発火の仕組み (例: `verify-type: observation`) が必要になり、本 Issue (Size M) のスコープを超えるため、Pre-merge で機械検証可能な「手順が module に文書化されていること」の確認に留めた。
 
+## Code Retrospective
+
+### Deviations from Design
+
+- `docs/structure.md` の `tests/` ファイル数コメントは Spec 記載の `118→119` ではなく `119→120` を採用した。実装開始前に `git ls-files tests/*.bats | wc -l` で実測したところ、変更前ベースラインが既に 119 だった (Spec 記述時点から他 Issue のマージでファイルが増えていたと推定される)。`modules/`（44）・`scripts/`（83）のベースラインは Spec 記載どおりで一致していた。
+
+### Design Gaps/Ambiguities
+
+- Spec Implementation Step 1 は「`get-issue-size.sh` の Project field 取得パターンを踏襲しつつ...1 issue あたり 1 回の `gh-graphql.sh` 呼び出しでまとめて取得する」とだけ記述しており、複数フィールドを 1 回の `--jq` 呼び出しで TSV 化する具体的な実装方法までは規定していなかった。`gh-graphql.sh` は `jq` に `-r` (raw output) を渡さないため、`--jq '... | @tsv'` の結果はダブルクォートで囲まれ `\t` がエスケープされた文字列としてそのまま出力され (実際のタブ文字にならない)、`IFS=$'\t' read` によるフィールド分割が機能しなかった。対応として `--jq` フィルタは JSON オブジェクト (`{title, size, value}`) を返す形にとどめ、呼び出し元 (`compute-round-order.sh`) が自前で `jq -r '... | @tsv'` に再度通してからパースする 2 段階構成にした。GraphQL 往復は 1 issue あたり 1 回のまま (`jq` の追加呼び出しはローカル処理でネットワーク往復を伴わない) なので、Spec の「1 回の `gh-graphql.sh` 呼び出し」という制約は満たしている。
+
+### Rework
+
+- N/A
+
 ## Consumed Comments
 
 No new comments since last phase.
+
+## Phase Handoff
+<!-- phase: review -->
+
+### Key Decisions
+- Pre-merge AC 4件は全て `<!-- verify: rubric ... -->` + `<!-- verify: file_contains/section_contains ... -->` の組み合わせで PASS 判定した。rubric grader には `modules/round-ordering.md`/`skills/auto/SKILL.md` の該当箇所を読ませ、機械的チェックと併用して意味的妥当性も確認した。
+- review-light エージェントが `modules/round-ordering.md:227` と報告した行番号は実際のファイル (121行) を超える誤りだったため、実行前に `grep -n` で実行行 (40行目) に修正してから line comment を投稿した。エージェント出力の行番号はそのまま信用せず、投稿前に実在性を確認すること。
+- SHOULD (テストカバレッジ欠如) と CONSIDER (ドキュメント文言の曖昧さ) はいずれも軽量・低リスクな修正だったため、MUST ではないが Step 12 で修正した (`tests/compute-round-order.bats` に label-fallback / title-fallback の2テスト追加、`modules/round-ordering.md` Signal 3 step 4 の文言修正)。
+
+### Deferred Items
+- AC4 (実運用確認手順) は「手順が module に文書化されていること」の確認に留まっており、実際の `--until` 実行による効果測定は次回以降の実運用時に行う想定 (code フェーズの Phase Handoff から継続、review フェーズでも変更なし)。
+
+### Notes for Next Phase
+- `modules/round-ordering.md` の Signal 3 (意味的関係判断) は `ROUND_LIST` 内の Issue body のみを読む設計であり、ラウンド外の Issue とのクラスタリングは意図的にスコープ外としている。将来この制約を緩和する提案が出た場合は、この設計判断を踏まえて検討すること。
+- `scripts/compute-round-order.sh` のラベルフォールバック (`size/*`/`value/*`) とタイトルフォールバック (`gh issue view --json title`) 経路は review フェーズで追加したテストでカバーされた。今後この script に変更を加える際は `tests/compute-round-order.bats` の8ケース (特に新規2ケース) を維持すること。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Nothing to note。review-light (Spec 観点) は「Spec と実装の乖離なし」と判定した。`compute-round-order.sh` の呼び出し規約・`size_rank`/`value_num` neutral fallback・ROI 計算式・`cluster-first`/`Relationship to the blocked-by gate`/`Confirming real-world effectiveness` の各見出しはすべて Spec/AC の pre-merge verify anchor と一致していた。
+
+### Recurring issues
+
+review-light エージェントが報告した `modules/round-ordering.md` の該当行番号 (227) が実ファイルの総行数 (121行) を超えており誤りだった。過去のレビューでも同種の「エージェント報告行番号が不正確」というケースが起こり得るため、line comment を投稿する前に `grep -n`/`wc -l` で行番号の実在性を機械的に確認するステップを常に踏むこと (今回は Step 11 投稿前に本セッションで確認・修正済み)。
+
+### Acceptance criteria verification difficulty
+
+Nothing to note。Pre-merge AC 4件はいずれも `rubric` + `file_contains`/`section_contains` の組み合わせで機械的・意味的の両面から一意に PASS 判定でき、UNCERTAIN は発生しなかった。verify command の anchor 文字列 (`cluster-first`, `Relationship to the blocked-by gate`, `Confirming real-world effectiveness`) は実装の見出しと完全一致しており、verify command 自体の精度に問題はなかった。
