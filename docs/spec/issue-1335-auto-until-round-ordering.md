@@ -100,19 +100,18 @@ N/A — 4件の受入条件はいずれも Pre-merge で機械検証可能なた
 No new comments since last phase.
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- Pre-merge AC 4件は全て `<!-- verify: rubric ... -->` + `<!-- verify: file_contains/section_contains ... -->` の組み合わせで PASS 判定した。rubric grader には `modules/round-ordering.md`/`skills/auto/SKILL.md` の該当箇所を読ませ、機械的チェックと併用して意味的妥当性も確認した。
-- review-light エージェントが `modules/round-ordering.md:227` と報告した行番号は実際のファイル (121行) を超える誤りだったため、実行前に `grep -n` で実行行 (40行目) に修正してから line comment を投稿した。エージェント出力の行番号はそのまま信用せず、投稿前に実在性を確認すること。
-- SHOULD (テストカバレッジ欠如) と CONSIDER (ドキュメント文言の曖昧さ) はいずれも軽量・低リスクな修正だったため、MUST ではないが Step 12 で修正した (`tests/compute-round-order.bats` に label-fallback / title-fallback の2テスト追加、`modules/round-ordering.md` Signal 3 step 4 の文言修正)。
+- Pre-merge AC 4件・review-incomplete-fallback チェックとも問題なし (unchecked_count=0, review_incomplete_fallback 未検出) だったため、pre-merge AC gate のオーバーライドなしでそのままマージした。
+- mergeable=true (clean) を確認し、コンフリクト解消フローには入らずそのまま squash merge を実行した。
 
 ### Deferred Items
-- AC4 (実運用確認手順) は「手順が module に文書化されていること」の確認に留まっており、実際の `--until` 実行による効果測定は次回以降の実運用時に行う想定 (code フェーズの Phase Handoff から継続、review フェーズでも変更なし)。
+- AC4 (実運用確認手順) の実効果測定は引き続き未実施 (code/review フェーズの Phase Handoff から継続)。次回以降の `--until` 実運用時に確認すること。
 
 ### Notes for Next Phase
-- `modules/round-ordering.md` の Signal 3 (意味的関係判断) は `ROUND_LIST` 内の Issue body のみを読む設計であり、ラウンド外の Issue とのクラスタリングは意図的にスコープ外としている。将来この制約を緩和する提案が出た場合は、この設計判断を踏まえて検討すること。
-- `scripts/compute-round-order.sh` のラベルフォールバック (`size/*`/`value/*`) とタイトルフォールバック (`gh issue view --json title`) 経路は review フェーズで追加したテストでカバーされた。今後この script に変更を加える際は `tests/compute-round-order.bats` の8ケース (特に新規2ケース) を維持すること。
+- `verify` フェーズでは Post-merge セクションが空 (Issue 本文に記載なし) のため、追加の post-merge 確認は不要。
+- `modules/round-ordering.md` の Signal 3 (意味的関係判断) はラウンド外 Issue とのクラスタリングを意図的にスコープ外としている設計判断を踏襲すること。
 
 ## review retrospective
 
