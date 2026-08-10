@@ -215,19 +215,34 @@ themes:
 なし。テスト・手動スモークテスト (themes あり2件・themes なし・実データ5テーマ) がいずれも初回実装で成功した。
 
 ## Phase Handoff
-<!-- phase: code -->
+<!-- phase: review -->
 
 ### Key Decisions
 
-- Spec の Implementation Steps 1-10 をそのままの順序・配置で実装した (逸脱なし)。パーサ配置・作成ループ配置・`WHOLEWORK_CONFIG_PATH` 対応・空配列展開の form はいずれも Spec 記載どおり。
-- 全7件の Pre-merge AC を `/code` 内で機械チェック (`file_contains` / `grep` / `file_not_contains` / `command`) + rubric 相当の判断で PASS 判定し、Issue 本文のチェックボックスを更新済み。
+- MUST issue は0件。SHOULD 5件・CONSIDER 2件は全て `/review` Step 12 内でその場で直接修正した (doc追記・bugfix・テスト追加のみで、いずれも低リスク)。
+- review-bug×2 が独立に検出した `scripts/setup-labels.sh:186` (theme ループが `set -euo pipefail` 下で Fallback-group より前に位置し、失敗時に abort する懸念) は Opus adversarial verification で false positive と判定し却下した — 本 PR 以前から `ALWAYS_LABELS` 内の `theme/*` エントリが全く同じ位置にあり、既存の挙動でありこの PR による新規リグレッションではないため。
 
 ### Deferred Items
 
-- None (本 Issue のスコープはすべて Implementation Steps に含まれ、完了している)。
+- `get-config-value.sh` のフラットキー検索 (`^[[:space:]]*${KEY}[[:space:]]*:`) が `themes:` の子キー名と衝突しうる問題は、コード修正ではなく `docs/guide/customization.md` への制約明記のみで対応した。根本修正 (`get-config-value.sh` 側のアンカーを非インデント限定に厳格化) は `themes:` 以外の既存ブロックにも影響する広いスコープの変更のため、別 Issue 化が妥当と判断し見送った。
+- `themes:` の子キーにネストした sub-mapping (例: `checkout:\n  description: "..."`) を書くと誤った複数ラベルが作成される問題は、CONSIDER 級のエッジケースとして「サポート外の形状」をドキュメント化するに留め、パーサ側のガードは追加していない。
 
 ### Notes for Next Phase
 
-- `bats tests/setup-labels.bats` 全22件 (既存20件 + 新規2件) が pass。実データの `.wholework.yml`(5テーマ) でも手動スモークテストし、`theme/observability` 等が正しく色 `006B75` ・description 付きで作成されることを確認済み。
-- behavioral change detection が `.wholework.yml` / `docs/tech.md` を参照する既存テストの存在により発火し、bats フルスイート (1715件、`--jobs 18`) を実行して全 PASS を確認済み。`/review` で再度フルスイートを回す場合も同じ結果になるはず。
-- ドキュメント同期は英語/`docs/ja/` の3ペア (`customization.md` / `tech.md` / `product.md`) + `modules/label-conventions.md` + `skills/triage/SKILL.md` の計8ファイルすべて更新済み。`scripts/check-translation-sync.sh` による OUTDATED 検出は想定していない。
+- Pre-merge AC 7件はいずれも `/review` の再検証で PASS を再確認済み。Step 12 の修正内容 (ドキュメント追記・bash パーサのバグ修正・bats テスト追加) はいずれも AC の意味論を変更しないため、Step 13 Policy Change Detection で方針変更なしと判定し Issue 本文・verify command の更新は行っていない。
+- `/review` 投稿時点で CI 11/11 ジョブ SUCCESS を確認済み。Step 12 で追加した4コミットの push により CI が再トリガーされるため、`/merge` 前に再度グリーンを確認すること。
+- `bats tests/setup-labels.bats` は25/25 pass (`/code` 時点の22件 + `/review` で追加した新規3件: 空 `themes:` ブロック、`--no-fallback` + `themes:` 併用、column-0 コメントのリグレッションテスト)。
+
+## review retrospective
+
+### Spec vs. implementation divergence patterns
+
+Spec の `## Changed Files` は実装対象8ファイルを正確に列挙しており、実装との乖離はなかった。一方で `docs/guide/customization.md` が「完全なリファレンス」として指し示す `modules/detect-config-markers.md` は Spec の Changed Files に含まれておらず、review-spec / review-bug×2 の3エージェントが揃って同じ欠落 (`themes` 行の未追加) を指摘した。`docs/spec/issue-1322-triage-theme-labels.md` の retrospective で記録済みの `modules/label-conventions.md` 欠落と同種のパターン ("SSoT テーブルが他ファイルへの `See also` ポインタを含む場合、そのポインタ先ファイルが Changed Files の洗い出しから漏れやすい") が再発した。`/spec` の Changed Files 洗い出し手順に「変更対象ファイルが `See also` / `for the full reference` 等の外部ポインタを含む場合、ポインタ先ファイルも Changed Files 候補に加える」というチェック項目を追加すると、この種の漏れを構造的に防げる可能性がある。
+
+### Recurring issues
+
+3件の SHOULD 指摘 (`--no-fallback` ヘルプテキストの陳腐化、`themes:` 行のパース制限未文書化、`modules/detect-config-markers.md` の行欠落) はいずれも「実装は正しいが、実装済みコードが変える既存の前提 (ヘルプテキストの文言、他ドキュメントへの参照整合性) の追随漏れ」という同じ根本原因に属する。加えて review-bug×2 が独立に発見した `scripts/setup-labels.sh:116` (column-0 コメントによるパース中断) は Spec の Uncertainty/Notes に記載のない未知の bash パーサ挙動で、Opus 検証で実際に再現された genuine な logic error だった — 新規 bash パーサを書く Issue では、パーサに対する fuzz 的な境界値 (コメント行・空行・不正文字) のテストケースを Spec の Implementation Steps 自体に含めておくと、review フェーズでの後追い修正を減らせる。
+
+### Acceptance criteria verification difficulty
+
+Pre-merge AC 7件はすべて `/code` フェーズの機械チェックで PASS 判定済みで、`/review` の再検証でも全件 PASS が再確認できた。UNCERTAIN・verify command の不備は0件で、AC の検証容易性に問題はなかった。
