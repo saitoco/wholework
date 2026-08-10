@@ -136,6 +136,22 @@ Fix options:
 - 現状のリポジトリ内容 (diff で変更される具体的な範囲) を rubric text に明示的に含める
 - 既存の類似実装を rubric text 内で明示的に除外する文言を追加する
 
+**定義が構造的に充足不能な AC (複数量の同時成立不能)**:
+
+AC が複数の量 (分母・分子、件数と割合など) を同時に要求している場合、それらが同一の実行単位で同時に取得できないと、実装をどう進めても AC 自体が構造的に充足不能になる。実装側の不足ではなく AC の定義自体の矛盾であるため、grader は UNCERTAIN と判定する。
+
+例: #1270 の Pre-merge AC1 は「observation dispatch における SKIPPED 率 (分母: 1 回の dispatch で候補に挙がった observation AC 行数、分子: そのうち SKIPPED を返した行数)」を要求していたが、`skills/auto/SKILL.md` Step 5 の dispatch は `observation-dispatch-threshold` (既定 5) 件を上限とするため、分母 85 に対し分子は構造上 5 が上限となり、率として意味をなさない。`/verify 1270` はこの AC を UNCERTAIN と判定した。
+
+Detection approach:
+- (a) AC が複数の量を同時に要求しているか確認する
+- (b) 一方の取得が設定値やスクリプトの構造的上限で制約されるか確認する
+- (c) 判定が難しい場合は検出せず素通しする (偽陽性を避ける — この監査は非破壊コメントであり、過剰指摘は起票者の負担になる)
+
+Fix options:
+- 両方の量を同一実行単位で取得できる形へ AC を書き換える
+- 一方の量のみを baseline として記録する形へ単位を揃える (#1270 が採った方法 — 率を諦めて母集団の実数に統一)
+- 比較対象となる post-merge AC も同じ単位へ揃える (片方だけ直すと baseline と post-merge が別の量を測ることになる)
+
 ### Pattern 3: 常時 FAIL な verify command (Always-FAIL Command)
 
 Detect: A `file_contains` or `grep` verify command whose search string has already
