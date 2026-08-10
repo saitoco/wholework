@@ -40,6 +40,9 @@ case "$NUM" in
     300)
         RESPONSE='{"data":{"repository":{"issue":{"title":"neutral fallback issue","projectItems":{"nodes":[{"fieldValues":{"nodes":[]}}]}}}}}'
         ;;
+    400)
+        RESPONSE='{"data":{"repository":{"issue":{"title":"label fallback issue","projectItems":{"nodes":[{"fieldValues":{"nodes":[]}}]}}}}}'
+        ;;
     *)
         RESPONSE='{"data":{"repository":{"issue":{"title":null,"projectItems":{"nodes":[]}}}}}'
         ;;
@@ -49,14 +52,23 @@ echo "$RESPONSE" | jq "$JQ_EXPR"
 MOCK_EOF
     chmod +x "$MOCK_DIR/gh-graphql.sh"
 
-    # Default gh mock: no labels (used only as fallback when Project fields are absent)
+    # Default gh mock: no labels/title (used only as fallback when Project fields are absent).
+    # Issue 400 (label-fallback test) returns size/value labels; issue 999 (title-fallback
+    # test) returns a title, since its GraphQL response above has title:null (default case).
     cat > "$MOCK_DIR/gh" << 'MOCK_EOF'
 #!/bin/bash
 if [[ "$1" == "issue" && "$2" == "view" ]]; then
+    NUM="$3"
     if [[ "$*" == *"labels"* ]]; then
-        echo ""
+        case "$NUM" in
+            400) echo -e "size/M\nvalue/3" ;;
+            *) echo "" ;;
+        esac
     elif [[ "$*" == *"title"* ]]; then
-        echo ""
+        case "$NUM" in
+            999) echo "title fetched via gh issue view fallback" ;;
+            *) echo "" ;;
+        esac
     fi
 fi
 exit 0
@@ -108,4 +120,19 @@ teardown() {
     run bash "$SCRIPT" "100"
     [ "$status" -eq 0 ]
     [[ "$output" == *"detect-wrapper-anomaly: split pattern"* ]]
+}
+
+@test "label fallback: Size/Value resolved from size/*,value/* labels when GraphQL fields are empty" {
+    run bash "$SCRIPT" "400"
+    [ "$status" -eq 0 ]
+    SIZE=$(echo "$output" | awk -F'\t' '{print $2}')
+    VALUE=$(echo "$output" | awk -F'\t' '{print $3}')
+    [ "$SIZE" = "M" ]
+    [ "$VALUE" = "3" ]
+}
+
+@test "title fallback: title fetched via gh issue view when GraphQL title is null" {
+    run bash "$SCRIPT" "999"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"title fetched via gh issue view fallback"* ]]
 }
