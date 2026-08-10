@@ -127,14 +127,14 @@ No new comments since last phase.
 - 困難なし。Pre-merge AC 3 件はいずれも `section_contains`/`grep`/`command` の機械的チェックで PASS 判定でき、UNCERTAIN はゼロだった。Issue 起票直後の Triage AC audit が事前に verify command の不具合 3 件を検出・修正していたため、review フェーズでの空撃ち確認は不要だった。
 
 ## Phase Handoff
-<!-- phase: review -->
+<!-- phase: merge -->
 
 ### Key Decisions
-- `REVIEW_DEPTH=light` (`--light` 明示指定、Size M とも整合) のため review-light エージェント1体による4観点統合レビューを採用し、review-spec/review-bug の2エージェント fan-out は行わなかった
-- SHOULD 指摘 (`wholework:triage` dispatch の失敗処理欠如、`skills/auto/SKILL.md:1211`) は周辺ステップとの一貫性を重視しその場で修正した。CONSIDER 指摘 (`docs/workflow.md`/`docs/ja/workflow.md` の base branch との `git merge-tree` コンフリクト検出) はコード修正を要さない情報提供のためスキップした
+- `gh-pr-merge-status.sh` は `mergeable=true reason=clean` を返し、review フェーズが予告していた `docs/workflow.md`/`docs/ja/workflow.md` の base branch コンフリクトは実際には発生しなかったため、rebase/コンフリクト解消ステップ (Step 3) はスキップしそのまま Squash Merge (Step 4) を実行した
+- pre-merge AC gate は `unchecked_count=0`、review-incomplete-fallback チェックも該当なしのため、override marker なしでゲートを通過した
 
 ### Deferred Items
-- N/A — MUST issue なし。Pre-merge AC 3 件はすべて review フェーズでも PASS 再確認済み
+- N/A
 
 ### Notes for Next Phase
-- `/merge` 時に `docs/workflow.md` / `docs/ja/workflow.md` で base branch (PR #1336 / Issue #1049) との `git merge-tree` コンフリクトが発生する見込み。本 PR の diff は隣接する別段落 (`--batch --until <query>`) のみを変更しており、いずれの側の内容も diff 内では失われていないことを review フェーズで確認済みなので、両側の追記を保持する形でリベース/コンフリクト解消すればよい
+- Post-merge AC はなし (Issue #1334 Post-merge AC: なし) のため `/verify` での追加確認事項は特にない
