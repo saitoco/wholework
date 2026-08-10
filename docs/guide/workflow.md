@@ -130,6 +130,7 @@ Chains all phases based on issue size. The most common way to run Wholework.
 /auto 42               # run the full workflow
 /auto 42 --patch       # force patch route (skip PR)
 /auto --batch 5        # process 5 XS/S backlog issues in sequence
+/auto --batch --until "label:retro/*"  # process a theme's backlog until none match, up to --max-rounds
 ```
 
 If no `phase/*` label is set, `/auto` starts from issue triage. If no spec exists, it runs `/spec` first.
@@ -185,6 +186,7 @@ Run periodically — for example, after a sprint or milestone — to keep docs, 
 | Want to refine a vague issue first | `/issue N`, then `/auto N` |
 | Reviewing a PR someone else created | `/review PR_NUMBER` |
 | Bulk-process small backlog issues | `/auto --batch 10` |
+| Work through a theme's backlog until it's exhausted | `/auto --batch --until "label:theme/*"` |
 
 ## Fixing After Verify Fails
 
